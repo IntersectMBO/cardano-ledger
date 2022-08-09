@@ -1,8 +1,10 @@
 module Cardano.Ledger.Conway.Genesis
-  ( AlonzoGenesis (..),
+  ( ConwayGenesis (..),
     extendPPWithGenesis,
   )
 where
 
-import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Babbage.Genesis (extendPPWithGenesis)
+import Cardano.Ledger.Keys (GenDelegs)
+
+newtype ConwayGenesis crypto = ConwayGenesis (GenDelegs crypto)

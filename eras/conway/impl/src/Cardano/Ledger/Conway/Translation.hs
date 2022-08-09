@@ -13,7 +13,6 @@
 module Cardano.Ledger.Conway.Translation where
 
 import Cardano.Binary (DecoderError)
-import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import Cardano.Ledger.Babbage (BabbageEra)
@@ -21,6 +20,7 @@ import Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..))
 import Cardano.Ledger.Babbage.Tx (AlonzoTx (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), Datum (..))
 import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Scripts ()
 import Cardano.Ledger.Conway.TxOut ()
 import qualified Cardano.Ledger.Core as Core
@@ -33,7 +33,9 @@ import Cardano.Ledger.Era
   )
 import Cardano.Ledger.Serialization (translateViaCBORAnn)
 import Cardano.Ledger.Shelley.API
-  ( EpochState (..),
+  ( DPState (..),
+    DState (..),
+    EpochState (..),
     NewEpochState (..),
     ShelleyGenesis,
     StrictMaybe (..),
@@ -59,7 +61,7 @@ import Data.Coerce
 
 type instance PreviousEra (ConwayEra c) = BabbageEra c
 
-type instance TranslationContext (ConwayEra c) = AlonzoGenesis
+type instance TranslationContext (ConwayEra c) = ConwayGenesis c
 
 instance Crypto c => TranslateEra (ConwayEra c) NewEpochState where
   translateEra ctxt nes =
@@ -135,12 +137,16 @@ instance Crypto c => TranslateEra (ConwayEra c) EpochState where
         }
 
 instance Crypto c => TranslateEra (ConwayEra c) API.LedgerState where
-  translateEra ctxt ls =
+  translateEra ctxt@(ConwayGenesis newGenDelegs) ls =
     pure
       API.LedgerState
         { API.lsUTxOState = translateEra' ctxt $ API.lsUTxOState ls,
-          API.lsDPState = API.lsDPState ls
+          API.lsDPState = updateGenesisKeys $ API.lsDPState ls
         }
+    where
+      updateGenesisKeys (DPState dstate pstate) = DPState dstate' pstate
+        where
+          dstate' = dstate {_genDelegs = newGenDelegs}
 
 instance Crypto c => TranslateEra (ConwayEra c) API.UTxOState where
   translateEra ctxt us =

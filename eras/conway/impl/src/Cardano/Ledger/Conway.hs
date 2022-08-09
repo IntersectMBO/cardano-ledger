@@ -11,6 +11,7 @@
 module Cardano.Ledger.Conway (ConwayEra) where
 
 import Cardano.Ledger.Alonzo (reapplyAlonzoTx)
+import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..))
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (..))
 import Cardano.Ledger.Babbage.Rules (babbageMinUTxOValue)
@@ -23,7 +24,7 @@ import Cardano.Ledger.Babbage.Tx
   )
 import Cardano.Ledger.Babbage.TxInfo (babbageTxInfo)
 import Cardano.Ledger.Conway.Era (ConwayEra)
-import Cardano.Ledger.Conway.Genesis (AlonzoGenesis, extendPPWithGenesis)
+import Cardano.Ledger.Conway.Genesis (extendPPWithGenesis)
 import Cardano.Ledger.Conway.PParams (BabbagePParamsHKD (..))
 import Cardano.Ledger.Conway.Tx ()
 import Cardano.Ledger.Conway.TxBody (BabbageEraTxBody (..))
