@@ -323,7 +323,7 @@ instance Crypto crypto => FromJSON (GenDelegPair crypto) where
 newtype GenDelegs crypto = GenDelegs
   { unGenDelegs :: Map (KeyHash 'Genesis crypto) (GenDelegPair crypto)
   }
-  deriving (Eq, FromCBOR, NoThunks, NFData, Generic)
+  deriving (Eq, FromCBOR, NoThunks, NFData, Generic, FromJSON)
   deriving (Show) via Quiet (GenDelegs crypto)
 
 deriving instance
