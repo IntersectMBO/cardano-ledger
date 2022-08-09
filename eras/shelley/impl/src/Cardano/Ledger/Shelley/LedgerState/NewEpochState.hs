@@ -42,7 +42,7 @@ import Cardano.Ledger.Shelley.TxBody
   )
 import Cardano.Ledger.Shelley.UTxO
   ( UTxO (..),
-    balance,
+    coinBalance,
     keyRefunds,
     totalDeposits,
   )
@@ -183,7 +183,7 @@ returnRedeemAddrsToReserves es = es {esAccountState = acnt', esLState = ls'}
     utxoR = UTxO redeemers :: UTxO era
     acnt' =
       acnt
-        { _reserves = _reserves acnt <+> Val.coin (balance utxoR)
+        { _reserves = _reserves acnt <+> coinBalance utxoR
         }
     us' = us {_utxo = UTxO nonredeemers :: UTxO era}
     ls' = ls {lsUTxOState = us'}

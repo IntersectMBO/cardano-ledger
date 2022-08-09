@@ -21,14 +21,14 @@ import Cardano.Ledger.Shelley.API.Types
     PoolDistr (PoolDistr),
     ShelleyGenesis (sgGenDelegs, sgMaxLovelaceSupply, sgProtocolParams),
     StrictMaybe (SNothing),
-    balance,
     genesisUTxO,
     word64ToCoin,
   )
 import Cardano.Ledger.Shelley.EpochBoundary (emptySnapShots)
 import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses, smartUTxOState)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams)
-import Cardano.Ledger.Val (Val (coin, (<->)))
+import Cardano.Ledger.Shelley.UTxO (coinBalance)
+import Cardano.Ledger.Val (Val ((<->)))
 import Control.State.Transition (STS (State))
 import Data.Default.Class (Default, def)
 import Data.Kind (Type)
@@ -90,6 +90,6 @@ initialStateFromGenesis extendPPWithGenesis' sg ag =
   where
     initialEpochNo = 0
     initialUtxo = genesisUTxO sg
-    reserves = word64ToCoin (sgMaxLovelaceSupply sg) <-> coin (balance initialUtxo)
+    reserves = word64ToCoin (sgMaxLovelaceSupply sg) <-> coinBalance initialUtxo
     genDelegs = sgGenDelegs sg
     pp = sgProtocolParams sg

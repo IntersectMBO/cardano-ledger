@@ -57,7 +57,6 @@ import Cardano.Ledger.UnifiedMap
   ( Triple,
     UMap (..),
   )
-import qualified Cardano.Ledger.Val as Val
 import Control.SetAlgebra (dom, eval, (∈))
 import Control.State.Transition (STS (State))
 import Data.Foldable (fold)
@@ -107,7 +106,7 @@ incrementalAggregateUtxoCoinByCredential mode (UTxO u) initial =
         Coin 0 -> Nothing
         final -> Just final
     accum ans@(IStake stake ptrs) out =
-      let c = Val.coin (out ^. valueTxOutL)
+      let c = out ^. coinTxOutL
        in case out ^. addrTxOutL of
             Addr _ _ (StakeRefPtr p) -> IStake stake (Map.alter (keepOrDelete c) p ptrs)
             Addr _ _ (StakeRefBase hk) -> IStake (Map.alter (keepOrDelete c) hk stake) ptrs
