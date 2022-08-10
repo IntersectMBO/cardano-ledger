@@ -48,6 +48,7 @@ import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Generic.Proof
   ( AlonzoEra,
     BabbageEra,
+    ConwayEra,
     Evidence (..),
     GoodCrypto,
     Mock,
@@ -270,6 +271,10 @@ instance Reflect (BabbageEra c) => Fixed (AlonzoScript (BabbageEra c)) where
   unique n = liftC somealonzo !! n
   size _ = Just alonzolength
 
+instance Reflect (ConwayEra c) => Fixed (AlonzoScript (ConwayEra c)) where
+  unique n = liftC somealonzo !! n
+  size _ = Just alonzolength
+
 -- ==============================================
 -- Type families (and other Types uniquely determined from type families like Hashes)
 -- Because we can't make instances over type families, we can't say things like
@@ -282,6 +287,7 @@ pickValue n (Allegra _) = unique @Coin n
 pickValue n (Mary _) = unMulti (unique @(MultiAsset era) n)
 pickValue n (Alonzo _) = unMulti (unique @(MultiAsset era) n)
 pickValue n (Babbage _) = unMulti (unique @(MultiAsset era) n)
+pickValue n (Conway _) = unMulti (unique @(MultiAsset era) n)
 
 pickScript :: Int -> Proof era -> Script era
 pickScript n (Shelley c) = somemultisigs c !! n
@@ -289,6 +295,7 @@ pickScript n (Allegra c) = sometimelocks c !! n
 pickScript n (Mary c) = sometimelocks c !! n
 pickScript n (Alonzo c) = somealonzo c !! n
 pickScript n (Babbage c) = somealonzo c !! n
+pickScript n (Conway c) = somealonzo c !! n
 
 pickScriptHash :: forall era. Reflect era => Int -> Proof era -> ScriptHash (Crypto era)
 pickScriptHash n wit = hashScript @era (pickScript n wit)

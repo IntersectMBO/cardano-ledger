@@ -93,19 +93,23 @@ import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
 maxCollateralInputs' :: Proof era -> PParams era -> Natural
 maxCollateralInputs' (Alonzo _) x = _maxCollateralInputs x
 maxCollateralInputs' (Babbage _) x = Babbage._maxCollateralInputs x
+maxCollateralInputs' (Conway _) x = Babbage._maxCollateralInputs x
 maxCollateralInputs' _proof _x = 0
 
 maxTxExUnits' :: Proof era -> PParams era -> ExUnits
 maxTxExUnits' (Alonzo _) x = _maxTxExUnits x
 maxTxExUnits' (Babbage _) x = Babbage._maxTxExUnits x
+maxTxExUnits' (Conway _) x = Babbage._maxTxExUnits x
 maxTxExUnits' _proof _x = mempty
 
 collateralPercentage' :: Proof era -> PParams era -> Natural
 collateralPercentage' (Alonzo _) x = _collateralPercentage x
 collateralPercentage' (Babbage _) x = Babbage._collateralPercentage x
+collateralPercentage' (Conway _) x = Babbage._collateralPercentage x
 collateralPercentage' _proof _x = 0
 
 protocolVersion :: Proof era -> ProtVer
+protocolVersion (Conway _) = ProtVer 7 0
 protocolVersion (Babbage _) = ProtVer 7 0
 protocolVersion (Alonzo _) = ProtVer 6 0
 protocolVersion (Mary _) = ProtVer 4 0
@@ -113,6 +117,7 @@ protocolVersion (Allegra _) = ProtVer 3 0
 protocolVersion (Shelley _) = ProtVer 2 0
 
 ppProtocolVersion :: Proof era -> PParams era -> ProtVer
+ppProtocolVersion (Conway _) pp = getField @"_protocolVersion" pp
 ppProtocolVersion (Babbage _) pp = getField @"_protocolVersion" pp
 ppProtocolVersion (Alonzo _) pp = getField @"_protocolVersion" pp
 ppProtocolVersion (Mary _) pp = getField @"_protocolVersion" pp
@@ -125,6 +130,7 @@ aggregateRewards' ::
   PParams era ->
   Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))) ->
   Map (Credential 'Staking (Crypto era)) Coin
+aggregateRewards' (Conway _) = aggregateRewards
 aggregateRewards' (Babbage _) = aggregateRewards
 aggregateRewards' (Alonzo _) = aggregateRewards
 aggregateRewards' (Mary _) = aggregateRewards
@@ -139,6 +145,7 @@ obligation' ::
   Map (Credential 'Staking c) Coin ->
   Map (KeyHash 'StakePool c) (PoolParams c) ->
   Coin
+obligation' (Conway _) = obligation @c @(BabbagePParams era) @Map
 obligation' (Babbage _) = obligation @c @(BabbagePParams era) @Map
 obligation' (Alonzo _) = obligation @c @(AlonzoPParams era) @Map
 obligation' (Mary _) = obligation @c @(ShelleyPParams era) @Map
@@ -152,6 +159,7 @@ totalDeposits' ::
   (KeyHash 'StakePool (Crypto era) -> Bool) ->
   [DCert (Crypto era)] ->
   Coin
+totalDeposits' (Conway _) pp = totalDeposits pp
 totalDeposits' (Babbage _) pp = totalDeposits pp
 totalDeposits' (Alonzo _) pp = totalDeposits pp
 totalDeposits' (Mary _) pp = totalDeposits pp
@@ -170,6 +178,7 @@ depositsAndRefunds proof pp certificates = List.foldl' accum (Coin 0) certificat
     (keydep, pooldep :: Coin) = keyPoolDeposits proof pp
 
 epochMax :: Proof era -> PParams era -> EpochNo
+epochMax (Conway _) = getField @"_eMax"
 epochMax (Babbage _) = getField @"_eMax"
 epochMax (Alonzo _) = getField @"_eMax"
 epochMax (Mary _) = getField @"_eMax"
@@ -178,6 +187,7 @@ epochMax (Shelley _) = getField @"_eMax"
 
 keyPoolDeposits :: Proof era -> PParams era -> (Coin, Coin)
 keyPoolDeposits proof pp = case proof of
+  Conway _ -> (getField @"_keyDeposit" pp, getField @"_poolDeposit" pp)
   Babbage _ -> (getField @"_keyDeposit" pp, getField @"_poolDeposit" pp)
   Alonzo _ -> (getField @"_keyDeposit" pp, getField @"_poolDeposit" pp)
   Mary _ -> (getField @"_keyDeposit" pp, getField @"_poolDeposit" pp)
@@ -187,6 +197,12 @@ keyPoolDeposits proof pp = case proof of
 -- | Compute the set of ScriptHashes for which there should be ScriptWitnesses. In Babbage
 --  Era and later, where inline Scripts are allowed, they should not appear in this set.
 scriptWitsNeeded' :: Proof era -> MUtxo era -> TxBody era -> Set (ScriptHash (Crypto era))
+scriptWitsNeeded' (Conway _) utxo txbody = regularScripts `Set.difference` inlineScripts
+  where
+    theUtxo = UTxO utxo
+    inputs = spendInputs' txbody `Set.union` referenceInputs' txbody
+    inlineScripts = keysSet $ refScripts inputs theUtxo
+    regularScripts = Set.fromList (map snd (scriptsNeededFromBody theUtxo txbody))
 scriptWitsNeeded' (Babbage _) utxo txbody = regularScripts `Set.difference` inlineScripts
   where
     theUtxo = UTxO utxo
@@ -199,6 +215,7 @@ scriptWitsNeeded' p@(Allegra _) utxo txbody = scriptsNeeded (UTxO utxo) (updateT
 scriptWitsNeeded' p@(Shelley _) utxo txbody = scriptsNeeded (UTxO utxo) (updateTx p (initialTx p) (Body txbody))
 
 scriptsNeeded' :: Proof era -> MUtxo era -> TxBody era -> Set (ScriptHash (Crypto era))
+scriptsNeeded' (Conway _) utxo txbody = Set.fromList (map snd (scriptsNeededFromBody (UTxO utxo) txbody))
 scriptsNeeded' (Babbage _) utxo txbody = Set.fromList (map snd (scriptsNeededFromBody (UTxO utxo) txbody))
 scriptsNeeded' (Alonzo _) utxo txbody = Set.fromList (map snd (scriptsNeededFromBody (UTxO utxo) txbody))
 scriptsNeeded' p@(Mary _) utxo txbody = scriptsNeeded (UTxO utxo) (updateTx p (initialTx p) (Body txbody))
@@ -207,6 +224,7 @@ scriptsNeeded' p@(Shelley _) utxo txbody = scriptsNeeded (UTxO utxo) (updateTx p
 
 minfee' :: forall era. Proof era -> PParams era -> Tx era -> Coin
 minfee' (Alonzo _) = minfee
+minfee' (Conway _) = minfee
 minfee' (Babbage _) = minfee
 minfee' (Mary _) = Shelley.minfee
 minfee' (Allegra _) = Shelley.minfee
@@ -222,8 +240,9 @@ txInBalance txinSet m = coin (balance (UTxO (restrictKeys m txinSet)))
 
 -- | Break a TxOut into its mandatory and optional parts
 txoutFields :: Proof era -> TxOut era -> (Addr (Crypto era), Value era, [TxOutField era])
-txoutFields (Alonzo _) (AlonzoTxOut addr val dh) = (addr, val, [DHash dh])
+txoutFields (Conway _) (BabbageTxOut addr val d h) = (addr, val, [FDatum d, RefScript h])
 txoutFields (Babbage _) (BabbageTxOut addr val d h) = (addr, val, [FDatum d, RefScript h])
+txoutFields (Alonzo _) (AlonzoTxOut addr val dh) = (addr, val, [DHash dh])
 txoutFields (Mary _) (ShelleyTxOut addr val) = (addr, val, [])
 txoutFields (Allegra _) (ShelleyTxOut addr val) = (addr, val, [])
 txoutFields (Shelley _) (ShelleyTxOut addr val) = (addr, val, [])
@@ -232,10 +251,12 @@ injectFee :: EraTxOut era => Proof era -> Coin -> TxOut era -> TxOut era
 injectFee _ fee txOut = txOut & valueTxOutL %~ (<+> inject fee)
 
 getTxOutRefScript :: Proof era -> TxOut era -> StrictMaybe (Script era)
+getTxOutRefScript (Conway _) (BabbageTxOut _ _ _ ms) = ms
 getTxOutRefScript (Babbage _) (BabbageTxOut _ _ _ ms) = ms
 getTxOutRefScript _ _ = SNothing
 
 emptyPPUPstate :: forall era. Proof era -> State (EraRule "PPUP" era)
+emptyPPUPstate (Conway _) = def
 emptyPPUPstate (Babbage _) = def
 emptyPPUPstate (Alonzo _) = def
 emptyPPUPstate (Mary _) = def
@@ -247,8 +268,9 @@ maxRefInputs (Babbage _) = 3
 maxRefInputs _ = 0
 
 isValid' :: Proof era -> Tx era -> IsValid
-isValid' (Alonzo _) x = isValid x
+isValid' (Conway _) x = isValid x
 isValid' (Babbage _) x = isValid x
+isValid' (Alonzo _) x = isValid x
 isValid' _ _ = IsValid True
 
 -- | Does the TxOut have evidence of credentials and data.
@@ -263,6 +285,12 @@ txoutEvidence (Alonzo _) (AlonzoTxOut addr _ (SJust dh)) =
   (addrCredentials addr, Just dh)
 txoutEvidence (Alonzo _) (AlonzoTxOut addr _ SNothing) =
   (addrCredentials addr, Nothing)
+txoutEvidence (Conway _) (BabbageTxOut addr _ NoDatum _) =
+  (addrCredentials addr, Nothing)
+txoutEvidence (Conway _) (BabbageTxOut addr _ (DatumHash dh) _) =
+  (addrCredentials addr, Just dh)
+txoutEvidence (Conway _) (BabbageTxOut addr _ (Datum _d) _) =
+  (addrCredentials addr, Just (hashData @era (binaryDataToData _d)))
 txoutEvidence (Babbage _) (BabbageTxOut addr _ NoDatum _) =
   (addrCredentials addr, Nothing)
 txoutEvidence (Babbage _) (BabbageTxOut addr _ (DatumHash dh) _) =
@@ -291,6 +319,7 @@ getBody :: EraTx era => Proof era -> Tx era -> TxBody era
 getBody _ tx = tx ^. bodyTxL
 
 getCollateralInputs :: Proof era -> TxBody era -> Set (TxIn (Crypto era))
+getCollateralInputs (Conway _) tx = collateralInputs' tx
 getCollateralInputs (Babbage _) tx = collateralInputs' tx
 getCollateralInputs (Alonzo _) tx = collateral' tx
 getCollateralInputs (Mary _) _ = Set.empty
@@ -298,6 +327,7 @@ getCollateralInputs (Allegra _) _ = Set.empty
 getCollateralInputs (Shelley _) _ = Set.empty
 
 getCollateralOutputs :: Proof era -> TxBody era -> [TxOut era]
+getCollateralOutputs (Conway _) tx = case collateralReturn' tx of SNothing -> []; SJust x -> [x]
 getCollateralOutputs (Babbage _) tx = case collateralReturn' tx of SNothing -> []; SJust x -> [x]
 getCollateralOutputs (Alonzo _) _ = []
 getCollateralOutputs (Mary _) _ = []
@@ -320,11 +350,14 @@ getWitnesses :: EraTx era => Proof era -> Tx era -> Witnesses era
 getWitnesses _ tx = tx ^. witsTxL
 
 primaryLanguage :: Proof era -> Maybe Language
+primaryLanguage (Conway _) = Just PlutusV2
 primaryLanguage (Babbage _) = Just PlutusV2
 primaryLanguage (Alonzo _) = Just PlutusV1
 primaryLanguage _ = Nothing
 
 alwaysTrue :: forall era. Proof era -> Maybe Language -> Natural -> Script era
+alwaysTrue (Conway _) (Just l) n = alwaysSucceeds @era l n
+alwaysTrue p@(Conway _) Nothing _ = allOf [] p
 alwaysTrue (Babbage _) (Just l) n = alwaysSucceeds @era l n
 alwaysTrue p@(Babbage _) Nothing _ = allOf [] p
 alwaysTrue (Alonzo _) (Just l) n = alwaysSucceeds @era l n
@@ -334,6 +367,8 @@ alwaysTrue p@(Allegra _) _ n = always n p
 alwaysTrue p@(Shelley _) _ n = always n p
 
 alwaysFalse :: forall era. Proof era -> Maybe Language -> Natural -> Script era
+alwaysFalse (Conway _) (Just l) n = alwaysFails @era l n
+alwaysFalse p@(Conway _) Nothing _ = anyOf [] p
 alwaysFalse (Babbage _) (Just l) n = alwaysFails @era l n
 alwaysFalse p@(Babbage _) Nothing _ = anyOf [] p
 alwaysFalse (Alonzo _) (Just l) n = alwaysFails @era l n
@@ -366,6 +401,7 @@ createRUpdNonPulsing' proof model =
         Left err -> error ("Failed to calculate slots per epoch:\n" ++ show err)
         Right x -> x
    in (`runReader` testGlobals) $ case proof of
+        Conway _ -> createRUpdOld_ @era slotsPerEpoch bm ss reserves pp totalStake rs def
         Babbage _ -> createRUpdOld_ @era slotsPerEpoch bm ss reserves pp totalStake rs def
         Alonzo _ -> createRUpdOld_ @era slotsPerEpoch bm ss reserves pp totalStake rs def
         Mary _ -> createRUpdOld_ @era slotsPerEpoch bm ss reserves pp totalStake rs def
@@ -386,6 +422,7 @@ languagesUsed proof tx utxo sNeeded = case proof of
   (Mary _) -> Set.empty
   (Alonzo _) -> Cardano.Ledger.Alonzo.TxInfo.languages tx utxo sNeeded
   (Babbage _) -> Cardano.Ledger.Alonzo.TxInfo.languages tx utxo sNeeded
+  (Conway _) -> Cardano.Ledger.Alonzo.TxInfo.languages tx utxo sNeeded
 
 -- | Compute the total Ada from Ada pots within 't'
 class TotalAda t where
@@ -418,6 +455,7 @@ instance Reflect era => TotalAda (NewEpochState era) where
   totalAda nes = totalAda (nesEs nes)
 
 adaPots :: Proof era -> EpochState era -> AdaPots
+adaPots (Conway _) es = totalAdaPotsES es
 adaPots (Babbage _) es = totalAdaPotsES es
 adaPots (Alonzo _) es = totalAdaPotsES es
 adaPots (Mary _) es = totalAdaPotsES es

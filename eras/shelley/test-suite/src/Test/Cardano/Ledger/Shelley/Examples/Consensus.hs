@@ -24,7 +24,6 @@ import qualified Cardano.Ledger.Era as Era (Crypto)
 import Cardano.Ledger.Keys
 import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.SafeHash
-import Cardano.Ledger.Serialization
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.EpochBoundary
@@ -96,9 +95,7 @@ data ShelleyLedgerExamples era = ShelleyLedgerExamples
 -------------------------------------------------------------------------------}
 
 type ShelleyBasedEra' era =
-  ( ToCBORGroup (TxSeq era),
-    ToCBOR (Core.Witnesses era),
-    Default (State (Core.EraRule "PPUP" era)),
+  ( Default (State (Core.EraRule "PPUP" era)),
     PraosCrypto (Cardano.Ledger.Era.Crypto era)
   )
 
@@ -251,7 +248,7 @@ examplePoolDistr =
 
 exampleNonMyopicRewards ::
   forall c.
-  PraosCrypto c =>
+  CC.Crypto c =>
   Map
     (Either Coin (Credential 'Staking c))
     (Map (KeyHash 'StakePool c) Coin)
@@ -363,7 +360,7 @@ exampleNewEpochState value ppp pp =
         (activeSlotCoeff testGlobals)
         10
 
-exampleLedgerChainDepState :: forall c. PraosCrypto c => Word64 -> ChainDepState c
+exampleLedgerChainDepState :: forall c. CC.Crypto c => Word64 -> ChainDepState c
 exampleLedgerChainDepState seed =
   ChainDepState
     { csProtocol =

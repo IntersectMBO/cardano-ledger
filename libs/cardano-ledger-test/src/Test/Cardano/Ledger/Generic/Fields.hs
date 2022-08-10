@@ -276,6 +276,24 @@ initialTxBody (Babbage _) =
     SNothing
     SNothing
     SNothing
+initialTxBody (Conway _) =
+  BabbageTxBody
+    Set.empty
+    Set.empty
+    Set.empty
+    Seq.empty
+    SNothing
+    SNothing
+    Seq.empty
+    initWdrl
+    (Coin 0)
+    initVI
+    SNothing
+    Set.empty
+    initValue
+    SNothing
+    SNothing
+    SNothing
 
 initialWitnesses :: Era era => Proof era -> Witnesses era
 initialWitnesses (Shelley _) = WitnessSet Set.empty Map.empty Set.empty
@@ -283,6 +301,7 @@ initialWitnesses (Allegra _) = WitnessSet Set.empty Map.empty Set.empty
 initialWitnesses (Mary _) = WitnessSet Set.empty Map.empty Set.empty
 initialWitnesses (Alonzo _) = TxWitness mempty mempty mempty mempty (Redeemers mempty)
 initialWitnesses (Babbage _) = TxWitness mempty mempty mempty mempty (Redeemers mempty)
+initialWitnesses (Conway _) = TxWitness mempty mempty mempty mempty (Redeemers mempty)
 
 initialTx :: forall era. Proof era -> Tx era
 initialTx era@(Shelley _) = ShelleyTx (initialTxBody era) (initialWitnesses era) SNothing
@@ -295,6 +314,12 @@ initialTx era@(Alonzo _) =
     (IsValid True)
     SNothing
 initialTx era@(Babbage _) =
+  AlonzoTx
+    (initialTxBody era)
+    (initialWitnesses era)
+    (IsValid True)
+    SNothing
+initialTx era@(Conway _) =
   AlonzoTx
     (initialTxBody era)
     (initialWitnesses era)
@@ -315,6 +340,7 @@ initialTxOut wit@(Allegra _) = ShelleyTxOut (initialAddr wit) (Coin 0)
 initialTxOut wit@(Mary _) = ShelleyTxOut (initialAddr wit) (inject (Coin 0))
 initialTxOut wit@(Alonzo _) = AlonzoTxOut (initialAddr wit) (inject (Coin 0)) SNothing
 initialTxOut wit@(Babbage _) = BabbageTxOut (initialAddr wit) (inject (Coin 0)) NoDatum SNothing
+initialTxOut wit@(Conway _) = BabbageTxOut (initialAddr wit) (inject (Coin 0)) NoDatum SNothing
 
 initialPParams :: forall era. Proof era -> PParams era
 initialPParams (Shelley _) = def
@@ -322,10 +348,13 @@ initialPParams (Allegra _) = def
 initialPParams (Mary _) = def
 initialPParams (Alonzo _) = def
 initialPParams (Babbage _) = def
+initialPParams (Conway _) = def
 
 -- ============================================================
 
 abstractTx :: Proof era -> Tx era -> [TxField era]
+abstractTx (Conway _) (AlonzoTx txBody wit v auxdata) =
+  [Body txBody, Witnesses wit, Valid v, AuxData auxdata]
 abstractTx (Babbage _) (AlonzoTx txBody wit v auxdata) =
   [Body txBody, Witnesses wit, Valid v, AuxData auxdata]
 abstractTx (Alonzo _) (AlonzoTx txBody wit v auxdata) =
@@ -342,6 +371,24 @@ abstractTxBody (Alonzo _) (AlonzoTxBody inp col out cert wdrl fee vldt up req mn
   [ Inputs inp,
     Collateral col,
     Outputs out,
+    Certs cert,
+    Wdrls wdrl,
+    Txfee fee,
+    Vldt vldt,
+    Update up,
+    ReqSignerHashes req,
+    Mint mnt,
+    WppHash sih,
+    AdHash adh,
+    Txnetworkid net
+  ]
+abstractTxBody (Conway _) (BabbageTxBody inp col ref out colret totcol cert wdrl fee vldt up req mnt sih adh net) =
+  [ Inputs inp,
+    Collateral col,
+    RefInputs ref,
+    Outputs (sizedValue <$> out),
+    CollateralReturn (sizedValue <$> colret),
+    TotalCol totcol,
     Certs cert,
     Wdrls wdrl,
     Txfee fee,
@@ -386,6 +433,8 @@ abstractWitnesses (Alonzo _) (TxWitness key boot scripts dats red) =
   [AddrWits key, ScriptWits scripts, BootWits boot, DataWits dats, RdmrWits red]
 abstractWitnesses (Babbage _) (TxWitness key boot scripts dats red) =
   [AddrWits key, ScriptWits scripts, BootWits boot, DataWits dats, RdmrWits red]
+abstractWitnesses (Conway _) (TxWitness key boot scripts dats red) =
+  [AddrWits key, ScriptWits scripts, BootWits boot, DataWits dats, RdmrWits red]
 
 abstractTxOut :: Era era => Proof era -> TxOut era -> [TxOutField era]
 abstractTxOut (Shelley _) (ShelleyTxOut addr c) = [Address addr, Amount c]
@@ -393,6 +442,8 @@ abstractTxOut (Allegra _) (ShelleyTxOut addr c) = [Address addr, Amount c]
 abstractTxOut (Mary _) (ShelleyTxOut addr val) = [Address addr, Amount val]
 abstractTxOut (Alonzo _) (AlonzoTxOut addr val d) = [Address addr, Amount val, DHash d]
 abstractTxOut (Babbage _) (BabbageTxOut addr val d refscr) =
+  [Address addr, Amount val, FDatum d, RefScript refscr]
+abstractTxOut (Conway _) (BabbageTxOut addr val d refscr) =
   [Address addr, Amount val, FDatum d, RefScript refscr]
 
 -- =================================================================

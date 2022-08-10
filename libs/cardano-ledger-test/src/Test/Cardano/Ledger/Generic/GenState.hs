@@ -387,6 +387,7 @@ validTxOut ::
 validTxOut proof m _txin txout = case txoutFields proof txout of
   (Addr _ (KeyHashObj _) _, _, _) -> True
   (Addr _ (ScriptHashObj h) _, _, _) -> case (proof, Map.lookup h m) of
+    (Conway _, Just (PlutusScript _ _)) -> True
     (Babbage _, Just (PlutusScript _ _)) -> True
     (Alonzo _, Just (PlutusScript _ _)) -> True
     (Shelley _, Just _msig) -> True
@@ -772,6 +773,7 @@ genValidityInterval (SlotNo s) = do
 -- Adds to gsScripts and gsPlutusScripts
 genScript :: forall era. Reflect era => Proof era -> Tag -> GenRS era (ScriptHash (Crypto era))
 genScript proof tag = case proof of
+  Conway _ -> elementsT [genTimelockScript proof, genPlutusScript proof tag]
   Babbage _ -> elementsT [genTimelockScript proof, genPlutusScript proof tag]
   Alonzo _ -> elementsT [genTimelockScript proof, genPlutusScript proof tag]
   Mary _ -> genTimelockScript proof
@@ -818,6 +820,7 @@ genTimelockScript proof = do
   tlscript <- genNestedTimelock (2 :: Natural)
   let corescript :: Script era
       corescript = case proof of
+        Conway _ -> TimelockScript tlscript
         Babbage _ -> TimelockScript tlscript
         Alonzo _ -> TimelockScript tlscript
         Mary _ -> tlscript
@@ -871,6 +874,8 @@ genPlutusScript proof tag = do
   -- For reasons unknown, this number differs from Alonzo to Babbage
   -- Perhaps because Babbage is using PlutusV2 scripts?
   let numArgs = case (proof, tag) of
+        (Conway _, Spend) -> 2
+        (Conway _, _) -> 1
         (Babbage _, Spend) -> 2
         (Babbage _, _) -> 1
         (_, Spend) -> 3
@@ -887,7 +892,13 @@ genPlutusScript proof tag = do
       corescript = case proof of
         Alonzo _ -> script
         Babbage _ -> script
-        _ -> error ("Only Alonzo and Babbage have PlutusScripts. " ++ show proof ++ " does not.")
+        Conway _ -> script
+        _ ->
+          error
+            ( "PlutusScripts are available starting in the Alonzo era. "
+                ++ show proof
+                ++ " does not support PlutusScripts."
+            )
       scriptHash = hashScript @era corescript
   modify $ \ts@GenState {gsPlutusScripts} ->
     ts {gsPlutusScripts = Map.insert (scriptHash, tag) (IsValid isValid, corescript) gsPlutusScripts}

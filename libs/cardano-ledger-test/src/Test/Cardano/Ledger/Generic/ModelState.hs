@@ -228,6 +228,7 @@ nonMyopicZero :: NonMyopic crypto
 nonMyopicZero = NonMyopic Map.empty mempty
 
 pPUPStateZeroByProof :: Proof era -> State (Core.EraRule "PPUP" era)
+pPUPStateZeroByProof (Conway _) = PPUPState proposedPPUpdatesZero proposedPPUpdatesZero
 pPUPStateZeroByProof (Babbage _) = PPUPState proposedPPUpdatesZero proposedPPUpdatesZero
 pPUPStateZeroByProof (Alonzo _) = PPUPState proposedPPUpdatesZero proposedPPUpdatesZero
 pPUPStateZeroByProof (Mary _) = PPUPState proposedPPUpdatesZero proposedPPUpdatesZero
@@ -235,6 +236,7 @@ pPUPStateZeroByProof (Allegra _) = PPUPState proposedPPUpdatesZero proposedPPUpd
 pPUPStateZeroByProof (Shelley _) = PPUPState proposedPPUpdatesZero proposedPPUpdatesZero
 
 pParamsZeroByProof :: Proof era -> Core.PParams era
+pParamsZeroByProof (Conway _) = def
 pParamsZeroByProof (Babbage _) = def
 pParamsZeroByProof (Alonzo _) = def
 pParamsZeroByProof (Mary _) = def
@@ -269,6 +271,7 @@ newEpochStateZero =
 
 stashedAVVMAddressesZero :: Proof era -> StashedAVVMAddresses era
 stashedAVVMAddressesZero (Shelley _) = utxoZero
+stashedAVVMAddressesZero (Conway _) = ()
 stashedAVVMAddressesZero (Babbage _) = ()
 stashedAVVMAddressesZero (Alonzo _) = ()
 stashedAVVMAddressesZero (Mary _) = ()

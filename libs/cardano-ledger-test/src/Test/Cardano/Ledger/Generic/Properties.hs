@@ -73,6 +73,9 @@ import Test.Tasty.QuickCheck (testProperty)
 -- Top level generators of TRC
 
 genTxAndUTXOState :: Reflect era => Proof era -> GenSize -> Gen (TRC (EraRule "UTXOW" era), GenState era)
+genTxAndUTXOState proof@(Conway _) gsize = do
+  (Box _ (TRC (LedgerEnv slotNo _ pp _, ledgerState, vtx)) genState) <- genTxAndLEDGERState proof gsize
+  pure (TRC (UtxoEnv slotNo pp mempty (GenDelegs mempty), lsUTxOState ledgerState, vtx), genState)
 genTxAndUTXOState proof@(Babbage _) gsize = do
   (Box _ (TRC (LedgerEnv slotNo _ pp _, ledgerState, vtx)) genState) <- genTxAndLEDGERState proof gsize
   pure (TRC (UtxoEnv slotNo pp mempty (GenDelegs mempty), lsUTxOState ledgerState, vtx), genState)
@@ -216,7 +219,9 @@ txPreserveAda genSize =
       testProperty "Alonzo ValidTx preserves ADA" $
         forAll (genTxAndLEDGERState (Alonzo Mock) genSize) (testTxValidForLEDGER (Alonzo Mock)),
       testProperty "Babbage ValidTx preserves ADA" $
-        forAll (genTxAndLEDGERState (Babbage Mock) genSize) (testTxValidForLEDGER (Babbage Mock))
+        forAll (genTxAndLEDGERState (Babbage Mock) genSize) (testTxValidForLEDGER (Babbage Mock)),
+      testProperty "Conway ValidTx preserves ADA" $
+        forAll (genTxAndLEDGERState (Conway Mock) genSize) (testTxValidForLEDGER (Conway Mock))
     ]
 
 -- | Ada is preserved over a trace of length 100
@@ -265,7 +270,8 @@ incrementalStake :: GenSize -> TestTree
 incrementalStake genSize =
   testGroup
     "Incremental Stake invariant holds"
-    [ incrementStakeInvariant (Babbage Mock) genSize,
+    [ incrementStakeInvariant (Conway Mock) genSize,
+      incrementStakeInvariant (Babbage Mock) genSize,
       incrementStakeInvariant (Alonzo Mock) genSize,
       incrementStakeInvariant (Mary Mock) genSize,
       incrementStakeInvariant (Allegra Mock) genSize,
@@ -326,14 +332,17 @@ main8 = test 100 (Babbage Mock)
 test :: ReflectC (Crypto era) => Int -> Proof era -> IO ()
 test n proof = defaultMain $
   case proof of
+    Conway _ ->
+      testProperty "Conway ValidTx preserves ADA" $
+        withMaxSuccess n (forAll (genTxAndLEDGERState proof def) (testTxValidForLEDGER proof))
     Babbage _ ->
       testProperty "Babbage ValidTx preserves ADA" $
         withMaxSuccess n (forAll (genTxAndLEDGERState proof def) (testTxValidForLEDGER proof))
     Alonzo _ ->
-      testProperty "Babbage ValidTx preserves ADA" $
+      testProperty "Alonzo ValidTx preserves ADA" $
         withMaxSuccess n (forAll (genTxAndLEDGERState proof def) (testTxValidForLEDGER proof))
     Shelley _ ->
-      testProperty "Babbage ValidTx preserves ADA" $
+      testProperty "Shelley ValidTx preserves ADA" $
         withMaxSuccess n (forAll (genTxAndLEDGERState proof def) (testTxValidForLEDGER proof))
     other -> error ("NO Test in era " ++ show other)
 

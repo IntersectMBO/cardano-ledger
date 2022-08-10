@@ -97,7 +97,7 @@ import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Scriptic (PostShelley, Scriptic (..))
 import Test.Cardano.Ledger.Generic.Updaters
 import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair)
-import Test.Tasty (TestTree, testGroup)
+import Test.Tasty
 import Test.Tasty.HUnit (Assertion, testCase)
 
 someKeys :: forall era. Era era => Proof era -> KeyPair 'Payment (Crypto era)
@@ -130,6 +130,7 @@ evenData3ArgsScript proof =
     Allegra _ -> error unsupported
     Alonzo _ -> evenData3ArgsLang PlutusV1
     Babbage _ -> evenData3ArgsLang PlutusV2
+    Conway _ -> evenData3ArgsLang PlutusV2
   where
     unsupported = "Plutus scripts are not supported in:" ++ show proof
     evenData3ArgsLang lang =
@@ -777,6 +778,7 @@ referenceInputWithPlutusV1Script pf =
 
 malformedScript :: forall era. Proof era -> ShortByteString -> Script era
 malformedScript pf s = case pf of
+  Conway {} -> ms
   Babbage {} -> ms
   Alonzo {} -> ms
   x@Shelley {} -> er x
@@ -960,6 +962,10 @@ class BabbageBased era failure where
   fromUtxowB :: BabbageUtxowPred era -> failure
 
 instance BabbageBased (BabbageEra c) (BabbageUtxowPred (BabbageEra c)) where
+  fromUtxoB = UtxoFailure
+  fromUtxowB = id
+
+instance BabbageBased (ConwayEra c) (BabbageUtxowPred (ConwayEra c)) where
   fromUtxoB = UtxoFailure
   fromUtxowB = id
 
@@ -1243,4 +1249,6 @@ babbageFeatures :: TestTree
 babbageFeatures =
   testGroup
     "Babbage Features"
-    [genericBabbageFeatures (Babbage Mock)]
+    [ genericBabbageFeatures (Babbage Mock),
+      genericBabbageFeatures (Conway Mock)
+    ]
