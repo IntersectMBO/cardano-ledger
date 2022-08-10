@@ -12,9 +12,9 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Shelley.Rules.Epoch
-  ( EPOCH,
-    EpochPredicateFailure (..),
-    EpochEvent (..),
+  ( ShelleyEPOCH,
+    ShelleyEpochPredFailure (..),
+    ShelleyEpochEvent (..),
     PredicateFailure,
   )
 where
@@ -45,13 +45,13 @@ import Cardano.Ledger.Shelley.LedgerState
   )
 import Cardano.Ledger.Shelley.Rewards ()
 import Cardano.Ledger.Shelley.Rules.PoolReap
-  ( POOLREAP,
-    PoolreapEvent,
-    PoolreapPredicateFailure,
-    PoolreapState (..),
+  ( ShelleyPOOLREAP,
+    ShelleyPoolreapEvent,
+    ShelleyPoolreapPredFailure,
+    ShelleyPoolreapState (..),
   )
-import Cardano.Ledger.Shelley.Rules.Snap (SNAP, SnapEvent, SnapPredicateFailure)
-import Cardano.Ledger.Shelley.Rules.Upec (UPEC, UpecPredicateFailure)
+import Cardano.Ledger.Shelley.Rules.Snap (ShelleySNAP, ShelleySnapPredFailure, SnapEvent)
+import Cardano.Ledger.Shelley.Rules.Upec (ShelleyUPEC, ShelleyUpecPredFailure)
 import Cardano.Ledger.Slot (EpochNo)
 import Control.SetAlgebra (eval, (⨃))
 import Control.State.Transition
@@ -69,9 +69,9 @@ import GHC.Generics (Generic)
 import GHC.Records (HasField)
 import NoThunks.Class (NoThunks (..))
 
-data EPOCH era
+data ShelleyEPOCH era
 
-data EpochPredicateFailure era
+data ShelleyEpochPredFailure era
   = PoolReapFailure (PredicateFailure (EraRule "POOLREAP" era)) -- Subtransition Failures
   | SnapFailure (PredicateFailure (EraRule "SNAP" era)) -- Subtransition Failures
   | UpecFailure (PredicateFailure (EraRule "UPEC" era)) -- Subtransition Failures
@@ -82,31 +82,31 @@ deriving stock instance
     Eq (PredicateFailure (EraRule "SNAP" era)),
     Eq (PredicateFailure (EraRule "UPEC" era))
   ) =>
-  Eq (EpochPredicateFailure era)
+  Eq (ShelleyEpochPredFailure era)
 
 deriving stock instance
   ( Show (PredicateFailure (EraRule "POOLREAP" era)),
     Show (PredicateFailure (EraRule "SNAP" era)),
     Show (PredicateFailure (EraRule "UPEC" era))
   ) =>
-  Show (EpochPredicateFailure era)
+  Show (ShelleyEpochPredFailure era)
 
-data EpochEvent era
+data ShelleyEpochEvent era
   = PoolReapEvent (Event (EraRule "POOLREAP" era))
   | SnapEvent (Event (EraRule "SNAP" era))
   | UpecEvent (Event (EraRule "UPEC" era))
 
 instance
   ( EraTxOut era,
-    Embed (EraRule "SNAP" era) (EPOCH era),
+    Embed (EraRule "SNAP" era) (ShelleyEPOCH era),
     Environment (EraRule "SNAP" era) ~ LedgerState era,
     State (EraRule "SNAP" era) ~ SnapShots (Crypto era),
     Signal (EraRule "SNAP" era) ~ (),
-    Embed (EraRule "POOLREAP" era) (EPOCH era),
+    Embed (EraRule "POOLREAP" era) (ShelleyEPOCH era),
     Environment (EraRule "POOLREAP" era) ~ PParams era,
-    State (EraRule "POOLREAP" era) ~ PoolreapState era,
+    State (EraRule "POOLREAP" era) ~ ShelleyPoolreapState era,
     Signal (EraRule "POOLREAP" era) ~ EpochNo,
-    Embed (EraRule "UPEC" era) (EPOCH era),
+    Embed (EraRule "UPEC" era) (ShelleyEPOCH era),
     Environment (EraRule "UPEC" era) ~ EpochState era,
     State (EraRule "UPEC" era) ~ UpecState era,
     Signal (EraRule "UPEC" era) ~ (),
@@ -115,14 +115,14 @@ instance
     HasField "_keyDeposit" (PParams era) Coin,
     HasField "_poolDeposit" (PParams era) Coin
   ) =>
-  STS (EPOCH era)
+  STS (ShelleyEPOCH era)
   where
-  type State (EPOCH era) = EpochState era
-  type Signal (EPOCH era) = EpochNo
-  type Environment (EPOCH era) = ()
-  type BaseM (EPOCH era) = ShelleyBase
-  type PredicateFailure (EPOCH era) = EpochPredicateFailure era
-  type Event (EPOCH era) = EpochEvent era
+  type State (ShelleyEPOCH era) = EpochState era
+  type Signal (ShelleyEPOCH era) = EpochNo
+  type Environment (ShelleyEPOCH era) = ()
+  type BaseM (ShelleyEPOCH era) = ShelleyBase
+  type PredicateFailure (ShelleyEPOCH era) = ShelleyEpochPredFailure era
+  type Event (ShelleyEPOCH era) = ShelleyEpochEvent era
   transitionRules = [epochTransition]
 
 instance
@@ -130,26 +130,26 @@ instance
     NoThunks (PredicateFailure (EraRule "SNAP" era)),
     NoThunks (PredicateFailure (EraRule "UPEC" era))
   ) =>
-  NoThunks (EpochPredicateFailure era)
+  NoThunks (ShelleyEpochPredFailure era)
 
 epochTransition ::
   forall era.
-  ( Embed (EraRule "SNAP" era) (EPOCH era),
+  ( Embed (EraRule "SNAP" era) (ShelleyEPOCH era),
     Environment (EraRule "SNAP" era) ~ LedgerState era,
     State (EraRule "SNAP" era) ~ SnapShots (Crypto era),
     Signal (EraRule "SNAP" era) ~ (),
-    Embed (EraRule "POOLREAP" era) (EPOCH era),
+    Embed (EraRule "POOLREAP" era) (ShelleyEPOCH era),
     Environment (EraRule "POOLREAP" era) ~ PParams era,
-    State (EraRule "POOLREAP" era) ~ PoolreapState era,
+    State (EraRule "POOLREAP" era) ~ ShelleyPoolreapState era,
     Signal (EraRule "POOLREAP" era) ~ EpochNo,
-    Embed (EraRule "UPEC" era) (EPOCH era),
+    Embed (EraRule "UPEC" era) (ShelleyEPOCH era),
     Environment (EraRule "UPEC" era) ~ EpochState era,
     State (EraRule "UPEC" era) ~ UpecState era,
     Signal (EraRule "UPEC" era) ~ (),
     HasField "_keyDeposit" (PParams era) Coin,
     HasField "_poolDeposit" (PParams era) Coin
   ) =>
-  TransitionRule (EPOCH era)
+  TransitionRule (ShelleyEPOCH era)
 epochTransition = do
   TRC
     ( _,
@@ -209,32 +209,32 @@ epochTransition = do
 
 instance
   ( EraTxOut era,
-    PredicateFailure (EraRule "SNAP" era) ~ SnapPredicateFailure era,
+    PredicateFailure (EraRule "SNAP" era) ~ ShelleySnapPredFailure era,
     Event (EraRule "SNAP" era) ~ SnapEvent era
   ) =>
-  Embed (SNAP era) (EPOCH era)
+  Embed (ShelleySNAP era) (ShelleyEPOCH era)
   where
   wrapFailed = SnapFailure
   wrapEvent = SnapEvent
 
 instance
   ( Era era,
-    STS (POOLREAP era),
-    PredicateFailure (EraRule "POOLREAP" era) ~ PoolreapPredicateFailure era,
-    Event (EraRule "POOLREAP" era) ~ PoolreapEvent era
+    STS (ShelleyPOOLREAP era),
+    PredicateFailure (EraRule "POOLREAP" era) ~ ShelleyPoolreapPredFailure era,
+    Event (EraRule "POOLREAP" era) ~ ShelleyPoolreapEvent era
   ) =>
-  Embed (POOLREAP era) (EPOCH era)
+  Embed (ShelleyPOOLREAP era) (ShelleyEPOCH era)
   where
   wrapFailed = PoolReapFailure
   wrapEvent = PoolReapEvent
 
 instance
   ( Era era,
-    STS (UPEC era),
-    PredicateFailure (EraRule "UPEC" era) ~ UpecPredicateFailure era,
+    STS (ShelleyUPEC era),
+    PredicateFailure (EraRule "UPEC" era) ~ ShelleyUpecPredFailure era,
     Event (EraRule "UPEC" era) ~ Void
   ) =>
-  Embed (UPEC era) (EPOCH era)
+  Embed (ShelleyUPEC era) (ShelleyEPOCH era)
   where
   wrapFailed = UpecFailure
   wrapEvent = UpecEvent

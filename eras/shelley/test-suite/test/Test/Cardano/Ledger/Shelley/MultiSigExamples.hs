@@ -46,7 +46,7 @@ import Cardano.Ledger.Keys
   )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.API (UTXOW)
+import Cardano.Ledger.Shelley.API (ShelleyUTXOW)
 import Cardano.Ledger.Shelley.LedgerState
   ( LedgerState (..),
     UTxOState,
@@ -59,7 +59,7 @@ import Cardano.Ledger.Shelley.PParams
     emptyPParams,
     _maxTxSize,
   )
-import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
+import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoEnv (..))
 import Cardano.Ledger.Shelley.Scripts
   ( MultiSig,
     pattern RequireAllOf,
@@ -221,7 +221,7 @@ initialUTxOState ::
   [(MultiSig c, Coin)] ->
   ( TxId c,
     Either
-      [PredicateFailure (UTXOW (ShelleyEra c))]
+      [PredicateFailure (ShelleyUTXOW (ShelleyEra c))]
       (UTxOState (ShelleyEra c))
   )
 initialUTxOState aliceKeep msigs =
@@ -245,7 +245,7 @@ initialUTxOState aliceKeep msigs =
               Nothing
        in ( txid $ tx ^. bodyTxL,
             runShelleyBase $
-              applySTSTest @(UTXOW (ShelleyEra c))
+              applySTSTest @(ShelleyUTXOW (ShelleyEra c))
                 ( TRC
                     ( UtxoEnv
                         (SlotNo 0)
@@ -273,7 +273,7 @@ applyTxWithScript ::
   Wdrl c ->
   Coin ->
   [KeyPair 'Witness c] ->
-  Either [PredicateFailure (UTXOW (ShelleyEra c))] (UTxOState (ShelleyEra c))
+  Either [PredicateFailure (ShelleyUTXOW (ShelleyEra c))] (UTxOState (ShelleyEra c))
 applyTxWithScript lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
   where
     (txId, initUtxo) = initialUTxOState aliceKeep lockScripts
@@ -299,7 +299,7 @@ applyTxWithScript lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
         Nothing
     utxoSt' =
       runShelleyBase $
-        applySTSTest @(UTXOW (ShelleyEra c))
+        applySTSTest @(ShelleyUTXOW (ShelleyEra c))
           ( TRC
               ( UtxoEnv
                   (SlotNo 0)

@@ -11,11 +11,11 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Shelley.Rules.PoolReap
-  ( POOLREAP,
-    PoolreapEvent (..),
-    PoolreapState (..),
+  ( ShelleyPOOLREAP,
+    ShelleyPoolreapEvent (..),
+    ShelleyPoolreapState (..),
     PredicateFailure,
-    PoolreapPredicateFailure,
+    ShelleyPoolreapPredFailure,
   )
 where
 
@@ -55,46 +55,46 @@ import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks (..))
 
-data POOLREAP era
+data ShelleyPOOLREAP era
 
-data PoolreapState era = PoolreapState
+data ShelleyPoolreapState era = PoolreapState
   { prUTxOSt :: UTxOState era,
     prAcnt :: AccountState,
     prDState :: DState (Crypto era),
     prPState :: PState (Crypto era)
   }
 
-deriving stock instance Show (UTxOState era) => Show (PoolreapState era)
+deriving stock instance Show (UTxOState era) => Show (ShelleyPoolreapState era)
 
-data PoolreapPredicateFailure era -- No predicate failures
+data ShelleyPoolreapPredFailure era -- No predicate failures
   deriving (Show, Eq, Generic)
 
-data PoolreapEvent era = RetiredPools
+data ShelleyPoolreapEvent era = RetiredPools
   { refundPools :: Map.Map (Credential 'Staking (Crypto era)) (Map.Map (KeyHash 'StakePool (Crypto era)) Coin),
     unclaimedPools :: Map.Map (Credential 'Staking (Crypto era)) (Map.Map (KeyHash 'StakePool (Crypto era)) Coin),
     epochNo :: EpochNo
   }
 
-instance NoThunks (PoolreapPredicateFailure era)
+instance NoThunks (ShelleyPoolreapPredFailure era)
 
-instance Default (UTxOState era) => Default (PoolreapState era) where
+instance Default (UTxOState era) => Default (ShelleyPoolreapState era) where
   def = PoolreapState def def def def
 
 instance
   forall era.
   ( Typeable era,
-    Default (PoolreapState era),
+    Default (ShelleyPoolreapState era),
     HasField "_poolDeposit" (PParams era) Coin,
     HasField "_keyDeposit" (PParams era) Coin
   ) =>
-  STS (POOLREAP era)
+  STS (ShelleyPOOLREAP era)
   where
-  type State (POOLREAP era) = PoolreapState era
-  type Signal (POOLREAP era) = EpochNo
-  type Environment (POOLREAP era) = PParams era
-  type BaseM (POOLREAP era) = ShelleyBase
-  type PredicateFailure (POOLREAP era) = PoolreapPredicateFailure era
-  type Event (POOLREAP era) = PoolreapEvent era
+  type State (ShelleyPOOLREAP era) = ShelleyPoolreapState era
+  type Signal (ShelleyPOOLREAP era) = EpochNo
+  type Environment (ShelleyPOOLREAP era) = PParams era
+  type BaseM (ShelleyPOOLREAP era) = ShelleyBase
+  type PredicateFailure (ShelleyPOOLREAP era) = ShelleyPoolreapPredFailure era
+  type Event (ShelleyPOOLREAP era) = ShelleyPoolreapEvent era
   transitionRules = [poolReapTransition]
   assertions =
     [ PostCondition
@@ -114,7 +114,7 @@ instance
 poolReapTransition ::
   forall era.
   HasField "_poolDeposit" (PParams era) Coin =>
-  TransitionRule (POOLREAP era)
+  TransitionRule (ShelleyPOOLREAP era)
 poolReapTransition = do
   TRC (pp, PoolreapState us a ds ps, e) <- judgmentContext
 

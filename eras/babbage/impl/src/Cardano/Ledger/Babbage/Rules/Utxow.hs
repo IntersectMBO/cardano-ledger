@@ -49,10 +49,10 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (DSIGN, HASH)
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest, runTestOnSignal)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), witsFromTxWitnesses)
-import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
+import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoEnv (..))
 import Cardano.Ledger.Shelley.Rules.Utxow
-  ( UtxowEvent (UtxoEvent),
-    UtxowPredicateFailure,
+  ( ShelleyUtxowEvent (UtxoEvent),
+    ShelleyUtxowPredFailure,
     validateNeededWitnesses,
   )
 import qualified Cardano.Ledger.Shelley.Rules.Utxow as Shelley
@@ -101,7 +101,7 @@ data BabbageUtxowPred era
 
 deriving instance
   ( Era era,
-    Show (UtxowPredicateFailure era),
+    Show (ShelleyUtxowPredFailure era),
     Show (PredicateFailure (EraRule "UTXO" era)),
     Show (PredicateFailure (EraRule "UTXOS" era)),
     Show (Script era),
@@ -113,7 +113,7 @@ deriving instance
 
 deriving instance
   ( Era era,
-    Eq (UtxowPredicateFailure era),
+    Eq (ShelleyUtxowPredFailure era),
     Eq (PredicateFailure (EraRule "UTXO" era)),
     Eq (PredicateFailure (EraRule "UTXOS" era)),
     Eq (TxOut era),
@@ -124,7 +124,7 @@ deriving instance
 instance Inject (UtxowPredicateFail era) (BabbageUtxowPred era) where
   inject = FromAlonzoUtxowFail
 
-instance Inject (UtxowPredicateFailure era) (BabbageUtxowPred era) where
+instance Inject (ShelleyUtxowPredFailure era) (BabbageUtxowPred era) where
   inject = FromAlonzoUtxowFail . WrappedShelleyEraFailure
 
 instance
@@ -185,7 +185,7 @@ babbageMissingScripts ::
   Set (ScriptHash (Crypto era)) ->
   Set (ScriptHash (Crypto era)) ->
   Set (ScriptHash (Crypto era)) ->
-  Test (Shelley.UtxowPredicateFailure era)
+  Test (ShelleyUtxowPredFailure era)
 babbageMissingScripts _ sNeeded sRefs sReceived =
   sequenceA_
     [ failureUnless (Set.null extra) $ Shelley.ExtraneousScriptWitnessesUTXOW extra,
@@ -206,7 +206,7 @@ validateFailedBabbageScripts ::
   Tx era ->
   UTxO era ->
   Set (ScriptHash (Crypto era)) ->
-  Test (Shelley.UtxowPredicateFailure era)
+  Test (ShelleyUtxowPredFailure era)
 validateFailedBabbageScripts tx utxo neededHashes =
   let phase1Map = getPhase1 (txscripts utxo tx)
       failedScripts =
@@ -277,7 +277,7 @@ babbageUtxowTransition ::
     Signable (DSIGN (Crypto era)) (Hash (HASH (Crypto era)) EraIndependentTxBody),
     -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (BabbageUTXOW era),
-    Environment (EraRule "UTXO" era) ~ UtxoEnv era,
+    Environment (EraRule "UTXO" era) ~ ShelleyUtxoEnv era,
     State (EraRule "UTXO" era) ~ UTxOState era,
     Signal (EraRule "UTXO" era) ~ AlonzoTx era
   ) =>
@@ -376,7 +376,7 @@ instance
     Script era ~ AlonzoScript era,
     -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (BabbageUTXOW era),
-    Environment (EraRule "UTXO" era) ~ UtxoEnv era,
+    Environment (EraRule "UTXO" era) ~ ShelleyUtxoEnv era,
     State (EraRule "UTXO" era) ~ UTxOState era,
     Signal (EraRule "UTXO" era) ~ AlonzoTx era,
     Eq (PredicateFailure (EraRule "UTXOS" era)),
@@ -386,7 +386,7 @@ instance
   where
   type State (BabbageUTXOW era) = UTxOState era
   type Signal (BabbageUTXOW era) = AlonzoTx era
-  type Environment (BabbageUTXOW era) = UtxoEnv era
+  type Environment (BabbageUTXOW era) = ShelleyUtxoEnv era
   type BaseM (BabbageUTXOW era) = ShelleyBase
   type PredicateFailure (BabbageUTXOW era) = BabbageUtxowPred era
   type Event (BabbageUTXOW era) = AlonzoUtxowEvent era

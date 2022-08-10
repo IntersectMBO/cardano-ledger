@@ -55,8 +55,8 @@ import Cardano.Ledger.Shelley.LedgerState
     updateStakeDistribution,
   )
 import Cardano.Ledger.Shelley.PParams (Update)
-import Cardano.Ledger.Shelley.Rules.Ppup (PPUP, PPUPEnv (..), PpupPredicateFailure)
-import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..), updateUTxOState)
+import Cardano.Ledger.Shelley.Rules.Ppup (ShelleyPPUP, ShelleyPPUPEnv (..), ShelleyPpupPredFailure)
+import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoEnv (..), updateUTxOState)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), totalDeposits)
 import qualified Cardano.Ledger.Val as Val
 import Control.Monad.Trans.Reader (asks)
@@ -89,7 +89,7 @@ instance
     HasField "_costmdls" (PParams era) CostModels,
     HasField "_protocolVersion" (PParams era) ProtVer,
     Embed (EraRule "PPUP" era) (BabbageUTXOS era),
-    Environment (EraRule "PPUP" era) ~ PPUPEnv era,
+    Environment (EraRule "PPUP" era) ~ ShelleyPPUPEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,
     Signal (EraRule "PPUP" era) ~ Maybe (Update era),
     ToCBOR (PredicateFailure (EraRule "PPUP" era)) -- Serializing the PredicateFailure
@@ -97,7 +97,7 @@ instance
   STS (BabbageUTXOS era)
   where
   type BaseM (BabbageUTXOS era) = ShelleyBase
-  type Environment (BabbageUTXOS era) = UtxoEnv era
+  type Environment (BabbageUTXOS era) = ShelleyUtxoEnv era
   type State (BabbageUTXOS era) = UTxOState era
   type Signal (BabbageUTXOS era) = AlonzoTx era
   type PredicateFailure (BabbageUTXOS era) = UtxosPredicateFailure era
@@ -106,11 +106,11 @@ instance
 
 instance
   ( Era era,
-    STS (PPUP era),
-    PredicateFailure (EraRule "PPUP" era) ~ PpupPredicateFailure era,
-    Event (EraRule "PPUP" era) ~ Event (PPUP era)
+    STS (ShelleyPPUP era),
+    PredicateFailure (EraRule "PPUP" era) ~ ShelleyPpupPredFailure era,
+    Event (EraRule "PPUP" era) ~ Event (ShelleyPPUP era)
   ) =>
-  Embed (PPUP era) (BabbageUTXOS era)
+  Embed (ShelleyPPUP era) (BabbageUTXOS era)
   where
   wrapFailed = UpdateFailure
   wrapEvent = AlonzoPpupToUtxosEvent
@@ -129,7 +129,7 @@ utxosTransition ::
     HasField "_poolDeposit" (PParams era) Coin,
     HasField "_costmdls" (PParams era) CostModels,
     HasField "_protocolVersion" (PParams era) ProtVer,
-    Environment (EraRule "PPUP" era) ~ PPUPEnv era,
+    Environment (EraRule "PPUP" era) ~ ShelleyPPUPEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,
     Signal (EraRule "PPUP" era) ~ Maybe (Update era),
     Embed (EraRule "PPUP" era) (BabbageUTXOS era),
@@ -152,7 +152,7 @@ scriptsYes ::
     Script era ~ AlonzoScript era,
     Witnesses era ~ TxWitness era,
     STS (BabbageUTXOS era),
-    Environment (EraRule "PPUP" era) ~ PPUPEnv era,
+    Environment (EraRule "PPUP" era) ~ ShelleyPPUPEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,
     Signal (EraRule "PPUP" era) ~ Maybe (Update era),
     Embed (EraRule "PPUP" era) (BabbageUTXOS era),

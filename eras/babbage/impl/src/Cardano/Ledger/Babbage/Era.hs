@@ -15,13 +15,16 @@ import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Mary.Value (MaryValue)
 import qualified Cardano.Ledger.Shelley.API as API
-import qualified Cardano.Ledger.Shelley.Rules.Epoch as Shelley
-import qualified Cardano.Ledger.Shelley.Rules.Mir as Shelley
-import qualified Cardano.Ledger.Shelley.Rules.Newpp as Shelley
-import qualified Cardano.Ledger.Shelley.Rules.Rupd as Shelley
-import qualified Cardano.Ledger.Shelley.Rules.Snap as Shelley
-import qualified Cardano.Ledger.Shelley.Rules.Tick as Shelley
-import qualified Cardano.Ledger.Shelley.Rules.Upec as Shelley
+import Cardano.Ledger.Shelley.Rules.Epoch (ShelleyEPOCH)
+import Cardano.Ledger.Shelley.Rules.Mir (ShelleyMIR)
+import Cardano.Ledger.Shelley.Rules.Newpp (ShelleyNEWPP)
+import Cardano.Ledger.Shelley.Rules.Rupd (ShelleyRUPD)
+import Cardano.Ledger.Shelley.Rules.Snap (ShelleySNAP)
+import Cardano.Ledger.Shelley.Rules.Tick
+  ( ShelleyTICK,
+    ShelleyTICKF,
+  )
+import Cardano.Ledger.Shelley.Rules.Upec (ShelleyUPEC)
 
 -- =====================================================
 
@@ -60,36 +63,36 @@ type instance EraRule "BBODY" (BabbageEra c) = AlonzoBBODY (BabbageEra c)
 
 -- Rules inherited from Shelley
 
-type instance EraRule "DELEG" (BabbageEra c) = API.DELEG (BabbageEra c)
+type instance EraRule "DELEG" (BabbageEra c) = API.ShelleyDELEG (BabbageEra c)
 
-type instance EraRule "DELEGS" (BabbageEra c) = API.DELEGS (BabbageEra c)
+type instance EraRule "DELEGS" (BabbageEra c) = API.ShelleyDELEGS (BabbageEra c)
 
-type instance EraRule "DELPL" (BabbageEra c) = API.DELPL (BabbageEra c)
+type instance EraRule "DELPL" (BabbageEra c) = API.ShelleyDELPL (BabbageEra c)
 
-type instance EraRule "EPOCH" (BabbageEra c) = Shelley.EPOCH (BabbageEra c)
+type instance EraRule "EPOCH" (BabbageEra c) = ShelleyEPOCH (BabbageEra c)
 
-type instance EraRule "LEDGERS" (BabbageEra c) = API.LEDGERS (BabbageEra c)
+type instance EraRule "LEDGERS" (BabbageEra c) = API.ShelleyLEDGERS (BabbageEra c)
 
-type instance EraRule "MIR" (BabbageEra c) = Shelley.MIR (BabbageEra c)
+type instance EraRule "MIR" (BabbageEra c) = ShelleyMIR (BabbageEra c)
 
-type instance EraRule "NEWEPOCH" (BabbageEra c) = API.NEWEPOCH (BabbageEra c)
+type instance EraRule "NEWEPOCH" (BabbageEra c) = API.ShelleyNEWEPOCH (BabbageEra c)
 
-type instance EraRule "NEWPP" (BabbageEra c) = Shelley.NEWPP (BabbageEra c)
+type instance EraRule "NEWPP" (BabbageEra c) = ShelleyNEWPP (BabbageEra c)
 
-type instance EraRule "POOL" (BabbageEra c) = API.POOL (BabbageEra c)
+type instance EraRule "POOL" (BabbageEra c) = API.ShelleyPOOL (BabbageEra c)
 
-type instance EraRule "POOLREAP" (BabbageEra c) = API.POOLREAP (BabbageEra c)
+type instance EraRule "POOLREAP" (BabbageEra c) = API.ShelleyPOOLREAP (BabbageEra c)
 
-type instance EraRule "PPUP" (BabbageEra c) = API.PPUP (BabbageEra c)
+type instance EraRule "PPUP" (BabbageEra c) = API.ShelleyPPUP (BabbageEra c)
 
-type instance EraRule "RUPD" (BabbageEra c) = Shelley.RUPD (BabbageEra c)
+type instance EraRule "RUPD" (BabbageEra c) = ShelleyRUPD (BabbageEra c)
 
-type instance EraRule "SNAP" (BabbageEra c) = Shelley.SNAP (BabbageEra c)
+type instance EraRule "SNAP" (BabbageEra c) = ShelleySNAP (BabbageEra c)
 
-type instance EraRule "TICK" (BabbageEra c) = Shelley.TICK (BabbageEra c)
+type instance EraRule "TICK" (BabbageEra c) = ShelleyTICK (BabbageEra c)
 
-type instance EraRule "TICKF" (BabbageEra c) = Shelley.TICKF (BabbageEra c)
+type instance EraRule "TICKF" (BabbageEra c) = ShelleyTICKF (BabbageEra c)
 
-type instance EraRule "UPEC" (BabbageEra c) = Shelley.UPEC (BabbageEra c)
+type instance EraRule "UPEC" (BabbageEra c) = ShelleyUPEC (BabbageEra c)
 
 -- =================================================

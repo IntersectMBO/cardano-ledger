@@ -14,10 +14,10 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState)
 import qualified Cardano.Ledger.Shelley.Rules.Ledger as Shelley
-import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv)
+import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoEnv)
 import Cardano.Ledger.Shelley.Rules.Utxow
-  ( UtxowEvent (..),
-    UtxowPredicateFailure (..),
+  ( ShelleyUtxowEvent (..),
+    ShelleyUtxowPredFailure (..),
     transitionRulesUTXOW,
   )
 import Cardano.Ledger.Shelley.Tx (ShelleyWitnesses)
@@ -46,7 +46,7 @@ instance
     Witnesses era ~ ShelleyWitnesses era,
     -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (UTXOW era),
-    Environment (EraRule "UTXO" era) ~ UtxoEnv era,
+    Environment (EraRule "UTXO" era) ~ ShelleyUtxoEnv era,
     State (EraRule "UTXO" era) ~ UTxOState era,
     Signal (EraRule "UTXO" era) ~ Tx era,
     HasField "_protocolVersion" (PParams era) ProtVer,
@@ -56,10 +56,10 @@ instance
   where
   type State (UTXOW era) = UTxOState era
   type Signal (UTXOW era) = Tx era
-  type Environment (UTXOW era) = UtxoEnv era
+  type Environment (UTXOW era) = ShelleyUtxoEnv era
   type BaseM (UTXOW era) = ShelleyBase
-  type PredicateFailure (UTXOW era) = UtxowPredicateFailure era
-  type Event (UTXOW era) = UtxowEvent era
+  type PredicateFailure (UTXOW era) = ShelleyUtxowPredFailure era
+  type Event (UTXOW era) = ShelleyUtxowEvent era
 
   transitionRules = [transitionRulesUTXOW]
 
@@ -81,10 +81,10 @@ instance
 instance
   ( Era era,
     STS (UTXOW era),
-    PredicateFailure (EraRule "UTXOW" era) ~ UtxowPredicateFailure era,
+    PredicateFailure (EraRule "UTXOW" era) ~ ShelleyUtxowPredFailure era,
     Event (EraRule "UTXOW" era) ~ Event (UTXOW era)
   ) =>
-  Embed (UTXOW era) (Shelley.LEDGER era)
+  Embed (UTXOW era) (Shelley.ShelleyLEDGER era)
   where
   wrapFailed = Shelley.UtxowFailure
   wrapEvent = Shelley.UtxowEvent

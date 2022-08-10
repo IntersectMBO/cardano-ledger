@@ -42,7 +42,7 @@ instance Mock c => Arbitrary (ShelleyTxBody (ShelleyEra c)) where
       <*> arbitrary
       <*> arbitrary
 
-instance Mock c => Arbitrary (STS.UtxoPredicateFailure (ShelleyEra c)) where
+instance Mock c => Arbitrary (STS.ShelleyUtxoPredFailure (ShelleyEra c)) where
   arbitrary = genericArbitraryU
   shrink _ = []
 

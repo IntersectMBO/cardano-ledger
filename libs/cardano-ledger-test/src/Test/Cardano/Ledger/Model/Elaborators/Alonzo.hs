@@ -28,10 +28,10 @@ import Cardano.Ledger.Shelley.API.Genesis (initialState)
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTxError (..))
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
 import Cardano.Ledger.Shelley.Rules.Ledger
-  ( LedgerPredicateFailure (..),
+  ( ShelleyLedgerPredFailure (..),
   )
 import Cardano.Ledger.Shelley.Rules.Utxow
-  ( UtxowPredicateFailure (..),
+  ( ShelleyUtxowPredFailure (..),
   )
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Protocol.TPraos.API (PraosCrypto)

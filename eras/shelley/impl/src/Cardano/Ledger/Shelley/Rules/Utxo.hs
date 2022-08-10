@@ -15,9 +15,9 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Shelley.Rules.Utxo
-  ( UTXO,
-    UtxoEnv (..),
-    UtxoPredicateFailure (..),
+  ( ShelleyUTXO,
+    ShelleyUtxoEnv (..),
+    ShelleyUtxoPredFailure (..),
     UtxoEvent (..),
     PredicateFailure,
     updateUTxOState,
@@ -67,10 +67,10 @@ import Cardano.Ledger.Shelley.PParams
     Update,
   )
 import Cardano.Ledger.Shelley.Rules.Ppup
-  ( PPUP,
-    PPUPEnv (..),
-    PpupEvent,
-    PpupPredicateFailure,
+  ( PpupEvent,
+    ShelleyPPUP,
+    ShelleyPPUPEnv (..),
+    ShelleyPpupPredFailure,
   )
 import Cardano.Ledger.Shelley.Tx
   ( ShelleyTx (..),
@@ -135,22 +135,22 @@ import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 import Validation (failureUnless)
 
-data UTXO era
+data ShelleyUTXO era
 
-data UtxoEnv era
+data ShelleyUtxoEnv era
   = UtxoEnv
       SlotNo
       (PParams era)
       (Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era)))
       (GenDelegs (Crypto era))
 
-deriving instance Show (PParams era) => Show (UtxoEnv era)
+deriving instance Show (PParams era) => Show (ShelleyUtxoEnv era)
 
 data UtxoEvent era
   = TotalDeposits Coin
   | UpdateEvent (Event (EraRule "PPUP" era))
 
-data UtxoPredicateFailure era
+data ShelleyUtxoPredFailure era
   = BadInputsUTxO
       !(Set (TxIn (Crypto era))) -- The bad transaction inputs
   | ExpiredUTxO
@@ -184,21 +184,21 @@ deriving stock instance
     Show (TxOut era),
     Show (PredicateFailure (EraRule "PPUP" era))
   ) =>
-  Show (UtxoPredicateFailure era)
+  Show (ShelleyUtxoPredFailure era)
 
 deriving stock instance
   ( Eq (Value era),
     Eq (TxOut era),
     Eq (PredicateFailure (EraRule "PPUP" era))
   ) =>
-  Eq (UtxoPredicateFailure era)
+  Eq (ShelleyUtxoPredFailure era)
 
 instance
   ( NoThunks (Value era),
     NoThunks (TxOut era),
     NoThunks (PredicateFailure (EraRule "PPUP" era))
   ) =>
-  NoThunks (UtxoPredicateFailure era)
+  NoThunks (ShelleyUtxoPredFailure era)
 
 instance
   ( Typeable era,
@@ -207,7 +207,7 @@ instance
     ToCBOR (TxOut era),
     ToCBOR (PredicateFailure (EraRule "PPUP" era))
   ) =>
-  ToCBOR (UtxoPredicateFailure era)
+  ToCBOR (ShelleyUtxoPredFailure era)
   where
   toCBOR = \case
     BadInputsUTxO ins ->
@@ -252,7 +252,7 @@ instance
     FromCBOR (TxOut era),
     FromCBOR (PredicateFailure (EraRule "PPUP" era))
   ) =>
-  FromCBOR (UtxoPredicateFailure era)
+  FromCBOR (ShelleyUtxoPredFailure era)
   where
   fromCBOR =
     decodeRecordSum "PredicateFailureUTXO" $
@@ -310,19 +310,19 @@ instance
     Value era ~ Coin,
     Show (ShelleyTx era),
     Eq (PredicateFailure (EraRule "PPUP" era)),
-    Embed (EraRule "PPUP" era) (UTXO era),
-    Environment (EraRule "PPUP" era) ~ PPUPEnv era,
+    Embed (EraRule "PPUP" era) (ShelleyUTXO era),
+    Environment (EraRule "PPUP" era) ~ ShelleyPPUPEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,
     Signal (EraRule "PPUP" era) ~ Maybe (Update era)
   ) =>
-  STS (UTXO era)
+  STS (ShelleyUTXO era)
   where
-  type State (UTXO era) = UTxOState era
-  type Signal (UTXO era) = ShelleyTx era
-  type Environment (UTXO era) = UtxoEnv era
-  type BaseM (UTXO era) = ShelleyBase
-  type PredicateFailure (UTXO era) = UtxoPredicateFailure era
-  type Event (UTXO era) = UtxoEvent era
+  type State (ShelleyUTXO era) = UTxOState era
+  type Signal (ShelleyUTXO era) = ShelleyTx era
+  type Environment (ShelleyUTXO era) = ShelleyUtxoEnv era
+  type BaseM (ShelleyUTXO era) = ShelleyBase
+  type PredicateFailure (ShelleyUTXO era) = ShelleyUtxoPredFailure era
+  type Event (ShelleyUTXO era) = UtxoEvent era
 
   transitionRules = [utxoInductive]
 
@@ -362,12 +362,12 @@ utxoInductive ::
     STS (utxo era),
     Embed (EraRule "PPUP" era) (utxo era),
     BaseM (utxo era) ~ ShelleyBase,
-    Environment (utxo era) ~ UtxoEnv era,
+    Environment (utxo era) ~ ShelleyUtxoEnv era,
     State (utxo era) ~ UTxOState era,
     Signal (utxo era) ~ Tx era,
-    PredicateFailure (utxo era) ~ UtxoPredicateFailure era,
+    PredicateFailure (utxo era) ~ ShelleyUtxoPredFailure era,
     Event (utxo era) ~ UtxoEvent era,
-    Environment (EraRule "PPUP" era) ~ PPUPEnv era,
+    Environment (EraRule "PPUP" era) ~ ShelleyPPUPEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,
     Signal (EraRule "PPUP" era) ~ Maybe (Update era),
     HasField "_minfeeA" (PParams era) Natural,
@@ -434,7 +434,7 @@ validateTimeToLive ::
   (ShelleyEraTxBody era, ProtVerInEra era (ShelleyEra c)) =>
   TxBody era ->
   SlotNo ->
-  Test (UtxoPredicateFailure era)
+  Test (ShelleyUtxoPredFailure era)
 validateTimeToLive txb slot = failureUnless (ttl >= slot) $ ExpiredUTxO ttl slot
   where
     ttl = txb ^. ttlTxBodyL
@@ -445,7 +445,7 @@ validateTimeToLive txb slot = failureUnless (ttl >= slot) $ ExpiredUTxO ttl slot
 validateInputSetEmptyUTxO ::
   EraTxBody era =>
   TxBody era ->
-  Test (UtxoPredicateFailure era)
+  Test (ShelleyUtxoPredFailure era)
 validateInputSetEmptyUTxO txb =
   failureUnless (txins /= Set.empty) InputSetEmptyUTxO
   where
@@ -461,7 +461,7 @@ validateFeeTooSmallUTxO ::
   ) =>
   PParams era ->
   Tx era ->
-  Test (UtxoPredicateFailure era)
+  Test (ShelleyUtxoPredFailure era)
 validateFeeTooSmallUTxO pp tx =
   failureUnless (minFee <= txFee) $ FeeTooSmallUTxO minFee txFee
   where
@@ -475,7 +475,7 @@ validateFeeTooSmallUTxO pp tx =
 validateBadInputsUTxO ::
   UTxO era ->
   Set (TxIn (Crypto era)) ->
-  Test (UtxoPredicateFailure era)
+  Test (ShelleyUtxoPredFailure era)
 validateBadInputsUTxO utxo txins =
   failureUnless (Set.null badInputs) $ BadInputsUTxO badInputs
   where
@@ -489,7 +489,7 @@ validateWrongNetwork ::
   EraTxOut era =>
   Network ->
   [TxOut era] ->
-  Test (UtxoPredicateFailure era)
+  Test (ShelleyUtxoPredFailure era)
 validateWrongNetwork netId outs =
   failureUnless (null addrsWrongNetwork) $ WrongNetwork netId (Set.fromList addrsWrongNetwork)
   where
@@ -505,7 +505,7 @@ validateWrongNetworkWithdrawal ::
   ShelleyEraTxBody era =>
   Network ->
   TxBody era ->
-  Test (UtxoPredicateFailure era)
+  Test (ShelleyUtxoPredFailure era)
 validateWrongNetworkWithdrawal netId txb =
   failureUnless (null wdrlsWrongNetwork) $
     WrongNetworkWithdrawal netId (Set.fromList wdrlsWrongNetwork)
@@ -527,7 +527,7 @@ validateValueNotConservedUTxO ::
   UTxO era ->
   Map (KeyHash 'StakePool (Crypto era)) a ->
   TxBody era ->
-  Test (UtxoPredicateFailure era)
+  Test (ShelleyUtxoPredFailure era)
 validateValueNotConservedUTxO pp utxo stakepools txb =
   failureUnless (consumedValue == producedValue) $
     ValueNotConservedUTxO consumedValue producedValue
@@ -544,7 +544,7 @@ validateOutputTooSmallUTxO ::
   ) =>
   PParams era ->
   UTxO era ->
-  Test (UtxoPredicateFailure era)
+  Test (ShelleyUtxoPredFailure era)
 validateOutputTooSmallUTxO pp (UTxO outputs) =
   failureUnless (null outputsTooSmall) $ OutputTooSmallUTxO outputsTooSmall
   where
@@ -564,7 +564,7 @@ validateOutputTooSmallUTxO pp (UTxO outputs) =
 validateOutputBootAddrAttrsTooBig ::
   EraTxOut era =>
   UTxO era ->
-  Test (UtxoPredicateFailure era)
+  Test (ShelleyUtxoPredFailure era)
 validateOutputBootAddrAttrsTooBig (UTxO outputs) =
   failureUnless (null outputsAttrsTooBig) $ OutputBootAddrAttrsTooBig outputsAttrsTooBig
   where
@@ -586,7 +586,7 @@ validateMaxTxSizeUTxO ::
   ) =>
   PParams era ->
   Tx era ->
-  Test (UtxoPredicateFailure era)
+  Test (ShelleyUtxoPredFailure era)
 validateMaxTxSizeUTxO pp tx =
   failureUnless (txSize <= maxTxSize) $ MaxTxSizeUTxO txSize maxTxSize
   where
@@ -618,11 +618,11 @@ updateUTxOState UTxOState {_utxo, _deposited, _fees, _stakeDistro} txb depositCh
 
 instance
   ( Era era,
-    STS (PPUP era),
-    PredicateFailure (EraRule "PPUP" era) ~ PpupPredicateFailure era,
+    STS (ShelleyPPUP era),
+    PredicateFailure (EraRule "PPUP" era) ~ ShelleyPpupPredFailure era,
     Event (EraRule "PPUP" era) ~ PpupEvent era
   ) =>
-  Embed (PPUP era) (UTXO era)
+  Embed (ShelleyPPUP era) (ShelleyUTXO era)
   where
   wrapFailed = UpdateFailure
   wrapEvent = UpdateEvent
@@ -630,10 +630,10 @@ instance
 -- =================================
 
 instance
-  PredicateFailure (EraRule "PPUP" era) ~ PpupPredicateFailure era =>
-  Inject (PpupPredicateFailure era) (UtxoPredicateFailure era)
+  PredicateFailure (EraRule "PPUP" era) ~ ShelleyPpupPredFailure era =>
+  Inject (ShelleyPpupPredFailure era) (ShelleyUtxoPredFailure era)
   where
   inject = UpdateFailure
 
-instance Inject (UtxoPredicateFailure era) (UtxoPredicateFailure era) where
+instance Inject (ShelleyUtxoPredFailure era) (ShelleyUtxoPredFailure era) where
   inject = id

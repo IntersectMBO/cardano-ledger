@@ -38,7 +38,7 @@ module Main where
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
 import Cardano.Ledger.Alonzo.Rules (AlonzoBBODY, AlonzoUTXOW)
-import Cardano.Ledger.Shelley.Rules.Ledger (LEDGER, LedgerEvent (UtxowEvent), LedgerPredicateFailure (UtxowFailure))
+import Cardano.Ledger.Shelley.Rules.Ledger (ShelleyLEDGER, ShelleyLedgerEvent (UtxowEvent), ShelleyLedgerPredFailure (UtxowFailure))
 import Control.State.Transition.Extended (Embed (..))
 import Test.Cardano.Ledger.Alonzo.AlonzoEraGen ()
 import Test.Cardano.Ledger.Alonzo.EraMapping ()
@@ -54,7 +54,7 @@ instance Embed (AlonzoBBODY (AlonzoEra TestCrypto)) (CHAIN (AlonzoEra TestCrypto
   wrapFailed = BbodyFailure
   wrapEvent = BbodyEvent
 
-instance Embed (AlonzoUTXOW (AlonzoEra TestCrypto)) (LEDGER (AlonzoEra TestCrypto)) where
+instance Embed (AlonzoUTXOW (AlonzoEra TestCrypto)) (ShelleyLEDGER (AlonzoEra TestCrypto)) where
   wrapFailed = UtxowFailure
   wrapEvent = UtxowEvent
 

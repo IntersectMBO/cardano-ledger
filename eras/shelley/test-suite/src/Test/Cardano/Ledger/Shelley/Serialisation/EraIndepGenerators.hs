@@ -752,11 +752,11 @@ instance
     where
       mscriptsToWits = Map.fromList . map (\s -> (hashScript @era s, s))
 
-instance Era era => Arbitrary (STS.PpupPredicateFailure era) where
+instance Era era => Arbitrary (STS.ShelleyPpupPredFailure era) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Era era => Arbitrary (STS.PoolPredicateFailure era) where
+instance Era era => Arbitrary (STS.ShelleyPoolPredFailure era) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -766,14 +766,14 @@ instance
     Arbitrary (STS.PredicateFailure (Core.EraRule "POOL" era)),
     Arbitrary (STS.PredicateFailure (Core.EraRule "DELEG" era))
   ) =>
-  Arbitrary (STS.DelplPredicateFailure era)
+  Arbitrary (STS.ShelleyDelplPredFailure era)
   where
   arbitrary = genericArbitraryU
   shrink = recursivelyShrink
 
 instance
   (Era era, Mock (Crypto era)) =>
-  Arbitrary (STS.DelegPredicateFailure era)
+  Arbitrary (STS.ShelleyDelegPredFailure era)
   where
   arbitrary = genericArbitraryU
   shrink = genericShrink
@@ -783,7 +783,7 @@ instance
     Mock (Crypto era),
     Arbitrary (STS.PredicateFailure (Core.EraRule "DELPL" era))
   ) =>
-  Arbitrary (STS.DelegsPredicateFailure era)
+  Arbitrary (STS.ShelleyDelegsPredFailure era)
   where
   arbitrary = genericArbitraryU
   shrink = recursivelyShrink
@@ -792,7 +792,7 @@ instance
   ( Era era,
     Arbitrary (STS.PredicateFailure (Core.EraRule "LEDGER" era))
   ) =>
-  Arbitrary (STS.LedgersPredicateFailure era)
+  Arbitrary (STS.ShelleyLedgersPredFailure era)
   where
   arbitrary = genericArbitraryU
   shrink = genericShrink
@@ -802,7 +802,7 @@ instance
     Arbitrary (STS.PredicateFailure (Core.EraRule "DELEGS" era)),
     Arbitrary (STS.PredicateFailure (Core.EraRule "UTXOW" era))
   ) =>
-  Arbitrary (STS.LedgerPredicateFailure era)
+  Arbitrary (STS.ShelleyLedgerPredFailure era)
   where
   arbitrary = genericArbitraryU
   shrink _ = []
@@ -811,7 +811,7 @@ instance
   ( Era era,
     Arbitrary (STS.PredicateFailure (Core.EraRule "UTXO" era))
   ) =>
-  Arbitrary (STS.UtxowPredicateFailure era)
+  Arbitrary (STS.ShelleyUtxowPredFailure era)
   where
   arbitrary = genericArbitraryU
   shrink _ = []

@@ -10,9 +10,9 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Shelley.Rules.Ppup
-  ( PPUP,
-    PPUPEnv (..),
-    PpupPredicateFailure (..),
+  ( ShelleyPPUP,
+    ShelleyPPUPEnv (..),
+    ShelleyPpupPredFailure (..),
     PpupEvent (..),
     PredicateFailure,
     VotingPeriod (..),
@@ -61,9 +61,9 @@ import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..))
 
-data PPUP era
+data ShelleyPPUP era
 
-data PPUPEnv era
+data ShelleyPPUPEnv era
   = PPUPEnv SlotNo (PParams era) (GenDelegs (Crypto era))
 
 data VotingPeriod = VoteForThisEpoch | VoteForNextEpoch
@@ -82,7 +82,7 @@ instance FromCBOR VotingPeriod where
       1 -> pure VoteForNextEpoch
       k -> invalidKey k
 
-data PpupPredicateFailure era
+data ShelleyPpupPredFailure era
   = -- | An update was proposed by a key hash that is not one of the genesis keys.
     --  The first set contains the key hashes which were a part of the update.
     --  The second set contains the key hashes of the genesis keys.
@@ -107,7 +107,7 @@ data PpupPredicateFailure era
       !ProtVer
   deriving (Show, Eq, Generic)
 
-instance NoThunks (PpupPredicateFailure era)
+instance NoThunks (ShelleyPpupPredFailure era)
 
 newtype PpupEvent era = NewEpoch EpochNo
 
@@ -116,14 +116,14 @@ instance
     HasField "_protocolVersion" (PParams era) ProtVer,
     HasField "_protocolVersion" (PParamsUpdate era) (StrictMaybe ProtVer)
   ) =>
-  STS (PPUP era)
+  STS (ShelleyPPUP era)
   where
-  type State (PPUP era) = PPUPState era
-  type Signal (PPUP era) = Maybe (Update era)
-  type Environment (PPUP era) = PPUPEnv era
-  type BaseM (PPUP era) = ShelleyBase
-  type PredicateFailure (PPUP era) = PpupPredicateFailure era
-  type Event (PPUP era) = PpupEvent era
+  type State (ShelleyPPUP era) = PPUPState era
+  type Signal (ShelleyPPUP era) = Maybe (Update era)
+  type Environment (ShelleyPPUP era) = ShelleyPPUPEnv era
+  type BaseM (ShelleyPPUP era) = ShelleyBase
+  type PredicateFailure (ShelleyPPUP era) = ShelleyPpupPredFailure era
+  type Event (ShelleyPPUP era) = PpupEvent era
 
   initialRules = []
 
@@ -131,7 +131,7 @@ instance
 
 instance
   (Typeable era, Era era) =>
-  ToCBOR (PpupPredicateFailure era)
+  ToCBOR (ShelleyPpupPredFailure era)
   where
   toCBOR = \case
     (NonGenesisUpdatePPUP a b) ->
@@ -145,7 +145,7 @@ instance
 
 instance
   (Era era) =>
-  FromCBOR (PpupPredicateFailure era)
+  FromCBOR (ShelleyPpupPredFailure era)
   where
   fromCBOR = decodeRecordSum "PredicateFailure (PPUP era)" $
     \case
@@ -168,7 +168,7 @@ ppupTransitionNonEmpty ::
     HasField "_protocolVersion" (PParams era) ProtVer,
     HasField "_protocolVersion" (PParamsUpdate era) (StrictMaybe ProtVer)
   ) =>
-  TransitionRule (PPUP era)
+  TransitionRule (ShelleyPPUP era)
 ppupTransitionNonEmpty = do
   TRC
     ( PPUPEnv slot pp (GenDelegs _genDelegs),

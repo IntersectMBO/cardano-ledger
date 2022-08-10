@@ -89,7 +89,7 @@ testScriptPostTranslation =
           txa = fromRight . runExcept $ translateEra @Allegra () txs
           result =
             runShelleyBase $
-              applySTSTest @(S.LEDGER Allegra)
+              applySTSTest @(S.ShelleyLEDGER Allegra)
                 (TRC (env, LedgerState utxoStAllegra def, txa))
        in case result of
             Left e -> error $ show e

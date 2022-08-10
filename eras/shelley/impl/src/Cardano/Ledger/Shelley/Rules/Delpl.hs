@@ -13,10 +13,10 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Shelley.Rules.Delpl
-  ( DELPL,
-    DelplEnv (..),
-    DelplPredicateFailure (..),
-    DelplEvent,
+  ( ShelleyDELPL,
+    ShelleyDelplEnv (..),
+    ShelleyDelplPredFailure (..),
+    ShelleyDelplEvent,
     PredicateFailure,
   )
 where
@@ -37,8 +37,8 @@ import Cardano.Ledger.Shelley.LedgerState
     dpsDState,
     dpsPState,
   )
-import Cardano.Ledger.Shelley.Rules.Deleg (DELEG, DelegEnv (..), DelegPredicateFailure)
-import Cardano.Ledger.Shelley.Rules.Pool (POOL, PoolEnv (..), PoolPredicateFailure)
+import Cardano.Ledger.Shelley.Rules.Deleg (ShelleyDELEG, ShelleyDelegEnv (..), ShelleyDelegPredFailure)
+import Cardano.Ledger.Shelley.Rules.Pool (ShelleyPOOL, ShelleyPoolEnv (..), ShelleyPoolPredFailure)
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
     DelegCert (..),
@@ -54,61 +54,61 @@ import GHC.Generics (Generic)
 import GHC.Records (HasField)
 import NoThunks.Class (NoThunks (..))
 
-data DELPL era
+data ShelleyDELPL era
 
-data DelplEnv era = DelplEnv
+data ShelleyDelplEnv era = DelplEnv
   { delplSlotNo :: SlotNo,
     delPlPtr :: Ptr,
     delPlPp :: PParams era,
     delPlAcnt :: AccountState
   }
 
-data DelplPredicateFailure era
+data ShelleyDelplPredFailure era
   = PoolFailure (PredicateFailure (EraRule "POOL" era)) -- Subtransition Failures
   | DelegFailure (PredicateFailure (EraRule "DELEG" era)) -- Subtransition Failures
   deriving (Generic)
 
-data DelplEvent era
-  = PoolEvent (Event (POOL era))
-  | DelegEvent (Event (DELEG era))
+data ShelleyDelplEvent era
+  = PoolEvent (Event (ShelleyPOOL era))
+  | DelegEvent (Event (ShelleyDELEG era))
 
 deriving stock instance
   ( Eq (PredicateFailure (EraRule "DELEG" era)),
     Eq (PredicateFailure (EraRule "POOL" era))
   ) =>
-  Eq (DelplPredicateFailure era)
+  Eq (ShelleyDelplPredFailure era)
 
 deriving stock instance
   ( Show (PredicateFailure (EraRule "DELEG" era)),
     Show (PredicateFailure (EraRule "POOL" era))
   ) =>
-  Show (DelplPredicateFailure era)
+  Show (ShelleyDelplPredFailure era)
 
 instance
   ( NoThunks (PredicateFailure (EraRule "DELEG" era)),
     NoThunks (PredicateFailure (EraRule "POOL" era))
   ) =>
-  NoThunks (DelplPredicateFailure era)
+  NoThunks (ShelleyDelplPredFailure era)
 
 instance
   ( Era era,
-    Embed (EraRule "DELEG" era) (DELPL era),
-    Environment (EraRule "DELEG" era) ~ DelegEnv era,
+    Embed (EraRule "DELEG" era) (ShelleyDELPL era),
+    Environment (EraRule "DELEG" era) ~ ShelleyDelegEnv era,
     State (EraRule "DELEG" era) ~ DState (Crypto era),
     Signal (EraRule "DELEG" era) ~ DCert (Crypto era),
-    Embed (EraRule "POOL" era) (DELPL era),
-    Environment (EraRule "POOL" era) ~ PoolEnv era,
+    Embed (EraRule "POOL" era) (ShelleyDELPL era),
+    Environment (EraRule "POOL" era) ~ ShelleyPoolEnv era,
     State (EraRule "POOL" era) ~ PState (Crypto era),
     Signal (EraRule "POOL" era) ~ DCert (Crypto era)
   ) =>
-  STS (DELPL era)
+  STS (ShelleyDELPL era)
   where
-  type State (DELPL era) = DPState (Crypto era)
-  type Signal (DELPL era) = DCert (Crypto era)
-  type Environment (DELPL era) = DelplEnv era
-  type BaseM (DELPL era) = ShelleyBase
-  type PredicateFailure (DELPL era) = DelplPredicateFailure era
-  type Event (DELPL era) = DelplEvent era
+  type State (ShelleyDELPL era) = DPState (Crypto era)
+  type Signal (ShelleyDELPL era) = DCert (Crypto era)
+  type Environment (ShelleyDELPL era) = ShelleyDelplEnv era
+  type BaseM (ShelleyDELPL era) = ShelleyBase
+  type PredicateFailure (ShelleyDELPL era) = ShelleyDelplPredFailure era
+  type Event (ShelleyDELPL era) = ShelleyDelplEvent era
 
   transitionRules = [delplTransition]
 
@@ -118,7 +118,7 @@ instance
     ToCBOR (PredicateFailure (EraRule "DELEG" era)),
     Typeable (Script era)
   ) =>
-  ToCBOR (DelplPredicateFailure era)
+  ToCBOR (ShelleyDelplPredFailure era)
   where
   toCBOR = \case
     (PoolFailure a) ->
@@ -134,7 +134,7 @@ instance
     FromCBOR (PredicateFailure (EraRule "DELEG" era)),
     Typeable (Script era)
   ) =>
-  FromCBOR (DelplPredicateFailure era)
+  FromCBOR (ShelleyDelplPredFailure era)
   where
   fromCBOR =
     decodeRecordSum
@@ -151,16 +151,16 @@ instance
 
 delplTransition ::
   forall era.
-  ( Embed (EraRule "DELEG" era) (DELPL era),
-    Environment (EraRule "DELEG" era) ~ DelegEnv era,
+  ( Embed (EraRule "DELEG" era) (ShelleyDELPL era),
+    Environment (EraRule "DELEG" era) ~ ShelleyDelegEnv era,
     State (EraRule "DELEG" era) ~ DState (Crypto era),
     Signal (EraRule "DELEG" era) ~ DCert (Crypto era),
-    Embed (EraRule "POOL" era) (DELPL era),
-    Environment (EraRule "POOL" era) ~ PoolEnv era,
+    Embed (EraRule "POOL" era) (ShelleyDELPL era),
+    Environment (EraRule "POOL" era) ~ ShelleyPoolEnv era,
     State (EraRule "POOL" era) ~ PState (Crypto era),
     Signal (EraRule "POOL" era) ~ DCert (Crypto era)
   ) =>
-  TransitionRule (DELPL era)
+  TransitionRule (ShelleyDELPL era)
 delplTransition = do
   TRC (DelplEnv slot ptr pp acnt, d, c) <- judgmentContext
   case c of
@@ -194,10 +194,10 @@ delplTransition = do
 
 instance
   ( Era era,
-    STS (POOL era),
-    PredicateFailure (EraRule "POOL" era) ~ PoolPredicateFailure era
+    STS (ShelleyPOOL era),
+    PredicateFailure (EraRule "POOL" era) ~ ShelleyPoolPredFailure era
   ) =>
-  Embed (POOL era) (DELPL era)
+  Embed (ShelleyPOOL era) (ShelleyDELPL era)
   where
   wrapFailed = PoolFailure
   wrapEvent = PoolEvent
@@ -205,9 +205,9 @@ instance
 instance
   ( Era era,
     HasField "_protocolVersion" (PParams era) ProtVer,
-    PredicateFailure (EraRule "DELEG" era) ~ DelegPredicateFailure era
+    PredicateFailure (EraRule "DELEG" era) ~ ShelleyDelegPredFailure era
   ) =>
-  Embed (DELEG era) (DELPL era)
+  Embed (ShelleyDELEG era) (ShelleyDELPL era)
   where
   wrapFailed = DelegFailure
   wrapEvent = DelegEvent

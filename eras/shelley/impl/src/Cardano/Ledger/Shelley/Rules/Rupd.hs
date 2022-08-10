@@ -7,10 +7,10 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Shelley.Rules.Rupd
-  ( RUPD,
-    RupdEnv (..),
+  ( ShelleyRUPD,
+    ShelleyRupdEnv (..),
     PredicateFailure,
-    RupdPredicateFailure,
+    ShelleyRupdPredFailure,
     epochInfoRange,
     PulsingRewUpdate (..),
     startStep,
@@ -77,15 +77,15 @@ import GHC.Records (HasField)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 
-data RUPD era
+data ShelleyRUPD era
 
-data RupdEnv era
+data ShelleyRupdEnv era
   = RupdEnv (BlocksMade (Crypto era)) (EpochState era)
 
-data RupdPredicateFailure era -- No predicate failures
+data ShelleyRupdPredFailure era -- No predicate failures
   deriving (Show, Eq, Generic)
 
-instance NoThunks (RupdPredicateFailure era)
+instance NoThunks (ShelleyRupdPredFailure era)
 
 instance
   ( Era era,
@@ -96,14 +96,14 @@ instance
     HasField "_rho" (PParams era) UnitInterval,
     HasField "_tau" (PParams era) UnitInterval
   ) =>
-  STS (RUPD era)
+  STS (ShelleyRUPD era)
   where
-  type State (RUPD era) = StrictMaybe (PulsingRewUpdate (Crypto era))
-  type Signal (RUPD era) = SlotNo
-  type Environment (RUPD era) = RupdEnv era
-  type BaseM (RUPD era) = ShelleyBase
-  type PredicateFailure (RUPD era) = RupdPredicateFailure era
-  type Event (RUPD era) = RupdEvent (Crypto era)
+  type State (ShelleyRUPD era) = StrictMaybe (PulsingRewUpdate (Crypto era))
+  type Signal (ShelleyRUPD era) = SlotNo
+  type Environment (ShelleyRUPD era) = ShelleyRupdEnv era
+  type BaseM (ShelleyRUPD era) = ShelleyBase
+  type PredicateFailure (ShelleyRUPD era) = ShelleyRupdPredFailure era
+  type Event (ShelleyRUPD era) = RupdEvent (Crypto era)
 
   initialRules = [pure SNothing]
   transitionRules = [rupdTransition]
@@ -114,7 +114,7 @@ data RupdEvent crypto
       !(Map.Map (Credential 'Staking crypto) (Set (Reward crypto)))
 
 -- | tell a RupdEvent only if the map is non-empty
-tellRupd :: String -> RupdEvent (Crypto era) -> Rule (RUPD era) rtype ()
+tellRupd :: String -> RupdEvent (Crypto era) -> Rule (ShelleyRUPD era) rtype ()
 tellRupd _ (RupdEvent _ m) | Map.null m = pure ()
 tellRupd _message x = tellEvent x
 
@@ -136,7 +136,7 @@ rupdTransition ::
     HasField "_rho" (PParams era) UnitInterval,
     HasField "_tau" (PParams era) UnitInterval
   ) =>
-  TransitionRule (RUPD era)
+  TransitionRule (ShelleyRUPD era)
 rupdTransition = do
   TRC (RupdEnv b es, ru, s) <- judgmentContext
   (slotsPerEpoch, slot, slotForce, maxLL, asc, k, e) <- liftSTS $ do

@@ -11,7 +11,7 @@ where
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary (MaryEra)
-import Cardano.Ledger.Shelley.API (LEDGER, LedgerEnv (..))
+import Cardano.Ledger.Shelley.API (ShelleyLEDGER, ShelleyLedgerEnv (..))
 import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), UTxOState (..), smartUTxOState)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
@@ -29,19 +29,19 @@ import Test.Tasty.HUnit (Assertion, (@?=))
 type MaryTest = MaryEra TestCrypto
 
 ignoreAllButUTxO ::
-  Either [PredicateFailure (LEDGER MaryTest)] (LedgerState MaryTest) ->
-  Either [PredicateFailure (LEDGER MaryTest)] (UTxO MaryTest)
+  Either [PredicateFailure (ShelleyLEDGER MaryTest)] (LedgerState MaryTest) ->
+  Either [PredicateFailure (ShelleyLEDGER MaryTest)] (UTxO MaryTest)
 ignoreAllButUTxO = fmap (\(LedgerState (UTxOState utxo _ _ _ _) _) -> utxo)
 
 testMaryNoDelegLEDGER ::
   HasCallStack =>
   UTxO MaryTest ->
   ShelleyTx MaryTest ->
-  LedgerEnv MaryTest ->
-  Either [PredicateFailure (LEDGER MaryTest)] (UTxO MaryTest) ->
+  ShelleyLedgerEnv MaryTest ->
+  Either [PredicateFailure (ShelleyLEDGER MaryTest)] (UTxO MaryTest) ->
   Assertion
 testMaryNoDelegLEDGER utxo tx env (Right expectedUTxO) = do
-  checkTrace @(LEDGER MaryTest) runShelleyBase env $
+  checkTrace @(ShelleyLEDGER MaryTest) runShelleyBase env $
     pure (LedgerState (smartUTxOState utxo (Coin 0) (Coin 0) def) def) .- tx .-> expectedSt'
   where
     txFee = tx ^. bodyTxL . feeTxBodyL
@@ -49,6 +49,6 @@ testMaryNoDelegLEDGER utxo tx env (Right expectedUTxO) = do
 testMaryNoDelegLEDGER utxo tx env predicateFailure@(Left _) = do
   let st =
         runShelleyBase $
-          applySTSTest @(LEDGER MaryTest)
+          applySTSTest @(ShelleyLEDGER MaryTest)
             (TRC (env, LedgerState (smartUTxOState utxo (Coin 0) (Coin 0) def) def, tx))
   ignoreAllButUTxO st @?= predicateFailure

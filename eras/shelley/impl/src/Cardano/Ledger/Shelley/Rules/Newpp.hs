@@ -8,10 +8,10 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Shelley.Rules.Newpp
-  ( NEWPP,
-    NewppState (..),
-    NewppEnv (..),
-    NewppPredicateFailure (..),
+  ( ShelleyNEWPP,
+    ShelleyNewppState (..),
+    ShelleyNewppEnv (..),
+    ShelleyNewppPredFailure (..),
     PredicateFailure,
   )
 where
@@ -51,25 +51,25 @@ import GHC.Natural (Natural)
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..))
 
-data NEWPP era
+data ShelleyNEWPP era
 
-data NewppState era
+data ShelleyNewppState era
   = NewppState (PParams era) (PPUPState era)
 
-data NewppEnv era
+data ShelleyNewppEnv era
   = NewppEnv
       (DState (Crypto era))
       (PState (Crypto era))
       (UTxOState era)
       AccountState
 
-data NewppPredicateFailure era
+data ShelleyNewppPredFailure era
   = UnexpectedDepositPot
       !Coin -- The total outstanding deposits
       !Coin -- The deposit pot
   deriving (Show, Eq, Generic)
 
-instance NoThunks (NewppPredicateFailure era)
+instance NoThunks (ShelleyNewppPredFailure era)
 
 instance
   ( Default (PParams era),
@@ -82,16 +82,16 @@ instance
     HasField "_protocolVersion" (PParamsUpdate era) (StrictMaybe ProtVer),
     Typeable era
   ) =>
-  STS (NEWPP era)
+  STS (ShelleyNEWPP era)
   where
-  type State (NEWPP era) = NewppState era
-  type Signal (NEWPP era) = Maybe (PParams era)
-  type Environment (NEWPP era) = NewppEnv era
-  type BaseM (NEWPP era) = ShelleyBase
-  type PredicateFailure (NEWPP era) = NewppPredicateFailure era
+  type State (ShelleyNEWPP era) = ShelleyNewppState era
+  type Signal (ShelleyNEWPP era) = Maybe (PParams era)
+  type Environment (ShelleyNEWPP era) = ShelleyNewppEnv era
+  type BaseM (ShelleyNEWPP era) = ShelleyBase
+  type PredicateFailure (ShelleyNEWPP era) = ShelleyNewppPredFailure era
   transitionRules = [newPpTransition]
 
-instance Default (PParams era) => Default (NewppState era) where
+instance Default (PParams era) => Default (ShelleyNewppState era) where
   def = NewppState def def
 
 newPpTransition ::
@@ -104,7 +104,7 @@ newPpTransition ::
     HasField "_maxBBSize" (PParams era) Natural,
     HasField "_protocolVersion" (PParamsUpdate era) (StrictMaybe ProtVer)
   ) =>
-  TransitionRule (NEWPP era)
+  TransitionRule (ShelleyNEWPP era)
 newPpTransition = do
   TRC
     ( NewppEnv dstate pstate utxoSt acnt,

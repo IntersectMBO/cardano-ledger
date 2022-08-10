@@ -20,16 +20,16 @@ import Cardano.Ledger.Compactible (CompactForm, Compactible)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Mary.Value (MaryValue, policies, policyID)
-import qualified Cardano.Ledger.Shelley.API as Shelley
+import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsUpdate, updatePParams)
-import qualified Cardano.Ledger.Shelley.Rules.Bbody as Shelley
-import qualified Cardano.Ledger.Shelley.Rules.Epoch as Shelley
-import qualified Cardano.Ledger.Shelley.Rules.Mir as Shelley
-import qualified Cardano.Ledger.Shelley.Rules.Newpp as Shelley
-import qualified Cardano.Ledger.Shelley.Rules.Rupd as Shelley
-import qualified Cardano.Ledger.Shelley.Rules.Snap as Shelley
-import qualified Cardano.Ledger.Shelley.Rules.Tick as Shelley
-import qualified Cardano.Ledger.Shelley.Rules.Upec as Shelley
+import Cardano.Ledger.Shelley.Rules.Bbody (ShelleyBBODY)
+import Cardano.Ledger.Shelley.Rules.Epoch (ShelleyEPOCH)
+import Cardano.Ledger.Shelley.Rules.Mir (ShelleyMIR)
+import Cardano.Ledger.Shelley.Rules.Newpp (ShelleyNEWPP)
+import Cardano.Ledger.Shelley.Rules.Rupd (ShelleyRUPD)
+import Cardano.Ledger.Shelley.Rules.Snap (ShelleySNAP)
+import Cardano.Ledger.Shelley.Rules.Tick (ShelleyTICKF)
+import Cardano.Ledger.Shelley.Rules.Upec (ShelleyUPEC)
 import Cardano.Ledger.Val (DecodeMint, DecodeNonNegative, EncodeMint, Val)
 import Control.DeepSeq (NFData (..))
 import Data.Kind (Type)
@@ -104,41 +104,41 @@ instance MAClass ma crypto => EraPParams (ShelleyMAEra ma crypto) where
 
 -- These rules are all inherited from Shelley
 
-type instance EraRule "BBODY" (ShelleyMAEra ma c) = Shelley.BBODY (ShelleyMAEra ma c)
+type instance EraRule "BBODY" (ShelleyMAEra ma c) = ShelleyBBODY (ShelleyMAEra ma c)
 
-type instance EraRule "DELEG" (ShelleyMAEra ma c) = Shelley.DELEG (ShelleyMAEra ma c)
+type instance EraRule "DELEG" (ShelleyMAEra ma c) = API.ShelleyDELEG (ShelleyMAEra ma c)
 
-type instance EraRule "DELEGS" (ShelleyMAEra ma c) = Shelley.DELEGS (ShelleyMAEra ma c)
+type instance EraRule "DELEGS" (ShelleyMAEra ma c) = API.ShelleyDELEGS (ShelleyMAEra ma c)
 
-type instance EraRule "DELPL" (ShelleyMAEra ma c) = Shelley.DELPL (ShelleyMAEra ma c)
+type instance EraRule "DELPL" (ShelleyMAEra ma c) = API.ShelleyDELPL (ShelleyMAEra ma c)
 
-type instance EraRule "EPOCH" (ShelleyMAEra ma c) = Shelley.EPOCH (ShelleyMAEra ma c)
+type instance EraRule "EPOCH" (ShelleyMAEra ma c) = ShelleyEPOCH (ShelleyMAEra ma c)
 
-type instance EraRule "LEDGER" (ShelleyMAEra ma c) = Shelley.LEDGER (ShelleyMAEra ma c)
+type instance EraRule "LEDGER" (ShelleyMAEra ma c) = API.ShelleyLEDGER (ShelleyMAEra ma c)
 
-type instance EraRule "LEDGERS" (ShelleyMAEra ma c) = Shelley.LEDGERS (ShelleyMAEra ma c)
+type instance EraRule "LEDGERS" (ShelleyMAEra ma c) = API.ShelleyLEDGERS (ShelleyMAEra ma c)
 
-type instance EraRule "MIR" (ShelleyMAEra ma c) = Shelley.MIR (ShelleyMAEra ma c)
+type instance EraRule "MIR" (ShelleyMAEra ma c) = ShelleyMIR (ShelleyMAEra ma c)
 
-type instance EraRule "NEWEPOCH" (ShelleyMAEra ma c) = Shelley.NEWEPOCH (ShelleyMAEra ma c)
+type instance EraRule "NEWEPOCH" (ShelleyMAEra ma c) = API.ShelleyNEWEPOCH (ShelleyMAEra ma c)
 
-type instance EraRule "NEWPP" (ShelleyMAEra ma c) = Shelley.NEWPP (ShelleyMAEra ma c)
+type instance EraRule "NEWPP" (ShelleyMAEra ma c) = ShelleyNEWPP (ShelleyMAEra ma c)
 
-type instance EraRule "POOL" (ShelleyMAEra ma c) = Shelley.POOL (ShelleyMAEra ma c)
+type instance EraRule "POOL" (ShelleyMAEra ma c) = API.ShelleyPOOL (ShelleyMAEra ma c)
 
-type instance EraRule "POOLREAP" (ShelleyMAEra ma c) = Shelley.POOLREAP (ShelleyMAEra ma c)
+type instance EraRule "POOLREAP" (ShelleyMAEra ma c) = API.ShelleyPOOLREAP (ShelleyMAEra ma c)
 
-type instance EraRule "PPUP" (ShelleyMAEra ma c) = Shelley.PPUP (ShelleyMAEra ma c)
+type instance EraRule "PPUP" (ShelleyMAEra ma c) = API.ShelleyPPUP (ShelleyMAEra ma c)
 
-type instance EraRule "RUPD" (ShelleyMAEra ma c) = Shelley.RUPD (ShelleyMAEra ma c)
+type instance EraRule "RUPD" (ShelleyMAEra ma c) = ShelleyRUPD (ShelleyMAEra ma c)
 
-type instance EraRule "SNAP" (ShelleyMAEra ma c) = Shelley.SNAP (ShelleyMAEra ma c)
+type instance EraRule "SNAP" (ShelleyMAEra ma c) = ShelleySNAP (ShelleyMAEra ma c)
 
-type instance EraRule "TICK" (ShelleyMAEra ma c) = Shelley.TICK (ShelleyMAEra ma c)
+type instance EraRule "TICK" (ShelleyMAEra ma c) = API.ShelleyTICK (ShelleyMAEra ma c)
 
-type instance EraRule "TICKF" (ShelleyMAEra ma c) = Shelley.TICKF (ShelleyMAEra ma c)
+type instance EraRule "TICKF" (ShelleyMAEra ma c) = ShelleyTICKF (ShelleyMAEra ma c)
 
-type instance EraRule "UPEC" (ShelleyMAEra ma c) = Shelley.UPEC (ShelleyMAEra ma c)
+type instance EraRule "UPEC" (ShelleyMAEra ma c) = ShelleyUPEC (ShelleyMAEra ma c)
 
 -- These rules are defined anew in the ShelleyMA era(s)
 

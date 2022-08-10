@@ -94,14 +94,14 @@ import Cardano.Ledger.Shelley.LedgerState
     smartUTxOState,
   )
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
-import Cardano.Ledger.Shelley.Rules.Bbody (BbodyEnv (..), BbodyPredicateFailure (..), BbodyState (..))
-import Cardano.Ledger.Shelley.Rules.Delegs (DelegsPredicateFailure (..))
-import Cardano.Ledger.Shelley.Rules.Delpl (DelplPredicateFailure (..))
-import Cardano.Ledger.Shelley.Rules.Ledger (LedgerPredicateFailure (..))
-import Cardano.Ledger.Shelley.Rules.Ledgers (LedgersPredicateFailure (..))
-import Cardano.Ledger.Shelley.Rules.Pool (PoolPredicateFailure (..))
-import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
-import Cardano.Ledger.Shelley.Rules.Utxow as Shelley (UtxowPredicateFailure (..))
+import Cardano.Ledger.Shelley.Rules.Bbody (ShelleyBbodyEnv (..), ShelleyBbodyPredFailure (..), ShelleyBbodyState (..))
+import Cardano.Ledger.Shelley.Rules.Delegs (ShelleyDelegsPredFailure (..))
+import Cardano.Ledger.Shelley.Rules.Delpl (ShelleyDelplPredFailure (..))
+import Cardano.Ledger.Shelley.Rules.Ledger (ShelleyLedgerPredFailure (..))
+import Cardano.Ledger.Shelley.Rules.Ledgers (ShelleyLedgersPredFailure (..))
+import Cardano.Ledger.Shelley.Rules.Pool (ShelleyPoolPredFailure (..))
+import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoEnv (..))
+import Cardano.Ledger.Shelley.Rules.Utxow as Shelley (ShelleyUtxowPredFailure (..))
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
     DelegCert (..),
@@ -190,7 +190,7 @@ defaultPPs =
     CollateralPercentage 100
   ]
 
-utxoEnv :: PParams era -> UtxoEnv era
+utxoEnv :: PParams era -> ShelleyUtxoEnv era
 utxoEnv pparams =
   UtxoEnv
     (SlotNo 0)
@@ -1739,7 +1739,7 @@ collectOrderingAlonzo =
 -- Alonzo BBODY Tests
 -- =======================
 
-bbodyEnv :: Proof era -> BbodyEnv era
+bbodyEnv :: Proof era -> ShelleyBbodyEnv era
 bbodyEnv pf = BbodyEnv (pp pf) def
 
 dpstate :: Scriptic era => Proof era -> DPState (Crypto era)
@@ -1756,7 +1756,7 @@ initialBBodyState ::
   ) =>
   Proof era ->
   UTxO era ->
-  BbodyState era
+  ShelleyBbodyState era
 initialBBodyState pf utxo =
   BbodyState (LedgerState (initialUtxoSt utxo) (dpstate pf)) (BlocksMade mempty)
 
@@ -1859,7 +1859,7 @@ example1BBodyState ::
     EraTxBody era
   ) =>
   Proof era ->
-  BbodyState era
+  ShelleyBbodyState era
 example1BBodyState proof =
   BbodyState (LedgerState (example1UtxoSt proof) def) (BlocksMade $ Map.singleton poolID 1)
   where
@@ -2389,7 +2389,7 @@ alonzoUTXOWexamplesB pf =
 class AlonzoBased era failure where
   fromUtxos :: UtxosPredicateFailure era -> failure
   fromUtxo :: UtxoPredicateFailure era -> failure
-  fromUtxow :: UtxowPredicateFailure era -> failure
+  fromUtxow :: ShelleyUtxowPredFailure era -> failure
   fromPredFail :: UtxowPredicateFail era -> failure
 
 instance AlonzoBased (AlonzoEra c) (UtxowPredicateFail (AlonzoEra c)) where
@@ -2415,9 +2415,9 @@ instance AlonzoBased (ConwayEra c) (BabbageUtxowPred (ConwayEra c)) where
 testBBODY ::
   (GoodCrypto (Crypto era), HasCallStack) =>
   WitRule "BBODY" era ->
-  BbodyState era ->
+  ShelleyBbodyState era ->
   Block (BHeaderView (Crypto era)) era ->
-  Either [PredicateFailure (AlonzoBBODY era)] (BbodyState era) ->
+  Either [PredicateFailure (AlonzoBBODY era)] (ShelleyBbodyState era) ->
   Assertion
 testBBODY wit@(BBODY proof) initialSt block expected =
   let env = bbodyEnv proof

@@ -76,6 +76,7 @@ import Cardano.Ledger.Rules.ValidationMode
   )
 import Cardano.Ledger.Shelley.HardForks (allowOutsideForecastTTL)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
+import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoEnv, ShelleyUtxoPredFailure)
 import qualified Cardano.Ledger.Shelley.Rules.Utxo as Shelley
 import Cardano.Ledger.Shelley.Tx (TxIn)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance, txouts)
@@ -494,7 +495,7 @@ utxoTransition ::
     STS (AlonzoUTXO era),
     -- instructions for calling UTXOS from AlonzoUTXO
     Embed (EraRule "UTXOS" era) (AlonzoUTXO era),
-    Environment (EraRule "UTXOS" era) ~ Shelley.UtxoEnv era,
+    Environment (EraRule "UTXOS" era) ~ ShelleyUtxoEnv era,
     State (EraRule "UTXOS" era) ~ Shelley.UTxOState era,
     Signal (EraRule "UTXOS" era) ~ Tx era,
     HasField "_poolDeposit" (PParams era) Coin,
@@ -597,7 +598,7 @@ instance
     Show (TxOut era),
     Show (TxBody era),
     Embed (EraRule "UTXOS" era) (AlonzoUTXO era),
-    Environment (EraRule "UTXOS" era) ~ Shelley.UtxoEnv era,
+    Environment (EraRule "UTXOS" era) ~ ShelleyUtxoEnv era,
     State (EraRule "UTXOS" era) ~ Shelley.UTxOState era,
     Signal (EraRule "UTXOS" era) ~ AlonzoTx era,
     HasField "_poolDeposit" (PParams era) Coin,
@@ -618,7 +619,7 @@ instance
   where
   type State (AlonzoUTXO era) = Shelley.UTxOState era
   type Signal (AlonzoUTXO era) = AlonzoTx era
-  type Environment (AlonzoUTXO era) = Shelley.UtxoEnv era
+  type Environment (AlonzoUTXO era) = ShelleyUtxoEnv era
   type BaseM (AlonzoUTXO era) = ShelleyBase
   type PredicateFailure (AlonzoUTXO era) = UtxoPredicateFailure era
   type Event (AlonzoUTXO era) = UtxoEvent era
@@ -753,7 +754,7 @@ instance
 -- =====================================================
 -- Injecting from one PredicateFailure to another
 
-fromShelleyFailure :: Shelley.UtxoPredicateFailure era -> Maybe (UtxoPredicateFailure era)
+fromShelleyFailure :: ShelleyUtxoPredFailure era -> Maybe (UtxoPredicateFailure era)
 fromShelleyFailure = \case
   Shelley.BadInputsUTxO ins -> Just $ BadInputsUTxO ins
   Shelley.ExpiredUTxO {} -> Nothing -- Replaced with `OutsideValidityIntervalUTxO` in ShelleyMA
@@ -820,13 +821,13 @@ utxoPredFailMaToAlonzo (ShelleyMA.OutputTooBigUTxO xs) = OutputTooBigUTxO (map (
 
 instance
   Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era)) =>
-  Inject (Shelley.UtxoPredicateFailure era) (UtxoPredicateFailure era)
+  Inject (ShelleyUtxoPredFailure era) (UtxoPredicateFailure era)
   where
   inject = utxoPredFailShelleyToAlonzo
 
 utxoPredFailShelleyToAlonzo ::
   Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era)) =>
-  Shelley.UtxoPredicateFailure era ->
+  ShelleyUtxoPredFailure era ->
   UtxoPredicateFailure era
 utxoPredFailShelleyToAlonzo (Shelley.BadInputsUTxO ins) = BadInputsUTxO ins
 utxoPredFailShelleyToAlonzo (Shelley.ExpiredUTxO ttl current) =
@@ -842,7 +843,7 @@ utxoPredFailShelleyToAlonzo (Shelley.UpdateFailure x) = UtxosFailure (inject x)
 utxoPredFailShelleyToAlonzo (Shelley.OutputBootAddrAttrsTooBig outs) =
   OutputTooBigUTxO (map (\x -> (0, 0, x)) outs)
 
-instance InjectMaybe (Shelley.UtxoPredicateFailure era) (UtxoPredicateFailure era) where
+instance InjectMaybe (ShelleyUtxoPredFailure era) (UtxoPredicateFailure era) where
   injectMaybe = fromShelleyFailure
 
 instance InjectMaybe (ShelleyMA.UtxoPredicateFailure era) (UtxoPredicateFailure era) where

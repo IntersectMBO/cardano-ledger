@@ -72,6 +72,7 @@ import Cardano.Ledger.Rules.ValidationMode
   )
 import Cardano.Ledger.Serialization (Sized (..))
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
+import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoEnv, ShelleyUtxoPredFailure)
 import qualified Cardano.Ledger.Shelley.Rules.Utxo as Shelley
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import qualified Cardano.Ledger.ShelleyMA.Rules as ShelleyMA
@@ -160,7 +161,7 @@ instance
 
 instance
   Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era)) =>
-  Inject (Shelley.UtxoPredicateFailure era) (BabbageUtxoPred era)
+  Inject (ShelleyUtxoPredFailure era) (BabbageUtxoPred era)
   where
   inject = FromAlonzoUtxoFail . utxoPredFailShelleyToAlonzo
 
@@ -361,7 +362,7 @@ utxoTransition ::
     HasField "_prices" (PParams era) Prices,
     -- In this function we we call the UTXOS rule, so we need some assumptions
     Embed (EraRule "UTXOS" era) (BabbageUTXO era),
-    Environment (EraRule "UTXOS" era) ~ Shelley.UtxoEnv era,
+    Environment (EraRule "UTXOS" era) ~ ShelleyUtxoEnv era,
     State (EraRule "UTXOS" era) ~ Shelley.UTxOState era,
     Signal (EraRule "UTXOS" era) ~ Tx era,
     Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era)),
@@ -469,7 +470,7 @@ instance
     HasField "_protocolVersion" (PParams era) ProtVer,
     -- instructions for calling UTXOS from BabbageUTXO
     Embed (EraRule "UTXOS" era) (BabbageUTXO era),
-    Environment (EraRule "UTXOS" era) ~ Shelley.UtxoEnv era,
+    Environment (EraRule "UTXOS" era) ~ ShelleyUtxoEnv era,
     State (EraRule "UTXOS" era) ~ Shelley.UTxOState era,
     Signal (EraRule "UTXOS" era) ~ Tx era,
     Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era)),
@@ -480,7 +481,7 @@ instance
   where
   type State (BabbageUTXO era) = Shelley.UTxOState era
   type Signal (BabbageUTXO era) = AlonzoTx era
-  type Environment (BabbageUTXO era) = Shelley.UtxoEnv era
+  type Environment (BabbageUTXO era) = ShelleyUtxoEnv era
   type BaseM (BabbageUTXO era) = ShelleyBase
   type PredicateFailure (BabbageUTXO era) = BabbageUtxoPred era
   type Event (BabbageUTXO era) = UtxoEvent era

@@ -103,8 +103,8 @@ defaultShelleyLedgerExamples ::
   forall era.
   ( ShelleyBasedEra' era,
     EraSegWits era,
-    PredicateFailure (Core.EraRule "DELEGS" era) ~ DelegsPredicateFailure era,
-    PredicateFailure (Core.EraRule "LEDGER" era) ~ LedgerPredicateFailure era,
+    PredicateFailure (Core.EraRule "DELEGS" era) ~ ShelleyDelegsPredFailure era,
+    PredicateFailure (Core.EraRule "LEDGER" era) ~ ShelleyLedgerPredFailure era,
     Core.PParams era ~ ShelleyPParams era,
     Core.PParamsUpdate era ~ ShelleyPParamsUpdate era,
     Default (StashedAVVMAddresses era)

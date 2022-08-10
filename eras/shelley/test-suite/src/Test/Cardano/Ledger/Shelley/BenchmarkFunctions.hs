@@ -53,7 +53,7 @@ import Cardano.Ledger.Shelley.LedgerState
     UTxOState (..),
   )
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..), emptyPParams)
-import Cardano.Ledger.Shelley.Rules.Ledger (LEDGER, LedgerEnv (..))
+import Cardano.Ledger.Shelley.Rules.Ledger (ShelleyLEDGER, ShelleyLedgerEnv (..))
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), WitnessSetHKD (..))
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
@@ -171,16 +171,16 @@ ppsBench =
       _tau = unsafeBoundRational 0.2
     }
 
-ledgerEnv :: (Core.PParams era ~ ShelleyPParams era) => LedgerEnv era
+ledgerEnv :: (Core.PParams era ~ ShelleyPParams era) => ShelleyLedgerEnv era
 ledgerEnv = LedgerEnv (SlotNo 0) minBound ppsBench (AccountState (Coin 0) (Coin 0))
 
 testLEDGER ::
   LedgerState B ->
   ShelleyTx B ->
-  LedgerEnv B ->
+  ShelleyLedgerEnv B ->
   ()
 testLEDGER initSt tx env = do
-  let st = runShelleyBase $ applySTS @(LEDGER B) (TRC (env, initSt, tx))
+  let st = runShelleyBase $ applySTS @(ShelleyLEDGER B) (TRC (env, initSt, tx))
   case st of
     Right _ -> ()
     Left e -> error $ show e
@@ -279,7 +279,7 @@ initLedgerState n = LedgerState (initUTxO n) def
 
 makeLEDGERState :: HasCallStack => LedgerState B -> ShelleyTx B -> LedgerState B
 makeLEDGERState start tx =
-  let st = applySTS @(LEDGER B) (TRC (ledgerEnv, start, tx))
+  let st = applySTS @(ShelleyLEDGER B) (TRC (ledgerEnv, start, tx))
    in case runShelleyBase st of
         Right st' -> st'
         Left e -> error $ show e

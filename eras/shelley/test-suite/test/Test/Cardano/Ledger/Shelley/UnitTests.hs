@@ -39,8 +39,8 @@ import Cardano.Ledger.Keys
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API
   ( DCert (..),
-    LEDGER,
-    LedgerEnv (..),
+    ShelleyLEDGER,
+    ShelleyLedgerEnv (..),
   )
 import Cardano.Ledger.Shelley.Delegation.Certificates (pattern RegPool)
 import Cardano.Ledger.Shelley.LedgerState
@@ -54,15 +54,15 @@ import Cardano.Ledger.Shelley.LedgerState
     _unified,
   )
 import Cardano.Ledger.Shelley.PParams
-import Cardano.Ledger.Shelley.Rules.Delegs (DelegsPredicateFailure (..))
-import Cardano.Ledger.Shelley.Rules.Delpl (DelplPredicateFailure (..))
+import Cardano.Ledger.Shelley.Rules.Delegs (ShelleyDelegsPredFailure (..))
+import Cardano.Ledger.Shelley.Rules.Delpl (ShelleyDelplPredFailure (..))
 import Cardano.Ledger.Shelley.Rules.Ledger
   ( pattern DelegsFailure,
     pattern UtxowFailure,
   )
-import Cardano.Ledger.Shelley.Rules.Pool (PoolPredicateFailure (..))
-import Cardano.Ledger.Shelley.Rules.Utxo (UtxoPredicateFailure (..))
-import Cardano.Ledger.Shelley.Rules.Utxow (UtxowPredicateFailure (..))
+import Cardano.Ledger.Shelley.Rules.Pool (ShelleyPoolPredFailure (..))
+import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoPredFailure (..))
+import Cardano.Ledger.Shelley.Rules.Utxow (ShelleyUtxowPredFailure (..))
 import Cardano.Ledger.Shelley.Tx
   ( ShelleyTx (..),
     ShelleyTxBody (..),
@@ -317,13 +317,13 @@ testLEDGER ::
   HasCallStack =>
   LedgerState C ->
   ShelleyTx C ->
-  LedgerEnv C ->
-  Either [PredicateFailure (LEDGER C)] (LedgerState C) ->
+  ShelleyLedgerEnv C ->
+  Either [PredicateFailure (ShelleyLEDGER C)] (LedgerState C) ->
   Assertion
 testLEDGER initSt tx env (Right expectedSt) = do
-  checkTrace @(LEDGER C) runShelleyBase env $ pure initSt .- tx .-> expectedSt
+  checkTrace @(ShelleyLEDGER C) runShelleyBase env $ pure initSt .- tx .-> expectedSt
 testLEDGER initSt tx env predicateFailure@(Left _) = do
-  let st = runShelleyBase $ applySTSTest @(LEDGER C) (TRC (env, initSt, tx))
+  let st = runShelleyBase $ applySTSTest @(ShelleyLEDGER C) (TRC (env, initSt, tx))
   st @?= predicateFailure
 
 aliceInitCoin :: Coin
@@ -396,11 +396,11 @@ addReward dp ra c = dp {dpsDState = ds {_unified = rewards'}}
     ds = dpsDState dp
     rewards' = UM.insert ra c (rewards ds)
 
-ledgerEnv :: LedgerEnv C
+ledgerEnv :: ShelleyLedgerEnv C
 ledgerEnv = LedgerEnv (SlotNo 0) minBound pp (AccountState (Coin 0) (Coin 0))
 
 testInvalidTx ::
-  [PredicateFailure (LEDGER C)] ->
+  [PredicateFailure (ShelleyLEDGER C)] ->
   ShelleyTx C ->
   Assertion
 testInvalidTx errs tx =
@@ -728,7 +728,7 @@ testProducedOverMaxWord64 =
       tx = ShelleyTx @C txbody txwits SNothing
       st =
         runShelleyBase $
-          applySTSTest @(LEDGER C) (TRC (ledgerEnv, ledgerState, tx))
+          applySTSTest @(ShelleyLEDGER C) (TRC (ledgerEnv, ledgerState, tx))
    in -- We test that the serialization of the predicate failure does not return bottom
       serialize' st @?= serialize' st
 

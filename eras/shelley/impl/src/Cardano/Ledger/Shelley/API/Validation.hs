@@ -58,8 +58,8 @@ class
     Signal (EraRule "TICK" era) ~ SlotNo,
     STS (EraRule "BBODY" era),
     BaseM (EraRule "BBODY" era) ~ ShelleyBase,
-    Environment (EraRule "BBODY" era) ~ STS.BbodyEnv era,
-    State (EraRule "BBODY" era) ~ STS.BbodyState era,
+    Environment (EraRule "BBODY" era) ~ STS.ShelleyBbodyEnv era,
+    State (EraRule "BBODY" era) ~ STS.ShelleyBbodyState era,
     Signal (EraRule "BBODY" era) ~ Block (BHeaderView (Crypto era)) era,
     ToCBORGroup (TxSeq era)
   ) =>
@@ -196,7 +196,7 @@ chainChecks = STS.chainChecks
 
 mkBbodyEnv ::
   NewEpochState era ->
-  STS.BbodyEnv era
+  STS.ShelleyBbodyEnv era
 mkBbodyEnv
   LedgerState.NewEpochState
     { LedgerState.nesEs
@@ -208,7 +208,7 @@ mkBbodyEnv
 
 updateNewEpochState ::
   NewEpochState era ->
-  STS.BbodyState era ->
+  STS.ShelleyBbodyState era ->
   NewEpochState era
 updateNewEpochState ss (STS.BbodyState ls bcur) =
   LedgerState.updateNES ss bcur ls

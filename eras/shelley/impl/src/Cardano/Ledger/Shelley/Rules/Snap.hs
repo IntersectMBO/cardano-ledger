@@ -9,9 +9,9 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Shelley.Rules.Snap
-  ( SNAP,
+  ( ShelleySNAP,
     PredicateFailure,
-    SnapPredicateFailure,
+    ShelleySnapPredFailure,
     SnapEvent (..),
   )
 where
@@ -50,23 +50,23 @@ import NoThunks.Class (NoThunks (..))
 
 -- ======================================================
 
-data SNAP era
+data ShelleySNAP era
 
-data SnapPredicateFailure era -- No predicate failures
+data ShelleySnapPredFailure era -- No predicate failures
   deriving (Show, Generic, Eq)
 
-instance NoThunks (SnapPredicateFailure era)
+instance NoThunks (ShelleySnapPredFailure era)
 
 newtype SnapEvent era
   = StakeDistEvent (Map (Credential 'Staking (Crypto era)) (Coin, KeyHash 'StakePool (Crypto era)))
 
-instance EraTxOut era => STS (SNAP era) where
-  type State (SNAP era) = SnapShots (Crypto era)
-  type Signal (SNAP era) = ()
-  type Environment (SNAP era) = LedgerState era
-  type BaseM (SNAP era) = ShelleyBase
-  type PredicateFailure (SNAP era) = SnapPredicateFailure era
-  type Event (SNAP era) = SnapEvent era
+instance EraTxOut era => STS (ShelleySNAP era) where
+  type State (ShelleySNAP era) = SnapShots (Crypto era)
+  type Signal (ShelleySNAP era) = ()
+  type Environment (ShelleySNAP era) = LedgerState era
+  type BaseM (ShelleySNAP era) = ShelleyBase
+  type PredicateFailure (ShelleySNAP era) = ShelleySnapPredFailure era
+  type Event (ShelleySNAP era) = SnapEvent era
   initialRules = [pure emptySnapShots]
   transitionRules = [snapTransition]
 
@@ -80,7 +80,7 @@ instance EraTxOut era => STS (SNAP era) where
 -- where important changes were made to the source code.
 snapTransition ::
   forall era.
-  TransitionRule (SNAP era)
+  TransitionRule (ShelleySNAP era)
 snapTransition = do
   TRC (lstate, s, _) <- judgmentContext
 

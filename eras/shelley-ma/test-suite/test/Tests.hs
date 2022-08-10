@@ -7,7 +7,7 @@ module Main where
 
 import Cardano.Ledger.Core as Core
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
-import Cardano.Ledger.Shelley.Rules.Ledger (LEDGER)
+import Cardano.Ledger.Shelley.Rules.Ledger (ShelleyLEDGER)
 import Cardano.Ledger.ShelleyMA (ShelleyMAEra)
 import qualified Cardano.Protocol.TPraos.Rules.Tickn as TPraos
 import Test.Cardano.Ledger.Allegra.ScriptTranslation (testScriptPostTranslation)
@@ -27,11 +27,11 @@ import Test.TestScenario (TestScenario (..), mainWithTestScenario)
 
 type A = AllegraEra TestCrypto
 
-type AL = LEDGER (AllegraEra TestCrypto)
+type AL = ShelleyLEDGER (AllegraEra TestCrypto)
 
 type M = MaryEra TestCrypto
 
-type ML = LEDGER (MaryEra TestCrypto)
+type ML = ShelleyLEDGER (MaryEra TestCrypto)
 
 type instance Core.EraRule "TICKN" (ShelleyMAEra _ma _c) = TPraos.TICKN
 

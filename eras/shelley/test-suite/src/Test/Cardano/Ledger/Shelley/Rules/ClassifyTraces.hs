@@ -27,7 +27,7 @@ import Cardano.Ledger.Shelley.API
     DCert (..),
     DelegCert (..),
     Delegation (..),
-    LEDGER,
+    ShelleyLEDGER,
   )
 import Cardano.Ledger.Shelley.Delegation.Certificates
   ( isDeRegKey,
@@ -297,14 +297,14 @@ onlyValidLedgerSignalsAreGenerated =
 propAbstractSizeBoundsBytes ::
   forall era.
   ( EraGen era,
-    QC.HasTrace (LEDGER era) (GenEnv era),
+    QC.HasTrace (ShelleyLEDGER era) (GenEnv era),
     Default (State (EraRule "PPUP" era))
   ) =>
   Property
 propAbstractSizeBoundsBytes = property $ do
   let tl = 100
       numBytes = toInteger . BS.length . serialize'
-  forAllTraceFromInitState @(LEDGER era)
+  forAllTraceFromInitState @(ShelleyLEDGER era)
     testGlobals
     tl
     (genEnv p)
@@ -323,7 +323,7 @@ propAbstractSizeBoundsBytes = property $ do
 propAbstractSizeNotTooBig ::
   forall era.
   ( EraGen era,
-    QC.HasTrace (LEDGER era) (GenEnv era),
+    QC.HasTrace (ShelleyLEDGER era) (GenEnv era),
     Default (State (EraRule "PPUP" era))
   ) =>
   Property
@@ -337,7 +337,7 @@ propAbstractSizeNotTooBig = property $ do
       acceptableMagnitude = (3 :: Integer)
       numBytes = toInteger . BS.length . serialize'
       notTooBig tx = txSizeBound tx <= acceptableMagnitude * numBytes tx
-  forAllTraceFromInitState @(LEDGER era)
+  forAllTraceFromInitState @(ShelleyLEDGER era)
     testGlobals
     tl
     (genEnv p)

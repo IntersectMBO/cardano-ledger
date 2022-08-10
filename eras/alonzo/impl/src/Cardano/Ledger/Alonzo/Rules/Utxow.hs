@@ -71,10 +71,10 @@ import Cardano.Ledger.Shelley.LedgerState
     propWits,
     witsFromTxWitnesses,
   )
-import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
+import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoEnv (..))
 import Cardano.Ledger.Shelley.Rules.Utxow
-  ( UtxowEvent (UtxoEvent),
-    UtxowPredicateFailure (..),
+  ( ShelleyUtxowEvent (UtxoEvent),
+    ShelleyUtxowPredFailure (..),
     validateNeededWitnesses,
   )
 import qualified Cardano.Ledger.Shelley.Rules.Utxow as Shelley
@@ -106,7 +106,7 @@ import Validation
 -- | The Predicate failure type in the Alonzo Era. It embeds the Predicate
 --   failure type of the Shelley Era, as they share some failure modes.
 data UtxowPredicateFail era
-  = WrappedShelleyEraFailure !(UtxowPredicateFailure era)
+  = WrappedShelleyEraFailure !(ShelleyUtxowPredFailure era)
   | -- | List of scripts for which no redeemers were supplied
     MissingRedeemers
       ![(ScriptPurpose (Crypto era), ScriptHash (Crypto era))]
@@ -138,14 +138,14 @@ data UtxowPredicateFail era
 
 deriving instance
   ( Era era,
-    Show (PredicateFailure (EraRule "UTXO" era)), -- The Shelley UtxowPredicateFailure needs this to Show
+    Show (PredicateFailure (EraRule "UTXO" era)), -- The ShelleyUtxowPredFailure needs this to Show
     Show (Script era)
   ) =>
   Show (UtxowPredicateFail era)
 
 deriving instance
   ( Era era,
-    Eq (PredicateFailure (EraRule "UTXO" era)), -- The Shelley UtxowPredicateFailure needs this to Eq
+    Eq (PredicateFailure (EraRule "UTXO" era)), -- The ShelleyUtxowPredFailure needs this to Eq
     Eq (Script era)
   ) =>
   Eq (UtxowPredicateFail era)
@@ -169,7 +169,7 @@ instance
   toCBOR x = encode (encodePredFail x)
 
 newtype AlonzoUtxowEvent era
-  = WrappedShelleyEraEvent (UtxowEvent era)
+  = WrappedShelleyEraEvent (ShelleyUtxowEvent era)
 
 encodePredFail ::
   ( Era era,
@@ -344,7 +344,7 @@ alonzoStyleWitness ::
     Signable (DSIGN (Crypto era)) (Hash (HASH (Crypto era)) EraIndependentTxBody),
     -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (AlonzoUTXOW era),
-    Environment (EraRule "UTXO" era) ~ UtxoEnv era,
+    Environment (EraRule "UTXO" era) ~ ShelleyUtxoEnv era,
     State (EraRule "UTXO" era) ~ UTxOState era,
     Signal (EraRule "UTXO" era) ~ AlonzoTx era
   ) =>
@@ -512,7 +512,7 @@ instance
     HasField "_protocolVersion" (PParams era) ProtVer,
     -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (AlonzoUTXOW era),
-    Environment (EraRule "UTXO" era) ~ UtxoEnv era,
+    Environment (EraRule "UTXO" era) ~ ShelleyUtxoEnv era,
     State (EraRule "UTXO" era) ~ UTxOState era,
     Signal (EraRule "UTXO" era) ~ AlonzoTx era
   ) =>
@@ -520,7 +520,7 @@ instance
   where
   type State (AlonzoUTXOW era) = UTxOState era
   type Signal (AlonzoUTXOW era) = AlonzoTx era
-  type Environment (AlonzoUTXOW era) = UtxoEnv era
+  type Environment (AlonzoUTXOW era) = ShelleyUtxoEnv era
   type BaseM (AlonzoUTXOW era) = ShelleyBase
   type PredicateFailure (AlonzoUTXOW era) = UtxowPredicateFail era
   type Event (AlonzoUTXOW era) = AlonzoUtxowEvent era
@@ -547,5 +547,5 @@ instance
 instance Inject (UtxowPredicateFail era) (UtxowPredicateFail era) where
   inject = id
 
-instance Inject (UtxowPredicateFailure era) (UtxowPredicateFail era) where
+instance Inject (ShelleyUtxowPredFailure era) (UtxowPredicateFail era) where
   inject = WrappedShelleyEraFailure

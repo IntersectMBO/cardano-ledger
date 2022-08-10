@@ -17,17 +17,17 @@ import Cardano.Ledger.Shelley.API
   ( AccountState (..),
     Credential (..),
     DCert (..),
-    DELEG,
     DState (..),
-    DelegEnv (..),
     InstantaneousRewards (..),
     MIRCert (..),
     MIRPot (..),
     MIRTarget (..),
     Ptr (..),
+    ShelleyDELEG,
+    ShelleyDelegEnv (..),
   )
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..), emptyPParams)
-import Cardano.Ledger.Shelley.Rules.Deleg (DelegPredicateFailure (..))
+import Cardano.Ledger.Shelley.Rules.Deleg (ShelleyDelegPredFailure (..))
 import Cardano.Ledger.Slot (SlotNo (..))
 import Control.State.Transition.Extended hiding (Assertion)
 import Control.State.Transition.Trace (checkTrace, (.-), (.->))
@@ -42,11 +42,11 @@ import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 type ShelleyTest = ShelleyEra C_Crypto
 
 ignoreAllButIRWD ::
-  Either [PredicateFailure (DELEG ShelleyTest)] (DState C_Crypto) ->
-  Either [PredicateFailure (DELEG ShelleyTest)] (InstantaneousRewards C_Crypto)
+  Either [PredicateFailure (ShelleyDELEG ShelleyTest)] (DState C_Crypto) ->
+  Either [PredicateFailure (ShelleyDELEG ShelleyTest)] (InstantaneousRewards C_Crypto)
 ignoreAllButIRWD = fmap _irwd
 
-env :: ProtVer -> AccountState -> DelegEnv ShelleyTest
+env :: ProtVer -> AccountState -> ShelleyDelegEnv ShelleyTest
 env pv acnt =
   DelegEnv
     { slotNo = SlotNo 50,
@@ -67,15 +67,15 @@ testMirTransfer ::
   MIRTarget C_Crypto ->
   InstantaneousRewards C_Crypto ->
   AccountState ->
-  Either [PredicateFailure (DELEG ShelleyTest)] (InstantaneousRewards C_Crypto) ->
+  Either [PredicateFailure (ShelleyDELEG ShelleyTest)] (InstantaneousRewards C_Crypto) ->
   Assertion
 testMirTransfer pv pot target ir acnt (Right expected) = do
-  checkTrace @(DELEG ShelleyTest) runShelleyBase (env pv acnt) $
+  checkTrace @(ShelleyDELEG ShelleyTest) runShelleyBase (env pv acnt) $
     (pure (def {_irwd = ir})) .- (DCertMir (MIRCert pot target)) .-> (def {_irwd = expected})
 testMirTransfer pv pot target ir acnt predicateFailure@(Left _) = do
   let st =
         runShelleyBase $
-          applySTSTest @(DELEG ShelleyTest)
+          applySTSTest @(ShelleyDELEG ShelleyTest)
             (TRC (env pv acnt, def {_irwd = ir}, DCertMir (MIRCert pot target)))
   (ignoreAllButIRWD st) @?= predicateFailure
 

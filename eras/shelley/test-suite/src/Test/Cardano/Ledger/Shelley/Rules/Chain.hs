@@ -75,12 +75,12 @@ import Cardano.Ledger.Shelley.LedgerState
     _genDelegs,
   )
 import Cardano.Ledger.Shelley.Rules.Bbody
-  ( BBODY,
-    BbodyEnv (..),
-    BbodyPredicateFailure,
-    BbodyState (..),
+  ( ShelleyBBODY,
+    ShelleyBbodyEnv (..),
+    ShelleyBbodyPredFailure,
+    ShelleyBbodyState (..),
   )
-import Cardano.Ledger.Shelley.Rules.Tick (TICK, TickEvent, TickPredicateFailure)
+import Cardano.Ledger.Shelley.Rules.Tick (ShelleyTICK, ShelleyTickEvent, ShelleyTickPredFailure)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.Slot (EpochNo)
 import Cardano.Protocol.TPraos.BHeader
@@ -242,8 +242,8 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
 instance
   ( Era era,
     Embed (Core.EraRule "BBODY" era) (CHAIN era),
-    Environment (Core.EraRule "BBODY" era) ~ BbodyEnv era,
-    State (Core.EraRule "BBODY" era) ~ BbodyState era,
+    Environment (Core.EraRule "BBODY" era) ~ ShelleyBbodyEnv era,
+    State (Core.EraRule "BBODY" era) ~ ShelleyBbodyState era,
     Signal (Core.EraRule "BBODY" era) ~ Block (BHeaderView (Crypto era)) era,
     Embed (Core.EraRule "TICKN" era) (CHAIN era),
     Environment (Core.EraRule "TICKN" era) ~ TicknEnv,
@@ -285,8 +285,8 @@ chainTransition ::
   ( Era era,
     STS (CHAIN era),
     Embed (Core.EraRule "BBODY" era) (CHAIN era),
-    Environment (Core.EraRule "BBODY" era) ~ BbodyEnv era,
-    State (Core.EraRule "BBODY" era) ~ BbodyState era,
+    Environment (Core.EraRule "BBODY" era) ~ ShelleyBbodyEnv era,
+    State (Core.EraRule "BBODY" era) ~ ShelleyBbodyState era,
     Signal (Core.EraRule "BBODY" era) ~ Block (BHeaderView (Crypto era)) era,
     Embed (Core.EraRule "TICKN" era) (CHAIN era),
     Environment (Core.EraRule "TICKN" era) ~ TicknEnv,
@@ -379,11 +379,11 @@ chainTransition =
 instance
   ( Era era,
     Era era,
-    STS (BBODY era),
-    PredicateFailure (Core.EraRule "BBODY" era) ~ BbodyPredicateFailure era,
-    Event (Core.EraRule "BBODY" era) ~ Event (BBODY era)
+    STS (ShelleyBBODY era),
+    PredicateFailure (Core.EraRule "BBODY" era) ~ ShelleyBbodyPredFailure era,
+    Event (Core.EraRule "BBODY" era) ~ Event (ShelleyBBODY era)
   ) =>
-  Embed (BBODY era) (CHAIN era)
+  Embed (ShelleyBBODY era) (CHAIN era)
   where
   wrapFailed = BbodyFailure
   wrapEvent = BbodyEvent
@@ -402,11 +402,11 @@ instance
 instance
   ( Era era,
     Era era,
-    STS (TICK era),
-    PredicateFailure (Core.EraRule "TICK" era) ~ TickPredicateFailure era,
-    Event (Core.EraRule "TICK" era) ~ TickEvent era
+    STS (ShelleyTICK era),
+    PredicateFailure (Core.EraRule "TICK" era) ~ ShelleyTickPredFailure era,
+    Event (Core.EraRule "TICK" era) ~ ShelleyTickEvent era
   ) =>
-  Embed (TICK era) (CHAIN era)
+  Embed (ShelleyTICK era) (CHAIN era)
   where
   wrapFailed = TickFailure
   wrapEvent = TickEvent

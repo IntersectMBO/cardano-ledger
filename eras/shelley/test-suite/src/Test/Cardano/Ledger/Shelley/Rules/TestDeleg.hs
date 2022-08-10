@@ -20,7 +20,7 @@ where
 import Cardano.Ledger.BaseTypes (ProtVer)
 import Cardano.Ledger.Coin (addDeltaCoin, pattern Coin)
 import qualified Cardano.Ledger.Core as Core (PParams)
-import Cardano.Ledger.Shelley.API (DELEG)
+import Cardano.Ledger.Shelley.API (ShelleyDELEG)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
 import Cardano.Ledger.Shelley.LedgerState
   ( DState (..),
@@ -28,7 +28,7 @@ import Cardano.Ledger.Shelley.LedgerState
     delegations,
     rewards,
   )
-import Cardano.Ledger.Shelley.Rules.Deleg (DelegEnv (..))
+import Cardano.Ledger.Shelley.Rules.Deleg (ShelleyDelegEnv (..))
 import Cardano.Ledger.Shelley.TxBody
   ( MIRPot (..),
     MIRTarget (..),
@@ -57,7 +57,7 @@ import GHC.Records (HasField (..))
 import Test.QuickCheck (Property, conjoin, counterexample, property)
 
 -- | Check stake key registration
-keyRegistration :: SourceSignalTarget (DELEG era) -> Property
+keyRegistration :: SourceSignalTarget (ShelleyDELEG era) -> Property
 keyRegistration
   SourceSignalTarget
     { signal = (DCertDeleg (RegKey hk)),
@@ -74,7 +74,7 @@ keyRegistration
 keyRegistration _ = property ()
 
 -- | Check stake key de-registration
-keyDeRegistration :: SourceSignalTarget (DELEG era) -> Property
+keyDeRegistration :: SourceSignalTarget (ShelleyDELEG era) -> Property
 keyDeRegistration
   SourceSignalTarget
     { signal = (DCertDeleg (DeRegKey hk)),
@@ -91,7 +91,7 @@ keyDeRegistration
 keyDeRegistration _ = property ()
 
 -- | Check stake key delegation
-keyDelegation :: SourceSignalTarget (DELEG era) -> Property
+keyDelegation :: SourceSignalTarget (ShelleyDELEG era) -> Property
 keyDelegation
   SourceSignalTarget
     { signal = (DCertDeleg (Delegate (Delegation from to))),
@@ -113,7 +113,7 @@ keyDelegation _ = property ()
 
 -- | Check that the sum of rewards does not change and that each element
 -- that is either removed or added has a zero balance.
-rewardsSumInvariant :: SourceSignalTarget (DELEG era) -> Property
+rewardsSumInvariant :: SourceSignalTarget (ShelleyDELEG era) -> Property
 rewardsSumInvariant
   SourceSignalTarget {source, target} =
     let sourceRewards = UM.unUnify (rewards source) -- would not use unUnify in production, but tests are OK?
@@ -133,8 +133,8 @@ rewardsSumInvariant
 
 checkInstantaneousRewards ::
   (HasField "_protocolVersion" (Core.PParams era) ProtVer) =>
-  DelegEnv era ->
-  SourceSignalTarget (DELEG era) ->
+  ShelleyDelegEnv era ->
+  SourceSignalTarget (ShelleyDELEG era) ->
   Property
 checkInstantaneousRewards
   denv

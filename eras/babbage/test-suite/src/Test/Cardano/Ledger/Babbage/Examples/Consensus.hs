@@ -40,8 +40,8 @@ import Cardano.Ledger.Shelley.API
     Update (..),
     Wdrl (..),
   )
-import Cardano.Ledger.Shelley.Rules.Delegs (DelegsPredicateFailure (..))
-import Cardano.Ledger.Shelley.Rules.Ledger (LedgerPredicateFailure (..))
+import Cardano.Ledger.Shelley.Rules.Delegs (ShelleyDelegsPredFailure (..))
+import Cardano.Ledger.Shelley.Rules.Ledger (ShelleyLedgerPredFailure (..))
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.UTxO (makeWitnessesVKey)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))

@@ -12,14 +12,14 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Shelley.Rules.Tick
-  ( TICK,
+  ( ShelleyTICK,
     State,
-    TickPredicateFailure (..),
-    TickEvent (..),
+    ShelleyTickPredFailure (..),
+    ShelleyTickEvent (..),
     PredicateFailure,
     adoptGenesisDelegs,
-    TICKF,
-    TickfPredicateFailure (..),
+    ShelleyTICKF,
+    ShelleyTickfPredFailure (..),
   )
 where
 
@@ -36,8 +36,8 @@ import Cardano.Ledger.Shelley.LedgerState
     NewEpochState (..),
     PulsingRewUpdate,
   )
-import Cardano.Ledger.Shelley.Rules.NewEpoch (NEWEPOCH, NewEpochEvent, NewEpochPredicateFailure)
-import Cardano.Ledger.Shelley.Rules.Rupd (RUPD, RupdEnv (..), RupdEvent, RupdPredicateFailure)
+import Cardano.Ledger.Shelley.Rules.NewEpoch (ShelleyNEWEPOCH, ShelleyNewEpochEvent, ShelleyNewEpochPredFailure)
+import Cardano.Ledger.Shelley.Rules.Rupd (RupdEvent, ShelleyRUPD, ShelleyRupdEnv (..), ShelleyRupdPredFailure)
 import Cardano.Ledger.Slot (EpochNo, SlotNo, epochInfoEpoch)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (⨃))
@@ -48,9 +48,9 @@ import NoThunks.Class (NoThunks (..))
 
 -- ==================================================
 
-data TICK era
+data ShelleyTICK era
 
-data TickPredicateFailure era
+data ShelleyTickPredFailure era
   = NewEpochFailure (PredicateFailure (EraRule "NEWEPOCH" era)) -- Subtransition Failures
   | RupdFailure (PredicateFailure (EraRule "RUPD" era)) -- Subtransition Failures
   deriving (Generic)
@@ -59,50 +59,50 @@ deriving stock instance
   ( Show (PredicateFailure (EraRule "NEWEPOCH" era)),
     Show (PredicateFailure (EraRule "RUPD" era))
   ) =>
-  Show (TickPredicateFailure era)
+  Show (ShelleyTickPredFailure era)
 
 deriving stock instance
   ( Eq (PredicateFailure (EraRule "NEWEPOCH" era)),
     Eq (PredicateFailure (EraRule "RUPD" era))
   ) =>
-  Eq (TickPredicateFailure era)
+  Eq (ShelleyTickPredFailure era)
 
 instance
   ( NoThunks (PredicateFailure (EraRule "NEWEPOCH" era)),
     NoThunks (PredicateFailure (EraRule "RUPD" era))
   ) =>
-  NoThunks (TickPredicateFailure era)
+  NoThunks (ShelleyTickPredFailure era)
 
-data TickEvent era
+data ShelleyTickEvent era
   = NewEpochEvent (Event (EraRule "NEWEPOCH" era))
   | RupdEvent (Event (EraRule "RUPD" era))
   deriving (Generic)
 
 instance
   ( Era era,
-    Embed (EraRule "NEWEPOCH" era) (TICK era),
-    Embed (EraRule "RUPD" era) (TICK era),
-    State (TICK era) ~ NewEpochState era,
-    BaseM (TICK era) ~ ShelleyBase,
-    Environment (EraRule "RUPD" era) ~ RupdEnv era,
+    Embed (EraRule "NEWEPOCH" era) (ShelleyTICK era),
+    Embed (EraRule "RUPD" era) (ShelleyTICK era),
+    State (ShelleyTICK era) ~ NewEpochState era,
+    BaseM (ShelleyTICK era) ~ ShelleyBase,
+    Environment (EraRule "RUPD" era) ~ ShelleyRupdEnv era,
     State (EraRule "RUPD" era) ~ StrictMaybe (PulsingRewUpdate (Crypto era)),
     Signal (EraRule "RUPD" era) ~ SlotNo,
     Environment (EraRule "NEWEPOCH" era) ~ (),
     State (EraRule "NEWEPOCH" era) ~ NewEpochState era,
     Signal (EraRule "NEWEPOCH" era) ~ EpochNo
   ) =>
-  STS (TICK era)
+  STS (ShelleyTICK era)
   where
   type
-    State (TICK era) =
+    State (ShelleyTICK era) =
       NewEpochState era
   type
-    Signal (TICK era) =
+    Signal (ShelleyTICK era) =
       SlotNo
-  type Environment (TICK era) = ()
-  type BaseM (TICK era) = ShelleyBase
-  type PredicateFailure (TICK era) = TickPredicateFailure era
-  type Event (TICK era) = TickEvent era
+  type Environment (ShelleyTICK era) = ()
+  type BaseM (ShelleyTICK era) = ShelleyBase
+  type PredicateFailure (ShelleyTICK era) = ShelleyTickPredFailure era
+  type Event (ShelleyTICK era) = ShelleyTickEvent era
 
   initialRules = []
   transitionRules = [bheadTransition]
@@ -163,24 +163,24 @@ validatingTickTransition nes slot = do
 
 bheadTransition ::
   forall era.
-  ( Embed (EraRule "NEWEPOCH" era) (TICK era),
-    Embed (EraRule "RUPD" era) (TICK era),
-    STS (TICK era),
-    State (TICK era) ~ NewEpochState era,
-    BaseM (TICK era) ~ ShelleyBase,
-    Environment (EraRule "RUPD" era) ~ RupdEnv era,
+  ( Embed (EraRule "NEWEPOCH" era) (ShelleyTICK era),
+    Embed (EraRule "RUPD" era) (ShelleyTICK era),
+    STS (ShelleyTICK era),
+    State (ShelleyTICK era) ~ NewEpochState era,
+    BaseM (ShelleyTICK era) ~ ShelleyBase,
+    Environment (EraRule "RUPD" era) ~ ShelleyRupdEnv era,
     State (EraRule "RUPD" era) ~ StrictMaybe (PulsingRewUpdate (Crypto era)),
     Signal (EraRule "RUPD" era) ~ SlotNo,
     Environment (EraRule "NEWEPOCH" era) ~ (),
     State (EraRule "NEWEPOCH" era) ~ NewEpochState era,
     Signal (EraRule "NEWEPOCH" era) ~ EpochNo
   ) =>
-  TransitionRule (TICK era)
+  TransitionRule (ShelleyTICK era)
 bheadTransition = do
   TRC ((), nes@(NewEpochState _ bprev _ es _ _ _), slot) <-
     judgmentContext
 
-  nes' <- validatingTickTransition @TICK nes slot
+  nes' <- validatingTickTransition @ShelleyTICK nes slot
 
   -- Here we force the evaluation of the mark snapshot.
   -- We do NOT force it in the TICKF and TICKN rule
@@ -196,22 +196,22 @@ bheadTransition = do
   pure nes''
 
 instance
-  ( STS (NEWEPOCH era),
-    PredicateFailure (EraRule "NEWEPOCH" era) ~ NewEpochPredicateFailure era,
-    Event (EraRule "NEWEPOCH" era) ~ NewEpochEvent era
+  ( STS (ShelleyNEWEPOCH era),
+    PredicateFailure (EraRule "NEWEPOCH" era) ~ ShelleyNewEpochPredFailure era,
+    Event (EraRule "NEWEPOCH" era) ~ ShelleyNewEpochEvent era
   ) =>
-  Embed (NEWEPOCH era) (TICK era)
+  Embed (ShelleyNEWEPOCH era) (ShelleyTICK era)
   where
   wrapFailed = NewEpochFailure
   wrapEvent = NewEpochEvent
 
 instance
   ( Era era,
-    STS (RUPD era),
-    PredicateFailure (EraRule "RUPD" era) ~ RupdPredicateFailure era,
+    STS (ShelleyRUPD era),
+    PredicateFailure (EraRule "RUPD" era) ~ ShelleyRupdPredFailure era,
     Event (EraRule "RUPD" era) ~ RupdEvent (Crypto era)
   ) =>
-  Embed (RUPD era) (TICK era)
+  Embed (ShelleyRUPD era) (ShelleyTICK era)
   where
   wrapFailed = RupdFailure
   wrapEvent = RupdEvent
@@ -223,9 +223,9 @@ instance
 to tick the ledger state to a future slot.
 ------------------------------------------------------------------------------}
 
-data TICKF era
+data ShelleyTICKF era
 
-newtype TickfPredicateFailure era
+newtype ShelleyTickfPredFailure era
   = TickfNewEpochFailure (PredicateFailure (EraRule "NEWEPOCH" era)) -- Subtransition Failures
   deriving (Generic)
 
@@ -233,41 +233,41 @@ deriving stock instance
   ( Era era,
     Show (PredicateFailure (EraRule "NEWEPOCH" era))
   ) =>
-  Show (TickfPredicateFailure era)
+  Show (ShelleyTickfPredFailure era)
 
 deriving stock instance
   ( Era era,
     Eq (PredicateFailure (EraRule "NEWEPOCH" era))
   ) =>
-  Eq (TickfPredicateFailure era)
+  Eq (ShelleyTickfPredFailure era)
 
 instance
   ( NoThunks (PredicateFailure (EraRule "NEWEPOCH" era))
   ) =>
-  NoThunks (TickfPredicateFailure era)
+  NoThunks (ShelleyTickfPredFailure era)
 
-newtype TickfEvent era
+newtype ShelleyTickfEvent era
   = TickfNewEpochEvent (Event (EraRule "NEWEPOCH" era)) -- Subtransition Events
 
 instance
   ( Era era,
-    Embed (EraRule "NEWEPOCH" era) (TICKF era),
+    Embed (EraRule "NEWEPOCH" era) (ShelleyTICKF era),
     Environment (EraRule "NEWEPOCH" era) ~ (),
     State (EraRule "NEWEPOCH" era) ~ NewEpochState era,
     Signal (EraRule "NEWEPOCH" era) ~ EpochNo
   ) =>
-  STS (TICKF era)
+  STS (ShelleyTICKF era)
   where
   type
-    State (TICKF era) =
+    State (ShelleyTICKF era) =
       NewEpochState era
   type
-    Signal (TICKF era) =
+    Signal (ShelleyTICKF era) =
       SlotNo
-  type Environment (TICKF era) = ()
-  type BaseM (TICKF era) = ShelleyBase
-  type PredicateFailure (TICKF era) = TickfPredicateFailure era
-  type Event (TICKF era) = TickfEvent era
+  type Environment (ShelleyTICKF era) = ()
+  type BaseM (ShelleyTICKF era) = ShelleyBase
+  type PredicateFailure (ShelleyTICKF era) = ShelleyTickfPredFailure era
+  type Event (ShelleyTICKF era) = ShelleyTickfEvent era
 
   initialRules = []
   transitionRules =
@@ -277,11 +277,11 @@ instance
     ]
 
 instance
-  ( STS (NEWEPOCH era),
-    PredicateFailure (EraRule "NEWEPOCH" era) ~ NewEpochPredicateFailure era,
-    Event (EraRule "NEWEPOCH" era) ~ NewEpochEvent era
+  ( STS (ShelleyNEWEPOCH era),
+    PredicateFailure (EraRule "NEWEPOCH" era) ~ ShelleyNewEpochPredFailure era,
+    Event (EraRule "NEWEPOCH" era) ~ ShelleyNewEpochEvent era
   ) =>
-  Embed (NEWEPOCH era) (TICKF era)
+  Embed (ShelleyNEWEPOCH era) (ShelleyTICKF era)
   where
   wrapFailed = TickfNewEpochFailure
   wrapEvent = TickfNewEpochEvent
