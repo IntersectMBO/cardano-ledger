@@ -271,8 +271,11 @@ In the UTXO rule, we switch from a manual estimation of the size consumed by $\U
 
 To the UTXOW rule, in addition to the changes required by the new
 features, we add a check that all scripts and datums involved in the
-transaction are well-formed. Also, we forbid transactions that use the
-new features and try to execute $\PlutusVI$ scripts.
+transaction are well-formed. We forbid transactions that try to
+execute $\PlutusVI$ scripts and use the new features which can't be
+translated to $\PlutusVI$'s $\TxInfo$ (reference inputs, inline datums
+and reference scripts). We also forbid transactions that involve Byron 
+addresses.
 
 \begin{figure}
   \begin{equation}
