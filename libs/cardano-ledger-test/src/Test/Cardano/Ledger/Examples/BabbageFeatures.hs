@@ -26,8 +26,8 @@ import Cardano.Ledger.Alonzo.Rules
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (PlutusScript), CostModels (..), ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
 import Cardano.Ledger.Alonzo.TxInfo
-  ( TranslationError (InlineDatumsNotSupported),
-    TxOutSource (TxOutFromInput),
+  ( TranslationError (InlineDatumsNotSupported, ReferenceInputsNotSupported, ReferenceScriptsNotSupported),
+    TxOutSource (TxOutFromInput, TxOutFromOutput),
   )
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..), TxDats (..))
 import qualified Cardano.Ledger.Babbage.Collateral as Collateral (collBalance)
@@ -691,6 +691,87 @@ inlineDatumWithPlutusV1Script pf =
     }
 
 -- ====================================================================================
+-- Invalid:  Using reference script with Plutus V1 script
+-- ====================================================================================
+
+referenceScriptWithPlutusV1Script :: forall era. (Scriptic era, EraTxBody era) => Proof era -> TestCaseData era
+referenceScriptWithPlutusV1Script pf =
+  TestCaseData
+    { txBody =
+        newTxBody
+          pf
+          [ Inputs' [someTxIn],
+            Collateral' [anotherTxIn],
+            Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 4995), RefScript (SJust $ simpleScript pf)]],
+            Txfee (Coin 5),
+            WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] validatingRedeemers txDats)
+          ],
+      initOutputs =
+        InitOutputs
+          { ofInputs =
+              [ newTxOut
+                  pf
+                  [ Address (scriptAddr pf (always 3 pf)),
+                    Amount (inject $ Coin 5000),
+                    DHash' [hashData $ datumExampleSixtyFiveBytes @era]
+                  ]
+              ],
+            ofRefInputs = [],
+            ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
+          },
+      keysForAddrWits = [someKeysPaymentKeyRole pf],
+      otherWitsFields =
+        [ ScriptWits' [always 3 pf],
+          DataWits' [datumExampleSixtyFiveBytes],
+          RdmrWits validatingRedeemers
+        ]
+    }
+
+-- ====================================================================================
+-- Invalid:  Using reference input with Plutus V1 script
+-- ====================================================================================
+
+referenceInputWithPlutusV1Script :: forall era. (Scriptic era, EraTxBody era) => Proof era -> TestCaseData era
+referenceInputWithPlutusV1Script pf =
+  TestCaseData
+    { txBody =
+        newTxBody
+          pf
+          [ Inputs' [someTxIn],
+            RefInputs' [anotherTxIn],
+            Collateral' [yetAnotherTxIn],
+            Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 4995)]],
+            Txfee (Coin 5),
+            WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] validatingRedeemers txDats)
+          ],
+      initOutputs =
+        InitOutputs
+          { ofInputs =
+              [ newTxOut
+                  pf
+                  [ Address (scriptAddr pf (always 3 pf)),
+                    Amount (inject $ Coin 5000),
+                    DHash' [hashData $ datumExampleSixtyFiveBytes @era]
+                  ]
+              ],
+            ofRefInputs =
+              [ newTxOut
+                  pf
+                  [ Address (scriptAddr pf (always 3 pf)),
+                    Amount (inject $ Coin 5000)
+                  ]
+              ],
+            ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
+          },
+      keysForAddrWits = [someKeysPaymentKeyRole pf],
+      otherWitsFields =
+        [ ScriptWits' [always 3 pf],
+          DataWits' [datumExampleSixtyFiveBytes],
+          RdmrWits validatingRedeemers
+        ]
+    }
+
+-- ====================================================================================
 -- Invalid: Malformed plutus reference script creation
 -- ====================================================================================
 
@@ -1112,6 +1193,24 @@ genericBabbageFeatures pf =
               ( fromUtxos @era
                   ( CollectErrors
                       [BadTranslation $ InlineDatumsNotSupported (TxOutFromInput someTxIn)]
+                  )
+              ),
+          testCase "reference script with Plutus V1" $
+            testExpectFailure
+              pf
+              (referenceScriptWithPlutusV1Script pf)
+              ( fromUtxos @era
+                  ( CollectErrors
+                      [BadTranslation $ ReferenceScriptsNotSupported (TxOutFromOutput (mkTxIxPartial 0))]
+                  )
+              ),
+          testCase "reference input with Plutus V1" $
+            testExpectFailure
+              pf
+              (referenceInputWithPlutusV1Script pf)
+              ( fromUtxos @era
+                  ( CollectErrors
+                      [BadTranslation $ ReferenceInputsNotSupported $ Set.singleton anotherTxIn]
                   )
               ),
           testCase "malformed reference script" $
