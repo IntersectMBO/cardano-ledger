@@ -147,7 +147,7 @@ import Test.QuickCheck
     shrink,
     vectorOf,
   )
-import Test.QuickCheck.Gen (chooseAny)
+import Test.QuickCheck.Gen (chooseAny, frequency)
 
 -- =======================================================
 
@@ -649,7 +649,7 @@ instance Arbitrary Url where
   arbitrary = return . fromJust $ textToUrl "text"
 
 instance Arbitrary a => Arbitrary (StrictSeq a) where
-  arbitrary = StrictSeq.forceToStrict <$> arbitrary
+  arbitrary = StrictSeq.forceToStrict <$> frequency [(9, arbitrary), (1, pure mempty)]
   shrink = map StrictSeq.forceToStrict . shrink . StrictSeq.fromStrict
 
 instance Arbitrary StakePoolRelay where

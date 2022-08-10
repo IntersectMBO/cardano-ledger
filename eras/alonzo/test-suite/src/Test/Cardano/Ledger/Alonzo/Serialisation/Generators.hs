@@ -22,6 +22,9 @@ import Cardano.Ledger.Alonzo.Data
     dataToBinaryData,
   )
 import Cardano.Ledger.Alonzo.Language (Language (..), nonNativeLanguages)
+import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo.Data (AlonzoAuxiliaryData (..), BinaryData, Data (..), dataToBinaryData, AuxiliaryDataHash)
+import Cardano.Ledger.Alonzo.Language
 import Cardano.Ledger.Alonzo.PParams
   ( AlonzoPParams,
     AlonzoPParamsHKD (AlonzoPParams),
@@ -54,16 +57,29 @@ import Cardano.Ledger.Alonzo.Tx
   )
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits
+import Cardano.Ledger.Alonzo.TxWitness
+import Cardano.Ledger.BaseTypes (StrictMaybe (..), Network)
+import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Control.State.Transition (PredicateFailure)
+import qualified Cardano.Ledger.Crypto as C
+import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl)
+import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
+import Cardano.Ledger.TxIn (TxIn)
+import Cardano.Ledger.Val (DecodeNonNegative, Val, EncodeMint (..))
+import Cardano.Slotting.Slot (SlotNo)
+import Codec.CBOR.Term (Term (..), encodeTerm)
 import Data.Int (Int64)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (catMaybes)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text, pack)
 import GHC.Records (HasField)
+import Data.Twiddle
+import Data.Void (Void)
 import Numeric.Natural (Natural)
 import qualified Plutus.V1.Ledger.Api as PV1
 import qualified Plutus.V2.Ledger.Api as PV2
@@ -72,6 +88,12 @@ import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators (genMintValues)
 import Test.QuickCheck
+import Cardano.Ledger.Shelley.PParams (Update)
+import Cardano.Ledger.Mary.Value (MultiAsset)
+import Cardano.Ledger.Keys (KeyHash)
+import Data.Typeable (Typeable)
+import Debug.Trace (traceM)
+import Codec.CBOR.Write (toLazyByteString)
 
 instance Era era => Arbitrary (Data era) where
   arbitrary = Data <$> arbitrary
@@ -84,14 +106,14 @@ instance Arbitrary PV1.Data where
     where
       gendata n
         | n > 0 =
-            oneof
-              [ PV1.I <$> arbitrary,
-                PV1.B <$> arbitrary,
-                PV1.Map <$> listOf ((,) <$> gendata (n `div` 2) <*> gendata (n `div` 2)),
-                PV1.Constr <$> fmap fromIntegral (arbitrary :: Gen Natural)
-                  <*> listOf (gendata (n `div` 2)),
-                PV1.List <$> listOf (gendata (n `div` 2))
-              ]
+          oneof
+            [ PV1.I <$> arbitrary,
+              PV1.B <$> arbitrary,
+              PV1.Map <$> listOf ((,) <$> gendata (n `div` 2) <*> gendata (n `div` 2)),
+              PV1.Constr <$> fmap fromIntegral (arbitrary :: Gen Natural)
+                <*> listOf (gendata (n `div` 2)),
+              PV1.List <$> listOf (gendata (n `div` 2))
+            ]
       gendata _ = oneof [PV1.I <$> arbitrary, PV1.B <$> arbitrary]
 
 instance
@@ -101,7 +123,11 @@ instance
   ) =>
   Arbitrary (AlonzoAuxiliaryData era)
   where
-  arbitrary = AlonzoAuxiliaryData <$> arbitrary <*> arbitrary
+  arbitrary =
+    frequency
+      [ (9, AlonzoAuxiliaryData <$> arbitrary <*> arbitrary),
+        (1, pure $ AlonzoAuxiliaryData mempty mempty)
+      ]
 
 instance Arbitrary Tag where
   arbitrary = elements [Spend, Mint, Cert, Rewrd]
@@ -387,4 +413,103 @@ instance
       [ pure NoDatum,
         DatumHash <$> arbitrary,
         Datum . dataToBinaryData <$> arbitrary
+
+instance (Era era, Val (Value era), DecodeNonNegative (Value era)) => Twiddle (AlonzoTxOut era) where
+  twiddle = twiddle . toTerm
+
+instance Twiddle SlotNo where
+  twiddle = twiddle . toTerm
+
+instance C.Crypto crypto => Twiddle (DCert crypto) where
+  twiddle = twiddle . toTerm
+
+instance C.Crypto crypto => Twiddle (Wdrl crypto) where
+  twiddle = twiddle . toTerm
+
+instance C.Crypto crypto => Twiddle (AuxiliaryDataHash crypto) where
+  twiddle = twiddle . toTerm
+
+emptyOrNothing ::
+  forall t a crypto.
+  ( Foldable t,
+    Twiddle (t Void),
+    Monoid (t Void),
+    Twiddle (t a)
+  ) =>
+  AlonzoTxBody (AlonzoEra crypto) ->
+  ( AlonzoTxBody (AlonzoEra crypto) ->
+    t a
+  ) ->
+  Gen (Maybe Term)
+emptyOrNothing txBody f =
+  if null $ f txBody
+    then
+      oneof
+        [ Just <$> twiddle @(t Void) mempty,
+          pure Nothing
+        ]
+    else Just <$> twiddle (f txBody)
+
+twiddleStrictMaybe :: Twiddle a => StrictMaybe a -> Gen (Maybe Term)
+twiddleStrictMaybe SNothing = pure Nothing
+twiddleStrictMaybe (SJust x) = Just <$> twiddle x
+
+instance C.Crypto crypto => Twiddle (Update (AlonzoEra crypto)) where
+  twiddle = twiddle . toTerm
+
+instance C.Crypto crypto => Twiddle (MultiAsset crypto) where
+  twiddle = twiddle . encodingToTerm . encodeMint
+
+instance C.Crypto crypto => Twiddle (ScriptIntegrityHash crypto) where
+  twiddle = twiddle . toTerm
+
+instance (C.Crypto crypto, Typeable t) => Twiddle (KeyHash t crypto) where
+  twiddle = twiddle . toTerm
+
+instance Twiddle Network where
+  twiddle = twiddle . toTerm
+
+instance C.Crypto c => Twiddle (TxIn c) where
+  twiddle = twiddle . toTerm
+
+instance Twiddle Coin where
+  twiddle = twiddle . toTerm
+
+instance C.Crypto crypto => Twiddle (AlonzoTxBody (AlonzoEra crypto)) where
+  twiddle txBody = do
+    inputs' <- twiddle $ inputs txBody
+    traceM $ "inputs': " <> (show  . toLazyByteString $ encodeTerm inputs')
+    outputs' <- twiddle $ outputs txBody
+    fee' <- twiddle $ txfee txBody
+    -- Empty collateral can be represented by empty set or the
+    -- value can be omitted entirely
+    ttl' <- twiddleStrictMaybe . invalidHereafter $ txvldt txBody
+    cert' <- emptyOrNothing txBody txcerts
+    wdrls' <- twiddle $ txwdrls txBody
+    update' <- twiddleStrictMaybe $ txUpdates txBody
+    auxDataHash' <- twiddleStrictMaybe $ adHash txBody
+    validityStart' <- twiddleStrictMaybe . invalidBefore $ txvldt txBody
+    mint' <- twiddle $ mint txBody
+    scriptDataHash' <- twiddleStrictMaybe $ scriptIntegrityHash txBody 
+    collateral' <- emptyOrNothing txBody collateral
+    requiredSigners' <- emptyOrNothing txBody reqSignerHashes
+    networkId' <- twiddleStrictMaybe $ txnetworkid txBody
+    mp <- elements [TMap, TMapI]
+    pure . mp $
+      [ (TInt 0, inputs'),
+        (TInt 1, outputs'),
+        (TInt 2, fee')
       ]
+        <> catMaybes
+          [ (TInt 3,) <$> ttl',
+            (TInt 4,) <$> cert',
+            (TInt 5,) <$> Just wdrls',
+            (TInt 6,) <$> update',
+            (TInt 7,) <$> auxDataHash',
+            (TInt 8,) <$> validityStart',
+            (TInt 9,) <$> Just mint',
+            (TInt 11,) <$> scriptDataHash',
+            (TInt 13,) <$> collateral',
+            (TInt 14,) <$> requiredSigners',
+            (TInt 15,) <$> networkId'
+          ]

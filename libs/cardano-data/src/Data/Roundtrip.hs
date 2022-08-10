@@ -10,6 +10,7 @@ module Data.Roundtrip
     embedTrip,
     embedTrip',
     roundTripAnn,
+    roundTripAnnWithTwiddling,
     embedTripAnn,
     RoundTripResult,
   )
@@ -23,9 +24,16 @@ import Cardano.Binary
   )
 import Codec.CBOR.Decoding (Decoder)
 import Codec.CBOR.Encoding (Encoding)
-import Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
+import Codec.CBOR.Read
+  ( DeserialiseFailure,
+    deserialiseFromBytes,
+  )
 import Codec.CBOR.Write (toLazyByteString)
 import qualified Data.ByteString.Lazy as Lazy
+import Data.Twiddle (Twiddle (..))
+import Test.QuickCheck (Gen)
+import Codec.CBOR.Term (encodeTerm)
+import qualified Data.ByteString.Lazy as LBS
 
 -- =====================================================================
 
@@ -38,11 +46,22 @@ roundTrip' :: (t -> Encoding) -> (forall s. Decoder s t) -> t -> RoundTripResult
 roundTrip' enc dec t = deserialiseFromBytes dec (toLazyByteString (enc t))
 
 roundTripAnn :: (ToCBOR t, FromCBOR (Annotator t)) => t -> RoundTripResult t
-roundTripAnn s =
-  let bytes = toLazyByteString (toCBOR s)
-   in case deserialiseFromBytes fromCBOR bytes of
-        Left err -> Left err
-        Right (leftover, Annotator f) -> Right (leftover, f (Full bytes))
+roundTripAnn s = roundTripAnn' $ toLazyByteString (toCBOR s)
+
+roundTripAnnWithTwiddling ::
+  forall t.
+  (Twiddle t, FromCBOR (Annotator t)) =>
+  t ->
+  Gen (RoundTripResult t, LBS.ByteString)
+roundTripAnnWithTwiddling x = do
+  tw <- encodeTerm <$> twiddle x
+  let bs = toLazyByteString tw
+  pure (roundTripAnn' bs, bs)
+
+roundTripAnn' :: FromCBOR (Annotator t) => Lazy.ByteString -> RoundTripResult t
+roundTripAnn' bytes = case deserialiseFromBytes fromCBOR bytes of
+  Left err -> Left err
+  Right (leftover, Annotator f) -> Right (leftover, f (Full bytes))
 
 -- | Can we serialise a type, and then deserialise it as something else?
 embedTrip :: (ToCBOR t, FromCBOR s) => t -> RoundTripResult s

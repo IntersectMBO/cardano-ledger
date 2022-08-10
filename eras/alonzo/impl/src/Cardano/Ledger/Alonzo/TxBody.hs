@@ -70,6 +70,7 @@ module Cardano.Ledger.Alonzo.TxBody
     ScriptIntegrityHash,
     getAlonzoTxOutEitherAddr,
     utxoEntrySize,
+    txBodyRawEq,
 
     -- * Deprecated
     TxOut,
@@ -110,7 +111,7 @@ import Cardano.Ledger.Credential (Credential (..), PaymentCredential, StakeRefer
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary.Value (MaryValue (MaryValue), MultiAsset (..), policies, policyID)
-import Cardano.Ledger.MemoBytes (Mem, MemoBytes (..), MemoHashIndex, memoBytes)
+import Cardano.Ledger.MemoBytes (Mem, MemoBytes (..), MemoHashIndex, contentsEq, memoBytes)
 import Cardano.Ledger.SafeHash
   ( HashAnnotated (..),
     SafeHash,
@@ -192,6 +193,8 @@ deriving stock instance
     Compactible (Value era)
   ) =>
   Eq (AlonzoTxOut era)
+
+deriving instance Generic (AlonzoTxOut era)
 
 -- | Already in NF
 instance NFData (AlonzoTxOut era) where
@@ -285,12 +288,12 @@ viewCompactTxOut txOut = case txOut of
   TxOutCompactDH' addr val dh -> (addr, val, SJust dh)
   TxOut_AddrHash28_AdaOnly stakeRef addr28Extra adaVal
     | Just addr <- decodeAddress28 stakeRef addr28Extra ->
-        (compactAddr addr, injectCompact adaVal, SNothing)
+      (compactAddr addr, injectCompact adaVal, SNothing)
     | otherwise -> error addressErrorMsg
   TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal dataHash32
     | Just addr <- decodeAddress28 stakeRef addr28Extra,
       Just dh <- decodeDataHash32 dataHash32 ->
-        (compactAddr addr, injectCompact adaVal, SJust dh)
+      (compactAddr addr, injectCompact adaVal, SJust dh)
     | otherwise -> error addressErrorMsg
 
 viewTxOut ::
@@ -307,11 +310,11 @@ viewTxOut (TxOutCompactDH' bs c dh) = (addr, val, SJust dh)
     val = fromCompact c
 viewTxOut (TxOut_AddrHash28_AdaOnly stakeRef addr28Extra adaVal)
   | Just addr <- decodeAddress28 stakeRef addr28Extra =
-      (addr, inject (fromCompact adaVal), SNothing)
+    (addr, inject (fromCompact adaVal), SNothing)
 viewTxOut (TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal dataHash32)
   | Just addr <- decodeAddress28 stakeRef addr28Extra,
     Just dh <- decodeDataHash32 dataHash32 =
-      (addr, inject (fromCompact adaVal), SJust dh)
+    (addr, inject (fromCompact adaVal), SJust dh)
 viewTxOut TxOut_AddrHash28_AdaOnly {} = error addressErrorMsg
 viewTxOut TxOut_AddrHash28_AdaOnly_DataHash32 {} = error addressErrorMsg
 
@@ -334,13 +337,13 @@ pattern AlonzoTxOut addr vl dh <-
       | StakeRefBase stakeCred <- stakeRef,
         Just adaCompact <- getAdaOnly (Proxy @era) vl,
         Just (Refl, addr28Extra) <- encodeAddress28 network paymentCred =
-          TxOut_AddrHash28_AdaOnly stakeCred addr28Extra adaCompact
+        TxOut_AddrHash28_AdaOnly stakeCred addr28Extra adaCompact
     AlonzoTxOut (Addr network paymentCred stakeRef) vl (SJust dh)
       | StakeRefBase stakeCred <- stakeRef,
         Just adaCompact <- getAdaOnly (Proxy @era) vl,
         Just (Refl, addr28Extra) <- encodeAddress28 network paymentCred,
         Just (Refl, dataHash32) <- encodeDataHash32 dh =
-          TxOut_AddrHash28_AdaOnly_DataHash32 stakeCred addr28Extra adaCompact dataHash32
+        TxOut_AddrHash28_AdaOnly_DataHash32 stakeCred addr28Extra adaCompact dataHash32
     AlonzoTxOut addr vl mdh =
       let v = fromMaybe (error "Illegal value in txout") $ toCompact vl
           a = compactAddr addr
@@ -985,3 +988,14 @@ getAlonzoTxOutEitherAddr = \case
 addressErrorMsg :: String
 addressErrorMsg = "Impossible: Compacted an address of non-standard size"
 {-# NOINLINE addressErrorMsg #-}
+
+txBodyRawEq ::
+  ( Era era,
+    Compactible (Value era),
+    Eq (Value era),
+    Eq (PParamsUpdate era)
+  ) =>
+  AlonzoTxBody era ->
+  AlonzoTxBody era ->
+  Bool
+txBodyRawEq (TxBodyConstr x) (TxBodyConstr y) = contentsEq x y

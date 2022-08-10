@@ -33,6 +33,7 @@ module Cardano.Ledger.MemoBytes
     printMemo,
     roundTripMemo,
     shortToLazy,
+    contentsEq,
   )
 where
 
@@ -151,3 +152,7 @@ roundTripMemo (Memo' _t bytes _hash) =
 -- | Helper function. Converts a short bytestring to a lazy bytestring.
 shortToLazy :: ShortByteString -> BSL.ByteString
 shortToLazy = fromStrict . fromShort
+
+-- | Returns true if the contents of the MemoBytes are equal
+contentsEq :: Eq (t era) => MemoBytes t era -> MemoBytes t era -> Bool
+contentsEq x y = mbType x == mbType y

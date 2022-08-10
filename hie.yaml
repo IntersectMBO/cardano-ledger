@@ -81,6 +81,9 @@ cradle:
     - path: "libs/cardano-data/src"
       component: "lib:cardano-data"
 
+    - path: "libs/cardano-data/test"
+      component: "test:cardano-data-tests"
+
     - path: "libs/small-steps/src"
       component: "lib:small-steps-test"
 
