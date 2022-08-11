@@ -88,7 +88,7 @@ the following in `/etc/nix/nix.conf` if you have a system-wide `nix`
 installation , or in `~/.config/nix/nix.conf` if you have a local installation:
 
 ```
-substituters        = https://hydra.iohk.io https://cache.nixos.org/
+substituters        = https://cache.iog.io https://cache.nixos.org/
 trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
 ```
 
