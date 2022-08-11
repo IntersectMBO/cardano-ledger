@@ -46,6 +46,7 @@ module Test.Cardano.Ledger.Generic.Proof
     BabbageEra,
     ConwayEra,
     C_Crypto,
+    specialize,
   )
 where
 
@@ -300,3 +301,32 @@ postMary = [Some (Conway Mock), Some (Babbage Mock), Some (Alonzo Mock), Some (M
 postAlonzo = [Some (Conway Mock), Some (Babbage Mock), Some (Alonzo Mock)]
 postBabbage = [Some (Conway Mock), Some (Babbage Mock)]
 postConway = [Some (Conway Mock)]
+
+-- ============================================
+
+-- | Specialize ('action' :: (constraint era => t)) to all known 'era', because
+-- we know (constraint era) holds for all known era. In order for this to work
+-- it is best to type apply 'specialize' to a concrete constraint. So a call site
+-- looks like '(specialize @EraSegWits proof action). This way the constraint does
+-- not percolate upwards, past the call site of 'action'
+specialize ::
+  forall constraint era t.
+  ( constraint (ShelleyEra (EraCrypto era)),
+    constraint (AllegraEra (EraCrypto era)),
+    constraint (MaryEra (EraCrypto era)),
+    constraint (AlonzoEra (EraCrypto era)),
+    constraint (BabbageEra (EraCrypto era)),
+    constraint (ConwayEra (EraCrypto era))
+  ) =>
+  Proof era ->
+  (constraint era => t) ->
+  t
+specialize proof action =
+  case proof of
+    Shelley _ -> action
+    Allegra _ -> action
+    Mary _ -> action
+    Alonzo _ -> action
+    Babbage _ -> action
+    Conway _ -> action
+{-# NOINLINE specialize #-}

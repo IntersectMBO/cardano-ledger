@@ -847,16 +847,16 @@ bodySummary proof body =
 
 witnessFieldSummary :: Era era => WitnessesField era -> (Text, PDoc)
 witnessFieldSummary wit = case wit of
-  (AddrWits s) -> ("Address TxWits", ppInt (Set.size s))
-  (BootWits s) -> ("BootStrap TxWits", ppInt (Set.size s))
-  (ScriptWits s) -> ("Script TxWits", ppInt (Map.size s))
-  (DataWits m) -> ("Data TxWits", ppInt (Map.size (unTxDats m)))
-  (RdmrWits (Redeemers' m)) -> ("Redeemer TxWits", ppInt (Map.size m))
+  (AddrWits s) -> ("Address Witnesses", ppInt (Set.size s))
+  (BootWits s) -> ("BootStrap Witnesses", ppInt (Set.size s))
+  (ScriptWits s) -> ("Script Witnesses", ppInt (Map.size s))
+  (DataWits m) -> ("Data Witnesses", ppInt (Map.size (unTxDats m)))
+  (RdmrWits (Redeemers' m)) -> ("Redeemer Witnesses", ppInt (Map.size m))
 
 witnessSummary :: Era era => Proof era -> TxWits era -> PDoc
 witnessSummary proof wits =
   ppRecord
-    "TxWits"
+    "Witnesses"
     (map witnessFieldSummary (abstractWitnesses proof wits))
 
 txFieldSummary :: EraTxBody era => Proof era -> TxField era -> [PDoc]
@@ -864,7 +864,7 @@ txFieldSummary proof tx = case tx of
   (Body b) -> [bodySummary proof b]
   (BodyI xs) -> [ppRecord "TxBody" (concat (map txBodyFieldSummary xs))]
   (TxWits ws) -> [witnessSummary proof ws]
-  (WitnessesI ws) -> [ppRecord "TxWits" (map witnessFieldSummary ws)]
+  (WitnessesI ws) -> [ppRecord "Witnesses" (map witnessFieldSummary ws)]
   (AuxData (SJust _)) -> [ppSexp "AuxData" [ppString "?"]]
   (Valid (IsValid b)) -> [ppSexp "IsValid" [ppBool b]]
   _ -> []
@@ -1268,7 +1268,7 @@ pcTxField proof x = case x of
   Body b -> [("txbody hash", ppSafeHash (hashAnnotated b)), ("body", pcTxBody proof b)]
   BodyI xs -> [("body", ppRecord "TxBody" (concat (map (pcTxBodyField proof) xs)))]
   TxWits w -> [("witnesses", pcWitnesses proof w)]
-  WitnessesI ws -> [("witnesses", ppRecord "TxWits" (concat (map (pcWitnessesField proof) ws)))]
+  WitnessesI ws -> [("witnesses", ppRecord "Witnesses" (concat (map (pcWitnessesField proof) ws)))]
   AuxData SNothing -> []
   AuxData (SJust _auxdata) -> [("aux data", ppString "AUXDATA")] -- ppAuxiliaryData auxdata)]
   Valid (IsValid v) -> [("is valid", ppString (show v))]
@@ -1293,7 +1293,7 @@ pcWitVKey (WitVKey vk@(VKey x) sig) = ppSexp "WitVKey" [ppString keystring, ppSt
     sigstring = show sig
 
 pcWitnesses :: Reflect era => Proof era -> TxWits era -> PDoc
-pcWitnesses proof wits = ppRecord "TxWits" pairs
+pcWitnesses proof wits = ppRecord "Witnesses" pairs
   where
     fields = abstractWitnesses proof wits
     pairs = concat (map (pcWitnessesField proof) fields)

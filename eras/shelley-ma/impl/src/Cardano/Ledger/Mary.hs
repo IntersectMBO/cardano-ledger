@@ -32,12 +32,14 @@ import Cardano.Ledger.Core (EraCrypto)
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys (DSignable)
+import Cardano.Ledger.Mary.Translation ()
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Shelley.API hiding (TxBody)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsUpdate)
 import qualified Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.ShelleyMA
 import Cardano.Ledger.ShelleyMA.AuxiliaryData (AuxiliaryData)
+import Cardano.Ledger.ShelleyMA.Era (MaryEra)
 import Cardano.Ledger.ShelleyMA.Rules ()
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock)
 
@@ -55,8 +57,6 @@ instance Crypto c => CanStartFromGenesis (MaryEra c) where
 -- Self-Describing type synomyms
 
 type Mary = MaryEra StandardCrypto
-
-type MaryEra = ShelleyMAEra 'Mary
 
 type Self c = ShelleyMAEra 'Mary c
 

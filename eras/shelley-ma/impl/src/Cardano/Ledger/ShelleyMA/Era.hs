@@ -11,6 +11,8 @@ module Cardano.Ledger.ShelleyMA.Era
     MaryOrAllegra (..),
     ShelleyMAUTXO,
     ShelleyMAUTXOW,
+    MaryEra,
+    AllegraEra,
   )
 where
 
@@ -39,6 +41,10 @@ import Data.Set as Set (Set, empty, map)
 import Data.Typeable (Typeable)
 import GHC.TypeLits
 import NoThunks.Class (NoThunks)
+
+type MaryEra = ShelleyMAEra 'Mary
+
+type AllegraEra = ShelleyMAEra 'Allegra
 
 -- | The Shelley Mary/Allegra eras
 --   The uninhabited type that indexes both the Mary and Allegra Eras.

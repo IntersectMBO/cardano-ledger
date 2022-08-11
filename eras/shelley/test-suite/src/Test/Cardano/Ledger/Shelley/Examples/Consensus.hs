@@ -3,8 +3,11 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+-- For deriving Eq instances that involve Eq of type families
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Shelley.Examples.Consensus where
@@ -75,6 +78,12 @@ data ShelleyResultExamples era = ShelleyResultExamples
     sreShelleyGenesis :: ShelleyGenesis era
   }
 
+deriving instance
+  ( Eq (Core.PParams era),
+    Eq (Core.PParamsUpdate era)
+  ) =>
+  Eq (ShelleyResultExamples era)
+
 data ShelleyLedgerExamples era = ShelleyLedgerExamples
   { sleBlock :: Block (BHeader (EraCrypto era)) era,
     sleHashHeader :: HashHeader (EraCrypto era),
@@ -86,6 +95,20 @@ data ShelleyLedgerExamples era = ShelleyLedgerExamples
     sleChainDepState :: ChainDepState (EraCrypto era),
     sleTranslationContext :: TranslationContext era
   }
+
+deriving instance
+  ( Eq (Core.PParams era),
+    Eq (Core.PParamsUpdate era),
+    Eq (TxSeq era),
+    Eq (Core.Tx era),
+    Eq (PredicateFailure (Core.EraRule "LEDGER" era)),
+    Eq (Core.TxOut era),
+    Eq (State (Core.EraRule "PPUP" era)),
+    Eq (StashedAVVMAddresses era),
+    Eq (TranslationContext era),
+    Era era
+  ) =>
+  Eq (ShelleyLedgerExamples era)
 
 {-------------------------------------------------------------------------------
   Default constructor

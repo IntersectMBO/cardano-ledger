@@ -18,13 +18,13 @@ import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era hiding (EraCrypto)
-import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Shelley.API hiding (Metadata, TxBody)
 import Cardano.Ledger.Shelley.TxWits (decodeWits)
 import Cardano.Ledger.ShelleyMA.AuxiliaryData
   ( MAAuxiliaryData (..),
   )
+import Cardano.Ledger.ShelleyMA.Era (MaryEra)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock, translateTimelock)
 import qualified Cardano.Ledger.Val as Val
 import Control.Monad.Except (throwError)

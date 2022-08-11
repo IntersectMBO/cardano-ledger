@@ -12,14 +12,14 @@
 
 module Cardano.Ledger.Conway.Translation where
 
-import Cardano.Binary (DecoderError)
+import Cardano.Binary (Annotator, DecoderError, FromCBOR)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..))
 import Cardano.Ledger.Babbage.Tx (AlonzoTx (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), Datum (..))
-import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Scripts ()
 import Cardano.Ledger.Conway.TxOut ()
@@ -102,7 +102,9 @@ newtype Tx era = Tx {unTx :: Core.Tx era}
 
 instance
   ( Crypto c,
-    Core.Tx (ConwayEra c) ~ AlonzoTx (ConwayEra c)
+    Core.Tx (ConwayEra c) ~ AlonzoTx (ConwayEra c),
+    FromCBOR (Annotator (Core.TxBody (ConwayEra c))),
+    FromCBOR (Annotator (Core.TxWits (ConwayEra c)))
   ) =>
   TranslateEra (ConwayEra c) Tx
   where

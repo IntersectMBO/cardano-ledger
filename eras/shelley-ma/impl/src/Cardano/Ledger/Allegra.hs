@@ -20,6 +20,7 @@ module Cardano.Ledger.Allegra
   )
 where
 
+import Cardano.Ledger.Allegra.Translation ()
 import Cardano.Ledger.Allegra.UTxO ()
 import Cardano.Ledger.Core (EraCrypto)
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
@@ -28,13 +29,12 @@ import Cardano.Ledger.Keys (DSignable)
 import Cardano.Ledger.Shelley.API hiding (PParams, Tx, TxBody, TxOut)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsUpdate)
 import Cardano.Ledger.ShelleyMA
+import Cardano.Ledger.ShelleyMA.Era (AllegraEra)
 import Cardano.Ledger.ShelleyMA.Rules ()
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock)
 import Cardano.Ledger.ShelleyMA.TxBody ()
 
 type Allegra = AllegraEra StandardCrypto
-
-type AllegraEra = ShelleyMAEra 'Allegra
 
 --------------------------------------------------------------------------------
 -- Mempool instances
