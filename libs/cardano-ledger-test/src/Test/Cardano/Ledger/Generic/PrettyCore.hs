@@ -75,7 +75,7 @@ import Cardano.Ledger.Shelley.Rules.Utxow (ShelleyUtxowPredFailure (..))
 import qualified Cardano.Ledger.Shelley.Scripts as SS (MultiSig (..))
 import Cardano.Ledger.Shelley.TxBody (DCert (..), DelegCert (..), Delegation (..), PoolCert (..), PoolParams (..), ShelleyTxOut (..), Wdrl (..), WitVKey (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
-import qualified Cardano.Ledger.ShelleyMA.Rules as Mary (UtxoPredicateFailure (..))
+import qualified Cardano.Ledger.ShelleyMA.Rules as Mary (ShelleyMAUtxoPredFailure (..))
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UnifiedMap (UnifiedMap)
@@ -535,7 +535,7 @@ ppUtxoPFMary ::
   ( PrettyCore era,
     PrettyA (PredicateFailure (EraRule "PPUP" era))
   ) =>
-  Mary.UtxoPredicateFailure era ->
+  Mary.ShelleyMAUtxoPredFailure era ->
   PDoc
 ppUtxoPFMary (Mary.BadInputsUTxO txins) =
   ppSexp "BadInputsUTxO" [ppSet ppTxIn txins]
@@ -592,7 +592,7 @@ instance
   ( PrettyCore era,
     PrettyA (PredicateFailure (EraRule "PPUP" era))
   ) =>
-  PrettyA (Mary.UtxoPredicateFailure era)
+  PrettyA (Mary.ShelleyMAUtxoPredFailure era)
   where
   prettyA = ppUtxoPFMary
 

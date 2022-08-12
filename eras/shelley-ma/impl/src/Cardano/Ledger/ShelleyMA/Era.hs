@@ -9,8 +9,8 @@ module Cardano.Ledger.ShelleyMA.Era
   ( ShelleyMAEra,
     MAClass (..),
     MaryOrAllegra (..),
-    UTXO,
-    UTXOW,
+    ShelleyMAUTXO,
+    ShelleyMAUTXOW,
   )
 where
 
@@ -142,10 +142,10 @@ type instance EraRule "UPEC" (ShelleyMAEra ma c) = ShelleyUPEC (ShelleyMAEra ma 
 
 -- These rules are defined anew in the ShelleyMA era(s)
 
-data UTXO era
+data ShelleyMAUTXO era
 
-type instance EraRule "UTXO" (ShelleyMAEra ma c) = UTXO (ShelleyMAEra ma c)
+type instance EraRule "UTXO" (ShelleyMAEra ma c) = ShelleyMAUTXO (ShelleyMAEra ma c)
 
-data UTXOW era
+data ShelleyMAUTXOW era
 
-type instance EraRule "UTXOW" (ShelleyMAEra ma c) = UTXOW (ShelleyMAEra ma c)
+type instance EraRule "UTXOW" (ShelleyMAEra ma c) = ShelleyMAUTXOW (ShelleyMAEra ma c)

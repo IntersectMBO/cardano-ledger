@@ -80,6 +80,7 @@ import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoEnv, ShelleyUtxoPredFailure
 import qualified Cardano.Ledger.Shelley.Rules.Utxo as Shelley
 import Cardano.Ledger.Shelley.Tx (TxIn)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance, txouts)
+import Cardano.Ledger.ShelleyMA.Rules (ShelleyMAUtxoPredFailure)
 import qualified Cardano.Ledger.ShelleyMA.Rules as ShelleyMA
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import qualified Cardano.Ledger.Val as Val
@@ -768,7 +769,7 @@ fromShelleyFailure = \case
   Shelley.UpdateFailure {} -> Nothing -- Removed
   Shelley.OutputBootAddrAttrsTooBig outs -> Just $ OutputBootAddrAttrsTooBig outs
 
-fromShelleyMAFailure :: ShelleyMA.UtxoPredicateFailure era -> Maybe (UtxoPredicateFailure era)
+fromShelleyMAFailure :: ShelleyMAUtxoPredFailure era -> Maybe (UtxoPredicateFailure era)
 fromShelleyMAFailure = \case
   ShelleyMA.BadInputsUTxO {} -> Nothing -- Inherited from Shelley
   ShelleyMA.OutsideValidityIntervalUTxO vi slotNo -> Just $ OutsideValidityIntervalUTxO vi slotNo
@@ -795,13 +796,13 @@ instance
 
 instance
   Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era)) =>
-  Inject (ShelleyMA.UtxoPredicateFailure era) (UtxoPredicateFailure era)
+  Inject (ShelleyMAUtxoPredFailure era) (UtxoPredicateFailure era)
   where
   inject = utxoPredFailMaToAlonzo
 
 utxoPredFailMaToAlonzo ::
   Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era)) =>
-  ShelleyMA.UtxoPredicateFailure era ->
+  ShelleyMAUtxoPredFailure era ->
   UtxoPredicateFailure era
 utxoPredFailMaToAlonzo (ShelleyMA.BadInputsUTxO x) = BadInputsUTxO x
 utxoPredFailMaToAlonzo (ShelleyMA.OutsideValidityIntervalUTxO vi slotNo) =
@@ -846,5 +847,5 @@ utxoPredFailShelleyToAlonzo (Shelley.OutputBootAddrAttrsTooBig outs) =
 instance InjectMaybe (ShelleyUtxoPredFailure era) (UtxoPredicateFailure era) where
   injectMaybe = fromShelleyFailure
 
-instance InjectMaybe (ShelleyMA.UtxoPredicateFailure era) (UtxoPredicateFailure era) where
+instance InjectMaybe (ShelleyMAUtxoPredFailure era) (UtxoPredicateFailure era) where
   injectMaybe = fromShelleyMAFailure

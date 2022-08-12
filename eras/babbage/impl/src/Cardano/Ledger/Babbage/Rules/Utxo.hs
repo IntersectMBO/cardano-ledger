@@ -75,9 +75,9 @@ import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoEnv, ShelleyUtxoPredFailure)
 import qualified Cardano.Ledger.Shelley.Rules.Utxo as Shelley
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
+import Cardano.Ledger.ShelleyMA.Rules (ShelleyMAUtxoPredFailure)
 import qualified Cardano.Ledger.ShelleyMA.Rules as ShelleyMA
-  ( UtxoPredicateFailure,
-    validateOutsideValidityIntervalUTxO,
+  ( validateOutsideValidityIntervalUTxO,
     validateTriesToForgeADA,
     validateValueNotConservedUTxO,
   )
@@ -155,7 +155,7 @@ instance Inject (BabbageUtxoPred era) (BabbageUtxoPred era) where
 
 instance
   Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era)) =>
-  Inject (ShelleyMA.UtxoPredicateFailure era) (BabbageUtxoPred era)
+  Inject (ShelleyMAUtxoPredFailure era) (BabbageUtxoPred era)
   where
   inject = FromAlonzoUtxoFail . utxoPredFailMaToAlonzo
 
