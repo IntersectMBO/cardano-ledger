@@ -21,7 +21,7 @@ import Cardano.Ledger.Alonzo.Rules
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.PParams
-import Cardano.Ledger.Babbage.Rules (BabbageUtxoPred (..), BabbageUtxowPred (..))
+import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..), BabbageUtxowPredFailure (..))
 import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.Babbage.TxBody
   ( BabbageEraTxBody,
@@ -212,17 +212,17 @@ instance
         Datum . dataToBinaryData <$> arbitrary
       ]
 
-instance Mock c => Arbitrary (BabbageUtxoPred (BabbageEra c)) where
+instance Mock c => Arbitrary (BabbageUtxoPredFailure (BabbageEra c)) where
   arbitrary =
     oneof
-      [ FromAlonzoUtxoFail <$> arbitrary,
+      [ AlonzoInBabbageUtxoPredFailure <$> arbitrary,
         IncorrectTotalCollateralField <$> arbitrary <*> arbitrary
       ]
 
-instance Mock c => Arbitrary (BabbageUtxowPred (BabbageEra c)) where
+instance Mock c => Arbitrary (BabbageUtxowPredFailure (BabbageEra c)) where
   arbitrary =
     oneof
-      [ FromAlonzoUtxowFail <$> arbitrary,
+      [ AlonzoInBabbageUtxowPredFailure <$> arbitrary,
         UtxoFailure <$> arbitrary,
         MalformedScriptWitnesses <$> arbitrary,
         MalformedReferenceScripts <$> arbitrary

@@ -13,7 +13,7 @@
 
 module Cardano.Ledger.Babbage.Rules.Utxo
   ( BabbageUTXO,
-    BabbageUtxoPred (..),
+    BabbageUtxoPredFailure (..),
     utxoTransition,
     feesOK,
     validateTotalCollateral,
@@ -113,8 +113,8 @@ import Validation (Validation, failureIf, failureUnless)
 -- ======================================================
 
 -- | Predicate failure for the Babbage Era
-data BabbageUtxoPred era
-  = FromAlonzoUtxoFail !(AlonzoUtxoPredFailure era) -- Inherited from Alonzo
+data BabbageUtxoPredFailure era
+  = AlonzoInBabbageUtxoPredFailure !(AlonzoUtxoPredFailure era) -- Inherited from Alonzo
   | -- | The collateral is not equivalent to the total collateral asserted by the transaction
     IncorrectTotalCollateralField
       !Coin
@@ -133,7 +133,7 @@ deriving instance
     Show (TxOut era),
     Show (Script era)
   ) =>
-  Show (BabbageUtxoPred era)
+  Show (BabbageUtxoPredFailure era)
 
 deriving instance
   ( Era era,
@@ -142,28 +142,28 @@ deriving instance
     Eq (TxOut era),
     Eq (Script era)
   ) =>
-  Eq (BabbageUtxoPred era)
+  Eq (BabbageUtxoPredFailure era)
 
 -- ===============================================
 -- Inject instances
 
-instance Inject (AlonzoUtxoPredFailure era) (BabbageUtxoPred era) where
-  inject = FromAlonzoUtxoFail
+instance Inject (AlonzoUtxoPredFailure era) (BabbageUtxoPredFailure era) where
+  inject = AlonzoInBabbageUtxoPredFailure
 
-instance Inject (BabbageUtxoPred era) (BabbageUtxoPred era) where
+instance Inject (BabbageUtxoPredFailure era) (BabbageUtxoPredFailure era) where
   inject = id
 
 instance
   Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era)) =>
-  Inject (ShelleyMAUtxoPredFailure era) (BabbageUtxoPred era)
+  Inject (ShelleyMAUtxoPredFailure era) (BabbageUtxoPredFailure era)
   where
-  inject = FromAlonzoUtxoFail . utxoPredFailMaToAlonzo
+  inject = AlonzoInBabbageUtxoPredFailure . utxoPredFailMaToAlonzo
 
 instance
   Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era)) =>
-  Inject (ShelleyUtxoPredFailure era) (BabbageUtxoPred era)
+  Inject (ShelleyUtxoPredFailure era) (BabbageUtxoPredFailure era)
   where
-  inject = FromAlonzoUtxoFail . utxoPredFailShelleyToAlonzo
+  inject = AlonzoInBabbageUtxoPredFailure . utxoPredFailShelleyToAlonzo
 
 -- =======================================================
 
@@ -199,7 +199,7 @@ feesOK ::
   PParams era ->
   Tx era ->
   UTxO era ->
-  Test (BabbageUtxoPred era)
+  Test (BabbageUtxoPredFailure era)
 feesOK pp tx u@(UTxO utxo) =
   let txBody = tx ^. bodyTxL
       collateral' = txBody ^. collateralInputsTxBodyL -- Inputs allocated to pay txfee
@@ -226,7 +226,7 @@ validateTotalCollateral ::
   TxBody era ->
   Map.Map (TxIn (Crypto era)) (TxOut era) ->
   Value era ->
-  Test (BabbageUtxoPred era)
+  Test (BabbageUtxoPredFailure era)
 validateTotalCollateral pp txBody utxoCollateral bal =
   sequenceA_
     [ -- Part 3: (∀(a,_,_) ∈ range (collateral txb ◁ utxo), a ∈ Addrvkey)
@@ -244,7 +244,7 @@ validateTotalCollateral pp txBody utxoCollateral bal =
     fromAlonzoValidation x = first (fmap inject) x
 
 -- > (txcoll tx ≠ ◇) => balance == txcoll tx
-validateCollateralEqBalance :: Coin -> StrictMaybe Coin -> Validation (NonEmpty (BabbageUtxoPred era)) ()
+validateCollateralEqBalance :: Coin -> StrictMaybe Coin -> Validation (NonEmpty (BabbageUtxoPredFailure era)) ()
 validateCollateralEqBalance bal txcoll =
   case txcoll of
     SNothing -> pure ()
@@ -283,7 +283,7 @@ validateOutputTooSmallUTxO ::
   ) =>
   PParams era ->
   [Sized (TxOut era)] ->
-  Test (BabbageUtxoPred era)
+  Test (BabbageUtxoPredFailure era)
 validateOutputTooSmallUTxO pp outs =
   failureUnless (null outputsTooSmall) $ BabbageOutputTooSmallUTxO outputsTooSmall
   where
@@ -474,7 +474,7 @@ instance
     State (EraRule "UTXOS" era) ~ Shelley.UTxOState era,
     Signal (EraRule "UTXOS" era) ~ Tx era,
     Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era)),
-    PredicateFailure (EraRule "UTXO" era) ~ BabbageUtxoPred era,
+    PredicateFailure (EraRule "UTXO" era) ~ BabbageUtxoPredFailure era,
     ExtendedUTxO era
   ) =>
   STS (BabbageUTXO era)
@@ -483,7 +483,7 @@ instance
   type Signal (BabbageUTXO era) = AlonzoTx era
   type Environment (BabbageUTXO era) = ShelleyUtxoEnv era
   type BaseM (BabbageUTXO era) = ShelleyBase
-  type PredicateFailure (BabbageUTXO era) = BabbageUtxoPred era
+  type PredicateFailure (BabbageUTXO era) = BabbageUtxoPredFailure era
   type Event (BabbageUTXO era) = AlonzoUtxoEvent era
 
   initialRules = []
@@ -497,7 +497,7 @@ instance
   ) =>
   Embed (BabbageUTXOS era) (BabbageUTXO era)
   where
-  wrapFailed = FromAlonzoUtxoFail . UtxosFailure
+  wrapFailed = AlonzoInBabbageUtxoPredFailure . UtxosFailure
   wrapEvent = UtxosEvent
 
 -- ============================================
@@ -513,11 +513,11 @@ instance
     ToCBOR (Script era),
     Typeable (AuxiliaryData era)
   ) =>
-  ToCBOR (BabbageUtxoPred era)
+  ToCBOR (BabbageUtxoPredFailure era)
   where
   toCBOR pf = encode (work pf)
     where
-      work (FromAlonzoUtxoFail x) = Sum FromAlonzoUtxoFail 1 !> To x
+      work (AlonzoInBabbageUtxoPredFailure x) = Sum AlonzoInBabbageUtxoPredFailure 1 !> To x
       work (IncorrectTotalCollateralField c1 c2) = Sum IncorrectTotalCollateralField 2 !> To c1 !> To c2
       work (BabbageOutputTooSmallUTxO x) = Sum BabbageOutputTooSmallUTxO 3 !> To x
 
@@ -531,16 +531,16 @@ instance
     Typeable (Script era),
     Typeable (AuxiliaryData era)
   ) =>
-  FromCBOR (BabbageUtxoPred era)
+  FromCBOR (BabbageUtxoPredFailure era)
   where
   fromCBOR = decode (Summands "BabbageUtxoPred" work)
     where
-      work 1 = SumD FromAlonzoUtxoFail <! From
+      work 1 = SumD AlonzoInBabbageUtxoPredFailure <! From
       work 2 = SumD IncorrectTotalCollateralField <! From <! From
       work 3 = SumD BabbageOutputTooSmallUTxO <! From
       work n = Invalid n
 
 deriving via
-  InspectHeapNamed "BabbageUtxoPred" (BabbageUtxoPred era)
+  InspectHeapNamed "BabbageUtxoPred" (BabbageUtxoPredFailure era)
   instance
-    NoThunks (BabbageUtxoPred era)
+    NoThunks (BabbageUtxoPredFailure era)

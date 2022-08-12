@@ -11,7 +11,7 @@
 
 module Cardano.Ledger.Babbage.Rules.Utxow
   ( BabbageUTXOW,
-    BabbageUtxowPred (..),
+    BabbageUtxowPredFailure (..),
     babbageMissingScripts,
     validateFailedBabbageScripts,
     validateScriptsWellFormed,
@@ -37,7 +37,7 @@ import Cardano.Ledger.Alonzo.Scripts (AlonzoScript, CostModels)
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), validScript)
 import Cardano.Ledger.Babbage.Era (BabbageUTXOW)
-import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUTXO, BabbageUtxoPred (..))
+import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUTXO, BabbageUtxoPredFailure (..))
 import Cardano.Ledger.Babbage.Tx (refScripts)
 import Cardano.Ledger.Babbage.TxBody
   ( BabbageEraTxBody (..),
@@ -88,8 +88,8 @@ import Lens.Micro.Extras (view)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 import Validation (failureUnless)
 
-data BabbageUtxowPred era
-  = FromAlonzoUtxowFail !(AlonzoUtxowPredFailure era)
+data BabbageUtxowPredFailure era
+  = AlonzoInBabbageUtxowPredFailure !(AlonzoUtxowPredFailure era)
   | -- | Embed UTXO rule failures
     UtxoFailure !(PredicateFailure (EraRule "UTXO" era))
   | -- | the set of malformed script witnesses
@@ -109,7 +109,7 @@ deriving instance
     Show (TxBody era),
     Show (Value era)
   ) =>
-  Show (BabbageUtxowPred era)
+  Show (BabbageUtxowPredFailure era)
 
 deriving instance
   ( Era era,
@@ -119,13 +119,13 @@ deriving instance
     Eq (TxOut era),
     Eq (Script era)
   ) =>
-  Eq (BabbageUtxowPred era)
+  Eq (BabbageUtxowPredFailure era)
 
-instance Inject (AlonzoUtxowPredFailure era) (BabbageUtxowPred era) where
-  inject = FromAlonzoUtxowFail
+instance Inject (AlonzoUtxowPredFailure era) (BabbageUtxowPredFailure era) where
+  inject = AlonzoInBabbageUtxowPredFailure
 
-instance Inject (ShelleyUtxowPredFailure era) (BabbageUtxowPred era) where
-  inject = FromAlonzoUtxowFail . ShelleyInAlonzoUtxowPredFailure
+instance Inject (ShelleyUtxowPredFailure era) (BabbageUtxowPredFailure era) where
+  inject = AlonzoInBabbageUtxowPredFailure . ShelleyInAlonzoUtxowPredFailure
 
 instance
   ( Era era,
@@ -137,11 +137,11 @@ instance
     ToCBOR (Script era),
     Typeable (AuxiliaryData era)
   ) =>
-  ToCBOR (BabbageUtxowPred era)
+  ToCBOR (BabbageUtxowPredFailure era)
   where
   toCBOR = encode . work
     where
-      work (FromAlonzoUtxowFail x) = Sum FromAlonzoUtxowFail 1 !> To x
+      work (AlonzoInBabbageUtxowPredFailure x) = Sum AlonzoInBabbageUtxowPredFailure 1 !> To x
       work (UtxoFailure x) = Sum UtxoFailure 2 !> To x
       work (MalformedScriptWitnesses x) = Sum MalformedScriptWitnesses 3 !> To x
       work (MalformedReferenceScripts x) = Sum MalformedReferenceScripts 4 !> To x
@@ -156,20 +156,20 @@ instance
     Typeable (Script era),
     Typeable (AuxiliaryData era)
   ) =>
-  FromCBOR (BabbageUtxowPred era)
+  FromCBOR (BabbageUtxowPredFailure era)
   where
   fromCBOR = decode (Summands "BabbageUtxowPred" work)
     where
-      work 1 = SumD FromAlonzoUtxowFail <! From
+      work 1 = SumD AlonzoInBabbageUtxowPredFailure <! From
       work 2 = SumD UtxoFailure <! From
       work 3 = SumD MalformedScriptWitnesses <! From
       work 4 = SumD MalformedReferenceScripts <! From
       work n = Invalid n
 
 deriving via
-  InspectHeapNamed "BabbageUtxowPred" (BabbageUtxowPred era)
+  InspectHeapNamed "BabbageUtxowPred" (BabbageUtxowPredFailure era)
   instance
-    NoThunks (BabbageUtxowPred era)
+    NoThunks (BabbageUtxowPredFailure era)
 
 -- ==================================================
 -- Reuseable tests first used in the Babbage Era
@@ -237,7 +237,7 @@ validateScriptsWellFormed ::
   ) =>
   PParams era ->
   Tx era ->
-  Test (BabbageUtxowPred era)
+  Test (BabbageUtxowPredFailure era)
 validateScriptsWellFormed pp tx =
   sequenceA_
     [ failureUnless (Map.null invalidScriptWits) $ MalformedScriptWitnesses (Map.keysSet invalidScriptWits),
@@ -388,7 +388,7 @@ instance
   type Signal (BabbageUTXOW era) = AlonzoTx era
   type Environment (BabbageUTXOW era) = ShelleyUtxoEnv era
   type BaseM (BabbageUTXOW era) = ShelleyBase
-  type PredicateFailure (BabbageUTXOW era) = BabbageUtxowPred era
+  type PredicateFailure (BabbageUTXOW era) = BabbageUtxowPredFailure era
   type Event (BabbageUTXOW era) = AlonzoUtxowEvent era
   transitionRules = [babbageUtxowTransition]
   initialRules = []
@@ -396,10 +396,10 @@ instance
 instance
   ( Era era,
     STS (BabbageUTXO era),
-    PredicateFailure (EraRule "UTXO" era) ~ BabbageUtxoPred era,
+    PredicateFailure (EraRule "UTXO" era) ~ BabbageUtxoPredFailure era,
     Event (EraRule "UTXO" era) ~ AlonzoUtxoEvent era,
     BaseM (BabbageUTXOW era) ~ ShelleyBase,
-    PredicateFailure (BabbageUTXOW era) ~ BabbageUtxowPred era,
+    PredicateFailure (BabbageUTXOW era) ~ BabbageUtxowPredFailure era,
     Event (BabbageUTXOW era) ~ AlonzoUtxowEvent era
   ) =>
   Embed (BabbageUTXO era) (BabbageUTXOW era)
@@ -407,5 +407,5 @@ instance
   wrapFailed = UtxoFailure
   wrapEvent = WrappedShelleyEraEvent . UtxoEvent
 
-instance Inject (BabbageUtxowPred era) (BabbageUtxowPred era) where
+instance Inject (BabbageUtxowPredFailure era) (BabbageUtxowPredFailure era) where
   inject = id

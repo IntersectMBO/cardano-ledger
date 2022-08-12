@@ -47,8 +47,8 @@ import Cardano.Ledger.Alonzo.TxInfo (TranslationError, VersionedTxInfo, txInfo, 
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..), TxDats (..), unRedeemers)
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import qualified Cardano.Ledger.Babbage.PParams as Babbage (BabbagePParamsHKD (..))
-import Cardano.Ledger.Babbage.Rules (BabbageUtxoPred (..))
-import Cardano.Ledger.Babbage.Rules as Babbage (BabbageUtxowPred (..))
+import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..))
+import Cardano.Ledger.Babbage.Rules as Babbage (BabbageUtxowPredFailure (..))
 import Cardano.Ledger.BaseTypes
   ( BlocksMade (..),
     Network (..),
@@ -2055,8 +2055,8 @@ findMismatch ::
   PredicateFailure (EraRule "UTXOW" era) ->
   Maybe (AlonzoUtxosPredFailure era)
 findMismatch (Alonzo _) (ShelleyInAlonzoUtxowPredFailure (Shelley.UtxoFailure (UtxosFailure x@(ValidationTagMismatch _ _)))) = Just x
-findMismatch (Babbage _) (Babbage.UtxoFailure (FromAlonzoUtxoFail (UtxosFailure x@(ValidationTagMismatch _ _)))) = Just x
-findMismatch (Conway _) (Babbage.UtxoFailure (FromAlonzoUtxoFail (UtxosFailure x@(ValidationTagMismatch _ _)))) = Just x
+findMismatch (Babbage _) (Babbage.UtxoFailure (AlonzoInBabbageUtxoPredFailure (UtxosFailure x@(ValidationTagMismatch _ _)))) = Just x
+findMismatch (Conway _) (Babbage.UtxoFailure (AlonzoInBabbageUtxoPredFailure (UtxosFailure x@(ValidationTagMismatch _ _)))) = Just x
 findMismatch _ _ = Nothing
 
 specialCont ::
@@ -2398,17 +2398,17 @@ instance AlonzoBased (AlonzoEra c) (AlonzoUtxowPredFailure (AlonzoEra c)) where
   fromUtxow = ShelleyInAlonzoUtxowPredFailure
   fromPredFail = id
 
-instance AlonzoBased (BabbageEra c) (BabbageUtxowPred (BabbageEra c)) where
-  fromUtxos = Babbage.UtxoFailure . FromAlonzoUtxoFail . UtxosFailure
-  fromUtxo = Babbage.UtxoFailure . FromAlonzoUtxoFail
-  fromUtxow = FromAlonzoUtxowFail . ShelleyInAlonzoUtxowPredFailure
-  fromPredFail = FromAlonzoUtxowFail
+instance AlonzoBased (BabbageEra c) (BabbageUtxowPredFailure (BabbageEra c)) where
+  fromUtxos = Babbage.UtxoFailure . AlonzoInBabbageUtxoPredFailure . UtxosFailure
+  fromUtxo = Babbage.UtxoFailure . AlonzoInBabbageUtxoPredFailure
+  fromUtxow = AlonzoInBabbageUtxowPredFailure . ShelleyInAlonzoUtxowPredFailure
+  fromPredFail = AlonzoInBabbageUtxowPredFailure
 
-instance AlonzoBased (ConwayEra c) (BabbageUtxowPred (ConwayEra c)) where
-  fromUtxos = Babbage.UtxoFailure . FromAlonzoUtxoFail . UtxosFailure
-  fromUtxo = Babbage.UtxoFailure . FromAlonzoUtxoFail
-  fromUtxow = FromAlonzoUtxowFail . ShelleyInAlonzoUtxowPredFailure
-  fromPredFail = FromAlonzoUtxowFail
+instance AlonzoBased (ConwayEra c) (BabbageUtxowPredFailure (ConwayEra c)) where
+  fromUtxos = Babbage.UtxoFailure . AlonzoInBabbageUtxoPredFailure . UtxosFailure
+  fromUtxo = Babbage.UtxoFailure . AlonzoInBabbageUtxoPredFailure
+  fromUtxow = AlonzoInBabbageUtxowPredFailure . ShelleyInAlonzoUtxowPredFailure
+  fromPredFail = AlonzoInBabbageUtxowPredFailure
 
 -- ===================================================================
 

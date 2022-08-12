@@ -21,7 +21,7 @@ import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxowPredFailure (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (body))
 import qualified Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..))
-import Cardano.Ledger.Babbage.Rules (BabbageUtxowPred (..))
+import Cardano.Ledger.Babbage.Rules (BabbageUtxowPredFailure (..))
 import Cardano.Ledger.Babbage.TxBody (certs')
 import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals)
 import Cardano.Ledger.Core
@@ -289,7 +289,7 @@ badScripts proof xs = Fold.foldl' (\s mcf -> Set.union s (getw proof mcf)) Set.e
       ( MockChainFromLedgersFailure
           ( LedgerFailure
               ( UtxowFailure
-                  ( FromAlonzoUtxowFail
+                  ( AlonzoInBabbageUtxowPredFailure
                       ( ShelleyInAlonzoUtxowPredFailure
                           (ScriptWitnessNotValidatingUTXOW set)
                         )

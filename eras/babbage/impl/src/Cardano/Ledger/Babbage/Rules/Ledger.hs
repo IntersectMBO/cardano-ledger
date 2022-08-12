@@ -16,7 +16,7 @@ module Cardano.Ledger.Babbage.Rules.Ledger (BabbageLEDGER) where
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxowEvent, ledgerTransition)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, AlonzoTx (..))
 import Cardano.Ledger.Babbage.Era
-import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUtxowPred)
+import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUtxowPredFailure)
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
@@ -120,7 +120,7 @@ instance
   ( Era era,
     STS (BabbageUTXOW era),
     Event (EraRule "UTXOW" era) ~ AlonzoUtxowEvent era,
-    PredicateFailure (EraRule "UTXOW" era) ~ BabbageUtxowPred era
+    PredicateFailure (EraRule "UTXOW" era) ~ BabbageUtxowPredFailure era
   ) =>
   Embed (BabbageUTXOW era) (BabbageLEDGER era)
   where
