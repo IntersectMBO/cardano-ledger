@@ -25,14 +25,14 @@ import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo (scriptsNeeded)
 import Cardano.Ledger.Alonzo.Rules
   ( AlonzoUtxowEvent (WrappedShelleyEraEvent),
-    UtxowPredicateFail (WrappedShelleyEraFailure),
+    AlonzoUtxowPredFailure (ShelleyInAlonzoUtxowPredFailure),
     hasExactSetOfRedeemers,
     missingRequiredDatums,
     ppViewHashesMatch,
     requiredSignersAreWitnessed,
     witsVKeyNeeded,
   )
-import Cardano.Ledger.Alonzo.Rules as Alonzo (UtxoEvent)
+import Cardano.Ledger.Alonzo.Rules as Alonzo (AlonzoUtxoEvent)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript, CostModels)
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), validScript)
@@ -89,7 +89,7 @@ import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 import Validation (failureUnless)
 
 data BabbageUtxowPred era
-  = FromAlonzoUtxowFail !(UtxowPredicateFail era)
+  = FromAlonzoUtxowFail !(AlonzoUtxowPredFailure era)
   | -- | Embed UTXO rule failures
     UtxoFailure !(PredicateFailure (EraRule "UTXO" era))
   | -- | the set of malformed script witnesses
@@ -121,11 +121,11 @@ deriving instance
   ) =>
   Eq (BabbageUtxowPred era)
 
-instance Inject (UtxowPredicateFail era) (BabbageUtxowPred era) where
+instance Inject (AlonzoUtxowPredFailure era) (BabbageUtxowPred era) where
   inject = FromAlonzoUtxowFail
 
 instance Inject (ShelleyUtxowPredFailure era) (BabbageUtxowPred era) where
-  inject = FromAlonzoUtxowFail . WrappedShelleyEraFailure
+  inject = FromAlonzoUtxowFail . ShelleyInAlonzoUtxowPredFailure
 
 instance
   ( Era era,
@@ -397,7 +397,7 @@ instance
   ( Era era,
     STS (BabbageUTXO era),
     PredicateFailure (EraRule "UTXO" era) ~ BabbageUtxoPred era,
-    Event (EraRule "UTXO" era) ~ Alonzo.UtxoEvent era,
+    Event (EraRule "UTXO" era) ~ AlonzoUtxoEvent era,
     BaseM (BabbageUTXOW era) ~ ShelleyBase,
     PredicateFailure (BabbageUTXOW era) ~ BabbageUtxowPred era,
     Event (BabbageUTXOW era) ~ AlonzoUtxowEvent era

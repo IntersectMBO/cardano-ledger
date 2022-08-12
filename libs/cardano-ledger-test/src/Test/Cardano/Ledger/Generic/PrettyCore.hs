@@ -16,12 +16,12 @@ import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Alonzo.Data (Data (..), Datum (..), binaryDataToData, hashData)
 import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (..))
 import Cardano.Ledger.Alonzo.Rules
-  ( AlonzoBbodyPredFail (..),
+  ( AlonzoBbodyPredFailure (..),
+    AlonzoUtxoPredFailure (..),
+    AlonzoUtxosPredFailure (..),
+    AlonzoUtxowPredFailure (..),
     FailureDescription (..),
     TagMismatchDescription (..),
-    UtxoPredicateFailure (..),
-    UtxosPredicateFailure (..),
-    UtxowPredicateFail (..),
   )
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
 import Cardano.Ledger.Alonzo.Tx (IsValid (..), ScriptPurpose (..))
@@ -210,9 +210,9 @@ ppUtxowPredicateFail ::
   ( PrettyA (PredicateFailure (EraRule "UTXO" era)),
     PrettyCore era
   ) =>
-  UtxowPredicateFail era ->
+  AlonzoUtxowPredFailure era ->
   PDoc
-ppUtxowPredicateFail (WrappedShelleyEraFailure x) = prettyA x
+ppUtxowPredicateFail (ShelleyInAlonzoUtxowPredFailure x) = prettyA x
 ppUtxowPredicateFail (MissingRedeemers xs) =
   ppSexp "MissingRedeemers" [ppList (ppPair ppScriptPurpose ppScriptHash) xs]
 ppUtxowPredicateFail (MissingRequiredDatums s1 s2) =
@@ -244,7 +244,7 @@ instance
   ( PrettyA (PredicateFailure (EraRule "UTXO" era)),
     PrettyCore era
   ) =>
-  PrettyA (UtxowPredicateFail era)
+  PrettyA (AlonzoUtxowPredFailure era)
   where
   prettyA = ppUtxowPredicateFail
 
@@ -298,7 +298,7 @@ ppUtxoPredicateFailure ::
     PrettyA (PredicateFailure (EraRule "UTXOS" era)),
     PrettyA (TxOut era) -- From ppUTxO FIXME
   ) =>
-  UtxoPredicateFailure era ->
+  AlonzoUtxoPredFailure era ->
   PDoc
 ppUtxoPredicateFailure (BadInputsUTxO x) =
   ppSexp "BadInputsUTxO" [ppSet ppTxIn x]
@@ -310,7 +310,7 @@ ppUtxoPredicateFailure (MaxTxSizeUTxO actual maxs) =
     [ ("Actual", ppInteger actual),
       ("max transaction size", ppInteger maxs)
     ]
-ppUtxoPredicateFailure (InputSetEmptyUTxO) =
+ppUtxoPredicateFailure InputSetEmptyUTxO =
   ppSexp "InputSetEmptyUTxO" []
 ppUtxoPredicateFailure (FeeTooSmallUTxO computed supplied) =
   ppRecord
@@ -393,7 +393,7 @@ instance
     PrettyA (PredicateFailure (EraRule "UTXOS" era)),
     PrettyA (TxOut era) -- From ppUTxO FIXME
   ) =>
-  PrettyA (UtxoPredicateFailure era)
+  PrettyA (AlonzoUtxoPredFailure era)
   where
   prettyA = ppUtxoPredicateFailure
 
@@ -402,7 +402,7 @@ instance
 
 ppUtxosPredicateFailure ::
   PrettyA (PredicateFailure (EraRule "PPUP" era)) =>
-  UtxosPredicateFailure era ->
+  AlonzoUtxosPredFailure era ->
   PDoc
 ppUtxosPredicateFailure (ValidationTagMismatch isvalid tag) =
   ppRecord
@@ -414,7 +414,7 @@ ppUtxosPredicateFailure (CollectErrors es) =
   ppRecord' mempty [("When collecting inputs for twophase scripts, these went wrong.", ppList ppCollectError es)]
 ppUtxosPredicateFailure (UpdateFailure p) = prettyA p
 
-instance PrettyA (PredicateFailure (EraRule "PPUP" era)) => PrettyA (UtxosPredicateFailure era) where
+instance PrettyA (PredicateFailure (EraRule "PPUP" era)) => PrettyA (AlonzoUtxosPredFailure era) where
   prettyA = ppUtxosPredicateFailure
 
 ppCollectError :: CollectError crypto -> PDoc
@@ -687,9 +687,9 @@ instance
 
 ppAlonzoBbodyPredFail ::
   PrettyA (PredicateFailure (EraRule "LEDGERS" era)) =>
-  AlonzoBbodyPredFail era ->
+  AlonzoBbodyPredFailure era ->
   PDoc
-ppAlonzoBbodyPredFail (ShelleyInAlonzoPredFail x) =
+ppAlonzoBbodyPredFail (ShelleyInAlonzoBbodyPredFailure x) =
   ppSexp "ShelleyInAlonzoPredFail" [ppBbodyPredicateFailure x]
 ppAlonzoBbodyPredFail (TooManyExUnits e1 e2) =
   ppRecord
@@ -700,7 +700,7 @@ ppAlonzoBbodyPredFail (TooManyExUnits e1 e2) =
 
 instance
   PrettyA (PredicateFailure (EraRule "LEDGERS" era)) =>
-  PrettyA (AlonzoBbodyPredFail era)
+  PrettyA (AlonzoBbodyPredFailure era)
   where
   prettyA = ppAlonzoBbodyPredFail
 

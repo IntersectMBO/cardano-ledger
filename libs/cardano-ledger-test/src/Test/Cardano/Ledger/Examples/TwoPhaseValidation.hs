@@ -22,12 +22,12 @@ import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (..), collectTwoPhaseScriptInputs)
 import Cardano.Ledger.Alonzo.Rules
   ( AlonzoBBODY,
-    AlonzoBbodyPredFail (..),
+    AlonzoBbodyPredFailure (..),
+    AlonzoUtxoPredFailure (..),
+    AlonzoUtxosPredFailure (..),
+    AlonzoUtxowPredFailure (..),
     FailureDescription (..),
     TagMismatchDescription (..),
-    UtxoPredicateFailure (..),
-    UtxosPredicateFailure (..),
-    UtxowPredicateFail (..),
   )
 import Cardano.Ledger.Alonzo.Scripts
   ( AlonzoScript (..),
@@ -2053,8 +2053,8 @@ specialCase wit@(UTXOW proof) utxo pparam tx expected =
 findMismatch ::
   Proof era ->
   PredicateFailure (EraRule "UTXOW" era) ->
-  Maybe (UtxosPredicateFailure era)
-findMismatch (Alonzo _) (WrappedShelleyEraFailure (Shelley.UtxoFailure (UtxosFailure x@(ValidationTagMismatch _ _)))) = Just x
+  Maybe (AlonzoUtxosPredFailure era)
+findMismatch (Alonzo _) (ShelleyInAlonzoUtxowPredFailure (Shelley.UtxoFailure (UtxosFailure x@(ValidationTagMismatch _ _)))) = Just x
 findMismatch (Babbage _) (Babbage.UtxoFailure (FromAlonzoUtxoFail (UtxosFailure x@(ValidationTagMismatch _ _)))) = Just x
 findMismatch (Conway _) (Babbage.UtxoFailure (FromAlonzoUtxoFail (UtxosFailure x@(ValidationTagMismatch _ _)))) = Just x
 findMismatch _ _ = Nothing
@@ -2387,27 +2387,27 @@ alonzoUTXOWexamplesB pf =
 --   'UtxosPredicateFailure',  'UtxoPredicateFailure', and  'UtxowPredicateFailure' .
 --   The idea is to make tests that only raise these failures, in Alonzo and future Eras.
 class AlonzoBased era failure where
-  fromUtxos :: UtxosPredicateFailure era -> failure
-  fromUtxo :: UtxoPredicateFailure era -> failure
+  fromUtxos :: AlonzoUtxosPredFailure era -> failure
+  fromUtxo :: AlonzoUtxoPredFailure era -> failure
   fromUtxow :: ShelleyUtxowPredFailure era -> failure
-  fromPredFail :: UtxowPredicateFail era -> failure
+  fromPredFail :: AlonzoUtxowPredFailure era -> failure
 
-instance AlonzoBased (AlonzoEra c) (UtxowPredicateFail (AlonzoEra c)) where
-  fromUtxos = WrappedShelleyEraFailure . Shelley.UtxoFailure . UtxosFailure
-  fromUtxo = WrappedShelleyEraFailure . Shelley.UtxoFailure
-  fromUtxow = WrappedShelleyEraFailure
+instance AlonzoBased (AlonzoEra c) (AlonzoUtxowPredFailure (AlonzoEra c)) where
+  fromUtxos = ShelleyInAlonzoUtxowPredFailure . Shelley.UtxoFailure . UtxosFailure
+  fromUtxo = ShelleyInAlonzoUtxowPredFailure . Shelley.UtxoFailure
+  fromUtxow = ShelleyInAlonzoUtxowPredFailure
   fromPredFail = id
 
 instance AlonzoBased (BabbageEra c) (BabbageUtxowPred (BabbageEra c)) where
   fromUtxos = Babbage.UtxoFailure . FromAlonzoUtxoFail . UtxosFailure
   fromUtxo = Babbage.UtxoFailure . FromAlonzoUtxoFail
-  fromUtxow = FromAlonzoUtxowFail . WrappedShelleyEraFailure
+  fromUtxow = FromAlonzoUtxowFail . ShelleyInAlonzoUtxowPredFailure
   fromPredFail = FromAlonzoUtxowFail
 
 instance AlonzoBased (ConwayEra c) (BabbageUtxowPred (ConwayEra c)) where
   fromUtxos = Babbage.UtxoFailure . FromAlonzoUtxoFail . UtxosFailure
   fromUtxo = Babbage.UtxoFailure . FromAlonzoUtxoFail
-  fromUtxow = FromAlonzoUtxowFail . WrappedShelleyEraFailure
+  fromUtxow = FromAlonzoUtxowFail . ShelleyInAlonzoUtxowPredFailure
   fromPredFail = FromAlonzoUtxowFail
 
 -- ===================================================================
@@ -2454,15 +2454,15 @@ alonzoBBODYexamplesP proof =
           (Left [makeTooBig proof])
     ]
 
-makeTooBig :: Proof era -> AlonzoBbodyPredFail era
+makeTooBig :: Proof era -> AlonzoBbodyPredFailure era
 makeTooBig proof@(Alonzo _) =
-  ShelleyInAlonzoPredFail . LedgersFailure . LedgerFailure . DelegsFailure . DelplFailure . PoolFailure $
+  ShelleyInAlonzoBbodyPredFailure . LedgersFailure . LedgerFailure . DelegsFailure . DelplFailure . PoolFailure $
     PoolMedataHashTooBig (coerceKeyRole . hashKey . vKey $ someKeys proof) (hashsize @Mock + 1)
 makeTooBig proof@(Babbage _) =
-  ShelleyInAlonzoPredFail . LedgersFailure . LedgerFailure . DelegsFailure . DelplFailure . PoolFailure $
+  ShelleyInAlonzoBbodyPredFailure . LedgersFailure . LedgerFailure . DelegsFailure . DelplFailure . PoolFailure $
     PoolMedataHashTooBig (coerceKeyRole . hashKey . vKey $ someKeys proof) (hashsize @Mock + 1)
 makeTooBig proof@(Conway _) =
-  ShelleyInAlonzoPredFail . LedgersFailure . LedgerFailure . DelegsFailure . DelplFailure . PoolFailure $
+  ShelleyInAlonzoBbodyPredFailure . LedgersFailure . LedgerFailure . DelegsFailure . DelplFailure . PoolFailure $
     PoolMedataHashTooBig (coerceKeyRole . hashKey . vKey $ someKeys proof) (hashsize @Mock + 1)
 makeTooBig proof = error ("makeTooBig does not work in era " ++ show proof)
 

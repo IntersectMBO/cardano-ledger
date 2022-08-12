@@ -17,14 +17,14 @@
 
 module Cardano.Ledger.Alonzo.Rules.Utxos
   ( AlonzoUTXOS,
-    UtxosPredicateFailure (..),
+    AlonzoUtxosPredFailure (..),
     lbl2Phase,
     TagMismatchDescription (..),
     validBegin,
     validEnd,
     invalidBegin,
     invalidEnd,
-    UtxosEvent (..),
+    AlonzoUtxosEvent (..),
     when2Phase,
     FailureDescription (..),
     scriptFailuresToPredicateFailure,
@@ -119,11 +119,11 @@ instance
   type Environment (AlonzoUTXOS era) = ShelleyUtxoEnv era
   type State (AlonzoUTXOS era) = UTxOState era
   type Signal (AlonzoUTXOS era) = AlonzoTx era
-  type PredicateFailure (AlonzoUTXOS era) = UtxosPredicateFailure era
-  type Event (AlonzoUTXOS era) = UtxosEvent era
+  type PredicateFailure (AlonzoUTXOS era) = AlonzoUtxosPredFailure era
+  type Event (AlonzoUTXOS era) = AlonzoUtxosEvent era
   transitionRules = [utxosTransition]
 
-data UtxosEvent era
+data AlonzoUtxosEvent era
   = AlonzoPpupToUtxosEvent (Event (EraRule "PPUP" era))
   | SuccessfulPlutusScriptsEvent (NonEmpty PlutusDebug)
   | FailedPlutusScriptsEvent (NonEmpty PlutusDebug)
@@ -175,7 +175,7 @@ scriptsTransition ::
     HasField "_costmdls" (PParams era) CostModels,
     HasField "_protocolVersion" (PParams era) ProtVer,
     BaseM sts ~ ReaderT Globals m,
-    PredicateFailure sts ~ UtxosPredicateFailure era,
+    PredicateFailure sts ~ AlonzoUtxosPredFailure era,
     Script era ~ AlonzoScript era
   ) =>
   SlotNo ->
@@ -341,7 +341,7 @@ instance FromCBOR TagMismatchDescription where
       dec 1 = SumD FailedUnexpectedly <! From
       dec n = Invalid n
 
-data UtxosPredicateFailure era
+data AlonzoUtxosPredFailure era
   = -- | The 'isValid' tag on the transaction is incorrect. The tag given
     --   here is that provided on the transaction (whereas evaluation of the
     --   scripts gives the opposite.). The Text tries to explain why it failed.
@@ -361,7 +361,7 @@ instance
     ToCBOR (PredicateFailure (EraRule "PPUP" era)),
     Show (TxOut era)
   ) =>
-  ToCBOR (UtxosPredicateFailure era)
+  ToCBOR (AlonzoUtxosPredFailure era)
   where
   toCBOR (ValidationTagMismatch v descr) = encode (Sum ValidationTagMismatch 0 !> To v !> To descr)
   toCBOR (CollectErrors cs) =
@@ -372,7 +372,7 @@ instance
   ( Era era,
     FromCBOR (PredicateFailure (EraRule "PPUP" era))
   ) =>
-  FromCBOR (UtxosPredicateFailure era)
+  FromCBOR (AlonzoUtxosPredFailure era)
   where
   fromCBOR = decode (Summands "UtxosPredicateFailure" dec)
     where
@@ -385,13 +385,13 @@ deriving stock instance
   ( Show (Shelley.UTxOState era),
     Show (PredicateFailure (EraRule "PPUP" era))
   ) =>
-  Show (UtxosPredicateFailure era)
+  Show (AlonzoUtxosPredFailure era)
 
 instance
   ( Eq (Shelley.UTxOState era),
     Eq (PredicateFailure (EraRule "PPUP" era))
   ) =>
-  Eq (UtxosPredicateFailure era)
+  Eq (AlonzoUtxosPredFailure era)
   where
   (ValidationTagMismatch a x) == (ValidationTagMismatch b y) = a == b && x == y
   (CollectErrors x) == (CollectErrors y) = x == y
@@ -402,7 +402,7 @@ instance
   ( NoThunks (Shelley.UTxOState era),
     NoThunks (PredicateFailure (EraRule "PPUP" era))
   ) =>
-  NoThunks (UtxosPredicateFailure era)
+  NoThunks (AlonzoUtxosPredFailure era)
 
 --------------------------------------------------------------------------------
 -- 2-phase checks
@@ -432,9 +432,9 @@ when2Phase = labeled $ lblStatic NE.:| [lbl2Phase]
 
 instance
   PredicateFailure (EraRule "PPUP" era) ~ ShelleyPpupPredFailure era =>
-  Inject (ShelleyPpupPredFailure era) (UtxosPredicateFailure era)
+  Inject (ShelleyPpupPredFailure era) (AlonzoUtxosPredFailure era)
   where
   inject = UpdateFailure
 
-instance Inject (UtxosPredicateFailure era) (UtxosPredicateFailure era) where
+instance Inject (AlonzoUtxosPredFailure era) (AlonzoUtxosPredFailure era) where
   inject = id

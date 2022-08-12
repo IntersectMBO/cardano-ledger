@@ -14,7 +14,7 @@
 
 module Cardano.Ledger.Alonzo.Rules.Bbody
   ( AlonzoBBODY,
-    AlonzoBbodyPredFail (..),
+    AlonzoBbodyPredFailure (..),
     AlonzoBbodyEvent (..),
     bbodyTransition,
   )
@@ -65,8 +65,8 @@ import NoThunks.Class (NoThunks (..))
 -- =======================================
 -- A new PredicateFailure type
 
-data AlonzoBbodyPredFail era
-  = ShelleyInAlonzoPredFail (ShelleyBbodyPredFailure era)
+data AlonzoBbodyPredFailure era
+  = ShelleyInAlonzoBbodyPredFailure (ShelleyBbodyPredFailure era)
   | TooManyExUnits
       !ExUnits
       -- ^ Computed Sum of ExUnits for all plutus scripts
@@ -79,34 +79,34 @@ newtype AlonzoBbodyEvent era
 
 deriving instance
   (Era era, Show (PredicateFailure (EraRule "LEDGERS" era))) =>
-  Show (AlonzoBbodyPredFail era)
+  Show (AlonzoBbodyPredFailure era)
 
 deriving instance
   (Era era, Eq (PredicateFailure (EraRule "LEDGERS" era))) =>
-  Eq (AlonzoBbodyPredFail era)
+  Eq (AlonzoBbodyPredFailure era)
 
 deriving anyclass instance
   (Era era, NoThunks (PredicateFailure (EraRule "LEDGERS" era))) =>
-  NoThunks (AlonzoBbodyPredFail era)
+  NoThunks (AlonzoBbodyPredFailure era)
 
 instance
   ( Typeable era,
     ToCBOR (ShelleyBbodyPredFailure era)
   ) =>
-  ToCBOR (AlonzoBbodyPredFail era)
+  ToCBOR (AlonzoBbodyPredFailure era)
   where
-  toCBOR (ShelleyInAlonzoPredFail x) = encode (Sum ShelleyInAlonzoPredFail 0 !> To x)
+  toCBOR (ShelleyInAlonzoBbodyPredFailure x) = encode (Sum ShelleyInAlonzoBbodyPredFailure 0 !> To x)
   toCBOR (TooManyExUnits x y) = encode (Sum TooManyExUnits 1 !> To x !> To y)
 
 instance
   ( Typeable era,
     FromCBOR (ShelleyBbodyPredFailure era) -- TODO why is there no FromCBOR for (ShelleyBbodyPredFailure era)
   ) =>
-  FromCBOR (AlonzoBbodyPredFail era)
+  FromCBOR (AlonzoBbodyPredFailure era)
   where
   fromCBOR = decode (Summands "AlonzoBbodyPredFail" dec)
     where
-      dec 0 = SumD ShelleyInAlonzoPredFail <! From
+      dec 0 = SumD ShelleyInAlonzoBbodyPredFailure <! From
       dec 1 = SumD TooManyExUnits <! From <! From
       dec n = Invalid n
 
@@ -118,7 +118,7 @@ bbodyTransition ::
   ( -- Conditions that the Abstract someBBODY must meet
     STS (someBBODY era),
     Signal (someBBODY era) ~ Block (BHeaderView (Crypto era)) era,
-    PredicateFailure (someBBODY era) ~ AlonzoBbodyPredFail era,
+    PredicateFailure (someBBODY era) ~ AlonzoBbodyPredFailure era,
     BaseM (someBBODY era) ~ ShelleyBase,
     State (someBBODY era) ~ ShelleyBbodyState era,
     Environment (someBBODY era) ~ ShelleyBbodyEnv era,
@@ -149,12 +149,12 @@ bbodyTransition =
             actualBodyHash = hashTxSeq @era txsSeq
 
         actualBodySize == fromIntegral (bhviewBSize bh)
-          ?! ShelleyInAlonzoPredFail
+          ?! ShelleyInAlonzoBbodyPredFailure
             ( WrongBlockBodySizeBBODY actualBodySize (fromIntegral $ bhviewBSize bh)
             )
 
         actualBodyHash == bhviewBHash bh
-          ?! ShelleyInAlonzoPredFail
+          ?! ShelleyInAlonzoBbodyPredFailure
             ( InvalidBodyHashBBODY @era actualBodyHash (bhviewBHash bh)
             )
 
@@ -220,7 +220,7 @@ instance
 
   type BaseM (AlonzoBBODY era) = ShelleyBase
 
-  type PredicateFailure (AlonzoBBODY era) = AlonzoBbodyPredFail era
+  type PredicateFailure (AlonzoBBODY era) = AlonzoBbodyPredFailure era
   type Event (AlonzoBBODY era) = AlonzoBbodyEvent era
 
   initialRules = []
@@ -236,5 +236,5 @@ instance
   ) =>
   Embed ledgers (AlonzoBBODY era)
   where
-  wrapFailed = ShelleyInAlonzoPredFail . LedgersFailure
+  wrapFailed = ShelleyInAlonzoBbodyPredFailure . LedgersFailure
   wrapEvent = ShelleyInAlonzoEvent . LedgersEvent

@@ -18,7 +18,7 @@ module Test.Cardano.Ledger.Generic.Trace where
 
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
-import Cardano.Ledger.Alonzo.Rules (UtxowPredicateFail (..))
+import Cardano.Ledger.Alonzo.Rules (AlonzoUtxowPredFailure (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (body))
 import qualified Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..))
 import Cardano.Ledger.Babbage.Rules (BabbageUtxowPred (..))
@@ -290,7 +290,7 @@ badScripts proof xs = Fold.foldl' (\s mcf -> Set.union s (getw proof mcf)) Set.e
           ( LedgerFailure
               ( UtxowFailure
                   ( FromAlonzoUtxowFail
-                      ( WrappedShelleyEraFailure
+                      ( ShelleyInAlonzoUtxowPredFailure
                           (ScriptWitnessNotValidatingUTXOW set)
                         )
                     )
@@ -302,7 +302,7 @@ badScripts proof xs = Fold.foldl' (\s mcf -> Set.union s (getw proof mcf)) Set.e
       ( MockChainFromLedgersFailure
           ( LedgerFailure
               ( UtxowFailure
-                  ( WrappedShelleyEraFailure
+                  ( ShelleyInAlonzoUtxowPredFailure
                       (ScriptWitnessNotValidatingUTXOW set)
                     )
                 )

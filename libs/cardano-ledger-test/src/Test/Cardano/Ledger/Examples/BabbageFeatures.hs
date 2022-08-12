@@ -20,8 +20,8 @@ import Cardano.Ledger.Alonzo.Data (Data (..), dataToBinaryData, hashData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (BadTranslation))
 import Cardano.Ledger.Alonzo.Rules
-  ( UtxosPredicateFailure (CollectErrors),
-    UtxowPredicateFail (NonOutputSupplimentaryDatums),
+  ( AlonzoUtxosPredFailure (CollectErrors),
+    AlonzoUtxowPredFailure (NonOutputSupplimentaryDatums),
   )
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (PlutusScript), CostModels (..), ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))

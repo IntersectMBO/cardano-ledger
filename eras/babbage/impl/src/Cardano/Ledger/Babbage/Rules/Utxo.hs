@@ -28,9 +28,9 @@ where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), serialize)
 import Cardano.Ledger.Address (bootstrapAddressAttrsSize)
 import Cardano.Ledger.Alonzo.Rules
-  ( UtxoEvent (..),
-    UtxoPredicateFailure (..),
-    UtxosPredicateFailure (..),
+  ( AlonzoUtxoEvent (..),
+    AlonzoUtxoPredFailure (..),
+    AlonzoUtxosPredFailure (..),
     utxoPredFailMaToAlonzo,
     utxoPredFailShelleyToAlonzo,
     validateCollateralContainsNonADA,
@@ -114,7 +114,7 @@ import Validation (Validation, failureIf, failureUnless)
 
 -- | Predicate failure for the Babbage Era
 data BabbageUtxoPred era
-  = FromAlonzoUtxoFail !(UtxoPredicateFailure era) -- Inherited from Alonzo
+  = FromAlonzoUtxoFail !(AlonzoUtxoPredFailure era) -- Inherited from Alonzo
   | -- | The collateral is not equivalent to the total collateral asserted by the transaction
     IncorrectTotalCollateralField
       !Coin
@@ -128,7 +128,7 @@ data BabbageUtxoPred era
 
 deriving instance
   ( Era era,
-    Show (UtxoPredicateFailure era),
+    Show (AlonzoUtxoPredFailure era),
     Show (PredicateFailure (EraRule "UTXO" era)),
     Show (TxOut era),
     Show (Script era)
@@ -137,7 +137,7 @@ deriving instance
 
 deriving instance
   ( Era era,
-    Eq (UtxoPredicateFailure era),
+    Eq (AlonzoUtxoPredFailure era),
     Eq (PredicateFailure (EraRule "UTXO" era)),
     Eq (TxOut era),
     Eq (Script era)
@@ -147,7 +147,7 @@ deriving instance
 -- ===============================================
 -- Inject instances
 
-instance Inject (UtxoPredicateFailure era) (BabbageUtxoPred era) where
+instance Inject (AlonzoUtxoPredFailure era) (BabbageUtxoPred era) where
   inject = FromAlonzoUtxoFail
 
 instance Inject (BabbageUtxoPred era) (BabbageUtxoPred era) where
@@ -308,7 +308,7 @@ validateOutputTooBigUTxO ::
   ) =>
   PParams era ->
   [TxOut era] ->
-  Test (UtxoPredicateFailure era)
+  Test (AlonzoUtxoPredFailure era)
 validateOutputTooBigUTxO pp outs =
   failureUnless (null outputsTooBig) $ OutputTooBigUTxO outputsTooBig
   where
@@ -325,7 +325,7 @@ validateOutputTooBigUTxO pp outs =
 validateOutputBootAddrAttrsTooBig ::
   EraTxOut era =>
   [TxOut era] ->
-  Test (UtxoPredicateFailure era)
+  Test (AlonzoUtxoPredFailure era)
 validateOutputBootAddrAttrsTooBig outs =
   failureUnless (null outputsAttrsTooBig) $ OutputBootAddrAttrsTooBig outputsAttrsTooBig
   where
@@ -484,7 +484,7 @@ instance
   type Environment (BabbageUTXO era) = ShelleyUtxoEnv era
   type BaseM (BabbageUTXO era) = ShelleyBase
   type PredicateFailure (BabbageUTXO era) = BabbageUtxoPred era
-  type Event (BabbageUTXO era) = UtxoEvent era
+  type Event (BabbageUTXO era) = AlonzoUtxoEvent era
 
   initialRules = []
   transitionRules = [utxoTransition]
@@ -492,7 +492,7 @@ instance
 instance
   ( Era era,
     STS (BabbageUTXOS era),
-    PredicateFailure (EraRule "UTXOS" era) ~ UtxosPredicateFailure era,
+    PredicateFailure (EraRule "UTXOS" era) ~ AlonzoUtxosPredFailure era,
     Event (EraRule "UTXOS" era) ~ Event (BabbageUTXOS era)
   ) =>
   Embed (BabbageUTXOS era) (BabbageUTXO era)

@@ -15,7 +15,7 @@
 module Cardano.Ledger.Alonzo.Rules.Utxow
   ( AlonzoUTXOW,
     AlonzoUtxowEvent (WrappedShelleyEraEvent),
-    UtxowPredicateFail (..),
+    AlonzoUtxowPredFailure (..),
     hasExactSetOfRedeemers,
     missingRequiredDatums,
     ppViewHashesMatch,
@@ -31,8 +31,11 @@ import Cardano.Ledger.Address (Addr (..), bootstrapKeyHash, getRwdCred)
 import Cardano.Ledger.Alonzo.Era (AlonzoUTXOW)
 import Cardano.Ledger.Alonzo.PParams (getLanguageView)
 import Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo (scriptsNeeded)
-import Cardano.Ledger.Alonzo.Rules.Utxo (AlonzoUTXO)
-import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (UtxoEvent, UtxoPredicateFailure)
+import Cardano.Ledger.Alonzo.Rules.Utxo
+  ( AlonzoUTXO,
+    AlonzoUtxoEvent,
+    AlonzoUtxoPredFailure,
+  )
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), CostModels)
 import Cardano.Ledger.Alonzo.Tx
   ( AlonzoTx (..),
@@ -105,8 +108,8 @@ import Validation
 
 -- | The Predicate failure type in the Alonzo Era. It embeds the Predicate
 --   failure type of the Shelley Era, as they share some failure modes.
-data UtxowPredicateFail era
-  = WrappedShelleyEraFailure !(ShelleyUtxowPredFailure era)
+data AlonzoUtxowPredFailure era
+  = ShelleyInAlonzoUtxowPredFailure !(ShelleyUtxowPredFailure era)
   | -- | List of scripts for which no redeemers were supplied
     MissingRedeemers
       ![(ScriptPurpose (Crypto era), ScriptHash (Crypto era))]
@@ -141,21 +144,21 @@ deriving instance
     Show (PredicateFailure (EraRule "UTXO" era)), -- The ShelleyUtxowPredFailure needs this to Show
     Show (Script era)
   ) =>
-  Show (UtxowPredicateFail era)
+  Show (AlonzoUtxowPredFailure era)
 
 deriving instance
   ( Era era,
     Eq (PredicateFailure (EraRule "UTXO" era)), -- The ShelleyUtxowPredFailure needs this to Eq
     Eq (Script era)
   ) =>
-  Eq (UtxowPredicateFail era)
+  Eq (AlonzoUtxowPredFailure era)
 
 instance
   ( Era era,
     NoThunks (Script era),
     NoThunks (PredicateFailure (EraRule "UTXO" era))
   ) =>
-  NoThunks (UtxowPredicateFail era)
+  NoThunks (AlonzoUtxowPredFailure era)
 
 instance
   ( Era era,
@@ -164,7 +167,7 @@ instance
     Typeable (Script era),
     ToCBOR (Script era)
   ) =>
-  ToCBOR (UtxowPredicateFail era)
+  ToCBOR (AlonzoUtxowPredFailure era)
   where
   toCBOR x = encode (encodePredFail x)
 
@@ -177,9 +180,9 @@ encodePredFail ::
     Typeable (Script era),
     Typeable (AuxiliaryData era)
   ) =>
-  UtxowPredicateFail era ->
-  Encode 'Open (UtxowPredicateFail era)
-encodePredFail (WrappedShelleyEraFailure x) = Sum WrappedShelleyEraFailure 0 !> E toCBOR x
+  AlonzoUtxowPredFailure era ->
+  Encode 'Open (AlonzoUtxowPredFailure era)
+encodePredFail (ShelleyInAlonzoUtxowPredFailure x) = Sum ShelleyInAlonzoUtxowPredFailure 0 !> E toCBOR x
 encodePredFail (MissingRedeemers x) = Sum MissingRedeemers 1 !> To x
 encodePredFail (MissingRequiredDatums x y) = Sum MissingRequiredDatums 2 !> To x !> To y
 encodePredFail (NonOutputSupplimentaryDatums x y) = Sum NonOutputSupplimentaryDatums 3 !> To x !> To y
@@ -194,7 +197,7 @@ instance
     Typeable (Script era),
     Typeable (AuxiliaryData era)
   ) =>
-  FromCBOR (UtxowPredicateFail era)
+  FromCBOR (AlonzoUtxowPredFailure era)
   where
   fromCBOR = decode (Summands "(UtxowPredicateFail" decodePredFail)
 
@@ -205,8 +208,8 @@ decodePredFail ::
     Typeable (AuxiliaryData era)
   ) =>
   Word ->
-  Decode 'Open (UtxowPredicateFail era)
-decodePredFail 0 = SumD WrappedShelleyEraFailure <! D fromCBOR
+  Decode 'Open (AlonzoUtxowPredFailure era)
+decodePredFail 0 = SumD ShelleyInAlonzoUtxowPredFailure <! D fromCBOR
 decodePredFail 1 = SumD MissingRedeemers <! From
 decodePredFail 2 = SumD MissingRequiredDatums <! From <! From
 decodePredFail 3 = SumD NonOutputSupplimentaryDatums <! From <! From
@@ -230,7 +233,7 @@ missingRequiredDatums ::
   UTxO era ->
   AlonzoTx era ->
   TxBody era ->
-  Test (UtxowPredicateFail era)
+  Test (AlonzoUtxowPredFailure era)
 missingRequiredDatums scriptwits utxo tx txbody = do
   let (inputHashes, txinsNoDhash) = inputDataHashes scriptwits tx utxo
       txHashes = domain (unTxDats . txdats . wits $ tx)
@@ -265,7 +268,7 @@ hasExactSetOfRedeemers ::
   UTxO era ->
   Tx era ->
   TxBody era ->
-  Test (UtxowPredicateFail era)
+  Test (AlonzoUtxowPredFailure era)
 hasExactSetOfRedeemers utxo tx txbody = do
   let redeemersNeeded =
         [ (rp, (sp, sh))
@@ -292,7 +295,7 @@ requiredSignersAreWitnessed ::
   ) =>
   TxBody era ->
   Set (KeyHash 'Witness (Crypto era)) ->
-  Test (UtxowPredicateFail era)
+  Test (AlonzoUtxowPredFailure era)
 requiredSignersAreWitnessed txBody witsKeyHashes = do
   let reqSignerHashes' = txBody ^. reqSignerHashesTxBodyL
   failureUnless
@@ -314,7 +317,7 @@ ppViewHashesMatch ::
   PParams era ->
   UTxO era ->
   Set (ScriptHash (Crypto era)) ->
-  Test (UtxowPredicateFail era)
+  Test (AlonzoUtxowPredFailure era)
 ppViewHashesMatch tx txBody pp utxo sNeeded = do
   -- FIXME: No need to supply txBody as a separate argument: txBody = tx ^. bodyTxL
   let langs = languages @era tx utxo sNeeded
@@ -522,7 +525,7 @@ instance
   type Signal (AlonzoUTXOW era) = AlonzoTx era
   type Environment (AlonzoUTXOW era) = ShelleyUtxoEnv era
   type BaseM (AlonzoUTXOW era) = ShelleyBase
-  type PredicateFailure (AlonzoUTXOW era) = UtxowPredicateFail era
+  type PredicateFailure (AlonzoUTXOW era) = AlonzoUtxowPredFailure era
   type Event (AlonzoUTXOW era) = AlonzoUtxowEvent era
   transitionRules = [alonzoStyleWitness]
   initialRules = []
@@ -530,22 +533,22 @@ instance
 instance
   ( Era era,
     STS (AlonzoUTXO era),
-    PredicateFailure (EraRule "UTXO" era) ~ Alonzo.UtxoPredicateFailure era,
-    Event (EraRule "UTXO" era) ~ Alonzo.UtxoEvent era,
+    PredicateFailure (EraRule "UTXO" era) ~ AlonzoUtxoPredFailure era,
+    Event (EraRule "UTXO" era) ~ AlonzoUtxoEvent era,
     BaseM (AlonzoUTXOW era) ~ ShelleyBase,
-    PredicateFailure (AlonzoUTXOW era) ~ UtxowPredicateFail era,
+    PredicateFailure (AlonzoUTXOW era) ~ AlonzoUtxowPredFailure era,
     Event (AlonzoUTXOW era) ~ AlonzoUtxowEvent era
   ) =>
   Embed (AlonzoUTXO era) (AlonzoUTXOW era)
   where
-  wrapFailed = WrappedShelleyEraFailure . UtxoFailure
+  wrapFailed = ShelleyInAlonzoUtxowPredFailure . UtxoFailure
   wrapEvent = WrappedShelleyEraEvent . UtxoEvent
 
 -- ==========================================================
 -- inject instances
 
-instance Inject (UtxowPredicateFail era) (UtxowPredicateFail era) where
+instance Inject (AlonzoUtxowPredFailure era) (AlonzoUtxowPredFailure era) where
   inject = id
 
-instance Inject (ShelleyUtxowPredFailure era) (UtxowPredicateFail era) where
-  inject = WrappedShelleyEraFailure
+instance Inject (ShelleyUtxowPredFailure era) (AlonzoUtxowPredFailure era) where
+  inject = ShelleyInAlonzoUtxowPredFailure

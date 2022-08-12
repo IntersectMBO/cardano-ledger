@@ -22,9 +22,9 @@ import Cardano.Ledger.Alonzo.PlutusScriptApi
     evalScripts,
   )
 import Cardano.Ledger.Alonzo.Rules
-  ( TagMismatchDescription (..),
-    UtxosEvent (..),
-    UtxosPredicateFailure (..),
+  ( AlonzoUtxosEvent (..),
+    AlonzoUtxosPredFailure (..),
+    TagMismatchDescription (..),
     invalidBegin,
     invalidEnd,
     scriptFailuresToPlutusDebug,
@@ -100,8 +100,8 @@ instance
   type Environment (BabbageUTXOS era) = ShelleyUtxoEnv era
   type State (BabbageUTXOS era) = UTxOState era
   type Signal (BabbageUTXOS era) = AlonzoTx era
-  type PredicateFailure (BabbageUTXOS era) = UtxosPredicateFailure era
-  type Event (BabbageUTXOS era) = UtxosEvent era
+  type PredicateFailure (BabbageUTXOS era) = AlonzoUtxosPredFailure era
+  type Event (BabbageUTXOS era) = AlonzoUtxosEvent era
   transitionRules = [utxosTransition]
 
 instance

@@ -16,7 +16,7 @@ import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Genesis as Alonzo (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
-import Cardano.Ledger.Alonzo.Rules (UtxoPredicateFailure (..), UtxowPredicateFail (..))
+import Cardano.Ledger.Alonzo.Rules (AlonzoUtxoPredFailure (..), AlonzoUtxowPredFailure (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import Cardano.Ledger.Alonzo.Translation ()
@@ -87,7 +87,7 @@ instance
           ApplyBlockTransitionError_Tx $
             ApplyTxError
               [ UtxowFailure
-                  ( WrappedShelleyEraFailure
+                  ( ShelleyInAlonzoUtxowPredFailure
                       (UtxoFailure (ValueNotConservedUTxO x' y'))
                   )
               ]
