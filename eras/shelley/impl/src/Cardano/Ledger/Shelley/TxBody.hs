@@ -84,8 +84,8 @@ import Cardano.Ledger.Credential (Credential (..), Ptr (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Keys.WitVKey
-import Cardano.Ledger.MemoBytes (Mem, MemoBytes, memoBytes, pattern Memo)
-import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash)
+import Cardano.Ledger.MemoBytes (Mem, MemoBytes (..), memoBytes, pattern Memo, MemoHashIndex)
+import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
 import Cardano.Ledger.Serialization
   ( decodeRecordNamed,
     decodeSet,
@@ -503,6 +503,8 @@ mkShelleyTxBody :: EraTxBody era => TxBodyRaw era -> ShelleyTxBody era
 mkShelleyTxBody = TxBodyConstr . memoBytes . txSparse
 
 -- =========================================
+
+type instance MemoHashIndex TxBodyRaw = EraIndependentTxBody
 
 instance
   (Era era, crypto ~ Crypto era) =>

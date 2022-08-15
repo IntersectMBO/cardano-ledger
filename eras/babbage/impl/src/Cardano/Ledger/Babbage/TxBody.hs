@@ -172,9 +172,9 @@ import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary.Value (MaryValue (MaryValue), MultiAsset, policies, policyID)
-import Cardano.Ledger.MemoBytes (Mem, MemoBytes (..), memoBytes)
+import Cardano.Ledger.MemoBytes (Mem, MemoBytes (..), MemoHashIndex, memoBytes)
 import Cardano.Ledger.SafeHash
-  ( HashAnnotated,
+  ( HashAnnotated (..),
     SafeHash,
     SafeToHash,
   )
@@ -528,6 +528,8 @@ data TxBodyRaw era = TxBodyRaw
     _txnetworkid :: !(StrictMaybe Network)
   }
   deriving (Generic, Typeable)
+
+type instance MemoHashIndex TxBodyRaw = EraIndependentTxBody
 
 deriving instance
   (Era era, Eq (Script era), Eq (PParamsUpdate era), Eq (CompactForm (Value era))) =>
@@ -936,7 +938,8 @@ mkBabbageTxBodyFromRaw = TxBodyConstr . memoBytes . encodeTxBodyRaw
 mkBabbageTxBody :: BabbageEraTxBody era => BabbageTxBody era
 mkBabbageTxBody = mkBabbageTxBodyFromRaw initialTxBodyRaw
 
-instance (c ~ Crypto era) => HashAnnotated (BabbageTxBody era) EraIndependentTxBody c
+instance (c ~ Crypto era) => HashAnnotated (BabbageTxBody era) EraIndependentTxBody c where
+  hashAnnotated (TxBodyConstr mb) = memoHash mb
 
 -- ==============================================================================
 -- We define these accessor functions manually, because if we define them using

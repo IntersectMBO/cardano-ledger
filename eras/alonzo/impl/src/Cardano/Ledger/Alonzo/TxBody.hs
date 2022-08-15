@@ -109,9 +109,9 @@ import Cardano.Ledger.Credential (Credential (..), PaymentCredential, StakeRefer
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary.Value (MaryValue (MaryValue), MultiAsset (..), policies, policyID)
-import Cardano.Ledger.MemoBytes (Mem, MemoBytes (..), memoBytes)
+import Cardano.Ledger.MemoBytes (Mem, MemoBytes (..), MemoHashIndex, memoBytes)
 import Cardano.Ledger.SafeHash
-  ( HashAnnotated,
+  ( HashAnnotated (..),
     SafeHash,
     SafeToHash,
     extractHash,
@@ -662,7 +662,10 @@ mkAlonzoTxBody ::
   AlonzoTxBody era
 mkAlonzoTxBody = TxBodyConstr . memoBytes . encodeTxBodyRaw
 
-instance (c ~ Crypto era) => HashAnnotated (AlonzoTxBody era) EraIndependentTxBody c
+type instance MemoHashIndex TxBodyRaw = EraIndependentTxBody
+
+instance (c ~ Crypto era) => HashAnnotated (AlonzoTxBody era) EraIndependentTxBody c where
+  hashAnnotated (TxBodyConstr mb) = memoHash mb
 
 -- ==============================================================================
 -- We define these accessor functions manually, because if we define them using

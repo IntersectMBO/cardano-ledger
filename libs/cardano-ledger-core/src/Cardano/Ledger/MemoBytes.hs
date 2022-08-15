@@ -23,7 +23,8 @@
 --   can be derived for free. MemoBytes plays an important role in the 'SafeToHash' class
 --   introduced in the module 'Cardano.Ledger.SafeHash'
 module Cardano.Ledger.MemoBytes
-  ( MemoBytes (Memo),
+  ( MemoBytes (Memo, memoHash),
+    MemoHashIndex,
     Mem,
     mkMemoBytes,
     memoBytes,
