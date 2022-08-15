@@ -15,8 +15,8 @@
 
 module Cardano.Ledger.Alonzo.Rules.Utxo
   ( AlonzoUTXO,
-    UtxoPredicateFailure (..),
-    UtxoEvent (..),
+    AlonzoUtxoPredFailure (..),
+    AlonzoUtxoEvent (..),
     utxoPredFailMaToAlonzo,
     utxoPredFailShelleyToAlonzo,
     validateCollateralContainsNonADA,
@@ -35,7 +35,7 @@ import Cardano.Binary (FromCBOR (..), ToCBOR (..), serialize)
 import Cardano.Ledger.Address (Addr (..), RewardAcnt)
 import Cardano.Ledger.Alonzo.Data (dataHashSize)
 import Cardano.Ledger.Alonzo.Era (AlonzoUTXO)
-import Cardano.Ledger.Alonzo.Rules.Utxos (AlonzoUTXOS, UtxosPredicateFailure)
+import Cardano.Ledger.Alonzo.Rules.Utxos (AlonzoUTXOS, AlonzoUtxosPredFailure)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Prices, pointWiseExUnits)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), AlonzoTx (..), minfee, totExUnits)
 import Cardano.Ledger.Alonzo.TxBody
@@ -76,9 +76,11 @@ import Cardano.Ledger.Rules.ValidationMode
   )
 import Cardano.Ledger.Shelley.HardForks (allowOutsideForecastTTL)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
+import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoEnv, ShelleyUtxoPredFailure)
 import qualified Cardano.Ledger.Shelley.Rules.Utxo as Shelley
 import Cardano.Ledger.Shelley.Tx (TxIn)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance, txouts)
+import Cardano.Ledger.ShelleyMA.Rules (ShelleyMAUtxoPredFailure)
 import qualified Cardano.Ledger.ShelleyMA.Rules as ShelleyMA
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import qualified Cardano.Ledger.Val as Val
@@ -138,7 +140,7 @@ utxoEntrySize txOut = utxoEntrySizeWithoutVal + Val.size v + dataHashSize dh
 
 -- ==========================================================
 
-data UtxoPredicateFailure era
+data AlonzoUtxoPredFailure era
   = -- | The bad transaction inputs
     BadInputsUTxO
       !(Set (TxIn (Crypto era)))
@@ -226,7 +228,7 @@ deriving stock instance
     Show (TxBody era),
     Show (PredicateFailure (EraRule "UTXOS" era))
   ) =>
-  Show (UtxoPredicateFailure era)
+  Show (AlonzoUtxoPredFailure era)
 
 deriving stock instance
   ( CC.Crypto (Crypto era),
@@ -234,7 +236,7 @@ deriving stock instance
     Eq (TxOut era),
     Eq (PredicateFailure (EraRule "UTXOS" era))
   ) =>
-  Eq (UtxoPredicateFailure era)
+  Eq (AlonzoUtxoPredFailure era)
 
 instance
   ( NoThunks (Value era),
@@ -242,9 +244,9 @@ instance
     NoThunks (PredicateFailure (EraRule "UTXOS" era)),
     NoThunks (TxOut era)
   ) =>
-  NoThunks (UtxoPredicateFailure era)
+  NoThunks (AlonzoUtxoPredFailure era)
 
-newtype UtxoEvent era
+newtype AlonzoUtxoEvent era
   = UtxosEvent (Event (EraRule "UTXOS" era))
 
 -- | Returns true for VKey locked addresses, and false for any kind of
@@ -287,7 +289,7 @@ feesOK ::
   PParams era ->
   Tx era ->
   UTxO era ->
-  Test (UtxoPredicateFailure era)
+  Test (AlonzoUtxoPredFailure era)
 feesOK pp tx (UTxO utxo) =
   let txBody = tx ^. bodyTxL
       collateral = txBody ^. collateralInputsTxBodyL -- Inputs allocated to pay txfee
@@ -312,7 +314,7 @@ validateCollateral ::
   TxBody era ->
   Map.Map (TxIn (Crypto era)) (TxOut era) ->
   Value era ->
-  Test (UtxoPredicateFailure era)
+  Test (AlonzoUtxoPredFailure era)
 validateCollateral pp txb utxoCollateral bal =
   sequenceA_
     [ -- Part 3: (∀(a,_,_) ∈ range (collateral txb ◁ utxo), a ∈ Addrvkey)
@@ -329,7 +331,7 @@ validateCollateral pp txb utxoCollateral bal =
 validateScriptsNotPaidUTxO ::
   EraTxOut era =>
   Map.Map (TxIn (Crypto era)) (TxOut era) ->
-  Test (UtxoPredicateFailure era)
+  Test (AlonzoUtxoPredFailure era)
 validateScriptsNotPaidUTxO utxoCollateral =
   failureUnless (all vKeyLocked utxoCollateral) $
     ScriptsNotPaidUTxO (UTxO (Map.filter (not . vKeyLocked) utxoCollateral))
@@ -342,7 +344,7 @@ validateInsufficientCollateral ::
   PParams era ->
   TxBody era ->
   Value era ->
-  Test (UtxoPredicateFailure era)
+  Test (AlonzoUtxoPredFailure era)
 validateInsufficientCollateral pp txBody bal =
   failureUnless (Val.scale (100 :: Int) (Val.coin bal) >= Val.scale collPerc txfee) $
     InsufficientCollateral
@@ -356,7 +358,7 @@ validateInsufficientCollateral pp txBody bal =
 validateCollateralContainsNonADA ::
   Val.Val (Value era) =>
   Value era ->
-  Test (UtxoPredicateFailure era)
+  Test (AlonzoUtxoPredFailure era)
 validateCollateralContainsNonADA bal =
   failureUnless (Val.isAdaOnly bal) $ CollateralContainsNonADA bal
 
@@ -374,7 +376,7 @@ validateOutsideForecast ::
   SlotNo ->
   SystemStart ->
   AlonzoTx era ->
-  Test (UtxoPredicateFailure era)
+  Test (AlonzoUtxoPredFailure era)
 validateOutsideForecast pp ei slotNo sysSt tx =
   {-   (_,i_f) := txvldt tx   -}
   case body tx ^. vldtTxBodyL of
@@ -397,7 +399,7 @@ validateOutputTooSmallUTxO ::
   ) =>
   PParams era ->
   UTxO era ->
-  Test (UtxoPredicateFailure era)
+  Test (AlonzoUtxoPredFailure era)
 validateOutputTooSmallUTxO pp (UTxO outputs) =
   failureUnless (null outputsTooSmall) $ OutputTooSmallUTxO outputsTooSmall
   where
@@ -422,7 +424,7 @@ validateOutputTooBigUTxO ::
   ) =>
   PParams era ->
   UTxO era ->
-  Test (UtxoPredicateFailure era)
+  Test (AlonzoUtxoPredFailure era)
 validateOutputTooBigUTxO pp (UTxO outputs) =
   failureUnless (null outputsTooBig) $ OutputTooBigUTxO outputsTooBig
   where
@@ -442,7 +444,7 @@ validateWrongNetworkInTxBody ::
   AlonzoEraTxBody era =>
   Network ->
   TxBody era ->
-  Test (UtxoPredicateFailure era)
+  Test (AlonzoUtxoPredFailure era)
 validateWrongNetworkInTxBody netId txBody =
   case txBody ^. networkIdTxBodyL of
     SNothing -> pure ()
@@ -458,7 +460,7 @@ validateExUnitsTooBigUTxO ::
   ) =>
   PParams era ->
   Tx era ->
-  Test (UtxoPredicateFailure era)
+  Test (AlonzoUtxoPredFailure era)
 validateExUnitsTooBigUTxO pp tx =
   failureUnless (pointWiseExUnits (<=) totalExUnits maxTxExUnits) $
     ExUnitsTooBigUTxO maxTxExUnits totalExUnits
@@ -476,7 +478,7 @@ validateTooManyCollateralInputs ::
   ) =>
   PParams era ->
   TxBody era ->
-  Test (UtxoPredicateFailure era)
+  Test (AlonzoUtxoPredFailure era)
 validateTooManyCollateralInputs pp txBody =
   failureUnless (numColl <= maxColl) $ TooManyCollateralInputs maxColl numColl
   where
@@ -494,7 +496,7 @@ utxoTransition ::
     STS (AlonzoUTXO era),
     -- instructions for calling UTXOS from AlonzoUTXO
     Embed (EraRule "UTXOS" era) (AlonzoUTXO era),
-    Environment (EraRule "UTXOS" era) ~ Shelley.UtxoEnv era,
+    Environment (EraRule "UTXOS" era) ~ ShelleyUtxoEnv era,
     State (EraRule "UTXOS" era) ~ Shelley.UTxOState era,
     Signal (EraRule "UTXOS" era) ~ Tx era,
     HasField "_poolDeposit" (PParams era) Coin,
@@ -597,7 +599,7 @@ instance
     Show (TxOut era),
     Show (TxBody era),
     Embed (EraRule "UTXOS" era) (AlonzoUTXO era),
-    Environment (EraRule "UTXOS" era) ~ Shelley.UtxoEnv era,
+    Environment (EraRule "UTXOS" era) ~ ShelleyUtxoEnv era,
     State (EraRule "UTXOS" era) ~ Shelley.UTxOState era,
     Signal (EraRule "UTXOS" era) ~ AlonzoTx era,
     HasField "_poolDeposit" (PParams era) Coin,
@@ -618,10 +620,10 @@ instance
   where
   type State (AlonzoUTXO era) = Shelley.UTxOState era
   type Signal (AlonzoUTXO era) = AlonzoTx era
-  type Environment (AlonzoUTXO era) = Shelley.UtxoEnv era
+  type Environment (AlonzoUTXO era) = ShelleyUtxoEnv era
   type BaseM (AlonzoUTXO era) = ShelleyBase
-  type PredicateFailure (AlonzoUTXO era) = UtxoPredicateFailure era
-  type Event (AlonzoUTXO era) = UtxoEvent era
+  type PredicateFailure (AlonzoUTXO era) = AlonzoUtxoPredFailure era
+  type Event (AlonzoUTXO era) = AlonzoUtxoEvent era
 
   initialRules = []
   transitionRules = [utxoTransition]
@@ -629,7 +631,7 @@ instance
 instance
   ( Era era,
     STS (AlonzoUTXOS era),
-    PredicateFailure (EraRule "UTXOS" era) ~ UtxosPredicateFailure era,
+    PredicateFailure (EraRule "UTXOS" era) ~ AlonzoUtxosPredFailure era,
     Event (EraRule "UTXOS" era) ~ Event (AlonzoUTXOS era)
   ) =>
   Embed (AlonzoUTXOS era) (AlonzoUTXO era)
@@ -648,7 +650,7 @@ instance
     ToCBOR (Value era),
     ToCBOR (PredicateFailure (EraRule "UTXOS" era))
   ) =>
-  ToCBOR (UtxoPredicateFailure era)
+  ToCBOR (AlonzoUtxoPredFailure era)
   where
   toCBOR x = encode (encFail x)
 
@@ -659,8 +661,8 @@ encFail ::
     ToCBOR (Value era),
     ToCBOR (PredicateFailure (EraRule "UTXOS" era))
   ) =>
-  UtxoPredicateFailure era ->
-  Encode 'Open (UtxoPredicateFailure era)
+  AlonzoUtxoPredFailure era ->
+  Encode 'Open (AlonzoUtxoPredFailure era)
 encFail (BadInputsUTxO ins) =
   Sum (BadInputsUTxO @era) 0 !> E encodeFoldable ins
 encFail (OutsideValidityIntervalUTxO a b) =
@@ -711,7 +713,7 @@ decFail ::
     FromCBOR (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   Word ->
-  Decode 'Open (UtxoPredicateFailure era)
+  Decode 'Open (AlonzoUtxoPredFailure era)
 decFail 0 = SumD BadInputsUTxO <! D (decodeSet fromCBOR)
 decFail 1 = SumD OutsideValidityIntervalUTxO <! From <! From
 decFail 2 = SumD MaxTxSizeUTxO <! From <! From
@@ -746,14 +748,14 @@ instance
     FromCBOR (Value era),
     FromCBOR (PredicateFailure (EraRule "UTXOS" era))
   ) =>
-  FromCBOR (UtxoPredicateFailure era)
+  FromCBOR (AlonzoUtxoPredFailure era)
   where
   fromCBOR = decode (Summands "UtxoPredicateFailure" decFail)
 
 -- =====================================================
 -- Injecting from one PredicateFailure to another
 
-fromShelleyFailure :: Shelley.UtxoPredicateFailure era -> Maybe (UtxoPredicateFailure era)
+fromShelleyFailure :: ShelleyUtxoPredFailure era -> Maybe (AlonzoUtxoPredFailure era)
 fromShelleyFailure = \case
   Shelley.BadInputsUTxO ins -> Just $ BadInputsUTxO ins
   Shelley.ExpiredUTxO {} -> Nothing -- Replaced with `OutsideValidityIntervalUTxO` in ShelleyMA
@@ -767,7 +769,7 @@ fromShelleyFailure = \case
   Shelley.UpdateFailure {} -> Nothing -- Removed
   Shelley.OutputBootAddrAttrsTooBig outs -> Just $ OutputBootAddrAttrsTooBig outs
 
-fromShelleyMAFailure :: ShelleyMA.UtxoPredicateFailure era -> Maybe (UtxoPredicateFailure era)
+fromShelleyMAFailure :: ShelleyMAUtxoPredFailure era -> Maybe (AlonzoUtxoPredFailure era)
 fromShelleyMAFailure = \case
   ShelleyMA.BadInputsUTxO {} -> Nothing -- Inherited from Shelley
   ShelleyMA.OutsideValidityIntervalUTxO vi slotNo -> Just $ OutsideValidityIntervalUTxO vi slotNo
@@ -783,25 +785,25 @@ fromShelleyMAFailure = \case
   ShelleyMA.TriesToForgeADA -> Just TriesToForgeADA
   ShelleyMA.OutputTooBigUTxO {} -> Nothing -- Updated error reporting
 
-instance Inject (UtxoPredicateFailure era) (UtxoPredicateFailure era) where
+instance Inject (AlonzoUtxoPredFailure era) (AlonzoUtxoPredFailure era) where
   inject = id
 
 instance
-  PredicateFailure (EraRule "UTXOS" era) ~ UtxosPredicateFailure era =>
-  Inject (UtxosPredicateFailure era) (UtxoPredicateFailure era)
+  PredicateFailure (EraRule "UTXOS" era) ~ AlonzoUtxosPredFailure era =>
+  Inject (AlonzoUtxosPredFailure era) (AlonzoUtxoPredFailure era)
   where
   inject = UtxosFailure
 
 instance
   Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era)) =>
-  Inject (ShelleyMA.UtxoPredicateFailure era) (UtxoPredicateFailure era)
+  Inject (ShelleyMAUtxoPredFailure era) (AlonzoUtxoPredFailure era)
   where
   inject = utxoPredFailMaToAlonzo
 
 utxoPredFailMaToAlonzo ::
   Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era)) =>
-  ShelleyMA.UtxoPredicateFailure era ->
-  UtxoPredicateFailure era
+  ShelleyMAUtxoPredFailure era ->
+  AlonzoUtxoPredFailure era
 utxoPredFailMaToAlonzo (ShelleyMA.BadInputsUTxO x) = BadInputsUTxO x
 utxoPredFailMaToAlonzo (ShelleyMA.OutsideValidityIntervalUTxO vi slotNo) =
   OutsideValidityIntervalUTxO vi slotNo
@@ -820,14 +822,14 @@ utxoPredFailMaToAlonzo (ShelleyMA.OutputTooBigUTxO xs) = OutputTooBigUTxO (map (
 
 instance
   Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era)) =>
-  Inject (Shelley.UtxoPredicateFailure era) (UtxoPredicateFailure era)
+  Inject (ShelleyUtxoPredFailure era) (AlonzoUtxoPredFailure era)
   where
   inject = utxoPredFailShelleyToAlonzo
 
 utxoPredFailShelleyToAlonzo ::
   Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era)) =>
-  Shelley.UtxoPredicateFailure era ->
-  UtxoPredicateFailure era
+  ShelleyUtxoPredFailure era ->
+  AlonzoUtxoPredFailure era
 utxoPredFailShelleyToAlonzo (Shelley.BadInputsUTxO ins) = BadInputsUTxO ins
 utxoPredFailShelleyToAlonzo (Shelley.ExpiredUTxO ttl current) =
   OutsideValidityIntervalUTxO (ValidityInterval SNothing (SJust ttl)) current
@@ -842,8 +844,8 @@ utxoPredFailShelleyToAlonzo (Shelley.UpdateFailure x) = UtxosFailure (inject x)
 utxoPredFailShelleyToAlonzo (Shelley.OutputBootAddrAttrsTooBig outs) =
   OutputTooBigUTxO (map (\x -> (0, 0, x)) outs)
 
-instance InjectMaybe (Shelley.UtxoPredicateFailure era) (UtxoPredicateFailure era) where
+instance InjectMaybe (ShelleyUtxoPredFailure era) (AlonzoUtxoPredFailure era) where
   injectMaybe = fromShelleyFailure
 
-instance InjectMaybe (ShelleyMA.UtxoPredicateFailure era) (UtxoPredicateFailure era) where
+instance InjectMaybe (ShelleyMAUtxoPredFailure era) (AlonzoUtxoPredFailure era) where
   injectMaybe = fromShelleyMAFailure

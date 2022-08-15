@@ -85,7 +85,7 @@ import Cardano.Ledger.Shelley.LedgerState
   )
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Rules.EraMapping ()
-import Cardano.Ledger.Shelley.Rules.Tick (TickfPredicateFailure)
+import Cardano.Ledger.Shelley.Rules.Tick (ShelleyTickfPredFailure)
 import Cardano.Ledger.Slot (SlotNo)
 import Cardano.Protocol.TPraos.BHeader
   ( BHBody,
@@ -147,7 +147,7 @@ class
     Environment (EraRule "TICKF" era) ~ (),
     State (EraRule "TICKF" era) ~ NewEpochState era,
     Signal (EraRule "TICKF" era) ~ SlotNo,
-    PredicateFailure (EraRule "TICKF" era) ~ TickfPredicateFailure era,
+    PredicateFailure (EraRule "TICKF" era) ~ ShelleyTickfPredFailure era,
     HasField "_d" (PParams era) UnitInterval,
     HasField "_maxBBSize" (PParams era) Natural,
     HasField "_maxBHSize" (PParams era) Natural,
@@ -330,7 +330,7 @@ futureView ::
     Environment (EraRule "TICKF" era) ~ (),
     State (EraRule "TICKF" era) ~ NewEpochState era,
     Signal (EraRule "TICKF" era) ~ SlotNo,
-    PredicateFailure (EraRule "TICKF" era) ~ TickfPredicateFailure era,
+    PredicateFailure (EraRule "TICKF" era) ~ ShelleyTickfPredFailure era,
     HasField "_d" (PParams era) UnitInterval,
     HasField "_extraEntropy" (PParams era) Nonce,
     HasField "_maxBBSize" (PParams era) Natural,

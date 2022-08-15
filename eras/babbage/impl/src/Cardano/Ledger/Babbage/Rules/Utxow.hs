@@ -11,7 +11,7 @@
 
 module Cardano.Ledger.Babbage.Rules.Utxow
   ( BabbageUTXOW,
-    BabbageUtxowPred (..),
+    BabbageUtxowPredFailure (..),
     babbageMissingScripts,
     validateFailedBabbageScripts,
     validateScriptsWellFormed,
@@ -25,19 +25,19 @@ import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo (scriptsNeeded)
 import Cardano.Ledger.Alonzo.Rules
   ( AlonzoUtxowEvent (WrappedShelleyEraEvent),
-    UtxowPredicateFail (WrappedShelleyEraFailure),
+    AlonzoUtxowPredFailure (ShelleyInAlonzoUtxowPredFailure),
     hasExactSetOfRedeemers,
     missingRequiredDatums,
     ppViewHashesMatch,
     requiredSignersAreWitnessed,
     witsVKeyNeeded,
   )
-import Cardano.Ledger.Alonzo.Rules as Alonzo (UtxoEvent)
+import Cardano.Ledger.Alonzo.Rules as Alonzo (AlonzoUtxoEvent)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript, CostModels)
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), validScript)
 import Cardano.Ledger.Babbage.Era (BabbageUTXOW)
-import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUTXO, BabbageUtxoPred (..))
+import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUTXO, BabbageUtxoPredFailure (..))
 import Cardano.Ledger.Babbage.Tx (refScripts)
 import Cardano.Ledger.Babbage.TxBody
   ( BabbageEraTxBody (..),
@@ -49,10 +49,10 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (DSIGN, HASH)
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest, runTestOnSignal)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), witsFromTxWitnesses)
-import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
+import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoEnv (..))
 import Cardano.Ledger.Shelley.Rules.Utxow
-  ( UtxowEvent (UtxoEvent),
-    UtxowPredicateFailure,
+  ( ShelleyUtxowEvent (UtxoEvent),
+    ShelleyUtxowPredFailure,
     validateNeededWitnesses,
   )
 import qualified Cardano.Ledger.Shelley.Rules.Utxow as Shelley
@@ -88,8 +88,8 @@ import Lens.Micro.Extras (view)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 import Validation (failureUnless)
 
-data BabbageUtxowPred era
-  = FromAlonzoUtxowFail !(UtxowPredicateFail era)
+data BabbageUtxowPredFailure era
+  = AlonzoInBabbageUtxowPredFailure !(AlonzoUtxowPredFailure era)
   | -- | Embed UTXO rule failures
     UtxoFailure !(PredicateFailure (EraRule "UTXO" era))
   | -- | the set of malformed script witnesses
@@ -101,7 +101,7 @@ data BabbageUtxowPred era
 
 deriving instance
   ( Era era,
-    Show (UtxowPredicateFailure era),
+    Show (ShelleyUtxowPredFailure era),
     Show (PredicateFailure (EraRule "UTXO" era)),
     Show (PredicateFailure (EraRule "UTXOS" era)),
     Show (Script era),
@@ -109,23 +109,23 @@ deriving instance
     Show (TxBody era),
     Show (Value era)
   ) =>
-  Show (BabbageUtxowPred era)
+  Show (BabbageUtxowPredFailure era)
 
 deriving instance
   ( Era era,
-    Eq (UtxowPredicateFailure era),
+    Eq (ShelleyUtxowPredFailure era),
     Eq (PredicateFailure (EraRule "UTXO" era)),
     Eq (PredicateFailure (EraRule "UTXOS" era)),
     Eq (TxOut era),
     Eq (Script era)
   ) =>
-  Eq (BabbageUtxowPred era)
+  Eq (BabbageUtxowPredFailure era)
 
-instance Inject (UtxowPredicateFail era) (BabbageUtxowPred era) where
-  inject = FromAlonzoUtxowFail
+instance Inject (AlonzoUtxowPredFailure era) (BabbageUtxowPredFailure era) where
+  inject = AlonzoInBabbageUtxowPredFailure
 
-instance Inject (UtxowPredicateFailure era) (BabbageUtxowPred era) where
-  inject = FromAlonzoUtxowFail . WrappedShelleyEraFailure
+instance Inject (ShelleyUtxowPredFailure era) (BabbageUtxowPredFailure era) where
+  inject = AlonzoInBabbageUtxowPredFailure . ShelleyInAlonzoUtxowPredFailure
 
 instance
   ( Era era,
@@ -137,11 +137,11 @@ instance
     ToCBOR (Script era),
     Typeable (AuxiliaryData era)
   ) =>
-  ToCBOR (BabbageUtxowPred era)
+  ToCBOR (BabbageUtxowPredFailure era)
   where
   toCBOR = encode . work
     where
-      work (FromAlonzoUtxowFail x) = Sum FromAlonzoUtxowFail 1 !> To x
+      work (AlonzoInBabbageUtxowPredFailure x) = Sum AlonzoInBabbageUtxowPredFailure 1 !> To x
       work (UtxoFailure x) = Sum UtxoFailure 2 !> To x
       work (MalformedScriptWitnesses x) = Sum MalformedScriptWitnesses 3 !> To x
       work (MalformedReferenceScripts x) = Sum MalformedReferenceScripts 4 !> To x
@@ -156,20 +156,20 @@ instance
     Typeable (Script era),
     Typeable (AuxiliaryData era)
   ) =>
-  FromCBOR (BabbageUtxowPred era)
+  FromCBOR (BabbageUtxowPredFailure era)
   where
   fromCBOR = decode (Summands "BabbageUtxowPred" work)
     where
-      work 1 = SumD FromAlonzoUtxowFail <! From
+      work 1 = SumD AlonzoInBabbageUtxowPredFailure <! From
       work 2 = SumD UtxoFailure <! From
       work 3 = SumD MalformedScriptWitnesses <! From
       work 4 = SumD MalformedReferenceScripts <! From
       work n = Invalid n
 
 deriving via
-  InspectHeapNamed "BabbageUtxowPred" (BabbageUtxowPred era)
+  InspectHeapNamed "BabbageUtxowPred" (BabbageUtxowPredFailure era)
   instance
-    NoThunks (BabbageUtxowPred era)
+    NoThunks (BabbageUtxowPredFailure era)
 
 -- ==================================================
 -- Reuseable tests first used in the Babbage Era
@@ -185,7 +185,7 @@ babbageMissingScripts ::
   Set (ScriptHash (Crypto era)) ->
   Set (ScriptHash (Crypto era)) ->
   Set (ScriptHash (Crypto era)) ->
-  Test (Shelley.UtxowPredicateFailure era)
+  Test (ShelleyUtxowPredFailure era)
 babbageMissingScripts _ sNeeded sRefs sReceived =
   sequenceA_
     [ failureUnless (Set.null extra) $ Shelley.ExtraneousScriptWitnessesUTXOW extra,
@@ -206,7 +206,7 @@ validateFailedBabbageScripts ::
   Tx era ->
   UTxO era ->
   Set (ScriptHash (Crypto era)) ->
-  Test (Shelley.UtxowPredicateFailure era)
+  Test (ShelleyUtxowPredFailure era)
 validateFailedBabbageScripts tx utxo neededHashes =
   let phase1Map = getPhase1 (txscripts utxo tx)
       failedScripts =
@@ -237,7 +237,7 @@ validateScriptsWellFormed ::
   ) =>
   PParams era ->
   Tx era ->
-  Test (BabbageUtxowPred era)
+  Test (BabbageUtxowPredFailure era)
 validateScriptsWellFormed pp tx =
   sequenceA_
     [ failureUnless (Map.null invalidScriptWits) $ MalformedScriptWitnesses (Map.keysSet invalidScriptWits),
@@ -277,7 +277,7 @@ babbageUtxowTransition ::
     Signable (DSIGN (Crypto era)) (Hash (HASH (Crypto era)) EraIndependentTxBody),
     -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (BabbageUTXOW era),
-    Environment (EraRule "UTXO" era) ~ UtxoEnv era,
+    Environment (EraRule "UTXO" era) ~ ShelleyUtxoEnv era,
     State (EraRule "UTXO" era) ~ UTxOState era,
     Signal (EraRule "UTXO" era) ~ AlonzoTx era
   ) =>
@@ -376,7 +376,7 @@ instance
     Script era ~ AlonzoScript era,
     -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (BabbageUTXOW era),
-    Environment (EraRule "UTXO" era) ~ UtxoEnv era,
+    Environment (EraRule "UTXO" era) ~ ShelleyUtxoEnv era,
     State (EraRule "UTXO" era) ~ UTxOState era,
     Signal (EraRule "UTXO" era) ~ AlonzoTx era,
     Eq (PredicateFailure (EraRule "UTXOS" era)),
@@ -386,9 +386,9 @@ instance
   where
   type State (BabbageUTXOW era) = UTxOState era
   type Signal (BabbageUTXOW era) = AlonzoTx era
-  type Environment (BabbageUTXOW era) = UtxoEnv era
+  type Environment (BabbageUTXOW era) = ShelleyUtxoEnv era
   type BaseM (BabbageUTXOW era) = ShelleyBase
-  type PredicateFailure (BabbageUTXOW era) = BabbageUtxowPred era
+  type PredicateFailure (BabbageUTXOW era) = BabbageUtxowPredFailure era
   type Event (BabbageUTXOW era) = AlonzoUtxowEvent era
   transitionRules = [babbageUtxowTransition]
   initialRules = []
@@ -396,10 +396,10 @@ instance
 instance
   ( Era era,
     STS (BabbageUTXO era),
-    PredicateFailure (EraRule "UTXO" era) ~ BabbageUtxoPred era,
-    Event (EraRule "UTXO" era) ~ Alonzo.UtxoEvent era,
+    PredicateFailure (EraRule "UTXO" era) ~ BabbageUtxoPredFailure era,
+    Event (EraRule "UTXO" era) ~ AlonzoUtxoEvent era,
     BaseM (BabbageUTXOW era) ~ ShelleyBase,
-    PredicateFailure (BabbageUTXOW era) ~ BabbageUtxowPred era,
+    PredicateFailure (BabbageUTXOW era) ~ BabbageUtxowPredFailure era,
     Event (BabbageUTXOW era) ~ AlonzoUtxowEvent era
   ) =>
   Embed (BabbageUTXO era) (BabbageUTXOW era)
@@ -407,5 +407,5 @@ instance
   wrapFailed = UtxoFailure
   wrapEvent = WrappedShelleyEraEvent . UtxoEvent
 
-instance Inject (BabbageUtxowPred era) (BabbageUtxowPred era) where
+instance Inject (BabbageUtxowPredFailure era) (BabbageUtxowPredFailure era) where
   inject = id

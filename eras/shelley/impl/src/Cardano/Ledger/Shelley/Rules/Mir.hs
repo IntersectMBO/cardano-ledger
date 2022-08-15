@@ -9,10 +9,10 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Shelley.Rules.Mir
-  ( MIR,
+  ( ShelleyMIR,
     PredicateFailure,
-    MirPredicateFailure,
-    MirEvent (..),
+    ShelleyMirPredFailure,
+    ShelleyMirEvent (..),
     emptyInstantaneousRewards,
   )
 where
@@ -56,27 +56,27 @@ import qualified Data.UMap as UM
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
-data MIR era
+data ShelleyMIR era
 
-data MirPredicateFailure era
+data ShelleyMirPredFailure era
   deriving (Show, Generic, Eq)
 
-data MirEvent era
+data ShelleyMirEvent era
   = MirTransfer (InstantaneousRewards (Crypto era))
   | -- | We were not able to perform an MIR transfer due to insufficient funds.
     --   This event gives the rewards we wanted to pay, plus the available
     --   reserves and treasury.
     NoMirTransfer (InstantaneousRewards (Crypto era)) Coin Coin
 
-instance NoThunks (MirPredicateFailure era)
+instance NoThunks (ShelleyMirPredFailure era)
 
-instance (Typeable era, Default (EpochState era)) => STS (MIR era) where
-  type State (MIR era) = EpochState era
-  type Signal (MIR era) = ()
-  type Environment (MIR era) = ()
-  type BaseM (MIR era) = ShelleyBase
-  type Event (MIR era) = MirEvent era
-  type PredicateFailure (MIR era) = MirPredicateFailure era
+instance (Typeable era, Default (EpochState era)) => STS (ShelleyMIR era) where
+  type State (ShelleyMIR era) = EpochState era
+  type Signal (ShelleyMIR era) = ()
+  type Environment (ShelleyMIR era) = ()
+  type BaseM (ShelleyMIR era) = ShelleyBase
+  type Event (ShelleyMIR era) = ShelleyMirEvent era
+  type PredicateFailure (ShelleyMIR era) = ShelleyMirPredFailure era
 
   transitionRules = [mirTransition]
 
@@ -89,7 +89,7 @@ instance (Typeable era, Default (EpochState era)) => STS (MIR era) where
         )
     ]
 
-mirTransition :: forall era. TransitionRule (MIR era)
+mirTransition :: forall era. TransitionRule (ShelleyMIR era)
 mirTransition = do
   TRC
     ( _,

@@ -30,7 +30,7 @@ import Cardano.Ledger.Shelley.LedgerState
     pattern EpochState,
   )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
-import Cardano.Ledger.Shelley.Rules.Newpp (NEWPP, NewppEnv (..), NewppState (..))
+import Cardano.Ledger.Shelley.Rules.Newpp (ShelleyNEWPP, ShelleyNewppEnv (..), ShelleyNewppState (..))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
   ( Embed (..),
@@ -49,13 +49,13 @@ import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 
 -- | Update epoch change
-data UPEC era
+data ShelleyUPEC era
 
-newtype UpecPredicateFailure era
-  = NewPpFailure (PredicateFailure (NEWPP era))
+newtype ShelleyUpecPredFailure era
+  = NewPpFailure (PredicateFailure (ShelleyNEWPP era))
   deriving (Eq, Show, Generic)
 
-instance NoThunks (UpecPredicateFailure era)
+instance NoThunks (ShelleyUpecPredFailure era)
 
 instance
   ( EraPParams era,
@@ -69,13 +69,13 @@ instance
     HasField "_protocolVersion" (PParams era) ProtVer,
     HasField "_protocolVersion" (PParamsUpdate era) (StrictMaybe ProtVer)
   ) =>
-  STS (UPEC era)
+  STS (ShelleyUPEC era)
   where
-  type State (UPEC era) = UpecState era
-  type Signal (UPEC era) = ()
-  type Environment (UPEC era) = EpochState era
-  type BaseM (UPEC era) = ShelleyBase
-  type PredicateFailure (UPEC era) = UpecPredicateFailure era
+  type State (ShelleyUPEC era) = UpecState era
+  type Signal (ShelleyUPEC era) = ()
+  type Environment (ShelleyUPEC era) = EpochState era
+  type BaseM (ShelleyUPEC era) = ShelleyBase
+  type PredicateFailure (ShelleyUPEC era) = ShelleyUpecPredFailure era
   initialRules = []
   transitionRules =
     [ do
@@ -96,7 +96,7 @@ instance
             pup = proposals . _ppups $ utxoSt
             ppNew = votedValue pup pp (fromIntegral coreNodeQuorum)
         NewppState pp' ppupSt' <-
-          trans @(NEWPP era) $
+          trans @(ShelleyNEWPP era) $
             TRC (NewppEnv dstate pstate utxoSt acnt, NewppState pp ppupSt, ppNew)
         pure $
           UpecState pp' ppupSt'
@@ -137,7 +137,7 @@ votedValue (ProposedPPUpdates pup) pps quorumN =
         _ -> Nothing
 
 instance
-  (Era era, STS (NEWPP era)) =>
-  Embed (NEWPP era) (UPEC era)
+  (Era era, STS (ShelleyNEWPP era)) =>
+  Embed (ShelleyNEWPP era) (ShelleyUPEC era)
   where
   wrapFailed = NewPpFailure

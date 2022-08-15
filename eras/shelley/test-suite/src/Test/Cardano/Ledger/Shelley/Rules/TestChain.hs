@@ -46,7 +46,7 @@ import Cardano.Ledger.Compactible (fromCompact, toCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (StakeRefBase, StakeRefPtr))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking, Witness))
-import Cardano.Ledger.Shelley.API (ApplyBlock, DELEG)
+import Cardano.Ledger.Shelley.API (ApplyBlock, ShelleyDELEG)
 import Cardano.Ledger.Shelley.EpochBoundary (SnapShot (..), Stake (..), obligation)
 import Cardano.Ledger.Shelley.LedgerState
   ( DPState (..),
@@ -73,9 +73,9 @@ import Cardano.Ledger.Shelley.LedgerState
     rs,
   )
 import Cardano.Ledger.Shelley.Rewards (sumRewards)
-import Cardano.Ledger.Shelley.Rules.Deleg (DelegEnv (..))
-import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv (..))
-import Cardano.Ledger.Shelley.Rules.Pool (POOL, PoolEnv (..))
+import Cardano.Ledger.Shelley.Rules.Deleg (ShelleyDelegEnv (..))
+import Cardano.Ledger.Shelley.Rules.Ledger (ShelleyLedgerEnv (..))
+import Cardano.Ledger.Shelley.Rules.Pool (ShelleyPOOL, ShelleyPoolEnv (..))
 import Cardano.Ledger.Shelley.Rules.Upec (votedValue)
 import Cardano.Ledger.Shelley.TxBody hiding (TxBody, TxOut)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance, totalDeposits, txins, txouts, pattern UTxO)
@@ -174,7 +174,7 @@ longTraceLen = 150
 
 type TestingLedger era ledger =
   ( BaseM ledger ~ ReaderT Globals Identity,
-    Environment ledger ~ LedgerEnv era,
+    Environment ledger ~ ShelleyLedgerEnv era,
     State ledger ~ LedgerState era,
     Signal ledger ~ Tx era,
     Embed (EraRule "DELEGS" era) ledger,
@@ -1000,7 +1000,7 @@ delegProperties =
     conjoin $
       map chainProp (sourceSignalTargets tr)
   where
-    delegProp :: DelegEnv era -> SourceSignalTarget (DELEG era) -> Property
+    delegProp :: ShelleyDelegEnv era -> SourceSignalTarget (ShelleyDELEG era) -> Property
     delegProp denv delegSst =
       conjoin $
         [ TestDeleg.keyRegistration delegSst,
@@ -1075,11 +1075,11 @@ poolTraceFromBlock ::
   ) =>
   ChainState era ->
   Block (BHeader (Crypto era)) era ->
-  (ChainState era, Trace (POOL era))
+  (ChainState era, Trace (ShelleyPOOL era))
 poolTraceFromBlock chainSt block =
   ( tickedChainSt,
     runShelleyBase $
-      Trace.closure @(POOL era) poolEnv poolSt0 poolCerts
+      Trace.closure @(ShelleyPOOL era) poolEnv poolSt0 poolCerts
   )
   where
     (tickedChainSt, ledgerEnv, ledgerSt0, txs) = ledgerTraceBase chainSt block
@@ -1103,11 +1103,11 @@ delegTraceFromBlock ::
   ) =>
   ChainState era ->
   Block (BHeader (Crypto era)) era ->
-  (DelegEnv era, Trace (DELEG era))
+  (ShelleyDelegEnv era, Trace (ShelleyDELEG era))
 delegTraceFromBlock chainSt block =
   ( delegEnv,
     runShelleyBase $
-      Trace.closure @(DELEG era) delegEnv delegSt0 blockCerts
+      Trace.closure @(ShelleyDELEG era) delegEnv delegSt0 blockCerts
   )
   where
     (_tickedChainSt, ledgerEnv, ledgerSt0, txs) = ledgerTraceBase chainSt block
@@ -1138,7 +1138,7 @@ ledgerTraceBase ::
   ) =>
   ChainState era ->
   Block (BHeader (Crypto era)) era ->
-  (ChainState era, LedgerEnv era, LedgerState era, [Tx era])
+  (ChainState era, ShelleyLedgerEnv era, LedgerState era, [Tx era])
 ledgerTraceBase chainSt block =
   ( tickedChainSt,
     LedgerEnv slot minBound pp_ (esAccountState nes),

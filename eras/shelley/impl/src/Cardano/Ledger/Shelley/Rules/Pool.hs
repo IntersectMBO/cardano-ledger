@@ -12,11 +12,11 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Shelley.Rules.Pool
-  ( POOL,
+  ( ShelleyPOOL,
     PoolEvent (..),
-    PoolEnv (..),
+    ShelleyPoolEnv (..),
     PredicateFailure,
-    PoolPredicateFailure (..),
+    ShelleyPoolPredFailure (..),
   )
 where
 
@@ -72,16 +72,16 @@ import GHC.Generics (Generic)
 import GHC.Records (HasField (getField))
 import NoThunks.Class (NoThunks (..))
 
-data POOL (era :: Type)
+data ShelleyPOOL (era :: Type)
 
-data PoolEnv era
+data ShelleyPoolEnv era
   = PoolEnv SlotNo (PParams era)
 
-deriving instance (Show (PParams era)) => Show (PoolEnv era)
+deriving instance (Show (PParams era)) => Show (ShelleyPoolEnv era)
 
-deriving instance (Eq (PParams era)) => Eq (PoolEnv era)
+deriving instance (Eq (PParams era)) => Eq (ShelleyPoolEnv era)
 
-data PoolPredicateFailure era
+data ShelleyPoolPredFailure era
   = StakePoolNotRegisteredOnKeyPOOL
       !(KeyHash 'StakePool (Crypto era)) -- KeyHash which cannot be retired since it is not registered
   | StakePoolRetirementWrongEpochPOOL
@@ -102,7 +102,7 @@ data PoolPredicateFailure era
       !Int -- Size of the metadata hash
   deriving (Show, Eq, Generic)
 
-instance NoThunks (PoolPredicateFailure era)
+instance NoThunks (ShelleyPoolPredFailure era)
 
 instance
   ( Era era,
@@ -110,17 +110,17 @@ instance
     HasField "_eMax" (PParams era) EpochNo,
     HasField "_protocolVersion" (PParams era) ProtVer
   ) =>
-  STS (POOL era)
+  STS (ShelleyPOOL era)
   where
-  type State (POOL era) = PState (Crypto era)
+  type State (ShelleyPOOL era) = PState (Crypto era)
 
-  type Signal (POOL era) = DCert (Crypto era)
+  type Signal (ShelleyPOOL era) = DCert (Crypto era)
 
-  type Environment (POOL era) = PoolEnv era
+  type Environment (ShelleyPOOL era) = ShelleyPoolEnv era
 
-  type BaseM (POOL era) = ShelleyBase
-  type PredicateFailure (POOL era) = PoolPredicateFailure era
-  type Event (POOL era) = PoolEvent era
+  type BaseM (ShelleyPOOL era) = ShelleyBase
+  type PredicateFailure (ShelleyPOOL era) = ShelleyPoolPredFailure era
+  type Event (ShelleyPOOL era) = PoolEvent era
 
   transitionRules = [poolDelegationTransition]
 
@@ -130,7 +130,7 @@ data PoolEvent era
 
 instance
   (Typeable era, Era era) =>
-  ToCBOR (PoolPredicateFailure era)
+  ToCBOR (ShelleyPoolPredFailure era)
   where
   toCBOR = \case
     StakePoolNotRegisteredOnKeyPOOL kh ->
@@ -148,7 +148,7 @@ instance
 
 instance
   (Era era) =>
-  FromCBOR (PoolPredicateFailure era)
+  FromCBOR (ShelleyPoolPredFailure era)
   where
   fromCBOR = decodeRecordSum "PredicateFailure (POOL era)" $
     \case
@@ -185,7 +185,7 @@ poolDelegationTransition ::
     HasField "_eMax" (PParams era) EpochNo,
     HasField "_protocolVersion" (PParams era) ProtVer
   ) =>
-  TransitionRule (POOL era)
+  TransitionRule (ShelleyPOOL era)
 poolDelegationTransition = do
   TRC (PoolEnv slot pp, ps, c) <- judgmentContext
   let stpools = _pParams ps

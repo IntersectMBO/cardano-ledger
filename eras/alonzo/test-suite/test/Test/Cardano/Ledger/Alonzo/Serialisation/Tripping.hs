@@ -8,7 +8,7 @@ module Test.Cardano.Ledger.Alonzo.Serialisation.Tripping where
 import Cardano.Binary
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Data (BinaryData, Data (..))
-import Cardano.Ledger.Alonzo.Rules (UtxoPredicateFailure, UtxosPredicateFailure, UtxowPredicateFail)
+import Cardano.Ledger.Alonzo.Rules (AlonzoUtxoPredFailure, AlonzoUtxosPredFailure, AlonzoUtxowPredFailure)
 import Cardano.Ledger.Alonzo.Scripts (CostModels)
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness)
 import Cardano.Ledger.Block (Block)
@@ -86,12 +86,12 @@ tests =
         tripping @(PParamsUpdate (AlonzoEra C_Crypto)),
       testProperty "alonzo/AuxiliaryData" $
         trippingAnn @(AuxiliaryData (AlonzoEra C_Crypto)),
-      testProperty "alonzo/UtxowPredicateFail" $
-        tripping @(UtxowPredicateFail (AlonzoEra C_Crypto)),
-      testProperty "alonzo/UtxoPredicateFailure" $
-        tripping @(UtxoPredicateFailure (AlonzoEra C_Crypto)),
-      testProperty "alonzo/UtxosPredicateFailure" $
-        tripping @(UtxosPredicateFailure (AlonzoEra C_Crypto)),
+      testProperty "alonzo/AlonzoUtxowPredFailure" $
+        tripping @(AlonzoUtxowPredFailure (AlonzoEra C_Crypto)),
+      testProperty "alonzo/AlonzoUtxoPredFailure" $
+        tripping @(AlonzoUtxoPredFailure (AlonzoEra C_Crypto)),
+      testProperty "alonzo/AlonzoUtxosPredFailure" $
+        tripping @(AlonzoUtxosPredFailure (AlonzoEra C_Crypto)),
       testProperty "Script" $
         trippingAnn @(Script (AlonzoEra C_Crypto)),
       testProperty "alonzo/Tx" $

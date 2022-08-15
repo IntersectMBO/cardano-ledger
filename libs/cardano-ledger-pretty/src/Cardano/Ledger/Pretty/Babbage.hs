@@ -11,9 +11,9 @@
 module Cardano.Ledger.Pretty.Babbage where
 
 import Cardano.Ledger.Alonzo.Data (BinaryData, binaryDataToData)
-import Cardano.Ledger.Alonzo.Rules (UtxoPredicateFailure, UtxowPredicateFail)
+import Cardano.Ledger.Alonzo.Rules (AlonzoUtxoPredFailure, AlonzoUtxowPredFailure)
 import Cardano.Ledger.Babbage.PParams (BabbagePParams, BabbagePParamsHKD (..), BabbagePParamsUpdate)
-import Cardano.Ledger.Babbage.Rules (BabbageUtxoPred (..), BabbageUtxowPred (..))
+import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..), BabbageUtxowPredFailure (..))
 import Cardano.Ledger.Babbage.TxBody
   ( BabbageTxBody (..),
     BabbageTxOut (..),
@@ -130,12 +130,12 @@ instance PrettyA (BabbagePParamsUpdate era) where
   prettyA = ppPParamsUpdate
 
 ppBabbageUtxoPred ::
-  ( PrettyA (UtxoPredicateFailure era),
+  ( PrettyA (AlonzoUtxoPredFailure era),
     PrettyA (TxOut era)
   ) =>
-  BabbageUtxoPred era ->
+  BabbageUtxoPredFailure era ->
   PDoc
-ppBabbageUtxoPred (FromAlonzoUtxoFail x) = prettyA x
+ppBabbageUtxoPred (AlonzoInBabbageUtxoPredFailure x) = prettyA x
 ppBabbageUtxoPred (IncorrectTotalCollateralField c1 c2) =
   ppRecord
     "IncorrectTotalCollateralField"
@@ -144,20 +144,20 @@ ppBabbageUtxoPred (BabbageOutputTooSmallUTxO xs) =
   ppSexp "BabbageOutputTooSmallUTxO" [ppList (ppPair prettyA ppCoin) xs]
 
 instance
-  ( PrettyA (UtxoPredicateFailure era),
+  ( PrettyA (AlonzoUtxoPredFailure era),
     PrettyA (TxOut era)
   ) =>
-  PrettyA (BabbageUtxoPred era)
+  PrettyA (BabbageUtxoPredFailure era)
   where
   prettyA = ppBabbageUtxoPred
 
 ppBabbageUtxowPred ::
-  ( PrettyA (UtxowPredicateFail era),
+  ( PrettyA (AlonzoUtxowPredFailure era),
     PrettyA (PredicateFailure (EraRule "UTXO" era))
   ) =>
-  BabbageUtxowPred era ->
+  BabbageUtxowPredFailure era ->
   PDoc
-ppBabbageUtxowPred (FromAlonzoUtxowFail pf) = prettyA pf
+ppBabbageUtxowPred (AlonzoInBabbageUtxowPredFailure pf) = prettyA pf
 ppBabbageUtxowPred (UtxoFailure pf) = prettyA pf
 ppBabbageUtxowPred (MalformedScriptWitnesses scripts) =
   ppSexp "MalformedScriptWitnesses" [ppSet ppScriptHash scripts]
@@ -165,10 +165,10 @@ ppBabbageUtxowPred (MalformedReferenceScripts scripts) =
   ppSexp "MalformedReferenceScripts" [ppSet ppScriptHash scripts]
 
 instance
-  ( PrettyA (UtxowPredicateFail era),
+  ( PrettyA (AlonzoUtxowPredFailure era),
     PrettyA (PredicateFailure (EraRule "UTXO" era))
   ) =>
-  PrettyA (BabbageUtxowPred era)
+  PrettyA (BabbageUtxowPredFailure era)
   where
   prettyA = ppBabbageUtxowPred
 

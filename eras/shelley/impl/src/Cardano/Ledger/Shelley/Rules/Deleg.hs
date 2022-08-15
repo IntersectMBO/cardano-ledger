@@ -9,10 +9,10 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Shelley.Rules.Deleg
-  ( DELEG,
-    DelegEnv (..),
+  ( ShelleyDELEG,
+    ShelleyDelegEnv (..),
     PredicateFailure,
-    DelegPredicateFailure (..),
+    ShelleyDelegPredFailure (..),
   )
 where
 
@@ -82,20 +82,20 @@ import GHC.Generics (Generic)
 import GHC.Records (HasField)
 import NoThunks.Class (NoThunks (..))
 
-data DELEG era
+data ShelleyDELEG era
 
-data DelegEnv era = DelegEnv
+data ShelleyDelegEnv era = DelegEnv
   { slotNo :: SlotNo,
     ptr_ :: Ptr,
     acnt_ :: AccountState,
     ppDE :: PParams era -- The protocol parameters are only used for the HardFork mechanism
   }
 
-deriving instance (Show (PParams era)) => Show (DelegEnv era)
+deriving instance (Show (PParams era)) => Show (ShelleyDelegEnv era)
 
-deriving instance (Eq (PParams era)) => Eq (DelegEnv era)
+deriving instance (Eq (PParams era)) => Eq (ShelleyDelegEnv era)
 
-data DelegPredicateFailure era
+data ShelleyDelegPredFailure era
   = StakeKeyAlreadyRegisteredDELEG
       !(Credential 'Staking (Crypto era)) -- Credential which is already registered
   | -- | Indicates that the stake key is somehow already in the rewards map.
@@ -135,28 +135,28 @@ data DelegPredicateFailure era
       !Coin -- amount attempted to transfer
   deriving (Show, Eq, Generic)
 
-newtype DelegEvent era = NewEpoch EpochNo
+newtype ShelleyDelegEvent era = NewEpoch EpochNo
 
 instance
   ( Typeable era,
     HasField "_protocolVersion" (PParams era) ProtVer
   ) =>
-  STS (DELEG era)
+  STS (ShelleyDELEG era)
   where
-  type State (DELEG era) = DState (Crypto era)
-  type Signal (DELEG era) = DCert (Crypto era)
-  type Environment (DELEG era) = DelegEnv era
-  type BaseM (DELEG era) = ShelleyBase
-  type PredicateFailure (DELEG era) = DelegPredicateFailure era
-  type Event (DELEG era) = DelegEvent era
+  type State (ShelleyDELEG era) = DState (Crypto era)
+  type Signal (ShelleyDELEG era) = DCert (Crypto era)
+  type Environment (ShelleyDELEG era) = ShelleyDelegEnv era
+  type BaseM (ShelleyDELEG era) = ShelleyBase
+  type PredicateFailure (ShelleyDELEG era) = ShelleyDelegPredFailure era
+  type Event (ShelleyDELEG era) = ShelleyDelegEvent era
 
   transitionRules = [delegationTransition]
 
-instance NoThunks (DelegPredicateFailure era)
+instance NoThunks (ShelleyDelegPredFailure era)
 
 instance
   (Typeable era, Era era, Typeable (Script era)) =>
-  ToCBOR (DelegPredicateFailure era)
+  ToCBOR (ShelleyDelegPredFailure era)
   where
   toCBOR = \case
     StakeKeyAlreadyRegisteredDELEG cred ->
@@ -202,7 +202,7 @@ instance
 
 instance
   (Era era, Typeable (Script era)) =>
-  FromCBOR (DelegPredicateFailure era)
+  FromCBOR (ShelleyDelegPredFailure era)
   where
   fromCBOR = decodeRecordSum "PredicateFailure (DELEG era)" $
     \case
@@ -262,7 +262,7 @@ delegationTransition ::
   ( Typeable era,
     HasField "_protocolVersion" (PParams era) ProtVer
   ) =>
-  TransitionRule (DELEG era)
+  TransitionRule (ShelleyDELEG era)
 delegationTransition = do
   TRC (DelegEnv slot ptr acnt pp, ds, c) <- judgmentContext
   case c of

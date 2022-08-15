@@ -17,14 +17,14 @@
 
 module Cardano.Ledger.Alonzo.Rules.Utxos
   ( AlonzoUTXOS,
-    UtxosPredicateFailure (..),
+    AlonzoUtxosPredFailure (..),
     lbl2Phase,
     TagMismatchDescription (..),
     validBegin,
     validEnd,
     invalidBegin,
     invalidEnd,
-    UtxosEvent (..),
+    AlonzoUtxosEvent (..),
     when2Phase,
     FailureDescription (..),
     scriptFailuresToPredicateFailure,
@@ -68,8 +68,8 @@ import Cardano.Ledger.Shelley.LedgerState
   )
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.PParams (Update)
-import Cardano.Ledger.Shelley.Rules.Ppup (PPUP, PPUPEnv (..), PpupPredicateFailure)
-import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..), updateUTxOState)
+import Cardano.Ledger.Shelley.Rules.Ppup (ShelleyPPUP, ShelleyPPUPEnv (..), ShelleyPpupPredFailure)
+import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoEnv (..), updateUTxOState)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance, totalDeposits)
 import Cardano.Ledger.Val as Val (Val (coin, (<->)))
 import Cardano.Slotting.EpochInfo.Extend (unsafeLinearExtendEpochInfo)
@@ -104,7 +104,7 @@ instance
     Script era ~ AlonzoScript era,
     Tx era ~ AlonzoTx era,
     Embed (EraRule "PPUP" era) (AlonzoUTXOS era),
-    Environment (EraRule "PPUP" era) ~ PPUPEnv era,
+    Environment (EraRule "PPUP" era) ~ ShelleyPPUPEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,
     Signal (EraRule "PPUP" era) ~ Maybe (Update era),
     HasField "_costmdls" (PParams era) CostModels,
@@ -116,25 +116,25 @@ instance
   STS (AlonzoUTXOS era)
   where
   type BaseM (AlonzoUTXOS era) = ShelleyBase
-  type Environment (AlonzoUTXOS era) = UtxoEnv era
+  type Environment (AlonzoUTXOS era) = ShelleyUtxoEnv era
   type State (AlonzoUTXOS era) = UTxOState era
   type Signal (AlonzoUTXOS era) = AlonzoTx era
-  type PredicateFailure (AlonzoUTXOS era) = UtxosPredicateFailure era
-  type Event (AlonzoUTXOS era) = UtxosEvent era
+  type PredicateFailure (AlonzoUTXOS era) = AlonzoUtxosPredFailure era
+  type Event (AlonzoUTXOS era) = AlonzoUtxosEvent era
   transitionRules = [utxosTransition]
 
-data UtxosEvent era
+data AlonzoUtxosEvent era
   = AlonzoPpupToUtxosEvent (Event (EraRule "PPUP" era))
   | SuccessfulPlutusScriptsEvent (NonEmpty PlutusDebug)
   | FailedPlutusScriptsEvent (NonEmpty PlutusDebug)
 
 instance
   ( Era era,
-    STS (PPUP era),
-    PredicateFailure (EraRule "PPUP" era) ~ PpupPredicateFailure era,
-    Event (EraRule "PPUP" era) ~ Event (PPUP era)
+    STS (ShelleyPPUP era),
+    PredicateFailure (EraRule "PPUP" era) ~ ShelleyPpupPredFailure era,
+    Event (EraRule "PPUP" era) ~ Event (ShelleyPPUP era)
   ) =>
-  Embed (PPUP era) (AlonzoUTXOS era)
+  Embed (ShelleyPPUP era) (AlonzoUTXOS era)
   where
   wrapFailed = UpdateFailure
   wrapEvent = AlonzoPpupToUtxosEvent
@@ -146,7 +146,7 @@ utxosTransition ::
     Tx era ~ AlonzoTx era,
     Script era ~ AlonzoScript era,
     Witnesses era ~ TxWitness era,
-    Environment (EraRule "PPUP" era) ~ PPUPEnv era,
+    Environment (EraRule "PPUP" era) ~ ShelleyPPUPEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,
     Signal (EraRule "PPUP" era) ~ Maybe (Update era),
     Embed (EraRule "PPUP" era) (AlonzoUTXOS era),
@@ -175,7 +175,7 @@ scriptsTransition ::
     HasField "_costmdls" (PParams era) CostModels,
     HasField "_protocolVersion" (PParams era) ProtVer,
     BaseM sts ~ ReaderT Globals m,
-    PredicateFailure sts ~ UtxosPredicateFailure era,
+    PredicateFailure sts ~ AlonzoUtxosPredFailure era,
     Script era ~ AlonzoScript era
   ) =>
   SlotNo ->
@@ -209,7 +209,7 @@ scriptsValidateTransition ::
     Tx era ~ AlonzoTx era,
     Witnesses era ~ TxWitness era,
     Script era ~ AlonzoScript era,
-    Environment (EraRule "PPUP" era) ~ PPUPEnv era,
+    Environment (EraRule "PPUP" era) ~ ShelleyPPUPEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,
     Signal (EraRule "PPUP" era) ~ Maybe (Update era),
     Embed (EraRule "PPUP" era) (AlonzoUTXOS era),
@@ -341,7 +341,7 @@ instance FromCBOR TagMismatchDescription where
       dec 1 = SumD FailedUnexpectedly <! From
       dec n = Invalid n
 
-data UtxosPredicateFailure era
+data AlonzoUtxosPredFailure era
   = -- | The 'isValid' tag on the transaction is incorrect. The tag given
     --   here is that provided on the transaction (whereas evaluation of the
     --   scripts gives the opposite.). The Text tries to explain why it failed.
@@ -361,7 +361,7 @@ instance
     ToCBOR (PredicateFailure (EraRule "PPUP" era)),
     Show (TxOut era)
   ) =>
-  ToCBOR (UtxosPredicateFailure era)
+  ToCBOR (AlonzoUtxosPredFailure era)
   where
   toCBOR (ValidationTagMismatch v descr) = encode (Sum ValidationTagMismatch 0 !> To v !> To descr)
   toCBOR (CollectErrors cs) =
@@ -372,7 +372,7 @@ instance
   ( Era era,
     FromCBOR (PredicateFailure (EraRule "PPUP" era))
   ) =>
-  FromCBOR (UtxosPredicateFailure era)
+  FromCBOR (AlonzoUtxosPredFailure era)
   where
   fromCBOR = decode (Summands "UtxosPredicateFailure" dec)
     where
@@ -385,13 +385,13 @@ deriving stock instance
   ( Show (Shelley.UTxOState era),
     Show (PredicateFailure (EraRule "PPUP" era))
   ) =>
-  Show (UtxosPredicateFailure era)
+  Show (AlonzoUtxosPredFailure era)
 
 instance
   ( Eq (Shelley.UTxOState era),
     Eq (PredicateFailure (EraRule "PPUP" era))
   ) =>
-  Eq (UtxosPredicateFailure era)
+  Eq (AlonzoUtxosPredFailure era)
   where
   (ValidationTagMismatch a x) == (ValidationTagMismatch b y) = a == b && x == y
   (CollectErrors x) == (CollectErrors y) = x == y
@@ -402,7 +402,7 @@ instance
   ( NoThunks (Shelley.UTxOState era),
     NoThunks (PredicateFailure (EraRule "PPUP" era))
   ) =>
-  NoThunks (UtxosPredicateFailure era)
+  NoThunks (AlonzoUtxosPredFailure era)
 
 --------------------------------------------------------------------------------
 -- 2-phase checks
@@ -431,10 +431,10 @@ when2Phase = labeled $ lblStatic NE.:| [lbl2Phase]
 -- Inject instances
 
 instance
-  PredicateFailure (EraRule "PPUP" era) ~ PpupPredicateFailure era =>
-  Inject (PpupPredicateFailure era) (UtxosPredicateFailure era)
+  PredicateFailure (EraRule "PPUP" era) ~ ShelleyPpupPredFailure era =>
+  Inject (ShelleyPpupPredFailure era) (AlonzoUtxosPredFailure era)
   where
   inject = UpdateFailure
 
-instance Inject (UtxosPredicateFailure era) (UtxosPredicateFailure era) where
+instance Inject (AlonzoUtxosPredFailure era) (AlonzoUtxosPredFailure era) where
   inject = id

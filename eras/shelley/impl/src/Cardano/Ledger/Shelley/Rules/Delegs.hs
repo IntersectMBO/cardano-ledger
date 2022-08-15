@@ -13,10 +13,10 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Shelley.Rules.Delegs
-  ( DELEGS,
-    DelegsEnv (..),
-    DelegsPredicateFailure (..),
-    DelegsEvent (..),
+  ( ShelleyDELEGS,
+    ShelleyDelegsEnv (..),
+    ShelleyDelegsPredFailure (..),
+    ShelleyDelegsEvent (..),
     PredicateFailure,
   )
 where
@@ -52,7 +52,7 @@ import Cardano.Ledger.Shelley.LedgerState
     _pParams,
     _unified,
   )
-import Cardano.Ledger.Shelley.Rules.Delpl (DELPL, DelplEnv (..), DelplEvent, DelplPredicateFailure)
+import Cardano.Ledger.Shelley.Rules.Delpl (ShelleyDELPL, ShelleyDelplEnv (..), ShelleyDelplEvent, ShelleyDelplPredFailure)
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
     DelegCert (..),
@@ -88,9 +88,9 @@ import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
-data DELEGS era
+data ShelleyDELEGS era
 
-data DelegsEnv era = DelegsEnv
+data ShelleyDelegsEnv era = ShelleyDelegsEnv
   { delegsSlotNo :: !SlotNo,
     delegsIx :: !TxIx,
     delegspp :: !(PParams era),
@@ -102,9 +102,9 @@ deriving stock instance
   ( Show (Tx era),
     Show (PParams era)
   ) =>
-  Show (DelegsEnv era)
+  Show (ShelleyDelegsEnv era)
 
-data DelegsPredicateFailure era
+data ShelleyDelegsPredFailure era
   = DelegateeNotRegisteredDELEG
       !(KeyHash 'StakePool (Crypto era)) -- target pool which is not registered
   | WithdrawalsNotInRewardsDELEGS
@@ -112,50 +112,50 @@ data DelegsPredicateFailure era
   | DelplFailure (PredicateFailure (EraRule "DELPL" era)) -- Subtransition Failures
   deriving (Generic)
 
-newtype DelegsEvent era = DelplEvent (Event (EraRule "DELPL" era))
+newtype ShelleyDelegsEvent era = DelplEvent (Event (EraRule "DELPL" era))
 
 deriving stock instance
   ( Show (PredicateFailure (EraRule "DELPL" era))
   ) =>
-  Show (DelegsPredicateFailure era)
+  Show (ShelleyDelegsPredFailure era)
 
 deriving stock instance
   ( Eq (PredicateFailure (EraRule "DELPL" era))
   ) =>
-  Eq (DelegsPredicateFailure era)
+  Eq (ShelleyDelegsPredFailure era)
 
 instance
   ( EraTx era,
     ShelleyEraTxBody era,
-    Embed (EraRule "DELPL" era) (DELEGS era),
-    Environment (EraRule "DELPL" era) ~ DelplEnv era,
+    Embed (EraRule "DELPL" era) (ShelleyDELEGS era),
+    Environment (EraRule "DELPL" era) ~ ShelleyDelplEnv era,
     State (EraRule "DELPL" era) ~ DPState (Crypto era),
     Signal (EraRule "DELPL" era) ~ DCert (Crypto era)
   ) =>
-  STS (DELEGS era)
+  STS (ShelleyDELEGS era)
   where
-  type State (DELEGS era) = DPState (Crypto era)
-  type Signal (DELEGS era) = Seq (DCert (Crypto era))
-  type Environment (DELEGS era) = DelegsEnv era
-  type BaseM (DELEGS era) = ShelleyBase
+  type State (ShelleyDELEGS era) = DPState (Crypto era)
+  type Signal (ShelleyDELEGS era) = Seq (DCert (Crypto era))
+  type Environment (ShelleyDELEGS era) = ShelleyDelegsEnv era
+  type BaseM (ShelleyDELEGS era) = ShelleyBase
   type
-    PredicateFailure (DELEGS era) =
-      DelegsPredicateFailure era
-  type Event _ = DelegsEvent era
+    PredicateFailure (ShelleyDELEGS era) =
+      ShelleyDelegsPredFailure era
+  type Event _ = ShelleyDelegsEvent era
 
   transitionRules = [delegsTransition]
 
 instance
   ( NoThunks (PredicateFailure (EraRule "DELPL" era))
   ) =>
-  NoThunks (DelegsPredicateFailure era)
+  NoThunks (ShelleyDelegsPredFailure era)
 
 instance
   ( Era era,
     Typeable (Script era),
     ToCBOR (PredicateFailure (EraRule "DELPL" era))
   ) =>
-  ToCBOR (DelegsPredicateFailure era)
+  ToCBOR (ShelleyDelegsPredFailure era)
   where
   toCBOR = \case
     DelegateeNotRegisteredDELEG kh ->
@@ -175,7 +175,7 @@ instance
     FromCBOR (PredicateFailure (EraRule "DELPL" era)),
     Typeable (Script era)
   ) =>
-  FromCBOR (DelegsPredicateFailure era)
+  FromCBOR (ShelleyDelegsPredFailure era)
   where
   fromCBOR =
     decodeRecordSum "PredicateFailure" $
@@ -195,14 +195,14 @@ delegsTransition ::
   forall era.
   ( EraTx era,
     ShelleyEraTxBody era,
-    Embed (EraRule "DELPL" era) (DELEGS era),
-    Environment (EraRule "DELPL" era) ~ DelplEnv era,
+    Embed (EraRule "DELPL" era) (ShelleyDELEGS era),
+    Environment (EraRule "DELPL" era) ~ ShelleyDelplEnv era,
     State (EraRule "DELPL" era) ~ DPState (Crypto era),
     Signal (EraRule "DELPL" era) ~ DCert (Crypto era)
   ) =>
-  TransitionRule (DELEGS era)
+  TransitionRule (ShelleyDELEGS era)
 delegsTransition = do
-  TRC (env@(DelegsEnv slot txIx pp tx acnt), dpstate, certificates) <- judgmentContext
+  TRC (env@(ShelleyDelegsEnv slot txIx pp tx acnt), dpstate, certificates) <- judgmentContext
   network <- liftSTS $ asks networkId
 
   case certificates of
@@ -230,7 +230,7 @@ delegsTransition = do
       pure $ dpstate {dpsDState = ds {_unified = unified'}}
     gamma :|> c -> do
       dpstate' <-
-        trans @(DELEGS era) $ TRC (env, dpstate, gamma)
+        trans @(ShelleyDELEGS era) $ TRC (env, dpstate, gamma)
 
       let isDelegationRegistered = case c of
             DCertDeleg (Delegate deleg) ->
@@ -266,11 +266,11 @@ delegsTransition = do
 
 instance
   ( Era era,
-    STS (DELPL era),
-    PredicateFailure (EraRule "DELPL" era) ~ DelplPredicateFailure era,
-    Event (EraRule "DELPL" era) ~ DelplEvent era
+    STS (ShelleyDELPL era),
+    PredicateFailure (EraRule "DELPL" era) ~ ShelleyDelplPredFailure era,
+    Event (EraRule "DELPL" era) ~ ShelleyDelplEvent era
   ) =>
-  Embed (DELPL era) (DELEGS era)
+  Embed (ShelleyDELPL era) (ShelleyDELEGS era)
   where
   wrapFailed = DelplFailure
   wrapEvent = DelplEvent

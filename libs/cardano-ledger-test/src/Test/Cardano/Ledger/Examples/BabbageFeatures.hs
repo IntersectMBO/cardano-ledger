@@ -20,8 +20,8 @@ import Cardano.Ledger.Alonzo.Data (Data (..), dataToBinaryData, hashData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (BadTranslation))
 import Cardano.Ledger.Alonzo.Rules
-  ( UtxosPredicateFailure (CollectErrors),
-    UtxowPredicateFail (NonOutputSupplimentaryDatums),
+  ( AlonzoUtxosPredFailure (CollectErrors),
+    AlonzoUtxowPredFailure (NonOutputSupplimentaryDatums),
   )
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (PlutusScript), CostModels (..), ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
@@ -31,7 +31,7 @@ import Cardano.Ledger.Alonzo.TxInfo
   )
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..), TxDats (..))
 import qualified Cardano.Ledger.Babbage.Collateral as Collateral (collBalance)
-import Cardano.Ledger.Babbage.Rules (BabbageUtxoPred (..), BabbageUtxowPred (..))
+import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..), BabbageUtxowPredFailure (..))
 import Cardano.Ledger.Babbage.TxBody
   ( AlonzoEraTxBody (..),
     BabbageEraTxBody (..),
@@ -958,14 +958,14 @@ malformedScriptWit pf =
 -- ====================================================================================
 
 class BabbageBased era failure where
-  fromUtxoB :: BabbageUtxoPred era -> failure
-  fromUtxowB :: BabbageUtxowPred era -> failure
+  fromUtxoB :: BabbageUtxoPredFailure era -> failure
+  fromUtxowB :: BabbageUtxowPredFailure era -> failure
 
-instance BabbageBased (BabbageEra c) (BabbageUtxowPred (BabbageEra c)) where
+instance BabbageBased (BabbageEra c) (BabbageUtxowPredFailure (BabbageEra c)) where
   fromUtxoB = UtxoFailure
   fromUtxowB = id
 
-instance BabbageBased (ConwayEra c) (BabbageUtxowPred (ConwayEra c)) where
+instance BabbageBased (ConwayEra c) (BabbageUtxowPredFailure (ConwayEra c)) where
   fromUtxoB = UtxoFailure
   fromUtxowB = id
 

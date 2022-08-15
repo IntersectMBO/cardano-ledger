@@ -172,7 +172,7 @@ prop_roundtrip_BootstrapWitness =
   roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 
 prop_roundtrip_LEDGER_PredicateFails ::
-  [STS.PredicateFailure (STS.LEDGERS Mock.C)] -> Property
+  [STS.PredicateFailure (STS.ShelleyLEDGERS Mock.C)] -> Property
 prop_roundtrip_LEDGER_PredicateFails = roundtrip toCBOR fromCBOR
 
 prop_roundtrip_PrtclState :: STS.PrtclState Mock.C_Crypto -> Property

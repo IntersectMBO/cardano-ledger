@@ -19,8 +19,8 @@ import Cardano.Ledger.Shelley.API
     Block,
     DCert,
     DPState,
-    DelplEnv,
-    LEDGERS,
+    ShelleyDelplEnv,
+    ShelleyLEDGERS,
     ShelleyTx,
   )
 import Cardano.Ledger.Shelley.LedgerState
@@ -89,8 +89,8 @@ genBlock ::
     EraGen era,
     MinLEDGER_STS era,
     GetLedgerView era,
-    Core.EraRule "LEDGERS" era ~ LEDGERS era,
-    QC.HasTrace (LEDGERS era) (GenEnv era),
+    Core.EraRule "LEDGERS" era ~ ShelleyLEDGERS era,
+    QC.HasTrace (ShelleyLEDGERS era) (GenEnv era),
     ApplyBlock era
   ) =>
   GenEnv era ->
@@ -111,7 +111,7 @@ genTriple ::
     Core.PParams era ~ ShelleyPParams era,
     Mock (Crypto era),
     Embed (Core.EraRule "DELPL" era) (CERTS era),
-    Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
+    Environment (Core.EraRule "DELPL" era) ~ ShelleyDelplEnv era,
     State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
     Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era),
     ShelleyTest era

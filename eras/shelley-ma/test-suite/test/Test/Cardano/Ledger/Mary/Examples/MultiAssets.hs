@@ -23,15 +23,15 @@ import Cardano.Ledger.Mary.Value
     PolicyID (..),
   )
 import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Shelley.API (LEDGER, LedgerEnv (..))
+import Cardano.Ledger.Shelley.API (ShelleyLEDGER, ShelleyLedgerEnv (..))
 import Cardano.Ledger.Shelley.LedgerState (AccountState (..))
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..), emptyPParams)
-import Cardano.Ledger.Shelley.Rules.Ledger (LedgerPredicateFailure (..))
-import Cardano.Ledger.Shelley.Rules.Utxow (UtxowPredicateFailure (..))
+import Cardano.Ledger.Shelley.Rules.Ledger (ShelleyLedgerPredFailure (..))
+import Cardano.Ledger.Shelley.Rules.Utxow (ShelleyUtxowPredFailure (..))
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), WitnessSetHKD (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxOut (..), Wdrl (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), makeWitnessesVKey)
-import Cardano.Ledger.ShelleyMA.Rules (UtxoPredicateFailure (..))
+import Cardano.Ledger.ShelleyMA.Rules (ShelleyMAUtxoPredFailure (..))
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.ShelleyMA.TxBody (MATxBody (..))
 import Cardano.Ledger.Slot (SlotNo (..))
@@ -98,7 +98,7 @@ pp =
       _minUTxOValue = Coin 100
     }
 
-ledgerEnv :: SlotNo -> LedgerEnv MaryTest
+ledgerEnv :: SlotNo -> ShelleyLedgerEnv MaryTest
 ledgerEnv s = LedgerEnv s minBound pp (AccountState (Coin 0) (Coin 0))
 
 feeEx :: Coin
@@ -124,14 +124,14 @@ makeTxb ins outs interval minted =
     SNothing
     minted
 
-policyFailure :: PolicyID TestCrypto -> Either [PredicateFailure (LEDGER MaryTest)] (UTxO MaryTest)
+policyFailure :: PolicyID TestCrypto -> Either [PredicateFailure (ShelleyLEDGER MaryTest)] (UTxO MaryTest)
 policyFailure p =
   Left
     [ UtxowFailure
         (ScriptWitnessNotValidatingUTXOW (Set.singleton (policyID p)))
     ]
 
-outTooBigFailure :: ShelleyTxOut MaryTest -> Either [PredicateFailure (LEDGER MaryTest)] (UTxO MaryTest)
+outTooBigFailure :: ShelleyTxOut MaryTest -> Either [PredicateFailure (ShelleyLEDGER MaryTest)] (UTxO MaryTest)
 outTooBigFailure out = Left [UtxowFailure (UtxoFailure (OutputTooBigUTxO [out]))]
 
 ----------------------------------------------------

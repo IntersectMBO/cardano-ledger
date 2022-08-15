@@ -51,10 +51,10 @@ import Cardano.Ledger.Shelley.PParams
     ShelleyPParamsHKD (..),
     emptyPParams,
   )
-import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
+import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoEnv (..))
 import Cardano.Ledger.Shelley.Rules.Utxow
-  ( UTXOW,
-    UtxowPredicateFailure (..),
+  ( ShelleyUTXOW,
+    ShelleyUtxowPredFailure (..),
   )
 import Cardano.Ledger.Shelley.Tx
   ( ShelleyTx (..),
@@ -165,7 +165,7 @@ utxoState1 =
     bobResult = (mkTxInPartial txid 0, ShelleyTxOut bobAddr coinsToBob)
     aliceResult = (mkTxInPartial txid 1, ShelleyTxOut aliceAddr (Coin 998990))
 
-utxoEnv :: UtxoEnv C
+utxoEnv :: ShelleyUtxoEnv C
 utxoEnv =
   UtxoEnv
     0
@@ -238,7 +238,7 @@ txBody =
 
 testBootstrapSpending :: Assertion
 testBootstrapSpending =
-  testSTS @(UTXOW C)
+  testSTS @(ShelleyUTXOW C)
     utxoEnv
     utxoState0
     tx
@@ -246,7 +246,7 @@ testBootstrapSpending =
 
 testBootstrapNotSpending :: Assertion
 testBootstrapNotSpending =
-  testSTS @(UTXOW C)
+  testSTS @(ShelleyUTXOW C)
     utxoEnv
     utxoState0
     txBad

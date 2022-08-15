@@ -112,7 +112,7 @@ import Cardano.Ledger.Shelley.Rewards
     mkApparentPerformance,
     mkPoolRewardInfo,
   )
-import Cardano.Ledger.Shelley.Rules.NewEpoch (NewEpochEvent (DeltaRewardEvent, TotalRewardEvent))
+import Cardano.Ledger.Shelley.Rules.NewEpoch (ShelleyNewEpochEvent (DeltaRewardEvent, TotalRewardEvent))
 import Cardano.Ledger.Shelley.Rules.Rupd (RupdEvent (..))
 import qualified Cardano.Ledger.Shelley.Rules.Tick as Tick
 import Cardano.Ledger.Shelley.TxBody (RewardAcnt (..))

@@ -14,14 +14,14 @@ module Test.Cardano.Ledger.Babbage.Serialisation.Generators where
 import Cardano.Binary (ToCBOR)
 import Cardano.Ledger.Alonzo.Data (dataToBinaryData)
 import Cardano.Ledger.Alonzo.Rules
-  ( UtxoPredicateFailure (..),
-    UtxosPredicateFailure (..),
-    UtxowPredicateFail (..),
+  ( AlonzoUtxoPredFailure (..),
+    AlonzoUtxosPredFailure (..),
+    AlonzoUtxowPredFailure (..),
   )
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.PParams
-import Cardano.Ledger.Babbage.Rules (BabbageUtxoPred (..), BabbageUtxowPred (..))
+import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..), BabbageUtxowPredFailure (..))
 import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.Babbage.TxBody
   ( BabbageEraTxBody,
@@ -156,14 +156,14 @@ instance Arbitrary (BabbagePParamsUpdate era) where
       <*> arbitrary
       <*> arbitrary
 
-instance Mock c => Arbitrary (UtxosPredicateFailure (BabbageEra c)) where
+instance Mock c => Arbitrary (AlonzoUtxosPredFailure (BabbageEra c)) where
   arbitrary =
     oneof
       [ ValidationTagMismatch <$> arbitrary <*> arbitrary,
         UpdateFailure <$> arbitrary
       ]
 
-instance Mock c => Arbitrary (UtxoPredicateFailure (BabbageEra c)) where
+instance Mock c => Arbitrary (AlonzoUtxoPredFailure (BabbageEra c)) where
   arbitrary =
     oneof
       [ BadInputsUTxO <$> arbitrary,
@@ -185,10 +185,10 @@ instance Mock c => Arbitrary (UtxoPredicateFailure (BabbageEra c)) where
         CollateralContainsNonADA <$> arbitrary
       ]
 
-instance Mock c => Arbitrary (UtxowPredicateFail (BabbageEra c)) where
+instance Mock c => Arbitrary (AlonzoUtxowPredFailure (BabbageEra c)) where
   arbitrary =
     oneof
-      [ WrappedShelleyEraFailure <$> arbitrary,
+      [ ShelleyInAlonzoUtxowPredFailure <$> arbitrary,
         MissingRedeemers <$> arbitrary,
         MissingRequiredDatums <$> arbitrary <*> arbitrary,
         PPViewHashesDontMatch <$> arbitrary <*> arbitrary
@@ -212,17 +212,17 @@ instance
         Datum . dataToBinaryData <$> arbitrary
       ]
 
-instance Mock c => Arbitrary (BabbageUtxoPred (BabbageEra c)) where
+instance Mock c => Arbitrary (BabbageUtxoPredFailure (BabbageEra c)) where
   arbitrary =
     oneof
-      [ FromAlonzoUtxoFail <$> arbitrary,
+      [ AlonzoInBabbageUtxoPredFailure <$> arbitrary,
         IncorrectTotalCollateralField <$> arbitrary <*> arbitrary
       ]
 
-instance Mock c => Arbitrary (BabbageUtxowPred (BabbageEra c)) where
+instance Mock c => Arbitrary (BabbageUtxowPredFailure (BabbageEra c)) where
   arbitrary =
     oneof
-      [ FromAlonzoUtxowFail <$> arbitrary,
+      [ AlonzoInBabbageUtxowPredFailure <$> arbitrary,
         UtxoFailure <$> arbitrary,
         MalformedScriptWitnesses <$> arbitrary,
         MalformedReferenceScripts <$> arbitrary

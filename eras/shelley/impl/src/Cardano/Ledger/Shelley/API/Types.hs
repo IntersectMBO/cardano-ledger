@@ -108,25 +108,25 @@ import Cardano.Ledger.Shelley.PParams as X
 import Cardano.Ledger.Shelley.PoolRank as X
   ( NonMyopic,
   )
-import Cardano.Ledger.Shelley.Rules.Deleg as X (DELEG, DelegEnv (..))
-import Cardano.Ledger.Shelley.Rules.Delegs as X (DELEGS, DelegsEnv (..))
-import Cardano.Ledger.Shelley.Rules.Delpl as X (DELPL, DelplEnv (..))
-import Cardano.Ledger.Shelley.Rules.Ledger as X (LEDGER, LedgerEnv (..))
-import Cardano.Ledger.Shelley.Rules.Ledgers as X (LEDGERS, LedgersEnv (..))
+import Cardano.Ledger.Shelley.Rules.Deleg as X (ShelleyDELEG, ShelleyDelegEnv (..))
+import Cardano.Ledger.Shelley.Rules.Delegs as X (ShelleyDELEGS, ShelleyDelegsEnv (..))
+import Cardano.Ledger.Shelley.Rules.Delpl as X (ShelleyDELPL, ShelleyDelplEnv (..))
+import Cardano.Ledger.Shelley.Rules.Ledger as X (ShelleyLEDGER, ShelleyLedgerEnv (..))
+import Cardano.Ledger.Shelley.Rules.Ledgers as X (ShelleyLEDGERS, ShelleyLedgersEnv (..))
 import Cardano.Ledger.Shelley.Rules.NewEpoch as X
-  ( NEWEPOCH,
+  ( ShelleyNEWEPOCH,
     calculatePoolDistr,
     calculatePoolDistr',
   )
-import Cardano.Ledger.Shelley.Rules.Pool as X (POOL, PoolEnv (..))
-import Cardano.Ledger.Shelley.Rules.PoolReap as X (POOLREAP)
-import Cardano.Ledger.Shelley.Rules.Ppup as X (PPUP, PPUPEnv (..))
-import Cardano.Ledger.Shelley.Rules.Tick as X (TICK)
+import Cardano.Ledger.Shelley.Rules.Pool as X (ShelleyPOOL, ShelleyPoolEnv (..))
+import Cardano.Ledger.Shelley.Rules.PoolReap as X (ShelleyPOOLREAP)
+import Cardano.Ledger.Shelley.Rules.Ppup as X (ShelleyPPUP, ShelleyPPUPEnv (..))
+import Cardano.Ledger.Shelley.Rules.Tick as X (ShelleyTICK)
 import Cardano.Ledger.Shelley.Rules.Utxo as X
-  ( UTXO,
-    UtxoEnv (..),
+  ( ShelleyUTXO,
+    ShelleyUtxoEnv (..),
   )
-import Cardano.Ledger.Shelley.Rules.Utxow as X (UTXOW)
+import Cardano.Ledger.Shelley.Rules.Utxow as X (ShelleyUTXOW)
 import Cardano.Ledger.Shelley.Scripts as X
   ( MultiSig (..),
     ScriptHash (..),

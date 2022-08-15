@@ -12,10 +12,10 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Shelley.Rules.Ledgers
-  ( LEDGERS,
-    LedgersEnv (..),
-    LedgersPredicateFailure (..),
-    LedgersEvent (..),
+  ( ShelleyLEDGERS,
+    ShelleyLedgersEnv (..),
+    ShelleyLedgersPredFailure (..),
+    ShelleyLedgersEvent (..),
     PredicateFailure,
   )
 where
@@ -26,10 +26,10 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley.LedgerState (AccountState, LedgerState)
 import Cardano.Ledger.Shelley.Rules.Ledger
-  ( LEDGER,
-    LedgerEnv (..),
-    LedgerEvent,
-    LedgerPredicateFailure,
+  ( ShelleyLEDGER,
+    ShelleyLedgerEnv (..),
+    ShelleyLedgerEvent,
+    ShelleyLedgerPredFailure,
   )
 import Cardano.Ledger.Slot (SlotNo)
 import Control.Monad (foldM)
@@ -47,44 +47,44 @@ import Data.Sequence (Seq)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
-data LEDGERS era
+data ShelleyLEDGERS era
 
-data LedgersEnv era = LedgersEnv
+data ShelleyLedgersEnv era = LedgersEnv
   { ledgersSlotNo :: SlotNo,
     ledgersPp :: PParams era,
     ledgersAccount :: AccountState
   }
 
-newtype LedgersPredicateFailure era
+newtype ShelleyLedgersPredFailure era
   = LedgerFailure (PredicateFailure (EraRule "LEDGER" era)) -- Subtransition Failures
   deriving (Generic)
 
-newtype LedgersEvent era
+newtype ShelleyLedgersEvent era
   = LedgerEvent (Event (EraRule "LEDGER" era))
 
 deriving stock instance
   ( Era era,
     Show (PredicateFailure (EraRule "LEDGER" era))
   ) =>
-  Show (LedgersPredicateFailure era)
+  Show (ShelleyLedgersPredFailure era)
 
 deriving stock instance
   ( Era era,
     Eq (PredicateFailure (EraRule "LEDGER" era))
   ) =>
-  Eq (LedgersPredicateFailure era)
+  Eq (ShelleyLedgersPredFailure era)
 
 instance
   ( Era era,
     NoThunks (PredicateFailure (EraRule "LEDGER" era))
   ) =>
-  NoThunks (LedgersPredicateFailure era)
+  NoThunks (ShelleyLedgersPredFailure era)
 
 instance
   ( Era era,
     ToCBOR (PredicateFailure (EraRule "LEDGER" era))
   ) =>
-  ToCBOR (LedgersPredicateFailure era)
+  ToCBOR (ShelleyLedgersPredFailure era)
   where
   toCBOR (LedgerFailure e) = toCBOR e
 
@@ -92,38 +92,38 @@ instance
   ( Era era,
     FromCBOR (PredicateFailure (EraRule "LEDGER" era))
   ) =>
-  FromCBOR (LedgersPredicateFailure era)
+  FromCBOR (ShelleyLedgersPredFailure era)
   where
   fromCBOR = LedgerFailure <$> fromCBOR
 
 instance
   ( Era era,
-    Embed (EraRule "LEDGER" era) (LEDGERS era),
-    Environment (EraRule "LEDGER" era) ~ LedgerEnv era,
+    Embed (EraRule "LEDGER" era) (ShelleyLEDGERS era),
+    Environment (EraRule "LEDGER" era) ~ ShelleyLedgerEnv era,
     State (EraRule "LEDGER" era) ~ LedgerState era,
     Signal (EraRule "LEDGER" era) ~ Tx era,
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
     Default (LedgerState era)
   ) =>
-  STS (LEDGERS era)
+  STS (ShelleyLEDGERS era)
   where
-  type State (LEDGERS era) = LedgerState era
-  type Signal (LEDGERS era) = Seq (Tx era)
-  type Environment (LEDGERS era) = LedgersEnv era
-  type BaseM (LEDGERS era) = ShelleyBase
-  type PredicateFailure (LEDGERS era) = LedgersPredicateFailure era
-  type Event (LEDGERS era) = LedgersEvent era
+  type State (ShelleyLEDGERS era) = LedgerState era
+  type Signal (ShelleyLEDGERS era) = Seq (Tx era)
+  type Environment (ShelleyLEDGERS era) = ShelleyLedgersEnv era
+  type BaseM (ShelleyLEDGERS era) = ShelleyBase
+  type PredicateFailure (ShelleyLEDGERS era) = ShelleyLedgersPredFailure era
+  type Event (ShelleyLEDGERS era) = ShelleyLedgersEvent era
 
   transitionRules = [ledgersTransition]
 
 ledgersTransition ::
   forall era.
-  ( Embed (EraRule "LEDGER" era) (LEDGERS era),
-    Environment (EraRule "LEDGER" era) ~ LedgerEnv era,
+  ( Embed (EraRule "LEDGER" era) (ShelleyLEDGERS era),
+    Environment (EraRule "LEDGER" era) ~ ShelleyLedgerEnv era,
     State (EraRule "LEDGER" era) ~ LedgerState era,
     Signal (EraRule "LEDGER" era) ~ Tx era
   ) =>
-  TransitionRule (LEDGERS era)
+  TransitionRule (ShelleyLEDGERS era)
 ledgersTransition = do
   TRC (LedgersEnv slot pp account, ls, txwits) <- judgmentContext
   foldM
@@ -136,11 +136,11 @@ ledgersTransition = do
 
 instance
   ( Era era,
-    STS (LEDGER era),
-    PredicateFailure (EraRule "LEDGER" era) ~ LedgerPredicateFailure era,
-    Event (EraRule "LEDGER" era) ~ LedgerEvent era
+    STS (ShelleyLEDGER era),
+    PredicateFailure (EraRule "LEDGER" era) ~ ShelleyLedgerPredFailure era,
+    Event (EraRule "LEDGER" era) ~ ShelleyLedgerEvent era
   ) =>
-  Embed (LEDGER era) (LEDGERS era)
+  Embed (ShelleyLEDGER era) (ShelleyLEDGERS era)
   where
   wrapFailed = LedgerFailure
   wrapEvent = LedgerEvent

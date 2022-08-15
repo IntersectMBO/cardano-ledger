@@ -33,7 +33,7 @@ import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), PolicyID (..))
 import qualified Cardano.Ledger.Mary.Value as ConcreteValue
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.ShelleyMA.AuxiliaryData (MAAuxiliaryData (..))
-import qualified Cardano.Ledger.ShelleyMA.Rules as MA.STS
+import Cardano.Ledger.ShelleyMA.Rules (ShelleyMAUtxoPredFailure)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
 import qualified Cardano.Ledger.ShelleyMA.Timelocks as MA (Timelock (..))
 import Cardano.Ledger.ShelleyMA.TxBody (MATxBody (..))
@@ -200,7 +200,7 @@ valueFromListBounded (fromIntegral -> ada) =
 instance Arbitrary AssetName where
   arbitrary = AssetName . SBS.pack . take 32 . SBS.unpack <$> arbitrary
 
-instance Mock c => Arbitrary (MA.STS.UtxoPredicateFailure (MaryEra c)) where
+instance Mock c => Arbitrary (ShelleyMAUtxoPredFailure (MaryEra c)) where
   arbitrary = genericArbitraryU
 
 {-------------------------------------------------------------------------------
@@ -227,5 +227,5 @@ instance Arbitrary ValidityInterval where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Mock c => Arbitrary (MA.STS.UtxoPredicateFailure (AllegraEra c)) where
+instance Mock c => Arbitrary (ShelleyMAUtxoPredFailure (AllegraEra c)) where
   arbitrary = genericArbitraryU

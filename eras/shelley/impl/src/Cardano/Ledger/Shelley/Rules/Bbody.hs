@@ -11,11 +11,11 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Shelley.Rules.Bbody
-  ( BBODY,
-    BbodyState (..),
-    BbodyEnv (..),
-    BbodyPredicateFailure (..),
-    BbodyEvent (..),
+  ( ShelleyBBODY,
+    ShelleyBbodyState (..),
+    ShelleyBbodyEnv (..),
+    ShelleyBbodyPredFailure (..),
+    ShelleyBbodyEvent (..),
     PredicateFailure,
     State,
   )
@@ -31,7 +31,7 @@ import Cardano.Ledger.Shelley.LedgerState
   ( AccountState,
     LedgerState,
   )
-import Cardano.Ledger.Shelley.Rules.Ledgers (LedgersEnv (..))
+import Cardano.Ledger.Shelley.Rules.Ledgers (ShelleyLedgersEnv (..))
 import Cardano.Ledger.Slot (epochInfoEpoch, epochInfoFirst)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
@@ -50,21 +50,21 @@ import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..))
 
-data BBODY era
+data ShelleyBBODY era
 
-data BbodyState era
+data ShelleyBbodyState era
   = BbodyState (LedgerState era) (BlocksMade (Crypto era))
 
-deriving stock instance Show (LedgerState era) => Show (BbodyState era)
+deriving stock instance Show (LedgerState era) => Show (ShelleyBbodyState era)
 
-deriving stock instance Eq (LedgerState era) => Eq (BbodyState era)
+deriving stock instance Eq (LedgerState era) => Eq (ShelleyBbodyState era)
 
-data BbodyEnv era = BbodyEnv
+data ShelleyBbodyEnv era = BbodyEnv
   { bbodyPp :: PParams era,
     bbodyAccount :: AccountState
   }
 
-data BbodyPredicateFailure era
+data ShelleyBbodyPredFailure era
   = WrongBlockBodySizeBBODY
       !Int -- Actual Body Size
       !Int -- Claimed Body Size in Header
@@ -74,68 +74,68 @@ data BbodyPredicateFailure era
   | LedgersFailure (PredicateFailure (EraRule "LEDGERS" era)) -- Subtransition Failures
   deriving (Generic)
 
-newtype BbodyEvent era
+newtype ShelleyBbodyEvent era
   = LedgersEvent (Event (EraRule "LEDGERS" era))
 
 deriving stock instance
   ( Era era,
     Show (PredicateFailure (EraRule "LEDGERS" era))
   ) =>
-  Show (BbodyPredicateFailure era)
+  Show (ShelleyBbodyPredFailure era)
 
 deriving stock instance
   ( Era era,
     Eq (PredicateFailure (EraRule "LEDGERS" era))
   ) =>
-  Eq (BbodyPredicateFailure era)
+  Eq (ShelleyBbodyPredFailure era)
 
 instance
   ( Era era,
     NoThunks (PredicateFailure (EraRule "LEDGERS" era))
   ) =>
-  NoThunks (BbodyPredicateFailure era)
+  NoThunks (ShelleyBbodyPredFailure era)
 
 instance
   ( EraSegWits era,
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
-    Embed (EraRule "LEDGERS" era) (BBODY era),
-    Environment (EraRule "LEDGERS" era) ~ LedgersEnv era,
+    Embed (EraRule "LEDGERS" era) (ShelleyBBODY era),
+    Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era,
     State (EraRule "LEDGERS" era) ~ LedgerState era,
     Signal (EraRule "LEDGERS" era) ~ Seq (Tx era),
     HasField "_d" (PParams era) UnitInterval
   ) =>
-  STS (BBODY era)
+  STS (ShelleyBBODY era)
   where
   type
-    State (BBODY era) =
-      BbodyState era
+    State (ShelleyBBODY era) =
+      ShelleyBbodyState era
 
   type
-    Signal (BBODY era) =
+    Signal (ShelleyBBODY era) =
       Block (BHeaderView (Crypto era)) era
 
-  type Environment (BBODY era) = BbodyEnv era
+  type Environment (ShelleyBBODY era) = ShelleyBbodyEnv era
 
-  type BaseM (BBODY era) = ShelleyBase
+  type BaseM (ShelleyBBODY era) = ShelleyBase
 
-  type PredicateFailure (BBODY era) = BbodyPredicateFailure era
+  type PredicateFailure (ShelleyBBODY era) = ShelleyBbodyPredFailure era
 
-  type Event (BBODY era) = BbodyEvent era
+  type Event (ShelleyBBODY era) = ShelleyBbodyEvent era
 
   initialRules = []
   transitionRules = [bbodyTransition]
 
 bbodyTransition ::
   forall era.
-  ( STS (BBODY era),
+  ( STS (ShelleyBBODY era),
     EraSegWits era,
-    Embed (EraRule "LEDGERS" era) (BBODY era),
-    Environment (EraRule "LEDGERS" era) ~ LedgersEnv era,
+    Embed (EraRule "LEDGERS" era) (ShelleyBBODY era),
+    Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era,
     State (EraRule "LEDGERS" era) ~ LedgerState era,
     Signal (EraRule "LEDGERS" era) ~ Seq (Tx era),
     HasField "_d" (PParams era) UnitInterval
   ) =>
-  TransitionRule (BBODY era)
+  TransitionRule (ShelleyBBODY era)
 bbodyTransition =
   judgmentContext
     >>= \( TRC
@@ -179,7 +179,7 @@ instance
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
     Era era
   ) =>
-  Embed ledgers (BBODY era)
+  Embed ledgers (ShelleyBBODY era)
   where
   wrapFailed = LedgersFailure
   wrapEvent = LedgersEvent

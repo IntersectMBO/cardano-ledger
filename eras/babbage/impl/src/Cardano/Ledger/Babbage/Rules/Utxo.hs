@@ -13,7 +13,7 @@
 
 module Cardano.Ledger.Babbage.Rules.Utxo
   ( BabbageUTXO,
-    BabbageUtxoPred (..),
+    BabbageUtxoPredFailure (..),
     utxoTransition,
     feesOK,
     validateTotalCollateral,
@@ -28,9 +28,9 @@ where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), serialize)
 import Cardano.Ledger.Address (bootstrapAddressAttrsSize)
 import Cardano.Ledger.Alonzo.Rules
-  ( UtxoEvent (..),
-    UtxoPredicateFailure (..),
-    UtxosPredicateFailure (..),
+  ( AlonzoUtxoEvent (..),
+    AlonzoUtxoPredFailure (..),
+    AlonzoUtxosPredFailure (..),
     utxoPredFailMaToAlonzo,
     utxoPredFailShelleyToAlonzo,
     validateCollateralContainsNonADA,
@@ -72,11 +72,12 @@ import Cardano.Ledger.Rules.ValidationMode
   )
 import Cardano.Ledger.Serialization (Sized (..))
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
+import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoEnv, ShelleyUtxoPredFailure)
 import qualified Cardano.Ledger.Shelley.Rules.Utxo as Shelley
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
+import Cardano.Ledger.ShelleyMA.Rules (ShelleyMAUtxoPredFailure)
 import qualified Cardano.Ledger.ShelleyMA.Rules as ShelleyMA
-  ( UtxoPredicateFailure,
-    validateOutsideValidityIntervalUTxO,
+  ( validateOutsideValidityIntervalUTxO,
     validateTriesToForgeADA,
     validateValueNotConservedUTxO,
   )
@@ -112,8 +113,8 @@ import Validation (Validation, failureIf, failureUnless)
 -- ======================================================
 
 -- | Predicate failure for the Babbage Era
-data BabbageUtxoPred era
-  = FromAlonzoUtxoFail !(UtxoPredicateFailure era) -- Inherited from Alonzo
+data BabbageUtxoPredFailure era
+  = AlonzoInBabbageUtxoPredFailure !(AlonzoUtxoPredFailure era) -- Inherited from Alonzo
   | -- | The collateral is not equivalent to the total collateral asserted by the transaction
     IncorrectTotalCollateralField
       !Coin
@@ -127,42 +128,42 @@ data BabbageUtxoPred era
 
 deriving instance
   ( Era era,
-    Show (UtxoPredicateFailure era),
+    Show (AlonzoUtxoPredFailure era),
     Show (PredicateFailure (EraRule "UTXO" era)),
     Show (TxOut era),
     Show (Script era)
   ) =>
-  Show (BabbageUtxoPred era)
+  Show (BabbageUtxoPredFailure era)
 
 deriving instance
   ( Era era,
-    Eq (UtxoPredicateFailure era),
+    Eq (AlonzoUtxoPredFailure era),
     Eq (PredicateFailure (EraRule "UTXO" era)),
     Eq (TxOut era),
     Eq (Script era)
   ) =>
-  Eq (BabbageUtxoPred era)
+  Eq (BabbageUtxoPredFailure era)
 
 -- ===============================================
 -- Inject instances
 
-instance Inject (UtxoPredicateFailure era) (BabbageUtxoPred era) where
-  inject = FromAlonzoUtxoFail
+instance Inject (AlonzoUtxoPredFailure era) (BabbageUtxoPredFailure era) where
+  inject = AlonzoInBabbageUtxoPredFailure
 
-instance Inject (BabbageUtxoPred era) (BabbageUtxoPred era) where
+instance Inject (BabbageUtxoPredFailure era) (BabbageUtxoPredFailure era) where
   inject = id
 
 instance
   Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era)) =>
-  Inject (ShelleyMA.UtxoPredicateFailure era) (BabbageUtxoPred era)
+  Inject (ShelleyMAUtxoPredFailure era) (BabbageUtxoPredFailure era)
   where
-  inject = FromAlonzoUtxoFail . utxoPredFailMaToAlonzo
+  inject = AlonzoInBabbageUtxoPredFailure . utxoPredFailMaToAlonzo
 
 instance
   Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era)) =>
-  Inject (Shelley.UtxoPredicateFailure era) (BabbageUtxoPred era)
+  Inject (ShelleyUtxoPredFailure era) (BabbageUtxoPredFailure era)
   where
-  inject = FromAlonzoUtxoFail . utxoPredFailShelleyToAlonzo
+  inject = AlonzoInBabbageUtxoPredFailure . utxoPredFailShelleyToAlonzo
 
 -- =======================================================
 
@@ -198,7 +199,7 @@ feesOK ::
   PParams era ->
   Tx era ->
   UTxO era ->
-  Test (BabbageUtxoPred era)
+  Test (BabbageUtxoPredFailure era)
 feesOK pp tx u@(UTxO utxo) =
   let txBody = tx ^. bodyTxL
       collateral' = txBody ^. collateralInputsTxBodyL -- Inputs allocated to pay txfee
@@ -225,7 +226,7 @@ validateTotalCollateral ::
   TxBody era ->
   Map.Map (TxIn (Crypto era)) (TxOut era) ->
   Value era ->
-  Test (BabbageUtxoPred era)
+  Test (BabbageUtxoPredFailure era)
 validateTotalCollateral pp txBody utxoCollateral bal =
   sequenceA_
     [ -- Part 3: (∀(a,_,_) ∈ range (collateral txb ◁ utxo), a ∈ Addrvkey)
@@ -243,7 +244,7 @@ validateTotalCollateral pp txBody utxoCollateral bal =
     fromAlonzoValidation x = first (fmap inject) x
 
 -- > (txcoll tx ≠ ◇) => balance == txcoll tx
-validateCollateralEqBalance :: Coin -> StrictMaybe Coin -> Validation (NonEmpty (BabbageUtxoPred era)) ()
+validateCollateralEqBalance :: Coin -> StrictMaybe Coin -> Validation (NonEmpty (BabbageUtxoPredFailure era)) ()
 validateCollateralEqBalance bal txcoll =
   case txcoll of
     SNothing -> pure ()
@@ -282,7 +283,7 @@ validateOutputTooSmallUTxO ::
   ) =>
   PParams era ->
   [Sized (TxOut era)] ->
-  Test (BabbageUtxoPred era)
+  Test (BabbageUtxoPredFailure era)
 validateOutputTooSmallUTxO pp outs =
   failureUnless (null outputsTooSmall) $ BabbageOutputTooSmallUTxO outputsTooSmall
   where
@@ -307,7 +308,7 @@ validateOutputTooBigUTxO ::
   ) =>
   PParams era ->
   [TxOut era] ->
-  Test (UtxoPredicateFailure era)
+  Test (AlonzoUtxoPredFailure era)
 validateOutputTooBigUTxO pp outs =
   failureUnless (null outputsTooBig) $ OutputTooBigUTxO outputsTooBig
   where
@@ -324,7 +325,7 @@ validateOutputTooBigUTxO pp outs =
 validateOutputBootAddrAttrsTooBig ::
   EraTxOut era =>
   [TxOut era] ->
-  Test (UtxoPredicateFailure era)
+  Test (AlonzoUtxoPredFailure era)
 validateOutputBootAddrAttrsTooBig outs =
   failureUnless (null outputsAttrsTooBig) $ OutputBootAddrAttrsTooBig outputsAttrsTooBig
   where
@@ -361,7 +362,7 @@ utxoTransition ::
     HasField "_prices" (PParams era) Prices,
     -- In this function we we call the UTXOS rule, so we need some assumptions
     Embed (EraRule "UTXOS" era) (BabbageUTXO era),
-    Environment (EraRule "UTXOS" era) ~ Shelley.UtxoEnv era,
+    Environment (EraRule "UTXOS" era) ~ ShelleyUtxoEnv era,
     State (EraRule "UTXOS" era) ~ Shelley.UTxOState era,
     Signal (EraRule "UTXOS" era) ~ Tx era,
     Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era)),
@@ -469,21 +470,21 @@ instance
     HasField "_protocolVersion" (PParams era) ProtVer,
     -- instructions for calling UTXOS from BabbageUTXO
     Embed (EraRule "UTXOS" era) (BabbageUTXO era),
-    Environment (EraRule "UTXOS" era) ~ Shelley.UtxoEnv era,
+    Environment (EraRule "UTXOS" era) ~ ShelleyUtxoEnv era,
     State (EraRule "UTXOS" era) ~ Shelley.UTxOState era,
     Signal (EraRule "UTXOS" era) ~ Tx era,
     Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era)),
-    PredicateFailure (EraRule "UTXO" era) ~ BabbageUtxoPred era,
+    PredicateFailure (EraRule "UTXO" era) ~ BabbageUtxoPredFailure era,
     ExtendedUTxO era
   ) =>
   STS (BabbageUTXO era)
   where
   type State (BabbageUTXO era) = Shelley.UTxOState era
   type Signal (BabbageUTXO era) = AlonzoTx era
-  type Environment (BabbageUTXO era) = Shelley.UtxoEnv era
+  type Environment (BabbageUTXO era) = ShelleyUtxoEnv era
   type BaseM (BabbageUTXO era) = ShelleyBase
-  type PredicateFailure (BabbageUTXO era) = BabbageUtxoPred era
-  type Event (BabbageUTXO era) = UtxoEvent era
+  type PredicateFailure (BabbageUTXO era) = BabbageUtxoPredFailure era
+  type Event (BabbageUTXO era) = AlonzoUtxoEvent era
 
   initialRules = []
   transitionRules = [utxoTransition]
@@ -491,12 +492,12 @@ instance
 instance
   ( Era era,
     STS (BabbageUTXOS era),
-    PredicateFailure (EraRule "UTXOS" era) ~ UtxosPredicateFailure era,
+    PredicateFailure (EraRule "UTXOS" era) ~ AlonzoUtxosPredFailure era,
     Event (EraRule "UTXOS" era) ~ Event (BabbageUTXOS era)
   ) =>
   Embed (BabbageUTXOS era) (BabbageUTXO era)
   where
-  wrapFailed = FromAlonzoUtxoFail . UtxosFailure
+  wrapFailed = AlonzoInBabbageUtxoPredFailure . UtxosFailure
   wrapEvent = UtxosEvent
 
 -- ============================================
@@ -512,11 +513,11 @@ instance
     ToCBOR (Script era),
     Typeable (AuxiliaryData era)
   ) =>
-  ToCBOR (BabbageUtxoPred era)
+  ToCBOR (BabbageUtxoPredFailure era)
   where
   toCBOR pf = encode (work pf)
     where
-      work (FromAlonzoUtxoFail x) = Sum FromAlonzoUtxoFail 1 !> To x
+      work (AlonzoInBabbageUtxoPredFailure x) = Sum AlonzoInBabbageUtxoPredFailure 1 !> To x
       work (IncorrectTotalCollateralField c1 c2) = Sum IncorrectTotalCollateralField 2 !> To c1 !> To c2
       work (BabbageOutputTooSmallUTxO x) = Sum BabbageOutputTooSmallUTxO 3 !> To x
 
@@ -530,16 +531,16 @@ instance
     Typeable (Script era),
     Typeable (AuxiliaryData era)
   ) =>
-  FromCBOR (BabbageUtxoPred era)
+  FromCBOR (BabbageUtxoPredFailure era)
   where
   fromCBOR = decode (Summands "BabbageUtxoPred" work)
     where
-      work 1 = SumD FromAlonzoUtxoFail <! From
+      work 1 = SumD AlonzoInBabbageUtxoPredFailure <! From
       work 2 = SumD IncorrectTotalCollateralField <! From <! From
       work 3 = SumD BabbageOutputTooSmallUTxO <! From
       work n = Invalid n
 
 deriving via
-  InspectHeapNamed "BabbageUtxoPred" (BabbageUtxoPred era)
+  InspectHeapNamed "BabbageUtxoPred" (BabbageUtxoPredFailure era)
   instance
-    NoThunks (BabbageUtxoPred era)
+    NoThunks (BabbageUtxoPredFailure era)

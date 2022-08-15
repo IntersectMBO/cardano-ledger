@@ -18,7 +18,7 @@ import Cardano.Ledger.Shelley.LedgerState
     _fPParams,
     _pParams,
   )
-import Cardano.Ledger.Shelley.Rules.Pool (POOL)
+import Cardano.Ledger.Shelley.Rules.Pool (ShelleyPOOL)
 import Cardano.Ledger.Shelley.TxBody (DCert (DCertPool), PoolParams (..))
 import Cardano.Ledger.Slot (EpochNo (..))
 import Control.SetAlgebra (dom, eval, (∈), (∉))
@@ -29,7 +29,7 @@ import qualified Data.Map.Strict as Map (keysSet, lookup)
 import qualified Data.Set as Set (isSubsetOf)
 import Test.QuickCheck (Property, conjoin, counterexample, property, (===))
 
-poolRegistration :: SourceSignalTarget (POOL era) -> Property
+poolRegistration :: SourceSignalTarget (ShelleyPOOL era) -> Property
 poolRegistration
   SourceSignalTarget
     { signal = (DCertPool (RegPool poolParams)),
@@ -66,7 +66,7 @@ poolRegistration
               ]
 poolRegistration _ = property ()
 
-poolRetirement :: EpochNo -> EpochNo -> SourceSignalTarget (POOL era) -> Property
+poolRetirement :: EpochNo -> EpochNo -> SourceSignalTarget (ShelleyPOOL era) -> Property
 poolRetirement
   currentEpoch@(EpochNo ce)
   (EpochNo maxEpoch)

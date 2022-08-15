@@ -22,12 +22,12 @@ import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (..), collectTwoPhaseScriptInputs)
 import Cardano.Ledger.Alonzo.Rules
   ( AlonzoBBODY,
-    AlonzoBbodyPredFail (..),
+    AlonzoBbodyPredFailure (..),
+    AlonzoUtxoPredFailure (..),
+    AlonzoUtxosPredFailure (..),
+    AlonzoUtxowPredFailure (..),
     FailureDescription (..),
     TagMismatchDescription (..),
-    UtxoPredicateFailure (..),
-    UtxosPredicateFailure (..),
-    UtxowPredicateFail (..),
   )
 import Cardano.Ledger.Alonzo.Scripts
   ( AlonzoScript (..),
@@ -47,8 +47,8 @@ import Cardano.Ledger.Alonzo.TxInfo (TranslationError, VersionedTxInfo, txInfo, 
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..), TxDats (..), unRedeemers)
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import qualified Cardano.Ledger.Babbage.PParams as Babbage (BabbagePParamsHKD (..))
-import Cardano.Ledger.Babbage.Rules (BabbageUtxoPred (..))
-import Cardano.Ledger.Babbage.Rules as Babbage (BabbageUtxowPred (..))
+import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..))
+import Cardano.Ledger.Babbage.Rules as Babbage (BabbageUtxowPredFailure (..))
 import Cardano.Ledger.BaseTypes
   ( BlocksMade (..),
     Network (..),
@@ -94,14 +94,14 @@ import Cardano.Ledger.Shelley.LedgerState
     smartUTxOState,
   )
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
-import Cardano.Ledger.Shelley.Rules.Bbody (BbodyEnv (..), BbodyPredicateFailure (..), BbodyState (..))
-import Cardano.Ledger.Shelley.Rules.Delegs (DelegsPredicateFailure (..))
-import Cardano.Ledger.Shelley.Rules.Delpl (DelplPredicateFailure (..))
-import Cardano.Ledger.Shelley.Rules.Ledger (LedgerPredicateFailure (..))
-import Cardano.Ledger.Shelley.Rules.Ledgers (LedgersPredicateFailure (..))
-import Cardano.Ledger.Shelley.Rules.Pool (PoolPredicateFailure (..))
-import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
-import Cardano.Ledger.Shelley.Rules.Utxow as Shelley (UtxowPredicateFailure (..))
+import Cardano.Ledger.Shelley.Rules.Bbody (ShelleyBbodyEnv (..), ShelleyBbodyPredFailure (..), ShelleyBbodyState (..))
+import Cardano.Ledger.Shelley.Rules.Delegs (ShelleyDelegsPredFailure (..))
+import Cardano.Ledger.Shelley.Rules.Delpl (ShelleyDelplPredFailure (..))
+import Cardano.Ledger.Shelley.Rules.Ledger (ShelleyLedgerPredFailure (..))
+import Cardano.Ledger.Shelley.Rules.Ledgers (ShelleyLedgersPredFailure (..))
+import Cardano.Ledger.Shelley.Rules.Pool (ShelleyPoolPredFailure (..))
+import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoEnv (..))
+import Cardano.Ledger.Shelley.Rules.Utxow as Shelley (ShelleyUtxowPredFailure (..))
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
     DelegCert (..),
@@ -190,7 +190,7 @@ defaultPPs =
     CollateralPercentage 100
   ]
 
-utxoEnv :: PParams era -> UtxoEnv era
+utxoEnv :: PParams era -> ShelleyUtxoEnv era
 utxoEnv pparams =
   UtxoEnv
     (SlotNo 0)
@@ -1739,7 +1739,7 @@ collectOrderingAlonzo =
 -- Alonzo BBODY Tests
 -- =======================
 
-bbodyEnv :: Proof era -> BbodyEnv era
+bbodyEnv :: Proof era -> ShelleyBbodyEnv era
 bbodyEnv pf = BbodyEnv (pp pf) def
 
 dpstate :: Scriptic era => Proof era -> DPState (Crypto era)
@@ -1756,7 +1756,7 @@ initialBBodyState ::
   ) =>
   Proof era ->
   UTxO era ->
-  BbodyState era
+  ShelleyBbodyState era
 initialBBodyState pf utxo =
   BbodyState (LedgerState (initialUtxoSt utxo) (dpstate pf)) (BlocksMade mempty)
 
@@ -1859,7 +1859,7 @@ example1BBodyState ::
     EraTxBody era
   ) =>
   Proof era ->
-  BbodyState era
+  ShelleyBbodyState era
 example1BBodyState proof =
   BbodyState (LedgerState (example1UtxoSt proof) def) (BlocksMade $ Map.singleton poolID 1)
   where
@@ -2053,10 +2053,10 @@ specialCase wit@(UTXOW proof) utxo pparam tx expected =
 findMismatch ::
   Proof era ->
   PredicateFailure (EraRule "UTXOW" era) ->
-  Maybe (UtxosPredicateFailure era)
-findMismatch (Alonzo _) (WrappedShelleyEraFailure (Shelley.UtxoFailure (UtxosFailure x@(ValidationTagMismatch _ _)))) = Just x
-findMismatch (Babbage _) (Babbage.UtxoFailure (FromAlonzoUtxoFail (UtxosFailure x@(ValidationTagMismatch _ _)))) = Just x
-findMismatch (Conway _) (Babbage.UtxoFailure (FromAlonzoUtxoFail (UtxosFailure x@(ValidationTagMismatch _ _)))) = Just x
+  Maybe (AlonzoUtxosPredFailure era)
+findMismatch (Alonzo _) (ShelleyInAlonzoUtxowPredFailure (Shelley.UtxoFailure (UtxosFailure x@(ValidationTagMismatch _ _)))) = Just x
+findMismatch (Babbage _) (Babbage.UtxoFailure (AlonzoInBabbageUtxoPredFailure (UtxosFailure x@(ValidationTagMismatch _ _)))) = Just x
+findMismatch (Conway _) (Babbage.UtxoFailure (AlonzoInBabbageUtxoPredFailure (UtxosFailure x@(ValidationTagMismatch _ _)))) = Just x
 findMismatch _ _ = Nothing
 
 specialCont ::
@@ -2387,37 +2387,37 @@ alonzoUTXOWexamplesB pf =
 --   'UtxosPredicateFailure',  'UtxoPredicateFailure', and  'UtxowPredicateFailure' .
 --   The idea is to make tests that only raise these failures, in Alonzo and future Eras.
 class AlonzoBased era failure where
-  fromUtxos :: UtxosPredicateFailure era -> failure
-  fromUtxo :: UtxoPredicateFailure era -> failure
-  fromUtxow :: UtxowPredicateFailure era -> failure
-  fromPredFail :: UtxowPredicateFail era -> failure
+  fromUtxos :: AlonzoUtxosPredFailure era -> failure
+  fromUtxo :: AlonzoUtxoPredFailure era -> failure
+  fromUtxow :: ShelleyUtxowPredFailure era -> failure
+  fromPredFail :: AlonzoUtxowPredFailure era -> failure
 
-instance AlonzoBased (AlonzoEra c) (UtxowPredicateFail (AlonzoEra c)) where
-  fromUtxos = WrappedShelleyEraFailure . Shelley.UtxoFailure . UtxosFailure
-  fromUtxo = WrappedShelleyEraFailure . Shelley.UtxoFailure
-  fromUtxow = WrappedShelleyEraFailure
+instance AlonzoBased (AlonzoEra c) (AlonzoUtxowPredFailure (AlonzoEra c)) where
+  fromUtxos = ShelleyInAlonzoUtxowPredFailure . Shelley.UtxoFailure . UtxosFailure
+  fromUtxo = ShelleyInAlonzoUtxowPredFailure . Shelley.UtxoFailure
+  fromUtxow = ShelleyInAlonzoUtxowPredFailure
   fromPredFail = id
 
-instance AlonzoBased (BabbageEra c) (BabbageUtxowPred (BabbageEra c)) where
-  fromUtxos = Babbage.UtxoFailure . FromAlonzoUtxoFail . UtxosFailure
-  fromUtxo = Babbage.UtxoFailure . FromAlonzoUtxoFail
-  fromUtxow = FromAlonzoUtxowFail . WrappedShelleyEraFailure
-  fromPredFail = FromAlonzoUtxowFail
+instance AlonzoBased (BabbageEra c) (BabbageUtxowPredFailure (BabbageEra c)) where
+  fromUtxos = Babbage.UtxoFailure . AlonzoInBabbageUtxoPredFailure . UtxosFailure
+  fromUtxo = Babbage.UtxoFailure . AlonzoInBabbageUtxoPredFailure
+  fromUtxow = AlonzoInBabbageUtxowPredFailure . ShelleyInAlonzoUtxowPredFailure
+  fromPredFail = AlonzoInBabbageUtxowPredFailure
 
-instance AlonzoBased (ConwayEra c) (BabbageUtxowPred (ConwayEra c)) where
-  fromUtxos = Babbage.UtxoFailure . FromAlonzoUtxoFail . UtxosFailure
-  fromUtxo = Babbage.UtxoFailure . FromAlonzoUtxoFail
-  fromUtxow = FromAlonzoUtxowFail . WrappedShelleyEraFailure
-  fromPredFail = FromAlonzoUtxowFail
+instance AlonzoBased (ConwayEra c) (BabbageUtxowPredFailure (ConwayEra c)) where
+  fromUtxos = Babbage.UtxoFailure . AlonzoInBabbageUtxoPredFailure . UtxosFailure
+  fromUtxo = Babbage.UtxoFailure . AlonzoInBabbageUtxoPredFailure
+  fromUtxow = AlonzoInBabbageUtxowPredFailure . ShelleyInAlonzoUtxowPredFailure
+  fromPredFail = AlonzoInBabbageUtxowPredFailure
 
 -- ===================================================================
 
 testBBODY ::
   (GoodCrypto (Crypto era), HasCallStack) =>
   WitRule "BBODY" era ->
-  BbodyState era ->
+  ShelleyBbodyState era ->
   Block (BHeaderView (Crypto era)) era ->
-  Either [PredicateFailure (AlonzoBBODY era)] (BbodyState era) ->
+  Either [PredicateFailure (AlonzoBBODY era)] (ShelleyBbodyState era) ->
   Assertion
 testBBODY wit@(BBODY proof) initialSt block expected =
   let env = bbodyEnv proof
@@ -2454,15 +2454,15 @@ alonzoBBODYexamplesP proof =
           (Left [makeTooBig proof])
     ]
 
-makeTooBig :: Proof era -> AlonzoBbodyPredFail era
+makeTooBig :: Proof era -> AlonzoBbodyPredFailure era
 makeTooBig proof@(Alonzo _) =
-  ShelleyInAlonzoPredFail . LedgersFailure . LedgerFailure . DelegsFailure . DelplFailure . PoolFailure $
+  ShelleyInAlonzoBbodyPredFailure . LedgersFailure . LedgerFailure . DelegsFailure . DelplFailure . PoolFailure $
     PoolMedataHashTooBig (coerceKeyRole . hashKey . vKey $ someKeys proof) (hashsize @Mock + 1)
 makeTooBig proof@(Babbage _) =
-  ShelleyInAlonzoPredFail . LedgersFailure . LedgerFailure . DelegsFailure . DelplFailure . PoolFailure $
+  ShelleyInAlonzoBbodyPredFailure . LedgersFailure . LedgerFailure . DelegsFailure . DelplFailure . PoolFailure $
     PoolMedataHashTooBig (coerceKeyRole . hashKey . vKey $ someKeys proof) (hashsize @Mock + 1)
 makeTooBig proof@(Conway _) =
-  ShelleyInAlonzoPredFail . LedgersFailure . LedgerFailure . DelegsFailure . DelplFailure . PoolFailure $
+  ShelleyInAlonzoBbodyPredFailure . LedgersFailure . LedgerFailure . DelegsFailure . DelplFailure . PoolFailure $
     PoolMedataHashTooBig (coerceKeyRole . hashKey . vKey $ someKeys proof) (hashsize @Mock + 1)
 makeTooBig proof = error ("makeTooBig does not work in era " ++ show proof)
 

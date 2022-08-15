@@ -11,12 +11,12 @@ import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API
   ( DCert (..),
     Network (..),
-    POOL,
     PoolCert (..),
-    PoolEnv (..),
     PoolParams (..),
     RewardAcnt (..),
+    ShelleyPOOL,
     ShelleyPParamsHKD (..),
+    ShelleyPoolEnv (..),
   )
 import Cardano.Ledger.Slot (SlotNo (..))
 import Control.State.Transition.Extended hiding (Assertion)
@@ -46,7 +46,7 @@ testPoolNetworkID ::
 testPoolNetworkID pv poolParams e = do
   let st =
         runShelleyBase $
-          applySTSTest @(POOL ShelleyTest)
+          applySTSTest @(ShelleyPOOL ShelleyTest)
             (TRC (PoolEnv (SlotNo 0) def {_protocolVersion = pv}, def, DCertPool (RegPool poolParams)))
   case (st, e) of
     (Right _, ExpectSuccess) -> assertBool "" True

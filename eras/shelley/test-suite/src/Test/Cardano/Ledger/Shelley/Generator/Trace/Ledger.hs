@@ -25,11 +25,11 @@ import Cardano.Ledger.Shelley.LedgerState
     UTxOState,
     genesisState,
   )
-import Cardano.Ledger.Shelley.Rules.Delegs (DelegsEnv)
-import Cardano.Ledger.Shelley.Rules.Delpl (DELPL, DelplEnv, DelplPredicateFailure)
-import Cardano.Ledger.Shelley.Rules.Ledger (LEDGER, LedgerEnv (..))
-import Cardano.Ledger.Shelley.Rules.Ledgers (LEDGERS, LedgersEnv (..))
-import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv)
+import Cardano.Ledger.Shelley.Rules.Delegs (ShelleyDelegsEnv)
+import Cardano.Ledger.Shelley.Rules.Delpl (ShelleyDELPL, ShelleyDelplEnv, ShelleyDelplPredFailure)
+import Cardano.Ledger.Shelley.Rules.Ledger (ShelleyLEDGER, ShelleyLedgerEnv (..))
+import Cardano.Ledger.Shelley.Rules.Ledgers (ShelleyLEDGERS, ShelleyLedgersEnv (..))
+import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoEnv)
 import Cardano.Ledger.Shelley.TxBody (DCert)
 import Cardano.Ledger.Slot (SlotNo (..))
 import Control.Monad (foldM)
@@ -73,21 +73,21 @@ instance
     Mock (Crypto era),
     MinLEDGER_STS era,
     Embed (Core.EraRule "DELPL" era) (CERTS era),
-    Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
+    Environment (Core.EraRule "DELPL" era) ~ ShelleyDelplEnv era,
     State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
     Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era),
-    PredicateFailure (Core.EraRule "DELPL" era) ~ DelplPredicateFailure era,
-    Embed (Core.EraRule "DELEGS" era) (LEDGER era),
-    Embed (Core.EraRule "UTXOW" era) (LEDGER era),
-    Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
+    PredicateFailure (Core.EraRule "DELPL" era) ~ ShelleyDelplPredFailure era,
+    Embed (Core.EraRule "DELEGS" era) (ShelleyLEDGER era),
+    Embed (Core.EraRule "UTXOW" era) (ShelleyLEDGER era),
+    Environment (Core.EraRule "UTXOW" era) ~ ShelleyUtxoEnv era,
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
     Signal (Core.EraRule "UTXOW" era) ~ Core.Tx era,
-    Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
+    Environment (Core.EraRule "DELEGS" era) ~ ShelleyDelegsEnv era,
     State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
     Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
     Show (State (Core.EraRule "PPUP" era))
   ) =>
-  TQC.HasTrace (LEDGER era) (GenEnv era)
+  TQC.HasTrace (ShelleyLEDGER era) (GenEnv era)
   where
   envGen GenEnv {geConstants} =
     LedgerEnv (SlotNo 0) minBound
@@ -98,7 +98,7 @@ instance
 
   shrinkSignal _ = [] -- TODO add some kind of Shrinker?
 
-  type BaseEnv (LEDGER era) = Globals
+  type BaseEnv (ShelleyLEDGER era) = Globals
   interpretSTS globals act = runIdentity $ runReaderT act globals
 
 instance
@@ -107,15 +107,15 @@ instance
     Mock (Crypto era),
     MinLEDGER_STS era,
     Embed (Core.EraRule "DELPL" era) (CERTS era),
-    Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
+    Environment (Core.EraRule "DELPL" era) ~ ShelleyDelplEnv era,
     State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
     Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era),
-    PredicateFailure (Core.EraRule "DELPL" era) ~ DelplPredicateFailure era,
-    Embed (Core.EraRule "DELEG" era) (DELPL era),
-    Embed (Core.EraRule "LEDGER" era) (LEDGERS era),
+    PredicateFailure (Core.EraRule "DELPL" era) ~ ShelleyDelplPredFailure era,
+    Embed (Core.EraRule "DELEG" era) (ShelleyDELPL era),
+    Embed (Core.EraRule "LEDGER" era) (ShelleyLEDGERS era),
     Default (State (Core.EraRule "PPUP" era))
   ) =>
-  TQC.HasTrace (LEDGERS era) (GenEnv era)
+  TQC.HasTrace (ShelleyLEDGERS era) (GenEnv era)
   where
   envGen GenEnv {geConstants} =
     LedgersEnv (SlotNo 0)
@@ -154,7 +154,7 @@ instance
 
   shrinkSignal = const []
 
-  type BaseEnv (LEDGERS era) = Globals
+  type BaseEnv (ShelleyLEDGERS era) = Globals
   interpretSTS globals act = runIdentity $ runReaderT act globals
 
 -- | Generate initial state for the LEDGER STS using the STS environment.

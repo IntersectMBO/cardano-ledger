@@ -11,9 +11,9 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Shelley.Rules.NewEpoch
-  ( NEWEPOCH,
-    NewEpochPredicateFailure (..),
-    NewEpochEvent (..),
+  ( ShelleyNEWEPOCH,
+    ShelleyNewEpochPredFailure (..),
+    ShelleyNewEpochEvent (..),
     PredicateFailure,
     calculatePoolDistr,
     calculatePoolDistr',
@@ -37,7 +37,7 @@ import Cardano.Ledger.Shelley.EpochBoundary
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rewards (Reward, sumRewards)
 import Cardano.Ledger.Shelley.Rules.Epoch
-import Cardano.Ledger.Shelley.Rules.Mir (MIR, MirEvent, MirPredicateFailure)
+import Cardano.Ledger.Shelley.Rules.Mir (ShelleyMIR, ShelleyMirEvent, ShelleyMirPredFailure)
 import Cardano.Ledger.Shelley.Rules.Rupd (RupdEvent (..))
 import Cardano.Ledger.Shelley.TxBody (PoolParams (_poolVrf))
 import Cardano.Ledger.Slot (EpochNo (EpochNo))
@@ -52,9 +52,9 @@ import GHC.Generics (Generic)
 import GHC.Records (HasField)
 import NoThunks.Class (NoThunks (..))
 
-data NEWEPOCH era
+data ShelleyNEWEPOCH era
 
-data NewEpochPredicateFailure era
+data ShelleyNewEpochPredFailure era
   = EpochFailure (PredicateFailure (EraRule "EPOCH" era)) -- Subtransition Failures
   | CorruptRewardUpdate
       !(RewardUpdate (Crypto era)) -- The reward update which violates an invariant
@@ -65,21 +65,21 @@ deriving stock instance
   ( Show (PredicateFailure (EraRule "EPOCH" era)),
     Show (PredicateFailure (EraRule "MIR" era))
   ) =>
-  Show (NewEpochPredicateFailure era)
+  Show (ShelleyNewEpochPredFailure era)
 
 deriving stock instance
   ( Eq (PredicateFailure (EraRule "EPOCH" era)),
     Eq (PredicateFailure (EraRule "MIR" era))
   ) =>
-  Eq (NewEpochPredicateFailure era)
+  Eq (ShelleyNewEpochPredFailure era)
 
 instance
   ( NoThunks (PredicateFailure (EraRule "EPOCH" era)),
     NoThunks (PredicateFailure (EraRule "MIR" era))
   ) =>
-  NoThunks (NewEpochPredicateFailure era)
+  NoThunks (ShelleyNewEpochPredFailure era)
 
-data NewEpochEvent era
+data ShelleyNewEpochEvent era
   = DeltaRewardEvent (Event (EraRule "RUPD" era))
   | RestrainedRewards
       EpochNo
@@ -92,8 +92,8 @@ data NewEpochEvent era
 
 instance
   ( EraTxOut era,
-    Embed (EraRule "MIR" era) (NEWEPOCH era),
-    Embed (EraRule "EPOCH" era) (NEWEPOCH era),
+    Embed (EraRule "MIR" era) (ShelleyNEWEPOCH era),
+    Embed (EraRule "EPOCH" era) (ShelleyNEWEPOCH era),
     Environment (EraRule "MIR" era) ~ (),
     State (EraRule "MIR" era) ~ EpochState era,
     Signal (EraRule "MIR" era) ~ (),
@@ -107,17 +107,17 @@ instance
     Default (PParams era),
     Default (StashedAVVMAddresses era)
   ) =>
-  STS (NEWEPOCH era)
+  STS (ShelleyNEWEPOCH era)
   where
-  type State (NEWEPOCH era) = NewEpochState era
+  type State (ShelleyNEWEPOCH era) = NewEpochState era
 
-  type Signal (NEWEPOCH era) = EpochNo
+  type Signal (ShelleyNEWEPOCH era) = EpochNo
 
-  type Environment (NEWEPOCH era) = ()
+  type Environment (ShelleyNEWEPOCH era) = ()
 
-  type BaseM (NEWEPOCH era) = ShelleyBase
-  type PredicateFailure (NEWEPOCH era) = NewEpochPredicateFailure era
-  type Event (NEWEPOCH era) = NewEpochEvent era
+  type BaseM (ShelleyNEWEPOCH era) = ShelleyBase
+  type PredicateFailure (ShelleyNEWEPOCH era) = ShelleyNewEpochPredFailure era
+  type Event (ShelleyNEWEPOCH era) = ShelleyNewEpochEvent era
 
   initialRules =
     [ pure $
@@ -136,8 +136,8 @@ instance
 newEpochTransition ::
   forall era.
   ( EraTxOut era,
-    Embed (EraRule "MIR" era) (NEWEPOCH era),
-    Embed (EraRule "EPOCH" era) (NEWEPOCH era),
+    Embed (EraRule "MIR" era) (ShelleyNEWEPOCH era),
+    Embed (EraRule "EPOCH" era) (ShelleyNEWEPOCH era),
     Event (EraRule "RUPD" era) ~ RupdEvent (Crypto era),
     Environment (EraRule "MIR" era) ~ (),
     State (EraRule "MIR" era) ~ EpochState era,
@@ -151,7 +151,7 @@ newEpochTransition ::
     Default (StashedAVVMAddresses era),
     Event (EraRule "RUPD" era) ~ RupdEvent (Crypto era)
   ) =>
-  TransitionRule (NEWEPOCH era)
+  TransitionRule (ShelleyNEWEPOCH era)
 newEpochTransition = do
   TRC
     ( _,
@@ -197,8 +197,8 @@ newEpochTransition = do
 -- | tell a RupdEvent as a DeltaRewardEvent only if the map is non-empty
 tellReward ::
   (Event (EraRule "RUPD" era) ~ RupdEvent (Crypto era)) =>
-  NewEpochEvent era ->
-  Rule (NEWEPOCH era) rtype ()
+  ShelleyNewEpochEvent era ->
+  Rule (ShelleyNEWEPOCH era) rtype ()
 tellReward (DeltaRewardEvent (RupdEvent _ m)) | Map.null m = pure ()
 tellReward x = tellEvent x
 
@@ -225,11 +225,11 @@ calculatePoolDistr' includeHash (SnapShot stake delegs poolParams) =
           (toMap (VMap.map _poolVrf poolParams))
 
 instance
-  ( STS (EPOCH era),
-    PredicateFailure (EraRule "EPOCH" era) ~ EpochPredicateFailure era,
-    Event (EraRule "EPOCH" era) ~ EpochEvent era
+  ( STS (ShelleyEPOCH era),
+    PredicateFailure (EraRule "EPOCH" era) ~ ShelleyEpochPredFailure era,
+    Event (EraRule "EPOCH" era) ~ ShelleyEpochEvent era
   ) =>
-  Embed (EPOCH era) (NEWEPOCH era)
+  Embed (ShelleyEPOCH era) (ShelleyNEWEPOCH era)
   where
   wrapFailed = EpochFailure
   wrapEvent = EpochEvent
@@ -237,10 +237,10 @@ instance
 instance
   ( Era era,
     Default (EpochState era),
-    PredicateFailure (EraRule "MIR" era) ~ MirPredicateFailure era,
-    Event (EraRule "MIR" era) ~ MirEvent era
+    PredicateFailure (EraRule "MIR" era) ~ ShelleyMirPredFailure era,
+    Event (EraRule "MIR" era) ~ ShelleyMirEvent era
   ) =>
-  Embed (MIR era) (NEWEPOCH era)
+  Embed (ShelleyMIR era) (ShelleyNEWEPOCH era)
   where
   wrapFailed = MirFailure
   wrapEvent = MirEvent

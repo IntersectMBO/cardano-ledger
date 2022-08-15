@@ -18,11 +18,11 @@ import Cardano.Ledger.Alonzo.Data (AlonzoAuxiliaryData (..), BinaryData, Data (.
 import Cardano.Ledger.Alonzo.Language
 import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.Rules
-  ( FailureDescription (..),
+  ( AlonzoUtxoPredFailure (..),
+    AlonzoUtxosPredFailure (..),
+    AlonzoUtxowPredFailure (..),
+    FailureDescription (..),
     TagMismatchDescription (..),
-    UtxoPredicateFailure (..),
-    UtxosPredicateFailure (..),
-    UtxowPredicateFail (..),
   )
 import Cardano.Ledger.Alonzo.Scripts
   ( AlonzoScript (..),
@@ -266,14 +266,14 @@ instance Arbitrary TagMismatchDescription where
   arbitrary =
     oneof [pure PassedUnexpectedly, FailedUnexpectedly <$> ((:|) <$> arbitrary <*> arbitrary)]
 
-instance Mock c => Arbitrary (UtxosPredicateFailure (AlonzoEra c)) where
+instance Mock c => Arbitrary (AlonzoUtxosPredFailure (AlonzoEra c)) where
   arbitrary =
     oneof
       [ ValidationTagMismatch <$> arbitrary <*> arbitrary,
         UpdateFailure <$> arbitrary
       ]
 
-instance Mock c => Arbitrary (UtxoPredicateFailure (AlonzoEra c)) where
+instance Mock c => Arbitrary (AlonzoUtxoPredFailure (AlonzoEra c)) where
   arbitrary =
     oneof
       [ BadInputsUTxO <$> arbitrary,
@@ -295,10 +295,10 @@ instance Mock c => Arbitrary (UtxoPredicateFailure (AlonzoEra c)) where
         CollateralContainsNonADA <$> arbitrary
       ]
 
-instance Mock c => Arbitrary (UtxowPredicateFail (AlonzoEra c)) where
+instance Mock c => Arbitrary (AlonzoUtxowPredFailure (AlonzoEra c)) where
   arbitrary =
     oneof
-      [ WrappedShelleyEraFailure <$> arbitrary,
+      [ ShelleyInAlonzoUtxowPredFailure <$> arbitrary,
         MissingRedeemers <$> arbitrary,
         MissingRequiredDatums <$> arbitrary <*> arbitrary,
         PPViewHashesDontMatch <$> arbitrary <*> arbitrary
