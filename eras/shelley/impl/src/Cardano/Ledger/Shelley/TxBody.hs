@@ -209,7 +209,7 @@ instance (Era era, HeapWords (CompactForm (Value era))) => HeapWords (TxOut era)
 packedADDRHASH :: forall proxy era. (CC.Crypto (Crypto era)) => proxy era -> ShortByteString
 packedADDRHASH _ = pack (replicate (fromIntegral (1 + 2 * HS.sizeHash (Proxy :: Proxy (CC.ADDRHASH (Crypto era))))) (1 :: Word8))
 
-instance EraTxOut era => Show (TxOut era) where
+instance (Era era, Compactible (Value era), Show (Value era)) => Show (TxOut era) where
   show = show . viewCompactTxOut -- FIXME: showing TxOut as a tuple is just sad
 
 deriving instance Eq (CompactForm (Value era)) => Eq (TxOut era)
@@ -234,7 +234,7 @@ pattern ShelleyTxOut addr vl <-
 
 {-# COMPLETE ShelleyTxOut #-}
 
-viewCompactTxOut :: EraTxOut era => TxOut era -> (Addr (Crypto era), Value era)
+viewCompactTxOut :: (Era era, Compactible (Value era)) => TxOut era -> (Addr (Crypto era), Value era)
 viewCompactTxOut TxOutCompact {txOutCompactAddr, txOutCompactValue} =
   (decompactAddr txOutCompactAddr, fromCompact txOutCompactValue)
 
@@ -258,13 +258,25 @@ data TxBodyRaw era = TxBodyRaw
 
 deriving instance NoThunks (PParamsUpdate era) => NoThunks (TxBodyRaw era)
 
-deriving instance EraTxBody era => NFData (TxBodyRaw era)
+deriving instance (Era era, NFData (PParamsUpdate era)) => NFData (TxBodyRaw era)
 
-deriving instance EraTxBody era => Eq (TxBodyRaw era)
+deriving instance
+  (Era era, Eq (PParamsUpdate era), Eq (CompactForm (Value era))) =>
+  Eq (TxBodyRaw era)
 
-deriving instance EraTxBody era => Show (TxBodyRaw era)
+deriving instance
+  (Era era, Show (PParamsUpdate era), Compactible (Value era), Show (Value era)) =>
+  Show (TxBodyRaw era)
 
-instance EraTxBody era => FromCBOR (TxBodyRaw era) where
+instance
+  ( Era era,
+    FromCBOR (PParamsUpdate era),
+    DecodeNonNegative (Value era),
+    Compactible (Value era),
+    Show (Value era)
+  ) =>
+  FromCBOR (TxBodyRaw era)
+  where
   fromCBOR =
     decode
       ( SparseKeyed
@@ -274,7 +286,15 @@ instance EraTxBody era => FromCBOR (TxBodyRaw era) where
           [(0, "inputs"), (1, "outputs"), (2, "fee"), (3, "ttl")]
       )
 
-instance EraTxBody era => FromCBOR (Annotator (TxBodyRaw era)) where
+instance
+  ( Era era,
+    FromCBOR (PParamsUpdate era),
+    DecodeNonNegative (Value era),
+    Compactible (Value era),
+    Show (Value era)
+  ) =>
+  FromCBOR (Annotator (TxBodyRaw era))
+  where
   fromCBOR = pure <$> fromCBOR
 
 -- =================================================================
@@ -285,7 +305,15 @@ instance EraTxBody era => FromCBOR (Annotator (TxBodyRaw era)) where
 -- | Choose a de-serialiser when given the key (of type Word).
 --   Wrap it in a Field which pairs it with its update function which
 --   changes only the field being deserialised.
-boxBody :: EraTxBody era => Word -> Field (TxBodyRaw era)
+boxBody ::
+  ( Era era,
+    FromCBOR (PParamsUpdate era),
+    DecodeNonNegative (Value era),
+    Compactible (Value era),
+    Show (Value era)
+  ) =>
+  Word ->
+  Field (TxBodyRaw era)
 boxBody 0 = field (\x tx -> tx {_inputsX = x}) (D (decodeSet fromCBOR))
 boxBody 1 = field (\x tx -> tx {_outputsX = x}) (D (decodeStrictSeq fromCBOR))
 boxBody 4 = field (\x tx -> tx {_certsX = x}) (D (decodeStrictSeq fromCBOR))
@@ -299,7 +327,10 @@ boxBody n = invalidField n
 -- | Tells how to serialise each field, and what tag to label it with in the
 --   serialisation. boxBody and txSparse should be Duals, visually inspect
 --   The key order looks strange but was choosen for backward compatibility.
-txSparse :: EraTxBody era => TxBodyRaw era -> Encode ('Closed 'Sparse) (TxBodyRaw era)
+txSparse ::
+  (Era era, ToCBOR (PParamsUpdate era), ToCBOR (CompactForm (Value era))) =>
+  TxBodyRaw era ->
+  Encode ('Closed 'Sparse) (TxBodyRaw era)
 txSparse (TxBodyRaw input output cert wdrl fee ttl update hash) =
   Keyed (\i o f t c w u h -> TxBodyRaw i o c w f t u h)
     !> Key 0 (E encodeFoldable input) -- We don't have to send these in TxBodyRaw order
@@ -326,7 +357,10 @@ baseTxBodyRaw =
       _mdHashX = SNothing
     }
 
-instance EraTxBody era => ToCBOR (TxBodyRaw era) where
+instance
+  (Era era, ToCBOR (PParamsUpdate era), ToCBOR (CompactForm (Value era))) =>
+  ToCBOR (TxBodyRaw era)
+  where
   toCBOR = encode . txSparse
 
 -- ====================================================
@@ -450,10 +484,10 @@ mkShelleyTxBody = TxBodyConstr . memoBytes . txSparse
 -- =========================================
 
 instance
-  (EraTxBody era, crypto ~ Crypto era) =>
+  (Era era, crypto ~ Crypto era) =>
   HashAnnotated (ShelleyTxBody era) EraIndependentTxBody crypto
 
-instance EraTxBody era => ToCBOR (TxBody era) where
+instance Era era => ToCBOR (TxBody era) where
   toCBOR (TxBodyConstr memo) = toCBOR memo
 
 -- ===============================================================
@@ -464,7 +498,10 @@ instance (Era era, ToCBOR (CompactForm (Value era))) => ToCBOR (TxOut era) where
       <> toCBOR addr
       <> toCBOR coin
 
-instance EraTxOut era => FromCBOR (TxOut era) where
+instance
+  (Era era, DecodeNonNegative (Value era), Compactible (Value era), Show (Value era)) =>
+  FromCBOR (TxOut era)
+  where
   fromCBOR = fromNotSharedCBOR
 
 -- This instance does not do any sharing and is isomorphic to FromCBOR

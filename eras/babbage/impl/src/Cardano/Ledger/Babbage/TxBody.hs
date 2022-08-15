@@ -183,9 +183,9 @@ import Cardano.Ledger.Shelley.TxBody (Wdrl (Wdrl), unWdrl)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val
-  ( Val (..),
+  ( DecodeNonNegative (decodeNonNegative),
+    Val (..),
     decodeMint,
-    decodeNonNegative,
     encodeMint,
     isZero,
   )
@@ -322,7 +322,9 @@ valueEitherBabbageTxOutL =
               Right cVal -> mkTxOutCompact (decompactAddr cAddr) cAddr cVal datum mScript
     )
 
-deriving stock instance BabbageEraTxOut era => Eq (BabbageTxOut era)
+deriving stock instance
+  (Era era, Eq (Script era), Eq (CompactForm (Value era))) =>
+  Eq (BabbageTxOut era)
 
 -- | Already in NF
 instance NFData (BabbageTxOut era) where
@@ -354,7 +356,7 @@ viewCompactTxOut txOut = case txOut of
 
 viewTxOut ::
   forall era.
-  EraTxOut era =>
+  (Era era, Val (Value era)) =>
   TxOut era ->
   (Addr (Crypto era), Value era, Datum era, StrictMaybe (Script era))
 viewTxOut (TxOutCompact' bs c) = (addr, val, NoDatum, SNothing)
@@ -386,13 +388,16 @@ viewTxOut (TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal dataH
       Alonzo.viewTxOut @era $
         Alonzo.TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal dataHash32
 
-instance (EraTxOut era, Show (Script era)) => Show (BabbageTxOut era) where
+instance
+  (Era era, Show (Value era), Show (Script era), Val (Value era)) =>
+  Show (BabbageTxOut era)
+  where
   show = show . viewTxOut
 
 deriving via InspectHeapNamed "BabbageTxOut" (BabbageTxOut era) instance NoThunks (BabbageTxOut era)
 
 pattern BabbageTxOut ::
-  (EraTxOut era, HasCallStack) =>
+  (Era era, Val (Value era), HasCallStack) =>
   Addr (Crypto era) ->
   Value era ->
   Datum era ->
@@ -409,7 +414,7 @@ pattern BabbageTxOut addr vl datum refScript <-
 -- address should be the exact same address in different forms.
 mkTxOut ::
   forall era.
-  (EraTxOut era, HasCallStack) =>
+  (Era era, Val (Value era), HasCallStack) =>
   Addr (Crypto era) ->
   CompactAddr (Crypto era) ->
   Value era ->
@@ -441,7 +446,7 @@ mkTxOut _addr cAddr vl d rs =
 -- TODO: Implement mkTxOut in terms of mkTxOutCompact, it will avoid unnecessary
 -- MultiAsset serilization/deserialization
 mkTxOutCompact ::
-  EraTxOut era =>
+  (Era era, Val (Value era)) =>
   Addr (Crypto era) ->
   CompactAddr (Crypto era) ->
   CompactForm (Value era) ->
@@ -506,13 +511,17 @@ data TxBodyRaw era = TxBodyRaw
   }
   deriving (Generic, Typeable)
 
-deriving instance BabbageEraTxBody era => Eq (TxBodyRaw era)
+deriving instance
+  (Era era, Eq (Script era), Eq (PParamsUpdate era), Eq (CompactForm (Value era))) =>
+  Eq (TxBodyRaw era)
 
-instance EraTxBody era => NoThunks (TxBodyRaw era)
+instance (Era era, NoThunks (PParamsUpdate era)) => NoThunks (TxBodyRaw era)
 
 instance (CC.Crypto (Crypto era), NFData (PParamsUpdate era)) => NFData (TxBodyRaw era)
 
-deriving instance BabbageEraTxBody era => Show (TxBodyRaw era)
+deriving instance
+  (Era era, Val (Value era), Show (Value era), Show (Script era), Show (PParamsUpdate era)) =>
+  Show (TxBodyRaw era)
 
 newtype BabbageTxBody era = TxBodyConstr (MemoBytes (TxBodyRaw era))
   deriving (ToCBOR)
@@ -719,16 +728,32 @@ type TxBody era = BabbageTxBody era
 
 deriving newtype instance CC.Crypto (Crypto era) => Eq (BabbageTxBody era)
 
-deriving instance EraTxBody era => NoThunks (BabbageTxBody era)
+deriving instance (Era era, NoThunks (PParamsUpdate era)) => NoThunks (BabbageTxBody era)
 
-deriving instance BabbageEraTxBody era => Show (BabbageTxBody era)
+deriving instance
+  (Era era, Val (Value era), Show (Value era), Show (Script era), Show (PParamsUpdate era)) =>
+  Show (BabbageTxBody era)
 
 deriving via
   (Mem (TxBodyRaw era))
   instance
-    BabbageEraTxBody era => FromCBOR (Annotator (BabbageTxBody era))
+    ( Era era,
+      Val (Value era),
+      DecodeNonNegative (Value era),
+      FromCBOR (PParamsUpdate era),
+      FromCBOR (Annotator (Script era))
+    ) =>
+    FromCBOR (Annotator (BabbageTxBody era))
 
-instance BabbageEraTxBody era => FromCBOR (Annotator (TxBodyRaw era)) where
+instance
+  ( Era era,
+    Val (Value era),
+    DecodeNonNegative (Value era),
+    FromCBOR (PParamsUpdate era),
+    FromCBOR (Annotator (Script era))
+  ) =>
+  FromCBOR (Annotator (TxBodyRaw era))
+  where
   fromCBOR = pure <$> fromCBOR
 
 pattern BabbageTxBody ::
@@ -899,7 +924,7 @@ txnetworkid' (TxBodyConstr (Memo raw _)) = _txnetworkid raw
 {-# INLINE encodeTxOut #-}
 encodeTxOut ::
   forall era.
-  BabbageEraTxOut era =>
+  (Era era, ToCBOR (Value era), ToCBOR (Script era)) =>
   CompactAddr (Crypto era) ->
   Value era ->
   Datum era ->
@@ -923,7 +948,7 @@ data DecodingTxOut era = DecodingTxOut
 {-# INLINE decodeTxOut #-}
 decodeTxOut ::
   forall s era.
-  BabbageEraTxOut era =>
+  (Era era, Val (Value era), DecodeNonNegative (Value era), FromCBOR (Annotator (Script era))) =>
   (forall s'. Decoder s' (Addr (Crypto era), CompactAddr (Crypto era))) ->
   Decoder s (BabbageTxOut era)
 decodeTxOut decAddr = do
@@ -965,7 +990,10 @@ decodeCIC s = do
     Left e -> fail $ T.unpack s <> ": " <> show e
     Right x -> pure x
 
-instance BabbageEraTxOut era => ToCBOR (BabbageTxOut era) where
+instance
+  (Era era, Val (Value era), ToCBOR (Value era), ToCBOR (Script era)) =>
+  ToCBOR (BabbageTxOut era)
+  where
   toCBOR (BabbageTxOut addr v d s) = encodeTxOut (compactAddr addr) v d s
 
 -- FIXME: ^ Starting with Babbage we need to reserialize all Addresses.  It is
@@ -980,10 +1008,24 @@ instance BabbageEraTxOut era => ToCBOR (BabbageTxOut era) where
 -- toCBOR (TxOutCompactDatum addr cv d) = encodeTxOut addr cv (Datum d) SNothing
 -- toCBOR (TxOutCompactRefScript addr cv d rs) = encodeTxOut addr cv d (SJust rs)
 
-instance BabbageEraTxOut era => FromCBOR (BabbageTxOut era) where
+instance
+  ( Era era,
+    Val (Value era),
+    FromCBOR (Annotator (Script era)),
+    DecodeNonNegative (Value era)
+  ) =>
+  FromCBOR (BabbageTxOut era)
+  where
   fromCBOR = fromCborTxOutWithAddr fromCborBackwardsBothAddr
 
-instance BabbageEraTxOut era => FromSharedCBOR (BabbageTxOut era) where
+instance
+  ( Era era,
+    Val (Value era),
+    FromCBOR (Annotator (Script era)),
+    DecodeNonNegative (Value era)
+  ) =>
+  FromSharedCBOR (BabbageTxOut era)
+  where
   type Share (BabbageTxOut era) = Interns (Credential 'Staking (Crypto era))
   fromSharedCBOR credsInterns =
     internTxOut <$!> fromCborTxOutWithAddr fromCborBackwardsBothAddr
@@ -996,7 +1038,7 @@ instance BabbageEraTxOut era => FromSharedCBOR (BabbageTxOut era) where
         txOut -> txOut
 
 fromCborTxOutWithAddr ::
-  BabbageEraTxOut era =>
+  (Era era, Val (Value era), FromCBOR (Annotator (Script era)), DecodeNonNegative (Value era)) =>
   (forall s'. Decoder s' (Addr (Crypto era), CompactAddr (Crypto era))) ->
   Decoder s (BabbageTxOut era)
 fromCborTxOutWithAddr decAddr = do
@@ -1074,7 +1116,15 @@ encodeTxBodyRaw
       !> encodeKeyedStrictMaybe 7 _adHash
       !> encodeKeyedStrictMaybe 15 _txnetworkid
 
-instance BabbageEraTxBody era => FromCBOR (TxBodyRaw era) where
+instance
+  ( Era era,
+    Val (Value era),
+    DecodeNonNegative (Value era),
+    FromCBOR (Annotator (Script era)),
+    FromCBOR (PParamsUpdate era)
+  ) =>
+  FromCBOR (TxBodyRaw era)
+  where
   fromCBOR =
     decode $
       SparseKeyed
