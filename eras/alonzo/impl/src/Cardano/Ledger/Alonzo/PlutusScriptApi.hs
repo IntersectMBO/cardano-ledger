@@ -86,7 +86,7 @@ getSpendingTxIn = \case
 -- | Get the Data associated with a ScriptPurpose. Only the Spending
 --   ScriptPurpose contains Data. The null list is returned for the other kinds.
 getDatumAlonzo ::
-  (AlonzoEraTxOut era, EraTx era, Witnesses era ~ TxWitness era) =>
+  (AlonzoEraTxOut era, EraTx era, TxWits era ~ TxWitness era) =>
   Tx era ->
   UTxO era ->
   ScriptPurpose (Crypto era) ->
@@ -150,7 +150,7 @@ collectTwoPhaseScriptInputs ::
     ShelleyEraTxBody era,
     ExtendedUTxO era,
     Script era ~ AlonzoScript era,
-    Witnesses era ~ TxWitness era,
+    TxWits era ~ TxWitness era,
     HasField "_costmdls" (PParams era) CostModels
   ) =>
   EpochInfo (Either Text) ->

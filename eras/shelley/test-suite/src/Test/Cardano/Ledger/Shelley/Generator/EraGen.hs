@@ -180,7 +180,7 @@ class
     MinGenTxout era,
     PrettyA (Tx era),
     PrettyA (TxBody era),
-    PrettyA (Witnesses era),
+    PrettyA (TxWits era),
     PrettyA (Value era),
     Default (StashedAVVMAddresses era)
   ) =>
@@ -221,7 +221,7 @@ class
   updateEraTxBody ::
     UTxO era ->
     PParams era ->
-    Witnesses era ->
+    TxWits era ->
     TxBody era ->
     Coin ->
     -- | This overrides the existing TxFee
@@ -247,7 +247,7 @@ class
     (UTxO era, TxBody era, ScriptInfo era) ->
     Set (WitVKey 'Witness (Crypto era)) ->
     Map (ScriptHash (Crypto era)) (Script era) ->
-    Witnesses era
+    TxWits era
 
   -- When choosing new recipeients from the UTxO, choose only those whose Outputs meet this predicate.
   genEraGoodTxOut :: TxOut era -> Bool
@@ -256,7 +256,7 @@ class
   -- | Construct a transaction given its constituent parts.
   constructTx ::
     TxBody era ->
-    Witnesses era ->
+    TxWits era ->
     StrictMaybe (AuxiliaryData era) ->
     Tx era
   constructTx txBody txWits txAuxData =
@@ -379,7 +379,7 @@ randomByHash low high x = low + remainder
 
 data Label t where
   Body' :: Label (TxBody era)
-  Wits' :: Label (Witnesses era)
+  Wits' :: Label (TxWits era)
 
 class Sets (x :: Label t) y where
   set :: Label t -> y -> y

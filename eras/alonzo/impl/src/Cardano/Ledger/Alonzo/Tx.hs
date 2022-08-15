@@ -201,7 +201,7 @@ mkBasicAlonzoTx txBody = AlonzoTx txBody mempty (IsValid True) SNothing
 bodyAlonzoTxL :: Lens' (AlonzoTx era) (Core.TxBody era)
 bodyAlonzoTxL = lens body (\tx txBody -> tx {body = txBody})
 
--- | `Witnesses` setter and getter for `AlonzoTx`.
+-- | `TxWits` setter and getter for `AlonzoTx`.
 witsAlonzoTxL :: Lens' (AlonzoTx era) (TxWitness era)
 witsAlonzoTxL = lens wits (\tx txWits -> tx {wits = txWits})
 
@@ -295,7 +295,7 @@ hashScriptIntegrity langViews rdmrs dats =
 
 isTwoPhaseScriptAddress ::
   forall era.
-  (EraTx era, Witnesses era ~ TxWitness era) =>
+  (EraTx era, TxWits era ~ TxWitness era) =>
   AlonzoTx era ->
   Addr (Crypto era) ->
   Bool
@@ -434,7 +434,7 @@ getMapFromValue (MaryValue _ m) = m
 -- | Find the Data and ExUnits assigned to a script.
 indexedRdmrs ::
   forall era.
-  (ShelleyEraTxBody era, EraTx era, Witnesses era ~ TxWitness era) =>
+  (ShelleyEraTxBody era, EraTx era, TxWits era ~ TxWitness era) =>
   Tx era ->
   ScriptPurpose (Crypto era) ->
   Maybe (Data era, ExUnits)

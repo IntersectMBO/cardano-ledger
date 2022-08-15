@@ -820,7 +820,7 @@ genTx ::
   ( Core.EraTx era,
     Arbitrary (Core.TxBody era),
     Arbitrary (Core.AuxiliaryData era),
-    Arbitrary (Core.Witnesses era)
+    Arbitrary (Core.TxWits era)
   ) =>
   Gen (ShelleyTx era)
 genTx =
@@ -880,12 +880,12 @@ genCoherentBlock = do
 
 instance
   ( Core.EraTx era,
-    ToCBOR (Core.Witnesses era),
+    ToCBOR (Core.TxWits era),
     Arbitrary (Core.TxBody era),
     Arbitrary (Core.Value era),
     Arbitrary (Core.AuxiliaryData era),
     Arbitrary (Core.Script era),
-    Arbitrary (Core.Witnesses era)
+    Arbitrary (Core.TxWits era)
   ) =>
   Arbitrary (ShelleyTx era)
   where

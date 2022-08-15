@@ -65,9 +65,9 @@ instance CC.Crypto c => EraTx (BabbageEra c) where
 instance CC.Crypto c => AlonzoEraTx (BabbageEra c) where
   isValidTxL = isValidAlonzoTxL
 
-instance CC.Crypto c => EraWitnesses (BabbageEra c) where
-  type Witnesses (BabbageEra c) = TxWitness (BabbageEra c)
-  mkBasicWitnesses = mempty
+instance CC.Crypto c => EraTxWits (BabbageEra c) where
+  type TxWits (BabbageEra c) = TxWitness (BabbageEra c)
+  mkBasicWits = mempty
   addrWitsL = addrAlonzoWitsL
   bootAddrWitsL = bootAddrAlonzoWitsL
   scriptWitsL = scriptAlonzoWitsL
@@ -120,7 +120,7 @@ getDatumBabbage tx (UTxO m) sp = do
 -- Compute a Map of (ScriptHash -> Script) for all Scripts found in a AlonzoTx.
 -- Note we are interested in the actual scripts that might be run during the Utxow
 -- rule. There are two places to look:
--- 1) The Script part of the Witnesses
+-- 1) The Script part of the TxWits
 -- 2) The reference scripts found in the TxOuts, pointed to by the spending and reference inputs
 --    of the Tx.  Given such a TxOut, we look in the Pay credentials of the Addr of that TxOut.
 --      A. We only look in the Pay credential of the TxOut, because the Stake credential plays

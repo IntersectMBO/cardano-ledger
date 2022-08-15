@@ -23,9 +23,9 @@ import Cardano.Ledger.Conway.Scripts ()
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC
 
-instance CC.Crypto c => EraWitnesses (ConwayEra c) where
-  type Witnesses (ConwayEra c) = TxWitness (ConwayEra c)
-  mkBasicWitnesses = mempty
+instance CC.Crypto c => EraTxWits (ConwayEra c) where
+  type TxWits (ConwayEra c) = TxWitness (ConwayEra c)
+  mkBasicWits = mempty
   addrWitsL = addrAlonzoWitsL
   bootAddrWitsL = bootAddrAlonzoWitsL
   scriptWitsL = scriptAlonzoWitsL

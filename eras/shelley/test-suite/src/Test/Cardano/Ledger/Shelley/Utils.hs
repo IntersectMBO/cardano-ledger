@@ -152,7 +152,7 @@ type ShelleyTest era =
     Tx era ~ ShelleyTx era,
     TxSeq era ~ ShelleyTxSeq era,
     ShelleyTxOut era ~ TxOut era,
-    Witnesses era ~ ShelleyWitnesses era,
+    TxWits era ~ ShelleyWitnesses era,
     Split (Value era),
     Default (State (EraRule "PPUP" era)),
     Default (StashedAVVMAddresses era)

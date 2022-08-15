@@ -109,7 +109,7 @@ defaultShelleyLedgerExamples ::
     Core.PParamsUpdate era ~ ShelleyPParamsUpdate era,
     Default (StashedAVVMAddresses era)
   ) =>
-  (Core.TxBody era -> KeyPairWits era -> Core.Witnesses era) ->
+  (Core.TxBody era -> KeyPairWits era -> Core.TxWits era) ->
   (ShelleyTx era -> Core.Tx era) ->
   Core.Value era ->
   Core.TxBody era ->
@@ -210,7 +210,7 @@ mkScriptHash = ScriptHash . mkDummyHash (Proxy @(ADDRHASH c))
 exampleTx ::
   forall era.
   Core.EraTx era =>
-  (Core.TxBody era -> KeyPairWits era -> Core.Witnesses era) ->
+  (Core.TxBody era -> KeyPairWits era -> Core.TxWits era) ->
   Core.TxBody era ->
   Core.AuxiliaryData era ->
   ShelleyTx era

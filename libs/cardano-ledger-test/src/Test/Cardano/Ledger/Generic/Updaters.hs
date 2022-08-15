@@ -106,7 +106,7 @@ updateTx (wit@(Shelley _)) (tx@(ShelleyTx b w d)) dt =
   case dt of
     Body fbody -> ShelleyTx fbody w d
     BodyI bfields -> ShelleyTx (newTxBody wit bfields) w d
-    Witnesses fwit -> ShelleyTx b fwit d
+    TxWits fwit -> ShelleyTx b fwit d
     WitnessesI wfields -> ShelleyTx b (newWitnesses override wit wfields) d
     AuxData faux -> ShelleyTx b w faux
     Valid _ -> tx
@@ -114,7 +114,7 @@ updateTx (wit@(Allegra _)) (tx@(ShelleyTx b w d)) dt =
   case dt of
     Body fbody -> ShelleyTx fbody w d
     BodyI bfields -> ShelleyTx (newTxBody wit bfields) w d
-    Witnesses fwit -> ShelleyTx b fwit d
+    TxWits fwit -> ShelleyTx b fwit d
     WitnessesI wfields -> ShelleyTx b (newWitnesses override wit wfields) d
     AuxData faux -> ShelleyTx b w faux
     Valid _ -> tx
@@ -122,7 +122,7 @@ updateTx (wit@(Mary _)) (tx@(ShelleyTx b w d)) dt =
   case dt of
     Body fbody -> ShelleyTx fbody w d
     BodyI bfields -> ShelleyTx (newTxBody wit bfields) w d
-    Witnesses fwit -> ShelleyTx b fwit d
+    TxWits fwit -> ShelleyTx b fwit d
     WitnessesI wfields -> ShelleyTx b (newWitnesses override wit wfields) d
     AuxData faux -> ShelleyTx b w faux
     Valid _ -> tx
@@ -130,7 +130,7 @@ updateTx wit@(Alonzo _) (Alonzo.AlonzoTx b w iv d) dt =
   case dt of
     Body fbody -> Alonzo.AlonzoTx fbody w iv d
     BodyI bfields -> Alonzo.AlonzoTx (newTxBody wit bfields) w iv d
-    Witnesses fwit -> Alonzo.AlonzoTx b fwit iv d
+    TxWits fwit -> Alonzo.AlonzoTx b fwit iv d
     WitnessesI wfields -> Alonzo.AlonzoTx b (newWitnesses override wit wfields) iv d
     AuxData faux -> Alonzo.AlonzoTx b w iv faux
     Valid iv' -> Alonzo.AlonzoTx b w iv' d
@@ -138,7 +138,7 @@ updateTx wit@(Babbage _) (AlonzoTx b w iv d) dt =
   case dt of
     Body fbody -> AlonzoTx fbody w iv d
     BodyI bfields -> AlonzoTx (newTxBody wit bfields) w iv d
-    Witnesses fwit -> AlonzoTx b fwit iv d
+    TxWits fwit -> AlonzoTx b fwit iv d
     WitnessesI wfields -> AlonzoTx b (newWitnesses override wit wfields) iv d
     AuxData faux -> AlonzoTx b w iv faux
     Valid iv' -> AlonzoTx b w iv' d
@@ -146,7 +146,7 @@ updateTx wit@(Conway _) (AlonzoTx b w iv d) dt =
   case dt of
     Body fbody -> AlonzoTx fbody w iv d
     BodyI bfields -> AlonzoTx (newTxBody wit bfields) w iv d
-    Witnesses fwit -> AlonzoTx b fwit iv d
+    TxWits fwit -> AlonzoTx b fwit iv d
     WitnessesI wfields -> AlonzoTx b (newWitnesses override wit wfields) iv d
     AuxData faux -> AlonzoTx b w iv faux
     Valid iv' -> AlonzoTx b w iv' d
@@ -231,9 +231,9 @@ newTxBody :: EraTxBody era => Proof era -> [TxBodyField era] -> TxBody era
 newTxBody era = List.foldl' (updateTxBody era) (initialTxBody era)
 
 --------------------------------------------------------------------
--- Updaters for Witnesses
+-- Updaters for TxWits
 
-updateWitnesses :: forall era. Policy -> Proof era -> Witnesses era -> WitnessesField era -> Witnesses era
+updateWitnesses :: forall era. Policy -> Proof era -> TxWits era -> WitnessesField era -> TxWits era
 updateWitnesses p (Shelley _) w dw = case dw of
   (AddrWits ks) -> w {Shelley.addrWits = p (Shelley.addrWits w) ks}
   (BootWits boots) -> w {Shelley.bootWits = p (Shelley.bootWits w) boots}
@@ -268,7 +268,7 @@ updateWitnesses p (Conway _) w dw = case dw of
   (DataWits ds) -> w {txdats = p (txdats w) ds}
   (RdmrWits r) -> w {txrdmrs = p (txrdmrs w) r}
 
-newWitnesses :: Era era => Policy -> Proof era -> [WitnessesField era] -> Witnesses era
+newWitnesses :: Era era => Policy -> Proof era -> [WitnessesField era] -> TxWits era
 newWitnesses p era = List.foldl' (updateWitnesses p era) (initialWitnesses era)
 
 --------------------------------------------------------------------

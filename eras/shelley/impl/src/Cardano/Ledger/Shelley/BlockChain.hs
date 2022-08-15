@@ -121,7 +121,7 @@ deriving stock instance
 -- Getting bytes from pieces of a Tx
 
 coreWitnessBytes ::
-  (EraTx era, SafeToHash (Witnesses era)) =>
+  (EraTx era, SafeToHash (TxWits era)) =>
   Tx era ->
   ByteString
 coreWitnessBytes coretx = originalBytes $ coretx ^. witsTxL
@@ -139,7 +139,7 @@ pattern ShelleyTxSeq ::
   forall era.
   ( EraTx era,
     Tx era ~ ShelleyTx era,
-    SafeToHash (Witnesses era)
+    SafeToHash (TxWits era)
   ) =>
   StrictSeq (Tx era) ->
   ShelleyTxSeq era
@@ -157,7 +157,7 @@ pattern ShelleyTxSeq xs <-
             { txSeqTxns' = txns,
               -- bytes encoding Seq(TxBody era)
               txSeqBodyBytes = serializeFoldable $ coreBodyBytes @era <$> txns,
-              -- bytes encoding Seq(Witnesses era)
+              -- bytes encoding Seq(TxWits era)
               txSeqWitsBytes = serializeFoldable $ coreWitnessBytes @era <$> txns,
               -- bytes encoding a (Map Int (AuxiliaryData))
               txSeqMetadataBytes =

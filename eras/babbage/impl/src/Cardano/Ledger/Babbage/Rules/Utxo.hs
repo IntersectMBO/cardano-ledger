@@ -451,7 +451,7 @@ instance
     Tx era ~ AlonzoTx era,
     TxOut era ~ BabbageTxOut era,
     TxBody era ~ BabbageTxBody era,
-    Witnesses era ~ TxWitness era,
+    TxWits era ~ TxWitness era,
     Show (TxBody era),
     Show (TxOut era),
     Show (Script era),

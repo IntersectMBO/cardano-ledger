@@ -535,7 +535,7 @@ evaluateTransactionBalance pp u isNewPool txb =
 --------------------------------------------------------------------------------
 
 addShelleyKeyWitnesses ::
-  (EraTx era, Witnesses era ~ ShelleyWitnesses era) =>
+  (EraTx era, TxWits era ~ ShelleyWitnesses era) =>
   ShelleyTx era ->
   Set (WitVKey 'Witness (Crypto era)) ->
   ShelleyTx era

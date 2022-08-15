@@ -43,7 +43,7 @@ instance
   forall era.
   ( EraTx era,
     ShelleyEraTxBody era,
-    Witnesses era ~ ShelleyWitnesses era,
+    TxWits era ~ ShelleyWitnesses era,
     -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (ShelleyMAUTXOW era),
     Environment (EraRule "UTXO" era) ~ ShelleyUtxoEnv era,

@@ -936,7 +936,7 @@ instance PrettyA (Metadata era) where
 ppTx ::
   ( PrettyA (TxBody era),
     PrettyA (AuxiliaryData era),
-    PrettyA (Witnesses era),
+    PrettyA (TxWits era),
     EraTx era
   ) =>
   Tx era ->
@@ -972,7 +972,7 @@ ppWitnessSetHKD x =
 instance
   ( PrettyA (TxBody era),
     PrettyA (AuxiliaryData era),
-    PrettyA (Witnesses era),
+    PrettyA (TxWits era),
     EraTx era,
     Tx era ~ ShelleyTx era
   ) =>

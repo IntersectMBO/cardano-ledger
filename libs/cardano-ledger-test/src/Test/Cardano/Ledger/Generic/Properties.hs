@@ -164,7 +164,7 @@ txBodyRoundTrip ::
 txBodyRoundTrip proof x = coreTxBody proof (abstractTxBody proof x) == x
 
 txWitRoundTrip ::
-  EraWitnesses era => Proof era -> Witnesses era -> Bool
+  EraTxWits era => Proof era -> TxWits era -> Bool
 txWitRoundTrip proof x = assembleWits proof (abstractWitnesses proof x) == x
 
 coreTypesRoundTrip :: TestTree
@@ -172,7 +172,7 @@ coreTypesRoundTrip =
   testGroup
     "Core types make generic roundtrips"
     [ testGroup
-        "Witnesses roundtrip"
+        "TxWits roundtrip"
         [ testProperty "Babbage era" $ txWitRoundTrip (Babbage Mock),
           testProperty "Alonzo era" $ txWitRoundTrip (Alonzo Mock),
           testProperty "Mary era" $ txWitRoundTrip (Mary Mock),

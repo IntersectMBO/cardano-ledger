@@ -546,7 +546,7 @@ someLeaf _proxy x =
             (RequireAnyOf . Seq.fromList) [RequireTimeStart slot, RequireTimeExpire slot]
         _ -> TimelockScript $ RequireSignature x
 
--- | given the "txscripts" field of the Witnesses, compute the set of languages used in a transaction
+-- | given the "txscripts" field of the TxWits, compute the set of languages used in a transaction
 langsUsed ::
   forall era.
   (Script era ~ AlonzoScript era, EraScript era) =>

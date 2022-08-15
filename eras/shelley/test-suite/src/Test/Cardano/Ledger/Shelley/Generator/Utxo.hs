@@ -213,7 +213,7 @@ genTx
         genDCerts ge pparams dpState slot txIx reserves
       metadata <- genEraAuxiliaryData @era constants
       -------------------------------------------------------------------------
-      -- Gather Key Witnesses and Scripts, prepare a constructor for Tx Wits
+      -- Gather Key TxWits and Scripts, prepare a constructor for Tx Wits
       -------------------------------------------------------------------------
       let txWits = spendWits ++ wdrlWits ++ certWits ++ updateWits
           scripts = mkScriptWits @era spendScripts (certScripts ++ wdrlScripts)
@@ -303,7 +303,7 @@ genTx
 data Delta era = Delta
   { dfees :: Coin,
     extraInputs :: Set.Set (TxIn (Crypto era)),
-    extraWitnesses :: Witnesses era,
+    extraWitnesses :: TxWits era,
     change :: TxOut era,
     deltaVKeys :: [KeyPair 'Witness (Crypto era)],
     deltaScripts :: [(Script era, Script era)]
@@ -318,7 +318,7 @@ instance Show (Delta era) where
 --  changed then the Scripts and keys will not have changed.
 instance
   ( EraTxOut era,
-    Eq (Witnesses era)
+    Eq (TxWits era)
   ) =>
   Eq (Delta era)
   where
@@ -333,7 +333,7 @@ instance
 deltaZero ::
   forall era.
   ( EraTxOut era,
-    Monoid (Witnesses era)
+    Monoid (TxWits era)
   ) =>
   Coin ->
   Coin ->
@@ -663,7 +663,7 @@ mkTxWits ::
   [KeyPair 'Witness (Crypto era)] ->
   Map (ScriptHash (Crypto era)) (Script era) ->
   SafeHash (Crypto era) EraIndependentTxBody ->
-  Witnesses era
+  TxWits era
 mkTxWits
   (utxo, txbody, scriptinfo)
   indexedPaymentKeys

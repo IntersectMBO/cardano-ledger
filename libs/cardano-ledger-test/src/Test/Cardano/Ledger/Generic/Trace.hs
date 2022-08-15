@@ -271,7 +271,7 @@ raiseMockError slot (SlotNo next) epochstate pdfs txs GenState {..} =
             ppString "Last Slot " <> ppWord64 slot,
             ppString "Current Slot " <> ppWord64 next,
             ppString "===================================",
-            ppString "Script Witnesses\n"
+            ppString "Script TxWits\n"
               <> ppMap
                 pcScriptHash
                 (scriptSummary @era reify)

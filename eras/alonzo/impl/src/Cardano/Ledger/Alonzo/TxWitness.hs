@@ -382,18 +382,18 @@ rdmrsAlonzoWitsL ::
 rdmrsAlonzoWitsL =
   lensWitsRaw _txrdmrs (\witsRaw rdmrsWits -> witsRaw {_txrdmrs = rdmrsWits})
 
-instance (EraScript (AlonzoEra c), CC.Crypto c) => EraWitnesses (AlonzoEra c) where
-  type Witnesses (AlonzoEra c) = TxWitness (AlonzoEra c)
+instance (EraScript (AlonzoEra c), CC.Crypto c) => EraTxWits (AlonzoEra c) where
+  type TxWits (AlonzoEra c) = TxWitness (AlonzoEra c)
 
-  mkBasicWitnesses = mempty
+  mkBasicWits = mempty
   addrWitsL = addrAlonzoWitsL
   bootAddrWitsL = bootAddrAlonzoWitsL
   scriptWitsL = scriptAlonzoWitsL
 
-class EraWitnesses era => AlonzoEraWitnesses era where
-  datsWitsL :: Lens' (Witnesses era) (TxDats era)
+class EraTxWits era => AlonzoEraWitnesses era where
+  datsWitsL :: Lens' (TxWits era) (TxDats era)
 
-  rdmrsWitsL :: Lens' (Witnesses era) (Redeemers era)
+  rdmrsWitsL :: Lens' (TxWits era) (Redeemers era)
 
 instance (EraScript (AlonzoEra c), CC.Crypto c) => AlonzoEraWitnesses (AlonzoEra c) where
   datsWitsL = datsAlonzoWitsL

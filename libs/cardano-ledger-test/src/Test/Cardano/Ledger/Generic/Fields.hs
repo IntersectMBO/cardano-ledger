@@ -94,7 +94,7 @@ import Test.Cardano.Ledger.Generic.Proof
 data TxField era
   = Body (TxBody era)
   | BodyI [TxBodyField era] -- Inlines TxBody Fields
-  | Witnesses (Witnesses era)
+  | TxWits (TxWits era)
   | WitnessesI [WitnessesField era] -- Inlines Witnesess Fields
   | AuxData (StrictMaybe (AuxiliaryData era))
   | Valid IsValid
@@ -295,7 +295,7 @@ initialTxBody (Conway _) =
     SNothing
     SNothing
 
-initialWitnesses :: Era era => Proof era -> Witnesses era
+initialWitnesses :: Era era => Proof era -> TxWits era
 initialWitnesses (Shelley _) = WitnessSet Set.empty Map.empty Set.empty
 initialWitnesses (Allegra _) = WitnessSet Set.empty Map.empty Set.empty
 initialWitnesses (Mary _) = WitnessSet Set.empty Map.empty Set.empty
@@ -354,17 +354,17 @@ initialPParams (Conway _) = def
 
 abstractTx :: Proof era -> Tx era -> [TxField era]
 abstractTx (Conway _) (AlonzoTx txBody wit v auxdata) =
-  [Body txBody, Witnesses wit, Valid v, AuxData auxdata]
+  [Body txBody, TxWits wit, Valid v, AuxData auxdata]
 abstractTx (Babbage _) (AlonzoTx txBody wit v auxdata) =
-  [Body txBody, Witnesses wit, Valid v, AuxData auxdata]
+  [Body txBody, TxWits wit, Valid v, AuxData auxdata]
 abstractTx (Alonzo _) (AlonzoTx txBody wit v auxdata) =
-  [Body txBody, Witnesses wit, Valid v, AuxData auxdata]
+  [Body txBody, TxWits wit, Valid v, AuxData auxdata]
 abstractTx (Shelley _) (ShelleyTx txBody wit auxdata) =
-  [Body txBody, Witnesses wit, AuxData auxdata]
+  [Body txBody, TxWits wit, AuxData auxdata]
 abstractTx (Mary _) (ShelleyTx txBody wit auxdata) =
-  [Body txBody, Witnesses wit, AuxData auxdata]
+  [Body txBody, TxWits wit, AuxData auxdata]
 abstractTx (Allegra _) (ShelleyTx txBody wit auxdata) =
-  [Body txBody, Witnesses wit, AuxData auxdata]
+  [Body txBody, TxWits wit, AuxData auxdata]
 
 abstractTxBody :: Proof era -> TxBody era -> [TxBodyField era]
 abstractTxBody (Alonzo _) (AlonzoTxBody inp col out cert wdrl fee vldt up req mnt sih adh net) =
@@ -425,7 +425,7 @@ abstractTxBody (Mary _) (MATxBody inp out cert wdrl fee vldt up adh mnt) =
 abstractTxBody (Allegra _) (MATxBody inp out cert wdrl fee vldt up adh mnt) =
   [Inputs inp, Outputs out, Certs cert, Wdrls wdrl, Txfee fee, Vldt vldt, Update up, AdHash adh, Mint mnt]
 
-abstractWitnesses :: Proof era -> Witnesses era -> [WitnessesField era]
+abstractWitnesses :: Proof era -> TxWits era -> [WitnessesField era]
 abstractWitnesses (Shelley _) (WitnessSet keys scripts boot) = [AddrWits keys, ScriptWits scripts, BootWits boot]
 abstractWitnesses (Allegra _) (WitnessSet keys scripts boot) = [AddrWits keys, ScriptWits scripts, BootWits boot]
 abstractWitnesses (Mary _) (WitnessSet keys scripts boot) = [AddrWits keys, ScriptWits scripts, BootWits boot]
