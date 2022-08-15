@@ -54,27 +54,57 @@ import qualified Data.Set as Set
 import Lens.Micro
 
 instance CC.Crypto c => EraTx (BabbageEra c) where
+  {-# SPECIALIZE instance EraTx (BabbageEra CC.StandardCrypto) #-}
+
   type Tx (BabbageEra c) = AlonzoTx (BabbageEra c)
+
   mkBasicTx = mkBasicAlonzoTx
+
   bodyTxL = bodyAlonzoTxL
+  {-# INLINE bodyTxL #-}
+
   witsTxL = witsAlonzoTxL
+  {-# INLINE witsTxL #-}
+
   auxDataTxL = auxDataAlonzoTxL
+  {-# INLINE auxDataTxL #-}
+
   sizeTxF = sizeAlonzoTxF
+  {-# INLINE sizeTxF #-}
+
   validateScript (Phase1Script script) tx = validateTimelock @(BabbageEra c) script tx
+  {-# INLINE validateScript #-}
 
 instance CC.Crypto c => AlonzoEraTx (BabbageEra c) where
+  {-# SPECIALIZE instance AlonzoEraTx (BabbageEra CC.StandardCrypto) #-}
+
   isValidTxL = isValidAlonzoTxL
+  {-# INLINE isValidTxL #-}
 
 instance CC.Crypto c => EraWitnesses (BabbageEra c) where
+  {-# SPECIALIZE instance EraWitnesses (BabbageEra CC.StandardCrypto) #-}
+
   type Witnesses (BabbageEra c) = TxWitness (BabbageEra c)
+
   mkBasicWitnesses = mempty
+
   addrWitsL = addrAlonzoWitsL
+  {-# INLINE addrWitsL #-}
+
   bootAddrWitsL = bootAddrAlonzoWitsL
+  {-# INLINE bootAddrWitsL #-}
+
   scriptWitsL = scriptAlonzoWitsL
+  {-# INLINE scriptWitsL #-}
 
 instance CC.Crypto c => AlonzoEraWitnesses (BabbageEra c) where
+  {-# SPECIALIZE instance AlonzoEraWitnesses (BabbageEra CC.StandardCrypto) #-}
+
   datsWitsL = datsAlonzoWitsL
+  {-# INLINE datsWitsL #-}
+
   rdmrsWitsL = rdmrsAlonzoWitsL
+  {-# INLINE rdmrsWitsL #-}
 
 instance CC.Crypto c => EraSegWits (BabbageEra c) where
   type TxSeq (BabbageEra c) = AlonzoTxSeq (BabbageEra c)

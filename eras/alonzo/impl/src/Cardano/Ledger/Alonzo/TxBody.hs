@@ -351,6 +351,8 @@ pattern AlonzoTxOut addr vl dh <-
 {-# COMPLETE AlonzoTxOut #-}
 
 instance CC.Crypto c => EraTxOut (AlonzoEra c) where
+  {-# SPECIALIZE instance EraTxOut (AlonzoEra CC.StandardCrypto) #-}
+
   type TxOut (AlonzoEra c) = AlonzoTxOut (AlonzoEra c)
 
   mkBasicTxOut addr vl = AlonzoTxOut addr vl SNothing
@@ -365,6 +367,7 @@ instance CC.Crypto c => EraTxOut (AlonzoEra c) where
                 Left addr -> mkTxOutCompact addr (compactAddr addr) cVal dh
                 Right cAddr -> mkTxOutCompact (decompactAddr cAddr) cAddr cVal dh
       )
+  {-# INLINE addrEitherTxOutL #-}
 
   valueEitherTxOutL =
     lens
@@ -380,13 +383,17 @@ instance CC.Crypto c => EraTxOut (AlonzoEra c) where
                     Left addr -> mkTxOutCompact addr (compactAddr addr) cVal dh
                     Right cAddr -> mkTxOutCompact (decompactAddr cAddr) cAddr cVal dh
       )
+  {-# INLINE valueEitherTxOutL #-}
 
 class EraTxOut era => AlonzoEraTxOut era where
   dataHashTxOutL :: Lens' (Core.TxOut era) (StrictMaybe (DataHash (Crypto era)))
 
 instance CC.Crypto c => AlonzoEraTxOut (AlonzoEra c) where
+  {-# SPECIALIZE instance AlonzoEraTxOut (AlonzoEra CC.StandardCrypto) #-}
+
   dataHashTxOutL =
     lens getAlonzoTxOutDataHash (\(AlonzoTxOut addr cv _) dh -> AlonzoTxOut addr cv dh)
+  {-# INLINE dataHashTxOutL #-}
 
 getTxOutCompactValue :: EraTxOut era => AlonzoTxOut era -> CompactForm (Value era)
 getTxOutCompactValue =
@@ -445,48 +452,66 @@ lensTxBodyRaw getter setter =
   lens
     (\(TxBodyConstr (Memo txBodyRaw _)) -> getter txBodyRaw)
     (\(TxBodyConstr (Memo txBodyRaw _)) val -> mkAlonzoTxBody $ setter txBodyRaw val)
+{-# INLINE lensTxBodyRaw #-}
 
 instance CC.Crypto c => EraTxBody (AlonzoEra c) where
+  {-# SPECIALIZE instance EraTxBody (AlonzoEra CC.StandardCrypto) #-}
+
   type TxBody (AlonzoEra c) = AlonzoTxBody (AlonzoEra c)
 
   mkBasicTxBody = mkAlonzoTxBody initial
 
   inputsTxBodyL =
     lensTxBodyRaw _inputs (\txBodyRaw inputs_ -> txBodyRaw {_inputs = inputs_})
+  {-# INLINE inputsTxBodyL #-}
 
   outputsTxBodyL =
     lensTxBodyRaw _outputs (\txBodyRaw outputs_ -> txBodyRaw {_outputs = outputs_})
+  {-# INLINE outputsTxBodyL #-}
 
   feeTxBodyL =
     lensTxBodyRaw _txfee (\txBodyRaw fee_ -> txBodyRaw {_txfee = fee_})
+  {-# INLINE feeTxBodyL #-}
 
   auxDataHashTxBodyL =
     lensTxBodyRaw _adHash (\txBodyRaw auxDataHash -> txBodyRaw {_adHash = auxDataHash})
+  {-# INLINE auxDataHashTxBodyL #-}
 
   allInputsTxBodyF =
     to $ \txBody -> (txBody ^. inputsTxBodyL) `Set.union` (txBody ^. collateralInputsTxBodyL)
+  {-# INLINE allInputsTxBodyF #-}
 
   mintedTxBodyF =
     to (\(TxBodyConstr (Memo txBodyRaw _)) -> Set.map policyID (policies (_mint txBodyRaw)))
+  {-# INLINE mintedTxBodyF #-}
 
 instance CC.Crypto c => ShelleyEraTxBody (AlonzoEra c) where
+  {-# SPECIALIZE instance ShelleyEraTxBody (AlonzoEra CC.StandardCrypto) #-}
+
   wdrlsTxBodyL =
     lensTxBodyRaw _wdrls (\txBodyRaw wdrls_ -> txBodyRaw {_wdrls = wdrls_})
+  {-# INLINE wdrlsTxBodyL #-}
 
   ttlTxBodyL = notSupportedInThisEraL
 
   updateTxBodyL =
     lensTxBodyRaw _update (\txBodyRaw update_ -> txBodyRaw {_update = update_})
+  {-# INLINE updateTxBodyL #-}
 
   certsTxBodyL =
     lensTxBodyRaw _certs (\txBodyRaw certs_ -> txBodyRaw {_certs = certs_})
+  {-# INLINE certsTxBodyL #-}
 
 instance CC.Crypto c => ShelleyMAEraTxBody (AlonzoEra c) where
+  {-# SPECIALIZE instance ShelleyMAEraTxBody (AlonzoEra CC.StandardCrypto) #-}
+
   vldtTxBodyL =
     lensTxBodyRaw _vldt (\txBodyRaw vldt_ -> txBodyRaw {_vldt = vldt_})
+  {-# INLINE vldtTxBodyL #-}
 
   mintTxBodyL =
     lensTxBodyRaw _mint (\txBodyRaw mint_ -> txBodyRaw {_mint = mint_})
+  {-# INLINE mintTxBodyL #-}
 
 class (ShelleyMAEraTxBody era, AlonzoEraTxOut era) => AlonzoEraTxBody era where
   collateralInputsTxBodyL :: Lens' (Core.TxBody era) (Set (TxIn (Crypto era)))
@@ -499,21 +524,27 @@ class (ShelleyMAEraTxBody era, AlonzoEraTxOut era) => AlonzoEraTxBody era where
   networkIdTxBodyL :: Lens' (Core.TxBody era) (StrictMaybe Network)
 
 instance CC.Crypto c => AlonzoEraTxBody (AlonzoEra c) where
+  {-# SPECIALIZE instance AlonzoEraTxBody (AlonzoEra CC.StandardCrypto) #-}
+
   collateralInputsTxBodyL =
     lensTxBodyRaw _collateral (\txBodyRaw collateral_ -> txBodyRaw {_collateral = collateral_})
+  {-# INLINE collateralInputsTxBodyL #-}
 
   reqSignerHashesTxBodyL =
     lensTxBodyRaw
       _reqSignerHashes
       (\txBodyRaw reqSignerHashes_ -> txBodyRaw {_reqSignerHashes = reqSignerHashes_})
+  {-# INLINE reqSignerHashesTxBodyL #-}
 
   scriptIntegrityHashTxBodyL =
     lensTxBodyRaw
       _scriptIntegrityHash
       (\txBodyRaw scriptIntegrityHash_ -> txBodyRaw {_scriptIntegrityHash = scriptIntegrityHash_})
+  {-# INLINE scriptIntegrityHashTxBodyL #-}
 
   networkIdTxBodyL =
     lensTxBodyRaw _txnetworkid (\txBodyRaw networkId -> txBodyRaw {_txnetworkid = networkId})
+  {-# INLINE networkIdTxBodyL #-}
 
 deriving newtype instance CC.Crypto (Crypto era) => Eq (AlonzoTxBody era)
 

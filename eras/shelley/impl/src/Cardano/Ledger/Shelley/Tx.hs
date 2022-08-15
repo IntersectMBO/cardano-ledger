@@ -89,7 +89,7 @@ import Cardano.Ledger.Coin (Coin (Coin))
 import Cardano.Ledger.Core hiding (Tx, TxBody, TxOut)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..))
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import qualified Cardano.Ledger.Crypto as CC (Crypto, StandardCrypto)
 import Cardano.Ledger.HKD (HKD)
 import Cardano.Ledger.Keys (HasKeyRole (coerceKeyRole), KeyHash, KeyRole (Witness), asWitness)
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness, bootstrapWitKeyHash)
@@ -166,6 +166,7 @@ bodyShelleyTxL =
   lens
     (\(TxConstr (Memo tx _)) -> _body tx)
     (\(TxConstr (Memo tx _)) txBody -> TxConstr $ memoBytes $ encodeTxRaw $ tx {_body = txBody})
+{-# INLINE bodyShelleyTxL #-}
 
 -- | `Witnesses` setter and getter for `ShelleyTx`. The setter does update
 -- memoized binary representation.
@@ -174,6 +175,7 @@ witsShelleyTxL =
   lens
     (\(TxConstr (Memo tx _)) -> _wits tx)
     (\(TxConstr (Memo tx _)) txWits -> TxConstr $ memoBytes $ encodeTxRaw $ tx {_wits = txWits})
+{-# INLINE witsShelleyTxL #-}
 
 -- | `AuxiliaryData` setter and getter for `ShelleyTx`. The setter does update
 -- memoized binary representation.
@@ -182,13 +184,16 @@ auxDataShelleyTxL =
   lens
     (\(TxConstr (Memo tx _)) -> _auxiliaryData tx)
     (\(TxConstr (Memo tx _)) auxData -> mkShelleyTx $ tx {_auxiliaryData = auxData})
+{-# INLINE auxDataShelleyTxL #-}
 
 -- | Size getter for `ShelleyTx`.
 sizeShelleyTxF :: SimpleGetter (Tx era) Integer
 sizeShelleyTxF = to (\(TxConstr (Memo _ bytes)) -> fromIntegral $ SBS.length bytes)
+{-# INLINE sizeShelleyTxF #-}
 
 mkShelleyTx :: EraTx era => TxRaw era -> ShelleyTx era
 mkShelleyTx = TxConstr . memoBytes . encodeTxRaw
+{-# INLINE mkShelleyTx #-}
 
 mkBasicShelleyTx :: EraTx era => Core.TxBody era -> ShelleyTx era
 mkBasicShelleyTx txBody =
@@ -200,19 +205,26 @@ mkBasicShelleyTx txBody =
       }
 
 instance CC.Crypto crypto => EraTx (ShelleyEra crypto) where
+  {-# SPECIALIZE instance EraTx (ShelleyEra CC.StandardCrypto) #-}
+
   type Tx (ShelleyEra crypto) = ShelleyTx (ShelleyEra crypto)
 
   mkBasicTx = mkBasicShelleyTx
 
   bodyTxL = bodyShelleyTxL
+  {-# INLINE bodyTxL #-}
 
   witsTxL = witsShelleyTxL
+  {-# INLINE witsTxL #-}
 
   auxDataTxL = auxDataShelleyTxL
+  {-# INLINE auxDataTxL #-}
 
   sizeTxF = sizeShelleyTxF
+  {-# INLINE sizeTxF #-}
 
   validateScript (Phase1Script multisig) tx = validateNativeMultiSigScript multisig tx
+  {-# INLINE validateScript #-}
 
 deriving newtype instance
   ( NFData (Core.TxBody era),
@@ -332,34 +344,42 @@ type WitnessSet = WitnessSetHKD Identity
 
 type ShelleyWitnesses = WitnessSetHKD Identity
 
--- | Script witness setter and getter for `ShelleyWitnesses`. The
--- setter does update memoized binary representation.
-scriptShelleyWitsL ::
-  EraWitnesses era => Lens' (ShelleyWitnesses era) (Map (ScriptHash (Crypto era)) (Script era))
-scriptShelleyWitsL = lens scriptWits' (\w s -> w {scriptWits = s})
-
 -- | Addresses witness setter and getter for `ShelleyWitnesses`. The
 -- setter does update memoized binary representation.
 addrShelleyWitsL ::
   EraWitnesses era => Lens' (ShelleyWitnesses era) (Set (WitVKey 'Witness (Crypto era)))
 addrShelleyWitsL = lens addrWits' (\w s -> w {addrWits = s})
+{-# INLINE addrShelleyWitsL #-}
 
 -- | Bootstrap Addresses witness setter and getter for `ShelleyWitnesses`. The
 -- setter does update memoized binary representation.
 bootAddrShelleyWitsL ::
   EraWitnesses era => Lens' (ShelleyWitnesses era) (Set (BootstrapWitness (Crypto era)))
 bootAddrShelleyWitsL = lens bootWits' (\w s -> w {bootWits = s})
+{-# INLINE bootAddrShelleyWitsL #-}
+
+-- | Script witness setter and getter for `ShelleyWitnesses`. The
+-- setter does update memoized binary representation.
+scriptShelleyWitsL ::
+  EraWitnesses era => Lens' (ShelleyWitnesses era) (Map (ScriptHash (Crypto era)) (Script era))
+scriptShelleyWitsL = lens scriptWits' (\w s -> w {scriptWits = s})
+{-# INLINE scriptShelleyWitsL #-}
 
 instance CC.Crypto crypto => EraWitnesses (ShelleyEra crypto) where
+  {-# SPECIALIZE instance EraWitnesses (ShelleyEra CC.StandardCrypto) #-}
+
   type Witnesses (ShelleyEra crypto) = ShelleyWitnesses (ShelleyEra crypto)
 
   mkBasicWitnesses = mempty
 
-  scriptWitsL = scriptShelleyWitsL
-
   addrWitsL = addrShelleyWitsL
+  {-# INLINE addrWitsL #-}
 
   bootAddrWitsL = bootAddrShelleyWitsL
+  {-# INLINE bootAddrWitsL #-}
+
+  scriptWitsL = scriptShelleyWitsL
+  {-# INLINE scriptWitsL #-}
 
 instance Era era => ToCBOR (WitnessSetHKD Identity era) where
   toCBOR = encodePreEncoded . BSL.toStrict . txWitsBytes

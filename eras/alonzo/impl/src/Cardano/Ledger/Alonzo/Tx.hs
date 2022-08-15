@@ -179,20 +179,35 @@ data AlonzoTx era = AlonzoTx
 type ValidatedTx era = AlonzoTx era
 
 instance CC.Crypto c => EraTx (AlonzoEra c) where
+  {-# SPECIALIZE instance EraTx (AlonzoEra CC.StandardCrypto) #-}
+
   type Tx (AlonzoEra c) = AlonzoTx (AlonzoEra c)
 
   mkBasicTx = mkBasicAlonzoTx
+
   bodyTxL = bodyAlonzoTxL
+  {-# INLINE bodyTxL #-}
+
   witsTxL = witsAlonzoTxL
+  {-# INLINE witsTxL #-}
+
   auxDataTxL = auxDataAlonzoTxL
+  {-# INLINE auxDataTxL #-}
+
   sizeTxF = sizeAlonzoTxF
+  {-# INLINE sizeTxF #-}
+
   validateScript (Phase1Script script) tx = validateTimelock @(AlonzoEra c) script tx
+  {-# INLINE validateScript #-}
 
 class (EraTx era, AlonzoEraTxBody era, AlonzoEraWitnesses era) => AlonzoEraTx era where
   isValidTxL :: Lens' (Core.Tx era) IsValid
 
 instance CC.Crypto c => AlonzoEraTx (AlonzoEra c) where
+  {-# SPECIALIZE instance AlonzoEraTx (AlonzoEra CC.StandardCrypto) #-}
+
   isValidTxL = isValidAlonzoTxL
+  {-# INLINE isValidTxL #-}
 
 mkBasicAlonzoTx :: (Era era, Script era ~ AlonzoScript era) => Core.TxBody era -> AlonzoTx era
 mkBasicAlonzoTx txBody = AlonzoTx txBody mempty (IsValid True) SNothing
@@ -200,21 +215,26 @@ mkBasicAlonzoTx txBody = AlonzoTx txBody mempty (IsValid True) SNothing
 -- | `Core.TxBody` setter and getter for `AlonzoTx`.
 bodyAlonzoTxL :: Lens' (AlonzoTx era) (Core.TxBody era)
 bodyAlonzoTxL = lens body (\tx txBody -> tx {body = txBody})
+{-# INLINE bodyAlonzoTxL #-}
 
 -- | `Witnesses` setter and getter for `AlonzoTx`.
 witsAlonzoTxL :: Lens' (AlonzoTx era) (TxWitness era)
 witsAlonzoTxL = lens wits (\tx txWits -> tx {wits = txWits})
+{-# INLINE witsAlonzoTxL #-}
 
 -- | `AuxiliaryData` setter and getter for `AlonzoTx`.
 auxDataAlonzoTxL :: Lens' (AlonzoTx era) (StrictMaybe (AuxiliaryData era))
 auxDataAlonzoTxL = lens auxiliaryData (\tx txAuxiliaryData -> tx {auxiliaryData = txAuxiliaryData})
+{-# INLINE auxDataAlonzoTxL #-}
 
 -- | txsize computes the length of the serialised bytes
 sizeAlonzoTxF :: EraTx era => SimpleGetter (AlonzoTx era) Integer
 sizeAlonzoTxF = to (fromIntegral . LBS.length . serializeEncoding . toCBORForSizeComputation)
+{-# INLINE sizeAlonzoTxF #-}
 
 isValidAlonzoTxL :: Lens' (AlonzoTx era) IsValid
 isValidAlonzoTxL = lens isValid (\tx valid -> tx {isValid = valid})
+{-# INLINE isValidAlonzoTxL #-}
 
 deriving instance EraTx era => Eq (AlonzoTx era)
 

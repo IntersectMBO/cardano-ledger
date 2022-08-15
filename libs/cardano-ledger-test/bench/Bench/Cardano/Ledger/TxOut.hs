@@ -122,7 +122,11 @@ accessTxOutAlonzoBench count name mkTxOuts =
         bench "addrTxOutL" $
           nf (map (^. addrTxOutL)) txOuts,
       env (pure (mkTxOuts <$> [1 .. count])) $ \txOuts ->
-        bench "getField value" $ nf (map (^. valueTxOutL)) txOuts
+        bench "valueTxOutL" $ nf (map (^. valueTxOutL)) txOuts,
+      env (pure (mkTxOuts <$> [1 .. count])) $ \txOuts ->
+        bench "coin . valueTxOutL" $ nf (map (coin . (^. valueTxOutL))) txOuts,
+      env (pure (mkTxOuts <$> [1 .. count])) $ \txOuts ->
+        bench "coinTxOutL" $ nf (map (^. coinTxOutL)) txOuts
     ]
 
 serializeTxOutAlonzoBench :: Int -> String -> (Int -> TxOut A) -> Benchmark

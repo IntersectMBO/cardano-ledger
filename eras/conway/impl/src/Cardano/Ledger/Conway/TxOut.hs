@@ -35,20 +35,32 @@ import qualified Cardano.Ledger.Crypto as CC
 import Data.Maybe.Strict (StrictMaybe (..))
 
 instance CC.Crypto c => EraTxOut (ConwayEra c) where
+  {-# SPECIALIZE instance EraTxOut (ConwayEra CC.StandardCrypto) #-}
+
   type TxOut (ConwayEra c) = BabbageTxOut (ConwayEra c)
 
   mkBasicTxOut addr vl = BabbageTxOut addr vl NoDatum SNothing
 
   addrEitherTxOutL = addrEitherBabbageTxOutL
+  {-# INLINE addrEitherTxOutL #-}
 
   valueEitherTxOutL = valueEitherBabbageTxOutL
+  {-# INLINE valueEitherTxOutL #-}
 
 instance CC.Crypto c => AlonzoEraTxOut (ConwayEra c) where
+  {-# SPECIALIZE instance AlonzoEraTxOut (ConwayEra CC.StandardCrypto) #-}
+
   dataHashTxOutL = dataHashBabbageTxOutL
+  {-# INLINE dataHashTxOutL #-}
 
 instance CC.Crypto c => BabbageEraTxOut (ConwayEra c) where
+  {-# SPECIALIZE instance BabbageEraTxOut (ConwayEra CC.StandardCrypto) #-}
+
   dataTxOutL = dataBabbageTxOutL
+  {-# INLINE dataTxOutL #-}
 
   datumTxOutL = datumBabbageTxOutL
+  {-# INLINE datumTxOutL #-}
 
   referenceScriptTxOutL = referenceScriptBabbageTxOutL
+  {-# INLINE referenceScriptTxOutL #-}

@@ -52,52 +52,83 @@ import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC
 
 instance CC.Crypto c => EraTxBody (ConwayEra c) where
+  {-# SPECIALIZE instance EraTxBody (ConwayEra CC.StandardCrypto) #-}
+
   type TxBody (ConwayEra c) = BabbageTxBody (ConwayEra c)
 
   mkBasicTxBody = mkBabbageTxBody
 
   inputsTxBodyL = inputsBabbageTxBodyL
+  {-# INLINE inputsTxBodyL #-}
 
   outputsTxBodyL = outputsBabbageTxBodyL
+  {-# INLINE outputsTxBodyL #-}
 
   feeTxBodyL = feeBabbageTxBodyL
+  {-# INLINE feeTxBodyL #-}
 
   auxDataHashTxBodyL = auxDataHashBabbageTxBodyL
+  {-# INLINE auxDataHashTxBodyL #-}
 
   allInputsTxBodyF = allInputsBabbageTxBodyF
+  {-# INLINE allInputsTxBodyF #-}
 
   mintedTxBodyF = mintedBabbageTxBodyF
+  {-# INLINE mintedTxBodyF #-}
 
 instance CC.Crypto c => ShelleyEraTxBody (ConwayEra c) where
+  {-# SPECIALIZE instance ShelleyEraTxBody (ConwayEra CC.StandardCrypto) #-}
+
   wdrlsTxBodyL = wdrlsBabbbageTxBodyL
+  {-# INLINE wdrlsTxBodyL #-}
 
   ttlTxBodyL = notSupportedInThisEraL
+  {-# INLINE ttlTxBodyL #-}
 
   updateTxBodyL = updateBabbageTxBodyL
+  {-# INLINE updateTxBodyL #-}
 
   certsTxBodyL = certsBabbageTxBodyL
+  {-# INLINE certsTxBodyL #-}
 
 instance CC.Crypto c => ShelleyMAEraTxBody (ConwayEra c) where
+  {-# SPECIALIZE instance ShelleyMAEraTxBody (ConwayEra CC.StandardCrypto) #-}
+
   vldtTxBodyL = vldtBabbageTxBodyL
+  {-# INLINE vldtTxBodyL #-}
 
   mintTxBodyL = mintBabbageTxBodyL
+  {-# INLINE mintTxBodyL #-}
 
 instance CC.Crypto c => AlonzoEraTxBody (ConwayEra c) where
+  {-# SPECIALIZE instance AlonzoEraTxBody (ConwayEra CC.StandardCrypto) #-}
+
   collateralInputsTxBodyL = collateralInputsBabbageTxBodyL
+  {-# INLINE collateralInputsTxBodyL #-}
 
   reqSignerHashesTxBodyL = reqSignerHashesBabbageTxBodyL
+  {-# INLINE reqSignerHashesTxBodyL #-}
 
   scriptIntegrityHashTxBodyL = scriptIntegrityHashBabbageTxBodyL
+  {-# INLINE scriptIntegrityHashTxBodyL #-}
 
   networkIdTxBodyL = networkIdBabbageTxBodyL
+  {-# INLINE networkIdTxBodyL #-}
 
 instance CC.Crypto c => BabbageEraTxBody (ConwayEra c) where
+  {-# SPECIALIZE instance BabbageEraTxBody (ConwayEra CC.StandardCrypto) #-}
+
   sizedOutputsTxBodyL = sizedOutputsBabbageTxBodyL
+  {-# INLINE sizedOutputsTxBodyL #-}
 
   referenceInputsTxBodyL = referenceInputsBabbageTxBodyL
+  {-# INLINE referenceInputsTxBodyL #-}
 
   totalCollateralTxBodyL = totalCollateralBabbageTxBodyL
+  {-# INLINE totalCollateralTxBodyL #-}
 
   collateralReturnTxBodyL = collateralReturnBabbageTxBodyL
+  {-# INLINE collateralReturnTxBodyL #-}
 
   sizedCollateralReturnTxBodyL = sizedCollateralReturnBabbageTxBodyL
+  {-# INLINE sizedCollateralReturnTxBodyL #-}
