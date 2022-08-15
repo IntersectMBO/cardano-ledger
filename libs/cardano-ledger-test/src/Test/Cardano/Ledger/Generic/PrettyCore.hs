@@ -1262,7 +1262,7 @@ pcTxBodyField proof x = case x of
 
 pcTxField :: forall era. Reflect era => Proof era -> TxField era -> [(Text, PDoc)]
 pcTxField proof x = case x of
-  Body b -> [("txbody hash", ppSafeHash (hashAnnotated @(Crypto era) @EraIndependentTxBody b)), ("body", pcTxBody proof b)]
+  Body b -> [("txbody hash", ppSafeHash (hashAnnotated b)), ("body", pcTxBody proof b)]
   BodyI xs -> [("body", ppRecord "TxBody" (concat (map (pcTxBodyField proof) xs)))]
   Witnesses w -> [("witnesses", pcWitnesses proof w)]
   WitnessesI ws -> [("witnesses", ppRecord "Witnesses" (concat (map (pcWitnessesField proof) ws)))]

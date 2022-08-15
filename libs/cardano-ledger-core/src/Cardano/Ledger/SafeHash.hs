@@ -169,9 +169,10 @@ class SafeToHash x => HashAnnotated x index crypto | x -> index crypto where
   indexProxy :: x -> Proxy index
   indexProxy _ = Proxy @index
 
--- | Create a @('SafeHash' i crypto)@, given @(HasAlgorithm crypto)@ and  @(HashAnnotated x i crypto)@ instances.
-hashAnnotated :: forall c i x. (HasAlgorithm c, HashAnnotated x i c) => x -> SafeHash c i
-hashAnnotated = makeHashWithExplicitProxys (Proxy @c) (Proxy @i)
+  -- | Create a @('SafeHash' i crypto)@, given @(HasAlgorithm crypto)@ and  @(HashAnnotated x i crypto)@ instances.
+  hashAnnotated :: HasAlgorithm crypto => x -> SafeHash crypto index
+  hashAnnotated = makeHashWithExplicitProxys (Proxy @crypto) (Proxy @index)
+
 
 -- ========================================================================
 

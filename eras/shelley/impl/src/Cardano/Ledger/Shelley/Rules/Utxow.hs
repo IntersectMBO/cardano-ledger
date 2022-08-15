@@ -423,7 +423,7 @@ validateVerifiedWits tx =
     nonEmpty -> failure $ InvalidWitnessesUTXOW nonEmpty
   where
     txBody = tx ^. bodyTxL
-    txBodyHash = extractHash (hashAnnotated @(Crypto era) txBody)
+    txBodyHash = extractHash (hashAnnotated txBody)
     wvkKey (WitVKey k _) = k
     failed =
       wvkKey
