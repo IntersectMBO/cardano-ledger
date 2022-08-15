@@ -73,14 +73,15 @@ If you are using [NixOS](https://nixos.org/) add the snippet below to your
 `/etc/nixos/configuration.nix`:
 
 ```
-nix.binaryCaches = [
-  "https://cache.nixos.org"
-  "https://hydra.iohk.io"
-];
-
-nix.binaryCachePublicKeys = [
-  "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="
-];
+nix.settings = {
+  substituters = [
+    "https://cache.nixos.org"
+    "https://cache.iog.io"
+  ];
+  trusted-public-keys = [
+    "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="
+  ];
+};
 ```
 
 If you are using the `nix` package manager next to another operating system put
