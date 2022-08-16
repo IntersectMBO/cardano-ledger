@@ -315,7 +315,7 @@ viewTxOut (TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal dataH
 viewTxOut TxOut_AddrHash28_AdaOnly {} = error addressErrorMsg
 viewTxOut TxOut_AddrHash28_AdaOnly_DataHash32 {} = error addressErrorMsg
 
-instance EraTxOut era => Show (AlonzoTxOut era) where
+instance (Era era, Val (Value era), Show (Value era)) => Show (AlonzoTxOut era) where
   show = show . viewTxOut -- FIXME: showing tuple is ugly
 
 deriving via InspectHeapNamed "AlonzoTxOut" (AlonzoTxOut era) instance NoThunks (AlonzoTxOut era)
@@ -420,13 +420,17 @@ data TxBodyRaw era = TxBodyRaw
   }
   deriving (Generic, Typeable)
 
-deriving instance EraTxBody era => Eq (TxBodyRaw era)
+deriving instance
+  (Era era, Eq (PParamsUpdate era), Eq (Value era), Compactible (Value era)) =>
+  Eq (TxBodyRaw era)
 
-instance EraTxBody era => NoThunks (TxBodyRaw era)
+instance (Era era, NoThunks (PParamsUpdate era)) => NoThunks (TxBodyRaw era)
 
 instance (Era era, NFData (PParamsUpdate era)) => NFData (TxBodyRaw era)
 
-deriving instance EraTxBody era => Show (TxBodyRaw era)
+deriving instance
+  (Era era, Show (PParamsUpdate era), Show (Value era), Val (Value era)) =>
+  Show (TxBodyRaw era)
 
 newtype AlonzoTxBody era = TxBodyConstr (MemoBytes (TxBodyRaw era))
   deriving (ToCBOR)
@@ -437,7 +441,7 @@ type TxBody era = AlonzoTxBody era
 {-# DEPRECATED TxBody "Use `AlonzoTxBody` instead" #-}
 
 lensTxBodyRaw ::
-  EraTxBody era =>
+  (Era era, Val (Value era), ToCBOR (PParamsUpdate era), DecodeNonNegative (Value era)) =>
   (TxBodyRaw era -> a) ->
   (TxBodyRaw era -> t -> TxBodyRaw era) ->
   Lens (AlonzoTxBody era) (AlonzoTxBody era) a t
@@ -517,16 +521,24 @@ instance CC.Crypto c => AlonzoEraTxBody (AlonzoEra c) where
 
 deriving newtype instance CC.Crypto (Crypto era) => Eq (AlonzoTxBody era)
 
-deriving instance EraTxBody era => NoThunks (AlonzoTxBody era)
+deriving instance (Era era, NoThunks (PParamsUpdate era)) => NoThunks (AlonzoTxBody era)
 
 deriving instance (Era era, NFData (PParamsUpdate era)) => NFData (AlonzoTxBody era)
 
-deriving instance EraTxBody era => Show (AlonzoTxBody era)
+deriving instance
+  (Era era, Show (PParamsUpdate era), Show (Value era), Val (Value era)) =>
+  Show (AlonzoTxBody era)
 
 deriving via
   (Mem (TxBodyRaw era))
   instance
-    EraTxBody era => FromCBOR (Annotator (AlonzoTxBody era))
+    ( Era era,
+      FromCBOR (PParamsUpdate era),
+      Val (Value era),
+      Show (Value era),
+      DecodeNonNegative (Value era)
+    ) =>
+    FromCBOR (Annotator (AlonzoTxBody era))
 
 pattern AlonzoTxBody ::
   EraTxBody era =>
@@ -612,7 +624,7 @@ pattern AlonzoTxBody
 {-# COMPLETE AlonzoTxBody #-}
 
 mkAlonzoTxBody ::
-  EraTxBody era =>
+  (Era era, Val (Value era), ToCBOR (PParamsUpdate era), DecodeNonNegative (Value era)) =>
   TxBodyRaw era ->
   AlonzoTxBody era
 mkAlonzoTxBody = TxBodyConstr . memoBytes . encodeTxBodyRaw
@@ -668,7 +680,10 @@ txnetworkid' (TxBodyConstr (Memo raw _)) = _txnetworkid raw
 -- Serialisation
 --------------------------------------------------------------------------------
 
-instance EraTxOut era => ToCBOR (AlonzoTxOut era) where
+instance
+  (Era era, Val (Value era), DecodeNonNegative (Value era), ToCBOR (CompactForm (Value era))) =>
+  ToCBOR (AlonzoTxOut era)
+  where
   toCBOR (TxOutCompact addr cv) =
     encodeListLen 2
       <> toCBOR addr
@@ -679,7 +694,10 @@ instance EraTxOut era => ToCBOR (AlonzoTxOut era) where
       <> toCBOR cv
       <> toCBOR dh
 
-instance EraTxOut era => FromCBOR (AlonzoTxOut era) where
+instance
+  (Era era, Show (Value era), Val (Value era), DecodeNonNegative (Value era)) =>
+  FromCBOR (AlonzoTxOut era)
+  where
   fromCBOR = fromNotSharedCBOR
   {-# INLINE fromCBOR #-}
 
@@ -719,7 +737,7 @@ instance
   {-# INLINE fromSharedCBOR #-}
 
 pattern TxOutCompact ::
-  (EraTxOut era, HasCallStack) =>
+  (Era era, Val (Value era), HasCallStack) =>
   CompactAddr (Crypto era) ->
   CompactForm (Value era) ->
   AlonzoTxOut era
@@ -729,7 +747,7 @@ pattern TxOutCompact addr vl <-
     TxOutCompact cAddr cVal = mkTxOutCompact (decompactAddr cAddr) cAddr cVal SNothing
 
 pattern TxOutCompactDH ::
-  (EraTxOut era, HasCallStack) =>
+  (Era era, Val (Value era), HasCallStack) =>
   CompactAddr (Crypto era) ->
   CompactForm (Value era) ->
   DataHash (Crypto era) ->
@@ -754,7 +772,9 @@ mkTxOutCompact addr cAddr cVal mdh
   | otherwise = TxOutCompact' cAddr cVal
 
 encodeTxBodyRaw ::
-  EraTxBody era => TxBodyRaw era -> Encode ('Closed 'Sparse) (TxBodyRaw era)
+  (Era era, ToCBOR (PParamsUpdate era), Val (Value era), DecodeNonNegative (Value era)) =>
+  TxBodyRaw era ->
+  Encode ('Closed 'Sparse) (TxBodyRaw era)
 encodeTxBodyRaw
   TxBodyRaw
     { _inputs,
@@ -790,7 +810,15 @@ encodeTxBodyRaw
       !> encodeKeyedStrictMaybe 7 _adHash
       !> encodeKeyedStrictMaybe 15 _txnetworkid
 
-instance EraTxBody era => FromCBOR (TxBodyRaw era) where
+instance
+  ( Era era,
+    FromCBOR (PParamsUpdate era),
+    Show (Value era),
+    Val (Value era),
+    DecodeNonNegative (Value era)
+  ) =>
+  FromCBOR (TxBodyRaw era)
+  where
   fromCBOR =
     decode $
       SparseKeyed
@@ -856,7 +884,15 @@ initial =
     SNothing
     SNothing
 
-instance EraTxBody era => FromCBOR (Annotator (TxBodyRaw era)) where
+instance
+  ( Era era,
+    FromCBOR (PParamsUpdate era),
+    Val (Value era),
+    Show (Value era),
+    DecodeNonNegative (Value era)
+  ) =>
+  FromCBOR (Annotator (TxBodyRaw era))
+  where
   fromCBOR = pure <$> fromCBOR
 
 getAlonzoTxOutDataHash ::

@@ -48,6 +48,7 @@ import Cardano.Binary (Annotator, FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core hiding (TxBody)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash)
@@ -110,16 +111,22 @@ data TxBodyRaw era = TxBodyRaw
   }
 
 deriving instance
-  (NFData (Value era), EraTxOut era, NFData (PParamsUpdate era)) =>
+  (Era era, NFData (Value era), NFData (PParamsUpdate era)) =>
   NFData (TxBodyRaw era)
 
-deriving instance EraTxBody era => Eq (TxBodyRaw era)
+deriving instance
+  (Era era, Eq (PParamsUpdate era), Eq (Value era), Eq (CompactForm (Value era))) =>
+  Eq (TxBodyRaw era)
 
-deriving instance EraTxBody era => Show (TxBodyRaw era)
+deriving instance
+  (Era era, Compactible (Value era), Show (Value era), Show (PParamsUpdate era)) =>
+  Show (TxBodyRaw era)
 
 deriving instance Generic (TxBodyRaw era)
 
-deriving instance (EraTxBody era, NoThunks (Value era)) => NoThunks (TxBodyRaw era)
+deriving instance
+  (Era era, NoThunks (PParamsUpdate era), NoThunks (Value era)) =>
+  NoThunks (TxBodyRaw era)
 
 instance ShelleyMAEraTxBody era => FromCBOR (TxBodyRaw era) where
   fromCBOR =
@@ -194,16 +201,20 @@ type TxBody era = MATxBody era
 
 deriving instance Eq (MATxBody era)
 
-deriving instance EraTxBody era => Show (MATxBody era)
+deriving instance
+  (Era era, Show (Value era), Compactible (Value era), Show (PParamsUpdate era)) =>
+  Show (MATxBody era)
 
 deriving instance Generic (MATxBody era)
 
-deriving newtype instance (EraTxBody era, NoThunks (Value era)) => NoThunks (MATxBody era)
+deriving newtype instance
+  (Era era, NoThunks (Value era), NoThunks (PParamsUpdate era)) =>
+  NoThunks (MATxBody era)
 
 deriving newtype instance
   ( NFData (Value era),
     NFData (PParamsUpdate era),
-    EraTxBody era
+    Era era
   ) =>
   NFData (MATxBody era)
 

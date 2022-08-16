@@ -216,9 +216,13 @@ sizeAlonzoTxF = to (fromIntegral . LBS.length . serializeEncoding . toCBORForSiz
 isValidAlonzoTxL :: Lens' (AlonzoTx era) IsValid
 isValidAlonzoTxL = lens isValid (\tx valid -> tx {isValid = valid})
 
-deriving instance EraTx era => Eq (AlonzoTx era)
+deriving instance
+  (Era era, Eq (Core.TxBody era), Eq (AuxiliaryData era)) =>
+  Eq (AlonzoTx era)
 
-deriving instance EraTx era => Show (AlonzoTx era)
+deriving instance
+  (Era era, Show (Core.TxBody era), Show (AuxiliaryData era), Show (Script era)) =>
+  Show (AlonzoTx era)
 
 instance
   ( Era era,
@@ -507,10 +511,20 @@ toCBORForMempoolSubmission
         !> To isValid
         !> E (encodeNullMaybe toCBOR . strictMaybeToMaybe) auxiliaryData
 
-instance EraTx era => ToCBOR (AlonzoTx era) where
+instance
+  (Era era, ToCBOR (Core.TxBody era), ToCBOR (AuxiliaryData era)) =>
+  ToCBOR (AlonzoTx era)
+  where
   toCBOR = toCBORForMempoolSubmission
 
-instance (EraTx era, Script era ~ AlonzoScript era) => FromCBOR (Annotator (AlonzoTx era)) where
+instance
+  ( EraScript era,
+    Script era ~ AlonzoScript era,
+    FromCBOR (Annotator (Core.TxBody era)),
+    FromCBOR (Annotator (AuxiliaryData era))
+  ) =>
+  FromCBOR (Annotator (AlonzoTx era))
+  where
   fromCBOR =
     decode $
       Ann (RecD AlonzoTx)

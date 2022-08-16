@@ -140,9 +140,21 @@ instance
   ) =>
   NFData (TxRaw era)
 
-deriving instance EraTx era => Eq (TxRaw era)
+deriving instance
+  ( Era era,
+    Eq (Core.TxBody era),
+    Eq (Witnesses era),
+    Eq (AuxiliaryData era)
+  ) =>
+  Eq (TxRaw era)
 
-deriving instance EraTx era => Show (TxRaw era)
+deriving instance
+  ( Era era,
+    Show (Core.TxBody era),
+    Show (Witnesses era),
+    Show (AuxiliaryData era)
+  ) =>
+  Show (TxRaw era)
 
 instance
   ( Era era,
@@ -221,9 +233,11 @@ deriving newtype instance
   ) =>
   NFData (ShelleyTx era)
 
-deriving newtype instance Eq (Tx era)
+deriving newtype instance Eq (ShelleyTx era)
 
-deriving newtype instance EraTx era => Show (ShelleyTx era)
+deriving newtype instance
+  (Era era, Show (Core.TxBody era), Show (Witnesses era), Show (AuxiliaryData era)) =>
+  Show (ShelleyTx era)
 
 deriving newtype instance
   ( Era era,
@@ -265,7 +279,14 @@ encodeTxRaw TxRaw {_body, _wits, _auxiliaryData} =
     !> To _wits
     !> E (encodeNullMaybe toCBOR . strictMaybeToMaybe) _auxiliaryData
 
-instance EraTx era => FromCBOR (Annotator (TxRaw era)) where
+instance
+  ( Era era,
+    FromCBOR (Annotator (Core.TxBody era)),
+    FromCBOR (Annotator (Witnesses era)),
+    FromCBOR (Annotator (AuxiliaryData era))
+  ) =>
+  FromCBOR (Annotator (TxRaw era))
+  where
   fromCBOR =
     decode $
       Ann (RecD TxRaw)
