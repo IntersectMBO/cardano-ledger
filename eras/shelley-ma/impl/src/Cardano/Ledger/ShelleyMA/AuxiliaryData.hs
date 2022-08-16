@@ -32,7 +32,7 @@ import qualified Cardano.Ledger.Core as Core (AuxiliaryData)
 import Cardano.Ledger.Crypto (HASH)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Hashes (EraIndependentAuxiliaryData)
-import Cardano.Ledger.MemoBytes (Mem, MemoBytes (Memo), memoBytes)
+import Cardano.Ledger.MemoBytes (Mem, MemoBytes (..), MemoHashIndex, memoBytes)
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash, hashAnnotated)
 import Cardano.Ledger.Serialization (mapFromCBOR, mapToCBOR)
 import Cardano.Ledger.Shelley.Metadata (Metadatum, validMetadatum)
@@ -88,7 +88,10 @@ newtype MAAuxiliaryData era = AuxiliaryDataWithBytes (MemoBytes AuxiliaryDataRaw
   deriving (Generic)
   deriving newtype (ToCBOR, SafeToHash)
 
-instance (c ~ Crypto era) => HashAnnotated (MAAuxiliaryData era) EraIndependentAuxiliaryData c
+type instance MemoHashIndex AuxiliaryDataRaw = EraIndependentAuxiliaryData
+
+instance (c ~ Crypto era) => HashAnnotated (MAAuxiliaryData era) EraIndependentAuxiliaryData c where
+  hashAnnotated (AuxiliaryDataWithBytes mb) = mbHash mb
 
 deriving newtype instance Eq (MAAuxiliaryData era)
 

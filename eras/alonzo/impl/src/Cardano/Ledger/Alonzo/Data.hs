@@ -63,7 +63,7 @@ import Cardano.Ledger.Core hiding (AuxiliaryData)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (HASH)
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.MemoBytes (Mem, MemoBytes (..), memoBytes, mkMemoBytes, shortToLazy)
+import Cardano.Ledger.MemoBytes (Mem, MemoBytes (..), MemoHashIndex, memoBytes, mkMemoBytes, shortToLazy)
 import Cardano.Ledger.SafeHash
   ( HashAnnotated,
     SafeToHash (..),
@@ -124,7 +124,10 @@ instance (Typeable era, Era era) => FromCBOR (Annotator (Data era)) where
     (Annotator getT, Annotator getBytes) <- withSlice fromCBOR
     pure (Annotator (\fullbytes -> DataConstr (mkMemoBytes (getT fullbytes) (getBytes fullbytes))))
 
-instance (Crypto era ~ c) => HashAnnotated (Data era) EraIndependentData c
+type instance MemoHashIndex PlutusData = EraIndependentData
+
+instance (Crypto era ~ c) => HashAnnotated (Data era) EraIndependentData c where
+  hashAnnotated (DataConstr mb) = mbHash mb
 
 instance Typeable era => NoThunks (Data era)
 
@@ -376,13 +379,16 @@ validateAlonzoAuxiliaryData pv (AlonzoAuxiliaryData metadata scrips) =
   all validMetadatum metadata
     && all (validScript pv) scrips
 
-instance (Crypto era ~ c) => HashAnnotated (AuxiliaryData era) EraIndependentAuxiliaryData c
+instance (Crypto era ~ c) => HashAnnotated (AuxiliaryData era) EraIndependentAuxiliaryData c where
+  hashAnnotated (AuxiliaryDataConstr mb) = mbHash mb
 
 deriving newtype instance NFData (Script era) => NFData (AuxiliaryData era)
 
 deriving instance Eq (AuxiliaryData era)
 
 deriving instance (Show (Script era), HashAlgorithm (HASH (Crypto era))) => Show (AuxiliaryData era)
+
+type instance MemoHashIndex AuxiliaryDataRaw = EraIndependentAuxiliaryData
 
 deriving via InspectHeapNamed "AuxiliaryDataRaw" (AuxiliaryData era) instance NoThunks (AuxiliaryData era)
 

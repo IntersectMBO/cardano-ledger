@@ -356,8 +356,6 @@ data TestUTxOInfo era = TestUTxOInfo
   }
   deriving stock (Generic)
 
--- deriving (Show) via (Quiet (TestUTxOInfo era))
-
 deriving via Quiet (TestUTxOInfo era) instance HashAlgorithm (HASH (Crypto era)) => Show (TestUTxOInfo era)
 
 tuoi_txid :: Lens' (TestUTxOInfo era) (Maybe (Shelley.TxIn (Crypto era)))
