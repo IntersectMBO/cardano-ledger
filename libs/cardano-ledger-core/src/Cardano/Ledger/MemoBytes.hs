@@ -23,7 +23,7 @@
 --   can be derived for free. MemoBytes plays an important role in the 'SafeToHash' class
 --   introduced in the module 'Cardano.Ledger.SafeHash'
 module Cardano.Ledger.MemoBytes
-  ( MemoBytes (Memo, memoHash),
+  ( MemoBytes (Memo, mbHash),
     MemoHashIndex,
     Mem,
     mkMemoBytes,
@@ -67,11 +67,11 @@ import Prelude hiding (span)
 --   from the serialization of a type, and ToCBOR instances do not have unique
 --   serializations.
 data MemoBytes t era = Memo'
-  { memoType :: !(t era),
-    memoByteString :: ShortByteString,
-    memoHash :: SafeHash (Crypto era) (MemoHashIndex t)
+  { mbType :: !(t era),
+    mbBytes :: ShortByteString,
+    mbHash :: SafeHash (Crypto era) (MemoHashIndex t)
   }
-  deriving (NoThunks) via AllowThunksIn '["memoByteString"] (MemoBytes t era)
+  deriving (NoThunks) via AllowThunksIn '["mbBytes"] (MemoBytes t era)
 
 pattern Memo :: Era era => t era -> ShortByteString -> MemoBytes t era
 pattern Memo memoType memoBytes <-
@@ -107,7 +107,7 @@ instance Eq (MemoBytes t era) where (Memo' _ x _) == (Memo' _ y _) = x == y
 instance Show (t era) => Show (MemoBytes t era) where show (Memo' y _ h) = show y <> "(hash " <> show h <> ")"
 
 instance SafeToHash (MemoBytes t era) where
-  originalBytes = fromShort . memoByteString
+  originalBytes = fromShort . mbBytes
 
 -- | Turn a lazy bytestring into a short bytestring.
 shorten :: Lazy.ByteString -> ShortByteString

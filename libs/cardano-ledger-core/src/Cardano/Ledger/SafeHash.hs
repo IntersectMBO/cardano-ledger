@@ -173,7 +173,6 @@ class SafeToHash x => HashAnnotated x index crypto | x -> index crypto where
   hashAnnotated :: HasAlgorithm crypto => x -> SafeHash crypto index
   hashAnnotated = makeHashWithExplicitProxys (Proxy @crypto) (Proxy @index)
 
-
 -- ========================================================================
 
 -- | Create @('SafeHash' index crypto)@ values, used when the type being hashed:
