@@ -43,7 +43,9 @@ import Cardano.Binary
     encodePreEncoded,
     withSlice,
   )
+import Cardano.Crypto.Hash (HashAlgorithm (hashAlgorithmName))
 import Cardano.Ledger.Core (Era (Crypto))
+import Cardano.Ledger.Crypto (HASH)
 import Cardano.Ledger.SafeHash (SafeHash, SafeToHash (..))
 import Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
 import Codec.CBOR.Write (toLazyByteString)
@@ -104,7 +106,8 @@ instance
 
 instance Eq (MemoBytes t era) where (Memo' _ x _) == (Memo' _ y _) = x == y
 
-instance Show (t era) => Show (MemoBytes t era) where show (Memo' y _ h) = show y <> "(hash " <> show h <> ")"
+instance (Show (t era), HashAlgorithm (HASH (Crypto era))) => Show (MemoBytes t era) where
+  show (Memo' y _ h) = show y <> " (" <> hashAlgorithmName (Proxy :: Proxy (HASH (Crypto era))) <> ": " <> show h <> ")"
 
 instance SafeToHash (MemoBytes t era) where
   originalBytes = fromShort . mbBytes
@@ -137,7 +140,7 @@ memoBytes :: Era era => Encode w (t era) -> MemoBytes t era
 memoBytes t = mkMemoBytes (runE t) (toLazyByteString (encode t))
 
 -- | Try and deserialize a MemoBytes, and then reconstruct it. Useful in tests.
-roundTripMemo :: (FromCBOR (t era), Era era) => MemoBytes t era -> Either Codec.CBOR.Read.DeserialiseFailure (Lazy.ByteString, MemoBytes t era)
+roundTripMemo :: (FromCBOR (t era), Era era) => MemoBytes t era -> Either DeserialiseFailure (Lazy.ByteString, MemoBytes t era)
 roundTripMemo (Memo' _t bytes _hash) =
   case deserialiseFromBytes fromCBOR lbs of
     Left err -> Left err

@@ -57,12 +57,14 @@ import Cardano.Binary
     serializeEncoding',
   )
 import Cardano.Crypto.DSIGN.Class (SigDSIGN, VerKeyDSIGN)
+import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.Alonzo.Data (Data, hashData)
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..), Tag)
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Crypto (HASH)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
@@ -116,11 +118,15 @@ instance FromCBORGroup RdmrPtr where
   fromCBORGroup = RdmrPtr <$> fromCBOR <*> fromCBOR
 
 newtype RedeemersRaw era = RedeemersRaw (Map RdmrPtr (Data era, ExUnits))
-  deriving (Eq, Show, Generic, Typeable, NFData)
+  deriving (Eq, Generic, Typeable, NFData)
   deriving newtype (NoThunks)
 
+deriving instance HashAlgorithm (HASH (Crypto era)) => Show (RedeemersRaw era)
+
 newtype Redeemers era = RedeemersConstr (MemoBytes RedeemersRaw era)
-  deriving newtype (Eq, Show, ToCBOR, NoThunks, SafeToHash, Typeable, NFData)
+  deriving newtype (Eq, ToCBOR, NoThunks, SafeToHash, Typeable, NFData)
+
+deriving instance HashAlgorithm (HASH (Crypto era)) => Show (Redeemers era)
 
 -- =====================================================
 -- Pattern for Redeemers
@@ -228,8 +234,10 @@ isEmptyTxWitness (TxWitnessConstr (Memo (TxWitnessRaw a b c d (Redeemers' e)) _)
 
 -- =====================================================
 newtype TxDatsRaw era = TxDatsRaw (Map (DataHash (Crypto era)) (Data era))
-  deriving (Generic, Typeable, Eq, Show)
+  deriving (Generic, Typeable, Eq)
   deriving newtype (NoThunks, NFData)
+
+deriving instance HashAlgorithm (HASH (Crypto era)) => Show (TxDatsRaw era)
 
 encodeTxDatsRaw ::
   ToCBOR (Data era) =>
@@ -262,7 +270,9 @@ instance (Typeable era, Era era) => FromCBOR (Annotator (TxDatsRaw era)) where
   fromCBOR = decode $ fmap (TxDatsRaw . keyBy hashData) <$> listDecodeA From
 
 newtype TxDats era = TxDatsConstr (MemoBytes TxDatsRaw era)
-  deriving newtype (SafeToHash, ToCBOR, Eq, Show, NoThunks, NFData)
+  deriving newtype (SafeToHash, ToCBOR, Eq, NoThunks, NFData)
+
+deriving instance HashAlgorithm (HASH (Crypto era)) => Show (TxDats era)
 
 instance Era era => Semigroup (TxDats era) where
   (TxDats m) <> (TxDats m') = TxDats (m <> m')

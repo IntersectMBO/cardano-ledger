@@ -21,6 +21,7 @@ module Cardano.Ledger.ShelleyMA.AuxiliaryData
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), peekTokenType)
+import Cardano.Crypto.Hash (HashAlgorithm)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Core
   ( Era (..),
@@ -28,6 +29,7 @@ import Cardano.Ledger.Core
     Script,
   )
 import qualified Cardano.Ledger.Core as Core (AuxiliaryData)
+import Cardano.Ledger.Crypto (HASH)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Hashes (EraIndependentAuxiliaryData)
 import Cardano.Ledger.MemoBytes (Mem, MemoBytes (Memo), memoBytes)
@@ -90,7 +92,7 @@ instance (c ~ Crypto era) => HashAnnotated (MAAuxiliaryData era) EraIndependentA
 
 deriving newtype instance Eq (MAAuxiliaryData era)
 
-deriving newtype instance Show (Script era) => Show (MAAuxiliaryData era)
+deriving newtype instance (Show (Script era), HashAlgorithm (HASH (Crypto era))) => Show (MAAuxiliaryData era)
 
 deriving newtype instance
   (NoThunks (Script era), Era era) =>

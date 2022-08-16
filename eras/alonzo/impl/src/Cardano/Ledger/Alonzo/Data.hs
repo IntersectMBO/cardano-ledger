@@ -61,6 +61,7 @@ import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..))
 import Cardano.Ledger.Core hiding (AuxiliaryData)
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Crypto (HASH)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.MemoBytes (Mem, MemoBytes (..), memoBytes, mkMemoBytes, shortToLazy)
 import Cardano.Ledger.SafeHash
@@ -113,8 +114,10 @@ instance Typeable era => FromCBOR (Annotator (PlutusData era)) where
   fromCBOR = pure <$> Cborg.decode
 
 newtype Data era = DataConstr (MemoBytes PlutusData era)
-  deriving (Eq, Generic, Show)
+  deriving (Eq, Generic)
   deriving newtype (SafeToHash, ToCBOR, NFData)
+
+deriving instance HashAlgorithm (HASH (Crypto era)) => Show (Data era)
 
 instance (Typeable era, Era era) => FromCBOR (Annotator (Data era)) where
   fromCBOR = do
@@ -379,7 +382,7 @@ deriving newtype instance NFData (Script era) => NFData (AuxiliaryData era)
 
 deriving instance Eq (AuxiliaryData era)
 
-deriving instance Show (Script era) => Show (AuxiliaryData era)
+deriving instance (Show (Script era), HashAlgorithm (HASH (Crypto era))) => Show (AuxiliaryData era)
 
 deriving via InspectHeapNamed "AuxiliaryDataRaw" (AuxiliaryData era) instance NoThunks (AuxiliaryData era)
 

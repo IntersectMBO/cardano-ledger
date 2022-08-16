@@ -12,6 +12,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.Scripts
@@ -32,8 +33,10 @@ import Cardano.Binary
     FromCBOR (fromCBOR),
     ToCBOR,
   )
+import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.BaseTypes (invalidKey)
 import Cardano.Ledger.Core
+import Cardano.Ledger.Crypto (HASH)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (Witness))
 import Cardano.Ledger.MemoBytes
@@ -77,14 +80,18 @@ data MultiSigRaw era
     RequireAnyOf' ![MultiSig era]
   | -- | Require M of the given sub-terms to be satisfied.
     RequireMOf' !Int ![MultiSig era]
-  deriving (Show, Eq, Generic)
+  deriving (Eq, Generic)
   deriving anyclass (NoThunks)
+
+deriving instance HashAlgorithm (HASH (Crypto era)) => Show (MultiSigRaw era)
 
 instance NFData (MultiSigRaw era)
 
 newtype MultiSig era = MultiSigConstr (MemoBytes MultiSigRaw era)
-  deriving (Eq, Show, Generic)
+  deriving (Eq, Generic)
   deriving newtype (ToCBOR, NoThunks, SafeToHash)
+
+deriving instance HashAlgorithm (HASH (Crypto era)) => Show (MultiSig era)
 
 -- | Magic number "memorialized" in the ValidateScript class under the method:
 --   scriptPrefixTag:: Core.Script era -> Bs.ByteString, for the Shelley Era.

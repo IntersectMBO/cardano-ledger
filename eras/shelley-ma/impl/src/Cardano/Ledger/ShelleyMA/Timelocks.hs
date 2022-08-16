@@ -43,8 +43,10 @@ import Cardano.Binary
     FullByteString (Full),
     ToCBOR (toCBOR),
   )
+import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import Cardano.Ledger.Core
+import Cardano.Ledger.Crypto (HASH)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (Witness))
 import Cardano.Ledger.MemoBytes
   ( Mem,
@@ -124,9 +126,11 @@ data TimelockRaw era
   | MOfN !Int !(StrictSeq (Timelock era)) -- Note that the Int may be negative in which case (MOfN -2 [..]) is always True
   | TimeStart !SlotNo -- The start time
   | TimeExpire !SlotNo -- The time it expires
-  deriving (Eq, Show, Generic, NFData)
+  deriving (Eq, Generic, NFData)
 
 deriving instance Era era => NoThunks (TimelockRaw era)
+
+deriving instance HashAlgorithm (HASH (Crypto era)) => Show (TimelockRaw era)
 
 -- | This function deconstructs and then reconstructs the timelock script
 -- to prove the compiler that we can arbirarily switch out the eras as long
@@ -182,8 +186,10 @@ instance Era era => FromCBOR (Annotator (TimelockRaw era)) where
 -- =================================================================
 
 newtype Timelock era = TimelockConstr (MemoBytes TimelockRaw era)
-  deriving (Eq, Show, Generic)
+  deriving (Eq, Generic)
   deriving newtype (ToCBOR, NoThunks, NFData, SafeToHash)
+
+deriving instance HashAlgorithm (HASH (Crypto era)) => Show (Timelock era)
 
 type instance SomeScript 'PhaseOne (ShelleyMAEra ma c) = Timelock (ShelleyMAEra ma c)
 

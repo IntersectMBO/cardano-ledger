@@ -84,6 +84,7 @@ import Cardano.Binary
     serializeEncoding',
   )
 import Cardano.Crypto.DSIGN.Class (SigDSIGN, VerKeyDSIGN)
+import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Alonzo.Data (Data, hashData)
 import Cardano.Ledger.Alonzo.Era
@@ -122,6 +123,7 @@ import Cardano.Ledger.Alonzo.TxWitness
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core hiding (TxBody)
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Crypto (HASH)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Mary.Value (AssetName, MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.SafeHash
@@ -284,7 +286,9 @@ data ScriptIntegrity era
       !(Redeemers era) -- From the witnesses
       !(TxDats era)
       !(Set LangDepView) -- From the Porotocl parameters
-  deriving (Show, Eq, Generic, Typeable)
+  deriving (Eq, Generic, Typeable)
+
+deriving instance HashAlgorithm (HASH (Crypto era)) => Show (ScriptIntegrity era)
 
 deriving instance Typeable era => NoThunks (ScriptIntegrity era)
 
