@@ -166,11 +166,17 @@ type TxOut era = ShelleyTxOut era
 {-# DEPRECATED TxOut "Use `ShelleyTxOut` instead" #-}
 
 instance CC.Crypto crypto => EraTxOut (ShelleyEra crypto) where
+  {-# SPECIALIZE instance EraTxOut (ShelleyEra CC.StandardCrypto) #-}
+
   type TxOut (ShelleyEra crypto) = ShelleyTxOut (ShelleyEra crypto)
 
   mkBasicTxOut = ShelleyTxOut
+
   addrEitherTxOutL = addrEitherShelleyTxOutL
+  {-# INLINE addrEitherTxOutL #-}
+
   valueEitherTxOutL = valueEitherShelleyTxOutL
+  {-# INLINE valueEitherTxOutL #-}
 
 addrEitherShelleyTxOutL ::
   Lens' (ShelleyTxOut era) (Either (Addr (Crypto era)) (CompactAddr (Crypto era)))
@@ -181,6 +187,7 @@ addrEitherShelleyTxOutL =
         Left addr -> txOut {txOutCompactAddr = compactAddr addr}
         Right cAddr -> txOut {txOutCompactAddr = cAddr}
     )
+{-# INLINE addrEitherShelleyTxOutL #-}
 
 valueEitherShelleyTxOutL ::
   (Show (Value era), Compactible (Value era)) =>
@@ -196,6 +203,7 @@ valueEitherShelleyTxOutL =
             }
         Right cValue -> txOut {txOutCompactValue = cValue}
     )
+{-# INLINE valueEitherShelleyTxOutL #-}
 
 -- assume Shelley+ type address : payment addr, staking addr (same length as payment), plus 1 word overhead
 instance (Era era, HeapWords (CompactForm (Value era))) => HeapWords (TxOut era) where
@@ -375,26 +383,32 @@ type TxBody era = ShelleyTxBody era
 {-# DEPRECATED TxBody "Use `ShelleyTxBody` instead" #-}
 
 instance CC.Crypto crypto => EraTxBody (ShelleyEra crypto) where
+  {-# SPECIALIZE instance EraTxBody (ShelleyEra CC.StandardCrypto) #-}
+
   type TxBody (ShelleyEra crypto) = ShelleyTxBody (ShelleyEra crypto)
 
   mkBasicTxBody = mkShelleyTxBody baseTxBodyRaw
 
   allInputsTxBodyF = inputsTxBodyL
+  {-# INLINE allInputsTxBodyF #-}
 
   inputsTxBodyL =
     lens
       (\(TxBodyConstr (Memo m _)) -> _inputsX m)
       (\txBody inputs -> txBody {_inputs = inputs})
+  {-# INLINE inputsTxBodyL #-}
 
   outputsTxBodyL =
     lens
       (\(TxBodyConstr (Memo m _)) -> _outputsX m)
       (\txBody outputs -> txBody {_outputs = outputs})
+  {-# INLINE outputsTxBodyL #-}
 
   feeTxBodyL =
     lens
       (\(TxBodyConstr (Memo m _)) -> _txfeeX m)
       (\txBody fee -> txBody {_txfee = fee})
+  {-# INLINE feeTxBodyL #-}
 
   -- TODO: fix this wart. Shelley does not know what minting is and this lens should move to Mary
   mintedTxBodyF = to (const Set.empty)
@@ -403,6 +417,7 @@ instance CC.Crypto crypto => EraTxBody (ShelleyEra crypto) where
     lens
       (\(TxBodyConstr (Memo m _)) -> _mdHashX m)
       (\txBody auxDataHash -> txBody {_mdHash = auxDataHash})
+  {-# INLINE auxDataHashTxBodyL #-}
 
 class EraTxBody era => ShelleyEraTxBody era where
   wdrlsTxBodyL :: Lens' (Core.TxBody era) (Wdrl (Crypto era))
@@ -414,25 +429,31 @@ class EraTxBody era => ShelleyEraTxBody era where
   certsTxBodyL :: Lens' (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
 
 instance CC.Crypto crypto => ShelleyEraTxBody (ShelleyEra crypto) where
+  {-# SPECIALIZE instance ShelleyEraTxBody (ShelleyEra CC.StandardCrypto) #-}
+
   wdrlsTxBodyL =
     lens
       (\(TxBodyConstr (Memo m _)) -> _wdrlsX m)
       (\txBody wdrls -> txBody {_wdrls = wdrls})
+  {-# INLINE wdrlsTxBodyL #-}
 
   ttlTxBodyL =
     lens
       (\(TxBodyConstr (Memo m _)) -> _ttlX m)
       (\txBody ttl -> txBody {_ttl = ttl})
+  {-# INLINE ttlTxBodyL #-}
 
   updateTxBodyL =
     lens
       (\(TxBodyConstr (Memo m _)) -> _txUpdateX m)
       (\txBody update -> txBody {_txUpdate = update})
+  {-# INLINE updateTxBodyL #-}
 
   certsTxBodyL =
     lens
       (\(TxBodyConstr (Memo m _)) -> _certsX m)
       (\txBody certs -> txBody {_certs = certs})
+  {-# INLINE certsTxBodyL #-}
 
 deriving newtype instance
   (Era era, NoThunks (PParamsUpdate era)) => NoThunks (TxBody era)
