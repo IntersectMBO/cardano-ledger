@@ -76,7 +76,7 @@ import Cardano.Ledger.Rules.ValidationMode
   )
 import Cardano.Ledger.Shelley.HardForks (allowOutsideForecastTTL)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
-import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoEnv, ShelleyUtxoPredFailure)
+import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoPredFailure, UtxoEnv)
 import qualified Cardano.Ledger.Shelley.Rules.Utxo as Shelley
 import Cardano.Ledger.Shelley.Tx (TxIn)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance, txouts)
@@ -496,7 +496,7 @@ utxoTransition ::
     STS (AlonzoUTXO era),
     -- instructions for calling UTXOS from AlonzoUTXO
     Embed (EraRule "UTXOS" era) (AlonzoUTXO era),
-    Environment (EraRule "UTXOS" era) ~ ShelleyUtxoEnv era,
+    Environment (EraRule "UTXOS" era) ~ UtxoEnv era,
     State (EraRule "UTXOS" era) ~ Shelley.UTxOState era,
     Signal (EraRule "UTXOS" era) ~ Tx era,
     HasField "_poolDeposit" (PParams era) Coin,
@@ -599,7 +599,7 @@ instance
     Show (TxOut era),
     Show (TxBody era),
     Embed (EraRule "UTXOS" era) (AlonzoUTXO era),
-    Environment (EraRule "UTXOS" era) ~ ShelleyUtxoEnv era,
+    Environment (EraRule "UTXOS" era) ~ UtxoEnv era,
     State (EraRule "UTXOS" era) ~ Shelley.UTxOState era,
     Signal (EraRule "UTXOS" era) ~ AlonzoTx era,
     HasField "_poolDeposit" (PParams era) Coin,
@@ -620,7 +620,7 @@ instance
   where
   type State (AlonzoUTXO era) = Shelley.UTxOState era
   type Signal (AlonzoUTXO era) = AlonzoTx era
-  type Environment (AlonzoUTXO era) = ShelleyUtxoEnv era
+  type Environment (AlonzoUTXO era) = UtxoEnv era
   type BaseM (AlonzoUTXO era) = ShelleyBase
   type PredicateFailure (AlonzoUTXO era) = AlonzoUtxoPredFailure era
   type Event (AlonzoUTXO era) = AlonzoUtxoEvent era

@@ -39,8 +39,8 @@ import Cardano.Ledger.Keys
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API
   ( DCert (..),
+    LedgerEnv (..),
     ShelleyLEDGER,
-    ShelleyLedgerEnv (..),
   )
 import Cardano.Ledger.Shelley.Delegation.Certificates (pattern RegPool)
 import Cardano.Ledger.Shelley.LedgerState
@@ -317,7 +317,7 @@ testLEDGER ::
   HasCallStack =>
   LedgerState C ->
   ShelleyTx C ->
-  ShelleyLedgerEnv C ->
+  LedgerEnv C ->
   Either [PredicateFailure (ShelleyLEDGER C)] (LedgerState C) ->
   Assertion
 testLEDGER initSt tx env (Right expectedSt) = do
@@ -396,7 +396,7 @@ addReward dp ra c = dp {dpsDState = ds {_unified = rewards'}}
     ds = dpsDState dp
     rewards' = UM.insert ra c (rewards ds)
 
-ledgerEnv :: ShelleyLedgerEnv C
+ledgerEnv :: LedgerEnv C
 ledgerEnv = LedgerEnv (SlotNo 0) minBound pp (AccountState (Coin 0) (Coin 0))
 
 testInvalidTx ::

@@ -25,11 +25,11 @@ import Cardano.Ledger.Shelley.LedgerState
     UTxOState,
     genesisState,
   )
-import Cardano.Ledger.Shelley.Rules.Delegs (ShelleyDelegsEnv)
-import Cardano.Ledger.Shelley.Rules.Delpl (ShelleyDELPL, ShelleyDelplEnv, ShelleyDelplPredFailure)
-import Cardano.Ledger.Shelley.Rules.Ledger (ShelleyLEDGER, ShelleyLedgerEnv (..))
+import Cardano.Ledger.Shelley.Rules.Delegs (DelegsEnv)
+import Cardano.Ledger.Shelley.Rules.Delpl (DelplEnv, ShelleyDELPL, ShelleyDelplPredFailure)
+import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv (..), ShelleyLEDGER)
 import Cardano.Ledger.Shelley.Rules.Ledgers (ShelleyLEDGERS, ShelleyLedgersEnv (..))
-import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoEnv)
+import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv)
 import Cardano.Ledger.Shelley.TxBody (DCert)
 import Cardano.Ledger.Slot (SlotNo (..))
 import Control.Monad (foldM)
@@ -73,16 +73,16 @@ instance
     Mock (Crypto era),
     MinLEDGER_STS era,
     Embed (Core.EraRule "DELPL" era) (CERTS era),
-    Environment (Core.EraRule "DELPL" era) ~ ShelleyDelplEnv era,
+    Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
     State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
     Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era),
     PredicateFailure (Core.EraRule "DELPL" era) ~ ShelleyDelplPredFailure era,
     Embed (Core.EraRule "DELEGS" era) (ShelleyLEDGER era),
     Embed (Core.EraRule "UTXOW" era) (ShelleyLEDGER era),
-    Environment (Core.EraRule "UTXOW" era) ~ ShelleyUtxoEnv era,
+    Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
     Signal (Core.EraRule "UTXOW" era) ~ Core.Tx era,
-    Environment (Core.EraRule "DELEGS" era) ~ ShelleyDelegsEnv era,
+    Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
     State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
     Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
     Show (State (Core.EraRule "PPUP" era))
@@ -107,7 +107,7 @@ instance
     Mock (Crypto era),
     MinLEDGER_STS era,
     Embed (Core.EraRule "DELPL" era) (CERTS era),
-    Environment (Core.EraRule "DELPL" era) ~ ShelleyDelplEnv era,
+    Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
     State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
     Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era),
     PredicateFailure (Core.EraRule "DELPL" era) ~ ShelleyDelplPredFailure era,

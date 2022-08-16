@@ -73,9 +73,9 @@ import Cardano.Ledger.Shelley.LedgerState
     rs,
   )
 import Cardano.Ledger.Shelley.Rewards (sumRewards)
-import Cardano.Ledger.Shelley.Rules.Deleg (ShelleyDelegEnv (..))
-import Cardano.Ledger.Shelley.Rules.Ledger (ShelleyLedgerEnv (..))
-import Cardano.Ledger.Shelley.Rules.Pool (ShelleyPOOL, ShelleyPoolEnv (..))
+import Cardano.Ledger.Shelley.Rules.Deleg (DelegEnv (..))
+import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv (..))
+import Cardano.Ledger.Shelley.Rules.Pool (PoolEnv (..), ShelleyPOOL)
 import Cardano.Ledger.Shelley.Rules.Upec (votedValue)
 import Cardano.Ledger.Shelley.TxBody hiding (TxBody, TxOut)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance, totalDeposits, txins, txouts, pattern UTxO)
@@ -174,7 +174,7 @@ longTraceLen = 150
 
 type TestingLedger era ledger =
   ( BaseM ledger ~ ReaderT Globals Identity,
-    Environment ledger ~ ShelleyLedgerEnv era,
+    Environment ledger ~ LedgerEnv era,
     State ledger ~ LedgerState era,
     Signal ledger ~ Tx era,
     Embed (EraRule "DELEGS" era) ledger,
@@ -1000,7 +1000,7 @@ delegProperties =
     conjoin $
       map chainProp (sourceSignalTargets tr)
   where
-    delegProp :: ShelleyDelegEnv era -> SourceSignalTarget (ShelleyDELEG era) -> Property
+    delegProp :: DelegEnv era -> SourceSignalTarget (ShelleyDELEG era) -> Property
     delegProp denv delegSst =
       conjoin $
         [ TestDeleg.keyRegistration delegSst,
@@ -1103,7 +1103,7 @@ delegTraceFromBlock ::
   ) =>
   ChainState era ->
   Block (BHeader (Crypto era)) era ->
-  (ShelleyDelegEnv era, Trace (ShelleyDELEG era))
+  (DelegEnv era, Trace (ShelleyDELEG era))
 delegTraceFromBlock chainSt block =
   ( delegEnv,
     runShelleyBase $
@@ -1138,7 +1138,7 @@ ledgerTraceBase ::
   ) =>
   ChainState era ->
   Block (BHeader (Crypto era)) era ->
-  (ChainState era, ShelleyLedgerEnv era, LedgerState era, [Tx era])
+  (ChainState era, LedgerEnv era, LedgerState era, [Tx era])
 ledgerTraceBase chainSt block =
   ( tickedChainSt,
     LedgerEnv slot minBound pp_ (esAccountState nes),

@@ -54,8 +54,8 @@ import Cardano.Ledger.Shelley.LedgerState
     ptrsMap,
     rewards,
   )
-import Cardano.Ledger.Shelley.Rules.Delpl (ShelleyDelplEnv)
-import Cardano.Ledger.Shelley.Rules.Ledger (ShelleyLedgerEnv (..))
+import Cardano.Ledger.Shelley.Rules.Delpl (DelplEnv)
+import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv (..))
 import Cardano.Ledger.Shelley.Tx (TxIn (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody, Wdrl (..))
 import Cardano.Ledger.Shelley.UTxO
@@ -119,7 +119,7 @@ showBalance ::
     HasField "_keyDeposit" (PParams era) Coin,
     HasField "_poolDeposit" (PParams era) Coin
   ) =>
-  ShelleyLedgerEnv era ->
+  LedgerEnv era ->
   UTxOState era ->
   DPState (Crypto era) ->
   Tx era ->
@@ -159,12 +159,12 @@ genTx ::
   ( EraGen era,
     Mock (Crypto era),
     Embed (EraRule "DELPL" era) (CERTS era),
-    Environment (EraRule "DELPL" era) ~ ShelleyDelplEnv era,
+    Environment (EraRule "DELPL" era) ~ DelplEnv era,
     State (EraRule "DELPL" era) ~ DPState (Crypto era),
     Signal (EraRule "DELPL" era) ~ DCert (Crypto era)
   ) =>
   GenEnv era ->
-  ShelleyLedgerEnv era ->
+  LedgerEnv era ->
   LedgerState era ->
   Gen (Tx era)
 genTx

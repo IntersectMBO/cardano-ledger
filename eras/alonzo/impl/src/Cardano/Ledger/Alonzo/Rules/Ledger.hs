@@ -35,13 +35,13 @@ import Cardano.Ledger.Shelley.LedgerState
     rewards,
   )
 import Cardano.Ledger.Shelley.Rules.Delegs
-  ( ShelleyDELEGS,
-    ShelleyDelegsEnv (..),
+  ( DelegsEnv (..),
+    ShelleyDELEGS,
     ShelleyDelegsEvent,
     ShelleyDelegsPredFailure,
   )
 import Cardano.Ledger.Shelley.Rules.Ledger as Shelley
-  ( ShelleyLedgerEnv (..),
+  ( LedgerEnv (..),
     ShelleyLedgerEvent (..),
     ShelleyLedgerPredFailure (..),
   )
@@ -51,7 +51,7 @@ import qualified Cardano.Ledger.Shelley.Rules.Ledgers as Shelley
     ShelleyLedgersPredFailure (..),
   )
 import Cardano.Ledger.Shelley.Rules.Utxo
-  ( ShelleyUtxoEnv (..),
+  ( UtxoEnv (..),
   )
 import Cardano.Ledger.Shelley.TxBody (DCert)
 import Control.State.Transition
@@ -78,13 +78,13 @@ ledgerTransition ::
   forall (someLEDGER :: Type -> Type) era.
   ( Signal (someLEDGER era) ~ Tx era,
     State (someLEDGER era) ~ LedgerState era,
-    Environment (someLEDGER era) ~ ShelleyLedgerEnv era,
+    Environment (someLEDGER era) ~ LedgerEnv era,
     Embed (EraRule "UTXOW" era) (someLEDGER era),
     Embed (EraRule "DELEGS" era) (someLEDGER era),
-    Environment (EraRule "DELEGS" era) ~ ShelleyDelegsEnv era,
+    Environment (EraRule "DELEGS" era) ~ DelegsEnv era,
     State (EraRule "DELEGS" era) ~ DPState (Crypto era),
     Signal (EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
-    Environment (EraRule "UTXOW" era) ~ ShelleyUtxoEnv era,
+    Environment (EraRule "UTXOW" era) ~ UtxoEnv era,
     State (EraRule "UTXOW" era) ~ UTxOState era,
     Signal (EraRule "UTXOW" era) ~ Tx era,
     AlonzoEraTx era
@@ -99,7 +99,7 @@ ledgerTransition = do
       then
         trans @(EraRule "DELEGS" era) $
           TRC
-            ( ShelleyDelegsEnv slot txIx pp tx account,
+            ( DelegsEnv slot txIx pp tx account,
               dpstate,
               StrictSeq.fromStrict $ txBody ^. certsTxBodyL
             )
@@ -125,10 +125,10 @@ instance
     Tx era ~ AlonzoTx era,
     Embed (EraRule "DELEGS" era) (AlonzoLEDGER era),
     Embed (EraRule "UTXOW" era) (AlonzoLEDGER era),
-    Environment (EraRule "UTXOW" era) ~ ShelleyUtxoEnv era,
+    Environment (EraRule "UTXOW" era) ~ UtxoEnv era,
     State (EraRule "UTXOW" era) ~ UTxOState era,
     Signal (EraRule "UTXOW" era) ~ AlonzoTx era,
-    Environment (EraRule "DELEGS" era) ~ ShelleyDelegsEnv era,
+    Environment (EraRule "DELEGS" era) ~ DelegsEnv era,
     State (EraRule "DELEGS" era) ~ DPState (Crypto era),
     Signal (EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
     HasField "_keyDeposit" (PParams era) Coin,
@@ -138,7 +138,7 @@ instance
   where
   type State (AlonzoLEDGER era) = LedgerState era
   type Signal (AlonzoLEDGER era) = AlonzoTx era
-  type Environment (AlonzoLEDGER era) = ShelleyLedgerEnv era
+  type Environment (AlonzoLEDGER era) = LedgerEnv era
   type BaseM (AlonzoLEDGER era) = ShelleyBase
   type PredicateFailure (AlonzoLEDGER era) = ShelleyLedgerPredFailure era
   type Event (AlonzoLEDGER era) = ShelleyLedgerEvent era

@@ -13,7 +13,7 @@
 module Cardano.Ledger.Shelley.Rules.Bbody
   ( ShelleyBBODY,
     ShelleyBbodyState (..),
-    ShelleyBbodyEnv (..),
+    BbodyEnv (..),
     ShelleyBbodyPredFailure (..),
     ShelleyBbodyEvent (..),
     PredicateFailure,
@@ -59,7 +59,7 @@ deriving stock instance Show (LedgerState era) => Show (ShelleyBbodyState era)
 
 deriving stock instance Eq (LedgerState era) => Eq (ShelleyBbodyState era)
 
-data ShelleyBbodyEnv era = BbodyEnv
+data BbodyEnv era = BbodyEnv
   { bbodyPp :: PParams era,
     bbodyAccount :: AccountState
   }
@@ -114,7 +114,7 @@ instance
     Signal (ShelleyBBODY era) =
       Block (BHeaderView (Crypto era)) era
 
-  type Environment (ShelleyBBODY era) = ShelleyBbodyEnv era
+  type Environment (ShelleyBBODY era) = BbodyEnv era
 
   type BaseM (ShelleyBBODY era) = ShelleyBase
 

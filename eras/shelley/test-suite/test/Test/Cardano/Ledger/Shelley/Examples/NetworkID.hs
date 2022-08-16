@@ -12,11 +12,11 @@ import Cardano.Ledger.Shelley.API
   ( DCert (..),
     Network (..),
     PoolCert (..),
+    PoolEnv (..),
     PoolParams (..),
     RewardAcnt (..),
     ShelleyPOOL,
     ShelleyPParamsHKD (..),
-    ShelleyPoolEnv (..),
   )
 import Cardano.Ledger.Slot (SlotNo (..))
 import Control.State.Transition.Extended hiding (Assertion)

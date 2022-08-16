@@ -28,7 +28,7 @@ import Cardano.Ledger.Shelley.LedgerState
     delegations,
     rewards,
   )
-import Cardano.Ledger.Shelley.Rules.Deleg (ShelleyDelegEnv (..))
+import Cardano.Ledger.Shelley.Rules.Deleg (DelegEnv (..))
 import Cardano.Ledger.Shelley.TxBody
   ( MIRPot (..),
     MIRTarget (..),
@@ -133,7 +133,7 @@ rewardsSumInvariant
 
 checkInstantaneousRewards ::
   (HasField "_protocolVersion" (Core.PParams era) ProtVer) =>
-  ShelleyDelegEnv era ->
+  DelegEnv era ->
   SourceSignalTarget (ShelleyDELEG era) ->
   Property
 checkInstantaneousRewards

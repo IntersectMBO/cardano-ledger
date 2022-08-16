@@ -35,7 +35,7 @@ import Cardano.Ledger.Keys (DSignable, Hash, coerceKeyRole)
 import Cardano.Ledger.Shelley.BlockChain (bBodySize, incrBlocks)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState)
 import Cardano.Ledger.Shelley.Rules.Bbody
-  ( ShelleyBbodyEnv (..),
+  ( BbodyEnv (..),
     ShelleyBbodyEvent (..),
     ShelleyBbodyPredFailure (..),
     ShelleyBbodyState (..),
@@ -121,7 +121,7 @@ bbodyTransition ::
     PredicateFailure (someBBODY era) ~ AlonzoBbodyPredFailure era,
     BaseM (someBBODY era) ~ ShelleyBase,
     State (someBBODY era) ~ ShelleyBbodyState era,
-    Environment (someBBODY era) ~ ShelleyBbodyEnv era,
+    Environment (someBBODY era) ~ BbodyEnv era,
     -- Conditions to be an instance of STS
     Embed (EraRule "LEDGERS" era) (someBBODY era),
     Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era,
@@ -216,7 +216,7 @@ instance
     Signal (AlonzoBBODY era) =
       (Block (BHeaderView (Crypto era)) era)
 
-  type Environment (AlonzoBBODY era) = ShelleyBbodyEnv era
+  type Environment (AlonzoBBODY era) = BbodyEnv era
 
   type BaseM (AlonzoBBODY era) = ShelleyBase
 

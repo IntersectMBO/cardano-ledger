@@ -11,7 +11,7 @@ where
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary (MaryEra)
-import Cardano.Ledger.Shelley.API (ShelleyLEDGER, ShelleyLedgerEnv (..))
+import Cardano.Ledger.Shelley.API (LedgerEnv (..), ShelleyLEDGER)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), UTxOState (..), smartUTxOState)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
@@ -37,7 +37,7 @@ testMaryNoDelegLEDGER ::
   HasCallStack =>
   UTxO MaryTest ->
   ShelleyTx MaryTest ->
-  ShelleyLedgerEnv MaryTest ->
+  LedgerEnv MaryTest ->
   Either [PredicateFailure (ShelleyLEDGER MaryTest)] (UTxO MaryTest) ->
   Assertion
 testMaryNoDelegLEDGER utxo tx env (Right expectedUTxO) = do

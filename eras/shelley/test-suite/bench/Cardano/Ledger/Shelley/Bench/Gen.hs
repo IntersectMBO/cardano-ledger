@@ -19,7 +19,7 @@ import Cardano.Ledger.Shelley.API
     Block,
     DCert,
     DPState,
-    ShelleyDelplEnv,
+    DelplEnv,
     ShelleyLEDGERS,
     ShelleyTx,
   )
@@ -111,7 +111,7 @@ genTriple ::
     Core.PParams era ~ ShelleyPParams era,
     Mock (Crypto era),
     Embed (Core.EraRule "DELPL" era) (CERTS era),
-    Environment (Core.EraRule "DELPL" era) ~ ShelleyDelplEnv era,
+    Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
     State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
     Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era),
     ShelleyTest era

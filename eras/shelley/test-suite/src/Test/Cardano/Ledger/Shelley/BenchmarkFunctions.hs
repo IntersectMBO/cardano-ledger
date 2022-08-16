@@ -53,7 +53,7 @@ import Cardano.Ledger.Shelley.LedgerState
     UTxOState (..),
   )
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..), emptyPParams)
-import Cardano.Ledger.Shelley.Rules.Ledger (ShelleyLEDGER, ShelleyLedgerEnv (..))
+import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv (..), ShelleyLEDGER)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), WitnessSetHKD (..))
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
@@ -171,13 +171,13 @@ ppsBench =
       _tau = unsafeBoundRational 0.2
     }
 
-ledgerEnv :: (Core.PParams era ~ ShelleyPParams era) => ShelleyLedgerEnv era
+ledgerEnv :: (Core.PParams era ~ ShelleyPParams era) => LedgerEnv era
 ledgerEnv = LedgerEnv (SlotNo 0) minBound ppsBench (AccountState (Coin 0) (Coin 0))
 
 testLEDGER ::
   LedgerState B ->
   ShelleyTx B ->
-  ShelleyLedgerEnv B ->
+  LedgerEnv B ->
   ()
 testLEDGER initSt tx env = do
   let st = runShelleyBase $ applySTS @(ShelleyLEDGER B) (TRC (env, initSt, tx))

@@ -36,14 +36,14 @@ import Cardano.Ledger.Shelley.LedgerState
     StashedAVVMAddresses,
   )
 import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate)
-import Cardano.Ledger.Shelley.Rules.Ledger (ShelleyLedgerEnv)
+import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv)
 import Cardano.Ledger.Shelley.Rules.Ledgers
   ( ShelleyLEDGERS,
     ShelleyLedgersEnv (..),
     ShelleyLedgersEvent,
     ShelleyLedgersPredFailure,
   )
-import Cardano.Ledger.Shelley.Rules.Rupd (ShelleyRupdEnv)
+import Cardano.Ledger.Shelley.Rules.Rupd (RupdEnv)
 import Cardano.Ledger.Shelley.Rules.Tick (ShelleyTICK, ShelleyTickEvent, ShelleyTickPredFailure)
 import Cardano.Slotting.Slot (EpochNo, SlotNo)
 import Control.State.Transition
@@ -130,7 +130,7 @@ instance
     Signal (Core.EraRule "TICK" era) ~ SlotNo,
     Environment (Core.EraRule "TICK" era) ~ (),
     Signal (Core.EraRule "LEDGER" era) ~ Core.Tx era,
-    Environment (Core.EraRule "LEDGER" era) ~ ShelleyLedgerEnv era,
+    Environment (Core.EraRule "LEDGER" era) ~ LedgerEnv era,
     State (Core.EraRule "LEDGER" era) ~ LedgerState era,
     Embed (Core.EraRule "TICK" era) (MOCKCHAIN era)
   ) =>
@@ -152,7 +152,7 @@ chainTransition ::
     Signal (Core.EraRule "TICK" era) ~ SlotNo,
     Environment (Core.EraRule "TICK" era) ~ (),
     Signal (Core.EraRule "LEDGER" era) ~ Core.Tx era,
-    Environment (Core.EraRule "LEDGER" era) ~ ShelleyLedgerEnv era,
+    Environment (Core.EraRule "LEDGER" era) ~ LedgerEnv era,
     State (Core.EraRule "LEDGER" era) ~ LedgerState era,
     Embed (Core.EraRule "TICK" era) (MOCKCHAIN era)
   ) =>
@@ -185,7 +185,7 @@ instance
   ( STS (ShelleyTICK era),
     Signal (Core.EraRule "RUPD" era) ~ SlotNo,
     State (Core.EraRule "RUPD" era) ~ StrictMaybe (PulsingRewUpdate (Crypto era)),
-    Environment (Core.EraRule "RUPD" era) ~ ShelleyRupdEnv era,
+    Environment (Core.EraRule "RUPD" era) ~ RupdEnv era,
     State (Core.EraRule "NEWEPOCH" era) ~ NewEpochState era,
     Signal (Core.EraRule "NEWEPOCH" era) ~ EpochNo,
     State (Core.EraRule "NEWEPOCH" era) ~ NewEpochState era,
@@ -199,7 +199,7 @@ instance
 instance
   ( STS (ShelleyLEDGERS era),
     State (Core.EraRule "LEDGER" era) ~ LedgerState era,
-    Environment (Core.EraRule "LEDGER" era) ~ ShelleyLedgerEnv era,
+    Environment (Core.EraRule "LEDGER" era) ~ LedgerEnv era,
     Signal (Core.EraRule "LEDGER" era) ~ Core.Tx era
   ) =>
   Embed (ShelleyLEDGERS era) (MOCKCHAIN era)

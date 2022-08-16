@@ -75,8 +75,8 @@ import Cardano.Ledger.Shelley.LedgerState
     _genDelegs,
   )
 import Cardano.Ledger.Shelley.Rules.Bbody
-  ( ShelleyBBODY,
-    ShelleyBbodyEnv (..),
+  ( BbodyEnv (..),
+    ShelleyBBODY,
     ShelleyBbodyPredFailure,
     ShelleyBbodyState (..),
   )
@@ -242,7 +242,7 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
 instance
   ( Era era,
     Embed (Core.EraRule "BBODY" era) (CHAIN era),
-    Environment (Core.EraRule "BBODY" era) ~ ShelleyBbodyEnv era,
+    Environment (Core.EraRule "BBODY" era) ~ BbodyEnv era,
     State (Core.EraRule "BBODY" era) ~ ShelleyBbodyState era,
     Signal (Core.EraRule "BBODY" era) ~ Block (BHeaderView (Crypto era)) era,
     Embed (Core.EraRule "TICKN" era) (CHAIN era),
@@ -285,7 +285,7 @@ chainTransition ::
   ( Era era,
     STS (CHAIN era),
     Embed (Core.EraRule "BBODY" era) (CHAIN era),
-    Environment (Core.EraRule "BBODY" era) ~ ShelleyBbodyEnv era,
+    Environment (Core.EraRule "BBODY" era) ~ BbodyEnv era,
     State (Core.EraRule "BBODY" era) ~ ShelleyBbodyState era,
     Signal (Core.EraRule "BBODY" era) ~ Block (BHeaderView (Crypto era)) era,
     Embed (Core.EraRule "TICKN" era) (CHAIN era),

@@ -10,7 +10,7 @@
 
 module Cardano.Ledger.Shelley.Rules.Deleg
   ( ShelleyDELEG,
-    ShelleyDelegEnv (..),
+    DelegEnv (..),
     PredicateFailure,
     ShelleyDelegPredFailure (..),
   )
@@ -84,16 +84,16 @@ import NoThunks.Class (NoThunks (..))
 
 data ShelleyDELEG era
 
-data ShelleyDelegEnv era = DelegEnv
+data DelegEnv era = DelegEnv
   { slotNo :: SlotNo,
     ptr_ :: Ptr,
     acnt_ :: AccountState,
     ppDE :: PParams era -- The protocol parameters are only used for the HardFork mechanism
   }
 
-deriving instance (Show (PParams era)) => Show (ShelleyDelegEnv era)
+deriving instance (Show (PParams era)) => Show (DelegEnv era)
 
-deriving instance (Eq (PParams era)) => Eq (ShelleyDelegEnv era)
+deriving instance (Eq (PParams era)) => Eq (DelegEnv era)
 
 data ShelleyDelegPredFailure era
   = StakeKeyAlreadyRegisteredDELEG
@@ -145,7 +145,7 @@ instance
   where
   type State (ShelleyDELEG era) = DState (Crypto era)
   type Signal (ShelleyDELEG era) = DCert (Crypto era)
-  type Environment (ShelleyDELEG era) = ShelleyDelegEnv era
+  type Environment (ShelleyDELEG era) = DelegEnv era
   type BaseM (ShelleyDELEG era) = ShelleyBase
   type PredicateFailure (ShelleyDELEG era) = ShelleyDelegPredFailure era
   type Event (ShelleyDELEG era) = ShelleyDelegEvent era

@@ -68,8 +68,8 @@ import Cardano.Ledger.Shelley.LedgerState
   )
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.PParams (Update)
-import Cardano.Ledger.Shelley.Rules.Ppup (ShelleyPPUP, ShelleyPPUPEnv (..), ShelleyPpupPredFailure)
-import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoEnv (..), updateUTxOState)
+import Cardano.Ledger.Shelley.Rules.Ppup (PpupEnv (..), ShelleyPPUP, ShelleyPpupPredFailure)
+import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..), updateUTxOState)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance, totalDeposits)
 import Cardano.Ledger.Val as Val (Val (coin, (<->)))
 import Cardano.Slotting.EpochInfo.Extend (unsafeLinearExtendEpochInfo)
@@ -104,7 +104,7 @@ instance
     Script era ~ AlonzoScript era,
     Tx era ~ AlonzoTx era,
     Embed (EraRule "PPUP" era) (AlonzoUTXOS era),
-    Environment (EraRule "PPUP" era) ~ ShelleyPPUPEnv era,
+    Environment (EraRule "PPUP" era) ~ PpupEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,
     Signal (EraRule "PPUP" era) ~ Maybe (Update era),
     HasField "_costmdls" (PParams era) CostModels,
@@ -116,7 +116,7 @@ instance
   STS (AlonzoUTXOS era)
   where
   type BaseM (AlonzoUTXOS era) = ShelleyBase
-  type Environment (AlonzoUTXOS era) = ShelleyUtxoEnv era
+  type Environment (AlonzoUTXOS era) = UtxoEnv era
   type State (AlonzoUTXOS era) = UTxOState era
   type Signal (AlonzoUTXOS era) = AlonzoTx era
   type PredicateFailure (AlonzoUTXOS era) = AlonzoUtxosPredFailure era
@@ -146,7 +146,7 @@ utxosTransition ::
     Tx era ~ AlonzoTx era,
     Script era ~ AlonzoScript era,
     Witnesses era ~ TxWitness era,
-    Environment (EraRule "PPUP" era) ~ ShelleyPPUPEnv era,
+    Environment (EraRule "PPUP" era) ~ PpupEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,
     Signal (EraRule "PPUP" era) ~ Maybe (Update era),
     Embed (EraRule "PPUP" era) (AlonzoUTXOS era),
@@ -209,7 +209,7 @@ scriptsValidateTransition ::
     Tx era ~ AlonzoTx era,
     Witnesses era ~ TxWitness era,
     Script era ~ AlonzoScript era,
-    Environment (EraRule "PPUP" era) ~ ShelleyPPUPEnv era,
+    Environment (EraRule "PPUP" era) ~ PpupEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,
     Signal (EraRule "PPUP" era) ~ Maybe (Update era),
     Embed (EraRule "PPUP" era) (AlonzoUTXOS era),

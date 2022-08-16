@@ -52,7 +52,7 @@ import Cardano.Ledger.Shelley.LedgerState (NewEpochState)
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Rules.EraMapping ()
-import Cardano.Ledger.Shelley.Rules.Ledger (ShelleyLedgerEnv, ShelleyLedgerPredFailure)
+import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv, ShelleyLedgerPredFailure)
 import qualified Cardano.Ledger.Shelley.Rules.Ledger as Ledger
 import Cardano.Ledger.Slot (SlotNo)
 import Control.Arrow (ArrowChoice (right), left)
@@ -110,7 +110,7 @@ class
     Typeable (ApplyTxError era),
     STS (EraRule "LEDGER" era),
     BaseM (EraRule "LEDGER" era) ~ ShelleyBase,
-    Environment (EraRule "LEDGER" era) ~ ShelleyLedgerEnv era,
+    Environment (EraRule "LEDGER" era) ~ LedgerEnv era,
     State (EraRule "LEDGER" era) ~ MempoolState era,
     Signal (EraRule "LEDGER" era) ~ Tx era,
     PredicateFailure (EraRule "LEDGER" era) ~ ShelleyLedgerPredFailure era
@@ -173,7 +173,7 @@ instance
   ) =>
   ApplyTx (ShelleyEra crypto)
 
-type MempoolEnv era = Ledger.ShelleyLedgerEnv era
+type MempoolEnv era = Ledger.LedgerEnv era
 
 type MempoolState era = LedgerState.LedgerState era
 

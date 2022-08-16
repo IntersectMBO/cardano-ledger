@@ -84,7 +84,7 @@ import Cardano.Ledger.Shelley.Delegation.Certificates
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState.Types (UTxOState (..))
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (ProposedPPUpdates), Update (Update))
-import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUTXO, ShelleyUtxoEnv (..), ShelleyUtxoPredFailure, UtxoEvent)
+import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUTXO, ShelleyUtxoPredFailure, UtxoEnv (..), UtxoEvent)
 import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks
 import Cardano.Ledger.Shelley.Tx
   ( ShelleyTx,
@@ -268,7 +268,7 @@ instance
 initialLedgerStateUTXOW ::
   forall era.
   ( Embed (EraRule "UTXO" era) (ShelleyUTXOW era),
-    Environment (EraRule "UTXO" era) ~ ShelleyUtxoEnv era,
+    Environment (EraRule "UTXO" era) ~ UtxoEnv era,
     State (EraRule "UTXO" era) ~ UTxOState era
   ) =>
   InitialRule (ShelleyUTXOW era)
@@ -285,10 +285,10 @@ transitionRulesUTXOW ::
     ShelleyEraTxBody era,
     BaseM (utxow era) ~ ShelleyBase,
     Embed (EraRule "UTXO" era) (utxow era),
-    Environment (EraRule "UTXO" era) ~ ShelleyUtxoEnv era,
+    Environment (EraRule "UTXO" era) ~ UtxoEnv era,
     State (EraRule "UTXO" era) ~ UTxOState era,
     Signal (EraRule "UTXO" era) ~ Tx era,
-    Environment (utxow era) ~ ShelleyUtxoEnv era,
+    Environment (utxow era) ~ UtxoEnv era,
     State (utxow era) ~ UTxOState era,
     Signal (utxow era) ~ Tx era,
     PredicateFailure (utxow era) ~ ShelleyUtxowPredFailure era,
@@ -353,7 +353,7 @@ instance
     HasField "_protocolVersion" (PParams era) ProtVer,
     -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (ShelleyUTXOW era),
-    Environment (EraRule "UTXO" era) ~ ShelleyUtxoEnv era,
+    Environment (EraRule "UTXO" era) ~ UtxoEnv era,
     State (EraRule "UTXO" era) ~ UTxOState era,
     Signal (EraRule "UTXO" era) ~ Tx era,
     HasField "_protocolVersion" (PParams era) ProtVer,
@@ -363,7 +363,7 @@ instance
   where
   type State (ShelleyUTXOW era) = UTxOState era
   type Signal (ShelleyUTXOW era) = ShelleyTx era
-  type Environment (ShelleyUTXOW era) = ShelleyUtxoEnv era
+  type Environment (ShelleyUTXOW era) = UtxoEnv era
   type BaseM (ShelleyUTXOW era) = ShelleyBase
   type PredicateFailure (ShelleyUTXOW era) = ShelleyUtxowPredFailure era
   type Event _ = ShelleyUtxowEvent era

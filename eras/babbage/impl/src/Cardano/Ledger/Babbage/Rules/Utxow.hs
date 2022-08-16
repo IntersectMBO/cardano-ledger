@@ -49,7 +49,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (DSIGN, HASH)
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest, runTestOnSignal)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), witsFromTxWitnesses)
-import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoEnv (..))
+import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
 import Cardano.Ledger.Shelley.Rules.Utxow
   ( ShelleyUtxowEvent (UtxoEvent),
     ShelleyUtxowPredFailure,
@@ -277,7 +277,7 @@ babbageUtxowTransition ::
     Signable (DSIGN (Crypto era)) (Hash (HASH (Crypto era)) EraIndependentTxBody),
     -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (BabbageUTXOW era),
-    Environment (EraRule "UTXO" era) ~ ShelleyUtxoEnv era,
+    Environment (EraRule "UTXO" era) ~ UtxoEnv era,
     State (EraRule "UTXO" era) ~ UTxOState era,
     Signal (EraRule "UTXO" era) ~ AlonzoTx era
   ) =>
@@ -376,7 +376,7 @@ instance
     Script era ~ AlonzoScript era,
     -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (BabbageUTXOW era),
-    Environment (EraRule "UTXO" era) ~ ShelleyUtxoEnv era,
+    Environment (EraRule "UTXO" era) ~ UtxoEnv era,
     State (EraRule "UTXO" era) ~ UTxOState era,
     Signal (EraRule "UTXO" era) ~ AlonzoTx era,
     Eq (PredicateFailure (EraRule "UTXOS" era)),
@@ -386,7 +386,7 @@ instance
   where
   type State (BabbageUTXOW era) = UTxOState era
   type Signal (BabbageUTXOW era) = AlonzoTx era
-  type Environment (BabbageUTXOW era) = ShelleyUtxoEnv era
+  type Environment (BabbageUTXOW era) = UtxoEnv era
   type BaseM (BabbageUTXOW era) = ShelleyBase
   type PredicateFailure (BabbageUTXOW era) = BabbageUtxowPredFailure era
   type Event (BabbageUTXOW era) = AlonzoUtxowEvent era

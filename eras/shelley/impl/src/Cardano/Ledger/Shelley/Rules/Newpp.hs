@@ -10,7 +10,7 @@
 module Cardano.Ledger.Shelley.Rules.Newpp
   ( ShelleyNEWPP,
     ShelleyNewppState (..),
-    ShelleyNewppEnv (..),
+    NewppEnv (..),
     ShelleyNewppPredFailure (..),
     PredicateFailure,
   )
@@ -56,7 +56,7 @@ data ShelleyNEWPP era
 data ShelleyNewppState era
   = NewppState (PParams era) (PPUPState era)
 
-data ShelleyNewppEnv era
+data NewppEnv era
   = NewppEnv
       (DState (Crypto era))
       (PState (Crypto era))
@@ -86,7 +86,7 @@ instance
   where
   type State (ShelleyNEWPP era) = ShelleyNewppState era
   type Signal (ShelleyNEWPP era) = Maybe (PParams era)
-  type Environment (ShelleyNEWPP era) = ShelleyNewppEnv era
+  type Environment (ShelleyNEWPP era) = NewppEnv era
   type BaseM (ShelleyNEWPP era) = ShelleyBase
   type PredicateFailure (ShelleyNEWPP era) = ShelleyNewppPredFailure era
   transitionRules = [newPpTransition]

@@ -94,13 +94,13 @@ import Cardano.Ledger.Shelley.LedgerState
     smartUTxOState,
   )
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
-import Cardano.Ledger.Shelley.Rules.Bbody (ShelleyBbodyEnv (..), ShelleyBbodyPredFailure (..), ShelleyBbodyState (..))
+import Cardano.Ledger.Shelley.Rules.Bbody (BbodyEnv (..), ShelleyBbodyPredFailure (..), ShelleyBbodyState (..))
 import Cardano.Ledger.Shelley.Rules.Delegs (ShelleyDelegsPredFailure (..))
 import Cardano.Ledger.Shelley.Rules.Delpl (ShelleyDelplPredFailure (..))
 import Cardano.Ledger.Shelley.Rules.Ledger (ShelleyLedgerPredFailure (..))
 import Cardano.Ledger.Shelley.Rules.Ledgers (ShelleyLedgersPredFailure (..))
 import Cardano.Ledger.Shelley.Rules.Pool (ShelleyPoolPredFailure (..))
-import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoEnv (..))
+import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
 import Cardano.Ledger.Shelley.Rules.Utxow as Shelley (ShelleyUtxowPredFailure (..))
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
@@ -190,7 +190,7 @@ defaultPPs =
     CollateralPercentage 100
   ]
 
-utxoEnv :: PParams era -> ShelleyUtxoEnv era
+utxoEnv :: PParams era -> UtxoEnv era
 utxoEnv pparams =
   UtxoEnv
     (SlotNo 0)
@@ -1739,7 +1739,7 @@ collectOrderingAlonzo =
 -- Alonzo BBODY Tests
 -- =======================
 
-bbodyEnv :: Proof era -> ShelleyBbodyEnv era
+bbodyEnv :: Proof era -> BbodyEnv era
 bbodyEnv pf = BbodyEnv (pp pf) def
 
 dpstate :: Scriptic era => Proof era -> DPState (Crypto era)
