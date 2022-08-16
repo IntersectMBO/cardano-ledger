@@ -83,6 +83,80 @@ BabbageEraTxBody --> AlonzoEraTxBody --> ....
   - `TxBody` to `BabbageTxBody` (kept type synonym with a deprecation message)
   - `PParams` to `BabbagePParams` (kept type synonym with a deprecation message)
   - `PParamsUpdate` to `BabbagePParamsUpdate` (kept type synonym with a deprecation message)
+- Renamed Rules:
+  - `BBODY` -> `ShelleyBBODY`
+  - `DELEG` -> `ShelleyDELEG`
+  - `DELEGS` -> `ShelleyDELEGS`
+  - `DELPL` -> `ShelleyDELPL`
+  - `EPOCH` -> `ShelleyEPOCH`
+  - `LEDGER` -> `ShelleyLEDGER`
+  - `LEDGERS` -> `ShelleyLEDGERS`
+  - `MIR` -> `ShelleyMIR`
+  - `NEWEPOCH` -> `ShelleyNEWEPOCH`
+  - `NEWPP` -> `ShelleyNEWPP`
+  - `POOL` -> `ShelleyPOOL`
+  - `POOLREAP` -> `ShelleyPOOLREAP`
+  - `PPUP` -> `ShelleyPPUP`
+  - `RUPD` -> `ShelleyRUPD`
+  - `SNAP` -> `ShelleySNAP`
+  - `TICK` -> `ShelleyTICK, ShelleyTICKF`
+  - `UPEC` -> `ShelleyUPEC`
+  - `UTXO` -> `ShelleyUTXO`
+  - `UTXOW` -> `ShelleyUTXOW`
+- Renamed rules environments:
+  - `PPUPEnv -> PpupEnv`
+- Renamed rules events:
+  - `BbodyEvent` -> `ShelleyBbodyEvent`
+  - `DelegEvent` -> `ShelleyDelegEvent`
+  - `DelegsEvent` -> `ShelleyDelegsEvent`
+  - `DelplEvent` -> `ShelleyDelplEvent`
+  - `EpochEvent` -> `ShelleyEpochEvent`
+  - `LedgerEvent` -> `ShelleyLedgerEvent`
+  - `LedgersEvent` -> `ShelleyLedgersEvent`
+  - `MirEvent` -> `ShelleyMirEvent`
+  - `NewEpochEvent` -> `ShelleyNewEpochEvent`
+  - `PoolreapEvent` -> `ShelleyPoolreapEvent`
+  - `TickEvent` -> `ShelleyTickEvent`
+  - `TickfEvent` -> `ShelleyTickfEvent`
+  - `UtxowEvent` -> `ShelleyUtxowEvent`
+- Renamed predicate failure type names:
+  - `Cardano.Ledger.Shelley.Rules`:
+    - `BbodyPredicateFailure` -> `ShelleyBbodyPredFailure`
+    - `DelegPredicateFailure` -> `ShelleyDelegPredFailure`
+    - `DelegsPredicateFailure` -> `ShelleyDelegsPredFailure`
+    - `DelplPredicateFailure` -> `ShelleyDelplPredFailure`
+    - `EpochPredicateFailure` -> `ShelleyEpochPredFailure`
+    - `LedgerPredicateFailure` -> `ShelleyLedgerPredFailure`
+    - `LedgersPredicateFailure` -> `ShelleyLedgersPredFailure`
+    - `MirPredicateFailure` -> `ShelleyMirPredFailure`
+    - `NewEpochPredicateFailure` -> `ShelleyNewEpochPredFailure`
+    - `NewppPredicateFailure` -> `ShelleyNewppPredFailure`
+    - `LedgerPredicateFailure` -> `ShelleyLedgerPredFailure`
+    - `PoolPredicateFailure` -> `ShelleyPoolPredFailure`
+    - `PoolreapPredicateFailure` -> `ShelleyPoolreapPredFailure`
+    - `PpupPredicateFailure` -> `ShelleyPpupPredFailure`
+    - `RupdPredicateFailure` -> `ShelleyRupdPredFailure`
+    - `SnapPredicateFailure` -> `ShelleySnapPredFailure`
+    - `TickPredicateFailure` -> `ShelleyTickPredFailure`
+    - `TickfPredicateFailure` -> `ShelleyTickfPredFailure`
+    - `UpecPredicateFailure` -> `ShelleyUpecPredFailure`
+    - `UtxoPredicateFailure` -> `ShelleyUtxoPredFailure`
+    - `UtxowPredicateFailure` -> `ShelleyUtxowPredFailure`
+  - `Cardano.Ledger.ShelleyMA.Rules`:
+    - `UtxoPredicateFailure` -> `ShelleyMAUtxoPredFailure`
+  - `Cardano.Ledger.Alonzo.Rules`:
+    - `AlonzoBbodyPredFail` -> `AlonzoBbodyPredFailure` and constructor:
+      - `ShelleyInAlonzoPredFail` -> `ShelleyInAlonzoBbodyPredFailure`
+    - `UtxoPredicateFailure` -> `AlonzoUtxoPredFailure`
+    - `UtxosPredicateFailure` -> `AlonzoUtxosPredFailure`
+    - `UtxowPredicateFail` -> `AlonzoUtxowPredFailure` and constructor:
+      - `WrappedShelleyEraFailure` -> `ShelleyInAlonzoUtxowPredFailure`
+  - `Cardano.Ledger.Babbage.Rules`:
+    - `BabbageUtxoPred` -> `BabbageUtxoPredFailure` and constructor:
+      - `FromAlonzoUtxoFail` -> `AlonzoInBabbageUtxoPredFailure`
+    - `BabbageUtxowPred` -> `BabbageUtxowPredFailure` and constructor:
+      - `FromAlonzoUtxowFail` -> `AlonzoInBabbageUtxowPredFailure`
+
 ### Deprecated
 - The provenance for the reward calculation has been removed.
   The type signature to the API function `getRewardProvenance` has not change,
