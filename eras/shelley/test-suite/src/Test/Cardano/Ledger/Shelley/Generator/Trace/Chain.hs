@@ -27,7 +27,7 @@ import Cardano.Ledger.Era
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.LedgerState (incrementalStakeDistr)
 import Cardano.Ledger.Shelley.Rules.Bbody
-  ( ShelleyBbodyEnv,
+  ( BbodyEnv,
     ShelleyBbodyState,
   )
 import Cardano.Ledger.Slot
@@ -102,7 +102,7 @@ instance
     MinLEDGER_STS era,
     MinCHAIN_STS era,
     Embed (Core.EraRule "BBODY" era) (CHAIN era),
-    Environment (Core.EraRule "BBODY" era) ~ ShelleyBbodyEnv era,
+    Environment (Core.EraRule "BBODY" era) ~ BbodyEnv era,
     State (Core.EraRule "BBODY" era) ~ ShelleyBbodyState era,
     Signal (Core.EraRule "BBODY" era) ~ Block (BHeaderView (Crypto era)) era,
     Embed (Core.EraRule "TICKN" era) (CHAIN era),

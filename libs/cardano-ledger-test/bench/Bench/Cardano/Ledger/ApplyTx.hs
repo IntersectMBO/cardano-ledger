@@ -26,8 +26,8 @@ import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API
   ( ApplyTx,
     Globals,
+    LedgerEnv,
     LedgerState,
-    ShelleyLedgerEnv,
     applyTxsTransition,
   )
 import Cardano.Ledger.Shelley.LedgerState (DPState, UTxOState)
@@ -77,7 +77,7 @@ benchWithGenState ::
     Default (State (EraRule "PPUP" era)),
     BaseEnv (EraRule "LEDGER" era) ~ Globals,
     Signal (EraRule "LEDGER" era) ~ Tx era,
-    Environment (EraRule "LEDGER" era) ~ ShelleyLedgerEnv era,
+    Environment (EraRule "LEDGER" era) ~ LedgerEnv era,
     State (EraRule "LEDGER" era) ~ LedgerState era
   ) =>
   Proxy era ->
@@ -120,7 +120,7 @@ deserialiseTxEra ::
     BaseEnv (EraRule "LEDGER" era) ~ Globals,
     HasTrace (EraRule "LEDGER" era) (GenEnv era),
     State (EraRule "LEDGER" era) ~ LedgerState era,
-    Environment (EraRule "LEDGER" era) ~ ShelleyLedgerEnv era,
+    Environment (EraRule "LEDGER" era) ~ LedgerEnv era,
     Signal (EraRule "LEDGER" era) ~ Tx era,
     NFData (Tx era)
   ) =>

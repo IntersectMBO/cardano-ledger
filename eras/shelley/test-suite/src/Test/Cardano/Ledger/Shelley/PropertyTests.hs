@@ -30,7 +30,7 @@ import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.SafeHash (SafeHash)
 import Cardano.Ledger.Shelley.API (LedgerState, PPUPState)
-import Cardano.Ledger.Shelley.Rules.Ledger (ShelleyLedgerEnv)
+import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx)
 import Cardano.Ledger.Shelley.UTxO (makeWitnessVKey)
 import Control.Monad.Trans.Reader (ReaderT)
@@ -135,7 +135,7 @@ propertyTests ::
     Embed (EraRule "DELEGS" era) ledger,
     Embed (EraRule "UTXOW" era) ledger,
     State (EraRule "PPUP" era) ~ PPUPState era,
-    Environment ledger ~ ShelleyLedgerEnv era,
+    Environment ledger ~ LedgerEnv era,
     QC.BaseEnv ledger ~ Globals,
     BaseM ledger ~ ReaderT Globals Identity,
     State ledger ~ LedgerState era,

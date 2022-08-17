@@ -51,7 +51,7 @@ import Cardano.Ledger.Shelley.PParams
     ShelleyPParamsHKD (..),
     emptyPParams,
   )
-import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoEnv (..))
+import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
 import Cardano.Ledger.Shelley.Rules.Utxow
   ( ShelleyUTXOW,
     ShelleyUtxowPredFailure (..),
@@ -165,7 +165,7 @@ utxoState1 =
     bobResult = (mkTxInPartial txid 0, ShelleyTxOut bobAddr coinsToBob)
     aliceResult = (mkTxInPartial txid 1, ShelleyTxOut aliceAddr (Coin 998990))
 
-utxoEnv :: ShelleyUtxoEnv C
+utxoEnv :: UtxoEnv C
 utxoEnv =
   UtxoEnv
     0

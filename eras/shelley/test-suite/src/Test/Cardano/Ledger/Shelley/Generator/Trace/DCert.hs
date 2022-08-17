@@ -26,12 +26,12 @@ import Cardano.Ledger.Shelley.API
   ( AccountState,
     DCert,
     DPState (..),
+    DelplEnv (..),
     KeyPair (..),
     KeyRole (..),
     PState (..),
     Ptr (..),
     ShelleyDELPL,
-    ShelleyDelplEnv (..),
   )
 import Cardano.Ledger.Shelley.Delegation.Certificates (isDeRegKey)
 import Cardano.Ledger.Shelley.Rules.Delpl (ShelleyDelplEvent, ShelleyDelplPredFailure)
@@ -101,7 +101,7 @@ deriving stock instance
 instance
   ( Era era,
     Embed (Core.EraRule "DELPL" era) (CERTS era),
-    Environment (Core.EraRule "DELPL" era) ~ ShelleyDelplEnv era,
+    Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
     State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
     Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era)
   ) =>
@@ -121,7 +121,7 @@ instance
 certsTransition ::
   forall era.
   ( Embed (Core.EraRule "DELPL" era) (CERTS era),
-    Environment (Core.EraRule "DELPL" era) ~ ShelleyDelplEnv era,
+    Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
     State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
     Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era)
   ) =>
@@ -159,7 +159,7 @@ instance
 instance
   ( EraGen era,
     Embed (Core.EraRule "DELPL" era) (CERTS era),
-    Environment (Core.EraRule "DELPL" era) ~ ShelleyDelplEnv era,
+    Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
     State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
     Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era)
   ) =>
@@ -194,7 +194,7 @@ genDCerts ::
   forall era.
   ( EraGen era,
     Embed (Core.EraRule "DELPL" era) (CERTS era),
-    Environment (Core.EraRule "DELPL" era) ~ ShelleyDelplEnv era,
+    Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
     State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
     Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era)
   ) =>

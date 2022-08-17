@@ -26,8 +26,8 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley.LedgerState (AccountState, LedgerState)
 import Cardano.Ledger.Shelley.Rules.Ledger
-  ( ShelleyLEDGER,
-    ShelleyLedgerEnv (..),
+  ( LedgerEnv (..),
+    ShelleyLEDGER,
     ShelleyLedgerEvent,
     ShelleyLedgerPredFailure,
   )
@@ -99,7 +99,7 @@ instance
 instance
   ( Era era,
     Embed (EraRule "LEDGER" era) (ShelleyLEDGERS era),
-    Environment (EraRule "LEDGER" era) ~ ShelleyLedgerEnv era,
+    Environment (EraRule "LEDGER" era) ~ LedgerEnv era,
     State (EraRule "LEDGER" era) ~ LedgerState era,
     Signal (EraRule "LEDGER" era) ~ Tx era,
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
@@ -119,7 +119,7 @@ instance
 ledgersTransition ::
   forall era.
   ( Embed (EraRule "LEDGER" era) (ShelleyLEDGERS era),
-    Environment (EraRule "LEDGER" era) ~ ShelleyLedgerEnv era,
+    Environment (EraRule "LEDGER" era) ~ LedgerEnv era,
     State (EraRule "LEDGER" era) ~ LedgerState era,
     Signal (EraRule "LEDGER" era) ~ Tx era
   ) =>

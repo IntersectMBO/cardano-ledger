@@ -30,7 +30,7 @@ import Cardano.Ledger.Shelley.LedgerState
     pattern EpochState,
   )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
-import Cardano.Ledger.Shelley.Rules.Newpp (ShelleyNEWPP, ShelleyNewppEnv (..), ShelleyNewppState (..))
+import Cardano.Ledger.Shelley.Rules.Newpp (NewppEnv (..), ShelleyNEWPP, ShelleyNewppState (..))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
   ( Embed (..),

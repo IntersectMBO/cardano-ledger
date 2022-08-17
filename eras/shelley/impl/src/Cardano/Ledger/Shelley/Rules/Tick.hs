@@ -37,7 +37,7 @@ import Cardano.Ledger.Shelley.LedgerState
     PulsingRewUpdate,
   )
 import Cardano.Ledger.Shelley.Rules.NewEpoch (ShelleyNEWEPOCH, ShelleyNewEpochEvent, ShelleyNewEpochPredFailure)
-import Cardano.Ledger.Shelley.Rules.Rupd (RupdEvent, ShelleyRUPD, ShelleyRupdEnv (..), ShelleyRupdPredFailure)
+import Cardano.Ledger.Shelley.Rules.Rupd (RupdEnv (..), RupdEvent, ShelleyRUPD, ShelleyRupdPredFailure)
 import Cardano.Ledger.Slot (EpochNo, SlotNo, epochInfoEpoch)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (⨃))
@@ -84,7 +84,7 @@ instance
     Embed (EraRule "RUPD" era) (ShelleyTICK era),
     State (ShelleyTICK era) ~ NewEpochState era,
     BaseM (ShelleyTICK era) ~ ShelleyBase,
-    Environment (EraRule "RUPD" era) ~ ShelleyRupdEnv era,
+    Environment (EraRule "RUPD" era) ~ RupdEnv era,
     State (EraRule "RUPD" era) ~ StrictMaybe (PulsingRewUpdate (Crypto era)),
     Signal (EraRule "RUPD" era) ~ SlotNo,
     Environment (EraRule "NEWEPOCH" era) ~ (),
@@ -93,12 +93,8 @@ instance
   ) =>
   STS (ShelleyTICK era)
   where
-  type
-    State (ShelleyTICK era) =
-      NewEpochState era
-  type
-    Signal (ShelleyTICK era) =
-      SlotNo
+  type State (ShelleyTICK era) = NewEpochState era
+  type Signal (ShelleyTICK era) = SlotNo
   type Environment (ShelleyTICK era) = ()
   type BaseM (ShelleyTICK era) = ShelleyBase
   type PredicateFailure (ShelleyTICK era) = ShelleyTickPredFailure era
@@ -168,7 +164,7 @@ bheadTransition ::
     STS (ShelleyTICK era),
     State (ShelleyTICK era) ~ NewEpochState era,
     BaseM (ShelleyTICK era) ~ ShelleyBase,
-    Environment (EraRule "RUPD" era) ~ ShelleyRupdEnv era,
+    Environment (EraRule "RUPD" era) ~ RupdEnv era,
     State (EraRule "RUPD" era) ~ StrictMaybe (PulsingRewUpdate (Crypto era)),
     Signal (EraRule "RUPD" era) ~ SlotNo,
     Environment (EraRule "NEWEPOCH" era) ~ (),

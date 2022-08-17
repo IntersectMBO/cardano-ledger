@@ -11,7 +11,7 @@
 
 module Cardano.Ledger.Shelley.Rules.Ppup
   ( ShelleyPPUP,
-    ShelleyPPUPEnv (..),
+    PpupEnv (..),
     ShelleyPpupPredFailure (..),
     PpupEvent (..),
     PredicateFailure,
@@ -63,7 +63,7 @@ import NoThunks.Class (NoThunks (..))
 
 data ShelleyPPUP era
 
-data ShelleyPPUPEnv era
+data PpupEnv era
   = PPUPEnv SlotNo (PParams era) (GenDelegs (Crypto era))
 
 data VotingPeriod = VoteForThisEpoch | VoteForNextEpoch
@@ -120,7 +120,7 @@ instance
   where
   type State (ShelleyPPUP era) = PPUPState era
   type Signal (ShelleyPPUP era) = Maybe (Update era)
-  type Environment (ShelleyPPUP era) = ShelleyPPUPEnv era
+  type Environment (ShelleyPPUP era) = PpupEnv era
   type BaseM (ShelleyPPUP era) = ShelleyBase
   type PredicateFailure (ShelleyPPUP era) = ShelleyPpupPredFailure era
   type Event (ShelleyPPUP era) = PpupEvent era

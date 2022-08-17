@@ -74,7 +74,7 @@ import Cardano.Ledger.Shelley.LedgerState
     propWits,
     witsFromTxWitnesses,
   )
-import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoEnv (..))
+import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
 import Cardano.Ledger.Shelley.Rules.Utxow
   ( ShelleyUtxowEvent (UtxoEvent),
     ShelleyUtxowPredFailure (..),
@@ -347,7 +347,7 @@ alonzoStyleWitness ::
     Signable (DSIGN (Crypto era)) (Hash (HASH (Crypto era)) EraIndependentTxBody),
     -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (AlonzoUTXOW era),
-    Environment (EraRule "UTXO" era) ~ ShelleyUtxoEnv era,
+    Environment (EraRule "UTXO" era) ~ UtxoEnv era,
     State (EraRule "UTXO" era) ~ UTxOState era,
     Signal (EraRule "UTXO" era) ~ AlonzoTx era
   ) =>
@@ -515,7 +515,7 @@ instance
     HasField "_protocolVersion" (PParams era) ProtVer,
     -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (AlonzoUTXOW era),
-    Environment (EraRule "UTXO" era) ~ ShelleyUtxoEnv era,
+    Environment (EraRule "UTXO" era) ~ UtxoEnv era,
     State (EraRule "UTXO" era) ~ UTxOState era,
     Signal (EraRule "UTXO" era) ~ AlonzoTx era
   ) =>
@@ -523,7 +523,7 @@ instance
   where
   type State (AlonzoUTXOW era) = UTxOState era
   type Signal (AlonzoUTXOW era) = AlonzoTx era
-  type Environment (AlonzoUTXOW era) = ShelleyUtxoEnv era
+  type Environment (AlonzoUTXOW era) = UtxoEnv era
   type BaseM (AlonzoUTXOW era) = ShelleyBase
   type PredicateFailure (AlonzoUTXOW era) = AlonzoUtxowPredFailure era
   type Event (AlonzoUTXOW era) = AlonzoUtxowEvent era

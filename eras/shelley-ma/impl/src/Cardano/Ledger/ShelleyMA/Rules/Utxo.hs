@@ -44,7 +44,7 @@ import Cardano.Ledger.Rules.ValidationMode
 import Cardano.Ledger.Shelley.LedgerState (PPUPState)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..), Update)
-import Cardano.Ledger.Shelley.Rules.Ppup (ShelleyPPUP, ShelleyPPUPEnv (..), ShelleyPpupPredFailure)
+import Cardano.Ledger.Shelley.Rules.Ppup (PpupEnv (..), ShelleyPPUP, ShelleyPpupPredFailure)
 import qualified Cardano.Ledger.Shelley.Rules.Utxo as Shelley
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), ShelleyTxOut, TxIn)
 import Cardano.Ledger.Shelley.TxBody (RewardAcnt, ShelleyEraTxBody (..))
@@ -212,7 +212,7 @@ utxoTransition ::
     STS (ShelleyMAUTXO era),
     Tx era ~ ShelleyTx era,
     Embed (EraRule "PPUP" era) (ShelleyMAUTXO era),
-    Environment (EraRule "PPUP" era) ~ ShelleyPPUPEnv era,
+    Environment (EraRule "PPUP" era) ~ PpupEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,
     Signal (EraRule "PPUP" era) ~ Maybe (Update era),
     HasField "_minfeeA" (PParams era) Natural,
@@ -377,7 +377,7 @@ instance
     TxOut era ~ ShelleyTxOut era,
     Tx era ~ ShelleyTx era,
     Embed (EraRule "PPUP" era) (ShelleyMAUTXO era),
-    Environment (EraRule "PPUP" era) ~ ShelleyPPUPEnv era,
+    Environment (EraRule "PPUP" era) ~ PpupEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,
     Signal (EraRule "PPUP" era) ~ Maybe (Update era)
   ) =>
@@ -385,7 +385,7 @@ instance
   where
   type State (ShelleyMAUTXO era) = Shelley.UTxOState era
   type Signal (ShelleyMAUTXO era) = ShelleyTx era
-  type Environment (ShelleyMAUTXO era) = Shelley.ShelleyUtxoEnv era
+  type Environment (ShelleyMAUTXO era) = Shelley.UtxoEnv era
   type BaseM (ShelleyMAUTXO era) = ShelleyBase
   type PredicateFailure (ShelleyMAUTXO era) = ShelleyMAUtxoPredFailure era
   type Event (ShelleyMAUTXO era) = ShelleyMAUtxoEvent era

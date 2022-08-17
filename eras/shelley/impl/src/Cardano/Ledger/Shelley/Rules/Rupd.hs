@@ -8,7 +8,7 @@
 
 module Cardano.Ledger.Shelley.Rules.Rupd
   ( ShelleyRUPD,
-    ShelleyRupdEnv (..),
+    RupdEnv (..),
     PredicateFailure,
     ShelleyRupdPredFailure,
     epochInfoRange,
@@ -79,7 +79,7 @@ import Numeric.Natural (Natural)
 
 data ShelleyRUPD era
 
-data ShelleyRupdEnv era
+data RupdEnv era
   = RupdEnv (BlocksMade (Crypto era)) (EpochState era)
 
 data ShelleyRupdPredFailure era -- No predicate failures
@@ -100,7 +100,7 @@ instance
   where
   type State (ShelleyRUPD era) = StrictMaybe (PulsingRewUpdate (Crypto era))
   type Signal (ShelleyRUPD era) = SlotNo
-  type Environment (ShelleyRUPD era) = ShelleyRupdEnv era
+  type Environment (ShelleyRUPD era) = RupdEnv era
   type BaseM (ShelleyRUPD era) = ShelleyBase
   type PredicateFailure (ShelleyRUPD era) = ShelleyRupdPredFailure era
   type Event (ShelleyRUPD era) = RupdEvent (Crypto era)

@@ -14,8 +14,8 @@ import Cardano.Ledger.Shelley.API
   ( AccountState (..),
     Coin (..),
     Globals,
+    LedgerEnv (..),
     MempoolEnv,
-    ShelleyLedgerEnv (..),
   )
 import Cardano.Ledger.Shelley.LedgerState (LedgerState)
 import Cardano.Ledger.Slot (SlotNo (SlotNo))
@@ -70,7 +70,7 @@ generateApplyTxEnvForEra ::
     HasTrace (EraRule "LEDGER" era) (GenEnv era),
     BaseEnv (EraRule "LEDGER" era) ~ Globals,
     Signal (EraRule "LEDGER" era) ~ Core.Tx era,
-    Environment (EraRule "LEDGER" era) ~ ShelleyLedgerEnv era,
+    Environment (EraRule "LEDGER" era) ~ LedgerEnv era,
     State (EraRule "LEDGER" era) ~ LedgerState era
   ) =>
   Proxy era ->

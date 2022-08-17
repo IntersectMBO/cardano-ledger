@@ -45,14 +45,14 @@ import Cardano.Ledger.Shelley.API
     Block (..),
     Credential (ScriptHashObj),
     KeyPairs,
+    LedgerEnv,
     LedgerState,
-    ShelleyLedgerEnv,
     ShelleyLedgersEnv,
     StakeReference (StakeRefBase),
   )
 import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses, UTxOState (..))
 import Cardano.Ledger.Shelley.PParams (Update)
-import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoEnv)
+import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv)
 import Cardano.Ledger.Shelley.TxBody (DCert, ShelleyEraTxBody, Wdrl, WitVKey)
 import Cardano.Ledger.Shelley.UTxO (UTxO)
 import Cardano.Ledger.Slot (EpochNo)
@@ -119,7 +119,7 @@ type MinLEDGER_STS era =
     BaseM (EraRule "LEDGER" era) ~ ShelleyBase,
     Signal (EraRule "LEDGER" era) ~ Tx era,
     State (EraRule "LEDGER" era) ~ LedgerState era,
-    Environment (EraRule "LEDGER" era) ~ ShelleyLedgerEnv era,
+    Environment (EraRule "LEDGER" era) ~ LedgerEnv era,
     BaseM (EraRule "LEDGERS" era) ~ ShelleyBase,
     State (EraRule "LEDGERS" era) ~ LedgerState era,
     Signal (EraRule "LEDGERS" era) ~ Seq (Tx era),
@@ -140,10 +140,10 @@ type MinUTXO_STS era =
   ( STS (EraRule "UTXOW" era),
     BaseM (EraRule "UTXOW" era) ~ ShelleyBase,
     State (EraRule "UTXOW" era) ~ UTxOState era,
-    Environment (EraRule "UTXOW" era) ~ ShelleyUtxoEnv era,
+    Environment (EraRule "UTXOW" era) ~ UtxoEnv era,
     Signal (EraRule "UTXOW" era) ~ Tx era,
     State (EraRule "UTXO" era) ~ UTxOState era,
-    Environment (EraRule "UTXO" era) ~ ShelleyUtxoEnv era,
+    Environment (EraRule "UTXO" era) ~ UtxoEnv era,
     Signal (EraRule "UTXO" era) ~ Tx era
   )
 

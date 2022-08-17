@@ -20,10 +20,10 @@ import Cardano.Ledger.BaseTypes (Globals)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto))
 import Cardano.Ledger.Shelley.LedgerState (DPState (..), UTxOState)
-import Cardano.Ledger.Shelley.Rules.Delegs (ShelleyDelegsEnv)
-import Cardano.Ledger.Shelley.Rules.Delpl (ShelleyDelplEnv, ShelleyDelplPredFailure)
-import Cardano.Ledger.Shelley.Rules.Ledger (ShelleyLedgerEnv (..))
-import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoEnv)
+import Cardano.Ledger.Shelley.Rules.Delegs (DelegsEnv)
+import Cardano.Ledger.Shelley.Rules.Delpl (DelplEnv, ShelleyDelplPredFailure)
+import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv (..))
+import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv)
 import Cardano.Ledger.Shelley.TxBody (DCert)
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad.Trans.Reader (runReaderT)
@@ -48,16 +48,16 @@ instance
     Mock (Crypto era),
     MinLEDGER_STS era,
     Embed (Core.EraRule "DELPL" era) (CERTS era),
-    Environment (Core.EraRule "DELPL" era) ~ ShelleyDelplEnv era,
+    Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
     State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
     Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era),
     PredicateFailure (Core.EraRule "DELPL" era) ~ ShelleyDelplPredFailure era,
     Embed (Core.EraRule "DELEGS" era) (AlonzoLEDGER era),
     Embed (Core.EraRule "UTXOW" era) (AlonzoLEDGER era),
-    Environment (Core.EraRule "UTXOW" era) ~ ShelleyUtxoEnv era,
+    Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
     Signal (Core.EraRule "UTXOW" era) ~ Core.Tx era,
-    Environment (Core.EraRule "DELEGS" era) ~ ShelleyDelegsEnv era,
+    Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
     State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
     Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
     Show (State (Core.EraRule "PPUP" era)),

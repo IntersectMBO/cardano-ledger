@@ -16,7 +16,7 @@
 
 module Cardano.Ledger.Shelley.Rules.Utxo
   ( ShelleyUTXO,
-    ShelleyUtxoEnv (..),
+    UtxoEnv (..),
     ShelleyUtxoPredFailure (..),
     UtxoEvent (..),
     PredicateFailure,
@@ -67,9 +67,9 @@ import Cardano.Ledger.Shelley.PParams
     Update,
   )
 import Cardano.Ledger.Shelley.Rules.Ppup
-  ( PpupEvent,
+  ( PpupEnv (..),
+    PpupEvent,
     ShelleyPPUP,
-    ShelleyPPUPEnv (..),
     ShelleyPpupPredFailure,
   )
 import Cardano.Ledger.Shelley.Tx
@@ -137,14 +137,14 @@ import Validation (failureUnless)
 
 data ShelleyUTXO era
 
-data ShelleyUtxoEnv era
+data UtxoEnv era
   = UtxoEnv
       SlotNo
       (PParams era)
       (Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era)))
       (GenDelegs (Crypto era))
 
-deriving instance Show (PParams era) => Show (ShelleyUtxoEnv era)
+deriving instance Show (PParams era) => Show (UtxoEnv era)
 
 data UtxoEvent era
   = TotalDeposits Coin
@@ -311,7 +311,7 @@ instance
     Show (ShelleyTx era),
     Eq (PredicateFailure (EraRule "PPUP" era)),
     Embed (EraRule "PPUP" era) (ShelleyUTXO era),
-    Environment (EraRule "PPUP" era) ~ ShelleyPPUPEnv era,
+    Environment (EraRule "PPUP" era) ~ PpupEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,
     Signal (EraRule "PPUP" era) ~ Maybe (Update era)
   ) =>
@@ -319,7 +319,7 @@ instance
   where
   type State (ShelleyUTXO era) = UTxOState era
   type Signal (ShelleyUTXO era) = ShelleyTx era
-  type Environment (ShelleyUTXO era) = ShelleyUtxoEnv era
+  type Environment (ShelleyUTXO era) = UtxoEnv era
   type BaseM (ShelleyUTXO era) = ShelleyBase
   type PredicateFailure (ShelleyUTXO era) = ShelleyUtxoPredFailure era
   type Event (ShelleyUTXO era) = UtxoEvent era
@@ -362,12 +362,12 @@ utxoInductive ::
     STS (utxo era),
     Embed (EraRule "PPUP" era) (utxo era),
     BaseM (utxo era) ~ ShelleyBase,
-    Environment (utxo era) ~ ShelleyUtxoEnv era,
+    Environment (utxo era) ~ UtxoEnv era,
     State (utxo era) ~ UTxOState era,
     Signal (utxo era) ~ Tx era,
     PredicateFailure (utxo era) ~ ShelleyUtxoPredFailure era,
     Event (utxo era) ~ UtxoEvent era,
-    Environment (EraRule "PPUP" era) ~ ShelleyPPUPEnv era,
+    Environment (EraRule "PPUP" era) ~ PpupEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,
     Signal (EraRule "PPUP" era) ~ Maybe (Update era),
     HasField "_minfeeA" (PParams era) Natural,

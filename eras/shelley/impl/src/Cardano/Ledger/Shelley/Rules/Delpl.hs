@@ -14,7 +14,7 @@
 
 module Cardano.Ledger.Shelley.Rules.Delpl
   ( ShelleyDELPL,
-    ShelleyDelplEnv (..),
+    DelplEnv (..),
     ShelleyDelplPredFailure (..),
     ShelleyDelplEvent,
     PredicateFailure,
@@ -37,8 +37,8 @@ import Cardano.Ledger.Shelley.LedgerState
     dpsDState,
     dpsPState,
   )
-import Cardano.Ledger.Shelley.Rules.Deleg (ShelleyDELEG, ShelleyDelegEnv (..), ShelleyDelegPredFailure)
-import Cardano.Ledger.Shelley.Rules.Pool (ShelleyPOOL, ShelleyPoolEnv (..), ShelleyPoolPredFailure)
+import Cardano.Ledger.Shelley.Rules.Deleg (DelegEnv (..), ShelleyDELEG, ShelleyDelegPredFailure)
+import Cardano.Ledger.Shelley.Rules.Pool (PoolEnv (..), ShelleyPOOL, ShelleyPoolPredFailure)
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
     DelegCert (..),
@@ -56,7 +56,7 @@ import NoThunks.Class (NoThunks (..))
 
 data ShelleyDELPL era
 
-data ShelleyDelplEnv era = DelplEnv
+data DelplEnv era = DelplEnv
   { delplSlotNo :: SlotNo,
     delPlPtr :: Ptr,
     delPlPp :: PParams era,
@@ -93,11 +93,11 @@ instance
 instance
   ( Era era,
     Embed (EraRule "DELEG" era) (ShelleyDELPL era),
-    Environment (EraRule "DELEG" era) ~ ShelleyDelegEnv era,
+    Environment (EraRule "DELEG" era) ~ DelegEnv era,
     State (EraRule "DELEG" era) ~ DState (Crypto era),
     Signal (EraRule "DELEG" era) ~ DCert (Crypto era),
     Embed (EraRule "POOL" era) (ShelleyDELPL era),
-    Environment (EraRule "POOL" era) ~ ShelleyPoolEnv era,
+    Environment (EraRule "POOL" era) ~ PoolEnv era,
     State (EraRule "POOL" era) ~ PState (Crypto era),
     Signal (EraRule "POOL" era) ~ DCert (Crypto era)
   ) =>
@@ -105,7 +105,7 @@ instance
   where
   type State (ShelleyDELPL era) = DPState (Crypto era)
   type Signal (ShelleyDELPL era) = DCert (Crypto era)
-  type Environment (ShelleyDELPL era) = ShelleyDelplEnv era
+  type Environment (ShelleyDELPL era) = DelplEnv era
   type BaseM (ShelleyDELPL era) = ShelleyBase
   type PredicateFailure (ShelleyDELPL era) = ShelleyDelplPredFailure era
   type Event (ShelleyDELPL era) = ShelleyDelplEvent era
@@ -152,11 +152,11 @@ instance
 delplTransition ::
   forall era.
   ( Embed (EraRule "DELEG" era) (ShelleyDELPL era),
-    Environment (EraRule "DELEG" era) ~ ShelleyDelegEnv era,
+    Environment (EraRule "DELEG" era) ~ DelegEnv era,
     State (EraRule "DELEG" era) ~ DState (Crypto era),
     Signal (EraRule "DELEG" era) ~ DCert (Crypto era),
     Embed (EraRule "POOL" era) (ShelleyDELPL era),
-    Environment (EraRule "POOL" era) ~ ShelleyPoolEnv era,
+    Environment (EraRule "POOL" era) ~ PoolEnv era,
     State (EraRule "POOL" era) ~ PState (Crypto era),
     Signal (EraRule "POOL" era) ~ DCert (Crypto era)
   ) =>

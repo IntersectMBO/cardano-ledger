@@ -14,7 +14,7 @@
 module Cardano.Ledger.Shelley.Rules.Pool
   ( ShelleyPOOL,
     PoolEvent (..),
-    ShelleyPoolEnv (..),
+    PoolEnv (..),
     PredicateFailure,
     ShelleyPoolPredFailure (..),
   )
@@ -74,12 +74,12 @@ import NoThunks.Class (NoThunks (..))
 
 data ShelleyPOOL (era :: Type)
 
-data ShelleyPoolEnv era
+data PoolEnv era
   = PoolEnv SlotNo (PParams era)
 
-deriving instance (Show (PParams era)) => Show (ShelleyPoolEnv era)
+deriving instance (Show (PParams era)) => Show (PoolEnv era)
 
-deriving instance (Eq (PParams era)) => Eq (ShelleyPoolEnv era)
+deriving instance (Eq (PParams era)) => Eq (PoolEnv era)
 
 data ShelleyPoolPredFailure era
   = StakePoolNotRegisteredOnKeyPOOL
@@ -116,7 +116,7 @@ instance
 
   type Signal (ShelleyPOOL era) = DCert (Crypto era)
 
-  type Environment (ShelleyPOOL era) = ShelleyPoolEnv era
+  type Environment (ShelleyPOOL era) = PoolEnv era
 
   type BaseM (ShelleyPOOL era) = ShelleyBase
   type PredicateFailure (ShelleyPOOL era) = ShelleyPoolPredFailure era

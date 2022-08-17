@@ -14,7 +14,7 @@
 
 module Cardano.Ledger.Shelley.Rules.Delegs
   ( ShelleyDELEGS,
-    ShelleyDelegsEnv (..),
+    DelegsEnv (..),
     ShelleyDelegsPredFailure (..),
     ShelleyDelegsEvent (..),
     PredicateFailure,
@@ -52,7 +52,7 @@ import Cardano.Ledger.Shelley.LedgerState
     _pParams,
     _unified,
   )
-import Cardano.Ledger.Shelley.Rules.Delpl (ShelleyDELPL, ShelleyDelplEnv (..), ShelleyDelplEvent, ShelleyDelplPredFailure)
+import Cardano.Ledger.Shelley.Rules.Delpl (DelplEnv (..), ShelleyDELPL, ShelleyDelplEvent, ShelleyDelplPredFailure)
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
     DelegCert (..),
@@ -90,7 +90,7 @@ import NoThunks.Class (NoThunks (..))
 
 data ShelleyDELEGS era
 
-data ShelleyDelegsEnv era = ShelleyDelegsEnv
+data DelegsEnv era = DelegsEnv
   { delegsSlotNo :: !SlotNo,
     delegsIx :: !TxIx,
     delegspp :: !(PParams era),
@@ -102,7 +102,7 @@ deriving stock instance
   ( Show (Tx era),
     Show (PParams era)
   ) =>
-  Show (ShelleyDelegsEnv era)
+  Show (DelegsEnv era)
 
 data ShelleyDelegsPredFailure era
   = DelegateeNotRegisteredDELEG
@@ -128,7 +128,7 @@ instance
   ( EraTx era,
     ShelleyEraTxBody era,
     Embed (EraRule "DELPL" era) (ShelleyDELEGS era),
-    Environment (EraRule "DELPL" era) ~ ShelleyDelplEnv era,
+    Environment (EraRule "DELPL" era) ~ DelplEnv era,
     State (EraRule "DELPL" era) ~ DPState (Crypto era),
     Signal (EraRule "DELPL" era) ~ DCert (Crypto era)
   ) =>
@@ -136,7 +136,7 @@ instance
   where
   type State (ShelleyDELEGS era) = DPState (Crypto era)
   type Signal (ShelleyDELEGS era) = Seq (DCert (Crypto era))
-  type Environment (ShelleyDELEGS era) = ShelleyDelegsEnv era
+  type Environment (ShelleyDELEGS era) = DelegsEnv era
   type BaseM (ShelleyDELEGS era) = ShelleyBase
   type
     PredicateFailure (ShelleyDELEGS era) =
@@ -196,13 +196,13 @@ delegsTransition ::
   ( EraTx era,
     ShelleyEraTxBody era,
     Embed (EraRule "DELPL" era) (ShelleyDELEGS era),
-    Environment (EraRule "DELPL" era) ~ ShelleyDelplEnv era,
+    Environment (EraRule "DELPL" era) ~ DelplEnv era,
     State (EraRule "DELPL" era) ~ DPState (Crypto era),
     Signal (EraRule "DELPL" era) ~ DCert (Crypto era)
   ) =>
   TransitionRule (ShelleyDELEGS era)
 delegsTransition = do
-  TRC (env@(ShelleyDelegsEnv slot txIx pp tx acnt), dpstate, certificates) <- judgmentContext
+  TRC (env@(DelegsEnv slot txIx pp tx acnt), dpstate, certificates) <- judgmentContext
   network <- liftSTS $ asks networkId
 
   case certificates of

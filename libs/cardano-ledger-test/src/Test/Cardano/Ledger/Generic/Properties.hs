@@ -26,8 +26,8 @@ import Cardano.Ledger.Shelley.LedgerState
     updateStakeDistribution,
   )
 import qualified Cardano.Ledger.Shelley.PParams as Shelley (ShelleyPParamsHKD (..))
-import Cardano.Ledger.Shelley.Rules.Ledger (ShelleyLedgerEnv (..))
-import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoEnv (..))
+import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv (..))
+import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad.Trans.RWS.Strict (gets)
@@ -97,7 +97,7 @@ genTxAndLEDGERState ::
   ( Reflect era,
     Signal (EraRule "LEDGER" era) ~ Tx era,
     State (EraRule "LEDGER" era) ~ LedgerState era,
-    Environment (EraRule "LEDGER" era) ~ ShelleyLedgerEnv era
+    Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   ) =>
   Proof era ->
   GenSize ->

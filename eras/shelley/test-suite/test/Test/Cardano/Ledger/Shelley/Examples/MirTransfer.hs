@@ -18,13 +18,13 @@ import Cardano.Ledger.Shelley.API
     Credential (..),
     DCert (..),
     DState (..),
+    DelegEnv (..),
     InstantaneousRewards (..),
     MIRCert (..),
     MIRPot (..),
     MIRTarget (..),
     Ptr (..),
     ShelleyDELEG,
-    ShelleyDelegEnv (..),
   )
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..), emptyPParams)
 import Cardano.Ledger.Shelley.Rules.Deleg (ShelleyDelegPredFailure (..))
@@ -46,7 +46,7 @@ ignoreAllButIRWD ::
   Either [PredicateFailure (ShelleyDELEG ShelleyTest)] (InstantaneousRewards C_Crypto)
 ignoreAllButIRWD = fmap _irwd
 
-env :: ProtVer -> AccountState -> ShelleyDelegEnv ShelleyTest
+env :: ProtVer -> AccountState -> DelegEnv ShelleyTest
 env pv acnt =
   DelegEnv
     { slotNo = SlotNo 50,

@@ -23,7 +23,7 @@ import Cardano.Ledger.Mary.Value
     PolicyID (..),
   )
 import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Shelley.API (ShelleyLEDGER, ShelleyLedgerEnv (..))
+import Cardano.Ledger.Shelley.API (LedgerEnv (..), ShelleyLEDGER)
 import Cardano.Ledger.Shelley.LedgerState (AccountState (..))
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..), emptyPParams)
 import Cardano.Ledger.Shelley.Rules.Ledger (ShelleyLedgerPredFailure (..))
@@ -98,7 +98,7 @@ pp =
       _minUTxOValue = Coin 100
     }
 
-ledgerEnv :: SlotNo -> ShelleyLedgerEnv MaryTest
+ledgerEnv :: SlotNo -> LedgerEnv MaryTest
 ledgerEnv s = LedgerEnv s minBound pp (AccountState (Coin 0) (Coin 0))
 
 feeEx :: Coin

@@ -29,13 +29,13 @@ import Cardano.Ledger.Shelley.LedgerState
     rewards,
   )
 import Cardano.Ledger.Shelley.Rules.Delegs
-  ( ShelleyDELEGS,
-    ShelleyDelegsEnv (..),
+  ( DelegsEnv (..),
+    ShelleyDELEGS,
     ShelleyDelegsEvent,
     ShelleyDelegsPredFailure,
   )
 import Cardano.Ledger.Shelley.Rules.Ledger
-  ( ShelleyLedgerEnv (..),
+  ( LedgerEnv (..),
     ShelleyLedgerEvent (..),
     ShelleyLedgerPredFailure (..),
   )
@@ -44,7 +44,7 @@ import Cardano.Ledger.Shelley.Rules.Ledgers as Shelley
   ( ShelleyLedgersEvent (LedgerEvent),
     ShelleyLedgersPredFailure (LedgerFailure),
   )
-import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoEnv (..))
+import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
 import Cardano.Ledger.Shelley.TxBody (DCert)
 import Control.State.Transition
   ( Assertion (..),
@@ -69,10 +69,10 @@ instance
     HasField "_poolDeposit" (PParams era) Coin,
     Embed (EraRule "DELEGS" era) (BabbageLEDGER era),
     Embed (EraRule "UTXOW" era) (BabbageLEDGER era),
-    Environment (EraRule "UTXOW" era) ~ ShelleyUtxoEnv era,
+    Environment (EraRule "UTXOW" era) ~ UtxoEnv era,
     State (EraRule "UTXOW" era) ~ UTxOState era,
     Signal (EraRule "UTXOW" era) ~ AlonzoTx era,
-    Environment (EraRule "DELEGS" era) ~ ShelleyDelegsEnv era,
+    Environment (EraRule "DELEGS" era) ~ DelegsEnv era,
     State (EraRule "DELEGS" era) ~ DPState (Crypto era),
     Signal (EraRule "DELEGS" era) ~ Seq (DCert (Crypto era))
   ) =>
@@ -80,7 +80,7 @@ instance
   where
   type State (BabbageLEDGER era) = LedgerState era
   type Signal (BabbageLEDGER era) = AlonzoTx era
-  type Environment (BabbageLEDGER era) = ShelleyLedgerEnv era
+  type Environment (BabbageLEDGER era) = LedgerEnv era
   type BaseM (BabbageLEDGER era) = ShelleyBase
   type PredicateFailure (BabbageLEDGER era) = ShelleyLedgerPredFailure era
   type Event (BabbageLEDGER era) = ShelleyLedgerEvent era
