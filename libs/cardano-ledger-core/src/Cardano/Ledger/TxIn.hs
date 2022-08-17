@@ -27,6 +27,8 @@ import Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (..), encodeListLen)
 import Cardano.Ledger.BaseTypes (TxIx (..), mkTxIxPartial)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
+import Cardano.HeapWords (HeapWords (..))
+import qualified Cardano.HeapWords as HW
 import Cardano.Ledger.SafeHash (SafeHash)
 import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Cardano.Prelude (HeapWords (..))

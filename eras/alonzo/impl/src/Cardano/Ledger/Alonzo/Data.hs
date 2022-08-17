@@ -54,6 +54,7 @@ import Cardano.Binary
     withSlice,
   )
 import Cardano.Crypto.Hash.Class (HashAlgorithm)
+import Cardano.HeapWords (HeapWords (..), heapWords0, heapWords1)
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), validScript)

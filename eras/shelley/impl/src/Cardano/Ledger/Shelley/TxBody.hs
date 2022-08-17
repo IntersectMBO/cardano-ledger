@@ -72,6 +72,7 @@ import Cardano.Binary
     encodeListLen,
   )
 import qualified Cardano.Crypto.Hash.Class as HS
+import Cardano.HeapWords (HeapWords (..))
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), Url)
@@ -109,7 +110,6 @@ import Cardano.Ledger.Shelley.PoolParams
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val (DecodeNonNegative (..))
-import Cardano.Prelude (HeapWords (..))
 import Control.DeepSeq (NFData (rnf))
 import qualified Data.ByteString.Lazy as BSL
 import Data.ByteString.Short (ShortByteString, pack)
