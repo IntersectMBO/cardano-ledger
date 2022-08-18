@@ -57,15 +57,18 @@ import Cardano.Binary
     serializeEncoding',
   )
 import Cardano.Crypto.DSIGN.Class (SigDSIGN, VerKeyDSIGN)
+import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.Alonzo.Data (Data, hashData)
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..), Tag)
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Crypto (HASH)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
+import Cardano.Ledger.MemoBytes (Mem, MemoBytes (..), memoBytes)
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Serialization (FromCBORGroup (..), ToCBORGroup (..))
 import Cardano.Ledger.Shelley.TxBody (WitVKey)
@@ -75,7 +78,6 @@ import Data.Coders
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
-import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
 import Data.Proxy (Proxy (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -116,16 +118,21 @@ instance FromCBORGroup RdmrPtr where
   fromCBORGroup = RdmrPtr <$> fromCBOR <*> fromCBOR
 
 newtype RedeemersRaw era = RedeemersRaw (Map RdmrPtr (Data era, ExUnits))
-  deriving (Eq, Show, Generic, Typeable, NFData)
+  deriving (Eq, Generic, Typeable, NFData)
   deriving newtype (NoThunks)
 
-newtype Redeemers era = RedeemersConstr (MemoBytes (RedeemersRaw era))
-  deriving newtype (Eq, Show, ToCBOR, NoThunks, SafeToHash, Typeable, NFData)
+deriving instance HashAlgorithm (HASH (Crypto era)) => Show (RedeemersRaw era)
+
+newtype Redeemers era = RedeemersConstr (MemoBytes RedeemersRaw era)
+  deriving newtype (Eq, ToCBOR, NoThunks, SafeToHash, Typeable, NFData)
+
+deriving instance HashAlgorithm (HASH (Crypto era)) => Show (Redeemers era)
 
 -- =====================================================
 -- Pattern for Redeemers
 
 pattern Redeemers' ::
+  Era era =>
   Map RdmrPtr (Data era, ExUnits) ->
   Redeemers era
 pattern Redeemers' rs' <-
@@ -153,10 +160,10 @@ pattern Redeemers rs <-
 
 {-# COMPLETE Redeemers #-}
 
-unRedeemers :: Redeemers era -> Map RdmrPtr (Data era, ExUnits)
+unRedeemers :: Era era => Redeemers era -> Map RdmrPtr (Data era, ExUnits)
 unRedeemers (Redeemers' rs) = rs
 
-nullRedeemers :: Redeemers era -> Bool
+nullRedeemers :: Era era => Redeemers era -> Bool
 nullRedeemers = Map.null . unRedeemers
 
 -- ====================================================================
@@ -196,7 +203,7 @@ instance
   ) =>
   NFData (TxWitnessRaw era)
 
-newtype TxWitness era = TxWitnessConstr (MemoBytes (TxWitnessRaw era))
+newtype TxWitness era = TxWitnessConstr (MemoBytes TxWitnessRaw era)
   deriving newtype (SafeToHash, ToCBOR)
 
 instance (Era era, Core.Script era ~ AlonzoScript era) => Semigroup (TxWitness era) where
@@ -221,14 +228,16 @@ deriving instance
   ) =>
   NFData (TxWitness era)
 
-isEmptyTxWitness :: TxWitness era -> Bool
+isEmptyTxWitness :: Era era => TxWitness era -> Bool
 isEmptyTxWitness (TxWitnessConstr (Memo (TxWitnessRaw a b c d (Redeemers' e)) _)) =
   Set.null a && Set.null b && Map.null c && nullDats d && Map.null e
 
 -- =====================================================
 newtype TxDatsRaw era = TxDatsRaw (Map (DataHash (Crypto era)) (Data era))
-  deriving (Generic, Typeable, Eq, Show)
+  deriving (Generic, Typeable, Eq)
   deriving newtype (NoThunks, NFData)
+
+deriving instance HashAlgorithm (HASH (Crypto era)) => Show (TxDatsRaw era)
 
 encodeTxDatsRaw ::
   ToCBOR (Data era) =>
@@ -238,12 +247,12 @@ encodeTxDatsRaw = E (encodeFoldable . Map.elems . unTxDatsRaw)
   where
     unTxDatsRaw (TxDatsRaw m) = m
 
-pattern TxDats' :: Map (DataHash (Crypto era)) (Data era) -> TxDats era
+pattern TxDats' :: Era era => Map (DataHash (Crypto era)) (Data era) -> TxDats era
 pattern TxDats' m <- TxDatsConstr (Memo (TxDatsRaw m) _)
 
 {-# COMPLETE TxDats' #-}
 
-pattern TxDats :: Typeable era => Map (DataHash (Crypto era)) (Data era) -> TxDats era
+pattern TxDats :: Era era => Typeable era => Map (DataHash (Crypto era)) (Data era) -> TxDats era
 pattern TxDats m <-
   TxDatsConstr (Memo (TxDatsRaw m) _)
   where
@@ -251,26 +260,28 @@ pattern TxDats m <-
 
 {-# COMPLETE TxDats #-}
 
-unTxDats :: TxDats era -> Map (DataHash (Crypto era)) (Data era)
+unTxDats :: Era era => TxDats era -> Map (DataHash (Crypto era)) (Data era)
 unTxDats (TxDats' m) = m
 
-nullDats :: TxDats era -> Bool
+nullDats :: Era era => TxDats era -> Bool
 nullDats (TxDats' d) = Map.null d
 
 instance (Typeable era, Era era) => FromCBOR (Annotator (TxDatsRaw era)) where
   fromCBOR = decode $ fmap (TxDatsRaw . keyBy hashData) <$> listDecodeA From
 
-newtype TxDats era = TxDatsConstr (MemoBytes (TxDatsRaw era))
-  deriving newtype (SafeToHash, ToCBOR, Eq, Show, NoThunks, NFData)
+newtype TxDats era = TxDatsConstr (MemoBytes TxDatsRaw era)
+  deriving newtype (SafeToHash, ToCBOR, Eq, NoThunks, NFData)
 
-instance Typeable era => Semigroup (TxDats era) where
+deriving instance HashAlgorithm (HASH (Crypto era)) => Show (TxDats era)
+
+instance Era era => Semigroup (TxDats era) where
   (TxDats m) <> (TxDats m') = TxDats (m <> m')
 
-instance Typeable era => Monoid (TxDats era) where
+instance Era era => Monoid (TxDats era) where
   mempty = TxDats mempty
 
 deriving via
-  (Mem (TxDatsRaw era))
+  (Mem TxDatsRaw era)
   instance
     (Era era) => FromCBOR (Annotator (TxDats era))
 
@@ -303,6 +314,7 @@ deriving newtype instance
 -- Pattern for TxWitness
 
 pattern TxWitness' ::
+  Era era =>
   Set (WitVKey 'Witness (Crypto era)) ->
   Set (BootstrapWitness (Crypto era)) ->
   Map (ScriptHash (Crypto era)) (Core.Script era) ->
@@ -344,7 +356,7 @@ mkAlonzoTxWitness = TxWitnessConstr . memoBytes . encodeWitnessRaw
 -- =======================================================
 
 lensWitsRaw ::
-  (Era era, Core.Script era ~ AlonzoScript era) =>
+  (Era e, Era era, Core.Script era ~ AlonzoScript era) =>
   (TxWitnessRaw e -> a) ->
   (TxWitnessRaw e -> t -> TxWitnessRaw era) ->
   Lens (TxWitness e) (TxWitness era) a t
@@ -488,7 +500,7 @@ instance
         pure $ Map.fromList <$> entries
 
 deriving via
-  (Mem (RedeemersRaw era))
+  (Mem RedeemersRaw era)
   instance
     (Era era) => FromCBOR (Annotator (Redeemers era))
 
@@ -553,7 +565,7 @@ keyBy :: forall a b. Ord b => (a -> b) -> [a] -> Map b a
 keyBy f xs = Map.fromList $ (\x -> (f x, x)) <$> xs
 
 deriving via
-  (Mem (TxWitnessRaw era))
+  (Mem TxWitnessRaw era)
   instance
     (EraScript era, Core.Script era ~ AlonzoScript era) =>
     FromCBOR (Annotator (TxWitness era))

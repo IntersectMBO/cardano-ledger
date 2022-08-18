@@ -94,6 +94,7 @@ import Cardano.Ledger.HKD (HKD)
 import Cardano.Ledger.Keys (HasKeyRole (coerceKeyRole), KeyHash, KeyRole (Witness), asWitness)
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness, bootstrapWitKeyHash)
 import Cardano.Ledger.Keys.WitVKey (WitVKey (..), witVKeyHash)
+import Cardano.Ledger.MemoBytes (Mem, MemoBytes, memoBytes, mkMemoBytes, pattern Memo)
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.Metadata ()
@@ -102,6 +103,7 @@ import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..), ShelleyTxOut (..), TxB
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Control.DeepSeq (NFData)
 import qualified Data.ByteString.Lazy as BSL
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Short as SBS
 import Data.Coders hiding (to)
 import Data.Foldable (fold)
@@ -114,7 +116,6 @@ import Data.Maybe.Strict
     maybeToStrictMaybe,
     strictMaybeToMaybe,
   )
-import Data.MemoBytes (Mem, MemoBytes (Memo), memoBytes)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
@@ -164,7 +165,7 @@ instance
   ) =>
   NoThunks (TxRaw era)
 
-newtype ShelleyTx era = TxConstr (MemoBytes (TxRaw era))
+newtype ShelleyTx era = TxConstr (MemoBytes TxRaw era)
   deriving newtype (SafeToHash, ToCBOR)
 
 type Tx era = ShelleyTx era
@@ -199,7 +200,7 @@ auxDataShelleyTxL =
 {-# INLINE auxDataShelleyTxL #-}
 
 -- | Size getter for `ShelleyTx`.
-sizeShelleyTxF :: SimpleGetter (Tx era) Integer
+sizeShelleyTxF :: Era era => SimpleGetter (Tx era) Integer
 sizeShelleyTxF = to (\(TxConstr (Memo _ bytes)) -> fromIntegral $ SBS.length bytes)
 {-# INLINE sizeShelleyTxF #-}
 
@@ -309,7 +310,7 @@ instance
               <$> decodeNullMaybe fromCBOR
           )
 
-deriving via Mem (TxRaw era) instance EraTx era => FromCBOR (Annotator (Tx era))
+deriving via Mem TxRaw era instance EraTx era => FromCBOR (Annotator (Tx era))
 
 -- | Construct a Tx containing the explicit serialised bytes.
 --
@@ -320,12 +321,13 @@ deriving via Mem (TxRaw era) instance EraTx era => FromCBOR (Annotator (Tx era))
 --
 --   The only intended use case for this is for segregated witness.
 unsafeConstructTxWithBytes ::
+  Era era =>
   Core.TxBody era ->
   Witnesses era ->
   StrictMaybe (AuxiliaryData era) ->
-  SBS.ShortByteString ->
+  LBS.ByteString ->
   Tx era
-unsafeConstructTxWithBytes b w a bytes = TxConstr (Memo (TxRaw b w a) bytes)
+unsafeConstructTxWithBytes b w a bytes = TxConstr (mkMemoBytes (TxRaw b w a) bytes)
 
 --------------------------------------------------------------------------------
 -- Witnessing
@@ -496,7 +498,7 @@ segwitTx
           body'
           witnessSet
           (maybeToStrictMaybe metadata)
-          (SBS.toShort . BSL.toStrict $ fullBytes)
+          fullBytes
 
 instance EraScript era => FromCBOR (Annotator (WitnessSetHKD Identity era)) where
   fromCBOR = decodeWits
@@ -567,9 +569,9 @@ hashMultiSigScript = hashScript @era
 -- | Script evaluator for native multi-signature scheme. 'vhks' is the set of
 -- key hashes that signed the transaction to be validated.
 evalNativeMultiSigScript ::
-  CC.Crypto crypto =>
-  MultiSig crypto ->
-  Set (KeyHash 'Witness crypto) ->
+  Era era =>
+  MultiSig era ->
+  Set (KeyHash 'Witness (Crypto era)) ->
   Bool
 evalNativeMultiSigScript (RequireSignature hk) vhks = Set.member hk vhks
 evalNativeMultiSigScript (RequireAllOf msigs) vhks =
@@ -582,7 +584,7 @@ evalNativeMultiSigScript (RequireMOf m msigs) vhks =
 -- | Script validator for native multi-signature scheme.
 validateNativeMultiSigScript ::
   EraTx era =>
-  MultiSig (Crypto era) ->
+  MultiSig era ->
   Core.Tx era ->
   Bool
 validateNativeMultiSigScript msig tx =

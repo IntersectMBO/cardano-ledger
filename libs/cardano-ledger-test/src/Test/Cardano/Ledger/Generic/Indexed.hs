@@ -55,7 +55,6 @@ import Test.Cardano.Ledger.Generic.Proof
     Mock,
     Proof (..),
     Reflect (..),
-    ReflectC (..),
   )
 import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair)
 
@@ -175,18 +174,18 @@ instance Fixed SlotNo where
 -- ==========================================================================
 -- MultiSig Scripts
 
-multisigSimple :: forall c. CC.Crypto c => Evidence c -> [MultiSig c]
+multisigSimple :: forall era. Era era => Proof era -> [MultiSig era]
 multisigSimple _c =
   [ Multi.RequireAnyOf mempty, -- always False
     Multi.RequireAllOf mempty -- always True
   ]
 
-multisigFrom :: forall c. CC.Crypto c => Evidence c -> Int -> [MultiSig c]
+multisigFrom :: forall era. Era era => Proof era -> Int -> [MultiSig era]
 multisigFrom _c n =
   [ Multi.RequireSignature (theKeyHash n)
   ]
 
-multisigCompound :: forall c. CC.Crypto c => Evidence c -> Int -> [MultiSig c]
+multisigCompound :: forall era. Era era => Proof era -> Int -> [MultiSig era]
 multisigCompound c n =
   [ Multi.RequireAnyOf (multisigFrom c n),
     Multi.RequireAllOf (multisigFrom c n),
@@ -194,36 +193,36 @@ multisigCompound c n =
     Multi.RequireMOf 2 (multisigFrom c n)
   ]
 
-somemultisigs :: CC.Crypto c => Evidence c -> [MultiSig c]
+somemultisigs :: Era era => Proof era -> [MultiSig era]
 somemultisigs c =
   multisigSimple c
     ++ concat [multisigFrom c i | i <- [1 .. 5]]
     ++ concat [multisigCompound c i | i <- [1 .. 5]]
 
-instance ReflectC c => Fixed (MultiSig c) where
-  unique n = (somemultisigs evidence) !! n
+instance (Era era, Reflect era) => Fixed (MultiSig era) where
+  unique n = (somemultisigs reify) !! n
   size _ = Just multisiglength
 
 multisiglength :: Int
-multisiglength = length (somemultisigs Mock) - 1
+multisiglength = length (somemultisigs (Shelley Mock)) - 1
 
 -- ====================================================
 -- Timelock Scripts
 
-timelockSimple :: forall c. CC.Crypto c => Evidence c -> [Timelock c]
+timelockSimple :: forall era. Era era => Proof era -> [Timelock era]
 timelockSimple _c =
   [ RequireAnyOf mempty, -- always False
     RequireAllOf mempty -- always True
   ]
 
-timelockFrom :: forall c. CC.Crypto c => Evidence c -> Int -> [Timelock c]
+timelockFrom :: forall era. Era era => Proof era -> Int -> [Timelock era]
 timelockFrom _c n =
   [ RequireSignature (theKeyHash n),
     RequireTimeExpire (unique @SlotNo n),
     RequireTimeStart (unique @SlotNo n)
   ]
 
-timelockCompound :: forall c. CC.Crypto c => Evidence c -> Int -> [Timelock c]
+timelockCompound :: forall era. Era era => Proof era -> Int -> [Timelock era]
 timelockCompound c n =
   [ RequireAnyOf (Seq.fromList (timelockFrom c n)),
     RequireAllOf (Seq.fromList (timelockFrom c n)),
@@ -231,17 +230,17 @@ timelockCompound c n =
     RequireMOf 2 (Seq.fromList (timelockFrom c n))
   ]
 
-sometimelocks :: CC.Crypto c => Evidence c -> [Timelock c]
+sometimelocks :: Era era => Proof era -> [Timelock era]
 sometimelocks c =
   timelockSimple c
     ++ concat [timelockFrom c i | i <- [1 .. 5]]
     ++ concat [timelockCompound c i | i <- [1 .. 5]]
 
 timelocklength :: Int
-timelocklength = length (sometimelocks Mock) - 1
+timelocklength = length (sometimelocks (Shelley Mock)) - 1
 
-instance (ReflectC c, CC.Crypto c) => Fixed (Timelock c) where
-  unique n = (liftC sometimelocks) !! n
+instance (Era era, Reflect era) => Fixed (Timelock era) where
+  unique n = lift sometimelocks !! n
   size _ = Just timelocklength
 
 -- ====================================================
@@ -253,7 +252,7 @@ alonzoSimple =
     alwaysSucceeds PlutusV1 1 -- always True
   ]
 
-somealonzo :: Era era => Evidence (Crypto era) -> [AlonzoScript era]
+somealonzo :: Era era => Proof era -> [AlonzoScript era]
 somealonzo c =
   alonzoSimple
     ++ ( fmap
@@ -264,18 +263,18 @@ somealonzo c =
        )
 
 alonzolength :: Int
-alonzolength = length (somealonzo Mock :: [Script (AlonzoEra Mock)]) - 1
+alonzolength = length (somealonzo (Alonzo Mock) :: [Script (AlonzoEra Mock)]) - 1
 
 instance Reflect (AlonzoEra c) => Fixed (AlonzoScript (AlonzoEra c)) where
-  unique n = liftC somealonzo !! n
+  unique n = lift somealonzo !! n
   size _ = Just alonzolength
 
 instance Reflect (BabbageEra c) => Fixed (AlonzoScript (BabbageEra c)) where
-  unique n = liftC somealonzo !! n
+  unique n = lift somealonzo !! n
   size _ = Just alonzolength
 
 instance Reflect (ConwayEra c) => Fixed (AlonzoScript (ConwayEra c)) where
-  unique n = liftC somealonzo !! n
+  unique n = lift somealonzo !! n
   size _ = Just alonzolength
 
 -- ==============================================
@@ -293,12 +292,12 @@ pickValue n (Babbage _) = unMulti (unique @(MultiAsset era) n)
 pickValue n (Conway _) = unMulti (unique @(MultiAsset era) n)
 
 pickScript :: Int -> Proof era -> Script era
-pickScript n (Shelley c) = somemultisigs c !! n
-pickScript n (Allegra c) = sometimelocks c !! n
-pickScript n (Mary c) = sometimelocks c !! n
-pickScript n (Alonzo c) = somealonzo c !! n
-pickScript n (Babbage c) = somealonzo c !! n
-pickScript n (Conway c) = somealonzo c !! n
+pickScript n p@(Shelley _) = somemultisigs p !! n
+pickScript n p@(Allegra _) = sometimelocks p !! n
+pickScript n p@(Mary _) = sometimelocks p !! n
+pickScript n p@(Alonzo _) = somealonzo p !! n
+pickScript n p@(Babbage _) = somealonzo p !! n
+pickScript n p@(Conway _) = somealonzo p !! n
 
 pickScriptHash :: forall era. Reflect era => Int -> Proof era -> ScriptHash (Crypto era)
 pickScriptHash n wit = hashScript @era (pickScript n wit)

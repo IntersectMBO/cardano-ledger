@@ -34,7 +34,6 @@ library
 
   exposed-modules:     Data.AbstractSize
                      , Data.CanonicalMaps
-                     , Data.MemoBytes
                      , Data.Coders
                      , Data.Pulse
                      , Data.Sharing

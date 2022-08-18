@@ -118,7 +118,7 @@ instance NFData Tag where
 
 -- | Scripts in the Alonzo Era, Either a Timelock script or a Plutus script.
 data AlonzoScript era
-  = TimelockScript (Timelock (Crypto era))
+  = TimelockScript (Timelock era)
   | PlutusScript Language ShortByteString
   deriving (Eq, Generic)
 
@@ -142,7 +142,7 @@ instance SafeToHash (AlonzoScript era) where
   originalBytes (TimelockScript t) = originalBytes t
   originalBytes (PlutusScript _ bs) = fromShort bs
 
-type instance SomeScript 'PhaseOne (AlonzoEra c) = Timelock c
+type instance SomeScript 'PhaseOne (AlonzoEra c) = Timelock (AlonzoEra c)
 
 type instance SomeScript 'PhaseTwo (AlonzoEra c) = (Language, ShortByteString)
 
@@ -405,7 +405,7 @@ instance FromCBOR Prices where
 instance forall era. (Typeable (Crypto era), Typeable era) => ToCBOR (Script era) where
   toCBOR x = encode (encodeScript x)
 
-encodeScript :: (Typeable (Crypto era)) => Script era -> Encode 'Open (Script era)
+encodeScript :: (Typeable era) => Script era -> Encode 'Open (Script era)
 encodeScript (TimelockScript i) = Sum TimelockScript 0 !> To i
 -- Use the ToCBOR instance of ShortByteString:
 encodeScript (PlutusScript PlutusV1 s) = Sum (PlutusScript PlutusV1) 1 !> To s

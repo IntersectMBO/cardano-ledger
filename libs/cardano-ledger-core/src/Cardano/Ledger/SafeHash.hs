@@ -64,7 +64,6 @@ import Control.DeepSeq (NFData)
 import Data.ByteString (ByteString)
 import Data.ByteString.Short (ShortByteString, fromShort)
 import Data.Foldable (fold)
-import Data.MemoBytes (MemoBytes (..))
 import Data.Typeable
 import NoThunks.Class (NoThunks (..))
 
@@ -133,9 +132,6 @@ class SafeToHash t where
 -- There are a limited number of direct instances. Everything else should come
 -- from newtype deriving.
 
-instance SafeToHash (MemoBytes t) where
-  originalBytes = fromShort . memobytes
-
 instance SafeToHash ShortByteString where
   originalBytes x = fromShort x
 
@@ -173,9 +169,9 @@ class SafeToHash x => HashAnnotated x index crypto | x -> index crypto where
   indexProxy :: x -> Proxy index
   indexProxy _ = Proxy @index
 
--- | Create a @('SafeHash' i crypto)@, given @(HasAlgorithm crypto)@ and  @(HashAnnotated x i crypto)@ instances.
-hashAnnotated :: forall c i x. (HasAlgorithm c, HashAnnotated x i c) => x -> SafeHash c i
-hashAnnotated = makeHashWithExplicitProxys (Proxy @c) (Proxy @i)
+  -- | Create a @('SafeHash' i crypto)@, given @(HasAlgorithm crypto)@ and  @(HashAnnotated x i crypto)@ instances.
+  hashAnnotated :: HasAlgorithm crypto => x -> SafeHash crypto index
+  hashAnnotated = makeHashWithExplicitProxys (Proxy @crypto) (Proxy @index)
 
 -- ========================================================================
 

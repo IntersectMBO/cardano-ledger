@@ -149,7 +149,7 @@ txInfoInV2 (UTxO mp) txin =
       out <- txInfoOutV2 (TxOutFromInput txin) txout
       Right (PV2.TxInInfo (Alonzo.txInfoIn' txin) out)
 
-transRedeemer :: Data era -> PV2.Redeemer
+transRedeemer :: Era era => Data era -> PV2.Redeemer
 transRedeemer = PV2.Redeemer . PV2.dataToBuiltinData . getPlutusData
 
 transRedeemerPtr ::
@@ -202,7 +202,7 @@ babbageTxInfo pp lang ei sysS utxo tx = do
             PV1.txInfoSignatories =
               map Alonzo.transKeyHash (Set.toList (txBody ^. reqSignerHashesTxBodyL)),
             PV1.txInfoData = map Alonzo.transDataPair datpairs,
-            PV1.txInfoId = PV1.TxId (Alonzo.transSafeHash (hashAnnotated @(Crypto era) txBody))
+            PV1.txInfoId = PV1.TxId (Alonzo.transSafeHash (hashAnnotated txBody))
           }
     PlutusV2 -> do
       inputs <- mapM (txInfoInV2 utxo) (Set.toList (txBody ^. inputsTxBodyL))
@@ -227,7 +227,7 @@ babbageTxInfo pp lang ei sysS utxo tx = do
               map Alonzo.transKeyHash (Set.toList (txBody ^. reqSignerHashesTxBodyL)),
             PV2.txInfoRedeemers = PV2.fromList rdmrs',
             PV2.txInfoData = PV2.fromList $ map Alonzo.transDataPair datpairs,
-            PV2.txInfoId = PV2.TxId (Alonzo.transSafeHash (hashAnnotated @(Crypto era) txBody))
+            PV2.txInfoId = PV2.TxId (Alonzo.transSafeHash (hashAnnotated txBody))
           }
   where
     txBody = tx ^. bodyTxL

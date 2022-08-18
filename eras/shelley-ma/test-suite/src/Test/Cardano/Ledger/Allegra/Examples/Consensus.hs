@@ -15,6 +15,7 @@ import Cardano.Ledger.Shelley.PParams (ShelleyPParamsUpdate, Update (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxOut (..))
 import Cardano.Ledger.ShelleyMA
 import Cardano.Ledger.ShelleyMA.AuxiliaryData
+import Cardano.Ledger.ShelleyMA.Era
 import Cardano.Ledger.ShelleyMA.Timelocks
 import Cardano.Ledger.ShelleyMA.TxBody
 import Cardano.Slotting.Slot
@@ -68,13 +69,13 @@ exampleTxBodyMA value =
     auxiliaryDataHash =
       AuxiliaryDataHash $ mkDummySafeHash (Proxy @(Crypto era)) 30
 
-exampleAuxiliaryDataMA :: CC.Crypto c => MAAuxiliaryData (ShelleyMAEra ma c)
+exampleAuxiliaryDataMA :: (MAClass ma c) => MAAuxiliaryData (ShelleyMAEra ma c)
 exampleAuxiliaryDataMA =
   MAAuxiliaryData
     exampleMetadataMap
     (StrictSeq.fromList [exampleScriptMA])
 
-exampleScriptMA :: CC.Crypto c => Script (ShelleyMAEra ma c)
+exampleScriptMA :: (MAClass ma c) => Script (ShelleyMAEra ma c)
 exampleScriptMA =
   RequireMOf 2 $
     StrictSeq.fromList

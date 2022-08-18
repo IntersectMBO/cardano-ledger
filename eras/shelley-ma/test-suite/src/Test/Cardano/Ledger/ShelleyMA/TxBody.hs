@@ -21,6 +21,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Value (AssetName (..), MultiAsset (..), PolicyID (..))
+import Cardano.Ledger.MemoBytes (MemoBytes (Memo))
 import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), Wdrl (..))
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.ShelleyMA.TxBody (MATxBody (..), ShelleyMAEraTxBody (..))
@@ -28,7 +29,6 @@ import Cardano.Slotting.Slot (SlotNo (..))
 import Data.ByteString.Short (ShortByteString)
 import qualified Data.ByteString.Short as Short
 import qualified Data.Map.Strict as Map
-import Data.MemoBytes (MemoBytes (Memo))
 import Data.Sequence.Strict (fromList)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (empty)
@@ -71,7 +71,7 @@ testmint = MultiAsset $ Map.singleton policyId (Map.singleton aname 2)
     policyId = PolicyID . hashScript @TestEra . RequireAnyOf $ fromList []
     aname = AssetName $ fromString "asset name"
 
-bytes :: MATxBody era -> ShortByteString
+bytes :: Era era => MATxBody era -> ShortByteString
 bytes (TxBodyConstr (Memo _ b)) = b
 
 fieldTests :: TestTree

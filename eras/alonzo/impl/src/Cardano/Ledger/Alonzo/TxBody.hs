@@ -109,8 +109,9 @@ import Cardano.Ledger.Credential (Credential (..), PaymentCredential, StakeRefer
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary.Value (MaryValue (MaryValue), MultiAsset (..), policies, policyID)
+import Cardano.Ledger.MemoBytes (Mem, MemoBytes (..), MemoHashIndex, memoBytes)
 import Cardano.Ledger.SafeHash
-  ( HashAnnotated,
+  ( HashAnnotated (..),
     SafeHash,
     SafeToHash,
     extractHash,
@@ -133,7 +134,6 @@ import Control.Monad (guard, (<$!>))
 import Data.Bits
 import Data.Coders hiding (to)
 import Data.Maybe (fromMaybe)
-import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
@@ -439,7 +439,7 @@ deriving instance
   (Era era, Show (PParamsUpdate era), Show (Value era), Val (Value era)) =>
   Show (TxBodyRaw era)
 
-newtype AlonzoTxBody era = TxBodyConstr (MemoBytes (TxBodyRaw era))
+newtype AlonzoTxBody era = TxBodyConstr (MemoBytes TxBodyRaw era)
   deriving (ToCBOR)
   deriving newtype (SafeToHash)
 
@@ -563,7 +563,7 @@ deriving instance
   Show (AlonzoTxBody era)
 
 deriving via
-  (Mem (TxBodyRaw era))
+  (Mem TxBodyRaw era)
   instance
     ( Era era,
       FromCBOR (PParamsUpdate era),
@@ -662,7 +662,10 @@ mkAlonzoTxBody ::
   AlonzoTxBody era
 mkAlonzoTxBody = TxBodyConstr . memoBytes . encodeTxBodyRaw
 
-instance (c ~ Crypto era) => HashAnnotated (AlonzoTxBody era) EraIndependentTxBody c
+type instance MemoHashIndex TxBodyRaw = EraIndependentTxBody
+
+instance (c ~ Crypto era) => HashAnnotated (AlonzoTxBody era) EraIndependentTxBody c where
+  hashAnnotated (TxBodyConstr mb) = mbHash mb
 
 -- ==============================================================================
 -- We define these accessor functions manually, because if we define them using
@@ -670,19 +673,19 @@ instance (c ~ Crypto era) => HashAnnotated (AlonzoTxBody era) EraIndependentTxBo
 -- constraint as a precondition. This is unnecessary, as one can see below
 -- they need not be constrained at all. This should be fixed in the GHC compiler.
 
-inputs' :: AlonzoTxBody era -> Set (TxIn (Crypto era))
-collateral' :: AlonzoTxBody era -> Set (TxIn (Crypto era))
-outputs' :: AlonzoTxBody era -> StrictSeq (AlonzoTxOut era)
-certs' :: AlonzoTxBody era -> StrictSeq (DCert (Crypto era))
-txfee' :: AlonzoTxBody era -> Coin
-wdrls' :: AlonzoTxBody era -> Wdrl (Crypto era)
-vldt' :: AlonzoTxBody era -> ValidityInterval
-update' :: AlonzoTxBody era -> StrictMaybe (Update era)
-reqSignerHashes' :: AlonzoTxBody era -> Set (KeyHash 'Witness (Crypto era))
-adHash' :: AlonzoTxBody era -> StrictMaybe (AuxiliaryDataHash (Crypto era))
-mint' :: AlonzoTxBody era -> MultiAsset (Crypto era)
-scriptIntegrityHash' :: AlonzoTxBody era -> StrictMaybe (ScriptIntegrityHash (Crypto era))
-txnetworkid' :: AlonzoTxBody era -> StrictMaybe Network
+inputs' :: Era era => AlonzoTxBody era -> Set (TxIn (Crypto era))
+collateral' :: Era era => AlonzoTxBody era -> Set (TxIn (Crypto era))
+outputs' :: Era era => AlonzoTxBody era -> StrictSeq (AlonzoTxOut era)
+certs' :: Era era => AlonzoTxBody era -> StrictSeq (DCert (Crypto era))
+txfee' :: Era era => AlonzoTxBody era -> Coin
+wdrls' :: Era era => AlonzoTxBody era -> Wdrl (Crypto era)
+vldt' :: Era era => AlonzoTxBody era -> ValidityInterval
+update' :: Era era => AlonzoTxBody era -> StrictMaybe (Update era)
+reqSignerHashes' :: Era era => AlonzoTxBody era -> Set (KeyHash 'Witness (Crypto era))
+adHash' :: Era era => AlonzoTxBody era -> StrictMaybe (AuxiliaryDataHash (Crypto era))
+mint' :: Era era => AlonzoTxBody era -> MultiAsset (Crypto era)
+scriptIntegrityHash' :: Era era => AlonzoTxBody era -> StrictMaybe (ScriptIntegrityHash (Crypto era))
+txnetworkid' :: Era era => AlonzoTxBody era -> StrictMaybe Network
 inputs' (TxBodyConstr (Memo raw _)) = _inputs raw
 
 collateral' (TxBodyConstr (Memo raw _)) = _collateral raw

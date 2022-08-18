@@ -43,7 +43,7 @@ cradle:
       component: "lib:cardano-ledger-shelley-ma-test"
 
     - path: "eras/shelley-ma/test-suite/test"
-      component: "cardano-ledger-shelley-ma-test:bench:bench"
+      component: "test:cardano-ledger-shelley-ma-test"
 
     - path: "eras/alonzo/impl/src"
       component: "lib:cardano-ledger-alonzo"

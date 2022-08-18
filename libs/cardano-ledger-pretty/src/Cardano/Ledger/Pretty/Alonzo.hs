@@ -154,10 +154,10 @@ ppPlutusData (Plutus.B bytes) = ppSexp "B" [ppLong bytes]
 
 instance PrettyA Plutus.Data where prettyA = ppPlutusData
 
-ppData :: Data era -> PDoc
+ppData :: Era era => Data era -> PDoc
 ppData (Data d) = ppSexp "Data" [ppPlutusData d]
 
-instance PrettyA (Data era) where prettyA = ppData
+instance Era era => PrettyA (Data era) where prettyA = ppData
 
 ppAuxiliaryData ::
   (PrettyA (Script era), EraTx era, Script era ~ AlonzoScript era) =>

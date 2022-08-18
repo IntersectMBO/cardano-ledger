@@ -791,7 +791,7 @@ genTimelockScript proof = do
             elementsT $
               nonRecTimelocks ++ [requireAllOf k, requireAnyOf k, requireMOf k]
         | otherwise = elementsT nonRecTimelocks
-      nonRecTimelocks :: [GenRS era (Timelock (Crypto era))]
+      nonRecTimelocks :: [GenRS era (Timelock era)]
       nonRecTimelocks =
         [ r
           | SJust r <-
@@ -845,7 +845,7 @@ genMultiSigScript proof = do
               nonRecTimelocks ++ [requireAllOf k, requireAnyOf k, requireMOf k]
         | otherwise = elementsT nonRecTimelocks
       nonRecTimelocks = [requireSignature]
-      requireSignature = Shelley.RequireSignature <$> genKeyHash
+      requireSignature = Shelley.RequireSignature @era <$> genKeyHash
       requireAllOf k = do
         n <- lift nonNegativeSingleDigitInt
         Shelley.RequireAllOf <$> replicateM n (genNestedMultiSig (k - 1))

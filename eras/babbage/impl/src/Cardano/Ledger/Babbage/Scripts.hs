@@ -40,7 +40,7 @@ babbageScriptPrefixTag script =
     (PlutusScript PlutusV1 _) -> "\x01"
     (PlutusScript PlutusV2 _) -> "\x02"
 
-type instance SomeScript 'PhaseOne (BabbageEra c) = Timelock c
+type instance SomeScript 'PhaseOne (BabbageEra c) = Timelock (BabbageEra c)
 
 type instance SomeScript 'PhaseTwo (BabbageEra c) = (Language, ShortByteString)
 

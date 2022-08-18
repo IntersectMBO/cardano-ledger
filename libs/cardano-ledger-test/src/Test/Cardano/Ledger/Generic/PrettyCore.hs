@@ -842,7 +842,7 @@ bodySummary proof body =
     "TxBody"
     (concat (map txBodyFieldSummary (abstractTxBody proof body)))
 
-witnessFieldSummary :: WitnessesField era -> (Text, PDoc)
+witnessFieldSummary :: Era era => WitnessesField era -> (Text, PDoc)
 witnessFieldSummary wit = case wit of
   (AddrWits s) -> ("Address Witnesses", ppInt (Set.size s))
   (BootWits s) -> ("BootStrap Witnesses", ppInt (Set.size s))
@@ -850,7 +850,7 @@ witnessFieldSummary wit = case wit of
   (DataWits m) -> ("Data Witnesses", ppInt (Map.size (unTxDats m)))
   (RdmrWits (Redeemers' m)) -> ("Redeemer Witnesses", ppInt (Map.size m))
 
-witnessSummary :: Proof era -> Witnesses era -> PDoc
+witnessSummary :: Era era => Proof era -> Witnesses era -> PDoc
 witnessSummary proof wits =
   ppRecord
     "Witnesses"
@@ -890,12 +890,12 @@ txOutSummary p@(Mary _) (ShelleyTxOut addr v) = ppSexp "TxOut" [addrSummary addr
 txOutSummary p@(Allegra _) (ShelleyTxOut addr v) = ppSexp "TxOut" [addrSummary addr, pcCoreValue p v]
 txOutSummary p@(Shelley _) (ShelleyTxOut addr v) = ppSexp "TxOut" [addrSummary addr, pcCoreValue p v]
 
-datumSummary :: Datum era -> PDoc
+datumSummary :: Era era => Datum era -> PDoc
 datumSummary NoDatum = ppString "NoDatum"
 datumSummary (DatumHash h) = ppSexp "DHash" [trim (ppSafeHash h)]
 datumSummary (Datum b) = dataSummary (binaryDataToData b)
 
-dataSummary :: Cardano.Ledger.Alonzo.Data.Data era -> PDoc
+dataSummary :: Era era => Cardano.Ledger.Alonzo.Data.Data era -> PDoc
 dataSummary (Data x) = plutusDataSummary x
 
 plutusDataSummary :: Plutus.Data -> PDoc
@@ -960,7 +960,7 @@ keyPairSummary (KeyPair x y) =
 vKeySummary :: CC.Crypto c => VKey r c -> PDoc
 vKeySummary vk@(VKey x) = (viaShow x) <> " (hash " <> keyHashSummary (hashKey vk) <> ")"
 
-timelockSummary :: CC.Crypto crypto => Timelock crypto -> PDoc
+timelockSummary :: Era era => Timelock era -> PDoc
 timelockSummary (RequireSignature akh) =
   ppSexp "Signature" [keyHashSummary akh]
 timelockSummary (RequireAllOf ms) =
@@ -974,7 +974,7 @@ timelockSummary (RequireTimeExpire mslot) =
 timelockSummary (RequireTimeStart mslot) =
   ppSexp "Starts" [ppSlotNo mslot]
 
-multiSigSummary :: CC.Crypto crypto => SS.MultiSig crypto -> PDoc
+multiSigSummary :: Era era => SS.MultiSig era -> PDoc
 multiSigSummary (SS.RequireSignature hk) = ppSexp "ReqSig" [keyHashSummary hk]
 multiSigSummary (SS.RequireAllOf ps) = ppSexp "AllOf" (map multiSigSummary ps)
 multiSigSummary (SS.RequireAnyOf ps) = ppSexp "AnyOf" (map multiSigSummary ps)
@@ -1125,7 +1125,7 @@ pcData d@(Data (Plutus.B bytes)) =
 
 instance Era era => PrettyC (Data era) era where prettyC _ = pcData
 
-pcTimelock :: forall era. Reflect era => PDoc -> Timelock (Crypto era) -> PDoc
+pcTimelock :: forall era. Reflect era => PDoc -> Timelock era -> PDoc
 pcTimelock hash (RequireSignature akh) = ppSexp "Signature" [keyHashSummary akh, hash]
 pcTimelock hash (RequireAllOf _ts) = ppSexp "AllOf" [hash]
 pcTimelock hash (RequireAnyOf _) = ppSexp "AnyOf" [hash]
@@ -1133,7 +1133,7 @@ pcTimelock hash (RequireMOf m _) = ppSexp "MOfN" [ppInteger (fromIntegral m), ha
 pcTimelock hash (RequireTimeExpire mslot) = ppSexp "Expires" [ppSlotNo mslot, hash]
 pcTimelock hash (RequireTimeStart mslot) = ppSexp "Starts" [ppSlotNo mslot, hash]
 
-pcMultiSig :: Reflect era => PDoc -> SS.MultiSig (Crypto era) -> PDoc
+pcMultiSig :: Reflect era => PDoc -> SS.MultiSig era -> PDoc
 pcMultiSig h (SS.RequireSignature hk) = ppSexp "ReqSig" [keyHashSummary hk, h]
 pcMultiSig h (SS.RequireAllOf _) = ppSexp "AllOf" [h]
 pcMultiSig h (SS.RequireAnyOf _) = ppSexp "AnyOf" [h]
@@ -1262,7 +1262,7 @@ pcTxBodyField proof x = case x of
 
 pcTxField :: forall era. Reflect era => Proof era -> TxField era -> [(Text, PDoc)]
 pcTxField proof x = case x of
-  Body b -> [("txbody hash", ppSafeHash (hashAnnotated @(Crypto era) @EraIndependentTxBody b)), ("body", pcTxBody proof b)]
+  Body b -> [("txbody hash", ppSafeHash (hashAnnotated b)), ("body", pcTxBody proof b)]
   BodyI xs -> [("body", ppRecord "TxBody" (concat (map (pcTxBodyField proof) xs)))]
   Witnesses w -> [("witnesses", pcWitnesses proof w)]
   WitnessesI ws -> [("witnesses", ppRecord "Witnesses" (concat (map (pcWitnessesField proof) ws)))]

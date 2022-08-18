@@ -9,6 +9,7 @@ module Cardano.Ledger.Pretty.Mary where
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Era (Era)
 import Cardano.Ledger.Mary.Value
 import Cardano.Ledger.Pretty hiding (ppTxBody)
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxOut)
@@ -33,7 +34,8 @@ ppMultiAsset m = ppList pptriple (flattenMultiAsset m)
   where
     pptriple (i, asset, num) = hsep [ppPolicyID i, ppAssetName asset, ppInteger num]
 
-instance CC.Crypto crypto => PrettyA (MultiAsset crypto) where prettyA x = ppSexp "MultiAsset" [ppMultiAsset x]
+instance CC.Crypto crypto => PrettyA (MultiAsset crypto) where
+  prettyA x = ppSexp "MultiAsset" [ppMultiAsset x]
 
 ppValue :: MaryValue crypto -> PDoc
 ppValue (MaryValue n m) = ppSexp "Value" $ [ppCoin (Coin n), ppMultiAsset m] ++ ppBad
@@ -45,7 +47,7 @@ ppValue (MaryValue n m) = ppSexp "Value" $ [ppCoin (Coin n), ppMultiAsset m] ++ 
 
 instance PrettyA (MaryValue crypto) where prettyA = ppValue
 
-ppTimelock :: CC.Crypto crypto => Timelock crypto -> PDoc
+ppTimelock :: Era era => Timelock era -> PDoc
 ppTimelock (RequireSignature akh) =
   ppSexp "Signature" [ppKeyHash akh]
 ppTimelock (RequireAllOf ms) =
@@ -59,7 +61,7 @@ ppTimelock (RequireTimeExpire mslot) =
 ppTimelock (RequireTimeStart mslot) =
   ppSexp "Starts" [ppSlotNo mslot]
 
-instance CC.Crypto crypto => PrettyA (Timelock crypto) where prettyA = ppTimelock
+instance Era era => PrettyA (Timelock era) where prettyA = ppTimelock
 
 ppValidityInterval :: ValidityInterval -> PDoc
 ppValidityInterval (ValidityInterval b a) =
@@ -71,7 +73,7 @@ ppValidityInterval (ValidityInterval b a) =
 
 instance PrettyA ValidityInterval where prettyA = ppValidityInterval
 
-ppAuxiliaryData :: PrettyA (Core.Script era) => MAAuxiliaryData era -> PDoc
+ppAuxiliaryData :: Era era => PrettyA (Core.Script era) => MAAuxiliaryData era -> PDoc
 ppAuxiliaryData (AuxiliaryData' m sp) =
   ppRecord
     "AuxiliaryData"
@@ -79,7 +81,7 @@ ppAuxiliaryData (AuxiliaryData' m sp) =
       ("auxiliaryscripts", ppStrictSeq prettyA sp)
     ]
 
-instance PrettyA (Core.Script era) => PrettyA (MAAuxiliaryData era) where
+instance (Era era, PrettyA (Core.Script era)) => PrettyA (MAAuxiliaryData era) where
   prettyA = ppAuxiliaryData
 
 ppTxBody ::

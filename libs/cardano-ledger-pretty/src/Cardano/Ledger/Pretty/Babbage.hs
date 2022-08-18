@@ -204,17 +204,17 @@ instance
   where
   prettyA = ppTxOut
 
-ppDatum :: Datum era -> PDoc
+ppDatum :: Era era => Datum era -> PDoc
 ppDatum NoDatum = ppString "NoDatum"
 ppDatum (DatumHash x) = ppSexp "DatumHash" [ppDataHash x]
 ppDatum (Datum x) = ppSexp "Datum" [ppBinaryData x]
 
-instance PrettyA (Datum era) where prettyA = ppDatum
+instance Era era => PrettyA (Datum era) where prettyA = ppDatum
 
-ppBinaryData :: BinaryData era -> PDoc
+ppBinaryData :: Era era => BinaryData era -> PDoc
 ppBinaryData x = ppData (binaryDataToData x)
 
-instance PrettyA (BinaryData era) where prettyA = ppBinaryData
+instance Era era => PrettyA (BinaryData era) where prettyA = ppBinaryData
 
 ppDataHash :: DataHash era -> PDoc
 ppDataHash x = ppSafeHash x

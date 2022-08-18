@@ -13,7 +13,7 @@ module Cardano.Ledger.ShelleyMA.Tx
   )
 where
 
-import Cardano.Ledger.Core (Era (Crypto), EraTx (..), EraWitnesses (..), PhasedScript (..))
+import Cardano.Ledger.Core (EraTx (..), EraWitnesses (..), PhasedScript (..))
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
 import Cardano.Ledger.Shelley.Tx
@@ -66,7 +66,7 @@ instance MAClass ma crypto => EraTx (ShelleyMAEra ma crypto) where
 -- We still need to correctly compute the witness set for TxBody as well.
 
 validateTimelock ::
-  (EraTx era, ShelleyMAEraTxBody era) => Timelock (Crypto era) -> Tx era -> Bool
+  (EraTx era, ShelleyMAEraTxBody era) => Timelock era -> Tx era -> Bool
 validateTimelock timelock tx = evalTimelock vhks (tx ^. bodyTxL . vldtTxBodyL) timelock
   where
     vhks = Set.map witVKeyHash (tx ^. witsTxL . addrWitsL)

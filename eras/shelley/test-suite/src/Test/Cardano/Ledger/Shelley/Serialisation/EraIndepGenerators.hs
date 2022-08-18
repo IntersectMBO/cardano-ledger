@@ -685,7 +685,7 @@ maxMultiSigDepth = 3
 maxMultiSigListLens :: Int
 maxMultiSigListLens = 5
 
-sizedMultiSig :: CC.Crypto crypto => Int -> Gen (MultiSig crypto)
+sizedMultiSig :: Era era => Int -> Gen (MultiSig era)
 sizedMultiSig 0 = RequireSignature <$> arbitrary
 sizedMultiSig n =
   oneof
@@ -695,7 +695,7 @@ sizedMultiSig n =
       RequireMOf <$> arbitrary <*> resize maxMultiSigListLens (listOf (sizedMultiSig (n - 1)))
     ]
 
-instance CC.Crypto crypto => Arbitrary (MultiSig crypto) where
+instance Era era => Arbitrary (MultiSig era) where
   arbitrary = sizedMultiSig maxMultiSigDepth
 
 -- |

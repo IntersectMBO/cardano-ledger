@@ -53,7 +53,8 @@ import Cardano.Ledger.Core hiding (TxBody)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Mary.Value (MultiAsset)
-import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash)
+import Cardano.Ledger.MemoBytes (Mem, MemoBytes (..), MemoHashIndex, memoBytes)
+import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
 import Cardano.Ledger.Serialization (encodeFoldable)
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.TxBody
@@ -88,7 +89,6 @@ import Data.Coders
     (!>),
   )
 import qualified Data.Map.Strict as Map
-import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
 import Data.Proxy
 import Data.Sequence.Strict (StrictSeq, fromList)
 import Data.Set (Set, empty)
@@ -193,7 +193,7 @@ initial =
 -- ===========================================================================
 -- Wrap it all up in a newtype, hiding the insides with a pattern construtor.
 
-newtype MATxBody e = TxBodyConstr (MemoBytes (TxBodyRaw e))
+newtype MATxBody e = TxBodyConstr (MemoBytes TxBodyRaw e)
   deriving newtype (SafeToHash)
 
 type TxBody era = MATxBody era
@@ -222,11 +222,14 @@ deriving newtype instance
 deriving newtype instance Typeable era => ToCBOR (MATxBody era)
 
 deriving via
-  Mem (TxBodyRaw era)
+  Mem TxBodyRaw era
   instance
     ShelleyMAEraTxBody era => FromCBOR (Annotator (MATxBody era))
 
-instance (c ~ Crypto era, Era era) => HashAnnotated (MATxBody era) EraIndependentTxBody c
+type instance MemoHashIndex TxBodyRaw = EraIndependentTxBody
+
+instance (c ~ Crypto era, Era era) => HashAnnotated (MATxBody era) EraIndependentTxBody c where
+  hashAnnotated (TxBodyConstr mb) = mbHash mb
 
 -- Make a Pattern so the newtype and the MemoBytes are hidden
 
@@ -265,6 +268,7 @@ mkMATxBody = TxBodyConstr . memoBytes . txSparse
 -- | This pattern is for deconstruction only but accompanied with fields and
 -- projection functions.
 pattern TxBody' ::
+  Era era =>
   Set (TxIn (Crypto era)) ->
   StrictSeq (ShelleyTxOut era) ->
   StrictSeq (DCert (Crypto era)) ->

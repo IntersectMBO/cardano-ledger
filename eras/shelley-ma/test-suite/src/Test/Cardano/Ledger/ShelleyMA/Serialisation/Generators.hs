@@ -26,7 +26,6 @@ import Cardano.Crypto.Hash (HashAlgorithm, hashWithSerialiser)
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Allegra (AllegraEra)
 import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
@@ -76,9 +75,9 @@ maxTimelockListLens :: Int
 maxTimelockListLens = 5
 
 sizedTimelock ::
-  CC.Crypto crypto =>
+  Era era =>
   Int ->
-  Gen (Timelock crypto)
+  Gen (Timelock era)
 sizedTimelock 0 = MA.RequireSignature . KeyHash . mkDummyHash <$> arbitrary
 sizedTimelock n =
   oneof
@@ -224,7 +223,7 @@ instance Mock c => Arbitrary (MATxBody (AllegraEra c)) where
       <*> arbitrary
       <*> pure mempty
 
-instance Mock c => Arbitrary (Timelock c) where
+instance Era era => Arbitrary (Timelock era) where
   arbitrary = sizedTimelock maxTimelockDepth
 
 instance Arbitrary ValidityInterval where

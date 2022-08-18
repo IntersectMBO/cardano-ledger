@@ -36,7 +36,6 @@ import Cardano.Ledger.Credential
     pattern ScriptHashObj,
     pattern StakeRefBase,
   )
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys
   ( GenDelegs (..),
     KeyHash (..),
@@ -111,33 +110,33 @@ _assertScriptHashSizeMatchesAddrHashSize (ScriptHash h) =
   KeyHash (Hash.castHash h)
 
 -- Multi-signature scripts
-singleKeyOnly :: CC.Crypto crypto => Addr crypto -> MultiSig crypto
+singleKeyOnly :: Era era => Addr (Crypto era) -> MultiSig era
 singleKeyOnly (Addr _ (KeyHashObj pk) _) = RequireSignature $ asWitness pk
 singleKeyOnly _ = error "use VKey address"
 
-aliceOnly :: CC.Crypto crypto => MultiSig crypto
+aliceOnly :: Era era => MultiSig era
 aliceOnly = singleKeyOnly Cast.aliceAddr
 
-bobOnly :: CC.Crypto crypto => MultiSig crypto
+bobOnly :: Era era => MultiSig era
 bobOnly = singleKeyOnly Cast.bobAddr
 
-aliceOrBob :: CC.Crypto crypto => MultiSig crypto
+aliceOrBob :: Era era => MultiSig era
 aliceOrBob = RequireAnyOf [aliceOnly, singleKeyOnly Cast.bobAddr]
 
-aliceAndBob :: CC.Crypto crypto => MultiSig crypto
+aliceAndBob :: Era era => MultiSig era
 aliceAndBob = RequireAllOf [aliceOnly, singleKeyOnly Cast.bobAddr]
 
-aliceAndBobOrCarl :: CC.Crypto crypto => MultiSig crypto
+aliceAndBobOrCarl :: Era era => MultiSig era
 aliceAndBobOrCarl = RequireMOf 1 [aliceAndBob, singleKeyOnly Cast.carlAddr]
 
-aliceAndBobOrCarlAndDaria :: CC.Crypto crypto => MultiSig crypto
+aliceAndBobOrCarlAndDaria :: Era era => MultiSig era
 aliceAndBobOrCarlAndDaria =
   RequireAnyOf
     [ aliceAndBob,
       RequireAllOf [singleKeyOnly Cast.carlAddr, singleKeyOnly Cast.dariaAddr]
     ]
 
-aliceAndBobOrCarlOrDaria :: CC.Crypto crypto => MultiSig crypto
+aliceAndBobOrCarlOrDaria :: Era era => MultiSig era
 aliceAndBobOrCarlOrDaria =
   RequireMOf
     1
@@ -179,7 +178,7 @@ makeTx ::
   (Mock c) =>
   TxBody (ShelleyEra c) ->
   [KeyPair 'Witness c] ->
-  Map (ScriptHash c) (MultiSig c) ->
+  Map (ScriptHash c) (MultiSig (ShelleyEra c)) ->
   Maybe (Metadata (ShelleyEra c)) ->
   ShelleyTx (ShelleyEra c)
 makeTx txBody keyPairs msigs = ShelleyTx txBody txWits . maybeToStrictMaybe
@@ -216,9 +215,9 @@ initPParams = emptyPParams {_maxTxSize = 1000}
 -- locked by a script for each pair of script, coin value in 'msigs'.
 initialUTxOState ::
   forall c.
-  Mock c =>
+  (Mock c) =>
   Coin ->
-  [(MultiSig c, Coin)] ->
+  [(MultiSig (ShelleyEra c), Coin)] ->
   ( TxId c,
     Either
       [PredicateFailure (ShelleyUTXOW (ShelleyEra c))]
@@ -268,8 +267,8 @@ initialUTxOState aliceKeep msigs =
 applyTxWithScript ::
   forall c.
   (Mock c) =>
-  [(MultiSig c, Coin)] ->
-  [MultiSig c] ->
+  [(MultiSig (ShelleyEra c), Coin)] ->
+  [MultiSig (ShelleyEra c)] ->
   Wdrl c ->
   Coin ->
   [KeyPair 'Witness c] ->

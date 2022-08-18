@@ -388,7 +388,7 @@ class
   EraScript era
   where
   -- | Scripts which may lock transaction outputs in this era
-  type Script era :: Type
+  type Script era = (r :: Type) | r -> era
 
   scriptPrefixTag :: Script era -> BS.ByteString
   hashScript :: Script era -> ScriptHash (Crypto era)

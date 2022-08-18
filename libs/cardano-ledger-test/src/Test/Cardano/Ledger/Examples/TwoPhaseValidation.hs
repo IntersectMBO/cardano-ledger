@@ -358,10 +358,10 @@ pp pf = newPParams pf defaultPPs
 --  Example 1: Process a SPEND transaction with a succeeding Plutus script.
 -- =========================================================================
 
-datumExample1 :: Data era
+datumExample1 :: Era era => Data era
 datumExample1 = Data (Plutus.I 123)
 
-redeemerExample1 :: Data era
+redeemerExample1 :: Era era => Data era
 redeemerExample1 = Data (Plutus.I 42)
 
 txDatsExample1 :: Era era => TxDats era
@@ -474,10 +474,10 @@ utxoStEx1 pf = smartUTxOState (utxoEx1 pf) (Coin 0) (Coin 5) def
 --  Example 2: Process a SPEND transaction with a failing Plutus script.
 -- ======================================================================
 
-datumExample2 :: Data era
+datumExample2 :: Era era => Data era
 datumExample2 = Data (Plutus.I 0)
 
-redeemerExample2 :: Data era
+redeemerExample2 :: Era era => Data era
 redeemerExample2 = Data (Plutus.I 1)
 
 txDatsExample2 :: Era era => TxDats era
@@ -551,7 +551,7 @@ utxoStEx2 pf = smartUTxOState (utxoEx2 pf) (Coin 0) (Coin 5) def
 outEx3 :: EraTxOut era => Proof era -> TxOut era
 outEx3 pf = newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 995)]
 
-redeemerExample3 :: Data era
+redeemerExample3 :: Era era => Data era
 redeemerExample3 = Data (Plutus.I 42)
 
 validatingRedeemersEx3 :: Era era => Redeemers era
@@ -609,7 +609,7 @@ utxoStEx3 pf = smartUTxOState (utxoEx3 pf) (Coin 0) (Coin 5) def
 outEx4 :: (Scriptic era, EraTxOut era) => Proof era -> TxOut era
 outEx4 pf = newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 995)]
 
-redeemerExample4 :: Data era
+redeemerExample4 :: Era era => Data era
 redeemerExample4 = Data (Plutus.I 0)
 
 notValidatingRedeemersEx4 :: Era era => Redeemers era
@@ -667,7 +667,7 @@ utxoStEx4 pf = smartUTxOState (utxoEx4 pf) (Coin 0) (Coin 5) def
 outEx5 :: (Scriptic era, EraTxOut era) => Proof era -> TxOut era
 outEx5 pf = newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 1995)]
 
-redeemerExample5 :: Data era
+redeemerExample5 :: Era era => Data era
 redeemerExample5 = Data (Plutus.I 42)
 
 validatingRedeemersEx5 :: Era era => Redeemers era
@@ -727,7 +727,7 @@ utxoStEx5 pf = smartUTxOState (utxoEx5 pf) (Coin 0) (Coin 5) def
 outEx6 :: (Scriptic era, EraTxOut era) => Proof era -> TxOut era
 outEx6 pf = newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 1995)]
 
-redeemerExample6 :: Data era
+redeemerExample6 :: Era era => Data era
 redeemerExample6 = Data (Plutus.I 0)
 
 notValidatingRedeemersEx6 :: Era era => Redeemers era
@@ -790,7 +790,7 @@ mintEx7 pf = forge @era 1 (always 2 pf)
 outEx7 :: (HasTokens era, EraTxOut era, Scriptic era, Value era ~ MaryValue (Crypto era)) => Proof era -> TxOut era
 outEx7 pf = newTxOut pf [Address (someAddr pf), Amount (MaryValue 0 (mintEx7 pf) <+> inject (Coin 995))]
 
-redeemerExample7 :: Data era
+redeemerExample7 :: Era era => Data era
 redeemerExample7 = Data (Plutus.I 42)
 
 validatingRedeemersEx7 :: Era era => Redeemers era
@@ -854,7 +854,7 @@ mintEx8 pf = forge @era 1 (never 1 pf)
 outEx8 :: (HasTokens era, EraTxOut era, Scriptic era, Value era ~ MaryValue (Crypto era)) => Proof era -> TxOut era
 outEx8 pf = newTxOut pf [Address (someAddr pf), Amount ((MaryValue 0 (mintEx8 pf)) <+> inject (Coin 995))]
 
-redeemerExample8 :: Data era
+redeemerExample8 :: Era era => Data era
 redeemerExample8 = Data (Plutus.I 0)
 
 notValidatingRedeemersEx8 :: Era era => Redeemers era
@@ -1500,7 +1500,7 @@ plutusOutputWithNoDataTx pf =
         ]
     ]
 
-totallyIrrelevantDatum :: Data era
+totallyIrrelevantDatum :: Era era => Data era
 totallyIrrelevantDatum = Data (Plutus.I 1729)
 
 outputWithNoDatum :: forall era. EraTxOut era => Proof era -> TxOut era

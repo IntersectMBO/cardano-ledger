@@ -47,6 +47,7 @@ module Test.Cardano.Ledger.Model.Elaborators
 where
 
 import qualified Cardano.Crypto.DSIGN.Class as DSIGN
+import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.VRF.Class (VerKeyVRF)
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
@@ -69,6 +70,7 @@ import Cardano.Ledger.Coin (Coin (..), toDeltaCoin)
 import Cardano.Ledger.Core (Era (Crypto), EraScript (hashScript))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
+import Cardano.Ledger.Crypto (HASH)
 import qualified Cardano.Ledger.Crypto as C
 import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Keys
@@ -353,7 +355,8 @@ data TestUTxOInfo era = TestUTxOInfo
     _tuoi_data :: StrictMaybe (Alonzo.DataHash (Crypto era), (Alonzo.Data era))
   }
   deriving stock (Generic)
-  deriving (Show) via (Quiet (TestUTxOInfo era))
+
+deriving via Quiet (TestUTxOInfo era) instance HashAlgorithm (HASH (Crypto era)) => Show (TestUTxOInfo era)
 
 tuoi_txid :: Lens' (TestUTxOInfo era) (Maybe (Shelley.TxIn (Crypto era)))
 tuoi_txid a2fb s = (\b -> s {_tuoi_txid = b}) <$> a2fb (_tuoi_txid s)
@@ -372,13 +375,13 @@ data EraElaboratorTxAccum era = EraElaboratorTxAccum
     _eetaDats :: Alonzo.TxDats era
   }
 
-instance Typeable era => Semigroup (EraElaboratorTxAccum era) where
+instance Era era => Semigroup (EraElaboratorTxAccum era) where
   EraElaboratorTxAccum a b <> EraElaboratorTxAccum a' b' =
     EraElaboratorTxAccum
       (a <> a')
       (b <> b')
 
-instance Typeable era => Monoid (EraElaboratorTxAccum era) where
+instance Era era => Monoid (EraElaboratorTxAccum era) where
   mempty = EraElaboratorTxAccum mempty mempty
 
 -- under normal circumstances, this arises during elaboration, at which time the
@@ -1162,7 +1165,7 @@ class
 
   makeTimelockScript ::
     proxy era ->
-    IfSupportsTimelock Void (Timelock (Crypto era)) (EraScriptFeature era) ->
+    IfSupportsTimelock Void (Timelock era) (EraScriptFeature era) ->
     Core.Script era
 
   makePlutusScript ::
@@ -1190,7 +1193,7 @@ class
     ModelScript_PlutusV1 ms ->
       pure $ makePlutusScript proxy (SupportsPlutus $ elaborateModelScript ms)
     ModelScript_Timelock ms -> do
-      x <- elaborateModelTimelock (getScriptWitnessFor (Proxy :: Proxy era) . liftModelCredential) ms
+      x <- elaborateModelTimelock @era (getScriptWitnessFor (Proxy :: Proxy era) . liftModelCredential) ms
       pure $ makeTimelockScript proxy $ SupportsTimelock x
 
   -- | Construct a TxBody from some elaborated inputs.
