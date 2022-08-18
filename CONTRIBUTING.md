@@ -4,9 +4,13 @@
 
 We use [trunk based developement](https://trunkbaseddevelopment.com/).
 In particular, releases will be handled by release branches,
-starting with `release/1.0.0`.
+starting with `release/1.0.x`.
 Normal development will branch off of master and be merged back to master.
 Only bug-fixes can be cherry-picked onto the release branches.
+
+We use tags on the release branches to indicate patches, of the form `ledger/a.b.c`.
+We also use tags to indicate what version of the ledger was used in
+cardano-node releases, of the form `node/a.b.c` (possible with a `rc` or `rc1`, etc).
 
 ## Building
 
