@@ -73,22 +73,24 @@ If you are using [NixOS](https://nixos.org/) add the snippet below to your
 `/etc/nixos/configuration.nix`:
 
 ```
-nix.binaryCaches = [
-  "https://cache.nixos.org"
-  "https://hydra.iohk.io"
-];
-
-nix.binaryCachePublicKeys = [
-  "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="
-];
+nix.settings = {
+  experimental-features = [ "nix-command" "flakes" ];
+  substituters = [
+    "https://cache.nixos.org"
+    "https://cache.iog.io"
+  ];
+  trusted-public-keys = [
+    "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="
+  ];
+};
 ```
 
 If you are using the `nix` package manager next to another operating system put
-the following in `/etc/nix/nix.conf` if you have a system-wide `nix`
-installation , or in `~/.config/nix/nix.conf` if you have a local installation:
+the following in `/etc/nix/nix.conf`:
 
 ```
-substituters        = https://hydra.iohk.io https://cache.nixos.org/
+experimental-features = nix-command flakes
+substituters        = https://cache.iog.io https://cache.nixos.org/
 trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
 ```
 
