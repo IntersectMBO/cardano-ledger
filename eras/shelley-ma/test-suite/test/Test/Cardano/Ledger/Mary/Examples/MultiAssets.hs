@@ -20,6 +20,7 @@ import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Value
   ( AssetName (..),
     MaryValue (..),
+    MultiAsset (..),
     PolicyID (..),
   )
 import Cardano.Ledger.SafeHash (hashAnnotated)
@@ -79,7 +80,7 @@ bootstrapTxId = txid txb
         unboundedInterval
         SNothing
         SNothing
-        (Val.inject (Coin 0))
+        mempty
 
 initUTxO :: UTxO MaryTest
 initUTxO =
@@ -110,7 +111,7 @@ makeTxb ::
   [TxIn TestCrypto] ->
   [ShelleyTxOut MaryTest] ->
   ValidityInterval ->
-  MaryValue TestCrypto ->
+  MultiAsset TestCrypto ->
   MATxBody MaryTest
 makeTxb ins outs interval minted =
   MATxBody
@@ -158,16 +159,16 @@ amethyst = AssetName "amethyst"
 -- Mint Purple Tokens --
 ------------------------
 
-mintSimpleEx1 :: MaryValue TestCrypto
+mintSimpleEx1 :: MultiAsset TestCrypto
 mintSimpleEx1 =
-  MaryValue 0 $
+  MultiAsset $
     Map.singleton purplePolicyId (Map.fromList [(plum, 13), (amethyst, 2)])
 
 aliceCoinSimpleEx1 :: Coin
 aliceCoinSimpleEx1 = aliceInitCoin <-> feeEx
 
 tokensSimpleEx1 :: MaryValue TestCrypto
-tokensSimpleEx1 = mintSimpleEx1 <+> Val.inject aliceCoinSimpleEx1
+tokensSimpleEx1 = (MaryValue 0 mintSimpleEx1) <+> Val.inject aliceCoinSimpleEx1
 
 -- Mint a purple token bundle, consisting of thirteen plums and two amethysts.
 -- Give the bundle to Alice.
@@ -210,12 +211,14 @@ aliceCoinsSimpleEx2 = aliceCoinSimpleEx1 <-> (feeEx <+> minUtxoSimpleEx2)
 aliceTokensSimpleEx2 :: MaryValue TestCrypto
 aliceTokensSimpleEx2 =
   MaryValue (unCoin aliceCoinsSimpleEx2) $
-    Map.singleton purplePolicyId (Map.fromList [(plum, 8), (amethyst, 2)])
+    MultiAsset $
+      Map.singleton purplePolicyId (Map.fromList [(plum, 8), (amethyst, 2)])
 
 bobTokensSimpleEx2 :: MaryValue TestCrypto
 bobTokensSimpleEx2 =
   MaryValue (unCoin minUtxoSimpleEx2) $
-    Map.singleton purplePolicyId (Map.singleton plum 5)
+    MultiAsset $
+      Map.singleton purplePolicyId (Map.singleton plum 5)
 
 -- Alice gives five plums to Bob.
 txbodySimpleEx2 :: MATxBody MaryTest
@@ -226,7 +229,7 @@ txbodySimpleEx2 =
       ShelleyTxOut Cast.bobAddr bobTokensSimpleEx2
     ]
     unboundedInterval
-    Val.zero
+    mempty
 
 txSimpleEx2 :: ShelleyTx MaryTest
 txSimpleEx2 =
@@ -282,16 +285,16 @@ tokenTimeEx = AssetName "tokenTimeEx"
 -- Mint Bounded Time Range Tokens --
 ------------------------------------
 
-mintTimeEx1 :: MaryValue TestCrypto
+mintTimeEx1 :: MultiAsset TestCrypto
 mintTimeEx1 =
-  MaryValue 0 $
+  MultiAsset $
     Map.singleton boundedTimePolicyId (Map.singleton tokenTimeEx 1)
 
 aliceCoinsTimeEx1 :: Coin
 aliceCoinsTimeEx1 = aliceInitCoin <-> feeEx
 
 tokensTimeEx1 :: MaryValue TestCrypto
-tokensTimeEx1 = mintTimeEx1 <+> Val.inject aliceCoinsTimeEx1
+tokensTimeEx1 = (MaryValue 0 mintTimeEx1) <+> Val.inject aliceCoinsTimeEx1
 
 -- Mint tokens
 txbodyTimeEx1 :: StrictMaybe SlotNo -> StrictMaybe SlotNo -> MATxBody MaryTest
@@ -348,7 +351,8 @@ mintTimeEx2 = Coin 120
 bobTokensTimeEx2 :: MaryValue TestCrypto
 bobTokensTimeEx2 =
   MaryValue (unCoin mintTimeEx2) $
-    Map.singleton boundedTimePolicyId (Map.singleton tokenTimeEx 1)
+    MultiAsset $
+      Map.singleton boundedTimePolicyId (Map.singleton tokenTimeEx 1)
 
 aliceCoinsTimeEx2 :: Coin
 aliceCoinsTimeEx2 = aliceCoinSimpleEx1 <-> (feeEx <+> mintTimeEx2)
@@ -362,7 +366,7 @@ txbodyTimeEx2 =
       ShelleyTxOut Cast.bobAddr bobTokensTimeEx2
     ]
     unboundedInterval
-    Val.zero
+    mempty
 
 txTimeEx2 :: ShelleyTx MaryTest
 txTimeEx2 =
@@ -403,16 +407,16 @@ tokenSingWitEx1 = AssetName "tokenSingWitEx1"
 -- Mint Alice Tokens --
 -----------------------
 
-mintSingWitEx1 :: MaryValue TestCrypto
+mintSingWitEx1 :: MultiAsset TestCrypto
 mintSingWitEx1 =
-  MaryValue 0 $
+  MultiAsset $
     Map.singleton alicePolicyId (Map.singleton tokenSingWitEx1 17)
 
 bobCoinsSingWitEx1 :: Coin
 bobCoinsSingWitEx1 = bobInitCoin <-> feeEx
 
 tokensSingWitEx1 :: MaryValue TestCrypto
-tokensSingWitEx1 = mintSingWitEx1 <+> Val.inject bobCoinsSingWitEx1
+tokensSingWitEx1 = (MaryValue 0 mintSingWitEx1) <+> Val.inject bobCoinsSingWitEx1
 
 -- Bob pays the fees, but only alice can witness the minting
 txbodySingWitEx1 :: MATxBody MaryTest
@@ -463,15 +467,16 @@ txSingWitEx1Invalid =
 ------------------------
 
 -- Mint negative valued tokens
-mintNegEx1 :: MaryValue TestCrypto
+mintNegEx1 :: MultiAsset TestCrypto
 mintNegEx1 =
-  MaryValue 0 $
+  MultiAsset $
     Map.singleton purplePolicyId (Map.singleton plum (-8))
 
 aliceTokensNegEx1 :: MaryValue TestCrypto
 aliceTokensNegEx1 =
   MaryValue (unCoin $ aliceCoinsSimpleEx2 <-> feeEx) $
-    Map.singleton purplePolicyId (Map.singleton amethyst 2)
+    MultiAsset $
+      Map.singleton purplePolicyId (Map.singleton amethyst 2)
 
 txbodyNegEx1 :: MATxBody MaryTest
 txbodyNegEx1 =
@@ -507,15 +512,16 @@ expectedUTxONegEx1 =
 -- Now attempt to produce negative outputs
 --
 
-mintNegEx2 :: MaryValue TestCrypto
+mintNegEx2 :: MultiAsset TestCrypto
 mintNegEx2 =
-  MaryValue 0 $
+  MultiAsset $
     Map.singleton purplePolicyId (Map.singleton plum (-9))
 
 aliceTokensNegEx2 :: MaryValue TestCrypto
 aliceTokensNegEx2 =
   MaryValue (unCoin $ aliceCoinsSimpleEx2 <-> feeEx) $
-    Map.singleton purplePolicyId (Map.fromList [(plum, -1), (amethyst, 2)])
+    MultiAsset $
+      Map.singleton purplePolicyId (Map.fromList [(plum, -1), (amethyst, 2)])
 
 -- Mint negative valued tokens
 txbodyNegEx2 :: MATxBody MaryTest
@@ -540,27 +546,27 @@ testNegEx2 = do
 minUtxoBigEx :: Coin
 minUtxoBigEx = Coin 50000
 
-smallValue :: MaryValue TestCrypto
+smallValue :: MultiAsset TestCrypto
 smallValue =
-  MaryValue 0 $
+  MultiAsset $
     Map.singleton purplePolicyId (Map.fromList [(plum, 13), (amethyst, 2)])
 
 smallOut :: ShelleyTxOut MaryTest
 smallOut =
-  ShelleyTxOut Cast.aliceAddr $ smallValue <+> Val.inject (aliceInitCoin <-> (feeEx <+> minUtxoBigEx))
+  ShelleyTxOut Cast.aliceAddr $ (MaryValue 0 smallValue) <+> Val.inject (aliceInitCoin <-> (feeEx <+> minUtxoBigEx))
 
 numAssets :: Int
 numAssets = 1000
 
-bigValue :: MaryValue TestCrypto
+bigValue :: MultiAsset TestCrypto
 bigValue =
-  MaryValue 0 $
+  MultiAsset $
     Map.singleton
       purplePolicyId
       (Map.fromList $ map (\x -> (AssetName . fromString $ show x, 1)) [1 .. numAssets])
 
 bigOut :: ShelleyTxOut MaryTest
-bigOut = ShelleyTxOut Cast.aliceAddr $ bigValue <+> Val.inject minUtxoBigEx
+bigOut = ShelleyTxOut Cast.aliceAddr $ (MaryValue 0 bigValue) <+> Val.inject minUtxoBigEx
 
 txbodyWithBigValue :: MATxBody MaryTest
 txbodyWithBigValue =
@@ -568,7 +574,7 @@ txbodyWithBigValue =
     [mkTxInPartial bootstrapTxId 0]
     [smallOut, bigOut]
     unboundedInterval
-    (bigValue <+> smallValue)
+    (bigValue <> smallValue)
 
 txBigValue :: ShelleyTx MaryTest
 txBigValue =

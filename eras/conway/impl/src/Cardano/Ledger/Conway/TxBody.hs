@@ -24,6 +24,7 @@ import Cardano.Ledger.Babbage.TxBody
     feeBabbageTxBodyL,
     inputsBabbageTxBodyL,
     mintBabbageTxBodyL,
+    mintValueBabbageTxBodyF,
     mintedBabbageTxBodyF,
     mkBabbageTxBody,
     networkIdBabbageTxBodyL,
@@ -99,6 +100,8 @@ instance CC.Crypto c => ShelleyMAEraTxBody (ConwayEra c) where
 
   mintTxBodyL = mintBabbageTxBodyL
   {-# INLINE mintTxBodyL #-}
+
+  mintValueTxBodyF = mintValueBabbageTxBodyF
 
 instance CC.Crypto c => AlonzoEraTxBody (ConwayEra c) where
   {-# SPECIALIZE instance AlonzoEraTxBody (ConwayEra CC.StandardCrypto) #-}

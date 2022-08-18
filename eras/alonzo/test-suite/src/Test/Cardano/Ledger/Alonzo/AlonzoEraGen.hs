@@ -60,7 +60,7 @@ import Cardano.Ledger.Credential (Credential (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (KeyHash, KeyRole (Witness))
 import Cardano.Ledger.Mary (MaryEra)
-import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue, PolicyID (..), policies, valueFromList)
+import Cardano.Ledger.Mary.Value (AssetName (..), MultiAsset (..), PolicyID (..), multiAssetFromList, policies)
 import Cardano.Ledger.Pretty.Alonzo ()
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl)
@@ -171,7 +171,7 @@ genPlutus2Arg :: Mock c => Gen (Maybe (TwoPhase2ArgInfo (AlonzoEra c)))
 genPlutus2Arg = frequency [(10, Just <$> elements phase2scripts2Arg), (90, pure Nothing)]
 
 -- | Gen a Mint value in the Alonzo Era, with a 10% chance that it includes an AlonzoScript
-genAlonzoMint :: Mock c => MaryValue c -> Gen (MaryValue c, [AlonzoScript (AlonzoEra c)])
+genAlonzoMint :: Mock c => MultiAsset c -> Gen (MultiAsset c, [AlonzoScript (AlonzoEra c)])
 genAlonzoMint startvalue = do
   ans <- genPlutus2Arg
   case ans of
@@ -179,7 +179,7 @@ genAlonzoMint startvalue = do
     Just (TwoPhase2ArgInfo script shash _ _) -> do
       count <- chooseEnum (1, 10)
       let assetname = AssetName "purple"
-      pure (valueFromList 0 [(PolicyID shash, assetname, count)] <> startvalue, [script])
+      pure (multiAssetFromList [(PolicyID shash, assetname, count)] <> startvalue, [script])
 
 -- ================================================================
 

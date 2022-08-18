@@ -50,7 +50,7 @@ import Cardano.Ledger.Pretty.Alonzo
     ppExUnits,
     ppPrices,
   )
-import Cardano.Ledger.Pretty.Mary (ppValidityInterval, ppValue)
+import Cardano.Ledger.Pretty.Mary (ppMultiAsset, ppValidityInterval)
 import Control.State.Transition.Extended
 import Data.Maybe.Strict (StrictMaybe (SJust, SNothing))
 import Prettyprinter ((<+>))
@@ -246,7 +246,7 @@ ppTxBody x =
       ("vldt", ppValidityInterval (vldt' x)),
       ("update", ppStrictMaybe ppUpdate (update' x)),
       ("reqSignerHashes", ppSet ppKeyHash (reqSignerHashes' x)),
-      ("mint", ppValue (mint' x)),
+      ("mint", ppMultiAsset (mint' x)),
       ("scriptIntegrityHash", ppStrictMaybe ppSafeHash (scriptIntegrityHash' x)),
       ("adHash", ppStrictMaybe ppAuxDataHash (adHash' x)),
       ("txnetworkid", ppStrictMaybe ppNetwork (txnetworkid' x))

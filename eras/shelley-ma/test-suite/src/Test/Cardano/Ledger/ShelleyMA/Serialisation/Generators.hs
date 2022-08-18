@@ -29,7 +29,7 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Mary (MaryEra)
-import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), PolicyID (..))
+import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import qualified Cardano.Ledger.Mary.Value as ConcreteValue
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.ShelleyMA.AuxiliaryData (MAAuxiliaryData (..))
@@ -40,7 +40,6 @@ import Cardano.Ledger.ShelleyMA.TxBody (MATxBody (..))
 import qualified Data.ByteString.Short as SBS
 import Data.Coerce (coerce)
 import Data.Int (Int64)
-import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq, fromList)
 import Data.Word (Word64)
 import Generic.Random (genericArbitraryU)
@@ -158,8 +157,14 @@ instance Mock c => Arbitrary (MATxBody (MaryEra c)) where
 instance Mock c => Arbitrary (PolicyID c) where
   arbitrary = PolicyID <$> arbitrary
 
+instance Mock c => Arbitrary (MultiAsset c) where
+  arbitrary = MultiAsset <$> arbitrary
+
 instance Mock c => Arbitrary (MaryValue c) where
-  arbitrary = valueFromListBounded @Word64 <$> arbitrary <*> arbitrary
+  arbitrary = MaryValue <$> (fromIntegral <$> positives) <*> (multiAssetFromListBounded <$> triples)
+    where
+      triples = arbitrary :: Gen [(PolicyID c, AssetName, Word64)]
+      positives = arbitrary :: Gen Word64
 
   shrink (MaryValue ada assets) =
     concat
@@ -175,21 +180,20 @@ instance Mock c => Arbitrary (MaryValue c) where
 --
 -- - Fix the ADA value to 0
 -- - Allow both positive and negative quantities
-genMintValues :: forall c. Mock c => Gen (MaryValue c)
-genMintValues = valueFromListBounded @Int64 0 <$> arbitrary
+genMintValues :: forall c. Mock c => Gen (MultiAsset c)
+genMintValues = multiAssetFromListBounded @Int64 <$> arbitrary
 
--- | Variant on @valueFromList@ that makes sure that generated values stay
+-- | Variant on @multiAssetFromList@ that makes sure that generated values stay
 -- bounded within the range of a given integral type.
-valueFromListBounded ::
+multiAssetFromListBounded ::
   forall i crypto.
   (Bounded i, Integral i) =>
-  i ->
   [(PolicyID crypto, AssetName, i)] ->
-  MaryValue crypto
-valueFromListBounded (fromIntegral -> ada) =
+  MultiAsset crypto
+multiAssetFromListBounded =
   foldr
     (\(p, n, fromIntegral -> i) ans -> ConcreteValue.insert comb p n i ans)
-    (MaryValue ada Map.empty)
+    mempty
   where
     comb :: Integer -> Integer -> Integer
     comb a b =
@@ -218,7 +222,7 @@ instance Mock c => Arbitrary (MATxBody (AllegraEra c)) where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-      <*> pure (Coin 0)
+      <*> pure mempty
 
 instance Mock c => Arbitrary (Timelock c) where
   arbitrary = sizedTimelock maxTimelockDepth

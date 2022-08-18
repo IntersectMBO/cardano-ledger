@@ -61,7 +61,7 @@ exampleTxBodyMA value =
     (ValidityInterval (SJust (SlotNo 2)) (SJust (SlotNo 4)))
     (SJust (Update exampleProposedPPUpdates (EpochNo 0)))
     (SJust auxiliaryDataHash)
-    value
+    mempty
   where
     -- Dummy hash to decouple from the auxiliary data in 'exampleTx'.
     auxiliaryDataHash :: AuxiliaryDataHash (Crypto era)

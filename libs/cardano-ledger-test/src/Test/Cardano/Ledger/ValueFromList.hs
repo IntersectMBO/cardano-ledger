@@ -9,9 +9,10 @@ import qualified Cardano.Ledger.Crypto as C
 import Cardano.Ledger.Mary.Value as Mary
   ( AssetName,
     MaryValue (..),
+    MultiAsset (..),
     PolicyID (..),
     insert,
-    valueFromList,
+    multiAssetFromList,
   )
 import Cardano.Ledger.Val as Val
 import Data.Map.Strict as Map
@@ -24,11 +25,11 @@ class Val.Val val => ValueFromList val crypto | val -> crypto where
   gettriples :: val -> (Integer, [(PolicyID crypto, AssetName, Integer)])
 
 instance C.Crypto crypto => ValueFromList (MaryValue crypto) crypto where
-  valueFromList = Mary.valueFromList
+  valueFromList c triples = MaryValue c (Mary.multiAssetFromList triples)
 
-  insert = Mary.insert
+  insert combine pid an new (MaryValue c ma) = MaryValue c $ Mary.insert combine pid an new ma
 
-  gettriples (MaryValue c m1) = (c, triples)
+  gettriples (MaryValue c (MultiAsset m1)) = (c, triples)
     where
       triples =
         [ (policyId, aname, amount)

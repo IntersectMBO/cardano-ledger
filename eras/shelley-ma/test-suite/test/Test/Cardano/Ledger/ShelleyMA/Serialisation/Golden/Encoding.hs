@@ -18,7 +18,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), hashKey)
-import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), PolicyID (..))
+import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import qualified Cardano.Ledger.Shelley.Metadata as SMD
 import Cardano.Ledger.Shelley.PParams
   ( ShelleyPParamsHKD (..),
@@ -245,7 +245,7 @@ goldenEncodingTestsAllegra =
                 (ValidityInterval SNothing SNothing)
                 SNothing
                 SNothing
-                (Coin 0)
+                (MultiAsset Map.empty)
             )
             ( T (TkMapLen 3)
                 <> T (TkWord 0) -- Tx Ins
@@ -275,7 +275,7 @@ goldenEncodingTestsAllegra =
                 (ValidityInterval (SJust $ SlotNo 500) (SJust $ SlotNo 600))
                 (SJust up)
                 (SJust mdh)
-                (Coin 0)
+                mempty
             )
             ( T (TkMapLen 9)
                 <> T (TkWord 0) -- Tx Ins
@@ -314,17 +314,18 @@ goldenEncodingTestsMary =
       checkEncodingCBOR
         "not_just_ada_value"
         ( MaryValue @TestCrypto 2 $
-            Map.fromList
-              [ ( policyID1,
-                  Map.fromList
-                    [ (AssetName assetName1, 13),
-                      (AssetName assetName2, 17)
-                    ]
-                ),
-                ( policyID2,
-                  Map.singleton (AssetName assetName3) 19
-                )
-              ]
+            MultiAsset $
+              Map.fromList
+                [ ( policyID1,
+                    Map.fromList
+                      [ (AssetName assetName1, 13),
+                        (AssetName assetName2, 17)
+                      ]
+                  ),
+                  ( policyID2,
+                    Map.singleton (AssetName assetName3) 19
+                  )
+                ]
         )
         ( T
             ( TkListLen 2
@@ -348,7 +349,7 @@ goldenEncodingTestsMary =
         ),
       checkEncodingCBOR
         "value_with_negative"
-        (MaryValue 0 $ Map.singleton policyID1 (Map.singleton (AssetName assetName1) (-19)))
+        (MaryValue 0 $ MultiAsset $ Map.singleton policyID1 (Map.singleton (AssetName assetName1) (-19)))
         ( T
             ( TkListLen 2
                 . TkInteger 0
@@ -378,7 +379,7 @@ goldenEncodingTestsMary =
                 (ValidityInterval SNothing SNothing)
                 SNothing
                 SNothing
-                (Val.inject (Coin 0))
+                mempty
             )
             ( T (TkMapLen 3)
                 <> T (TkWord 0) -- Tx Ins
@@ -409,7 +410,7 @@ goldenEncodingTestsMary =
                 (ValidityInterval (SJust $ SlotNo 500) (SJust $ SlotNo 600))
                 (SJust up)
                 (SJust mdh)
-                (MaryValue 0 mint)
+                (MultiAsset mint)
             )
             ( T (TkMapLen 10)
                 <> T (TkWord 0) -- Tx Ins

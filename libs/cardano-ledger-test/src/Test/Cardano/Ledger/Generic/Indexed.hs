@@ -30,6 +30,7 @@ import Cardano.Ledger.Keys
     hashKey,
   )
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), PolicyID (..))
+import qualified Cardano.Ledger.Mary.Value as Mary (MultiAsset (..))
 import Cardano.Ledger.Pretty (PrettyA (..), ppPair, ppString)
 import Cardano.Ledger.Pretty.Alonzo ()
 import Cardano.Ledger.Pretty.Mary ()
@@ -109,9 +110,11 @@ instance (Reflect era, EraScript era, Fixed (Script era)) => Fixed (MultiAsset e
     MultiAsset
       ( MaryValue
           (fromIntegral n)
-          ( Map.singleton
-              (lift (pickPolicyID @era n))
-              (Map.singleton (unique @AssetName n) (fromIntegral n))
+          ( Mary.MultiAsset
+              ( Map.singleton
+                  (lift (pickPolicyID @era n))
+                  (Map.singleton (unique @AssetName n) (fromIntegral n))
+              )
           )
       )
   size _ = lift (scriptsize @era)
@@ -121,7 +124,7 @@ scriptsize _ = size (Proxy @(Script era))
 
 instance CC.Crypto c => Fixed (MaryValue c) where
   size _ = Nothing
-  unique n = MaryValue (fromIntegral n) Map.empty
+  unique n = MaryValue (fromIntegral n) (Mary.MultiAsset Map.empty)
 
 -- =======================================================
 -- Keys and KeyHashes

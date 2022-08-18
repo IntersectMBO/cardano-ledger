@@ -19,7 +19,7 @@ import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible (CompactForm, Compactible)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Mary.Value (MaryValue, policies, policyID)
+import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..), policies, policyID)
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsUpdate, updatePParams)
 import Cardano.Ledger.Shelley.Rules.Bbody (ShelleyBBODY)
@@ -30,7 +30,7 @@ import Cardano.Ledger.Shelley.Rules.Rupd (ShelleyRUPD)
 import Cardano.Ledger.Shelley.Rules.Snap (ShelleySNAP)
 import Cardano.Ledger.Shelley.Rules.Tick (ShelleyTICKF)
 import Cardano.Ledger.Shelley.Rules.Upec (ShelleyUPEC)
-import Cardano.Ledger.Val (DecodeMint, DecodeNonNegative, EncodeMint, Val)
+import Cardano.Ledger.Val (DecodeMint, DecodeNonNegative, EncodeMint, Val, zero)
 import Control.DeepSeq (NFData (..))
 import Data.Kind (Type)
 import Data.Set as Set (Set, empty, map)
@@ -70,15 +70,18 @@ class
   MAClass (ma :: MaryOrAllegra) crypto
   where
   type MAValue (ma :: MaryOrAllegra) crypto :: Type
-  getScriptHash :: proxy ma -> MAValue ma crypto -> Set.Set (ScriptHash crypto)
+  getScriptHash :: proxy ma -> MultiAsset crypto -> Set.Set (ScriptHash crypto)
+  promoteMultiAsset :: proxy ma -> MultiAsset crypto -> Value (ShelleyMAEra ma crypto)
 
 instance CC.Crypto c => MAClass 'Mary c where
   type MAValue 'Mary c = MaryValue c
   getScriptHash _ x = Set.map policyID (policies x)
+  promoteMultiAsset _ ma = MaryValue 0 ma
 
 instance CC.Crypto c => MAClass 'Allegra c where
   type MAValue 'Allegra c = Coin
   getScriptHash _ _ = Set.empty
+  promoteMultiAsset _ _ = zero
 
 -- | The actual Mary and Allegra instances, rolled into one, the MAClass superclass
 --   provides the era-specific code for where they differ.

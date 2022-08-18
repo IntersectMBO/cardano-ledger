@@ -156,7 +156,8 @@ BabbageEraTxBody --> AlonzoEraTxBody --> ....
       - `FromAlonzoUtxoFail` -> `AlonzoInBabbageUtxoPredFailure`
     - `BabbageUtxowPred` -> `BabbageUtxowPredFailure` and constructor:
       - `FromAlonzoUtxowFail` -> `AlonzoInBabbageUtxowPredFailure`
-
+- Changed `mint` field type to `MultiAsset (Crypto era)` in `MATxBody`, `AlonzoTxBody`, `BabbageTxBody`
+  #2954
 ### Deprecated
 - The provenance for the reward calculation has been removed.
   The type signature to the API function `getRewardProvenance` has not change,

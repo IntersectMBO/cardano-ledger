@@ -43,7 +43,7 @@ import Cardano.Ledger.Keys
     VKey (..),
     hashKey,
   )
-import Cardano.Ledger.Mary.Value (MaryValue (..))
+import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.Pretty
 import Cardano.Ledger.Pretty.Alonzo
@@ -830,7 +830,7 @@ txBodyFieldSummary txb = case txb of
   (Txfee c) -> [("Fee", ppCoin c)]
   (Update (SJust _)) -> [("Collateral Return", ppString "?")]
   (ReqSignerHashes x) -> [("Required Signer hashes", ppInt (Set.size x))]
-  (Mint v) -> [("Mint", ppInteger (Val.size v) <> ppString " bytes")]
+  (Mint ma) -> [("Mint", ppInteger (Val.size (MaryValue 0 ma)) <> ppString " bytes")]
   (WppHash (SJust _)) -> [("WppHash", ppString "?")]
   (AdHash (SJust _)) -> [("AdHash", ppString "?")]
   (Txnetworkid (SJust x)) -> [("Network id", ppNetwork x)]
@@ -905,9 +905,12 @@ plutusDataSummary (Plutus.List xs) = ppList plutusDataSummary xs
 plutusDataSummary (Plutus.I n) = ppInteger n
 plutusDataSummary (Plutus.B bs) = trim (ppLong bs)
 
+multiAssetSummary :: MultiAsset c -> PDoc
+multiAssetSummary (MultiAsset m) = ppString ("num tokens = " ++ show (Map.size m))
+
 vSummary :: MaryValue c -> PDoc
-vSummary (MaryValue n m) =
-  ppSexp "Value" [ppInteger n, ppString ("num tokens = " ++ show (Map.size m))]
+vSummary (MaryValue n ma) =
+  ppSexp "Value" [ppInteger n, multiAssetSummary ma]
 
 scriptSummary :: forall era. Proof era -> Script era -> PDoc
 scriptSummary p@(Conway _) script = plutusSummary p script
@@ -1096,7 +1099,7 @@ pcCoin (Coin n) = hsep [ppString "₳", ppInteger n]
 instance PrettyC Coin era where prettyC _ = pcCoin
 
 pcValue :: MaryValue c -> PDoc
-pcValue (MaryValue n m) = ppSexp "Value" [ppInteger n, ppString ("num tokens = " ++ show (Map.size m))]
+pcValue (MaryValue n (MultiAsset m)) = ppSexp "Value" [ppInteger n, ppString ("num tokens = " ++ show (Map.size m))]
 
 instance c ~ Crypto era => PrettyC (MaryValue c) era where
   prettyC _ = pcValue
@@ -1249,7 +1252,7 @@ pcTxBodyField proof x = case x of
   Update SNothing -> []
   Update (SJust _) -> [("update", ppString "UPDATE")]
   ReqSignerHashes s -> [("required hashes", ppSet pcKeyHash s)]
-  Mint v -> [("minted", pcCoreValue proof v)]
+  Mint v -> [("minted", multiAssetSummary v)]
   WppHash SNothing -> []
   WppHash (SJust h) -> [("integrity hash", trim (ppSafeHash h))]
   AdHash SNothing -> []
