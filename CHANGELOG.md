@@ -9,6 +9,8 @@ in the naming of release branches.
 
 ## [Unreleased]
 
+## Release branch 1.1.x
+
 ### Added
 - New `calculatePoolDistr'` function which is similar to `calculatePoolDistr` but has a new
   filter argument to only include the stake pool ids (stake pool key hashes) that are needed.
@@ -208,7 +210,7 @@ BabbageEraTxBody --> AlonzoEraTxBody --> ....
   It now uses the Alonze minfee function.
   #2936
 
-## Release branch 1.0.0
+## Release branch 1.0.x
 
 The first release branch in the cardano-ledger repository,
 namely `release/1.0.0`, branches from the
