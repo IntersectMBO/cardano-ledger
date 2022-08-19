@@ -562,7 +562,7 @@ utxoTransition = do
 
   {- ∀ ( _ ↦ (a,_)) ∈ txoutstxb,  a ∈ Addrbootstrap → bootstrapAttrsSize a ≤ 64 -}
   runTestOnSignal $
-    Shelley.validateOutputBootAddrAttrsTooBig outputs
+    Shelley.validateOutputBootAddrAttrsTooBig (Map.elems (unUTxO outputs))
 
   netId <- liftSTS $ asks networkId
 

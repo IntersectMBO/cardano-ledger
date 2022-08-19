@@ -21,12 +21,10 @@ module Cardano.Ledger.Babbage.Rules.Utxo
     babbageMinUTxOValue,
     validateOutputTooSmallUTxO,
     validateOutputTooBigUTxO,
-    validateOutputBootAddrAttrsTooBig,
   )
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), serialize)
-import Cardano.Ledger.Address (bootstrapAddressAttrsSize)
 import Cardano.Ledger.Alonzo.Rules
   ( AlonzoUtxoEvent (..),
     AlonzoUtxoPredFailure (..),
@@ -320,23 +318,6 @@ validateOutputTooBigUTxO pp outs =
             then (fromIntegral serSize, fromIntegral maxValSize, txOut) : ans
             else ans
 
--- > a ∈ Addr_bootstrap ⇒ bootstrapAttrsSize a ≤ 64
-validateOutputBootAddrAttrsTooBig ::
-  EraTxOut era =>
-  [TxOut era] ->
-  Test (AlonzoUtxoPredFailure era)
-validateOutputBootAddrAttrsTooBig outs =
-  failureUnless (null outputsAttrsTooBig) $ OutputBootAddrAttrsTooBig outputsAttrsTooBig
-  where
-    outputsAttrsTooBig =
-      filter
-        ( \txOut ->
-            case txOut ^. bootAddrTxOutF of
-              Just addr -> bootstrapAddressAttrsSize addr > 64
-              _ -> False
-        )
-        outs
-
 -- | The UTxO transition rule for the Babbage eras.
 utxoTransition ::
   forall era.
@@ -411,8 +392,7 @@ utxoTransition = do
   runTest $ validateOutputTooBigUTxO pp outs
 
   {- ∀ ( _ ↦ (a,_)) ∈ allOuts txb,  a ∈ Addrbootstrap → bootstrapAttrsSize a ≤ 64 -}
-  runTestOnSignal $
-    validateOutputBootAddrAttrsTooBig outs
+  runTestOnSignal $ Shelley.validateOutputBootAddrAttrsTooBig outs
 
   netId <- liftSTS $ asks networkId
 
