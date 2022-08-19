@@ -59,6 +59,14 @@ $ cabal run -- ledger-state:ledger-state --epoch-state-cbor="${CARDANO_DATA}/led
 
 ## Running benchmarks
 
+### Memory
+
 ```shell
-$ cabal bench ledger-state --benchmark-options="--new-epoch-state-cbor=\"${CARDANO_DATA}/ledger-state.bin\" --new-epoch-state-sqlite=\"${CARDANO_DATA}/ledger-state.sqlite\""
+$ cabal bench ledger-state:memory --benchmark-options="--new-epoch-state-cbor=\"${CARDANO_DATA}/ledger-state.bin\" --new-epoch-state-sqlite=\"${CARDANO_DATA}/ledger-state.sqlite\""
 ```
+### Performance
+
+Performance benchmarks need an actual mainnet ledger state and genesis config
+file to run properly. It is not possible to add extra arguments to criterion cli
+menu, therefore paths to those files must be supplied as environment variables.
+
