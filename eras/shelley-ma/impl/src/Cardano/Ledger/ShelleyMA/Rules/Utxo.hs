@@ -267,7 +267,7 @@ utxoTransition = do
   runTest $ validateOutputTooBigUTxO outputs
 
   {- ∀ ( _ ↦ (a,_)) ∈ txoutstxb,  a ∈ Addrbootstrap → bootstrapAttrsSize a ≤ 64 -}
-  runTest $ Shelley.validateOutputBootAddrAttrsTooBig outputs
+  runTest $ Shelley.validateOutputBootAddrAttrsTooBig (Map.elems (unUTxO outputs))
 
   {- txsize tx ≤ maxTxSize pp -}
   runTest $ Shelley.validateMaxTxSizeUTxO pp tx

@@ -414,7 +414,7 @@ utxoInductive = do
   runTest $ validateOutputTooSmallUTxO pp outputs
 
   {- ∀ ( _ ↦ (a,_)) ∈ txoutstxb,  a ∈ Addrbootstrap → bootstrapAttrsSize a ≤ 64 -}
-  runTest $ validateOutputBootAddrAttrsTooBig outputs
+  runTest $ validateOutputBootAddrAttrsTooBig (Map.elems (unUTxO outputs))
 
   {- txsize tx ≤ maxTxSize pp -}
   runTest $ validateMaxTxSizeUTxO pp tx
@@ -563,9 +563,9 @@ validateOutputTooSmallUTxO pp (UTxO outputs) =
 -- > ∀ ( _ ↦ (a,_)) ∈ txoutstxb,  a ∈ Addrbootstrap → bootstrapAttrsSize a ≤ 64
 validateOutputBootAddrAttrsTooBig ::
   EraTxOut era =>
-  UTxO era ->
+  [TxOut era] ->
   Test (ShelleyUtxoPredFailure era)
-validateOutputBootAddrAttrsTooBig (UTxO outputs) =
+validateOutputBootAddrAttrsTooBig outputs =
   failureUnless (null outputsAttrsTooBig) $ OutputBootAddrAttrsTooBig outputsAttrsTooBig
   where
     outputsAttrsTooBig =
@@ -575,7 +575,7 @@ validateOutputBootAddrAttrsTooBig (UTxO outputs) =
               Just addr -> bootstrapAddressAttrsSize addr > 64
               _ -> False
         )
-        (Map.elems outputs)
+        outputs
 
 -- | Ensure that the size of the transaction does not exceed the @maxTxSize@ protocol parameter
 --
