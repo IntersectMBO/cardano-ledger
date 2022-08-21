@@ -46,7 +46,7 @@ import Cardano.Ledger.ShelleyMA.Timelocks (translateTimelock)
 import Data.Coerce
 
 --------------------------------------------------------------------------------
--- Translation from Alonzo to Babbage
+-- Translation from Babbage to Conway
 --
 -- The instances below are needed by the consensus layer. Do not remove any of
 -- them without coordinating with consensus.
