@@ -97,9 +97,12 @@ instance NoThunks (InstantaneousRewards crypto)
 
 instance NFData (InstantaneousRewards crypto)
 
--- | State of staking pool delegations and rewards
+-- | The state used by the DELEG rule, which roughly tracks stake
+-- delegation and some governance features.
 data DState crypto = DState
-  { -- | Unified Reward Maps
+  { -- | Unified Reward Maps. This contains the reward map (which is the source
+    -- of truth regarding the registered stake credentials, the delegation map,
+    -- and the stake credential pointer map.
     _unified :: !(UnifiedMap crypto),
     -- | Future genesis key delegations
     _fGenDelegs :: !(Map (FutureGenDeleg crypto) (GenDelegPair crypto)),
@@ -134,11 +137,15 @@ instance (CC.Crypto crypto, FromSharedCBOR (InstantaneousRewards crypto)) => Fro
       ir <- fromSharedPlusLensCBOR _1
       pure $ DState unified fgs gs ir
 
--- | Current state of staking pools and their certificate counters.
+-- | The state used by the POOL rule, which tracks stake pool information.
 data PState crypto = PState
-  { -- | The pool parameters.
+  { -- | The stake pool parameters.
     _pParams :: !(Map (KeyHash 'StakePool crypto) (PoolParams crypto)),
-    -- | The future pool parameters.
+    -- | The future stake pool parameters.
+    -- Changes to existing stake pool parameters are staged in order
+    -- to give delegators time to react to changes.
+    -- See section 11.2, "Example Illustration of the Reward Cycle",
+    -- of the Shelley Ledger Specification for a sequence diagram.
     _fPParams :: !(Map (KeyHash 'StakePool crypto) (PoolParams crypto)),
     -- | A map of retiring stake pools to the epoch when they retire.
     _retiring :: !(Map (KeyHash 'StakePool crypto) EpochNo)
@@ -166,7 +173,8 @@ instance CC.Crypto crypto => FromSharedCBOR (PState crypto) where
 instance (CC.Crypto crypto, FromSharedCBOR (PState crypto)) => FromCBOR (PState crypto) where
   fromCBOR = fromNotSharedCBOR
 
--- | The state associated with the current stake delegation.
+-- | The state associated with the DELPL rule, which combines the DELEG rule
+-- and the POOL rule.
 data DPState crypto = DPState
   { dpsDState :: !(DState crypto),
     dpsPState :: !(PState crypto)
