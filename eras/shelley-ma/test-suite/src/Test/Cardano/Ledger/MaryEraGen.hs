@@ -34,7 +34,7 @@ import Cardano.Ledger.Shelley.Tx
 import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl)
 import Cardano.Ledger.ShelleyMA.Rules (scaledMinDeposit)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
-import Cardano.Ledger.ShelleyMA.TxBody (MATxBody (MATxBody), ShelleyMAEraTxBody)
+import Cardano.Ledger.ShelleyMA.TxBody (MATxBody (MATxBody))
 import Cardano.Ledger.Val ((<+>))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (SlotNo)
@@ -283,8 +283,7 @@ genTxBody ::
   ( EraGen era,
     Value era ~ MaryValue (Crypto era),
     PParams era ~ ShelleyPParams era,
-    TxOut era ~ ShelleyTxOut era,
-    ShelleyMAEraTxBody era
+    TxOut era ~ ShelleyTxOut era
   ) =>
   ShelleyPParams era ->
   SlotNo ->

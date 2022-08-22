@@ -10,7 +10,8 @@
 
 module Test.Cardano.Ledger.Shelley.Serialisation.Generators () where
 
-import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Binary (ToCBOR)
+import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.API (ShelleyTxBody (ShelleyTxBody))
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams)
 import qualified Cardano.Ledger.Shelley.Rules.Utxo as STS
@@ -30,7 +31,10 @@ import Test.QuickCheck
   necessarily valid
 -------------------------------------------------------------------------------}
 
-instance Mock c => Arbitrary (ShelleyTxBody (ShelleyEra c)) where
+instance
+  (EraTxOut era, Mock (Crypto era), Arbitrary (Value era), ToCBOR (PParamsUpdate era)) =>
+  Arbitrary (ShelleyTxBody era)
+  where
   arbitrary =
     ShelleyTxBody
       <$> arbitrary
@@ -42,7 +46,15 @@ instance Mock c => Arbitrary (ShelleyTxBody (ShelleyEra c)) where
       <*> arbitrary
       <*> arbitrary
 
-instance Mock c => Arbitrary (STS.ShelleyUtxoPredFailure (ShelleyEra c)) where
+instance
+  ( Era era,
+    Mock (Crypto era),
+    Arbitrary (Value era),
+    Arbitrary (TxOut era),
+    Arbitrary (STS.PredicateFailure (EraRule "PPUP" era))
+  ) =>
+  Arbitrary (STS.ShelleyUtxoPredFailure era)
+  where
   arbitrary = genericArbitraryU
   shrink _ = []
 

@@ -574,7 +574,7 @@ deriving via
     FromCBOR (Annotator (AlonzoTxBody era))
 
 pattern AlonzoTxBody ::
-  EraTxBody era =>
+  (EraTxOut era, ToCBOR (PParamsUpdate era)) =>
   Set (TxIn (Crypto era)) ->
   Set (TxIn (Crypto era)) ->
   StrictSeq (AlonzoTxOut era) ->
