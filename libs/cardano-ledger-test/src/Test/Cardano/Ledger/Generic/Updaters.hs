@@ -175,6 +175,8 @@ updateTxBody pf txBody dt =
       Wdrls wdrls -> txBody & wdrlsTxBodyL .~ wdrls
       Vldt vldt -> txBody & vldtTxBodyL .~ vldt
       Update update -> txBody & updateTxBodyL .~ update
+      AdHash auxDataHash -> txBody & auxDataHashTxBodyL .~ auxDataHash
+      Mint mint -> txBody & mintTxBodyL .~ mint
       _ -> txBody
     Mary _ -> case dt of
       Certs certs -> txBody & certsTxBodyL .~ certs
