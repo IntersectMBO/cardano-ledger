@@ -468,7 +468,7 @@ deriving via Mem TxBodyRaw era instance EraTxBody era => FromCBOR (Annotator (Tx
 
 -- | Pattern for use by external users
 pattern ShelleyTxBody ::
-  EraTxBody era =>
+  (EraTxOut era, ToCBOR (PParamsUpdate era)) =>
   Set (TxIn (Crypto era)) ->
   StrictSeq (TxOut era) ->
   StrictSeq (DCert (Crypto era)) ->
@@ -499,7 +499,7 @@ pattern ShelleyTxBody {_inputs, _outputs, _certs, _wdrls, _txfee, _ttl, _txUpdat
 
 {-# COMPLETE ShelleyTxBody #-}
 
-mkShelleyTxBody :: EraTxBody era => TxBodyRaw era -> ShelleyTxBody era
+mkShelleyTxBody :: (EraTxOut era, ToCBOR (PParamsUpdate era)) => TxBodyRaw era -> ShelleyTxBody era
 mkShelleyTxBody = TxBodyConstr . memoBytes . txSparse
 
 -- =========================================

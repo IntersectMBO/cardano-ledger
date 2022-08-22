@@ -285,7 +285,7 @@ data ScriptIntegrity era
   = ScriptIntegrity
       !(Redeemers era) -- From the witnesses
       !(TxDats era)
-      !(Set LangDepView) -- From the Porotocl parameters
+      !(Set LangDepView) -- From the Protocol parameters
   deriving (Eq, Generic, Typeable)
 
 deriving instance HashAlgorithm (HASH (Crypto era)) => Show (ScriptIntegrity era)

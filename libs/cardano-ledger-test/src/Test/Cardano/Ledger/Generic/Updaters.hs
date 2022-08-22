@@ -101,7 +101,7 @@ instance Merge (Map (ScriptHash c) v) where
 -- Updaters for Tx
 
 updateTx :: Proof era -> Tx era -> TxField era -> Tx era
-updateTx (wit@(Shelley _)) (tx@(ShelleyTx b w d)) dt =
+updateTx wit@(Shelley _) tx@(ShelleyTx b w d) dt =
   case dt of
     Body fbody -> ShelleyTx fbody w d
     BodyI bfields -> ShelleyTx (newTxBody wit bfields) w d
@@ -109,7 +109,7 @@ updateTx (wit@(Shelley _)) (tx@(ShelleyTx b w d)) dt =
     WitnessesI wfields -> ShelleyTx b (newWitnesses override wit wfields) d
     AuxData faux -> ShelleyTx b w faux
     Valid _ -> tx
-updateTx (wit@(Allegra _)) (tx@(ShelleyTx b w d)) dt =
+updateTx wit@(Allegra _) tx@(ShelleyTx b w d) dt =
   case dt of
     Body fbody -> ShelleyTx fbody w d
     BodyI bfields -> ShelleyTx (newTxBody wit bfields) w d
@@ -117,7 +117,7 @@ updateTx (wit@(Allegra _)) (tx@(ShelleyTx b w d)) dt =
     WitnessesI wfields -> ShelleyTx b (newWitnesses override wit wfields) d
     AuxData faux -> ShelleyTx b w faux
     Valid _ -> tx
-updateTx (wit@(Mary _)) (tx@(ShelleyTx b w d)) dt =
+updateTx wit@(Mary _) tx@(ShelleyTx b w d) dt =
   case dt of
     Body fbody -> ShelleyTx fbody w d
     BodyI bfields -> ShelleyTx (newTxBody wit bfields) w d
@@ -174,6 +174,8 @@ updateTxBody pf txBody dt =
       Wdrls wdrls -> txBody & wdrlsTxBodyL .~ wdrls
       Vldt vldt -> txBody & vldtTxBodyL .~ vldt
       Update update -> txBody & updateTxBodyL .~ update
+      AdHash auxDataHash -> txBody & auxDataHashTxBodyL .~ auxDataHash
+      Mint mint -> txBody & mintTxBodyL .~ mint
       _ -> txBody
     Mary _ -> case dt of
       Certs certs -> txBody & certsTxBodyL .~ certs
