@@ -349,7 +349,7 @@ mkAlonzoTxWitness ::
   TxWitnessRaw era ->
   TxWitness era
 mkAlonzoTxWitness = TxWitnessConstr . memoBytes . encodeWitnessRaw
-{-# INLINE mkAlonzoTxWitness #-}
+{-# INLINEABLE mkAlonzoTxWitness #-}
 
 -- =======================================================
 -- Accessors
@@ -364,42 +364,42 @@ lensWitsRaw getter setter =
   lens
     (\(TxWitnessConstr (Memo witsRaw _)) -> getter witsRaw)
     (\(TxWitnessConstr (Memo witsRaw _)) val -> mkAlonzoTxWitness $ setter witsRaw val)
-{-# INLINE lensWitsRaw #-}
+{-# INLINEABLE lensWitsRaw #-}
 
 addrAlonzoWitsL ::
   (Era era, Core.Script era ~ AlonzoScript era) =>
   Lens' (TxWitness era) (Set (WitVKey 'Witness (Crypto era)))
 addrAlonzoWitsL =
   lensWitsRaw _txwitsVKey (\witsRaw addrWits -> witsRaw {_txwitsVKey = addrWits})
-{-# INLINE addrAlonzoWitsL #-}
+{-# INLINEABLE addrAlonzoWitsL #-}
 
 bootAddrAlonzoWitsL ::
   (Era era, Core.Script era ~ AlonzoScript era) =>
   Lens' (TxWitness era) (Set (BootstrapWitness (Crypto era)))
 bootAddrAlonzoWitsL =
   lensWitsRaw _txwitsBoot (\witsRaw bootAddrWits -> witsRaw {_txwitsBoot = bootAddrWits})
-{-# INLINE bootAddrAlonzoWitsL #-}
+{-# INLINEABLE bootAddrAlonzoWitsL #-}
 
 scriptAlonzoWitsL ::
   (Era era, Core.Script era ~ AlonzoScript era) =>
   Lens' (TxWitness era) (Map (ScriptHash (Crypto era)) (Script era))
 scriptAlonzoWitsL =
   lensWitsRaw _txscripts (\witsRaw scriptWits -> witsRaw {_txscripts = scriptWits})
-{-# INLINE scriptAlonzoWitsL #-}
+{-# INLINEABLE scriptAlonzoWitsL #-}
 
 datsAlonzoWitsL ::
   (Era era, Core.Script era ~ AlonzoScript era) =>
   Lens' (TxWitness era) (TxDats era)
 datsAlonzoWitsL =
   lensWitsRaw _txdats (\witsRaw datsWits -> witsRaw {_txdats = datsWits})
-{-# INLINE datsAlonzoWitsL #-}
+{-# INLINEABLE datsAlonzoWitsL #-}
 
 rdmrsAlonzoWitsL ::
   (Era era, Core.Script era ~ AlonzoScript era) =>
   Lens' (TxWitness era) (Redeemers era)
 rdmrsAlonzoWitsL =
   lensWitsRaw _txrdmrs (\witsRaw rdmrsWits -> witsRaw {_txrdmrs = rdmrsWits})
-{-# INLINE rdmrsAlonzoWitsL #-}
+{-# INLINEABLE rdmrsAlonzoWitsL #-}
 
 instance (EraScript (AlonzoEra c), CC.Crypto c) => EraWitnesses (AlonzoEra c) where
   {-# SPECIALIZE instance EraWitnesses (AlonzoEra CC.StandardCrypto) #-}

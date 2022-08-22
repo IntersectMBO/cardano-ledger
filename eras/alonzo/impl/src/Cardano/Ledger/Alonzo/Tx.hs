@@ -217,26 +217,26 @@ mkBasicAlonzoTx txBody = AlonzoTx txBody mempty (IsValid True) SNothing
 -- | `Core.TxBody` setter and getter for `AlonzoTx`.
 bodyAlonzoTxL :: Lens' (AlonzoTx era) (Core.TxBody era)
 bodyAlonzoTxL = lens body (\tx txBody -> tx {body = txBody})
-{-# INLINE bodyAlonzoTxL #-}
+{-# INLINEABLE bodyAlonzoTxL #-}
 
 -- | `Witnesses` setter and getter for `AlonzoTx`.
 witsAlonzoTxL :: Lens' (AlonzoTx era) (TxWitness era)
 witsAlonzoTxL = lens wits (\tx txWits -> tx {wits = txWits})
-{-# INLINE witsAlonzoTxL #-}
+{-# INLINEABLE witsAlonzoTxL #-}
 
 -- | `AuxiliaryData` setter and getter for `AlonzoTx`.
 auxDataAlonzoTxL :: Lens' (AlonzoTx era) (StrictMaybe (AuxiliaryData era))
 auxDataAlonzoTxL = lens auxiliaryData (\tx txAuxiliaryData -> tx {auxiliaryData = txAuxiliaryData})
-{-# INLINE auxDataAlonzoTxL #-}
+{-# INLINEABLE auxDataAlonzoTxL #-}
 
 -- | txsize computes the length of the serialised bytes
 sizeAlonzoTxF :: EraTx era => SimpleGetter (AlonzoTx era) Integer
 sizeAlonzoTxF = to (fromIntegral . LBS.length . serializeEncoding . toCBORForSizeComputation)
-{-# INLINE sizeAlonzoTxF #-}
+{-# INLINEABLE sizeAlonzoTxF #-}
 
 isValidAlonzoTxL :: Lens' (AlonzoTx era) IsValid
 isValidAlonzoTxL = lens isValid (\tx valid -> tx {isValid = valid})
-{-# INLINE isValidAlonzoTxL #-}
+{-# INLINEABLE isValidAlonzoTxL #-}
 
 deriving instance
   (Era era, Eq (Core.TxBody era), Eq (AuxiliaryData era)) =>
