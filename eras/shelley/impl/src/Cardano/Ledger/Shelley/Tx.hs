@@ -179,7 +179,7 @@ bodyShelleyTxL =
   lens
     (\(TxConstr (Memo tx _)) -> _body tx)
     (\(TxConstr (Memo tx _)) txBody -> TxConstr $ memoBytes $ encodeTxRaw $ tx {_body = txBody})
-{-# INLINE bodyShelleyTxL #-}
+{-# INLINEABLE bodyShelleyTxL #-}
 
 -- | `Witnesses` setter and getter for `ShelleyTx`. The setter does update
 -- memoized binary representation.
@@ -188,7 +188,7 @@ witsShelleyTxL =
   lens
     (\(TxConstr (Memo tx _)) -> _wits tx)
     (\(TxConstr (Memo tx _)) txWits -> TxConstr $ memoBytes $ encodeTxRaw $ tx {_wits = txWits})
-{-# INLINE witsShelleyTxL #-}
+{-# INLINEABLE witsShelleyTxL #-}
 
 -- | `AuxiliaryData` setter and getter for `ShelleyTx`. The setter does update
 -- memoized binary representation.
@@ -197,16 +197,16 @@ auxDataShelleyTxL =
   lens
     (\(TxConstr (Memo tx _)) -> _auxiliaryData tx)
     (\(TxConstr (Memo tx _)) auxData -> mkShelleyTx $ tx {_auxiliaryData = auxData})
-{-# INLINE auxDataShelleyTxL #-}
+{-# INLINEABLE auxDataShelleyTxL #-}
 
 -- | Size getter for `ShelleyTx`.
 sizeShelleyTxF :: Era era => SimpleGetter (Tx era) Integer
 sizeShelleyTxF = to (\(TxConstr (Memo _ bytes)) -> fromIntegral $ SBS.length bytes)
-{-# INLINE sizeShelleyTxF #-}
+{-# INLINEABLE sizeShelleyTxF #-}
 
 mkShelleyTx :: EraTx era => TxRaw era -> ShelleyTx era
 mkShelleyTx = TxConstr . memoBytes . encodeTxRaw
-{-# INLINE mkShelleyTx #-}
+{-# INLINEABLE mkShelleyTx #-}
 
 mkBasicShelleyTx :: EraTx era => Core.TxBody era -> ShelleyTx era
 mkBasicShelleyTx txBody =
@@ -372,21 +372,21 @@ type ShelleyWitnesses = WitnessSetHKD Identity
 addrShelleyWitsL ::
   EraWitnesses era => Lens' (ShelleyWitnesses era) (Set (WitVKey 'Witness (Crypto era)))
 addrShelleyWitsL = lens addrWits' (\w s -> w {addrWits = s})
-{-# INLINE addrShelleyWitsL #-}
+{-# INLINEABLE addrShelleyWitsL #-}
 
 -- | Bootstrap Addresses witness setter and getter for `ShelleyWitnesses`. The
 -- setter does update memoized binary representation.
 bootAddrShelleyWitsL ::
   EraWitnesses era => Lens' (ShelleyWitnesses era) (Set (BootstrapWitness (Crypto era)))
 bootAddrShelleyWitsL = lens bootWits' (\w s -> w {bootWits = s})
-{-# INLINE bootAddrShelleyWitsL #-}
+{-# INLINEABLE bootAddrShelleyWitsL #-}
 
 -- | Script witness setter and getter for `ShelleyWitnesses`. The
 -- setter does update memoized binary representation.
 scriptShelleyWitsL ::
   EraWitnesses era => Lens' (ShelleyWitnesses era) (Map (ScriptHash (Crypto era)) (Script era))
 scriptShelleyWitsL = lens scriptWits' (\w s -> w {scriptWits = s})
-{-# INLINE scriptShelleyWitsL #-}
+{-# INLINEABLE scriptShelleyWitsL #-}
 
 instance CC.Crypto crypto => EraWitnesses (ShelleyEra crypto) where
   {-# SPECIALIZE instance EraWitnesses (ShelleyEra CC.StandardCrypto) #-}
