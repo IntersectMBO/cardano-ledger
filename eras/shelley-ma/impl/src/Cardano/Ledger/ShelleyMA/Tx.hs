@@ -70,7 +70,7 @@ validateTimelock ::
 validateTimelock timelock tx = evalTimelock vhks (tx ^. bodyTxL . vldtTxBodyL) timelock
   where
     vhks = Set.map witVKeyHash (tx ^. witsTxL . addrWitsL)
-{-# INLINE validateTimelock #-}
+{-# INLINEABLE validateTimelock #-}
 
 instance MAClass ma crypto => EraWitnesses (ShelleyMAEra ma crypto) where
   {-# SPECIALIZE instance EraWitnesses (ShelleyMAEra 'Mary StandardCrypto) #-}
