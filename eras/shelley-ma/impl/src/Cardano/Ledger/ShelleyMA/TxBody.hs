@@ -150,7 +150,10 @@ fromSJust SNothing = error "SNothing in fromSJust"
 -- concerns as we want the Shelley era TxBody to deserialise as a Shelley-ma TxBody.
 -- txXparse and bodyFields should be Duals, visual inspection helps ensure this.
 
-txSparse :: ShelleyMAEraTxBody era => TxBodyRaw era -> Encode ('Closed 'Sparse) (TxBodyRaw era)
+txSparse ::
+  (EraTxOut era, ToCBOR (PParamsUpdate era), EncodeMint (Value era)) =>
+  TxBodyRaw era ->
+  Encode ('Closed 'Sparse) (TxBodyRaw era)
 txSparse (TxBodyRaw inp out cert wdrl fee (ValidityInterval bot top) up hash frge) =
   Keyed (\i o f topx c w u h botx forg -> TxBodyRaw i o c w f (ValidityInterval botx topx) u h forg)
     !> Key 0 (E encodeFoldable inp) -- We don't have to send these in TxBodyX order
@@ -164,7 +167,10 @@ txSparse (TxBodyRaw inp out cert wdrl fee (ValidityInterval bot top) up hash frg
     !> encodeKeyedStrictMaybe 8 bot
     !> Omit isZero (Key 9 (E encodeMint frge))
 
-bodyFields :: ShelleyMAEraTxBody era => Word -> Field (TxBodyRaw era)
+bodyFields ::
+  (EraTxOut era, FromCBOR (PParamsUpdate era), DecodeMint (Value era)) =>
+  Word ->
+  Field (TxBodyRaw era)
 bodyFields 0 = field (\x tx -> tx {inputs = x}) (D (decodeSet fromCBOR))
 bodyFields 1 = field (\x tx -> tx {outputs = x}) (D (decodeStrictSeq fromCBOR))
 bodyFields 2 = field (\x tx -> tx {txfee = x}) From
@@ -231,7 +237,7 @@ instance (c ~ Crypto era, Era era) => HashAnnotated (MATxBody era) EraIndependen
 -- Make a Pattern so the newtype and the MemoBytes are hidden
 
 pattern MATxBody ::
-  ShelleyMAEraTxBody era =>
+  (EraTxOut era, ToCBOR (PParamsUpdate era), EncodeMint (Value era)) =>
   Set (TxIn (Crypto era)) ->
   StrictSeq (ShelleyTxOut era) ->
   StrictSeq (DCert (Crypto era)) ->
@@ -256,7 +262,7 @@ pattern MATxBody inputs outputs certs wdrls txfee vldt update adHash mint <-
 {-# COMPLETE MATxBody #-}
 
 mkMATxBody ::
-  ShelleyMAEraTxBody era =>
+  (EraTxOut era, ToCBOR (PParamsUpdate era), EncodeMint (Value era)) =>
   TxBodyRaw era ->
   MATxBody era
 mkMATxBody = TxBodyConstr . memoBytes . txSparse
