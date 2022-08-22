@@ -142,16 +142,16 @@ assembleWits :: Era era => Proof era -> [WitnessesField era] -> Witnesses era
 assembleWits era = List.foldl' (updateWitnesses merge era) (initialWitnesses era)
 
 coreTxOut :: Era era => Proof era -> [TxOutField era] -> TxOut era
-coreTxOut era dts = List.foldl' (updateTxOut era) (initialTxOut era) dts
+coreTxOut era = List.foldl' (updateTxOut era) (initialTxOut era)
 
 coreTxBody :: EraTxBody era => Proof era -> [TxBodyField era] -> TxBody era
-coreTxBody era dts = List.foldl' (updateTxBody era) (initialTxBody era) dts
+coreTxBody era = List.foldl' (updateTxBody era) (initialTxBody era)
 
 overrideTxBody :: EraTxBody era => Proof era -> TxBody era -> [TxBodyField era] -> TxBody era
-overrideTxBody era old dts = List.foldl' (updateTxBody era) old dts
+overrideTxBody era = List.foldl' (updateTxBody era)
 
 coreTx :: Proof era -> [TxField era] -> Tx era
-coreTx era dts = List.foldl' (updateTx era) (initialTx era) dts
+coreTx era = List.foldl' (updateTx era) (initialTx era)
 
 -- ====================================================================
 
