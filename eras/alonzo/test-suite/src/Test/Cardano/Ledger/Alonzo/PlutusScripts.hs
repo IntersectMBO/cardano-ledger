@@ -8,10 +8,14 @@ import Data.Either (fromRight)
 import PlutusLedgerApi.Test.EvaluationContext (costModelParamsForTesting)
 
 testingCostModelV1 :: CostModel
-testingCostModelV1 = fromRight (error "corrupt model") $ mkCostModel PlutusV1 (0 <$ costModelParamsForTesting)
+testingCostModelV1 =
+  fromRight (error "testingCostModelV1 is not well-formed") $
+    mkCostModel PlutusV1 (0 <$ costModelParamsForTesting)
 
 testingCostModelV2 :: CostModel
-testingCostModelV2 = fromRight (error "corrupt model") $ mkCostModel PlutusV2 (0 <$ costModelParamsForTesting)
+testingCostModelV2 =
+  fromRight (error "testingCostModelV2 is not well-formed") $
+    mkCostModel PlutusV2 (0 <$ costModelParamsForTesting)
 
 {- Preproceesed Plutus Script
 guessTheNumber'2_0 :: PlutusTx.Builtins.Internal.BuiltinData ->

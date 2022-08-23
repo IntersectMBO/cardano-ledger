@@ -24,15 +24,16 @@ module Cardano.Ledger.TxIn
 where
 
 import Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (..), encodeListLen)
+import Cardano.HeapWords (HeapWords (..))
+import qualified Cardano.HeapWords as HW
 import Cardano.Ledger.BaseTypes (TxIx (..), mkTxIxPartial)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.SafeHash (SafeHash)
 import Cardano.Ledger.Serialization (decodeRecordNamed)
-import Cardano.Prelude (HeapWords (..))
-import qualified Cardano.Prelude as HW
 import Control.DeepSeq (NFData)
 import GHC.Generics (Generic)
+import GHC.Stack (HasCallStack)
 import NoThunks.Class (NoThunks (..))
 
 -- ===================================================================================
@@ -66,7 +67,7 @@ data TxIn c = TxIn !(TxId c) {-# UNPACK #-} !TxIx
 
 -- | Construct `TxIn` while throwing an error for an out of range `TxIx`. Make
 -- sure to use it only for testing.
-mkTxInPartial :: HW.HasCallStack => TxId c -> Integer -> TxIn c
+mkTxInPartial :: HasCallStack => TxId c -> Integer -> TxIn c
 mkTxInPartial txId = TxIn txId . mkTxIxPartial
 
 deriving instance Eq (TxIn c)
