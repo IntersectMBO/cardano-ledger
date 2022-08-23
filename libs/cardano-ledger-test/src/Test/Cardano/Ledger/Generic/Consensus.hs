@@ -90,7 +90,7 @@ import Data.Word (Word64, Word8)
 import GHC.Records (HasField)
 import GHC.Stack (HasCallStack)
 import Numeric.Natural (Natural)
-import qualified Plutus.V1.Ledger.Api as Plutus
+import qualified PlutusLedgerApi.V1 as Plutus
 import qualified Test.Cardano.Ledger.Allegra.Examples.Consensus as Old (ledgerExamplesAllegra)
 import Test.Cardano.Ledger.Alonzo.EraMapping ()
 import qualified Test.Cardano.Ledger.Alonzo.Examples.Consensus as Old (ledgerExamplesAlonzo)

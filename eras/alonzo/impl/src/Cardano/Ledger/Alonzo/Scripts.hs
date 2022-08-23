@@ -65,6 +65,7 @@ import Cardano.Ledger.ShelleyMA.Timelocks (Timelock)
 import qualified Cardano.Ledger.ShelleyMA.Timelocks as Timelocks
 import Control.DeepSeq (NFData (..), deepseq, rwhnf)
 import Control.Monad (when)
+import Control.Monad.Trans.Writer (WriterT (runWriterT))
 import Data.ByteString.Short (ShortByteString, fromShort)
 import Data.Coders
   ( Annotator,
@@ -90,13 +91,26 @@ import Data.Measure (BoundedMeasure, Measure)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text)
+import qualified Data.Text as Text
 import Data.Typeable (Proxy (..), Typeable)
 import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import Numeric.Natural (Natural)
-import Plutus.V1.Ledger.Api as PV1 hiding (Map, Script)
-import Plutus.V2.Ledger.Api as PV2 (costModelParamNames, isScriptWellFormed, mkEvaluationContext)
+import PlutusCore.Evaluation.Machine.CostModelInterface (CostModelApplyWarn)
+import PlutusLedgerApi.Common (showParamName)
+import PlutusLedgerApi.V1 as PV1
+  ( CostModelApplyError (..),
+    EvaluationContext,
+    ParamName,
+    ProtocolVersion (ProtocolVersion),
+    ScriptDecodeError,
+    assertScriptWellFormed,
+    assertWellFormedCostModelParams,
+    mkEvaluationContext,
+  )
+import PlutusLedgerApi.V2 as PV2 (ParamName, assertScriptWellFormed, mkEvaluationContext)
+import PlutusPrelude (enumerate)
 
 -- | Marker indicating the part of a transaction for which this script is acting
 -- as a validator.
@@ -272,12 +286,12 @@ instance NFData CostModel where
 --  conversion function mkEvaluationContext from the Plutus API.
 mkCostModel :: Language -> Map Text Integer -> Either CostModelApplyError CostModel
 mkCostModel PlutusV1 cm =
-  case PV1.mkEvaluationContext cm of
-    Right evalCtx -> Right (CostModel PlutusV1 cm evalCtx)
+  case (runWriterT (PV1.mkEvaluationContext (Map.elems cm)) :: Either CostModelApplyError (EvaluationContext, [CostModelApplyWarn])) of
+    Right (evalCtx, _) -> Right (CostModel PlutusV1 cm evalCtx)
     Left e -> Left e
 mkCostModel PlutusV2 cm =
-  case PV2.mkEvaluationContext cm of
-    Right evalCtx -> Right (CostModel PlutusV2 cm evalCtx)
+  case (runWriterT (PV2.mkEvaluationContext (Map.elems cm)) :: Either CostModelApplyError (EvaluationContext, [CostModelApplyWarn])) of
+    Right (evalCtx, _) -> Right (CostModel PlutusV2 cm evalCtx)
     Left e -> Left e
 
 getCostModelLanguage :: CostModel -> Language
@@ -297,8 +311,8 @@ decodeCostModel lang = do
     Right cm -> pure cm
   where
     keys = case lang of
-      PlutusV1 -> PV1.costModelParamNames
-      PlutusV2 -> PV2.costModelParamNames
+      PlutusV1 -> Set.fromList $ Text.pack . showParamName <$> enumerate @PV1.ParamName
+      PlutusV2 -> Set.fromList $ Text.pack . showParamName <$> enumerate @PV2.ParamName
 
 decodeArrayAsMap :: Ord a => Set a -> Decoder s b -> Decoder s (Map a b)
 decodeArrayAsMap keys decodeValue = do
@@ -428,8 +442,8 @@ instance Era era => FromCBOR (Annotator (Script era)) where
 validScript :: ProtVer -> Script era -> Bool
 validScript pv scrip = case scrip of
   TimelockScript sc -> deepseq sc True
-  PlutusScript PlutusV1 bytes -> PV1.isScriptWellFormed (transProtocolVersion pv) bytes
-  PlutusScript PlutusV2 bytes -> PV2.isScriptWellFormed (transProtocolVersion pv) bytes
+  PlutusScript PlutusV1 bytes -> (not . null) (PV1.assertScriptWellFormed (transProtocolVersion pv) bytes :: Either ScriptDecodeError ())
+  PlutusScript PlutusV2 bytes -> (not . null) (PV2.assertScriptWellFormed (transProtocolVersion pv) bytes :: Either ScriptDecodeError ())
 
 transProtocolVersion :: ProtVer -> PV1.ProtocolVersion
 transProtocolVersion (ProtVer major minor) =

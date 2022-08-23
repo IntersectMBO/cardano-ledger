@@ -44,13 +44,15 @@ import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
 import Data.Scientific (fromRationalRepetendLimited)
-import qualified Data.Set as Set
 import Data.Text (Text)
+import qualified Data.Text as Text
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
-import Plutus.V1.Ledger.Api as PV1 (costModelParamNames)
+import PlutusLedgerApi.Common (showParamName)
+import PlutusLedgerApi.V1 as PV1 (ParamName)
+import PlutusPrelude (enumerate)
 
 data AlonzoGenesis = AlonzoGenesis
   { coinsPerUTxOWord :: !Coin,
@@ -224,7 +226,7 @@ validateCostModel (lang, cmps) = case mkCostModel lang cmps of
 translateLegacyV1paramNames :: Map Text Integer -> Map Text Integer
 translateLegacyV1paramNames cmps =
   Map.fromList $
-    zipWith (\(_, v) k2 -> (k2, v)) (Map.toList cmps) (Set.toList PV1.costModelParamNames)
+    zipWith (\(_, v) k2 -> (k2, v)) (Map.toList cmps) (Text.pack . showParamName <$> enumerate @PV1.ParamName)
 
 instance FromJSON CostModels where
   parseJSON = Aeson.withObject "CostModels" $ \o -> do

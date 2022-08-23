@@ -43,9 +43,9 @@ import qualified Data.Set as Set
 import Data.Text (Text)
 import GHC.Records (HasField (..))
 import Lens.Micro
-import qualified Plutus.V1.Ledger.Api as PV1
-import Plutus.V1.Ledger.Contexts ()
-import qualified Plutus.V2.Ledger.Api as PV2
+import qualified PlutusLedgerApi.V1 as PV1
+import PlutusLedgerApi.V1.Contexts ()
+import qualified PlutusLedgerApi.V2 as PV2
 
 transScriptHash :: ScriptHash c -> PV2.ScriptHash
 transScriptHash (ScriptHash h) = PV2.ScriptHash (PV2.toBuiltin (hashToBytes h))
