@@ -1,5 +1,4 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -25,7 +24,10 @@ module Cardano.Ledger.Shelley.UTxO
     txouts,
     txup,
     balance,
+    coinBalance,
     sumAllValue,
+    sumAllCoin,
+    areAllAdaOnly,
     totalDeposits,
     makeWitnessVKey,
     makeWitnessesVKey,
@@ -35,7 +37,7 @@ module Cardano.Ledger.Shelley.UTxO
     scriptsNeeded,
     scriptCred,
     scriptStakeCred,
-    consumed,
+    coinConsumed,
     produced,
     keyRefunds,
   )
@@ -46,7 +48,8 @@ import qualified Cardano.Crypto.Hash as CH
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
 import Cardano.Ledger.Block (txid)
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin, CompactForm (CompactCoin))
+import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto, HASH)
@@ -91,6 +94,7 @@ import Data.Foldable (Foldable (fold), foldMap', toList)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe as Maybe
+import Data.Monoid (Sum (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Sharing (FromSharedCBOR (Share, fromSharedCBOR), Interns)
@@ -224,22 +228,37 @@ makeWitnessesFromScriptKeys txbodyHash hashKeyMap scriptHashes =
    in makeWitnessesVKey txbodyHash (Map.elems witKeys)
 
 -- | Determine the total balance contained in the UTxO.
-balance ::
-  forall era.
-  EraTxOut era =>
-  UTxO era ->
-  Value era
-balance = sumAllValue @era . unUTxO
+balance :: EraTxOut era => UTxO era -> Value era
+balance = sumAllValue . unUTxO
 {-# INLINE balance #-}
 
--- | Sum all the value in any Foldable with elements that have a field "value"
-sumAllValue ::
-  forall era f.
-  (Foldable f, EraTxOut era) =>
-  f (TxOut era) ->
-  Value era
+-- | Determine the total Ada only balance contained in the UTxO. This is
+-- equivalent to `coin . balance`, but it will be more efficient
+coinBalance :: EraTxOut era => UTxO era -> Coin
+coinBalance = sumAllCoin . unUTxO
+{-# INLINE coinBalance #-}
+
+-- | Sum all the value in any Foldable with 'TxOut's
+sumAllValue :: (EraTxOut era, Foldable f) => f (TxOut era) -> Value era
 sumAllValue = foldMap' (^. valueTxOutL)
 {-# INLINE sumAllValue #-}
+
+-- | Sum all the 'Coin's in any Foldable with with 'TxOut's. Care should be
+-- taken since it is susceptible to integer overflow, therefore make sure this
+-- function is not applied to unvalidated 'TxOut's
+sumAllCoin :: (EraTxOut era, Foldable f) => f (TxOut era) -> Coin
+sumAllCoin = fromCompact . CompactCoin . getSum . foldMap' getCoinWord64
+  where
+    getCoinWord64 txOut =
+      case txOut ^. compactCoinTxOutL of
+        CompactCoin w64 -> Sum w64
+{-# INLINE sumAllCoin #-}
+
+-- | Check whether any of the supplied 'TxOut's contain any MultiAssets. Returns
+-- True if non of them do.
+areAllAdaOnly :: (EraTxOut era, Foldable f) => f (TxOut era) -> Bool
+areAllAdaOnly = all (^. isAdaOnlyTxOutF)
+{-# INLINE areAllAdaOnly #-}
 
 -- | Determine the total deposit amount needed.
 -- The block may (legitimately) contain multiple registration certificates
@@ -345,7 +364,7 @@ produced pp isNewPool txBody =
       )
 
 -- | Compute the lovelace which are destroyed by the transaction
-consumed ::
+coinConsumed ::
   forall era pp.
   ( ShelleyEraTxBody era,
     HasField "_keyDeposit" pp Coin
@@ -353,14 +372,13 @@ consumed ::
   pp ->
   UTxO era ->
   TxBody era ->
-  Value era
-consumed pp (UTxO u) txBody =
+  Coin
+coinConsumed pp (UTxO u) txBody =
   {- balance (txins tx ◁ u) + wbalance (txwdrls tx) + keyRefunds pp tx -}
-  Set.foldl' lookupAddTxOut mempty (txins @era txBody)
-    <> Val.inject (refunds <+> withdrawals)
+  coinBalance (UTxO (Map.restrictKeys u (txBody ^. inputsTxBodyL)))
+    <> refunds
+    <> withdrawals
   where
-    lookupAddTxOut acc txin = maybe acc (addTxOut acc) $ Map.lookup txin u
-    addTxOut !b out = out ^. valueTxOutL <+> b
     refunds = keyRefunds pp txBody
     withdrawals = fold . unWdrl $ txBody ^. wdrlsTxBodyL
 

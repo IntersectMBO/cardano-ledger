@@ -29,6 +29,7 @@ import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.Types
 import Cardano.Ledger.Shelley.EpochBoundary
 import Cardano.Ledger.Shelley.Rules.EraMapping ()
+import Cardano.Ledger.Shelley.UTxO (coinBalance)
 import Cardano.Ledger.Slot
 import Cardano.Ledger.Val ((<->))
 import qualified Data.ByteString.Short as SBS
@@ -131,7 +132,7 @@ translateToShelleyLedgerState genesisShelley epochNo cvs =
 
     reserves :: Coin
     reserves =
-      word64ToCoin (sgMaxLovelaceSupply genesisShelley) <-> balance utxoShelley
+      word64ToCoin (sgMaxLovelaceSupply genesisShelley) <-> coinBalance utxoShelley
 
     epochState :: EpochState (ShelleyEra c)
     epochState =

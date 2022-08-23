@@ -27,6 +27,8 @@ module Cardano.Ledger.Core
     EraTxOut (..),
     bootAddrTxOutF,
     coinTxOutL,
+    compactCoinTxOutL,
+    isAdaOnlyTxOutF,
     EraTxBody (..),
     EraAuxiliaryData (..),
     EraWitnesses (..),
@@ -287,6 +289,30 @@ coinTxOutL =
             txOut & compactValueTxOutL .~ modifyCompactCoin (const (toCompactPartial c)) cVal
     )
 {-# INLINE coinTxOutL #-}
+
+compactCoinTxOutL :: EraTxOut era => Lens' (TxOut era) (CompactForm Coin)
+compactCoinTxOutL =
+  lens
+    ( \txOut ->
+        case txOut ^. valueEitherTxOutL of
+          Left val -> toCompactPartial (coin val)
+          Right cVal -> coinCompact cVal
+    )
+    ( \txOut cCoin ->
+        case txOut ^. valueEitherTxOutL of
+          Left val -> txOut & valueTxOutL .~ modifyCoin (const (fromCompact cCoin)) val
+          Right cVal ->
+            txOut & compactValueTxOutL .~ modifyCompactCoin (const cCoin) cVal
+    )
+{-# INLINE compactCoinTxOutL #-}
+
+-- | This is a getter that implements an efficient way to check whether 'TxOut'
+-- contains ADA only.
+isAdaOnlyTxOutF :: EraTxOut era => SimpleGetter (TxOut era) Bool
+isAdaOnlyTxOutF = to $ \txOut ->
+  case txOut ^. valueEitherTxOutL of
+    Left val -> isAdaOnly val
+    Right cVal -> isAdaOnlyCompact cVal
 
 toCompactPartial :: (Val a, Show a) => a -> CompactForm a
 toCompactPartial v =

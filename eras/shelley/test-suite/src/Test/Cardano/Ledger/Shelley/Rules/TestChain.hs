@@ -78,11 +78,10 @@ import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv (..))
 import Cardano.Ledger.Shelley.Rules.Pool (PoolEnv (..), ShelleyPOOL)
 import Cardano.Ledger.Shelley.Rules.Upec (votedValue)
 import Cardano.Ledger.Shelley.TxBody hiding (TxBody, TxOut)
-import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance, totalDeposits, txins, txouts, pattern UTxO)
+import Cardano.Ledger.Shelley.UTxO (UTxO (..), coinBalance, totalDeposits, txins, txouts)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UnifiedMap (ViewMap)
 import Cardano.Ledger.Val ((<+>), (<->))
-import qualified Cardano.Ledger.Val as Val (coin)
 import Cardano.Protocol.TPraos.API (GetLedgerView)
 import Cardano.Protocol.TPraos.BHeader
   ( BHeader (..),
@@ -270,7 +269,7 @@ incrStakeComp SourceSignalTarget {source = chainSt, signal = block} =
           )
           $ utxoBal === incrStakeBal
         where
-          utxoBal = Val.coin $ balance u'
+          utxoBal = coinBalance u'
           incrStakeBal = fold (credMap sd') <> fold (ptrMap sd')
           ptrs = ptrsMap . dpsDState $ dp
           ptrs' = ptrsMap . dpsDState $ dp'
@@ -488,7 +487,7 @@ utxoDepositsIncreaseByFeesWithdrawals SourceSignalTarget {source, signal, target
     us = lsUTxOState . esLState . nesEs . chainNes
     circulation chainSt =
       let UTxOState {_utxo = u, _deposited = d} = us chainSt
-       in Val.coin (balance u) <+> d
+       in coinBalance u <+> d
     (_, ledgerTr) = ledgerTraceFromBlock @era @ledger source signal
 
 -- | If we are not at an Epoch Boundary, then (Utxo + Deposits + Fees)
@@ -505,7 +504,7 @@ potsSumIncreaseWdrlsPerBlock SourceSignalTarget {source, signal, target} =
     potsSum chainSt =
       let UTxOState {_utxo = u, _deposited = d, _fees = f} =
             lsUTxOState . esLState . nesEs . chainNes $ chainSt
-       in Val.coin (balance u) <+> d <+> f
+       in coinBalance u <+> d <+> f
 
 -- | If we are not at an Epoch Boundary, then (Utxo + Deposits + Fees)
 -- increases by sum of withdrawals in a transaction
@@ -532,7 +531,7 @@ potsSumIncreaseWdrlsPerTx SourceSignalTarget {source = chainSt, signal = block} 
           target = LedgerState UTxOState {_utxo = u', _deposited = d', _fees = f'} _
         } =
         property (hasFailedScripts tx)
-          .||. (Val.coin (balance u') <+> d' <+> f') <-> (Val.coin (balance u) <+> d <+> f)
+          .||. (coinBalance u' <+> d' <+> f') <-> (coinBalance u <+> d <+> f)
           === fold (unWdrl (tx ^. bodyTxL . wdrlsTxBodyL))
 
 -- | (Utxo + Deposits + Fees) increases by the reward delta
@@ -562,7 +561,7 @@ potsSumIncreaseByRewardsPerTx SourceSignalTarget {source = chainSt, signal = blo
               UTxOState {_utxo = u', _deposited = d', _fees = f'}
               DPState {dpsDState = DState {_unified = umap2}}
         } =
-        (Val.coin (balance u') <+> d' <+> f') <-> (Val.coin (balance u) <+> d <+> f)
+        (coinBalance u' <+> d' <+> f') <-> (coinBalance u <+> d <+> f)
           === fold (UM.unUnify (UM.Rewards umap1)) <-> fold (UM.unUnify (UM.Rewards umap2))
 
 -- | The Rewards pot decreases by the sum of withdrawals in a transaction
@@ -634,11 +633,11 @@ preserveBalance SourceSignalTarget {source = chainSt, signal = block} =
         certs = toList (txb ^. certsTxBodyL)
         pools = _pParams . dpsPState $ dstate
         created =
-          Val.coin (balance u')
+          coinBalance u'
             <+> txb ^. feeTxBodyL
             <+> totalDeposits pp_ (`Map.notMember` pools) certs
         consumed_ =
-          Val.coin (balance u)
+          coinBalance u
             <+> keyRefunds pp_ txb
             <+> fold (unWdrl (txb ^. wdrlsTxBodyL))
 
@@ -673,12 +672,12 @@ preserveBalanceRestricted SourceSignalTarget {source = chainSt, signal = block} 
           txb = tx ^. bodyTxL
           pools = _pParams . dpsPState $ dstate
           inps =
-            Val.coin (balance @era (UTxO (Map.restrictKeys u (txb ^. inputsTxBodyL))))
+            coinBalance @era (UTxO (Map.restrictKeys u (txb ^. inputsTxBodyL)))
               <> keyRefunds pp_ txb
               <> fold (unWdrl (txb ^. wdrlsTxBodyL))
           outs =
             let certs = toList (txb ^. certsTxBodyL)
-             in Val.coin (balance (txouts @era txb))
+             in coinBalance (txouts @era txb)
                   <> txb ^. feeTxBodyL
                   <> totalDeposits pp_ (`Map.notMember` pools) certs
 

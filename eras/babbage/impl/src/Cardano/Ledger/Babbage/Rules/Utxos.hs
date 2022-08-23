@@ -36,7 +36,7 @@ import Cardano.Ledger.Alonzo.Rules
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript, CostModels)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO, ScriptResult (Fails, Passes))
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (..))
-import Cardano.Ledger.Babbage.Collateral (collBalance, collOuts)
+import Cardano.Ledger.Babbage.Collateral (collAdaBalance, collOuts)
 import Cardano.Ledger.Babbage.Era (BabbageUTXOS)
 import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.Babbage.TxBody
@@ -247,7 +247,7 @@ scriptsNo = do
   {- utxoDel  = getField @"collateral" txb ◁ utxo -}
   let !(utxoKeep, utxoDel) = extractKeys (unUTxO utxo) (txBody ^. collateralInputsTxBodyL)
       UTxO collouts = collOuts txBody
-      collateralFees = Val.coin (collBalance txBody utxo) -- NEW to Babbage
+      collateralFees = collAdaBalance txBody utxoDel -- NEW to Babbage
   pure
     $! us {- (collInputs txb ⋪ utxo) ∪ collouts tx -}
       { _utxo = UTxO (Map.union utxoKeep collouts), -- NEW to Babbage

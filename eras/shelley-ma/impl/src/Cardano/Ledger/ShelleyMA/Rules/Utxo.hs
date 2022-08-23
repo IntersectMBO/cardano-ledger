@@ -46,8 +46,8 @@ import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..), U
 import Cardano.Ledger.Shelley.Rules.Ppup (PpupEnv (..), ShelleyPPUP, ShelleyPpupPredFailure)
 import qualified Cardano.Ledger.Shelley.Rules.Utxo as Shelley
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), ShelleyTxOut, TxIn)
-import Cardano.Ledger.Shelley.TxBody (RewardAcnt, ShelleyEraTxBody (..))
-import Cardano.Ledger.Shelley.UTxO (UTxO (..), totalDeposits, txouts, txup)
+import Cardano.Ledger.Shelley.TxBody (RewardAcnt, ShelleyEraTxBody (..), Wdrl (..))
+import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance, keyRefunds, totalDeposits, txouts, txup)
 import Cardano.Ledger.ShelleyMA.Era (ShelleyMAUTXO)
 import Cardano.Ledger.ShelleyMA.Timelocks
 import Cardano.Ledger.ShelleyMA.TxBody (MATxBody, ShelleyMAEraTxBody (..))
@@ -63,7 +63,7 @@ import Data.Coders
     encodeFoldable,
     invalidKey,
   )
-import Data.Foldable (toList)
+import Data.Foldable (Foldable (fold), toList)
 import Data.Int (Int64)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
@@ -186,9 +186,9 @@ newtype ShelleyMAUtxoEvent era
 
 -- | Calculate the value consumed by the transation.
 --
---   This differs from the corresponding Shelley function @Shelley.consumed@
---   since it also considers the "mint" field which creates or destroys non-Ada
---   tokens.
+--   This differs from the corresponding Shelley function 'Shelley.coinConsumed'
+--   since it works on Value and it also considers the "mint" field which
+--   creates or destroys non-Ada tokens.
 --
 --   Note that this is slightly confusing, since it also covers non-Ada assets
 --   _created_ by the transaction, depending on the sign of the quantities in
@@ -202,7 +202,14 @@ consumed ::
   UTxO era ->
   TxBody era ->
   Value era
-consumed pp u txBody = Shelley.consumed pp u txBody <> txBody ^. mintValueTxBodyF
+consumed pp (UTxO u) txBody = shelleyConsumed <> txBody ^. mintValueTxBodyF
+  where
+    {- balance (txins tx ◁ u) + wbalance (txwdrls tx) + keyRefunds pp tx -}
+    shelleyConsumed =
+      balance (UTxO (Map.restrictKeys u (txBody ^. inputsTxBodyL)))
+        <> Val.inject (refunds <> withdrawals)
+    refunds = keyRefunds pp txBody
+    withdrawals = fold . unWdrl $ txBody ^. wdrlsTxBodyL
 
 -- | The UTxO transition rule for the Shelley-MA (Mary and Allegra) eras.
 utxoTransition ::

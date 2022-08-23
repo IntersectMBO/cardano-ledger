@@ -79,7 +79,7 @@ import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoPredFailure, UtxoEnv)
 import qualified Cardano.Ledger.Shelley.Rules.Utxo as Shelley
 import Cardano.Ledger.Shelley.Tx (TxIn)
-import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance, txouts)
+import Cardano.Ledger.Shelley.UTxO (UTxO (..), areAllAdaOnly, coinBalance, sumAllValue, txouts)
 import Cardano.Ledger.ShelleyMA.Rules (ShelleyMAUtxoPredFailure)
 import qualified Cardano.Ledger.ShelleyMA.Rules as ShelleyMA
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
@@ -296,7 +296,6 @@ feesOK pp tx (UTxO utxo) =
       collateral = txBody ^. collateralInputsTxBodyL -- Inputs allocated to pay txfee
       -- restrict Utxo to those inputs we use to pay fees.
       utxoCollateral = eval (collateral ◁ utxo)
-      bal = balance @era (UTxO utxoCollateral)
       theFee = txBody ^. feeTxBodyL
       minimumFee = minfee @era pp tx
    in sequenceA_
@@ -304,7 +303,7 @@ feesOK pp tx (UTxO utxo) =
           failureUnless (minimumFee <= theFee) (inject (FeeTooSmallUTxO @era minimumFee theFee)),
           -- Part 2: (txrdmrs tx ≠ ∅ ⇒ validateCollateral)
           unless (nullRedeemers . txrdmrs' . wits $ tx) $
-            validateCollateral pp txBody utxoCollateral bal
+            validateCollateral pp txBody utxoCollateral
         ]
 
 validateCollateral ::
@@ -314,19 +313,20 @@ validateCollateral ::
   PParams era ->
   TxBody era ->
   Map.Map (TxIn (Crypto era)) (TxOut era) ->
-  Value era ->
   Test (AlonzoUtxoPredFailure era)
-validateCollateral pp txb utxoCollateral bal =
+validateCollateral pp txb utxoCollateral =
   sequenceA_
     [ -- Part 3: (∀(a,_,_) ∈ range (collateral txb ◁ utxo), a ∈ Addrvkey)
       validateScriptsNotPaidUTxO utxoCollateral,
       -- Part 4: balance ∗ 100 ≥ txfee txb ∗ (collateralPercent pp)
       validateInsufficientCollateral pp txb bal,
       -- Part 5: isAdaOnly balance
-      validateCollateralContainsNonADA bal,
+      validateCollateralContainsNonADA utxoCollateral,
       -- Part 6: (∀(a,_,_) ∈ range (collateral txb ◁ utxo), a ∈ Addrvkey)
       failureIf (null utxoCollateral) NoCollateralInputs
     ]
+  where
+    bal = coinBalance (UTxO utxoCollateral)
 
 -- > (∀(a,_,_) ∈ range (collateral txb ◁ utxo), a ∈ Addrvkey)
 validateScriptsNotPaidUTxO ::
@@ -344,24 +344,24 @@ validateInsufficientCollateral ::
   ) =>
   PParams era ->
   TxBody era ->
-  Value era ->
+  Coin ->
   Test (AlonzoUtxoPredFailure era)
 validateInsufficientCollateral pp txBody bal =
-  failureUnless (Val.scale (100 :: Int) (Val.coin bal) >= Val.scale collPerc txfee) $
-    InsufficientCollateral
-      (Val.coin bal)
-      (rationalToCoinViaCeiling $ (fromIntegral collPerc * unCoin txfee) % 100)
+  failureUnless (Val.scale (100 :: Int) bal >= Val.scale collPerc txfee) $
+    InsufficientCollateral bal $
+      rationalToCoinViaCeiling $ (fromIntegral collPerc * unCoin txfee) % 100
   where
     txfee = txBody ^. feeTxBodyL -- Coin supplied to pay fees
     collPerc = getField @"_collateralPercentage" pp
 
 -- > isAdaOnly balance
 validateCollateralContainsNonADA ::
-  Val.Val (Value era) =>
-  Value era ->
+  (Foldable f, EraTxOut era) =>
+  f (TxOut era) ->
   Test (AlonzoUtxoPredFailure era)
-validateCollateralContainsNonADA bal =
-  failureUnless (Val.isAdaOnly bal) $ CollateralContainsNonADA bal
+validateCollateralContainsNonADA collateralTxOuts =
+  failureUnless (areAllAdaOnly collateralTxOuts) $
+    CollateralContainsNonADA $ sumAllValue collateralTxOuts
 
 -- | If tx has non-native scripts, end of validity interval must translate to time
 --

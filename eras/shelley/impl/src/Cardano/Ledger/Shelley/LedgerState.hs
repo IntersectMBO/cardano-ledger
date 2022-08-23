@@ -48,7 +48,6 @@ module Cardano.Ledger.Shelley.LedgerState
     diffWitHashes,
     minfee,
     produced,
-    consumed,
     witsFromTxWitnesses,
     propWits,
 
@@ -96,7 +95,7 @@ import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Shelley.RewardUpdate
 import Cardano.Ledger.Shelley.Rules.Utxow (propWits)
 import Cardano.Ledger.Shelley.Tx (minfee, witsFromTxWitnesses)
-import Cardano.Ledger.Shelley.UTxO (consumed, keyRefunds, produced)
+import Cardano.Ledger.Shelley.UTxO (keyRefunds, produced)
 import Data.Default.Class (def)
 import Data.Set (Set)
 import qualified Data.Set as Set

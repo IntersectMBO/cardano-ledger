@@ -64,12 +64,12 @@ import Cardano.Ledger.Mary.Value (AssetName (..), MultiAsset (..), PolicyID (..)
 import Cardano.Ledger.Pretty.Alonzo ()
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl)
-import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance)
+import Cardano.Ledger.Shelley.UTxO (UTxO (..), coinBalance)
 import Cardano.Ledger.ShelleyMA.AuxiliaryData (MAAuxiliaryData (..))
 import Cardano.Ledger.ShelleyMA.Era ()
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), translateTimelock)
 import Cardano.Ledger.TxIn (TxIn)
-import Cardano.Ledger.Val (Val (coin, isAdaOnly, (<+>), (<×>)))
+import Cardano.Ledger.Val (Val (isAdaOnly, (<+>), (<×>)))
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad (replicateM)
 import Data.Either (fromRight)
@@ -451,7 +451,7 @@ instance Mock c => EraGen (AlonzoEra c) where
 
 sumCollateral :: (EraTx era, AlonzoEraTxBody era) => Tx era -> UTxO era -> Coin
 sumCollateral tx (UTxO utxo) =
-  coin . balance . UTxO $ Map.restrictKeys utxo collateral_
+  coinBalance . UTxO $ Map.restrictKeys utxo collateral_
   where
     collateral_ = tx ^. bodyTxL . collateralInputsTxBodyL
 

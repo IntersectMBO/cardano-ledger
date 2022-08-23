@@ -57,10 +57,10 @@ import Cardano.Ledger.Shelley.TxBody
     ShelleyEraTxBody (..),
     ShelleyTxOut (..),
   )
-import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance, scriptsNeeded, totalDeposits)
+import Cardano.Ledger.Shelley.UTxO (UTxO (..), coinBalance, scriptsNeeded, totalDeposits)
 import Cardano.Ledger.Slot (EpochNo)
 import Cardano.Ledger.TxIn (TxIn (..))
-import Cardano.Ledger.Val (Val (coin, inject, (<+>), (<->)))
+import Cardano.Ledger.Val (Val (inject, (<+>), (<->)))
 import Cardano.Slotting.EpochInfo.API (epochInfoSize)
 import Control.Monad.Reader (runReader)
 import Control.State.Transition.Extended (STS (State))
@@ -236,7 +236,7 @@ txInBalance ::
   Set (TxIn (Crypto era)) ->
   MUtxo era ->
   Coin
-txInBalance txinSet m = coin (balance (UTxO (restrictKeys m txinSet)))
+txInBalance txinSet m = coinBalance (UTxO (restrictKeys m txinSet))
 
 -- | Break a TxOut into its mandatory and optional parts
 txoutFields :: Proof era -> TxOut era -> (Addr (Crypto era), Value era, [TxOutField era])

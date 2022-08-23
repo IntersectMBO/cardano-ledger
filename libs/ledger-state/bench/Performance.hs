@@ -15,8 +15,9 @@ import Cardano.Ledger.Shelley.API.Mempool
 import Cardano.Ledger.Shelley.API.Wallet (getFilteredUTxO, getUTxO)
 import Cardano.Ledger.Shelley.Genesis (ShelleyGenesis (..), mkShelleyGlobals)
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Shelley.UTxO (UTxO (..))
+import Cardano.Ledger.Shelley.UTxO
 import Cardano.Ledger.State.UTxO
+import Cardano.Ledger.Val
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
 import Cardano.Slotting.Slot
 import Cardano.Slotting.Time (mkSlotLength)
@@ -84,6 +85,17 @@ main = do
               bench "Tx2" . whnf (applyTx' mempoolEnv mempoolState),
             env (pure (extractTx validatedTx3)) $
               bench "Tx3" . whnf (applyTx' mempoolEnv mempoolState)
+          ],
+      env (pure (getUTxO es)) $ \utxo ->
+        bgroup
+          "UTxO"
+          [ bench "balance" $ nf balance utxo,
+            bench "coinBalance" $ nf coinBalance utxo,
+            -- We need to filter out all multi-assets to prevent `areAllAdaOnly`
+            -- from short circuiting and producing results that are way better
+            -- than the worst case
+            env (pure $ Map.filter (\txOut -> isAdaOnly (txOut ^. valueTxOutL)) $ unUTxO utxo) $
+              bench "areAllAdaOnly" . nf areAllAdaOnly
           ],
       env (pure es) $ \newEpochState ->
         let utxo = getUTxO es

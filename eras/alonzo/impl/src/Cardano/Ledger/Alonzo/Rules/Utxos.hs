@@ -70,8 +70,8 @@ import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules.Ppup (PpupEnv (..), ShelleyPPUP, ShelleyPpupPredFailure)
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..), updateUTxOState)
-import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance, totalDeposits)
-import Cardano.Ledger.Val as Val (Val (coin, (<->)))
+import Cardano.Ledger.Shelley.UTxO (UTxO (..), coinBalance, totalDeposits)
+import Cardano.Ledger.Val as Val (Val ((<->)))
 import Cardano.Slotting.EpochInfo.Extend (unsafeLinearExtendEpochInfo)
 import Cardano.Slotting.Slot (SlotNo)
 import Control.Monad.Trans.Reader (ReaderT, asks)
@@ -281,7 +281,7 @@ scriptsNotValidateTransition = do
   pure
     $! us
       { _utxo = UTxO utxoKeep,
-        _fees = fees <> Val.coin (balance (UTxO utxoDel)),
+        _fees = fees <> coinBalance (UTxO utxoDel),
         _stakeDistro = updateStakeDistribution (_stakeDistro us) (UTxO utxoDel) mempty
       }
 
