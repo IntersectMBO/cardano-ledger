@@ -9,8 +9,13 @@ in the naming of release branches.
 
 ## [Unreleased]
 
-### Changed
+### Added
 
+- Start on the `cardano-ledger-api` package and implement `setBabbageMinTxOut`: #2995
+
+### Changed
+- Changed `mint` field type to `MultiAsset (Crypto era)` in `MATxBody`, `AlonzoTxBody`, `BabbageTxBody`
+  #2954
 - All Shelley rules are now available through `Cadano.Ledger.Shelley.Rules` module: #2996
 
 ## Release branch 1.1.x
@@ -162,8 +167,6 @@ BabbageEraTxBody --> AlonzoEraTxBody --> ....
       - `FromAlonzoUtxoFail` -> `AlonzoInBabbageUtxoPredFailure`
     - `BabbageUtxowPred` -> `BabbageUtxowPredFailure` and constructor:
       - `FromAlonzoUtxowFail` -> `AlonzoInBabbageUtxowPredFailure`
-- Changed `mint` field type to `MultiAsset (Crypto era)` in `MATxBody`, `AlonzoTxBody`, `BabbageTxBody`
-  #2954
 ### Deprecated
 - The provenance for the reward calculation has been removed.
   The type signature to the API function `getRewardProvenance` has not change,
@@ -205,18 +208,22 @@ BabbageEraTxBody --> AlonzoEraTxBody --> ....
   - ...
 
 ### Fixed
-- Ensure Babbage TxOut decoder can't fail due to malformed Ptr.
-  This bug was manifesting in the cardano-node as:
-  if a node is running in the Babbage era and shuts down, when it comes back up it has to re-sync from genesis.
-  #2897
+
 - The error message for failed Plutus V2 scripts was being obscured by a bug which has now been fixed.
   #2888
-- The Alonzo UTxO rule was previously using the incorrect minfee function (from Shelley).
-  It now uses the Alonze minfee function.
-  #2936
 
 ## Release branch 1.0.x
 
 The first release branch in the cardano-ledger repository,
 namely `release/1.0.0`, branches from the
 cardano-ledger commit used for the 1.35.0 release of cardano-node release.
+
+### Fixed
+
+- Ensure Babbage TxOut decoder can't fail due to malformed Ptr.
+  This bug was manifesting in the cardano-node as:
+  if a node is running in the Babbage era and shuts down, when it comes back up it has to re-sync from genesis.
+  #2897
+- The Alonzo UTxO rule was previously using the incorrect minfee function (from Shelley).
+  It now uses the Alonze minfee function.
+  #2936
