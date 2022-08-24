@@ -150,7 +150,10 @@ fromSJust SNothing = error "SNothing in fromSJust"
 -- concerns as we want the Shelley era TxBody to deserialise as a Shelley-ma TxBody.
 -- txXparse and bodyFields should be Duals, visual inspection helps ensure this.
 
-txSparse :: ShelleyMAEraTxBody era => TxBodyRaw era -> Encode ('Closed 'Sparse) (TxBodyRaw era)
+txSparse ::
+  (EraTxOut era, ToCBOR (PParamsUpdate era), EncodeMint (Value era)) =>
+  TxBodyRaw era ->
+  Encode ('Closed 'Sparse) (TxBodyRaw era)
 txSparse (TxBodyRaw inp out cert wdrl fee (ValidityInterval bot top) up hash frge) =
   Keyed (\i o f topx c w u h botx forg -> TxBodyRaw i o c w f (ValidityInterval botx topx) u h forg)
     !> Key 0 (E encodeFoldable inp) -- We don't have to send these in TxBodyX order
@@ -164,7 +167,10 @@ txSparse (TxBodyRaw inp out cert wdrl fee (ValidityInterval bot top) up hash frg
     !> encodeKeyedStrictMaybe 8 bot
     !> Omit isZero (Key 9 (E encodeMint frge))
 
-bodyFields :: ShelleyMAEraTxBody era => Word -> Field (TxBodyRaw era)
+bodyFields ::
+  (EraTxOut era, FromCBOR (PParamsUpdate era), DecodeMint (Value era)) =>
+  Word ->
+  Field (TxBodyRaw era)
 bodyFields 0 = field (\x tx -> tx {inputs = x}) (D (decodeSet fromCBOR))
 bodyFields 1 = field (\x tx -> tx {outputs = x}) (D (decodeStrictSeq fromCBOR))
 bodyFields 2 = field (\x tx -> tx {txfee = x}) From
@@ -231,7 +237,7 @@ instance (c ~ Crypto era, Era era) => HashAnnotated (MATxBody era) EraIndependen
 -- Make a Pattern so the newtype and the MemoBytes are hidden
 
 pattern MATxBody ::
-  ShelleyMAEraTxBody era =>
+  (EraTxOut era, ToCBOR (PParamsUpdate era), EncodeMint (Value era)) =>
   Set (TxIn (Crypto era)) ->
   StrictSeq (ShelleyTxOut era) ->
   StrictSeq (DCert (Crypto era)) ->
@@ -256,11 +262,11 @@ pattern MATxBody inputs outputs certs wdrls txfee vldt update adHash mint <-
 {-# COMPLETE MATxBody #-}
 
 mkMATxBody ::
-  ShelleyMAEraTxBody era =>
+  (EraTxOut era, ToCBOR (PParamsUpdate era), EncodeMint (Value era)) =>
   TxBodyRaw era ->
   MATxBody era
 mkMATxBody = TxBodyConstr . memoBytes . txSparse
-{-# INLINE mkMATxBody #-}
+{-# INLINEABLE mkMATxBody #-}
 
 -- | This pattern is for deconstruction only but accompanied with fields and
 -- projection functions.
@@ -303,7 +309,7 @@ lensTxBodyRaw getter setter =
   lens
     (\(TxBodyConstr (Memo txBodyRaw _)) -> getter txBodyRaw)
     (\(TxBodyConstr (Memo txBodyRaw _)) val -> mkMATxBody $ setter txBodyRaw val)
-{-# INLINE lensTxBodyRaw #-}
+{-# INLINEABLE lensTxBodyRaw #-}
 
 instance MAClass ma crypto => EraTxBody (ShelleyMAEra ma crypto) where
   {-# SPECIALIZE instance EraTxBody (ShelleyMAEra 'Mary StandardCrypto) #-}
@@ -315,26 +321,26 @@ instance MAClass ma crypto => EraTxBody (ShelleyMAEra ma crypto) where
 
   inputsTxBodyL =
     lensTxBodyRaw inputs (\txBodyRaw inputs_ -> txBodyRaw {inputs = inputs_})
-  {-# INLINE inputsTxBodyL #-}
+  {-# INLINEABLE inputsTxBodyL #-}
 
   outputsTxBodyL =
     lensTxBodyRaw outputs (\txBodyRaw outputs_ -> txBodyRaw {outputs = outputs_})
-  {-# INLINE outputsTxBodyL #-}
+  {-# INLINEABLE outputsTxBodyL #-}
 
   feeTxBodyL =
     lensTxBodyRaw txfee (\txBodyRaw fee_ -> txBodyRaw {txfee = fee_})
-  {-# INLINE feeTxBodyL #-}
+  {-# INLINEABLE feeTxBodyL #-}
 
   auxDataHashTxBodyL =
     lensTxBodyRaw adHash (\txBodyRaw auxDataHash -> txBodyRaw {adHash = auxDataHash})
-  {-# INLINE auxDataHashTxBodyL #-}
+  {-# INLINEABLE auxDataHashTxBodyL #-}
 
   allInputsTxBodyF = inputsTxBodyL
-  {-# INLINE allInputsTxBodyF #-}
+  {-# INLINEABLE allInputsTxBodyF #-}
 
   mintedTxBodyF =
     to (\(TxBodyConstr (Memo txBodyRaw _)) -> getScriptHash (Proxy @ma) (mint txBodyRaw))
-  {-# INLINE mintedTxBodyF #-}
+  {-# INLINEABLE mintedTxBodyF #-}
 
 instance MAClass ma crypto => ShelleyEraTxBody (ShelleyMAEra ma crypto) where
   {-# SPECIALIZE instance ShelleyEraTxBody (ShelleyMAEra 'Mary StandardCrypto) #-}
@@ -342,18 +348,18 @@ instance MAClass ma crypto => ShelleyEraTxBody (ShelleyMAEra ma crypto) where
 
   wdrlsTxBodyL =
     lensTxBodyRaw wdrls (\txBodyRaw wdrls_ -> txBodyRaw {wdrls = wdrls_})
-  {-# INLINE wdrlsTxBodyL #-}
+  {-# INLINEABLE wdrlsTxBodyL #-}
 
   ttlTxBodyL = notSupportedInThisEraL
-  {-# INLINE ttlTxBodyL #-}
+  {-# INLINEABLE ttlTxBodyL #-}
 
   updateTxBodyL =
     lensTxBodyRaw update (\txBodyRaw update_ -> txBodyRaw {update = update_})
-  {-# INLINE updateTxBodyL #-}
+  {-# INLINEABLE updateTxBodyL #-}
 
   certsTxBodyL =
     lensTxBodyRaw certs (\txBodyRaw certs_ -> txBodyRaw {certs = certs_})
-  {-# INLINE certsTxBodyL #-}
+  {-# INLINEABLE certsTxBodyL #-}
 
 class
   (ShelleyEraTxBody era, EncodeMint (Value era), DecodeMint (Value era)) =>
@@ -369,11 +375,11 @@ instance MAClass ma crypto => ShelleyMAEraTxBody (ShelleyMAEra ma crypto) where
 
   vldtTxBodyL =
     lensTxBodyRaw vldt (\txBodyRaw vldt_ -> txBodyRaw {vldt = vldt_})
-  {-# INLINE vldtTxBodyL #-}
+  {-# INLINEABLE vldtTxBodyL #-}
 
   mintTxBodyL =
     lensTxBodyRaw mint (\txBodyRaw mint_ -> txBodyRaw {mint = mint_})
-  {-# INLINE mintTxBodyL #-}
+  {-# INLINEABLE mintTxBodyL #-}
 
 instance MAClass ma crypto => EraTxOut (ShelleyMAEra ma crypto) where
   {-# SPECIALIZE instance EraTxOut (ShelleyMAEra 'Mary StandardCrypto) #-}

@@ -58,6 +58,7 @@ import Cardano.Ledger.BaseTypes
     epochInfoPure,
   )
 import Cardano.Ledger.Chain (ChainChecksPParams, pparamsToChainChecksPParams)
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto, StandardCrypto, VRF)
 import Cardano.Ledger.Keys
@@ -214,6 +215,33 @@ instance CC.Crypto c => GetLedgerView (BabbageEra c) where
       res =
         flip runReader globals
           . applySTS @(EraRule "TICKF" (BabbageEra c))
+          $ TRC ((), ss, slot)
+
+-- Note that although we do not use TPraos in the Conway era, we include this
+-- because it makes it simpler to get the ledger view for Praos.
+instance CC.Crypto c => GetLedgerView (ConwayEra c) where
+  currentLedgerView
+    NewEpochState {nesPd = pd, nesEs = es} =
+      LedgerView
+        { lvD = getField @"_d" . esPp $ es,
+          lvExtraEntropy = error "Extra entropy is not set in the Conway era",
+          lvPoolDistr = pd,
+          lvGenDelegs =
+            _genDelegs . dpsDState
+              . lsDPState
+              $ esLState es,
+          lvChainChecks = pparamsToChainChecksPParams . esPp $ es
+        }
+
+  futureLedgerView globals ss slot =
+    liftEither
+      . right currentLedgerView
+      . left FutureLedgerViewError
+      $ res
+    where
+      res =
+        flip runReader globals
+          . applySTS @(EraRule "TICKF" (ConwayEra c))
           $ TRC ((), ss, slot)
 
 -- | Data required by the Transitional Praos protocol from the Shelley ledger.

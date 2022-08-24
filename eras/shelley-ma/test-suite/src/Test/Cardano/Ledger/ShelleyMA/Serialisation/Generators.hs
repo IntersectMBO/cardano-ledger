@@ -25,18 +25,18 @@ import Cardano.Binary (Annotator, FromCBOR, ToCBOR (toCBOR))
 import Cardano.Crypto.Hash (HashAlgorithm, hashWithSerialiser)
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Allegra (AllegraEra)
-import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Core
+import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), PolicyID (..))
 import qualified Cardano.Ledger.Mary.Value as ConcreteValue
-import Cardano.Ledger.Shelley.API
+import Cardano.Ledger.Shelley.API (KeyHash (KeyHash), Metadata (Metadata))
 import Cardano.Ledger.ShelleyMA.AuxiliaryData (MAAuxiliaryData (..))
 import Cardano.Ledger.ShelleyMA.Rules (ShelleyMAUtxoPredFailure)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
 import qualified Cardano.Ledger.ShelleyMA.Timelocks as MA (Timelock (..))
 import Cardano.Ledger.ShelleyMA.TxBody (MATxBody (..))
+import Control.State.Transition (PredicateFailure)
 import qualified Data.ByteString.Short as SBS
 import Data.Coerce (coerce)
 import Data.Int (Int64)
@@ -110,9 +110,9 @@ instance
   ( Era era,
     c ~ Crypto era,
     Mock c,
-    FromCBOR (Annotator (Core.Script era)),
-    ToCBOR (Core.Script era),
-    Arbitrary (Core.Script era)
+    FromCBOR (Annotator (Script era)),
+    ToCBOR (Script era),
+    Arbitrary (Script era)
   ) =>
   Arbitrary (MAAuxiliaryData era)
   where
@@ -132,15 +132,35 @@ instance
       Metadata m -> MAAuxiliaryData m <$> (genScriptSeq @era)
 
 genScriptSeq ::
-  forall era. Arbitrary (Core.Script era) => Gen (StrictSeq (Core.Script era))
+  forall era. Arbitrary (Script era) => Gen (StrictSeq (Script era))
 genScriptSeq = do
   n <- choose (0, 3)
   l <- vectorOf n arbitrary
   pure (fromList l)
 
-{-------------------------------------------------------------------------------
-  MaryEra Generators
--------------------------------------------------------------------------------}
+instance
+  ( Era era,
+    Mock (Crypto era),
+    Arbitrary (Value era),
+    Arbitrary (TxOut era),
+    Arbitrary (PredicateFailure (EraRule "PPUP" era))
+  ) =>
+  Arbitrary (ShelleyMAUtxoPredFailure era)
+  where
+  arbitrary = genericArbitraryU
+
+instance Mock c => Arbitrary (MATxBody (AllegraEra c)) where
+  arbitrary =
+    MATxBody
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> pure mempty
 
 instance Mock c => Arbitrary (MATxBody (MaryEra c)) where
   arbitrary =
@@ -153,7 +173,11 @@ instance Mock c => Arbitrary (MATxBody (MaryEra c)) where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-      <*> genMintValues
+      <*> genMintValues @c
+
+{-------------------------------------------------------------------------------
+  MaryEra Generators
+-------------------------------------------------------------------------------}
 
 instance Mock c => Arbitrary (PolicyID c) where
   arbitrary = PolicyID <$> arbitrary
@@ -166,9 +190,7 @@ instance Mock c => Arbitrary (MaryValue c) where
       [ -- Shrink the ADA value
         flip MaryValue assets <$> shrink ada,
         -- Shrink the non-ADA assets by reducing the list length
-        MaryValue
-          ada
-          <$> shrink assets
+        MaryValue ada <$> shrink assets
       ]
 
 -- | When generating values for the mint field, we do two things:
@@ -200,32 +222,13 @@ valueFromListBounded (fromIntegral -> ada) =
 instance Arbitrary AssetName where
   arbitrary = AssetName . SBS.pack . take 32 . SBS.unpack <$> arbitrary
 
-instance Mock c => Arbitrary (ShelleyMAUtxoPredFailure (MaryEra c)) where
-  arbitrary = genericArbitraryU
-
 {-------------------------------------------------------------------------------
   AllegraEra Generators
 -------------------------------------------------------------------------------}
 
-instance Mock c => Arbitrary (MATxBody (AllegraEra c)) where
-  arbitrary =
-    MATxBody
-      <$> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> pure (Coin 0)
-
-instance Mock c => Arbitrary (Timelock c) where
+instance CC.Crypto crypto => Arbitrary (Timelock crypto) where
   arbitrary = sizedTimelock maxTimelockDepth
 
 instance Arbitrary ValidityInterval where
   arbitrary = genericArbitraryU
   shrink = genericShrink
-
-instance Mock c => Arbitrary (ShelleyMAUtxoPredFailure (AllegraEra c)) where
-  arbitrary = genericArbitraryU

@@ -396,19 +396,19 @@ instance CC.Crypto crypto => EraTxBody (ShelleyEra crypto) where
     lens
       (\(TxBodyConstr (Memo m _)) -> _inputsX m)
       (\txBody inputs -> txBody {_inputs = inputs})
-  {-# INLINE inputsTxBodyL #-}
+  {-# INLINEABLE inputsTxBodyL #-}
 
   outputsTxBodyL =
     lens
       (\(TxBodyConstr (Memo m _)) -> _outputsX m)
       (\txBody outputs -> txBody {_outputs = outputs})
-  {-# INLINE outputsTxBodyL #-}
+  {-# INLINEABLE outputsTxBodyL #-}
 
   feeTxBodyL =
     lens
       (\(TxBodyConstr (Memo m _)) -> _txfeeX m)
       (\txBody fee -> txBody {_txfee = fee})
-  {-# INLINE feeTxBodyL #-}
+  {-# INLINEABLE feeTxBodyL #-}
 
   -- TODO: fix this wart. Shelley does not know what minting is and this lens should move to Mary
   mintedTxBodyF = to (const Set.empty)
@@ -417,7 +417,7 @@ instance CC.Crypto crypto => EraTxBody (ShelleyEra crypto) where
     lens
       (\(TxBodyConstr (Memo m _)) -> _mdHashX m)
       (\txBody auxDataHash -> txBody {_mdHash = auxDataHash})
-  {-# INLINE auxDataHashTxBodyL #-}
+  {-# INLINEABLE auxDataHashTxBodyL #-}
 
 class EraTxBody era => ShelleyEraTxBody era where
   wdrlsTxBodyL :: Lens' (Core.TxBody era) (Wdrl (Crypto era))
@@ -435,25 +435,25 @@ instance CC.Crypto crypto => ShelleyEraTxBody (ShelleyEra crypto) where
     lens
       (\(TxBodyConstr (Memo m _)) -> _wdrlsX m)
       (\txBody wdrls -> txBody {_wdrls = wdrls})
-  {-# INLINE wdrlsTxBodyL #-}
+  {-# INLINEABLE wdrlsTxBodyL #-}
 
   ttlTxBodyL =
     lens
       (\(TxBodyConstr (Memo m _)) -> _ttlX m)
       (\txBody ttl -> txBody {_ttl = ttl})
-  {-# INLINE ttlTxBodyL #-}
+  {-# INLINEABLE ttlTxBodyL #-}
 
   updateTxBodyL =
     lens
       (\(TxBodyConstr (Memo m _)) -> _txUpdateX m)
       (\txBody update -> txBody {_txUpdate = update})
-  {-# INLINE updateTxBodyL #-}
+  {-# INLINEABLE updateTxBodyL #-}
 
   certsTxBodyL =
     lens
       (\(TxBodyConstr (Memo m _)) -> _certsX m)
       (\txBody certs -> txBody {_certs = certs})
-  {-# INLINE certsTxBodyL #-}
+  {-# INLINEABLE certsTxBodyL #-}
 
 deriving newtype instance
   (Era era, NoThunks (PParamsUpdate era)) => NoThunks (TxBody era)
@@ -468,7 +468,7 @@ deriving via Mem (TxBodyRaw era) instance EraTxBody era => FromCBOR (Annotator (
 
 -- | Pattern for use by external users
 pattern ShelleyTxBody ::
-  EraTxBody era =>
+  (EraTxOut era, ToCBOR (PParamsUpdate era)) =>
   Set (TxIn (Crypto era)) ->
   StrictSeq (TxOut era) ->
   StrictSeq (DCert (Crypto era)) ->
@@ -499,7 +499,7 @@ pattern ShelleyTxBody {_inputs, _outputs, _certs, _wdrls, _txfee, _ttl, _txUpdat
 
 {-# COMPLETE ShelleyTxBody #-}
 
-mkShelleyTxBody :: EraTxBody era => TxBodyRaw era -> ShelleyTxBody era
+mkShelleyTxBody :: (EraTxOut era, ToCBOR (PParamsUpdate era)) => TxBodyRaw era -> ShelleyTxBody era
 mkShelleyTxBody = TxBodyConstr . memoBytes . txSparse
 
 -- =========================================

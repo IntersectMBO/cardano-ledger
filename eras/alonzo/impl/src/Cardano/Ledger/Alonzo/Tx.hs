@@ -84,6 +84,7 @@ import Cardano.Binary
     serializeEncoding',
   )
 import Cardano.Crypto.DSIGN.Class (SigDSIGN, VerKeyDSIGN)
+import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Alonzo.Data (Data, hashData)
 import Cardano.Ledger.Alonzo.Era
@@ -122,6 +123,7 @@ import Cardano.Ledger.Alonzo.TxWitness
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core hiding (TxBody)
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Crypto (HASH)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Mary.Value (AssetName, MaryValue (..), PolicyID (..))
 import Cardano.Ledger.SafeHash
@@ -215,26 +217,26 @@ mkBasicAlonzoTx txBody = AlonzoTx txBody mempty (IsValid True) SNothing
 -- | `Core.TxBody` setter and getter for `AlonzoTx`.
 bodyAlonzoTxL :: Lens' (AlonzoTx era) (Core.TxBody era)
 bodyAlonzoTxL = lens body (\tx txBody -> tx {body = txBody})
-{-# INLINE bodyAlonzoTxL #-}
+{-# INLINEABLE bodyAlonzoTxL #-}
 
 -- | `Witnesses` setter and getter for `AlonzoTx`.
 witsAlonzoTxL :: Lens' (AlonzoTx era) (TxWitness era)
 witsAlonzoTxL = lens wits (\tx txWits -> tx {wits = txWits})
-{-# INLINE witsAlonzoTxL #-}
+{-# INLINEABLE witsAlonzoTxL #-}
 
 -- | `AuxiliaryData` setter and getter for `AlonzoTx`.
 auxDataAlonzoTxL :: Lens' (AlonzoTx era) (StrictMaybe (AuxiliaryData era))
 auxDataAlonzoTxL = lens auxiliaryData (\tx txAuxiliaryData -> tx {auxiliaryData = txAuxiliaryData})
-{-# INLINE auxDataAlonzoTxL #-}
+{-# INLINEABLE auxDataAlonzoTxL #-}
 
 -- | txsize computes the length of the serialised bytes
 sizeAlonzoTxF :: EraTx era => SimpleGetter (AlonzoTx era) Integer
 sizeAlonzoTxF = to (fromIntegral . LBS.length . serializeEncoding . toCBORForSizeComputation)
-{-# INLINE sizeAlonzoTxF #-}
+{-# INLINEABLE sizeAlonzoTxF #-}
 
 isValidAlonzoTxL :: Lens' (AlonzoTx era) IsValid
 isValidAlonzoTxL = lens isValid (\tx valid -> tx {isValid = valid})
-{-# INLINE isValidAlonzoTxL #-}
+{-# INLINEABLE isValidAlonzoTxL #-}
 
 deriving instance
   (Era era, Eq (Core.TxBody era), Eq (AuxiliaryData era)) =>
@@ -283,8 +285,10 @@ data ScriptIntegrity era
   = ScriptIntegrity
       !(Redeemers era) -- From the witnesses
       !(TxDats era)
-      !(Set LangDepView) -- From the Porotocl parameters
-  deriving (Show, Eq, Generic, Typeable)
+      !(Set LangDepView) -- From the Protocol parameters
+  deriving (Eq, Generic, Typeable)
+
+deriving instance HashAlgorithm (HASH (Crypto era)) => Show (ScriptIntegrity era)
 
 deriving instance Typeable era => NoThunks (ScriptIntegrity era)
 

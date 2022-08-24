@@ -37,12 +37,14 @@ library
 
   exposed-modules:
     Test.Cardano.Ledger.Conway.Examples.Consensus,
+    Test.Cardano.Ledger.Conway.Serialisation.Generators
   build-depends:
     bytestring,
     cardano-binary,
     cardano-ledger-alonzo,
     cardano-ledger-alonzo-test,
     cardano-ledger-babbage,
+    cardano-ledger-babbage-test,
     cardano-ledger-conway,
     cardano-ledger-core,
     cardano-ledger-pretty,

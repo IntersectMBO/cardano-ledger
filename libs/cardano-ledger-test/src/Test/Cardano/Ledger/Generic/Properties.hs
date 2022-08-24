@@ -152,20 +152,20 @@ testTxValidForLEDGER proof (Box _ trc@(TRC (_, ledgerState, vtx)) _genstate) =
 -- The generic types make a roundtrip without adding or losing information
 
 txOutRoundTrip ::
-  EraTxOut era => Proof era -> TxOut era -> Bool
-txOutRoundTrip proof x = coreTxOut proof (abstractTxOut proof x) == x
+  EraTxOut era => Proof era -> TxOut era -> Property
+txOutRoundTrip proof x = coreTxOut proof (abstractTxOut proof x) === x
 
 txRoundTrip ::
-  EraTx era => Proof era -> Tx era -> Bool
-txRoundTrip proof x = coreTx proof (abstractTx proof x) == x
+  EraTx era => Proof era -> Tx era -> Property
+txRoundTrip proof x = coreTx proof (abstractTx proof x) === x
 
 txBodyRoundTrip ::
-  EraTxBody era => Proof era -> TxBody era -> Bool
-txBodyRoundTrip proof x = coreTxBody proof (abstractTxBody proof x) == x
+  EraTxBody era => Proof era -> TxBody era -> Property
+txBodyRoundTrip proof x = coreTxBody proof (abstractTxBody proof x) === x
 
 txWitRoundTrip ::
-  EraWitnesses era => Proof era -> Witnesses era -> Bool
-txWitRoundTrip proof x = assembleWits proof (abstractWitnesses proof x) == x
+  EraWitnesses era => Proof era -> Witnesses era -> Property
+txWitRoundTrip proof x = assembleWits proof (abstractWitnesses proof x) === x
 
 coreTypesRoundTrip :: TestTree
 coreTypesRoundTrip =

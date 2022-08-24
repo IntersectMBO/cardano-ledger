@@ -13,10 +13,21 @@
 
 module Test.Cardano.Ledger.Alonzo.Serialisation.Generators where
 
-import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.Data (AlonzoAuxiliaryData (..), BinaryData, Data (..), dataToBinaryData)
-import Cardano.Ledger.Alonzo.Language
+import Cardano.Binary (ToCBOR (..))
+import Cardano.Ledger.Alonzo.Data
+  ( AlonzoAuxiliaryData (..),
+    BinaryData,
+    Data (..),
+    Datum (..),
+    dataToBinaryData,
+  )
+import Cardano.Ledger.Alonzo.Language (Language (..), nonNativeLanguages)
 import Cardano.Ledger.Alonzo.PParams
+  ( AlonzoPParams,
+    AlonzoPParamsHKD (AlonzoPParams),
+    AlonzoPParamsUpdate,
+    getLanguageView,
+  )
 import Cardano.Ledger.Alonzo.Rules
   ( AlonzoUtxoPredFailure (..),
     AlonzoUtxosPredFailure (..),
@@ -33,9 +44,18 @@ import Cardano.Ledger.Alonzo.Scripts
     mkCostModel,
   )
 import Cardano.Ledger.Alonzo.Tx
+  ( AlonzoTx (AlonzoTx),
+    AlonzoTxBody (AlonzoTxBody),
+    CostModel,
+    IsValid (..),
+    ScriptIntegrity (..),
+    ScriptPurpose (..),
+    hashData,
+  )
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWitness
 import Cardano.Ledger.Core
+import Control.State.Transition (PredicateFailure)
 import Data.Int (Int64)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Map (Map)
@@ -43,6 +63,7 @@ import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text, pack)
+import GHC.Records (HasField)
 import Numeric.Natural (Natural)
 import qualified Plutus.V1.Ledger.Api as PV1
 import qualified Plutus.V2.Ledger.Api as PV2
@@ -140,7 +161,10 @@ instance
       <*> arbitrary
       <*> arbitrary
 
-instance Mock c => Arbitrary (AlonzoTxBody (AlonzoEra c)) where
+instance
+  (EraTxOut era, ToCBOR (PParamsUpdate era), Arbitrary (Value era), Mock (Crypto era)) =>
+  Arbitrary (AlonzoTxBody era)
+  where
   arbitrary =
     AlonzoTxBody
       <$> arbitrary
@@ -152,14 +176,23 @@ instance Mock c => Arbitrary (AlonzoTxBody (AlonzoEra c)) where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-      <*> genMintValues @c
+      <*> genMintValues @(Crypto era)
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
 
 deriving newtype instance Arbitrary IsValid
 
-instance Mock c => Arbitrary (AlonzoTx (AlonzoEra c)) where
+instance
+  ( EraTxBody era,
+    EraScript era,
+    Mock (Crypto era),
+    Script era ~ AlonzoScript era,
+    Arbitrary (TxBody era),
+    Arbitrary (AuxiliaryData era)
+  ) =>
+  Arbitrary (AlonzoTx era)
+  where
   arbitrary =
     AlonzoTx
       <$> arbitrary
@@ -167,7 +200,7 @@ instance Mock c => Arbitrary (AlonzoTx (AlonzoEra c)) where
       <*> arbitrary
       <*> arbitrary
 
-instance Mock c => Arbitrary (AlonzoScript (AlonzoEra c)) where
+instance (Era era, Mock (Crypto era)) => Arbitrary (AlonzoScript era) where
   arbitrary = do
     lang <- arbitrary -- The language is not present in the Script serialization
     frequency
@@ -266,14 +299,25 @@ instance Arbitrary TagMismatchDescription where
   arbitrary =
     oneof [pure PassedUnexpectedly, FailedUnexpectedly <$> ((:|) <$> arbitrary <*> arbitrary)]
 
-instance Mock c => Arbitrary (AlonzoUtxosPredFailure (AlonzoEra c)) where
+instance
+  (Era era, Mock (Crypto era), Arbitrary (PredicateFailure (EraRule "PPUP" era))) =>
+  Arbitrary (AlonzoUtxosPredFailure era)
+  where
   arbitrary =
     oneof
       [ ValidationTagMismatch <$> arbitrary <*> arbitrary,
         UpdateFailure <$> arbitrary
       ]
 
-instance Mock c => Arbitrary (AlonzoUtxoPredFailure (AlonzoEra c)) where
+instance
+  ( EraTxOut era,
+    Mock (Crypto era),
+    Arbitrary (Value era),
+    Arbitrary (TxOut era),
+    Arbitrary (PredicateFailure (EraRule "UTXOS" era))
+  ) =>
+  Arbitrary (AlonzoUtxoPredFailure era)
+  where
   arbitrary =
     oneof
       [ BadInputsUTxO <$> arbitrary,
@@ -295,7 +339,13 @@ instance Mock c => Arbitrary (AlonzoUtxoPredFailure (AlonzoEra c)) where
         CollateralContainsNonADA <$> arbitrary
       ]
 
-instance Mock c => Arbitrary (AlonzoUtxowPredFailure (AlonzoEra c)) where
+instance
+  ( Era era,
+    Mock (Crypto era),
+    Arbitrary (PredicateFailure (EraRule "UTXO" era))
+  ) =>
+  Arbitrary (AlonzoUtxowPredFailure era)
+  where
   arbitrary =
     oneof
       [ ShelleyInAlonzoUtxowPredFailure <$> arbitrary,
@@ -313,9 +363,28 @@ instance Mock c => Arbitrary (ScriptPurpose c) where
         Certifying <$> arbitrary
       ]
 
-instance Mock c => Arbitrary (ScriptIntegrity (AlonzoEra c)) where
+instance
+  ( Era era,
+    Mock (Crypto era),
+    Arbitrary (PParams era),
+    HasField "_costmdls" (PParams era) CostModels
+  ) =>
+  Arbitrary (ScriptIntegrity era)
+  where
   arbitrary =
     ScriptIntegrity
       <$> arbitrary
       <*> genData
-      <*> (Set.singleton <$> (getLanguageView @(AlonzoEra c) <$> arbitrary <*> arbitrary))
+      -- FIXME: why singleton? We should generate empty as well as many value sets
+      <*> (Set.singleton <$> (getLanguageView @era <$> arbitrary <*> arbitrary))
+
+instance
+  (Mock (Crypto era), Era era) =>
+  Arbitrary (Datum era)
+  where
+  arbitrary =
+    oneof
+      [ pure NoDatum,
+        DatumHash <$> arbitrary,
+        Datum . dataToBinaryData <$> arbitrary
+      ]

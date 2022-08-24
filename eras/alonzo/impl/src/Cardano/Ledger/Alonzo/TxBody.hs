@@ -393,7 +393,7 @@ instance CC.Crypto c => AlonzoEraTxOut (AlonzoEra c) where
 
   dataHashTxOutL =
     lens getAlonzoTxOutDataHash (\(AlonzoTxOut addr cv _) dh -> AlonzoTxOut addr cv dh)
-  {-# INLINE dataHashTxOutL #-}
+  {-# INLINEABLE dataHashTxOutL #-}
 
 getTxOutCompactValue :: EraTxOut era => AlonzoTxOut era -> CompactForm (Value era)
 getTxOutCompactValue =
@@ -456,7 +456,7 @@ lensTxBodyRaw getter setter =
   lens
     (\(TxBodyConstr (Memo txBodyRaw _)) -> getter txBodyRaw)
     (\(TxBodyConstr (Memo txBodyRaw _)) val -> mkAlonzoTxBody $ setter txBodyRaw val)
-{-# INLINE lensTxBodyRaw #-}
+{-# INLINEABLE lensTxBodyRaw #-}
 
 instance CC.Crypto c => EraTxBody (AlonzoEra c) where
   {-# SPECIALIZE instance EraTxBody (AlonzoEra CC.StandardCrypto) #-}
@@ -467,55 +467,55 @@ instance CC.Crypto c => EraTxBody (AlonzoEra c) where
 
   inputsTxBodyL =
     lensTxBodyRaw _inputs (\txBodyRaw inputs_ -> txBodyRaw {_inputs = inputs_})
-  {-# INLINE inputsTxBodyL #-}
+  {-# INLINEABLE inputsTxBodyL #-}
 
   outputsTxBodyL =
     lensTxBodyRaw _outputs (\txBodyRaw outputs_ -> txBodyRaw {_outputs = outputs_})
-  {-# INLINE outputsTxBodyL #-}
+  {-# INLINEABLE outputsTxBodyL #-}
 
   feeTxBodyL =
     lensTxBodyRaw _txfee (\txBodyRaw fee_ -> txBodyRaw {_txfee = fee_})
-  {-# INLINE feeTxBodyL #-}
+  {-# INLINEABLE feeTxBodyL #-}
 
   auxDataHashTxBodyL =
     lensTxBodyRaw _adHash (\txBodyRaw auxDataHash -> txBodyRaw {_adHash = auxDataHash})
-  {-# INLINE auxDataHashTxBodyL #-}
+  {-# INLINEABLE auxDataHashTxBodyL #-}
 
   allInputsTxBodyF =
     to $ \txBody -> (txBody ^. inputsTxBodyL) `Set.union` (txBody ^. collateralInputsTxBodyL)
-  {-# INLINE allInputsTxBodyF #-}
+  {-# INLINEABLE allInputsTxBodyF #-}
 
   mintedTxBodyF =
     to (\(TxBodyConstr (Memo txBodyRaw _)) -> Set.map policyID (policies (_mint txBodyRaw)))
-  {-# INLINE mintedTxBodyF #-}
+  {-# INLINEABLE mintedTxBodyF #-}
 
 instance CC.Crypto c => ShelleyEraTxBody (AlonzoEra c) where
   {-# SPECIALIZE instance ShelleyEraTxBody (AlonzoEra CC.StandardCrypto) #-}
 
   wdrlsTxBodyL =
     lensTxBodyRaw _wdrls (\txBodyRaw wdrls_ -> txBodyRaw {_wdrls = wdrls_})
-  {-# INLINE wdrlsTxBodyL #-}
+  {-# INLINEABLE wdrlsTxBodyL #-}
 
   ttlTxBodyL = notSupportedInThisEraL
 
   updateTxBodyL =
     lensTxBodyRaw _update (\txBodyRaw update_ -> txBodyRaw {_update = update_})
-  {-# INLINE updateTxBodyL #-}
+  {-# INLINEABLE updateTxBodyL #-}
 
   certsTxBodyL =
     lensTxBodyRaw _certs (\txBodyRaw certs_ -> txBodyRaw {_certs = certs_})
-  {-# INLINE certsTxBodyL #-}
+  {-# INLINEABLE certsTxBodyL #-}
 
 instance CC.Crypto c => ShelleyMAEraTxBody (AlonzoEra c) where
   {-# SPECIALIZE instance ShelleyMAEraTxBody (AlonzoEra CC.StandardCrypto) #-}
 
   vldtTxBodyL =
     lensTxBodyRaw _vldt (\txBodyRaw vldt_ -> txBodyRaw {_vldt = vldt_})
-  {-# INLINE vldtTxBodyL #-}
+  {-# INLINEABLE vldtTxBodyL #-}
 
   mintTxBodyL =
     lensTxBodyRaw _mint (\txBodyRaw mint_ -> txBodyRaw {_mint = mint_})
-  {-# INLINE mintTxBodyL #-}
+  {-# INLINEABLE mintTxBodyL #-}
 
 class (ShelleyMAEraTxBody era, AlonzoEraTxOut era) => AlonzoEraTxBody era where
   collateralInputsTxBodyL :: Lens' (Core.TxBody era) (Set (TxIn (Crypto era)))
@@ -532,23 +532,23 @@ instance CC.Crypto c => AlonzoEraTxBody (AlonzoEra c) where
 
   collateralInputsTxBodyL =
     lensTxBodyRaw _collateral (\txBodyRaw collateral_ -> txBodyRaw {_collateral = collateral_})
-  {-# INLINE collateralInputsTxBodyL #-}
+  {-# INLINEABLE collateralInputsTxBodyL #-}
 
   reqSignerHashesTxBodyL =
     lensTxBodyRaw
       _reqSignerHashes
       (\txBodyRaw reqSignerHashes_ -> txBodyRaw {_reqSignerHashes = reqSignerHashes_})
-  {-# INLINE reqSignerHashesTxBodyL #-}
+  {-# INLINEABLE reqSignerHashesTxBodyL #-}
 
   scriptIntegrityHashTxBodyL =
     lensTxBodyRaw
       _scriptIntegrityHash
       (\txBodyRaw scriptIntegrityHash_ -> txBodyRaw {_scriptIntegrityHash = scriptIntegrityHash_})
-  {-# INLINE scriptIntegrityHashTxBodyL #-}
+  {-# INLINEABLE scriptIntegrityHashTxBodyL #-}
 
   networkIdTxBodyL =
     lensTxBodyRaw _txnetworkid (\txBodyRaw networkId -> txBodyRaw {_txnetworkid = networkId})
-  {-# INLINE networkIdTxBodyL #-}
+  {-# INLINEABLE networkIdTxBodyL #-}
 
 deriving newtype instance CC.Crypto (Crypto era) => Eq (AlonzoTxBody era)
 
@@ -572,7 +572,7 @@ deriving via
     FromCBOR (Annotator (AlonzoTxBody era))
 
 pattern AlonzoTxBody ::
-  EraTxBody era =>
+  (EraTxOut era, ToCBOR (PParamsUpdate era)) =>
   Set (TxIn (Crypto era)) ->
   Set (TxIn (Crypto era)) ->
   StrictSeq (AlonzoTxOut era) ->
@@ -765,7 +765,7 @@ instance
         cv <- decodeNonNegative
         mkTxOutCompact a ca cv . SJust <$> fromCBOR
       Just _ -> cborError $ DecoderErrorCustom "txout" "wrong number of terms in txout"
-  {-# INLINE fromSharedCBOR #-}
+  {-# INLINEABLE fromSharedCBOR #-}
 
 pattern TxOutCompact ::
   (Era era, Val (Value era), HasCallStack) =>
