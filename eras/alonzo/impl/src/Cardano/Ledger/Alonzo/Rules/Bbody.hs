@@ -34,13 +34,13 @@ import qualified Cardano.Ledger.Era as Era
 import Cardano.Ledger.Keys (DSignable, Hash, coerceKeyRole)
 import Cardano.Ledger.Shelley.BlockChain (bBodySize, incrBlocks)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState)
-import Cardano.Ledger.Shelley.Rules.Bbody
+import Cardano.Ledger.Shelley.Rules
   ( BbodyEnv (..),
     ShelleyBbodyEvent (..),
     ShelleyBbodyPredFailure (..),
     ShelleyBbodyState (..),
+    ShelleyLedgersEnv (..),
   )
-import Cardano.Ledger.Shelley.Rules.Ledgers (ShelleyLedgersEnv (..))
 import Cardano.Ledger.Slot (epochInfoEpoch, epochInfoFirst)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition

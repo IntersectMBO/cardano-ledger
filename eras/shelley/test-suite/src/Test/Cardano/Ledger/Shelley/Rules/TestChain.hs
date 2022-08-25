@@ -3,7 +3,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -73,10 +72,13 @@ import Cardano.Ledger.Shelley.LedgerState
     rs,
   )
 import Cardano.Ledger.Shelley.Rewards (sumRewards)
-import Cardano.Ledger.Shelley.Rules.Deleg (DelegEnv (..))
-import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv (..))
-import Cardano.Ledger.Shelley.Rules.Pool (PoolEnv (..), ShelleyPOOL)
-import Cardano.Ledger.Shelley.Rules.Upec (votedValue)
+import Cardano.Ledger.Shelley.Rules
+  ( DelegEnv (..),
+    LedgerEnv (..),
+    PoolEnv (..),
+    ShelleyPOOL,
+    votedValue,
+  )
 import Cardano.Ledger.Shelley.TxBody hiding (TxBody, TxOut)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), coinBalance, totalDeposits, txins, txouts)
 import Cardano.Ledger.TxIn (TxIn (..))

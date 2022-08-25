@@ -11,6 +11,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.Rules.Delegs
   ( ShelleyDELEGS,
@@ -43,6 +44,7 @@ import Cardano.Ledger.Serialization
     mapFromCBOR,
     mapToCBOR,
   )
+import Cardano.Ledger.Shelley.Era (ShelleyDELEGS)
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState,
     DPState (..),
@@ -87,8 +89,6 @@ import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
-
-data ShelleyDELEGS era
 
 data DelegsEnv era = DelegsEnv
   { delegsSlotNo :: !SlotNo,

@@ -4,7 +4,7 @@
 
 import Cardano.Crypto.Libsodium (sodiumInit)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
-import Cardano.Ledger.Shelley.Rules.Ledger (ShelleyLEDGER)
+import Cardano.Ledger.Shelley.Rules (ShelleyLEDGER)
 import System.IO (hSetEncoding, stdout, utf8)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C)
 import Test.Cardano.Ledger.Shelley.Pretty (prettyTest)

@@ -13,6 +13,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.Rules.Utxow
   ( ShelleyUTXOW,
@@ -81,10 +82,16 @@ import Cardano.Ledger.Shelley.Delegation.Certificates
     poolCWitness,
     requiresVKeyWitness,
   )
+import Cardano.Ledger.Shelley.Era (ShelleyUTXOW)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState.Types (UTxOState (..))
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (ProposedPPUpdates), Update (Update))
-import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUTXO, ShelleyUtxoPredFailure, UtxoEnv (..), UtxoEvent)
+import Cardano.Ledger.Shelley.Rules.Utxo
+  ( ShelleyUTXO,
+    ShelleyUtxoPredFailure,
+    UtxoEnv (..),
+    UtxoEvent,
+  )
 import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks
 import Cardano.Ledger.Shelley.Tx
   ( ShelleyTx,
@@ -132,8 +139,6 @@ import NoThunks.Class (NoThunks (..))
 import Validation
 
 -- =========================================
-
-data ShelleyUTXOW era
 
 data ShelleyUtxowPredFailure era
   = InvalidWitnessesUTXOW

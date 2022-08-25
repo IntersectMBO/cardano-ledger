@@ -50,8 +50,7 @@ import Cardano.Ledger.Shelley.LedgerState
     ptrsMap,
     rewards,
   )
-import Cardano.Ledger.Shelley.Rules.Delpl (DelplEnv)
-import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv (..))
+import Cardano.Ledger.Shelley.Rules (DelplEnv, LedgerEnv (..))
 import Cardano.Ledger.Shelley.Tx (TxIn (..))
 import Cardano.Ledger.Shelley.TxBody (Wdrl (..))
 import Cardano.Ledger.Shelley.UTxO

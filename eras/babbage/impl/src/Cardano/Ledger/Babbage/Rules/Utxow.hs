@@ -49,13 +49,13 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (DSIGN, HASH)
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest, runTestOnSignal)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), witsFromTxWitnesses)
-import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
-import Cardano.Ledger.Shelley.Rules.Utxow
+import Cardano.Ledger.Shelley.Rules
   ( ShelleyUtxowEvent (UtxoEvent),
     ShelleyUtxowPredFailure,
+    UtxoEnv (..),
     validateNeededWitnesses,
   )
-import qualified Cardano.Ledger.Shelley.Rules.Utxow as Shelley
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended

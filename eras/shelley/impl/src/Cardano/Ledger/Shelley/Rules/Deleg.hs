@@ -7,6 +7,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.Rules.Deleg
   ( ShelleyDELEG,
@@ -33,6 +34,7 @@ import Cardano.Ledger.Keys
     KeyRole (..),
     VerKeyVRF,
   )
+import Cardano.Ledger.Shelley.Era (ShelleyDELEG)
 import Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
@@ -81,8 +83,6 @@ import Data.Word (Word8)
 import GHC.Generics (Generic)
 import GHC.Records (HasField)
 import NoThunks.Class (NoThunks (..))
-
-data ShelleyDELEG era
 
 data DelegEnv era = DelegEnv
   { slotNo :: SlotNo,

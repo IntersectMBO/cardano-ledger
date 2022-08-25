@@ -39,10 +39,10 @@ import Cardano.Ledger.Keys
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.SafeHash (HashAnnotated)
 import Cardano.Ledger.Serialization (decodeRecordNamedT, mapFromCBOR, mapToCBOR)
-import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.EpochBoundary
   ( SnapShots (..),
   )
+import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState.DPState (DPState)
 import Cardano.Ledger.Shelley.PoolRank
   ( NonMyopic (..),

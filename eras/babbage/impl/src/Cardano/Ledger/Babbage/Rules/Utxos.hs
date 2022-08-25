@@ -55,8 +55,13 @@ import Cardano.Ledger.Shelley.LedgerState
     updateStakeDistribution,
   )
 import Cardano.Ledger.Shelley.PParams (Update)
-import Cardano.Ledger.Shelley.Rules.Ppup (PpupEnv (..), ShelleyPPUP, ShelleyPpupPredFailure)
-import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..), updateUTxOState)
+import Cardano.Ledger.Shelley.Rules
+  ( PpupEnv (..),
+    ShelleyPPUP,
+    ShelleyPpupPredFailure,
+    UtxoEnv (..),
+    updateUTxOState,
+  )
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), totalDeposits)
 import qualified Cardano.Ledger.Val as Val
 import Control.Monad.Trans.Reader (asks)

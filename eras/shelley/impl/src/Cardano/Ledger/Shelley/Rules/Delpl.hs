@@ -11,6 +11,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.Rules.Delpl
   ( ShelleyDELPL,
@@ -29,6 +30,7 @@ import Cardano.Binary
 import Cardano.Ledger.BaseTypes (ProtVer, ShelleyBase, invalidKey)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Serialization (decodeRecordSum)
+import Cardano.Ledger.Shelley.Era (ShelleyDELPL)
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState,
     DPState,
@@ -53,8 +55,6 @@ import Data.Word (Word8)
 import GHC.Generics (Generic)
 import GHC.Records (HasField)
 import NoThunks.Class (NoThunks (..))
-
-data ShelleyDELPL era
 
 data DelplEnv era = DelplEnv
   { delplSlotNo :: SlotNo,

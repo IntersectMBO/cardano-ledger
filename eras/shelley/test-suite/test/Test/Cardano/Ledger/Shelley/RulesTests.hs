@@ -14,7 +14,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (hashScript)
 import Cardano.Ledger.Credential (pattern ScriptHashObj)
 import Cardano.Ledger.Keys (asWitness, hashKey, vKey)
-import Cardano.Ledger.Shelley.Rules.Utxow (ShelleyUtxowPredFailure (..))
+import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))
 import Cardano.Ledger.Shelley.TxBody (RewardAcnt (..), Wdrl (..))
 import Data.Either (isRight)
 import qualified Data.Map.Strict as Map

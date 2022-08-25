@@ -9,6 +9,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.Rules.Bbody
   ( ShelleyBBODY,
@@ -27,6 +28,7 @@ import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (DSignable, Hash, coerceKeyRole)
 import Cardano.Ledger.Shelley.BlockChain (bBodySize, incrBlocks)
+import Cardano.Ledger.Shelley.Era (ShelleyBBODY)
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState,
     LedgerState,
@@ -49,8 +51,6 @@ import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..))
-
-data ShelleyBBODY era
 
 data ShelleyBbodyState era
   = BbodyState (LedgerState era) (BlocksMade (Crypto era))

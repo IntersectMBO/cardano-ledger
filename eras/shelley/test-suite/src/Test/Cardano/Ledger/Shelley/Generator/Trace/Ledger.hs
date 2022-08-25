@@ -25,11 +25,17 @@ import Cardano.Ledger.Shelley.LedgerState
     UTxOState,
     genesisState,
   )
-import Cardano.Ledger.Shelley.Rules.Delegs (DelegsEnv)
-import Cardano.Ledger.Shelley.Rules.Delpl (DelplEnv, ShelleyDELPL, ShelleyDelplPredFailure)
-import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv (..), ShelleyLEDGER)
-import Cardano.Ledger.Shelley.Rules.Ledgers (ShelleyLEDGERS, ShelleyLedgersEnv (..))
-import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv)
+import Cardano.Ledger.Shelley.Rules
+  ( DelegsEnv,
+    DelplEnv,
+    LedgerEnv (..),
+    ShelleyDELPL,
+    ShelleyDelplPredFailure,
+    ShelleyLEDGER,
+    ShelleyLEDGERS,
+    ShelleyLedgersEnv (..),
+    UtxoEnv,
+  )
 import Cardano.Ledger.Shelley.TxBody (DCert)
 import Cardano.Ledger.Slot (SlotNo (..))
 import Control.Monad (foldM)

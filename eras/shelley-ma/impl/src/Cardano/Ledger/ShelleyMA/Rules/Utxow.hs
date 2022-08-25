@@ -13,13 +13,13 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState)
-import qualified Cardano.Ledger.Shelley.Rules.Ledger as Shelley
-import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv)
-import Cardano.Ledger.Shelley.Rules.Utxow
+import Cardano.Ledger.Shelley.Rules
   ( ShelleyUtxowEvent (..),
     ShelleyUtxowPredFailure (..),
+    UtxoEnv,
     transitionRulesUTXOW,
   )
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Tx (ShelleyWitnesses)
 import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody)
 import Cardano.Ledger.ShelleyMA.Era (ShelleyMAUTXOW)

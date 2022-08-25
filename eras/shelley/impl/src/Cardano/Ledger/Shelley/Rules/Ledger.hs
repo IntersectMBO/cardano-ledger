@@ -12,6 +12,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.Rules.Ledger
   ( ShelleyLEDGER,
@@ -33,6 +34,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley.EpochBoundary (obligation)
+import Cardano.Ledger.Shelley.Era (ShelleyLEDGER)
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState,
     DPState (..),
@@ -73,8 +75,6 @@ import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
 -- ========================================================
-
-data ShelleyLEDGER era
 
 data LedgerEnv era = LedgerEnv
   { ledgerSlotNo :: !SlotNo,

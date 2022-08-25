@@ -34,7 +34,7 @@ import Cardano.Ledger.Shelley.API
     ShelleyDELPL,
   )
 import Cardano.Ledger.Shelley.Delegation.Certificates (isDeRegKey)
-import Cardano.Ledger.Shelley.Rules.Delpl (ShelleyDelplEvent, ShelleyDelplPredFailure)
+import Cardano.Ledger.Shelley.Rules (ShelleyDelplEvent, ShelleyDelplPredFailure)
 import Cardano.Ledger.Shelley.UTxO (totalDeposits)
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.Val ((<×>))

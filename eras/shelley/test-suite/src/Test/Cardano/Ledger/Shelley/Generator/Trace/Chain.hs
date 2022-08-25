@@ -26,7 +26,7 @@ import Cardano.Ledger.Era
   )
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.LedgerState (incrementalStakeDistr)
-import Cardano.Ledger.Shelley.Rules.Bbody
+import Cardano.Ledger.Shelley.Rules
   ( BbodyEnv,
     ShelleyBbodyState,
   )

@@ -76,8 +76,8 @@ import Cardano.Ledger.Rules.ValidationMode
   )
 import Cardano.Ledger.Shelley.HardForks (allowOutsideForecastTTL)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
-import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoPredFailure, UtxoEnv)
-import qualified Cardano.Ledger.Shelley.Rules.Utxo as Shelley
+import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, UtxoEnv)
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Tx (TxIn)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), areAllAdaOnly, coinBalance, sumAllValue, txouts)
 import Cardano.Ledger.ShelleyMA.Rules (ShelleyMAUtxoPredFailure)

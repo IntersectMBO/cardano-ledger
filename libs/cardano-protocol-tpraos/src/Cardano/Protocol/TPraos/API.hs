@@ -85,8 +85,7 @@ import Cardano.Ledger.Shelley.LedgerState
     _genDelegs,
   )
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
-import Cardano.Ledger.Shelley.Rules.EraMapping ()
-import Cardano.Ledger.Shelley.Rules.Tick (ShelleyTickfPredFailure)
+import Cardano.Ledger.Shelley.Rules (ShelleyTickfPredFailure)
 import Cardano.Ledger.Slot (SlotNo)
 import Cardano.Protocol.TPraos.BHeader
   ( BHBody,

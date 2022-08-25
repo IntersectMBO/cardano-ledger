@@ -39,9 +39,20 @@ import Cardano.Ledger.Keys (GenDelegs (..), asWitness)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Serialization (mkSized)
-import Cardano.Ledger.Shelley.API (ApplyTxError (..), Network (..), NewEpochState (..), ProposedPPUpdates (..), RewardAcnt (..), TxId (..), Update (..), Wdrl (..))
-import Cardano.Ledger.Shelley.Rules.Delegs (ShelleyDelegsPredFailure (..))
-import Cardano.Ledger.Shelley.Rules.Ledger (ShelleyLedgerPredFailure (DelegsFailure))
+import Cardano.Ledger.Shelley.API
+  ( ApplyTxError (..),
+    Network (..),
+    NewEpochState (..),
+    ProposedPPUpdates (..),
+    RewardAcnt (..),
+    TxId (..),
+    Update (..),
+    Wdrl (..),
+  )
+import Cardano.Ledger.Shelley.Rules
+  ( ShelleyDelegsPredFailure (..),
+    ShelleyLedgerPredFailure (DelegsFailure),
+  )
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.UTxO (makeWitnessesVKey)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))

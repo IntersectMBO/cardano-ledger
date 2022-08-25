@@ -95,14 +95,18 @@ import Cardano.Ledger.Shelley.LedgerState
     smartUTxOState,
   )
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
-import Cardano.Ledger.Shelley.Rules.Bbody (BbodyEnv (..), ShelleyBbodyPredFailure (..), ShelleyBbodyState (..))
-import Cardano.Ledger.Shelley.Rules.Delegs (ShelleyDelegsPredFailure (..))
-import Cardano.Ledger.Shelley.Rules.Delpl (ShelleyDelplPredFailure (..))
-import Cardano.Ledger.Shelley.Rules.Ledger (ShelleyLedgerPredFailure (..))
-import Cardano.Ledger.Shelley.Rules.Ledgers (ShelleyLedgersPredFailure (..))
-import Cardano.Ledger.Shelley.Rules.Pool (ShelleyPoolPredFailure (..))
-import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
-import Cardano.Ledger.Shelley.Rules.Utxow as Shelley (ShelleyUtxowPredFailure (..))
+import Cardano.Ledger.Shelley.Rules as Shelley
+  ( BbodyEnv (..),
+    ShelleyBbodyPredFailure (..),
+    ShelleyBbodyState (..),
+    ShelleyDelegsPredFailure (..),
+    ShelleyDelplPredFailure (..),
+    ShelleyLedgerPredFailure (..),
+    ShelleyLedgersPredFailure (..),
+    ShelleyPoolPredFailure (..),
+    ShelleyUtxowPredFailure (..),
+    UtxoEnv (..),
+  )
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
     DelegCert (..),

@@ -35,8 +35,8 @@ import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (NewEpochState)
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
-import qualified Cardano.Ledger.Shelley.Rules.Bbody as STS
-import Cardano.Ledger.Shelley.Rules.EraMapping ()
+import Cardano.Ledger.Shelley.Rules ()
+import qualified Cardano.Ledger.Shelley.Rules as STS
 import Cardano.Ledger.Slot (SlotNo)
 import Control.Arrow (left, right)
 import Control.Monad.Except

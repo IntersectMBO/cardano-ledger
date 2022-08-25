@@ -28,7 +28,7 @@ import Cardano.Ledger.Shelley.LedgerState
     delegations,
     rewards,
   )
-import Cardano.Ledger.Shelley.Rules.Deleg (DelegEnv (..))
+import Cardano.Ledger.Shelley.Rules (DelegEnv (..))
 import Cardano.Ledger.Shelley.TxBody
   ( MIRPot (..),
     MIRTarget (..),

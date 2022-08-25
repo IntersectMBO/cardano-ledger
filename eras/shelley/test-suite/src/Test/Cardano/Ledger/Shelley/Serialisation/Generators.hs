@@ -14,7 +14,7 @@ import Cardano.Binary (ToCBOR)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.API (ShelleyTxBody (ShelleyTxBody))
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams)
-import qualified Cardano.Ledger.Shelley.Rules.Utxo as STS
+import qualified Cardano.Ledger.Shelley.Rules as STS
 import Generic.Random (genericArbitraryU)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()

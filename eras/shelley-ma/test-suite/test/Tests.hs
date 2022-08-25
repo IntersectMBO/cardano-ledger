@@ -7,7 +7,7 @@ module Main where
 
 import Cardano.Ledger.Core as Core
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
-import Cardano.Ledger.Shelley.Rules.Ledger (ShelleyLEDGER)
+import Cardano.Ledger.Shelley.Rules (ShelleyLEDGER)
 import Cardano.Ledger.ShelleyMA (ShelleyMAEra)
 import qualified Cardano.Protocol.TPraos.Rules.Tickn as TPraos
 import Test.Cardano.Ledger.Allegra.ScriptTranslation (testScriptPostTranslation)

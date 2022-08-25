@@ -28,7 +28,7 @@ import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.Types
 import Cardano.Ledger.Shelley.EpochBoundary
-import Cardano.Ledger.Shelley.Rules.EraMapping ()
+import Cardano.Ledger.Shelley.Rules ()
 import Cardano.Ledger.Shelley.UTxO (coinBalance)
 import Cardano.Ledger.Slot
 import Cardano.Ledger.Val ((<->))

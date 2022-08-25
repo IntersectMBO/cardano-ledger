@@ -6,6 +6,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.Rules.Newpp
   ( ShelleyNEWPP,
@@ -20,6 +21,7 @@ import Cardano.Ledger.BaseTypes (ProtVer, ShelleyBase, StrictMaybe)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.EpochBoundary (obligation)
+import Cardano.Ledger.Shelley.Era (ShelleyNEWPP)
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState,
     DState (..),
@@ -50,8 +52,6 @@ import GHC.Generics (Generic)
 import GHC.Natural (Natural)
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..))
-
-data ShelleyNEWPP era
 
 data ShelleyNewppState era
   = NewppState (PParams era) (PPUPState era)
