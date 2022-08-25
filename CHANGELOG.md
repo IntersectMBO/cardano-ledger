@@ -9,6 +9,10 @@ in the naming of release branches.
 
 ## [Unreleased]
 
+### Changed
+
+- All Shelley rules are now available through `Cadano.Ledger.Shelley.Rules` module: #2996
+
 ## Release branch 1.1.x
 
 ### Added
