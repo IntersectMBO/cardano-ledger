@@ -7,6 +7,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.Rules.Mir
   ( ShelleyMIR,
@@ -20,6 +21,7 @@ where
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin, addDeltaCoin)
 import Cardano.Ledger.Era (Crypto)
+import Cardano.Ledger.Shelley.Era (ShelleyMIR)
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
     EpochState,
@@ -55,8 +57,6 @@ import Data.Typeable (Typeable)
 import qualified Data.UMap as UM
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
-
-data ShelleyMIR era
 
 data ShelleyMirPredFailure era
   deriving (Show, Generic, Eq)

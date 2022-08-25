@@ -7,6 +7,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.Rules.Snap
   ( ShelleySNAP,
@@ -29,6 +30,7 @@ import Cardano.Ledger.Shelley.EpochBoundary
     Stake (unStake),
     emptySnapShots,
   )
+import Cardano.Ledger.Shelley.Era (ShelleySNAP)
 import Cardano.Ledger.Shelley.LedgerState
   ( DPState (..),
     LedgerState (..),
@@ -49,8 +51,6 @@ import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
 -- ======================================================
-
-data ShelleySNAP era
 
 data ShelleySnapPredFailure era -- No predicate failures
   deriving (Show, Generic, Eq)

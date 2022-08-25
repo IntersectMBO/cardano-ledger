@@ -51,10 +51,10 @@ import Cardano.Ledger.Shelley.PParams
     ShelleyPParamsHKD (..),
     emptyPParams,
   )
-import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
-import Cardano.Ledger.Shelley.Rules.Utxow
+import Cardano.Ledger.Shelley.Rules
   ( ShelleyUTXOW,
     ShelleyUtxowPredFailure (..),
+    UtxoEnv (..),
   )
 import Cardano.Ledger.Shelley.Tx
   ( ShelleyTx (..),

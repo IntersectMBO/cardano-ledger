@@ -60,12 +60,22 @@ library
     Cardano.Ledger.Shelley.Scripts
     Cardano.Ledger.Shelley.SoftForks
     Cardano.Ledger.Shelley.StabilityWindow
+    Cardano.Ledger.Shelley.Rules
+    Cardano.Ledger.Shelley.Tx
+    Cardano.Ledger.Shelley.TxBody
+    Cardano.Ledger.Shelley.UTxO
+  other-modules:
+    Cardano.Ledger.Shelley.Era
+    Cardano.Ledger.Shelley.LedgerState.Types
+    Cardano.Ledger.Shelley.LedgerState.DPState
+    Cardano.Ledger.Shelley.LedgerState.IncrementalStake
+    Cardano.Ledger.Shelley.LedgerState.NewEpochState
+    Cardano.Ledger.Shelley.LedgerState.PulsingReward
     Cardano.Ledger.Shelley.Rules.Bbody
     Cardano.Ledger.Shelley.Rules.Deleg
     Cardano.Ledger.Shelley.Rules.Delegs
     Cardano.Ledger.Shelley.Rules.Delpl
     Cardano.Ledger.Shelley.Rules.Epoch
-    Cardano.Ledger.Shelley.Rules.EraMapping
     Cardano.Ledger.Shelley.Rules.Ledger
     Cardano.Ledger.Shelley.Rules.Ledgers
     Cardano.Ledger.Shelley.Rules.Mir
@@ -80,16 +90,6 @@ library
     Cardano.Ledger.Shelley.Rules.Upec
     Cardano.Ledger.Shelley.Rules.Utxo
     Cardano.Ledger.Shelley.Rules.Utxow
-    Cardano.Ledger.Shelley.Tx
-    Cardano.Ledger.Shelley.TxBody
-    Cardano.Ledger.Shelley.UTxO
-  other-modules:
-    Cardano.Ledger.Shelley.Era
-    Cardano.Ledger.Shelley.LedgerState.Types
-    Cardano.Ledger.Shelley.LedgerState.DPState
-    Cardano.Ledger.Shelley.LedgerState.IncrementalStake
-    Cardano.Ledger.Shelley.LedgerState.NewEpochState
-    Cardano.Ledger.Shelley.LedgerState.PulsingReward
   hs-source-dirs: src
   build-depends:
     aeson >= 2,

@@ -9,6 +9,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.Rules.NewEpoch
   ( ShelleyNEWEPOCH,
@@ -34,6 +35,7 @@ import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.Shelley.AdaPots (AdaPots, totalAdaPotsES)
 import Cardano.Ledger.Shelley.EpochBoundary
+import Cardano.Ledger.Shelley.Era (ShelleyNEWEPOCH)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rewards (Reward, sumRewards)
 import Cardano.Ledger.Shelley.Rules.Epoch
@@ -51,8 +53,6 @@ import Data.VMap as VMap
 import GHC.Generics (Generic)
 import GHC.Records (HasField)
 import NoThunks.Class (NoThunks (..))
-
-data ShelleyNEWEPOCH era
 
 data ShelleyNewEpochPredFailure era
   = EpochFailure (PredicateFailure (EraRule "EPOCH" era)) -- Subtransition Failures

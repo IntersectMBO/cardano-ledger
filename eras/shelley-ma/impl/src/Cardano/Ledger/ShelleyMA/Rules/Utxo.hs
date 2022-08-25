@@ -43,8 +43,8 @@ import Cardano.Ledger.Rules.ValidationMode
 import Cardano.Ledger.Shelley.LedgerState (PPUPState)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..), Update)
-import Cardano.Ledger.Shelley.Rules.Ppup (PpupEnv (..), ShelleyPPUP, ShelleyPpupPredFailure)
-import qualified Cardano.Ledger.Shelley.Rules.Utxo as Shelley
+import Cardano.Ledger.Shelley.Rules (PpupEnv (..), ShelleyPPUP, ShelleyPpupPredFailure)
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), ShelleyTxOut, TxIn)
 import Cardano.Ledger.Shelley.TxBody (RewardAcnt, ShelleyEraTxBody (..), Wdrl (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance, keyRefunds, totalDeposits, txouts, txup)

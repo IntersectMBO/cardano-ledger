@@ -74,13 +74,13 @@ import Cardano.Ledger.Shelley.LedgerState
     propWits,
     witsFromTxWitnesses,
   )
-import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
-import Cardano.Ledger.Shelley.Rules.Utxow
+import Cardano.Ledger.Shelley.Rules
   ( ShelleyUtxowEvent (UtxoEvent),
     ShelleyUtxowPredFailure (..),
+    UtxoEnv (..),
     validateNeededWitnesses,
   )
-import qualified Cardano.Ledger.Shelley.Rules.Utxow as Shelley
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Tx (TxIn (..), extractKeyHashWitnessSet)
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (DCertDeleg, DCertGenesis, DCertPool),

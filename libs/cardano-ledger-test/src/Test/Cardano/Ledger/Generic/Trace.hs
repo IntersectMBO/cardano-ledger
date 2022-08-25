@@ -52,9 +52,11 @@ import Cardano.Ledger.Shelley.LedgerState
     UTxOState (..),
   )
 import qualified Cardano.Ledger.Shelley.PParams as Shelley (ShelleyPParamsHKD (..))
-import Cardano.Ledger.Shelley.Rules.Ledger (ShelleyLedgerPredFailure (..))
-import Cardano.Ledger.Shelley.Rules.Ledgers (ShelleyLedgersPredFailure (..))
-import Cardano.Ledger.Shelley.Rules.Utxow (ShelleyUtxowPredFailure (ScriptWitnessNotValidatingUTXOW))
+import Cardano.Ledger.Shelley.Rules
+  ( ShelleyLedgerPredFailure (..),
+    ShelleyLedgersPredFailure (..),
+    ShelleyUtxowPredFailure (ScriptWitnessNotValidatingUTXOW),
+  )
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import Control.Monad (forM)

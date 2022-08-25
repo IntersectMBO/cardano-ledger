@@ -29,8 +29,7 @@ import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.EpochBoundary
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PParams
-import Cardano.Ledger.Shelley.Rules.Delegs
-import Cardano.Ledger.Shelley.Rules.Ledger
+import Cardano.Ledger.Shelley.Rules
 import Cardano.Ledger.Shelley.Tx
 import Cardano.Ledger.Shelley.UTxO
 import Cardano.Protocol.TPraos.API
@@ -44,7 +43,6 @@ import Cardano.Slotting.Slot
 import qualified Data.ByteString as Strict
 import Data.Coerce (coerce)
 import Data.Default.Class
-import Data.Functor.Identity (Identity (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)

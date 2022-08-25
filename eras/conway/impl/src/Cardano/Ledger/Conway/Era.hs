@@ -12,16 +12,16 @@ import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Mary.Value (MaryValue)
 import qualified Cardano.Ledger.Shelley.API as API
-import Cardano.Ledger.Shelley.Rules.Epoch (ShelleyEPOCH)
-import Cardano.Ledger.Shelley.Rules.Mir (ShelleyMIR)
-import Cardano.Ledger.Shelley.Rules.Newpp (ShelleyNEWPP)
-import Cardano.Ledger.Shelley.Rules.Rupd (ShelleyRUPD)
-import Cardano.Ledger.Shelley.Rules.Snap (ShelleySNAP)
-import Cardano.Ledger.Shelley.Rules.Tick
-  ( ShelleyTICK,
+import Cardano.Ledger.Shelley.Rules
+  ( ShelleyEPOCH,
+    ShelleyMIR,
+    ShelleyNEWPP,
+    ShelleyRUPD,
+    ShelleySNAP,
+    ShelleyTICK,
     ShelleyTICKF,
+    ShelleyUPEC,
   )
-import Cardano.Ledger.Shelley.Rules.Upec (ShelleyUPEC)
 
 -- =====================================================
 

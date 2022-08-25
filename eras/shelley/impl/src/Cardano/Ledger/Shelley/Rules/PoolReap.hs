@@ -9,6 +9,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.Rules.PoolReap
   ( ShelleyPOOLREAP,
@@ -25,6 +26,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking))
 import Cardano.Ledger.Shelley.EpochBoundary (obligation)
+import Cardano.Ledger.Shelley.Era (ShelleyPOOLREAP)
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
     DState (..),
@@ -54,8 +56,6 @@ import qualified Data.UMap as UM
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks (..))
-
-data ShelleyPOOLREAP era
 
 data ShelleyPoolreapState era = PoolreapState
   { prUTxOSt :: UTxOState era,

@@ -56,7 +56,7 @@ import Cardano.Ledger.Shelley.RewardUpdate
     RewardSnapShot (..),
     RewardUpdate (..),
   )
-import qualified Cardano.Ledger.Shelley.Rules.Ledgers as STS
+import qualified Cardano.Ledger.Shelley.Rules as STS
 import qualified Cardano.Protocol.TPraos.BHeader as TP
 import qualified Cardano.Protocol.TPraos.Rules.Prtcl as STS (PrtclState)
 import Codec.CBOR.Decoding (Decoder)

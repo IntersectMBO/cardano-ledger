@@ -7,16 +7,23 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | Epoch change registration.
 --
 -- The rules of this module determine how the update subsystem of the ledger
 -- handles the epoch transitions.
-module Cardano.Ledger.Shelley.Rules.Upec where
+module Cardano.Ledger.Shelley.Rules.Upec
+  ( ShelleyUPEC,
+    ShelleyUpecPredFailure (..),
+    votedValue,
+  )
+where
 
 import Cardano.Ledger.BaseTypes (Globals (..), ProtVer, ShelleyBase, StrictMaybe)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
+import Cardano.Ledger.Shelley.Era (ShelleyUPEC)
 import Cardano.Ledger.Shelley.LedgerState
   ( EpochState,
     PPUPState (..),
@@ -47,9 +54,6 @@ import GHC.Generics (Generic)
 import GHC.Records (HasField)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
-
--- | Update epoch change
-data ShelleyUPEC era
 
 newtype ShelleyUpecPredFailure era
   = NewPpFailure (PredicateFailure (ShelleyNEWPP era))

@@ -20,10 +20,13 @@ import Cardano.Ledger.BaseTypes (Globals)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto))
 import Cardano.Ledger.Shelley.LedgerState (DPState (..), UTxOState)
-import Cardano.Ledger.Shelley.Rules.Delegs (DelegsEnv)
-import Cardano.Ledger.Shelley.Rules.Delpl (DelplEnv, ShelleyDelplPredFailure)
-import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv (..))
-import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv)
+import Cardano.Ledger.Shelley.Rules
+  ( DelegsEnv,
+    DelplEnv,
+    LedgerEnv (..),
+    ShelleyDelplPredFailure,
+    UtxoEnv,
+  )
 import Cardano.Ledger.Shelley.TxBody (DCert)
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad.Trans.Reader (runReaderT)

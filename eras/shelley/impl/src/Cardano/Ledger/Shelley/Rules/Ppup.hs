@@ -8,6 +8,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.Rules.Ppup
   ( ShelleyPPUP,
@@ -35,6 +36,7 @@ import Cardano.Ledger.BaseTypes
   )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (GenDelegs (GenDelegs), KeyHash, KeyRole (Genesis))
+import Cardano.Ledger.Shelley.Era (ShelleyPPUP)
 import Cardano.Ledger.Shelley.PParams
   ( PPUPState (..),
     ProposedPPUpdates (ProposedPPUpdates),
@@ -60,8 +62,6 @@ import Data.Word (Word8)
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..))
-
-data ShelleyPPUP era
 
 data PpupEnv era
   = PPUPEnv SlotNo (PParams era) (GenDelegs (Crypto era))

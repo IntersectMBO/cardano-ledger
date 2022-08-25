@@ -15,7 +15,7 @@ module Test.Cardano.Ledger.Generic.PrettyCore where
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Alonzo.Data (Data (..), Datum (..), binaryDataToData, hashData)
 import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (..))
-import Cardano.Ledger.Alonzo.Rules
+import Cardano.Ledger.Alonzo.Rules as Alonzo
   ( AlonzoBbodyPredFailure (..),
     AlonzoUtxoPredFailure (..),
     AlonzoUtxosPredFailure (..),
@@ -61,17 +61,20 @@ import Cardano.Ledger.Shelley.LedgerState
     PState (..),
     UTxOState (..),
   )
-import Cardano.Ledger.Shelley.Rules.Bbody (ShelleyBbodyPredFailure (..), ShelleyBbodyState (..))
-import Cardano.Ledger.Shelley.Rules.Epoch (ShelleyEpochPredFailure (..))
-import Cardano.Ledger.Shelley.Rules.Ledger (ShelleyLedgerPredFailure (..))
-import Cardano.Ledger.Shelley.Rules.Ledgers (ShelleyLedgersPredFailure (..))
-import Cardano.Ledger.Shelley.Rules.NewEpoch (ShelleyNewEpochPredFailure (..))
-import Cardano.Ledger.Shelley.Rules.Newpp (ShelleyNewppPredFailure (..))
-import qualified Cardano.Ledger.Shelley.Rules.Ppup as Shelley (ShelleyPpupPredFailure (..))
-import Cardano.Ledger.Shelley.Rules.Tick (ShelleyTickPredFailure (..))
-import Cardano.Ledger.Shelley.Rules.Upec (ShelleyUpecPredFailure (..))
-import qualified Cardano.Ledger.Shelley.Rules.Utxo as Shelley (ShelleyUtxoPredFailure (..))
-import Cardano.Ledger.Shelley.Rules.Utxow (ShelleyUtxowPredFailure (..))
+import Cardano.Ledger.Shelley.Rules as Shelley
+  ( ShelleyBbodyPredFailure (..),
+    ShelleyBbodyState (..),
+    ShelleyEpochPredFailure (..),
+    ShelleyLedgerPredFailure (..),
+    ShelleyLedgersPredFailure (..),
+    ShelleyNewEpochPredFailure (..),
+    ShelleyNewppPredFailure (..),
+    ShelleyPpupPredFailure (..),
+    ShelleyTickPredFailure (..),
+    ShelleyUpecPredFailure (..),
+    ShelleyUtxoPredFailure (..),
+    ShelleyUtxowPredFailure (..),
+  )
 import qualified Cardano.Ledger.Shelley.Scripts as SS (MultiSig (..))
 import Cardano.Ledger.Shelley.TxBody (DCert (..), DelegCert (..), Delegation (..), PoolCert (..), PoolParams (..), ShelleyTxOut (..), Wdrl (..), WitVKey (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
@@ -300,51 +303,51 @@ ppUtxoPredicateFailure ::
   ) =>
   AlonzoUtxoPredFailure era ->
   PDoc
-ppUtxoPredicateFailure (BadInputsUTxO x) =
+ppUtxoPredicateFailure (Alonzo.BadInputsUTxO x) =
   ppSexp "BadInputsUTxO" [ppSet ppTxIn x]
 ppUtxoPredicateFailure (OutsideValidityIntervalUTxO vi slot) =
   ppRecord "OutsideValidityIntervalUTxO" [("validity interval", ppValidityInterval vi), ("slot", ppSlotNo slot)]
-ppUtxoPredicateFailure (MaxTxSizeUTxO actual maxs) =
+ppUtxoPredicateFailure (Alonzo.MaxTxSizeUTxO actual maxs) =
   ppRecord
     "MaxTxSizeUTxO"
     [ ("Actual", ppInteger actual),
       ("max transaction size", ppInteger maxs)
     ]
-ppUtxoPredicateFailure InputSetEmptyUTxO =
+ppUtxoPredicateFailure Alonzo.InputSetEmptyUTxO =
   ppSexp "InputSetEmptyUTxO" []
-ppUtxoPredicateFailure (FeeTooSmallUTxO computed supplied) =
+ppUtxoPredicateFailure (Alonzo.FeeTooSmallUTxO computed supplied) =
   ppRecord
     "FeeTooSmallUTxO"
     [ ("min fee for thistransaction", ppCoin computed),
       ("fee supplied by transaction", ppCoin supplied)
     ]
-ppUtxoPredicateFailure (ValueNotConservedUTxO consumed produced) =
+ppUtxoPredicateFailure (Alonzo.ValueNotConservedUTxO consumed produced) =
   ppRecord
     "ValueNotConservedUTxO"
     [ ("coin consumed", prettyValue @era consumed),
       ("coin produced", prettyValue @era produced)
     ]
-ppUtxoPredicateFailure (WrongNetwork n add) =
+ppUtxoPredicateFailure (Alonzo.WrongNetwork n add) =
   ppRecord
     "WrongNetwork"
     [ ("expected network id", ppNetwork n),
       ("set addresses with wrong network id", ppSet ppAddr add)
     ]
-ppUtxoPredicateFailure (WrongNetworkWithdrawal n accnt) =
+ppUtxoPredicateFailure (Alonzo.WrongNetworkWithdrawal n accnt) =
   ppRecord
     "WrongNetworkWithdrawal"
     [ ("expected network id", ppNetwork n),
       ("set reward address with wrong network id", ppSet ppRewardAcnt accnt)
     ]
-ppUtxoPredicateFailure (OutputTooSmallUTxO xs) =
+ppUtxoPredicateFailure (Alonzo.OutputTooSmallUTxO xs) =
   ppSexp "OutputTooSmallUTxO" [ppList prettyTxOut xs]
 ppUtxoPredicateFailure (UtxosFailure subpred) = prettyA subpred
 -- ppSexp "UtxosFailure" [prettyA subpred]
-ppUtxoPredicateFailure (OutputBootAddrAttrsTooBig x) =
+ppUtxoPredicateFailure (Alonzo.OutputBootAddrAttrsTooBig x) =
   ppSexp "OutputBootAddrAttrsTooBig" [ppList prettyTxOut x]
-ppUtxoPredicateFailure (TriesToForgeADA) =
+ppUtxoPredicateFailure Alonzo.TriesToForgeADA =
   ppSexp "TriesToForgeADA" []
-ppUtxoPredicateFailure (OutputTooBigUTxO xs) =
+ppUtxoPredicateFailure (Alonzo.OutputTooBigUTxO xs) =
   ppSexp
     "OutputTooBigUTxO"
     [ ppList
@@ -412,7 +415,7 @@ ppUtxosPredicateFailure (ValidationTagMismatch isvalid tag) =
     ]
 ppUtxosPredicateFailure (CollectErrors es) =
   ppRecord' mempty [("When collecting inputs for twophase scripts, these went wrong.", ppList ppCollectError es)]
-ppUtxosPredicateFailure (UpdateFailure p) = prettyA p
+ppUtxosPredicateFailure (Alonzo.UpdateFailure p) = prettyA p
 
 instance PrettyA (PredicateFailure (EraRule "PPUP" era)) => PrettyA (AlonzoUtxosPredFailure era) where
   prettyA = ppUtxosPredicateFailure
@@ -449,7 +452,7 @@ ppUtxoPFShelley ::
   ( PrettyCore era,
     PrettyA (PredicateFailure (EraRule "PPUP" era))
   ) =>
-  Shelley.ShelleyUtxoPredFailure era ->
+  ShelleyUtxoPredFailure era ->
   PDoc
 ppUtxoPFShelley (Shelley.BadInputsUTxO x) =
   ppSexp "BadInputsUTxO" [ppSet ppTxIn x]
@@ -500,31 +503,31 @@ instance
   ( PrettyCore era,
     PrettyA (PredicateFailure (EraRule "PPUP" era))
   ) =>
-  PrettyA (Shelley.ShelleyUtxoPredFailure era)
+  PrettyA (ShelleyUtxoPredFailure era)
   where
   prettyA = ppUtxoPFShelley
 
 -- =======================================
 -- Predicate Failure for Shelley PPUP
 
-ppPpupPredicateFailure :: Shelley.ShelleyPpupPredFailure era -> PDoc
-ppPpupPredicateFailure (Shelley.NonGenesisUpdatePPUP x y) =
+ppPpupPredicateFailure :: ShelleyPpupPredFailure era -> PDoc
+ppPpupPredicateFailure (NonGenesisUpdatePPUP x y) =
   ppRecord
     "NonGenesisUpdatePPUP"
     [ ("KeyHashes which are voting", ppSet ppKeyHash x),
       ("KeyHashes which should be voting", ppSet ppKeyHash y)
     ]
-ppPpupPredicateFailure (Shelley.PPUpdateWrongEpoch x y z) =
+ppPpupPredicateFailure (PPUpdateWrongEpoch x y z) =
   ppRecord
     "PPUpdateWrongEpoch"
     [ ("current epoch", ppEpochNo x),
       ("intended epoch of update", ppEpochNo y),
       ("voting period within the epoch", ppString (show z))
     ]
-ppPpupPredicateFailure (Shelley.PVCannotFollowPPUP x) =
+ppPpupPredicateFailure (PVCannotFollowPPUP x) =
   ppRecord "PVCannotFollowPPUP" [("the first bad protocol version", ppProtVer x)]
 
-instance PrettyA (Shelley.ShelleyPpupPredFailure era) where
+instance PrettyA (ShelleyPpupPredFailure era) where
   prettyA = ppPpupPredicateFailure
 
 -- =====================================================

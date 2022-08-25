@@ -101,7 +101,7 @@ import Cardano.Ledger.Shelley.AdaPots (totalAdaES)
 import Cardano.Ledger.Shelley.Genesis (initialFundsPseudoTxIn)
 import Cardano.Ledger.Shelley.LedgerState (NewEpochState)
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
-import qualified Cardano.Ledger.Shelley.Rules.Ledger
+import Cardano.Ledger.Shelley.Rules
 import qualified Cardano.Ledger.Shelley.Tx as Shelley
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
@@ -146,14 +146,11 @@ import Control.Monad (unless)
 import qualified Control.Monad.Except as Except
 import Control.Monad.State (MonadState (..))
 import qualified Control.Monad.State.Class as State
-import Control.Monad.Trans.Class (lift)
 import qualified Control.Monad.Trans.State as State hiding (get, gets, state)
 import qualified Control.Monad.Writer.CPS as CPS
-import Control.State.Transition.Extended (State)
 import Data.Bool (bool)
 import Data.Foldable (fold, for_, toList, traverse_)
 import Data.Function (on)
-import Data.Functor.Identity (Identity (..))
 import Data.Group.GrpMap (GrpMap (..))
 import Data.Kind (Type)
 import qualified Data.List.NonEmpty as NonEmpty
@@ -1093,7 +1090,7 @@ class
 
         ifor_ (zip txSeq mtxSeq) $ \txIx (tx, mtx) -> do
           (nes0, ems0) <- get
-          (mps', _) <- liftApplyTxError (ElaborateApplyTxError tx mtx nes0 ems0) $ applyTx globals mempoolEnv {Cardano.Ledger.Shelley.Rules.Ledger.ledgerIx = toEnum txIx} (view mempoolState nes0) tx
+          (mps', _) <- liftApplyTxError (ElaborateApplyTxError tx mtx nes0 ems0) $ applyTx globals mempoolEnv {ledgerIx = toEnum txIx} (view mempoolState nes0) tx
 
           let nes1 = set mempoolState mps' nes0
               adaSupply = totalAdaES (LedgerState.nesEs nes1)
@@ -1466,9 +1463,9 @@ class
                   _poolRelays = StrictSeq.empty,
                   _poolMD = SNothing
                 }
-        ModelRetirePool maddr epochNo -> do
+        ModelRetirePool maddr eNo -> do
           pool <- getTestPoolId proxy maddr
-          pure $ DCertPool $ RetirePool pool epochNo
+          pure $ DCertPool $ RetirePool pool eNo
 
 liftApplyTxError ::
   Except.MonadError (ElaborateBlockError era) m =>
@@ -1583,11 +1580,11 @@ instance CompareModelLedger NewEpochState where
         }
       )
     ( LedgerState.NewEpochState
-        { LedgerState.nesEL = epochNo,
+        { LedgerState.nesEL = eNo,
           LedgerState.nesEs = es
         }
       ) = CPS.execWriter $ do
-      unless (mepochNo == epochNo) $ CPS.tell [WrongEpoch mepochNo epochNo]
+      unless (mepochNo == eNo) $ CPS.tell [WrongEpoch mepochNo eNo]
       let mcirc = totalPreservedAda mes
           circ = totalAdaES es
       unless (mcirc == circ) $ CPS.tell [AdaNotPreserved mcirc circ]

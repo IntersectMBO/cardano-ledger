@@ -38,7 +38,11 @@ module Main where
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
 import Cardano.Ledger.Alonzo.Rules (AlonzoBBODY, AlonzoUTXOW)
-import Cardano.Ledger.Shelley.Rules.Ledger (ShelleyLEDGER, ShelleyLedgerEvent (UtxowEvent), ShelleyLedgerPredFailure (UtxowFailure))
+import Cardano.Ledger.Shelley.Rules
+  ( ShelleyLEDGER,
+    ShelleyLedgerEvent (UtxowEvent),
+    ShelleyLedgerPredFailure (UtxowFailure),
+  )
 import Control.State.Transition.Extended (Embed (..))
 import Test.Cardano.Ledger.Alonzo.AlonzoEraGen ()
 import Test.Cardano.Ledger.Alonzo.EraMapping ()

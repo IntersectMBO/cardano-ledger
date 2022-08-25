@@ -28,23 +28,21 @@ import Cardano.Ledger.Shelley.LedgerState
     UTxOState (..),
     rewards,
   )
-import Cardano.Ledger.Shelley.Rules.Delegs
+import Cardano.Ledger.Shelley.Rules
   ( DelegsEnv (..),
+    LedgerEnv (..),
     ShelleyDELEGS,
     ShelleyDelegsEvent,
     ShelleyDelegsPredFailure,
-  )
-import Cardano.Ledger.Shelley.Rules.Ledger
-  ( LedgerEnv (..),
+    ShelleyLEDGERS,
     ShelleyLedgerEvent (..),
     ShelleyLedgerPredFailure (..),
+    UtxoEnv (..),
   )
-import Cardano.Ledger.Shelley.Rules.Ledgers (ShelleyLEDGERS)
-import Cardano.Ledger.Shelley.Rules.Ledgers as Shelley
+import Cardano.Ledger.Shelley.Rules as Shelley
   ( ShelleyLedgersEvent (LedgerEvent),
     ShelleyLedgersPredFailure (LedgerFailure),
   )
-import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
 import Cardano.Ledger.Shelley.TxBody (DCert)
 import Control.State.Transition
   ( Assertion (..),

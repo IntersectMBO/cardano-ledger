@@ -80,7 +80,6 @@ import Cardano.Ledger.Shelley.LedgerState
     EpochState (..),
     LedgerState (..),
     NewEpochState (..),
-    PulsingRewUpdate (..),
     RewardUpdate (..),
     circulation,
     completeRupd,
@@ -112,9 +111,12 @@ import Cardano.Ledger.Shelley.Rewards
     mkApparentPerformance,
     mkPoolRewardInfo,
   )
-import Cardano.Ledger.Shelley.Rules.NewEpoch (ShelleyNewEpochEvent (DeltaRewardEvent, TotalRewardEvent))
-import Cardano.Ledger.Shelley.Rules.Rupd (RupdEvent (..))
-import qualified Cardano.Ledger.Shelley.Rules.Tick as Tick
+import Cardano.Ledger.Shelley.Rules
+  ( PulsingRewUpdate (..),
+    RupdEvent (RupdEvent),
+    ShelleyNewEpochEvent (DeltaRewardEvent, TotalRewardEvent),
+    ShelleyTickEvent (TickNewEpochEvent, TickRupdEvent),
+  )
 import Cardano.Ledger.Shelley.TxBody (RewardAcnt (..))
 import Cardano.Ledger.Slot (epochInfoSize)
 import Cardano.Ledger.Val (Val (..), invert, (<+>), (<->))
@@ -716,15 +718,15 @@ newEpochEventsProp tracelen propf = withMaxSuccess 10 $
 aggIncrementalRewardEvents :: [ChainEvent C] -> Map (Credential 'Staking (Crypto C)) (Set (Reward (Crypto C)))
 aggIncrementalRewardEvents = foldl' accum Map.empty
   where
-    accum ans (TickEvent (Tick.RupdEvent (RupdEvent _ m))) = Map.unionWith Set.union m ans
-    accum ans (TickEvent (Tick.NewEpochEvent (DeltaRewardEvent (RupdEvent _ m)))) =
+    accum ans (TickEvent (TickRupdEvent (RupdEvent _ m))) = Map.unionWith Set.union m ans
+    accum ans (TickEvent (TickNewEpochEvent (DeltaRewardEvent (RupdEvent _ m)))) =
       Map.unionWith Set.union m ans
     accum ans _ = ans
 
 getMostRecentTotalRewardEvent :: [ChainEvent C] -> Map (Credential 'Staking (Crypto C)) (Set (Reward (Crypto C)))
 getMostRecentTotalRewardEvent = foldl' accum Map.empty
   where
-    accum ans (TickEvent (Tick.NewEpochEvent (TotalRewardEvent _ m))) = Map.unionWith Set.union m ans
+    accum ans (TickEvent (TickNewEpochEvent (TotalRewardEvent _ m))) = Map.unionWith Set.union m ans
     accum ans _ = ans
 
 complete :: PulsingRewUpdate crypto -> (RewardUpdate crypto, RewardEvent crypto)

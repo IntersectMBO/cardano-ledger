@@ -38,13 +38,15 @@ import Cardano.Ledger.Shelley.LedgerState
     emptyRewardUpdate,
   )
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..))
-import Cardano.Ledger.Shelley.Rules.Bbody (ShelleyBbodyPredFailure (..))
-import Cardano.Ledger.Shelley.Rules.Deleg (ShelleyDelegPredFailure (..))
-import Cardano.Ledger.Shelley.Rules.Delegs (ShelleyDelegsPredFailure (..))
-import Cardano.Ledger.Shelley.Rules.Delpl (ShelleyDelplPredFailure (..))
-import Cardano.Ledger.Shelley.Rules.Ledger (ShelleyLedgerPredFailure (..))
-import Cardano.Ledger.Shelley.Rules.Ledgers (ShelleyLedgersPredFailure (..))
-import Cardano.Ledger.Shelley.Rules.Utxow (ShelleyUtxowPredFailure (..))
+import Cardano.Ledger.Shelley.Rules
+  ( ShelleyBbodyPredFailure (..),
+    ShelleyDelegPredFailure (..),
+    ShelleyDelegsPredFailure (..),
+    ShelleyDelplPredFailure (..),
+    ShelleyLedgerPredFailure (..),
+    ShelleyLedgersPredFailure (..),
+    ShelleyUtxowPredFailure (..),
+  )
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), WitnessSetHKD (..))
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),

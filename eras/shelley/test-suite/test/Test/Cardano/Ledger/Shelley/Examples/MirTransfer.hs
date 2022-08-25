@@ -27,7 +27,7 @@ import Cardano.Ledger.Shelley.API
     ShelleyDELEG,
   )
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..), emptyPParams)
-import Cardano.Ledger.Shelley.Rules.Deleg (ShelleyDelegPredFailure (..))
+import Cardano.Ledger.Shelley.Rules (ShelleyDelegPredFailure (..))
 import Cardano.Ledger.Slot (SlotNo (..))
 import Control.State.Transition.Extended hiding (Assertion)
 import Control.State.Transition.Trace (checkTrace, (.-), (.->))

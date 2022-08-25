@@ -15,13 +15,7 @@ import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Mary.Value (MaryValue)
 import qualified Cardano.Ledger.Shelley.API as API
-import Cardano.Ledger.Shelley.Rules.Epoch
-import Cardano.Ledger.Shelley.Rules.Mir
-import Cardano.Ledger.Shelley.Rules.Newpp
-import Cardano.Ledger.Shelley.Rules.Rupd
-import Cardano.Ledger.Shelley.Rules.Snap
-import Cardano.Ledger.Shelley.Rules.Tick
-import Cardano.Ledger.Shelley.Rules.Upec
+import Cardano.Ledger.Shelley.Rules
 
 -- =====================================================
 

@@ -24,7 +24,7 @@ import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (GenDelegs (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.LedgerState (IncrementalStake (..), UTxOState (..))
-import Cardano.Ledger.Shelley.Rules.Utxo (PredicateFailure, UtxoEnv (..))
+import Cardano.Ledger.Shelley.Rules (PredicateFailure, UtxoEnv (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), makeWitnessVKey)
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..), SlotNo (..))

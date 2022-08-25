@@ -10,6 +10,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.Rules.Epoch
   ( ShelleyEPOCH,
@@ -23,6 +24,7 @@ import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.EpochBoundary (SnapShots, obligation)
+import Cardano.Ledger.Shelley.Era (ShelleyEPOCH)
 import Cardano.Ledger.Shelley.LedgerState
   ( EpochState,
     LedgerState,
@@ -68,8 +70,6 @@ import Data.Void (Void)
 import GHC.Generics (Generic)
 import GHC.Records (HasField)
 import NoThunks.Class (NoThunks (..))
-
-data ShelleyEPOCH era
 
 data ShelleyEpochPredFailure era
   = PoolReapFailure (PredicateFailure (EraRule "POOLREAP" era)) -- Subtransition Failures

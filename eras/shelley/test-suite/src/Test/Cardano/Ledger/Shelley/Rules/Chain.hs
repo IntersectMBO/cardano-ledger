@@ -74,13 +74,15 @@ import Cardano.Ledger.Shelley.LedgerState
     updateNES,
     _genDelegs,
   )
-import Cardano.Ledger.Shelley.Rules.Bbody
+import Cardano.Ledger.Shelley.Rules
   ( BbodyEnv (..),
     ShelleyBBODY,
     ShelleyBbodyPredFailure,
     ShelleyBbodyState (..),
+    ShelleyTICK,
+    ShelleyTickEvent,
+    ShelleyTickPredFailure,
   )
-import Cardano.Ledger.Shelley.Rules.Tick (ShelleyTICK, ShelleyTickEvent, ShelleyTickPredFailure)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.Slot (EpochNo)
 import Cardano.Protocol.TPraos.BHeader

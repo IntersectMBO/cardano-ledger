@@ -68,8 +68,13 @@ import Cardano.Ledger.Shelley.LedgerState
   )
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.PParams (Update)
-import Cardano.Ledger.Shelley.Rules.Ppup (PpupEnv (..), ShelleyPPUP, ShelleyPpupPredFailure)
-import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..), updateUTxOState)
+import Cardano.Ledger.Shelley.Rules
+  ( PpupEnv (..),
+    ShelleyPPUP,
+    ShelleyPpupPredFailure,
+    UtxoEnv (..),
+    updateUTxOState,
+  )
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), coinBalance, totalDeposits)
 import Cardano.Ledger.Val as Val (Val ((<->)))
 import Cardano.Slotting.EpochInfo.Extend (unsafeLinearExtendEpochInfo)

@@ -53,7 +53,7 @@ import Cardano.Ledger.Shelley.LedgerState
     UTxOState (..),
   )
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..), emptyPParams)
-import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv (..), ShelleyLEDGER)
+import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), ShelleyLEDGER)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), WitnessSetHKD (..))
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),

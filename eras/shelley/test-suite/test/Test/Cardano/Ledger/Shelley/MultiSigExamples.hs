@@ -58,7 +58,7 @@ import Cardano.Ledger.Shelley.PParams
     emptyPParams,
     _maxTxSize,
   )
-import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
+import Cardano.Ledger.Shelley.Rules (UtxoEnv (..))
 import Cardano.Ledger.Shelley.Scripts
   ( MultiSig,
     pattern RequireAllOf,

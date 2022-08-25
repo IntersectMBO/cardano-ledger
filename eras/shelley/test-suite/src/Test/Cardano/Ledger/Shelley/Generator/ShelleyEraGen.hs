@@ -23,7 +23,6 @@ import Cardano.Ledger.Shelley.API
     Update,
   )
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..))
-import Cardano.Ledger.Shelley.Rules.EraMapping ()
 import Cardano.Ledger.Shelley.Scripts (MultiSig (..))
 import Cardano.Ledger.Shelley.Tx (TxIn (..), WitnessSetHKD (ShelleyWitnesses))
 import Cardano.Ledger.Shelley.TxBody

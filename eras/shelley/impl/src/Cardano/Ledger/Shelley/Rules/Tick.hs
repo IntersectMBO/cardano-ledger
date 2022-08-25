@@ -10,6 +10,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.Rules.Tick
   ( ShelleyTICK,
@@ -27,6 +28,7 @@ import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..), epochInfoPure)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (GenDelegs (..))
 import Cardano.Ledger.Shelley.EpochBoundary (SnapShots (_pstakeMark))
+import Cardano.Ledger.Shelley.Era (ShelleyTICK, ShelleyTICKF)
 import Cardano.Ledger.Shelley.LedgerState
   ( DPState (..),
     DState (..),
@@ -36,8 +38,17 @@ import Cardano.Ledger.Shelley.LedgerState
     NewEpochState (..),
     PulsingRewUpdate,
   )
-import Cardano.Ledger.Shelley.Rules.NewEpoch (ShelleyNEWEPOCH, ShelleyNewEpochEvent, ShelleyNewEpochPredFailure)
-import Cardano.Ledger.Shelley.Rules.Rupd (RupdEnv (..), RupdEvent, ShelleyRUPD, ShelleyRupdPredFailure)
+import Cardano.Ledger.Shelley.Rules.NewEpoch
+  ( ShelleyNEWEPOCH,
+    ShelleyNewEpochEvent,
+    ShelleyNewEpochPredFailure,
+  )
+import Cardano.Ledger.Shelley.Rules.Rupd
+  ( RupdEnv (..),
+    RupdEvent,
+    ShelleyRUPD,
+    ShelleyRupdPredFailure,
+  )
 import Cardano.Ledger.Slot (EpochNo, SlotNo, epochInfoEpoch)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (⨃))
@@ -47,8 +58,6 @@ import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
 -- ==================================================
-
-data ShelleyTICK era
 
 data ShelleyTickPredFailure era
   = NewEpochFailure (PredicateFailure (EraRule "NEWEPOCH" era)) -- Subtransition Failures
@@ -74,8 +83,8 @@ instance
   NoThunks (ShelleyTickPredFailure era)
 
 data ShelleyTickEvent era
-  = NewEpochEvent (Event (EraRule "NEWEPOCH" era))
-  | RupdEvent (Event (EraRule "RUPD" era))
+  = TickNewEpochEvent (Event (EraRule "NEWEPOCH" era))
+  | TickRupdEvent (Event (EraRule "RUPD" era))
   deriving (Generic)
 
 instance
@@ -199,7 +208,7 @@ instance
   Embed (ShelleyNEWEPOCH era) (ShelleyTICK era)
   where
   wrapFailed = NewEpochFailure
-  wrapEvent = NewEpochEvent
+  wrapEvent = TickNewEpochEvent
 
 instance
   ( Era era,
@@ -210,7 +219,7 @@ instance
   Embed (ShelleyRUPD era) (ShelleyTICK era)
   where
   wrapFailed = RupdFailure
-  wrapEvent = RupdEvent
+  wrapEvent = TickRupdEvent
 
 {------------------------------------------------------------------------------
 -- TICKF transition
@@ -218,8 +227,6 @@ instance
 -- This is a variant on the TICK transition called only by the consensus layer
 to tick the ledger state to a future slot.
 ------------------------------------------------------------------------------}
-
-data ShelleyTICKF era
 
 newtype ShelleyTickfPredFailure era
   = TickfNewEpochFailure (PredicateFailure (EraRule "NEWEPOCH" era)) -- Subtransition Failures

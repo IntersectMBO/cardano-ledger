@@ -10,6 +10,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.Rules.Ledgers
   ( ShelleyLEDGERS,
@@ -24,6 +25,7 @@ import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (DSignable, Hash)
+import Cardano.Ledger.Shelley.Era (ShelleyLEDGERS)
 import Cardano.Ledger.Shelley.LedgerState (AccountState, LedgerState)
 import Cardano.Ledger.Shelley.Rules.Ledger
   ( LedgerEnv (..),
@@ -46,8 +48,6 @@ import Data.Foldable (toList)
 import Data.Sequence (Seq)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
-
-data ShelleyLEDGERS era
 
 data ShelleyLedgersEnv era = LedgersEnv
   { ledgersSlotNo :: SlotNo,

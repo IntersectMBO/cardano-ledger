@@ -59,7 +59,7 @@ import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API (DCert (DCertDeleg), DelegCert (DeRegKey), ProtVer (..), UTxO (..))
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), smartUTxOState)
-import qualified Cardano.Ledger.Shelley.Rules.Utxow as Shelley
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.UTxO (makeWitnessVKey)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (inject)
