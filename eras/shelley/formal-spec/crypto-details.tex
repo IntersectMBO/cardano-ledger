@@ -1,6 +1,10 @@
 \section{Cryptographic Details}
 \label{sec:crypto-details}
 
+\subsection{Warning About Re-serialization}
+It is a bad security practice to check signatures or hashes on re-serialized data,
+the original bytes must be preserved.
+
 \subsection{Hashing}
 We present the (informal) properties of cryptographically safe hash functions:
 \begin{description}
@@ -52,13 +56,22 @@ More generally, we expect the following properties from a Verifyable Random Func
 \item[Pseudorandomness] Assuming the public-private key pair has been generated honestly, the VRF hash output on any adversarially-chosen VRF input looks indistinguishable from random for a computationally bounded adversary who does not know the private key. 
 \end{description}
 
-\subsection{Abstract functions $\seedOp$ and \fun{seedToSlot}}
-\label{sec:mkseed-slottoseed}
-The seed operation $x \seedOp y$ from Figure~\ref{fig:defs-vrf} is implemented
-as the BLAKE2b-256 hash of the concatenation of $x$ and $y$.
+\subsection{Abstract functions}
+\label{sec:abstract-funcs-implementation}
 
-The function \fun{slotToSeed} from Figure~\ref{fig:defs:blocks} is implemented
-as the big-endian encoding of the slot number in 8 bytes.
+\begin{itemize}
+  \item The transaction ID function $\fun{txid}$ from Figure~\ref{fig:defs:utxo-shelley} is implemented
+        as the BLAKE2b-256 hash of the CBOR serialization of the transaction body.
+        \textbf{Note} that we do \textbf{not} enforce canonical CBOR and that there are
+        multiple valid serializations for any given transaction body.
+        The transaction ID must be computed using the original bytes that were
+        submitted to the network.
+  \item The seed operation $x \seedOp y$ from Figure~\ref{fig:defs-vrf} is implemented
+        as the BLAKE2b-256 hash of the concatenation of $x$ and $y$.
+  \item The function \fun{slotToSeed} from Figure~\ref{fig:defs:blocks} is implemented
+        as the big-endian encoding of the slot number in 8 bytes.
+\end{itemize}
+
 
 \subsection{Multi-Signatures}
 As presented in Figure~\ref{fig:types-msig}, Shelley realizes multi-signatures 
