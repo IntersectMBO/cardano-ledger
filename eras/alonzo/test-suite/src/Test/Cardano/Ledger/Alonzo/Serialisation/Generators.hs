@@ -495,21 +495,32 @@ instance C.Crypto crypto => Twiddle (AlonzoTxBody (AlonzoEra crypto)) where
     requiredSigners' <- emptyOrNothing txBody reqSignerHashes
     networkId' <- twiddleStrictMaybe $ txnetworkid txBody
     mp <- elements [TMap, TMapI]
-    pure . mp $
-      [ (TInt 0, inputs'),
-        (TInt 1, outputs'),
-        (TInt 2, fee')
-      ]
-        <> catMaybes
-          [ (TInt 3,) <$> ttl',
-            (TInt 4,) <$> cert',
-            (TInt 5,) <$> Just wdrls',
-            (TInt 6,) <$> update',
-            (TInt 7,) <$> auxDataHash',
-            (TInt 8,) <$> validityStart',
-            (TInt 9,) <$> Just mint',
-            (TInt 11,) <$> scriptDataHash',
-            (TInt 13,) <$> collateral',
-            (TInt 14,) <$> requiredSigners',
-            (TInt 15,) <$> networkId'
+    let fields = 
+          [ (TInt 0, inputs'),
+            (TInt 1, outputs'),
+            (TInt 2, fee')
           ]
+            <> catMaybes
+              [ (TInt 3,) <$> ttl',
+                (TInt 4,) <$> cert',
+                (TInt 5,) <$> Just wdrls',
+                (TInt 6,) <$> update',
+                (TInt 7,) <$> auxDataHash',
+                (TInt 8,) <$> validityStart',
+                (TInt 9,) <$> Just mint',
+                (TInt 11,) <$> scriptDataHash',
+                (TInt 13,) <$> collateral',
+                (TInt 14,) <$> requiredSigners',
+                (TInt 15,) <$> networkId'
+              ]
+    fields' <- shuffle fields
+    pure $ mp fields'
+
+instance Typeable c => Twiddle (AlonzoScript (AlonzoEra c)) where
+  twiddle = twiddle . toTerm
+
+instance Typeable c => Twiddle (Data (AlonzoEra c)) where
+  twiddle = twiddle . toTerm
+
+instance Typeable c => Twiddle (BinaryData (AlonzoEra c)) where
+  twiddle = twiddle . toTerm

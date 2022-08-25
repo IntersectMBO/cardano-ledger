@@ -1,6 +1,9 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Alonzo.Serialisation.Tripping where
@@ -20,18 +23,18 @@ import Cardano.Ledger.Shelley.Metadata (Metadata)
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Codec.CBOR.Read (deserialiseFromBytes)
 import Codec.CBOR.Term
+import Codec.CBOR.Write (toLazyByteString)
 import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import Data.Data (Proxy (..))
 import Data.Functor.Identity (Identity (..))
-import Data.Roundtrip (roundTrip, roundTripAnn, roundTripAnnWithTwiddling)
+import Data.Roundtrip (roundTrip, roundTripAnn, roundTripAnnWithTwiddling, roundTripWithTwiddling)
 import Data.Twiddle (Twiddle (..))
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Codec.CBOR.Write (toLazyByteString)
 
 trippingF ::
   (Eq src, Show src, Show target, ToCBOR src) =>
@@ -85,11 +88,15 @@ trippingAnnWithTwiddling comp x = property $ trippingM roundTripAnnWithTwiddling
 tripping :: (Eq src, Show src, ToCBOR src, FromCBOR src) => src -> Property
 tripping = trippingF roundTrip
 
+trippingWithTwiddling :: (src -> src -> Property) -> src -> Property
+trippingWithTwiddling comp x = property $ trippingM roundTripWithTwiddling comp x
+
 compareTxBody ::
   TxBody (AlonzoEra C_Crypto) ->
   TxBody (AlonzoEra C_Crypto) ->
   Property
 compareTxBody x y = counterexample "TxBody contents are different" (txBodyRawEq x y)
+  
 
 tests :: TestTree
 tests =
@@ -97,18 +104,23 @@ tests =
     "Alonzo CBOR round-trip"
     [ testProperty "alonzo/Script" $
         trippingAnn @(Script (AlonzoEra C_Crypto)),
+      testTwiddlingAnn @(Script (AlonzoEra C_Crypto)) "alonzo/Script twiddled",
       testProperty "alonzo/Data" $
         trippingAnn @(Data (AlonzoEra C_Crypto)),
+      testTwiddlingAnn @(Data (AlonzoEra C_Crypto)) "alonzo/Data twiddled",
       testProperty "alonzo/BinaryData" $
         tripping @(BinaryData (AlonzoEra C_Crypto)),
+      testTwiddling @(BinaryData (AlonzoEra C_Crypto)) "alonzo/BinaryData twiddled",
       testProperty "alonzo/Metadata" $
         trippingAnn @(Metadata (AlonzoEra C_Crypto)),
       testProperty "alonzo/AlonzoTxWits" $
         trippingAnn @(AlonzoTxWits (AlonzoEra C_Crypto)),
       testProperty "alonzo/TxBody" $
         trippingAnn @(TxBody (AlonzoEra C_Crypto)),
-      testProperty "alonzo/TxBody twiddled" $
-        trippingAnnWithTwiddling @(TxBody (AlonzoEra C_Crypto)) compareTxBody,
+      testTwiddlingAnn'
+        @(TxBody (AlonzoEra C_Crypto))
+        "alonzo/TxBody twiddled"
+        compareTxBody,
       testProperty "alonzo/CostModels" $
         tripping @CostModels,
       testProperty "alonzo/PParams" $
@@ -130,6 +142,36 @@ tests =
       testProperty "alonzo/Block" $
         trippingAnn @(Block (BHeader C_Crypto) (AlonzoEra C_Crypto))
     ]
+  where
+    testTwiddlingAnn' ::
+      forall a.
+      (Twiddle a, Arbitrary a, Show a, FromCBOR (Annotator a)) =>
+      TestName ->
+      (a -> a -> Property) ->
+      TestTree
+    testTwiddlingAnn' name comp = testProperty name $ trippingAnnWithTwiddling comp
+
+    testTwiddlingAnn ::
+      forall a.
+      ( Twiddle a,
+        Arbitrary a,
+        Eq a,
+        Show a,
+        FromCBOR (Annotator a)
+      ) =>
+      TestName ->
+      TestTree
+    testTwiddlingAnn name = testTwiddlingAnn' @a name (===)
+
+    testTwiddling ::
+      forall a.
+      ( Arbitrary a,
+        Show a,
+        Eq a
+      ) =>
+      TestName ->
+      TestTree
+    testTwiddling name = testProperty name $ trippingWithTwiddling @a (===)
 
 test :: IO ()
 test = do

@@ -11,6 +11,7 @@ module Data.Roundtrip
     embedTrip',
     roundTripAnn,
     roundTripAnnWithTwiddling,
+    roundTripWithTwiddling,
     embedTripAnn,
     RoundTripResult,
   )
@@ -57,6 +58,10 @@ roundTripAnnWithTwiddling x = do
   tw <- encodeTerm <$> twiddle x
   let bs = toLazyByteString tw
   pure (roundTripAnn' bs, bs)
+
+roundTripWithTwiddling :: t -> Gen (RoundTripResult t, LBS.ByteString)
+roundTripWithTwiddling = do
+  undefined
 
 roundTripAnn' :: FromCBOR (Annotator t) => Lazy.ByteString -> RoundTripResult t
 roundTripAnn' bytes = case deserialiseFromBytes fromCBOR bytes of
