@@ -12,7 +12,7 @@
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-orphans -Wno-redundant-constraints #-}
 
 -- | This module defines core type families which we know to vary from era to
 -- era.
@@ -49,10 +49,13 @@ module Cardano.Ledger.Core
     EraSegWits (..),
 
     -- * Protocol version constraints
+    ProtVerNoMore,
+    ProtVerNoLess,
     ProtVerAtLeast,
-    ProtVerAtMost,
     ProtVerInBounds,
-    ProtVerInEra,
+    ExactEra,
+    AtLeastEra,
+    atLeastEra,
     notSupportedInThisEra,
     notSupportedInThisEraL,
 
@@ -581,21 +584,50 @@ type family ProtVerIsInBounds (check :: Symbol) era (v :: Nat) (b :: Bool) :: Co
           ':<>: 'ShowType (ProtVerLow era)
           ':<>: 'Text ", "
           ':<>: 'ShowType (ProtVerHigh era)
-          ':<>: 'Text "], but required is at "
+          ':<>: 'Text "], but required is "
           ':<>: 'Text check
           ':<>: 'Text " "
           ':<>: 'ShowType v
       )
 
+-- | Requirement for the era's highest protocol version to be higher or equal to
+-- the supplied value
 type family ProtVerAtLeast era (l :: Nat) :: Constraint where
-  ProtVerAtLeast era l = ProtVerIsInBounds "least" era l (ProtVerLow era <=? l)
+  ProtVerAtLeast era l = ProtVerIsInBounds "at least" era l (l <=? ProtVerHigh era)
 
-type family ProtVerAtMost era (h :: Nat) :: Constraint where
-  ProtVerAtMost era h = ProtVerIsInBounds "most" era h (h <=? ProtVerHigh era)
+type family ProtVerNoLess era (l :: Nat) :: Constraint where
+  ProtVerNoLess era l = ProtVerIsInBounds "no less than" era l (ProtVerLow era <=? l)
 
-type ProtVerInBounds era l h = (ProtVerAtLeast era l, ProtVerAtMost era h)
+-- | Requirement for the era's highest protocol version to be less or equal to
+-- the supplied value
+type family ProtVerNoMore era (h :: Nat) :: Constraint where
+  ProtVerNoMore era h = ProtVerIsInBounds "no more than" era h (h <=? ProtVerHigh era)
 
-type ProtVerInEra era inEra = ProtVerInBounds era (ProtVerLow inEra) (ProtVerHigh inEra)
+-- | Restrict a lower and upper bounds of the protocol version for the particular era
+type ProtVerInBounds era l h = (ProtVerNoLess era l, ProtVerNoMore era h)
+
+-- | Restrict an era to the specific era through the protocol version. This is
+-- equivalent to @(inEra (Crypto era) ~ era)@
+type ExactEra (inEra :: Type -> Type) era =
+  ProtVerInBounds era (ProtVerLow (inEra (Crypto era))) (ProtVerHigh (inEra (Crypto era)))
+
+type AtLeastEra (eraName :: Type -> Type) era =
+  ProtVerAtLeast era (ProtVerLow (eraName (Crypto era)))
+
+-- | Enforce era to be at least the specified era at the type level. In other words
+-- compiler will produce type error when applied to eras prior to the specified era.
+-- This function should be used in order to avoid redundant constraints warning.
+--
+-- For example these will type check
+--
+-- >>> atLeastEra @BabbageEra @(ConwayEra StandardCrypto)
+-- >>> atLeastEra @BabbageEra @(BabbageEra StandardCrypto)
+--
+-- However this will result in a type error
+--
+-- >>> atLeastEra @BabbageEra @(AlonzoEra StandardCrypto)
+atLeastEra :: AtLeastEra eraName era => ()
+atLeastEra = ()
 
 notSupportedInThisEra :: HasCallStack => a
 notSupportedInThisEra = error "Impossible: Function is not supported in this era"
@@ -637,7 +669,7 @@ data PhasedScript phase era where
   Phase2Script :: Language -> ShortByteString -> PhasedScript 'PhaseTwo era
 
 getPhase1 :: EraScript era => Map k (Script era) -> Map k (Script era, PhasedScript 'PhaseOne era)
-getPhase1 m = mapMaybe phase1 m
+getPhase1 = mapMaybe phase1
   where
     phase1 s = case phaseScript PhaseOneRep s of
       Just ps -> Just (s, ps)

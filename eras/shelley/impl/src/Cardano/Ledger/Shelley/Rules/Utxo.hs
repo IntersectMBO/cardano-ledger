@@ -298,7 +298,7 @@ instance
 instance
   ( EraTx era,
     ShelleyEraTxBody era,
-    ProtVerInEra era (ShelleyEra c),
+    ExactEra ShelleyEra era,
     TxOut era ~ ShelleyTxOut era,
     Show (Value era),
     Show (Witnesses era),
@@ -353,10 +353,10 @@ instance
     ]
 
 utxoInductive ::
-  forall era utxo c.
+  forall era utxo.
   ( EraTx era,
     ShelleyEraTxBody era,
-    ProtVerInEra era (ShelleyEra c),
+    ExactEra ShelleyEra era,
     TxOut era ~ ShelleyTxOut era,
     STS (utxo era),
     Embed (EraRule "PPUP" era) (utxo era),
@@ -430,7 +430,7 @@ utxoInductive = do
 --
 -- > txttl txb ≥ slot
 validateTimeToLive ::
-  (ShelleyEraTxBody era, ProtVerInEra era (ShelleyEra c)) =>
+  (ShelleyEraTxBody era, ExactEra ShelleyEra era) =>
   TxBody era ->
   SlotNo ->
   Test (ShelleyUtxoPredFailure era)

@@ -554,7 +554,7 @@ chainTest proof n gsize = testProperty message action
           (Gen1 vs genstate)
           (Just (\_ -> pure $ Right initState))
       -- Here is where we can add some properties for traces:
-      pure $ (_traceInitState trace1 === initState)
+      pure (_traceInitState trace1 === initState)
 
 testTraces :: Int -> TestTree
 testTraces n =

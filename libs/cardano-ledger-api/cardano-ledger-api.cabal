@@ -50,3 +50,26 @@ library
     cardano-ledger-babbage,
     cardano-ledger-shelley,
     microlens,
+
+test-suite cardano-ledger-api-test
+  import:             base, project-config
+
+  type:                exitcode-stdio-1.0
+  main-is:             Tests.hs
+  ghc-options: -rtsopts -threaded
+
+  hs-source-dirs:      test
+  other-modules:
+    Test.Cardano.Ledger.Api.Tx.Out
+  build-depends:
+    bytestring,
+    cardano-binary,
+    cardano-ledger-api,
+    cardano-ledger-core,
+    cardano-ledger-babbage,
+    cardano-ledger-babbage-test,
+    cardano-ledger-conway,
+    microlens,
+    tasty,
+    tasty-quickcheck,
+    QuickCheck,
