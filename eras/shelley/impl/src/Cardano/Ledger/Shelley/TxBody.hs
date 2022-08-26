@@ -422,7 +422,7 @@ instance CC.Crypto crypto => EraTxBody (ShelleyEra crypto) where
 class EraTxBody era => ShelleyEraTxBody era where
   wdrlsTxBodyL :: Lens' (Core.TxBody era) (Wdrl (Crypto era))
 
-  ttlTxBodyL :: ProtVerInEra era (ShelleyEra c) => Lens' (Core.TxBody era) SlotNo
+  ttlTxBodyL :: ExactEra ShelleyEra era => Lens' (Core.TxBody era) SlotNo
 
   updateTxBodyL :: Lens' (Core.TxBody era) (StrictMaybe (Update era))
 
