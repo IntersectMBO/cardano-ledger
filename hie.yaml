@@ -87,6 +87,9 @@ cradle:
     - path: "libs/small-steps-test/test"
       component: "small-steps-test:test:examples"
 
+    - path: "libs/cardano-ledger-api/src"
+      component: "lib:cardano-ledger-api"
+
     - path: "libs/cardano-ledger-core/src"
       component: "lib:cardano-ledger-core"
 

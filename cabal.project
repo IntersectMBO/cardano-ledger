@@ -17,6 +17,7 @@ packages:
   eras/shelley/test-suite
   eras/shelley-ma/impl
   eras/shelley-ma/test-suite
+  libs/cardano-ledger-api
   libs/cardano-ledger-core
   libs/cardano-ledger-pretty
   libs/cardano-ledger-test
@@ -165,6 +166,9 @@ package cardano-ledger-shelley
   ghc-options: -Werror
 
 package cardano-ledger-shelley-test
+  ghc-options: -Werror
+
+package cardano-ledger-api
   ghc-options: -Werror
 
 package cardano-ledger-core

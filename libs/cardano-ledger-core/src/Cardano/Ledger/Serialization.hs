@@ -57,6 +57,7 @@ module Cardano.Ledger.Serialization
     Sized (..),
     mkSized,
     sizedDecoder,
+    toSizedL,
   )
 where
 
@@ -130,6 +131,7 @@ import Data.Time.Calendar.OrdinalDate (fromOrdinalDate, toOrdinalDate)
 import Data.Time.Clock (diffTimeToPicoseconds, picosecondsToDiffTime)
 import Data.Typeable
 import GHC.Generics
+import Lens.Micro
 import Network.Socket (HostAddress6)
 import NoThunks.Class (NoThunks)
 import Prelude
@@ -365,3 +367,8 @@ instance ToCBOR a => ToCBOR (Sized a) where
   -- Size is an auxiliary value and should not be transmitted over the wire,
   -- therefore it is ignored.
   toCBOR (Sized v _) = toCBOR v
+
+-- | Take a lens that operates on a particular type and convert it into a lens
+-- that operates on the `Sized` version of the type.
+toSizedL :: ToCBOR s => Lens' s a -> Lens' (Sized s) a
+toSizedL l = lens (\sv -> sizedValue sv ^. l) (\sv a -> mkSized (sizedValue sv & l .~ a))
