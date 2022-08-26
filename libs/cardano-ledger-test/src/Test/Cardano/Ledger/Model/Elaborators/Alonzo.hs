@@ -39,7 +39,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.Set as Set
 import GHC.Records as GHC
-import Test.Cardano.Ledger.Examples.TwoPhaseValidation (freeCostModelV1)
+import Test.Cardano.Ledger.Examples.STSTestUtils (freeCostModelV1)
 import Test.Cardano.Ledger.Model.BaseTypes
   ( ModelValue (..),
   )

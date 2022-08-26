@@ -10,12 +10,17 @@
 
 module Test.Cardano.Ledger.Generic.ApplyTx where
 
+import Cardano.Ledger.Alonzo.Data (Data (..))
+import Cardano.Ledger.Alonzo.Language (Language (PlutusV1))
+import Cardano.Ledger.Alonzo.Scripts (CostModels (..), ExUnits (ExUnits))
+import qualified Cardano.Ledger.Alonzo.Scripts as Tag
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
-import Cardano.Ledger.BaseTypes (TxIx, mkTxIxPartial)
+import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (RdmrPtr), Redeemers (..))
+import Cardano.Ledger.BaseTypes (ProtVer (..), TxIx, mkTxIxPartial)
 import Cardano.Ledger.Coin (Coin (..), addDeltaCoin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
-import Cardano.Ledger.Shelley.API (Credential, KeyRole (Staking), ProtVer (pvMajor))
+import Cardano.Ledger.Shelley.API (Credential, KeyRole (Staking))
 import Cardano.Ledger.Shelley.Rewards (Reward)
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
@@ -26,9 +31,9 @@ import Cardano.Ledger.Shelley.TxBody
     RewardAcnt (..),
     Wdrl (..),
   )
-import Cardano.Ledger.Shelley.UTxO (UTxO (..))
+import Cardano.Ledger.Shelley.UTxO (UTxO (..), makeWitnessVKey)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
-import Cardano.Ledger.Val ((<+>), (<->))
+import Cardano.Ledger.Val (Val (inject), (<+>), (<->))
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import Control.Iterate.Exp (dom, (∈))
 import Control.Iterate.SetAlgebra (eval)
@@ -41,8 +46,17 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
 import Lens.Micro
-import Test.Cardano.Ledger.Examples.TwoPhaseValidation (initUTxO, notValidatingTx)
-import Test.Cardano.Ledger.Generic.Fields (TxBodyField (..), TxField (..), abstractTx, abstractTxBody)
+import qualified Plutus.V1.Ledger.Api as Plutus
+import Test.Cardano.Ledger.Examples.STSTestUtils (freeCostModelV1, initUTxO, mkGenesisTxIn, mkTxDats, someAddr, someKeys)
+import Test.Cardano.Ledger.Generic.Fields
+  ( PParamsField (..),
+    TxBodyField (..),
+    TxField (..),
+    TxOutField (..),
+    WitnessesField (..),
+    abstractTx,
+    abstractTxBody,
+  )
 import Test.Cardano.Ledger.Generic.Functions
   ( aggregateRewards',
     createRUpdNonPulsing',
@@ -60,10 +74,25 @@ import Test.Cardano.Ledger.Generic.ModelState
   )
 import Test.Cardano.Ledger.Generic.PrettyCore (pcCredential, pcTx)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
+import Test.Cardano.Ledger.Generic.Scriptic (Scriptic (never))
+import Test.Cardano.Ledger.Generic.Updaters (newPParams, newScriptIntegrityHash, newTx, newTxBody, newTxOut)
 import Test.Cardano.Ledger.Shelley.Rewards (RewardUpdateOld (deltaFOld), rsOld)
 import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo)
 
 -- ========================================================================
+
+defaultPPs :: [PParamsField era]
+defaultPPs =
+  [ Costmdls . CostModels $ Map.singleton PlutusV1 freeCostModelV1,
+    MaxValSize 1000000000,
+    MaxTxExUnits $ ExUnits 1000000 1000000,
+    MaxBlockExUnits $ ExUnits 1000000 1000000,
+    ProtocolVersion $ ProtVer 5 0,
+    CollateralPercentage 100
+  ]
+
+pparams :: Proof era -> PParams era
+pparams pf = newPParams pf defaultPPs
 
 hasValid :: [TxField era] -> Maybe Bool
 hasValid [] = Nothing
@@ -312,3 +341,40 @@ applyRUpd ru m =
     { mFees = mFees m `addDeltaCoin` deltaFOld @(EraCrypto era) ru,
       mRewards = Map.unionWith (<>) (mRewards m) (rsOld ru)
     }
+
+notValidatingTx ::
+  ( Scriptic era,
+    EraTx era,
+    GoodCrypto (EraCrypto era)
+  ) =>
+  Proof era ->
+  Tx era
+notValidatingTx pf =
+  newTx
+    pf
+    [ Body notValidatingBody,
+      WitnessesI
+        [ AddrWits' [makeWitnessVKey (hashAnnotated notValidatingBody) (someKeys pf)],
+          ScriptWits' [never 0 pf],
+          DataWits' [Data (Plutus.I 0)],
+          RdmrWits redeemers
+        ]
+    ]
+  where
+    notValidatingBody =
+      newTxBody
+        pf
+        [ Inputs' [mkGenesisTxIn 2],
+          Collateral' [mkGenesisTxIn 12],
+          Outputs' [newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 2995)]],
+          Txfee (Coin 5),
+          WppHash (newScriptIntegrityHash pf (pparams pf) [PlutusV1] redeemers (mkTxDats (Data (Plutus.I 0))))
+        ]
+    redeemers =
+      Redeemers
+        ( Map.fromList
+            [ ( RdmrPtr Tag.Spend 0,
+                (Data (Plutus.I 1), ExUnits 5000 5000)
+              )
+            ]
+        )
