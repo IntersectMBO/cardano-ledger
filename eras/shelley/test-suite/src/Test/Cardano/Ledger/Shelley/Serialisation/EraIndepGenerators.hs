@@ -61,10 +61,10 @@ import Cardano.Ledger.Coin (CompactForm (..), DeltaCoin (..))
 import Cardano.Ledger.Core (Crypto, Era, EraScript (..), EraSegWits (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (DSIGN)
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import qualified Cardano.Ledger.Crypto as CC (Crypto, HASH)
 import Cardano.Ledger.Keys.Bootstrap (ChainCode (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
-import Cardano.Ledger.SafeHash (HasAlgorithm, SafeHash, unsafeMakeSafeHash)
+import Cardano.Ledger.SafeHash (SafeHash, unsafeMakeSafeHash)
 import Cardano.Ledger.Serialization (ToCBORGroup)
 import Cardano.Ledger.Shelley.API hiding (SignedDSIGN, TxBody)
 import Cardano.Ledger.Shelley.LedgerState (FutureGenDeleg, StashedAVVMAddresses)
@@ -157,7 +157,7 @@ genHash = mkDummyHash <$> arbitrary
 mkDummyHash :: forall h a. HashAlgorithm h => Int -> Hash.Hash h a
 mkDummyHash = coerce . hashWithSerialiser @h toCBOR
 
-instance HasAlgorithm c => Arbitrary (SafeHash c i) where
+instance Hash.HashAlgorithm (CC.HASH c) => Arbitrary (SafeHash c i) where
   arbitrary = unsafeMakeSafeHash <$> arbitrary
 
 {-------------------------------------------------------------------------------

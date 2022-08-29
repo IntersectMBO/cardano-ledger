@@ -45,7 +45,6 @@ module Cardano.Ledger.SafeHash
     castSafeHash,
     extractHash,
     indexProxy,
-    HasAlgorithm,
 
     -- * Safe hashing aggregates
 
@@ -53,6 +52,9 @@ module Cardano.Ledger.SafeHash
     -- $AGG
     Safe (..),
     hashSafeList,
+
+    -- * Deprecated
+    HasAlgorithm,
   )
 where
 
@@ -93,6 +95,8 @@ deriving instance (Typeable index, CC.Crypto c) => ToCBOR (SafeHash c index)
 
 deriving instance (Typeable index, CC.Crypto c) => FromCBOR (SafeHash c index)
 
+{-# DEPRECATED HasAlgorithm "Use `Hash.HashAlgorithm (CC.HASH c)` instead" #-}
+
 type HasAlgorithm c = Hash.HashAlgorithm (CC.HASH c)
 
 -- | Extract the hash out of a 'SafeHash'
@@ -123,7 +127,12 @@ class SafeToHash t where
   -- | Extract the original bytes from 't'
   originalBytes :: t -> ByteString
 
-  makeHashWithExplicitProxys :: HasAlgorithm crypto => Proxy crypto -> Proxy index -> t -> SafeHash crypto indexl
+  makeHashWithExplicitProxys ::
+    Hash.HashAlgorithm (CC.HASH crypto) =>
+    Proxy crypto ->
+    Proxy index ->
+    t ->
+    SafeHash crypto indexl
 
   -- | Build a @(SafeHash crypto index)@ value given to proxies (determining @i@ and @crypto@), and the
   --   value to be hashed.
@@ -169,8 +178,10 @@ class SafeToHash x => HashAnnotated x index crypto | x -> index crypto where
   indexProxy :: x -> Proxy index
   indexProxy _ = Proxy @index
 
-  -- | Create a @('SafeHash' i crypto)@, given @(HasAlgorithm crypto)@ and  @(HashAnnotated x i crypto)@ instances.
-  hashAnnotated :: HasAlgorithm crypto => x -> SafeHash crypto index
+  -- | Create a @('SafeHash' i crypto)@,
+  -- given @(Hash.HashAlgorithm (CC.HASH crypto))@
+  -- and  @(HashAnnotated x i crypto)@ instances.
+  hashAnnotated :: Hash.HashAlgorithm (CC.HASH crypto) => x -> SafeHash crypto index
   hashAnnotated = makeHashWithExplicitProxys (Proxy @crypto) (Proxy @index)
 
 -- ========================================================================
@@ -179,7 +190,12 @@ class SafeToHash x => HashAnnotated x index crypto | x -> index crypto where
 --   @x@ determines the @index@ tag but not the @crypto@ tag of @x@
 class SafeToHash x => HashWithCrypto x index | x -> index where
   -- | Create a @('SafeHash' index crypto)@ value from @x@, the @proxy@ determines the crypto.
-  hashWithCrypto :: forall crypto. HasAlgorithm crypto => Proxy crypto -> x -> SafeHash crypto index
+  hashWithCrypto ::
+    forall crypto.
+    Hash.HashAlgorithm (CC.HASH crypto) =>
+    Proxy crypto ->
+    x ->
+    SafeHash crypto index
   hashWithCrypto proxy y = makeHashWithExplicitProxys proxy (Proxy @index) y
 
 -- ======================================================================
@@ -200,5 +216,5 @@ data Safe where
 instance SafeToHash Safe where
   originalBytes (Safe x) = originalBytes x
 
-hashSafeList :: HasAlgorithm c => Proxy c -> Proxy index -> [Safe] -> SafeHash c index
+hashSafeList :: Hash.HashAlgorithm (CC.HASH c) => Proxy c -> Proxy index -> [Safe] -> SafeHash c index
 hashSafeList pc pindex xs = makeHashWithExplicitProxys pc pindex (fold $ originalBytes <$> xs)
