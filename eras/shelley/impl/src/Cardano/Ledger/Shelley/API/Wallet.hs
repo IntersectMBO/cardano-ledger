@@ -32,6 +32,7 @@ module Cardano.Ledger.Shelley.API.Wallet
 
     -- * Transaction helpers
     CLI (..),
+    addKeyWitnesses,
     evaluateTransactionBalance,
     addShelleyKeyWitnesses,
     -- -- * Ada pots
@@ -104,7 +105,7 @@ import Cardano.Ledger.Shelley.PoolRank
 import Cardano.Ledger.Shelley.RewardProvenance (RewardProvenance)
 import Cardano.Ledger.Shelley.Rewards (StakeShare (..))
 import Cardano.Ledger.Shelley.Rules.NewEpoch (calculatePoolDistr)
-import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), ShelleyWitnesses, WitnessSetHKD (..))
+import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..), ShelleyEraTxBody, WitVKey (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), coinConsumed)
 import Cardano.Ledger.Slot (epochInfoSize)
@@ -470,8 +471,6 @@ class
   -- Used for the default implentation of 'evaluateTransactionBalance'.
   evaluateConsumed :: PParams era -> UTxO era -> TxBody era -> Value era
 
-  addKeyWitnesses :: Tx era -> Set (WitVKey 'Witness (EraCrypto era)) -> Tx era
-
   -- | Evaluate the fee for a given transaction.
   evaluateTransactionFee ::
     -- | The current protocol parameters.
@@ -506,6 +505,10 @@ class
   -- | Evaluate the minimum lovelace that a given transaction output must contain.
   evaluateMinLovelaceOutput :: PParams era -> TxOut era -> Coin
 
+addKeyWitnesses :: EraTx era => Tx era -> Set (WitVKey 'Witness (EraCrypto era)) -> Tx era
+addKeyWitnesses tx newWits = tx & witsTxL . addrWitsL %~ Set.union newWits
+
+
 -- | Evaluate the difference between the value currently being consumed by
 -- a transaction and the number of lovelace being produced.
 -- This value will be zero for a valid transaction.
@@ -534,20 +537,17 @@ evaluateTransactionBalance pp u isNewPool txb =
 --------------------------------------------------------------------------------
 
 addShelleyKeyWitnesses ::
-  (EraTx era, Witnesses era ~ ShelleyWitnesses era) =>
+  (EraTx era, Tx era ~ ShelleyTx era) =>
   ShelleyTx era ->
   Set (WitVKey 'Witness (EraCrypto era)) ->
   ShelleyTx era
-addShelleyKeyWitnesses (ShelleyTx b ws aux) newWits = ShelleyTx b ws' aux
-  where
-    ws' = ws {addrWits = Set.union newWits (addrWits ws)}
+addShelleyKeyWitnesses = addKeyWitnesses
+{-# DEPRECATED addShelleyKeyWitnesses "In favor of 'addKeyWitnesses'" #-}
 
 instance CC.Crypto c => CLI (ShelleyEra c) where
   evaluateMinFee = minfee
 
   evaluateConsumed = coinConsumed
-
-  addKeyWitnesses = addShelleyKeyWitnesses
 
   evaluateMinLovelaceOutput pp _out = _minUTxOValue pp
 

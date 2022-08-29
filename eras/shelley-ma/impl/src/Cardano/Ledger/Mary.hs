@@ -58,8 +58,6 @@ instance CC.Crypto c => CLI (MaryEra c) where
 
   evaluateConsumed = consumed
 
-  addKeyWitnesses = addShelleyKeyWitnesses
-
   evaluateMinLovelaceOutput pp (ShelleyTxOut _ v) = scaledMinDeposit v (_minUTxOValue pp)
 
 -- Self-Describing type synomyms
