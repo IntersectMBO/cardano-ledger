@@ -16,10 +16,16 @@ import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Data (AlonzoAuxiliaryData (..), Data (..))
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.PParams (AlonzoPParams, AlonzoPParamsHKD (..), extendPP, getLanguageView, retractPP)
+import Cardano.Ledger.Alonzo.PParams
+  ( AlonzoPParams,
+    AlonzoPParamsHKD (..),
+    extendPP,
+    getLanguageView,
+    retractPP,
+  )
 import Cardano.Ledger.Alonzo.PlutusScriptApi (scriptsNeededFromBody)
 import Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo (language)
-import Cardano.Ledger.Alonzo.Rules (utxoEntrySize, vKeyLocked)
+import Cardano.Ledger.Alonzo.Rules (vKeyLocked)
 import Cardano.Ledger.Alonzo.Scripts (isPlutusScript, pointWiseExUnits, txscriptfee)
 import Cardano.Ledger.Alonzo.Scripts as Alonzo
   ( AlonzoScript (..),
@@ -44,6 +50,7 @@ import Cardano.Ledger.Alonzo.TxBody
     AlonzoTxBody (..),
     AlonzoTxOut (..),
     inputs',
+    utxoEntrySize,
   )
 import Cardano.Ledger.Alonzo.TxWitness
   ( AlonzoEraWitnesses (..),

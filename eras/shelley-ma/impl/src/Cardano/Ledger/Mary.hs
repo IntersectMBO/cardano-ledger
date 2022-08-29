@@ -38,7 +38,7 @@ import Cardano.Ledger.Shelley.PParams (ShelleyPParamsUpdate)
 import qualified Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.ShelleyMA
 import Cardano.Ledger.ShelleyMA.AuxiliaryData (AuxiliaryData)
-import Cardano.Ledger.ShelleyMA.Rules.Utxo (consumed, scaledMinDeposit)
+import Cardano.Ledger.ShelleyMA.Rules.Utxo (consumed)
 import Cardano.Ledger.ShelleyMA.Rules.Utxow ()
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock)
 
@@ -57,8 +57,6 @@ instance CC.Crypto c => CLI (MaryEra c) where
   evaluateMinFee = minfee
 
   evaluateConsumed = consumed
-
-  evaluateMinLovelaceOutput pp (ShelleyTxOut _ v) = scaledMinDeposit v (_minUTxOValue pp)
 
 -- Self-Describing type synomyms
 

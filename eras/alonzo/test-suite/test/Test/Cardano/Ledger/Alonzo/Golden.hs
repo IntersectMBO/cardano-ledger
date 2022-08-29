@@ -23,10 +23,9 @@ import Cardano.Ledger.Alonzo.PParams
     emptyPParams,
     getLanguageView,
   )
-import Cardano.Ledger.Alonzo.Rules (utxoEntrySize)
 import Cardano.Ledger.Alonzo.Scripts (CostModel, CostModels (..), Prices (..), mkCostModel)
 import Cardano.Ledger.Alonzo.Tx (minfee)
-import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
+import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), utxoEntrySize)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), boundRational)
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..))

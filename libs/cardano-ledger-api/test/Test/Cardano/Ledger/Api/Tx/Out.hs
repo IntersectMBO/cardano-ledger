@@ -38,7 +38,7 @@ propSetBabbageMinTxOut ::
   Property
 propSetBabbageMinTxOut pp txOut =
   within 1000000 $ -- just in case if there is a problem with termination
-    let txOut' = sizedValue (setBabbageMinTxOut pp (mkSized txOut))
+    let txOut' = sizedValue (setMinCoinSizedTxOut pp (mkSized txOut))
         size = toInteger (BSL.length (serialize txOut'))
      in (txOut' ^. coinTxOutL)
           === Coin ((160 + size) * unCoin (getField @"_coinsPerUTxOByte" pp))

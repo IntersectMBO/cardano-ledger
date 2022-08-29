@@ -31,7 +31,7 @@ import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..))
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.Genesis (AlonzoGenesis, extendPPWithGenesis)
 import Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..))
-import Cardano.Ledger.Babbage.Rules (babbageMinUTxOValue)
+import Cardano.Ledger.Babbage.Rules ()
 import Cardano.Ledger.Babbage.Tx
   ( babbageInputDataHashes,
     babbageTxScripts,
@@ -50,7 +50,6 @@ import Cardano.Ledger.Babbage.TxInfo (babbageTxInfo)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys (DSignable, Hash)
-import Cardano.Ledger.Serialization (mkSized)
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.ShelleyMA.Rules (consumed)
@@ -76,8 +75,6 @@ instance CC.Crypto c => API.CLI (BabbageEra c) where
   evaluateMinFee = minfee
 
   evaluateConsumed = consumed
-
-  evaluateMinLovelaceOutput pp out = babbageMinUTxOValue pp (mkSized out)
 
 instance CC.Crypto c => ExtendedUTxO (BabbageEra c) where
   txInfo = babbageTxInfo

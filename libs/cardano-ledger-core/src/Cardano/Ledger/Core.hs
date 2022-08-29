@@ -88,7 +88,7 @@ import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
 import Cardano.Ledger.Keys.WitVKey (WitVKey)
 import Cardano.Ledger.Language (Language)
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash (..))
-import Cardano.Ledger.Serialization (ToCBORGroup (..))
+import Cardano.Ledger.Serialization (Sized (sizedValue), ToCBORGroup (..), mkSized)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (DecodeNonNegative, Val (..))
 import Control.DeepSeq (NFData)
@@ -209,6 +209,13 @@ class
   -- | The output of a UTxO for a particular era
   type TxOut era = (r :: Type) | r -> era
 
+  {-# MINIMAL
+    mkBasicTxOut,
+    valueEitherTxOutL,
+    addrEitherTxOutL,
+    (getMinCoinSizedTxOut | getMinCoinTxOut)
+    #-}
+
   mkBasicTxOut :: Addr (EraCrypto era) -> Value era -> TxOut era
 
   valueTxOutL :: Lens' (TxOut era) (Value era)
@@ -265,6 +272,19 @@ class
   -- the callsite which form of address we have readily available without any
   -- conversions (eg. searching millions of TxOuts for a particular address)
   addrEitherTxOutL :: Lens' (TxOut era) (Either (Addr (EraCrypto era)) (CompactAddr (EraCrypto era)))
+
+  -- | Produce the minimum lovelace that a given transaction output must
+  -- contain. Information about the size of the TxOut is required in some eras.
+  -- Use `getMinCoinTxOut` if you don't have the size readily available to you.
+  getMinCoinSizedTxOut :: PParams era -> Sized (TxOut era) -> Coin
+  getMinCoinSizedTxOut pp = getMinCoinTxOut pp . sizedValue
+
+  -- | Same as `getMinCoinSizedTxOut`, except information about the size of
+  -- TxOut will be computed by serializing the TxOut. If the size turns out to
+  -- be not needed, then serialization will have no overhead, since it is
+  -- computed lazily.
+  getMinCoinTxOut :: PParams era -> TxOut era -> Coin
+  getMinCoinTxOut pp txOut = getMinCoinSizedTxOut pp (mkSized txOut)
 
 bootAddrTxOutF :: EraTxOut era => SimpleGetter (TxOut era) (Maybe (BootstrapAddress (EraCrypto era)))
 bootAddrTxOutF = to $ \txOut ->

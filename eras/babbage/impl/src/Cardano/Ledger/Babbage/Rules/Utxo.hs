@@ -18,7 +18,6 @@ module Cardano.Ledger.Babbage.Rules.Utxo
     feesOK,
     validateTotalCollateral,
     validateCollateralEqBalance,
-    babbageMinUTxOValue,
     validateOutputTooSmallUTxO,
     validateOutputTooBigUTxO,
   )
@@ -280,36 +279,10 @@ validateCollateralEqBalance bal txcoll =
     SNothing -> pure ()
     SJust tc -> failureUnless (bal == tc) (IncorrectTotalCollateralField bal tc)
 
-babbageMinUTxOValue ::
-  HasField "_coinsPerUTxOByte" (PParams era) Coin =>
-  PParams era ->
-  Sized (TxOut era) ->
-  Coin
-babbageMinUTxOValue pp sizedOut =
-  Coin $
-    fromIntegral (constantOverhead + sizedSize sizedOut) * unCoin (getField @"_coinsPerUTxOByte" pp)
-  where
-    -- This constant is an approximation of the memory overhead that comes
-    -- from TxIn and an entry in the Map data structure:
-    --
-    -- 160 = 20 words * 8bytes
-    --
-    -- This means that if:
-    --
-    --  * 'coinsPerUTxOByte' = 4310
-    --  * A simple TxOut with staking and payment credentials with ADA only
-    --    amount of 978370 lovelace
-    --
-    -- we get the size of TxOut to be 67 bytes and the minimum value will come
-    -- out to be 978597 lovelace. Also the absolute minimum value will be
-    -- 857690, because TxOut without staking address can't be less than 39 bytes
-    constantOverhead = 160
-
 -- > getValue txout ≥ inject ( serSize txout ∗ coinsPerUTxOByte pp )
 validateOutputTooSmallUTxO ::
   ( EraTxOut era,
-    TxOut era ~ BabbageTxOut era,
-    HasField "_coinsPerUTxOByte" (PParams era) Coin
+    TxOut era ~ BabbageTxOut era
   ) =>
   PParams era ->
   [Sized (TxOut era)] ->
@@ -317,7 +290,7 @@ validateOutputTooSmallUTxO ::
 validateOutputTooSmallUTxO pp outs =
   failureUnless (null outputsTooSmall) $ BabbageOutputTooSmallUTxO outputsTooSmall
   where
-    outs' = map (\out -> (sizedValue out, babbageMinUTxOValue pp out)) outs
+    outs' = map (\out -> (sizedValue out, getMinCoinSizedTxOut pp out)) outs
     outputsTooSmall =
       filter
         ( \(out, minSize) ->
@@ -368,7 +341,6 @@ utxoTransition ::
     HasField "_protocolVersion" (PParams era) ProtVer,
     HasField "_collateralPercentage" (PParams era) Natural,
     HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_coinsPerUTxOByte" (PParams era) Coin,
     HasField "_minfeeA" (PParams era) Natural,
     HasField "_minfeeB" (PParams era) Natural,
     HasField "_poolDeposit" (PParams era) Coin,

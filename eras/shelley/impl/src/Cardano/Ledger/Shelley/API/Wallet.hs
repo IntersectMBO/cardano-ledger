@@ -35,6 +35,7 @@ module Cardano.Ledger.Shelley.API.Wallet
     addKeyWitnesses,
     evaluateTransactionFee,
     evaluateTransactionBalance,
+    evaluateMinLovelaceOutput,
     addShelleyKeyWitnesses,
     -- -- * Ada pots
     AdaPots (..),
@@ -472,8 +473,10 @@ class
   -- Used for the default implentation of 'evaluateTransactionBalance'.
   evaluateConsumed :: PParams era -> UTxO era -> TxBody era -> Value era
 
-  -- | Evaluate the minimum lovelace that a given transaction output must contain.
-  evaluateMinLovelaceOutput :: PParams era -> TxOut era -> Coin
+-- | Evaluate the minimum lovelace that a given transaction output must contain.
+evaluateMinLovelaceOutput :: EraTxOut era => PParams era -> TxOut era -> Coin
+evaluateMinLovelaceOutput = getMinCoinTxOut
+{-# DEPRECATED evaluateMinLovelaceOutput "In favor of `getMinCoinTxOut`" #-}
 
 addKeyWitnesses :: EraTx era => Tx era -> Set (WitVKey 'Witness (EraCrypto era)) -> Tx era
 addKeyWitnesses tx newWits = tx & witsTxL . addrWitsL %~ Set.union newWits
@@ -546,8 +549,6 @@ instance CC.Crypto c => CLI (ShelleyEra c) where
   evaluateMinFee = minfee
 
   evaluateConsumed = coinConsumed
-
-  evaluateMinLovelaceOutput pp _out = _minUTxOValue pp
 
 --------------------------------------------------------------------------------
 -- CBOR instances

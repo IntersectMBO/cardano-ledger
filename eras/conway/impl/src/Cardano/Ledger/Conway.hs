@@ -13,7 +13,7 @@ module Cardano.Ledger.Conway (ConwayEra) where
 import Cardano.Ledger.Alonzo (reapplyAlonzoTx)
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..))
-import Cardano.Ledger.Babbage.Rules (babbageMinUTxOValue)
+import Cardano.Ledger.Babbage.Rules ()
 import Cardano.Ledger.Babbage.Tx
   ( babbageInputDataHashes,
     babbageTxScripts,
@@ -30,7 +30,6 @@ import Cardano.Ledger.Conway.TxOut (AlonzoEraTxOut (..), BabbageTxOut (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys (DSignable, Hash)
-import Cardano.Ledger.Serialization (mkSized)
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.ShelleyMA.Rules (consumed)
@@ -56,8 +55,6 @@ instance CC.Crypto c => API.CLI (ConwayEra c) where
   evaluateMinFee = minfee
 
   evaluateConsumed = consumed
-
-  evaluateMinLovelaceOutput pp out = babbageMinUTxOValue pp (mkSized out)
 
 instance CC.Crypto c => ExtendedUTxO (ConwayEra c) where
   txInfo = babbageTxInfo

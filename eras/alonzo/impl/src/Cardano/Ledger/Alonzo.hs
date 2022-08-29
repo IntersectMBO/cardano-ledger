@@ -43,7 +43,7 @@ import Cardano.Ledger.Alonzo.PParams
   )
 import qualified Cardano.Ledger.Alonzo.PParams (PParams)
 import Cardano.Ledger.Alonzo.PlutusScriptApi (getDatumAlonzo)
-import Cardano.Ledger.Alonzo.Rules (utxoEntrySize)
+import Cardano.Ledger.Alonzo.Rules ()
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), Script)
 import Cardano.Ledger.Alonzo.Tx (alonzoInputHashes, minfee)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..), AlonzoTxBody, AlonzoTxOut)
@@ -51,7 +51,6 @@ import qualified Cardano.Ledger.Alonzo.TxBody (TxBody, TxOut)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), alonzoTxInfo)
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (..))
 import Cardano.Ledger.BaseTypes (Globals)
-import Cardano.Ledger.Coin
 import Cardano.Ledger.Core hiding (PParamsDelta, Value)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (DSignable, Hash)
@@ -107,9 +106,6 @@ instance CC.Crypto c => API.CLI (AlonzoEra c) where
   evaluateMinFee = minfee
 
   evaluateConsumed = consumed
-
-  evaluateMinLovelaceOutput pp out =
-    Coin $ utxoEntrySize out * unCoin (_coinsPerUTxOWord pp)
 
 instance CC.Crypto c => ExtendedUTxO (AlonzoEra c) where
   txInfo = alonzoTxInfo
