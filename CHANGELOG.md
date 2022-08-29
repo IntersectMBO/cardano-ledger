@@ -18,6 +18,10 @@ in the naming of release branches.
   #2954
 - All Shelley rules are now available through `Cadano.Ledger.Shelley.Rules` module: #2996
 
+### Removed
+
+- Deprecated the HasAlgorithm type alias: #3007
+
 ## Release branch 1.1.x
 
 ### Added
