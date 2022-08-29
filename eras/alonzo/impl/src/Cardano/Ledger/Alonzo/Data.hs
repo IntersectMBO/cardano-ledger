@@ -36,6 +36,7 @@ module Cardano.Ledger.Alonzo.Data
     AuxiliaryDataHash (..),
     hashAlonzoAuxiliaryData,
     validateAlonzoAuxiliaryData,
+    contentsEq,
 
     -- * Deprecated
     AuxiliaryData,
@@ -64,6 +65,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (HASH)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.MemoBytes (Mem, MemoBytes (..), MemoHashIndex, memoBytes, mkMemoBytes, shortToLazy)
+import qualified Cardano.Ledger.MemoBytes as Memo
 import Cardano.Ledger.SafeHash
   ( HashAnnotated,
     SafeToHash (..),
@@ -429,3 +431,6 @@ pattern AlonzoAuxiliaryData' txMD_ scripts_ <-
   AuxiliaryDataConstr (Memo (AuxiliaryDataRaw txMD_ scripts_) _)
 
 {-# COMPLETE AlonzoAuxiliaryData' #-}
+
+contentsEq :: Data era -> Data era -> Bool
+contentsEq (DataConstr x) (DataConstr y) = Memo.contentsEq x y

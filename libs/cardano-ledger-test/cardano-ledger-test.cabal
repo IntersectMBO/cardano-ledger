@@ -106,7 +106,6 @@ library
     Test.Cardano.Ledger.Generic.GenState.Types
     Test.Cardano.Ledger.Generic.GenState.Generators
     Test.Cardano.Ledger.Generic.GenState.GenScript
-    Test.Cardano.Ledger.Twiddle
   build-depends:
     aeson >= 2,
     array,

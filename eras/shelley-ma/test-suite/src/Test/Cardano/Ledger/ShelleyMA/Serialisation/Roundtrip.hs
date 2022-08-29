@@ -47,9 +47,9 @@ handleResult ::
 handleResult x (Right (remaining, y))
   | BSL.null remaining = x === y
   | otherwise =
-    counterexample
-      ("Unconsumed trailing bytes:\n" <> BSL.unpack remaining)
-      False
+      counterexample
+        ("Unconsumed trailing bytes:\n" <> BSL.unpack remaining)
+        False
 handleResult _ (Left stuff) =
   counterexample
     ("Failed to decode: " <> show stuff)

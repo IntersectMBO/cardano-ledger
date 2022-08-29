@@ -19,7 +19,7 @@ in the naming of release branches.
 - Added `allInputsTxBodyF`
 - Added `EraUTxO` class with `getConsumedValue`
 - Added type synonyms for eras: `Shelley`, `Allegra`, `Mary`, `Alonzo`, `Babbage` and `Conway`.
-
+- Added `Twiddle` class to test alternative serializations: #2994
 
 ### Changed
 

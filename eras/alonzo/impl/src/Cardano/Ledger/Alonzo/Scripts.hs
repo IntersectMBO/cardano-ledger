@@ -42,6 +42,7 @@ module Cardano.Ledger.Alonzo.Scripts
     decodeCostModel,
     CostModels (..),
     CostModelApplyError (..),
+    contentsEq,
   )
 where
 
@@ -61,6 +62,7 @@ import Cardano.Ledger.SafeHash
 import Cardano.Ledger.Serialization (mapToCBOR)
 import Cardano.Ledger.Shelley (nativeMultiSigTag)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock)
+import qualified Cardano.Ledger.ShelleyMA.Timelocks as Timelocks
 import Control.DeepSeq (NFData (..), deepseq, rwhnf)
 import Control.Monad (when)
 import Data.ByteString.Short (ShortByteString, fromShort)
@@ -432,3 +434,7 @@ validScript pv scrip = case scrip of
 transProtocolVersion :: ProtVer -> PV1.ProtocolVersion
 transProtocolVersion (ProtVer major minor) =
   PV1.ProtocolVersion (fromIntegral major) (fromIntegral minor)
+
+contentsEq :: Script era -> Script era -> Bool
+contentsEq (TimelockScript x) (TimelockScript y) = Timelocks.contentsEq x y
+contentsEq x y = x == y

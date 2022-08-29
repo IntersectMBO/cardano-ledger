@@ -34,6 +34,7 @@ module Cardano.Ledger.ShelleyMA.Timelocks
     decodeVI,
     translate,
     translateTimelock,
+    contentsEq,
   )
 where
 
@@ -54,6 +55,7 @@ import Cardano.Ledger.MemoBytes
     memoBytes,
     mkMemoBytes,
   )
+import qualified Cardano.Ledger.MemoBytes as Memo
 import Cardano.Ledger.SafeHash (SafeToHash)
 import Cardano.Ledger.Serialization (decodeStrictSeq, encodeFoldable)
 import Cardano.Ledger.Shelley.Scripts (MultiSig, getMultiSigBytes, nativeMultiSigTag)
@@ -307,6 +309,9 @@ showTimelock (RequireMOf m xs) = "(MOf " ++ show m ++ " " ++ foldl accum ")" xs
   where
     accum ans x = showTimelock x ++ " " ++ ans
 showTimelock (RequireSignature hash) = "(Signature " ++ show hash ++ ")"
+
+contentsEq :: Timelock era -> Timelock era -> Bool
+contentsEq (TimelockConstr x) (TimelockConstr y) = Memo.contentsEq x y
 
 -- ===============================================================
 -- Pretty Printer

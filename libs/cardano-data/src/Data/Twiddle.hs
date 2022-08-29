@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstrainedClassMethods #-}
 {-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
@@ -8,7 +9,6 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE EmptyCase #-}
 
 module Data.Twiddle
   ( Twiddler (unTwiddler),
@@ -19,7 +19,7 @@ module Data.Twiddle
   )
 where
 
-import Cardano.Binary (ToCBOR (..), FromCBOR (..), Encoding)
+import Cardano.Binary (Encoding, FromCBOR (..), ToCBOR (..))
 import Codec.CBOR.Read (deserialiseFromBytes)
 import Codec.CBOR.Term (Term (..), decodeTerm, encodeTerm)
 import Codec.CBOR.Write (toLazyByteString)
@@ -35,21 +35,21 @@ import Data.Set (Set)
 import Data.Text (Text)
 import qualified Data.Text.Lazy as T
 import Data.Typeable (Typeable)
+import Data.Void (Void, absurd)
 import GHC.Generics
 import Test.QuickCheck (Arbitrary (..), Gen, elements, shuffle)
-import Data.Void (Void, absurd)
 
 data Twiddler a = Twiddler
   { unTwiddler :: !a,
     _unEnc :: Term
   }
 
-gTwiddleTList :: forall a p. (Generic a, TwiddleL' (Rep a p)) => a -> Gen Term
-gTwiddleTList a = TList <$> twiddleL' (from @a @p a)
+gTwiddleTList :: forall a p. (Generic a, TwiddleL (Rep a p)) => a -> Gen Term
+gTwiddleTList a = TList <$> twiddleL (from @a @p a)
 
 class Twiddle a where
   twiddle :: a -> Gen Term
-  default twiddle :: forall p. (Generic a, TwiddleL' (Rep a p)) => a -> Gen Term
+  default twiddle :: forall p. (Generic a, TwiddleL (Rep a p)) => a -> Gen Term
   twiddle = gTwiddleTList @a @p
 
 instance Twiddle a => Twiddle [a] where
@@ -111,30 +111,30 @@ instance Show a => Show (Twiddler a) where
 instance Eq a => Eq (Twiddler a) where
   (Twiddler x _) == (Twiddler y _) = x == y
 
-class TwiddleL' a where
-  twiddleL' :: a -> Gen [Term]
+class TwiddleL a where
+  twiddleL :: a -> Gen [Term]
 
-instance TwiddleL' (V1 p) where
-  twiddleL' v1 = case v1 of
+instance TwiddleL (V1 p) where
+  twiddleL v1 = case v1 of {}
 
-instance TwiddleL' (U1 p) where
-  twiddleL' U1 = pure []
+instance TwiddleL (U1 p) where
+  twiddleL U1 = pure []
 
-instance (TwiddleL' (l x), TwiddleL' (r x)) => TwiddleL' ((l :*: r) x) where
-  twiddleL' (lx :*: rx) = do
-    lx' <- twiddleL' lx
-    rx' <- twiddleL' rx
+instance (TwiddleL (l x), TwiddleL (r x)) => TwiddleL ((l :*: r) x) where
+  twiddleL (lx :*: rx) = do
+    lx' <- twiddleL lx
+    rx' <- twiddleL rx
     pure $ lx' <> rx'
 
-instance (TwiddleL' (l x), TwiddleL' (r x)) => TwiddleL' ((l :+: r) x) where
-  twiddleL' (L1 lx) = twiddleL' lx
-  twiddleL' (R1 rx) = twiddleL' rx
+instance (TwiddleL (l x), TwiddleL (r x)) => TwiddleL ((l :+: r) x) where
+  twiddleL (L1 lx) = twiddleL lx
+  twiddleL (R1 rx) = twiddleL rx
 
-instance Twiddle c => TwiddleL' (K1 i c p) where
-  twiddleL' (K1 c) = pure <$> twiddle c
+instance Twiddle c => TwiddleL (K1 i c p) where
+  twiddleL (K1 c) = pure <$> twiddle c
 
-instance (TwiddleL' (f p)) => TwiddleL' (M1 i c f p) where
-  twiddleL' (M1 fp) = twiddleL' fp
+instance (TwiddleL (f p)) => TwiddleL (M1 i c f p) where
+  twiddleL (M1 fp) = twiddleL fp
 
 instance Twiddle Integer where
   twiddle = pure . TInteger

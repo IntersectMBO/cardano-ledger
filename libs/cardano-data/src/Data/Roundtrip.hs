@@ -29,12 +29,12 @@ import Codec.CBOR.Read
   ( DeserialiseFailure,
     deserialiseFromBytes,
   )
+import Codec.CBOR.Term (encodeTerm)
 import Codec.CBOR.Write (toLazyByteString)
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Lazy as Lazy
 import Data.Twiddle (Twiddle (..))
 import Test.QuickCheck (Gen)
-import Codec.CBOR.Term (encodeTerm)
-import qualified Data.ByteString.Lazy as LBS
 
 -- =====================================================================
 
@@ -47,7 +47,7 @@ roundTrip' :: (t -> Encoding) -> (forall s. Decoder s t) -> t -> RoundTripResult
 roundTrip' enc dec t = deserialiseFromBytes dec (toLazyByteString (enc t))
 
 roundTripAnn :: (ToCBOR t, FromCBOR (Annotator t)) => t -> RoundTripResult t
-roundTripAnn s = roundTripAnn' $ toLazyByteString (toCBOR s)
+roundTripAnn s = roundTripAnnBytes $ toLazyByteString (toCBOR s)
 
 roundTripAnnWithTwiddling ::
   forall t.
@@ -57,14 +57,16 @@ roundTripAnnWithTwiddling ::
 roundTripAnnWithTwiddling x = do
   tw <- encodeTerm <$> twiddle x
   let bs = toLazyByteString tw
-  pure (roundTripAnn' bs, bs)
+  pure (roundTripAnnBytes bs, bs)
 
-roundTripWithTwiddling :: t -> Gen (RoundTripResult t, LBS.ByteString)
-roundTripWithTwiddling = do
-  undefined
+roundTripWithTwiddling :: (Twiddle t, FromCBOR t) => t -> Gen (RoundTripResult t, LBS.ByteString)
+roundTripWithTwiddling x = do
+  tw <- encodeTerm <$> twiddle x
+  let bs = toLazyByteString tw
+  pure (roundTrip' (const tw) fromCBOR x, bs)
 
-roundTripAnn' :: FromCBOR (Annotator t) => Lazy.ByteString -> RoundTripResult t
-roundTripAnn' bytes = case deserialiseFromBytes fromCBOR bytes of
+roundTripAnnBytes :: FromCBOR (Annotator t) => Lazy.ByteString -> RoundTripResult t
+roundTripAnnBytes bytes = case deserialiseFromBytes fromCBOR bytes of
   Left err -> Left err
   Right (leftover, Annotator f) -> Right (leftover, f (Full bytes))
 
