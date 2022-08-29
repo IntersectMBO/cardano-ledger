@@ -33,6 +33,7 @@ module Cardano.Ledger.Shelley.API.Wallet
     -- * Transaction helpers
     CLI (..),
     addKeyWitnesses,
+    evaluateTransactionFee,
     evaluateTransactionBalance,
     addShelleyKeyWitnesses,
     -- -- * Ada pots
@@ -471,43 +472,40 @@ class
   -- Used for the default implentation of 'evaluateTransactionBalance'.
   evaluateConsumed :: PParams era -> UTxO era -> TxBody era -> Value era
 
-  -- | Evaluate the fee for a given transaction.
-  evaluateTransactionFee ::
-    -- | The current protocol parameters.
-    PParams era ->
-    -- | The transaction.
-    Tx era ->
-    -- | The number of key witnesses still to be added to the transaction.
-    Word ->
-    -- | The required fee.
-    Coin
-  evaluateTransactionFee pp tx numKeyWits =
-    evaluateMinFee @era pp tx'
-    where
-      sigSize = fromIntegral $ sizeSigDSIGN (Proxy @(DSIGN (EraCrypto era)))
-      dummySig =
-        fromRight
-          (error "corrupt dummy signature")
-          (decodeFullDecoder "dummy signature" decodeSignedDSIGN (serialize $ LBS.replicate sigSize 0))
-      vkeySize = fromIntegral $ sizeVerKeyDSIGN (Proxy @(DSIGN (EraCrypto era)))
-      dummyVKey w =
-        let padding = LBS.replicate paddingSize 0
-            paddingSize = vkeySize - LBS.length sw
-            sw = serialize w
-            keyBytes = serialize $ padding <> sw
-         in fromRight (error "corrupt dummy vkey") (decodeFull keyBytes)
-      dummyKeyWits = Set.fromList $
-        flip map [1 .. numKeyWits] $
-          \x -> WitVKey (dummyVKey x) dummySig
-
-      tx' = addKeyWitnesses @era tx dummyKeyWits
-
   -- | Evaluate the minimum lovelace that a given transaction output must contain.
   evaluateMinLovelaceOutput :: PParams era -> TxOut era -> Coin
 
 addKeyWitnesses :: EraTx era => Tx era -> Set (WitVKey 'Witness (EraCrypto era)) -> Tx era
 addKeyWitnesses tx newWits = tx & witsTxL . addrWitsL %~ Set.union newWits
 
+-- | Evaluate the fee for a given transaction.
+evaluateTransactionFee ::
+  forall era.
+  CLI era =>
+  -- | The current protocol parameters.
+  PParams era ->
+  -- | The transaction.
+  Tx era ->
+  -- | The number of key witnesses still to be added to the transaction.
+  Word ->
+  -- | The required fee.
+  Coin
+evaluateTransactionFee pp tx numKeyWits = evaluateMinFee pp tx'
+  where
+    sigSize = fromIntegral $ sizeSigDSIGN (Proxy @(DSIGN (EraCrypto era)))
+    dummySig =
+      fromRight
+        (error "corrupt dummy signature")
+        (decodeFullDecoder "dummy signature" decodeSignedDSIGN (serialize $ LBS.replicate sigSize 0))
+    vkeySize = fromIntegral $ sizeVerKeyDSIGN (Proxy @(DSIGN (EraCrypto era)))
+    dummyVKey w =
+      let padding = LBS.replicate paddingSize 0
+          paddingSize = vkeySize - LBS.length sw
+          sw = serialize w
+          keyBytes = serialize $ padding <> sw
+       in fromRight (error "corrupt dummy vkey") (decodeFull keyBytes)
+    dummyKeyWits = Set.fromList [WitVKey (dummyVKey x) dummySig | x <- [1 .. numKeyWits]]
+    tx' = addKeyWitnesses tx dummyKeyWits
 
 -- | Evaluate the difference between the value currently being consumed by
 -- a transaction and the number of lovelace being produced.
