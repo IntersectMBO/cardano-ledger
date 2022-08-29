@@ -252,14 +252,6 @@ Plutus script.
 
 \begin{figure*}[htb]
   \begin{align*}
-    & \fun{validPlutusdata} \in \type{P.Data} \to \Bool \\
-    & \fun{validPlutusdata}~ (\type{P.Constr} ~\wcard ~ds) = \bigwedge_{d\in ds} \type{validPlutusdata}~d \\
-    & \fun{validPlutusdata}~ (\type{P.Map}~ ds) = \bigwedge_{(x,y)\in ds} \type{validPlutusdata}~x \wedge \type{validPlutusdata}~y \\
-    & \fun{validPlutusdata} ~(\type{P.List}~ ds) =  \bigwedge_{d\in ds} \type{validPlutusdata}~d \\
-    & \fun{validPlutusdata}~ (\type{P.I}~ \wcard) = \True \\
-    & \fun{validPlutusdata}~ (\type{P.B}~ bs) = \fun{length} ~bs \leq 64 \\
-    & \text{Checks if a Data element is constructed correctly}
-    \nextdef
     & \fun{validScript} \in \Script \to \Bool \\
     & \fun{validScript} ~sc = \begin{cases}
       \True & \text{if $sc \in \ScriptPhOne$} \\

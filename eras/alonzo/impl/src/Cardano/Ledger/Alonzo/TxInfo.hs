@@ -56,8 +56,9 @@ module Cardano.Ledger.Alonzo.TxInfo
     debugPlutus,
     runPLCScript,
     explainPlutusFailure,
-    validPlutusdata,
     languages,
+    -- DEPRECATED
+    validPlutusdata,
   )
 where
 
@@ -783,6 +784,7 @@ explainPlutusFailure _proxy pv lang scriptbytestring e ds cm eu =
         PlutusV2 -> PlutusDebugV2 cm eu scriptbytestring ds pv
    in scriptFail $ PlutusSF line db
 
+{-# DEPRECATED validPlutusdata "Plutus data bytestrings are not restricted to sixty-four bytes." #-}
 validPlutusdata :: PV1.Data -> Bool
 validPlutusdata (PV1.Constr _n ds) = all validPlutusdata ds
 validPlutusdata (PV1.Map ds) =
