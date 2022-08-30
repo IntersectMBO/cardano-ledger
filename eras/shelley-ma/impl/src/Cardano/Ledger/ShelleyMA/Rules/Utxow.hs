@@ -20,7 +20,7 @@ import Cardano.Ledger.Shelley.Rules
     transitionRulesUTXOW,
   )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.Shelley.Tx (ShelleyWitnesses)
+import Cardano.Ledger.Shelley.Tx (ShelleyTxWits)
 import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody)
 import Cardano.Ledger.ShelleyMA.Era (ShelleyMAUTXOW)
 import Cardano.Ledger.ShelleyMA.Rules.Utxo (ShelleyMAUTXO, ShelleyMAUtxoPredFailure)
@@ -43,7 +43,7 @@ instance
   forall era.
   ( EraTx era,
     ShelleyEraTxBody era,
-    TxWits era ~ ShelleyWitnesses era,
+    TxWits era ~ ShelleyTxWits era,
     -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (ShelleyMAUTXOW era),
     Environment (EraRule "UTXO" era) ~ UtxoEnv era,

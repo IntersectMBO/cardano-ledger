@@ -19,7 +19,7 @@ import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Tx
   ( ShelleyTx,
-    ShelleyWitnesses,
+    ShelleyTxWits,
     addrShelleyWitsL,
     auxDataShelleyTxL,
     bodyShelleyTxL,
@@ -80,7 +80,7 @@ instance MAClass ma crypto => EraTxWits (ShelleyMAEra ma crypto) where
   {-# SPECIALIZE instance EraTxWits (ShelleyMAEra 'Mary StandardCrypto) #-}
   {-# SPECIALIZE instance EraTxWits (ShelleyMAEra 'Allegra StandardCrypto) #-}
 
-  type TxWits (ShelleyMAEra ma crypto) = ShelleyWitnesses (ShelleyMAEra ma crypto)
+  type TxWits (ShelleyMAEra ma crypto) = ShelleyTxWits (ShelleyMAEra ma crypto)
 
   mkBasicTxWits = mempty
 

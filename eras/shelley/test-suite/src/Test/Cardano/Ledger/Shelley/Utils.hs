@@ -100,7 +100,7 @@ import Cardano.Ledger.Keys
 import Cardano.Ledger.Shelley.API (ApplyBlock)
 import Cardano.Ledger.Shelley.BlockChain (ShelleyTxSeq)
 import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses)
-import Cardano.Ledger.Shelley.Tx (ShelleyTx, ShelleyTxOut, ShelleyWitnesses)
+import Cardano.Ledger.Shelley.Tx (ShelleyTx, ShelleyTxOut, ShelleyTxWits)
 import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody)
 import Cardano.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
 import Cardano.Protocol.TPraos.API (GetLedgerView)
@@ -152,7 +152,7 @@ type ShelleyTest era =
     Tx era ~ ShelleyTx era,
     TxSeq era ~ ShelleyTxSeq era,
     ShelleyTxOut era ~ TxOut era,
-    TxWits era ~ ShelleyWitnesses era,
+    TxWits era ~ ShelleyTxWits era,
     Split (Value era),
     Default (State (EraRule "PPUP" era)),
     Default (StashedAVVMAddresses era)

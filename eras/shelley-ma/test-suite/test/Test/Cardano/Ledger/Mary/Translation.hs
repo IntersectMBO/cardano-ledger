@@ -59,7 +59,7 @@ maryTranslationTests =
       testProperty "UTxOState compatibility" (test @S.UTxOState),
       testProperty "LedgerState compatibility" (test @S.LedgerState),
       testProperty "EpochState compatibility" (test @S.EpochState),
-      testProperty "WitnessSet compatibility" (test @S.ShelleyWitnesses),
+      testProperty "WitnessSet compatibility" (test @S.ShelleyTxWits),
       testProperty "Update compatibility" (test @S.Update)
     ]
 

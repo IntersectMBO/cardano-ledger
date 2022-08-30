@@ -139,7 +139,7 @@ import Cardano.Ledger.Shelley.Tx as X
   ( ShelleyTx (..),
     ShelleyTxBody (..),
     ShelleyTxOut (..),
-    ShelleyWitnesses,
+    ShelleyTxWits,
     Tx,
     TxBody,
     TxOut,

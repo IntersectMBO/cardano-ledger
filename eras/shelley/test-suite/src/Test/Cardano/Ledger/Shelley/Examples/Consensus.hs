@@ -414,7 +414,7 @@ mkWitnessesPreAlonzo ::
   Proxy era ->
   Core.TxBody era ->
   KeyPairWits era ->
-  ShelleyWitnesses era
+  ShelleyTxWits era
 mkWitnessesPreAlonzo _ txBody keyPairWits =
   mempty
     { addrWits =
