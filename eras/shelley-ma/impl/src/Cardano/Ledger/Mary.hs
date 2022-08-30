@@ -60,7 +60,7 @@ instance CC.Crypto c => CLI (MaryEra c) where
 
 -- Self-Describing type synomyms
 
-type MaryEra c = ShelleyMAEra 'Mary c
+type MaryEra = ShelleyMAEra 'Mary
 
 type Self c = ShelleyMAEra 'Mary c
 

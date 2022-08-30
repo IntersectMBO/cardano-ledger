@@ -49,13 +49,14 @@ module Cardano.Ledger.Core
     EraSegWits (..),
 
     -- * Protocol version constraints
-    ProtVerNoMore,
-    ProtVerNoLess,
     ProtVerAtLeast,
+    ProtVerAtMost,
     ProtVerInBounds,
     ExactEra,
     AtLeastEra,
     atLeastEra,
+    AtMostEra,
+    atMostEra,
     notSupportedInThisEra,
     notSupportedInThisEraL,
 
@@ -615,24 +616,26 @@ type family ProtVerIsInBounds (check :: Symbol) era (v :: Nat) (b :: Bool) :: Co
 type family ProtVerAtLeast era (l :: Nat) :: Constraint where
   ProtVerAtLeast era l = ProtVerIsInBounds "at least" era l (l <=? ProtVerHigh era)
 
-type family ProtVerNoLess era (l :: Nat) :: Constraint where
-  ProtVerNoLess era l = ProtVerIsInBounds "no less than" era l (ProtVerLow era <=? l)
-
--- | Requirement for the era's highest protocol version to be less or equal to
+-- | Requirement for the era's lowest protocol version to be lower or equal to
 -- the supplied value
-type family ProtVerNoMore era (h :: Nat) :: Constraint where
-  ProtVerNoMore era h = ProtVerIsInBounds "no more than" era h (h <=? ProtVerHigh era)
+type family ProtVerAtMost era (h :: Nat) :: Constraint where
+  ProtVerAtMost era h = ProtVerIsInBounds "at most" era h (ProtVerLow era <=? h)
 
 -- | Restrict a lower and upper bounds of the protocol version for the particular era
-type ProtVerInBounds era l h = (ProtVerNoLess era l, ProtVerNoMore era h)
+type ProtVerInBounds era l h = (ProtVerAtLeast era l, ProtVerAtMost era h)
 
 -- | Restrict an era to the specific era through the protocol version. This is
 -- equivalent to @(inEra (Crypto era) ~ era)@
 type ExactEra (inEra :: Type -> Type) era =
   ProtVerInBounds era (ProtVerLow (inEra (EraCrypto era))) (ProtVerHigh (inEra (EraCrypto era)))
 
+-- | Restrict the @era@ to equal to @eraName@ or come after it
 type AtLeastEra (eraName :: Type -> Type) era =
   ProtVerAtLeast era (ProtVerLow (eraName (EraCrypto era)))
+
+-- | Restrict the @era@ to equal to @eraName@ or come before it.
+type AtMostEra (eraName :: Type -> Type) era =
+  ProtVerAtMost era (ProtVerHigh (eraName (EraCrypto era)))
 
 -- | Enforce era to be at least the specified era at the type level. In other words
 -- compiler will produce type error when applied to eras prior to the specified era.
@@ -648,6 +651,21 @@ type AtLeastEra (eraName :: Type -> Type) era =
 -- >>> atLeastEra @BabbageEra @(AlonzoEra StandardCrypto)
 atLeastEra :: AtLeastEra eraName era => ()
 atLeastEra = ()
+
+-- | Enforce era to be at most the specified era at the type level. In other words
+-- compiler will produce type error when applied to eras prior to the specified era.
+-- This function should be used in order to avoid redundant constraints warning.
+--
+-- For example these will type check
+--
+-- >>> atMostEra @BabbageEra @(ShelleyEra StandardCrypto)
+-- >>> atMostEra @AlonzoEra @(MaryEra StandardCrypto)
+--
+-- However this will result in a type error
+--
+-- >>> atMostEra @BabbageEra @(ConwayEra StandardCrypto)
+atMostEra :: AtMostEra eraName era => ()
+atMostEra = ()
 
 notSupportedInThisEra :: HasCallStack => a
 notSupportedInThisEra = error "Impossible: Function is not supported in this era"

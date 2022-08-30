@@ -41,14 +41,17 @@ library
   hs-source-dirs: src
 
   exposed-modules:
+    Cardano.Ledger.Api.Era
     Cardano.Ledger.Api.Tx
     Cardano.Ledger.Api.Tx.Out
 
   build-depends:
-    cardano-ledger-core,
     cardano-ledger-alonzo,
     cardano-ledger-babbage,
+    cardano-ledger-conway,
+    cardano-ledger-core,
     cardano-ledger-shelley,
+    cardano-ledger-shelley-ma,
     microlens,
 
 test-suite cardano-ledger-api-test
@@ -66,9 +69,11 @@ test-suite cardano-ledger-api-test
     cardano-binary,
     cardano-ledger-api,
     cardano-ledger-core,
+    cardano-ledger-alonzo,
     cardano-ledger-babbage,
     cardano-ledger-babbage-test,
     cardano-ledger-conway,
+    cardano-ledger-shelley,
     microlens,
     tasty,
     tasty-quickcheck,
