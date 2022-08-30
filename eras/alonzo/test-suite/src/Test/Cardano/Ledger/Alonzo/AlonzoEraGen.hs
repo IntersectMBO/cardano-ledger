@@ -41,7 +41,6 @@ import Cardano.Ledger.Alonzo.Tx
     IsValid (..),
     ScriptPurpose (..),
     hashScriptIntegrity,
-    minfee,
     rdptr,
     totExUnits,
   )
@@ -436,7 +435,7 @@ instance Mock c => EraGen (AlonzoEra c) where
 
   genEraDone pp tx =
     let theFee = tx ^. bodyTxL . feeTxBodyL -- Coin supplied to pay fees
-        minimumFee = minfee @(AlonzoEra c) pp tx
+        minimumFee = getMinFeeTx @(AlonzoEra c) pp tx
      in if minimumFee <= theFee
           then pure tx
           else myDiscard "MinFeee violation: genEraDne: AlonzoEraGen.hs"

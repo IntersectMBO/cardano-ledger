@@ -16,7 +16,7 @@ import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParams, AlonzoPParamsHKD (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (scriptsNeededFromBody)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
-import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..), minfee)
+import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), collateral')
 import Cardano.Ledger.Alonzo.TxInfo (languages)
 import Cardano.Ledger.Babbage.PParams (BabbagePParams)
@@ -46,7 +46,6 @@ import Cardano.Ledger.Shelley.LedgerState
     NewEpochState (..),
     UTxOState (..),
   )
-import qualified Cardano.Ledger.Shelley.LedgerState as Shelley (minfee)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Rewards (Reward, aggregateRewards)
 import Cardano.Ledger.Shelley.TxBody
@@ -221,14 +220,6 @@ scriptsNeeded' (Alonzo _) utxo txbody = Set.fromList (map snd (scriptsNeededFrom
 scriptsNeeded' p@(Mary _) utxo txbody = scriptsNeeded (UTxO utxo) (updateTx p (initialTx p) (Body txbody))
 scriptsNeeded' p@(Allegra _) utxo txbody = scriptsNeeded (UTxO utxo) (updateTx p (initialTx p) (Body txbody))
 scriptsNeeded' p@(Shelley _) utxo txbody = scriptsNeeded (UTxO utxo) (updateTx p (initialTx p) (Body txbody))
-
-minfee' :: forall era. Proof era -> PParams era -> Tx era -> Coin
-minfee' (Alonzo _) = minfee
-minfee' (Conway _) = minfee
-minfee' (Babbage _) = minfee
-minfee' (Mary _) = Shelley.minfee
-minfee' (Allegra _) = Shelley.minfee
-minfee' (Shelley _) = Shelley.minfee
 
 txInBalance ::
   forall era.

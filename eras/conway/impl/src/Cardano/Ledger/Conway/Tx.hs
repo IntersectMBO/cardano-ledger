@@ -9,7 +9,8 @@ module Cardano.Ledger.Conway.Tx
 where
 
 import Cardano.Ledger.Alonzo.Tx
-  ( auxDataAlonzoTxL,
+  ( alonzoMinFeeTx,
+    auxDataAlonzoTxL,
     bodyAlonzoTxL,
     isValidAlonzoTxL,
     mkBasicAlonzoTx,
@@ -25,6 +26,7 @@ import Cardano.Ledger.Babbage.Tx as BabbageTxReExport
     AlonzoTx (..),
   )
 import Cardano.Ledger.Conway.Era (ConwayEra)
+import qualified Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.TxBody ()
 import Cardano.Ledger.Conway.TxWits ()
 import Cardano.Ledger.Core
@@ -52,6 +54,8 @@ instance CC.Crypto c => EraTx (ConwayEra c) where
 
   validateScript (Phase1Script script) tx = validateTimelock @(ConwayEra c) script tx
   {-# INLINE validateScript #-}
+
+  getMinFeeTx = alonzoMinFeeTx
 
 instance CC.Crypto c => AlonzoEraTx (ConwayEra c) where
   {-# SPECIALIZE instance AlonzoEraTx (ConwayEra CC.StandardCrypto) #-}

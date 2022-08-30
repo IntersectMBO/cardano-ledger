@@ -16,6 +16,7 @@ where
 import Cardano.Ledger.Core (EraTx (..), EraWitnesses (..), PhasedScript (..))
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
+import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Tx
   ( ShelleyTx,
     ShelleyWitnesses,
@@ -25,6 +26,7 @@ import Cardano.Ledger.Shelley.Tx
     bootAddrShelleyWitsL,
     mkBasicShelleyTx,
     scriptShelleyWitsL,
+    shelleyMinFeeTx,
     sizeShelleyTxF,
     witsShelleyTxL,
   )
@@ -59,6 +61,8 @@ instance MAClass ma crypto => EraTx (ShelleyMAEra ma crypto) where
 
   validateScript (Phase1Script script) tx = validateTimelock @(ShelleyMAEra ma crypto) script tx
   {-# INLINE validateScript #-}
+
+  getMinFeeTx = shelleyMinFeeTx
 
 -- =======================================================
 -- Validating timelock scripts

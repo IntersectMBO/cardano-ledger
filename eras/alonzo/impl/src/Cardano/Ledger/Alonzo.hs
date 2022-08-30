@@ -45,7 +45,7 @@ import qualified Cardano.Ledger.Alonzo.PParams (PParams)
 import Cardano.Ledger.Alonzo.PlutusScriptApi (getDatumAlonzo)
 import Cardano.Ledger.Alonzo.Rules ()
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), Script)
-import Cardano.Ledger.Alonzo.Tx (alonzoInputHashes, minfee)
+import Cardano.Ledger.Alonzo.Tx (alonzoInputHashes)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..), AlonzoTxBody, AlonzoTxOut)
 import qualified Cardano.Ledger.Alonzo.TxBody (TxBody, TxOut)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), alonzoTxInfo)
@@ -103,8 +103,6 @@ instance CC.Crypto c => API.CanStartFromGenesis (AlonzoEra c) where
   initialState = API.initialStateFromGenesis extendPPWithGenesis
 
 instance CC.Crypto c => API.CLI (AlonzoEra c) where
-  evaluateMinFee = minfee
-
   evaluateConsumed = consumed
 
 instance CC.Crypto c => ExtendedUTxO (AlonzoEra c) where

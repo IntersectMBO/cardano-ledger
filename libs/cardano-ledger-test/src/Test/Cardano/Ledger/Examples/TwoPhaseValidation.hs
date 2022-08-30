@@ -41,7 +41,6 @@ import Cardano.Ledger.Alonzo.Tx
   ( AlonzoTx (..),
     IsValid (..),
     ScriptPurpose (..),
-    minfee,
   )
 import Cardano.Ledger.Alonzo.TxInfo (TranslationError, VersionedTxInfo, txInfo, valContext)
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..), TxDats (..), unRedeemers)
@@ -1888,7 +1887,7 @@ testEvaluateTransactionFee =
     pparams
     validatingTxNoWits
     1
-    @?= minfee pparams (validatingTx pf)
+    @?= getMinFeeTx pparams (validatingTx pf)
   where
     pf = Alonzo Mock
     pparams = newPParams pf $ defaultPPs ++ [MinfeeA 1]

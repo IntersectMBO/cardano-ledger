@@ -33,6 +33,7 @@ module Cardano.Ledger.Shelley.API.Wallet
     -- * Transaction helpers
     CLI (..),
     addKeyWitnesses,
+    evaluateMinFee,
     evaluateTransactionFee,
     evaluateTransactionBalance,
     evaluateMinLovelaceOutput,
@@ -93,7 +94,6 @@ import Cardano.Ledger.Shelley.LedgerState
     circulation,
     createRUpd,
     incrementalStakeDistr,
-    minfee,
     produced,
   )
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
@@ -465,13 +465,16 @@ class
   ) =>
   CLI era
   where
-  -- | The minimum fee calculation.
-  -- Used for the default implentation of 'evaluateTransactionFee'.
-  evaluateMinFee :: PParams era -> Tx era -> Coin
 
   -- | The consumed calculation.
   -- Used for the default implentation of 'evaluateTransactionBalance'.
   evaluateConsumed :: PParams era -> UTxO era -> TxBody era -> Value era
+
+-- | The minimum fee calculation.
+-- Used for the default implentation of 'evaluateTransactionFee'.
+evaluateMinFee :: EraTx era => PParams era -> Tx era -> Coin
+evaluateMinFee = getMinFeeTx
+{-# DEPRECATED evaluateMinFee "In favor of 'getMinFeeTx'" #-}
 
 -- | Evaluate the minimum lovelace that a given transaction output must contain.
 evaluateMinLovelaceOutput :: EraTxOut era => PParams era -> TxOut era -> Coin
@@ -493,7 +496,7 @@ evaluateTransactionFee ::
   Word ->
   -- | The required fee.
   Coin
-evaluateTransactionFee pp tx numKeyWits = evaluateMinFee pp tx'
+evaluateTransactionFee pp tx numKeyWits = getMinFeeTx pp tx'
   where
     sigSize = fromIntegral $ sizeSigDSIGN (Proxy @(DSIGN (EraCrypto era)))
     dummySig =
@@ -546,9 +549,9 @@ addShelleyKeyWitnesses = addKeyWitnesses
 {-# DEPRECATED addShelleyKeyWitnesses "In favor of 'addKeyWitnesses'" #-}
 
 instance CC.Crypto c => CLI (ShelleyEra c) where
-  evaluateMinFee = minfee
 
   evaluateConsumed = coinConsumed
+
 
 --------------------------------------------------------------------------------
 -- CBOR instances

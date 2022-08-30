@@ -155,6 +155,8 @@ class
 
   validateScript :: PhasedScript 'PhaseOne era -> Tx era -> Bool
 
+  getMinFeeTx :: PParams era -> Tx era -> Coin
+
 class
   ( EraTxOut era,
     EraPParams era,

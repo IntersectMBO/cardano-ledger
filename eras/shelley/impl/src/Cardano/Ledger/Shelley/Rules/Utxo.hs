@@ -77,7 +77,6 @@ import Cardano.Ledger.Shelley.Tx
   ( ShelleyTx (..),
     ShelleyTxOut (..),
     TxIn,
-    minfee,
   )
 import Cardano.Ledger.Shelley.TxBody
   ( PoolParams,
@@ -369,8 +368,6 @@ utxoInductive ::
     Environment (EraRule "PPUP" era) ~ PpupEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,
     Signal (EraRule "PPUP" era) ~ Maybe (Update era),
-    HasField "_minfeeA" (PParams era) Natural,
-    HasField "_minfeeB" (PParams era) Natural,
     HasField "_keyDeposit" (PParams era) Coin,
     HasField "_poolDeposit" (PParams era) Coin,
     HasField "_maxTxSize" (PParams era) Natural
@@ -453,17 +450,14 @@ validateInputSetEmptyUTxO txb =
 --
 -- > minfee pp tx ≤ txfee txb
 validateFeeTooSmallUTxO ::
-  ( EraTx era,
-    HasField "_minfeeA" (PParams era) Natural,
-    HasField "_minfeeB" (PParams era) Natural
-  ) =>
+  EraTx era =>
   PParams era ->
   Tx era ->
   Test (ShelleyUtxoPredFailure era)
 validateFeeTooSmallUTxO pp tx =
   failureUnless (minFee <= txFee) $ FeeTooSmallUTxO minFee txFee
   where
-    minFee = minfee pp tx
+    minFee = getMinFeeTx pp tx
     txFee = txb ^. feeTxBodyL
     txb = tx ^. bodyTxL
 

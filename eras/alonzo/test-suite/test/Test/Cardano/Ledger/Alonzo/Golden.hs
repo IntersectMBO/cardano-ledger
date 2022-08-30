@@ -24,12 +24,11 @@ import Cardano.Ledger.Alonzo.PParams
     getLanguageView,
   )
 import Cardano.Ledger.Alonzo.Scripts (CostModel, CostModels (..), Prices (..), mkCostModel)
-import Cardano.Ledger.Alonzo.Tx (minfee)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), utxoEntrySize)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), boundRational)
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Era (EraSegWits (..))
+import Cardano.Ledger.Core
 import Cardano.Ledger.Mary.Value (MaryValue (..), valueFromList)
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Codec.CBOR.Read (deserialiseFromBytes)
@@ -220,7 +219,7 @@ goldenMinFee =
             prices = Prices priceMem priceSteps
             pp = emptyPParams {_minfeeA = 44, _minfeeB = 155381, _prices = prices}
 
-        Coin 1006053 @?= minfee pp firstTx
+        Coin 1006053 @?= getMinFeeTx pp firstTx
     ]
 
 fromRightError :: (HasCallStack, Show a) => String -> Either a b -> b

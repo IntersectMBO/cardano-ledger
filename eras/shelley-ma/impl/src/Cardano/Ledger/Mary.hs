@@ -33,13 +33,11 @@ import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys (DSignable)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Shelley.API hiding (TxBody)
-import Cardano.Ledger.Shelley.LedgerState (minfee)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsUpdate)
 import qualified Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.ShelleyMA
 import Cardano.Ledger.ShelleyMA.AuxiliaryData (AuxiliaryData)
-import Cardano.Ledger.ShelleyMA.Rules.Utxo (consumed)
-import Cardano.Ledger.ShelleyMA.Rules.Utxow ()
+import Cardano.Ledger.ShelleyMA.Rules (consumed)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock)
 
 instance
@@ -54,8 +52,6 @@ instance CC.Crypto c => CanStartFromGenesis (MaryEra c) where
   initialState = initialStateFromGenesis const
 
 instance CC.Crypto c => CLI (MaryEra c) where
-  evaluateMinFee = minfee
-
   evaluateConsumed = consumed
 
 -- Self-Describing type synomyms

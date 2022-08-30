@@ -18,7 +18,6 @@ import Cardano.Ledger.Babbage.Tx
   ( babbageInputDataHashes,
     babbageTxScripts,
     getDatumBabbage,
-    minfee,
   )
 import Cardano.Ledger.Babbage.TxInfo (babbageTxInfo)
 import Cardano.Ledger.Conway.Era (ConwayEra)
@@ -52,8 +51,6 @@ instance CC.Crypto c => API.CanStartFromGenesis (ConwayEra c) where
   initialState = API.initialStateFromGenesis extendPPWithGenesis
 
 instance CC.Crypto c => API.CLI (ConwayEra c) where
-  evaluateMinFee = minfee
-
   evaluateConsumed = consumed
 
 instance CC.Crypto c => ExtendedUTxO (ConwayEra c) where

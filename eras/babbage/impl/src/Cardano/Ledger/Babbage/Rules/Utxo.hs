@@ -37,8 +37,8 @@ import Cardano.Ledger.Alonzo.Rules
     validateTooManyCollateralInputs,
     validateWrongNetworkInTxBody,
   )
-import Cardano.Ledger.Alonzo.Scripts (ExUnits, Prices)
-import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), minfee)
+import Cardano.Ledger.Alonzo.Scripts (ExUnits)
+import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody (collateralInputsTxBodyL))
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (allOuts, allSizedOuts))
 import Cardano.Ledger.Alonzo.TxWitness (AlonzoEraWitnesses, TxWitness (..), nullRedeemers)
@@ -183,14 +183,10 @@ feesOK ::
   forall era.
   ( EraTx era,
     BabbageEraTxBody era,
-    AlonzoEraWitnesses era,
     Tx era ~ AlonzoTx era,
     TxBody era ~ BabbageTxBody era,
     TxOut era ~ BabbageTxOut era,
-    HasField "_minfeeA" (PParams era) Natural,
-    HasField "_minfeeB" (PParams era) Natural,
-    HasField "_collateralPercentage" (PParams era) Natural,
-    HasField "_prices" (PParams era) Prices
+    HasField "_collateralPercentage" (PParams era) Natural
   ) =>
   PParams era ->
   Tx era ->
@@ -202,10 +198,10 @@ feesOK pp tx (UTxO utxo) =
       -- restrict Utxo to those inputs we use to pay fees.
       utxoCollateral = eval (collateral' ◁ utxo)
       theFee = txfee' txBody -- Coin supplied to pay fees
-      minimumFee = minfee @era pp tx
+      minFee = getMinFeeTx pp tx
    in sequenceA_
         [ -- Part 1: minfee pp tx ≤ txfee txBody
-          failureUnless (minimumFee <= theFee) (inject (FeeTooSmallUTxO @era minimumFee theFee)),
+          failureUnless (minFee <= theFee) (inject (FeeTooSmallUTxO @era minFee theFee)),
           -- Part 2: (txrdmrs tx ≠ ∅ ⇒ validateCollateral)
           unless (nullRedeemers . txrdmrs' . wits $ tx) $
             validateTotalCollateral pp txBody utxoCollateral
@@ -341,10 +337,7 @@ utxoTransition ::
     HasField "_protocolVersion" (PParams era) ProtVer,
     HasField "_collateralPercentage" (PParams era) Natural,
     HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_minfeeA" (PParams era) Natural,
-    HasField "_minfeeB" (PParams era) Natural,
     HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_prices" (PParams era) Prices,
     -- In this function we we call the UTXOS rule, so we need some assumptions
     Embed (EraRule "UTXOS" era) (BabbageUTXO era),
     Environment (EraRule "UTXOS" era) ~ UtxoEnv era,
@@ -434,21 +427,14 @@ instance
     TxOut era ~ BabbageTxOut era,
     TxBody era ~ BabbageTxBody era,
     Witnesses era ~ TxWitness era,
-    Show (TxBody era),
-    Show (TxOut era),
-    Show (Script era),
-    Eq (Script era),
     HasField "_maxCollateralInputs" (PParams era) Natural,
     HasField "_coinsPerUTxOByte" (PParams era) Coin,
     HasField "_collateralPercentage" (PParams era) Natural,
-    HasField "_minfeeA" (PParams era) Natural,
-    HasField "_minfeeB" (PParams era) Natural,
     HasField "_keyDeposit" (PParams era) Coin,
     HasField "_maxTxExUnits" (PParams era) ExUnits,
     HasField "_maxTxSize" (PParams era) Natural,
     HasField "_maxValSize" (PParams era) Natural,
     HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_prices" (PParams era) Prices,
     HasField "_protocolVersion" (PParams era) ProtVer,
     -- instructions for calling UTXOS from BabbageUTXO
     Embed (EraRule "UTXOS" era) (BabbageUTXO era),
