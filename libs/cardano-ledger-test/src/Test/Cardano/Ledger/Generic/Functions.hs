@@ -128,8 +128,8 @@ aggregateRewards' ::
   forall era.
   Proof era ->
   PParams era ->
-  Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))) ->
-  Map (Credential 'Staking (Crypto era)) Coin
+  Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))) ->
+  Map (Credential 'Staking (EraCrypto era)) Coin
 aggregateRewards' (Conway _) = aggregateRewards
 aggregateRewards' (Babbage _) = aggregateRewards
 aggregateRewards' (Alonzo _) = aggregateRewards
@@ -139,7 +139,7 @@ aggregateRewards' (Shelley _) = aggregateRewards
 
 obligation' ::
   forall era c.
-  (c ~ Crypto era) =>
+  (c ~ EraCrypto era) =>
   Proof era ->
   PParams era ->
   Map (Credential 'Staking c) Coin ->
@@ -156,8 +156,8 @@ totalDeposits' ::
   forall era.
   Proof era ->
   PParams era ->
-  (KeyHash 'StakePool (Crypto era) -> Bool) ->
-  [DCert (Crypto era)] ->
+  (KeyHash 'StakePool (EraCrypto era) -> Bool) ->
+  [DCert (EraCrypto era)] ->
   Coin
 totalDeposits' (Conway _) pp = totalDeposits pp
 totalDeposits' (Babbage _) pp = totalDeposits pp
@@ -167,7 +167,7 @@ totalDeposits' (Allegra _) pp = totalDeposits pp
 totalDeposits' (Shelley _) pp = totalDeposits pp
 
 -- | Positive numbers are "deposits owed", negative amounts are "refunds gained"
-depositsAndRefunds :: Proof era -> PParams era -> [DCert (Crypto era)] -> Coin
+depositsAndRefunds :: Proof era -> PParams era -> [DCert (EraCrypto era)] -> Coin
 depositsAndRefunds proof pp certificates = List.foldl' accum (Coin 0) certificates
   where
     accum ans (DCertDeleg (RegKey _)) = keydep <+> ans
@@ -196,7 +196,7 @@ keyPoolDeposits proof pp = case proof of
 
 -- | Compute the set of ScriptHashes for which there should be ScriptWitnesses. In Babbage
 --  Era and later, where inline Scripts are allowed, they should not appear in this set.
-scriptWitsNeeded' :: Proof era -> MUtxo era -> TxBody era -> Set (ScriptHash (Crypto era))
+scriptWitsNeeded' :: Proof era -> MUtxo era -> TxBody era -> Set (ScriptHash (EraCrypto era))
 scriptWitsNeeded' (Conway _) utxo txbody = regularScripts `Set.difference` inlineScripts
   where
     theUtxo = UTxO utxo
@@ -214,7 +214,7 @@ scriptWitsNeeded' p@(Mary _) utxo txbody = scriptsNeeded (UTxO utxo) (updateTx p
 scriptWitsNeeded' p@(Allegra _) utxo txbody = scriptsNeeded (UTxO utxo) (updateTx p (initialTx p) (Body txbody))
 scriptWitsNeeded' p@(Shelley _) utxo txbody = scriptsNeeded (UTxO utxo) (updateTx p (initialTx p) (Body txbody))
 
-scriptsNeeded' :: Proof era -> MUtxo era -> TxBody era -> Set (ScriptHash (Crypto era))
+scriptsNeeded' :: Proof era -> MUtxo era -> TxBody era -> Set (ScriptHash (EraCrypto era))
 scriptsNeeded' (Conway _) utxo txbody = Set.fromList (map snd (scriptsNeededFromBody (UTxO utxo) txbody))
 scriptsNeeded' (Babbage _) utxo txbody = Set.fromList (map snd (scriptsNeededFromBody (UTxO utxo) txbody))
 scriptsNeeded' (Alonzo _) utxo txbody = Set.fromList (map snd (scriptsNeededFromBody (UTxO utxo) txbody))
@@ -233,13 +233,13 @@ minfee' (Shelley _) = Shelley.minfee
 txInBalance ::
   forall era.
   EraTxOut era =>
-  Set (TxIn (Crypto era)) ->
+  Set (TxIn (EraCrypto era)) ->
   MUtxo era ->
   Coin
 txInBalance txinSet m = coinBalance (UTxO (restrictKeys m txinSet))
 
 -- | Break a TxOut into its mandatory and optional parts
-txoutFields :: Proof era -> TxOut era -> (Addr (Crypto era), Value era, [TxOutField era])
+txoutFields :: Proof era -> TxOut era -> (Addr (EraCrypto era), Value era, [TxOutField era])
 txoutFields (Conway _) (BabbageTxOut addr val d h) = (addr, val, [FDatum d, RefScript h])
 txoutFields (Babbage _) (BabbageTxOut addr val d h) = (addr, val, [FDatum d, RefScript h])
 txoutFields (Alonzo _) (AlonzoTxOut addr val dh) = (addr, val, [DHash dh])
@@ -280,7 +280,7 @@ txoutEvidence ::
   forall era.
   Proof era ->
   TxOut era ->
-  ([Credential 'Payment (Crypto era)], Maybe (DataHash (Crypto era)))
+  ([Credential 'Payment (EraCrypto era)], Maybe (DataHash (EraCrypto era)))
 txoutEvidence (Alonzo _) (AlonzoTxOut addr _ (SJust dh)) =
   (addrCredentials addr, Just dh)
 txoutEvidence (Alonzo _) (AlonzoTxOut addr _ SNothing) =
@@ -318,7 +318,7 @@ stakeCredAddr _ = Nothing
 getBody :: EraTx era => Proof era -> Tx era -> TxBody era
 getBody _ tx = tx ^. bodyTxL
 
-getCollateralInputs :: Proof era -> TxBody era -> Set (TxIn (Crypto era))
+getCollateralInputs :: Proof era -> TxBody era -> Set (TxIn (EraCrypto era))
 getCollateralInputs (Conway _) tx = collateralInputs' tx
 getCollateralInputs (Babbage _) tx = collateralInputs' tx
 getCollateralInputs (Alonzo _) tx = collateral' tx
@@ -334,16 +334,16 @@ getCollateralOutputs (Mary _) _ = []
 getCollateralOutputs (Allegra _) _ = []
 getCollateralOutputs (Shelley _) _ = []
 
-getInputs :: EraTxBody era => Proof era -> TxBody era -> Set (TxIn (Crypto era))
+getInputs :: EraTxBody era => Proof era -> TxBody era -> Set (TxIn (EraCrypto era))
 getInputs _ tx = tx ^. inputsTxBodyL
 
 getOutputs :: EraTxBody era => Proof era -> TxBody era -> StrictSeq (TxOut era)
 getOutputs _ tx = tx ^. outputsTxBodyL
 
-getScriptWits :: EraWitnesses era => Proof era -> Witnesses era -> Map (ScriptHash (Crypto era)) (Script era)
+getScriptWits :: EraWitnesses era => Proof era -> Witnesses era -> Map (ScriptHash (EraCrypto era)) (Script era)
 getScriptWits _ tx = tx ^. scriptWitsL
 
-allInputs :: EraTxBody era => Proof era -> TxBody era -> Set (TxIn (Crypto era))
+allInputs :: EraTxBody era => Proof era -> TxBody era -> Set (TxIn (EraCrypto era))
 allInputs _ txb = txb ^. allInputsTxBodyF
 
 getWitnesses :: EraTx era => Proof era -> Tx era -> Witnesses era
@@ -377,7 +377,7 @@ alwaysFalse p@(Mary _) _ n = never n p
 alwaysFalse p@(Allegra _) _ n = never n p
 alwaysFalse p@(Shelley _) _ n = never n p
 
-certs :: (ShelleyEraTxBody era, EraTx era) => Proof era -> Tx era -> [DCert (Crypto era)]
+certs :: (ShelleyEraTxBody era, EraTx era) => Proof era -> Tx era -> [DCert (EraCrypto era)]
 certs _ tx = Fold.toList $ tx ^. bodyTxL . certsTxBodyL
 
 -- | Create an old style RewardUpdate to be used in tests, in any Era.
@@ -385,7 +385,7 @@ createRUpdNonPulsing' ::
   forall era.
   Proof era ->
   Model era ->
-  RewardUpdateOld (Crypto era)
+  RewardUpdateOld (EraCrypto era)
 createRUpdNonPulsing' proof model =
   let bm = BlocksMade $ mBcur model -- TODO or should this be mBprev?
       ss = mSnapshots model
@@ -414,7 +414,7 @@ languagesUsed ::
   Proof era ->
   Tx era ->
   UTxO era ->
-  Set (ScriptHash (Crypto era)) ->
+  Set (ScriptHash (EraCrypto era)) ->
   Set Language
 languagesUsed proof tx utxo sNeeded = case proof of
   (Shelley _) -> Set.empty

@@ -81,7 +81,7 @@ module Cardano.Ledger.Shelley.LedgerState
   )
 where
 
-import Cardano.Ledger.Era (Crypto)
+import Cardano.Ledger.Era (EraCrypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (Witness))
 import Cardano.Ledger.Shelley.LedgerState.DPState
 import Cardano.Ledger.Shelley.LedgerState.IncrementalStake
@@ -106,10 +106,10 @@ emptyDState = def
 
 {-# DEPRECATED WitHashes "Use a set of keyhashes instead" #-}
 
-type WitHashes era = Set (KeyHash 'Witness (Crypto era))
+type WitHashes era = Set (KeyHash 'Witness (EraCrypto era))
 
 {-# DEPRECATED unWitHashes "Remove this function" #-}
-unWitHashes :: WitHashes era -> Set (KeyHash 'Witness (Crypto era))
+unWitHashes :: WitHashes era -> Set (KeyHash 'Witness (EraCrypto era))
 unWitHashes = id
 
 {-# DEPRECATED nullWitHashes "Use set operations instead" #-}

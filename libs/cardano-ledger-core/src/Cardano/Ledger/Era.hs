@@ -29,27 +29,27 @@ import Lens.Micro
 -- needed UTxO from disk and present only those to the ledger.
 -- It is therefore neccessary that this function account for all the
 -- different types of inputs inside a transaction.
-getAllTxInputs :: EraTxBody era => TxBody era -> Set (TxIn (Crypto era))
+getAllTxInputs :: EraTxBody era => TxBody era -> Set (TxIn (EraCrypto era))
 getAllTxInputs txBody = txBody ^. allInputsTxBodyF
 
 getTxOutEitherAddr ::
   EraTxOut era =>
   TxOut era ->
-  Either (Addr (Crypto era)) (CompactAddr (Crypto era))
+  Either (Addr (EraCrypto era)) (CompactAddr (EraCrypto era))
 getTxOutEitherAddr txOut = txOut ^. addrEitherTxOutL
 {-# DEPRECATED getTxOutEitherAddr "In favor of `addrEitherTxOutL`" #-}
 
 getTxOutAddr ::
   EraTxOut era =>
   TxOut era ->
-  Addr (Crypto era)
+  Addr (EraCrypto era)
 getTxOutAddr txOut = txOut ^. addrTxOutL
 {-# DEPRECATED getTxOutAddr "In favor of `addrTxOutL`" #-}
 
 getTxOutCompactAddr ::
   EraTxOut era =>
   TxOut era ->
-  CompactAddr (Crypto era)
+  CompactAddr (EraCrypto era)
 getTxOutCompactAddr txOut = txOut ^. compactAddrTxOutL
 {-# DEPRECATED getTxOutCompactAddr "In favor of `compactAddrTxOutL`" #-}
 
@@ -58,6 +58,6 @@ getTxOutCompactAddr txOut = txOut ^. compactAddrTxOutL
 getTxOutBootstrapAddress ::
   EraTxOut era =>
   TxOut era ->
-  Maybe (BootstrapAddress (Crypto era))
+  Maybe (BootstrapAddress (EraCrypto era))
 getTxOutBootstrapAddress txOut = txOut ^. bootAddrTxOutF
 {-# DEPRECATED getTxOutBootstrapAddress "In favor of `bootAddrTxOutF`" #-}

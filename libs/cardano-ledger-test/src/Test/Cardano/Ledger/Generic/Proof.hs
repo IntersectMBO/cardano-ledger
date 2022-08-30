@@ -108,7 +108,7 @@ instance Show (Evidence c) where
   show Mock = "Mock"
   show Standard = "Standard"
 
-getCrypto :: Proof era -> Evidence (Crypto era)
+getCrypto :: Proof era -> Evidence (EraCrypto era)
 getCrypto (Babbage c) = c
 getCrypto (Alonzo c) = c
 getCrypto (Mary c) = c
@@ -143,7 +143,7 @@ instance ReflectC StandardCrypto where
 instance ReflectC C_Crypto where
   evidence = Mock
 
-class (EraTx era, ReflectC (Crypto era)) => Reflect era where
+class (EraTx era, ReflectC (EraCrypto era)) => Reflect era where
   reify :: Proof era
   lift :: forall a. (Proof era -> a) -> a
   lift f = f (reify @era)

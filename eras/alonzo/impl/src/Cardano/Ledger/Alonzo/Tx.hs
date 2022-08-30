@@ -259,7 +259,7 @@ instance
 instance
   ( Era era,
     Script era ~ AlonzoScript era,
-    crypto ~ Crypto era,
+    crypto ~ EraCrypto era,
     NFData (AuxiliaryData era),
     NFData (Script era),
     NFData (Core.TxBody era),
@@ -288,7 +288,7 @@ data ScriptIntegrity era
       !(Set LangDepView) -- From the Protocol parameters
   deriving (Eq, Generic, Typeable)
 
-deriving instance HashAlgorithm (HASH (Crypto era)) => Show (ScriptIntegrity era)
+deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (ScriptIntegrity era)
 
 deriving instance Typeable era => NoThunks (ScriptIntegrity era)
 
@@ -302,7 +302,7 @@ instance Era era => SafeToHash (ScriptIntegrity era) where
      in originalBytes m <> dBytes <> lBytes
 
 instance
-  (Era era, c ~ Crypto era) =>
+  (Era era, c ~ EraCrypto era) =>
   HashAnnotated (ScriptIntegrity era) EraIndependentScriptIntegrity c
 
 hashScriptIntegrity ::
@@ -311,7 +311,7 @@ hashScriptIntegrity ::
   Set LangDepView ->
   Redeemers era ->
   TxDats era ->
-  StrictMaybe (ScriptIntegrityHash (Crypto era))
+  StrictMaybe (ScriptIntegrityHash (EraCrypto era))
 hashScriptIntegrity langViews rdmrs dats =
   if nullRedeemers rdmrs && Set.null langViews && nullDats dats
     then SNothing
@@ -325,7 +325,7 @@ isTwoPhaseScriptAddress ::
   forall era.
   (EraTx era, Witnesses era ~ TxWitness era) =>
   AlonzoTx era ->
-  Addr (Crypto era) ->
+  Addr (EraCrypto era) ->
   Bool
 isTwoPhaseScriptAddress tx =
   isTwoPhaseScriptAddressFromMap @era (wits tx ^. scriptWitsL)
@@ -433,10 +433,10 @@ rdptr ::
   forall era.
   ShelleyEraTxBody era =>
   Core.TxBody era ->
-  ScriptPurpose (Crypto era) ->
+  ScriptPurpose (EraCrypto era) ->
   StrictMaybe RdmrPtr
 rdptr txBody (Minting (PolicyID hash)) =
-  RdmrPtr Mint <$> indexOf hash (txBody ^. mintedTxBodyF :: Set (ScriptHash (Crypto era)))
+  RdmrPtr Mint <$> indexOf hash (txBody ^. mintedTxBodyF :: Set (ScriptHash (EraCrypto era)))
 rdptr txBody (Spending txin) = RdmrPtr Spend <$> indexOf txin (txBody ^. inputsTxBodyL)
 rdptr txBody (Rewarding racnt) = RdmrPtr Rewrd <$> indexOf racnt (unWdrl (txBody ^. wdrlsTxBodyL))
 rdptr txBody (Certifying d) = RdmrPtr Cert <$> indexOf d (txBody ^. certsTxBodyL)
@@ -446,7 +446,7 @@ rdptrInv ::
   ShelleyEraTxBody era =>
   Core.TxBody era ->
   RdmrPtr ->
-  StrictMaybe (ScriptPurpose (Crypto era))
+  StrictMaybe (ScriptPurpose (EraCrypto era))
 rdptrInv txBody (RdmrPtr Mint idx) =
   Minting . PolicyID <$> fromIndex idx (txBody ^. mintedTxBodyF)
 rdptrInv txBody (RdmrPtr Spend idx) =
@@ -465,7 +465,7 @@ indexedRdmrs ::
   forall era.
   (ShelleyEraTxBody era, EraTx era, Witnesses era ~ TxWitness era) =>
   Tx era ->
-  ScriptPurpose (Crypto era) ->
+  ScriptPurpose (EraCrypto era) ->
   Maybe (Data era, ExUnits)
 indexedRdmrs tx sp = case rdptr @era (tx ^. bodyTxL) sp of
   SNothing -> Nothing
@@ -574,11 +574,11 @@ instance
 isTwoPhaseScriptAddressFromMap ::
   forall era.
   EraScript era =>
-  Map.Map (ScriptHash (Crypto era)) (Script era) ->
-  Addr (Crypto era) ->
+  Map.Map (ScriptHash (EraCrypto era)) (Script era) ->
+  Addr (EraCrypto era) ->
   Bool
 isTwoPhaseScriptAddressFromMap hashScriptMap addr =
-  case Shelley.getScriptHash @(Crypto era) addr of
+  case Shelley.getScriptHash @(EraCrypto era) addr of
     Nothing -> False
     Just hash -> any ok hashScriptMap
       where
@@ -590,13 +590,13 @@ alonzoInputHashes ::
     EraScript era,
     TxOut era ~ AlonzoTxOut era
   ) =>
-  Map.Map (ScriptHash (Crypto era)) (Script era) ->
+  Map.Map (ScriptHash (EraCrypto era)) (Script era) ->
   AlonzoTx era ->
   UTxO era ->
-  (Set (DataHash (Crypto era)), Set (TxIn (Crypto era)))
+  (Set (DataHash (EraCrypto era)), Set (TxIn (EraCrypto era)))
 alonzoInputHashes hashScriptMap tx (UTxO mp) = Map.foldlWithKey' accum (Set.empty, Set.empty) smallUtxo
   where
-    spendInputs :: Set (TxIn (Crypto era))
+    spendInputs :: Set (TxIn (EraCrypto era))
     spendInputs = body tx ^. inputsTxBodyL
     smallUtxo = eval (spendInputs ◁ mp)
     accum ans@(hashSet, inputSet) txin txout =

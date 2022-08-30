@@ -143,7 +143,7 @@ utxoEntrySize txOut = utxoEntrySizeWithoutVal + Val.size v + dataHashSize dh
 data AlonzoUtxoPredFailure era
   = -- | The bad transaction inputs
     BadInputsUTxO
-      !(Set (TxIn (Crypto era)))
+      !(Set (TxIn (EraCrypto era)))
   | OutsideValidityIntervalUTxO
       !ValidityInterval
       -- ^ transaction's validity interval
@@ -169,12 +169,12 @@ data AlonzoUtxoPredFailure era
     WrongNetwork
       !Network
       -- ^ the expected network id
-      !(Set (Addr (Crypto era)))
+      !(Set (Addr (EraCrypto era)))
       -- ^ the set of addresses with incorrect network IDs
   | WrongNetworkWithdrawal
       !Network
       -- ^ the expected network id
-      !(Set (RewardAcnt (Crypto era)))
+      !(Set (RewardAcnt (EraCrypto era)))
       -- ^ the set of reward addresses with incorrect network IDs
   | -- | list of supplied transaction outputs that are too small
     OutputTooSmallUTxO
@@ -232,7 +232,7 @@ deriving stock instance
   Show (AlonzoUtxoPredFailure era)
 
 deriving stock instance
-  ( CC.Crypto (Crypto era),
+  ( CC.Crypto (EraCrypto era),
     Eq (Value era),
     Eq (TxOut era),
     Eq (PredicateFailure (EraRule "UTXOS" era))
@@ -312,7 +312,7 @@ validateCollateral ::
   ) =>
   PParams era ->
   TxBody era ->
-  Map.Map (TxIn (Crypto era)) (TxOut era) ->
+  Map.Map (TxIn (EraCrypto era)) (TxOut era) ->
   Test (AlonzoUtxoPredFailure era)
 validateCollateral pp txb utxoCollateral =
   sequenceA_
@@ -331,7 +331,7 @@ validateCollateral pp txb utxoCollateral =
 -- > (∀(a,_,_) ∈ range (collateral txb ◁ utxo), a ∈ Addrvkey)
 validateScriptsNotPaidUTxO ::
   EraTxOut era =>
-  Map.Map (TxIn (Crypto era)) (TxOut era) ->
+  Map.Map (TxIn (EraCrypto era)) (TxOut era) ->
   Test (AlonzoUtxoPredFailure era)
 validateScriptsNotPaidUTxO utxoCollateral =
   failureUnless (all vKeyLocked utxoCollateral) $

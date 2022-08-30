@@ -226,7 +226,7 @@ mkGlobals genesis pp =
 getFilteredOldUTxO ::
   EraTxOut era =>
   NewEpochState era ->
-  Set (Addr (Crypto era)) ->
+  Set (Addr (EraCrypto era)) ->
   UTxO era
 getFilteredOldUTxO ss addrs =
   UTxO $

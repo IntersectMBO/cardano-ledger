@@ -21,8 +21,8 @@ import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.BaseTypes (UnitInterval)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
-  ( Crypto,
-    Era,
+  ( Era,
+    EraCrypto,
   )
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.LedgerState (incrementalStakeDistr)
@@ -96,7 +96,7 @@ import Test.QuickCheck (Gen)
 instance
   ( EraGen era,
     Core.EraSegWits era,
-    Mock (Crypto era),
+    Mock (EraCrypto era),
     ApplyBlock era,
     GetLedgerView era,
     MinLEDGER_STS era,
@@ -104,7 +104,7 @@ instance
     Embed (Core.EraRule "BBODY" era) (CHAIN era),
     Environment (Core.EraRule "BBODY" era) ~ BbodyEnv era,
     State (Core.EraRule "BBODY" era) ~ ShelleyBbodyState era,
-    Signal (Core.EraRule "BBODY" era) ~ Block (BHeaderView (Crypto era)) era,
+    Signal (Core.EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era,
     Embed (Core.EraRule "TICKN" era) (CHAIN era),
     Environment (Core.EraRule "TICKN" era) ~ TicknEnv,
     State (Core.EraRule "TICKN" era) ~ TicknState,
@@ -131,7 +131,7 @@ instance
 -- For our purposes we can bootstrap the chain by just coercing the value.
 -- When this transition actually occurs, the consensus layer will do the work of making
 -- sure that the hash gets translated across the fork
-lastByronHeaderHash :: forall proxy era. Era era => proxy era -> HashHeader (Crypto era)
+lastByronHeaderHash :: forall proxy era. Era era => proxy era -> HashHeader (EraCrypto era)
 lastByronHeaderHash _ = HashHeader $ mkHash 0
 
 -- Note: this function must be usable in place of 'applySTS' and needs to align
@@ -193,7 +193,7 @@ mkOCertIssueNos (GenDelegs delegs0) =
 -- This allows stake pools to produce blocks from genesis.
 registerGenesisStaking ::
   forall era.
-  ShelleyGenesisStaking (Crypto era) ->
+  ShelleyGenesisStaking (EraCrypto era) ->
   ChainState era ->
   ChainState era
 registerGenesisStaking
@@ -238,7 +238,7 @@ registerGenesisStaking
       -- about updating the '_delegations' field.
       --
       -- See STS DELEG for details
-      newDState :: DState (Crypto era)
+      newDState :: DState (EraCrypto era)
       newDState =
         (dpsDState oldDPState)
           { _unified =
@@ -250,7 +250,7 @@ registerGenesisStaking
 
       -- We consider pools as having been registered in slot 0
       -- See STS POOL for details
-      newPState :: PState (Crypto era)
+      newPState :: PState (EraCrypto era)
       newPState =
         (dpsPState oldDPState)
           { _pParams = LM.toMap sgsPools

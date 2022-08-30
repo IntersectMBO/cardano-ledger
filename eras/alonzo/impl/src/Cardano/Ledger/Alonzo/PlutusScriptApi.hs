@@ -89,7 +89,7 @@ getDatumAlonzo ::
   (AlonzoEraTxOut era, EraTx era, Witnesses era ~ TxWitness era) =>
   Tx era ->
   UTxO era ->
-  ScriptPurpose (Crypto era) ->
+  ScriptPurpose (EraCrypto era) ->
   Maybe (Data era)
 getDatumAlonzo tx (UTxO m) sp = do
   txIn <- getSpendingTxIn sp
@@ -131,9 +131,9 @@ instance (CC.Crypto crypto) => FromCBOR (CollectError crypto) where
 -- The formal spec achieves the same filtering as knownToNotBe1Phase
 -- by use of the (partial) language function, which is not defined on 1-phase scripts.
 knownToNotBe1Phase ::
-  Map.Map (ScriptHash (Crypto era)) (AlonzoScript era) ->
-  (ScriptPurpose (Crypto era), ScriptHash (Crypto era)) ->
-  Maybe (ScriptPurpose (Crypto era), Language, ShortByteString)
+  Map.Map (ScriptHash (EraCrypto era)) (AlonzoScript era) ->
+  (ScriptPurpose (EraCrypto era), ScriptHash (EraCrypto era)) ->
+  Maybe (ScriptPurpose (EraCrypto era), Language, ShortByteString)
 knownToNotBe1Phase scriptsAvailable (sp, sh) = do
   PlutusScript lang script <- sh `Map.lookup` scriptsAvailable
   Just (sp, lang, script)
@@ -158,7 +158,7 @@ collectTwoPhaseScriptInputs ::
   PParams era ->
   Tx era ->
   UTxO era ->
-  Either [CollectError (Crypto era)] [(ShortByteString, Language, [Data era], ExUnits, CostModel)]
+  Either [CollectError (EraCrypto era)] [(ShortByteString, Language, [Data era], ExUnits, CostModel)]
 collectTwoPhaseScriptInputs ei sysS pp tx utxo =
   let usedLanguages = Set.fromList [lang | (_, lang, _) <- neededAndConfirmedToBePlutus]
       costModels = unCostModels $ getField @"_costmdls" pp
@@ -245,7 +245,7 @@ scriptsNeeded ::
   (EraTx era, ShelleyEraTxBody era) =>
   UTxO era ->
   Tx era ->
-  [(ScriptPurpose (Crypto era), ScriptHash (Crypto era))]
+  [(ScriptPurpose (EraCrypto era), ScriptHash (EraCrypto era))]
 scriptsNeeded utxo tx = scriptsNeededFromBody utxo (tx ^. bodyTxL)
 
 -- We only find certificate witnesses in Delegating and Deregistration DCerts
@@ -296,10 +296,10 @@ scriptsNeededFromBody ::
   (ShelleyEraTxBody era) =>
   UTxO era ->
   TxBody era ->
-  [(ScriptPurpose (Crypto era), ScriptHash (Crypto era))]
+  [(ScriptPurpose (EraCrypto era), ScriptHash (EraCrypto era))]
 scriptsNeededFromBody (UTxO u) txBody = spend ++ reward ++ cert ++ minted
   where
-    collect :: TxIn (Crypto era) -> Maybe (ScriptPurpose (Crypto era), ScriptHash (Crypto era))
+    collect :: TxIn (EraCrypto era) -> Maybe (ScriptPurpose (EraCrypto era), ScriptHash (EraCrypto era))
     collect !i = do
       addr <- view addrTxOutL <$> Map.lookup i u
       hash <- getScriptHash addr

@@ -120,7 +120,7 @@ instance FromCBOR ValidityInterval where
 -- ==================================================================
 
 data TimelockRaw era
-  = Signature !(KeyHash 'Witness (Crypto era))
+  = Signature !(KeyHash 'Witness (EraCrypto era))
   | AllOf !(StrictSeq (Timelock era)) -- NOTE that Timelock and
   | AnyOf !(StrictSeq (Timelock era)) -- TimelockRaw are mutually recursive.
   | MOfN !Int !(StrictSeq (Timelock era)) -- Note that the Int may be negative in which case (MOfN -2 [..]) is always True
@@ -130,7 +130,7 @@ data TimelockRaw era
 
 deriving instance Era era => NoThunks (TimelockRaw era)
 
-deriving instance HashAlgorithm (HASH (Crypto era)) => Show (TimelockRaw era)
+deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (TimelockRaw era)
 
 -- | This function deconstructs and then reconstructs the timelock script
 -- to prove the compiler that we can arbirarily switch out the eras as long
@@ -139,7 +139,7 @@ translateTimelock ::
   forall era1 era2.
   ( Era era1,
     Era era2,
-    Crypto era1 ~ Crypto era2
+    EraCrypto era1 ~ EraCrypto era2
   ) =>
   Timelock era1 ->
   Timelock era2
@@ -189,7 +189,7 @@ newtype Timelock era = TimelockConstr (MemoBytes TimelockRaw era)
   deriving (Eq, Generic)
   deriving newtype (ToCBOR, NoThunks, NFData, SafeToHash)
 
-deriving instance HashAlgorithm (HASH (Crypto era)) => Show (Timelock era)
+deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (Timelock era)
 
 type instance SomeScript 'PhaseOne (ShelleyMAEra ma c) = Timelock (ShelleyMAEra ma c)
 
@@ -207,7 +207,7 @@ deriving via
   instance
     Era era => FromCBOR (Annotator (Timelock era))
 
-pattern RequireSignature :: Era era => KeyHash 'Witness (Crypto era) -> Timelock era
+pattern RequireSignature :: Era era => KeyHash 'Witness (EraCrypto era) -> Timelock era
 pattern RequireSignature akh <-
   TimelockConstr (Memo (Signature akh) _)
   where
@@ -266,7 +266,7 @@ ltePosInfty (SJust i) j = i <= j
 
 evalTimelock ::
   Era era =>
-  Set (KeyHash 'Witness (Crypto era)) ->
+  Set (KeyHash 'Witness (EraCrypto era)) ->
   ValidityInterval ->
   Timelock era ->
   Bool

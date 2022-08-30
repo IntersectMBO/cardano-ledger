@@ -17,6 +17,7 @@ in the naming of release branches.
 - Changed `mint` field type to `MultiAsset (Crypto era)` in `MATxBody`, `AlonzoTxBody`, `BabbageTxBody`
   #2954
 - All Shelley rules are now available through `Cadano.Ledger.Shelley.Rules` module: #2996
+- Renamed the `Crypto` dependent type in the `Era` class to `EraCrypto` #3009
 
 ### Removed
 

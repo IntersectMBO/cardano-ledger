@@ -104,7 +104,7 @@ sizedTimelock n =
 instance
   forall era c.
   ( Era era,
-    c ~ Crypto era,
+    c ~ EraCrypto era,
     Mock c,
     FromCBOR (Annotator (Script era)),
     ToCBOR (Script era),
@@ -136,7 +136,7 @@ genScriptSeq = do
 
 instance
   ( Era era,
-    Mock (Crypto era),
+    Mock (EraCrypto era),
     Arbitrary (Value era),
     Arbitrary (TxOut era),
     Arbitrary (PredicateFailure (EraRule "PPUP" era))
@@ -146,7 +146,7 @@ instance
   arbitrary = genericArbitraryU
 
 instance
-  (EraTxOut era, Mock (Crypto era), Arbitrary (Value era), ToCBOR (PParamsUpdate era)) =>
+  (EraTxOut era, Mock (EraCrypto era), Arbitrary (Value era), ToCBOR (PParamsUpdate era)) =>
   Arbitrary (MATxBody era)
   where
   arbitrary =

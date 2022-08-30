@@ -20,7 +20,7 @@ where
 import Cardano.Ledger.BaseTypes (CertIx, Globals, ShelleyBase, TxIx)
 import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Era (Era, EraCrypto)
 import Cardano.Ledger.Keys (HasKeyRole (coerceKeyRole), asWitness)
 import Cardano.Ledger.Shelley.API
   ( AccountState,
@@ -102,14 +102,14 @@ instance
   ( Era era,
     Embed (Core.EraRule "DELPL" era) (CERTS era),
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
-    State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
-    Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era)
+    State (Core.EraRule "DELPL" era) ~ DPState (EraCrypto era),
+    Signal (Core.EraRule "DELPL" era) ~ DCert (EraCrypto era)
   ) =>
   STS (CERTS era)
   where
   type Environment (CERTS era) = (SlotNo, TxIx, Core.PParams era, AccountState)
-  type State (CERTS era) = (DPState (Crypto era), CertIx)
-  type Signal (CERTS era) = Maybe (DCert (Crypto era), CertCred era)
+  type State (CERTS era) = (DPState (EraCrypto era), CertIx)
+  type Signal (CERTS era) = Maybe (DCert (EraCrypto era), CertCred era)
   type PredicateFailure (CERTS era) = CertsPredicateFailure era
   type Event (CERTS era) = CertsEvent era
 
@@ -122,8 +122,8 @@ certsTransition ::
   forall era.
   ( Embed (Core.EraRule "DELPL" era) (CERTS era),
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
-    State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
-    Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era)
+    State (Core.EraRule "DELPL" era) ~ DPState (EraCrypto era),
+    Signal (Core.EraRule "DELPL" era) ~ DCert (EraCrypto era)
   ) =>
   TransitionRule (CERTS era)
 certsTransition = do
@@ -160,8 +160,8 @@ instance
   ( EraGen era,
     Embed (Core.EraRule "DELPL" era) (CERTS era),
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
-    State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
-    Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era)
+    State (Core.EraRule "DELPL" era) ~ DPState (EraCrypto era),
+    Signal (Core.EraRule "DELPL" era) ~ DCert (EraCrypto era)
   ) =>
   QC.HasTrace (CERTS era) (GenEnv era)
   where
@@ -195,21 +195,21 @@ genDCerts ::
   ( EraGen era,
     Embed (Core.EraRule "DELPL" era) (CERTS era),
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
-    State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
-    Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era)
+    State (Core.EraRule "DELPL" era) ~ DPState (EraCrypto era),
+    Signal (Core.EraRule "DELPL" era) ~ DCert (EraCrypto era)
   ) =>
   GenEnv era ->
   Core.PParams era ->
-  DPState (Crypto era) ->
+  DPState (EraCrypto era) ->
   SlotNo ->
   TxIx ->
   AccountState ->
   Gen
-    ( StrictSeq (DCert (Crypto era)),
+    ( StrictSeq (DCert (EraCrypto era)),
       Coin,
       Coin,
-      DPState (Crypto era),
-      ([KeyPair 'Witness (Crypto era)], [(Core.Script era, Core.Script era)])
+      DPState (EraCrypto era),
+      ([KeyPair 'Witness (EraCrypto era)], [(Core.Script era, Core.Script era)])
     )
 genDCerts
   ge@( GenEnv
@@ -272,7 +272,7 @@ extractScriptCred x =
 keyCredAsWitness ::
   (HasCallStack, Era era, Show (Core.Script era)) =>
   CertCred era ->
-  [KeyPair 'Witness (Crypto era)]
+  [KeyPair 'Witness (EraCrypto era)]
 keyCredAsWitness (DelegateCred c) = asWitness <$> c
 keyCredAsWitness (CoreKeyCred c) = asWitness <$> c
 keyCredAsWitness (StakeCred c) = [asWitness c]

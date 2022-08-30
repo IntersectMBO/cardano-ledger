@@ -32,7 +32,7 @@ import Cardano.Ledger.Shelley.Rules
 data BabbageEra c
 
 instance CC.Crypto c => Era (BabbageEra c) where
-  type Crypto (BabbageEra c) = c
+  type EraCrypto (BabbageEra c) = c
   type ProtVerLow (BabbageEra c) = 7
 
 type instance Value (BabbageEra c) = MaryValue c

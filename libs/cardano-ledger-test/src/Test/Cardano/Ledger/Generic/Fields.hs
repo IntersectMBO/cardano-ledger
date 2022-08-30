@@ -105,57 +105,57 @@ pattern Valid' :: Bool -> TxField era
 
 -- =================
 data TxBodyField era
-  = Inputs (Set (TxIn (Crypto era)))
-  | Collateral (Set (TxIn (Crypto era)))
-  | RefInputs (Set (TxIn (Crypto era)))
+  = Inputs (Set (TxIn (EraCrypto era)))
+  | Collateral (Set (TxIn (EraCrypto era)))
+  | RefInputs (Set (TxIn (EraCrypto era)))
   | Outputs (StrictSeq (TxOut era))
   | CollateralReturn (StrictMaybe (TxOut era))
   | TotalCol (StrictMaybe Coin)
-  | Certs (StrictSeq (DCert (Crypto era)))
-  | Wdrls (Wdrl (Crypto era))
+  | Certs (StrictSeq (DCert (EraCrypto era)))
+  | Wdrls (Wdrl (EraCrypto era))
   | Txfee Coin
   | Vldt ValidityInterval
   | TTL SlotNo
   | Update (StrictMaybe (PP.Update era))
-  | ReqSignerHashes (Set (KeyHash 'Witness (Crypto era)))
-  | Mint (MultiAsset (Crypto era))
-  | WppHash (StrictMaybe (ScriptIntegrityHash (Crypto era)))
-  | AdHash (StrictMaybe (AuxiliaryDataHash (Crypto era)))
+  | ReqSignerHashes (Set (KeyHash 'Witness (EraCrypto era)))
+  | Mint (MultiAsset (EraCrypto era))
+  | WppHash (StrictMaybe (ScriptIntegrityHash (EraCrypto era)))
+  | AdHash (StrictMaybe (AuxiliaryDataHash (EraCrypto era)))
   | Txnetworkid (StrictMaybe Network)
 
-pattern Inputs' :: [TxIn (Crypto era)] -> TxBodyField era -- Set
+pattern Inputs' :: [TxIn (EraCrypto era)] -> TxBodyField era -- Set
 
-pattern Collateral' :: [TxIn (Crypto era)] -> TxBodyField era -- Set
+pattern Collateral' :: [TxIn (EraCrypto era)] -> TxBodyField era -- Set
 
-pattern RefInputs' :: [TxIn (Crypto era)] -> TxBodyField era -- Set
+pattern RefInputs' :: [TxIn (EraCrypto era)] -> TxBodyField era -- Set
 
 pattern Outputs' :: [TxOut era] -> TxBodyField era -- StrictSeq
 
-pattern Certs' :: [DCert (Crypto era)] -> TxBodyField era -- StrictSeq
+pattern Certs' :: [DCert (EraCrypto era)] -> TxBodyField era -- StrictSeq
 
 pattern CollateralReturn' :: [TxOut era] -> TxBodyField era -- 0 or 1 element
 
 pattern Update' :: [PP.Update era] -> TxBodyField era -- 0 or 1 element
 
-pattern ReqSignerHashes' :: [KeyHash 'Witness (Crypto era)] -> TxBodyField era -- A set
+pattern ReqSignerHashes' :: [KeyHash 'Witness (EraCrypto era)] -> TxBodyField era -- A set
 
-pattern WppHash' :: [ScriptIntegrityHash (Crypto era)] -> TxBodyField era -- 0 or 1 element
+pattern WppHash' :: [ScriptIntegrityHash (EraCrypto era)] -> TxBodyField era -- 0 or 1 element
 
-pattern AdHash' :: [AuxiliaryDataHash (Crypto era)] -> TxBodyField era -- 0 or 1 element
+pattern AdHash' :: [AuxiliaryDataHash (EraCrypto era)] -> TxBodyField era -- 0 or 1 element
 
 pattern Txnetworkid' :: [Network] -> TxBodyField era -- 0 or 1 element
 
 -- ====================
 data WitnessesField era
-  = AddrWits (Set (WitVKey 'Witness (Crypto era)))
-  | BootWits (Set (BootstrapWitness (Crypto era)))
-  | ScriptWits (Map (ScriptHash (Crypto era)) (Script era))
+  = AddrWits (Set (WitVKey 'Witness (EraCrypto era)))
+  | BootWits (Set (BootstrapWitness (EraCrypto era)))
+  | ScriptWits (Map (ScriptHash (EraCrypto era)) (Script era))
   | DataWits (TxDats era)
   | RdmrWits (Redeemers era)
 
-pattern AddrWits' :: Era era => [WitVKey 'Witness (Crypto era)] -> WitnessesField era -- Set
+pattern AddrWits' :: Era era => [WitVKey 'Witness (EraCrypto era)] -> WitnessesField era -- Set
 
-pattern BootWits' :: Era era => [BootstrapWitness (Crypto era)] -> WitnessesField era -- Set
+pattern BootWits' :: Era era => [BootstrapWitness (EraCrypto era)] -> WitnessesField era -- Set
 
 pattern ScriptWits' :: forall era. EraScript era => [Script era] -> WitnessesField era -- Map
 
@@ -163,13 +163,13 @@ pattern DataWits' :: Era era => [Data era] -> WitnessesField era -- Map
 
 -- ================
 data TxOutField era
-  = Address (Addr (Crypto era))
+  = Address (Addr (EraCrypto era))
   | Amount (Value era)
-  | DHash (StrictMaybe (DataHash (Crypto era)))
+  | DHash (StrictMaybe (DataHash (EraCrypto era)))
   | FDatum (Datum era)
   | RefScript (StrictMaybe (Script era))
 
-pattern DHash' :: [DataHash (Crypto era)] -> TxOutField era -- 0 or 1 element
+pattern DHash' :: [DataHash (EraCrypto era)] -> TxOutField era -- 0 or 1 element
 
 pattern RefScript' :: [Script era] -> TxOutField era -- 0 or 1 element
 
@@ -330,7 +330,7 @@ initialTx era@(Conway _) =
     SNothing
 
 -- | A Meaningless Addr.
-initialAddr :: Era era => Proof era -> Addr (Crypto era)
+initialAddr :: Era era => Proof era -> Addr (EraCrypto era)
 initialAddr _wit = Addr Testnet pCred sCred
   where
     (KeyPair svk _ssk) = theKeyPair 0
@@ -481,10 +481,10 @@ fromStrictMaybe (SJust x) = [x]
 toMapDat :: Era era => [Data era] -> TxDats era
 toMapDat ds = TxDats (Map.fromList (map (\d -> (hashData d, d)) ds))
 
-fromMapScript :: forall era. Map (ScriptHash (Crypto era)) (Script era) -> [Script era]
+fromMapScript :: forall era. Map (ScriptHash (EraCrypto era)) (Script era) -> [Script era]
 fromMapScript m = Map.elems m
 
-toMapScript :: forall era. EraScript era => [Script era] -> Map (ScriptHash (Crypto era)) (Script era)
+toMapScript :: forall era. EraScript era => [Script era] -> Map (ScriptHash (EraCrypto era)) (Script era)
 toMapScript scripts = Map.fromList (map (\s -> (hashScript @era s, s)) scripts)
 
 -- =============================================================================
@@ -504,7 +504,7 @@ pattern Txnetworkid' x <-
   where
     Txnetworkid' x = Txnetworkid (toStrictMaybe x)
 
-adhashview :: TxBodyField era -> Maybe [AuxiliaryDataHash (Crypto era)]
+adhashview :: TxBodyField era -> Maybe [AuxiliaryDataHash (EraCrypto era)]
 adhashview (AdHash x) = Just (fromStrictMaybe x)
 adhashview _ = Nothing
 
@@ -513,7 +513,7 @@ pattern AdHash' x <-
   where
     AdHash' x = AdHash (toStrictMaybe x)
 
-wppview :: TxBodyField era -> Maybe [ScriptIntegrityHash (Crypto era)]
+wppview :: TxBodyField era -> Maybe [ScriptIntegrityHash (EraCrypto era)]
 wppview (WppHash x) = Just (fromStrictMaybe x)
 wppview _ = Nothing
 
@@ -522,7 +522,7 @@ pattern WppHash' x <-
   where
     WppHash' x = WppHash (toStrictMaybe x)
 
-signview :: TxBodyField era -> Maybe [KeyHash 'Witness (Crypto era)]
+signview :: TxBodyField era -> Maybe [KeyHash 'Witness (EraCrypto era)]
 signview (ReqSignerHashes x) = Just (fromSet x)
 signview _ = Nothing
 
@@ -540,7 +540,7 @@ pattern Update' x <-
   where
     Update' x = Update (toStrictMaybe x)
 
-certsview :: TxBodyField era -> Maybe [DCert (Crypto era)]
+certsview :: TxBodyField era -> Maybe [DCert (EraCrypto era)]
 certsview (Certs x) = Just (fromStrictSeq x)
 certsview _ = Nothing
 
@@ -567,7 +567,7 @@ pattern Outputs' x <-
   where
     Outputs' x = Outputs (toStrictSeq x)
 
-inputsview :: TxBodyField era -> Maybe [TxIn (Crypto era)]
+inputsview :: TxBodyField era -> Maybe [TxIn (EraCrypto era)]
 inputsview (Inputs x) = Just (fromSet x)
 inputsview _ = Nothing
 
@@ -576,7 +576,7 @@ pattern Inputs' x <-
   where
     Inputs' x = Inputs (toSet x)
 
-colview :: TxBodyField era -> Maybe [TxIn (Crypto era)]
+colview :: TxBodyField era -> Maybe [TxIn (EraCrypto era)]
 colview (Collateral x) = Just (fromSet x)
 colview _ = Nothing
 
@@ -585,7 +585,7 @@ pattern Collateral' x <-
   where
     Collateral' x = Collateral (toSet x)
 
-refview :: TxBodyField era -> Maybe [TxIn (Crypto era)]
+refview :: TxBodyField era -> Maybe [TxIn (EraCrypto era)]
 refview (RefInputs x) = Just (fromSet x)
 refview _ = Nothing
 
@@ -636,7 +636,7 @@ pattern ScriptWits' x <-
   where
     ScriptWits' x = ScriptWits (toMapScript @era x)
 
-addrview :: WitnessesField era -> Maybe [WitVKey 'Witness (Crypto era)]
+addrview :: WitnessesField era -> Maybe [WitVKey 'Witness (EraCrypto era)]
 addrview (AddrWits x) = Just (fromSet x)
 addrview _ = Nothing
 
@@ -645,7 +645,7 @@ pattern AddrWits' x <-
   where
     AddrWits' x = AddrWits (toSet x)
 
-bootview :: WitnessesField era -> Maybe [BootstrapWitness (Crypto era)]
+bootview :: WitnessesField era -> Maybe [BootstrapWitness (EraCrypto era)]
 bootview (BootWits x) = Just (fromSet x)
 bootview _ = Nothing
 
@@ -666,7 +666,7 @@ pattern RefScript' x <-
   where
     RefScript' x = RefScript (toStrictMaybe x)
 
-dhashview :: TxOutField era -> Maybe [DataHash (Crypto era)]
+dhashview :: TxOutField era -> Maybe [DataHash (EraCrypto era)]
 dhashview (DHash x) = Just (fromStrictMaybe x)
 dhashview _ = Nothing
 

@@ -112,28 +112,28 @@ data AlonzoUtxowPredFailure era
   = ShelleyInAlonzoUtxowPredFailure !(ShelleyUtxowPredFailure era)
   | -- | List of scripts for which no redeemers were supplied
     MissingRedeemers
-      ![(ScriptPurpose (Crypto era), ScriptHash (Crypto era))]
+      ![(ScriptPurpose (EraCrypto era), ScriptHash (EraCrypto era))]
   | MissingRequiredDatums
-      !(Set (DataHash (Crypto era)))
+      !(Set (DataHash (EraCrypto era)))
       -- ^ Set of missing data hashes
-      !(Set (DataHash (Crypto era)))
+      !(Set (DataHash (EraCrypto era)))
       -- ^ Set of received data hashes
   | NonOutputSupplimentaryDatums
-      !(Set (DataHash (Crypto era)))
+      !(Set (DataHash (EraCrypto era)))
       -- ^ Set of unallowed data hashes
-      !(Set (DataHash (Crypto era)))
+      !(Set (DataHash (EraCrypto era)))
       -- ^ Set of acceptable supplimental data hashes
   | PPViewHashesDontMatch
-      !(StrictMaybe (ScriptIntegrityHash (Crypto era)))
+      !(StrictMaybe (ScriptIntegrityHash (EraCrypto era)))
       -- ^ The PPHash in the TxBody
-      !(StrictMaybe (ScriptIntegrityHash (Crypto era)))
+      !(StrictMaybe (ScriptIntegrityHash (EraCrypto era)))
       -- ^ Computed from the current Protocol Parameters
   | -- | Set of witnesses which were needed and not supplied
     MissingRequiredSigners
-      (Set (KeyHash 'Witness (Crypto era)))
+      (Set (KeyHash 'Witness (EraCrypto era)))
   | -- | Set of transaction inputs that are TwoPhase scripts, and should have a DataHash but don't
     UnspendableUTxONoDatumHash
-      (Set (TxIn (Crypto era)))
+      (Set (TxIn (EraCrypto era)))
   | -- | List of redeemers not needed
     ExtraRedeemers
       ![RdmrPtr]
@@ -229,7 +229,7 @@ missingRequiredDatums ::
     Script era ~ AlonzoScript era,
     ExtendedUTxO era
   ) =>
-  Map.Map (ScriptHash (Crypto era)) (Script era) ->
+  Map.Map (ScriptHash (EraCrypto era)) (Script era) ->
   UTxO era ->
   AlonzoTx era ->
   TxBody era ->
@@ -294,7 +294,7 @@ requiredSignersAreWitnessed ::
   ( AlonzoEraTxBody era
   ) =>
   TxBody era ->
-  Set (KeyHash 'Witness (Crypto era)) ->
+  Set (KeyHash 'Witness (EraCrypto era)) ->
   Test (AlonzoUtxowPredFailure era)
 requiredSignersAreWitnessed txBody witsKeyHashes = do
   let reqSignerHashes' = txBody ^. reqSignerHashesTxBodyL
@@ -316,7 +316,7 @@ ppViewHashesMatch ::
   TxBody era ->
   PParams era ->
   UTxO era ->
-  Set (ScriptHash (Crypto era)) ->
+  Set (ScriptHash (EraCrypto era)) ->
   Test (AlonzoUtxowPredFailure era)
 ppViewHashesMatch tx txBody pp utxo sNeeded = do
   -- FIXME: No need to supply txBody as a separate argument: txBody = tx ^. bodyTxL
@@ -344,7 +344,7 @@ alonzoStyleWitness ::
     Witnesses era ~ TxWitness era,
     HasField "_costmdls" (PParams era) CostModels,
     HasField "_protocolVersion" (PParams era) ProtVer,
-    Signable (DSIGN (Crypto era)) (Hash (HASH (Crypto era)) EraIndependentTxBody),
+    Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody),
     -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (AlonzoUTXOW era),
     Environment (EraRule "UTXO" era) ~ UtxoEnv era,
@@ -433,8 +433,8 @@ witsVKeyNeeded ::
   (EraTx era, AlonzoEraTxBody era) =>
   UTxO era ->
   Tx era ->
-  GenDelegs (Crypto era) ->
-  Set (KeyHash 'Witness (Crypto era))
+  GenDelegs (EraCrypto era) ->
+  Set (KeyHash 'Witness (EraCrypto era))
 witsVKeyNeeded utxo' tx genDelegs =
   certAuthors
     `Set.union` inputAuthors
@@ -443,7 +443,7 @@ witsVKeyNeeded utxo' tx genDelegs =
     `Set.union` updateKeys
   where
     txBody = tx ^. bodyTxL
-    inputAuthors :: Set (KeyHash 'Witness (Crypto era))
+    inputAuthors :: Set (KeyHash 'Witness (EraCrypto era))
     inputAuthors =
       foldr'
         accum
@@ -460,11 +460,11 @@ witsVKeyNeeded utxo' tx genDelegs =
                 _ -> ans
             Nothing -> ans
 
-    wdrlAuthors :: Set (KeyHash 'Witness (Crypto era))
+    wdrlAuthors :: Set (KeyHash 'Witness (EraCrypto era))
     wdrlAuthors = Map.foldrWithKey' accum Set.empty (unWdrl (txBody ^. wdrlsTxBodyL))
       where
         accum key _ ans = Set.union (extractKeyHashWitnessSet [getRwdCred key]) ans
-    owners :: Set (KeyHash 'Witness (Crypto era))
+    owners :: Set (KeyHash 'Witness (EraCrypto era))
     owners = foldr' accum Set.empty (txBody ^. certsTxBodyL)
       where
         accum (DCertPool (RegPool pool)) ans =
@@ -479,12 +479,12 @@ witsVKeyNeeded utxo' tx genDelegs =
     -- key reg requires no witness but this is already filtered out by requiresVKeyWitness
     -- before the call to `cwitness`, so this error should never be reached.
 
-    certAuthors :: Set (KeyHash 'Witness (Crypto era))
+    certAuthors :: Set (KeyHash 'Witness (EraCrypto era))
     certAuthors = foldr' accum Set.empty (txBody ^. certsTxBodyL)
       where
         accum cert ans | requiresVKeyWitness cert = Set.union (cwitness cert) ans
         accum _cert ans = ans
-    updateKeys :: Set (KeyHash 'Witness (Crypto era))
+    updateKeys :: Set (KeyHash 'Witness (EraCrypto era))
     updateKeys =
       asWitness
         `Set.map` propWits
@@ -507,7 +507,7 @@ instance
     AlonzoEraTxBody era,
     EraAuxiliaryData era,
     ExtendedUTxO era,
-    Signable (DSIGN (Crypto era)) (Hash (HASH (Crypto era)) EraIndependentTxBody),
+    Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody),
     Tx era ~ AlonzoTx era,
     Script era ~ AlonzoScript era,
     Witnesses era ~ TxWitness era,

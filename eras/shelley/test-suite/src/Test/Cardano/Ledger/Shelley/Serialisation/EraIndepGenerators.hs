@@ -58,7 +58,7 @@ import Cardano.Ledger.BaseTypes
     textToUrl,
   )
 import Cardano.Ledger.Coin (CompactForm (..), DeltaCoin (..))
-import Cardano.Ledger.Core (Crypto, Era, EraScript (..), EraSegWits (..))
+import Cardano.Ledger.Core (Era, EraCrypto, EraScript (..), EraSegWits (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto, HASH)
@@ -168,8 +168,8 @@ instance Hash.HashAlgorithm (CC.HASH c) => Arbitrary (SafeHash c i) where
 -------------------------------------------------------------------------------}
 
 type MockGen era =
-  ( Mock (Crypto era),
-    Arbitrary (VerKeyDSIGN (DSIGN (Crypto era)))
+  ( Mock (EraCrypto era),
+    Arbitrary (VerKeyDSIGN (DSIGN (EraCrypto era)))
   )
 
 instance Mock crypto => Arbitrary (BHeader crypto) where
@@ -228,10 +228,10 @@ instance CC.Crypto crypto => Arbitrary (Wdrl crypto) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance (Era era, Mock (Crypto era)) => Arbitrary (ProposedPPUpdates era) where
+instance (Era era, Mock (EraCrypto era)) => Arbitrary (ProposedPPUpdates era) where
   arbitrary = ProposedPPUpdates <$> pure Map.empty
 
-instance (Era era, Mock (Crypto era)) => Arbitrary (Update era) where
+instance (Era era, Mock (EraCrypto era)) => Arbitrary (Update era) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -277,7 +277,7 @@ instance CC.Crypto crypto => Arbitrary (TxIn crypto) where
       <*> arbitrary
 
 instance
-  (Core.EraTxOut era, Mock (Crypto era), Arbitrary (Core.Value era)) =>
+  (Core.EraTxOut era, Mock (EraCrypto era), Arbitrary (Core.Value era)) =>
   Arbitrary (ShelleyTxOut era)
   where
   arbitrary = ShelleyTxOut <$> arbitrary <*> arbitrary
@@ -412,7 +412,7 @@ instance CC.Crypto crypto => Arbitrary (STS.PrtclState crypto) where
 
 deriving instance
   ( Core.EraTxOut era,
-    Mock (Crypto era),
+    Mock (EraCrypto era),
     Arbitrary (Core.TxOut era)
   ) =>
   Arbitrary (UTxO era)
@@ -481,7 +481,7 @@ instance CC.Crypto crypto => Arbitrary (DCert crypto) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance (Era era, Mock (Crypto era)) => Arbitrary (PPUPState era) where
+instance (Era era, Mock (EraCrypto era)) => Arbitrary (PPUPState era) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -491,7 +491,7 @@ instance CC.Crypto crypto => Arbitrary (DPState crypto) where
 
 instance
   ( Core.EraTxOut era,
-    Mock (Crypto era),
+    Mock (EraCrypto era),
     Arbitrary (Core.TxOut era),
     Arbitrary (State (Core.EraRule "PPUP" era))
   ) =>
@@ -518,7 +518,7 @@ instance CC.Crypto c => Arbitrary (IncrementalStake c) where
 
 instance
   ( Core.EraTxOut era,
-    Mock (Crypto era),
+    Mock (EraCrypto era),
     Arbitrary (Core.TxOut era),
     Arbitrary (State (Core.EraRule "PPUP" era))
   ) =>
@@ -529,7 +529,7 @@ instance
 
 instance
   ( Core.EraTxOut era,
-    Mock (Crypto era),
+    Mock (EraCrypto era),
     Arbitrary (Core.TxOut era),
     Arbitrary (Core.Value era),
     Arbitrary (Core.PParams era),
@@ -552,7 +552,7 @@ instance CC.Crypto crypto => Arbitrary (PoolDistr crypto) where
 
 instance
   ( Core.EraTxOut era,
-    Mock (Crypto era),
+    Mock (EraCrypto era),
     Arbitrary (Core.TxOut era),
     Arbitrary (Core.Value era),
     Arbitrary (Core.PParams era),
@@ -709,7 +709,7 @@ genUTCTime = do
       (Time.picosecondsToDiffTime diff)
 
 instance
-  (Mock (Crypto era), Arbitrary (ShelleyPParams era)) =>
+  (Mock (EraCrypto era), Arbitrary (ShelleyPParams era)) =>
   Arbitrary (ShelleyGenesis era)
   where
   arbitrary =
@@ -731,7 +731,7 @@ instance
       <*> (ShelleyGenesisStaking <$> arbitrary <*> arbitrary) -- sgStaking
 
 instance
-  ( Mock (Crypto era),
+  ( Mock (EraCrypto era),
     EraScript era,
     Arbitrary (Core.Script era)
   ) =>
@@ -755,7 +755,7 @@ instance Era era => Arbitrary (STS.ShelleyPoolPredFailure era) where
 
 instance
   ( Era era,
-    Mock (Crypto era),
+    Mock (EraCrypto era),
     Arbitrary (STS.PredicateFailure (Core.EraRule "POOL" era)),
     Arbitrary (STS.PredicateFailure (Core.EraRule "DELEG" era))
   ) =>
@@ -765,7 +765,7 @@ instance
   shrink = recursivelyShrink
 
 instance
-  (Era era, Mock (Crypto era)) =>
+  (Era era, Mock (EraCrypto era)) =>
   Arbitrary (STS.ShelleyDelegPredFailure era)
   where
   arbitrary = genericArbitraryU
@@ -773,7 +773,7 @@ instance
 
 instance
   ( Era era,
-    Mock (Crypto era),
+    Mock (EraCrypto era),
     Arbitrary (STS.PredicateFailure (Core.EraRule "DELPL" era))
   ) =>
   Arbitrary (STS.ShelleyDelegsPredFailure era)
@@ -825,9 +825,9 @@ genTx =
 genBlock ::
   forall era h.
   ( EraSegWits era,
-    Mock (Crypto era),
+    Mock (EraCrypto era),
     Arbitrary (Core.Tx era),
-    h ~ BHeader (Crypto era)
+    h ~ BHeader (EraCrypto era)
   ) =>
   Gen (Block h era)
 genBlock = Block <$> arbitrary <*> (toTxSeq @era <$> arbitrary)
@@ -842,15 +842,15 @@ genBlock = Block <$> arbitrary <*> (toTxSeq @era <$> arbitrary)
 -- This generator uses 'mkBlock' provide more coherent blocks.
 genCoherentBlock ::
   forall era h.
-  ( Mock (Crypto era),
+  ( Mock (EraCrypto era),
     EraSegWits era,
     Arbitrary (Core.Tx era),
-    h ~ BHeader (Crypto era)
+    h ~ BHeader (EraCrypto era)
   ) =>
   Gen (Block h era)
 genCoherentBlock = do
   let ksCoreNodes = coreNodeKeys defaultConstants
-  prevHash <- arbitrary :: Gen (HashHeader (Crypto era))
+  prevHash <- arbitrary :: Gen (HashHeader (EraCrypto era))
   allPoolKeys <- elements (map snd ksCoreNodes)
   txs <- arbitrary
   curSlotNo <- SlotNo <$> choose (0, 10)
@@ -888,9 +888,9 @@ instance
   ( Core.EraTxBody era,
     ToCBORGroup (TxSeq era),
     EraSegWits era,
-    Mock (Crypto era),
+    Mock (EraCrypto era),
     Arbitrary (Core.Tx era),
-    h ~ BHeader (Crypto era)
+    h ~ BHeader (EraCrypto era)
   ) =>
   Arbitrary (Block h era)
   where

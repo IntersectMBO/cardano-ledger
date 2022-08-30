@@ -94,10 +94,10 @@ data BabbageUtxowPredFailure era
     UtxoFailure !(PredicateFailure (EraRule "UTXO" era))
   | -- | the set of malformed script witnesses
     MalformedScriptWitnesses
-      !(Set (ScriptHash (Crypto era)))
+      !(Set (ScriptHash (EraCrypto era)))
   | -- | the set of malformed script witnesses
     MalformedReferenceScripts
-      !(Set (ScriptHash (Crypto era)))
+      !(Set (ScriptHash (EraCrypto era)))
 
 deriving instance
   ( Era era,
@@ -182,9 +182,9 @@ deriving via
 babbageMissingScripts ::
   forall era.
   PParams era ->
-  Set (ScriptHash (Crypto era)) ->
-  Set (ScriptHash (Crypto era)) ->
-  Set (ScriptHash (Crypto era)) ->
+  Set (ScriptHash (EraCrypto era)) ->
+  Set (ScriptHash (EraCrypto era)) ->
+  Set (ScriptHash (EraCrypto era)) ->
   Test (ShelleyUtxowPredFailure era)
 babbageMissingScripts _ sNeeded sRefs sReceived =
   sequenceA_
@@ -205,7 +205,7 @@ validateFailedBabbageScripts ::
   ) =>
   Tx era ->
   UTxO era ->
-  Set (ScriptHash (Crypto era)) ->
+  Set (ScriptHash (EraCrypto era)) ->
   Test (ShelleyUtxowPredFailure era)
 validateFailedBabbageScripts tx utxo neededHashes =
   let phase1Map = getPhase1 (txscripts utxo tx)
@@ -274,7 +274,7 @@ babbageUtxowTransition ::
     BabbageEraTxBody era,
     HasField "_costmdls" (PParams era) CostModels,
     HasField "_protocolVersion" (PParams era) ProtVer,
-    Signable (DSIGN (Crypto era)) (Hash (HASH (Crypto era)) EraIndependentTxBody),
+    Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody),
     -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (BabbageUTXOW era),
     Environment (EraRule "UTXO" era) ~ UtxoEnv era,
@@ -368,7 +368,7 @@ instance
     TxOut era ~ BabbageTxOut era,
     HasField "_costmdls" (PParams era) CostModels,
     HasField "_protocolVersion" (PParams era) ProtVer,
-    Signable (DSIGN (Crypto era)) (Hash (HASH (Crypto era)) EraIndependentTxBody),
+    Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody),
     Show (TxBody era),
     Show (TxOut era),
     -- Fix some Core types to the Babbage Era

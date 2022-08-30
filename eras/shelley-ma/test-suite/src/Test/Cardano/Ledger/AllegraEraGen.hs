@@ -27,7 +27,7 @@ import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
-import Cardano.Ledger.Era (Era (Crypto))
+import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Keys (KeyHash)
 import Cardano.Ledger.Pretty.Mary ()
 import Cardano.Ledger.Shelley.API (KeyRole (Witness))
@@ -96,13 +96,13 @@ instance (CryptoClass.Crypto c, Mock c) => EraGen (AllegraEra c) where
 genTxBody ::
   ShelleyMAEraTxBody era =>
   SlotNo ->
-  Set.Set (TxIn (Crypto era)) ->
+  Set.Set (TxIn (EraCrypto era)) ->
   StrictSeq (ShelleyTxOut era) ->
-  StrictSeq (DCert (Crypto era)) ->
-  Wdrl (Crypto era) ->
+  StrictSeq (DCert (EraCrypto era)) ->
+  Wdrl (EraCrypto era) ->
   Coin ->
   StrictMaybe (Update era) ->
-  StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
+  StrictMaybe (AuxiliaryDataHash (EraCrypto era)) ->
   Gen (MATxBody era, [Timelock era])
 genTxBody slot ins outs cert wdrl fee upd ad = do
   validityInterval <- genValidityInterval slot
@@ -187,7 +187,7 @@ genValidityInterval cs@(SlotNo currentSlot) =
 someLeaf ::
   forall era.
   Era era =>
-  KeyHash 'Witness (Crypto era) ->
+  KeyHash 'Witness (EraCrypto era) ->
   Timelock era
 someLeaf x =
   let n = mod (hash (serializeEncoding' (toCBOR x))) 200

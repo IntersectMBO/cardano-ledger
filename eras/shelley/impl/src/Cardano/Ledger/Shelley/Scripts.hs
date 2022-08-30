@@ -73,7 +73,7 @@ import NoThunks.Class (NoThunks (..))
 data MultiSigRaw era
   = -- | Require the redeeming transaction be witnessed by the spending key
     --   corresponding to the given verification key hash.
-    RequireSignature' !(KeyHash 'Witness (Crypto era))
+    RequireSignature' !(KeyHash 'Witness (EraCrypto era))
   | -- | Require all the sub-terms to be satisfied.
     RequireAllOf' ![MultiSig era]
   | -- | Require any one of the sub-terms to be satisfied.
@@ -83,7 +83,7 @@ data MultiSigRaw era
   deriving (Eq, Generic)
   deriving anyclass (NoThunks)
 
-deriving instance HashAlgorithm (HASH (Crypto era)) => Show (MultiSigRaw era)
+deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (MultiSigRaw era)
 
 instance NFData (MultiSigRaw era)
 
@@ -91,7 +91,7 @@ newtype MultiSig era = MultiSigConstr (MemoBytes MultiSigRaw era)
   deriving (Eq, Generic)
   deriving newtype (ToCBOR, NoThunks, SafeToHash)
 
-deriving instance HashAlgorithm (HASH (Crypto era)) => Show (MultiSig era)
+deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (MultiSig era)
 
 -- | Magic number "memorialized" in the ValidateScript class under the method:
 --   scriptPrefixTag:: Core.Script era -> Bs.ByteString, for the Shelley Era.
@@ -118,7 +118,7 @@ deriving via
   instance
     Era era => FromCBOR (Annotator (MultiSig era))
 
-pattern RequireSignature :: Era era => KeyHash 'Witness (Crypto era) -> MultiSig era
+pattern RequireSignature :: Era era => KeyHash 'Witness (EraCrypto era) -> MultiSig era
 pattern RequireSignature akh <-
   MultiSigConstr (Memo (RequireSignature' akh) _)
   where

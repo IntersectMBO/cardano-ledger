@@ -118,4 +118,4 @@ initSt utxo =
     (maxLLSupply <-> Val.coin (balance utxo))
     genDelegs
     ppEx
-    (nonce0 @(Crypto era))
+    (nonce0 @(EraCrypto era))

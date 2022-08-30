@@ -153,7 +153,7 @@ getUTxO = _utxo . lsUTxOState . esLState . nesEs
 getFilteredUTxO ::
   EraTxOut era =>
   NewEpochState era ->
-  Set (Addr (Crypto era)) ->
+  Set (Addr (EraCrypto era)) ->
   UTxO era
 getFilteredUTxO ss addrSet =
   UTxO $ Map.filter checkAddr fullUTxO
@@ -168,7 +168,7 @@ getFilteredUTxO ss addrSet =
 
 getUTxOSubset ::
   NewEpochState era ->
-  Set (TxIn (Crypto era)) ->
+  Set (TxIn (EraCrypto era)) ->
   UTxO era
 getUTxOSubset ss txins =
   UTxO $ fullUTxO `Map.restrictKeys` txins
@@ -182,7 +182,7 @@ getUTxOSubset ss txins =
 -- | Get the /current/ registered stake pools.
 getPools ::
   NewEpochState era ->
-  Set (KeyHash 'StakePool (Crypto era))
+  Set (KeyHash 'StakePool (EraCrypto era))
 getPools = Map.keysSet . f
   where
     f = _pParams . dpsPState . lsDPState . esLState . nesEs
@@ -192,8 +192,8 @@ getPools = Map.keysSet . f
 -- pools that are currently registered.
 getPoolParameters ::
   NewEpochState era ->
-  Set (KeyHash 'StakePool (Crypto era)) ->
-  Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era))
+  Set (KeyHash 'StakePool (EraCrypto era)) ->
+  Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era))
 getPoolParameters = Map.restrictKeys . f
   where
     f = _pParams . dpsPState . lsDPState . esLState . nesEs
@@ -210,7 +210,7 @@ poolsByTotalStakeFraction ::
   forall era.
   Globals ->
   NewEpochState era ->
-  PoolDistr (Crypto era)
+  PoolDistr (EraCrypto era)
 poolsByTotalStakeFraction globals ss =
   PoolDistr poolsByTotalStake
   where
@@ -221,8 +221,8 @@ poolsByTotalStakeFraction globals ss =
     PoolDistr poolsByActiveStake = calculatePoolDistr snap
     poolsByTotalStake = Map.map toTotalStakeFrac poolsByActiveStake
     toTotalStakeFrac ::
-      IndividualPoolStake (Crypto era) ->
-      IndividualPoolStake (Crypto era)
+      IndividualPoolStake (EraCrypto era) ->
+      IndividualPoolStake (EraCrypto era)
     toTotalStakeFrac (IndividualPoolStake s vrf) =
       IndividualPoolStake (s * stakeRatio) vrf
 
@@ -245,10 +245,10 @@ getNonMyopicMemberRewards ::
   ) =>
   Globals ->
   NewEpochState era ->
-  Set (Either Coin (Credential 'Staking (Crypto era))) ->
+  Set (Either Coin (Credential 'Staking (EraCrypto era))) ->
   Map
-    (Either Coin (Credential 'Staking (Crypto era)))
-    (Map (KeyHash 'StakePool (Crypto era)) Coin)
+    (Either Coin (Credential 'Staking (EraCrypto era)))
+    (Map (KeyHash 'StakePool (EraCrypto era)) Coin)
 getNonMyopicMemberRewards globals ss creds =
   Map.fromSet (\cred -> Map.map (mkNMMRewards $ memShare cred) poolData) creds
   where
@@ -301,7 +301,7 @@ sumPoolOwnersStake pool stake =
 -- When ranking pools, and reporting their saturation level, in the wallet, we
 -- do not want to use one of the regular snapshots, but rather the most recent
 -- ledger state.
-currentSnapshot :: NewEpochState era -> EB.SnapShot (Crypto era)
+currentSnapshot :: NewEpochState era -> EB.SnapShot (EraCrypto era)
 currentSnapshot ss =
   incrementalStakeDistr incrementalStake dstate pstate
   where
@@ -373,7 +373,7 @@ getRewardInfoPools ::
   ) =>
   Globals ->
   NewEpochState era ->
-  (RewardParams, Map (KeyHash 'StakePool (Crypto era)) RewardInfoPool)
+  (RewardParams, Map (KeyHash 'StakePool (EraCrypto era)) RewardInfoPool)
 getRewardInfoPools globals ss =
   (mkRewardParams, VMap.toMap (VMap.mapWithKey mkRewardInfoPool poolParams))
   where
@@ -429,7 +429,7 @@ getRewardProvenance ::
   ) =>
   Globals ->
   NewEpochState era ->
-  (RewardUpdate (Crypto era), RewardProvenance (Crypto era))
+  (RewardUpdate (EraCrypto era), RewardProvenance (EraCrypto era))
 getRewardProvenance globals newepochstate =
   ( runReader
       (createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc secparam)
@@ -440,7 +440,7 @@ getRewardProvenance globals newepochstate =
     epochstate = nesEs newepochstate
     maxsupply :: Coin
     maxsupply = Coin (fromIntegral (maxLovelaceSupply globals))
-    blocksmade :: BlocksMade (Crypto era)
+    blocksmade :: BlocksMade (EraCrypto era)
     blocksmade = nesBprev newepochstate
     epochnumber = nesEL newepochstate
     slotsPerEpoch :: EpochSize
@@ -470,7 +470,7 @@ class
   -- Used for the default implentation of 'evaluateTransactionBalance'.
   evaluateConsumed :: PParams era -> UTxO era -> TxBody era -> Value era
 
-  addKeyWitnesses :: Tx era -> Set (WitVKey 'Witness (Crypto era)) -> Tx era
+  addKeyWitnesses :: Tx era -> Set (WitVKey 'Witness (EraCrypto era)) -> Tx era
 
   -- | Evaluate the fee for a given transaction.
   evaluateTransactionFee ::
@@ -485,12 +485,12 @@ class
   evaluateTransactionFee pp tx numKeyWits =
     evaluateMinFee @era pp tx'
     where
-      sigSize = fromIntegral $ sizeSigDSIGN (Proxy @(DSIGN (Crypto era)))
+      sigSize = fromIntegral $ sizeSigDSIGN (Proxy @(DSIGN (EraCrypto era)))
       dummySig =
         fromRight
           (error "corrupt dummy signature")
           (decodeFullDecoder "dummy signature" decodeSignedDSIGN (serialize $ LBS.replicate sigSize 0))
-      vkeySize = fromIntegral $ sizeVerKeyDSIGN (Proxy @(DSIGN (Crypto era)))
+      vkeySize = fromIntegral $ sizeVerKeyDSIGN (Proxy @(DSIGN (EraCrypto era)))
       dummyVKey w =
         let padding = LBS.replicate paddingSize 0
             paddingSize = vkeySize - LBS.length sw
@@ -521,7 +521,7 @@ evaluateTransactionBalance ::
   -- @
   --   (`Map.notMember` stakepools)
   -- @
-  (KeyHash 'StakePool (Crypto era) -> Bool) ->
+  (KeyHash 'StakePool (EraCrypto era) -> Bool) ->
   -- | The transaction being evaluated for balance.
   TxBody era ->
   -- | The difference between what the transaction consumes and what it produces.
@@ -536,7 +536,7 @@ evaluateTransactionBalance pp u isNewPool txb =
 addShelleyKeyWitnesses ::
   (EraTx era, Witnesses era ~ ShelleyWitnesses era) =>
   ShelleyTx era ->
-  Set (WitVKey 'Witness (Crypto era)) ->
+  Set (WitVKey 'Witness (EraCrypto era)) ->
   ShelleyTx era
 addShelleyKeyWitnesses (ShelleyTx b ws aux) newWits = ShelleyTx b ws' aux
   where

@@ -33,7 +33,7 @@ import Cardano.Ledger.Crypto as CC (Crypto)
 data ShelleyEra crypto
 
 instance CC.Crypto c => Era (ShelleyEra c) where
-  type Crypto (ShelleyEra c) = c
+  type EraCrypto (ShelleyEra c) = c
   type ProtVerLow (ShelleyEra c) = 2
 
 type instance Value (ShelleyEra _c) = Coin

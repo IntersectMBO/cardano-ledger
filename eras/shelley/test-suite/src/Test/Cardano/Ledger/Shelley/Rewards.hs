@@ -53,7 +53,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (VRF)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Era (Era, EraCrypto)
 import Cardano.Ledger.Keys
   ( KeyHash,
     KeyPair (..),
@@ -323,7 +323,7 @@ rewardsBoundedByPot ::
   Property
 rewardsBoundedByPot _ = property $ do
   numPools <- choose (0, maxNumPools)
-  pools <- sequence $ genPoolInfo @(Crypto era) <$> replicate numPools emptySetupArgs
+  pools <- sequence $ genPoolInfo @(EraCrypto era) <$> replicate numPools emptySetupArgs
   pp <- genRewardPPs
   rewardPot <- genCoin 0 (fromIntegral $ maxLovelaceSupply testGlobals)
   undelegatedLovelace <- genCoin 0 (fromIntegral $ maxLovelaceSupply testGlobals)
@@ -392,13 +392,13 @@ rewardOnePool ::
   Coin ->
   Natural ->
   Natural ->
-  PoolParams (Crypto era) ->
-  Stake (Crypto era) ->
+  PoolParams (EraCrypto era) ->
+  Stake (EraCrypto era) ->
   Rational ->
   Rational ->
   Coin ->
-  Set.Set (Credential 'Staking (Crypto era)) ->
-  Map (Credential 'Staking (Crypto era)) Coin
+  Set.Set (Credential 'Staking (EraCrypto era)) ->
+  Map (Credential 'Staking (EraCrypto era)) Coin
 rewardOnePool
   pp
   r
@@ -466,19 +466,19 @@ rewardOld ::
     HasField "_nOpt" (Core.PParams era) Natural
   ) =>
   Core.PParams era ->
-  BlocksMade (Crypto era) ->
+  BlocksMade (EraCrypto era) ->
   Coin ->
-  Set.Set (Credential 'Staking (Crypto era)) ->
-  VMap.VMap VMap.VB VMap.VB (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era)) ->
-  Stake (Crypto era) ->
-  VMap.VMap VMap.VB VMap.VB (Credential 'Staking (Crypto era)) (KeyHash 'StakePool (Crypto era)) ->
+  Set.Set (Credential 'Staking (EraCrypto era)) ->
+  VMap.VMap VMap.VB VMap.VB (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)) ->
+  Stake (EraCrypto era) ->
+  VMap.VMap VMap.VB VMap.VB (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era)) ->
   Coin ->
   ActiveSlotCoeff ->
   EpochSize ->
   ( Map
-      (Credential 'Staking (Crypto era))
+      (Credential 'Staking (EraCrypto era))
       Coin,
-    Map (KeyHash 'StakePool (Crypto era)) Likelihood
+    Map (KeyHash 'StakePool (EraCrypto era)) Likelihood
   )
 rewardOld
   pp
@@ -494,7 +494,7 @@ rewardOld
     where
       totalBlocks = sum b
       Coin activeStake = sumAllStake stake
-      results :: [(KeyHash 'StakePool (Crypto era), Maybe (Map (Credential 'Staking (Crypto era)) Coin), Likelihood)]
+      results :: [(KeyHash 'StakePool (EraCrypto era), Maybe (Map (Credential 'Staking (EraCrypto era)) Coin), Likelihood)]
       results = do
         (hk, pparams) <- VMap.toAscList poolParams
         let sigma = if totalStake == 0 then 0 else fromIntegral pstake % fromIntegral totalStake
@@ -549,10 +549,10 @@ createRUpdOld ::
     HasField "_nOpt" (Core.PParams era) Natural
   ) =>
   EpochSize ->
-  BlocksMade (Crypto era) ->
+  BlocksMade (EraCrypto era) ->
   EpochState era ->
   Coin ->
-  ShelleyBase (RewardUpdateOld (Crypto era))
+  ShelleyBase (RewardUpdateOld (EraCrypto era))
 createRUpdOld slotsPerEpoch b es@(EpochState acnt ss ls pr _ nm) maxSupply =
   createRUpdOld_ @era slotsPerEpoch b ss reserves pr totalStake rs nm
   where
@@ -571,14 +571,14 @@ createRUpdOld_ ::
     HasField "_nOpt" (Core.PParams era) Natural
   ) =>
   EpochSize ->
-  BlocksMade (Crypto era) ->
-  SnapShots (Crypto era) ->
+  BlocksMade (EraCrypto era) ->
+  SnapShots (EraCrypto era) ->
   Coin ->
   Core.PParams era ->
   Coin ->
-  Set.Set (Credential 'Staking (Crypto era)) ->
-  NonMyopic (Crypto era) ->
-  ShelleyBase (RewardUpdateOld (Crypto era))
+  Set.Set (Credential 'Staking (EraCrypto era)) ->
+  NonMyopic (EraCrypto era) ->
+  ShelleyBase (RewardUpdateOld (EraCrypto era))
 createRUpdOld_ slotsPerEpoch b@(BlocksMade b') ss (Coin reserves) pr totalStake rs nm = do
   asc <- asks activeSlotCoeff
   let SnapShot stake' delegs' poolParams = _pstakeGo ss
@@ -651,7 +651,7 @@ oldEqualsNew pv newepochstate =
     epochstate = overrideProtocolVersionUsedInRewardCalc pv $ nesEs newepochstate
     maxsupply :: Coin
     maxsupply = Coin (fromIntegral (maxLovelaceSupply globals))
-    blocksmade :: BlocksMade (Crypto era)
+    blocksmade :: BlocksMade (EraCrypto era)
     blocksmade = nesBprev newepochstate
     epochnumber = nesEL newepochstate
     slotsPerEpoch :: EpochSize
@@ -659,7 +659,7 @@ oldEqualsNew pv newepochstate =
     unAggregated =
       runReader (createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc k) globals
     old = rsOld $ runReader (createRUpdOld slotsPerEpoch blocksmade epochstate maxsupply) globals
-    new_with_zeros = aggregateRewards @(Crypto era) (emptyPParams {_protocolVersion = pv}) (rs unAggregated)
+    new_with_zeros = aggregateRewards @(EraCrypto era) (emptyPParams {_protocolVersion = pv}) (rs unAggregated)
     new = Map.filter (/= Coin 0) new_with_zeros
     asc = activeSlotCoeff globals
     k = securityParameter testGlobals
@@ -678,17 +678,17 @@ oldEqualsNewOn pv newepochstate = old === new
     epochstate = overrideProtocolVersionUsedInRewardCalc pv $ nesEs newepochstate
     maxsupply :: Coin
     maxsupply = Coin (fromIntegral (maxLovelaceSupply globals))
-    blocksmade :: BlocksMade (Crypto era)
+    blocksmade :: BlocksMade (EraCrypto era)
     blocksmade = nesBprev newepochstate
     epochnumber = nesEL newepochstate
     slotsPerEpoch :: EpochSize
     slotsPerEpoch = runReader (epochInfoSize (epochInfoPure globals) epochnumber) globals
     unAggregated =
       runReader (createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc k) globals
-    old :: Map (Credential 'Staking (Crypto era)) Coin
+    old :: Map (Credential 'Staking (EraCrypto era)) Coin
     old = rsOld $ runReader (createRUpdOld slotsPerEpoch blocksmade epochstate maxsupply) globals
     new_with_zeros =
-      aggregateRewards @(Crypto era) (emptyPParams {_protocolVersion = pv}) (rs unAggregated)
+      aggregateRewards @(EraCrypto era) (emptyPParams {_protocolVersion = pv}) (rs unAggregated)
     new = Map.filter (/= Coin 0) new_with_zeros
     asc = activeSlotCoeff globals
     k = securityParameter testGlobals
@@ -715,7 +715,7 @@ newEpochEventsProp tracelen propf = withMaxSuccess 10 $
         propf (concat (runShelleyBase $ getEvents tr)) (chainNes target)
       _ -> property True
 
-aggIncrementalRewardEvents :: [ChainEvent C] -> Map (Credential 'Staking (Crypto C)) (Set (Reward (Crypto C)))
+aggIncrementalRewardEvents :: [ChainEvent C] -> Map (Credential 'Staking (EraCrypto C)) (Set (Reward (EraCrypto C)))
 aggIncrementalRewardEvents = foldl' accum Map.empty
   where
     accum ans (TickEvent (TickRupdEvent (RupdEvent _ m))) = Map.unionWith Set.union m ans
@@ -723,7 +723,7 @@ aggIncrementalRewardEvents = foldl' accum Map.empty
       Map.unionWith Set.union m ans
     accum ans _ = ans
 
-getMostRecentTotalRewardEvent :: [ChainEvent C] -> Map (Credential 'Staking (Crypto C)) (Set (Reward (Crypto C)))
+getMostRecentTotalRewardEvent :: [ChainEvent C] -> Map (Credential 'Staking (EraCrypto C)) (Set (Reward (EraCrypto C)))
 getMostRecentTotalRewardEvent = foldl' accum Map.empty
   where
     accum ans (TickEvent (TickNewEpochEvent (TotalRewardEvent _ m))) = Map.unionWith Set.union m ans
@@ -757,7 +757,7 @@ eventsMirrorRewards events nes = same eventRew compRew
               x
               y
 
-ppAgg :: Map (Credential 'Staking (Crypto C)) (Set (Reward (Crypto C))) -> PDoc
+ppAgg :: Map (Credential 'Staking (EraCrypto C)) (Set (Reward (EraCrypto C))) -> PDoc
 ppAgg = ppMap prettyA (ppSet ppReward)
 
 instance Terse (Reward crypto) where
@@ -775,14 +775,14 @@ reward ::
   forall era.
   (Core.PParams era ~ ShelleyPParams era) =>
   Core.PParams era ->
-  BlocksMade (Crypto era) ->
+  BlocksMade (EraCrypto era) ->
   Coin ->
-  Set (Credential 'Staking (Crypto era)) ->
-  VMap.VMap VMap.VB VMap.VB (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era)) ->
-  Stake (Crypto era) ->
-  VMap.VMap VMap.VB VMap.VB (Credential 'Staking (Crypto era)) (KeyHash 'StakePool (Crypto era)) ->
+  Set (Credential 'Staking (EraCrypto era)) ->
+  VMap.VMap VMap.VB VMap.VB (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)) ->
+  Stake (EraCrypto era) ->
+  VMap.VMap VMap.VB VMap.VB (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era)) ->
   Coin ->
-  ShelleyBase (RewardAns (Crypto era))
+  ShelleyBase (RewardAns (EraCrypto era))
 reward
   pp
   (BlocksMade b)
@@ -820,7 +820,7 @@ reward
             poolRewardInfo,
             delegs
           }
-      pulser :: Pulser (Crypto era)
+      pulser :: Pulser (EraCrypto era)
       pulser = RSLP 2 free (unStake stake) (RewardAns Map.empty Map.empty)
 
 -- ==================================================================

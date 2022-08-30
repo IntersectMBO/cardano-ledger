@@ -17,7 +17,7 @@ module Test.Cardano.Ledger.Shelley.Generator.Trace.Ledger where
 
 import Cardano.Ledger.BaseTypes (Globals, TxIx, mkTxIxPartial)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto)
+import Cardano.Ledger.Era (EraCrypto)
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
     DPState,
@@ -76,12 +76,12 @@ genAccountState Constants {minTreasury, maxTreasury, minReserves, maxReserves} =
 -- with meaningful delegation certificates.
 instance
   ( EraGen era,
-    Mock (Crypto era),
+    Mock (EraCrypto era),
     MinLEDGER_STS era,
     Embed (Core.EraRule "DELPL" era) (CERTS era),
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
-    State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
-    Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era),
+    State (Core.EraRule "DELPL" era) ~ DPState (EraCrypto era),
+    Signal (Core.EraRule "DELPL" era) ~ DCert (EraCrypto era),
     PredicateFailure (Core.EraRule "DELPL" era) ~ ShelleyDelplPredFailure era,
     Embed (Core.EraRule "DELEGS" era) (ShelleyLEDGER era),
     Embed (Core.EraRule "UTXOW" era) (ShelleyLEDGER era),
@@ -89,8 +89,8 @@ instance
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
     Signal (Core.EraRule "UTXOW" era) ~ Core.Tx era,
     Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
-    State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
-    Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
+    State (Core.EraRule "DELEGS" era) ~ DPState (EraCrypto era),
+    Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era)),
     Show (State (Core.EraRule "PPUP" era))
   ) =>
   TQC.HasTrace (ShelleyLEDGER era) (GenEnv era)
@@ -110,12 +110,12 @@ instance
 instance
   forall era.
   ( EraGen era,
-    Mock (Crypto era),
+    Mock (EraCrypto era),
     MinLEDGER_STS era,
     Embed (Core.EraRule "DELPL" era) (CERTS era),
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
-    State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
-    Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era),
+    State (Core.EraRule "DELPL" era) ~ DPState (EraCrypto era),
+    Signal (Core.EraRule "DELPL" era) ~ DCert (EraCrypto era),
     PredicateFailure (Core.EraRule "DELPL" era) ~ ShelleyDelplPredFailure era,
     Embed (Core.EraRule "DELEG" era) (ShelleyDELPL era),
     Embed (Core.EraRule "LEDGER" era) (ShelleyLEDGERS era),

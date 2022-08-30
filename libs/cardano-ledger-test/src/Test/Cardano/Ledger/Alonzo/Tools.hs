@@ -129,8 +129,8 @@ exampleExUnitCalc ::
     State (EraRule "UTXOS" era) ~ UTxOState era,
     Environment (EraRule "UTXOS" era) ~ UtxoEnv era,
     Signable
-      (CC.DSIGN (Crypto era))
-      (Crypto.Hash (CC.HASH (Crypto era)) EraIndependentTxBody),
+      (CC.DSIGN (EraCrypto era))
+      (Crypto.Hash (CC.HASH (EraCrypto era)) EraIndependentTxBody),
     Signal (EraRule "UTXOS" era) ~ Tx era,
     ExtendedUTxO era,
     HasField "_maxTxExUnits" (PParams era) ExUnits,
@@ -163,8 +163,8 @@ exampleInvalidExUnitCalc ::
     HasField "_protocolVersion" (PParams era) ProtVer,
     Script era ~ AlonzoScript era,
     Signable
-      (CC.DSIGN (Crypto era))
-      (Crypto.Hash (CC.HASH (Crypto era)) EraIndependentTxBody)
+      (CC.DSIGN (EraCrypto era))
+      (Crypto.Hash (CC.HASH (EraCrypto era)) EraIndependentTxBody)
   ) =>
   Proof era ->
   IO ()
@@ -196,7 +196,7 @@ exampleInvalidExUnitCalc proof = do
 exampleTx ::
   ( Scriptic era,
     EraTxBody era,
-    Signable (CC.DSIGN (Crypto era)) (Crypto.Hash (CC.HASH (Crypto era)) EraIndependentTxBody)
+    Signable (CC.DSIGN (EraCrypto era)) (Crypto.Hash (CC.HASH (EraCrypto era)) EraIndependentTxBody)
   ) =>
   Proof era ->
   RdmrPtr ->
@@ -258,7 +258,7 @@ updateTxExUnits proof tx utxo ei ss costmdls err =
   let res = evaluateTransactionExecutionUnits (pparams proof) tx utxo ei ss costmdls
    in case res of
         Left e -> err (show e)
-        Right (rdmrs :: Map RdmrPtr (Either (TransactionScriptFailure (Crypto era)) ExUnits)) ->
+        Right (rdmrs :: Map RdmrPtr (Either (TransactionScriptFailure (EraCrypto era)) ExUnits)) ->
           replaceRdmrs proof tx <$> traverse (failLeft err) rdmrs
 
 replaceRdmrs ::

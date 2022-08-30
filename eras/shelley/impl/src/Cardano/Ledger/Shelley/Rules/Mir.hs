@@ -20,7 +20,7 @@ where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin, addDeltaCoin)
-import Cardano.Ledger.Era (Crypto)
+import Cardano.Ledger.Era (EraCrypto)
 import Cardano.Ledger.Shelley.Era (ShelleyMIR)
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
@@ -62,11 +62,11 @@ data ShelleyMirPredFailure era
   deriving (Show, Generic, Eq)
 
 data ShelleyMirEvent era
-  = MirTransfer (InstantaneousRewards (Crypto era))
+  = MirTransfer (InstantaneousRewards (EraCrypto era))
   | -- | We were not able to perform an MIR transfer due to insufficient funds.
     --   This event gives the rewards we wanted to pay, plus the available
     --   reserves and treasury.
-    NoMirTransfer (InstantaneousRewards (Crypto era)) Coin Coin
+    NoMirTransfer (InstantaneousRewards (EraCrypto era)) Coin Coin
 
 instance NoThunks (ShelleyMirPredFailure era)
 
@@ -109,13 +109,13 @@ mirTransition = do
       rewards' = rewards ds
       reserves = _reserves acnt
       treasury = _treasury acnt
-      irwdR = eval $ dom rewards' ◁ iRReserves (_irwd ds) :: RewardAccounts (Crypto era)
-      irwdT = eval $ dom rewards' ◁ iRTreasury (_irwd ds) :: RewardAccounts (Crypto era)
+      irwdR = eval $ dom rewards' ◁ iRReserves (_irwd ds) :: RewardAccounts (EraCrypto era)
+      irwdT = eval $ dom rewards' ◁ iRTreasury (_irwd ds) :: RewardAccounts (EraCrypto era)
       totR = fold irwdR
       totT = fold irwdT
       availableReserves = reserves `addDeltaCoin` (deltaReserves . _irwd $ ds)
       availableTreasury = treasury `addDeltaCoin` (deltaTreasury . _irwd $ ds)
-      update = eval (irwdR ∪+ irwdT) :: RewardAccounts (Crypto era)
+      update = eval (irwdR ∪+ irwdT) :: RewardAccounts (EraCrypto era)
 
   if totR <= availableReserves && totT <= availableTreasury
     then do

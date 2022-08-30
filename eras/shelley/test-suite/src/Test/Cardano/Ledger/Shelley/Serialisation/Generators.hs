@@ -32,7 +32,7 @@ import Test.QuickCheck
 -------------------------------------------------------------------------------}
 
 instance
-  (EraTxOut era, Mock (Crypto era), Arbitrary (Value era), ToCBOR (PParamsUpdate era)) =>
+  (EraTxOut era, Mock (EraCrypto era), Arbitrary (Value era), ToCBOR (PParamsUpdate era)) =>
   Arbitrary (ShelleyTxBody era)
   where
   arbitrary =
@@ -48,7 +48,7 @@ instance
 
 instance
   ( Era era,
-    Mock (Crypto era),
+    Mock (EraCrypto era),
     Arbitrary (Value era),
     Arbitrary (TxOut era),
     Arbitrary (STS.PredicateFailure (EraRule "PPUP" era))

@@ -453,7 +453,7 @@ newScriptIntegrityHash ::
   [Language] ->
   Redeemers era ->
   TxDats era ->
-  StrictMaybe (Alonzo.ScriptIntegrityHash (Crypto era))
+  StrictMaybe (Alonzo.ScriptIntegrityHash (EraCrypto era))
 newScriptIntegrityHash (Conway _) pp ls rds dats =
   hashScriptIntegrity (Set.map (Alonzo.getLanguageView pp) (Set.fromList ls)) rds dats
 newScriptIntegrityHash (Babbage _) pp ls rds dats =

@@ -97,23 +97,23 @@ deriving instance (Eq (PParams era)) => Eq (DelegEnv era)
 
 data ShelleyDelegPredFailure era
   = StakeKeyAlreadyRegisteredDELEG
-      !(Credential 'Staking (Crypto era)) -- Credential which is already registered
+      !(Credential 'Staking (EraCrypto era)) -- Credential which is already registered
   | -- | Indicates that the stake key is somehow already in the rewards map.
     --   This error is now redundant with StakeKeyAlreadyRegisteredDELEG.
     --   We should remove it and replace its one use with StakeKeyAlreadyRegisteredDELEG.
     StakeKeyInRewardsDELEG
-      !(Credential 'Staking (Crypto era)) -- DEPRECATED, now redundant with StakeKeyAlreadyRegisteredDELEG
+      !(Credential 'Staking (EraCrypto era)) -- DEPRECATED, now redundant with StakeKeyAlreadyRegisteredDELEG
   | StakeKeyNotRegisteredDELEG
-      !(Credential 'Staking (Crypto era)) -- Credential which is not registered
+      !(Credential 'Staking (EraCrypto era)) -- Credential which is not registered
   | StakeKeyNonZeroAccountBalanceDELEG
       !(Maybe Coin) -- The remaining reward account balance, if it exists
   | StakeDelegationImpossibleDELEG
-      !(Credential 'Staking (Crypto era)) -- Credential that is not registered
+      !(Credential 'Staking (EraCrypto era)) -- Credential that is not registered
   | WrongCertificateTypeDELEG -- The DCertPool constructor should not be used by this transition
   | GenesisKeyNotInMappingDELEG
-      !(KeyHash 'Genesis (Crypto era)) -- Unknown Genesis KeyHash
+      !(KeyHash 'Genesis (EraCrypto era)) -- Unknown Genesis KeyHash
   | DuplicateGenesisDelegateDELEG
-      !(KeyHash 'GenesisDelegate (Crypto era)) -- Keyhash which is already delegated to
+      !(KeyHash 'GenesisDelegate (EraCrypto era)) -- Keyhash which is already delegated to
   | InsufficientForInstantaneousRewardsDELEG
       !MIRPot -- which pot the rewards are to be drawn from, treasury or reserves
       !Coin -- amount of rewards to be given out
@@ -122,7 +122,7 @@ data ShelleyDelegPredFailure era
       !SlotNo -- current slot
       !SlotNo -- EraRule "MIR" must be submitted before this slot
   | DuplicateGenesisVRFDELEG
-      !(Hash (Crypto era) (VerKeyVRF (Crypto era))) -- VRF KeyHash which is already delegated to
+      !(Hash (EraCrypto era) (VerKeyVRF (EraCrypto era))) -- VRF KeyHash which is already delegated to
   | MIRTransferNotCurrentlyAllowed
   | MIRNegativesNotCurrentlyAllowed
   | InsufficientForTransferDELEG
@@ -143,8 +143,8 @@ instance
   ) =>
   STS (ShelleyDELEG era)
   where
-  type State (ShelleyDELEG era) = DState (Crypto era)
-  type Signal (ShelleyDELEG era) = DCert (Crypto era)
+  type State (ShelleyDELEG era) = DState (EraCrypto era)
+  type Signal (ShelleyDELEG era) = DCert (EraCrypto era)
   type Environment (ShelleyDELEG era) = DelegEnv era
   type BaseM (ShelleyDELEG era) = ShelleyBase
   type PredicateFailure (ShelleyDELEG era) = ShelleyDelegPredFailure era

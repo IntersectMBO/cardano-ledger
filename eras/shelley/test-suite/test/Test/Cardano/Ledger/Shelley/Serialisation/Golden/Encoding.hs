@@ -47,7 +47,7 @@ import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
 import Cardano.Ledger.Core (EraTx, Tx, hashAuxiliaryData, hashScript)
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Era (Crypto (..))
+import Cardano.Ledger.Era (EraCrypto (..))
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys
   ( Hash,
@@ -260,7 +260,7 @@ testTxb =
 testTxbHash ::
   forall era.
   ShelleyTest era =>
-  SafeHash (Crypto era) EraIndependentTxBody
+  SafeHash (EraCrypto era) EraIndependentTxBody
 testTxbHash = hashAnnotated $ testTxb @era
 
 testKey1 :: CC.Crypto crypto => KeyPair 'Payment crypto
@@ -298,16 +298,16 @@ testBlockIssuerKeyTokens = e
 
 testKey1SigToken ::
   forall era.
-  (ShelleyTest era, Mock (Crypto era)) =>
+  (ShelleyTest era, Mock (EraCrypto era)) =>
   Tokens ->
   Tokens
 testKey1SigToken = e
   where
     s =
-      signedDSIGN @(Crypto era)
-        (sKey $ testKey1 @(Crypto era))
+      signedDSIGN @(EraCrypto era)
+        (sKey $ testKey1 @(EraCrypto era))
         (extractHash (testTxbHash @era)) ::
-        SignedDSIGN (Crypto era) (Hash (Crypto era) EraIndependentTxBody)
+        SignedDSIGN (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
     Encoding e = encodeSignedDSIGN s
 
 testOpCertSigTokens ::
@@ -368,7 +368,7 @@ testBHB ::
   ( EraTx era,
     PreAlonzo era,
     ExMock crypto,
-    crypto ~ Crypto era,
+    crypto ~ EraCrypto era,
     Tx era ~ ShelleyTx era
   ) =>
   BHBody crypto
@@ -411,7 +411,7 @@ testBHBSigTokens ::
   forall era.
   ( EraTx era,
     PreAlonzo era,
-    ExMock (Crypto era),
+    ExMock (EraCrypto era),
     Tx era ~ ShelleyTx era
   ) =>
   Tokens ->
@@ -419,11 +419,11 @@ testBHBSigTokens ::
 testBHBSigTokens = e
   where
     s =
-      signedKES @(CC.KES (Crypto era))
+      signedKES @(CC.KES (EraCrypto era))
         ()
         0
         (testBHB @era)
-        (fst $ testKESKeys @(Crypto era))
+        (fst $ testKESKeys @(EraCrypto era))
     Encoding e = encodeSignedKES s
 
 tests :: TestTree

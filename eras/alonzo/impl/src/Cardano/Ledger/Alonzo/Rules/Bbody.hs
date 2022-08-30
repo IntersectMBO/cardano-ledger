@@ -117,7 +117,7 @@ bbodyTransition ::
   forall (someBBODY :: Type -> Type) era.
   ( -- Conditions that the Abstract someBBODY must meet
     STS (someBBODY era),
-    Signal (someBBODY era) ~ Block (BHeaderView (Crypto era)) era,
+    Signal (someBBODY era) ~ Block (BHeaderView (EraCrypto era)) era,
     PredicateFailure (someBBODY era) ~ AlonzoBbodyPredFailure era,
     BaseM (someBBODY era) ~ ShelleyBase,
     State (someBBODY era) ~ ShelleyBbodyState era,
@@ -193,7 +193,7 @@ bbodyTransition =
             )
 
 instance
-  ( DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
+  ( DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody),
     Embed (EraRule "LEDGERS" era) (AlonzoBBODY era),
     Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era,
     State (EraRule "LEDGERS" era) ~ LedgerState era,
@@ -214,7 +214,7 @@ instance
 
   type
     Signal (AlonzoBBODY era) =
-      (Block (BHeaderView (Crypto era)) era)
+      (Block (BHeaderView (EraCrypto era)) era)
 
   type Environment (AlonzoBBODY era) = BbodyEnv era
 
@@ -231,7 +231,7 @@ instance
     BaseM ledgers ~ ShelleyBase,
     ledgers ~ EraRule "LEDGERS" era,
     STS ledgers,
-    DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
+    DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody),
     Era era
   ) =>
   Embed ledgers (AlonzoBBODY era)

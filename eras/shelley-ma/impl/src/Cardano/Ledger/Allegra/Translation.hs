@@ -18,7 +18,7 @@ import Cardano.Binary
   )
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Era hiding (Crypto)
+import Cardano.Ledger.Era hiding (EraCrypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API
 import qualified Cardano.Ledger.Shelley.LedgerState as LS

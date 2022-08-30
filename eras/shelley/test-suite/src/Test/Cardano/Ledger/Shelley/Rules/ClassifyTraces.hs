@@ -123,7 +123,7 @@ relevantCasesAreCoveredForTrace ::
   Trace (CHAIN era) ->
   Property
 relevantCasesAreCoveredForTrace tr = do
-  let blockTxs :: Block (BHeader (Crypto era)) era -> [Tx era]
+  let blockTxs :: Block (BHeader (EraCrypto era)) era -> [Tx era]
       blockTxs (UnserialisedBlock _ txSeq) = toList (fromTxSeq @era txSeq)
       bs = traceSignals OldestFirst tr
       txs = concat (blockTxs <$> bs)
@@ -224,7 +224,7 @@ scriptCredentialCertsRatio certs =
           certs
 
 -- | Extract the certificates from the transactions
-certsByTx :: (ShelleyEraTxBody era, EraTx era) => [Tx era] -> [[DCert (Crypto era)]]
+certsByTx :: (ShelleyEraTxBody era, EraTx era) => [Tx era] -> [[DCert (EraCrypto era)]]
 certsByTx txs = toList . view certsTxBodyL . view bodyTxL <$> txs
 
 ratioInt :: Int -> Int -> Double
@@ -371,7 +371,7 @@ onlyValidChainSignalsAreGenerated =
     genesisChainSt = Just $ mkGenesisChainState (genEnv p)
 
 -- | Counts the epochs spanned by this trace
-epochsInTrace :: forall era. Era era => [Block (BHeader (Crypto era)) era] -> Int
+epochsInTrace :: forall era. Era era => [Block (BHeader (EraCrypto era)) era] -> Int
 epochsInTrace [] = 0
 epochsInTrace bs =
   fromIntegral $ toEpoch - fromEpoch + 1

@@ -121,7 +121,7 @@ getDatumBabbage ::
   ) =>
   Tx era ->
   UTxO era ->
-  ScriptPurpose (Crypto era) ->
+  ScriptPurpose (EraCrypto era) ->
   Maybe (Data era)
 getDatumBabbage tx (UTxO m) sp = do
   txIn <- getSpendingTxIn sp
@@ -170,7 +170,7 @@ babbageTxScripts ::
   ) =>
   UTxO era ->
   Tx era ->
-  Map.Map (ScriptHash (Crypto era)) (Script era)
+  Map.Map (ScriptHash (EraCrypto era)) (Script era)
 babbageTxScripts utxo tx = ans
   where
     txBody = tx ^. bodyTxL
@@ -181,9 +181,9 @@ babbageTxScripts utxo tx = ans
 refScripts ::
   forall era.
   (EraTx era, BabbageEraTxOut era) =>
-  Set (TxIn (Crypto era)) ->
+  Set (TxIn (EraCrypto era)) ->
   UTxO era ->
-  Map.Map (ScriptHash (Crypto era)) (Script era)
+  Map.Map (ScriptHash (EraCrypto era)) (Script era)
 refScripts ins (UTxO mp) = Map.foldl' accum Map.empty (eval (ins ◁ mp))
   where
     accum ans txOut =
@@ -200,10 +200,10 @@ refScripts ins (UTxO mp) = Map.foldl' accum Map.empty (eval (ins ◁ mp))
 babbageInputDataHashes ::
   forall era.
   (EraTx era, TxOut era ~ BabbageTxOut era) =>
-  Map.Map (ScriptHash (Crypto era)) (Script era) ->
+  Map.Map (ScriptHash (EraCrypto era)) (Script era) ->
   AlonzoTx era ->
   UTxO era ->
-  (Set (DataHash (Crypto era)), Set (TxIn (Crypto era)))
+  (Set (DataHash (EraCrypto era)), Set (TxIn (EraCrypto era)))
 babbageInputDataHashes hashScriptMap tx (UTxO mp) =
   Map.foldlWithKey' accum (Set.empty, Set.empty) smallUtxo
   where

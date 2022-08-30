@@ -110,7 +110,7 @@ _assertScriptHashSizeMatchesAddrHashSize (ScriptHash h) =
   KeyHash (Hash.castHash h)
 
 -- Multi-signature scripts
-singleKeyOnly :: Era era => Addr (Crypto era) -> MultiSig era
+singleKeyOnly :: Era era => Addr (EraCrypto era) -> MultiSig era
 singleKeyOnly (Addr _ (KeyHashObj pk) _) = RequireSignature $ asWitness pk
 singleKeyOnly _ = error "use VKey address"
 
@@ -144,7 +144,7 @@ aliceAndBobOrCarlOrDaria =
       RequireAnyOf [singleKeyOnly Cast.carlAddr, singleKeyOnly Cast.dariaAddr]
     ]
 
-initTxBody :: ShelleyTest era => [(Addr (Crypto era), Value era)] -> ShelleyTxBody era
+initTxBody :: ShelleyTest era => [(Addr (EraCrypto era), Value era)] -> ShelleyTxBody era
 initTxBody addrs =
   ShelleyTxBody
     (Set.fromList [TxIn genesisId minBound, TxIn genesisId (mkTxIxPartial 1)])
@@ -158,9 +158,9 @@ initTxBody addrs =
 
 makeTxBody ::
   ShelleyTest era =>
-  [TxIn (Crypto era)] ->
-  [(Addr (Crypto era), Value era)] ->
-  Wdrl (Crypto era) ->
+  [TxIn (EraCrypto era)] ->
+  [(Addr (EraCrypto era), Value era)] ->
+  Wdrl (EraCrypto era) ->
   ShelleyTxBody era
 makeTxBody inp addrCs wdrl =
   ShelleyTxBody

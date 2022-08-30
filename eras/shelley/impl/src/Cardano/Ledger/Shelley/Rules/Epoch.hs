@@ -100,7 +100,7 @@ instance
   ( EraTxOut era,
     Embed (EraRule "SNAP" era) (ShelleyEPOCH era),
     Environment (EraRule "SNAP" era) ~ LedgerState era,
-    State (EraRule "SNAP" era) ~ SnapShots (Crypto era),
+    State (EraRule "SNAP" era) ~ SnapShots (EraCrypto era),
     Signal (EraRule "SNAP" era) ~ (),
     Embed (EraRule "POOLREAP" era) (ShelleyEPOCH era),
     Environment (EraRule "POOLREAP" era) ~ PParams era,
@@ -136,7 +136,7 @@ epochTransition ::
   forall era.
   ( Embed (EraRule "SNAP" era) (ShelleyEPOCH era),
     Environment (EraRule "SNAP" era) ~ LedgerState era,
-    State (EraRule "SNAP" era) ~ SnapShots (Crypto era),
+    State (EraRule "SNAP" era) ~ SnapShots (EraCrypto era),
     Signal (EraRule "SNAP" era) ~ (),
     Embed (EraRule "POOLREAP" era) (ShelleyEPOCH era),
     Environment (EraRule "POOLREAP" era) ~ PParams era,

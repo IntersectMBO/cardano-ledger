@@ -18,7 +18,7 @@ import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, AlonzoTx)
 import Cardano.Ledger.Alonzo.TxBody ()
 import Cardano.Ledger.BaseTypes (Globals)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Era (Crypto))
+import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Shelley.LedgerState (DPState (..), UTxOState)
 import Cardano.Ledger.Shelley.Rules
   ( DelegsEnv,
@@ -48,12 +48,12 @@ import Test.Cardano.Ledger.Shelley.Generator.Utxo (genTx)
 instance
   ( EraGen era,
     AlonzoEraTx era,
-    Mock (Crypto era),
+    Mock (EraCrypto era),
     MinLEDGER_STS era,
     Embed (Core.EraRule "DELPL" era) (CERTS era),
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
-    State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
-    Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era),
+    State (Core.EraRule "DELPL" era) ~ DPState (EraCrypto era),
+    Signal (Core.EraRule "DELPL" era) ~ DCert (EraCrypto era),
     PredicateFailure (Core.EraRule "DELPL" era) ~ ShelleyDelplPredFailure era,
     Embed (Core.EraRule "DELEGS" era) (AlonzoLEDGER era),
     Embed (Core.EraRule "UTXOW" era) (AlonzoLEDGER era),
@@ -61,8 +61,8 @@ instance
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
     Signal (Core.EraRule "UTXOW" era) ~ Core.Tx era,
     Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
-    State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
-    Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
+    State (Core.EraRule "DELEGS" era) ~ DPState (EraCrypto era),
+    Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era)),
     Show (State (Core.EraRule "PPUP" era)),
     Core.Tx era ~ AlonzoTx era
   ) =>

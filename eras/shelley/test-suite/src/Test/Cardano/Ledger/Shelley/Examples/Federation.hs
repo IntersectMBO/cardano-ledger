@@ -20,7 +20,7 @@ where
 
 import Cardano.Ledger.BaseTypes (Globals (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Era (Era, EraCrypto)
 import Cardano.Ledger.Keys
   ( GenDelegPair (..),
     KeyHash (..),
@@ -112,7 +112,7 @@ coreNodeKeysBySchedule ::
   (HasCallStack, Era era) =>
   ShelleyPParams era ->
   Word64 ->
-  AllIssuerKeys (Crypto era) 'GenesisDelegate
+  AllIssuerKeys (EraCrypto era) 'GenesisDelegate
 coreNodeKeysBySchedule pp slot =
   case lookupInOverlaySchedule
     firstSlot

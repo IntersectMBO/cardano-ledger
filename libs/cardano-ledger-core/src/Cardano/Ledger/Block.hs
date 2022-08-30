@@ -153,7 +153,7 @@ neededTxInsForBlock ::
   forall h era.
   EraSegWits era =>
   Block h era ->
-  Set (TxIn (Crypto era))
+  Set (TxIn (EraCrypto era))
 neededTxInsForBlock (Block' _ txsSeq _) = Set.filter isNotNewInput allTxIns
   where
     txBodies = map (^. bodyTxL) $ toList $ fromTxSeq txsSeq
@@ -162,5 +162,5 @@ neededTxInsForBlock (Block' _ txsSeq _) = Set.filter isNotNewInput allTxIns
     isNotNewInput (TxIn txID _) = txID `Set.notMember` newTxIds
 
 -- | Compute the id of a transaction.
-txid :: EraTxBody era => TxBody era -> TxId (Crypto era)
+txid :: EraTxBody era => TxBody era -> TxId (EraCrypto era)
 txid = TxId . hashAnnotated

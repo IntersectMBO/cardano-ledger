@@ -60,8 +60,8 @@ import qualified Test.QuickCheck as QC
 ------------------------------------------------------------------------------}
 
 class EraScript era => ScriptClass era where
-  basescript :: Proxy era -> KeyHash 'Witness (Crypto era) -> Script era
-  isKey :: Proxy era -> Script era -> Maybe (KeyHash 'Witness (Crypto era))
+  basescript :: Proxy era -> KeyHash 'Witness (EraCrypto era) -> Script era
+  isKey :: Proxy era -> Script era -> Maybe (KeyHash 'Witness (EraCrypto era))
   isOnePhase :: Proxy era -> Script era -> Bool
   isOnePhase _proxy _ = True -- Many Eras have only OnePhase Scripts.
   quantify :: Proxy era -> Script era -> Quantifier (Script era)
@@ -103,7 +103,7 @@ scriptKeyCombination ::
   ScriptClass era =>
   Proxy era ->
   Script era ->
-  [KeyHash 'Witness (Crypto era)]
+  [KeyHash 'Witness (EraCrypto era)]
 scriptKeyCombination prox script = case quantify prox script of
   AllOf xs -> concatMap (scriptKeyCombination prox) xs
   AnyOf xs -> getFirst (not . null) (map (scriptKeyCombination prox) xs)
@@ -119,7 +119,7 @@ scriptKeyCombinations ::
   ScriptClass era =>
   Proxy era ->
   Script era ->
-  [[KeyHash 'Witness (Crypto era)]]
+  [[KeyHash 'Witness (EraCrypto era)]]
 scriptKeyCombinations prox script = case quantify prox script of
   AllOf xs -> [concat $ concatMap (scriptKeyCombinations prox) xs]
   AnyOf xs -> concatMap (scriptKeyCombinations prox) xs
@@ -132,13 +132,13 @@ scriptKeyCombinations prox script = case quantify prox script of
 
 -- | Make a simple (non-combined, ie NO quantifer like All, Any, MofN, etc.) script.
 --   'basescript' is a method of ScriptClass, and is different for every Era.
-mkScriptFromKey :: forall era. (ScriptClass era) => KeyPair 'Witness (Crypto era) -> Core.Script era
+mkScriptFromKey :: forall era. (ScriptClass era) => KeyPair 'Witness (EraCrypto era) -> Core.Script era
 mkScriptFromKey = (basescript (Proxy :: Proxy era) . hashKey . vKey)
 
 mkScriptsFromKeyPair ::
   forall era.
   (ScriptClass era) =>
-  (KeyPair 'Payment (Crypto era), KeyPair 'Staking (Crypto era)) ->
+  (KeyPair 'Payment (EraCrypto era), KeyPair 'Staking (EraCrypto era)) ->
   (Core.Script era, Core.Script era)
 mkScriptsFromKeyPair (k0, k1) =
   (mkScriptFromKey @era $ asWitness k0, mkScriptFromKey @era $ asWitness k1)
@@ -147,7 +147,7 @@ mkScriptsFromKeyPair (k0, k1) =
 mkScripts ::
   forall era.
   (ScriptClass era) =>
-  KeyPairs (Crypto era) ->
+  KeyPairs (EraCrypto era) ->
   [(Core.Script era, Core.Script era)]
 mkScripts = map (mkScriptsFromKeyPair @era)
 
@@ -155,7 +155,7 @@ mkPayScriptHashMap ::
   forall era.
   (ScriptClass era) =>
   [(Core.Script era, Core.Script era)] ->
-  Map.Map (ScriptHash (Crypto era)) (Core.Script era, Core.Script era)
+  Map.Map (ScriptHash (EraCrypto era)) (Core.Script era, Core.Script era)
 mkPayScriptHashMap scripts =
   Map.fromList (f <$> scripts)
   where
@@ -166,7 +166,7 @@ mkStakeScriptHashMap ::
   forall era.
   (ScriptClass era) =>
   [(Core.Script era, Core.Script era)] ->
-  Map.Map (ScriptHash (Crypto era)) (Core.Script era, Core.Script era)
+  Map.Map (ScriptHash (EraCrypto era)) (Core.Script era, Core.Script era)
 mkStakeScriptHashMap scripts =
   Map.fromList (f <$> scripts)
   where

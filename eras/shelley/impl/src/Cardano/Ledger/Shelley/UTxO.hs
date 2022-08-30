@@ -108,7 +108,7 @@ import Quiet (Quiet (Quiet))
 -- ===============================================
 
 -- | The unspent transaction outputs.
-newtype UTxO era = UTxO {unUTxO :: Map.Map (TxIn (Crypto era)) (TxOut era)}
+newtype UTxO era = UTxO {unUTxO :: Map.Map (TxIn (EraCrypto era)) (TxOut era)}
   deriving (Default, Generic, Semigroup)
 
 deriving instance NoThunks (TxOut era) => NoThunks (UTxO era)
@@ -116,23 +116,23 @@ deriving instance NoThunks (TxOut era) => NoThunks (UTxO era)
 deriving instance (Era era, NFData (TxOut era)) => NFData (UTxO era)
 
 deriving newtype instance
-  (Eq (TxOut era), CC.Crypto (Crypto era)) => Eq (UTxO era)
+  (Eq (TxOut era), CC.Crypto (EraCrypto era)) => Eq (UTxO era)
 
-deriving newtype instance CC.Crypto (Crypto era) => Monoid (UTxO era)
+deriving newtype instance CC.Crypto (EraCrypto era) => Monoid (UTxO era)
 
 instance (Era era, ToCBOR (TxOut era)) => ToCBOR (UTxO era) where
   toCBOR = encodeMap toCBOR toCBOR . unUTxO
 
 instance
-  ( CC.Crypto (Crypto era),
+  ( CC.Crypto (EraCrypto era),
     FromSharedCBOR (TxOut era),
-    Share (TxOut era) ~ Interns (Credential 'Staking (Crypto era))
+    Share (TxOut era) ~ Interns (Credential 'Staking (EraCrypto era))
   ) =>
   FromSharedCBOR (UTxO era)
   where
   type
     Share (UTxO era) =
-      Interns (Credential 'Staking (Crypto era))
+      Interns (Credential 'Staking (EraCrypto era))
   fromSharedCBOR credsInterns =
     UTxO <$!> decodeMapNoDuplicates fromCBOR (fromSharedCBOR credsInterns)
 
@@ -147,14 +147,14 @@ instance
 deriving via
   Quiet (UTxO era)
   instance
-    (Show (TxOut era), CC.Crypto (Crypto era)) => Show (UTxO era)
+    (Show (TxOut era), CC.Crypto (EraCrypto era)) => Show (UTxO era)
 
 -- | Compute the UTxO inputs of a transaction.
 -- txins has the same problems as txouts, see notes below.
 txins ::
   EraTxBody era =>
   TxBody era ->
-  Set (TxIn (Crypto era))
+  Set (TxIn (EraCrypto era))
 txins = (^. inputsTxBodyL)
 
 -- | Compute the transaction outputs of a transaction.
@@ -174,7 +174,7 @@ txouts txBody =
 
 -- | Lookup a txin for a given UTxO collection
 txinLookup ::
-  TxIn (Crypto era) ->
+  TxIn (EraCrypto era) ->
   UTxO era ->
   Maybe (TxOut era)
 txinLookup txin (UTxO utxo') = Map.lookup txin utxo'
@@ -314,7 +314,7 @@ scriptsNeeded ::
   (EraTx era, ShelleyEraTxBody era) =>
   UTxO era ->
   Tx era ->
-  Set (ScriptHash (Crypto era))
+  Set (ScriptHash (EraCrypto era))
 scriptsNeeded u tx =
   scriptHashes
     `Set.union` Set.fromList
@@ -332,9 +332,9 @@ scriptsNeeded u tx =
 -- locked by a script in the UTxO 'u'.
 txinsScriptHashes ::
   EraTxOut era =>
-  Set (TxIn (Crypto era)) ->
+  Set (TxIn (EraCrypto era)) ->
   UTxO era ->
-  Set (ScriptHash (Crypto era))
+  Set (ScriptHash (EraCrypto era))
 txinsScriptHashes txInps (UTxO u) = foldr add Set.empty txInps
   where
     -- to get subset, start with empty, and only insert those inputs in txInps
@@ -353,7 +353,7 @@ produced ::
     HasField "_poolDeposit" pp Coin
   ) =>
   pp ->
-  (KeyHash 'StakePool (Crypto era) -> Bool) ->
+  (KeyHash 'StakePool (EraCrypto era) -> Bool) ->
   TxBody era ->
   Value era
 produced pp isNewPool txBody =

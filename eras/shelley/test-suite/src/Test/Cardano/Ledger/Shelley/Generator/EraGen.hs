@@ -132,7 +132,7 @@ type MinCHAIN_STS era =
     BaseM (CHAIN era) ~ ShelleyBase,
     Environment (CHAIN era) ~ (),
     State (CHAIN era) ~ ChainState era,
-    Signal (CHAIN era) ~ Block (BHeader (Crypto era)) era
+    Signal (CHAIN era) ~ Block (BHeader (EraCrypto era)) era
   )
 
 -- | Minimal requirements on the UTxO instances
@@ -165,7 +165,7 @@ type MinGenPParams era =
 class Show (TxOut era) => MinGenTxout era where
   calcEraMinUTxO :: TxOut era -> PParams era -> Coin
   addValToTxOut :: Value era -> TxOut era -> TxOut era
-  genEraTxOut :: GenEnv era -> Gen (Value era) -> [Addr (Crypto era)] -> Gen [TxOut era]
+  genEraTxOut :: GenEnv era -> Gen (Value era) -> [Addr (EraCrypto era)] -> Gen [TxOut era]
 
 -- ======================================================================================
 -- The EraGen class. Generally one method for each type family in Cardano.Ledger.Core
@@ -205,13 +205,13 @@ class
     UTxO era ->
     PParams era ->
     SlotNo ->
-    Set (TxIn (Crypto era)) ->
+    Set (TxIn (EraCrypto era)) ->
     StrictSeq (TxOut era) ->
-    StrictSeq (DCert (Crypto era)) ->
-    Wdrl (Crypto era) ->
+    StrictSeq (DCert (EraCrypto era)) ->
+    Wdrl (EraCrypto era) ->
     Coin ->
     StrictMaybe (Update era) ->
-    StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
+    StrictMaybe (AuxiliaryDataHash (EraCrypto era)) ->
     Gen (TxBody era, [Script era])
 
   -- | Generate era-specific auxiliary data
@@ -225,14 +225,14 @@ class
     TxBody era ->
     Coin ->
     -- | This overrides the existing TxFee
-    Set (TxIn (Crypto era)) ->
+    Set (TxIn (EraCrypto era)) ->
     -- | This is to be Unioned with the existing TxIn
     TxOut era ->
     -- | This is to be Appended to the end of the existing TxOut
     TxBody era
 
   -- |  Union the TxIn with the existing TxIn in the TxBody
-  addInputs :: TxBody era -> Set (TxIn (Crypto era)) -> TxBody era
+  addInputs :: TxBody era -> Set (TxIn (EraCrypto era)) -> TxBody era
   addInputs txb _ins = txb
 
   genEraPParamsUpdate :: Constants -> PParams era -> Gen (PParamsUpdate era)
@@ -245,8 +245,8 @@ class
 
   genEraWitnesses ::
     (UTxO era, TxBody era, ScriptInfo era) ->
-    Set (WitVKey 'Witness (Crypto era)) ->
-    Map (ScriptHash (Crypto era)) (Script era) ->
+    Set (WitVKey 'Witness (EraCrypto era)) ->
+    Map (ScriptHash (EraCrypto era)) (Script era) ->
     Witnesses era
 
   -- When choosing new recipeients from the UTxO, choose only those whose Outputs meet this predicate.
@@ -303,11 +303,11 @@ genUtxo0 ge@(GenEnv _ _ c@Constants {minGenesisUTxOouts, maxGenesisUTxOouts}) = 
       (fmap (toAddr Testnet) genesisKeys ++ fmap (scriptsToAddr' Testnet) genesisScripts)
   return (genesisCoins genesisId outs)
   where
-    scriptsToAddr' :: Network -> (Script era, Script era) -> Addr (Crypto era)
+    scriptsToAddr' :: Network -> (Script era, Script era) -> Addr (EraCrypto era)
     scriptsToAddr' n (payScript, stakeScript) =
       Addr n (scriptToCred' payScript) (StakeRefBase $ scriptToCred' stakeScript)
 
-    scriptToCred' :: Script era -> Credential kr (Crypto era)
+    scriptToCred' :: Script era -> Credential kr (EraCrypto era)
     scriptToCred' = ScriptHashObj . hashScript @era
 
 -- | We share this dummy TxId as genesis transaction id across eras

@@ -71,8 +71,8 @@ instance
     State (EraRule "UTXOW" era) ~ UTxOState era,
     Signal (EraRule "UTXOW" era) ~ AlonzoTx era,
     Environment (EraRule "DELEGS" era) ~ DelegsEnv era,
-    State (EraRule "DELEGS" era) ~ DPState (Crypto era),
-    Signal (EraRule "DELEGS" era) ~ Seq (DCert (Crypto era))
+    State (EraRule "DELEGS" era) ~ DPState (EraCrypto era),
+    Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era))
   ) =>
   STS (BabbageLEDGER era)
   where

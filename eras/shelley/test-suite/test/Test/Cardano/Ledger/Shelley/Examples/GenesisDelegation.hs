@@ -173,7 +173,7 @@ txEx1 = ShelleyTx txbodyEx1 txwits SNothing
 
 blockEx1 ::
   forall c.
-  (ExMock (Crypto (ShelleyEra c))) =>
+  (ExMock (EraCrypto (ShelleyEra c))) =>
   Block (BHeader c) (ShelleyEra c)
 blockEx1 =
   mkBlockFakeVRF @(ShelleyEra c)
@@ -224,7 +224,7 @@ genesisDelegation1 = CHAINExample initStGenesisDeleg blockEx1 (Right expectedStE
 
 blockEx2 ::
   forall c.
-  (ExMock (Crypto (ShelleyEra c))) =>
+  (ExMock (EraCrypto (ShelleyEra c))) =>
   Block (BHeader c) (ShelleyEra c)
 blockEx2 =
   mkBlockFakeVRF @(ShelleyEra c)

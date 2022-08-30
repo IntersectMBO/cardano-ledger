@@ -328,7 +328,7 @@ main = defaultMain $ adaIsPreservedBabbage 100 (def {blocksizeMax = 4})
 main8 :: IO ()
 main8 = test 100 (Babbage Mock)
 
-test :: ReflectC (Crypto era) => Int -> Proof era -> IO ()
+test :: ReflectC (EraCrypto era) => Int -> Proof era -> IO ()
 test n proof = defaultMain $
   case proof of
     Conway _ ->

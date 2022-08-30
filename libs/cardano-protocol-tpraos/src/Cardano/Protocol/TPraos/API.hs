@@ -138,9 +138,9 @@ class
 instance PraosCrypto CC.StandardCrypto
 
 class
-  ( Eq (ChainTransitionError (Crypto era)),
-    Show (ChainTransitionError (Crypto era)),
-    Show (LedgerView (Crypto era)),
+  ( Eq (ChainTransitionError (EraCrypto era)),
+    Show (ChainTransitionError (EraCrypto era)),
+    Show (LedgerView (EraCrypto era)),
     Show (FutureLedgerViewError era),
     STS (EraRule "TICKF" era),
     BaseM (EraRule "TICKF" era) ~ ShelleyBase,
@@ -157,11 +157,11 @@ class
   where
   currentLedgerView ::
     NewEpochState era ->
-    LedgerView (Crypto era)
+    LedgerView (EraCrypto era)
   default currentLedgerView ::
     HasField "_extraEntropy" (PParams era) Nonce =>
     NewEpochState era ->
-    LedgerView (Crypto era)
+    LedgerView (EraCrypto era)
   currentLedgerView = view
 
   -- $timetravel
@@ -170,7 +170,7 @@ class
     Globals ->
     NewEpochState era ->
     SlotNo ->
-    m (LedgerView (Crypto era))
+    m (LedgerView (EraCrypto era))
   default futureLedgerView ::
     ( MonadError (FutureLedgerViewError era) m,
       HasField "_extraEntropy" (PParams era) Nonce
@@ -178,7 +178,7 @@ class
     Globals ->
     NewEpochState era ->
     SlotNo ->
-    m (LedgerView (Crypto era))
+    m (LedgerView (EraCrypto era))
   futureLedgerView = futureView
 
 instance CC.Crypto crypto => GetLedgerView (ShelleyEra crypto)
@@ -287,7 +287,7 @@ view ::
     HasField "_protocolVersion" (PParams era) ProtVer
   ) =>
   NewEpochState era ->
-  LedgerView (Crypto era)
+  LedgerView (EraCrypto era)
 view
   NewEpochState
     { nesPd = pd,
@@ -367,7 +367,7 @@ futureView ::
   Globals ->
   NewEpochState era ->
   SlotNo ->
-  m (LedgerView (Crypto era))
+  m (LedgerView (EraCrypto era))
 futureView globals ss slot =
   liftEither
     . right view
@@ -565,15 +565,15 @@ reupdateChainDepState
 getLeaderSchedule ::
   ( Era era,
     VRF.Signable
-      (CC.VRF (Crypto era))
+      (CC.VRF (EraCrypto era))
       Seed,
     HasField "_d" (PParams era) UnitInterval
   ) =>
   Globals ->
   NewEpochState era ->
-  ChainDepState (Crypto era) ->
-  KeyHash 'StakePool (Crypto era) ->
-  SignKeyVRF (Crypto era) ->
+  ChainDepState (EraCrypto era) ->
+  KeyHash 'StakePool (EraCrypto era) ->
+  SignKeyVRF (EraCrypto era) ->
   PParams era ->
   Set SlotNo
 getLeaderSchedule globals ss cds poolHash key pp = Set.filter isLeader epochSlots

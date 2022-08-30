@@ -76,7 +76,7 @@ availableAfterMIR TreasuryMIR as ir =
 
 getGKeys ::
   NewEpochState era ->
-  Set (KeyHash 'Genesis (Crypto era))
+  Set (KeyHash 'Genesis (EraCrypto era))
 getGKeys nes = Map.keysSet genDelegs
   where
     NewEpochState _ _ _ es _ _ _ = nes
@@ -87,7 +87,7 @@ getGKeys nes = Map.keysSet genDelegs
 --  contains the specified transaction outputs.
 genesisState ::
   Default (State (EraRule "PPUP" era)) =>
-  Map (KeyHash 'Genesis (Crypto era)) (GenDelegPair (Crypto era)) ->
+  Map (KeyHash 'Genesis (EraCrypto era)) (GenDelegPair (EraCrypto era)) ->
   UTxO era ->
   LedgerState era
 genesisState genDelegs0 utxo0 =
@@ -146,7 +146,7 @@ reapRewards (UnifiedMap tmap ptrmap) withdrawals = UnifiedMap (Map.mapWithKey g 
 -- | Update new epoch state
 updateNES ::
   NewEpochState era ->
-  BlocksMade (Crypto era) ->
+  BlocksMade (EraCrypto era) ->
   LedgerState era ->
   NewEpochState era
 updateNES

@@ -11,7 +11,7 @@ module Cardano.Ledger.Shelley.Bench.Gen
 where
 
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto)
+import Cardano.Ledger.Era (EraCrypto)
 -- Use Another constraint, so this works in all Eras
 
 import Cardano.Ledger.Shelley.API
@@ -84,7 +84,7 @@ genChainState n ge =
 
 -- | Benchmark generating a block given a chain state.
 genBlock ::
-  ( Mock (Crypto era),
+  ( Mock (EraCrypto era),
     ShelleyTest era,
     EraGen era,
     MinLEDGER_STS era,
@@ -95,7 +95,7 @@ genBlock ::
   ) =>
   GenEnv era ->
   ChainState era ->
-  IO (Block (BHeader (Crypto era)) era)
+  IO (Block (BHeader (EraCrypto era)) era)
 genBlock ge cs = generate $ GenBlock.genBlock ge cs
 
 -- The order one does this is important, since all these things must flow from the same
@@ -109,11 +109,11 @@ genBlock ge cs = generate $ GenBlock.genBlock ge cs
 genTriple ::
   ( EraGen era,
     Core.PParams era ~ ShelleyPParams era,
-    Mock (Crypto era),
+    Mock (EraCrypto era),
     Embed (Core.EraRule "DELPL" era) (CERTS era),
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
-    State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
-    Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era),
+    State (Core.EraRule "DELPL" era) ~ DPState (EraCrypto era),
+    Signal (Core.EraRule "DELPL" era) ~ DCert (EraCrypto era),
     ShelleyTest era
   ) =>
   Proxy era ->

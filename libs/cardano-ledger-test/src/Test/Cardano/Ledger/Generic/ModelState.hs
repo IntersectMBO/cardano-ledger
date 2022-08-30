@@ -128,7 +128,7 @@ import Test.Cardano.Ledger.Shelley.Utils (runShelleyBase)
 
 -- | MUtxo = Model UTxO. In the Model we represent the
 --   UTxO as a Map (not a newtype around a Map)
-type MUtxo era = Map (TxIn (Crypto era)) (Core.TxOut era)
+type MUtxo era = Map (TxIn (EraCrypto era)) (Core.TxOut era)
 
 pcMUtxo :: Reflect era => Proof era -> MUtxo era -> PDoc
 pcMUtxo proof m = ppMap pcTxIn (pcTxOut proof) m
@@ -137,17 +137,17 @@ pcMUtxo proof m = ppMap pcTxIn (pcTxOut proof) m
 
 data ModelNewEpochState era = ModelNewEpochState
   { -- PState fields
-    mPoolParams :: !(Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era))),
+    mPoolParams :: !(Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era))),
     -- DState state fields
-    mRewards :: !(Map (Credential 'Staking (Crypto era)) Coin),
-    mDelegations :: !(Map (Credential 'Staking (Crypto era)) (KeyHash 'StakePool (Crypto era))),
+    mRewards :: !(Map (Credential 'Staking (EraCrypto era)) Coin),
+    mDelegations :: !(Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))),
     --  _fGenDelegs,  _genDelegs, and _irwd, are for
     --  changing the PParams and are abstracted away
 
     -- UTxO state fields (and extra stuff)
-    mUTxO :: !(Map (TxIn (Crypto era)) (Core.TxOut era)),
+    mUTxO :: !(Map (TxIn (EraCrypto era)) (Core.TxOut era)),
     -- | The current UTxO
-    mMutFee :: !(Map (TxIn (Crypto era)) (Core.TxOut era)),
+    mMutFee :: !(Map (TxIn (EraCrypto era)) (Core.TxOut era)),
     -- _ppups is for changing PParams, and _stakeDistro is for efficiency
     -- and are abstracted away.
 
@@ -157,24 +157,24 @@ data ModelNewEpochState era = ModelNewEpochState
     -- esNonMyopic is for efficiency, and all are abstracted away
 
     -- Model NewEpochState fields
-    mPoolDistr :: !(Map (KeyHash 'StakePool (Crypto era)) (IndividualPoolStake (Crypto era))),
+    mPoolDistr :: !(Map (KeyHash 'StakePool (EraCrypto era)) (IndividualPoolStake (EraCrypto era))),
     mPParams :: !(Core.PParams era),
     mDeposited :: !Coin,
     mFees :: !Coin,
     mCount :: !Int,
-    mIndex :: !(Map Int (TxId (Crypto era))),
+    mIndex :: !(Map Int (TxId (EraCrypto era))),
     -- below here NO EFFECT until we model EpochBoundary
-    mFPoolParams :: !(Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era))),
-    mRetiring :: !(Map (KeyHash 'StakePool (Crypto era)) EpochNo),
-    mSnapshots :: !(SnapShots (Crypto era)),
+    mFPoolParams :: !(Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era))),
+    mRetiring :: !(Map (KeyHash 'StakePool (EraCrypto era)) EpochNo),
+    mSnapshots :: !(SnapShots (EraCrypto era)),
     mEL :: !EpochNo, -- The current epoch,
-    mBprev :: !(Map (KeyHash 'StakePool (Crypto era)) Natural), --  Blocks made before current epoch, NO EFFECT until we model EpochBoundar
-    mBcur :: !(Map (KeyHash 'StakePool (Crypto era)) Natural),
+    mBprev :: !(Map (KeyHash 'StakePool (EraCrypto era)) Natural), --  Blocks made before current epoch, NO EFFECT until we model EpochBoundar
+    mBcur :: !(Map (KeyHash 'StakePool (EraCrypto era)) Natural),
     -- | Blocks made in current epoch
-    mRu :: !(StrictMaybe (RewardUpdate (Crypto era))) -- Possible reward update
+    mRu :: !(StrictMaybe (RewardUpdate (EraCrypto era))) -- Possible reward update
   }
 
-type UtxoEntry era = (TxIn (Crypto era), Core.TxOut era)
+type UtxoEntry era = (TxIn (EraCrypto era), Core.TxOut era)
 
 type Model era = ModelNewEpochState era
 
@@ -313,7 +313,7 @@ testMNES = mNewEpochStateZero
 class Extract t era where
   extract :: ModelNewEpochState era -> t
 
-instance Crypto era ~ c => Extract (DState c) era where
+instance EraCrypto era ~ c => Extract (DState c) era where
   extract x =
     DState
       (UMap.unify (mRewards x) (mDelegations x) Map.empty)
@@ -321,10 +321,10 @@ instance Crypto era ~ c => Extract (DState c) era where
       genDelegsZero
       instantaneousRewardsZero
 
-instance Crypto era ~ c => Extract (PState c) era where
+instance EraCrypto era ~ c => Extract (PState c) era where
   extract x = PState (mPoolParams x) (mFPoolParams x) (mRetiring x)
 
-instance Crypto era ~ c => Extract (DPState c) era where
+instance EraCrypto era ~ c => Extract (DPState c) era where
   extract x = DPState (extract x) (extract x)
 
 instance Reflect era => Extract (UTxOState era) era where

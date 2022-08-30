@@ -50,7 +50,7 @@ instance
     State (EraRule "UTXO" era) ~ UTxOState era,
     Signal (EraRule "UTXO" era) ~ Tx era,
     HasField "_protocolVersion" (PParams era) ProtVer,
-    DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody)
+    DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
   ) =>
   STS (ShelleyMAUTXOW era)
   where

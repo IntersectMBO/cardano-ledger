@@ -65,9 +65,9 @@ exampleTxBodyMA value =
     mempty
   where
     -- Dummy hash to decouple from the auxiliary data in 'exampleTx'.
-    auxiliaryDataHash :: AuxiliaryDataHash (Crypto era)
+    auxiliaryDataHash :: AuxiliaryDataHash (EraCrypto era)
     auxiliaryDataHash =
-      AuxiliaryDataHash $ mkDummySafeHash (Proxy @(Crypto era)) 30
+      AuxiliaryDataHash $ mkDummySafeHash (Proxy @(EraCrypto era)) 30
 
 exampleAuxiliaryDataMA :: (MAClass ma c) => MAAuxiliaryData (ShelleyMAEra ma c)
 exampleAuxiliaryDataMA =

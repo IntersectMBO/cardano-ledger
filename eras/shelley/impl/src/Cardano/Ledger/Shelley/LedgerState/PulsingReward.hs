@@ -117,12 +117,12 @@ startStep ::
   forall era.
   UsesPP era =>
   EpochSize ->
-  BlocksMade (Crypto era) ->
+  BlocksMade (EraCrypto era) ->
   EpochState era ->
   Coin ->
   ActiveSlotCoeff ->
   Word64 ->
-  PulsingRewUpdate (Crypto era)
+  PulsingRewUpdate (EraCrypto era)
 startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) maxSupply asc secparam =
   let SnapShot stake' delegs' poolParams = _pstakeGo ss
       numStakeCreds, k :: Rational
@@ -236,7 +236,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
           (unCoin _totalStake)
           (getField @"_protocolVersion" pr)
           blockProducingPoolInfo
-      pulser :: Pulser (Crypto era)
+      pulser :: Pulser (EraCrypto era)
       pulser =
         RSLP
           pulseSize
@@ -318,12 +318,12 @@ createRUpd ::
   forall era.
   UsesPP era =>
   EpochSize ->
-  BlocksMade (Crypto era) ->
+  BlocksMade (EraCrypto era) ->
   EpochState era ->
   Coin ->
   ActiveSlotCoeff ->
   Word64 ->
-  ShelleyBase (RewardUpdate (Crypto era))
+  ShelleyBase (RewardUpdate (EraCrypto era))
 createRUpd slotsPerEpoch blocksmade epstate maxSupply asc secparam = do
   let step1 = startStep slotsPerEpoch blocksmade epstate maxSupply asc secparam
   (step2, _event) <- pulseStep step1

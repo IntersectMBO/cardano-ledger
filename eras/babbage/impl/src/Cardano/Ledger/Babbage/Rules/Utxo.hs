@@ -220,7 +220,7 @@ validateTotalCollateral ::
   ) =>
   PParams era ->
   TxBody era ->
-  Map.Map (TxIn (Crypto era)) (TxOut era) ->
+  Map.Map (TxIn (EraCrypto era)) (TxOut era) ->
   Test (BabbageUtxoPredFailure era)
 validateTotalCollateral pp txBody utxoCollateral =
   sequenceA_
@@ -250,7 +250,7 @@ validateCollateralContainsNonADA ::
   forall era.
   (BabbageEraTxBody era, TxOut era ~ BabbageTxOut era) =>
   TxBody era ->
-  Map.Map (TxIn (Crypto era)) (TxOut era) ->
+  Map.Map (TxIn (EraCrypto era)) (TxOut era) ->
   Test (AlonzoUtxoPredFailure era)
 validateCollateralContainsNonADA txBody utxoCollateral =
   -- When we do not have any non-ada TxOuts we can short-circuit the more

@@ -356,7 +356,7 @@ data AlonzoUtxosPredFailure era
     --         consequences of not detecting this means scripts get dropped, so things
     --         might validate that shouldn't. So we double check in the function
     --         collectTwoPhaseScriptInputs, it should find data for every Script.
-    CollectErrors [CollectError (Crypto era)]
+    CollectErrors [CollectError (EraCrypto era)]
   | UpdateFailure (PredicateFailure (EraRule "PPUP" era))
   deriving
     (Generic)

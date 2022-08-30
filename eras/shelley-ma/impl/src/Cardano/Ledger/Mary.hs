@@ -27,7 +27,7 @@ module Cardano.Ledger.Mary
   )
 where
 
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core (EraCrypto)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys (DSignable)
@@ -70,11 +70,11 @@ type Self c = ShelleyMAEra 'Mary c
 
 {-# DEPRECATED Self "Use `MaryEra` instead" #-}
 
-type Script era = Timelock (Core.Crypto era)
+type Script era = Timelock (EraCrypto era)
 
 {-# DEPRECATED Script "Use `Timelock` instead" #-}
 
-type Value era = MaryValue (Core.Crypto era)
+type Value era = MaryValue (EraCrypto era)
 
 {-# DEPRECATED Value "Use `MaryValue` instead" #-}
 

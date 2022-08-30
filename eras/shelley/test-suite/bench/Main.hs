@@ -23,7 +23,7 @@ import Cardano.Crypto.KES
 import Cardano.Crypto.VRF.Praos
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Crypto as CryptoClass
-import Cardano.Ledger.Era (Crypto)
+import Cardano.Ledger.Era (EraCrypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Bench.Gen
   ( genBlock,
@@ -234,14 +234,14 @@ epochAt x =
 
 action2m ::
   ShelleyTest era =>
-  (DState (Crypto era), PState (Crypto era), UTxO era) ->
-  EB.SnapShot (Crypto era)
+  (DState (EraCrypto era), PState (EraCrypto era), UTxO era) ->
+  EB.SnapShot (EraCrypto era)
 action2m (dstate, pstate, utxo) = stakeDistr utxo dstate pstate
 
 action2im ::
   ShelleyTest era =>
-  (DState (Crypto era), PState (Crypto era), UTxO era) ->
-  EB.SnapShot (Crypto era)
+  (DState (EraCrypto era), PState (EraCrypto era), UTxO era) ->
+  EB.SnapShot (EraCrypto era)
 action2im (dstate, pstate, utxo) =
   let incStake = updateStakeDistribution mempty mempty utxo
    in incrementalStakeDistr incStake dstate pstate

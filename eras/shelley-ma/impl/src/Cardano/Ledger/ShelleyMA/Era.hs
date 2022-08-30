@@ -88,7 +88,7 @@ instance CC.Crypto c => MAClass 'Allegra c where
 -- | The actual Mary and Allegra instances, rolled into one, the MAClass superclass
 --   provides the era-specific code for where they differ.
 instance MAClass ma crypto => Era (ShelleyMAEra ma crypto) where
-  type Crypto (ShelleyMAEra ma crypto) = crypto
+  type EraCrypto (ShelleyMAEra ma crypto) = crypto
   type ProtVerLow (ShelleyMAEra ma crypto) = MAProtVer ma
 
 type family MAProtVer (ma :: MaryOrAllegra) :: Nat where

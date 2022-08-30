@@ -102,7 +102,7 @@ instance
     Environment (EraRule "LEDGER" era) ~ LedgerEnv era,
     State (EraRule "LEDGER" era) ~ LedgerState era,
     Signal (EraRule "LEDGER" era) ~ Tx era,
-    DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
+    DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody),
     Default (LedgerState era)
   ) =>
   STS (ShelleyLEDGERS era)

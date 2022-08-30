@@ -180,7 +180,7 @@ hashTxSeq ::
   forall era.
   (Era era) =>
   AlonzoTxSeq era ->
-  Hash (Crypto era) EraIndependentBlockBody
+  Hash (EraCrypto era) EraIndependentBlockBody
 hashTxSeq = hashAlonzoTxSeq
 {-# DEPRECATED hashTxSeq "Use `hashAlonzoTxSeq` instead" #-}
 
@@ -189,7 +189,7 @@ hashAlonzoTxSeq ::
   forall era.
   (Era era) =>
   AlonzoTxSeq era ->
-  Hash (Crypto era) EraIndependentBlockBody
+  Hash (EraCrypto era) EraIndependentBlockBody
 hashAlonzoTxSeq (TxSeq' _ bodies ws md vs) =
   coerce $
     hashStrict $
@@ -202,7 +202,7 @@ hashAlonzoTxSeq (TxSeq' _ bodies ws md vs) =
               hashPart vs
             ]
   where
-    hashStrict :: ByteString -> Hash (Crypto era) ByteString
+    hashStrict :: ByteString -> Hash (EraCrypto era) ByteString
     hashStrict = Hash.hashWith id
     hashPart = shortByteString . Hash.hashToBytesShort . hashStrict . BSL.toStrict
 

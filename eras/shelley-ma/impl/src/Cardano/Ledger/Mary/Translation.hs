@@ -17,7 +17,7 @@ import Cardano.Binary
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Era hiding (Crypto)
+import Cardano.Ledger.Era hiding (EraCrypto)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Shelley.API hiding (Metadata, TxBody)

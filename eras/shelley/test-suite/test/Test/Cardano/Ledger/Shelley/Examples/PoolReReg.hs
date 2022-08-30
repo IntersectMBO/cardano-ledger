@@ -25,7 +25,7 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Block (Block, bheader, txid)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Crypto as Cr
-import Cardano.Ledger.Era (Crypto (..))
+import Cardano.Ledger.Era (EraCrypto (..))
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -113,7 +113,7 @@ txbodyEx1 =
     SNothing
     SNothing
 
-txEx1 :: forall c. (Cr.Crypto c, ExMock (Crypto (ShelleyEra c))) => ShelleyTx (ShelleyEra c)
+txEx1 :: forall c. (Cr.Crypto c, ExMock (EraCrypto (ShelleyEra c))) => ShelleyTx (ShelleyEra c)
 txEx1 =
   ShelleyTx
     txbodyEx1
@@ -130,7 +130,7 @@ txEx1 =
 
 blockEx1 ::
   forall c.
-  (HasCallStack, ExMock (Crypto (ShelleyEra c))) =>
+  (HasCallStack, ExMock (EraCrypto (ShelleyEra c))) =>
   Block (BHeader c) (ShelleyEra c)
 blockEx1 =
   mkBlockFakeVRF
@@ -139,7 +139,7 @@ blockEx1 =
     [txEx1]
     (SlotNo 10)
     (BlockNo 1)
-    (nonce0 @(Crypto (ShelleyEra c)))
+    (nonce0 @(EraCrypto (ShelleyEra c)))
     (NatNonce 1)
     minBound
     0
@@ -148,7 +148,7 @@ blockEx1 =
 
 expectedStEx1 ::
   forall c.
-  (ExMock (Crypto (ShelleyEra c))) =>
+  (ExMock (EraCrypto (ShelleyEra c))) =>
   ChainState (ShelleyEra c)
 expectedStEx1 =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx1 @c))
@@ -161,7 +161,7 @@ expectedStEx1 =
 -- === Block 1, Slot 10, Epoch 0
 --
 -- In the first block Alice registers a stake pool.
-poolReReg1 :: (ExMock (Crypto (ShelleyEra c))) => CHAINExample (BHeader c) (ShelleyEra c)
+poolReReg1 :: (ExMock (EraCrypto (ShelleyEra c))) => CHAINExample (BHeader c) (ShelleyEra c)
 poolReReg1 = CHAINExample initStPoolReReg blockEx1 (Right expectedStEx1)
 
 --
@@ -193,7 +193,7 @@ txbodyEx2 =
     SNothing
     SNothing
 
-txEx2 :: forall c. (Cr.Crypto c, ExMock (Crypto (ShelleyEra c))) => ShelleyTx (ShelleyEra c)
+txEx2 :: forall c. (Cr.Crypto c, ExMock (EraCrypto (ShelleyEra c))) => ShelleyTx (ShelleyEra c)
 txEx2 =
   ShelleyTx
     txbodyEx2
@@ -212,7 +212,7 @@ word64SlotToKesPeriodWord :: Word64 -> Word
 word64SlotToKesPeriodWord slot =
   fromIntegral (toInteger slot) `div` fromIntegral (toInteger $ slotsPerKESPeriod testGlobals)
 
-blockEx2 :: forall c. (ExMock (Crypto (ShelleyEra c))) => Word64 -> Block (BHeader c) (ShelleyEra c)
+blockEx2 :: forall c. (ExMock (EraCrypto (ShelleyEra c))) => Word64 -> Block (BHeader c) (ShelleyEra c)
 blockEx2 slot =
   mkBlockFakeVRF
     (bhHash $ bheader @(BHeader c) @(ShelleyEra c) blockEx1)
@@ -220,24 +220,24 @@ blockEx2 slot =
     [txEx2]
     (SlotNo slot)
     (BlockNo 2)
-    (nonce0 @(Crypto (ShelleyEra c)))
+    (nonce0 @(EraCrypto (ShelleyEra c)))
     (NatNonce 2)
     minBound
     (word64SlotToKesPeriodWord slot)
     0
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 20) 0 (KESPeriod 0))
 
-blockEx2A :: forall c. (ExMock (Crypto (ShelleyEra c))) => Block (BHeader c) (ShelleyEra c)
+blockEx2A :: forall c. (ExMock (EraCrypto (ShelleyEra c))) => Block (BHeader c) (ShelleyEra c)
 blockEx2A = blockEx2 20
 
-expectedStEx2 :: forall c. (ExMock (Crypto (ShelleyEra c))) => ChainState (ShelleyEra c)
+expectedStEx2 :: forall c. (ExMock (EraCrypto (ShelleyEra c))) => ChainState (ShelleyEra c)
 expectedStEx2 =
   C.feesAndDeposits feeTx2 (Coin 0)
     . C.newUTxO txbodyEx2
     . C.reregPool newPoolParams
     $ expectedStEx1
 
-expectedStEx2A :: forall c. (ExMock (Crypto (ShelleyEra c))) => ChainState (ShelleyEra c)
+expectedStEx2A :: forall c. (ExMock (EraCrypto (ShelleyEra c))) => ChainState (ShelleyEra c)
 expectedStEx2A =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx2A @c))
     . C.newLab blockEx2A
@@ -247,37 +247,37 @@ expectedStEx2A =
 --
 -- In the second block Alice re-registers with new pool parameters
 -- early in the epoch.
-poolReReg2A :: (ExMock (Crypto (ShelleyEra c))) => CHAINExample (BHeader c) (ShelleyEra c)
+poolReReg2A :: (ExMock (EraCrypto (ShelleyEra c))) => CHAINExample (BHeader c) (ShelleyEra c)
 poolReReg2A = CHAINExample expectedStEx1 blockEx2A (Right expectedStEx2A)
 
 pulserEx2 :: forall c. (ExMock c) => PulsingRewUpdate c
 pulserEx2 = makeCompletedPulser (BlocksMade mempty) expectedStEx2
 
-expectedStEx2B :: forall c. (ExMock (Crypto (ShelleyEra c))) => ChainState (ShelleyEra c)
+expectedStEx2B :: forall c. (ExMock (EraCrypto (ShelleyEra c))) => ChainState (ShelleyEra c)
 expectedStEx2B =
   C.evolveNonceFrozen (getBlockNonce (blockEx2B @c))
     . C.newLab blockEx2B
     . C.pulserUpdate pulserEx2
     $ expectedStEx2
 
-blockEx2B :: forall c. (ExMock (Crypto (ShelleyEra c))) => Block (BHeader c) (ShelleyEra c)
+blockEx2B :: forall c. (ExMock (EraCrypto (ShelleyEra c))) => Block (BHeader c) (ShelleyEra c)
 blockEx2B = blockEx2 90
 
 -- === Block 2, Slot 90, Epoch 0
 --
 -- In the second block Alice re-registers with new pool parameters
 -- late in the epoch.
-poolReReg2B :: (ExMock (Crypto (ShelleyEra c))) => CHAINExample (BHeader c) (ShelleyEra c)
+poolReReg2B :: (ExMock (EraCrypto (ShelleyEra c))) => CHAINExample (BHeader c) (ShelleyEra c)
 poolReReg2B = CHAINExample expectedStEx1 blockEx2B (Right expectedStEx2B)
 
 --
 -- Block 3, Slot 110, Epoch 1
 --
 
-epoch1Nonce :: forall c. (ExMock (Crypto (ShelleyEra c))) => Nonce
+epoch1Nonce :: forall c. (ExMock (EraCrypto (ShelleyEra c))) => Nonce
 epoch1Nonce = chainCandidateNonce (expectedStEx2B @c)
 
-blockEx3 :: forall c. (ExMock (Crypto (ShelleyEra c))) => Block (BHeader c) (ShelleyEra c)
+blockEx3 :: forall c. (ExMock (EraCrypto (ShelleyEra c))) => Block (BHeader c) (ShelleyEra c)
 blockEx3 =
   mkBlockFakeVRF
     (bhHash $ bheader @(BHeader c) @(ShelleyEra c) blockEx2B)
@@ -296,7 +296,7 @@ snapEx3 :: Cr.Crypto c => SnapShot c
 snapEx3 =
   emptySnapShot {_poolParams = [(hk Cast.alicePoolKeys, Cast.alicePoolParams)]}
 
-expectedStEx3 :: forall c. (ExMock (Crypto (ShelleyEra c))) => ChainState (ShelleyEra c)
+expectedStEx3 :: forall c. (ExMock (EraCrypto (ShelleyEra c))) => ChainState (ShelleyEra c)
 expectedStEx3 =
   C.newEpoch blockEx3
     . C.newSnapshot snapEx3 (feeTx1 <+> feeTx2)
@@ -308,7 +308,7 @@ expectedStEx3 =
 --
 -- The third block is empty and trigger the epoch change,
 -- and Alice's new pool parameters are adopted.
-poolReReg3 :: (ExMock (Crypto (ShelleyEra c))) => CHAINExample (BHeader c) (ShelleyEra c)
+poolReReg3 :: (ExMock (EraCrypto (ShelleyEra c))) => CHAINExample (BHeader c) (ShelleyEra c)
 poolReReg3 = CHAINExample expectedStEx2B blockEx3 (Right expectedStEx3)
 
 --

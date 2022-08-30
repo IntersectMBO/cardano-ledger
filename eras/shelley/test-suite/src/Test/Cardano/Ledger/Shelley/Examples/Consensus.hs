@@ -20,7 +20,6 @@ import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era
-import qualified Cardano.Ledger.Era as Era (Crypto)
 import Cardano.Ledger.Keys
 import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.SafeHash
@@ -59,7 +58,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Core
 import Test.Cardano.Ledger.Shelley.Orphans ()
 import Test.Cardano.Ledger.Shelley.Utils hiding (mkVRFKeyPair)
 
-type KeyPairWits era = [KeyPair 'Witness (Cardano.Ledger.Era.Crypto era)]
+type KeyPairWits era = [KeyPair 'Witness (EraCrypto era)]
 
 {-------------------------------------------------------------------------------
   ShelleyLedgerExamples
@@ -68,23 +67,23 @@ type KeyPairWits era = [KeyPair 'Witness (Cardano.Ledger.Era.Crypto era)]
 data ShelleyResultExamples era = ShelleyResultExamples
   { srePParams :: Core.PParams era,
     sreProposedPPUpdates :: ProposedPPUpdates era,
-    srePoolDistr :: PoolDistr (Cardano.Ledger.Era.Crypto era),
+    srePoolDistr :: PoolDistr (EraCrypto era),
     sreNonMyopicRewards ::
       Map
-        (Either Coin (Credential 'Staking (Cardano.Ledger.Era.Crypto era)))
-        (Map (KeyHash 'StakePool (Cardano.Ledger.Era.Crypto era)) Coin),
+        (Either Coin (Credential 'Staking (EraCrypto era)))
+        (Map (KeyHash 'StakePool (EraCrypto era)) Coin),
     sreShelleyGenesis :: ShelleyGenesis era
   }
 
 data ShelleyLedgerExamples era = ShelleyLedgerExamples
-  { sleBlock :: Block (BHeader (Era.Crypto era)) era,
-    sleHashHeader :: HashHeader (Cardano.Ledger.Era.Crypto era),
+  { sleBlock :: Block (BHeader (EraCrypto era)) era,
+    sleHashHeader :: HashHeader (EraCrypto era),
     sleTx :: Core.Tx era,
     sleApplyTxError :: ApplyTxError era,
-    sleRewardsCredentials :: Set (Either Coin (Credential 'Staking (Cardano.Ledger.Era.Crypto era))),
+    sleRewardsCredentials :: Set (Either Coin (Credential 'Staking (EraCrypto era))),
     sleResultExamples :: ShelleyResultExamples era,
     sleNewEpochState :: NewEpochState era,
-    sleChainDepState :: ChainDepState (Cardano.Ledger.Era.Crypto era),
+    sleChainDepState :: ChainDepState (EraCrypto era),
     sleTranslationContext :: TranslationContext era
   }
 
@@ -94,7 +93,7 @@ data ShelleyLedgerExamples era = ShelleyLedgerExamples
 
 type ShelleyBasedEra' era =
   ( Default (State (Core.EraRule "PPUP" era)),
-    PraosCrypto (Cardano.Ledger.Era.Crypto era)
+    PraosCrypto (EraCrypto era)
   )
 
 defaultShelleyLedgerExamples ::
@@ -157,19 +156,19 @@ exampleShelleyLedgerBlock ::
   forall era.
   (Core.EraTx era, EraSegWits era, ShelleyBasedEra' era) =>
   Core.Tx era ->
-  Block (BHeader (Era.Crypto era)) era
+  Block (BHeader (EraCrypto era)) era
 exampleShelleyLedgerBlock tx = Block blockHeader blockBody
   where
-    keys :: AllIssuerKeys (Cardano.Ledger.Era.Crypto era) 'StakePool
+    keys :: AllIssuerKeys (EraCrypto era) 'StakePool
     keys = exampleKeys
 
     (_, (hotKey, _)) = head $ hot keys
     KeyPair vKeyCold _ = cold keys
 
-    blockHeader :: BHeader (Cardano.Ledger.Era.Crypto era)
+    blockHeader :: BHeader (EraCrypto era)
     blockHeader = BHeader blockHeaderBody (signedKES () 0 blockHeaderBody hotKey)
 
-    blockHeaderBody :: BHBody (Cardano.Ledger.Era.Crypto era)
+    blockHeaderBody :: BHBody (EraCrypto era)
     blockHeaderBody =
       BHBody
         { bheaderBlockNo = BlockNo 3,
@@ -194,8 +193,8 @@ exampleHashHeader ::
   forall era.
   ShelleyBasedEra' era =>
   Proxy era ->
-  HashHeader (Cardano.Ledger.Era.Crypto era)
-exampleHashHeader _ = coerce $ mkDummyHash (Proxy @(HASH (Cardano.Ledger.Era.Crypto era))) 0
+  HashHeader (EraCrypto era)
+exampleHashHeader _ = coerce $ mkDummyHash (Proxy @(HASH (EraCrypto era))) 0
 
 mkKeyHash :: forall c discriminator. CC.Crypto c => Int -> KeyHash discriminator c
 mkKeyHash = KeyHash . mkDummyHash (Proxy @(ADDRHASH c))
@@ -219,7 +218,7 @@ exampleTx mkWitnesses txBody auxData =
     keyPairWits =
       [ asWitness examplePayKey,
         asWitness exampleStakeKey,
-        asWitness $ cold (exampleKeys @(Cardano.Ledger.Era.Crypto era) @'StakePool)
+        asWitness $ cold (exampleKeys @(EraCrypto era) @'StakePool)
       ]
 
 exampleProposedPParamsUpdates ::
@@ -341,14 +340,14 @@ exampleNewEpochState value ppp pp =
           esNonMyopic = def
         }
       where
-        addr :: Addr (Cardano.Ledger.Era.Crypto era)
+        addr :: Addr (EraCrypto era)
         addr =
           Addr
             Testnet
             (keyToCredential examplePayKey)
             (StakeRefBase (keyToCredential exampleStakeKey))
 
-    rewardUpdate :: PulsingRewUpdate (Cardano.Ledger.Era.Crypto era)
+    rewardUpdate :: PulsingRewUpdate (EraCrypto era)
     rewardUpdate =
       startStep @era
         (EpochSize 432000)
@@ -409,8 +408,8 @@ ledgerExamplesShelley =
 mkWitnessesPreAlonzo ::
   ( Core.EraTx era,
     DSIGN.Signable
-      (DSIGN (Era.Crypto era))
-      (Hash.Hash (HASH (Era.Crypto era)) Core.EraIndependentTxBody)
+      (DSIGN (EraCrypto era))
+      (Hash.Hash (HASH (EraCrypto era)) Core.EraIndependentTxBody)
   ) =>
   Proxy era ->
   Core.TxBody era ->

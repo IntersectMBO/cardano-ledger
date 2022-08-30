@@ -106,9 +106,9 @@ deriving stock instance
 
 data ShelleyDelegsPredFailure era
   = DelegateeNotRegisteredDELEG
-      !(KeyHash 'StakePool (Crypto era)) -- target pool which is not registered
+      !(KeyHash 'StakePool (EraCrypto era)) -- target pool which is not registered
   | WithdrawalsNotInRewardsDELEGS
-      !(Map (RewardAcnt (Crypto era)) Coin) -- withdrawals that are missing or do not withdrawl the entire amount
+      !(Map (RewardAcnt (EraCrypto era)) Coin) -- withdrawals that are missing or do not withdrawl the entire amount
   | DelplFailure (PredicateFailure (EraRule "DELPL" era)) -- Subtransition Failures
   deriving (Generic)
 
@@ -129,13 +129,13 @@ instance
     ShelleyEraTxBody era,
     Embed (EraRule "DELPL" era) (ShelleyDELEGS era),
     Environment (EraRule "DELPL" era) ~ DelplEnv era,
-    State (EraRule "DELPL" era) ~ DPState (Crypto era),
-    Signal (EraRule "DELPL" era) ~ DCert (Crypto era)
+    State (EraRule "DELPL" era) ~ DPState (EraCrypto era),
+    Signal (EraRule "DELPL" era) ~ DCert (EraCrypto era)
   ) =>
   STS (ShelleyDELEGS era)
   where
-  type State (ShelleyDELEGS era) = DPState (Crypto era)
-  type Signal (ShelleyDELEGS era) = Seq (DCert (Crypto era))
+  type State (ShelleyDELEGS era) = DPState (EraCrypto era)
+  type Signal (ShelleyDELEGS era) = Seq (DCert (EraCrypto era))
   type Environment (ShelleyDELEGS era) = DelegsEnv era
   type BaseM (ShelleyDELEGS era) = ShelleyBase
   type
@@ -197,8 +197,8 @@ delegsTransition ::
     ShelleyEraTxBody era,
     Embed (EraRule "DELPL" era) (ShelleyDELEGS era),
     Environment (EraRule "DELPL" era) ~ DelplEnv era,
-    State (EraRule "DELPL" era) ~ DPState (Crypto era),
-    Signal (EraRule "DELPL" era) ~ DCert (Crypto era)
+    State (EraRule "DELPL" era) ~ DPState (EraCrypto era),
+    Signal (EraRule "DELPL" era) ~ DCert (EraCrypto era)
   ) =>
   TransitionRule (ShelleyDELEGS era)
 delegsTransition = do
@@ -218,7 +218,7 @@ delegsTransition = do
               (Map.mapKeys (mkRwdAcnt network) (UM.unUnify rewards'))
           )
 
-      let wdrls_' :: RewardAccounts (Crypto era)
+      let wdrls_' :: RewardAccounts (EraCrypto era)
           wdrls_' =
             Map.foldrWithKey
               ( \(RewardAcnt _ cred) _coin ->
@@ -251,8 +251,8 @@ delegsTransition = do
     -- @wdrls_@ is small and @rewards@ big, better to transform the former
     -- than the latter into the right shape so we can call 'Map.isSubmapOf'.
     isSubmapOf ::
-      Map (RewardAcnt (Crypto era)) Coin ->
-      ViewMap (Crypto era) (Credential 'Staking crypto) Coin ->
+      Map (RewardAcnt (EraCrypto era)) Coin ->
+      ViewMap (EraCrypto era) (Credential 'Staking crypto) Coin ->
       Bool
     isSubmapOf wdrls_ (Rewards (UnifiedMap tripmap _)) = Map.isSubmapOfBy f withdrawalMap tripmap
       where

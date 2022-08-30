@@ -36,14 +36,14 @@ isTwoPhaseScriptAddress ::
   (ExtendedUTxO era, EraScript era) =>
   Tx era ->
   UTxO era ->
-  Addr (Crypto era) ->
+  Addr (EraCrypto era) ->
   Bool
 isTwoPhaseScriptAddress tx utxo = isTwoPhaseScriptAddressFromMap @era (txscripts utxo tx)
 
 collAdaBalance ::
   (BabbageEraTxBody era, TxOut era ~ BabbageTxOut era) =>
   TxBody era ->
-  Map.Map (TxIn (Crypto era)) (TxOut era) ->
+  Map.Map (TxIn (EraCrypto era)) (TxOut era) ->
   Coin
 collAdaBalance txBody utxoCollateral =
   case txBody ^. collateralReturnTxBodyL of
