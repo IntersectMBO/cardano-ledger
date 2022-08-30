@@ -97,7 +97,7 @@ instance NFData AccountState
 
 data EpochState era = EpochState
   { esAccountState :: !AccountState,
-    esSnapshots :: !(SnapShots (Crypto era)),
+    esSnapshots :: !(SnapShots (EraCrypto era)),
     esLState :: !(LedgerState era),
     esPrevPp :: !(PParams era),
     esPp :: !(PParams era),
@@ -105,12 +105,12 @@ data EpochState era = EpochState
     -- and is not a part of the protocol. It is only used for providing
     -- data to the stake pool ranking calculation @getNonMyopicMemberRewards@.
     -- See https://hydra.iohk.io/job/Cardano/cardano-ledger/specs.pool-ranking/latest/download-by-type/doc-pdf/pool-ranking
-    esNonMyopic :: !(NonMyopic (Crypto era))
+    esNonMyopic :: !(NonMyopic (EraCrypto era))
   }
   deriving (Generic)
 
 deriving stock instance
-  ( CC.Crypto (Crypto era),
+  ( CC.Crypto (EraCrypto era),
     Show (TxOut era),
     Show (PParams era),
     Show (State (EraRule "PPUP" era))
@@ -118,7 +118,7 @@ deriving stock instance
   Show (EpochState era)
 
 deriving stock instance
-  ( CC.Crypto (Crypto era),
+  ( CC.Crypto (EraCrypto era),
     Eq (TxOut era),
     Eq (PParams era),
     Eq (State (EraRule "PPUP" era))
@@ -165,9 +165,9 @@ instance
 instance
   ( FromCBOR (Value era),
     FromCBOR (PParams era),
-    HashAnnotated (TxBody era) EraIndependentTxBody (Crypto era),
+    HashAnnotated (TxBody era) EraIndependentTxBody (EraCrypto era),
     FromSharedCBOR (TxOut era),
-    Share (TxOut era) ~ Interns (Credential 'Staking (Crypto era)),
+    Share (TxOut era) ~ Interns (Credential 'Staking (EraCrypto era)),
     FromCBOR (State (EraRule "PPUP" era)),
     Era era
   ) =>
@@ -251,7 +251,7 @@ data UTxOState era = UTxOState
     _deposited :: !Coin,
     _fees :: !Coin,
     _ppups :: !(State (EraRule "PPUP" era)),
-    _stakeDistro :: !(IncrementalStake (Crypto era))
+    _stakeDistro :: !(IncrementalStake (EraCrypto era))
   }
   deriving (Generic)
 
@@ -263,14 +263,14 @@ instance
   NFData (UTxOState era)
 
 deriving stock instance
-  ( CC.Crypto (Crypto era),
+  ( CC.Crypto (EraCrypto era),
     Show (TxOut era),
     Show (State (EraRule "PPUP" era))
   ) =>
   Show (UTxOState era)
 
 deriving stock instance
-  ( CC.Crypto (Crypto era),
+  ( CC.Crypto (EraCrypto era),
     Eq (TxOut era),
     Eq (State (EraRule "PPUP" era))
   ) =>
@@ -294,17 +294,17 @@ instance
     encodeListLen 5 <> toCBOR ut <> toCBOR dp <> toCBOR fs <> toCBOR us <> toCBOR sd
 
 instance
-  ( CC.Crypto (Crypto era),
+  ( CC.Crypto (EraCrypto era),
     FromCBOR (State (EraRule "PPUP" era)),
     FromSharedCBOR (TxOut era),
-    Share (TxOut era) ~ Interns (Credential 'Staking (Crypto era)),
-    HashAnnotated (TxBody era) EraIndependentTxBody (Crypto era)
+    Share (TxOut era) ~ Interns (Credential 'Staking (EraCrypto era)),
+    HashAnnotated (TxBody era) EraIndependentTxBody (EraCrypto era)
   ) =>
   FromSharedCBOR (UTxOState era)
   where
   type
     Share (UTxOState era) =
-      Interns (Credential 'Staking (Crypto era))
+      Interns (Credential 'Staking (EraCrypto era))
   fromSharedCBOR credInterns =
     decodeRecordNamed "UTxOState" (const 5) $ do
       _utxo <- fromSharedCBOR credInterns
@@ -319,15 +319,15 @@ data NewEpochState era = NewEpochState
   { -- | Last epoch
     nesEL :: !EpochNo,
     -- | Blocks made before current epoch
-    nesBprev :: !(BlocksMade (Crypto era)),
+    nesBprev :: !(BlocksMade (EraCrypto era)),
     -- | Blocks made in current epoch
-    nesBcur :: !(BlocksMade (Crypto era)),
+    nesBcur :: !(BlocksMade (EraCrypto era)),
     -- | Epoch state before current
     nesEs :: !(EpochState era),
     -- | Possible reward update
-    nesRu :: !(StrictMaybe (PulsingRewUpdate (Crypto era))),
+    nesRu :: !(StrictMaybe (PulsingRewUpdate (EraCrypto era))),
     -- | Stake distribution within the stake pool
-    nesPd :: !(PoolDistr (Crypto era)),
+    nesPd :: !(PoolDistr (EraCrypto era)),
     -- | AVVM addresses to be removed at the end of the Shelley era. Note that
     -- the existence of this field is a hack, related to the transition of UTxO
     -- to disk. We remove AVVM addresses from the UTxO on the Shelley/Allegra
@@ -348,7 +348,7 @@ type family StashedAVVMAddresses era where
   StashedAVVMAddresses _ = ()
 
 deriving stock instance
-  ( CC.Crypto (Crypto era),
+  ( CC.Crypto (EraCrypto era),
     Show (TxOut era),
     Show (PParams era),
     Show (State (EraRule "PPUP" era)),
@@ -357,7 +357,7 @@ deriving stock instance
   Show (NewEpochState era)
 
 deriving stock instance
-  ( CC.Crypto (Crypto era),
+  ( CC.Crypto (EraCrypto era),
     Eq (TxOut era),
     Eq (PParams era),
     Eq (State (EraRule "PPUP" era)),
@@ -397,11 +397,11 @@ instance
   ( Era era,
     FromCBOR (PParams era),
     FromSharedCBOR (TxOut era),
-    Share (TxOut era) ~ Interns (Credential 'Staking (Crypto era)),
+    Share (TxOut era) ~ Interns (Credential 'Staking (EraCrypto era)),
     FromCBOR (Value era),
     FromCBOR (State (EraRule "PPUP" era)),
     FromCBOR (StashedAVVMAddresses era),
-    HashAnnotated (TxBody era) EraIndependentTxBody (Crypto era)
+    HashAnnotated (TxBody era) EraIndependentTxBody (EraCrypto era)
   ) =>
   FromCBOR (NewEpochState era)
   where
@@ -418,9 +418,9 @@ instance
 
 instance
   ( Era era,
-    NoThunks (BlocksMade (Crypto era)),
+    NoThunks (BlocksMade (EraCrypto era)),
     NoThunks (EpochState era),
-    NoThunks (PulsingRewUpdate (Crypto era)),
+    NoThunks (PulsingRewUpdate (EraCrypto era)),
     NoThunks (StashedAVVMAddresses era)
   ) =>
   NoThunks (NewEpochState era)
@@ -430,19 +430,19 @@ data LedgerState era = LedgerState
   { -- | The current unspent transaction outputs.
     lsUTxOState :: !(UTxOState era),
     -- | The current delegation state
-    lsDPState :: !(DPState (Crypto era))
+    lsDPState :: !(DPState (EraCrypto era))
   }
   deriving (Generic)
 
 deriving stock instance
-  ( CC.Crypto (Crypto era),
+  ( CC.Crypto (EraCrypto era),
     Show (TxOut era),
     Show (State (EraRule "PPUP" era))
   ) =>
   Show (LedgerState era)
 
 deriving stock instance
-  ( CC.Crypto (Crypto era),
+  ( CC.Crypto (EraCrypto era),
     Eq (TxOut era),
     Eq (State (EraRule "PPUP" era))
   ) =>
@@ -477,17 +477,17 @@ instance
 
 instance
   ( Era era,
-    HashAnnotated (TxBody era) EraIndependentTxBody (Crypto era),
+    HashAnnotated (TxBody era) EraIndependentTxBody (EraCrypto era),
     FromCBOR (Value era),
     FromSharedCBOR (TxOut era),
-    Share (TxOut era) ~ Interns (Credential 'Staking (Crypto era)),
+    Share (TxOut era) ~ Interns (Credential 'Staking (EraCrypto era)),
     FromCBOR (State (EraRule "PPUP" era))
   ) =>
   FromSharedCBOR (LedgerState era)
   where
   type
     Share (LedgerState era) =
-      (Interns (Credential 'Staking (Crypto era)), Interns (KeyHash 'StakePool (Crypto era)))
+      (Interns (Credential 'Staking (EraCrypto era)), Interns (KeyHash 'StakePool (EraCrypto era)))
   fromSharedPlusCBOR =
     decodeRecordNamedT "LedgerState" (const 2) $ do
       lsDPState <- fromSharedPlusCBOR
@@ -501,7 +501,7 @@ instance
 --------------------------------------------------------------------------------
 
 instance
-  (Default (State (EraRule "PPUP" era)), CC.Crypto (Crypto era)) =>
+  (Default (State (EraRule "PPUP" era)), CC.Crypto (EraCrypto era)) =>
   Default (UTxOState era)
   where
   def = UTxOState mempty mempty mempty def mempty

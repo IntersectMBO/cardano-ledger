@@ -112,17 +112,17 @@ minimalPropertyTests =
       bootstrapHashTest,
       testGroup
         "Compact Address Tests"
-        [ TQC.testProperty "Compact address round trip" (propCompactAddrRoundTrip @(Crypto era)),
-          TQC.testProperty "Compact address binary representation" (propCompactSerializationAgree @(Crypto era)),
+        [ TQC.testProperty "Compact address round trip" (propCompactAddrRoundTrip @(EraCrypto era)),
+          TQC.testProperty "Compact address binary representation" (propCompactSerializationAgree @(EraCrypto era)),
           TQC.testProperty "Ensure Addr failures on incorrect binary data" $
-            propDecompactErrors @(Crypto era),
+            propDecompactErrors @(EraCrypto era),
           TQC.testProperty "Ensure RewardAcnt failures on incorrect binary data" $
-            propDeserializeRewardAcntErrors @(Crypto era),
+            propDeserializeRewardAcntErrors @(EraCrypto era),
           TQC.testProperty "Decompacting an address is still valid" $
-            propValidateNewDecompact @(Crypto era)
+            propValidateNewDecompact @(EraCrypto era)
         ],
       TQC.testProperty "WitVKey does not brake containers due to invalid Ord" $
-        propWitVKeys @(Crypto era)
+        propWitVKeys @(EraCrypto era)
     ]
 
 -- | 'TestTree' of property-based testing properties.
@@ -196,9 +196,9 @@ propertyTests =
       testGroupShelleyTranslation,
       testGroup
         "Compact Address Tests"
-        [ TQC.testProperty "Compact address round trip" (propCompactAddrRoundTrip @(Crypto era)),
-          TQC.testProperty "Compact address binary representation" (propCompactSerializationAgree @(Crypto era)),
+        [ TQC.testProperty "Compact address round trip" (propCompactAddrRoundTrip @(EraCrypto era)),
+          TQC.testProperty "Compact address binary representation" (propCompactSerializationAgree @(EraCrypto era)),
           TQC.testProperty "Ensure failures on incorrect binary data" $
-            propDecompactErrors @(Crypto era)
+            propDecompactErrors @(EraCrypto era)
         ]
     ]

@@ -90,12 +90,12 @@ newtype MAAuxiliaryData era = AuxiliaryDataWithBytes (MemoBytes AuxiliaryDataRaw
 
 type instance MemoHashIndex AuxiliaryDataRaw = EraIndependentAuxiliaryData
 
-instance (c ~ Crypto era) => HashAnnotated (MAAuxiliaryData era) EraIndependentAuxiliaryData c where
+instance (c ~ EraCrypto era) => HashAnnotated (MAAuxiliaryData era) EraIndependentAuxiliaryData c where
   hashAnnotated (AuxiliaryDataWithBytes mb) = mbHash mb
 
 deriving newtype instance Eq (MAAuxiliaryData era)
 
-deriving newtype instance (Show (Script era), HashAlgorithm (HASH (Crypto era))) => Show (MAAuxiliaryData era)
+deriving newtype instance (Show (Script era), HashAlgorithm (HASH (EraCrypto era))) => Show (MAAuxiliaryData era)
 
 deriving newtype instance
   (NoThunks (Script era), Era era) =>

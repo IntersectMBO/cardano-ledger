@@ -99,23 +99,23 @@ import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair)
 import Test.Tasty
 import Test.Tasty.HUnit (Assertion, testCase)
 
-someKeys :: forall era. Era era => Proof era -> KeyPair 'Payment (Crypto era)
+someKeys :: forall era. Era era => Proof era -> KeyPair 'Payment (EraCrypto era)
 someKeys _pf = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair @(Crypto era) (RawSeed 1 1 1 1 1)
+    (sk, vk) = mkKeyPair @(EraCrypto era) (RawSeed 1 1 1 1 1)
 
 someKeysPaymentKeyRole :: forall era. Era era => Proof era -> KeyPairRole era
 someKeysPaymentKeyRole pf = KeyPairPayment (someKeys pf)
 
-keysForMultisig :: forall era. Era era => Proof era -> KeyPair 'Witness (Crypto era)
+keysForMultisig :: forall era. Era era => Proof era -> KeyPair 'Witness (EraCrypto era)
 keysForMultisig _pf = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair @(Crypto era) (RawSeed 0 0 0 0 99)
+    (sk, vk) = mkKeyPair @(EraCrypto era) (RawSeed 0 0 0 0 99)
 
 keysForMultisigWitnessKeyRole :: forall era. Era era => Proof era -> KeyPairRole era
 keysForMultisigWitnessKeyRole pf = KeyPairWitness (keysForMultisig pf)
 
-keyHashForMultisig :: forall era. Era era => Proof era -> KeyHash 'Witness (Crypto era)
+keyHashForMultisig :: forall era. Era era => Proof era -> KeyHash 'Witness (EraCrypto era)
 keyHashForMultisig pf = hashKey . vKey $ keysForMultisig pf
 
 simpleScript :: forall era. (Scriptic era) => Proof era -> Script era
@@ -142,28 +142,28 @@ evenData3ArgsScript proof =
             [128, 8, 72, 128, 4, 128, 5]
           ]
 
-plainAddr :: forall era. Era era => Proof era -> Addr (Crypto era)
+plainAddr :: forall era. Era era => Proof era -> Addr (EraCrypto era)
 plainAddr pf = Addr Testnet pCred sCred
   where
-    (_ssk, svk) = mkKeyPair @(Crypto era) (RawSeed 0 0 0 0 2)
+    (_ssk, svk) = mkKeyPair @(EraCrypto era) (RawSeed 0 0 0 0 2)
     pCred = KeyHashObj . hashKey . vKey $ someKeys pf
     sCred = StakeRefBase . KeyHashObj . hashKey $ svk
 
-scriptAddr :: forall era. (Scriptic era) => Proof era -> Script era -> Addr (Crypto era)
+scriptAddr :: forall era. (Scriptic era) => Proof era -> Script era -> Addr (EraCrypto era)
 scriptAddr _pf s = Addr Testnet pCred sCred
   where
     pCred = ScriptHashObj . hashScript @era $ s
-    (_ssk, svk) = mkKeyPair @(Crypto era) (RawSeed 0 0 0 0 0)
+    (_ssk, svk) = mkKeyPair @(EraCrypto era) (RawSeed 0 0 0 0 0)
     sCred = StakeRefBase . KeyHashObj . hashKey $ svk
 
-malformedScriptAddr :: forall era. EraScript era => Proof era -> Addr (Crypto era)
+malformedScriptAddr :: forall era. EraScript era => Proof era -> Addr (EraCrypto era)
 malformedScriptAddr pf = Addr Testnet pCred sCred
   where
     pCred = ScriptHashObj . hashScript @era $ malformedScript pf "malfoy"
-    (_ssk, svk) = mkKeyPair @(Crypto era) (RawSeed 0 0 0 0 0)
+    (_ssk, svk) = mkKeyPair @(EraCrypto era) (RawSeed 0 0 0 0 0)
     sCred = StakeRefBase . KeyHashObj . hashKey $ svk
 
-simpleScriptAddr :: forall era. (Scriptic era) => Proof era -> Addr (Crypto era)
+simpleScriptAddr :: forall era. (Scriptic era) => Proof era -> Addr (EraCrypto era)
 simpleScriptAddr pf = scriptAddr pf (simpleScript pf)
 
 datumExampleEven :: Era era => Data era
@@ -968,7 +968,7 @@ instance BabbageBased (ConwayEra c) (BabbageUtxowPredFailure (ConwayEra c)) wher
   fromUtxoB = UtxoFailure
   fromUtxowB = id
 
-type InOut era = (TxIn (Crypto era), TxOut era)
+type InOut era = (TxIn (EraCrypto era), TxOut era)
 
 data TestCaseData era = TestCaseData
   { txBody :: TxBody era,
@@ -990,8 +990,8 @@ data InitUtxo era = InitUtxo
   }
 
 data KeyPairRole era
-  = KeyPairPayment (KeyPair 'Payment (Crypto era))
-  | KeyPairWitness (KeyPair 'Witness (Crypto era))
+  = KeyPairPayment (KeyPair 'Payment (EraCrypto era))
+  | KeyPairWitness (KeyPair 'Witness (EraCrypto era))
 
 initUtxoFromTestCaseData ::
   BabbageEraTxBody era =>
@@ -1013,7 +1013,7 @@ initUtxoFromTestCaseData
 txFromTestCaseData ::
   forall era.
   ( Scriptic era,
-    GoodCrypto (Crypto era),
+    GoodCrypto (EraCrypto era),
     BabbageEraTxBody era
   ) =>
   Proof era ->
@@ -1042,7 +1042,7 @@ txFromTestCaseData
 testExpectSuccessValid ::
   forall era.
   ( State (EraRule "UTXOW" era) ~ UTxOState era,
-    GoodCrypto (Crypto era),
+    GoodCrypto (EraCrypto era),
     Default (State (EraRule "PPUP" era)),
     PostShelley era,
     EraTx era,
@@ -1089,7 +1089,7 @@ testExpectSuccessInvalid ::
   ( State (EraRule "UTXOW" era) ~ UTxOState era,
     TxBody era ~ BabbageTxBody era,
     TxOut era ~ BabbageTxOut era,
-    GoodCrypto (Crypto era),
+    GoodCrypto (EraCrypto era),
     Default (State (EraRule "PPUP" era)),
     PostShelley era,
     EraTx era,
@@ -1114,7 +1114,7 @@ testExpectSuccessInvalid
 testExpectFailure ::
   forall era.
   ( State (EraRule "UTXOW" era) ~ UTxOState era,
-    GoodCrypto (Crypto era),
+    GoodCrypto (EraCrypto era),
     Default (State (EraRule "PPUP" era)),
     PostShelley era,
     BabbageEraTxBody era,
@@ -1140,7 +1140,7 @@ genericBabbageFeatures ::
     State (EraRule "UTXOW" era) ~ UTxOState era,
     TxBody era ~ BabbageTxBody era,
     TxOut era ~ BabbageTxOut era,
-    GoodCrypto (Crypto era),
+    GoodCrypto (EraCrypto era),
     BabbageEraTxBody era,
     Default (State (EraRule "PPUP" era)),
     PostShelley era,

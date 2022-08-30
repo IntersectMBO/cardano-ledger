@@ -139,7 +139,7 @@ type Self c = AlonzoEra c
 
 {-# DEPRECATED Self "Use `AlonzoEra` instead" #-}
 
-type Value era = MaryValue (Crypto era)
+type Value era = MaryValue (EraCrypto era)
 
 {-# DEPRECATED Value "Use `MaryValue` instead" #-}
 

@@ -44,7 +44,7 @@ import Cardano.Binary
     withSlice,
   )
 import Cardano.Crypto.Hash (HashAlgorithm (hashAlgorithmName))
-import Cardano.Ledger.Core (Era (Crypto))
+import Cardano.Ledger.Core (Era (EraCrypto))
 import Cardano.Ledger.Crypto (HASH)
 import Cardano.Ledger.SafeHash (SafeHash, SafeToHash (..))
 import Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
@@ -71,7 +71,7 @@ import Prelude hiding (span)
 data MemoBytes t era = Memo'
   { mbType :: !(t era),
     mbBytes :: ShortByteString,
-    mbHash :: SafeHash (Crypto era) (MemoHashIndex t)
+    mbHash :: SafeHash (EraCrypto era) (MemoHashIndex t)
   }
   deriving (NoThunks) via AllowThunksIn '["mbBytes"] (MemoBytes t era)
 
@@ -106,8 +106,8 @@ instance
 
 instance Eq (MemoBytes t era) where (Memo' _ x _) == (Memo' _ y _) = x == y
 
-instance (Show (t era), HashAlgorithm (HASH (Crypto era))) => Show (MemoBytes t era) where
-  show (Memo' y _ h) = show y <> " (" <> hashAlgorithmName (Proxy :: Proxy (HASH (Crypto era))) <> ": " <> show h <> ")"
+instance (Show (t era), HashAlgorithm (HASH (EraCrypto era))) => Show (MemoBytes t era) where
+  show (Memo' y _ h) = show y <> " (" <> hashAlgorithmName (Proxy :: Proxy (HASH (EraCrypto era))) <> ": " <> show h <> ")"
 
 instance SafeToHash (MemoBytes t era) where
   originalBytes = fromShort . mbBytes
@@ -123,7 +123,7 @@ type Mem t era = Annotator (MemoBytes t era)
 -- | Smart constructor
 mkMemoBytes :: forall era t. Era era => t era -> BSL.ByteString -> MemoBytes t era
 mkMemoBytes t bsl =
-  Memo' t (toShort bs) (makeHashWithExplicitProxys (Proxy @(Crypto era)) (Proxy @(MemoHashIndex t)) bs)
+  Memo' t (toShort bs) (makeHashWithExplicitProxys (Proxy @(EraCrypto era)) (Proxy @(MemoHashIndex t)) bs)
   where
     bs = toStrict bsl
 

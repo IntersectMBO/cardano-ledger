@@ -73,7 +73,7 @@ pickCbyCrypto :: Fixed (t c) => Int -> Evidence c -> t c
 pickCbyCrypto n Standard = unique n
 pickCbyCrypto n Mock = unique n
 
-pickCbyEra :: Fixed (t (Crypto era)) => Int -> Proof era -> t (Crypto era)
+pickCbyEra :: Fixed (t (EraCrypto era)) => Int -> Proof era -> t (EraCrypto era)
 pickCbyEra n _ = unique n
 
 -- =======================================================
@@ -97,9 +97,9 @@ instance Fixed Coin where
 -- Examples where type depends on Crypto
 
 data MultiAsset era where
-  MultiAsset :: Era era => MaryValue (Crypto era) -> MultiAsset era
+  MultiAsset :: Era era => MaryValue (EraCrypto era) -> MultiAsset era
 
-unMulti :: MultiAsset era -> MaryValue (Crypto era)
+unMulti :: MultiAsset era -> MaryValue (EraCrypto era)
 unMulti (MultiAsset x) = x
 
 deriving instance Show (MultiAsset era)
@@ -155,7 +155,7 @@ theWitVKey n hash = makeWitnessVKey hash (theKeyPair n)
 theKeyHashObj :: CC.Crypto crypto => Int -> Credential kr crypto
 theKeyHashObj n = KeyHashObj . hashKey . vKey $ theKeyPair n
 
-aScriptHashObj :: forall era kr. EraScript era => Proof era -> Script era -> Credential kr (Crypto era)
+aScriptHashObj :: forall era kr. EraScript era => Proof era -> Script era -> Credential kr (EraCrypto era)
 aScriptHashObj _wit s = ScriptHashObj . hashScript @era $ s
 
 theStakeReference :: CC.Crypto crypto => Int -> StakeReference crypto
@@ -299,10 +299,10 @@ pickScript n p@(Alonzo _) = somealonzo p !! n
 pickScript n p@(Babbage _) = somealonzo p !! n
 pickScript n p@(Conway _) = somealonzo p !! n
 
-pickScriptHash :: forall era. Reflect era => Int -> Proof era -> ScriptHash (Crypto era)
+pickScriptHash :: forall era. Reflect era => Int -> Proof era -> ScriptHash (EraCrypto era)
 pickScriptHash n wit = hashScript @era (pickScript n wit)
 
-pickPolicyID :: Reflect era => Int -> Proof era -> PolicyID (Crypto era)
+pickPolicyID :: Reflect era => Int -> Proof era -> PolicyID (EraCrypto era)
 pickPolicyID n wit = PolicyID (pickScriptHash n wit)
 
 -- ===========================================================================

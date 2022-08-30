@@ -78,8 +78,8 @@ ledgerTransition ::
     Embed (EraRule "UTXOW" era) (someLEDGER era),
     Embed (EraRule "DELEGS" era) (someLEDGER era),
     Environment (EraRule "DELEGS" era) ~ DelegsEnv era,
-    State (EraRule "DELEGS" era) ~ DPState (Crypto era),
-    Signal (EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
+    State (EraRule "DELEGS" era) ~ DPState (EraCrypto era),
+    Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era)),
     Environment (EraRule "UTXOW" era) ~ UtxoEnv era,
     State (EraRule "UTXOW" era) ~ UTxOState era,
     Signal (EraRule "UTXOW" era) ~ Tx era,
@@ -116,7 +116,7 @@ ledgerTransition = do
 
 instance
   ( Show (State (EraRule "PPUP" era)),
-    DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
+    DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody),
     AlonzoEraTx era,
     Tx era ~ AlonzoTx era,
     Embed (EraRule "DELEGS" era) (AlonzoLEDGER era),
@@ -125,8 +125,8 @@ instance
     State (EraRule "UTXOW" era) ~ UTxOState era,
     Signal (EraRule "UTXOW" era) ~ AlonzoTx era,
     Environment (EraRule "DELEGS" era) ~ DelegsEnv era,
-    State (EraRule "DELEGS" era) ~ DPState (Crypto era),
-    Signal (EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
+    State (EraRule "DELEGS" era) ~ DPState (EraCrypto era),
+    Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era)),
     HasField "_keyDeposit" (PParams era) Coin,
     HasField "_poolDeposit" (PParams era) Coin
   ) =>

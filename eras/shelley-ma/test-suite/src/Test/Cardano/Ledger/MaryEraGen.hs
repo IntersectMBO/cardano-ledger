@@ -216,7 +216,7 @@ genYellow = do
 
 -- | Carefully crafted to apply in any Era where Value is MaryValue
 -- | This map allows us to lookup a minting policy by the policy ID.
-policyIndex :: Era era => Map (PolicyID (Crypto era)) (Timelock era)
+policyIndex :: Era era => Map (PolicyID (EraCrypto era)) (Timelock era)
 policyIndex =
   Map.fromList
     [ (redCoinId, redCoins),
@@ -262,12 +262,12 @@ genMint = do
 addTokens ::
   forall era.
   ( EraGen era,
-    Value era ~ MaryValue (Crypto era)
+    Value era ~ MaryValue (EraCrypto era)
   ) =>
   Proxy era ->
   StrictSeq (TxOut era) -> -- This is an accumuating parameter
   PParams era ->
-  MultiAsset (Crypto era) ->
+  MultiAsset (EraCrypto era) ->
   StrictSeq (TxOut era) ->
   Maybe (StrictSeq (TxOut era))
 addTokens proxy tooLittleLovelace pparams ts (txOut :<| os) =
@@ -281,19 +281,19 @@ addTokens _proxy _ _ _ StrictSeq.Empty = Nothing
 genTxBody ::
   forall era.
   ( EraGen era,
-    Value era ~ MaryValue (Crypto era),
+    Value era ~ MaryValue (EraCrypto era),
     PParams era ~ ShelleyPParams era,
     TxOut era ~ ShelleyTxOut era
   ) =>
   ShelleyPParams era ->
   SlotNo ->
-  Set.Set (TxIn (Crypto era)) ->
+  Set.Set (TxIn (EraCrypto era)) ->
   StrictSeq (ShelleyTxOut era) ->
-  StrictSeq (DCert (Crypto era)) ->
-  Wdrl (Crypto era) ->
+  StrictSeq (DCert (EraCrypto era)) ->
+  Wdrl (EraCrypto era) ->
   Coin ->
   StrictMaybe (Update era) ->
-  StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
+  StrictMaybe (AuxiliaryDataHash (EraCrypto era)) ->
   Gen (MATxBody era, [Timelock era])
 genTxBody pparams slot ins outs cert wdrl fee upd meta = do
   validityInterval <- genValidityInterval slot

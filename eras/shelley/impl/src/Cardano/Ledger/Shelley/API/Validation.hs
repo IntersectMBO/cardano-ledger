@@ -60,7 +60,7 @@ class
     BaseM (EraRule "BBODY" era) ~ ShelleyBase,
     Environment (EraRule "BBODY" era) ~ STS.BbodyEnv era,
     State (EraRule "BBODY" era) ~ STS.ShelleyBbodyState era,
-    Signal (EraRule "BBODY" era) ~ Block (BHeaderView (Crypto era)) era,
+    Signal (EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era,
     ToCBORGroup (TxSeq era)
   ) =>
   ApplyBlock era
@@ -91,7 +91,7 @@ class
     ApplySTSOpts ep ->
     Globals ->
     NewEpochState era ->
-    Block (BHeaderView (Crypto era)) era ->
+    Block (BHeaderView (EraCrypto era)) era ->
     m (EventReturnType ep (EraRule "BBODY" era) (NewEpochState era))
   applyBlockOpts opts globals state blk =
     liftEither
@@ -120,7 +120,7 @@ class
   reapplyBlock ::
     Globals ->
     NewEpochState era ->
-    Block (BHeaderView (Crypto era)) era ->
+    Block (BHeaderView (EraCrypto era)) era ->
     NewEpochState era
   reapplyBlock globals state blk =
     updateNewEpochState state res
@@ -153,7 +153,7 @@ applyBlock ::
   ) =>
   Globals ->
   NewEpochState era ->
-  Block (BHeaderView (Crypto era)) era ->
+  Block (BHeaderView (EraCrypto era)) era ->
   m (NewEpochState era)
 applyBlock =
   applyBlockOpts $

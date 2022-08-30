@@ -140,8 +140,8 @@ data UtxoEnv era
   = UtxoEnv
       SlotNo
       (PParams era)
-      (Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era)))
-      (GenDelegs (Crypto era))
+      (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
+      (GenDelegs (EraCrypto era))
 
 deriving instance Show (PParams era) => Show (UtxoEnv era)
 
@@ -151,7 +151,7 @@ data UtxoEvent era
 
 data ShelleyUtxoPredFailure era
   = BadInputsUTxO
-      !(Set (TxIn (Crypto era))) -- The bad transaction inputs
+      !(Set (TxIn (EraCrypto era))) -- The bad transaction inputs
   | ExpiredUTxO
       !SlotNo -- transaction's time to live
       !SlotNo -- current slot
@@ -167,10 +167,10 @@ data ShelleyUtxoPredFailure era
       !(Value era) -- the Coin produced by this transaction
   | WrongNetwork
       !Network -- the expected network id
-      !(Set (Addr (Crypto era))) -- the set of addresses with incorrect network IDs
+      !(Set (Addr (EraCrypto era))) -- the set of addresses with incorrect network IDs
   | WrongNetworkWithdrawal
       !Network -- the expected network id
-      !(Set (RewardAcnt (Crypto era))) -- the set of reward addresses with incorrect network IDs
+      !(Set (RewardAcnt (EraCrypto era))) -- the set of reward addresses with incorrect network IDs
   | OutputTooSmallUTxO
       ![TxOut era] -- list of supplied transaction outputs that are too small
   | UpdateFailure (PredicateFailure (EraRule "PPUP" era)) -- Subtransition Failures
@@ -201,7 +201,7 @@ instance
 
 instance
   ( Typeable era,
-    CC.Crypto (Crypto era),
+    CC.Crypto (EraCrypto era),
     ToCBOR (Value era),
     ToCBOR (TxOut era),
     ToCBOR (PredicateFailure (EraRule "PPUP" era))
@@ -473,7 +473,7 @@ validateFeeTooSmallUTxO pp tx =
 -- > inputs ⊆ dom utxo
 validateBadInputsUTxO ::
   UTxO era ->
-  Set (TxIn (Crypto era)) ->
+  Set (TxIn (EraCrypto era)) ->
   Test (ShelleyUtxoPredFailure era)
 validateBadInputsUTxO utxo txins =
   failureUnless (Set.null badInputs) $ BadInputsUTxO badInputs
@@ -524,7 +524,7 @@ validateValueNotConservedUTxO ::
   ) =>
   PParams era ->
   UTxO era ->
-  Map (KeyHash 'StakePool (Crypto era)) a ->
+  Map (KeyHash 'StakePool (EraCrypto era)) a ->
   TxBody era ->
   Test (ShelleyUtxoPredFailure era)
 validateValueNotConservedUTxO pp utxo stakepools txb =

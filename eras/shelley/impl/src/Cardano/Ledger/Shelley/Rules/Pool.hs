@@ -82,7 +82,7 @@ deriving instance (Eq (PParams era)) => Eq (PoolEnv era)
 
 data ShelleyPoolPredFailure era
   = StakePoolNotRegisteredOnKeyPOOL
-      !(KeyHash 'StakePool (Crypto era)) -- KeyHash which cannot be retired since it is not registered
+      !(KeyHash 'StakePool (EraCrypto era)) -- KeyHash which cannot be retired since it is not registered
   | StakePoolRetirementWrongEpochPOOL
       !Word64 -- Current Epoch
       !Word64 -- The epoch listed in the Pool Retirement Certificate
@@ -95,9 +95,9 @@ data ShelleyPoolPredFailure era
   | WrongNetworkPOOL
       !Network -- Actual Network ID
       !Network -- Network ID listed in Pool Registration Certificate
-      !(KeyHash 'StakePool (Crypto era)) -- Stake Pool ID
+      !(KeyHash 'StakePool (EraCrypto era)) -- Stake Pool ID
   | PoolMedataHashTooBig
-      !(KeyHash 'StakePool (Crypto era)) -- Stake Pool ID
+      !(KeyHash 'StakePool (EraCrypto era)) -- Stake Pool ID
       !Int -- Size of the metadata hash
   deriving (Show, Eq, Generic)
 
@@ -111,9 +111,9 @@ instance
   ) =>
   STS (ShelleyPOOL era)
   where
-  type State (ShelleyPOOL era) = PState (Crypto era)
+  type State (ShelleyPOOL era) = PState (EraCrypto era)
 
-  type Signal (ShelleyPOOL era) = DCert (Crypto era)
+  type Signal (ShelleyPOOL era) = DCert (EraCrypto era)
 
   type Environment (ShelleyPOOL era) = PoolEnv era
 
@@ -124,8 +124,8 @@ instance
   transitionRules = [poolDelegationTransition]
 
 data PoolEvent era
-  = RegisterPool (KeyHash 'StakePool (Crypto era))
-  | ReregisterPool (KeyHash 'StakePool (Crypto era))
+  = RegisterPool (KeyHash 'StakePool (EraCrypto era))
+  | ReregisterPool (KeyHash 'StakePool (EraCrypto era))
 
 instance
   (Typeable era, Era era) =>
@@ -201,7 +201,7 @@ poolDelegationTransition = do
       when (SoftForks.restrictPoolMetadataHash pp) $
         forM_ (_poolMD poolParam) $ \pmd ->
           let s = BS.length (_poolMDHash pmd)
-           in s <= fromIntegral (sizeHash ([] @(CC.HASH (Crypto era))))
+           in s <= fromIntegral (sizeHash ([] @(CC.HASH (EraCrypto era))))
                 ?! PoolMedataHashTooBig (_poolId poolParam) s
 
       let poolCost = _poolCost poolParam

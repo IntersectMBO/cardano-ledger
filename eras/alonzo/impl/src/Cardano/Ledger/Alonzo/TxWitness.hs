@@ -121,12 +121,12 @@ newtype RedeemersRaw era = RedeemersRaw (Map RdmrPtr (Data era, ExUnits))
   deriving (Eq, Generic, Typeable, NFData)
   deriving newtype (NoThunks)
 
-deriving instance HashAlgorithm (HASH (Crypto era)) => Show (RedeemersRaw era)
+deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (RedeemersRaw era)
 
 newtype Redeemers era = RedeemersConstr (MemoBytes RedeemersRaw era)
   deriving newtype (Eq, ToCBOR, NoThunks, SafeToHash, Typeable, NFData)
 
-deriving instance HashAlgorithm (HASH (Crypto era)) => Show (Redeemers era)
+deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (Redeemers era)
 
 -- =====================================================
 -- Pattern for Redeemers
@@ -184,9 +184,9 @@ nullRedeemers = Map.null . unRedeemers
 
 -- | Internal 'TxWitness' type, lacking serialised bytes.
 data TxWitnessRaw era = TxWitnessRaw
-  { _txwitsVKey :: Set (WitVKey 'Witness (Crypto era)),
-    _txwitsBoot :: Set (BootstrapWitness (Crypto era)),
-    _txscripts :: Map (ScriptHash (Crypto era)) (Core.Script era),
+  { _txwitsVKey :: Set (WitVKey 'Witness (EraCrypto era)),
+    _txwitsBoot :: Set (BootstrapWitness (EraCrypto era)),
+    _txscripts :: Map (ScriptHash (EraCrypto era)) (Core.Script era),
     _txdats :: TxDats era,
     _txrdmrs :: Redeemers era
   }
@@ -195,7 +195,7 @@ data TxWitnessRaw era = TxWitnessRaw
 instance
   ( Era era,
     Core.Script era ~ AlonzoScript era,
-    crypto ~ Crypto era,
+    crypto ~ EraCrypto era,
     NFData (TxDats era),
     NFData (Redeemers era),
     NFData (SigDSIGN (CC.DSIGN crypto)),
@@ -220,7 +220,7 @@ instance (Era era, Core.Script era ~ AlonzoScript era) => Monoid (TxWitness era)
 deriving instance
   ( Era era,
     Core.Script era ~ AlonzoScript era,
-    crypto ~ Crypto era,
+    crypto ~ EraCrypto era,
     NFData (TxDats era),
     NFData (Redeemers era),
     NFData (SigDSIGN (CC.DSIGN crypto)),
@@ -233,11 +233,11 @@ isEmptyTxWitness (TxWitnessConstr (Memo (TxWitnessRaw a b c d (Redeemers' e)) _)
   Set.null a && Set.null b && Map.null c && nullDats d && Map.null e
 
 -- =====================================================
-newtype TxDatsRaw era = TxDatsRaw (Map (DataHash (Crypto era)) (Data era))
+newtype TxDatsRaw era = TxDatsRaw (Map (DataHash (EraCrypto era)) (Data era))
   deriving (Generic, Typeable, Eq)
   deriving newtype (NoThunks, NFData)
 
-deriving instance HashAlgorithm (HASH (Crypto era)) => Show (TxDatsRaw era)
+deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (TxDatsRaw era)
 
 encodeTxDatsRaw ::
   ToCBOR (Data era) =>
@@ -247,12 +247,12 @@ encodeTxDatsRaw = E (encodeFoldable . Map.elems . unTxDatsRaw)
   where
     unTxDatsRaw (TxDatsRaw m) = m
 
-pattern TxDats' :: Era era => Map (DataHash (Crypto era)) (Data era) -> TxDats era
+pattern TxDats' :: Era era => Map (DataHash (EraCrypto era)) (Data era) -> TxDats era
 pattern TxDats' m <- TxDatsConstr (Memo (TxDatsRaw m) _)
 
 {-# COMPLETE TxDats' #-}
 
-pattern TxDats :: Era era => Typeable era => Map (DataHash (Crypto era)) (Data era) -> TxDats era
+pattern TxDats :: Era era => Typeable era => Map (DataHash (EraCrypto era)) (Data era) -> TxDats era
 pattern TxDats m <-
   TxDatsConstr (Memo (TxDatsRaw m) _)
   where
@@ -260,7 +260,7 @@ pattern TxDats m <-
 
 {-# COMPLETE TxDats #-}
 
-unTxDats :: Era era => TxDats era -> Map (DataHash (Crypto era)) (Data era)
+unTxDats :: Era era => TxDats era -> Map (DataHash (EraCrypto era)) (Data era)
 unTxDats (TxDats' m) = m
 
 nullDats :: Era era => TxDats era -> Bool
@@ -272,7 +272,7 @@ instance (Typeable era, Era era) => FromCBOR (Annotator (TxDatsRaw era)) where
 newtype TxDats era = TxDatsConstr (MemoBytes TxDatsRaw era)
   deriving newtype (SafeToHash, ToCBOR, Eq, NoThunks, NFData)
 
-deriving instance HashAlgorithm (HASH (Crypto era)) => Show (TxDats era)
+deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (TxDats era)
 
 instance Era era => Semigroup (TxDats era) where
   (TxDats m) <> (TxDats m') = TxDats (m <> m')
@@ -315,9 +315,9 @@ deriving newtype instance
 
 pattern TxWitness' ::
   Era era =>
-  Set (WitVKey 'Witness (Crypto era)) ->
-  Set (BootstrapWitness (Crypto era)) ->
-  Map (ScriptHash (Crypto era)) (Core.Script era) ->
+  Set (WitVKey 'Witness (EraCrypto era)) ->
+  Set (BootstrapWitness (EraCrypto era)) ->
+  Map (ScriptHash (EraCrypto era)) (Core.Script era) ->
   TxDats era ->
   Redeemers era ->
   TxWitness era
@@ -329,9 +329,9 @@ pattern TxWitness' {txwitsVKey', txwitsBoot', txscripts', txdats', txrdmrs'} <-
 
 pattern TxWitness ::
   (Era era, Core.Script era ~ AlonzoScript era) =>
-  Set (WitVKey 'Witness (Crypto era)) ->
-  Set (BootstrapWitness (Crypto era)) ->
-  Map (ScriptHash (Crypto era)) (Core.Script era) ->
+  Set (WitVKey 'Witness (EraCrypto era)) ->
+  Set (BootstrapWitness (EraCrypto era)) ->
+  Map (ScriptHash (EraCrypto era)) (Core.Script era) ->
   TxDats era ->
   Redeemers era ->
   TxWitness era
@@ -368,21 +368,21 @@ lensWitsRaw getter setter =
 
 addrAlonzoWitsL ::
   (Era era, Core.Script era ~ AlonzoScript era) =>
-  Lens' (TxWitness era) (Set (WitVKey 'Witness (Crypto era)))
+  Lens' (TxWitness era) (Set (WitVKey 'Witness (EraCrypto era)))
 addrAlonzoWitsL =
   lensWitsRaw _txwitsVKey (\witsRaw addrWits -> witsRaw {_txwitsVKey = addrWits})
 {-# INLINEABLE addrAlonzoWitsL #-}
 
 bootAddrAlonzoWitsL ::
   (Era era, Core.Script era ~ AlonzoScript era) =>
-  Lens' (TxWitness era) (Set (BootstrapWitness (Crypto era)))
+  Lens' (TxWitness era) (Set (BootstrapWitness (EraCrypto era)))
 bootAddrAlonzoWitsL =
   lensWitsRaw _txwitsBoot (\witsRaw bootAddrWits -> witsRaw {_txwitsBoot = bootAddrWits})
 {-# INLINEABLE bootAddrAlonzoWitsL #-}
 
 scriptAlonzoWitsL ::
   (Era era, Core.Script era ~ AlonzoScript era) =>
-  Lens' (TxWitness era) (Map (ScriptHash (Crypto era)) (Script era))
+  Lens' (TxWitness era) (Map (ScriptHash (EraCrypto era)) (Script era))
 scriptAlonzoWitsL =
   lensWitsRaw _txscripts (\witsRaw scriptWits -> witsRaw {_txscripts = scriptWits})
 {-# INLINEABLE scriptAlonzoWitsL #-}
@@ -558,7 +558,7 @@ instance
         EraScript e =>
         proxy e ->
         [Core.Script e] ->
-        Map (ScriptHash (Crypto e)) (Core.Script e)
+        Map (ScriptHash (EraCrypto e)) (Core.Script e)
       getKeys _ = keyBy (hashScript @e)
 
 keyBy :: forall a b. Ord b => (a -> b) -> [a] -> Map b a

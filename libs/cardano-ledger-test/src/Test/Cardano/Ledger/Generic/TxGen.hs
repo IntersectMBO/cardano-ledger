@@ -187,7 +187,7 @@ genExUnits era n = do
 
 lookupScript ::
   forall era.
-  ScriptHash (Crypto era) ->
+  ScriptHash (EraCrypto era) ->
   Maybe Tag ->
   GenRS era (Maybe (Script era))
 lookupScript scriptHash mTag = do
@@ -211,7 +211,7 @@ mkMultiSigWit ::
   Proof era ->
   Maybe Tag ->
   Shelley.MultiSig era ->
-  GenRS era (SafeHash (Crypto era) EraIndependentTxBody -> [WitnessesField era])
+  GenRS era (SafeHash (EraCrypto era) EraIndependentTxBody -> [WitnessesField era])
 mkMultiSigWit era mTag (Shelley.RequireSignature keyHash) = mkWitVKey era mTag (KeyHashObj keyHash)
 mkMultiSigWit era mTag (Shelley.RequireAllOf timelocks) = F.fold <$> mapM (mkMultiSigWit era mTag) timelocks
 mkMultiSigWit era mTag (Shelley.RequireAnyOf timelocks)
@@ -228,7 +228,7 @@ mkTimelockWit ::
   Proof era ->
   Maybe Tag ->
   Timelock era ->
-  GenRS era (SafeHash (Crypto era) EraIndependentTxBody -> [WitnessesField era])
+  GenRS era (SafeHash (EraCrypto era) EraIndependentTxBody -> [WitnessesField era])
 mkTimelockWit era mTag =
   \case
     RequireSignature keyHash -> mkWitVKey era mTag (KeyHashObj keyHash)
@@ -247,7 +247,7 @@ genGenericScriptWitness ::
   Proof era ->
   Maybe Tag ->
   Script era ->
-  GenRS era (SafeHash (Crypto era) EraIndependentTxBody -> [WitnessesField era])
+  GenRS era (SafeHash (EraCrypto era) EraIndependentTxBody -> [WitnessesField era])
 genGenericScriptWitness (Shelley c) mTag timelock = mkMultiSigWit (Shelley c) mTag timelock
 genGenericScriptWitness (Allegra c) mTag timelock = mkTimelockWit (Allegra c) mTag timelock
 genGenericScriptWitness (Mary c) mTag timelock = mkTimelockWit (Mary c) mTag timelock
@@ -265,8 +265,8 @@ mkWitVKey ::
   (Reflect era) =>
   Proof era ->
   Maybe Tag ->
-  Credential kr (Crypto era) ->
-  GenRS era (SafeHash (Crypto era) EraIndependentTxBody -> [WitnessesField era])
+  Credential kr (EraCrypto era) ->
+  GenRS era (SafeHash (EraCrypto era) EraIndependentTxBody -> [WitnessesField era])
 mkWitVKey _ _mTag (KeyHashObj keyHash) = do
   keyPair <- lookupByKeyM "credential" (coerceKeyRole keyHash) gsKeys
   pure $ \bodyHash -> [AddrWits' [makeWitnessVKey bodyHash keyPair]]
@@ -286,7 +286,7 @@ genTxOutKeyWitness ::
   Proof era ->
   Maybe Tag ->
   TxOut era ->
-  GenRS era (SafeHash (Crypto era) EraIndependentTxBody -> [WitnessesField era])
+  GenRS era (SafeHash (EraCrypto era) EraIndependentTxBody -> [WitnessesField era])
 genTxOutKeyWitness era mTag txOut =
   case txOut ^. addrTxOutL of
     AddrBootstrap baddr ->
@@ -304,8 +304,8 @@ genCredKeyWit ::
   (Reflect era) =>
   Proof era ->
   Maybe Tag ->
-  Credential k (Crypto era) ->
-  GenRS era (SafeHash (Crypto era) EraIndependentTxBody -> [WitnessesField era])
+  Credential k (EraCrypto era) ->
+  GenRS era (SafeHash (EraCrypto era) EraIndependentTxBody -> [WitnessesField era])
 genCredKeyWit era mTag cred = mkWitVKey era mTag cred
 
 makeDatumWitness :: Proof era -> TxOut era -> GenRS era [WitnessesField era]
@@ -326,9 +326,9 @@ makeDatumWitness proof txout = case (proof, txout) of
 
 -- | Does the current Credential point to a PlutusScript? If so return its IsValid and Hash
 lookupPlutusScript ::
-  Credential k (Crypto era) ->
+  Credential k (EraCrypto era) ->
   Tag ->
-  GenRS era (Maybe (IsValid, ScriptHash (Crypto era)))
+  GenRS era (Maybe (IsValid, ScriptHash (EraCrypto era)))
 lookupPlutusScript (KeyHashObj _) _ = pure Nothing
 lookupPlutusScript (ScriptHashObj scriptHash) tag =
   fmap (Map.lookup (scriptHash, tag) . gsPlutusScripts) get <&> \case
@@ -340,7 +340,7 @@ lookupPlutusScript (ScriptHashObj scriptHash) tag =
 redeemerWitnessMaker ::
   Era era =>
   Tag ->
-  [Maybe (GenRS era (Data era), Credential k (Crypto era))] ->
+  [Maybe (GenRS era (Data era), Credential k (EraCrypto era))] ->
   GenRS era (IsValid, [ExUnits -> [WitnessesField era]])
 redeemerWitnessMaker tag listWithCred =
   let creds =
@@ -367,14 +367,14 @@ redeemerWitnessMaker tag listWithCred =
 
 -- | Collaterals can't have scripts, this is where this generator is needed.
 --   As we generate this we add to the gsKeys field of the GenState.
-genNoScriptRecipient :: Reflect era => GenRS era (Addr (Crypto era))
+genNoScriptRecipient :: Reflect era => GenRS era (Addr (EraCrypto era))
 genNoScriptRecipient = do
   paymentCred <- KeyHashObj <$> genKeyHash
   stakeCred <- StakeRefBase . KeyHashObj <$> genKeyHash
   pure (Addr Testnet paymentCred stakeCred)
 
 -- | Sometimes generates new Credentials, and some times reuses old ones
-genRecipient :: Reflect era => GenRS era (Addr (Crypto era))
+genRecipient :: Reflect era => GenRS era (Addr (EraCrypto era))
 genRecipient = do
   paymentCred <- genCredential Spend
   stakeCred <- genCredential Cert
@@ -435,7 +435,7 @@ genTxOut proof val = do
 -- ================================================================================
 
 -- | Generate a TxIn whose TxIx will never clash with an Input created from a TxOut
-genTxIn :: forall era. Reflect era => Proof era -> Int -> Gen (TxIn (Crypto era))
+genTxIn :: forall era. Reflect era => Proof era -> Int -> Gen (TxIn (EraCrypto era))
 genTxIn _proof numChoices = do
   txId <- resize 40 arbitrary
   -- The TxIx for Inputs created from outputs of a TxBody, will only range from (1..numChoices)
@@ -446,7 +446,7 @@ genTxIn _proof numChoices = do
 
 -- | Generate a non-empty List of fresh TxIn. By fresh we mean TxIn's that
 --   we have not generated previously. We use the current InitialUtxo to test this.
-genFreshTxIn :: forall era. Reflect era => Int -> GenRS era [TxIn (Crypto era)]
+genFreshTxIn :: forall era. Reflect era => Int -> GenRS era [TxIn (EraCrypto era)]
 genFreshTxIn tries | tries <= 0 = error "Could not generate a fresh TxIn after many tries."
 genFreshTxIn tries = do
   entriesInUse <- gets gsInitialUtxo
@@ -485,13 +485,13 @@ genUTxO = do
 -- | Generate both the spending and reference inputs and a key from the spending
 --   inputs we can use to pay the fee. That key is never from the oldUTxO
 genSpendReferenceInputs ::
-  Map (TxIn (Crypto era)) (TxOut era) ->
+  Map (TxIn (EraCrypto era)) (TxOut era) ->
   GenRS
     era
     ( UtxoEntry era, -- The fee key, used to pay the fee.
-      Map (TxIn (Crypto era)) (TxOut era),
-      Map (TxIn (Crypto era)) (TxOut era),
-      Map (TxIn (Crypto era)) (TxOut era)
+      Map (TxIn (EraCrypto era)) (TxOut era),
+      Map (TxIn (EraCrypto era)) (TxOut era),
+      Map (TxIn (EraCrypto era)) (TxOut era)
     )
 genSpendReferenceInputs newUTxO = do
   let pairs = Map.toList newUTxO
@@ -537,7 +537,7 @@ chooseGood bad n xs = do
 -- ==================================================
 -- Generating Certificates, May add to the Model
 
-genDCert :: forall era. Reflect era => Proof era -> SlotNo -> GenRS era (DCert (Crypto era))
+genDCert :: forall era. Reflect era => Proof era -> SlotNo -> GenRS era (DCert (EraCrypto era))
 genDCert proof slot = do
   res <-
     elementsT
@@ -572,7 +572,7 @@ genDCert proof slot = do
       delta <- lift $ choose (nextEpoch, maxEpoch)
       return . EpochNo $ (curEpoch + delta)
 
-genDCerts :: forall era. Reflect era => Proof era -> SlotNo -> GenRS era [DCert (Crypto era)]
+genDCerts :: forall era. Reflect era => Proof era -> SlotNo -> GenRS era [DCert (EraCrypto era)]
 genDCerts proof slot = do
   let genUniqueScript (!dcs, !ss, !regCreds) _ = do
         honest <- gets gsStableDelegators
@@ -634,9 +634,9 @@ genDCerts proof slot = do
   n <- lift $ choose (0, maxcert)
   reward <- gets (mRewards . gsModel)
   let initSets ::
-        ( [DCert (Crypto era)],
-          Set (ScriptHash (Crypto era), Maybe (KeyHash 'StakePool (Crypto era))),
-          Map (Credential 'Staking (Crypto era)) Coin
+        ( [DCert (EraCrypto era)],
+          Set (ScriptHash (EraCrypto era), Maybe (KeyHash 'StakePool (EraCrypto era))),
+          Map (Credential 'Staking (EraCrypto era)) Coin
         )
       initSets = ([], Set.empty, reward)
   (dcs, _, _) <- F.foldlM genUniqueScript initSets [1 :: Int .. n]
@@ -648,10 +648,10 @@ genDCerts proof slot = do
 genCollateralUTxO ::
   forall era.
   (HasCallStack, Reflect era) =>
-  [Addr (Crypto era)] ->
+  [Addr (EraCrypto era)] ->
   Coin ->
   MUtxo era ->
-  GenRS era (MUtxo era, Map.Map (TxIn (Crypto era)) (TxOut era), Coin)
+  GenRS era (MUtxo era, Map.Map (TxIn (EraCrypto era)) (TxOut era), Coin)
 genCollateralUTxO collateralAddresses (Coin fee) utxo = do
   GenEnv {gePParams} <- gets gsGenEnv
   let collPerc = collateralPercentage' reify gePParams
@@ -662,7 +662,7 @@ genCollateralUTxO collateralAddresses (Coin fee) utxo = do
         -- that is really bad, because if the happens we get the same TxIn every time, and 'coll' never grows,
         -- so this function doesn't terminate. We want many choices of TxIn, so resize just this arbitrary by 30.
         entriesInUse <- gets gsInitialUtxo
-        txIn <- lift (resize 30 (arbitrary :: Gen (TxIn (Crypto era))))
+        txIn <- lift (resize 30 (arbitrary :: Gen (TxIn (EraCrypto era))))
         if Map.member txIn utxo || Map.member txIn coll || txIn `Map.member` entriesInUse
           then genNewCollateral addr coll um c
           else pure (um, Map.insert txIn (coreTxOut reify [Address addr, Amount (inject c)]) coll, c)
@@ -676,11 +676,11 @@ genCollateralUTxO collateralAddresses (Coin fee) utxo = do
       -- Recursively either pick existing key spend only outputs or generate new ones that
       -- will be later added to the UTxO map
       go ::
-        [Addr (Crypto era)] ->
-        Map (TxIn (Crypto era)) (TxOut era) ->
+        [Addr (EraCrypto era)] ->
+        Map (TxIn (EraCrypto era)) (TxOut era) ->
         Coin ->
-        Map (TxIn (Crypto era)) (TxOut era) ->
-        GenRS era (Map (TxIn (Crypto era)) (TxOut era), Coin)
+        Map (TxIn (EraCrypto era)) (TxOut era) ->
+        GenRS era (Map (TxIn (EraCrypto era)) (TxOut era), Coin)
       go ecs !coll !curCollTotal !um
         | curCollTotal >= minCollTotal = pure (coll, curCollTotal <-> minCollTotal)
         | [] <- ecs = error "Impossible: supplied less addresses than `maxCollateralInputs`"
@@ -761,7 +761,7 @@ getDCertCredential = \case
   DCertGenesis _g -> Nothing
   DCertMir _m -> Nothing
 
-genWithdrawals :: Reflect era => SlotNo -> GenRS era (Wdrl (Crypto era), RewardAccounts (Crypto era))
+genWithdrawals :: Reflect era => SlotNo -> GenRS era (Wdrl (EraCrypto era), RewardAccounts (EraCrypto era))
 genWithdrawals slot =
   if epochFromSlotNo slot == EpochNo 0
     then do
@@ -867,7 +867,7 @@ genAlonzoTxAndInfo proof slot = do
   -- 5. Estimate inputs that will be used as collateral
   maxCollateralCount <-
     lift $ chooseInt (1, fromIntegral (maxCollateralInputs' proof gePParams))
-  bogusCollateralTxId <- lift (arbitrary :: Gen (TxId (Crypto era)))
+  bogusCollateralTxId <- lift (arbitrary :: Gen (TxId (EraCrypto era)))
   let bogusCollateralTxIns =
         Set.fromList
           [ TxIn bogusCollateralTxId (mkTxIxPartial (fromIntegral i))
@@ -919,7 +919,7 @@ genAlonzoTxAndInfo proof slot = do
             Txnetworkid networkId
           ]
       txBodyNoFeeHash = hashAnnotated txBodyNoFee
-      witsMakers :: [SafeHash (Crypto era) EraIndependentTxBody -> [WitnessesField era]]
+      witsMakers :: [SafeHash (EraCrypto era) EraIndependentTxBody -> [WitnessesField era]]
       witsMakers = keyWitsMakers ++ dcertWitsMakers ++ rwdrsWitsMakers
       bogusNeededScripts = scriptWitsNeeded' proof utxoNoCollateral txBodyNoFee
       noFeeWits :: [WitnessesField era]
@@ -1012,7 +1012,7 @@ minus m Nothing = m
 minus m (Just (txin, _)) = Map.delete txin m
 
 -- | Keep only Script witnesses that are neccessary in 'era',
-onlyNecessaryScripts :: Proof era -> Set (ScriptHash (Crypto era)) -> [WitnessesField era] -> [WitnessesField era]
+onlyNecessaryScripts :: Proof era -> Set (ScriptHash (EraCrypto era)) -> [WitnessesField era] -> [WitnessesField era]
 onlyNecessaryScripts _ _ [] = []
 onlyNecessaryScripts proof hashes (ScriptWits m : xs) =
   ScriptWits (Map.restrictKeys m hashes) : onlyNecessaryScripts proof hashes xs
@@ -1075,12 +1075,12 @@ testTx = do
 
 applySTSByProof ::
   forall era.
-  (GoodCrypto (Crypto era)) =>
+  (GoodCrypto (EraCrypto era)) =>
   Proof era ->
   RuleContext 'Transition (EraRule "LEDGER" era) ->
   Either [PredicateFailure (EraRule "LEDGER" era)] (State (EraRule "LEDGER" era))
-applySTSByProof (Conway _) _trc = runShelleyBase $ applySTS @(EraRule "LEDGER" (ConwayEra (Crypto era))) _trc
-applySTSByProof (Babbage _) _trc = runShelleyBase $ applySTS @(EraRule "LEDGER" (BabbageEra (Crypto era))) _trc
+applySTSByProof (Conway _) _trc = runShelleyBase $ applySTS @(EraRule "LEDGER" (ConwayEra (EraCrypto era))) _trc
+applySTSByProof (Babbage _) _trc = runShelleyBase $ applySTS @(EraRule "LEDGER" (BabbageEra (EraCrypto era))) _trc
 applySTSByProof (Alonzo _) trc = runShelleyBase $ applySTS trc
 applySTSByProof (Mary _) trc = runShelleyBase $ applySTS trc
 applySTSByProof (Allegra _) trc = runShelleyBase $ applySTS trc

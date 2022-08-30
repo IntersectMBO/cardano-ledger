@@ -157,7 +157,7 @@ instance CC.Crypto crypto => FromCBOR (Wdrl crypto) where
   fromCBOR = Wdrl <$> mapFromCBOR
 
 data ShelleyTxOut era = TxOutCompact
-  { txOutCompactAddr :: {-# UNPACK #-} !(CompactAddr (Crypto era)),
+  { txOutCompactAddr :: {-# UNPACK #-} !(CompactAddr (EraCrypto era)),
     txOutCompactValue :: !(CompactForm (Value era))
   }
 
@@ -179,7 +179,7 @@ instance CC.Crypto crypto => EraTxOut (ShelleyEra crypto) where
   {-# INLINE valueEitherTxOutL #-}
 
 addrEitherShelleyTxOutL ::
-  Lens' (ShelleyTxOut era) (Either (Addr (Crypto era)) (CompactAddr (Crypto era)))
+  Lens' (ShelleyTxOut era) (Either (Addr (EraCrypto era)) (CompactAddr (EraCrypto era)))
 addrEitherShelleyTxOutL =
   lens
     (Right . txOutCompactAddr)
@@ -214,8 +214,8 @@ instance (Era era, HeapWords (CompactForm (Value era))) => HeapWords (TxOut era)
 
 -- a ShortByteString of the same length as the ADDRHASH
 -- used to calculate heapWords
-packedADDRHASH :: forall proxy era. (CC.Crypto (Crypto era)) => proxy era -> ShortByteString
-packedADDRHASH _ = pack (replicate (fromIntegral (1 + 2 * HS.sizeHash (Proxy :: Proxy (CC.ADDRHASH (Crypto era))))) (1 :: Word8))
+packedADDRHASH :: forall proxy era. (CC.Crypto (EraCrypto era)) => proxy era -> ShortByteString
+packedADDRHASH _ = pack (replicate (fromIntegral (1 + 2 * HS.sizeHash (Proxy :: Proxy (CC.ADDRHASH (EraCrypto era))))) (1 :: Word8))
 
 instance (Era era, Compactible (Value era), Show (Value era)) => Show (TxOut era) where
   show = show . viewCompactTxOut -- FIXME: showing TxOut as a tuple is just sad
@@ -229,7 +229,7 @@ deriving via InspectHeapNamed "TxOut" (TxOut era) instance NoThunks (TxOut era)
 
 pattern ShelleyTxOut ::
   (HasCallStack, EraTxOut era) =>
-  Addr (Crypto era) ->
+  Addr (EraCrypto era) ->
   Value era ->
   TxOut era
 pattern ShelleyTxOut addr vl <-
@@ -242,7 +242,7 @@ pattern ShelleyTxOut addr vl <-
 
 {-# COMPLETE ShelleyTxOut #-}
 
-viewCompactTxOut :: (Era era, Compactible (Value era)) => TxOut era -> (Addr (Crypto era), Value era)
+viewCompactTxOut :: (Era era, Compactible (Value era)) => TxOut era -> (Addr (EraCrypto era), Value era)
 viewCompactTxOut TxOutCompact {txOutCompactAddr, txOutCompactValue} =
   (decompactAddr txOutCompactAddr, fromCompact txOutCompactValue)
 
@@ -253,14 +253,14 @@ viewCompactTxOut TxOutCompact {txOutCompactAddr, txOutCompactValue} =
 -- The underlying type for TxBody
 
 data TxBodyRaw era = TxBodyRaw
-  { _inputsX :: !(Set (TxIn (Crypto era))),
+  { _inputsX :: !(Set (TxIn (EraCrypto era))),
     _outputsX :: !(StrictSeq (TxOut era)),
-    _certsX :: !(StrictSeq (DCert (Crypto era))),
-    _wdrlsX :: !(Wdrl (Crypto era)),
+    _certsX :: !(StrictSeq (DCert (EraCrypto era))),
+    _wdrlsX :: !(Wdrl (EraCrypto era)),
     _txfeeX :: !Coin,
     _ttlX :: !SlotNo,
     _txUpdateX :: !(StrictMaybe (Update era)),
-    _mdHashX :: !(StrictMaybe (AuxiliaryDataHash (Crypto era)))
+    _mdHashX :: !(StrictMaybe (AuxiliaryDataHash (EraCrypto era)))
   }
   deriving (Generic, Typeable)
 
@@ -420,13 +420,13 @@ instance CC.Crypto crypto => EraTxBody (ShelleyEra crypto) where
   {-# INLINEABLE auxDataHashTxBodyL #-}
 
 class EraTxBody era => ShelleyEraTxBody era where
-  wdrlsTxBodyL :: Lens' (Core.TxBody era) (Wdrl (Crypto era))
+  wdrlsTxBodyL :: Lens' (Core.TxBody era) (Wdrl (EraCrypto era))
 
   ttlTxBodyL :: ExactEra ShelleyEra era => Lens' (Core.TxBody era) SlotNo
 
   updateTxBodyL :: Lens' (Core.TxBody era) (StrictMaybe (Update era))
 
-  certsTxBodyL :: Lens' (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
+  certsTxBodyL :: Lens' (Core.TxBody era) (StrictSeq (DCert (EraCrypto era)))
 
 instance CC.Crypto crypto => ShelleyEraTxBody (ShelleyEra crypto) where
   {-# SPECIALIZE instance ShelleyEraTxBody (ShelleyEra CC.StandardCrypto) #-}
@@ -469,14 +469,14 @@ deriving via Mem TxBodyRaw era instance EraTxBody era => FromCBOR (Annotator (Tx
 -- | Pattern for use by external users
 pattern ShelleyTxBody ::
   (EraTxOut era, ToCBOR (PParamsUpdate era)) =>
-  Set (TxIn (Crypto era)) ->
+  Set (TxIn (EraCrypto era)) ->
   StrictSeq (TxOut era) ->
-  StrictSeq (DCert (Crypto era)) ->
-  Wdrl (Crypto era) ->
+  StrictSeq (DCert (EraCrypto era)) ->
+  Wdrl (EraCrypto era) ->
   Coin ->
   SlotNo ->
   StrictMaybe (Update era) ->
-  StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
+  StrictMaybe (AuxiliaryDataHash (EraCrypto era)) ->
   ShelleyTxBody era
 pattern ShelleyTxBody {_inputs, _outputs, _certs, _wdrls, _txfee, _ttl, _txUpdate, _mdHash} <-
   TxBodyConstr
@@ -507,7 +507,7 @@ mkShelleyTxBody = TxBodyConstr . memoBytes . txSparse
 type instance MemoHashIndex TxBodyRaw = EraIndependentTxBody
 
 instance
-  (Era era, crypto ~ Crypto era) =>
+  (Era era, crypto ~ EraCrypto era) =>
   HashAnnotated (ShelleyTxBody era) EraIndependentTxBody crypto
   where
   hashAnnotated (TxBodyConstr mb) = mbHash mb
@@ -535,7 +535,7 @@ instance
   (Era era, Show (Value era), DecodeNonNegative (Value era), Compactible (Value era)) =>
   FromSharedCBOR (TxOut era)
   where
-  type Share (TxOut era) = Interns (Credential 'Staking (Crypto era))
+  type Share (TxOut era) = Interns (Credential 'Staking (EraCrypto era))
   fromSharedCBOR _ =
     decodeRecordNamed "TxOut" (const 2) $ do
       cAddr <- fromCBOR

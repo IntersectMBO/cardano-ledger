@@ -54,9 +54,9 @@ blockEx1 ::
   ( HasCallStack,
     ShelleyTest era,
     EraSegWits era,
-    ExMock (Crypto era)
+    ExMock (EraCrypto era)
   ) =>
-  Block (BHeader (Crypto era)) era
+  Block (BHeader (EraCrypto era)) era
 blockEx1 =
   mkBlockFakeVRF
     lastByronHeaderHash
@@ -64,7 +64,7 @@ blockEx1 =
     []
     (SlotNo 10)
     (BlockNo 1)
-    (nonce0 @(Crypto era))
+    (nonce0 @(EraCrypto era))
     (NatNonce 1)
     minBound
     0
@@ -77,7 +77,7 @@ blockNonce ::
     PreAlonzo era,
     ShelleyTest era,
     EraSegWits era,
-    ExMock (Crypto era)
+    ExMock (EraCrypto era)
   ) =>
   Nonce
 blockNonce = getBlockNonce (blockEx1 @era)
@@ -86,7 +86,7 @@ expectedStEx1 ::
   forall era.
   ( ShelleyTest era,
     EraSegWits era,
-    ExMock (Crypto era),
+    ExMock (EraCrypto era),
     PreAlonzo era,
     PParams era ~ ShelleyPParams era
   ) =>
@@ -102,10 +102,10 @@ expectedStEx1 = evolveNonceUnfrozen (blockNonce @era) . newLab blockEx1 $ initSt
 -- evolving and candidate nonces, and the last applied block.
 exEmptyBlock ::
   ( ShelleyTest era,
-    ExMock (Crypto era),
+    ExMock (EraCrypto era),
     PreAlonzo era,
     EraSegWits era,
     PParams era ~ ShelleyPParams era
   ) =>
-  CHAINExample (BHeader (Crypto era)) era
+  CHAINExample (BHeader (EraCrypto era)) era
 exEmptyBlock = CHAINExample initStEx1 blockEx1 (Right expectedStEx1)

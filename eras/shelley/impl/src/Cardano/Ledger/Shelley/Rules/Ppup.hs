@@ -64,7 +64,7 @@ import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..))
 
 data PpupEnv era
-  = PPUPEnv SlotNo (PParams era) (GenDelegs (Crypto era))
+  = PPUPEnv SlotNo (PParams era) (GenDelegs (EraCrypto era))
 
 data VotingPeriod = VoteForThisEpoch | VoteForNextEpoch
   deriving (Show, Eq, Generic)
@@ -87,8 +87,8 @@ data ShelleyPpupPredFailure era
     --  The first set contains the key hashes which were a part of the update.
     --  The second set contains the key hashes of the genesis keys.
     NonGenesisUpdatePPUP
-      !(Set (KeyHash 'Genesis (Crypto era)))
-      !(Set (KeyHash 'Genesis (Crypto era)))
+      !(Set (KeyHash 'Genesis (EraCrypto era)))
+      !(Set (KeyHash 'Genesis (EraCrypto era)))
   | -- | An update was proposed for the wrong epoch.
     --  The first 'EpochNo' is the current epoch.
     --  The second 'EpochNo' is the epoch listed in the update.

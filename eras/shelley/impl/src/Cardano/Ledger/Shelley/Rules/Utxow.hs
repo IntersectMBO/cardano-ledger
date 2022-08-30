@@ -142,27 +142,27 @@ import Validation
 
 data ShelleyUtxowPredFailure era
   = InvalidWitnessesUTXOW
-      ![VKey 'Witness (Crypto era)]
+      ![VKey 'Witness (EraCrypto era)]
   | -- witnesses which failed in verifiedWits function
     MissingVKeyWitnessesUTXOW
-      !(Set (KeyHash 'Witness (Crypto era))) -- witnesses which were needed and not supplied
+      !(Set (KeyHash 'Witness (EraCrypto era))) -- witnesses which were needed and not supplied
   | MissingScriptWitnessesUTXOW
-      !(Set (ScriptHash (Crypto era))) -- missing scripts
+      !(Set (ScriptHash (EraCrypto era))) -- missing scripts
   | ScriptWitnessNotValidatingUTXOW
-      !(Set (ScriptHash (Crypto era))) -- failed scripts
+      !(Set (ScriptHash (EraCrypto era))) -- failed scripts
   | UtxoFailure (PredicateFailure (EraRule "UTXO" era))
-  | MIRInsufficientGenesisSigsUTXOW (Set (KeyHash 'Witness (Crypto era)))
+  | MIRInsufficientGenesisSigsUTXOW (Set (KeyHash 'Witness (EraCrypto era)))
   | MissingTxBodyMetadataHash
-      !(AuxiliaryDataHash (Crypto era)) -- hash of the full metadata
+      !(AuxiliaryDataHash (EraCrypto era)) -- hash of the full metadata
   | MissingTxMetadata
-      !(AuxiliaryDataHash (Crypto era)) -- hash of the metadata included in the transaction body
+      !(AuxiliaryDataHash (EraCrypto era)) -- hash of the metadata included in the transaction body
   | ConflictingMetadataHash
-      !(AuxiliaryDataHash (Crypto era)) -- hash of the metadata included in the transaction body
-      !(AuxiliaryDataHash (Crypto era)) -- hash of the full metadata
+      !(AuxiliaryDataHash (EraCrypto era)) -- hash of the metadata included in the transaction body
+      !(AuxiliaryDataHash (EraCrypto era)) -- hash of the full metadata
       -- Contains out of range values (strings too long)
   | InvalidMetadata
   | ExtraneousScriptWitnessesUTXOW
-      !(Set (ScriptHash (Crypto era))) -- extraneous scripts
+      !(Set (ScriptHash (EraCrypto era))) -- extraneous scripts
   deriving (Generic)
 
 newtype ShelleyUtxowEvent era
@@ -299,7 +299,7 @@ transitionRulesUTXOW ::
     PredicateFailure (utxow era) ~ ShelleyUtxowPredFailure era,
     STS (utxow era),
     HasField "_protocolVersion" (PParams era) ProtVer,
-    DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody)
+    DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
   ) =>
   TransitionRule (utxow era)
 transitionRulesUTXOW = do
@@ -354,7 +354,7 @@ instance
   ( EraTx era,
     ShelleyEraTxBody era,
     Tx era ~ ShelleyTx era,
-    DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
+    DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody),
     HasField "_protocolVersion" (PParams era) ProtVer,
     -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (ShelleyUTXOW era),
@@ -362,7 +362,7 @@ instance
     State (EraRule "UTXO" era) ~ UTxOState era,
     Signal (EraRule "UTXO" era) ~ Tx era,
     HasField "_protocolVersion" (PParams era) ProtVer,
-    DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody)
+    DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
   ) =>
   STS (ShelleyUTXOW era)
   where
@@ -397,8 +397,8 @@ validateMissingScripts ::
   ( HasField "_protocolVersion" (PParams era) ProtVer
   ) =>
   PParams era ->
-  Set (ScriptHash (Crypto era)) ->
-  Set (ScriptHash (Crypto era)) ->
+  Set (ScriptHash (EraCrypto era)) ->
+  Set (ScriptHash (EraCrypto era)) ->
   Test (ShelleyUtxowPredFailure era)
 validateMissingScripts pp sNeeded sReceived =
   if HardForks.missingScriptsSymmetricDifference pp
@@ -418,7 +418,7 @@ validateMissingScripts pp sNeeded sReceived =
 validateVerifiedWits ::
   forall era.
   ( EraTx era,
-    DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody)
+    DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
   ) =>
   Tx era ->
   Test (ShelleyUtxowPredFailure era)
@@ -465,11 +465,11 @@ validateNeededWitnesses genDelegs utxo tx witsKeyHashes =
 -- from Era to Era, so we parameterise over that function in this test.
 -- That allows it to be used in many Eras.
 validateNeededWitnesses ::
-  (UTxO era -> Tx era -> GenDelegs (Crypto era) -> Set (KeyHash 'Witness (Crypto era))) ->
-  GenDelegs (Crypto era) ->
+  (UTxO era -> Tx era -> GenDelegs (EraCrypto era) -> Set (KeyHash 'Witness (EraCrypto era))) ->
+  GenDelegs (EraCrypto era) ->
   UTxO era ->
   Tx era ->
-  Set (KeyHash 'Witness (Crypto era)) ->
+  Set (KeyHash 'Witness (EraCrypto era)) ->
   Test (ShelleyUtxowPredFailure era)
 validateNeededWitnesses witsvkeyneeded genDelegs utxo tx witsKeyHashes =
   let needed = witsvkeyneeded utxo tx genDelegs
@@ -487,8 +487,8 @@ witsVKeyNeeded ::
   ) =>
   UTxO era ->
   Tx era ->
-  GenDelegs (Crypto era) ->
-  Set (KeyHash 'Witness (Crypto era))
+  GenDelegs (EraCrypto era) ->
+  Set (KeyHash 'Witness (EraCrypto era))
 witsVKeyNeeded utxo' tx genDelegs =
   certAuthors
     `Set.union` inputAuthors
@@ -497,7 +497,7 @@ witsVKeyNeeded utxo' tx genDelegs =
     `Set.union` updateKeys
   where
     txBody = tx ^. bodyTxL
-    inputAuthors :: Set (KeyHash 'Witness (Crypto era))
+    inputAuthors :: Set (KeyHash 'Witness (EraCrypto era))
     inputAuthors = foldr accum Set.empty (txBody ^. inputsTxBodyL)
       where
         accum txin ans =
@@ -510,11 +510,11 @@ witsVKeyNeeded utxo' tx genDelegs =
                 _ -> ans
             Nothing -> ans
 
-    wdrlAuthors :: Set (KeyHash 'Witness (Crypto era))
+    wdrlAuthors :: Set (KeyHash 'Witness (EraCrypto era))
     wdrlAuthors = Map.foldrWithKey accum Set.empty (unWdrl (txBody ^. wdrlsTxBodyL))
       where
         accum key _ ans = Set.union (extractKeyHashWitnessSet [getRwdCred key]) ans
-    owners :: Set (KeyHash 'Witness (Crypto era))
+    owners :: Set (KeyHash 'Witness (EraCrypto era))
     owners = foldr accum Set.empty (txBody ^. certsTxBodyL)
       where
         accum (DCertPool (RegPool pool)) ans =
@@ -529,12 +529,12 @@ witsVKeyNeeded utxo' tx genDelegs =
     -- key reg requires no witness but this is already filtered outby requiresVKeyWitness
     -- before the call to `cwitness`, so this error should never be reached.
 
-    certAuthors :: Set (KeyHash 'Witness (Crypto era))
+    certAuthors :: Set (KeyHash 'Witness (EraCrypto era))
     certAuthors = foldr accum Set.empty (txBody ^. certsTxBodyL)
       where
         accum cert ans | requiresVKeyWitness cert = Set.union (cwitness cert) ans
         accum _cert ans = ans
-    updateKeys :: Set (KeyHash 'Witness (Crypto era))
+    updateKeys :: Set (KeyHash 'Witness (EraCrypto era))
     updateKeys =
       asWitness
         `Set.map` propWits
@@ -576,9 +576,9 @@ validateMIRInsufficientGenesisSigs ::
   ( EraTx era,
     ShelleyEraTxBody era
   ) =>
-  GenDelegs (Crypto era) ->
+  GenDelegs (EraCrypto era) ->
   Word64 ->
-  Set (KeyHash 'Witness (Crypto era)) ->
+  Set (KeyHash 'Witness (EraCrypto era)) ->
   Tx era ->
   Test (ShelleyUtxowPredFailure era)
 validateMIRInsufficientGenesisSigs (GenDelegs genMapping) coreNodeQuorum witsKeyHashes tx =
@@ -612,8 +612,8 @@ instance
 -- proposals.
 propWits ::
   Maybe (Update era) ->
-  GenDelegs (Crypto era) ->
-  Set (KeyHash 'Witness (Crypto era))
+  GenDelegs (EraCrypto era) ->
+  Set (KeyHash 'Witness (EraCrypto era))
 propWits Nothing _ = Set.empty
 propWits (Just (Update (ProposedPPUpdates pup) _)) (GenDelegs genDelegs) =
   Set.map asWitness . Set.fromList $ Map.elems updateKeys

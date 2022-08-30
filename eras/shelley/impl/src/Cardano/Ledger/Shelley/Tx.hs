@@ -334,9 +334,9 @@ unsafeConstructTxWithBytes b w a bytes = TxConstr (mkMemoBytes (TxRaw b w a) byt
 --------------------------------------------------------------------------------
 
 data WitnessSetHKD f era = WitnessSet'
-  { addrWits' :: !(HKD f (Set (WitVKey 'Witness (Crypto era)))),
-    scriptWits' :: !(HKD f (Map (ScriptHash (Crypto era)) (Script era))),
-    bootWits' :: !(HKD f (Set (BootstrapWitness (Crypto era)))),
+  { addrWits' :: !(HKD f (Set (WitVKey 'Witness (EraCrypto era)))),
+    scriptWits' :: !(HKD f (Map (ScriptHash (EraCrypto era)) (Script era))),
+    bootWits' :: !(HKD f (Set (BootstrapWitness (EraCrypto era)))),
     txWitsBytes :: BSL.ByteString
   }
 
@@ -349,8 +349,8 @@ deriving instance Era era => Generic (WitnessSetHKD Identity era)
 instance
   ( Era era,
     NFData (Script era),
-    NFData (WitVKey 'Witness (Crypto era)),
-    NFData (BootstrapWitness (Crypto era))
+    NFData (WitVKey 'Witness (EraCrypto era)),
+    NFData (BootstrapWitness (EraCrypto era))
   ) =>
   NFData (WitnessSetHKD Identity era)
 
@@ -370,21 +370,21 @@ type ShelleyWitnesses = WitnessSetHKD Identity
 -- | Addresses witness setter and getter for `ShelleyWitnesses`. The
 -- setter does update memoized binary representation.
 addrShelleyWitsL ::
-  EraWitnesses era => Lens' (ShelleyWitnesses era) (Set (WitVKey 'Witness (Crypto era)))
+  EraWitnesses era => Lens' (ShelleyWitnesses era) (Set (WitVKey 'Witness (EraCrypto era)))
 addrShelleyWitsL = lens addrWits' (\w s -> w {addrWits = s})
 {-# INLINEABLE addrShelleyWitsL #-}
 
 -- | Bootstrap Addresses witness setter and getter for `ShelleyWitnesses`. The
 -- setter does update memoized binary representation.
 bootAddrShelleyWitsL ::
-  EraWitnesses era => Lens' (ShelleyWitnesses era) (Set (BootstrapWitness (Crypto era)))
+  EraWitnesses era => Lens' (ShelleyWitnesses era) (Set (BootstrapWitness (EraCrypto era)))
 bootAddrShelleyWitsL = lens bootWits' (\w s -> w {bootWits = s})
 {-# INLINEABLE bootAddrShelleyWitsL #-}
 
 -- | Script witness setter and getter for `ShelleyWitnesses`. The
 -- setter does update memoized binary representation.
 scriptShelleyWitsL ::
-  EraWitnesses era => Lens' (ShelleyWitnesses era) (Map (ScriptHash (Crypto era)) (Script era))
+  EraWitnesses era => Lens' (ShelleyWitnesses era) (Map (ScriptHash (EraCrypto era)) (Script era))
 scriptShelleyWitsL = lens scriptWits' (\w s -> w {scriptWits = s})
 {-# INLINEABLE scriptShelleyWitsL #-}
 
@@ -418,9 +418,9 @@ instance EraScript era => Monoid (WitnessSetHKD Identity era) where
 
 pattern ShelleyWitnesses ::
   EraScript era =>
-  Set (WitVKey 'Witness (Crypto era)) ->
-  Map (ScriptHash (Crypto era)) (Script era) ->
-  Set (BootstrapWitness (Crypto era)) ->
+  Set (WitVKey 'Witness (EraCrypto era)) ->
+  Map (ScriptHash (EraCrypto era)) (Script era) ->
+  Set (BootstrapWitness (EraCrypto era)) ->
   WitnessSet era
 pattern ShelleyWitnesses {addrWits, scriptWits, bootWits} <-
   WitnessSet' addrWits scriptWits bootWits _
@@ -447,9 +447,9 @@ pattern ShelleyWitnesses {addrWits, scriptWits, bootWits} <-
 
 pattern WitnessSet ::
   EraScript era =>
-  Set (WitVKey 'Witness (Crypto era)) ->
-  Map (ScriptHash (Crypto era)) (Script era) ->
-  Set (BootstrapWitness (Crypto era)) ->
+  Set (WitVKey 'Witness (EraCrypto era)) ->
+  Map (ScriptHash (EraCrypto era)) (Script era) ->
+  Set (BootstrapWitness (EraCrypto era)) ->
   WitnessSet era
 pattern WitnessSet a s b = ShelleyWitnesses a s b
 
@@ -463,9 +463,9 @@ instance SafeToHash (WitnessSetHKD Identity era) where
 --     Uses the non-exported WitnessSet' constructor.
 prettyWitnessSetParts ::
   WitnessSetHKD Identity era ->
-  ( Set (WitVKey 'Witness (Crypto era)),
-    Map (ScriptHash (Crypto era)) (Core.Script era),
-    Set (BootstrapWitness (Crypto era))
+  ( Set (WitVKey 'Witness (EraCrypto era)),
+    Map (ScriptHash (EraCrypto era)) (Core.Script era),
+    Set (BootstrapWitness (EraCrypto era))
   )
 prettyWitnessSetParts (WitnessSet' a b c _) = (a, b, c)
 
@@ -558,10 +558,10 @@ keyBy f xs = Map.fromList $ (\x -> (f x, x)) <$> xs
 hashMultiSigScript ::
   forall era.
   ( EraScript era,
-    Script era ~ MultiSig (Crypto era)
+    Script era ~ MultiSig (EraCrypto era)
   ) =>
-  MultiSig (Crypto era) ->
-  ScriptHash (Crypto era)
+  MultiSig (EraCrypto era) ->
+  ScriptHash (EraCrypto era)
 hashMultiSigScript = hashScript @era
 
 -- ========================================
@@ -571,7 +571,7 @@ hashMultiSigScript = hashScript @era
 evalNativeMultiSigScript ::
   Era era =>
   MultiSig era ->
-  Set (KeyHash 'Witness (Crypto era)) ->
+  Set (KeyHash 'Witness (EraCrypto era)) ->
   Bool
 evalNativeMultiSigScript (RequireSignature hk) vhks = Set.member hk vhks
 evalNativeMultiSigScript (RequireAllOf msigs) vhks =
@@ -596,7 +596,7 @@ validateNativeMultiSigScript msig tx =
 txwitsScript ::
   EraTx era =>
   Core.Tx era ->
-  Map (ScriptHash (Crypto era)) (Script era)
+  Map (ScriptHash (EraCrypto era)) (Script era)
 txwitsScript tx = tx ^. witsTxL . scriptWitsL
 
 extractKeyHashWitnessSet ::
@@ -626,7 +626,7 @@ minfee pp tx =
 witsFromTxWitnesses ::
   EraTx era =>
   Core.Tx era ->
-  Set (KeyHash 'Witness (Crypto era))
+  Set (KeyHash 'Witness (EraCrypto era))
 witsFromTxWitnesses tx =
   Set.map witVKeyHash (tx ^. witsTxL . addrWitsL)
     `Set.union` Set.map bootstrapWitKeyHash (tx ^. witsTxL . bootAddrWitsL)

@@ -326,8 +326,8 @@ txInfoIn' (TxIn txid txIx) = PV1.TxOutRef (txInfoId txid) (toInteger (txIxToInt 
 -- | Given a TxIn, look it up in the UTxO. If it exists, translate it and return
 --   (Just translation). If does not exist in the UTxO, return Nothing.
 txInfoIn ::
-  (AlonzoEraTxOut era, Value era ~ MaryValue (Crypto era)) =>
-  TxIn (Crypto era) ->
+  (AlonzoEraTxOut era, Value era ~ MaryValue (EraCrypto era)) =>
+  TxIn (EraCrypto era) ->
   TxOut era ->
   Maybe PV1.TxInInfo
 txInfoIn txIn txOut = do
@@ -342,7 +342,7 @@ txInfoIn txIn txOut = do
 --   possible the address part is a Bootstrap Address, in that case return Nothing
 --   I.e. don't include Bootstrap Addresses in the answer.
 txInfoOut ::
-  (AlonzoEraTxOut era, Value era ~ MaryValue (Crypto era)) =>
+  (AlonzoEraTxOut era, Value era ~ MaryValue (EraCrypto era)) =>
   TxOut era ->
   Maybe PV1.TxOut
 txInfoOut txOut = do
@@ -454,32 +454,32 @@ class ExtendedUTxO era where
     SystemStart ->
     UTxO era ->
     Tx era ->
-    Either (TranslationError (Crypto era)) VersionedTxInfo
+    Either (TranslationError (EraCrypto era)) VersionedTxInfo
 
   -- Compute two sets for all TwoPhase scripts in a Tx.
   -- set 1) DataHashes for each Two phase Script in a TxIn that has a DataHash
   -- set 2) TxIns that are TwoPhase scripts, and should have a DataHash but don't.
   {- { h | (_ → (a,_,h)) ∈ txins tx ◁ utxo, isNonNativeScriptAddress tx a} -}
   inputDataHashes ::
-    Map.Map (ScriptHash (Crypto era)) (Script era) ->
+    Map.Map (ScriptHash (EraCrypto era)) (Script era) ->
     AlonzoTx era ->
     UTxO era ->
-    (Set (DataHash (Crypto era)), Set (TxIn (Crypto era)))
+    (Set (DataHash (EraCrypto era)), Set (TxIn (EraCrypto era)))
 
   txscripts ::
     UTxO era ->
     Tx era ->
-    Map.Map (ScriptHash (Crypto era)) (Script era)
+    Map.Map (ScriptHash (EraCrypto era)) (Script era)
 
   getAllowedSupplimentalDataHashes ::
     TxBody era ->
     UTxO era ->
-    Set (DataHash (Crypto era))
+    Set (DataHash (EraCrypto era))
 
   getDatum ::
     Tx era ->
     UTxO era ->
-    ScriptPurpose (Crypto era) ->
+    ScriptPurpose (EraCrypto era) ->
     Maybe (Data era)
 
   getTxOutDatum ::
@@ -498,7 +498,7 @@ alonzoTxInfo ::
   forall era.
   ( EraTx era,
     AlonzoEraTxBody era,
-    Value era ~ MaryValue (Crypto era),
+    Value era ~ MaryValue (EraCrypto era),
     Witnesses era ~ TxWitness era,
     HasField "_protocolVersion" (PParams era) ProtVer
   ) =>
@@ -508,7 +508,7 @@ alonzoTxInfo ::
   SystemStart ->
   UTxO era ->
   Tx era ->
-  Either (TranslationError (Crypto era)) VersionedTxInfo
+  Either (TranslationError (EraCrypto era)) VersionedTxInfo
 alonzoTxInfo pp lang ei sysS utxo tx = do
   timeRange <- left TimeTranslationPastHorizon $ transVITime pp ei sysS interval
   -- We need to do this as a separate step
@@ -523,7 +523,7 @@ alonzoTxInfo pp lang ei sysS utxo tx = do
         PV1.TxInfo
           { PV1.txInfoInputs = mapMaybe (uncurry txInfoIn) txIns,
             PV1.txInfoOutputs = mapMaybe txInfoOut (foldr (:) [] txOuts),
-            PV1.txInfoFee = transValue (inject @(MaryValue (Crypto era)) fee),
+            PV1.txInfoFee = transValue (inject @(MaryValue (EraCrypto era)) fee),
             PV1.txInfoMint = transMultiAsset (txBody ^. mintTxBodyL),
             PV1.txInfoDCert = foldr (\c ans -> transDCert c : ans) [] (txBody ^. certsTxBodyL),
             PV1.txInfoWdrl = Map.toList (transWdrl (txBody ^. wdrlsTxBodyL)),
@@ -549,7 +549,7 @@ alonzoTxInfo pp lang ei sysS utxo tx = do
 valContext ::
   Era era =>
   VersionedTxInfo ->
-  ScriptPurpose (Crypto era) ->
+  ScriptPurpose (EraCrypto era) ->
   Data era
 valContext (TxInfoPV1 txinfo) sp = Data (PV1.toData (PV1.ScriptContext txinfo (transScriptPurpose sp)))
 valContext (TxInfoPV2 txinfo) sp = Data (PV2.toData (PV2.ScriptContext txinfo (transScriptPurpose sp)))
@@ -799,7 +799,7 @@ languages ::
   ) =>
   Tx era ->
   UTxO era ->
-  Set (ScriptHash (Crypto era)) ->
+  Set (ScriptHash (EraCrypto era)) ->
   Set Language
 languages tx utxo sNeeded = Map.foldl' accum Set.empty allscripts
   where

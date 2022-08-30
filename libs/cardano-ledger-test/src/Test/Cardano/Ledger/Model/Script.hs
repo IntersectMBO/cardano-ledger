@@ -17,7 +17,7 @@ module Test.Cardano.Ledger.Model.Script where
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
-import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Era (Era, EraCrypto)
 import Cardano.Ledger.Keys
 import Cardano.Ledger.ShelleyMA.Timelocks
 import Cardano.Slotting.Slot hiding (at)
@@ -247,7 +247,7 @@ instance NFData ModelTimelock
 elaborateModelTimelock ::
   forall era m.
   (Applicative m, Era era) =>
-  (ModelCredential 'Witness ('TyScriptFeature 'False 'False) -> m (KeyHash 'Witness (Crypto era))) ->
+  (ModelCredential 'Witness ('TyScriptFeature 'False 'False) -> m (KeyHash 'Witness (EraCrypto era))) ->
   ModelTimelock ->
   m (Timelock era)
 elaborateModelTimelock f = go

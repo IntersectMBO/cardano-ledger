@@ -165,7 +165,7 @@ instance CC.Crypto c => PrettyCore (ConwayEra c) where
 prettyUTxO :: Proof era -> UTxO era -> PDoc
 prettyUTxO proof = prettyUTxOMap proof . unUTxO
 
-prettyUTxOMap :: Proof era -> Map.Map (TxIn (Crypto era)) (TxOut era) -> PDoc
+prettyUTxOMap :: Proof era -> Map.Map (TxIn (EraCrypto era)) (TxOut era) -> PDoc
 prettyUTxOMap (Conway _) mp = ppMap ppTxIn prettyTxOut mp
 prettyUTxOMap (Babbage _) mp = ppMap ppTxIn prettyTxOut mp
 prettyUTxOMap (Alonzo _) mp = ppMap ppTxIn prettyTxOut mp
@@ -1044,12 +1044,12 @@ class PrettyC t era where
 pcTxId :: TxId crypto -> PDoc
 pcTxId (TxId safehash) = trim (ppSafeHash safehash)
 
-instance c ~ Crypto era => PrettyC (TxId c) era where prettyC _ = pcTxId
+instance c ~ EraCrypto era => PrettyC (TxId c) era where prettyC _ = pcTxId
 
 pcTxIn :: TxIn crypto -> PDoc
 pcTxIn (TxIn (TxId h) (TxIx i)) = parens (hsep [ppString "TxIn", trim (ppSafeHash h), ppWord64 i])
 
-instance c ~ Crypto era => PrettyC (TxIn c) era where prettyC _ = pcTxIn
+instance c ~ EraCrypto era => PrettyC (TxIn c) era where prettyC _ = pcTxIn
 
 pcNetwork :: Network -> PDoc
 pcNetwork Testnet = ppString "TestNet"
@@ -1060,20 +1060,20 @@ instance PrettyC Network era where prettyC _ = pcNetwork
 pcKeyHash :: KeyHash discriminator crypto -> PDoc
 pcKeyHash (KeyHash h) = trim (ppHash h)
 
-instance c ~ Crypto era => PrettyC (KeyHash d c) era where prettyC _ = pcKeyHash
+instance c ~ EraCrypto era => PrettyC (KeyHash d c) era where prettyC _ = pcKeyHash
 
 pcCredential :: Credential keyrole c -> PDoc
 pcCredential (ScriptHashObj (ScriptHash h)) = hsep [ppString "Script", trim (ppHash h)]
 pcCredential (KeyHashObj (KeyHash h)) = hsep [ppString "Key", trim (ppHash h)]
 
-instance c ~ Crypto era => PrettyC (Credential keyrole c) era where prettyC _ = pcCredential
+instance c ~ EraCrypto era => PrettyC (Credential keyrole c) era where prettyC _ = pcCredential
 
 pcStakeReference :: StakeReference c -> PDoc
 pcStakeReference StakeRefNull = ppString "Null"
 pcStakeReference (StakeRefBase cred) = pcCredential cred
 pcStakeReference (StakeRefPtr _) = ppString "Ptr"
 
-instance c ~ Crypto era => PrettyC (StakeReference c) era where prettyC _ = pcStakeReference
+instance c ~ EraCrypto era => PrettyC (StakeReference c) era where prettyC _ = pcStakeReference
 
 pcAddr :: Addr c -> PDoc
 pcAddr (Addr nw pay stk) =
@@ -1086,7 +1086,7 @@ pcAddr (Addr nw pay stk) =
       ]
 pcAddr (AddrBootstrap _) = ppString "Bootstrap"
 
-instance c ~ Crypto era => PrettyC (Addr c) era where prettyC _ = pcAddr
+instance c ~ EraCrypto era => PrettyC (Addr c) era where prettyC _ = pcAddr
 
 pcCoreValue :: Proof era -> Value era -> PDoc
 pcCoreValue (Conway _) v = vSummary v
@@ -1104,7 +1104,7 @@ instance PrettyC Coin era where prettyC _ = pcCoin
 pcValue :: MaryValue c -> PDoc
 pcValue (MaryValue n (MultiAsset m)) = ppSexp "Value" [ppInteger n, ppString ("num tokens = " ++ show (Map.size m))]
 
-instance c ~ Crypto era => PrettyC (MaryValue c) era where
+instance c ~ EraCrypto era => PrettyC (MaryValue c) era where
   prettyC _ = pcValue
 
 pcDatum :: Era era => Datum era -> PDoc
@@ -1195,7 +1195,7 @@ pcIndividualPoolStake (IndividualPoolStake rat vrf) =
     "pool stake"
     [("ratio", ppRational rat), ("vrf", trim (ppHash vrf))]
 
-instance c ~ Crypto era => PrettyC (IndividualPoolStake c) era where prettyC _ = pcIndividualPoolStake
+instance c ~ EraCrypto era => PrettyC (IndividualPoolStake c) era where prettyC _ = pcIndividualPoolStake
 
 pcPoolParams :: PoolParams era -> PDoc
 pcPoolParams x =
@@ -1212,13 +1212,13 @@ pcDelegCert (RegKey cred) = ppSexp "RegKey" [pcCredential cred]
 pcDelegCert (DeRegKey cred) = ppSexp "DeRegKey" [pcCredential cred]
 pcDelegCert (Delegate (Delegation x y)) = ppSexp "Delegate" [pcCredential x, pcKeyHash y]
 
-instance c ~ Crypto era => PrettyC (DelegCert c) era where prettyC _ = pcDelegCert
+instance c ~ EraCrypto era => PrettyC (DelegCert c) era where prettyC _ = pcDelegCert
 
 pcPoolCert :: PoolCert crypto -> PDoc
 pcPoolCert (RegPool poolp) = ppSexp "RegPool" [pcPoolParams poolp]
 pcPoolCert (RetirePool keyhash epoch) = ppSexp "RetirePool" [pcKeyHash keyhash, ppEpochNo epoch]
 
-instance c ~ Crypto era => PrettyC (PoolCert c) era where prettyC _ = pcPoolCert
+instance c ~ EraCrypto era => PrettyC (PoolCert c) era where prettyC _ = pcPoolCert
 
 pcDCert :: DCert crypto -> PDoc
 pcDCert (DCertDeleg x) = pcDelegCert x
@@ -1226,12 +1226,12 @@ pcDCert (DCertPool x) = pcPoolCert x
 pcDCert (DCertGenesis _) = ppString "GenesisCert"
 pcDCert (DCertMir _) = ppString "MirCert"
 
-instance c ~ Crypto era => PrettyC (DCert c) era where prettyC _ = pcDCert
+instance c ~ EraCrypto era => PrettyC (DCert c) era where prettyC _ = pcDCert
 
 pcRewardAcnt :: RewardAcnt crypto -> PDoc
 pcRewardAcnt (RewardAcnt net cred) = ppSexp "RewAccnt" [pcNetwork net, pcCredential cred]
 
-instance c ~ Crypto era => PrettyC (RewardAcnt c) era where prettyC _ = pcRewardAcnt
+instance c ~ EraCrypto era => PrettyC (RewardAcnt c) era where prettyC _ = pcRewardAcnt
 
 pcExUnits :: ExUnits -> PDoc
 pcExUnits (ExUnits mem step) =
@@ -1285,7 +1285,7 @@ pcWitnessesField proof x = case x of
 pcPair :: (t1 -> PDoc) -> (t2 -> PDoc) -> (t1, t2) -> PDoc
 pcPair pp1 pp2 (x, y) = parens (hsep [pp1 x, ppString ",", pp2 y])
 
-pcWitVKey :: (Reflect era, Typeable discriminator) => WitVKey discriminator (Crypto era) -> PDoc
+pcWitVKey :: (Reflect era, Typeable discriminator) => WitVKey discriminator (EraCrypto era) -> PDoc
 pcWitVKey (WitVKey vk@(VKey x) sig) = ppSexp "WitVKey" [ppString keystring, ppString (drop 12 sigstring), hash]
   where
     keystring = show x

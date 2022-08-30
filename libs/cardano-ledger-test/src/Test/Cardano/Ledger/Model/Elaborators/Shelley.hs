@@ -15,7 +15,7 @@ import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.BaseTypes (Globals (..), activeSlotVal, epochInfoPure)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Crypto (DSIGN, KES)
-import Cardano.Ledger.Era (Crypto)
+import Cardano.Ledger.Era (EraCrypto)
 import Cardano.Ledger.Keys (GenDelegPair, KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.Genesis (initialState)
@@ -125,8 +125,8 @@ instance
 fromShelleyGlobals ::
   Globals ->
   Shelley.ShelleyPParams era ->
-  Map.Map (KeyHash 'Genesis (Crypto era)) (GenDelegPair (Crypto era)) ->
-  Map.Map (Addr (Crypto era)) Coin ->
+  Map.Map (KeyHash 'Genesis (EraCrypto era)) (GenDelegPair (EraCrypto era)) ->
+  Map.Map (Addr (EraCrypto era)) Coin ->
   ShelleyGenesis era
 fromShelleyGlobals globals pp genDelegs initialFunds =
   ShelleyGenesis

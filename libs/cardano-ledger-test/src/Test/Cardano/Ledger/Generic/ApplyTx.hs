@@ -122,11 +122,11 @@ applyField proof count model field = case field of
   (Wdrls (Wdrl m)) -> Map.foldlWithKey' (applyWdrl proof) model m
   _other -> model
 
-applyWdrl :: Proof era -> Model era -> RewardAcnt (Crypto era) -> Coin -> Model era
+applyWdrl :: Proof era -> Model era -> RewardAcnt (EraCrypto era) -> Coin -> Model era
 applyWdrl _proof model (RewardAcnt _network cred) coin =
   model {mRewards = Map.adjust (\c -> c <-> coin) cred (mRewards model)}
 
-applyCert :: Proof era -> Model era -> DCert (Crypto era) -> Model era
+applyCert :: Proof era -> Model era -> DCert (EraCrypto era) -> Model era
 applyCert proof model dcert = case dcert of
   (DCertDeleg (RegKey x)) ->
     model
@@ -176,8 +176,8 @@ applyCert proof model dcert = case dcert of
 data CollInfo era = CollInfo
   { ciBal :: Coin, -- Balance of all the collateral inputs
     ciRet :: Coin, -- Coin amount of the collateral return output
-    ciDelset :: Set (TxIn (Crypto era)), -- The set of inputs to delete from the UTxO
-    ciAddmap :: Map (TxIn (Crypto era)) (TxOut era) -- Things to Add to the UTxO
+    ciDelset :: Set (TxIn (EraCrypto era)), -- The set of inputs to delete from the UTxO
+    ciAddmap :: Map (TxIn (EraCrypto era)) (TxOut era) -- Things to Add to the UTxO
   }
 
 emptyCollInfo :: CollInfo era
@@ -234,10 +234,10 @@ applyTxFail proof count nextTxIx model field = case field of
 -- =======================================
 
 additions ::
-  SafeHash (Crypto era) EraIndependentTxBody ->
+  SafeHash (EraCrypto era) EraIndependentTxBody ->
   TxIx ->
   [TxOut era] ->
-  Map (TxIn (Crypto era)) (TxOut era)
+  Map (TxIn (EraCrypto era)) (TxOut era)
 additions bodyhash firstTxIx outputs =
   Map.fromList
     [ (TxIn (TxId bodyhash) idx, out)
@@ -269,9 +269,9 @@ go = do
 filterRewards ::
   Proof era ->
   PParams era ->
-  Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))) ->
-  ( Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))),
-    Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era)))
+  Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))) ->
+  ( Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))),
+    Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era)))
   )
 filterRewards proof pp rewards =
   if pvMajor (ppProtocolVersion proof pp) > 2
@@ -282,11 +282,11 @@ filterRewards proof pp rewards =
 
 filterAllRewards ::
   Proof era ->
-  Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))) ->
+  Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))) ->
   Model era ->
-  ( Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))),
-    Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))),
-    Set (Credential 'Staking (Crypto era)),
+  ( Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))),
+    Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))),
+    Set (Credential 'Staking (EraCrypto era)),
     Coin
   )
 filterAllRewards proof rs' m =
@@ -304,11 +304,11 @@ filterAllRewards proof rs' m =
 
 applyRUpd ::
   forall era.
-  RewardUpdateOld (Crypto era) ->
+  RewardUpdateOld (EraCrypto era) ->
   Model era ->
   Model era
 applyRUpd ru m =
   m
-    { mFees = mFees m `addDeltaCoin` deltaFOld @(Crypto era) ru,
+    { mFees = mFees m `addDeltaCoin` deltaFOld @(EraCrypto era) ru,
       mRewards = Map.unionWith (<>) (mRewards m) (rsOld ru)
     }

@@ -115,8 +115,8 @@ import NoThunks.Class (NoThunks)
 -- Era
 --------------------------------------------------------------------------------
 
-class (CC.Crypto (Crypto era), Typeable era, ProtVerLow era <= ProtVerHigh era) => Era era where
-  type Crypto era :: Type
+class (CC.Crypto (EraCrypto era), Typeable era, ProtVerLow era <= ProtVerHigh era) => Era era where
+  type EraCrypto era :: Type
 
   -- | Lowest major protocol version for this era
   type ProtVerLow era :: Nat
@@ -157,7 +157,7 @@ class
 class
   ( EraTxOut era,
     EraPParams era,
-    HashAnnotated (TxBody era) EraIndependentTxBody (Crypto era),
+    HashAnnotated (TxBody era) EraIndependentTxBody (EraCrypto era),
     FromCBOR (Annotator (TxBody era)),
     ToCBOR (TxBody era),
     NoThunks (TxBody era),
@@ -172,17 +172,17 @@ class
 
   mkBasicTxBody :: TxBody era
 
-  inputsTxBodyL :: Lens' (TxBody era) (Set (TxIn (Crypto era)))
+  inputsTxBodyL :: Lens' (TxBody era) (Set (TxIn (EraCrypto era)))
 
   outputsTxBodyL :: Lens' (TxBody era) (StrictSeq (TxOut era))
 
   feeTxBodyL :: Lens' (TxBody era) Coin
 
-  auxDataHashTxBodyL :: Lens' (TxBody era) (StrictMaybe (AuxiliaryDataHash (Crypto era)))
+  auxDataHashTxBodyL :: Lens' (TxBody era) (StrictMaybe (AuxiliaryDataHash (EraCrypto era)))
 
-  allInputsTxBodyF :: SimpleGetter (TxBody era) (Set (TxIn (Crypto era)))
+  allInputsTxBodyF :: SimpleGetter (TxBody era) (Set (TxIn (EraCrypto era)))
 
-  mintedTxBodyF :: SimpleGetter (TxBody era) (Set (ScriptHash (Crypto era)))
+  mintedTxBodyF :: SimpleGetter (TxBody era) (Set (ScriptHash (EraCrypto era)))
 
 -- | Abstract interface into specific fields of a `TxOut`
 class
@@ -196,7 +196,7 @@ class
     ToCBOR (Value era),
     FromCBOR (TxOut era),
     FromSharedCBOR (TxOut era),
-    Share (TxOut era) ~ Interns (Credential 'Staking (Crypto era)),
+    Share (TxOut era) ~ Interns (Credential 'Staking (EraCrypto era)),
     ToCBOR (TxOut era),
     NoThunks (TxOut era),
     NFData (TxOut era),
@@ -209,7 +209,7 @@ class
   -- | The output of a UTxO for a particular era
   type TxOut era = (r :: Type) | r -> era
 
-  mkBasicTxOut :: Addr (Crypto era) -> Value era -> TxOut era
+  mkBasicTxOut :: Addr (EraCrypto era) -> Value era -> TxOut era
 
   valueTxOutL :: Lens' (TxOut era) (Value era)
   valueTxOutL =
@@ -235,7 +235,7 @@ class
   -- version by doing the least amount of work.
   valueEitherTxOutL :: Lens' (TxOut era) (Either (Value era) (CompactForm (Value era)))
 
-  addrTxOutL :: Lens' (TxOut era) (Addr (Crypto era))
+  addrTxOutL :: Lens' (TxOut era) (Addr (EraCrypto era))
   addrTxOutL =
     lens
       ( \txOut -> case txOut ^. addrEitherTxOutL of
@@ -245,7 +245,7 @@ class
       (\txOut addr -> txOut & addrEitherTxOutL .~ Left addr)
   {-# INLINE addrTxOutL #-}
 
-  compactAddrTxOutL :: Lens' (TxOut era) (CompactAddr (Crypto era))
+  compactAddrTxOutL :: Lens' (TxOut era) (CompactAddr (EraCrypto era))
   compactAddrTxOutL =
     lens
       ( \txOut -> case txOut ^. addrEitherTxOutL of
@@ -264,9 +264,9 @@ class
   -- can define just this functionality. Also sometimes it crutial to know at
   -- the callsite which form of address we have readily available without any
   -- conversions (eg. searching millions of TxOuts for a particular address)
-  addrEitherTxOutL :: Lens' (TxOut era) (Either (Addr (Crypto era)) (CompactAddr (Crypto era)))
+  addrEitherTxOutL :: Lens' (TxOut era) (Either (Addr (EraCrypto era)) (CompactAddr (EraCrypto era)))
 
-bootAddrTxOutF :: EraTxOut era => SimpleGetter (TxOut era) (Maybe (BootstrapAddress (Crypto era)))
+bootAddrTxOutF :: EraTxOut era => SimpleGetter (TxOut era) (Maybe (BootstrapAddress (EraCrypto era)))
 bootAddrTxOutF = to $ \txOut ->
   case txOut ^. addrEitherTxOutL of
     Left (AddrBootstrap bootstrapAddr) -> Just bootstrapAddr
@@ -332,12 +332,12 @@ class
     NoThunks (AuxiliaryData era),
     ToCBOR (AuxiliaryData era),
     FromCBOR (Annotator (AuxiliaryData era)),
-    HashAnnotated (AuxiliaryData era) EraIndependentAuxiliaryData (Crypto era)
+    HashAnnotated (AuxiliaryData era) EraIndependentAuxiliaryData (EraCrypto era)
   ) =>
   EraAuxiliaryData era
   where
   type AuxiliaryData era = (r :: Type) | r -> era
-  hashAuxiliaryData :: AuxiliaryData era -> AuxiliaryDataHash (Crypto era)
+  hashAuxiliaryData :: AuxiliaryData era -> AuxiliaryDataHash (EraCrypto era)
   validateAuxiliaryData :: ProtVer -> AuxiliaryData era -> Bool
 
 class
@@ -386,11 +386,11 @@ class
   mkBasicWitnesses :: Witnesses era
   mkBasicWitnesses = mempty
 
-  addrWitsL :: Lens' (Witnesses era) (Set (WitVKey 'Witness (Crypto era)))
+  addrWitsL :: Lens' (Witnesses era) (Set (WitVKey 'Witness (EraCrypto era)))
 
-  bootAddrWitsL :: Lens' (Witnesses era) (Set (BootstrapWitness (Crypto era)))
+  bootAddrWitsL :: Lens' (Witnesses era) (Set (BootstrapWitness (EraCrypto era)))
 
-  scriptWitsL :: Lens' (Witnesses era) (Map (ScriptHash (Crypto era)) (Script era))
+  scriptWitsL :: Lens' (Witnesses era) (Map (ScriptHash (EraCrypto era)) (Script era))
 
 -- | Era STS map
 type family EraRule (k :: Symbol) era :: Type
@@ -420,7 +420,7 @@ class
   type Script era = (r :: Type) | r -> era
 
   scriptPrefixTag :: Script era -> BS.ByteString
-  hashScript :: Script era -> ScriptHash (Crypto era)
+  hashScript :: Script era -> ScriptHash (EraCrypto era)
   -- ONE SHOULD NOT OVERIDE THE hashScript DEFAULT METHOD
   -- UNLESS YOU UNDERSTAND THE SafeToHash class, AND THE ROLE OF THE scriptPrefixTag
   hashScript =
@@ -476,7 +476,7 @@ class
   -- Merkle tree.
   hashTxSeq ::
     TxSeq era ->
-    Hash.Hash (CC.HASH (Crypto era)) EraIndependentBlockBody
+    Hash.Hash (CC.HASH (EraCrypto era)) EraIndependentBlockBody
 
   -- | The number of segregated components
   numSegComponents :: Word64
@@ -609,10 +609,10 @@ type ProtVerInBounds era l h = (ProtVerNoLess era l, ProtVerNoMore era h)
 -- | Restrict an era to the specific era through the protocol version. This is
 -- equivalent to @(inEra (Crypto era) ~ era)@
 type ExactEra (inEra :: Type -> Type) era =
-  ProtVerInBounds era (ProtVerLow (inEra (Crypto era))) (ProtVerHigh (inEra (Crypto era)))
+  ProtVerInBounds era (ProtVerLow (inEra (EraCrypto era))) (ProtVerHigh (inEra (EraCrypto era)))
 
 type AtLeastEra (eraName :: Type -> Type) era =
-  ProtVerAtLeast era (ProtVerLow (eraName (Crypto era)))
+  ProtVerAtLeast era (ProtVerLow (eraName (EraCrypto era)))
 
 -- | Enforce era to be at least the specified era at the type level. In other words
 -- compiler will produce type error when applied to eras prior to the specified era.

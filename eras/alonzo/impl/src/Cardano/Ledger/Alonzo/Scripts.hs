@@ -50,7 +50,7 @@ import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.BaseTypes (BoundedRational (unboundRational), NonNegativeInterval, ProtVer (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (Era (Crypto), EraScript, Phase (..), PhaseRep (..), PhasedScript (..), SomeScript)
+import Cardano.Ledger.Core (Era (EraCrypto), EraScript, Phase (..), PhaseRep (..), PhasedScript (..), SomeScript)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.SafeHash
@@ -319,8 +319,8 @@ hashCostModel ::
   Era e =>
   Proxy e ->
   CostModel ->
-  SafeHash (Crypto e) CostModel
-hashCostModel _proxy = hashWithCrypto (Proxy @(Crypto e))
+  SafeHash (EraCrypto e) CostModel
+hashCostModel _proxy = hashWithCrypto (Proxy @(EraCrypto e))
 
 getEvaluationContext :: CostModel -> PV1.EvaluationContext
 getEvaluationContext (CostModel _ _ ec) = ec
@@ -402,7 +402,7 @@ instance ToCBOR Prices where
 instance FromCBOR Prices where
   fromCBOR = decode $ RecD Prices <! From <! From
 
-instance forall era. (Typeable (Crypto era), Typeable era) => ToCBOR (Script era) where
+instance forall era. (Typeable (EraCrypto era), Typeable era) => ToCBOR (Script era) where
   toCBOR x = encode (encodeScript x)
 
 encodeScript :: (Typeable era) => Script era -> Encode 'Open (Script era)

@@ -127,11 +127,11 @@ myDiscard message = trace ("\nDiscarded trace: " ++ message) discard
 genTx ::
   forall era.
   ( EraGen era,
-    Mock (Crypto era),
+    Mock (EraCrypto era),
     Embed (EraRule "DELPL" era) (CERTS era),
     Environment (EraRule "DELPL" era) ~ DelplEnv era,
-    State (EraRule "DELPL" era) ~ DPState (Crypto era),
-    Signal (EraRule "DELPL" era) ~ DCert (Crypto era)
+    State (EraRule "DELPL" era) ~ DPState (EraCrypto era),
+    Signal (EraRule "DELPL" era) ~ DCert (EraCrypto era)
   ) =>
   GenEnv era ->
   LedgerEnv era ->
@@ -272,10 +272,10 @@ genTx
 -- the transaction balance.
 data Delta era = Delta
   { dfees :: Coin,
-    extraInputs :: Set.Set (TxIn (Crypto era)),
+    extraInputs :: Set.Set (TxIn (EraCrypto era)),
     extraWitnesses :: Witnesses era,
     change :: TxOut era,
-    deltaVKeys :: [KeyPair 'Witness (Crypto era)],
+    deltaVKeys :: [KeyPair 'Witness (EraCrypto era)],
     deltaScripts :: [(Script era, Script era)]
   }
 
@@ -307,7 +307,7 @@ deltaZero ::
   ) =>
   Coin ->
   Coin ->
-  Addr (Crypto era) ->
+  Addr (EraCrypto era) ->
   Delta era
 deltaZero initialfee minAda addr =
   Delta
@@ -325,7 +325,7 @@ encodedLen x = fromIntegral $ BSL.length (serialize x)
 -- transaction so that it will balance.
 genNextDelta ::
   forall era.
-  (EraGen era, Mock (Crypto era)) =>
+  (EraGen era, Mock (EraCrypto era)) =>
   ScriptInfo era ->
   UTxO era ->
   PParams era ->
@@ -443,11 +443,11 @@ genNextDelta
 genNextDeltaTilFixPoint ::
   forall era.
   ( EraGen era,
-    Mock (Crypto era)
+    Mock (EraCrypto era)
   ) =>
   ScriptInfo era ->
   Coin ->
-  KeyPairs (Crypto era) ->
+  KeyPairs (EraCrypto era) ->
   [(Script era, Script era)] ->
   UTxO era ->
   PParams era ->
@@ -467,13 +467,13 @@ genNextDeltaTilFixPoint scriptinfo initialfee keys scripts utxo pparams keySpace
 applyDelta ::
   forall era.
   ( EraGen era,
-    Mock (Crypto era)
+    Mock (EraCrypto era)
   ) =>
   UTxO era ->
   ScriptInfo era ->
   PParams era ->
-  [KeyPair 'Witness (Crypto era)] ->
-  Map (ScriptHash (Crypto era)) (Script era) ->
+  [KeyPair 'Witness (EraCrypto era)] ->
+  Map (ScriptHash (EraCrypto era)) (Script era) ->
   KeySpace era ->
   Tx era ->
   Delta era ->
@@ -524,12 +524,12 @@ fix n f d = do d1 <- f n d; if d1 == d then pure d else fix (n + 1) f d1
 
 converge ::
   forall era.
-  (EraGen era, Mock (Crypto era)) =>
+  (EraGen era, Mock (EraCrypto era)) =>
   ScriptInfo era ->
   Coin ->
-  [KeyPair 'Witness (Crypto era)] ->
-  Map (ScriptHash (Crypto era)) (Script era) ->
-  KeyPairs (Crypto era) ->
+  [KeyPair 'Witness (EraCrypto era)] ->
+  Map (ScriptHash (EraCrypto era)) (Script era) ->
+  KeyPairs (EraCrypto era) ->
   [(Script era, Script era)] ->
   UTxO era ->
   PParams era ->
@@ -606,7 +606,7 @@ mkScriptWits ::
   EraGen era =>
   [(Script era, Script era)] ->
   [(Script era, Script era)] ->
-  Map (ScriptHash (Crypto era)) (Script era)
+  Map (ScriptHash (EraCrypto era)) (Script era)
 mkScriptWits payScripts stakeScripts =
   Map.fromList $
     (hashPayScript <$> payScripts)
@@ -614,25 +614,25 @@ mkScriptWits payScripts stakeScripts =
   where
     hashPayScript ::
       (Script era, Script era) ->
-      (ScriptHash (Crypto era), Script era)
+      (ScriptHash (EraCrypto era), Script era)
     hashPayScript (payScript, _) =
       (hashScript @era payScript, payScript)
 
     hashStakeScript ::
       (Script era, Script era) ->
-      (ScriptHash (Crypto era), Script era)
+      (ScriptHash (EraCrypto era), Script era)
     hashStakeScript (_, sScript) =
       (hashScript @era sScript, sScript)
 
 mkTxWits ::
   forall era.
-  (EraGen era, Mock (Crypto era)) =>
+  (EraGen era, Mock (EraCrypto era)) =>
   (UTxO era, TxBody era, ScriptInfo era) ->
-  Map (KeyHash 'Payment (Crypto era)) (KeyPair 'Payment (Crypto era)) ->
-  Map (KeyHash 'Staking (Crypto era)) (KeyPair 'Staking (Crypto era)) ->
-  [KeyPair 'Witness (Crypto era)] ->
-  Map (ScriptHash (Crypto era)) (Script era) ->
-  SafeHash (Crypto era) EraIndependentTxBody ->
+  Map (KeyHash 'Payment (EraCrypto era)) (KeyPair 'Payment (EraCrypto era)) ->
+  Map (KeyHash 'Staking (EraCrypto era)) (KeyPair 'Staking (EraCrypto era)) ->
+  [KeyPair 'Witness (EraCrypto era)] ->
+  Map (ScriptHash (EraCrypto era)) (Script era) ->
+  SafeHash (EraCrypto era) EraIndependentTxBody ->
   Witnesses era
 mkTxWits
   (utxo, txbody, scriptinfo)
@@ -679,7 +679,7 @@ calcOutputsFromBalance ::
     Split (Value era)
   ) =>
   Value era ->
-  [Addr (Crypto era)] ->
+  [Addr (EraCrypto era)] ->
   Coin ->
   (Coin, StrictSeq (TxOut era))
 calcOutputsFromBalance balance_ addrs fee =
@@ -707,13 +707,13 @@ genInputs ::
   forall era.
   EraTxOut era =>
   (Int, Int) ->
-  Map (KeyHash 'Payment (Crypto era)) (KeyPair 'Payment (Crypto era)) ->
-  Map (ScriptHash (Crypto era)) (Script era, Script era) ->
+  Map (KeyHash 'Payment (EraCrypto era)) (KeyPair 'Payment (EraCrypto era)) ->
+  Map (ScriptHash (EraCrypto era)) (Script era, Script era) ->
   UTxO era ->
   Gen
-    ( [TxIn (Crypto era)],
+    ( [TxIn (EraCrypto era)],
       Value era,
-      ([KeyPair 'Witness (Crypto era)], [(Script era, Script era)])
+      ([KeyPair 'Witness (EraCrypto era)], [(Script era, Script era)])
     )
 genInputs (minNumGenInputs, maxNumGenInputs) keyHashMap payScriptMap (UTxO utxo) = do
   numInputs <- QC.choose (minNumGenInputs, maxNumGenInputs)
@@ -737,12 +737,12 @@ genInputs (minNumGenInputs, maxNumGenInputs) keyHashMap payScriptMap (UTxO utxo)
 genWithdrawals ::
   forall era.
   Constants ->
-  Map (ScriptHash (Crypto era)) (Script era, Script era) ->
-  Map (KeyHash 'Staking (Crypto era)) (KeyPair 'Staking (Crypto era)) ->
-  Map (Credential 'Staking (Crypto era)) Coin ->
+  Map (ScriptHash (EraCrypto era)) (Script era, Script era) ->
+  Map (KeyHash 'Staking (EraCrypto era)) (KeyPair 'Staking (EraCrypto era)) ->
+  Map (Credential 'Staking (EraCrypto era)) Coin ->
   Gen
-    ( [(RewardAcnt (Crypto era), Coin)],
-      ([KeyPair 'Witness (Crypto era)], [(Script era, Script era)])
+    ( [(RewardAcnt (EraCrypto era), Coin)],
+      ([KeyPair 'Witness (EraCrypto era)], [(Script era, Script era)])
     )
 genWithdrawals
   Constants
@@ -781,10 +781,10 @@ genWithdrawals
 -- | Collect witnesses needed for reward withdrawals.
 mkWdrlWits ::
   forall era.
-  Map (ScriptHash (Crypto era)) (Script era, Script era) ->
-  Map (KeyHash 'Staking (Crypto era)) (KeyPair 'Staking (Crypto era)) ->
-  Credential 'Staking (Crypto era) ->
-  Either (KeyPair 'Witness (Crypto era)) (Script era, Script era)
+  Map (ScriptHash (EraCrypto era)) (Script era, Script era) ->
+  Map (KeyHash 'Staking (EraCrypto era)) (KeyPair 'Staking (EraCrypto era)) ->
+  Credential 'Staking (EraCrypto era) ->
+  Either (KeyPair 'Witness (EraCrypto era)) (Script era, Script era)
 mkWdrlWits scriptsByStakeHash _ c@(ScriptHashObj _) =
   Right $
     findStakeScriptFromCred @era (asWitness c) scriptsByStakeHash
@@ -799,9 +799,9 @@ genRecipients ::
   forall era.
   EraGen era =>
   Int ->
-  KeyPairs (Crypto era) ->
+  KeyPairs (EraCrypto era) ->
   [(Script era, Script era)] ->
-  Gen [Addr (Crypto era)]
+  Gen [Addr (EraCrypto era)]
 genRecipients len keys scripts = do
   n' <-
     QC.frequency
@@ -843,7 +843,7 @@ genRecipients len keys scripts = do
 
   return (zipWith (Addr Testnet) payCreds stakeCreds')
   where
-    scriptToCred' :: Script era -> Credential kr (Crypto era)
+    scriptToCred' :: Script era -> Credential kr (EraCrypto era)
     scriptToCred' = ScriptHashObj . hashScript @era
 
 genPtrAddrs :: DState crypto -> [Addr crypto] -> Gen [Addr crypto]

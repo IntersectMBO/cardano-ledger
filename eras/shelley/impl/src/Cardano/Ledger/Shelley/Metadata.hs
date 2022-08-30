@@ -103,9 +103,9 @@ instance NFData (Metadata era) where
 instance SafeToHash (Metadata era) where
   originalBytes = LBS.toStrict . mdBytes
 
-instance c ~ Crypto era => HashAnnotated (Metadata era) EraIndependentAuxiliaryData c
+instance c ~ EraCrypto era => HashAnnotated (Metadata era) EraIndependentAuxiliaryData c
 
-hashMetadata :: Era era => Metadata era -> SafeHash (Crypto era) EraIndependentAuxiliaryData
+hashMetadata :: Era era => Metadata era -> SafeHash (EraCrypto era) EraIndependentAuxiliaryData
 hashMetadata = hashAnnotated
 
 pattern Metadata :: Map Word64 Metadatum -> Metadata era

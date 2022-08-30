@@ -64,11 +64,11 @@ txInfoOutV1 ::
   forall era.
   ( BabbageEraTxOut era,
     ExtendedUTxO era,
-    Value era ~ MaryValue (Crypto era)
+    Value era ~ MaryValue (EraCrypto era)
   ) =>
-  TxOutSource (Crypto era) ->
+  TxOutSource (EraCrypto era) ->
   TxOut era ->
-  Either (TranslationError (Crypto era)) PV1.TxOut
+  Either (TranslationError (EraCrypto era)) PV1.TxOut
 txInfoOutV1 os txOut = do
   let val = txOut ^. valueTxOutL
       referenceScript = txOut ^. referenceScriptTxOutL
@@ -82,7 +82,7 @@ txInfoOutV1 os txOut = do
     case Alonzo.transTxOutAddr txOut of
       Nothing -> Left (ByronTxOutInContext os)
       Just addr -> Right addr
-  Right (PV1.TxOut addr (Alonzo.transValue @(Crypto era) val) (Alonzo.transDataHash datahash))
+  Right (PV1.TxOut addr (Alonzo.transValue @(EraCrypto era) val) (Alonzo.transDataHash datahash))
 
 -- | Given a TxOut, translate it for V2 and return (Right transalation). It is
 --   possible the address part is a Bootstrap Address, in that case return Left.
@@ -90,11 +90,11 @@ txInfoOutV2 ::
   forall era.
   ( BabbageEraTxOut era,
     ExtendedUTxO era,
-    Value era ~ MaryValue (Crypto era)
+    Value era ~ MaryValue (EraCrypto era)
   ) =>
-  TxOutSource (Crypto era) ->
+  TxOutSource (EraCrypto era) ->
   TxOut era ->
-  Either (TranslationError (Crypto era)) PV2.TxOut
+  Either (TranslationError (EraCrypto era)) PV2.TxOut
 txInfoOutV2 os txOut = do
   let val = txOut ^. valueTxOutL
       referenceScript = transReferenceScript @era $ txOut ^. referenceScriptTxOutL
@@ -111,7 +111,7 @@ txInfoOutV2 os txOut = do
   case Alonzo.transTxOutAddr txOut of
     Nothing -> Left (ByronTxOutInContext os)
     Just ad ->
-      Right (PV2.TxOut ad (Alonzo.transValue @(Crypto era) val) datum referenceScript)
+      Right (PV2.TxOut ad (Alonzo.transValue @(EraCrypto era) val) datum referenceScript)
 
 -- | Given a TxIn, look it up in the UTxO. If it exists, translate it to the V1 context
 --   and return (Just translation). If does not exist in the UTxO, return Nothing.
@@ -119,11 +119,11 @@ txInfoInV1 ::
   forall era.
   ( BabbageEraTxOut era,
     ExtendedUTxO era,
-    Value era ~ MaryValue (Crypto era)
+    Value era ~ MaryValue (EraCrypto era)
   ) =>
   UTxO era ->
-  TxIn (Crypto era) ->
-  Either (TranslationError (Crypto era)) PV1.TxInInfo
+  TxIn (EraCrypto era) ->
+  Either (TranslationError (EraCrypto era)) PV1.TxInInfo
 txInfoInV1 (UTxO mp) txin =
   case Map.lookup txin mp of
     Nothing -> Left (TranslationLogicMissingInput txin)
@@ -137,11 +137,11 @@ txInfoInV2 ::
   forall era.
   ( BabbageEraTxOut era,
     ExtendedUTxO era,
-    Value era ~ MaryValue (Crypto era)
+    Value era ~ MaryValue (EraCrypto era)
   ) =>
   UTxO era ->
-  TxIn (Crypto era) ->
-  Either (TranslationError (Crypto era)) PV2.TxInInfo
+  TxIn (EraCrypto era) ->
+  Either (TranslationError (EraCrypto era)) PV2.TxInInfo
 txInfoInV2 (UTxO mp) txin =
   case Map.lookup txin mp of
     Nothing -> Left (TranslationLogicMissingInput txin)
@@ -156,7 +156,7 @@ transRedeemerPtr ::
   ShelleyEraTxBody era =>
   TxBody era ->
   (RdmrPtr, (Data era, ExUnits)) ->
-  Either (TranslationError (Crypto era)) (PV2.ScriptPurpose, PV2.Redeemer)
+  Either (TranslationError (EraCrypto era)) (PV2.ScriptPurpose, PV2.Redeemer)
 transRedeemerPtr txb (ptr, (d, _)) =
   case rdptrInv txb ptr of
     SNothing -> Left (RdmrPtrPointsToNothing ptr)
@@ -167,7 +167,7 @@ babbageTxInfo ::
   ( EraTx era,
     BabbageEraTxBody era,
     ExtendedUTxO era,
-    Value era ~ MaryValue (Crypto era),
+    Value era ~ MaryValue (EraCrypto era),
     Witnesses era ~ TxWitness era,
     HasField "_protocolVersion" (PParams era) ProtVer
   ) =>
@@ -177,7 +177,7 @@ babbageTxInfo ::
   SystemStart ->
   UTxO era ->
   Tx era ->
-  Either (TranslationError (Crypto era)) VersionedTxInfo
+  Either (TranslationError (EraCrypto era)) VersionedTxInfo
 babbageTxInfo pp lang ei sysS utxo tx = do
   timeRange <- left TimeTranslationPastHorizon $ Alonzo.transVITime pp ei sysS interval
   case lang of
@@ -194,7 +194,7 @@ babbageTxInfo pp lang ei sysS utxo tx = do
         PV1.TxInfo
           { PV1.txInfoInputs = inputs,
             PV1.txInfoOutputs = outputs,
-            PV1.txInfoFee = Alonzo.transValue (inject @(MaryValue (Crypto era)) fee),
+            PV1.txInfoFee = Alonzo.transValue (inject @(MaryValue (EraCrypto era)) fee),
             PV1.txInfoMint = Alonzo.transMultiAsset multiAsset,
             PV1.txInfoDCert = foldr (\c ans -> Alonzo.transDCert c : ans) [] (txBody ^. certsTxBodyL),
             PV1.txInfoWdrl = Map.toList (Alonzo.transWdrl (txBody ^. wdrlsTxBodyL)),
@@ -218,7 +218,7 @@ babbageTxInfo pp lang ei sysS utxo tx = do
           { PV2.txInfoInputs = inputs,
             PV2.txInfoOutputs = outputs,
             PV2.txInfoReferenceInputs = refInputs,
-            PV2.txInfoFee = Alonzo.transValue (inject @(MaryValue (Crypto era)) fee),
+            PV2.txInfoFee = Alonzo.transValue (inject @(MaryValue (EraCrypto era)) fee),
             PV2.txInfoMint = Alonzo.transMultiAsset multiAsset,
             PV2.txInfoDCert = foldr (\c ans -> Alonzo.transDCert c : ans) [] (txBody ^. certsTxBodyL),
             PV2.txInfoWdrl = PV2.fromList $ Map.toList (Alonzo.transWdrl (txBody ^. wdrlsTxBodyL)),

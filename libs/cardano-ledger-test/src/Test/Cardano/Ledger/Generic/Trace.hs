@@ -216,7 +216,7 @@ makeEpochState gstate ledgerstate =
       esNonMyopic = def
     }
 
-snaps :: EraTxOut era => LedgerState era -> SnapShots (Crypto era)
+snaps :: EraTxOut era => LedgerState era -> SnapShots (EraCrypto era)
 snaps (LedgerState UTxOState {_utxo = u, _fees = f} (DPState dstate pstate)) =
   SnapShots snap snap snap f
   where
@@ -282,10 +282,10 @@ raiseMockError slot (SlotNo next) epochstate pdfs txs GenState {..} =
                 -- ppString "Real Pool Params\n" <> ppMap pcKeyHash pcPoolParams poolParams
           ]
 
-badScripts :: Proof era -> [MockChainFailure era] -> Set.Set (ScriptHash (Crypto era))
+badScripts :: Proof era -> [MockChainFailure era] -> Set.Set (ScriptHash (EraCrypto era))
 badScripts proof xs = Fold.foldl' (\s mcf -> Set.union s (getw proof mcf)) Set.empty xs
   where
-    getw :: Proof era -> MockChainFailure era -> Set.Set (ScriptHash (Crypto era))
+    getw :: Proof era -> MockChainFailure era -> Set.Set (ScriptHash (EraCrypto era))
     getw
       (Babbage _)
       ( MockChainFromLedgersFailure

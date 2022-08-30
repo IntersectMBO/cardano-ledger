@@ -18,7 +18,7 @@ import Cardano.Binary (Encoding (..), ToCBOR (..), Tokens (..), serializeEncodin
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.BaseTypes (textToDns, textToUrl)
 import Cardano.Ledger.Crypto (HASH)
-import Cardano.Ledger.Era (Crypto (..))
+import Cardano.Ledger.Era (EraCrypto (..))
 import Cardano.Ledger.Keys (hashKey, hashVerKeyVRF, vKey)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import qualified Cardano.Ledger.Shelley.API as L
@@ -222,15 +222,15 @@ exampleShelleyGenesis =
     }
   where
     -- hash of the genesis verification key
-    genesisVerKeyHash :: L.KeyHash 'L.Genesis (Crypto era)
+    genesisVerKeyHash :: L.KeyHash 'L.Genesis (EraCrypto era)
     genesisVerKeyHash = L.KeyHash "38e7c5986a34f334e19b712c0aa525146dab8f0ff889b2ad16894241"
     -- hash of the delegators verififation key
     genDelegPair = L.GenDelegPair delegVerKeyHash delegVrfKeyHash
-    delegVerKeyHash :: L.KeyHash 'L.GenesisDelegate (Crypto era)
+    delegVerKeyHash :: L.KeyHash 'L.GenesisDelegate (EraCrypto era)
     delegVerKeyHash = L.KeyHash "e6960dd671ee8d73de1a83d1345b661165dcddeba99623beef2f157a"
-    delegVrfKeyHash :: Hash.Hash (HASH (Crypto era)) (L.VerKeyVRF (Crypto era))
+    delegVrfKeyHash :: Hash.Hash (HASH (EraCrypto era)) (L.VerKeyVRF (EraCrypto era))
     delegVrfKeyHash = "fce31c6f3187531ee4a39aa743c24d22275f415a8895e9cd22c30c8a25cdef0d"
-    initialFundedAddress :: L.Addr (Crypto era)
+    initialFundedAddress :: L.Addr (EraCrypto era)
     initialFundedAddress =
       L.Addr
         L.Testnet
@@ -256,7 +256,7 @@ exampleShelleyGenesis =
           L.SingleHostName L.SNothing (fromJust $ textToDns "cool.domain.com"),
           L.MultiHostName (fromJust $ textToDns "cool.domain.com")
         ]
-    poolParams :: L.PoolParams (Crypto era)
+    poolParams :: L.PoolParams (EraCrypto era)
     poolParams =
       L.PoolParams
         { L._poolId = hashKey . snd $ mkKeyPair (RawSeed 1 0 0 0 1),

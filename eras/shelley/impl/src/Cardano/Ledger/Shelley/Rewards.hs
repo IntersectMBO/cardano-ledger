@@ -329,15 +329,15 @@ mkPoolRewardInfo ::
   ) =>
   PParams era ->
   Coin ->
-  BlocksMade (Crypto era) ->
+  BlocksMade (EraCrypto era) ->
   Natural ->
-  Stake (Crypto era) ->
-  VMap.VMap VMap.VB VMap.VB (Credential 'Staking (Crypto era)) (KeyHash 'StakePool (Crypto era)) ->
-  Map (KeyHash 'StakePool (Crypto era)) Coin ->
+  Stake (EraCrypto era) ->
+  VMap.VMap VMap.VB VMap.VB (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era)) ->
+  Map (KeyHash 'StakePool (EraCrypto era)) Coin ->
   Coin ->
   Coin ->
-  PoolParams (Crypto era) ->
-  Either StakeShare (PoolRewardInfo (Crypto era))
+  PoolParams (EraCrypto era) ->
+  Either StakeShare (PoolRewardInfo (EraCrypto era))
 mkPoolRewardInfo
   pp
   r

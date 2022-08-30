@@ -188,7 +188,7 @@ txbSimpleUTxO =
     }
 
 -- | to use makeWitnessesVKey, we need to know we can sign the TxBody for that (ShelleyEra c)
-type BodySignable era = DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody)
+type BodySignable era = DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
 
 txSimpleUTxO :: forall c. (Cr.Crypto c, BodySignable (ShelleyEra c)) => ShelleyTx (ShelleyEra c)
 txSimpleUTxO =
@@ -335,7 +335,7 @@ txDeregisterStake =
           { addrWits =
               makeWitnessesVKey
                 (hashAnnotated $ txbDeregisterStake @c)
-                [alicePay @(Crypto (ShelleyEra c))]
+                [alicePay @(EraCrypto (ShelleyEra c))]
           },
       auxiliaryData = SNothing
     }

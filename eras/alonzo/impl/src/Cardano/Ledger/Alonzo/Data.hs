@@ -117,7 +117,7 @@ newtype Data era = DataConstr (MemoBytes PlutusData era)
   deriving (Eq, Generic)
   deriving newtype (SafeToHash, ToCBOR, NFData)
 
-deriving instance HashAlgorithm (HASH (Crypto era)) => Show (Data era)
+deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (Data era)
 
 instance (Typeable era, Era era) => FromCBOR (Annotator (Data era)) where
   fromCBOR = do
@@ -126,7 +126,7 @@ instance (Typeable era, Era era) => FromCBOR (Annotator (Data era)) where
 
 type instance MemoHashIndex PlutusData = EraIndependentData
 
-instance (Crypto era ~ c) => HashAnnotated (Data era) EraIndependentData c where
+instance (EraCrypto era ~ c) => HashAnnotated (Data era) EraIndependentData c where
   hashAnnotated (DataConstr mb) = mbHash mb
 
 instance Typeable era => NoThunks (Data era)
@@ -149,7 +149,7 @@ getPlutusData (DataConstr (Memo (PlutusData d) _)) = d
 newtype BinaryData era = BinaryData ShortByteString
   deriving newtype (Eq, Ord, Show, SafeToHash)
 
-instance (Crypto era ~ c) => HashAnnotated (BinaryData era) EraIndependentData c
+instance (EraCrypto era ~ c) => HashAnnotated (BinaryData era) EraIndependentData c
 
 instance Typeable era => ToCBOR (BinaryData era) where
   toCBOR (BinaryData sbs) = encodeTag 24 <> toCBOR sbs
@@ -185,12 +185,12 @@ binaryDataToData binaryData =
 dataToBinaryData :: Era era => Data era -> BinaryData era
 dataToBinaryData (DataConstr (Memo _ sbs)) = BinaryData sbs
 
-hashBinaryData :: Era era => BinaryData era -> DataHash (Crypto era)
+hashBinaryData :: Era era => BinaryData era -> DataHash (EraCrypto era)
 hashBinaryData = hashAnnotated
 
 -- =============================================================================
 
-hashData :: Era era => Data era -> DataHash (Crypto era)
+hashData :: Era era => Data era -> DataHash (EraCrypto era)
 hashData = hashAnnotated
 
 -- Size of the datum hash attached to the output (could be Nothing)
@@ -209,7 +209,7 @@ instance (CC.Crypto c) => HeapWords (StrictMaybe (DataHash c)) where
 -- both. It can also be neither one of them.
 data Datum era
   = NoDatum
-  | DatumHash !(DataHash (Crypto era))
+  | DatumHash !(DataHash (EraCrypto era))
   | Datum !(BinaryData era)
   deriving (Eq, Ord, Show)
 
@@ -227,7 +227,7 @@ instance Era era => FromCBOR (Datum era) where
       decodeDatum k = Invalid k
 
 -- | Get the Hash of the datum.
-datumDataHash :: Era era => Datum era -> StrictMaybe (DataHash (Crypto era))
+datumDataHash :: Era era => Datum era -> StrictMaybe (DataHash (EraCrypto era))
 datumDataHash = \case
   NoDatum -> SNothing
   DatumHash dh -> SJust dh
@@ -257,7 +257,7 @@ instance
   ( Typeable era,
     Script era ~ AlonzoScript era,
     ToCBOR (Script era),
-    Typeable (Crypto era)
+    Typeable (EraCrypto era)
   ) =>
   ToCBOR (AuxiliaryDataRaw era)
   where
@@ -379,14 +379,14 @@ validateAlonzoAuxiliaryData pv (AlonzoAuxiliaryData metadata scrips) =
   all validMetadatum metadata
     && all (validScript pv) scrips
 
-instance (Crypto era ~ c) => HashAnnotated (AuxiliaryData era) EraIndependentAuxiliaryData c where
+instance (EraCrypto era ~ c) => HashAnnotated (AuxiliaryData era) EraIndependentAuxiliaryData c where
   hashAnnotated (AuxiliaryDataConstr mb) = mbHash mb
 
 deriving newtype instance NFData (Script era) => NFData (AuxiliaryData era)
 
 deriving instance Eq (AuxiliaryData era)
 
-deriving instance (Show (Script era), HashAlgorithm (HASH (Crypto era))) => Show (AuxiliaryData era)
+deriving instance (Show (Script era), HashAlgorithm (HASH (EraCrypto era))) => Show (AuxiliaryData era)
 
 type instance MemoHashIndex AuxiliaryDataRaw = EraIndependentAuxiliaryData
 

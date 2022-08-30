@@ -35,7 +35,7 @@ class (EraScript era, Show (Script era)) => Scriptic era where
   always :: Natural -> Proof era -> Script era
   alwaysAlt :: Natural -> Proof era -> Script era
   never :: Natural -> Proof era -> Script era
-  require :: KeyHash 'Witness (Crypto era) -> Proof era -> Script era
+  require :: KeyHash 'Witness (EraCrypto era) -> Proof era -> Script era
   allOf :: [Proof era -> Script era] -> Proof era -> Script era
   anyOf :: [Proof era -> Script era] -> Proof era -> Script era
   mOf :: Int -> [Proof era -> Script era] -> Proof era -> Script era
@@ -45,7 +45,7 @@ class Scriptic era => PostShelley era where
   after :: Int -> Proof era -> Script era
 
 class HasTokens era where
-  forge :: Integer -> Script era -> MultiAsset (Crypto era)
+  forge :: Integer -> Script era -> MultiAsset (EraCrypto era)
 
 instance CC.Crypto c => Scriptic (ShelleyEra c) where
   never _ (Shelley _) = Multi.RequireAnyOf mempty -- always False

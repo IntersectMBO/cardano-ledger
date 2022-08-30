@@ -19,7 +19,7 @@ module Cardano.Ledger.Allegra
   )
 where
 
-import Cardano.Ledger.Core (Era (Crypto))
+import Cardano.Ledger.Core (EraCrypto)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys (DSignable)
@@ -64,7 +64,7 @@ type Self c = ShelleyMAEra 'Allegra c
 
 {-# DEPRECATED Self "Use `MaryEra` instead" #-}
 
-type Script era = Timelock (Crypto era)
+type Script era = Timelock (EraCrypto era)
 
 {-# DEPRECATED Script "Use `Timelock` instead" #-}
 
@@ -72,7 +72,7 @@ type Value era = Coin
 
 {-# DEPRECATED Value "Use `Coin` instead" #-}
 
-type Witnesses era = ShelleyWitnesses (Crypto era)
+type Witnesses era = ShelleyWitnesses (EraCrypto era)
 
 {-# DEPRECATED Witnesses "Use `Timelock` instead" #-}
 

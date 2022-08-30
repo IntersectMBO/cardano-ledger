@@ -478,8 +478,8 @@ getDataMap ::
   forall era.
   Era era =>
   ScriptInfo era ->
-  Map (ScriptHash (Crypto era)) (Script era) ->
-  Map (DataHash (Crypto era)) (Data era)
+  Map (ScriptHash (EraCrypto era)) (Script era) ->
+  Map (DataHash (EraCrypto era)) (Data era)
 getDataMap (scriptInfo3, _) = Map.foldlWithKey' accum Map.empty
   where
     accum ans hsh _script =
@@ -535,7 +535,7 @@ someLeaf ::
   forall era.
   Era era =>
   Proxy era ->
-  KeyHash 'Witness (Crypto era) ->
+  KeyHash 'Witness (EraCrypto era) ->
   AlonzoScript era
 someLeaf _proxy x =
   let n = hash (serializeEncoding' (toCBOR x)) -- We don't really care about the hash, we only
@@ -551,7 +551,7 @@ someLeaf _proxy x =
 langsUsed ::
   forall era.
   (Script era ~ AlonzoScript era, EraScript era) =>
-  Map.Map (ScriptHash (Crypto era)) (AlonzoScript era) ->
+  Map.Map (ScriptHash (EraCrypto era)) (AlonzoScript era) ->
   Set Language
 langsUsed hashScriptMap =
   Set.fromList

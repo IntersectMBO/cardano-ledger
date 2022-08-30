@@ -72,10 +72,10 @@ import Lens.Micro
 -- | Incrementally add the inserts 'utxoAdd' and the deletes 'utxoDel' to the IncrementalStake.
 updateStakeDistribution ::
   EraTxOut era =>
-  IncrementalStake (Crypto era) ->
+  IncrementalStake (EraCrypto era) ->
   UTxO era ->
   UTxO era ->
-  IncrementalStake (Crypto era)
+  IncrementalStake (EraCrypto era)
 updateStakeDistribution incStake0 utxoDel utxoAdd = incStake2
   where
     incStake1 = incrementalAggregateUtxoCoinByCredential id utxoAdd incStake0
@@ -92,8 +92,8 @@ incrementalAggregateUtxoCoinByCredential ::
   EraTxOut era =>
   (Coin -> Coin) ->
   UTxO era ->
-  IncrementalStake (Crypto era) ->
-  IncrementalStake (Crypto era)
+  IncrementalStake (EraCrypto era) ->
+  IncrementalStake (EraCrypto era)
 incrementalAggregateUtxoCoinByCredential mode (UTxO u) initial =
   Map.foldl' accum initial u
   where
@@ -115,11 +115,11 @@ incrementalAggregateUtxoCoinByCredential mode (UTxO u) initial =
 filterAllRewards ::
   ( HasField "_protocolVersion" (PParams era) ProtVer
   ) =>
-  Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))) ->
+  Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))) ->
   EpochState era ->
-  ( Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))),
-    Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))),
-    Set (Credential 'Staking (Crypto era)),
+  ( Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))),
+    Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))),
+    Set (Credential 'Staking (EraCrypto era)),
     Coin
   )
 filterAllRewards rs' (EpochState _as _ss ls pr _pp _nm) =
@@ -189,7 +189,7 @@ smartUTxOState utxo c1 c2 st =
 applyRUpd ::
   ( HasField "_protocolVersion" (PParams era) ProtVer
   ) =>
-  RewardUpdate (Crypto era) ->
+  RewardUpdate (EraCrypto era) ->
   EpochState era ->
   EpochState era
 applyRUpd ru es =
@@ -200,12 +200,12 @@ applyRUpd ru es =
 applyRUpd' ::
   ( HasField "_protocolVersion" (PParams era) ProtVer
   ) =>
-  RewardUpdate (Crypto era) ->
+  RewardUpdate (EraCrypto era) ->
   EpochState era ->
   ( EpochState era,
-    Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))),
-    Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))),
-    Set (Credential 'Staking (Crypto era))
+    Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))),
+    Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))),
+    Set (Credential 'Staking (EraCrypto era))
   )
 applyRUpd'
   ru

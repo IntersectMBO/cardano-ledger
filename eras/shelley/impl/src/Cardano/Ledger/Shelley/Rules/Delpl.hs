@@ -94,17 +94,17 @@ instance
   ( Era era,
     Embed (EraRule "DELEG" era) (ShelleyDELPL era),
     Environment (EraRule "DELEG" era) ~ DelegEnv era,
-    State (EraRule "DELEG" era) ~ DState (Crypto era),
-    Signal (EraRule "DELEG" era) ~ DCert (Crypto era),
+    State (EraRule "DELEG" era) ~ DState (EraCrypto era),
+    Signal (EraRule "DELEG" era) ~ DCert (EraCrypto era),
     Embed (EraRule "POOL" era) (ShelleyDELPL era),
     Environment (EraRule "POOL" era) ~ PoolEnv era,
-    State (EraRule "POOL" era) ~ PState (Crypto era),
-    Signal (EraRule "POOL" era) ~ DCert (Crypto era)
+    State (EraRule "POOL" era) ~ PState (EraCrypto era),
+    Signal (EraRule "POOL" era) ~ DCert (EraCrypto era)
   ) =>
   STS (ShelleyDELPL era)
   where
-  type State (ShelleyDELPL era) = DPState (Crypto era)
-  type Signal (ShelleyDELPL era) = DCert (Crypto era)
+  type State (ShelleyDELPL era) = DPState (EraCrypto era)
+  type Signal (ShelleyDELPL era) = DCert (EraCrypto era)
   type Environment (ShelleyDELPL era) = DelplEnv era
   type BaseM (ShelleyDELPL era) = ShelleyBase
   type PredicateFailure (ShelleyDELPL era) = ShelleyDelplPredFailure era
@@ -153,12 +153,12 @@ delplTransition ::
   forall era.
   ( Embed (EraRule "DELEG" era) (ShelleyDELPL era),
     Environment (EraRule "DELEG" era) ~ DelegEnv era,
-    State (EraRule "DELEG" era) ~ DState (Crypto era),
-    Signal (EraRule "DELEG" era) ~ DCert (Crypto era),
+    State (EraRule "DELEG" era) ~ DState (EraCrypto era),
+    Signal (EraRule "DELEG" era) ~ DCert (EraCrypto era),
     Embed (EraRule "POOL" era) (ShelleyDELPL era),
     Environment (EraRule "POOL" era) ~ PoolEnv era,
-    State (EraRule "POOL" era) ~ PState (Crypto era),
-    Signal (EraRule "POOL" era) ~ DCert (Crypto era)
+    State (EraRule "POOL" era) ~ PState (EraCrypto era),
+    Signal (EraRule "POOL" era) ~ DCert (EraCrypto era)
   ) =>
   TransitionRule (ShelleyDELPL era)
 delplTransition = do

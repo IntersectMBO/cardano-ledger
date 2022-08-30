@@ -54,7 +54,7 @@ import Cardano.Ledger.BaseTypes
   )
 import qualified Cardano.Ledger.BaseTypes as BT
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (Era (Crypto), EraPParams (applyPPUpdates))
+import Cardano.Ledger.Core (Era (EraCrypto), EraPParams (applyPPUpdates))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.HKD (HKD, HKDFunctor (..))
@@ -435,7 +435,7 @@ instance (Era era) => FromCBOR (PParamsUpdate era) where
 
 -- | Update operation for protocol parameters structure @PParams
 newtype ProposedPPUpdates era
-  = ProposedPPUpdates (Map (KeyHash 'Genesis (Crypto era)) (Core.PParamsUpdate era))
+  = ProposedPPUpdates (Map (KeyHash 'Genesis (EraCrypto era)) (Core.PParamsUpdate era))
   deriving (Generic)
 
 deriving instance Eq (Core.PParamsUpdate era) => Eq (ProposedPPUpdates era)

@@ -58,8 +58,8 @@ data ShelleyNewppState era
 
 data NewppEnv era
   = NewppEnv
-      (DState (Crypto era))
-      (PState (Crypto era))
+      (DState (EraCrypto era))
+      (PState (EraCrypto era))
       (UTxOState era)
       AccountState
 

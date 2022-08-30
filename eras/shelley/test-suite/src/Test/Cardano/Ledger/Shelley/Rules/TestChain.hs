@@ -816,7 +816,7 @@ requiredMSigSignaturesSubset SourceSignalTarget {source = chainSt, signal = bloc
 
     existsReqKeyComb keyHashes msig =
       any (\kl -> Set.fromList kl `Set.isSubsetOf` keyHashes) (scriptKeyCombinations (Proxy @era) msig)
-    keyHashSet :: Tx era -> Set (KeyHash 'Witness (Crypto era))
+    keyHashSet :: Tx era -> Set (KeyHash 'Witness (EraCrypto era))
     keyHashSet tx_ =
       Set.map witVKeyHash (tx_ ^. witsTxL . addrWitsL)
 
@@ -857,7 +857,7 @@ noDoubleSpend SourceSignalTarget {signal} =
 withdrawals ::
   forall era.
   EraGen era =>
-  Block (BHeader (Crypto era)) era ->
+  Block (BHeader (EraCrypto era)) era ->
   Coin
 withdrawals (UnserialisedBlock _ txseq) =
   foldl'
@@ -1030,7 +1030,7 @@ ledgerTraceFromBlock ::
     TestingLedger era ledger
   ) =>
   ChainState era ->
-  Block (BHeader (Crypto era)) era ->
+  Block (BHeader (EraCrypto era)) era ->
   (ChainState era, Trace ledger)
 ledgerTraceFromBlock chainSt block =
   ( tickedChainSt,
@@ -1050,7 +1050,7 @@ ledgerTraceFromBlockWithRestrictedUTxO ::
     TestingLedger era ledger
   ) =>
   ChainState era ->
-  Block (BHeader (Crypto era)) era ->
+  Block (BHeader (EraCrypto era)) era ->
   (UTxO era, Trace ledger)
 ledgerTraceFromBlockWithRestrictedUTxO chainSt block =
   ( UTxO irrelevantUTxO,
@@ -1075,7 +1075,7 @@ poolTraceFromBlock ::
     HasField "_minPoolCost" (PParams era) Coin
   ) =>
   ChainState era ->
-  Block (BHeader (Crypto era)) era ->
+  Block (BHeader (EraCrypto era)) era ->
   (ChainState era, Trace (ShelleyPOOL era))
 poolTraceFromBlock chainSt block =
   ( tickedChainSt,
@@ -1103,7 +1103,7 @@ delegTraceFromBlock ::
     EraSegWits era
   ) =>
   ChainState era ->
-  Block (BHeader (Crypto era)) era ->
+  Block (BHeader (EraCrypto era)) era ->
   (DelegEnv era, Trace (ShelleyDELEG era))
 delegTraceFromBlock chainSt block =
   ( delegEnv,
@@ -1138,7 +1138,7 @@ ledgerTraceBase ::
     ApplyBlock era
   ) =>
   ChainState era ->
-  Block (BHeader (Crypto era)) era ->
+  Block (BHeader (EraCrypto era)) era ->
   (ChainState era, LedgerEnv era, LedgerState era, [Tx era])
 ledgerTraceBase chainSt block =
   ( tickedChainSt,
@@ -1292,7 +1292,7 @@ testIncrementalStake ::
 testIncrementalStake _ (LedgerState (UTxOState utxo _ _ _ incStake) (DPState dstate pstate)) =
   let stake = stakeDistr @era utxo dstate pstate
 
-      istake = incrementalStakeDistr @(Crypto era) incStake dstate pstate
+      istake = incrementalStakeDistr @(EraCrypto era) incStake dstate pstate
    in counterexample
         ( "\nIncremental stake distribution does not match old style stake distribution"
             ++ tersediffincremental "differences: Old vs Incremental" (_stake stake) (_stake istake)
@@ -1321,9 +1321,9 @@ stakeDistr ::
   forall era.
   EraTxOut era =>
   UTxO era ->
-  DState (Crypto era) ->
-  PState (Crypto era) ->
-  SnapShot (Crypto era)
+  DState (EraCrypto era) ->
+  PState (EraCrypto era) ->
+  SnapShot (EraCrypto era)
 stakeDistr u ds ps =
   SnapShot
     (Stake $ VMap.fromMap (compactCoinOrError <$> eval (dom activeDelegs ◁ stakeRelation)))
@@ -1334,9 +1334,9 @@ stakeDistr u ds ps =
     delegs = delegations ds
     ptrs' = ptrsMap ds
     PState poolParams _ _ = ps
-    stakeRelation :: Map (Credential 'Staking (Crypto era)) Coin
+    stakeRelation :: Map (Credential 'Staking (EraCrypto era)) Coin
     stakeRelation = aggregateUtxoCoinByCredential ptrs' u (UM.unUnify rewards')
-    activeDelegs :: ViewMap (Crypto era) (Credential 'Staking (Crypto era)) (KeyHash 'StakePool (Crypto era))
+    activeDelegs :: ViewMap (EraCrypto era) (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))
     activeDelegs = eval ((dom rewards' ◁ delegs) ▷ dom poolParams)
     compactCoinOrError c =
       case toCompact c of
@@ -1348,10 +1348,10 @@ stakeDistr u ds ps =
 aggregateUtxoCoinByCredential ::
   forall era.
   EraTxOut era =>
-  Map Ptr (Credential 'Staking (Crypto era)) ->
+  Map Ptr (Credential 'Staking (EraCrypto era)) ->
   UTxO era ->
-  Map (Credential 'Staking (Crypto era)) Coin ->
-  Map (Credential 'Staking (Crypto era)) Coin
+  Map (Credential 'Staking (EraCrypto era)) Coin ->
+  Map (Credential 'Staking (EraCrypto era)) Coin
 aggregateUtxoCoinByCredential ptrs (UTxO u) initial =
   Map.foldl' accum initial u
   where

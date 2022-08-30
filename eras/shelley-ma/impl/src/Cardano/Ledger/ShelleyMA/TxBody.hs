@@ -104,15 +104,15 @@ import NoThunks.Class (NoThunks (..))
 -- =======================================================
 
 data TxBodyRaw era = TxBodyRaw
-  { inputs :: !(Set (TxIn (Crypto era))),
+  { inputs :: !(Set (TxIn (EraCrypto era))),
     outputs :: !(StrictSeq (ShelleyTxOut era)),
-    certs :: !(StrictSeq (DCert (Crypto era))),
-    wdrls :: !(Wdrl (Crypto era)),
+    certs :: !(StrictSeq (DCert (EraCrypto era))),
+    wdrls :: !(Wdrl (EraCrypto era)),
     txfee :: !Coin,
     vldt :: !ValidityInterval, -- imported from Timelocks
     update :: !(StrictMaybe (Update era)),
-    adHash :: !(StrictMaybe (AuxiliaryDataHash (Crypto era))),
-    mint :: !(MultiAsset (Crypto era))
+    adHash :: !(StrictMaybe (AuxiliaryDataHash (EraCrypto era))),
+    mint :: !(MultiAsset (EraCrypto era))
   }
 
 deriving instance
@@ -235,22 +235,22 @@ deriving via
 
 type instance MemoHashIndex TxBodyRaw = EraIndependentTxBody
 
-instance (c ~ Crypto era, Era era) => HashAnnotated (MATxBody era) EraIndependentTxBody c where
+instance (c ~ EraCrypto era, Era era) => HashAnnotated (MATxBody era) EraIndependentTxBody c where
   hashAnnotated (TxBodyConstr mb) = mbHash mb
 
 -- Make a Pattern so the newtype and the MemoBytes are hidden
 
 pattern MATxBody ::
   (EraTxOut era, ToCBOR (PParamsUpdate era)) =>
-  Set (TxIn (Crypto era)) ->
+  Set (TxIn (EraCrypto era)) ->
   StrictSeq (ShelleyTxOut era) ->
-  StrictSeq (DCert (Crypto era)) ->
-  Wdrl (Crypto era) ->
+  StrictSeq (DCert (EraCrypto era)) ->
+  Wdrl (EraCrypto era) ->
   Coin ->
   ValidityInterval ->
   StrictMaybe (Update era) ->
-  StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
-  MultiAsset (Crypto era) ->
+  StrictMaybe (AuxiliaryDataHash (EraCrypto era)) ->
+  MultiAsset (EraCrypto era) ->
   MATxBody era
 pattern MATxBody inputs outputs certs wdrls txfee vldt update adHash mint <-
   TxBodyConstr
@@ -276,15 +276,15 @@ mkMATxBody = TxBodyConstr . memoBytes . txSparse
 -- projection functions.
 pattern TxBody' ::
   Era era =>
-  Set (TxIn (Crypto era)) ->
+  Set (TxIn (EraCrypto era)) ->
   StrictSeq (ShelleyTxOut era) ->
-  StrictSeq (DCert (Crypto era)) ->
-  Wdrl (Crypto era) ->
+  StrictSeq (DCert (EraCrypto era)) ->
+  Wdrl (EraCrypto era) ->
   Coin ->
   ValidityInterval ->
   StrictMaybe (Update era) ->
-  StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
-  MultiAsset (Crypto era) ->
+  StrictMaybe (AuxiliaryDataHash (EraCrypto era)) ->
+  MultiAsset (EraCrypto era) ->
   MATxBody era
 pattern TxBody' {inputs', outputs', certs', wdrls', txfee', vldt', update', adHash', mint'} <-
   TxBodyConstr
@@ -372,7 +372,7 @@ class
   where
   vldtTxBodyL :: Lens' (Core.TxBody era) ValidityInterval
 
-  mintTxBodyL :: Lens' (Core.TxBody era) (MultiAsset (Crypto era))
+  mintTxBodyL :: Lens' (Core.TxBody era) (MultiAsset (EraCrypto era))
 
   mintValueTxBodyF :: SimpleGetter (Core.TxBody era) (Core.Value era)
 

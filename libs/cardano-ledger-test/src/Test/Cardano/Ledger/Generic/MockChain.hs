@@ -16,7 +16,7 @@ module Test.Cardano.Ledger.Generic.MockChain where
 import Cardano.Ledger.BaseTypes (BlocksMade (..), ShelleyBase)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Era (Era (Crypto))
+import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Pretty
   ( PDoc,
@@ -88,7 +88,7 @@ data MockChainEvent era
   | MockChainFromLedgersEvent !(ShelleyLedgersEvent era)
 
 data MockBlock era = MockBlock
-  { mbIssuer :: !(KeyHash 'StakePool (Crypto era)),
+  { mbIssuer :: !(KeyHash 'StakePool (EraCrypto era)),
     mbSlot :: !SlotNo,
     mbTrans :: !(StrictSeq (Core.Tx era))
   }
@@ -100,7 +100,7 @@ data MockChainState era = MockChainState
   }
 
 deriving instance
-  ( CC.Crypto (Crypto era),
+  ( CC.Crypto (EraCrypto era),
     Eq (Core.TxOut era),
     Eq (Core.PParams era),
     Eq (State (Core.EraRule "PPUP" era)),
@@ -186,7 +186,7 @@ chainTransition = do
 instance
   ( STS (ShelleyTICK era),
     Signal (Core.EraRule "RUPD" era) ~ SlotNo,
-    State (Core.EraRule "RUPD" era) ~ StrictMaybe (PulsingRewUpdate (Crypto era)),
+    State (Core.EraRule "RUPD" era) ~ StrictMaybe (PulsingRewUpdate (EraCrypto era)),
     Environment (Core.EraRule "RUPD" era) ~ RupdEnv era,
     State (Core.EraRule "NEWEPOCH" era) ~ NewEpochState era,
     Signal (Core.EraRule "NEWEPOCH" era) ~ EpochNo,

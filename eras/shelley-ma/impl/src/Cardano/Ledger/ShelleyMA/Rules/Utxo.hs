@@ -126,7 +126,7 @@ scaledMinDeposit v (Coin mv)
 
 data ShelleyMAUtxoPredFailure era
   = BadInputsUTxO
-      !(Set (TxIn (Crypto era))) -- The bad transaction inputs
+      !(Set (TxIn (EraCrypto era))) -- The bad transaction inputs
   | OutsideValidityIntervalUTxO
       !ValidityInterval -- transaction's validity interval
       !SlotNo -- current slot
@@ -142,10 +142,10 @@ data ShelleyMAUtxoPredFailure era
       !(Value era) -- the Coin produced by this transaction
   | WrongNetwork
       !Network -- the expected network id
-      !(Set (Addr (Crypto era))) -- the set of addresses with incorrect network IDs
+      !(Set (Addr (EraCrypto era))) -- the set of addresses with incorrect network IDs
   | WrongNetworkWithdrawal
       !Network -- the expected network id
-      !(Set (RewardAcnt (Crypto era))) -- the set of reward addresses with incorrect network IDs
+      !(Set (RewardAcnt (EraCrypto era))) -- the set of reward addresses with incorrect network IDs
   | OutputTooSmallUTxO
       ![TxOut era] -- list of supplied transaction outputs that are too small
   | UpdateFailure !(PredicateFailure (EraRule "PPUP" era)) -- Subtransition Failures
@@ -349,7 +349,7 @@ validateValueNotConservedUTxO ::
   ) =>
   PParams era ->
   UTxO era ->
-  Map.Map (KeyHash 'StakePool (Crypto era)) a ->
+  Map.Map (KeyHash 'StakePool (EraCrypto era)) a ->
   TxBody era ->
   Test (ShelleyMAUtxoPredFailure era)
 validateValueNotConservedUTxO pp utxo stakepools txb =
@@ -405,7 +405,7 @@ instance
 --------------------------------------------------------------------------------
 instance
   ( Typeable era,
-    CC.Crypto (Crypto era),
+    CC.Crypto (EraCrypto era),
     ToCBOR (Value era),
     ToCBOR (TxOut era),
     ToCBOR (Shelley.UTxOState era),

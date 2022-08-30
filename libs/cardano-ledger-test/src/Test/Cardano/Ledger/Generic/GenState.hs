@@ -175,22 +175,22 @@ data GenEnv era = GenEnv
 
 data GenState era = GenState
   { gsValidityInterval :: !ValidityInterval,
-    gsKeys :: !(Map (KeyHash 'Witness (Crypto era)) (KeyPair 'Witness (Crypto era))),
-    gsScripts :: !(Map (ScriptHash (Crypto era)) (Script era)),
-    gsPlutusScripts :: !(Map (ScriptHash (Crypto era), Tag) (IsValid, Script era)),
-    gsDatums :: !(Map (DataHash (Crypto era)) (Data era)),
-    gsVI :: !(Map ValidityInterval (Set (ScriptHash (Crypto era)))),
+    gsKeys :: !(Map (KeyHash 'Witness (EraCrypto era)) (KeyPair 'Witness (EraCrypto era))),
+    gsScripts :: !(Map (ScriptHash (EraCrypto era)) (Script era)),
+    gsPlutusScripts :: !(Map (ScriptHash (EraCrypto era), Tag) (IsValid, Script era)),
+    gsDatums :: !(Map (DataHash (EraCrypto era)) (Data era)),
+    gsVI :: !(Map ValidityInterval (Set (ScriptHash (EraCrypto era)))),
     gsModel :: !(ModelNewEpochState era),
-    gsInitialUtxo :: !(Map (TxIn (Crypto era)) (TxOut era)),
-    gsInitialRewards :: !(Map (Credential 'Staking (Crypto era)) Coin),
-    gsInitialDelegations :: !(Map (Credential 'Staking (Crypto era)) (KeyHash 'StakePool (Crypto era))),
-    gsInitialPoolParams :: !(Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era))),
-    gsInitialPoolDistr :: !(Map (KeyHash 'StakePool (Crypto era)) (IndividualPoolStake (Crypto era))),
+    gsInitialUtxo :: !(Map (TxIn (EraCrypto era)) (TxOut era)),
+    gsInitialRewards :: !(Map (Credential 'Staking (EraCrypto era)) Coin),
+    gsInitialDelegations :: !(Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))),
+    gsInitialPoolParams :: !(Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era))),
+    gsInitialPoolDistr :: !(Map (KeyHash 'StakePool (EraCrypto era)) (IndividualPoolStake (EraCrypto era))),
     -- Stable fields are stable from initialization to the end of the generation process
-    gsStablePools :: !(Set (KeyHash 'StakePool (Crypto era))),
-    gsStableDelegators :: !(Set (StakeCredential (Crypto era))),
-    gsAvoidCred :: !(Set (Credential 'Staking (Crypto era))),
-    gsAvoidKey :: !(Set (KeyHash 'StakePool (Crypto era))),
+    gsStablePools :: !(Set (KeyHash 'StakePool (EraCrypto era))),
+    gsStableDelegators :: !(Set (StakeCredential (EraCrypto era))),
+    gsAvoidCred :: !(Set (Credential 'Staking (EraCrypto era))),
+    gsAvoidKey :: !(Set (KeyHash 'StakePool (EraCrypto era))),
     gsProof :: !(Proof era),
     gsGenEnv :: !(GenEnv era),
     gsSeedIdx :: !Int
@@ -369,7 +369,7 @@ getReserves = Coin . reserves . geSize . gsGenEnv
 --   that that the Pay credential of the TxOut can run in the curent ValidityInterval
 --   A crude but simple way is to insist Pay credential is either Key locked, or locked
 --   with Plutus or MultiSig scripts, and return False for any Timelock scripts.
-getUtxoElem :: Reflect era => GenRS era (Maybe (TxIn (Crypto era), TxOut era))
+getUtxoElem :: Reflect era => GenRS era (Maybe (TxIn (EraCrypto era), TxOut era))
 getUtxoElem = do
   x <- gets (mUTxO . gsModel)
   scriptmap <- gets gsScripts
@@ -380,8 +380,8 @@ getUtxoElem = do
 --   only (Key or Plutus or MutiSig) locking. Disallowing all Timelock scripts
 validTxOut ::
   Proof era ->
-  Map (ScriptHash (Crypto era)) (Script era) ->
-  TxIn (Crypto era) ->
+  Map (ScriptHash (EraCrypto era)) (Script era) ->
+  TxIn (EraCrypto era) ->
   TxOut era ->
   Bool
 validTxOut proof m _txin txout = case txoutFields proof txout of
@@ -394,7 +394,7 @@ validTxOut proof m _txin txout = case txoutFields proof txout of
     _ -> False
   _bootstrap -> False
 
-getUtxoTest :: GenRS era (TxIn (Crypto era) -> Bool)
+getUtxoTest :: GenRS era (TxIn (EraCrypto era) -> Bool)
 getUtxoTest = do
   x <- gets (mUTxO . gsModel)
   pure (\k -> maybe False (const True) (Map.lookup k x))
@@ -402,7 +402,7 @@ getUtxoTest = do
 -- | To compute deposits we need a function that tells if the KeyHash is a new Pool
 --   Compute this function before we do any generation, since such generation
 --   may actually add to the mPoolParams, and then the added thing won't appear new.
-getNewPoolTest :: GenRS era (KeyHash 'StakePool (Crypto era) -> Bool)
+getNewPoolTest :: GenRS era (KeyHash 'StakePool (EraCrypto era) -> Bool)
 getNewPoolTest = do
   poolparams <- gets (mPoolParams . gsModel)
   pure (`Map.member` poolparams)
@@ -442,7 +442,7 @@ initStableFields proof = do
             }
       )
     return cred
-  let f :: Credential 'Staking (Crypto era) -> KeyHash 'StakePool (Crypto era) -> GenRS era ()
+  let f :: Credential 'Staking (EraCrypto era) -> KeyHash 'StakePool (EraCrypto era) -> GenRS era ()
       f cred kh = do
         pp <- asks gePParams
         let (keydeposit, _) = keyPoolDeposits proof pp
@@ -521,7 +521,7 @@ viewGenState proof gsize verbose = do
 -- Generators of inter-related items
 
 -- Adds to the gsKeys
-genKeyHash :: Reflect era => GenRS era (KeyHash kr (Crypto era))
+genKeyHash :: Reflect era => GenRS era (KeyHash kr (EraCrypto era))
 genKeyHash = do
   keyPair <- lift arbitrary
   let keyHash = hashKey $ vKey keyPair
@@ -529,7 +529,7 @@ genKeyHash = do
   pure $ coerceKeyRole keyHash
 
 -- Adds to the gsDatums
-genDatumWithHash :: Era era => GenRS era (DataHash (Crypto era), Data era)
+genDatumWithHash :: Era era => GenRS era (DataHash (EraCrypto era), Data era)
 genDatumWithHash = do
   datum <- lift arbitrary
   let datumHash = hashData datum
@@ -539,7 +539,7 @@ genDatumWithHash = do
 
 -- Adds to the rewards of the ModelNewEpochState. This used exclusively to generate Withdrawals, so
 -- we mark these as ones to avoid in the future. Especialy when generating DeRegKey.
-genRewards :: Reflect era => GenRS era (RewardAccounts (Crypto era))
+genRewards :: Reflect era => GenRS era (RewardAccounts (EraCrypto era))
 genRewards = do
   wmax <- gets (withdrawalMax . geSize . gsGenEnv)
   n <- lift $ choose (1, wmax)
@@ -559,7 +559,7 @@ genRewards = do
     )
   pure newRewards
 
-genRetirementHash :: forall era. Reflect era => GenRS era (KeyHash 'StakePool (Crypto era))
+genRetirementHash :: forall era. Reflect era => GenRS era (KeyHash 'StakePool (EraCrypto era))
 genRetirementHash = do
   m <- gets (mPoolParams . gsModel)
   honestKhs <- gets gsStablePools
@@ -586,9 +586,9 @@ genFreshCredentials ::
   Int ->
   Int ->
   Tag ->
-  Set (Credential kr (Crypto era)) ->
-  [Credential kr (Crypto era)] ->
-  GenRS era [Credential kr (Crypto era)]
+  Set (Credential kr (EraCrypto era)) ->
+  [Credential kr (EraCrypto era)] ->
+  GenRS era [Credential kr (EraCrypto era)]
 genFreshCredentials _n 0 _tag _old _ans = error "Ran out of tries in genFreshCredentials."
 genFreshCredentials n0 tries tag old0 ans0 = go n0 old0 ans0
   where
@@ -602,8 +602,8 @@ genFreshCredential ::
   Reflect era =>
   Int ->
   Tag ->
-  Set (Credential kr (Crypto era)) ->
-  GenRS era (Credential kr (Crypto era))
+  Set (Credential kr (EraCrypto era)) ->
+  GenRS era (Credential kr (EraCrypto era))
 genFreshCredential 0 _tag _old = error "Ran out of tries in genFreshCredential."
 genFreshCredential tries0 tag old = go tries0
   where
@@ -614,7 +614,7 @@ genFreshCredential tries0 tag old = go tries0
         else pure c
 
 -- Adds to the mPoolParams and the  mPoolDistr of the Model, and the initial set of objects for Traces
-genPool :: forall era. Reflect era => GenRS era (KeyHash 'StakePool (Crypto era), PoolParams (Crypto era))
+genPool :: forall era. Reflect era => GenRS era (KeyHash 'StakePool (EraCrypto era), PoolParams (EraCrypto era))
 genPool = frequencyT [(10, genNew), (90, pickExisting)]
   where
     genNew = do
@@ -632,7 +632,7 @@ genPool = frequencyT [(10, genNew), (90, pickExisting)]
         Nothing -> genNew
         Just (kh, pp) -> pure (kh, pp)
 
-genFreshKeyHash :: Reflect era => GenRS era (KeyHash kr (Crypto era))
+genFreshKeyHash :: Reflect era => GenRS era (KeyHash kr (EraCrypto era))
 genFreshKeyHash = go (100 :: Int) -- avoid unlikely chance of generated hash collisions.
   where
     go n
@@ -645,19 +645,19 @@ genFreshKeyHash = go (100 :: Int) -- avoid unlikely chance of generated hash col
             else return kh
 
 -- | Use this function to get a new pool that should not be used in the future transactions
-genNewPool :: forall era. Reflect era => GenRS era (KeyHash 'StakePool (Crypto era), PoolParams (Crypto era), IndividualPoolStake (Crypto era))
+genNewPool :: forall era. Reflect era => GenRS era (KeyHash 'StakePool (EraCrypto era), PoolParams (EraCrypto era), IndividualPoolStake (EraCrypto era))
 genNewPool = do
   poolId <- genFreshKeyHash
   poolParam <- genPoolParams poolId
   percent <- lift $ choose (0, 1 :: Float)
-  let stake = IndividualPoolStake @(Crypto era) (toRational percent) (_poolVrf poolParam)
+  let stake = IndividualPoolStake @(EraCrypto era) (toRational percent) (_poolVrf poolParam)
   modify (\s -> s {gsAvoidKey = Set.insert (coerceKeyRole poolId) $ gsAvoidKey s})
   pure (poolId, poolParam, stake)
 
 addPoolToInitialState ::
-  KeyHash 'StakePool (Crypto era) ->
-  PoolParams (Crypto era) ->
-  IndividualPoolStake (Crypto era) ->
+  KeyHash 'StakePool (EraCrypto era) ->
+  PoolParams (EraCrypto era) ->
+  IndividualPoolStake (EraCrypto era) ->
   GenRS era ()
 addPoolToInitialState poolId poolparam stake =
   modify
@@ -668,7 +668,7 @@ addPoolToInitialState poolId poolparam stake =
           }
     )
 
-addPoolToModel :: KeyHash 'StakePool (Crypto era) -> PoolParams (Crypto era) -> IndividualPoolStake (Crypto era) -> GenRS era ()
+addPoolToModel :: KeyHash 'StakePool (EraCrypto era) -> PoolParams (EraCrypto era) -> IndividualPoolStake (EraCrypto era) -> GenRS era ()
 addPoolToModel poolId poolparam stake =
   modifyModel
     ( \m ->
@@ -680,8 +680,8 @@ addPoolToModel poolId poolparam stake =
 
 genPoolParams ::
   Reflect era =>
-  KeyHash 'StakePool (Crypto era) ->
-  GenRS era (PoolParams (Crypto era))
+  KeyHash 'StakePool (EraCrypto era) ->
+  GenRS era (PoolParams (EraCrypto era))
 genPoolParams _poolId = do
   _poolVrf <- lift arbitrary
   _poolPledge <- lift genPositiveVal
@@ -700,7 +700,7 @@ genPoolParams _poolId = do
 -- plutus scripts), while occasionally picking out randomly from previously
 -- generated set.
 -- Returns the credential and True iff the credential is freshly generated
-genCredential :: forall era kr. Reflect era => Tag -> GenRS era (Credential kr (Crypto era))
+genCredential :: forall era kr. Reflect era => Tag -> GenRS era (Credential kr (EraCrypto era))
 genCredential tag =
   frequencyT
     [ (35, KeyHashObj <$> genKeyHash'),
@@ -771,7 +771,7 @@ genValidityInterval (SlotNo s) = do
 -- Generate Era agnostic Scripts
 
 -- Adds to gsScripts and gsPlutusScripts
-genScript :: forall era. Reflect era => Proof era -> Tag -> GenRS era (ScriptHash (Crypto era))
+genScript :: forall era. Reflect era => Proof era -> Tag -> GenRS era (ScriptHash (EraCrypto era))
 genScript proof tag = case proof of
   Conway _ -> elementsT [genTimelockScript proof, genPlutusScript proof tag]
   Babbage _ -> elementsT [genTimelockScript proof, genPlutusScript proof tag]
@@ -781,7 +781,7 @@ genScript proof tag = case proof of
   Shelley _ -> genMultiSigScript proof
 
 -- Adds to gsScripts
-genTimelockScript :: forall era. Reflect era => Proof era -> GenRS era (ScriptHash (Crypto era))
+genTimelockScript :: forall era. Reflect era => Proof era -> GenRS era (ScriptHash (EraCrypto era))
 genTimelockScript proof = do
   vi@(ValidityInterval mBefore mAfter) <- gets gsValidityInterval
   -- We need to limit how deep these timelocks can go, otherwise this generator will
@@ -837,7 +837,7 @@ genTimelockScript proof = do
   pure scriptHash
 
 -- Adds to gsScripts
-genMultiSigScript :: forall era. Reflect era => Proof era -> GenRS era (ScriptHash (Crypto era))
+genMultiSigScript :: forall era. Reflect era => Proof era -> GenRS era (ScriptHash (EraCrypto era))
 genMultiSigScript proof = do
   let genNestedMultiSig k
         | k > 0 =
@@ -866,7 +866,7 @@ genMultiSigScript proof = do
   pure scriptHash
 
 -- Adds to gsPlutusScripts
-genPlutusScript :: forall era. Reflect era => Proof era -> Tag -> GenRS era (ScriptHash (Crypto era))
+genPlutusScript :: forall era. Reflect era => Proof era -> Tag -> GenRS era (ScriptHash (EraCrypto era))
 genPlutusScript proof tag = do
   isValid <- lift $ frequency [(5, pure False), (95, pure True)]
   -- Plutus scripts alwaysSucceeds needs at least numArgs, while
@@ -904,7 +904,7 @@ genPlutusScript proof tag = do
     ts {gsPlutusScripts = Map.insert (scriptHash, tag) (IsValid isValid, corescript) gsPlutusScripts}
   pure scriptHash
 
-genFreshRegCred :: forall era. Reflect era => Tag -> GenRS era (Credential 'Staking (Crypto era))
+genFreshRegCred :: forall era. Reflect era => Tag -> GenRS era (Credential 'Staking (EraCrypto era))
 genFreshRegCred tag = do
   old <- gets (Map.keysSet . gsInitialRewards)
   avoid <- gets gsAvoidCred

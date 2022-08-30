@@ -29,7 +29,7 @@ instance (ToCBOR a, Arbitrary a) => Arbitrary (Sized a) where
 
 instance
   ( EraTxOut era,
-    Mock (Crypto era),
+    Mock (EraCrypto era),
     Arbitrary (Value era),
     Arbitrary (Script era)
   ) =>
@@ -43,7 +43,7 @@ instance
       <*> arbitrary
 
 instance
-  ( Mock (Crypto era),
+  ( Mock (EraCrypto era),
     ToCBOR (Script era),
     BabbageEraTxBody era,
     Arbitrary (Value era),
@@ -127,7 +127,7 @@ instance Arbitrary (BabbagePParamsUpdate era) where
 
 instance
   ( EraTxOut era,
-    Mock (Crypto era),
+    Mock (EraCrypto era),
     Arbitrary (Value era),
     Arbitrary (TxOut era),
     Arbitrary (PredicateFailure (EraRule "UTXOS" era))
@@ -142,7 +142,7 @@ instance
 
 instance
   ( Era era,
-    Mock (Crypto era),
+    Mock (EraCrypto era),
     Arbitrary (PredicateFailure (EraRule "UTXO" era))
   ) =>
   Arbitrary (BabbageUtxowPredFailure era)

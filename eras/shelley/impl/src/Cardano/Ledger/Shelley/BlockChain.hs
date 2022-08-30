@@ -191,7 +191,7 @@ bbHash ::
   forall era.
   (Era era) =>
   ShelleyTxSeq era ->
-  Hash (Crypto era) EraIndependentBlockBody
+  Hash (EraCrypto era) EraIndependentBlockBody
 bbHash (TxSeq' _ bodies wits md) =
   coerce $
     hashStrict
@@ -200,7 +200,7 @@ bbHash (TxSeq' _ bodies wits md) =
           <> hashPart md
       )
   where
-    hashStrict :: ByteString -> Hash (Crypto era) ByteString
+    hashStrict :: ByteString -> Hash (EraCrypto era) ByteString
     hashStrict = Hash.hashWith id
     hashPart = Hash.hashToBytes . hashStrict . BSL.toStrict
 

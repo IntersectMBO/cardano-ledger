@@ -68,7 +68,7 @@ import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest, testGlobals)
 
-data ValidateInput era = ValidateInput Globals (NewEpochState era) (Block (BHeader (Crypto era)) era)
+data ValidateInput era = ValidateInput Globals (NewEpochState era) (Block (BHeader (EraCrypto era)) era)
 
 sizes :: ValidateInput era -> String
 sizes (ValidateInput _gs ss _blk) = "blockMap size=" ++ show (Map.size (unBlocksMade (nesBcur ss)))
@@ -79,7 +79,7 @@ instance NFData (ValidateInput era) where
 validateInput ::
   ( EraGen era,
     ShelleyTest era,
-    Mock (Crypto era),
+    Mock (EraCrypto era),
     Core.EraRule "LEDGERS" era ~ API.ShelleyLEDGERS era,
     QC.HasTrace (API.ShelleyLEDGERS era) (GenEnv era),
     API.ApplyBlock era,
@@ -93,7 +93,7 @@ validateInput utxoSize = genValidateInput utxoSize
 genValidateInput ::
   ( EraGen era,
     ShelleyTest era,
-    Mock (Crypto era),
+    Mock (EraCrypto era),
     Core.EraRule "LEDGERS" era ~ API.ShelleyLEDGERS era,
     QC.HasTrace (API.ShelleyLEDGERS era) (GenEnv era),
     API.ApplyBlock era,
@@ -177,7 +177,7 @@ instance CryptoClass.Crypto c => NFData (UpdateInputs c) where
 genUpdateInputs ::
   forall era.
   ( EraGen era,
-    Mock (Crypto era),
+    Mock (EraCrypto era),
     ShelleyTest era,
     MinLEDGER_STS era,
     GetLedgerView era,
@@ -186,7 +186,7 @@ genUpdateInputs ::
     API.ApplyBlock era
   ) =>
   Int ->
-  IO (UpdateInputs (Crypto era))
+  IO (UpdateInputs (EraCrypto era))
 genUpdateInputs utxoSize = do
   let ge = genEnv (Proxy :: Proxy era)
   chainstate <- genChainState utxoSize ge

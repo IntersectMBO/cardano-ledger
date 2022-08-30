@@ -107,13 +107,13 @@ genTxBody ::
   (ShelleyTest era) =>
   ShelleyPParams era ->
   SlotNo ->
-  Set (TxIn (Crypto era)) ->
+  Set (TxIn (EraCrypto era)) ->
   StrictSeq (ShelleyTxOut era) ->
-  StrictSeq (DCert (Crypto era)) ->
-  Wdrl (Crypto era) ->
+  StrictSeq (DCert (EraCrypto era)) ->
+  Wdrl (EraCrypto era) ->
   Coin ->
   StrictMaybe (Update era) ->
-  StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
+  StrictMaybe (AuxiliaryDataHash (EraCrypto era)) ->
   Gen (ShelleyTxBody era, [MultiSig era])
 genTxBody _pparams slot inputs outputs certs wdrls fee update adHash = do
   ttl <- genTimeToLive slot

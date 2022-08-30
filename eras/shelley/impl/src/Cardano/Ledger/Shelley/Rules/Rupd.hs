@@ -80,7 +80,7 @@ import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 
 data RupdEnv era
-  = RupdEnv (BlocksMade (Crypto era)) (EpochState era)
+  = RupdEnv (BlocksMade (EraCrypto era)) (EpochState era)
 
 data ShelleyRupdPredFailure era -- No predicate failures
   deriving (Show, Eq, Generic)
@@ -98,12 +98,12 @@ instance
   ) =>
   STS (ShelleyRUPD era)
   where
-  type State (ShelleyRUPD era) = StrictMaybe (PulsingRewUpdate (Crypto era))
+  type State (ShelleyRUPD era) = StrictMaybe (PulsingRewUpdate (EraCrypto era))
   type Signal (ShelleyRUPD era) = SlotNo
   type Environment (ShelleyRUPD era) = RupdEnv era
   type BaseM (ShelleyRUPD era) = ShelleyBase
   type PredicateFailure (ShelleyRUPD era) = ShelleyRupdPredFailure era
-  type Event (ShelleyRUPD era) = RupdEvent (Crypto era)
+  type Event (ShelleyRUPD era) = RupdEvent (EraCrypto era)
 
   initialRules = [pure SNothing]
   transitionRules = [rupdTransition]
@@ -114,7 +114,7 @@ data RupdEvent crypto
       !(Map.Map (Credential 'Staking crypto) (Set (Reward crypto)))
 
 -- | tell a RupdEvent only if the map is non-empty
-tellRupd :: String -> RupdEvent (Crypto era) -> Rule (ShelleyRUPD era) rtype ()
+tellRupd :: String -> RupdEvent (EraCrypto era) -> Rule (ShelleyRUPD era) rtype ()
 tellRupd _ (RupdEvent _ m) | Map.null m = pure ()
 tellRupd _message x = tellEvent x
 

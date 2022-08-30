@@ -53,7 +53,7 @@ import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..))
 
 data ShelleyBbodyState era
-  = BbodyState (LedgerState era) (BlocksMade (Crypto era))
+  = BbodyState (LedgerState era) (BlocksMade (EraCrypto era))
 
 deriving stock instance Show (LedgerState era) => Show (ShelleyBbodyState era)
 
@@ -69,8 +69,8 @@ data ShelleyBbodyPredFailure era
       !Int -- Actual Body Size
       !Int -- Claimed Body Size in Header
   | InvalidBodyHashBBODY
-      !(Hash (Crypto era) EraIndependentBlockBody) -- Actual Hash
-      !(Hash (Crypto era) EraIndependentBlockBody) -- Claimed Hash
+      !(Hash (EraCrypto era) EraIndependentBlockBody) -- Actual Hash
+      !(Hash (EraCrypto era) EraIndependentBlockBody) -- Claimed Hash
   | LedgersFailure (PredicateFailure (EraRule "LEDGERS" era)) -- Subtransition Failures
   deriving (Generic)
 
@@ -97,7 +97,7 @@ instance
 
 instance
   ( EraSegWits era,
-    DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
+    DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody),
     Embed (EraRule "LEDGERS" era) (ShelleyBBODY era),
     Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era,
     State (EraRule "LEDGERS" era) ~ LedgerState era,
@@ -112,7 +112,7 @@ instance
 
   type
     Signal (ShelleyBBODY era) =
-      Block (BHeaderView (Crypto era)) era
+      Block (BHeaderView (EraCrypto era)) era
 
   type Environment (ShelleyBBODY era) = BbodyEnv era
 
@@ -176,7 +176,7 @@ instance
     BaseM ledgers ~ ShelleyBase,
     ledgers ~ EraRule "LEDGERS" era,
     STS ledgers,
-    DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
+    DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody),
     Era era
   ) =>
   Embed ledgers (ShelleyBBODY era)

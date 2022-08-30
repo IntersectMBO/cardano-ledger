@@ -13,7 +13,7 @@ module Test.Cardano.Ledger.ShelleyMA.Serialisation.Golden.Encoding (goldenEncodi
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (Crypto (..), EraScript (hashScript), PParamsUpdate, hashAuxiliaryData)
+import Cardano.Ledger.Core (EraCrypto (..), EraScript (hashScript), PParamsUpdate, hashAuxiliaryData)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), hashKey)
@@ -107,7 +107,7 @@ testStakeCred = KeyHashObj . hashKey . snd $ mkKeyPair (RawSeed 0 0 0 0 3)
 
 testUpdate ::
   forall era.
-  ( Crypto era ~ TestCrypto,
+  ( EraCrypto era ~ TestCrypto,
     PParamsUpdate era ~ ShelleyPParamsUpdate era
   ) =>
   Update era
@@ -146,8 +146,8 @@ testUpdate =
 
 scriptGoldenTest :: forall era. (Era era) => TestTree
 scriptGoldenTest =
-  let kh0 = hashKey . snd . mkGenKey $ RawSeed 0 0 0 0 0 :: KeyHash 'Witness (Crypto era)
-      kh1 = hashKey . snd . mkGenKey $ RawSeed 1 1 1 1 1 :: KeyHash 'Witness (Crypto era)
+  let kh0 = hashKey . snd . mkGenKey $ RawSeed 0 0 0 0 0 :: KeyHash 'Witness (EraCrypto era)
+      kh1 = hashKey . snd . mkGenKey $ RawSeed 1 1 1 1 1 :: KeyHash 'Witness (EraCrypto era)
    in checkEncodingCBORAnnotated
         "timelock_script"
         ( RequireAllOf @era

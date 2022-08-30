@@ -138,7 +138,7 @@ import Test.Tasty.HUnit
   )
 
 type ChainProperty era =
-  ( Mock (Crypto era),
+  ( Mock (EraCrypto era),
     ApplyBlock era,
     GetLedgerView era,
     EraTx era
@@ -335,6 +335,6 @@ testSTS env initSt sig predicateFailure@(Left _) = do
 mkHash :: forall a h. HashAlgorithm h => Int -> Hash h a
 mkHash i = coerce (hashWithSerialiser @h toCBOR i)
 
-getBlockNonce :: forall era. Era era => Block (BHeader (Crypto era)) era -> Nonce
+getBlockNonce :: forall era. Era era => Block (BHeader (EraCrypto era)) era -> Nonce
 getBlockNonce =
   mkNonceFromOutputVRF . certifiedOutput . bheaderEta . bhbody . bheader

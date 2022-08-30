@@ -42,7 +42,7 @@ import Cardano.Ledger.Chain
   )
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Era (Era, EraCrypto)
 import qualified Cardano.Ledger.Era as Era
 import Cardano.Ledger.Keys
   ( GenDelegPair (..),
@@ -133,12 +133,12 @@ data CHAIN era
 
 data ChainState era = ChainState
   { chainNes :: NewEpochState era,
-    chainOCertIssue :: Map.Map (KeyHash 'BlockIssuer (Crypto era)) Word64,
+    chainOCertIssue :: Map.Map (KeyHash 'BlockIssuer (EraCrypto era)) Word64,
     chainEpochNonce :: Nonce,
     chainEvolvingNonce :: Nonce,
     chainCandidateNonce :: Nonce,
     chainPrevEpochNonce :: Nonce,
-    chainLastAppliedBlock :: WithOrigin (LastAppliedBlock (Crypto era))
+    chainLastAppliedBlock :: WithOrigin (LastAppliedBlock (EraCrypto era))
   }
   deriving (Generic)
 
@@ -153,15 +153,15 @@ data TestChainPredicateFailure era
   | BbodyFailure !(PredicateFailure (Core.EraRule "BBODY" era)) -- Subtransition Failures
   | TickFailure !(PredicateFailure (Core.EraRule "TICK" era)) -- Subtransition Failures
   | TicknFailure !(PredicateFailure (Core.EraRule "TICKN" era)) -- Subtransition Failures
-  | PrtclFailure !(PredicateFailure (PRTCL (Crypto era))) -- Subtransition Failures
-  | PrtclSeqFailure !(PrtlSeqFailure (Crypto era)) -- Subtransition Failures
+  | PrtclFailure !(PredicateFailure (PRTCL (EraCrypto era))) -- Subtransition Failures
+  | PrtclSeqFailure !(PrtlSeqFailure (EraCrypto era)) -- Subtransition Failures
   deriving (Generic)
 
 data ChainEvent era
   = BbodyEvent !(Event (Core.EraRule "BBODY" era))
   | TickEvent !(Event (Core.EraRule "TICK" era))
   | TicknEvent !(Event (Core.EraRule "TICKN" era))
-  | PrtclEvent !(Event (PRTCL (Crypto era)))
+  | PrtclEvent !(Event (PRTCL (EraCrypto era)))
 
 deriving stock instance
   ( Era era,
@@ -193,11 +193,11 @@ initialShelleyState ::
     Default (State (Core.EraRule "PPUP" era)),
     Default (StashedAVVMAddresses era)
   ) =>
-  WithOrigin (LastAppliedBlock (Crypto era)) ->
+  WithOrigin (LastAppliedBlock (EraCrypto era)) ->
   EpochNo ->
   UTxO era ->
   Coin ->
-  Map (KeyHash 'Genesis (Crypto era)) (GenDelegPair (Crypto era)) ->
+  Map (KeyHash 'Genesis (EraCrypto era)) (GenDelegPair (EraCrypto era)) ->
   Core.PParams era ->
   Nonce ->
   ChainState era
@@ -246,7 +246,7 @@ instance
     Embed (Core.EraRule "BBODY" era) (CHAIN era),
     Environment (Core.EraRule "BBODY" era) ~ BbodyEnv era,
     State (Core.EraRule "BBODY" era) ~ ShelleyBbodyState era,
-    Signal (Core.EraRule "BBODY" era) ~ Block (BHeaderView (Crypto era)) era,
+    Signal (Core.EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era,
     Embed (Core.EraRule "TICKN" era) (CHAIN era),
     Environment (Core.EraRule "TICKN" era) ~ TicknEnv,
     State (Core.EraRule "TICKN" era) ~ TicknState,
@@ -255,7 +255,7 @@ instance
     Environment (Core.EraRule "TICK" era) ~ (),
     State (Core.EraRule "TICK" era) ~ NewEpochState era,
     Signal (Core.EraRule "TICK" era) ~ SlotNo,
-    Embed (PRTCL (Crypto era)) (CHAIN era),
+    Embed (PRTCL (EraCrypto era)) (CHAIN era),
     HasField "_maxBHSize" (Core.PParams era) Natural,
     HasField "_maxBBSize" (Core.PParams era) Natural,
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
@@ -271,7 +271,7 @@ instance
 
   type
     Signal (CHAIN era) =
-      Block (BHeader (Crypto era)) era
+      Block (BHeader (EraCrypto era)) era
 
   type Environment (CHAIN era) = ()
   type BaseM (CHAIN era) = ShelleyBase
@@ -289,7 +289,7 @@ chainTransition ::
     Embed (Core.EraRule "BBODY" era) (CHAIN era),
     Environment (Core.EraRule "BBODY" era) ~ BbodyEnv era,
     State (Core.EraRule "BBODY" era) ~ ShelleyBbodyState era,
-    Signal (Core.EraRule "BBODY" era) ~ Block (BHeaderView (Crypto era)) era,
+    Signal (Core.EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era,
     Embed (Core.EraRule "TICKN" era) (CHAIN era),
     Environment (Core.EraRule "TICKN" era) ~ TicknEnv,
     State (Core.EraRule "TICKN" era) ~ TicknState,
@@ -298,7 +298,7 @@ chainTransition ::
     Environment (Core.EraRule "TICK" era) ~ (),
     State (Core.EraRule "TICK" era) ~ NewEpochState era,
     Signal (Core.EraRule "TICK" era) ~ SlotNo,
-    Embed (PRTCL (Crypto era)) (CHAIN era),
+    Embed (PRTCL (EraCrypto era)) (CHAIN era),
     HasField "_maxBHSize" (Core.PParams era) Natural,
     HasField "_maxBBSize" (Core.PParams era) Natural,
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
@@ -355,7 +355,7 @@ chainTransition =
               )
 
         PrtclState cs' etaV' etaC' <-
-          trans @(PRTCL (Crypto era)) $
+          trans @(PRTCL (EraCrypto era)) $
             TRC
               ( PrtclEnv (getField @"_d" pp') _pd genDelegs eta0',
                 PrtclState cs etaV etaC,
@@ -415,7 +415,7 @@ instance
 
 instance
   ( Era era,
-    c ~ Crypto era,
+    c ~ EraCrypto era,
     Era era,
     STS (PRTCL c)
   ) =>

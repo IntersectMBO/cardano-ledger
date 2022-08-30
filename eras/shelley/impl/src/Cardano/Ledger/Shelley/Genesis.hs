@@ -135,9 +135,9 @@ data ShelleyGenesis era = ShelleyGenesis
     sgUpdateQuorum :: !Word64,
     sgMaxLovelaceSupply :: !Word64,
     sgProtocolParams :: !(ShelleyPParams era),
-    sgGenDelegs :: !(Map (KeyHash 'Genesis (Crypto era)) (GenDelegPair (Crypto era))),
-    sgInitialFunds :: LM.ListMap (Addr (Crypto era)) Coin,
-    sgStaking :: ShelleyGenesisStaking (Crypto era)
+    sgGenDelegs :: !(Map (KeyHash 'Genesis (EraCrypto era)) (GenDelegPair (EraCrypto era))),
+    sgInitialFunds :: LM.ListMap (Addr (EraCrypto era)) Coin,
+    sgStaking :: ShelleyGenesisStaking (EraCrypto era)
   }
   deriving stock (Eq, Show, Generic)
 
@@ -151,7 +151,7 @@ instance Era era => ToJSON (ShelleyGenesis era) where
   toEncoding = Aeson.pairs . mconcat . toShelleyGenesisPairs
 
 toShelleyGenesisPairs ::
-  (Aeson.KeyValue a, CC.Crypto (Crypto era)) =>
+  (Aeson.KeyValue a, CC.Crypto (EraCrypto era)) =>
   ShelleyGenesis era ->
   [a]
 toShelleyGenesisPairs
@@ -433,13 +433,13 @@ validateGenesis
               else Nothing
       checkKesEvolutions =
         if sgMaxKESEvolutions
-          <= fromIntegral (totalPeriodsKES (Proxy @(KES (Crypto era))))
+          <= fromIntegral (totalPeriodsKES (Proxy @(KES (EraCrypto era))))
           then Nothing
           else
             Just $
               MaxKESEvolutionsUnsupported
                 sgMaxKESEvolutions
-                (totalPeriodsKES (Proxy @(KES (Crypto era))))
+                (totalPeriodsKES (Proxy @(KES (EraCrypto era))))
       checkQuorumSize =
         let numGenesisNodes = fromIntegral $ length sgGenDelegs
             maxTooSmal = numGenesisNodes `div` 2

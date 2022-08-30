@@ -94,7 +94,7 @@ instance
     State (ShelleyTICK era) ~ NewEpochState era,
     BaseM (ShelleyTICK era) ~ ShelleyBase,
     Environment (EraRule "RUPD" era) ~ RupdEnv era,
-    State (EraRule "RUPD" era) ~ StrictMaybe (PulsingRewUpdate (Crypto era)),
+    State (EraRule "RUPD" era) ~ StrictMaybe (PulsingRewUpdate (EraCrypto era)),
     Signal (EraRule "RUPD" era) ~ SlotNo,
     Environment (EraRule "NEWEPOCH" era) ~ (),
     State (EraRule "NEWEPOCH" era) ~ NewEpochState era,
@@ -174,7 +174,7 @@ bheadTransition ::
     State (ShelleyTICK era) ~ NewEpochState era,
     BaseM (ShelleyTICK era) ~ ShelleyBase,
     Environment (EraRule "RUPD" era) ~ RupdEnv era,
-    State (EraRule "RUPD" era) ~ StrictMaybe (PulsingRewUpdate (Crypto era)),
+    State (EraRule "RUPD" era) ~ StrictMaybe (PulsingRewUpdate (EraCrypto era)),
     Signal (EraRule "RUPD" era) ~ SlotNo,
     Environment (EraRule "NEWEPOCH" era) ~ (),
     State (EraRule "NEWEPOCH" era) ~ NewEpochState era,
@@ -214,7 +214,7 @@ instance
   ( Era era,
     STS (ShelleyRUPD era),
     PredicateFailure (EraRule "RUPD" era) ~ ShelleyRupdPredFailure era,
-    Event (EraRule "RUPD" era) ~ RupdEvent (Crypto era)
+    Event (EraRule "RUPD" era) ~ RupdEvent (EraCrypto era)
   ) =>
   Embed (ShelleyRUPD era) (ShelleyTICK era)
   where
