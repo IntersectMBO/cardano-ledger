@@ -48,14 +48,14 @@ in the naming of release branches.
 - Added `coinsPerUTxOByteToCoinsPerUTxOWord` helper function for Babbage
   #2896
 - Core type classes: `EraSegWits`, `EraTx`, `EraTxBody`, `EraTxOut`, `EraPParams`,
-  `EraAuxiliaryData`, `EraWitnesses`, `EraScript`
+  `EraAuxiliaryData`, `EraTxWits`, `EraScript`
 - Era specific type classes: `ShelleyEraTxBody`, `ShelleyMAEraTxBody`,
   `AlonzoEraTxBody`, `AlonzoEraTxOut`, `AlonzoEraTx`, `BabbageEraTxBody`, `BabbageEraTxOut`
 - Type class hierarchy:
 ```
 EraSegWits --> EraTx --> EraTxBody --> EraTxOut --> Era
                      \             `--> EraPParams --> Era
-                      `--> EraWitnesses --> EraScript --> Era
+                      `--> EraTxWits --> EraScript --> Era
                        `--> EraAuxiliaryData --> Era
 ```
 - Shelley:

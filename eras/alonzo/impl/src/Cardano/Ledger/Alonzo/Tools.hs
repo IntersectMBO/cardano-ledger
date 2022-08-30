@@ -32,7 +32,7 @@ import Cardano.Ledger.Alonzo.TxInfo
     valContext,
   )
 import Cardano.Ledger.Alonzo.TxWitness
-  ( AlonzoEraWitnesses (..),
+  ( AlonzoEraTxWits (..),
     RdmrPtr (..),
     unRedeemers,
     unTxDats,

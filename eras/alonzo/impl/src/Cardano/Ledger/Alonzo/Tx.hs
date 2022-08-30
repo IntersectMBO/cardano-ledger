@@ -112,7 +112,7 @@ import Cardano.Ledger.Alonzo.TxBody
     TxBody,
   )
 import Cardano.Ledger.Alonzo.TxWitness
-  ( AlonzoEraWitnesses (..),
+  ( AlonzoEraTxWits (..),
     RdmrPtr (..),
     Redeemers (..),
     TxDats (..),
@@ -206,7 +206,7 @@ instance CC.Crypto c => EraTx (AlonzoEra c) where
 
   getMinFeeTx = alonzoMinFeeTx
 
-class (EraTx era, AlonzoEraTxBody era, AlonzoEraWitnesses era) => AlonzoEraTx era where
+class (EraTx era, AlonzoEraTxBody era, AlonzoEraTxWits era) => AlonzoEraTx era where
   isValidTxL :: Lens' (Core.Tx era) IsValid
 
 instance CC.Crypto c => AlonzoEraTx (AlonzoEra c) where
@@ -223,7 +223,7 @@ bodyAlonzoTxL :: Lens' (AlonzoTx era) (Core.TxBody era)
 bodyAlonzoTxL = lens body (\tx txBody -> tx {body = txBody})
 {-# INLINEABLE bodyAlonzoTxL #-}
 
--- | `Witnesses` setter and getter for `AlonzoTx`.
+-- | `TxWits` setter and getter for `AlonzoTx`.
 witsAlonzoTxL :: Lens' (AlonzoTx era) (TxWitness era)
 witsAlonzoTxL = lens wits (\tx txWits -> tx {wits = txWits})
 {-# INLINEABLE witsAlonzoTxL #-}
@@ -327,7 +327,7 @@ hashScriptIntegrity langViews rdmrs dats =
 
 isTwoPhaseScriptAddress ::
   forall era.
-  (EraTx era, Witnesses era ~ TxWitness era) =>
+  (EraTx era, TxWits era ~ TxWitness era) =>
   AlonzoTx era ->
   Addr (EraCrypto era) ->
   Bool
@@ -352,7 +352,7 @@ toCBORForSizeComputation AlonzoTx {body, wits, auxiliaryData} =
 
 alonzoMinFeeTx ::
   ( EraTx era,
-    AlonzoEraWitnesses era,
+    AlonzoEraTxWits era,
     HasField "_minfeeA" (PParams era) Natural,
     HasField "_minfeeB" (PParams era) Natural,
     HasField "_prices" (PParams era) Prices
@@ -371,7 +371,7 @@ alonzoMinFeeTx pp tx =
 
 minfee ::
   ( EraTx era,
-    AlonzoEraWitnesses era,
+    AlonzoEraTxWits era,
     HasField "_minfeeA" (PParams era) Natural,
     HasField "_minfeeB" (PParams era) Natural,
     HasField "_prices" (PParams era) Prices
@@ -383,7 +383,7 @@ minfee = alonzoMinFeeTx
 {-# DEPRECATED minfee "In favor of `getMinFeeTx`" #-}
 
 totExUnits ::
-  (EraTx era, AlonzoEraWitnesses era) =>
+  (EraTx era, AlonzoEraTxWits era) =>
   Tx era ->
   ExUnits
 totExUnits tx =
@@ -480,7 +480,7 @@ getMapFromValue (MaryValue _ (MultiAsset m)) = m
 -- | Find the Data and ExUnits assigned to a script.
 indexedRdmrs ::
   forall era.
-  (ShelleyEraTxBody era, EraTx era, Witnesses era ~ TxWitness era) =>
+  (ShelleyEraTxBody era, EraTx era, TxWits era ~ TxWitness era) =>
   Tx era ->
   ScriptPurpose (EraCrypto era) ->
   Maybe (Data era, ExUnits)

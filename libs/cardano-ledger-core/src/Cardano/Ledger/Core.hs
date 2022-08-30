@@ -31,7 +31,7 @@ module Cardano.Ledger.Core
     isAdaOnlyTxOutF,
     EraTxBody (..),
     EraAuxiliaryData (..),
-    EraWitnesses (..),
+    EraTxWits (..),
     EraScript (..),
     Value,
     EraPParams (..),
@@ -130,7 +130,7 @@ class (CC.Crypto (EraCrypto era), Typeable era, ProtVerLow era <= ProtVerHigh er
 -- | A transaction.
 class
   ( EraTxBody era,
-    EraWitnesses era,
+    EraTxWits era,
     EraAuxiliaryData era,
     -- NFData (Tx era), TODO: Add NFData constraints to Crypto class
     NoThunks (Tx era),
@@ -147,7 +147,7 @@ class
 
   bodyTxL :: Lens' (Tx era) (TxBody era)
 
-  witsTxL :: Lens' (Tx era) (Witnesses era)
+  witsTxL :: Lens' (Tx era) (TxWits era)
 
   auxDataTxL :: Lens' (Tx era) (StrictMaybe (AuxiliaryData era))
 
@@ -395,25 +395,25 @@ type PParamsDelta era = PParamsUpdate era
 -- | A collection of witnesses in a Tx
 class
   ( EraScript era,
-    Eq (Witnesses era),
-    Show (Witnesses era),
-    Monoid (Witnesses era),
-    NoThunks (Witnesses era),
-    ToCBOR (Witnesses era),
-    FromCBOR (Annotator (Witnesses era))
+    Eq (TxWits era),
+    Show (TxWits era),
+    Monoid (TxWits era),
+    NoThunks (TxWits era),
+    ToCBOR (TxWits era),
+    FromCBOR (Annotator (TxWits era))
   ) =>
-  EraWitnesses era
+  EraTxWits era
   where
-  type Witnesses era = (r :: Type) | r -> era
+  type TxWits era = (r :: Type) | r -> era
 
-  mkBasicWitnesses :: Witnesses era
-  mkBasicWitnesses = mempty
+  mkBasicTxWits :: TxWits era
+  mkBasicTxWits = mempty
 
-  addrWitsL :: Lens' (Witnesses era) (Set (WitVKey 'Witness (EraCrypto era)))
+  addrWitsL :: Lens' (TxWits era) (Set (WitVKey 'Witness (EraCrypto era)))
 
-  bootAddrWitsL :: Lens' (Witnesses era) (Set (BootstrapWitness (EraCrypto era)))
+  bootAddrWitsL :: Lens' (TxWits era) (Set (BootstrapWitness (EraCrypto era)))
 
-  scriptWitsL :: Lens' (Witnesses era) (Map (ScriptHash (EraCrypto era)) (Script era))
+  scriptWitsL :: Lens' (TxWits era) (Map (ScriptHash (EraCrypto era)) (Script era))
 
 -- | Era STS map
 type family EraRule (k :: Symbol) era :: Type

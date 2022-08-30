@@ -90,7 +90,7 @@ instance (CryptoClass.Crypto c, Mock c) => EraGen (AllegraEra c) where
         MATxBody (existingins <> ins) (outs :|> out) cert wdrl fee vi upd ad forge
   genEraPParamsUpdate = genShelleyPParamsUpdate
   genEraPParams = genPParams
-  genEraWitnesses _scriptinfo setWitVKey mapScriptWit = ShelleyWitnesses setWitVKey mapScriptWit mempty
+  genEraTxWits _scriptinfo setWitVKey mapScriptWit = ShelleyWitnesses setWitVKey mapScriptWit mempty
   constructTx = ShelleyTx
 
 genTxBody ::

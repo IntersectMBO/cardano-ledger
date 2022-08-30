@@ -84,7 +84,7 @@ instance
   genEraPParamsUpdate = genShelleyPParamsUpdate
   genEraPParams = genPParams
 
-  genEraWitnesses _ setWitVKey mapScriptWit = ShelleyWitnesses setWitVKey mapScriptWit mempty
+  genEraTxWits _ setWitVKey mapScriptWit = ShelleyWitnesses setWitVKey mapScriptWit mempty
 
 instance CC.Crypto c => ScriptClass (ShelleyEra c) where
   basescript _proxy = RequireSignature

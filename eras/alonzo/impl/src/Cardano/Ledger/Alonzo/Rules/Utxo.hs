@@ -43,7 +43,7 @@ import Cardano.Ledger.Alonzo.TxBody
   )
 import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq)
 import Cardano.Ledger.Alonzo.TxWitness
-  ( AlonzoEraWitnesses,
+  ( AlonzoEraTxWits,
     TxWitness (txrdmrs'),
     nullRedeemers,
   )
@@ -431,7 +431,7 @@ validateWrongNetworkInTxBody netId txBody =
 -- > totExunits tx ≤ maxTxExUnits pp
 validateExUnitsTooBigUTxO ::
   ( HasField "_maxTxExUnits" (PParams era) ExUnits,
-    AlonzoEraWitnesses era,
+    AlonzoEraTxWits era,
     EraTx era
   ) =>
   PParams era ->

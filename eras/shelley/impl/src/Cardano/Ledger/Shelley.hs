@@ -7,7 +7,7 @@ module Cardano.Ledger.Shelley
     Script,
     AuxiliaryData,
     ShelleyPParams,
-    Witnesses,
+    TxWits,
     nativeMultiSigTag,
     -- Deprecated
     PParams,
@@ -19,7 +19,7 @@ where
 
 import Cardano.Ledger.Core
   ( EraAuxiliaryData (AuxiliaryData),
-    EraWitnesses (Witnesses),
+    EraTxWits (TxWits),
     Script,
     Value,
   )

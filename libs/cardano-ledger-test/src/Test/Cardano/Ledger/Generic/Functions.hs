@@ -331,13 +331,13 @@ getInputs _ tx = tx ^. inputsTxBodyL
 getOutputs :: EraTxBody era => Proof era -> TxBody era -> StrictSeq (TxOut era)
 getOutputs _ tx = tx ^. outputsTxBodyL
 
-getScriptWits :: EraWitnesses era => Proof era -> Witnesses era -> Map (ScriptHash (EraCrypto era)) (Script era)
+getScriptWits :: EraTxWits era => Proof era -> TxWits era -> Map (ScriptHash (EraCrypto era)) (Script era)
 getScriptWits _ tx = tx ^. scriptWitsL
 
 allInputs :: EraTxBody era => Proof era -> TxBody era -> Set (TxIn (EraCrypto era))
 allInputs _ txb = txb ^. allInputsTxBodyF
 
-getWitnesses :: EraTx era => Proof era -> Tx era -> Witnesses era
+getWitnesses :: EraTx era => Proof era -> Tx era -> TxWits era
 getWitnesses _ tx = tx ^. witsTxL
 
 primaryLanguage :: Proof era -> Maybe Language

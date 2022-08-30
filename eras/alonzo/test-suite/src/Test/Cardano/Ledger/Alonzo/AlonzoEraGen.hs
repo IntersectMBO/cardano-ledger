@@ -52,7 +52,7 @@ import Cardano.Ledger.Alonzo.TxBody
     utxoEntrySize,
   )
 import Cardano.Ledger.Alonzo.TxWitness
-  ( AlonzoEraWitnesses (..),
+  ( AlonzoEraTxWits (..),
     RdmrPtr (..),
     Redeemers (..),
     TxDats (..),
@@ -385,7 +385,7 @@ instance Mock c => EraGen (AlonzoEra c) where
 
   genEraPParamsUpdate = genAlonzoPParamsUpdate
   genEraPParams = genAlonzoPParams
-  genEraWitnesses (utxo, txbody, scriptinfo) setWitVKey mapScriptWit = new
+  genEraTxWits (utxo, txbody, scriptinfo) setWitVKey mapScriptWit = new
     where
       new =
         TxWitness
@@ -553,7 +553,7 @@ someLeaf _proxy x =
             (RequireAnyOf . Seq.fromList) [RequireTimeStart slot, RequireTimeExpire slot]
         _ -> TimelockScript $ RequireSignature x
 
--- | given the "txscripts" field of the Witnesses, compute the set of languages used in a transaction
+-- | given the "txscripts" field of the TxWits, compute the set of languages used in a transaction
 langsUsed ::
   forall era.
   (Script era ~ AlonzoScript era, EraScript era) =>

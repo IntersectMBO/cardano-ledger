@@ -22,7 +22,7 @@ import Cardano.Ledger.Alonzo.TxSeq
     hashAlonzoTxSeq,
   )
 import Cardano.Ledger.Alonzo.TxWitness
-  ( AlonzoEraWitnesses (..),
+  ( AlonzoEraTxWits (..),
     TxWitness (..),
     addrAlonzoWitsL,
     bootAddrAlonzoWitsL,
@@ -84,12 +84,12 @@ instance CC.Crypto c => AlonzoEraTx (BabbageEra c) where
   isValidTxL = isValidAlonzoTxL
   {-# INLINE isValidTxL #-}
 
-instance CC.Crypto c => EraWitnesses (BabbageEra c) where
-  {-# SPECIALIZE instance EraWitnesses (BabbageEra CC.StandardCrypto) #-}
+instance CC.Crypto c => EraTxWits (BabbageEra c) where
+  {-# SPECIALIZE instance EraTxWits (BabbageEra CC.StandardCrypto) #-}
 
-  type Witnesses (BabbageEra c) = TxWitness (BabbageEra c)
+  type TxWits (BabbageEra c) = TxWitness (BabbageEra c)
 
-  mkBasicWitnesses = mempty
+  mkBasicTxWits = mempty
 
   addrWitsL = addrAlonzoWitsL
   {-# INLINE addrWitsL #-}
@@ -100,8 +100,8 @@ instance CC.Crypto c => EraWitnesses (BabbageEra c) where
   scriptWitsL = scriptAlonzoWitsL
   {-# INLINE scriptWitsL #-}
 
-instance CC.Crypto c => AlonzoEraWitnesses (BabbageEra c) where
-  {-# SPECIALIZE instance AlonzoEraWitnesses (BabbageEra CC.StandardCrypto) #-}
+instance CC.Crypto c => AlonzoEraTxWits (BabbageEra c) where
+  {-# SPECIALIZE instance AlonzoEraTxWits (BabbageEra CC.StandardCrypto) #-}
 
   datsWitsL = datsAlonzoWitsL
   {-# INLINE datsWitsL #-}
@@ -153,7 +153,7 @@ getDatumBabbage tx (UTxO m) sp = do
 -- Compute a Map of (ScriptHash -> Script) for all Scripts found in a AlonzoTx.
 -- Note we are interested in the actual scripts that might be run during the Utxow
 -- rule. There are two places to look:
--- 1) The Script part of the Witnesses
+-- 1) The Script part of the TxWits
 -- 2) The reference scripts found in the TxOuts, pointed to by the spending and reference inputs
 --    of the Tx.  Given such a TxOut, we look in the Pay credentials of the Addr of that TxOut.
 --      A. We only look in the Pay credential of the TxOut, because the Stake credential plays

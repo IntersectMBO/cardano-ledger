@@ -49,7 +49,7 @@ import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.CompactAddress (CompactAddr (..), decompactAddr)
 import Cardano.Ledger.Compactible (Compactible (..))
-import Cardano.Ledger.Core (Era, EraAuxiliaryData (..), EraPParams (..), EraRule, EraScript (..), EraTx (..), EraTxBody (..), EraTxOut (..), EraWitnesses (..), ScriptHash (..), Value)
+import Cardano.Ledger.Core (Era, EraAuxiliaryData (..), EraPParams (..), EraRule, EraScript (..), EraTx (..), EraTxBody (..), EraTxOut (..), EraTxWits (..), ScriptHash (..), Value)
 import Cardano.Ledger.Credential
   ( Credential (KeyHashObj, ScriptHashObj),
     GenesisCredential (..),
@@ -936,7 +936,7 @@ instance PrettyA (Metadata era) where
 ppTx ::
   ( PrettyA (TxBody era),
     PrettyA (AuxiliaryData era),
-    PrettyA (Witnesses era),
+    PrettyA (TxWits era),
     EraTx era
   ) =>
   Tx era ->
@@ -972,7 +972,7 @@ ppWitnessSetHKD x =
 instance
   ( PrettyA (TxBody era),
     PrettyA (AuxiliaryData era),
-    PrettyA (Witnesses era),
+    PrettyA (TxWits era),
     EraTx era,
     Tx era ~ ShelleyTx era
   ) =>

@@ -15,7 +15,7 @@ module Cardano.Ledger.Allegra
     PParams,
     PParamsDelta,
     Tx,
-    Witnesses,
+    TxWits,
   )
 where
 
@@ -62,9 +62,9 @@ type Value era = Coin
 
 {-# DEPRECATED Value "Use `Coin` instead" #-}
 
-type Witnesses era = ShelleyWitnesses (EraCrypto era)
+type TxWits era = ShelleyWitnesses (EraCrypto era)
 
-{-# DEPRECATED Witnesses "Use `Timelock` instead" #-}
+{-# DEPRECATED TxWits "Use `Timelock` instead" #-}
 
 type PParamsDelta era = ShelleyPParamsUpdate era
 

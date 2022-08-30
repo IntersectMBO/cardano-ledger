@@ -341,7 +341,7 @@ alonzoStyleWitness ::
     ExtendedUTxO era,
     Tx era ~ AlonzoTx era,
     Script era ~ AlonzoScript era,
-    Witnesses era ~ TxWitness era,
+    TxWits era ~ TxWitness era,
     HasField "_costmdls" (PParams era) CostModels,
     HasField "_protocolVersion" (PParams era) ProtVer,
     Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody),
@@ -510,7 +510,7 @@ instance
     Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody),
     Tx era ~ AlonzoTx era,
     Script era ~ AlonzoScript era,
-    Witnesses era ~ TxWitness era,
+    TxWits era ~ TxWitness era,
     HasField "_costmdls" (PParams era) CostModels,
     HasField "_protocolVersion" (PParams era) ProtVer,
     -- Allow UTXOW to call UTXO

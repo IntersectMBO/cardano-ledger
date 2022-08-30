@@ -95,7 +95,7 @@ instance (CC.Crypto c, Mock c) => EraGen (MaryEra c) where
         MATxBody (existingins <> ins) (outs :|> out) cert wdrl fee vi upd meta mint
   genEraPParamsUpdate = genShelleyPParamsUpdate
   genEraPParams = genPParams
-  genEraWitnesses _scriptinfo setWitVKey mapScriptWit = ShelleyWitnesses setWitVKey mapScriptWit mempty
+  genEraTxWits _scriptinfo setWitVKey mapScriptWit = ShelleyWitnesses setWitVKey mapScriptWit mempty
 
 genAuxiliaryData ::
   Mock crypto =>

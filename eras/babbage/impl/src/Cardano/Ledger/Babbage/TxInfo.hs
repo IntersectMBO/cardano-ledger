@@ -163,7 +163,7 @@ babbageTxInfo ::
   ( EraTx era,
     BabbageEraTxBody era,
     Value era ~ MaryValue (EraCrypto era),
-    Witnesses era ~ TxWitness era,
+    TxWits era ~ TxWitness era,
     HasField "_protocolVersion" (PParams era) ProtVer
   ) =>
   PParams era ->

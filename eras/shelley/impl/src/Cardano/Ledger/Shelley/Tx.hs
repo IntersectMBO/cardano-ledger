@@ -35,7 +35,7 @@ module Cardano.Ledger.Shelley.Tx
     decodeWits,
     segwitTx,
 
-    -- * Witnesses
+    -- * TxWits
     ShelleyWitnesses,
     WitnessSet,
     WitnessSetHKD
@@ -131,14 +131,14 @@ import Numeric.Natural (Natural)
 
 data TxRaw era = TxRaw
   { _body :: !(Core.TxBody era),
-    _wits :: !(Witnesses era),
+    _wits :: !(TxWits era),
     _auxiliaryData :: !(StrictMaybe (AuxiliaryData era))
   }
   deriving (Generic, Typeable)
 
 instance
   ( NFData (Core.TxBody era),
-    NFData (Witnesses era),
+    NFData (TxWits era),
     NFData (AuxiliaryData era)
   ) =>
   NFData (TxRaw era)
@@ -146,7 +146,7 @@ instance
 deriving instance
   ( Era era,
     Eq (Core.TxBody era),
-    Eq (Witnesses era),
+    Eq (TxWits era),
     Eq (AuxiliaryData era)
   ) =>
   Eq (TxRaw era)
@@ -154,7 +154,7 @@ deriving instance
 deriving instance
   ( Era era,
     Show (Core.TxBody era),
-    Show (Witnesses era),
+    Show (TxWits era),
     Show (AuxiliaryData era)
   ) =>
   Show (TxRaw era)
@@ -163,7 +163,7 @@ instance
   ( Era era,
     NoThunks (AuxiliaryData era),
     NoThunks (Core.TxBody era),
-    NoThunks (Witnesses era)
+    NoThunks (TxWits era)
   ) =>
   NoThunks (TxRaw era)
 
@@ -183,9 +183,9 @@ bodyShelleyTxL =
     (\(TxConstr (Memo tx _)) txBody -> TxConstr $ memoBytes $ encodeTxRaw $ tx {_body = txBody})
 {-# INLINEABLE bodyShelleyTxL #-}
 
--- | `Witnesses` setter and getter for `ShelleyTx`. The setter does update
+-- | `TxWits` setter and getter for `ShelleyTx`. The setter does update
 -- memoized binary representation.
-witsShelleyTxL :: EraTx era => Lens' (ShelleyTx era) (Witnesses era)
+witsShelleyTxL :: EraTx era => Lens' (ShelleyTx era) (TxWits era)
 witsShelleyTxL =
   lens
     (\(TxConstr (Memo tx _)) -> _wits tx)
@@ -215,7 +215,7 @@ mkBasicShelleyTx txBody =
   mkShelleyTx $
     TxRaw
       { _body = txBody,
-        _wits = mkBasicWitnesses,
+        _wits = mkBasicTxWits,
         _auxiliaryData = SNothing
       }
 
@@ -245,7 +245,7 @@ instance CC.Crypto crypto => EraTx (ShelleyEra crypto) where
 
 deriving newtype instance
   ( NFData (Core.TxBody era),
-    NFData (Witnesses era),
+    NFData (TxWits era),
     NFData (AuxiliaryData era)
   ) =>
   NFData (ShelleyTx era)
@@ -253,21 +253,21 @@ deriving newtype instance
 deriving newtype instance Eq (ShelleyTx era)
 
 deriving newtype instance
-  (Era era, Show (Core.TxBody era), Show (Witnesses era), Show (AuxiliaryData era)) =>
+  (Era era, Show (Core.TxBody era), Show (TxWits era), Show (AuxiliaryData era)) =>
   Show (ShelleyTx era)
 
 deriving newtype instance
   ( Era era,
     NoThunks (AuxiliaryData era),
     NoThunks (Core.TxBody era),
-    NoThunks (Witnesses era)
+    NoThunks (TxWits era)
   ) =>
   NoThunks (ShelleyTx era)
 
 pattern ShelleyTx ::
   EraTx era =>
   Core.TxBody era ->
-  Witnesses era ->
+  TxWits era ->
   StrictMaybe (AuxiliaryData era) ->
   ShelleyTx era
 pattern ShelleyTx {body, wits, auxiliaryData} <-
@@ -299,7 +299,7 @@ encodeTxRaw TxRaw {_body, _wits, _auxiliaryData} =
 instance
   ( Era era,
     FromCBOR (Annotator (Core.TxBody era)),
-    FromCBOR (Annotator (Witnesses era)),
+    FromCBOR (Annotator (TxWits era)),
     FromCBOR (Annotator (AuxiliaryData era))
   ) =>
   FromCBOR (Annotator (TxRaw era))
@@ -327,7 +327,7 @@ deriving via Mem TxRaw era instance EraTx era => FromCBOR (Annotator (Tx era))
 unsafeConstructTxWithBytes ::
   Era era =>
   Core.TxBody era ->
-  Witnesses era ->
+  TxWits era ->
   StrictMaybe (AuxiliaryData era) ->
   LBS.ByteString ->
   Tx era
@@ -374,30 +374,30 @@ type ShelleyWitnesses = WitnessSetHKD Identity
 -- | Addresses witness setter and getter for `ShelleyWitnesses`. The
 -- setter does update memoized binary representation.
 addrShelleyWitsL ::
-  EraWitnesses era => Lens' (ShelleyWitnesses era) (Set (WitVKey 'Witness (EraCrypto era)))
+  EraTxWits era => Lens' (ShelleyWitnesses era) (Set (WitVKey 'Witness (EraCrypto era)))
 addrShelleyWitsL = lens addrWits' (\w s -> w {addrWits = s})
 {-# INLINEABLE addrShelleyWitsL #-}
 
 -- | Bootstrap Addresses witness setter and getter for `ShelleyWitnesses`. The
 -- setter does update memoized binary representation.
 bootAddrShelleyWitsL ::
-  EraWitnesses era => Lens' (ShelleyWitnesses era) (Set (BootstrapWitness (EraCrypto era)))
+  EraTxWits era => Lens' (ShelleyWitnesses era) (Set (BootstrapWitness (EraCrypto era)))
 bootAddrShelleyWitsL = lens bootWits' (\w s -> w {bootWits = s})
 {-# INLINEABLE bootAddrShelleyWitsL #-}
 
 -- | Script witness setter and getter for `ShelleyWitnesses`. The
 -- setter does update memoized binary representation.
 scriptShelleyWitsL ::
-  EraWitnesses era => Lens' (ShelleyWitnesses era) (Map (ScriptHash (EraCrypto era)) (Script era))
+  EraTxWits era => Lens' (ShelleyWitnesses era) (Map (ScriptHash (EraCrypto era)) (Script era))
 scriptShelleyWitsL = lens scriptWits' (\w s -> w {scriptWits = s})
 {-# INLINEABLE scriptShelleyWitsL #-}
 
-instance CC.Crypto crypto => EraWitnesses (ShelleyEra crypto) where
-  {-# SPECIALIZE instance EraWitnesses (ShelleyEra CC.StandardCrypto) #-}
+instance CC.Crypto crypto => EraTxWits (ShelleyEra crypto) where
+  {-# SPECIALIZE instance EraTxWits (ShelleyEra CC.StandardCrypto) #-}
 
-  type Witnesses (ShelleyEra crypto) = ShelleyWitnesses (ShelleyEra crypto)
+  type TxWits (ShelleyEra crypto) = ShelleyWitnesses (ShelleyEra crypto)
 
-  mkBasicWitnesses = mempty
+  mkBasicTxWits = mempty
 
   addrWitsL = addrShelleyWitsL
   {-# INLINE addrWitsL #-}
@@ -480,7 +480,7 @@ prettyWitnessSetParts (WitnessSet' a b c _) = (a, b, c)
 segwitTx ::
   EraTx era =>
   Annotator (Core.TxBody era) ->
-  Annotator (Witnesses era) ->
+  Annotator (TxWits era) ->
   Maybe (Annotator (AuxiliaryData era)) ->
   Annotator (Tx era)
 segwitTx

@@ -25,7 +25,7 @@ import Cardano.Ledger.Alonzo.Era (AlonzoBBODY)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), pointWiseExUnits)
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx, totExUnits)
 import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq, txSeqTxns)
-import Cardano.Ledger.Alonzo.TxWitness (AlonzoEraWitnesses (..))
+import Cardano.Ledger.Alonzo.TxWitness (AlonzoEraTxWits (..))
 import Cardano.Ledger.BHeaderView (BHeaderView (..), isOverlaySlot)
 import Cardano.Ledger.BaseTypes (ShelleyBase, UnitInterval, epochInfoPure)
 import Cardano.Ledger.Block (Block (..))
@@ -131,7 +131,7 @@ bbodyTransition ::
     HasField "_d" (PParams era) UnitInterval,
     HasField "_maxBlockExUnits" (PParams era) ExUnits,
     EraSegWits era,
-    AlonzoEraWitnesses era,
+    AlonzoEraTxWits era,
     Era.TxSeq era ~ AlonzoTxSeq era,
     Tx era ~ AlonzoTx era
   ) =>
@@ -198,7 +198,7 @@ instance
     Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era,
     State (EraRule "LEDGERS" era) ~ LedgerState era,
     Signal (EraRule "LEDGERS" era) ~ Seq (AlonzoTx era),
-    AlonzoEraWitnesses era,
+    AlonzoEraTxWits era,
     Tx era ~ AlonzoTx era,
     HasField "_d" (PParams era) UnitInterval,
     HasField "_maxBlockExUnits" (PParams era) ExUnits,

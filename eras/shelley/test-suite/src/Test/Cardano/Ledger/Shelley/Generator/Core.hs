@@ -175,7 +175,7 @@ import qualified Test.QuickCheck as QC
 
 -- | For use in the Serialisation and Example Tests, which assume Shelley, Allegra, or Mary Eras.
 type PreAlonzo era =
-  ( Witnesses era ~ ShelleyWitnesses era,
+  ( TxWits era ~ ShelleyWitnesses era,
     ToCBOR (AuxiliaryData era)
   )
 

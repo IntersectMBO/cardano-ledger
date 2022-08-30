@@ -138,7 +138,7 @@ import Test.QuickCheck
 -- Assembing lists of Fields in to (XX era)
 
 -- | This uses merging semantics, it expects duplicate fields, and merges them together
-assembleWits :: Era era => Proof era -> [WitnessesField era] -> Witnesses era
+assembleWits :: Era era => Proof era -> [WitnessesField era] -> TxWits era
 assembleWits era = List.foldl' (updateWitnesses merge era) (initialWitnesses era)
 
 coreTxOut :: Era era => Proof era -> [TxOutField era] -> TxOut era
@@ -200,9 +200,9 @@ lookupScript scriptHash mTag = do
     _ -> pure Nothing
 
 -- ========================================================================
--- Generating Witnesses, here we are not adding anything to the GenState
+-- Generating TxWits, here we are not adding anything to the GenState
 -- only looking up things already added, and assembling the right pieces to
--- make Witnesses.
+-- make TxWits.
 
 -- | Used in Shelley Eras
 mkMultiSigWit ::
@@ -258,7 +258,7 @@ genGenericScriptWitness (Babbage _) _ (PlutusScript _ _) = pure (const [])
 genGenericScriptWitness (Conway c) mTag (TimelockScript timelock) = mkTimelockWit (Conway c) mTag timelock
 genGenericScriptWitness (Conway _) _ (PlutusScript _ _) = pure (const [])
 
--- | Generate a Witnesses producing function. We handle Witnesses come from Keys and Scripts
+-- | Generate a TxWits producing function. We handle TxWits come from Keys and Scripts
 --   Because scripts vary be Era, we need some Era specific code here: genGenericScriptWitness
 mkWitVKey ::
   forall era kr.
@@ -384,7 +384,7 @@ genDatum :: Era era => GenRS era (Data era)
 genDatum = snd <$> genDatumWithHash
 
 -- | Generate a Babbage Datum witness to use as a redeemer for a Plutus Script.
---   Witnesses can be a ScriptHash, or an inline Datum
+--   TxWits can be a ScriptHash, or an inline Datum
 genBabbageDatum :: forall era. Era era => GenRS era (Datum era)
 genBabbageDatum =
   frequencyT
@@ -931,7 +931,7 @@ genAlonzoTxAndInfo proof slot = do
         coreTx
           proof
           [ Body txBodyNoFee,
-            Witnesses (assembleWits proof noFeeWits),
+            TxWits (assembleWits proof noFeeWits),
             Valid isValid,
             AuxData' []
           ]
@@ -982,7 +982,7 @@ genAlonzoTxAndInfo proof slot = do
         coreTx
           proof
           [ Body txBody,
-            Witnesses (assembleWits proof wits),
+            TxWits (assembleWits proof wits),
             Valid isValid,
             AuxData' []
           ]

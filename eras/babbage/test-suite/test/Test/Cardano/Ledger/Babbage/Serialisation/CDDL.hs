@@ -35,7 +35,7 @@ tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
       cddlTest @(TxOut B) n "transaction_output",
       cddlAnnotatorTest @(Script B) n "script",
       cddlTest @(Datum B) n "datum_option",
-      cddlAnnotatorTest @(Witnesses B) n "transaction_witness_set",
+      cddlAnnotatorTest @(TxWits B) n "transaction_witness_set",
       cddlTest @(PParamsUpdate B) n "protocol_param_update",
       cddlTest @CostModels n "costmdls",
       cddlAnnotatorTest @(Redeemers B) n "[* redeemer]",

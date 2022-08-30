@@ -291,7 +291,7 @@ updateTxExUnits proof tx utxo ei ss costmdls err =
 
 replaceRdmrs ::
   forall era.
-  (AlonzoEraWitnesses era, EraTx era) =>
+  (AlonzoEraTxWits era, EraTx era) =>
   Proof era ->
   Tx era ->
   Map RdmrPtr ExUnits ->

@@ -44,7 +44,7 @@ module Cardano.Ledger.Alonzo.TxWitness
     scriptAlonzoWitsL,
     datsAlonzoWitsL,
     rdmrsAlonzoWitsL,
-    AlonzoEraWitnesses (..),
+    AlonzoEraTxWits (..),
     unTxDats,
     nullDats,
   )
@@ -401,12 +401,12 @@ rdmrsAlonzoWitsL =
   lensWitsRaw _txrdmrs (\witsRaw rdmrsWits -> witsRaw {_txrdmrs = rdmrsWits})
 {-# INLINEABLE rdmrsAlonzoWitsL #-}
 
-instance (EraScript (AlonzoEra c), CC.Crypto c) => EraWitnesses (AlonzoEra c) where
-  {-# SPECIALIZE instance EraWitnesses (AlonzoEra CC.StandardCrypto) #-}
+instance (EraScript (AlonzoEra c), CC.Crypto c) => EraTxWits (AlonzoEra c) where
+  {-# SPECIALIZE instance EraTxWits (AlonzoEra CC.StandardCrypto) #-}
 
-  type Witnesses (AlonzoEra c) = TxWitness (AlonzoEra c)
+  type TxWits (AlonzoEra c) = TxWitness (AlonzoEra c)
 
-  mkBasicWitnesses = mempty
+  mkBasicTxWits = mempty
 
   addrWitsL = addrAlonzoWitsL
   {-# INLINE addrWitsL #-}
@@ -417,13 +417,13 @@ instance (EraScript (AlonzoEra c), CC.Crypto c) => EraWitnesses (AlonzoEra c) wh
   scriptWitsL = scriptAlonzoWitsL
   {-# INLINE scriptWitsL #-}
 
-class EraWitnesses era => AlonzoEraWitnesses era where
-  datsWitsL :: Lens' (Witnesses era) (TxDats era)
+class EraTxWits era => AlonzoEraTxWits era where
+  datsWitsL :: Lens' (TxWits era) (TxDats era)
 
-  rdmrsWitsL :: Lens' (Witnesses era) (Redeemers era)
+  rdmrsWitsL :: Lens' (TxWits era) (Redeemers era)
 
-instance (EraScript (AlonzoEra c), CC.Crypto c) => AlonzoEraWitnesses (AlonzoEra c) where
-  {-# SPECIALIZE instance AlonzoEraWitnesses (AlonzoEra CC.StandardCrypto) #-}
+instance (EraScript (AlonzoEra c), CC.Crypto c) => AlonzoEraTxWits (AlonzoEra c) where
+  {-# SPECIALIZE instance AlonzoEraTxWits (AlonzoEra CC.StandardCrypto) #-}
 
   datsWitsL = datsAlonzoWitsL
   {-# INLINE datsWitsL #-}
