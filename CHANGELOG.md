@@ -21,6 +21,7 @@ in the naming of release branches.
 ### Removed
 
 - Deprecated the HasAlgorithm type alias: #3007
+- Deprecated the validPlutusdata function: #3006
 
 ## Release branch 1.1.x
 
