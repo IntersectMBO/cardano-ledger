@@ -40,7 +40,7 @@ import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.Babbage.TxBody
   ( BabbageEraTxBody (referenceInputsTxBodyL, sizedCollateralReturnTxBodyL, sizedOutputsTxBodyL),
     BabbageTxBody,
-    BabbageTxOut (BabbageTxOut),
+    BabbageTxOut,
     TxBody,
     TxOut,
     dataHashTxOutL,
@@ -84,7 +84,6 @@ instance CC.Crypto c => ExtendedUTxO (BabbageEra c) where
       referencedOuts = Map.elems $ Map.restrictKeys utxo (txBody ^. referenceInputsTxBodyL)
       outs = newOuts <> referencedOuts
   getDatum = getDatumBabbage
-  getTxOutDatum (BabbageTxOut _ _ datum _) = datum
   allSizedOuts txBody = toList (txBody ^. sizedOutputsTxBodyL) <> collOuts
     where
       collOuts = case txBody ^. sizedCollateralReturnTxBodyL of

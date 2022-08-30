@@ -59,6 +59,7 @@ module Cardano.Ledger.Alonzo.TxInfo
     languages,
     -- DEPRECATED
     validPlutusdata,
+    getTxOutDatum,
   )
 where
 
@@ -67,8 +68,7 @@ where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeFull')
 import Cardano.Crypto.Hash.Class (Hash, hashToBytes)
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
-import Cardano.Ledger.Alonzo.Data (Data (..), Datum (..), getPlutusData)
-import Cardano.Ledger.Alonzo.Language (Language (..))
+import Cardano.Ledger.Alonzo.Data (Data (..), Datum, getPlutusData)
 import Cardano.Ledger.Alonzo.Scripts
   ( AlonzoScript (..),
     ExUnits (..),
@@ -102,6 +102,7 @@ import Cardano.Ledger.Credential
   )
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (KeyHash (..), hashKey)
+import Cardano.Ledger.Language (Language (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
 import Cardano.Ledger.Serialization (Sized (sizedValue))
@@ -483,9 +484,6 @@ class ExtendedUTxO era where
     ScriptPurpose (EraCrypto era) ->
     Maybe (Data era)
 
-  getTxOutDatum ::
-    TxOut era -> Datum era
-
   allOuts ::
     TxBody era ->
     [TxOut era]
@@ -494,6 +492,10 @@ class ExtendedUTxO era where
   allSizedOuts ::
     TxBody era ->
     [Sized (TxOut era)]
+
+getTxOutDatum :: AlonzoEraTxOut era => TxOut era -> Datum era
+getTxOutDatum txOut = txOut ^. datumTxOutF
+{-# DEPRECATED getTxOutDatum "In favor of `datumTxOutF`" #-}
 
 alonzoTxInfo ::
   forall era.

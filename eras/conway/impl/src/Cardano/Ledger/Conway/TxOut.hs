@@ -17,9 +17,11 @@ where
 import Cardano.Ledger.Alonzo.Data (Datum (NoDatum))
 import Cardano.Ledger.Babbage.TxBody
   ( addrEitherBabbageTxOutL,
+    babbageMinUTxOValue,
     dataBabbageTxOutL,
     dataHashBabbageTxOutL,
     datumBabbageTxOutL,
+    getDatumBabbageTxOut,
     referenceScriptBabbageTxOutL,
     valueEitherBabbageTxOutL,
   )
@@ -27,7 +29,6 @@ import Cardano.Ledger.Babbage.TxBody as BabbageTxOutReExports
   ( AlonzoEraTxOut (..),
     BabbageEraTxOut (..),
     BabbageTxOut (..),
-    babbageMinUTxOValue,
   )
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.PParams (BabbagePParamsHKD (..))
@@ -35,6 +36,7 @@ import Cardano.Ledger.Conway.Scripts ()
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC
 import Data.Maybe.Strict (StrictMaybe (..))
+import Lens.Micro
 
 instance CC.Crypto c => EraTxOut (ConwayEra c) where
   {-# SPECIALIZE instance EraTxOut (ConwayEra CC.StandardCrypto) #-}
@@ -56,6 +58,9 @@ instance CC.Crypto c => AlonzoEraTxOut (ConwayEra c) where
 
   dataHashTxOutL = dataHashBabbageTxOutL
   {-# INLINE dataHashTxOutL #-}
+
+  datumTxOutF = to getDatumBabbageTxOut
+  {-# INLINE datumTxOutF #-}
 
 instance CC.Crypto c => BabbageEraTxOut (ConwayEra c) where
   {-# SPECIALIZE instance BabbageEraTxOut (ConwayEra CC.StandardCrypto) #-}

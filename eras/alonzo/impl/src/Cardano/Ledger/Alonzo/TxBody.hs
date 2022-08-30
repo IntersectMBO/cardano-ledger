@@ -87,7 +87,7 @@ import Cardano.Binary
   )
 import Cardano.Crypto.Hash
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash (..), dataHashSize)
+import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash (..), Datum (..), dataHashSize)
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.PParams (_coinsPerUTxOWord)
 import Cardano.Ledger.Alonzo.Scripts ()
@@ -405,12 +405,20 @@ utxoEntrySize txOut = utxoEntrySizeWithoutVal + size v + dataHashSize dh
 class EraTxOut era => AlonzoEraTxOut era where
   dataHashTxOutL :: Lens' (Core.TxOut era) (StrictMaybe (DataHash (EraCrypto era)))
 
+  datumTxOutF :: SimpleGetter (Core.TxOut era) (Datum era)
+
 instance CC.Crypto c => AlonzoEraTxOut (AlonzoEra c) where
   {-# SPECIALIZE instance AlonzoEraTxOut (AlonzoEra CC.StandardCrypto) #-}
 
   dataHashTxOutL =
     lens getAlonzoTxOutDataHash (\(AlonzoTxOut addr cv _) dh -> AlonzoTxOut addr cv dh)
   {-# INLINEABLE dataHashTxOutL #-}
+
+  datumTxOutF = to $ \txOut ->
+    case getAlonzoTxOutDataHash txOut of
+      SNothing -> NoDatum
+      SJust dh -> DatumHash dh
+  {-# INLINEABLE datumTxOutF #-}
 
 getTxOutCompactValue :: EraTxOut era => AlonzoTxOut era -> CompactForm (Value era)
 getTxOutCompactValue =

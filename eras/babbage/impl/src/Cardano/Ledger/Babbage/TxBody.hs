@@ -35,6 +35,7 @@ module Cardano.Ledger.Babbage.TxBody
     dataBabbageTxOutL,
     datumBabbageTxOutL,
     referenceScriptBabbageTxOutL,
+    getDatumBabbageTxOut,
     babbageMinUTxOValue,
     BabbageTxBody
       ( BabbageTxBody,
@@ -97,7 +98,7 @@ module Cardano.Ledger.Babbage.TxBody
     scriptIntegrityHash',
     adHash',
     txnetworkid',
-    getBabbageTxOutEitherAddr,
+    getEitherAddrBabbageTxOut,
     EraIndependentScriptIntegrity,
     ScriptIntegrityHash,
     txOutData,
@@ -286,7 +287,7 @@ dataHashBabbageTxOutL ::
   EraTxOut era => Lens' (BabbageTxOut era) (StrictMaybe (DataHash (EraCrypto era)))
 dataHashBabbageTxOutL =
   lens
-    getBabbageTxOutDataHash
+    getDataHashBabbageTxOut
     ( \(BabbageTxOut addr cv _ s) -> \case
         SNothing -> BabbageTxOut addr cv NoDatum s
         SJust dh -> BabbageTxOut addr cv (DatumHash dh) s
@@ -299,6 +300,9 @@ instance CC.Crypto c => AlonzoEraTxOut (BabbageEra c) where
   dataHashTxOutL = dataHashBabbageTxOutL
   {-# INLINEABLE dataHashTxOutL #-}
 
+  datumTxOutF = to getDatumBabbageTxOut
+  {-# INLINEABLE datumTxOutF #-}
+
 class (AlonzoEraTxOut era, EraScript era) => BabbageEraTxOut era where
   referenceScriptTxOutL :: Lens' (Core.TxOut era) (StrictMaybe (Script era))
 
@@ -309,7 +313,7 @@ class (AlonzoEraTxOut era, EraScript era) => BabbageEraTxOut era where
 dataBabbageTxOutL :: EraTxOut era => Lens' (BabbageTxOut era) (StrictMaybe (Data era))
 dataBabbageTxOutL =
   lens
-    getBabbageTxOutData
+    getDataBabbageTxOut
     ( \(BabbageTxOut addr cv _ s) ->
         \case
           SNothing -> BabbageTxOut addr cv NoDatum s
@@ -319,12 +323,12 @@ dataBabbageTxOutL =
 
 datumBabbageTxOutL :: EraTxOut era => Lens' (BabbageTxOut era) (Datum era)
 datumBabbageTxOutL =
-  lens getBabbageTxOutDatum (\(BabbageTxOut addr cv _ s) d -> BabbageTxOut addr cv d s)
+  lens getDatumBabbageTxOut (\(BabbageTxOut addr cv _ s) d -> BabbageTxOut addr cv d s)
 {-# INLINEABLE datumBabbageTxOutL #-}
 
 referenceScriptBabbageTxOutL :: EraTxOut era => Lens' (BabbageTxOut era) (StrictMaybe (Script era))
 referenceScriptBabbageTxOutL =
-  lens getBabbageTxOutScript (\(BabbageTxOut addr cv d _) s -> BabbageTxOut addr cv d s)
+  lens getScriptBabbageTxOut (\(BabbageTxOut addr cv d _) s -> BabbageTxOut addr cv d s)
 {-# INLINEABLE referenceScriptBabbageTxOutL #-}
 
 instance CC.Crypto c => BabbageEraTxOut (BabbageEra c) where
@@ -343,9 +347,9 @@ addrEitherBabbageTxOutL ::
   Lens' (BabbageTxOut era) (Either (Addr (EraCrypto era)) (CompactAddr (EraCrypto era)))
 addrEitherBabbageTxOutL =
   lens
-    getBabbageTxOutEitherAddr
+    getEitherAddrBabbageTxOut
     ( \txOut eAddr ->
-        let cVal = getTxOutCompactValue txOut
+        let cVal = getCompactValueBabbageTxOut txOut
             (_, _, datum, mScript) = viewTxOut txOut
          in case eAddr of
               Left addr -> mkTxOutCompact addr (compactAddr addr) cVal datum mScript
@@ -359,7 +363,7 @@ valueEitherBabbageTxOutL ::
   Lens' (BabbageTxOut era) (Either (Value era) (CompactForm (Value era)))
 valueEitherBabbageTxOutL =
   lens
-    (Right . getTxOutCompactValue)
+    (Right . getCompactValueBabbageTxOut)
     ( \txOut eVal ->
         let (cAddr, _, datum, mScript) = viewCompactTxOut txOut
          in case eVal of
@@ -1318,11 +1322,11 @@ initialTxBodyRaw =
     SNothing
     SNothing
 
-getBabbageTxOutEitherAddr ::
+getEitherAddrBabbageTxOut ::
   HashAlgorithm (CC.ADDRHASH (EraCrypto era)) =>
   BabbageTxOut era ->
   Either (Addr (EraCrypto era)) (CompactAddr (EraCrypto era))
-getBabbageTxOutEitherAddr = \case
+getEitherAddrBabbageTxOut = \case
   TxOutCompact' cAddr _ -> Right cAddr
   TxOutCompactDH' cAddr _ _ -> Right cAddr
   TxOutCompactRefScript cAddr _ _ _ -> Right cAddr
@@ -1334,9 +1338,9 @@ getBabbageTxOutEitherAddr = \case
     | Just addr <- decodeAddress28 stakeRef addr28Extra -> Left addr
     | otherwise -> error "Impossible: Compacted an address or a hash of non-standard size"
 
--- TODO: Switch to using `getBabbageTxOutDatum`
-getBabbageTxOutData :: Era era => BabbageTxOut era -> StrictMaybe (Data era)
-getBabbageTxOutData = \case
+-- TODO: Switch to using `getDatumBabbageTxOut`
+getDataBabbageTxOut :: Era era => BabbageTxOut era -> StrictMaybe (Data era)
+getDataBabbageTxOut = \case
   TxOutCompact' {} -> SNothing
   TxOutCompactDH' {} -> SNothing
   TxOutCompactDatum _ _ binaryData -> SJust $ binaryDataToData binaryData
@@ -1346,13 +1350,13 @@ getBabbageTxOutData = \case
   TxOut_AddrHash28_AdaOnly {} -> SNothing
   TxOut_AddrHash28_AdaOnly_DataHash32 {} -> SNothing
 
--- TODO: Switch to using `getBabbageTxOutDatum`
+-- TODO: Switch to using `getDatumBabbageTxOut`
 
 -- | Return the data hash of a given transaction output, if one is present.
 --  Note that this function does *not* return the hash of an inline datum
 --  if one is present.
-getBabbageTxOutDataHash :: Era era => BabbageTxOut era -> StrictMaybe (DataHash (EraCrypto era))
-getBabbageTxOutDataHash = \case
+getDataHashBabbageTxOut :: Era era => BabbageTxOut era -> StrictMaybe (DataHash (EraCrypto era))
+getDataHashBabbageTxOut = \case
   TxOutCompact' {} -> SNothing
   TxOutCompactDH' _ _ dh -> SJust dh
   TxOutCompactDatum {} -> SNothing
@@ -1365,8 +1369,8 @@ getBabbageTxOutDataHash = \case
   TxOut_AddrHash28_AdaOnly_DataHash32 _ _ _ dataHash32 ->
     maybeToStrictMaybe $ decodeDataHash32 dataHash32
 
-getBabbageTxOutScript :: BabbageTxOut era -> StrictMaybe (Script era)
-getBabbageTxOutScript = \case
+getScriptBabbageTxOut :: BabbageTxOut era -> StrictMaybe (Script era)
+getScriptBabbageTxOut = \case
   TxOutCompact' {} -> SNothing
   TxOutCompactDH' {} -> SNothing
   TxOutCompactDatum {} -> SNothing
@@ -1374,8 +1378,8 @@ getBabbageTxOutScript = \case
   TxOut_AddrHash28_AdaOnly {} -> SNothing
   TxOut_AddrHash28_AdaOnly_DataHash32 {} -> SNothing
 
-getBabbageTxOutDatum :: Era era => BabbageTxOut era -> Datum era
-getBabbageTxOutDatum = \case
+getDatumBabbageTxOut :: Era era => BabbageTxOut era -> Datum era
+getDatumBabbageTxOut = \case
   TxOutCompact' {} -> NoDatum
   TxOutCompactDH' _ _ dh -> DatumHash dh
   TxOutCompactDatum _ _ binaryData -> Datum binaryData
@@ -1385,8 +1389,8 @@ getBabbageTxOutDatum = \case
     | Just dh <- decodeDataHash32 dataHash32 -> DatumHash dh
     | otherwise -> error "Impossible: Compacted a hash of non-standard size"
 
-getTxOutCompactValue :: EraTxOut era => BabbageTxOut era -> CompactForm (Value era)
-getTxOutCompactValue =
+getCompactValueBabbageTxOut :: EraTxOut era => BabbageTxOut era -> CompactForm (Value era)
+getCompactValueBabbageTxOut =
   \case
     TxOutCompact' _ cv -> cv
     TxOutCompactDH' _ cv _ -> cv
@@ -1396,13 +1400,13 @@ getTxOutCompactValue =
     TxOut_AddrHash28_AdaOnly_DataHash32 _ _ cc _ -> injectCompact cc
 
 txOutData :: Era era => BabbageTxOut era -> Maybe (Data era)
-txOutData = strictMaybeToMaybe . getBabbageTxOutData
-{-# DEPRECATED txOutData "In favor of `dataTxOutL` or `getBabbageTxOutData`" #-}
+txOutData = strictMaybeToMaybe . getDataBabbageTxOut
+{-# DEPRECATED txOutData "In favor of `dataTxOutL` or `getDataBabbageTxOut`" #-}
 
-txOutDataHash :: Era era => BabbageTxOut era -> Maybe (Data era)
-txOutDataHash = strictMaybeToMaybe . getBabbageTxOutData
-{-# DEPRECATED txOutDataHash "In favor of `dataHashTxOutL` or `getBabbageTxOutDataHash`" #-}
+txOutDataHash :: Era era => BabbageTxOut era -> Maybe (DataHash (EraCrypto era))
+txOutDataHash = strictMaybeToMaybe . getDataHashBabbageTxOut
+{-# DEPRECATED txOutDataHash "In favor of `dataHashTxOutL` or `getDataHashBabbageTxOut`" #-}
 
 txOutScript :: BabbageTxOut era -> Maybe (Script era)
-txOutScript = strictMaybeToMaybe . getBabbageTxOutScript
-{-# DEPRECATED txOutScript "In favor of `dataTxOutL` or `getBabbageTxOutScript`" #-}
+txOutScript = strictMaybeToMaybe . getScriptBabbageTxOut
+{-# DEPRECATED txOutScript "In favor of `dataTxOutL` or `getScriptBabbageTxOut`" #-}
