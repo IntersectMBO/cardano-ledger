@@ -9,10 +9,9 @@ where
 import Cardano.Ledger.Alonzo.Data (Data)
 import Cardano.Ledger.Alonzo.Scripts (CostModels)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers)
-import Cardano.Ledger.Babbage (BabbageEra)
+import Cardano.Ledger.Babbage (Babbage)
 import Cardano.Ledger.Babbage.TxBody (Datum)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.ShelleyMA.Timelocks as MA
 import qualified Data.ByteString.Lazy as BSL
 import Paths_cardano_ledger_babbage_test
@@ -22,24 +21,22 @@ import Test.Cardano.Ledger.Shelley.Serialisation.CDDLUtils
   )
 import Test.Tasty (TestTree, testGroup, withResource)
 
-type B = BabbageEra StandardCrypto
-
 tests :: Int -> TestTree
 tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
   testGroup "CDDL roundtrip tests" $
-    [ cddlTest @(Value B) n "coin",
-      cddlAnnotatorTest @(TxBody B) n "transaction_body",
-      cddlAnnotatorTest @(AuxiliaryData B) n "auxiliary_data",
-      cddlAnnotatorTest @(MA.Timelock (BabbageEra StandardCrypto)) n "native_script",
-      cddlAnnotatorTest @(Data B) n "plutus_data",
-      cddlTest @(TxOut B) n "transaction_output",
-      cddlAnnotatorTest @(Script B) n "script",
-      cddlTest @(Datum B) n "datum_option",
-      cddlAnnotatorTest @(TxWits B) n "transaction_witness_set",
-      cddlTest @(PParamsUpdate B) n "protocol_param_update",
+    [ cddlTest @(Value Babbage) n "coin",
+      cddlAnnotatorTest @(TxBody Babbage) n "transaction_body",
+      cddlAnnotatorTest @(AuxiliaryData Babbage) n "auxiliary_data",
+      cddlAnnotatorTest @(MA.Timelock Babbage) n "native_script",
+      cddlAnnotatorTest @(Data Babbage) n "plutus_data",
+      cddlTest @(TxOut Babbage) n "transaction_output",
+      cddlAnnotatorTest @(Script Babbage) n "script",
+      cddlTest @(Datum Babbage) n "datum_option",
+      cddlAnnotatorTest @(TxWits Babbage) n "transaction_witness_set",
+      cddlTest @(PParamsUpdate Babbage) n "protocol_param_update",
       cddlTest @CostModels n "costmdls",
-      cddlAnnotatorTest @(Redeemers B) n "[* redeemer]",
-      cddlAnnotatorTest @(Tx B) n "transaction"
+      cddlAnnotatorTest @(Redeemers Babbage) n "[* redeemer]",
+      cddlAnnotatorTest @(Tx Babbage) n "transaction"
     ]
       <*> pure cddl
 

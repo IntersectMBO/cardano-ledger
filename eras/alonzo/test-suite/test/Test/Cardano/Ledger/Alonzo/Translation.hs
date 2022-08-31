@@ -16,21 +16,18 @@ where
 import Cardano.Binary
   ( ToCBOR (..),
   )
-import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo (Alonzo)
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import qualified Cardano.Ledger.Alonzo.Translation as Translation (Tx (..))
 import Cardano.Ledger.Alonzo.Tx (toCBORForSizeComputation)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (TranslateEra (..))
+import Cardano.Ledger.Mary (Mary)
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.ShelleyMA.AuxiliaryData (MAAuxiliaryData)
 import Cardano.Ledger.ShelleyMA.TxBody (MATxBody)
 import Data.Typeable (Typeable)
 import Test.Cardano.Ledger.AllegraEraGen ()
-import Test.Cardano.Ledger.EraBuffet
-  ( MaryEra,
-    StandardCrypto,
-  )
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
@@ -42,10 +39,6 @@ import Test.Cardano.Ledger.TranslationTools
   )
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (Arbitrary, testProperty)
-
-type Mary = MaryEra StandardCrypto
-
-type Alonzo = AlonzoEra StandardCrypto
 
 tests :: TestTree
 tests =

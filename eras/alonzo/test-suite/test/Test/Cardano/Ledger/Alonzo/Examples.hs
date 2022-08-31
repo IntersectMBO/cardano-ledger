@@ -8,7 +8,7 @@
 
 module Test.Cardano.Ledger.Alonzo.Examples where
 
-import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo (Alonzo)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
 import Cardano.Ledger.Alonzo.TxInfo
@@ -38,7 +38,6 @@ import qualified Test.Cardano.Ledger.Alonzo.PlutusScripts as Generated
     redeemerIs102,
     sumsTo103,
   )
-import Test.Cardano.Ledger.EraBuffet (StandardCrypto)
 import Test.Tasty
 import Test.Tasty.HUnit (Assertion, assertBool, testCase)
 
@@ -190,10 +189,10 @@ plutusScriptExamples =
 
 -- =========================================
 
-alonzo :: Proxy (AlonzoEra StandardCrypto)
+alonzo :: Proxy Alonzo
 alonzo = Proxy
 
-explainTest :: AlonzoScript (AlonzoEra StandardCrypto) -> ShouldSucceed -> [P.Data] -> Assertion
+explainTest :: AlonzoScript Alonzo -> ShouldSucceed -> [P.Data] -> Assertion
 explainTest script@(PlutusScript _ bytes) mode ds =
   case ( mode,
          runPLCScript

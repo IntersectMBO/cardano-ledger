@@ -9,7 +9,8 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Babbage
-  ( BabbageEra,
+  ( Babbage,
+    BabbageEra,
     BabbageTxOut,
     BabbageTxBody,
     AlonzoScript,
@@ -47,7 +48,7 @@ import Cardano.Ledger.Babbage.TxBody
   )
 import Cardano.Ledger.Babbage.TxInfo (babbageTxInfo)
 import Cardano.Ledger.Babbage.UTxO ()
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Serialization (sizedValue)
@@ -59,19 +60,21 @@ import Data.Maybe.Strict
 import qualified Data.Set as Set
 import Lens.Micro
 
+type Babbage = BabbageEra StandardCrypto
+
 -- =====================================================
 
-instance (CC.Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyTx (BabbageEra c) where
+instance (Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyTx (BabbageEra c) where
   reapplyTx = reapplyAlonzoTx
 
-instance (CC.Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyBlock (BabbageEra c)
+instance (Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyBlock (BabbageEra c)
 
-instance CC.Crypto c => API.CanStartFromGenesis (BabbageEra c) where
+instance Crypto c => API.CanStartFromGenesis (BabbageEra c) where
   type AdditionalGenesisConfig (BabbageEra c) = AlonzoGenesis
 
   initialState = API.initialStateFromGenesis extendPPWithGenesis
 
-instance CC.Crypto c => ExtendedUTxO (BabbageEra c) where
+instance Crypto c => ExtendedUTxO (BabbageEra c) where
   txInfo = babbageTxInfo
   inputDataHashes = babbageInputDataHashes
   txscripts = babbageTxScripts

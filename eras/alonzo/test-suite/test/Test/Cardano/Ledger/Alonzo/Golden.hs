@@ -13,7 +13,7 @@ module Test.Cardano.Ledger.Alonzo.Golden
 where
 
 import Cardano.Binary (Annotator (..), FullByteString (Full), fromCBOR, serialize)
-import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo (Alonzo)
 import Cardano.Ledger.Alonzo.Data (Data (..), hashData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams
@@ -66,7 +66,7 @@ coinsPerUTxOWordLocal = quot minUTxOValueShelleyMA utxoEntrySizeWithoutValLocal
     utxoEntrySizeWithoutValLocal = 29
     Coin minUTxOValueShelleyMA = minUTxO
 
-calcMinUTxO :: AlonzoTxOut (AlonzoEra StandardCrypto) -> Coin
+calcMinUTxO :: AlonzoTxOut Alonzo -> Coin
 calcMinUTxO tout = Coin (utxoEntrySize tout * coinsPerUTxOWordLocal)
 
 -- | (heapWords of a DataHash) * coinsPerUTxOWordLocal is 344820
@@ -79,7 +79,7 @@ goldenUTxOEntryMinAda =
           ( AlonzoTxOut
               carlAddr
               (valueFromList 1407406 [(pid1, smallestName, 1)])
-              (SJust $ hashData @(AlonzoEra StandardCrypto) (Data (List [])))
+              (SJust $ hashData @Alonzo (Data (List [])))
           )
           @?= Coin 1655136,
       testCase "one policy, one (smallest) name, no datum hash" $
@@ -131,7 +131,7 @@ goldenUTxOEntryMinAda =
                     (pid1, largestName 67, 1)
                   ]
               )
-              (SJust $ hashData @(AlonzoEra StandardCrypto) (Data (Constr 0 [Constr 0 []])))
+              (SJust $ hashData @Alonzo (Data (Constr 0 [Constr 0 []])))
           )
           @?= Coin 2172366,
       testCase "two policies, one (smallest) name" $
@@ -147,7 +147,7 @@ goldenUTxOEntryMinAda =
           ( AlonzoTxOut
               aliceAddr
               (valueFromList 1592591 [(pid1, smallestName, 1), (pid2, smallestName, 1)])
-              (SJust $ hashData @(AlonzoEra StandardCrypto) (Data (Constr 0 [])))
+              (SJust $ hashData @Alonzo (Data (Constr 0 [])))
           )
           @?= Coin 1827546,
       testCase "two policies, two (small) names" $
@@ -173,7 +173,7 @@ goldenUTxOEntryMinAda =
         -- with the old parameter minUTxOValue.
         -- If we wish to keep the ada-only, no datum hash, minimum value nearly the same,
         -- we can divide minUTxOValue by 29 and round.
-        utxoEntrySize @(AlonzoEra StandardCrypto) (AlonzoTxOut aliceAddr (MaryValue 0 mempty) SNothing) @?= 29
+        utxoEntrySize @Alonzo (AlonzoTxOut aliceAddr (MaryValue 0 mempty) SNothing) @?= 29
     ]
 
 goldenSerialization :: TestTree
@@ -207,9 +207,9 @@ goldenMinFee =
             (_leftover, Annotator f) =
               fromRight (error "bad golden block 4228") $
                 deserialiseFromBytes fromCBOR cborBlock
-            _block :: Block (BHeader StandardCrypto) (AlonzoEra StandardCrypto)
+            _block :: Block (BHeader StandardCrypto) Alonzo
             _block@(Block _header txs) = f (Full cborBlock)
-            txs' = fromTxSeq @(AlonzoEra StandardCrypto) txs
+            txs' = fromTxSeq @Alonzo txs
             firstTx = head $ toList txs'
 
             -- Below are the relevant protocol parameters that were active
@@ -235,7 +235,7 @@ freeCostModel lang =
     names PlutusV2 = PV2.costModelParamNames
     cmps = Map.fromSet (const 0) . names
 
-exPP :: AlonzoPParams (AlonzoEra StandardCrypto)
+exPP :: AlonzoPParams Alonzo
 exPP =
   emptyPParams
     { _costmdls =
@@ -275,7 +275,7 @@ exampleLangDepViewPV2 = LangDepView b1 b2
             <> "0000000000000000000000000000000000"
 
 testScriptIntegritpHash ::
-  AlonzoPParams (AlonzoEra StandardCrypto) ->
+  AlonzoPParams Alonzo ->
   Language ->
   LangDepView ->
   Assertion

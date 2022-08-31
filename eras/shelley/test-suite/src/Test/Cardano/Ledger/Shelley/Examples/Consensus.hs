@@ -23,7 +23,7 @@ import Cardano.Ledger.Era
 import Cardano.Ledger.Keys
 import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.SafeHash
-import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley (Shelley)
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.EpochBoundary
 import Cardano.Ledger.Shelley.LedgerState
@@ -392,13 +392,11 @@ mkDummySafeHash _ =
   Shelley era specific functions
 -------------------------------------------------------------------------------}
 
-type StandardShelley = ShelleyEra StandardCrypto
-
 -- | ShelleyLedgerExamples for Shelley era
-ledgerExamplesShelley :: ShelleyLedgerExamples StandardShelley
+ledgerExamplesShelley :: ShelleyLedgerExamples Shelley
 ledgerExamplesShelley =
   defaultShelleyLedgerExamples
-    (mkWitnessesPreAlonzo (Proxy @StandardShelley))
+    (mkWitnessesPreAlonzo (Proxy @Shelley))
     id
     exampleCoin
     exampleTxBodyShelley
@@ -424,7 +422,7 @@ mkWitnessesPreAlonzo _ txBody keyPairWits =
 exampleCoin :: Coin
 exampleCoin = Coin 10
 
-exampleTxBodyShelley :: ShelleyTxBody StandardShelley
+exampleTxBodyShelley :: ShelleyTxBody Shelley
 exampleTxBodyShelley =
   ShelleyTxBody
     exampleTxIns
@@ -453,7 +451,7 @@ exampleMetadataMap =
       (4, Map [(I 3, B "b")])
     ]
 
-exampleAuxiliaryDataShelley :: Core.AuxiliaryData StandardShelley
+exampleAuxiliaryDataShelley :: Core.AuxiliaryData Shelley
 exampleAuxiliaryDataShelley = Metadata exampleMetadataMap
 
 exampleTxIns :: CC.Crypto c => Set (TxIn c)

@@ -5,7 +5,8 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Allegra
-  ( AllegraEra,
+  ( Allegra,
+    AllegraEra,
     Self,
     TxOut,
     TxBody,
@@ -21,7 +22,7 @@ where
 
 import Cardano.Ledger.Allegra.UTxO ()
 import Cardano.Ledger.Core (EraCrypto)
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys (DSignable)
 import Cardano.Ledger.Shelley.API hiding (PParams, Tx, TxBody, TxOut)
@@ -31,6 +32,8 @@ import Cardano.Ledger.ShelleyMA.Rules ()
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock)
 import Cardano.Ledger.ShelleyMA.TxBody ()
 
+type Allegra = AllegraEra StandardCrypto
+
 type AllegraEra = ShelleyMAEra 'Allegra
 
 --------------------------------------------------------------------------------
@@ -38,14 +41,14 @@ type AllegraEra = ShelleyMAEra 'Allegra
 --------------------------------------------------------------------------------
 
 instance
-  (CC.Crypto crypto, DSignable crypto (Hash crypto EraIndependentTxBody)) =>
+  (Crypto crypto, DSignable crypto (Hash crypto EraIndependentTxBody)) =>
   ApplyTx (AllegraEra crypto)
 
 instance
-  (CC.Crypto crypto, DSignable crypto (Hash crypto EraIndependentTxBody)) =>
+  (Crypto crypto, DSignable crypto (Hash crypto EraIndependentTxBody)) =>
   ApplyBlock (AllegraEra crypto)
 
-instance CC.Crypto crypto => CanStartFromGenesis (AllegraEra crypto) where
+instance Crypto crypto => CanStartFromGenesis (AllegraEra crypto) where
   initialState = initialStateFromGenesis const
 
 -- Self-Describing type synomyms

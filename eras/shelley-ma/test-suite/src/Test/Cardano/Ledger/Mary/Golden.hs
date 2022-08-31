@@ -19,7 +19,7 @@ where
 
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (hashScript)
-import Cardano.Ledger.Mary (MaryEra)
+import Cardano.Ledger.Mary (Mary)
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
 import Cardano.Ledger.ShelleyMA.TxBody (scaledMinDeposit)
@@ -41,19 +41,19 @@ import Test.Tasty.HUnit (testCase, (@?=))
 pid1 :: PolicyID StandardCrypto
 pid1 =
   PolicyID $
-    hashScript @(MaryEra StandardCrypto) $
+    hashScript @Mary $
       RequireAllOf (StrictSeq.fromList [])
 
 pid2 :: PolicyID StandardCrypto
 pid2 =
   PolicyID $
-    hashScript @(MaryEra StandardCrypto) $
+    hashScript @Mary $
       RequireAllOf (StrictSeq.fromList [RequireTimeStart (SlotNo 1)])
 
 pid3 :: PolicyID StandardCrypto
 pid3 =
   PolicyID $
-    hashScript @(MaryEra StandardCrypto) $
+    hashScript @Mary $
       RequireAllOf (StrictSeq.fromList [RequireTimeExpire (SlotNo 1)])
 
 -- | The smallest asset name has length zero

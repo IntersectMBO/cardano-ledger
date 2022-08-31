@@ -5,7 +5,8 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Mary
-  ( MaryEra,
+  ( Mary,
+    MaryEra,
     Self,
     ShelleyTx,
     ShelleyTxOut,
@@ -28,7 +29,7 @@ module Cardano.Ledger.Mary
 where
 
 import Cardano.Ledger.Core (EraCrypto)
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys (DSignable)
 import Cardano.Ledger.Mary.Value (MaryValue)
@@ -41,17 +42,19 @@ import Cardano.Ledger.ShelleyMA.Rules ()
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock)
 
 instance
-  (CC.Crypto crypto, DSignable crypto (Hash crypto EraIndependentTxBody)) =>
+  (Crypto crypto, DSignable crypto (Hash crypto EraIndependentTxBody)) =>
   ApplyTx (MaryEra crypto)
 
 instance
-  (CC.Crypto crypto, DSignable crypto (Hash crypto EraIndependentTxBody)) =>
+  (Crypto crypto, DSignable crypto (Hash crypto EraIndependentTxBody)) =>
   ApplyBlock (MaryEra crypto)
 
-instance CC.Crypto c => CanStartFromGenesis (MaryEra c) where
+instance Crypto c => CanStartFromGenesis (MaryEra c) where
   initialState = initialStateFromGenesis const
 
 -- Self-Describing type synomyms
+
+type Mary = MaryEra StandardCrypto
 
 type MaryEra = ShelleyMAEra 'Mary
 

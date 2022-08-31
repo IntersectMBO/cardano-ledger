@@ -18,7 +18,6 @@ import Cardano.Ledger.Babbage.PParams hiding (PParams)
 import Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Shelley.PParams hiding (PParams)
 import qualified Cardano.Ledger.Val as Val
 import qualified Data.ByteString.Lazy as BSL
@@ -56,7 +55,7 @@ propSetShelleyMinTxOut = testProperty "setShelleyMinTxOut" prop
 propSetAlonzoMinTxOut :: TestTree
 propSetAlonzoMinTxOut = testProperty "setAlonzoMinTxOut" prop
   where
-    prop :: PParams (AlonzoEra StandardCrypto) -> TxOut (AlonzoEra StandardCrypto) -> Property
+    prop :: PParams Alonzo -> TxOut Alonzo -> Property
     prop pp txOut =
       within 1000000 $ -- just in case if there is a problem with termination
         let txOut' = setMinCoinTxOut pp txOut
@@ -89,10 +88,10 @@ propSetBabbageMinTxOut = testProperty "setBabbageMinTxOut" prop
 txOutTests :: TestTree
 txOutTests =
   testGroup "TxOut" $
-    [ testGroup "ShelleyEra" [propSetShelleyMinTxOut @(ShelleyEra StandardCrypto)],
-      testGroup "AllegraEra" [propSetShelleyMinTxOut @(AllegraEra StandardCrypto)],
-      testGroup "MaryEra" [propSetShelleyMinTxOut @(MaryEra StandardCrypto)],
+    [ testGroup "ShelleyEra" [propSetShelleyMinTxOut @Shelley],
+      testGroup "AllegraEra" [propSetShelleyMinTxOut @Allegra],
+      testGroup "MaryEra" [propSetShelleyMinTxOut @Mary],
       testGroup "AlonzoEra" [propSetAlonzoMinTxOut],
-      testGroup "BabbageEra" [propSetBabbageMinTxOut @(BabbageEra StandardCrypto)],
-      testGroup "ConwayEra" [propSetBabbageMinTxOut @(ConwayEra StandardCrypto)]
+      testGroup "BabbageEra" [propSetBabbageMinTxOut @Babbage],
+      testGroup "ConwayEra" [propSetBabbageMinTxOut @Conway]
     ]

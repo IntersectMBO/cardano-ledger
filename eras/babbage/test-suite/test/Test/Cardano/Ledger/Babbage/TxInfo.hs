@@ -11,7 +11,7 @@ import Cardano.Ledger.Alonzo.TxInfo
     VersionedTxInfo (..),
     txInfo,
   )
-import Cardano.Ledger.Babbage (BabbageEra)
+import Cardano.Ledger.Babbage (Babbage)
 import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..), BabbageTxOut (..), Datum (..))
 import Cardano.Ledger.Babbage.TxInfo (txInfoInV2, txInfoOutV2)
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
@@ -55,8 +55,6 @@ ei = fixedEpochInfo (EpochSize 100) (mkSlotLength 1)
 ss :: SystemStart
 ss = SystemStart $ posixSecondsToUTCTime 0
 
-type B = BabbageEra StandardCrypto
-
 -- This input is only a "Byron input" in the sense
 -- that we attach it to a Byron output in the UTxO created below.
 byronInput :: TxIn StandardCrypto
@@ -67,19 +65,19 @@ byronInput = mkTxInPartial genesisId 0
 unknownInput :: TxIn StandardCrypto
 unknownInput = mkTxInPartial genesisId 1
 
-byronOutput :: TxOut B
+byronOutput :: TxOut Babbage
 byronOutput = BabbageTxOut byronAddr (Val.inject $ Coin 1) NoDatum SNothing
 
-shelleyOutput :: TxOut B
+shelleyOutput :: TxOut Babbage
 shelleyOutput = BabbageTxOut shelleyAddr (Val.inject $ Coin 2) NoDatum SNothing
 
-datumEx :: Datum B
+datumEx :: Datum Babbage
 datumEx = Datum . dataToBinaryData . Data . Plutus.I $ 123
 
-inlineDatumOutput :: TxOut B
+inlineDatumOutput :: TxOut Babbage
 inlineDatumOutput = BabbageTxOut shelleyAddr (Val.inject $ Coin 3) datumEx SNothing
 
-refScriptOutput :: TxOut B
+refScriptOutput :: TxOut Babbage
 refScriptOutput = BabbageTxOut shelleyAddr (Val.inject $ Coin 3) NoDatum (SJust $ alwaysSucceeds PlutusV2 3)
 
 -- This input is only a "Shelley input" in the sense
@@ -93,7 +91,7 @@ inputWithInlineDatum = mkTxInPartial genesisId 3
 inputWithRefScript :: TxIn StandardCrypto
 inputWithRefScript = mkTxInPartial genesisId 4
 
-utxo :: UTxO B
+utxo :: UTxO Babbage
 utxo =
   UTxO $
     Map.fromList
@@ -103,7 +101,7 @@ utxo =
         (inputWithRefScript, refScriptOutput)
       ]
 
-txb :: TxIn StandardCrypto -> Maybe (TxIn StandardCrypto) -> TxOut B -> TxBody B
+txb :: TxIn StandardCrypto -> Maybe (TxIn StandardCrypto) -> TxOut Babbage -> TxBody Babbage
 txb i mRefInp o =
   BabbageTxBody
     { inputs = Set.singleton i,
@@ -124,10 +122,10 @@ txb i mRefInp o =
       txnetworkid = SNothing
     }
 
-txBare :: TxIn StandardCrypto -> TxOut B -> AlonzoTx B
+txBare :: TxIn StandardCrypto -> TxOut Babbage -> AlonzoTx Babbage
 txBare i o = AlonzoTx (txb i Nothing o) mempty (IsValid True) SNothing
 
-txRefInput :: TxIn StandardCrypto -> AlonzoTx B
+txRefInput :: TxIn StandardCrypto -> AlonzoTx Babbage
 txRefInput refInput =
   AlonzoTx (txb shelleyInput (Just refInput) shelleyOutput) mempty (IsValid True) SNothing
 
@@ -143,7 +141,7 @@ expectOneOutput :: PV2.TxOut -> VersionedTxInfo -> Bool
 expectOneOutput _ (TxInfoPV1 _) = False
 expectOneOutput o (TxInfoPV2 info) = PV2.txInfoOutputs info == [o]
 
-successfulTranslation :: Language -> AlonzoTx B -> (VersionedTxInfo -> Bool) -> Assertion
+successfulTranslation :: Language -> AlonzoTx Babbage -> (VersionedTxInfo -> Bool) -> Assertion
 successfulTranslation lang tx f =
   case ctx of
     Right info -> assertBool "unexpected transaction info" (f info)
@@ -151,10 +149,10 @@ successfulTranslation lang tx f =
   where
     ctx = txInfo def lang ei ss utxo tx
 
-successfulV2Translation :: AlonzoTx B -> (VersionedTxInfo -> Bool) -> Assertion
+successfulV2Translation :: AlonzoTx Babbage -> (VersionedTxInfo -> Bool) -> Assertion
 successfulV2Translation = successfulTranslation PlutusV2
 
-expectTranslationError :: Language -> AlonzoTx B -> TranslationError StandardCrypto -> Assertion
+expectTranslationError :: Language -> AlonzoTx Babbage -> TranslationError StandardCrypto -> Assertion
 expectTranslationError lang tx expected =
   case ctx of
     Right _ -> assertFailure "This translation was expected to fail, but it succeeded."
@@ -162,10 +160,10 @@ expectTranslationError lang tx expected =
   where
     ctx = txInfo def lang ei ss utxo tx
 
-expectV1TranslationError :: AlonzoTx B -> TranslationError StandardCrypto -> Assertion
+expectV1TranslationError :: AlonzoTx Babbage -> TranslationError StandardCrypto -> Assertion
 expectV1TranslationError = expectTranslationError PlutusV1
 
-expectV2TranslationError :: AlonzoTx B -> TranslationError StandardCrypto -> Assertion
+expectV2TranslationError :: AlonzoTx Babbage -> TranslationError StandardCrypto -> Assertion
 expectV2TranslationError = expectTranslationError PlutusV2
 
 errorTranslate :: (HasCallStack, Show a) => String -> Either a b -> b

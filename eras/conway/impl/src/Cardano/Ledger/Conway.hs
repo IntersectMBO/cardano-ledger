@@ -8,7 +8,11 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Conway (ConwayEra) where
+module Cardano.Ledger.Conway
+  ( Conway,
+    ConwayEra,
+  )
+where
 
 import Cardano.Ledger.Alonzo (reapplyAlonzoTx)
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
@@ -27,7 +31,7 @@ import Cardano.Ledger.Conway.Tx ()
 import Cardano.Ledger.Conway.TxBody (BabbageEraTxBody (..))
 import Cardano.Ledger.Conway.TxOut (AlonzoEraTxOut (..))
 import Cardano.Ledger.Conway.UTxO ()
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Serialization (sizedValue)
@@ -39,19 +43,21 @@ import Data.Maybe.Strict
 import qualified Data.Set as Set
 import Lens.Micro
 
+type Conway = ConwayEra StandardCrypto
+
 -- =====================================================
 
-instance (CC.Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyTx (ConwayEra c) where
+instance (Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyTx (ConwayEra c) where
   reapplyTx = reapplyAlonzoTx
 
-instance (CC.Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyBlock (ConwayEra c)
+instance (Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyBlock (ConwayEra c)
 
-instance CC.Crypto c => API.CanStartFromGenesis (ConwayEra c) where
+instance Crypto c => API.CanStartFromGenesis (ConwayEra c) where
   type AdditionalGenesisConfig (ConwayEra c) = AlonzoGenesis
 
   initialState = API.initialStateFromGenesis extendPPWithGenesis
 
-instance CC.Crypto c => ExtendedUTxO (ConwayEra c) where
+instance Crypto c => ExtendedUTxO (ConwayEra c) where
   txInfo = babbageTxInfo
   inputDataHashes = babbageInputDataHashes
   txscripts = babbageTxScripts

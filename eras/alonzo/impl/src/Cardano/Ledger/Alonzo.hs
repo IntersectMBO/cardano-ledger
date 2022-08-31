@@ -10,7 +10,8 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Alonzo
-  ( AlonzoEra,
+  ( Alonzo,
+    AlonzoEra,
     AlonzoTxOut,
     MaryValue,
     AlonzoTxBody,
@@ -53,7 +54,7 @@ import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..))
 import Cardano.Ledger.Alonzo.UTxO ()
 import Cardano.Ledger.BaseTypes (Globals)
 import Cardano.Ledger.Core hiding (PParamsDelta, Value)
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Rules.ValidationMode (applySTSNonStatic)
@@ -68,6 +69,8 @@ import Data.Maybe.Strict
 import qualified Data.Set as Set
 import Lens.Micro
 import Lens.Micro.Extras (view)
+
+type Alonzo = AlonzoEra StandardCrypto
 
 -- =====================================================
 
@@ -87,21 +90,21 @@ reapplyAlonzoTx globals env state vtx =
           $ TRC (env, state, API.extractTx vtx)
    in liftEither . left API.ApplyTxError $ res
 
-instance (CC.Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyTx (AlonzoEra c) where
+instance (Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyTx (AlonzoEra c) where
   reapplyTx = reapplyAlonzoTx
 
-instance (CC.Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyBlock (AlonzoEra c)
+instance (Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyBlock (AlonzoEra c)
 
 -- To run a PlutusScript use Cardano.Ledger.Alonzo.TxInfo(runPLCScript)
 -- To run any Alonzo Script use Cardano.Ledger.Alonzo.PlutusScriptApi(evalScripts)
 -- hashScript x = ...  We use the default method for hashScript
 
-instance CC.Crypto c => API.CanStartFromGenesis (AlonzoEra c) where
+instance Crypto c => API.CanStartFromGenesis (AlonzoEra c) where
   type AdditionalGenesisConfig (AlonzoEra c) = AlonzoGenesis
 
   initialState = API.initialStateFromGenesis extendPPWithGenesis
 
-instance CC.Crypto c => ExtendedUTxO (AlonzoEra c) where
+instance Crypto c => ExtendedUTxO (AlonzoEra c) where
   txInfo = alonzoTxInfo
   inputDataHashes = alonzoInputHashes
   txscripts _ = txscripts' . view witsTxL

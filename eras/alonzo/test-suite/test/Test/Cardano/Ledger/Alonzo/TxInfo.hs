@@ -1,16 +1,17 @@
 module Test.Cardano.Ledger.Alonzo.TxInfo where
 
 import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..))
-import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.Language (Language (..))
+import Cardano.Ledger.Alonzo (Alonzo)
 import Cardano.Ledger.Alonzo.PParams ()
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (..), AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxInfo (TranslationError (..), txInfo)
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core hiding (TranslationError)
+import Cardano.Ledger.Core (EraTx (Tx), EraTxBody (TxBody), EraTxOut (TxOut))
 import Cardano.Ledger.Credential (StakeReference (..))
+import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Language (Language (..))
 import Cardano.Ledger.Shelley.TxBody (Wdrl (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
@@ -24,7 +25,6 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
-import Test.Cardano.Ledger.EraBuffet (StandardCrypto)
 import Test.Cardano.Ledger.Shelley.Address.Bootstrap (aliceByronAddr)
 import Test.Cardano.Ledger.Shelley.Examples.Cast (alicePHK)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
@@ -43,8 +43,6 @@ ei = fixedEpochInfo (EpochSize 100) (mkSlotLength 1)
 ss :: SystemStart
 ss = SystemStart $ posixSecondsToUTCTime 0
 
-type A = AlonzoEra StandardCrypto
-
 -- This input is only a "Byron input" in the sense
 -- that we attach it to a Byron output in the UTxO created below.
 byronInput :: TxIn StandardCrypto
@@ -55,16 +53,16 @@ byronInput = mkTxInPartial genesisId 0
 shelleyInput :: TxIn StandardCrypto
 shelleyInput = mkTxInPartial genesisId 1
 
-byronOutput :: TxOut A
+byronOutput :: TxOut Alonzo
 byronOutput = AlonzoTxOut byronAddr (Val.inject $ Coin 1) SNothing
 
-shelleyOutput :: TxOut A
+shelleyOutput :: TxOut Alonzo
 shelleyOutput = AlonzoTxOut shelleyAddr (Val.inject $ Coin 2) SNothing
 
-utxo :: UTxO A
+utxo :: UTxO Alonzo
 utxo = UTxO $ Map.fromList [(byronInput, byronOutput), (shelleyInput, shelleyOutput)]
 
-txb :: TxIn StandardCrypto -> TxOut A -> TxBody A
+txb :: TxIn StandardCrypto -> TxOut Alonzo -> TxBody Alonzo
 txb i o =
   AlonzoTxBody
     (Set.singleton i) -- inputs
@@ -81,10 +79,10 @@ txb i o =
     SNothing -- auxiliary data hash
     SNothing -- network ID
 
-txEx :: TxIn StandardCrypto -> TxOut A -> Tx A
+txEx :: TxIn StandardCrypto -> TxOut Alonzo -> Tx Alonzo
 txEx i o = AlonzoTx (txb i o) mempty (IsValid True) SNothing
 
-silentlyIgnore :: Tx A -> Assertion
+silentlyIgnore :: Tx Alonzo -> Assertion
 silentlyIgnore tx =
   case ctx of
     Right _ -> pure ()
@@ -92,7 +90,7 @@ silentlyIgnore tx =
   where
     ctx = txInfo def PlutusV1 ei ss utxo tx
 
-expectTranslationError :: Language -> Tx A -> TranslationError StandardCrypto -> Assertion
+expectTranslationError :: Language -> Tx Alonzo -> TranslationError StandardCrypto -> Assertion
 expectTranslationError lang tx expected =
   case ctx of
     Right _ -> error "This translation was expected to fail, but it succeeded."
