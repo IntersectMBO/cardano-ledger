@@ -26,14 +26,12 @@ module Cardano.Ledger.Alonzo.Rules.Utxo
     validateScriptsNotPaidUTxO,
     validateTooManyCollateralInputs,
     validateWrongNetworkInTxBody,
-    utxoEntrySize,
     vKeyLocked,
   )
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), serialize)
 import Cardano.Ledger.Address (Addr (..), RewardAcnt)
-import Cardano.Ledger.Alonzo.Data (dataHashSize)
 import Cardano.Ledger.Alonzo.Era (AlonzoUTXO)
 import Cardano.Ledger.Alonzo.Rules.Utxos (AlonzoUTXOS, AlonzoUtxosPredFailure)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Prices, pointWiseExUnits)
@@ -120,23 +118,6 @@ import Lens.Micro
 import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
 import Validation
-
--- | Compute an estimate of the size of storing one UTxO entry.
--- This function implements the UTxO entry size estimate done by scaledMinDeposit in the ShelleyMA era
-utxoEntrySize :: AlonzoEraTxOut era => TxOut era -> Integer
-utxoEntrySize txOut = utxoEntrySizeWithoutVal + Val.size v + dataHashSize dh
-  where
-    v = txOut ^. valueTxOutL
-    dh = txOut ^. dataHashTxOutL
-    -- lengths obtained from tracing on HeapWords of inputs and outputs
-    -- obtained experimentally, and number used here
-    -- units are Word64s
-
-    -- size of UTxO entry excluding the Value part
-    utxoEntrySizeWithoutVal :: Integer
-    utxoEntrySizeWithoutVal = 27 -- 6 + txoutLenNoVal [14] + txinLen [7]
-
--- ============================================
 
 -- ==========================================================
 
@@ -395,22 +376,19 @@ validateOutsideForecast pp ei slotNo sysSt tx =
 --
 -- > ∀ txout ∈ txouts txb, getValue txout ≥ inject (utxoEntrySize txout ∗ coinsPerUTxOWord pp)
 validateOutputTooSmallUTxO ::
-  ( HasField "_coinsPerUTxOWord" (PParams era) Coin,
-    AlonzoEraTxOut era
-  ) =>
+  AlonzoEraTxOut era =>
   PParams era ->
   UTxO era ->
   Test (AlonzoUtxoPredFailure era)
 validateOutputTooSmallUTxO pp (UTxO outputs) =
   failureUnless (null outputsTooSmall) $ OutputTooSmallUTxO outputsTooSmall
   where
-    Coin coinsPerUTxOWord = getField @"_coinsPerUTxOWord" pp
     outputsTooSmall =
       filter
         ( \txOut ->
             let v = txOut ^. valueTxOutL
              in -- pointwise is used because non-ada amounts must be >= 0 too
-                not $ Val.pointwise (>=) v (Val.inject $ Coin (utxoEntrySize txOut * coinsPerUTxOWord))
+                not $ Val.pointwise (>=) v (Val.inject $ getMinCoinTxOut pp txOut)
         )
         (Map.elems outputs)
 
@@ -508,7 +486,6 @@ utxoTransition ::
     HasField "_maxTxSize" (PParams era) Natural,
     HasField "_maxTxExUnits" (PParams era) ExUnits,
     HasField "_protocolVersion" (PParams era) ProtVer,
-    HasField "_coinsPerUTxOWord" (PParams era) Coin,
     HasField "_maxCollateralInputs" (PParams era) Natural,
     HasField "_collateralPercentage" (PParams era) Natural,
     HasField "_prices" (PParams era) Prices,

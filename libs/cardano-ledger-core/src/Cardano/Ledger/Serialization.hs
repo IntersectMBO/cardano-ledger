@@ -357,7 +357,7 @@ mkSized a =
 sizedDecoder :: Decoder s a -> Decoder s (Sized a)
 sizedDecoder decoder = do
   Annotated v (ByteSpan start end) <- annotatedDecoder decoder
-  pure $ Sized v $! end - start
+  pure $! Sized v $! end - start
 
 instance FromCBOR a => FromCBOR (Sized a) where
   fromCBOR = sizedDecoder fromCBOR

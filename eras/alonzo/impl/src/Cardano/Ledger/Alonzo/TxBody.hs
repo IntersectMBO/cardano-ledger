@@ -69,6 +69,7 @@ module Cardano.Ledger.Alonzo.TxBody
     EraIndependentScriptIntegrity,
     ScriptIntegrityHash,
     getAlonzoTxOutEitherAddr,
+    utxoEntrySize,
 
     -- * Deprecated
     TxOut,
@@ -86,9 +87,9 @@ import Cardano.Binary
   )
 import Cardano.Crypto.Hash
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash (..))
+import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash (..), dataHashSize)
 import Cardano.Ledger.Alonzo.Era
-import Cardano.Ledger.Alonzo.PParams ()
+import Cardano.Ledger.Alonzo.PParams (_coinsPerUTxOWord)
 import Cardano.Ledger.Alonzo.Scripts ()
 import Cardano.Ledger.BaseTypes
   ( Network (..),
@@ -383,6 +384,23 @@ instance CC.Crypto c => EraTxOut (AlonzoEra c) where
                     Right cAddr -> mkTxOutCompact (decompactAddr cAddr) cAddr cVal dh
       )
   {-# INLINE valueEitherTxOutL #-}
+
+  getMinCoinTxOut pp txOut = Coin $ utxoEntrySize txOut * unCoin (_coinsPerUTxOWord pp)
+
+-- | Compute an estimate of the size of storing one UTxO entry.
+-- This function implements the UTxO entry size estimate done by scaledMinDeposit in the ShelleyMA era
+utxoEntrySize :: AlonzoEraTxOut era => Core.TxOut era -> Integer
+utxoEntrySize txOut = utxoEntrySizeWithoutVal + size v + dataHashSize dh
+  where
+    v = txOut ^. valueTxOutL
+    dh = txOut ^. dataHashTxOutL
+    -- lengths obtained from tracing on HeapWords of inputs and outputs
+    -- obtained experimentally, and number used here
+    -- units are Word64s
+
+    -- size of UTxO entry excluding the Value part
+    utxoEntrySizeWithoutVal :: Integer
+    utxoEntrySizeWithoutVal = 27 -- 6 + txoutLenNoVal [14] + txinLen [7]
 
 class EraTxOut era => AlonzoEraTxOut era where
   dataHashTxOutL :: Lens' (Core.TxOut era) (StrictMaybe (DataHash (EraCrypto era)))

@@ -11,7 +11,9 @@ in the naming of release branches.
 
 ### Added
 
-- Start on the `cardano-ledger-api` package and implement `setBabbageMinTxOut`: #2995
+- Start on the `cardano-ledger-api` package and implement
+  `setMinCoinTxOut`+`setMinCoinSizedTxOut`: #2995
+- Added `getMinCoinTxOut`/`getMinCoinSizedTxOut`: #3008
 
 ### Changed
 - Changed `mint` field type to `MultiAsset (Crypto era)` in `MATxBody`, `AlonzoTxBody`, `BabbageTxBody`
@@ -21,8 +23,10 @@ in the naming of release branches.
 
 ### Removed
 
-- Deprecated the HasAlgorithm type alias: #3007
-- Deprecated the validPlutusdata function: #3006
+- Deprecated the `validPlutusdata` function: #3006
+- Deprecated the misspelled `HasAlgorithm` type alias: #3007
+- Deprecate `evaluateMinLovelaceOutput` in favor of newly added
+  `getMinCoinTxOut`/`getMinCoinSizedTxOut` #3008
 
 ## Release branch 1.1.x
 

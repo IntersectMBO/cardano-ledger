@@ -11,14 +11,16 @@ module Test.Cardano.Ledger.Api.Tx.Out
 where
 
 import Cardano.Binary (serialize)
+import Cardano.Ledger.Alonzo.PParams hiding (PParams)
+import Cardano.Ledger.Api.Era
 import Cardano.Ledger.Api.Tx.Out
-import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.PParams hiding (PParams)
+import Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
 import Cardano.Ledger.Coin
-import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Serialization (mkSized, sizedValue)
+import Cardano.Ledger.Shelley.PParams hiding (PParams)
+import qualified Cardano.Ledger.Val as Val
 import qualified Data.ByteString.Lazy as BSL
 import GHC.Records
 import Lens.Micro
@@ -27,60 +29,70 @@ import Test.QuickCheck
 import Test.Tasty
 import Test.Tasty.QuickCheck
 
+propSetShelleyMinTxOut ::
+  forall era.
+  ( EraTxOut era,
+    Arbitrary (PParams era),
+    Arbitrary (TxOut era),
+    Show (PParams era),
+    AtMostEra MaryEra era,
+    HasField "_minUTxOValue" (PParams era) Coin
+  ) =>
+  TestTree
+propSetShelleyMinTxOut = testProperty "setShelleyMinTxOut" prop
+  where
+    _atMostMary = atMostEra @MaryEra @era
+    prop :: PParams era -> TxOut era -> Property
+    prop pp txOut =
+      within 1000000 $ -- just in case if there is a problem with termination
+        let txOut' = setMinCoinTxOut pp txOut
+            val = txOut' ^. valueTxOutL
+            minUTxOValue = unCoin $ getField @"_minUTxOValue" pp
+            minVal
+              | Val.isAdaOnly val = 0
+              | otherwise = (27 + Val.size val) * (minUTxOValue `quot` 27)
+         in Val.coin val === Coin (max minVal minUTxOValue)
+
+propSetAlonzoMinTxOut :: TestTree
+propSetAlonzoMinTxOut = testProperty "setAlonzoMinTxOut" prop
+  where
+    prop :: PParams (AlonzoEra StandardCrypto) -> TxOut (AlonzoEra StandardCrypto) -> Property
+    prop pp txOut =
+      within 1000000 $ -- just in case if there is a problem with termination
+        let txOut' = setMinCoinTxOut pp txOut
+            valSize = Val.size (txOut' ^. valueTxOutL)
+            dataHashSize = maybe 0 (const 10) $ strictMaybeToMaybe (txOut' ^. dataHashTxOutL)
+            sz = 27 + valSize + dataHashSize
+         in (txOut' ^. coinTxOutL) === Coin (sz * unCoin (getField @"_coinsPerUTxOWord" pp))
+
 propSetBabbageMinTxOut ::
   forall era.
   ( EraTxOut era,
+    Arbitrary (PParams era),
+    Arbitrary (TxOut era),
+    Show (PParams era),
     AtLeastEra BabbageEra era,
     HasField "_coinsPerUTxOByte" (PParams era) Coin
   ) =>
-  PParams era ->
-  TxOut era ->
-  Property
-propSetBabbageMinTxOut pp txOut =
-  within 1000000 $ -- just in case if there is a problem with termination
-    let txOut' = sizedValue (setBabbageMinTxOut pp (mkSized txOut))
-        size = toInteger (BSL.length (serialize txOut'))
-     in (txOut' ^. coinTxOutL)
-          === Coin ((160 + size) * unCoin (getField @"_coinsPerUTxOByte" pp))
+  TestTree
+propSetBabbageMinTxOut = testProperty "setBabbageMinTxOut" prop
   where
     _atLeastBabbage = atLeastEra @BabbageEra @era
-
-babbageTxOutTests ::
-  forall era.
-  ( Arbitrary (PParams era),
-    Arbitrary (TxOut era),
-    Show (PParams era),
-    EraTxOut era,
-    AtLeastEra BabbageEra era,
-    HasField "_coinsPerUTxOByte" (PParams era) Coin
-  ) =>
-  [TestTree]
-babbageTxOutTests =
-  [ testProperty "setBabbageMinTxOut" $ propSetBabbageMinTxOut @era
-  ]
-
-conwayTxOutTests ::
-  forall era.
-  ( Arbitrary (PParams era),
-    Arbitrary (TxOut era),
-    Show (PParams era),
-    EraTxOut era,
-    AtLeastEra BabbageEra era,
-    AtLeastEra ConwayEra era,
-    HasField "_coinsPerUTxOByte" (PParams era) Coin
-  ) =>
-  [TestTree]
-conwayTxOutTests =
-  concat
-    [ babbageTxOutTests @era
-    ]
-  where
-    _atLeastConway = atLeastEra @ConwayEra @era
+    prop :: PParams era -> TxOut era -> Property
+    prop pp txOut =
+      within 1000000 $ -- just in case if there is a problem with termination
+        let txOut' = setMinCoinTxOut pp txOut
+            sz = toInteger (BSL.length (serialize txOut'))
+         in (txOut' ^. coinTxOutL)
+              === Coin ((160 + sz) * unCoin (getField @"_coinsPerUTxOByte" pp))
 
 txOutTests :: TestTree
 txOutTests =
   testGroup "TxOut" $
-    concat
-      [ babbageTxOutTests @(BabbageEra StandardCrypto),
-        conwayTxOutTests @(ConwayEra StandardCrypto)
-      ]
+    [ testGroup "ShelleyEra" [propSetShelleyMinTxOut @(ShelleyEra StandardCrypto)],
+      testGroup "AllegraEra" [propSetShelleyMinTxOut @(AllegraEra StandardCrypto)],
+      testGroup "MaryEra" [propSetShelleyMinTxOut @(MaryEra StandardCrypto)],
+      testGroup "AlonzoEra" [propSetAlonzoMinTxOut],
+      testGroup "BabbageEra" [propSetBabbageMinTxOut @(BabbageEra StandardCrypto)],
+      testGroup "ConwayEra" [propSetBabbageMinTxOut @(ConwayEra StandardCrypto)]
+    ]

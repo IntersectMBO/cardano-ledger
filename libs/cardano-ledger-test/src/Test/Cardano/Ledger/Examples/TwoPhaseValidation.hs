@@ -81,13 +81,13 @@ import Cardano.Ledger.Pretty
 import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API
-  ( CLI (..),
-    DPState (..),
+  ( DPState (..),
     DState (..),
     LedgerState (..),
     PoolParams (..),
     ProtVer (..),
     UTxO (..),
+    evaluateTransactionFee,
   )
 import Cardano.Ledger.Shelley.BlockChain (bBodySize)
 import Cardano.Ledger.Shelley.LedgerState

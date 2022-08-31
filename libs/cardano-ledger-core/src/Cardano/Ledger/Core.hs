@@ -49,13 +49,14 @@ module Cardano.Ledger.Core
     EraSegWits (..),
 
     -- * Protocol version constraints
-    ProtVerNoMore,
-    ProtVerNoLess,
     ProtVerAtLeast,
+    ProtVerAtMost,
     ProtVerInBounds,
     ExactEra,
     AtLeastEra,
     atLeastEra,
+    AtMostEra,
+    atMostEra,
     notSupportedInThisEra,
     notSupportedInThisEraL,
 
@@ -88,7 +89,7 @@ import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
 import Cardano.Ledger.Keys.WitVKey (WitVKey)
 import Cardano.Ledger.Language (Language)
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash (..))
-import Cardano.Ledger.Serialization (ToCBORGroup (..))
+import Cardano.Ledger.Serialization (Sized (sizedValue), ToCBORGroup (..), mkSized)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (DecodeNonNegative, Val (..))
 import Control.DeepSeq (NFData)
@@ -209,6 +210,13 @@ class
   -- | The output of a UTxO for a particular era
   type TxOut era = (r :: Type) | r -> era
 
+  {-# MINIMAL
+    mkBasicTxOut,
+    valueEitherTxOutL,
+    addrEitherTxOutL,
+    (getMinCoinSizedTxOut | getMinCoinTxOut)
+    #-}
+
   mkBasicTxOut :: Addr (EraCrypto era) -> Value era -> TxOut era
 
   valueTxOutL :: Lens' (TxOut era) (Value era)
@@ -265,6 +273,19 @@ class
   -- the callsite which form of address we have readily available without any
   -- conversions (eg. searching millions of TxOuts for a particular address)
   addrEitherTxOutL :: Lens' (TxOut era) (Either (Addr (EraCrypto era)) (CompactAddr (EraCrypto era)))
+
+  -- | Produce the minimum lovelace that a given transaction output must
+  -- contain. Information about the size of the TxOut is required in some eras.
+  -- Use `getMinCoinTxOut` if you don't have the size readily available to you.
+  getMinCoinSizedTxOut :: PParams era -> Sized (TxOut era) -> Coin
+  getMinCoinSizedTxOut pp = getMinCoinTxOut pp . sizedValue
+
+  -- | Same as `getMinCoinSizedTxOut`, except information about the size of
+  -- TxOut will be computed by serializing the TxOut. If the size turns out to
+  -- be not needed, then serialization will have no overhead, since it is
+  -- computed lazily.
+  getMinCoinTxOut :: PParams era -> TxOut era -> Coin
+  getMinCoinTxOut pp txOut = getMinCoinSizedTxOut pp (mkSized txOut)
 
 bootAddrTxOutF :: EraTxOut era => SimpleGetter (TxOut era) (Maybe (BootstrapAddress (EraCrypto era)))
 bootAddrTxOutF = to $ \txOut ->
@@ -595,24 +616,26 @@ type family ProtVerIsInBounds (check :: Symbol) era (v :: Nat) (b :: Bool) :: Co
 type family ProtVerAtLeast era (l :: Nat) :: Constraint where
   ProtVerAtLeast era l = ProtVerIsInBounds "at least" era l (l <=? ProtVerHigh era)
 
-type family ProtVerNoLess era (l :: Nat) :: Constraint where
-  ProtVerNoLess era l = ProtVerIsInBounds "no less than" era l (ProtVerLow era <=? l)
-
--- | Requirement for the era's highest protocol version to be less or equal to
+-- | Requirement for the era's lowest protocol version to be lower or equal to
 -- the supplied value
-type family ProtVerNoMore era (h :: Nat) :: Constraint where
-  ProtVerNoMore era h = ProtVerIsInBounds "no more than" era h (h <=? ProtVerHigh era)
+type family ProtVerAtMost era (h :: Nat) :: Constraint where
+  ProtVerAtMost era h = ProtVerIsInBounds "at most" era h (ProtVerLow era <=? h)
 
 -- | Restrict a lower and upper bounds of the protocol version for the particular era
-type ProtVerInBounds era l h = (ProtVerNoLess era l, ProtVerNoMore era h)
+type ProtVerInBounds era l h = (ProtVerAtLeast era l, ProtVerAtMost era h)
 
 -- | Restrict an era to the specific era through the protocol version. This is
 -- equivalent to @(inEra (Crypto era) ~ era)@
 type ExactEra (inEra :: Type -> Type) era =
   ProtVerInBounds era (ProtVerLow (inEra (EraCrypto era))) (ProtVerHigh (inEra (EraCrypto era)))
 
+-- | Restrict the @era@ to equal to @eraName@ or come after it
 type AtLeastEra (eraName :: Type -> Type) era =
   ProtVerAtLeast era (ProtVerLow (eraName (EraCrypto era)))
+
+-- | Restrict the @era@ to equal to @eraName@ or come before it.
+type AtMostEra (eraName :: Type -> Type) era =
+  ProtVerAtMost era (ProtVerHigh (eraName (EraCrypto era)))
 
 -- | Enforce era to be at least the specified era at the type level. In other words
 -- compiler will produce type error when applied to eras prior to the specified era.
@@ -628,6 +651,21 @@ type AtLeastEra (eraName :: Type -> Type) era =
 -- >>> atLeastEra @BabbageEra @(AlonzoEra StandardCrypto)
 atLeastEra :: AtLeastEra eraName era => ()
 atLeastEra = ()
+
+-- | Enforce era to be at most the specified era at the type level. In other words
+-- compiler will produce type error when applied to eras prior to the specified era.
+-- This function should be used in order to avoid redundant constraints warning.
+--
+-- For example these will type check
+--
+-- >>> atMostEra @BabbageEra @(ShelleyEra StandardCrypto)
+-- >>> atMostEra @AlonzoEra @(MaryEra StandardCrypto)
+--
+-- However this will result in a type error
+--
+-- >>> atMostEra @BabbageEra @(ConwayEra StandardCrypto)
+atMostEra :: AtMostEra eraName era => ()
+atMostEra = ()
 
 notSupportedInThisEra :: HasCallStack => a
 notSupportedInThisEra = error "Impossible: Function is not supported in this era"

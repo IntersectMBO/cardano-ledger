@@ -35,6 +35,7 @@ module Cardano.Ledger.Babbage.TxBody
     dataBabbageTxOutL,
     datumBabbageTxOutL,
     referenceScriptBabbageTxOutL,
+    babbageMinUTxOValue,
     BabbageTxBody
       ( BabbageTxBody,
         inputs,
@@ -148,7 +149,7 @@ import Cardano.Ledger.Alonzo.TxBody as AlonzoTxBodyReExports
   )
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
 import Cardano.Ledger.Babbage.Era (BabbageEra)
-import Cardano.Ledger.Babbage.PParams ()
+import Cardano.Ledger.Babbage.PParams (_coinsPerUTxOByte)
 import Cardano.Ledger.Babbage.Scripts ()
 import Cardano.Ledger.BaseTypes
   ( Network (..),
@@ -204,6 +205,7 @@ import qualified Data.Text as T
 import Data.Typeable (Proxy (..), Typeable, (:~:) (Refl))
 import Data.Word
 import GHC.Generics (Generic)
+import GHC.Records
 import GHC.Stack (HasCallStack)
 import Lens.Micro
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
@@ -252,6 +254,33 @@ instance CC.Crypto c => EraTxOut (BabbageEra c) where
 
   valueEitherTxOutL = valueEitherBabbageTxOutL
   {-# INLINE valueEitherTxOutL #-}
+
+  getMinCoinSizedTxOut = babbageMinUTxOValue
+
+babbageMinUTxOValue ::
+  HasField "_coinsPerUTxOByte" (PParams era) Coin =>
+  PParams era ->
+  Sized a ->
+  Coin
+babbageMinUTxOValue pp sizedTxOut =
+  Coin $ fromIntegral (constantOverhead + sizedSize sizedTxOut) * unCoin coinsPerUTxOByte
+  where
+    coinsPerUTxOByte = getField @"_coinsPerUTxOByte" pp
+    -- This constant is an approximation of the memory overhead that comes
+    -- from TxIn and an entry in the Map data structure:
+    --
+    -- 160 = 20 words * 8bytes
+    --
+    -- This means that if:
+    --
+    --  * 'coinsPerUTxOByte' = 4310
+    --  * A simple TxOut with staking and payment credentials with ADA only
+    --    amount of 978370 lovelace
+    --
+    -- we get the size of TxOut to be 67 bytes and the minimum value will come
+    -- out to be 978597 lovelace. Also the absolute minimum value will be
+    -- 857690, because TxOut without staking address can't be less than 39 bytes
+    constantOverhead = 160
 
 dataHashBabbageTxOutL ::
   EraTxOut era => Lens' (BabbageTxOut era) (StrictMaybe (DataHash (EraCrypto era)))

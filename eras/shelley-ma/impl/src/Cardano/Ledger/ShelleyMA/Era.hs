@@ -92,8 +92,8 @@ instance MAClass ma crypto => Era (ShelleyMAEra ma crypto) where
   type ProtVerLow (ShelleyMAEra ma crypto) = MAProtVer ma
 
 type family MAProtVer (ma :: MaryOrAllegra) :: Nat where
-  MAProtVer 'Mary = 3
-  MAProtVer 'Allegra = 4
+  MAProtVer 'Allegra = 3
+  MAProtVer 'Mary = 4
 
 --------------------------------------------------------------------------------
 -- Core instances

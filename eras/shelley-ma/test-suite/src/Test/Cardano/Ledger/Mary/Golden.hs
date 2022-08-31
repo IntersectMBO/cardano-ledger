@@ -21,8 +21,8 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (hashScript)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
-import Cardano.Ledger.ShelleyMA.Rules (scaledMinDeposit)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
+import Cardano.Ledger.ShelleyMA.TxBody (scaledMinDeposit)
 import Cardano.Ledger.Slot (SlotNo (..))
 import qualified Data.ByteString.Short as SBS
 import qualified Data.Map.Strict as Map

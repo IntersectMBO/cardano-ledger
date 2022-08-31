@@ -373,7 +373,6 @@ utxoInductive ::
     HasField "_minfeeB" (PParams era) Natural,
     HasField "_keyDeposit" (PParams era) Coin,
     HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_minUTxOValue" (PParams era) Coin,
     HasField "_maxTxSize" (PParams era) Natural
   ) =>
   TransitionRule (utxo era)
@@ -538,22 +537,19 @@ validateValueNotConservedUTxO pp utxo stakepools txb =
 --
 -- > ∀(_ → (_, c)) ∈ txouts txb, c ≥ (minUTxOValue pp)
 validateOutputTooSmallUTxO ::
-  ( HasField "_minUTxOValue" (PParams era) Coin,
-    EraTxOut era
-  ) =>
+  EraTxOut era =>
   PParams era ->
   UTxO era ->
   Test (ShelleyUtxoPredFailure era)
 validateOutputTooSmallUTxO pp (UTxO outputs) =
   failureUnless (null outputsTooSmall) $ OutputTooSmallUTxO outputsTooSmall
   where
-    minUTxOValue = getField @"_minUTxOValue" pp
     -- minUTxOValue deposit comparison done as Coin because this rule is correct
     -- strictly in the Shelley era (in ShelleyMA we additionally check that all
     -- amounts are non-negative)
     outputsTooSmall =
       filter
-        (\txOut -> txOut ^. coinTxOutL < minUTxOValue)
+        (\txOut -> txOut ^. coinTxOutL < getMinCoinTxOut pp txOut)
         (Map.elems outputs)
 
 -- | Bootstrap (i.e. Byron) addresses have variable sized attributes in them.

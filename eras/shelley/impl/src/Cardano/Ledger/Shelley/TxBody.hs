@@ -105,7 +105,7 @@ import Cardano.Ledger.Shelley.Delegation.Certificates
     PoolCert (..),
   )
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Shelley.PParams (Update)
+import Cardano.Ledger.Shelley.PParams (Update, _minUTxOValue)
 import Cardano.Ledger.Shelley.PoolParams
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn)
@@ -177,6 +177,8 @@ instance CC.Crypto crypto => EraTxOut (ShelleyEra crypto) where
 
   valueEitherTxOutL = valueEitherShelleyTxOutL
   {-# INLINE valueEitherTxOutL #-}
+
+  getMinCoinTxOut pp _ = _minUTxOValue pp
 
 addrEitherShelleyTxOutL ::
   Lens' (ShelleyTxOut era) (Either (Addr (EraCrypto era)) (CompactAddr (EraCrypto era)))

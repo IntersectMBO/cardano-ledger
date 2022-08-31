@@ -54,10 +54,6 @@ instance CC.Crypto c => CLI (AllegraEra c) where
 
   evaluateConsumed = consumed
 
-  addKeyWitnesses = addShelleyKeyWitnesses
-
-  evaluateMinLovelaceOutput pp _out = _minUTxOValue pp
-
 -- Self-Describing type synomyms
 
 type Self c = ShelleyMAEra 'Allegra c
