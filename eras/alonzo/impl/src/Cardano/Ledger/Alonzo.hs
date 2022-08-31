@@ -46,7 +46,6 @@ import qualified Cardano.Ledger.Alonzo.PParams (PParams)
 import Cardano.Ledger.Alonzo.PlutusScriptApi (getDatumAlonzo)
 import Cardano.Ledger.Alonzo.Rules ()
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), Script)
-import Cardano.Ledger.Alonzo.Tx (alonzoInputHashes)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..), AlonzoTxBody, AlonzoTxOut)
 import qualified Cardano.Ledger.Alonzo.TxBody (TxBody, TxOut)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), alonzoTxInfo)
@@ -106,7 +105,6 @@ instance Crypto c => API.CanStartFromGenesis (AlonzoEra c) where
 
 instance Crypto c => ExtendedUTxO (AlonzoEra c) where
   txInfo = alonzoTxInfo
-  inputDataHashes = alonzoInputHashes
   txscripts _ = txscripts' . view witsTxL
   getAllowedSupplimentalDataHashes txBody _ =
     Set.fromList

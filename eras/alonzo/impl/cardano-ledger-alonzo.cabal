@@ -51,6 +51,7 @@ library
     Cardano.Ledger.Alonzo.TxInfo
     Cardano.Ledger.Alonzo.TxSeq
     Cardano.Ledger.Alonzo.TxWits
+    Cardano.Ledger.Alonzo.UTxO
   other-modules:
     Cardano.Ledger.Alonzo.Era
     Cardano.Ledger.Alonzo.Rules.Bbody
@@ -58,7 +59,6 @@ library
     Cardano.Ledger.Alonzo.Rules.Utxo
     Cardano.Ledger.Alonzo.Rules.Utxos
     Cardano.Ledger.Alonzo.Rules.Utxow
-    Cardano.Ledger.Alonzo.UTxO
   build-depends:
     aeson >= 2,
     array,

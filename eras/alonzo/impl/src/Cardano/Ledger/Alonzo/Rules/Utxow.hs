@@ -43,7 +43,12 @@ import Cardano.Ledger.Alonzo.Tx
     hashScriptIntegrity,
     rdptr,
   )
-import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody (..), ScriptIntegrityHash, ShelleyEraTxBody (..))
+import Cardano.Ledger.Alonzo.TxBody
+  ( AlonzoEraTxBody (..),
+    AlonzoEraTxOut,
+    ScriptIntegrityHash,
+    ShelleyEraTxBody (..),
+  )
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), languages)
 import Cardano.Ledger.Alonzo.TxWits
   ( AlonzoTxWits (txdats, txrdmrs),
@@ -51,6 +56,7 @@ import Cardano.Ledger.Alonzo.TxWits
     unRedeemers,
     unTxDats,
   )
+import Cardano.Ledger.Alonzo.UTxO (getInputDataHashesTxBody)
 import Cardano.Ledger.BaseTypes
   ( ProtVer,
     ShelleyBase,
@@ -226,26 +232,28 @@ decodePredFail n = Invalid n
 missingRequiredDatums ::
   forall era.
   ( EraTx era,
+    AlonzoEraTxOut era,
+    Tx era ~ AlonzoTx era,
     Script era ~ AlonzoScript era,
     ExtendedUTxO era
   ) =>
   Map.Map (ScriptHash (EraCrypto era)) (Script era) ->
   UTxO era ->
   AlonzoTx era ->
-  TxBody era ->
   Test (AlonzoUtxowPredFailure era)
-missingRequiredDatums scriptwits utxo tx txbody = do
-  let (inputHashes, txinsNoDhash) = inputDataHashes scriptwits tx utxo
+missingRequiredDatums scriptWits utxo tx = do
+  let txBody = tx ^. bodyTxL
+      (inputHashes, txInsNoDataHash) = getInputDataHashesTxBody utxo txBody scriptWits
       txHashes = domain (unTxDats . txdats . wits $ tx)
       unmatchedDatumHashes = eval (inputHashes ➖ txHashes)
-      allowedSupplimentalDataHashes = getAllowedSupplimentalDataHashes txbody utxo
+      allowedSupplimentalDataHashes = getAllowedSupplimentalDataHashes txBody utxo
       supplimentalDatumHashes = eval (txHashes ➖ inputHashes)
       (okSupplimentalDHs, notOkSupplimentalDHs) =
         Set.partition (`Set.member` allowedSupplimentalDataHashes) supplimentalDatumHashes
   sequenceA_
     [ failureUnless
-        (Set.null txinsNoDhash)
-        (UnspendableUTxONoDatumHash txinsNoDhash),
+        (Set.null txInsNoDataHash)
+        (UnspendableUTxONoDatumHash txInsNoDataHash),
       failureUnless
         (Set.null unmatchedDatumHashes)
         (MissingRequiredDatums unmatchedDatumHashes txHashes),
@@ -360,7 +368,7 @@ alonzoStyleWitness = do
   {-  txw := txwits tx  -}
   {-  witsKeyHashes := { hashKey vk | vk ∈ dom(txwitsVKey txw) }  -}
   let utxo = _utxo u
-      txbody = tx ^. bodyTxL
+      txBody = tx ^. bodyTxL
       witsKeyHashes = witsFromTxWitnesses @era tx
 
   -- check scripts
@@ -374,7 +382,7 @@ alonzoStyleWitness = do
 
   {- inputHashes := { h | (_ → (a,_,h)) ∈ txins tx ◁ utxo, isTwoPhaseScriptAddress tx a} -}
   {-  inputHashes ⊆ dom(txdats txw)  -}
-  runTest $ missingRequiredDatums (tx ^. witsTxL . scriptTxWitsL) utxo tx txbody
+  runTest $ missingRequiredDatums (tx ^. witsTxL . scriptTxWitsL) utxo tx
 
   {- dom(txdats txw) ⊆ inputHashes ∪ {h | ( , , h) ∈ txouts tx -}
   -- This is incorporated into missingRequiredDatums, see the
@@ -382,10 +390,10 @@ alonzoStyleWitness = do
 
   {-  dom (txrdmrs tx) = { rdptr txb sp | (sp, h) ∈ scriptsNeeded utxo tx,
                            h ↦ s ∈ txscripts txw, s ∈ Scriptph2}     -}
-  runTest $ hasExactSetOfRedeemers utxo tx txbody
+  runTest $ hasExactSetOfRedeemers utxo tx txBody
 
   -- check VKey witnesses
-  {-  ∀ (vk ↦ σ) ∈ (txwitsVKey txw), V_vk⟦ txbodyHash ⟧_σ                -}
+  {-  ∀ (vk ↦ σ) ∈ (txwitsVKey txw), V_vk⟦ txBodyHash ⟧_σ                -}
   runTestOnSignal $ Shelley.validateVerifiedWits tx
 
   {-  witsVKeyNeeded utxo tx genDelegs ⊆ witsKeyHashes                   -}
@@ -393,8 +401,8 @@ alonzoStyleWitness = do
 
   {-  THIS DOES NOT APPPEAR IN THE SPEC as a separate check, but
       witsVKeyNeeded must include the reqSignerHashes in the union   -}
-  {- reqSignerHashes txbody ⊆ witsKeyHashes -}
-  runTestOnSignal $ requiredSignersAreWitnessed txbody witsKeyHashes
+  {- reqSignerHashes txBody ⊆ witsKeyHashes -}
+  runTestOnSignal $ requiredSignersAreWitnessed txBody witsKeyHashes
 
   -- check genesis keys signatures for instantaneous rewards certificates
   {-  genSig := { hashKey gkey | gkey ∈ dom(genDelegs)} ∩ witsKeyHashes  -}
@@ -415,7 +423,7 @@ alonzoStyleWitness = do
   -- which appears in the spec, seems broken since costmdls is a projection of PPrams, not Tx
 
   {-  scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw)  -}
-  runTest $ ppViewHashesMatch tx txbody pp utxo sNeeded
+  runTest $ ppViewHashesMatch tx txBody pp utxo sNeeded
 
   trans @(EraRule "UTXO" era) $
     TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)

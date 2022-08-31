@@ -18,11 +18,7 @@ import Cardano.Ledger.Alonzo (reapplyAlonzoTx)
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..))
 import Cardano.Ledger.Babbage.Rules ()
-import Cardano.Ledger.Babbage.Tx
-  ( babbageInputDataHashes,
-    babbageTxScripts,
-    getDatumBabbage,
-  )
+import Cardano.Ledger.Babbage.Tx (babbageTxScripts, getDatumBabbage)
 import Cardano.Ledger.Babbage.TxInfo (babbageTxInfo)
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Genesis (extendPPWithGenesis)
@@ -59,7 +55,6 @@ instance Crypto c => API.CanStartFromGenesis (ConwayEra c) where
 
 instance Crypto c => ExtendedUTxO (ConwayEra c) where
   txInfo = babbageTxInfo
-  inputDataHashes = babbageInputDataHashes
   txscripts = babbageTxScripts
   getAllowedSupplimentalDataHashes txBody (UTxO utxo) =
     Set.fromList [dh | txOut <- outs, SJust dh <- [txOut ^. dataHashTxOutL]]
