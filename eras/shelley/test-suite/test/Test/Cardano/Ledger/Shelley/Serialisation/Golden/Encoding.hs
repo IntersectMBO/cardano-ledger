@@ -115,7 +115,7 @@ import Cardano.Ledger.Shelley.PParams
   )
 import Cardano.Ledger.Shelley.Rewards ()
 import Cardano.Ledger.Shelley.Scripts (pattern RequireSignature)
-import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), ShelleyTxWits, WitnessSetHKD (..))
+import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxBody
   ( MIRPot (..),
     MIRTarget (..),
@@ -144,6 +144,7 @@ import Cardano.Ledger.Shelley.TxBody
     pattern PoolParams,
     pattern RewardAcnt,
   )
+import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits, WitnessSetHKD (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (UTxO), makeWitnessVKey)
 import Cardano.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxId, TxIn (..))

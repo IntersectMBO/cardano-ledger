@@ -66,9 +66,7 @@ import Cardano.Ledger.Shelley.Tx
   ( ShelleyTx (..),
     ShelleyTxBody (..),
     ShelleyTxOut (..),
-    ShelleyTxWits,
     TxIn (..),
-    WitnessSetHKD (..),
     _ttl,
   )
 import Cardano.Ledger.Shelley.TxBody
@@ -87,6 +85,10 @@ import Cardano.Ledger.Shelley.TxBody
     _poolRelays,
     _poolVrf,
     pattern RewardAcnt,
+  )
+import Cardano.Ledger.Shelley.TxWits
+  ( ShelleyTxWits,
+    WitnessSetHKD (..),
   )
 import Cardano.Ledger.Shelley.UTxO (makeWitnessVKey, makeWitnessesVKey)
 import Cardano.Ledger.Slot
@@ -575,7 +577,7 @@ testInvalidWintess =
           SNothing
           SNothing
       txb' = txb {_ttl = SlotNo 2}
-      txwits :: Cardano.Ledger.Shelley.Tx.ShelleyTxWits C
+      txwits :: Cardano.Ledger.Shelley.TxWits.ShelleyTxWits C
       txwits = mempty {addrWits = makeWitnessesVKey (hashAnnotated txb') [alicePay]}
       tx = ShelleyTx @C txb txwits SNothing
       errs =

@@ -33,9 +33,11 @@ import Cardano.Ledger.Shelley.PParams (ShelleyPParams)
 import qualified Cardano.Ledger.Shelley.PParams as Shelley (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Tx as Shelley
   ( ShelleyTx (..),
-    WitnessSetHKD (addrWits, bootWits, scriptWits),
   )
 import Cardano.Ledger.Shelley.TxBody as Shelley (ShelleyEraTxBody (..), ShelleyTxOut (..))
+import Cardano.Ledger.Shelley.TxWits as Shelley
+  ( WitnessSetHKD (addrWits, bootWits, scriptWits),
+  )
 import Cardano.Ledger.ShelleyMA.TxBody (ShelleyMAEraTxBody (..))
 import Cardano.Ledger.Val ((<×>))
 import qualified Data.List as List

@@ -19,16 +19,18 @@ import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Tx
   ( ShelleyTx,
-    ShelleyTxWits,
-    addrShelleyWitsL,
     auxDataShelleyTxL,
     bodyShelleyTxL,
-    bootAddrShelleyWitsL,
     mkBasicShelleyTx,
-    scriptShelleyWitsL,
     shelleyMinFeeTx,
     sizeShelleyTxF,
     witsShelleyTxL,
+  )
+import Cardano.Ledger.Shelley.TxWits
+  ( ShelleyTxWits,
+    addrShelleyWitsL,
+    bootAddrShelleyWitsL,
+    scriptShelleyWitsL,
   )
 import Cardano.Ledger.ShelleyMA.AuxiliaryData ()
 import Cardano.Ledger.ShelleyMA.Era (MAClass, MaryOrAllegra (..), ShelleyMAEra)

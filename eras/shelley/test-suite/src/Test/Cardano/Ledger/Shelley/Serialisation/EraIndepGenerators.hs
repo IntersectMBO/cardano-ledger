@@ -90,7 +90,7 @@ import Cardano.Ledger.Shelley.Rewards
     StakeShare (..),
   )
 import qualified Cardano.Ledger.Shelley.Rules as STS
-import Cardano.Ledger.Shelley.Tx (WitnessSetHKD (..))
+import Cardano.Ledger.Shelley.TxWits (WitnessSetHKD (..))
 import Cardano.Ledger.UnifiedMap (Trip (Triple), Triple, UMap (UnifiedMap), UnifiedMap)
 import Cardano.Protocol.TPraos.BHeader (BHeader, HashHeader)
 import qualified Cardano.Protocol.TPraos.BHeader as TP

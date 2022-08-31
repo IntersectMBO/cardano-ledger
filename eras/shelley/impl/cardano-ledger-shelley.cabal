@@ -62,6 +62,7 @@ library
     Cardano.Ledger.Shelley.StabilityWindow
     Cardano.Ledger.Shelley.Rules
     Cardano.Ledger.Shelley.Tx
+    Cardano.Ledger.Shelley.TxWits
     Cardano.Ledger.Shelley.TxBody
     Cardano.Ledger.Shelley.UTxO
   other-modules:

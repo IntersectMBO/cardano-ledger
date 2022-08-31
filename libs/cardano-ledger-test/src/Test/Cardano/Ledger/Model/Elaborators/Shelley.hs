@@ -32,6 +32,7 @@ import Cardano.Ledger.Shelley.Rules
   )
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (ShelleyTx), ShelleyTxBody (ShelleyTxBody))
 import qualified Cardano.Ledger.Shelley.Tx as Shelley
+import Cardano.Ledger.Shelley.TxWits as Shelley
 import Cardano.Protocol.TPraos.API (PraosCrypto)
 import Cardano.Slotting.EpochInfo.API (epochInfoSize)
 import Cardano.Slotting.Slot (EpochNo (..))

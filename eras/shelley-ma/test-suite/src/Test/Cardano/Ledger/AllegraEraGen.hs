@@ -32,8 +32,9 @@ import Cardano.Ledger.Keys (KeyHash)
 import Cardano.Ledger.Pretty.Mary ()
 import Cardano.Ledger.Shelley.API (KeyRole (Witness))
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..), Update)
-import Cardano.Ledger.Shelley.Tx (pattern ShelleyTx, pattern ShelleyTxWits)
+import Cardano.Ledger.Shelley.Tx (pattern ShelleyTx)
 import Cardano.Ledger.Shelley.TxBody (DCert, ShelleyTxOut (..), Wdrl)
+import Cardano.Ledger.Shelley.TxWits (pattern ShelleyTxWits)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
 import Cardano.Ledger.ShelleyMA.TxBody
   ( MATxBody (..),

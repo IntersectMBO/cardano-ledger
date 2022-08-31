@@ -103,10 +103,12 @@ import Cardano.Ledger.SafeHash (SafeHash, unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley.BlockChain (bBodySize)
 import Cardano.Ledger.Shelley.LedgerState (AccountState (..), KeyPairs)
 import Cardano.Ledger.Shelley.Tx
-  ( ShelleyTxWits,
-    pattern TxIn,
+  ( pattern TxIn,
   )
 import qualified Cardano.Ledger.Shelley.Tx as Ledger
+import Cardano.Ledger.Shelley.TxWits
+  ( ShelleyTxWits,
+  )
 import Cardano.Ledger.Shelley.UTxO
   ( UTxO,
     pattern UTxO,

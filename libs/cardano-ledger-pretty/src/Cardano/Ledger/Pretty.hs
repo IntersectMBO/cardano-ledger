@@ -127,8 +127,6 @@ import Cardano.Ledger.Shelley.Rewards
 import Cardano.Ledger.Shelley.Scripts (MultiSig (..))
 import Cardano.Ledger.Shelley.Tx
   ( ShelleyTx (..),
-    WitnessSetHKD,
-    prettyWitnessSetParts,
   )
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
@@ -147,6 +145,10 @@ import Cardano.Ledger.Shelley.TxBody
     TxBodyRaw (..),
     Wdrl (..),
     WitVKey (..),
+  )
+import Cardano.Ledger.Shelley.TxWits
+  ( WitnessSetHKD,
+    prettyWitnessSetParts,
   )
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.Slot

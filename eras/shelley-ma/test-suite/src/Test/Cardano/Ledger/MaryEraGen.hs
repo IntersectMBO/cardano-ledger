@@ -29,9 +29,11 @@ import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..), U
 import Cardano.Ledger.Shelley.Tx
   ( ShelleyTxOut (..),
     TxIn,
-    WitnessSetHKD (..),
   )
 import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl)
+import Cardano.Ledger.Shelley.TxWits
+  ( WitnessSetHKD (..),
+  )
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
 import Cardano.Ledger.ShelleyMA.TxBody (MATxBody (MATxBody), scaledMinDeposit)
 import Cardano.Ledger.Val ((<+>))

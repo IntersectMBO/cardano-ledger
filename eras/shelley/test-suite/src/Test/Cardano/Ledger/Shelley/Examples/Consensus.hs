@@ -29,7 +29,7 @@ import Cardano.Ledger.Shelley.EpochBoundary
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Shelley.Rules
-import Cardano.Ledger.Shelley.Tx
+import Cardano.Ledger.Shelley.TxWits
 import Cardano.Ledger.Shelley.UTxO
 import Cardano.Protocol.TPraos.API
 import Cardano.Protocol.TPraos.BHeader

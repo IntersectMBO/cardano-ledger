@@ -24,12 +24,13 @@ import Cardano.Ledger.Shelley.API
   )
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Scripts (MultiSig (..))
-import Cardano.Ledger.Shelley.Tx (TxIn (..), WitnessSetHKD (ShelleyTxWits))
+import Cardano.Ledger.Shelley.Tx (TxIn (..))
 import Cardano.Ledger.Shelley.TxBody
   ( ShelleyTxBody (ShelleyTxBody, _inputs, _outputs, _txfee),
     ShelleyTxOut (..),
     Wdrl (..),
   )
+import Cardano.Ledger.Shelley.TxWits (WitnessSetHKD (ShelleyTxWits))
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.Val ((<+>))
 import Cardano.Protocol.TPraos.API (PraosCrypto)

@@ -58,12 +58,14 @@ import Cardano.Ledger.Shelley.Rules
   )
 import Cardano.Ledger.Shelley.Tx
   ( ShelleyTx (..),
-    WitnessSetHKD (..),
   )
 import Cardano.Ledger.Shelley.TxBody
   ( ShelleyTxBody (..),
     ShelleyTxOut (..),
     Wdrl (..),
+  )
+import Cardano.Ledger.Shelley.TxWits
+  ( WitnessSetHKD (..),
   )
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.Slot (SlotNo (..))

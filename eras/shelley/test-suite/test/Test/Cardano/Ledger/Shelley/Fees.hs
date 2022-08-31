@@ -55,12 +55,14 @@ import qualified Cardano.Ledger.Shelley.Metadata as MD
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..), emptyPParams)
 import Cardano.Ledger.Shelley.Tx
   ( ShelleyTx (..),
-    WitnessSetHKD (..),
   )
 import Cardano.Ledger.Shelley.TxBody
   ( PoolMetadata (..),
     StakePoolRelay (..),
     Wdrl (..),
+  )
+import Cardano.Ledger.Shelley.TxWits
+  ( WitnessSetHKD (..),
   )
 import Cardano.Ledger.Shelley.UTxO (makeWitnessesVKey)
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))

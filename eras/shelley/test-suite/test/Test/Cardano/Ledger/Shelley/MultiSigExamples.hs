@@ -66,12 +66,13 @@ import Cardano.Ledger.Shelley.Scripts
     pattern RequireMOf,
     pattern RequireSignature,
   )
-import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), TxId, WitnessSetHKD (..))
+import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), TxId)
 import Cardano.Ledger.Shelley.TxBody
   ( ShelleyTxBody (..),
     ShelleyTxOut (..),
     Wdrl (..),
   )
+import Cardano.Ledger.Shelley.TxWits (WitnessSetHKD (..))
 import Cardano.Ledger.Shelley.UTxO (makeWitnessesVKey)
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn (..))

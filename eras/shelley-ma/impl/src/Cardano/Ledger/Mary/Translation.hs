@@ -21,7 +21,7 @@ import Cardano.Ledger.Era hiding (EraCrypto)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Shelley.API hiding (Metadata, TxBody)
-import Cardano.Ledger.Shelley.Tx (decodeWits)
+import Cardano.Ledger.Shelley.TxWits (decodeWits)
 import Cardano.Ledger.ShelleyMA.AuxiliaryData
   ( MAAuxiliaryData (..),
   )

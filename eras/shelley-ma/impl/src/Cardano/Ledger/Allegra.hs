@@ -24,7 +24,7 @@ import Cardano.Ledger.Core (EraCrypto)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys (DSignable)
-import Cardano.Ledger.Shelley.API hiding (PParams, Tx, TxBody, TxOut, WitnessSet)
+import Cardano.Ledger.Shelley.API hiding (PParams, Tx, TxBody, TxOut)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsUpdate)
 import Cardano.Ledger.ShelleyMA
 import Cardano.Ledger.ShelleyMA.Rules ()

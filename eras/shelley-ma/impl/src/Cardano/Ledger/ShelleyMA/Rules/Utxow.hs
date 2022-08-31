@@ -20,8 +20,8 @@ import Cardano.Ledger.Shelley.Rules
     transitionRulesUTXOW,
   )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.Shelley.Tx (ShelleyTxWits)
 import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody)
+import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits)
 import Cardano.Ledger.ShelleyMA.Era (ShelleyMAUTXOW)
 import Cardano.Ledger.ShelleyMA.Rules.Utxo (ShelleyMAUTXO, ShelleyMAUtxoPredFailure)
 import Control.State.Transition.Extended
