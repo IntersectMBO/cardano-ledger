@@ -48,7 +48,7 @@ import Cardano.Ledger.Alonzo.TxInfo
     ScriptFailure (..),
     ScriptResult (..),
   )
-import Cardano.Ledger.Alonzo.TxWitness (TxWitness)
+import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits)
 import Cardano.Ledger.BaseTypes
   ( Globals,
     ProtVer,
@@ -105,7 +105,7 @@ instance
   forall era.
   ( AlonzoEraTx era,
     ExtendedUTxO era,
-    TxWits era ~ TxWitness era,
+    TxWits era ~ AlonzoTxWits era,
     Script era ~ AlonzoScript era,
     Tx era ~ AlonzoTx era,
     Embed (EraRule "PPUP" era) (AlonzoUTXOS era),
@@ -150,7 +150,7 @@ utxosTransition ::
     AlonzoEraTx era,
     Tx era ~ AlonzoTx era,
     Script era ~ AlonzoScript era,
-    TxWits era ~ TxWitness era,
+    TxWits era ~ AlonzoTxWits era,
     Environment (EraRule "PPUP" era) ~ PpupEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,
     Signal (EraRule "PPUP" era) ~ Maybe (Update era),
@@ -176,7 +176,7 @@ scriptsTransition ::
     EraTx era,
     ShelleyEraTxBody era,
     ExtendedUTxO era,
-    TxWits era ~ TxWitness era,
+    TxWits era ~ AlonzoTxWits era,
     HasField "_costmdls" (PParams era) CostModels,
     HasField "_protocolVersion" (PParams era) ProtVer,
     BaseM sts ~ ReaderT Globals m,
@@ -212,7 +212,7 @@ scriptsValidateTransition ::
     ExtendedUTxO era,
     STS (AlonzoUTXOS era),
     Tx era ~ AlonzoTx era,
-    TxWits era ~ TxWitness era,
+    TxWits era ~ AlonzoTxWits era,
     Script era ~ AlonzoScript era,
     Environment (EraRule "PPUP" era) ~ PpupEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,
@@ -257,7 +257,7 @@ scriptsNotValidateTransition ::
   ( AlonzoEraTx era,
     ExtendedUTxO era,
     STS (AlonzoUTXOS era),
-    TxWits era ~ TxWitness era,
+    TxWits era ~ AlonzoTxWits era,
     Script era ~ AlonzoScript era,
     Tx era ~ AlonzoTx era,
     HasField "_costmdls" (PParams era) CostModels,

@@ -50,7 +50,7 @@ library
     Cardano.Ledger.Alonzo.TxBody
     Cardano.Ledger.Alonzo.TxInfo
     Cardano.Ledger.Alonzo.TxSeq
-    Cardano.Ledger.Alonzo.TxWitness
+    Cardano.Ledger.Alonzo.TxWits
   other-modules:
     Cardano.Ledger.Alonzo.Era
     Cardano.Ledger.Alonzo.Rules.Bbody

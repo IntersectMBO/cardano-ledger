@@ -46,7 +46,7 @@ import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash, Data (..), hashData)
 import Cardano.Ledger.Alonzo.Scripts (CostModels (..), ExUnits (..), Prices)
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..), ScriptIntegrityHash)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (..), AlonzoTxOut (..))
-import Cardano.Ledger.Alonzo.TxWitness (Redeemers (..), TxDats (..), TxWitness (..))
+import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..), BabbageTxOut (..), Datum (..))
 import Cardano.Ledger.BaseTypes
   ( Network (..),
@@ -303,9 +303,9 @@ initialWitnesses :: Era era => Proof era -> TxWits era
 initialWitnesses (Shelley _) = WitnessSet Set.empty Map.empty Set.empty
 initialWitnesses (Allegra _) = WitnessSet Set.empty Map.empty Set.empty
 initialWitnesses (Mary _) = WitnessSet Set.empty Map.empty Set.empty
-initialWitnesses (Alonzo _) = TxWitness mempty mempty mempty mempty (Redeemers mempty)
-initialWitnesses (Babbage _) = TxWitness mempty mempty mempty mempty (Redeemers mempty)
-initialWitnesses (Conway _) = TxWitness mempty mempty mempty mempty (Redeemers mempty)
+initialWitnesses (Alonzo _) = AlonzoTxWits mempty mempty mempty mempty (Redeemers mempty)
+initialWitnesses (Babbage _) = AlonzoTxWits mempty mempty mempty mempty (Redeemers mempty)
+initialWitnesses (Conway _) = AlonzoTxWits mempty mempty mempty mempty (Redeemers mempty)
 
 initialTx :: forall era. Proof era -> Tx era
 initialTx era@(Shelley _) = ShelleyTx (initialTxBody era) (initialWitnesses era) SNothing
@@ -433,11 +433,11 @@ abstractWitnesses :: Proof era -> TxWits era -> [WitnessesField era]
 abstractWitnesses (Shelley _) (WitnessSet keys scripts boot) = [AddrWits keys, ScriptWits scripts, BootWits boot]
 abstractWitnesses (Allegra _) (WitnessSet keys scripts boot) = [AddrWits keys, ScriptWits scripts, BootWits boot]
 abstractWitnesses (Mary _) (WitnessSet keys scripts boot) = [AddrWits keys, ScriptWits scripts, BootWits boot]
-abstractWitnesses (Alonzo _) (TxWitness key boot scripts dats red) =
+abstractWitnesses (Alonzo _) (AlonzoTxWits key boot scripts dats red) =
   [AddrWits key, ScriptWits scripts, BootWits boot, DataWits dats, RdmrWits red]
-abstractWitnesses (Babbage _) (TxWitness key boot scripts dats red) =
+abstractWitnesses (Babbage _) (AlonzoTxWits key boot scripts dats red) =
   [AddrWits key, ScriptWits scripts, BootWits boot, DataWits dats, RdmrWits red]
-abstractWitnesses (Conway _) (TxWitness key boot scripts dats red) =
+abstractWitnesses (Conway _) (AlonzoTxWits key boot scripts dats red) =
   [AddrWits key, ScriptWits scripts, BootWits boot, DataWits dats, RdmrWits red]
 
 abstractTxOut :: Era era => Proof era -> TxOut era -> [TxOutField era]

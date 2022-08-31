@@ -32,7 +32,7 @@ import Cardano.Ledger.Alonzo.Tx
   ( IsValid (..),
     ScriptPurpose (..),
   )
-import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..), TxDats (..), unRedeemers)
+import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..), TxDats (..), unRedeemers)
 import Cardano.Ledger.BaseTypes
   ( Network (..),
     StrictMaybe (..),

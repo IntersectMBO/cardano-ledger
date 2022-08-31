@@ -28,7 +28,7 @@ import Cardano.Ledger.Alonzo.Tx
   ( ScriptPurpose (..),
   )
 import Cardano.Ledger.Alonzo.TxInfo (TranslationError, VersionedTxInfo, txInfo, valContext)
-import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..))
+import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..))
 import qualified Cardano.Ledger.Babbage.PParams as Babbage (BabbagePParamsHKD (..))
 import Cardano.Ledger.Core hiding (TranslationError)
 import Cardano.Ledger.Pretty.Babbage ()

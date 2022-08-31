@@ -21,9 +21,9 @@ import Cardano.Ledger.Alonzo.TxSeq
   ( AlonzoTxSeq (AlonzoTxSeq, txSeqTxns),
     hashAlonzoTxSeq,
   )
-import Cardano.Ledger.Alonzo.TxWitness
+import Cardano.Ledger.Alonzo.TxWits
   ( AlonzoEraTxWits (..),
-    TxWitness (..),
+    AlonzoTxWits (..),
     addrAlonzoWitsL,
     bootAddrAlonzoWitsL,
     datsAlonzoWitsL,
@@ -87,7 +87,7 @@ instance CC.Crypto c => AlonzoEraTx (BabbageEra c) where
 instance CC.Crypto c => EraTxWits (BabbageEra c) where
   {-# SPECIALIZE instance EraTxWits (BabbageEra CC.StandardCrypto) #-}
 
-  type TxWits (BabbageEra c) = TxWitness (BabbageEra c)
+  type TxWits (BabbageEra c) = AlonzoTxWits (BabbageEra c)
 
   mkBasicTxWits = mempty
 

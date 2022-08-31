@@ -45,9 +45,9 @@ import Cardano.Ledger.Alonzo.Tx
   )
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody (..), ScriptIntegrityHash, ShelleyEraTxBody (..))
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), languages)
-import Cardano.Ledger.Alonzo.TxWitness
-  ( RdmrPtr,
-    TxWitness (txdats, txrdmrs),
+import Cardano.Ledger.Alonzo.TxWits
+  ( AlonzoTxWits (txdats, txrdmrs),
+    RdmrPtr,
     unRedeemers,
     unTxDats,
   )
@@ -341,7 +341,7 @@ alonzoStyleWitness ::
     ExtendedUTxO era,
     Tx era ~ AlonzoTx era,
     Script era ~ AlonzoScript era,
-    TxWits era ~ TxWitness era,
+    TxWits era ~ AlonzoTxWits era,
     HasField "_costmdls" (PParams era) CostModels,
     HasField "_protocolVersion" (PParams era) ProtVer,
     Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody),
@@ -510,7 +510,7 @@ instance
     Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody),
     Tx era ~ AlonzoTx era,
     Script era ~ AlonzoScript era,
-    TxWits era ~ TxWitness era,
+    TxWits era ~ AlonzoTxWits era,
     HasField "_costmdls" (PParams era) CostModels,
     HasField "_protocolVersion" (PParams era) ProtVer,
     -- Allow UTXOW to call UTXO

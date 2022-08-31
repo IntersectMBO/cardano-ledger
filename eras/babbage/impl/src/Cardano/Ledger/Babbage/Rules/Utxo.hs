@@ -40,9 +40,9 @@ import Cardano.Ledger.Alonzo.Rules
 import Cardano.Ledger.Alonzo.Scripts (ExUnits)
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody (collateralInputsTxBodyL))
-import Cardano.Ledger.Alonzo.TxWitness
+import Cardano.Ledger.Alonzo.TxWits
   ( AlonzoEraTxWits (..),
-    TxWitness (..),
+    AlonzoTxWits (..),
     nullRedeemers,
   )
 import Cardano.Ledger.Babbage.Collateral (collAdaBalance)
@@ -428,7 +428,7 @@ instance
     Tx era ~ AlonzoTx era,
     TxOut era ~ BabbageTxOut era,
     TxBody era ~ BabbageTxBody era,
-    TxWits era ~ TxWitness era,
+    TxWits era ~ AlonzoTxWits era,
     HasField "_maxCollateralInputs" (PParams era) Natural,
     HasField "_coinsPerUTxOByte" (PParams era) Coin,
     HasField "_collateralPercentage" (PParams era) Natural,

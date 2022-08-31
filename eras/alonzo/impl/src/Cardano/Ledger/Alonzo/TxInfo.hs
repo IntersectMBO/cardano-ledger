@@ -91,7 +91,7 @@ import Cardano.Ledger.Alonzo.TxBody
     vldtTxBodyL,
     wdrlsTxBodyL,
   )
-import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr, TxWitness, unTxDats)
+import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits, RdmrPtr, unTxDats)
 import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..), TxIx, certIxToInt, txIxToInt)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core as Core hiding (TranslationError)
@@ -492,7 +492,7 @@ alonzoTxInfo ::
   ( EraTx era,
     AlonzoEraTxBody era,
     Value era ~ MaryValue (EraCrypto era),
-    TxWits era ~ TxWitness era,
+    TxWits era ~ AlonzoTxWits era,
     HasField "_protocolVersion" (PParams era) ProtVer
   ) =>
   PParams era ->
@@ -529,7 +529,7 @@ alonzoTxInfo pp lang ei sysS utxo tx = do
   where
     txBody :: TxBody era
     txBody = tx ^. bodyTxL
-    txWits :: TxWitness era
+    txWits :: AlonzoTxWits era
     txWits = tx ^. witsTxL
     txOuts = txBody ^. outputsTxBodyL
     fee = txBody ^. feeTxBodyL

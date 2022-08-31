@@ -21,7 +21,7 @@ import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
-import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..), TxDats (..))
+import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.Babbage.TxBody (Datum (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
@@ -31,7 +31,7 @@ import Cardano.Ledger.Conway.PParams (BabbagePParamsHKD (..), emptyPParams, empt
 import Cardano.Ledger.Conway.Translation ()
 import Cardano.Ledger.Conway.Tx (AlonzoTx (..))
 import Cardano.Ledger.Conway.TxBody (BabbageTxBody (..), BabbageTxOut (..))
-import Cardano.Ledger.Conway.TxWits (TxWitness (..))
+import Cardano.Ledger.Conway.TxWits (AlonzoTxWits (..))
 import Cardano.Ledger.Core (EraScript (hashScript), TxBody)
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj))
 import Cardano.Ledger.Crypto (StandardCrypto)
@@ -172,7 +172,7 @@ exampleTx :: ShelleyTx StandardConway
 exampleTx =
   ShelleyTx
     exampleTxBodyConway
-    ( TxWitness
+    ( AlonzoTxWits
         (makeWitnessesVKey (hashAnnotated exampleTxBodyConway) [asWitness SLE.examplePayKey]) -- vkey
         mempty -- bootstrap
         ( Map.singleton

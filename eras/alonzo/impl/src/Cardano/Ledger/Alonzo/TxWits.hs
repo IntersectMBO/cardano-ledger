@@ -16,7 +16,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Alonzo.TxWitness
+module Cardano.Ledger.Alonzo.TxWits
   ( RdmrPtr (..),
     Redeemers
       ( Redeemers,
@@ -25,14 +25,14 @@ module Cardano.Ledger.Alonzo.TxWitness
     unRedeemers,
     nullRedeemers,
     TxDats (TxDats, TxDats'),
-    TxWitness
-      ( TxWitness,
+    AlonzoTxWits
+      ( AlonzoTxWits,
         txwitsVKey,
         txwitsBoot,
         txscripts,
         txdats,
         txrdmrs,
-        TxWitness',
+        AlonzoTxWits',
         txwitsVKey',
         txwitsBoot',
         txscripts',
@@ -167,22 +167,22 @@ nullRedeemers :: Era era => Redeemers era -> Bool
 nullRedeemers = Map.null . unRedeemers
 
 -- ====================================================================
--- In the Spec, TxWitness has 4 logical fields. Here in the implementation
+-- In the Spec, AlonzoTxWits has 4 logical fields. Here in the implementation
 -- we make two physical modifications.
--- 1) The witsVKey field of TxWitness is specified as a (Map VKey Signature)
+-- 1) The witsVKey field of AlonzoTxWits is specified as a (Map VKey Signature)
 --    for efficiency this is stored as a (Set WitVKey) where WitVKey is
 --    logically a triple (VKey,Signature,VKeyHash).
 -- 2) We add a 5th field _witsBoot to be backwards compatible with
 --    earlier Eras: Byron, Mary, Allegra
 -- So logically things look like this
---   data TxWitness = TxWitness
+--   data AlonzoTxWits = AlonzoTxWits
 --      (Set (WitVKey 'Witness (Crypto era)))
 --      (Set (BootstrapWitness (Crypto era)))
 --      (Map (ScriptHash (Crypto era)) (Core.Script era))
 --      (TxDats era)
 --      (Map RdmrPtr (Data era, ExUnits))
 
--- | Internal 'TxWitness' type, lacking serialised bytes.
+-- | Internal 'AlonzoTxWits' type, lacking serialised bytes.
 data TxWitnessRaw era = TxWitnessRaw
   { _txwitsVKey :: Set (WitVKey 'Witness (EraCrypto era)),
     _txwitsBoot :: Set (BootstrapWitness (EraCrypto era)),
@@ -203,19 +203,19 @@ instance
   ) =>
   NFData (TxWitnessRaw era)
 
-newtype TxWitness era = TxWitnessConstr (MemoBytes TxWitnessRaw era)
+newtype AlonzoTxWits era = TxWitnessConstr (MemoBytes TxWitnessRaw era)
   deriving newtype (SafeToHash, ToCBOR)
 
-instance (Era era, Core.Script era ~ AlonzoScript era) => Semigroup (TxWitness era) where
+instance (Era era, Core.Script era ~ AlonzoScript era) => Semigroup (AlonzoTxWits era) where
   (<>) x y | isEmptyTxWitness x = y
   (<>) x y | isEmptyTxWitness y = x
   (<>)
     (TxWitnessConstr (Memo (TxWitnessRaw a b c d (Redeemers' e)) _))
     (TxWitnessConstr (Memo (TxWitnessRaw u v w x (Redeemers' y)) _)) =
-      TxWitness (a <> u) (b <> v) (c <> w) (d <> x) (Redeemers (e <> y))
+      AlonzoTxWits (a <> u) (b <> v) (c <> w) (d <> x) (Redeemers (e <> y))
 
-instance (Era era, Core.Script era ~ AlonzoScript era) => Monoid (TxWitness era) where
-  mempty = TxWitness mempty mempty mempty mempty (Redeemers mempty)
+instance (Era era, Core.Script era ~ AlonzoScript era) => Monoid (AlonzoTxWits era) where
+  mempty = AlonzoTxWits mempty mempty mempty mempty (Redeemers mempty)
 
 deriving instance
   ( Era era,
@@ -226,9 +226,9 @@ deriving instance
     NFData (SigDSIGN (CC.DSIGN crypto)),
     NFData (VerKeyDSIGN (CC.DSIGN crypto))
   ) =>
-  NFData (TxWitness era)
+  NFData (AlonzoTxWits era)
 
-isEmptyTxWitness :: Era era => TxWitness era -> Bool
+isEmptyTxWitness :: Era era => AlonzoTxWits era -> Bool
 isEmptyTxWitness (TxWitnessConstr (Memo (TxWitnessRaw a b c d (Redeemers' e)) _)) =
   Set.null a && Set.null b && Map.null c && nullDats d && Map.null e
 
@@ -286,7 +286,7 @@ deriving via
     (Era era) => FromCBOR (Annotator (TxDats era))
 
 -- =====================================================
--- TxWitness instances
+-- AlonzoTxWits instances
 
 deriving stock instance
   ( Era era,
@@ -300,54 +300,54 @@ deriving stock instance
 
 instance (Era era, NoThunks (Core.Script era)) => NoThunks (TxWitnessRaw era)
 
-deriving newtype instance Eq (TxWitness era)
+deriving newtype instance Eq (AlonzoTxWits era)
 
 deriving newtype instance
   (Era era, Show (Core.Script era)) =>
-  Show (TxWitness era)
+  Show (AlonzoTxWits era)
 
 deriving newtype instance
   (Era era, NoThunks (Core.Script era)) =>
-  NoThunks (TxWitness era)
+  NoThunks (AlonzoTxWits era)
 
 -- =====================================================
--- Pattern for TxWitness
+-- Pattern for AlonzoTxWits
 
-pattern TxWitness' ::
+pattern AlonzoTxWits' ::
   Era era =>
   Set (WitVKey 'Witness (EraCrypto era)) ->
   Set (BootstrapWitness (EraCrypto era)) ->
   Map (ScriptHash (EraCrypto era)) (Core.Script era) ->
   TxDats era ->
   Redeemers era ->
-  TxWitness era
-pattern TxWitness' {txwitsVKey', txwitsBoot', txscripts', txdats', txrdmrs'} <-
+  AlonzoTxWits era
+pattern AlonzoTxWits' {txwitsVKey', txwitsBoot', txscripts', txdats', txrdmrs'} <-
   TxWitnessConstr
     (Memo (TxWitnessRaw txwitsVKey' txwitsBoot' txscripts' txdats' txrdmrs') _)
 
-{-# COMPLETE TxWitness' #-}
+{-# COMPLETE AlonzoTxWits' #-}
 
-pattern TxWitness ::
+pattern AlonzoTxWits ::
   (Era era, Core.Script era ~ AlonzoScript era) =>
   Set (WitVKey 'Witness (EraCrypto era)) ->
   Set (BootstrapWitness (EraCrypto era)) ->
   Map (ScriptHash (EraCrypto era)) (Core.Script era) ->
   TxDats era ->
   Redeemers era ->
-  TxWitness era
-pattern TxWitness {txwitsVKey, txwitsBoot, txscripts, txdats, txrdmrs} <-
+  AlonzoTxWits era
+pattern AlonzoTxWits {txwitsVKey, txwitsBoot, txscripts, txdats, txrdmrs} <-
   TxWitnessConstr
     (Memo (TxWitnessRaw txwitsVKey txwitsBoot txscripts txdats txrdmrs) _)
   where
-    TxWitness witsVKey' witsBoot' witsScript' witsDat' witsRdmr' =
+    AlonzoTxWits witsVKey' witsBoot' witsScript' witsDat' witsRdmr' =
       mkAlonzoTxWitness $ TxWitnessRaw witsVKey' witsBoot' witsScript' witsDat' witsRdmr'
 
-{-# COMPLETE TxWitness #-}
+{-# COMPLETE AlonzoTxWits #-}
 
 mkAlonzoTxWitness ::
   (Era era, Core.Script era ~ AlonzoScript era) =>
   TxWitnessRaw era ->
-  TxWitness era
+  AlonzoTxWits era
 mkAlonzoTxWitness = TxWitnessConstr . memoBytes . encodeWitnessRaw
 {-# INLINEABLE mkAlonzoTxWitness #-}
 
@@ -359,7 +359,7 @@ lensWitsRaw ::
   (Era e, Era era, Core.Script era ~ AlonzoScript era) =>
   (TxWitnessRaw e -> a) ->
   (TxWitnessRaw e -> t -> TxWitnessRaw era) ->
-  Lens (TxWitness e) (TxWitness era) a t
+  Lens (AlonzoTxWits e) (AlonzoTxWits era) a t
 lensWitsRaw getter setter =
   lens
     (\(TxWitnessConstr (Memo witsRaw _)) -> getter witsRaw)
@@ -368,35 +368,35 @@ lensWitsRaw getter setter =
 
 addrAlonzoWitsL ::
   (Era era, Core.Script era ~ AlonzoScript era) =>
-  Lens' (TxWitness era) (Set (WitVKey 'Witness (EraCrypto era)))
+  Lens' (AlonzoTxWits era) (Set (WitVKey 'Witness (EraCrypto era)))
 addrAlonzoWitsL =
   lensWitsRaw _txwitsVKey (\witsRaw addrWits -> witsRaw {_txwitsVKey = addrWits})
 {-# INLINEABLE addrAlonzoWitsL #-}
 
 bootAddrAlonzoWitsL ::
   (Era era, Core.Script era ~ AlonzoScript era) =>
-  Lens' (TxWitness era) (Set (BootstrapWitness (EraCrypto era)))
+  Lens' (AlonzoTxWits era) (Set (BootstrapWitness (EraCrypto era)))
 bootAddrAlonzoWitsL =
   lensWitsRaw _txwitsBoot (\witsRaw bootAddrWits -> witsRaw {_txwitsBoot = bootAddrWits})
 {-# INLINEABLE bootAddrAlonzoWitsL #-}
 
 scriptAlonzoWitsL ::
   (Era era, Core.Script era ~ AlonzoScript era) =>
-  Lens' (TxWitness era) (Map (ScriptHash (EraCrypto era)) (Script era))
+  Lens' (AlonzoTxWits era) (Map (ScriptHash (EraCrypto era)) (Script era))
 scriptAlonzoWitsL =
   lensWitsRaw _txscripts (\witsRaw scriptWits -> witsRaw {_txscripts = scriptWits})
 {-# INLINEABLE scriptAlonzoWitsL #-}
 
 datsAlonzoWitsL ::
   (Era era, Core.Script era ~ AlonzoScript era) =>
-  Lens' (TxWitness era) (TxDats era)
+  Lens' (AlonzoTxWits era) (TxDats era)
 datsAlonzoWitsL =
   lensWitsRaw _txdats (\witsRaw datsWits -> witsRaw {_txdats = datsWits})
 {-# INLINEABLE datsAlonzoWitsL #-}
 
 rdmrsAlonzoWitsL ::
   (Era era, Core.Script era ~ AlonzoScript era) =>
-  Lens' (TxWitness era) (Redeemers era)
+  Lens' (AlonzoTxWits era) (Redeemers era)
 rdmrsAlonzoWitsL =
   lensWitsRaw _txrdmrs (\witsRaw rdmrsWits -> witsRaw {_txrdmrs = rdmrsWits})
 {-# INLINEABLE rdmrsAlonzoWitsL #-}
@@ -404,7 +404,7 @@ rdmrsAlonzoWitsL =
 instance (EraScript (AlonzoEra c), CC.Crypto c) => EraTxWits (AlonzoEra c) where
   {-# SPECIALIZE instance EraTxWits (AlonzoEra CC.StandardCrypto) #-}
 
-  type TxWits (AlonzoEra c) = TxWitness (AlonzoEra c)
+  type TxWits (AlonzoEra c) = AlonzoTxWits (AlonzoEra c)
 
   mkBasicTxWits = mempty
 
@@ -515,7 +515,7 @@ instance
   fromCBOR =
     decode $
       SparseKeyed
-        "TxWitness"
+        "AlonzoTxWits"
         (pure emptyTxWitness)
         txWitnessField
         []
@@ -568,4 +568,4 @@ deriving via
   (Mem TxWitnessRaw era)
   instance
     (EraScript era, Core.Script era ~ AlonzoScript era) =>
-    FromCBOR (Annotator (TxWitness era))
+    FromCBOR (Annotator (AlonzoTxWits era))

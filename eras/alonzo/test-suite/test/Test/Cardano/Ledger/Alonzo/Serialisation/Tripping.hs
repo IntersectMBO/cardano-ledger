@@ -10,7 +10,7 @@ import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Data (BinaryData, Data (..))
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxoPredFailure, AlonzoUtxosPredFailure, AlonzoUtxowPredFailure)
 import Cardano.Ledger.Alonzo.Scripts (CostModels)
-import Cardano.Ledger.Alonzo.TxWitness (TxWitness)
+import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits)
 import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Metadata (Metadata)
@@ -74,8 +74,8 @@ tests =
         tripping @(BinaryData (AlonzoEra C_Crypto)),
       testProperty "alonzo/Metadata" $
         trippingAnn @(Metadata (AlonzoEra C_Crypto)),
-      testProperty "alonzo/TxWitness" $
-        trippingAnn @(TxWitness (AlonzoEra C_Crypto)),
+      testProperty "alonzo/AlonzoTxWits" $
+        trippingAnn @(AlonzoTxWits (AlonzoEra C_Crypto)),
       testProperty "alonzo/TxBody" $
         trippingAnn @(TxBody (AlonzoEra C_Crypto)),
       testProperty "alonzo/CostModels" $

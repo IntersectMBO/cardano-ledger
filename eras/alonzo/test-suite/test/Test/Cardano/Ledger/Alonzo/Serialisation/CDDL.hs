@@ -9,7 +9,7 @@ where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Data (Data)
-import Cardano.Ledger.Alonzo.TxWitness (Redeemers, TxWitness)
+import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits, Redeemers)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.ShelleyMA.Timelocks as MA
@@ -32,7 +32,7 @@ tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
       cddlAnnotatorTest @(MA.Timelock (AlonzoEra StandardCrypto)) n "native_script",
       cddlAnnotatorTest @(Data A) n "plutus_data",
       cddlTest @(TxOut A) n "transaction_output",
-      cddlAnnotatorTest @(TxWitness A) n "transaction_witness_set",
+      cddlAnnotatorTest @(AlonzoTxWits A) n "transaction_witness_set",
       cddlTest @(PParamsUpdate A) n "protocol_param_update",
       cddlAnnotatorTest @(Redeemers A) n "[* redeemer]",
       cddlAnnotatorTest @(Tx A) n "transaction"

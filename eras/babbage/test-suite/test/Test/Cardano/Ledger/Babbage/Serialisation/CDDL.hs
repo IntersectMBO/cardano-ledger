@@ -8,7 +8,7 @@ where
 
 import Cardano.Ledger.Alonzo.Data (Data)
 import Cardano.Ledger.Alonzo.Scripts (CostModels)
-import Cardano.Ledger.Alonzo.TxWitness (Redeemers)
+import Cardano.Ledger.Alonzo.TxWits (Redeemers)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.TxBody (Datum)
 import Cardano.Ledger.Core

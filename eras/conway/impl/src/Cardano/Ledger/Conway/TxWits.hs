@@ -7,16 +7,16 @@ module Cardano.Ledger.Conway.TxWits
   )
 where
 
-import Cardano.Ledger.Alonzo.TxWitness
+import Cardano.Ledger.Alonzo.TxWits
   ( addrAlonzoWitsL,
     bootAddrAlonzoWitsL,
     datsAlonzoWitsL,
     rdmrsAlonzoWitsL,
     scriptAlonzoWitsL,
   )
-import Cardano.Ledger.Alonzo.TxWitness as BabbageTxWitsReExport
+import Cardano.Ledger.Alonzo.TxWits as BabbageTxWitsReExport
   ( AlonzoEraTxWits (..),
-    TxWitness (..),
+    AlonzoTxWits (..),
   )
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Scripts ()
@@ -26,7 +26,7 @@ import qualified Cardano.Ledger.Crypto as CC
 instance CC.Crypto c => EraTxWits (ConwayEra c) where
   {-# SPECIALIZE instance EraTxWits (ConwayEra CC.StandardCrypto) #-}
 
-  type TxWits (ConwayEra c) = TxWitness (ConwayEra c)
+  type TxWits (ConwayEra c) = AlonzoTxWits (ConwayEra c)
 
   mkBasicTxWits = mempty
 

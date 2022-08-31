@@ -51,12 +51,12 @@ import Cardano.Ledger.Alonzo.TxBody
     inputs',
     utxoEntrySize,
   )
-import Cardano.Ledger.Alonzo.TxWitness
+import Cardano.Ledger.Alonzo.TxWits
   ( AlonzoEraTxWits (..),
+    AlonzoTxWits (..),
     RdmrPtr (..),
     Redeemers (..),
     TxDats (..),
-    TxWitness (..),
   )
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
@@ -388,7 +388,7 @@ instance Mock c => EraGen (AlonzoEra c) where
   genEraTxWits (utxo, txbody, scriptinfo) setWitVKey mapScriptWit = new
     where
       new =
-        TxWitness
+        AlonzoTxWits
           setWitVKey
           Set.empty
           mapScriptWit

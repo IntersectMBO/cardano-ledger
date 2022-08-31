@@ -18,7 +18,7 @@ import Cardano.Ledger.Alonzo.TxInfo
     VersionedTxInfo (..),
   )
 import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
-import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr, TxWitness (..), unRedeemers, unTxDats)
+import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), RdmrPtr, unRedeemers, unTxDats)
 import Cardano.Ledger.Babbage.TxBody
   ( AlonzoEraTxBody (..),
     AlonzoEraTxOut (..),
@@ -163,7 +163,7 @@ babbageTxInfo ::
   ( EraTx era,
     BabbageEraTxBody era,
     Value era ~ MaryValue (EraCrypto era),
-    TxWits era ~ TxWitness era,
+    TxWits era ~ AlonzoTxWits era,
     HasField "_protocolVersion" (PParams era) ProtVer
   ) =>
   PParams era ->

@@ -20,7 +20,7 @@ import Cardano.Ledger.Alonzo.Scripts (CostModels (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), hashScriptIntegrity)
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody (..), AlonzoTxOut (..))
-import Cardano.Ledger.Alonzo.TxWitness (Redeemers (..), TxDats (..), TxWitness (..))
+import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))
 import qualified Cardano.Ledger.Babbage.PParams as Babbage (BabbagePParamsHKD (..))
 import Cardano.Ledger.Babbage.TxBody as Babbage
   ( BabbageEraTxBody (..),
@@ -68,7 +68,7 @@ import Test.Cardano.Ledger.Generic.Proof
 -- or combine (merge) of two values. We only use this for elements in the
 -- WitnessesField data type. That is because we assemble witnesses in small
 -- pieces and we combine the pieces together. Every field in WitnessSet and
--- TxWitness has clear way of being merged. We don't use Policies in the other
+-- AlonzoTxWits has clear way of being merged. We don't use Policies in the other
 -- xxxField types because most of those parts cannot be safely combined.
 -- (The only execeptions are Coin and Value, but they both have Monoid
 -- instances, where we can easliy use (<>) instead.).

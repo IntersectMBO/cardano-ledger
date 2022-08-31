@@ -53,7 +53,7 @@ import Cardano.Ledger.Alonzo.Tx
     hashData,
   )
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
-import Cardano.Ledger.Alonzo.TxWitness
+import Cardano.Ledger.Alonzo.TxWits
 import Cardano.Ledger.Core
 import Control.State.Transition (PredicateFailure)
 import Data.Int (Int64)
@@ -123,10 +123,10 @@ instance
     AlonzoScript era ~ Script era,
     EraScript era
   ) =>
-  Arbitrary (TxWitness era)
+  Arbitrary (AlonzoTxWits era)
   where
   arbitrary =
-    TxWitness
+    AlonzoTxWits
       <$> arbitrary
       <*> arbitrary
       <*> genScripts

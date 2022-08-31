@@ -30,7 +30,7 @@ import Cardano.Ledger.Alonzo.Scripts
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (AlonzoTx), AlonzoTxBody (AlonzoTxBody), IsValid (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody, AlonzoTxOut (AlonzoTxOut))
 import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq (AlonzoTxSeq))
-import Cardano.Ledger.Alonzo.TxWitness
+import Cardano.Ledger.Alonzo.TxWits
 import Cardano.Ledger.AuxiliaryData
 import Cardano.Ledger.BaseTypes (BoundedRational (unboundRational))
 import Cardano.Ledger.Core
@@ -245,10 +245,10 @@ ppRdmrPtr (RdmrPtr tag w) = ppSexp "RdmrPtr" [ppTag tag, ppWord64 w]
 
 instance PrettyA RdmrPtr where prettyA = ppRdmrPtr
 
-ppTxWitness :: (Era era, PrettyA (Script era)) => TxWitness era -> PDoc
-ppTxWitness (TxWitness' vk wb sc da (Redeemers rd)) =
+ppTxWitness :: (Era era, PrettyA (Script era)) => AlonzoTxWits era -> PDoc
+ppTxWitness (AlonzoTxWits' vk wb sc da (Redeemers rd)) =
   ppRecord
-    "TxWitness"
+    "AlonzoTxWits"
     [ ("keys", ppSet ppWitVKey vk),
       ("bootstrap witnesses", ppSet ppBootstrapWitness wb),
       ("scripts map", ppMap ppScriptHash prettyA sc),
@@ -258,7 +258,7 @@ ppTxWitness (TxWitness' vk wb sc da (Redeemers rd)) =
 
 instance
   (Era era, PrettyA (Script era)) =>
-  PrettyA (TxWitness era)
+  PrettyA (AlonzoTxWits era)
   where
   prettyA = ppTxWitness
 

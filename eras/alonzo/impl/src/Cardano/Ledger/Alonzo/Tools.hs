@@ -31,7 +31,7 @@ import Cardano.Ledger.Alonzo.TxInfo
     txInfo,
     valContext,
   )
-import Cardano.Ledger.Alonzo.TxWitness
+import Cardano.Ledger.Alonzo.TxWits
   ( AlonzoEraTxWits (..),
     RdmrPtr (..),
     unRedeemers,

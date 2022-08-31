@@ -111,12 +111,12 @@ import Cardano.Ledger.Alonzo.TxBody
     ScriptIntegrityHash,
     TxBody,
   )
-import Cardano.Ledger.Alonzo.TxWitness
+import Cardano.Ledger.Alonzo.TxWits
   ( AlonzoEraTxWits (..),
+    AlonzoTxWits (..),
     RdmrPtr (..),
     Redeemers (..),
     TxDats (..),
-    TxWitness (..),
     nullDats,
     nullRedeemers,
     txrdmrs,
@@ -172,7 +172,7 @@ newtype IsValid = IsValid Bool
 
 data AlonzoTx era = AlonzoTx
   { body :: !(Core.TxBody era),
-    wits :: !(TxWitness era),
+    wits :: !(AlonzoTxWits era),
     isValid :: !IsValid,
     auxiliaryData :: !(StrictMaybe (AuxiliaryData era))
   }
@@ -224,7 +224,7 @@ bodyAlonzoTxL = lens body (\tx txBody -> tx {body = txBody})
 {-# INLINEABLE bodyAlonzoTxL #-}
 
 -- | `TxWits` setter and getter for `AlonzoTx`.
-witsAlonzoTxL :: Lens' (AlonzoTx era) (TxWitness era)
+witsAlonzoTxL :: Lens' (AlonzoTx era) (AlonzoTxWits era)
 witsAlonzoTxL = lens wits (\tx txWits -> tx {wits = txWits})
 {-# INLINEABLE witsAlonzoTxL #-}
 
@@ -327,7 +327,7 @@ hashScriptIntegrity langViews rdmrs dats =
 
 isTwoPhaseScriptAddress ::
   forall era.
-  (EraTx era, TxWits era ~ TxWitness era) =>
+  (EraTx era, TxWits era ~ AlonzoTxWits era) =>
   AlonzoTx era ->
   Addr (EraCrypto era) ->
   Bool
@@ -480,7 +480,7 @@ getMapFromValue (MaryValue _ (MultiAsset m)) = m
 -- | Find the Data and ExUnits assigned to a script.
 indexedRdmrs ::
   forall era.
-  (ShelleyEraTxBody era, EraTx era, TxWits era ~ TxWitness era) =>
+  (ShelleyEraTxBody era, EraTx era, TxWits era ~ AlonzoTxWits era) =>
   Tx era ->
   ScriptPurpose (EraCrypto era) ->
   Maybe (Data era, ExUnits)
@@ -500,7 +500,7 @@ deriving newtype instance ToCBOR IsValid
 
 segwitTx ::
   Annotator (Core.TxBody era) ->
-  Annotator (TxWitness era) ->
+  Annotator (AlonzoTxWits era) ->
   IsValid ->
   Maybe (Annotator (AuxiliaryData era)) ->
   Annotator (AlonzoTx era)

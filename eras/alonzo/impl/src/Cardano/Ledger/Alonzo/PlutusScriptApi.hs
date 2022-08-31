@@ -37,7 +37,7 @@ import Cardano.Ledger.Alonzo.TxInfo
     runPLCScript,
     valContext,
   )
-import Cardano.Ledger.Alonzo.TxWitness (TxWitness, unTxDats)
+import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits, unTxDats)
 import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..))
 import Cardano.Ledger.Core hiding (TranslationError)
 import Cardano.Ledger.Credential (Credential (ScriptHashObj))
@@ -86,7 +86,7 @@ getSpendingTxIn = \case
 -- | Get the Data associated with a ScriptPurpose. Only the Spending
 --   ScriptPurpose contains Data. The null list is returned for the other kinds.
 getDatumAlonzo ::
-  (AlonzoEraTxOut era, EraTx era, TxWits era ~ TxWitness era) =>
+  (AlonzoEraTxOut era, EraTx era, TxWits era ~ AlonzoTxWits era) =>
   Tx era ->
   UTxO era ->
   ScriptPurpose (EraCrypto era) ->
@@ -150,7 +150,7 @@ collectTwoPhaseScriptInputs ::
     ShelleyEraTxBody era,
     ExtendedUTxO era,
     Script era ~ AlonzoScript era,
-    TxWits era ~ TxWitness era,
+    TxWits era ~ AlonzoTxWits era,
     HasField "_costmdls" (PParams era) CostModels
   ) =>
   EpochInfo (Either Text) ->

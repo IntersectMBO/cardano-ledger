@@ -42,9 +42,9 @@ import Cardano.Ledger.Alonzo.TxBody
     ShelleyMAEraTxBody (..),
   )
 import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq)
-import Cardano.Ledger.Alonzo.TxWitness
+import Cardano.Ledger.Alonzo.TxWits
   ( AlonzoEraTxWits,
-    TxWitness (txrdmrs'),
+    AlonzoTxWits (txrdmrs'),
     nullRedeemers,
   )
 import Cardano.Ledger.BaseTypes

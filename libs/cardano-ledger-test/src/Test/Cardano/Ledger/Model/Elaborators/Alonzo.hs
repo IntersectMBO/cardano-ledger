@@ -22,7 +22,7 @@ import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import Cardano.Ledger.Alonzo.Translation ()
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (AlonzoTxBody), AlonzoTxOut (AlonzoTxOut))
-import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
+import qualified Cardano.Ledger.Alonzo.TxWits as Alonzo
 import Cardano.Ledger.Crypto (DSIGN, KES)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Shelley.API.Genesis (initialState)
@@ -134,7 +134,7 @@ instance
 
   makeTx _ realTxBody (TxWitnessArguments wits (SupportsScript ScriptFeatureTag_PlutusV1 scripts) (SupportsPlutus (rdmr, dats)) (SupportsPlutus isValid)) =
     let witSet =
-          Alonzo.TxWitness
+          Alonzo.AlonzoTxWits
             { Alonzo.txwitsVKey = wits,
               Alonzo.txwitsBoot = Set.empty,
               Alonzo.txscripts = scripts,

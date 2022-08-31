@@ -16,7 +16,7 @@ import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
 import Cardano.Ledger.Alonzo.Translation ()
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
-import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..), TxDats (..), TxWitness (..))
+import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), RdmrPtr (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..), emptyPParams, emptyPParamsUpdate)
 import Cardano.Ledger.Babbage.Translation ()
@@ -159,7 +159,7 @@ exampleTx :: ShelleyTx StandardBabbage
 exampleTx =
   ShelleyTx
     exampleTxBodyBabbage
-    ( TxWitness
+    ( AlonzoTxWits
         (makeWitnessesVKey (hashAnnotated exampleTxBodyBabbage) [asWitness SLE.examplePayKey]) -- vkey
         mempty -- bootstrap
         ( Map.singleton
