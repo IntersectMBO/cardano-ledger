@@ -50,6 +50,7 @@ import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..), AlonzoTxBody, AlonzoTx
 import qualified Cardano.Ledger.Alonzo.TxBody (TxBody, TxOut)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), alonzoTxInfo)
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (..))
+import Cardano.Ledger.Alonzo.UTxO ()
 import Cardano.Ledger.BaseTypes (Globals)
 import Cardano.Ledger.Core hiding (PParamsDelta, Value)
 import qualified Cardano.Ledger.Crypto as CC
@@ -58,7 +59,6 @@ import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Rules.ValidationMode (applySTSNonStatic)
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.API.Mempool
-import Cardano.Ledger.ShelleyMA.Rules (consumed)
 import Control.Arrow (left)
 import Control.Monad.Except (MonadError, liftEither)
 import Control.Monad.Reader (runReader)
@@ -100,9 +100,6 @@ instance CC.Crypto c => API.CanStartFromGenesis (AlonzoEra c) where
   type AdditionalGenesisConfig (AlonzoEra c) = AlonzoGenesis
 
   initialState = API.initialStateFromGenesis extendPPWithGenesis
-
-instance CC.Crypto c => API.CLI (AlonzoEra c) where
-  evaluateConsumed = consumed
 
 instance CC.Crypto c => ExtendedUTxO (AlonzoEra c) where
   txInfo = alonzoTxInfo

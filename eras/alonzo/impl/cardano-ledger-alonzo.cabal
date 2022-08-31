@@ -58,6 +58,7 @@ library
     Cardano.Ledger.Alonzo.Rules.Utxo
     Cardano.Ledger.Alonzo.Rules.Utxos
     Cardano.Ledger.Alonzo.Rules.Utxow
+    Cardano.Ledger.Alonzo.UTxO
   build-depends:
     aeson >= 2,
     array,

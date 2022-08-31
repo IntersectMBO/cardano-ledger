@@ -50,6 +50,7 @@ library
     Cardano.Ledger.Babbage.Rules.Utxo
     Cardano.Ledger.Babbage.Rules.Utxos
     Cardano.Ledger.Babbage.Rules.Ledger
+    Cardano.Ledger.Babbage.UTxO
   build-depends:
                 bytestring,
                 cardano-binary,

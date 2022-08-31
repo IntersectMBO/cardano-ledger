@@ -37,7 +37,7 @@ import Cardano.Ledger.Shelley.PParams (ShelleyPParamsUpdate)
 import qualified Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.ShelleyMA
 import Cardano.Ledger.ShelleyMA.AuxiliaryData (AuxiliaryData)
-import Cardano.Ledger.ShelleyMA.Rules (consumed)
+import Cardano.Ledger.ShelleyMA.Rules ()
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock)
 
 instance
@@ -50,9 +50,6 @@ instance
 
 instance CC.Crypto c => CanStartFromGenesis (MaryEra c) where
   initialState = initialStateFromGenesis const
-
-instance CC.Crypto c => CLI (MaryEra c) where
-  evaluateConsumed = consumed
 
 -- Self-Describing type synomyms
 

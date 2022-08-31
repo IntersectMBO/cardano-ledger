@@ -26,13 +26,13 @@ import Cardano.Ledger.Conway.PParams (BabbagePParamsHKD (..))
 import Cardano.Ledger.Conway.Tx ()
 import Cardano.Ledger.Conway.TxBody (BabbageEraTxBody (..))
 import Cardano.Ledger.Conway.TxOut (AlonzoEraTxOut (..))
+import Cardano.Ledger.Conway.UTxO ()
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Serialization (sizedValue)
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
-import Cardano.Ledger.ShelleyMA.Rules (consumed)
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict
@@ -50,9 +50,6 @@ instance CC.Crypto c => API.CanStartFromGenesis (ConwayEra c) where
   type AdditionalGenesisConfig (ConwayEra c) = AlonzoGenesis
 
   initialState = API.initialStateFromGenesis extendPPWithGenesis
-
-instance CC.Crypto c => API.CLI (ConwayEra c) where
-  evaluateConsumed = consumed
 
 instance CC.Crypto c => ExtendedUTxO (ConwayEra c) where
   txInfo = babbageTxInfo

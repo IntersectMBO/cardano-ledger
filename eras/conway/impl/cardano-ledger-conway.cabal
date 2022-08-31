@@ -45,6 +45,7 @@ library
     Cardano.Ledger.Conway
   other-modules:
     Cardano.Ledger.Conway.Era
+    Cardano.Ledger.Conway.UTxO
   build-depends:
                 aeson,
                 bytestring,

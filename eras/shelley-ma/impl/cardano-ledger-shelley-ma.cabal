@@ -40,6 +40,7 @@ library
     Cardano.Ledger.Allegra
     Cardano.Ledger.Allegra.Translation
     Cardano.Ledger.Mary
+    Cardano.Ledger.Mary.UTxO
     Cardano.Ledger.Mary.Translation
     Cardano.Ledger.Mary.Value
     Cardano.Ledger.ShelleyMA
@@ -51,6 +52,7 @@ library
     Cardano.Ledger.ShelleyMA.Tx
 
   other-modules:
+    Cardano.Ledger.Allegra.UTxO
     Cardano.Ledger.ShelleyMA.Rules.Utxo
     Cardano.Ledger.ShelleyMA.Rules.Utxow
 

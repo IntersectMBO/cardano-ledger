@@ -17,7 +17,6 @@ module Cardano.Ledger.ShelleyMA.Rules.Utxo
     ShelleyMAUtxoPredFailure (..),
     consumed,
     validateOutsideValidityIntervalUTxO,
-    validateValueNotConservedUTxO,
   )
 where
 
@@ -32,7 +31,8 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
+import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue)
+import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Rules.ValidationMode
   ( Inject (..),
     InjectMaybe (..),
@@ -45,8 +45,8 @@ import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..), U
 import Cardano.Ledger.Shelley.Rules (PpupEnv (..), ShelleyPPUP, ShelleyPpupPredFailure)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), ShelleyTxOut, TxIn)
-import Cardano.Ledger.Shelley.TxBody (RewardAcnt, ShelleyEraTxBody (..), Wdrl (..))
-import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance, keyRefunds, totalDeposits, txouts, txup)
+import Cardano.Ledger.Shelley.TxBody (RewardAcnt, ShelleyEraTxBody (..))
+import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), UTxO (..), totalDeposits, txouts, txup)
 import Cardano.Ledger.ShelleyMA.Era (ShelleyMAUTXO)
 import Cardano.Ledger.ShelleyMA.Timelocks
 import Cardano.Ledger.ShelleyMA.TxBody (MATxBody, ShelleyMAEraTxBody (..))
@@ -62,7 +62,7 @@ import Data.Coders
     encodeFoldable,
     invalidKey,
   )
-import Data.Foldable (Foldable (fold), toList)
+import Data.Foldable (toList)
 import Data.Int (Int64)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
@@ -137,37 +137,24 @@ instance
 newtype ShelleyMAUtxoEvent era
   = UpdateEvent (Event (EraRule "PPUP" era))
 
--- | Calculate the value consumed by the transation.
---
---   This differs from the corresponding Shelley function 'Shelley.coinConsumed'
---   since it works on Value and it also considers the "mint" field which
---   creates or destroys non-Ada tokens.
---
---   Note that this is slightly confusing, since it also covers non-Ada assets
---   _created_ by the transaction, depending on the sign of the quantities in
---   the mint field.
 consumed ::
   forall era.
   ( ShelleyMAEraTxBody era,
+    Value era ~ MaryValue (EraCrypto era),
     HasField "_keyDeposit" (PParams era) Coin
   ) =>
   PParams era ->
   UTxO era ->
   TxBody era ->
-  Value era
-consumed pp (UTxO u) txBody = shelleyConsumed <> txBody ^. mintValueTxBodyF
-  where
-    {- balance (txins tx ◁ u) + wbalance (txwdrls tx) + keyRefunds pp tx -}
-    shelleyConsumed =
-      balance (UTxO (Map.restrictKeys u (txBody ^. inputsTxBodyL)))
-        <> Val.inject (refunds <> withdrawals)
-    refunds = keyRefunds pp txBody
-    withdrawals = fold . unWdrl $ txBody ^. wdrlsTxBodyL
+  MaryValue (EraCrypto era)
+consumed = getConsumedMaryValue
+{-# DEPRECATED consumed "In favor of `getConsumedMaryValue`" #-}
 
 -- | The UTxO transition rule for the Shelley-MA (Mary and Allegra) eras.
 utxoTransition ::
   forall era.
   ( EraTx era,
+    EraUTxO era,
     ShelleyMAEraTxBody era,
     STS (ShelleyMAUTXO era),
     Tx era ~ ShelleyTx era,
@@ -207,13 +194,14 @@ utxoTransition = do
   runTest $ Shelley.validateWrongNetworkWithdrawal netId txb
 
   {- consumed pp utxo txb = produced pp poolParams txb -}
-  runTest $ validateValueNotConservedUTxO pp utxo stakepools txb
+  runTest $ Shelley.validateValueNotConservedUTxO pp utxo stakepools txb
 
   -- process Protocol Parameter Update Proposals
   ppup' <-
     trans @(EraRule "PPUP" era) $ TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
 
-  {- adaPolicy ∉ supp mint tx  - check not needed because mint field of type MultiAsset cannot contain ada -}
+  {- adaPolicy ∉ supp mint tx
+     above check not needed because mint field of type MultiAsset cannot contain ada -}
 
   let outputs = txouts txb
   {- ∀ txout ∈ txouts txb, getValue txout ≥ inject (scaledMinDeposit v (minUTxOValue pp)) -}
@@ -284,34 +272,13 @@ validateOutputTooSmallUTxO pp (UTxO outputs) =
         )
         (Map.elems outputs)
 
--- | Ensure that value consumed and produced matches up exactly. Note that this
--- is different from Shelley, since implementation of `consumed` has changed.
---
--- > consumed pp utxo txb = produced pp poolParams txb
-validateValueNotConservedUTxO ::
-  ( EraTx era,
-    ShelleyMAEraTxBody era,
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin
-  ) =>
-  PParams era ->
-  UTxO era ->
-  Map.Map (KeyHash 'StakePool (EraCrypto era)) a ->
-  TxBody era ->
-  Test (ShelleyMAUtxoPredFailure era)
-validateValueNotConservedUTxO pp utxo stakepools txb =
-  failureUnless (consumedValue == producedValue) $
-    ValueNotConservedUTxO consumedValue producedValue
-  where
-    consumedValue = consumed pp utxo txb
-    producedValue = Shelley.produced pp (`Map.notMember` stakepools) txb
-
 --------------------------------------------------------------------------------
 -- UTXO STS
 --------------------------------------------------------------------------------
 instance
   forall era.
   ( EraTx era,
+    EraUTxO era,
     ShelleyMAEraTxBody era,
     Eq (PParamsUpdate era),
     Show (PParamsUpdate era),
@@ -464,7 +431,7 @@ fromShelleyFailure = \case
   Shelley.MaxTxSizeUTxO a m -> Just $ MaxTxSizeUTxO a m
   Shelley.InputSetEmptyUTxO -> Just InputSetEmptyUTxO
   Shelley.FeeTooSmallUTxO mf af -> Just $ FeeTooSmallUTxO mf af
-  Shelley.ValueNotConservedUTxO {} -> Nothing -- Rule was updated
+  Shelley.ValueNotConservedUTxO c p -> Just $ ValueNotConservedUTxO c p
   Shelley.WrongNetwork n as -> Just $ WrongNetwork n as
   Shelley.WrongNetworkWithdrawal n as -> Just $ WrongNetworkWithdrawal n as
   Shelley.OutputTooSmallUTxO {} -> Nothing -- Rule was updated
@@ -482,7 +449,7 @@ instance Inject (Shelley.ShelleyUtxoPredFailure era) (ShelleyMAUtxoPredFailure e
   inject (Shelley.ExpiredUTxO ttl current) =
     OutsideValidityIntervalUTxO (ValidityInterval SNothing (SJust ttl)) current
   inject (Shelley.MaxTxSizeUTxO a m) = MaxTxSizeUTxO a m
-  inject (Shelley.InputSetEmptyUTxO) = InputSetEmptyUTxO
+  inject Shelley.InputSetEmptyUTxO = InputSetEmptyUTxO
   inject (Shelley.FeeTooSmallUTxO mf af) = FeeTooSmallUTxO mf af
   inject (Shelley.ValueNotConservedUTxO vc vp) = ValueNotConservedUTxO vc vp
   inject (Shelley.WrongNetwork n as) = WrongNetwork n as

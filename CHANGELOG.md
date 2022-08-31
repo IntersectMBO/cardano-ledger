@@ -17,6 +17,7 @@ in the naming of release branches.
 - Added `getMinFeeTx` to `EraTx`
 - Added `datumTxOutF` to `AlonzoEraTxOut`
 - Added `allInputsTxBodyF`
+- Added `EraUTxO` class with `getConsumedValue`
 
 ### Changed
 - Changed `mint` field type to `MultiAsset (Crypto era)` in `MATxBody`, `AlonzoTxBody`, `BabbageTxBody`
@@ -34,6 +35,8 @@ in the naming of release branches.
 - Deprecated `ExtendedUTxO.getTxOutDatum` in favor of new `AlonzoEraTxOut.datumTxOutF`
 - Removed `ExtendedUTxO.allOuts` and `ExtendedUTxO.allSizedOuts` in favor of
   `BabbageEraTxBody.allInputsTxBodyF`
+- Deprecated `consumed` and `evaluateConsumed` in favor of new `EraUTxO.getConsumedValue`
+- Removed `CLI` class
 
 ## Release branch 1.1.x
 

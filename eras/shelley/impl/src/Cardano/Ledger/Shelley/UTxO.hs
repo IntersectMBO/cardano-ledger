@@ -17,6 +17,7 @@
 module Cardano.Ledger.Shelley.UTxO
   ( -- * Primitives
     UTxO (..),
+    EraUTxO(..),
 
     -- * Functions
     txins,
@@ -37,7 +38,7 @@ module Cardano.Ledger.Shelley.UTxO
     scriptsNeeded,
     scriptCred,
     scriptStakeCred,
-    coinConsumed,
+    getConsumedCoin,
     produced,
     keyRefunds,
   )
@@ -52,7 +53,7 @@ import Cardano.Ledger.Coin (Coin, CompactForm (CompactCoin))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
-import qualified Cardano.Ledger.Crypto as CC (Crypto, HASH)
+import Cardano.Ledger.Crypto (Crypto, HASH)
 import Cardano.Ledger.Keys
   ( DSignable,
     Hash,
@@ -70,7 +71,8 @@ import Cardano.Ledger.Shelley.Delegation.Certificates
     isRegKey,
     requiresVKeyWitness,
   )
-import Cardano.Ledger.Shelley.PParams (Update)
+import Cardano.Ledger.Shelley.Era (ShelleyEra)
+import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..), Update)
 import Cardano.Ledger.Shelley.TxBody
   ( PoolCert (..),
     PoolParams (..),
@@ -116,15 +118,15 @@ deriving instance NoThunks (TxOut era) => NoThunks (UTxO era)
 deriving instance (Era era, NFData (TxOut era)) => NFData (UTxO era)
 
 deriving newtype instance
-  (Eq (TxOut era), CC.Crypto (EraCrypto era)) => Eq (UTxO era)
+  (Eq (TxOut era), Crypto (EraCrypto era)) => Eq (UTxO era)
 
-deriving newtype instance CC.Crypto (EraCrypto era) => Monoid (UTxO era)
+deriving newtype instance Crypto (EraCrypto era) => Monoid (UTxO era)
 
 instance (Era era, ToCBOR (TxOut era)) => ToCBOR (UTxO era) where
   toCBOR = encodeMap toCBOR toCBOR . unUTxO
 
 instance
-  ( CC.Crypto (EraCrypto era),
+  ( Crypto (EraCrypto era),
     FromSharedCBOR (TxOut era),
     Share (TxOut era) ~ Interns (Credential 'Staking (EraCrypto era))
   ) =>
@@ -147,7 +149,7 @@ instance
 deriving via
   Quiet (UTxO era)
   instance
-    (Show (TxOut era), CC.Crypto (EraCrypto era)) => Show (UTxO era)
+    (Show (TxOut era), Crypto (EraCrypto era)) => Show (UTxO era)
 
 -- | Compute the UTxO inputs of a transaction.
 -- txins has the same problems as txouts, see notes below.
@@ -182,7 +184,7 @@ txinLookup txin (UTxO utxo') = Map.lookup txin utxo'
 -- | Verify a transaction body witness
 verifyWitVKey ::
   ( Typeable kr,
-    CC.Crypto crypto,
+    Crypto crypto,
     DSignable crypto (Hash crypto EraIndependentTxBody)
   ) =>
   Hash crypto EraIndependentTxBody ->
@@ -193,8 +195,8 @@ verifyWitVKey txbodyHash (WitVKey vkey sig) = verifySignedDSIGN vkey txbodyHash 
 -- | Create a witness for transaction
 makeWitnessVKey ::
   forall c kr.
-  ( CC.Crypto c,
-    DSignable c (CH.Hash (CC.HASH c) EraIndependentTxBody)
+  ( Crypto c,
+    DSignable c (CH.Hash (HASH c) EraIndependentTxBody)
   ) =>
   SafeHash c EraIndependentTxBody ->
   KeyPair kr c ->
@@ -205,8 +207,8 @@ makeWitnessVKey safe keys =
 -- | Create witnesses for transaction
 makeWitnessesVKey ::
   forall c kr.
-  ( CC.Crypto c,
-    DSignable c (CH.Hash (CC.HASH c) EraIndependentTxBody)
+  ( Crypto c,
+    DSignable c (CH.Hash (HASH c) EraIndependentTxBody)
   ) =>
   SafeHash c EraIndependentTxBody ->
   [KeyPair kr c] ->
@@ -216,9 +218,7 @@ makeWitnessesVKey safe xs = Set.fromList (fmap (makeWitnessVKey safe) xs)
 -- | From a list of key pairs and a set of key hashes required for a multi-sig
 -- scripts, return the set of required keys.
 makeWitnessesFromScriptKeys ::
-  ( CC.Crypto crypto,
-    DSignable crypto (Hash crypto EraIndependentTxBody)
-  ) =>
+  (Crypto crypto, DSignable crypto (Hash crypto EraIndependentTxBody)) =>
   SafeHash crypto EraIndependentTxBody ->
   Map (KeyHash kr crypto) (KeyPair kr crypto) ->
   Set (KeyHash kr crypto) ->
@@ -364,7 +364,7 @@ produced pp isNewPool txBody =
       )
 
 -- | Compute the lovelace which are destroyed by the transaction
-coinConsumed ::
+getConsumedCoin ::
   forall era pp.
   ( ShelleyEraTxBody era,
     HasField "_keyDeposit" pp Coin
@@ -373,7 +373,7 @@ coinConsumed ::
   UTxO era ->
   TxBody era ->
   Coin
-coinConsumed pp (UTxO u) txBody =
+getConsumedCoin pp (UTxO u) txBody =
   {- balance (txins tx ◁ u) + wbalance (txwdrls tx) + keyRefunds pp tx -}
   coinBalance (UTxO (Map.restrictKeys u (txBody ^. inputsTxBodyL)))
     <> refunds
@@ -393,3 +393,9 @@ keyRefunds ::
 keyRefunds pp tx = length deregistrations <×> getField @"_keyDeposit" pp
   where
     deregistrations = filter isDeRegKey (toList $ tx ^. certsTxBodyL)
+
+class EraTxBody era => EraUTxO era where
+  getConsumedValue :: PParams era -> UTxO era -> TxBody era -> Value era
+
+instance Crypto c => EraUTxO (ShelleyEra c) where
+  getConsumedValue = getConsumedCoin
