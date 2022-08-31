@@ -46,7 +46,6 @@ import Cardano.Ledger.Shelley.LedgerState
     LedgerState (..),
     UTxOState (..),
     dpsDState,
-    minfee,
     ptrsMap,
     rewards,
   )
@@ -346,7 +345,7 @@ genNextDelta
   tx
   _count -- the counter of the fix loop
   delta@(Delta dfees extraInputs extraWitnesses change _ extraScripts) =
-    let !baseTxFee = minfee pparams tx
+    let !baseTxFee = getMinFeeTx pparams tx
         -- based on the current contents of delta, how much will the fee
         -- increase when we add the delta to the tx?
         draftSize =

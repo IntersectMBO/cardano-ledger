@@ -935,7 +935,7 @@ genAlonzoTxAndInfo proof slot = do
             Valid isValid,
             AuxData' []
           ]
-      fee = minfee' proof gePParams bogusTxForFeeCalc
+      fee = getMinFeeTx gePParams bogusTxForFeeCalc
       deposits = depositsAndRefunds proof gePParams dcerts
 
   -- 8. Crank up the amount in one of outputs to account for the fee and deposits. Note

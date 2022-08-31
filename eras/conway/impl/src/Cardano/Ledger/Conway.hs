@@ -18,7 +18,6 @@ import Cardano.Ledger.Babbage.Tx
   ( babbageInputDataHashes,
     babbageTxScripts,
     getDatumBabbage,
-    minfee,
   )
 import Cardano.Ledger.Babbage.TxInfo (babbageTxInfo)
 import Cardano.Ledger.Conway.Era (ConwayEra)
@@ -26,10 +25,11 @@ import Cardano.Ledger.Conway.Genesis (extendPPWithGenesis)
 import Cardano.Ledger.Conway.PParams (BabbagePParamsHKD (..))
 import Cardano.Ledger.Conway.Tx ()
 import Cardano.Ledger.Conway.TxBody (BabbageEraTxBody (..))
-import Cardano.Ledger.Conway.TxOut (AlonzoEraTxOut (..), BabbageTxOut (..))
+import Cardano.Ledger.Conway.TxOut (AlonzoEraTxOut (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys (DSignable, Hash)
+import Cardano.Ledger.Serialization (sizedValue)
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.ShelleyMA.Rules (consumed)
@@ -52,8 +52,6 @@ instance CC.Crypto c => API.CanStartFromGenesis (ConwayEra c) where
   initialState = API.initialStateFromGenesis extendPPWithGenesis
 
 instance CC.Crypto c => API.CLI (ConwayEra c) where
-  evaluateMinFee = minfee
-
   evaluateConsumed = consumed
 
 instance CC.Crypto c => ExtendedUTxO (ConwayEra c) where
@@ -63,13 +61,7 @@ instance CC.Crypto c => ExtendedUTxO (ConwayEra c) where
   getAllowedSupplimentalDataHashes txBody (UTxO utxo) =
     Set.fromList [dh | txOut <- outs, SJust dh <- [txOut ^. dataHashTxOutL]]
     where
-      newOuts = allOuts txBody
+      newOuts = map sizedValue $ toList $ txBody ^. allSizedOutputsTxBodyF
       referencedOuts = Map.elems $ Map.restrictKeys utxo (txBody ^. referenceInputsTxBodyL)
       outs = newOuts <> referencedOuts
   getDatum = getDatumBabbage
-  getTxOutDatum (BabbageTxOut _ _ datum _) = datum
-  allSizedOuts txBody = toList (txBody ^. sizedOutputsTxBodyL) <> collOuts
-    where
-      collOuts = case txBody ^. sizedCollateralReturnTxBodyL of
-        SNothing -> []
-        SJust x -> [x]

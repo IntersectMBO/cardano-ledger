@@ -13,8 +13,7 @@ import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.Tx (Data, rdptrInv)
 import Cardano.Ledger.Alonzo.TxInfo
-  ( ExtendedUTxO (getTxOutDatum),
-    TranslationError (..),
+  ( TranslationError (..),
     TxOutSource (..),
     VersionedTxInfo (..),
   )
@@ -22,6 +21,7 @@ import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr, TxWitness (..), unRedeemers, unTxDats)
 import Cardano.Ledger.Babbage.TxBody
   ( AlonzoEraTxBody (..),
+    AlonzoEraTxOut (..),
     BabbageEraTxBody (..),
     BabbageEraTxOut (..),
     ShelleyEraTxBody (..),
@@ -63,7 +63,6 @@ transReferenceScript (SJust s) = Just . transScriptHash . hashScript @era $ s
 txInfoOutV1 ::
   forall era.
   ( BabbageEraTxOut era,
-    ExtendedUTxO era,
     Value era ~ MaryValue (EraCrypto era)
   ) =>
   TxOutSource (EraCrypto era) ->
@@ -74,7 +73,7 @@ txInfoOutV1 os txOut = do
       referenceScript = txOut ^. referenceScriptTxOutL
   when (isSJust referenceScript) $ Left $ ReferenceScriptsNotSupported os
   datahash <-
-    case getTxOutDatum txOut of
+    case txOut ^. datumTxOutF of
       NoDatum -> Right SNothing
       DatumHash dh -> Right $ SJust dh
       Datum _ -> Left $ InlineDatumsNotSupported os
@@ -89,7 +88,6 @@ txInfoOutV1 os txOut = do
 txInfoOutV2 ::
   forall era.
   ( BabbageEraTxOut era,
-    ExtendedUTxO era,
     Value era ~ MaryValue (EraCrypto era)
   ) =>
   TxOutSource (EraCrypto era) ->
@@ -99,7 +97,7 @@ txInfoOutV2 os txOut = do
   let val = txOut ^. valueTxOutL
       referenceScript = transReferenceScript @era $ txOut ^. referenceScriptTxOutL
       datum =
-        case getTxOutDatum txOut of
+        case txOut ^. datumTxOutF of
           NoDatum -> PV2.NoOutputDatum
           DatumHash dh -> PV2.OutputDatumHash $ Alonzo.transDataHash' dh
           Datum binaryData ->
@@ -118,7 +116,6 @@ txInfoOutV2 os txOut = do
 txInfoInV1 ::
   forall era.
   ( BabbageEraTxOut era,
-    ExtendedUTxO era,
     Value era ~ MaryValue (EraCrypto era)
   ) =>
   UTxO era ->
@@ -136,7 +133,6 @@ txInfoInV1 (UTxO mp) txin =
 txInfoInV2 ::
   forall era.
   ( BabbageEraTxOut era,
-    ExtendedUTxO era,
     Value era ~ MaryValue (EraCrypto era)
   ) =>
   UTxO era ->
@@ -166,7 +162,6 @@ babbageTxInfo ::
   forall era.
   ( EraTx era,
     BabbageEraTxBody era,
-    ExtendedUTxO era,
     Value era ~ MaryValue (EraCrypto era),
     Witnesses era ~ TxWitness era,
     HasField "_protocolVersion" (PParams era) ProtVer

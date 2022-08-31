@@ -59,6 +59,7 @@ module Cardano.Ledger.Shelley.Tx
     validateNativeMultiSigScript,
     prettyWitnessSetParts,
     minfee,
+    shelleyMinFeeTx,
     witsFromTxWitnesses,
 
     -- * Re-exports
@@ -98,6 +99,7 @@ import Cardano.Ledger.MemoBytes (Mem, MemoBytes, memoBytes, mkMemoBytes, pattern
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.Metadata ()
+import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Scripts (MultiSig (..), nativeMultiSigTag)
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..), ShelleyTxOut (..), TxBody, TxOut)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
@@ -238,6 +240,8 @@ instance CC.Crypto crypto => EraTx (ShelleyEra crypto) where
 
   validateScript (Phase1Script multisig) tx = validateNativeMultiSigScript multisig tx
   {-# INLINE validateScript #-}
+
+  getMinFeeTx = shelleyMinFeeTx
 
 deriving newtype instance
   ( NFData (Core.TxBody era),
@@ -609,18 +613,29 @@ extractKeyHashWitnessSet = foldr accum Set.empty
     accum _other ans = ans
 
 -- | Minimum fee calculation
-minfee ::
+shelleyMinFeeTx ::
   ( EraTx era,
-    HasField "_minfeeA" pp Natural,
-    HasField "_minfeeB" pp Natural
+    HasField "_minfeeA" (Core.PParams era) Natural,
+    HasField "_minfeeB" (Core.PParams era) Natural
   ) =>
-  pp ->
+  Core.PParams era ->
   Core.Tx era ->
   Coin
-minfee pp tx =
+shelleyMinFeeTx pp tx =
   Coin $
     fromIntegral (getField @"_minfeeA" pp)
       * tx ^. sizeTxF + fromIntegral (getField @"_minfeeB" pp)
+
+minfee ::
+  ( EraTx era,
+    HasField "_minfeeA" (Core.PParams era) Natural,
+    HasField "_minfeeB" (Core.PParams era) Natural
+  ) =>
+  Core.PParams era ->
+  Core.Tx era ->
+  Coin
+minfee = shelleyMinFeeTx
+{-# DEPRECATED minfee "In favor of `getMinFeeTx`" #-}
 
 -- | Extract the witness hashes from the Transaction.
 witsFromTxWitnesses ::

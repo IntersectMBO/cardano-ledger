@@ -20,8 +20,9 @@ import Cardano.Ledger.Alonzo.Scripts
     getEvaluationContext,
   )
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, ScriptPurpose (..), rdptr)
+import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..))
 import Cardano.Ledger.Alonzo.TxInfo
-  ( ExtendedUTxO (getTxOutDatum, txscripts),
+  ( ExtendedUTxO (txscripts),
     TranslationError,
     VersionedTxInfo (..),
     exBudgetToExUnits,
@@ -169,7 +170,7 @@ evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels = do
       args <- case sp of
         Spending txin -> do
           txOut <- note (UnknownTxIn txin) $ Map.lookup txin (unUTxO utxo)
-          datum <- case getTxOutDatum txOut of
+          datum <- case txOut ^. datumTxOutF of
             Datum binaryData -> pure $ binaryDataToData binaryData
             DatumHash dh -> note (MissingDatum dh) $ Map.lookup dh dats
             NoDatum -> Left (InvalidTxIn txin)

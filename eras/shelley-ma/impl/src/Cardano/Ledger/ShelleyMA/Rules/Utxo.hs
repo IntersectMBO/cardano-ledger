@@ -175,8 +175,6 @@ utxoTransition ::
     Environment (EraRule "PPUP" era) ~ PpupEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,
     Signal (EraRule "PPUP" era) ~ Maybe (Update era),
-    HasField "_minfeeA" (PParams era) Natural,
-    HasField "_minfeeB" (PParams era) Natural,
     HasField "_keyDeposit" (PParams era) Coin,
     HasField "_poolDeposit" (PParams era) Coin,
     HasField "_maxTxSize" (PParams era) Natural

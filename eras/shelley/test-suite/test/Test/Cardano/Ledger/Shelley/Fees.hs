@@ -21,10 +21,8 @@ import Cardano.Ledger.BaseTypes
     textToUrl,
   )
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (hashAuxiliaryData, hashScript, sizeTxF)
+import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as Cr
-import Cardano.Ledger.Era (Era (..))
-import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys
   ( DSignable,
     Hash,
@@ -53,7 +51,6 @@ import Cardano.Ledger.Shelley.API
     hashVerKeyVRF,
   )
 import qualified Cardano.Ledger.Shelley.API as API
-import Cardano.Ledger.Shelley.LedgerState (minfee)
 import qualified Cardano.Ledger.Shelley.Metadata as MD
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..), emptyPParams)
 import Cardano.Ledger.Shelley.Tx
@@ -511,7 +508,7 @@ testEvaluateTransactionFee =
     pp
     txSimpleUTxONoWit
     1
-    @?= minfee pp (txSimpleUTxO @StandardCrypto)
+    @?= getMinFeeTx pp (txSimpleUTxO @StandardCrypto)
   where
     pp = emptyPParams {_minfeeA = 1, _minfeeB = 1}
 

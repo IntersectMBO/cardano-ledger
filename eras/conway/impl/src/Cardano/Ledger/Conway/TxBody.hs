@@ -17,6 +17,7 @@ where
 
 import Cardano.Ledger.Babbage.TxBody
   ( allInputsBabbageTxBodyF,
+    allSizedOutputsBabbageTxBodyF,
     auxDataHashBabbageTxBodyL,
     certsBabbageTxBodyL,
     collateralInputsBabbageTxBodyL,
@@ -135,3 +136,6 @@ instance CC.Crypto c => BabbageEraTxBody (ConwayEra c) where
 
   sizedCollateralReturnTxBodyL = sizedCollateralReturnBabbageTxBodyL
   {-# INLINE sizedCollateralReturnTxBodyL #-}
+
+  allSizedOutputsTxBodyF = allSizedOutputsBabbageTxBodyF
+  {-# INLINE allSizedOutputsTxBodyF #-}

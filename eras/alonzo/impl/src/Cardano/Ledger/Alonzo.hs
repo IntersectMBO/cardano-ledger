@@ -32,7 +32,7 @@ module Cardano.Ledger.Alonzo
   )
 where
 
-import Cardano.Ledger.Alonzo.Data (AlonzoAuxiliaryData, Datum (..))
+import Cardano.Ledger.Alonzo.Data (AlonzoAuxiliaryData)
 import qualified Cardano.Ledger.Alonzo.Data (AuxiliaryData)
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Genesis
@@ -45,7 +45,7 @@ import qualified Cardano.Ledger.Alonzo.PParams (PParams)
 import Cardano.Ledger.Alonzo.PlutusScriptApi (getDatumAlonzo)
 import Cardano.Ledger.Alonzo.Rules ()
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), Script)
-import Cardano.Ledger.Alonzo.Tx (alonzoInputHashes, minfee)
+import Cardano.Ledger.Alonzo.Tx (alonzoInputHashes)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..), AlonzoTxBody, AlonzoTxOut)
 import qualified Cardano.Ledger.Alonzo.TxBody (TxBody, TxOut)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), alonzoTxInfo)
@@ -56,7 +56,6 @@ import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Rules.ValidationMode (applySTSNonStatic)
-import Cardano.Ledger.Serialization (mkSized)
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.API.Mempool
 import Cardano.Ledger.ShelleyMA.Rules (consumed)
@@ -103,8 +102,6 @@ instance CC.Crypto c => API.CanStartFromGenesis (AlonzoEra c) where
   initialState = API.initialStateFromGenesis extendPPWithGenesis
 
 instance CC.Crypto c => API.CLI (AlonzoEra c) where
-  evaluateMinFee = minfee
-
   evaluateConsumed = consumed
 
 instance CC.Crypto c => ExtendedUTxO (AlonzoEra c) where
@@ -114,16 +111,10 @@ instance CC.Crypto c => ExtendedUTxO (AlonzoEra c) where
   getAllowedSupplimentalDataHashes txBody _ =
     Set.fromList
       [ dh
-        | txOut <- allOuts txBody,
+        | txOut <- toList $ txBody ^. outputsTxBodyL,
           SJust dh <- [txOut ^. dataHashTxOutL]
       ]
   getDatum = getDatumAlonzo
-  getTxOutDatum txOut =
-    case txOut ^. dataHashTxOutL of
-      SNothing -> NoDatum
-      SJust dh -> DatumHash dh
-  allOuts txBody = toList $ txBody ^. outputsTxBodyL
-  allSizedOuts = map mkSized . allOuts
 
 -- Self-Describing type synomyms
 

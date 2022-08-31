@@ -56,6 +56,7 @@ module Cardano.Ledger.Alonzo.Tx
     -- Figure 4
     totExUnits,
     isTwoPhaseScriptAddress,
+    alonzoMinFeeTx,
     minfee,
     --  Figure 5
     Indexable (..), -- indexOf
@@ -90,7 +91,8 @@ import Cardano.Ledger.Alonzo.Data (Data, hashData)
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Language (nonNativeLanguages)
 import Cardano.Ledger.Alonzo.PParams
-  ( LangDepView (..),
+  ( AlonzoPParamsHKD (..),
+    LangDepView (..),
     encodeLangViews,
     getLanguageView,
   )
@@ -201,6 +203,8 @@ instance CC.Crypto c => EraTx (AlonzoEra c) where
 
   validateScript (Phase1Script script) tx = validateTimelock @(AlonzoEra c) script tx
   {-# INLINE validateScript #-}
+
+  getMinFeeTx = alonzoMinFeeTx
 
 class (EraTx era, AlonzoEraTxBody era, AlonzoEraWitnesses era) => AlonzoEraTx era where
   isValidTxL :: Lens' (Core.Tx era) IsValid
@@ -346,6 +350,25 @@ toCBORForSizeComputation AlonzoTx {body, wits, auxiliaryData} =
     <> toCBOR wits
     <> encodeNullMaybe toCBOR (strictMaybeToMaybe auxiliaryData)
 
+alonzoMinFeeTx ::
+  ( EraTx era,
+    AlonzoEraWitnesses era,
+    HasField "_minfeeA" (PParams era) Natural,
+    HasField "_minfeeB" (PParams era) Natural,
+    HasField "_prices" (PParams era) Prices
+  ) =>
+  PParams era ->
+  Core.Tx era ->
+  Coin
+alonzoMinFeeTx pp tx =
+  (tx ^. sizeTxF <×> a pp)
+    <+> b pp
+    <+> txscriptfee (getField @"_prices" pp) allExunits
+  where
+    a protparam = Coin (fromIntegral (getField @"_minfeeA" protparam))
+    b protparam = Coin (fromIntegral (getField @"_minfeeB" protparam))
+    allExunits = totExUnits tx
+
 minfee ::
   ( EraTx era,
     AlonzoEraWitnesses era,
@@ -356,14 +379,8 @@ minfee ::
   PParams era ->
   Core.Tx era ->
   Coin
-minfee pp tx =
-  (tx ^. sizeTxF <×> a pp)
-    <+> b pp
-    <+> txscriptfee (getField @"_prices" pp) allExunits
-  where
-    a protparam = Coin (fromIntegral (getField @"_minfeeA" protparam))
-    b protparam = Coin (fromIntegral (getField @"_minfeeB" protparam))
-    allExunits = totExUnits tx
+minfee = alonzoMinFeeTx
+{-# DEPRECATED minfee "In favor of `getMinFeeTx`" #-}
 
 totExUnits ::
   (EraTx era, AlonzoEraWitnesses era) =>

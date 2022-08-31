@@ -24,11 +24,9 @@ import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys (DSignable)
 import Cardano.Ledger.Shelley.API hiding (PParams, Tx, TxBody, TxOut, WitnessSet)
-import Cardano.Ledger.Shelley.LedgerState (minfee)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsUpdate)
 import Cardano.Ledger.ShelleyMA
-import Cardano.Ledger.ShelleyMA.Rules.Utxo (consumed)
-import Cardano.Ledger.ShelleyMA.Rules.Utxow ()
+import Cardano.Ledger.ShelleyMA.Rules (consumed)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock)
 import Cardano.Ledger.ShelleyMA.TxBody ()
 
@@ -50,8 +48,6 @@ instance CC.Crypto crypto => CanStartFromGenesis (AllegraEra crypto) where
   initialState = initialStateFromGenesis const
 
 instance CC.Crypto c => CLI (AllegraEra c) where
-  evaluateMinFee = minfee
-
   evaluateConsumed = consumed
 
 -- Self-Describing type synomyms

@@ -32,6 +32,7 @@ import Cardano.Ledger.Alonzo.TxWitness
     unTxDats,
   )
 import Cardano.Ledger.Babbage.Era (BabbageEra)
+import Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..))
 import Cardano.Ledger.Babbage.TxBody
   ( BabbageEraTxBody (..),
     BabbageEraTxOut (..),
@@ -74,6 +75,8 @@ instance CC.Crypto c => EraTx (BabbageEra c) where
 
   validateScript (Phase1Script script) tx = validateTimelock @(BabbageEra c) script tx
   {-# INLINE validateScript #-}
+
+  getMinFeeTx = alonzoMinFeeTx
 
 instance CC.Crypto c => AlonzoEraTx (BabbageEra c) where
   {-# SPECIALIZE instance AlonzoEraTx (BabbageEra CC.StandardCrypto) #-}
