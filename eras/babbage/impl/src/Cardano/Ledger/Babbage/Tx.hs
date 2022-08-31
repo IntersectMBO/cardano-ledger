@@ -23,12 +23,6 @@ import Cardano.Ledger.Alonzo.TxSeq
   )
 import Cardano.Ledger.Alonzo.TxWits
   ( AlonzoEraTxWits (..),
-    AlonzoTxWits (..),
-    addrAlonzoWitsL,
-    bootAddrAlonzoWitsL,
-    datsAlonzoWitsL,
-    rdmrsAlonzoWitsL,
-    scriptAlonzoWitsL,
     unTxDats,
   )
 import Cardano.Ledger.Babbage.Era (BabbageEra)
@@ -41,6 +35,7 @@ import Cardano.Ledger.Babbage.TxBody
     Datum (..),
     dataHashTxOutL,
   )
+import Cardano.Ledger.Babbage.TxWits ()
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
@@ -83,31 +78,6 @@ instance CC.Crypto c => AlonzoEraTx (BabbageEra c) where
 
   isValidTxL = isValidAlonzoTxL
   {-# INLINE isValidTxL #-}
-
-instance CC.Crypto c => EraTxWits (BabbageEra c) where
-  {-# SPECIALIZE instance EraTxWits (BabbageEra CC.StandardCrypto) #-}
-
-  type TxWits (BabbageEra c) = AlonzoTxWits (BabbageEra c)
-
-  mkBasicTxWits = mempty
-
-  addrWitsL = addrAlonzoWitsL
-  {-# INLINE addrWitsL #-}
-
-  bootAddrWitsL = bootAddrAlonzoWitsL
-  {-# INLINE bootAddrWitsL #-}
-
-  scriptWitsL = scriptAlonzoWitsL
-  {-# INLINE scriptWitsL #-}
-
-instance CC.Crypto c => AlonzoEraTxWits (BabbageEra c) where
-  {-# SPECIALIZE instance AlonzoEraTxWits (BabbageEra CC.StandardCrypto) #-}
-
-  datsWitsL = datsAlonzoWitsL
-  {-# INLINE datsWitsL #-}
-
-  rdmrsWitsL = rdmrsAlonzoWitsL
-  {-# INLINE rdmrsWitsL #-}
 
 instance CC.Crypto c => EraSegWits (BabbageEra c) where
   type TxSeq (BabbageEra c) = AlonzoTxSeq (BabbageEra c)
