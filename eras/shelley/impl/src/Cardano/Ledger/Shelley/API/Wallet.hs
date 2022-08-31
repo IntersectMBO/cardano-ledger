@@ -465,7 +465,6 @@ class
   ) =>
   CLI era
   where
-
   -- | The consumed calculation.
   -- Used for the default implentation of 'evaluateTransactionBalance'.
   evaluateConsumed :: PParams era -> UTxO era -> TxBody era -> Value era
@@ -549,9 +548,7 @@ addShelleyKeyWitnesses = addKeyWitnesses
 {-# DEPRECATED addShelleyKeyWitnesses "In favor of 'addKeyWitnesses'" #-}
 
 instance CC.Crypto c => CLI (ShelleyEra c) where
-
   evaluateConsumed = coinConsumed
-
 
 --------------------------------------------------------------------------------
 -- CBOR instances

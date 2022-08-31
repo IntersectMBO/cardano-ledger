@@ -38,7 +38,7 @@ import Cardano.Ledger.Babbage.Tx
     getDatumBabbage,
   )
 import Cardano.Ledger.Babbage.TxBody
-  ( BabbageEraTxBody (referenceInputsTxBodyL, sizedCollateralReturnTxBodyL, sizedOutputsTxBodyL),
+  ( BabbageEraTxBody (..),
     BabbageTxBody,
     BabbageTxOut,
     TxBody,
@@ -49,6 +49,7 @@ import Cardano.Ledger.Babbage.TxInfo (babbageTxInfo)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys (DSignable, Hash)
+import Cardano.Ledger.Serialization (sizedValue)
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.ShelleyMA.Rules (consumed)
@@ -80,15 +81,10 @@ instance CC.Crypto c => ExtendedUTxO (BabbageEra c) where
   getAllowedSupplimentalDataHashes txBody (UTxO utxo) =
     Set.fromList [dh | txOut <- outs, SJust dh <- [txOut ^. dataHashTxOutL]]
     where
-      newOuts = allOuts txBody
+      newOuts = map sizedValue $ toList $ txBody ^. allSizedOutputsTxBodyF
       referencedOuts = Map.elems $ Map.restrictKeys utxo (txBody ^. referenceInputsTxBodyL)
       outs = newOuts <> referencedOuts
   getDatum = getDatumBabbage
-  allSizedOuts txBody = toList (txBody ^. sizedOutputsTxBodyL) <> collOuts
-    where
-      collOuts = case txBody ^. sizedCollateralReturnTxBodyL of
-        SNothing -> []
-        SJust x -> [x]
 
 -- Self-Describing type synomyms
 

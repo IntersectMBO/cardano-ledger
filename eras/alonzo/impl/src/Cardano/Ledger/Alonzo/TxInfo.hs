@@ -105,7 +105,6 @@ import Cardano.Ledger.Keys (KeyHash (..), hashKey)
 import Cardano.Ledger.Language (Language (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
-import Cardano.Ledger.Serialization (Sized (sizedValue))
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
@@ -483,15 +482,6 @@ class ExtendedUTxO era where
     UTxO era ->
     ScriptPurpose (EraCrypto era) ->
     Maybe (Data era)
-
-  allOuts ::
-    TxBody era ->
-    [TxOut era]
-  allOuts = map sizedValue . allSizedOuts
-
-  allSizedOuts ::
-    TxBody era ->
-    [Sized (TxOut era)]
 
 getTxOutDatum :: AlonzoEraTxOut era => TxOut era -> Datum era
 getTxOutDatum txOut = txOut ^. datumTxOutF

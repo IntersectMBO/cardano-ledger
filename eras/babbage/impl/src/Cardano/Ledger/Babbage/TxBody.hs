@@ -35,6 +35,7 @@ module Cardano.Ledger.Babbage.TxBody
     dataBabbageTxOutL,
     datumBabbageTxOutL,
     referenceScriptBabbageTxOutL,
+    allSizedOutputsBabbageTxBodyF,
     getDatumBabbageTxOut,
     babbageMinUTxOValue,
     BabbageTxBody
@@ -197,7 +198,7 @@ import Control.Monad ((<$!>))
 import qualified Data.ByteString.Lazy as LBS
 import Data.Coders hiding (to)
 import Data.Maybe (fromMaybe)
-import Data.Sequence.Strict (StrictSeq)
+import Data.Sequence.Strict (StrictSeq, (|>))
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -739,6 +740,17 @@ sizedCollateralReturnBabbageTxBodyL =
     (\txBodyRaw collateralReturn_ -> txBodyRaw {_collateralReturn = collateralReturn_})
 {-# INLINEABLE sizedCollateralReturnBabbageTxBodyL #-}
 
+allSizedOutputsBabbageTxBodyF ::
+  BabbageEraTxBody era =>
+  SimpleGetter (Core.TxBody era) (StrictSeq (Sized (BabbageTxOut era)))
+allSizedOutputsBabbageTxBodyF =
+  to $ \txBody ->
+    let txOuts = txBody ^. sizedOutputsTxBodyL
+     in case txBody ^. sizedCollateralReturnTxBodyL of
+          SNothing -> txOuts
+          SJust collTxOut -> txOuts |> collTxOut
+{-# INLINEABLE allSizedOutputsBabbageTxBodyF #-}
+
 instance CC.Crypto c => EraTxBody (BabbageEra c) where
   {-# SPECIALIZE instance EraTxBody (BabbageEra CC.StandardCrypto) #-}
 
@@ -817,6 +829,8 @@ class (AlonzoEraTxBody era, BabbageEraTxOut era) => BabbageEraTxBody era where
 
   sizedCollateralReturnTxBodyL :: Lens' (Core.TxBody era) (StrictMaybe (Sized (BabbageTxOut era)))
 
+  allSizedOutputsTxBodyF :: SimpleGetter (TxBody era) (StrictSeq (Sized (TxOut era)))
+
 instance CC.Crypto c => BabbageEraTxBody (BabbageEra c) where
   {-# SPECIALIZE instance BabbageEraTxBody (BabbageEra CC.StandardCrypto) #-}
 
@@ -834,6 +848,9 @@ instance CC.Crypto c => BabbageEraTxBody (BabbageEra c) where
 
   sizedCollateralReturnTxBodyL = sizedCollateralReturnBabbageTxBodyL
   {-# INLINE sizedCollateralReturnTxBodyL #-}
+
+  allSizedOutputsTxBodyF = allSizedOutputsBabbageTxBodyF
+  {-# INLINE allSizedOutputsTxBodyF #-}
 
 type TxBody era = BabbageTxBody era
 

@@ -56,7 +56,6 @@ import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Rules.ValidationMode (applySTSNonStatic)
-import Cardano.Ledger.Serialization (mkSized)
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.API.Mempool
 import Cardano.Ledger.ShelleyMA.Rules (consumed)
@@ -112,12 +111,10 @@ instance CC.Crypto c => ExtendedUTxO (AlonzoEra c) where
   getAllowedSupplimentalDataHashes txBody _ =
     Set.fromList
       [ dh
-        | txOut <- allOuts txBody,
+        | txOut <- toList $ txBody ^. outputsTxBodyL,
           SJust dh <- [txOut ^. dataHashTxOutL]
       ]
   getDatum = getDatumAlonzo
-  allOuts txBody = toList $ txBody ^. outputsTxBodyL
-  allSizedOuts = map mkSized . allOuts
 
 -- Self-Describing type synomyms
 

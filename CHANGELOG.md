@@ -16,6 +16,7 @@ in the naming of release branches.
 - Added `getMinCoinTxOut`/`getMinCoinSizedTxOut` to `EraTxOut`: #3008
 - Added `getMinFeeTx` to `EraTx`
 - Added `datumTxOutF` to `AlonzoEraTxOut`
+- Added `allInputsTxBodyF`
 
 ### Changed
 - Changed `mint` field type to `MultiAsset (Crypto era)` in `MATxBody`, `AlonzoTxBody`, `BabbageTxBody`
@@ -31,6 +32,8 @@ in the naming of release branches.
   `EraTxOut.getMinCoinTxOut`/`EraTxOut.getMinCoinSizedTxOut` #3008
 - Deprecated `minfee` and `CLI.evaluateMinfee` in favor of new `EraTx.getMinFeeTx`
 - Deprecated `ExtendedUTxO.getTxOutDatum` in favor of new `AlonzoEraTxOut.datumTxOutF`
+- Removed `ExtendedUTxO.allOuts` and `ExtendedUTxO.allSizedOuts` in favor of
+  `BabbageEraTxBody.allInputsTxBodyF`
 
 ## Release branch 1.1.x
 
