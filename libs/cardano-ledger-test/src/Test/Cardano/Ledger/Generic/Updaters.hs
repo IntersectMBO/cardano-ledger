@@ -67,7 +67,7 @@ import Test.Cardano.Ledger.Generic.Proof
 -- A Policy lets you choose to keep the old (first) or the new (override)
 -- or combine (merge) of two values. We only use this for elements in the
 -- WitnessesField data type. That is because we assemble witnesses in small
--- pieces and we combine the pieces together. Every field in WitnessSet and
+-- pieces and we combine the pieces together. Every field in ShelleyTxWits and
 -- AlonzoTxWits has clear way of being merged. We don't use Policies in the other
 -- xxxField types because most of those parts cannot be safely combined.
 -- (The only execeptions are Coin and Value, but they both have Monoid

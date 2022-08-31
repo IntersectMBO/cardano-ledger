@@ -22,10 +22,8 @@
 module Cardano.Ledger.Shelley.TxWits
   ( decodeWits,
     ShelleyTxWits,
-    WitnessSet,
     WitnessSetHKD
       ( ShelleyTxWits,
-        WitnessSet,
         addrWits,
         bootWits,
         scriptWits,
@@ -121,8 +119,6 @@ deriving via
     (Era era, NoThunks (Script era)) =>
     (NoThunks (WitnessSetHKD Identity era))
 
-type WitnessSet = WitnessSetHKD Identity
-
 type ShelleyTxWits = WitnessSetHKD Identity
 
 -- | Addresses witness setter and getter for `ShelleyTxWits`. The
@@ -168,18 +164,18 @@ instance Era era => ToCBOR (WitnessSetHKD Identity era) where
 instance EraScript era => Semigroup (WitnessSetHKD Identity era) where
   (WitnessSet' a b c _) <> y | Set.null a && Map.null b && Set.null c = y
   y <> (WitnessSet' a b c _) | Set.null a && Map.null b && Set.null c = y
-  (WitnessSet a b c) <> (WitnessSet a' b' c') =
-    WitnessSet (a <> a') (b <> b') (c <> c')
+  (ShelleyTxWits a b c) <> (ShelleyTxWits a' b' c') =
+    ShelleyTxWits (a <> a') (b <> b') (c <> c')
 
 instance EraScript era => Monoid (WitnessSetHKD Identity era) where
-  mempty = WitnessSet mempty mempty mempty
+  mempty = ShelleyTxWits mempty mempty mempty
 
 pattern ShelleyTxWits ::
   EraScript era =>
   Set (WitVKey 'Witness (EraCrypto era)) ->
   Map (ScriptHash (EraCrypto era)) (Script era) ->
   Set (BootstrapWitness (EraCrypto era)) ->
-  WitnessSet era
+  ShelleyTxWits era
 pattern ShelleyTxWits {addrWits, scriptWits, bootWits} <-
   WitnessSet' addrWits scriptWits bootWits _
   where
@@ -202,16 +198,6 @@ pattern ShelleyTxWits {addrWits, scriptWits, bootWits} <-
             }
 
 {-# COMPLETE ShelleyTxWits #-}
-
-pattern WitnessSet ::
-  EraScript era =>
-  Set (WitVKey 'Witness (EraCrypto era)) ->
-  Map (ScriptHash (EraCrypto era)) (Script era) ->
-  Set (BootstrapWitness (EraCrypto era)) ->
-  WitnessSet era
-pattern WitnessSet a s b = ShelleyTxWits a s b
-
-{-# COMPLETE WitnessSet #-}
 
 instance SafeToHash (WitnessSetHKD Identity era) where
   originalBytes = BSL.toStrict . txWitsBytes
@@ -238,7 +224,7 @@ newtype IgnoreSigOrd kr crypto = IgnoreSigOrd {unIgnoreSigOrd :: WitVKey kr cryp
 instance (Typeable kr, CC.Crypto crypto) => Ord (IgnoreSigOrd kr crypto) where
   compare (IgnoreSigOrd w1) (IgnoreSigOrd w2) = compare (witVKeyHash w1) (witVKeyHash w2)
 
-decodeWits :: forall era s. EraScript era => Decoder s (Annotator (WitnessSet era))
+decodeWits :: forall era s. EraScript era => Decoder s (Annotator (ShelleyTxWits era))
 decodeWits = do
   (mapParts, annBytes) <-
     withSlice $

@@ -965,7 +965,7 @@ ppWitnessSetHKD :: (Era era, PrettyA (Script era)) => WitnessSetHKD Identity era
 ppWitnessSetHKD x =
   let (addr, scr, boot) = prettyWitnessSetParts x
    in ppRecord
-        "WitnessSet"
+        "ShelleyTxWits"
         [ ("addrWits", ppSet ppWitVKey addr),
           ("scriptWits", ppMap ppScriptHash prettyA scr),
           ("bootWits", ppSet ppBootstrapWitness boot)

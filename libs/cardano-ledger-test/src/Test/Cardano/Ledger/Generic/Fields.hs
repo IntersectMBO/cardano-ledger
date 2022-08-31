@@ -66,7 +66,7 @@ import Cardano.Ledger.Serialization (sizedValue)
 import qualified Cardano.Ledger.Shelley.PParams as PP (Update)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxBody (DCert (..), ShelleyTxBody (..), Wdrl (..), WitVKey (..))
-import Cardano.Ledger.Shelley.TxWits (pattern WitnessSet)
+import Cardano.Ledger.Shelley.TxWits (pattern ShelleyTxWits)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Ledger.ShelleyMA.TxBody (MATxBody (..))
 import Cardano.Ledger.TxIn (TxIn (..))
@@ -300,9 +300,9 @@ initialTxBody (Conway _) =
     SNothing
 
 initialWitnesses :: Era era => Proof era -> TxWits era
-initialWitnesses (Shelley _) = WitnessSet Set.empty Map.empty Set.empty
-initialWitnesses (Allegra _) = WitnessSet Set.empty Map.empty Set.empty
-initialWitnesses (Mary _) = WitnessSet Set.empty Map.empty Set.empty
+initialWitnesses (Shelley _) = ShelleyTxWits Set.empty Map.empty Set.empty
+initialWitnesses (Allegra _) = ShelleyTxWits Set.empty Map.empty Set.empty
+initialWitnesses (Mary _) = ShelleyTxWits Set.empty Map.empty Set.empty
 initialWitnesses (Alonzo _) = AlonzoTxWits mempty mempty mempty mempty (Redeemers mempty)
 initialWitnesses (Babbage _) = AlonzoTxWits mempty mempty mempty mempty (Redeemers mempty)
 initialWitnesses (Conway _) = AlonzoTxWits mempty mempty mempty mempty (Redeemers mempty)
@@ -430,9 +430,9 @@ abstractTxBody (Allegra _) (MATxBody inp out cert wdrl fee vldt up adh mnt) =
   [Inputs inp, Outputs out, Certs cert, Wdrls wdrl, Txfee fee, Vldt vldt, Update up, AdHash adh, Mint mnt]
 
 abstractWitnesses :: Proof era -> TxWits era -> [WitnessesField era]
-abstractWitnesses (Shelley _) (WitnessSet keys scripts boot) = [AddrWits keys, ScriptWits scripts, BootWits boot]
-abstractWitnesses (Allegra _) (WitnessSet keys scripts boot) = [AddrWits keys, ScriptWits scripts, BootWits boot]
-abstractWitnesses (Mary _) (WitnessSet keys scripts boot) = [AddrWits keys, ScriptWits scripts, BootWits boot]
+abstractWitnesses (Shelley _) (ShelleyTxWits keys scripts boot) = [AddrWits keys, ScriptWits scripts, BootWits boot]
+abstractWitnesses (Allegra _) (ShelleyTxWits keys scripts boot) = [AddrWits keys, ScriptWits scripts, BootWits boot]
+abstractWitnesses (Mary _) (ShelleyTxWits keys scripts boot) = [AddrWits keys, ScriptWits scripts, BootWits boot]
 abstractWitnesses (Alonzo _) (AlonzoTxWits key boot scripts dats red) =
   [AddrWits key, ScriptWits scripts, BootWits boot, DataWits dats, RdmrWits red]
 abstractWitnesses (Babbage _) (AlonzoTxWits key boot scripts dats red) =
