@@ -17,7 +17,7 @@
 module Cardano.Ledger.Shelley.UTxO
   ( -- * Primitives
     UTxO (..),
-    EraUTxO(..),
+    EraUTxO (..),
 
     -- * Functions
     txins,
