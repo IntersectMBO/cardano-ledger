@@ -26,16 +26,11 @@ import Cardano.Ledger.Shelley.Tx
     sizeShelleyTxF,
     witsShelleyTxL,
   )
-import Cardano.Ledger.Shelley.TxWits
-  ( ShelleyTxWits,
-    addrShelleyTxWitsL,
-    bootAddrShelleyTxWitsL,
-    scriptShelleyTxWitsL,
-  )
 import Cardano.Ledger.ShelleyMA.AuxiliaryData ()
 import Cardano.Ledger.ShelleyMA.Era (MAClass, MaryOrAllegra (..), ShelleyMAEra)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock, evalTimelock)
 import Cardano.Ledger.ShelleyMA.TxBody (ShelleyMAEraTxBody (..))
+import Cardano.Ledger.ShelleyMA.TxWits ()
 import qualified Data.Set as Set (map)
 import Lens.Micro ((^.))
 
@@ -77,20 +72,3 @@ validateTimelock timelock tx = evalTimelock vhks (tx ^. bodyTxL . vldtTxBodyL) t
   where
     vhks = Set.map witVKeyHash (tx ^. witsTxL . addrTxWitsL)
 {-# INLINEABLE validateTimelock #-}
-
-instance MAClass ma crypto => EraTxWits (ShelleyMAEra ma crypto) where
-  {-# SPECIALIZE instance EraTxWits (ShelleyMAEra 'Mary StandardCrypto) #-}
-  {-# SPECIALIZE instance EraTxWits (ShelleyMAEra 'Allegra StandardCrypto) #-}
-
-  type TxWits (ShelleyMAEra ma crypto) = ShelleyTxWits (ShelleyMAEra ma crypto)
-
-  mkBasicTxWits = mempty
-
-  addrTxWitsL = addrShelleyTxWitsL
-  {-# INLINE addrTxWitsL #-}
-
-  bootAddrTxWitsL = bootAddrShelleyTxWitsL
-  {-# INLINE bootAddrTxWitsL #-}
-
-  scriptTxWitsL = scriptShelleyTxWitsL
-  {-# INLINE scriptTxWitsL #-}
