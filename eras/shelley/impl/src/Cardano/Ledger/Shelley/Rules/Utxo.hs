@@ -31,6 +31,7 @@ module Cardano.Ledger.Shelley.Rules.Utxo
     validateWrongNetworkWithdrawal,
     validateOutputBootAddrAttrsTooBig,
     validateMaxTxSizeUTxO,
+    validateValueNotConservedUTxO,
   )
 where
 
@@ -86,9 +87,9 @@ import Cardano.Ledger.Shelley.TxBody
     Wdrl (..),
   )
 import Cardano.Ledger.Shelley.UTxO
-  ( UTxO (..),
+  ( EraUTxO (getConsumedValue),
+    UTxO (..),
     balance,
-    coinConsumed,
     keyRefunds,
     produced,
     totalDeposits,
@@ -296,6 +297,7 @@ instance
 
 instance
   ( EraTx era,
+    EraUTxO era,
     ShelleyEraTxBody era,
     ExactEra ShelleyEra era,
     TxOut era ~ ShelleyTxOut era,
@@ -354,6 +356,7 @@ instance
 utxoInductive ::
   forall era utxo.
   ( EraTx era,
+    EraUTxO era,
     ShelleyEraTxBody era,
     ExactEra ShelleyEra era,
     TxOut era ~ ShelleyTxOut era,
@@ -512,6 +515,7 @@ validateWrongNetworkWithdrawal netId txb =
 -- > consumed pp utxo txb = produced pp poolParams txb
 validateValueNotConservedUTxO ::
   ( ShelleyEraTxBody era,
+    EraUTxO era,
     HasField "_keyDeposit" (PParams era) Coin,
     HasField "_poolDeposit" (PParams era) Coin
   ) =>
@@ -524,7 +528,7 @@ validateValueNotConservedUTxO pp utxo stakepools txb =
   failureUnless (consumedValue == producedValue) $
     ValueNotConservedUTxO consumedValue producedValue
   where
-    consumedValue = Val.inject $ coinConsumed pp utxo txb
+    consumedValue = getConsumedValue pp utxo txb
     producedValue = produced pp (`Map.notMember` stakepools) txb
 
 -- | Ensure there are no `TxOut`s that have less than @minUTxOValue@

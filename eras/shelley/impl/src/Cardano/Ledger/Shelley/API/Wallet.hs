@@ -31,14 +31,15 @@ module Cardano.Ledger.Shelley.API.Wallet
     getNonMyopicMemberRewards,
 
     -- * Transaction helpers
-    CLI (..),
     addKeyWitnesses,
+    evaluateConsumed,
     evaluateMinFee,
     evaluateTransactionFee,
     evaluateTransactionBalance,
     evaluateMinLovelaceOutput,
     addShelleyKeyWitnesses,
-    -- -- * Ada pots
+
+    -- * Ada pots
     AdaPots (..),
     totalAdaES,
     totalAdaPotsES,
@@ -70,13 +71,11 @@ import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (DSIGN)
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolDistr
   ( IndividualPoolStake (..),
     PoolDistr (..),
   )
-import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.AdaPots
   ( AdaPots (..),
     totalAdaES,
@@ -96,7 +95,6 @@ import Cardano.Ledger.Shelley.LedgerState
     incrementalStakeDistr,
     produced,
   )
-import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.PoolRank
   ( NonMyopic (..),
     PerformanceEstimate (..),
@@ -109,7 +107,7 @@ import Cardano.Ledger.Shelley.Rewards (StakeShare (..))
 import Cardano.Ledger.Shelley.Rules.NewEpoch (calculatePoolDistr)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..), ShelleyEraTxBody, WitVKey (..))
-import Cardano.Ledger.Shelley.UTxO (UTxO (..), coinConsumed)
+import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), UTxO (..))
 import Cardano.Ledger.Slot (epochInfoSize)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val ((<->))
@@ -455,19 +453,11 @@ getRewardProvenance globals newepochstate =
 -- Transaction helpers
 --------------------------------------------------------------------------------
 
--- | A collection of functons to help construction transactions
---  from the cardano-cli.
-class
-  ( EraTx era,
-    HasField "_minfeeA" (PParams era) Natural,
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin
-  ) =>
-  CLI era
-  where
-  -- | The consumed calculation.
-  -- Used for the default implentation of 'evaluateTransactionBalance'.
-  evaluateConsumed :: PParams era -> UTxO era -> TxBody era -> Value era
+-- | The consumed calculation.
+-- Used for the default implentation of 'evaluateTransactionBalance'.
+evaluateConsumed :: EraUTxO era => PParams era -> UTxO era -> TxBody era -> Value era
+evaluateConsumed = getConsumedValue
+{-# DEPRECATED evaluateConsumed "In favor of 'getConsumedValue'" #-}
 
 -- | The minimum fee calculation.
 -- Used for the default implentation of 'evaluateTransactionFee'.
@@ -486,7 +476,7 @@ addKeyWitnesses tx newWits = tx & witsTxL . addrWitsL %~ Set.union newWits
 -- | Evaluate the fee for a given transaction.
 evaluateTransactionFee ::
   forall era.
-  CLI era =>
+  EraTx era =>
   -- | The current protocol parameters.
   PParams era ->
   -- | The transaction.
@@ -516,7 +506,11 @@ evaluateTransactionFee pp tx numKeyWits = getMinFeeTx pp tx'
 -- a transaction and the number of lovelace being produced.
 -- This value will be zero for a valid transaction.
 evaluateTransactionBalance ::
-  (CLI era, ShelleyEraTxBody era) =>
+  ( EraUTxO era,
+    ShelleyEraTxBody era,
+    HasField "_poolDeposit" (PParams era) Coin,
+    HasField "_keyDeposit" (PParams era) Coin
+  ) =>
   -- | The current protocol parameters.
   PParams era ->
   -- | The UTxO relevant to the transaction.
@@ -533,7 +527,7 @@ evaluateTransactionBalance ::
   -- | The difference between what the transaction consumes and what it produces.
   Value era
 evaluateTransactionBalance pp u isNewPool txb =
-  evaluateConsumed pp u txb <-> produced pp isNewPool txb
+  getConsumedValue pp u txb <-> produced pp isNewPool txb
 
 --------------------------------------------------------------------------------
 -- Shelley specifics
@@ -546,9 +540,6 @@ addShelleyKeyWitnesses ::
   ShelleyTx era
 addShelleyKeyWitnesses = addKeyWitnesses
 {-# DEPRECATED addShelleyKeyWitnesses "In favor of 'addKeyWitnesses'" #-}
-
-instance CC.Crypto c => CLI (ShelleyEra c) where
-  evaluateConsumed = coinConsumed
 
 --------------------------------------------------------------------------------
 -- CBOR instances

@@ -77,7 +77,7 @@ import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, UtxoEnv)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Tx (TxIn)
-import Cardano.Ledger.Shelley.UTxO (UTxO (..), areAllAdaOnly, coinBalance, sumAllValue, txouts)
+import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), UTxO (..), areAllAdaOnly, coinBalance, sumAllValue, txouts)
 import Cardano.Ledger.ShelleyMA.Rules (ShelleyMAUtxoPredFailure)
 import qualified Cardano.Ledger.ShelleyMA.Rules as ShelleyMA
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
@@ -467,7 +467,8 @@ validateTooManyCollateralInputs pp txBody =
 -- | The UTxO transition rule for the Alonzo eras.
 utxoTransition ::
   forall era.
-  ( AlonzoEraTx era,
+  ( EraUTxO era,
+    AlonzoEraTx era,
     Tx era ~ AlonzoTx era,
     STS (AlonzoUTXO era),
     -- instructions for calling UTXOS from AlonzoUTXO
@@ -515,14 +516,13 @@ utxoTransition = do
 
   {- inputsAndCollateral = txins txb ∪ collateral txb -}
   {- (txins txb) ∪ (collateral txb) ⊆ dom utxo   -}
-  runTest $
-    Shelley.validateBadInputsUTxO utxo inputsAndCollateral
+  runTest $ Shelley.validateBadInputsUTxO utxo inputsAndCollateral
 
   {- consumed pp utxo txb = produced pp poolParams txb -}
-  runTest $
-    ShelleyMA.validateValueNotConservedUTxO pp utxo stakepools txBody
+  runTest $ Shelley.validateValueNotConservedUTxO pp utxo stakepools txBody
 
-  {- adaPolicy ∉ supp mint tx  - check not needed because mint field of type MultiAsset cannot contain ada -}
+  {- adaPolicy ∉ supp mint tx
+     above check not needed because mint field of type MultiAsset cannot contain ada -}
 
   let outputs = txouts txBody
   {-   ∀ txout ∈ txouts txb, getValuetxout ≥ inject (uxoEntrySizetxout ∗ coinsPerUTxOWord p) -}
@@ -532,8 +532,7 @@ utxoTransition = do
   runTest $ validateOutputTooBigUTxO pp outputs
 
   {- ∀ ( _ ↦ (a,_)) ∈ txoutstxb,  a ∈ Addrbootstrap → bootstrapAttrsSize a ≤ 64 -}
-  runTestOnSignal $
-    Shelley.validateOutputBootAddrAttrsTooBig (Map.elems (unUTxO outputs))
+  runTestOnSignal $ Shelley.validateOutputBootAddrAttrsTooBig (Map.elems (unUTxO outputs))
 
   netId <- liftSTS $ asks networkId
 
@@ -563,7 +562,8 @@ utxoTransition = do
 
 instance
   forall era.
-  ( AlonzoEraTx era,
+  ( EraUTxO era,
+    AlonzoEraTx era,
     Tx era ~ AlonzoTx era,
     TxSeq era ~ AlonzoTxSeq era,
     Show (TxOut era),
@@ -732,7 +732,7 @@ fromShelleyFailure = \case
   Shelley.MaxTxSizeUTxO a m -> Just $ MaxTxSizeUTxO a m
   Shelley.InputSetEmptyUTxO -> Just InputSetEmptyUTxO
   Shelley.FeeTooSmallUTxO mf af -> Just $ FeeTooSmallUTxO mf af
-  Shelley.ValueNotConservedUTxO {} -> Nothing -- Updated in ShelleyMA
+  Shelley.ValueNotConservedUTxO vc vp -> Just $ ValueNotConservedUTxO vc vp
   Shelley.WrongNetwork n as -> Just $ WrongNetwork n as
   Shelley.WrongNetworkWithdrawal n as -> Just $ WrongNetworkWithdrawal n as
   Shelley.OutputTooSmallUTxO {} -> Nothing -- Updated in ShelleyMA
@@ -746,7 +746,7 @@ fromShelleyMAFailure = \case
   ShelleyMA.MaxTxSizeUTxO {} -> Nothing -- Inherited from Shelley
   ShelleyMA.InputSetEmptyUTxO -> Nothing -- Inherited from Shelley
   ShelleyMA.FeeTooSmallUTxO {} -> Nothing -- Inherited from Shelley
-  ShelleyMA.ValueNotConservedUTxO vc vp -> Just $ ValueNotConservedUTxO vc vp
+  ShelleyMA.ValueNotConservedUTxO {} -> Nothing -- Inherited from Shelley
   ShelleyMA.WrongNetwork {} -> Nothing -- Inherited from Shelley
   ShelleyMA.WrongNetworkWithdrawal {} -> Nothing -- Inherited from Shelley
   ShelleyMA.OutputTooSmallUTxO {} -> Nothing -- Updated

@@ -69,11 +69,10 @@ import Cardano.Ledger.Serialization (Sized (..))
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, UtxoEnv)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.Shelley.UTxO (UTxO (..), areAllAdaOnly, balance)
+import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), UTxO (..), areAllAdaOnly, balance)
 import Cardano.Ledger.ShelleyMA.Rules (ShelleyMAUtxoPredFailure)
 import qualified Cardano.Ledger.ShelleyMA.Rules as ShelleyMA
   ( validateOutsideValidityIntervalUTxO,
-    validateValueNotConservedUTxO,
   )
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val ((<->))
@@ -323,6 +322,7 @@ validateOutputTooBigUTxO pp outs =
 utxoTransition ::
   forall era.
   ( EraTx era,
+    EraUTxO era,
     BabbageEraTxBody era,
     AlonzoEraWitnesses era,
     Tx era ~ AlonzoTx era,
@@ -354,8 +354,7 @@ utxoTransition = do
       allInputs = txBody ^. allInputsTxBodyF
 
   {- ininterval slot (txvld txb) -}
-  runTest $
-    ShelleyMA.validateOutsideValidityIntervalUTxO slot txBody
+  runTest $ ShelleyMA.validateOutsideValidityIntervalUTxO slot txBody
 
   sysSt <- liftSTS $ asks systemStart
   ei <- liftSTS $ asks epochInfo
@@ -371,14 +370,13 @@ utxoTransition = do
 
   {- allInputs = spendInputs txb ∪ collInputs txb ∪ refInputs txb -}
   {- (spendInputs txb ∪ collInputs txb ∪ refInputs txb) ⊆ dom utxo   -}
-  runTest $
-    Shelley.validateBadInputsUTxO utxo allInputs
+  runTest $ Shelley.validateBadInputsUTxO utxo allInputs
 
   {- consumed pp utxo txb = produced pp poolParams txb -}
-  runTest $
-    ShelleyMA.validateValueNotConservedUTxO pp utxo stakepools txBody
+  runTest $ Shelley.validateValueNotConservedUTxO pp utxo stakepools txBody
 
-  {-   adaID ∉ supp mint tx  - check not needed because mint field of type MultiAsset cannot contain ada  -}
+  {-   adaID ∉ supp mint tx - check not needed because mint field of type MultiAsset
+   cannot contain ada -}
 
   {-   ∀ txout ∈ allOuts txb, getValue txout ≥ inject (serSize txout ∗ coinsPerUTxOByte pp) -}
   let allSizedOutputs = toList (txBody ^. allSizedOutputsTxBodyF)
@@ -420,6 +418,7 @@ utxoTransition = do
 instance
   forall era.
   ( EraTx era,
+    EraUTxO era,
     BabbageEraTxBody era,
     AlonzoEraWitnesses era,
     Tx era ~ AlonzoTx era,

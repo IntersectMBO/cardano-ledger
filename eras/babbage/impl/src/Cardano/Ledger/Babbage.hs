@@ -46,13 +46,13 @@ import Cardano.Ledger.Babbage.TxBody
     dataHashTxOutL,
   )
 import Cardano.Ledger.Babbage.TxInfo (babbageTxInfo)
+import Cardano.Ledger.Babbage.UTxO ()
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Serialization (sizedValue)
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
-import Cardano.Ledger.ShelleyMA.Rules (consumed)
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict
@@ -70,9 +70,6 @@ instance CC.Crypto c => API.CanStartFromGenesis (BabbageEra c) where
   type AdditionalGenesisConfig (BabbageEra c) = AlonzoGenesis
 
   initialState = API.initialStateFromGenesis extendPPWithGenesis
-
-instance CC.Crypto c => API.CLI (BabbageEra c) where
-  evaluateConsumed = consumed
 
 instance CC.Crypto c => ExtendedUTxO (BabbageEra c) where
   txInfo = babbageTxInfo

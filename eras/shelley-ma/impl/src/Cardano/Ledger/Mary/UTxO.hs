@@ -1,0 +1,52 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
+
+module Cardano.Ledger.Mary.UTxO (getConsumedMaryValue) where
+
+import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Core
+import Cardano.Ledger.Crypto
+import Cardano.Ledger.Mary.Value (MaryValue)
+import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
+import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), Wdrl (..))
+import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), UTxO (UTxO), balance, keyRefunds)
+import Cardano.Ledger.ShelleyMA.Era (MaryOrAllegra (Mary), ShelleyMAEra)
+import Cardano.Ledger.ShelleyMA.TxBody (ShelleyMAEraTxBody (..))
+import Cardano.Ledger.Val (inject)
+import Data.Foldable (fold)
+import qualified Data.Map.Strict as Map
+import GHC.Records (HasField)
+import Lens.Micro
+
+instance Crypto c => EraUTxO (ShelleyMAEra 'Mary c) where
+  getConsumedValue = getConsumedMaryValue
+
+-- | Calculate the value consumed by the transation.
+--
+--   This differs from the corresponding Shelley function 'Shelley.coinConsumed'
+--   since it works on Value and it also considers the "mint" field which
+--   creates or destroys non-Ada tokens.
+--
+--   Note that this is slightly confusing, since it also covers non-Ada assets
+--   _created_ by the transaction, depending on the sign of the quantities in
+--   the mint field.
+getConsumedMaryValue ::
+  ( ShelleyMAEraTxBody era,
+    Value era ~ MaryValue (EraCrypto era),
+    HasField "_keyDeposit" (PParams era) Coin
+  ) =>
+  PParams era ->
+  UTxO era ->
+  TxBody era ->
+  MaryValue (EraCrypto era)
+getConsumedMaryValue pp (UTxO u) txBody = consumedValue <> txBody ^. mintValueTxBodyF
+  where
+    {- balance (txins tx ◁ u) + wbalance (txwdrls tx) + keyRefunds pp tx -}
+    consumedValue =
+      balance (UTxO (Map.restrictKeys u (txBody ^. inputsTxBodyL)))
+        <> inject (refunds <> withdrawals)
+    refunds = keyRefunds pp txBody
+    withdrawals = fold . unWdrl $ txBody ^. wdrlsTxBodyL
