@@ -409,11 +409,11 @@ class
   mkBasicTxWits :: TxWits era
   mkBasicTxWits = mempty
 
-  addrWitsL :: Lens' (TxWits era) (Set (WitVKey 'Witness (EraCrypto era)))
+  addrTxWitsL :: Lens' (TxWits era) (Set (WitVKey 'Witness (EraCrypto era)))
 
-  bootAddrWitsL :: Lens' (TxWits era) (Set (BootstrapWitness (EraCrypto era)))
+  bootAddrTxWitsL :: Lens' (TxWits era) (Set (BootstrapWitness (EraCrypto era)))
 
-  scriptWitsL :: Lens' (TxWits era) (Map (ScriptHash (EraCrypto era)) (Script era))
+  scriptTxWitsL :: Lens' (TxWits era) (Map (ScriptHash (EraCrypto era)) (Script era))
 
 -- | Era STS map
 type family EraRule (k :: Symbol) era :: Type

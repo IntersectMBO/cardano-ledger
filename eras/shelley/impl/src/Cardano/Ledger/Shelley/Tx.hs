@@ -373,14 +373,14 @@ validateNativeMultiSigScript ::
 validateNativeMultiSigScript msig tx =
   evalNativeMultiSigScript msig (coerceKeyRole `Set.map` vhks)
   where
-    vhks = Set.map witVKeyHash (tx ^. witsTxL . addrWitsL)
+    vhks = Set.map witVKeyHash (tx ^. witsTxL . addrTxWitsL)
 
 -- | Multi-signature script witness accessor function for Transactions
 txwitsScript ::
   EraTx era =>
   Core.Tx era ->
   Map (ScriptHash (EraCrypto era)) (Script era)
-txwitsScript tx = tx ^. witsTxL . scriptWitsL
+txwitsScript tx = tx ^. witsTxL . scriptTxWitsL
 
 extractKeyHashWitnessSet ::
   forall (r :: KeyRole) crypto.
@@ -422,5 +422,5 @@ witsFromTxWitnesses ::
   Core.Tx era ->
   Set (KeyHash 'Witness (EraCrypto era))
 witsFromTxWitnesses tx =
-  Set.map witVKeyHash (tx ^. witsTxL . addrWitsL)
-    `Set.union` Set.map bootstrapWitKeyHash (tx ^. witsTxL . bootAddrWitsL)
+  Set.map witVKeyHash (tx ^. witsTxL . addrTxWitsL)
+    `Set.union` Set.map bootstrapWitKeyHash (tx ^. witsTxL . bootAddrTxWitsL)

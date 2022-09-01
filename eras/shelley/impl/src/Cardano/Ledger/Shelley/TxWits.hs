@@ -30,9 +30,9 @@ module Cardano.Ledger.Shelley.TxWits
     WitnessSetHKD
       ( txWitsBytes
       ),
-    scriptShelleyWitsL,
-    addrShelleyWitsL,
-    bootAddrShelleyWitsL,
+    scriptShelleyTxWitsL,
+    addrShelleyTxWitsL,
+    bootAddrShelleyTxWitsL,
     addrWits',
     prettyWitnessSetParts,
 
@@ -144,35 +144,35 @@ instance (Era era, NoThunks (Script era)) => NoThunks (ShelleyTxWits era)
 
 -- | Addresses witness setter and getter for `ShelleyTxWits`. The
 -- setter does update memoized binary representation.
-addrShelleyWitsL ::
+addrShelleyTxWitsL ::
   EraScript era => Lens' (ShelleyTxWits era) (Set (WitVKey 'Witness (EraCrypto era)))
-addrShelleyWitsL =
+addrShelleyTxWitsL =
   lens
     (\(ShelleyTxWitsConstr w) -> addrWits' w)
     (\w s -> w {addrWits = s})
-{-# INLINEABLE addrShelleyWitsL #-}
+{-# INLINEABLE addrShelleyTxWitsL #-}
 
 -- | Bootstrap Addresses witness setter and getter for `ShelleyTxWits`. The
 -- setter does update memoized binary representation.
-bootAddrShelleyWitsL ::
+bootAddrShelleyTxWitsL ::
   EraScript era =>
   Lens' (ShelleyTxWits era) (Set (BootstrapWitness (EraCrypto era)))
-bootAddrShelleyWitsL =
+bootAddrShelleyTxWitsL =
   lens
     (\(ShelleyTxWitsConstr w) -> bootWits' w)
     (\w s -> w {bootWits = s})
-{-# INLINEABLE bootAddrShelleyWitsL #-}
+{-# INLINEABLE bootAddrShelleyTxWitsL #-}
 
 -- | Script witness setter and getter for `ShelleyTxWits`. The
 -- setter does update memoized binary representation.
-scriptShelleyWitsL ::
+scriptShelleyTxWitsL ::
   EraScript era =>
   Lens' (ShelleyTxWits era) (Map (ScriptHash (EraCrypto era)) (Script era))
-scriptShelleyWitsL =
+scriptShelleyTxWitsL =
   lens
     (\(ShelleyTxWitsConstr w) -> scriptWits' w)
     (\w s -> w {scriptWits = s})
-{-# INLINEABLE scriptShelleyWitsL #-}
+{-# INLINEABLE scriptShelleyTxWitsL #-}
 
 instance CC.Crypto crypto => EraTxWits (ShelleyEra crypto) where
   {-# SPECIALIZE instance EraTxWits (ShelleyEra CC.StandardCrypto) #-}
@@ -181,14 +181,14 @@ instance CC.Crypto crypto => EraTxWits (ShelleyEra crypto) where
 
   mkBasicTxWits = mempty
 
-  addrWitsL = addrShelleyWitsL
-  {-# INLINE addrWitsL #-}
+  addrTxWitsL = addrShelleyTxWitsL
+  {-# INLINE addrTxWitsL #-}
 
-  bootAddrWitsL = bootAddrShelleyWitsL
-  {-# INLINE bootAddrWitsL #-}
+  bootAddrTxWitsL = bootAddrShelleyTxWitsL
+  {-# INLINE bootAddrTxWitsL #-}
 
-  scriptWitsL = scriptShelleyWitsL
-  {-# INLINE scriptWitsL #-}
+  scriptTxWitsL = scriptShelleyTxWitsL
+  {-# INLINE scriptTxWitsL #-}
 
 instance Era era => ToCBOR (ShelleyTxWits era) where
   toCBOR (ShelleyTxWitsConstr w) = encodePreEncoded $ BSL.toStrict $ txWitsBytes w

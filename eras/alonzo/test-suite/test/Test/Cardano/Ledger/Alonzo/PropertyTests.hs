@@ -92,7 +92,7 @@ alonzoSpecificProps SourceSignalTarget {source = chainSt, signal = block} =
             noNewUTxO = u' `Map.isSubmapOf` u
             collateralInFees = f <> sumCollateral tx (UTxO u) == f'
             utxoConsumed = not $ u `Map.isSubmapOf` u'
-            allScripts = tx ^. witsTxL . scriptWitsL
+            allScripts = tx ^. witsTxL . scriptTxWitsL
             hasPlutus = if all (isNativeScript @A) allScripts then NoPlutus else HasPlutus
             totEU = totExUnits tx
             nonTrivialExU = exUnitsMem totEU > 0 && exUnitsSteps totEU > 0

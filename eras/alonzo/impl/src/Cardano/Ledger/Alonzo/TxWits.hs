@@ -39,11 +39,11 @@ module Cardano.Ledger.Alonzo.TxWits
         txdats',
         txrdmrs'
       ),
-    addrAlonzoWitsL,
-    bootAddrAlonzoWitsL,
-    scriptAlonzoWitsL,
-    datsAlonzoWitsL,
-    rdmrsAlonzoWitsL,
+    addrAlonzoTxWitsL,
+    bootAddrAlonzoTxWitsL,
+    scriptAlonzoTxWitsL,
+    datsAlonzoTxWitsL,
+    rdmrsAlonzoTxWitsL,
     AlonzoEraTxWits (..),
     unTxDats,
     nullDats,
@@ -366,40 +366,40 @@ lensWitsRaw getter setter =
     (\(TxWitnessConstr (Memo witsRaw _)) val -> mkAlonzoTxWitness $ setter witsRaw val)
 {-# INLINEABLE lensWitsRaw #-}
 
-addrAlonzoWitsL ::
+addrAlonzoTxWitsL ::
   (Era era, Core.Script era ~ AlonzoScript era) =>
   Lens' (AlonzoTxWits era) (Set (WitVKey 'Witness (EraCrypto era)))
-addrAlonzoWitsL =
+addrAlonzoTxWitsL =
   lensWitsRaw _txwitsVKey (\witsRaw addrWits -> witsRaw {_txwitsVKey = addrWits})
-{-# INLINEABLE addrAlonzoWitsL #-}
+{-# INLINEABLE addrAlonzoTxWitsL #-}
 
-bootAddrAlonzoWitsL ::
+bootAddrAlonzoTxWitsL ::
   (Era era, Core.Script era ~ AlonzoScript era) =>
   Lens' (AlonzoTxWits era) (Set (BootstrapWitness (EraCrypto era)))
-bootAddrAlonzoWitsL =
+bootAddrAlonzoTxWitsL =
   lensWitsRaw _txwitsBoot (\witsRaw bootAddrWits -> witsRaw {_txwitsBoot = bootAddrWits})
-{-# INLINEABLE bootAddrAlonzoWitsL #-}
+{-# INLINEABLE bootAddrAlonzoTxWitsL #-}
 
-scriptAlonzoWitsL ::
+scriptAlonzoTxWitsL ::
   (Era era, Core.Script era ~ AlonzoScript era) =>
   Lens' (AlonzoTxWits era) (Map (ScriptHash (EraCrypto era)) (Script era))
-scriptAlonzoWitsL =
+scriptAlonzoTxWitsL =
   lensWitsRaw _txscripts (\witsRaw scriptWits -> witsRaw {_txscripts = scriptWits})
-{-# INLINEABLE scriptAlonzoWitsL #-}
+{-# INLINEABLE scriptAlonzoTxWitsL #-}
 
-datsAlonzoWitsL ::
+datsAlonzoTxWitsL ::
   (Era era, Core.Script era ~ AlonzoScript era) =>
   Lens' (AlonzoTxWits era) (TxDats era)
-datsAlonzoWitsL =
+datsAlonzoTxWitsL =
   lensWitsRaw _txdats (\witsRaw datsWits -> witsRaw {_txdats = datsWits})
-{-# INLINEABLE datsAlonzoWitsL #-}
+{-# INLINEABLE datsAlonzoTxWitsL #-}
 
-rdmrsAlonzoWitsL ::
+rdmrsAlonzoTxWitsL ::
   (Era era, Core.Script era ~ AlonzoScript era) =>
   Lens' (AlonzoTxWits era) (Redeemers era)
-rdmrsAlonzoWitsL =
+rdmrsAlonzoTxWitsL =
   lensWitsRaw _txrdmrs (\witsRaw rdmrsWits -> witsRaw {_txrdmrs = rdmrsWits})
-{-# INLINEABLE rdmrsAlonzoWitsL #-}
+{-# INLINEABLE rdmrsAlonzoTxWitsL #-}
 
 instance (EraScript (AlonzoEra c), CC.Crypto c) => EraTxWits (AlonzoEra c) where
   {-# SPECIALIZE instance EraTxWits (AlonzoEra CC.StandardCrypto) #-}
@@ -408,28 +408,28 @@ instance (EraScript (AlonzoEra c), CC.Crypto c) => EraTxWits (AlonzoEra c) where
 
   mkBasicTxWits = mempty
 
-  addrWitsL = addrAlonzoWitsL
-  {-# INLINE addrWitsL #-}
+  addrTxWitsL = addrAlonzoTxWitsL
+  {-# INLINE addrTxWitsL #-}
 
-  bootAddrWitsL = bootAddrAlonzoWitsL
-  {-# INLINE bootAddrWitsL #-}
+  bootAddrTxWitsL = bootAddrAlonzoTxWitsL
+  {-# INLINE bootAddrTxWitsL #-}
 
-  scriptWitsL = scriptAlonzoWitsL
-  {-# INLINE scriptWitsL #-}
+  scriptTxWitsL = scriptAlonzoTxWitsL
+  {-# INLINE scriptTxWitsL #-}
 
 class EraTxWits era => AlonzoEraTxWits era where
-  datsWitsL :: Lens' (TxWits era) (TxDats era)
+  datsTxWitsL :: Lens' (TxWits era) (TxDats era)
 
-  rdmrsWitsL :: Lens' (TxWits era) (Redeemers era)
+  rdmrsTxWitsL :: Lens' (TxWits era) (Redeemers era)
 
 instance (EraScript (AlonzoEra c), CC.Crypto c) => AlonzoEraTxWits (AlonzoEra c) where
   {-# SPECIALIZE instance AlonzoEraTxWits (AlonzoEra CC.StandardCrypto) #-}
 
-  datsWitsL = datsAlonzoWitsL
-  {-# INLINE datsWitsL #-}
+  datsTxWitsL = datsAlonzoTxWitsL
+  {-# INLINE datsTxWitsL #-}
 
-  rdmrsWitsL = rdmrsAlonzoWitsL
-  {-# INLINE rdmrsWitsL #-}
+  rdmrsTxWitsL = rdmrsAlonzoTxWitsL
+  {-# INLINE rdmrsTxWitsL #-}
 
 --------------------------------------------------------------------------------
 -- Serialisation

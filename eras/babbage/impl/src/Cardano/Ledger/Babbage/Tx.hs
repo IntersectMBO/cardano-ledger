@@ -101,7 +101,7 @@ getDatumBabbage tx (UTxO m) sp = do
   txOut <- Map.lookup txIn m
   let txOutDataFromWits = do
         hash <- strictMaybeToMaybe (txOut ^. dataHashTxOutL)
-        Map.lookup hash (unTxDats (tx ^. witsTxL . datsWitsL))
+        Map.lookup hash (unTxDats (tx ^. witsTxL . datsTxWitsL))
   strictMaybeToMaybe (txOut ^. dataTxOutL) <|> txOutDataFromWits
 
 -- Figure 3 of the Specification
@@ -148,7 +148,7 @@ babbageTxScripts utxo tx = ans
   where
     txBody = tx ^. bodyTxL
     ins = (txBody ^. referenceInputsTxBodyL) `Set.union` (txBody ^. inputsTxBodyL)
-    ans = refScripts ins utxo `Map.union` (tx ^. witsTxL . scriptWitsL)
+    ans = refScripts ins utxo `Map.union` (tx ^. witsTxL . scriptTxWitsL)
 
 -- | Collect all the reference scripts found in the TxOuts, pointed to by some input.
 refScripts ::

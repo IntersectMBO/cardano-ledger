@@ -332,7 +332,7 @@ getOutputs :: EraTxBody era => Proof era -> TxBody era -> StrictSeq (TxOut era)
 getOutputs _ tx = tx ^. outputsTxBodyL
 
 getScriptWits :: EraTxWits era => Proof era -> TxWits era -> Map (ScriptHash (EraCrypto era)) (Script era)
-getScriptWits _ tx = tx ^. scriptWitsL
+getScriptWits _ tx = tx ^. scriptTxWitsL
 
 allInputs :: EraTxBody era => Proof era -> TxBody era -> Set (TxIn (EraCrypto era))
 allInputs _ txb = txb ^. allInputsTxBodyF

@@ -365,7 +365,7 @@ instance Mock c => EraGen (AlonzoEra c) where
   genEraTxBody = genAlonzoTxBody
   updateEraTxBody utxo pp witnesses txb coinx txin txout = new
     where
-      langs = langsUsed @(AlonzoEra c) (witnesses ^. scriptWitsL)
+      langs = langsUsed @(AlonzoEra c) (witnesses ^. scriptTxWitsL)
       langViews = Set.map (getLanguageView pp) langs
       new =
         txb
@@ -377,8 +377,8 @@ instance Mock c => EraGen (AlonzoEra c) where
             scriptIntegrityHash =
               hashScriptIntegrity
                 langViews
-                (witnesses ^. rdmrsWitsL)
-                (witnesses ^. datsWitsL)
+                (witnesses ^. rdmrsTxWitsL)
+                (witnesses ^. datsTxWitsL)
           }
 
   addInputs txb txin = txb {inputs = inputs txb <> txin}

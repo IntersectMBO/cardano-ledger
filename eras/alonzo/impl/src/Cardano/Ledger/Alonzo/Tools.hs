@@ -127,11 +127,11 @@ evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels = do
   pure $
     Map.mapWithKey
       (findAndCount pp ctx)
-      (unRedeemers $ ws ^. rdmrsWitsL)
+      (unRedeemers $ ws ^. rdmrsTxWitsL)
   where
     txBody = tx ^. bodyTxL
     ws = tx ^. witsTxL
-    dats = unTxDats $ ws ^. datsWitsL
+    dats = unTxDats $ ws ^. datsTxWitsL
     scriptsAvailable = txscripts utxo tx
     needed = scriptsNeeded utxo tx
     neededAndConfirmedToBePlutus = mapMaybe (knownToNotBe1Phase scriptsAvailable) needed

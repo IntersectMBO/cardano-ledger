@@ -244,7 +244,7 @@ validateScriptsWellFormed pp tx =
       failureUnless (null invalidRefScripts) $ MalformedReferenceScripts invalidRefScriptHashes
     ]
   where
-    scriptWits = tx ^. witsTxL . scriptWitsL
+    scriptWits = tx ^. witsTxL . scriptTxWitsL
     invalidScriptWits = Map.filter (not . validScript (getField @"_protocolVersion" pp)) scriptWits
 
     txBody = tx ^. bodyTxL
@@ -302,7 +302,7 @@ babbageUtxowTransition = do
   {- ∀s ∈ (txscripts txw utxo neededHashes ) ∩ Scriptph1 , validateScript s tx -}
   runTest $ validateFailedBabbageScripts tx utxo sNeeded -- CHANGED In BABBAGE txscripts depends on UTxO
   {- neededHashes − dom(refScripts tx utxo) = dom(txwitscripts txw) -}
-  let sReceived = Map.keysSet $ tx ^. witsTxL . scriptWitsL
+  let sReceived = Map.keysSet $ tx ^. witsTxL . scriptTxWitsL
       sRefs = Map.keysSet $ refScripts inputs utxo
   runTest $ babbageMissingScripts pp sNeeded sRefs sReceived
 

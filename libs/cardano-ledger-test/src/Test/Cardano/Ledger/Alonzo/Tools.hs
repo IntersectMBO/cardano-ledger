@@ -298,7 +298,7 @@ replaceRdmrs ::
   Tx era
 replaceRdmrs pf tx rdmrs = updateTx pf tx (WitnessesI [RdmrWits newrdmrs])
   where
-    newrdmrs = foldr replaceRdmr (tx ^. witsTxL . rdmrsWitsL) (Map.assocs rdmrs)
+    newrdmrs = foldr replaceRdmr (tx ^. witsTxL . rdmrsTxWitsL) (Map.assocs rdmrs)
 
     replaceRdmr :: (RdmrPtr, ExUnits) -> Redeemers era -> Redeemers era
     replaceRdmr (ptr, ex) x@(Redeemers r) =

@@ -8,11 +8,11 @@ module Cardano.Ledger.Conway.TxWits
 where
 
 import Cardano.Ledger.Alonzo.TxWits
-  ( addrAlonzoWitsL,
-    bootAddrAlonzoWitsL,
-    datsAlonzoWitsL,
-    rdmrsAlonzoWitsL,
-    scriptAlonzoWitsL,
+  ( addrAlonzoTxWitsL,
+    bootAddrAlonzoTxWitsL,
+    datsAlonzoTxWitsL,
+    rdmrsAlonzoTxWitsL,
+    scriptAlonzoTxWitsL,
   )
 import Cardano.Ledger.Alonzo.TxWits as BabbageTxWitsReExport
   ( AlonzoEraTxWits (..),
@@ -30,20 +30,20 @@ instance CC.Crypto c => EraTxWits (ConwayEra c) where
 
   mkBasicTxWits = mempty
 
-  addrWitsL = addrAlonzoWitsL
-  {-# INLINE addrWitsL #-}
+  addrTxWitsL = addrAlonzoTxWitsL
+  {-# INLINE addrTxWitsL #-}
 
-  bootAddrWitsL = bootAddrAlonzoWitsL
-  {-# INLINE bootAddrWitsL #-}
+  bootAddrTxWitsL = bootAddrAlonzoTxWitsL
+  {-# INLINE bootAddrTxWitsL #-}
 
-  scriptWitsL = scriptAlonzoWitsL
-  {-# INLINE scriptWitsL #-}
+  scriptTxWitsL = scriptAlonzoTxWitsL
+  {-# INLINE scriptTxWitsL #-}
 
 instance CC.Crypto c => AlonzoEraTxWits (ConwayEra c) where
   {-# SPECIALIZE instance AlonzoEraTxWits (ConwayEra CC.StandardCrypto) #-}
 
-  datsWitsL = datsAlonzoWitsL
-  {-# INLINE datsWitsL #-}
+  datsTxWitsL = datsAlonzoTxWitsL
+  {-# INLINE datsTxWitsL #-}
 
-  rdmrsWitsL = rdmrsAlonzoWitsL
-  {-# INLINE rdmrsWitsL #-}
+  rdmrsTxWitsL = rdmrsAlonzoTxWitsL
+  {-# INLINE rdmrsTxWitsL #-}

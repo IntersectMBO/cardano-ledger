@@ -369,12 +369,12 @@ alonzoStyleWitness = do
 
   {-  { h | (_,h) ∈ scriptsNeeded utxo tx} = dom(txscripts txw)          -}
   let sNeeded = Set.fromList (map snd (Alonzo.scriptsNeeded utxo tx))
-      sReceived = Map.keysSet (tx ^. witsTxL . scriptWitsL)
+      sReceived = Map.keysSet (tx ^. witsTxL . scriptTxWitsL)
   runTest $ Shelley.validateMissingScripts pp sNeeded sReceived
 
   {- inputHashes := { h | (_ → (a,_,h)) ∈ txins tx ◁ utxo, isTwoPhaseScriptAddress tx a} -}
   {-  inputHashes ⊆ dom(txdats txw)  -}
-  runTest $ missingRequiredDatums (tx ^. witsTxL . scriptWitsL) utxo tx txbody
+  runTest $ missingRequiredDatums (tx ^. witsTxL . scriptTxWitsL) utxo tx txbody
 
   {- dom(txdats txw) ⊆ inputHashes ∪ {h | ( , , h) ∈ txouts tx -}
   -- This is incorporated into missingRequiredDatums, see the

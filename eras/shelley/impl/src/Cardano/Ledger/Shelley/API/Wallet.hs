@@ -471,7 +471,7 @@ evaluateMinLovelaceOutput = getMinCoinTxOut
 {-# DEPRECATED evaluateMinLovelaceOutput "In favor of `getMinCoinTxOut`" #-}
 
 addKeyWitnesses :: EraTx era => Tx era -> Set (WitVKey 'Witness (EraCrypto era)) -> Tx era
-addKeyWitnesses tx newWits = tx & witsTxL . addrWitsL %~ Set.union newWits
+addKeyWitnesses tx newWits = tx & witsTxL . addrTxWitsL %~ Set.union newWits
 
 -- | Evaluate the fee for a given transaction.
 evaluateTransactionFee ::

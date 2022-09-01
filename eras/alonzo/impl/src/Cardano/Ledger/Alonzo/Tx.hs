@@ -332,7 +332,7 @@ isTwoPhaseScriptAddress ::
   Addr (EraCrypto era) ->
   Bool
 isTwoPhaseScriptAddress tx =
-  isTwoPhaseScriptAddressFromMap @era (wits tx ^. scriptWitsL)
+  isTwoPhaseScriptAddressFromMap @era (wits tx ^. scriptTxWitsL)
 
 -- | This ensures that the size of transactions from Mary is unchanged.
 -- The individual components all store their bytes; the only work we do in this
@@ -387,7 +387,7 @@ totExUnits ::
   Tx era ->
   ExUnits
 totExUnits tx =
-  foldMap snd . Map.elems . unRedeemers $ tx ^. witsTxL . rdmrsWitsL
+  foldMap snd . Map.elems . unRedeemers $ tx ^. witsTxL . rdmrsTxWitsL
 
 -- ===============================================================
 -- Operations on scripts from specification
