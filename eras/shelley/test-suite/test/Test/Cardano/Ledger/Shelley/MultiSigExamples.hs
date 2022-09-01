@@ -72,7 +72,7 @@ import Cardano.Ledger.Shelley.TxBody
     ShelleyTxOut (..),
     Wdrl (..),
   )
-import Cardano.Ledger.Shelley.TxWits (WitnessSetHKD (..))
+import Cardano.Ledger.Shelley.TxWits (addrWits, scriptWits)
 import Cardano.Ledger.Shelley.UTxO (makeWitnessesVKey)
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn (..))

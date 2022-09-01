@@ -30,7 +30,7 @@ import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..), e
 import Cardano.Ledger.Shelley.Rules (ShelleyLedgerPredFailure (..), ShelleyUtxowPredFailure (..))
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxOut (..), Wdrl (..))
-import Cardano.Ledger.Shelley.TxWits (WitnessSetHKD (..))
+import Cardano.Ledger.Shelley.TxWits (addrWits, scriptWits)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), makeWitnessesVKey)
 import Cardano.Ledger.ShelleyMA.Rules (ShelleyMAUtxoPredFailure (..))
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))

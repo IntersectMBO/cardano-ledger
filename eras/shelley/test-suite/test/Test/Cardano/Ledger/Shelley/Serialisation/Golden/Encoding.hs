@@ -144,7 +144,7 @@ import Cardano.Ledger.Shelley.TxBody
     pattern PoolParams,
     pattern RewardAcnt,
   )
-import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits, WitnessSetHKD (..))
+import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits, addrWits, scriptWits)
 import Cardano.Ledger.Shelley.UTxO (UTxO (UTxO), makeWitnessVKey)
 import Cardano.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxId, TxIn (..))

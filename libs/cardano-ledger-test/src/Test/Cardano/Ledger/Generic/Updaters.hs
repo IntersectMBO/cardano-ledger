@@ -36,7 +36,9 @@ import Cardano.Ledger.Shelley.Tx as Shelley
   )
 import Cardano.Ledger.Shelley.TxBody as Shelley (ShelleyEraTxBody (..), ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits as Shelley
-  ( WitnessSetHKD (addrWits, bootWits, scriptWits),
+  ( addrWits,
+    bootWits,
+    scriptWits,
   )
 import Cardano.Ledger.ShelleyMA.TxBody (ShelleyMAEraTxBody (..))
 import Cardano.Ledger.Val ((<×>))

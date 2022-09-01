@@ -74,7 +74,7 @@ import Cardano.Ledger.Shelley.TxBody
     _poolRelays,
     _poolVrf,
   )
-import Cardano.Ledger.Shelley.TxWits (WitnessSetHKD (..))
+import Cardano.Ledger.Shelley.TxWits (addrWits)
 import Cardano.Ledger.Shelley.UTxO (makeWitnessesVKey)
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn (..), mkTxInPartial)

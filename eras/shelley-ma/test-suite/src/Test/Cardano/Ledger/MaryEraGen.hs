@@ -31,9 +31,7 @@ import Cardano.Ledger.Shelley.Tx
     TxIn,
   )
 import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl)
-import Cardano.Ledger.Shelley.TxWits
-  ( WitnessSetHKD (..),
-  )
+import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (ShelleyTxWits))
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
 import Cardano.Ledger.ShelleyMA.TxBody (MATxBody (MATxBody), scaledMinDeposit)
 import Cardano.Ledger.Val ((<+>))

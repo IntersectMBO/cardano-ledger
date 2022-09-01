@@ -30,7 +30,7 @@ import Cardano.Ledger.Shelley.TxBody
     ShelleyTxOut (..),
     Wdrl (..),
   )
-import Cardano.Ledger.Shelley.TxWits (WitnessSetHKD (ShelleyTxWits))
+import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (ShelleyTxWits))
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.Val ((<+>))
 import Cardano.Protocol.TPraos.API (PraosCrypto)

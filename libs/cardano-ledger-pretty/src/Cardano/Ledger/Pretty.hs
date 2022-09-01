@@ -147,7 +147,7 @@ import Cardano.Ledger.Shelley.TxBody
     WitVKey (..),
   )
 import Cardano.Ledger.Shelley.TxWits
-  ( WitnessSetHKD,
+  ( ShelleyTxWits,
     prettyWitnessSetParts,
   )
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
@@ -176,7 +176,6 @@ import Cardano.Protocol.TPraos.OCert
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Cardano.Slotting.Time (SystemStart (SystemStart))
 import Codec.Binary.Bech32
-import Control.Monad.Identity (Identity)
 import Control.State.Transition (STS (State))
 import qualified Data.ByteString as Long (ByteString)
 import qualified Data.ByteString.Lazy as Lazy (ByteString, toStrict)
@@ -961,7 +960,7 @@ ppBootstrapWitness (BootstrapWitness key sig (ChainCode code) attr) =
       ("attributes", ppLong attr)
     ]
 
-ppWitnessSetHKD :: (Era era, PrettyA (Script era)) => WitnessSetHKD Identity era -> PDoc
+ppWitnessSetHKD :: (Era era, PrettyA (Script era)) => ShelleyTxWits era -> PDoc
 ppWitnessSetHKD x =
   let (addr, scr, boot) = prettyWitnessSetParts x
    in ppRecord
@@ -985,7 +984,7 @@ instance
 instance Crypto crypto => PrettyA (BootstrapWitness crypto) where
   prettyA = ppBootstrapWitness
 
-instance (Era era, PrettyA (Script era)) => PrettyA (WitnessSetHKD Identity era) where
+instance (Era era, PrettyA (Script era)) => PrettyA (ShelleyTxWits era) where
   prettyA = ppWitnessSetHKD
 
 -- ============================
