@@ -8,10 +8,9 @@ description: Use this file to compile plutus scripts and to generate bytestring 
 
 bug-reports:https://github.com/input-output-hk/cardano-ledger/issues
 license:             Apache-2.0
-author:              IOHK Formal Methods Team
-maintainer:          formal.methods@iohk.io
+author:              IOHK
+maintainer:          operations@iohk.io
 
-copyright:           2020 Input Output (Hong Kong) Ltd.
 category:            Network
 
 extra-source-files: CHANGELOG.md

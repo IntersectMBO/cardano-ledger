@@ -7,7 +7,6 @@ description:         The blockchain layer of Cardano during the Byron era
 license:             Apache-2.0
 author:              IOHK
 maintainer:          operations@iohk.io
-copyright:           2018 IOHK
 category:            Currency
 build-type:          Simple
 extra-source-files:  README.md

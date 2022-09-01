@@ -2,10 +2,10 @@ cabal-version: 2.2
 
 name:                cardano-ledger-shelley
 version:             0.1.0.0
-description:         Shelley Ledger Executable Model
+synopsis:            Shelley Ledger Executable Model
 license:             Apache-2.0
-author:              IOHK Formal Methods Team
-maintainer:          formal.methods@iohk.io
+author:              IOHK
+maintainer:          operations@iohk.io
 build-type:          Simple
 
 source-repository head

@@ -7,7 +7,6 @@ description:         Test helpers from cardano-crypto exposed to other packages
 license:             Apache-2.0
 author:              IOHK
 maintainer:          operations@iohk.io
-copyright:           2018 IOHK
 category:            Currency
 build-type:          Simple
 data-files:          golden/AbstractHash

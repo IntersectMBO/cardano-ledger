@@ -3,8 +3,9 @@ cabal-version: 2.2
 name:                cardano-ledger-pretty
 version:             0.1.0.0
 license:             Apache-2.0
-author:              IOHK Formal Methods Team
-maintainer:          formal.methods@iohk.io
+author:              IOHK
+synopsis:            Pretty-printers for Cardano ledger datatypes
+maintainer:          operations@iohk.io
 description:         Pretty Printers for the Cardano Ledger
 build-type:          Simple
 

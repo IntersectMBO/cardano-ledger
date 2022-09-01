@@ -3,8 +3,8 @@ cabal-version: 2.2
 name:                non-integral
 version:             0.1.0.0
 license:             Apache-2.0
-author:              IOHK Formal Methods Team
-maintainer:          formal.methods@iohk.io
+author:              IOHK
+maintainer:          operations@iohk.io
 description:         Implementation decision for non-integer calculations
 build-type:          Simple
 
