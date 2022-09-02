@@ -189,8 +189,6 @@ class
 
   allInputsTxBodyF :: SimpleGetter (TxBody era) (Set (TxIn (EraCrypto era)))
 
-  mintedTxBodyF :: SimpleGetter (TxBody era) (Set (ScriptHash (EraCrypto era)))
-
 -- | Abstract interface into specific fields of a `TxOut`
 class
   ( DecodeNonNegative (Value era),

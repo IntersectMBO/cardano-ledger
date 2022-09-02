@@ -109,11 +109,11 @@ import Cardano.Ledger.Shelley.TxBody
     Delegation (..),
     PoolCert (..),
     PoolParams (..),
-    ShelleyEraTxBody (..),
   )
 import qualified Cardano.Ledger.Shelley.TxBody as Shelley
 import qualified Cardano.Ledger.Shelley.UTxO as UTxO
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock)
+import Cardano.Ledger.ShelleyMA.TxBody (ShelleyMAEraTxBody)
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.EpochInfo.API
   ( epochInfoEpoch,
@@ -384,7 +384,7 @@ instance Era era => Monoid (EraElaboratorTxAccum era) where
 -- under normal circumstances, this arises during elaboration, at which time the
 -- era is already known
 data TestRedeemer era = TestRedeemer
-  { _trdmrPtr :: !(Either (Alonzo.RdmrPtr) (Alonzo.ScriptPurpose (EraCrypto era))),
+  { _trdmrPtr :: !(Either Alonzo.RdmrPtr (Alonzo.ScriptPurpose (EraCrypto era))),
     _trdmData :: !PlutusTx.Data,
     _trdmExUnits :: !ExUnits
   }
@@ -393,12 +393,12 @@ data TestRedeemer era = TestRedeemer
 
 elaborateModelRedeemer ::
   forall era.
-  ShelleyEraTxBody era =>
+  ShelleyMAEraTxBody era =>
   Core.TxBody era ->
   TestRedeemer era ->
   StrictMaybe (Alonzo.RdmrPtr, (Alonzo.Data era, Alonzo.ExUnits))
 elaborateModelRedeemer tx (TestRedeemer scriptPurpose dat exUnits) =
-  (,) <$> (either pure (Alonzo.rdptr @era tx) scriptPurpose) <*> pure (Alonzo.Data dat, exUnits)
+  (,) <$> either pure (Alonzo.rdptr @era tx) scriptPurpose <*> pure (Alonzo.Data dat, exUnits)
 
 eesUnusedKeyPairs :: Functor f => (Word64 -> f Word64) -> EraElaboratorState era -> f (EraElaboratorState era)
 eesUnusedKeyPairs a2fb s = (\b -> s {_eesUnusedKeyPairs = b}) <$> a2fb (_eesUnusedKeyPairs s)
@@ -916,7 +916,7 @@ mkTxWitnessArguments ::
   ( Monad m,
     C.Crypto (EraCrypto era),
     ElaborateEraModel era,
-    ShelleyEraTxBody era,
+    ShelleyMAEraTxBody era,
     DSIGN.Signable (C.DSIGN (EraCrypto era)) (Hash.Hash (C.HASH (EraCrypto era)) Shelley.EraIndependentTxBody)
   ) =>
   Set.Set ModelUTxOId ->
@@ -1212,7 +1212,7 @@ class
     )
   default elaborateTx ::
     ( DSIGN.Signable (C.DSIGN (EraCrypto era)) (Hash.Hash (C.HASH (EraCrypto era)) Shelley.EraIndependentTxBody),
-      ShelleyEraTxBody era
+      ShelleyMAEraTxBody era
     ) =>
     proxy era ->
     Globals ->

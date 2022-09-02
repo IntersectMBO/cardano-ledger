@@ -30,7 +30,6 @@ import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Address (Addr (..), bootstrapKeyHash, getRwdCred)
 import Cardano.Ledger.Alonzo.Era (AlonzoUTXOW)
 import Cardano.Ledger.Alonzo.PParams (getLanguageView)
-import Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo (scriptsNeeded)
 import Cardano.Ledger.Alonzo.Rules.Utxo
   ( AlonzoUTXO,
     AlonzoUtxoEvent,
@@ -55,7 +54,7 @@ import Cardano.Ledger.Alonzo.TxWits
     unRedeemers,
     unTxDats,
   )
-import Cardano.Ledger.Alonzo.UTxO (getInputDataHashesTxBody)
+import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..), getInputDataHashesTxBody)
 import Cardano.Ledger.BaseTypes
   ( ProtVer,
     ShelleyBase,
@@ -93,7 +92,7 @@ import Cardano.Ledger.Shelley.TxBody
     PoolParams (..),
     unWdrl,
   )
-import Cardano.Ledger.Shelley.UTxO (UTxO (..), txinLookup)
+import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), ShelleyScriptsNeeded (..), UTxO (..), txinLookup)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (domain, eval, (⊆), (➖))
 import Control.State.Transition.Extended
@@ -262,19 +261,21 @@ missingRequiredDatums scriptWits utxo tx = do
 {-  dom (txrdmrs tx) = { rdptr txb sp | (sp, h) ∈ scriptsNeeded utxo tx,
                            h ↦ s ∈ txscripts txw, s ∈ Scriptph2}     -}
 hasExactSetOfRedeemers ::
+  forall era.
   ( AlonzoEraTx era,
     ExtendedUTxO era,
     Script era ~ AlonzoScript era
   ) =>
   UTxO era ->
   Tx era ->
-  TxBody era ->
+  AlonzoScriptsNeeded era ->
   Test (AlonzoUtxowPredFailure era)
-hasExactSetOfRedeemers utxo tx txbody = do
-  let redeemersNeeded =
+hasExactSetOfRedeemers utxo tx (AlonzoScriptsNeeded scriptsNeeded) = do
+  let txBody = tx ^. bodyTxL
+      redeemersNeeded =
         [ (rp, (sp, sh))
-          | (sp, sh) <- Alonzo.scriptsNeeded utxo tx,
-            SJust rp <- [rdptr txbody sp],
+          | (sp, sh) <- scriptsNeeded,
+            SJust rp <- [rdptr @era txBody sp],
             Just script <- [Map.lookup sh (txscripts utxo tx)],
             (not . isNativeScript) script
         ]
@@ -311,18 +312,16 @@ ppViewHashesMatch ::
     HasField "_costmdls" (PParams era) CostModels
   ) =>
   Tx era ->
-  TxBody era ->
   PParams era ->
   UTxO era ->
   Set (ScriptHash (EraCrypto era)) ->
   Test (AlonzoUtxowPredFailure era)
-ppViewHashesMatch tx txBody pp utxo sNeeded = do
-  -- FIXME: No need to supply txBody as a separate argument: txBody = tx ^. bodyTxL
+ppViewHashesMatch tx pp utxo sNeeded = do
   let langs = languages @era tx utxo sNeeded
       langViews = Set.map (getLanguageView pp) langs
       txWits = tx ^. witsTxL
       computedPPhash = hashScriptIntegrity langViews (txWits ^. rdmrsTxWitsL) (txWits ^. datsTxWitsL)
-      bodyPPhash = txBody ^. scriptIntegrityHashTxBodyL
+      bodyPPhash = tx ^. bodyTxL . scriptIntegrityHashTxBodyL
   failureUnless
     (bodyPPhash == computedPPhash)
     (PPViewHashesDontMatch bodyPPhash computedPPhash)
@@ -337,6 +336,8 @@ alonzoStyleWitness ::
   forall era.
   ( AlonzoEraTx era,
     ExtendedUTxO era,
+    EraUTxO era,
+    ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     Script era ~ AlonzoScript era,
     HasField "_costmdls" (PParams era) CostModels,
     HasField "_protocolVersion" (PParams era) ProtVer,
@@ -364,9 +365,11 @@ alonzoStyleWitness = do
   runTestOnSignal $ Shelley.validateFailedScripts tx
 
   {-  { h | (_,h) ∈ scriptsNeeded utxo tx} = dom(txscripts txw)          -}
-  let sNeeded = Set.fromList (map snd (Alonzo.scriptsNeeded utxo tx))
-      sReceived = Map.keysSet (tx ^. witsTxL . scriptTxWitsL)
-  runTest $ Shelley.validateMissingScripts pp sNeeded sReceived
+  let scriptsNeeded = getScriptsNeeded utxo txBody
+      scriptsHashesNeeded = getScriptsHashesNeeded scriptsNeeded
+      shelleyScriptsNeeded = ShelleyScriptsNeeded scriptsHashesNeeded
+      scriptsReceived = Map.keysSet (tx ^. witsTxL . scriptTxWitsL)
+  runTest $ Shelley.validateMissingScripts pp shelleyScriptsNeeded scriptsReceived
 
   {- inputHashes := { h | (_ → (a,_,h)) ∈ txins tx ◁ utxo, isTwoPhaseScriptAddress tx a} -}
   {-  inputHashes ⊆ dom(txdats txw)  -}
@@ -378,7 +381,7 @@ alonzoStyleWitness = do
 
   {-  dom (txrdmrs tx) = { rdptr txb sp | (sp, h) ∈ scriptsNeeded utxo tx,
                            h ↦ s ∈ txscripts txw, s ∈ Scriptph2}     -}
-  runTest $ hasExactSetOfRedeemers utxo tx txBody
+  runTest $ hasExactSetOfRedeemers utxo tx scriptsNeeded
 
   -- check VKey witnesses
   {-  ∀ (vk ↦ σ) ∈ (txwitsVKey txw), V_vk⟦ txBodyHash ⟧_σ                -}
@@ -411,7 +414,7 @@ alonzoStyleWitness = do
   -- which appears in the spec, seems broken since costmdls is a projection of PPrams, not Tx
 
   {-  scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw)  -}
-  runTest $ ppViewHashesMatch tx txBody pp utxo sNeeded
+  runTest $ ppViewHashesMatch tx pp utxo scriptsHashesNeeded
 
   trans @(EraRule "UTXO" era) $
     TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)
@@ -502,6 +505,8 @@ instance
   ( AlonzoEraTx era,
     EraTxAuxData era,
     ExtendedUTxO era,
+    EraUTxO era,
+    ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody),
     Script era ~ AlonzoScript era,
     HasField "_costmdls" (PParams era) CostModels,

@@ -14,7 +14,6 @@ import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Data (binaryDataToData, hashData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParams, AlonzoPParamsHKD (..))
-import Cardano.Ledger.Alonzo.PlutusScriptApi (scriptsNeededFromBody)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), collateral')
@@ -56,7 +55,7 @@ import Cardano.Ledger.Shelley.TxBody
     ShelleyEraTxBody (..),
     ShelleyTxOut (..),
   )
-import Cardano.Ledger.Shelley.UTxO (UTxO (..), coinBalance, scriptsNeeded, totalDeposits)
+import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), UTxO (..), coinBalance, totalDeposits)
 import Cardano.Ledger.Slot (EpochNo)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (inject, (<+>), (<->)))
@@ -77,11 +76,10 @@ import GHC.Records (HasField (getField))
 import Lens.Micro
 import Numeric.Natural
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
-import Test.Cardano.Ledger.Generic.Fields (TxField (..), TxOutField (..), initialTx)
+import Test.Cardano.Ledger.Generic.Fields (TxOutField (..))
 import Test.Cardano.Ledger.Generic.ModelState (MUtxo, Model, ModelNewEpochState (..))
 import Test.Cardano.Ledger.Generic.Proof (Proof (..), Reflect (..))
 import Test.Cardano.Ledger.Generic.Scriptic (Scriptic (..))
-import Test.Cardano.Ledger.Generic.Updaters (updateTx)
 import Test.Cardano.Ledger.Shelley.Rewards (RewardUpdateOld, createRUpdOld_)
 import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
 
@@ -206,31 +204,41 @@ keyPoolDeposits proof pp = case proof of
 -- | Compute the set of ScriptHashes for which there should be ScriptWitnesses. In Babbage
 --  Era and later, where inline Scripts are allowed, they should not appear in this set.
 scriptWitsNeeded' :: Proof era -> MUtxo era -> TxBody era -> Set (ScriptHash (EraCrypto era))
-scriptWitsNeeded' (Conway _) utxo txbody = regularScripts `Set.difference` inlineScripts
+scriptWitsNeeded' (Conway _) utxo txBody = regularScripts `Set.difference` inlineScripts
   where
     theUtxo = UTxO utxo
-    inputs = spendInputs' txbody `Set.union` referenceInputs' txbody
+    inputs = spendInputs' txBody `Set.union` referenceInputs' txBody
     inlineScripts = keysSet $ refScripts inputs theUtxo
-    regularScripts = Set.fromList (map snd (scriptsNeededFromBody theUtxo txbody))
-scriptWitsNeeded' (Babbage _) utxo txbody = regularScripts `Set.difference` inlineScripts
+    regularScripts = getScriptsHashesNeeded (getScriptsNeeded theUtxo txBody)
+scriptWitsNeeded' (Babbage _) utxo txBody = regularScripts `Set.difference` inlineScripts
   where
     theUtxo = UTxO utxo
-    inputs = spendInputs' txbody `Set.union` referenceInputs' txbody
+    inputs = spendInputs' txBody `Set.union` referenceInputs' txBody
     inlineScripts = keysSet $ refScripts inputs theUtxo
-    regularScripts = Set.fromList (map snd (scriptsNeededFromBody theUtxo txbody))
-scriptWitsNeeded' (Alonzo _) utxo txbody = Set.fromList (map snd (scriptsNeededFromBody (UTxO utxo) txbody))
-scriptWitsNeeded' p@(Mary _) utxo txbody = scriptsNeeded (UTxO utxo) (updateTx p (initialTx p) (Body txbody))
-scriptWitsNeeded' p@(Allegra _) utxo txbody = scriptsNeeded (UTxO utxo) (updateTx p (initialTx p) (Body txbody))
-scriptWitsNeeded' p@(Shelley _) utxo txbody = scriptsNeeded (UTxO utxo) (updateTx p (initialTx p) (Body txbody))
+    regularScripts = getScriptsHashesNeeded (getScriptsNeeded theUtxo txBody)
+scriptWitsNeeded' (Alonzo _) utxo txBody =
+  getScriptsHashesNeeded (getScriptsNeeded (UTxO utxo) txBody)
+scriptWitsNeeded' (Mary _) utxo txBody =
+  getScriptsHashesNeeded (getScriptsNeeded (UTxO utxo) txBody)
+scriptWitsNeeded' (Allegra _) utxo txBody =
+  getScriptsHashesNeeded (getScriptsNeeded (UTxO utxo) txBody)
+scriptWitsNeeded' (Shelley _) utxo txBody =
+  getScriptsHashesNeeded (getScriptsNeeded (UTxO utxo) txBody)
 {-# NOINLINE scriptWitsNeeded' #-}
 
 scriptsNeeded' :: Proof era -> MUtxo era -> TxBody era -> Set (ScriptHash (EraCrypto era))
-scriptsNeeded' (Conway _) utxo txbody = Set.fromList (map snd (scriptsNeededFromBody (UTxO utxo) txbody))
-scriptsNeeded' (Babbage _) utxo txbody = Set.fromList (map snd (scriptsNeededFromBody (UTxO utxo) txbody))
-scriptsNeeded' (Alonzo _) utxo txbody = Set.fromList (map snd (scriptsNeededFromBody (UTxO utxo) txbody))
-scriptsNeeded' p@(Mary _) utxo txbody = scriptsNeeded (UTxO utxo) (updateTx p (initialTx p) (Body txbody))
-scriptsNeeded' p@(Allegra _) utxo txbody = scriptsNeeded (UTxO utxo) (updateTx p (initialTx p) (Body txbody))
-scriptsNeeded' p@(Shelley _) utxo txbody = scriptsNeeded (UTxO utxo) (updateTx p (initialTx p) (Body txbody))
+scriptsNeeded' (Conway _) utxo txBody =
+  getScriptsHashesNeeded (getScriptsNeeded (UTxO utxo) txBody)
+scriptsNeeded' (Babbage _) utxo txBody =
+  getScriptsHashesNeeded (getScriptsNeeded (UTxO utxo) txBody)
+scriptsNeeded' (Alonzo _) utxo txBody =
+  getScriptsHashesNeeded (getScriptsNeeded (UTxO utxo) txBody)
+scriptsNeeded' (Mary _) utxo txBody =
+  getScriptsHashesNeeded (getScriptsNeeded (UTxO utxo) txBody)
+scriptsNeeded' (Allegra _) utxo txBody =
+  getScriptsHashesNeeded (getScriptsNeeded (UTxO utxo) txBody)
+scriptsNeeded' (Shelley _) utxo txBody =
+  getScriptsHashesNeeded (getScriptsNeeded (UTxO utxo) txBody)
 {-# NOINLINE scriptsNeeded' #-}
 
 txInBalance ::

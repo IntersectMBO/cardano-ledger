@@ -307,9 +307,6 @@ instance CC.Crypto c => EraTxBody (ShelleyEra c) where
       (\txBody fee -> txBody {_txfee = fee})
   {-# INLINEABLE feeTxBodyL #-}
 
-  -- TODO: fix this wart. Shelley does not know what minting is and this lens should move to Mary
-  mintedTxBodyF = to (const Set.empty)
-
   auxDataHashTxBodyL =
     lens
       (\(TxBodyConstr (Memo m _)) -> _mdHashX m)

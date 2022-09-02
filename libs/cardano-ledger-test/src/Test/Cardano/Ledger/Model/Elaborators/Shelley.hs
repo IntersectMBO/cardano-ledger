@@ -14,6 +14,7 @@ import Cardano.Crypto.Util (SignableRepresentation)
 import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.BaseTypes (Globals (..), activeSlotVal, epochInfoPure)
 import Cardano.Ledger.Coin (Coin (..))
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (DSIGN, KES)
 import Cardano.Ledger.Era (EraCrypto)
 import Cardano.Ledger.Keys (GenDelegPair, KeyHash, KeyRole (..))
@@ -24,9 +25,11 @@ import Cardano.Ledger.Shelley.Genesis
   ( ShelleyGenesis (..),
     emptyGenesisStaking,
   )
+import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
 import qualified Cardano.Ledger.Shelley.PParams as Shelley
 import Cardano.Ledger.Shelley.Rules
   ( ShelleyLedgerPredFailure (..),
+    ledgerIx,
     ShelleyUtxoPredFailure (..),
     ShelleyUtxowPredFailure (..),
   )
@@ -36,29 +39,26 @@ import Cardano.Ledger.Shelley.TxWits as Shelley
 import Cardano.Protocol.TPraos.API (PraosCrypto)
 import Cardano.Slotting.EpochInfo.API (epochInfoSize)
 import Cardano.Slotting.Slot (EpochNo (..))
-import qualified Control.Monad.Trans.State as State hiding (state)
+import qualified Control.Monad.Except as Except
+import qualified Control.Monad.State.Class as State
+import qualified Control.Monad.Trans.State as State hiding (get, gets, state)
 import Data.Functor.Identity (Identity (..))
 import Data.Group (Group (..))
 import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
+import Data.Proxy
 import Data.Time.Clock (secondsToNominalDiffTime)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.Void (absurd)
 import qualified GHC.Records as GHC
+import Test.Cardano.Ledger.Model.API
+  ( ModelBlock (..),
+  )
 import Test.Cardano.Ledger.Model.BaseTypes
   ( ModelValue (..),
   )
 import Test.Cardano.Ledger.Model.Elaborators
-  ( ApplyBlockTransitionError (..),
-    ElaborateEraModel (..),
-    EraFeatureSet,
-    ExpectedValueTypeC (..),
-    TxBodyArguments (..),
-    TxWitnessArguments (..),
-    lookupModelValue,
-    noScriptAction,
-  )
 import Test.Cardano.Ledger.Model.FeatureSet
   ( FeatureSet (..),
     FeatureSupport (..),
@@ -122,6 +122,44 @@ instance
 
   makeTx _ realTxBody (TxWitnessArguments wits (NoScriptSupport ()) (NoPlutusSupport ()) (NoPlutusSupport ())) =
     ShelleyTx realTxBody (mempty {Shelley.addrWits = wits}) SNothing
+  elaborateBlock globals =
+    State.runState . Except.runExceptT . \case
+      mblock@(ModelBlock mslot mtxSeq) -> do
+        currentEpoch <- use $ _2 . eesCurrentEpoch
+        let slot = runIdentity (epochInfoFirst ei currentEpoch) + mslot
+            ei = epochInfoPure globals
+            ttl = succ slot
+
+        unless (currentEpoch == runIdentity (epochInfoEpoch ei slot)) $ error $ "model slot out of range: " <> show mslot
+        _2 . eesCurrentSlot .= slot
+        -- tick the model
+        lift $ zoom _1 $ State.state $ \nes0 -> ((), applyTick globals nes0 slot)
+        txSeq ::
+          [Core.Tx era] <-
+          for mtxSeq $ \tx -> Except.ExceptT $ State.state $ elaborateTx (Proxy :: Proxy era) globals ttl tx
+
+        mempoolEnv <- (\(nes0, _) -> mkMempoolEnv nes0 slot) <$> get
+
+        -- apply the transactions.
+
+        ifor_ (zip txSeq mtxSeq) $ \txIx (tx, mtx) -> do
+          (nes0, ems0) <- get
+          (mps', _) <- liftApplyTxError (ElaborateApplyTxError tx mtx nes0 ems0) $ applyTx globals mempoolEnv {ledgerIx = toEnum txIx} (view mempoolState nes0) tx
+
+          let nes1 = set mempoolState mps' nes0
+              adaSupply = totalAdaES (LedgerState.nesEs nes1)
+          unless (adaSupply == Coin (toInteger $ maxLovelaceSupply globals)) $
+            _2 . eesStats
+              <>= mempty
+                { _eeStats_adaConservedErrors = [(globals, mempoolEnv, (view mempoolState nes0), tx)]
+                }
+          put (nes1, ems0)
+
+        _2 . eesModel %= execModelM (applyModelBlock mblock) globals
+
+        compareModelLedger (cmsError mblock)
+
+        pure ()
 
 fromShelleyGlobals ::
   Globals ->

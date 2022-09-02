@@ -107,7 +107,13 @@ import Cardano.Ledger.Shelley.TxBody
     getRwdCred,
     unWdrl,
   )
-import Cardano.Ledger.Shelley.UTxO (UTxO, scriptsNeeded, txinLookup, verifyWitVKey)
+import Cardano.Ledger.Shelley.UTxO
+  ( EraUTxO (..),
+    ShelleyScriptsNeeded (..),
+    UTxO,
+    txinLookup,
+    verifyWitVKey,
+  )
 import Control.Monad (when)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (∩), (◁))
@@ -287,7 +293,9 @@ initialLedgerStateUTXOW = do
 transitionRulesUTXOW ::
   forall era utxow.
   ( EraTx era,
+    EraUTxO era,
     ShelleyEraTxBody era,
+    ScriptsNeeded era ~ ShelleyScriptsNeeded era,
     BaseM (utxow era) ~ ShelleyBase,
     Embed (EraRule "UTXO" era) (utxow era),
     Environment (EraRule "UTXO" era) ~ UtxoEnv era,
@@ -316,7 +324,9 @@ transitionRulesUTXOW = do
   runTestOnSignal $ validateFailedScripts tx
 
   {-  { s | (_,s) ∈ scriptsNeeded utxo tx} = dom(txscripts txw)          -}
-  runTest $ validateMissingScripts pp (scriptsNeeded utxo tx) (Map.keysSet (tx ^. witsTxL . scriptTxWitsL))
+  let scriptsNeeded = getScriptsNeeded utxo (tx ^. bodyTxL)
+      scriptsReceived = Map.keysSet (tx ^. witsTxL . scriptTxWitsL)
+  runTest $ validateMissingScripts pp scriptsNeeded scriptsReceived
 
   -- check VKey witnesses
   {-  ∀ (vk ↦ σ) ∈ (txwitsVKey txw), V_vk⟦ txbodyHash ⟧_σ                -}
@@ -352,8 +362,10 @@ instance
 
 instance
   ( EraTx era,
+    EraUTxO era,
     ShelleyEraTxBody era,
     Tx era ~ ShelleyTx era,
+    ScriptsNeeded era ~ ShelleyScriptsNeeded era,
     DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody),
     HasField "_protocolVersion" (PParams era) ProtVer,
     -- Allow UTXOW to call UTXO
@@ -397,10 +409,10 @@ validateMissingScripts ::
   ( HasField "_protocolVersion" (PParams era) ProtVer
   ) =>
   PParams era ->
-  Set (ScriptHash (EraCrypto era)) ->
+  ShelleyScriptsNeeded era ->
   Set (ScriptHash (EraCrypto era)) ->
   Test (ShelleyUtxowPredFailure era)
-validateMissingScripts pp sNeeded sReceived =
+validateMissingScripts pp (ShelleyScriptsNeeded sNeeded) sReceived =
   if HardForks.missingScriptsSymmetricDifference pp
     then
       sequenceA_

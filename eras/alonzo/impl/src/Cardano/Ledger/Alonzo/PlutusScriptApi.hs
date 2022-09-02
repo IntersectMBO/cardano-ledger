@@ -38,26 +38,17 @@ import Cardano.Ledger.Alonzo.TxInfo
     valContext,
   )
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), AlonzoTxWits, unTxDats)
+import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..))
 import Cardano.Ledger.Core hiding (TranslationError)
-import Cardano.Ledger.Credential (Credential (ScriptHashObj))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Mary.Value (PolicyID (..))
-import Cardano.Ledger.Shelley.Delegation.Certificates (DCert (..))
-import Cardano.Ledger.Shelley.TxBody
-  ( DelegCert (..),
-    Delegation (..),
-    ShelleyEraTxBody (..),
-    Wdrl (..),
-    getRwdCred,
-  )
-import Cardano.Ledger.Shelley.UTxO (UTxO (..), getScriptHash, scriptCred)
+import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), UTxO (..))
+import Cardano.Ledger.ShelleyMA.TxBody (ShelleyMAEraTxBody (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Data.ByteString.Short (ShortByteString)
 import Data.Coders
-import Data.Foldable (foldl')
 import Data.List (intercalate)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
@@ -68,7 +59,6 @@ import Debug.Trace (traceEvent)
 import GHC.Generics
 import GHC.Records (HasField (..))
 import Lens.Micro
-import Lens.Micro.Extras (view)
 import NoThunks.Class (NoThunks)
 
 -- ===============================================================
@@ -147,8 +137,10 @@ knownToNotBe1Phase scriptsAvailable (sp, sh) = do
 collectTwoPhaseScriptInputs ::
   forall era.
   ( EraTx era,
-    ShelleyEraTxBody era,
+    ShelleyMAEraTxBody era,
     AlonzoEraTxWits era,
+    EraUTxO era,
+    ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     ExtendedUTxO era,
     Script era ~ AlonzoScript era,
     HasField "_costmdls" (PParams era) CostModels
@@ -174,8 +166,9 @@ collectTwoPhaseScriptInputs ei sysS pp tx utxo =
   where
     scriptsAvailable = txscripts utxo tx
     txinfo lang = txInfo pp lang ei sysS utxo tx
+    AlonzoScriptsNeeded scriptsNeeded' = getScriptsNeeded utxo (tx ^. bodyTxL)
     neededAndConfirmedToBePlutus =
-      mapMaybe (knownToNotBe1Phase scriptsAvailable) $ scriptsNeeded utxo tx
+      mapMaybe (knownToNotBe1Phase scriptsAvailable) scriptsNeeded'
     redeemer (sp, lang, _) =
       case indexedRdmrs tx sp of
         Just (d, eu) -> Right (lang, sp, d, eu)
@@ -241,79 +234,23 @@ evalScripts pv tx ((pscript, lang, ds, units, cost) : rest) =
 -- THE SPEC CALLS FOR A SET, BUT THAT NEEDS A BUNCH OF ORD INSTANCES (DCert)
 -- See additional comments about 'scriptsNeededFromBody' below.
 scriptsNeeded ::
-  forall era.
-  (EraTx era, ShelleyEraTxBody era) =>
+  ( EraTx era,
+    EraUTxO era,
+    ScriptsNeeded era ~ [(ScriptPurpose (EraCrypto era), ScriptHash (EraCrypto era))]
+  ) =>
   UTxO era ->
   Tx era ->
   [(ScriptPurpose (EraCrypto era), ScriptHash (EraCrypto era))]
 scriptsNeeded utxo tx = scriptsNeededFromBody utxo (tx ^. bodyTxL)
+{-# DEPRECATED scriptsNeeded "In favor of `getScritpsNeeded`" #-}
 
--- We only find certificate witnesses in Delegating and Deregistration DCerts
--- that have ScriptHashObj credentials.
-addOnlyCwitness ::
-  [(ScriptPurpose c, ScriptHash c)] ->
-  DCert c ->
-  [(ScriptPurpose c, ScriptHash c)]
-addOnlyCwitness !ans (DCertDeleg c@(DeRegKey (ScriptHashObj hk))) =
-  (Certifying $ DCertDeleg c, hk) : ans
-addOnlyCwitness !ans (DCertDeleg c@(Delegate (Delegation (ScriptHashObj hk) _dpool))) =
-  (Certifying $ DCertDeleg c, hk) : ans
-addOnlyCwitness !ans _ = ans
-
--- |
--- Uses of inputs in ‘txscripts’ and ‘neededScripts’
--- There are currently 3 sets of inputs (spending, collateral, reference). A particular TxInput
--- can appear in more than one of the sets. Even in all three at the same, but that may not be
--- a really useful case. Inputs are where you find scripts with the 'Spending' purpose.
---
--- 1) Collateral inputs are only spent if phase two fails. Their corresponding TxOut can only have
---    Key (not Script) Pay credentials, so ‘neededScripts’ does not look there.
--- 2) Reference inputs are not spent in the current Tx, unless that same input also appears in one
---    of the other sets. If that is not the case, their credentials are never needed, so anyone can
---    access the inline datums and scripts in their corresponding TxOut, without needing any
---    authorizing credentials. So ‘neededScripts’ does not look there.
--- 3) Spending inputs are always spent. So their Pay credentials are always needed.
---
--- Collect information (purpose and ScriptHash) about all the Credentials that refer to scripts
--- that will be needed to run in a TxBody in the Utxow rule. Note there may be credentials that
--- cannot be run, so are not collected. In Babbage, reference inputs, fit that description.
--- Purposes include
--- 1) Spending (payment script credentials, but NOT staking scripts) in the Addr of a TxOut, pointed
---    to by some input that needs authorization. Be sure (getField @"inputs" txb) gets all such inputs.
---    In some Eras there may be multiple sets of inputs, which ones should be included? Currently that
---    is only the spending inputs. Because collateral inputs can only have key-locked credentials,
---    and reference inputs are never authorized. That might not always be the case.
--- 2) Rewarding (Withdrawals),
--- 3) Minting (minted field), and
--- 4) Certifying (Delegating) scripts.
---
--- 'scriptsNeeded' is an aggregation of the needed Credentials referring to Scripts used in Utxow rule.
--- The flip side of 'scriptsNeeded' (which collects script hashes) is 'txscripts' which finds the
--- actual scripts. We maintain an invariant that every script credential refers to some actual script.
--- This is tested in the test function 'validateMissingScripts' in the Utxow rule.
 scriptsNeededFromBody ::
   forall era.
-  (ShelleyEraTxBody era) =>
+  ( EraUTxO era,
+    ScriptsNeeded era ~ [(ScriptPurpose (EraCrypto era), ScriptHash (EraCrypto era))]
+  ) =>
   UTxO era ->
   TxBody era ->
   [(ScriptPurpose (EraCrypto era), ScriptHash (EraCrypto era))]
-scriptsNeededFromBody (UTxO u) txBody = spend ++ reward ++ cert ++ minted
-  where
-    collect :: TxIn (EraCrypto era) -> Maybe (ScriptPurpose (EraCrypto era), ScriptHash (EraCrypto era))
-    collect !i = do
-      addr <- view addrTxOutL <$> Map.lookup i u
-      hash <- getScriptHash addr
-      return (Spending i, hash)
-
-    !spend = mapMaybe collect (Set.toList $ txBody ^. inputsTxBodyL)
-
-    !reward = mapMaybe fromRwd (Map.keys withdrawals)
-      where
-        withdrawals = unWdrl $ txBody ^. wdrlsTxBodyL
-        fromRwd accnt = do
-          hash <- scriptCred $ getRwdCred accnt
-          return (Rewarding accnt, hash)
-
-    !cert = foldl' addOnlyCwitness [] (txBody ^. certsTxBodyL)
-
-    !minted = map (\hash -> (Minting (PolicyID hash), hash)) $ Set.toList $ txBody ^. mintedTxBodyF
+scriptsNeededFromBody = getScriptsNeeded
+{-# DEPRECATED scriptsNeededFromBody "In favor of `getScritpsNeeded`" #-}

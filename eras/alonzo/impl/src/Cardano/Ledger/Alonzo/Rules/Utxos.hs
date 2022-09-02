@@ -41,7 +41,11 @@ import Cardano.Ledger.Alonzo.PlutusScriptApi
   )
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript, CostModels)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
-import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody (..), ShelleyEraTxBody (..))
+import Cardano.Ledger.Alonzo.TxBody
+  ( AlonzoEraTxBody (..),
+    ShelleyEraTxBody (..),
+    ShelleyMAEraTxBody (..),
+  )
 import Cardano.Ledger.Alonzo.TxInfo
   ( ExtendedUTxO (..),
     PlutusDebug,
@@ -49,6 +53,7 @@ import Cardano.Ledger.Alonzo.TxInfo
     ScriptResult (..),
   )
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits)
+import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded)
 import Cardano.Ledger.BaseTypes
   ( Globals,
     ProtVer,
@@ -75,7 +80,7 @@ import Cardano.Ledger.Shelley.Rules
     UtxoEnv (..),
     updateUTxOState,
   )
-import Cardano.Ledger.Shelley.UTxO (UTxO (..), coinBalance, totalDeposits)
+import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), UTxO (..), coinBalance, totalDeposits)
 import Cardano.Ledger.Val as Val (Val ((<->)))
 import Cardano.Slotting.EpochInfo.Extend (unsafeLinearExtendEpochInfo)
 import Cardano.Slotting.Slot (SlotNo)
@@ -105,6 +110,8 @@ instance
   forall era.
   ( AlonzoEraTx era,
     ExtendedUTxO era,
+    EraUTxO era,
+    ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     Script era ~ AlonzoScript era,
     Embed (EraRule "PPUP" era) (AlonzoUTXOS era),
     Environment (EraRule "PPUP" era) ~ PpupEnv era,
@@ -146,6 +153,8 @@ utxosTransition ::
   forall era.
   ( ExtendedUTxO era,
     AlonzoEraTx era,
+    EraUTxO era,
+    ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     Script era ~ AlonzoScript era,
     Environment (EraRule "PPUP" era) ~ PpupEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,
@@ -171,9 +180,11 @@ scriptsTransition ::
     Monad m,
     EraTx era,
     Script era ~ AlonzoScript era,
-    ShelleyEraTxBody era,
+    ShelleyMAEraTxBody era,
     AlonzoEraTxWits era,
     ExtendedUTxO era,
+    EraUTxO era,
+    ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     HasField "_costmdls" (PParams era) CostModels,
     HasField "_protocolVersion" (PParams era) ProtVer,
     BaseM sts ~ ReaderT Globals m,
@@ -206,6 +217,8 @@ scriptsValidateTransition ::
   forall era.
   ( AlonzoEraTx era,
     ExtendedUTxO era,
+    EraUTxO era,
+    ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     STS (AlonzoUTXOS era),
     Script era ~ AlonzoScript era,
     Environment (EraRule "PPUP" era) ~ PpupEnv era,
@@ -250,6 +263,8 @@ scriptsNotValidateTransition ::
   forall era.
   ( AlonzoEraTx era,
     ExtendedUTxO era,
+    EraUTxO era,
+    ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     STS (AlonzoUTXOS era),
     Script era ~ AlonzoScript era,
     HasField "_costmdls" (PParams era) CostModels,

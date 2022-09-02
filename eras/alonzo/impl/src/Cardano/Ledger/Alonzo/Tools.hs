@@ -12,7 +12,7 @@ where
 
 import Cardano.Ledger.Alonzo.Data (Data, Datum (..), binaryDataToData, getPlutusData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.PlutusScriptApi (knownToNotBe1Phase, scriptsNeeded)
+import Cardano.Ledger.Alonzo.PlutusScriptApi (knownToNotBe1Phase)
 import Cardano.Ledger.Alonzo.Scripts
   ( AlonzoScript (..),
     CostModel,
@@ -37,10 +37,11 @@ import Cardano.Ledger.Alonzo.TxWits
     unRedeemers,
     unTxDats,
   )
+import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..))
 import Cardano.Ledger.Core hiding (TranslationError)
 import Cardano.Ledger.Shelley.Tx (TxIn)
-import Cardano.Ledger.Shelley.UTxO (UTxO (..), unUTxO)
+import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), UTxO (..))
 import Cardano.Slotting.EpochInfo.API (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Data.Array (Array, bounds, (!))
@@ -100,6 +101,8 @@ evaluateTransactionExecutionUnits ::
   forall era.
   ( AlonzoEraTx era,
     ExtendedUTxO era,
+    EraUTxO era,
+    ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     HasField "_maxTxExUnits" (PParams era) ExUnits,
     HasField "_protocolVersion" (PParams era) ProtVer,
     Script era ~ AlonzoScript era
@@ -133,7 +136,7 @@ evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels = do
     ws = tx ^. witsTxL
     dats = unTxDats $ ws ^. datsTxWitsL
     scriptsAvailable = txscripts utxo tx
-    needed = scriptsNeeded utxo tx
+    AlonzoScriptsNeeded needed = getScriptsNeeded utxo txBody
     neededAndConfirmedToBePlutus = mapMaybe (knownToNotBe1Phase scriptsAvailable) needed
     languagesUsed = Set.fromList [lang | (_, lang, _) <- neededAndConfirmedToBePlutus]
 
