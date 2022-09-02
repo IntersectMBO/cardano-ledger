@@ -35,7 +35,7 @@ import Cardano.Ledger.Alonzo.Rules
   )
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript, CostModels)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO, ScriptResult (Fails, Passes))
-import Cardano.Ledger.Alonzo.TxWitness (TxWitness (..))
+import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..))
 import Cardano.Ledger.Babbage.Collateral (collAdaBalance, collOuts)
 import Cardano.Ledger.Babbage.Era (BabbageUTXOS)
 import Cardano.Ledger.Babbage.Tx
@@ -87,7 +87,7 @@ instance
     Tx era ~ AlonzoTx era,
     TxOut era ~ BabbageTxOut era,
     TxBody era ~ BabbageTxBody era,
-    Witnesses era ~ TxWitness era,
+    TxWits era ~ AlonzoTxWits era,
     Script era ~ AlonzoScript era,
     HasField "_keyDeposit" (PParams era) Coin,
     HasField "_poolDeposit" (PParams era) Coin,
@@ -128,7 +128,7 @@ utxosTransition ::
     Tx era ~ AlonzoTx era,
     TxOut era ~ BabbageTxOut era,
     TxBody era ~ BabbageTxBody era,
-    Witnesses era ~ TxWitness era,
+    TxWits era ~ AlonzoTxWits era,
     Script era ~ AlonzoScript era,
     HasField "_keyDeposit" (PParams era) Coin,
     HasField "_poolDeposit" (PParams era) Coin,
@@ -155,7 +155,7 @@ scriptsYes ::
     AlonzoEraTx era,
     Tx era ~ AlonzoTx era,
     Script era ~ AlonzoScript era,
-    Witnesses era ~ TxWitness era,
+    TxWits era ~ AlonzoTxWits era,
     STS (BabbageUTXOS era),
     Environment (EraRule "PPUP" era) ~ PpupEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,
@@ -219,7 +219,7 @@ scriptsNo ::
     Tx era ~ AlonzoTx era,
     TxOut era ~ BabbageTxOut era,
     TxBody era ~ BabbageTxBody era,
-    Witnesses era ~ TxWitness era,
+    TxWits era ~ AlonzoTxWits era,
     Script era ~ AlonzoScript era,
     HasField "_protocolVersion" (PParams era) ProtVer,
     HasField "_costmdls" (PParams era) CostModels

@@ -49,7 +49,7 @@ import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.CompactAddress (CompactAddr (..), decompactAddr)
 import Cardano.Ledger.Compactible (Compactible (..))
-import Cardano.Ledger.Core (Era, EraAuxiliaryData (..), EraPParams (..), EraRule, EraScript (..), EraTx (..), EraTxBody (..), EraTxOut (..), EraWitnesses (..), ScriptHash (..), Value)
+import Cardano.Ledger.Core (Era, EraAuxiliaryData (..), EraPParams (..), EraRule, EraScript (..), EraTx (..), EraTxBody (..), EraTxOut (..), EraTxWits (..), ScriptHash (..), Value)
 import Cardano.Ledger.Credential
   ( Credential (KeyHashObj, ScriptHashObj),
     GenesisCredential (..),
@@ -127,8 +127,6 @@ import Cardano.Ledger.Shelley.Rewards
 import Cardano.Ledger.Shelley.Scripts (MultiSig (..))
 import Cardano.Ledger.Shelley.Tx
   ( ShelleyTx (..),
-    WitnessSetHKD,
-    prettyWitnessSetParts,
   )
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
@@ -147,6 +145,10 @@ import Cardano.Ledger.Shelley.TxBody
     TxBodyRaw (..),
     Wdrl (..),
     WitVKey (..),
+  )
+import Cardano.Ledger.Shelley.TxWits
+  ( ShelleyTxWits,
+    prettyWitnessSetParts,
   )
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.Slot
@@ -174,7 +176,6 @@ import Cardano.Protocol.TPraos.OCert
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Cardano.Slotting.Time (SystemStart (SystemStart))
 import Codec.Binary.Bech32
-import Control.Monad.Identity (Identity)
 import Control.State.Transition (STS (State))
 import qualified Data.ByteString as Long (ByteString)
 import qualified Data.ByteString.Lazy as Lazy (ByteString, toStrict)
@@ -936,7 +937,7 @@ instance PrettyA (Metadata era) where
 ppTx ::
   ( PrettyA (TxBody era),
     PrettyA (AuxiliaryData era),
-    PrettyA (Witnesses era),
+    PrettyA (TxWits era),
     EraTx era
   ) =>
   Tx era ->
@@ -959,11 +960,11 @@ ppBootstrapWitness (BootstrapWitness key sig (ChainCode code) attr) =
       ("attributes", ppLong attr)
     ]
 
-ppWitnessSetHKD :: (Era era, PrettyA (Script era)) => WitnessSetHKD Identity era -> PDoc
+ppWitnessSetHKD :: (Era era, PrettyA (Script era)) => ShelleyTxWits era -> PDoc
 ppWitnessSetHKD x =
   let (addr, scr, boot) = prettyWitnessSetParts x
    in ppRecord
-        "WitnessSet"
+        "ShelleyTxWits"
         [ ("addrWits", ppSet ppWitVKey addr),
           ("scriptWits", ppMap ppScriptHash prettyA scr),
           ("bootWits", ppSet ppBootstrapWitness boot)
@@ -972,7 +973,7 @@ ppWitnessSetHKD x =
 instance
   ( PrettyA (TxBody era),
     PrettyA (AuxiliaryData era),
-    PrettyA (Witnesses era),
+    PrettyA (TxWits era),
     EraTx era,
     Tx era ~ ShelleyTx era
   ) =>
@@ -983,7 +984,7 @@ instance
 instance Crypto crypto => PrettyA (BootstrapWitness crypto) where
   prettyA = ppBootstrapWitness
 
-instance (Era era, PrettyA (Script era)) => PrettyA (WitnessSetHKD Identity era) where
+instance (Era era, PrettyA (Script era)) => PrettyA (ShelleyTxWits era) where
   prettyA = ppWitnessSetHKD
 
 -- ============================

@@ -302,7 +302,7 @@ instance
     ExactEra ShelleyEra era,
     TxOut era ~ ShelleyTxOut era,
     Show (Value era),
-    Show (Witnesses era),
+    Show (TxWits era),
     Show (PParamsUpdate era),
     TxBody era ~ ShelleyTxBody era,
     PParams era ~ ShelleyPParams era,

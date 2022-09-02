@@ -24,7 +24,7 @@ import Cardano.Ledger.Shelley.API
 import qualified Cardano.Ledger.Shelley.LedgerState as LS
   ( returnRedeemAddrsToReserves,
   )
-import Cardano.Ledger.Shelley.Tx (decodeWits)
+import Cardano.Ledger.Shelley.TxWits (decodeWits)
 import Control.Monad.Except (throwError)
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map
@@ -182,8 +182,8 @@ instance Crypto c => TranslateEra (AllegraEra c) EpochState where
           esNonMyopic = esNonMyopic es
         }
 
-instance Crypto c => TranslateEra (AllegraEra c) ShelleyWitnesses where
-  type TranslationError (AllegraEra c) ShelleyWitnesses = DecoderError
+instance Crypto c => TranslateEra (AllegraEra c) ShelleyTxWits where
+  type TranslationError (AllegraEra c) ShelleyTxWits = DecoderError
   translateEra _ctx ws =
     case decodeAnnotator "witnessSet" decodeWits (serialize ws) of
       Right new -> pure new

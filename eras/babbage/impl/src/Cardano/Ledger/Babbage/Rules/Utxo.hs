@@ -40,7 +40,11 @@ import Cardano.Ledger.Alonzo.Rules
 import Cardano.Ledger.Alonzo.Scripts (ExUnits)
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody (collateralInputsTxBodyL))
-import Cardano.Ledger.Alonzo.TxWitness (AlonzoEraWitnesses, TxWitness (..), nullRedeemers)
+import Cardano.Ledger.Alonzo.TxWits
+  ( AlonzoEraTxWits (..),
+    AlonzoTxWits (..),
+    nullRedeemers,
+  )
 import Cardano.Ledger.Babbage.Collateral (collAdaBalance)
 import Cardano.Ledger.Babbage.Era (BabbageUTXO)
 import Cardano.Ledger.Babbage.Rules.Utxos (BabbageUTXOS)
@@ -324,7 +328,7 @@ utxoTransition ::
   ( EraTx era,
     EraUTxO era,
     BabbageEraTxBody era,
-    AlonzoEraWitnesses era,
+    AlonzoEraTxWits era,
     Tx era ~ AlonzoTx era,
     TxBody era ~ BabbageTxBody era,
     TxOut era ~ BabbageTxOut era,
@@ -420,11 +424,11 @@ instance
   ( EraTx era,
     EraUTxO era,
     BabbageEraTxBody era,
-    AlonzoEraWitnesses era,
+    AlonzoEraTxWits era,
     Tx era ~ AlonzoTx era,
     TxOut era ~ BabbageTxOut era,
     TxBody era ~ BabbageTxBody era,
-    Witnesses era ~ TxWitness era,
+    TxWits era ~ AlonzoTxWits era,
     HasField "_maxCollateralInputs" (PParams era) Natural,
     HasField "_coinsPerUTxOByte" (PParams era) Coin,
     HasField "_collateralPercentage" (PParams era) Natural,

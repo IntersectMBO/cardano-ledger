@@ -316,7 +316,7 @@ transitionRulesUTXOW = do
   runTestOnSignal $ validateFailedScripts tx
 
   {-  { s | (_,s) ∈ scriptsNeeded utxo tx} = dom(txscripts txw)          -}
-  runTest $ validateMissingScripts pp (scriptsNeeded utxo tx) (Map.keysSet (tx ^. witsTxL . scriptWitsL))
+  runTest $ validateMissingScripts pp (scriptsNeeded utxo tx) (Map.keysSet (tx ^. witsTxL . scriptTxWitsL))
 
   -- check VKey witnesses
   {-  ∀ (vk ↦ σ) ∈ (txwitsVKey txw), V_vk⟦ txbodyHash ⟧_σ                -}
@@ -379,7 +379,7 @@ instance
 validateFailedScripts ::
   forall era. EraTx era => Tx era -> Test (ShelleyUtxowPredFailure era)
 validateFailedScripts tx = do
-  let phase1Map = getPhase1 (tx ^. witsTxL . scriptWitsL)
+  let phase1Map = getPhase1 (tx ^. witsTxL . scriptTxWitsL)
       failedScripts =
         Map.filterWithKey
           ( \hs (core, phase) ->
@@ -434,12 +434,12 @@ validateVerifiedWits tx =
       wvkKey
         <$> filter
           (not . verifyWitVKey txBodyHash)
-          (Set.toList $ tx ^. witsTxL . addrWitsL)
+          (Set.toList $ tx ^. witsTxL . addrTxWitsL)
     failedBootstrap =
       bwKey
         <$> filter
           (not . verifyBootstrapWit txBodyHash)
-          (Set.toList $ tx ^. witsTxL . bootAddrWitsL)
+          (Set.toList $ tx ^. witsTxL . bootAddrTxWitsL)
 
 {-
 validateNeededWitnesses ::

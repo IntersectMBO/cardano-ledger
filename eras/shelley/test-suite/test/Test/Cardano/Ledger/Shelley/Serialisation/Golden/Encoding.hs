@@ -115,7 +115,7 @@ import Cardano.Ledger.Shelley.PParams
   )
 import Cardano.Ledger.Shelley.Rewards ()
 import Cardano.Ledger.Shelley.Scripts (pattern RequireSignature)
-import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), ShelleyWitnesses, WitnessSetHKD (..))
+import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxBody
   ( MIRPot (..),
     MIRTarget (..),
@@ -144,6 +144,7 @@ import Cardano.Ledger.Shelley.TxBody
     pattern PoolParams,
     pattern RewardAcnt,
   )
+import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits, addrWits, scriptWits)
 import Cardano.Ledger.Shelley.UTxO (UTxO (UTxO), makeWitnessVKey)
 import Cardano.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxId, TxIn (..))
@@ -950,7 +951,7 @@ tests =
             "tx_min"
             ( ShelleyTx @(ShelleyEra C_Crypto)
                 txb
-                (mempty {addrWits = Set.singleton w} :: ShelleyWitnesses C)
+                (mempty {addrWits = Set.singleton w} :: ShelleyTxWits C)
                 SNothing
             )
             ( T (TkListLen 3)
@@ -975,7 +976,7 @@ tests =
           txbh = hashAnnotated txb
           w = makeWitnessVKey @C_Crypto txbh testKey1
           s = Map.singleton (hashScript @C testScript) (testScript @C_Crypto)
-          txwits :: ShelleyWitnesses C
+          txwits :: ShelleyTxWits C
           txwits = mempty {addrWits = Set.singleton w, scriptWits = s}
           md = (MD.Metadata @C) $ Map.singleton 17 (MD.I 42)
        in checkEncodingCBORAnnotated

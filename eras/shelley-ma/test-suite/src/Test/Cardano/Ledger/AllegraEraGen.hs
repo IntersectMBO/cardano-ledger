@@ -32,8 +32,9 @@ import Cardano.Ledger.Keys (KeyHash)
 import Cardano.Ledger.Pretty.Mary ()
 import Cardano.Ledger.Shelley.API (KeyRole (Witness))
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..), Update)
-import Cardano.Ledger.Shelley.Tx (pattern ShelleyTx, pattern ShelleyWitnesses)
+import Cardano.Ledger.Shelley.Tx (pattern ShelleyTx)
 import Cardano.Ledger.Shelley.TxBody (DCert, ShelleyTxOut (..), Wdrl)
+import Cardano.Ledger.Shelley.TxWits (pattern ShelleyTxWits)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
 import Cardano.Ledger.ShelleyMA.TxBody
   ( MATxBody (..),
@@ -90,7 +91,7 @@ instance (CryptoClass.Crypto c, Mock c) => EraGen (AllegraEra c) where
         MATxBody (existingins <> ins) (outs :|> out) cert wdrl fee vi upd ad forge
   genEraPParamsUpdate = genShelleyPParamsUpdate
   genEraPParams = genPParams
-  genEraWitnesses _scriptinfo setWitVKey mapScriptWit = ShelleyWitnesses setWitVKey mapScriptWit mempty
+  genEraTxWits _scriptinfo setWitVKey mapScriptWit = ShelleyTxWits setWitVKey mapScriptWit mempty
   constructTx = ShelleyTx
 
 genTxBody ::

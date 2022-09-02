@@ -15,7 +15,7 @@ module Cardano.Ledger.Allegra
     PParams,
     PParamsDelta,
     Tx,
-    Witnesses,
+    TxWits,
   )
 where
 
@@ -24,7 +24,7 @@ import Cardano.Ledger.Core (EraCrypto)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys (DSignable)
-import Cardano.Ledger.Shelley.API hiding (PParams, Tx, TxBody, TxOut, WitnessSet)
+import Cardano.Ledger.Shelley.API hiding (PParams, Tx, TxBody, TxOut)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsUpdate)
 import Cardano.Ledger.ShelleyMA
 import Cardano.Ledger.ShelleyMA.Rules ()
@@ -62,9 +62,9 @@ type Value era = Coin
 
 {-# DEPRECATED Value "Use `Coin` instead" #-}
 
-type Witnesses era = ShelleyWitnesses (EraCrypto era)
+type TxWits era = ShelleyTxWits (EraCrypto era)
 
-{-# DEPRECATED Witnesses "Use `Timelock` instead" #-}
+{-# DEPRECATED TxWits "Use `Timelock` instead" #-}
 
 type PParamsDelta era = ShelleyPParamsUpdate era
 

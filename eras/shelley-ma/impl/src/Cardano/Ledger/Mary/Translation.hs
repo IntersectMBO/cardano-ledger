@@ -21,7 +21,7 @@ import Cardano.Ledger.Era hiding (EraCrypto)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Shelley.API hiding (Metadata, TxBody)
-import Cardano.Ledger.Shelley.Tx (decodeWits)
+import Cardano.Ledger.Shelley.TxWits (decodeWits)
 import Cardano.Ledger.ShelleyMA.AuxiliaryData
   ( MAAuxiliaryData (..),
   )
@@ -155,8 +155,8 @@ instance Crypto c => TranslateEra (MaryEra c) UTxO where
   translateEra ctxt utxo =
     return $ UTxO (translateEra' ctxt <$> unUTxO utxo)
 
-instance Crypto c => TranslateEra (MaryEra c) ShelleyWitnesses where
-  type TranslationError (MaryEra c) ShelleyWitnesses = DecoderError
+instance Crypto c => TranslateEra (MaryEra c) ShelleyTxWits where
+  type TranslationError (MaryEra c) ShelleyTxWits = DecoderError
   translateEra _ctx ws =
     case decodeAnnotator "witnessSet" decodeWits (serialize ws) of
       Right new -> pure new

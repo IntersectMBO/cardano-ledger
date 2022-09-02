@@ -15,7 +15,7 @@ import Cardano.Ledger.Alonzo.Language (Language (PlutusV1))
 import Cardano.Ledger.Alonzo.Scripts (CostModels (..), ExUnits (ExUnits))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
-import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (RdmrPtr), Redeemers (..))
+import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (RdmrPtr), Redeemers (..))
 import Cardano.Ledger.BaseTypes (ProtVer (..), TxIx, mkTxIxPartial)
 import Cardano.Ledger.Coin (Coin (..), addDeltaCoin)
 import Cardano.Ledger.Core
@@ -130,7 +130,7 @@ applyTxSimple :: Proof era -> Int -> Model era -> TxField era -> Model era
 applyTxSimple proof count model field = case field of
   Body body1 -> applyTxBody proof count model body1
   BodyI fs -> List.foldl' (applyField proof count) model fs
-  Witnesses _ -> model
+  TxWits _ -> model
   WitnessesI _ -> model
   AuxData _ -> model
   Valid _ -> model
@@ -255,7 +255,7 @@ applyTxFail proof count nextTxIx model field = case field of
   BodyI fs -> updateInfo info model
     where
       info = List.foldl' (collInfo count nextTxIx model) emptyCollInfo fs
-  Witnesses _ -> model
+  TxWits _ -> model
   WitnessesI _ -> model
   AuxData _ -> model
   Valid _ -> model

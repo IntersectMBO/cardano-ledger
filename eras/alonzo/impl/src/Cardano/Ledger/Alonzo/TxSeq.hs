@@ -36,7 +36,7 @@ import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..), segwitTx)
-import Cardano.Ledger.Alonzo.TxWitness (TxWitness)
+import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits)
 import Cardano.Ledger.Core hiding (TxSeq, hashTxSeq)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
@@ -103,7 +103,7 @@ instance CC.Crypto c => EraSegWits (AlonzoEra c) where
 pattern AlonzoTxSeq ::
   forall era.
   ( EraTx era,
-    SafeToHash (TxWitness era)
+    SafeToHash (AlonzoTxWits era)
   ) =>
   StrictSeq (AlonzoTx era) ->
   AlonzoTxSeq era

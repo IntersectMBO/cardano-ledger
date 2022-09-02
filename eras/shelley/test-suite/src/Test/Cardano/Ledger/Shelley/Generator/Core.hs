@@ -103,10 +103,12 @@ import Cardano.Ledger.SafeHash (SafeHash, unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley.BlockChain (bBodySize)
 import Cardano.Ledger.Shelley.LedgerState (AccountState (..), KeyPairs)
 import Cardano.Ledger.Shelley.Tx
-  ( ShelleyWitnesses,
-    pattern TxIn,
+  ( pattern TxIn,
   )
 import qualified Cardano.Ledger.Shelley.Tx as Ledger
+import Cardano.Ledger.Shelley.TxWits
+  ( ShelleyTxWits,
+  )
 import Cardano.Ledger.Shelley.UTxO
   ( UTxO,
     pattern UTxO,
@@ -175,7 +177,7 @@ import qualified Test.QuickCheck as QC
 
 -- | For use in the Serialisation and Example Tests, which assume Shelley, Allegra, or Mary Eras.
 type PreAlonzo era =
-  ( Witnesses era ~ ShelleyWitnesses era,
+  ( TxWits era ~ ShelleyTxWits era,
     ToCBOR (AuxiliaryData era)
   )
 

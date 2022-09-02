@@ -13,19 +13,15 @@ module Cardano.Ledger.ShelleyMA.Tx
   )
 where
 
-import Cardano.Ledger.Core (EraTx (..), EraWitnesses (..), PhasedScript (..))
+import Cardano.Ledger.Core (EraTx (..), EraTxWits (..), PhasedScript (..))
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Tx
   ( ShelleyTx,
-    ShelleyWitnesses,
-    addrShelleyWitsL,
     auxDataShelleyTxL,
     bodyShelleyTxL,
-    bootAddrShelleyWitsL,
     mkBasicShelleyTx,
-    scriptShelleyWitsL,
     shelleyMinFeeTx,
     sizeShelleyTxF,
     witsShelleyTxL,
@@ -34,6 +30,7 @@ import Cardano.Ledger.ShelleyMA.AuxiliaryData ()
 import Cardano.Ledger.ShelleyMA.Era (MAClass, MaryOrAllegra (..), ShelleyMAEra)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock, evalTimelock)
 import Cardano.Ledger.ShelleyMA.TxBody (ShelleyMAEraTxBody (..))
+import Cardano.Ledger.ShelleyMA.TxWits ()
 import qualified Data.Set as Set (map)
 import Lens.Micro ((^.))
 
@@ -73,22 +70,5 @@ validateTimelock ::
   (EraTx era, ShelleyMAEraTxBody era) => Timelock era -> Tx era -> Bool
 validateTimelock timelock tx = evalTimelock vhks (tx ^. bodyTxL . vldtTxBodyL) timelock
   where
-    vhks = Set.map witVKeyHash (tx ^. witsTxL . addrWitsL)
+    vhks = Set.map witVKeyHash (tx ^. witsTxL . addrTxWitsL)
 {-# INLINEABLE validateTimelock #-}
-
-instance MAClass ma crypto => EraWitnesses (ShelleyMAEra ma crypto) where
-  {-# SPECIALIZE instance EraWitnesses (ShelleyMAEra 'Mary StandardCrypto) #-}
-  {-# SPECIALIZE instance EraWitnesses (ShelleyMAEra 'Allegra StandardCrypto) #-}
-
-  type Witnesses (ShelleyMAEra ma crypto) = ShelleyWitnesses (ShelleyMAEra ma crypto)
-
-  mkBasicWitnesses = mempty
-
-  addrWitsL = addrShelleyWitsL
-  {-# INLINE addrWitsL #-}
-
-  bootAddrWitsL = bootAddrShelleyWitsL
-  {-# INLINE bootAddrWitsL #-}
-
-  scriptWitsL = scriptShelleyWitsL
-  {-# INLINE scriptWitsL #-}

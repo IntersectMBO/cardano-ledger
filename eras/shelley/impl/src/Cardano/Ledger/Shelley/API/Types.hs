@@ -139,11 +139,9 @@ import Cardano.Ledger.Shelley.Tx as X
   ( ShelleyTx (..),
     ShelleyTxBody (..),
     ShelleyTxOut (..),
-    ShelleyWitnesses,
     Tx,
     TxBody,
     TxOut,
-    WitnessSet,
   )
 import Cardano.Ledger.Shelley.TxBody as X
   ( Delegation (..),
@@ -157,6 +155,9 @@ import Cardano.Ledger.Shelley.TxBody as X
     StakePoolRelay (..),
     Wdrl (..),
     WitVKey (..),
+  )
+import Cardano.Ledger.Shelley.TxWits as X
+  ( ShelleyTxWits,
   )
 import Cardano.Ledger.Shelley.UTxO as X
   ( UTxO (..),

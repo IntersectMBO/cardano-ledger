@@ -7,43 +7,43 @@ module Cardano.Ledger.Conway.TxWits
   )
 where
 
-import Cardano.Ledger.Alonzo.TxWitness
-  ( addrAlonzoWitsL,
-    bootAddrAlonzoWitsL,
-    datsAlonzoWitsL,
-    rdmrsAlonzoWitsL,
-    scriptAlonzoWitsL,
+import Cardano.Ledger.Alonzo.TxWits
+  ( addrAlonzoTxWitsL,
+    bootAddrAlonzoTxWitsL,
+    datsAlonzoTxWitsL,
+    rdmrsAlonzoTxWitsL,
+    scriptAlonzoTxWitsL,
   )
-import Cardano.Ledger.Alonzo.TxWitness as BabbageTxWitsReExport
-  ( AlonzoEraWitnesses (..),
-    TxWitness (..),
+import Cardano.Ledger.Alonzo.TxWits as BabbageTxWitsReExport
+  ( AlonzoEraTxWits (..),
+    AlonzoTxWits (..),
   )
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Scripts ()
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC
 
-instance CC.Crypto c => EraWitnesses (ConwayEra c) where
-  {-# SPECIALIZE instance EraWitnesses (ConwayEra CC.StandardCrypto) #-}
+instance CC.Crypto c => EraTxWits (ConwayEra c) where
+  {-# SPECIALIZE instance EraTxWits (ConwayEra CC.StandardCrypto) #-}
 
-  type Witnesses (ConwayEra c) = TxWitness (ConwayEra c)
+  type TxWits (ConwayEra c) = AlonzoTxWits (ConwayEra c)
 
-  mkBasicWitnesses = mempty
+  mkBasicTxWits = mempty
 
-  addrWitsL = addrAlonzoWitsL
-  {-# INLINE addrWitsL #-}
+  addrTxWitsL = addrAlonzoTxWitsL
+  {-# INLINE addrTxWitsL #-}
 
-  bootAddrWitsL = bootAddrAlonzoWitsL
-  {-# INLINE bootAddrWitsL #-}
+  bootAddrTxWitsL = bootAddrAlonzoTxWitsL
+  {-# INLINE bootAddrTxWitsL #-}
 
-  scriptWitsL = scriptAlonzoWitsL
-  {-# INLINE scriptWitsL #-}
+  scriptTxWitsL = scriptAlonzoTxWitsL
+  {-# INLINE scriptTxWitsL #-}
 
-instance CC.Crypto c => AlonzoEraWitnesses (ConwayEra c) where
-  {-# SPECIALIZE instance AlonzoEraWitnesses (ConwayEra CC.StandardCrypto) #-}
+instance CC.Crypto c => AlonzoEraTxWits (ConwayEra c) where
+  {-# SPECIALIZE instance AlonzoEraTxWits (ConwayEra CC.StandardCrypto) #-}
 
-  datsWitsL = datsAlonzoWitsL
-  {-# INLINE datsWitsL #-}
+  datsTxWitsL = datsAlonzoTxWitsL
+  {-# INLINE datsTxWitsL #-}
 
-  rdmrsWitsL = rdmrsAlonzoWitsL
-  {-# INLINE rdmrsWitsL #-}
+  rdmrsTxWitsL = rdmrsAlonzoTxWitsL
+  {-# INLINE rdmrsTxWitsL #-}

@@ -25,7 +25,7 @@ import Cardano.Ledger.Alonzo.Scripts
     ExUnits (..),
   )
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
-import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..))
+import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..))
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.BaseTypes
   ( BlocksMade (..),

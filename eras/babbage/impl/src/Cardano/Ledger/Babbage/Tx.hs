@@ -21,14 +21,8 @@ import Cardano.Ledger.Alonzo.TxSeq
   ( AlonzoTxSeq (AlonzoTxSeq, txSeqTxns),
     hashAlonzoTxSeq,
   )
-import Cardano.Ledger.Alonzo.TxWitness
-  ( AlonzoEraWitnesses (..),
-    TxWitness (..),
-    addrAlonzoWitsL,
-    bootAddrAlonzoWitsL,
-    datsAlonzoWitsL,
-    rdmrsAlonzoWitsL,
-    scriptAlonzoWitsL,
+import Cardano.Ledger.Alonzo.TxWits
+  ( AlonzoEraTxWits (..),
     unTxDats,
   )
 import Cardano.Ledger.Babbage.Era (BabbageEra)
@@ -41,6 +35,7 @@ import Cardano.Ledger.Babbage.TxBody
     Datum (..),
     dataHashTxOutL,
   )
+import Cardano.Ledger.Babbage.TxWits ()
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
@@ -84,31 +79,6 @@ instance CC.Crypto c => AlonzoEraTx (BabbageEra c) where
   isValidTxL = isValidAlonzoTxL
   {-# INLINE isValidTxL #-}
 
-instance CC.Crypto c => EraWitnesses (BabbageEra c) where
-  {-# SPECIALIZE instance EraWitnesses (BabbageEra CC.StandardCrypto) #-}
-
-  type Witnesses (BabbageEra c) = TxWitness (BabbageEra c)
-
-  mkBasicWitnesses = mempty
-
-  addrWitsL = addrAlonzoWitsL
-  {-# INLINE addrWitsL #-}
-
-  bootAddrWitsL = bootAddrAlonzoWitsL
-  {-# INLINE bootAddrWitsL #-}
-
-  scriptWitsL = scriptAlonzoWitsL
-  {-# INLINE scriptWitsL #-}
-
-instance CC.Crypto c => AlonzoEraWitnesses (BabbageEra c) where
-  {-# SPECIALIZE instance AlonzoEraWitnesses (BabbageEra CC.StandardCrypto) #-}
-
-  datsWitsL = datsAlonzoWitsL
-  {-# INLINE datsWitsL #-}
-
-  rdmrsWitsL = rdmrsAlonzoWitsL
-  {-# INLINE rdmrsWitsL #-}
-
 instance CC.Crypto c => EraSegWits (BabbageEra c) where
   type TxSeq (BabbageEra c) = AlonzoTxSeq (BabbageEra c)
   fromTxSeq = txSeqTxns
@@ -131,7 +101,7 @@ getDatumBabbage tx (UTxO m) sp = do
   txOut <- Map.lookup txIn m
   let txOutDataFromWits = do
         hash <- strictMaybeToMaybe (txOut ^. dataHashTxOutL)
-        Map.lookup hash (unTxDats (tx ^. witsTxL . datsWitsL))
+        Map.lookup hash (unTxDats (tx ^. witsTxL . datsTxWitsL))
   strictMaybeToMaybe (txOut ^. dataTxOutL) <|> txOutDataFromWits
 
 -- Figure 3 of the Specification
@@ -153,7 +123,7 @@ getDatumBabbage tx (UTxO m) sp = do
 -- Compute a Map of (ScriptHash -> Script) for all Scripts found in a AlonzoTx.
 -- Note we are interested in the actual scripts that might be run during the Utxow
 -- rule. There are two places to look:
--- 1) The Script part of the Witnesses
+-- 1) The Script part of the TxWits
 -- 2) The reference scripts found in the TxOuts, pointed to by the spending and reference inputs
 --    of the Tx.  Given such a TxOut, we look in the Pay credentials of the Addr of that TxOut.
 --      A. We only look in the Pay credential of the TxOut, because the Stake credential plays
@@ -178,7 +148,7 @@ babbageTxScripts utxo tx = ans
   where
     txBody = tx ^. bodyTxL
     ins = (txBody ^. referenceInputsTxBodyL) `Set.union` (txBody ^. inputsTxBodyL)
-    ans = refScripts ins utxo `Map.union` (tx ^. witsTxL . scriptWitsL)
+    ans = refScripts ins utxo `Map.union` (tx ^. witsTxL . scriptTxWitsL)
 
 -- | Collect all the reference scripts found in the TxOuts, pointed to by some input.
 refScripts ::

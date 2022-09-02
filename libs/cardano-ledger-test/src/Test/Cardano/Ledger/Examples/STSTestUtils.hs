@@ -54,7 +54,7 @@ import Cardano.Ledger.Alonzo.Tx
   ( AlonzoTx (..),
     IsValid (..),
   )
-import Cardano.Ledger.Alonzo.TxWitness (TxDats (..))
+import Cardano.Ledger.Alonzo.TxWits (TxDats (..))
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import qualified Cardano.Ledger.Babbage.PParams as Babbage (BabbagePParamsHKD (..))
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..))

@@ -90,7 +90,7 @@ import Cardano.Ledger.Shelley.Rewards
     StakeShare (..),
   )
 import qualified Cardano.Ledger.Shelley.Rules as STS
-import Cardano.Ledger.Shelley.Tx (WitnessSetHKD (..))
+import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..))
 import Cardano.Ledger.UnifiedMap (Trip (Triple), Triple, UMap (UnifiedMap), UnifiedMap)
 import Cardano.Protocol.TPraos.BHeader (BHeader, HashHeader)
 import qualified Cardano.Protocol.TPraos.BHeader as TP
@@ -735,10 +735,10 @@ instance
     EraScript era,
     Arbitrary (Core.Script era)
   ) =>
-  Arbitrary (ShelleyWitnesses era)
+  Arbitrary (ShelleyTxWits era)
   where
   arbitrary =
-    ShelleyWitnesses
+    ShelleyTxWits
       <$> arbitrary
       <*> (mscriptsToWits <$> arbitrary)
       <*> arbitrary
@@ -813,7 +813,7 @@ genTx ::
   ( Core.EraTx era,
     Arbitrary (Core.TxBody era),
     Arbitrary (Core.AuxiliaryData era),
-    Arbitrary (Core.Witnesses era)
+    Arbitrary (Core.TxWits era)
   ) =>
   Gen (ShelleyTx era)
 genTx =
@@ -873,12 +873,12 @@ genCoherentBlock = do
 
 instance
   ( Core.EraTx era,
-    ToCBOR (Core.Witnesses era),
+    ToCBOR (Core.TxWits era),
     Arbitrary (Core.TxBody era),
     Arbitrary (Core.Value era),
     Arbitrary (Core.AuxiliaryData era),
     Arbitrary (Core.Script era),
-    Arbitrary (Core.Witnesses era)
+    Arbitrary (Core.TxWits era)
   ) =>
   Arbitrary (ShelleyTx era)
   where

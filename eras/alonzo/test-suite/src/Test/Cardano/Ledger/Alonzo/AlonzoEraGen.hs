@@ -51,12 +51,12 @@ import Cardano.Ledger.Alonzo.TxBody
     inputs',
     utxoEntrySize,
   )
-import Cardano.Ledger.Alonzo.TxWitness
-  ( AlonzoEraWitnesses (..),
+import Cardano.Ledger.Alonzo.TxWits
+  ( AlonzoEraTxWits (..),
+    AlonzoTxWits (..),
     RdmrPtr (..),
     Redeemers (..),
     TxDats (..),
-    TxWitness (..),
   )
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
@@ -365,7 +365,7 @@ instance Mock c => EraGen (AlonzoEra c) where
   genEraTxBody = genAlonzoTxBody
   updateEraTxBody utxo pp witnesses txb coinx txin txout = new
     where
-      langs = langsUsed @(AlonzoEra c) (witnesses ^. scriptWitsL)
+      langs = langsUsed @(AlonzoEra c) (witnesses ^. scriptTxWitsL)
       langViews = Set.map (getLanguageView pp) langs
       new =
         txb
@@ -377,18 +377,18 @@ instance Mock c => EraGen (AlonzoEra c) where
             scriptIntegrityHash =
               hashScriptIntegrity
                 langViews
-                (witnesses ^. rdmrsWitsL)
-                (witnesses ^. datsWitsL)
+                (witnesses ^. rdmrsTxWitsL)
+                (witnesses ^. datsTxWitsL)
           }
 
   addInputs txb txin = txb {inputs = inputs txb <> txin}
 
   genEraPParamsUpdate = genAlonzoPParamsUpdate
   genEraPParams = genAlonzoPParams
-  genEraWitnesses (utxo, txbody, scriptinfo) setWitVKey mapScriptWit = new
+  genEraTxWits (utxo, txbody, scriptinfo) setWitVKey mapScriptWit = new
     where
       new =
-        TxWitness
+        AlonzoTxWits
           setWitVKey
           Set.empty
           mapScriptWit
@@ -553,7 +553,7 @@ someLeaf _proxy x =
             (RequireAnyOf . Seq.fromList) [RequireTimeStart slot, RequireTimeExpire slot]
         _ -> TimelockScript $ RequireSignature x
 
--- | given the "txscripts" field of the Witnesses, compute the set of languages used in a transaction
+-- | given the "txscripts" field of the TxWits, compute the set of languages used in a transaction
 langsUsed ::
   forall era.
   (Script era ~ AlonzoScript era, EraScript era) =>

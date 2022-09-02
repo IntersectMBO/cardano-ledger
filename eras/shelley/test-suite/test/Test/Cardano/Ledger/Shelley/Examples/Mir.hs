@@ -47,7 +47,7 @@ import Cardano.Ledger.Shelley.Rules
     ShelleyLedgersPredFailure (..),
     ShelleyUtxowPredFailure (..),
   )
-import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), WitnessSetHKD (..))
+import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
     MIRPot (..),
@@ -56,6 +56,7 @@ import Cardano.Ledger.Shelley.TxBody
     ShelleyTxOut (..),
     Wdrl (..),
   )
+import Cardano.Ledger.Shelley.TxWits (addrWits)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), makeWitnessesVKey)
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn (..))

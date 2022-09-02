@@ -36,7 +36,7 @@ import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (FutureGenDeleg (..), PulsingRewUpdate)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..))
-import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), ShelleyWitnesses, WitnessSetHKD (..))
+import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
     GenesisDelegCert (..),
@@ -44,6 +44,7 @@ import Cardano.Ledger.Shelley.TxBody
     ShelleyTxOut (..),
     Wdrl (..),
   )
+import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits, addrWits)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), makeWitnessesVKey)
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn (..))
@@ -156,7 +157,7 @@ txEx1 ::
   ShelleyTx (ShelleyEra c)
 txEx1 = ShelleyTx txbodyEx1 txwits SNothing
   where
-    txwits :: ShelleyWitnesses (ShelleyEra c)
+    txwits :: ShelleyTxWits (ShelleyEra c)
     txwits =
       mempty
         { addrWits =

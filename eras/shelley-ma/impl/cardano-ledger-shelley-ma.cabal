@@ -50,6 +50,7 @@ library
     Cardano.Ledger.ShelleyMA.Timelocks
     Cardano.Ledger.ShelleyMA.TxBody
     Cardano.Ledger.ShelleyMA.Tx
+    Cardano.Ledger.ShelleyMA.TxWits
 
   other-modules:
     Cardano.Ledger.Allegra.UTxO

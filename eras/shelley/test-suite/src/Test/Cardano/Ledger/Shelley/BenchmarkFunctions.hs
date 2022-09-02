@@ -54,7 +54,7 @@ import Cardano.Ledger.Shelley.LedgerState
   )
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..), emptyPParams)
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), ShelleyLEDGER)
-import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), WitnessSetHKD (..))
+import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
     Delegation (..),
@@ -74,6 +74,7 @@ import Cardano.Ledger.Shelley.TxBody
     _poolRelays,
     _poolVrf,
   )
+import Cardano.Ledger.Shelley.TxWits (addrWits)
 import Cardano.Ledger.Shelley.UTxO (makeWitnessesVKey)
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn (..), mkTxInPartial)

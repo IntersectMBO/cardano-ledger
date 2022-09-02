@@ -29,7 +29,7 @@ import Cardano.Ledger.Shelley.EpochBoundary
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Shelley.Rules
-import Cardano.Ledger.Shelley.Tx
+import Cardano.Ledger.Shelley.TxWits
 import Cardano.Ledger.Shelley.UTxO
 import Cardano.Protocol.TPraos.API
 import Cardano.Protocol.TPraos.BHeader
@@ -106,7 +106,7 @@ defaultShelleyLedgerExamples ::
     Core.PParamsUpdate era ~ ShelleyPParamsUpdate era,
     Default (StashedAVVMAddresses era)
   ) =>
-  (Core.TxBody era -> KeyPairWits era -> Core.Witnesses era) ->
+  (Core.TxBody era -> KeyPairWits era -> Core.TxWits era) ->
   (ShelleyTx era -> Core.Tx era) ->
   Core.Value era ->
   Core.TxBody era ->
@@ -207,7 +207,7 @@ mkScriptHash = ScriptHash . mkDummyHash (Proxy @(ADDRHASH c))
 exampleTx ::
   forall era.
   Core.EraTx era =>
-  (Core.TxBody era -> KeyPairWits era -> Core.Witnesses era) ->
+  (Core.TxBody era -> KeyPairWits era -> Core.TxWits era) ->
   Core.TxBody era ->
   Core.AuxiliaryData era ->
   ShelleyTx era
@@ -414,7 +414,7 @@ mkWitnessesPreAlonzo ::
   Proxy era ->
   Core.TxBody era ->
   KeyPairWits era ->
-  ShelleyWitnesses era
+  ShelleyTxWits era
 mkWitnessesPreAlonzo _ txBody keyPairWits =
   mempty
     { addrWits =

@@ -55,7 +55,6 @@ library
                 hashable,
                 iproute,
                 microlens,
-                mtl,
                 plutus-ledger-api,
                 prettyprinter,
                 small-steps,

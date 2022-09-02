@@ -17,7 +17,7 @@ import qualified Cardano.Ledger.Alonzo.Scripts as Tag
 import Cardano.Ledger.Alonzo.Tools (TransactionScriptFailure (..), evaluateTransactionExecutionUnits)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..))
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO, exBudgetToExUnits, transExUnits)
-import Cardano.Ledger.Alonzo.TxWitness
+import Cardano.Ledger.Alonzo.TxWits
 import qualified Cardano.Ledger.Babbage.PParams as Babbage.PParams
 import Cardano.Ledger.BaseTypes (ProtVer (..), ShelleyBase)
 import Cardano.Ledger.Coin (Coin (..))
@@ -291,14 +291,14 @@ updateTxExUnits proof tx utxo ei ss costmdls err =
 
 replaceRdmrs ::
   forall era.
-  (AlonzoEraWitnesses era, EraTx era) =>
+  (AlonzoEraTxWits era, EraTx era) =>
   Proof era ->
   Tx era ->
   Map RdmrPtr ExUnits ->
   Tx era
 replaceRdmrs pf tx rdmrs = updateTx pf tx (WitnessesI [RdmrWits newrdmrs])
   where
-    newrdmrs = foldr replaceRdmr (tx ^. witsTxL . rdmrsWitsL) (Map.assocs rdmrs)
+    newrdmrs = foldr replaceRdmr (tx ^. witsTxL . rdmrsTxWitsL) (Map.assocs rdmrs)
 
     replaceRdmr :: (RdmrPtr, ExUnits) -> Redeemers era -> Redeemers era
     replaceRdmr (ptr, ex) x@(Redeemers r) =

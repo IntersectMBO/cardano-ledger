@@ -67,7 +67,7 @@ alonzoEncodeDecodeTests =
         (decodeTestAnn @(MATxBody Mary) ([] :: [Core.TxBody Alonzo])),
       testProperty
         "decoding witnesses"
-        (decodeTestAnn @(Core.Witnesses Mary) ([] :: [Core.Witnesses Alonzo]))
+        (decodeTestAnn @(Core.TxWits Mary) ([] :: [Core.TxWits Alonzo]))
     ]
 
 alonzoTranslationTests :: TestTree

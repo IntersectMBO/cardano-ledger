@@ -24,12 +24,13 @@ import Cardano.Ledger.Shelley.API
   )
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Scripts (MultiSig (..))
-import Cardano.Ledger.Shelley.Tx (TxIn (..), WitnessSetHKD (ShelleyWitnesses))
+import Cardano.Ledger.Shelley.Tx (TxIn (..))
 import Cardano.Ledger.Shelley.TxBody
   ( ShelleyTxBody (ShelleyTxBody, _inputs, _outputs, _txfee),
     ShelleyTxOut (..),
     Wdrl (..),
   )
+import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (ShelleyTxWits))
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.Val ((<+>))
 import Cardano.Protocol.TPraos.API (PraosCrypto)
@@ -84,7 +85,7 @@ instance
   genEraPParamsUpdate = genShelleyPParamsUpdate
   genEraPParams = genPParams
 
-  genEraWitnesses _ setWitVKey mapScriptWit = ShelleyWitnesses setWitVKey mapScriptWit mempty
+  genEraTxWits _ setWitVKey mapScriptWit = ShelleyTxWits setWitVKey mapScriptWit mempty
 
 instance CC.Crypto c => ScriptClass (ShelleyEra c) where
   basescript _proxy = RequireSignature

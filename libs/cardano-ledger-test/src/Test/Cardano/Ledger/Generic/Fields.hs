@@ -46,7 +46,7 @@ import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash, Data (..), hashData)
 import Cardano.Ledger.Alonzo.Scripts (CostModels (..), ExUnits (..), Prices)
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..), ScriptIntegrityHash)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (..), AlonzoTxOut (..))
-import Cardano.Ledger.Alonzo.TxWitness (Redeemers (..), TxDats (..), TxWitness (..))
+import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..), BabbageTxOut (..), Datum (..))
 import Cardano.Ledger.BaseTypes
   ( Network (..),
@@ -64,8 +64,9 @@ import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness (..))
 import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
 import Cardano.Ledger.Serialization (sizedValue)
 import qualified Cardano.Ledger.Shelley.PParams as PP (Update)
-import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), ShelleyTxOut (..), pattern WitnessSet)
+import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxBody (DCert (..), ShelleyTxBody (..), Wdrl (..), WitVKey (..))
+import Cardano.Ledger.Shelley.TxWits (pattern ShelleyTxWits)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Ledger.ShelleyMA.TxBody (MATxBody (..))
 import Cardano.Ledger.TxIn (TxIn (..))
@@ -94,7 +95,7 @@ import Test.Cardano.Ledger.Generic.Proof
 data TxField era
   = Body (TxBody era)
   | BodyI [TxBodyField era] -- Inlines TxBody Fields
-  | Witnesses (Witnesses era)
+  | TxWits (TxWits era)
   | WitnessesI [WitnessesField era] -- Inlines Witnesess Fields
   | AuxData (StrictMaybe (AuxiliaryData era))
   | Valid IsValid
@@ -298,13 +299,13 @@ initialTxBody (Conway _) =
     SNothing
     SNothing
 
-initialWitnesses :: Era era => Proof era -> Witnesses era
-initialWitnesses (Shelley _) = WitnessSet Set.empty Map.empty Set.empty
-initialWitnesses (Allegra _) = WitnessSet Set.empty Map.empty Set.empty
-initialWitnesses (Mary _) = WitnessSet Set.empty Map.empty Set.empty
-initialWitnesses (Alonzo _) = TxWitness mempty mempty mempty mempty (Redeemers mempty)
-initialWitnesses (Babbage _) = TxWitness mempty mempty mempty mempty (Redeemers mempty)
-initialWitnesses (Conway _) = TxWitness mempty mempty mempty mempty (Redeemers mempty)
+initialWitnesses :: Era era => Proof era -> TxWits era
+initialWitnesses (Shelley _) = ShelleyTxWits Set.empty Map.empty Set.empty
+initialWitnesses (Allegra _) = ShelleyTxWits Set.empty Map.empty Set.empty
+initialWitnesses (Mary _) = ShelleyTxWits Set.empty Map.empty Set.empty
+initialWitnesses (Alonzo _) = AlonzoTxWits mempty mempty mempty mempty (Redeemers mempty)
+initialWitnesses (Babbage _) = AlonzoTxWits mempty mempty mempty mempty (Redeemers mempty)
+initialWitnesses (Conway _) = AlonzoTxWits mempty mempty mempty mempty (Redeemers mempty)
 
 initialTx :: forall era. Proof era -> Tx era
 initialTx era@(Shelley _) = ShelleyTx (initialTxBody era) (initialWitnesses era) SNothing
@@ -357,17 +358,17 @@ initialPParams (Conway _) = def
 
 abstractTx :: Proof era -> Tx era -> [TxField era]
 abstractTx (Conway _) (AlonzoTx txBody wit v auxdata) =
-  [Body txBody, Witnesses wit, Valid v, AuxData auxdata]
+  [Body txBody, TxWits wit, Valid v, AuxData auxdata]
 abstractTx (Babbage _) (AlonzoTx txBody wit v auxdata) =
-  [Body txBody, Witnesses wit, Valid v, AuxData auxdata]
+  [Body txBody, TxWits wit, Valid v, AuxData auxdata]
 abstractTx (Alonzo _) (AlonzoTx txBody wit v auxdata) =
-  [Body txBody, Witnesses wit, Valid v, AuxData auxdata]
+  [Body txBody, TxWits wit, Valid v, AuxData auxdata]
 abstractTx (Shelley _) (ShelleyTx txBody wit auxdata) =
-  [Body txBody, Witnesses wit, AuxData auxdata]
+  [Body txBody, TxWits wit, AuxData auxdata]
 abstractTx (Mary _) (ShelleyTx txBody wit auxdata) =
-  [Body txBody, Witnesses wit, AuxData auxdata]
+  [Body txBody, TxWits wit, AuxData auxdata]
 abstractTx (Allegra _) (ShelleyTx txBody wit auxdata) =
-  [Body txBody, Witnesses wit, AuxData auxdata]
+  [Body txBody, TxWits wit, AuxData auxdata]
 
 abstractTxBody :: Proof era -> TxBody era -> [TxBodyField era]
 abstractTxBody (Alonzo _) (AlonzoTxBody inp col out cert wdrl fee vldt up req mnt sih adh net) =
@@ -428,15 +429,15 @@ abstractTxBody (Mary _) (MATxBody inp out cert wdrl fee vldt up adh mnt) =
 abstractTxBody (Allegra _) (MATxBody inp out cert wdrl fee vldt up adh mnt) =
   [Inputs inp, Outputs out, Certs cert, Wdrls wdrl, Txfee fee, Vldt vldt, Update up, AdHash adh, Mint mnt]
 
-abstractWitnesses :: Proof era -> Witnesses era -> [WitnessesField era]
-abstractWitnesses (Shelley _) (WitnessSet keys scripts boot) = [AddrWits keys, ScriptWits scripts, BootWits boot]
-abstractWitnesses (Allegra _) (WitnessSet keys scripts boot) = [AddrWits keys, ScriptWits scripts, BootWits boot]
-abstractWitnesses (Mary _) (WitnessSet keys scripts boot) = [AddrWits keys, ScriptWits scripts, BootWits boot]
-abstractWitnesses (Alonzo _) (TxWitness key boot scripts dats red) =
+abstractWitnesses :: Proof era -> TxWits era -> [WitnessesField era]
+abstractWitnesses (Shelley _) (ShelleyTxWits keys scripts boot) = [AddrWits keys, ScriptWits scripts, BootWits boot]
+abstractWitnesses (Allegra _) (ShelleyTxWits keys scripts boot) = [AddrWits keys, ScriptWits scripts, BootWits boot]
+abstractWitnesses (Mary _) (ShelleyTxWits keys scripts boot) = [AddrWits keys, ScriptWits scripts, BootWits boot]
+abstractWitnesses (Alonzo _) (AlonzoTxWits key boot scripts dats red) =
   [AddrWits key, ScriptWits scripts, BootWits boot, DataWits dats, RdmrWits red]
-abstractWitnesses (Babbage _) (TxWitness key boot scripts dats red) =
+abstractWitnesses (Babbage _) (AlonzoTxWits key boot scripts dats red) =
   [AddrWits key, ScriptWits scripts, BootWits boot, DataWits dats, RdmrWits red]
-abstractWitnesses (Conway _) (TxWitness key boot scripts dats red) =
+abstractWitnesses (Conway _) (AlonzoTxWits key boot scripts dats red) =
   [AddrWits key, ScriptWits scripts, BootWits boot, DataWits dats, RdmrWits red]
 
 abstractTxOut :: Era era => Proof era -> TxOut era -> [TxOutField era]

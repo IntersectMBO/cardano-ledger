@@ -812,13 +812,13 @@ requiredMSigSignaturesSubset SourceSignalTarget {source = chainSt, signal = bloc
     signaturesSubset SourceSignalTarget {signal = tx} =
       let khs = keyHashSet tx
        in property $
-            all (existsReqKeyComb khs) (tx ^. witsTxL . scriptWitsL)
+            all (existsReqKeyComb khs) (tx ^. witsTxL . scriptTxWitsL)
 
     existsReqKeyComb keyHashes msig =
       any (\kl -> Set.fromList kl `Set.isSubsetOf` keyHashes) (scriptKeyCombinations (Proxy @era) msig)
     keyHashSet :: Tx era -> Set (KeyHash 'Witness (EraCrypto era))
     keyHashSet tx_ =
-      Set.map witVKeyHash (tx_ ^. witsTxL . addrWitsL)
+      Set.map witVKeyHash (tx_ ^. witsTxL . addrTxWitsL)
 
 --- | Check for absence of double spend in a block
 noDoubleSpend ::

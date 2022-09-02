@@ -29,9 +29,9 @@ import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..), U
 import Cardano.Ledger.Shelley.Tx
   ( ShelleyTxOut (..),
     TxIn,
-    WitnessSetHKD (..),
   )
 import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl)
+import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (ShelleyTxWits))
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
 import Cardano.Ledger.ShelleyMA.TxBody (MATxBody (MATxBody), scaledMinDeposit)
 import Cardano.Ledger.Val ((<+>))
@@ -95,7 +95,7 @@ instance (CC.Crypto c, Mock c) => EraGen (MaryEra c) where
         MATxBody (existingins <> ins) (outs :|> out) cert wdrl fee vi upd meta mint
   genEraPParamsUpdate = genShelleyPParamsUpdate
   genEraPParams = genPParams
-  genEraWitnesses _scriptinfo setWitVKey mapScriptWit = ShelleyWitnesses setWitVKey mapScriptWit mempty
+  genEraTxWits _scriptinfo setWitVKey mapScriptWit = ShelleyTxWits setWitVKey mapScriptWit mempty
 
 genAuxiliaryData ::
   Mock crypto =>

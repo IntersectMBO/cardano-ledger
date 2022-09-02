@@ -34,7 +34,6 @@ import Cardano.Ledger.Shelley.LedgerState (PulsingRewUpdate, emptyRewardUpdate)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Tx
   ( ShelleyTx (..),
-    WitnessSetHKD (..),
   )
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
@@ -43,6 +42,9 @@ import Cardano.Ledger.Shelley.TxBody
     ShelleyTxBody (..),
     ShelleyTxOut (..),
     Wdrl (..),
+  )
+import Cardano.Ledger.Shelley.TxWits
+  ( addrWits,
   )
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), makeWitnessesVKey)
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))

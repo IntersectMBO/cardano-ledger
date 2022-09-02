@@ -56,7 +56,7 @@ import Cardano.Ledger.Alonzo.Scripts (AlonzoScript, ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import Cardano.Ledger.Alonzo.Tx (IsValid (..), ScriptPurpose (..))
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
-import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
+import qualified Cardano.Ledger.Alonzo.TxWits as Alonzo
 import Cardano.Ledger.BaseTypes
   ( BlocksMade (..),
     Globals (..),
