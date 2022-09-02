@@ -20,7 +20,6 @@ import Test.Cardano.Ledger.Examples.BabbageFeatures (babbageFeatures)
 import Test.Cardano.Ledger.Examples.Consensus (genericConsensusTest)
 import Test.Cardano.Ledger.Generic.AggPropTests (aggTests)
 import Test.Cardano.Ledger.Generic.Properties (genericProperties)
-import Test.Cardano.Ledger.Model.Properties (modelUnitTests_)
 import qualified Test.Cardano.Ledger.NoThunks as NoThunks
 import Test.Tasty
 import Test.TestScenario (TestScenario (..), mainWithTestScenario)
@@ -45,8 +44,7 @@ mainTestTrees =
         AlonzoInvalidTxUTXOW.tests,
         AlonzoBBODY.tests,
         AlonzoAPI.tests,
-        AlonzoCollectInputs.tests,
-        modelUnitTests_
+        AlonzoCollectInputs.tests
       ],
     genericProperties def,
     aggTests

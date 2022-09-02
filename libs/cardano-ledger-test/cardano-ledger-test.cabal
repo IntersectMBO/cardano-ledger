@@ -35,9 +35,6 @@ library
   import:             base, project-config
   hs-source-dirs:     src
   other-modules:
-    Data.Group.GrpMap
-    Data.Functor.PiecewiseConstant
-    Test.Cardano.Ledger.Orphans
   exposed-modules:
     Test.Cardano.Ledger.Alonzo.Tools
     Test.Cardano.Ledger.BaseTypes
@@ -67,36 +64,6 @@ library
     Test.Cardano.Ledger.Generic.Scriptic
     Test.Cardano.Ledger.Generic.Trace
     Test.Cardano.Ledger.Generic.Updaters
-    Test.Cardano.Ledger.Model.API
-    Test.Cardano.Ledger.Model.Acnt
-    Test.Cardano.Ledger.Model.BaseTypes
-    Test.Cardano.Ledger.Model.Elaborators
-    Test.Cardano.Ledger.Model.Elaborators.Alonzo
-    Test.Cardano.Ledger.Model.Elaborators.Shelley
-    Test.Cardano.Ledger.Model.FeatureSet
-    Test.Cardano.Ledger.Model.Fixup
-    Test.Cardano.Ledger.Model.Generators
-    Test.Cardano.Ledger.Model.Generators.Address
-    Test.Cardano.Ledger.Model.Generators.Certificates
-    Test.Cardano.Ledger.Model.Generators.Chain
-    Test.Cardano.Ledger.Model.Generators.Script
-    Test.Cardano.Ledger.Model.Generators.Shrinking
-    Test.Cardano.Ledger.Model.Generators.Tx
-    Test.Cardano.Ledger.Model.Generators.TxOut
-    Test.Cardano.Ledger.Model.Generators.Value
-    Test.Cardano.Ledger.Model.LedgerState
-    Test.Cardano.Ledger.Model.PParams
-    Test.Cardano.Ledger.Model.Properties
-    Test.Cardano.Ledger.Model.Properties.Utils
-    Test.Cardano.Ledger.Model.Prov
-    Test.Cardano.Ledger.Model.Rewards
-    Test.Cardano.Ledger.Model.Rules
-    Test.Cardano.Ledger.Model.Script
-    Test.Cardano.Ledger.Model.Snapshot
-    Test.Cardano.Ledger.Model.Tx
-    Test.Cardano.Ledger.Model.TxOut
-    Test.Cardano.Ledger.Model.UTxO
-    Test.Cardano.Ledger.Model.Value
     Test.Cardano.Ledger.NoThunks
     Test.Cardano.Ledger.Rational
     Test.Cardano.Ledger.TestableEra
@@ -125,39 +92,25 @@ library
     containers,
     vector-map,
     data-default-class,
-    deepseq,
     genvalidity,
     genvalidity-scientific,
-    groups,
-    hkd,
-    lens,
     microlens,
-    monad-supply,
     mtl,
     nothunks,
     plutus-ledger-api,
     plutus-core,
-    plutus-tx,
     prettyprinter,
-    profunctors,
     QuickCheck,
-    quickcheck-instances,
-    QuickCheck-GenT,
-    quiet,
-    random,
     scientific,
     cardano-ledger-shelley,
     cardano-ledger-shelley-test,
     cardano-ledger-shelley-ma-test,
     cardano-ledger-babbage-test,
     cardano-ledger-conway-test,
-    semigroupoids,
     small-steps,
     small-steps-test,
     set-algebra,
-    some,
     strict-containers,
-    tagged,
     tasty,
     tasty-hunit,
     tasty-quickcheck,
@@ -165,7 +118,6 @@ library
     time,
     transformers,
     vector,
-    writer-cps-mtl,
 
 
 test-suite cardano-ledger-test
