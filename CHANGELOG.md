@@ -24,6 +24,31 @@ in the naming of release branches.
   #2954
 - All Shelley rules are now available through `Cadano.Ledger.Shelley.Rules` module: #2996
 - Renamed the `Crypto` dependent type in the `Era` class to `EraCrypto` #3009
+- Renamed in `Cardano.Ledger.Core`:
+  - `EraWitnesses` to `EraTxWits`
+  - `Witnesses` to `EraTxWits`
+  - `mkBasicWitnesses` to `mkBasicTxWits`
+  - `addrWitsL` to `addrTxWitsL`
+  - `bootAddrWitsL` to `bootAddrTxWitsL`
+  - `scriptWitsL` to `scriptTxWitsL`
+
+- Renamed in (new) module `Cardano.Ledger.Alonzo.TxWits` (renamed from `Cardano.Ledger.Alonzo.TxWitness`):
+  - `AlonzoEraWitnesses` to `AlonzoEraTxWits`
+  - `TxWitness` to `AlonzoTxWits`
+  - `addrAlonzoWitsL` to `addrAlonzoTxWitsL`
+  - `bootAddrAlonzoWitsL` to `bootAddrAlonzoTxWitsL`
+  - `scriptAlonzoWitsL` to `scriptAlonzoTxWitsL`
+  - `datsWitsL` to `datsTxWitsL`
+  - `datsAlonzoWitsL` to `datsAlonzoTxWitsL`
+  - `rdmrsWitsL` to `rdmrsTxWitsL`
+  - `rdmrsAlonzoWitsL` to `rdmrsAlonzoTxWitsL`
+
+- Renamed in (new) module `Cardano.Ledger.Shelley.TxWits` (extracted from `Cardano.Ledger.Shelley.Tx`):
+  - `ShelleyWitnesses` to `ShelleyTxWits`
+  - `addrShelleyWitsL` to `addrShelleyTxWitsL`
+  - `bootAddrShelleyWitsL` to `bootAddrShelleyTxWitsL`
+  - `scriptShelleyWitsL` to `scriptShelleyTxWitsL`
+#2976
 
 ### Removed
 
