@@ -74,12 +74,12 @@ import qualified Data.Set as Set
 import GHC.Stack
 import Lens.Micro
 import qualified Plutus.V1.Ledger.Api as Plutus
-import Test.Cardano.Ledger.Examples.TwoPhaseValidation
+import Test.Cardano.Ledger.Examples.STSTestUtils
   ( AlonzoBased (..),
     freeCostModelV1,
     freeCostModelV2,
-    keyBy,
     mkGenesisTxIn,
+    mkTxDats,
     testUTXOW,
     trustMeP,
   )
@@ -187,7 +187,7 @@ datumExampleSixtyFiveBytes :: Era era => Data era
 datumExampleSixtyFiveBytes = Data (Plutus.B sixtyFiveBytes)
 
 txDats :: Era era => TxDats era
-txDats = TxDats $ keyBy hashData [datumExampleSixtyFiveBytes]
+txDats = mkTxDats datumExampleSixtyFiveBytes
 
 someTxIn :: (CH.HashAlgorithm (CC.HASH crypto), HasCallStack) => TxIn crypto
 someTxIn = mkGenesisTxIn 1

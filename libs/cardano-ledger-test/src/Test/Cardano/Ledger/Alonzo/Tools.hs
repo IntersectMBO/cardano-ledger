@@ -9,9 +9,11 @@ module Test.Cardano.Ledger.Alonzo.Tools (tests, testExUnitCalculation) where
 
 import Cardano.Crypto.DSIGN
 import qualified Cardano.Crypto.Hash as Crypto
+import Cardano.Ledger.Alonzo.Data (Data (..))
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import qualified Cardano.Ledger.Alonzo.PParams as Alonzo.PParams
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript, CostModel, CostModels (..), ExUnits (..), Tag (..))
+import qualified Cardano.Ledger.Alonzo.Scripts as Tag
 import Cardano.Ledger.Alonzo.Tools (TransactionScriptFailure (..), evaluateTransactionExecutionUnits)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..))
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO, exBudgetToExUnits, transExUnits)
@@ -26,29 +28,37 @@ import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.LedgerState (IncrementalStake (..), UTxOState (..))
 import Cardano.Ledger.Shelley.Rules (PredicateFailure, UtxoEnv (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), makeWitnessVKey)
+import Cardano.Ledger.Val (Val (inject))
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..), SlotNo (..))
-import Cardano.Slotting.Time (SystemStart, mkSlotLength)
+import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
 import Control.State.Transition.Extended (STS (BaseM, Environment, Signal, State), TRC (TRC))
 import Data.Array (Array, array)
 import Data.Default.Class (Default (..))
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Text (Text)
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import GHC.Records (HasField)
 import Lens.Micro
+import qualified Plutus.V1.Ledger.Api as Plutus
 import Test.Cardano.Ledger.Alonzo.PlutusScripts (testingCostModelV1)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
-import Test.Cardano.Ledger.Examples.TwoPhaseValidation
-  ( datumExample1,
-    initUTxO,
-    redeemerExample1,
+import Test.Cardano.Ledger.Examples.STSTestUtils
+  ( initUTxO,
+    mkGenesisTxIn,
+    mkTxDats,
+    someAddr,
     someKeys,
-    testSystemStart,
-    validatingBody,
   )
-import Test.Cardano.Ledger.Generic.Fields (PParamsField (..), TxField (..), WitnessesField (..))
+import Test.Cardano.Ledger.Generic.Fields
+  ( PParamsField (..),
+    TxBodyField (..),
+    TxField (..),
+    TxOutField (..),
+    WitnessesField (..),
+  )
 import Test.Cardano.Ledger.Generic.Proof (Evidence (Mock), Proof (Alonzo, Babbage))
 import Test.Cardano.Ledger.Generic.Scriptic (PostShelley, Scriptic, always)
 import Test.Cardano.Ledger.Generic.Updaters
@@ -86,6 +96,9 @@ exUnitsTranslationRoundTrip = do
           <> show result
       )
       $ result == Just e
+
+testSystemStart :: SystemStart
+testSystemStart = SystemStart $ posixSecondsToUTCTime 0
 
 -- checks plutus script validation against a tx which has had
 -- its ex units replaced by the output of evaluateTransactionExecutionUnits
@@ -208,12 +221,27 @@ exampleTx pf ptr =
       WitnessesI
         [ AddrWits' [makeWitnessVKey (hashAnnotated (validatingBody pf)) (someKeys pf)],
           ScriptWits' [always 3 pf],
-          DataWits' [datumExample1],
+          DataWits' [Data (Plutus.I 123)],
           RdmrWits $
             Redeemers $
-              Map.singleton ptr (redeemerExample1, ExUnits 5000 5000)
+              Map.singleton ptr (Data (Plutus.I 42), ExUnits 5000 5000)
         ]
     ]
+
+validatingBody :: (Scriptic era, EraTxBody era) => Proof era -> TxBody era
+validatingBody pf =
+  newTxBody
+    pf
+    [ Inputs' [mkGenesisTxIn 1],
+      Collateral' [mkGenesisTxIn 11],
+      Outputs' [newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 4995)]],
+      Txfee (Coin 5),
+      WppHash (newScriptIntegrityHash pf (pparams pf) [PlutusV1] redeemers (mkTxDats (Data (Plutus.I 123))))
+    ]
+  where
+    redeemers =
+      Redeemers $
+        Map.singleton (RdmrPtr Tag.Spend 0) (Data (Plutus.I 42), ExUnits 5000 5000)
 
 exampleEpochInfo :: Monad m => EpochInfo m
 exampleEpochInfo = fixedEpochInfo (EpochSize 100) (mkSlotLength 1)

@@ -46,7 +46,12 @@ library
     Test.Cardano.Ledger.Alonzo.Tools
     Test.Cardano.Ledger.BaseTypes
     Test.Cardano.Ledger.Examples.BabbageFeatures
-    Test.Cardano.Ledger.Examples.TwoPhaseValidation
+    Test.Cardano.Ledger.Examples.AlonzoValidTxUTXOW
+    Test.Cardano.Ledger.Examples.AlonzoInvalidTxUTXOW
+    Test.Cardano.Ledger.Examples.AlonzoBBODY
+    Test.Cardano.Ledger.Examples.AlonzoCollectInputs
+    Test.Cardano.Ledger.Examples.AlonzoAPI
+    Test.Cardano.Ledger.Examples.STSTestUtils
     Test.Cardano.Ledger.Generic.AggPropTests
     Test.Cardano.Ledger.Generic.ApplyTx
     Test.Cardano.Ledger.Generic.Indexed
