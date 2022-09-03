@@ -15,7 +15,7 @@ import Cardano.Ledger.Address
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (KeyRole (Staking))
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
-import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley (Shelley)
 import Cardano.Ledger.Shelley.API
   ( Credential,
     DCert,
@@ -44,8 +44,6 @@ import Test.Cardano.Ledger.Shelley.Serialisation.CDDLUtils
   )
 import Test.Tasty (TestTree, testGroup, withResource)
 
-type ShelleyE = ShelleyEra StandardCrypto
-
 tests :: Int -> TestTree
 tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
   testGroup "CDDL roundtrip tests" $
@@ -56,18 +54,18 @@ tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
       cddlTest @(Addr StandardCrypto) n "address",
       cddlTest @(RewardAcnt StandardCrypto) n "reward_account",
       cddlTest @(Credential 'Staking StandardCrypto) n "stake_credential",
-      cddlAnnotatorTest @(ShelleyTxBody ShelleyE) n "transaction_body",
-      cddlTest @(ShelleyTxOut ShelleyE) n "transaction_output",
+      cddlAnnotatorTest @(ShelleyTxBody Shelley) n "transaction_body",
+      cddlTest @(ShelleyTxOut Shelley) n "transaction_output",
       cddlTest @StakePoolRelay n "relay",
       cddlTest @(DCert StandardCrypto) n "certificate",
       cddlTest @(TxIn StandardCrypto) n "transaction_input",
-      cddlAnnotatorTest @(Metadata ShelleyE) n "transaction_metadata",
-      cddlAnnotatorTest @(MultiSig ShelleyE) n "multisig_script",
-      cddlTest @(Update ShelleyE) n "update",
-      cddlTest @(ProposedPPUpdates ShelleyE) n "proposed_protocol_parameter_updates",
-      cddlTest @(ShelleyPParamsUpdate ShelleyE) n "protocol_param_update",
-      cddlAnnotatorTest @(ShelleyTx ShelleyE) n "transaction",
-      cddlAnnotatorTest @(LaxBlock (BHeader StandardCrypto) ShelleyE) n "block"
+      cddlAnnotatorTest @(Metadata Shelley) n "transaction_metadata",
+      cddlAnnotatorTest @(MultiSig Shelley) n "multisig_script",
+      cddlTest @(Update Shelley) n "update",
+      cddlTest @(ProposedPPUpdates Shelley) n "proposed_protocol_parameter_updates",
+      cddlTest @(ShelleyPParamsUpdate Shelley) n "protocol_param_update",
+      cddlAnnotatorTest @(ShelleyTx Shelley) n "transaction",
+      cddlAnnotatorTest @(LaxBlock (BHeader StandardCrypto) Shelley) n "block"
     ]
       <*> pure cddl
 

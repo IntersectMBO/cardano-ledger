@@ -4,7 +4,7 @@
 
 module Test.Cardano.Ledger.Alonzo.Examples.Consensus where
 
-import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo (Alonzo)
 import Cardano.Ledger.Alonzo.Data
   ( AlonzoAuxiliaryData (..),
     AuxiliaryDataHash (..),
@@ -58,20 +58,18 @@ import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as SLE
 import Test.Cardano.Ledger.Shelley.Orphans ()
 import Test.Cardano.Ledger.Shelley.Utils (mkAddr)
 
-type StandardAlonzo = AlonzoEra StandardCrypto
-
 -- | ShelleyLedgerExamples for Alonzo era
-ledgerExamplesAlonzo :: SLE.ShelleyLedgerExamples StandardAlonzo
+ledgerExamplesAlonzo :: SLE.ShelleyLedgerExamples Alonzo
 ledgerExamplesAlonzo =
   SLE.ShelleyLedgerExamples
     { SLE.sleBlock = SLE.exampleShelleyLedgerBlock exampleTransactionInBlock,
-      SLE.sleHashHeader = SLE.exampleHashHeader (Proxy @StandardAlonzo),
+      SLE.sleHashHeader = SLE.exampleHashHeader (Proxy @Alonzo),
       SLE.sleTx = exampleTransactionInBlock,
       SLE.sleApplyTxError =
         ApplyTxError $
           pure $
             DelegsFailure $
-              DelegateeNotRegisteredDELEG @StandardAlonzo (SLE.mkKeyHash 1),
+              DelegateeNotRegisteredDELEG @Alonzo (SLE.mkKeyHash 1),
       SLE.sleRewardsCredentials =
         Set.fromList
           [ Left (Coin 100),
@@ -98,7 +96,7 @@ ledgerExamplesAlonzo =
           (SLE.mkKeyHash 0)
           (emptyPParamsUpdate {_collateralPercentage = SJust 150})
 
-exampleTxBodyAlonzo :: AlonzoTxBody StandardAlonzo
+exampleTxBodyAlonzo :: AlonzoTxBody Alonzo
 exampleTxBodyAlonzo =
   AlonzoTxBody
     (Set.fromList [mkTxInPartial (TxId (SLE.mkDummySafeHash Proxy 1)) 0]) -- inputs
@@ -135,13 +133,13 @@ exampleTxBodyAlonzo =
   where
     MaryValue _ exampleMultiAsset = SLE.exampleMultiAssetValue 3
 
-datumExample :: Data StandardAlonzo
+datumExample :: Data Alonzo
 datumExample = Data (Plutus.I 191)
 
-redeemerExample :: Data StandardAlonzo
+redeemerExample :: Data Alonzo
 redeemerExample = Data (Plutus.I 919)
 
-exampleTx :: ShelleyTx StandardAlonzo
+exampleTx :: ShelleyTx Alonzo
 exampleTx =
   ShelleyTx
     exampleTxBodyAlonzo
@@ -149,7 +147,7 @@ exampleTx =
         (makeWitnessesVKey (hashAnnotated exampleTxBodyAlonzo) [asWitness SLE.examplePayKey]) -- vkey
         mempty -- bootstrap
         ( Map.singleton
-            (hashScript @StandardAlonzo $ alwaysSucceeds PlutusV1 3)
+            (hashScript @Alonzo $ alwaysSucceeds PlutusV1 3)
             (alwaysSucceeds PlutusV1 3) -- txscripts
         )
         (TxDats $ Map.singleton (hashData datumExample) datumExample)
@@ -165,12 +163,12 @@ exampleTx =
           )
     )
 
-exampleTransactionInBlock :: AlonzoTx StandardAlonzo
+exampleTransactionInBlock :: AlonzoTx Alonzo
 exampleTransactionInBlock = AlonzoTx b w (IsValid True) a
   where
     ShelleyTx b w a = exampleTx
 
-exampleAlonzoNewEpochState :: NewEpochState StandardAlonzo
+exampleAlonzoNewEpochState :: NewEpochState Alonzo
 exampleAlonzoNewEpochState =
   SLE.exampleNewEpochState
     (SLE.exampleMultiAssetValue 1)

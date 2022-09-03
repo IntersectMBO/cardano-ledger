@@ -12,31 +12,20 @@ where
 import Cardano.Binary
   ( ToCBOR (..),
   )
+import Cardano.Ledger.Allegra (Allegra)
 import Cardano.Ledger.Era (TranslateEra (..))
+import Cardano.Ledger.Mary (Mary)
 import Cardano.Ledger.Mary.Translation ()
 import qualified Cardano.Ledger.Shelley.API as S
 import Cardano.Ledger.ShelleyMA.AuxiliaryData (MAAuxiliaryData)
 import Test.Cardano.Ledger.AllegraEraGen ()
--- import Allegra EraGen instance
-import Test.Cardano.Ledger.EraBuffet
-  ( AllegraEra,
-    MaryEra,
-    StandardCrypto,
-  )
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
-import Test.Cardano.Ledger.TranslationTools
-  ( decodeTestAnn,
-    translationCompatToCBOR,
-  )
+import Test.Cardano.Ledger.TranslationTools (decodeTestAnn, translationCompatToCBOR)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperty)
-
-type Allegra = AllegraEra StandardCrypto
-
-type Mary = MaryEra StandardCrypto
 
 maryEncodeDecodeTests :: TestTree
 maryEncodeDecodeTests =

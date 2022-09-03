@@ -1,5 +1,6 @@
 module Cardano.Ledger.Shelley
-  ( ShelleyEra,
+  ( Shelley,
+    ShelleyEra,
     ShelleyTx,
     ShelleyTxOut,
     ShelleyTxBody,
@@ -23,6 +24,7 @@ import Cardano.Ledger.Core
     Script,
     Value,
   )
+import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (PParams, ShelleyPParams)
 import Cardano.Ledger.Shelley.Rules ()
@@ -33,3 +35,5 @@ import Cardano.Ledger.Shelley.Tx
     nativeMultiSigTag,
   )
 import qualified Cardano.Ledger.Shelley.Tx as Shelley (Tx, TxBody, TxOut)
+
+type Shelley = ShelleyEra StandardCrypto

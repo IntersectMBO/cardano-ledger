@@ -17,7 +17,7 @@ import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
 import Cardano.Ledger.Alonzo.Translation ()
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), RdmrPtr (..), Redeemers (..), TxDats (..))
-import Cardano.Ledger.Babbage (BabbageEra)
+import Cardano.Ledger.Babbage (Babbage)
 import Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..), emptyPParams, emptyPParamsUpdate)
 import Cardano.Ledger.Babbage.Translation ()
 import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..), BabbageTxOut (..), Datum (..))
@@ -59,20 +59,18 @@ import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as SLE
 import Test.Cardano.Ledger.Shelley.Orphans ()
 import Test.Cardano.Ledger.Shelley.Utils (mkAddr)
 
-type StandardBabbage = BabbageEra StandardCrypto
-
 -- | ShelleyLedgerExamples for Babbage era
-ledgerExamplesBabbage :: SLE.ShelleyLedgerExamples StandardBabbage
+ledgerExamplesBabbage :: SLE.ShelleyLedgerExamples Babbage
 ledgerExamplesBabbage =
   SLE.ShelleyLedgerExamples
     { SLE.sleBlock = SLE.exampleShelleyLedgerBlock exampleTransactionInBlock,
-      SLE.sleHashHeader = SLE.exampleHashHeader (Proxy @StandardBabbage),
+      SLE.sleHashHeader = SLE.exampleHashHeader (Proxy @Babbage),
       SLE.sleTx = exampleTransactionInBlock,
       SLE.sleApplyTxError =
         ApplyTxError $
           pure $
             DelegsFailure $
-              DelegateeNotRegisteredDELEG @StandardBabbage (SLE.mkKeyHash 1),
+              DelegateeNotRegisteredDELEG @Babbage (SLE.mkKeyHash 1),
       SLE.sleRewardsCredentials =
         Set.fromList
           [ Left (Coin 100),
@@ -99,7 +97,7 @@ ledgerExamplesBabbage =
           (SLE.mkKeyHash 0)
           (emptyPParamsUpdate {_collateralPercentage = SJust 150})
 
-collateralOutput :: BabbageTxOut StandardBabbage
+collateralOutput :: BabbageTxOut Babbage
 collateralOutput =
   BabbageTxOut
     (mkAddr (SLE.examplePayKey, SLE.exampleStakeKey))
@@ -107,7 +105,7 @@ collateralOutput =
     NoDatum
     SNothing
 
-exampleTxBodyBabbage :: TxBody StandardBabbage
+exampleTxBodyBabbage :: TxBody Babbage
 exampleTxBodyBabbage =
   BabbageTxBody
     (Set.fromList [mkTxInPartial (TxId (SLE.mkDummySafeHash Proxy 1)) 0]) -- spending inputs
@@ -149,13 +147,13 @@ exampleTxBodyBabbage =
   where
     MaryValue _ exampleMultiAsset = MarySLE.exampleMultiAssetValue 3
 
-datumExample :: Data StandardBabbage
+datumExample :: Data Babbage
 datumExample = Data (Plutus.I 191)
 
-redeemerExample :: Data StandardBabbage
+redeemerExample :: Data Babbage
 redeemerExample = Data (Plutus.I 919)
 
-exampleTx :: ShelleyTx StandardBabbage
+exampleTx :: ShelleyTx Babbage
 exampleTx =
   ShelleyTx
     exampleTxBodyBabbage
@@ -163,7 +161,7 @@ exampleTx =
         (makeWitnessesVKey (hashAnnotated exampleTxBodyBabbage) [asWitness SLE.examplePayKey]) -- vkey
         mempty -- bootstrap
         ( Map.singleton
-            (hashScript @StandardBabbage $ alwaysSucceeds PlutusV1 3)
+            (hashScript @Babbage $ alwaysSucceeds PlutusV1 3)
             (alwaysSucceeds PlutusV1 3) -- txscripts
         )
         (TxDats $ Map.singleton (hashData datumExample) datumExample)
@@ -179,12 +177,12 @@ exampleTx =
           )
     )
 
-exampleTransactionInBlock :: AlonzoTx StandardBabbage
+exampleTransactionInBlock :: AlonzoTx Babbage
 exampleTransactionInBlock = AlonzoTx b w (IsValid True) a
   where
     (ShelleyTx b w a) = exampleTx
 
-exampleBabbageNewEpochState :: NewEpochState StandardBabbage
+exampleBabbageNewEpochState :: NewEpochState Babbage
 exampleBabbageNewEpochState =
   SLE.exampleNewEpochState
     (MarySLE.exampleMultiAssetValue 1)

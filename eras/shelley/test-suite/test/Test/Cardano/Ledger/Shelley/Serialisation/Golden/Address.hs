@@ -7,11 +7,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Test.Cardano.Ledger.Shelley.Serialisation.Golden.Address
-  ( tests,
-    Shelley,
-  )
-where
+module Test.Cardano.Ledger.Shelley.Serialisation.Golden.Address (tests) where
 
 import qualified Cardano.Chain.Common as Byron
 import Cardano.Crypto.Hash (HashAlgorithm (..), hashFromBytes, hashFromTextAsHex, sizeHash)
@@ -28,7 +24,6 @@ import Cardano.Ledger.Keys
   ( KeyRole (..),
     pattern KeyHash,
   )
-import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Scripts (pattern ScriptHash)
 import Cardano.Ledger.Slot (SlotNo (..))
 import qualified Data.Binary as B
@@ -47,10 +42,6 @@ import qualified Test.Tasty.HUnit as T
 
 -- Crypto family as used in production Shelley
 -- This should match that defined at https://github.com/input-output-hk/ouroboros-network/blob/master/ouroboros-consensus-shelley/src/Ouroboros/Consensus/Shelley/Protocol/Crypto.hs
-
-type ShelleyCrypto = StandardCrypto
-
-type Shelley = ShelleyEra StandardCrypto
 
 tests :: TestTree
 tests =
@@ -201,21 +192,21 @@ goldenTests_ShelleyCrypto =
         )
         "82d818582183581c4bf3c2ee56bfef278d65f7388c46efa12a1069698e474f77adf0cf6aa0001ab4aad9a5",
       T.testCase "fail on extraneous bytes" $
-        case deserialiseAddr @ShelleyCrypto addressWithExtraneousBytes of
+        case deserialiseAddr @StandardCrypto addressWithExtraneousBytes of
           Nothing -> pure ()
-          Just _a -> error $ "This should have failed"
+          Just _a -> error "This should have failed"
     ]
   where
-    paymentKey :: Credential 'Payment ShelleyCrypto
+    paymentKey :: Credential 'Payment StandardCrypto
     paymentKey = keyBlake2b224 $ B16.encode "1a2a3a4a5a6a7a8a"
-    stakeKey :: Credential 'Staking ShelleyCrypto
+    stakeKey :: Credential 'Staking StandardCrypto
     stakeKey = keyBlake2b224 $ B16.encode "1c2c3c4c5c6c7c8c"
     ptr :: Ptr
     ptr = Ptr (SlotNo 128) (mkTxIxPartial 2) (mkCertIxPartial 3)
     -- 32-byte verification key is expected, vk, ie., public key without chain code.
     -- The verification key undergoes Blake2b_224 hashing
     -- and should be 28-byte in the aftermath
-    keyBlake2b224 :: BS.ByteString -> Credential kh ShelleyCrypto
+    keyBlake2b224 :: BS.ByteString -> Credential kh StandardCrypto
     keyBlake2b224 vk =
       KeyHashObj . KeyHash
         . fromMaybe (error "Supplied bytes are of unexpected length")

@@ -8,7 +8,10 @@
 module Test.Cardano.Ledger.ShelleyMA.Serialisation.Roundtrip where
 
 import Cardano.Binary (Annotator (..), FromCBOR, ToCBOR)
+import Cardano.Ledger.Allegra (Allegra)
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Mary (Mary)
+import Cardano.Ledger.Shelley (Shelley)
 import Cardano.Ledger.Shelley.API (ApplyTx, ApplyTxError)
 import Control.State.Transition.Extended (PredicateFailure)
 import qualified Data.ByteString.Lazy.Char8 as BSL
@@ -18,7 +21,6 @@ import Data.Roundtrip
     roundTripAnn,
   )
 import Data.Typeable (typeRep)
-import Test.Cardano.Ledger.EraBuffet
 import Test.Cardano.Ledger.Shelley.Generator.Metadata ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
@@ -95,7 +97,7 @@ allEraRoundtripTests :: TestTree
 allEraRoundtripTests =
   testGroup
     "All Era Roundtrip Tests"
-    [ allprops @(ShelleyEra StandardCrypto),
-      allprops @(AllegraEra StandardCrypto),
-      allprops @(MaryEra StandardCrypto)
+    [ allprops @Shelley,
+      allprops @Allegra,
+      allprops @Mary
     ]

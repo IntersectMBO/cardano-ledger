@@ -18,8 +18,11 @@ in the naming of release branches.
 - Added `datumTxOutF` to `AlonzoEraTxOut`
 - Added `allInputsTxBodyF`
 - Added `EraUTxO` class with `getConsumedValue`
+- Added type synonyms for eras: `Shelley`, `Allegra`, `Mary`, `Alonzo`, `Babbage` and `Conway`.
+
 
 ### Changed
+
 - Changed `mint` field type to `MultiAsset (Crypto era)` in `MATxBody`, `AlonzoTxBody`, `BabbageTxBody`
   #2954
 - All Shelley rules are now available through `Cadano.Ledger.Shelley.Rules` module: #2996

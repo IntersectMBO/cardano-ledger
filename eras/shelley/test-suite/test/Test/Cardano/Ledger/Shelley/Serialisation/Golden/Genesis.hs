@@ -2,7 +2,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Ledger.Shelley.Serialisation.Golden.Genesis
@@ -20,7 +19,7 @@ import Cardano.Ledger.BaseTypes (textToDns, textToUrl)
 import Cardano.Ledger.Crypto (HASH)
 import Cardano.Ledger.Era (EraCrypto (..))
 import Cardano.Ledger.Keys (hashKey, hashVerKeyVRF, vKey)
-import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley (Shelley)
 import qualified Cardano.Ledger.Shelley.API as L
 import Cardano.Ledger.Shelley.Genesis
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..), emptyPParams)
@@ -34,8 +33,7 @@ import Data.Scientific (Scientific)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
-import Paths_cardano_ledger_shelley_test
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (StandardCrypto)
+import Paths_cardano_ledger_shelley_test (getDataFileName)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
 import Test.Cardano.Ledger.Shelley.Utils
   ( RawSeed (..),
@@ -58,7 +56,7 @@ golden_json_ShelleyGenesis :: Assertion
 golden_json_ShelleyGenesis =
   goldenTestJSON example =<< getDataFileName "test/Golden/ShelleyGenesis"
   where
-    example :: ShelleyGenesis (ShelleyEra StandardCrypto)
+    example :: ShelleyGenesis Shelley
     example = exampleShelleyGenesis
 
 golden_cbor_ShelleyGenesis :: Assertion
@@ -75,7 +73,7 @@ golden_cbor_ShelleyGenesis =
           ]
     else return ()
   where
-    example :: ShelleyGenesis (ShelleyEra StandardCrypto)
+    example :: ShelleyGenesis Shelley
     example = exampleShelleyGenesis
 
     received = Encoding expectedTokens

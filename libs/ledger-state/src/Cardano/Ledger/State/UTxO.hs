@@ -44,7 +44,7 @@ import Text.Printf
 
 type C = StandardCrypto
 
-type CurrentEra = AlonzoEra C
+type CurrentEra = Alonzo
 
 --- Loading
 readNewEpochState :: FilePath -> IO (NewEpochState CurrentEra)
@@ -616,7 +616,7 @@ instance Pretty UTxOStats where
 instance AggregateStat UTxOStats where
   aggregateStat = aggregateStat . usTxOutStats
 
-countUTxOStats :: UTxO (AlonzoEra StandardCrypto) -> UTxOStats
+countUTxOStats :: UTxO Alonzo -> UTxOStats
 countUTxOStats (UTxO m) =
   UTxOStats
     { usTxInStats = countTxInStats (Map.keys m),
