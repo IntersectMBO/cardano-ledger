@@ -147,9 +147,9 @@ import GHC.Records (HasField (..))
 import Lens.Micro
 import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
-import qualified Plutus.V1.Ledger.Api as PV1
-import Plutus.V1.Ledger.Contexts ()
-import qualified Plutus.V2.Ledger.Api as PV2
+import qualified PlutusLedgerApi.V1 as PV1
+import PlutusLedgerApi.V1.Contexts ()
+import qualified PlutusLedgerApi.V2 as PV2
 import Prettyprinter (Pretty (..))
 
 -- =========================================================

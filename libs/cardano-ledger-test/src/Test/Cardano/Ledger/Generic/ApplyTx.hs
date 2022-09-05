@@ -46,7 +46,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
 import Lens.Micro
-import qualified Plutus.V1.Ledger.Api as Plutus
+import qualified PlutusLedgerApi.V1 as Plutus
 import Test.Cardano.Ledger.Examples.STSTestUtils (freeCostModelV1, initUTxO, mkGenesisTxIn, mkTxDats, someAddr, someKeys)
 import Test.Cardano.Ledger.Generic.Fields
   ( PParamsField (..),

@@ -38,10 +38,14 @@ import Data.Either (fromRight)
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
+import qualified Data.Set as Set
+import Data.Text as Text (pack)
 import GHC.Stack (HasCallStack)
-import Plutus.V1.Ledger.Api (Data (..))
-import qualified Plutus.V1.Ledger.Api as PV1 (costModelParamNames)
-import qualified Plutus.V2.Ledger.Api as PV2 (costModelParamNames)
+import PlutusLedgerApi.Common (showParamName)
+import PlutusLedgerApi.V1 (Data (..))
+import PlutusLedgerApi.V1 as PV1 (ParamName)
+import PlutusLedgerApi.V2 as PV2 (ParamName)
+import PlutusPrelude (enumerate)
 import Test.Cardano.Ledger.Alonzo.Examples.Consensus (ledgerExamplesAlonzo)
 import Test.Cardano.Ledger.Alonzo.Serialisation.CDDL (readDataFile)
 import Test.Cardano.Ledger.EraBuffet (StandardCrypto)
@@ -231,8 +235,8 @@ freeCostModel :: HasCallStack => Language -> CostModel
 freeCostModel lang =
   fromRightError "freeCostModel is not well-formed" $ mkCostModel lang (cmps lang)
   where
-    names PlutusV1 = PV1.costModelParamNames
-    names PlutusV2 = PV2.costModelParamNames
+    names PlutusV1 = Set.fromList $ Text.pack . showParamName <$> enumerate @PV1.ParamName
+    names PlutusV2 = Set.fromList $ Text.pack . showParamName <$> enumerate @PV2.ParamName
     cmps = Map.fromSet (const 0) . names
 
 exPP :: AlonzoPParams Alonzo

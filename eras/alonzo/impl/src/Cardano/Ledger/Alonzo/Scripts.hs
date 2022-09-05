@@ -90,13 +90,23 @@ import Data.Measure (BoundedMeasure, Measure)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text)
+import qualified Data.Text as Text
 import Data.Typeable (Proxy (..), Typeable)
 import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import Numeric.Natural (Natural)
-import Plutus.V1.Ledger.Api as PV1 hiding (Map, Script)
-import Plutus.V2.Ledger.Api as PV2 (costModelParamNames, isScriptWellFormed, mkEvaluationContext)
+import PlutusLedgerApi.Common (mkDynEvaluationContext, showParamName)
+import PlutusLedgerApi.V1 as PV1
+  ( CostModelApplyError (..),
+    EvaluationContext,
+    ParamName,
+    ProtocolVersion (ProtocolVersion),
+    assertWellFormedCostModelParams,
+    isScriptWellFormed,
+  )
+import PlutusLedgerApi.V2 as PV2 (ParamName, isScriptWellFormed)
+import PlutusPrelude (enumerate)
 
 -- | Marker indicating the part of a transaction for which this script is acting
 -- as a validator.
@@ -272,11 +282,11 @@ instance NFData CostModel where
 --  conversion function mkEvaluationContext from the Plutus API.
 mkCostModel :: Language -> Map Text Integer -> Either CostModelApplyError CostModel
 mkCostModel PlutusV1 cm =
-  case PV1.mkEvaluationContext cm of
+  case mkDynEvaluationContext cm of
     Right evalCtx -> Right (CostModel PlutusV1 cm evalCtx)
     Left e -> Left e
 mkCostModel PlutusV2 cm =
-  case PV2.mkEvaluationContext cm of
+  case mkDynEvaluationContext cm of
     Right evalCtx -> Right (CostModel PlutusV2 cm evalCtx)
     Left e -> Left e
 
@@ -297,8 +307,8 @@ decodeCostModel lang = do
     Right cm -> pure cm
   where
     keys = case lang of
-      PlutusV1 -> PV1.costModelParamNames
-      PlutusV2 -> PV2.costModelParamNames
+      PlutusV1 -> Set.fromList $ Text.pack . showParamName <$> enumerate @PV1.ParamName
+      PlutusV2 -> Set.fromList $ Text.pack . showParamName <$> enumerate @PV2.ParamName
 
 decodeArrayAsMap :: Ord a => Set a -> Decoder s b -> Decoder s (Map a b)
 decodeArrayAsMap keys decodeValue = do

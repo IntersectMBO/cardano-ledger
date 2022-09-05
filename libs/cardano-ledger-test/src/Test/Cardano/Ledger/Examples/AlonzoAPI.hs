@@ -32,7 +32,7 @@ import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.UTxO (makeWitnessVKey)
 import Cardano.Ledger.Val (Val (inject))
 import qualified Data.Map.Strict as Map
-import qualified Plutus.V1.Ledger.Api as Plutus
+import qualified PlutusLedgerApi.V1 as Plutus
 import Test.Cardano.Ledger.Examples.STSTestUtils
   ( freeCostModelV1,
     mkGenesisTxIn,

@@ -104,8 +104,8 @@ import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import GHC.Natural (Natural)
 import GHC.Stack
-import qualified Plutus.V1.Ledger.Api as Plutus
-import Plutus.V1.Ledger.EvaluationContext (costModelParamsForTesting)
+import PlutusLedgerApi.Test.EvaluationContext (costModelParamsForTesting)
+import qualified PlutusLedgerApi.V1 as Plutus
 import Test.Cardano.Ledger.Generic.Fields
   ( TxOutField (..),
   )

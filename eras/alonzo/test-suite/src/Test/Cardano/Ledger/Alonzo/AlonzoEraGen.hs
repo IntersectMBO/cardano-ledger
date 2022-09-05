@@ -92,10 +92,13 @@ import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq ((:|>)))
 import qualified Data.Sequence.Strict as Seq (fromList)
 import Data.Set as Set
+import qualified Data.Text as Text
 import GHC.Records (HasField (..))
 import Lens.Micro
 import Numeric.Natural (Natural)
-import Plutus.V1.Ledger.Api (costModelParamNames)
+import PlutusLedgerApi.Common (showParamName)
+import PlutusLedgerApi.V2 as PV2 (ParamName)
+import PlutusPrelude (enumerate)
 import qualified PlutusTx as P (Data (..))
 import qualified PlutusTx as Plutus
 import Test.Cardano.Ledger.AllegraEraGen (genValidityInterval)
@@ -198,7 +201,7 @@ genAlonzoMint startvalue = do
 freeCostModel :: CostModel
 freeCostModel =
   fromRight (error "freeCostModel is not well-formed") $
-    Alonzo.mkCostModel PlutusV1 $ Map.fromSet (const 0) costModelParamNames
+    Alonzo.mkCostModel PlutusV1 $ Map.fromSet (const 0) (Set.fromList (Text.pack . showParamName <$> enumerate @PV2.ParamName))
 
 -- ================================================================
 
