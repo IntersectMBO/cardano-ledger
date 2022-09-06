@@ -77,12 +77,7 @@ import Cardano.Ledger.Alonzo.Scripts
     transProtocolVersion,
     validScript,
   )
-import Cardano.Ledger.Alonzo.Tx
-  ( AlonzoTx,
-    CostModel,
-    ScriptPurpose (..),
-    txdats',
-  )
+import Cardano.Ledger.Alonzo.Tx (CostModel, ScriptPurpose (..), txdats')
 import Cardano.Ledger.Alonzo.TxBody
   ( AlonzoEraTxBody (..),
     AlonzoEraTxOut (..),
@@ -456,16 +451,6 @@ class ExtendedUTxO era where
     UTxO era ->
     Tx era ->
     Either (TranslationError (EraCrypto era)) VersionedTxInfo
-
-  -- Compute two sets for all TwoPhase scripts in a Tx.
-  -- set 1) DataHashes for each Two phase Script in a TxIn that has a DataHash
-  -- set 2) TxIns that are TwoPhase scripts, and should have a DataHash but don't.
-  {- { h | (_ → (a,_,h)) ∈ txins tx ◁ utxo, isNonNativeScriptAddress tx a} -}
-  inputDataHashes ::
-    Map.Map (ScriptHash (EraCrypto era)) (Script era) ->
-    AlonzoTx era ->
-    UTxO era ->
-    (Set (DataHash (EraCrypto era)), Set (TxIn (EraCrypto era)))
 
   txscripts ::
     UTxO era ->

@@ -11,7 +11,6 @@ module Cardano.Ledger.Babbage.Tx
     getDatumBabbage,
     babbageTxScripts,
     refScripts,
-    babbageInputDataHashes,
   )
 where
 
@@ -31,8 +30,6 @@ import Cardano.Ledger.Babbage.TxBody
   ( BabbageEraTxBody (..),
     BabbageEraTxOut (..),
     BabbageTxBody (..),
-    BabbageTxOut (..),
-    Datum (..),
     dataHashTxOutL,
   )
 import Cardano.Ledger.Babbage.TxWits ()
@@ -163,37 +160,3 @@ refScripts ins (UTxO mp) = Map.foldl' accum Map.empty (eval (ins ◁ mp))
       case txOut ^. referenceScriptTxOutL of
         SNothing -> ans
         SJust script -> Map.insert (hashScript @era script) script ans
-
--- Compute two sets for all TwoPhase scripts in a Tx.
--- set 1) DataHashes for each Two phase Script in a TxIn that has a DataHash
--- set 2) TxIns that are TwoPhase scripts, and should have a DataHash but don't.
---        in Babbage, a TxOut with an inline Datum, does not need DataHash, so
---        it should not be added to set of Bad TxIn.
-{- { h | (_ → (a,_,h)) ∈ txins tx ◁ utxo, isNonNativeScriptAddress tx a} -}
-babbageInputDataHashes ::
-  forall era.
-  (EraTx era, TxOut era ~ BabbageTxOut era) =>
-  Map.Map (ScriptHash (EraCrypto era)) (Script era) ->
-  AlonzoTx era ->
-  UTxO era ->
-  (Set (DataHash (EraCrypto era)), Set (TxIn (EraCrypto era)))
-babbageInputDataHashes hashScriptMap tx (UTxO mp) =
-  Map.foldlWithKey' accum (Set.empty, Set.empty) smallUtxo
-  where
-    txBody = body tx
-    spendInputs = txBody ^. inputsTxBodyL
-    smallUtxo = eval (spendInputs ◁ mp)
-    accum ans@(!hashSet, !inputSet) txin txout =
-      case txout of
-        BabbageTxOut addr _ NoDatum _ ->
-          if isTwoPhaseScriptAddressFromMap @era hashScriptMap addr
-            then (hashSet, Set.insert txin inputSet)
-            else ans
-        BabbageTxOut addr _ (DatumHash dhash) _ ->
-          if isTwoPhaseScriptAddressFromMap @era hashScriptMap addr
-            then (Set.insert dhash hashSet, inputSet)
-            else ans
-        -- Though it is somewhat odd to allow non-two-phase-scripts to include a datum,
-        -- the Alonzo era already set the precedent with datum hashes, and several dapp
-        -- developers see this as a helpful feature.
-        BabbageTxOut _ _ (Datum _) _ -> ans

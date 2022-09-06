@@ -62,7 +62,6 @@ module Cardano.Ledger.Alonzo.Tx
     Indexable (..), -- indexOf
     ScriptPurpose (..),
     isTwoPhaseScriptAddressFromMap,
-    alonzoInputHashes,
     Shelley.txouts,
     indexedRdmrs,
     rdptr,
@@ -107,7 +106,6 @@ import Cardano.Ledger.Alonzo.Scripts
 import Cardano.Ledger.Alonzo.TxBody
   ( AlonzoEraTxBody (..),
     AlonzoTxBody (..),
-    AlonzoTxOut (..),
     ScriptIntegrityHash,
     TxBody,
   )
@@ -135,13 +133,11 @@ import Cardano.Ledger.SafeHash
   )
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), Wdrl (..), unWdrl)
-import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import qualified Cardano.Ledger.Shelley.UTxO as Shelley
 import Cardano.Ledger.ShelleyMA.Tx (validateTimelock)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val ((<+>), (<×>)))
 import Control.DeepSeq (NFData (..))
-import Control.SetAlgebra (eval, (◁))
 import qualified Data.ByteString.Lazy as LBS
 import Data.Coders hiding (to)
 import qualified Data.Map.Strict as Map
@@ -600,29 +596,3 @@ isTwoPhaseScriptAddressFromMap hashScriptMap addr =
     Just hash -> any ok hashScriptMap
       where
         ok script = hashScript @era script == hash && not (isNativeScript @era script)
-
-alonzoInputHashes ::
-  forall era.
-  ( EraTxBody era,
-    EraScript era,
-    TxOut era ~ AlonzoTxOut era
-  ) =>
-  Map.Map (ScriptHash (EraCrypto era)) (Script era) ->
-  AlonzoTx era ->
-  UTxO era ->
-  (Set (DataHash (EraCrypto era)), Set (TxIn (EraCrypto era)))
-alonzoInputHashes hashScriptMap tx (UTxO mp) = Map.foldlWithKey' accum (Set.empty, Set.empty) smallUtxo
-  where
-    spendInputs :: Set (TxIn (EraCrypto era))
-    spendInputs = body tx ^. inputsTxBodyL
-    smallUtxo = eval (spendInputs ◁ mp)
-    accum ans@(hashSet, inputSet) txin txout =
-      case txout of
-        (AlonzoTxOut addr _ SNothing) ->
-          if isTwoPhaseScriptAddressFromMap @era hashScriptMap addr
-            then (hashSet, Set.insert txin inputSet)
-            else ans
-        (AlonzoTxOut addr _ (SJust dhash)) ->
-          if isTwoPhaseScriptAddressFromMap @era hashScriptMap addr
-            then (Set.insert dhash hashSet, inputSet)
-            else ans

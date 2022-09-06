@@ -307,7 +307,7 @@ babbageUtxowTransition = do
   runTest $ babbageMissingScripts pp sNeeded sRefs sReceived
 
   {-  inputHashes ⊆  dom(txdats txw) ⊆  allowed -}
-  runTest $ missingRequiredDatums hashScriptMap utxo tx txBody
+  runTest $ missingRequiredDatums hashScriptMap utxo tx
 
   {-  dom (txrdmrs tx) = { rdptr txb sp | (sp, h) ∈ scriptsNeeded utxo tx,
                            h ↦ s ∈ txscripts txw, s ∈ Scriptph2}     -}
