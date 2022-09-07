@@ -52,6 +52,7 @@ in the naming of release branches.
   - `bootAddrShelleyWitsL` to `bootAddrShelleyTxWitsL`
   - `scriptShelleyWitsL` to `scriptShelleyTxWitsL`
 #2976
+- Moved TxOut to a separate module in each era #3024
 
 ### Removed
 

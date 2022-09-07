@@ -49,6 +49,7 @@ library
     Cardano.Ledger.ShelleyMA.Rules
     Cardano.Ledger.ShelleyMA.Timelocks
     Cardano.Ledger.ShelleyMA.TxBody
+    Cardano.Ledger.ShelleyMA.TxOut
     Cardano.Ledger.ShelleyMA.Tx
     Cardano.Ledger.ShelleyMA.TxWits
 

@@ -48,6 +48,7 @@ library
     Cardano.Ledger.Alonzo.Translation
     Cardano.Ledger.Alonzo.Tx
     Cardano.Ledger.Alonzo.TxBody
+    Cardano.Ledger.Alonzo.TxOut
     Cardano.Ledger.Alonzo.TxInfo
     Cardano.Ledger.Alonzo.TxSeq
     Cardano.Ledger.Alonzo.TxWits
