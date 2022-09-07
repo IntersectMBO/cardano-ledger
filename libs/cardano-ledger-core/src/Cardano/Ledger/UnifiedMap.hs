@@ -25,19 +25,19 @@ import Data.UMap (Tag (..), Trip (..), UMap (..), UnifiedView (..), View (..))
 
 -- ====================================================
 
-type UnifiedMap crypto = UMap Coin (Credential 'Staking crypto) (KeyHash 'StakePool crypto) Ptr
+type UnifiedMap c = UMap Coin (Credential 'Staking c) (KeyHash 'StakePool c) Ptr
 
-type Triple crypto = Trip Coin Ptr (KeyHash 'StakePool crypto)
+type Triple c = Trip Coin Ptr (KeyHash 'StakePool c)
 
-type ViewMap crypto = View Coin (Credential 'Staking crypto) (KeyHash 'StakePool crypto) Ptr
+type ViewMap c = View Coin (Credential 'Staking c) (KeyHash 'StakePool c) Ptr
 
 instance
   UnifiedView
     Coin
-    (Credential 'Staking crypto)
-    (KeyHash 'StakePool crypto)
+    (Credential 'Staking c)
+    (KeyHash 'StakePool c)
     Ptr
-    (Credential 'Staking crypto)
+    (Credential 'Staking c)
     Coin
   where
   tag = Rew
@@ -45,21 +45,21 @@ instance
 instance
   UnifiedView
     Coin
-    (Credential 'Staking crypto)
-    (KeyHash 'StakePool crypto)
+    (Credential 'Staking c)
+    (KeyHash 'StakePool c)
     Ptr
-    (Credential 'Staking crypto)
-    (KeyHash 'StakePool crypto)
+    (Credential 'Staking c)
+    (KeyHash 'StakePool c)
   where
   tag = Del
 
 instance
   UnifiedView
     Coin
-    (Credential 'Staking crypto)
-    (KeyHash 'StakePool crypto)
+    (Credential 'Staking c)
+    (KeyHash 'StakePool c)
     Ptr
     Ptr
-    (Credential 'Staking crypto)
+    (Credential 'Staking c)
   where
   tag = Ptr

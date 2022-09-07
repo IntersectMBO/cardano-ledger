@@ -27,9 +27,9 @@ import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
-data OCERT crypto
+data OCERT c
 
-data OcertPredicateFailure crypto
+data OcertPredicateFailure c
   = KESBeforeStartOCERT
       !KESPeriod -- OCert Start KES Period
       !KESPeriod -- Current KES Period
@@ -49,37 +49,37 @@ data OcertPredicateFailure crypto
       !Word -- expected KES evolutions
       !String -- error message given by Consensus Layer
   | NoCounterForKeyHashOCERT
-      !(KeyHash 'BlockIssuer crypto) -- stake pool key hash
+      !(KeyHash 'BlockIssuer c) -- stake pool key hash
   deriving (Show, Eq, Generic)
 
-instance NoThunks (OcertPredicateFailure crypto)
+instance NoThunks (OcertPredicateFailure c)
 
 instance
-  ( Crypto crypto,
-    DSignable crypto (OCertSignable crypto),
-    KESignable crypto (BHBody crypto)
+  ( Crypto c,
+    DSignable c (OCertSignable c),
+    KESignable c (BHBody c)
   ) =>
-  STS (OCERT crypto)
+  STS (OCERT c)
   where
   type
-    State (OCERT crypto) =
-      Map (KeyHash 'BlockIssuer crypto) Word64
+    State (OCERT c) =
+      Map (KeyHash 'BlockIssuer c) Word64
   type
-    Signal (OCERT crypto) =
-      BHeader crypto
-  type Environment (OCERT crypto) = OCertEnv crypto
-  type BaseM (OCERT crypto) = ShelleyBase
-  type PredicateFailure (OCERT crypto) = OcertPredicateFailure crypto
+    Signal (OCERT c) =
+      BHeader c
+  type Environment (OCERT c) = OCertEnv c
+  type BaseM (OCERT c) = ShelleyBase
+  type PredicateFailure (OCERT c) = OcertPredicateFailure c
 
   initialRules = [pure Map.empty]
   transitionRules = [ocertTransition]
 
 ocertTransition ::
-  ( Crypto crypto,
-    DSignable crypto (OCertSignable crypto),
-    KESignable crypto (BHBody crypto)
+  ( Crypto c,
+    DSignable c (OCertSignable c),
+    KESignable c (BHBody c)
   ) =>
-  TransitionRule (OCERT crypto)
+  TransitionRule (OCERT c)
 ocertTransition =
   judgmentContext >>= \(TRC (env, cs, BHeader bhb sigma)) -> do
     let OCert vk_hot n c0@(KESPeriod c0_) tau = bheaderOCert bhb

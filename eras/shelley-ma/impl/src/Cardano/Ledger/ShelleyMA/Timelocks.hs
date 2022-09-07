@@ -198,8 +198,8 @@ type instance SomeScript 'PhaseOne (ShelleyMAEra ma c) = Timelock (ShelleyMAEra 
 -- | Since Timelock scripts are a strictly backwards compatible extension of
 -- Multisig scripts, we can use the same 'scriptPrefixTag' tag here as we did
 -- for the ValidateScript instance in Multisig
-instance MAClass ma crypto => EraScript (ShelleyMAEra ma crypto) where
-  type Script (ShelleyMAEra ma crypto) = Timelock (ShelleyMAEra ma crypto)
+instance MAClass ma c => EraScript (ShelleyMAEra ma c) where
+  type Script (ShelleyMAEra ma c) = Timelock (ShelleyMAEra ma c)
   scriptPrefixTag _script = nativeMultiSigTag -- "\x00"
   phaseScript PhaseOneRep timelock = Just (Phase1Script timelock)
   phaseScript PhaseTwoRep _ = Nothing

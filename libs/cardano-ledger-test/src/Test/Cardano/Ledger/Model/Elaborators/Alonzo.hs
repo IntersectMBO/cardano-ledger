@@ -69,13 +69,13 @@ import Test.Cardano.Ledger.Model.Rules (ModelPredicateFailure (..))
 import Test.Cardano.Ledger.Model.Value (evalModelValue)
 
 instance
-  ( PraosCrypto crypto,
-    KES.Signable (KES crypto) ~ SignableRepresentation,
-    DSIGN.Signable (DSIGN crypto) ~ SignableRepresentation
+  ( PraosCrypto c,
+    KES.Signable (KES c) ~ SignableRepresentation,
+    DSIGN.Signable (DSIGN c) ~ SignableRepresentation
   ) =>
-  ElaborateEraModel (AlonzoEra crypto)
+  ElaborateEraModel (AlonzoEra c)
   where
-  type EraFeatureSet (AlonzoEra crypto) = 'FeatureSet 'ExpectAnyOutput ('TyScriptFeature 'True 'True)
+  type EraFeatureSet (AlonzoEra c) = 'FeatureSet 'ExpectAnyOutput ('TyScriptFeature 'True 'True)
 
   toEraPredicateFailure = \case
     ModelValueNotConservedUTxO (ModelValue x) (ModelValue y) -> State.evalState $

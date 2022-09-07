@@ -249,8 +249,8 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
 
 -- | Run the pulser for a bit. If is has nothing left to do, complete it.
 pulseStep ::
-  PulsingRewUpdate crypto ->
-  ShelleyBase (PulsingRewUpdate crypto, RewardEvent crypto)
+  PulsingRewUpdate c ->
+  ShelleyBase (PulsingRewUpdate c, RewardEvent c)
 pulseStep (Complete r_) = pure (Complete r_, mempty)
 pulseStep p@(Pulsing _ pulser) | done pulser = completeStep p
 pulseStep (Pulsing rewsnap pulser) = do
@@ -261,8 +261,8 @@ pulseStep (Pulsing rewsnap pulser) = do
 -- Phase 3
 
 completeStep ::
-  PulsingRewUpdate crypto ->
-  ShelleyBase (PulsingRewUpdate crypto, RewardEvent crypto)
+  PulsingRewUpdate c ->
+  ShelleyBase (PulsingRewUpdate c, RewardEvent c)
 completeStep (Complete r) = pure (Complete r, mempty)
 completeStep (Pulsing rewsnap pulser) = do
   (p2, !event) <- completeRupd (Pulsing rewsnap pulser)
@@ -274,8 +274,8 @@ completeStep (Pulsing rewsnap pulser) = do
 --   c) Construct the final RewardUpdate
 --   d) Add the leader rewards to both the events and the computed Rewards
 completeRupd ::
-  PulsingRewUpdate crypto ->
-  ShelleyBase (RewardUpdate crypto, RewardEvent crypto)
+  PulsingRewUpdate c ->
+  ShelleyBase (RewardUpdate c, RewardEvent c)
 completeRupd (Complete x) = pure (x, mempty)
 completeRupd
   ( Pulsing
@@ -342,10 +342,10 @@ decayFactor :: Float
 decayFactor = 0.9
 
 updateNonMyopic ::
-  NonMyopic crypto ->
+  NonMyopic c ->
   Coin ->
-  Map (KeyHash 'StakePool crypto) Likelihood ->
-  NonMyopic crypto
+  Map (KeyHash 'StakePool c) Likelihood ->
+  NonMyopic c
 updateNonMyopic nm rPot_ newLikelihoods =
   nm
     { likelihoodsNM = updatedLikelihoods,

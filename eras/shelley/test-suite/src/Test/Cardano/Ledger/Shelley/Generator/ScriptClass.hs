@@ -232,13 +232,13 @@ combinedScripts c@(Constants {numBaseScripts}) =
   mkScriptCombinations @era . take numBaseScripts $ baseScripts @era c
 
 -- | Constant list of KeyPairs intended to be used in the generators.
-keyPairs :: CC.Crypto crypto => Constants -> KeyPairs crypto
+keyPairs :: CC.Crypto c => Constants -> KeyPairs c
 keyPairs Constants {maxNumKeyPairs} = mkKeyPairs <$> [1 .. maxNumKeyPairs]
 
 mkKeyPairs ::
-  (DSIGNAlgorithm (DSIGN crypto)) =>
+  (DSIGNAlgorithm (DSIGN c)) =>
   Word64 ->
-  (KeyPair kr crypto, KeyPair kr' crypto)
+  (KeyPair kr c, KeyPair kr' c)
 mkKeyPairs n =
   (mkKeyPair_ (2 * n), mkKeyPair_ (2 * n + 1))
   where

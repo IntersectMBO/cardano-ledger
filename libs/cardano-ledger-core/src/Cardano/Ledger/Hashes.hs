@@ -61,7 +61,7 @@ data EraIndependentScript
 
 data EraIndependentData
 
-type DataHash crypto = SafeHash crypto EraIndependentData
+type DataHash c = SafeHash c EraIndependentData
 
 data EraIndependentScriptData
 
@@ -69,15 +69,15 @@ data EraIndependentPParamView
 
 data EraIndependentScriptIntegrity
 
-newtype ScriptHash crypto
-  = ScriptHash (Hash.Hash (ADDRHASH crypto) EraIndependentScript)
+newtype ScriptHash c
+  = ScriptHash (Hash.Hash (ADDRHASH c) EraIndependentScript)
   deriving (Show, Eq, Ord, Generic)
   deriving newtype (NFData, NoThunks)
 
-deriving newtype instance CC.Crypto crypto => ToCBOR (ScriptHash crypto)
+deriving newtype instance CC.Crypto c => ToCBOR (ScriptHash c)
 
-deriving newtype instance CC.Crypto crypto => FromCBOR (ScriptHash crypto)
+deriving newtype instance CC.Crypto c => FromCBOR (ScriptHash c)
 
-deriving newtype instance CC.Crypto crypto => ToJSON (ScriptHash crypto)
+deriving newtype instance CC.Crypto c => ToJSON (ScriptHash c)
 
-deriving newtype instance CC.Crypto crypto => FromJSON (ScriptHash crypto)
+deriving newtype instance CC.Crypto c => FromJSON (ScriptHash c)

@@ -78,7 +78,7 @@ tersemapfilter message p mp = terselistfilter message (\(_, a) -> p a) (Map.toAs
 tersemapdiffs :: (Terse a, Terse b, Ord a, Eq b) => String -> Map.Map a b -> Map.Map a b -> [Char]
 tersemapdiffs message mp1 mp2 = terselist message (mapdiffs mp1 mp2)
 
-instance Terse (Addr crypto) where
+instance Terse (Addr c) where
   terse (Addr _net cred1 (StakeRefBase cred2)) = "Addr (" ++ terse cred1 ++ ") (" ++ terse cred2 ++ ")"
   terse (Addr _net cred (StakeRefPtr ptr)) = "Addr (" ++ terse cred ++ ") (" ++ terse ptr ++ ")"
   terse (Addr _net cred StakeRefNull) = "Addr (" ++ terse cred ++ ") Null"
@@ -100,7 +100,7 @@ instance CC.Crypto era => Terse (TxIn era) where
 instance Terse (Coin) where
   terse (Coin n) = show n
 
-tersediffincremental :: String -> IncrementalStake crypto -> IncrementalStake crypto -> String
+tersediffincremental :: String -> IncrementalStake c -> IncrementalStake c -> String
 tersediffincremental message (IStake a b) (IStake c d) =
   tersemapdiffs (message ++ " " ++ "hashes") a c
     ++ tersemapdiffs (message ++ " " ++ "ptrs") b d

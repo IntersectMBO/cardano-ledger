@@ -291,7 +291,7 @@ getNonMyopicMemberRewards globals ss creds =
           let ostake = sumPoolOwnersStake pool stake
            in _poolPledge poolp <= ostake
 
-sumPoolOwnersStake :: PoolParams crypto -> EB.Stake crypto -> Coin
+sumPoolOwnersStake :: PoolParams c -> EB.Stake c -> Coin
 sumPoolOwnersStake pool stake =
   let getStakeFor o =
         maybe mempty fromCompact $ VMap.lookup (KeyHashObj o) (EB.unStake stake)

@@ -420,13 +420,13 @@ ppUtxosPredicateFailure (Alonzo.UpdateFailure p) = prettyA p
 instance PrettyA (PredicateFailure (EraRule "PPUP" era)) => PrettyA (AlonzoUtxosPredFailure era) where
   prettyA = ppUtxosPredicateFailure
 
-ppCollectError :: CollectError crypto -> PDoc
+ppCollectError :: CollectError c -> PDoc
 ppCollectError (NoRedeemer sp) = ppSexp "NoRedeemer" [ppScriptPurpose sp]
 ppCollectError (NoWitness sh) = ppSexp "NoWitness" [ppScriptHash sh]
 ppCollectError (NoCostModel l) = ppSexp "NoCostModel" [ppLanguage l]
 ppCollectError (BadTranslation x) = ppSexp "BadTranslation" [ppString (show x)]
 
-instance PrettyA (CollectError crypto) where
+instance PrettyA (CollectError c) where
   prettyA = ppCollectError
 
 ppTagMismatchDescription :: TagMismatchDescription -> PDoc
@@ -603,17 +603,17 @@ instance
 -- Probably should be moved elsewhere
 
 -- LedgerState.hs
-ppWitHashes :: Set (KeyHash 'Witness crypto) -> PDoc
+ppWitHashes :: Set (KeyHash 'Witness c) -> PDoc
 ppWitHashes hs = ppSexp "WitHashes" [ppSet ppKeyHash hs]
 
 -- Defined in ‘Cardano.Ledger.Alonzo.Tx’
-ppScriptPurpose :: ScriptPurpose crypto -> PDoc
+ppScriptPurpose :: ScriptPurpose c -> PDoc
 ppScriptPurpose (Minting policy) = ppSexp "Minting" [prettyA policy] -- FIXME fill in the blanks
 ppScriptPurpose (Spending txin) = ppSexp "Spending" [ppTxIn txin]
 ppScriptPurpose (Rewarding acct) = ppSexp "Rewarding" [ppRewardAcnt acct]
 ppScriptPurpose (Certifying dcert) = ppSexp "Certifying" [ppDCert dcert]
 
-instance PrettyA (ScriptPurpose crypto) where
+instance PrettyA (ScriptPurpose c) where
   prettyA = ppScriptPurpose
 
 instance PrettyA x => PrettyA [x] where prettyA xs = ppList prettyA xs
@@ -927,16 +927,16 @@ networkSummary :: Network -> PDoc
 networkSummary Testnet = ppString "Test"
 networkSummary Mainnet = ppString "Main"
 
-addrSummary :: Addr crypto -> PDoc
+addrSummary :: Addr c -> PDoc
 addrSummary (Addr nw pay stk) =
   ppSexp "Addr" [networkSummary nw, credSummary pay, stakeSummary stk]
 addrSummary (AddrBootstrap _) = ppString "Bootstrap"
 
-credSummary :: Credential keyrole crypto -> PDoc
+credSummary :: Credential keyrole c -> PDoc
 credSummary (ScriptHashObj (ScriptHash h)) = ppSexp "Script" [trim (ppHash h)]
 credSummary (KeyHashObj (KeyHash kh)) = ppSexp "Key" [trim (ppHash kh)]
 
-stakeSummary :: StakeReference crypto -> PDoc
+stakeSummary :: StakeReference c -> PDoc
 stakeSummary StakeRefNull = ppString "Null"
 stakeSummary (StakeRefPtr _) = ppString "Ptr"
 stakeSummary (StakeRefBase x) = ppSexp "Stake" [credSummary (coerceKeyRole x)]
@@ -947,10 +947,10 @@ utxoSummary proof = ppMap txInSummary (txOutSummary proof) . unUTxO
 utxoString :: Proof era -> UTxO era -> String
 utxoString proof = show . ppMap txInSummary (txOutSummary proof) . unUTxO
 
-scriptHashSummary :: ScriptHash crypto -> PDoc
+scriptHashSummary :: ScriptHash c -> PDoc
 scriptHashSummary (ScriptHash h) = trim (ppHash h)
 
-keyHashSummary :: KeyHash keyrole crypto -> PDoc
+keyHashSummary :: KeyHash keyrole c -> PDoc
 keyHashSummary (KeyHash h) = trim (ppHash h)
 
 dataHashSummary :: DataHash era -> PDoc
@@ -995,7 +995,7 @@ plutusSummary (Alonzo _) s@(PlutusScript lang _) =
 plutusSummary (Alonzo _) (TimelockScript x) = timelockSummary x
 plutusSummary other _ = ppString ("Plutus script in era " ++ show other ++ "???")
 
-dStateSummary :: DState crypto -> PDoc
+dStateSummary :: DState c -> PDoc
 dStateSummary (DState umap future (GenDelegs current) irwd) =
   ppRecord
     "DState"
@@ -1005,7 +1005,7 @@ dStateSummary (DState umap future (GenDelegs current) irwd) =
       ("Instantaneous Rewards", instantSummary irwd)
     ]
 
-instantSummary :: InstantaneousRewards crypto -> PDoc
+instantSummary :: InstantaneousRewards c -> PDoc
 instantSummary (InstantaneousRewards reserves treasury dreserves dtreasury) =
   ppRecord
     "InstantaneousRewards"
@@ -1015,7 +1015,7 @@ instantSummary (InstantaneousRewards reserves treasury dreserves dtreasury) =
       ("Reserves to treasury", ppDeltaCoin dtreasury)
     ]
 
-uMapSummary :: UnifiedMap crypto -> PDoc
+uMapSummary :: UnifiedMap c -> PDoc
 uMapSummary umap =
   ppRecord
     "UMap"
@@ -1024,7 +1024,7 @@ uMapSummary umap =
       ("Ptrs Map", ppInt (UMap.size (UMap.Ptrs umap)))
     ]
 
-pStateSummary :: PState crypto -> PDoc
+pStateSummary :: PState c -> PDoc
 pStateSummary (PState pp fpp retire) =
   ppRecord
     "PState"
@@ -1033,7 +1033,7 @@ pStateSummary (PState pp fpp retire) =
       ("Retiring stake pools", ppInt (Map.size retire))
     ]
 
-dpStateSummary :: DPState crypto -> PDoc
+dpStateSummary :: DPState c -> PDoc
 dpStateSummary (DPState d p) = vsep [dStateSummary d, pStateSummary p]
 
 -- =============================================
@@ -1041,12 +1041,12 @@ dpStateSummary (DPState d p) = vsep [dStateSummary d, pStateSummary p]
 class PrettyC t era where
   prettyC :: Proof era -> t -> PDoc
 
-pcTxId :: TxId crypto -> PDoc
+pcTxId :: TxId c -> PDoc
 pcTxId (TxId safehash) = trim (ppSafeHash safehash)
 
 instance c ~ EraCrypto era => PrettyC (TxId c) era where prettyC _ = pcTxId
 
-pcTxIn :: TxIn crypto -> PDoc
+pcTxIn :: TxIn c -> PDoc
 pcTxIn (TxIn (TxId h) (TxIx i)) = parens (hsep [ppString "TxIn", trim (ppSafeHash h), ppWord64 i])
 
 instance c ~ EraCrypto era => PrettyC (TxIn c) era where prettyC _ = pcTxIn
@@ -1057,7 +1057,7 @@ pcNetwork Mainnet = ppString "Mainnet"
 
 instance PrettyC Network era where prettyC _ = pcNetwork
 
-pcKeyHash :: KeyHash discriminator crypto -> PDoc
+pcKeyHash :: KeyHash discriminator c -> PDoc
 pcKeyHash (KeyHash h) = trim (ppHash h)
 
 instance c ~ EraCrypto era => PrettyC (KeyHash d c) era where prettyC _ = pcKeyHash
@@ -1189,7 +1189,7 @@ pcUTxO proof = ppMap pcTxIn (pcTxOut proof) . unUTxO
 
 instance Reflect era => PrettyC (UTxO era) era where prettyC = pcUTxO
 
-pcIndividualPoolStake :: IndividualPoolStake crypto -> PDoc
+pcIndividualPoolStake :: IndividualPoolStake c -> PDoc
 pcIndividualPoolStake (IndividualPoolStake rat vrf) =
   ppRecord
     "pool stake"
@@ -1207,20 +1207,20 @@ pcPoolParams x =
 
 instance PrettyC (PoolParams era) era where prettyC _ = pcPoolParams
 
-pcDelegCert :: DelegCert crypto -> PDoc
+pcDelegCert :: DelegCert c -> PDoc
 pcDelegCert (RegKey cred) = ppSexp "RegKey" [pcCredential cred]
 pcDelegCert (DeRegKey cred) = ppSexp "DeRegKey" [pcCredential cred]
 pcDelegCert (Delegate (Delegation x y)) = ppSexp "Delegate" [pcCredential x, pcKeyHash y]
 
 instance c ~ EraCrypto era => PrettyC (DelegCert c) era where prettyC _ = pcDelegCert
 
-pcPoolCert :: PoolCert crypto -> PDoc
+pcPoolCert :: PoolCert c -> PDoc
 pcPoolCert (RegPool poolp) = ppSexp "RegPool" [pcPoolParams poolp]
 pcPoolCert (RetirePool keyhash epoch) = ppSexp "RetirePool" [pcKeyHash keyhash, ppEpochNo epoch]
 
 instance c ~ EraCrypto era => PrettyC (PoolCert c) era where prettyC _ = pcPoolCert
 
-pcDCert :: DCert crypto -> PDoc
+pcDCert :: DCert c -> PDoc
 pcDCert (DCertDeleg x) = pcDelegCert x
 pcDCert (DCertPool x) = pcPoolCert x
 pcDCert (DCertGenesis _) = ppString "GenesisCert"
@@ -1228,7 +1228,7 @@ pcDCert (DCertMir _) = ppString "MirCert"
 
 instance c ~ EraCrypto era => PrettyC (DCert c) era where prettyC _ = pcDCert
 
-pcRewardAcnt :: RewardAcnt crypto -> PDoc
+pcRewardAcnt :: RewardAcnt c -> PDoc
 pcRewardAcnt (RewardAcnt net cred) = ppSexp "RewAccnt" [pcNetwork net, pcCredential cred]
 
 instance c ~ EraCrypto era => PrettyC (RewardAcnt c) era where prettyC _ = pcRewardAcnt

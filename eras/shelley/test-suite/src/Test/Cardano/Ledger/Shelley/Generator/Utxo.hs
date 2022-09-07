@@ -845,7 +845,7 @@ genRecipients len keys scripts = do
     scriptToCred' :: Script era -> Credential kr (EraCrypto era)
     scriptToCred' = ScriptHashObj . hashScript @era
 
-genPtrAddrs :: DState crypto -> [Addr crypto] -> Gen [Addr crypto]
+genPtrAddrs :: DState c -> [Addr c] -> Gen [Addr c]
 genPtrAddrs ds addrs = do
   let pointers = ptrsMap ds
   n <- QC.choose (0, min (Map.size pointers) (length addrs))

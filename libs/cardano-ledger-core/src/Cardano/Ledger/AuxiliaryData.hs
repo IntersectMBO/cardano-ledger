@@ -21,14 +21,14 @@ import Cardano.Ledger.SafeHash (SafeHash)
 import Control.DeepSeq (NFData (..))
 import NoThunks.Class (NoThunks (..))
 
-newtype AuxiliaryDataHash crypto = AuxiliaryDataHash
-  { unsafeAuxiliaryDataHash :: SafeHash crypto EraIndependentAuxiliaryData
+newtype AuxiliaryDataHash c = AuxiliaryDataHash
+  { unsafeAuxiliaryDataHash :: SafeHash c EraIndependentAuxiliaryData
   }
   deriving (Show, Eq, Ord, NoThunks, NFData)
 
-deriving instance CC.Crypto crypto => ToCBOR (AuxiliaryDataHash crypto)
+deriving instance CC.Crypto c => ToCBOR (AuxiliaryDataHash c)
 
-deriving instance CC.Crypto crypto => FromCBOR (AuxiliaryDataHash crypto)
+deriving instance CC.Crypto c => FromCBOR (AuxiliaryDataHash c)
 
 type ValidateAuxiliaryData era c = ()
 

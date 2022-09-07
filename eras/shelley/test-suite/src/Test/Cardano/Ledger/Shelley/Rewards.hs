@@ -206,7 +206,7 @@ rhoRange = [0, 0.05 .. 0.3]
 
 -- Helpers --
 
-keyPair :: CC.Crypto crypto => Int -> KeyPair r crypto
+keyPair :: CC.Crypto c => Int -> KeyPair r c
 keyPair seed = KeyPair vk sk
   where
     vk = VKey (Crypto.deriveVerKeyDSIGN sk)
@@ -224,14 +224,14 @@ vrfKeyPair seed = (sk, vk)
         mkSeedFromBytes . hashToBytes $
           hashWithSerialiser @Blake2b_256 toCBOR seed
 
-data PoolSetUpArgs crypto f = PoolSetUpArgs
+data PoolSetUpArgs c f = PoolSetUpArgs
   { poolPledge :: f Coin,
     poolCost :: f Coin,
     poolMargin :: f UnitInterval,
-    poolMembers :: f (Map (Credential 'Staking crypto) Coin)
+    poolMembers :: f (Map (Credential 'Staking c) Coin)
   }
 
-emptySetupArgs :: PoolSetUpArgs crypto Maybe
+emptySetupArgs :: PoolSetUpArgs c Maybe
 emptySetupArgs =
   PoolSetUpArgs
     { poolPledge = Nothing,
@@ -240,18 +240,18 @@ emptySetupArgs =
       poolMembers = Nothing
     }
 
-data PoolInfo crypto = PoolInfo
-  { params :: PoolParams crypto,
-    coldKey :: KeyPair 'StakePool crypto,
-    ownerKey :: KeyPair 'Staking crypto,
+data PoolInfo c = PoolInfo
+  { params :: PoolParams c,
+    coldKey :: KeyPair 'StakePool c,
+    ownerKey :: KeyPair 'Staking c,
     ownerStake :: Coin,
-    rewardKey :: KeyPair 'Staking crypto,
-    members :: Map (Credential 'Staking crypto) Coin
+    rewardKey :: KeyPair 'Staking c,
+    members :: Map (Credential 'Staking c) Coin
   }
 
 -- Generators --
 
-genNonOwnerMembers :: CC.Crypto crypto => Gen (Map (Credential 'Staking crypto) Coin)
+genNonOwnerMembers :: CC.Crypto c => Gen (Map (Credential 'Staking c) Coin)
 genNonOwnerMembers = do
   numMembers <- choose (0, maxNumMembers)
   fmap Map.fromList . replicateM numMembers $ do
@@ -269,12 +269,12 @@ genMargin = do
   numer <- choose (0, denom)
   pure $ unsafeBoundRational (numer % denom)
 
-genPoolInfo :: forall crypto. CC.Crypto crypto => PoolSetUpArgs crypto Maybe -> Gen (PoolInfo crypto)
+genPoolInfo :: forall c. CC.Crypto c => PoolSetUpArgs c Maybe -> Gen (PoolInfo c)
 genPoolInfo PoolSetUpArgs {poolPledge, poolCost, poolMargin, poolMembers} = do
   pledge <- getOrGen poolPledge $ genCoin 0 maxPoolPledeg
   cost <- getOrGen poolCost $ genCoin 0 maxPoolCost
   margin <- getOrGen poolMargin genMargin
-  vrfKey <- vrfKeyPair @(VRF crypto) <$> arbitrary
+  vrfKey <- vrfKeyPair @(VRF c) <$> arbitrary
   coldKey <- keyPair <$> arbitrary
   ownerKey <- keyPair <$> arbitrary
   rewardKey <- keyPair <$> arbitrary
@@ -305,7 +305,7 @@ genRewardPPs = do
   where
     g xs = unsafeBoundRational <$> elements xs
 
-genBlocksMade :: [PoolParams crypto] -> Gen (BlocksMade crypto)
+genBlocksMade :: [PoolParams c] -> Gen (BlocksMade c)
 genBlocksMade pools = BlocksMade . Map.fromList <$> mapM f pools
   where
     f p = (_poolId p,) <$> genNatural 0 maxPoolBlocks
@@ -530,12 +530,12 @@ rewardOld
       rewards' = f $ mapMaybe (\(_, x, _) -> x) results
       hs = Map.fromList $ fmap (\(hk, _, l) -> (hk, l)) results
 
-data RewardUpdateOld crypto = RewardUpdateOld
+data RewardUpdateOld c = RewardUpdateOld
   { deltaTOld :: !DeltaCoin,
     deltaROld :: !DeltaCoin,
-    rsOld :: !(Map (Credential 'Staking crypto) Coin),
+    rsOld :: !(Map (Credential 'Staking c) Coin),
     deltaFOld :: !DeltaCoin,
-    nonMyopicOld :: !(NonMyopic crypto)
+    nonMyopicOld :: !(NonMyopic c)
   }
   deriving (Show, Eq)
 
@@ -729,7 +729,7 @@ getMostRecentTotalRewardEvent = foldl' accum Map.empty
     accum ans (TickEvent (TickNewEpochEvent (TotalRewardEvent _ m))) = Map.unionWith Set.union m ans
     accum ans _ = ans
 
-complete :: PulsingRewUpdate crypto -> (RewardUpdate crypto, RewardEvent crypto)
+complete :: PulsingRewUpdate c -> (RewardUpdate c, RewardEvent c)
 complete (Complete r) = (r, mempty)
 complete (Pulsing rewsnap pulser) = runShelleyBase $ (completeRupd (Pulsing rewsnap pulser))
 
@@ -760,13 +760,13 @@ eventsMirrorRewards events nes = same eventRew compRew
 ppAgg :: Map (Credential 'Staking (EraCrypto C)) (Set (Reward (EraCrypto C))) -> PDoc
 ppAgg = ppMap prettyA (ppSet ppReward)
 
-instance Terse (Reward crypto) where
+instance Terse (Reward c) where
   terse x = show (ppReward x)
 
 instance PrettyA x => Terse (Set x) where
   terse x = show (ppSet prettyA x)
 
-instance PrettyA (Reward crypto) where
+instance PrettyA (Reward c) where
   prettyA = ppReward
 
 -- ================================================================

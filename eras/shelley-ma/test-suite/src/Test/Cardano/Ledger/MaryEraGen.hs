@@ -69,7 +69,7 @@ import qualified Test.QuickCheck as QC
 
 {------------------------------------------------------------------------------
  EraGen instance for MaryEra - This instance makes it possible to run the
- Shelley property tests for (MaryEra crypto)
+ Shelley property tests for (MaryEra c)
 
  This instance is layered on top of the ShelleyMA instances
  in Cardano.Ledger.ShelleyMA.Scripts:
@@ -98,9 +98,9 @@ instance (CC.Crypto c, Mock c) => EraGen (MaryEra c) where
   genEraTxWits _scriptinfo setWitVKey mapScriptWit = ShelleyTxWits setWitVKey mapScriptWit mempty
 
 genAuxiliaryData ::
-  Mock crypto =>
+  Mock c =>
   Constants ->
-  Gen (StrictMaybe (AuxiliaryData (MaryEra crypto)))
+  Gen (StrictMaybe (AuxiliaryData (MaryEra c)))
 genAuxiliaryData Constants {frequencyTxWithMetadata} =
   frequency
     [ (frequencyTxWithMetadata, SJust <$> arbitrary),
@@ -108,7 +108,7 @@ genAuxiliaryData Constants {frequencyTxWithMetadata} =
     ]
 
 -- | Carefully crafted to apply in any Era where Value is MaryValue
-maryGenesisValue :: forall era crypto. CC.Crypto crypto => GenEnv era -> Gen (MaryValue crypto)
+maryGenesisValue :: forall era c. CC.Crypto c => GenEnv era -> Gen (MaryValue c)
 maryGenesisValue (GenEnv _ _ Constants {minGenesisOutputVal, maxGenesisOutputVal}) =
   Val.inject . Coin <$> exponential minGenesisOutputVal maxGenesisOutputVal
 

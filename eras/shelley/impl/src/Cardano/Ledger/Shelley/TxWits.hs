@@ -174,10 +174,10 @@ scriptShelleyTxWitsL =
     (\w s -> w {scriptWits = s})
 {-# INLINEABLE scriptShelleyTxWitsL #-}
 
-instance CC.Crypto crypto => EraTxWits (ShelleyEra crypto) where
+instance CC.Crypto c => EraTxWits (ShelleyEra c) where
   {-# SPECIALIZE instance EraTxWits (ShelleyEra CC.StandardCrypto) #-}
 
-  type TxWits (ShelleyEra crypto) = ShelleyTxWits (ShelleyEra crypto)
+  type TxWits (ShelleyEra c) = ShelleyTxWits (ShelleyEra c)
 
   mkBasicTxWits = mempty
 
@@ -251,10 +251,10 @@ instance EraScript era => FromCBOR (Annotator (ShelleyTxWits era)) where
 
 -- | This type is only used to preserve the old buggy behavior where signature
 -- was ignored in the `Ord` instance for `WitVKey`s.
-newtype IgnoreSigOrd kr crypto = IgnoreSigOrd {unIgnoreSigOrd :: WitVKey kr crypto}
+newtype IgnoreSigOrd kr c = IgnoreSigOrd {unIgnoreSigOrd :: WitVKey kr c}
   deriving (Eq)
 
-instance (Typeable kr, CC.Crypto crypto) => Ord (IgnoreSigOrd kr crypto) where
+instance (Typeable kr, CC.Crypto c) => Ord (IgnoreSigOrd kr c) where
   compare (IgnoreSigOrd w1) (IgnoreSigOrd w2) = compare (witVKeyHash w1) (witVKeyHash w2)
 
 decodeWits :: forall era s. EraScript era => Decoder s (Annotator (ShelleyTxWits era))

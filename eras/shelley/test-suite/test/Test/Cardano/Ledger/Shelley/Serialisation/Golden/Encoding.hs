@@ -232,19 +232,19 @@ getRawNonce :: Nonce -> ByteString
 getRawNonce (Nonce hsh) = Monomorphic.hashToBytes hsh
 getRawNonce NeutralNonce = error "The neutral nonce has no bytes"
 
-testGKey :: CC.Crypto crypto => GenesisKeyPair crypto
+testGKey :: CC.Crypto c => GenesisKeyPair c
 testGKey = KeyPair vk sk
   where
     (sk, vk) = mkGenKey (RawSeed 0 0 0 0 0)
 
-testGKeyHash :: CC.Crypto crypto => KeyHash 'Genesis crypto
+testGKeyHash :: CC.Crypto c => KeyHash 'Genesis c
 testGKeyHash = (hashKey . vKey) testGKey
 
-testVRF :: CC.Crypto crypto => (SignKeyVRF crypto, VerKeyVRF crypto)
+testVRF :: CC.Crypto c => (SignKeyVRF c, VerKeyVRF c)
 testVRF = mkVRFKeyPair (RawSeed 0 0 0 0 5)
 
-testVRFKH :: forall crypto. CC.Crypto crypto => Hash crypto (VerKeyVRF crypto)
-testVRFKH = hashVerKeyVRF $ snd (testVRF @crypto)
+testVRFKH :: forall c. CC.Crypto c => Hash c (VerKeyVRF c)
+testVRFKH = hashVerKeyVRF $ snd (testVRF @c)
 
 testTxb :: ShelleyTest era => ShelleyTxBody era
 testTxb =
@@ -264,29 +264,29 @@ testTxbHash ::
   SafeHash (EraCrypto era) EraIndependentTxBody
 testTxbHash = hashAnnotated $ testTxb @era
 
-testKey1 :: CC.Crypto crypto => KeyPair 'Payment crypto
+testKey1 :: CC.Crypto c => KeyPair 'Payment c
 testKey1 = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 0 0 0 0 1)
 
-testKey2 :: CC.Crypto crypto => KeyPair kr crypto
+testKey2 :: CC.Crypto c => KeyPair kr c
 testKey2 = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 0 0 0 0 2)
 
-testBlockIssuerKey :: CC.Crypto crypto => KeyPair 'BlockIssuer crypto
+testBlockIssuerKey :: CC.Crypto c => KeyPair 'BlockIssuer c
 testBlockIssuerKey = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 0 0 0 0 4)
 
-testStakePoolKey :: CC.Crypto crypto => KeyPair 'StakePool crypto
+testStakePoolKey :: CC.Crypto c => KeyPair 'StakePool c
 testStakePoolKey = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 0 0 0 0 5)
 
 testGenesisDelegateKey ::
-  CC.Crypto crypto =>
-  KeyPair 'GenesisDelegate crypto
+  CC.Crypto c =>
+  KeyPair 'GenesisDelegate c
 testGenesisDelegateKey = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 0 0 0 0 6)
@@ -312,98 +312,98 @@ testKey1SigToken = e
     Encoding e = encodeSignedDSIGN s
 
 testOpCertSigTokens ::
-  forall crypto.
-  (Mock crypto) =>
+  forall c.
+  (Mock c) =>
   Tokens ->
   Tokens
 testOpCertSigTokens = e
   where
     s =
-      signedDSIGN @crypto
-        (sKey $ testKey1 @crypto)
-        (OCertSignable @crypto (snd $ testKESKeys @crypto) 0 (KESPeriod 0))
+      signedDSIGN @c
+        (sKey $ testKey1 @c)
+        (OCertSignable @c (snd $ testKESKeys @c) 0 (KESPeriod 0))
     Encoding e = encodeSignedDSIGN s
 
-testKeyHash1 :: CC.Crypto crypto => KeyHash 'Payment crypto
+testKeyHash1 :: CC.Crypto c => KeyHash 'Payment c
 testKeyHash1 = (hashKey . vKey) testKey1
 
-testKeyHash2 :: CC.Crypto crypto => KeyHash 'Staking crypto
+testKeyHash2 :: CC.Crypto c => KeyHash 'Staking c
 testKeyHash2 = (hashKey . vKey) testKey2
 
-testKESKeys :: CC.Crypto crypto => (SignKeyKES crypto, VerKeyKES crypto)
+testKESKeys :: CC.Crypto c => (SignKeyKES c, VerKeyKES c)
 testKESKeys = mkKESKeyPair (RawSeed 0 0 0 0 3)
 
-testAddrE :: CC.Crypto crypto => Addr crypto
+testAddrE :: CC.Crypto c => Addr c
 testAddrE =
   Addr
     Testnet
     (KeyHashObj testKeyHash1)
     StakeRefNull
 
-testPayCred :: forall crypto. CC.Crypto crypto => Credential 'Payment crypto
-testPayCred = KeyHashObj (testKeyHash1 @crypto)
+testPayCred :: forall c. CC.Crypto c => Credential 'Payment c
+testPayCred = KeyHashObj (testKeyHash1 @c)
 
-testStakeCred :: forall crypto. CC.Crypto crypto => Credential 'Staking crypto
-testStakeCred = KeyHashObj $ testKeyHash2 @crypto
+testStakeCred :: forall c. CC.Crypto c => Credential 'Staking c
+testStakeCred = KeyHashObj $ testKeyHash2 @c
 
-testScript :: forall crypto. CC.Crypto crypto => MultiSig (ShelleyEra crypto)
-testScript = RequireSignature $ asWitness (testKeyHash1 @crypto)
+testScript :: forall c. CC.Crypto c => MultiSig (ShelleyEra c)
+testScript = RequireSignature $ asWitness (testKeyHash1 @c)
 
-testScriptHash :: forall crypto. CC.Crypto crypto => ScriptHash crypto
-testScriptHash = hashScript @(ShelleyEra crypto) testScript
+testScriptHash :: forall c. CC.Crypto c => ScriptHash c
+testScriptHash = hashScript @(ShelleyEra c) testScript
 
-testScript2 :: forall crypto. CC.Crypto crypto => MultiSig (ShelleyEra crypto)
-testScript2 = RequireSignature $ asWitness (testKeyHash2 @crypto)
+testScript2 :: forall c. CC.Crypto c => MultiSig (ShelleyEra c)
+testScript2 = RequireSignature $ asWitness (testKeyHash2 @c)
 
 testHeaderHash ::
-  forall crypto.
-  CC.Crypto crypto =>
-  HashHeader crypto
+  forall c.
+  CC.Crypto c =>
+  HashHeader c
 testHeaderHash =
   HashHeader $
     coerce
-      (hashWithSerialiser toCBOR 0 :: Hash crypto Int)
+      (hashWithSerialiser toCBOR 0 :: Hash c Int)
 
 testBHB ::
-  forall era crypto.
+  forall era c.
   ( EraTx era,
     PreAlonzo era,
-    ExMock crypto,
-    crypto ~ EraCrypto era,
+    ExMock c,
+    c ~ EraCrypto era,
     Tx era ~ ShelleyTx era
   ) =>
-  BHBody crypto
+  BHBody c
 testBHB =
   BHBody
     { bheaderBlockNo = BlockNo 44,
       bheaderSlotNo = SlotNo 33,
       bheaderPrev = BlockHash testHeaderHash,
       bheaderVk = vKey testBlockIssuerKey,
-      bheaderVrfVk = snd $ testVRF @crypto,
+      bheaderVrfVk = snd $ testVRF @c,
       bheaderEta =
         mkCertifiedVRF
           ( WithResult
               (mkSeed seedEta (SlotNo 33) (mkNonceFromNumber 0))
               1
           )
-          (fst $ testVRF @crypto),
+          (fst $ testVRF @c),
       bheaderL =
         mkCertifiedVRF
           ( WithResult
               (mkSeed seedL (SlotNo 33) (mkNonceFromNumber 0))
               1
           )
-          (fst $ testVRF @crypto),
+          (fst $ testVRF @c),
       bsize = 0,
       bhash = bbHash @era $ ShelleyTxSeq @era StrictSeq.empty,
       bheaderOCert =
         OCert
-          (snd $ testKESKeys @crypto)
+          (snd $ testKESKeys @c)
           0
           (KESPeriod 0)
-          ( signedDSIGN @crypto
-              (sKey $ testKey1 @crypto)
-              (OCertSignable (snd $ testKESKeys @crypto) 0 (KESPeriod 0))
+          ( signedDSIGN @c
+              (sKey $ testKey1 @c)
+              (OCertSignable (snd $ testKESKeys @c) 0 (KESPeriod 0))
           ),
       bprotver = ProtVer 0 0
     }

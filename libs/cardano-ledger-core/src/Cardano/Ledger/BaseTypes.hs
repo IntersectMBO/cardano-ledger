@@ -654,11 +654,11 @@ instance FromCBOR Network where
       Just n -> pure n
 
 -- | Blocks made
-newtype BlocksMade crypto = BlocksMade
-  { unBlocksMade :: Map (KeyHash 'StakePool crypto) Natural
+newtype BlocksMade c = BlocksMade
+  { unBlocksMade :: Map (KeyHash 'StakePool c) Natural
   }
   deriving (Eq, Generic)
-  deriving (Show) via Quiet (BlocksMade crypto)
+  deriving (Show) via Quiet (BlocksMade c)
   deriving newtype (NoThunks, NFData, ToJSON, FromJSON, ToCBOR, FromCBOR)
 
 -- TODO: It is unfeasable to have 65535 outputs in a transaction,

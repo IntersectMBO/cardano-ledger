@@ -209,26 +209,26 @@ instance FromCBOR StakePoolRelay where
       k -> invalidKey k
 
 -- | A stake pool.
-data PoolParams crypto = PoolParams
-  { _poolId :: !(KeyHash 'StakePool crypto),
-    _poolVrf :: !(Hash crypto (VerKeyVRF crypto)),
+data PoolParams c = PoolParams
+  { _poolId :: !(KeyHash 'StakePool c),
+    _poolVrf :: !(Hash c (VerKeyVRF c)),
     _poolPledge :: !Coin,
     _poolCost :: !Coin,
     _poolMargin :: !UnitInterval,
-    _poolRAcnt :: !(RewardAcnt crypto),
-    _poolOwners :: !(Set (KeyHash 'Staking crypto)),
+    _poolRAcnt :: !(RewardAcnt c),
+    _poolOwners :: !(Set (KeyHash 'Staking c)),
     _poolRelays :: !(StrictSeq StakePoolRelay),
     _poolMD :: !(StrictMaybe PoolMetadata)
   }
   deriving (Show, Generic, Eq, Ord)
-  deriving (ToCBOR) via CBORGroup (PoolParams crypto)
-  deriving (FromCBOR) via CBORGroup (PoolParams crypto)
+  deriving (ToCBOR) via CBORGroup (PoolParams c)
+  deriving (FromCBOR) via CBORGroup (PoolParams c)
 
-instance NoThunks (PoolParams crypto)
+instance NoThunks (PoolParams c)
 
-deriving instance NFData (PoolParams crypto)
+deriving instance NFData (PoolParams c)
 
-instance CC.Crypto crypto => ToJSON (PoolParams crypto) where
+instance CC.Crypto c => ToJSON (PoolParams c) where
   toJSON pp =
     Aeson.object
       [ "publicKey" .= _poolId pp, -- TODO publicKey is an unfortunate name, should be poolId
@@ -242,7 +242,7 @@ instance CC.Crypto crypto => ToJSON (PoolParams crypto) where
         "metadata" .= _poolMD pp
       ]
 
-instance CC.Crypto crypto => FromJSON (PoolParams crypto) where
+instance CC.Crypto c => FromJSON (PoolParams c) where
   parseJSON =
     Aeson.withObject "PoolParams" $ \obj ->
       PoolParams
@@ -281,8 +281,8 @@ instance ToCBOR SizeOfPoolRelays where
   toCBOR = panic "The `SizeOfPoolRelays` type cannot be encoded!"
 
 instance
-  CC.Crypto crypto =>
-  ToCBORGroup (PoolParams crypto)
+  CC.Crypto c =>
+  ToCBORGroup (PoolParams c)
   where
   toCBORGroup poolParams =
     toCBOR (_poolId poolParams)
@@ -321,8 +321,8 @@ instance
   listLenBound _ = 9
 
 instance
-  CC.Crypto crypto =>
-  FromCBORGroup (PoolParams crypto)
+  CC.Crypto c =>
+  FromCBORGroup (PoolParams c)
   where
   fromCBORGroup = do
     hk <- fromCBOR

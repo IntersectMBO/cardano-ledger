@@ -234,13 +234,13 @@ data PParamsField era
 initVI :: ValidityInterval
 initVI = ValidityInterval SNothing SNothing
 
-initWdrl :: Wdrl crypto
+initWdrl :: Wdrl c
 initWdrl = Wdrl Map.empty
 
-initMultiAsset :: MultiAsset crypto
+initMultiAsset :: MultiAsset c
 initMultiAsset = MultiAsset Map.empty
 
-initValue :: MaryValue crypto
+initValue :: MaryValue c
 initValue = MaryValue 0 mempty
 
 initialTxBody :: Era era => Proof era -> TxBody era

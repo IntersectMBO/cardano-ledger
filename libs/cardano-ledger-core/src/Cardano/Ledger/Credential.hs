@@ -70,18 +70,18 @@ import Quiet (Quiet (Quiet))
 -- era, since they reference the hash of a script, which can change. This
 -- parameter is a phantom, however, so in actuality the instances will remain
 -- the same.
-data Credential (kr :: KeyRole) crypto
-  = ScriptHashObj !(ScriptHash crypto)
-  | KeyHashObj !(KeyHash kr crypto)
+data Credential (kr :: KeyRole) c
+  = ScriptHashObj !(ScriptHash c)
+  | KeyHashObj !(KeyHash kr c)
   deriving (Show, Eq, Generic, NFData, Ord)
 
 instance HasKeyRole Credential where
   coerceKeyRole (ScriptHashObj x) = ScriptHashObj x
   coerceKeyRole (KeyHashObj x) = KeyHashObj $ coerceKeyRole x
 
-instance NoThunks (Credential kr crypto)
+instance NoThunks (Credential kr c)
 
-instance CC.Crypto crypto => ToJSON (Credential kr crypto) where
+instance CC.Crypto c => ToJSON (Credential kr c) where
   toJSON (ScriptHashObj hash) =
     Aeson.object
       [ "script hash" .= hash
@@ -91,7 +91,7 @@ instance CC.Crypto crypto => ToJSON (Credential kr crypto) where
       [ "key hash" .= hash
       ]
 
-instance CC.Crypto crypto => FromJSON (Credential kr crypto) where
+instance CC.Crypto c => FromJSON (Credential kr c) where
   parseJSON =
     Aeson.withObject "Credential" $ \obj ->
       asum [parser1 obj, parser2 obj]
@@ -99,21 +99,21 @@ instance CC.Crypto crypto => FromJSON (Credential kr crypto) where
       parser1 obj = ScriptHashObj <$> obj .: "script hash"
       parser2 obj = KeyHashObj <$> obj .: "key hash"
 
-instance CC.Crypto crypto => ToJSONKey (Credential kr crypto)
+instance CC.Crypto c => ToJSONKey (Credential kr c)
 
-instance CC.Crypto crypto => FromJSONKey (Credential kr crypto)
+instance CC.Crypto c => FromJSONKey (Credential kr c)
 
-type PaymentCredential crypto = Credential 'Payment crypto
+type PaymentCredential c = Credential 'Payment c
 
-type StakeCredential crypto = Credential 'Staking crypto
+type StakeCredential c = Credential 'Staking c
 
-data StakeReference crypto
-  = StakeRefBase !(StakeCredential crypto)
+data StakeReference c
+  = StakeRefBase !(StakeCredential c)
   | StakeRefPtr !Ptr
   | StakeRefNull
   deriving (Show, Eq, Generic, NFData, Ord)
 
-instance NoThunks (StakeReference crypto)
+instance NoThunks (StakeReference c)
 
 -- TODO: implement this optimization:
 -- We expect that `SlotNo` will fit into `Word32` for a very long time,
@@ -191,16 +191,16 @@ ptrCertIx :: Ptr -> CertIx
 ptrCertIx (Ptr _ _ cIx) = cIx
 
 instance
-  (Typeable kr, CC.Crypto crypto) =>
-  ToCBOR (Credential kr crypto)
+  (Typeable kr, CC.Crypto c) =>
+  ToCBOR (Credential kr c)
   where
   toCBOR = \case
     KeyHashObj kh -> encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR kh
     ScriptHashObj hs -> encodeListLen 2 <> toCBOR (1 :: Word8) <> toCBOR hs
 
 instance
-  (Typeable kr, CC.Crypto crypto) =>
-  FromCBOR (Credential kr crypto)
+  (Typeable kr, CC.Crypto c) =>
+  FromCBOR (Credential kr c)
   where
   fromCBOR = decodeRecordSum "Credential" $
     \case
@@ -236,17 +236,17 @@ instance FromCBORGroup Ptr where
 --   Nothing -> fail $ "SlotNo is too far into the future: " ++ show slotNo
 --   Just ptr -> pure ptr
 
-newtype GenesisCredential crypto = GenesisCredential
-  { unGenesisCredential :: KeyHash 'Genesis crypto
+newtype GenesisCredential c = GenesisCredential
+  { unGenesisCredential :: KeyHash 'Genesis c
   }
   deriving (Generic)
-  deriving (Show) via Quiet (GenesisCredential crypto)
+  deriving (Show) via Quiet (GenesisCredential c)
 
-instance Ord (GenesisCredential crypto) where
+instance Ord (GenesisCredential c) where
   compare (GenesisCredential gh) (GenesisCredential gh') = compare gh gh'
 
-instance Eq (GenesisCredential crypto) where
+instance Eq (GenesisCredential c) where
   (==) (GenesisCredential gh) (GenesisCredential gh') = gh == gh'
 
-instance CC.Crypto crypto => ToCBOR (GenesisCredential crypto) where
+instance CC.Crypto c => ToCBOR (GenesisCredential c) where
   toCBOR (GenesisCredential kh) = toCBOR kh

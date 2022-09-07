@@ -29,39 +29,39 @@ testProperty :: TestName -> Property -> TestTree
 testProperty s p = testPropertyNamed s (Hedgehog.Internal.Property.PropertyName s) p
 
 prop_roundtrip_Address_JSON ::
-  forall crypto.
-  CC.Crypto crypto =>
-  Proxy crypto ->
+  forall c.
+  CC.Crypto c =>
+  Proxy c ->
   Property
 prop_roundtrip_Address_JSON _ =
   -- If this fails, FundPair and ShelleyGenesis can also fail.
   Hedgehog.property $ do
-    addr <- Hedgehog.forAll $ genAddress @crypto
+    addr <- Hedgehog.forAll $ genAddress @c
 
     Hedgehog.tripping addr toJSON fromJSON
     Hedgehog.tripping addr encode decode
 
 prop_roundtrip_GenesisDelegationPair_JSON ::
-  forall crypto.
-  CC.Crypto crypto =>
-  Proxy crypto ->
+  forall c.
+  CC.Crypto c =>
+  Proxy c ->
   Property
 prop_roundtrip_GenesisDelegationPair_JSON _ =
   Hedgehog.property $ do
-    dp <- Hedgehog.forAll $ genGenesisDelegationPair @crypto
+    dp <- Hedgehog.forAll $ genGenesisDelegationPair @c
 
     Hedgehog.tripping dp toJSON fromJSON
     Hedgehog.tripping dp encode decode
 
 prop_roundtrip_FundPair_JSON ::
-  forall crypto.
-  CC.Crypto crypto =>
-  Proxy crypto ->
+  forall c.
+  CC.Crypto c =>
+  Proxy c ->
   Property
 prop_roundtrip_FundPair_JSON _ =
   -- If this fails, ShelleyGenesis can also fail.
   Hedgehog.property $ do
-    fp <- Hedgehog.forAll $ genGenesisFundPair @crypto
+    fp <- Hedgehog.forAll $ genGenesisFundPair @c
 
     Hedgehog.tripping fp toJSON fromJSON
     Hedgehog.tripping fp encode decode

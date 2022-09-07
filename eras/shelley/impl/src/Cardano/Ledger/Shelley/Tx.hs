@@ -190,10 +190,10 @@ mkBasicShelleyTx txBody =
         _auxiliaryData = SNothing
       }
 
-instance CC.Crypto crypto => EraTx (ShelleyEra crypto) where
+instance CC.Crypto c => EraTx (ShelleyEra c) where
   {-# SPECIALIZE instance EraTx (ShelleyEra CC.StandardCrypto) #-}
 
-  type Tx (ShelleyEra crypto) = ShelleyTx (ShelleyEra crypto)
+  type Tx (ShelleyEra c) = ShelleyTx (ShelleyEra c)
 
   mkBasicTx = mkBasicShelleyTx
 
@@ -383,9 +383,9 @@ txwitsScript ::
 txwitsScript tx = tx ^. witsTxL . scriptTxWitsL
 
 extractKeyHashWitnessSet ::
-  forall (r :: KeyRole) crypto.
-  [Credential r crypto] ->
-  Set (KeyHash 'Witness crypto)
+  forall (r :: KeyRole) c.
+  [Credential r c] ->
+  Set (KeyHash 'Witness c)
 extractKeyHashWitnessSet = foldr accum Set.empty
   where
     accum (KeyHashObj hk) ans = Set.insert (asWitness hk) ans

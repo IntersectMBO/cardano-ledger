@@ -108,10 +108,10 @@ instance
   initialRules = [pure SNothing]
   transitionRules = [rupdTransition]
 
-data RupdEvent crypto
+data RupdEvent c
   = RupdEvent
       !EpochNo
-      !(Map.Map (Credential 'Staking crypto) (Set (Reward crypto)))
+      !(Map.Map (Credential 'Staking c) (Set (Reward c)))
 
 -- | tell a RupdEvent only if the map is non-empty
 tellRupd :: String -> RupdEvent (EraCrypto era) -> Rule (ShelleyRUPD era) rtype ()

@@ -747,7 +747,7 @@ genRecipientsFrom txOuts = do
                 else coreTxOut reify fields : rs
   goNew extra txOuts []
 
-getDCertCredential :: DCert crypto -> Maybe (Credential 'Staking crypto)
+getDCertCredential :: DCert c -> Maybe (Credential 'Staking c)
 getDCertCredential = \case
   DCertDeleg d ->
     case d of

@@ -436,7 +436,7 @@ mapProportion epochnum lastSlot count m =
   where
     pairs = [(n, pure k) | (k, n) <- Map.toList m]
 
-chooseIssuer :: EpochNo -> Word64 -> Int -> PoolDistr crypto -> Gen (KeyHash 'StakePool crypto)
+chooseIssuer :: EpochNo -> Word64 -> Int -> PoolDistr c -> Gen (KeyHash 'StakePool c)
 chooseIssuer epochnum lastSlot count (PoolDistr m) = mapProportion epochnum lastSlot count (getInt <$> m)
   where
     getInt x = floor (individualPoolStake x * 1000)

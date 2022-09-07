@@ -149,11 +149,11 @@ toCompactCoinError c =
     Just compactCoin -> compactCoin
 
 mkStake ::
-  [ ( Credential 'Staking crypto,
+  [ ( Credential 'Staking c,
       Coin
     )
   ] ->
-  EB.Stake crypto
+  EB.Stake c
 mkStake = EB.Stake . GHC.Exts.fromList . map (fmap toCompactCoinError)
 
 initUTxO :: Cr.Crypto c => UTxO (ShelleyEra c)

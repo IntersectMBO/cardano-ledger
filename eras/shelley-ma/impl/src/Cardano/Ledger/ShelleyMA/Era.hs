@@ -55,25 +55,25 @@ data MaryOrAllegra = Mary | Allegra
 --   between the Mary and Allegra instances
 class
   ( Typeable ma,
-    CC.Crypto crypto,
-    DecodeNonNegative (MAValue ma crypto),
-    Compactible (MAValue ma crypto),
-    Eq (CompactForm (MAValue ma crypto)),
-    NFData (MAValue ma crypto),
-    Show (MAValue ma crypto),
-    Val (MAValue ma crypto),
-    Eq (MAValue ma crypto),
-    FromCBOR (MAValue ma crypto),
-    ToCBOR (MAValue ma crypto),
-    EncodeMint (MAValue ma crypto),
-    DecodeMint (MAValue ma crypto),
-    NoThunks (MAValue ma crypto)
+    CC.Crypto c,
+    DecodeNonNegative (MAValue ma c),
+    Compactible (MAValue ma c),
+    Eq (CompactForm (MAValue ma c)),
+    NFData (MAValue ma c),
+    Show (MAValue ma c),
+    Val (MAValue ma c),
+    Eq (MAValue ma c),
+    FromCBOR (MAValue ma c),
+    ToCBOR (MAValue ma c),
+    EncodeMint (MAValue ma c),
+    DecodeMint (MAValue ma c),
+    NoThunks (MAValue ma c)
   ) =>
-  MAClass (ma :: MaryOrAllegra) crypto
+  MAClass (ma :: MaryOrAllegra) c
   where
-  type MAValue (ma :: MaryOrAllegra) crypto :: Type
-  getScriptHash :: proxy ma -> MultiAsset crypto -> Set.Set (ScriptHash crypto)
-  promoteMultiAsset :: proxy ma -> MultiAsset crypto -> Value (ShelleyMAEra ma crypto)
+  type MAValue (ma :: MaryOrAllegra) c :: Type
+  getScriptHash :: proxy ma -> MultiAsset c -> Set.Set (ScriptHash c)
+  promoteMultiAsset :: proxy ma -> MultiAsset c -> Value (ShelleyMAEra ma c)
 
 instance CC.Crypto c => MAClass 'Mary c where
   type MAValue 'Mary c = MaryValue c
@@ -87,9 +87,9 @@ instance CC.Crypto c => MAClass 'Allegra c where
 
 -- | The actual Mary and Allegra instances, rolled into one, the MAClass superclass
 --   provides the era-specific code for where they differ.
-instance MAClass ma crypto => Era (ShelleyMAEra ma crypto) where
-  type EraCrypto (ShelleyMAEra ma crypto) = crypto
-  type ProtVerLow (ShelleyMAEra ma crypto) = MAProtVer ma
+instance MAClass ma c => Era (ShelleyMAEra ma c) where
+  type EraCrypto (ShelleyMAEra ma c) = c
+  type ProtVerLow (ShelleyMAEra ma c) = MAProtVer ma
 
 type family MAProtVer (ma :: MaryOrAllegra) :: Nat where
   MAProtVer 'Allegra = 3
@@ -101,9 +101,9 @@ type family MAProtVer (ma :: MaryOrAllegra) :: Nat where
 
 type instance Value (ShelleyMAEra ma c) = MAValue ma c
 
-instance MAClass ma crypto => EraPParams (ShelleyMAEra ma crypto) where
-  type PParams (ShelleyMAEra ma crypto) = ShelleyPParams (ShelleyMAEra ma crypto)
-  type PParamsUpdate (ShelleyMAEra ma crypto) = ShelleyPParamsUpdate (ShelleyMAEra ma crypto)
+instance MAClass ma c => EraPParams (ShelleyMAEra ma c) where
+  type PParams (ShelleyMAEra ma c) = ShelleyPParams (ShelleyMAEra ma c)
+  type PParamsUpdate (ShelleyMAEra ma c) = ShelleyPParamsUpdate (ShelleyMAEra ma c)
 
   applyPPUpdates = updatePParams
 

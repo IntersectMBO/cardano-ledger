@@ -406,24 +406,24 @@ instance (Era era, Val (Value era), DecodeNonNegative (Value era)) => Twiddle (A
 instance Twiddle SlotNo where
   twiddle = twiddle . toTerm
 
-instance C.Crypto crypto => Twiddle (DCert crypto) where
+instance C.Crypto c => Twiddle (DCert c) where
   twiddle = twiddle . toTerm
 
-instance C.Crypto crypto => Twiddle (Wdrl crypto) where
+instance C.Crypto c => Twiddle (Wdrl c) where
   twiddle = twiddle . toTerm
 
-instance C.Crypto crypto => Twiddle (AuxiliaryDataHash crypto) where
+instance C.Crypto c => Twiddle (AuxiliaryDataHash c) where
   twiddle = twiddle . toTerm
 
 emptyOrNothing ::
-  forall t a crypto.
+  forall t a c.
   ( Foldable t,
     Twiddle (t Void),
     Monoid (t Void),
     Twiddle (t a)
   ) =>
-  AlonzoTxBody (AlonzoEra crypto) ->
-  (AlonzoTxBody (AlonzoEra crypto) -> t a) ->
+  AlonzoTxBody (AlonzoEra c) ->
+  (AlonzoTxBody (AlonzoEra c) -> t a) ->
   Gen (Maybe Term)
 emptyOrNothing txBody f =
   if null $ f txBody
@@ -438,16 +438,16 @@ twiddleStrictMaybe :: Twiddle a => StrictMaybe a -> Gen (Maybe Term)
 twiddleStrictMaybe SNothing = pure Nothing
 twiddleStrictMaybe (SJust x) = Just <$> twiddle x
 
-instance C.Crypto crypto => Twiddle (Update (AlonzoEra crypto)) where
+instance C.Crypto c => Twiddle (Update (AlonzoEra c)) where
   twiddle = twiddle . toTerm
 
-instance C.Crypto crypto => Twiddle (MultiAsset crypto) where
+instance C.Crypto c => Twiddle (MultiAsset c) where
   twiddle = twiddle . encodingToTerm . encodeMint
 
-instance C.Crypto crypto => Twiddle (ScriptIntegrityHash crypto) where
+instance C.Crypto c => Twiddle (ScriptIntegrityHash c) where
   twiddle = twiddle . toTerm
 
-instance (C.Crypto crypto, Typeable t) => Twiddle (KeyHash t crypto) where
+instance (C.Crypto c, Typeable t) => Twiddle (KeyHash t c) where
   twiddle = twiddle . toTerm
 
 instance Twiddle Network where
@@ -459,7 +459,7 @@ instance C.Crypto c => Twiddle (TxIn c) where
 instance Twiddle Coin where
   twiddle = twiddle . toTerm
 
-instance C.Crypto crypto => Twiddle (AlonzoTxBody (AlonzoEra crypto)) where
+instance C.Crypto c => Twiddle (AlonzoTxBody (AlonzoEra c)) where
   twiddle txBody = do
     inputs' <- twiddle $ inputs txBody
     outputs' <- twiddle $ outputs txBody

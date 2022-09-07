@@ -172,9 +172,9 @@ type MockGen era =
     Arbitrary (VerKeyDSIGN (DSIGN (EraCrypto era)))
   )
 
-instance Mock crypto => Arbitrary (BHeader crypto) where
+instance Mock c => Arbitrary (BHeader c) where
   arbitrary = do
-    prevHash <- arbitrary :: Gen (HashHeader crypto)
+    prevHash <- arbitrary :: Gen (HashHeader c)
     allPoolKeys <- elements (map snd (coreNodeKeys defaultConstants))
     curSlotNo <- SlotNo <$> choose (0, 10)
     curBlockNo <- BlockNo <$> choose (0, 100)
@@ -197,17 +197,17 @@ instance Mock crypto => Arbitrary (BHeader crypto) where
         bodySize
         bodyHash
 
-instance DSIGNAlgorithm crypto => Arbitrary (SignedDSIGN crypto a) where
+instance DSIGNAlgorithm c => Arbitrary (SignedDSIGN c a) where
   arbitrary =
     SignedDSIGN . fromJust . rawDeserialiseSigDSIGN
-      <$> (genByteString . fromIntegral $ sizeSigDSIGN (Proxy @crypto))
+      <$> (genByteString . fromIntegral $ sizeSigDSIGN (Proxy @c))
 
-instance DSIGNAlgorithm crypto => Arbitrary (VerKeyDSIGN crypto) where
+instance DSIGNAlgorithm c => Arbitrary (VerKeyDSIGN c) where
   arbitrary =
     fromJust . rawDeserialiseVerKeyDSIGN
-      <$> (genByteString . fromIntegral $ sizeVerKeyDSIGN (Proxy @crypto))
+      <$> (genByteString . fromIntegral $ sizeVerKeyDSIGN (Proxy @c))
 
-instance CC.Crypto crypto => Arbitrary (BootstrapWitness crypto) where
+instance CC.Crypto c => Arbitrary (BootstrapWitness c) where
   arbitrary = do
     key <- arbitrary
     sig <- genSignature
@@ -215,16 +215,16 @@ instance CC.Crypto crypto => Arbitrary (BootstrapWitness crypto) where
     attributes <- arbitrary
     pure $ BootstrapWitness key sig chainCode attributes
 
-instance CC.Crypto crypto => Arbitrary (TP.HashHeader crypto) where
+instance CC.Crypto c => Arbitrary (TP.HashHeader c) where
   arbitrary = TP.HashHeader <$> genHash
 
-instance (Typeable kr, CC.Crypto crypto) => Arbitrary (WitVKey kr crypto) where
+instance (Typeable kr, CC.Crypto c) => Arbitrary (WitVKey kr c) where
   arbitrary =
     WitVKey
       <$> arbitrary
       <*> arbitrary
 
-instance CC.Crypto crypto => Arbitrary (Wdrl crypto) where
+instance CC.Crypto c => Arbitrary (Wdrl c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -267,10 +267,10 @@ instance Arbitrary (MD.Metadata era) where
 maxTxWits :: Int
 maxTxWits = 5
 
-instance CC.Crypto crypto => Arbitrary (TxId crypto) where
+instance CC.Crypto c => Arbitrary (TxId c) where
   arbitrary = TxId <$> arbitrary
 
-instance CC.Crypto crypto => Arbitrary (TxIn crypto) where
+instance CC.Crypto c => Arbitrary (TxIn c) where
   arbitrary =
     TxIn
       <$> (TxId <$> arbitrary)
@@ -313,13 +313,13 @@ instance Arbitrary NonNegativeInterval where
     Positive (y :: Word64) <- arbitrary
     pure $ unsafeBoundRational $ promoteRatio (x % y)
 
-instance CC.Crypto crypto => Arbitrary (KeyHash a crypto) where
+instance CC.Crypto c => Arbitrary (KeyHash a c) where
   arbitrary = KeyHash <$> genHash
 
 instance Arbitrary MIRPot where
   arbitrary = genericArbitraryU
 
-instance CC.Crypto crypto => Arbitrary (MIRTarget crypto) where
+instance CC.Crypto c => Arbitrary (MIRTarget c) where
   arbitrary =
     oneof
       [ StakeAddressesMIR <$> arbitrary,
@@ -349,20 +349,20 @@ instance Arbitrary EpochNo where
   -- Cannot be negative even though it is an 'Integer'
   arbitrary = EpochNo <$> choose (1, 100000)
 
-instance CC.Crypto crypto => Arbitrary (Addr crypto) where
+instance CC.Crypto c => Arbitrary (Addr c) where
   arbitrary = oneof [genShelleyAddress, genByronAddress]
 
-genShelleyAddress :: CC.Crypto crypto => Gen (Addr crypto)
+genShelleyAddress :: CC.Crypto c => Gen (Addr c)
 genShelleyAddress = Addr <$> arbitrary <*> arbitrary <*> arbitrary
 
-genByronAddress :: Gen (Addr crypto)
+genByronAddress :: Gen (Addr c)
 genByronAddress = AddrBootstrap <$> genBootstrapAddress
 
-instance CC.Crypto crypto => Arbitrary (StakeReference crypto) where
+instance CC.Crypto c => Arbitrary (StakeReference c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance CC.Crypto crypto => Arbitrary (Credential r crypto) where
+instance CC.Crypto c => Arbitrary (Credential r c) where
   arbitrary =
     oneof
       [ ScriptHashObj . ScriptHash <$> genHash,
@@ -379,24 +379,24 @@ instance Arbitrary Ptr where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance CC.Crypto crypto => Arbitrary (RewardAcnt crypto) where
+instance CC.Crypto c => Arbitrary (RewardAcnt c) where
   arbitrary = RewardAcnt <$> arbitrary <*> arbitrary
 
 instance Arbitrary Network where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance (Arbitrary (VerKeyDSIGN (DSIGN crypto))) => Arbitrary (VKey kd crypto) where
+instance (Arbitrary (VerKeyDSIGN (DSIGN c))) => Arbitrary (VKey kd c) where
   arbitrary = VKey <$> arbitrary
 
 instance Arbitrary ProtVer where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance CC.Crypto crypto => Arbitrary (ScriptHash crypto) where
+instance CC.Crypto c => Arbitrary (ScriptHash c) where
   arbitrary = ScriptHash <$> genHash
 
-instance CC.Crypto crypto => Arbitrary (AuxiliaryDataHash crypto) where
+instance CC.Crypto c => Arbitrary (AuxiliaryDataHash c) where
   arbitrary = AuxiliaryDataHash <$> arbitrary
 
 instance HashAlgorithm h => Arbitrary (Hash.Hash h a) where
@@ -406,7 +406,7 @@ instance Arbitrary STS.TicknState where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance CC.Crypto crypto => Arbitrary (STS.PrtclState crypto) where
+instance CC.Crypto c => Arbitrary (STS.PrtclState c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -417,15 +417,15 @@ deriving instance
   ) =>
   Arbitrary (UTxO era)
 
-instance CC.Crypto crypto => Arbitrary (PState crypto) where
+instance CC.Crypto c => Arbitrary (PState c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance CC.Crypto crypto => Arbitrary (InstantaneousRewards crypto) where
+instance CC.Crypto c => Arbitrary (InstantaneousRewards c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance CC.Crypto crypto => Arbitrary (FutureGenDeleg crypto) where
+instance CC.Crypto c => Arbitrary (FutureGenDeleg c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -433,23 +433,23 @@ instance (Arbitrary k, Arbitrary v) => Arbitrary (LM.ListMap k v) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance CC.Crypto crypto => Arbitrary (GenDelegs crypto) where
+instance CC.Crypto c => Arbitrary (GenDelegs c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance CC.Crypto crypto => Arbitrary (GenDelegPair crypto) where
+instance CC.Crypto c => Arbitrary (GenDelegPair c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance CC.Crypto crypto => Arbitrary (Triple crypto) where
+instance CC.Crypto c => Arbitrary (Triple c) where
   arbitrary = Triple <$> arbitrary <*> arbitrary <*> arbitrary
   shrink = genericShrink
 
-instance CC.Crypto crypto => Arbitrary (UnifiedMap crypto) where
+instance CC.Crypto c => Arbitrary (UnifiedMap c) where
   arbitrary = UnifiedMap <$> arbitrary <*> arbitrary
   shrink = genericShrink
 
-instance CC.Crypto crypto => Arbitrary (DState crypto) where
+instance CC.Crypto c => Arbitrary (DState c) where
   arbitrary =
     DState
       <$> arbitrary
@@ -457,27 +457,27 @@ instance CC.Crypto crypto => Arbitrary (DState crypto) where
       <*> arbitrary
       <*> arbitrary
 
-instance CC.Crypto crypto => Arbitrary (DelegCert crypto) where
+instance CC.Crypto c => Arbitrary (DelegCert c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance CC.Crypto crypto => Arbitrary (Delegation crypto) where
+instance CC.Crypto c => Arbitrary (Delegation c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance CC.Crypto crypto => Arbitrary (PoolCert crypto) where
+instance CC.Crypto c => Arbitrary (PoolCert c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance CC.Crypto crypto => Arbitrary (GenesisDelegCert crypto) where
+instance CC.Crypto c => Arbitrary (GenesisDelegCert c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance CC.Crypto crypto => Arbitrary (MIRCert crypto) where
+instance CC.Crypto c => Arbitrary (MIRCert c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance CC.Crypto crypto => Arbitrary (DCert crypto) where
+instance CC.Crypto c => Arbitrary (DCert c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -485,7 +485,7 @@ instance (Era era, Mock (EraCrypto era)) => Arbitrary (PPUPState era) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance CC.Crypto crypto => Arbitrary (DPState crypto) where
+instance CC.Crypto c => Arbitrary (DPState c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -540,10 +540,10 @@ instance
   where
   arbitrary = genericArbitraryU
 
-instance CC.Crypto crypto => Arbitrary (BlocksMade crypto) where
+instance CC.Crypto c => Arbitrary (BlocksMade c) where
   arbitrary = BlocksMade <$> arbitrary
 
-instance CC.Crypto crypto => Arbitrary (PoolDistr crypto) where
+instance CC.Crypto c => Arbitrary (PoolDistr c) where
   arbitrary =
     PoolDistr . Map.fromList
       <$> listOf ((,) <$> arbitrary <*> genVal)
@@ -580,15 +580,15 @@ instance Arbitrary RewardType where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance CC.Crypto crypto => Arbitrary (Reward crypto) where
+instance CC.Crypto c => Arbitrary (Reward c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance CC.Crypto crypto => Arbitrary (LeaderOnlyReward crypto) where
+instance CC.Crypto c => Arbitrary (LeaderOnlyReward c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance CC.Crypto crypto => Arbitrary (RewardUpdate crypto) where
+instance CC.Crypto c => Arbitrary (RewardUpdate c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -596,7 +596,7 @@ instance Arbitrary a => Arbitrary (StrictMaybe a) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance CC.Crypto crypto => Arbitrary (STS.OBftSlot crypto) where
+instance CC.Crypto c => Arbitrary (STS.OBftSlot c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -609,15 +609,15 @@ instance Arbitrary Likelihood where
 instance Arbitrary LogWeight where
   arbitrary = LogWeight <$> arbitrary
 
-instance CC.Crypto crypto => Arbitrary (NonMyopic crypto) where
+instance CC.Crypto c => Arbitrary (NonMyopic c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance CC.Crypto crypto => Arbitrary (SnapShot crypto) where
+instance CC.Crypto c => Arbitrary (SnapShot c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance CC.Crypto crypto => Arbitrary (SnapShots crypto) where
+instance CC.Crypto c => Arbitrary (SnapShots c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -626,10 +626,10 @@ instance Arbitrary PerformanceEstimate where
 
 deriving instance Arbitrary (CompactForm Coin)
 
-instance CC.Crypto crypto => Arbitrary (Stake crypto) where
+instance CC.Crypto c => Arbitrary (Stake c) where
   arbitrary = Stake <$> arbitrary
 
-instance CC.Crypto crypto => Arbitrary (PoolParams crypto) where
+instance CC.Crypto c => Arbitrary (PoolParams c) where
   arbitrary =
     PoolParams
       <$> arbitrary
@@ -905,7 +905,7 @@ instance
   arbitrary = ApplyTxError <$> arbitrary
   shrink (ApplyTxError xs) = [ApplyTxError xs' | xs' <- shrink xs]
 
-instance (Mock crypto) => Arbitrary (PulsingRewUpdate crypto) where
+instance (Mock c) => Arbitrary (PulsingRewUpdate c) where
   arbitrary =
     oneof
       [ Complete <$> arbitrary,
@@ -913,8 +913,8 @@ instance (Mock crypto) => Arbitrary (PulsingRewUpdate crypto) where
       ]
 
 instance
-  Mock crypto =>
-  Arbitrary (RewardSnapShot crypto)
+  Mock c =>
+  Arbitrary (RewardSnapShot c)
   where
   arbitrary =
     RewardSnapShot
@@ -928,8 +928,8 @@ instance
       <*> arbitrary
 
 instance
-  Mock crypto =>
-  Arbitrary (PoolRewardInfo crypto)
+  Mock c =>
+  Arbitrary (PoolRewardInfo c)
   where
   arbitrary =
     PoolRewardInfo
@@ -940,8 +940,8 @@ instance
       <*> arbitrary
 
 instance
-  Mock crypto =>
-  Arbitrary (FreeVars crypto)
+  Mock c =>
+  Arbitrary (FreeVars c)
   where
   arbitrary =
     FreeVars
@@ -952,7 +952,7 @@ instance
       <*> arbitrary {- delegations -}
 
 instance
-  Mock crypto =>
-  Arbitrary (Pulser crypto)
+  Mock c =>
+  Arbitrary (Pulser c)
   where
   arbitrary = RSLP <$> arbitrary <*> arbitrary <*> arbitrary <*> (RewardAns <$> arbitrary <*> arbitrary)

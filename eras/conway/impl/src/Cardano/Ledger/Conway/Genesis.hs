@@ -16,10 +16,10 @@ import Data.Unit.Strict (forceElemsToWHNF)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 
-newtype ConwayGenesis crypto = ConwayGenesis (GenDelegs crypto)
+newtype ConwayGenesis c = ConwayGenesis (GenDelegs c)
   deriving (Eq, Generic, NoThunks)
 
-instance Crypto crypto => FromJSON (ConwayGenesis crypto) where
+instance Crypto c => FromJSON (ConwayGenesis c) where
   parseJSON = withObject "ConwayGenesis" $ \obj ->
     ConwayGenesis
       <$> forceElemsToWHNF obj .: "genDelegs"

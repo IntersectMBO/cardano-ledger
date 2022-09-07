@@ -42,12 +42,12 @@ import Cardano.Ledger.ShelleyMA.Rules ()
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock)
 
 instance
-  (Crypto crypto, DSignable crypto (Hash crypto EraIndependentTxBody)) =>
-  ApplyTx (MaryEra crypto)
+  (Crypto c, DSignable c (Hash c EraIndependentTxBody)) =>
+  ApplyTx (MaryEra c)
 
 instance
-  (Crypto crypto, DSignable crypto (Hash crypto EraIndependentTxBody)) =>
-  ApplyBlock (MaryEra crypto)
+  (Crypto c, DSignable c (Hash c EraIndependentTxBody)) =>
+  ApplyBlock (MaryEra c)
 
 instance Crypto c => CanStartFromGenesis (MaryEra c) where
   initialState = initialStateFromGenesis const

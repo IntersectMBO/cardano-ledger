@@ -112,21 +112,21 @@ import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 import Numeric.Natural (Natural)
 
 -- | The hash of a Block Header
-newtype HashHeader crypto = HashHeader {unHashHeader :: Hash crypto EraIndependentBlockHeader}
+newtype HashHeader c = HashHeader {unHashHeader :: Hash c EraIndependentBlockHeader}
   deriving stock (Show, Eq, Generic, Ord)
   deriving newtype (NFData, NoThunks)
 
-deriving newtype instance CC.Crypto crypto => ToCBOR (HashHeader crypto)
+deriving newtype instance CC.Crypto c => ToCBOR (HashHeader c)
 
 -- | The previous hash of a block
-data PrevHash crypto = GenesisHash | BlockHash !(HashHeader crypto)
+data PrevHash c = GenesisHash | BlockHash !(HashHeader c)
   deriving (Show, Eq, Generic, Ord)
 
-instance CC.Crypto crypto => NoThunks (PrevHash crypto)
+instance CC.Crypto c => NoThunks (PrevHash c)
 
 instance
-  CC.Crypto crypto =>
-  ToCBOR (PrevHash crypto)
+  CC.Crypto c =>
+  ToCBOR (PrevHash c)
   where
   toCBOR GenesisHash = encodeNull
   toCBOR (BlockHash h) = toCBOR h
@@ -136,11 +136,11 @@ instance
         Case "BlockHash" (encodedSizeExpr size p)
       ]
     where
-      p = Proxy :: Proxy (HashHeader crypto)
+      p = Proxy :: Proxy (HashHeader c)
 
 instance
-  CC.Crypto crypto =>
-  FromCBOR (PrevHash crypto)
+  CC.Crypto c =>
+  FromCBOR (PrevHash c)
   where
   fromCBOR = do
     peekTokenType >>= \case
@@ -149,51 +149,51 @@ instance
         pure GenesisHash
       _ -> BlockHash <$> fromCBOR
 
-deriving newtype instance CC.Crypto crypto => FromCBOR (HashHeader crypto)
+deriving newtype instance CC.Crypto c => FromCBOR (HashHeader c)
 
-data BHBody crypto = BHBody
+data BHBody c = BHBody
   { -- | block number
     bheaderBlockNo :: !BlockNo,
     -- | block slot
     bheaderSlotNo :: !SlotNo,
     -- | Hash of the previous block header
-    bheaderPrev :: !(PrevHash crypto),
+    bheaderPrev :: !(PrevHash c),
     -- | verification key of block issuer
-    bheaderVk :: !(VKey 'BlockIssuer crypto),
+    bheaderVk :: !(VKey 'BlockIssuer c),
     -- | VRF verification key for block issuer
-    bheaderVrfVk :: !(VerKeyVRF crypto),
+    bheaderVrfVk :: !(VerKeyVRF c),
     -- | block nonce
-    bheaderEta :: !(CertifiedVRF crypto Nonce),
+    bheaderEta :: !(CertifiedVRF c Nonce),
     -- | leader election value
-    bheaderL :: !(CertifiedVRF crypto Natural),
+    bheaderL :: !(CertifiedVRF c Natural),
     -- | Size of the block body
     bsize :: !Natural,
     -- | Hash of block body
-    bhash :: !(Hash crypto EraIndependentBlockBody),
+    bhash :: !(Hash c EraIndependentBlockBody),
     -- | operational certificate
-    bheaderOCert :: !(OCert crypto),
+    bheaderOCert :: !(OCert c),
     -- | protocol version
     bprotver :: !ProtVer
   }
   deriving (Generic)
 
-deriving instance CC.Crypto crypto => Show (BHBody crypto)
+deriving instance CC.Crypto c => Show (BHBody c)
 
-deriving instance CC.Crypto crypto => Eq (BHBody crypto)
+deriving instance CC.Crypto c => Eq (BHBody c)
 
 instance
-  CC.Crypto crypto =>
-  SignableRepresentation (BHBody crypto)
+  CC.Crypto c =>
+  SignableRepresentation (BHBody c)
   where
   getSignableRepresentation = serialize'
 
 instance
-  CC.Crypto crypto =>
-  NoThunks (BHBody crypto)
+  CC.Crypto c =>
+  NoThunks (BHBody c)
 
 instance
-  CC.Crypto crypto =>
-  ToCBOR (BHBody crypto)
+  CC.Crypto c =>
+  ToCBOR (BHBody c)
   where
   toCBOR bhBody =
     encodeListLen (9 + listLen oc + listLen pv)
@@ -232,8 +232,8 @@ instance
       toWord64 = fromIntegral
 
 instance
-  CC.Crypto crypto =>
-  FromCBOR (BHBody crypto)
+  CC.Crypto c =>
+  FromCBOR (BHBody c)
   where
   fromCBOR = decodeRecordNamed "BHBody" bhBodySize $ do
     bheaderBlockNo <- fromCBOR
@@ -264,27 +264,27 @@ instance
     where
       bhBodySize body = 9 + listLenInt (bheaderOCert body) + listLenInt (bprotver body)
 
-data BHeader crypto = BHeader'
-  { bHeaderBody' :: !(BHBody crypto),
-    bHeaderSig' :: !(SignedKES crypto (BHBody crypto)),
+data BHeader c = BHeader'
+  { bHeaderBody' :: !(BHBody c),
+    bHeaderSig' :: !(SignedKES c (BHBody c)),
     bHeaderBytes :: !BSL.ByteString
   }
   deriving (Generic)
 
 deriving via
-  AllowThunksIn '["bHeaderBytes"] (BHeader crypto)
+  AllowThunksIn '["bHeaderBytes"] (BHeader c)
   instance
-    CC.Crypto crypto => NoThunks (BHeader crypto)
+    CC.Crypto c => NoThunks (BHeader c)
 
-deriving instance CC.Crypto crypto => Eq (BHeader crypto)
+deriving instance CC.Crypto c => Eq (BHeader c)
 
-deriving instance CC.Crypto crypto => Show (BHeader crypto)
+deriving instance CC.Crypto c => Show (BHeader c)
 
 pattern BHeader ::
-  CC.Crypto crypto =>
-  BHBody crypto ->
-  SignedKES crypto (BHBody crypto) ->
-  BHeader crypto
+  CC.Crypto c =>
+  BHBody c ->
+  SignedKES c (BHBody c) ->
+  BHeader c
 pattern BHeader bHeaderBody' bHeaderSig' <-
   BHeader' {bHeaderBody', bHeaderSig'}
   where
@@ -299,8 +299,8 @@ pattern BHeader bHeaderBody' bHeaderSig' <-
 {-# COMPLETE BHeader #-}
 
 instance
-  CC.Crypto crypto =>
-  ToCBOR (BHeader crypto)
+  CC.Crypto c =>
+  ToCBOR (BHeader c)
   where
   toCBOR (BHeader' _ _ bytes) = encodePreEncoded (BSL.toStrict bytes)
   encodedSizeExpr size proxy =
@@ -309,8 +309,8 @@ instance
       + KES.encodedSigKESSizeExpr (KES.getSig . bHeaderSig' <$> proxy)
 
 instance
-  CC.Crypto crypto =>
-  FromCBOR (Annotator (BHeader crypto))
+  CC.Crypto c =>
+  FromCBOR (Annotator (BHeader c))
   where
   fromCBOR = annotatorSlice $
     decodeRecordNamed "Header" (const 2) $ do
@@ -320,9 +320,9 @@ instance
 
 -- | Hash a given block header
 bhHash ::
-  CC.Crypto crypto =>
-  BHeader crypto ->
-  HashHeader crypto
+  CC.Crypto c =>
+  BHeader c ->
+  HashHeader c
 bhHash = HashHeader . Hash.castHash . Hash.hashWithSerialiser toCBOR
 
 -- | HashHeader to Nonce
@@ -331,7 +331,7 @@ bhHash = HashHeader . Hash.castHash . Hash.hashWithSerialiser toCBOR
 -- but the nonce is hard-coded to Blake2b_256.
 -- We require the nonce to have the right length (the size of a Blake2b_256 hash), so
 -- if the hash size differs, we pad or remove bytes accordingly.
-hashHeaderToNonce :: HashHeader crypto -> Nonce
+hashHeaderToNonce :: HashHeader c -> Nonce
 hashHeaderToNonce (HashHeader h) = case Hash.hashFromBytes bytes of
   Nothing -> Nonce (Hash.castHash (Hash.hashWith id bytes))
   Just hash -> Nonce $! hash
@@ -339,7 +339,7 @@ hashHeaderToNonce (HashHeader h) = case Hash.hashFromBytes bytes of
     bytes = Hash.hashToBytes h
 
 prevHashToNonce ::
-  PrevHash crypto ->
+  PrevHash c ->
   Nonce
 prevHashToNonce = \case
   GenesisHash -> NeutralNonce -- This case can only happen when starting Shelley from genesis,
@@ -352,19 +352,19 @@ prevHashToNonce = \case
 
 -- | Retrieve the issuer id (the hash of the cold key) from the body of the block header.
 -- This corresponds to either a genesis/core node or a stake pool.
-issuerIDfromBHBody :: CC.Crypto crypto => BHBody crypto -> KeyHash 'BlockIssuer crypto
+issuerIDfromBHBody :: CC.Crypto c => BHBody c -> KeyHash 'BlockIssuer c
 issuerIDfromBHBody = hashKey . bheaderVk
 
-bHeaderSize :: forall crypto. BHeader crypto -> Int
+bHeaderSize :: forall c. BHeader c -> Int
 bHeaderSize = fromIntegral . BSL.length . bHeaderBytes
 
 bhbody ::
-  CC.Crypto crypto =>
-  BHeader crypto ->
-  BHBody crypto
+  CC.Crypto c =>
+  BHeader c ->
+  BHBody c
 bhbody (BHeader b _) = b
 
-hBbsize :: BHBody crypto -> Natural
+hBbsize :: BHBody c -> Natural
 hBbsize = bsize
 
 -- | Natural value with some additional bound. It must always be the base that
@@ -482,22 +482,22 @@ mkSeed ucNonce (SlotNo slot) eNonce =
              Nonce h -> BS.byteStringCopy (Hash.hashToBytes h)
          )
 
-data LastAppliedBlock crypto = LastAppliedBlock
+data LastAppliedBlock c = LastAppliedBlock
   { labBlockNo :: !BlockNo,
     labSlotNo :: !SlotNo,
-    labHash :: !(HashHeader crypto)
+    labHash :: !(HashHeader c)
   }
   deriving (Show, Eq, Generic)
 
-instance CC.Crypto crypto => NoThunks (LastAppliedBlock crypto)
+instance CC.Crypto c => NoThunks (LastAppliedBlock c)
 
-instance NFData (LastAppliedBlock crypto)
+instance NFData (LastAppliedBlock c)
 
-instance CC.Crypto crypto => ToCBOR (LastAppliedBlock crypto) where
+instance CC.Crypto c => ToCBOR (LastAppliedBlock c) where
   toCBOR (LastAppliedBlock b s h) =
     encodeListLen 3 <> toCBOR b <> toCBOR s <> toCBOR h
 
-instance CC.Crypto crypto => FromCBOR (LastAppliedBlock crypto) where
+instance CC.Crypto c => FromCBOR (LastAppliedBlock c) where
   fromCBOR =
     decodeRecordNamed
       "lastAppliedBlock"
@@ -508,15 +508,15 @@ instance CC.Crypto crypto => FromCBOR (LastAppliedBlock crypto) where
           <*> fromCBOR
       )
 
-lastAppliedHash :: WithOrigin (LastAppliedBlock crypto) -> PrevHash crypto
+lastAppliedHash :: WithOrigin (LastAppliedBlock c) -> PrevHash c
 lastAppliedHash Origin = GenesisHash
 lastAppliedHash (At lab) = BlockHash $ labHash lab
 
 -- | Retrieve the new nonce from the block header body.
-bnonce :: BHBody crypto -> Nonce
+bnonce :: BHBody c -> Nonce
 bnonce = mkNonceFromOutputVRF . VRF.certifiedOutput . bheaderEta
 
-makeHeaderView :: CC.Crypto crypto => BHeader crypto -> BHeaderView crypto
+makeHeaderView :: CC.Crypto c => BHeader c -> BHeaderView c
 makeHeaderView bh =
   BHeaderView
     (hashKey . bheaderVk $ bhb)

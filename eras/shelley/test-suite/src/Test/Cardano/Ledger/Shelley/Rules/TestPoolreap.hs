@@ -29,9 +29,9 @@ import Test.QuickCheck (Property, property)
 -- | Check that after a POOLREAP certificate transition the pool is removed from
 -- the stake pool and retiring maps.
 removedAfterPoolreap ::
-  forall crypto.
-  PState crypto ->
-  PState crypto ->
+  forall c.
+  PState c ->
+  PState c ->
   EpochNo ->
   Property
 removedAfterPoolreap p p' e =
@@ -44,5 +44,5 @@ removedAfterPoolreap p p' e =
     stp' = _pParams p'
     retiring = _retiring p
     retiring' = _retiring p'
-    retire :: Set.Set (KeyHash 'StakePool crypto) -- This declaration needed to disambiguate 'eval'
+    retire :: Set.Set (KeyHash 'StakePool c) -- This declaration needed to disambiguate 'eval'
     retire = eval (dom (retiring ▷ setSingleton e))

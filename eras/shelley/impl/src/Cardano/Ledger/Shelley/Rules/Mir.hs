@@ -161,5 +161,5 @@ mirTransition = do
           pp
           nm
 
-emptyInstantaneousRewards :: InstantaneousRewards crypto
+emptyInstantaneousRewards :: InstantaneousRewards c
 emptyInstantaneousRewards = InstantaneousRewards Map.empty Map.empty mempty mempty

@@ -82,12 +82,12 @@ import NoThunks.Class (NoThunks (..))
 --     such as 'hashWithCrypto, 'hashAnnotated' and 'extractHash' which have constraints
 --     that limit their application to types which preserve their original serialization
 --     bytes.
-newtype SafeHash crypto index = SafeHash (Hash.Hash (CC.HASH crypto) index)
+newtype SafeHash c index = SafeHash (Hash.Hash (CC.HASH c) index)
   deriving (Show, Eq, Ord, NoThunks, NFData)
 
 deriving newtype instance
-  Hash.HashAlgorithm (CC.HASH crypto) =>
-  SafeToHash (SafeHash crypto index)
+  Hash.HashAlgorithm (CC.HASH c) =>
+  SafeToHash (SafeHash c index)
 
 deriving newtype instance HeapWords (Hash.Hash (CC.HASH c) i) => HeapWords (SafeHash c i)
 
@@ -100,14 +100,14 @@ deriving instance (Typeable index, CC.Crypto c) => FromCBOR (SafeHash c index)
 type HasAlgorithm c = Hash.HashAlgorithm (CC.HASH c)
 
 -- | Extract the hash out of a 'SafeHash'
-extractHash :: SafeHash crypto i -> Hash.Hash (CC.HASH crypto) i
+extractHash :: SafeHash c i -> Hash.Hash (CC.HASH c) i
 extractHash (SafeHash h) = h
 
 -- MAKE
 
 -- | Don't use this except in Testing to make Arbitrary instances, etc.
 --   Defined here, only because the Constructor is in scope here.
-unsafeMakeSafeHash :: Hash.Hash (CC.HASH crypto) index -> SafeHash crypto index
+unsafeMakeSafeHash :: Hash.Hash (CC.HASH c) index -> SafeHash c index
 unsafeMakeSafeHash = SafeHash
 
 -- =====================================================================
@@ -128,11 +128,11 @@ class SafeToHash t where
   originalBytes :: t -> ByteString
 
   makeHashWithExplicitProxys ::
-    Hash.HashAlgorithm (CC.HASH crypto) =>
-    Proxy crypto ->
+    Hash.HashAlgorithm (CC.HASH c) =>
+    Proxy c ->
     Proxy index ->
     t ->
-    SafeHash crypto indexl
+    SafeHash c indexl
 
   -- | Build a @(SafeHash crypto index)@ value given to proxies (determining @i@ and @crypto@), and the
   --   value to be hashed.
@@ -174,15 +174,15 @@ instance Hash.HashAlgorithm c => SafeToHash (Hash.Hash c i) where
 --
 -- After these declarations. One specialization of 'hashAnnotated' is
 --    @(hashAnnotated :: Era e => T e -> SafeHash (Crypto e) Index)@
-class SafeToHash x => HashAnnotated x index crypto | x -> index crypto where
+class SafeToHash x => HashAnnotated x index c | x -> index c where
   indexProxy :: x -> Proxy index
   indexProxy _ = Proxy @index
 
   -- | Create a @('SafeHash' i crypto)@,
   -- given @(Hash.HashAlgorithm (CC.HASH crypto))@
   -- and  @(HashAnnotated x i crypto)@ instances.
-  hashAnnotated :: Hash.HashAlgorithm (CC.HASH crypto) => x -> SafeHash crypto index
-  hashAnnotated = makeHashWithExplicitProxys (Proxy @crypto) (Proxy @index)
+  hashAnnotated :: Hash.HashAlgorithm (CC.HASH c) => x -> SafeHash c index
+  hashAnnotated = makeHashWithExplicitProxys (Proxy @c) (Proxy @index)
 
 -- ========================================================================
 
@@ -191,11 +191,11 @@ class SafeToHash x => HashAnnotated x index crypto | x -> index crypto where
 class SafeToHash x => HashWithCrypto x index | x -> index where
   -- | Create a @('SafeHash' index crypto)@ value from @x@, the @proxy@ determines the crypto.
   hashWithCrypto ::
-    forall crypto.
-    Hash.HashAlgorithm (CC.HASH crypto) =>
-    Proxy crypto ->
+    forall c.
+    Hash.HashAlgorithm (CC.HASH c) =>
+    Proxy c ->
     x ->
-    SafeHash crypto index
+    SafeHash c index
   hashWithCrypto proxy y = makeHashWithExplicitProxys proxy (Proxy @index) y
 
 -- ======================================================================

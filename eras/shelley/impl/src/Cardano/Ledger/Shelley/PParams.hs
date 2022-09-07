@@ -170,9 +170,9 @@ type ShelleyPParams era = ShelleyPParamsHKD Identity era
 
 type ShelleyPParamsUpdate era = ShelleyPParamsHKD StrictMaybe era
 
-instance CC.Crypto crypto => EraPParams (ShelleyEra crypto) where
-  type PParams (ShelleyEra crypto) = ShelleyPParams (ShelleyEra crypto)
-  type PParamsUpdate (ShelleyEra crypto) = ShelleyPParamsUpdate (ShelleyEra crypto)
+instance CC.Crypto c => EraPParams (ShelleyEra c) where
+  type PParams (ShelleyEra c) = ShelleyPParams (ShelleyEra c)
+  type PParamsUpdate (ShelleyEra c) = ShelleyPParamsUpdate (ShelleyEra c)
 
   applyPPUpdates = updatePParams
 

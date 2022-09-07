@@ -316,11 +316,11 @@ lensTxBodyRaw getter setter =
     (\(TxBodyConstr (Memo txBodyRaw _)) val -> mkMATxBody $ setter txBodyRaw val)
 {-# INLINEABLE lensTxBodyRaw #-}
 
-instance MAClass ma crypto => EraTxBody (ShelleyMAEra ma crypto) where
+instance MAClass ma c => EraTxBody (ShelleyMAEra ma c) where
   {-# SPECIALIZE instance EraTxBody (ShelleyMAEra 'Mary StandardCrypto) #-}
   {-# SPECIALIZE instance EraTxBody (ShelleyMAEra 'Allegra StandardCrypto) #-}
 
-  type TxBody (ShelleyMAEra ma crypto) = MATxBody (ShelleyMAEra ma crypto)
+  type TxBody (ShelleyMAEra ma c) = MATxBody (ShelleyMAEra ma c)
 
   mkBasicTxBody = mkMATxBody initial
 
@@ -347,7 +347,7 @@ instance MAClass ma crypto => EraTxBody (ShelleyMAEra ma crypto) where
     to (\(TxBodyConstr (Memo txBodyRaw _)) -> getScriptHash (Proxy @ma) (mint txBodyRaw))
   {-# INLINEABLE mintedTxBodyF #-}
 
-instance MAClass ma crypto => ShelleyEraTxBody (ShelleyMAEra ma crypto) where
+instance MAClass ma c => ShelleyEraTxBody (ShelleyMAEra ma c) where
   {-# SPECIALIZE instance ShelleyEraTxBody (ShelleyMAEra 'Mary StandardCrypto) #-}
   {-# SPECIALIZE instance ShelleyEraTxBody (ShelleyMAEra 'Allegra StandardCrypto) #-}
 
@@ -376,7 +376,7 @@ class
 
   mintValueTxBodyF :: SimpleGetter (Core.TxBody era) (Core.Value era)
 
-instance MAClass ma crypto => ShelleyMAEraTxBody (ShelleyMAEra ma crypto) where
+instance MAClass ma c => ShelleyMAEraTxBody (ShelleyMAEra ma c) where
   {-# SPECIALIZE instance ShelleyMAEraTxBody (ShelleyMAEra 'Mary StandardCrypto) #-}
   {-# SPECIALIZE instance ShelleyMAEraTxBody (ShelleyMAEra 'Allegra StandardCrypto) #-}
 

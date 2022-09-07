@@ -295,7 +295,7 @@ txoutEvidence (Allegra _) (ShelleyTxOut addr _) =
 txoutEvidence (Shelley _) (ShelleyTxOut addr _) =
   (addrCredentials addr, Nothing)
 
-addrCredentials :: Addr crypto -> [Credential 'Payment crypto]
+addrCredentials :: Addr c -> [Credential 'Payment c]
 addrCredentials addr = maybe [] (: []) (paymentCredAddr addr)
 
 paymentCredAddr :: Addr c -> Maybe (Credential 'Payment c)

@@ -182,19 +182,19 @@ type Model era = ModelNewEpochState era
 -- Empty or default values, these are usefull for many things, not the
 -- least of, for making Model instances.
 
-blocksMadeZero :: BlocksMade crypto
+blocksMadeZero :: BlocksMade c
 blocksMadeZero = BlocksMade Map.empty
 
-poolDistrZero :: PoolDistr crypto
+poolDistrZero :: PoolDistr c
 poolDistrZero = PoolDistr Map.empty
 
-stakeZero :: Stake crypto
+stakeZero :: Stake c
 stakeZero = Stake VMap.empty
 
-snapShotZero :: SnapShot crypto
+snapShotZero :: SnapShot c
 snapShotZero = SnapShot stakeZero VMap.empty VMap.empty
 
-snapShotsZero :: SnapShots crypto
+snapShotsZero :: SnapShots c
 snapShotsZero = SnapShots snapShotZero snapShotZero snapShotZero (Coin 0)
 
 accountStateZero :: AccountState
@@ -203,28 +203,28 @@ accountStateZero = AccountState (Coin 0) (Coin 0)
 utxoZero :: UTxO era
 utxoZero = UTxO Map.empty
 
-genDelegsZero :: GenDelegs crypto
+genDelegsZero :: GenDelegs c
 genDelegsZero = GenDelegs Map.empty
 
-instantaneousRewardsZero :: InstantaneousRewards crypto
+instantaneousRewardsZero :: InstantaneousRewards c
 instantaneousRewardsZero = InstantaneousRewards Map.empty Map.empty mempty mempty
 
-dStateZero :: DState crypto
+dStateZero :: DState c
 dStateZero = DState UMap.empty Map.empty genDelegsZero instantaneousRewardsZero
 
-pStateZero :: PState crypto
+pStateZero :: PState c
 pStateZero = PState Map.empty Map.empty Map.empty
 
-dPStateZero :: DPState crypto
+dPStateZero :: DPState c
 dPStateZero = DPState dStateZero pStateZero
 
-incrementalStakeZero :: IncrementalStake crypto
+incrementalStakeZero :: IncrementalStake c
 incrementalStakeZero = IStake Map.empty Map.empty
 
 proposedPPUpdatesZero :: ProposedPPUpdates era
 proposedPPUpdatesZero = ProposedPPUpdates Map.empty
 
-nonMyopicZero :: NonMyopic crypto
+nonMyopicZero :: NonMyopic c
 nonMyopicZero = NonMyopic Map.empty mempty
 
 pPUPStateZeroByProof :: Proof era -> State (Core.EraRule "PPUP" era)
@@ -387,7 +387,7 @@ abstract x =
         -- SNothing -- There is no way to complete (nesRu x) to get a RewardUpdate
     }
 
-complete :: PulsingRewUpdate crypto -> RewardUpdate crypto
+complete :: PulsingRewUpdate c -> RewardUpdate c
 complete (Complete r) = r
 complete (Pulsing rewsnap pulser) = fst $ runShelleyBase (completeRupd (Pulsing rewsnap pulser))
 

@@ -403,7 +403,7 @@ class PrettyA t where
 -- =====================================================
 -- Data.UMap
 
-ppTrip :: Triple crypto -> PDoc
+ppTrip :: Triple c -> PDoc
 ppTrip (Triple mcoin set mpool) =
   ppSexp
     "Triple"
@@ -412,7 +412,7 @@ ppTrip (Triple mcoin set mpool) =
       ppStrictMaybe ppKeyHash mpool
     ]
 
-ppUnifiedMap :: UnifiedMap crypto -> PDoc
+ppUnifiedMap :: UnifiedMap c -> PDoc
 ppUnifiedMap (UnifiedMap tripmap ptrmap) =
   ppRecord
     "UnifiedMap"
@@ -519,7 +519,7 @@ instance PrettyA (IndividualPoolStake c) where
 -- ================================
 -- Cardano.Ledger.Shelley.RewardUpdate
 
-ppRewardUpdate :: RewardUpdate crypto -> PDoc
+ppRewardUpdate :: RewardUpdate c -> PDoc
 ppRewardUpdate (RewardUpdate dt dr rss df nonmyop) =
   ppRecord
     "RewardUpdate"
@@ -530,7 +530,7 @@ ppRewardUpdate (RewardUpdate dt dr rss df nonmyop) =
       ("nonMyopic", ppNonMyopic nonmyop)
     ]
 
-ppRewardSnapShot :: RewardSnapShot crypto -> PDoc
+ppRewardSnapShot :: RewardSnapShot c -> PDoc
 ppRewardSnapShot (RewardSnapShot fee ver non deltaR1 rR deltaT1 ls lrews) =
   ppRecord
     "RewardSnapShot"
@@ -544,7 +544,7 @@ ppRewardSnapShot (RewardSnapShot fee ver non deltaR1 rR deltaT1 ls lrews) =
       ("leaderRewards", ppMap ppCredential (ppSet ppReward) lrews)
     ]
 
-ppPoolRewardInfo :: PoolRewardInfo crypto -> PDoc
+ppPoolRewardInfo :: PoolRewardInfo c -> PDoc
 ppPoolRewardInfo (PoolRewardInfo relStake pot params blocks lreward) =
   ppRecord
     "PoolRewardInfo"
@@ -555,7 +555,7 @@ ppPoolRewardInfo (PoolRewardInfo relStake pot params blocks lreward) =
       ("leaderReward", ppLeaderOnlyReward lreward)
     ]
 
-ppFreeVars :: FreeVars crypto -> PDoc
+ppFreeVars :: FreeVars c -> PDoc
 ppFreeVars (FreeVars ds addrs total pv pri) =
   ppRecord
     "FreeVars"
@@ -566,11 +566,11 @@ ppFreeVars (FreeVars ds addrs total pv pri) =
       ("poolRewardInfo", ppMap ppKeyHash ppPoolRewardInfo pri)
     ]
 
-ppAns :: RewardAns crypto -> PDoc
+ppAns :: RewardAns c -> PDoc
 ppAns (RewardAns x y) =
   ppRecord "RewardAns" [("allEvents", ppMap ppCredential ppReward x), ("recentEvents", ppMap ppCredential (ppSet ppReward) y)]
 
-ppRewardPulser :: Pulser crypto -> PDoc
+ppRewardPulser :: Pulser c -> PDoc
 ppRewardPulser (RSLP n free items ans) =
   ppSexp
     "RewardPulser"
@@ -580,25 +580,25 @@ ppRewardPulser (RSLP n free items ans) =
       ppAns ans
     ]
 
-ppPulsingRewUpdate :: PulsingRewUpdate crypto -> PDoc
+ppPulsingRewUpdate :: PulsingRewUpdate c -> PDoc
 ppPulsingRewUpdate (Pulsing snap pulser) =
   ppSexp "Pulsing" [ppRewardSnapShot snap, ppRewardPulser pulser]
 ppPulsingRewUpdate (Complete rewup) =
   ppSexp "Complete" [ppRewardUpdate rewup]
 
-instance PrettyA (RewardSnapShot crypto) where
+instance PrettyA (RewardSnapShot c) where
   prettyA = ppRewardSnapShot
 
-instance PrettyA (FreeVars crypto) where
+instance PrettyA (FreeVars c) where
   prettyA = ppFreeVars
 
-instance PrettyA (Pulser crypto) where
+instance PrettyA (Pulser c) where
   prettyA = ppRewardPulser
 
-instance PrettyA (PulsingRewUpdate crypto) where
+instance PrettyA (PulsingRewUpdate c) where
   prettyA = ppPulsingRewUpdate
 
-instance PrettyA (RewardUpdate crypto) where
+instance PrettyA (RewardUpdate c) where
   prettyA = ppRewardUpdate
 
 -- =================================
@@ -619,10 +619,10 @@ ppAccountState (AccountState tr re) =
       ("reserves", ppCoin re)
     ]
 
-ppDPState :: DPState crypto -> PDoc
+ppDPState :: DPState c -> PDoc
 ppDPState (DPState d p) = ppRecord "DPState" [("dstate", ppDState d), ("pstate", ppPState p)]
 
-ppDState :: DState crypto -> PDoc
+ppDState :: DState c -> PDoc
 ppDState (DState unified future gen irwd) =
   ppRecord
     "DState"
@@ -632,7 +632,7 @@ ppDState (DState unified future gen irwd) =
       ("instantaeousrewards", ppInstantaneousRewards irwd)
     ]
 
-ppFutureGenDeleg :: FutureGenDeleg crypto -> PDoc
+ppFutureGenDeleg :: FutureGenDeleg c -> PDoc
 ppFutureGenDeleg (FutureGenDeleg sl kh) =
   ppRecord
     "FutureGenDeleg"
@@ -640,7 +640,7 @@ ppFutureGenDeleg (FutureGenDeleg sl kh) =
       ("keyhash", ppKeyHash kh)
     ]
 
-ppInstantaneousRewards :: InstantaneousRewards crypto -> PDoc
+ppInstantaneousRewards :: InstantaneousRewards c -> PDoc
 ppInstantaneousRewards (InstantaneousRewards res treas dR dT) =
   ppRecord
     "InstantaneousRewards"
@@ -658,7 +658,7 @@ ppPPUPState (PPUPState p fp) =
       ("futureProposals", ppProposedPPUpdates fp)
     ]
 
-ppPState :: PState crypto -> PDoc
+ppPState :: PState c -> PDoc
 ppPState (PState par fpar ret) =
   ppRecord
     "PState"
@@ -667,14 +667,14 @@ ppPState (PState par fpar ret) =
       ("retiring", ppMap' mempty ppKeyHash ppEpochNo ret)
     ]
 
-ppRewardAccounts :: Map.Map (Credential 'Staking crypto) Coin -> PDoc
+ppRewardAccounts :: Map.Map (Credential 'Staking c) Coin -> PDoc
 ppRewardAccounts = ppMap' (text "RewardAccounts") ppCredential ppCoin
 
 ppRewardType :: RewardType -> PDoc
 ppRewardType MemberReward = text "MemberReward"
 ppRewardType LeaderReward = text "LeaderReward"
 
-ppReward :: Reward crypto -> PDoc
+ppReward :: Reward c -> PDoc
 ppReward (Reward rt pool amt) =
   ppRecord
     "Reward"
@@ -683,7 +683,7 @@ ppReward (Reward rt pool amt) =
       ("rewardAmount", ppCoin amt)
     ]
 
-ppLeaderOnlyReward :: LeaderOnlyReward crypto -> PDoc
+ppLeaderOnlyReward :: LeaderOnlyReward c -> PDoc
 ppLeaderOnlyReward (LeaderOnlyReward pool amt) =
   ppRecord
     "LeaderOnlyReward"
@@ -691,7 +691,7 @@ ppLeaderOnlyReward (LeaderOnlyReward pool amt) =
       ("rewardAmount", ppCoin amt)
     ]
 
-ppIncrementalStake :: IncrementalStake crypto -> PDoc
+ppIncrementalStake :: IncrementalStake c -> PDoc
 ppIncrementalStake (IStake st dangle) =
   ppRecord
     "IncrementalStake"
@@ -751,10 +751,10 @@ ppLedgerState (LedgerState u d) =
 instance PrettyA AccountState where
   prettyA = ppAccountState
 
-instance PrettyA (DPState crypto) where
+instance PrettyA (DPState c) where
   prettyA = ppDPState
 
-instance PrettyA (DState crypto) where
+instance PrettyA (DState c) where
   prettyA = ppDState
 
 instance
@@ -773,10 +773,10 @@ instance
   where
   prettyA x = ppNewEpochState x
 
-instance PrettyA (FutureGenDeleg crypto) where
+instance PrettyA (FutureGenDeleg c) where
   prettyA = ppFutureGenDeleg
 
-instance PrettyA (InstantaneousRewards crypto) where
+instance PrettyA (InstantaneousRewards c) where
   prettyA = ppInstantaneousRewards
 
 instance
@@ -793,7 +793,7 @@ instance
   where
   prettyA = ppPPUPState
 
-instance PrettyA (PState crypto) where
+instance PrettyA (PState c) where
   prettyA = ppPState
 
 instance
@@ -813,7 +813,7 @@ instance PrettyA (IncrementalStake c) where
 ppPerformanceEstimate :: PerformanceEstimate -> PDoc
 ppPerformanceEstimate (PerformanceEstimate n) = ppSexp "PerformanceEstimate" [ppDouble n]
 
-ppNonMyopic :: NonMyopic crypto -> PDoc
+ppNonMyopic :: NonMyopic c -> PDoc
 ppNonMyopic (NonMyopic m c) =
   ppRecord
     "NonMyopic"
@@ -851,14 +851,14 @@ instance PrettyA Likelihood where
 -- =================================
 -- Cardano.Ledger.Shelley.EpochBoundary
 
-ppStake :: Stake crypto -> PDoc
+ppStake :: Stake c -> PDoc
 ppStake (Stake m) =
   ppMap' (text "Stake") ppCredential (ppCoin . fromCompact) (VMap.toMap m)
 
-ppBlocksMade :: BlocksMade crypto -> PDoc
+ppBlocksMade :: BlocksMade c -> PDoc
 ppBlocksMade (BlocksMade m) = ppMap' (text "BlocksMade") ppKeyHash ppNatural m
 
-ppSnapShot :: SnapShot crypto -> PDoc
+ppSnapShot :: SnapShot c -> PDoc
 ppSnapShot (SnapShot st deleg params) =
   ppRecord
     "SnapShot"
@@ -867,7 +867,7 @@ ppSnapShot (SnapShot st deleg params) =
       ("poolParams", ppVMap ppKeyHash ppPoolParams params)
     ]
 
-ppSnapShots :: SnapShots crypto -> PDoc
+ppSnapShots :: SnapShots c -> PDoc
 ppSnapShots (SnapShots mark set go fees) =
   ppRecord
     "SnapShots"
@@ -877,16 +877,16 @@ ppSnapShots (SnapShots mark set go fees) =
       ("fee", ppCoin fees)
     ]
 
-instance PrettyA (Stake crypto) where
+instance PrettyA (Stake c) where
   prettyA = ppStake
 
-instance PrettyA (BlocksMade crypto) where
+instance PrettyA (BlocksMade c) where
   prettyA = ppBlocksMade
 
-instance PrettyA (SnapShot crypto) where
+instance PrettyA (SnapShot c) where
   prettyA = ppSnapShot
 
-instance PrettyA (SnapShots crypto) where
+instance PrettyA (SnapShots c) where
   prettyA = ppSnapShots
 
 -- ============================
@@ -950,7 +950,7 @@ ppTx tx =
       ("metadata", ppStrictMaybe prettyA $ tx ^. auxDataTxL)
     ]
 
-ppBootstrapWitness :: Crypto crypto => BootstrapWitness crypto -> PDoc
+ppBootstrapWitness :: Crypto c => BootstrapWitness c -> PDoc
 ppBootstrapWitness (BootstrapWitness key sig (ChainCode code) attr) =
   ppRecord
     "BootstrapWitness"
@@ -981,7 +981,7 @@ instance
   where
   prettyA = ppTx
 
-instance Crypto crypto => PrettyA (BootstrapWitness crypto) where
+instance Crypto c => PrettyA (BootstrapWitness c) where
   prettyA = ppBootstrapWitness
 
 instance (Era era, PrettyA (Script era)) => PrettyA (ShelleyTxWits era) where
@@ -990,7 +990,7 @@ instance (Era era, PrettyA (Script era)) => PrettyA (ShelleyTxWits era) where
 -- ============================
 --  Cardano.Ledger.AuxiliaryData
 
-ppSafeHash :: SafeHash crypto index -> PDoc
+ppSafeHash :: SafeHash c index -> PDoc
 ppSafeHash x = ppHash (extractHash x)
 
 ppAuxiliaryDataHash :: AuxiliaryDataHash c -> PDoc
@@ -1380,7 +1380,7 @@ ppMultiSig (RequireAllOf ps) = ppSexp "AllOf" (map ppMultiSig ps)
 ppMultiSig (RequireAnyOf ps) = ppSexp "AnyOf" (map ppMultiSig ps)
 ppMultiSig (RequireMOf m ps) = ppSexp "MOf" (pretty m : map ppMultiSig ps)
 
-ppScriptHash :: ScriptHash crypto -> PDoc
+ppScriptHash :: ScriptHash c -> PDoc
 ppScriptHash (ScriptHash h) = ppSexp "ScriptHash" [ppHash h]
 
 instance PrettyA (ScriptHash c) where
@@ -1428,7 +1428,7 @@ instance PrettyA BlockNo where
 ppKESPeriod :: KESPeriod -> PDoc
 ppKESPeriod (KESPeriod x) = text "KESPeriod" <+> pretty x
 
-ppOCertEnv :: OCertEnv crypto -> PDoc
+ppOCertEnv :: OCertEnv c -> PDoc
 ppOCertEnv (OCertEnv ps ds) =
   ppRecord
     "OCertEnv"
@@ -1436,19 +1436,19 @@ ppOCertEnv (OCertEnv ps ds) =
       ("ocertEnvGenDelegs", ppSet ppKeyHash ds)
     ]
 
-ppOCert :: forall crypto. Crypto crypto => OCert crypto -> PDoc
+ppOCert :: forall c. Crypto c => OCert c -> PDoc
 ppOCert (OCert vk n per sig) =
   ppRecord
     "OCert"
-    [ ("ocertVkKot", ppVerKeyKES (Proxy @crypto) vk),
+    [ ("ocertVkKot", ppVerKeyKES (Proxy @c) vk),
       ("ocertN", pretty n),
       ("ocertKESPeriod", ppKESPeriod per),
       ("ocertSigma", ppSignedDSIGN sig)
     ]
 
-ppOCertSignable :: forall crypto. Crypto crypto => OCertSignable crypto -> PDoc
+ppOCertSignable :: forall c. Crypto c => OCertSignable c -> PDoc
 ppOCertSignable (OCertSignable verkes w per) =
-  ppSexp "OCertSignable" [ppVerKeyKES (Proxy @crypto) verkes, pretty w, ppKESPeriod per]
+  ppSexp "OCertSignable" [ppVerKeyKES (Proxy @c) verkes, pretty w, ppKESPeriod per]
 
 instance PrettyA KESPeriod where
   prettyA = ppKESPeriod
@@ -1581,7 +1581,7 @@ ppGenDelegPair (GenDelegPair (KeyHash x) y) =
 ppGKeys :: Crypto c => GKeys c -> PDoc
 ppGKeys (GKeys x) = ppSexp "GKeys" [ppSet ppVKey x]
 
-ppVerKeyKES :: forall crypto. Crypto crypto => Proxy crypto -> VerKeyKES crypto -> PDoc
+ppVerKeyKES :: forall c. Crypto c => Proxy c -> VerKeyKES c -> PDoc
 ppVerKeyKES Proxy x = reAnnotate (Width 5 :) (viaShow x)
 
 ppGenDelegs :: GenDelegs c -> PDoc

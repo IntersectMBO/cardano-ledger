@@ -46,14 +46,14 @@ import NoThunks.Class (NoThunks (..))
 -- The stake is relative to the total amount of active stake
 -- in the network. Stake is active if it is both registered and
 -- delegated to a registered stake pool.
-data IndividualPoolStake crypto = IndividualPoolStake
+data IndividualPoolStake c = IndividualPoolStake
   { individualPoolStake :: !Rational,
-    individualPoolStakeVrf :: !(Hash crypto (VerKeyVRF crypto))
+    individualPoolStakeVrf :: !(Hash c (VerKeyVRF c))
   }
   deriving stock (Show, Eq, Generic)
   deriving anyclass (NFData, NoThunks)
 
-instance CC.Crypto crypto => ToCBOR (IndividualPoolStake crypto) where
+instance CC.Crypto c => ToCBOR (IndividualPoolStake c) where
   toCBOR (IndividualPoolStake stake vrf) =
     mconcat
       [ encodeListLen 2,
@@ -61,7 +61,7 @@ instance CC.Crypto crypto => ToCBOR (IndividualPoolStake crypto) where
         toCBOR vrf
       ]
 
-instance CC.Crypto crypto => FromCBOR (IndividualPoolStake crypto) where
+instance CC.Crypto c => FromCBOR (IndividualPoolStake c) where
   fromCBOR =
     decodeRecordNamed "IndividualPoolStake" (const 2) $
       IndividualPoolStake
@@ -70,9 +70,9 @@ instance CC.Crypto crypto => FromCBOR (IndividualPoolStake crypto) where
 
 -- | A map of stake pool IDs (the hash of the stake pool operator's
 -- verification key) to 'IndividualPoolStake'.
-newtype PoolDistr crypto = PoolDistr
+newtype PoolDistr c = PoolDistr
   { unPoolDistr ::
-      Map (KeyHash 'StakePool crypto) (IndividualPoolStake crypto)
+      Map (KeyHash 'StakePool c) (IndividualPoolStake c)
   }
   deriving stock (Show, Eq)
   deriving newtype (ToCBOR, FromCBOR, NFData, NoThunks)
@@ -81,10 +81,10 @@ newtype PoolDistr crypto = PoolDistr
 
 instance
   HasExp
-    (PoolDistr crypto)
+    (PoolDistr c)
     ( Map
-        (KeyHash 'StakePool crypto)
-        (IndividualPoolStake crypto)
+        (KeyHash 'StakePool c)
+        (IndividualPoolStake c)
     )
   where
   toExp (PoolDistr x) = Base MapR x
@@ -92,10 +92,10 @@ instance
 -- | We can Embed a Newtype around a Map (or other Iterable type) and then use it in a set expression.
 instance
   Embed
-    (PoolDistr crypto)
+    (PoolDistr c)
     ( Map
-        (KeyHash 'StakePool crypto)
-        (IndividualPoolStake crypto)
+        (KeyHash 'StakePool c)
+        (IndividualPoolStake c)
     )
   where
   toBase (PoolDistr x) = x

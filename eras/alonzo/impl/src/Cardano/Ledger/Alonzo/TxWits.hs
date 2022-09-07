@@ -195,11 +195,11 @@ data TxWitnessRaw era = TxWitnessRaw
 instance
   ( Era era,
     Core.Script era ~ AlonzoScript era,
-    crypto ~ EraCrypto era,
+    c ~ EraCrypto era,
     NFData (TxDats era),
     NFData (Redeemers era),
-    NFData (SigDSIGN (CC.DSIGN crypto)),
-    NFData (VerKeyDSIGN (CC.DSIGN crypto))
+    NFData (SigDSIGN (CC.DSIGN c)),
+    NFData (VerKeyDSIGN (CC.DSIGN c))
   ) =>
   NFData (TxWitnessRaw era)
 
@@ -220,11 +220,11 @@ instance (Era era, Core.Script era ~ AlonzoScript era) => Monoid (AlonzoTxWits e
 deriving instance
   ( Era era,
     Core.Script era ~ AlonzoScript era,
-    crypto ~ EraCrypto era,
+    c ~ EraCrypto era,
     NFData (TxDats era),
     NFData (Redeemers era),
-    NFData (SigDSIGN (CC.DSIGN crypto)),
-    NFData (VerKeyDSIGN (CC.DSIGN crypto))
+    NFData (SigDSIGN (CC.DSIGN c)),
+    NFData (VerKeyDSIGN (CC.DSIGN c))
   ) =>
   NFData (AlonzoTxWits era)
 

@@ -191,7 +191,7 @@ data AllIssuerKeys v (r :: KeyRole) = AllIssuerKeys
   }
   deriving (Show)
 
-type DataHash crypto = SafeHash crypto EraIndependentData
+type DataHash c = SafeHash c EraIndependentData
 
 type ScriptInfo era =
   ( Map (ScriptHash (EraCrypto era)) (TwoPhase3ArgInfo era),
@@ -339,10 +339,10 @@ genWord64 lower upper =
 -- Note: we index all possible genesis delegate keys, that is,
 -- core nodes and all potential keys.
 mkGenesisDelegatesHashMap ::
-  (CC.Crypto crypto) =>
-  [(GenesisKeyPair crypto, AllIssuerKeys crypto 'GenesisDelegate)] ->
-  [AllIssuerKeys crypto 'GenesisDelegate] ->
-  Map (KeyHash 'GenesisDelegate crypto) (AllIssuerKeys crypto 'GenesisDelegate)
+  (CC.Crypto c) =>
+  [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)] ->
+  [AllIssuerKeys c 'GenesisDelegate] ->
+  Map (KeyHash 'GenesisDelegate c) (AllIssuerKeys c 'GenesisDelegate)
 mkGenesisDelegatesHashMap coreNodes genesisDelegates =
   Map.fromList (f <$> allDelegateKeys)
   where
@@ -351,7 +351,7 @@ mkGenesisDelegatesHashMap coreNodes genesisDelegates =
 
 -- | Generate a mapping from stake key hash to stake key pair, from a list of
 -- (payment, staking) key pairs.
-mkStakeKeyHashMap :: (CC.Crypto crypto) => KeyPairs crypto -> Map (KeyHash 'Staking crypto) (KeyPair 'Staking crypto)
+mkStakeKeyHashMap :: (CC.Crypto c) => KeyPairs c -> Map (KeyHash 'Staking c) (KeyPair 'Staking c)
 mkStakeKeyHashMap keyPairs =
   Map.fromList (f <$> keyPairs)
   where
@@ -360,9 +360,9 @@ mkStakeKeyHashMap keyPairs =
 -- | Generate a mapping from payment key hash to keypair
 -- from a list of (payment, staking) key pairs.
 mkPayKeyHashMap ::
-  (CC.Crypto crypto) =>
-  KeyPairs crypto ->
-  Map (KeyHash 'Payment crypto) (KeyPair 'Payment crypto)
+  (CC.Crypto c) =>
+  KeyPairs c ->
+  Map (KeyHash 'Payment c) (KeyPair 'Payment c)
 mkPayKeyHashMap keyPairs =
   Map.fromList (f <$> keyPairs)
   where
@@ -435,7 +435,7 @@ findPayScriptFromAddr _ _ =
   error "findPayScriptFromAddr: expects only base and pointer script addresses"
 
 -- | Select one random verification staking key from list of pairs of KeyPair.
-pickStakeKey :: KeyPairs crypto -> Gen (VKey 'Staking crypto)
+pickStakeKey :: KeyPairs c -> Gen (VKey 'Staking c)
 pickStakeKey keys = vKey . snd <$> QC.elements keys
 
 -- | Generates a list of coins for the given 'Addr' and produced a 'TxOut' for each 'Addr'
@@ -486,11 +486,11 @@ unitIntervalToNatural ui =
     toNat r = fromInteger (numerator r `quot` denominator r)
 
 mkBlockHeader ::
-  Mock crypto =>
+  Mock c =>
   -- | Hash of previous block
-  HashHeader crypto ->
+  HashHeader c ->
   -- | All keys in the stake pool
-  AllIssuerKeys crypto r ->
+  AllIssuerKeys c r ->
   -- | Current slot
   SlotNo ->
   -- | Block number/chain length/chain "difficulty"
@@ -502,12 +502,12 @@ mkBlockHeader ::
   -- | KES period of key registration
   Word ->
   -- | Operational certificate
-  OCert crypto ->
+  OCert c ->
   -- | Block size
   Natural ->
   -- | Block body hash
-  Hash crypto EraIndependentBlockBody ->
-  BHeader crypto
+  Hash c EraIndependentBlockBody ->
+  BHeader c
 mkBlockHeader prev pkeys s blockNo enonce kesPeriod c0 oCert bodySize bodyHash =
   let (_, (sHot, _)) = head $ hot pkeys
       KeyPair vKeyCold _ = cold pkeys
@@ -632,12 +632,12 @@ mkBlockFakeVRF prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod c0
 newtype NatNonce = NatNonce Natural
 
 mkOCert ::
-  forall crypto r.
-  (CC.Crypto crypto, Signable (DSIGN crypto) (OCertSignable crypto)) =>
-  AllIssuerKeys crypto r ->
+  forall c r.
+  (CC.Crypto c, Signable (DSIGN c) (OCertSignable c)) =>
+  AllIssuerKeys c r ->
   Word64 ->
   KESPeriod ->
-  OCert crypto
+  OCert c
 mkOCert pkeys n c0 =
   let (_, (_, vKeyHot)) = head $ hot pkeys
       KeyPair _vKeyCold sKeyCold = cold pkeys
@@ -645,7 +645,7 @@ mkOCert pkeys n c0 =
         vKeyHot
         n
         c0
-        (signedDSIGN @crypto sKeyCold (OCertSignable vKeyHot n c0))
+        (signedDSIGN @c sKeyCold (OCertSignable vKeyHot n c0))
 
 -- | Takes a set of KES hot keys and checks to see whether there is one whose
 -- range contains the current KES period. If so, return its index in the list of

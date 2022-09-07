@@ -65,7 +65,7 @@ import Lens.Micro.Extras (view)
 -- | This function returns the coin balance of a given pot, either the
 -- reserves or the treasury, after the instantaneous rewards and pot
 -- transfers are accounted for.
-availableAfterMIR :: MIRPot -> AccountState -> InstantaneousRewards crypto -> Coin
+availableAfterMIR :: MIRPot -> AccountState -> InstantaneousRewards c -> Coin
 availableAfterMIR ReservesMIR as ir =
   _reserves as `addDeltaCoin` deltaReserves ir <-> fold (iRReserves ir)
 availableAfterMIR TreasuryMIR as ir =
@@ -128,9 +128,9 @@ depositPoolChange ls pp txBody = (currentPool <+> txDeposits) <-> txRefunds
     txRefunds = keyRefunds pp txBody
 
 reapRewards ::
-  UnifiedMap crypto ->
-  RewardAccounts crypto ->
-  UnifiedMap crypto
+  UnifiedMap c ->
+  RewardAccounts c ->
+  UnifiedMap c
 reapRewards (UnifiedMap tmap ptrmap) withdrawals = UnifiedMap (Map.mapWithKey g tmap) ptrmap
   where
     g k (Triple x y z) = Triple (fmap (removeRewards k) x) y z

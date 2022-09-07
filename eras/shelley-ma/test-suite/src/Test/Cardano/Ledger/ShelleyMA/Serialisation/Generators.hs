@@ -195,10 +195,10 @@ genMintValues = multiAssetFromListBounded @Int64 <$> arbitrary
 -- | Variant on @multiAssetFromList@ that makes sure that generated values stay
 -- bounded within the range of a given integral type.
 multiAssetFromListBounded ::
-  forall i crypto.
+  forall i c.
   (Bounded i, Integral i) =>
-  [(PolicyID crypto, AssetName, i)] ->
-  MultiAsset crypto
+  [(PolicyID c, AssetName, i)] ->
+  MultiAsset c
 multiAssetFromListBounded =
   foldr
     (\(p, n, fromIntegral -> i) ans -> ConcreteValue.insert comb p n i ans)

@@ -222,20 +222,20 @@ instance ToCBOR PerformanceEstimate where
 instance FromCBOR PerformanceEstimate where
   fromCBOR = PerformanceEstimate <$> decodeDouble
 
-data NonMyopic crypto = NonMyopic
-  { likelihoodsNM :: !(Map (KeyHash 'StakePool crypto) Likelihood),
+data NonMyopic c = NonMyopic
+  { likelihoodsNM :: !(Map (KeyHash 'StakePool c) Likelihood),
     rewardPotNM :: !Coin
   }
   deriving (Show, Eq, Generic)
 
-instance Default (NonMyopic crypto) where
+instance Default (NonMyopic c) where
   def = NonMyopic Map.empty (Coin 0)
 
-instance NoThunks (NonMyopic crypto)
+instance NoThunks (NonMyopic c)
 
-instance NFData (NonMyopic crypto)
+instance NFData (NonMyopic c)
 
-instance CC.Crypto crypto => ToCBOR (NonMyopic crypto) where
+instance CC.Crypto c => ToCBOR (NonMyopic c) where
   toCBOR
     NonMyopic
       { likelihoodsNM = aps,
@@ -245,8 +245,8 @@ instance CC.Crypto crypto => ToCBOR (NonMyopic crypto) where
         <> toCBOR aps
         <> toCBOR rp
 
-instance CC.Crypto crypto => FromSharedCBOR (NonMyopic crypto) where
-  type Share (NonMyopic crypto) = Interns (KeyHash 'StakePool crypto)
+instance CC.Crypto c => FromSharedCBOR (NonMyopic c) where
+  type Share (NonMyopic c) = Interns (KeyHash 'StakePool c)
   fromSharedPlusCBOR = do
     decodeRecordNamedT "NonMyopic" (const 2) $ do
       likelihoodsNM <- fromSharedPlusLensCBOR (toMemptyLens _1 id)
@@ -286,9 +286,9 @@ getTopRankedPools ::
   Coin ->
   Coin ->
   pp ->
-  Map (KeyHash 'StakePool crypto) (PoolParams crypto) ->
-  Map (KeyHash 'StakePool crypto) PerformanceEstimate ->
-  Set (KeyHash 'StakePool crypto)
+  Map (KeyHash 'StakePool c) (PoolParams c) ->
+  Map (KeyHash 'StakePool c) PerformanceEstimate ->
+  Set (KeyHash 'StakePool c)
 getTopRankedPools rPot totalStake pp poolParams aps =
   let pdata = Map.toAscList $ Map.intersectionWith (,) poolParams aps
    in getTopRankedPoolsInternal rPot totalStake pp pdata
@@ -298,9 +298,9 @@ getTopRankedPoolsVMap ::
   Coin ->
   Coin ->
   pp ->
-  VMap.VMap VMap.VB VMap.VB (KeyHash 'StakePool crypto) (PoolParams crypto) ->
-  Map (KeyHash 'StakePool crypto) PerformanceEstimate ->
-  Set (KeyHash 'StakePool crypto)
+  VMap.VMap VMap.VB VMap.VB (KeyHash 'StakePool c) (PoolParams c) ->
+  Map (KeyHash 'StakePool c) PerformanceEstimate ->
+  Set (KeyHash 'StakePool c)
 getTopRankedPoolsVMap rPot totalStake pp poolParams aps =
   let pdata = [(kh, (pps, a)) | (kh, a) <- Map.toAscList aps, Just pps <- [VMap.lookup kh poolParams]]
    in getTopRankedPoolsInternal rPot totalStake pp pdata
@@ -310,8 +310,8 @@ getTopRankedPoolsInternal ::
   Coin ->
   Coin ->
   pp ->
-  [(KeyHash 'StakePool crypto, (PoolParams crypto, PerformanceEstimate))] ->
-  Set (KeyHash 'StakePool crypto)
+  [(KeyHash 'StakePool c, (PoolParams c, PerformanceEstimate))] ->
+  Set (KeyHash 'StakePool c)
 getTopRankedPoolsInternal rPot totalStake pp pdata =
   Set.fromList $
     fst

@@ -65,39 +65,39 @@ import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 
 -- | Type of stake as map from hash key to coins associated.
-newtype Stake crypto = Stake
-  { unStake :: VMap VB VP (Credential 'Staking crypto) (CompactForm Coin)
+newtype Stake c = Stake
+  { unStake :: VMap VB VP (Credential 'Staking c) (CompactForm Coin)
   }
   deriving (Show, Eq, NFData, Generic)
 
-deriving newtype instance Typeable crypto => NoThunks (Stake crypto)
+deriving newtype instance Typeable c => NoThunks (Stake c)
 
 deriving newtype instance
-  CC.Crypto crypto => ToCBOR (Stake crypto)
+  CC.Crypto c => ToCBOR (Stake c)
 
-instance CC.Crypto crypto => FromSharedCBOR (Stake crypto) where
-  type Share (Stake crypto) = Share (VMap VB VP (Credential 'Staking crypto) (CompactForm Coin))
+instance CC.Crypto c => FromSharedCBOR (Stake c) where
+  type Share (Stake c) = Share (VMap VB VP (Credential 'Staking c) (CompactForm Coin))
   getShare = getShare . unStake
   fromSharedCBOR = fmap Stake . fromSharedCBOR
 
-sumAllStake :: Stake crypto -> Coin
+sumAllStake :: Stake c -> Coin
 sumAllStake = fromCompact . CompactCoin . VMap.foldl (\acc (CompactCoin c) -> acc + c) 0 . unStake
 {-# INLINE sumAllStake #-}
 
 -- | Get stake of one pool
 poolStake ::
-  KeyHash 'StakePool crypto ->
-  VMap VB VB (Credential 'Staking crypto) (KeyHash 'StakePool crypto) ->
-  Stake crypto ->
-  Stake crypto
+  KeyHash 'StakePool c ->
+  VMap VB VB (Credential 'Staking c) (KeyHash 'StakePool c) ->
+  Stake c ->
+  Stake c
 poolStake hk delegs (Stake stake) =
   -- Stake $ (eval (dom (delegs ▷ setSingleton hk) ◁ stake))
   Stake $ VMap.filter (\cred _ -> VMap.lookup cred delegs == Just hk) stake
 
 sumStakePerPool ::
-  VMap VB VB (Credential 'Staking crypto) (KeyHash 'StakePool crypto) ->
-  Stake crypto ->
-  Map (KeyHash 'StakePool crypto) Coin
+  VMap VB VB (Credential 'Staking c) (KeyHash 'StakePool c) ->
+  Stake c ->
+  Map (KeyHash 'StakePool c) Coin
 sumStakePerPool delegs (Stake stake) = VMap.foldlWithKey accum Map.empty stake
   where
     accum !acc cred compactCoin =
@@ -107,14 +107,14 @@ sumStakePerPool delegs (Stake stake) = VMap.foldlWithKey accum Map.empty stake
 
 -- | Calculate total possible refunds.
 obligation ::
-  forall crypto pp anymap.
+  forall c pp t.
   ( HasField "_keyDeposit" pp Coin,
     HasField "_poolDeposit" pp Coin,
-    Foldable (anymap (Credential 'Staking crypto))
+    Foldable (t (Credential 'Staking c))
   ) =>
   pp ->
-  anymap (Credential 'Staking crypto) Coin ->
-  Map (KeyHash 'StakePool crypto) (PoolParams crypto) ->
+  t (Credential 'Staking c) Coin ->
+  Map (KeyHash 'StakePool c) (PoolParams c) ->
   Coin
 obligation pp rewards stakePools =
   (length rewards <×> getField @"_keyDeposit" pp)
@@ -152,20 +152,20 @@ maxPool pc r sigma pR = maxPool' a0 nOpt r sigma pR
     nOpt = getField @"_nOpt" pc
 
 -- | Snapshot of the stake distribution.
-data SnapShot crypto = SnapShot
-  { _stake :: !(Stake crypto),
-    _delegations :: !(VMap VB VB (Credential 'Staking crypto) (KeyHash 'StakePool crypto)),
-    _poolParams :: !(VMap VB VB (KeyHash 'StakePool crypto) (PoolParams crypto))
+data SnapShot c = SnapShot
+  { _stake :: !(Stake c),
+    _delegations :: !(VMap VB VB (Credential 'Staking c) (KeyHash 'StakePool c)),
+    _poolParams :: !(VMap VB VB (KeyHash 'StakePool c) (PoolParams c))
   }
   deriving (Show, Eq, Generic)
 
-instance Typeable crypto => NoThunks (SnapShot crypto)
+instance Typeable c => NoThunks (SnapShot c)
 
-instance NFData (SnapShot crypto)
+instance NFData (SnapShot c)
 
 instance
-  CC.Crypto crypto =>
-  ToCBOR (SnapShot crypto)
+  CC.Crypto c =>
+  ToCBOR (SnapShot c)
   where
   toCBOR
     SnapShot
@@ -178,10 +178,10 @@ instance
         <> toCBOR d
         <> toCBOR p
 
-instance CC.Crypto crypto => FromSharedCBOR (SnapShot crypto) where
+instance CC.Crypto c => FromSharedCBOR (SnapShot c) where
   type
-    Share (SnapShot crypto) =
-      (Interns (Credential 'Staking crypto), Interns (KeyHash 'StakePool crypto))
+    Share (SnapShot c) =
+      (Interns (Credential 'Staking c), Interns (KeyHash 'StakePool c))
   fromSharedPlusCBOR = decodeRecordNamedT "SnapShot" (const 3) $ do
     _stake <- fromSharedPlusLensCBOR _1
     _delegations <- fromSharedPlusCBOR
@@ -189,21 +189,21 @@ instance CC.Crypto crypto => FromSharedCBOR (SnapShot crypto) where
     pure SnapShot {_stake, _delegations, _poolParams}
 
 -- | Snapshots of the stake distribution.
-data SnapShots crypto = SnapShots
-  { _pstakeMark :: SnapShot crypto, -- Lazy on purpose
-    _pstakeSet :: !(SnapShot crypto),
-    _pstakeGo :: !(SnapShot crypto),
+data SnapShots c = SnapShots
+  { _pstakeMark :: SnapShot c, -- Lazy on purpose
+    _pstakeSet :: !(SnapShot c),
+    _pstakeGo :: !(SnapShot c),
     _feeSS :: !Coin
   }
   deriving (Show, Eq, Generic)
 
-instance Typeable crypto => NoThunks (SnapShots crypto)
+instance Typeable c => NoThunks (SnapShots c)
 
-instance NFData (SnapShots crypto)
+instance NFData (SnapShots c)
 
 instance
-  CC.Crypto crypto =>
-  ToCBOR (SnapShots crypto)
+  CC.Crypto c =>
+  ToCBOR (SnapShots c)
   where
   toCBOR (SnapShots {_pstakeMark, _pstakeSet, _pstakeGo, _feeSS}) =
     encodeListLen 4
@@ -212,8 +212,8 @@ instance
       <> toCBOR _pstakeGo
       <> toCBOR _feeSS
 
-instance CC.Crypto crypto => FromSharedCBOR (SnapShots crypto) where
-  type Share (SnapShots crypto) = Share (SnapShot crypto)
+instance CC.Crypto c => FromSharedCBOR (SnapShots c) where
+  type Share (SnapShots c) = Share (SnapShot c)
   fromSharedPlusCBOR = decodeRecordNamedT "SnapShots" (const 4) $ do
     !_pstakeMark <- fromSharedPlusCBOR
     _pstakeSet <- fromSharedPlusCBOR
@@ -221,11 +221,11 @@ instance CC.Crypto crypto => FromSharedCBOR (SnapShots crypto) where
     _feeSS <- lift fromCBOR
     pure SnapShots {_pstakeMark, _pstakeSet, _pstakeGo, _feeSS}
 
-instance Default (SnapShots crypto) where
+instance Default (SnapShots c) where
   def = emptySnapShots
 
-emptySnapShot :: SnapShot crypto
+emptySnapShot :: SnapShot c
 emptySnapShot = SnapShot (Stake VMap.empty) VMap.empty VMap.empty
 
-emptySnapShots :: SnapShots crypto
+emptySnapShots :: SnapShots c
 emptySnapShots = SnapShots emptySnapShot emptySnapShot emptySnapShot (Coin 0)

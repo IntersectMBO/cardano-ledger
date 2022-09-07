@@ -367,9 +367,9 @@ instance CC.Crypto c => EraAuxiliaryData (AlonzoEra c) where
   validateAuxiliaryData = validateAlonzoAuxiliaryData
 
 hashAlonzoAuxiliaryData ::
-  (HashAlgorithm (CC.HASH crypto), HashAnnotated x EraIndependentAuxiliaryData crypto) =>
+  (HashAlgorithm (CC.HASH c), HashAnnotated x EraIndependentAuxiliaryData c) =>
   x ->
-  AuxiliaryDataHash crypto
+  AuxiliaryDataHash c
 hashAlonzoAuxiliaryData x = AuxiliaryDataHash (hashAnnotated x)
 
 validateAlonzoAuxiliaryData ::

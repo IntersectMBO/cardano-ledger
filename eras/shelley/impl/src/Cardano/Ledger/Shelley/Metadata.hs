@@ -85,12 +85,12 @@ data Metadata era = Metadata'
   deriving (Eq, Show, Ord, Generic)
   deriving (NoThunks) via AllowThunksIn '["mdBytes"] (Metadata era)
 
-instance CC.Crypto crypto => EraAuxiliaryData (ShelleyEra crypto) where
-  type AuxiliaryData (ShelleyEra crypto) = Metadata (ShelleyEra crypto)
+instance CC.Crypto c => EraAuxiliaryData (ShelleyEra c) where
+  type AuxiliaryData (ShelleyEra c) = Metadata (ShelleyEra c)
 
   validateAuxiliaryData _ (Metadata m) = all validMetadatum m
   hashAuxiliaryData metadata =
-    AuxiliaryDataHash (makeHashWithExplicitProxys (Proxy @crypto) index metadata)
+    AuxiliaryDataHash (makeHashWithExplicitProxys (Proxy @c) index metadata)
     where
       index = Proxy @EraIndependentAuxiliaryData
 

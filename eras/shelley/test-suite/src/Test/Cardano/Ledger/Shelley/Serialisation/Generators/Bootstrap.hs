@@ -29,5 +29,5 @@ genSignature =
     . DSIGN.rawDeserialiseSigDSIGN
     <$> hedgehog (Hedgehog.Gen.bytes . Hedgehog.Range.singleton . fromIntegral $ DSIGN.sizeSigDSIGN ([] @a))
 
-genBootstrapAddress :: Gen (BootstrapAddress crypto)
+genBootstrapAddress :: Gen (BootstrapAddress c)
 genBootstrapAddress = BootstrapAddress <$> hedgehog Byron.genAddress

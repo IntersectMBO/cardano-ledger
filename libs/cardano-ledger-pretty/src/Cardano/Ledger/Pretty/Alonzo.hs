@@ -228,7 +228,7 @@ ppTxBody (AlonzoTxBody i ifee o c w fee vi u rsh mnt sdh axh ni) =
       ("txnetworkid", ppStrictMaybe ppNetwork ni)
     ]
 
-ppAuxDataHash :: AuxiliaryDataHash crypto -> PDoc
+ppAuxDataHash :: AuxiliaryDataHash c -> PDoc
 ppAuxDataHash (AuxiliaryDataHash axh) = ppSafeHash axh
 
 instance

@@ -204,6 +204,6 @@ exampleConwayNewEpochState =
     emptyPParams
     (emptyPParams {_coinsPerUTxOByte = Coin 1})
 
-exampleConwayGenesis :: ConwayGenesis crypto
+exampleConwayGenesis :: ConwayGenesis c
 exampleConwayGenesis =
   ConwayGenesis (GenDelegs Map.empty)

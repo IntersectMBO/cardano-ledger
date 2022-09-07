@@ -68,11 +68,11 @@ import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
-data PRTCL crypto
+data PRTCL c
 
-data PrtclState crypto
+data PrtclState c
   = PrtclState
-      !(Map (KeyHash 'BlockIssuer crypto) Word64)
+      !(Map (KeyHash 'BlockIssuer c) Word64)
       -- ^ Operation Certificate counters
       !Nonce
       -- ^ Evolving nonce
@@ -80,7 +80,7 @@ data PrtclState crypto
       -- ^ Candidate nonce
   deriving (Generic, Show, Eq)
 
-instance Crypto crypto => ToCBOR (PrtclState crypto) where
+instance Crypto c => ToCBOR (PrtclState c) where
   toCBOR (PrtclState m n1 n2) =
     mconcat
       [ encodeListLen 3,
@@ -89,7 +89,7 @@ instance Crypto crypto => ToCBOR (PrtclState crypto) where
         toCBOR n2
       ]
 
-instance Crypto crypto => FromCBOR (PrtclState crypto) where
+instance Crypto c => FromCBOR (PrtclState c) where
   fromCBOR =
     decodeRecordNamed
       "PrtclState"
@@ -100,71 +100,71 @@ instance Crypto crypto => FromCBOR (PrtclState crypto) where
           <*> fromCBOR
       )
 
-instance Crypto crypto => NoThunks (PrtclState crypto)
+instance Crypto c => NoThunks (PrtclState c)
 
-data PrtclEnv crypto
+data PrtclEnv c
   = PrtclEnv
       UnitInterval -- the decentralization paramater @d@ from the protocal parameters
-      (PoolDistr crypto)
-      (GenDelegs crypto)
+      (PoolDistr c)
+      (GenDelegs c)
       Nonce
   deriving (Generic)
 
-instance NoThunks (PrtclEnv crypto)
+instance NoThunks (PrtclEnv c)
 
-data PrtclPredicateFailure crypto
-  = OverlayFailure (PredicateFailure (OVERLAY crypto)) -- Subtransition Failures
-  | UpdnFailure (PredicateFailure (UPDN crypto)) -- Subtransition Failures
+data PrtclPredicateFailure c
+  = OverlayFailure (PredicateFailure (OVERLAY c)) -- Subtransition Failures
+  | UpdnFailure (PredicateFailure (UPDN c)) -- Subtransition Failures
   deriving (Generic)
 
-data PrtclEvent crypto
-  = UpdnEvent (Event (UPDN crypto)) -- Subtransition Failures
+data PrtclEvent c
+  = UpdnEvent (Event (UPDN c)) -- Subtransition Failures
   | NoEvent Void
 
 deriving instance
-  (VRF.VRFAlgorithm (VRF crypto)) =>
-  Show (PrtclPredicateFailure crypto)
+  (VRF.VRFAlgorithm (VRF c)) =>
+  Show (PrtclPredicateFailure c)
 
 deriving instance
-  (VRF.VRFAlgorithm (VRF crypto)) =>
-  Eq (PrtclPredicateFailure crypto)
+  (VRF.VRFAlgorithm (VRF c)) =>
+  Eq (PrtclPredicateFailure c)
 
 instance
-  ( Crypto crypto,
-    DSignable crypto (OCertSignable crypto),
-    KESignable crypto (BHBody crypto),
-    VRFSignable crypto Seed
+  ( Crypto c,
+    DSignable c (OCertSignable c),
+    KESignable c (BHBody c),
+    VRFSignable c Seed
   ) =>
-  STS (PRTCL crypto)
+  STS (PRTCL c)
   where
   type
-    State (PRTCL crypto) =
-      PrtclState crypto
+    State (PRTCL c) =
+      PrtclState c
 
   type
-    Signal (PRTCL crypto) =
-      BHeader crypto
+    Signal (PRTCL c) =
+      BHeader c
 
   type
-    Environment (PRTCL crypto) =
-      PrtclEnv crypto
+    Environment (PRTCL c) =
+      PrtclEnv c
 
-  type BaseM (PRTCL crypto) = ShelleyBase
-  type PredicateFailure (PRTCL crypto) = PrtclPredicateFailure crypto
-  type Event (PRTCL crypto) = PrtclEvent crypto
+  type BaseM (PRTCL c) = ShelleyBase
+  type PredicateFailure (PRTCL c) = PrtclPredicateFailure c
+  type Event (PRTCL c) = PrtclEvent c
 
   initialRules = []
 
   transitionRules = [prtclTransition]
 
 prtclTransition ::
-  forall crypto.
-  ( Crypto crypto,
-    DSignable crypto (OCertSignable crypto),
-    KESignable crypto (BHBody crypto),
-    VRFSignable crypto Seed
+  forall c.
+  ( Crypto c,
+    DSignable c (OCertSignable c),
+    KESignable c (BHBody c),
+    VRFSignable c Seed
   ) =>
-  TransitionRule (PRTCL crypto)
+  TransitionRule (PRTCL c)
 prtclTransition = do
   TRC
     ( PrtclEnv dval pd dms eta0,
@@ -177,14 +177,14 @@ prtclTransition = do
       eta = bnonce bhb
 
   UpdnState etaV' etaC' <-
-    trans @(UPDN crypto) $
+    trans @(UPDN c) $
       TRC
         ( UpdnEnv eta,
           UpdnState etaV etaC,
           slot
         )
   cs' <-
-    trans @(OVERLAY crypto) $
+    trans @(OVERLAY c) $
       TRC (OverlayEnv dval pd dms eta0, cs, bh)
 
   pure $
@@ -193,54 +193,54 @@ prtclTransition = do
       etaV'
       etaC'
 
-instance (Crypto crypto) => NoThunks (PrtclPredicateFailure crypto)
+instance (Crypto c) => NoThunks (PrtclPredicateFailure c)
 
 instance
-  ( Crypto crypto,
-    DSignable crypto (OCertSignable crypto),
-    KESignable crypto (BHBody crypto),
-    VRFSignable crypto Seed
+  ( Crypto c,
+    DSignable c (OCertSignable c),
+    KESignable c (BHBody c),
+    VRFSignable c Seed
   ) =>
-  Embed (OVERLAY crypto) (PRTCL crypto)
+  Embed (OVERLAY c) (PRTCL c)
   where
   wrapFailed = OverlayFailure
   wrapEvent = NoEvent
 
 instance
-  ( Crypto crypto,
-    DSignable crypto (OCertSignable crypto),
-    KESignable crypto (BHBody crypto),
-    VRFSignable crypto Seed
+  ( Crypto c,
+    DSignable c (OCertSignable c),
+    KESignable c (BHBody c),
+    VRFSignable c Seed
   ) =>
-  Embed (UPDN crypto) (PRTCL crypto)
+  Embed (UPDN c) (PRTCL c)
   where
   wrapFailed = UpdnFailure
   wrapEvent = UpdnEvent
 
-data PrtlSeqFailure crypto
+data PrtlSeqFailure c
   = WrongSlotIntervalPrtclSeq
       SlotNo
       -- ^ Last slot number.
       SlotNo
       -- ^ Current slot number.
   | WrongBlockNoPrtclSeq
-      (WithOrigin (LastAppliedBlock crypto))
+      (WithOrigin (LastAppliedBlock c))
       -- ^ Last applied block.
       BlockNo
       -- ^ Current block number.
   | WrongBlockSequencePrtclSeq
-      (PrevHash crypto)
+      (PrevHash c)
       -- ^ Last applied hash
-      (PrevHash crypto)
+      (PrevHash c)
       -- ^ Current block's previous hash
   deriving (Show, Eq, Generic)
 
-instance Crypto crypto => NoThunks (PrtlSeqFailure crypto)
+instance Crypto c => NoThunks (PrtlSeqFailure c)
 
 prtlSeqChecks ::
-  (MonadError (PrtlSeqFailure crypto) m, Crypto crypto) =>
-  WithOrigin (LastAppliedBlock crypto) ->
-  BHeader crypto ->
+  (MonadError (PrtlSeqFailure c) m, Crypto c) =>
+  WithOrigin (LastAppliedBlock c) ->
+  BHeader c ->
   m ()
 prtlSeqChecks lab bh =
   case lab of

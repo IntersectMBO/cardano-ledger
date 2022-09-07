@@ -287,7 +287,7 @@ class
  -----------------------------------------------------------------------------}
 
 -- | Select between _lower_ and _upper_ keys from 'keyPairs'
-someKeyPairs :: CC.Crypto crypto => Constants -> Int -> Int -> Gen (KeyPairs crypto)
+someKeyPairs :: CC.Crypto c => Constants -> Int -> Int -> Gen (KeyPairs c)
 someKeyPairs c lower upper =
   take
     <$> choose (lower, upper)
@@ -312,8 +312,8 @@ genUtxo0 ge@(GenEnv _ _ c@Constants {minGenesisUTxOouts, maxGenesisUTxOouts}) = 
 
 -- | We share this dummy TxId as genesis transaction id across eras
 genesisId ::
-  Hash.HashAlgorithm (CC.HASH crypto) =>
-  TxId crypto
+  Hash.HashAlgorithm (CC.HASH c) =>
+  TxId c
 genesisId = TxId (unsafeMakeSafeHash (mkDummyHash 0))
   where
     mkDummyHash :: forall h a. Hash.HashAlgorithm h => Int -> Hash.Hash h a

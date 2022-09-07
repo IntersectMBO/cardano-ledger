@@ -111,8 +111,8 @@ initStGenesisDeleg = initSt initUTxO
 --
 
 newGenDelegate ::
-  CryptoClass.Crypto crypto =>
-  KeyPair 'GenesisDelegate crypto
+  CryptoClass.Crypto c =>
+  KeyPair 'GenesisDelegate c
 newGenDelegate = KeyPair vkCold skCold
   where
     (skCold, vkCold) = mkKeyPair (RawSeed 108 0 0 0 1)
@@ -191,9 +191,9 @@ blockEx1 =
     (mkOCert @c (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 10) 0 (KESPeriod 0))
 
 newGenDeleg ::
-  forall crypto.
-  CryptoClass.Crypto crypto =>
-  (FutureGenDeleg crypto, GenDelegPair crypto)
+  forall c.
+  CryptoClass.Crypto c =>
+  (FutureGenDeleg c, GenDelegPair c)
 newGenDeleg =
   ( FutureGenDeleg (SlotNo 43) (hashKey $ coreNodeVK 0),
     GenDelegPair (hashKey . vKey $ newGenDelegate) newGenesisVrfKH

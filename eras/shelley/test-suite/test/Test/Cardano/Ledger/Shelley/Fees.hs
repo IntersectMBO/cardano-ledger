@@ -93,35 +93,35 @@ sizeTest b16 tx = do
   Base16.encode (serialize tx) @?= b16
   (tx ^. sizeTxF) @?= toInteger (BSL.length b16 `div` 2)
 
-alicePay :: forall crypto. Cr.Crypto crypto => KeyPair 'Payment crypto
-alicePay = KeyPair @'Payment @crypto vk sk
+alicePay :: forall c. Cr.Crypto c => KeyPair 'Payment c
+alicePay = KeyPair @'Payment @c vk sk
   where
-    (sk, vk) = mkKeyPair @crypto (RawSeed 0 0 0 0 0)
+    (sk, vk) = mkKeyPair @c (RawSeed 0 0 0 0 0)
 
-aliceStake :: forall crypto. Cr.Crypto crypto => KeyPair 'Staking crypto
+aliceStake :: forall c. Cr.Crypto c => KeyPair 'Staking c
 aliceStake = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair @crypto (RawSeed 0 0 0 0 1)
+    (sk, vk) = mkKeyPair @c (RawSeed 0 0 0 0 1)
 
-aliceSHK :: forall crypto. Cr.Crypto crypto => Credential 'Staking crypto
+aliceSHK :: forall c. Cr.Crypto c => Credential 'Staking c
 aliceSHK = (KeyHashObj . hashKey . vKey) aliceStake
 
-alicePool :: forall crypto. Cr.Crypto crypto => KeyPair 'StakePool crypto
+alicePool :: forall c. Cr.Crypto c => KeyPair 'StakePool c
 alicePool = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair @crypto (RawSeed 0 0 0 0 2)
+    (sk, vk) = mkKeyPair @c (RawSeed 0 0 0 0 2)
 
-alicePoolKH :: forall crypto. Cr.Crypto crypto => KeyHash 'StakePool crypto
+alicePoolKH :: forall c. Cr.Crypto c => KeyHash 'StakePool c
 alicePoolKH = (hashKey . vKey) alicePool
 
 aliceVRF :: forall v. VRFAlgorithm v => (VRF.SignKeyVRF v, VRF.VerKeyVRF v)
 aliceVRF = mkVRFKeyPair (RawSeed 0 0 0 0 3)
 
-alicePoolParams :: forall crypto. Cr.Crypto crypto => PoolParams crypto
+alicePoolParams :: forall c. Cr.Crypto c => PoolParams c
 alicePoolParams =
   PoolParams
     { _poolId = alicePoolKH,
-      _poolVrf = hashVerKeyVRF . snd $ aliceVRF @(Cr.VRF crypto),
+      _poolVrf = hashVerKeyVRF . snd $ aliceVRF @(Cr.VRF c),
       _poolPledge = Coin 1,
       _poolCost = Coin 5,
       _poolMargin = unsafeBoundRational 0.1,
@@ -139,26 +139,26 @@ alicePoolParams =
             }
     }
 
-aliceAddr :: forall crypto. Cr.Crypto crypto => Addr crypto
+aliceAddr :: forall c. Cr.Crypto c => Addr c
 aliceAddr = mkAddr (alicePay, aliceStake)
 
-bobPay :: forall crypto. Cr.Crypto crypto => KeyPair 'Payment crypto
+bobPay :: forall c. Cr.Crypto c => KeyPair 'Payment c
 bobPay = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair @crypto (RawSeed 1 0 0 0 0)
+    (sk, vk) = mkKeyPair @c (RawSeed 1 0 0 0 0)
 
-bobStake :: forall crypto. Cr.Crypto crypto => KeyPair 'Staking crypto
+bobStake :: forall c. Cr.Crypto c => KeyPair 'Staking c
 bobStake = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair @crypto (RawSeed 1 0 0 0 1)
+    (sk, vk) = mkKeyPair @c (RawSeed 1 0 0 0 1)
 
-bobSHK :: forall crypto. Cr.Crypto crypto => Credential 'Staking crypto
+bobSHK :: forall c. Cr.Crypto c => Credential 'Staking c
 bobSHK = (KeyHashObj . hashKey . vKey) bobStake
 
-bobAddr :: forall crypto. Cr.Crypto crypto => Addr crypto
+bobAddr :: forall c. Cr.Crypto c => Addr c
 bobAddr = mkAddr (bobPay, bobStake)
 
-carlPay :: forall crypto. Cr.Crypto crypto => KeyPair 'Payment crypto
+carlPay :: forall c. Cr.Crypto c => KeyPair 'Payment c
 carlPay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 2 0 0 0 0)

@@ -157,35 +157,35 @@ import Prettyprinter (Pretty (..))
 
 -- | A transaction output can be translated because it is a newly created output,
 -- or because it is the output which is connected to a transaction input being spent.
-data TxOutSource crypto
-  = TxOutFromInput !(TxIn crypto)
+data TxOutSource c
+  = TxOutFromInput !(TxIn c)
   | TxOutFromOutput !TxIx
   deriving (Eq, Show, Generic, NoThunks)
 
-instance CC.Crypto crypto => ToCBOR (TxOutSource crypto) where
+instance CC.Crypto c => ToCBOR (TxOutSource c) where
   toCBOR = \case
     TxOutFromInput txIn -> encode $ Sum TxOutFromInput 0 !> To txIn
     TxOutFromOutput txIx -> encode $ Sum TxOutFromOutput 1 !> To txIx
 
-instance CC.Crypto crypto => FromCBOR (TxOutSource crypto) where
+instance CC.Crypto c => FromCBOR (TxOutSource c) where
   fromCBOR = decode (Summands "TxOutSource" dec)
     where
       dec 0 = SumD TxOutFromInput <! From
       dec 1 = SumD TxOutFromOutput <! From
       dec n = Invalid n
 
-data TranslationError crypto
-  = ByronTxOutInContext !(TxOutSource crypto)
-  | TranslationLogicMissingInput !(TxIn crypto)
+data TranslationError c
+  = ByronTxOutInContext !(TxOutSource c)
+  | TranslationLogicMissingInput !(TxIn c)
   | RdmrPtrPointsToNothing !RdmrPtr
   | LanguageNotSupported !Language
-  | InlineDatumsNotSupported !(TxOutSource crypto)
-  | ReferenceScriptsNotSupported !(TxOutSource crypto)
-  | ReferenceInputsNotSupported !(Set (TxIn crypto))
+  | InlineDatumsNotSupported !(TxOutSource c)
+  | ReferenceScriptsNotSupported !(TxOutSource c)
+  | ReferenceInputsNotSupported !(Set (TxIn c))
   | TimeTranslationPastHorizon !Text
   deriving (Eq, Show, Generic, NoThunks)
 
-instance CC.Crypto crypto => ToCBOR (TranslationError crypto) where
+instance CC.Crypto c => ToCBOR (TranslationError c) where
   toCBOR = \case
     ByronTxOutInContext txOutSource ->
       encode $ Sum ByronTxOutInContext 0 !> To txOutSource
@@ -204,7 +204,7 @@ instance CC.Crypto crypto => ToCBOR (TranslationError crypto) where
     TimeTranslationPastHorizon err ->
       encode $ Sum TimeTranslationPastHorizon 7 !> To err
 
-instance CC.Crypto crypto => FromCBOR (TranslationError crypto) where
+instance CC.Crypto c => FromCBOR (TranslationError c) where
   fromCBOR = decode (Summands "TranslationError" dec)
     where
       dec 0 = SumD ByronTxOutInContext <! From
@@ -236,16 +236,16 @@ transSafeHash = PV1.toBuiltin . hashToBytes . extractHash
 transHash :: Hash h a -> BS.ByteString
 transHash = hashToBytes
 
-txInfoId :: TxId crypto -> PV1.TxId
+txInfoId :: TxId c -> PV1.TxId
 txInfoId (TxId safe) = PV1.TxId (transSafeHash safe)
 
-transStakeCred :: Credential keyrole crypto -> PV1.Credential
+transStakeCred :: Credential kr c -> PV1.Credential
 transStakeCred (ScriptHashObj (ScriptHash kh)) =
   PV1.ScriptCredential (PV1.ValidatorHash (PV1.toBuiltin (hashToBytes kh)))
 transStakeCred (KeyHashObj (KeyHash kh)) =
   PV1.PubKeyCredential (PV1.PubKeyHash (PV1.toBuiltin (hashToBytes kh)))
 
-transStakeReference :: StakeReference crypto -> Maybe PV1.StakingCredential
+transStakeReference :: StakeReference c -> Maybe PV1.StakingCredential
 transStakeReference (StakeRefBase cred) = Just (PV1.StakingHash (transStakeCred cred))
 transStakeReference (StakeRefPtr (Ptr (SlotNo slot) txIx certIx)) =
   let !txIxInteger = toInteger (txIxToInt txIx)
@@ -253,13 +253,13 @@ transStakeReference (StakeRefPtr (Ptr (SlotNo slot) txIx certIx)) =
    in Just (PV1.StakingPtr (fromIntegral slot) txIxInteger certIxInteger)
 transStakeReference StakeRefNull = Nothing
 
-transCred :: Credential keyrole crypto -> PV1.Credential
+transCred :: Credential kr c -> PV1.Credential
 transCred (KeyHashObj (KeyHash kh)) =
   PV1.PubKeyCredential (PV1.PubKeyHash (PV1.toBuiltin (hashToBytes kh)))
 transCred (ScriptHashObj (ScriptHash kh)) =
   PV1.ScriptCredential (PV1.ValidatorHash (PV1.toBuiltin (hashToBytes kh)))
 
-transAddr :: Addr crypto -> Maybe PV1.Address
+transAddr :: Addr c -> Maybe PV1.Address
 transAddr (Addr _net object stake) = Just (PV1.Address (transCred object) (transStakeReference stake))
 transAddr (AddrBootstrap _bootaddr) = Nothing
 
@@ -350,7 +350,7 @@ txInfoOut txOut = do
 -- ==================================
 -- translate Values
 
-transPolicyID :: PolicyID crypto -> PV1.CurrencySymbol
+transPolicyID :: PolicyID c -> PV1.CurrencySymbol
 transPolicyID (PolicyID (ScriptHash x)) = PV1.CurrencySymbol (PV1.toBuiltin (hashToBytes x))
 
 transAssetName :: AssetName -> PV1.TokenName
@@ -391,13 +391,13 @@ transDCert (DCertPool (RetirePool keyhash (EpochNo i))) =
 transDCert (DCertGenesis _) = PV1.DCertGenesis
 transDCert (DCertMir _) = PV1.DCertMir
 
-transWdrl :: Wdrl crypto -> Map.Map PV1.StakingCredential Integer
+transWdrl :: Wdrl c -> Map.Map PV1.StakingCredential Integer
 transWdrl (Wdrl mp) = Map.foldlWithKey' accum Map.empty mp
   where
     accum ans (RewardAcnt _network cred) (Coin n) =
       Map.insert (PV1.StakingHash (transStakeCred cred)) n ans
 
-getWitVKeyHash :: (CC.Crypto crypto, Typeable kr) => WitVKey kr crypto -> PV1.PubKeyHash
+getWitVKeyHash :: (CC.Crypto c, Typeable kr) => WitVKey kr c -> PV1.PubKeyHash
 getWitVKeyHash =
   PV1.PubKeyHash
     . PV1.toBuiltin
@@ -426,7 +426,7 @@ exBudgetToExUnits (PV1.ExBudget (PV1.ExCPU steps) (PV1.ExMemory memory)) =
 -- ===================================
 -- translate Script Purpose
 
-transScriptPurpose :: ScriptPurpose crypto -> PV1.ScriptPurpose
+transScriptPurpose :: ScriptPurpose c -> PV1.ScriptPurpose
 transScriptPurpose (Minting policyid) = PV1.Minting (transPolicyID policyid)
 transScriptPurpose (Spending txin) = PV1.Spending (txInfoIn' txin)
 transScriptPurpose (Rewarding (RewardAcnt _network cred)) =

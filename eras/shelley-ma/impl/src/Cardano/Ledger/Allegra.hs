@@ -41,14 +41,14 @@ type AllegraEra = ShelleyMAEra 'Allegra
 --------------------------------------------------------------------------------
 
 instance
-  (Crypto crypto, DSignable crypto (Hash crypto EraIndependentTxBody)) =>
-  ApplyTx (AllegraEra crypto)
+  (Crypto c, DSignable c (Hash c EraIndependentTxBody)) =>
+  ApplyTx (AllegraEra c)
 
 instance
-  (Crypto crypto, DSignable crypto (Hash crypto EraIndependentTxBody)) =>
-  ApplyBlock (AllegraEra crypto)
+  (Crypto c, DSignable c (Hash c EraIndependentTxBody)) =>
+  ApplyBlock (AllegraEra c)
 
-instance Crypto crypto => CanStartFromGenesis (AllegraEra crypto) where
+instance Crypto c => CanStartFromGenesis (AllegraEra c) where
   initialState = initialStateFromGenesis const
 
 -- Self-Describing type synomyms

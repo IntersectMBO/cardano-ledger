@@ -55,9 +55,9 @@ numCoreNodes :: Word64
 numCoreNodes = 7
 
 mkAllCoreNodeKeys ::
-  (CC.Crypto crypto) =>
+  (CC.Crypto c) =>
   Word64 ->
-  AllIssuerKeys crypto r
+  AllIssuerKeys c r
 mkAllCoreNodeKeys w =
   AllIssuerKeys
     (KeyPair vkCold skCold)
@@ -68,10 +68,10 @@ mkAllCoreNodeKeys w =
     (skCold, vkCold) = mkKeyPair (RawSeed w 0 0 0 1)
 
 coreNodes ::
-  forall crypto.
-  CC.Crypto crypto =>
-  [ ( (SignKeyDSIGN crypto, VKey 'Genesis crypto),
-      AllIssuerKeys crypto 'GenesisDelegate
+  forall c.
+  CC.Crypto c =>
+  [ ( (SignKeyDSIGN c, VKey 'Genesis c),
+      AllIssuerKeys c 'GenesisDelegate
     )
   ]
 coreNodes =
@@ -82,25 +82,25 @@ coreNodes =
 -- === Signing (Secret) Keys
 -- Retrieve the signing key for a core node by providing
 -- a number in the range @[0, ... ('numCoreNodes'-1)]@.
-coreNodeSK :: forall crypto. CC.Crypto crypto => Int -> SignKeyDSIGN crypto
-coreNodeSK = fst . fst . (coreNodes @crypto !!)
+coreNodeSK :: forall c. CC.Crypto c => Int -> SignKeyDSIGN c
+coreNodeSK = fst . fst . (coreNodes @c !!)
 
 -- | === Verification (Public) Keys
 -- Retrieve the verification key for a core node by providing
 -- a number in the range @[0, ... ('numCoreNodes'-1)]@.
-coreNodeVK :: forall crypto. CC.Crypto crypto => Int -> VKey 'Genesis crypto
-coreNodeVK = snd . fst . (coreNodes @crypto !!)
+coreNodeVK :: forall c. CC.Crypto c => Int -> VKey 'Genesis c
+coreNodeVK = snd . fst . (coreNodes @c !!)
 
 -- | === Block Issuer Keys
 -- Retrieve the block issuer keys (cold, VRF, and hot KES keys)
 -- for a core node by providing
 -- a number in the range @[0, ... ('numCoreNodes'-1)]@.
 coreNodeIssuerKeys ::
-  forall crypto.
-  CC.Crypto crypto =>
+  forall c.
+  CC.Crypto c =>
   Int ->
-  AllIssuerKeys crypto 'GenesisDelegate
-coreNodeIssuerKeys = snd . (coreNodes @crypto !!)
+  AllIssuerKeys c 'GenesisDelegate
+coreNodeIssuerKeys = snd . (coreNodes @c !!)
 
 -- | === Keys by Overlay Schedule
 -- Retrieve all the keys associated with a core node
@@ -137,9 +137,9 @@ coreNodeKeysBySchedule pp slot =
 -- The map from genesis/core node (verification) key hashes
 -- to their delegate's (verification) key hash.
 genDelegs ::
-  forall crypto.
-  CC.Crypto crypto =>
-  Map (KeyHash 'Genesis crypto) (GenDelegPair crypto)
+  forall c.
+  CC.Crypto c =>
+  Map (KeyHash 'Genesis c) (GenDelegPair c)
 genDelegs =
   Map.fromList
     [ ( hashKey $ snd gkey,

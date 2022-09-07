@@ -20,7 +20,7 @@ import Control.State.Transition
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
-data UPDN crypto
+data UPDN c
 
 newtype UpdnEnv
   = -- | New nonce
@@ -30,23 +30,23 @@ newtype UpdnEnv
 data UpdnState = UpdnState Nonce Nonce
   deriving (Show, Eq)
 
-data UpdnPredicateFailure crypto -- No predicate failures
+data UpdnPredicateFailure c -- No predicate failures
   deriving (Generic, Show, Eq)
 
-instance NoThunks (UpdnPredicateFailure crypto)
+instance NoThunks (UpdnPredicateFailure c)
 
-newtype UpdnEvent crypto = NewEpoch EpochNo
+newtype UpdnEvent c = NewEpoch EpochNo
 
 instance
-  (Crypto crypto) =>
-  STS (UPDN crypto)
+  (Crypto c) =>
+  STS (UPDN c)
   where
-  type State (UPDN crypto) = UpdnState
-  type Signal (UPDN crypto) = SlotNo
-  type Environment (UPDN crypto) = UpdnEnv
-  type BaseM (UPDN crypto) = ShelleyBase
-  type PredicateFailure (UPDN crypto) = UpdnPredicateFailure crypto
-  type Event (UPDN crypto) = UpdnEvent crypto
+  type State (UPDN c) = UpdnState
+  type Signal (UPDN c) = SlotNo
+  type Environment (UPDN c) = UpdnEnv
+  type BaseM (UPDN c) = ShelleyBase
+  type PredicateFailure (UPDN c) = UpdnPredicateFailure c
+  type Event (UPDN c) = UpdnEvent c
   initialRules =
     [ pure
         ( UpdnState
@@ -58,7 +58,7 @@ instance
       initialNonce = mkNonceFromNumber 0
   transitionRules = [updTransition]
 
-updTransition :: Crypto crypto => TransitionRule (UPDN crypto)
+updTransition :: Crypto c => TransitionRule (UPDN c)
 updTransition = do
   TRC (UpdnEnv eta, UpdnState eta_v eta_c, s) <- judgmentContext
   ei <- liftSTS $ asks epochInfoPure

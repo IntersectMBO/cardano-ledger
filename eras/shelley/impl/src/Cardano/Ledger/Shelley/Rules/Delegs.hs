@@ -252,7 +252,7 @@ delegsTransition = do
     -- than the latter into the right shape so we can call 'Map.isSubmapOf'.
     isSubmapOf ::
       Map (RewardAcnt (EraCrypto era)) Coin ->
-      ViewMap (EraCrypto era) (Credential 'Staking crypto) Coin ->
+      ViewMap (EraCrypto era) (Credential 'Staking c) Coin ->
       Bool
     isSubmapOf wdrls_ (Rewards (UnifiedMap tripmap _)) = Map.isSubmapOfBy f withdrawalMap tripmap
       where

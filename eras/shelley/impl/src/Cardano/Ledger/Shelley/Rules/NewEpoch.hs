@@ -202,10 +202,10 @@ tellReward ::
 tellReward (DeltaRewardEvent (RupdEvent _ m)) | Map.null m = pure ()
 tellReward x = tellEvent x
 
-calculatePoolDistr :: SnapShot crypto -> PoolDistr crypto
+calculatePoolDistr :: SnapShot c -> PoolDistr c
 calculatePoolDistr = calculatePoolDistr' (const True)
 
-calculatePoolDistr' :: forall crypto. (KeyHash 'StakePool crypto -> Bool) -> SnapShot crypto -> PoolDistr crypto
+calculatePoolDistr' :: forall c. (KeyHash 'StakePool c -> Bool) -> SnapShot c -> PoolDistr c
 calculatePoolDistr' includeHash (SnapShot stake delegs poolParams) =
   let Coin total = sumAllStake stake
       -- total could be zero (in particular when shrinking)

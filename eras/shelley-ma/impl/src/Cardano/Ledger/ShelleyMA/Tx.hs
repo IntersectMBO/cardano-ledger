@@ -36,11 +36,11 @@ import Lens.Micro ((^.))
 
 -- ========================================
 
-instance MAClass ma crypto => EraTx (ShelleyMAEra ma crypto) where
+instance MAClass ma c => EraTx (ShelleyMAEra ma c) where
   {-# SPECIALIZE instance EraTx (ShelleyMAEra 'Mary StandardCrypto) #-}
   {-# SPECIALIZE instance EraTx (ShelleyMAEra 'Allegra StandardCrypto) #-}
 
-  type Tx (ShelleyMAEra ma crypto) = ShelleyTx (ShelleyMAEra ma crypto)
+  type Tx (ShelleyMAEra ma c) = ShelleyTx (ShelleyMAEra ma c)
 
   mkBasicTx = mkBasicShelleyTx
 
@@ -56,7 +56,7 @@ instance MAClass ma crypto => EraTx (ShelleyMAEra ma crypto) where
   sizeTxF = sizeShelleyTxF
   {-# INLINE sizeTxF #-}
 
-  validateScript (Phase1Script script) tx = validateTimelock @(ShelleyMAEra ma crypto) script tx
+  validateScript (Phase1Script script) tx = validateTimelock @(ShelleyMAEra ma c) script tx
   {-# INLINE validateScript #-}
 
   getMinFeeTx = shelleyMinFeeTx
