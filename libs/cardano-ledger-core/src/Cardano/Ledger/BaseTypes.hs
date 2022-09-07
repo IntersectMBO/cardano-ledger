@@ -670,7 +670,7 @@ newtype BlocksMade crypto = BlocksMade
 
 -- | Transaction index.
 newtype TxIx = TxIx Word64
-  deriving stock (Eq, Ord, Show)
+  deriving stock (Eq, Ord, Show, Generic)
   deriving newtype (NFData, Enum, Bounded, NoThunks, ToCBOR, FromCBOR)
 
 txIxToInt :: TxIx -> Int

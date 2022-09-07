@@ -37,16 +37,23 @@ propertyAnn ::
   ) =>
   t ->
   Property
-propertyAnn x = case roundTripAnn x of
-  Right (remaining, y) | BSL.null remaining -> x === y
-  Right (remaining, _) ->
-    counterexample
-      ("Unconsumed trailing bytes:\n" <> BSL.unpack remaining)
-      False
-  Left stuff ->
-    counterexample
-      ("Failed to decode: " <> show stuff)
-      False
+propertyAnn x = handleResult x $ roundTripAnn x
+
+handleResult ::
+  (Eq a1, Show a1, Show a2) =>
+  a1 ->
+  Either a2 (BSL.ByteString, a1) ->
+  Property
+handleResult x (Right (remaining, y))
+  | BSL.null remaining = x === y
+  | otherwise =
+      counterexample
+        ("Unconsumed trailing bytes:\n" <> BSL.unpack remaining)
+        False
+handleResult _ (Left stuff) =
+  counterexample
+    ("Failed to decode: " <> show stuff)
+    False
 
 property ::
   forall t.
@@ -57,17 +64,7 @@ property ::
   ) =>
   t ->
   Property
-property x =
-  case roundTrip x of
-    Right (remaining, y) | BSL.null remaining -> x === y
-    Right (remaining, _) ->
-      counterexample
-        ("Unconsumed trailing bytes:\n" <> BSL.unpack remaining)
-        False
-    Left stuff ->
-      counterexample
-        ("Failed to decode: " <> show stuff)
-        False
+property x = handleResult x $ roundTrip x
 
 allprops ::
   forall e.

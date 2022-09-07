@@ -70,6 +70,7 @@ module Cardano.Ledger.Alonzo.TxBody
     ScriptIntegrityHash,
     getAlonzoTxOutEitherAddr,
     utxoEntrySize,
+    txBodyRawEq,
 
     -- * Deprecated
     TxOut,
@@ -110,7 +111,7 @@ import Cardano.Ledger.Credential (Credential (..), PaymentCredential, StakeRefer
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary.Value (MaryValue (MaryValue), MultiAsset (..), policies, policyID)
-import Cardano.Ledger.MemoBytes (Mem, MemoBytes (..), MemoHashIndex, memoBytes)
+import Cardano.Ledger.MemoBytes (Mem, MemoBytes (..), MemoHashIndex, contentsEq, memoBytes)
 import Cardano.Ledger.SafeHash
   ( HashAnnotated (..),
     SafeHash,
@@ -192,6 +193,8 @@ deriving stock instance
     Compactible (Value era)
   ) =>
   Eq (AlonzoTxOut era)
+
+deriving instance Generic (AlonzoTxOut era)
 
 -- | Already in NF
 instance NFData (AlonzoTxOut era) where
@@ -985,3 +988,14 @@ getAlonzoTxOutEitherAddr = \case
 addressErrorMsg :: String
 addressErrorMsg = "Impossible: Compacted an address of non-standard size"
 {-# NOINLINE addressErrorMsg #-}
+
+txBodyRawEq ::
+  ( Era era,
+    Compactible (Value era),
+    Eq (Value era),
+    Eq (PParamsUpdate era)
+  ) =>
+  AlonzoTxBody era ->
+  AlonzoTxBody era ->
+  Bool
+txBodyRawEq (TxBodyConstr x) (TxBodyConstr y) = contentsEq x y

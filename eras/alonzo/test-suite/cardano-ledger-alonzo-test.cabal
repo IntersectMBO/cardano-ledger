@@ -53,6 +53,7 @@ library
   build-depends:
     bytestring,
     cardano-binary,
+    cardano-data,
     cardano-ledger-alonzo,
     cardano-ledger-core,
     cardano-ledger-pretty,
@@ -60,6 +61,7 @@ library
     cardano-ledger-shelley-ma,
     cardano-protocol-tpraos,
     cardano-slotting,
+    cborg,
     containers,
     data-default-class,
     hashable,
