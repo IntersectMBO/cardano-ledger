@@ -90,6 +90,15 @@ cradle:
     - path: "libs/cardano-data/test"
       component: "test:cardano-data-tests"
 
+    - path: "libs/cardano-ledger-binary/src"
+      component: "cardano-ledger-binary:lib:cardano-ledger-binary"
+
+    - path: "libs/cardano-ledger-binary/test-lib"
+      component: "cardano-ledger-binary:lib:testlib"
+
+    - path: "libs/cardano-ledger-binary/test"
+      component: "cardano-ledger-binary:test:tests"
+
     - path: "libs/small-steps/src"
       component: "lib:small-steps-test"
 
