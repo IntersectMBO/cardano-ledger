@@ -38,6 +38,7 @@ library
     Cardano.Ledger.Babbage.PParams
     Cardano.Ledger.Babbage.Tx
     Cardano.Ledger.Babbage.TxBody
+    Cardano.Ledger.Babbage.TxOut
     Cardano.Ledger.Babbage.TxInfo
     Cardano.Ledger.Babbage.TxWits
     Cardano.Ledger.Babbage.Translation
