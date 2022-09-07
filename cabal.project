@@ -31,6 +31,9 @@ packages:
   libs/set-algebra
   libs/vector-map
 
+program-options
+  ghc-options: -Werror
+
 -- Always write GHC env files, because they are needed by the doctests.
 write-ghc-environment-files: always
 
@@ -120,86 +123,3 @@ constraints:
   , protolude >= 0.3.2
 
   , persistent < 2.14
-
--- Have to specify  '-Werror' for each package until this is taken care of:
--- https://github.com/haskell/cabal/issues/3579
-package cardano-ledger-alonzo
-  ghc-options: -Werror
-
-package cardano-ledger-alonzo-test
-  ghc-options: -Werror
-
-package cardano-ledger-babbage
-  ghc-options: -Werror
-
-package cardano-ledger-babbage-test
-  ghc-options: -Werror
-
-package cardano-ledger-conway
-  ghc-options: -Werror
-
-package byron-spec-chain
-  ghc-options: -Werror
-
-package cardano-crypto-wrapper
-  ghc-options: -Werror
-
-package cardano-crypto-test
-  ghc-options: -Werror
-
-package byron-spec-ledger
-  ghc-options: -Werror
-
-package cardano-ledger-byron
-  ghc-options: -Werror
-
-package cardano-ledger-byron-test
-  ghc-options: -Werror
-
-package cardano-ledger-shelley-ma
-  ghc-options: -Werror
-
-package cardano-ledger-shelley-ma-test
-  ghc-options: -Werror
-
-package cardano-ledger-shelley
-  ghc-options: -Werror
-
-package cardano-ledger-shelley-test
-  ghc-options: -Werror
-
-package cardano-ledger-api
-  ghc-options: -Werror
-
-package cardano-ledger-core
-  ghc-options: -Werror
-
-package cardano-ledger-pretty
-  ghc-options: -Werror
-
-package cardano-ledger-test
-  ghc-options: -Werror
-
-package cardano-protocol-tpraos
-  ghc-options: -Werror
-
-package cardano-data
-  ghc-options: -Werror
-
-package vector-map
-  ghc-options: -Werror
-
-package non-integral
-  ghc-options: -Werror
-
-package plutus-preprocessor
-  ghc-options: -Werror
-
-package small-steps-test
-  ghc-options: -Werror
-
-package small-steps
-  ghc-options: -Werror
-
-package set-algebra
-  ghc-options: -Werror
