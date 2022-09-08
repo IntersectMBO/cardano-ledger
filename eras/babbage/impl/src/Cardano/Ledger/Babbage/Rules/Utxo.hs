@@ -52,7 +52,6 @@ import Cardano.Ledger.Babbage.TxBody
   ( BabbageEraTxBody (..),
     BabbageTxBody (..),
     BabbageTxOut,
-    txfee',
   )
 import Cardano.Ledger.BaseTypes
   ( ProtVer,
@@ -185,9 +184,7 @@ feesOK ::
   forall era.
   ( EraTx era,
     BabbageEraTxBody era,
-    Tx era ~ AlonzoTx era,
-    TxBody era ~ BabbageTxBody era,
-    TxOut era ~ BabbageTxOut era,
+    AlonzoEraTxWits era,
     HasField "_collateralPercentage" (PParams era) Natural
   ) =>
   PParams era ->
@@ -199,20 +196,19 @@ feesOK pp tx (UTxO utxo) =
       collateral' = txBody ^. collateralInputsTxBodyL -- Inputs allocated to pay txfee
       -- restrict Utxo to those inputs we use to pay fees.
       utxoCollateral = eval (collateral' ◁ utxo)
-      theFee = txfee' txBody -- Coin supplied to pay fees
+      theFee = txBody ^. feeTxBodyL -- Coin supplied to pay fees
       minFee = getMinFeeTx pp tx
    in sequenceA_
         [ -- Part 1: minfee pp tx ≤ txfee txBody
           failureUnless (minFee <= theFee) (inject (FeeTooSmallUTxO @era minFee theFee)),
           -- Part 2: (txrdmrs tx ≠ ∅ ⇒ validateCollateral)
-          unless (nullRedeemers . txrdmrs' . wits $ tx) $
+          unless (nullRedeemers $ tx ^. witsTxL . rdmrsTxWitsL) $
             validateTotalCollateral pp txBody utxoCollateral
         ]
 
 validateTotalCollateral ::
   forall era.
-  ( TxOut era ~ BabbageTxOut era,
-    BabbageEraTxBody era,
+  ( BabbageEraTxBody era,
     HasField "_collateralPercentage" (PParams era) Natural
   ) =>
   PParams era ->
@@ -245,7 +241,7 @@ validateTotalCollateral pp txBody utxoCollateral =
 -- > isAdaOnly balance
 validateCollateralContainsNonADA ::
   forall era.
-  (BabbageEraTxBody era, TxOut era ~ BabbageTxOut era) =>
+  BabbageEraTxBody era =>
   TxBody era ->
   Map.Map (TxIn (EraCrypto era)) (TxOut era) ->
   Test (AlonzoUtxoPredFailure era)

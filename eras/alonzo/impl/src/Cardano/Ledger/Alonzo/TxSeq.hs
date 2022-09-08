@@ -34,9 +34,7 @@ import Cardano.Binary
   )
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Alonzo.Era
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
-import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..), segwitTx)
-import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits)
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..), alonzoSegwitTx)
 import Cardano.Ledger.Core hiding (TxSeq, hashTxSeq)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
@@ -67,6 +65,8 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
+import Lens.Micro
+import Lens.Micro.Extras (view)
 import NoThunks.Class (AllowThunksIn (..), NoThunks)
 
 -- =================================================
@@ -79,7 +79,7 @@ import NoThunks.Class (AllowThunksIn (..), NoThunks)
 -- order to support segregated witnessing.
 
 data AlonzoTxSeq era = TxSeq'
-  { txSeqTxns :: !(StrictSeq (AlonzoTx era)),
+  { txSeqTxns :: !(StrictSeq (Tx era)),
     -- | Bytes encoding @Seq ('AlonzoTxBody' era)@
     txSeqBodyBytes :: BSL.ByteString,
     -- | Bytes encoding @Seq ('TxWitness' era)@
@@ -102,10 +102,10 @@ instance CC.Crypto c => EraSegWits (AlonzoEra c) where
 
 pattern AlonzoTxSeq ::
   forall era.
-  ( EraTx era,
-    SafeToHash (AlonzoTxWits era)
+  ( AlonzoEraTx era,
+    SafeToHash (TxWits era)
   ) =>
-  StrictSeq (AlonzoTx era) ->
+  StrictSeq (Tx era) ->
   AlonzoTxSeq era
 pattern AlonzoTxSeq xs <-
   TxSeq' xs _ _ _ _
@@ -120,12 +120,12 @@ pattern AlonzoTxSeq xs <-
        in TxSeq'
             { txSeqTxns = txns,
               txSeqBodyBytes =
-                serializeFoldable $ originalBytes . body <$> txns,
+                serializeFoldable $ originalBytes . view bodyTxL <$> txns,
               txSeqWitsBytes =
-                serializeFoldable $ originalBytes . wits <$> txns,
+                serializeFoldable $ originalBytes . view witsTxL <$> txns,
               txSeqMetadataBytes =
                 serializeEncoding . encodeFoldableMapEncoder metaChunk $
-                  fmap originalBytes . auxiliaryData <$> txns,
+                  fmap originalBytes . view auxDataTxL <$> txns,
               txSeqIsValidBytes =
                 serializeEncoding $ encodeFoldable $ nonValidatingIndices txns
             }
@@ -145,15 +145,11 @@ deriving via
      ]
     (TxSeq era)
   instance
-    (Typeable era, NoThunks (AlonzoTx era)) => NoThunks (TxSeq era)
+    (Typeable era, NoThunks (Tx era)) => NoThunks (TxSeq era)
 
-deriving stock instance
-  Show (AlonzoTx era) =>
-  Show (TxSeq era)
+deriving stock instance Show (Tx era) => Show (TxSeq era)
 
-deriving stock instance
-  Eq (AlonzoTx era) =>
-  Eq (TxSeq era)
+deriving stock instance Eq (Tx era) => Eq (TxSeq era)
 
 --------------------------------------------------------------------------------
 -- Serialisation and hashing
@@ -206,19 +202,14 @@ hashAlonzoTxSeq (TxSeq' _ bodies ws md vs) =
     hashStrict = Hash.hashWith id
     hashPart = shortByteString . Hash.hashToBytesShort . hashStrict . BSL.toStrict
 
-instance
-  ( Core.Script era ~ AlonzoScript era,
-    EraTx era
-  ) =>
-  FromCBOR (Annotator (TxSeq era))
-  where
+instance AlonzoEraTx era => FromCBOR (Annotator (TxSeq era)) where
   fromCBOR = do
     (bodies, bodiesAnn) <- withSlice $ decodeSeq fromCBOR
     (ws, witsAnn) <- withSlice $ decodeSeq fromCBOR
     let b = length bodies
         inRange x = (0 <= x) && (x <= (b - 1))
         w = length ws
-    (metadata, metadataAnn) <- withSlice $
+    (auxData, auxDataAnn) <- withSlice $
       do
         m <- decodeMap fromCBOR fromCBOR
         unless
@@ -228,7 +219,7 @@ instance
                   ++ show (b - 1)
               )
           )
-        pure (constructMetadata @era b m)
+        pure (constructMetadata b m)
     (isValIdxs, isValAnn) <- withSlice $ decodeList fromCBOR
     let vs = alignedValidFlags b isValIdxs
     unless
@@ -253,13 +244,13 @@ instance
     let txns =
           sequenceA $
             StrictSeq.forceToStrict $
-              Seq.zipWith4 segwitTx bodies ws vs metadata
+              Seq.zipWith4 alonzoSegwitTx bodies ws vs auxData
     pure $
       TxSeq'
         <$> txns
         <*> bodiesAnn
         <*> witsAnn
-        <*> metadataAnn
+        <*> auxDataAnn
         <*> isValAnn
 
 --------------------------------------------------------------------------------
@@ -269,11 +260,11 @@ instance
 -- | Given a sequence of transactions, return the indices of those which do not
 -- validate. We store the indices of the non-validating transactions because we
 -- expect this to be a much smaller set than the validating transactions.
-nonValidatingIndices :: StrictSeq (AlonzoTx era) -> [Int]
+nonValidatingIndices :: AlonzoEraTx era => StrictSeq (Tx era) -> [Int]
 nonValidatingIndices (StrictSeq.fromStrict -> xs) =
   Seq.foldrWithIndex
     ( \idx tx acc ->
-        if isValid tx == IsValid False
+        if tx ^. isValidTxL == IsValid False
           then idx : acc
           else acc
     )

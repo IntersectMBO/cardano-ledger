@@ -139,7 +139,7 @@ import Cardano.Ledger.CompactAddress
   )
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core hiding (TxBody, TxOut)
-import qualified Cardano.Ledger.Core as Core (TxBody)
+import qualified Cardano.Ledger.Core as Core (TxBody, TxOut)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary.Value (MaryValue (MaryValue), MultiAsset, policies, policyID)
@@ -380,7 +380,7 @@ sizedCollateralReturnBabbageTxBodyL =
 {-# INLINEABLE sizedCollateralReturnBabbageTxBodyL #-}
 
 allSizedOutputsBabbageTxBodyF ::
-  BabbageEraTxBody era =>
+  (BabbageEraTxBody era, Core.TxOut era ~ BabbageTxOut era) =>
   SimpleGetter (Core.TxBody era) (StrictSeq (Sized (BabbageTxOut era)))
 allSizedOutputsBabbageTxBodyF =
   to $ \txBody ->
@@ -458,17 +458,17 @@ instance CC.Crypto c => AlonzoEraTxBody (BabbageEra c) where
   {-# INLINE networkIdTxBodyL #-}
 
 class (AlonzoEraTxBody era, BabbageEraTxOut era) => BabbageEraTxBody era where
-  sizedOutputsTxBodyL :: Lens' (Core.TxBody era) (StrictSeq (Sized (BabbageTxOut era)))
+  sizedOutputsTxBodyL :: Lens' (Core.TxBody era) (StrictSeq (Sized (Core.TxOut era)))
 
   referenceInputsTxBodyL :: Lens' (Core.TxBody era) (Set (TxIn (EraCrypto era)))
 
   totalCollateralTxBodyL :: Lens' (Core.TxBody era) (StrictMaybe Coin)
 
-  collateralReturnTxBodyL :: Lens' (Core.TxBody era) (StrictMaybe (BabbageTxOut era))
+  collateralReturnTxBodyL :: Lens' (Core.TxBody era) (StrictMaybe (Core.TxOut era))
 
-  sizedCollateralReturnTxBodyL :: Lens' (Core.TxBody era) (StrictMaybe (Sized (BabbageTxOut era)))
+  sizedCollateralReturnTxBodyL :: Lens' (Core.TxBody era) (StrictMaybe (Sized (Core.TxOut era)))
 
-  allSizedOutputsTxBodyF :: SimpleGetter (TxBody era) (StrictSeq (Sized (BabbageTxOut era)))
+  allSizedOutputsTxBodyF :: SimpleGetter (TxBody era) (StrictSeq (Sized (Core.TxOut era)))
 
 instance CC.Crypto c => BabbageEraTxBody (BabbageEra c) where
   {-# SPECIALIZE instance BabbageEraTxBody (BabbageEra CC.StandardCrypto) #-}

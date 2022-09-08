@@ -35,18 +35,13 @@ import Cardano.Ledger.Address (Addr (..), RewardAcnt)
 import Cardano.Ledger.Alonzo.Era (AlonzoUTXO)
 import Cardano.Ledger.Alonzo.Rules.Utxos (AlonzoUTXOS, AlonzoUtxosPredFailure)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Prices, pointWiseExUnits)
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), AlonzoTx (..), totExUnits)
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), totExUnits)
 import Cardano.Ledger.Alonzo.TxBody
   ( AlonzoEraTxBody (..),
     AlonzoEraTxOut (..),
     ShelleyMAEraTxBody (..),
   )
-import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq)
-import Cardano.Ledger.Alonzo.TxWits
-  ( AlonzoEraTxWits,
-    AlonzoTxWits (txrdmrs'),
-    nullRedeemers,
-  )
+import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), nullRedeemers)
 import Cardano.Ledger.BaseTypes
   ( Network,
     ProtVer,
@@ -262,7 +257,6 @@ vKeyLocked txOut =
 feesOK ::
   forall era.
   ( AlonzoEraTx era,
-    Tx era ~ AlonzoTx era,
     HasField "_collateralPercentage" (PParams era) Natural
   ) =>
   PParams era ->
@@ -280,7 +274,7 @@ feesOK pp tx (UTxO utxo) =
         [ -- Part 1: minfee pp tx ≤ txfee txb
           failureUnless (minFee <= theFee) (inject (FeeTooSmallUTxO @era minFee theFee)),
           -- Part 2: (txrdmrs tx ≠ ∅ ⇒ validateCollateral)
-          unless (nullRedeemers . txrdmrs' . wits $ tx) $
+          unless (nullRedeemers (tx ^. witsTxL . rdmrsTxWitsL)) $
             validateCollateral pp txBody utxoCollateral
         ]
 
@@ -347,6 +341,8 @@ validateCollateralContainsNonADA collateralTxOuts =
 -- > ◇ ∉ { txrdmrs tx, i_f } ⇒ epochInfoSlotToUTCTime epochInfo systemTime i_f ≠ ◇
 validateOutsideForecast ::
   ( ShelleyMAEraTxBody era,
+    AlonzoEraTxWits era,
+    EraTx era,
     HasField "_protocolVersion" (PParams era) ProtVer
   ) =>
   PParams era ->
@@ -354,13 +350,13 @@ validateOutsideForecast ::
   -- | Current slot number
   SlotNo ->
   SystemStart ->
-  AlonzoTx era ->
+  Tx era ->
   Test (AlonzoUtxoPredFailure era)
 validateOutsideForecast pp ei slotNo sysSt tx =
   {-   (_,i_f) := txvldt tx   -}
-  case body tx ^. vldtTxBodyL of
+  case tx ^. bodyTxL . vldtTxBodyL of
     ValidityInterval _ (SJust ifj)
-      | not (nullRedeemers (txrdmrs' $ wits tx)) ->
+      | not (nullRedeemers (tx ^. witsTxL . rdmrsTxWitsL)) ->
           let ei' =
                 if allowOutsideForecastTTL pp
                   then unsafeLinearExtendEpochInfo slotNo ei
@@ -469,7 +465,6 @@ utxoTransition ::
   forall era.
   ( EraUTxO era,
     AlonzoEraTx era,
-    Tx era ~ AlonzoTx era,
     STS (AlonzoUTXO era),
     -- instructions for calling UTXOS from AlonzoUTXO
     Embed (EraRule "UTXOS" era) (AlonzoUTXO era),
@@ -492,7 +487,7 @@ utxoTransition = do
   let Shelley.UTxOState utxo _deposits _fees _ppup _ = u
 
   {-   txb := txbody tx   -}
-  let txBody = body tx
+  let txBody = tx ^. bodyTxL
       inputsAndCollateral =
         Set.union
           (txBody ^. inputsTxBodyL)
@@ -564,14 +559,12 @@ instance
   forall era.
   ( EraUTxO era,
     AlonzoEraTx era,
-    Tx era ~ AlonzoTx era,
-    TxSeq era ~ AlonzoTxSeq era,
     Show (TxOut era),
     Show (TxBody era),
     Embed (EraRule "UTXOS" era) (AlonzoUTXO era),
     Environment (EraRule "UTXOS" era) ~ UtxoEnv era,
     State (EraRule "UTXOS" era) ~ Shelley.UTxOState era,
-    Signal (EraRule "UTXOS" era) ~ AlonzoTx era,
+    Signal (EraRule "UTXOS" era) ~ Tx era,
     HasField "_poolDeposit" (PParams era) Coin,
     HasField "_minfeeA" (PParams era) Natural,
     HasField "_minfeeB" (PParams era) Natural,
@@ -589,7 +582,7 @@ instance
   STS (AlonzoUTXO era)
   where
   type State (AlonzoUTXO era) = Shelley.UTxOState era
-  type Signal (AlonzoUTXO era) = AlonzoTx era
+  type Signal (AlonzoUTXO era) = Tx era
   type Environment (AlonzoUTXO era) = UtxoEnv era
   type BaseM (AlonzoUTXO era) = ShelleyBase
   type PredicateFailure (AlonzoUTXO era) = AlonzoUtxoPredFailure era

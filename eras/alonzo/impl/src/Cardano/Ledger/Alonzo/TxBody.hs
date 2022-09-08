@@ -106,12 +106,7 @@ import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), Wdrl (Wdrl), unWdrl
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Ledger.ShelleyMA.TxBody (ShelleyMAEraTxBody (..))
 import Cardano.Ledger.TxIn (TxIn (..))
-import Cardano.Ledger.Val
-  ( DecodeNonNegative,
-    Val (..),
-    decodeMint,
-    encodeMint,
-  )
+import Cardano.Ledger.Val (Val (..), decodeMint, encodeMint)
 import Control.DeepSeq (NFData (..))
 import Data.Coders hiding (to)
 import Data.Sequence.Strict (StrictSeq)
@@ -132,7 +127,7 @@ type ScriptIntegrityHash c = SafeHash c EraIndependentScriptIntegrity
 data TxBodyRaw era = TxBodyRaw
   { _inputs :: !(Set (TxIn (EraCrypto era))),
     _collateral :: !(Set (TxIn (EraCrypto era))),
-    _outputs :: !(StrictSeq (AlonzoTxOut era)),
+    _outputs :: !(StrictSeq (Core.TxOut era)),
     _certs :: !(StrictSeq (DCert (EraCrypto era))),
     _wdrls :: !(Wdrl (EraCrypto era)),
     _txfee :: !Coin,
@@ -151,15 +146,15 @@ data TxBodyRaw era = TxBodyRaw
   deriving (Generic, Typeable)
 
 deriving instance
-  (Era era, Eq (PParamsUpdate era), Eq (Value era), Compactible (Value era)) =>
+  (Era era, Eq (Core.TxOut era), Eq (PParamsUpdate era), Eq (Value era), Compactible (Value era)) =>
   Eq (TxBodyRaw era)
 
-instance (Era era, NoThunks (PParamsUpdate era)) => NoThunks (TxBodyRaw era)
+instance (Era era, NoThunks (Core.TxOut era), NoThunks (PParamsUpdate era)) => NoThunks (TxBodyRaw era)
 
-instance (Era era, NFData (PParamsUpdate era)) => NFData (TxBodyRaw era)
+instance (Era era, NFData (Core.TxOut era), NFData (PParamsUpdate era)) => NFData (TxBodyRaw era)
 
 deriving instance
-  (Era era, Show (PParamsUpdate era), Show (Value era), Val (Value era)) =>
+  (Era era, Show (Core.TxOut era), Show (PParamsUpdate era), Show (Value era), Val (Value era)) =>
   Show (TxBodyRaw era)
 
 newtype AlonzoTxBody era = TxBodyConstr (MemoBytes TxBodyRaw era)
@@ -171,7 +166,7 @@ type TxBody era = AlonzoTxBody era
 {-# DEPRECATED TxBody "Use `AlonzoTxBody` instead" #-}
 
 lensTxBodyRaw ::
-  (Era era, Val (Value era), ToCBOR (PParamsUpdate era), DecodeNonNegative (Value era)) =>
+  (Era era, ToCBOR (Core.TxOut era), ToCBOR (PParamsUpdate era)) =>
   (TxBodyRaw era -> a) ->
   (TxBodyRaw era -> t -> TxBodyRaw era) ->
   Lens (AlonzoTxBody era) (AlonzoTxBody era) a t
@@ -278,22 +273,25 @@ instance CC.Crypto c => AlonzoEraTxBody (AlonzoEra c) where
 
 deriving newtype instance CC.Crypto (EraCrypto era) => Eq (AlonzoTxBody era)
 
-deriving instance (Era era, NoThunks (PParamsUpdate era)) => NoThunks (AlonzoTxBody era)
-
-deriving instance (Era era, NFData (PParamsUpdate era)) => NFData (AlonzoTxBody era)
+deriving instance
+  (Era era, NoThunks (Core.TxOut era), NoThunks (PParamsUpdate era)) =>
+  NoThunks (AlonzoTxBody era)
 
 deriving instance
-  (Era era, Show (PParamsUpdate era), Show (Value era), Val (Value era)) =>
+  (Era era, NFData (Core.TxOut era), NFData (PParamsUpdate era)) =>
+  NFData (AlonzoTxBody era)
+
+deriving instance
+  (Era era, Show (Core.TxOut era), Show (PParamsUpdate era), Show (Value era), Val (Value era)) =>
   Show (AlonzoTxBody era)
 
 deriving via
   (Mem TxBodyRaw era)
   instance
     ( Era era,
+      FromCBOR (Core.TxOut era),
       FromCBOR (PParamsUpdate era),
-      Val (Value era),
-      Show (Value era),
-      DecodeNonNegative (Value era)
+      Show (Value era)
     ) =>
     FromCBOR (Annotator (AlonzoTxBody era))
 
@@ -301,7 +299,7 @@ pattern AlonzoTxBody ::
   (EraTxOut era, ToCBOR (PParamsUpdate era)) =>
   Set (TxIn (EraCrypto era)) ->
   Set (TxIn (EraCrypto era)) ->
-  StrictSeq (AlonzoTxOut era) ->
+  StrictSeq (Core.TxOut era) ->
   StrictSeq (DCert (EraCrypto era)) ->
   Wdrl (EraCrypto era) ->
   Coin ->
@@ -381,7 +379,7 @@ pattern AlonzoTxBody
 {-# COMPLETE AlonzoTxBody #-}
 
 mkAlonzoTxBody ::
-  (Era era, Val (Value era), ToCBOR (PParamsUpdate era), DecodeNonNegative (Value era)) =>
+  (Era era, ToCBOR (Core.TxOut era), ToCBOR (PParamsUpdate era)) =>
   TxBodyRaw era ->
   AlonzoTxBody era
 mkAlonzoTxBody = TxBodyConstr . memoBytes . encodeTxBodyRaw
@@ -399,7 +397,7 @@ instance (c ~ EraCrypto era) => HashAnnotated (AlonzoTxBody era) EraIndependentT
 
 inputs' :: Era era => AlonzoTxBody era -> Set (TxIn (EraCrypto era))
 collateral' :: Era era => AlonzoTxBody era -> Set (TxIn (EraCrypto era))
-outputs' :: Era era => AlonzoTxBody era -> StrictSeq (AlonzoTxOut era)
+outputs' :: Era era => AlonzoTxBody era -> StrictSeq (Core.TxOut era)
 certs' :: Era era => AlonzoTxBody era -> StrictSeq (DCert (EraCrypto era))
 txfee' :: Era era => AlonzoTxBody era -> Coin
 wdrls' :: Era era => AlonzoTxBody era -> Wdrl (EraCrypto era)
@@ -441,7 +439,10 @@ txnetworkid' (TxBodyConstr (Memo raw _)) = _txnetworkid raw
 --------------------------------------------------------------------------------
 
 encodeTxBodyRaw ::
-  (Era era, ToCBOR (PParamsUpdate era), Val (Value era), DecodeNonNegative (Value era)) =>
+  ( Era era,
+    ToCBOR (Core.TxOut era),
+    ToCBOR (PParamsUpdate era)
+  ) =>
   TxBodyRaw era ->
   Encode ('Closed 'Sparse) (TxBodyRaw era)
 encodeTxBodyRaw
@@ -481,10 +482,9 @@ encodeTxBodyRaw
 
 instance
   ( Era era,
+    FromCBOR (Core.TxOut era),
     FromCBOR (PParamsUpdate era),
-    Show (Value era),
-    Val (Value era),
-    DecodeNonNegative (Value era)
+    Show (Value era)
   ) =>
   FromCBOR (TxBodyRaw era)
   where
@@ -555,10 +555,9 @@ initial =
 
 instance
   ( Era era,
+    FromCBOR (Core.TxOut era),
     FromCBOR (PParamsUpdate era),
-    Val (Value era),
-    Show (Value era),
-    DecodeNonNegative (Value era)
+    Show (Value era)
   ) =>
   FromCBOR (Annotator (TxBodyRaw era))
   where
@@ -566,6 +565,7 @@ instance
 
 txBodyRawEq ::
   ( Era era,
+    Eq (Core.TxOut era),
     Compactible (Value era),
     Eq (Value era),
     Eq (PParamsUpdate era)

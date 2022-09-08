@@ -14,9 +14,9 @@
 module Cardano.Ledger.Babbage.Rules.Ledger (BabbageLEDGER) where
 
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxowEvent, ledgerTransition)
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, AlonzoTx (..))
-import Cardano.Ledger.Babbage.Era
-import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUtxowPredFailure)
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx)
+import Cardano.Ledger.Babbage.Era (BabbageLEDGER)
+import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUTXOW, BabbageUtxowPredFailure)
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
@@ -58,7 +58,6 @@ import GHC.Records (HasField)
 
 instance
   ( AlonzoEraTx era,
-    Tx era ~ AlonzoTx era,
     Show (PParams era),
     Show (TxOut era),
     Show (Tx era),
@@ -69,7 +68,7 @@ instance
     Embed (EraRule "UTXOW" era) (BabbageLEDGER era),
     Environment (EraRule "UTXOW" era) ~ UtxoEnv era,
     State (EraRule "UTXOW" era) ~ UTxOState era,
-    Signal (EraRule "UTXOW" era) ~ AlonzoTx era,
+    Signal (EraRule "UTXOW" era) ~ Tx era,
     Environment (EraRule "DELEGS" era) ~ DelegsEnv era,
     State (EraRule "DELEGS" era) ~ DPState (EraCrypto era),
     Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era))
@@ -77,7 +76,7 @@ instance
   STS (BabbageLEDGER era)
   where
   type State (BabbageLEDGER era) = LedgerState era
-  type Signal (BabbageLEDGER era) = AlonzoTx era
+  type Signal (BabbageLEDGER era) = Tx era
   type Environment (BabbageLEDGER era) = LedgerEnv era
   type BaseM (BabbageLEDGER era) = ShelleyBase
   type PredicateFailure (BabbageLEDGER era) = ShelleyLedgerPredFailure era

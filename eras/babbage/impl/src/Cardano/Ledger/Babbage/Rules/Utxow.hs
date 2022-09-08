@@ -34,7 +34,7 @@ import Cardano.Ledger.Alonzo.Rules
   )
 import Cardano.Ledger.Alonzo.Rules as Alonzo (AlonzoUtxoEvent)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript, CostModels)
-import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), validScript)
 import Cardano.Ledger.Babbage.Era (BabbageUTXOW)
 import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUTXO, BabbageUtxoPredFailure (..))
@@ -265,9 +265,8 @@ validateScriptsWellFormed pp tx =
 -- | A very specialized transitionRule function for the Babbage Era.
 babbageUtxowTransition ::
   forall era.
-  ( EraTx era,
+  ( AlonzoEraTx era,
     ExtendedUTxO era,
-    Tx era ~ AlonzoTx era,
     Script era ~ AlonzoScript era,
     TxOut era ~ BabbageTxOut era,
     STS (BabbageUTXOW era),
@@ -279,7 +278,7 @@ babbageUtxowTransition ::
     Embed (EraRule "UTXO" era) (BabbageUTXOW era),
     Environment (EraRule "UTXO" era) ~ UtxoEnv era,
     State (EraRule "UTXO" era) ~ UTxOState era,
-    Signal (EraRule "UTXO" era) ~ AlonzoTx era
+    Signal (EraRule "UTXO" era) ~ Tx era
   ) =>
   TransitionRule (BabbageUTXOW era)
 babbageUtxowTransition = do
@@ -363,7 +362,7 @@ babbageUtxowTransition = do
 instance
   forall era.
   ( ExtendedUTxO era,
-    EraTx era,
+    AlonzoEraTx era,
     BabbageEraTxBody era,
     TxOut era ~ BabbageTxOut era,
     HasField "_costmdls" (PParams era) CostModels,
@@ -371,21 +370,19 @@ instance
     Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody),
     Show (TxBody era),
     Show (TxOut era),
-    -- Fix some Core types to the Babbage Era
-    Tx era ~ AlonzoTx era,
     Script era ~ AlonzoScript era,
     -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (BabbageUTXOW era),
     Environment (EraRule "UTXO" era) ~ UtxoEnv era,
     State (EraRule "UTXO" era) ~ UTxOState era,
-    Signal (EraRule "UTXO" era) ~ AlonzoTx era,
+    Signal (EraRule "UTXO" era) ~ Tx era,
     Eq (PredicateFailure (EraRule "UTXOS" era)),
     Show (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   STS (BabbageUTXOW era)
   where
   type State (BabbageUTXOW era) = UTxOState era
-  type Signal (BabbageUTXOW era) = AlonzoTx era
+  type Signal (BabbageUTXOW era) = Tx era
   type Environment (BabbageUTXOW era) = UtxoEnv era
   type BaseM (BabbageUTXOW era) = ShelleyBase
   type PredicateFailure (BabbageUTXOW era) = BabbageUtxowPredFailure era
