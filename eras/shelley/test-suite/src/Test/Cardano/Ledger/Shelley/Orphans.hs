@@ -15,7 +15,7 @@ import Test.Cardano.Ledger.Shelley.Utils (Split (..))
 
 -- We need this here for the tests, but should not be in the actual library because
 -- a Num instance for this type does not make sense in the general case.
-deriving instance Num (DSIGN.VerKeyDSIGN (DSIGN crypto)) => Num (VKey kd crypto)
+deriving instance Num (DSIGN.VerKeyDSIGN (DSIGN c)) => Num (VKey kd c)
 
 -- ===============================================================================
 -- Generating random transactions requires splitting Values into multiple Values

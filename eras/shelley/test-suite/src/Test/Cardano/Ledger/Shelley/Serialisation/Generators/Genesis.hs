@@ -69,17 +69,17 @@ genShelleyGenesis =
     <*> fmap LM.ListMap genFundsList
     <*> genStaking
 
-genStaking :: CC.Crypto crypto => Gen (ShelleyGenesisStaking crypto)
+genStaking :: CC.Crypto c => Gen (ShelleyGenesisStaking c)
 genStaking =
   ShelleyGenesisStaking
     <$> fmap LM.ListMap genPools
     <*> fmap LM.ListMap genStake
 
 genPools ::
-  CC.Crypto crypto =>
+  CC.Crypto c =>
   Gen
-    [ ( KeyHash 'StakePool crypto,
-        PoolParams crypto
+    [ ( KeyHash 'StakePool c,
+        PoolParams c
       )
     ]
 genPools =
@@ -87,21 +87,21 @@ genPools =
     (,) <$> genKeyHash <*> genPoolParams
 
 genStake ::
-  CC.Crypto crypto =>
+  CC.Crypto c =>
   Gen
-    [ ( KeyHash 'Staking crypto,
-        KeyHash 'StakePool crypto
+    [ ( KeyHash 'Staking c,
+        KeyHash 'StakePool c
       )
     ]
 genStake =
   Gen.list (Range.linear 1 10) $
     (,) <$> genKeyHash <*> genKeyHash
 
-genPoolParams :: forall crypto. CC.Crypto crypto => Gen (PoolParams crypto)
+genPoolParams :: forall c. CC.Crypto c => Gen (PoolParams c)
 genPoolParams =
   PoolParams
     <$> genKeyHash
-    <*> genVRFKeyHash @crypto
+    <*> genVRFKeyHash @c
     <*> genCoin
     <*> genCoin
     <*> genUnitInterval
@@ -144,10 +144,10 @@ genUrl = do
     Nothing -> error "wrong generator for Url"
     Just url -> return url
 
-genRewardAcnt :: CC.Crypto crypto => Gen (RewardAcnt crypto)
+genRewardAcnt :: CC.Crypto c => Gen (RewardAcnt c)
 genRewardAcnt = RewardAcnt Testnet <$> genCredential
 
-genCredential :: CC.Crypto crypto => Gen (Credential 'Staking crypto)
+genCredential :: CC.Crypto c => Gen (Credential 'Staking c)
 genCredential =
   Gen.choice
     [ ScriptHashObj . ScriptHash <$> genHash,
@@ -228,54 +228,54 @@ genDecimalBoundedRational gen = do
   pure $ unsafeBoundRational $ toInteger num % toInteger denom
 
 genGenesisDelegationList ::
-  CC.Crypto crypto =>
-  Gen [(KeyHash 'Genesis crypto, GenDelegPair crypto)]
+  CC.Crypto c =>
+  Gen [(KeyHash 'Genesis c, GenDelegPair c)]
 genGenesisDelegationList = Gen.list (Range.linear 1 10) genGenesisDelegationPair
 
 genGenesisDelegationPair ::
-  forall crypto.
-  CC.Crypto crypto =>
-  Gen (KeyHash 'Genesis crypto, GenDelegPair crypto)
+  forall c.
+  CC.Crypto c =>
+  Gen (KeyHash 'Genesis c, GenDelegPair c)
 genGenesisDelegationPair =
-  (,) <$> genKeyHash <*> (GenDelegPair <$> genKeyHash <*> genVRFKeyHash @crypto)
+  (,) <$> genKeyHash <*> (GenDelegPair <$> genKeyHash <*> genVRFKeyHash @c)
 
 genVRFKeyHash ::
-  forall crypto.
-  CC.Crypto crypto =>
-  Gen (Hash crypto (VerKeyVRF (VRF crypto)))
-genVRFKeyHash = hashVerKeyVRF . snd <$> (genVRFKeyPair @crypto)
+  forall c.
+  CC.Crypto c =>
+  Gen (Hash c (VerKeyVRF (VRF c)))
+genVRFKeyHash = hashVerKeyVRF . snd <$> (genVRFKeyPair @c)
 
 genVRFKeyPair ::
-  forall crypto.
-  CC.Crypto crypto =>
-  Gen (SignKeyVRF (VRF crypto), VerKeyVRF (VRF crypto))
+  forall c.
+  CC.Crypto c =>
+  Gen (SignKeyVRF (VRF c), VerKeyVRF (VRF c))
 genVRFKeyPair = do
   seed <- genSeed seedSize
   let sk = genKeyVRF seed
       vk = deriveVerKeyVRF sk
   pure (sk, vk)
   where
-    seedSize = fromIntegral (seedSizeVRF (Proxy :: Proxy (VRF crypto)))
+    seedSize = fromIntegral (seedSizeVRF (Proxy :: Proxy (VRF c)))
 
-genFundsList :: CC.Crypto crypto => Gen [(Addr crypto, Coin)]
+genFundsList :: CC.Crypto c => Gen [(Addr c, Coin)]
 genFundsList = Gen.list (Range.linear 1 100) genGenesisFundPair
 
 genSeed :: Int -> Gen Seed
 genSeed n = mkSeedFromBytes <$> Gen.bytes (Range.singleton n)
 
 genKeyHash ::
-  ( CC.Crypto crypto
+  ( CC.Crypto c
   ) =>
-  Gen (KeyHash disc crypto)
+  Gen (KeyHash disc c)
 genKeyHash = hashKey . snd <$> genKeyPair
 
 -- | Generate a deterministic key pair given a seed.
 genKeyPair ::
-  forall crypto krole.
-  DSIGNAlgorithm (DSIGN crypto) =>
+  forall c krole.
+  DSIGNAlgorithm (DSIGN c) =>
   Gen
-    ( SignKeyDSIGN (DSIGN crypto),
-      VKey krole crypto
+    ( SignKeyDSIGN (DSIGN c),
+      VKey krole c
     )
 genKeyPair = do
   seed <- genSeed seedSize
@@ -288,15 +288,15 @@ genKeyPair = do
       fromIntegral
         ( seedSizeDSIGN
             ( Proxy ::
-                Proxy (DSIGN crypto)
+                Proxy (DSIGN c)
             )
         )
 
-genGenesisFundPair :: CC.Crypto crypto => Gen (Addr crypto, Coin)
+genGenesisFundPair :: CC.Crypto c => Gen (Addr c, Coin)
 genGenesisFundPair =
   (,) <$> genAddress <*> genCoin
 
-genAddress :: CC.Crypto crypto => Gen (Addr crypto)
+genAddress :: CC.Crypto c => Gen (Addr c)
 genAddress = do
   (secKey1, verKey1) <- genKeyPair
   (secKey2, verKey2) <- genKeyPair

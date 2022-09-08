@@ -177,9 +177,9 @@ type AlonzoPParams era = AlonzoPParamsHKD Identity era
 
 type AlonzoPParamsUpdate era = AlonzoPParamsHKD StrictMaybe era
 
-instance CC.Crypto crypto => EraPParams (AlonzoEra crypto) where
-  type PParams (AlonzoEra crypto) = AlonzoPParams (AlonzoEra crypto)
-  type PParamsUpdate (AlonzoEra crypto) = AlonzoPParamsUpdate (AlonzoEra crypto)
+instance CC.Crypto c => EraPParams (AlonzoEra c) where
+  type PParams (AlonzoEra c) = AlonzoPParams (AlonzoEra c)
+  type PParamsUpdate (AlonzoEra c) = AlonzoPParamsUpdate (AlonzoEra c)
 
   applyPPUpdates = updatePParams
 

@@ -58,17 +58,17 @@ import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Quiet
 
-data OCertEnv crypto = OCertEnv
-  { ocertEnvStPools :: Set (KeyHash 'StakePool crypto),
-    ocertEnvGenDelegs :: Set (KeyHash 'GenesisDelegate crypto)
+data OCertEnv c = OCertEnv
+  { ocertEnvStPools :: Set (KeyHash 'StakePool c),
+    ocertEnvGenDelegs :: Set (KeyHash 'GenesisDelegate c)
   }
   deriving (Show, Eq)
 
 currentIssueNo ::
-  OCertEnv crypto ->
-  Map (KeyHash 'BlockIssuer crypto) Word64 ->
+  OCertEnv c ->
+  Map (KeyHash 'BlockIssuer c) Word64 ->
   -- | Pool hash
-  KeyHash 'BlockIssuer crypto ->
+  KeyHash 'BlockIssuer c ->
   Maybe Word64
 currentIssueNo (OCertEnv stPools genDelegs) cs hk
   | Map.member hk cs = Map.lookup hk cs
@@ -80,28 +80,28 @@ newtype KESPeriod = KESPeriod {unKESPeriod :: Word}
   deriving (Eq, Generic, Ord, NoThunks, FromCBOR, ToCBOR)
   deriving (Show) via Quiet KESPeriod
 
-data OCert crypto = OCert
+data OCert c = OCert
   { -- | The operational hot key
-    ocertVkHot :: !(VerKeyKES crypto),
+    ocertVkHot :: !(VerKeyKES c),
     -- | counter
     ocertN :: !Word64,
     -- | Start of key evolving signature period
     ocertKESPeriod :: !KESPeriod,
     -- | Signature of block operational certificate content
-    ocertSigma :: !(SignedDSIGN crypto (OCertSignable crypto))
+    ocertSigma :: !(SignedDSIGN c (OCertSignable c))
   }
   deriving (Generic)
-  deriving (ToCBOR) via (CBORGroup (OCert crypto))
+  deriving (ToCBOR) via (CBORGroup (OCert c))
 
-deriving instance Crypto crypto => Eq (OCert crypto)
+deriving instance Crypto c => Eq (OCert c)
 
-deriving instance Crypto crypto => Show (OCert crypto)
+deriving instance Crypto c => Show (OCert c)
 
-instance Crypto crypto => NoThunks (OCert crypto)
+instance Crypto c => NoThunks (OCert c)
 
 instance
-  (Crypto crypto) =>
-  ToCBORGroup (OCert crypto)
+  (Crypto c) =>
+  ToCBORGroup (OCert c)
   where
   toCBORGroup ocert =
     encodeVerKeyKES (ocertVkHot ocert)
@@ -121,8 +121,8 @@ instance
   listLenBound _ = 4
 
 instance
-  (Crypto crypto) =>
-  FromCBORGroup (OCert crypto)
+  (Crypto c) =>
+  FromCBORGroup (OCert c)
   where
   fromCBORGroup =
     OCert
@@ -139,18 +139,18 @@ kesPeriod (SlotNo s) =
       else KESPeriod . fromIntegral $ s `div` spkp
 
 -- | Signable part of an operational certificate
-data OCertSignable crypto
-  = OCertSignable !(VerKeyKES crypto) !Word64 !KESPeriod
+data OCertSignable c
+  = OCertSignable !(VerKeyKES c) !Word64 !KESPeriod
 
 instance
-  forall crypto.
-  Crypto crypto =>
-  SignableRepresentation (OCertSignable crypto)
+  forall c.
+  Crypto c =>
+  SignableRepresentation (OCertSignable c)
   where
   getSignableRepresentation (OCertSignable vk counter period) =
     runByteBuilder
       ( fromIntegral $
-          KES.sizeVerKeyKES (Proxy @(KES crypto))
+          KES.sizeVerKeyKES (Proxy @(KES c))
             + 8
             + 8
       )
@@ -159,6 +159,6 @@ instance
         <> BS.word64BE (fromIntegral $ unKESPeriod period)
 
 -- | Extract the signable part of an operational certificate (for verification)
-ocertToSignable :: OCert crypto -> OCertSignable crypto
+ocertToSignable :: OCert c -> OCertSignable c
 ocertToSignable OCert {ocertVkHot, ocertN, ocertKESPeriod} =
   OCertSignable ocertVkHot ocertN ocertKESPeriod

@@ -354,15 +354,15 @@ genGenesisDelegation coreNodes delegateKeys dpState =
 
 -- | Generate PoolParams and the key witness.
 genStakePool ::
-  forall crypto.
-  (CC.Crypto crypto) =>
+  forall c.
+  (CC.Crypto c) =>
   -- | Available keys for stake pool registration
-  [AllIssuerKeys crypto 'StakePool] ->
+  [AllIssuerKeys c 'StakePool] ->
   -- | KeyPairs containing staking keys to act as owners/reward account
-  KeyPairs crypto ->
+  KeyPairs c ->
   -- | Minimum pool cost Protocol Param
   Coin ->
-  Gen (PoolParams crypto, KeyPair 'StakePool crypto)
+  Gen (PoolParams c, KeyPair 'StakePool c)
 genStakePool poolKeys skeys (Coin minPoolCost) =
   mkPoolParams
     <$> QC.elements poolKeys
@@ -376,7 +376,7 @@ genStakePool poolKeys skeys (Coin minPoolCost) =
     <*> (fromInteger <$> QC.choose (0, 100) :: Gen Natural)
     <*> getAnyStakeKey skeys
   where
-    getAnyStakeKey :: KeyPairs crypto -> Gen (VKey 'Staking crypto)
+    getAnyStakeKey :: KeyPairs c -> Gen (VKey 'Staking c)
     getAnyStakeKey keys = vKey . snd <$> QC.elements keys
     mkPoolParams allPoolKeys pledge cost marginPercent acntKey =
       let interval = unsafeBoundRational $ fromIntegral marginPercent % 100

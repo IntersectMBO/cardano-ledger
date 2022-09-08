@@ -169,7 +169,7 @@ profileUTxO = do
 -- ==========================================
 -- Registering Stake Keys
 
-touchDPState :: DPState crypto -> Int
+touchDPState :: DPState c -> Int
 touchDPState (DPState _x _y) = 1
 
 touchUTxOState :: Cardano.Ledger.Shelley.LedgerState.UTxOState cryto -> Int

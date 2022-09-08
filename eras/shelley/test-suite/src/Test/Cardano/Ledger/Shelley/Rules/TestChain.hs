@@ -1309,7 +1309,7 @@ incrementalStakeProp ::
   Property
 incrementalStakeProp Proxy = atEpoch @era (testIncrementalStake @era)
 
-tersediffincremental :: String -> Stake crypto -> Stake crypto -> String
+tersediffincremental :: String -> Stake c -> Stake c -> String
 tersediffincremental message (Stake a) (Stake c) =
   tersemapdiffs (message ++ " " ++ "hashes") (mp a) (mp c)
   where

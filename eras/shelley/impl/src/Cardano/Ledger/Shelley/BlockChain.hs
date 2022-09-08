@@ -264,9 +264,9 @@ slotToNonce (SlotNo s) = mkNonceFromNumber s
 
 incrBlocks ::
   Bool ->
-  KeyHash 'StakePool crypto ->
-  BlocksMade crypto ->
-  BlocksMade crypto
+  KeyHash 'StakePool c ->
+  BlocksMade c ->
+  BlocksMade c
 incrBlocks isOverlay hk b'@(BlocksMade b)
   | isOverlay = b'
   | otherwise = BlocksMade $ case hkVal of

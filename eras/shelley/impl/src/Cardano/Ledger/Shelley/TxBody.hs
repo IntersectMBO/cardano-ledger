@@ -133,14 +133,14 @@ import NoThunks.Class (NoThunks (..))
 
 -- ========================================================================
 
-newtype Wdrl crypto = Wdrl {unWdrl :: Map (RewardAcnt crypto) Coin}
+newtype Wdrl c = Wdrl {unWdrl :: Map (RewardAcnt c) Coin}
   deriving (Show, Eq, Generic)
   deriving newtype (NoThunks, NFData)
 
-instance CC.Crypto crypto => ToCBOR (Wdrl crypto) where
+instance CC.Crypto c => ToCBOR (Wdrl c) where
   toCBOR = mapToCBOR . unWdrl
 
-instance CC.Crypto crypto => FromCBOR (Wdrl crypto) where
+instance CC.Crypto c => FromCBOR (Wdrl c) where
   fromCBOR = Wdrl <$> mapFromCBOR
 
 -- ---------------------------
@@ -279,10 +279,10 @@ type TxBody era = ShelleyTxBody era
 
 {-# DEPRECATED TxBody "Use `ShelleyTxBody` instead" #-}
 
-instance CC.Crypto crypto => EraTxBody (ShelleyEra crypto) where
+instance CC.Crypto c => EraTxBody (ShelleyEra c) where
   {-# SPECIALIZE instance EraTxBody (ShelleyEra CC.StandardCrypto) #-}
 
-  type TxBody (ShelleyEra crypto) = ShelleyTxBody (ShelleyEra crypto)
+  type TxBody (ShelleyEra c) = ShelleyTxBody (ShelleyEra c)
 
   mkBasicTxBody = mkShelleyTxBody baseTxBodyRaw
 
@@ -325,7 +325,7 @@ class EraTxBody era => ShelleyEraTxBody era where
 
   certsTxBodyL :: Lens' (Core.TxBody era) (StrictSeq (DCert (EraCrypto era)))
 
-instance CC.Crypto crypto => ShelleyEraTxBody (ShelleyEra crypto) where
+instance CC.Crypto c => ShelleyEraTxBody (ShelleyEra c) where
   {-# SPECIALIZE instance ShelleyEraTxBody (ShelleyEra CC.StandardCrypto) #-}
 
   wdrlsTxBodyL =
@@ -404,8 +404,8 @@ mkShelleyTxBody = TxBodyConstr . memoBytes . txSparse
 type instance MemoHashIndex TxBodyRaw = EraIndependentTxBody
 
 instance
-  (Era era, crypto ~ EraCrypto era) =>
-  HashAnnotated (ShelleyTxBody era) EraIndependentTxBody crypto
+  (Era era, c ~ EraCrypto era) =>
+  HashAnnotated (ShelleyTxBody era) EraIndependentTxBody c
   where
   hashAnnotated (TxBodyConstr mb) = mbHash mb
 
@@ -414,10 +414,10 @@ instance Era era => ToCBOR (TxBody era) where
 
 -- ===============================================================
 
-witKeyHash :: WitVKey kr crypto -> KeyHash 'Witness crypto
+witKeyHash :: WitVKey kr c -> KeyHash 'Witness c
 witKeyHash = witVKeyHash
 {-# DEPRECATED witKeyHash "In favor of `witVKeyHash`" #-}
 
-wvkBytes :: WitVKey kr crypto -> BSL.ByteString
+wvkBytes :: WitVKey kr c -> BSL.ByteString
 wvkBytes = witVKeyBytes
 {-# DEPRECATED wvkBytes "In favor of `witVKeyBytes`" #-}

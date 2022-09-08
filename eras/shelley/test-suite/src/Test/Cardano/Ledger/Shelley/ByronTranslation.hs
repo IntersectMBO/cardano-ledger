@@ -46,17 +46,17 @@ prop_translateTxOut_correctness compactTxOut =
 ------------------------------------------------------------------------------}
 
 translateTxOutByronToShelley ::
-  forall crypto.
-  CryptoClass.Crypto crypto =>
+  forall c.
+  CryptoClass.Crypto c =>
   Byron.TxOut ->
-  ShelleyTxOut (ShelleyEra crypto)
+  ShelleyTxOut (ShelleyEra c)
 translateTxOutByronToShelley (Byron.TxOut addr amount) =
   ShelleyTxOut (translateAddr addr) (translateAmount amount)
   where
     translateAmount :: Byron.Lovelace -> Coin
     translateAmount = Coin . Byron.lovelaceToInteger
 
-    translateAddr :: Byron.Address -> Addr crypto
+    translateAddr :: Byron.Address -> Addr c
     translateAddr = AddrBootstrap . BootstrapAddress
 
 {------------------------------------------------------------------------------

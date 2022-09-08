@@ -181,7 +181,7 @@ class
     m (LedgerView (EraCrypto era))
   futureLedgerView = futureView
 
-instance CC.Crypto crypto => GetLedgerView (ShelleyEra crypto)
+instance CC.Crypto c => GetLedgerView (ShelleyEra c)
 
 instance CC.Crypto c => GetLedgerView (AllegraEra c)
 
@@ -244,7 +244,7 @@ instance CC.Crypto c => GetLedgerView (ConwayEra c) where
           $ TRC ((), ss, slot)
 
 -- | Data required by the Transitional Praos protocol from the Shelley ledger.
-data LedgerView crypto = LedgerView
+data LedgerView c = LedgerView
   { lvD :: UnitInterval,
     -- Note that this field is not present in Babbage, but we require this view
     -- in order to construct the Babbage ledger view. We allow this to be lazy
@@ -252,22 +252,22 @@ data LedgerView crypto = LedgerView
     -- serialised, so this should not be forced except as a result of a
     -- programmer error.
     lvExtraEntropy :: ~Nonce,
-    lvPoolDistr :: PoolDistr crypto,
-    lvGenDelegs :: GenDelegs crypto,
+    lvPoolDistr :: PoolDistr c,
+    lvGenDelegs :: GenDelegs c,
     lvChainChecks :: ChainChecksPParams
   }
   deriving (Eq, Show, Generic)
 
-instance NoThunks (LedgerView crypto)
+instance NoThunks (LedgerView c)
 
 -- | Construct a protocol environment from the ledger view, along with the
 -- current slot and a marker indicating whether this is the first block in a new
 -- epoch.
 mkPrtclEnv ::
-  LedgerView crypto ->
+  LedgerView c ->
   -- | Epoch nonce
   Nonce ->
-  STS.Prtcl.PrtclEnv crypto
+  STS.Prtcl.PrtclEnv c
 mkPrtclEnv
   LedgerView
     { lvD,
@@ -385,8 +385,8 @@ futureView globals ss slot =
 --
 -- The chain state is an amalgam of the protocol state and the ticked nonce.
 
-data ChainDepState crypto = ChainDepState
-  { csProtocol :: !(STS.Prtcl.PrtclState crypto),
+data ChainDepState c = ChainDepState
+  { csProtocol :: !(STS.Prtcl.PrtclState c),
     csTickn :: !STS.Tickn.TicknState,
     -- | Nonce constructed from the hash of the last applied block header.
     csLabNonce :: !Nonce
@@ -397,8 +397,8 @@ data ChainDepState crypto = ChainDepState
 -- genesis delegates.
 initialChainDepState ::
   Nonce ->
-  Map (KeyHash 'Genesis crypto) (GenDelegPair crypto) ->
-  ChainDepState crypto
+  Map (KeyHash 'Genesis c) (GenDelegPair c) ->
+  ChainDepState c
 initialChainDepState initNonce genDelegs =
   ChainDepState
     { csProtocol =
@@ -421,9 +421,9 @@ initialChainDepState initNonce genDelegs =
             (Map.elems genDelegs)
         )
 
-instance CC.Crypto crypto => NoThunks (ChainDepState crypto)
+instance CC.Crypto c => NoThunks (ChainDepState c)
 
-instance CC.Crypto crypto => FromCBOR (ChainDepState crypto) where
+instance CC.Crypto c => FromCBOR (ChainDepState c) where
   fromCBOR =
     decodeRecordNamed
       "ChainDepState"
@@ -434,7 +434,7 @@ instance CC.Crypto crypto => FromCBOR (ChainDepState crypto) where
           <*> fromCBOR
       )
 
-instance CC.Crypto crypto => ToCBOR (ChainDepState crypto) where
+instance CC.Crypto c => ToCBOR (ChainDepState c) where
   toCBOR
     ChainDepState
       { csProtocol,
@@ -448,24 +448,24 @@ instance CC.Crypto crypto => ToCBOR (ChainDepState crypto) where
           toCBOR csLabNonce
         ]
 
-newtype ChainTransitionError crypto
-  = ChainTransitionError [PredicateFailure (STS.Prtcl.PRTCL crypto)]
+newtype ChainTransitionError c
+  = ChainTransitionError [PredicateFailure (STS.Prtcl.PRTCL c)]
   deriving (Generic)
 
-instance (CC.Crypto crypto) => NoThunks (ChainTransitionError crypto)
+instance (CC.Crypto c) => NoThunks (ChainTransitionError c)
 
-deriving instance (CC.Crypto crypto) => Eq (ChainTransitionError crypto)
+deriving instance (CC.Crypto c) => Eq (ChainTransitionError c)
 
-deriving instance (CC.Crypto crypto) => Show (ChainTransitionError crypto)
+deriving instance (CC.Crypto c) => Show (ChainTransitionError c)
 
 -- | Tick the chain state to a new epoch.
 tickChainDepState ::
   Globals ->
-  LedgerView crypto ->
+  LedgerView c ->
   -- | Are we in a new epoch?
   Bool ->
-  ChainDepState crypto ->
-  ChainDepState crypto
+  ChainDepState c ->
+  ChainDepState c
 tickChainDepState
   globals
   LedgerView {lvExtraEntropy}
@@ -490,15 +490,15 @@ tickChainDepState
 --
 --   This also updates the last applied block hash.
 updateChainDepState ::
-  forall crypto m.
-  ( PraosCrypto crypto,
-    MonadError (ChainTransitionError crypto) m
+  forall c m.
+  ( PraosCrypto c,
+    MonadError (ChainTransitionError c) m
   ) =>
   Globals ->
-  LedgerView crypto ->
-  BHeader crypto ->
-  ChainDepState crypto ->
-  m (ChainDepState crypto)
+  LedgerView c ->
+  BHeader c ->
+  ChainDepState c ->
+  m (ChainDepState c)
 updateChainDepState
   globals
   lv
@@ -517,7 +517,7 @@ updateChainDepState
     where
       res =
         flip runReader globals
-          . applySTS @(STS.Prtcl.PRTCL crypto)
+          . applySTS @(STS.Prtcl.PRTCL c)
           $ TRC
             ( mkPrtclEnv lv epochNonce,
               csProtocol,
@@ -531,13 +531,13 @@ updateChainDepState
 --   or consistent with the chain it is being applied to; the caller must ensure
 --   that this is valid through having previously applied it.
 reupdateChainDepState ::
-  forall crypto.
-  PraosCrypto crypto =>
+  forall c.
+  PraosCrypto c =>
   Globals ->
-  LedgerView crypto ->
-  BHeader crypto ->
-  ChainDepState crypto ->
-  ChainDepState crypto
+  LedgerView c ->
+  BHeader c ->
+  ChainDepState c ->
+  ChainDepState c
 reupdateChainDepState
   globals
   lv
@@ -550,7 +550,7 @@ reupdateChainDepState
     where
       res =
         flip runReader globals
-          . reapplySTS @(STS.Prtcl.PRTCL crypto)
+          . reapplySTS @(STS.Prtcl.PRTCL c)
           $ TRC
             ( mkPrtclEnv lv epochNonce,
               csProtocol,

@@ -168,10 +168,10 @@ class
           $ res
 
 instance
-  ( CC.Crypto crypto,
-    DSignable crypto (Hash crypto EraIndependentTxBody)
+  ( CC.Crypto c,
+    DSignable c (Hash c EraIndependentTxBody)
   ) =>
-  ApplyTx (ShelleyEra crypto)
+  ApplyTx (ShelleyEra c)
 
 type MempoolEnv era = Ledger.LedgerEnv era
 

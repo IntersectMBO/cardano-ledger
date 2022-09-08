@@ -152,13 +152,13 @@ theKeyHash n = hashKey (theVKey n)
 theWitVKey :: (GoodCrypto c) => Int -> SafeHash c EraIndependentTxBody -> WitVKey 'Witness c
 theWitVKey n hash = makeWitnessVKey hash (theKeyPair n)
 
-theKeyHashObj :: CC.Crypto crypto => Int -> Credential kr crypto
+theKeyHashObj :: CC.Crypto c => Int -> Credential kr c
 theKeyHashObj n = KeyHashObj . hashKey . vKey $ theKeyPair n
 
 aScriptHashObj :: forall era kr. EraScript era => Proof era -> Script era -> Credential kr (EraCrypto era)
 aScriptHashObj _wit s = ScriptHashObj . hashScript @era $ s
 
-theStakeReference :: CC.Crypto crypto => Int -> StakeReference crypto
+theStakeReference :: CC.Crypto c => Int -> StakeReference c
 theStakeReference n = (StakeRefBase . KeyHashObj . hashKey) (theVKey n)
 
 -- ====================================================
@@ -308,7 +308,7 @@ pickPolicyID n wit = PolicyID (pickScriptHash n wit)
 -- ===========================================================================
 -- An example where the 'pick' is the same type across all Crypto Evidence
 
-data PublicSecret kr kr' crypto = PublicSecret (KeyPair kr crypto) (KeyPair kr' crypto)
+data PublicSecret kr kr' c = PublicSecret (KeyPair kr c) (KeyPair kr' c)
 
 instance CC.Crypto c => Fixed (PublicSecret kr kr' c) where
   unique n = PublicSecret (KeyPair a b) (KeyPair c d)

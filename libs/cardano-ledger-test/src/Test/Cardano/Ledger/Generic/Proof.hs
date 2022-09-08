@@ -119,17 +119,17 @@ getCrypto (Conway c) = c
 -- ==================================
 -- Reflection over Crypto and Era
 
-type GoodCrypto crypto =
-  ( CC.Crypto crypto,
-    DSignable crypto (CH.Hash (CC.HASH crypto) EraIndependentTxBody),
-    DSIGNAlgorithm (CC.DSIGN crypto),
-    DSIGN.Signable (CC.DSIGN crypto) (OCertSignable crypto),
-    VRF.Signable (VRF crypto) Base.Seed,
-    KES.Signable (KES crypto) (BHBody crypto),
-    ContextKES (KES crypto) ~ (),
-    ContextVRF (VRF crypto) ~ (),
-    CH.HashAlgorithm (CC.HASH crypto),
-    PraosCrypto crypto
+type GoodCrypto c =
+  ( CC.Crypto c,
+    DSignable c (CH.Hash (CC.HASH c) EraIndependentTxBody),
+    DSIGNAlgorithm (CC.DSIGN c),
+    DSIGN.Signable (CC.DSIGN c) (OCertSignable c),
+    VRF.Signable (VRF c) Base.Seed,
+    KES.Signable (KES c) (BHBody c),
+    ContextKES (KES c) ~ (),
+    ContextVRF (VRF c) ~ (),
+    CH.HashAlgorithm (CC.HASH c),
+    PraosCrypto c
   )
 
 class (GoodCrypto c) => ReflectC c where

@@ -89,94 +89,94 @@ import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
-data OVERLAY crypto
+data OVERLAY c
 
-data OverlayEnv crypto
+data OverlayEnv c
   = OverlayEnv
       UnitInterval -- the decentralization paramater @d@ from the protocal parameters
-      (PoolDistr crypto)
-      (GenDelegs crypto)
+      (PoolDistr c)
+      (GenDelegs c)
       Nonce
   deriving (Generic)
 
-instance NoThunks (OverlayEnv crypto)
+instance NoThunks (OverlayEnv c)
 
-data OverlayPredicateFailure crypto
+data OverlayPredicateFailure c
   = VRFKeyUnknown
-      !(KeyHash 'StakePool crypto) -- unknown VRF keyhash (not registered)
+      !(KeyHash 'StakePool c) -- unknown VRF keyhash (not registered)
   | VRFKeyWrongVRFKey
-      !(KeyHash 'StakePool crypto) -- KeyHash of block issuer
-      !(Hash crypto (VerKeyVRF crypto)) -- VRF KeyHash registered with stake pool
-      !(Hash crypto (VerKeyVRF crypto)) -- VRF KeyHash from Header
+      !(KeyHash 'StakePool c) -- KeyHash of block issuer
+      !(Hash c (VerKeyVRF c)) -- VRF KeyHash registered with stake pool
+      !(Hash c (VerKeyVRF c)) -- VRF KeyHash from Header
   | VRFKeyBadNonce
       !Nonce -- Nonce constant to distinguish VRF nonce values
       !SlotNo -- Slot used for VRF calculation
       !Nonce -- Epoch nonce used for VRF calculation
-      !(VRF.CertifiedVRF (VRF crypto) Nonce) -- VRF calculated nonce value
+      !(VRF.CertifiedVRF (VRF c) Nonce) -- VRF calculated nonce value
   | VRFKeyBadLeaderValue
       !Nonce -- Leader constant to distinguish VRF leader values
       !SlotNo -- Slot used for VRF calculation
       !Nonce -- Epoch nonce used for VRF calculation
-      !(VRF.CertifiedVRF (VRF crypto) Nonce) -- VRF calculated leader value
+      !(VRF.CertifiedVRF (VRF c) Nonce) -- VRF calculated leader value
   | VRFLeaderValueTooBig
-      !(VRF.OutputVRF (VRF crypto)) -- VRF Leader value
+      !(VRF.OutputVRF (VRF c)) -- VRF Leader value
       !Rational -- stake pool's relative stake
       !ActiveSlotCoeff -- Praos active slot coefficient value
   | NotActiveSlotOVERLAY
       !SlotNo -- Slot which is supposed to be silent
   | WrongGenesisColdKeyOVERLAY
-      !(KeyHash 'BlockIssuer crypto) -- KeyHash of block issuer
-      !(KeyHash 'GenesisDelegate crypto) -- KeyHash genesis delegate keyhash assigned to this slot
+      !(KeyHash 'BlockIssuer c) -- KeyHash of block issuer
+      !(KeyHash 'GenesisDelegate c) -- KeyHash genesis delegate keyhash assigned to this slot
   | WrongGenesisVRFKeyOVERLAY
-      !(KeyHash 'BlockIssuer crypto) -- KeyHash of block issuer
-      !(Hash crypto (VerKeyVRF crypto)) -- VRF KeyHash registered with genesis delegation
-      !(Hash crypto (VerKeyVRF crypto)) -- VRF KeyHash from Header
+      !(KeyHash 'BlockIssuer c) -- KeyHash of block issuer
+      !(Hash c (VerKeyVRF c)) -- VRF KeyHash registered with genesis delegation
+      !(Hash c (VerKeyVRF c)) -- VRF KeyHash from Header
   | UnknownGenesisKeyOVERLAY
-      !(KeyHash 'Genesis crypto) -- KeyHash which does not correspond to o genesis node
-  | OcertFailure (PredicateFailure (OCERT crypto)) -- Subtransition Failures
+      !(KeyHash 'Genesis c) -- KeyHash which does not correspond to o genesis node
+  | OcertFailure (PredicateFailure (OCERT c)) -- Subtransition Failures
   deriving (Generic)
 
 instance
-  ( Crypto crypto,
-    DSignable crypto (OCertSignable crypto),
-    KESignable crypto (BHBody crypto),
-    VRF.Signable (VRF crypto) Seed
+  ( Crypto c,
+    DSignable c (OCertSignable c),
+    KESignable c (BHBody c),
+    VRF.Signable (VRF c) Seed
   ) =>
-  STS (OVERLAY crypto)
+  STS (OVERLAY c)
   where
   type
-    State (OVERLAY crypto) =
-      Map (KeyHash 'BlockIssuer crypto) Word64
+    State (OVERLAY c) =
+      Map (KeyHash 'BlockIssuer c) Word64
 
   type
-    Signal (OVERLAY crypto) =
-      BHeader crypto
+    Signal (OVERLAY c) =
+      BHeader c
 
-  type Environment (OVERLAY crypto) = OverlayEnv crypto
-  type BaseM (OVERLAY crypto) = ShelleyBase
-  type PredicateFailure (OVERLAY crypto) = OverlayPredicateFailure crypto
+  type Environment (OVERLAY c) = OverlayEnv c
+  type BaseM (OVERLAY c) = ShelleyBase
+  type PredicateFailure (OVERLAY c) = OverlayPredicateFailure c
 
   initialRules = []
 
   transitionRules = [overlayTransition]
 
 deriving instance
-  (VRF.VRFAlgorithm (VRF crypto)) =>
-  Show (OverlayPredicateFailure crypto)
+  (VRF.VRFAlgorithm (VRF c)) =>
+  Show (OverlayPredicateFailure c)
 
 deriving instance
-  (VRF.VRFAlgorithm (VRF crypto)) =>
-  Eq (OverlayPredicateFailure crypto)
+  (VRF.VRFAlgorithm (VRF c)) =>
+  Eq (OverlayPredicateFailure c)
 
 vrfChecks ::
-  forall crypto.
-  ( Crypto crypto,
-    VRF.Signable (VRF crypto) Seed,
-    VRF.ContextVRF (VRF crypto) ~ ()
+  forall c.
+  ( Crypto c,
+    VRF.Signable (VRF c) Seed,
+    VRF.ContextVRF (VRF c) ~ ()
   ) =>
   Nonce ->
-  BHBody crypto ->
-  Either (PredicateFailure (OVERLAY crypto)) ()
+  BHBody c ->
+  Either (PredicateFailure (OVERLAY c)) ()
 vrfChecks eta0 bhb = do
   unless
     ( VRF.verifyCertified
@@ -199,16 +199,16 @@ vrfChecks eta0 bhb = do
     slot = bheaderSlotNo bhb
 
 praosVrfChecks ::
-  forall crypto.
-  ( Crypto crypto,
-    VRF.Signable (VRF crypto) Seed,
-    VRF.ContextVRF (VRF crypto) ~ ()
+  forall c.
+  ( Crypto c,
+    VRF.Signable (VRF c) Seed,
+    VRF.ContextVRF (VRF c) ~ ()
   ) =>
   Nonce ->
-  PoolDistr crypto ->
+  PoolDistr c ->
   ActiveSlotCoeff ->
-  BHBody crypto ->
-  Either (PredicateFailure (OVERLAY crypto)) ()
+  BHBody c ->
+  Either (PredicateFailure (OVERLAY c)) ()
 praosVrfChecks eta0 (PoolDistr pd) f bhb = do
   let sigma' = Map.lookup hk pd
   case sigma' of
@@ -226,15 +226,15 @@ praosVrfChecks eta0 (PoolDistr pd) f bhb = do
     vrfK = bheaderVrfVk bhb
 
 pbftVrfChecks ::
-  forall crypto.
-  ( Crypto crypto,
-    VRF.Signable (VRF crypto) Seed,
-    VRF.ContextVRF (VRF crypto) ~ ()
+  forall c.
+  ( Crypto c,
+    VRF.Signable (VRF c) Seed,
+    VRF.ContextVRF (VRF c) ~ ()
   ) =>
-  Hash crypto (VerKeyVRF crypto) ->
+  Hash c (VerKeyVRF c) ->
   Nonce ->
-  BHBody crypto ->
-  Either (PredicateFailure (OVERLAY crypto)) ()
+  BHBody c ->
+  Either (PredicateFailure (OVERLAY c)) ()
 pbftVrfChecks vrfHK eta0 bhb = do
   unless
     (vrfHK == hashVerKeyVRF vrfK)
@@ -246,13 +246,13 @@ pbftVrfChecks vrfHK eta0 bhb = do
     vrfK = bheaderVrfVk bhb
 
 overlayTransition ::
-  forall crypto.
-  ( Crypto crypto,
-    DSignable crypto (OCertSignable crypto),
-    KESignable crypto (BHBody crypto),
-    VRF.Signable (VRF crypto) Seed
+  forall c.
+  ( Crypto c,
+    DSignable c (OCertSignable c),
+    KESignable c (BHBody c),
+    VRF.Signable (VRF c) Seed
   ) =>
-  TransitionRule (OVERLAY crypto)
+  TransitionRule (OVERLAY c)
 overlayTransition =
   judgmentContext
     >>= \( TRC
@@ -272,7 +272,7 @@ overlayTransition =
           e <- epochInfoEpoch ei slot
           epochInfoFirst ei e
 
-        case (lookupInOverlaySchedule firstSlotNo gkeys dval asc slot :: Maybe (OBftSlot crypto)) of
+        case (lookupInOverlaySchedule firstSlotNo gkeys dval asc slot :: Maybe (OBftSlot c)) of
           Nothing ->
             praosVrfChecks eta0 pd asc bhb ?!: id
           Just NonActiveSlot ->
@@ -291,37 +291,37 @@ overlayTransition =
                   ocertEnvGenDelegs = Set.map genDelegKeyHash $ range genDelegs
                 }
 
-        trans @(OCERT crypto) $ TRC (oce, cs, bh)
+        trans @(OCERT c) $ TRC (oce, cs, bh)
 
 instance
-  (VRF.VRFAlgorithm (VRF crypto)) =>
-  NoThunks (OverlayPredicateFailure crypto)
+  (VRF.VRFAlgorithm (VRF c)) =>
+  NoThunks (OverlayPredicateFailure c)
 
 instance
-  ( Crypto crypto,
-    DSignable crypto (OCertSignable crypto),
-    KESignable crypto (BHBody crypto),
-    VRF.Signable (VRF crypto) Seed
+  ( Crypto c,
+    DSignable c (OCertSignable c),
+    KESignable c (BHBody c),
+    VRF.Signable (VRF c) Seed
   ) =>
-  Embed (OCERT crypto) (OVERLAY crypto)
+  Embed (OCERT c) (OVERLAY c)
   where
   wrapFailed = OcertFailure
 
-data OBftSlot crypto
+data OBftSlot c
   = NonActiveSlot
-  | ActiveSlot !(KeyHash 'Genesis crypto)
+  | ActiveSlot !(KeyHash 'Genesis c)
   deriving (Show, Eq, Ord, Generic)
 
 instance
-  Crypto crypto =>
-  ToCBOR (OBftSlot crypto)
+  Crypto c =>
+  ToCBOR (OBftSlot c)
   where
   toCBOR NonActiveSlot = encodeNull
   toCBOR (ActiveSlot k) = toCBOR k
 
 instance
-  Crypto crypto =>
-  FromCBOR (OBftSlot crypto)
+  Crypto c =>
+  FromCBOR (OBftSlot c)
   where
   fromCBOR = do
     peekTokenType >>= \case
@@ -330,17 +330,17 @@ instance
         pure NonActiveSlot
       _ -> ActiveSlot <$> fromCBOR
 
-instance NoThunks (OBftSlot crypto)
+instance NoThunks (OBftSlot c)
 
-instance NFData (OBftSlot crypto)
+instance NFData (OBftSlot c)
 
 classifyOverlaySlot ::
   SlotNo -> -- first slot of the epoch
-  Set (KeyHash 'Genesis crypto) -> -- genesis Nodes
+  Set (KeyHash 'Genesis c) -> -- genesis Nodes
   UnitInterval -> -- decentralization parameter
   ActiveSlotCoeff -> -- active slot coefficent
   SlotNo -> -- overlay slot to classify
-  OBftSlot crypto
+  OBftSlot c
 classifyOverlaySlot firstSlotNo gkeys dval ascValue slot =
   if isActive
     then
@@ -356,11 +356,11 @@ classifyOverlaySlot firstSlotNo gkeys dval ascValue slot =
 
 lookupInOverlaySchedule ::
   SlotNo -> -- first slot of the epoch
-  Set (KeyHash 'Genesis crypto) -> -- genesis Nodes
+  Set (KeyHash 'Genesis c) -> -- genesis Nodes
   UnitInterval -> -- decentralization parameter
   ActiveSlotCoeff -> -- active slot coefficent
   SlotNo -> -- slot to lookup
-  Maybe (OBftSlot crypto)
+  Maybe (OBftSlot c)
 lookupInOverlaySchedule firstSlotNo gkeys dval ascValue slot =
   if isOverlaySlot firstSlotNo dval slot
     then Just $ classifyOverlaySlot firstSlotNo gkeys dval ascValue slot

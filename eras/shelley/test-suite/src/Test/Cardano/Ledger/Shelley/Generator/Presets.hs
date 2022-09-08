@@ -98,9 +98,9 @@ keySpace c =
 -- NOTE: we use a seed range in the [1000...] range
 -- to create keys that don't overlap with any of the other generated keys
 coreNodeKeys ::
-  CC.Crypto crypto =>
+  CC.Crypto c =>
   Constants ->
-  [(KeyPair 'Genesis crypto, AllIssuerKeys crypto 'GenesisDelegate)]
+  [(KeyPair 'Genesis c, AllIssuerKeys c 'GenesisDelegate)]
 coreNodeKeys c@Constants {numCoreNodes} =
   [ ( (toKeyPair . mkGenKey) (RawSeed x 0 0 0 0),
       issuerKeys c 0 x
@@ -111,14 +111,14 @@ coreNodeKeys c@Constants {numCoreNodes} =
     toKeyPair (sk, vk) = KeyPair vk sk
 
 -- Pre-generate a set of keys to use for genesis delegates.
-genesisDelegates :: CC.Crypto crypto => Constants -> [AllIssuerKeys crypto 'GenesisDelegate]
+genesisDelegates :: CC.Crypto c => Constants -> [AllIssuerKeys c 'GenesisDelegate]
 genesisDelegates c =
   [ issuerKeys c 20 x
     | x <- [0 .. 50]
   ]
 
 -- Pre-generate a set of keys to use for stake pools.
-stakePoolKeys :: CC.Crypto crypto => Constants -> [AllIssuerKeys crypto 'StakePool]
+stakePoolKeys :: CC.Crypto c => Constants -> [AllIssuerKeys c 'StakePool]
 stakePoolKeys c =
   [ issuerKeys c 10 x
     | x <- [0 .. 50]
@@ -126,13 +126,13 @@ stakePoolKeys c =
 
 -- | Generate all keys for any entity which will be issuing blocks.
 issuerKeys ::
-  (CC.Crypto crypto) =>
+  (CC.Crypto c) =>
   Constants ->
   -- | Namespace parameter. Can be used to differentiate between different
   --   "types" of issuer.
   Word64 ->
   Word64 ->
-  AllIssuerKeys crypto r
+  AllIssuerKeys c r
 issuerKeys Constants {maxSlotTrace} ns x =
   let (skCold, vkCold) = mkKeyPair (RawSeed x 0 0 0 (ns + 1))
    in AllIssuerKeys
@@ -157,9 +157,9 @@ issuerKeys Constants {maxSlotTrace} ns x =
         }
 
 genesisDelegs0 ::
-  CC.Crypto crypto =>
+  CC.Crypto c =>
   Constants ->
-  Map (KeyHash 'Genesis crypto) (GenDelegPair crypto)
+  Map (KeyHash 'Genesis c) (GenDelegPair c)
 genesisDelegs0 c =
   Map.fromList
     [ ( hashVKey gkey,

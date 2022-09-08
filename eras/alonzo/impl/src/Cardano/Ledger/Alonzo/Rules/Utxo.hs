@@ -233,13 +233,13 @@ newtype AlonzoUtxoEvent era
 
 -- | Returns true for VKey locked addresses, and false for any kind of
 -- script-locked address.
-isKeyHashAddr :: Addr crypto -> Bool
+isKeyHashAddr :: Addr c -> Bool
 isKeyHashAddr (AddrBootstrap _) = True
 isKeyHashAddr (Addr _ (KeyHashObj _) _) = True
 isKeyHashAddr _ = False
 
 -- | This is equivalent to `isKeyHashAddr`, but for compacted version of an address.
-isKeyHashCompactAddr :: CompactAddr crypto -> Bool
+isKeyHashCompactAddr :: CompactAddr c -> Bool
 isKeyHashCompactAddr cAddr =
   isBootstrapCompactAddr cAddr || not (isPayCredScriptCompactAddr cAddr)
 

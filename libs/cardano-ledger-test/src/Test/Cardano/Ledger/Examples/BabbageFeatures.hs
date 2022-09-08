@@ -189,13 +189,13 @@ datumExampleSixtyFiveBytes = Data (Plutus.B sixtyFiveBytes)
 txDats :: Era era => TxDats era
 txDats = mkTxDats datumExampleSixtyFiveBytes
 
-someTxIn :: (CH.HashAlgorithm (CC.HASH crypto), HasCallStack) => TxIn crypto
+someTxIn :: (CH.HashAlgorithm (CC.HASH c), HasCallStack) => TxIn c
 someTxIn = mkGenesisTxIn 1
 
-anotherTxIn :: (CH.HashAlgorithm (CC.HASH crypto), HasCallStack) => TxIn crypto
+anotherTxIn :: (CH.HashAlgorithm (CC.HASH c), HasCallStack) => TxIn c
 anotherTxIn = mkGenesisTxIn 2
 
-yetAnotherTxIn :: (CH.HashAlgorithm (CC.HASH crypto), HasCallStack) => TxIn crypto
+yetAnotherTxIn :: (CH.HashAlgorithm (CC.HASH c), HasCallStack) => TxIn c
 yetAnotherTxIn = mkGenesisTxIn 3
 
 defaultPPs :: [PParamsField era]

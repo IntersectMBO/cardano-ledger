@@ -141,7 +141,7 @@ filterAllRewards rs' (EpochState _as _ss ls pr _pp _nm) =
 --   aggregate (dom activeDelegs ◁ rewards) step1
 --
 --   TO IncrementalStake
-aggregateActiveStake :: Ord k => Map k (Triple crypto) -> Map k Coin -> Map k Coin
+aggregateActiveStake :: Ord k => Map k (Triple c) -> Map k Coin -> Map k Coin
 aggregateActiveStake =
   Map.mergeWithKey
     -- How to merge the ranges of the two maps where they have a common key. Below
@@ -265,11 +265,11 @@ applyRUpd'
 --   step2 =  aggregate (dom activeDelegs ◁ rewards) step1
 --   This function has a non-incremental analog, 'stakeDistr', mosty used in tests, which does use the UTxO.
 incrementalStakeDistr ::
-  forall crypto.
-  IncrementalStake crypto ->
-  DState crypto ->
-  PState crypto ->
-  SnapShot crypto
+  forall c.
+  IncrementalStake c ->
+  DState c ->
+  PState c ->
+  SnapShot c
 incrementalStakeDistr incstake ds ps =
   SnapShot
     (Stake $ VMap.fromMap (compactCoinOrError <$> step2))
@@ -288,10 +288,10 @@ incrementalStakeDistr incstake ds ps =
 --   keep ony the active credentials.
 --   This is  step1 = (dom activeDelegs ◁ credStake) ∪ (dom activeDelegs ◁ ptrStake)
 resolveActiveIncrementalPtrs ::
-  (Credential 'Staking crypto -> Bool) ->
-  Map Ptr (Credential 'Staking crypto) ->
-  IncrementalStake crypto ->
-  Map (Credential 'Staking crypto) Coin
+  (Credential 'Staking c -> Bool) ->
+  Map Ptr (Credential 'Staking c) ->
+  IncrementalStake c ->
+  Map (Credential 'Staking c) Coin
 resolveActiveIncrementalPtrs isActive ptrMap_ (IStake credStake ptrStake) =
   Map.foldlWithKey' accum step1A ptrStake -- step1A  ∪ (dom activeDelegs ◁ ptrStake)
   where

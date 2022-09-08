@@ -78,30 +78,30 @@ import NoThunks.Class (NoThunks (..))
 --
 -- For simplicity, pools defined in the genesis staking do not pay deposits for
 -- their registration.
-data ShelleyGenesisStaking crypto = ShelleyGenesisStaking
+data ShelleyGenesisStaking c = ShelleyGenesisStaking
   { -- | Pools to register
     --
     --   The key in this map is the hash of the public key of the _pool_. This
     --   need not correspond to any payment or staking key, but must correspond
     --   to the cold key held by 'TPraosIsCoreNode'.
-    sgsPools :: LM.ListMap (KeyHash 'StakePool crypto) (PoolParams crypto),
+    sgsPools :: LM.ListMap (KeyHash 'StakePool c) (PoolParams c),
     -- | Stake-holding key hash credentials and the pools to delegate that stake
     -- to. We require the raw staking key hash in order to:
     --
     -- - Avoid pointer addresses, which would be tricky when there's no slot or
     --   transaction to point to.
     -- - Avoid script credentials.
-    sgsStake :: LM.ListMap (KeyHash 'Staking crypto) (KeyHash 'StakePool crypto)
+    sgsStake :: LM.ListMap (KeyHash 'Staking c) (KeyHash 'StakePool c)
   }
   deriving stock (Eq, Show, Generic)
 
-instance NoThunks (ShelleyGenesisStaking crypto)
+instance NoThunks (ShelleyGenesisStaking c)
 
-instance CC.Crypto crypto => ToCBOR (ShelleyGenesisStaking crypto) where
+instance CC.Crypto c => ToCBOR (ShelleyGenesisStaking c) where
   toCBOR (ShelleyGenesisStaking pools stake) =
     encodeListLen 2 <> toCBOR pools <> toCBOR stake
 
-instance CC.Crypto crypto => FromCBOR (ShelleyGenesisStaking crypto) where
+instance CC.Crypto c => FromCBOR (ShelleyGenesisStaking c) where
   fromCBOR = do
     decodeRecordNamed "ShelleyGenesisStaking" (const 2) $ do
       pools <- fromCBOR
@@ -109,7 +109,7 @@ instance CC.Crypto crypto => FromCBOR (ShelleyGenesisStaking crypto) where
       pure $ ShelleyGenesisStaking pools stake
 
 -- | Empty genesis staking
-emptyGenesisStaking :: ShelleyGenesisStaking crypto
+emptyGenesisStaking :: ShelleyGenesisStaking c
 emptyGenesisStaking =
   ShelleyGenesisStaking
     { sgsPools = mempty,
@@ -216,20 +216,20 @@ instance Era era => FromJSON (ShelleyGenesis era) where
             !time = utctDayTime date
          in UTCTime day time
 
-instance CC.Crypto crypto => ToJSON (ShelleyGenesisStaking crypto) where
+instance CC.Crypto c => ToJSON (ShelleyGenesisStaking c) where
   toJSON = Aeson.object . toShelleyGenesisStakingPairs
   toEncoding = Aeson.pairs . mconcat . toShelleyGenesisStakingPairs
 
 toShelleyGenesisStakingPairs ::
-  (Aeson.KeyValue a, CC.Crypto crypto) =>
-  ShelleyGenesisStaking crypto ->
+  (Aeson.KeyValue a, CC.Crypto c) =>
+  ShelleyGenesisStaking c ->
   [a]
 toShelleyGenesisStakingPairs ShelleyGenesisStaking {sgsPools, sgsStake} =
   [ "pools" .= sgsPools,
     "stake" .= sgsStake
   ]
 
-instance CC.Crypto crypto => FromJSON (ShelleyGenesisStaking crypto) where
+instance CC.Crypto c => FromJSON (ShelleyGenesisStaking c) where
   parseJSON =
     Aeson.withObject "ShelleyGenesisStaking" $ \obj ->
       ShelleyGenesisStaking
@@ -335,7 +335,7 @@ genesisUTxO genesis =
 -- This gets turned into a UTxO by making a pseudo-transaction for each address,
 -- with the 0th output being the coin value. So to spend from the initial UTxO
 -- we need this same 'TxIn' to use as an input to the spending transaction.
-initialFundsPseudoTxIn :: forall crypto. CC.Crypto crypto => Addr crypto -> TxIn crypto
+initialFundsPseudoTxIn :: forall c. CC.Crypto c => Addr c -> TxIn c
 initialFundsPseudoTxIn addr =
   TxIn (pseudoTxId addr) minBound
   where
@@ -343,8 +343,8 @@ initialFundsPseudoTxIn addr =
       TxId
         . unsafeMakeSafeHash
         . ( Crypto.castHash ::
-              Crypto.Hash (HASH crypto) (Addr crypto) ->
-              Crypto.Hash (HASH crypto) EraIndependentTxBody
+              Crypto.Hash (HASH c) (Addr c) ->
+              Crypto.Hash (HASH c) EraIndependentTxBody
           )
         . Crypto.hashWith serialiseAddr
 

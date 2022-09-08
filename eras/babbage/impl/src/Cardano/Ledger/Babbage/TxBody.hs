@@ -176,7 +176,7 @@ import Prelude hiding (lookup)
 
 -- ======================================
 
-type ScriptIntegrityHash crypto = SafeHash crypto EraIndependentScriptIntegrity
+type ScriptIntegrityHash c = SafeHash c EraIndependentScriptIntegrity
 
 data TxBodyRaw era = TxBodyRaw
   { _spendInputs :: !(Set (TxIn (EraCrypto era))),

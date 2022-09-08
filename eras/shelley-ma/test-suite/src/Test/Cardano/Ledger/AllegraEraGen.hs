@@ -64,7 +64,7 @@ import Test.QuickCheck (Arbitrary, Gen, arbitrary, frequency)
 
 {------------------------------------------------------------------------------
  EraGen instance for AllegraEra - This instance makes it possible to run the
- Shelley property tests for (AllegraEra crypto)
+ Shelley property tests for (AllegraEra c)
 
  This instance is layered on top of the ShelleyMA instances
  in Cardano.Ledger.ShelleyMA.Scripts:

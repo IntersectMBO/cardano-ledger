@@ -18,16 +18,16 @@ import Numeric.Natural (Natural)
 -- and should work independently of the protocol. The values in
 -- 'BHeaderView' provide 'BBODY' all the data that it needs from the
 -- block headers.
-data BHeaderView crypto = BHeaderView
+data BHeaderView c = BHeaderView
   { -- | The block issuer. In the TPraos protocol, this can be a
     --  Genesis delegate, everywhere else it is the stake pool ID.
-    bhviewID :: KeyHash 'BlockIssuer crypto,
+    bhviewID :: KeyHash 'BlockIssuer c,
     -- | The purported size (in bytes) of the block body.
     bhviewBSize :: Natural,
     -- | The purported size (in bytes) of the block header.
     bhviewHSize :: Int,
     -- | The purported hash of the block body.
-    bhviewBHash :: Hash crypto EraIndependentBlockBody,
+    bhviewBHash :: Hash c EraIndependentBlockBody,
     -- | The slot for which this block was submitted to the chain.
     bhviewSlot :: SlotNo
   }

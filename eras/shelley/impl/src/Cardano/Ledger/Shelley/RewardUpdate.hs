@@ -80,7 +80,7 @@ data RewardAns c = RewardAns
   deriving (Show, Eq, Generic)
   deriving (NFData)
 
-instance NoThunks (RewardAns crypto)
+instance NoThunks (RewardAns c)
 
 instance CC.Crypto c => ToCBOR (RewardAns c) where
   toCBOR (RewardAns accum recent) = encodeListLen 2 <> toCBOR accum <> toCBOR recent
@@ -95,22 +95,22 @@ type Pulser c = RewardPulser c ShelleyBase (RewardAns c)
 
 -- | The ultiate goal of a reward update computation.
 --     Aggregating rewards for each staking credential.
-data RewardUpdate crypto = RewardUpdate
+data RewardUpdate c = RewardUpdate
   { deltaT :: !DeltaCoin,
     deltaR :: !DeltaCoin,
-    rs :: !(Map (Credential 'Staking crypto) (Set (Reward crypto))),
+    rs :: !(Map (Credential 'Staking c) (Set (Reward c))),
     deltaF :: !DeltaCoin,
-    nonMyopic :: !(NonMyopic crypto)
+    nonMyopic :: !(NonMyopic c)
   }
   deriving (Show, Eq, Generic)
 
-instance NoThunks (RewardUpdate crypto)
+instance NoThunks (RewardUpdate c)
 
-instance NFData (RewardUpdate crypto)
+instance NFData (RewardUpdate c)
 
 instance
-  CC.Crypto crypto =>
-  ToCBOR (RewardUpdate crypto)
+  CC.Crypto c =>
+  ToCBOR (RewardUpdate c)
   where
   toCBOR (RewardUpdate dt dr rw df nm) =
     encodeListLen 5
@@ -121,8 +121,8 @@ instance
       <> toCBOR nm
 
 instance
-  CC.Crypto crypto =>
-  FromCBOR (RewardUpdate crypto)
+  CC.Crypto c =>
+  FromCBOR (RewardUpdate c)
   where
   fromCBOR = do
     decodeRecordNamed "RewardUpdate" (const 5) $ do
@@ -133,30 +133,30 @@ instance
       nm <- fromNotSharedCBOR
       pure $ RewardUpdate dt (invert dr) rw (invert df) nm
 
-emptyRewardUpdate :: RewardUpdate crypto
+emptyRewardUpdate :: RewardUpdate c
 emptyRewardUpdate =
   RewardUpdate (DeltaCoin 0) (DeltaCoin 0) Map.empty (DeltaCoin 0) def
 
 -- ===================================================
 
 -- | To complete the reward update, we need a snap shot of the EpochState particular to this computation
-data RewardSnapShot crypto = RewardSnapShot
+data RewardSnapShot c = RewardSnapShot
   { rewFees :: !Coin,
     rewprotocolVersion :: !ProtVer,
-    rewNonMyopic :: !(NonMyopic crypto),
+    rewNonMyopic :: !(NonMyopic c),
     rewDeltaR1 :: !Coin, -- deltaR1
     rewR :: !Coin, -- r
     rewDeltaT1 :: !Coin, -- deltaT1
-    rewLikelihoods :: !(Map (KeyHash 'StakePool crypto) Likelihood),
-    rewLeaders :: !(Map (Credential 'Staking crypto) (Set (Reward crypto)))
+    rewLikelihoods :: !(Map (KeyHash 'StakePool c) Likelihood),
+    rewLeaders :: !(Map (Credential 'Staking c) (Set (Reward c)))
   }
   deriving (Show, Eq, Generic)
 
-instance Typeable crypto => NoThunks (RewardSnapShot crypto)
+instance Typeable c => NoThunks (RewardSnapShot c)
 
-instance NFData (RewardSnapShot crypto)
+instance NFData (RewardSnapShot c)
 
-instance CC.Crypto crypto => ToCBOR (RewardSnapShot crypto) where
+instance CC.Crypto c => ToCBOR (RewardSnapShot c) where
   toCBOR (RewardSnapShot fees ver nm dr1 r dt1 lhs lrs) =
     encode
       ( Rec RewardSnapShot
@@ -170,7 +170,7 @@ instance CC.Crypto crypto => ToCBOR (RewardSnapShot crypto) where
           !> mapEncode lrs
       )
 
-instance CC.Crypto crypto => FromCBOR (RewardSnapShot crypto) where
+instance CC.Crypto c => FromCBOR (RewardSnapShot c) where
   fromCBOR =
     decode
       ( RecD RewardSnapShot
@@ -185,7 +185,7 @@ instance CC.Crypto crypto => FromCBOR (RewardSnapShot crypto) where
       )
 
 -- | RewardSnapShot can act as a Proxy for PParams when only the protocol version is needed.
-instance HasField "_protocolVersion" (RewardSnapShot crypto) ProtVer where
+instance HasField "_protocolVersion" (RewardSnapShot c) ProtVer where
   getField x = rewprotocolVersion x
 
 -- ========================================================
@@ -193,23 +193,23 @@ instance HasField "_protocolVersion" (RewardSnapShot crypto) ProtVer where
 -- rewardStakePool, so that it can be made into a serializable
 -- Pulsable function.
 
-data FreeVars crypto = FreeVars
-  { delegs :: !(VMap VB VB (Credential 'Staking crypto) (KeyHash 'StakePool crypto)),
-    addrsRew :: !(Set (Credential 'Staking crypto)),
+data FreeVars c = FreeVars
+  { delegs :: !(VMap VB VB (Credential 'Staking c) (KeyHash 'StakePool c)),
+    addrsRew :: !(Set (Credential 'Staking c)),
     totalStake :: !Integer,
     pp_pv :: !ProtVer,
-    poolRewardInfo :: !(Map (KeyHash 'StakePool crypto) (PoolRewardInfo crypto))
+    poolRewardInfo :: !(Map (KeyHash 'StakePool c) (PoolRewardInfo c))
   }
   deriving (Eq, Show, Generic)
   deriving (NoThunks)
 
 -- | FreeVars can act as a Proxy for PParams when only the protocol version is needed.
-instance HasField "_protocolVersion" (FreeVars crypto) ProtVer where
+instance HasField "_protocolVersion" (FreeVars c) ProtVer where
   getField = pp_pv
 
-instance NFData (FreeVars crypto)
+instance NFData (FreeVars c)
 
-instance (CC.Crypto crypto) => ToCBOR (FreeVars crypto) where
+instance (CC.Crypto c) => ToCBOR (FreeVars c) where
   toCBOR
     FreeVars
       { delegs,
@@ -227,7 +227,7 @@ instance (CC.Crypto crypto) => ToCBOR (FreeVars crypto) where
             !> mapEncode poolRewardInfo
         )
 
-instance (CC.Crypto crypto) => FromCBOR (FreeVars crypto) where
+instance (CC.Crypto c) => FromCBOR (FreeVars c) where
   fromCBOR =
     decode
       ( RecD FreeVars
@@ -289,7 +289,7 @@ data RewardPulser c (m :: Type -> Type) ans where
 clearRecent :: RewardAns c -> RewardAns c
 clearRecent (RewardAns accum _) = RewardAns accum Map.empty
 
-instance Pulsable (RewardPulser crypto) where
+instance Pulsable (RewardPulser c) where
   done (RSLP _n _free zs _ans) = VMap.null zs
   current (RSLP _ _ _ ans) = ans
   pulseM p@(RSLP n free balance (clearRecent -> ans)) =
@@ -331,20 +331,20 @@ instance (CC.Crypto c) => FromCBOR (Pulser c) where
 -- =========================================================================
 
 -- | The state used in the STS rules
-data PulsingRewUpdate crypto
-  = Pulsing !(RewardSnapShot crypto) !(Pulser crypto) -- Pulsing work still to do
-  | Complete !(RewardUpdate crypto) -- Pulsing work completed, ultimate goal reached
+data PulsingRewUpdate c
+  = Pulsing !(RewardSnapShot c) !(Pulser c) -- Pulsing work still to do
+  | Complete !(RewardUpdate c) -- Pulsing work completed, ultimate goal reached
   deriving (Eq, Show, Generic, NoThunks)
 
-instance (CC.Crypto crypto) => ToCBOR (PulsingRewUpdate crypto) where
+instance (CC.Crypto c) => ToCBOR (PulsingRewUpdate c) where
   toCBOR (Pulsing s p) = encode (Sum Pulsing 0 !> To s !> To p)
   toCBOR (Complete r) = encode (Sum Complete 1 !> To r)
 
-instance (CC.Crypto crypto) => FromCBOR (PulsingRewUpdate crypto) where
+instance (CC.Crypto c) => FromCBOR (PulsingRewUpdate c) where
   fromCBOR = decode (Summands "PulsingRewUpdate" decPS)
     where
       decPS 0 = SumD Pulsing <! From <! From
       decPS 1 = SumD Complete <! From
       decPS n = Invalid n
 
-instance NFData (PulsingRewUpdate crypto)
+instance NFData (PulsingRewUpdate c)

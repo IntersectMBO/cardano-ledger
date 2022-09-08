@@ -52,20 +52,20 @@ pickOld o _n = o
 
 insertValue ::
   (Integer -> Integer -> Integer) ->
-  PolicyID crypto ->
+  PolicyID c ->
   AssetName ->
   Integer ->
-  MaryValue crypto ->
-  MaryValue crypto
+  MaryValue c ->
+  MaryValue c
 insertValue combine pid aid new (MaryValue c m) = MaryValue c $ insert combine pid aid new m
 
 insert3 ::
   (Integer -> Integer -> Integer) ->
-  PolicyID crypto ->
+  PolicyID c ->
   AssetName ->
   Integer ->
-  MaryValue crypto ->
-  MaryValue crypto
+  MaryValue c ->
+  MaryValue c
 insert3 combine pid aid new (MaryValue c (MultiAsset m1)) =
   case Map.lookup pid m1 of
     Nothing ->
@@ -83,19 +83,19 @@ insert3 combine pid aid new (MaryValue c (MultiAsset m1)) =
             canonicalInsert pickNew pid (canonicalInsert pickNew aid (combine old new) m2) m1
 
 -- | Make a Value with no coin, and just one token.
-unit :: PolicyID crypto -> AssetName -> Integer -> MaryValue crypto
+unit :: PolicyID c -> AssetName -> Integer -> MaryValue c
 unit pid aid n = MaryValue 0 $ MultiAsset (canonicalInsert pickNew pid (canonicalInsert pickNew aid n empty) empty)
 
 -- Use <+> and <->
 
 insert2 ::
-  CC.Crypto crypto =>
+  CC.Crypto c =>
   (Integer -> Integer -> Integer) ->
-  PolicyID crypto ->
+  PolicyID c ->
   AssetName ->
   Integer ->
-  MaryValue crypto ->
-  MaryValue crypto
+  MaryValue c ->
+  MaryValue c
 insert2 combine pid aid new m1 =
   -- The trick is to correctly not store a zero. Several ways to get a zero
   case (lookup pid aid m1, new == 0) of

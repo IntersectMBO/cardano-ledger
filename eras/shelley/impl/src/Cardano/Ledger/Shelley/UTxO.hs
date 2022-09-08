@@ -184,11 +184,11 @@ txinLookup txin (UTxO utxo') = Map.lookup txin utxo'
 -- | Verify a transaction body witness
 verifyWitVKey ::
   ( Typeable kr,
-    Crypto crypto,
-    DSignable crypto (Hash crypto EraIndependentTxBody)
+    Crypto c,
+    DSignable c (Hash c EraIndependentTxBody)
   ) =>
-  Hash crypto EraIndependentTxBody ->
-  WitVKey kr crypto ->
+  Hash c EraIndependentTxBody ->
+  WitVKey kr c ->
   Bool
 verifyWitVKey txbodyHash (WitVKey vkey sig) = verifySignedDSIGN vkey txbodyHash (coerce sig)
 
@@ -218,11 +218,11 @@ makeWitnessesVKey safe xs = Set.fromList (fmap (makeWitnessVKey safe) xs)
 -- | From a list of key pairs and a set of key hashes required for a multi-sig
 -- scripts, return the set of required keys.
 makeWitnessesFromScriptKeys ::
-  (Crypto crypto, DSignable crypto (Hash crypto EraIndependentTxBody)) =>
-  SafeHash crypto EraIndependentTxBody ->
-  Map (KeyHash kr crypto) (KeyPair kr crypto) ->
-  Set (KeyHash kr crypto) ->
-  Set (WitVKey 'Witness crypto)
+  (Crypto c, DSignable c (Hash c EraIndependentTxBody)) =>
+  SafeHash c EraIndependentTxBody ->
+  Map (KeyHash kr c) (KeyPair kr c) ->
+  Set (KeyHash kr c) ->
+  Set (WitVKey 'Witness c)
 makeWitnessesFromScriptKeys txbodyHash hashKeyMap scriptHashes =
   let witKeys = Map.restrictKeys hashKeyMap scriptHashes
    in makeWitnessesVKey txbodyHash (Map.elems witKeys)
@@ -273,8 +273,8 @@ totalDeposits ::
     HasField "_keyDeposit" pp Coin
   ) =>
   pp ->
-  (KeyHash 'StakePool crypto -> Bool) ->
-  [DCert crypto] ->
+  (KeyHash 'StakePool c -> Bool) ->
+  [DCert c] ->
   Coin
 totalDeposits pp isNewPool certs =
   (numKeys <×> getField @"_keyDeposit" pp)
@@ -284,7 +284,7 @@ totalDeposits pp isNewPool certs =
     pools = Set.fromList $ Maybe.mapMaybe getKeyHashFromRegPool certs
     numNewPools = length $ Set.filter isNewPool pools
 
-getKeyHashFromRegPool :: DCert crypto -> Maybe (KeyHash 'StakePool crypto)
+getKeyHashFromRegPool :: DCert c -> Maybe (KeyHash 'StakePool c)
 getKeyHashFromRegPool (DCertPool (RegPool p)) = Just $ _poolId p
 getKeyHashFromRegPool _ = Nothing
 
@@ -292,18 +292,18 @@ txup :: (EraTx era, ShelleyEraTxBody era) => Tx era -> Maybe (Update era)
 txup tx = strictMaybeToMaybe (tx ^. bodyTxL . updateTxBodyL)
 
 -- | Extract script hash from value address with script.
-getScriptHash :: Addr crypto -> Maybe (ScriptHash crypto)
+getScriptHash :: Addr c -> Maybe (ScriptHash c)
 getScriptHash (Addr _ (ScriptHashObj hs) _) = Just hs
 getScriptHash _ = Nothing
 
-scriptStakeCred :: DCert crypto -> Maybe (ScriptHash crypto)
+scriptStakeCred :: DCert c -> Maybe (ScriptHash c)
 scriptStakeCred (DCertDeleg (DeRegKey (KeyHashObj _))) = Nothing
 scriptStakeCred (DCertDeleg (DeRegKey (ScriptHashObj hs))) = Just hs
 scriptStakeCred (DCertDeleg (Delegate (Delegation (KeyHashObj _) _))) = Nothing
 scriptStakeCred (DCertDeleg (Delegate (Delegation (ScriptHashObj hs) _))) = Just hs
 scriptStakeCred _ = Nothing
 
-scriptCred :: Credential kr crypto -> Maybe (ScriptHash crypto)
+scriptCred :: Credential kr c -> Maybe (ScriptHash c)
 scriptCred (KeyHashObj _) = Nothing
 scriptCred (ScriptHashObj hs) = Just hs
 

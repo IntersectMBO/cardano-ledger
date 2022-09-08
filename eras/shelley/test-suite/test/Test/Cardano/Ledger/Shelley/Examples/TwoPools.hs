@@ -436,7 +436,7 @@ blockEx4 =
 deltaREx4 :: Coin
 deltaREx4 = Coin 3
 
-rewardUpdateEx4 :: forall crypto. RewardUpdate crypto
+rewardUpdateEx4 :: forall c. RewardUpdate c
 rewardUpdateEx4 =
   RewardUpdate
     { deltaT = DeltaCoin 0,

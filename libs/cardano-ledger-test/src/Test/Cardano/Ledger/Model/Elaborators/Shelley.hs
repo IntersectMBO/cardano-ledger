@@ -77,13 +77,13 @@ import Test.Cardano.Ledger.Model.Value
   )
 
 instance
-  ( PraosCrypto crypto,
-    KES.Signable (KES crypto) ~ SignableRepresentation,
-    DSIGN.Signable (DSIGN crypto) ~ SignableRepresentation
+  ( PraosCrypto c,
+    KES.Signable (KES c) ~ SignableRepresentation,
+    DSIGN.Signable (DSIGN c) ~ SignableRepresentation
   ) =>
-  ElaborateEraModel (ShelleyEra crypto)
+  ElaborateEraModel (ShelleyEra c)
   where
-  type EraFeatureSet (ShelleyEra crypto) = 'FeatureSet 'ExpectAdaOnly ('TyScriptFeature 'False 'False)
+  type EraFeatureSet (ShelleyEra c) = 'FeatureSet 'ExpectAdaOnly ('TyScriptFeature 'False 'False)
 
   reifyValueConstraint = ExpectedValueTypeC_Simple
 

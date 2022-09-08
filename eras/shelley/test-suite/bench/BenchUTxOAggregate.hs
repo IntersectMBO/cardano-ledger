@@ -85,11 +85,11 @@ genTestCase numUTxO numAddr = do
   pure (dstate, pstate, UTxO utxo)
 
 makeStatePair ::
-  Map (Credential 'Staking crypto) Coin ->
-  Map (Credential 'Staking crypto) (KeyHash 'StakePool crypto) ->
-  Map Ptr (Credential 'Staking crypto) ->
-  Map (KeyHash 'StakePool crypto) (PoolParams crypto) ->
-  (DState crypto, PState crypto)
+  Map (Credential 'Staking c) Coin ->
+  Map (Credential 'Staking c) (KeyHash 'StakePool c) ->
+  Map Ptr (Credential 'Staking c) ->
+  Map (KeyHash 'StakePool c) (PoolParams c) ->
+  (DState c, PState c)
 makeStatePair rewards' delegs ptrs' poolParams =
   ( DState
       (UM.unify rewards' delegs ptrs')

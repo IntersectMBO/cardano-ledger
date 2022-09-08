@@ -71,36 +71,36 @@ import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
 -- | The delegation of one stake key to another.
-data Delegation crypto = Delegation
-  { _delegator :: !(StakeCredential crypto),
-    _delegatee :: !(KeyHash 'StakePool crypto)
+data Delegation c = Delegation
+  { _delegator :: !(StakeCredential c),
+    _delegatee :: !(KeyHash 'StakePool c)
   }
   deriving (Eq, Generic, Show, NFData)
 
-instance NoThunks (Delegation crypto)
+instance NoThunks (Delegation c)
 
-data DelegCert crypto
+data DelegCert c
   = -- | A stake key registration certificate.
-    RegKey !(StakeCredential crypto)
+    RegKey !(StakeCredential c)
   | -- | A stake key deregistration certificate.
-    DeRegKey !(StakeCredential crypto)
+    DeRegKey !(StakeCredential c)
   | -- | A stake delegation certificate.
-    Delegate !(Delegation crypto)
+    Delegate !(Delegation c)
   deriving (Show, Generic, Eq, NFData)
 
-data PoolCert crypto
+data PoolCert c
   = -- | A stake pool registration certificate.
-    RegPool !(PoolParams crypto)
+    RegPool !(PoolParams c)
   | -- | A stake pool retirement certificate.
-    RetirePool !(KeyHash 'StakePool crypto) !EpochNo
+    RetirePool !(KeyHash 'StakePool c) !EpochNo
   deriving (Show, Generic, Eq, NFData)
 
 -- | Genesis key delegation certificate
-data GenesisDelegCert crypto
+data GenesisDelegCert c
   = GenesisDelegCert
-      !(KeyHash 'Genesis crypto)
-      !(KeyHash 'GenesisDelegate crypto)
-      !(Hash crypto (VerKeyVRF crypto))
+      !(KeyHash 'Genesis c)
+      !(KeyHash 'GenesisDelegate c)
+      !(Hash c (VerKeyVRF c))
   deriving (Show, Generic, Eq, NFData)
 
 data MIRPot = ReservesMIR | TreasuryMIR
@@ -122,16 +122,16 @@ instance FromCBOR MIRPot where
 -- | MIRTarget specifies if funds from either the reserves
 -- or the treasury are to be handed out to a collection of
 -- reward accounts or instead transfered to the opposite pot.
-data MIRTarget crypto
-  = StakeAddressesMIR (Map (Credential 'Staking crypto) DeltaCoin)
+data MIRTarget c
+  = StakeAddressesMIR (Map (Credential 'Staking c) DeltaCoin)
   | SendToOppositePotMIR Coin
   deriving (Show, Generic, Eq, NFData)
 
-deriving instance NoThunks (MIRTarget crypto)
+deriving instance NoThunks (MIRTarget c)
 
 instance
-  CC.Crypto crypto =>
-  FromCBOR (MIRTarget crypto)
+  CC.Crypto c =>
+  FromCBOR (MIRTarget c)
   where
   fromCBOR = do
     peekTokenType >>= \case
@@ -141,29 +141,29 @@ instance
       _ -> SendToOppositePotMIR <$> fromCBOR
 
 instance
-  CC.Crypto crypto =>
-  ToCBOR (MIRTarget crypto)
+  CC.Crypto c =>
+  ToCBOR (MIRTarget c)
   where
   toCBOR (StakeAddressesMIR m) = mapToCBOR m
   toCBOR (SendToOppositePotMIR c) = toCBOR c
 
 -- | Move instantaneous rewards certificate
-data MIRCert crypto = MIRCert
+data MIRCert c = MIRCert
   { mirPot :: MIRPot,
-    mirRewards :: MIRTarget crypto
+    mirRewards :: MIRTarget c
   }
   deriving (Show, Generic, Eq, NFData)
 
 instance
-  CC.Crypto crypto =>
-  FromCBOR (MIRCert crypto)
+  CC.Crypto c =>
+  FromCBOR (MIRCert c)
   where
   fromCBOR =
     decodeRecordNamed "MIRCert" (const 2) (MIRCert <$> fromCBOR <*> fromCBOR)
 
 instance
-  CC.Crypto crypto =>
-  ToCBOR (MIRCert crypto)
+  CC.Crypto c =>
+  ToCBOR (MIRCert c)
   where
   toCBOR (MIRCert pot targets) =
     encodeListLen 2
@@ -171,28 +171,28 @@ instance
       <> toCBOR targets
 
 -- | A heavyweight certificate.
-data DCert crypto
-  = DCertDeleg !(DelegCert crypto)
-  | DCertPool !(PoolCert crypto)
-  | DCertGenesis !(GenesisDelegCert crypto)
-  | DCertMir !(MIRCert crypto)
+data DCert c
+  = DCertDeleg !(DelegCert c)
+  | DCertPool !(PoolCert c)
+  | DCertGenesis !(GenesisDelegCert c)
+  | DCertMir !(MIRCert c)
   deriving (Show, Generic, Eq, NFData)
 
-instance NoThunks (DelegCert crypto)
+instance NoThunks (DelegCert c)
 
-instance NoThunks (PoolCert crypto)
+instance NoThunks (PoolCert c)
 
-instance NoThunks (GenesisDelegCert crypto)
+instance NoThunks (GenesisDelegCert c)
 
-instance NoThunks (MIRCert crypto)
+instance NoThunks (MIRCert c)
 
-instance NoThunks (DCert crypto)
+instance NoThunks (DCert c)
 
 -- CBOR
 
 instance
-  CC.Crypto crypto =>
-  ToCBOR (DCert crypto)
+  CC.Crypto c =>
+  ToCBOR (DCert c)
   where
   toCBOR = \case
     -- DCertDeleg
@@ -233,8 +233,8 @@ instance
         <> toCBOR mir
 
 instance
-  CC.Crypto crypto =>
-  FromCBOR (DCert crypto)
+  CC.Crypto c =>
+  FromCBOR (DCert c)
   where
   fromCBOR = decodeRecordSum "DCert crypto" $
     \case
@@ -266,64 +266,64 @@ instance
       k -> invalidKey k
 
 -- | Determine the certificate author
-delegCWitness :: DelegCert crypto -> Credential 'Staking crypto
+delegCWitness :: DelegCert c -> Credential 'Staking c
 delegCWitness (RegKey _) = error "no witness in key registration certificate"
 delegCWitness (DeRegKey hk) = hk
 delegCWitness (Delegate delegation) = _delegator delegation
 
-poolCWitness :: PoolCert crypto -> Credential 'StakePool crypto
+poolCWitness :: PoolCert c -> Credential 'StakePool c
 poolCWitness (RegPool pool) = KeyHashObj $ _poolId pool
 poolCWitness (RetirePool k _) = KeyHashObj k
 
-genesisCWitness :: GenesisDelegCert crypto -> KeyHash 'Genesis crypto
+genesisCWitness :: GenesisDelegCert c -> KeyHash 'Genesis c
 genesisCWitness (GenesisDelegCert gk _ _) = gk
 
 -- | Check for 'RegKey' constructor
-isRegKey :: DCert crypto -> Bool
+isRegKey :: DCert c -> Bool
 isRegKey (DCertDeleg (RegKey _)) = True
 isRegKey _ = False
 
 -- | Check for 'DeRegKey' constructor
-isDeRegKey :: DCert crypto -> Bool
+isDeRegKey :: DCert c -> Bool
 isDeRegKey (DCertDeleg (DeRegKey _)) = True
 isDeRegKey _ = False
 
 -- | Check for 'Delegation' constructor
-isDelegation :: DCert crypto -> Bool
+isDelegation :: DCert c -> Bool
 isDelegation (DCertDeleg (Delegate _)) = True
 isDelegation _ = False
 
 -- | Check for 'GenesisDelegate' constructor
-isGenesisDelegation :: DCert crypto -> Bool
+isGenesisDelegation :: DCert c -> Bool
 isGenesisDelegation (DCertGenesis GenesisDelegCert {}) = True
 isGenesisDelegation _ = False
 
 -- | Check for 'RegPool' constructor
-isRegPool :: DCert crypto -> Bool
+isRegPool :: DCert c -> Bool
 isRegPool (DCertPool (RegPool _)) = True
 isRegPool _ = False
 
 -- | Check for 'RetirePool' constructor
-isRetirePool :: DCert crypto -> Bool
+isRetirePool :: DCert c -> Bool
 isRetirePool (DCertPool (RetirePool _ _)) = True
 isRetirePool _ = False
 
-isInstantaneousRewards :: DCert crypto -> Bool
+isInstantaneousRewards :: DCert c -> Bool
 isInstantaneousRewards (DCertMir _) = True
 isInstantaneousRewards _ = False
 
-isReservesMIRCert :: DCert crypto -> Bool
+isReservesMIRCert :: DCert c -> Bool
 isReservesMIRCert (DCertMir (MIRCert ReservesMIR _)) = True
 isReservesMIRCert _ = False
 
-isTreasuryMIRCert :: DCert crypto -> Bool
+isTreasuryMIRCert :: DCert c -> Bool
 isTreasuryMIRCert (DCertMir (MIRCert TreasuryMIR _)) = True
 isTreasuryMIRCert _ = False
 
 -- | Returns True for delegation certificates that require at least
 -- one witness, and False otherwise. It is mainly used to ensure
 -- that calling a variant of 'cwitness' is safe.
-requiresVKeyWitness :: DCert crypto -> Bool
+requiresVKeyWitness :: DCert c -> Bool
 requiresVKeyWitness (DCertMir (MIRCert _ _)) = False
 requiresVKeyWitness (DCertDeleg (RegKey _)) = False
 requiresVKeyWitness _ = True

@@ -105,8 +105,8 @@ import Test.Cardano.Ledger.Shelley.Utils
 -- hashing algorithm.
 --
 _assertScriptHashSizeMatchesAddrHashSize ::
-  ScriptHash crypto ->
-  KeyHash r crypto
+  ScriptHash c ->
+  KeyHash r c
 _assertScriptHashSizeMatchesAddrHashSize (ScriptHash h) =
   KeyHash (Hash.castHash h)
 

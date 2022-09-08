@@ -1015,9 +1015,9 @@ tellDCertScriptWits proxy mdc = do
 
 -- TODO: this is a bit overconstrained, we probably want a more constraints
 -- based approach using ValueFromList
-type family ElaborateValueType (valF :: TyValueExpected) crypto :: Type where
+type family ElaborateValueType (valF :: TyValueExpected) c :: Type where
   ElaborateValueType 'ExpectAdaOnly _ = Coin
-  ElaborateValueType 'ExpectAnyOutput crypto = MaryValue crypto
+  ElaborateValueType 'ExpectAnyOutput c = MaryValue c
 
 eraFeatureSet ::
   forall era proxy.

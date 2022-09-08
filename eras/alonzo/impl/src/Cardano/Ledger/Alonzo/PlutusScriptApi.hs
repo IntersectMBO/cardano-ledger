@@ -76,7 +76,7 @@ import NoThunks.Class (NoThunks)
 -- ===============================================================
 
 -- | Only the Spending ScriptPurpose contains TxIn
-getSpendingTxIn :: ScriptPurpose crypto -> Maybe (TxIn crypto)
+getSpendingTxIn :: ScriptPurpose c -> Maybe (TxIn c)
 getSpendingTxIn = \case
   Spending txin -> Just txin
   Minting _policyid -> Nothing
@@ -100,20 +100,20 @@ getDatumAlonzo tx (UTxO m) sp = do
 -- ========================================================================
 
 -- | When collecting inputs for twophase scripts, 3 things can go wrong.
-data CollectError crypto
-  = NoRedeemer !(ScriptPurpose crypto)
-  | NoWitness !(ScriptHash crypto)
+data CollectError c
+  = NoRedeemer !(ScriptPurpose c)
+  | NoWitness !(ScriptHash c)
   | NoCostModel !Language
-  | BadTranslation !(TranslationError crypto)
+  | BadTranslation !(TranslationError c)
   deriving (Eq, Show, Generic, NoThunks)
 
-instance (CC.Crypto crypto) => ToCBOR (CollectError crypto) where
+instance (CC.Crypto c) => ToCBOR (CollectError c) where
   toCBOR (NoRedeemer x) = encode $ Sum NoRedeemer 0 !> To x
   toCBOR (NoWitness x) = encode $ Sum NoWitness 1 !> To x
   toCBOR (NoCostModel x) = encode $ Sum NoCostModel 2 !> To x
   toCBOR (BadTranslation x) = encode $ Sum BadTranslation 3 !> To x
 
-instance (CC.Crypto crypto) => FromCBOR (CollectError crypto) where
+instance (CC.Crypto c) => FromCBOR (CollectError c) where
   fromCBOR = decode (Summands "CollectError" dec)
     where
       dec 0 = SumD NoRedeemer <! From
@@ -251,9 +251,9 @@ scriptsNeeded utxo tx = scriptsNeededFromBody utxo (tx ^. bodyTxL)
 -- We only find certificate witnesses in Delegating and Deregistration DCerts
 -- that have ScriptHashObj credentials.
 addOnlyCwitness ::
-  [(ScriptPurpose crypto, ScriptHash crypto)] ->
-  DCert crypto ->
-  [(ScriptPurpose crypto, ScriptHash crypto)]
+  [(ScriptPurpose c, ScriptHash c)] ->
+  DCert c ->
+  [(ScriptPurpose c, ScriptHash c)]
 addOnlyCwitness !ans (DCertDeleg c@(DeRegKey (ScriptHashObj hk))) =
   (Certifying $ DCertDeleg c, hk) : ans
 addOnlyCwitness !ans (DCertDeleg c@(Delegate (Delegation (ScriptHashObj hk) _dpool))) =

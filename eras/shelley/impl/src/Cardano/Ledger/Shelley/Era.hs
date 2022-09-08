@@ -30,7 +30,7 @@ import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core (Era (..), EraRule, TranslationContext, Value)
 import Cardano.Ledger.Crypto as CC (Crypto)
 
-data ShelleyEra crypto
+data ShelleyEra c
 
 instance CC.Crypto c => Era (ShelleyEra c) where
   type EraCrypto (ShelleyEra c) = c

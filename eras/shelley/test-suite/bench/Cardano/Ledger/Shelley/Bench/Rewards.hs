@@ -165,7 +165,7 @@ genChainInEpoch epoch = do
         go !acc [] = acc
         go !acc xs' = let (a, b) = splitAt n xs' in go (a : acc) b
 
-    addrToKeyHash :: Addr crypto -> Maybe (KeyHash 'Staking crypto)
+    addrToKeyHash :: Addr c -> Maybe (KeyHash 'Staking c)
     addrToKeyHash (Addr _ _ (StakeRefBase (KeyHashObj kh))) = Just kh
     addrToKeyHash _ = Nothing
 

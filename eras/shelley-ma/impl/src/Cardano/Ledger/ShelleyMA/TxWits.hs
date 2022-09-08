@@ -21,11 +21,11 @@ import Cardano.Ledger.Shelley.TxWits
 import Cardano.Ledger.ShelleyMA.AuxiliaryData ()
 import Cardano.Ledger.ShelleyMA.Era (MAClass, MaryOrAllegra (..), ShelleyMAEra)
 
-instance MAClass ma crypto => EraTxWits (ShelleyMAEra ma crypto) where
+instance MAClass ma c => EraTxWits (ShelleyMAEra ma c) where
   {-# SPECIALIZE instance EraTxWits (ShelleyMAEra 'Mary StandardCrypto) #-}
   {-# SPECIALIZE instance EraTxWits (ShelleyMAEra 'Allegra StandardCrypto) #-}
 
-  type TxWits (ShelleyMAEra ma crypto) = ShelleyTxWits (ShelleyMAEra ma crypto)
+  type TxWits (ShelleyMAEra ma c) = ShelleyTxWits (ShelleyMAEra ma c)
 
   mkBasicTxWits = mempty
 

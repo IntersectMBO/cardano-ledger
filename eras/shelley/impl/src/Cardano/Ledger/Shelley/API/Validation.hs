@@ -163,30 +163,30 @@ applyBlock =
         asoEvents = EPDiscard
       }
 
-type ShelleyEraCrypto crypto =
-  ( CC.Crypto crypto,
-    DSignable crypto (Hash crypto EraIndependentTxBody)
+type ShelleyEraCrypto c =
+  ( CC.Crypto c,
+    DSignable c (Hash c EraIndependentTxBody)
   )
 
 {-# DEPRECATED ShelleyEraCrypto "Constraint synonyms are being removed" #-}
 
 instance
-  ( CC.Crypto crypto,
-    DSignable crypto (Hash crypto EraIndependentTxBody)
+  ( CC.Crypto c,
+    DSignable c (Hash c EraIndependentTxBody)
   ) =>
-  ApplyBlock (ShelleyEra crypto)
+  ApplyBlock (ShelleyEra c)
 
 {-------------------------------------------------------------------------------
   CHAIN Transition checks
 -------------------------------------------------------------------------------}
 
 chainChecks ::
-  forall crypto m.
+  forall c m.
   MonadError STS.ChainPredicateFailure m =>
   -- | Max major protocol version
   Natural ->
   STS.ChainChecksPParams ->
-  BHeaderView crypto ->
+  BHeaderView c ->
   m ()
 chainChecks = STS.chainChecks
 

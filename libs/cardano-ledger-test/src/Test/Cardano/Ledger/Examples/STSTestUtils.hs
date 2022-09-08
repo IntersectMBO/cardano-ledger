@@ -290,7 +290,7 @@ instance AlonzoBased (ConwayEra c) (BabbageUtxowPredFailure (ConwayEra c)) where
 -- ========================= Shared helper functions  ===================
 -- ======================================================================
 
-mkGenesisTxIn :: (CH.HashAlgorithm (CC.HASH crypto), HasCallStack) => Integer -> TxIn crypto
+mkGenesisTxIn :: (CH.HashAlgorithm (CC.HASH c), HasCallStack) => Integer -> TxIn c
 mkGenesisTxIn = TxIn genesisId . mkTxIxPartial
 
 mkTxDats :: Era era => Data era -> TxDats era

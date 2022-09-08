@@ -34,29 +34,29 @@ import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.QuickCheck
 import Test.QuickCheck.Gen (chooseWord64)
 
-propValidateNewDecompact :: forall crypto. CC.Crypto crypto => Addr crypto -> Property
+propValidateNewDecompact :: forall c. CC.Crypto c => Addr c -> Property
 propValidateNewDecompact addr =
   let bs = serialiseAddr addr
       compact = SBS.toShort bs
-      decompactedOld = deserialiseAddr @crypto bs
-      decompactedNew = CA.decodeAddrShort @crypto compact
+      decompactedOld = deserialiseAddr @c bs
+      decompactedNew = CA.decodeAddrShort @c compact
    in isJust decompactedOld .&&. decompactedOld === decompactedNew
 
-propCompactAddrRoundTrip :: CC.Crypto crypto => Addr crypto -> Bool
+propCompactAddrRoundTrip :: CC.Crypto c => Addr c -> Bool
 propCompactAddrRoundTrip addr =
   let compact = CA.compactAddr addr
       decompact = CA.decompactAddr compact
    in addr == decompact
 
-propCompactSerializationAgree :: Addr crypto -> Bool
+propCompactSerializationAgree :: Addr c -> Bool
 propCompactSerializationAgree addr =
   let (CA.UnsafeCompactAddr sbs) = CA.compactAddr addr
    in sbs == SBS.toShort (serialiseAddr addr)
 
-propDecompactErrors :: forall crypto. CC.Crypto crypto => Addr crypto -> Gen Property
+propDecompactErrors :: forall c. CC.Crypto c => Addr c -> Gen Property
 propDecompactErrors addr = do
   let (CA.UnsafeCompactAddr sbs) = CA.compactAddr addr
-      hashLen = fromIntegral $ Hash.sizeHash (Proxy :: Proxy (CC.ADDRHASH crypto))
+      hashLen = fromIntegral $ Hash.sizeHash (Proxy :: Proxy (CC.ADDRHASH c))
       bs = SBS.fromShort sbs
       flipHeaderBit b =
         case BS.uncons bs of
@@ -115,9 +115,9 @@ propDecompactErrors addr = do
   pure $
     counterexample
       ("Mingled address with " ++ mingler ++ " was parsed: " ++ show badAddr)
-      $ isLeft $ CA.decodeAddrEither @crypto badAddr
+      $ isLeft $ CA.decodeAddrEither @c badAddr
 
-propDeserializeRewardAcntErrors :: forall crypto. CC.Crypto crypto => RewardAcnt crypto -> Gen Property
+propDeserializeRewardAcntErrors :: forall c. CC.Crypto c => RewardAcnt c -> Gen Property
 propDeserializeRewardAcntErrors acnt = do
   let bs = serialize' acnt
       flipHeaderBit b =
@@ -142,4 +142,4 @@ propDeserializeRewardAcntErrors acnt = do
   pure $
     counterexample
       ("Mingled address with " ++ mingler ++ " was parsed: " ++ show badAddr)
-      $ isNothing $ CA.decodeRewardAcnt @crypto badAddr
+      $ isNothing $ CA.decodeRewardAcnt @c badAddr

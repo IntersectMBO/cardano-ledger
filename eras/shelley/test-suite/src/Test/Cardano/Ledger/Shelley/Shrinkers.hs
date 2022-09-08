@@ -89,7 +89,7 @@ shrinkTxBody (ShelleyTxBody is os@((:<|) (ShelleyTxOut a vs) _) cs ws tf tl tu m
 outputBalance :: ShelleyTest era => StrictSeq (ShelleyTxOut era) -> Core.Value era
 outputBalance = foldl' (\v (ShelleyTxOut _ c) -> v <+> c) mempty
 
-shrinkTxIn :: TxIn crypto -> [TxIn crypto]
+shrinkTxIn :: TxIn c -> [TxIn c]
 shrinkTxIn = const []
 
 shrinkTxOut :: ShelleyTest era => ShelleyTxOut era -> [ShelleyTxOut era]
@@ -102,13 +102,13 @@ shrinkTxOut (ShelleyTxOut addr vl) =
 shrinkCoin :: Coin -> [Coin]
 shrinkCoin (Coin x) = Coin <$> shrinkIntegral x
 
-shrinkDCert :: DCert crypto -> [DCert crypto]
+shrinkDCert :: DCert c -> [DCert c]
 shrinkDCert = const []
 
-shrinkWdrl :: Wdrl crypto -> [Wdrl crypto]
+shrinkWdrl :: Wdrl c -> [Wdrl c]
 shrinkWdrl (Wdrl m) = Wdrl <$> shrinkMap shrinkRewardAcnt shrinkCoin m
 
-shrinkRewardAcnt :: RewardAcnt crypto -> [RewardAcnt crypto]
+shrinkRewardAcnt :: RewardAcnt c -> [RewardAcnt c]
 shrinkRewardAcnt = const []
 
 shrinkSlotNo :: SlotNo -> [SlotNo]
@@ -117,13 +117,13 @@ shrinkSlotNo (SlotNo x) = SlotNo <$> shrinkIntegral x
 shrinkUpdate :: Update era -> [Update era]
 shrinkUpdate = const []
 
-shrinkWitVKey :: WitVKey kr crypto -> [WitVKey kr crypto]
+shrinkWitVKey :: WitVKey kr c -> [WitVKey kr c]
 shrinkWitVKey = const []
 
-shrinkScriptHash :: ScriptHash crypto -> [ScriptHash crypto]
+shrinkScriptHash :: ScriptHash c -> [ScriptHash c]
 shrinkScriptHash = const []
 
-shrinkMultiSig :: MultiSig crypto -> [MultiSig crypto]
+shrinkMultiSig :: MultiSig c -> [MultiSig c]
 shrinkMultiSig = const []
 
 shrinkSet :: Ord a => (a -> [a]) -> Set a -> [Set a]

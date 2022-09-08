@@ -259,7 +259,7 @@ instance
 instance
   ( Era era,
     Script era ~ AlonzoScript era,
-    crypto ~ EraCrypto era,
+    c ~ EraCrypto era,
     NFData (AuxiliaryData era),
     NFData (Script era),
     NFData (Core.TxBody era),
@@ -267,8 +267,8 @@ instance
     NFData (PParamsUpdate era),
     NFData (TxDats era),
     NFData (Redeemers era),
-    NFData (VerKeyDSIGN (CC.DSIGN crypto)),
-    NFData (SigDSIGN (CC.DSIGN crypto))
+    NFData (VerKeyDSIGN (CC.DSIGN c)),
+    NFData (SigDSIGN (CC.DSIGN c))
   ) =>
   NFData (AlonzoTx era)
 
@@ -390,11 +390,11 @@ totExUnits tx =
 -- Figure 6:Indexing script and data objects
 -- ===============================================================
 
-data ScriptPurpose crypto
-  = Minting !(PolicyID crypto)
-  | Spending !(TxIn crypto)
-  | Rewarding !(RewardAcnt crypto) -- Not sure if this is the right type.
-  | Certifying !(DCert crypto)
+data ScriptPurpose c
+  = Minting !(PolicyID c)
+  | Spending !(TxIn c)
+  | Rewarding !(RewardAcnt c) -- Not sure if this is the right type.
+  | Certifying !(DCert c)
   deriving (Eq, Show, Generic, NoThunks, NFData)
 
 instance (Typeable c, CC.Crypto c) => ToCBOR (ScriptPurpose c) where
@@ -470,7 +470,7 @@ rdptrInv txBody (RdmrPtr Cert idx) =
   Certifying <$> fromIndex idx (txBody ^. certsTxBodyL)
 
 {-# DEPRECATED getMapFromValue "No longer used" #-}
-getMapFromValue :: MaryValue crypto -> Map.Map (PolicyID crypto) (Map.Map AssetName Integer)
+getMapFromValue :: MaryValue c -> Map.Map (PolicyID c) (Map.Map AssetName Integer)
 getMapFromValue (MaryValue _ (MultiAsset m)) = m
 
 -- | Find the Data and ExUnits assigned to a script.

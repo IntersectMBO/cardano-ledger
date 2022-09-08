@@ -94,7 +94,7 @@ mkApparentPerformance d_ sigma blocksN blocksTotal
 -- | Calculate pool leader reward
 leaderRew ::
   Coin ->
-  PoolParams crypto ->
+  PoolParams c ->
   StakeShare ->
   StakeShare ->
   Coin
@@ -111,7 +111,7 @@ leaderRew f pool (StakeShare s) (StakeShare sigma)
 -- | Calculate pool member reward
 memberRew ::
   Coin ->
-  PoolParams crypto ->
+  PoolParams c ->
   StakeShare ->
   StakeShare ->
   Coin
@@ -142,9 +142,9 @@ instance FromCBOR RewardType where
       1 -> pure LeaderReward
       n -> invalidKey n
 
-data Reward crypto = Reward
+data Reward c = Reward
   { rewardType :: RewardType,
-    rewardPool :: KeyHash 'StakePool crypto,
+    rewardPool :: KeyHash 'StakePool c,
     rewardAmount :: Coin
   }
   deriving (Eq, Show, Generic)
@@ -153,28 +153,28 @@ data Reward crypto = Reward
 --  with the Allegra reward aggregation, as given by the
 --  function 'aggregateRewards' so that 'Set.findMax' returns
 --  the expected value.
-instance Ord (Reward crypto) where
+instance Ord (Reward c) where
   compare (Reward MemberReward _ _) (Reward LeaderReward _ _) = GT
   compare (Reward LeaderReward _ _) (Reward MemberReward _ _) = LT
   compare (Reward _ pool1 _) (Reward _ pool2 _) = compare pool1 pool2
 
-instance NoThunks (Reward crypto)
+instance NoThunks (Reward c)
 
-instance NFData (Reward crypto)
+instance NFData (Reward c)
 
-instance CC.Crypto crypto => ToCBOR (Reward crypto) where
+instance CC.Crypto c => ToCBOR (Reward c) where
   toCBOR (Reward rt pool c) =
     encode $ Rec Reward !> To rt !> To pool !> To c
 
-instance CC.Crypto crypto => FromCBOR (Reward crypto) where
+instance CC.Crypto c => FromCBOR (Reward c) where
   fromCBOR =
     decode $ RecD Reward <! From <! From <! From
 
 sumRewards ::
-  forall crypto pp.
+  forall c pp.
   (HasField "_protocolVersion" pp ProtVer) =>
   pp ->
-  Map (Credential 'Staking crypto) (Set (Reward crypto)) ->
+  Map (Credential 'Staking c) (Set (Reward c)) ->
   Coin
 sumRewards protocolVersion rs = fold $ aggregateRewards protocolVersion rs
 
@@ -182,12 +182,12 @@ sumRewards protocolVersion rs = fold $ aggregateRewards protocolVersion rs
 -- function exists since in Shelley, a stake credential earning rewards from
 -- multiple sources would only receive one reward.
 filterRewards ::
-  forall crypto pp.
+  forall c pp.
   (HasField "_protocolVersion" pp ProtVer) =>
   pp ->
-  Map (Credential 'Staking crypto) (Set (Reward crypto)) ->
-  ( Map (Credential 'Staking crypto) (Set (Reward crypto)),
-    Map (Credential 'Staking crypto) (Set (Reward crypto))
+  Map (Credential 'Staking c) (Set (Reward c)) ->
+  ( Map (Credential 'Staking c) (Set (Reward c)),
+    Map (Credential 'Staking c) (Set (Reward c))
   )
 filterRewards pp rewards =
   if HardForks.aggregatedRewards pp
@@ -197,28 +197,28 @@ filterRewards pp rewards =
        in (Map.map (Set.singleton . fst) mp, Map.filter (not . Set.null) $ Map.map snd mp)
 
 aggregateRewards ::
-  forall crypto pp.
+  forall c pp.
   (HasField "_protocolVersion" pp ProtVer) =>
   pp ->
-  Map (Credential 'Staking crypto) (Set (Reward crypto)) ->
-  Map (Credential 'Staking crypto) Coin
+  Map (Credential 'Staking c) (Set (Reward c)) ->
+  Map (Credential 'Staking c) Coin
 aggregateRewards pp rewards =
   Map.map (foldMap' rewardAmount) $ fst $ filterRewards pp rewards
 
-data LeaderOnlyReward crypto = LeaderOnlyReward
-  { lRewardPool :: !(KeyHash 'StakePool crypto),
+data LeaderOnlyReward c = LeaderOnlyReward
+  { lRewardPool :: !(KeyHash 'StakePool c),
     lRewardAmount :: !Coin
   }
   deriving (Eq, Ord, Show, Generic)
 
-instance NoThunks (LeaderOnlyReward crypto)
+instance NoThunks (LeaderOnlyReward c)
 
-instance NFData (LeaderOnlyReward crypto)
+instance NFData (LeaderOnlyReward c)
 
-instance CC.Crypto crypto => ToCBOR (LeaderOnlyReward crypto) where
+instance CC.Crypto c => ToCBOR (LeaderOnlyReward c) where
   toCBOR (LeaderOnlyReward pool c) = encode $ Rec LeaderOnlyReward !> To pool !> To c
 
-instance CC.Crypto crypto => FromCBOR (LeaderOnlyReward crypto) where
+instance CC.Crypto c => FromCBOR (LeaderOnlyReward c) where
   fromCBOR = decode $ RecD LeaderOnlyReward <! From <! From
 
 leaderRewardToGeneral :: LeaderOnlyReward c -> Reward c
@@ -226,25 +226,25 @@ leaderRewardToGeneral (LeaderOnlyReward poolId r) = Reward LeaderReward poolId r
 
 -- | Stake Pool specific information needed to compute the rewards
 -- for its members.
-data PoolRewardInfo crypto = PoolRewardInfo
+data PoolRewardInfo c = PoolRewardInfo
   { -- | The stake pool's stake divided by the total stake
     poolRelativeStake :: !StakeShare,
     -- | The maximum rewards available for the entire pool
     poolPot :: !Coin,
     -- | The stake pool parameters
-    poolPs :: !(PoolParams crypto),
+    poolPs :: !(PoolParams c),
     -- | The number of blocks the stake pool produced
     poolBlocks :: !Natural,
     -- | The leader reward
-    poolLeaderReward :: !(LeaderOnlyReward crypto)
+    poolLeaderReward :: !(LeaderOnlyReward c)
   }
   deriving (Show, Eq, Ord, Generic)
 
-instance NoThunks (PoolRewardInfo crypto)
+instance NoThunks (PoolRewardInfo c)
 
-instance NFData (PoolRewardInfo crypto)
+instance NFData (PoolRewardInfo c)
 
-instance CC.Crypto crypto => ToCBOR (PoolRewardInfo crypto) where
+instance CC.Crypto c => ToCBOR (PoolRewardInfo c) where
   toCBOR
     (PoolRewardInfo a b c d e) =
       encode $
@@ -255,7 +255,7 @@ instance CC.Crypto crypto => ToCBOR (PoolRewardInfo crypto) where
           !> To d
           !> To e
 
-instance CC.Crypto crypto => FromCBOR (PoolRewardInfo crypto) where
+instance CC.Crypto c => FromCBOR (PoolRewardInfo c) where
   fromCBOR =
     decode
       ( RecD PoolRewardInfo
@@ -269,8 +269,8 @@ instance CC.Crypto crypto => FromCBOR (PoolRewardInfo crypto) where
 notPoolOwner ::
   HasField "_protocolVersion" pp ProtVer =>
   pp ->
-  PoolParams crypto ->
-  Credential 'Staking crypto ->
+  PoolParams c ->
+  Credential 'Staking c ->
   Bool
 notPoolOwner pp pps = \case
   KeyHashObj hk -> hk `Set.notMember` _poolOwners pps

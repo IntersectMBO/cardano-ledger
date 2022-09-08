@@ -162,7 +162,7 @@ type ShelleyTest era =
 class Split v where
   vsplit :: v -> Integer -> ([v], Coin)
 
-type GenesisKeyPair crypto = KeyPair 'Genesis crypto
+type GenesisKeyPair c = KeyPair 'Genesis c
 
 data RawSeed = RawSeed !Word64 !Word64 !Word64 !Word64 !Word64
   deriving (Eq, Show)
@@ -188,33 +188,33 @@ mkSeedFromWords stuff =
 
 -- | For testing purposes, generate a deterministic genesis key pair given a seed.
 mkGenKey ::
-  DSIGNAlgorithm (DSIGN crypto) =>
+  DSIGNAlgorithm (DSIGN c) =>
   RawSeed ->
-  (SignKeyDSIGN (DSIGN crypto), VKey kd crypto)
+  (SignKeyDSIGN (DSIGN c), VKey kd c)
 mkGenKey seed =
   let sk = genKeyDSIGN $ mkSeedFromWords seed
    in (sk, VKey $ deriveVerKeyDSIGN sk)
 
 -- | For testing purposes, generate a deterministic key pair given a seed.
 mkKeyPair ::
-  forall crypto kd.
-  DSIGNAlgorithm (DSIGN crypto) =>
+  forall c kd.
+  DSIGNAlgorithm (DSIGN c) =>
   RawSeed ->
-  (SignKeyDSIGN (DSIGN crypto), VKey kd crypto)
+  (SignKeyDSIGN (DSIGN c), VKey kd c)
 mkKeyPair seed =
   let sk = genKeyDSIGN $ mkSeedFromWords seed
    in (sk, VKey $ deriveVerKeyDSIGN sk)
 
 -- | For testing purposes, generate a deterministic key pair given a seed.
 mkKeyPair' ::
-  DSIGNAlgorithm (DSIGN crypto) =>
+  DSIGNAlgorithm (DSIGN c) =>
   RawSeed ->
-  KeyPair kd crypto
+  KeyPair kd c
 mkKeyPair' seed = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair seed
 
-instance DSIGNAlgorithm (DSIGN crypto) => Arbitrary (KeyPair kd crypto) where
+instance DSIGNAlgorithm (DSIGN c) => Arbitrary (KeyPair kd c) where
   arbitrary = mkKeyPair' <$> arbitrary
 
 -- | For testing purposes, generate a deterministic VRF key pair given a seed.
@@ -249,9 +249,9 @@ mkKESKeyPair seed =
    in (sk, deriveVerKeyKES sk)
 
 mkAddr ::
-  CC.Crypto crypto =>
-  (KeyPair 'Payment crypto, KeyPair 'Staking crypto) ->
-  Addr crypto
+  CC.Crypto c =>
+  (KeyPair 'Payment c, KeyPair 'Staking c) ->
+  Addr c
 mkAddr (payKey, stakeKey) =
   Addr
     Testnet

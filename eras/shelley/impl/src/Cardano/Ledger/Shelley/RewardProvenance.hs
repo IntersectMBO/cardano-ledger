@@ -48,7 +48,7 @@ import Numeric.Natural (Natural)
 -- ==========================================================
 
 -- | Provenance for an individual stake pool's reward calculation.
-data RewardProvenancePool crypto = RewardProvenancePool
+data RewardProvenancePool c = RewardProvenancePool
   { -- | The number of blocks the pool produced.
     poolBlocksP :: !Natural,
     -- | The stake pool's stake share (portion of the total stake).
@@ -60,7 +60,7 @@ data RewardProvenancePool crypto = RewardProvenancePool
     -- the stake pool will not earn any rewards for the given epoch.
     ownerStakeP :: !Coin,
     -- | The stake pool's registered parameters.
-    poolParamsP :: !(PoolParams crypto),
+    poolParamsP :: !(PoolParams c),
     -- | The stake pool's pledge.
     pledgeRatioP :: !Rational,
     -- | The maximum number of Lovelace this stake pool can earn.
@@ -76,15 +76,15 @@ data RewardProvenancePool crypto = RewardProvenancePool
   }
   deriving (Eq, Generic)
 
-instance NoThunks (RewardProvenancePool crypto)
+instance NoThunks (RewardProvenancePool c)
 
-instance NFData (RewardProvenancePool crypto)
+instance NFData (RewardProvenancePool c)
 
-deriving instance (CC.Crypto crypto) => FromJSON (RewardProvenancePool crypto)
+deriving instance (CC.Crypto c) => FromJSON (RewardProvenancePool c)
 
-deriving instance (CC.Crypto crypto) => ToJSON (RewardProvenancePool crypto)
+deriving instance (CC.Crypto c) => ToJSON (RewardProvenancePool c)
 
-instance CC.Crypto crypto => Default (RewardProvenancePool crypto) where
+instance CC.Crypto c => Default (RewardProvenancePool c) where
   def = RewardProvenancePool 0 0 0 (Coin 0) def 0 (Coin 0) 0 (Coin 0) (Coin 0)
 
 -- | The desirability score of a stake pool, as described
@@ -113,12 +113,12 @@ instance NFData Desirability
 --  The variable names here align with those in the specification.
 --  See also Section 5 of the
 --  <https://hydra.iohk.io/job/Cardano/cardano-ledger/delegationDesignSpec/latest/download-by-type/doc-pdf/delegation_design_spec Design Specification>.
-data RewardProvenance crypto = RewardProvenance
+data RewardProvenance c = RewardProvenance
   { -- | The number of slots per epoch.
     spe :: !Word64,
     -- | A map from pool ID (the key hash of the stake pool operator's
     -- verification key) to the number of blocks made in the given epoch.
-    blocks :: !(BlocksMade crypto),
+    blocks :: !(BlocksMade c),
     -- | The maximum Lovelace supply. On mainnet, this value is equal to
     -- 45 * 10^15 (45 billion ADA).
     maxLL :: !Coin,
@@ -151,13 +151,13 @@ data RewardProvenance crypto = RewardProvenance
     -- | Individual stake pool provenance.
     pools ::
       !( Map
-           (KeyHash 'StakePool crypto)
-           (RewardProvenancePool crypto)
+           (KeyHash 'StakePool c)
+           (RewardProvenancePool c)
        ),
     -- | A map from pool ID to the desirability score.
     -- See the <https://hydra.iohk.io/job/Cardano/cardano-ledger/specs.pool-ranking/latest/download-by-type/doc-pdf/pool-ranking stake pool ranking document>.
     desirabilities ::
-      !(Map (KeyHash 'StakePool crypto) Desirability)
+      !(Map (KeyHash 'StakePool c) Desirability)
   }
   deriving (Eq, Generic)
 
@@ -165,15 +165,15 @@ deriving instance FromJSON Desirability
 
 deriving instance ToJSON Desirability
 
-deriving instance (CC.Crypto crypto) => FromJSON (RewardProvenance crypto)
+deriving instance (CC.Crypto c) => FromJSON (RewardProvenance c)
 
-deriving instance (CC.Crypto crypto) => ToJSON (RewardProvenance crypto)
+deriving instance (CC.Crypto c) => ToJSON (RewardProvenance c)
 
-instance NoThunks (RewardProvenance crypto)
+instance NoThunks (RewardProvenance c)
 
-instance NFData (RewardProvenance crypto)
+instance NFData (RewardProvenance c)
 
-instance Default (RewardProvenance crypto) where
+instance Default (RewardProvenance c) where
   def =
     RewardProvenance
       0
@@ -193,13 +193,13 @@ instance Default (RewardProvenance crypto) where
       def
       def
 
-instance CC.Crypto crypto => Default (PoolParams crypto) where
+instance CC.Crypto c => Default (PoolParams c) where
   def = PoolParams def def (Coin 0) (Coin 0) def def def def def
 
 instance CC.Crypto e => Default (Credential r e) where
   def = KeyHashObj def
 
-instance CC.Crypto crypto => Default (RewardAcnt crypto) where
+instance CC.Crypto c => Default (RewardAcnt c) where
   def = RewardAcnt def def
 
 instance CC.Crypto c => Default (SafeHash c i) where
@@ -211,7 +211,7 @@ instance CC.Crypto c => Default (SafeHash c i) where
 mylines :: Int -> [String] -> String
 mylines n xs = unlines (map (replicate n ' ' ++) xs)
 
-instance Show (RewardProvenancePool crypto) where
+instance Show (RewardProvenancePool c) where
   show t =
     "RewardProvenancePool\n"
       ++ mylines
@@ -228,7 +228,7 @@ instance Show (RewardProvenancePool crypto) where
           "lReward = " ++ show (lRewardP t)
         ]
 
-showPoolParams :: PoolParams crypto -> String
+showPoolParams :: PoolParams c -> String
 showPoolParams x =
   "PoolParams\n"
     ++ mylines
@@ -244,7 +244,7 @@ showPoolParams x =
         "poolMD = " ++ show (_poolMD x)
       ]
 
-instance Show (RewardProvenance crypto) where
+instance Show (RewardProvenance c) where
   show t =
     "RewardProvenance\n"
       ++ mylines
@@ -278,8 +278,8 @@ instance FromCBOR Desirability where
   fromCBOR = decode $ RecD Desirability <! D decodeDouble <! D decodeDouble
 
 instance
-  (CC.Crypto crypto) =>
-  ToCBOR (RewardProvenancePool crypto)
+  (CC.Crypto c) =>
+  ToCBOR (RewardProvenancePool c)
   where
   toCBOR (RewardProvenancePool p1 p2 p3 p4 p5 p6 p7 p8 p9 p10) =
     encode $
@@ -296,8 +296,8 @@ instance
         !> To p10
 
 instance
-  (CC.Crypto crypto) =>
-  FromCBOR (RewardProvenancePool crypto)
+  (CC.Crypto c) =>
+  FromCBOR (RewardProvenancePool c)
   where
   fromCBOR =
     decode $
@@ -314,8 +314,8 @@ instance
         <! From
 
 instance
-  (CC.Crypto crypto) =>
-  ToCBOR (RewardProvenance crypto)
+  (CC.Crypto c) =>
+  ToCBOR (RewardProvenance c)
   where
   toCBOR (RewardProvenance p1 p2 p3 p4 p5 p6 p7 p8 p9 p10 p11 p12 p13 p14 p15 p16) =
     encode $
@@ -338,8 +338,8 @@ instance
         !> To p16
 
 instance
-  (CC.Crypto crypto) =>
-  FromCBOR (RewardProvenance crypto)
+  (CC.Crypto c) =>
+  FromCBOR (RewardProvenance c)
   where
   fromCBOR =
     decode $

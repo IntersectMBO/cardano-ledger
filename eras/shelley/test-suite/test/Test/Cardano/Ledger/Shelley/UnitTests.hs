@@ -130,38 +130,38 @@ import Test.Tasty.QuickCheck
 -- ========================================================================================
 
 -- | - This constraint says we can coerce Numbers into a signable keys
-type NumKey crypto =
-  ( Num (SignKeyDSIGN (DSIGN crypto)),
-    Num (VerKeyDSIGN (DSIGN crypto))
+type NumKey c =
+  ( Num (SignKeyDSIGN (DSIGN c)),
+    Num (VerKeyDSIGN (DSIGN c))
   )
 
-alicePay :: NumKey crypto => KeyPair 'Payment crypto
+alicePay :: NumKey c => KeyPair 'Payment c
 alicePay = KeyPair 1 1
 
-aliceStake :: NumKey crypto => KeyPair 'Staking crypto
+aliceStake :: NumKey c => KeyPair 'Staking c
 aliceStake = KeyPair 2 2
 
-aliceAddr :: (NumKey crypto, CC.Crypto crypto) => Addr crypto
+aliceAddr :: (NumKey c, CC.Crypto c) => Addr c
 aliceAddr =
   Addr
     Testnet
     (KeyHashObj . hashKey $ vKey alicePay)
     (StakeRefBase . KeyHashObj . hashKey $ vKey aliceStake)
 
-bobPay :: NumKey crypto => KeyPair 'Payment crypto
+bobPay :: NumKey c => KeyPair 'Payment c
 bobPay = KeyPair 3 3
 
-bobStake :: NumKey crypto => KeyPair 'Staking crypto
+bobStake :: NumKey c => KeyPair 'Staking c
 bobStake = KeyPair 4 4
 
-bobAddr :: (NumKey crypto, CC.Crypto crypto) => Addr crypto
+bobAddr :: (NumKey c, CC.Crypto c) => Addr c
 bobAddr =
   Addr
     Testnet
     (KeyHashObj . hashKey $ vKey bobPay)
     (StakeRefBase . KeyHashObj . hashKey $ vKey bobStake)
 
-mkGenesisTxIn :: (HashAlgorithm (HASH crypto), HasCallStack) => Integer -> TxIn crypto
+mkGenesisTxIn :: (HashAlgorithm (HASH c), HasCallStack) => Integer -> TxIn c
 mkGenesisTxIn = TxIn genesisId . mkTxIxPartial
 
 pp :: ShelleyPParams era

@@ -49,8 +49,8 @@ import Cardano.Ledger.ShelleyMA.TxBody (MATxBody, TxBody)
 
 -- Uses the default instance of hashScript
 
-instance MAClass ma crypto => EraSegWits (ShelleyMAEra ma crypto) where
-  type TxSeq (ShelleyMAEra ma crypto) = ShelleyTxSeq (ShelleyMAEra ma crypto)
+instance MAClass ma c => EraSegWits (ShelleyMAEra ma c) where
+  type TxSeq (ShelleyMAEra ma c) = ShelleyTxSeq (ShelleyMAEra ma c)
   fromTxSeq = Shelley.txSeqTxns
   toTxSeq = ShelleyTxSeq
   hashTxSeq = Shelley.bbHash

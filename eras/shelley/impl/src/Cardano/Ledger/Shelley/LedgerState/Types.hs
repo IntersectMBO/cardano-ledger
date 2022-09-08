@@ -72,10 +72,10 @@ import Lens.Micro (_1, _2)
 import NoThunks.Class (NoThunks (..))
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
-type KeyPairs crypto = [(KeyPair 'Payment crypto, KeyPair 'Staking crypto)]
+type KeyPairs c = [(KeyPair 'Payment c, KeyPair 'Staking c)]
 
-type RewardAccounts crypto =
-  Map (Credential 'Staking crypto) Coin
+type RewardAccounts c =
+  Map (Credential 'Staking c) Coin
 
 data AccountState = AccountState
   { _treasury :: !Coin,
@@ -208,18 +208,18 @@ deriving stock instance
 --   that might point to something by the time the epoch boundary is reached. When
 --   the epoch boundary is reached we 'resolve' these pointers, to see if any have
 --   become non-dangling since the time they were first used in the incremental computation.
-data IncrementalStake crypto = IStake
-  { credMap :: !(Map (Credential 'Staking crypto) Coin),
+data IncrementalStake c = IStake
+  { credMap :: !(Map (Credential 'Staking c) Coin),
     ptrMap :: !(Map Ptr Coin)
   }
   deriving (Generic, Show, Eq, Ord, NoThunks, NFData)
 
-instance CC.Crypto crypto => ToCBOR (IncrementalStake crypto) where
+instance CC.Crypto c => ToCBOR (IncrementalStake c) where
   toCBOR (IStake st dangle) =
     encodeListLen 2 <> mapToCBOR st <> mapToCBOR dangle
 
-instance CC.Crypto crypto => FromSharedCBOR (IncrementalStake crypto) where
-  type Share (IncrementalStake crypto) = Interns (Credential 'Staking crypto)
+instance CC.Crypto c => FromSharedCBOR (IncrementalStake c) where
+  type Share (IncrementalStake c) = Interns (Credential 'Staking c)
   fromSharedCBOR credInterns =
     decodeRecordNamed "Stake" (const 2) $ do
       stake <- fromSharedCBOR (credInterns, mempty)

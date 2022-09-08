@@ -21,19 +21,19 @@ import Cardano.Ledger.State.UTxO
 import Control.DeepSeq
 import Data.Map.Strict as Map
 
-data SnapShotM crypto = SnapShotM
-  { ssStake :: !(Map (Credential 'Staking crypto) (CompactForm Coin)),
-    ssDelegations :: !(Map (Credential 'Staking crypto) (KeyHash 'StakePool crypto)),
-    ssPoolParams :: !(Map (KeyHash 'StakePool crypto) (PoolParams crypto))
+data SnapShotM c = SnapShotM
+  { ssStake :: !(Map (Credential 'Staking c) (CompactForm Coin)),
+    ssDelegations :: !(Map (Credential 'Staking c) (KeyHash 'StakePool c)),
+    ssPoolParams :: !(Map (KeyHash 'StakePool c) (PoolParams c))
   }
 
 instance NFData (SnapShotM C) where
   rnf (SnapShotM s d p) = s `deepseq` d `deepseq` rnf p
 
-data SnapShotsM crypto = SnapShotsM
-  { ssPstakeMark :: !(SnapShotM crypto),
-    ssPstakeSet :: !(SnapShotM crypto),
-    ssPstakeGo :: !(SnapShotM crypto),
+data SnapShotsM c = SnapShotsM
+  { ssPstakeMark :: !(SnapShotM c),
+    ssPstakeSet :: !(SnapShotM c),
+    ssPstakeGo :: !(SnapShotM c),
     ssFeeSS :: !Coin
   }
 

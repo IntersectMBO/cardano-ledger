@@ -68,7 +68,7 @@ chainChecks ::
   MonadError ChainPredicateFailure m =>
   Natural ->
   ChainChecksPParams ->
-  BHeaderView crypto ->
+  BHeaderView c ->
   m ()
 chainChecks maxpv ccd bhv = do
   unless (m <= maxpv) $ throwError (ObsoleteNodeCHAIN m maxpv)
