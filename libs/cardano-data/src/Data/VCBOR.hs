@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -22,7 +23,6 @@ module Data.VCBOR
     internsFromMap,
     internsFromVMap,
     toMemptyLens,
-    fromShareVCBORfunctor,
   )
 where
 
@@ -46,6 +46,7 @@ import Lens.Micro
 -- =======================================
 
 newtype VDecoder (v :: Nat) s a = VDecoder (Decoder s a)
+  deriving (Functor, Applicative, Monad)
 
 -- | This is an abstract interface that does the interning. In other words it
 -- does the actual sharing by looking up the supplied value in some existing
@@ -115,7 +116,6 @@ instance Semigroup (Interns a) where
         | internWeight a > internWeight i = a : insertIntoSortedInterns i as
         | otherwise = i : a : as
 
-
 class Monoid (Share a) => Shareable a where
   type Share a :: Type
   type Share a = ()
@@ -123,32 +123,35 @@ class Monoid (Share a) => Shareable a where
   -- | Whenever `fromShareVCBOR` is being used for defining the instance this
   -- function should return the state that can be added whenever user invokes
   -- `fromSharedPlusVCBOR`. `mempty` is returned by default.
-  getShare :: Proxy v -> a -> Share v a
-  getShare _ _ = mempty
+  getShare :: a -> Share a
+  getShare _ = mempty
 
 class FromVCBOR (v :: Nat) a where
-  {-# MINIMAL (fromSharedVCBOR | fromSharedPlusVCBOR) #-}
-
+  
   fromVCBOR :: VDecoder v s a
-  fromVCBOR = fromSharedVCBOR mempty
+  default fromVCBOR :: FromSharedVCBOR (v :: Nat) a => VDecoder v s a
+  fromVCBOR = fromNotSharedVCBOR
+
+class Shareable a => FromSharedVCBOR (v :: Nat) a where
+  {-# MINIMAL (fromSharedVCBOR | fromSharedPlusVCBOR) #-}
 
   -- | Utilize sharing when decoding, but do not add anything to the state for
   -- future sharing.
-  fromSharedVCBOR :: Share v a -> VDecoder v s a
+  fromSharedVCBOR :: Share a -> VDecoder v s a
   fromSharedVCBOR s = fst <$> runStateT fromSharedPlusVCBOR s
 
   -- | Deserialize with sharing and add to the state that is used for sharing. Default
   -- implementation will add value returned by `getShare` for adding to the
   -- state.
-  fromSharedPlusVCBOR :: StateT (Share v a) (VDecoder v s) a
+  fromSharedPlusVCBOR :: StateT (Share a) (VDecoder v s) a
   fromSharedPlusVCBOR = do
     s <- get
     x <- lift $ fromSharedVCBOR s
-    x <$ put (getShare (Proxy :: Proxy v) x <> s)
+    x <$ put (getShare x <> s)
 
 fromSharedLensVCBOR ::
-  FromVCBOR v b =>
-  SimpleGetter bs (Share v b) ->
+  FromSharedVCBOR v b =>
+  SimpleGetter bs (Share b) ->
   StateT bs (VDecoder v s) b
 fromSharedLensVCBOR l = do
   s <- get
@@ -180,46 +183,53 @@ toMemptyLens lto lfrom =
 -- | Just like `fromSharedPlusVCBOR`, except allows to transform the shared state
 -- with a lens.
 fromSharedPlusLensVCBOR ::
-  FromVCBOR v b =>
-  Lens' bs (Share v b) ->
+  FromSharedVCBOR v b =>
+  Lens' bs (Share b) ->
   StateT bs (VDecoder v s) b
 fromSharedPlusLensVCBOR l = do
   s <- get
   (x, k) <- lift $ runStateT fromSharedPlusVCBOR (s ^. l)
   x <$ put (s & l .~ k)
 
--- | Use `FromVCBOR` class while ignoring sharing
-fromNotSharedVCBOR :: FromVCBOR v a => VDecoder v s a
+-- | Use `FromSharedVCBOR` class while ignoring sharing
+fromNotSharedVCBOR :: FromSharedVCBOR v a => VDecoder v s a
 fromNotSharedVCBOR = fromSharedVCBOR mempty
 
-instance (Ord k, FromCBOR k, FromCBOR a) => FromVCBOR v (Map k a) where
-  type Share v (Map k a) = (Interns k, Interns a)
+instance Ord k => Shareable (Map k a) where
+  getShare !m = (internsFromMap m, mempty)
+  type Share (Map k a) = (Interns k, Interns a)
+
+instance (Ord k, FromCBOR k, FromCBOR a) => FromSharedVCBOR v (Map k a) where
   fromSharedVCBOR (kis, vis) =
     VDecoder $
       decodeMap (interns kis <$> fromCBOR) (interns vis <$> fromCBOR)
-  getShare _ !m = (internsFromMap m, mempty)
 
-instance (Ord k, FromCBOR k, FromCBOR a) => FromVCBOR v (VMap VB VB k a) where
-  type Share v (VMap VB VB k a) = (Interns k, Interns a)
+instance Ord k => Shareable (VMap VB VB k a) where
+  type Share (VMap VB VB k a) = (Interns k, Interns a)
+  getShare !m = (internsFromVMap m, mempty)
+
+instance (Ord k, FromCBOR k, FromCBOR a) => FromSharedVCBOR v (VMap VB VB k a) where
   fromSharedVCBOR (kis, vis) =
-    VDecoder $
-      decodeMap (interns kis <$> fromCBOR) (interns vis <$> fromCBOR)
-  getShare _ !m = (internsFromVMap m, mempty)
+    VDecoder $ decodeVMap (interns kis <$> fromCBOR) (interns vis <$> fromCBOR)
 
-instance (Ord k, FromCBOR k, FromCBOR a, Prim a) => FromVCBOR v (VMap VB VP k a) where
-  type Share v (VMap VB VP k a) = Interns k
+instance Ord k => Shareable (VMap VB VP k a) where
+  type Share (VMap VB VP k a) = Interns k
+  getShare !m = internsFromVMap m
+
+instance (Ord k, FromCBOR k, FromCBOR a, Prim a) => FromSharedVCBOR v (VMap VB VP k a) where
   fromSharedVCBOR kis =
-    VDecoder $
-      decodeMap (interns kis <$> fromCBOR) fromCBOR
-  getShare _ !m = internsFromVMap m
+    VDecoder $ decodeVMap (interns kis <$> fromCBOR) fromCBOR
 
 -- ==============================================================================
 -- These BiMap instances are adapted from the FromCBOR instances in Data.Coders
 
-instance (Ord a, Ord b, FromCBOR a, FromCBOR b) => FromVCBOR v (BiMap b a b) where
-  type Share v (BiMap b a b) = (Interns a, Interns b)
+instance (Ord a, Ord b) => Shareable (BiMap b a b) where
+  type Share (BiMap b a b) = (Interns a, Interns b)
+  getShare (MkBiMap m1 m2) = (internsFromMap m1, internsFromMap m2)
+
+instance (Ord a, Ord b, FromCBOR a, FromCBOR b) => FromSharedVCBOR v (BiMap b a b) where
   fromSharedVCBOR share =
-    decodeListLen >>= \case
+    VDecoder decodeListLen >>= \case
       1 -> biMapFromMap <$> fromSharedVCBOR share
       -- Previous encoding of 'BiMap' encoded both the forward and reverse
       -- directions. In this case we skip the reverse encoding. Note that,
@@ -227,10 +237,9 @@ instance (Ord a, Ord b, FromCBOR a, FromCBOR b) => FromVCBOR v (BiMap b a b) whe
       -- to 'Set a', and hence the dropper reflects that.
       2 -> do
         !x <- biMapFromMap <$> fromSharedVCBOR share
-        dropMap (void $ fromCBOR @b) (void $ fromCBOR @a)
+        VDecoder $ dropMap (void $ fromCBOR @b) (void $ fromCBOR @a)
         return x
-      k -> invalidKey (fromIntegral k)
-  getShare (MkBiMap m1 m2) = (internsFromMap m1, internsFromMap m2)
+      k -> VDecoder $ invalidKey (fromIntegral k)
 
 -- | Share every item in a functor, have deserializing it
 fromShareVCBORfunctor :: (FromCBOR (f b), Monad f) => Interns b -> Decoder s (f b)
