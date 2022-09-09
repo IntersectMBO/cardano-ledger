@@ -110,6 +110,7 @@ source-repository-package
 allow-newer:
   monoidal-containers:aeson,
   size-based:template-haskell,
+  Unique:hashable
 
 constraints:
   -- bizarre issue: in earlier versions they define their own 'GEq', in newer
