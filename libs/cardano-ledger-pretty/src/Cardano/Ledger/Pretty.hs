@@ -49,7 +49,7 @@ import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.CompactAddress (CompactAddr (..), decompactAddr)
 import Cardano.Ledger.Compactible (Compactible (..))
-import Cardano.Ledger.Core (Era, EraAuxiliaryData (..), EraPParams (..), EraRule, EraScript (..), EraTx (..), EraTxBody (..), EraTxOut (..), EraTxWits (..), ScriptHash (..), Value)
+import Cardano.Ledger.Core (Era, EraPParams (..), EraRule, EraScript (..), EraTx (..), EraTxAuxData (..), EraTxBody (..), EraTxOut (..), EraTxWits (..), ScriptHash (..), Value)
 import Cardano.Ledger.Credential
   ( Credential (KeyHashObj, ScriptHashObj),
     GenesisCredential (..),
@@ -92,7 +92,7 @@ import Cardano.Ledger.Shelley.LedgerState
     PState (..),
     UTxOState (..),
   )
-import Cardano.Ledger.Shelley.Metadata (Metadata (..), Metadatum (..))
+import Cardano.Ledger.Shelley.Metadata (Metadatum (..), ShelleyTxAuxData (..))
 import Cardano.Ledger.Shelley.PParams
   ( PPUpdateEnv (..),
     ProposedPPUpdates (..),
@@ -922,21 +922,21 @@ ppMetadatum (I n) = ppSexp "I" [ppInteger n]
 ppMetadatum (B bs) = ppSexp "B" [ppLong bs]
 ppMetadatum (S txt) = ppSexp "S" [text txt]
 
-ppMetadata :: Metadata era -> PDoc
-ppMetadata (Metadata m) = ppMap' (text "Metadata") ppWord64 ppMetadatum m
+ppShelleyTxAuxData :: ShelleyTxAuxData era -> PDoc
+ppShelleyTxAuxData (ShelleyTxAuxData m) = ppMap' (text "ShelleyTxAuxData") ppWord64 ppMetadatum m
 
 instance PrettyA Metadatum where
   prettyA = ppMetadatum
 
-instance PrettyA (Metadata era) where
-  prettyA = ppMetadata
+instance PrettyA (ShelleyTxAuxData era) where
+  prettyA = ppShelleyTxAuxData
 
 -- ============================
 -- Cardano.Ledger.Shelley.Tx
 
 ppTx ::
   ( PrettyA (TxBody era),
-    PrettyA (AuxiliaryData era),
+    PrettyA (TxAuxData era),
     PrettyA (TxWits era),
     EraTx era
   ) =>
@@ -972,7 +972,7 @@ ppWitnessSetHKD x =
 
 instance
   ( PrettyA (TxBody era),
-    PrettyA (AuxiliaryData era),
+    PrettyA (TxAuxData era),
     PrettyA (TxWits era),
     EraTx era,
     Tx era ~ ShelleyTx era

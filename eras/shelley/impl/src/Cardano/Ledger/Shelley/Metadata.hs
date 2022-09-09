@@ -16,9 +16,12 @@
 
 module Cardano.Ledger.Shelley.Metadata
   ( Metadatum (..),
-    Metadata (Metadata),
-    hashMetadata,
+    ShelleyTxAuxData (ShelleyTxAuxData),
+    hashShelleyTxAuxData,
     validMetadatum,
+
+    -- * Deprecations
+    Metadata,
   )
 where
 
@@ -32,9 +35,9 @@ import Cardano.Binary
     withSlice,
   )
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
-import Cardano.Ledger.Core (Era (..), EraAuxiliaryData (..))
+import Cardano.Ledger.Core (Era (..), EraTxAuxData (..))
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Hashes (EraIndependentAuxiliaryData)
+import Cardano.Ledger.Hashes (EraIndependentTxAuxData)
 import Cardano.Ledger.SafeHash
   ( HashAnnotated,
     SafeHash,
@@ -78,53 +81,57 @@ instance NFData Metadatum where
     B _ -> ()
     S _ -> ()
 
-data Metadata era = Metadata'
+data ShelleyTxAuxData era = ShelleyTxAuxData'
   { mdMap :: Map Word64 Metadatum,
     mdBytes :: LBS.ByteString
   }
   deriving (Eq, Show, Ord, Generic)
-  deriving (NoThunks) via AllowThunksIn '["mdBytes"] (Metadata era)
+  deriving (NoThunks) via AllowThunksIn '["mdBytes"] (ShelleyTxAuxData era)
 
-instance CC.Crypto c => EraAuxiliaryData (ShelleyEra c) where
-  type AuxiliaryData (ShelleyEra c) = Metadata (ShelleyEra c)
+type Metadata era = ShelleyTxAuxData era
 
-  validateAuxiliaryData _ (Metadata m) = all validMetadatum m
-  hashAuxiliaryData metadata =
+{-# DEPRECATED Metadata "Use `ShelleyTxAuxData` instead" #-}
+
+instance CC.Crypto c => EraTxAuxData (ShelleyEra c) where
+  type TxAuxData (ShelleyEra c) = ShelleyTxAuxData (ShelleyEra c)
+
+  validateTxAuxData _ (ShelleyTxAuxData m) = all validMetadatum m
+  hashTxAuxData metadata =
     AuxiliaryDataHash (makeHashWithExplicitProxys (Proxy @c) index metadata)
     where
-      index = Proxy @EraIndependentAuxiliaryData
+      index = Proxy @EraIndependentTxAuxData
 
-instance NFData (Metadata era) where
+instance NFData (ShelleyTxAuxData era) where
   rnf m = mdMap m `deepseq` rnf (mdBytes m)
 
--- Usually we derive SafeToHash instances, but since Metadata preserves its serialisation
+-- Usually we derive SafeToHash instances, but since ShelleyTxAuxData preserves its serialisation
 -- bytes we can just extract them here, and make an explicit SafeToHash instance.
 
-instance SafeToHash (Metadata era) where
+instance SafeToHash (ShelleyTxAuxData era) where
   originalBytes = LBS.toStrict . mdBytes
 
-instance c ~ EraCrypto era => HashAnnotated (Metadata era) EraIndependentAuxiliaryData c
+instance c ~ EraCrypto era => HashAnnotated (ShelleyTxAuxData era) EraIndependentTxAuxData c
 
-hashMetadata :: Era era => Metadata era -> SafeHash (EraCrypto era) EraIndependentAuxiliaryData
-hashMetadata = hashAnnotated
+hashShelleyTxAuxData :: Era era => ShelleyTxAuxData era -> SafeHash (EraCrypto era) EraIndependentTxAuxData
+hashShelleyTxAuxData = hashAnnotated
 
-pattern Metadata :: Map Word64 Metadatum -> Metadata era
-pattern Metadata m <-
-  Metadata' m _
+pattern ShelleyTxAuxData :: Map Word64 Metadatum -> ShelleyTxAuxData era
+pattern ShelleyTxAuxData m <-
+  ShelleyTxAuxData' m _
   where
-    Metadata m =
+    ShelleyTxAuxData m =
       let bytes = serializeEncoding $ mapToCBOR m
-       in Metadata' m bytes
+       in ShelleyTxAuxData' m bytes
 
-{-# COMPLETE Metadata #-}
+{-# COMPLETE ShelleyTxAuxData #-}
 
-instance Typeable era => ToCBOR (Metadata era) where
+instance Typeable era => ToCBOR (ShelleyTxAuxData era) where
   toCBOR = encodePreEncoded . LBS.toStrict . mdBytes
 
-instance Typeable era => FromCBOR (Annotator (Metadata era)) where
+instance Typeable era => FromCBOR (Annotator (ShelleyTxAuxData era)) where
   fromCBOR = do
     (m, bytesAnn) <- withSlice mapFromCBOR
-    pure $ Metadata' m <$> bytesAnn
+    pure $ ShelleyTxAuxData' m <$> bytesAnn
 
 instance ToCBOR Metadatum where
   toCBOR = encodeMetadatum

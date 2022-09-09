@@ -18,9 +18,9 @@ module Cardano.Ledger.Babbage.Scripts
 where
 
 import Cardano.Ledger.Alonzo.Data
-  ( AlonzoAuxiliaryData,
-    hashAlonzoAuxiliaryData,
-    validateAlonzoAuxiliaryData,
+  ( AlonzoTxAuxData,
+    hashAlonzoTxAuxData,
+    validateAlonzoTxAuxData,
   )
 import Cardano.Ledger.Alonzo.Language
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
@@ -57,7 +57,7 @@ isPlutusScript x =
     Just _ -> True
     Nothing -> False
 
-instance CC.Crypto c => EraAuxiliaryData (BabbageEra c) where
-  type AuxiliaryData (BabbageEra c) = AlonzoAuxiliaryData (BabbageEra c)
-  hashAuxiliaryData = hashAlonzoAuxiliaryData
-  validateAuxiliaryData = validateAlonzoAuxiliaryData
+instance CC.Crypto c => EraTxAuxData (BabbageEra c) where
+  type TxAuxData (BabbageEra c) = AlonzoTxAuxData (BabbageEra c)
+  hashTxAuxData = hashAlonzoTxAuxData
+  validateTxAuxData = validateAlonzoTxAuxData

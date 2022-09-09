@@ -13,7 +13,7 @@ module Cardano.Ledger.ShelleyMA
     ShelleyTx,
     ShelleyTxOut,
     MATxBody,
-    MAAuxiliaryData,
+    AllegraTxAuxData,
     ShelleyPParams,
 
     -- * Deprecated
@@ -38,7 +38,7 @@ import Cardano.Ledger.Shelley.Tx
     Tx,
     TxOut,
   )
-import Cardano.Ledger.ShelleyMA.AuxiliaryData (AuxiliaryData, MAAuxiliaryData)
+import Cardano.Ledger.ShelleyMA.AuxiliaryData (AllegraTxAuxData, AuxiliaryData)
 import Cardano.Ledger.ShelleyMA.Era (MAClass, MaryOrAllegra (..), ShelleyMAEra)
 import Cardano.Ledger.ShelleyMA.Tx ()
 import Cardano.Ledger.ShelleyMA.TxBody (MATxBody, TxBody)

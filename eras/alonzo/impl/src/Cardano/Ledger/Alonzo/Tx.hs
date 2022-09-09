@@ -164,7 +164,7 @@ data AlonzoTx era = AlonzoTx
   { body :: !(Core.TxBody era),
     wits :: !(Core.TxWits era),
     isValid :: !IsValid,
-    auxiliaryData :: !(StrictMaybe (AuxiliaryData era))
+    auxiliaryData :: !(StrictMaybe (TxAuxData era))
   }
   deriving (Generic)
 
@@ -218,9 +218,9 @@ witsAlonzoTxL :: Lens' (AlonzoTx era) (TxWits era)
 witsAlonzoTxL = lens wits (\tx txWits -> tx {wits = txWits})
 {-# INLINEABLE witsAlonzoTxL #-}
 
--- | `AuxiliaryData` setter and getter for `AlonzoTx`.
-auxDataAlonzoTxL :: Lens' (AlonzoTx era) (StrictMaybe (AuxiliaryData era))
-auxDataAlonzoTxL = lens auxiliaryData (\tx txAuxiliaryData -> tx {auxiliaryData = txAuxiliaryData})
+-- | `TxAuxData` setter and getter for `AlonzoTx`.
+auxDataAlonzoTxL :: Lens' (AlonzoTx era) (StrictMaybe (TxAuxData era))
+auxDataAlonzoTxL = lens auxiliaryData (\tx txTxAuxData -> tx {auxiliaryData = txTxAuxData})
 {-# INLINEABLE auxDataAlonzoTxL #-}
 
 -- | txsize computes the length of the serialised bytes
@@ -233,25 +233,24 @@ isValidAlonzoTxL = lens isValid (\tx valid -> tx {isValid = valid})
 {-# INLINEABLE isValidAlonzoTxL #-}
 
 deriving instance
-  (Era era, Eq (Core.TxBody era), Eq (TxWits era), Eq (AuxiliaryData era)) =>
-  Eq (AlonzoTx era)
+  (Era era, Eq (Core.TxBody era), Eq (TxWits era), Eq (TxAuxData era)) => Eq (AlonzoTx era)
 
 deriving instance
-  (Era era, Show (Core.TxBody era), Show (TxWits era), Show (AuxiliaryData era)) =>
+  (Era era, Show (Core.TxBody era), Show (TxAuxData era), Show (Script era), Show (TxWits era)) =>
   Show (AlonzoTx era)
 
 instance
   ( Era era,
-    NoThunks (AuxiliaryData era),
     NoThunks (TxWits era),
+    NoThunks (TxAuxData era),
     NoThunks (Core.TxBody era)
   ) =>
   NoThunks (AlonzoTx era)
 
 instance
   ( Era era,
-    NFData (AuxiliaryData era),
     NFData (TxWits era),
+    NFData (TxAuxData era),
     NFData (Core.TxBody era)
   ) =>
   NFData (AlonzoTx era)
@@ -320,7 +319,7 @@ isTwoPhaseScriptAddress tx =
 toCBORForSizeComputation ::
   ( ToCBOR (Core.TxBody era),
     ToCBOR (TxWits era),
-    ToCBOR (AuxiliaryData era)
+    ToCBOR (TxAuxData era)
   ) =>
   AlonzoTx era ->
   Encoding
@@ -484,7 +483,7 @@ alonzoSegwitTx ::
   Annotator (Core.TxBody era) ->
   Annotator (TxWits era) ->
   IsValid ->
-  Maybe (Annotator (AuxiliaryData era)) ->
+  Maybe (Annotator (TxAuxData era)) ->
   Annotator (Tx era)
 alonzoSegwitTx txBodyAnn txWitsAnn isValid auxDataAnn = Annotator $ \bytes ->
   let txBody = runAnnotator txBodyAnn bytes
@@ -517,7 +516,7 @@ alonzoSegwitTx txBodyAnn txWitsAnn isValid auxDataAnn = Annotator $ \bytes ->
 toCBORForMempoolSubmission ::
   ( ToCBOR (Core.TxBody era),
     ToCBOR (TxWits era),
-    ToCBOR (AuxiliaryData era)
+    ToCBOR (TxAuxData era)
   ) =>
   AlonzoTx era ->
   Encoding
@@ -533,8 +532,8 @@ toCBORForMempoolSubmission
 instance
   ( Era era,
     ToCBOR (Core.TxBody era),
-    ToCBOR (TxWits era),
-    ToCBOR (AuxiliaryData era)
+    ToCBOR (TxAuxData era),
+    ToCBOR (TxWits era)
   ) =>
   ToCBOR (AlonzoTx era)
   where
@@ -544,7 +543,7 @@ instance
   ( Typeable era,
     FromCBOR (Annotator (Core.TxBody era)),
     FromCBOR (Annotator (Core.TxWits era)),
-    FromCBOR (Annotator (AuxiliaryData era))
+    FromCBOR (Annotator (TxAuxData era))
   ) =>
   FromCBOR (Annotator (AlonzoTx era))
   where

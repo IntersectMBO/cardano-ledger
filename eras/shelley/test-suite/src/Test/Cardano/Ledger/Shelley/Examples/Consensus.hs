@@ -110,7 +110,7 @@ defaultShelleyLedgerExamples ::
   (ShelleyTx era -> Core.Tx era) ->
   Core.Value era ->
   Core.TxBody era ->
-  Core.AuxiliaryData era ->
+  Core.TxAuxData era ->
   TranslationContext era ->
   ShelleyLedgerExamples era
 defaultShelleyLedgerExamples mkWitnesses mkAlonzoTx value txBody auxData translationContext =
@@ -209,7 +209,7 @@ exampleTx ::
   Core.EraTx era =>
   (Core.TxBody era -> KeyPairWits era -> Core.TxWits era) ->
   Core.TxBody era ->
-  Core.AuxiliaryData era ->
+  Core.TxAuxData era ->
   ShelleyTx era
 exampleTx mkWitnesses txBody auxData =
   ShelleyTx txBody (mkWitnesses txBody keyPairWits) (SJust auxData)
@@ -442,8 +442,8 @@ exampleTxBodyShelley =
     auxiliaryDataHash =
       AuxiliaryDataHash $ mkDummySafeHash (Proxy @StandardCrypto) 30
 
-exampleMetadataMap :: Map Word64 Metadatum
-exampleMetadataMap =
+exampleAuxDataMap :: Map Word64 Metadatum
+exampleAuxDataMap =
   Map.fromList
     [ (1, S "string"),
       (2, B "bytes"),
@@ -451,8 +451,8 @@ exampleMetadataMap =
       (4, Map [(I 3, B "b")])
     ]
 
-exampleAuxiliaryDataShelley :: Core.AuxiliaryData Shelley
-exampleAuxiliaryDataShelley = Metadata exampleMetadataMap
+exampleAuxiliaryDataShelley :: Core.TxAuxData Shelley
+exampleAuxiliaryDataShelley = ShelleyTxAuxData exampleAuxDataMap
 
 exampleTxIns :: CC.Crypto c => Set (TxIn c)
 exampleTxIns =

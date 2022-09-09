@@ -14,7 +14,7 @@ module Test.Cardano.Ledger.Alonzo.AlonzoEraGen where
 import Cardano.Binary (ToCBOR (toCBOR), serializeEncoding')
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.Data (AlonzoAuxiliaryData (..), Data (..))
+import Cardano.Ledger.Alonzo.Data (AlonzoTxAuxData (..), Data (..))
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams
   ( AlonzoPParams,
@@ -71,7 +71,7 @@ import Cardano.Ledger.Pretty.Alonzo ()
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), coinBalance)
-import Cardano.Ledger.ShelleyMA.AuxiliaryData (MAAuxiliaryData (..))
+import Cardano.Ledger.ShelleyMA.AuxiliaryData (AllegraTxAuxData (..))
 import Cardano.Ledger.ShelleyMA.Era ()
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), translateTimelock)
 import Cardano.Ledger.TxIn (TxIn)
@@ -223,12 +223,12 @@ genSet gen =
       (1, Set.fromList <$> sequence [gen, gen])
     ]
 
-genAux :: forall c. Mock c => Constants -> Gen (StrictMaybe (AlonzoAuxiliaryData (AlonzoEra c)))
+genAux :: forall c. Mock c => Constants -> Gen (StrictMaybe (AlonzoTxAuxData (AlonzoEra c)))
 genAux constants = do
   maybeAux <- genEraAuxiliaryData @(MaryEra c) constants
   pure $
     fmap
-      (\(MAAuxiliaryData x y) -> AlonzoAuxiliaryData x (TimelockScript . translateTimelock <$> y))
+      (\(AllegraTxAuxData x y) -> AlonzoTxAuxData x (TimelockScript . translateTimelock <$> y))
       maybeAux
 
 instance CC.Crypto c => ScriptClass (AlonzoEra c) where

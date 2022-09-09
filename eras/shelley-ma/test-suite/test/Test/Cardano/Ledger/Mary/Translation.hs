@@ -17,7 +17,7 @@ import Cardano.Ledger.Era (TranslateEra (..))
 import Cardano.Ledger.Mary (Mary)
 import Cardano.Ledger.Mary.Translation ()
 import qualified Cardano.Ledger.Shelley.API as S
-import Cardano.Ledger.ShelleyMA.AuxiliaryData (MAAuxiliaryData)
+import Cardano.Ledger.ShelleyMA.AuxiliaryData (AllegraTxAuxData)
 import Test.Cardano.Ledger.AllegraEraGen ()
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
@@ -33,7 +33,7 @@ maryEncodeDecodeTests =
     "encoded allegra types can be decoded as mary types"
     [ testProperty
         "decoding metadata"
-        (decodeTestAnn @(S.Metadata Allegra) ([] :: [MAAuxiliaryData Mary]))
+        (decodeTestAnn @(S.ShelleyTxAuxData Allegra) ([] :: [AllegraTxAuxData Mary]))
     ]
 
 maryTranslationTests :: TestTree

@@ -100,7 +100,7 @@ instance (CC.Crypto c, Mock c) => EraGen (MaryEra c) where
 genAuxiliaryData ::
   Mock c =>
   Constants ->
-  Gen (StrictMaybe (AuxiliaryData (MaryEra c)))
+  Gen (StrictMaybe (TxAuxData (MaryEra c)))
 genAuxiliaryData Constants {frequencyTxWithMetadata} =
   frequency
     [ (frequencyTxWithMetadata, SJust <$> arbitrary),

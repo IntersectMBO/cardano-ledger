@@ -24,7 +24,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (TranslateEra (..))
 import Cardano.Ledger.Mary (Mary)
 import qualified Cardano.Ledger.Shelley.API as API
-import Cardano.Ledger.ShelleyMA.AuxiliaryData (MAAuxiliaryData)
+import Cardano.Ledger.ShelleyMA.AuxiliaryData (AllegraTxAuxData)
 import Cardano.Ledger.ShelleyMA.TxBody (MATxBody)
 import Data.Typeable (Typeable)
 import Test.Cardano.Ledger.AllegraEraGen ()
@@ -54,7 +54,7 @@ alonzoEncodeDecodeTests =
     "encoded mary types can be decoded as alonzo types"
     [ testProperty
         "decoding auxilliary"
-        (decodeTestAnn @(MAAuxiliaryData Mary) ([] :: [Core.AuxiliaryData Alonzo])),
+        (decodeTestAnn @(AllegraTxAuxData Mary) ([] :: [Core.TxAuxData Alonzo])),
       testProperty
         "decoding txbody"
         (decodeTestAnn @(MATxBody Mary) ([] :: [Core.TxBody Alonzo])),

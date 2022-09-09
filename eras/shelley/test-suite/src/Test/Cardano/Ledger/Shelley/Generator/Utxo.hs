@@ -247,7 +247,7 @@ genTx
           (Wdrl (Map.fromList wdrls))
           draftFee
           (maybeToStrictMaybe update)
-          (hashAuxiliaryData @era <$> metadata)
+          (hashTxAuxData @era <$> metadata)
       let draftTx =
             constructTx @era
               draftTxBody

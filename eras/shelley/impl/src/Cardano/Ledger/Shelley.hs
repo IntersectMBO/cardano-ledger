@@ -6,7 +6,7 @@ module Cardano.Ledger.Shelley
     ShelleyTxBody,
     Value,
     Script,
-    AuxiliaryData,
+    TxAuxData,
     ShelleyPParams,
     TxWits,
     nativeMultiSigTag,
@@ -19,7 +19,7 @@ module Cardano.Ledger.Shelley
 where
 
 import Cardano.Ledger.Core
-  ( EraAuxiliaryData (AuxiliaryData),
+  ( EraTxAuxData (TxAuxData),
     EraTxWits (TxWits),
     Script,
     Value,

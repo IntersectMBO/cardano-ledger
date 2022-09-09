@@ -24,7 +24,7 @@ import Cardano.Ledger.Shelley.API
     ShelleyTx,
     Update,
   )
-import Cardano.Ledger.Shelley.Metadata (Metadata)
+import Cardano.Ledger.Shelley.Metadata (ShelleyTxAuxData)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsUpdate)
 import Cardano.Ledger.Shelley.TxBody
   ( ShelleyTxBody,
@@ -59,7 +59,7 @@ tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
       cddlTest @StakePoolRelay n "relay",
       cddlTest @(DCert StandardCrypto) n "certificate",
       cddlTest @(TxIn StandardCrypto) n "transaction_input",
-      cddlAnnotatorTest @(Metadata Shelley) n "transaction_metadata",
+      cddlAnnotatorTest @(ShelleyTxAuxData Shelley) n "transaction_metadata",
       cddlAnnotatorTest @(MultiSig Shelley) n "multisig_script",
       cddlTest @(Update Shelley) n "update",
       cddlTest @(ProposedPPUpdates Shelley) n "proposed_protocol_parameter_updates",

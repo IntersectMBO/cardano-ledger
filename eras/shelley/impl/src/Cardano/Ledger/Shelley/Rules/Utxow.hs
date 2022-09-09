@@ -189,7 +189,7 @@ deriving stock instance
 instance
   ( Era era,
     Typeable (Script era),
-    Typeable (AuxiliaryData era),
+    Typeable (TxAuxData era),
     ToCBOR (PredicateFailure (EraRule "UTXO" era))
   ) =>
   ToCBOR (ShelleyUtxowPredFailure era)
@@ -227,7 +227,7 @@ instance
   ( Era era,
     FromCBOR (PredicateFailure (EraRule "UTXO" era)),
     Typeable (Script era),
-    Typeable (AuxiliaryData era)
+    Typeable (TxAuxData era)
   ) =>
   FromCBOR (ShelleyUtxowPredFailure era)
   where
@@ -558,14 +558,14 @@ validateMetadata pp tx =
         (SNothing, SNothing) -> pure ()
         (SJust mdh, SNothing) -> failure $ MissingTxMetadata mdh
         (SNothing, SJust md') ->
-          failure $ MissingTxBodyMetadataHash (hashAuxiliaryData @era md')
+          failure $ MissingTxBodyMetadataHash (hashTxAuxData @era md')
         (SJust mdh, SJust md') ->
           sequenceA_
-            [ failureUnless (hashAuxiliaryData @era md' == mdh) $
-                ConflictingMetadataHash mdh (hashAuxiliaryData @era md'),
+            [ failureUnless (hashTxAuxData @era md' == mdh) $
+                ConflictingMetadataHash mdh (hashTxAuxData @era md'),
               -- check metadata value sizes
               when (SoftForks.validMetadata pp) $
-                failureUnless (validateAuxiliaryData @era pv md') InvalidMetadata
+                failureUnless (validateTxAuxData @era pv md') InvalidMetadata
             ]
 
 -- | check genesis keys signatures for instantaneous rewards certificates

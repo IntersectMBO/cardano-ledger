@@ -27,8 +27,8 @@ import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import qualified Cardano.Ledger.Mary.Value as ConcreteValue
-import Cardano.Ledger.Shelley.API (KeyHash (KeyHash), Metadata (Metadata))
-import Cardano.Ledger.ShelleyMA.AuxiliaryData (MAAuxiliaryData (..))
+import Cardano.Ledger.Shelley.API (KeyHash (KeyHash), ShelleyTxAuxData (ShelleyTxAuxData))
+import Cardano.Ledger.ShelleyMA.AuxiliaryData (AllegraTxAuxData (..))
 import Cardano.Ledger.ShelleyMA.Rules (ShelleyMAUtxoPredFailure)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
 import qualified Cardano.Ledger.ShelleyMA.Timelocks as MA (Timelock (..))
@@ -110,7 +110,7 @@ instance
     ToCBOR (Script era),
     Arbitrary (Script era)
   ) =>
-  Arbitrary (MAAuxiliaryData era)
+  Arbitrary (AllegraTxAuxData era)
   where
   -- Why do we use the \case instead of a do statement? like this:
   --
@@ -125,7 +125,7 @@ instance
   -- in an unsatisfied `MonadFail` constraint.
   arbitrary =
     genMetadata' >>= \case
-      Metadata m -> MAAuxiliaryData m <$> (genScriptSeq @era)
+      ShelleyTxAuxData m -> AllegraTxAuxData m <$> (genScriptSeq @era)
 
 genScriptSeq ::
   forall era. Arbitrary (Script era) => Gen (StrictSeq (Script era))

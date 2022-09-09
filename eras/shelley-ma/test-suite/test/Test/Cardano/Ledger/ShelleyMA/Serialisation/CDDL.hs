@@ -26,8 +26,8 @@ cddlTests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
       cddlAnnotatorTest @(Core.TxBody Allegra) n "transaction_body_allegra",
       cddlAnnotatorTest @(Core.Script Mary) n "native_script",
       cddlAnnotatorTest @(Core.Script Allegra) n "native_script",
-      cddlAnnotatorTest @(Core.AuxiliaryData Mary) n "auxiliary_data",
-      cddlAnnotatorTest @(Core.AuxiliaryData Allegra) n "auxiliary_data"
+      cddlAnnotatorTest @(Core.TxAuxData Mary) n "auxiliary_data",
+      cddlAnnotatorTest @(Core.TxAuxData Allegra) n "auxiliary_data"
     ]
       <*> pure cddl
 

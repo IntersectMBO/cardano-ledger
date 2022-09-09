@@ -103,14 +103,14 @@ import Numeric.Natural (Natural)
 data TxRaw era = TxRaw
   { _body :: !(Core.TxBody era),
     _wits :: !(TxWits era),
-    _auxiliaryData :: !(StrictMaybe (AuxiliaryData era))
+    _auxiliaryData :: !(StrictMaybe (TxAuxData era))
   }
   deriving (Generic, Typeable)
 
 instance
   ( NFData (Core.TxBody era),
     NFData (TxWits era),
-    NFData (AuxiliaryData era)
+    NFData (TxAuxData era)
   ) =>
   NFData (TxRaw era)
 
@@ -118,7 +118,7 @@ deriving instance
   ( Era era,
     Eq (Core.TxBody era),
     Eq (TxWits era),
-    Eq (AuxiliaryData era)
+    Eq (TxAuxData era)
   ) =>
   Eq (TxRaw era)
 
@@ -126,13 +126,13 @@ deriving instance
   ( Era era,
     Show (Core.TxBody era),
     Show (TxWits era),
-    Show (AuxiliaryData era)
+    Show (TxAuxData era)
   ) =>
   Show (TxRaw era)
 
 instance
   ( Era era,
-    NoThunks (AuxiliaryData era),
+    NoThunks (TxAuxData era),
     NoThunks (Core.TxBody era),
     NoThunks (TxWits era)
   ) =>
@@ -163,9 +163,9 @@ witsShelleyTxL =
     (\(TxConstr (Memo tx _)) txWits -> TxConstr $ memoBytes $ encodeTxRaw $ tx {_wits = txWits})
 {-# INLINEABLE witsShelleyTxL #-}
 
--- | `AuxiliaryData` setter and getter for `ShelleyTx`. The setter does update
+-- | `TxAuxData` setter and getter for `ShelleyTx`. The setter does update
 -- memoized binary representation.
-auxDataShelleyTxL :: EraTx era => Lens' (ShelleyTx era) (StrictMaybe (AuxiliaryData era))
+auxDataShelleyTxL :: EraTx era => Lens' (ShelleyTx era) (StrictMaybe (TxAuxData era))
 auxDataShelleyTxL =
   lens
     (\(TxConstr (Memo tx _)) -> _auxiliaryData tx)
@@ -217,19 +217,19 @@ instance CC.Crypto c => EraTx (ShelleyEra c) where
 deriving newtype instance
   ( NFData (Core.TxBody era),
     NFData (TxWits era),
-    NFData (AuxiliaryData era)
+    NFData (TxAuxData era)
   ) =>
   NFData (ShelleyTx era)
 
 deriving newtype instance Eq (ShelleyTx era)
 
 deriving newtype instance
-  (Era era, Show (Core.TxBody era), Show (TxWits era), Show (AuxiliaryData era)) =>
+  (Era era, Show (Core.TxBody era), Show (TxWits era), Show (TxAuxData era)) =>
   Show (ShelleyTx era)
 
 deriving newtype instance
   ( Era era,
-    NoThunks (AuxiliaryData era),
+    NoThunks (TxAuxData era),
     NoThunks (Core.TxBody era),
     NoThunks (TxWits era)
   ) =>
@@ -239,7 +239,7 @@ pattern ShelleyTx ::
   EraTx era =>
   Core.TxBody era ->
   TxWits era ->
-  StrictMaybe (AuxiliaryData era) ->
+  StrictMaybe (TxAuxData era) ->
   ShelleyTx era
 pattern ShelleyTx {body, wits, auxiliaryData} <-
   TxConstr
@@ -271,7 +271,7 @@ instance
   ( Era era,
     FromCBOR (Annotator (Core.TxBody era)),
     FromCBOR (Annotator (TxWits era)),
-    FromCBOR (Annotator (AuxiliaryData era))
+    FromCBOR (Annotator (TxAuxData era))
   ) =>
   FromCBOR (Annotator (TxRaw era))
   where
@@ -299,7 +299,7 @@ unsafeConstructTxWithBytes ::
   Era era =>
   Core.TxBody era ->
   TxWits era ->
-  StrictMaybe (AuxiliaryData era) ->
+  StrictMaybe (TxAuxData era) ->
   LBS.ByteString ->
   Tx era
 unsafeConstructTxWithBytes b w a bytes = TxConstr (mkMemoBytes (TxRaw b w a) bytes)
@@ -312,7 +312,7 @@ segwitTx ::
   EraTx era =>
   Annotator (Core.TxBody era) ->
   Annotator (TxWits era) ->
-  Maybe (Annotator (AuxiliaryData era)) ->
+  Maybe (Annotator (TxAuxData era)) ->
   Annotator (Tx era)
 segwitTx
   bodyAnn

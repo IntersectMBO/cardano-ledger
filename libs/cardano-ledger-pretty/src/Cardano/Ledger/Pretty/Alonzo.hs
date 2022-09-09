@@ -10,7 +10,7 @@
 
 module Cardano.Ledger.Pretty.Alonzo where
 
-import Cardano.Ledger.Alonzo.Data (AlonzoAuxiliaryData (AlonzoAuxiliaryData), Data (..))
+import Cardano.Ledger.Alonzo.Data (AlonzoTxAuxData (AlonzoTxAuxData), Data (..))
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams
   ( AlonzoPParams,
@@ -172,14 +172,14 @@ instance Era era => PrettyA (Data era) where
 
 ppAuxiliaryData ::
   (PrettyA (Script era), EraTx era, Script era ~ AlonzoScript era) =>
-  AlonzoAuxiliaryData era ->
+  AlonzoTxAuxData era ->
   PDoc
-ppAuxiliaryData (AlonzoAuxiliaryData m s) =
+ppAuxiliaryData (AlonzoTxAuxData m s) =
   ppSexp "AuxiliaryData" [ppMap ppWord64 ppMetadatum m, ppStrictSeq prettyA s]
 
 instance
   (PrettyA (Script era), EraTx era, Script era ~ AlonzoScript era) =>
-  PrettyA (AlonzoAuxiliaryData era)
+  PrettyA (AlonzoTxAuxData era)
   where
   prettyA = ppAuxiliaryData
 
@@ -284,7 +284,7 @@ instance PrettyA IsValid where
 ppTx ::
   ( PrettyA (TxBody era),
     PrettyA (TxWits era),
-    PrettyA (AuxiliaryData era)
+    PrettyA (TxAuxData era)
   ) =>
   AlonzoTx era ->
   PDoc
@@ -298,9 +298,10 @@ ppTx (AlonzoTx b w iv aux) =
     ]
 
 instance
-  ( PrettyA (TxBody era),
-    PrettyA (TxWits era),
-    PrettyA (AuxiliaryData era)
+  ( PrettyA (TxWits era),
+    Era era,
+    PrettyA (TxBody era),
+    PrettyA (TxAuxData era)
   ) =>
   PrettyA (AlonzoTx era)
   where

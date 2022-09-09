@@ -146,9 +146,9 @@ unQuantifyTL (MOf n xs) = RequireMOf n (fromList xs)
 unQuantifyTL (Leaf t) = t
 
 genAuxiliaryData ::
-  Arbitrary (Core.AuxiliaryData era) =>
+  Arbitrary (Core.TxAuxData era) =>
   Constants ->
-  Gen (StrictMaybe (Core.AuxiliaryData era))
+  Gen (StrictMaybe (Core.TxAuxData era))
 genAuxiliaryData Constants {frequencyTxWithMetadata} =
   frequency
     [ (frequencyTxWithMetadata, SJust <$> arbitrary),

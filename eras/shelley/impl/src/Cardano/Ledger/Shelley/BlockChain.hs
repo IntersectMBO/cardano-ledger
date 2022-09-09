@@ -159,7 +159,7 @@ pattern ShelleyTxSeq xs <-
               txSeqBodyBytes = serializeFoldable $ coreBodyBytes @era <$> txns,
               -- bytes encoding Seq(TxWits era)
               txSeqWitsBytes = serializeFoldable $ coreWitnessBytes @era <$> txns,
-              -- bytes encoding a (Map Int (AuxiliaryData))
+              -- bytes encoding a (Map Int (TxAuxData))
               txSeqMetadataBytes =
                 serializeEncoding . encodeFoldableMapEncoder metaChunk $
                   coreAuxDataBytes @era <$> txns
@@ -210,8 +210,8 @@ bbHash (TxSeq' _ bodies wits md) =
 constructMetadata ::
   forall era.
   Int ->
-  Map Int (Annotator (AuxiliaryData era)) ->
-  Seq (Maybe (Annotator (AuxiliaryData era)))
+  Map Int (Annotator (TxAuxData era)) ->
+  Seq (Maybe (Annotator (TxAuxData era)))
 constructMetadata n md = fmap (`Map.lookup` md) (Seq.fromList [0 .. n - 1])
 
 -- | The parts of the Tx in Blocks that have to have FromCBOR(Annotator x) instances.

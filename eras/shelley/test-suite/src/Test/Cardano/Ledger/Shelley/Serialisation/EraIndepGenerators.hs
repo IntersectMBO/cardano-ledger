@@ -261,8 +261,8 @@ sizedMetadatum n =
 instance Arbitrary MD.Metadatum where
   arbitrary = sizedMetadatum maxMetadatumDepth
 
-instance Arbitrary (MD.Metadata era) where
-  arbitrary = MD.Metadata <$> arbitrary
+instance Arbitrary (MD.ShelleyTxAuxData era) where
+  arbitrary = MD.ShelleyTxAuxData <$> arbitrary
 
 maxTxWits :: Int
 maxTxWits = 5
@@ -812,7 +812,7 @@ instance
 genTx ::
   ( Core.EraTx era,
     Arbitrary (Core.TxBody era),
-    Arbitrary (Core.AuxiliaryData era),
+    Arbitrary (Core.TxAuxData era),
     Arbitrary (Core.TxWits era)
   ) =>
   Gen (ShelleyTx era)
@@ -876,7 +876,7 @@ instance
     ToCBOR (Core.TxWits era),
     Arbitrary (Core.TxBody era),
     Arbitrary (Core.Value era),
-    Arbitrary (Core.AuxiliaryData era),
+    Arbitrary (Core.TxAuxData era),
     Arbitrary (Core.Script era),
     Arbitrary (Core.TxWits era)
   ) =>

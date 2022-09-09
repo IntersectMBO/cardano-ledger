@@ -70,7 +70,7 @@ allprops ::
   forall e.
   ( ApplyTx e,
     Arbitrary (Core.TxBody e),
-    Arbitrary (Core.AuxiliaryData e),
+    Arbitrary (Core.TxAuxData e),
     Arbitrary (Core.Value e),
     Arbitrary (Core.Script e),
     Arbitrary (ApplyTxError e),
@@ -84,7 +84,7 @@ allprops =
   testGroup
     (show $ typeRep (Proxy @e))
     [ testProperty "TxBody" $ propertyAnn @(Core.TxBody e),
-      testProperty "Metadata" $ propertyAnn @(Core.AuxiliaryData e),
+      testProperty "Metadata" $ propertyAnn @(Core.TxAuxData e),
       testProperty "Value" $ property @(Core.Value e),
       testProperty "Script" $ propertyAnn @(Core.Script e),
       testProperty "ApplyTxError" $ property @(ApplyTxError e)

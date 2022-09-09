@@ -389,8 +389,8 @@ txRetirePoolBytes16 = "83a5008182582003170a2e7597b7b7e3d84c05391d139a62b157e7878
 
 -- | Simple Transaction which consumes one UTxO and creates one UTxO
 -- | and has one witness
-md :: MD.Metadata era
-md = MD.Metadata $ Map.singleton 0 (MD.List [MD.I 5, MD.S "hello"])
+md :: MD.ShelleyTxAuxData era
+md = MD.ShelleyTxAuxData $ Map.singleton 0 (MD.List [MD.I 5, MD.S "hello"])
 
 txbWithMD :: ShelleyTxBody Shelley
 txbWithMD =
@@ -402,7 +402,7 @@ txbWithMD =
       _txfee = Coin 94,
       _ttl = SlotNo 10,
       _txUpdate = SNothing,
-      _mdHash = SJust $ hashAuxiliaryData @Shelley md
+      _mdHash = SJust $ hashTxAuxData @Shelley md
     }
 
 txWithMD :: ShelleyTx Shelley

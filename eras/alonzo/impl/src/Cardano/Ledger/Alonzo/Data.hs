@@ -32,10 +32,10 @@ module Cardano.Ledger.Alonzo.Data
     Datum (..),
     datumDataHash,
     -- $
-    AlonzoAuxiliaryData (AlonzoAuxiliaryData, AlonzoAuxiliaryData', scripts, txMD),
+    AlonzoTxAuxData (AlonzoTxAuxData, AlonzoTxAuxData', scripts, txMD),
     AuxiliaryDataHash (..),
-    hashAlonzoAuxiliaryData,
-    validateAlonzoAuxiliaryData,
+    hashAlonzoTxAuxData,
+    validateAlonzoTxAuxData,
     contentsEq,
 
     -- * Deprecated
@@ -60,8 +60,7 @@ import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), validScript)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..))
-import Cardano.Ledger.Core hiding (AuxiliaryData)
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (HASH)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.MemoBytes (Mem, MemoBytes (..), MemoHashIndex, memoBytes, mkMemoBytes, shortToLazy)
@@ -354,34 +353,34 @@ emptyAuxData = AuxiliaryDataRaw mempty mempty
 -- ================================================================================
 -- Version with serialized bytes.
 
-newtype AlonzoAuxiliaryData era = AuxiliaryDataConstr (MemoBytes AuxiliaryDataRaw era)
+newtype AlonzoTxAuxData era = AuxiliaryDataConstr (MemoBytes AuxiliaryDataRaw era)
   deriving newtype (ToCBOR, SafeToHash)
 
-type AuxiliaryData era = AlonzoAuxiliaryData era
+type AuxiliaryData era = AlonzoTxAuxData era
 
-{-# DEPRECATED AuxiliaryData "Use `AlonzoAuxiliaryData` instead" #-}
+{-# DEPRECATED AuxiliaryData "Use `AlonzoTxAuxData` instead" #-}
 
-instance CC.Crypto c => EraAuxiliaryData (AlonzoEra c) where
-  type AuxiliaryData (AlonzoEra c) = AlonzoAuxiliaryData (AlonzoEra c)
-  hashAuxiliaryData = hashAlonzoAuxiliaryData
-  validateAuxiliaryData = validateAlonzoAuxiliaryData
+instance CC.Crypto c => EraTxAuxData (AlonzoEra c) where
+  type TxAuxData (AlonzoEra c) = AlonzoTxAuxData (AlonzoEra c)
+  hashTxAuxData = hashAlonzoTxAuxData
+  validateTxAuxData = validateAlonzoTxAuxData
 
-hashAlonzoAuxiliaryData ::
-  (HashAlgorithm (CC.HASH c), HashAnnotated x EraIndependentAuxiliaryData c) =>
+hashAlonzoTxAuxData ::
+  (HashAlgorithm (CC.HASH c), HashAnnotated x EraIndependentTxAuxData c) =>
   x ->
   AuxiliaryDataHash c
-hashAlonzoAuxiliaryData x = AuxiliaryDataHash (hashAnnotated x)
+hashAlonzoTxAuxData x = AuxiliaryDataHash (hashAnnotated x)
 
-validateAlonzoAuxiliaryData ::
+validateAlonzoTxAuxData ::
   (Era era, ToCBOR (Script era), Script era ~ AlonzoScript era) =>
   ProtVer ->
   AuxiliaryData era ->
   Bool
-validateAlonzoAuxiliaryData pv (AlonzoAuxiliaryData metadata scrips) =
+validateAlonzoTxAuxData pv (AlonzoTxAuxData metadata scrips) =
   all validMetadatum metadata
     && all (validScript pv) scrips
 
-instance (EraCrypto era ~ c) => HashAnnotated (AuxiliaryData era) EraIndependentAuxiliaryData c where
+instance (EraCrypto era ~ c) => HashAnnotated (AuxiliaryData era) EraIndependentTxAuxData c where
   hashAnnotated (AuxiliaryDataConstr mb) = mbHash mb
 
 deriving newtype instance NFData (Script era) => NFData (AuxiliaryData era)
@@ -390,7 +389,7 @@ deriving instance Eq (AuxiliaryData era)
 
 deriving instance (Show (Script era), HashAlgorithm (HASH (EraCrypto era))) => Show (AuxiliaryData era)
 
-type instance MemoHashIndex AuxiliaryDataRaw = EraIndependentAuxiliaryData
+type instance MemoHashIndex AuxiliaryDataRaw = EraIndependentTxAuxData
 
 deriving via InspectHeapNamed "AuxiliaryDataRaw" (AuxiliaryData era) instance NoThunks (AuxiliaryData era)
 
@@ -403,7 +402,7 @@ deriving via
     ) =>
     FromCBOR (Annotator (AuxiliaryData era))
 
-pattern AlonzoAuxiliaryData ::
+pattern AlonzoTxAuxData ::
   ( Era era,
     ToCBOR (Script era),
     Script era ~ AlonzoScript era
@@ -411,26 +410,26 @@ pattern AlonzoAuxiliaryData ::
   Map Word64 Metadatum ->
   StrictSeq (Script era) ->
   AuxiliaryData era
-pattern AlonzoAuxiliaryData {txMD, scripts} <-
+pattern AlonzoTxAuxData {txMD, scripts} <-
   AuxiliaryDataConstr (Memo (AuxiliaryDataRaw txMD scripts) _)
   where
-    AlonzoAuxiliaryData m s =
+    AlonzoTxAuxData m s =
       AuxiliaryDataConstr
         ( memoBytes
             (encodeRaw m s)
         )
 
-{-# COMPLETE AlonzoAuxiliaryData #-}
+{-# COMPLETE AlonzoTxAuxData #-}
 
-pattern AlonzoAuxiliaryData' ::
+pattern AlonzoTxAuxData' ::
   Era era =>
   Map Word64 Metadatum ->
   StrictSeq (Script era) ->
-  AuxiliaryData era
-pattern AlonzoAuxiliaryData' txMD_ scripts_ <-
+  AlonzoTxAuxData era
+pattern AlonzoTxAuxData' txMD_ scripts_ <-
   AuxiliaryDataConstr (Memo (AuxiliaryDataRaw txMD_ scripts_) _)
 
-{-# COMPLETE AlonzoAuxiliaryData' #-}
+{-# COMPLETE AlonzoTxAuxData' #-}
 
 contentsEq :: Data era -> Data era -> Bool
 contentsEq (DataConstr x) (DataConstr y) = Memo.contentsEq x y

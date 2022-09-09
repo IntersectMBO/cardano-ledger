@@ -14,7 +14,7 @@ module Cardano.Ledger.Mary
     MATxBody,
     ShelleyPParams,
     ShelleyPParamsUpdate,
-    MAAuxiliaryData,
+    AllegraTxAuxData,
 
     -- * Deprecated
     Cardano.Ledger.Shelley.API.Tx,

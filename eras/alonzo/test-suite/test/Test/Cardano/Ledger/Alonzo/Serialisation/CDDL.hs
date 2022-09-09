@@ -25,7 +25,7 @@ tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
   testGroup "CDDL roundtrip tests" $
     [ cddlTest @(Value Alonzo) n "coin",
       cddlAnnotatorTest @(TxBody Alonzo) n "transaction_body",
-      cddlAnnotatorTest @(AuxiliaryData Alonzo) n "auxiliary_data",
+      cddlAnnotatorTest @(TxAuxData Alonzo) n "auxiliary_data",
       cddlAnnotatorTest @(MA.Timelock Alonzo) n "native_script",
       cddlAnnotatorTest @(Data Alonzo) n "plutus_data",
       cddlTest @(TxOut Alonzo) n "transaction_output",
