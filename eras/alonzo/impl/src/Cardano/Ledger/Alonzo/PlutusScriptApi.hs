@@ -37,7 +37,7 @@ import Cardano.Ledger.Alonzo.TxInfo
     runPLCScript,
     valContext,
   )
-import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits, unTxDats)
+import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), AlonzoTxWits, unTxDats)
 import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..))
 import Cardano.Ledger.Core hiding (TranslationError)
 import Cardano.Ledger.Credential (Credential (ScriptHashObj))
@@ -148,9 +148,9 @@ collectTwoPhaseScriptInputs ::
   forall era.
   ( EraTx era,
     ShelleyEraTxBody era,
+    AlonzoEraTxWits era,
     ExtendedUTxO era,
     Script era ~ AlonzoScript era,
-    TxWits era ~ AlonzoTxWits era,
     HasField "_costmdls" (PParams era) CostModels
   ) =>
   EpochInfo (Either Text) ->

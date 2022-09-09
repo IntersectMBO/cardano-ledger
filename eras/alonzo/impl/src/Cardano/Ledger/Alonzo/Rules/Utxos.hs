@@ -40,7 +40,7 @@ import Cardano.Ledger.Alonzo.PlutusScriptApi
     evalScripts,
   )
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript, CostModels)
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), AlonzoTx (..), IsValid (..))
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody (..), ShelleyEraTxBody (..))
 import Cardano.Ledger.Alonzo.TxInfo
   ( ExtendedUTxO (..),
@@ -48,7 +48,7 @@ import Cardano.Ledger.Alonzo.TxInfo
     ScriptFailure (..),
     ScriptResult (..),
   )
-import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits)
+import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits)
 import Cardano.Ledger.BaseTypes
   ( Globals,
     ProtVer,
@@ -105,9 +105,7 @@ instance
   forall era.
   ( AlonzoEraTx era,
     ExtendedUTxO era,
-    TxWits era ~ AlonzoTxWits era,
     Script era ~ AlonzoScript era,
-    Tx era ~ AlonzoTx era,
     Embed (EraRule "PPUP" era) (AlonzoUTXOS era),
     Environment (EraRule "PPUP" era) ~ PpupEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,
@@ -123,7 +121,7 @@ instance
   type BaseM (AlonzoUTXOS era) = ShelleyBase
   type Environment (AlonzoUTXOS era) = UtxoEnv era
   type State (AlonzoUTXOS era) = UTxOState era
-  type Signal (AlonzoUTXOS era) = AlonzoTx era
+  type Signal (AlonzoUTXOS era) = Tx era
   type PredicateFailure (AlonzoUTXOS era) = AlonzoUtxosPredFailure era
   type Event (AlonzoUTXOS era) = AlonzoUtxosEvent era
   transitionRules = [utxosTransition]
@@ -148,9 +146,7 @@ utxosTransition ::
   forall era.
   ( ExtendedUTxO era,
     AlonzoEraTx era,
-    Tx era ~ AlonzoTx era,
     Script era ~ AlonzoScript era,
-    TxWits era ~ AlonzoTxWits era,
     Environment (EraRule "PPUP" era) ~ PpupEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,
     Signal (EraRule "PPUP" era) ~ Maybe (Update era),
@@ -174,14 +170,14 @@ scriptsTransition ::
   ( STS sts,
     Monad m,
     EraTx era,
+    Script era ~ AlonzoScript era,
     ShelleyEraTxBody era,
+    AlonzoEraTxWits era,
     ExtendedUTxO era,
-    TxWits era ~ AlonzoTxWits era,
     HasField "_costmdls" (PParams era) CostModels,
     HasField "_protocolVersion" (PParams era) ProtVer,
     BaseM sts ~ ReaderT Globals m,
-    PredicateFailure sts ~ AlonzoUtxosPredFailure era,
-    Script era ~ AlonzoScript era
+    PredicateFailure sts ~ AlonzoUtxosPredFailure era
   ) =>
   SlotNo ->
   PParams era ->
@@ -211,8 +207,6 @@ scriptsValidateTransition ::
   ( AlonzoEraTx era,
     ExtendedUTxO era,
     STS (AlonzoUTXOS era),
-    Tx era ~ AlonzoTx era,
-    TxWits era ~ AlonzoTxWits era,
     Script era ~ AlonzoScript era,
     Environment (EraRule "PPUP" era) ~ PpupEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,
@@ -227,7 +221,7 @@ scriptsValidateTransition ::
 scriptsValidateTransition = do
   TRC (UtxoEnv slot pp poolParams genDelegs, u@(UTxOState utxo _ _ pup _), tx) <-
     judgmentContext
-  let txBody = body tx
+  let txBody = tx ^. bodyTxL
       refunded = keyRefunds pp txBody
       txcerts = toList $ txBody ^. certsTxBodyL
       depositChange =
@@ -257,23 +251,21 @@ scriptsNotValidateTransition ::
   ( AlonzoEraTx era,
     ExtendedUTxO era,
     STS (AlonzoUTXOS era),
-    TxWits era ~ AlonzoTxWits era,
     Script era ~ AlonzoScript era,
-    Tx era ~ AlonzoTx era,
     HasField "_costmdls" (PParams era) CostModels,
     HasField "_protocolVersion" (PParams era) ProtVer
   ) =>
   TransitionRule (AlonzoUTXOS era)
 scriptsNotValidateTransition = do
   TRC (UtxoEnv slot pp _ _, us@(UTxOState utxo _ fees _ _), tx) <- judgmentContext
-  let txBody = body tx
+  let txBody = tx ^. bodyTxL
 
   let !_ = traceEvent invalidBegin ()
 
   scriptsTransition slot pp tx utxo $ \case
     Passes _ps ->
       failBecause $
-        ValidationTagMismatch (getField @"isValid" tx) PassedUnexpectedly
+        ValidationTagMismatch (tx ^. isValidTxL) PassedUnexpectedly
     Fails ps fs -> do
       mapM_ (tellEvent . SuccessfulPlutusScriptsEvent) (nonEmpty ps)
       tellEvent (FailedPlutusScriptsEvent (scriptFailuresToPlutusDebug fs))

@@ -69,7 +69,7 @@ module Cardano.Ledger.Alonzo.Tx
     rdptrInv,
     getMapFromValue,
     -- Segwit
-    segwitTx,
+    alonzoSegwitTx,
     -- Other
     toCBORForSizeComputation,
     toCBORForMempoolSubmission,
@@ -83,12 +83,10 @@ import Cardano.Binary
     serializeEncoding,
     serializeEncoding',
   )
-import Cardano.Crypto.DSIGN.Class (SigDSIGN, VerKeyDSIGN)
 import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Alonzo.Data (Data, hashData)
-import Cardano.Ledger.Alonzo.Era
-import Cardano.Ledger.Alonzo.Language (nonNativeLanguages)
+import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.PParams
   ( AlonzoPParamsHKD (..),
     LangDepView (..),
@@ -96,8 +94,7 @@ import Cardano.Ledger.Alonzo.PParams
     getLanguageView,
   )
 import Cardano.Ledger.Alonzo.Scripts
-  ( AlonzoScript (..),
-    CostModel,
+  ( CostModel,
     ExUnits (..),
     Prices,
     Tag (..),
@@ -125,12 +122,9 @@ import Cardano.Ledger.Core hiding (TxBody)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (HASH)
 import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Language (nonNativeLanguages)
 import Cardano.Ledger.Mary.Value (AssetName, MaryValue (..), MultiAsset (..), PolicyID (..))
-import Cardano.Ledger.SafeHash
-  ( HashAnnotated,
-    SafeToHash (..),
-    hashAnnotated,
-  )
+import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash (..), hashAnnotated)
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), Wdrl (..), unWdrl)
 import qualified Cardano.Ledger.Shelley.UTxO as Shelley
@@ -168,7 +162,7 @@ newtype IsValid = IsValid Bool
 
 data AlonzoTx era = AlonzoTx
   { body :: !(Core.TxBody era),
-    wits :: !(AlonzoTxWits era),
+    wits :: !(Core.TxWits era),
     isValid :: !IsValid,
     auxiliaryData :: !(StrictMaybe (AuxiliaryData era))
   }
@@ -211,7 +205,7 @@ instance CC.Crypto c => AlonzoEraTx (AlonzoEra c) where
   isValidTxL = isValidAlonzoTxL
   {-# INLINE isValidTxL #-}
 
-mkBasicAlonzoTx :: (Era era, Script era ~ AlonzoScript era) => Core.TxBody era -> AlonzoTx era
+mkBasicAlonzoTx :: Monoid (TxWits era) => Core.TxBody era -> AlonzoTx era
 mkBasicAlonzoTx txBody = AlonzoTx txBody mempty (IsValid True) SNothing
 
 -- | `Core.TxBody` setter and getter for `AlonzoTx`.
@@ -220,7 +214,7 @@ bodyAlonzoTxL = lens body (\tx txBody -> tx {body = txBody})
 {-# INLINEABLE bodyAlonzoTxL #-}
 
 -- | `TxWits` setter and getter for `AlonzoTx`.
-witsAlonzoTxL :: Lens' (AlonzoTx era) (AlonzoTxWits era)
+witsAlonzoTxL :: Lens' (AlonzoTx era) (TxWits era)
 witsAlonzoTxL = lens wits (\tx txWits -> tx {wits = txWits})
 {-# INLINEABLE witsAlonzoTxL #-}
 
@@ -239,36 +233,26 @@ isValidAlonzoTxL = lens isValid (\tx valid -> tx {isValid = valid})
 {-# INLINEABLE isValidAlonzoTxL #-}
 
 deriving instance
-  (Era era, Eq (Core.TxBody era), Eq (AuxiliaryData era)) =>
+  (Era era, Eq (Core.TxBody era), Eq (TxWits era), Eq (AuxiliaryData era)) =>
   Eq (AlonzoTx era)
 
 deriving instance
-  (Era era, Show (Core.TxBody era), Show (AuxiliaryData era), Show (Script era)) =>
+  (Era era, Show (Core.TxBody era), Show (TxWits era), Show (AuxiliaryData era)) =>
   Show (AlonzoTx era)
 
 instance
   ( Era era,
     NoThunks (AuxiliaryData era),
-    NoThunks (Script era),
-    NoThunks (Core.TxBody era),
-    NoThunks (Value era),
-    NoThunks (PParamsUpdate era)
+    NoThunks (TxWits era),
+    NoThunks (Core.TxBody era)
   ) =>
   NoThunks (AlonzoTx era)
 
 instance
   ( Era era,
-    Script era ~ AlonzoScript era,
-    c ~ EraCrypto era,
     NFData (AuxiliaryData era),
-    NFData (Script era),
-    NFData (Core.TxBody era),
-    NFData (Value era),
-    NFData (PParamsUpdate era),
-    NFData (TxDats era),
-    NFData (Redeemers era),
-    NFData (VerKeyDSIGN (CC.DSIGN c)),
-    NFData (SigDSIGN (CC.DSIGN c))
+    NFData (TxWits era),
+    NFData (Core.TxBody era)
   ) =>
   NFData (AlonzoTx era)
 
@@ -334,8 +318,8 @@ isTwoPhaseScriptAddress tx =
 -- The individual components all store their bytes; the only work we do in this
 -- function is concatenating
 toCBORForSizeComputation ::
-  ( Typeable era,
-    ToCBOR (Core.TxBody era),
+  ( ToCBOR (Core.TxBody era),
+    ToCBOR (TxWits era),
     ToCBOR (AuxiliaryData era)
   ) =>
   AlonzoTx era ->
@@ -476,7 +460,7 @@ getMapFromValue (MaryValue _ (MultiAsset m)) = m
 -- | Find the Data and ExUnits assigned to a script.
 indexedRdmrs ::
   forall era.
-  (ShelleyEraTxBody era, EraTx era, TxWits era ~ AlonzoTxWits era) =>
+  (ShelleyEraTxBody era, AlonzoEraTxWits era, EraTx era) =>
   Tx era ->
   ScriptPurpose (EraCrypto era) ->
   Maybe (Data era, ExUnits)
@@ -484,7 +468,7 @@ indexedRdmrs tx sp = case rdptr @era (tx ^. bodyTxL) sp of
   SNothing -> Nothing
   SJust rPtr -> Map.lookup rPtr rdmrs
     where
-      rdmrs = unRedeemers $ txrdmrs' (tx ^. witsTxL)
+      rdmrs = unRedeemers (tx ^. witsTxL . rdmrsTxWitsL)
 
 --------------------------------------------------------------------------------
 -- Serialisation
@@ -494,25 +478,22 @@ deriving newtype instance FromCBOR IsValid
 
 deriving newtype instance ToCBOR IsValid
 
-segwitTx ::
+-- | Construct an annotated Alonzo style transaction.
+alonzoSegwitTx ::
+  AlonzoEraTx era =>
   Annotator (Core.TxBody era) ->
-  Annotator (AlonzoTxWits era) ->
+  Annotator (TxWits era) ->
   IsValid ->
   Maybe (Annotator (AuxiliaryData era)) ->
-  Annotator (AlonzoTx era)
-segwitTx
-  bodyAnn
-  witsAnn
-  isval
-  metaAnn = Annotator $ \bytes ->
-    let bodyb = runAnnotator bodyAnn bytes
-        witnessSet = runAnnotator witsAnn bytes
-        metadata = flip runAnnotator bytes <$> metaAnn
-     in AlonzoTx
-          bodyb
-          witnessSet
-          isval
-          (maybeToStrictMaybe metadata)
+  Annotator (Tx era)
+alonzoSegwitTx txBodyAnn txWitsAnn isValid auxDataAnn = Annotator $ \bytes ->
+  let txBody = runAnnotator txBodyAnn bytes
+      txWits = runAnnotator txWitsAnn bytes
+      txAuxData = maybeToStrictMaybe (flip runAnnotator bytes <$> auxDataAnn)
+   in mkBasicTx txBody
+        & witsTxL .~ txWits
+        & auxDataTxL .~ txAuxData
+        & isValidTxL .~ isValid
 
 --------------------------------------------------------------------------------
 -- Mempool Serialisation
@@ -534,8 +515,8 @@ segwitTx
 -- computing the transaction size (which omits the `IsValid` field for
 -- compatibility with Mary - see 'toCBORForSizeComputation').
 toCBORForMempoolSubmission ::
-  ( Typeable era,
-    ToCBOR (Core.TxBody era),
+  ( ToCBOR (Core.TxBody era),
+    ToCBOR (TxWits era),
     ToCBOR (AuxiliaryData era)
   ) =>
   AlonzoTx era ->
@@ -550,15 +531,19 @@ toCBORForMempoolSubmission
         !> E (encodeNullMaybe toCBOR . strictMaybeToMaybe) auxiliaryData
 
 instance
-  (Era era, ToCBOR (Core.TxBody era), ToCBOR (AuxiliaryData era)) =>
+  ( Era era,
+    ToCBOR (Core.TxBody era),
+    ToCBOR (TxWits era),
+    ToCBOR (AuxiliaryData era)
+  ) =>
   ToCBOR (AlonzoTx era)
   where
   toCBOR = toCBORForMempoolSubmission
 
 instance
-  ( EraScript era,
-    Script era ~ AlonzoScript era,
+  ( Typeable era,
     FromCBOR (Annotator (Core.TxBody era)),
+    FromCBOR (Annotator (Core.TxWits era)),
     FromCBOR (Annotator (AuxiliaryData era))
   ) =>
   FromCBOR (Annotator (AlonzoTx era))

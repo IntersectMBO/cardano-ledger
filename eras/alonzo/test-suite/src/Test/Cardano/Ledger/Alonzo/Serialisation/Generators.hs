@@ -15,7 +15,14 @@ module Test.Cardano.Ledger.Alonzo.Serialisation.Generators where
 
 import Cardano.Binary (ToCBOR (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.Data (AlonzoAuxiliaryData (..), AuxiliaryDataHash, BinaryData, Data (..), Datum (..), dataToBinaryData)
+import Cardano.Ledger.Alonzo.Data
+  ( AlonzoAuxiliaryData (..),
+    AuxiliaryDataHash,
+    BinaryData,
+    Data (..),
+    Datum (..),
+    dataToBinaryData,
+  )
 import Cardano.Ledger.Alonzo.Language
 import Cardano.Ledger.Alonzo.PParams
   ( AlonzoPParams,
@@ -173,7 +180,7 @@ instance
       <*> arbitrary
 
 instance
-  (EraTxOut era, ToCBOR (PParamsUpdate era), Arbitrary (Value era), Mock (EraCrypto era)) =>
+  (EraTxOut era, ToCBOR (PParamsUpdate era), Arbitrary (TxOut era), Mock (EraCrypto era)) =>
   Arbitrary (AlonzoTxBody era)
   where
   arbitrary =
@@ -195,11 +202,8 @@ instance
 deriving newtype instance Arbitrary IsValid
 
 instance
-  ( EraTxBody era,
-    EraScript era,
-    Mock (EraCrypto era),
-    Script era ~ AlonzoScript era,
-    Arbitrary (TxBody era),
+  ( Arbitrary (TxBody era),
+    Arbitrary (TxWits era),
     Arbitrary (AuxiliaryData era)
   ) =>
   Arbitrary (AlonzoTx era)

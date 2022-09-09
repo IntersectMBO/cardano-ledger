@@ -38,20 +38,19 @@ import Cardano.Ledger.Alonzo.Rules.Utxo
   )
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), CostModels)
 import Cardano.Ledger.Alonzo.Tx
-  ( AlonzoTx (..),
+  ( AlonzoEraTx,
     ScriptPurpose,
     hashScriptIntegrity,
     rdptr,
   )
 import Cardano.Ledger.Alonzo.TxBody
   ( AlonzoEraTxBody (..),
-    AlonzoEraTxOut,
     ScriptIntegrityHash,
     ShelleyEraTxBody (..),
   )
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), languages)
 import Cardano.Ledger.Alonzo.TxWits
-  ( AlonzoTxWits (txdats, txrdmrs),
+  ( AlonzoEraTxWits (..),
     RdmrPtr,
     unRedeemers,
     unTxDats,
@@ -231,20 +230,17 @@ decodePredFail n = Invalid n
 {- dom(txdats txw) ⊆ inputHashes ∪ {h | ( , , h, ) ∈ txouts tx ∪ utxo (refInputs tx) } -}
 missingRequiredDatums ::
   forall era.
-  ( EraTx era,
-    AlonzoEraTxOut era,
-    Tx era ~ AlonzoTx era,
-    Script era ~ AlonzoScript era,
+  ( AlonzoEraTx era,
     ExtendedUTxO era
   ) =>
   Map.Map (ScriptHash (EraCrypto era)) (Script era) ->
   UTxO era ->
-  AlonzoTx era ->
+  Tx era ->
   Test (AlonzoUtxowPredFailure era)
 missingRequiredDatums scriptWits utxo tx = do
   let txBody = tx ^. bodyTxL
       (inputHashes, txInsNoDataHash) = getInputDataHashesTxBody utxo txBody scriptWits
-      txHashes = domain (unTxDats . txdats . wits $ tx)
+      txHashes = domain (unTxDats $ tx ^. witsTxL . datsTxWitsL)
       unmatchedDatumHashes = eval (inputHashes ➖ txHashes)
       allowedSupplimentalDataHashes = getAllowedSupplimentalDataHashes txBody utxo
       supplimentalDatumHashes = eval (txHashes ➖ inputHashes)
@@ -266,12 +262,9 @@ missingRequiredDatums scriptWits utxo tx = do
 {-  dom (txrdmrs tx) = { rdptr txb sp | (sp, h) ∈ scriptsNeeded utxo tx,
                            h ↦ s ∈ txscripts txw, s ∈ Scriptph2}     -}
 hasExactSetOfRedeemers ::
-  forall era.
-  ( EraTx era,
-    ShelleyEraTxBody era,
+  ( AlonzoEraTx era,
     ExtendedUTxO era,
-    Script era ~ AlonzoScript era,
-    Tx era ~ AlonzoTx era
+    Script era ~ AlonzoScript era
   ) =>
   UTxO era ->
   Tx era ->
@@ -281,13 +274,13 @@ hasExactSetOfRedeemers utxo tx txbody = do
   let redeemersNeeded =
         [ (rp, (sp, sh))
           | (sp, sh) <- Alonzo.scriptsNeeded utxo tx,
-            SJust rp <- [rdptr @era txbody sp],
+            SJust rp <- [rdptr txbody sp],
             Just script <- [Map.lookup sh (txscripts utxo tx)],
-            (not . isNativeScript @era) script
+            (not . isNativeScript) script
         ]
       (extraRdmrs, missingRdmrs) =
         extSymmetricDifference
-          (Map.keys $ unRedeemers $ txrdmrs $ wits tx)
+          (Map.keys $ unRedeemers $ tx ^. witsTxL . rdmrsTxWitsL)
           id
           redeemersNeeded
           fst
@@ -298,9 +291,7 @@ hasExactSetOfRedeemers utxo tx txbody = do
 
 -- ======================
 requiredSignersAreWitnessed ::
-  forall era.
-  ( AlonzoEraTxBody era
-  ) =>
+  AlonzoEraTxBody era =>
   TxBody era ->
   Set (KeyHash 'Witness (EraCrypto era)) ->
   Test (AlonzoUtxowPredFailure era)
@@ -314,10 +305,9 @@ requiredSignersAreWitnessed txBody witsKeyHashes = do
 {-  scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw)  -}
 ppViewHashesMatch ::
   forall era.
-  ( AlonzoEraTxBody era,
+  ( AlonzoEraTx era,
     ExtendedUTxO era,
     Script era ~ AlonzoScript era,
-    Tx era ~ AlonzoTx era,
     HasField "_costmdls" (PParams era) CostModels
   ) =>
   Tx era ->
@@ -330,7 +320,8 @@ ppViewHashesMatch tx txBody pp utxo sNeeded = do
   -- FIXME: No need to supply txBody as a separate argument: txBody = tx ^. bodyTxL
   let langs = languages @era tx utxo sNeeded
       langViews = Set.map (getLanguageView pp) langs
-      computedPPhash = hashScriptIntegrity langViews (txrdmrs . wits $ tx) (txdats . wits $ tx)
+      txWits = tx ^. witsTxL
+      computedPPhash = hashScriptIntegrity langViews (txWits ^. rdmrsTxWitsL) (txWits ^. datsTxWitsL)
       bodyPPhash = txBody ^. scriptIntegrityHashTxBodyL
   failureUnless
     (bodyPPhash == computedPPhash)
@@ -344,12 +335,9 @@ ppViewHashesMatch tx txBody pp utxo sNeeded = do
 -- | A very specialized transitionRule function for the Alonzo Era.
 alonzoStyleWitness ::
   forall era.
-  ( EraTx era,
-    AlonzoEraTxBody era,
+  ( AlonzoEraTx era,
     ExtendedUTxO era,
-    Tx era ~ AlonzoTx era,
     Script era ~ AlonzoScript era,
-    TxWits era ~ AlonzoTxWits era,
     HasField "_costmdls" (PParams era) CostModels,
     HasField "_protocolVersion" (PParams era) ProtVer,
     Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody),
@@ -357,7 +345,7 @@ alonzoStyleWitness ::
     Embed (EraRule "UTXO" era) (AlonzoUTXOW era),
     Environment (EraRule "UTXO" era) ~ UtxoEnv era,
     State (EraRule "UTXO" era) ~ UTxOState era,
-    Signal (EraRule "UTXO" era) ~ AlonzoTx era
+    Signal (EraRule "UTXO" era) ~ Tx era
   ) =>
   TransitionRule (AlonzoUTXOW era)
 alonzoStyleWitness = do
@@ -511,26 +499,23 @@ extSymmetricDifference as fa bs fb = (extraA, extraB)
 
 instance
   forall era.
-  ( EraTx era,
-    AlonzoEraTxBody era,
+  ( AlonzoEraTx era,
     EraAuxiliaryData era,
     ExtendedUTxO era,
     Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody),
-    Tx era ~ AlonzoTx era,
     Script era ~ AlonzoScript era,
-    TxWits era ~ AlonzoTxWits era,
     HasField "_costmdls" (PParams era) CostModels,
     HasField "_protocolVersion" (PParams era) ProtVer,
     -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (AlonzoUTXOW era),
     Environment (EraRule "UTXO" era) ~ UtxoEnv era,
     State (EraRule "UTXO" era) ~ UTxOState era,
-    Signal (EraRule "UTXO" era) ~ AlonzoTx era
+    Signal (EraRule "UTXO" era) ~ Tx era
   ) =>
   STS (AlonzoUTXOW era)
   where
   type State (AlonzoUTXOW era) = UTxOState era
-  type Signal (AlonzoUTXOW era) = AlonzoTx era
+  type Signal (AlonzoUTXOW era) = Tx era
   type Environment (AlonzoUTXOW era) = UtxoEnv era
   type BaseM (AlonzoUTXOW era) = ShelleyBase
   type PredicateFailure (AlonzoUTXOW era) = AlonzoUtxowPredFailure era

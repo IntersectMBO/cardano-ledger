@@ -155,7 +155,6 @@ scriptsYes ::
     AlonzoEraTx era,
     Tx era ~ AlonzoTx era,
     Script era ~ AlonzoScript era,
-    TxWits era ~ AlonzoTxWits era,
     STS (BabbageUTXOS era),
     Environment (EraRule "PPUP" era) ~ PpupEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,
@@ -219,7 +218,6 @@ scriptsNo ::
     Tx era ~ AlonzoTx era,
     TxOut era ~ BabbageTxOut era,
     TxBody era ~ BabbageTxBody era,
-    TxWits era ~ AlonzoTxWits era,
     Script era ~ AlonzoScript era,
     HasField "_protocolVersion" (PParams era) ProtVer,
     HasField "_costmdls" (PParams era) CostModels
