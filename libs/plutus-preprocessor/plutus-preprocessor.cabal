@@ -34,6 +34,7 @@ executable plutus-preprocessor
       bytestring,
       cardano-ledger-alonzo,
       flat,
+      hashable >= 1.4.1.0,
       plutus-core,
       plutus-tx,
       plutus-tx-plugin,
