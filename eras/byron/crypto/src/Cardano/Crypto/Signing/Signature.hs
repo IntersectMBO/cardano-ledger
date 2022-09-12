@@ -8,6 +8,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 
 module Cardano.Crypto.Signing.Signature
   ( -- * Signature
@@ -69,6 +70,8 @@ import qualified Text.JSON.Canonical as TJC (FromJSON (..), ToJSON (..))
 --------------------------------------------------------------------------------
 
 -- | Wrapper around 'CC.XSignature'
+
+type Signature :: Type -> Type
 newtype Signature a
   = Signature CC.XSignature
   deriving stock (Eq, Ord, Show, Generic)
@@ -95,6 +98,7 @@ fullSignatureHexF :: Format r (Signature a -> r)
 fullSignatureHexF =
   later $ \(Signature x) -> base16Builder . CC.unXSignature $ x
 
+type SignatureParseError :: Type
 data SignatureParseError
   = SignatureParseBase16Error ByteString
   | SignatureParseXSignatureError Text
