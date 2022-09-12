@@ -4,7 +4,7 @@ name:                byron-spec-chain
 version:             0.1.0.0
 synopsis:            Executable specification of the Cardano blockchain
 -- description:
-homepage:            https://github.com/input-output-hk/cardano-legder-specs
+homepage:            https://github.com/input-output-hk/cardano-legder
 license:             Apache-2.0
 author:              IOHK Formal Methods Team
 maintainer:          formal.methods@iohk.io
