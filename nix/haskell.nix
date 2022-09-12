@@ -45,10 +45,6 @@ let
         packages.cardano-ledger-alonzo-test.components.tests.cardano-ledger-alonzo-test.build-tools = [pkgs.cddl pkgs.cbor-diag];
         packages.cardano-ledger-babbage-test.components.tests.cardano-ledger-babbage-test.build-tools = [pkgs.cddl pkgs.cbor-diag];
         enableLibraryProfiling = profiling;
-        # Disable doctests for now (waiting for https://github.com/input-output-hk/haskell.nix/pull/427):
-        packages.small-steps.components.tests.doctests.buildable = lib.mkForce false;
-        packages.small-steps-test.components.tests.doctests.buildable = lib.mkForce false;
-        packages.byron-spec-ledger.components.tests.doctests.buildable = lib.mkForce false;
 
         packages.cardano-ledger-byron = {
           configureFlags = [ "--ghc-option=-Werror" ];

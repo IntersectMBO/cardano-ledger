@@ -92,3 +92,14 @@ test-suite cardano-data-tests
                      , cardano-data
                      , QuickCheck
   ghc-options:        -threaded
+
+test-suite cardano-data-doctest
+  type:               exitcode-stdio-1.0
+  import:             project-config
+
+  hs-source-dirs:     test
+  main-is:            doctests.hs
+  buildable:          True
+  build-depends:      base
+                    , cardano-data
+                    , doctest

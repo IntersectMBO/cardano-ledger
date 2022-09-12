@@ -40,7 +40,8 @@ let
     tools = {
       cabal = "3.8.1.0";
       ghcid = "0.8.7";
-      haskell-language-server="latest";
+      haskell-language-server = "latest";
+      doctest = "latest";
     };
 
     # Prevents cabal from choosing alternate plans, so that
