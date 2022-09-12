@@ -42,7 +42,8 @@ library
                      , Data.UMap
                      , Data.ListMap
                      , Data.Twiddle
-                     , Data.VCBOR
+                     -- , Data.VCBOR
+                     , Data.FromVCBOR
 
   build-depends:       aeson
                      , base >=4.11 && <5
