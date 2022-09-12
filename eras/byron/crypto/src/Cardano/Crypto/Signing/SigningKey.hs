@@ -1,6 +1,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Crypto.Signing.SigningKey
@@ -21,6 +22,7 @@ import qualified GHC.Show
 import NoThunks.Class (InspectHeap (..), NoThunks (..))
 
 -- | Wrapper around 'CC.XPrv'.
+type SigningKey :: Type
 newtype SigningKey = SigningKey
   { unSigningKey :: CC.XPrv
   }

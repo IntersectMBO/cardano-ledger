@@ -1,4 +1,4 @@
-index-state: 2022-09-07T00:00:00Z
+index-state: 2022-09-10T00:00:00Z
 
 packages:
   eras/alonzo/impl
@@ -66,19 +66,20 @@ source-repository-package
   tag: f73079303f663e028288f9f4a9e08bcca39a923e
   --sha256: 1n87i15x54s0cjkh3nsxs4r1x016cdw1fypwmr68936n3xxsjn6q
 
+-- https://github.com/input-output-hk/cardano-prelude/pull/169
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
-  tag: 533aec85c1ca05c7d171da44b89341fb736ecfe5
-  --sha256: 0z2y3wzppc12bpn9bl48776ms3nszw8j58xfsdxf97nzjgrmd62g
+  tag: f3548c2bc620c8df4bc6e28830544f813ef533dc
+  --sha256: 04h8n0m93rgr8xcynypjh6mc7kmb450c17cfvpyzpa36yld599fy
   subdir:
     cardano-prelude
     cardano-prelude-test
 
 source-repository-package
   type: git
-  location: https://github.com/input-output-hk/goblins
-  tag: cde90a2b27f79187ca8310b6549331e59595e7ba
+  location: https://github.com/newhoggy/goblins
+  tag: 6a3e582951ff7d2709f5fddf3d09d733c2801e08
   --sha256: 17c88rbva3iw82yg9srlxjv2ia5wjb9cyqw44hik565f5v9svnyg
 
 source-repository-package
@@ -94,12 +95,10 @@ source-repository-package
     prettyprinter-configurable
     word-array
 
--- https://github.com/Quid2/flat/pull/22 fixes a potential exception
--- when decoding invalid (e.g. malicious) text literals.
 source-repository-package
   type: git
   location: https://github.com/Quid2/flat.git
-  tag: ee59880f47ab835dbd73bea0847dab7869fc20d8
+  tag: 44dd79ab3d6547afd7674876f0307995fc40dfcf
   --sha256: 1lrzknw765pz2j97nvv9ip3l1mcpf2zr4n56hwlz0rk7wq7ls4cm
 
 source-repository-package
@@ -109,6 +108,8 @@ source-repository-package
   --sha256: 01fy4nbq6kaqi73ydn6w7rd1izkg5p217q5znyp2icybf41sl1b6
 
 allow-newer:
+  cardano-slotting:time,
+  int-cast:base,
   monoidal-containers:aeson,
   size-based:template-haskell,
   Unique:hashable
@@ -125,3 +126,30 @@ constraints:
   , protolude >= 0.3.2
 
   , persistent < 2.14
+
+-- https://github.com/well-typed/canonical-json/pull/8
+source-repository-package
+   type: git
+   location: https://github.com/erikd/canonical-json
+   tag: 38734cacc5b1f20428ee1991ba054627982a62d5
+
+-- https://github.com/input-output-hk/nothunks/pull/18
+source-repository-package
+  type: git
+  location: https://github.com/erikd/nothunks
+  tag: be807ff5411a97c54e997706618c96bd686c2830
+
+-- https://github.com/astanin/moo/pull/11
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/moo
+  tag: b9ab5acfd19c2b16161b30357c09dcf18e2655be
+
+package base58-bytestring
+  ghc-options: -Wno-unused-imports
+
+package double-conversion
+  ghc-options: -Wno-deprecations
+
+package foundation
+  ghc-options: -Wno-dodgy-imports

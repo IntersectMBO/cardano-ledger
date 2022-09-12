@@ -100,7 +100,7 @@ instance Twiddle a => Twiddle (StrictSeq a) where
 instance Typeable a => ToCBOR (Twiddler a) where
   toCBOR (Twiddler _ x) = encodeTerm x
 
-instance (Typeable a, ToCBOR a, FromCBOR a) => FromCBOR (Twiddler a) where
+instance (ToCBOR a, FromCBOR a) => FromCBOR (Twiddler a) where
   fromCBOR = f <$> fromCBOR
     where
       f x = Twiddler x $ toTerm x

@@ -112,7 +112,7 @@ data-files: golden/cbor/block/BlockSignature
             golden/json/genesis/GenesisData0_Legacy_HasNetworkMagic
 
 common base
-  build-depends:      base >= 4.12 && < 4.15
+  build-depends:      base >= 4.12 && < 4.17
 
 common project-config
   default-language:   Haskell2010
