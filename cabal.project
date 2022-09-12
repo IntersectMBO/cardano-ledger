@@ -112,7 +112,14 @@ allow-newer:
   int-cast:base,
   monoidal-containers:aeson,
   size-based:template-haskell,
-  Unique:hashable
+  plutus-core:int-cast,
+  plutus-core:ral,
+  plutus-core:some,
+  plutus-tx-plugin:ghc,
+  Unique:hashable,
+--  tasty-hedgehog:hedgehog,
+
+--  *:tasty-hedgehog,
 
 constraints:
   -- bizarre issue: in earlier versions they define their own 'GEq', in newer
