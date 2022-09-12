@@ -2,6 +2,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 
 module Cardano.Crypto.Signing.Redeem.SigningKey
   ( RedeemSigningKey (..),
@@ -21,6 +22,7 @@ import qualified Formatting.Buildable as B
 import NoThunks.Class (InspectHeap (..), NoThunks (..))
 
 -- | Wrapper around 'Ed25519.SecretKey'.
+type RedeemSigningKey :: Type
 newtype RedeemSigningKey
   = RedeemSigningKey Ed25519.SecretKey
   deriving (Eq, Show, Generic, NFData, FromCBOR, ToCBOR)

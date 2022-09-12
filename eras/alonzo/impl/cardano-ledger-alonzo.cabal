@@ -20,7 +20,7 @@ source-repository head
   subdir:   eras/alonzo/impl
 
 common base
-  build-depends:      base >= 4.12 && < 4.15
+  build-depends:      base >= 4.12 && < 4.17
 
 common project-config
   default-language:   Haskell2010
