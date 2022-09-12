@@ -8,8 +8,14 @@ license:             Apache-2.0
 author:              IOHK Formal Methods Team
 maintainer:          formal.methods@iohk.io
 category:            Control
-build-type:          Simple
+build-type:          Custom
 extra-source-files:  CHANGELOG.md
+
+custom-setup
+  setup-depends: 
+      base
+    , Cabal
+    , cabal-doctest
 
 source-repository head
   type:     git
@@ -101,5 +107,10 @@ test-suite cardano-data-doctest
   main-is:            doctests.hs
   buildable:          True
   build-depends:      base
+                    , Cabal
+                    , cabal-doctest
                     , cardano-data
                     , doctest
+  x-doctest-components: lib
+  ghc-options:        -threaded
+                      -Wall
