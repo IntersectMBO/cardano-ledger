@@ -7,6 +7,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -63,6 +64,7 @@ import Text.JSON.Canonical
   )
 
 -- | Wrapper around 'Ed25519.PublicKey'.
+type RedeemVerificationKey :: Type
 newtype RedeemVerificationKey
   = RedeemVerificationKey Ed25519.PublicKey
   deriving (Eq, Show, Generic, NFData, FromCBOR, ToCBOR)
@@ -79,58 +81,22 @@ instance Ord RedeemVerificationKey where
   RedeemVerificationKey a `compare` RedeemVerificationKey b =
     BA.convert a `compare` (BA.convert b :: ByteString)
 
-instance Monad m => ToObjectKey m RedeemVerificationKey where
-  toObjectKey = pure . toJSString . formatToString redeemVKB64UrlF
-
-instance MonadError SchemaError m => FromObjectKey m RedeemVerificationKey where
-  fromObjectKey =
-    fmap Just . parseJSString (first (sformat build) . fromAvvmVK) . JSString
-
-instance ToJSONKey RedeemVerificationKey where
-  toJSONKey = ToJSONKeyText render (A.key . render)
-    where
-      render = A.fromText . sformat redeemVKB64UrlF
-
-instance FromJSONKey RedeemVerificationKey where
-  fromJSONKey =
-    FromJSONKeyTextParser $ toAesonError . first (sformat build) . fromAvvmVK
-  fromJSONKeyList =
-    FromJSONKeyTextParser $
-      toAesonError
-        . bimap (sformat build) pure
-        . fromAvvmVK
-
-instance B.Buildable RedeemVerificationKey where
-  build = bprint ("redeem_vk:" . redeemVKB64F)
-
 fromVerificationKeyToByteString :: Ed25519.PublicKey -> BS.ByteString
 fromVerificationKeyToByteString = BA.convert
-
-redeemVKB64F :: Format r (RedeemVerificationKey -> r)
-redeemVKB64F = later $ \(RedeemVerificationKey vk) ->
-  B.build . Char8.unpack . B64.encode $ fromVerificationKeyToByteString vk
 
 -- | Base64url Format for 'RedeemVerificationKey'.
 redeemVKB64UrlF :: Format r (RedeemVerificationKey -> r)
 redeemVKB64UrlF = later $ \(RedeemVerificationKey vk) ->
   B.build . Char8.unpack . B64URL.encode $ fromVerificationKeyToByteString vk
 
-redeemVKB64ShortF :: Format r (RedeemVerificationKey -> r)
-redeemVKB64ShortF = fitLeft 8 %. redeemVKB64F
+instance Monad m => ToObjectKey m RedeemVerificationKey where
+  toObjectKey = pure . toJSString . formatToString redeemVKB64UrlF
 
--- | Read the text into a redeeming verification key. The key should be in
---   AVVM format which is base64(url). This function must be inverse of
---   redeemVKB64UrlF formatter.
-fromAvvmVK :: Text -> Either AvvmVKError RedeemVerificationKey
-fromAvvmVK addrText = do
-  let base64rify = T.replace "-" "+" . T.replace "_" "/"
-  let parsedM = B64.decode . T.encodeUtf8 $ base64rify addrText
-  addrParsed <- case parsedM of
-    Left _ -> throwError $ ApeAddressFormat addrText
-    Right a -> Right a
-  let len = BS.length addrParsed
-  (len == 32) `orThrowError` ApeAddressLength len
-  pure $ redeemVKBuild addrParsed
+type AvvmVKError :: Type
+data AvvmVKError
+  = ApeAddressFormat Text
+  | ApeAddressLength Int
+  deriving (Show)
 
 -- | Creates a verification key from 32 byte bytestring, fails with 'error' otherwise
 redeemVKBuild :: ByteString -> RedeemVerificationKey
@@ -149,10 +115,19 @@ redeemVKBuild bs
               "Cardano.Crypto.Signing.Types.Redeem.hs consRedeemVK failed because "
               (T.pack $ show e)
 
-data AvvmVKError
-  = ApeAddressFormat Text
-  | ApeAddressLength Int
-  deriving (Show)
+-- | Read the text into a redeeming verification key. The key should be in
+--   AVVM format which is base64(url). This function must be inverse of
+--   redeemVKB64UrlF formatter.
+fromAvvmVK :: Text -> Either AvvmVKError RedeemVerificationKey
+fromAvvmVK addrText = do
+  let base64rify = T.replace "-" "+" . T.replace "_" "/"
+  let parsedM = B64.decode . T.encodeUtf8 $ base64rify addrText
+  addrParsed <- case parsedM of
+    Left _ -> throwError $ ApeAddressFormat addrText
+    Right a -> Right a
+  let len = BS.length addrParsed
+  (len == 32) `orThrowError` ApeAddressLength len
+  pure $ redeemVKBuild addrParsed
 
 instance B.Buildable AvvmVKError where
   build = \case
@@ -163,4 +138,32 @@ instance B.Buildable AvvmVKError where
         ("Address length is " . build . ", expected 32, can't be redeeming vk")
         len
 
+instance MonadError SchemaError m => FromObjectKey m RedeemVerificationKey where
+  fromObjectKey =
+    fmap Just . parseJSString (first (sformat build) . fromAvvmVK) . JSString
+
 deriveJSON defaultOptions ''RedeemVerificationKey
+
+instance ToJSONKey RedeemVerificationKey where
+  toJSONKey = ToJSONKeyText render (A.key . render)
+    where
+      render = A.fromText . sformat redeemVKB64UrlF
+
+instance FromJSONKey RedeemVerificationKey where
+  fromJSONKey =
+    FromJSONKeyTextParser $ toAesonError . first (sformat build) . fromAvvmVK
+  fromJSONKeyList =
+    FromJSONKeyTextParser $
+      toAesonError
+        . bimap (sformat build) pure
+        . fromAvvmVK
+
+instance B.Buildable RedeemVerificationKey where
+  build = bprint ("redeem_vk:" . redeemVKB64F)
+
+redeemVKB64F :: Format r (RedeemVerificationKey -> r)
+redeemVKB64F = later $ \(RedeemVerificationKey vk) ->
+  B.build . Char8.unpack . B64.encode $ fromVerificationKeyToByteString vk
+
+redeemVKB64ShortF :: Format r (RedeemVerificationKey -> r)
+redeemVKB64ShortF = fitLeft 8 %. redeemVKB64F

@@ -1,0 +1,63 @@
+cabal-version: 3.0
+
+name:                cardano-ledger-conway
+version:             0.1.0.0
+synopsis:            TODO
+description:         TODO
+bug-reports:         https://github.com/input-output-hk/cardano-ledger/issues
+license:             Apache-2.0
+author:              IOHK Formal Methods Team
+maintainer:          formal.methods@iohk.io
+copyright:           2022 Input Output (Hong Kong) Ltd.
+category:            Network
+build-type:          Simple
+
+source-repository head
+  type:     git
+  location: https://github.com/input-output-hk/cardano-ledger
+  subdir:   eras/conway/impl
+
+common base
+  build-depends:      base >= 4.12 && < 4.17
+
+common project-config
+  default-language:   Haskell2010
+
+  ghc-options:        -Wall
+                      -Wcompat
+                      -Wincomplete-record-updates
+                      -Wincomplete-uni-patterns
+                      -Wpartial-fields
+                      -Wredundant-constraints
+                      -Wunused-packages
+
+library
+  import:             base, project-config
+  exposed-modules:
+    Cardano.Ledger.Conway.Genesis
+    Cardano.Ledger.Conway.PParams
+    Cardano.Ledger.Conway.Tx
+    Cardano.Ledger.Conway.TxBody
+    Cardano.Ledger.Conway.TxOut
+    Cardano.Ledger.Conway.TxWits
+    Cardano.Ledger.Conway.Translation
+    Cardano.Ledger.Conway.Scripts
+    Cardano.Ledger.Conway
+  other-modules:
+    Cardano.Ledger.Conway.Era
+    Cardano.Ledger.Conway.UTxO
+  build-depends:
+                aeson,
+                bytestring,
+                cardano-binary,
+                cardano-ledger-alonzo,
+                cardano-ledger-babbage,
+                cardano-ledger-core,
+                cardano-ledger-shelley,
+                cardano-ledger-shelley-ma,
+                containers,
+                microlens,
+                nothunks,
+                strict-containers,
+  hs-source-dirs:
+    src

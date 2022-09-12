@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Crypto.Signing.Tag
@@ -26,6 +27,7 @@ import Formatting.Buildable (Buildable (..))
 --   We also automatically add the network tag ('protocolMagic') whenever it
 --   makes sense, to ensure that things intended for testnet won't work for
 --   mainnet.
+type SignTag :: Type
 data SignTag
   = -- | Anything (to be used for testing only)
     SignForTestingOnly

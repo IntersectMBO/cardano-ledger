@@ -1,9 +1,10 @@
 cabal-version: 3.0
 
-name:                cardano-ledger-babbage
+name:                cardano-ledger-conway-test
 version:             0.1.0.0
-synopsis:            TODO
-description:         TODO
+synopsis:            Tests for Cardano ledger conway era
+description:
+  This package builds upon the Alonzo ledger
 bug-reports:         https://github.com/input-output-hk/cardano-ledger/issues
 license:             Apache-2.0
 author:              IOHK Formal Methods Team
@@ -15,7 +16,7 @@ build-type:          Simple
 source-repository head
   type:     git
   location: https://github.com/input-output-hk/cardano-ledger
-  subdir:   eras/babbage/impl
+  subdir:   eras/conway/test-suite
 
 common base
   build-depends:      base >= 4.12 && < 4.17
@@ -33,42 +34,26 @@ common project-config
 
 library
   import:             base, project-config
+
   exposed-modules:
-    Cardano.Ledger.Babbage.Genesis
-    Cardano.Ledger.Babbage.PParams
-    Cardano.Ledger.Babbage.Tx
-    Cardano.Ledger.Babbage.TxBody
-    Cardano.Ledger.Babbage.TxInfo
-    Cardano.Ledger.Babbage.Translation
-    Cardano.Ledger.Babbage.Scripts
-    Cardano.Ledger.Babbage.Collateral
-    Cardano.Ledger.Babbage.Rules.Utxow
-    Cardano.Ledger.Babbage.Rules.Utxo
-    Cardano.Ledger.Babbage.Rules.Utxos
-    Cardano.Ledger.Babbage.Rules.Ledger
-    Cardano.Ledger.Babbage
+    Test.Cardano.Ledger.Conway.Examples.Consensus,
+    Test.Cardano.Ledger.Conway.Serialisation.Generators
   build-depends:
-    bytestring,
-    cardano-binary,
-    cardano-crypto-class,
-    cardano-data,
     cardano-ledger-alonzo,
+    cardano-ledger-alonzo-test,
+    cardano-ledger-babbage,
+    cardano-ledger-babbage-test,
+    cardano-ledger-conway,
     cardano-ledger-core,
-    cardano-ledger-shelley,
+    cardano-ledger-shelley-ma-test,
     cardano-ledger-shelley-ma,
     cardano-slotting,
     containers,
-    data-default,
-    deepseq,
-    mtl,
-    nothunks,
-    plutus-ledger-api ^>= 1.0,
-    plutus-tx ^>= 1.0,
-    set-algebra,
-    small-steps,
+    data-default-class,
+    plutus-tx,
+    cardano-ledger-shelley-test,
+    cardano-ledger-shelley,
     strict-containers,
-    text,
-    transformers,
-    validation-selective,
   hs-source-dirs:
     src
+

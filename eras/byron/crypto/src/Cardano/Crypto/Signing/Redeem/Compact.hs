@@ -6,6 +6,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -51,6 +52,7 @@ import Text.JSON.Canonical
     toJSString,
   )
 
+type CompactRedeemVerificationKey :: Type
 data CompactRedeemVerificationKey
   = CompactRedeemVerificationKey
       {-# UNPACK #-} !Word64
