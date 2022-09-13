@@ -1,1 +1,1 @@
--c "nix-shell ../../shell.nix --run \"cabal repl cardano-data\"" -o ghcid.txt
+-c "nix-shell ../../shell.nix --run \"cabal repl cardano-ledegr-binary\"" -o ghcid.txt

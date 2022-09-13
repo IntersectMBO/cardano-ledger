@@ -38,6 +38,9 @@ library
                      Cardano.Ledger.Binary.Decoding.FromVCBOR
                      Cardano.Ledger.Binary.Decoding.VDecoder
 
+  if impl(ghc < 9.2)
+    other-modules:   Cardano.Ledger.Binary.Decoding.NatsCompat
+
   build-depends:       aeson
                      , base >=4.11 && <5
                      , bytestring

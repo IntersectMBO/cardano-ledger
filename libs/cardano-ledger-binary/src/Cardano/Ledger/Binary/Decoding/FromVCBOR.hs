@@ -4,6 +4,7 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Ledger.Binary.Decoding.FromVCBOR
   ( FromVCBOR (..),
@@ -39,10 +40,6 @@ class Typeable a => FromVCBOR a where
 
   label :: proxy a -> T.Text
   label = T.pack . show . typeRep
-
---------------------------------------------------------------------------------
--- Primitive types
---------------------------------------------------------------------------------
 
 --------------------------------------------------------------------------------
 -- Primitive types

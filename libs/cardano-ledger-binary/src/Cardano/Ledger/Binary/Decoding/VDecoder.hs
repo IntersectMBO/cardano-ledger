@@ -1,17 +1,23 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Ledger.Binary.Decoding.VDecoder
   ( -- * Decoders
-    C.Decoder,
-    VDecoder (..),
+    VDecoder,
+    toVDecoder,
+    fromVDecoder,
     C.DecoderError (..),
     C.ByteOffset,
     C.DecodeAction (..),
@@ -20,6 +26,10 @@ module Cardano.Ledger.Binary.Decoding.VDecoder
     -- ** Running decoders
     decodeFullDecoder,
     decodeFullDecoderProxy,
+
+    -- ** Versioning
+    ifVerAtLeast,
+    ifVerAtLeastProxy,
 
     -- * Error reporting
     cborError,
@@ -191,12 +201,12 @@ import qualified Codec.CBOR.Decoding as C
     peekByteOffset,
     peekTokenType,
   )
-import Control.Monad (when)
+import Control.Monad (replicateM, when)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.Int (Int16, Int32, Int64, Int8)
 import qualified Data.Map.Strict as Map
-import Data.Proxy (Proxy)
+import Data.Proxy (Proxy (..))
 import Data.Ratio ((%))
 import Data.Reflection (reifyNat)
 import qualified Data.Set as Set
@@ -206,12 +216,28 @@ import Data.Time.Clock (NominalDiffTime, UTCTime (..), picosecondsToDiffTime)
 import qualified Data.Vector.Generic as VG
 import Data.Word (Word16, Word32, Word64, Word8)
 import Formatting (build, formatToString)
-import GHC.TypeLits
-import Numeric.Natural
+import GHC.TypeLits (KnownNat, Nat, natVal)
+import Numeric.Natural (Natural)
 import Prelude hiding (decodeFloat)
+
+#if __GLASGOW_HASKELL__ < 902
+import Cardano.Ledger.Binary.Decoding.NatsCompat (OrderingI(LTI), cmpNat)
+#endif
 
 newtype VDecoder (v :: Nat) s a = VDecoder {unVDecoder :: C.Decoder s a}
   deriving (Functor, Applicative, Monad, MonadFail)
+
+-- | Promote a regular `C.Decoder` to a version one
+toVDecoder :: C.Decoder s a -> VDecoder v s a
+toVDecoder = VDecoder
+
+-- | Extract the underlying `C.Decoder` by specifying the concrete version to be used.
+fromVDecoder :: forall v s a. KnownNat v => VDecoder v s a -> C.Decoder s a
+fromVDecoder vd@(VDecoder d) = d
+  where
+    -- We need to ensure that 'v' type parameter is set to a specific version, before we
+    -- unwrap the VDecoder.
+    _enforceKnownNat = decVer vd
 
 decodeFullDecoder ::
   Natural ->
@@ -230,6 +256,39 @@ decodeFullDecoderProxy ::
   BSL.ByteString ->
   Either C.DecoderError a
 decodeFullDecoderProxy _ txt vd = C.decodeFullDecoder txt (unVDecoder vd)
+
+decVerToProxy :: VDecoder v s a -> Proxy v
+decVerToProxy _ = Proxy
+
+decVer :: KnownNat v => VDecoder v s a -> Natural
+decVer = fromInteger . natVal . decVerToProxy
+
+-- getCurVerProxy :: VDecoder v s (Proxy v)
+-- getCurVerProxy = pure Proxy
+
+ifVerAtLeast ::
+  forall vl v s a.
+  (KnownNat vl, KnownNat v) =>
+  VDecoder v s a ->
+  VDecoder v s a ->
+  VDecoder v s a
+ifVerAtLeast = ifVerAtLeastProxy (Proxy :: Proxy vl)
+
+ifVerAtLeastProxy ::
+  (KnownNat vl, KnownNat v) =>
+  -- | If cuurent decoder version is higher or equal to supplied version then first
+  -- argument is used, otherwise the second
+  Proxy vl ->
+  -- | Newer decoder
+  VDecoder v s a ->
+  -- | Older decoder
+  VDecoder v s a ->
+  VDecoder v s a
+ifVerAtLeastProxy atLeast newerDecoder olderDecoder = do
+  let cur = decVerToProxy newerDecoder
+  case cmpNat cur atLeast of
+    LTI -> olderDecoder
+    _ -> newerDecoder
 
 --------------------------------------------------------------------------------
 -- Error reporting
@@ -312,7 +371,7 @@ decodeMapSkel fromDistinctDescList decodeKey decodeValue = do
         else cborError $ C.DecoderErrorCanonicityViolation "Map"
 {-# INLINE decodeMapSkel #-}
 
-decodeMap ::
+decodeMapV1 ::
   forall k a v s.
   Ord k =>
   -- | Decoder for keys
@@ -320,7 +379,76 @@ decodeMap ::
   -- | Decoder for values
   VDecoder v s a ->
   VDecoder v s (Map.Map k a)
-decodeMap = decodeMapSkel Map.fromDistinctDescList
+decodeMapV1 = decodeMapSkel Map.fromDistinctDescList
+
+decodeMapContents :: VDecoder v s a -> VDecoder v s [a]
+decodeMapContents = decodeCollection decodeMapLenOrIndef
+
+decodeCollection :: VDecoder v s (Maybe Int) -> VDecoder v s a -> VDecoder v s [a]
+decodeCollection lenOrIndef el = snd <$> decodeCollectionWithLen lenOrIndef el
+
+decodeCollectionWithLen ::
+  VDecoder v s (Maybe Int) ->
+  VDecoder v s a ->
+  VDecoder v s (Int, [a])
+decodeCollectionWithLen lenOrIndef el = do
+  lenOrIndef >>= \case
+    Just len -> (,) len <$> replicateM len el
+    Nothing -> loop (0, []) (not <$> decodeBreakOr) el
+  where
+    loop (n, acc) condition action =
+      condition >>= \case
+        False -> pure (n, reverse acc)
+        True -> action >>= \v -> loop (n + 1, v : acc) condition action
+
+decodeMapByKey ::
+  forall k a v s.
+  Ord k =>
+  -- | Decoder for keys
+  VDecoder v s k ->
+  -- | Decoder for values
+  (k -> VDecoder v s a) ->
+  VDecoder v s (Map.Map k a)
+decodeMapByKey decodeKey decodeValueFor =
+  Map.fromList
+    <$> decodeMapContents decodeInlinedPair
+  where
+    decodeInlinedPair = do
+      !key <- decodeKey
+      !value <- decodeValueFor key
+      pure (key, value)
+
+decodeMapV2 ::
+  forall k a v s.
+  Ord k =>
+  -- | Decoder for keys
+  VDecoder v s k ->
+  -- | Decoder for values
+  VDecoder v s a ->
+  VDecoder v s (Map.Map k a)
+decodeMapV2 decodeKey decodeValue = decodeMapByKey decodeKey (const decodeValue)
+
+-- | An example of how to use versioning
+--
+-- >>> :set -XOverloadedStrings
+-- >>> :set -XTypeApplications
+-- >>> :set -XDataKinds
+-- >>> import Codec.CBOR.FlatTerm
+-- >>> fromFlatTerm (fromVDecoder @1 (decodeMap decodeInt decodeBytes)) [TkMapLen 2,TkInt 1,TkBytes "Foo",TkInt 2,TkBytes "Bar"]
+-- Right (fromList [(1,"Foo"),(2,"Bar")])
+-- >>> fromFlatTerm (fromVDecoder @2 (decodeMap decodeInt decodeBytes)) [TkMapBegin,TkInt 1,TkBytes "Foo",TkInt 2,TkBytes "Bar"]
+-- Left "decodeMapLen: unexpected token TkMapBegin"
+-- >>> fromFlatTerm (fromVDecoder @2 (decodeMap decodeInt decodeBytes)) [TkMapBegin,TkInt 1,TkBytes "Foo",TkInt 2,TkBytes "Bar",TkBreak]
+-- Right (fromList [(1,"Foo"),(2,"Bar")])
+decodeMap ::
+  (KnownNat v, Ord k) =>
+  VDecoder v s k ->
+  VDecoder v s a ->
+  VDecoder v s (Map.Map k a)
+decodeMap decodeKey decodeValue =
+  ifVerAtLeast @1
+    (decodeMapV2 decodeKey decodeValue)
+    (decodeMapV1 decodeKey decodeValue)
 
 -- We stitch a `258` in from of a (Hash)Set, so that tools which
 -- programmatically check for canonicity can recognise it from a normal
@@ -493,7 +621,6 @@ decodeNatural = do
   if n >= 0
     then return $! fromInteger n
     else cborError $ C.DecoderErrorCustom "Natural" "got a negative number"
-
 
 decodeIntegerCanonical :: VDecoder v s Integer
 decodeIntegerCanonical = VDecoder C.decodeIntegerCanonical
