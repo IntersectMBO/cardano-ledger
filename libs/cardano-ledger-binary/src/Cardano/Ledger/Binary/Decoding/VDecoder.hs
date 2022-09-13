@@ -1,49 +1,120 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE NumDecimals #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Data.FromVCBOR
-  ( FromVCBOR (..),
+module Cardano.Ledger.Binary.Decoding.VDecoder
+  ( -- * Decoders
+    C.Decoder,
     VDecoder (..),
     C.DecoderError (..),
     C.ByteOffset,
     C.DecodeAction (..),
-    C.Decoder,
     C.TokenType (..),
+
+    -- ** Running decoders
+    decodeFullDecoder,
+    decodeFullDecoderProxy,
+
+    -- * Error reporting
+    cborError,
+
+    -- ** Custom decoders
+    decodeUTCTime,
+    decodeNominalDiffTime,
+    decodeVector,
+    decodeSet,
+    decodeMap,
+
+    -- ** Lifted @cborg@ decoders
     enforceSize,
     matchSize,
-    -- fromCBORMaybe,
+    fromCBORMaybe,
     decodeListWith,
-
-    -- * Helper tools to build instances
-    cborError,
-    toCborError,
+    decodeBool,
+    decodeBreakOr,
+    decodeByteArray,
+    decodeByteArrayCanonical,
+    decodeBytes,
+    decodeBytesCanonical,
+    decodeBytesIndef,
+    decodeDouble,
+    decodeDoubleCanonical,
+    decodeFloat,
+    decodeFloat16Canonical,
+    decodeFloatCanonical,
+    decodeInt,
+    decodeInt16,
+    decodeInt16Canonical,
+    decodeInt32,
+    decodeInt32Canonical,
+    decodeInt64,
+    decodeInt64Canonical,
+    decodeInt8,
+    decodeInt8Canonical,
+    decodeIntCanonical,
+    decodeInteger,
+    decodeIntegerCanonical,
+    decodeNatural,
+    decodeListLen,
+    decodeListLenCanonical,
+    decodeListLenCanonicalOf,
+    decodeListLenIndef,
+    decodeListLenOf,
+    decodeListLenOrIndef,
+    decodeMapLen,
+    decodeMapLenCanonical,
+    decodeMapLenIndef,
+    decodeMapLenOrIndef,
+    decodeNegWord,
+    decodeNegWord64,
+    decodeNegWord64Canonical,
+    decodeNegWordCanonical,
+    decodeNull,
+    decodeSequenceLenIndef,
+    decodeSequenceLenN,
+    decodeSimple,
+    decodeSimpleCanonical,
+    decodeString,
+    decodeStringCanonical,
+    decodeStringIndef,
+    decodeTag,
+    decodeTag64,
+    decodeTag64Canonical,
+    decodeTagCanonical,
+    decodeUtf8ByteArray,
+    decodeUtf8ByteArrayCanonical,
+    decodeWithByteSpan,
+    decodeWord,
+    decodeWord16,
+    decodeWord16Canonical,
+    decodeWord32,
+    decodeWord32Canonical,
+    decodeWord64,
+    decodeWord64Canonical,
+    decodeWord8,
+    decodeWord8Canonical,
+    decodeWordCanonical,
+    decodeWordCanonicalOf,
+    decodeWordOf,
+    peekAvailable,
+    peekByteOffset,
+    peekTokenType,
   )
 where
 
 import qualified Cardano.Binary as C
-  ( Decoder,
-    DecoderError (..),
-    FromCBOR (..),
+  ( DecoderError (..),
     decodeFullDecoder,
-    decodeListLen,
     decodeListWith,
-    decodeMapSkel,
-    dropMap,
     enforceSize,
     fromCBORMaybe,
     matchSize,
-  )
-import qualified Cardano.Prelude as C
-  ( cborError,
-    toCborError,
   )
 import Codec.CBOR.ByteArray (ByteArray)
 import qualified Codec.CBOR.Decoding as C
@@ -116,237 +187,62 @@ import qualified Codec.CBOR.Decoding as C
     decodeWordCanonical,
     decodeWordCanonicalOf,
     decodeWordOf,
-    getDecodeAction,
-    liftST,
     peekAvailable,
     peekByteOffset,
     peekTokenType,
   )
-import Control.Monad
-import Control.Monad (void, (<$!>))
-import Control.Monad.Trans
-import Control.Monad.Trans.State.Strict
-import Data.BiMap (BiMap (..), biMapFromMap)
+import Control.Monad (when)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
-import qualified Data.ByteString.Short as SBS
-import Data.Coders (decode, decodeMap, decodeVMap, invalidKey)
-import Data.Fixed (Fixed (..), Nano, Pico)
-import qualified Data.Foldable as F
 import Data.Int (Int16, Int32, Int64, Int8)
-import Data.Kind
-import Data.List.NonEmpty (NonEmpty, nonEmpty)
 import qualified Data.Map.Strict as Map
-import Data.Map.Strict.Internal
-import Data.Primitive.Types (Prim)
-import Data.Proxy
-import Data.Ratio (Ratio, (%))
-import Data.Reflection
+import Data.Proxy (Proxy)
+import Data.Ratio ((%))
+import Data.Reflection (reifyNat)
 import qualified Data.Set as Set
-import Data.Tagged (Tagged (..))
 import qualified Data.Text as T
 import Data.Time.Calendar.OrdinalDate (fromOrdinalDate)
 import Data.Time.Clock (NominalDiffTime, UTCTime (..), picosecondsToDiffTime)
-import Data.Typeable
-import qualified Data.Vector as V
 import qualified Data.Vector.Generic as VG
-import Data.Void (Void)
 import Data.Word (Word16, Word32, Word64, Word8)
+import Formatting (build, formatToString)
 import GHC.TypeLits
-import Numeric.Natural (Natural)
+import Numeric.Natural
+import Prelude hiding (decodeFloat)
 
 newtype VDecoder (v :: Nat) s a = VDecoder {unVDecoder :: C.Decoder s a}
   deriving (Functor, Applicative, Monad, MonadFail)
 
-class Typeable a => FromVCBOR a where
-  fromVCBOR :: KnownNat v => VDecoder v s a
-  default fromVCBOR :: C.FromCBOR a => VDecoder v s a
-  fromVCBOR = VDecoder C.fromCBOR
+decodeFullDecoder ::
+  Natural ->
+  T.Text ->
+  (forall v s. KnownNat v => VDecoder v s a) ->
+  BSL.ByteString ->
+  Either C.DecoderError a
+decodeFullDecoder v txt vd bsl =
+  reifyNat (toInteger v) (\px -> decodeFullDecoderProxy px txt vd bsl)
 
-  label :: proxy a -> T.Text
-  label = T.pack . show . typeRep
+decodeFullDecoderProxy ::
+  forall v a.
+  Proxy v ->
+  T.Text ->
+  (forall s. VDecoder v s a) ->
+  BSL.ByteString ->
+  Either C.DecoderError a
+decodeFullDecoderProxy _ txt vd = C.decodeFullDecoder txt (unVDecoder vd)
 
 --------------------------------------------------------------------------------
--- Useful primitives
+-- Error reporting
 --------------------------------------------------------------------------------
 
 cborError :: C.DecoderError -> VDecoder v s a
-cborError = VDecoder . C.cborError
-
-toCborError :: Either C.DecoderError a -> VDecoder v s a
-toCborError = VDecoder . C.toCborError
-
---------------------------------------------------------------------------------
--- Primitive types
---------------------------------------------------------------------------------
-
-instance FromVCBOR ()
-
-instance FromVCBOR Bool
-
---------------------------------------------------------------------------------
--- Numeric data
---------------------------------------------------------------------------------
-
-instance FromVCBOR Integer
-
-instance FromVCBOR Word
-
-instance FromVCBOR Word8
-
-instance FromVCBOR Word16
-
-instance FromVCBOR Word32
-
-instance FromVCBOR Word64
-
-instance FromVCBOR Int
-
-instance FromVCBOR Float
-
-instance FromVCBOR Int32
-
-instance FromVCBOR Int64
-
-instance (Integral a, FromVCBOR a) => FromVCBOR (Ratio a) where
-  fromVCBOR = do
-    enforceSize "Ratio" 2
-    n <- fromVCBOR
-    d <- fromVCBOR
-    if d <= 0
-      then cborError $ C.DecoderErrorCustom "Ratio" "invalid denominator"
-      else return $! n % d
-
-instance FromVCBOR Nano where
-  fromVCBOR = MkFixed <$> fromVCBOR
-
-instance FromVCBOR Pico where
-  fromVCBOR = MkFixed <$> fromVCBOR
-
--- | For backwards compatibility we round pico precision to micro
-instance FromVCBOR NominalDiffTime where
-  fromVCBOR = fromRational . (% 1e6) <$> fromVCBOR
-
-instance FromVCBOR Natural where
-  fromVCBOR = do
-    !n <- fromVCBOR
-    if n >= 0
-      then return $! fromInteger n
-      else cborError $ C.DecoderErrorCustom "Natural" "got a negative number"
-
-instance FromVCBOR Void
-
---------------------------------------------------------------------------------
--- Tagged
---------------------------------------------------------------------------------
-
-instance (Typeable s, FromVCBOR a) => FromVCBOR (Tagged s a) where
-  fromVCBOR = Tagged <$> fromVCBOR
-
---------------------------------------------------------------------------------
--- Containers
---------------------------------------------------------------------------------
-
-instance (FromVCBOR a, FromVCBOR b) => FromVCBOR (a, b) where
-  fromVCBOR = do
-    decodeListLenOf 2
-    !x <- fromVCBOR
-    !y <- fromVCBOR
-    return (x, y)
-
-instance (FromVCBOR a, FromVCBOR b, FromVCBOR c) => FromVCBOR (a, b, c) where
-  fromVCBOR = do
-    decodeListLenOf 3
-    !x <- fromVCBOR
-    !y <- fromVCBOR
-    !z <- fromVCBOR
-    return (x, y, z)
-
-instance (FromVCBOR a, FromVCBOR b, FromVCBOR c, FromVCBOR d) => FromVCBOR (a, b, c, d) where
-  fromVCBOR = do
-    decodeListLenOf 4
-    !a <- fromVCBOR
-    !b <- fromVCBOR
-    !c <- fromVCBOR
-    !d <- fromVCBOR
-    return (a, b, c, d)
-
-instance
-  (FromVCBOR a, FromVCBOR b, FromVCBOR c, FromVCBOR d, FromVCBOR e) =>
-  FromVCBOR (a, b, c, d, e)
-  where
-  fromVCBOR = do
-    decodeListLenOf 5
-    !a <- fromVCBOR
-    !b <- fromVCBOR
-    !c <- fromVCBOR
-    !d <- fromVCBOR
-    !e <- fromVCBOR
-    return (a, b, c, d, e)
-
-instance
-  ( FromVCBOR a,
-    FromVCBOR b,
-    FromVCBOR c,
-    FromVCBOR d,
-    FromVCBOR e,
-    FromVCBOR f,
-    FromVCBOR g
-  ) =>
-  FromVCBOR (a, b, c, d, e, f, g)
-  where
-  fromVCBOR = do
-    decodeListLenOf 7
-    !a <- fromVCBOR
-    !b <- fromVCBOR
-    !c <- fromVCBOR
-    !d <- fromVCBOR
-    !e <- fromVCBOR
-    !f <- fromVCBOR
-    !g <- fromVCBOR
-    return (a, b, c, d, e, f, g)
-
-instance FromVCBOR BS.ByteString
-
-instance FromVCBOR T.Text
-
-instance FromVCBOR BSL.ByteString where
-  fromVCBOR = BSL.fromStrict <$> fromVCBOR
-
-instance FromVCBOR SBS.ShortByteString
-
-instance FromVCBOR a => FromVCBOR [a] where
-  fromVCBOR = decodeListWith fromVCBOR
-
-instance (FromVCBOR a, FromVCBOR b) => FromVCBOR (Either a b) where
-  fromVCBOR = do
-    decodeListLenOf 2
-    t <- decodeWord
-    case t of
-      0 -> do
-        !x <- fromVCBOR
-        return (Left x)
-      1 -> do
-        !x <- fromVCBOR
-        return (Right x)
-      _ -> cborError $ C.DecoderErrorUnknownTag "Either" (fromIntegral t)
-
-instance FromVCBOR a => FromVCBOR (NonEmpty a) where
-  fromVCBOR =
-    nonEmpty <$> fromVCBOR
-      >>= toCborError . \case
-        Nothing -> Left $ C.DecoderErrorEmptyList "NonEmpty"
-        Just xs -> Right xs
-
-instance FromVCBOR a => FromVCBOR (Maybe a) where
-  fromVCBOR = fromCBORMaybe fromVCBOR
+cborError = fail . formatToString build
 
 decodeContainerSkelWithReplicate ::
-  (FromVCBOR a, KnownNat v) =>
   -- | How to get the size of the container
   VDecoder v s Int ->
   -- | replicateM for the container
-  (Int -> VDecoder v s a -> VDecoder v s c) ->
+  (Int -> VDecoder v s c) ->
   -- | concat for the container
   ([c] -> c) ->
   VDecoder v s c
@@ -360,15 +256,14 @@ decodeContainerSkelWithReplicate decodeLen replicateFun fromList' = do
   sz <- decodeLen
   limit <- peekAvailable
   if sz <= limit
-    then replicateFun sz fromVCBOR
+    then replicateFun sz
     else do
       -- Take the max of limit and a fixed chunk size (note: limit can be
       -- 0). This basically means that the attacker can make us allocate a
       -- container of size 128 even though there's no actual input.
       let chunkSize = max limit 128
           (d, m) = sz `divMod` chunkSize
-          buildOne s = replicateFun s fromVCBOR
-      containers <- sequence $ buildOne m : replicate d (buildOne chunkSize)
+      containers <- sequence $ replicateFun m : replicate d (replicateFun chunkSize)
       return $! fromList' containers
 {-# INLINE decodeContainerSkelWithReplicate #-}
 
@@ -378,28 +273,34 @@ decodeContainerSkelWithReplicate decodeLen replicateFun fromList' = do
 --   "[..]The keys in every map must be sorted lowest value to highest.[...]"
 decodeMapSkel ::
   forall k a m v s.
-  (Ord k, FromVCBOR k, FromVCBOR a, KnownNat v) =>
+  Ord k =>
+  -- | Decoded list is guaranteed to be sorted on keys in descending order without any
+  -- duplicate keys.
   ([(k, a)] -> m) ->
+  -- | Decoder for keys
+  VDecoder v s k ->
+  -- | Decoder for values
+  VDecoder v s a ->
   VDecoder v s m
-decodeMapSkel fromListFIFO = do
+decodeMapSkel fromDistinctDescList decodeKey decodeValue = do
   n <- decodeMapLen
-  case n of
-    0 -> return (fromListFIFO [])
+  fromDistinctDescList <$> case n of
+    0 -> return []
     _ -> do
       (firstKey, firstValue) <- decodeEntry
-      fromListFIFO <$> decodeEntries (n - 1) firstKey [(firstKey, firstValue)]
+      decodeEntries (n - 1) firstKey [(firstKey, firstValue)]
   where
     -- Decode a single (k,v).
     decodeEntry :: VDecoder v s (k, a)
     decodeEntry = do
-      !k <- fromVCBOR
-      !v <- fromVCBOR
+      !k <- decodeKey
+      !v <- decodeValue
       return (k, v)
 
     -- Decode all the entries, enforcing canonicity by ensuring that the
     -- previous key is smaller than the next one.
     decodeEntries :: Int -> k -> [(k, a)] -> VDecoder v s [(k, a)]
-    decodeEntries 0 _ acc = pure $ reverse acc
+    decodeEntries 0 _ acc = pure acc
     decodeEntries !remainingPairs previousKey !acc = do
       p@(newKey, _) <- decodeEntry
       -- Order of keys needs to be strictly increasing, because otherwise it's
@@ -411,8 +312,15 @@ decodeMapSkel fromListFIFO = do
         else cborError $ C.DecoderErrorCanonicityViolation "Map"
 {-# INLINE decodeMapSkel #-}
 
-instance (Ord k, FromVCBOR k, FromVCBOR v) => FromVCBOR (Map.Map k v) where
-  fromVCBOR = decodeMapSkel fromDistinctAscList
+decodeMap ::
+  forall k a v s.
+  Ord k =>
+  -- | Decoder for keys
+  VDecoder v s k ->
+  -- | Decoder for values
+  VDecoder v s a ->
+  VDecoder v s (Map.Map k a)
+decodeMap = decodeMapSkel Map.fromDistinctDescList
 
 -- We stitch a `258` in from of a (Hash)Set, so that tools which
 -- programmatically check for canonicity can recognise it from a normal
@@ -431,22 +339,25 @@ decodeSetTag = do
 
 decodeSetSkel ::
   forall a v s c.
-  (Ord a, FromVCBOR a, KnownNat v) =>
+  Ord a =>
+  -- | Decoded list is guaranteed to be sorted on keys in descending order without any
+  -- duplicate keys.
   ([a] -> c) ->
+  VDecoder v s a ->
   VDecoder v s c
-decodeSetSkel fromListFIFO = do
+decodeSetSkel fromDistinctDescList decodeValue = do
   decodeSetTag
   n <- decodeListLen
-  case n of
-    0 -> return (fromListFIFO [])
+  fromDistinctDescList <$> case n of
+    0 -> return []
     _ -> do
-      firstValue <- fromVCBOR
-      fromListFIFO <$> decodeEntries (n - 1) firstValue [firstValue]
+      firstValue <- decodeValue
+      decodeEntries (n - 1) firstValue [firstValue]
   where
     decodeEntries :: Int -> a -> [a] -> VDecoder v s [a]
-    decodeEntries 0 _ acc = pure $ reverse acc
+    decodeEntries 0 _ acc = pure acc
     decodeEntries !remainingEntries previousValue !acc = do
-      newValue <- fromVCBOR
+      newValue <- decodeValue
       -- Order of values needs to be strictly increasing, because otherwise
       -- it's possible to supply lists with various amount of duplicates which
       -- will result in the same set.
@@ -455,37 +366,37 @@ decodeSetSkel fromListFIFO = do
         else cborError $ C.DecoderErrorCanonicityViolation "Set"
 {-# INLINE decodeSetSkel #-}
 
-instance (Ord a, FromVCBOR a) => FromVCBOR (Set.Set a) where
-  fromVCBOR = decodeSetSkel Set.fromDistinctAscList
+decodeSet :: Ord a => VDecoder v s a -> VDecoder v s (Set.Set a)
+decodeSet = decodeSetSkel Set.fromDistinctDescList
 
 -- | Generic decoder for vectors. Its intended use is to allow easy
 -- definition of 'Serialise' instances for custom vector
-decodeVector :: (FromVCBOR a, VG.Vector vec a, KnownNat v) => VDecoder v s (vec a)
-decodeVector =
+decodeVector :: VG.Vector vec a => VDecoder v s a -> VDecoder v s (vec a)
+decodeVector decodeValue =
   decodeContainerSkelWithReplicate
     decodeListLen
-    VG.replicateM
+    (`VG.replicateM` decodeValue)
     VG.concat
 {-# INLINE decodeVector #-}
-
-instance (FromVCBOR a) => FromVCBOR (V.Vector a) where
-  fromVCBOR = decodeVector
-  {-# INLINE fromVCBOR #-}
 
 --------------------------------------------------------------------------------
 -- Time
 --------------------------------------------------------------------------------
 
-instance FromVCBOR UTCTime where
-  fromVCBOR = do
-    enforceSize "UTCTime" 3
-    year <- decodeInteger
-    dayOfYear <- decodeInt
-    timeOfDayPico <- decodeInteger
-    return $
-      UTCTime
-        (fromOrdinalDate year dayOfYear)
-        (picosecondsToDiffTime timeOfDayPico)
+decodeUTCTime :: VDecoder v s UTCTime
+decodeUTCTime = do
+  enforceSize "UTCTime" 3
+  year <- decodeInteger
+  dayOfYear <- decodeInt
+  timeOfDayPico <- decodeInteger
+  return $
+    UTCTime
+      (fromOrdinalDate year dayOfYear)
+      (picosecondsToDiffTime timeOfDayPico)
+
+-- | For backwards compatibility we round pico precision to micro
+decodeNominalDiffTime :: VDecoder v s NominalDiffTime
+decodeNominalDiffTime = fromRational . (% 1_000_000) <$> decodeInteger
 
 --------------------------------------------------------------------------------
 -- Promoted CBORG primitives
@@ -503,11 +414,6 @@ matchSize lbl requestedSize actualSize = VDecoder (C.matchSize lbl requestedSize
 -- | @'D.Decoder'@ for list.
 decodeListWith :: VDecoder v s a -> VDecoder v s [a]
 decodeListWith (VDecoder d) = VDecoder (C.decodeListWith d)
-
--- decodeFullDecoder = VDecoder C.decodeFullDecoder
-
--- decodeMapSkel = VDecoder . C.decodeMapSkel
--- dropMap = VDecoder C.dropMap
 
 fromCBORMaybe :: VDecoder v s a -> VDecoder v s (Maybe a)
 fromCBORMaybe = VDecoder . C.fromCBORMaybe . unVDecoder
@@ -539,6 +445,7 @@ decodeDouble = VDecoder C.decodeDouble
 decodeDoubleCanonical :: VDecoder v s Double
 decodeDoubleCanonical = VDecoder C.decodeDoubleCanonical
 
+decodeFloat :: VDecoder v s Float
 decodeFloat = VDecoder C.decodeFloat
 
 decodeFloat16Canonical :: VDecoder v s Float
@@ -579,6 +486,14 @@ decodeIntCanonical = VDecoder C.decodeIntCanonical
 
 decodeInteger :: VDecoder v s Integer
 decodeInteger = VDecoder C.decodeInteger
+
+decodeNatural :: VDecoder v s Natural
+decodeNatural = do
+  !n <- decodeInteger
+  if n >= 0
+    then return $! fromInteger n
+    else cborError $ C.DecoderErrorCustom "Natural" "got a negative number"
+
 
 decodeIntegerCanonical :: VDecoder v s Integer
 decodeIntegerCanonical = VDecoder C.decodeIntegerCanonical
@@ -710,8 +625,11 @@ decodeWordCanonicalOf = VDecoder . C.decodeWordCanonicalOf
 decodeWordOf :: Word -> VDecoder v s ()
 decodeWordOf = VDecoder . C.decodeWordOf
 
+peekAvailable :: VDecoder v s Int
 peekAvailable = VDecoder C.peekAvailable
 
+peekByteOffset :: VDecoder v s C.ByteOffset
 peekByteOffset = VDecoder C.peekByteOffset
 
+peekTokenType :: VDecoder v s C.TokenType
 peekTokenType = VDecoder C.peekTokenType

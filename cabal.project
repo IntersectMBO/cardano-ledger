@@ -19,6 +19,7 @@ packages:
   eras/shelley-ma/test-suite
   libs/cardano-ledger-api
   libs/cardano-ledger-core
+  libs/cardano-ledger-binary
   libs/cardano-ledger-pretty
   libs/cardano-ledger-test
   libs/cardano-protocol-tpraos

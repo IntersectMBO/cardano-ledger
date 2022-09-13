@@ -1,51 +1,44 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE UndecidableInstances #-}
 
-module Data.VCBOR
-  ( FromSharedVCBOR (..),
+module Data.Sharing
+  ( FromSharedCBOR (..),
     Interns (..),
     Intern (..),
-    fromSharedLensVCBOR,
-    fromSharedPlusLensVCBOR,
-    fromNotSharedVCBOR,
+    fromSharedLensCBOR,
+    fromSharedPlusLensCBOR,
+    fromNotSharedCBOR,
     interns,
     internsFromMap,
     internsFromVMap,
     toMemptyLens,
+    fromShareCBORfunctor,
   )
 where
 
-import Cardano.Binary (Decoder, DecoderError, FromCBOR (..), decodeFullDecoder, decodeListLen, dropMap)
+import Cardano.Binary (Decoder, FromCBOR (..), decodeListLen, dropMap)
 import Control.Monad (void, (<$!>))
 import Control.Monad.Trans
 import Control.Monad.Trans.State.Strict
 import Data.BiMap (BiMap (..), biMapFromMap)
-import qualified Data.ByteString.Lazy as BSL
-import Data.Coders (decode, decodeMap, decodeVMap, invalidKey)
+import Data.Coders (decodeMap, decodeVMap, invalidKey)
 import qualified Data.Foldable as F
 import Data.Kind
 import qualified Data.Map.Strict as Map
 import Data.Map.Strict.Internal
 import Data.Primitive.Types (Prim)
-import Data.Proxy
-import Data.Reflection
 import Data.VMap (VB, VMap, VP)
 import qualified Data.VMap as VMap
-import GHC.TypeLits
 import Lens.Micro
 
 -- =======================================
@@ -118,40 +111,38 @@ instance Semigroup (Interns a) where
         | internWeight a > internWeight i = a : insertIntoSortedInterns i as
         | otherwise = i : a : as
 
-class Monoid (Share a) => Shareable a where
+class Monoid (Share a) => FromSharedCBOR a where
+  {-# MINIMAL (fromSharedCBOR | fromSharedPlusCBOR) #-}
   type Share a :: Type
   type Share a = ()
 
-  -- | Whenever `fromShareVCBOR` is being used for defining the instance this
+  -- | Whenever `fromShareCBOR` is being used for defining the instance this
   -- function should return the state that can be added whenever user invokes
-  -- `fromSharedPlusVCBOR`. `mempty` is returned by default.
+  -- `fromSharedPlusCBOR`. `mempty` is returned by default.
   getShare :: a -> Share a
   getShare _ = mempty
 
-class Shareable a => FromSharedVCBOR a where
-  {-# MINIMAL (fromSharedVCBOR | fromSharedPlusVCBOR) #-}
-
   -- | Utilize sharing when decoding, but do not add anything to the state for
   -- future sharing.
-  fromSharedVCBOR :: Share a -> VDecoder v s a
-  fromSharedVCBOR s = fst <$> runStateT fromSharedPlusVCBOR s
+  fromSharedCBOR :: Share a -> Decoder s a
+  fromSharedCBOR s = fst <$> runStateT fromSharedPlusCBOR s
 
   -- | Deserialize with sharing and add to the state that is used for sharing. Default
   -- implementation will add value returned by `getShare` for adding to the
   -- state.
-  fromSharedPlusVCBOR :: StateT (Share a) (VDecoder v s) a
-  fromSharedPlusVCBOR = do
+  fromSharedPlusCBOR :: StateT (Share a) (Decoder s) a
+  fromSharedPlusCBOR = do
     s <- get
-    x <- lift $ fromSharedVCBOR s
+    x <- lift $ fromSharedCBOR s
     x <$ put (getShare x <> s)
 
-fromSharedLensVCBOR ::
-  FromSharedVCBOR b =>
+fromSharedLensCBOR ::
+  FromSharedCBOR b =>
   SimpleGetter bs (Share b) ->
-  StateT bs (VDecoder v s) b
-fromSharedLensVCBOR l = do
+  StateT bs (Decoder s) b
+fromSharedLensCBOR l = do
   s <- get
-  lift $ fromSharedVCBOR (s ^. l)
+  lift $ fromSharedCBOR (s ^. l)
 
 -- | Using this function it is possible to compose two lenses. One will extract
 -- a value and another will used it for placing it into a empty monoid. Here is
@@ -176,149 +167,60 @@ toMemptyLens :: Monoid a => Lens' a b -> Lens' c b -> Lens' c a
 toMemptyLens lto lfrom =
   lens (\s -> mempty & lto .~ (s ^. lfrom)) (\s a -> s & lfrom .~ (a ^. lto))
 
--- | Just like `fromSharedPlusVCBOR`, except allows to transform the shared state
+-- | Just like `fromSharedPlusCBOR`, except allows to transform the shared state
 -- with a lens.
-fromSharedPlusLensVCBOR ::
-  FromSharedVCBOR b =>
+fromSharedPlusLensCBOR ::
+  FromSharedCBOR b =>
   Lens' bs (Share b) ->
-  StateT bs (VDecoder v s) b
-fromSharedPlusLensVCBOR l = do
+  StateT bs (Decoder s) b
+fromSharedPlusLensCBOR l = do
   s <- get
-  (x, k) <- lift $ runStateT fromSharedPlusVCBOR (s ^. l)
+  (x, k) <- lift $ runStateT fromSharedPlusCBOR (s ^. l)
   x <$ put (s & l .~ k)
 
--- | Use `FromSharedVCBOR` class while ignoring sharing
-fromNotSharedVCBOR :: FromSharedVCBOR a => VDecoder v s a
-fromNotSharedVCBOR = fromSharedVCBOR mempty
+-- | Use `FromSharedCBOR` class while ignoring sharing
+fromNotSharedCBOR :: FromSharedCBOR a => Decoder s a
+fromNotSharedCBOR = fromSharedCBOR mempty
 
-instance Ord k => Shareable (Map k a) where
+instance (Ord k, FromCBOR k, FromCBOR v) => FromSharedCBOR (Map k v) where
+  type Share (Map k v) = (Interns k, Interns v)
+  fromSharedCBOR (kis, vis) = do
+    decodeMap (interns kis <$> fromCBOR) (interns vis <$> fromCBOR)
   getShare !m = (internsFromMap m, mempty)
-  type Share (Map k a) = (Interns k, Interns a)
 
-instance (Ord k, FromCBOR k, FromCBOR a) => FromSharedVCBOR (Map k a) where
-  fromSharedVCBOR (kis, vis) =
-    VDecoder $
-      decodeMap (interns kis <$> fromCBOR) (interns vis <$> fromCBOR)
-
--- instance (Ord k, FromCBOR k, FromCBOR a) => FromSharedVCBOR 2 (Map k a) where
---   fromSharedVCBOR (kis, vis) =
---     VDecoder $
---       decodeMap (interns kis <$> fromCBOR) (interns vis <$> fromCBOR)
-
-instance Ord k => Shareable (VMap VB VB k a) where
-  type Share (VMap VB VB k a) = (Interns k, Interns a)
+instance (Ord k, FromCBOR k, FromCBOR v) => FromSharedCBOR (VMap VB VB k v) where
+  type Share (VMap VB VB k v) = (Interns k, Interns v)
+  fromSharedCBOR (kis, vis) = do
+    decodeVMap (interns kis <$> fromCBOR) (interns vis <$> fromCBOR)
   getShare !m = (internsFromVMap m, mempty)
 
-instance (Ord k, FromCBOR k, FromCBOR a) => FromSharedVCBOR (VMap VB VB k a) where
-  fromSharedVCBOR (kis, vis) =
-    VDecoder $ decodeVMap (interns kis <$> fromCBOR) (interns vis <$> fromCBOR)
-
-instance Ord k => Shareable (VMap VB VP k a) where
-  type Share (VMap VB VP k a) = Interns k
+instance (Ord k, FromCBOR k, FromCBOR v, Prim v) => FromSharedCBOR (VMap VB VP k v) where
+  type Share (VMap VB VP k v) = Interns k
+  fromSharedCBOR kis = do
+    decodeVMap (interns kis <$> fromCBOR) fromCBOR
   getShare !m = internsFromVMap m
-
-instance (Ord k, FromCBOR k, FromCBOR a, Prim a) => FromSharedVCBOR (VMap VB VP k a) where
-  fromSharedVCBOR kis =
-    VDecoder $ decodeVMap (interns kis <$> fromCBOR) fromCBOR
-
-data Ver
-  = Ver1
-  | Ver2
-  | Ver3
-  | Ver4
-  | Ver5
-  | Ver6
-  | Ver7
-
-data MajProtVer (v :: Ver) where
-  MajProtVer1 :: MajProtVer 'Ver1
-  MajProtVer2 :: MajProtVer 'Ver2
-  MajProtVer3 :: MajProtVer 'Ver3
-  MajProtVer4 :: MajProtVer 'Ver4
-  MajProtVer5 :: MajProtVer 'Ver5
-  MajProtVer6 :: MajProtVer 'Ver6
-  MajProtVer7 :: MajProtVer 'Ver7
-
-reifyVer :: Ver -> (forall v. MajProtVer v -> a) -> a
-reifyVer v f =
-  case v of
-    Ver1 -> f MajProtVer1
-    Ver2 -> f MajProtVer2
-    Ver3 -> f MajProtVer3
-    Ver4 -> f MajProtVer4
-    Ver5 -> f MajProtVer5
-    Ver6 -> f MajProtVer6
-    Ver7 -> f MajProtVer7
-
-decodeFull ::
-  forall a.
-  (FromSharedVCBOR a) =>
-  Integer ->
-  BSL.ByteString ->
-  Either DecoderError a
-decodeFull n bs = reifyNat n decodeWithVersion
-  where
-    decodeWithVersion :: forall (v :: Nat). Proxy v -> Either DecoderError a
-    decodeWithVersion _ =
-      decodeFullDecoder "VCBOR" (unVDecoder (fromNotSharedVCBOR :: VDecoder v s a)) bs
-
--- decodeFull ::
---   forall v a.
---   (FromVCBOR v a) =>
---   BSL.ByteString ->
---   Proxy v ->
---   Either DecoderError a
--- decodeFull bs _ = decodeFullDecoder "VCBOR" (unVDecoder (fromVCBOR @v)) bs
-
-applyDecoder :: Integer -> BSL.ByteString -> (forall v s. VDecoder v s a) -> Either DecoderError a
-applyDecoder n bs dec =
-  case n of
-    1 -> decodeFullDecoder "VCBOR" (unVDecoder (dec @1)) bs
-    2 -> decodeFullDecoder "VCBOR" (unVDecoder (dec @2)) bs
-
-t :: Either DecoderError (Map Int Int)
-t = decodeFull 3 "" :: Either DecoderError (Map Int Int)
-
--- instance (forall v. (FromVCBOR v (Map k a))) => FromVCBORn (Map k a) where
---   fromVCBORn _ = fromVCBOR
-
--- where
---   f :: (forall v. (FromVCBOR v a) =>
---   f = decodeFull bs
-
--- applyDecoder' ::
---      forall v a. FromVCBOR v a
---   => Integer
---   -> BSL.ByteString
---   -> Either DecoderError a
--- applyDecoder' n bs = applyDecoder n bs (fromVCBOR @v)
 
 -- ==============================================================================
 -- These BiMap instances are adapted from the FromCBOR instances in Data.Coders
 
-instance (Ord a, Ord b) => Shareable (BiMap b a b) where
+instance (Ord a, Ord b, FromCBOR a, FromCBOR b) => FromSharedCBOR (BiMap b a b) where
   type Share (BiMap b a b) = (Interns a, Interns b)
-  getShare (MkBiMap m1 m2) = (internsFromMap m1, internsFromMap m2)
-
-instance
-  (Ord a, Ord b, FromCBOR a, FromCBOR b, FromSharedVCBOR (Map a b)) =>
-  FromSharedVCBOR (BiMap b a b)
-  where
-  fromSharedVCBOR share =
-    VDecoder decodeListLen >>= \case
-      1 -> biMapFromMap <$> fromSharedVCBOR share
+  fromSharedCBOR share =
+    decodeListLen >>= \case
+      1 -> biMapFromMap <$> fromSharedCBOR share
       -- Previous encoding of 'BiMap' encoded both the forward and reverse
       -- directions. In this case we skip the reverse encoding. Note that,
       -- further, the reverse encoding was from 'b' to 'a', not the current 'b'
       -- to 'Set a', and hence the dropper reflects that.
       2 -> do
-        !x <- biMapFromMap <$> fromSharedVCBOR share
-        VDecoder $ dropMap (void $ fromCBOR @b) (void $ fromCBOR @a)
+        !x <- biMapFromMap <$> fromSharedCBOR share
+        dropMap (void $ fromCBOR @b) (void $ fromCBOR @a)
         return x
-      k -> VDecoder $ invalidKey (fromIntegral k)
+      k -> invalidKey (fromIntegral k)
+  getShare (MkBiMap m1 m2) = (internsFromMap m1, internsFromMap m2)
 
 -- | Share every item in a functor, have deserializing it
-fromShareVCBORfunctor :: (FromCBOR (f b), Monad f) => Interns b -> Decoder s (f b)
-fromShareVCBORfunctor kis = do
+fromShareCBORfunctor :: (FromCBOR (f b), Monad f) => Interns b -> Decoder s (f b)
+fromShareCBORfunctor kis = do
   sm <- fromCBOR
   pure (interns kis <$!> sm)
