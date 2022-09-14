@@ -4,7 +4,6 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Ledger.Binary.Decoding.FromVCBOR
   ( FromVCBOR (..),
@@ -12,7 +11,7 @@ module Cardano.Ledger.Binary.Decoding.FromVCBOR
 where
 
 import Cardano.Ledger.Binary.Decoding.VDecoder
-import Codec.CBOR.ByteArray (ByteArray(BA))
+import Codec.CBOR.ByteArray (ByteArray (BA))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Short as SBS
@@ -28,7 +27,11 @@ import Data.Tagged (Tagged (Tagged))
 import qualified Data.Text as T
 import Data.Time.Clock (NominalDiffTime, UTCTime (..))
 import Data.Typeable
+import qualified Data.VMap as VMap
 import qualified Data.Vector as V
+import qualified Data.Vector.Primitive as VP
+import qualified Data.Vector.Storable as VS
+import qualified Data.Vector.Unboxed as VU
 import Data.Void (Void)
 import Data.Word (Word16, Word32, Word64, Word8)
 import GHC.TypeLits
@@ -194,7 +197,7 @@ instance FromVCBOR SBS.ShortByteString where
     return $ SBS.SBS ba
 
 instance FromVCBOR a => FromVCBOR [a] where
-  fromVCBOR = decodeListWith fromVCBOR
+  fromVCBOR = decodeList fromVCBOR
 
 instance (FromVCBOR a, FromVCBOR b) => FromVCBOR (Either a b) where
   fromVCBOR = do
@@ -219,13 +222,38 @@ instance FromVCBOR a => FromVCBOR (NonEmpty a) where
 instance FromVCBOR a => FromVCBOR (Maybe a) where
   fromVCBOR = fromCBORMaybe fromVCBOR
 
-instance (Ord k, FromVCBOR k, FromVCBOR v) => FromVCBOR (Map.Map k v) where
-  fromVCBOR = decodeMap fromVCBOR fromVCBOR
-
 instance (Ord a, FromVCBOR a) => FromVCBOR (Set.Set a) where
   fromVCBOR = decodeSet fromVCBOR
 
-instance (FromVCBOR a) => FromVCBOR (V.Vector a) where
+instance (Ord k, FromVCBOR k, FromVCBOR v) => FromVCBOR (Map.Map k v) where
+  fromVCBOR = decodeMap fromVCBOR fromVCBOR
+
+instance
+  ( Ord k,
+    FromVCBOR k,
+    FromVCBOR a,
+    Typeable kv,
+    Typeable av,
+    VMap.Vector kv k,
+    VMap.Vector av a
+  ) =>
+  FromVCBOR (VMap.VMap kv av k a)
+  where
+  fromVCBOR = decodeVMap fromVCBOR fromVCBOR
+
+instance FromVCBOR a => FromVCBOR (V.Vector a) where
+  fromVCBOR = decodeVector fromVCBOR
+  {-# INLINE fromVCBOR #-}
+
+instance (FromVCBOR a, VP.Prim a) => FromVCBOR (VP.Vector a) where
+  fromVCBOR = decodeVector fromVCBOR
+  {-# INLINE fromVCBOR #-}
+
+instance (FromVCBOR a, VS.Storable a) => FromVCBOR (VS.Vector a) where
+  fromVCBOR = decodeVector fromVCBOR
+  {-# INLINE fromVCBOR #-}
+
+instance (FromVCBOR a, VU.Unbox a) => FromVCBOR (VU.Vector a) where
   fromVCBOR = decodeVector fromVCBOR
   {-# INLINE fromVCBOR #-}
 

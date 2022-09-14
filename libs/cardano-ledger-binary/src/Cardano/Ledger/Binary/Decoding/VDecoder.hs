@@ -28,8 +28,12 @@ module Cardano.Ledger.Binary.Decoding.VDecoder
     decodeFullDecoderProxy,
 
     -- ** Versioning
-    ifVerAtLeast,
-    ifVerAtLeastProxy,
+    decVerToProxy,
+    getDecVerProxy,
+    decVer,
+    getDecVer,
+    ifDecVerAtLeast,
+    ifDecVerAtLeastProxy,
 
     -- * Error reporting
     cborError,
@@ -40,12 +44,13 @@ module Cardano.Ledger.Binary.Decoding.VDecoder
     decodeVector,
     decodeSet,
     decodeMap,
+    decodeVMap,
 
     -- ** Lifted @cborg@ decoders
     enforceSize,
     matchSize,
     fromCBORMaybe,
-    decodeListWith,
+    decodeList,
     decodeBool,
     decodeBreakOr,
     decodeByteArray,
@@ -213,9 +218,11 @@ import qualified Data.Set as Set
 import qualified Data.Text as T
 import Data.Time.Calendar.OrdinalDate (fromOrdinalDate)
 import Data.Time.Clock (NominalDiffTime, UTCTime (..), picosecondsToDiffTime)
+import qualified Data.VMap as VMap
 import qualified Data.Vector.Generic as VG
 import Data.Word (Word16, Word32, Word64, Word8)
 import Formatting (build, formatToString)
+import GHC.Exts as Exts (IsList (..))
 import GHC.TypeLits (KnownNat, Nat, natVal)
 import Numeric.Natural (Natural)
 import Prelude hiding (decodeFloat)
@@ -223,6 +230,10 @@ import Prelude hiding (decodeFloat)
 #if __GLASGOW_HASKELL__ < 902
 import Cardano.Ledger.Binary.Decoding.NatsCompat (OrderingI(LTI), cmpNat)
 #endif
+
+--------------------------------------------------------------------------------
+-- Versioned Decoder
+--------------------------------------------------------------------------------
 
 newtype VDecoder (v :: Nat) s a = VDecoder {unVDecoder :: C.Decoder s a}
   deriving (Functor, Applicative, Monad, MonadFail)
@@ -257,24 +268,55 @@ decodeFullDecoderProxy ::
   Either C.DecoderError a
 decodeFullDecoderProxy _ txt vd = C.decodeFullDecoder txt (unVDecoder vd)
 
+--------------------------------------------------------------------------------
+-- Working with current decoder version
+--------------------------------------------------------------------------------
+
+-- | Extract type level version of the decoder from its type
 decVerToProxy :: VDecoder v s a -> Proxy v
 decVerToProxy _ = Proxy
 
+-- | Use monadic syntax to extract type level version of the decoder from its type
+getDecVerProxy :: VDecoder v s (Proxy v)
+getDecVerProxy = pure Proxy
+
+-- | Extract value level version of a decoder's type
+--
+-- >>> decVer $ decodeInt @3
+-- 3
 decVer :: KnownNat v => VDecoder v s a -> Natural
 decVer = fromInteger . natVal . decVerToProxy
 
--- getCurVerProxy :: VDecoder v s (Proxy v)
--- getCurVerProxy = pure Proxy
+-- | Use monadic syntax to extract value level version of the decoder from its type
+--
+-- >>> decodeFullDecoder 3 "Version" getDecVer ""
+-- Right 3
+getDecVer :: KnownNat v => VDecoder v s Natural
+getDecVer = fromInteger . natVal <$> getDecVerProxy
 
-ifVerAtLeast ::
+-- | Conditionoly choose the decoder newer or older deceder, depending on the current
+-- version, which is supplied as a type argument.
+--
+-- =====__Example__
+--
+-- Let's say prior to the version 2 some type `Foo` was backed by `Word16`, but at the 2nd
+-- version onwards it was switched to `Word32` instead. In order to support both versions,
+-- we change the type, but we also use this condition to keep backwards compatibility of
+-- the decoder:
+--
+-- >>> :set -XTypeApplications
+-- >>> newtype Foo = Foo Word32
+-- >>> decFoo = Foo <$> ifDecVerAtLeast @2 (fromIntegral <$> decodeWord16) decodeWord32
+-- >>> :t decFoo
+ifDecVerAtLeast ::
   forall vl v s a.
   (KnownNat vl, KnownNat v) =>
   VDecoder v s a ->
   VDecoder v s a ->
   VDecoder v s a
-ifVerAtLeast = ifVerAtLeastProxy (Proxy :: Proxy vl)
+ifDecVerAtLeast = ifDecVerAtLeastProxy (Proxy :: Proxy vl)
 
-ifVerAtLeastProxy ::
+ifDecVerAtLeastProxy ::
   (KnownNat vl, KnownNat v) =>
   -- | If cuurent decoder version is higher or equal to supplied version then first
   -- argument is used, otherwise the second
@@ -284,7 +326,7 @@ ifVerAtLeastProxy ::
   -- | Older decoder
   VDecoder v s a ->
   VDecoder v s a
-ifVerAtLeastProxy atLeast newerDecoder olderDecoder = do
+ifDecVerAtLeastProxy atLeast newerDecoder olderDecoder = do
   let cur = decVerToProxy newerDecoder
   case cmpNat cur atLeast of
     LTI -> olderDecoder
@@ -305,7 +347,7 @@ decodeContainerSkelWithReplicate ::
   -- | concat for the container
   ([c] -> c) ->
   VDecoder v s c
-decodeContainerSkelWithReplicate decodeLen replicateFun fromList' = do
+decodeContainerSkelWithReplicate decodeLen replicateFun concatList = do
   -- Look at how much data we have at the moment and use it as the limit for
   -- the size of a single call to replicateFun. We don't want to use
   -- replicateFun directly on the result of decodeLen since this might lead to
@@ -323,8 +365,12 @@ decodeContainerSkelWithReplicate decodeLen replicateFun fromList' = do
       let chunkSize = max limit 128
           (d, m) = sz `divMod` chunkSize
       containers <- sequence $ replicateFun m : replicate d (replicateFun chunkSize)
-      return $! fromList' containers
+      return $! concatList containers
 {-# INLINE decodeContainerSkelWithReplicate #-}
+
+--------------------------------------------------------------------------------
+-- Decoder for Map
+--------------------------------------------------------------------------------
 
 -- | Checks canonicity by comparing the new key being decoded with
 --   the previous one, to enfore these are sorted the correct way.
@@ -396,28 +442,33 @@ decodeCollectionWithLen lenOrIndef el = do
     Just len -> (,) len <$> replicateM len el
     Nothing -> loop (0, []) (not <$> decodeBreakOr) el
   where
-    loop (n, acc) condition action =
+    loop (!n, !acc) condition action =
       condition >>= \case
         False -> pure (n, reverse acc)
         True -> action >>= \v -> loop (n + 1, v : acc) condition action
 
 decodeMapByKey ::
-  forall k a v s.
-  Ord k =>
+  forall k a t v s.
+  (Exts.IsList t, Exts.Item t ~ (k, a)) =>
   -- | Decoder for keys
   VDecoder v s k ->
   -- | Decoder for values
   (k -> VDecoder v s a) ->
-  VDecoder v s (Map.Map k a)
+  VDecoder v s t
 decodeMapByKey decodeKey decodeValueFor =
-  Map.fromList
-    <$> decodeMapContents decodeInlinedPair
+  uncurry Exts.fromListN
+    <$> decodeCollectionWithLen decodeMapLenOrIndef decodeInlinedPair
   where
     decodeInlinedPair = do
       !key <- decodeKey
       !value <- decodeValueFor key
       pure (key, value)
 
+
+-- | We want to make a uniform way of encoding and decoding `Map.Map`. The otiginal ToCBOR
+-- and FromCBOR instances date to Byron Era didn't support versioning were not always
+-- cannonical. We want to make these cannonical improvements staring with protocol version
+-- 2.
 decodeMapV2 ::
   forall k a v s.
   Ord k =>
@@ -446,11 +497,18 @@ decodeMap ::
   VDecoder v s a ->
   VDecoder v s (Map.Map k a)
 decodeMap decodeKey decodeValue =
-  ifVerAtLeast @1
+  ifDecVerAtLeast @2
     (decodeMapV2 decodeKey decodeValue)
     (decodeMapV1 decodeKey decodeValue)
 
--- We stitch a `258` in from of a (Hash)Set, so that tools which
+decodeVMap ::
+  (VMap.Vector kv k, VMap.Vector av a, Ord k) =>
+  VDecoder v s k ->
+  VDecoder v s a ->
+  VDecoder v s (VMap.VMap kv av k a)
+decodeVMap decodeKey decodeValue = decodeMapByKey decodeKey (const decodeValue)
+
+-- | We stitch a `258` in from of a (Hash)Set, so that tools which
 -- programmatically check for canonicity can recognise it from a normal
 -- array. Why 258? This will be formalised pretty soon, but IANA allocated
 -- 256...18446744073709551615 to "First come, first served":
@@ -494,8 +552,11 @@ decodeSetSkel fromDistinctDescList decodeValue = do
         else cborError $ C.DecoderErrorCanonicityViolation "Set"
 {-# INLINE decodeSetSkel #-}
 
-decodeSet :: Ord a => VDecoder v s a -> VDecoder v s (Set.Set a)
-decodeSet = decodeSetSkel Set.fromDistinctDescList
+decodeSet :: (Ord a, KnownNat v) => VDecoder v s a -> VDecoder v s (Set.Set a)
+decodeSet valueDecoder =
+  ifDecVerAtLeast @2
+    (Set.fromList <$> decodeList valueDecoder)
+    (decodeSetSkel Set.fromDistinctDescList valueDecoder)
 
 -- | Generic decoder for vectors. Its intended use is to allow easy
 -- definition of 'Serialise' instances for custom vector
@@ -527,7 +588,7 @@ decodeNominalDiffTime :: VDecoder v s NominalDiffTime
 decodeNominalDiffTime = fromRational . (% 1_000_000) <$> decodeInteger
 
 --------------------------------------------------------------------------------
--- Promoted CBORG primitives
+-- Promoted CBORG primitive decoders
 --------------------------------------------------------------------------------
 
 -- | Enforces that the input size is the same as the decoded one, failing in
@@ -540,8 +601,11 @@ matchSize :: T.Text -> Int -> Int -> VDecoder v s ()
 matchSize lbl requestedSize actualSize = VDecoder (C.matchSize lbl requestedSize actualSize)
 
 -- | @'D.Decoder'@ for list.
-decodeListWith :: VDecoder v s a -> VDecoder v s [a]
-decodeListWith (VDecoder d) = VDecoder (C.decodeListWith d)
+decodeList :: KnownNat v => VDecoder v s a -> VDecoder v s [a]
+decodeList decodeValue@(VDecoder d) =
+  ifDecVerAtLeast @2
+    (decodeCollection decodeListLenOrIndef decodeValue)
+    (VDecoder (C.decodeListWith d))
 
 fromCBORMaybe :: VDecoder v s a -> VDecoder v s (Maybe a)
 fromCBORMaybe = VDecoder . C.fromCBORMaybe . unVDecoder

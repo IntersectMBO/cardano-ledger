@@ -35,6 +35,7 @@ library
   exposed-modules:
                      -- Cardano.Ledger.Binary.Decoding.Coders
                      -- , Cardano.Ledger.Binary.Decoding.Sharing
+                     Cardano.Ledger.Binary.Decoding.Annotated
                      Cardano.Ledger.Binary.Decoding.FromVCBOR
                      Cardano.Ledger.Binary.Decoding.VDecoder
 
@@ -53,6 +54,7 @@ library
                      , mtl
                      , primitive
                      , reflection
+                     , serialise
                      , strict-containers
                      , tagged
                      , text
