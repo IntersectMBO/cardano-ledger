@@ -34,28 +34,24 @@ library
 
   exposed-modules:
                      -- Cardano.Ledger.Binary
-                     -- Cardano.Ledger.Binary.Decoding.Coders
+                     Cardano.Ledger.Binary.Decoding.Coders
                      -- , Cardano.Ledger.Binary.Decoding.Sharing
                      Cardano.Ledger.Binary.Decoding.Annotated
-                     Cardano.Ledger.Binary.Decoding.FromVCBOR
-                     Cardano.Ledger.Binary.Decoding.VDecoder
+                     Cardano.Ledger.Binary.Decoding.FromCBOR
+                     Cardano.Ledger.Binary.Decoding.Decoder
 
   if impl(ghc < 9.2)
     other-modules:   Cardano.Ledger.Binary.Decoding.NatsCompat
 
-  build-depends:       aeson
-                     , base >=4.11 && <5
+  build-depends:       base >=4.11 && <5
                      , bytestring
                      , cardano-crypto-class
                      , cardano-binary
-                     , cardano-data
                      , cborg
                      , containers
                      , formatting
                      , mtl
                      , primitive
-                     , reflection
-                     , serialise
                      , strict-containers
                      , tagged
                      , text

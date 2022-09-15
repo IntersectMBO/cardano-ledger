@@ -11,13 +11,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
-module Cardano.Ledger.Binary.Decoding.VDecoder
+module Cardano.Ledger.Binary.Decoding.Decoder
   ( -- * Decoders
-    VDecoder,
-    toVDecoder,
-    fromVDecoder,
+    Decoder,
+    toPlainDecoder,
+    fromPlainDecoder,
+    withPlainDecoder,
     C.DecoderError (..),
     C.ByteOffset,
     C.DecodeAction (..),
@@ -25,15 +25,11 @@ module Cardano.Ledger.Binary.Decoding.VDecoder
 
     -- ** Running decoders
     decodeFullDecoder,
-    decodeFullDecoderProxy,
 
     -- ** Versioning
-    decVerToProxy,
-    getDecVerProxy,
-    decVer,
+    Ver (..),
     getDecVer,
     ifDecVerAtLeast,
-    ifDecVerAtLeastProxy,
 
     -- * Error reporting
     cborError,
@@ -207,14 +203,12 @@ import qualified Codec.CBOR.Decoding as C
     peekByteOffset,
     peekTokenType,
   )
-import Control.Monad (replicateM, when)
+import Control.Monad.Reader
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.Int (Int16, Int32, Int64, Int8)
 import qualified Data.Map.Strict as Map
-import Data.Proxy (Proxy (..))
 import Data.Ratio ((%))
-import Data.Reflection (reifyNat)
 import qualified Data.Set as Set
 import qualified Data.Text as T
 import Data.Time.Calendar.OrdinalDate (fromOrdinalDate)
@@ -224,78 +218,55 @@ import qualified Data.Vector.Generic as VG
 import Data.Word (Word16, Word32, Word64, Word8)
 import Formatting (build, formatToString)
 import GHC.Exts as Exts (IsList (..))
-import GHC.TypeLits (KnownNat, Nat, natVal)
 import Numeric.Natural (Natural)
 import Prelude hiding (decodeFloat)
-
-#if __GLASGOW_HASKELL__ < 902
-import Cardano.Ledger.Binary.Decoding.NatsCompat (OrderingI(LTI), cmpNat)
-#endif
 
 --------------------------------------------------------------------------------
 -- Versioned Decoder
 --------------------------------------------------------------------------------
 
-newtype VDecoder (v :: Nat) s a = VDecoder {unVDecoder :: C.Decoder s a}
-  deriving (Functor, Applicative, Monad, MonadFail)
+newtype Ver = Ver Word
+  deriving (Eq, Ord, Show, Num)
 
--- | Promote a regular `C.Decoder` to a version one
-toVDecoder :: C.Decoder s a -> VDecoder v s a
-toVDecoder = VDecoder
+newtype Decoder s a = Decoder (ReaderT Ver (C.Decoder s) a)
+  deriving (Functor, Applicative, Monad, MonadFail, MonadReader Ver)
+
+-- | Promote a regular `C.Decoder` to a versioned one. Which measn it will work for all
+-- versions.
+fromPlainDecoder :: C.Decoder s a -> Decoder s a
+fromPlainDecoder d = Decoder (ReaderT (const d))
 
 -- | Extract the underlying `C.Decoder` by specifying the concrete version to be used.
-fromVDecoder :: forall v s a. KnownNat v => VDecoder v s a -> C.Decoder s a
-fromVDecoder vd@(VDecoder d) = d
-  where
-    -- We need to ensure that 'v' type parameter is set to a specific version, before we
-    -- unwrap the VDecoder.
-    _enforceKnownNat = decVer vd
+toPlainDecoder :: Ver -> Decoder s a -> C.Decoder s a
+toPlainDecoder v (Decoder d) = runReaderT d v
+
+withPlainDecoder :: Decoder s a -> (C.Decoder s a -> C.Decoder s b) -> Decoder s b
+withPlainDecoder vd f = do
+  curVer <- getDecVer
+  fromPlainDecoder (f (toPlainDecoder curVer vd))
 
 decodeFullDecoder ::
-     Natural
-  -- ^ Protocol version
-  -> T.Text
-  -> (forall v s. KnownNat v =>
-                    VDecoder v s a)
-  -> BSL.ByteString
-  -> Either C.DecoderError a
-decodeFullDecoder v txt vd bsl =
-  reifyNat (toInteger v) (\px -> decodeFullDecoderProxy px txt vd bsl)
-
-decodeFullDecoderProxy ::
-  forall v a.
-  Proxy v ->
+  -- | Protocol version
+  Ver ->
+  -- | Name for error reporting
   T.Text ->
-  (forall s. VDecoder v s a) ->
+  -- | Versioned decoder
+  (forall s. Decoder s a) ->
+  -- | Encoded bytes
   BSL.ByteString ->
   Either C.DecoderError a
-decodeFullDecoderProxy _ txt vd = C.decodeFullDecoder txt (unVDecoder vd)
+decodeFullDecoder ver txt vd = C.decodeFullDecoder txt (toPlainDecoder ver vd)
 
 --------------------------------------------------------------------------------
 -- Working with current decoder version
 --------------------------------------------------------------------------------
 
--- | Extract type level version of the decoder from its type
-decVerToProxy :: VDecoder v s a -> Proxy v
-decVerToProxy _ = Proxy
-
--- | Use monadic syntax to extract type level version of the decoder from its type
-getDecVerProxy :: VDecoder v s (Proxy v)
-getDecVerProxy = pure Proxy
-
--- | Extract value level version of a decoder's type
---
--- >>> decVer $ decodeInt @3
--- 3
-decVer :: KnownNat v => VDecoder v s a -> Natural
-decVer = fromInteger . natVal . decVerToProxy
-
 -- | Use monadic syntax to extract value level version of the decoder from its type
 --
 -- >>> decodeFullDecoder 3 "Version" getDecVer ""
 -- Right 3
-getDecVer :: KnownNat v => VDecoder v s Natural
-getDecVer = fromInteger . natVal <$> getDecVerProxy
+getDecVer :: Decoder s Ver
+getDecVer = ask
 
 -- | Conditionoly choose the decoder newer or older deceder, depending on the current
 -- version, which is supplied as a type argument.
@@ -309,47 +280,34 @@ getDecVer = fromInteger . natVal <$> getDecVerProxy
 --
 -- >>> :set -XTypeApplications
 -- >>> newtype Foo = Foo Word32
--- >>> decFoo = Foo <$> ifDecVerAtLeast @2 (fromIntegral <$> decodeWord16) decodeWord32
+-- >>> decFoo = Foo <$> ifDecVerAtLeast 2 (fromIntegral <$> decodeWord16) decodeWord32
 -- >>> :t decFoo
 ifDecVerAtLeast ::
-  forall vl v s a.
-  (KnownNat vl, KnownNat v) =>
-  VDecoder v s a ->
-  VDecoder v s a ->
-  VDecoder v s a
-ifDecVerAtLeast = ifDecVerAtLeastProxy (Proxy :: Proxy vl)
-
-ifDecVerAtLeastProxy ::
-  (KnownNat vl, KnownNat v) =>
-  -- | If cuurent decoder version is higher or equal to supplied version then first
-  -- argument is used, otherwise the second
-  Proxy vl ->
-  -- | Newer decoder
-  VDecoder v s a ->
-  -- | Older decoder
-  VDecoder v s a ->
-  VDecoder v s a
-ifDecVerAtLeastProxy atLeast newerDecoder olderDecoder = do
-  let cur = decVerToProxy newerDecoder
-  case cmpNat cur atLeast of
-    LTI -> olderDecoder
-    _ -> newerDecoder
+  Ver ->
+  Decoder s a ->
+  Decoder s a ->
+  Decoder s a
+ifDecVerAtLeast atLeast newerDecoder olderDecoder = do
+  cur <- getDecVer
+  if cur >= atLeast
+    then newerDecoder
+    else olderDecoder
 
 --------------------------------------------------------------------------------
 -- Error reporting
 --------------------------------------------------------------------------------
 
-cborError :: C.DecoderError -> VDecoder v s a
+cborError :: C.DecoderError -> Decoder s a
 cborError = fail . formatToString build
 
 decodeContainerSkelWithReplicate ::
   -- | How to get the size of the container
-  VDecoder v s Int ->
+  Decoder s Int ->
   -- | replicateM for the container
-  (Int -> VDecoder v s c) ->
+  (Int -> Decoder s c) ->
   -- | concat for the container
   ([c] -> c) ->
-  VDecoder v s c
+  Decoder s c
 decodeContainerSkelWithReplicate decodeLen replicateFun concatList = do
   -- Look at how much data we have at the moment and use it as the limit for
   -- the size of a single call to replicateFun. We don't want to use
@@ -380,16 +338,16 @@ decodeContainerSkelWithReplicate decodeLen replicateFun concatList = do
 --   See: https://tools.ietf.org/html/rfc7049#section-3.9
 --   "[..]The keys in every map must be sorted lowest value to highest.[...]"
 decodeMapSkel ::
-  forall k a m v s.
+  forall k m v s.
   Ord k =>
   -- | Decoded list is guaranteed to be sorted on keys in descending order without any
   -- duplicate keys.
-  ([(k, a)] -> m) ->
+  ([(k, v)] -> m) ->
   -- | Decoder for keys
-  VDecoder v s k ->
+  Decoder s k ->
   -- | Decoder for values
-  VDecoder v s a ->
-  VDecoder v s m
+  Decoder s v ->
+  Decoder s m
 decodeMapSkel fromDistinctDescList decodeKey decodeValue = do
   n <- decodeMapLen
   fromDistinctDescList <$> case n of
@@ -399,7 +357,7 @@ decodeMapSkel fromDistinctDescList decodeKey decodeValue = do
       decodeEntries (n - 1) firstKey [(firstKey, firstValue)]
   where
     -- Decode a single (k,v).
-    decodeEntry :: VDecoder v s (k, a)
+    decodeEntry :: Decoder s (k, v)
     decodeEntry = do
       !k <- decodeKey
       !v <- decodeValue
@@ -407,7 +365,7 @@ decodeMapSkel fromDistinctDescList decodeKey decodeValue = do
 
     -- Decode all the entries, enforcing canonicity by ensuring that the
     -- previous key is smaller than the next one.
-    decodeEntries :: Int -> k -> [(k, a)] -> VDecoder v s [(k, a)]
+    decodeEntries :: Int -> k -> [(k, v)] -> Decoder s [(k, v)]
     decodeEntries 0 _ acc = pure acc
     decodeEntries !remainingPairs previousKey !acc = do
       p@(newKey, _) <- decodeEntry
@@ -421,25 +379,25 @@ decodeMapSkel fromDistinctDescList decodeKey decodeValue = do
 {-# INLINE decodeMapSkel #-}
 
 decodeMapV1 ::
-  forall k a v s.
+  forall k v s.
   Ord k =>
   -- | Decoder for keys
-  VDecoder v s k ->
+  Decoder s k ->
   -- | Decoder for values
-  VDecoder v s a ->
-  VDecoder v s (Map.Map k a)
+  Decoder s v ->
+  Decoder s (Map.Map k v)
 decodeMapV1 = decodeMapSkel Map.fromDistinctDescList
 
--- decodeMapContents :: VDecoder v s a -> VDecoder v s [a]
+-- decodeMapContents :: Decoder s a -> Decoder s [a]
 -- decodeMapContents = decodeCollection decodeMapLenOrIndef
 
-decodeCollection :: VDecoder v s (Maybe Int) -> VDecoder v s a -> VDecoder v s [a]
+decodeCollection :: Decoder s (Maybe Int) -> Decoder s a -> Decoder s [a]
 decodeCollection lenOrIndef el = snd <$> decodeCollectionWithLen lenOrIndef el
 
 decodeCollectionWithLen ::
-  VDecoder v s (Maybe Int) ->
-  VDecoder v s a ->
-  VDecoder v s (Int, [a])
+  Decoder s (Maybe Int) ->
+  Decoder s v ->
+  Decoder s (Int, [v])
 decodeCollectionWithLen lenOrIndef el = do
   lenOrIndef >>= \case
     Just len -> (,) len <$> replicateM len el
@@ -451,13 +409,13 @@ decodeCollectionWithLen lenOrIndef el = do
         True -> action >>= \v -> loop (n + 1, v : acc) condition action
 
 decodeMapByKey ::
-  forall k a t v s.
-  (Exts.IsList t, Exts.Item t ~ (k, a)) =>
+  forall k t v s.
+  (Exts.IsList t, Exts.Item t ~ (k, v)) =>
   -- | Decoder for keys
-  VDecoder v s k ->
+  Decoder s k ->
   -- | Decoder for values
-  (k -> VDecoder v s a) ->
-  VDecoder v s t
+  (k -> Decoder s v) ->
+  Decoder s t
 decodeMapByKey decodeKey decodeValueFor =
   uncurry Exts.fromListN
     <$> decodeCollectionWithLen decodeMapLenOrIndef decodeInlinedPair
@@ -467,61 +425,57 @@ decodeMapByKey decodeKey decodeValueFor =
       !value <- decodeValueFor key
       pure (key, value)
 
-
 -- | We want to make a uniform way of encoding and decoding `Map.Map`. The otiginal ToCBOR
 -- and FromCBOR instances date to Byron Era didn't support versioning were not always
 -- cannonical. We want to make these cannonical improvements staring with protocol version
 -- 2.
 decodeMapV2 ::
-  forall k a v s.
+  forall k v s.
   Ord k =>
   -- | Decoder for keys
-  VDecoder v s k ->
+  Decoder s k ->
   -- | Decoder for values
-  VDecoder v s a ->
-  VDecoder v s (Map.Map k a)
+  Decoder s v ->
+  Decoder s (Map.Map k v)
 decodeMapV2 decodeKey decodeValue = decodeMapByKey decodeKey (const decodeValue)
 
 -- | An example of how to use versioning
 --
 -- >>> :set -XOverloadedStrings
--- >>> :set -XTypeApplications
--- >>> :set -XDataKinds
 -- >>> import Codec.CBOR.FlatTerm
--- >>> fromFlatTerm (fromVDecoder @1 (decodeMap decodeInt decodeBytes)) [TkMapLen 2,TkInt 1,TkBytes "Foo",TkInt 2,TkBytes "Bar"]
+-- >>> fromFlatTerm (toPlainDecoder 1 (decodeMap decodeInt decodeBytes)) [TkMapLen 2,TkInt 1,TkBytes "Foo",TkInt 2,TkBytes "Bar"]
 -- Right (fromList [(1,"Foo"),(2,"Bar")])
--- >>> fromFlatTerm (fromVDecoder @2 (decodeMap decodeInt decodeBytes)) [TkMapBegin,TkInt 1,TkBytes "Foo",TkInt 2,TkBytes "Bar"]
+-- >>> fromFlatTerm (toPlainDecoder 2 (decodeMap decodeInt decodeBytes)) [TkMapBegin,TkInt 1,TkBytes "Foo",TkInt 2,TkBytes "Bar"]
 -- Left "decodeMapLen: unexpected token TkMapBegin"
--- >>> fromFlatTerm (fromVDecoder @2 (decodeMap decodeInt decodeBytes)) [TkMapBegin,TkInt 1,TkBytes "Foo",TkInt 2,TkBytes "Bar",TkBreak]
+-- >>> fromFlatTerm (toPlainDecoder 2 (decodeMap decodeInt decodeBytes)) [TkMapBegin,TkInt 1,TkBytes "Foo",TkInt 2,TkBytes "Bar",TkBreak]
 -- Right (fromList [(1,"Foo"),(2,"Bar")])
 decodeMap ::
-  (KnownNat v, Ord k) =>
-  VDecoder v s k ->
-  VDecoder v s a ->
-  VDecoder v s (Map.Map k a)
+  Ord k =>
+  Decoder s k ->
+  Decoder s v ->
+  Decoder s (Map.Map k v)
 decodeMap decodeKey decodeValue =
-  ifDecVerAtLeast @2
+  ifDecVerAtLeast
+    2
     (decodeMapV2 decodeKey decodeValue)
     (decodeMapV1 decodeKey decodeValue)
 
-
-encodeMap ::
-  (KnownNat v, Ord k) =>
-  (Map.Map k a) ->
-  (k -> VEncoder v) ->
-  (a -> VEncoder v) ->
-  VEncoder v
-encodeMap m encodeKey encodeValue =
-  ifEncVerAtLeast @2
-    (encodeMapV2 m encodeKey encodeValue)
-    (encodeMapV1 m encodeKey encodeValue)
-
+-- encodeMap ::
+--   Ord k =>
+--   Map.Map k a ->
+--   (k -> Encoder) ->
+--   (v -> Encoder) ->
+--   VEncoder
+-- encodeMap m encodeKey encodeValue =
+--   ifEncVerAtLeast 2
+--     (encodeMapV2 m encodeKey encodeValue)
+--     (encodeMapV1 m encodeKey encodeValue)
 
 decodeVMap ::
-  (VMap.Vector kv k, VMap.Vector av a, Ord k) =>
-  VDecoder v s k ->
-  VDecoder v s a ->
-  VDecoder v s (VMap.VMap kv av k a)
+  (VMap.Vector kv k, VMap.Vector vv v, Ord k) =>
+  Decoder s k ->
+  Decoder s v ->
+  Decoder s (VMap.VMap kv vv k v)
 decodeVMap decodeKey decodeValue = decodeMapByKey decodeKey (const decodeValue)
 
 -- | We stitch a `258` in from of a (Hash)Set, so that tools which
@@ -534,19 +488,19 @@ decodeVMap decodeKey decodeValue = decodeMapByKey decodeKey (const decodeValue)
 setTag :: Word
 setTag = 258
 
-decodeSetTag :: VDecoder v s ()
+decodeSetTag :: Decoder s ()
 decodeSetTag = do
   t <- decodeTag
   when (t /= setTag) $ cborError $ C.DecoderErrorUnknownTag "Set" (fromIntegral t)
 
 decodeSetSkel ::
-  forall a v s c.
+  forall a s c.
   Ord a =>
   -- | Decoded list is guaranteed to be sorted on keys in descending order without any
   -- duplicate keys.
   ([a] -> c) ->
-  VDecoder v s a ->
-  VDecoder v s c
+  Decoder s a ->
+  Decoder s c
 decodeSetSkel fromDistinctDescList decodeValue = do
   decodeSetTag
   n <- decodeListLen
@@ -556,7 +510,7 @@ decodeSetSkel fromDistinctDescList decodeValue = do
       firstValue <- decodeValue
       decodeEntries (n - 1) firstValue [firstValue]
   where
-    decodeEntries :: Int -> a -> [a] -> VDecoder v s [a]
+    decodeEntries :: Int -> a -> [a] -> Decoder s [a]
     decodeEntries 0 _ acc = pure acc
     decodeEntries !remainingEntries previousValue !acc = do
       newValue <- decodeValue
@@ -568,15 +522,16 @@ decodeSetSkel fromDistinctDescList decodeValue = do
         else cborError $ C.DecoderErrorCanonicityViolation "Set"
 {-# INLINE decodeSetSkel #-}
 
-decodeSet :: (Ord a, KnownNat v) => VDecoder v s a -> VDecoder v s (Set.Set a)
+decodeSet :: Ord a => Decoder s a -> Decoder s (Set.Set a)
 decodeSet valueDecoder =
-  ifDecVerAtLeast @2
+  ifDecVerAtLeast
+    2
     (Set.fromList <$> decodeList valueDecoder)
     (decodeSetSkel Set.fromDistinctDescList valueDecoder)
 
 -- | Generic decoder for vectors. Its intended use is to allow easy
 -- definition of 'Serialise' instances for custom vector
-decodeVector :: VG.Vector vec a => VDecoder v s a -> VDecoder v s (vec a)
+decodeVector :: VG.Vector vec a => Decoder s a -> Decoder s (vec a)
 decodeVector decodeValue =
   decodeContainerSkelWithReplicate
     decodeListLen
@@ -584,12 +539,11 @@ decodeVector decodeValue =
     VG.concat
 {-# INLINE decodeVector #-}
 
-
 --------------------------------------------------------------------------------
 -- Time
 --------------------------------------------------------------------------------
 
-decodeUTCTime :: VDecoder v s UTCTime
+decodeUTCTime :: Decoder s UTCTime
 decodeUTCTime = do
   enforceSize "UTCTime" 3
   year <- decodeInteger
@@ -601,7 +555,7 @@ decodeUTCTime = do
       (picosecondsToDiffTime timeOfDayPico)
 
 -- | For backwards compatibility we round pico precision to micro
-decodeNominalDiffTime :: VDecoder v s NominalDiffTime
+decodeNominalDiffTime :: Decoder s NominalDiffTime
 decodeNominalDiffTime = fromRational . (% 1_000_000) <$> decodeInteger
 
 --------------------------------------------------------------------------------
@@ -610,24 +564,25 @@ decodeNominalDiffTime = fromRational . (% 1_000_000) <$> decodeInteger
 
 -- | Enforces that the input size is the same as the decoded one, failing in
 --   case it's not
-enforceSize :: T.Text -> Int -> VDecoder v s ()
-enforceSize lbl requestedSize = VDecoder (C.enforceSize lbl requestedSize)
+enforceSize :: T.Text -> Int -> Decoder s ()
+enforceSize lbl requestedSize = fromPlainDecoder (C.enforceSize lbl requestedSize)
 
 -- | Compare two sizes, failing if they are not equal
-matchSize :: T.Text -> Int -> Int -> VDecoder v s ()
-matchSize lbl requestedSize actualSize = VDecoder (C.matchSize lbl requestedSize actualSize)
+matchSize :: T.Text -> Int -> Int -> Decoder s ()
+matchSize lbl requestedSize actualSize = fromPlainDecoder (C.matchSize lbl requestedSize actualSize)
 
 -- | @'D.Decoder'@ for list.
-decodeList :: KnownNat v => VDecoder v s a -> VDecoder v s [a]
-decodeList decodeValue@(VDecoder d) =
-  ifDecVerAtLeast @2
+decodeList :: Decoder s a -> Decoder s [a]
+decodeList decodeValue =
+  ifDecVerAtLeast
+    2
     (decodeCollection decodeListLenOrIndef decodeValue)
-    (VDecoder (C.decodeListWith d))
+    (withPlainDecoder decodeValue C.decodeListWith)
 
-decodeMaybe :: VDecoder v s a -> VDecoder v s (Maybe a)
-decodeMaybe = VDecoder . C.fromCBORMaybe . unVDecoder
+decodeMaybe :: Decoder s a -> Decoder s (Maybe a)
+decodeMaybe d = withPlainDecoder d C.fromCBORMaybe
 
-decodeNullMaybe :: VDecoder v s a -> VDecoder v s (Maybe a)
+decodeNullMaybe :: Decoder s a -> Decoder s (Maybe a)
 decodeNullMaybe decoder = do
   peekTokenType >>= \case
     C.TypeNull -> do
@@ -635,217 +590,215 @@ decodeNullMaybe decoder = do
       pure Nothing
     _ -> Just <$> decoder
 
-decodeBool :: VDecoder v s Bool
-decodeBool = VDecoder C.decodeBool
+decodeBool :: Decoder s Bool
+decodeBool = fromPlainDecoder C.decodeBool
 
-decodeBreakOr :: VDecoder v s Bool
-decodeBreakOr = VDecoder C.decodeBreakOr
+decodeBreakOr :: Decoder s Bool
+decodeBreakOr = fromPlainDecoder C.decodeBreakOr
 
-decodeByteArray :: VDecoder v s ByteArray
-decodeByteArray = VDecoder C.decodeByteArray
+decodeByteArray :: Decoder s ByteArray
+decodeByteArray = fromPlainDecoder C.decodeByteArray
 
-decodeByteArrayCanonical :: VDecoder v s ByteArray
-decodeByteArrayCanonical = VDecoder C.decodeByteArrayCanonical
+decodeByteArrayCanonical :: Decoder s ByteArray
+decodeByteArrayCanonical = fromPlainDecoder C.decodeByteArrayCanonical
 
-decodeBytes :: VDecoder v s BS.ByteString
-decodeBytes = VDecoder C.decodeBytes
+decodeBytes :: Decoder s BS.ByteString
+decodeBytes = fromPlainDecoder C.decodeBytes
 
-decodeBytesCanonical :: VDecoder v s BS.ByteString
-decodeBytesCanonical = VDecoder C.decodeBytesCanonical
+decodeBytesCanonical :: Decoder s BS.ByteString
+decodeBytesCanonical = fromPlainDecoder C.decodeBytesCanonical
 
-decodeBytesIndef :: VDecoder v s ()
-decodeBytesIndef = VDecoder C.decodeBytesIndef
+decodeBytesIndef :: Decoder s ()
+decodeBytesIndef = fromPlainDecoder C.decodeBytesIndef
 
-decodeDouble :: VDecoder v s Double
-decodeDouble = VDecoder C.decodeDouble
+decodeDouble :: Decoder s Double
+decodeDouble = fromPlainDecoder C.decodeDouble
 
-decodeDoubleCanonical :: VDecoder v s Double
-decodeDoubleCanonical = VDecoder C.decodeDoubleCanonical
+decodeDoubleCanonical :: Decoder s Double
+decodeDoubleCanonical = fromPlainDecoder C.decodeDoubleCanonical
 
-decodeFloat :: VDecoder v s Float
-decodeFloat = VDecoder C.decodeFloat
+decodeFloat :: Decoder s Float
+decodeFloat = fromPlainDecoder C.decodeFloat
 
-decodeFloat16Canonical :: VDecoder v s Float
-decodeFloat16Canonical = VDecoder C.decodeFloat16Canonical
+decodeFloat16Canonical :: Decoder s Float
+decodeFloat16Canonical = fromPlainDecoder C.decodeFloat16Canonical
 
-decodeFloatCanonical :: VDecoder v s Float
-decodeFloatCanonical = VDecoder C.decodeFloatCanonical
+decodeFloatCanonical :: Decoder s Float
+decodeFloatCanonical = fromPlainDecoder C.decodeFloatCanonical
 
-decodeInt :: VDecoder v s Int
-decodeInt = VDecoder C.decodeInt
+decodeInt :: Decoder s Int
+decodeInt = fromPlainDecoder C.decodeInt
 
-decodeInt16 :: VDecoder v s Int16
-decodeInt16 = VDecoder C.decodeInt16
+decodeInt16 :: Decoder s Int16
+decodeInt16 = fromPlainDecoder C.decodeInt16
 
-decodeInt16Canonical :: VDecoder v s Int16
-decodeInt16Canonical = VDecoder C.decodeInt16Canonical
+decodeInt16Canonical :: Decoder s Int16
+decodeInt16Canonical = fromPlainDecoder C.decodeInt16Canonical
 
-decodeInt32 :: VDecoder v s Int32
-decodeInt32 = VDecoder C.decodeInt32
+decodeInt32 :: Decoder s Int32
+decodeInt32 = fromPlainDecoder C.decodeInt32
 
-decodeInt32Canonical :: VDecoder v s Int32
-decodeInt32Canonical = VDecoder C.decodeInt32Canonical
+decodeInt32Canonical :: Decoder s Int32
+decodeInt32Canonical = fromPlainDecoder C.decodeInt32Canonical
 
-decodeInt64 :: VDecoder v s Int64
-decodeInt64 = VDecoder C.decodeInt64
+decodeInt64 :: Decoder s Int64
+decodeInt64 = fromPlainDecoder C.decodeInt64
 
-decodeInt64Canonical :: VDecoder v s Int64
-decodeInt64Canonical = VDecoder C.decodeInt64Canonical
+decodeInt64Canonical :: Decoder s Int64
+decodeInt64Canonical = fromPlainDecoder C.decodeInt64Canonical
 
-decodeInt8 :: VDecoder v s Int8
-decodeInt8 = VDecoder C.decodeInt8
+decodeInt8 :: Decoder s Int8
+decodeInt8 = fromPlainDecoder C.decodeInt8
 
-decodeInt8Canonical :: VDecoder v s Int8
-decodeInt8Canonical = VDecoder C.decodeInt8Canonical
+decodeInt8Canonical :: Decoder s Int8
+decodeInt8Canonical = fromPlainDecoder C.decodeInt8Canonical
 
-decodeIntCanonical :: VDecoder v s Int
-decodeIntCanonical = VDecoder C.decodeIntCanonical
+decodeIntCanonical :: Decoder s Int
+decodeIntCanonical = fromPlainDecoder C.decodeIntCanonical
 
-decodeInteger :: VDecoder v s Integer
-decodeInteger = VDecoder C.decodeInteger
+decodeInteger :: Decoder s Integer
+decodeInteger = fromPlainDecoder C.decodeInteger
 
-decodeNatural :: VDecoder v s Natural
+decodeNatural :: Decoder s Natural
 decodeNatural = do
   !n <- decodeInteger
   if n >= 0
     then return $! fromInteger n
     else cborError $ C.DecoderErrorCustom "Natural" "got a negative number"
 
-decodeIntegerCanonical :: VDecoder v s Integer
-decodeIntegerCanonical = VDecoder C.decodeIntegerCanonical
+decodeIntegerCanonical :: Decoder s Integer
+decodeIntegerCanonical = fromPlainDecoder C.decodeIntegerCanonical
 
-decodeListLen :: VDecoder v s Int
-decodeListLen = VDecoder C.decodeListLen
+decodeListLen :: Decoder s Int
+decodeListLen = fromPlainDecoder C.decodeListLen
 
-decodeListLenCanonical :: VDecoder v s Int
-decodeListLenCanonical = VDecoder C.decodeListLenCanonical
+decodeListLenCanonical :: Decoder s Int
+decodeListLenCanonical = fromPlainDecoder C.decodeListLenCanonical
 
-decodeListLenCanonicalOf :: Int -> VDecoder v s ()
-decodeListLenCanonicalOf = VDecoder . C.decodeListLenCanonicalOf
+decodeListLenCanonicalOf :: Int -> Decoder s ()
+decodeListLenCanonicalOf = fromPlainDecoder . C.decodeListLenCanonicalOf
 
-decodeListLenIndef :: VDecoder v s ()
-decodeListLenIndef = VDecoder C.decodeListLenIndef
+decodeListLenIndef :: Decoder s ()
+decodeListLenIndef = fromPlainDecoder C.decodeListLenIndef
 
-decodeListLenOf :: Int -> VDecoder v s ()
-decodeListLenOf = VDecoder . C.decodeListLenOf
+decodeListLenOf :: Int -> Decoder s ()
+decodeListLenOf = fromPlainDecoder . C.decodeListLenOf
 
-decodeListLenOrIndef :: VDecoder v s (Maybe Int)
-decodeListLenOrIndef = VDecoder C.decodeListLenOrIndef
+decodeListLenOrIndef :: Decoder s (Maybe Int)
+decodeListLenOrIndef = fromPlainDecoder C.decodeListLenOrIndef
 
-decodeMapLen :: VDecoder v s Int
-decodeMapLen = VDecoder C.decodeMapLen
+decodeMapLen :: Decoder s Int
+decodeMapLen = fromPlainDecoder C.decodeMapLen
 
-decodeMapLenCanonical :: VDecoder v s Int
-decodeMapLenCanonical = VDecoder C.decodeMapLenCanonical
+decodeMapLenCanonical :: Decoder s Int
+decodeMapLenCanonical = fromPlainDecoder C.decodeMapLenCanonical
 
-decodeMapLenIndef :: VDecoder v s ()
-decodeMapLenIndef = VDecoder C.decodeMapLenIndef
+decodeMapLenIndef :: Decoder s ()
+decodeMapLenIndef = fromPlainDecoder C.decodeMapLenIndef
 
-decodeMapLenOrIndef :: VDecoder v s (Maybe Int)
-decodeMapLenOrIndef = VDecoder C.decodeMapLenOrIndef
+decodeMapLenOrIndef :: Decoder s (Maybe Int)
+decodeMapLenOrIndef = fromPlainDecoder C.decodeMapLenOrIndef
 
-decodeNegWord :: VDecoder v s Word
-decodeNegWord = VDecoder C.decodeNegWord
+decodeNegWord :: Decoder s Word
+decodeNegWord = fromPlainDecoder C.decodeNegWord
 
-decodeNegWord64 :: VDecoder v s Word64
-decodeNegWord64 = VDecoder C.decodeNegWord64
+decodeNegWord64 :: Decoder s Word64
+decodeNegWord64 = fromPlainDecoder C.decodeNegWord64
 
-decodeNegWord64Canonical :: VDecoder v s Word64
-decodeNegWord64Canonical = VDecoder C.decodeNegWord64Canonical
+decodeNegWord64Canonical :: Decoder s Word64
+decodeNegWord64Canonical = fromPlainDecoder C.decodeNegWord64Canonical
 
-decodeNegWordCanonical :: VDecoder v s Word
-decodeNegWordCanonical = VDecoder C.decodeNegWordCanonical
+decodeNegWordCanonical :: Decoder s Word
+decodeNegWordCanonical = fromPlainDecoder C.decodeNegWordCanonical
 
-decodeNull :: VDecoder v s ()
-decodeNull = VDecoder C.decodeNull
+decodeNull :: Decoder s ()
+decodeNull = fromPlainDecoder C.decodeNull
 
-decodeSequenceLenIndef ::
-  (r -> a1 -> r) -> r -> (r -> a2) -> VDecoder v s a1 -> VDecoder v s a2
-decodeSequenceLenIndef a b c (VDecoder d) =
-  VDecoder $ C.decodeSequenceLenIndef a b c d
+decodeSequenceLenIndef :: (r -> a -> r) -> r -> (r -> b) -> Decoder s a -> Decoder s b
+decodeSequenceLenIndef a b c dec =
+  withPlainDecoder dec $ C.decodeSequenceLenIndef a b c
 
-decodeSequenceLenN ::
-  (r -> a1 -> r) -> r -> (r -> a2) -> Int -> VDecoder v s a1 -> VDecoder v s a2
-decodeSequenceLenN a b c n (VDecoder d) =
-  VDecoder $ C.decodeSequenceLenN a b c n d
+decodeSequenceLenN :: (r -> a -> r) -> r -> (r -> b) -> Int -> Decoder s a -> Decoder s b
+decodeSequenceLenN a b c n dec =
+  withPlainDecoder dec $ C.decodeSequenceLenN a b c n
 
-decodeSimple :: VDecoder v s Word8
-decodeSimple = VDecoder C.decodeSimple
+decodeSimple :: Decoder s Word8
+decodeSimple = fromPlainDecoder C.decodeSimple
 
-decodeSimpleCanonical :: VDecoder v s Word8
-decodeSimpleCanonical = VDecoder C.decodeSimpleCanonical
+decodeSimpleCanonical :: Decoder s Word8
+decodeSimpleCanonical = fromPlainDecoder C.decodeSimpleCanonical
 
-decodeString :: VDecoder v s T.Text
-decodeString = VDecoder C.decodeString
+decodeString :: Decoder s T.Text
+decodeString = fromPlainDecoder C.decodeString
 
-decodeStringCanonical :: VDecoder v s T.Text
-decodeStringCanonical = VDecoder C.decodeStringCanonical
+decodeStringCanonical :: Decoder s T.Text
+decodeStringCanonical = fromPlainDecoder C.decodeStringCanonical
 
-decodeStringIndef :: VDecoder v s ()
-decodeStringIndef = VDecoder C.decodeStringIndef
+decodeStringIndef :: Decoder s ()
+decodeStringIndef = fromPlainDecoder C.decodeStringIndef
 
-decodeTag :: VDecoder v s Word
-decodeTag = VDecoder C.decodeTag
+decodeTag :: Decoder s Word
+decodeTag = fromPlainDecoder C.decodeTag
 
-decodeTag64 :: VDecoder v s Word64
-decodeTag64 = VDecoder C.decodeTag64
+decodeTag64 :: Decoder s Word64
+decodeTag64 = fromPlainDecoder C.decodeTag64
 
-decodeTag64Canonical :: VDecoder v s Word64
-decodeTag64Canonical = VDecoder C.decodeTag64Canonical
+decodeTag64Canonical :: Decoder s Word64
+decodeTag64Canonical = fromPlainDecoder C.decodeTag64Canonical
 
-decodeTagCanonical :: VDecoder v s Word
-decodeTagCanonical = VDecoder C.decodeTagCanonical
+decodeTagCanonical :: Decoder s Word
+decodeTagCanonical = fromPlainDecoder C.decodeTagCanonical
 
-decodeUtf8ByteArray :: VDecoder v s ByteArray
-decodeUtf8ByteArray = VDecoder C.decodeUtf8ByteArray
+decodeUtf8ByteArray :: Decoder s ByteArray
+decodeUtf8ByteArray = fromPlainDecoder C.decodeUtf8ByteArray
 
-decodeUtf8ByteArrayCanonical :: VDecoder v s ByteArray
-decodeUtf8ByteArrayCanonical = VDecoder C.decodeUtf8ByteArrayCanonical
+decodeUtf8ByteArrayCanonical :: Decoder s ByteArray
+decodeUtf8ByteArrayCanonical = fromPlainDecoder C.decodeUtf8ByteArrayCanonical
 
-decodeWithByteSpan :: VDecoder v s a -> VDecoder v s (a, C.ByteOffset, C.ByteOffset)
-decodeWithByteSpan (VDecoder d) = VDecoder $ C.decodeWithByteSpan d
+decodeWithByteSpan :: Decoder s a -> Decoder s (a, C.ByteOffset, C.ByteOffset)
+decodeWithByteSpan d = withPlainDecoder d C.decodeWithByteSpan
 
-decodeWord :: VDecoder v s Word
-decodeWord = VDecoder C.decodeWord
+decodeWord :: Decoder s Word
+decodeWord = fromPlainDecoder C.decodeWord
 
-decodeWord16 :: VDecoder v s Word16
-decodeWord16 = VDecoder C.decodeWord16
+decodeWord16 :: Decoder s Word16
+decodeWord16 = fromPlainDecoder C.decodeWord16
 
-decodeWord16Canonical :: VDecoder v s Word16
-decodeWord16Canonical = VDecoder C.decodeWord16Canonical
+decodeWord16Canonical :: Decoder s Word16
+decodeWord16Canonical = fromPlainDecoder C.decodeWord16Canonical
 
-decodeWord32 :: VDecoder v s Word32
-decodeWord32 = VDecoder C.decodeWord32
+decodeWord32 :: Decoder s Word32
+decodeWord32 = fromPlainDecoder C.decodeWord32
 
-decodeWord32Canonical :: VDecoder v s Word32
-decodeWord32Canonical = VDecoder C.decodeWord32Canonical
+decodeWord32Canonical :: Decoder s Word32
+decodeWord32Canonical = fromPlainDecoder C.decodeWord32Canonical
 
-decodeWord64 :: VDecoder v s Word64
-decodeWord64 = VDecoder C.decodeWord64
+decodeWord64 :: Decoder s Word64
+decodeWord64 = fromPlainDecoder C.decodeWord64
 
-decodeWord64Canonical :: VDecoder v s Word64
-decodeWord64Canonical = VDecoder C.decodeWord64Canonical
+decodeWord64Canonical :: Decoder s Word64
+decodeWord64Canonical = fromPlainDecoder C.decodeWord64Canonical
 
-decodeWord8 :: VDecoder v s Word8
-decodeWord8 = VDecoder C.decodeWord8
+decodeWord8 :: Decoder s Word8
+decodeWord8 = fromPlainDecoder C.decodeWord8
 
-decodeWord8Canonical :: VDecoder v s Word8
-decodeWord8Canonical = VDecoder C.decodeWord8Canonical
+decodeWord8Canonical :: Decoder s Word8
+decodeWord8Canonical = fromPlainDecoder C.decodeWord8Canonical
 
-decodeWordCanonical :: VDecoder v s Word
-decodeWordCanonical = VDecoder C.decodeWordCanonical
+decodeWordCanonical :: Decoder s Word
+decodeWordCanonical = fromPlainDecoder C.decodeWordCanonical
 
-decodeWordCanonicalOf :: Word -> VDecoder v s ()
-decodeWordCanonicalOf = VDecoder . C.decodeWordCanonicalOf
+decodeWordCanonicalOf :: Word -> Decoder s ()
+decodeWordCanonicalOf = fromPlainDecoder . C.decodeWordCanonicalOf
 
-decodeWordOf :: Word -> VDecoder v s ()
-decodeWordOf = VDecoder . C.decodeWordOf
+decodeWordOf :: Word -> Decoder s ()
+decodeWordOf = fromPlainDecoder . C.decodeWordOf
 
-peekAvailable :: VDecoder v s Int
-peekAvailable = VDecoder C.peekAvailable
+peekAvailable :: Decoder s Int
+peekAvailable = fromPlainDecoder C.peekAvailable
 
-peekByteOffset :: VDecoder v s C.ByteOffset
-peekByteOffset = VDecoder C.peekByteOffset
+peekByteOffset :: Decoder s C.ByteOffset
+peekByteOffset = fromPlainDecoder C.peekByteOffset
 
-peekTokenType :: VDecoder v s C.TokenType
-peekTokenType = VDecoder C.peekTokenType
+peekTokenType :: Decoder s C.TokenType
+peekTokenType = fromPlainDecoder C.peekTokenType
