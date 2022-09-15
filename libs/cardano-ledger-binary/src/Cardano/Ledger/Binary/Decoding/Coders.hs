@@ -62,7 +62,6 @@ module Data.Coders
     field,
     fieldA,
     fieldAA,
-    runE, -- Used in testing
 
     -- * Using Duals .
     decodeDual,
@@ -87,22 +86,18 @@ module Data.Coders
     decodeAnnSet,
 
     -- * Low level (Encoding/Decoder) utility functions
-    Decoder,
     decodeRecordNamed,
     decodeRecordNamedT,
     decodeRecordSum,
     invalidKey,
     unusedRequiredKeys,
     duplicateKey,
-    wrapCBORArray,
     decodeNullMaybe,
     decodeCollectionWithLen,
     decodeCollection,
-    wrapCBORMap,
     decodeMap,
     decodeVMap,
     decodeMapNoDuplicates,
-    decodeMapByKey,
     decodeMapContents,
     decodeMapTraverse,
     decodeMapContentsTraverse,
@@ -114,19 +109,6 @@ import qualified Cardano.Binary as C
 import Cardano.Ledger.Binary.Decoding.Annotated (Annotator (..))
 import Cardano.Ledger.Binary.Decoding.FromVCBOR (FromVCBOR (fromVCBOR))
 import Cardano.Ledger.Binary.Decoding.VDecoder
-  ( DecoderError (DecoderErrorCustom),
-    TokenType (..),
-    VDecoder,
-    decodeBreakOr,
-    decodeListLenOrIndef,
-    decodeMapLenOrIndef,
-    decodeNull,
-    decodeTag,
-    decodeTag64,
-    decodeWord,
-    matchSize,
-    peekTokenType,
-  )
 import Codec.CBOR.Encoding (Encoding, encodeTag)
 import Control.Applicative (liftA2)
 import Control.Monad (replicateM, unless, when)
@@ -199,28 +181,32 @@ data Wrapped where
   -- But may need field-wide wrapping, when Density is 'Sparse
 
 -- | A Field pairs an update function and a decoder for one field of a Sparse record.
-data Field t where
-  Field :: (x -> t -> t) -> (forall s. VDecoder v s x) -> Field t
+data Field v t where
+  Field :: (x -> t -> t) -> (forall s. VDecoder v s x) -> Field v t
 
 {-# INLINE field #-}
-field :: (x -> t -> t) -> Decode ('Closed d) x -> Field t
+field :: KnownNat v => (x -> t -> t) -> Decode ('Closed d) x -> Field v t
 field update dec = Field update (decode dec)
 
 {-# INLINE ofield #-}
-ofield :: (StrictMaybe x -> t -> t) -> Decode ('Closed d) x -> Field t
+ofield :: KnownNat v => (StrictMaybe x -> t -> t) -> Decode ('Closed d) x -> Field v t
 ofield update dec = Field update (SJust <$> decode dec)
 
 {-# INLINE invalidField #-}
-invalidField :: forall t. Word -> Field t
+invalidField :: forall v t. KnownNat v => Word -> Field v t
 invalidField n = field (flip $ const @t @Void) (Invalid n)
 
 -- | Sparse decode something with a (FromVCBOR (Annotator t)) instance
 -- A special case of 'field'
-fieldA :: Applicative ann => (x -> t -> t) -> Decode ('Closed d) x -> Field (ann t)
+fieldA :: (KnownNat v, Applicative ann) => (x -> t -> t) -> Decode ('Closed d) x -> Field v (ann t)
 fieldA update dec = Field (liftA2 update) (pure <$> decode dec)
 
 -- | Sparse decode something with a (FromVCBOR (Annotator t)) instance
-fieldAA :: Applicative ann => (x -> t -> t) -> Decode ('Closed d) (ann x) -> Field (ann t)
+fieldAA ::
+  (KnownNat v, Applicative ann) =>
+  (x -> t -> t) ->
+  Decode ('Closed d) (ann x) ->
+  Field v (ann t)
 fieldAA update dec = Field (liftA2 update) (decode dec)
 
 -- ==================================================================
@@ -397,7 +383,7 @@ data Decode (w :: Wrapped) t where
     -- | The type with default values in all fields
     t ->
     -- | What to do with key in the @Word@
-    (Word -> Field t) ->
+    (forall v. KnownNat v => Word -> Field v t) ->
     -- | Pairs of keys and Strings which must be there (default values not allowed)
     [(Word, String)] ->
     Decode ('Closed 'Dense) t
@@ -408,7 +394,7 @@ data Decode (w :: Wrapped) t where
   -- FromVCBOR instance at @t@
   From :: FromVCBOR t => Decode w t
   -- | Label a (component, field, argument). It will be decoded using the given decoder.
-  D :: (forall s. VDecoder v s t) -> Decode ('Closed 'Dense) t
+  D :: (forall s v. KnownNat v => VDecoder v s t) -> Decode ('Closed 'Dense) t
   -- | Apply a functional decoding (arising from 'RecD' or 'SumD') to get (type wise)
   -- smaller decoding.
   ApplyD :: Decode w1 (a -> t) -> Decode ('Closed d) a -> Decode w1 t
@@ -474,13 +460,13 @@ hsize (Ann x) = hsize x
 hsize (ApplyAnn f x) = hsize f + hsize x
 hsize (ApplyErr f x) = hsize f + hsize x
 
-decode :: Decode w t -> VDecoder v s t
+decode :: KnownNat v => Decode w t -> VDecoder v s t
 decode x = fmap snd (decodE x)
 
-decodE :: Decode w t -> VDecoder v s (Int, t)
+decodE :: KnownNat v => Decode w t -> VDecoder v s (Int, t)
 decodE x = decodeCount x 0
 
-decodeCount :: forall (w :: Wrapped) v s t. Decode w t -> Int -> VDecoder v s (Int, t)
+decodeCount :: forall (w :: Wrapped) v s t. KnownNat v => Decode w t -> Int -> VDecoder v s (Int, t)
 decodeCount (Summands nm f) n = (n + 1,) <$> decodeRecordSum nm (decodE . f)
 decodeCount (SumD cn) n = pure (n + 1, cn)
 decodeCount (KeyedD cn) n = pure (n + 1, cn)
@@ -513,7 +499,7 @@ decodeCount (ApplyErr cn g) n = do
 
 -- The type of DecodeClosed precludes pattern match against (SumD c) as the types are different.
 
-decodeClosed :: Decode ('Closed d) t -> VDecoder v s t
+decodeClosed :: KnownNat v => Decode ('Closed d) t -> VDecoder v s t
 decodeClosed (Summands nm f) = decodeRecordSum nm (decodE . f)
 decodeClosed (KeyedD cn) = pure cn
 decodeClosed (RecD cn) = pure cn
@@ -547,7 +533,7 @@ decodeSparse ::
   Typeable a =>
   String ->
   a ->
-  (Word -> Field a) ->
+  (Word -> Field v a) ->
   [(Word, String)] ->
   VDecoder v s a
 decodeSparse name initial pick required = do
@@ -562,25 +548,25 @@ decodeSparse name initial pick required = do
 -- | Given a function that picks a Field from a key, decodes that field
 --   and returns a (t -> t) transformer, which when applied, will
 --   update the record with the value decoded.
-applyField :: (Word -> Field t) -> Set Word -> String -> VDecoder v s (t -> t, Set Word)
+applyField :: (Word -> Field v t) -> Set Word -> String -> VDecoder v s (t -> t, Set Word)
 applyField f seen name = do
   tag <- decodeWord
   if Set.member tag seen
     then duplicateKey name tag
     else case f tag of
-      Field update d -> do v <- d; pure (update v, insert tag seen)
+      Field update d -> d >>= \v -> pure (update v, insert tag seen)
 
 -- | Decode a Map Block of key encoded data for type t
 --   given a function that picks the right box for a given key, and an
 --   initial value for the record (usually starts filled with default values).
 --   The Block can be either len-encoded or block-encoded.
-getSparseBlock :: Int -> t -> (Word -> Field t) -> Set Word -> String -> VDecoder v s (t, Set Word)
+getSparseBlock :: Int -> t -> (Word -> Field v t) -> Set Word -> String -> VDecoder v s (t, Set Word)
 getSparseBlock 0 initial _pick seen _name = pure (initial, seen)
 getSparseBlock n initial pick seen name = do
   (transform, seen2) <- applyField pick seen name
   getSparseBlock (n - 1) (transform initial) pick seen2 name
 
-getSparseBlockIndef :: t -> (Word -> Field t) -> Set Word -> String -> VDecoder v s (t, Set Word)
+getSparseBlockIndef :: t -> (Word -> Field v t) -> Set Word -> String -> VDecoder v s (t, Set Word)
 getSparseBlockIndef initial pick seen name =
   decodeBreakOr >>= \case
     True -> pure (initial, seen)
@@ -603,15 +589,20 @@ instance Applicative (Decode ('Closed d)) where
 
 -- | Use to and from, when you want to guarantee that a type has both
 -- ToCBOR and FromCBR instances.
-decodeDual :: (C.ToCBOR t, FromVCBOR t) => Decode ('Closed 'Dense) t
+decodeDual :: forall t. (C.ToCBOR t, FromVCBOR t) => Decode ('Closed 'Dense) t
 decodeDual = D fromVCBOR
+  where
+    -- Enforce ToCBOR constraint on t
+    _toCBOR = C.toCBOR (undefined :: t)
 
 -- Combinators
 
 -- | Combinators for building @(Encode ('Closed 'Dense) x)@ and @(Decode ('Closed 'Dense) x)@ objects.
 --
--- The use of the low level function 'encodeFoldable' is not self-documenting at all (and not even correct for Maps, even
--- though Map is an instance of Foldable). So instead of writing: @(E encodeFoldable x)@, we want people to write:
+-- The use of the low level function 'encodeFoldable' is not self-documenting at all (and
+-- not even correct for Maps, even though Map is an instance of Foldable). So instead of
+-- writing: @(E encodeFoldable x)@, we want people to write:
+--
 -- 1. @(mapEncode x)@   if x is a Map
 -- 2. @(setEncode x)@   if x is a Set
 -- 3. @(listEncode x)@  if x is a List
@@ -693,13 +684,9 @@ assertTag tag = do
     peekTokenType >>= \case
       TypeTag -> fromIntegral <$> decodeTag
       TypeTag64 -> fromIntegral <$> decodeTag64
-      _ -> cborError ("expected tag" :: String)
+      _ -> fail "expected tag"
   when (t /= (fromIntegral tag :: Natural)) $
-    cborError ("expecteg tag " <> show tag <> " but got tag " <> show t)
-
--- | Convert a @Buildable@ error into a 'cborg' decoder error
-cborError :: Buildable e => e -> VDecoder v s a
-cborError = fail . formatToString build
+    fail $ "expecteg tag " <> show tag <> " but got tag " <> show t
 
 decodeRecordNamed :: Text.Text -> (a -> Int) -> VDecoder v s a -> VDecoder v s a
 decodeRecordNamed name getRecordSize decoder = do
@@ -739,26 +726,9 @@ decodeRecordSum name decoder = do
       unless isBreak $ cborError $ DecoderErrorCustom (Text.pack name) "Excess terms in array"
   pure x
 
-encodeNullMaybe :: (a -> Encoding) -> Maybe a -> Encoding
-encodeNullMaybe _ Nothing = encodeNull
-encodeNullMaybe encoder (Just x) = encoder x
-
-decodeNullMaybe :: VDecoder v s a -> VDecoder v s (Maybe a)
-decodeNullMaybe decoder = do
-  peekTokenType >>= \case
-    TypeNull -> do
-      decodeNull
-      pure Nothing
-    _ -> Just <$> decoder
 
 decodePair :: VDecoder v s a -> VDecoder v s b -> VDecoder v s (a, b)
 decodePair first second = decodeRecordNamed "pair" (const 2) ((,) <$> first <*> second)
-
-encodePair :: (a -> Encoding) -> (b -> Encoding) -> (a, b) -> Encoding
-encodePair encodeFirst encodeSecond (x, y) =
-  encodeListLen 2
-    <> encodeFirst x
-    <> encodeSecond y
 
 invalidKey :: Word -> VDecoder v s a
 invalidKey k = cborError $ DecoderErrorCustom "not a valid key:" (Text.pack $ show k)
@@ -783,16 +753,13 @@ unusedRequiredKeys used required name =
     message (pair : more) = report pair ++ ", and " ++ message more
     report (k, f) = "field " ++ f ++ " with key " ++ show k
 
-decodeSeq :: VDecoder v s a -> VDecoder v s (Seq a)
+decodeSeq :: KnownNat v => VDecoder v s a -> VDecoder v s (Seq a)
 decodeSeq decoder = Seq.fromList <$> decodeList decoder
 
-decodeStrictSeq :: VDecoder v s a -> VDecoder v s (StrictSeq a)
+decodeStrictSeq :: KnownNat v => VDecoder v s a -> VDecoder v s (StrictSeq a)
 decodeStrictSeq decoder = StrictSeq.fromList <$> decodeList decoder
 
-decodeSet :: Ord a => VDecoder v s a -> VDecoder v s (Set a)
-decodeSet decoder = Set.fromList <$> decodeList decoder
-
-decodeAnnSet :: Ord t => VDecoder v s (Annotator t) -> VDecoder v s (Annotator (Set t))
+decodeAnnSet :: (KnownNat v, Ord t) => VDecoder v s (Annotator t) -> VDecoder v s (Annotator (Set t))
 decodeAnnSet dec = do
   xs <- decodeList dec
   pure (Set.fromList <$> sequence xs)

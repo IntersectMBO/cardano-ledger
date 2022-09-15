@@ -39,6 +39,7 @@ module Cardano.Ledger.Binary.Decoding.VDecoder
     cborError,
 
     -- ** Custom decoders
+    decodeNullMaybe,
     decodeUTCTime,
     decodeNominalDiffTime,
     decodeVector,
@@ -49,7 +50,7 @@ module Cardano.Ledger.Binary.Decoding.VDecoder
     -- ** Lifted @cborg@ decoders
     enforceSize,
     matchSize,
-    fromCBORMaybe,
+    decodeMaybe,
     decodeList,
     decodeBool,
     decodeBreakOr,
@@ -251,11 +252,13 @@ fromVDecoder vd@(VDecoder d) = d
     _enforceKnownNat = decVer vd
 
 decodeFullDecoder ::
-  Natural ->
-  T.Text ->
-  (forall v s. KnownNat v => VDecoder v s a) ->
-  BSL.ByteString ->
-  Either C.DecoderError a
+     Natural
+  -- ^ Protocol version
+  -> T.Text
+  -> (forall v s. KnownNat v =>
+                    VDecoder v s a)
+  -> BSL.ByteString
+  -> Either C.DecoderError a
 decodeFullDecoder v txt vd bsl =
   reifyNat (toInteger v) (\px -> decodeFullDecoderProxy px txt vd bsl)
 
@@ -427,8 +430,8 @@ decodeMapV1 ::
   VDecoder v s (Map.Map k a)
 decodeMapV1 = decodeMapSkel Map.fromDistinctDescList
 
-decodeMapContents :: VDecoder v s a -> VDecoder v s [a]
-decodeMapContents = decodeCollection decodeMapLenOrIndef
+-- decodeMapContents :: VDecoder v s a -> VDecoder v s [a]
+-- decodeMapContents = decodeCollection decodeMapLenOrIndef
 
 decodeCollection :: VDecoder v s (Maybe Int) -> VDecoder v s a -> VDecoder v s [a]
 decodeCollection lenOrIndef el = snd <$> decodeCollectionWithLen lenOrIndef el
@@ -501,6 +504,19 @@ decodeMap decodeKey decodeValue =
     (decodeMapV2 decodeKey decodeValue)
     (decodeMapV1 decodeKey decodeValue)
 
+
+encodeMap ::
+  (KnownNat v, Ord k) =>
+  (Map.Map k a) ->
+  (k -> VEncoder v) ->
+  (a -> VEncoder v) ->
+  VEncoder v
+encodeMap m encodeKey encodeValue =
+  ifEncVerAtLeast @2
+    (encodeMapV2 m encodeKey encodeValue)
+    (encodeMapV1 m encodeKey encodeValue)
+
+
 decodeVMap ::
   (VMap.Vector kv k, VMap.Vector av a, Ord k) =>
   VDecoder v s k ->
@@ -568,6 +584,7 @@ decodeVector decodeValue =
     VG.concat
 {-# INLINE decodeVector #-}
 
+
 --------------------------------------------------------------------------------
 -- Time
 --------------------------------------------------------------------------------
@@ -607,8 +624,16 @@ decodeList decodeValue@(VDecoder d) =
     (decodeCollection decodeListLenOrIndef decodeValue)
     (VDecoder (C.decodeListWith d))
 
-fromCBORMaybe :: VDecoder v s a -> VDecoder v s (Maybe a)
-fromCBORMaybe = VDecoder . C.fromCBORMaybe . unVDecoder
+decodeMaybe :: VDecoder v s a -> VDecoder v s (Maybe a)
+decodeMaybe = VDecoder . C.fromCBORMaybe . unVDecoder
+
+decodeNullMaybe :: VDecoder v s a -> VDecoder v s (Maybe a)
+decodeNullMaybe decoder = do
+  peekTokenType >>= \case
+    C.TypeNull -> do
+      decodeNull
+      pure Nothing
+    _ -> Just <$> decoder
 
 decodeBool :: VDecoder v s Bool
 decodeBool = VDecoder C.decodeBool
@@ -777,7 +802,7 @@ decodeUtf8ByteArray = VDecoder C.decodeUtf8ByteArray
 decodeUtf8ByteArrayCanonical :: VDecoder v s ByteArray
 decodeUtf8ByteArrayCanonical = VDecoder C.decodeUtf8ByteArrayCanonical
 
-decodeWithByteSpan :: VDecoder v1 s a -> VDecoder v s (a, C.ByteOffset, C.ByteOffset)
+decodeWithByteSpan :: VDecoder v s a -> VDecoder v s (a, C.ByteOffset, C.ByteOffset)
 decodeWithByteSpan (VDecoder d) = VDecoder $ C.decodeWithByteSpan d
 
 decodeWord :: VDecoder v s Word

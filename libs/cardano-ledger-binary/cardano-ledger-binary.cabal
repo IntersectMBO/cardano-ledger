@@ -33,6 +33,7 @@ library
   import:             base, project-config
 
   exposed-modules:
+                     -- Cardano.Ledger.Binary
                      -- Cardano.Ledger.Binary.Decoding.Coders
                      -- , Cardano.Ledger.Binary.Decoding.Sharing
                      Cardano.Ledger.Binary.Decoding.Annotated

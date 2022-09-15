@@ -38,6 +38,14 @@ import GHC.TypeLits
 import Numeric.Natural (Natural)
 import Prelude hiding (decodeFloat)
 
+
+newtype VEncoder (v :: Nat) = VEncoder {unVEncoder :: C.Encoder}
+  deriving (Functor, Applicative, Monad)
+
+class ToVCBOR a where
+  toVCBOR :: KnownNat v => a -> VEncoding v
+
+
 class Typeable a => FromVCBOR a where
   fromVCBOR :: KnownNat v => VDecoder v s a
 
@@ -220,7 +228,7 @@ instance FromVCBOR a => FromVCBOR (NonEmpty a) where
       Just ne -> pure ne
 
 instance FromVCBOR a => FromVCBOR (Maybe a) where
-  fromVCBOR = fromCBORMaybe fromVCBOR
+  fromVCBOR = decodeMaybe fromVCBOR
 
 instance (Ord a, FromVCBOR a) => FromVCBOR (Set.Set a) where
   fromVCBOR = decodeSet fromVCBOR
