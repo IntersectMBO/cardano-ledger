@@ -88,7 +88,6 @@ library
     cardano-ledger-shelley-ma,
     cardano-protocol-tpraos,
     cardano-slotting,
-    cborg,
     containers,
     vector-map,
     data-default-class,
