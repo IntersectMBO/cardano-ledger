@@ -485,6 +485,37 @@ toSet = Set.fromList . toList
 (∩) = intersection
 
 --------------------------------------------------------------------------------
+-- AddShrinks instances
+--------------------------------------------------------------------------------
+
+deriveAddShrinks ''Owner
+deriveAddShrinks ''VKey
+deriveAddShrinks ''Addr
+deriveAddShrinks ''BlockCount
+deriveAddShrinks ''Epoch
+deriveAddShrinks ''Hash
+deriveAddShrinks ''Lovelace
+deriveAddShrinks ''Sig
+deriveAddShrinks ''Slot
+deriveAddShrinks ''SlotCount
+deriveAddShrinks ''VKeyGenesis
+
+--------------------------------------------------------------------------------
+-- SeedGoblin instances
+--------------------------------------------------------------------------------
+
+deriveSeedGoblin ''Addr
+deriveSeedGoblin ''BlockCount
+deriveSeedGoblin ''Epoch
+deriveSeedGoblin ''Hash
+deriveSeedGoblin ''Lovelace
+deriveSeedGoblin ''Owner
+deriveSeedGoblin ''Slot
+deriveSeedGoblin ''SlotCount
+deriveSeedGoblin ''VKey
+deriveSeedGoblin ''VKeyGenesis
+
+--------------------------------------------------------------------------------
 -- Goblins instances
 --------------------------------------------------------------------------------
 
@@ -520,34 +551,3 @@ instance GeneOps g => Goblin g Lovelace where
           <$$> tinker ((\(Lovelace x) -> x) <$> gen)
       )
   conjure = saveInBagOfTricks =<< ((`mod` lovelaceCap) . Lovelace <$> conjure)
-
---------------------------------------------------------------------------------
--- AddShrinks instances
---------------------------------------------------------------------------------
-
-deriveAddShrinks ''Addr
-deriveAddShrinks ''BlockCount
-deriveAddShrinks ''Epoch
-deriveAddShrinks ''Hash
-deriveAddShrinks ''Lovelace
-deriveAddShrinks ''Owner
-deriveAddShrinks ''Sig
-deriveAddShrinks ''Slot
-deriveAddShrinks ''SlotCount
-deriveAddShrinks ''VKey
-deriveAddShrinks ''VKeyGenesis
-
---------------------------------------------------------------------------------
--- SeedGoblin instances
---------------------------------------------------------------------------------
-
-deriveSeedGoblin ''Addr
-deriveSeedGoblin ''BlockCount
-deriveSeedGoblin ''Epoch
-deriveSeedGoblin ''Hash
-deriveSeedGoblin ''Lovelace
-deriveSeedGoblin ''Owner
-deriveSeedGoblin ''Slot
-deriveSeedGoblin ''SlotCount
-deriveSeedGoblin ''VKey
-deriveSeedGoblin ''VKeyGenesis
