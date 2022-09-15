@@ -933,8 +933,8 @@ ledgerExamplesShelley =
 exampleCoin :: Coin
 exampleCoin = Coin 10
 
-exampleMetadataMap :: Map Word64 Metadatum
-exampleMetadataMap =
+exampleAuxDataMap :: Map Word64 Metadatum
+exampleAuxDataMap =
   Map.fromList
     [ (1, S "string"),
       (2, B "bytes"),
@@ -943,7 +943,7 @@ exampleMetadataMap =
     ]
 
 exampleShelleyTxAuxData :: Core.TxAuxData (ShelleyEra StandardCrypto)
-exampleShelleyTxAuxData = ShelleyTxAuxData exampleMetadataMap
+exampleShelleyTxAuxData = ShelleyTxAuxData SLE.exampleAuxDataMap
 
 -- ======================
 
@@ -959,7 +959,7 @@ ledgerExamplesAllegra =
 exampleAllegraTxAuxData :: MAClass ma c => AllegraTxAuxData (ShelleyMAEra ma c)
 exampleAllegraTxAuxData =
   AllegraTxAuxData
-    exampleMetadataMap
+    exampleAuxDataMap
     (StrictSeq.fromList [exampleScriptMA])
 
 exampleScriptMA :: MAClass ma c => Core.Script (ShelleyMAEra ma c)
