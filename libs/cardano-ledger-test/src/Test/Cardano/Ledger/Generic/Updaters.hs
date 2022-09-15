@@ -153,6 +153,7 @@ updateTx wit@(Conway _) (AlonzoTx b w iv d) dt =
     WitnessesI wfields -> AlonzoTx b (newWitnesses override wit wfields) iv d
     AuxData faux -> AlonzoTx b w iv faux
     Valid iv' -> AlonzoTx b w iv' d
+{-# NOINLINE updateTx #-}
 
 newTx :: Proof era -> [TxField era] -> Tx era
 newTx era = List.foldl' (updateTx era) (initialTx era)
@@ -231,6 +232,7 @@ updateTxBody pf txBody dt =
       TotalCol totalCol -> txBody & totalCollateralTxBodyL .~ totalCol
       CollateralReturn collateralReturn -> txBody & collateralReturnTxBodyL .~ collateralReturn
       _ -> txBody
+{-# NOINLINE updateTxBody #-}
 
 newTxBody :: EraTxBody era => Proof era -> [TxBodyField era] -> TxBody era
 newTxBody era = List.foldl' (updateTxBody era) (initialTxBody era)
@@ -272,6 +274,7 @@ updateWitnesses p (Conway _) w dw = case dw of
   (ScriptWits ss) -> w {txscripts = p (txscripts w) ss}
   (DataWits ds) -> w {txdats = p (txdats w) ds}
   (RdmrWits r) -> w {txrdmrs = p (txrdmrs w) r}
+{-# NOINLINE updateWitnesses #-}
 
 newWitnesses :: Era era => Policy -> Proof era -> [WitnessesField era] -> TxWits era
 newWitnesses p era = List.foldl' (updateWitnesses p era) (initialWitnesses era)
@@ -316,6 +319,7 @@ updateTxOut (Conway _) (BabbageTxOut a v h refscript) txoutd = case txoutd of
   DHash (SJust dh) -> BabbageTxOut a v (Babbage.DatumHash dh) refscript
   FDatum d -> BabbageTxOut a v d refscript
   RefScript s -> BabbageTxOut a v h s
+{-# NOINLINE updateTxOut #-}
 
 newTxOut :: Era era => Proof era -> [TxOutField era] -> TxOut era
 newTxOut _ dts | all notAddress dts = error ("A call to newTxOut must have an (Address x) field.")
@@ -354,6 +358,7 @@ updateShelleyPP pp dpp = case dpp of
   (MaxValSize _) -> pp
   (MaxCollateralInputs _) -> pp
   (CollateralPercentage _) -> pp
+{-# NOINLINE updateShelleyPP #-}
 
 -- | updatePParams uses the Override policy exclusively
 updatePParams :: Proof era -> PParams era -> PParamsField era -> PParams era
@@ -444,6 +449,7 @@ updatePParams (Conway _) pp dpp = case dpp of
   D _ -> pp
   ExtraEntropy _ -> pp
   MinUTxOValue _ -> pp
+{-# NOINLINE updatePParams #-}
 
 newPParams :: Proof era -> [PParamsField era] -> PParams era
 newPParams era = List.foldl' (updatePParams era) (initialPParams era)

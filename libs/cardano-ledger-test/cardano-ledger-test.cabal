@@ -47,9 +47,11 @@ library
     Test.Cardano.Ledger.Examples.AlonzoBBODY
     Test.Cardano.Ledger.Examples.AlonzoCollectInputs
     Test.Cardano.Ledger.Examples.AlonzoAPI
+    Test.Cardano.Ledger.Examples.Consensus
     Test.Cardano.Ledger.Examples.STSTestUtils
     Test.Cardano.Ledger.Generic.AggPropTests
     Test.Cardano.Ledger.Generic.ApplyTx
+    Test.Cardano.Ledger.Generic.Consensus
     Test.Cardano.Ledger.Generic.Indexed
     Test.Cardano.Ledger.Generic.Fields
     Test.Cardano.Ledger.Generic.Functions
@@ -61,6 +63,7 @@ library
     Test.Cardano.Ledger.Generic.ModelState
     Test.Cardano.Ledger.Generic.PrettyCore
     Test.Cardano.Ledger.Generic.Properties
+    Test.Cardano.Ledger.Generic.Same
     Test.Cardano.Ledger.Generic.Scriptic
     Test.Cardano.Ledger.Generic.Trace
     Test.Cardano.Ledger.Generic.Updaters
@@ -145,7 +148,9 @@ library
     scientific,
     cardano-ledger-shelley,
     cardano-ledger-shelley-test,
+    cardano-ledger-shelley-ma-test,
     cardano-ledger-babbage-test,
+    cardano-ledger-conway-test,
     semigroupoids,
     small-steps,
     small-steps-test,

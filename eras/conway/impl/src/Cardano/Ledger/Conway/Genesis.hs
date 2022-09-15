@@ -17,7 +17,7 @@ import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 
 newtype ConwayGenesis c = ConwayGenesis (GenDelegs c)
-  deriving (Eq, Generic, NoThunks)
+  deriving (Eq, Generic, NoThunks, Show)
 
 instance Crypto c => FromJSON (ConwayGenesis c) where
   parseJSON = withObject "ConwayGenesis" $ \obj ->

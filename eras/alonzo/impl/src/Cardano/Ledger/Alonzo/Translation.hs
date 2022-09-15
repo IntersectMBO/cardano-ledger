@@ -11,7 +11,7 @@
 module Cardano.Ledger.Alonzo.Translation where
 
 import Cardano.Binary (DecoderError)
-import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..), extendPPWithGenesis)
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParams, AlonzoPParamsUpdate, extendPP)
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))

@@ -5,7 +5,6 @@
 
 module Test.Cardano.Ledger.Allegra.Examples.Consensus where
 
-import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.Translation ()
 import Cardano.Ledger.AuxiliaryData
 import Cardano.Ledger.Coin
@@ -62,7 +61,7 @@ exampleTxBodyMA value =
     (ValidityInterval (SJust (SlotNo 2)) (SJust (SlotNo 4)))
     (SJust (Update exampleProposedPPUpdates (EpochNo 0)))
     (SJust auxiliaryDataHash)
-    mempty
+    mempty -- Minted MultiAsset
   where
     -- Dummy hash to decouple from the auxiliary data in 'exampleTx'.
     auxiliaryDataHash :: AuxiliaryDataHash (EraCrypto era)

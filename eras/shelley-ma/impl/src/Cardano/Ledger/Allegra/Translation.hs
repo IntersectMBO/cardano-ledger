@@ -16,7 +16,6 @@ import Cardano.Binary
     fromCBOR,
     serialize,
   )
-import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era hiding (EraCrypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -25,6 +24,8 @@ import qualified Cardano.Ledger.Shelley.LedgerState as LS
   ( returnRedeemAddrsToReserves,
   )
 import Cardano.Ledger.Shelley.TxWits (decodeWits)
+import Cardano.Ledger.ShelleyMA ()
+import Cardano.Ledger.ShelleyMA.Era (AllegraEra)
 import Control.Monad.Except (throwError)
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map

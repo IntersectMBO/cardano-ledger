@@ -33,7 +33,11 @@ import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.Genesis (AlonzoGenesis, extendPPWithGenesis)
 import Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..))
 import Cardano.Ledger.Babbage.Rules ()
-import Cardano.Ledger.Babbage.Tx (babbageTxScripts, getDatumBabbage)
+import Cardano.Ledger.Babbage.Translation ()
+import Cardano.Ledger.Babbage.Tx
+  ( babbageTxScripts,
+    getDatumBabbage,
+  )
 import Cardano.Ledger.Babbage.TxBody
   ( BabbageEraTxBody (..),
     BabbageTxBody,
