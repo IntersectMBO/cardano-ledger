@@ -15,7 +15,10 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.ShelleyMA.AuxiliaryData
-  ( MAAuxiliaryData (MAAuxiliaryData, AuxiliaryData', ..),
+  ( AllegraTxAuxData (AllegraTxAuxData, AllegraTxAuxData', ..),
+    Core.TxAuxData,
+
+    -- * Deprecations
     AuxiliaryData,
   )
 where
@@ -25,13 +28,13 @@ import Cardano.Crypto.Hash (HashAlgorithm)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Core
   ( Era (..),
-    EraAuxiliaryData (hashAuxiliaryData, validateAuxiliaryData),
+    EraTxAuxData (hashTxAuxData, validateTxAuxData),
     Script,
   )
-import qualified Cardano.Ledger.Core as Core (AuxiliaryData)
+import qualified Cardano.Ledger.Core as Core (TxAuxData)
 import Cardano.Ledger.Crypto (HASH)
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Hashes (EraIndependentAuxiliaryData)
+import Cardano.Ledger.Hashes (EraIndependentTxAuxData)
 import Cardano.Ledger.MemoBytes (Mem, MemoBytes (..), MemoHashIndex, memoBytes)
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash, hashAnnotated)
 import Cardano.Ledger.Serialization (mapFromCBOR, mapToCBOR)
@@ -71,10 +74,10 @@ data AuxiliaryDataRaw era = AuxiliaryDataRaw
   }
   deriving (Generic)
 
-instance (CC.Crypto c, MAClass ma c) => EraAuxiliaryData (ShelleyMAEra ma c) where
-  type AuxiliaryData (ShelleyMAEra ma c) = MAAuxiliaryData (ShelleyMAEra ma c)
-  validateAuxiliaryData _ (MAAuxiliaryData md as) = as `deepseq` all validMetadatum md
-  hashAuxiliaryData aux = AuxiliaryDataHash (hashAnnotated aux)
+instance (CC.Crypto c, MAClass ma c) => EraTxAuxData (ShelleyMAEra ma c) where
+  type TxAuxData (ShelleyMAEra ma c) = AllegraTxAuxData (ShelleyMAEra ma c)
+  validateTxAuxData _ (AllegraTxAuxData md as) = as `deepseq` all validMetadatum md
+  hashTxAuxData aux = AuxiliaryDataHash (hashAnnotated aux)
 
 deriving instance Eq (Script era) => Eq (AuxiliaryDataRaw era)
 
@@ -84,53 +87,53 @@ deriving instance NoThunks (Script era) => NoThunks (AuxiliaryDataRaw era)
 
 instance NFData (Script era) => NFData (AuxiliaryDataRaw era)
 
-newtype MAAuxiliaryData era = AuxiliaryDataWithBytes (MemoBytes AuxiliaryDataRaw era)
+newtype AllegraTxAuxData era = AuxiliaryDataWithBytes (MemoBytes AuxiliaryDataRaw era)
   deriving (Generic)
   deriving newtype (ToCBOR, SafeToHash)
 
-type instance MemoHashIndex AuxiliaryDataRaw = EraIndependentAuxiliaryData
+type instance MemoHashIndex AuxiliaryDataRaw = EraIndependentTxAuxData
 
-instance (c ~ EraCrypto era) => HashAnnotated (MAAuxiliaryData era) EraIndependentAuxiliaryData c where
+instance (c ~ EraCrypto era) => HashAnnotated (AllegraTxAuxData era) EraIndependentTxAuxData c where
   hashAnnotated (AuxiliaryDataWithBytes mb) = mbHash mb
 
-deriving newtype instance Eq (MAAuxiliaryData era)
+deriving newtype instance Eq (AllegraTxAuxData era)
 
-deriving newtype instance (Show (Script era), HashAlgorithm (HASH (EraCrypto era))) => Show (MAAuxiliaryData era)
+deriving newtype instance (Show (Script era), HashAlgorithm (HASH (EraCrypto era))) => Show (AllegraTxAuxData era)
 
 deriving newtype instance
   (NoThunks (Script era), Era era) =>
-  NoThunks (MAAuxiliaryData era)
+  NoThunks (AllegraTxAuxData era)
 
-deriving newtype instance NFData (Script era) => NFData (MAAuxiliaryData era)
+deriving newtype instance NFData (Script era) => NFData (AllegraTxAuxData era)
 
-pattern MAAuxiliaryData ::
+pattern AllegraTxAuxData ::
   (ToCBOR (Script era), Era era) =>
   Map Word64 Metadatum ->
   StrictSeq (Script era) ->
-  MAAuxiliaryData era
-pattern MAAuxiliaryData blob sp <-
+  AllegraTxAuxData era
+pattern AllegraTxAuxData blob sp <-
   AuxiliaryDataWithBytes (Memo (AuxiliaryDataRaw blob sp) _)
   where
-    MAAuxiliaryData blob sp =
+    AllegraTxAuxData blob sp =
       AuxiliaryDataWithBytes $
         memoBytes
           (encAuxiliaryDataRaw $ AuxiliaryDataRaw blob sp)
 
-{-# COMPLETE MAAuxiliaryData #-}
+{-# COMPLETE AllegraTxAuxData #-}
 
-type AuxiliaryData = MAAuxiliaryData
+type AuxiliaryData = AllegraTxAuxData
 
-{-# DEPRECATED AuxiliaryData "Use `MAAuxiliaryData` instead" #-}
+{-# DEPRECATED AuxiliaryData "Use `AllegraTxAuxData` instead" #-}
 
-pattern AuxiliaryData' ::
+pattern AllegraTxAuxData' ::
   Era era =>
   Map Word64 Metadatum ->
   StrictSeq (Script era) ->
-  MAAuxiliaryData era
-pattern AuxiliaryData' blob sp <-
+  AllegraTxAuxData era
+pattern AllegraTxAuxData' blob sp <-
   AuxiliaryDataWithBytes (Memo (AuxiliaryDataRaw blob sp) _)
 
-{-# COMPLETE AuxiliaryData' #-}
+{-# COMPLETE AllegraTxAuxData' #-}
 
 --------------------------------------------------------------------------------
 -- Serialisation
@@ -177,4 +180,4 @@ deriving via
   (Mem AuxiliaryDataRaw era)
   instance
     (Era era, FromCBOR (Annotator (Script era))) =>
-    FromCBOR (Annotator (MAAuxiliaryData era))
+    FromCBOR (Annotator (AllegraTxAuxData era))

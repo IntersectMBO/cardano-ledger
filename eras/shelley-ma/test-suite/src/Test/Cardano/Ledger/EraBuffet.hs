@@ -7,13 +7,13 @@ module Test.Cardano.Ledger.EraBuffet
     Value,
     Script,
     TxBody,
-    AuxiliaryData,
+    TxAuxData,
     Era (..),
   )
 where
 
 import Cardano.Ledger.Allegra (AllegraEra)
-import Cardano.Ledger.Core (AuxiliaryData, Script, TxBody, Value)
+import Cardano.Ledger.Core (Script, TxAuxData, TxBody, Value)
 import Cardano.Ledger.Era (Era, EraCrypto)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)

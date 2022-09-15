@@ -13,9 +13,9 @@ module Cardano.Ledger.Conway.Scripts
 where
 
 import Cardano.Ledger.Alonzo.Data
-  ( AlonzoAuxiliaryData,
-    hashAlonzoAuxiliaryData,
-    validateAlonzoAuxiliaryData,
+  ( AlonzoTxAuxData,
+    hashAlonzoTxAuxData,
+    validateAlonzoTxAuxData,
   )
 import Cardano.Ledger.Alonzo.Language (Language)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), isPlutusScript)
@@ -37,7 +37,7 @@ instance CC.Crypto c => EraScript (ConwayEra c) where
   phaseScript PhaseTwoRep (PlutusScript lang bytes) = Just (Phase2Script lang bytes)
   phaseScript _ _ = Nothing
 
-instance CC.Crypto c => EraAuxiliaryData (ConwayEra c) where
-  type AuxiliaryData (ConwayEra c) = AlonzoAuxiliaryData (ConwayEra c)
-  hashAuxiliaryData = hashAlonzoAuxiliaryData
-  validateAuxiliaryData = validateAlonzoAuxiliaryData
+instance CC.Crypto c => EraTxAuxData (ConwayEra c) where
+  type TxAuxData (ConwayEra c) = AlonzoTxAuxData (ConwayEra c)
+  hashTxAuxData = hashAlonzoTxAuxData
+  validateTxAuxData = validateAlonzoTxAuxData

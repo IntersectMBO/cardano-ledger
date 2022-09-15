@@ -168,7 +168,7 @@ instance
 instance
   ( Era era,
     ToCBOR (PredicateFailure (EraRule "UTXO" era)),
-    Typeable (AuxiliaryData era),
+    Typeable (TxAuxData era),
     Typeable (Script era),
     ToCBOR (Script era)
   ) =>
@@ -183,7 +183,7 @@ encodePredFail ::
   ( Era era,
     ToCBOR (PredicateFailure (EraRule "UTXO" era)),
     Typeable (Script era),
-    Typeable (AuxiliaryData era)
+    Typeable (TxAuxData era)
   ) =>
   AlonzoUtxowPredFailure era ->
   Encode 'Open (AlonzoUtxowPredFailure era)
@@ -200,7 +200,7 @@ instance
   ( Era era,
     FromCBOR (PredicateFailure (EraRule "UTXO" era)),
     Typeable (Script era),
-    Typeable (AuxiliaryData era)
+    Typeable (TxAuxData era)
   ) =>
   FromCBOR (AlonzoUtxowPredFailure era)
   where
@@ -210,7 +210,7 @@ decodePredFail ::
   ( Era era,
     FromCBOR (PredicateFailure (EraRule "UTXO" era)), -- TODO, we should be able to get rid of this constraint
     Typeable (Script era),
-    Typeable (AuxiliaryData era)
+    Typeable (TxAuxData era)
   ) =>
   Word ->
   Decode 'Open (AlonzoUtxowPredFailure era)
@@ -500,7 +500,7 @@ extSymmetricDifference as fa bs fb = (extraA, extraB)
 instance
   forall era.
   ( AlonzoEraTx era,
-    EraAuxiliaryData era,
+    EraTxAuxData era,
     ExtendedUTxO era,
     Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody),
     Script era ~ AlonzoScript era,

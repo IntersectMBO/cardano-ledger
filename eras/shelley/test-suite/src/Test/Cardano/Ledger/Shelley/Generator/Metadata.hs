@@ -10,8 +10,8 @@ import Cardano.Ledger.BaseTypes
   ( StrictMaybe (..),
   )
 import Cardano.Ledger.Shelley.Metadata
-  ( Metadata (..),
-    Metadatum (..),
+  ( Metadatum (..),
+    ShelleyTxAuxData (..),
   )
 import Control.Exception (assert)
 import qualified Data.ByteString.Char8 as BS (length, pack)
@@ -31,8 +31,8 @@ collectionDatumMaxSize = 5
 metadataMaxSize :: Int
 metadataMaxSize = 3
 
--- | Generate Metadata (and compute hash) with frequency 'frequencyTxWithMetadata'
-genMetadata :: Constants -> Gen (StrictMaybe (Metadata era))
+-- | Generate ShelleyTxAuxData (and compute hash) with frequency 'frequencyTxWithMetadata'
+genMetadata :: Constants -> Gen (StrictMaybe (ShelleyTxAuxData era))
 genMetadata (Constants {frequencyTxWithMetadata}) =
   QC.frequency
     [ (frequencyTxWithMetadata, SJust <$> genMetadata'),
@@ -40,10 +40,10 @@ genMetadata (Constants {frequencyTxWithMetadata}) =
     ]
 
 -- | Generate Metadata (and compute hash) of size up to 'metadataMaxSize'
-genMetadata' :: Gen (Metadata era)
+genMetadata' :: Gen (ShelleyTxAuxData era)
 genMetadata' = do
   n <- QC.choose (1, metadataMaxSize)
-  Metadata . Map.fromList
+  ShelleyTxAuxData . Map.fromList
     <$> QC.vectorOf n genMetadatum
 
 -- | Generate one of the Metadatum

@@ -13,7 +13,7 @@ module Test.Cardano.Ledger.ShelleyMA.Serialisation.Golden.Encoding (goldenEncodi
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (EraCrypto (..), EraScript (hashScript), PParamsUpdate, hashAuxiliaryData)
+import Cardano.Ledger.Core (EraCrypto (..), EraScript (hashScript), PParamsUpdate, hashTxAuxData)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), hashKey)
@@ -33,7 +33,7 @@ import Cardano.Ledger.Shelley.TxBody
     ShelleyTxOut (..),
     Wdrl (..),
   )
-import Cardano.Ledger.ShelleyMA.AuxiliaryData (pattern MAAuxiliaryData)
+import Cardano.Ledger.ShelleyMA.AuxiliaryData (pattern AllegraTxAuxData)
 import Cardano.Ledger.ShelleyMA.Timelocks
   ( Timelock (..),
     ValidityInterval (..),
@@ -189,7 +189,7 @@ metadataNoScriptsGoldenTest :: forall era. (Era era, Core.Script era ~ Timelock 
 metadataNoScriptsGoldenTest =
   checkEncodingCBORAnnotated
     "metadata_no_scripts"
-    (MAAuxiliaryData @era (Map.singleton 17 (SMD.I 42)) StrictSeq.empty)
+    (AllegraTxAuxData @era (Map.singleton 17 (SMD.I 42)) StrictSeq.empty)
     ( T
         ( TkListLen 2 -- structured metadata and auxiliary scripts
             . TkMapLen 1 -- metadata wrapper
@@ -204,7 +204,7 @@ metadataWithScriptsGoldenTest :: forall era. (Era era, Core.Script era ~ Timeloc
 metadataWithScriptsGoldenTest =
   checkEncodingCBORAnnotated
     "metadata_with_scripts"
-    ( MAAuxiliaryData @era
+    ( AllegraTxAuxData @era
         (Map.singleton 17 (SMD.I 42))
         (StrictSeq.singleton policy1)
     )
@@ -262,7 +262,7 @@ goldenEncodingTestsAllegra =
           reg = DCertDeleg (RegKey testStakeCred)
           ras = Map.singleton (RewardAcnt Testnet (KeyHashObj testKeyHash)) (Coin 123)
           up = testUpdate
-          mdh = hashAuxiliaryData @A $ MAAuxiliaryData Map.empty StrictSeq.empty
+          mdh = hashTxAuxData @A $ AllegraTxAuxData Map.empty StrictSeq.empty
        in checkEncodingCBORAnnotated
             "full_txn_body"
             ( MATxBody
@@ -396,7 +396,7 @@ goldenEncodingTestsMary =
           reg = DCertDeleg (RegKey testStakeCred)
           ras = Map.singleton (RewardAcnt Testnet (KeyHashObj testKeyHash)) (Coin 123)
           up = testUpdate
-          mdh = hashAuxiliaryData @A $ MAAuxiliaryData Map.empty StrictSeq.empty
+          mdh = hashTxAuxData @A $ AllegraTxAuxData Map.empty StrictSeq.empty
           mint = Map.singleton policyID1 $ Map.singleton (AssetName assetName1) 13
        in checkEncodingCBORAnnotated
             "full_txn_body"

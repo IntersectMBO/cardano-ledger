@@ -69,10 +69,10 @@ exampleTxBodyMA value =
     auxiliaryDataHash =
       AuxiliaryDataHash $ mkDummySafeHash (Proxy @(EraCrypto era)) 30
 
-exampleAuxiliaryDataMA :: (MAClass ma c) => MAAuxiliaryData (ShelleyMAEra ma c)
+exampleAuxiliaryDataMA :: (MAClass ma c) => AllegraTxAuxData (ShelleyMAEra ma c)
 exampleAuxiliaryDataMA =
-  MAAuxiliaryData
-    exampleMetadataMap
+  AllegraTxAuxData
+    exampleAuxDataMap
     (StrictSeq.fromList [exampleScriptMA])
 
 exampleScriptMA :: (MAClass ma c) => Script (ShelleyMAEra ma c)

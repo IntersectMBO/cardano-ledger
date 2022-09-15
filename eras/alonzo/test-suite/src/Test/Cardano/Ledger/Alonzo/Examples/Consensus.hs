@@ -6,7 +6,7 @@ module Test.Cardano.Ledger.Alonzo.Examples.Consensus where
 
 import Cardano.Ledger.Alonzo (Alonzo)
 import Cardano.Ledger.Alonzo.Data
-  ( AlonzoAuxiliaryData (..),
+  ( AlonzoTxAuxData (..),
     AuxiliaryDataHash (..),
     Data (..),
     hashData,
@@ -156,8 +156,8 @@ exampleTx =
         ) -- redeemers
     )
     ( SJust $
-        AlonzoAuxiliaryData
-          SLE.exampleMetadataMap -- metadata
+        AlonzoTxAuxData
+          SLE.exampleAuxDataMap -- auxiliary data
           ( StrictSeq.fromList
               [alwaysFails PlutusV1 2, TimelockScript $ RequireAllOf mempty] -- Scripts
           )

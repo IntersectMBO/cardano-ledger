@@ -94,8 +94,9 @@ import Cardano.Ledger.Shelley.LedgerState as X
     UTxOState (..),
   )
 import Cardano.Ledger.Shelley.Metadata as X
-  ( Metadata (..),
+  ( Metadata,
     Metadatum (..),
+    ShelleyTxAuxData (..),
   )
 import Cardano.Ledger.Shelley.PParams as X
   ( PParams,

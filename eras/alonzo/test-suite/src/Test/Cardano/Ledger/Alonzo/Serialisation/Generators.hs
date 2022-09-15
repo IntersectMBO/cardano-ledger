@@ -16,7 +16,7 @@ module Test.Cardano.Ledger.Alonzo.Serialisation.Generators where
 import Cardano.Binary (ToCBOR (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Data
-  ( AlonzoAuxiliaryData (..),
+  ( AlonzoTxAuxData (..),
     AuxiliaryDataHash,
     BinaryData,
     Data (..),
@@ -117,9 +117,9 @@ instance
     Arbitrary (Script era),
     Era era
   ) =>
-  Arbitrary (AlonzoAuxiliaryData era)
+  Arbitrary (AlonzoTxAuxData era)
   where
-  arbitrary = AlonzoAuxiliaryData <$> arbitrary <*> arbitrary
+  arbitrary = AlonzoTxAuxData <$> arbitrary <*> arbitrary
 
 instance Arbitrary Tag where
   arbitrary = elements [Spend, Mint, Cert, Rewrd]
@@ -204,7 +204,7 @@ deriving newtype instance Arbitrary IsValid
 instance
   ( Arbitrary (TxBody era),
     Arbitrary (TxWits era),
-    Arbitrary (AuxiliaryData era)
+    Arbitrary (TxAuxData era)
   ) =>
   Arbitrary (AlonzoTx era)
   where

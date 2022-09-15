@@ -44,7 +44,7 @@ import Cardano.Ledger.BaseTypes
   )
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
-import Cardano.Ledger.Core (EraTx, Tx, hashAuxiliaryData, hashScript)
+import Cardano.Ledger.Core (EraTx, Tx, hashScript, hashTxAuxData)
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (EraCrypto (..))
@@ -900,7 +900,7 @@ tests =
                   )
               )
               (EpochNo 0)
-          mdh = hashAuxiliaryData @C $ MD.Metadata $ Map.singleton 13 (MD.I 17)
+          mdh = hashTxAuxData @C $ MD.ShelleyTxAuxData $ Map.singleton 13 (MD.I 17)
        in checkEncodingCBORAnnotated
             "txbody_full"
             ( ShelleyTxBody @C -- transaction body with all components
@@ -978,7 +978,7 @@ tests =
           s = Map.singleton (hashScript @C testScript) (testScript @C_Crypto)
           txwits :: ShelleyTxWits C
           txwits = mempty {addrWits = Set.singleton w, scriptWits = s}
-          md = (MD.Metadata @C) $ Map.singleton 17 (MD.I 42)
+          md = (MD.ShelleyTxAuxData @C) $ Map.singleton 17 (MD.I 42)
        in checkEncodingCBORAnnotated
             "tx_full"
             (ShelleyTx @(ShelleyEra C_Crypto) txb txwits (SJust md))
@@ -1134,7 +1134,7 @@ tests =
                 (hashScript @C testScript2, testScript2)
               ]
           tx4 = ShelleyTx txb4 mempty {scriptWits = ss} SNothing
-          tx5MD = MD.Metadata @C $ Map.singleton 17 (MD.I 42)
+          tx5MD = MD.ShelleyTxAuxData @C $ Map.singleton 17 (MD.I 42)
           tx5 = ShelleyTx txb5 mempty {addrWits = ws, scriptWits = ss} (SJust tx5MD)
           txns = ShelleyTxSeq $ StrictSeq.fromList [tx1, tx2, tx3, tx4, tx5]
        in checkEncodingCBORAnnotated

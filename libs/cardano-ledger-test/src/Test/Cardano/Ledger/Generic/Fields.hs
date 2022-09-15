@@ -97,10 +97,10 @@ data TxField era
   | BodyI [TxBodyField era] -- Inlines TxBody Fields
   | TxWits (TxWits era)
   | WitnessesI [WitnessesField era] -- Inlines Witnesess Fields
-  | AuxData (StrictMaybe (AuxiliaryData era))
+  | AuxData (StrictMaybe (TxAuxData era))
   | Valid IsValid
 
-pattern AuxData' :: [AuxiliaryData era] -> TxField era
+pattern AuxData' :: [TxAuxData era] -> TxField era
 
 pattern Valid' :: Bool -> TxField era
 
@@ -607,7 +607,7 @@ pattern Valid' x <-
   where
     Valid' x = Valid (IsValid x)
 
-auxdataview :: TxField era -> Maybe [AuxiliaryData era]
+auxdataview :: TxField era -> Maybe [TxAuxData era]
 auxdataview (AuxData x) = Just (fromStrictMaybe x)
 auxdataview _ = Nothing
 

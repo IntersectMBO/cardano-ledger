@@ -16,7 +16,7 @@ module Cardano.Ledger.Alonzo
     MaryValue,
     AlonzoTxBody,
     AlonzoScript,
-    AlonzoAuxiliaryData,
+    AlonzoTxAuxData,
     AlonzoPParams,
     AlonzoPParamsUpdate,
     reapplyAlonzoTx,
@@ -33,7 +33,7 @@ module Cardano.Ledger.Alonzo
   )
 where
 
-import Cardano.Ledger.Alonzo.Data (AlonzoAuxiliaryData)
+import Cardano.Ledger.Alonzo.Data (AlonzoTxAuxData)
 import qualified Cardano.Ledger.Alonzo.Data (AuxiliaryData)
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Genesis

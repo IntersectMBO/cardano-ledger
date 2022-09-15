@@ -23,7 +23,7 @@ import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Shelley.API hiding (Metadata, TxBody)
 import Cardano.Ledger.Shelley.TxWits (decodeWits)
 import Cardano.Ledger.ShelleyMA.AuxiliaryData
-  ( MAAuxiliaryData (..),
+  ( AllegraTxAuxData (..),
   )
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock, translateTimelock)
 import qualified Cardano.Ledger.Val as Val
@@ -168,9 +168,9 @@ instance Crypto c => TranslateEra (MaryEra c) Update where
 instance Crypto c => TranslateEra (MaryEra c) Timelock where
   translateEra _ = pure . translateTimelock
 
-instance Crypto c => TranslateEra (MaryEra c) MAAuxiliaryData where
-  translateEra ctx (MAAuxiliaryData md as) =
-    pure $ MAAuxiliaryData md $ translateEra' ctx <$> as
+instance Crypto c => TranslateEra (MaryEra c) AllegraTxAuxData where
+  translateEra ctx (AllegraTxAuxData md as) =
+    pure $ AllegraTxAuxData md $ translateEra' ctx <$> as
 
 translateValue :: Crypto c => Coin -> MaryValue c
 translateValue = Val.inject

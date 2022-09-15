@@ -135,7 +135,7 @@ instance
     ToCBOR (PredicateFailure (EraRule "UTXOS" era)),
     ToCBOR (PredicateFailure (EraRule "UTXO" era)),
     ToCBOR (Script era),
-    Typeable (AuxiliaryData era)
+    Typeable (TxAuxData era)
   ) =>
   ToCBOR (BabbageUtxowPredFailure era)
   where
@@ -154,7 +154,7 @@ instance
     FromCBOR (PredicateFailure (EraRule "UTXOS" era)),
     FromCBOR (PredicateFailure (EraRule "UTXO" era)),
     Typeable (Script era),
-    Typeable (AuxiliaryData era)
+    Typeable (TxAuxData era)
   ) =>
   FromCBOR (BabbageUtxowPredFailure era)
   where

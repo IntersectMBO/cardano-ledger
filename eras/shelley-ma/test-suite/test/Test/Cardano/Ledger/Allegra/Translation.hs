@@ -34,7 +34,7 @@ allegraEncodeDecodeTests =
     "encoded shelley types can be decoded as allegra types"
     [ testProperty
         "decoding auxiliary data"
-        (decodeTestAnn @(S.Metadata Allegra) ([] :: [MAAuxiliaryData Allegra]))
+        (decodeTestAnn @(S.ShelleyTxAuxData Allegra) ([] :: [AllegraTxAuxData Allegra]))
     ]
 
 allegraTranslationTests :: TestTree

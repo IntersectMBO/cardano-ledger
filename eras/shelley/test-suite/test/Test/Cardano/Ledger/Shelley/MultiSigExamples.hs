@@ -51,7 +51,7 @@ import Cardano.Ledger.Shelley.LedgerState
     UTxOState,
     genesisState,
   )
-import Cardano.Ledger.Shelley.Metadata (Metadata)
+import Cardano.Ledger.Shelley.Metadata (ShelleyTxAuxData)
 import Cardano.Ledger.Shelley.PParams
   ( ShelleyPParams,
     ShelleyPParamsHKD (..),
@@ -180,7 +180,7 @@ makeTx ::
   TxBody (ShelleyEra c) ->
   [KeyPair 'Witness c] ->
   Map (ScriptHash c) (MultiSig (ShelleyEra c)) ->
-  Maybe (Metadata (ShelleyEra c)) ->
+  Maybe (ShelleyTxAuxData (ShelleyEra c)) ->
   ShelleyTx (ShelleyEra c)
 makeTx txBody keyPairs msigs = ShelleyTx txBody txWits . maybeToStrictMaybe
   where

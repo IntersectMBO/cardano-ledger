@@ -73,15 +73,15 @@ ppValidityInterval (ValidityInterval b a) =
 
 instance PrettyA ValidityInterval where prettyA = ppValidityInterval
 
-ppAuxiliaryData :: Era era => PrettyA (Core.Script era) => MAAuxiliaryData era -> PDoc
-ppAuxiliaryData (AuxiliaryData' m sp) =
+ppAuxiliaryData :: Era era => PrettyA (Core.Script era) => AllegraTxAuxData era -> PDoc
+ppAuxiliaryData (AllegraTxAuxData' m sp) =
   ppRecord
-    "AuxiliaryData"
+    "AllegraTxAuxData"
     [ ("metadata", ppMap' (text "Metadata") ppWord64 ppMetadatum m),
       ("auxiliaryscripts", ppStrictSeq prettyA sp)
     ]
 
-instance (Era era, PrettyA (Core.Script era)) => PrettyA (MAAuxiliaryData era) where
+instance (Era era, PrettyA (Core.Script era)) => PrettyA (AllegraTxAuxData era) where
   prettyA = ppAuxiliaryData
 
 ppTxBody ::

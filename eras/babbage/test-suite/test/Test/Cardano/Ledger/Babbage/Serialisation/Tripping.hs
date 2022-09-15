@@ -11,7 +11,7 @@ import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure)
 import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.Metadata (Metadata)
+import Cardano.Ledger.Shelley.Metadata (ShelleyTxAuxData)
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Codec.CBOR.Read (deserialiseFromBytes)
 import Codec.CBOR.Term (decodeTerm)
@@ -85,7 +85,7 @@ tests =
     [ testProperty "babbage/Script" $
         trippingAnn @(Script (BabbageEra C_Crypto)),
       testProperty "babbage/Metadata" $
-        trippingAnn @(Metadata (BabbageEra C_Crypto)),
+        trippingAnn @(ShelleyTxAuxData (BabbageEra C_Crypto)),
       testProperty "babbage/TxOut" $
         tripping @(TxOut (BabbageEra C_Crypto)),
       testProperty "babbage/TxBody" $
@@ -97,7 +97,7 @@ tests =
       testProperty "babbage/PParamsUpdate" $
         tripping @(PParamsUpdate (BabbageEra C_Crypto)),
       testProperty "babbage/AuxiliaryData" $
-        trippingAnn @(AuxiliaryData (BabbageEra C_Crypto)),
+        trippingAnn @(TxAuxData (BabbageEra C_Crypto)),
       testProperty "Script" $
         trippingAnn @(Script (BabbageEra C_Crypto)),
       testProperty "babbage/Tx" $

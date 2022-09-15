@@ -215,7 +215,7 @@ class
     Gen (TxBody era, [Script era])
 
   -- | Generate era-specific auxiliary data
-  genEraAuxiliaryData :: Constants -> Gen (StrictMaybe (AuxiliaryData era))
+  genEraAuxiliaryData :: Constants -> Gen (StrictMaybe (TxAuxData era))
 
   -- | Update an era-specific TxBody
   updateEraTxBody ::
@@ -257,7 +257,7 @@ class
   constructTx ::
     TxBody era ->
     TxWits era ->
-    StrictMaybe (AuxiliaryData era) ->
+    StrictMaybe (TxAuxData era) ->
     Tx era
   constructTx txBody txWits txAuxData =
     mkBasicTx txBody & witsTxL .~ txWits & auxDataTxL .~ txAuxData

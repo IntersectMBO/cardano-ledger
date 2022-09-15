@@ -16,13 +16,13 @@ where
 
 import Cardano.Binary (FromCBOR, ToCBOR)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Hashes (EraIndependentAuxiliaryData)
+import Cardano.Ledger.Hashes (EraIndependentTxAuxData)
 import Cardano.Ledger.SafeHash (SafeHash)
 import Control.DeepSeq (NFData (..))
 import NoThunks.Class (NoThunks (..))
 
 newtype AuxiliaryDataHash c = AuxiliaryDataHash
-  { unsafeAuxiliaryDataHash :: SafeHash c EraIndependentAuxiliaryData
+  { unsafeAuxiliaryDataHash :: SafeHash c EraIndependentTxAuxData
   }
   deriving (Show, Eq, Ord, NoThunks, NFData)
 
@@ -32,4 +32,4 @@ deriving instance CC.Crypto c => FromCBOR (AuxiliaryDataHash c)
 
 type ValidateAuxiliaryData era c = ()
 
-{-# DEPRECATED ValidateAuxiliaryData "Use `Cardano.Ledger.Core.EraAuxiliaryData` instead" #-}
+{-# DEPRECATED ValidateAuxiliaryData "Use `Cardano.Ledger.Core.EraTxAuxData` instead" #-}

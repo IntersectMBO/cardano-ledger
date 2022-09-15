@@ -30,7 +30,7 @@ module Cardano.Ledger.Core
     compactCoinTxOutL,
     isAdaOnlyTxOutF,
     EraTxBody (..),
-    EraAuxiliaryData (..),
+    EraTxAuxData (..),
     EraTxWits (..),
     EraScript (..),
     Value,
@@ -70,6 +70,10 @@ module Cardano.Ledger.Core
 
     -- * Re-exports
     module Cardano.Ledger.Hashes,
+
+    -- * Deprecations
+    hashAuxiliaryData,
+    validateAuxiliaryData,
   )
 where
 
@@ -131,7 +135,7 @@ class (CC.Crypto (EraCrypto era), Typeable era, ProtVerLow era <= ProtVerHigh er
 class
   ( EraTxBody era,
     EraTxWits era,
-    EraAuxiliaryData era,
+    EraTxAuxData era,
     -- NFData (Tx era), TODO: Add NFData constraints to Crypto class
     NoThunks (Tx era),
     FromCBOR (Annotator (Tx era)),
@@ -347,21 +351,33 @@ toCompactPartial v =
 -- | A value is something which quantifies a transaction output.
 type family Value era :: Type
 
--- | AuxiliaryData which may be attached to a transaction
+-- | TxAuxData which may be attached to a transaction
 class
   ( Era era,
-    Eq (AuxiliaryData era),
-    Show (AuxiliaryData era),
-    NoThunks (AuxiliaryData era),
-    ToCBOR (AuxiliaryData era),
-    FromCBOR (Annotator (AuxiliaryData era)),
-    HashAnnotated (AuxiliaryData era) EraIndependentAuxiliaryData (EraCrypto era)
+    Eq (TxAuxData era),
+    Show (TxAuxData era),
+    NoThunks (TxAuxData era),
+    ToCBOR (TxAuxData era),
+    FromCBOR (Annotator (TxAuxData era)),
+    HashAnnotated (TxAuxData era) EraIndependentTxAuxData (EraCrypto era)
   ) =>
-  EraAuxiliaryData era
+  EraTxAuxData era
   where
-  type AuxiliaryData era = (r :: Type) | r -> era
-  hashAuxiliaryData :: AuxiliaryData era -> AuxiliaryDataHash (EraCrypto era)
-  validateAuxiliaryData :: ProtVer -> AuxiliaryData era -> Bool
+  type TxAuxData era = (r :: Type) | r -> era
+  hashTxAuxData :: TxAuxData era -> AuxiliaryDataHash (EraCrypto era)
+  validateTxAuxData :: ProtVer -> TxAuxData era -> Bool
+
+type AuxiliaryData era = TxAuxData era
+
+{-# DEPRECATED AuxiliaryData "Use `TxAuxData` instead" #-}
+
+hashAuxiliaryData :: EraTxAuxData era => TxAuxData era -> AuxiliaryDataHash (EraCrypto era)
+hashAuxiliaryData = hashTxAuxData
+{-# DEPRECATED hashAuxiliaryData "Use `hashTxAuxData` instead" #-}
+
+validateAuxiliaryData :: EraTxAuxData era => ProtVer -> TxAuxData era -> Bool
+validateAuxiliaryData = validateTxAuxData
+{-# DEPRECATED validateAuxiliaryData "Use `validateTxAuxData` instead" #-}
 
 class
   ( Era era,

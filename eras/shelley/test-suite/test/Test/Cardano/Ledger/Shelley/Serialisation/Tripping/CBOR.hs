@@ -194,8 +194,8 @@ prop_roundtrip_NewEpochState = roundtrip2 toCBOR fromCBOR
 prop_roundtrip_MultiSig :: Ledger.MultiSig (ShelleyEra Mock.C_Crypto) -> Property
 prop_roundtrip_MultiSig = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 
-prop_roundtrip_metadata :: Ledger.Metadata Mock.C -> Property
-prop_roundtrip_metadata = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
+prop_roundtrip_auxData :: Ledger.ShelleyTxAuxData Mock.C -> Property
+prop_roundtrip_auxData = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 
 prop_roundtrip_ShelleyGenesis :: ShelleyGenesis Mock.C -> Property
 prop_roundtrip_ShelleyGenesis = roundtrip toCBOR fromCBOR
@@ -273,7 +273,7 @@ tests =
       testProperty "roundtrip Epoch State" prop_roundtrip_EpochState,
       testProperty "roundtrip NewEpoch State" prop_roundtrip_NewEpochState,
       testProperty "roundtrip MultiSig" prop_roundtrip_MultiSig,
-      testProperty "roundtrip Metadata" prop_roundtrip_metadata,
+      testProperty "roundtrip TxAuxData" prop_roundtrip_auxData,
       testProperty "roundtrip Shelley Genesis" prop_roundtrip_ShelleyGenesis,
       testProperty "roundtrip coin compactcoin cbor" prop_roundtrip_Coin_1,
       testProperty "roundtrip coin cbor compactcoin" prop_roundtrip_Coin_2,

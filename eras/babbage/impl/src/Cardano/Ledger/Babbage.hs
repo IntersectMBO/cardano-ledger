@@ -14,7 +14,7 @@ module Cardano.Ledger.Babbage
     BabbageTxOut,
     BabbageTxBody,
     AlonzoScript,
-    AlonzoAuxiliaryData,
+    AlonzoTxAuxData,
 
     -- * Deprecated
     Self,
@@ -26,7 +26,7 @@ module Cardano.Ledger.Babbage
 where
 
 import Cardano.Ledger.Alonzo (reapplyAlonzoTx)
-import Cardano.Ledger.Alonzo.Data (AlonzoAuxiliaryData (..), AuxiliaryData)
+import Cardano.Ledger.Alonzo.Data (AlonzoTxAuxData (..), AuxiliaryData)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), Script)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..))
 import Cardano.Ledger.Babbage.Era (BabbageEra)

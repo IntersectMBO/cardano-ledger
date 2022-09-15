@@ -18,7 +18,7 @@ module Cardano.Ledger.Hashes
     EraIndependentScript,
     EraIndependentData,
     EraIndependentScriptData,
-    EraIndependentAuxiliaryData,
+    EraIndependentTxAuxData,
     EraIndependentPParamView,
     EraIndependentScriptIntegrity,
 
@@ -55,7 +55,7 @@ data EraIndependentBlockBody
 
 data EraIndependentMetadata
 
-data EraIndependentAuxiliaryData
+data EraIndependentTxAuxData
 
 data EraIndependentScript
 

@@ -19,7 +19,7 @@ import Cardano.Ledger.Alonzo.TxBody (txBodyRawEq)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits)
 import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.Metadata (Metadata)
+import Cardano.Ledger.Shelley.Metadata (ShelleyTxAuxData)
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Codec.CBOR.Write (toLazyByteString)
 import qualified Data.ByteString.Base16.Lazy as Base16
@@ -109,8 +109,8 @@ tests =
       skip $
         testTwiddling @(BinaryData (AlonzoEra C_Crypto))
           "alonzo/BinaryData twiddled",
-      testProperty "alonzo/Metadata" $
-        trippingAnn @(Metadata (AlonzoEra C_Crypto)),
+      testProperty "alonzo/TxAuxData" $
+        trippingAnn @(ShelleyTxAuxData (AlonzoEra C_Crypto)),
       testProperty "alonzo/AlonzoTxWits" $
         trippingAnn @(AlonzoTxWits (AlonzoEra C_Crypto)),
       testProperty "alonzo/TxBody" $
@@ -127,7 +127,7 @@ tests =
       testProperty "alonzo/PParamsUpdate" $
         tripping @(PParamsUpdate (AlonzoEra C_Crypto)),
       testProperty "alonzo/AuxiliaryData" $
-        trippingAnn @(AuxiliaryData (AlonzoEra C_Crypto)),
+        trippingAnn @(TxAuxData (AlonzoEra C_Crypto)),
       testProperty "alonzo/AlonzoUtxowPredFailure" $
         tripping @(AlonzoUtxowPredFailure (AlonzoEra C_Crypto)),
       testProperty "alonzo/AlonzoUtxoPredFailure" $
