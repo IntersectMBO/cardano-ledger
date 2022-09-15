@@ -51,6 +51,7 @@ in the naming of release branches.
   - `addrShelleyWitsL` to `addrShelleyTxWitsL`
   - `bootAddrShelleyWitsL` to `bootAddrShelleyTxWitsL`
   - `scriptShelleyWitsL` to `scriptShelleyTxWitsL`
+- Updated package metadata #3023
 #2976
 - Moved TxOut to a separate module in each era #3024
 

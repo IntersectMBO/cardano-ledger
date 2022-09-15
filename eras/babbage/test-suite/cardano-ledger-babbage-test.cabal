@@ -7,9 +7,8 @@ description:
   This package builds upon the Alonzo ledger
 bug-reports:         https://github.com/input-output-hk/cardano-ledger/issues
 license:             Apache-2.0
-author:              IOHK Formal Methods Team
-maintainer:          formal.methods@iohk.io
-copyright:           2020 Input Output (Hong Kong) Ltd.
+author:              IOHK
+maintainer:          operations@iohk.io
 category:            Network
 build-type:          Simple
 

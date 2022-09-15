@@ -3,8 +3,8 @@ cabal-version: 2.2
 name:                ledger-state
 version:             0.1.0.0
 license:             Apache-2.0
-author:              IOHK Formal Methods Team
-maintainer:          formal.methods@iohk.io
+author:              IOHK
+maintainer:          operations@iohk.io
 description:         This is a tool that helps us experiment with the Ledger State
 build-type:          Simple
 

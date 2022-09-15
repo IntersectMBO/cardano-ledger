@@ -7,7 +7,6 @@ description:         Cryptographic primitives used in the Cardano project
 license:             Apache-2.0
 author:              IOHK
 maintainer:          operations@iohk.io
-copyright:           2019 IOHK
 category:            Currency
 build-type:          Simple
 extra-source-files:  README.md

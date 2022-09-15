@@ -6,9 +6,8 @@ synopsis:            Executable specification of Cardano ledger
 -- description:
 homepage:            https://github.com/input-output-hk/cardano-legder
 license:             Apache-2.0
-author:              IOHK Formal Methods Team
-maintainer:          formal.methods@iohk.io
--- copyright:
+author:              IOHK
+maintainer:          operations@iohk.io
 category:            Testing
 build-type:          Simple
 

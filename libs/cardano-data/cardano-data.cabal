@@ -5,8 +5,8 @@ version:             0.1.0.0
 synopsis:            Specialized data for Cardano project
 homepage:            https://github.com/input-output-hk/cardano-ledger
 license:             Apache-2.0
-author:              IOHK Formal Methods Team
-maintainer:          formal.methods@iohk.io
+author:              IOHK
+maintainer:          operations@iohk.io
 category:            Control
 build-type:          Simple
 extra-source-files:  CHANGELOG.md
