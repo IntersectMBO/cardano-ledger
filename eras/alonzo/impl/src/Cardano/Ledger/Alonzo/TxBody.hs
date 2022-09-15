@@ -79,6 +79,7 @@ import Cardano.Binary
   ( FromCBOR (..),
     ToCBOR (..),
   )
+import Cardano.Ledger.Alonzo.Core (AlonzoEraTxBody (..), ScriptIntegrityHash)
 import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash (..))
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Scripts ()
@@ -97,7 +98,6 @@ import Cardano.Ledger.Mary.Value (MaryValue (MaryValue), MultiAsset (..), polici
 import Cardano.Ledger.MemoBytes (Mem, MemoBytes (..), MemoHashIndex, contentsEq, memoBytes)
 import Cardano.Ledger.SafeHash
   ( HashAnnotated (..),
-    SafeHash,
     SafeToHash,
   )
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert)
@@ -121,8 +121,6 @@ import NoThunks.Class (NoThunks)
 import Prelude hiding (lookup)
 
 -- ======================================
-
-type ScriptIntegrityHash c = SafeHash c EraIndependentScriptIntegrity
 
 data TxBodyRaw era = TxBodyRaw
   { _inputs :: !(Set (TxIn (EraCrypto era))),
@@ -237,16 +235,6 @@ instance CC.Crypto c => ShelleyMAEraTxBody (AlonzoEra c) where
   mintedTxBodyF =
     to (\(TxBodyConstr (Memo txBodyRaw _)) -> Set.map policyID (policies (_mint txBodyRaw)))
   {-# INLINEABLE mintedTxBodyF #-}
-
-class (ShelleyMAEraTxBody era, AlonzoEraTxOut era) => AlonzoEraTxBody era where
-  collateralInputsTxBodyL :: Lens' (Core.TxBody era) (Set (TxIn (EraCrypto era)))
-
-  reqSignerHashesTxBodyL :: Lens' (Core.TxBody era) (Set (KeyHash 'Witness (EraCrypto era)))
-
-  scriptIntegrityHashTxBodyL ::
-    Lens' (Core.TxBody era) (StrictMaybe (ScriptIntegrityHash (EraCrypto era)))
-
-  networkIdTxBodyL :: Lens' (Core.TxBody era) (StrictMaybe Network)
 
 instance CC.Crypto c => AlonzoEraTxBody (AlonzoEra c) where
   {-# SPECIALIZE instance AlonzoEraTxBody (AlonzoEra CC.StandardCrypto) #-}

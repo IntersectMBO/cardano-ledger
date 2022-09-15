@@ -125,6 +125,7 @@ import Cardano.Ledger.Alonzo.TxBody as AlonzoTxBodyReExports
     ShelleyEraTxBody (..),
     ShelleyMAEraTxBody (..),
   )
+import Cardano.Ledger.Babbage.Core (BabbageEraTxBody (..))
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.Scripts ()
 import Cardano.Ledger.Babbage.TxOut
@@ -456,19 +457,6 @@ instance CC.Crypto c => AlonzoEraTxBody (BabbageEra c) where
 
   networkIdTxBodyL = networkIdBabbageTxBodyL
   {-# INLINE networkIdTxBodyL #-}
-
-class (AlonzoEraTxBody era, BabbageEraTxOut era) => BabbageEraTxBody era where
-  sizedOutputsTxBodyL :: Lens' (Core.TxBody era) (StrictSeq (Sized (Core.TxOut era)))
-
-  referenceInputsTxBodyL :: Lens' (Core.TxBody era) (Set (TxIn (EraCrypto era)))
-
-  totalCollateralTxBodyL :: Lens' (Core.TxBody era) (StrictMaybe Coin)
-
-  collateralReturnTxBodyL :: Lens' (Core.TxBody era) (StrictMaybe (Core.TxOut era))
-
-  sizedCollateralReturnTxBodyL :: Lens' (Core.TxBody era) (StrictMaybe (Sized (Core.TxOut era)))
-
-  allSizedOutputsTxBodyF :: SimpleGetter (TxBody era) (StrictSeq (Sized (Core.TxOut era)))
 
 instance CC.Crypto c => BabbageEraTxBody (BabbageEra c) where
   {-# SPECIALIZE instance BabbageEraTxBody (BabbageEra CC.StandardCrypto) #-}

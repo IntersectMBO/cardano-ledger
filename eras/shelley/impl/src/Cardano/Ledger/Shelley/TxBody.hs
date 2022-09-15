@@ -84,9 +84,8 @@ import Cardano.Ledger.Serialization
   ( decodeSet,
     decodeStrictSeq,
     encodeFoldable,
-    mapFromCBOR,
-    mapToCBOR,
   )
+import Cardano.Ledger.Shelley.Core (ShelleyEraTxBody (..), Wdrl (..))
 import Cardano.Ledger.Shelley.Delegation.Certificates
   ( DCert (..),
     DelegCert (..),
@@ -120,7 +119,6 @@ import Data.Coders
     ofield,
     (!>),
   )
-import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -132,16 +130,6 @@ import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
 -- ========================================================================
-
-newtype Wdrl c = Wdrl {unWdrl :: Map (RewardAcnt c) Coin}
-  deriving (Show, Eq, Generic)
-  deriving newtype (NoThunks, NFData)
-
-instance CC.Crypto c => ToCBOR (Wdrl c) where
-  toCBOR = mapToCBOR . unWdrl
-
-instance CC.Crypto c => FromCBOR (Wdrl c) where
-  fromCBOR = Wdrl <$> mapFromCBOR
 
 -- ---------------------------
 -- WellFormed instances
@@ -312,15 +300,6 @@ instance CC.Crypto c => EraTxBody (ShelleyEra c) where
       (\(TxBodyConstr (Memo m _)) -> _mdHashX m)
       (\txBody auxDataHash -> txBody {_mdHash = auxDataHash})
   {-# INLINEABLE auxDataHashTxBodyL #-}
-
-class EraTxBody era => ShelleyEraTxBody era where
-  wdrlsTxBodyL :: Lens' (Core.TxBody era) (Wdrl (EraCrypto era))
-
-  ttlTxBodyL :: ExactEra ShelleyEra era => Lens' (Core.TxBody era) SlotNo
-
-  updateTxBodyL :: Lens' (Core.TxBody era) (StrictMaybe (Update era))
-
-  certsTxBodyL :: Lens' (Core.TxBody era) (StrictSeq (DCert (EraCrypto era)))
 
 instance CC.Crypto c => ShelleyEraTxBody (ShelleyEra c) where
   {-# SPECIALIZE instance ShelleyEraTxBody (ShelleyEra CC.StandardCrypto) #-}

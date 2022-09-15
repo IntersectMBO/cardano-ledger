@@ -36,6 +36,7 @@ library
   import:             base, project-config
   exposed-modules:
     Cardano.Ledger.Alonzo
+    Cardano.Ledger.Alonzo.Core
     Cardano.Ledger.Alonzo.Data
     Cardano.Ledger.Alonzo.Genesis
     Cardano.Ledger.Alonzo.Language

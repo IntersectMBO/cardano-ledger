@@ -64,6 +64,7 @@ import Cardano.Ledger.Shelley.TxBody
     ShelleyTxOut (..),
     Wdrl (..),
   )
+import Cardano.Ledger.ShelleyMA.Core (ShelleyMAEraTxBody (..))
 import Cardano.Ledger.ShelleyMA.Era
   ( MAClass (getScriptHash, promoteMultiAsset),
     MaryOrAllegra (..),
@@ -361,18 +362,6 @@ instance MAClass ma c => ShelleyEraTxBody (ShelleyMAEra ma c) where
   certsTxBodyL =
     lensTxBodyRaw certs (\txBodyRaw certs_ -> txBodyRaw {certs = certs_})
   {-# INLINEABLE certsTxBodyL #-}
-
-class
-  (ShelleyEraTxBody era, EncodeMint (Value era), DecodeMint (Value era)) =>
-  ShelleyMAEraTxBody era
-  where
-  vldtTxBodyL :: Lens' (Core.TxBody era) ValidityInterval
-
-  mintTxBodyL :: Lens' (Core.TxBody era) (MultiAsset (EraCrypto era))
-
-  mintValueTxBodyF :: SimpleGetter (Core.TxBody era) (Core.Value era)
-
-  mintedTxBodyF :: SimpleGetter (Core.TxBody era) (Set (ScriptHash (EraCrypto era)))
 
 instance MAClass ma c => ShelleyMAEraTxBody (ShelleyMAEra ma c) where
   {-# SPECIALIZE instance ShelleyMAEraTxBody (ShelleyMAEra 'Mary StandardCrypto) #-}
