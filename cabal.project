@@ -28,6 +28,12 @@ packages:
   libs/set-algebra
   libs/vector-map
 
+repository ghc-next-packages
+  url: https://input-output-hk.github.io/ghc-next-packages
+  secure: True
+  root-keys:
+  key-threshold: 0
+
 -- Always write GHC env files, because they are needed by the doctests.
 write-ghc-environment-files: always
 

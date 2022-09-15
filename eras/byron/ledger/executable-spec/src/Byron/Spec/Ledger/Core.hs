@@ -504,15 +504,15 @@ deriveAddShrinks ''VKeyGenesis
 -- SeedGoblin instances
 --------------------------------------------------------------------------------
 
+deriveSeedGoblin ''Owner
+deriveSeedGoblin ''VKey
 deriveSeedGoblin ''Addr
 deriveSeedGoblin ''BlockCount
 deriveSeedGoblin ''Epoch
 deriveSeedGoblin ''Hash
 deriveSeedGoblin ''Lovelace
-deriveSeedGoblin ''Owner
 deriveSeedGoblin ''Slot
 deriveSeedGoblin ''SlotCount
-deriveSeedGoblin ''VKey
 deriveSeedGoblin ''VKeyGenesis
 
 --------------------------------------------------------------------------------
