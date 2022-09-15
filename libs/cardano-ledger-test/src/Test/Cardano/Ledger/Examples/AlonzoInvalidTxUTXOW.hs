@@ -964,7 +964,7 @@ defaultPPs =
     MaxValSize 1000000000,
     MaxTxExUnits $ ExUnits 1000000 1000000,
     MaxBlockExUnits $ ExUnits 1000000 1000000,
-    ProtocolVersion $ ProtVer 5 0,
+    ProtocolVersion $ ProtVer 7 0,
     CollateralPercentage 100
   ]
 
