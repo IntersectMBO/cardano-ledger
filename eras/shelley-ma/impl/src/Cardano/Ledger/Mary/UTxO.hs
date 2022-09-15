@@ -12,17 +12,31 @@ import Cardano.Ledger.Crypto
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), Wdrl (..))
-import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), UTxO (UTxO), balance, keyRefunds)
+import Cardano.Ledger.Shelley.UTxO
+  ( EraUTxO (..),
+    ShelleyScriptsNeeded (..),
+    UTxO (UTxO),
+    balance,
+    getShelleyScriptsNeeded,
+    keyRefunds,
+  )
 import Cardano.Ledger.ShelleyMA.Era (MaryOrAllegra (Mary), ShelleyMAEra)
 import Cardano.Ledger.ShelleyMA.TxBody (ShelleyMAEraTxBody (..))
 import Cardano.Ledger.Val (inject)
 import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 import GHC.Records (HasField)
 import Lens.Micro
 
 instance Crypto c => EraUTxO (ShelleyMAEra 'Mary c) where
+  type ScriptsNeeded (ShelleyMAEra 'Mary c) = ShelleyScriptsNeeded (ShelleyMAEra 'Mary c)
+
   getConsumedValue = getConsumedMaryValue
+
+  getScriptsNeeded = getMaryScriptsNeeded
+
+  getScriptsHashesNeeded (ShelleyScriptsNeeded scriptHashes) = scriptHashes
 
 -- | Calculate the value consumed by the transation.
 --
@@ -50,3 +64,16 @@ getConsumedMaryValue pp (UTxO u) txBody = consumedValue <> txBody ^. mintValueTx
         <> inject (refunds <> withdrawals)
     refunds = keyRefunds pp txBody
     withdrawals = fold . unWdrl $ txBody ^. wdrlsTxBodyL
+
+-- | Computes the set of script hashes required to unlock the transaction inputs and the
+-- withdrawals. Unlike the one from Shelley, this one also includes script hashes needed
+-- for minting multi-assets in the transaction.
+getMaryScriptsNeeded ::
+  ShelleyMAEraTxBody era =>
+  UTxO era ->
+  TxBody era ->
+  ShelleyScriptsNeeded era
+getMaryScriptsNeeded u txBody =
+  case getShelleyScriptsNeeded u txBody of
+    ShelleyScriptsNeeded shelleyScriptsNeeded ->
+      ShelleyScriptsNeeded (shelleyScriptsNeeded `Set.union` (txBody ^. mintedTxBodyF))

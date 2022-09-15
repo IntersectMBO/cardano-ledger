@@ -343,10 +343,6 @@ instance MAClass ma c => EraTxBody (ShelleyMAEra ma c) where
   allInputsTxBodyF = inputsTxBodyL
   {-# INLINEABLE allInputsTxBodyF #-}
 
-  mintedTxBodyF =
-    to (\(TxBodyConstr (Memo txBodyRaw _)) -> getScriptHash (Proxy @ma) (mint txBodyRaw))
-  {-# INLINEABLE mintedTxBodyF #-}
-
 instance MAClass ma c => ShelleyEraTxBody (ShelleyMAEra ma c) where
   {-# SPECIALIZE instance ShelleyEraTxBody (ShelleyMAEra 'Mary StandardCrypto) #-}
   {-# SPECIALIZE instance ShelleyEraTxBody (ShelleyMAEra 'Allegra StandardCrypto) #-}
@@ -376,6 +372,8 @@ class
 
   mintValueTxBodyF :: SimpleGetter (Core.TxBody era) (Core.Value era)
 
+  mintedTxBodyF :: SimpleGetter (Core.TxBody era) (Set (ScriptHash (EraCrypto era)))
+
 instance MAClass ma c => ShelleyMAEraTxBody (ShelleyMAEra ma c) where
   {-# SPECIALIZE instance ShelleyMAEraTxBody (ShelleyMAEra 'Mary StandardCrypto) #-}
   {-# SPECIALIZE instance ShelleyMAEraTxBody (ShelleyMAEra 'Allegra StandardCrypto) #-}
@@ -391,3 +389,7 @@ instance MAClass ma c => ShelleyMAEraTxBody (ShelleyMAEra ma c) where
   mintValueTxBodyF =
     to (\(TxBodyConstr (Memo txBodyRaw _)) -> promoteMultiAsset (Proxy @ma) (mint txBodyRaw))
   {-# INLINEABLE mintValueTxBodyF #-}
+
+  mintedTxBodyF =
+    to (\(TxBodyConstr (Memo txBodyRaw _)) -> getScriptHash (Proxy @ma) (mint txBodyRaw))
+  {-# INLINEABLE mintedTxBodyF #-}

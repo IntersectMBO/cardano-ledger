@@ -20,6 +20,7 @@ in the naming of release branches.
 - Added `EraUTxO` class with `getConsumedValue`
 - Added type synonyms for eras: `Shelley`, `Allegra`, `Mary`, `Alonzo`, `Babbage` and `Conway`.
 - Added `Twiddle` class to test alternative serializations: #2994
+- Added `getScriptsNeeded` and `getScriptsHashesNeeded` to `EraUTxO` class: #3019
 
 ### Changed
 
@@ -53,7 +54,8 @@ in the naming of release branches.
   - `scriptShelleyWitsL` to `scriptShelleyTxWitsL`
 - Updated package metadata #3023
 #2976
-- Moved TxOut to a separate module in each era #3024
+- Moved `TxOut` to a separate module in each era #3024
+- Moved `mintedTxBodyF` into `ShelleyMAEraTxBody` class #3019
 
 ### Removed
 
@@ -67,6 +69,9 @@ in the naming of release branches.
   `BabbageEraTxBody.allInputsTxBodyF`
 - Deprecated `consumed` and `evaluateConsumed` in favor of new `EraUTxO.getConsumedValue`
 - Removed `CLI` class
+- Deprecated `scriptsNeededFromBody` and `scriptsNeeded` in all eras in favor of new class
+  function `EraUTxO.getScriptsNeeded` #3019
+- Remove model test framework #3019
 
 ## Release branch 1.1.x
 

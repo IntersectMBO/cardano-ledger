@@ -36,6 +36,7 @@ import Cardano.Ledger.Alonzo.Rules
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript, CostModels)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO, ScriptResult (Fails, Passes))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..))
+import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded)
 import Cardano.Ledger.Babbage.Collateral (collAdaBalance, collOuts)
 import Cardano.Ledger.Babbage.Era (BabbageUTXOS)
 import Cardano.Ledger.Babbage.Tx
@@ -62,7 +63,7 @@ import Cardano.Ledger.Shelley.Rules
     UtxoEnv (..),
     updateUTxOState,
   )
-import Cardano.Ledger.Shelley.UTxO (UTxO (..), totalDeposits)
+import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), UTxO (..), totalDeposits)
 import qualified Cardano.Ledger.Val as Val
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
@@ -81,6 +82,8 @@ instance
   ( AlonzoEraTx era,
     BabbageEraTxBody era,
     ExtendedUTxO era,
+    EraUTxO era,
+    ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     Show (Script era),
     Eq (PParamsUpdate era),
     Show (PParamsUpdate era),
@@ -125,6 +128,8 @@ utxosTransition ::
   ( AlonzoEraTx era,
     ExtendedUTxO era,
     BabbageEraTxBody era,
+    EraUTxO era,
+    ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     Tx era ~ AlonzoTx era,
     TxOut era ~ BabbageTxOut era,
     TxBody era ~ BabbageTxBody era,
@@ -153,6 +158,8 @@ scriptsYes ::
   forall era.
   ( ExtendedUTxO era,
     AlonzoEraTx era,
+    EraUTxO era,
+    ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     Tx era ~ AlonzoTx era,
     Script era ~ AlonzoScript era,
     STS (BabbageUTXOS era),
@@ -213,6 +220,8 @@ scriptsNo ::
   forall era.
   ( AlonzoEraTx era,
     ExtendedUTxO era,
+    EraUTxO era,
+    ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     STS (BabbageUTXOS era),
     BabbageEraTxBody era,
     Tx era ~ AlonzoTx era,

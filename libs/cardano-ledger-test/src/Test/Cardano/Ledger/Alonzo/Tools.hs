@@ -18,6 +18,7 @@ import Cardano.Ledger.Alonzo.Tools (TransactionScriptFailure (..), evaluateTrans
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..))
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO, exBudgetToExUnits, transExUnits)
 import Cardano.Ledger.Alonzo.TxWits
+import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded)
 import qualified Cardano.Ledger.Babbage.PParams as Babbage.PParams
 import Cardano.Ledger.BaseTypes (ProtVer (..), ShelleyBase)
 import Cardano.Ledger.Coin (Coin (..))
@@ -27,7 +28,7 @@ import Cardano.Ledger.Keys (GenDelegs (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.LedgerState (IncrementalStake (..), UTxOState (..))
 import Cardano.Ledger.Shelley.Rules (PredicateFailure, UtxoEnv (..))
-import Cardano.Ledger.Shelley.UTxO (UTxO (..), makeWitnessVKey)
+import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), UTxO (..), makeWitnessVKey)
 import Cardano.Ledger.Val (Val (inject))
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..), SlotNo (..))
@@ -115,7 +116,9 @@ testExUnitCalculation ::
     HasField "_protocolVersion" (PParams era) ProtVer,
     Show (PredicateFailure (EraRule "UTXOS" era)),
     STS (EraRule "UTXOS" era),
-    Script era ~ AlonzoScript era
+    Script era ~ AlonzoScript era,
+    EraUTxO era,
+    ScriptsNeeded era ~ AlonzoScriptsNeeded era
   ) =>
   Proof era ->
   Tx era ->
@@ -141,9 +144,7 @@ exampleExUnitCalc ::
   ( BaseM (EraRule "UTXOS" era) ~ ShelleyBase,
     State (EraRule "UTXOS" era) ~ UTxOState era,
     Environment (EraRule "UTXOS" era) ~ UtxoEnv era,
-    Signable
-      (CC.DSIGN (EraCrypto era))
-      (Crypto.Hash (CC.HASH (EraCrypto era)) EraIndependentTxBody),
+    Signable (CC.DSIGN (EraCrypto era)) (Crypto.Hash (CC.HASH (EraCrypto era)) EraIndependentTxBody),
     Signal (EraRule "UTXOS" era) ~ Tx era,
     ExtendedUTxO era,
     HasField "_maxTxExUnits" (PParams era) ExUnits,
@@ -151,6 +152,8 @@ exampleExUnitCalc ::
     STS (EraRule "UTXOS" era),
     AlonzoEraTx era,
     PostShelley era,
+    EraUTxO era,
+    ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     Default (State (EraRule "PPUP" era)),
     Script era ~ AlonzoScript era
   ) =>
@@ -172,6 +175,8 @@ exampleInvalidExUnitCalc ::
   ( ExtendedUTxO era,
     PostShelley era,
     AlonzoEraTx era,
+    EraUTxO era,
+    ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     HasField "_maxTxExUnits" (PParams era) ExUnits,
     HasField "_protocolVersion" (PParams era) ProtVer,
     Script era ~ AlonzoScript era,
@@ -270,6 +275,8 @@ updateTxExUnits ::
   ( MonadFail m,
     AlonzoEraTx era,
     ExtendedUTxO era,
+    EraUTxO era,
+    ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     HasField "_maxTxExUnits" (PParams era) ExUnits,
     HasField "_protocolVersion" (PParams era) ProtVer,
     Script era ~ AlonzoScript era

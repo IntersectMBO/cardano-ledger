@@ -23,7 +23,6 @@ import Cardano.Ledger.Alonzo.PParams
     getLanguageView,
     retractPP,
   )
-import Cardano.Ledger.Alonzo.PlutusScriptApi (scriptsNeededFromBody)
 import Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo (language)
 import Cardano.Ledger.Alonzo.Rules (vKeyLocked)
 import Cardano.Ledger.Alonzo.Scripts (isPlutusScript, pointWiseExUnits, txscriptfee)
@@ -58,6 +57,7 @@ import Cardano.Ledger.Alonzo.TxWits
     Redeemers (..),
     TxDats (..),
   )
+import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
@@ -66,11 +66,17 @@ import Cardano.Ledger.Credential (Credential (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (KeyHash, KeyRole (Witness))
 import Cardano.Ledger.Mary (MaryEra)
-import Cardano.Ledger.Mary.Value (AssetName (..), MultiAsset (..), PolicyID (..), multiAssetFromList, policies)
+import Cardano.Ledger.Mary.Value
+  ( AssetName (..),
+    MultiAsset (..),
+    PolicyID (..),
+    multiAssetFromList,
+    policies,
+  )
 import Cardano.Ledger.Pretty.Alonzo ()
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl)
-import Cardano.Ledger.Shelley.UTxO (UTxO (..), coinBalance)
+import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), UTxO (..), coinBalance)
 import Cardano.Ledger.ShelleyMA.AuxiliaryData (AllegraTxAuxData (..))
 import Cardano.Ledger.ShelleyMA.Era ()
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), translateTimelock)
@@ -399,7 +405,7 @@ instance Mock c => EraGen (AlonzoEra c) where
       txinputs = inputs' txbody
       smallUtxo :: [TxOut (AlonzoEra c)]
       smallUtxo = Map.elems (unUTxO utxo `Map.restrictKeys` txinputs)
-      purposeHashPairs = scriptsNeededFromBody @(AlonzoEra c) utxo txbody
+      AlonzoScriptsNeeded purposeHashPairs = getScriptsNeeded @(AlonzoEra c) utxo txbody
       rdmrMap = List.foldl' accum Map.empty purposeHashPairs -- Search through the pairs for Plutus scripts
       accum ans (purpose, hash1) =
         case Map.lookup hash1 mapScriptWit of

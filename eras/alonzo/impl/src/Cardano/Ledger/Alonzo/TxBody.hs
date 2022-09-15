@@ -203,10 +203,6 @@ instance CC.Crypto c => EraTxBody (AlonzoEra c) where
     to $ \txBody -> (txBody ^. inputsTxBodyL) `Set.union` (txBody ^. collateralInputsTxBodyL)
   {-# INLINEABLE allInputsTxBodyF #-}
 
-  mintedTxBodyF =
-    to (\(TxBodyConstr (Memo txBodyRaw _)) -> Set.map policyID (policies (_mint txBodyRaw)))
-  {-# INLINEABLE mintedTxBodyF #-}
-
 instance CC.Crypto c => ShelleyEraTxBody (AlonzoEra c) where
   {-# SPECIALIZE instance ShelleyEraTxBody (AlonzoEra CC.StandardCrypto) #-}
 
@@ -237,6 +233,10 @@ instance CC.Crypto c => ShelleyMAEraTxBody (AlonzoEra c) where
 
   mintValueTxBodyF = mintTxBodyL . to (MaryValue 0)
   {-# INLINEABLE mintValueTxBodyF #-}
+
+  mintedTxBodyF =
+    to (\(TxBodyConstr (Memo txBodyRaw _)) -> Set.map policyID (policies (_mint txBodyRaw)))
+  {-# INLINEABLE mintedTxBodyF #-}
 
 class (ShelleyMAEraTxBody era, AlonzoEraTxOut era) => AlonzoEraTxBody era where
   collateralInputsTxBodyL :: Lens' (Core.TxBody era) (Set (TxIn (EraCrypto era)))

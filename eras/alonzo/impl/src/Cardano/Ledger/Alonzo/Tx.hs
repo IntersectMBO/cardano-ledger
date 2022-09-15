@@ -104,6 +104,7 @@ import Cardano.Ledger.Alonzo.TxBody
   ( AlonzoEraTxBody (..),
     AlonzoTxBody (..),
     ScriptIntegrityHash,
+    ShelleyMAEraTxBody (..),
     TxBody,
   )
 import Cardano.Ledger.Alonzo.TxWits
@@ -427,7 +428,7 @@ instance Ord k => Indexable k (Map.Map k v) where
 
 rdptr ::
   forall era.
-  ShelleyEraTxBody era =>
+  ShelleyMAEraTxBody era =>
   Core.TxBody era ->
   ScriptPurpose (EraCrypto era) ->
   StrictMaybe RdmrPtr
@@ -439,7 +440,7 @@ rdptr txBody (Certifying d) = RdmrPtr Cert <$> indexOf d (txBody ^. certsTxBodyL
 
 rdptrInv ::
   forall era.
-  ShelleyEraTxBody era =>
+  ShelleyMAEraTxBody era =>
   Core.TxBody era ->
   RdmrPtr ->
   StrictMaybe (ScriptPurpose (EraCrypto era))
@@ -459,7 +460,7 @@ getMapFromValue (MaryValue _ (MultiAsset m)) = m
 -- | Find the Data and ExUnits assigned to a script.
 indexedRdmrs ::
   forall era.
-  (ShelleyEraTxBody era, AlonzoEraTxWits era, EraTx era) =>
+  (ShelleyMAEraTxBody era, AlonzoEraTxWits era, EraTx era) =>
   Tx era ->
   ScriptPurpose (EraCrypto era) ->
   Maybe (Data era, ExUnits)

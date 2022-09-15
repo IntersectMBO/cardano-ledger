@@ -22,7 +22,6 @@ where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Crypto.DSIGN.Class (Signable)
 import Cardano.Crypto.Hash.Class (Hash)
-import Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo (scriptsNeeded)
 import Cardano.Ledger.Alonzo.Rules
   ( AlonzoUtxowEvent (WrappedShelleyEraEvent),
     AlonzoUtxowPredFailure (ShelleyInAlonzoUtxowPredFailure),
@@ -36,6 +35,7 @@ import Cardano.Ledger.Alonzo.Rules as Alonzo (AlonzoUtxoEvent)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript, CostModels)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), validScript)
+import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded)
 import Cardano.Ledger.Babbage.Era (BabbageUTXOW)
 import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUTXO, BabbageUtxoPredFailure (..))
 import Cardano.Ledger.Babbage.Tx (refScripts)
@@ -56,7 +56,7 @@ import Cardano.Ledger.Shelley.Rules
     validateNeededWitnesses,
   )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.Shelley.UTxO (UTxO (..))
+import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), UTxO (..))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
   ( Embed (..),
@@ -267,6 +267,8 @@ babbageUtxowTransition ::
   forall era.
   ( AlonzoEraTx era,
     ExtendedUTxO era,
+    EraUTxO era,
+    ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     Script era ~ AlonzoScript era,
     TxOut era ~ BabbageTxOut era,
     STS (BabbageUTXOW era),
@@ -297,20 +299,23 @@ babbageUtxowTransition = do
   -- check scripts
   {- neededHashes := {h | ( , h) ∈ scriptsNeeded utxo txb} -}
   {- neededHashes − dom(refScripts tx utxo) = dom(txwitscripts txw) -}
-  let sNeeded = Set.fromList (map snd (Alonzo.scriptsNeeded utxo tx)) -- Script credentials
+  let scriptsNeeded = getScriptsNeeded utxo txBody
+      scriptHashesNeeded = getScriptsHashesNeeded scriptsNeeded
   {- ∀s ∈ (txscripts txw utxo neededHashes ) ∩ Scriptph1 , validateScript s tx -}
-  runTest $ validateFailedBabbageScripts tx utxo sNeeded -- CHANGED In BABBAGE txscripts depends on UTxO
+  -- CHANGED In BABBAGE txscripts depends on UTxO
+  runTest $ validateFailedBabbageScripts tx utxo scriptHashesNeeded
+
   {- neededHashes − dom(refScripts tx utxo) = dom(txwitscripts txw) -}
   let sReceived = Map.keysSet $ tx ^. witsTxL . scriptTxWitsL
       sRefs = Map.keysSet $ refScripts inputs utxo
-  runTest $ babbageMissingScripts pp sNeeded sRefs sReceived
+  runTest $ babbageMissingScripts pp scriptHashesNeeded sRefs sReceived
 
   {-  inputHashes ⊆  dom(txdats txw) ⊆  allowed -}
   runTest $ missingRequiredDatums hashScriptMap utxo tx
 
   {-  dom (txrdmrs tx) = { rdptr txb sp | (sp, h) ∈ scriptsNeeded utxo tx,
                            h ↦ s ∈ txscripts txw, s ∈ Scriptph2}     -}
-  runTest $ hasExactSetOfRedeemers utxo tx txBody
+  runTest $ hasExactSetOfRedeemers utxo tx scriptsNeeded
 
   -- check VKey witnesses
   -- let txbodyHash = hashAnnotated @(Crypto era) txbody
@@ -352,7 +357,7 @@ babbageUtxowTransition = do
   -- which appears in the spec, seems broken since costmdls is a projection of PPrams, not Tx
 
   {-  scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw)  -}
-  runTest $ ppViewHashesMatch tx txBody pp utxo sNeeded
+  runTest $ ppViewHashesMatch tx pp utxo scriptHashesNeeded
 
   trans @(EraRule "UTXO" era) $
     TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)
@@ -363,6 +368,8 @@ instance
   forall era.
   ( ExtendedUTxO era,
     AlonzoEraTx era,
+    EraUTxO era,
+    ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     BabbageEraTxBody era,
     TxOut era ~ BabbageTxOut era,
     HasField "_costmdls" (PParams era) CostModels,

@@ -22,7 +22,7 @@ import Cardano.Crypto.Seed as Seed
 import Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Allegra.Translation ()
 import Cardano.Ledger.Alonzo.Data
-  ( AlonzoAuxiliaryData (..),
+  ( AlonzoTxAuxData (..),
     Data (..),
     dataToBinaryData,
     hashData,
@@ -60,7 +60,7 @@ import qualified Cardano.Ledger.Shelley.PParams as ShelleyPP
 import Cardano.Ledger.Shelley.Rules
 import Cardano.Ledger.Shelley.UTxO (makeWitnessesVKey)
 import Cardano.Ledger.ShelleyMA (ShelleyMAEra)
-import Cardano.Ledger.ShelleyMA.AuxiliaryData (MAAuxiliaryData (..))
+import Cardano.Ledger.ShelleyMA.AuxiliaryData (AllegraTxAuxData (..))
 import Cardano.Ledger.ShelleyMA.Era (MAClass)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.TxIn (mkTxInPartial)
@@ -90,7 +90,7 @@ import Data.Word (Word64, Word8)
 import GHC.Records (HasField)
 import GHC.Stack (HasCallStack)
 import Numeric.Natural (Natural)
-import qualified PlutusTx as Plutus
+import qualified Plutus.V1.Ledger.Api as Plutus
 import qualified Test.Cardano.Ledger.Allegra.Examples.Consensus as Old (ledgerExamplesAllegra)
 import Test.Cardano.Ledger.Alonzo.EraMapping ()
 import qualified Test.Cardano.Ledger.Alonzo.Examples.Consensus as Old (ledgerExamplesAlonzo)
@@ -98,11 +98,19 @@ import Test.Cardano.Ledger.Alonzo.PlutusScripts (testingCostModelV1)
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import qualified Test.Cardano.Ledger.Babbage.Examples.Consensus as Old (ledgerExamplesBabbage)
 import qualified Test.Cardano.Ledger.Conway.Examples.Consensus as Old (ledgerExamplesConway)
-import Test.Cardano.Ledger.Generic.Fields (TxBodyField (..), TxField (..), TxOutField (..), WitnessesField (..))
+import Test.Cardano.Ledger.Generic.Fields
+  ( TxBodyField (..),
+    TxField (..),
+    TxOutField (..),
+    WitnessesField (..),
+  )
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Updaters (merge, newTx, newTxBody, newTxOut, newWitnesses)
 import qualified Test.Cardano.Ledger.Mary.Examples.Consensus as Old (ledgerExamplesMary)
-import Test.Cardano.Ledger.Shelley.Examples.Consensus (ShelleyLedgerExamples (..), ShelleyResultExamples (..))
+import Test.Cardano.Ledger.Shelley.Examples.Consensus
+  ( ShelleyLedgerExamples (..),
+    ShelleyResultExamples (..),
+  )
 import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as Old (ledgerExamplesShelley)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as SLE
 import Test.Cardano.Ledger.Shelley.Generator.Core
@@ -151,7 +159,7 @@ defaultLedgerExamples ::
   Proof era ->
   Core.Value era ->
   Core.TxBody era ->
-  Core.AuxiliaryData era ->
+  Core.TxAuxData era ->
   TranslationContext era ->
   ShelleyLedgerExamples era
 defaultLedgerExamples proof value txBody auxData translationContext =
@@ -568,7 +576,7 @@ exampleTx ::
   Reflect era =>
   Proof era ->
   Core.TxBody era ->
-  Core.AuxiliaryData era ->
+  Core.TxAuxData era ->
   Core.Tx era
 exampleTx proof txBody auxData =
   genericTx
@@ -588,9 +596,9 @@ exampleTx proof txBody auxData =
         Shelley _ -> Just (AuxData' [auxData])
         Allegra _ -> Just (AuxData' [auxData])
         Mary _ -> Just (AuxData' [auxData])
-        Alonzo _ -> (Just . AuxData . SJust) exampleAuxiliaryDataAlonzo
-        Babbage _ -> (Just . AuxData . SJust) exampleAuxiliaryDataAlonzo
-        Conway _ -> (Just . AuxData . SJust) exampleAuxiliaryDataAlonzo,
+        Alonzo _ -> (Just . AuxData . SJust) exampleAlonzoTxAuxData
+        Babbage _ -> (Just . AuxData . SJust) exampleAlonzoTxAuxData
+        Conway _ -> (Just . AuxData . SJust) exampleAlonzoTxAuxData,
       -- Validity
       case proof of
         Shelley _ -> Nothing
@@ -919,7 +927,7 @@ ledgerExamplesShelley =
     (Shelley Standard)
     exampleCoin
     (exampleTxBody (Shelley Standard) (inject (Coin 100000)))
-    exampleAuxiliaryDataShelley
+    exampleShelleyTxAuxData
     ()
 
 exampleCoin :: Coin
@@ -934,8 +942,8 @@ exampleMetadataMap =
       (4, Map [(I 3, B "b")])
     ]
 
-exampleAuxiliaryDataShelley :: Core.AuxiliaryData (ShelleyEra StandardCrypto)
-exampleAuxiliaryDataShelley = Metadata exampleMetadataMap
+exampleShelleyTxAuxData :: Core.TxAuxData (ShelleyEra StandardCrypto)
+exampleShelleyTxAuxData = ShelleyTxAuxData exampleMetadataMap
 
 -- ======================
 
@@ -945,12 +953,12 @@ ledgerExamplesAllegra =
     (Allegra Standard)
     exampleCoin
     (exampleTxBody (Allegra Standard) (inject exampleCoin))
-    exampleAuxiliaryDataMA
+    exampleAllegraTxAuxData
     ()
 
-exampleAuxiliaryDataMA :: MAClass ma c => MAAuxiliaryData (ShelleyMAEra ma c)
-exampleAuxiliaryDataMA =
-  MAAuxiliaryData
+exampleAllegraTxAuxData :: MAClass ma c => AllegraTxAuxData (ShelleyMAEra ma c)
+exampleAllegraTxAuxData =
+  AllegraTxAuxData
     exampleMetadataMap
     (StrictSeq.fromList [exampleScriptMA])
 
@@ -982,7 +990,7 @@ ledgerExamplesMary =
         (Mary Standard)
         (exampleMultiAssetValue @CC.StandardCrypto 1)
     )
-    exampleAuxiliaryDataMA
+    exampleAllegraTxAuxData
     ()
 
 exampleMultiAssetValue ::
@@ -1004,16 +1012,16 @@ multiAssetOf (MaryValue _ ma) = ma
 
 -- ============================================================
 
-exampleAuxiliaryDataAlonzo ::
+exampleAlonzoTxAuxData ::
   forall era.
   ( Era era,
     ToCBOR (Core.Script era),
     Core.Script era ~ AlonzoScript era
   ) =>
-  AlonzoAuxiliaryData era
-exampleAuxiliaryDataAlonzo =
-  AlonzoAuxiliaryData
-    SLE.exampleMetadataMap
+  AlonzoTxAuxData era
+exampleAlonzoTxAuxData =
+  AlonzoTxAuxData
+    SLE.exampleAuxDataMap
     (StrictSeq.fromList [alwaysFails PlutusV1 2, TimelockScript $ RequireAllOf mempty])
 
 ledgerExamplesAlonzo :: ShelleyLedgerExamples (AlonzoEra StandardCrypto)
@@ -1025,7 +1033,7 @@ ledgerExamplesAlonzo =
         (Alonzo Standard)
         (exampleMultiAssetValue @StandardCrypto 2)
     )
-    exampleAuxiliaryDataAlonzo
+    exampleAlonzoTxAuxData
     exampleAlonzoGenesis
 
 datumExample :: Era era => Data era
@@ -1063,7 +1071,7 @@ ledgerExamplesBabbage =
         (Babbage Standard)
         (exampleMultiAssetValue @StandardCrypto 2)
     )
-    exampleAuxiliaryDataAlonzo
+    exampleAlonzoTxAuxData
     exampleAlonzoGenesis
 
 -- ============================================================
@@ -1080,7 +1088,7 @@ ledgerExamplesConway =
         (Conway Standard)
         (exampleMultiAssetValue @StandardCrypto 2)
     )
-    exampleAuxiliaryDataAlonzo
+    exampleAlonzoTxAuxData
     exampleConwayGenesis
 
 -- ==============================================

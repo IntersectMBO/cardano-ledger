@@ -75,9 +75,6 @@ instance CC.Crypto c => EraTxBody (ConwayEra c) where
   allInputsTxBodyF = allInputsBabbageTxBodyF
   {-# INLINE allInputsTxBodyF #-}
 
-  mintedTxBodyF = mintedBabbageTxBodyF
-  {-# INLINE mintedTxBodyF #-}
-
 instance CC.Crypto c => ShelleyEraTxBody (ConwayEra c) where
   {-# SPECIALIZE instance ShelleyEraTxBody (ConwayEra CC.StandardCrypto) #-}
 
@@ -103,6 +100,9 @@ instance CC.Crypto c => ShelleyMAEraTxBody (ConwayEra c) where
   {-# INLINE mintTxBodyL #-}
 
   mintValueTxBodyF = mintValueBabbageTxBodyF
+
+  mintedTxBodyF = mintedBabbageTxBodyF
+  {-# INLINE mintedTxBodyF #-}
 
 instance CC.Crypto c => AlonzoEraTxBody (ConwayEra c) where
   {-# SPECIALIZE instance AlonzoEraTxBody (ConwayEra CC.StandardCrypto) #-}

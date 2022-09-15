@@ -11,13 +11,14 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Shelley.UTxO
   ( -- * Primitives
     UTxO (..),
     EraUTxO (..),
+    ShelleyScriptsNeeded (..),
 
     -- * Functions
     txins,
@@ -36,6 +37,7 @@ module Cardano.Ledger.Shelley.UTxO
     verifyWitVKey,
     getScriptHash,
     scriptsNeeded,
+    getShelleyScriptsNeeded,
     scriptCred,
     scriptStakeCred,
     getConsumedCoin,
@@ -93,6 +95,7 @@ import Data.Coders (decodeMapNoDuplicates, encodeMap)
 import Data.Coerce (coerce)
 import Data.Default.Class (Default)
 import Data.Foldable (Foldable (fold), foldMap', toList)
+import Data.Kind
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe as Maybe
@@ -316,17 +319,28 @@ scriptsNeeded ::
   Tx era ->
   Set (ScriptHash (EraCrypto era))
 scriptsNeeded u tx =
-  scriptHashes
-    `Set.union` Set.fromList
-      [sh | w <- withdrawals, Just sh <- [scriptCred (getRwdCred w)]]
-    `Set.union` Set.fromList
-      [sh | c <- certificates, requiresVKeyWitness c, Just sh <- [scriptStakeCred c]]
-    `Set.union` (txbody ^. mintedTxBodyF) -- This might be Set.empty in some Eras.
+  case getShelleyScriptsNeeded u (tx ^. bodyTxL) of
+    ShelleyScriptsNeeded sn -> sn
+{-# DEPRECATED scriptsNeeded "In favor of `getScriptsNeeded`" #-}
+
+getShelleyScriptsNeeded ::
+  forall era.
+  (EraTxBody era, ShelleyEraTxBody era) =>
+  UTxO era ->
+  TxBody era ->
+  ShelleyScriptsNeeded era
+getShelleyScriptsNeeded u txBody =
+  ShelleyScriptsNeeded
+    ( scriptHashes
+        `Set.union` Set.fromList
+          [sh | w <- withdrawals, Just sh <- [scriptCred (getRwdCred w)]]
+        `Set.union` Set.fromList
+          [sh | c <- certificates, requiresVKeyWitness c, Just sh <- [scriptStakeCred c]]
+    )
   where
-    txbody = tx ^. bodyTxL
-    withdrawals = Map.keys (unWdrl (txbody ^. wdrlsTxBodyL))
-    scriptHashes = txinsScriptHashes (txbody ^. inputsTxBodyL) u
-    certificates = toList (txbody ^. certsTxBodyL)
+    withdrawals = Map.keys (unWdrl (txBody ^. wdrlsTxBodyL))
+    scriptHashes = txinsScriptHashes (txBody ^. inputsTxBodyL) u
+    certificates = toList (txBody ^. certsTxBodyL)
 
 -- | Compute the subset of inputs of the set 'txInps' for which each input is
 -- locked by a script in the UTxO 'u'.
@@ -395,7 +409,27 @@ keyRefunds pp tx = length deregistrations <×> getField @"_keyDeposit" pp
     deregistrations = filter isDeRegKey (toList $ tx ^. certsTxBodyL)
 
 class EraTxBody era => EraUTxO era where
+  -- | A customizable type on per era basis for the information required to find all
+  -- scripts needed for the transaction.
+  type ScriptsNeeded era = (r :: Type) | r -> era
+
+  -- | Calculate all the value that is being consumed by the transaction.
   getConsumedValue :: PParams era -> UTxO era -> TxBody era -> Value era
 
+  -- | Produce all the information required for figuring out which scripts are required
+  -- for the transaction to be valid, once those scripts are evaluated
+  getScriptsNeeded :: UTxO era -> TxBody era -> ScriptsNeeded era
+
+  -- | Extract the set of all script hashes that are needed for script validation.
+  getScriptsHashesNeeded :: ScriptsNeeded era -> Set (ScriptHash (EraCrypto era))
+
+newtype ShelleyScriptsNeeded era = ShelleyScriptsNeeded (Set (ScriptHash (EraCrypto era)))
+  deriving (Eq, Show)
+
 instance Crypto c => EraUTxO (ShelleyEra c) where
+  type ScriptsNeeded (ShelleyEra c) = ShelleyScriptsNeeded (ShelleyEra c)
   getConsumedValue = getConsumedCoin
+
+  getScriptsNeeded = getShelleyScriptsNeeded
+
+  getScriptsHashesNeeded (ShelleyScriptsNeeded scriptsHashes) = scriptsHashes

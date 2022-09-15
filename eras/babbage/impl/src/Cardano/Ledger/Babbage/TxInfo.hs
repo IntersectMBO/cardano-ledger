@@ -149,7 +149,7 @@ transRedeemer :: Era era => Data era -> PV2.Redeemer
 transRedeemer = PV2.Redeemer . PV2.dataToBuiltinData . getPlutusData
 
 transRedeemerPtr ::
-  ShelleyEraTxBody era =>
+  ShelleyMAEraTxBody era =>
   TxBody era ->
   (RdmrPtr, (Data era, ExUnits)) ->
   Either (TranslationError (EraCrypto era)) (PV2.ScriptPurpose, PV2.Redeemer)
