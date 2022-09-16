@@ -268,8 +268,8 @@ class
 
   -- | A final opportunity to tweak things when the generator is done. Possible uses
   --   1) Add tracing when debugging on a per Era basis
-  genEraDone :: PParams era -> Tx era -> Gen (Tx era)
-  genEraDone _pp x = pure x
+  genEraDone :: UTxO era -> PParams era -> Tx era -> Gen (Tx era)
+  genEraDone _utxo _pp x = pure x
 
   -- | A final opportunity to tweak things at the block level. Possible uses
   --   2) Run a test that might decide to 'discard' the test, because we got unlucky, and a rare unfixible condition has occurred.
