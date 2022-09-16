@@ -1866,6 +1866,24 @@ protocolVersionEndorsementGen upienv upistate =
             & Map.fromListWith Set.union
 
 --------------------------------------------------------------------------------
+-- AddShrinks instances
+--------------------------------------------------------------------------------
+
+deriveAddShrinks ''ApName
+deriveAddShrinks ''ApVer
+deriveAddShrinks ''BkSgnCntT
+deriveAddShrinks ''FactorA
+deriveAddShrinks ''FactorB
+deriveAddShrinks ''Metadata
+deriveAddShrinks ''UpAdptThd
+deriveAddShrinks ''PParams
+deriveAddShrinks ''ProtVer
+deriveAddShrinks ''SwVer
+deriveAddShrinks ''UpId
+deriveAddShrinks ''UProp
+deriveAddShrinks ''Vote
+
+--------------------------------------------------------------------------------
 -- Goblins instances
 --------------------------------------------------------------------------------
 
@@ -1873,11 +1891,22 @@ deriveGoblin ''ApVer
 deriveGoblin ''ApName
 deriveGoblin ''Metadata
 deriveGoblin ''ProtVer
-deriveGoblin ''PParams
-deriveGoblin ''SwVer
-deriveGoblin ''UpId
-deriveGoblin ''UProp
-deriveGoblin ''Vote
+
+instance GeneOps g => Goblin g BkSgnCntT where
+  tinker _ =
+    pure <$> conjure
+  conjure =
+    saveInBagOfTricks =<< do
+      i <- transcribeGenesAsInt 100
+      pure (BkSgnCntT (fromIntegral i / 100))
+
+instance GeneOps g => Goblin g UpAdptThd where
+  tinker _ =
+    pure <$> conjure
+  conjure =
+    saveInBagOfTricks =<< do
+      i <- transcribeGenesAsInt 100
+      pure (UpAdptThd (fromIntegral i / 100))
 
 instance GeneOps g => Goblin g FactorA where
   tinker gen =
@@ -1903,39 +1932,11 @@ instance GeneOps g => Goblin g FactorB where
               <$> conjure
           )
 
-instance GeneOps g => Goblin g BkSgnCntT where
-  tinker _ =
-    pure <$> conjure
-  conjure =
-    saveInBagOfTricks =<< do
-      i <- transcribeGenesAsInt 100
-      pure (BkSgnCntT (fromIntegral i / 100))
-
-instance GeneOps g => Goblin g UpAdptThd where
-  tinker _ =
-    pure <$> conjure
-  conjure =
-    saveInBagOfTricks =<< do
-      i <- transcribeGenesAsInt 100
-      pure (UpAdptThd (fromIntegral i / 100))
-
---------------------------------------------------------------------------------
--- AddShrinks instances
---------------------------------------------------------------------------------
-
-deriveAddShrinks ''ApName
-deriveAddShrinks ''ApVer
-deriveAddShrinks ''BkSgnCntT
-deriveAddShrinks ''FactorA
-deriveAddShrinks ''FactorB
-deriveAddShrinks ''Metadata
-deriveAddShrinks ''PParams
-deriveAddShrinks ''ProtVer
-deriveAddShrinks ''SwVer
-deriveAddShrinks ''UpAdptThd
-deriveAddShrinks ''UpId
-deriveAddShrinks ''UProp
-deriveAddShrinks ''Vote
+deriveGoblin ''PParams
+deriveGoblin ''SwVer
+deriveGoblin ''UpId
+deriveGoblin ''UProp
+deriveGoblin ''Vote
 
 --------------------------------------------------------------------------------
 -- SeedGoblin instances
@@ -1947,10 +1948,10 @@ deriveSeedGoblin ''BkSgnCntT
 deriveSeedGoblin ''FactorA
 deriveSeedGoblin ''FactorB
 deriveSeedGoblin ''SwVer
+deriveSeedGoblin ''UpAdptThd
 deriveSeedGoblin ''PParams
 deriveSeedGoblin ''ProtVer
 deriveSeedGoblin ''Metadata
-deriveSeedGoblin ''UpAdptThd
 deriveSeedGoblin ''UpId
 
 --------------------------------------------------------------------------------
