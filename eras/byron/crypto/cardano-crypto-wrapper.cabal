@@ -132,7 +132,7 @@ test-suite test
                      , filepath
                      , hedgehog >= 1.0.4
                      , memory
-                     , text
+                    --  , text
 
   ghc-options:         -threaded
                        -rtsopts

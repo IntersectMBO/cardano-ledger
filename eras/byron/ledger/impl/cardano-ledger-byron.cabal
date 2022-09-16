@@ -256,12 +256,10 @@ library
                      , contra-tracer
                      , cryptonite
                      , Cabal
-                     , deepseq
                      , digest
                      , directory
                      , filepath
                      , formatting
-                     , mtl
                      , nothunks
                      , quiet
                      , resourcet
