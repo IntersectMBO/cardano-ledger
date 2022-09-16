@@ -60,7 +60,7 @@ import Control.State.Transition.Extended hiding (Assertion)
 import Data.Default.Class (Default (..))
 import qualified Data.Map.Strict as Map
 import GHC.Stack
-import qualified Plutus.V1.Ledger.Api as Plutus
+import qualified PlutusLedgerApi.V1 as Plutus
 import Test.Cardano.Ledger.Examples.STSTestUtils
   ( alwaysFailsHash,
     alwaysSucceedsHash,

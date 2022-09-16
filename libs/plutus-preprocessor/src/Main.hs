@@ -19,7 +19,7 @@ import Data.ByteString.Short (ShortByteString, pack, toShort, unpack)
 import Flat (flat)
 import Language.Haskell.TH
 import Language.Haskell.TH.Ppr
-import qualified Plutus.V1.Ledger.Api as P
+import qualified PlutusLedgerApi.V1 as P
 import PlutusScripts
   ( evenRedeemerDecl,
     evenRedeemerDecl2Args,
@@ -152,9 +152,10 @@ main = do
       "import Cardano.Ledger.Alonzo.Language (Language (..))",
       "import Cardano.Ledger.Alonzo.Scripts (CostModel (..), Script (..))",
       "import Data.ByteString.Short (pack)",
-      "import Plutus.V1.Ledger.EvaluationContext (costModelParamsForTesting, mkEvaluationContext)\n",
+      "import PlutusLedgerApi.Common (mkDynEvaluationContext)",
+      "import PlutusLedgerApi.Test.EvaluationContext (costModelParamsForTesting)\n",
       "defaultCostModel :: CostModel",
-      "defaultCostModel = CostModel costModelParamsForTesting <$> (mkEvaluationContext costModelParamsForTesting)"
+      "defaultCostModel = CostModel costModelParamsForTesting <$> (mkDynEvaluationContext costModelParamsForTesting)"
     ]
   display outh PlutusV1 guess2args guessDecl2args "guessTheNumber2"
   display outh PlutusV1 guessTheNumberBytes guessDecl "guessTheNumber3"
