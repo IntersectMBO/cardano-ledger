@@ -1,12 +1,15 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeApplications #-}
+
 module Test.Cardano.Ledger.Alonzo.TxInfo where
 
 import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..))
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo (Alonzo)
-import Cardano.Ledger.Alonzo.PParams ()
+import Cardano.Ledger.Alonzo.PParams (AlonzoPParams, AlonzoPParamsHKD(..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (..), AlonzoTxOut (..))
-import Cardano.Ledger.Alonzo.TxInfo (TranslationError (..), txInfo)
+import Cardano.Ledger.Alonzo.TxInfo (TranslationError (..), txInfo, transVITime)
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (EraTx (Tx), EraTxBody (TxBody), EraTxOut (TxOut))
@@ -15,11 +18,14 @@ import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Language (Language (..))
 import Cardano.Ledger.Shelley.TxBody (Wdrl (..))
 import Cardano.Ledger.TxIn (TxIn (..), mkTxInPartial)
+import Cardano.Ledger.BaseTypes (natVersion)
+import qualified Cardano.Ledger.BaseTypes as BT (ProtVer (..))
 import Cardano.Ledger.UTxO (UTxO (..))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
-import Cardano.Slotting.Slot (EpochSize (..))
+import Cardano.Slotting.Slot (EpochSize (..), SlotNo(..))
 import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
+import Data.Default.Class (def)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
@@ -28,6 +34,7 @@ import Test.Cardano.Ledger.Shelley.Address.Bootstrap (aliceByronAddr)
 import Test.Cardano.Ledger.Shelley.Examples.Cast (alicePHK)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Tasty (TestTree, testGroup)
+import qualified PlutusLedgerApi.V1 as PV1
 import Test.Tasty.HUnit (Assertion, assertFailure, testCase, (@?=))
 
 byronAddr :: Addr StandardCrypto
@@ -87,7 +94,7 @@ silentlyIgnore tx =
     Right _ -> pure ()
     Left e -> assertFailure $ "no translation error was expected, but got: " <> show e
   where
-    ctx = txInfo PlutusV1 ei ss utxo tx
+    ctx = txInfo def PlutusV1 ei ss utxo tx
 
 expectTranslationError :: Language -> Tx Alonzo -> TranslationError StandardCrypto -> Assertion
 expectTranslationError lang tx expected =
@@ -95,7 +102,26 @@ expectTranslationError lang tx expected =
     Right _ -> error "This translation was expected to fail, but it succeeded."
     Left e -> e @?= expected
   where
-    ctx = txInfo lang ei ss utxo tx
+    ctx = txInfo def lang ei ss utxo tx
+
+-- | The test checks that the old implementation of 'transVITime' stays intentionally incorrect,
+-- by returning close upper bound of the validaty interval.
+transVITimeUpperBoundIsClosed :: Assertion
+transVITimeUpperBoundIsClosed = do
+  let interval = ValidityInterval SNothing (SJust (SlotNo 40))
+  case transVITime (def :: AlonzoPParams Alonzo) ei ss interval of
+    Left e -> assertFailure $ "no translation error was expected, but got: " <> show e
+    Right t -> t @?= (PV1.Interval (PV1.LowerBound PV1.NegInf True) (PV1.UpperBound (PV1.Finite (PV1.POSIXTime 40000)) True))
+
+-- | The test checks that since protocol version 9 'transVITime' works correctly,
+-- by returning open upper bound of the validaty interval.
+transVITimeUpperBoundIsOpen :: Assertion
+transVITimeUpperBoundIsOpen = do
+  let interval = ValidityInterval SNothing (SJust (SlotNo 40))
+  case transVITime (def { _protocolVersion = BT.ProtVer (natVersion @9) 0 } :: AlonzoPParams Alonzo) ei ss interval of
+    Left e -> assertFailure $ "no translation error was expected, but got: " <> show e
+    Right t -> t @?= (PV1.Interval (PV1.LowerBound PV1.NegInf True) (PV1.UpperBound (PV1.Finite (PV1.POSIXTime 40000)) False))
+
 
 txInfoTests :: TestTree
 txInfoTests =
@@ -115,5 +141,10 @@ txInfoTests =
               PlutusV2
               (txEx shelleyInput shelleyOutput)
               (LanguageNotSupported PlutusV2)
+        ],
+      testGroup
+        "transVITime"
+        [ testCase "validity interval's upper bound is close when protocol < 9" transVITimeUpperBoundIsClosed
+        , testCase "validity interval's upper bound is open when protocol >= 9" transVITimeUpperBoundIsOpen
         ]
     ]

@@ -29,6 +29,7 @@ import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
+import Data.Default.Class (def)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
@@ -148,7 +149,7 @@ successfulTranslation lang tx f =
     Right info -> assertBool "unexpected transaction info" (f info)
     Left e -> assertFailure $ "no translation error was expected, but got: " <> show e
   where
-    ctx = txInfo lang ei ss utxo tx
+    ctx = txInfo def lang ei ss utxo tx
 
 successfulV2Translation :: AlonzoTx Babbage -> (VersionedTxInfo -> Bool) -> Assertion
 successfulV2Translation = successfulTranslation PlutusV2
@@ -159,7 +160,7 @@ expectTranslationError lang tx expected =
     Right _ -> assertFailure "This translation was expected to fail, but it succeeded."
     Left e -> e @?= expected
   where
-    ctx = txInfo lang ei ss utxo tx
+    ctx = txInfo def lang ei ss utxo tx
 
 expectV1TranslationError :: AlonzoTx Babbage -> TranslationError StandardCrypto -> Assertion
 expectV1TranslationError = expectTranslationError PlutusV1
