@@ -1,10 +1,12 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -57,6 +59,7 @@ import Data.Typeable (Typeable)
 import qualified Data.UMap as UM
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
+import Control.DeepSeq (NFData (..))
 
 data ShelleyMirPredFailure era
   deriving (Show, Generic, Eq)
@@ -69,6 +72,8 @@ data ShelleyMirEvent era
     NoMirTransfer (InstantaneousRewards (EraCrypto era)) Coin Coin
 
 instance NoThunks (ShelleyMirPredFailure era)
+
+deriving instance NFData (ShelleyMirPredFailure era)
 
 instance (Typeable era, Default (EpochState era)) => STS (ShelleyMIR era) where
   type State (ShelleyMIR era) = EpochState era

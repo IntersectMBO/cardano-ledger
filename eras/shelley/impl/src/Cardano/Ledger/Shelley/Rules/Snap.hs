@@ -1,9 +1,11 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -49,6 +51,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.VMap as VMap
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
+import Control.DeepSeq (NFData (..))
 
 -- ======================================================
 
@@ -56,6 +59,8 @@ data ShelleySnapPredFailure era -- No predicate failures
   deriving (Show, Generic, Eq)
 
 instance NoThunks (ShelleySnapPredFailure era)
+
+deriving instance NFData (ShelleySnapPredFailure era)
 
 newtype SnapEvent era
   = StakeDistEvent (Map (Credential 'Staking (EraCrypto era)) (Coin, KeyHash 'StakePool (EraCrypto era)))

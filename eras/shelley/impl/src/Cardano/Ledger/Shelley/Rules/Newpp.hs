@@ -1,8 +1,10 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -52,6 +54,7 @@ import GHC.Generics (Generic)
 import GHC.Natural (Natural)
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..))
+import Control.DeepSeq (NFData (..))
 
 data ShelleyNewppState era
   = NewppState (PParams era) (PPUPState era)
@@ -70,6 +73,8 @@ data ShelleyNewppPredFailure era
   deriving (Show, Eq, Generic)
 
 instance NoThunks (ShelleyNewppPredFailure era)
+
+deriving instance NFData (ShelleyNewppPredFailure era)
 
 instance
   ( Default (PParams era),

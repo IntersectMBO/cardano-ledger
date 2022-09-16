@@ -4,6 +4,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -21,6 +22,7 @@ module Cardano.Ledger.Shelley.Rules.Tick
     adoptGenesisDelegs,
     ShelleyTICKF,
     ShelleyTickfPredFailure (..),
+    validatingTickTransition,
   )
 where
 
@@ -56,6 +58,7 @@ import Control.State.Transition
 import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
+import Control.DeepSeq (NFData (..))
 
 -- ==================================================
 
@@ -231,6 +234,8 @@ to tick the ledger state to a future slot.
 newtype ShelleyTickfPredFailure era
   = TickfNewEpochFailure (PredicateFailure (EraRule "NEWEPOCH" era)) -- Subtransition Failures
   deriving (Generic)
+
+deriving newtype instance NFData (PredicateFailure (EraRule "NEWEPOCH" era)) => NFData (ShelleyTickfPredFailure era)
 
 deriving stock instance
   ( Era era,

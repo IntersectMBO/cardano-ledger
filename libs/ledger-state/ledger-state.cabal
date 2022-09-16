@@ -114,7 +114,9 @@ benchmark performance
     deepseq,
     ledger-state,
     microlens,
+    mtl,
     random,
+    small-steps,
   ghc-options:
       -threaded
       -rtsopts

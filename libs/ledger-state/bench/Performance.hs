@@ -2,12 +2,14 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Main where
 
 import Cardano.Binary
 import Cardano.Ledger.Address
 import Cardano.Ledger.Alonzo.PParams hiding (PParams)
+import Cardano.Ledger.Alonzo (Alonzo)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.CompactAddress
 import Cardano.Ledger.Core
@@ -16,6 +18,7 @@ import Cardano.Ledger.Shelley.API.Wallet (getFilteredUTxO, getUTxO)
 import Cardano.Ledger.Shelley.Genesis (ShelleyGenesis (..), mkShelleyGlobals)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.UTxO
+import Cardano.Ledger.Shelley.Rules (ShelleyTICKF)
 import Cardano.Ledger.State.UTxO
 import Cardano.Ledger.Val
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
@@ -31,25 +34,30 @@ import Data.Default.Class (def)
 import Data.Foldable as F
 import Data.Map.Strict as Map
 import Data.MapExtras (extractKeys, extractKeysSmallSet)
+--import Data.Maybe (fromMaybe)
 import Data.Set as Set
 import Lens.Micro ((^.))
 import System.Environment (getEnv)
 import System.Random.Stateful
+import Control.State.Transition.Extended (TRC(TRC), applySTS)
+import Control.Monad.Reader (runReader)
 
 main :: IO ()
 main = do
   let ledgerVarName = "BENCH_LEDGER_STATE_PATH"
       genesisVarName = "BENCH_GENESIS_PATH"
+  --    slotVarName = "BENCH_SLOT_NO"
   ledgerStateFilePath <- getEnv ledgerVarName
   genesisFilePath <- getEnv genesisVarName
   genesis <- either error id <$> eitherDecodeFileStrict' genesisFilePath
+  --slotArg <- getEnv slotVarName
 
   let toMempoolState :: NewEpochState CurrentEra -> MempoolState CurrentEra
       toMempoolState NewEpochState {nesEs = EpochState {esLState}} = esLState
       pp :: PParams CurrentEra
       pp = def
       !globals = mkGlobals genesis pp
-      !slotNo = SlotNo 55733343
+      !slotNo = SlotNo 156953303 -- I found this by trial and error to get epoch 363, I do not know why this doesn't align with mainnet. byron somehow?
       applyTx' mempoolEnv mempoolState =
         either (error . show) seqTuple
           . applyTx globals mempoolEnv mempoolState
@@ -110,6 +118,16 @@ main = do
                 env (pure setAddr) $
                   bench "getFilteredOldUTxO" . nf (getFilteredOldUTxO newEpochState)
               ],
+      env (pure es) $ \newEpochState ->
+        let tickf state slot =
+              flip runReader globals
+                . applySTS @(ShelleyTICKF Alonzo)
+                $ TRC ((), state, slot)
+        in bgroup
+          "TICKF"
+          [
+            bench "tickf" $ nf (tickf newEpochState) slotNo
+          ],
       bgroup
         "DeleteTxOuts"
         [ extractKeysBench (unUTxO (getUTxO es)) largeKeysNum largeKeys,

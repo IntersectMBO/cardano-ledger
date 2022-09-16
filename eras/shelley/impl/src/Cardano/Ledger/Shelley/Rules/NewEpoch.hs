@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -53,6 +54,7 @@ import Data.VMap as VMap
 import GHC.Generics (Generic)
 import GHC.Records (HasField)
 import NoThunks.Class (NoThunks (..))
+import Control.DeepSeq (NFData (..))
 
 data ShelleyNewEpochPredFailure era
   = EpochFailure (PredicateFailure (EraRule "EPOCH" era)) -- Subtransition Failures
@@ -60,6 +62,12 @@ data ShelleyNewEpochPredFailure era
       !(RewardUpdate (EraCrypto era)) -- The reward update which violates an invariant
   | MirFailure (PredicateFailure (EraRule "MIR" era)) -- Subtransition Failures
   deriving (Generic)
+
+deriving instance
+  ( NFData (PredicateFailure (EraRule "EPOCH" era))
+  , NFData (PredicateFailure (EraRule "MIR" era))
+  ) =>
+  NFData (ShelleyNewEpochPredFailure era)
 
 deriving stock instance
   ( Show (PredicateFailure (EraRule "EPOCH" era)),

@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -70,12 +71,20 @@ import Data.Void (Void)
 import GHC.Generics (Generic)
 import GHC.Records (HasField)
 import NoThunks.Class (NoThunks (..))
+import Control.DeepSeq (NFData (..))
 
 data ShelleyEpochPredFailure era
   = PoolReapFailure (PredicateFailure (EraRule "POOLREAP" era)) -- Subtransition Failures
   | SnapFailure (PredicateFailure (EraRule "SNAP" era)) -- Subtransition Failures
   | UpecFailure (PredicateFailure (EraRule "UPEC" era)) -- Subtransition Failures
   deriving (Generic)
+
+deriving instance
+  ( NFData (PredicateFailure (EraRule "POOLREAP" era))
+  , NFData (PredicateFailure (EraRule "SNAP" era))
+  , NFData (PredicateFailure (EraRule "UPEC" era))
+  ) =>
+  NFData (ShelleyEpochPredFailure era)
 
 deriving stock instance
   ( Eq (PredicateFailure (EraRule "POOLREAP" era)),

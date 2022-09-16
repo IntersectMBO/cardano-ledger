@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyDataDeriving #-}
@@ -56,6 +57,7 @@ import qualified Data.UMap as UM
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks (..))
+import Control.DeepSeq (NFData (..))
 
 data ShelleyPoolreapState era = PoolreapState
   { prUTxOSt :: UTxOState era,
@@ -76,6 +78,8 @@ data ShelleyPoolreapEvent era = RetiredPools
   }
 
 instance NoThunks (ShelleyPoolreapPredFailure era)
+
+deriving instance NFData (ShelleyPoolreapPredFailure era)
 
 instance Default (UTxOState era) => Default (ShelleyPoolreapState era) where
   def = PoolreapState def def def def
