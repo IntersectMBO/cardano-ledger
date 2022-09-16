@@ -330,6 +330,10 @@ deriving instance
   (Crypto c) =>
   ToCBOR (GenDelegs c)
 
+deriving instance
+  Crypto c =>
+  ToJSON (GenDelegs c)
+
 newtype GKeys c = GKeys {unGKeys :: Set (VKey 'Genesis c)}
   deriving (Eq, NoThunks, Generic)
   deriving (Show) via Quiet (GKeys c)

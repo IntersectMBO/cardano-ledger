@@ -1,7 +1,12 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module Test.Cardano.Ledger.Conway.Serialisation.Generators () where
 
+import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
+import Cardano.Ledger.Crypto (Crypto)
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
+import Test.QuickCheck (Arbitrary (..))
 
--- Currently Conway does not define any types that require serialization,
--- therefore we simply re-export ones from Babbage. This could change in the
--- future, thus is this placeholder module.
+deriving instance Crypto c => Arbitrary (ConwayGenesis c)
