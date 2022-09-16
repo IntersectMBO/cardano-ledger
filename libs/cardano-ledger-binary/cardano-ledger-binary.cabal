@@ -34,8 +34,10 @@ library
 
   exposed-modules:
                      -- Cardano.Ledger.Binary
+                     Cardano.Ledger.Binary.Decoding
+  other-modules:
                      Cardano.Ledger.Binary.Decoding.Coders
-                     -- , Cardano.Ledger.Binary.Decoding.Sharing
+                     Cardano.Ledger.Binary.Decoding.Sharing
                      Cardano.Ledger.Binary.Decoding.Annotated
                      Cardano.Ledger.Binary.Decoding.FromCBOR
                      Cardano.Ledger.Binary.Decoding.Decoder
@@ -50,6 +52,7 @@ library
                      , cborg
                      , containers
                      , formatting
+                     , microlens
                      , mtl
                      , primitive
                      , strict-containers

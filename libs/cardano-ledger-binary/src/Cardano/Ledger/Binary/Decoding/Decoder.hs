@@ -27,9 +27,9 @@ module Cardano.Ledger.Binary.Decoding.Decoder
     decodeFullDecoder,
 
     -- ** Versioning
-    Ver (..),
-    getDecVer,
-    ifDecVerAtLeast,
+    Version (..),
+    getDecoderVersion,
+    ifDecoderVersionAtLeast,
 
     -- * Error reporting
     cborError,
@@ -225,11 +225,11 @@ import Prelude hiding (decodeFloat)
 -- Versioned Decoder
 --------------------------------------------------------------------------------
 
-newtype Ver = Ver Word
+newtype Version = Version Word
   deriving (Eq, Ord, Show, Num)
 
-newtype Decoder s a = Decoder (ReaderT Ver (C.Decoder s) a)
-  deriving (Functor, Applicative, Monad, MonadFail, MonadReader Ver)
+newtype Decoder s a = Decoder (ReaderT Version (C.Decoder s) a)
+  deriving (Functor, Applicative, Monad, MonadFail, MonadReader Version)
 
 -- | Promote a regular `C.Decoder` to a versioned one. Which measn it will work for all
 -- versions.
@@ -237,17 +237,18 @@ fromPlainDecoder :: C.Decoder s a -> Decoder s a
 fromPlainDecoder d = Decoder (ReaderT (const d))
 
 -- | Extract the underlying `C.Decoder` by specifying the concrete version to be used.
-toPlainDecoder :: Ver -> Decoder s a -> C.Decoder s a
+toPlainDecoder :: Version -> Decoder s a -> C.Decoder s a
 toPlainDecoder v (Decoder d) = runReaderT d v
 
+-- | Use the supplied decoder as a plain decoder with current version.
 withPlainDecoder :: Decoder s a -> (C.Decoder s a -> C.Decoder s b) -> Decoder s b
 withPlainDecoder vd f = do
-  curVer <- getDecVer
-  fromPlainDecoder (f (toPlainDecoder curVer vd))
+  curVersion <- getDecoderVersion
+  fromPlainDecoder (f (toPlainDecoder curVersion vd))
 
 decodeFullDecoder ::
   -- | Protocol version
-  Ver ->
+  Version ->
   -- | Name for error reporting
   T.Text ->
   -- | Versioned decoder
@@ -263,10 +264,10 @@ decodeFullDecoder ver txt vd = C.decodeFullDecoder txt (toPlainDecoder ver vd)
 
 -- | Use monadic syntax to extract value level version of the decoder from its type
 --
--- >>> decodeFullDecoder 3 "Version" getDecVer ""
+-- >>> decodeFullDecoder 3 "Version" getDecoderVersion ""
 -- Right 3
-getDecVer :: Decoder s Ver
-getDecVer = ask
+getDecoderVersion :: Decoder s Version
+getDecoderVersion = ask
 
 -- | Conditionoly choose the decoder newer or older deceder, depending on the current
 -- version, which is supplied as a type argument.
@@ -280,15 +281,15 @@ getDecVer = ask
 --
 -- >>> :set -XTypeApplications
 -- >>> newtype Foo = Foo Word32
--- >>> decFoo = Foo <$> ifDecVerAtLeast 2 (fromIntegral <$> decodeWord16) decodeWord32
+-- >>> decFoo = Foo <$> ifDecoderVersionAtLeast 2 (fromIntegral <$> decodeWord16) decodeWord32
 -- >>> :t decFoo
-ifDecVerAtLeast ::
-  Ver ->
+ifDecoderVersionAtLeast ::
+  Version ->
   Decoder s a ->
   Decoder s a ->
   Decoder s a
-ifDecVerAtLeast atLeast newerDecoder olderDecoder = do
-  cur <- getDecVer
+ifDecoderVersionAtLeast atLeast newerDecoder olderDecoder = do
+  cur <- getDecoderVersion
   if cur >= atLeast
     then newerDecoder
     else olderDecoder
@@ -455,7 +456,7 @@ decodeMap ::
   Decoder s v ->
   Decoder s (Map.Map k v)
 decodeMap decodeKey decodeValue =
-  ifDecVerAtLeast
+  ifDecoderVersionAtLeast
     2
     (decodeMapV2 decodeKey decodeValue)
     (decodeMapV1 decodeKey decodeValue)
@@ -524,7 +525,7 @@ decodeSetSkel fromDistinctDescList decodeValue = do
 
 decodeSet :: Ord a => Decoder s a -> Decoder s (Set.Set a)
 decodeSet valueDecoder =
-  ifDecVerAtLeast
+  ifDecoderVersionAtLeast
     2
     (Set.fromList <$> decodeList valueDecoder)
     (decodeSetSkel Set.fromDistinctDescList valueDecoder)
@@ -574,7 +575,7 @@ matchSize lbl requestedSize actualSize = fromPlainDecoder (C.matchSize lbl reque
 -- | @'D.Decoder'@ for list.
 decodeList :: Decoder s a -> Decoder s [a]
 decodeList decodeValue =
-  ifDecVerAtLeast
+  ifDecoderVersionAtLeast
     2
     (decodeCollection decodeListLenOrIndef decodeValue)
     (withPlainDecoder decodeValue C.decodeListWith)

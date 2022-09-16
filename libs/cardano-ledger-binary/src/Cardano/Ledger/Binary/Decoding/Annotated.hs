@@ -27,7 +27,7 @@ import qualified Cardano.Binary as C
 import Cardano.Ledger.Binary.Decoding.Decoder
   ( Decoder,
     DecoderError,
-    Ver,
+    Version,
     decodeFullDecoder,
     withPlainDecoder,
   )
@@ -58,7 +58,7 @@ fromCBORAnnotated = annotatedDecoder fromCBOR
 -- replaces ByteSpan annotations with the corresponding substrings of the input string.
 decodeFullAnnotatedBytes ::
   Functor f =>
-  Ver ->
+  Version ->
   Text ->
   (forall s. Decoder s (f C.ByteSpan)) ->
   BSL.ByteString ->
@@ -83,7 +83,8 @@ annotatorSlice dec = do
   (k, bytes) <- withSlice dec
   pure $ k <*> bytes
 
--- | Pairs the decoder result with an annotator that can be used to construct the exact bytes used to decode the result.
+-- | Pairs the decoder result with an annotator that can be used to construct the exact
+-- bytes used to decode the result.
 withSlice :: Decoder s a -> Decoder s (a, C.Annotator BSL.ByteString)
 withSlice dec = do
   C.Annotated r byteSpan <- annotatedDecoder dec
@@ -91,7 +92,7 @@ withSlice dec = do
 
 -- | Supplies the bytestring argument to both the decoder and the produced annotator.
 decodeAnnotator ::
-  Ver ->
+  Version ->
   Text ->
   (forall s. Decoder s (C.Annotator a)) ->
   BSL.ByteString ->

@@ -47,6 +47,7 @@ library
                      , base >=4.11 && <5
                      , bytestring
                      , cardano-prelude
+                     , cardano-ledger-binary
                      , cborg
                      , containers
                      , deepseq

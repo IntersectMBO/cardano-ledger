@@ -58,11 +58,7 @@ instance (Ord a, Ord b, ToCBOR a, ToCBOR b) => ToCBOR (BiMap b a b) where
   -- can easily use the list length token to distinguish between them.
   toCBOR (MkBiMap l _) = encodeListLen 1 <> toCBOR l
 
-instance
-  forall a b.
-  (Ord a, Ord b, FromCBOR a, FromCBOR b) =>
-  FromCBOR (BiMap b a b)
-  where
+instance (Ord a, Ord b, FromCBOR a, FromCBOR b) => FromCBOR (BiMap b a b) where
   fromCBOR =
     decodeListLen >>= \case
       1 -> decodeMapAsBimap
@@ -75,6 +71,22 @@ instance
         dropMap (void $ fromCBOR @b) (void $ fromCBOR @a)
         return x
       k -> invalidKey (fromIntegral k)
+
+instance (Ord a, Ord b, FromCBOR a, FromCBOR b) => FromSharedCBOR (BiMap b a b) where
+  type Share (BiMap b a b) = (Interns a, Interns b)
+  fromSharedCBOR share =
+    decodeListLen >>= \case
+      1 -> biMapFromMap <$> fromSharedCBOR share
+      -- Previous encoding of 'BiMap' encoded both the forward and reverse
+      -- directions. In this case we skip the reverse encoding. Note that,
+      -- further, the reverse encoding was from 'b' to 'a', not the current 'b'
+      -- to 'Set a', and hence the dropper reflects that.
+      2 -> do
+        !x <- biMapFromMap <$> fromSharedCBOR share
+        dropMap (void $ fromCBOR @b) (void $ fromCBOR @a)
+        return x
+      k -> cborError $ CustomError $ "Unexpected number of lists for BiMap: " ++ show (fromIntegral k)
+  getShare (MkBiMap m1 m2) = (internsFromMap m1, internsFromMap m2)
 
 -- | Decode a serialised CBOR Map as a Bimap
 decodeMapAsBimap ::
