@@ -53,7 +53,6 @@ module Cardano.Ledger.Binary.Decoding.Coders
     -- $Indexes
     Density (..),
     Wrapped (..),
-    Annotator (..),
     Field (..),
     ofield,
     invalidField,
@@ -64,24 +63,14 @@ module Cardano.Ledger.Binary.Decoding.Coders
     -- * Using Duals .
     decodeDual,
 
-    -- * Containers, Combinators, Annotators
+    -- * Containers, Combinators
 
     --
     -- $Combinators
-    mapDecode,
     mapDecodeA,
-    vMapDecode,
-    setDecode,
     setDecodeA,
-    listDecode,
     listDecodeA,
     pairDecodeA,
-    decodeList,
-    decodePair,
-    decodeSeq,
-    decodeStrictSeq,
-    decodeSet,
-    decodeAnnSet,
 
     -- * Low level (Encoding/Decoder) utility functions
     decodeRecordNamed,
@@ -90,39 +79,23 @@ module Cardano.Ledger.Binary.Decoding.Coders
     invalidKey,
     unusedRequiredKeys,
     duplicateKey,
-    decodeNullMaybe,
-    decodeCollectionWithLen,
-    decodeCollection,
-    decodeMap,
-    decodeVMap,
-    decodeMapNoDuplicates,
-    decodeMapContents,
-    decodeMapTraverse,
-    decodeMapContentsTraverse,
-    cborError,
   )
 where
 
 import qualified Cardano.Binary as C
-import Cardano.Ledger.Binary.Decoding.Annotated (Annotator (..))
+import Cardano.Ledger.Binary.Decoding.Annotated (Annotator (..), decodeAnnSet)
 import Cardano.Ledger.Binary.Decoding.Decoder
 import Cardano.Ledger.Binary.Decoding.FromCBOR (FromCBOR (fromCBOR))
 import Control.Applicative (liftA2)
-import Control.Monad (replicateM, unless, when)
+import Control.Monad (unless, when)
 import Control.Monad.Trans (MonadTrans (..))
 import Control.Monad.Trans.Identity (IdentityT (runIdentityT))
-import Data.Functor.Compose (Compose (..))
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
-import Data.Sequence (Seq)
-import qualified Data.Sequence as Seq
-import Data.Sequence.Strict (StrictSeq)
-import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set, insert, member)
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import Data.Typeable (Typeable, typeOf)
-import qualified Data.VMap as VMap
 import Data.Void (Void)
 import Numeric.Natural (Natural)
 
@@ -587,61 +560,16 @@ decodeDual = D fromCBOR
     -- Enforce ToCBOR constraint on t
     _toCBOR = C.toCBOR (undefined :: t)
 
--- Combinators
-
--- | Combinators for building @(Encode ('Closed 'Dense) x)@ and @(Decode ('Closed 'Dense) x)@ objects.
---
--- The use of the low level function 'encodeFoldable' is not self-documenting at all (and
--- not even correct for Maps, even though Map is an instance of Foldable). So instead of
--- writing: @(E encodeFoldable x)@, we want people to write:
---
--- 1. @(mapEncode x)@   if x is a Map
--- 2. @(setEncode x)@   if x is a Set
--- 3. @(listEncode x)@  if x is a List
---
--- To decode one of these foldable instances, we should use one of the aptly named Duals
---
--- 1. @mapDecode@   if x is a Map
--- 2. @setDecode@   if x is a Set
--- 3. @listDecode@  if x is a List
---
--- If one needs an 'Annotated' decoder, one can use (explained further below)
---
--- 1. @mapDecodeA@   if x is a Map
--- 2. @setDecodeA@   if x is a Set
--- 3. @listDecodeA@  if x is a List
--- 4. @pairDecodeA@  if x is a Pair like (Int,Bool)
-
--- | @(mapDecode)@ is the Dual for @(mapEncode x)@
-mapDecode :: (Ord k, FromCBOR k, FromCBOR v) => Decode ('Closed 'Dense) (Map.Map k v)
-mapDecode = D (decodeMap fromCBOR fromCBOR)
-
--- | @(vMapDecode)@ is the Dual for @(vMapEncode x)@
-vMapDecode ::
-  (VMap.Vector kv k, VMap.Vector vv v, Ord k, FromCBOR k, FromCBOR v) =>
-  Decode ('Closed 'Dense) (VMap.VMap kv vv k v)
-vMapDecode = D (decodeVMap fromCBOR fromCBOR)
-
--- | @(setDecode)@ is the Dual for @(setEncode x)@
-setDecode :: (Ord v, FromCBOR v) => Decode ('Closed 'Dense) (Set.Set v)
-setDecode = D (decodeSet fromCBOR)
-
--- | @(listDecode)@ is the Dual for @(listEncode x)@
-listDecode :: (FromCBOR v) => Decode ('Closed 'Dense) [v]
-listDecode = D (decodeList fromCBOR)
-
 -- =============================================================================
 
--- | Combinators for building (Decode ('Closed 'Dense) (Annotator x)) objects. Unlike
--- the combinators above (setDecode, mapDecode, ListDecode) for Non-Annotator types,
--- these combinators take explicit (Decode  ('Closed 'Dense) i) objects as parameters
--- rather than relying on FromCBOR instances as implicit parameters. To get the
--- annotator version, just add 'A' to the end of the non-annotator version decode function.
--- E.g.  setDecodeA, listDecodeA, mapDecodeA. Suppose I want to decode x:: Map [A] (B,C)
--- and I only have Annotator instances of A and C, then the following decodes x.
--- mapDecodeA (listDecodeA From) (pairDecodeA (Ann From) From).
---                                             ^^^^^^^^
--- One can always lift x::(Decode w T) by using Ann. so (Ann x)::(Decode w (Annotator T)).
+-- | Combinators for building (Decode ('Closed 'Dense) (Annotator x)) objects. These
+-- combinators take explicit (Decode ('Closed 'Dense) i) objects as parameters rather than
+-- relying on FromCBOR instances as implicit parameters. To get the annotator version,
+-- just add 'A' to the end of the non-annotator version decode function.  E.g.
+-- setDecodeA, listDecodeA, mapDecodeA. Suppose I want to decode x:: Map [A] (B,C) and I
+-- only have Annotator instances of A and C, then the following decodes x.  mapDecodeA
+-- (listDecodeA From) (pairDecodeA (Ann From) From).  ^^^^^^^^ One can always lift
+-- x::(Decode w T) by using Ann. so (Ann x)::(Decode w (Annotator T)).
 pairDecodeA ::
   Decode ('Closed 'Dense) (Annotator x) ->
   Decode ('Closed 'Dense) (Annotator y) ->
@@ -743,89 +671,3 @@ unusedRequiredKeys used required name =
     message [pair] = report pair ++ message []
     message (pair : more) = report pair ++ ", and " ++ message more
     report (k, f) = "field " ++ f ++ " with key " ++ show k
-
-decodeSeq :: Decoder s a -> Decoder s (Seq a)
-decodeSeq decoder = Seq.fromList <$> decodeList decoder
-
-decodeStrictSeq :: Decoder s a -> Decoder s (StrictSeq a)
-decodeStrictSeq decoder = StrictSeq.fromList <$> decodeList decoder
-
-decodeAnnSet :: Ord t => Decoder s (Annotator t) -> Decoder s (Annotator (Set t))
-decodeAnnSet dec = do
-  xs <- decodeList dec
-  pure (Set.fromList <$> sequence xs)
-
--- Utilities
-
-decodeCollection :: Decoder s (Maybe Int) -> Decoder s a -> Decoder s [a]
-decodeCollection lenOrIndef el = snd <$> decodeCollectionWithLen lenOrIndef el
-
-decodeCollectionWithLen ::
-  Decoder s (Maybe Int) ->
-  Decoder s a ->
-  Decoder s (Int, [a])
-decodeCollectionWithLen lenOrIndef el = do
-  lenOrIndef >>= \case
-    Just len -> (,) len <$> replicateM len el
-    Nothing -> loop (0, []) (not <$> decodeBreakOr) el
-  where
-    loop (n, acc) condition action =
-      condition >>= \case
-        False -> pure (n, reverse acc)
-        True -> action >>= \v -> loop (n + 1, v : acc) condition action
-
-decodeAccWithLen ::
-  Decoder s (Maybe Int) ->
-  (a -> b -> b) ->
-  b ->
-  Decoder s a ->
-  Decoder s (Int, b)
-decodeAccWithLen lenOrIndef combine acc0 action = do
-  mLen <- lenOrIndef
-  let condition = case mLen of
-        Nothing -> const <$> decodeBreakOr
-        Just len -> pure (>= len)
-      loop !i !acc = do
-        shouldStop <- condition
-        if shouldStop i
-          then pure (i, acc)
-          else do
-            v <- action
-            loop (i + 1) (v `combine` acc)
-  loop 0 acc0
-
--- | Just like `decodeMap`, but assumes there are no duplicate keys
-decodeMapNoDuplicates :: Ord a => Decoder s a -> Decoder s b -> Decoder s (Map.Map a b)
-decodeMapNoDuplicates decodeKey decodeValue =
-  snd
-    <$> decodeAccWithLen
-      decodeMapLenOrIndef
-      (uncurry Map.insert)
-      Map.empty
-      decodeInlinedPair
-  where
-    decodeInlinedPair = do
-      !key <- decodeKey
-      !value <- decodeValue
-      pure (key, value)
-
-decodeMapContents :: Decoder s a -> Decoder s [a]
-decodeMapContents = decodeCollection decodeMapLenOrIndef
-
-decodeMapTraverse ::
-  (Ord a, Applicative t) =>
-  Decoder s (t a) ->
-  Decoder s (t b) ->
-  Decoder s (t (Map.Map a b))
-decodeMapTraverse decodeKey decodeValue =
-  fmap Map.fromList <$> decodeMapContentsTraverse decodeKey decodeValue
-
-decodeMapContentsTraverse ::
-  (Applicative t) =>
-  Decoder s (t a) ->
-  Decoder s (t b) ->
-  Decoder s (t [(a, b)])
-decodeMapContentsTraverse decodeKey decodeValue =
-  sequenceA <$> decodeMapContents decodeInlinedPair
-  where
-    decodeInlinedPair = getCompose $ (,) <$> Compose decodeKey <*> Compose decodeValue

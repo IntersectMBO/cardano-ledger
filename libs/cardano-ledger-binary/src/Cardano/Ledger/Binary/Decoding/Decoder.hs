@@ -1,16 +1,12 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE CPP #-}
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Ledger.Binary.Decoding.Decoder
   ( -- * Decoders
@@ -22,9 +18,6 @@ module Cardano.Ledger.Binary.Decoding.Decoder
     C.ByteOffset,
     C.DecodeAction (..),
     C.TokenType (..),
-
-    -- ** Running decoders
-    decodeFullDecoder,
 
     -- ** Versioning
     Version (..),
@@ -40,8 +33,15 @@ module Cardano.Ledger.Binary.Decoding.Decoder
     decodeNominalDiffTime,
     decodeVector,
     decodeSet,
+    setTag,
     decodeMap,
     decodeVMap,
+    decodeSeq,
+    decodeStrictSeq,
+    decodeMapContents,
+    decodeMapNoDuplicates,
+    decodeMapTraverse,
+    decodeMapContentsTraverse,
 
     -- ** Lifted @cborg@ decoders
     enforceSize,
@@ -122,10 +122,8 @@ where
 
 import qualified Cardano.Binary as C
   ( DecoderError (..),
-    decodeFullDecoder,
     decodeListWith,
     enforceSize,
-    fromCBORMaybe,
     matchSize,
   )
 import Codec.CBOR.ByteArray (ByteArray)
@@ -205,10 +203,12 @@ import qualified Codec.CBOR.Decoding as C
   )
 import Control.Monad.Reader
 import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as BSL
+import Data.Functor.Compose (Compose (..))
 import Data.Int (Int16, Int32, Int64, Int8)
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
+import qualified Data.Sequence as Seq
+import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import qualified Data.Text as T
 import Data.Time.Calendar.OrdinalDate (fromOrdinalDate)
@@ -246,18 +246,6 @@ withPlainDecoder vd f = do
   curVersion <- getDecoderVersion
   fromPlainDecoder (f (toPlainDecoder curVersion vd))
 
-decodeFullDecoder ::
-  -- | Protocol version
-  Version ->
-  -- | Name for error reporting
-  T.Text ->
-  -- | Versioned decoder
-  (forall s. Decoder s a) ->
-  -- | Encoded bytes
-  BSL.ByteString ->
-  Either C.DecoderError a
-decodeFullDecoder ver txt vd = C.decodeFullDecoder txt (toPlainDecoder ver vd)
-
 --------------------------------------------------------------------------------
 -- Working with current decoder version
 --------------------------------------------------------------------------------
@@ -270,7 +258,7 @@ getDecoderVersion :: Decoder s Version
 getDecoderVersion = ask
 
 -- | Conditionoly choose the decoder newer or older deceder, depending on the current
--- version, which is supplied as a type argument.
+-- version. Supplied version acts as a pivot.
 --
 -- =====__Example__
 --
@@ -285,7 +273,10 @@ getDecoderVersion = ask
 -- >>> :t decFoo
 ifDecoderVersionAtLeast ::
   Version ->
+  -- | Use this decoder if current decoder version is larger or equal to the supplied
+  -- `Version`
   Decoder s a ->
+  -- | Use this decoder if current decoder version is lower than the supplied `Version`
   Decoder s a ->
   Decoder s a
 ifDecoderVersionAtLeast atLeast newerDecoder olderDecoder = do
@@ -540,6 +531,68 @@ decodeVector decodeValue =
     VG.concat
 {-# INLINE decodeVector #-}
 
+decodeSeq :: Decoder s a -> Decoder s (Seq.Seq a)
+decodeSeq decoder = Seq.fromList <$> decodeList decoder
+
+decodeStrictSeq :: Decoder s a -> Decoder s (StrictSeq.StrictSeq a)
+decodeStrictSeq decoder = StrictSeq.fromList <$> decodeList decoder
+
+decodeAccWithLen ::
+  Decoder s (Maybe Int) ->
+  (a -> b -> b) ->
+  b ->
+  Decoder s a ->
+  Decoder s (Int, b)
+decodeAccWithLen lenOrIndef combine acc0 action = do
+  mLen <- lenOrIndef
+  let condition = case mLen of
+        Nothing -> const <$> decodeBreakOr
+        Just len -> pure (>= len)
+      loop !i !acc = do
+        shouldStop <- condition
+        if shouldStop i
+          then pure (i, acc)
+          else do
+            v <- action
+            loop (i + 1) (v `combine` acc)
+  loop 0 acc0
+
+-- | Just like `decodeMap`, but assumes that there are no duplicate keys
+decodeMapNoDuplicates :: Ord a => Decoder s a -> Decoder s b -> Decoder s (Map.Map a b)
+decodeMapNoDuplicates decodeKey decodeValue =
+  snd
+    <$> decodeAccWithLen
+      decodeMapLenOrIndef
+      (uncurry Map.insert)
+      Map.empty
+      decodeInlinedPair
+  where
+    decodeInlinedPair = do
+      !key <- decodeKey
+      !value <- decodeValue
+      pure (key, value)
+
+decodeMapContents :: Decoder s a -> Decoder s [a]
+decodeMapContents = decodeCollection decodeMapLenOrIndef
+
+decodeMapTraverse ::
+  (Ord a, Applicative t) =>
+  Decoder s (t a) ->
+  Decoder s (t b) ->
+  Decoder s (t (Map.Map a b))
+decodeMapTraverse decodeKey decodeValue =
+  fmap Map.fromList <$> decodeMapContentsTraverse decodeKey decodeValue
+
+decodeMapContentsTraverse ::
+  Applicative t =>
+  Decoder s (t a) ->
+  Decoder s (t b) ->
+  Decoder s (t [(a, b)])
+decodeMapContentsTraverse decodeKey decodeValue =
+  sequenceA <$> decodeMapContents decodeInlinedPair
+  where
+    decodeInlinedPair = getCompose $ (,) <$> Compose decodeKey <*> Compose decodeValue
+
 --------------------------------------------------------------------------------
 -- Time
 --------------------------------------------------------------------------------
@@ -581,7 +634,14 @@ decodeList decodeValue =
     (withPlainDecoder decodeValue C.decodeListWith)
 
 decodeMaybe :: Decoder s a -> Decoder s (Maybe a)
-decodeMaybe d = withPlainDecoder d C.fromCBORMaybe
+decodeMaybe decodeValue = do
+  n <- decodeListLen
+  case n of
+    0 -> return Nothing
+    1 -> do
+      !x <- decodeValue
+      return (Just x)
+    _ -> cborError $ C.DecoderErrorUnknownTag "Maybe" (fromIntegral n)
 
 decodeNullMaybe :: Decoder s a -> Decoder s (Maybe a)
 decodeNullMaybe decoder = do

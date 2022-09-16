@@ -11,32 +11,25 @@ module Cardano.Ledger.Binary.Decoding.Annotated
     annotatedDecoder,
     C.slice,
     fromCBORAnnotated,
-    decodeFullAnnotatedBytes,
     reAnnotate,
     C.Annotator (..),
     annotatorSlice,
-    decodeAnnotator,
     withSlice,
     C.FullByteString (..),
     C.serializeEncoding,
     encodePreEncoded,
+    decodeAnnSet,
   )
 where
 
+import qualified Data.Set as Set
 import qualified Cardano.Binary as C
-import Cardano.Ledger.Binary.Decoding.Decoder
-  ( Decoder,
-    DecoderError,
-    Version,
-    decodeFullDecoder,
-    withPlainDecoder,
-  )
+import Cardano.Ledger.Binary.Decoding.Decoder (Decoder, withPlainDecoder, decodeList)
 import Cardano.Ledger.Binary.Decoding.FromCBOR (FromCBOR (..))
 import Codec.CBOR.Encoding (encodePreEncoded)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.Functor ((<&>))
-import Data.Text (Text)
 
 -- | A decoder for a value paired with an annotation specifying the start and end
 -- of the consumed bytes.
@@ -53,18 +46,6 @@ annotatedDecoder vd =
 -- of the consumed bytes.
 fromCBORAnnotated :: FromCBOR a => Decoder s (C.Annotated a C.ByteSpan)
 fromCBORAnnotated = annotatedDecoder fromCBOR
-
--- | Decodes a value from a ByteString, requiring that the full ByteString is consumed, and
--- replaces ByteSpan annotations with the corresponding substrings of the input string.
-decodeFullAnnotatedBytes ::
-  Functor f =>
-  Version ->
-  Text ->
-  (forall s. Decoder s (f C.ByteSpan)) ->
-  BSL.ByteString ->
-  Either DecoderError (f BS.ByteString)
-decodeFullAnnotatedBytes v lbl decoder bytes =
-  C.annotationBytes bytes <$> decodeFullDecoder v lbl decoder bytes
 
 -- | Reconstruct an annotation by re-serialising the payload to a ByteString.
 reAnnotate :: C.ToCBOR a => C.Annotated a b -> C.Annotated a BS.ByteString
@@ -90,12 +71,10 @@ withSlice dec = do
   C.Annotated r byteSpan <- annotatedDecoder dec
   return (r, C.Annotator (\(C.Full bsl) -> C.slice bsl byteSpan))
 
--- | Supplies the bytestring argument to both the decoder and the produced annotator.
-decodeAnnotator ::
-  Version ->
-  Text ->
-  (forall s. Decoder s (C.Annotator a)) ->
-  BSL.ByteString ->
-  Either DecoderError a
-decodeAnnotator v label' decoder bytes =
-  (\x -> C.runAnnotator x (C.Full bytes)) <$> decodeFullDecoder v label' decoder bytes
+
+-- TODO: Implement version that matches the length of a list with the size of the Set in
+-- order to enforce no duplicates.
+decodeAnnSet :: Ord t => Decoder s (C.Annotator t) -> Decoder s (C.Annotator (Set.Set t))
+decodeAnnSet dec = do
+  xs <- decodeList dec
+  pure (Set.fromList <$> sequence xs)

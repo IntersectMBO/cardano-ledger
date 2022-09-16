@@ -36,9 +36,6 @@ import Numeric.Natural (Natural)
 import Prelude hiding (decodeFloat)
 
 
--- newtype VEncoder (v :: Nat) = VEncoder {unVEncoder :: C.Encoder}
---   deriving (Functor, Applicative, Monad)
-
 -- class ToVCBOR a where
 --   toVCBOR :: KnownNat v => a -> VEncoding v
 

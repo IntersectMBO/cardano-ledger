@@ -34,16 +34,17 @@ library
 
   exposed-modules:
                      -- Cardano.Ledger.Binary
+                     --Cardano.Ledger.Binary.Encoding
                      Cardano.Ledger.Binary.Decoding
   other-modules:
-                     Cardano.Ledger.Binary.Decoding.Coders
-                     Cardano.Ledger.Binary.Decoding.Sharing
+                     Cardano.Ledger.Binary.Encoding.Coders
+                     Cardano.Ledger.Binary.Encoding.Encoder
+                     Cardano.Ledger.Binary.Encoding.ToCBOR
                      Cardano.Ledger.Binary.Decoding.Annotated
-                     Cardano.Ledger.Binary.Decoding.FromCBOR
+                     Cardano.Ledger.Binary.Decoding.Coders
                      Cardano.Ledger.Binary.Decoding.Decoder
-
-  if impl(ghc < 9.2)
-    other-modules:   Cardano.Ledger.Binary.Decoding.NatsCompat
+                     Cardano.Ledger.Binary.Decoding.FromCBOR
+                     Cardano.Ledger.Binary.Decoding.Sharing
 
   build-depends:       base >=4.11 && <5
                      , bytestring
@@ -51,10 +52,12 @@ library
                      , cardano-binary
                      , cborg
                      , containers
+                     , data-fix
                      , formatting
                      , microlens
                      , mtl
                      , primitive
+                     , recursion-schemes
                      , strict-containers
                      , tagged
                      , text
