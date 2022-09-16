@@ -23,8 +23,8 @@ where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Compactible
-import Cardano.Prelude (HeapWords)
-import Control.DeepSeq (NFData)
+import Cardano.HeapWords
+import Cardano.Prelude hiding ((.))
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Group (Abelian, Group (..))
 import Data.Monoid (Sum (..))

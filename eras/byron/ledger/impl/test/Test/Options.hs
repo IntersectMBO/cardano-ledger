@@ -18,7 +18,6 @@ module Test.Options
   )
 where
 
-import Cardano.Prelude hiding (Option)
 import Hedgehog (Gen, Group (..), Property, PropertyT, TestLimit, withTests)
 import Hedgehog.Internal.Property (GroupName (..), PropertyName (..))
 import Test.Cardano.Prelude
@@ -38,6 +37,9 @@ import Test.Tasty.Options
     lookupOption,
     safeRead,
   )
+
+import GHC.Real
+import Cardano.Prelude
 
 --------------------------------------------------------------------------------
 -- TestScenario

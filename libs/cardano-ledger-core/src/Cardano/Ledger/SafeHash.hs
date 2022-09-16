@@ -29,7 +29,8 @@ where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Prelude (HeapWords (..))
+import Cardano.HeapWords
+import Cardano.Prelude hiding ((.))
 import Control.DeepSeq (NFData)
 import Data.ByteString (ByteString)
 import Data.ByteString.Short (ShortByteString, fromShort)
@@ -55,7 +56,7 @@ deriving newtype instance
   Hash.HashAlgorithm (CC.HASH crypto) =>
   SafeToHash (SafeHash crypto index)
 
-deriving newtype instance HeapWords (Hash.Hash (CC.HASH c) i) => HeapWords (SafeHash c i)
+deriving newtype instance HeapWords (SafeHash c i)
 
 deriving instance (Typeable index, CC.Crypto c) => ToCBOR (SafeHash c index)
 

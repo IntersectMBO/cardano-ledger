@@ -101,7 +101,7 @@ instance
   transitionRules = [ppupTransitionNonEmpty]
 
 instance
-  (Typeable era, Era era) =>
+  Era era =>
   ToCBOR (PpupPredicateFailure era)
   where
   toCBOR = \case

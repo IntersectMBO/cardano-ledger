@@ -114,7 +114,6 @@ test-suite test
                      , formatting
                      , hedgehog >= 1.0.4
                      , memory
-                     , text
 
   ghc-options:         -threaded
                        -rtsopts

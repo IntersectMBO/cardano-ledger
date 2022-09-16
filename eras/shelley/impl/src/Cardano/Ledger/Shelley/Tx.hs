@@ -466,8 +466,7 @@ segwitTx
           (SBS.toShort . BSL.toStrict $ fullBytes)
 
 instance
-  ( Typeable era,
-    FromCBOR (Annotator (Core.Script era)),
+  ( FromCBOR (Annotator (Core.Script era)),
     ValidateScript era
   ) =>
   FromCBOR (Annotator (WitnessSetHKD Identity era))

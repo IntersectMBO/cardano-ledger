@@ -306,7 +306,6 @@ instance
     Core.PParams era ~ PParams era,
     Core.Tx era ~ Tx era,
     Core.Value era ~ Coin,
-    Eq (PredicateFailure (Core.EraRule "PPUP" era)),
     Embed (Core.EraRule "PPUP" era) (UTXO era),
     Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
     State (Core.EraRule "PPUP" era) ~ PPUPState era,

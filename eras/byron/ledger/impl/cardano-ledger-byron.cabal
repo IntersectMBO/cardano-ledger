@@ -155,12 +155,11 @@ library
                      , contra-tracer
                      , cryptonite
                      , Cabal
-                     , deepseq
                      , digest
                      , directory
                      , filepath
                      , formatting
-                     , mtl
+                     , heapwords
                      , nothunks
                      , quiet
                      , resourcet
@@ -258,7 +257,6 @@ test-suite cardano-ledger-byron-test
                      , cardano-crypto-wrapper
                      , cardano-prelude
                      , cardano-prelude-test
-                     , cborg
                      , containers
                      , byron-spec-chain
                      , byron-spec-ledger
@@ -266,6 +264,7 @@ test-suite cardano-ledger-byron-test
                      , filepath
                      , formatting
                      , generic-monoid
+                     , heapwords
                      , hedgehog >= 1.0.4
                      , microlens
                      , resourcet
@@ -304,6 +303,7 @@ test-suite epoch-validation-normal-form-test
                      , cardano-prelude-test
                      , directory
                      , filepath
+                     , heapwords
                      , hedgehog >= 1.0.4
                      , resourcet
                      , silently

@@ -134,7 +134,6 @@ instance
   forall h era.
   ( BlockAnn era,
     ValidateScript era,
-    Era.SupportsSegWit era,
     FromCBOR (Annotator (Era.TxSeq era)),
     FromCBOR (Annotator h),
     Typeable h

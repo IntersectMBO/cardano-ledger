@@ -24,6 +24,7 @@ import Cardano.Binary
     szCases,
   )
 import Cardano.Crypto.Signing (RedeemVerificationKey, VerificationKey)
+import Cardano.HeapWords
 import Cardano.Prelude
 import Data.Aeson (ToJSON)
 import Formatting (bprint, build)

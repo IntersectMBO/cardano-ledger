@@ -141,7 +141,7 @@ instance
   type
     PredicateFailure (DELEGS era) =
       DelegsPredicateFailure era
-  type Event _ = DelegsEvent era
+  type Event (DELEGS era) = DelegsEvent era
 
   transitionRules = [delegsTransition]
 

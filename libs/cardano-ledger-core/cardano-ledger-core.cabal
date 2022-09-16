@@ -82,6 +82,7 @@ library
     data-default-class,
     deepseq,
     groups,
+    heapwords,
     iproute,
     mtl,
     network,

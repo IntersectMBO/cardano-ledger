@@ -155,7 +155,7 @@ instance
 instance NoThunks (DelegPredicateFailure era)
 
 instance
-  (Typeable era, Era era, Typeable (Core.Script era)) =>
+  (Era era, Typeable (Core.Script era)) =>
   ToCBOR (DelegPredicateFailure era)
   where
   toCBOR = \case

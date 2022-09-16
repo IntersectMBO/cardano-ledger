@@ -489,9 +489,7 @@ toSet = Set.fromList . toList
 --------------------------------------------------------------------------------
 
 deriveAddShrinks ''Owner
-
 deriveAddShrinks ''VKey
-
 deriveAddShrinks ''Addr
 deriveAddShrinks ''BlockCount
 deriveAddShrinks ''Epoch
@@ -507,9 +505,7 @@ deriveAddShrinks ''VKeyGenesis
 --------------------------------------------------------------------------------
 
 deriveGoblin ''Owner
-
 deriveGoblin ''VKey
-
 deriveGoblin ''Addr
 deriveGoblin ''BlockCount
 deriveGoblin ''Epoch
@@ -546,9 +542,7 @@ instance GeneOps g => Goblin g Lovelace where
 --------------------------------------------------------------------------------
 
 deriveSeedGoblin ''Owner
-
 deriveSeedGoblin ''VKey
-
 deriveSeedGoblin ''Addr
 deriveSeedGoblin ''BlockCount
 deriveSeedGoblin ''Epoch

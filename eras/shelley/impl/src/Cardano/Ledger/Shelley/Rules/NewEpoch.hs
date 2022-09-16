@@ -133,7 +133,6 @@ newEpochTransition ::
   forall era.
   ( Embed (Core.EraRule "MIR" era) (NEWEPOCH era),
     Embed (Core.EraRule "EPOCH" era) (NEWEPOCH era),
-    Event (Core.EraRule "RUPD" era) ~ RupdEvent (Crypto era),
     Environment (Core.EraRule "MIR" era) ~ (),
     State (Core.EraRule "MIR" era) ~ EpochState era,
     Signal (Core.EraRule "MIR" era) ~ (),

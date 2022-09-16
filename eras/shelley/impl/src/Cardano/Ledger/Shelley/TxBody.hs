@@ -141,7 +141,8 @@ import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import qualified Cardano.Ledger.TxIn as Core
 import Cardano.Ledger.Val (DecodeNonNegative (..))
-import Cardano.Prelude (HeapWords (..), panic)
+import Cardano.HeapWords
+import Cardano.Prelude (panic)
 import Control.DeepSeq (NFData (rnf))
 import Control.SetAlgebra (BaseRep (MapR), Embed (..), Exp (Base), HasExp (toExp))
 import Data.Aeson (FromJSON (..), ToJSON (..), Value, (.!=), (.:), (.:?), (.=))

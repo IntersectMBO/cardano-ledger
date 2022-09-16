@@ -312,8 +312,7 @@ initialLedgerStateUTXOW = do
 --   the PredicateFailure (type family) of the context of where it is called.
 transitionRulesUTXOW ::
   forall era utxow.
-  ( Era era,
-    BaseM (utxow era) ~ ShelleyBase,
+  ( BaseM (utxow era) ~ ShelleyBase,
     Embed (Core.EraRule "UTXO" era) (utxow era),
     Environment (Core.EraRule "UTXO" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXO" era) ~ UTxOState era,
@@ -393,7 +392,7 @@ instance
   type Environment (UTXOW era) = UtxoEnv era
   type BaseM (UTXOW era) = ShelleyBase
   type PredicateFailure (UTXOW era) = UtxowPredicateFailure era
-  type Event _ = UtxowEvent era
+  type Event (UTXOW era) = UtxowEvent era
   transitionRules = [transitionRulesUTXOW]
   initialRules = [initialLedgerStateUTXOW]
 
