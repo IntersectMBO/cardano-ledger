@@ -165,7 +165,7 @@ collectTwoPhaseScriptInputs ei sysS pp tx utxo =
             (Right [])
   where
     scriptsAvailable = txscripts utxo tx
-    txinfo lang = txInfo lang ei sysS utxo tx
+    txinfo lang = txInfo pp lang ei sysS utxo tx
     AlonzoScriptsNeeded scriptsNeeded' = getScriptsNeeded utxo (tx ^. bodyTxL)
     neededAndConfirmedToBePlutus =
       mapMaybe (knownToNotBe1Phase scriptsAvailable) scriptsNeeded'

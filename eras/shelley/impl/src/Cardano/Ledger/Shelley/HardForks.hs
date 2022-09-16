@@ -8,6 +8,7 @@ module Cardano.Ledger.Shelley.HardForks
     validatePoolRewardAccountNetID,
     missingScriptsSymmetricDifference,
     forgoRewardPrefilter,
+    translateUpperBoundForPlutusScripts,
   )
 where
 
@@ -57,3 +58,11 @@ forgoRewardPrefilter ::
   pp ->
   Bool
 forgoRewardPrefilter pp = pvMajor (getField @"_protocolVersion" pp) > natVersion @6
+
+-- | Starting with protocol version 9, we translate the upper bound of validity interval
+-- correctly for Plutus scripts.
+translateUpperBoundForPlutusScripts ::
+  (HasField "_protocolVersion" pp ProtVer) =>
+  pp ->
+  Bool
+translateUpperBoundForPlutusScripts pp = pvMajor (getField @"_protocolVersion" pp) > natVersion @8
