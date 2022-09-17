@@ -55,6 +55,7 @@ import Cardano.Binary
     withSlice,
   )
 import Cardano.Crypto.Hash.Class (HashAlgorithm)
+import Cardano.HeapWords (HeapWords (..), heapWords0, heapWords1)
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), validScript)
@@ -72,7 +73,6 @@ import Cardano.Ledger.SafeHash
   )
 import Cardano.Ledger.Serialization (mapFromCBOR)
 import Cardano.Ledger.Shelley.Metadata (Metadatum, validMetadatum)
-import Cardano.Prelude (HeapWords (..), heapWords0, heapWords1)
 import qualified Codec.Serialise as Cborg (Serialise (..))
 import Control.DeepSeq (NFData)
 import Data.ByteString.Lazy (fromStrict)
@@ -87,7 +87,7 @@ import Data.Typeable (Typeable)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
-import qualified Plutus.V1.Ledger.Api as Plutus
+import qualified PlutusLedgerApi.V1 as Plutus
 
 -- =====================================================================
 -- Plutus.Data is the type that Plutus expects as data.

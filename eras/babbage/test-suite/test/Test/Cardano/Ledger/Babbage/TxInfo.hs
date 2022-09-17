@@ -33,8 +33,8 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import GHC.Stack
-import qualified Plutus.V1.Ledger.Api as Plutus
-import qualified Plutus.V2.Ledger.Api as PV2
+import qualified PlutusLedgerApi.V1 as Plutus
+import qualified PlutusLedgerApi.V2 as PV2
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysSucceeds)
 import Test.Cardano.Ledger.EraBuffet (StandardCrypto)
 import Test.Cardano.Ledger.Shelley.Address.Bootstrap (aliceByronAddr)

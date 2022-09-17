@@ -25,16 +25,27 @@ import Cardano.Ledger.Alonzo.PParams
   )
 import Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo (language)
 import Cardano.Ledger.Alonzo.Rules (vKeyLocked)
-import Cardano.Ledger.Alonzo.Scripts (isPlutusScript, pointWiseExUnits, txscriptfee)
 import Cardano.Ledger.Alonzo.Scripts as Alonzo
   ( AlonzoScript (..),
     CostModel,
     CostModels (..),
     ExUnits (..),
     Prices (..),
+    costModelParamsNamesSet,
+    isPlutusScript,
     mkCostModel,
+    pointWiseExUnits,
+    txscriptfee,
   )
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), AlonzoTx (..), IsValid (..), ScriptPurpose (..), hashScriptIntegrity, rdptr, totExUnits)
+import Cardano.Ledger.Alonzo.Tx
+  ( AlonzoEraTx (..),
+    AlonzoTx (..),
+    IsValid (..),
+    ScriptPurpose (..),
+    hashScriptIntegrity,
+    rdptr,
+    totExUnits,
+  )
 import Cardano.Ledger.Alonzo.TxBody
   ( AlonzoEraTxBody (..),
     AlonzoTxBody (..),
@@ -95,7 +106,6 @@ import Data.Set as Set
 import GHC.Records (HasField (..))
 import Lens.Micro
 import Numeric.Natural (Natural)
-import Plutus.V1.Ledger.Api (costModelParamNames)
 import qualified PlutusTx as P (Data (..))
 import qualified PlutusTx as Plutus
 import Test.Cardano.Ledger.AllegraEraGen (genValidityInterval)
@@ -197,13 +207,14 @@ genAlonzoMint startvalue = do
 -- | A cost model that sets everything as being free
 freeCostModel :: CostModel
 freeCostModel =
-  fromRight (error "freeCostModel is not well-formed") $
-    Alonzo.mkCostModel PlutusV1 $ Map.fromSet (const 0) costModelParamNames
+  let lang = PlutusV1
+   in fromRight (error "freeCostModel is not well-formed") $
+        Alonzo.mkCostModel lang $ Map.fromSet (const 0) $ costModelParamsNamesSet lang
 
 -- ================================================================
 
 genPair :: Gen a -> Gen b -> Gen (a, b)
-genPair x y = do a <- x; b <- y; pure (a, b)
+genPair x y = (,) <$> x <*> y
 
 genPlutusData :: Gen Plutus.Data
 genPlutusData = resize 5 (sized gendata)

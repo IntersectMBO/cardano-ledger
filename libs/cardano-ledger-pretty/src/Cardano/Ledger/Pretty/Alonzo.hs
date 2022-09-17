@@ -42,7 +42,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Pretty hiding (ppPParams, ppPParamsUpdate, ppTx, ppTxBody, ppTxOut)
 import Cardano.Ledger.Pretty.Mary (ppMultiAsset, ppTimelock, ppValidityInterval)
 import Cardano.Ledger.SafeHash (SafeToHash)
-import qualified Plutus.V1.Ledger.Api as Plutus
+import qualified PlutusLedgerApi.V1 as Plutus
 import qualified Prettyprinter as PP
 
 ppTxSeq ::

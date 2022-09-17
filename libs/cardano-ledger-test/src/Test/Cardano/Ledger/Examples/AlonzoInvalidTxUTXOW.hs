@@ -77,7 +77,7 @@ import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import GHC.Stack
-import qualified Plutus.V1.Ledger.Api as Plutus
+import qualified PlutusLedgerApi.V1 as Plutus
 import Test.Cardano.Ledger.Examples.STSTestUtils
   ( AlonzoBased (..),
     alwaysSucceedsHash,
@@ -964,7 +964,7 @@ defaultPPs =
     MaxValSize 1000000000,
     MaxTxExUnits $ ExUnits 1000000 1000000,
     MaxBlockExUnits $ ExUnits 1000000 1000000,
-    ProtocolVersion $ ProtVer 5 0,
+    ProtocolVersion $ ProtVer 7 0,
     CollateralPercentage 100
   ]
 

@@ -73,7 +73,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import GHC.Stack
 import Lens.Micro
-import qualified Plutus.V1.Ledger.Api as Plutus
+import qualified PlutusLedgerApi.V1 as Plutus
 import Test.Cardano.Ledger.Examples.STSTestUtils
   ( AlonzoBased (..),
     freeCostModelV1,
