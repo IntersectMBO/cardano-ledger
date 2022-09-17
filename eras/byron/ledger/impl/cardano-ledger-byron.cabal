@@ -33,6 +33,7 @@ common project-config
                       -Wno-safe
                       -Wno-unsafe
                       -Wunused-packages
+                      -Wno-missing-kind-signatures
 
 library
   import:             base, project-config

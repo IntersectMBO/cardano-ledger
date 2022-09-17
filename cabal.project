@@ -1,4 +1,4 @@
-index-state: 2022-09-10T00:00:00Z
+index-state: 2022-09-18T00:00:00Z
 
 packages:
   eras/alonzo/impl
@@ -81,10 +81,11 @@ source-repository-package
   tag: 6a3e582951ff7d2709f5fddf3d09d733c2801e08
   --sha256: 17c88rbva3iw82yg9srlxjv2ia5wjb9cyqw44hik565f5v9svnyg
 
+-- https://github.com/input-output-hk/plutus/pull/4860
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus
-  tag: f680ac6979e069fcc013e4389ee607ff5fa6672f
+  tag: 591be5edb34b4a4ffa443a557d2d23af64e08b17
   --sha256: 180jq8hd0jlg48ya7b5yw3bnd2d5czy0b1agy9ng3mgnzpyq747i
   subdir:
     plutus-ledger-api

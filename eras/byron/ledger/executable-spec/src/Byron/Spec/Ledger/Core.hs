@@ -519,14 +519,14 @@ deriveSeedGoblin ''VKeyGenesis
 -- Goblins instances
 --------------------------------------------------------------------------------
 
+deriveGoblin ''Owner
+deriveGoblin ''VKey
 deriveGoblin ''Addr
 deriveGoblin ''BlockCount
 deriveGoblin ''Epoch
-deriveGoblin ''Owner
 deriveGoblin ''Sig
 deriveGoblin ''Slot
 deriveGoblin ''SlotCount
-deriveGoblin ''VKey
 deriveGoblin ''VKeyGenesis
 
 instance GeneOps g => Goblin g Hash where
