@@ -36,7 +36,7 @@ common project-config
 
   default-extensions: NoImplicitPrelude
 
-  ghc-options:        -Weverything
+  ghc-options:        -Wall
                       -Wno-all-missed-specialisations
                       -Wno-missing-deriving-strategies
                       -Wno-missing-import-lists
