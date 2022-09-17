@@ -23,7 +23,13 @@ import Cardano.Ledger.Alonzo.PParams
     emptyPParams,
     getLanguageView,
   )
-import Cardano.Ledger.Alonzo.Scripts (CostModel, CostModels (..), Prices (..), mkCostModel)
+import Cardano.Ledger.Alonzo.Scripts
+  ( CostModel,
+    CostModels (..),
+    Prices (..),
+    costModelParamsNamesSet,
+    mkCostModel,
+  )
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), utxoEntrySize)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), boundRational)
 import Cardano.Ledger.Block (Block (..))
@@ -38,14 +44,8 @@ import Data.Either (fromRight)
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
-import qualified Data.Set as Set
-import Data.Text as Text (pack)
 import GHC.Stack (HasCallStack)
-import PlutusLedgerApi.Common (showParamName)
 import PlutusLedgerApi.V1 (Data (..))
-import PlutusLedgerApi.V1 as PV1 (ParamName)
-import PlutusLedgerApi.V2 as PV2 (ParamName)
-import PlutusPrelude (enumerate)
 import Test.Cardano.Ledger.Alonzo.Examples.Consensus (ledgerExamplesAlonzo)
 import Test.Cardano.Ledger.Alonzo.Serialisation.CDDL (readDataFile)
 import Test.Cardano.Ledger.EraBuffet (StandardCrypto)
@@ -233,11 +233,9 @@ fromRightError errorMsg =
 -- | A cost model that sets everything as being free
 freeCostModel :: HasCallStack => Language -> CostModel
 freeCostModel lang =
-  fromRightError "freeCostModel is not well-formed" $ mkCostModel lang (cmps lang)
+  fromRightError "freeCostModel is not well-formed" $ mkCostModel lang cmps
   where
-    names PlutusV1 = Set.fromList $ Text.pack . showParamName <$> enumerate @PV1.ParamName
-    names PlutusV2 = Set.fromList $ Text.pack . showParamName <$> enumerate @PV2.ParamName
-    cmps = Map.fromSet (const 0) . names
+    cmps = Map.fromSet (const 0) $ costModelParamsNamesSet lang
 
 exPP :: AlonzoPParams Alonzo
 exPP =

@@ -111,7 +111,6 @@ test-suite cardano-ledger-alonzo-test
     cborg,
     containers,
     data-default-class,
-    hashable >= 1.4.1.0,
     plutus-core,
     plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib} ^>=1.0,
     QuickCheck,
@@ -124,5 +123,4 @@ test-suite cardano-ledger-alonzo-test
     tasty,
     tasty-hunit,
     tasty-quickcheck,
-    text,
     time,

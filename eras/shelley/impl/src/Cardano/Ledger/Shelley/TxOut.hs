@@ -26,6 +26,7 @@ where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
 import qualified Cardano.Crypto.Hash as HS
+import Cardano.HeapWords (HeapWords (..))
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.CompactAddress (CompactAddr, compactAddr, decompactAddr)
 import Cardano.Ledger.Compactible (Compactible (CompactForm, fromCompact, toCompact))
@@ -38,7 +39,6 @@ import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (_minUTxOValue)
 import Cardano.Ledger.Val (DecodeNonNegative (..))
-import Cardano.HeapWords (HeapWords (..))
 import Control.DeepSeq (NFData (rnf))
 import Data.ByteString.Short (ShortByteString, pack)
 import Data.Maybe (fromMaybe)

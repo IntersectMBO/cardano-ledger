@@ -30,6 +30,8 @@ module Cardano.Ledger.Alonzo.Scripts
     -- * Cost Model
     CostModel,
     mkCostModel,
+    costModelParamsNames,
+    costModelParamsNamesSet,
     getCostModelLanguage,
     getCostModelParams,
     getEvaluationContext,
@@ -309,14 +311,19 @@ decodeCostModelMap = decodeMapByKey fromCBOR decodeCostModel
 
 decodeCostModel :: Language -> Decoder s CostModel
 decodeCostModel lang = do
+  let keys = costModelParamsNamesSet lang
   checked <- mkCostModel lang <$> decodeArrayAsMap keys fromCBOR
   case checked of
     Left e -> fail $ show e
     Right cm -> pure cm
-  where
-    keys = case lang of
-      PlutusV1 -> Set.fromList $ Text.pack . showParamName <$> enumerate @PV1.ParamName
-      PlutusV2 -> Set.fromList $ Text.pack . showParamName <$> enumerate @PV2.ParamName
+
+costModelParamsNames :: Language -> [Text]
+costModelParamsNames = \case
+  PlutusV1 -> Text.pack . showParamName <$> enumerate @PV1.ParamName
+  PlutusV2 -> Text.pack . showParamName <$> enumerate @PV2.ParamName
+
+costModelParamsNamesSet :: Language -> Set.Set Text
+costModelParamsNamesSet = Set.fromList . costModelParamsNames
 
 decodeArrayAsMap :: Ord a => Set a -> Decoder s b -> Decoder s (Map a b)
 decodeArrayAsMap keys decodeValue = do

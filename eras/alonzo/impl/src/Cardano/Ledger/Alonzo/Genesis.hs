@@ -27,6 +27,7 @@ import Cardano.Ledger.Alonzo.Scripts
     ExUnits (..),
     ExUnits',
     Prices (..),
+    costModelParamsNames,
     getCostModelParams,
     mkCostModel,
   )
@@ -42,17 +43,12 @@ import Data.Aeson.Types (FromJSONKey (..), ToJSONKey (..), toJSONKeyText)
 import Data.Coders
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (mapMaybe)
 import Data.Scientific (fromRationalRepetendLimited)
 import Data.Text (Text)
-import qualified Data.Text as Text
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
-import PlutusLedgerApi.Common (showParamName)
-import PlutusLedgerApi.V1 as PV1 (ParamName)
-import PlutusPrelude (enumerate)
 
 data AlonzoGenesis = AlonzoGenesis
   { coinsPerUTxOWord :: !Coin,
@@ -215,8 +211,8 @@ instance ToJSONKey Language where
 instance FromJSONKey Language where
   fromJSONKey = Aeson.FromJSONKeyTextParser languageFromText
 
-validateCostModel :: MonadFail m => (Language, Map Text Integer) -> m (Language, CostModel)
-validateCostModel (lang, cmps) = case mkCostModel lang cmps of
+validateCostModel :: MonadFail m => Language -> Map Text Integer -> m (Language, CostModel)
+validateCostModel lang cmps = case mkCostModel lang cmps of
   Left err -> fail $ show err
   Right cm -> pure (lang, cm)
 
@@ -225,19 +221,19 @@ validateCostModel (lang, cmps) = case mkCostModel lang cmps of
 -- Therefore we just replace (in order) the new keys for the old ones.
 translateLegacyV1paramNames :: Map Text Integer -> Map Text Integer
 translateLegacyV1paramNames cmps =
-  Map.fromList $
-    zipWith (\(_, v) k2 -> (k2, v)) (Map.toList cmps) (Text.pack . showParamName <$> enumerate @PV1.ParamName)
+  Map.fromList $ zip (costModelParamsNames PlutusV1) (Map.elems cmps)
 
 instance FromJSON CostModels where
   parseJSON = Aeson.withObject "CostModels" $ \o -> do
     plutusV1 <- o .:? "PlutusV1"
     plutusV2 <- o .:? "PlutusV2"
     let plutusV1' = translateLegacyV1paramNames <$> plutusV1
-    cms <- mapM validateCostModel $ mapMaybe f [(PlutusV1, plutusV1'), (PlutusV2, plutusV2)]
+    cms <-
+      sequence
+        [ validateCostModel lang cm
+          | (lang, Just cm) <- [(PlutusV1, plutusV1'), (PlutusV2, plutusV2)]
+        ]
     pure . CostModels . Map.fromList $ cms
-    where
-      f (_, Nothing) = Nothing
-      f (a, Just b) = Just (a, b)
 
 instance FromJSON AlonzoGenesis where
   parseJSON = Aeson.withObject "Alonzo Genesis" $ \o -> do
