@@ -135,8 +135,8 @@ import Data.UMap (View (Rewards))
 import qualified Data.UMap as UM
 import GHC.Stack
 import Numeric.Natural (Natural)
-import qualified Plutus.V1.Ledger.Api as Plutus
-import Plutus.V1.Ledger.EvaluationContext (costModelParamsForTesting)
+import qualified PlutusLedgerApi.V1 as Plutus
+import PlutusLedgerApi.Test.EvaluationContext (costModelParamsForTesting)
 import Test.Cardano.Ledger.Generic.Fields
   ( PParamsField (..),
     TxBodyField (..),

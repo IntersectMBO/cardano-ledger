@@ -31,9 +31,9 @@ import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.SafeHash (SafeHash)
 import Cardano.Ledger.Serialization (decodeRecordNamed)
-import Cardano.Prelude (HasCallStack)
 import Control.DeepSeq (NFData)
 import GHC.Generics (Generic)
+import GHC.Stack (HasCallStack)
 import NoThunks.Class (NoThunks (..))
 
 -- ===================================================================================
@@ -67,7 +67,7 @@ data TxIn crypto = TxIn !(TxId crypto) {-# UNPACK #-} !TxIx
 
 -- | Construct `TxIn` while throwing an error for an out of range `TxIx`. Make
 -- sure to use it only for testing.
-mkTxInPartial :: HasCallStack => TxId crypto -> Integer -> TxIn crypto
+mkTxInPartial :: HasCallStack => TxId c -> Integer -> TxIn c
 mkTxInPartial txId = TxIn txId . mkTxIxPartial
 
 deriving instance Eq (TxIn crypto)

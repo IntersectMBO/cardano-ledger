@@ -37,6 +37,7 @@ import qualified Data.Map.Strict as Map
 import Data.Text (Text)
 import GHC.Records (HasField)
 import Lens.Micro
+import qualified PlutusLedgerApi.V1 as Plutus
 import Test.Cardano.Ledger.Alonzo.PlutusScripts (testingCostModelV1)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()

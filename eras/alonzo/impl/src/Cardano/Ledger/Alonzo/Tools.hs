@@ -51,8 +51,8 @@ import qualified Data.Set as Set
 import Data.Text (Text)
 import GHC.Records (HasField (..))
 import Lens.Micro
-import qualified Plutus.V1.Ledger.Api as PV1
-import qualified Plutus.V2.Ledger.Api as PV2
+import qualified PlutusLedgerApi.V1 as PV1
+import qualified PlutusLedgerApi.V2 as PV2
 
 -- | Script failures that can be returned by 'evaluateTransactionExecutionUnits'.
 data TransactionScriptFailure c

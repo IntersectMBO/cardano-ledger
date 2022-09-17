@@ -17,7 +17,6 @@ module Cardano.Ledger.Alonzo.TxInfo
     transDataHash,
     transDataHash',
     transKeyHash,
-    transScriptHash,
     transSafeHash,
     transHash,
     txInfoId,
@@ -150,9 +149,9 @@ import GHC.Records (HasField (..))
 import Lens.Micro
 import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
-import qualified Plutus.V1.Ledger.Api as PV1
-import Plutus.V1.Ledger.Contexts ()
-import qualified Plutus.V2.Ledger.Api as PV2
+import qualified PlutusLedgerApi.V1 as PV1
+import PlutusLedgerApi.V1.Contexts ()
+import qualified PlutusLedgerApi.V2 as PV2
 import Prettyprinter (Pretty (..))
 
 -- =========================================================
@@ -230,9 +229,6 @@ transDataHash' safe = PV1.DatumHash (transSafeHash safe)
 transKeyHash :: KeyHash d c -> PV1.PubKeyHash
 transKeyHash (KeyHash h) = PV1.PubKeyHash (PV1.toBuiltin (hashToBytes h))
 
-transScriptHash :: ScriptHash c -> PV1.ValidatorHash
-transScriptHash (ScriptHash h) = PV1.ValidatorHash (PV1.toBuiltin (hashToBytes h))
-
 transSafeHash :: SafeHash c i -> PV1.BuiltinByteString
 transSafeHash = PV1.toBuiltin . hashToBytes . extractHash
 
@@ -242,9 +238,9 @@ transHash = hashToBytes
 txInfoId :: TxId crypto -> PV1.TxId
 txInfoId (TxId safe) = PV1.TxId (transSafeHash safe)
 
-transStakeCred :: Credential keyrole crypto -> PV1.Credential
-transStakeCred (ScriptHashObj (ScriptHash kh)) =
-  PV1.ScriptCredential (PV1.ValidatorHash (PV1.toBuiltin (hashToBytes kh)))
+transStakeCred :: Credential kr c -> PV1.Credential
+transStakeCred (ScriptHashObj (ScriptHash sh)) =
+  PV1.ScriptCredential (PV1.ScriptHash (PV1.toBuiltin (hashToBytes sh)))
 transStakeCred (KeyHashObj (KeyHash kh)) =
   PV1.PubKeyCredential (PV1.PubKeyHash (PV1.toBuiltin (hashToBytes kh)))
 
@@ -259,8 +255,7 @@ transStakeReference StakeRefNull = Nothing
 transCred :: Credential keyrole crypto -> PV1.Credential
 transCred (KeyHashObj (KeyHash kh)) =
   PV1.PubKeyCredential (PV1.PubKeyHash (PV1.toBuiltin (hashToBytes kh)))
-transCred (ScriptHashObj (ScriptHash kh)) =
-  PV1.ScriptCredential (PV1.ValidatorHash (PV1.toBuiltin (hashToBytes kh)))
+transCred (ScriptHashObj (ScriptHash sh)) = PV1.ScriptCredential (PV1.ScriptHash (PV1.toBuiltin (hashToBytes sh)))
 
 transAddr :: Addr crypto -> Maybe PV1.Address
 transAddr (Addr _net object stake) = Just (PV1.Address (transCred object) (transStakeReference stake))
