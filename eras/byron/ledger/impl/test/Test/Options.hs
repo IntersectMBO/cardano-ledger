@@ -18,7 +18,7 @@ module Test.Options
   )
 where
 
-import Cardano.Prelude hiding (Option)
+import Cardano.Prelude
 import Hedgehog (Gen, Group (..), Property, PropertyT, TestLimit, withTests)
 import Hedgehog.Internal.Property (GroupName (..), PropertyName (..))
 import Test.Cardano.Prelude
