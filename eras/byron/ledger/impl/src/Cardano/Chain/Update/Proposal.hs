@@ -1,5 +1,9 @@
--- this is needed for recoveryBytes = annotation
+
+{-# LANGUAGE CPP #-}
+#if __GLASGOW_HASKELL__ >= 900
+-- this is needed for 9.2: recoveryBytes = annotation
 {-# OPTIONS_GHC -Wno-ambiguous-fields #-}
+#endif
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
