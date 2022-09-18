@@ -97,6 +97,7 @@ import Formatting
     later,
   )
 import qualified Formatting.Buildable as B
+import Cardano.HeapWords (HeapWords (..), heapWords3)
 import NoThunks.Class (NoThunks (..))
 import Text.JSON.Canonical
   ( FromJSON (..),

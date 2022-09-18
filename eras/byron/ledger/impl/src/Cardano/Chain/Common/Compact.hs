@@ -16,6 +16,7 @@ where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeFull', serialize')
 import Cardano.Chain.Common.Address (Address (..))
 import Cardano.Prelude
+import Cardano.HeapWords (HeapWords)
 import Data.ByteString.Short (ShortByteString)
 import qualified Data.ByteString.Short as BSS (fromShort, toShort)
 import NoThunks.Class (NoThunks (..))

@@ -38,6 +38,7 @@ import Cardano.Chain.Common.CBOR
   )
 import Cardano.Crypto (Hash, serializeCborHash, shortHashF)
 import Cardano.Prelude
+import Cardano.HeapWords (HeapWords (..))
 import Data.Aeson (ToJSON)
 import Formatting (Format, bprint, build, builder, int)
 import qualified Formatting.Buildable as B

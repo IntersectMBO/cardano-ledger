@@ -40,6 +40,7 @@ import Cardano.Binary
     dropWord8,
   )
 import Cardano.Prelude
+import Cardano.HeapWords (HeapWords (..), heapWords2)
 import Data.Aeson (ToJSON (..))
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Lazy.Char8 as LChar8

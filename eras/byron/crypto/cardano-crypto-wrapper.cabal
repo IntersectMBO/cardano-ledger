@@ -92,6 +92,7 @@ library
                      , cryptonite
                      , data-default
                      , formatting
+                     , heapwords
                      , memory
                      , nothunks
                      , text

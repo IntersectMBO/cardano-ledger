@@ -19,6 +19,7 @@ import Cardano.Binary
     encodeListLen,
     matchSize,
   )
+import Cardano.HeapWords (HeapWords (..))
 import Cardano.Crypto.ProtocolMagic
   ( AProtocolMagic (..),
     RequiresNetworkMagic (..),

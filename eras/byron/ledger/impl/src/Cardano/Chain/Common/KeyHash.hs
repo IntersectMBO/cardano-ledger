@@ -16,6 +16,7 @@ import Cardano.Chain.Common.AddressHash
 import Cardano.Crypto (decodeAbstractHash, hashHexF)
 import Cardano.Crypto.Signing (VerificationKey)
 import Cardano.Prelude
+import Cardano.HeapWords (HeapWords)
 import Formatting (formatToString)
 import Formatting.Buildable (Buildable)
 import NoThunks.Class (NoThunks (..))

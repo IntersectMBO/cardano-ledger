@@ -65,6 +65,7 @@ import Cardano.Binary
     serialize,
     withWordSize,
   )
+import Cardano.HeapWords
 import Cardano.Prelude
 import Crypto.Hash (Blake2b_256, Digest, HashAlgorithm, hashDigestSize)
 import qualified Crypto.Hash as Hash

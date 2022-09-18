@@ -115,6 +115,7 @@ import Cardano.Crypto
     hashDecoded,
     hashRaw,
   )
+import Cardano.HeapWords (HeapWords (..))
 import Cardano.Prelude
 import Control.Monad.Trans.Resource (ResIO)
 import qualified Data.ByteString.Lazy as BSL

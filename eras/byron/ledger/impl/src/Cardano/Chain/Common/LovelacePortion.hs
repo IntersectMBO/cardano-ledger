@@ -21,6 +21,7 @@ import Control.Monad (fail)
 import qualified Data.Aeson as Aeson
 import Formatting (bprint, build, float, int, sformat)
 import qualified Formatting.Buildable as B
+import Cardano.HeapWords (HeapWords)
 import NoThunks.Class (NoThunks (..))
 import Quiet
 import Text.JSON.Canonical (FromJSON (..), ToJSON (..))
