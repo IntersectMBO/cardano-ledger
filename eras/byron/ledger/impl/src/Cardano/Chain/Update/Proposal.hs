@@ -1,3 +1,5 @@
+-- this is needed for recoveryBytes = annotation
+{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
