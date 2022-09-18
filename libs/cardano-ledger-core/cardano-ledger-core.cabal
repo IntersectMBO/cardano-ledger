@@ -81,6 +81,7 @@ library
     cardano-data,
     cardano-ledger-byron,
     cardano-slotting,
+    cardano-prelude,
     cborg,
     containers,
     data-default-class,
