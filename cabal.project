@@ -47,8 +47,8 @@ test-show-details: streaming
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 96cea98995bfcee4d6a6727130e97ec824a1035f
-  --sha256: 0p25aq8r4v8x84gxg6iqa2f2m2m07qp69w5z6j8gf4fcv4ci3fmg
+  tag: 8b9f816b8f9b065ca5c13f2aafdd5f45ae5dc82c
+  --sha256: 1vqs9lg3b91x2np9d75wak8l26i03fm3k2icsz7pv099fscsq0ln
   subdir:
     base-deriving-via
     binary
@@ -70,8 +70,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
-  tag: 760cc6b3602da0970af5cfddaa2af97741a368a6
-  --sha256: 0kdbp61i82mp8yihzi12z7a0nqidw9mn0c0xyz847r1rrqbkx4c7
+  tag: 678673bd79d0a695ce06a7a19da3bfa8fc184606
+  --sha256: 0m93ilnf18xfmhix3blsvq7q1ya42gksb1rl9rvf9xb6fzxbba1d
   subdir:
     cardano-prelude
     cardano-prelude-test
