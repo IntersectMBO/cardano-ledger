@@ -117,6 +117,7 @@ allow-newer:
   plutus-core:some,
   plutus-tx-plugin:ghc,
   Unique:hashable,
+  *:base,
 --  tasty-hedgehog:hedgehog,
 
 --  *:tasty-hedgehog,
@@ -132,7 +133,7 @@ constraints:
 
   , protolude >= 0.3.2
 
-  , persistent < 2.14
+--  , persistent < 2.14
 
 source-repository-package
   type: git
