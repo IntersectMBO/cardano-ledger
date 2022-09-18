@@ -360,7 +360,6 @@ test-suite cardano-ledger-byron-test
                      , cardano-crypto-wrapper
                      , cardano-prelude
                      , cardano-prelude-test
-                     , cborg
                      , containers
                      , byron-spec-chain
                      , byron-spec-ledger
