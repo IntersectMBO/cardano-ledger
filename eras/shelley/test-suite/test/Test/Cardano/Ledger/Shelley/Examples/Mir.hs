@@ -36,7 +36,6 @@ import Cardano.Ledger.Shelley.LedgerState
     PulsingRewUpdate,
     emptyRewardUpdate,
   )
-import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Rules
   ( ShelleyBbodyPredFailure (..),
     ShelleyDelegPredFailure (..),
@@ -107,7 +106,7 @@ initUTxO =
     aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
     bobInitCoin = Val.inject $ Coin $ 1 * 1000 * 1000 * 1000 * 1000 * 1000
 
-initStMIR :: forall era. (ShelleyTest era, PParams era ~ ShelleyPParams era) => Coin -> ChainState era
+initStMIR :: forall era. (ShelleyTest era) => Coin -> ChainState era
 initStMIR treasury = cs {chainNes = (chainNes cs) {nesEs = es'}}
   where
     cs = initSt @era initUTxO
@@ -149,7 +148,7 @@ txbodyEx1 pot =
     SNothing
   where
     aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
-    aliceCoinEx1 = aliceInitCoin <-> (Val.inject $ feeTx1 <+> _keyDeposit ppEx)
+    aliceCoinEx1 = aliceInitCoin <-> (Val.inject $ feeTx1 <+> (Coin 7))
 
 mirWits :: (CryptoClass.Crypto c) => [Int] -> [KeyPair 'Witness c]
 mirWits nodes = asWitness <$> map (\x -> cold . coreNodeIssuerKeys $ x) nodes

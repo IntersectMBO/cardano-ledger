@@ -64,17 +64,16 @@ library
     containers,
     generic-random,
     hashable,
-    mtl,
-    microlens,
-    QuickCheck >= 2.13.2,
     cardano-ledger-shelley-test,
     cardano-ledger-shelley,
     cardano-strict-containers,
+    microlens,
     small-steps,
-    tasty-hunit,
-    tasty-quickcheck,
     tasty,
+    tasty-quickcheck,
+    tasty-hunit,
     text,
+    QuickCheck
   hs-source-dirs: src
 
 test-suite cardano-ledger-shelley-ma-test

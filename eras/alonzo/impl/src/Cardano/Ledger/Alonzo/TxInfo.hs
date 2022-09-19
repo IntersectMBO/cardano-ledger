@@ -153,8 +153,7 @@ import Data.Time.Clock (nominalDiffTimeToSeconds)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Data.Typeable (Proxy (..), Typeable)
 import GHC.Generics (Generic)
-import GHC.Records (HasField (..))
-import Lens.Micro
+import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.V1 as PV1
@@ -289,7 +288,7 @@ slotToPOSIXTime ei sysS s = do
 
 -- | translate a validity interval to POSIX time
 transVITime ::
-  HasField "_protocolVersion" (PParams era) ProtVer =>
+  EraPParams era =>
   PParams era ->
   EpochInfo (Either Text) ->
   SystemStart ->
@@ -302,7 +301,7 @@ transVITime _ ei sysS (ValidityInterval (SJust i) SNothing) = do
 transVITime pp ei sysS (ValidityInterval SNothing (SJust i)) = do
   t <- slotToPOSIXTime ei sysS i
   pure $
-    if HardForks.translateUpperBoundForPlutusScripts pp
+    if HardForks.translateUpperBoundForPlutusScripts (pp ^. ppProtocolVersionL)
       then
         PV1.Interval
           (PV1.LowerBound PV1.NegInf True)

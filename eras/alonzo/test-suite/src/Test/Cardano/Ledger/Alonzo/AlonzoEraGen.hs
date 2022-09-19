@@ -99,7 +99,6 @@ import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq ((:|>)))
 import qualified Data.Sequence.Strict as Seq (fromList)
 import Data.Set as Set
-import GHC.Records (HasField (..))
 import Lens.Micro
 import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.V1 as PV1 (Data, ParamName)
@@ -226,13 +225,13 @@ genPlutusData = resize 5 (sized gendata)
   where
     gendata n
       | n > 0 =
-          oneof
-            [ Plutus.I <$> arbitrary,
-              Plutus.B <$> arbitrary,
-              Plutus.Map <$> listOf (genPair (gendata (n `div` 2)) (gendata (n `div` 2))),
-              Plutus.Constr <$> arbitrary <*> listOf (gendata (n `div` 2)),
-              Plutus.List <$> listOf (gendata (n `div` 2))
-            ]
+        oneof
+          [ Plutus.I <$> arbitrary,
+            Plutus.B <$> arbitrary,
+            Plutus.Map <$> listOf (genPair (gendata (n `div` 2)) (gendata (n `div` 2))),
+            Plutus.Constr <$> arbitrary <*> listOf (gendata (n `div` 2)),
+            Plutus.List <$> listOf (gendata (n `div` 2))
+          ]
     gendata _ = oneof [Plutus.I <$> arbitrary, Plutus.B <$> arbitrary]
 
 genSet :: Ord a => Gen a -> Gen (Set a)
@@ -366,10 +365,6 @@ genAlonzoPParams constants = do
       c = 25 -- percent of fee in collateral
       mxC = 100 -- max number of inputs in collateral
   pure (extendPP shelleypp ada cost price mxTx mxBl mxV c mxC)
-
--- | Since Alonzo PParams don't have this field, we have to compute something here.
-instance HasField "_minUTxOValue" (AlonzoPParams (AlonzoEra c)) Coin where
-  getField _ = Coin 4000
 
 bigMem :: Natural
 bigMem = 50000

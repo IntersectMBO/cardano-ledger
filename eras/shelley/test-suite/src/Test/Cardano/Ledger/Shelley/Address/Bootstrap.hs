@@ -39,6 +39,7 @@ import Cardano.Ledger.Keys
     hashKey,
   )
 import Cardano.Ledger.Keys.Bootstrap
+import Cardano.Ledger.PParams
 import Cardano.Ledger.SafeHash (extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (IncrementalStake (..), PPUPState (..), UTxOState (..))
@@ -46,7 +47,6 @@ import Cardano.Ledger.Shelley.LedgerState (IncrementalStake (..), PPUPState (..)
 import Cardano.Ledger.Shelley.PParams
   ( ProposedPPUpdates (..),
     ShelleyPParamsHKD (..),
-    emptyPParams,
   )
 import Cardano.Ledger.Shelley.Rules
   ( ShelleyUTXOW,
@@ -76,6 +76,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import qualified Hedgehog.Gen
 import qualified Hedgehog.Range
+import Lens.Micro
 import qualified Test.Cardano.Chain.Common.Gen as Byron
 import qualified Test.Cardano.Crypto.Gen as Byron
 import qualified Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes as Original (C_Crypto)
@@ -169,7 +170,7 @@ utxoEnv :: UtxoEnv C
 utxoEnv =
   UtxoEnv
     0
-    emptyPParams {_maxTxSize = 1000}
+    (emptyPParams ^. ppMaxTxSize .~ 1000)
     def
     (GenDelegs mempty)
 

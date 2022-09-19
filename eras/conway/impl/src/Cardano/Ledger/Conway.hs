@@ -21,7 +21,6 @@ import Cardano.Ledger.Babbage.TxBody (allSizedOutputsTxBodyF, referenceInputsTxB
 import Cardano.Ledger.Babbage.TxInfo (babbageTxInfo)
 import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Conway.Era (ConwayEra)
-import Cardano.Ledger.Conway.Genesis (extendPPWithGenesis)
 import Cardano.Ledger.Conway.Rules ()
 import Cardano.Ledger.Conway.Translation ()
 import Cardano.Ledger.Conway.Tx ()
@@ -47,7 +46,7 @@ type Conway = ConwayEra StandardCrypto
 instance Crypto c => API.CanStartFromGenesis (ConwayEra c) where
   type AdditionalGenesisConfig (ConwayEra c) = AlonzoGenesis
 
-  initialState = API.initialStateFromGenesis extendPPWithGenesis
+  initialState = API.initialStateFromGenesis (\(PParams pp) gen -> PParams $ augmentPPWithGenesis pp gen)
 
 instance Crypto c => ExtendedUTxO (ConwayEra c) where
   txInfo = babbageTxInfo

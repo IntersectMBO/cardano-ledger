@@ -108,7 +108,7 @@ taylorExpCmpCheck a p s = case taylorExpCmp 3 p s of
   MaxReached _ -> False
 
 praosLeaderCheck :: (RealFrac a, Show a, Enum a) => a -> a -> a -> a -> Bool
-praosLeaderCheck f a p sigma = case taylorExpCmp 3 (1 / q) (-sigma * c) of
+praosLeaderCheck f a p sigma = case taylorExpCmp 3 (1 / q) (- sigma * c) of
   ABOVE _ _ -> p >= a
   BELOW _ _ -> p < a
   MaxReached _ -> False
@@ -122,9 +122,9 @@ praosLeaderCheck f a p sigma = case taylorExpCmp 3 (1 / q) (-sigma * c) of
 
 prop_FPMonotonic :: Monotonic FixedPoint
 prop_FPMonotonic constrain f x y =
-  both constrain (x, y) ==>
-    classify zeroes "both zero case" $
-      (zeroes || monotonic f x y) === True
+  both constrain (x, y)
+    ==> classify zeroes "both zero case"
+    $ (zeroes || monotonic f x y) === True
   where
     zeroes = both zero (x, y)
     zero a = (f a, 0) ~= epsFP
@@ -160,16 +160,16 @@ prop_FPlnPow (Unit x) (Unit y) = (x > 0) ==> (log_pow x y ~= epsFP) === True
 
 prop_neg_taylorExpCmp :: UnitInterval FixedPoint -> UnitInterval FixedPoint -> Property
 prop_neg_taylorExpCmp (Unit p) (Unit s) =
-  both (\x -> 0 < x && x < 1) (p, s) ==>
-    taylorExpCmpCheck (exp' sm) p sm
+  both (\x -> 0 < x && x < 1) (p, s)
+    ==> taylorExpCmpCheck (exp' sm) p sm
   where
-    sm = -s
+    sm = - s
 
 prop_LeaderCmp :: UnitInterval FixedPoint -> UnitInterval FixedPoint -> Property
 prop_LeaderCmp (Unit p) (Unit s) =
-  both (\x -> 0 < x && x < 1) (p, s) ==>
-    classify (p < a) "is leader" $
-      praosLeaderCheck f a p s
+  both (\x -> 0 < x && x < 1) (p, s)
+    ==> classify (p < a) "is leader"
+    $ praosLeaderCheck f a p s
   where
     a = leader f s
     f = 1 / 10

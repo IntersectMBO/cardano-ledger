@@ -22,14 +22,13 @@ module Cardano.Ledger.Shelley.Rules.Delpl
   )
 where
 
-import Cardano.Ledger.BaseTypes (ProtVer, ShelleyBase, invalidKey)
+import Cardano.Ledger.BaseTypes (ShelleyBase, invalidKey)
 import Cardano.Ledger.Binary
   ( FromCBOR (..),
     ToCBOR (..),
     decodeRecordSum,
     encodeListLen,
   )
-import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Era (ShelleyDELPL)
 import Cardano.Ledger.Shelley.LedgerState
@@ -54,7 +53,6 @@ import Control.State.Transition
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import GHC.Records (HasField)
 import NoThunks.Class (NoThunks (..))
 
 data DelplEnv era = DelplEnv
@@ -206,9 +204,7 @@ instance
   wrapEvent = PoolEvent
 
 instance
-  ( Era era,
-    HasField "_protocolVersion" (PParams era) ProtVer,
-    HasField "_keyDeposit" (PParams era) Coin,
+  ( EraPParams era,
     PredicateFailure (EraRule "DELEG" era) ~ ShelleyDelegPredFailure era
   ) =>
   Embed (ShelleyDELEG era) (ShelleyDELPL era)

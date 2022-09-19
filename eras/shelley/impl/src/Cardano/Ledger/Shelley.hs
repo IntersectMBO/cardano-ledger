@@ -5,14 +5,13 @@ module Cardano.Ledger.Shelley
     ShelleyTxOut,
     ShelleyTxBody,
     ShelleyTxAuxData,
-    ShelleyPParams,
     nativeMultiSigTag,
   )
 where
 
 import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Shelley.PParams ()
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Shelley.PParams (ShelleyPParams)
 import Cardano.Ledger.Shelley.Rules ()
 import Cardano.Ledger.Shelley.Tx
   ( ShelleyTx,

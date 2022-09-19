@@ -72,6 +72,10 @@ import Cardano.Ledger.PoolDistr as X
     individualPoolStake,
   )
 import Cardano.Ledger.Shelley.BlockChain as X (bbHash)
+import Cardano.Ledger.Shelley.PParams as X
+  ( ProposedPPUpdates (..),
+    Update (..),
+  )
 import Cardano.Ledger.Shelley.Delegation.Certificates as X
   ( DCert (..),
     DelegCert (..),
@@ -92,14 +96,6 @@ import Cardano.Ledger.Shelley.LedgerState as X
     PState (..),
     RewardUpdate (..),
     UTxOState (..),
-  )
-import Cardano.Ledger.Shelley.PParams as X
-  ( PParams,
-    PParams',
-    ProposedPPUpdates (..),
-    ShelleyPParams,
-    ShelleyPParamsHKD (..),
-    Update (..),
   )
 import Cardano.Ledger.Shelley.PoolRank as X
   ( NonMyopic,

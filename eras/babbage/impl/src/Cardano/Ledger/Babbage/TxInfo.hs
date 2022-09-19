@@ -182,7 +182,7 @@ babbageTxInfo pp lang ei sysS utxo tx = do
       inputs <- mapM (txInfoInV1 utxo) (Set.toList (txBody ^. inputsTxBodyL))
       outputs <-
         zipWithM
-          (\txIx -> txInfoOutV1 (TxOutFromOutput txIx))
+          (txInfoOutV1 . TxOutFromOutput)
           [minBound ..]
           (foldr (:) [] outs)
       pure . TxInfoPV1 $
@@ -204,7 +204,7 @@ babbageTxInfo pp lang ei sysS utxo tx = do
       refInputs <- mapM (txInfoInV2 utxo) (Set.toList (txBody ^. referenceInputsTxBodyL))
       outputs <-
         zipWithM
-          (\txIx -> txInfoOutV2 (TxOutFromOutput txIx))
+          (txInfoOutV2 . TxOutFromOutput)
           [minBound ..]
           (foldr (:) [] outs)
       rdmrs' <- mapM (transRedeemerPtr txBody) rdmrs

@@ -27,7 +27,6 @@ import Cardano.Ledger.Babbage.Tx as BabbageTxReExport
     AlonzoTx (..),
   )
 import Cardano.Ledger.Conway.Era (ConwayEra)
-import qualified Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.TxBody ()
 import Cardano.Ledger.Conway.TxWits ()
 import Cardano.Ledger.Core

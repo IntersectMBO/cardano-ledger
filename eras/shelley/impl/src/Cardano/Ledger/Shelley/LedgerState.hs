@@ -97,10 +97,7 @@ import Cardano.Ledger.Shelley.LedgerState.NewEpochState
 import Cardano.Ledger.Shelley.LedgerState.PulsingReward
 import Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits
 import Cardano.Ledger.Shelley.LedgerState.Types
-import Cardano.Ledger.Shelley.PParams
-  ( PPUPState (..),
-    pvCanFollow,
-  )
+import Cardano.Ledger.Shelley.PParams (PPUPState (..), pvCanFollow)
 import Cardano.Ledger.Shelley.RewardUpdate
 import Cardano.Ledger.Shelley.Tx (minfee, witsFromTxWitnesses)
 import Cardano.Ledger.Shelley.UTxO (produced)

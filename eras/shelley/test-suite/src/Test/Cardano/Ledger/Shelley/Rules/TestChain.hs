@@ -35,7 +35,7 @@ module Test.Cardano.Ledger.Shelley.Rules.TestChain
 where
 
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.BaseTypes (Globals, StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (Globals, StrictMaybe (..), EpochNo (..))
 import Cardano.Ledger.Block
   ( Block (..),
     bbody,
@@ -107,7 +107,6 @@ import Cardano.Protocol.TPraos.BHeader
     bhbody,
     bheaderSlotNo,
   )
-import Cardano.Slotting.Slot (EpochNo (..))
 import Control.Monad.Trans.Reader (ReaderT)
 import Control.SetAlgebra (dom, eval, (∩), (▷), (◁))
 import Control.State.Transition
@@ -132,7 +131,6 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.VMap as VMap
 import Data.Word (Word64)
-import GHC.Records (HasField (..))
 import Lens.Micro hiding (ix)
 import Lens.Micro.Extras (view)
 import Test.Cardano.Ledger.Shelley.Generator.Block (tickChainState)
@@ -158,6 +156,7 @@ import qualified Test.Cardano.Ledger.Shelley.Rules.TestPool as TestPool
 import qualified Test.Cardano.Ledger.Shelley.Rules.TestPoolreap as TestPoolreap
 import Test.Cardano.Ledger.Shelley.Utils
   ( ChainProperty,
+    ShelleyTest,
     epochFromSlotNo,
     runShelleyBase,
     testGlobals,
@@ -377,8 +376,6 @@ checkPreservation ::
   forall era.
   ( EraSegWits era,
     ShelleyEraTxBody era,
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin,
     State (EraRule "PPUP" era) ~ PPUPState era,
     ProtVerAtMost era 8
   ) =>
@@ -432,7 +429,7 @@ checkPreservation (SourceSignalTarget {source, target, signal}, count) =
     targetTotal = totalAda target
 
     currPP = esPp . nesEs . chainNes $ source
-    prevPP = esPrevPp . nesEs . chainNes $ source
+    prevPP = view ppProtocolVersionL . esPrevPp . nesEs . chainNes $ source
 
     ru' = nesRu . chainNes $ source
     lsOld = esLState . nesEs . chainNes $ source
@@ -697,9 +694,7 @@ preserveBalanceRestricted ::
   ( ChainProperty era,
     TestingLedger era ledger,
     ShelleyEraTxBody era,
-    EraSegWits era,
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin
+    EraSegWits era
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -1047,9 +1042,6 @@ poolRetirement ::
   ( ChainProperty era,
     EraSegWits era,
     ShelleyEraTxBody era,
-    HasField "_eMax" (PParams era) EpochNo,
-    HasField "_minPoolCost" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin,
     ProtVerAtMost era 8
   ) =>
   SourceSignalTarget (CHAIN era) ->
@@ -1061,7 +1053,7 @@ poolRetirement SourceSignalTarget {source = chainSt, signal = block} =
     (chainSt', poolTr) = poolTraceFromBlock chainSt block
     bhb = bhbody $ bheader block
     currentEpoch = (epochFromSlotNo . bheaderSlotNo) bhb
-    maxEpoch = (getField @"_eMax" . esPp . nesEs . chainNes) chainSt'
+    maxEpoch = (view ppEMaxL . esPp . nesEs . chainNes) chainSt'
 
 -- | Check that a newly registered pool key is registered and not
 -- in the retiring map.
@@ -1069,9 +1061,6 @@ poolRegistration ::
   ( ChainProperty era,
     EraSegWits era,
     ShelleyEraTxBody era,
-    HasField "_eMax" (PParams era) EpochNo,
-    HasField "_minPoolCost" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin,
     ProtVerAtMost era 8
   ) =>
   SourceSignalTarget (CHAIN era) ->
@@ -1088,9 +1077,6 @@ poolStateIsInternallyConsistent ::
   ( ChainProperty era,
     EraSegWits era,
     ShelleyEraTxBody era,
-    HasField "_eMax" (PParams era) EpochNo,
-    HasField "_minPoolCost" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin,
     ProtVerAtMost era 8
   ) =>
   SourceSignalTarget (CHAIN era) ->
@@ -1110,7 +1096,6 @@ poolStateIsInternallyConsistent (SourceSignalTarget {source = chainSt, signal = 
 delegProperties ::
   forall era.
   ( EraGen era,
-    Default (State (EraRule "PPUP" era)),
     QC.HasTrace (CHAIN era) (GenEnv era),
     ChainProperty era,
     ProtVerAtMost era 8
@@ -1191,9 +1176,6 @@ poolTraceFromBlock ::
   ( ChainProperty era,
     ShelleyEraTxBody era,
     EraSegWits era,
-    HasField "_eMax" (PParams era) EpochNo,
-    HasField "_minPoolCost" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin,
     ProtVerAtMost era 8
   ) =>
   ChainState era ->

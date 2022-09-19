@@ -37,7 +37,6 @@ import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), unWdrl)
 import Cardano.Ledger.UTxO (UTxO (..), coinBalance, txouts)
 import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
-import GHC.Records (HasField (..))
 import Lens.Micro ((^.))
 
 data AdaPots = AdaPots
@@ -121,11 +120,9 @@ instance Show Produced where
 
 -- | Compute the Coin part of what is consumed by a TxBody, itemized as a 'Consume'
 consumedTxBody ::
-  ( HasField "_keyDeposit" pp Coin,
-    ShelleyEraTxBody era
-  ) =>
+  ShelleyEraTxBody era =>
   TxBody era ->
-  pp ->
+  PParams era ->
   DPState (EraCrypto era) ->
   UTxO era ->
   Consumed
@@ -137,12 +134,9 @@ consumedTxBody txBody pp dpstate (UTxO u) = Consumed {conInputs = i, conRefunds 
 
 -- | Compute the Coin part of what is produced by a TxBody, itemized as a 'Produced'
 producedTxBody ::
-  ( ShelleyEraTxBody era,
-    HasField "_keyDeposit" pp Coin,
-    HasField "_poolDeposit" pp Coin
-  ) =>
+  ShelleyEraTxBody era =>
   TxBody era ->
-  pp ->
+  PParams era ->
   DPState (EraCrypto era) ->
   Produced
 producedTxBody txBody pp dpstate = Produced {proOutputs = out, proFees = f, proDeposits = d}

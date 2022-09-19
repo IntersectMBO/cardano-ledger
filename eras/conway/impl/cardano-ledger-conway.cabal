@@ -64,6 +64,7 @@ library
                 cardano-ledger-shelley,
                 containers,
                 deepseq,
+                data-default,
                 microlens,
                 nothunks,
                 small-steps,

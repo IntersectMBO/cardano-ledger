@@ -722,38 +722,38 @@ collectStats = do
                 )
               StakeRefBase a
                 | KeyHashObj kh <- a ->
-                    ( su {stakeKeys = Set.insert kh stakeKeys},
-                      ss {statsTotalStakeKeys = statsTotalStakeKeys + 1}
-                    )
+                  ( su {stakeKeys = Set.insert kh stakeKeys},
+                    ss {statsTotalStakeKeys = statsTotalStakeKeys + 1}
+                  )
                 | ScriptHashObj sh <- a ->
-                    ( su {stakeScripts = Set.insert sh stakeScripts},
-                      ss {statsTotalStakeScripts = statsTotalStakeScripts + 1}
-                    )
+                  ( su {stakeScripts = Set.insert sh stakeScripts},
+                    ss {statsTotalStakeScripts = statsTotalStakeScripts + 1}
+                  )
        in case addr of
             AddrBootstrap _ ->
               (u', s' {statsByronTxOuts = statsByronTxOuts + 1})
             Addr _ni pc sr
               | KeyHashObj kh <- pc ->
-                  updateStakingStats
-                    sr
-                    ( u' {paymentKeys = Set.insert kh paymentKeys},
-                      s' {statsTotalPaymentKeys = statsTotalPaymentKeys + 1}
-                    )
+                updateStakingStats
+                  sr
+                  ( u' {paymentKeys = Set.insert kh paymentKeys},
+                    s' {statsTotalPaymentKeys = statsTotalPaymentKeys + 1}
+                  )
               | ScriptHashObj kh <- pc ->
-                  updateStakingStats
-                    sr
-                    ( u' {paymentScripts = Set.insert kh paymentScripts},
-                      s' {statsTotalPaymentScripts = statsTotalPaymentScripts + 1}
-                    )
+                updateStakingStats
+                  sr
+                  ( u' {paymentScripts = Set.insert kh paymentScripts},
+                    s' {statsTotalPaymentScripts = statsTotalPaymentScripts + 1}
+                  )
 
 reportStats :: UTxOUniques -> UTxOStats' -> IO ()
 reportStats UTxOUniques {..} UTxOStats' {..} = do
   let showPercent x y
         | y == 0 = "0"
         | otherwise =
-            case ((1000 * x) `div` y) `quotRem` 10 of
-              (q, r) ->
-                show x <> ", " <> show q <> "." <> show r <> "% of total"
+          case ((1000 * x) `div` y) `quotRem` 10 of
+            (q, r) ->
+              show x <> ", " <> show q <> "." <> show r <> "% of total"
   putStrLn $
     unlines
       [ "Total TxOuts = " <> show statsTotalTxOuts,

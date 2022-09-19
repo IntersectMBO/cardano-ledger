@@ -17,7 +17,7 @@ module Cardano.Ledger.Shelley.Rules.Deleg
   )
 where
 
-import Cardano.Ledger.BaseTypes (Globals (..), ProtVer, ShelleyBase, epochInfoPure, invalidKey)
+import Cardano.Ledger.BaseTypes (Globals (..), ShelleyBase, epochInfoPure, invalidKey)
 import Cardano.Ledger.Binary
   ( FromCBOR (..),
     ToCBOR (..),
@@ -83,7 +83,7 @@ import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import GHC.Records (HasField)
+import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
 data DelegEnv era = DelegEnv
@@ -139,13 +139,7 @@ data ShelleyDelegPredFailure era
 
 newtype ShelleyDelegEvent era = NewEpoch EpochNo
 
-instance
-  ( Typeable era,
-    HasField "_protocolVersion" (PParams era) ProtVer,
-    HasField "_keyDeposit" (PParams era) Coin
-  ) =>
-  STS (ShelleyDELEG era)
-  where
+instance EraPParams era => STS (ShelleyDELEG era) where
   type State (ShelleyDELEG era) = DState (EraCrypto era)
   type Signal (ShelleyDELEG era) = DCert (EraCrypto era)
   type Environment (ShelleyDELEG era) = DelegEnv era
@@ -264,14 +258,10 @@ instance
         pure (3, MIRNegativeTransfer pot amt)
       k -> invalidKey k
 
-delegationTransition ::
-  ( Typeable era,
-    HasField "_protocolVersion" (PParams era) ProtVer,
-    HasField "_keyDeposit" (PParams era) Coin
-  ) =>
-  TransitionRule (ShelleyDELEG era)
+delegationTransition :: EraPParams era => TransitionRule (ShelleyDELEG era)
 delegationTransition = do
   TRC (DelegEnv slot ptr acnt pp, ds, c) <- judgmentContext
+  let pv = pp ^. ppProtocolVersionL
   case c of
     DCertDeleg (RegKey hk) -> do
       -- (hk ∉ dom (rewards ds))
@@ -339,7 +329,7 @@ delegationTransition = do
                   TreasuryMIR -> (asTreasury acnt, deltaTreasury $ dsIRewards ds, iRTreasury $ dsIRewards ds)
           let credCoinMap' = Map.map (\(DeltaCoin x) -> Coin x) credCoinMap
           (combinedMap, available) <-
-            if HardForks.allowMIRTransfer pp
+            if HardForks.allowMIRTransfer pv
               then do
                 let cm = Map.unionWith (<>) credCoinMap' instantaneousRewards
                 all (>= mempty) cm ?! MIRProducesNegativeUpdate
@@ -349,7 +339,7 @@ delegationTransition = do
                 pure (Map.union credCoinMap' instantaneousRewards, potAmount)
           updateReservesAndTreasury targetPot combinedMap available ds
         SendToOppositePotMIR coin ->
-          if HardForks.allowMIRTransfer pp
+          if HardForks.allowMIRTransfer pv
             then do
               let available = availableAfterMIR targetPot acnt (dsIRewards ds)
               coin >= mempty ?! MIRNegativeTransfer targetPot coin
@@ -385,10 +375,7 @@ delegationTransition = do
       pure ds
 
 checkSlotNotTooLate ::
-  ( Typeable era,
-    HasField "_protocolVersion" (PParams era) ProtVer,
-    HasField "_keyDeposit" (PParams era) Coin
-  ) =>
+  EraPParams era =>
   SlotNo ->
   Rule (ShelleyDELEG era) 'Transition ()
 checkSlotNotTooLate slot = do

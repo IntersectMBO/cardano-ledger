@@ -5,6 +5,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -18,8 +19,19 @@ module Cardano.Ledger.Language where
 import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), decodeInt, invalidKey)
 import Cardano.Ledger.TreeDiff (ToExpr (..))
 import Control.DeepSeq (NFData (..))
+import Data.Aeson
+  ( FromJSON (parseJSON),
+    FromJSONKey (fromJSONKey),
+    FromJSONKeyFunction (FromJSONKeyTextParser),
+    ToJSON (toJSON),
+    ToJSONKey (toJSONKey),
+    Value (String),
+    withText,
+  )
+import Data.Aeson.Types (toJSONKeyText)
 import Data.Ix (Ix)
 import Data.Typeable (Typeable)
+import Data.Text (Text)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 
@@ -41,6 +53,27 @@ data Language
 instance NoThunks Language
 
 instance NFData Language
+
+instance FromJSON Language where
+  parseJSON = withText "Language" languageFromText
+
+instance ToJSON Language where
+  toJSON = String . languageToText
+
+instance ToJSONKey Language where
+  toJSONKey = toJSONKeyText languageToText
+
+instance FromJSONKey Language where
+  fromJSONKey = FromJSONKeyTextParser languageFromText
+
+languageToText :: Language -> Text
+languageToText PlutusV1 = "PlutusV1"
+languageToText PlutusV2 = "PlutusV2"
+
+languageFromText :: MonadFail m => Text -> m Language
+languageFromText "PlutusV1" = pure PlutusV1
+languageFromText "PlutusV2" = pure PlutusV2
+languageFromText lang = fail $ "Error decoding Language: " ++ show lang
 
 instance ToCBOR Language where
   toCBOR PlutusV1 = toCBOR (0 :: Int)
@@ -108,7 +141,8 @@ instance IsLanguage 'PlutusV2 where
 toSLanguage :: forall (l :: Language) m. (IsLanguage l, MonadFail m) => Language -> m (SLanguage l)
 toSLanguage lang
   | fromSLanguage thisLanguage == lang = pure thisLanguage
-  | otherwise = fail $ "Plutus language mismatch. Expected " ++ show thisLanguage ++ ", but got: " ++ show lang
+  | otherwise =
+    fail $ "Plutus language mismatch. Expected " ++ show thisLanguage ++ ", but got: " ++ show lang
   where
     thisLanguage :: SLanguage l
     thisLanguage = isLanguage

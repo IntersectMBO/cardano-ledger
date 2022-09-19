@@ -35,7 +35,7 @@ import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Keys (KeyHash)
 import Cardano.Ledger.Pretty.Mary ()
 import Cardano.Ledger.Shelley.API (KeyRole (Witness))
-import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..), Update)
+import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Tx (pattern ShelleyTx)
 import Cardano.Ledger.Shelley.TxBody (DCert, ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (pattern ShelleyTxWits)
@@ -121,7 +121,7 @@ genTxBody slot ins outs cert wdrl fee upd ad = do
     )
 
 instance Mock c => MinGenTxout (AllegraEra c) where
-  calcEraMinUTxO _txout pp = _minUTxOValue pp
+  calcEraMinUTxO _txout pp = pp ^. Core.ppMinUTxOValueL
   addValToTxOut v (ShelleyTxOut a u) = ShelleyTxOut a (v <+> u)
   genEraTxOut _genenv genVal addrs = do
     values <- replicateM (length addrs) genVal

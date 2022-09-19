@@ -54,6 +54,7 @@ import Cardano.Ledger.Coin
     rationalToCoinViaFloor,
   )
 import Cardano.Ledger.Compactible
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
@@ -70,9 +71,8 @@ import Data.Ratio ((%))
 import Data.Typeable
 import Data.VMap as VMap
 import GHC.Generics (Generic)
-import GHC.Records (HasField, getField)
 import GHC.Word (Word64)
-import Lens.Micro (_1, _2)
+import Lens.Micro ((^.), _1, _2)
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 import Numeric.Natural (Natural)
 
@@ -135,18 +135,18 @@ maxPool' a0 nOpt r sigma pR = rationalToCoinViaFloor $ factor1 * factor2
     factor3 = (sigma' - p' * factor4) / z0
     factor4 = (z0 - sigma') / z0
 
--- | Version of maxPool' that extracts a0 and nOpt from a PParam with the right HasField instances
+-- | Version of `maxPool'` that extracts `ppA0L` and `ppNOptL` from a `PParams`
 maxPool ::
-  (HasField "_a0" pp NonNegativeInterval, HasField "_nOpt" pp Natural) =>
-  pp ->
+  EraPParams era =>
+  PParams era ->
   Coin ->
   Rational ->
   Rational ->
   Coin
-maxPool pc r sigma pR = maxPool' a0 nOpt r sigma pR
+maxPool pp r sigma pR = maxPool' a0 nOpt r sigma pR
   where
-    a0 = getField @"_a0" pc
-    nOpt = getField @"_nOpt" pc
+    a0 = pp ^. ppA0L
+    nOpt = pp ^. ppNOptL
 
 -- | Snapshot of the stake distribution.
 data SnapShot c = SnapShot

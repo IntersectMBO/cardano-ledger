@@ -33,7 +33,6 @@ import Cardano.Ledger.Binary
     decodeRecordSum,
     encodeListLen,
   )
-import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley.Era (ShelleyLEDGER)
@@ -74,7 +73,6 @@ import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import GHC.Records (HasField (..))
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
@@ -171,8 +169,6 @@ instance
     Environment (EraRule "DELEGS" era) ~ DelegsEnv era,
     State (EraRule "DELEGS" era) ~ DPState (EraCrypto era),
     Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era)),
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin,
     ProtVerAtMost era 8
   ) =>
   STS (ShelleyLEDGER era)

@@ -27,7 +27,6 @@ import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits)
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded)
 import Cardano.Ledger.UTxO (EraUTxO (..))
 import Control.State.Transition.Extended
-import GHC.Records
 
 -- ==============================================================================
 --   We want to reuse the same rules for Mary and Allegra. We accomplish this
@@ -53,7 +52,6 @@ instance
     Environment (EraRule "UTXO" era) ~ UtxoEnv era,
     State (EraRule "UTXO" era) ~ UTxOState era,
     Signal (EraRule "UTXO" era) ~ Tx era,
-    HasField "_protocolVersion" (PParams era) ProtVer,
     DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody),
     ProtVerAtMost era 8
   ) =>

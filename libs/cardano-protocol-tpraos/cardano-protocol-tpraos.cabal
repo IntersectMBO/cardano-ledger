@@ -60,6 +60,7 @@ library
     containers,
     deepseq,
     nothunks,
+    lens,
     mtl,
     quiet,
     non-integral,

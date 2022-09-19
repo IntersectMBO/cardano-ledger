@@ -434,7 +434,7 @@ instance Era era => Arbitrary (MultiSig era) where
   arbitrary = sizedMultiSig maxMultiSigDepth
 
 instance
-  (Mock (EraCrypto era), Arbitrary (ShelleyPParams era)) =>
+  (Mock (EraCrypto era), Arbitrary (Core.PParams era)) =>
   Arbitrary (ShelleyGenesis era)
   where
   arbitrary = do

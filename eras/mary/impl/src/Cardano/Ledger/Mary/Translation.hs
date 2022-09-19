@@ -1,14 +1,17 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE PartialTypeSignatures #-}
 
 module Cardano.Ledger.Mary.Translation where
 
-import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core
@@ -39,14 +42,6 @@ import Data.Maybe (fromMaybe)
 -- being total. Do not change it!
 --------------------------------------------------------------------------------
 
-type instance PreviousEra (MaryEra c) = AllegraEra c
-
--- | Currently no context is needed to translate from Allegra to Mary.
---
--- Note: if context is needed, please coordinate with consensus, who will have
--- to provide the context in the right place.
-type instance TranslationContext (MaryEra c) = ()
-
 instance Crypto c => TranslateEra (MaryEra c) NewEpochState where
   translateEra ctxt nes =
     return $
@@ -60,38 +55,17 @@ instance Crypto c => TranslateEra (MaryEra c) NewEpochState where
           stashedAVVMAddresses = ()
         }
 
-instance Crypto c => TranslateEra (MaryEra c) ShelleyTx where
+instance (Crypto c, EraTx (MaryEra c)) => TranslateEra (MaryEra c) ShelleyTx where
   type TranslationError (MaryEra c) ShelleyTx = DecoderError
   translateEra _ctx = translateEraThroughCBOR "ShelleyTx"
-
--- TODO when a genesis has been introduced for Mary, this instance can be
--- removed.
-instance Crypto c => TranslateEra (MaryEra c) ShelleyGenesis where
-  translateEra ctxt genesis =
-    return
-      ShelleyGenesis
-        { sgSystemStart = sgSystemStart genesis,
-          sgNetworkMagic = sgNetworkMagic genesis,
-          sgNetworkId = sgNetworkId genesis,
-          sgActiveSlotsCoeff = sgActiveSlotsCoeff genesis,
-          sgSecurityParam = sgSecurityParam genesis,
-          sgEpochLength = sgEpochLength genesis,
-          sgSlotsPerKESPeriod = sgSlotsPerKESPeriod genesis,
-          sgMaxKESEvolutions = sgMaxKESEvolutions genesis,
-          sgSlotLength = sgSlotLength genesis,
-          sgUpdateQuorum = sgUpdateQuorum genesis,
-          sgMaxLovelaceSupply = sgMaxLovelaceSupply genesis,
-          sgProtocolParams = translateEra' ctxt (sgProtocolParams genesis),
-          sgGenDelegs = sgGenDelegs genesis,
-          sgInitialFunds = sgInitialFunds genesis,
-          sgStaking = sgStaking genesis
-        }
 
 --------------------------------------------------------------------------------
 -- Auxiliary instances and functions
 --------------------------------------------------------------------------------
 
-instance (Crypto c, Functor f) => TranslateEra (MaryEra c) (ShelleyPParamsHKD f)
+instance Crypto c => TranslateEra (MaryEra c) PParams
+
+instance Crypto c => TranslateEra (MaryEra c) PParamsUpdate
 
 instance Crypto c => TranslateEra (MaryEra c) EpochState where
   translateEra ctxt es =
@@ -140,7 +114,7 @@ instance Crypto c => TranslateEra (MaryEra c) ShelleyTxOut where
   translateEra () (TxOutCompact addr cfval) =
     pure $ TxOutCompact (coerce addr) (translateCompactValue cfval)
 
-instance Crypto c => TranslateEra (MaryEra c) UTxO where
+instance (Crypto c) => TranslateEra (MaryEra c) UTxO where
   translateEra ctxt utxo =
     return $ UTxO (translateEra' ctxt `Map.map` unUTxO utxo)
 

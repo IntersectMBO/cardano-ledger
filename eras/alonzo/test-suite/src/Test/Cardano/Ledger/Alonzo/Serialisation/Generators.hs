@@ -80,7 +80,7 @@ import Data.Maybe (catMaybes)
 import qualified Data.Set as Set
 import Data.Text (pack)
 import Data.Typeable (Typeable)
-import GHC.Records (HasField)
+import Data.Void (Void)
 import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Alonzo.AlonzoEraGen (costModelParamsCount)
@@ -102,15 +102,15 @@ instance Arbitrary PV1.Data where
     where
       gendata n
         | n > 0 =
-            oneof
-              [ PV1.I <$> arbitrary,
-                PV1.B <$> arbitrary,
-                PV1.Map <$> listOf ((,) <$> gendata (n `div` 2) <*> gendata (n `div` 2)),
-                PV1.Constr
-                  <$> fmap fromIntegral (arbitrary :: Gen Natural)
-                  <*> listOf (gendata (n `div` 2)),
-                PV1.List <$> listOf (gendata (n `div` 2))
-              ]
+          oneof
+            [ PV1.I <$> arbitrary,
+              PV1.B <$> arbitrary,
+              PV1.Map <$> listOf ((,) <$> gendata (n `div` 2) <*> gendata (n `div` 2)),
+              PV1.Constr
+                <$> fmap fromIntegral (arbitrary :: Gen Natural)
+                <*> listOf (gendata (n `div` 2)),
+              PV1.List <$> listOf (gendata (n `div` 2))
+            ]
       gendata _ = oneof [PV1.I <$> arbitrary, PV1.B <$> arbitrary]
 
 instance
@@ -378,8 +378,7 @@ instance Mock c => Arbitrary (ScriptPurpose c) where
 instance
   ( EraPParams era,
     Mock (EraCrypto era),
-    Arbitrary (PParams era),
-    HasField "_costmdls" (PParams era) CostModels
+    Arbitrary (PParams era)
   ) =>
   Arbitrary (ScriptIntegrity era)
   where

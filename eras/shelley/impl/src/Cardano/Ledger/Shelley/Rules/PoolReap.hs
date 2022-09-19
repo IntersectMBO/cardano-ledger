@@ -55,9 +55,7 @@ import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set (member)
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
-import GHC.Records
 import NoThunks.Class (NoThunks (..))
 
 data ShelleyPoolreapState era = PoolreapState
@@ -83,15 +81,7 @@ instance NoThunks (ShelleyPoolreapPredFailure era)
 instance Default (UTxOState era) => Default (ShelleyPoolreapState era) where
   def = PoolreapState def def def def
 
-instance
-  forall era.
-  ( Typeable era,
-    Default (ShelleyPoolreapState era),
-    HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_keyDeposit" (PParams era) Coin
-  ) =>
-  STS (ShelleyPOOLREAP era)
-  where
+instance (Default (ShelleyPoolreapState era), EraPParams era) => STS (ShelleyPOOLREAP era) where
   type State (ShelleyPOOLREAP era) = ShelleyPoolreapState era
   type Signal (ShelleyPOOLREAP era) = EpochNo
   type Environment (ShelleyPOOLREAP era) = PParams era
@@ -113,9 +103,7 @@ instance
         )
     ]
 
-poolReapTransition ::
-  forall era.
-  TransitionRule (ShelleyPOOLREAP era)
+poolReapTransition :: forall era. TransitionRule (ShelleyPOOLREAP era)
 poolReapTransition = do
   TRC (_pp, PoolreapState us a ds ps, e) <- judgmentContext
 
@@ -124,7 +112,8 @@ poolReapTransition = do
       retired = eval (dom (psRetiring ps ▷ setSingleton e))
       -- The Map of pools (retiring this epoch) to their deposits
       retiringDeposits, remainingDeposits :: Map.Map (KeyHash 'StakePool (EraCrypto era)) Coin
-      (retiringDeposits, remainingDeposits) = Map.partitionWithKey (\k _ -> Set.member k retired) (psDeposits ps)
+      (retiringDeposits, remainingDeposits) =
+        Map.partitionWithKey (\k _ -> Set.member k retired) (psDeposits ps)
       rewardAcnts :: Map.Map (KeyHash 'StakePool (EraCrypto era)) (RewardAcnt (EraCrypto era))
       rewardAcnts = Map.map ppRewardAcnt $ eval (retired ◁ psStakePoolParams ps)
       rewardAcnts_ :: Map.Map (KeyHash 'StakePool (EraCrypto era)) (RewardAcnt (EraCrypto era), Coin)

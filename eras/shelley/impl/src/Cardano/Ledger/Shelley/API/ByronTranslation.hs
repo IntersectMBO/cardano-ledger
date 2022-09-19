@@ -22,6 +22,7 @@ import Cardano.Ledger.Address (fromBoostrapCompactAddress, isBootstrapRedeemer)
 import Cardano.Ledger.BaseTypes (BlocksMade (..), TxIx (..))
 import Cardano.Ledger.Coin (CompactForm (CompactCoin))
 import Cardano.Ledger.Core
+import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
@@ -91,7 +92,7 @@ translateUTxOByronToShelley (Byron.UTxO utxoByron) =
 translateToShelleyLedgerState ::
   forall c.
   (CC.Crypto c, CC.ADDRHASH c ~ Crypto.Blake2b_224) =>
-  ShelleyGenesis (ShelleyEra c) ->
+  ShelleyGenesis c ->
   EpochNo ->
   Byron.ChainValidationState ->
   NewEpochState (ShelleyEra c)
@@ -113,7 +114,7 @@ translateToShelleyLedgerState genesisShelley epochNo cvs =
          in UTxO redeemers
     }
   where
-    pparams :: ShelleyPParams (ShelleyEra c)
+    pparams :: Core.PParams (ShelleyEra c)
     pparams = sgProtocolParams genesisShelley
 
     -- NOTE: we ignore the Byron delegation map because the genesis and

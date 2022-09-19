@@ -65,7 +65,18 @@ instance (Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyBlock
 instance Crypto c => API.CanStartFromGenesis (BabbageEra c) where
   type AdditionalGenesisConfig (BabbageEra c) = AlonzoGenesis
 
-  initialState = API.initialStateFromGenesis extendPPWithGenesis
+  fromShelleyPParams = fromShelleyBabbagePParams
+
+
+-- | Promote PParams all the way from ShelleyEra to BabbageEra
+fromShelleyBabbagePParams ::
+  Crypto c =>
+  BabbageGenesis ->
+  PParams (ShelleyEra c) ->
+  PParams (BabbageEra c)
+fromShelleyBabbagePParams (BabbageGenesisWrapper upgradeArgs) =
+  upgradePParams () . upgradePParams upgradeArgs . upgradePParams () . upgradePParams ()
+
 
 instance Crypto c => ExtendedUTxO (BabbageEra c) where
   txInfo = babbageTxInfo

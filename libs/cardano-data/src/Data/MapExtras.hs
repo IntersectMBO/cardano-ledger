@@ -200,8 +200,8 @@ extractKeys :: Ord k => Map k a -> Set k -> (Map k a, Map k a)
 extractKeys m s
   | Set.size s < 6 = extractKeysSmallSet m s -- See haddock for value 6
   | otherwise =
-      case extractKeys# m s of
-        (# w, r #) -> (w, r)
+    case extractKeys# m s of
+      (# w, r #) -> (w, r)
 {-# INLINE extractKeys #-}
 
 -- | It has been discovered expirementally through benchmarks that for small Set
@@ -229,15 +229,15 @@ extractKeys# m@(Bin _ k x lm rm) s = (# w, r #)
     !(StrictTriple ls b rs) = splitMemberSet k s
     !w
       | not b =
-          if lmw `ptrEq` lm && rmw `ptrEq` rm
-            then m
-            else link k x lmw rmw
+        if lmw `ptrEq` lm && rmw `ptrEq` rm
+          then m
+          else link k x lmw rmw
       | otherwise = link2 lmw rmw
     !r
       | b =
-          if lmr `ptrEq` lm && rmr `ptrEq` rm
-            then m
-            else link k x lmr rmr
+        if lmr `ptrEq` lm && rmr `ptrEq` rm
+          then m
+          else link k x lmr rmr
       | otherwise = link2 lmr rmr
     !(# lmw, lmr #) = extractKeys# lm ls
     !(# rmw, rmr #) = extractKeys# rm rs

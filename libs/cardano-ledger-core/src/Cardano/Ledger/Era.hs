@@ -6,7 +6,6 @@ module Cardano.Ledger.Era
     getTxOutEitherAddr,
     getTxOutBootstrapAddress,
     getAllTxInputs,
-    PreviousEra,
     TranslationContext,
     TranslateEra (..),
     translateEra',

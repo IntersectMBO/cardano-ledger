@@ -17,9 +17,22 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API
+  ( EpochState (..),
+    LedgerState (..),
+    NewEpochState (..),
+    PPUPState (..),
+    ProposedPPUpdates (..),
+    ShelleyTx (..),
+    ShelleyTxOut (..),
+    UTxO (..),
+    UTxOState (..),
+    Update,
+  )
 import qualified Cardano.Ledger.Shelley.LedgerState as LS
   ( returnRedeemAddrsToReserves,
   )
+import Cardano.Ledger.Shelley.PParams (Update (..))
+import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits)
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map
 
@@ -46,14 +59,6 @@ import qualified Data.Map.Strict as Map
 shelleyToAllegraAVVMsToDelete :: NewEpochState (ShelleyEra c) -> UTxO (ShelleyEra c)
 shelleyToAllegraAVVMsToDelete = stashedAVVMAddresses
 
-type instance PreviousEra (AllegraEra c) = ShelleyEra c
-
--- | Currently no context is needed to translate from Shelley to Allegra.
-
--- Note: if context is needed, please coordinate with consensus, who will have
--- to provide the context in the right place.
-type instance TranslationContext (AllegraEra c) = ()
-
 instance Crypto c => TranslateEra (AllegraEra c) NewEpochState where
   translateEra ctxt nes =
     return $
@@ -74,53 +79,13 @@ instance forall c. Crypto c => TranslateEra (AllegraEra c) ShelleyTx where
   type TranslationError (AllegraEra c) ShelleyTx = DecoderError
   translateEra _ctx = translateEraThroughCBOR "ShelleyTx"
 
-instance Crypto c => TranslateEra (AllegraEra c) ShelleyGenesis where
-  translateEra ctxt genesis =
-    return
-      ShelleyGenesis
-        { sgSystemStart = sgSystemStart genesis,
-          sgNetworkMagic = sgNetworkMagic genesis,
-          sgNetworkId = sgNetworkId genesis,
-          sgActiveSlotsCoeff = sgActiveSlotsCoeff genesis,
-          sgSecurityParam = sgSecurityParam genesis,
-          sgEpochLength = sgEpochLength genesis,
-          sgSlotsPerKESPeriod = sgSlotsPerKESPeriod genesis,
-          sgMaxKESEvolutions = sgMaxKESEvolutions genesis,
-          sgSlotLength = sgSlotLength genesis,
-          sgUpdateQuorum = sgUpdateQuorum genesis,
-          sgMaxLovelaceSupply = sgMaxLovelaceSupply genesis,
-          sgProtocolParams = translateEra' ctxt (sgProtocolParams genesis),
-          sgGenDelegs = sgGenDelegs genesis,
-          sgInitialFunds = sgInitialFunds genesis,
-          sgStaking = sgStaking genesis
-        }
-
 --------------------------------------------------------------------------------
 -- Auxiliary instances and functions
 --------------------------------------------------------------------------------
 
-instance Crypto c => TranslateEra (AllegraEra c) (ShelleyPParamsHKD f) where
-  translateEra _ pp =
-    return $
-      ShelleyPParams
-        { _minfeeA = _minfeeA pp,
-          _minfeeB = _minfeeB pp,
-          _maxBBSize = _maxBBSize pp,
-          _maxTxSize = _maxTxSize pp,
-          _maxBHSize = _maxBHSize pp,
-          _keyDeposit = _keyDeposit pp,
-          _poolDeposit = _poolDeposit pp,
-          _eMax = _eMax pp,
-          _nOpt = _nOpt pp,
-          _a0 = _a0 pp,
-          _rho = _rho pp,
-          _tau = _tau pp,
-          _d = _d pp,
-          _extraEntropy = _extraEntropy pp,
-          _protocolVersion = _protocolVersion pp,
-          _minUTxOValue = _minUTxOValue pp,
-          _minPoolCost = _minPoolCost pp
-        }
+instance Crypto c => TranslateEra (AllegraEra c) PParams
+
+instance Crypto c => TranslateEra (AllegraEra c) PParamsUpdate
 
 instance Crypto c => TranslateEra (AllegraEra c) ProposedPPUpdates where
   translateEra ctxt (ProposedPPUpdates ppup) =

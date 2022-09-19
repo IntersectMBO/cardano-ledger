@@ -40,7 +40,6 @@ import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Text (Text)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
-import GHC.Records (HasField)
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Alonzo.PlutusScripts (testingCostModelV1)
@@ -91,14 +90,14 @@ exUnitsTranslationRoundTrip :: Gen Property
 exUnitsTranslationRoundTrip = do
   e <- arbitrary
   let result = exBudgetToExUnits (transExUnits e)
-  pure
-    $ counterexample
+  pure $
+    counterexample
       ( "Before: "
           <> show e
           <> "\n After: "
           <> show result
       )
-    $ result == Just e
+      $ result == Just e
 
 testSystemStart :: SystemStart
 testSystemStart = SystemStart $ posixSecondsToUTCTime 0
@@ -114,7 +113,6 @@ testExUnitCalculation ::
     Signal (EraRule "UTXOS" era) ~ Tx era,
     AlonzoEraTx era,
     ExtendedUTxO era,
-    HasField "_maxTxExUnits" (PParams era) ExUnits,
     STS (EraRule "UTXOS" era),
     Script era ~ AlonzoScript era,
     EraUTxO era,

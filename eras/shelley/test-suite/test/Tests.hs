@@ -1,6 +1,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 import Cardano.Crypto.Libsodium (sodiumInit)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
@@ -14,6 +16,7 @@ import Test.Cardano.Ledger.Shelley.RulesTests (chainExamples, multisigExamples, 
 import Test.Cardano.Ledger.Shelley.SafeHash (safeHashTest)
 import qualified Test.Cardano.Ledger.Shelley.Serialisation as Serialisation
 import Test.Cardano.Ledger.Shelley.UnitTests (unitTests)
+import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest)
 import Test.Tasty
 import Test.TestScenario (TestScenario (..), mainWithTestScenario)
 
@@ -31,7 +34,7 @@ mainTests =
       minimalPropertyTests @C @(ShelleyLEDGER C),
       rewardTests,
       Serialisation.tests 5,
-      chainExamples,
+      chainExamples @C,
       multisigExamples,
       testTickF,
       unitTests,
@@ -52,7 +55,7 @@ fastTests =
   testGroup
     "Ledger with Delegation fast"
     [ Serialisation.tests 1,
-      chainExamples,
+      chainExamples @C,
       multisigExamples,
       unitTests,
       prettyTest,

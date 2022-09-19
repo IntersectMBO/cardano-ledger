@@ -479,8 +479,8 @@ genMapElem :: Map k a -> Gen (Maybe (k, a))
 genMapElem m
   | n == 0 = pure Nothing
   | otherwise = do
-      i <- choose (0, n - 1)
-      pure $ Just $ Map.elemAt i m
+    i <- choose (0, n - 1)
+    pure $ Just $ Map.elemAt i m
   where
     n = Map.size m
 
@@ -488,8 +488,8 @@ genSetElem :: Set a -> Gen (Maybe a)
 genSetElem m
   | n == 0 = pure Nothing
   | otherwise = do
-      i <- choose (0, n - 1)
-      pure $ Just $ Set.elemAt i m
+    i <- choose (0, n - 1)
+    pure $ Just $ Set.elemAt i m
   where
     n = Set.size m
 
@@ -499,11 +499,11 @@ genMapElemWhere m tries p
   | tries <= 0 = pure Nothing
   | n == 0 = pure Nothing
   | otherwise = do
-      i <- choose (0, n - 1)
-      let (k, a) = Map.elemAt i m
-      if p k a
-        then pure $ Just $ (k, a)
-        else genMapElemWhere m (tries - 1) p
+    i <- choose (0, n - 1)
+    let (k, a) = Map.elemAt i m
+    if p k a
+      then pure $ Just $ (k, a)
+      else genMapElemWhere m (tries - 1) p
   where
     n = Map.size m
 
@@ -734,11 +734,11 @@ genFreshKeyHash = go (100 :: Int) -- avoid unlikely chance of generated hash col
     go n
       | n <= 0 = error "Something very unlikely happened"
       | otherwise = do
-          avoidKeys <- gets gsAvoidKey
-          kh <- genKeyHash
-          if coerceKeyRole kh `Set.member` avoidKeys
-            then go $ n - 1
-            else return kh
+        avoidKeys <- gets gsAvoidKey
+        kh <- genKeyHash
+        if coerceKeyRole kh `Set.member` avoidKeys
+          then go $ n - 1
+          else return kh
 
 -- ===========================================================
 -- Generate Era agnostic Scripts
@@ -761,8 +761,8 @@ genTimelockScript proof = do
   -- diverge. It also has to stay very shallow because it grows too fast.
   let genNestedTimelock k
         | k > 0 =
-            elementsT $
-              nonRecTimelocks ++ [requireAllOf k, requireAnyOf k, requireMOf k]
+          elementsT $
+            nonRecTimelocks ++ [requireAllOf k, requireAnyOf k, requireMOf k]
         | otherwise = elementsT nonRecTimelocks
       nonRecTimelocks :: [GenRS era (Timelock era)]
       nonRecTimelocks =
@@ -812,8 +812,8 @@ genMultiSigScript :: forall era. Reflect era => Proof era -> GenRS era (ScriptHa
 genMultiSigScript proof = do
   let genNestedMultiSig k
         | k > 0 =
-            elementsT $
-              nonRecTimelocks ++ [requireAllOf k, requireAnyOf k, requireMOf k]
+          elementsT $
+            nonRecTimelocks ++ [requireAllOf k, requireAnyOf k, requireMOf k]
         | otherwise = elementsT nonRecTimelocks
       nonRecTimelocks = [requireSignature]
       requireSignature = Shelley.RequireSignature @era <$> genKeyHash
@@ -908,17 +908,17 @@ genCredential tag =
         f n
           | n <= 0 = error "Failed to generate a fresh script hash"
           | otherwise = do
-              sh <- genScript @era reify tag
-              initialRewards <- gets gsInitialRewards
-              avoidCredentials <- gets gsAvoidCred
-              let newcred = ScriptHashObj sh
-              if Map.notMember newcred initialRewards && Set.notMember newcred avoidCredentials
-                then do
-                  case tag of
-                    Rewrd -> modifyGenStateInitialRewards (Map.insert newcred (Coin 0))
-                    _ -> pure ()
-                  return sh
-                else f $ n - 1
+            sh <- genScript @era reify tag
+            initialRewards <- gets gsInitialRewards
+            avoidCredentials <- gets gsAvoidCred
+            let newcred = ScriptHashObj sh
+            if Map.notMember newcred initialRewards && Set.notMember newcred avoidCredentials
+              then do
+                case tag of
+                  Rewrd -> modifyGenStateInitialRewards (Map.insert newcred (Coin 0))
+                  _ -> pure ()
+                return sh
+              else f $ n - 1
     pickExistingKeyHash =
       KeyHashObj <$> do
         keysMap <- gsKeys <$> get

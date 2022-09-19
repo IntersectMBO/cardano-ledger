@@ -452,7 +452,7 @@ checkLeaderNatValue bn σ f =
     c, recip_q, x :: FixedPoint
     c = activeSlotLog f
     recip_q = fromRational (toInteger certNatMax % toInteger (certNatMax - certNat))
-    x = -fromRational σ * c
+    x = - fromRational σ * c
     certNatMax = bvMaxValue bn
     certNat = bvValue bn
 

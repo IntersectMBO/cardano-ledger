@@ -81,7 +81,6 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Time
 import Data.Word (Word64, Word8)
-import GHC.Records (HasField)
 import GHC.Stack (HasCallStack)
 import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.V1 as PV1

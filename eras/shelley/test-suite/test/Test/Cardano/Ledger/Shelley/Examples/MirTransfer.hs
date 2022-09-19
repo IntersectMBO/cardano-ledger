@@ -12,6 +12,7 @@ import Cardano.Ledger.Keys
   ( KeyRole (..),
     hashKey,
   )
+import Cardano.Ledger.PParams
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API
   ( AccountState (..),
@@ -26,7 +27,7 @@ import Cardano.Ledger.Shelley.API
     Ptr (..),
     ShelleyDELEG,
   )
-import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..), emptyPParams)
+import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Rules (ShelleyDelegPredFailure (..))
 import Cardano.Ledger.Slot (SlotNo (..))
 import Control.State.Transition.Extended hiding (Assertion)
@@ -52,7 +53,7 @@ env pv acnt =
     { slotNo = SlotNo 50,
       ptr_ = Ptr (SlotNo 50) minBound minBound,
       acnt_ = acnt,
-      ppDE = emptyPParams {_protocolVersion = pv}
+      ppDE = PParams $ def {_protocolVersion = pv}
     }
 
 shelleyPV :: ProtVer

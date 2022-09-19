@@ -10,6 +10,7 @@ module Cardano.Ledger.Babbage.Era
   )
 where
 
+import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Rules (AlonzoBBODY)
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC
@@ -32,6 +33,7 @@ import Cardano.Ledger.Shelley.Rules
 data BabbageEra c
 
 instance CC.Crypto c => Era (BabbageEra c) where
+  type PreviousEra (BabbageEra c) = AlonzoEra c
   type EraCrypto (BabbageEra c) = c
   type ProtVerLow (BabbageEra c) = 7
   type ProtVerHigh (BabbageEra c) = 8

@@ -47,6 +47,7 @@ import qualified Cardano.Ledger.Crypto as CryptoClass
 import qualified Cardano.Ledger.EpochBoundary as EB
 import Cardano.Ledger.Era (EraCrypto (..))
 import Cardano.Ledger.Keys (KeyRole (..), asWitness, coerceKeyRole)
+import Cardano.Ledger.PParams
 import Cardano.Ledger.PoolDistr
   ( IndividualPoolStake (..),
     PoolDistr (..),
@@ -57,10 +58,6 @@ import Cardano.Ledger.Shelley.LedgerState
     RewardUpdate (..),
     completeStep,
     emptyRewardUpdate,
-  )
-import Cardano.Ledger.Shelley.PParams
-  ( ShelleyPParams,
-    ShelleyPParamsHKD (..),
   )
 import Cardano.Ledger.Shelley.PoolRank
   ( Likelihood (..),
@@ -113,6 +110,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
+import Lens.Micro ((&), (.~), (^.))
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessesVKey)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, C_Crypto, ExMock)
 import Test.Cardano.Ledger.Shelley.Examples (CHAINExample (..), testCHAINExample)
@@ -146,6 +144,7 @@ import Test.Cardano.Ledger.Shelley.Utils
     maxLLSupply,
     runShelleyBase,
     testGlobals,
+    unsafeBoundRational,
   )
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))
@@ -157,7 +156,6 @@ type TwoPoolsConstraints era =
     ExMock (EraCrypto era),
     Core.TxBody era ~ ShelleyTxBody era,
     Core.Tx era ~ ShelleyTx era,
-    Core.PParams era ~ ShelleyPParams era,
     PreAlonzo era,
     Core.EraSegWits era,
     ToCBOR (Core.Script era)
@@ -191,8 +189,8 @@ initStTwoPools = initSt initUTxO
 aliceCoinEx1 :: Coin
 aliceCoinEx1 =
   aliceInitCoin
-    <-> ((2 :: Integer) <×> _poolDeposit ppEx)
-    <-> ((3 :: Integer) <×> _keyDeposit ppEx)
+    <-> ((2 :: Integer) <×> (Coin 250))
+    <-> ((3 :: Integer) <×> (Coin 7))
     <-> feeTx1
 
 feeTx1 :: Coin
@@ -660,7 +658,7 @@ blocksMadeEpoch3 = 3
 expectedBlocks :: Integer
 expectedBlocks =
   floor $
-    (1 - (unboundRational . _d $ ppEx))
+    0.5
       * unboundRational (activeSlotVal $ activeSlotCoeff testGlobals)
       * fromIntegral (epochSize $ EpochNo 3)
 
@@ -671,14 +669,14 @@ deltaR1Ex9 :: Coin
 deltaR1Ex9 =
   rationalToCoinViaFloor $
     (blocksMadeEpoch3 % expectedBlocks)
-      * (unboundRational $ _rho ppEx)
+      * 0.0021
       * (fromIntegral . unCoin $ reserves9)
 
 rPot :: Integer
 rPot = unCoin deltaR1Ex9 -- There were no fees
 
 deltaTEx9 :: Integer
-deltaTEx9 = floor $ unboundRational (_tau ppEx) * fromIntegral rPot
+deltaTEx9 = floor $ (0.2 :: Double) * fromIntegral rPot
 
 bigR :: Coin
 bigR = Coin $ rPot - deltaTEx9
@@ -695,10 +693,10 @@ bobStakeShareTot = unCoin bobInitCoin % circulation
 alicePoolRewards :: forall c. ExMock c => Coin
 alicePoolRewards = rationalToCoinViaFloor (appPerf * (fromIntegral . unCoin $ maxP))
   where
-    appPerf = mkApparentPerformance (_d ppEx) alicePoolStake 2 3
+    appPerf = mkApparentPerformance (ppEx ^. ppDL) alicePoolStake 2 3
     pledge = fromIntegral . unCoin . ppPledge $ alicePoolParams' @c
     pr = pledge % circulation
-    maxP = EB.maxPool ppEx bigR aliceStakeShareTot pr
+    maxP = EB.maxPool @(ShelleyEra c) ppEx bigR aliceStakeShareTot pr
 
 carlMemberRewardsFromAlice :: forall c. ExMock c => Coin
 carlMemberRewardsFromAlice =
@@ -719,10 +717,10 @@ carlLeaderRewardsFromAlice =
 bobPoolRewards :: forall c. ExMock c => Coin
 bobPoolRewards = rationalToCoinViaFloor (appPerf * (fromIntegral . unCoin $ maxP))
   where
-    appPerf = mkApparentPerformance (_d ppEx) bobPoolStake 1 3
+    appPerf = mkApparentPerformance (ppEx ^. ppDL) bobPoolStake 1 3
     pledge = fromIntegral . unCoin . ppPledge $ bobPoolParams' @c
     pr = pledge % circulation
-    maxP = EB.maxPool ppEx bigR bobStakeShareTot pr
+    maxP = EB.maxPool @(ShelleyEra c) ppEx bigR bobStakeShareTot pr
 
 carlLeaderRewardsFromBob :: forall c. ExMock c => Coin
 carlLeaderRewardsFromBob =
@@ -736,14 +734,14 @@ alicePerfEx9 :: Likelihood
 alicePerfEx9 = likelihood blocks t (epochSize $ EpochNo 3)
   where
     blocks = 2
-    t = leaderProbability f alicePoolStake (_d ppEx)
+    t = leaderProbability f alicePoolStake ((unsafeBoundRational 0.5))
     f = activeSlotCoeff testGlobals
 
 bobPerfEx9 :: Likelihood
 bobPerfEx9 = likelihood blocks t (epochSize $ EpochNo 3)
   where
     blocks = 1
-    t = leaderProbability f bobPoolStake (_d ppEx)
+    t = leaderProbability f bobPoolStake ((unsafeBoundRational 0.5))
     f = activeSlotCoeff testGlobals
 
 nonMyopicEx9 :: forall c. ExMock c => NonMyopic c
@@ -758,8 +756,9 @@ nonMyopicEx9 =
 
 rewardUpdateEx9 ::
   forall era.
+  ShelleyTest era =>
   ExMock (EraCrypto era) =>
-  ShelleyPParams era ->
+  PParams era ->
   Map (Credential 'Staking (EraCrypto era)) (Set (Core.Reward (EraCrypto era))) ->
   RewardUpdate (EraCrypto era)
 rewardUpdateEx9 pp rewards =
@@ -771,12 +770,13 @@ rewardUpdateEx9 pp rewards =
       nonMyopic = nonMyopicEx9
     }
   where
-    deltaR2Ex9 = bigR <-> (sumRewards pp rewards)
+    pv = pp ^. ppProtocolVersionL
+    deltaR2Ex9 = bigR <-> (sumRewards pv rewards)
 
 pulserEx9 ::
   forall era.
-  (TwoPoolsConstraints era) =>
-  ShelleyPParams era ->
+  TwoPoolsConstraints era =>
+  PParams era ->
   PulsingRewUpdate (EraCrypto era)
 pulserEx9 pp =
   makeCompletedPulser
@@ -791,7 +791,7 @@ pulserEx9 pp =
 expectedStEx9 ::
   forall era.
   (TwoPoolsConstraints era) =>
-  ShelleyPParams era ->
+  PParams era ->
   ChainState era
 expectedStEx9 pp =
   C.evolveNonceFrozen (getBlockNonce (blockEx9 @era))
@@ -824,7 +824,7 @@ rsEx9Agg :: forall c. ExMock c => Map (Credential 'Staking c) (Set (Core.Reward 
 rsEx9Agg = Map.singleton Cast.carlSHK carlsRewards
 
 ppProtVer3 :: ShelleyPParams era
-ppProtVer3 = ppEx {_protocolVersion = ProtVer (natVersion @3) 0}
+ppProtVer3 = ppEx & ppProtocolVersionL .~ ProtVer (natVersion @3) 0
 
 expectedStEx8Agg :: forall era. (TwoPoolsConstraints era) => ChainState era
 expectedStEx8Agg = C.setPrevPParams ppProtVer3 expectedStEx8
@@ -837,22 +837,22 @@ expectedStEx9Agg = C.setPrevPParams ppProtVer3 (expectedStEx9 ppProtVer3)
 twoPools9Agg :: forall era. (TwoPoolsConstraints era) => CHAINExample (BHeader (EraCrypto era)) era
 twoPools9Agg = CHAINExample expectedStEx8Agg blockEx9 (Right expectedStEx9Agg)
 
-testAggregateRewardsLegacy :: HasCallStack => Assertion
+testAggregateRewardsLegacy :: forall era. (ShelleyTest era, HasCallStack) => Assertion
 testAggregateRewardsLegacy = do
   let expectedReward = carlLeaderRewardsFromBob @(EraCrypto C)
   expectedReward @?= Core.rewardAmount (minimum (carlsRewards @(EraCrypto C)))
-  aggregateRewards @C_Crypto ppEx rsEx9Agg @?= Map.singleton Cast.carlSHK expectedReward
+  aggregateRewards @C_Crypto (ppEx ^. ppProtocolVersionL @era) rsEx9Agg @?= Map.singleton Cast.carlSHK expectedReward
 
-testAggregateRewardsNew :: Assertion
+testAggregateRewardsNew :: forall era. (ShelleyTest era) => Assertion
 testAggregateRewardsNew =
-  aggregateRewards @C_Crypto ppProtVer3 rsEx9Agg
+  aggregateRewards @C_Crypto (ppProtVer3 ^. ppProtocolVersionL @era) rsEx9Agg
     @?= Map.singleton Cast.carlSHK (foldMap Core.rewardAmount (carlsRewards @(EraCrypto C)))
 
 --
 -- Two Pools Test Group
 --
 
-twoPoolsExample :: TestTree
+twoPoolsExample :: forall era. (ShelleyTest era) => TestTree
 twoPoolsExample =
   testGroup
     "two pools"
@@ -866,8 +866,8 @@ twoPoolsExample =
             @?= (fst . runShelleyBase . completeStep $ pulserEx9 @C ppProtVer3)
         ),
       testCase "create aggregated pulser" $ testCHAINExample twoPools9Agg,
-      testCase "create legacy aggregatedRewards" testAggregateRewardsLegacy,
-      testCase "create new aggregatedRewards" testAggregateRewardsNew
+      testCase "create legacy aggregatedRewards" (testAggregateRewardsLegacy @era),
+      testCase "create new aggregatedRewards" (testAggregateRewardsNew @era)
     ]
 
 -- This test group tests each block individually, which is really only

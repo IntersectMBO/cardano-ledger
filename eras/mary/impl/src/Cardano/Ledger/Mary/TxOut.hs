@@ -8,7 +8,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Mary.Era (MaryEra)
-import Cardano.Ledger.Shelley.PParams (_minUTxOValue)
+import Cardano.Ledger.Mary.PParams ()
 import Cardano.Ledger.Shelley.TxBody
   ( ShelleyTxOut (..),
     addrEitherShelleyTxOutL,
@@ -30,7 +30,7 @@ instance Crypto c => EraTxOut (MaryEra c) where
   valueEitherTxOutL = valueEitherShelleyTxOutL
   {-# INLINE valueEitherTxOutL #-}
 
-  getMinCoinTxOut pp txOut = scaledMinDeposit (txOut ^. valueTxOutL) (_minUTxOValue pp)
+  getMinCoinTxOut pp txOut = scaledMinDeposit (txOut ^. valueTxOutL) (pp ^. ppMinUTxOValueL)
 
 -- | The `scaledMinDeposit` calculation uses the minUTxOValue protocol parameter
 -- (passed to it as Coin mv) as a specification of "the cost of making a

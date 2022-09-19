@@ -185,8 +185,8 @@ genExUnits era n = do
     genUpTo maxVal (!totalLeft, !acc) _
       | totalLeft == 0 = pure (0, 0 : acc)
       | otherwise = do
-          x <- min totalLeft . round . (% un) <$> genNatural 0 maxVal
-          pure (totalLeft - x, x : acc)
+        x <- min totalLeft . round . (% un) <$> genNatural 0 maxVal
+        pure (totalLeft - x, x : acc)
     genSequenceSum maxVal
       | maxVal == 0 = pure $ replicate n 0
       | otherwise = snd <$> F.foldlM (genUpTo maxVal) (maxVal, []) [1 .. n]
@@ -202,7 +202,7 @@ lookupScript scriptHash mTag = do
     Just script -> pure $ Just script
     Nothing
       | Just tag <- mTag ->
-          Just . snd <$> lookupByKeyM "plutusScript" (scriptHash, tag) gsPlutusScripts
+        Just . snd <$> lookupByKeyM "plutusScript" (scriptHash, tag) gsPlutusScripts
     _ -> pure Nothing
 
 -- =====================================
@@ -598,9 +598,9 @@ genDCerts proof slot = do
         -- so if a duplicate might be generated, we don't do that generation
         let insertIfNotPresent dcs' regCreds' mKey mScriptHash
               | Just (_, scriptHash) <- mScriptHash =
-                  if (scriptHash, mKey) `Set.member` ss
-                    then (dcs, ss, regCreds)
-                    else (dc : dcs', Set.insert (scriptHash, mKey) ss, regCreds')
+                if (scriptHash, mKey) `Set.member` ss
+                  then (dcs, ss, regCreds)
+                  else (dc : dcs', Set.insert (scriptHash, mKey) ss, regCreds')
               | otherwise = (dc : dcs', ss, regCreds')
         -- Generate registration and de-registration delegation certificates,
         -- while ensuring the proper registered/unregistered state in DState
@@ -693,9 +693,9 @@ genCollateralUTxO collateralAddresses (Coin fee) utxo = do
       genCollateral addr coll um
         | Map.null um = genNewCollateral addr coll um =<< lift genPositiveVal
         | otherwise = do
-            i <- lift $ chooseInt (0, Map.size um - 1)
-            let (txIn, txOut) = Map.elemAt i um
-            pure (Map.deleteAt i um, Map.insert txIn txOut coll, txOut ^. coinTxOutL)
+          i <- lift $ chooseInt (0, Map.size um - 1)
+          let (txIn, txOut) = Map.elemAt i um
+          pure (Map.deleteAt i um, Map.insert txIn txOut coll, txOut ^. coinTxOutL)
       -- Recursively either pick existing key spend only outputs or generate new ones that
       -- will be later added to the UTxO map
       go ::
@@ -708,15 +708,15 @@ genCollateralUTxO collateralAddresses (Coin fee) utxo = do
         | curCollTotal >= minCollTotal = pure (coll, curCollTotal <-> minCollTotal)
         | [] <- ecs = error "Impossible: supplied less addresses than `maxCollateralInputs`"
         | ec : ecs' <- ecs = do
-            (um', coll', c) <-
-              if null ecs'
-                then -- This is the last input, so most of the time, put something (val > 0)
-                -- extra in it or we will always have a ColReturn with zero in it.
-                do
-                  excess <- lift genPositiveVal
-                  genNewCollateral ec coll um ((minCollTotal <-> curCollTotal) <+> excess)
-                else elementsT [genCollateral ec coll Map.empty, genCollateral ec coll um]
-            go ecs' coll' (curCollTotal <+> c) um'
+          (um', coll', c) <-
+            if null ecs'
+              then -- This is the last input, so most of the time, put something (val > 0)
+              -- extra in it or we will always have a ColReturn with zero in it.
+              do
+                excess <- lift genPositiveVal
+                genNewCollateral ec coll um ((minCollTotal <-> curCollTotal) <+> excess)
+              else elementsT [genCollateral ec coll Map.empty, genCollateral ec coll um]
+          go ecs' coll' (curCollTotal <+> c) um'
   (collaterals, excessColCoin) <-
     go collateralAddresses Map.empty (Coin 0) $ Map.filter spendOnly utxo
   pure (Map.union collaterals utxo, collaterals, excessColCoin)

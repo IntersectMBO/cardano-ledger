@@ -68,7 +68,6 @@ import Data.Monoid (Sum (..))
 import Data.Set (Set)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
-import GHC.Records (HasField (..))
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 import Quiet (Quiet (Quiet))
@@ -201,7 +200,7 @@ class EraTxBody era => EraUTxO era where
   type ScriptsNeeded era = (r :: Type) | r -> era
 
   -- | Calculate all the value that is being consumed by the transaction.
-  getConsumedValue :: HasField "_keyDeposit" pp Coin => pp -> DPState (EraCrypto era) -> UTxO era -> TxBody era -> Value era
+  getConsumedValue :: PParams era -> DPState (EraCrypto era) -> UTxO era -> TxBody era -> Value era
 
   -- | Produce all the information required for figuring out which scripts are required
   -- for the transaction to be valid, once those scripts are evaluated

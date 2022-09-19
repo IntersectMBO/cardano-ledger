@@ -11,9 +11,10 @@
 module Test.Cardano.Ledger.Shelley.Serialisation.Generators () where
 
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.API (ShelleyTxBody (ShelleyTxBody))
-import Cardano.Ledger.Shelley.PParams (ShelleyPParams)
+import Cardano.Ledger.Shelley.API (ShelleyPParamsHKD, ShelleyTxBody (ShelleyTxBody))
 import qualified Cardano.Ledger.Shelley.Rules as STS
+import Control.Monad.Identity (Identity)
+import Data.Maybe.Strict (StrictMaybe)
 import Generic.Random (genericArbitraryU)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
@@ -57,9 +58,8 @@ instance
   arbitrary = genericArbitraryU
   shrink _ = []
 
--- | Note that this instance is a little off - it is an era-independent
--- generator for something which is only valid in certain eras. Its sole use is
--- for `ShelleyGenesis`, a somewhat confusing type which is in fact used as the
--- genesis for multiple eras.
-instance Arbitrary (ShelleyPParams era) where
+instance Arbitrary (ShelleyPParamsHKD Identity era) where
+  arbitrary = genericArbitraryU
+
+instance Arbitrary (ShelleyPParamsHKD StrictMaybe era) where
   arbitrary = genericArbitraryU

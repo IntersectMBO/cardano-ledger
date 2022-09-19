@@ -17,30 +17,26 @@ module Cardano.Ledger.Alonzo
     AlonzoTxBody,
     AlonzoScript,
     AlonzoTxAuxData,
-    AlonzoPParams,
-    AlonzoPParamsUpdate,
     reapplyAlonzoTx,
   )
 where
 
 import Cardano.Ledger.Alonzo.Data (AlonzoTxAuxData)
+import qualified Cardano.Ledger.Alonzo.Data ()
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Genesis
-import Cardano.Ledger.Alonzo.PParams
-  ( AlonzoPParams,
-    AlonzoPParamsHKD (..),
-    AlonzoPParamsUpdate,
-  )
+import Cardano.Ledger.Alonzo.PParams ()
 import Cardano.Ledger.Alonzo.PlutusScriptApi (getDatumAlonzo)
 import Cardano.Ledger.Alonzo.Rules ()
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Alonzo.Translation ()
+import Cardano.Ledger.Alonzo.Tx ()
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..), AlonzoTxBody, AlonzoTxOut)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), alonzoTxInfo)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..))
 import Cardano.Ledger.Alonzo.UTxO ()
 import Cardano.Ledger.BaseTypes (Globals)
-import Cardano.Ledger.Core hiding (PParamsDelta, Value)
+import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Mary.Value (MaryValue)
@@ -88,8 +84,7 @@ instance (Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyBlock
 
 instance Crypto c => API.CanStartFromGenesis (AlonzoEra c) where
   type AdditionalGenesisConfig (AlonzoEra c) = AlonzoGenesis
-
-  initialState = API.initialStateFromGenesis extendPPWithGenesis
+  fromShelleyPParams = fromShelleyAlonzoPParams
 
 instance Crypto c => ExtendedUTxO (AlonzoEra c) where
   txInfo = alonzoTxInfo

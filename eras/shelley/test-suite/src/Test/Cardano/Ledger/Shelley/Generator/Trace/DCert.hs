@@ -22,6 +22,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era, EraCrypto)
 import Cardano.Ledger.Keys (HasKeyRole (coerceKeyRole), asWitness)
+import Cardano.Ledger.PParams
 import Cardano.Ledger.Shelley.API
   ( AccountState,
     DelplEnv (..),
@@ -63,13 +64,14 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
+import Lens.Micro ((^.))
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair)
 import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv (..), KeySpace (..))
 import Test.Cardano.Ledger.Shelley.Generator.Delegation (CertCred (..), genDCert)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
 import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (scriptKeyCombination)
-import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
+import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest, testGlobals)
 import Test.QuickCheck (Gen)
 
 -- | This is a non-spec STS used to generate a sequence of certificates with
@@ -156,7 +158,8 @@ instance
     Embed (Core.EraRule "DELPL" era) (CERTS era),
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
     State (Core.EraRule "DELPL" era) ~ DPState (EraCrypto era),
-    Signal (Core.EraRule "DELPL" era) ~ DCert (EraCrypto era)
+    Signal (Core.EraRule "DELPL" era) ~ DCert (EraCrypto era),
+    ShelleyTest era
   ) =>
   QC.HasTrace (CERTS era) (GenEnv era)
   where
@@ -191,7 +194,8 @@ genDCerts ::
     Embed (Core.EraRule "DELPL" era) (CERTS era),
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
     State (Core.EraRule "DELPL" era) ~ DPState (EraCrypto era),
-    Signal (Core.EraRule "DELPL" era) ~ DCert (EraCrypto era)
+    Signal (Core.EraRule "DELPL" era) ~ DCert (EraCrypto era),
+    ShelleyTest era
   ) =>
   GenEnv era ->
   Core.PParams era ->

@@ -79,10 +79,10 @@ getInputDataHashesTxBody (UTxO mp) txBody hashScriptMap =
        in case txOut ^. datumTxOutF of
             NoDatum
               | isTwoPhaseScriptAddressFromMap hashScriptMap addr ->
-                  (hashSet, Set.insert txIn inputSet)
+                (hashSet, Set.insert txIn inputSet)
             DatumHash dataHash
               | isTwoPhaseScriptAddressFromMap hashScriptMap addr ->
-                  (Set.insert dataHash hashSet, inputSet)
+                (Set.insert dataHash hashSet, inputSet)
             -- Though it is somewhat odd to allow non-two-phase-scripts to include a datum,
             -- the Alonzo era already set the precedent with datum hashes, and several dapp
             -- developers see this as a helpful feature.

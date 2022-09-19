@@ -25,9 +25,6 @@ module Cardano.Ledger.Shelley.LedgerState.IncrementalStake
 where
 
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.BaseTypes
-  ( ProtVer (..),
-  )
 import Cardano.Ledger.Coin
   ( Coin (..),
     addDeltaCoin,
@@ -76,7 +73,6 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.VMap as VMap
-import GHC.Records (HasField (..))
 import Lens.Micro
 
 -- =======================================================================
@@ -252,8 +248,7 @@ aggregateActiveStake =
 --   2) Adds to the Treasury of the AccountState for non-actively delegated stake
 --   3) Adds fees to the UTxOState
 applyRUpd ::
-  ( HasField "_protocolVersion" (PParams era) ProtVer
-  ) =>
+  EraPParams era =>
   RewardUpdate (EraCrypto era) ->
   EpochState era ->
   EpochState era
@@ -263,8 +258,7 @@ applyRUpd ru es =
 
 -- TO IncrementalStake
 applyRUpdFiltered ::
-  ( HasField "_protocolVersion" (PParams era) ProtVer
-  ) =>
+  EraPParams era =>
   RewardUpdate (EraCrypto era) ->
   EpochState era ->
   (EpochState era, FilteredRewards era)
@@ -278,7 +272,7 @@ applyRUpdFiltered
       !epochStateAns = EpochState as' ss ls' pr pp nm'
       dState = dpsDState delegState
       filteredRewards@FilteredRewards {frRegistered, frTotalUnregistered} = filterAllRewards (rs ru) es
-      registeredAggregated = aggregateCompactRewards pp frRegistered
+      registeredAggregated = aggregateCompactRewards (pp ^. ppProtocolVersionL) frRegistered
       as' =
         as
           { asTreasury = addDeltaCoin (asTreasury as) (deltaT ru) <> frTotalUnregistered,
@@ -316,8 +310,7 @@ instance NFData (FilteredRewards era) where
 -- | Return aggregated information from a reward mapping from the previous Epoch
 --   Breaks the mapping into several parts captured by the 'Filtered' data type.
 filterAllRewards ::
-  ( HasField "_protocolVersion" (PParams era) ProtVer
-  ) =>
+  EraPParams era =>
   Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))) ->
   EpochState era ->
   FilteredRewards era
@@ -332,6 +325,6 @@ filterAllRewards rs' (EpochState _as _ss ls pr _pp _nm) =
       Map.partitionWithKey
         (\k _ -> member k (rewards dState)) -- The rewards view of the unified map of DState
         rs'
-    totalUnregistered = fold $ aggregateRewards pr unregRU
+    totalUnregistered = fold $ aggregateRewards (pr ^. ppProtocolVersionL) unregRU
     unregistered = Map.keysSet unregRU
-    (registered, shelleyIgnored) = filterRewards pr regRU
+    (registered, shelleyIgnored) = filterRewards (pr ^. ppProtocolVersionL) regRU

@@ -8,21 +8,17 @@
 
 module Cardano.Ledger.Mary.Era (MaryEra) where
 
+import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.Rules (AllegraUTXO, AllegraUTXOW)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary.Value (MaryValue)
-import Cardano.Ledger.Shelley.PParams
-  ( ShelleyPParams,
-    ShelleyPParamsHKD (..),
-    ShelleyPParamsUpdate,
-    updatePParams,
-  )
 import Cardano.Ledger.Shelley.Rules
 
 data MaryEra era
 
 instance Crypto c => Era (MaryEra c) where
+  type PreviousEra (MaryEra c) = AllegraEra c
   type EraCrypto (MaryEra c) = c
   type ProtVerLow (MaryEra c) = 4
 
@@ -30,13 +26,10 @@ instance Crypto c => Era (MaryEra c) where
 -- Core instances
 --------------------------------------------------------------------------------
 
+-- | No context is needed to translate from Allegra to Mary.
+type instance TranslationContext (MaryEra c) = ()
+
 type instance Value (MaryEra c) = MaryValue c
-
-instance Crypto c => EraPParams (MaryEra c) where
-  type PParams (MaryEra c) = ShelleyPParams (MaryEra c)
-  type PParamsUpdate (MaryEra c) = ShelleyPParamsUpdate (MaryEra c)
-
-  applyPPUpdates = updatePParams
 
 -- These rules are all inherited from Shelley
 

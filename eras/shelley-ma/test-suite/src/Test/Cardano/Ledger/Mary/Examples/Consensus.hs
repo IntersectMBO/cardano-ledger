@@ -12,6 +12,7 @@ import Cardano.Ledger.Mary.Value
 import qualified Data.Map.Strict as Map (singleton)
 import Data.Proxy
 import Test.Cardano.Ledger.Allegra.Examples.Consensus
+import Test.Cardano.Ledger.MaryEraGen ()
 import Test.Cardano.Ledger.Shelley.Examples.Consensus
 import Test.Cardano.Ledger.Shelley.Orphans ()
 

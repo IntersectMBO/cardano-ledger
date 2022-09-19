@@ -74,7 +74,7 @@ library
     cardano-ledger-mary,
     cardano-slotting,
     containers,
-    data-default,
+    data-default-class,
     deepseq,
     heapwords,
     measures,
@@ -93,6 +93,7 @@ library
     text,
     time,
     transformers,
+    tree-diff,
     utf8-string,
     validation-selective,
     vector

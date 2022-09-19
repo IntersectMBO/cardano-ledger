@@ -864,8 +864,8 @@ decodeUTCTime =
       !year <- decodeInteger
       !dayOfYear <- decodeInt
       !timeOfDayPico <- decodeInteger
-      return $!
-        UTCTime
+      return
+        $! UTCTime
           (fromOrdinalDate year dayOfYear)
           (picosecondsToDiffTime timeOfDayPico)
 
@@ -889,7 +889,7 @@ binaryGetDecoder allowLeftOver name getter = do
     Right (leftOver, _, ha)
       | allowLeftOver || BSL.null leftOver -> pure ha
       | otherwise ->
-          cborError $ DecoderErrorLeftover name (BSL.toStrict leftOver)
+        cborError $ DecoderErrorLeftover name (BSL.toStrict leftOver)
 
 decodeIPv4 :: Decoder s IPv4
 decodeIPv4 =

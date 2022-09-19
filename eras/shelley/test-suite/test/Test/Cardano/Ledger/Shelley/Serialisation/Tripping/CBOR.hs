@@ -37,7 +37,6 @@ import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Tasty
 import Test.Tasty.QuickCheck (testProperty)
-
 {-------------------------------------------------------------------------------
   Serialization Properties
 -------------------------------------------------------------------------------}

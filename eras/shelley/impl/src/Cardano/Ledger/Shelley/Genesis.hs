@@ -66,11 +66,10 @@ import Cardano.Ledger.Binary
   )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (HASH, KES)
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys
 import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
-import Cardano.Ledger.Shelley.PParams
+import Cardano.Ledger.Shelley.Era
 import Cardano.Ledger.Shelley.StabilityWindow
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
@@ -126,11 +125,11 @@ data ShelleyGenesisStaking c = ShelleyGenesisStaking
 
 instance NoThunks (ShelleyGenesisStaking c)
 
-instance CC.Crypto c => ToCBOR (ShelleyGenesisStaking c) where
+instance Crypto c => ToCBOR (ShelleyGenesisStaking c) where
   toCBOR (ShelleyGenesisStaking pools stake) =
     encodeListLen 2 <> toCBOR pools <> toCBOR stake
 
-instance CC.Crypto c => FromCBOR (ShelleyGenesisStaking c) where
+instance Crypto c => FromCBOR (ShelleyGenesisStaking c) where
   fromCBOR = do
     decodeRecordNamed "ShelleyGenesisStaking" (const 2) $ do
       pools <- fromCBOR
@@ -190,7 +189,7 @@ nominalDiffTimeMicroToSeconds (NominalDiffTimeMicro microseconds) = microToPico 
 -- defined here rather than in its own module. In mainnet, Shelley will
 -- transition naturally from Byron, and thus will never have its own genesis
 -- information.
-data ShelleyGenesis era = ShelleyGenesis
+data ShelleyGenesis c = ShelleyGenesis
   { sgSystemStart :: !UTCTime,
     sgNetworkMagic :: !Word32,
     sgNetworkId :: !Network,
@@ -202,26 +201,27 @@ data ShelleyGenesis era = ShelleyGenesis
     sgSlotLength :: !NominalDiffTimeMicro,
     sgUpdateQuorum :: !Word64,
     sgMaxLovelaceSupply :: !Word64,
-    sgProtocolParams :: !(ShelleyPParams era),
-    sgGenDelegs :: !(Map (KeyHash 'Genesis (EraCrypto era)) (GenDelegPair (EraCrypto era))),
-    sgInitialFunds :: LM.ListMap (Addr (EraCrypto era)) Coin,
-    sgStaking :: ShelleyGenesisStaking (EraCrypto era)
+    sgProtocolParams :: !(PParams (ShelleyEra c)),
+    sgGenDelegs :: !(Map (KeyHash 'Genesis c) (GenDelegPair c)),
+    sgInitialFunds :: LM.ListMap (Addr c) Coin,
+    sgStaking :: ShelleyGenesisStaking c
   }
-  deriving stock (Eq, Show, Generic)
+  deriving stock (Generic)
 
-deriving instance Era era => NoThunks (ShelleyGenesis era)
+deriving instance Crypto c => Show (ShelleyGenesis c)
 
-sgActiveSlotCoeff :: ShelleyGenesis era -> ActiveSlotCoeff
+deriving instance Crypto c => Eq (ShelleyGenesis c)
+
+deriving instance Crypto c => NoThunks (ShelleyGenesis c)
+
+sgActiveSlotCoeff :: ShelleyGenesis c -> ActiveSlotCoeff
 sgActiveSlotCoeff = mkActiveSlotCoeff . sgActiveSlotsCoeff
 
-instance Era era => ToJSON (ShelleyGenesis era) where
+instance Crypto c => ToJSON (ShelleyGenesis c) where
   toJSON = Aeson.object . toShelleyGenesisPairs
   toEncoding = Aeson.pairs . mconcat . toShelleyGenesisPairs
 
-toShelleyGenesisPairs ::
-  (Aeson.KeyValue a, CC.Crypto (EraCrypto era)) =>
-  ShelleyGenesis era ->
-  [a]
+toShelleyGenesisPairs :: (Aeson.KeyValue a, Crypto c) => ShelleyGenesis c -> [a]
 toShelleyGenesisPairs
   ShelleyGenesis
     { sgSystemStart,
@@ -259,37 +259,50 @@ toShelleyGenesisPairs
           "staking" .= strictSgStaking
         ]
 
-instance Era era => FromJSON (ShelleyGenesis era) where
+instance Crypto c => FromJSON (ShelleyGenesis c) where
   parseJSON =
     Aeson.withObject "ShelleyGenesis" $ \obj ->
       ShelleyGenesis
         <$> (forceUTCTime <$> obj .: "systemStart")
-        <*> obj .: "networkMagic"
-        <*> obj .: "networkId"
-        <*> obj .: "activeSlotsCoeff"
-        <*> obj .: "securityParam"
-        <*> obj .: "epochLength"
-        <*> obj .: "slotsPerKESPeriod"
-        <*> obj .: "maxKESEvolutions"
-        <*> obj .: "slotLength"
-        <*> obj .: "updateQuorum"
-        <*> obj .: "maxLovelaceSupply"
-        <*> obj .: "protocolParams"
+        <*> obj
+        .: "networkMagic"
+        <*> obj
+        .: "networkId"
+        <*> obj
+        .: "activeSlotsCoeff"
+        <*> obj
+        .: "securityParam"
+        <*> obj
+        .: "epochLength"
+        <*> obj
+        .: "slotsPerKESPeriod"
+        <*> obj
+        .: "maxKESEvolutions"
+        <*> obj
+        .: "slotLength"
+        <*> obj
+        .: "updateQuorum"
+        <*> obj
+        .: "maxLovelaceSupply"
+        <*> obj
+        .: "protocolParams"
         <*> (forceElemsToWHNF <$> obj .: "genDelegs")
         <*> (forceElemsToWHNF <$> obj .: "initialFunds")
-        <*> obj .:? "staking" .!= emptyGenesisStaking
+        <*> obj
+        .:? "staking"
+        .!= emptyGenesisStaking
     where
       forceUTCTime date =
         let !day = utctDay date
             !time = utctDayTime date
          in UTCTime day time
 
-instance CC.Crypto c => ToJSON (ShelleyGenesisStaking c) where
+instance Crypto c => ToJSON (ShelleyGenesisStaking c) where
   toJSON = Aeson.object . toShelleyGenesisStakingPairs
   toEncoding = Aeson.pairs . mconcat . toShelleyGenesisStakingPairs
 
 toShelleyGenesisStakingPairs ::
-  (Aeson.KeyValue a, CC.Crypto c) =>
+  (Aeson.KeyValue a, Crypto c) =>
   ShelleyGenesisStaking c ->
   [a]
 toShelleyGenesisStakingPairs ShelleyGenesisStaking {sgsPools, sgsStake} =
@@ -297,14 +310,14 @@ toShelleyGenesisStakingPairs ShelleyGenesisStaking {sgsPools, sgsStake} =
     "stake" .= sgsStake
   ]
 
-instance CC.Crypto c => FromJSON (ShelleyGenesisStaking c) where
+instance Crypto c => FromJSON (ShelleyGenesisStaking c) where
   parseJSON =
     Aeson.withObject "ShelleyGenesisStaking" $ \obj ->
       ShelleyGenesisStaking
         <$> (forceElemsToWHNF <$> obj .: "pools")
         <*> (forceElemsToWHNF <$> obj .: "stake")
 
-instance Era era => ToCBOR (ShelleyGenesis era) where
+instance Crypto c => ToCBOR (ShelleyGenesis c) where
   toCBOR
     ShelleyGenesis
       { sgSystemStart,
@@ -340,7 +353,7 @@ instance Era era => ToCBOR (ShelleyGenesis era) where
         <> toCBOR sgInitialFunds
         <> toCBOR sgStaking
 
-instance Era era => FromCBOR (ShelleyGenesis era) where
+instance Crypto c => FromCBOR (ShelleyGenesis c) where
   fromCBOR = do
     decodeRecordNamed "ShelleyGenesis" (const 15) $ do
       sgSystemStart <- fromCBOR
@@ -399,7 +412,7 @@ activeSlotsCoeffFromCBOR = do
 genesisUTxO ::
   forall era.
   EraTxOut era =>
-  ShelleyGenesis era ->
+  ShelleyGenesis (EraCrypto era) ->
   UTxO era
 genesisUTxO genesis =
   UTxO $
@@ -419,7 +432,7 @@ genesisUTxO genesis =
 -- This gets turned into a UTxO by making a pseudo-transaction for each address,
 -- with the 0th output being the coin value. So to spend from the initial UTxO
 -- we need this same 'TxIn' to use as an input to the spending transaction.
-initialFundsPseudoTxIn :: forall c. CC.Crypto c => Addr c -> TxIn c
+initialFundsPseudoTxIn :: forall c. Crypto c => Addr c -> TxIn c
 initialFundsPseudoTxIn addr =
   TxIn (pseudoTxId addr) minBound
   where

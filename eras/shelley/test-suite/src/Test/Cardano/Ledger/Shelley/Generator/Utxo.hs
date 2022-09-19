@@ -54,6 +54,7 @@ import Cardano.Ledger.UTxO
   ( UTxO (..),
     sumAllValue,
   )
+import Test.Cardano.Ledger.Shelley.Utils (Split (..))
 import Cardano.Ledger.Val (Val (..), sumVal, (<+>), (<->), (<×>))
 import Control.Monad (when)
 import Control.State.Transition
@@ -69,7 +70,6 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import qualified Data.Vector as V
 import Debug.Trace (trace)
-import GHC.Records (HasField (..))
 import Lens.Micro
 import NoThunks.Class ()
 import Test.Cardano.Ledger.Core.KeyPair
@@ -97,7 +97,7 @@ import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
 import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (scriptKeyCombination)
 import Test.Cardano.Ledger.Shelley.Generator.Trace.DCert (CERTS, genDCerts)
 import Test.Cardano.Ledger.Shelley.Generator.Update (genUpdate)
-import Test.Cardano.Ledger.Shelley.Utils (Split (..))
+import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest)
 import Test.QuickCheck (Gen, discard)
 import qualified Test.QuickCheck as QC
 
@@ -132,7 +132,8 @@ genTx ::
     Embed (EraRule "DELPL" era) (CERTS era),
     Environment (EraRule "DELPL" era) ~ DelplEnv era,
     State (EraRule "DELPL" era) ~ DPState (EraCrypto era),
-    Signal (EraRule "DELPL" era) ~ DCert (EraCrypto era)
+    Signal (EraRule "DELPL" era) ~ DCert (EraCrypto era),
+    ShelleyTest era
   ) =>
   GenEnv era ->
   LedgerEnv era ->
@@ -224,7 +225,7 @@ genTx
 
       -- Occasionally we have a transaction generated with insufficient inputs
       -- to cover the deposits. In this case we discard the test case.
-      let enough = length outputAddrs <×> getField @"_minUTxOValue" pparams
+      let enough = length outputAddrs <×> pparams ^. ppMinUTxOValueL
       !_ <- when (coin spendingBalance < coin enough) (myDiscard "No inputs left. Utxo.hs")
 
       -------------------------------------------------------------------------
@@ -326,7 +327,7 @@ encodedLen x = fromIntegral $ BSL.length (serialize (eraProtVerHigh @era) x)
 -- transaction so that it will balance.
 genNextDelta ::
   forall era.
-  (EraGen era, Mock (EraCrypto era)) =>
+  (EraGen era, Mock (EraCrypto era), ShelleyTest era) =>
   ScriptInfo era ->
   UTxO era ->
   PParams era ->
@@ -364,11 +365,11 @@ genNextDelta
         deltaScriptCost = foldr accum (Coin 0) extraScripts
           where
             accum (s1, _) ans = genEraScriptCost @era pparams s1 <+> ans
-        deltaFee = (draftSize <×> Coin (fromIntegral (getField @"_minfeeA" pparams))) <+> deltaScriptCost
+        deltaFee = (draftSize <×> Coin (fromIntegral (pparams ^. ppMinFeeAL))) <+> deltaScriptCost
         totalFee = baseTxFee <+> deltaFee :: Coin
         remainingFee = totalFee <-> dfees :: Coin
         changeAmount = getChangeAmount change
-        minAda = getField @"_minUTxOValue" pparams
+        minAda = pparams ^. ppMinUTxOValueL
      in if remainingFee <= Coin 0 -- we've paid for all the fees
           then pure delta -- we're done
           else -- the change covers what we need, so shift Coin from change to dfees.
@@ -444,7 +445,8 @@ genNextDelta
 genNextDeltaTilFixPoint ::
   forall era.
   ( EraGen era,
-    Mock (EraCrypto era)
+    Mock (EraCrypto era),
+    ShelleyTest era
   ) =>
   ScriptInfo era ->
   Coin ->
@@ -460,7 +462,7 @@ genNextDeltaTilFixPoint scriptinfo initialfee keys scripts utxo pparams keySpace
   fix
     0
     (genNextDelta scriptinfo utxo pparams keySpace tx)
-    (deltaZero initialfee (safetyOffset <+> getField @"_minUTxOValue" pparams) (head addr))
+    (deltaZero initialfee (safetyOffset <+> pparams ^. ppMinUTxOValueL) (head addr))
   where
     -- add a small offset here to ensure outputs above minUtxo value
     safetyOffset = Coin 5
@@ -525,6 +527,7 @@ fix n f d = do d1 <- f n d; if d1 == d then pure d else fix (n + 1) f d1
 
 converge ::
   forall era.
+  ShelleyTest era =>
   (EraGen era, Mock (EraCrypto era)) =>
   ScriptInfo era ->
   Coin ->
@@ -565,17 +568,17 @@ ruffle k items = do
 genIndices :: Int -> (Int, Int) -> Gen ([Int], IntSet.IntSet)
 genIndices k (l', u')
   | k < 0 || u - l + 1 < k =
-      error $
-        "Cannot generate "
-          ++ show k
-          ++ " indices in the range ["
-          ++ show l
-          ++ ", "
-          ++ show u
-          ++ "]"
+    error $
+      "Cannot generate "
+        ++ show k
+        ++ " indices in the range ["
+        ++ show l
+        ++ ", "
+        ++ show u
+        ++ "]"
   | u - l < k `div` 2 = do
-      xs <- take k <$> QC.shuffle [l .. u]
-      pure (xs, IntSet.fromList xs)
+    xs <- take k <$> QC.shuffle [l .. u]
+    pure (xs, IntSet.fromList xs)
   | otherwise = go k [] mempty
   where
     (l, u) =
@@ -585,10 +588,10 @@ genIndices k (l', u')
     go n !res !acc
       | n <= 0 = pure (res, acc)
       | otherwise = do
-          i <- QC.choose (l, u)
-          if IntSet.member i acc
-            then go n res acc
-            else go (n - 1) (i : res) $ IntSet.insert i acc
+        i <- QC.choose (l, u)
+        if IntSet.member i acc
+          then go n res acc
+          else go (n - 1) (i : res) $ IntSet.insert i acc
 
 -- | Select @n@ random key value pairs from the supplied map. Order of keys with
 -- respect to each other will also be random, i.e. not sorted.
@@ -598,9 +601,9 @@ pickRandomFromMap n' initMap = go (min (max 0 n') (Map.size initMap)) [] initMap
     go n !acc !m
       | n <= 0 = pure acc
       | otherwise = do
-          i <- QC.choose (0, n - 1)
-          let (k, y) = Map.elemAt i m
-          go (n - 1) ((k, y) : acc) (Map.deleteAt i m)
+        i <- QC.choose (0, n - 1)
+        let (k, y) = Map.elemAt i m
+        go (n - 1) ((k, y) : acc) (Map.deleteAt i m)
 
 mkScriptWits ::
   forall era.

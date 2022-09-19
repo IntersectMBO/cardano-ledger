@@ -1031,10 +1031,10 @@ txFromTestCaseData
         tx =
           newTx
             pf
-            ( Body (txBody testCaseData)
-                : [ WitnessesI
-                      (AddrWits' addrWits : otherWitsFields testCaseData)
-                  ]
+            ( Body (txBody testCaseData) :
+              [ WitnessesI
+                  (AddrWits' addrWits : otherWitsFields testCaseData)
+              ]
             )
      in tx
 

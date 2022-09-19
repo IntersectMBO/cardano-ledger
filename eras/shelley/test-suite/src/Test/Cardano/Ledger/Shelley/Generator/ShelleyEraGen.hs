@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
@@ -16,13 +17,13 @@ import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (DSIGN, KES)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.Pretty ()
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API
   ( Coin (..),
     DCert,
     Update,
   )
-import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Scripts (MultiSig (..))
 import Cardano.Ledger.Shelley.Tx (TxIn (..))
 import Cardano.Ledger.Shelley.TxBody
@@ -37,6 +38,7 @@ import Cardano.Protocol.TPraos.API (PraosCrypto)
 import Control.Monad (replicateM)
 import Data.Sequence.Strict (StrictSeq ((:|>)))
 import Data.Set (Set)
+import Lens.Micro.Extras (view)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core
@@ -62,7 +64,8 @@ import Test.QuickCheck (Gen)
 instance
   ( PraosCrypto c,
     DSIGN.Signable (DSIGN c) ~ SignableRepresentation,
-    KES.Signable (KES c) ~ SignableRepresentation
+    KES.Signable (KES c) ~ SignableRepresentation,
+    ShelleyTest (ShelleyEra c)
   ) =>
   EraGen (ShelleyEra c)
   where
@@ -82,7 +85,7 @@ instance
         stbInputs = stbInputs body' <> ins,
         stbOutputs = stbOutputs body' :|> out
       }
-  genEraPParamsUpdate = genShelleyPParamsUpdate
+  genEraPParamsUpdate = genShelleyPParamsUpdate @(ShelleyEra c)
   genEraPParams = genPParams
 
   genEraTxWits _ setWitVKey mapScriptWit = ShelleyTxWits setWitVKey mapScriptWit mempty
@@ -106,7 +109,7 @@ instance CC.Crypto c => ScriptClass (ShelleyEra c) where
 
 genTxBody ::
   (ShelleyTest era) =>
-  ShelleyPParams era ->
+  PParams era ->
   SlotNo ->
   Set (TxIn (EraCrypto era)) ->
   StrictSeq (ShelleyTxOut era) ->
@@ -136,8 +139,8 @@ genTimeToLive currentSlot = do
   ttl <- genNatural 50 100
   pure $ currentSlot + SlotNo (fromIntegral ttl)
 
-instance Mock c => MinGenTxout (ShelleyEra c) where
-  calcEraMinUTxO _txout = _minUTxOValue
+instance (Mock c) => MinGenTxout (ShelleyEra c) where
+  calcEraMinUTxO _txout = view ppMinUTxOValueL
   addValToTxOut v (ShelleyTxOut a u) = ShelleyTxOut a (v <+> u)
   genEraTxOut _genenv genVal addrs = do
     values <- replicateM (length addrs) genVal

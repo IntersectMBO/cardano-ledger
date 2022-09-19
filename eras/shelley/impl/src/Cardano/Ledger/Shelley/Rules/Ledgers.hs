@@ -132,8 +132,8 @@ ledgersTransition = do
           TRC (LedgerEnv slot ix pp account, ls', tx)
     )
     ls
-    $ zip [minBound ..]
-    $ toList txwits
+    $ zip [minBound ..] $
+      toList txwits
 
 instance
   ( Era era,

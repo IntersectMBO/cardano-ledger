@@ -35,7 +35,6 @@ common project-config
 library
   import:             base, project-config
   exposed-modules:
-    Cardano.Ledger.Babbage.Genesis
     Cardano.Ledger.Babbage.PParams
     Cardano.Ledger.Babbage.Tx
     Cardano.Ledger.Babbage.TxBody
@@ -56,25 +55,25 @@ library
     Cardano.Ledger.Babbage.Rules.Ledger
     Cardano.Ledger.Babbage.UTxO
   build-depends:
+                aeson,
                 bytestring,
                 cardano-crypto-class,
                 cardano-data,
-                cardano-ledger-alonzo,
                 cardano-ledger-allegra,
+                cardano-ledger-alonzo,
                 cardano-ledger-binary,
                 cardano-ledger-core,
                 cardano-ledger-mary,
                 cardano-ledger-shelley,
                 cardano-slotting,
+                cardano-strict-containers,
                 containers,
-                data-default,
                 deepseq,
                 microlens,
                 nothunks,
                 plutus-ledger-api ^>= 1.1,
                 set-algebra,
                 small-steps,
-                cardano-strict-containers,
                 text,
                 transformers,
                 validation-selective

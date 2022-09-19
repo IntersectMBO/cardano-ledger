@@ -11,16 +11,16 @@
 module Cardano.Ledger.Alonzo.Translation where
 
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
-import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..), extendPPWithGenesis)
-import Cardano.Ledger.Alonzo.PParams (AlonzoPParams, AlonzoPParamsUpdate, extendPP)
+import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
+import Cardano.Ledger.Alonzo.PParams ()
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.Binary (DecoderError)
+import Cardano.Ledger.Core (upgradePParams, upgradePParamsUpdate)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era
-  ( PreviousEra,
-    TranslateEra (..),
+  ( TranslateEra (..),
     TranslationContext,
     translateEra',
   )
@@ -28,13 +28,12 @@ import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley.API
   ( EpochState (..),
     NewEpochState (..),
-    ShelleyGenesis,
     StrictMaybe (..),
   )
 import qualified Cardano.Ledger.Shelley.API as API
-import qualified Cardano.Ledger.Shelley.PParams as Shelley
 import qualified Cardano.Ledger.Shelley.Tx as LTX
 import qualified Cardano.Ledger.Shelley.TxBody as Shelley
+import Data.Default.Class (def)
 import qualified Data.Map.Strict as Map
 
 --------------------------------------------------------------------------------
@@ -52,8 +51,6 @@ import qualified Data.Map.Strict as Map
 -- being total. Do not change it!
 --------------------------------------------------------------------------------
 
-type instance PreviousEra (AlonzoEra c) = MaryEra c
-
 type instance TranslationContext (AlonzoEra c) = AlonzoGenesis
 
 instance Crypto c => TranslateEra (AlonzoEra c) NewEpochState where
@@ -69,26 +66,8 @@ instance Crypto c => TranslateEra (AlonzoEra c) NewEpochState where
           stashedAVVMAddresses = ()
         }
 
-instance Crypto c => TranslateEra (AlonzoEra c) ShelleyGenesis where
-  translateEra ctxt genesis =
-    return
-      API.ShelleyGenesis
-        { API.sgSystemStart = API.sgSystemStart genesis,
-          API.sgNetworkMagic = API.sgNetworkMagic genesis,
-          API.sgNetworkId = API.sgNetworkId genesis,
-          API.sgActiveSlotsCoeff = API.sgActiveSlotsCoeff genesis,
-          API.sgSecurityParam = API.sgSecurityParam genesis,
-          API.sgEpochLength = API.sgEpochLength genesis,
-          API.sgSlotsPerKESPeriod = API.sgSlotsPerKESPeriod genesis,
-          API.sgMaxKESEvolutions = API.sgMaxKESEvolutions genesis,
-          API.sgSlotLength = API.sgSlotLength genesis,
-          API.sgUpdateQuorum = API.sgUpdateQuorum genesis,
-          API.sgMaxLovelaceSupply = API.sgMaxLovelaceSupply genesis,
-          API.sgProtocolParams = translateEra' ctxt (API.sgProtocolParams genesis),
-          API.sgGenDelegs = API.sgGenDelegs genesis,
-          API.sgInitialFunds = API.sgInitialFunds genesis,
-          API.sgStaking = API.sgStaking genesis
-        }
+instance Crypto c => TranslateEra (AlonzoEra c) Core.PParams where
+  translateEra (AlonzoGenesisWrapper upgradeArgs) = pure . upgradePParams upgradeArgs
 
 newtype Tx era = Tx {unTx :: Core.Tx era}
 
@@ -116,17 +95,15 @@ instance
 -- Auxiliary instances and functions
 --------------------------------------------------------------------------------
 
-instance (Crypto c, Functor f) => TranslateEra (AlonzoEra c) (API.ShelleyPParamsHKD f)
-
 instance Crypto c => TranslateEra (AlonzoEra c) EpochState where
-  translateEra ctxt es =
+  translateEra ctxt@(AlonzoGenesisWrapper upgradeArgs) es =
     return
       EpochState
         { esAccountState = esAccountState es,
           esSnapshots = esSnapshots es,
           esLState = translateEra' ctxt $ esLState es,
-          esPrevPp = translatePParams ctxt $ esPrevPp es,
-          esPp = translatePParams ctxt $ esPp es,
+          esPrevPp = upgradePParams upgradeArgs $ esPrevPp es,
+          esPp = upgradePParams upgradeArgs $ esPp es,
           esNonMyopic = esNonMyopic es
         }
 
@@ -163,24 +140,10 @@ instance Crypto c => TranslateEra (AlonzoEra c) API.PPUPState where
 
 instance Crypto c => TranslateEra (AlonzoEra c) API.ProposedPPUpdates where
   translateEra _ctxt (API.ProposedPPUpdates ppup) =
-    return $ API.ProposedPPUpdates $ fmap translatePParamsUpdate ppup
+    return $ API.ProposedPPUpdates $ fmap (upgradePParamsUpdate def) ppup
 
 translateTxOut ::
   Crypto c =>
   Core.TxOut (MaryEra c) ->
   Core.TxOut (AlonzoEra c)
 translateTxOut (Shelley.TxOutCompact addr value) = TxOutCompact addr value
-
--- extendPP with type: extendPP :: Shelley.PParams' f era1 -> ... -> PParams' f era2
--- Is general enough to work for both
--- (PParams era)       = (PParams' Identity era)    and
--- (PParamsUpdate era) = (PParams' StrictMaybe era)
-
-translatePParams ::
-  AlonzoGenesis -> Shelley.ShelleyPParams (MaryEra c) -> AlonzoPParams (AlonzoEra c)
-translatePParams = flip extendPPWithGenesis
-
-translatePParamsUpdate ::
-  Shelley.ShelleyPParamsUpdate (MaryEra c) -> AlonzoPParamsUpdate (AlonzoEra c)
-translatePParamsUpdate pp =
-  extendPP pp SNothing SNothing SNothing SNothing SNothing SNothing SNothing SNothing

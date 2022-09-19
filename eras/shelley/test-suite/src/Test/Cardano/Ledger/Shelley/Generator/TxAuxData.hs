@@ -71,7 +71,7 @@ genDatumInt =
       ]
   where
     minVal, maxVal :: Integer
-    minVal = -maxVal
+    minVal = - maxVal
     maxVal = fromIntegral (maxBound :: Word64)
 
 genDatumString :: Gen Metadatum

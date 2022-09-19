@@ -44,7 +44,7 @@ import Cardano.Ledger.Coin
   ( Coin (..),
     DeltaCoin (..),
   )
-import Cardano.Ledger.Core (EraCrypto, PParams)
+import Cardano.Ledger.Core (EraCrypto, EraPParams, PParams, ppKeyDepositL, ppPoolDepositL)
 import Cardano.Ledger.Credential (Credential (..), Ptr)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys
@@ -68,8 +68,7 @@ import Data.Foldable (foldl')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
-import GHC.Records (HasField (..))
-import Lens.Micro (_1, _2)
+import Lens.Micro ((^.), _1, _2)
 import NoThunks.Class (NoThunks (..))
 
 -- ======================================
@@ -283,7 +282,7 @@ ptrsMap (DState {dsUnified = UMap _ ptrmap}) = ptrmap
 --   should be an error) So to avoid this problem one should make an explicit
 --   check that the credential is not registered in the places where this function is called.
 payKeyDeposit ::
-  HasField "_keyDeposit" (PParams era) Coin =>
+  EraPParams era =>
   Credential 'Staking (EraCrypto era) ->
   PParams era ->
   DState (EraCrypto era) ->
@@ -292,7 +291,7 @@ payKeyDeposit cred pp dstate = dstate {dsDeposits = newStake}
   where
     stake = dsDeposits dstate
     newStake
-      | Map.notMember cred stake = Map.insert cred (getField @"_keyDeposit" pp) stake
+      | Map.notMember cred stake = Map.insert cred (pp ^. ppKeyDepositL) stake
       | otherwise = stake
 
 refundKeyDepositFull :: Credential 'Staking c -> DState c -> (Coin, DState c)
@@ -311,7 +310,7 @@ refundKeyDeposit cred dstate = snd (refundKeyDepositFull cred dstate)
 --   the Deposits unchanged if the keyhash already exists. There are legal
 --   situations where a pool may be registered multiple times.
 payPoolDeposit ::
-  HasField "_poolDeposit" (PParams era) Coin =>
+  EraPParams era =>
   KeyHash 'StakePool (EraCrypto era) ->
   PParams era ->
   PState (EraCrypto era) ->
@@ -320,7 +319,7 @@ payPoolDeposit keyhash pp pstate = pstate {psDeposits = newpool}
   where
     pool = psDeposits pstate
     newpool
-      | Map.notMember keyhash pool = Map.insert keyhash (getField @"_poolDeposit" pp) pool
+      | Map.notMember keyhash pool = Map.insert keyhash (pp ^. ppPoolDepositL) pool
       | otherwise = pool
 
 refundPoolDeposit :: KeyHash 'StakePool c -> PState c -> (Coin, PState c)

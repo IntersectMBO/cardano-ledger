@@ -256,7 +256,7 @@ szVerify ctx x = case szSimplify (szWithCtx ctx (pure x)) of
   Left bounds -> BoundsAreSymbolic bounds
   Right range
     | lo range <= sz && sz <= hi range ->
-        if lo range == hi range then Exact else WithinBounds sz range
+      if lo range == hi range then Exact else WithinBounds sz range
   Right range -> OutOfBounds sz range
   where
     sz :: Natural

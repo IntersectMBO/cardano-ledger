@@ -121,8 +121,9 @@ import Cardano.Ledger.Alonzo.TxBody as AlonzoTxBodyReExports
     MaryEraTxBody (..),
     ShelleyEraTxBody (..),
   )
-import Cardano.Ledger.Babbage.Core (BabbageEraTxBody (..))
+import Cardano.Ledger.Babbage.Core (BabbageEraPParams, BabbageEraTxBody (..))
 import Cardano.Ledger.Babbage.Era (BabbageEra)
+import Cardano.Ledger.Babbage.PParams ()
 import Cardano.Ledger.Babbage.Scripts ()
 import Cardano.Ledger.Babbage.TxOut hiding (TxOut)
 import Cardano.Ledger.BaseTypes
@@ -377,7 +378,7 @@ allSizedOutputsBabbageTxBodyF =
           SJust collTxOut -> txOuts |> collTxOut
 {-# INLINEABLE allSizedOutputsBabbageTxBodyF #-}
 
-instance Crypto c => EraTxBody (BabbageEra c) where
+instance BabbageEraPParams (BabbageEra c) => EraTxBody (BabbageEra c) where
   {-# SPECIALIZE instance EraTxBody (BabbageEra StandardCrypto) #-}
 
   type TxBody (BabbageEra c) = BabbageTxBody (BabbageEra c)

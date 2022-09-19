@@ -22,12 +22,12 @@ import Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Era
 import Cardano.Ledger.Keys hiding (KeyPair, vKey)
+import Cardano.Ledger.PParams
 import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.SafeHash
 import Cardano.Ledger.Shelley (Shelley)
 import Cardano.Ledger.Shelley.API hiding (KeyPair, vKey)
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Shelley.Rules
 import Cardano.Ledger.Shelley.TxWits
 import Cardano.Protocol.TPraos.API
@@ -50,6 +50,7 @@ import qualified Data.Set as Set
 import Data.Time
 import Data.Word (Word64, Word8)
 import GHC.Records (HasField)
+import Lens.Micro ((&), (.~))
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessesVKey)
@@ -76,7 +77,8 @@ data ShelleyResultExamples era = ShelleyResultExamples
 
 deriving instance
   ( Eq (Core.PParams era),
-    Eq (Core.PParamsUpdate era)
+    Eq (Core.PParamsUpdate era),
+    ShelleyTest era
   ) =>
   Eq (ShelleyResultExamples era)
 
@@ -102,7 +104,8 @@ deriving instance
     Eq (State (Core.EraRule "PPUP" era)),
     Eq (StashedAVVMAddresses era),
     Eq (TranslationContext era),
-    Era era
+    Era era,
+    ShelleyTest era
   ) =>
   Eq (ShelleyLedgerExamples era)
 
@@ -121,9 +124,7 @@ defaultShelleyLedgerExamples ::
     EraSegWits era,
     PredicateFailure (Core.EraRule "DELEGS" era) ~ ShelleyDelegsPredFailure era,
     PredicateFailure (Core.EraRule "LEDGER" era) ~ ShelleyLedgerPredFailure era,
-    Core.PParams era ~ ShelleyPParams era,
-    Core.PParamsUpdate era ~ ShelleyPParamsUpdate era,
-    Default (StashedAVVMAddresses era)
+    ShelleyTest era
   ) =>
   (Core.TxBody era -> KeyPairWits era -> Core.TxWits era) ->
   (ShelleyTx era -> Core.Tx era) ->
@@ -150,8 +151,8 @@ defaultShelleyLedgerExamples mkWitnesses mkAlonzoTx value txBody auxData transla
       sleNewEpochState =
         exampleNewEpochState
           value
-          emptyPParams
-          (emptyPParams {_minUTxOValue = Coin 1}),
+          def
+          (def & ppMinUTxOValueL .~ Coin 1),
       sleChainDepState = exampleLedgerChainDepState 1,
       sleTranslationContext = translationContext
     }
@@ -241,15 +242,13 @@ exampleTx mkWitnesses txBody auxData =
       ]
 
 exampleProposedPParamsUpdates ::
-  ( ShelleyBasedEra' era,
-    Core.PParamsUpdate era ~ ShelleyPParamsUpdate era
-  ) =>
+  ShelleyTest era =>
   ProposedPPUpdates era
 exampleProposedPParamsUpdates =
   ProposedPPUpdates $
     Map.singleton
       (mkKeyHash 0)
-      (emptyPParamsUpdate {_keyDeposit = SJust (Coin 100)})
+      (def & ppuKeyDepositL .~ SJust (Coin 100))
 
 examplePoolDistr :: forall c. PraosCrypto c => PoolDistr c
 examplePoolDistr =
@@ -276,7 +275,7 @@ exampleNonMyopicRewards =
     ]
 
 -- | These are dummy values.
-testShelleyGenesis :: ShelleyGenesis era
+testShelleyGenesis :: ShelleyTest era => ShelleyGenesis era
 testShelleyGenesis =
   ShelleyGenesis
     { sgSystemStart = UTCTime (fromGregorian 2020 5 14) 0,
@@ -292,7 +291,7 @@ testShelleyGenesis =
       sgSlotLength = secondsToNominalDiffTimeMicro 2,
       sgUpdateQuorum = quorum testGlobals,
       sgMaxLovelaceSupply = maxLovelaceSupply testGlobals,
-      sgProtocolParams = emptyPParams,
+      sgProtocolParams = def,
       sgGenDelegs = Map.empty,
       sgInitialFunds = mempty,
       sgStaking = emptyGenesisStaking
@@ -303,13 +302,7 @@ testShelleyGenesis =
 exampleNewEpochState ::
   forall era.
   ( ShelleyBasedEra' era,
-    HasField "_a0" (Core.PParams era) NonNegativeInterval,
-    HasField "_d" (Core.PParams era) UnitInterval,
-    HasField "_nOpt" (Core.PParams era) Natural,
-    HasField "_rho" (Core.PParams era) UnitInterval,
-    HasField "_tau" (Core.PParams era) UnitInterval,
-    Default (StashedAVVMAddresses era),
-    Core.EraTxOut era
+    ShelleyTest era
   ) =>
   Core.Value era ->
   Core.PParams era ->
@@ -496,15 +489,13 @@ exampleWithdrawals =
       ]
 
 exampleProposedPPUpdates ::
-  ( Core.PParamsUpdate era ~ ShelleyPParamsUpdate era,
-    ShelleyBasedEra' era
-  ) =>
+  ShelleyTest era =>
   ProposedPPUpdates era
 exampleProposedPPUpdates =
   ProposedPPUpdates $
     Map.singleton
       (mkKeyHash 1)
-      (emptyPParamsUpdate {_maxBHSize = SJust 4000})
+      (def & ppuMaxBHSizeL .~ SJust 4000)
 
 examplePayKey :: CC.Crypto c => KeyPair 'Payment c
 examplePayKey = mkDSIGNKeyPair 0

@@ -18,7 +18,6 @@ module Test.Cardano.Ledger.Shelley.Generator.Trace.Chain where
 -- import Test.Cardano.Ledger.Shelley.Shrinkers (shrinkBlock) -- TODO FIX ME
 
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
-import Cardano.Ledger.BaseTypes (UnitInterval)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
   ( Era,
@@ -65,7 +64,7 @@ import qualified Data.ListMap as LM
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
-import GHC.Records (HasField)
+import qualified Data.UMap as UM
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Generator.Block (genBlock)
@@ -84,7 +83,8 @@ import Test.Cardano.Ledger.Shelley.Rules.Chain
   )
 import qualified Test.Cardano.Ledger.Shelley.Rules.Chain as STS (ChainState (ChainState))
 import Test.Cardano.Ledger.Shelley.Utils
-  ( maxLLSupply,
+  ( ShelleyTest,
+    maxLLSupply,
     mkHash,
   )
 import Test.QuickCheck (Gen)
@@ -113,8 +113,8 @@ instance
     Environment (Core.EraRule "TICK" era) ~ (),
     State (Core.EraRule "TICK" era) ~ NewEpochState era,
     Signal (Core.EraRule "TICK" era) ~ SlotNo,
-    HasField "_d" (Core.PParams era) UnitInterval,
-    QC.HasTrace (Core.EraRule "LEDGERS" era) (GenEnv era)
+    QC.HasTrace (Core.EraRule "LEDGERS" era) (GenEnv era),
+    ShelleyTest era
   ) =>
   HasTrace (CHAIN era) (GenEnv era)
   where

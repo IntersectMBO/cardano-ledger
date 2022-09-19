@@ -14,7 +14,7 @@ module Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits
 where
 
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (EraCrypto, TxBody)
+import Cardano.Ledger.Core
 import Cardano.Ledger.DPState (DPState (..), DState (..), PState (..))
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert (..), isRegKey)
 import Cardano.Ledger.Shelley.TxBody
@@ -27,7 +27,6 @@ import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.Val ((<+>), (<×>))
 import Data.Foldable (foldl', toList)
 import qualified Data.Map.Strict as Map
-import GHC.Records (HasField (..))
 import Lens.Micro ((^.))
 
 -- | Determine the total deposit amount needed from a TxBody.
@@ -42,16 +41,13 @@ import Lens.Micro ((^.))
 -- Note that this is not an issue for key registrations since subsequent
 -- registration certificates would be invalid.
 totalCertsDeposits ::
-  forall c pp.
-  ( HasField "_poolDeposit" pp Coin,
-    HasField "_keyDeposit" pp Coin
-  ) =>
-  pp ->
+  EraPParams era =>
+  PParams era ->
   DPState c ->
   [DCert c] ->
   Coin
 totalCertsDeposits pp dpstate certs =
-  numKeys <×> getField @"_keyDeposit" pp
+  numKeys <×> pp ^. ppKeyDepositL
     <+> snd (foldl' accum (regpools, Coin 0) certs)
   where
     numKeys = length $ filter isRegKey certs
@@ -59,16 +55,12 @@ totalCertsDeposits pp dpstate certs =
     accum (!pools, !ans) (DCertPool (RegPool poolparam)) =
       if Map.member (ppId poolparam) pools -- We don't pay a deposit on a pool that is already registered
         then (pools, ans)
-        else (Map.insert (ppId poolparam) poolparam pools, ans <+> getField @"_poolDeposit" pp)
+        else (Map.insert (ppId poolparam) poolparam pools, ans <+> pp ^. ppPoolDepositL)
     accum ans _ = ans
 
 totalTxDeposits ::
-  forall era pp.
-  ( HasField "_poolDeposit" pp Coin,
-    HasField "_keyDeposit" pp Coin,
-    ShelleyEraTxBody era
-  ) =>
-  pp ->
+  ShelleyEraTxBody era =>
+  PParams era ->
   DPState (EraCrypto era) ->
   TxBody era ->
   Coin
@@ -76,8 +68,8 @@ totalTxDeposits pp dpstate txb = totalCertsDeposits pp dpstate (toList $ txb ^. 
 
 -- | Compute the key deregistration refunds in a transaction
 keyCertsRefunds ::
-  HasField "_keyDeposit" pp Coin =>
-  pp ->
+  EraPParams era =>
+  PParams era ->
   DPState c ->
   [DCert c] ->
   Coin
@@ -86,7 +78,7 @@ keyCertsRefunds pp dpstate certs = snd (foldl' accum (regkeys, Coin 0) certs)
     regkeys = dsDeposits (dpsDState dpstate)
     accum (keys, ans) (DCertDeleg (RegKey k)) =
       -- Deposit is added locally to the growing 'keys'
-      (Map.insert k (getField @"_keyDeposit" pp) keys, ans)
+      (Map.insert k (pp ^. ppKeyDepositL) keys, ans)
     accum (keys, ans) (DCertDeleg (DeRegKey k)) =
       -- If the key is registered, lookup the deposit in the locally growing 'keys'
       -- if it is not registered, then just return ans
@@ -96,8 +88,8 @@ keyCertsRefunds pp dpstate certs = snd (foldl' accum (regkeys, Coin 0) certs)
     accum ans _ = ans
 
 keyTxRefunds ::
-  (ShelleyEraTxBody era, HasField "_keyDeposit" pp Coin) =>
-  pp ->
+  ShelleyEraTxBody era =>
+  PParams era ->
   DPState (EraCrypto era) ->
   TxBody era ->
   Coin

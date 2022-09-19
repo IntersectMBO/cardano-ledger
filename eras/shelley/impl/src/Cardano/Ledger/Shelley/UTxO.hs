@@ -57,7 +57,6 @@ import qualified Cardano.Ledger.Val as Val
 import Data.Foldable (Foldable (fold), toList)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import GHC.Records (HasField (..))
 import Lens.Micro ((^.))
 
 txup :: (EraTx era, ShelleyEraTxBody era, ProtVerAtMost era 8) => Tx era -> Maybe (Update era)
@@ -105,7 +104,6 @@ txinsScriptHashes txInps (UTxO u) = foldr add Set.empty txInps
       Nothing -> ans
 
 getShelleyScriptsNeeded ::
-  forall era.
   ShelleyEraTxBody era =>
   UTxO era ->
   TxBody era ->
@@ -125,12 +123,8 @@ getShelleyScriptsNeeded u txBody =
 
 -- | Compute the lovelace which are created by the transaction
 produced ::
-  forall era pp.
-  ( ShelleyEraTxBody era,
-    HasField "_keyDeposit" pp Coin,
-    HasField "_poolDeposit" pp Coin
-  ) =>
-  pp ->
+  ShelleyEraTxBody era =>
+  PParams era ->
   DPState (EraCrypto era) ->
   TxBody era ->
   Value era
@@ -141,11 +135,8 @@ produced pp dpstate txBody =
 
 -- | Compute the lovelace which are destroyed by the transaction
 getConsumedCoin ::
-  forall era pp.
-  ( ShelleyEraTxBody era,
-    HasField "_keyDeposit" pp Coin
-  ) =>
-  pp ->
+  ShelleyEraTxBody era =>
+  PParams era ->
   DPState (EraCrypto era) ->
   UTxO era ->
   TxBody era ->

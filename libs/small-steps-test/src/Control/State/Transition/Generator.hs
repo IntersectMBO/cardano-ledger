@@ -425,8 +425,8 @@ invalidTrace baseEnv maxTraceLength failureProfile = do
       st = lastState tr
   iSig <- generateSignalWithFailureProportions @s failureProfile env st
   let est' = interpretSTS @s baseEnv $ applySTSTest @s $ TRC (env, st, iSig)
-  pure $!
-    Invalid.Trace
+  pure
+    $! Invalid.Trace
       { Invalid.validPrefix = tr,
         Invalid.signal = iSig,
         Invalid.errorOrLastState = est'
@@ -604,7 +604,7 @@ mkIntervals ::
   [(n, n)]
 mkIntervals low high step
   | 0 <= low && low <= high && 0 < step =
-      [(low + i * step, high `min` (low + (i + 1) * step)) | i <- [0 .. n - 1]]
+    [(low + i * step, high `min` (low + (i + 1) * step)) | i <- [0 .. n - 1]]
   | otherwise = []
   where
     highNorm = high - low

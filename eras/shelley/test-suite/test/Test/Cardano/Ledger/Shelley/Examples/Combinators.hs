@@ -43,17 +43,13 @@ module Test.Cardano.Ledger.Shelley.Examples.Combinators
     setPrevPParams,
     setFutureGenDeleg,
     adoptFutureGenDeleg,
-    UsesPP,
   )
 where
 
 import Cardano.Ledger.BaseTypes
   ( BlocksMade (..),
-    NonNegativeInterval,
     Nonce (..),
-    ProtVer,
     StrictMaybe (..),
-    UnitInterval,
     (⭒),
   )
 import Cardano.Ledger.Block
@@ -74,6 +70,7 @@ import Cardano.Ledger.Keys
     KeyHash,
     KeyRole (..),
   )
+import Cardano.Ledger.PParams
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
@@ -94,7 +91,7 @@ import Cardano.Ledger.Shelley.LedgerState
     rewards,
     updateStakeDistribution,
   )
-import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates, ShelleyPParams, ShelleyPParamsHKD (..))
+import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates)
 import Cardano.Ledger.Shelley.Rules (emptyInstantaneousRewards)
 import Cardano.Ledger.Shelley.TxBody (MIRPot (..), PoolParams (..), RewardAcnt (..))
 import Cardano.Ledger.UMapCompact (View (Delegations, Ptrs, Rewards), unView)
@@ -117,21 +114,9 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Word (Word64)
-import GHC.Records (HasField (..))
-import Numeric.Natural (Natural)
+import Lens.Micro ((^.))
 import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
-import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo, getBlockNonce)
-
--- ==================================================
-
-type UsesPP era =
-  ( HasField "_d" (Core.PParams era) UnitInterval,
-    HasField "_tau" (Core.PParams era) UnitInterval,
-    HasField "_a0" (Core.PParams era) NonNegativeInterval,
-    HasField "_rho" (Core.PParams era) UnitInterval,
-    HasField "_nOpt" (Core.PParams era) Natural,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer
-  )
+import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest, epochFromSlotNo, getBlockNonce)
 
 -- ======================================================
 
@@ -450,7 +435,7 @@ stageRetirement kh e cs = cs {chainNes = nes'}
 -- Remove a stake pool.
 reapPool ::
   forall era.
-  (Core.PParams era ~ ShelleyPParams era) =>
+  ShelleyTest era =>
   PoolParams (EraCrypto era) ->
   ChainState era ->
   ChainState era
@@ -473,15 +458,21 @@ reapPool pool cs = cs {chainNes = nes'}
     RewardAcnt _ rewardAddr = ppRewardAcnt pool
     (rewards', unclaimed) =
       case UM.lookup rewardAddr (rewards ds) of
-        Nothing -> (rewards ds, _poolDeposit pp)
-        Just ccoin -> (UM.insert' rewardAddr (UM.addCompact ccoin (UM.compactCoinOrError (_poolDeposit pp))) (rewards ds), Coin 0)
+        Nothing -> (rewards ds, pp ^. ppPoolDepositL)
+        Just ccoin ->
+          ( UM.insert'
+              rewardAddr
+              (UM.addCompact ccoin (UM.compactCoinOrError (pp ^. ppPoolDepositL)))
+              (rewards ds),
+            Coin 0
+          )
     umap1 = unView rewards'
     umap2 = (UM.Delegations umap1 UM.⋫ Set.singleton kh)
     ds' = ds {dsUnified = umap2}
     as = esAccountState es
     as' = as {asTreasury = (asTreasury as) <+> unclaimed}
     utxoSt = lsUTxOState ls
-    utxoSt' = utxoSt {utxosDeposited = (utxosDeposited utxoSt) <-> (_poolDeposit pp)}
+    utxoSt' = utxoSt {utxosDeposited = (utxosDeposited utxoSt) <-> (pp ^. ppPoolDepositL)}
     dps' = dps {dpsPState = ps', dpsDState = ds'}
     ls' = ls {lsDPState = dps', lsUTxOState = utxoSt'}
     es' = es {esLState = ls', esAccountState = as'}
@@ -580,7 +571,7 @@ pulserUpdate p cs = cs {chainNes = nes'}
 -- Apply the given reward update to the chain state
 applyRewardUpdate ::
   forall era.
-  HasField "_protocolVersion" (Core.PParams era) ProtVer =>
+  ShelleyTest era =>
   RewardUpdate (EraCrypto era) ->
   ChainState era ->
   ChainState era
@@ -667,8 +658,7 @@ incrBlockCount kh cs = cs {chainNes = nes'}
 -- 'newLab', 'evolveNonceUnfrozen', and 'evolveNonceFrozen'.
 newEpoch ::
   forall era.
-  (Core.PParams era ~ ShelleyPParams era) =>
-  Era era =>
+  ShelleyTest era =>
   Block (BHeader (EraCrypto era)) era ->
   ChainState era ->
   ChainState era
@@ -696,7 +686,7 @@ newEpoch b cs = cs'
     cs' =
       cs
         { chainNes = nes',
-          chainEpochNonce = cNonce ⭒ pNonce ⭒ _extraEntropy pp,
+          chainEpochNonce = cNonce ⭒ pNonce ⭒ (pp ^. ppExtraEntropyL),
           chainEvolvingNonce = evNonce ⭒ n,
           chainCandidateNonce = evNonce ⭒ n,
           chainPrevEpochNonce = prevHashToNonce . lastAppliedHash $ lab,
@@ -752,8 +742,7 @@ setFutureProposals ps cs = cs {chainNes = nes'}
 -- Set the protocol parameters.
 setPParams ::
   forall era.
-  (Core.PParams era ~ ShelleyPParams era) =>
-  ShelleyPParams era ->
+  PParams era ->
   ChainState era ->
   ChainState era
 setPParams pp cs = cs {chainNes = nes'}
@@ -768,8 +757,7 @@ setPParams pp cs = cs {chainNes = nes'}
 -- Set the previous protocol parameters.
 setPrevPParams ::
   forall era.
-  (Core.PParams era ~ ShelleyPParams era) =>
-  ShelleyPParams era ->
+  PParams era ->
   ChainState era ->
   ChainState era
 setPrevPParams pp cs = cs {chainNes = nes'}

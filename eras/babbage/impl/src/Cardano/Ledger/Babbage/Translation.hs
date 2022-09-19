@@ -22,6 +22,7 @@ import Cardano.Ledger.Babbage.Tx (AlonzoTx (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), Datum (..))
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Core (mapPParams, mapPParamsUpdate)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era
@@ -56,8 +57,6 @@ import Data.Proxy (Proxy (..))
 -- 'TranslationError', i.e., 'Void', it means the consensus layer relies on it
 -- being total. Do not change it!
 --------------------------------------------------------------------------------
-
-type instance PreviousEra (BabbageEra c) = AlonzoEra c
 
 type instance TranslationContext (BabbageEra c) = AlonzoGenesis
 
@@ -125,6 +124,11 @@ instance
 
 instance (Crypto c, Functor f) => TranslateEra (BabbageEra c) (ShelleyPParamsHKD f)
 
+instance Crypto c => TranslateEra (BabbageEra c) (BabbagePParamsHKD f)
+
+instance Crypto c => TranslateEra (BabbageEra c) Core.PParams where
+  translateEra _ = pure . mapPParams translatePParams
+
 instance Crypto c => TranslateEra (BabbageEra c) EpochState where
   translateEra ctxt es =
     pure
@@ -132,8 +136,8 @@ instance Crypto c => TranslateEra (BabbageEra c) EpochState where
         { esAccountState = esAccountState es,
           esSnapshots = esSnapshots es,
           esLState = translateEra' ctxt $ esLState es,
-          esPrevPp = translatePParams $ esPrevPp es,
-          esPp = translatePParams $ esPp es,
+          esPrevPp = mapPParams translatePParams $ esPrevPp es,
+          esPp = mapPParams translatePParams $ esPp es,
           esNonMyopic = esNonMyopic es
         }
 
@@ -170,7 +174,7 @@ instance Crypto c => TranslateEra (BabbageEra c) API.PPUPState where
 
 instance Crypto c => TranslateEra (BabbageEra c) API.ProposedPPUpdates where
   translateEra _ctxt (API.ProposedPPUpdates ppup) =
-    pure $ API.ProposedPPUpdates $ fmap translatePParams ppup
+    pure $ API.ProposedPPUpdates $ fmap (mapPParamsUpdate translatePParams) ppup
 
 translateTxOut ::
   Crypto c =>
@@ -182,17 +186,7 @@ translateTxOut (AlonzoTxOut addr value dh) = BabbageTxOut addr value d SNothing
       SNothing -> NoDatum
       SJust d' -> DatumHash d'
 
--- | A word is 8 bytes, so to convert from coinsPerUTxOWord to coinsPerUTxOByte, rounding down.
-coinsPerUTxOWordToCoinsPerUTxOByte :: Coin -> Coin
-coinsPerUTxOWordToCoinsPerUTxOByte (Coin c) = Coin $ c `div` 8
-
--- | A word is 8 bytes, so to convert from coinsPerUTxOByte to coinsPerUTxOWord.
-coinsPerUTxOByteToCoinsPerUTxOWord :: Coin -> Coin
-coinsPerUTxOByteToCoinsPerUTxOWord (Coin c) = Coin $ c * 8
-
 translatePParams ::
-  forall f c. HKDFunctor f => AlonzoPParamsHKD f (AlonzoEra c) -> BabbagePParamsHKD f (BabbageEra c)
+  forall f c. AlonzoPParamsHKD f (AlonzoEra c) -> BabbagePParamsHKD f (BabbageEra c)
 translatePParams AlonzoPParams {_coinsPerUTxOWord = cpuw, ..} =
-  BabbagePParams {_coinsPerUTxOByte = cpub, ..}
-  where
-    cpub = hkdMap (Proxy :: Proxy f) coinsPerUTxOWordToCoinsPerUTxOByte cpuw
+  BabbagePParams {_coinsPerUTxOByte = cpuw, ..}

@@ -23,7 +23,7 @@ module Cardano.Ledger.Shelley.Rules.Bbody
 where
 
 import Cardano.Ledger.BHeaderView (BHeaderView (..), isOverlaySlot)
-import Cardano.Ledger.BaseTypes (BlocksMade, ShelleyBase, UnitInterval, epochInfoPure)
+import Cardano.Ledger.BaseTypes (BlocksMade, ShelleyBase, epochInfoPure)
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (DSignable, Hash, coerceKeyRole)
@@ -49,7 +49,7 @@ import Control.State.Transition
 import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Generics (Generic)
-import GHC.Records (HasField (..))
+import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
 data ShelleyBbodyState era
@@ -101,8 +101,7 @@ instance
     Embed (EraRule "LEDGERS" era) (ShelleyBBODY era),
     Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era,
     State (EraRule "LEDGERS" era) ~ LedgerState era,
-    Signal (EraRule "LEDGERS" era) ~ Seq (Tx era),
-    HasField "_d" (PParams era) UnitInterval
+    Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
   ) =>
   STS (ShelleyBBODY era)
   where
@@ -132,8 +131,7 @@ bbodyTransition ::
     Embed (EraRule "LEDGERS" era) (ShelleyBBODY era),
     Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era,
     State (EraRule "LEDGERS" era) ~ LedgerState era,
-    Signal (EraRule "LEDGERS" era) ~ Seq (Tx era),
-    HasField "_d" (PParams era) UnitInterval
+    Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
   ) =>
   TransitionRule (ShelleyBBODY era)
 bbodyTransition =
@@ -145,7 +143,7 @@ bbodyTransition =
                )
            ) -> do
         let txs = fromTxSeq @era txsSeq
-            actualBodySize = bBodySize @era (getField @"_protocolVersion" pp) txsSeq
+            actualBodySize = bBodySize @era (pp ^. ppProtocolVersionL) txsSeq
             actualBodyHash = hashTxSeq @era txsSeq
 
         actualBodySize
@@ -169,7 +167,7 @@ bbodyTransition =
           ei <- asks epochInfoPure
           e <- epochInfoEpoch ei slot
           epochInfoFirst ei e
-        let isOverlay = isOverlaySlot firstSlotNo (getField @"_d" pp) slot
+        let isOverlay = isOverlaySlot firstSlotNo (pp ^. ppDG) slot
         pure $ BbodyState ls' (incrBlocks isOverlay hkAsStakePool b)
 
 instance

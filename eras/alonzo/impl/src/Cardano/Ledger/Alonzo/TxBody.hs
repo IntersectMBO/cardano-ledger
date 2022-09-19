@@ -74,13 +74,9 @@ where
 
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Core
-  ( AllegraEraTxBody (..),
-    AlonzoEraTxBody (..),
-    MaryEraTxBody (..),
-    ScriptIntegrityHash,
-  )
 import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash (..))
 import Cardano.Ledger.Alonzo.Era
+import Cardano.Ledger.Alonzo.PParams ()
 import Cardano.Ledger.Alonzo.Scripts ()
 import Cardano.Ledger.Alonzo.TxOut
 import Cardano.Ledger.BaseTypes
@@ -94,7 +90,6 @@ import Cardano.Ledger.Binary
   )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary.Value (MaryValue (MaryValue), MultiAsset (..), policies, policyID)
@@ -111,7 +106,6 @@ import Cardano.Ledger.MemoBytes
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert)
 import Cardano.Ledger.Shelley.PParams (Update)
-import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), Wdrl (Wdrl), unWdrl)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.DeepSeq (NFData (..))
 import Data.Sequence.Strict (StrictSeq)
@@ -119,11 +113,9 @@ import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
-import Data.Word
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
-import Prelude hiding (lookup)
 
 -- ======================================
 
@@ -163,7 +155,7 @@ newtype AlonzoTxBody era = TxBodyConstr (MemoBytes AlonzoTxBodyRaw era)
 instance Memoized AlonzoTxBody where
   type RawType AlonzoTxBody = AlonzoTxBodyRaw
 
-instance Crypto c => EraTxBody (AlonzoEra c) where
+instance AlonzoEraPParams (AlonzoEra c) => EraTxBody (AlonzoEra c)where
   {-# SPECIALIZE instance EraTxBody (AlonzoEra StandardCrypto) #-}
 
   type TxBody (AlonzoEra c) = AlonzoTxBody (AlonzoEra c)
@@ -190,7 +182,7 @@ instance Crypto c => EraTxBody (AlonzoEra c) where
     to $ \txBody -> (txBody ^. inputsTxBodyL) `Set.union` (txBody ^. collateralInputsTxBodyL)
   {-# INLINEABLE allInputsTxBodyF #-}
 
-instance Crypto c => ShelleyEraTxBody (AlonzoEra c) where
+instance AlonzoEraPParams (AlonzoEra c) => ShelleyEraTxBody (AlonzoEra c) where
   {-# SPECIALIZE instance ShelleyEraTxBody (AlonzoEra StandardCrypto) #-}
 
   wdrlsTxBodyL =
@@ -207,7 +199,7 @@ instance Crypto c => ShelleyEraTxBody (AlonzoEra c) where
     lensMemoRawType atbrCerts (\txBodyRaw certs_ -> txBodyRaw {atbrCerts = certs_})
   {-# INLINEABLE certsTxBodyL #-}
 
-instance Crypto c => AllegraEraTxBody (AlonzoEra c) where
+instance AlonzoEraPParams (AlonzoEra c) => AllegraEraTxBody (AlonzoEra c) where
   {-# SPECIALIZE instance AllegraEraTxBody (AlonzoEra StandardCrypto) #-}
 
   vldtTxBodyL =
@@ -227,7 +219,7 @@ instance Crypto c => MaryEraTxBody (AlonzoEra c) where
   mintedTxBodyF = to (Set.map policyID . policies . atbrMint . getMemoRawType)
   {-# INLINEABLE mintedTxBodyF #-}
 
-instance Crypto c => AlonzoEraTxBody (AlonzoEra c) where
+instance (Crypto c, AlonzoEraPParams (AlonzoEra c)) => AlonzoEraTxBody (AlonzoEra c) where
   {-# SPECIALIZE instance AlonzoEraTxBody (AlonzoEra StandardCrypto) #-}
 
   collateralInputsTxBodyL =

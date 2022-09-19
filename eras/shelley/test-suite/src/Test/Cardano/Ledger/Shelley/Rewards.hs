@@ -37,7 +37,6 @@ import Cardano.Ledger.BaseTypes
     BoundedRational (..),
     Globals (..),
     Network (..),
-    NonNegativeInterval,
     ProtVer (..),
     ShelleyBase,
     StrictMaybe (..),
@@ -67,6 +66,7 @@ import Cardano.Ledger.Keys
     VKey (..),
     hashKey,
   )
+import Cardano.Ledger.PParams
 import Cardano.Ledger.Pretty (PDoc, PrettyA (..), ppMap, ppReward, ppSet)
 import Cardano.Ledger.Shelley.API (NonMyopic, SnapShot (..), SnapShots (..))
 import Cardano.Ledger.Shelley.API.Types (PoolParams (..))
@@ -88,9 +88,7 @@ import Cardano.Ledger.Shelley.LedgerState
     updateNonMyopic,
   )
 import Cardano.Ledger.Shelley.PParams
-  ( ShelleyPParams,
-    ShelleyPParamsHKD (..),
-    emptyPParams,
+  ( ShelleyPParamsHKD (..),
   )
 import Cardano.Ledger.Shelley.PoolRank (Likelihood, leaderProbability, likelihood)
 import Cardano.Ledger.Shelley.RewardUpdate
@@ -123,6 +121,7 @@ import Control.Monad (replicateM)
 import Control.Monad.Trans.Reader (asks, runReader)
 import Control.SetAlgebra (eval, (◁))
 import Control.State.Transition.Trace (SourceSignalTarget (..), getEvents, sourceSignalTargets)
+import Data.Default.Class (Default (..))
 import Data.Foldable (fold, foldl')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -135,8 +134,8 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.VMap as VMap
 import Data.Word (Word64)
-import GHC.Records (HasField, getField)
 import GHC.Stack
+import Lens.Micro ((&), (.~), (^.))
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), vKey)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C)
@@ -147,7 +146,8 @@ import Test.Cardano.Ledger.Shelley.Rules.TestChain (forAllChainTrace, forEachEpo
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Cardano.Ledger.Shelley.Utils
-  ( runShelleyBase,
+  ( ShelleyTest,
+    runShelleyBase,
     testGlobals,
     unsafeBoundRational,
   )
@@ -294,12 +294,12 @@ genPoolInfo PoolSetUpArgs {poolPledge, poolCost, poolMargin, poolMembers} = do
           }
   pure $ PoolInfo {params, coldKey, ownerKey, ownerStake, rewardKey, members}
 
-genRewardPPs :: Gen (ShelleyPParams era)
+genRewardPPs :: ShelleyTest era => Gen (Core.PParams era)
 genRewardPPs = do
   d <- g decentralizationRange
   t <- g tauRange
   r <- g rhoRange
-  pure $ emptyPParams {_d = d, _tau = t, _rho = r}
+  pure . Core.PParams $ def {_d = d, _tau = t, _rho = r}
   where
     g xs = unsafeBoundRational <$> elements xs
 
@@ -316,7 +316,7 @@ toCompactCoinError c =
 
 rewardsBoundedByPot ::
   forall era.
-  (Era era, Core.PParams era ~ ShelleyPParams era) =>
+  (ShelleyTest era) =>
   Proxy era ->
   Property
 rewardsBoundedByPot _ = property $ do
@@ -381,11 +381,7 @@ rewardsBoundedByPot _ = property $ do
 -- change the result of reward calculation. we reproduce the old style functions here.
 
 rewardOnePool ::
-  ( HasField "_d" (Core.PParams era) UnitInterval,
-    HasField "_a0" (Core.PParams era) NonNegativeInterval,
-    HasField "_nOpt" (Core.PParams era) Natural,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer
-  ) =>
+  ShelleyTest era =>
   Core.PParams era ->
   Coin ->
   Natural ->
@@ -421,9 +417,10 @@ rewardOnePool
         if pledge <= ostake
           then maxPool pp r sigma pr
           else mempty
-      appPerf = mkApparentPerformance (getField @"_d" pp) sigmaA blocksN blocksTotal
+      appPerf = mkApparentPerformance (pp ^. ppDL) sigmaA blocksN blocksTotal
       poolR = rationalToCoinViaFloor (appPerf * fromIntegral maxP)
       tot = fromIntegral totalStake
+      pv = pp ^. ppProtocolVersionL
       mRewards =
         Map.fromList
           [ ( hk,
@@ -445,24 +442,20 @@ rewardOnePool
           (StakeShare $ fromIntegral ostake % tot)
           (StakeShare sigma)
       f =
-        if HardForks.aggregatedRewards pp
+        if HardForks.aggregatedRewards pv
           then Map.insertWith (<>)
           else Map.insert
       potentialRewards =
         f (getRwdCred $ ppRewardAcnt pool) lReward mRewards
       potentialRewards' =
-        if HardForks.forgoRewardPrefilter pp
+        if HardForks.forgoRewardPrefilter pv
           then potentialRewards
           else eval (addrsRew ◁ potentialRewards)
       rewards' = Map.filter (/= Coin 0) potentialRewards'
 
 rewardOld ::
   forall era.
-  ( HasField "_d" (Core.PParams era) UnitInterval,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "_a0" (Core.PParams era) NonNegativeInterval,
-    HasField "_nOpt" (Core.PParams era) Natural
-  ) =>
+  ShelleyTest era =>
   Core.PParams era ->
   BlocksMade (EraCrypto era) ->
   Coin ->
@@ -518,11 +511,12 @@ rewardOld
             ls =
               likelihood
                 (fromMaybe 0 blocksProduced)
-                (leaderProbability asc sigma (getField @"_d" pp))
+                (leaderProbability asc sigma (pp ^. ppDL))
                 slotsPerEpoch
         pure (hk, rewardMap, ls)
+      pv = pp ^. ppProtocolVersionL
       f =
-        if HardForks.aggregatedRewards pp
+        if HardForks.aggregatedRewards pv
           then Map.unionsWith (<>)
           else Map.unions
       rewards' = f $ mapMaybe (\(_, x, _) -> x) results
@@ -539,13 +533,7 @@ data RewardUpdateOld c = RewardUpdateOld
 
 createRUpdOld ::
   forall era.
-  ( HasField "_d" (Core.PParams era) UnitInterval,
-    HasField "_rho" (Core.PParams era) UnitInterval,
-    HasField "_tau" (Core.PParams era) UnitInterval,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "_a0" (Core.PParams era) NonNegativeInterval,
-    HasField "_nOpt" (Core.PParams era) Natural
-  ) =>
+  ShelleyTest era =>
   EpochSize ->
   BlocksMade (EraCrypto era) ->
   EpochState era ->
@@ -561,13 +549,7 @@ createRUpdOld slotsPerEpoch b es@(EpochState acnt ss ls pr _ nm) maxSupply =
 
 createRUpdOld_ ::
   forall era.
-  ( HasField "_d" (Core.PParams era) UnitInterval,
-    HasField "_rho" (Core.PParams era) UnitInterval,
-    HasField "_tau" (Core.PParams era) UnitInterval,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "_a0" (Core.PParams era) NonNegativeInterval,
-    HasField "_nOpt" (Core.PParams era) Natural
-  ) =>
+  ShelleyTest era =>
   EpochSize ->
   BlocksMade (EraCrypto era) ->
   SnapShots (EraCrypto era) ->
@@ -584,19 +566,19 @@ createRUpdOld_ slotsPerEpoch b@(BlocksMade b') ss (Coin reserves) pr totalStake 
       deltaR1 =
         rationalToCoinViaFloor $
           min 1 eta
-            * unboundRational (getField @"_rho" pr)
+            * unboundRational (pr ^. ppRhoL)
             * fromIntegral reserves
-      d = unboundRational (getField @"_d" pr)
+      d = unboundRational (pr ^. ppDL)
       expectedBlocks =
         floor $
           (1 - d) * unboundRational (activeSlotVal asc) * fromIntegral slotsPerEpoch
       -- TODO asc is a global constant, and slotsPerEpoch should not change often at all,
       -- it would be nice to not have to compute expectedBlocks every epoch
       eta
-        | unboundRational (getField @"_d" pr) >= 0.8 = 1
+        | unboundRational (pr ^. ppDL) >= 0.8 = 1
         | otherwise = blocksMade % expectedBlocks
       Coin rPot = ssFee ss <> deltaR1
-      deltaT1 = floor $ unboundRational (getField @"_tau" pr) * fromIntegral rPot
+      deltaT1 = floor $ unboundRational (pr ^. ppTauL) * fromIntegral rPot
       _R = Coin $ rPot - deltaT1
       (rs_, newLikelihoods) =
         rewardOld
@@ -622,7 +604,7 @@ createRUpdOld_ slotsPerEpoch b@(BlocksMade b') ss (Coin reserves) pr totalStake 
       }
 
 overrideProtocolVersionUsedInRewardCalc ::
-  Core.PParams era ~ ShelleyPParams era =>
+  ShelleyTest era =>
   ProtVer ->
   EpochState era ->
   EpochState era
@@ -630,12 +612,11 @@ overrideProtocolVersionUsedInRewardCalc pv es =
   es {esPrevPp = pp'}
   where
     pp = esPrevPp es
-    pp' = pp {_protocolVersion = pv}
+    pp' = pp & ppProtocolVersionL .~ pv
 
 oldEqualsNew ::
   forall era.
-  ( era ~ C,
-    Core.PParams era ~ ShelleyPParams era
+  ( era ~ C
   ) =>
   ProtVer ->
   NewEpochState era ->
@@ -657,15 +638,17 @@ oldEqualsNew pv newepochstate =
     unAggregated =
       runReader (createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc k) globals
     old = rsOld $ runReader (createRUpdOld slotsPerEpoch blocksmade epochstate maxsupply) globals
-    new_with_zeros = aggregateRewards @(EraCrypto era) (emptyPParams {_protocolVersion = pv}) (rs unAggregated)
+    new_with_zeros =
+      aggregateRewards @(EraCrypto era)
+        pv
+        (rs unAggregated)
     new = Map.filter (/= Coin 0) new_with_zeros
     asc = activeSlotCoeff globals
     k = securityParameter testGlobals
 
 oldEqualsNewOn ::
   forall era.
-  ( era ~ C,
-    Core.PParams era ~ ShelleyPParams era
+  ( era ~ C
   ) =>
   ProtVer ->
   NewEpochState era ->
@@ -686,7 +669,7 @@ oldEqualsNewOn pv newepochstate = old === new
     old :: Map (Credential 'Staking (EraCrypto era)) Coin
     old = rsOld $ runReader (createRUpdOld slotsPerEpoch blocksmade epochstate maxsupply) globals
     new_with_zeros =
-      aggregateRewards @(EraCrypto era) (emptyPParams {_protocolVersion = pv}) (rs unAggregated)
+      aggregateRewards @(EraCrypto era) pv (rs unAggregated)
     new = Map.filter (/= Coin 0) new_with_zeros
     asc = activeSlotCoeff globals
     k = securityParameter testGlobals
@@ -775,7 +758,7 @@ instance PrettyA (Core.Reward c) where
 
 reward ::
   forall era.
-  (Core.PParams era ~ ShelleyPParams era) =>
+  ShelleyTest era =>
   Core.PParams era ->
   BlocksMade (EraCrypto era) ->
   Coin ->
@@ -813,7 +796,7 @@ reward
           (Coin activeStake)
           pool
       poolRewardInfo = VMap.toMap $ VMap.mapMaybe (either (const Nothing) Just . mkPoolRewardInfo') poolParams
-      pp_pv = _protocolVersion pp
+      pp_pv = pp ^. ppProtocolVersionL
       free =
         FreeVars
           { addrsRew,

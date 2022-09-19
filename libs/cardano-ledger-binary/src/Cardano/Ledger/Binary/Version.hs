@@ -75,14 +75,14 @@ mkVersion64 v
   | minVersion <= v && v <= maxVersion =
       pure (Version (fromIntegral v))
   | otherwise =
-      fail $
-        "Unsupported decoder version: "
-          ++ show v
-          ++ ". Expected value in bounds: ["
-          ++ show minVersion
-          ++ ", "
-          ++ show maxVersion
-          ++ "]"
+    fail $
+      "Unsupported decoder version: "
+        ++ show v
+        ++ ". Expected value in bounds: ["
+        ++ show minVersion
+        ++ ", "
+        ++ show maxVersion
+        ++ "]"
   where
     Version minVersion = minBound
     Version maxVersion = maxBound

@@ -32,7 +32,7 @@ import Cardano.Ledger.Alonzo.Rules
     validEnd,
     when2Phase,
   )
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript, CostModels)
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO, ScriptResult (Fails, Passes))
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded)
 import Cardano.Ledger.Babbage.Collateral (collAdaBalance, collOuts)
@@ -70,7 +70,6 @@ import Data.List.NonEmpty (nonEmpty)
 import qualified Data.Map.Strict as Map
 import Data.MapExtras (extractKeys)
 import Debug.Trace (traceEvent)
-import GHC.Records (HasField (..))
 import Lens.Micro
 
 -- =====================================================
@@ -78,16 +77,13 @@ import Lens.Micro
 instance
   forall era.
   ( AlonzoEraTx era,
+    AlonzoEraPParams era
     BabbageEraTxBody era,
     ExtendedUTxO era,
     EraUTxO era,
     ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     Tx era ~ AlonzoTx era,
     Script era ~ AlonzoScript era,
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_costmdls" (PParams era) CostModels,
-    HasField "_protocolVersion" (PParams era) ProtVer,
     Embed (EraRule "PPUP" era) (BabbageUTXOS era),
     Environment (EraRule "PPUP" era) ~ PpupEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,
@@ -119,15 +115,13 @@ instance
 utxosTransition ::
   forall era.
   ( AlonzoEraTx era,
+    AlonzoEraPParams era,
     ExtendedUTxO era,
     BabbageEraTxBody era,
     EraUTxO era,
     ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     Tx era ~ AlonzoTx era,
     Script era ~ AlonzoScript era,
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_costmdls" (PParams era) CostModels,
     Environment (EraRule "PPUP" era) ~ PpupEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,
     Signal (EraRule "PPUP" era) ~ Maybe (Update era),
@@ -157,9 +151,6 @@ scriptsYes ::
     State (EraRule "PPUP" era) ~ PPUPState era,
     Signal (EraRule "PPUP" era) ~ Maybe (Update era),
     Embed (EraRule "PPUP" era) (BabbageUTXOS era),
-    HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_costmdls" (PParams era) CostModels,
     ProtVerAtMost era 8
   ) =>
   TransitionRule (BabbageUTXOS era)
@@ -170,7 +161,7 @@ scriptsYes = do
       {- refunded := keyRefunds pp txb -}
       refunded = keyTxRefunds pp dpstate txBody
       {- depositChange := (totalDeposits pp poolParams txcerts txb) − refunded -}
-      protVer = getField @"_protocolVersion" pp
+      protVer = pp ^. ppProtocolVersionL
       depositChange = totalTxDeposits pp dpstate txBody <-> refunded
   sysSt <- liftSTS $ asks systemStart
   ei <- liftSTS $ asks epochInfo
@@ -214,7 +205,7 @@ scriptsNo ::
     BabbageEraTxBody era,
     Tx era ~ AlonzoTx era,
     Script era ~ AlonzoScript era,
-    HasField "_costmdls" (PParams era) CostModels
+    AlonzoEraPParams era
   ) =>
   TransitionRule (BabbageUTXOS era)
 scriptsNo = do
@@ -231,7 +222,7 @@ scriptsNo = do
       {- sLst := collectTwoPhaseScriptInputs pp tx utxo -}
       {- isValid tx = evalScripts tx sLst = False -}
       whenFailureFree $
-        when2Phase $ case evalScripts @era (getField @"_protocolVersion" pp) tx sLst of
+        when2Phase $ case evalScripts @era (pp ^. ppProtocolVersionL) tx sLst of
           Passes _ -> failBecause $ ValidationTagMismatch (tx ^. isValidTxL) PassedUnexpectedly
           Fails ps fs -> do
             mapM_ (tellEvent . SuccessfulPlutusScriptsEvent) (nonEmpty ps)

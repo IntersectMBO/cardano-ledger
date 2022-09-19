@@ -13,7 +13,7 @@ where
 
 import Cardano.Ledger.Core (Era (..), EraRule, Value)
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Mary.Value (MaryValue)
+import Cardano.Ledger.Mary (MaryEra, MaryValue)
 import Cardano.Ledger.Shelley.Rules
 
 -- =====================================================
@@ -23,6 +23,7 @@ data AlonzoEra c
 
 instance Crypto c => Era (AlonzoEra c) where
   type EraCrypto (AlonzoEra c) = c
+  type PreviousEra (AlonzoEra c) = MaryEra c
   type ProtVerLow (AlonzoEra c) = 5
   type ProtVerHigh (AlonzoEra c) = 6
 

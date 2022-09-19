@@ -30,10 +30,8 @@ import Cardano.Ledger.BaseTypes
   ( BlocksMade (..),
     Globals (..),
     Nonce (..),
-    ProtVer (..),
     ShelleyBase,
     StrictMaybe (..),
-    UnitInterval,
   )
 import Cardano.Ledger.Binary (ToCBORGroup)
 import Cardano.Ledger.Block (Block (..))
@@ -54,6 +52,7 @@ import Cardano.Ledger.Keys
     KeyRole (..),
     coerceKeyRole,
   )
+import Cardano.Ledger.PParams
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import qualified Cardano.Ledger.Pretty as PP
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -126,9 +125,9 @@ import qualified Data.Map.Strict as Map
 import Data.Void (Void)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
-import GHC.Records
+import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
-import Numeric.Natural (Natural)
+import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest)
 
 type instance Core.EraRule "TICKN" (ShelleyEra c) = TICKN
 
@@ -259,12 +258,8 @@ instance
     State (Core.EraRule "TICK" era) ~ NewEpochState era,
     Signal (Core.EraRule "TICK" era) ~ SlotNo,
     Embed (PRTCL (EraCrypto era)) (CHAIN era),
-    HasField "_maxBHSize" (Core.PParams era) Natural,
-    HasField "_maxBBSize" (Core.PParams era) Natural,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "_extraEntropy" (Core.PParams era) Nonce,
-    HasField "_d" (Core.PParams era) UnitInterval,
-    ToCBORGroup (Era.TxSeq era)
+    ToCBORGroup (Era.TxSeq era),
+    ShelleyTest era
   ) =>
   STS (CHAIN era)
   where
@@ -302,12 +297,8 @@ chainTransition ::
     State (Core.EraRule "TICK" era) ~ NewEpochState era,
     Signal (Core.EraRule "TICK" era) ~ SlotNo,
     Embed (PRTCL (EraCrypto era)) (CHAIN era),
-    HasField "_maxBHSize" (Core.PParams era) Natural,
-    HasField "_maxBBSize" (Core.PParams era) Natural,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "_extraEntropy" (Core.PParams era) Nonce,
-    HasField "_d" (Core.PParams era) UnitInterval,
-    ToCBORGroup (Era.TxSeq era)
+    ToCBORGroup (Era.TxSeq era),
+    ShelleyTest era
   ) =>
   TransitionRule (CHAIN era)
 chainTransition =
@@ -352,7 +343,7 @@ chainTransition =
         TicknState eta0' etaH' <-
           trans @(Core.EraRule "TICKN" era) $
             TRC
-              ( TicknEnv (getField @"_extraEntropy" pp') etaC etaPH,
+              ( TicknEnv (pp' ^. ppExtraEntropyL) etaC etaPH,
                 TicknState eta0 etaH,
                 e1 /= e2
               )
@@ -360,7 +351,7 @@ chainTransition =
         PrtclState cs' etaV' etaC' <-
           trans @(PRTCL (EraCrypto era)) $
             TRC
-              ( PrtclEnv (getField @"_d" pp') _pd genDelegs eta0',
+              ( PrtclEnv (pp' ^. ppDL) _pd genDelegs eta0',
                 PrtclState cs etaV etaC,
                 bh
               )

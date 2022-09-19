@@ -47,7 +47,6 @@ import Cardano.Ledger.Shelley.API
     hashVerKeyVRF,
   )
 import qualified Cardano.Ledger.Shelley.API as API
-import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..), emptyPParams)
 import Cardano.Ledger.Shelley.Tx
   ( ShelleyTx (..),
   )
@@ -499,7 +498,10 @@ testEvaluateTransactionFee =
     1
     @?= getMinFeeTx pp txSimpleUTxO
   where
-    pp = emptyPParams {_minfeeA = 1, _minfeeB = 1}
+    pp =
+      emptyPParams
+        & ppMinFeeAL .~ 1
+        & ppMinFeeBL .~ 1
 
     txSimpleUTxONoWit =
       ShelleyTx

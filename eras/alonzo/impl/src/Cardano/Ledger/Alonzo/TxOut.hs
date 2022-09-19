@@ -42,14 +42,16 @@ import Cardano.Ledger.Address
     decompactAddr,
     fromCborBothAddr,
   )
+import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Data (Datum (..), dataHashSize)
 import Cardano.Ledger.Alonzo.Era
-import Cardano.Ledger.Alonzo.PParams (_coinsPerUTxOWord)
+import Cardano.Ledger.Alonzo.PParams ()
 import Cardano.Ledger.Alonzo.Scripts ()
 import Cardano.Ledger.BaseTypes
   ( Network (..),
     StrictMaybe (..),
     maybeToStrictMaybe,
+    strictMaybeToMaybe,
   )
 import Cardano.Ledger.Binary
   ( DecoderError (DecoderErrorCustom),
@@ -66,7 +68,6 @@ import Cardano.Ledger.Binary
   )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible
-import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), PaymentCredential, StakeReference (..))
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
@@ -80,6 +81,8 @@ import Cardano.Ledger.Val
   )
 import Control.DeepSeq (NFData (..), rwhnf)
 import Control.Monad (guard, (<$!>))
+import Data.Aeson (ToJSON (..), object, (.=))
+import qualified Data.Aeson as Aeson (Value (Null, String))
 import Data.Bits
 import Data.Maybe (fromMaybe)
 import Data.Typeable (Proxy (..), (:~:) (Refl))
@@ -325,7 +328,9 @@ instance Crypto c => EraTxOut (AlonzoEra c) where
       )
   {-# INLINE valueEitherTxOutL #-}
 
-  getMinCoinTxOut pp txOut = Coin $ utxoEntrySize txOut * unCoin (_coinsPerUTxOWord pp)
+  getMinCoinTxOut pp txOut =
+    case pp ^. ppCoinsPerUTxOWordL of
+      CoinPerWord (Coin cpw) -> Coin $ utxoEntrySize txOut * cpw
 
 instance
   (Era era, Val (Value era), DecodeNonNegative (Value era)) =>
@@ -382,6 +387,21 @@ instance
         mkTxOutCompact a ca cv . SJust <$> fromCBOR
       Just _ -> cborError $ DecoderErrorCustom "txout" "wrong number of terms in txout"
   {-# INLINEABLE fromSharedCBOR #-}
+
+instance
+  (EraTxOut era, ToJSON (Value era)) =>
+  ToJSON (AlonzoTxOut era)
+  where
+  toJSON (AlonzoTxOut addr v dataHash) =
+    object
+      [ "address" .= toJSON addr,
+        "value" .= toJSON v,
+        "datahash" .= case strictMaybeToMaybe dataHash of
+          Nothing -> Aeson.Null
+          Just dHash ->
+            Aeson.String . hashToTextAsHex $
+              extractHash dHash
+      ]
 
 pattern TxOutCompact ::
   (Era era, Val (Value era), HasCallStack) =>
@@ -456,11 +476,6 @@ utxoEntrySize txOut = utxoEntrySizeWithoutVal + size v + dataHashSize dh
     -- size of UTxO entry excluding the Value part
     utxoEntrySizeWithoutVal :: Integer
     utxoEntrySizeWithoutVal = 27 -- 6 + txoutLenNoVal [14] + txinLen [7]
-
-class EraTxOut era => AlonzoEraTxOut era where
-  dataHashTxOutL :: Lens' (TxOut era) (StrictMaybe (DataHash (EraCrypto era)))
-
-  datumTxOutF :: SimpleGetter (TxOut era) (Datum era)
 
 instance Crypto c => AlonzoEraTxOut (AlonzoEra c) where
   {-# SPECIALIZE instance AlonzoEraTxOut (AlonzoEra StandardCrypto) #-}

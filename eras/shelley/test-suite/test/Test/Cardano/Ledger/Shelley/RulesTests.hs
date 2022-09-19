@@ -1,7 +1,10 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Ledger.Shelley.RulesTests
   ( chainExamples,
@@ -58,23 +61,18 @@ import Test.Cardano.Ledger.Shelley.MultiSigExamples
     applyTxWithScript,
     bobOnly,
   )
-import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
--- EraIndepGenerators is neded for Arbitrary NewEpochState
-import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
--- Generators is needed for Arbitrary ShelleyPParams
-import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase, slotFromEpoch)
-import Test.QuickCheck (Property, discard, (===))
+import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, assertBool, testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty)
 
-chainExamples :: TestTree
+chainExamples :: forall era. (ShelleyTest era) => TestTree
 chainExamples =
   testGroup
     "CHAIN examples"
     [ testCase "empty block" $ testCHAINExample exEmptyBlock,
       poolLifetimeExample,
-      twoPoolsExample,
+      twoPoolsExample @era,
       poolReRegExample,
       updatesExample,
       genesisDelegExample,

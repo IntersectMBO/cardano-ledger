@@ -125,6 +125,8 @@ instance
 
 instance (Crypto c, Functor f) => TranslateEra (ConwayEra c) (ShelleyPParamsHKD f)
 
+instance Crypto c => TranslateEra (ConwayEra c) Core.PParams
+
 instance Crypto c => TranslateEra (ConwayEra c) EpochState where
   translateEra ctxt es =
     pure
@@ -132,8 +134,8 @@ instance Crypto c => TranslateEra (ConwayEra c) EpochState where
         { esAccountState = esAccountState es,
           esSnapshots = esSnapshots es,
           esLState = translateEra' ctxt $ esLState es,
-          esPrevPp = translatePParams $ esPrevPp es,
-          esPp = translatePParams $ esPp es,
+          esPrevPp = mapPParams translatePParams $ esPrevPp es,
+          esPp = mapPParams translatePParams $ esPp es,
           esNonMyopic = esNonMyopic es
         }
 
@@ -174,7 +176,7 @@ instance Crypto c => TranslateEra (ConwayEra c) API.PPUPState where
 
 instance Crypto c => TranslateEra (ConwayEra c) API.ProposedPPUpdates where
   translateEra _ctxt (API.ProposedPPUpdates ppup) =
-    pure $ API.ProposedPPUpdates $ fmap translatePParams ppup
+    pure $ API.ProposedPPUpdates $ fmap (mapPParamsUpdate translatePParams) ppup
 
 translateTxOut ::
   Crypto c =>

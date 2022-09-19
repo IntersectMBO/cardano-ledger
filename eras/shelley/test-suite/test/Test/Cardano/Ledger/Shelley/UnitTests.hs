@@ -21,6 +21,7 @@ import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes hiding ((==>))
 import Cardano.Ledger.Binary (serialize')
 import Cardano.Ledger.Coin
+import Cardano.Ledger.Core (PParams (..), emptyPParams, ppEMaxL, ppKeyDepositL, ppMaxTxSizeL, ppMinFeeAL, ppMinFeeBL, ppMinPoolCostL, ppMinUTxOValueL, ppPoolDepositL)
 import Cardano.Ledger.Credential
   ( Credential (..),
     StakeReference (..),
@@ -50,7 +51,7 @@ import Cardano.Ledger.Shelley.LedgerState
     dsUnified,
     rewards,
   )
-import Cardano.Ledger.Shelley.PParams
+import Cardano.Ledger.Shelley.PParams hiding (emptyPParams)
 import Cardano.Ledger.Shelley.Rules
   ( ShelleyDelegsPredFailure (..),
     ShelleyDelplPredFailure (..),
@@ -103,6 +104,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Word (Word64)
 import GHC.Stack
+import Lens.Micro
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkVKeyRwdAcnt, mkWitnessVKey, mkWitnessesVKey, vKey)
 import Test.Cardano.Ledger.Shelley.Address.Bootstrap
@@ -160,18 +162,17 @@ bobAddr =
 mkGenesisTxIn :: (HashAlgorithm (HASH c), HasCallStack) => Integer -> TxIn c
 mkGenesisTxIn = TxIn genesisId . mkTxIxPartial
 
-pp :: ShelleyPParams era
+pp :: forall era. ShelleyTest era => PParams era
 pp =
   emptyPParams
-    { _minfeeA = 1,
-      _minfeeB = 1,
-      _keyDeposit = Coin 100,
-      _poolDeposit = Coin 250,
-      _maxTxSize = 1024,
-      _eMax = EpochNo 10,
-      _minUTxOValue = Coin 100,
-      _minPoolCost = Coin 100
-    }
+    & ppMinFeeAL .~ (1)
+    & ppMinFeeBL .~ (1)
+    & ppKeyDepositL .~ (Coin 100)
+    & ppPoolDepositL .~ (Coin 250)
+    & ppMaxTxSizeL .~ (1024)
+    & ppEMaxL .~ (EpochNo 10)
+    & ppMinUTxOValueL .~ (Coin 100)
+    & ppMinPoolCostL .~ (Coin 10)
 
 testVRFCheckWithActiveSlotCoeffOne :: Assertion
 testVRFCheckWithActiveSlotCoeffOne =
@@ -243,16 +244,16 @@ testCheckLeaderVal =
             == False,
       testProperty "checkLeaderVal succeeds iff l < 1 - (1-f)^r" $
         \(VRFNatVal n) (ASC f) (StakeProportion r) ->
-          r > 0 ==>
-            let ascVal :: Double
-                ascVal = fromRational . unboundRational $ activeSlotVal f
-             in checkLeaderValue @v
-                  (VRF.mkTestOutputVRF n)
-                  r
-                  f
-                  === ( (realToFrac n / realToFrac (maxVRFVal + 1))
-                          < (1 - (1 - ascVal) ** fromRational r)
-                      ),
+          r > 0
+            ==> let ascVal :: Double
+                    ascVal = fromRational . unboundRational $ activeSlotVal f
+                 in checkLeaderValue @v
+                      (VRF.mkTestOutputVRF n)
+                      r
+                      f
+                      === ( (realToFrac n / realToFrac (maxVRFVal + 1))
+                              < (1 - (1 - ascVal) ** fromRational r)
+                          ),
       -- Suppose that our VRF value V is drawn uniformly from [0, maxVRFVal).
       -- The leader check verifies that fromNat V < 1 - (1-f)^r, where fromNat
       -- is an appropriate mapping into the unit interval giving fromNat V ~
@@ -270,41 +271,41 @@ testCheckLeaderVal =
       --
       testProperty "We are elected as leader proportional to our stake" $
         \(ASC f) (StakeProportion r) ->
-          r > 0 ==>
-            let ascVal :: Double
-                ascVal = fromRational . unboundRational $ activeSlotVal f
-                numTrials = 2000
-                -- 4 standard deviations
-                δ = 4 * sqrt (realToFrac numTrials * p * (1 - p))
-                p = 1 - (1 - ascVal) ** fromRational r
-                mean = realToFrac numTrials * p
-                maxVRFValInt :: Integer
-                maxVRFValInt = fromIntegral maxVRFVal
-                lb = floor (mean - δ)
-                ub = ceiling (mean + δ)
-             in do
-                  vrfVals <- Gen.vectorOf numTrials (Gen.choose (0, maxVRFValInt))
-                  let s =
-                        length . filter id $
-                          ( \v ->
-                              checkLeaderValue @v
-                                (VRF.mkTestOutputVRF $ fromIntegral v)
-                                r
-                                f
+          r > 0
+            ==> let ascVal :: Double
+                    ascVal = fromRational . unboundRational $ activeSlotVal f
+                    numTrials = 2000
+                    -- 4 standard deviations
+                    δ = 4 * sqrt (realToFrac numTrials * p * (1 - p))
+                    p = 1 - (1 - ascVal) ** fromRational r
+                    mean = realToFrac numTrials * p
+                    maxVRFValInt :: Integer
+                    maxVRFValInt = fromIntegral maxVRFVal
+                    lb = floor (mean - δ)
+                    ub = ceiling (mean + δ)
+                 in do
+                      vrfVals <- Gen.vectorOf numTrials (Gen.choose (0, maxVRFValInt))
+                      let s =
+                            length . filter id $
+                              ( \v ->
+                                  checkLeaderValue @v
+                                    (VRF.mkTestOutputVRF $ fromIntegral v)
+                                    r
+                                    f
+                              )
+                                <$> vrfVals
+                      pure
+                        . counterexample
+                          ( show lb
+                              ++ " /< "
+                              ++ show s
+                              ++ " /< "
+                              ++ show ub
+                              ++ " (p="
+                              ++ show p
+                              ++ ")"
                           )
-                            <$> vrfVals
-                  pure
-                    . counterexample
-                      ( show lb
-                          ++ " /< "
-                          ++ show s
-                          ++ " /< "
-                          ++ show ub
-                          ++ " (p="
-                          ++ show p
-                          ++ ")"
-                      )
-                    $ s > lb && s < ub
+                        $ s > lb && s < ub
     ]
   where
     maxVRFVal :: Natural
@@ -409,17 +410,17 @@ testSpendNonexistentInput =
     [ UtxowFailure (UtxoFailure (ValueNotConservedUTxO (Coin 0) (Coin 10000))),
       UtxowFailure (UtxoFailure $ BadInputsUTxO (Set.singleton $ mkGenesisTxIn 42))
     ]
-    $ aliceGivesBobLovelace
-    $ AliceToBob
-      { input = mkGenesisTxIn 42, -- Non Existent
-        toBob = Coin 3000,
-        fee = Coin 1500,
-        deposits = Coin 0,
-        refunds = Coin 0,
-        certs = [],
-        ttl = SlotNo 100,
-        signers = [asWitness alicePay]
-      }
+    $ aliceGivesBobLovelace $
+      AliceToBob
+        { input = mkGenesisTxIn 42, -- Non Existent
+          toBob = Coin 3000,
+          fee = Coin 1500,
+          deposits = Coin 0,
+          refunds = Coin 0,
+          certs = [],
+          ttl = SlotNo 100,
+          signers = [asWitness alicePay]
+        }
 
 testWitnessNotIncluded :: Assertion
 testWitnessNotIncluded =
@@ -642,17 +643,17 @@ testOutputTooSmall :: Assertion
 testOutputTooSmall =
   testInvalidTx
     [UtxowFailure (UtxoFailure $ OutputTooSmallUTxO [ShelleyTxOut bobAddr (Coin 1)])]
-    $ aliceGivesBobLovelace
-    $ AliceToBob
-      { input = TxIn genesisId minBound,
-        toBob = Coin 1, -- Too Small
-        fee = Coin 997,
-        deposits = Coin 0,
-        refunds = Coin 0,
-        certs = [],
-        ttl = SlotNo 0,
-        signers = [asWitness alicePay]
-      }
+    $ aliceGivesBobLovelace $
+      AliceToBob
+        { input = TxIn genesisId minBound,
+          toBob = Coin 1, -- Too Small
+          fee = Coin 997,
+          deposits = Coin 0,
+          refunds = Coin 0,
+          certs = [],
+          ttl = SlotNo 0,
+          signers = [asWitness alicePay]
+        }
 
 alicePoolColdKeys :: KeyPair 'StakePool C_Crypto
 alicePoolColdKeys = KeyPair vk sk
@@ -686,27 +687,27 @@ testPoolCostTooSmall =
     [ DelegsFailure
         ( DelplFailure
             ( PoolFailure
-                ( StakePoolCostTooLowPOOL (ppCost alicePoolParamsSmallCost) (_minPoolCost (pp @C))
+                ( StakePoolCostTooLowPOOL (ppCost alicePoolParamsSmallCost) ((pp @C ^. ppMinPoolCostL))
                 )
             )
         )
     ]
-    $ aliceGivesBobLovelace
-    $ AliceToBob
-      { input = TxIn genesisId minBound,
-        toBob = Coin 100,
-        fee = Coin 997,
-        deposits = Coin 250,
-        refunds = Coin 0,
-        certs = [DCertPool $ RegPool alicePoolParamsSmallCost],
-        ttl = SlotNo 0,
-        signers =
-          ( [ asWitness alicePay,
-              asWitness aliceStake,
-              asWitness alicePoolColdKeys
-            ]
-          )
-      }
+    $ aliceGivesBobLovelace $
+      AliceToBob
+        { input = TxIn genesisId minBound,
+          toBob = Coin 100,
+          fee = Coin 997,
+          deposits = Coin 250,
+          refunds = Coin 0,
+          certs = [DCertPool $ RegPool alicePoolParamsSmallCost],
+          ttl = SlotNo 0,
+          signers =
+            ( [ asWitness alicePay,
+                asWitness aliceStake,
+                asWitness alicePoolColdKeys
+              ]
+            )
+        }
 
 testProducedOverMaxWord64 :: Assertion
 testProducedOverMaxWord64 =

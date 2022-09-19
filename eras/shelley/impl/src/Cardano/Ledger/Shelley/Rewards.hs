@@ -5,7 +5,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Ledger.Shelley.Rewards
   ( StakeShare (..),
@@ -30,7 +29,6 @@ where
 import Cardano.Ledger.BaseTypes
   ( BlocksMade (..),
     BoundedRational (..),
-    NonNegativeInterval,
     ProtVer,
     UnitInterval,
   )
@@ -46,7 +44,7 @@ import Cardano.Ledger.Coin
     rationalToCoinViaFloor,
   )
 import Cardano.Ledger.Compactible (fromCompact)
-import Cardano.Ledger.Core (EraCrypto, PParams, Reward (..), RewardType (..))
+import Cardano.Ledger.Core (EraCrypto, EraPParams (..), PParams (..), Reward (..), RewardType (..), ppA0L, ppNOptL)
 import Cardano.Ledger.Credential (Credential (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.EpochBoundary (Stake (..), maxPool')
@@ -66,7 +64,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.VMap as VMap
 import GHC.Generics (Generic)
-import GHC.Records (HasField (getField))
+import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 import Quiet
@@ -126,9 +124,8 @@ memberRew (Coin f') pool (StakeShare t) (StakeShare sigma)
     m' = unboundRational m
 
 sumRewards ::
-  forall c pp.
-  (HasField "_protocolVersion" pp ProtVer) =>
-  pp ->
+  forall c.
+  ProtVer ->
   Map (Credential 'Staking c) (Set (Reward c)) ->
   Coin
 sumRewards protocolVersion rs = fold $ aggregateRewards protocolVersion rs
@@ -138,15 +135,14 @@ sumRewards protocolVersion rs = fold $ aggregateRewards protocolVersion rs
 -- multiple sources would only receive one reward. So some of the coins are ignored,
 -- because of this backward compatibility issue in early protocolVersions.
 filterRewards ::
-  forall c pp.
-  (HasField "_protocolVersion" pp ProtVer) =>
-  pp ->
+  forall c.
+  ProtVer ->
   Map (Credential 'Staking c) (Set (Reward c)) ->
   ( Map (Credential 'Staking c) (Set (Reward c)), -- delivered
     Map (Credential 'Staking c) (Set (Reward c)) -- ignored in Shelley Era
   )
-filterRewards pp rewards =
-  if HardForks.aggregatedRewards pp
+filterRewards pv rewards =
+  if HardForks.aggregatedRewards pv
     then (rewards, Map.empty)
     else
       let mp = Map.map Set.deleteFindMin rewards
@@ -155,21 +151,18 @@ filterRewards pp rewards =
 -- | for each (Set (Reward c)) entry in the map, sum up the coin. In the ShelleyEra
 --   some of the coins are ignored (because of backward compatibility) see 'filterRewards'
 aggregateRewards ::
-  forall c pp.
-  (HasField "_protocolVersion" pp ProtVer) =>
-  pp ->
+  forall c.
+  ProtVer ->
   Map (Credential 'Staking c) (Set (Reward c)) ->
   Map (Credential 'Staking c) Coin
-aggregateRewards pp rewards =
-  Map.map (foldMap' rewardAmount) $ fst $ filterRewards pp rewards
+aggregateRewards pv rewards =
+  Map.map (foldMap' rewardAmount) $ fst $ filterRewards pv rewards
 
 -- ================================================
 -- Compact Coin versions of sumRewards and aggregateCompactRewards
 
 sumCompactRewards ::
-  forall c pp.
-  (HasField "_protocolVersion" pp ProtVer) =>
-  pp ->
+  ProtVer ->
   Map (Credential 'Staking c) (Set (Reward c)) ->
   CompactForm Coin
 sumCompactRewards protocolVersion rs = fold $ aggregateCompactRewards protocolVersion rs
@@ -177,13 +170,11 @@ sumCompactRewards protocolVersion rs = fold $ aggregateCompactRewards protocolVe
 -- | for each (Set (Reward c)) entry in the map, sum up the coin. In the ShelleyEra
 --   some of the coins are ignored (because of backward compatibility) see 'filterRewards'
 aggregateCompactRewards ::
-  forall c pp.
-  (HasField "_protocolVersion" pp ProtVer) =>
-  pp ->
+  ProtVer ->
   Map (Credential 'Staking c) (Set (Reward c)) ->
   Map (Credential 'Staking c) (CompactForm Coin)
-aggregateCompactRewards pp rewards =
-  Map.map (foldMap' (compactCoinOrError . rewardAmount)) $ fst $ filterRewards pp rewards
+aggregateCompactRewards pv rewards =
+  Map.map (foldMap' (compactCoinOrError . rewardAmount)) $ fst $ filterRewards pv rewards
 
 -- We argue that the call to 'compactCoinOrError' will never return error.
 -- The Reward is stored in the LedgerState, and we know the sum of all Ada in the LedgerState cannot
@@ -265,9 +256,8 @@ notPoolOwner pps = \case
 
 -- | The stake pool member reward calculation
 rewardOnePoolMember ::
-  HasField "_protocolVersion" pp ProtVer =>
-  -- | The protocol parameters
-  pp ->
+  -- | The protocol version
+  ProtVer ->
   -- | The total amount of stake in the system
   Coin ->
   -- | The set of registered stake credentials
@@ -310,9 +300,7 @@ rewardOnePoolMember
 -- the ranking information out of the ledger code and into a separate service,
 -- and at that point we can simplify this function to not care about ranking.
 mkPoolRewardInfo ::
-  ( HasField "_d" (PParams era) UnitInterval,
-    HasField "_a0" (PParams era) NonNegativeInterval,
-    HasField "_nOpt" (PParams era) Natural
+  ( EraPParams era
   ) =>
   PParams era ->
   Coin ->
@@ -368,9 +356,9 @@ mkPoolRewardInfo
               }
        in Right $! rewardInfo
     where
-      pp_d = getField @"_d" pp
-      pp_a0 = getField @"_a0" pp
-      pp_nOpt = getField @"_nOpt" pp
+      pp_d = pp ^. ppDG
+      pp_a0 = pp ^. ppA0L
+      pp_nOpt = pp ^. ppNOptL
       Coin pstakeTot = Map.findWithDefault mempty (ppId pool) stakePerPool
       accOwnerStake c o = maybe c (c <>) $ do
         hk <- VMap.lookup (KeyHashObj o) delegs
