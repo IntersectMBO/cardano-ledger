@@ -4,7 +4,7 @@ on:
   push:
     branches: [ '*' ]
   pull_request:
-    branches: [ master ]
+    branches: [ "master" ]
 
 jobs:
   build:
@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ghc: ["8.10.7"]
+        ghc: ["8.10.7", "9.2.4"]
         os: [ubuntu-latest]
 
     steps:
@@ -62,7 +62,7 @@ jobs:
       id: setup-haskell
       with:
         ghc-version: ${{ matrix.ghc }}
-        cabal-version: 3.4.0.0
+        cabal-version: 3.6.2.0
 
     - name: Configure to use libsodium
       run: |
