@@ -89,6 +89,7 @@ import Formatting (Format, bprint, build, fitLeft, later, sformat, (%.))
 import qualified Formatting.Buildable as B (Buildable (..))
 import NoThunks.Class (NoThunks (..))
 import qualified Prelude
+import Cardano.HeapWords (HeapWords(..))
 
 --------------------------------------------------------------------------------
 -- AbstractHash

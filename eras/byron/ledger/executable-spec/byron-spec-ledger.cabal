@@ -55,6 +55,7 @@ library
                      , goblins
                      , hashable
                      , hedgehog >= 1.0.4
+                     , lens
                      , microlens
                      , microlens-th
                      , nothunks

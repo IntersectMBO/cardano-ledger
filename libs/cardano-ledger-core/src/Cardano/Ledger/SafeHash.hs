@@ -59,7 +59,7 @@ where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Prelude (HeapWords (..))
+import Cardano.HeapWords (HeapWords (..))
 import Control.DeepSeq (NFData)
 import Data.ByteString (ByteString)
 import Data.ByteString.Short (ShortByteString, fromShort)

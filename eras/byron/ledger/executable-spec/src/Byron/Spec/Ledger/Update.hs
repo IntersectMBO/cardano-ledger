@@ -4,11 +4,13 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyDataDeriving #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MonadComprehensions #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -1759,7 +1761,16 @@ instance STS UPIEC where
   initialRules = []
   transitionRules =
     [ do
-        TRC ((e_n, k), us, ()) <- judgmentContext
+        TRC ((e_n, k), us :: ( (ProtVer, PParams), -- (pv, pps)
+            [(Core.Slot, (ProtVer, PParams))], -- fads
+            Map ApName (ApVer, Core.Slot, Metadata), -- avs
+            Map UpId (ProtVer, PParams), -- rpus
+            Map UpId (ApName, ApVer, Metadata), -- raus
+            Map UpId Core.Slot, -- cps
+            Set (UpId, Core.VKeyGenesis), -- vts
+            Set (ProtVer, Core.VKeyGenesis), -- bvs
+            Map UpId Core.Slot -- pws
+          ), ()) <- judgmentContext
         let (pv, pps) = us ^. _1 :: (ProtVer, PParams)
             fads = us ^. _2 :: [(Core.Slot, (ProtVer, PParams))]
         (pv', pps') <-
@@ -1866,18 +1877,42 @@ protocolVersionEndorsementGen upienv upistate =
             & Map.fromListWith Set.union
 
 --------------------------------------------------------------------------------
+-- AddShrinks instances
+--------------------------------------------------------------------------------
+
+deriveAddShrinks ''UpAdptThd
+deriveAddShrinks ''ApName
+deriveAddShrinks ''ApVer
+deriveAddShrinks ''BkSgnCntT
+deriveAddShrinks ''FactorA
+deriveAddShrinks ''FactorB
+deriveAddShrinks ''Metadata
+deriveAddShrinks ''PParams
+deriveAddShrinks ''ProtVer
+deriveAddShrinks ''SwVer
+deriveAddShrinks ''UpId
+deriveAddShrinks ''UProp
+deriveAddShrinks ''Vote
+
+--------------------------------------------------------------------------------
 -- Goblins instances
 --------------------------------------------------------------------------------
 
-deriveGoblin ''ApVer
-deriveGoblin ''ApName
-deriveGoblin ''Metadata
-deriveGoblin ''ProtVer
-deriveGoblin ''PParams
-deriveGoblin ''SwVer
-deriveGoblin ''UpId
-deriveGoblin ''UProp
-deriveGoblin ''Vote
+instance GeneOps g => Goblin g BkSgnCntT where
+  tinker _ =
+    pure <$> conjure
+  conjure =
+    saveInBagOfTricks =<< do
+      i <- transcribeGenesAsInt 100
+      pure (BkSgnCntT (fromIntegral i / 100))
+
+instance GeneOps g => Goblin g UpAdptThd where
+  tinker _ =
+    pure <$> conjure
+  conjure =
+    saveInBagOfTricks =<< do
+      i <- transcribeGenesAsInt 100
+      pure (UpAdptThd (fromIntegral i / 100))
 
 instance GeneOps g => Goblin g FactorA where
   tinker gen =
@@ -1903,39 +1938,15 @@ instance GeneOps g => Goblin g FactorB where
               <$> conjure
           )
 
-instance GeneOps g => Goblin g BkSgnCntT where
-  tinker _ =
-    pure <$> conjure
-  conjure =
-    saveInBagOfTricks =<< do
-      i <- transcribeGenesAsInt 100
-      pure (BkSgnCntT (fromIntegral i / 100))
-
-instance GeneOps g => Goblin g UpAdptThd where
-  tinker _ =
-    pure <$> conjure
-  conjure =
-    saveInBagOfTricks =<< do
-      i <- transcribeGenesAsInt 100
-      pure (UpAdptThd (fromIntegral i / 100))
-
---------------------------------------------------------------------------------
--- AddShrinks instances
---------------------------------------------------------------------------------
-
-deriveAddShrinks ''ApName
-deriveAddShrinks ''ApVer
-deriveAddShrinks ''BkSgnCntT
-deriveAddShrinks ''FactorA
-deriveAddShrinks ''FactorB
-deriveAddShrinks ''Metadata
-deriveAddShrinks ''PParams
-deriveAddShrinks ''ProtVer
-deriveAddShrinks ''SwVer
-deriveAddShrinks ''UpAdptThd
-deriveAddShrinks ''UpId
-deriveAddShrinks ''UProp
-deriveAddShrinks ''Vote
+deriveGoblin ''PParams
+deriveGoblin ''ApVer
+deriveGoblin ''ApName
+deriveGoblin ''Metadata
+deriveGoblin ''ProtVer
+deriveGoblin ''SwVer
+deriveGoblin ''UpId
+deriveGoblin ''UProp
+deriveGoblin ''Vote
 
 --------------------------------------------------------------------------------
 -- SeedGoblin instances
@@ -1947,10 +1958,10 @@ deriveSeedGoblin ''BkSgnCntT
 deriveSeedGoblin ''FactorA
 deriveSeedGoblin ''FactorB
 deriveSeedGoblin ''SwVer
+deriveSeedGoblin ''UpAdptThd
 deriveSeedGoblin ''PParams
 deriveSeedGoblin ''ProtVer
 deriveSeedGoblin ''Metadata
-deriveSeedGoblin ''UpAdptThd
 deriveSeedGoblin ''UpId
 
 --------------------------------------------------------------------------------
@@ -2130,19 +2141,3 @@ tamperWithVote vote =
         pure $! vote & vSig .~ Core.sign (skey vk) (vote ^. vPropId),
       pure $! vote
     ]
-
---------------------------------------------------------------------------------
--- FieldX instances for a 9-tuple
---------------------------------------------------------------------------------
-
-instance Field1 (a, b, c, d, e, f, g, h, i) (a', b, c, d, e, f, g, h, i) a a' where
-  _1 k ~(a, b, c, d, e, f, g, h, i) = (\a' -> (a', b, c, d, e, f, g, h, i)) <$> k a
-  {-# INLINE _1 #-}
-
-instance Field2 (a, b, c, d, e, f, g, h, i) (a, b', c, d, e, f, g, h, i) b b' where
-  _2 k ~(a, b, c, d, e, f, g, h, i) = (\b' -> (a, b', c, d, e, f, g, h, i)) <$> k b
-  {-# INLINE _2 #-}
-
-instance Field3 (a, b, c, d, e, f, g, h, i) (a, b, c', d, e, f, g, h, i) c c' where
-  _3 k ~(a, b, c, d, e, f, g, h, i) = (\c' -> (a, b, c', d, e, f, g, h, i)) <$> k c
-  {-# INLINE _3 #-}

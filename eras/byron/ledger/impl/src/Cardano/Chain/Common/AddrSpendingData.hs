@@ -29,6 +29,7 @@ import Data.Aeson (ToJSON)
 import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 import NoThunks.Class (NoThunks (..))
+import Cardano.HeapWords (HeapWords(..))
 
 -- | Data which is bound to an address and must be revealed in order to spend
 --   lovelace belonging to this address.

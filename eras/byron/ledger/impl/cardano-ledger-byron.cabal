@@ -161,6 +161,7 @@ library
                      , directory
                      , filepath
                      , formatting
+                     , heapwords
                      , mtl
                      , nothunks
                      , quiet

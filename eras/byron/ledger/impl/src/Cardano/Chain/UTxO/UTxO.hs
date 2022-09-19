@@ -56,6 +56,7 @@ import Cardano.Chain.UTxO.Compact
   )
 import Cardano.Chain.UTxO.Tx (Tx (..), TxId, TxIn (..), TxOut (..))
 import Cardano.Crypto (serializeCborHash)
+import Cardano.HeapWords (HeapWords(..))
 import Cardano.Prelude hiding (concat, empty, toList)
 import Data.Coerce
 import qualified Data.List.NonEmpty as NE

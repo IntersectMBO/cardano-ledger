@@ -22,8 +22,9 @@ module Cardano.Ledger.Coin
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.HeapWords (HeapWords(..))
 import Cardano.Ledger.Compactible
-import Cardano.Prelude (HeapWords)
+import Cardano.HeapWords (HeapWords)
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Group (Abelian, Group (..))

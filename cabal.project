@@ -19,7 +19,6 @@ packages:
   libs/cardano-ledger-pretty
   libs/cardano-ledger-test
   libs/cardano-protocol-tpraos
-  libs/plutus-preprocessor
   libs/ledger-state
   libs/non-integral
   libs/small-steps
@@ -47,7 +46,7 @@ test-show-details: streaming
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 7fd38b33b074980426cefeeac8d86aa33e30705c
+  tag: 83718afad02fb4559086753afe4eb9d308137d19
   subdir:
     base-deriving-via
     binary
@@ -69,7 +68,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
-  tag: 891b93b4121d26437d60625b6e212c51392acbea
+  tag: b1765ad51032ebdbf8489f4a246231916865d6de
   --sha256: 04h8n0m93rgr8xcynypjh6mc7kmb450c17cfvpyzpa36yld599fy
   subdir:
     cardano-prelude
@@ -85,21 +84,21 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus
-  tag: 591be5edb34b4a4ffa443a557d2d23af64e08b17
+  tag: 3ba4f5cf18887148abac3e46cc2ff7bb4e904995
   --sha256: 180jq8hd0jlg48ya7b5yw3bnd2d5czy0b1agy9ng3mgnzpyq747i
   subdir:
     plutus-ledger-api
     plutus-tx
-    plutus-tx-plugin
     plutus-core
     prettyprinter-configurable
     word-array
 
+-- https://github.com/Quid2/flat/pull/22 fixes a potential exception
+-- when decoding invalid (e.g. malicious) text literals.
 source-repository-package
   type: git
   location: https://github.com/Quid2/flat.git
   tag: 44dd79ab3d6547afd7674876f0307995fc40dfcf
-  --sha256: 1lrzknw765pz2j97nvv9ip3l1mcpf2zr4n56hwlz0rk7wq7ls4cm
 
 source-repository-package
   type: git
@@ -117,10 +116,7 @@ allow-newer:
   plutus-core:some,
   plutus-tx-plugin:ghc,
   size-based:template-haskell,
-  tasty-hedgehog:hedgehog,
   Unique:hashable,
-
---  *:tasty-hedgehog,
 
 constraints:
   -- bizarre issue: in earlier versions they define their own 'GEq', in newer
@@ -160,9 +156,3 @@ package double-conversion
 
 package foundation
   ghc-options: -Wno-dodgy-imports
-
--- https://github.com/input-output-hk/bytestring/pull/1
-source-repository-package
-  type: git
-  location: https://github.com/haskell/bytestring
-  tag: 6299fe0ee387a3c0929105f1a19c8467ecbd1c03

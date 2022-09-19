@@ -25,6 +25,7 @@ import qualified Formatting.Buildable as B
 import NoThunks.Class (NoThunks (..))
 import Quiet
 import Text.JSON.Canonical (FromJSON (..), ToJSON (..))
+import Cardano.HeapWords (HeapWords(..))
 
 -- | 'LovelacePortion' is a legacy Byron type that we keep only for
 -- compatibility. It was originally intended to represent a fraction of stake

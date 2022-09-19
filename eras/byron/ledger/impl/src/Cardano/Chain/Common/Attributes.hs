@@ -49,6 +49,7 @@ import Formatting.Buildable (Buildable)
 import qualified Formatting.Buildable as Buildable
 import NoThunks.Class (NoThunks (..))
 import qualified Prelude
+import Cardano.HeapWords (HeapWords(..), heapWords2)
 
 -- | Representation of unparsed fields in Attributes. Newtype wrapper is used
 --   for clear backward compatibility between previous representation (which was
