@@ -117,7 +117,12 @@ import Test.Cardano.Ledger.Generic.GenState
     getUtxoChoicesMax,
     getUtxoElem,
     getUtxoTest,
-    modifyModel,
+    modifyGenStateInitialRewards,
+    modifyGenStateInitialUtxo,
+    modifyModelCount,
+    modifyModelIndex,
+    modifyModelMutFee,
+    modifyModelUTxO,
     runGenRS,
   )
 import Test.Cardano.Ledger.Generic.ModelState
@@ -199,6 +204,50 @@ lookupScript scriptHash mTag = do
           Just . snd <$> lookupByKeyM "plutusScript" (scriptHash, tag) gsPlutusScripts
     _ -> pure Nothing
 
+-- =====================================
+
+genGenericScriptWitness ::
+  (Reflect era) =>
+  Proof era ->
+  Maybe Tag ->
+  Script era ->
+  GenRS era (SafeHash (EraCrypto era) EraIndependentTxBody -> [WitnessesField era])
+genGenericScriptWitness proof mTag script =
+  case proof of
+    Shelley _ -> mkMultiSigWit proof mTag script
+    Allegra _ -> mkTimelockWit proof mTag script
+    Mary _ -> mkTimelockWit proof mTag script
+    Alonzo _ -> case script of
+      TimelockScript timelock -> mkTimelockWit proof mTag timelock
+      PlutusScript _ _ -> pure (const [])
+    Babbage _ -> case script of
+      TimelockScript timelock -> mkTimelockWit proof mTag timelock
+      PlutusScript _ _ -> pure (const [])
+    Conway _ -> case script of
+      TimelockScript timelock -> mkTimelockWit proof mTag timelock
+      PlutusScript _ _ -> pure (const [])
+
+-- | Generate a TxWits producing function. We handle TxWits come from Keys and Scripts
+--   Because scripts vary be Era, we need some Era specific code here: genGenericScriptWitness
+mkWitVKey ::
+  forall era kr.
+  (Reflect era) =>
+  Proof era ->
+  Maybe Tag ->
+  Credential kr (EraCrypto era) ->
+  GenRS era (SafeHash (EraCrypto era) EraIndependentTxBody -> [WitnessesField era])
+mkWitVKey _ _mTag (KeyHashObj keyHash) = do
+  keyPair <- lookupByKeyM "credential" (coerceKeyRole keyHash) gsKeys
+  pure $ \bodyHash -> [AddrWits' [makeWitnessVKey bodyHash keyPair]]
+mkWitVKey era mTag (ScriptHashObj scriptHash) =
+  lookupScript @era scriptHash mTag >>= \case
+    Nothing ->
+      error $ "Impossible: Cannot find script with hash " ++ show scriptHash
+    Just script -> do
+      let scriptWit = ScriptWits' [script]
+      otherWit <- genGenericScriptWitness era mTag script
+      pure (\hash -> scriptWit : otherWit hash)
+
 -- ========================================================================
 -- Generating TxWits, here we are not adding anything to the GenState
 -- only looking up things already added, and assembling the right pieces to
@@ -241,43 +290,6 @@ mkTimelockWit era mTag =
       F.fold <$> mapM (mkTimelockWit era mTag) ts
     RequireTimeStart _ -> pure (const [])
     RequireTimeExpire _ -> pure (const [])
-
-genGenericScriptWitness ::
-  (Reflect era) =>
-  Proof era ->
-  Maybe Tag ->
-  Script era ->
-  GenRS era (SafeHash (EraCrypto era) EraIndependentTxBody -> [WitnessesField era])
-genGenericScriptWitness (Shelley c) mTag timelock = mkMultiSigWit (Shelley c) mTag timelock
-genGenericScriptWitness (Allegra c) mTag timelock = mkTimelockWit (Allegra c) mTag timelock
-genGenericScriptWitness (Mary c) mTag timelock = mkTimelockWit (Mary c) mTag timelock
-genGenericScriptWitness (Alonzo c) mTag (TimelockScript timelock) = mkTimelockWit (Alonzo c) mTag timelock
-genGenericScriptWitness (Alonzo _) _ (PlutusScript _ _) = pure (const [])
-genGenericScriptWitness (Babbage c) mTag (TimelockScript timelock) = mkTimelockWit (Babbage c) mTag timelock
-genGenericScriptWitness (Babbage _) _ (PlutusScript _ _) = pure (const [])
-genGenericScriptWitness (Conway c) mTag (TimelockScript timelock) = mkTimelockWit (Conway c) mTag timelock
-genGenericScriptWitness (Conway _) _ (PlutusScript _ _) = pure (const [])
-
--- | Generate a TxWits producing function. We handle TxWits come from Keys and Scripts
---   Because scripts vary be Era, we need some Era specific code here: genGenericScriptWitness
-mkWitVKey ::
-  forall era kr.
-  (Reflect era) =>
-  Proof era ->
-  Maybe Tag ->
-  Credential kr (EraCrypto era) ->
-  GenRS era (SafeHash (EraCrypto era) EraIndependentTxBody -> [WitnessesField era])
-mkWitVKey _ _mTag (KeyHashObj keyHash) = do
-  keyPair <- lookupByKeyM "credential" (coerceKeyRole keyHash) gsKeys
-  pure $ \bodyHash -> [AddrWits' [makeWitnessVKey bodyHash keyPair]]
-mkWitVKey era mTag (ScriptHashObj scriptHash) =
-  lookupScript @era scriptHash mTag >>= \case
-    Nothing ->
-      error $ "Impossible: Cannot find script with hash " ++ show scriptHash
-    Just script -> do
-      let scriptWit = ScriptWits' [script]
-      otherWit <- genGenericScriptWitness era mTag script
-      pure (\hash -> scriptWit : otherWit hash)
 
 -- | Same as `genCredKeyWit`, but for `TxOuts`
 genTxOutKeyWitness ::
@@ -400,6 +412,30 @@ genRefScript proof = do
     Nothing -> pure SNothing
     Just script -> pure (SJust script)
 
+-- | Gen the Datum and RefScript fields of a TxOut by Analyzing the payment credential's script
+genDataHashField :: Reflect era => Proof era -> Maybe (Script era) -> GenRS era [TxOutField era]
+genDataHashField proof maybeCoreScript =
+  case proof of
+    Conway _ -> case maybeCoreScript of
+      Just (PlutusScript _ _) -> do
+        datum <- genBabbageDatum
+        script <- genRefScript proof
+        pure [FDatum datum, RefScript script]
+      _ -> pure []
+    Babbage _ -> case maybeCoreScript of
+      Just (PlutusScript _ _) -> do
+        datum <- genBabbageDatum
+        script <- genRefScript proof
+        pure [FDatum datum, RefScript script]
+      _ -> pure []
+    Alonzo _ -> case maybeCoreScript of
+      Just (PlutusScript _ _) -> do
+        (datahash, _data) <- genDatumWithHash
+        pure [DHash (SJust datahash)]
+      _ -> pure []
+    _ -> pure [] -- No other Era has any datum in the TxOut
+
+-- | Generate the list of TxOutField that constitute a TxOut
 genTxOut :: Reflect era => Proof era -> Value era -> GenRS era [TxOutField era]
 genTxOut proof val = do
   addr <- genRecipient
@@ -409,27 +445,7 @@ genTxOut proof val = do
       KeyHashObj _ -> pure []
       ScriptHashObj scriptHash -> do
         maybeCoreScript <- lookupScript scriptHash (Just Spend)
-        case proof of
-          Conway _ -> case maybeCoreScript of
-            Just (PlutusScript _ _) -> do
-              datum <- genBabbageDatum
-              script <- genRefScript proof
-              pure [FDatum datum, RefScript script]
-            _ -> pure []
-          Babbage _ -> case maybeCoreScript of
-            Just (PlutusScript _ _) -> do
-              datum <- genBabbageDatum
-              script <- genRefScript proof
-              pure [FDatum datum, RefScript script]
-            _ -> pure []
-          Alonzo _ -> case maybeCoreScript of
-            Just (PlutusScript _ _) -> do
-              (datahash, _data) <- genDatumWithHash
-              pure [DHash (SJust datahash)]
-            _ -> pure []
-          Mary _ -> pure []
-          Allegra _ -> pure []
-          Shelley _ -> pure []
+        genDataHashField proof maybeCoreScript
   pure $ [Address addr, Amount val] ++ dataHashFields
 
 -- ================================================================================
@@ -505,7 +521,7 @@ genSpendReferenceInputs newUTxO = do
   let inputs = Map.fromList inputPairs
       refInputs = Map.fromList refInputPairs
   -- The feepair is added to the mMutFee field
-  modifyModel (\m -> m {mMutFee = Map.insert txin txout (mMutFee m)})
+  modifyModelMutFee (Map.insert txin txout)
   let filtered = Map.restrictKeys newUTxO (Set.union (Map.keysSet inputs) (Map.keysSet refInputs))
   pure (feepair, inputs, refInputs, filtered)
 
@@ -588,47 +604,48 @@ genDCerts proof slot = do
         -- Generate registration and de-registration delegation certificates,
         -- while ensuring the proper registered/unregistered state in DState
         case dc of
-          DCertDeleg d
-            | RegKey regCred <- d ->
-                if regCred `Map.member` regCreds -- Can't register if it is already registered
-                  then pure (dcs, ss, regCreds)
-                  else pure (dc : dcs, ss, Map.insert regCred (Coin 99) regCreds) -- 99 is a NonZero Value
-            | DeRegKey deregCred <- d ->
-                -- We can't make DeRegKey certificate if deregCred is not already registered
-                -- or if the Rewards balance for deregCred is not 0,
-                -- or if the credential is one of the StableDelegators (which are never de-registered)
-                case Map.lookup deregCred regCreds of
-                  Nothing -> pure (dcs, ss, regCreds)
-                  -- No credential, skip making certificate
-                  Just (Coin 0) ->
-                    -- Ok to make certificate, rewards balance is 0
-                    if Set.member deregCred honest
-                      then pure (dcs, ss, regCreds)
-                      else
-                        insertIfNotPresent dcs (Map.delete deregCred regCreds) Nothing
-                          <$> lookupPlutusScript deregCred Cert
-                  Just (Coin _) -> pure (dcs, ss, regCreds)
-            -- Either Reward balance is not zero, or no Credential, so skip making certificate
-            | Delegate (Delegation delegCred delegKey) <- d ->
-                let (dcs', regCreds')
-                      | delegCred `Map.member` regCreds = (dcs, regCreds)
-                      | otherwise -- In order to Delegate, the delegCred must exist in rewards.
+          DCertDeleg d -> case d of
+            RegKey regCred ->
+              if regCred `Map.member` regCreds -- Can't register if it is already registered
+                then pure (dcs, ss, regCreds)
+                else pure (dc : dcs, ss, Map.insert regCred (Coin 99) regCreds) -- 99 is a NonZero Value
+            DeRegKey deregCred ->
+              -- We can't make DeRegKey certificate if deregCred is not already registered
+              -- or if the Rewards balance for deregCred is not 0,
+              -- or if the credential is one of the StableDelegators (which are never de-registered)
+              case Map.lookup deregCred regCreds of
+                Nothing -> pure (dcs, ss, regCreds)
+                -- No credential, skip making certificate
+                Just (Coin 0) ->
+                  -- Ok to make certificate, rewards balance is 0
+                  if Set.member deregCred honest
+                    then pure (dcs, ss, regCreds)
+                    else
+                      insertIfNotPresent dcs (Map.delete deregCred regCreds) Nothing
+                        <$> lookupPlutusScript deregCred Cert
+                Just (Coin _) -> pure (dcs, ss, regCreds)
+            Delegate (Delegation delegCred delegKey) ->
+              let (dcs', regCreds') =
+                    if delegCred `Map.member` regCreds
+                      then (dcs, regCreds)
+                      else -- In order to Delegate, the delegCred must exist in rewards.
                       -- so if it is not there, we put it there, otherwise we may
                       -- never generate a valid delegation.
-                        =
-                          (DCertDeleg (RegKey delegCred) : dcs, Map.insert delegCred (Coin 99) regCreds)
-                 in insertIfNotPresent dcs' regCreds' (Just delegKey)
-                      <$> lookupPlutusScript delegCred Cert
-          DCertPool d
-            | RegPool _ <- d -> do
-                pure (dc : dcs, ss, regCreds)
-            | RetirePool kh _ <- d -> do
-                -- We need to make sure that the pool is registered before
-                -- we try to retire it
-                modelPools <- gets $ mPoolParams . gsModel
-                case Map.lookup kh modelPools of
-                  Just _ -> pure (dc : dcs, ss, regCreds)
-                  Nothing -> pure (dcs, ss, regCreds)
+
+                        ( DCertDeleg (RegKey delegCred) : dcs,
+                          Map.insert delegCred (Coin 99) regCreds
+                        )
+               in insertIfNotPresent dcs' regCreds' (Just delegKey)
+                    <$> lookupPlutusScript delegCred Cert
+          DCertPool d -> case d of
+            RegPool _ -> pure (dc : dcs, ss, regCreds)
+            RetirePool kh _ -> do
+              -- We need to make sure that the pool is registered before
+              -- we try to retire it
+              modelPools <- gets $ mPoolParams . gsModel
+              case Map.lookup kh modelPools of
+                Just _ -> pure (dc : dcs, ss, regCreds)
+                Nothing -> pure (dcs, ss, regCreds)
           _ -> pure (dc : dcs, ss, regCreds)
   maxcert <- gets getCertificateMax
   n <- lift $ choose (0, maxcert)
@@ -641,6 +658,11 @@ genDCerts proof slot = do
       initSets = ([], Set.empty, reward)
   (dcs, _, _) <- F.foldlM genUniqueScript initSets [1 :: Int .. n]
   pure $ reverse dcs
+
+spendOnly :: EraTxOut era => TxOut era -> Bool
+spendOnly txOut = case txOut ^. addrTxOutL of
+  Addr _ (ScriptHashObj _) _ -> False
+  _ -> True
 
 -- | Generate a set of Collateral inputs sufficient to pay the minimum fee ('minCollTotal') computed
 --   from the fee and the collateralPercentage from the PParams. Return the new UTxO, the inputs,
@@ -697,11 +719,6 @@ genCollateralUTxO collateralAddresses (Coin fee) utxo = do
   (collaterals, excessColCoin) <-
     go collateralAddresses Map.empty (Coin 0) $ Map.filter spendOnly utxo
   pure (Map.union collaterals utxo, collaterals, excessColCoin)
-
-spendOnly :: EraTxOut era => TxOut era -> Bool
-spendOnly txOut = case txOut ^. addrTxOutL of
-  Addr _ (ScriptHashObj _) _ -> False
-  _ -> True
 
 -- | This function is used to generate the Outputs of a TxBody, It is computed by taking the
 --   Outputs of the range of the domain restricted UTxO, resticted by the Inputs of the TxBody,
@@ -775,6 +792,10 @@ timeToLive (ValidityInterval _ (SJust n)) = n
 timeToLive (ValidityInterval _ SNothing) = SlotNo maxBound
 
 -- ============================================================================
+
+minus :: MUtxo era -> Maybe (UtxoEntry era) -> MUtxo era
+minus m Nothing = m
+minus m (Just (txin, _)) = Map.delete txin m
 
 genAlonzoTx :: forall era. Reflect era => Proof era -> SlotNo -> GenRS era (UTxO era, Tx era)
 genAlonzoTx proof slot = do
@@ -987,29 +1008,13 @@ genAlonzoTxAndInfo proof slot = do
             AuxData' []
           ]
   count <- gets (mCount . gsModel)
+  modifyGenStateInitialRewards (\x -> Map.union x newRewards)
+  modifyGenStateInitialUtxo (\x -> Map.union x (minus utxo maybeoldpair))
+  modifyModelCount (const (count + 1))
+  modifyModelIndex (Map.insert count (TxId txBodyHash))
+  modifyModelUTxO (const utxo)
 
-  -- Add the new objects freshly generated for this Tx to the set of Initial objects for a Trace
-  modify
-    ( \st ->
-        st
-          { gsInitialUtxo = Map.union (gsInitialUtxo st) (minus utxo maybeoldpair),
-            gsInitialRewards = Map.unions [gsInitialRewards st, newRewards]
-          }
-    )
-  -- Modify the model to track what this transaction does.
-  modifyModel
-    ( \m ->
-        m
-          { mCount = count + 1,
-            mIndex = Map.insert count (TxId txBodyHash) (mIndex m),
-            mUTxO = utxo -- This is the UTxO that will run this Tx,
-          }
-    )
   pure (UTxO utxo, validTx, feepair, maybeoldpair)
-
-minus :: MUtxo era -> Maybe (UtxoEntry era) -> MUtxo era
-minus m Nothing = m
-minus m (Just (txin, _)) = Map.delete txin m
 
 -- | Keep only Script witnesses that are neccessary in 'era',
 onlyNecessaryScripts :: Proof era -> Set (ScriptHash (EraCrypto era)) -> [WitnessesField era] -> [WitnessesField era]
