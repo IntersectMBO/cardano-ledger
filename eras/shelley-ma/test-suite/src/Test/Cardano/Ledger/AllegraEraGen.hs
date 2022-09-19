@@ -33,7 +33,7 @@ import Cardano.Ledger.Pretty.Mary ()
 import Cardano.Ledger.Shelley.API (KeyRole (Witness))
 import Cardano.Ledger.Shelley.Constraints
   ( UsesAuxiliary,
-    UsesPParams,
+    -- UsesPParams,
     UsesValue,
   )
 import Cardano.Ledger.Shelley.PParams (PParams, PParams' (..), Update)
@@ -99,7 +99,7 @@ genTxBody ::
   forall era.
   ( UsesValue era,
     UsesAuxiliary era,
-    UsesPParams era,
+    -- UsesPParams era,
     EraGen era
   ) =>
   PParams era ->

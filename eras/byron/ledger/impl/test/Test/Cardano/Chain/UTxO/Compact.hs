@@ -19,6 +19,7 @@ import Hedgehog (MonadTest, assert, forAll, property, tripping)
 import Test.Cardano.Chain.UTxO.Gen (genTxId, genTxIn, genTxOut)
 import Test.Cardano.Prelude
 import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS, withTestsTS)
+import Cardano.HeapWords (HeapWords(..))
 
 --------------------------------------------------------------------------------
 -- Compact TxIn

@@ -64,7 +64,7 @@ library
     cardano-ledger-pretty,
     cardano-ledger-shelley-ma,
     cardano-slotting,
-    cborg,
+    -- cborg,
     containers,
     generic-random,
     hashable,

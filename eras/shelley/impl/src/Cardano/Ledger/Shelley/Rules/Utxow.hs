@@ -388,7 +388,7 @@ instance
   type Environment (UTXOW era) = UtxoEnv era
   type BaseM (UTXOW era) = ShelleyBase
   type PredicateFailure (UTXOW era) = UtxowPredicateFailure era
-  type Event _ = UtxowEvent era
+  type Event (UTXOW era) = UtxowEvent era
   transitionRules = [transitionRulesUTXOW]
   initialRules = [initialLedgerStateUTXOW]
 
