@@ -6,7 +6,6 @@
 
 module Cardano.Ledger.Mary.UTxO (getConsumedMaryValue) where
 
-import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Mary.Era (MaryEra)
@@ -27,7 +26,6 @@ import Cardano.Ledger.Val (inject)
 import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import GHC.Records (HasField (..))
 import Lens.Micro
 
 instance Crypto c => EraUTxO (MaryEra c) where
@@ -49,11 +47,8 @@ instance Crypto c => EraUTxO (MaryEra c) where
 --   _created_ by the transaction, depending on the sign of the quantities in
 --   the mint field.
 getConsumedMaryValue ::
-  ( MaryEraTxBody era
-  , Value era ~ MaryValue (EraCrypto era)
-  , HasField "_keyDeposit" pp Coin
-  ) =>
-  pp ->
+  (MaryEraTxBody era, Value era ~ MaryValue (EraCrypto era)) =>
+  PParams era ->
   DPState (EraCrypto era) ->
   UTxO era ->
   TxBody era ->

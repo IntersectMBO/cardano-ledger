@@ -6,14 +6,11 @@ module Test.Cardano.Ledger.Mary.Examples (
 )
 where
 
--- obtaining orphan STS (UTXOW (ShelleyMAEra ma c))
-
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary (Mary)
 import Cardano.Ledger.Shelley.API (LedgerEnv (..), ShelleyLEDGER)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), UTxOState (..), smartUTxOState)
-import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.UTxO (UTxO)
 import Control.State.Transition.Extended hiding (Assertion)

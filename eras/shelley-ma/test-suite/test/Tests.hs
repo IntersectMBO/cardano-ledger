@@ -6,9 +6,8 @@
 module Main where
 
 import Cardano.Ledger.Allegra (Allegra, AllegraEra)
-import Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core
 import Cardano.Ledger.Mary (Mary, MaryEra)
-import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Rules (ShelleyLEDGER)
 import qualified Cardano.Protocol.TPraos.Rules.Tickn as TPraos
 import Test.Cardano.Ledger.Allegra.ScriptTranslation (testScriptPostTranslation)
@@ -24,9 +23,9 @@ import qualified Test.Cardano.Ledger.ShelleyMA.Serialisation as Serialisation
 import Test.Tasty
 import Test.TestScenario (TestScenario (..), mainWithTestScenario)
 
-type instance Core.EraRule "TICKN" (MaryEra _c) = TPraos.TICKN
+type instance EraRule "TICKN" (MaryEra _c) = TPraos.TICKN
 
-type instance Core.EraRule "TICKN" (AllegraEra _c) = TPraos.TICKN
+type instance EraRule "TICKN" (AllegraEra _c) = TPraos.TICKN
 
 tests :: TestTree
 tests = askOption $ \case

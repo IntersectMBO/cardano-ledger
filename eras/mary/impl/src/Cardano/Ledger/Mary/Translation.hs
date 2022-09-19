@@ -1,14 +1,17 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Mary.Translation where
 
-import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core
@@ -39,14 +42,6 @@ import Data.Maybe (fromMaybe)
 -- being total. Do not change it!
 --------------------------------------------------------------------------------
 
-type instance PreviousEra (MaryEra c) = AllegraEra c
-
--- | Currently no context is needed to translate from Allegra to Mary.
---
--- Note: if context is needed, please coordinate with consensus, who will have
--- to provide the context in the right place.
-type instance TranslationContext (MaryEra c) = ()
-
 instance Crypto c => TranslateEra (MaryEra c) NewEpochState where
   translateEra ctxt nes =
     return $
@@ -60,7 +55,7 @@ instance Crypto c => TranslateEra (MaryEra c) NewEpochState where
         , stashedAVVMAddresses = ()
         }
 
-instance Crypto c => TranslateEra (MaryEra c) ShelleyTx where
+instance (Crypto c, EraTx (MaryEra c)) => TranslateEra (MaryEra c) ShelleyTx where
   type TranslationError (MaryEra c) ShelleyTx = DecoderError
   translateEra _ctx = translateEraThroughCBOR "ShelleyTx"
 
@@ -68,7 +63,9 @@ instance Crypto c => TranslateEra (MaryEra c) ShelleyTx where
 -- Auxiliary instances and functions
 --------------------------------------------------------------------------------
 
-instance (Crypto c, Functor f) => TranslateEra (MaryEra c) (ShelleyPParamsHKD f)
+instance Crypto c => TranslateEra (MaryEra c) PParams
+
+instance Crypto c => TranslateEra (MaryEra c) PParamsUpdate
 
 instance Crypto c => TranslateEra (MaryEra c) EpochState where
   translateEra ctxt es =

@@ -36,7 +36,6 @@ where
 import Cardano.Ledger.Address (Addr (..), bootstrapKeyHash)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (
-  ProtVer,
   ShelleyBase,
   StrictMaybe (..),
   invalidKey,
@@ -75,7 +74,7 @@ import Cardano.Ledger.Shelley.Delegation.Certificates (
 import Cardano.Ledger.Shelley.Era (ShelleyUTXOW)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState.Types (UTxOState (..))
-import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (ProposedPPUpdates), Update (Update))
+import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (ProposedPPUpdates), Update (..))
 import Cardano.Ledger.Shelley.Rules.Utxo (
   ShelleyUTXO,
   ShelleyUtxoPredFailure,
@@ -129,7 +128,6 @@ import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
-import GHC.Records (HasField, getField)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 import Validation
@@ -362,13 +360,11 @@ instance
   , Tx era ~ ShelleyTx era
   , ScriptsNeeded era ~ ShelleyScriptsNeeded era
   , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
-  , HasField "_protocolVersion" (PParams era) ProtVer
   , -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (ShelleyUTXOW era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ Tx era
-  , HasField "_protocolVersion" (PParams era) ProtVer
   , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
   , ProtVerAtMost era 8
   ) =>
@@ -399,17 +395,15 @@ validateFailedScripts tx = do
 
 {-  { s | (_,s) ∈ scriptsNeeded utxo tx} = dom(txscripts txw)    -}
 {-  sNeeded := scriptsNeeded utxo tx                             -}
-{-  sReceived := Map.keysSet (getField @"scriptWits" tx)         -}
+{-  sReceived := Map.keysSet (tx ^. witsTxL . scriptTxWitsL)     -}
 validateMissingScripts ::
-  forall era.
-  ( HasField "_protocolVersion" (PParams era) ProtVer
-  ) =>
+  EraPParams era =>
   PParams era ->
   ShelleyScriptsNeeded era ->
   Set (ScriptHash (EraCrypto era)) ->
   Test (ShelleyUtxowPredFailure era)
 validateMissingScripts pp (ShelleyScriptsNeeded sNeeded) sReceived =
-  if HardForks.missingScriptsSymmetricDifference pp
+  if HardForks.missingScriptsSymmetricDifference (pp ^. ppProtocolVersionL)
     then
       sequenceA_
         [ failureUnless (sNeeded `Set.isSubsetOf` sReceived) $
@@ -424,7 +418,6 @@ validateMissingScripts pp (ShelleyScriptsNeeded sNeeded) sReceived =
 -- | Given a ledger state, determine if the UTxO witnesses in a given
 --  transaction are correct.
 validateVerifiedWits ::
-  forall era.
   ( EraTx era
   , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
   ) =>
@@ -448,26 +441,6 @@ validateVerifiedWits tx =
         <$> filter
           (not . verifyBootstrapWit txBodyHash)
           (Set.toList $ tx ^. witsTxL . bootAddrTxWitsL)
-
-{-
-validateNeededWitnesses ::
-  ( Era era,
-    HasField "wdrls" (TxBody era) (Wdrl (Crypto era)),
-    HasField "certs" (TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "inputs" (TxBody era) (Set (TxIn (Crypto era))),
-    HasField "update" (TxBody era) (StrictMaybe (Update era))
-  ) =>
-  GenDelegs (Crypto era) ->
-  UTxO era ->
-  Tx era ->
-  Set (KeyHash 'Witness (Crypto era)) ->
-  Test (ShelleyUtxowPredFailure era)
-validateNeededWitnesses genDelegs utxo tx witsKeyHashes =
-  let needed = witsVKeyNeeded utxo tx genDelegs
-      missingWitnesses = diffWitHashes needed witsKeyHashes
-   in failureUnless (nullWitHashes missingWitnesses) $
-        MissingVKeyWitnessesUTXOW missingWitnesses
--}
 
 -- How to compute the set of witnessed needed (witsvkeyneeded) varies
 -- from Era to Era, so we parameterise over that function in this test.
@@ -555,7 +528,7 @@ witsVKeyNeeded utxo' tx genDelegs =
 validateMetadata :: EraTx era => PParams era -> Tx era -> Test (ShelleyUtxowPredFailure era)
 validateMetadata pp tx =
   let txBody = tx ^. bodyTxL
-      pv = getField @"_protocolVersion" pp
+      pv = pp ^. ppProtocolVersionL
    in case (txBody ^. auxDataHashTxBodyL, tx ^. auxDataTxL) of
         (SNothing, SNothing) -> pure ()
         (SJust mdh, SNothing) -> failure $ MissingTxMetadata mdh
@@ -566,7 +539,7 @@ validateMetadata pp tx =
             [ failureUnless (hashTxAuxData md' == mdh) $
                 ConflictingMetadataHash mdh (hashTxAuxData md')
             , -- check metadata value sizes
-              when (SoftForks.validMetadata pp) $
+              when (SoftForks.validMetadata pv) $
                 failureUnless (validateTxAuxData pv md') InvalidMetadata
             ]
 

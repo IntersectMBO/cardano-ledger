@@ -6,7 +6,7 @@ module Test.Cardano.Ledger.Alonzo.Serialisation.Canonical (tests) where
 
 import Cardano.Ledger.Alonzo (Alonzo, AlonzoEra)
 import Cardano.Ledger.Alonzo.Language (Language)
-import Cardano.Ledger.Alonzo.PParams hiding (PParams)
+import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Binary (
   Annotator (..),
   Decoder,

@@ -2,8 +2,10 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -11,9 +13,11 @@
 module Test.Cardano.Ledger.Shelley.Serialisation.Generators () where
 
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.API (ShelleyTxBody (ShelleyTxBody))
-import Cardano.Ledger.Shelley.PParams (ShelleyPParams)
+import Cardano.Ledger.Shelley.PParams
 import qualified Cardano.Ledger.Shelley.Rules as STS
+import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (ShelleyTxBody))
+import Control.Monad.Identity (Identity)
+import Data.Maybe.Strict (StrictMaybe)
 import Generic.Random (genericArbitraryU)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
@@ -57,9 +61,12 @@ instance
   arbitrary = genericArbitraryU
   shrink _ = []
 
--- | Note that this instance is a little off - it is an era-independent
--- generator for something which is only valid in certain eras. Its sole use is
--- for `ShelleyGenesis`, a somewhat confusing type which is in fact used as the
--- genesis for multiple eras.
-instance Arbitrary (ShelleyPParams era) where
+instance Era era => Arbitrary (ShelleyPParams Identity era) where
   arbitrary = genericArbitraryU
+
+instance Era era => Arbitrary (ShelleyPParams StrictMaybe era) where
+  arbitrary = genericArbitraryU
+
+deriving instance (Era era, Arbitrary (PParamsHKD Identity era)) => Arbitrary (PParams era)
+
+deriving instance (Era era, Arbitrary (PParamsHKD StrictMaybe era)) => Arbitrary (PParamsUpdate era)

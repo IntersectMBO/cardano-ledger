@@ -23,7 +23,6 @@ import Cardano.Ledger.Allegra.Scripts (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.Language (Language (PlutusV1, PlutusV2))
-import qualified Cardano.Ledger.Alonzo.PParams as AlonzoPP
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), CostModels (..), ExUnits (..), Prices (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
 import Cardano.Ledger.Alonzo.Scripts.Data (Data (..), dataToBinaryData, hashData)
@@ -32,26 +31,19 @@ import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData (..), mkAlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.AuxiliaryData
-import qualified Cardano.Ledger.Babbage.PParams as BabbagePP
-import Cardano.Ledger.Babbage.Translation ()
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), Datum (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
-import qualified Cardano.Ledger.Conway.PParams as ConwayPP
-import Cardano.Ledger.Conway.Translation ()
-import Cardano.Ledger.Core as Core
+import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Keys hiding (KeyPair, vKey)
-import Cardano.Ledger.Mary.Translation ()
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.SafeHash
 import Cardano.Ledger.Shelley.API hiding (KeyPair, RequireAllOf, RequireAnyOf, RequireMOf, RequireSignature, vKey)
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Shelley.PParams
 import qualified Cardano.Ledger.Shelley.PParams as PParams (Update (..))
-import qualified Cardano.Ledger.Shelley.PParams as ShelleyPP
 import Cardano.Ledger.Shelley.Rules
 import Cardano.Ledger.Shelley.Translation (emptyFromByronTranslationContext)
 import Cardano.Ledger.TxIn (mkTxInPartial)
@@ -76,9 +68,8 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Time
 import Data.Word (Word64, Word8)
-import GHC.Records (HasField)
 import GHC.Stack (HasCallStack)
-import Numeric.Natural (Natural)
+import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified Test.Cardano.Ledger.Allegra.Examples.Consensus as Old (ledgerExamplesAllegra)
 import Test.Cardano.Ledger.Alonzo.EraMapping ()
@@ -106,28 +97,11 @@ import Test.Cardano.Ledger.Shelley.Examples.Consensus (
 import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as Old (ledgerExamplesShelley)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as SLE
 import Test.Cardano.Ledger.Shelley.Generator.Core hiding (hashData)
-import Test.Cardano.Ledger.Shelley.Orphans ()
 import Test.Cardano.Ledger.Shelley.Utils hiding (mkVRFKeyPair)
 
 -- ==================================================================
 
 type KeyPairWits era = [KeyPair 'Witness (EraCrypto era)]
-
-emptyPPUpdate :: Proof era -> Core.PParamsUpdate era
-emptyPPUpdate (Shelley _) = ShelleyPP.emptyPParamsUpdate
-emptyPPUpdate (Allegra _) = ShelleyPP.emptyPParamsUpdate
-emptyPPUpdate (Mary _) = ShelleyPP.emptyPParamsUpdate
-emptyPPUpdate (Alonzo _) = AlonzoPP.emptyPParamsUpdate
-emptyPPUpdate (Babbage _) = BabbagePP.emptyPParamsUpdate
-emptyPPUpdate (Conway _) = ConwayPP.emptyPParamsUpdate
-
-emptyPP :: Proof era -> Core.PParams era
-emptyPP (Shelley _) = ShelleyPP.emptyPParams
-emptyPP (Allegra _) = ShelleyPP.emptyPParams
-emptyPP (Mary _) = ShelleyPP.emptyPParams
-emptyPP (Alonzo _) = AlonzoPP.emptyPParams
-emptyPP (Babbage _) = BabbagePP.emptyPParams
-emptyPP (Conway _) = ConwayPP.emptyPParams
 
 -- ==================================================================
 -- LedgerExamples
@@ -136,9 +110,9 @@ emptyPP (Conway _) = ConwayPP.emptyPParams
 mkWitnesses ::
   Reflect era =>
   Proof era ->
-  Core.TxBody era ->
+  TxBody era ->
   KeyPairWits era ->
-  Core.TxWits era
+  TxWits era
 mkWitnesses proof txBody keyPairWits =
   genericWits proof [Just (AddrWits (mkWitnessesVKey (coerce (hashAnnotated txBody)) keyPairWits))]
 
@@ -146,12 +120,12 @@ defaultLedgerExamples ::
   forall era.
   ( Reflect era
   , Default (StashedAVVMAddresses era)
-  , Default (State (Core.EraRule "PPUP" era))
+  , Default (State (EraRule "PPUP" era))
   ) =>
   Proof era ->
-  Core.Value era ->
-  Core.TxBody era ->
-  Core.TxAuxData era ->
+  Value era ->
+  TxBody era ->
+  TxAuxData era ->
   TranslationContext era ->
   ShelleyLedgerExamples era
 defaultLedgerExamples proof value txBody auxData translationContext =
@@ -180,14 +154,14 @@ defaultLedgerExamples proof value txBody auxData translationContext =
         exampleNewEpochState
           proof
           value
-          (emptyPP proof)
+          emptyPParams
           ( case proof of
-              Shelley _ -> (emptyPP proof) {_minUTxOValue = Coin 1}
-              Allegra _ -> (emptyPP proof) {_minUTxOValue = Coin 1}
-              Mary _ -> (emptyPP proof) {_minUTxOValue = Coin 1}
-              Alonzo _ -> (emptyPP proof) {AlonzoPP._coinsPerUTxOWord = Coin 1}
-              Babbage _ -> (emptyPP proof) {BabbagePP._coinsPerUTxOByte = Coin 1}
-              Conway _ -> (emptyPP proof) {ConwayPP._coinsPerUTxOByte = Coin 1}
+              Shelley _ -> emptyPParams & ppMinUTxOValueL .~ Coin 1
+              Allegra _ -> emptyPParams & ppMinUTxOValueL .~ Coin 1
+              Mary _ -> emptyPParams & ppMinUTxOValueL .~ Coin 1
+              Alonzo _ -> emptyPParams & ppCoinsPerUTxOWordL .~ CoinPerWord (Coin 1)
+              Babbage _ -> emptyPParams & ppCoinsPerUTxOByteL .~ CoinPerByte (Coin 1)
+              Conway _ -> emptyPParams & ppCoinsPerUTxOByteL .~ CoinPerByte (Coin 1)
           )
     , sleChainDepState = exampleLedgerChainDepState 1
     , sleTranslationContext = translationContext
@@ -228,7 +202,7 @@ exampleLedgerBlock ::
   forall era.
   Reflect era =>
   Proof era ->
-  Core.Tx era ->
+  Tx era ->
   Block (BHeader (EraCrypto era)) era
 exampleLedgerBlock proof tx = specialize @EraSegWits proof (Block blockHeader blockBody)
   where
@@ -323,54 +297,39 @@ exampleProposedPParamsUpdates (Shelley _) =
   ProposedPPUpdates $
     Map.singleton
       (mkKeyHash 0)
-      (emptyPParamsUpdate {_keyDeposit = SJust (Coin 100)})
+      (emptyPParamsUpdate & ppuKeyDepositL .~ SJust (Coin 100))
 exampleProposedPParamsUpdates (Allegra _) =
   ProposedPPUpdates $
     Map.singleton
       (mkKeyHash 0)
-      (emptyPParamsUpdate {_keyDeposit = SJust (Coin 100)})
-exampleProposedPParamsUpdates proof@(Mary _) =
+      (emptyPParamsUpdate & ppuKeyDepositL .~ SJust (Coin 100))
+exampleProposedPParamsUpdates (Mary _) =
   ProposedPPUpdates $
     Map.singleton
       (mkKeyHash 0)
-      ((emptyPPUpdate proof) {_keyDeposit = SJust (Coin 100)})
-exampleProposedPParamsUpdates proof@(Alonzo _) =
+      (emptyPParamsUpdate & ppuKeyDepositL .~ SJust (Coin 100))
+exampleProposedPParamsUpdates (Alonzo _) =
   ProposedPPUpdates $
     Map.singleton
       (mkKeyHash 0)
-      ((emptyPPUpdate proof) {AlonzoPP._collateralPercentage = SJust 150})
-exampleProposedPParamsUpdates proof@(Babbage _) =
+      (emptyPParamsUpdate & ppuCollateralPercentageL .~ SJust 150)
+exampleProposedPParamsUpdates (Babbage _) =
   ProposedPPUpdates $
     Map.singleton
       (mkKeyHash 0)
-      ((emptyPPUpdate proof) {BabbagePP._collateralPercentage = SJust 150})
-exampleProposedPParamsUpdates proof@(Conway _) =
+      (emptyPParamsUpdate & ppuCollateralPercentageL .~ SJust 150)
+exampleProposedPParamsUpdates (Conway _) =
   ProposedPPUpdates $
     Map.singleton
       (mkKeyHash 0)
-      ((emptyPPUpdate proof) {BabbagePP._collateralPercentage = SJust 150})
+      (emptyPParamsUpdate & ppuCollateralPercentageL .~ SJust 150)
 {-# NOINLINE exampleProposedPParamsUpdates #-}
 
 -- | Used to fill in the TxBody Update field
-exampleProposedPPUpdates :: Proof era -> ProposedPPUpdates era
-exampleProposedPPUpdates proof@(Shelley _) =
+exampleProposedPPUpdates :: EraPParams era => Proof era -> ProposedPPUpdates era
+exampleProposedPPUpdates _ =
   ProposedPPUpdates $
-    Map.singleton (mkKeyHash 1) ((emptyPPUpdate proof) {_maxBHSize = SJust 4000})
-exampleProposedPPUpdates proof@(Allegra _) =
-  ProposedPPUpdates $
-    Map.singleton (mkKeyHash 1) ((emptyPPUpdate proof) {_maxBHSize = SJust 4000})
-exampleProposedPPUpdates proof@(Mary _) =
-  ProposedPPUpdates $
-    Map.singleton (mkKeyHash 1) ((emptyPPUpdate proof) {_maxBHSize = SJust 4000})
-exampleProposedPPUpdates proof@(Alonzo _) =
-  ProposedPPUpdates $
-    Map.singleton (mkKeyHash 1) ((emptyPPUpdate proof) {AlonzoPP._maxBHSize = SJust 4000})
-exampleProposedPPUpdates proof@(Babbage _) =
-  ProposedPPUpdates $
-    Map.singleton (mkKeyHash 1) ((emptyPPUpdate proof) {BabbagePP._maxBHSize = SJust 4000})
-exampleProposedPPUpdates proof@(Conway _) =
-  ProposedPPUpdates $
-    Map.singleton (mkKeyHash 1) ((emptyPPUpdate proof) {ConwayPP._maxBHSize = SJust 4000})
+    Map.singleton (mkKeyHash 1) (emptyPParamsUpdate & ppuMaxBHSizeL .~ SJust 4000)
 {-# NOINLINE exampleProposedPPUpdates #-}
 
 exampleNonMyopicRewards ::
@@ -388,29 +347,18 @@ exampleNonMyopicRewards =
 
 -- =====================================================================
 
--- | The EpochState has a field which is (PParams era). We need these
---     fields, a subset of the fields in PParams, in: startStep and createRUpd.
-type UsesPP era =
-  ( HasField "_d" (Core.PParams era) UnitInterval
-  , HasField "_tau" (Core.PParams era) UnitInterval
-  , HasField "_a0" (Core.PParams era) NonNegativeInterval
-  , HasField "_rho" (Core.PParams era) UnitInterval
-  , HasField "_nOpt" (Core.PParams era) Natural
-  , HasField "_protocolVersion" (Core.PParams era) ProtVer
-  )
-
 -- | This is probably not a valid ledger. We don't care, we are only
 -- interested in serialisation, not validation.
 exampleNewEpochState ::
   forall era.
   ( Reflect era
   , Default (StashedAVVMAddresses era)
-  , Default (State (Core.EraRule "PPUP" era))
+  , Default (State (EraRule "PPUP" era))
   ) =>
   Proof era ->
-  Core.Value era ->
-  Core.PParams era ->
-  Core.PParams era ->
+  Value era ->
+  PParams era ->
+  PParams era ->
   NewEpochState era
 exampleNewEpochState proof spendvalue ppp pp =
   NewEpochState
@@ -471,7 +419,7 @@ exampleNewEpochState proof spendvalue ppp pp =
       Alonzo _ -> step
       Babbage _ -> step
       Conway _ -> step
-    step :: UsesPP era => PulsingRewUpdate (EraCrypto era)
+    step :: PulsingRewUpdate (EraCrypto era)
     step =
       startStep @era
         (EpochSize 432000)
@@ -522,7 +470,7 @@ exampleLedgerChainDepState seed =
         mkNonceFromNumber seed
     }
 
-postAlonzoWits :: forall era. Reflect era => Proof era -> Core.TxBody era -> TxField era
+postAlonzoWits :: forall era. Reflect era => Proof era -> TxBody era -> TxField era
 postAlonzoWits proof txBody =
   WitnessesI
     [ AddrWits (mkWitnessesVKey (hashAnnotated txBody) [asWitness examplePayKey])
@@ -531,15 +479,15 @@ postAlonzoWits proof txBody =
         ( case proof of
             Alonzo _ ->
               Map.singleton
-                (Core.hashScript @era $ alwaysSucceeds @era PlutusV1 3)
+                (hashScript @era $ alwaysSucceeds @era PlutusV1 3)
                 (alwaysSucceeds @era PlutusV1 3)
             Babbage _ ->
               Map.singleton
-                (Core.hashScript @era $ alwaysSucceeds @era PlutusV1 3)
+                (hashScript @era $ alwaysSucceeds @era PlutusV1 3)
                 (alwaysSucceeds @era PlutusV1 3)
             Conway _ ->
               Map.singleton
-                (Core.hashScript @era $ alwaysSucceeds @era PlutusV1 3)
+                (hashScript @era $ alwaysSucceeds @era PlutusV1 3)
                 (alwaysSucceeds @era PlutusV1 3)
             other -> error ("Era " ++ show other ++ " is not a postAlonzo era.")
         )
@@ -564,9 +512,9 @@ exampleTx ::
   forall era.
   Reflect era =>
   Proof era ->
-  Core.TxBody era ->
-  Core.TxAuxData era ->
-  Core.Tx era
+  TxBody era ->
+  TxAuxData era ->
+  Tx era
 exampleTx proof txBody auxData =
   genericTx
     proof
@@ -618,8 +566,8 @@ exampleTxBody ::
   forall era.
   Reflect era =>
   Proof era ->
-  Core.Value era ->
-  Core.TxBody era
+  Value era ->
+  TxBody era
 exampleTxBody proof spendval =
   genericTxBody
     proof
@@ -717,7 +665,7 @@ exampleCollateral proof =
     Babbage _ -> Just (Set.fromList [mkTxInPartial (TxId (mkDummySafeHash Proxy 2)) 1])
     Conway _ -> Just (Set.fromList [mkTxInPartial (TxId (mkDummySafeHash Proxy 2)) 1])
 
-exampleCollateralOutput :: Era era => Proof era -> Maybe (Core.TxOut era)
+exampleCollateralOutput :: Era era => Proof era -> Maybe (TxOut era)
 exampleCollateralOutput proof =
   case proof of
     Shelley _ -> Nothing
@@ -759,7 +707,7 @@ exampleRefInputs proof =
     Babbage _ -> Just (Set.fromList [mkTxInPartial (TxId (mkDummySafeHash Proxy 1)) 3])
     Conway _ -> Just (Set.fromList [mkTxInPartial (TxId (mkDummySafeHash Proxy 1)) 3])
 
-exampleTxOut :: Proof era -> Core.Value era -> Core.TxOut era
+exampleTxOut :: Proof era -> Value era -> TxOut era
 exampleTxOut proof spendval =
   case proof of
     Shelley _ -> ShelleyTxOut (mkAddr (examplePayKey, exampleStakeKey)) spendval
@@ -843,7 +791,7 @@ exampleWithdrawals proof =
           (Coin 100)
 
 -- | These are dummy values.
-testShelleyGenesis :: ShelleyGenesis era
+testShelleyGenesis :: Crypto c => ShelleyGenesis c
 testShelleyGenesis =
   ShelleyGenesis
     { sgSystemStart = UTCTime (fromGregorian 2020 5 14) 0
@@ -880,7 +828,7 @@ testEpochInfo = epochInfoPure testGlobals
 --  , Just field3
 --  ]
 -- @
-genericTx :: Proof era -> [Maybe (TxField era)] -> Core.Tx era
+genericTx :: Proof era -> [Maybe (TxField era)] -> Tx era
 genericTx proof xs = newTx proof (foldl' accum [] xs)
   where
     accum ans Nothing = ans
@@ -896,13 +844,13 @@ genericTx proof xs = newTx proof (foldl' accum [] xs)
 --  , Just field3
 --  ]
 -- @
-genericTxBody :: Era era => Proof era -> [Maybe (TxBodyField era)] -> Core.TxBody era
-genericTxBody proof xs = specialize @Core.EraTxBody proof (newTxBody proof (catMaybes xs))
+genericTxBody :: Era era => Proof era -> [Maybe (TxBodyField era)] -> TxBody era
+genericTxBody proof xs = specialize @EraTxBody proof (newTxBody proof (catMaybes xs))
 
-genericTxOut :: Era era => Proof era -> [Maybe (TxOutField era)] -> Core.TxOut era
+genericTxOut :: Era era => Proof era -> [Maybe (TxOutField era)] -> TxOut era
 genericTxOut proof xs = newTxOut proof (catMaybes xs)
 
-genericWits :: Era era => Proof era -> [Maybe (WitnessesField era)] -> Core.TxWits era
+genericWits :: Era era => Proof era -> [Maybe (WitnessesField era)] -> TxWits era
 genericWits proof xs = newWitnesses merge proof (catMaybes xs)
 
 -- =========================================================
@@ -931,7 +879,7 @@ exampleAuxDataMap =
     , (4, Map [(I 3, B "b")])
     ]
 
-exampleShelleyTxAuxData :: Core.TxAuxData (ShelleyEra StandardCrypto)
+exampleShelleyTxAuxData :: TxAuxData (ShelleyEra StandardCrypto)
 exampleShelleyTxAuxData = ShelleyTxAuxData SLE.exampleAuxDataMap
 
 -- ======================
@@ -1028,14 +976,14 @@ redeemerExample = Data (PV1.I 919)
 exampleAlonzoGenesis :: AlonzoGenesis
 exampleAlonzoGenesis =
   AlonzoGenesis
-    { coinsPerUTxOWord = Coin 1
-    , costmdls = CostModels $ Map.fromList [(PlutusV1, testingCostModelV1)]
-    , prices = Prices (boundRational' 90) (boundRational' 91)
-    , maxTxExUnits = ExUnits 123 123
-    , maxBlockExUnits = ExUnits 223 223
-    , maxValSize = 1234
-    , collateralPercentage = 20
-    , maxCollateralInputs = 30
+    { agCoinsPerUTxOWord = CoinPerWord (Coin 1)
+    , agCostModels = CostModels $ Map.fromList [(PlutusV1, testingCostModelV1)]
+    , agPrices = Prices (boundRational' 90) (boundRational' 91)
+    , agMaxTxExUnits = ExUnits 123 123
+    , agMaxBlockExUnits = ExUnits 223 223
+    , agMaxValSize = 1234
+    , agCollateralPercentage = 20
+    , agMaxCollateralInputs = 30
     }
   where
     boundRational' :: HasCallStack => Rational -> NonNegativeInterval
@@ -1055,7 +1003,7 @@ ledgerExamplesBabbage =
         (exampleMultiAssetValue @StandardCrypto 2)
     )
     exampleAlonzoTxAuxData
-    exampleAlonzoGenesis
+    ()
 
 -- ============================================================
 

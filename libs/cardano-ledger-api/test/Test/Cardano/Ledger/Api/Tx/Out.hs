@@ -10,18 +10,15 @@ module Test.Cardano.Ledger.Api.Tx.Out (
 )
 where
 
-import Cardano.Ledger.Alonzo.PParams hiding (PParams)
 import Cardano.Ledger.Api.Era
 import Cardano.Ledger.Api.Tx.Out
-import Cardano.Ledger.Babbage.PParams
 import Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
 import Cardano.Ledger.Binary (serialize)
 import Cardano.Ledger.Coin
-import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.PParams hiding (PParams)
+import Cardano.Ledger.Conway.Core
 import qualified Cardano.Ledger.Val as Val
 import qualified Data.ByteString.Lazy as BSL
-import GHC.Records
+import Data.Functor.Identity
 import Lens.Micro
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 import Test.QuickCheck
@@ -31,10 +28,9 @@ import Test.Tasty.QuickCheck
 propSetShelleyMinTxOut ::
   forall era.
   ( EraTxOut era
-  , Arbitrary (PParams era)
+  , Arbitrary (PParamsHKD Identity era)
   , Arbitrary (TxOut era)
   , AtMostEra MaryEra era
-  , HasField "_minUTxOValue" (PParams era) Coin
   ) =>
   TestTree
 propSetShelleyMinTxOut = testProperty "setShelleyMinTxOut" prop
@@ -45,7 +41,7 @@ propSetShelleyMinTxOut = testProperty "setShelleyMinTxOut" prop
       within 1000000 $ -- just in case if there is a problem with termination
         let txOut' = setMinCoinTxOut pp txOut
             val = txOut' ^. valueTxOutL
-            minUTxOValue = unCoin $ getField @"_minUTxOValue" pp
+            minUTxOValue = unCoin $ pp ^. ppMinUTxOValueL
             minVal
               | Val.isAdaOnly val = 0
               | otherwise = (27 + Val.size val) * (minUTxOValue `quot` 27)
@@ -61,27 +57,25 @@ propSetAlonzoMinTxOut = testProperty "setAlonzoMinTxOut" prop
             valSize = Val.size (txOut' ^. valueTxOutL)
             dataHashSize = maybe 0 (const 10) $ strictMaybeToMaybe (txOut' ^. dataHashTxOutL)
             sz = 27 + valSize + dataHashSize
-         in (txOut' ^. coinTxOutL) === Coin (sz * unCoin (getField @"_coinsPerUTxOWord" pp))
+         in (txOut' ^. coinTxOutL) === Coin (sz * unCoin (unCoinPerWord (pp ^. ppCoinsPerUTxOWordL)))
 
 propSetBabbageMinTxOut ::
   forall era.
   ( EraTxOut era
-  , Arbitrary (PParams era)
+  , BabbageEraPParams era
+  , Arbitrary (PParamsHKD Identity era)
   , Arbitrary (TxOut era)
-  , AtLeastEra BabbageEra era
-  , HasField "_coinsPerUTxOByte" (PParams era) Coin
   ) =>
   TestTree
 propSetBabbageMinTxOut = testProperty "setBabbageMinTxOut" prop
   where
-    _atLeastBabbage = atLeastEra @BabbageEra @era
     prop :: PParams era -> TxOut era -> Property
     prop pp txOut =
       within 1000000 $ -- just in case if there is a problem with termination
         let txOut' = setMinCoinTxOut pp txOut
             sz = toInteger (BSL.length (serialize (eraProtVerLow @era) txOut'))
          in (txOut' ^. coinTxOutL)
-              === Coin ((160 + sz) * unCoin (getField @"_coinsPerUTxOByte" pp))
+              === Coin ((160 + sz) * unCoin (unCoinPerByte (pp ^. ppCoinsPerUTxOByteL)))
 
 txOutTests :: TestTree
 txOutTests =

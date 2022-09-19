@@ -14,20 +14,22 @@ module Cardano.Ledger.Allegra.Era (
 where
 
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Core (Era (EraCrypto, ProtVerLow), EraPParams (..), EraRule, Value)
-import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Shelley.PParams (
-  ShelleyPParams,
-  ShelleyPParamsHKD (..),
-  ShelleyPParamsUpdate,
-  updatePParams,
+import Cardano.Ledger.Core (
+  Era (EraCrypto, ProtVerLow),
+  EraRule,
+  PreviousEra,
+  TranslationContext,
+  Value,
  )
+import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Rules
 
 -- | The Allegra era
 data AllegraEra c
 
 instance Crypto c => Era (AllegraEra c) where
+  type PreviousEra (AllegraEra c) = ShelleyEra c
   type EraCrypto (AllegraEra c) = c
   type ProtVerLow (AllegraEra c) = 3
 
@@ -35,13 +37,10 @@ instance Crypto c => Era (AllegraEra c) where
 -- Core instances
 --------------------------------------------------------------------------------
 
+-- | No context is needed to translate from Shelley to Allegra.
+type instance TranslationContext (AllegraEra c) = ()
+
 type instance Value (AllegraEra _) = Coin
-
-instance Crypto c => EraPParams (AllegraEra c) where
-  type PParams (AllegraEra c) = ShelleyPParams (AllegraEra c)
-  type PParamsUpdate (AllegraEra c) = ShelleyPParamsUpdate (AllegraEra c)
-
-  applyPPUpdates = updatePParams
 
 -- These rules are all inherited from Shelley
 

@@ -31,7 +31,7 @@ import Cardano.Ledger.Babbage.TxBody as BabbageTxOutReExports (
   BabbageTxOut (..),
  )
 import Cardano.Ledger.Conway.Era (ConwayEra)
-import Cardano.Ledger.Conway.PParams (BabbagePParamsHKD (..))
+import Cardano.Ledger.Conway.PParams ()
 import Cardano.Ledger.Conway.Scripts ()
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC

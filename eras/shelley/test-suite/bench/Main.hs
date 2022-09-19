@@ -23,13 +23,13 @@ import Cardano.Crypto.VRF.Praos
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import qualified Cardano.Ledger.EpochBoundary as EB
-import Cardano.Ledger.Era (EraCrypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Bench.Gen (
   genBlock,
   genTriple,
  )
 import Cardano.Ledger.Shelley.Bench.Rewards (createRUpd, createRUpdWithProv, genChainInEpoch)
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   DPState (..),
   DState (..),
@@ -39,7 +39,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   incrementalStakeDistr,
   updateStakeDistribution,
  )
-import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.PoolRank (likelihood)
 import Cardano.Ledger.UTxO (UTxO)
 import Cardano.Protocol.TPraos.API (PraosCrypto)
@@ -78,7 +77,7 @@ import Test.Cardano.Ledger.Shelley.BenchmarkFunctions (
   ledgerStateWithNregisteredPools,
  )
 import Test.Cardano.Ledger.Shelley.Rules.TestChain (stakeDistr)
-import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest, testGlobals)
+import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
 import Test.QuickCheck (arbitrary)
 import Test.QuickCheck.Gen as QC
 
@@ -232,13 +231,13 @@ epochAt x =
     n = 10000 :: Int
 
 action2m ::
-  ShelleyTest era =>
+  EraTxOut era =>
   (DState (EraCrypto era), PState (EraCrypto era), UTxO era) ->
   EB.SnapShot (EraCrypto era)
 action2m (dstate, pstate, utxo) = stakeDistr utxo dstate pstate
 
 action2im ::
-  ShelleyTest era =>
+  EraTxOut era =>
   (DState (EraCrypto era), PState (EraCrypto era), UTxO era) ->
   EB.SnapShot (EraCrypto era)
 action2im (dstate, pstate, utxo) =
@@ -376,7 +375,6 @@ varyDelegState tag fixed changes initstate action =
 -- =============================================================================
 
 main :: IO ()
--- main=profileValid
 main = do
   (genenv, chainstate, genTxfun) <- genTriple (Proxy :: Proxy BenchEra) 1000
   defaultMain

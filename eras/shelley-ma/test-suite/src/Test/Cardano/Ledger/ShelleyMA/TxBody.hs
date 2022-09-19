@@ -55,7 +55,7 @@ testMint = MultiAsset $ Map.singleton policyId (Map.singleton aname 2)
 fieldTests :: TestTree
 fieldTests =
   testGroup
-    "getField tests"
+    "Tests for lenses"
     [ testCase "inputs" (assertEqual "inputs" (txM ^. inputsTxBodyL) empty)
     , testCase "outputs" (assertEqual "outputs" (txM ^. outputsTxBodyL) StrictSeq.empty)
     , testCase "certs" (assertEqual "certs" (txM ^. certsTxBodyG) StrictSeq.empty)

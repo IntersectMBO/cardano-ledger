@@ -110,17 +110,15 @@ where
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Scripts.Data (Datum (..))
 import Cardano.Ledger.Alonzo.TxAuxData (AuxiliaryDataHash (..))
-import Cardano.Ledger.Alonzo.TxBody (
-  AlonzoEraTxOut (..),
- )
 import Cardano.Ledger.Alonzo.TxBody as AlonzoTxBodyReExports (
   AllegraEraTxBody (..),
   AlonzoEraTxBody (..),
   MaryEraTxBody (..),
   ShelleyEraTxBody (..),
  )
-import Cardano.Ledger.Babbage.Core (BabbageEraTxBody (..))
+import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra)
+import Cardano.Ledger.Babbage.PParams ()
 import Cardano.Ledger.Babbage.Scripts ()
 import Cardano.Ledger.Babbage.TxOut hiding (TxOut)
 import Cardano.Ledger.BaseTypes (
@@ -136,7 +134,6 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary.Value (MaryValue (MaryValue), MultiAsset, policies, policyID)
@@ -150,14 +147,9 @@ import Cardano.Ledger.MemoBytes (
   lensMemoRawType,
   mkMemoized,
  )
-import Cardano.Ledger.SafeHash (
-  HashAnnotated (..),
-  SafeHash,
-  SafeToHash,
- )
+import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert)
 import Cardano.Ledger.Shelley.PParams (Update)
-import Cardano.Ledger.Shelley.TxBody (Wdrl (Wdrl), unWdrl)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.DeepSeq (NFData)
 import Data.Sequence.Strict (StrictSeq, (|>))
@@ -171,8 +163,6 @@ import NoThunks.Class (NoThunks)
 import Prelude hiding (lookup)
 
 -- ======================================
-
-type ScriptIntegrityHash c = SafeHash c EraIndependentScriptIntegrity
 
 data BabbageTxBodyRaw era = BabbageTxBodyRaw
   { btbrSpendInputs :: !(Set (TxIn (EraCrypto era)))

@@ -15,13 +15,11 @@ module Test.Cardano.Ledger.Alonzo.Golden (
 where
 
 import Cardano.Ledger.Alonzo (Alonzo)
+import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (
-  AlonzoPParams,
-  AlonzoPParamsHKD (..),
   LangDepView (..),
-  emptyPParams,
   getLanguageView,
  )
 import Cardano.Ledger.Alonzo.Scripts (
@@ -37,7 +35,6 @@ import Cardano.Ledger.BaseTypes (StrictMaybe (..), boundRational)
 import Cardano.Ledger.Binary (decodeFullAnnotator, fromCBOR, serialize)
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core
 import Cardano.Ledger.Mary.Value (MaryValue (..), valueFromList)
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Data.Aeson (eitherDecodeFileStrict)
@@ -48,6 +45,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Data.Sequence.Strict
 import GHC.Stack (HasCallStack)
+import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1 (Data (..))
 import Test.Cardano.Ledger.Alonzo.AlonzoEraGen (freeCostModel)
 import Test.Cardano.Ledger.Alonzo.Examples.Consensus (ledgerExamplesAlonzo)
@@ -239,7 +237,11 @@ goldenMinFee =
             priceMem = fromJust $ boundRational 0.0577
             priceSteps = fromJust $ boundRational 0.0000721
             pricesParam = Prices priceMem priceSteps
-            pp = emptyPParams {_minfeeA = 44, _minfeeB = 155381, _prices = pricesParam}
+            pp =
+              emptyPParams
+                & ppMinFeeAL .~ 44
+                & ppMinFeeBL .~ 155381
+                & ppPricesL .~ pricesParam
 
         Coin 1006053 @?= getMinFeeTx pp firstTx
     ]
@@ -248,12 +250,10 @@ fromRightError :: (HasCallStack, Show a) => String -> Either a b -> b
 fromRightError errorMsg =
   either (\e -> error $ errorMsg ++ ": " ++ show e) id
 
-exPP :: AlonzoPParams Alonzo
+exPP :: PParams Alonzo
 exPP =
   emptyPParams
-    { _costmdls =
-        CostModels $ Map.fromList [(l, freeCostModel l) | l <- [PlutusV1, PlutusV2]]
-    }
+    & ppCostModelsL .~ CostModels (Map.fromList [(l, freeCostModel l) | l <- [PlutusV1, PlutusV2]])
 
 exampleLangDepViewPV1 :: LangDepView
 exampleLangDepViewPV1 = LangDepView b1 b2
@@ -289,7 +289,7 @@ exampleLangDepViewPV2 = LangDepView b1 b2
 
 testScriptIntegritpHash ::
   HasCallStack =>
-  AlonzoPParams Alonzo ->
+  PParams Alonzo ->
   Language ->
   LangDepView ->
   Assertion
@@ -306,14 +306,14 @@ goldenScriptIntegrity =
 expectedGenesis :: AlonzoGenesis
 expectedGenesis =
   AlonzoGenesis
-    { coinsPerUTxOWord = Coin 34482
-    , prices = Prices (fromJust $ boundRational 0.0577) (fromJust $ boundRational 0.0000721)
-    , costmdls = CostModels $ Map.fromList [(PlutusV1, expectedCostModel), (PlutusV2, expectedCostModelV2)]
-    , maxTxExUnits = ExUnits 10000000 10000000000
-    , maxBlockExUnits = ExUnits 50000000 40000000000
-    , maxValSize = 5000
-    , collateralPercentage = 150
-    , maxCollateralInputs = 3
+    { agCoinsPerUTxOWord = CoinPerWord $ Coin 34482
+    , agPrices = Prices (fromJust $ boundRational 0.0577) (fromJust $ boundRational 0.0000721)
+    , agCostModels = CostModels $ Map.fromList [(PlutusV1, expectedCostModel), (PlutusV2, expectedCostModelV2)]
+    , agMaxTxExUnits = ExUnits 10000000 10000000000
+    , agMaxBlockExUnits = ExUnits 50000000 40000000000
+    , agMaxValSize = 5000
+    , agCollateralPercentage = 150
+    , agMaxCollateralInputs = 3
     }
 
 expectedCostModel :: CostModel

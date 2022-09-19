@@ -19,7 +19,6 @@ module Bench.Cardano.Ledger.StakeDistr (
 where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
 import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals (..), pvMajor)
 import Cardano.Ledger.Binary (FromCBOR (..), decodeFullDecoder)
 import Cardano.Ledger.Coin (DeltaCoin (..))
@@ -69,6 +68,7 @@ import Data.Default.Class (Default (def))
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Text (pack)
+import Lens.Micro
 import System.Environment (lookupEnv)
 import Test.Cardano.Ledger.Tickf (oldCalculatePoolDistr)
 
@@ -130,7 +130,7 @@ mkGlobals :: ShelleyGenesis StandardCrypto -> PParams CurrentEra -> Globals
 mkGlobals genesis pp =
   mkShelleyGlobals genesis epochInfoE majorPParamsVer
   where
-    majorPParamsVer = pvMajor $ _protocolVersion pp
+    majorPParamsVer = pvMajor $ pp ^. ppProtocolVersionL
     epochInfoE =
       fixedEpochInfo
         (sgEpochLength genesis)
@@ -197,55 +197,58 @@ tickfRuleBench :: Benchmark
 tickfRuleBench =
   env readGlobals $ \globals ->
     env readNewEpochState $ \nes ->
-      bgroup
-        "Tickf Benchmarks"
-        [ bench "validatingTickTransitionfunction" $ whnf (tickfR2 globals (SlotNo 156953303)) nes
-        , bgroup
-            "Tick subparts"
-            [ bench "adoptGenesisDelegs" $ whnf (adoptGenesisDelegsR (SlotNo 156953303)) nes
-            , bench "newEpoch" $ whnf (newEpochR globals (nesEL nes + 1)) nes
+      let pv = esPp (nesEs nes) ^. ppProtocolVersionL
+       in bgroup
+            "Tickf Benchmarks"
+            [ bench "validatingTickTransitionfunction" $ whnf (tickfR2 globals (SlotNo 156953303)) nes
             , bgroup
-                "NewEpoch sub parts"
-                [ bench "updateRewards" $ whnf (updateRewardsX globals) nes
+                "Tick subparts"
+                [ bench "adoptGenesisDelegs" $ whnf (adoptGenesisDelegsR (SlotNo 156953303)) nes
+                , bench "newEpoch" $ whnf (newEpochR globals (nesEL nes + 1)) nes
                 , bgroup
-                    "updateRewards subparts"
-                    [ bench "sumRewards" $ whnf (sumRewards (esPp (nesEs nes))) (rs (getRewardUpdate nes))
-                    , bench "applyRUpdFiltered Incremental" $ whnf (applyRUpdFiltered (getRewardUpdate nes)) (nesEs nes)
+                    "NewEpoch sub parts"
+                    [ bench "updateRewards" $ whnf (updateRewardsX globals) nes
                     , bgroup
-                        "applyRUpd subparts"
-                        [ bench "filterAllRewards" $ nf (filterAllRewards (rs (getRewardUpdate nes))) (nesEs nes)
-                        , env
-                            (pure (filterAllRewards (rs (getRewardUpdate nes)) (nesEs nes)))
-                            (bench "aggregateRewards" . whnf (aggregateCompactRewards (esPp (nesEs nes))) . frRegistered)
-                        , env
-                            ( pure
-                                ( aggregateCompactRewards
-                                    (esPp (nesEs nes))
-                                    ( frRegistered $
-                                        filterAllRewards (rs (getRewardUpdate nes)) (nesEs nes)
+                        "updateRewards subparts"
+                        [ bench "sumRewards" $ whnf (sumRewards pv) (rs (getRewardUpdate nes))
+                        , bench "applyRUpdFiltered Incremental" $
+                            whnf (applyRUpdFiltered (getRewardUpdate nes)) (nesEs nes)
+                        , bgroup
+                            "applyRUpd subparts"
+                            [ bench "filterAllRewards" $
+                                nf (filterAllRewards (rs (getRewardUpdate nes))) (nesEs nes)
+                            , env
+                                (pure (filterAllRewards (rs (getRewardUpdate nes)) (nesEs nes)))
+                                (bench "aggregateRewards" . whnf (aggregateCompactRewards pv) . frRegistered)
+                            , env
+                                ( pure
+                                    ( aggregateCompactRewards
+                                        pv
+                                        ( frRegistered $
+                                            filterAllRewards (rs (getRewardUpdate nes)) (nesEs nes)
+                                        )
                                     )
                                 )
-                            )
-                            ( \registeredAggregated ->
-                                bench "union+" $
-                                  let dState = (dpsDState . lsDPState . esLState . nesEs) nes
-                                   in whnf (rewards dState UM.∪+) registeredAggregated
-                            )
+                                ( \registeredAggregated ->
+                                    bench "union+" $
+                                      let dState = (dpsDState . lsDPState . esLState . nesEs) nes
+                                       in whnf (rewards dState UM.∪+) registeredAggregated
+                                )
+                            ]
                         ]
-                    ]
-                , bench "mir rule" $ whnf (mirR globals) (nesEs nes)
-                , bench "epoch rule" $ whnf (epochR globals (nesEL nes + 1)) (nesEs nes)
-                , bench "calculatePoolDistr, improved (current) version" $ whnf calculatePoolDistr (getSnap nes)
-                , bgroup
-                    "calculatePoolDistr subparts"
-                    [ bench "poolStake" $
-                        whnf (calculatePoolStake (const True) (ssDelegations (getSnap nes))) (ssStake (getSnap nes))
-                    , bench "old calculatePoolDistr" $
-                        whnf (oldCalculatePoolDistr (const True)) (getSnap nes)
+                    , bench "mir rule" $ whnf (mirR globals) (nesEs nes)
+                    , bench "epoch rule" $ whnf (epochR globals (nesEL nes + 1)) (nesEs nes)
+                    , bench "calculatePoolDistr, improved (current) version" $ whnf calculatePoolDistr (getSnap nes)
+                    , bgroup
+                        "calculatePoolDistr subparts"
+                        [ bench "poolStake" $
+                            whnf (calculatePoolStake (const True) (ssDelegations (getSnap nes))) (ssStake (getSnap nes))
+                        , bench "old calculatePoolDistr" $
+                            whnf (oldCalculatePoolDistr (const True)) (getSnap nes)
+                        ]
                     ]
                 ]
             ]
-        ]
 
 getSnap :: NewEpochState (AlonzoEra StandardCrypto) -> SnapShot StandardCrypto
 getSnap nes = (ssStakeSet . esSnapshots . nesEs) nes

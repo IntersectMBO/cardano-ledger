@@ -30,14 +30,12 @@ import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (mkSized)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (Conway)
+import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert (..))
-import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
-import Cardano.Ledger.Conway.PParams (BabbagePParamsHKD (..), emptyPParams, emptyPParamsUpdate)
 import Cardano.Ledger.Conway.Translation ()
 import Cardano.Ledger.Conway.Tx (AlonzoTx (..))
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
 import Cardano.Ledger.Conway.TxWits (AlonzoTxWits (..))
-import Cardano.Ledger.Core (EraScript (hashScript), TxBody, eraProtVerHigh)
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj))
 import Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Crypto as CC
@@ -53,7 +51,6 @@ import Cardano.Ledger.Shelley.API (
   ProposedPPUpdates (..),
   RewardAcnt (..),
   TxId (..),
-  Wdrl (..),
  )
 import Cardano.Ledger.Shelley.Rules (
   ShelleyDelegsPredFailure (..),
@@ -68,14 +65,13 @@ import Data.Proxy (Proxy (..))
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import Lens.Micro
 import qualified PlutusTx as Plutus
-import Test.Cardano.Ledger.Alonzo.Examples.Consensus (exampleAlonzoGenesis)
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr, mkWitnessesVKey)
 import qualified Test.Cardano.Ledger.Mary.Examples.Consensus as MarySLE
 import Test.Cardano.Ledger.Shelley.Examples.Consensus (examplePoolParams, exampleStakeKey, keyToCredential)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as SLE
-import Test.Cardano.Ledger.Shelley.Orphans ()
 
 -- ==============================================================
 
@@ -115,7 +111,7 @@ ledgerExamplesConway =
       ProposedPPUpdates $
         Map.singleton
           (SLE.mkKeyHash 0)
-          (emptyPParamsUpdate {_collateralPercentage = SJust 150})
+          (emptyPParamsUpdate & ppuCollateralPercentageL .~ SJust 150)
 
 collateralOutput :: BabbageTxOut Conway
 collateralOutput =
@@ -205,8 +201,7 @@ exampleConwayNewEpochState =
   SLE.exampleNewEpochState
     (MarySLE.exampleMultiAssetValue 1)
     emptyPParams
-    (emptyPParams {_coinsPerUTxOByte = Coin 1})
+    (emptyPParams & ppCoinsPerUTxOByteL .~ CoinPerByte (Coin 1))
 
-exampleConwayGenesis :: ConwayGenesis c
-exampleConwayGenesis =
-  ConwayGenesis exampleAlonzoGenesis (GenDelegs Map.empty)
+exampleConwayGenesis :: GenDelegs c
+exampleConwayGenesis = GenDelegs Map.empty

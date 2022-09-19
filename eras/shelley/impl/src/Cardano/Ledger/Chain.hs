@@ -7,7 +7,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -22,10 +21,11 @@ where
 
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.BaseTypes (ProtVer (..), Version)
+import Cardano.Ledger.Core
 import Control.Monad (unless)
 import Control.Monad.Except (MonadError, throwError)
 import GHC.Generics (Generic)
-import GHC.Records
+import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 
@@ -37,17 +37,14 @@ data ChainChecksPParams = ChainChecksPParams
   deriving (Show, Eq, Generic, NoThunks)
 
 pparamsToChainChecksPParams ::
-  ( HasField "_maxBHSize" pp Natural
-  , HasField "_maxBBSize" pp Natural
-  , HasField "_protocolVersion" pp ProtVer
-  ) =>
-  pp ->
+  EraPParams era =>
+  PParams era ->
   ChainChecksPParams
 pparamsToChainChecksPParams pp =
   ChainChecksPParams
-    { ccMaxBHSize = getField @"_maxBHSize" pp
-    , ccMaxBBSize = getField @"_maxBBSize" pp
-    , ccProtocolVersion = getField @"_protocolVersion" pp
+    { ccMaxBHSize = pp ^. ppMaxBHSizeL
+    , ccMaxBBSize = pp ^. ppMaxBBSizeL
+    , ccProtocolVersion = pp ^. ppProtocolVersionL
     }
 
 data ChainPredicateFailure

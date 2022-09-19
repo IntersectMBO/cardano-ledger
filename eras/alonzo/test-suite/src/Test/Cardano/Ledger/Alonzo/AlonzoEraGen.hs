@@ -15,14 +15,9 @@ import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Allegra.Scripts (Timelock (..), translateTimelock)
 import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.PParams (
-  AlonzoPParams,
-  AlonzoPParamsHKD (..),
-  extendPP,
-  getLanguageView,
-  retractPP,
- )
+import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo (language)
 import Cardano.Ledger.Alonzo.Rules (vKeyLocked)
 import Cardano.Ledger.Alonzo.Scripts as Alonzo (
@@ -48,7 +43,6 @@ import Cardano.Ledger.Alonzo.Tx (
  )
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData (..), mkAlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.TxBody (
-  AlonzoEraTxBody (..),
   AlonzoTxBody (..),
   AlonzoTxOut (..),
   inputs',
@@ -66,7 +60,6 @@ import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (ToCBOR)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash, KeyRole (Witness))
@@ -80,7 +73,7 @@ import Cardano.Ledger.Mary.Value (
  )
 import Cardano.Ledger.Pretty.Alonzo ()
 import Cardano.Ledger.Shelley.PParams (Update)
-import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl)
+import Cardano.Ledger.Shelley.TxBody (DCert)
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UTxO (
   EraUTxO (..),
@@ -100,7 +93,6 @@ import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq ((:|>)))
 import qualified Data.Sequence.Strict as Seq (fromList)
 import Data.Set as Set
-import GHC.Records (HasField (..))
 import Lens.Micro
 import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.V1 as PV1 (Data, ParamName)
@@ -324,27 +316,39 @@ genSlotAfter currentSlot = do
 -- | Gen an Alonzo PParamsUpdate, by adding to a Shelley PParamsData
 genAlonzoPParamsUpdate ::
   forall c.
+  Crypto c =>
   Constants ->
-  AlonzoPParams (AlonzoEra c) ->
+  PParams (AlonzoEra c) ->
   Gen (PParamsUpdate (AlonzoEra c))
 genAlonzoPParamsUpdate constants pp = do
-  shelleypp <- genShelleyPParamsUpdate @(MaryEra c) constants (retractPP (Coin 100) pp)
-  ada <- genM (Coin <$> choose (1, 5))
+  maryPPUpdate <-
+    genShelleyPParamsUpdate @(MaryEra c) constants $
+      downgradePParams (DowngradeAlonzoPParams {dappMinUTxOValue = Coin 100}) pp
+  coinPerWord <- genM (CoinPerWord . Coin <$> choose (1, 5))
   let genPrice = unsafeBoundRational . (% 100) <$> choose (0, 200)
-  price <- genM (Prices <$> genPrice <*> genPrice)
-  let mxTx = SNothing
-  -- mxTx <- genM (ExUnits <$> (choose (100, 5000)) <*> (choose (100, 5000)))
-  mxBl <- genM (ExUnits <$> genNatural 100 5000 <*> genNatural 100 5000)
-  -- Not too small for mxV, if this is too small then any Tx with Value
+  prices <- genM (Prices <$> genPrice <*> genPrice)
+  let maxTxExUnits = SNothing
+  -- maxTxExUnits <- genM (ExUnits <$> (choose (100, 5000)) <*> (choose (100, 5000)))
+  maxBlockExUnits <- genM (ExUnits <$> genNatural 100 5000 <*> genNatural 100 5000)
+  -- Not too small for maxValSize, if this is too small then any Tx with Value
   -- that has lots of policyIds will fail. The Shelley Era uses hard coded 4000
-  mxV <- genM (genNatural 4000 5000)
-  let cost = SJust . CostModels $ Map.singleton PlutusV1 (freeCostModel PlutusV1)
-      c = SJust 25 -- percent of fee in collateral
-      mxC = SJust 100 -- max number of inputs in collateral
-  pure (extendPP shelleypp ada cost price mxTx mxBl mxV c mxC)
+  maxValSize <- genM (genNatural 4000 5000)
+  let alonzoUpgrade =
+        UpgradeAlonzoPParams
+          { uappCoinsPerUTxOWord = coinPerWord
+          , uappCostModels = SJust $ CostModels $ Map.singleton PlutusV1 (freeCostModel PlutusV1)
+          , uappPrices = prices
+          , uappMaxTxExUnits = maxTxExUnits
+          , uappMaxBlockExUnits = maxBlockExUnits
+          , uappMaxValSize = maxValSize
+          , uappCollateralPercentage = SJust 25 -- percent of fee in collateral
+          , uappMaxCollateralInputs = SJust 100 -- max number of inputs in collateral
+          }
+  pure $ upgradePParamsUpdate alonzoUpgrade maryPPUpdate
 
 genAlonzoPParams ::
   forall c.
+  Crypto c =>
   Constants ->
   Gen (PParams (AlonzoEra c))
 genAlonzoPParams constants = do
@@ -352,25 +356,29 @@ genAlonzoPParams constants = do
   -- This ensures that "_d" field is not 0, and that the major protocol version
   -- is large enough to not trigger plutus script failures
   -- (no bultins are alllowed before major version 5).
-  shelleypp <- Shelley.genPParams @(MaryEra c) constants'
-  ada <- Coin <$> choose (1, 5)
-  let price = Prices minBound minBound
-  -- price <- Prices <$> (Coin <$> choose (100, 5000)) <*> (Coin <$> choose (100, 5000))
-  let mxTx = ExUnits (5 * bigMem + 1) (5 * bigStep + 1)
-  -- mxTx <- ExUnits <$> (choose (100, 5000)) <*> (choose (100, 5000))
-  mxBl <-
+  maryPP <- Shelley.genPParams @(MaryEra c) constants'
+  coinPerWord <- CoinPerWord . Coin <$> choose (1, 5)
+  let prices = Prices minBound minBound
+  -- prices <- Prices <$> (Coin <$> choose (100, 5000)) <*> (Coin <$> choose (100, 5000))
+  let maxTxExUnits = ExUnits (5 * bigMem + 1) (5 * bigStep + 1)
+  -- maxTxExUnits <- ExUnits <$> (choose (100, 5000)) <*> (choose (100, 5000))
+  maxBlockExUnits <-
     ExUnits
       <$> genNatural (20 * bigMem + 1) (30 * bigMem + 1)
       <*> genNatural (20 * bigStep + 1) (30 * bigStep + 1)
-  mxV <- genNatural 4000 10000 -- This can't be too small. Shelley uses Hard coded 4000
-  let cost = CostModels $ Map.singleton PlutusV1 (freeCostModel PlutusV1)
-      c = 25 -- percent of fee in collateral
-      mxC = 100 -- max number of inputs in collateral
-  pure (extendPP shelleypp ada cost price mxTx mxBl mxV c mxC)
-
--- | Since Alonzo PParams don't have this field, we have to compute something here.
-instance HasField "_minUTxOValue" (AlonzoPParams (AlonzoEra c)) Coin where
-  getField _ = Coin 4000
+  maxValSize <- genNatural 4000 10000 -- This can't be too small. Shelley uses Hard coded 4000
+  let alonzoUpgrade =
+        UpgradeAlonzoPParams
+          { uappCoinsPerUTxOWord = coinPerWord
+          , uappCostModels = CostModels $ Map.singleton PlutusV1 (freeCostModel PlutusV1)
+          , uappPrices = prices
+          , uappMaxTxExUnits = maxTxExUnits
+          , uappMaxBlockExUnits = maxBlockExUnits
+          , uappMaxValSize = maxValSize
+          , uappCollateralPercentage = 25 -- percent of fee in collateral
+          , uappMaxCollateralInputs = 100 -- max number of inputs in collateral
+          }
+  pure $ upgradePParams alonzoUpgrade maryPP
 
 bigMem :: Natural
 bigMem = 50000
@@ -448,7 +456,7 @@ instance Mock c => EraGen (AlonzoEra c) where
     if isPlutusScript script
       then case List.find (\info -> getScript3 @(AlonzoEra c) info == script) genEraTwoPhase3Arg of
         Just (TwoPhase3ArgInfo _script _hash inputdata (rdmr, mems, steps) _succeed) ->
-          txscriptfee (getField @"_prices" pp) (ExUnits mems steps)
+          txscriptfee (pp ^. ppPricesL) (ExUnits mems steps)
             <+> storageCost 10 pp (rdmr, ExUnits mems steps) -- Extra 10 for the RdmrPtr
             <+> storageCost 32 pp inputdata -- Extra 32 for the hash
             <+> storageCost 0 pp script
@@ -478,7 +486,7 @@ instance Mock c => EraGen (AlonzoEra c) where
   genEraTweakBlock pp txns =
     let txTotal, ppMax :: ExUnits
         txTotal = foldMap totExUnits txns
-        ppMax = getField @"_maxBlockExUnits" pp
+        ppMax = pp ^. ppMaxBlockExUnitsL
      in if pointWiseExUnits (<=) txTotal ppMax
           then pure txns
           else myDiscard "TotExUnits violation: genEraTweakBlock: AlonzoEraGen.hs"
@@ -496,8 +504,9 @@ sumCollateral tx (UTxO utxo) =
   where
     collateral_ = tx ^. bodyTxL . collateralInputsTxBodyL
 
-storageCost :: forall era t. (Era era, ToCBOR t) => Integer -> AlonzoPParams era -> t -> Coin
-storageCost extra pp x = (extra + encodedLen @era x) <×> Coin (fromIntegral (getField @"_minfeeA" pp))
+storageCost :: forall era t. (EraPParams era, ToCBOR t) => Integer -> PParams era -> t -> Coin
+storageCost extra pp x =
+  (extra + encodedLen @era x) <×> Coin (fromIntegral (pp ^. ppMinFeeAL))
 
 addRedeemMap ::
   forall c.
@@ -530,7 +539,7 @@ getDataMap (scriptInfo3, _) = Map.foldlWithKey' accum Map.empty
           Map.insert (hashData @era dat) (Data dat) ans
 
 instance Mock c => MinGenTxout (AlonzoEra c) where
-  calcEraMinUTxO tout pp = utxoEntrySize tout <×> getField @"_coinsPerUTxOWord" pp
+  calcEraMinUTxO txOut pp = utxoEntrySize txOut <×> unCoinPerWord (pp ^. ppCoinsPerUTxOWordL)
   addValToTxOut v (AlonzoTxOut a u _b) = AlonzoTxOut a (v <+> u) (dataFromAddr a)
   genEraTxOut genv genVal addrs = do
     values <- replicateM (length addrs) genVal

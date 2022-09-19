@@ -26,6 +26,7 @@ import Cardano.Ledger.Address (
   RewardAcnt (..),
   decompactAddr,
  )
+import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes (
   ActiveSlotCoeff,
@@ -52,21 +53,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Compactible (Compactible (..))
-import Cardano.Ledger.Core (
-  Era,
-  EraPParams (..),
-  EraRule,
-  EraScript (..),
-  EraTx (..),
-  EraTxAuxData (..),
-  EraTxBody (..),
-  EraTxOut (..),
-  EraTxWits (..),
-  Reward (..),
-  RewardType (..),
-  ScriptHash (..),
-  Value,
- )
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (
   Credential (KeyHashObj, ScriptHashObj),
   GenesisCredential (..),
@@ -90,12 +77,12 @@ import Cardano.Ledger.Keys (
   VerKeyKES,
   hashKey,
  )
-
--- import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness (..), ChainCode (..))
+import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.MemoBytes (MemoBytes (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   DPState (..),
@@ -113,9 +100,6 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Shelley.PParams (
   PPUpdateEnv (..),
   ProposedPPUpdates (..),
-  ShelleyPParams,
-  ShelleyPParamsHKD (..),
-  ShelleyPParamsUpdate,
   Update (..),
  )
 import Cardano.Ledger.Shelley.PoolRank (
@@ -1229,53 +1213,54 @@ instance PrettyA Version where
 ppProtVer :: ProtVer -> PDoc
 ppProtVer (ProtVer maj mi) = ppRecord "ProtVer" [("major", ppVersion maj), ("minor", ppNatural mi)]
 
-ppPParams :: ShelleyPParams era -> PDoc
-ppPParams (ShelleyPParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau d ex pv mutxo mpool) =
+ppPParams :: (ProtVerAtMost era 4, ProtVerAtMost era 6, EraPParams era) => PParams era -> PDoc
+ppPParams pp =
   ppRecord
     "PParams"
-    [ ("minfeeA", ppNatural feeA)
-    , ("minfeeB", ppNatural feeB)
-    , ("maxBBSize", ppNatural mbb)
-    , ("maxTxSize", ppNatural mtx)
-    , ("maxBHSize", ppNatural mbh)
-    , ("keyDeposit", ppCoin kd)
-    , ("poolDeposit", ppCoin pd)
-    , ("eMax", ppEpochNo em)
-    , ("nOpt", ppNatural no)
-    , ("a0", ppRational $ unboundRational a0)
-    , ("rho", ppUnitInterval rho)
-    , ("tau", ppUnitInterval tau)
-    , ("d", ppUnitInterval d)
-    , ("extraEntropy", ppNonce ex)
-    , ("protocolVersion", ppProtVer pv)
-    , ("minUTxOValue", ppCoin mutxo)
-    , ("minPoolCost", ppCoin mpool)
+    [ ("minfeeA", ppNatural $ pp ^. ppMinFeeAL)
+    , ("minfeeB", ppNatural $ pp ^. ppMinFeeBL)
+    , ("maxBBSize", ppNatural $ pp ^. ppMaxBBSizeL)
+    , ("maxTxSize", ppNatural $ pp ^. ppMaxTxSizeL)
+    , ("maxBHSize", ppNatural $ pp ^. ppMaxBHSizeL)
+    , ("keyDeposit", ppCoin $ pp ^. ppKeyDepositL)
+    , ("poolDeposit", ppCoin $ pp ^. ppPoolDepositL)
+    , ("eMax", ppEpochNo $ pp ^. ppEMaxL)
+    , ("nOpt", ppNatural $ pp ^. ppNOptL)
+    , ("a0", ppRational $ unboundRational $ pp ^. ppA0L)
+    , ("rho", ppUnitInterval $ pp ^. ppRhoL)
+    , ("tau", ppUnitInterval $ pp ^. ppTauL)
+    , ("d", ppUnitInterval $ pp ^. ppDL)
+    , ("extraEntropy", ppNonce $ pp ^. ppExtraEntropyL)
+    , ("protocolVersion", ppProtVer $ pp ^. ppProtocolVersionL)
+    , ("minUTxOValue", ppCoin $ pp ^. ppMinUTxOValueL)
+    , ("minPoolCost", ppCoin $ pp ^. ppMinPoolCostL)
     ]
 
-ppPParamsUpdate :: ShelleyPParamsUpdate era -> PDoc
-ppPParamsUpdate (ShelleyPParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau d ex pv mutxo mpool) =
+ppPParamsUpdate ::
+  (ProtVerAtMost era 4, ProtVerAtMost era 6, EraPParams era) =>
+  PParamsUpdate era ->
+  PDoc
+ppPParamsUpdate pp =
   ppRecord
-    "PParams"
-    [ ("minfeeA", lift ppNatural feeA)
-    , ("minfeeB", lift ppNatural feeB)
-    , ("maxBBSize", lift ppNatural mbb)
-    , ("maxTxSize", lift ppNatural mtx)
-    , ("maxBHSize", lift ppNatural mbh)
-    , ("keyDeposit", lift ppCoin kd)
-    , ("poolDeposit", lift ppCoin pd)
-    , ("eMax", lift ppEpochNo em)
-    , ("nOpt", lift ppNatural no)
-    , ("a0", lift (ppRational . unboundRational) a0)
-    , ("rho", lift ppUnitInterval rho)
-    , ("tau", lift ppUnitInterval tau)
-    , ("d", lift ppUnitInterval d)
-    , ("extraEntropy", lift ppNonce ex)
-    , ("protocolVersion", lift ppProtVer pv)
-    , ("minUTxOValue", lift ppCoin mutxo)
-    , ("minPoolCost", lift ppCoin mpool)
+    "PParamsUdate"
+    [ ("minfeeA", ppStrictMaybe ppNatural $ pp ^. ppuMinFeeAL)
+    , ("minfeeB", ppStrictMaybe ppNatural $ pp ^. ppuMinFeeBL)
+    , ("maxBBSize", ppStrictMaybe ppNatural $ pp ^. ppuMaxBBSizeL)
+    , ("maxTxSize", ppStrictMaybe ppNatural $ pp ^. ppuMaxTxSizeL)
+    , ("maxBHSize", ppStrictMaybe ppNatural $ pp ^. ppuMaxBHSizeL)
+    , ("keyDeposit", ppStrictMaybe ppCoin $ pp ^. ppuKeyDepositL)
+    , ("poolDeposit", ppStrictMaybe ppCoin $ pp ^. ppuPoolDepositL)
+    , ("eMax", ppStrictMaybe ppEpochNo $ pp ^. ppuEMaxL)
+    , ("nOpt", ppStrictMaybe ppNatural $ pp ^. ppuNOptL)
+    , ("a0", ppStrictMaybe (ppRational . unboundRational) $ pp ^. ppuA0L)
+    , ("rho", ppStrictMaybe ppUnitInterval $ pp ^. ppuRhoL)
+    , ("tau", ppStrictMaybe ppUnitInterval $ pp ^. ppuTauL)
+    , ("d", ppStrictMaybe ppUnitInterval $ pp ^. ppuDL)
+    , ("extraEntropy", ppStrictMaybe ppNonce $ pp ^. ppuExtraEntropyL)
+    , ("protocolVersion", ppStrictMaybe ppProtVer $ pp ^. ppuProtocolVersionL)
+    , ("minUTxOValue", ppStrictMaybe ppCoin $ pp ^. ppuMinUTxOValueL)
+    , ("minPoolCost", ppStrictMaybe ppCoin $ pp ^. ppuMinPoolCostL)
     ]
-  where
-    lift pp x = ppStrictMaybe pp x
 
 ppUpdate :: PrettyA (PParamsUpdate era) => Update era -> PDoc
 ppUpdate (Update prop epn) = ppSexp "Update" [ppProposedPPUpdates prop, ppEpochNo epn]
@@ -1301,10 +1286,22 @@ instance
 instance PrettyA (PParamsUpdate e) => PrettyA (Update e) where
   prettyA = ppUpdate
 
-instance PrettyA (ShelleyPParamsUpdate e) where
+instance Crypto c => PrettyA (PParamsUpdate (ShelleyEra c)) where
   prettyA = ppPParamsUpdate
 
-instance PrettyA (ShelleyPParams e) where
+instance Crypto c => PrettyA (PParams (ShelleyEra c)) where
+  prettyA = ppPParams
+
+instance Crypto c => PrettyA (PParamsUpdate (AllegraEra c)) where
+  prettyA = ppPParamsUpdate
+
+instance Crypto c => PrettyA (PParams (AllegraEra c)) where
+  prettyA = ppPParams
+
+instance Crypto c => PrettyA (PParamsUpdate (MaryEra c)) where
+  prettyA = ppPParamsUpdate
+
+instance Crypto c => PrettyA (PParams (MaryEra c)) where
   prettyA = ppPParams
 
 instance PrettyA ProtVer where

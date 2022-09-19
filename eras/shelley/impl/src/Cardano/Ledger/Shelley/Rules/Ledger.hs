@@ -34,7 +34,6 @@ import Cardano.Ledger.Binary (
   decodeRecordSum,
   encodeListLen,
  )
-import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
@@ -77,7 +76,6 @@ import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import GHC.Records (HasField (..))
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
@@ -171,8 +169,6 @@ instance
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
   , State (EraRule "DELEGS" era) ~ DPState (EraCrypto era)
   , Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era))
-  , HasField "_keyDeposit" (PParams era) Coin
-  , HasField "_poolDeposit" (PParams era) Coin
   , ProtVerAtMost era 8
   ) =>
   STS (ShelleyLEDGER era)
@@ -262,8 +258,6 @@ depositEqualsObligation ::
   , Environment t ~ LedgerEnv era
   , Signal t ~ Tx era
   , State t ~ LedgerState era
-  , HasField "_keyDeposit" (PParams era) Coin
-  , HasField "_poolDeposit" (PParams era) Coin
   ) =>
   AssertionViolation t ->
   String
@@ -279,7 +273,7 @@ depositEqualsObligation
           <> "\nCERTS\n"
           <> showTxCerts txb
           <> "\n(slot,keyDeposit,poolDeposit) "
-          <> show (slot, getField @"_keyDeposit" pp, getField @"_poolDeposit" pp)
+          <> show (slot, pp ^. ppKeyDepositL, pp ^. ppPoolDepositL)
           <> "\nutxosDeposited = "
           <> show ((utxosDeposited . lsUTxOState) <$> avState)
           <> "\nKey Deposits summary = "

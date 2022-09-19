@@ -9,11 +9,8 @@ module Test.Cardano.Ledger.NoThunks (
 )
 where
 
-import qualified Cardano.Ledger.Alonzo.PParams
-import qualified Cardano.Ledger.Babbage.PParams
-import Cardano.Ledger.Core (EraPParams (..))
+import Cardano.Ledger.Core
 import Cardano.Ledger.Pretty (PrettyA)
-import qualified Cardano.Ledger.Shelley.PParams
 import Control.State.Transition.Extended (STS)
 import Data.Default.Class (def)
 import Test.Cardano.Ledger.Generic.GenState (GenSize)

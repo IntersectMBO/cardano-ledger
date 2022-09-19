@@ -25,11 +25,8 @@ where
 
 import Cardano.Ledger.BaseTypes (
   BlocksMade,
-  NonNegativeInterval,
-  ProtVer,
   ShelleyBase,
   StrictMaybe (..),
-  UnitInterval,
   activeSlotCoeff,
   epochInfoPure,
   maxLovelaceSupply,
@@ -74,9 +71,7 @@ import Data.Functor ((<&>))
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import GHC.Generics (Generic)
-import GHC.Records (HasField)
 import NoThunks.Class (NoThunks (..))
-import Numeric.Natural (Natural)
 
 data RupdEnv era
   = RupdEnv (BlocksMade (EraCrypto era)) (EpochState era)
@@ -88,12 +83,7 @@ instance NoThunks (ShelleyRupdPredFailure era)
 
 instance
   ( Era era
-  , HasField "_a0" (PParams era) NonNegativeInterval
-  , HasField "_d" (PParams era) UnitInterval
-  , HasField "_nOpt" (PParams era) Natural
-  , HasField "_protocolVersion" (PParams era) ProtVer
-  , HasField "_rho" (PParams era) UnitInterval
-  , HasField "_tau" (PParams era) UnitInterval
+  , EraPParams era
   ) =>
   STS (ShelleyRUPD era)
   where
@@ -126,16 +116,7 @@ determineRewardTiming currentSlot startAftterSlot endSlot
   | currentSlot <= startAftterSlot = RewardsTooEarly
   | otherwise = RewardsJustRight
 
-rupdTransition ::
-  ( Era era
-  , HasField "_a0" (PParams era) NonNegativeInterval
-  , HasField "_d" (PParams era) UnitInterval
-  , HasField "_nOpt" (PParams era) Natural
-  , HasField "_protocolVersion" (PParams era) ProtVer
-  , HasField "_rho" (PParams era) UnitInterval
-  , HasField "_tau" (PParams era) UnitInterval
-  ) =>
-  TransitionRule (ShelleyRUPD era)
+rupdTransition :: EraPParams era => TransitionRule (ShelleyRUPD era)
 rupdTransition = do
   TRC (RupdEnv b es, ru, s) <- judgmentContext
   (slotsPerEpoch, slot, slotForce, maxLL, asc, k, e) <- liftSTS $ do

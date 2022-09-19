@@ -31,10 +31,9 @@ import Cardano.Ledger.Alonzo.TxInfo (
  )
 import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..), TxDats (..))
 import qualified Cardano.Ledger.Babbage.Collateral as Collateral (collAdaBalance)
+import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..), BabbageUtxowPredFailure (..))
 import Cardano.Ledger.Babbage.TxBody (
-  AlonzoEraTxBody (..),
-  BabbageEraTxBody (..),
   BabbageTxBody (..),
   Datum (..),
  )
@@ -46,7 +45,6 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (
@@ -205,10 +203,10 @@ defaultPPs =
   , MaxBlockExUnits $ ExUnits 1000000 1000000
   , ProtocolVersion $ ProtVer (natVersion @7) 0
   , CollateralPercentage 1
-  , AdaPerUTxOByte (Coin 5)
+  , AdaPerUTxOByte (CoinPerByte (Coin 5))
   ]
 
-pp :: Proof era -> PParams era
+pp :: EraPParams era => Proof era -> PParams era
 pp pf = newPParams pf defaultPPs
 
 -- =========================================================================

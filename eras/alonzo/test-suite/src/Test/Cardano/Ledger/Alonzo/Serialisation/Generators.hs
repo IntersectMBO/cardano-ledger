@@ -15,14 +15,10 @@ module Test.Cardano.Ledger.Alonzo.Serialisation.Generators where
 
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.Language
-import Cardano.Ledger.Alonzo.PParams (
-  AlonzoPParams,
-  AlonzoPParamsHKD (AlonzoPParams),
-  AlonzoPParamsUpdate,
-  getLanguageView,
- )
+import Cardano.Ledger.Alonzo.PParams (AlonzoPParams (..), OrdExUnits (..), getLanguageView)
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoPredFailure (..),
   AlonzoUtxosPredFailure (..),
@@ -58,23 +54,22 @@ import Cardano.Ledger.Alonzo.TxAuxData (
   AuxiliaryDataHash,
   mkAlonzoTxAuxData,
  )
-import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), ScriptIntegrityHash)
+import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits
-import Cardano.Ledger.BaseTypes (Network)
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (toCBOR)
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash)
 import Cardano.Ledger.Mary.Value (MultiAsset)
 import Cardano.Ledger.Shelley.PParams (Update)
-import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl)
+import Cardano.Ledger.Shelley.TxBody (DCert)
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val (DecodeNonNegative, Val)
-import Cardano.Slotting.Slot (SlotNo)
 import Codec.CBOR.Term (Term (..))
 import Control.State.Transition (PredicateFailure)
 import Data.Either (fromRight)
+import Data.Functor.Identity
 import Data.Int (Int64)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Map (Map)
@@ -83,7 +78,6 @@ import Data.Maybe (catMaybes)
 import qualified Data.Set as Set
 import Data.Text (pack)
 import Data.Typeable (Typeable)
-import GHC.Records (HasField)
 import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Alonzo.AlonzoEraGen (costModelParamsCount)
@@ -252,7 +246,7 @@ instance Arbitrary CostModel where
 instance Arbitrary CostModels where
   arbitrary = CostModels . Map.fromList <$> (sublistOf nonNativeLanguages >>= mapM genCostModel)
 
-instance Arbitrary (AlonzoPParams era) where
+instance Arbitrary (AlonzoPParams Identity era) where
   arbitrary =
     AlonzoPParams
       <$> arbitrary
@@ -280,7 +274,9 @@ instance Arbitrary (AlonzoPParams era) where
       <*> arbitrary
       <*> arbitrary
 
-instance Arbitrary (AlonzoPParamsUpdate era) where
+deriving instance Arbitrary OrdExUnits
+
+instance Arbitrary (AlonzoPParams StrictMaybe era) where
   arbitrary =
     AlonzoPParams
       <$> arbitrary
@@ -380,10 +376,9 @@ instance Mock c => Arbitrary (ScriptPurpose c) where
       ]
 
 instance
-  ( EraPParams era
+  ( AlonzoEraPParams era
   , Mock (EraCrypto era)
   , Arbitrary (PParams era)
-  , HasField "_costmdls" (PParams era) CostModels
   ) =>
   Arbitrary (ScriptIntegrity era)
   where
@@ -404,6 +399,8 @@ instance
       , DatumHash <$> arbitrary
       , Datum . dataToBinaryData <$> arbitrary
       ]
+
+deriving instance Arbitrary CoinPerWord
 
 instance Arbitrary AlonzoGenesis where
   arbitrary =

@@ -31,7 +31,6 @@ module Test.Cardano.Ledger.Generic.Fields (
   initialWitnesses,
   initialTx,
   initialTxOut,
-  initialPParams,
   valid,
   abstractTx,
   abstractTxBody,
@@ -45,7 +44,7 @@ import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (..))
 import Cardano.Ledger.Alonzo.Scripts (CostModels (..), ExUnits (..), Prices)
 import Cardano.Ledger.Alonzo.Scripts.Data (Data (..), hashData)
-import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..), ScriptIntegrityHash)
+import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxAuxData (AuxiliaryDataHash)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (..), AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))
@@ -60,10 +59,10 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert, transDCert)
 import Cardano.Ledger.Conway.Governance (GovernanceActionInfo (..), Vote)
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
-import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..), hashKey)
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness (..))
@@ -71,11 +70,10 @@ import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
 import Cardano.Ledger.Mary.Value (MultiAsset (..))
 import qualified Cardano.Ledger.Shelley.PParams as PP (Update)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), ShelleyTxOut (..))
-import Cardano.Ledger.Shelley.TxBody (DCert (..), ShelleyTxBody (..), Wdrl (..), WitVKey (..))
+import Cardano.Ledger.Shelley.TxBody (DCert (..), ShelleyTxBody (..), WitVKey (..))
 import Cardano.Ledger.Shelley.TxWits (pattern ShelleyTxWits)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
-import Data.Default.Class (def)
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
@@ -217,9 +215,9 @@ data PParamsField era
   | -- | Minimum Lovelace in a UTxO deprecated by AdaPerUTxOWord
     MinUTxOValue Coin
   | -- | Cost in ada per 8 bytes of UTxO storage instead of _minUTxOValue
-    AdaPerUTxOWord Coin -- Dropped in Babbage
+    AdaPerUTxOWord CoinPerWord -- Dropped in Babbage
   | -- | Cost in ada per 1 byte of UTxO storage instead of _coinsPerUTxOWord
-    AdaPerUTxOByte Coin -- New in Babbage
+    AdaPerUTxOByte CoinPerByte -- New in Babbage
   | -- | Cost models for non-native script languages
     Costmdls CostModels
   | -- | Prices of execution units for non-native script languages
@@ -283,14 +281,6 @@ initialTxOut wit@(Mary _) = mkBasicTxOut (initialAddr wit) mempty
 initialTxOut wit@(Alonzo _) = mkBasicTxOut (initialAddr wit) mempty
 initialTxOut wit@(Babbage _) = mkBasicTxOut (initialAddr wit) mempty
 initialTxOut wit@(Conway _) = mkBasicTxOut (initialAddr wit) mempty
-
-initialPParams :: forall era. Proof era -> PParams era
-initialPParams (Shelley _) = def
-initialPParams (Allegra _) = def
-initialPParams (Mary _) = def
-initialPParams (Alonzo _) = def
-initialPParams (Babbage _) = def
-initialPParams (Conway _) = def
 
 -- ============================================================
 

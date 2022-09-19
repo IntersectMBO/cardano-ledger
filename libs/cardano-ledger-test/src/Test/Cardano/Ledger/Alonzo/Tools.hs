@@ -10,7 +10,6 @@ module Test.Cardano.Ledger.Alonzo.Tools (tests, testExUnitCalculation) where
 import Cardano.Crypto.DSIGN
 import qualified Cardano.Crypto.Hash as Crypto
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import qualified Cardano.Ledger.Alonzo.PParams as Alonzo.PParams
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript, CostModel, CostModels (..), ExUnits (..), Tag (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag
 import Cardano.Ledger.Alonzo.Scripts.Data (Data (..))
@@ -19,7 +18,6 @@ import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..))
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO, exBudgetToExUnits, transExUnits)
 import Cardano.Ledger.Alonzo.TxWits
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded)
-import qualified Cardano.Ledger.Babbage.PParams as Babbage.PParams
 import Cardano.Ledger.BaseTypes (ProtVer (..), ShelleyBase, natVersion)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
@@ -40,7 +38,6 @@ import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Text (Text)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
-import GHC.Records (HasField)
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Alonzo.PlutusScripts (testingCostModelV1)
@@ -114,7 +111,6 @@ testExUnitCalculation ::
   , Signal (EraRule "UTXOS" era) ~ Tx era
   , AlonzoEraTx era
   , ExtendedUTxO era
-  , HasField "_maxTxExUnits" (PParams era) ExUnits
   , STS (EraRule "UTXOS" era)
   , Script era ~ AlonzoScript era
   , EraUTxO era
@@ -147,7 +143,6 @@ exampleExUnitCalc ::
   , Signable (CC.DSIGN (EraCrypto era)) (Crypto.Hash (CC.HASH (EraCrypto era)) EraIndependentTxBody)
   , Signal (EraRule "UTXOS" era) ~ Tx era
   , ExtendedUTxO era
-  , HasField "_maxTxExUnits" (PParams era) ExUnits
   , STS (EraRule "UTXOS" era)
   , AlonzoEraTx era
   , PostShelley era
@@ -176,7 +171,6 @@ exampleInvalidExUnitCalc ::
   , AlonzoEraTx era
   , EraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , HasField "_maxTxExUnits" (PParams era) ExUnits
   , Script era ~ AlonzoScript era
   , Signable
       (CC.DSIGN (EraCrypto era))
@@ -249,7 +243,7 @@ validatingBody pf =
 exampleEpochInfo :: Monad m => EpochInfo m
 exampleEpochInfo = fixedEpochInfo (EpochSize 100) (mkSlotLength 1)
 
-uenv :: Proof era -> UtxoEnv era
+uenv :: EraPParams era => Proof era -> UtxoEnv era
 uenv pf = UtxoEnv (SlotNo 0) (pparams pf) def (GenDelegs mempty)
 
 costmodels :: Array Language CostModel
@@ -275,7 +269,6 @@ updateTxExUnits ::
   , ExtendedUTxO era
   , EraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , HasField "_maxTxExUnits" (PParams era) ExUnits
   , Script era ~ AlonzoScript era
   ) =>
   Proof era ->
@@ -314,7 +307,7 @@ failLeft :: (Monad m, Show e) => (String -> m a) -> Either e a -> m a
 failLeft _ (Right a) = pure a
 failLeft err (Left e) = err (show e)
 
-pparams :: Proof era -> PParams era
+pparams :: EraPParams era => Proof era -> PParams era
 pparams proof =
   newPParams
     proof

@@ -60,7 +60,6 @@ library
     Test.Cardano.Ledger.Shelley.Generator.ScriptClass
     Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen
     Test.Cardano.Ledger.Shelley.LaxBlock
-    Test.Cardano.Ledger.Shelley.Orphans
     Test.Cardano.Ledger.Shelley.PropertyTests
     Test.Cardano.Ledger.Shelley.Rewards
     Test.Cardano.Ledger.Shelley.Rules.Chain
@@ -74,7 +73,6 @@ library
     Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators
     Test.Cardano.Ledger.Shelley.Serialisation.GoldenUtils
     Test.Cardano.Ledger.Shelley.ShelleyTranslation
-    Test.Cardano.Ledger.Shelley.Shrinkers
     Test.Cardano.Ledger.Shelley.Utils
     Test.TestScenario
   build-depends:
@@ -226,6 +224,7 @@ benchmark mainbench
                 cardano-strict-containers,
                 containers,
                 criterion,
+                data-default-class,
                 deepseq,
                 mtl,
                 set-algebra,

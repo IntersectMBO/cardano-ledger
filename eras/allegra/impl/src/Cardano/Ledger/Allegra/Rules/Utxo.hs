@@ -49,7 +49,7 @@ import Cardano.Ledger.Rules.ValidationMode (
  )
 import Cardano.Ledger.Shelley.LedgerState (PPUPState, keyTxRefunds, totalTxDeposits)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
-import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..), Update)
+import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules (PpupEnv (..), ShelleyPPUP, ShelleyPpupPredFailure)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), TxIn)
@@ -67,10 +67,8 @@ import Data.Set (Set)
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import GHC.Records
 import Lens.Micro
 import NoThunks.Class (NoThunks)
-import Numeric.Natural (Natural)
 import Validation
 
 -- ==========================================================
@@ -147,9 +145,6 @@ utxoTransition ::
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , State (EraRule "PPUP" era) ~ PPUPState era
   , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
-  , HasField "_keyDeposit" (PParams era) Coin
-  , HasField "_poolDeposit" (PParams era) Coin
-  , HasField "_maxTxSize" (PParams era) Natural
   , ProtVerAtMost era 8
   ) =>
   TransitionRule (AllegraUTXO era)
@@ -231,7 +226,7 @@ validateOutputTooBigUTxO ::
 validateOutputTooBigUTxO pp (UTxO outputs) =
   failureUnless (null outputsTooBig) $ OutputTooBigUTxO outputsTooBig
   where
-    version = pvMajor (getField @"_protocolVersion" pp)
+    version = pvMajor (pp ^. ppProtocolVersionL)
     maxValSize = 4000 :: Int64
     outputsTooBig =
       filter
@@ -268,7 +263,6 @@ instance
   ( EraTx era
   , EraUTxO era
   , AllegraEraTxBody era
-  , PParams era ~ ShelleyPParams era
   , Tx era ~ ShelleyTx era
   , Embed (EraRule "PPUP" era) (AllegraUTXO era)
   , Environment (EraRule "PPUP" era) ~ PpupEnv era

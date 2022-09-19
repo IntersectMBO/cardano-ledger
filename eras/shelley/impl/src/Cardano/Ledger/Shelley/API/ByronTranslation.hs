@@ -19,9 +19,9 @@ import qualified Cardano.Chain.UTxO as Byron
 import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Hashing as Hashing
 import Cardano.Ledger.Address (fromBoostrapCompactAddress, isBootstrapRedeemer)
-import Cardano.Ledger.BaseTypes (BlocksMade (..), TxIx (..))
+import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochNo, TxIx (..))
 import Cardano.Ledger.Coin (CompactForm (CompactCoin))
-import Cardano.Ledger.Core (bootAddrTxOutF)
+import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto (ADDRHASH))
 import Cardano.Ledger.EpochBoundary (emptySnapShots)
 import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
@@ -29,7 +29,6 @@ import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.Types
 import Cardano.Ledger.Shelley.Rules ()
 import Cardano.Ledger.Shelley.Translation (FromByronTranslationContext (..))
-import Cardano.Ledger.Slot
 import Cardano.Ledger.UTxO (coinBalance)
 import Cardano.Ledger.Val ((<->))
 import qualified Data.ByteString.Short as SBS
@@ -114,7 +113,7 @@ translateToShelleyLedgerState transCtxt epochNo cvs =
          in UTxO redeemers
     }
   where
-    pparams :: ShelleyPParams (ShelleyEra c)
+    pparams :: PParams (ShelleyEra c)
     pparams = fbtcProtocolParams transCtxt
 
     -- NOTE: we ignore the Byron delegation map because the genesis and

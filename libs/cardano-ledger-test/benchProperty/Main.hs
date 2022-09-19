@@ -36,7 +36,6 @@ package plutus-core
 module Main where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
 import Cardano.Ledger.Alonzo.Rules (AlonzoBBODY, AlonzoUTXOW)
 import Cardano.Ledger.Shelley.Rules (
   ShelleyLEDGER,

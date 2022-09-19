@@ -12,11 +12,12 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Conway.Core (
+  module X,
   ConwayEraTxBody (..),
 )
 where
 
-import Cardano.Ledger.Babbage.Core (BabbageEraTxBody, Era (..), EraTxBody (..))
+import Cardano.Ledger.Babbage.Core as X
 import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert)
 import Cardano.Ledger.Conway.Governance (GovernanceActionInfo, Vote)
 import Data.Sequence.Strict (StrictSeq)

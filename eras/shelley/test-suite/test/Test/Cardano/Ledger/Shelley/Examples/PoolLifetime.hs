@@ -34,11 +34,10 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Block (Block, bheader, txid)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), addDeltaCoin, toDeltaCoin)
 import Cardano.Ledger.Compactible
-import Cardano.Ledger.Core (Reward (..), RewardType (..))
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential, Ptr (..))
 import qualified Cardano.Ledger.Crypto as Cr
 import qualified Cardano.Ledger.EpochBoundary as EB
-import Cardano.Ledger.Era (EraCrypto (..))
 import Cardano.Ledger.Keys (KeyRole (..), asWitness, coerceKeyRole)
 import Cardano.Ledger.PoolDistr (
   IndividualPoolStake (..),
@@ -55,7 +54,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   emptyRewardUpdate,
   startStep,
  )
-import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.PoolRank (
   Likelihood (..),
   NonMyopic (..),
@@ -133,6 +131,7 @@ import Test.Cardano.Ledger.Shelley.Utils (
   maxLLSupply,
   runShelleyBase,
   testGlobals,
+  unsafeBoundRational,
  )
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
@@ -175,8 +174,8 @@ initStPoolLifetime = initSt initUTxO
 aliceCoinEx1 :: Coin
 aliceCoinEx1 =
   aliceInitCoin
-    <-> _poolDeposit ppEx
-    <-> ((3 :: Integer) <×> _keyDeposit ppEx)
+    <-> (Coin 250)
+    <-> ((3 :: Integer) <×> Coin 7)
     <-> Coin 3
 
 carlMIR :: Coin
@@ -347,7 +346,7 @@ blockEx2 =
 
 makePulser ::
   forall era.
-  (C.UsesPP era) =>
+  EraPParams era =>
   BlocksMade (EraCrypto era) ->
   ChainState era ->
   PulsingRewUpdate (EraCrypto era)
@@ -364,14 +363,14 @@ makePulser bs cs = p
 
 makePulser' ::
   forall era.
-  (C.UsesPP era) =>
+  EraPParams era =>
   ChainState era ->
   PulsingRewUpdate (EraCrypto era)
 makePulser' = makePulser (BlocksMade mempty)
 
 makeCompletedPulser ::
   forall era.
-  (C.UsesPP era) =>
+  EraPParams era =>
   BlocksMade (EraCrypto era) ->
   ChainState era ->
   PulsingRewUpdate (EraCrypto era)
@@ -742,7 +741,7 @@ alicePerfEx8 :: Likelihood
 alicePerfEx8 = likelihood blocks t (epochSize $ EpochNo 3)
   where
     blocks = 1
-    t = leaderProbability f relativeStake (_d ppEx)
+    t = leaderProbability f relativeStake (unsafeBoundRational 0.5)
     (Coin stake) = aliceCoinEx2Base <> aliceCoinEx2Ptr <> bobInitCoin
     (Coin tot) = maxLLSupply <-> reserves7
     relativeStake = fromRational (stake % tot)
@@ -855,7 +854,7 @@ bobAda10 :: Coin
 bobAda10 =
   bobRAcnt8
     <+> bobInitCoin
-    <+> _keyDeposit ppEx
+    <+> Coin 7
     <-> feeTx10
 
 txbodyEx10 :: Cr.Crypto c => ShelleyTxBody (ShelleyEra c)
@@ -973,7 +972,7 @@ alicePerfEx11 = applyDecay decayFactor alicePerfEx8 <> epoch4Likelihood
   where
     epoch4Likelihood = likelihood blocks t (epochSize $ EpochNo 4)
     blocks = 0
-    t = leaderProbability f relativeStake (_d ppEx)
+    t = leaderProbability f relativeStake (unsafeBoundRational 0.5)
     -- everyone has delegated to Alice's Pool
     Coin stake = EB.sumAllStake (EB.ssStake $ snapEx5 @c)
     relativeStake = fromRational (stake % supply)

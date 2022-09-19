@@ -12,7 +12,6 @@
 module Test.Cardano.Ledger.Alonzo.PropertyTests where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (collectTwoPhaseScriptInputs, evalScripts)
 import Cardano.Ledger.Alonzo.Rules (AlonzoBBODY, AlonzoLEDGER)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
@@ -110,7 +109,7 @@ alonzoSpecificProps SourceSignalTarget {source = chainSt, signal = block} =
             collectedScripts = Set.fromList $ map (\(s, v, _, _, _) -> (v, s)) collected
             suppliedPScrpts = Set.fromList [(v, s) | PlutusScript v s <- Map.elems allScripts]
             expectedPScripts = collectedScripts == suppliedPScrpts
-            allPlutusTrue = case evalScripts (_protocolVersion pp) tx collected of
+            allPlutusTrue = case evalScripts (pp ^. ppProtocolVersionL) tx collected of
               Fails _ _ -> False
               Passes _ -> True
          in counterexample

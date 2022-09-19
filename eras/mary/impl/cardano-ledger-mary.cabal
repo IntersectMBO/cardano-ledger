@@ -46,6 +46,7 @@ library
 
   other-modules:
     Cardano.Ledger.Mary.Era
+    Cardano.Ledger.Mary.PParams
     Cardano.Ledger.Mary.Scripts
     Cardano.Ledger.Mary.Tx
     Cardano.Ledger.Mary.TxAuxData

@@ -20,8 +20,7 @@ module Cardano.Ledger.Shelley.Rules.Upec (
 )
 where
 
-import Cardano.Ledger.BaseTypes (Globals (..), ProtVer, ShelleyBase, StrictMaybe)
-import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.BaseTypes (Globals (..), ShelleyBase)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Era (ShelleyUPEC)
 import Cardano.Ledger.Shelley.LedgerState (
@@ -50,9 +49,7 @@ import Data.Default.Class (Default)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
-import GHC.Records (HasField)
 import NoThunks.Class (NoThunks (..))
-import Numeric.Natural (Natural)
 
 newtype ShelleyUpecPredFailure era
   = NewPpFailure (PredicateFailure (ShelleyNEWPP era))
@@ -64,13 +61,6 @@ instance
   ( EraPParams era
   , Default (PParams era)
   , State (EraRule "PPUP" era) ~ PPUPState era
-  , HasField "_keyDeposit" (PParams era) Coin
-  , HasField "_maxBBSize" (PParams era) Natural
-  , HasField "_maxTxSize" (PParams era) Natural
-  , HasField "_maxBHSize" (PParams era) Natural
-  , HasField "_poolDeposit" (PParams era) Coin
-  , HasField "_protocolVersion" (PParams era) ProtVer
-  , HasField "_protocolVersion" (PParamsUpdate era) (StrictMaybe ProtVer)
   ) =>
   STS (ShelleyUPEC era)
   where

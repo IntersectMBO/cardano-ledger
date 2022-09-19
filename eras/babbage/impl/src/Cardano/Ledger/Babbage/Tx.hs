@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -16,7 +15,7 @@ where
 
 import Cardano.Ledger.Allegra.Tx (validateTimelock)
 import Cardano.Ledger.Alonzo.PlutusScriptApi (getSpendingTxIn)
-import Cardano.Ledger.Alonzo.Tx as X hiding (AlonzoTxBody (..), TxBody)
+import Cardano.Ledger.Alonzo.Tx as X
 import Cardano.Ledger.Alonzo.TxSeq (
   AlonzoTxSeq (AlonzoTxSeq, txSeqTxns),
   hashAlonzoTxSeq,
@@ -26,7 +25,6 @@ import Cardano.Ledger.Alonzo.TxWits (
   unTxDats,
  )
 import Cardano.Ledger.Babbage.Era (BabbageEra)
-import Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..))
 import Cardano.Ledger.Babbage.TxBody (
   BabbageEraTxBody (..),
   BabbageEraTxOut (..),

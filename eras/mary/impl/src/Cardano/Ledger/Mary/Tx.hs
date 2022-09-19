@@ -17,10 +17,10 @@ import Cardano.Ledger.Allegra.Tx (validateTimelock)
 import Cardano.Ledger.Core (EraTx (..), PhasedScript (..))
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Mary.Era (MaryEra)
+import Cardano.Ledger.Mary.PParams ()
 import Cardano.Ledger.Mary.TxAuxData ()
 import Cardano.Ledger.Mary.TxBody ()
 import Cardano.Ledger.Mary.TxWits ()
-import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Tx (
   ShelleyTx,
   auxDataShelleyTxL,

@@ -142,23 +142,23 @@ data ConwayTxBodyRaw era = ConwayTxBodyRaw
   deriving (Generic, Typeable)
 
 deriving instance
-  (Era era, Eq (TxOut era), Eq (PParamsUpdate era)) =>
+  (Eq (TxOut era), EraPParams era) =>
   Eq (ConwayTxBodyRaw era)
 
 instance
-  (NoThunks (TxOut era), NoThunks (PParamsUpdate era)) =>
+  (NoThunks (TxOut era), EraPParams era) =>
   NoThunks (ConwayTxBodyRaw era)
 
 instance
-  (Era era, NFData (TxOut era), NFData (PParamsUpdate era)) =>
+  (NFData (TxOut era), EraPParams era) =>
   NFData (ConwayTxBodyRaw era)
 
 deriving instance
-  (Era era, Show (TxOut era), Show (PParamsUpdate era)) =>
+  (Show (TxOut era), EraPParams era) =>
   Show (ConwayTxBodyRaw era)
 
 instance
-  (Era era, FromCBOR (TxOut era), FromCBOR (PParamsUpdate era)) =>
+  (FromCBOR (TxOut era), EraPParams era) =>
   FromCBOR (ConwayTxBodyRaw era)
   where
   fromCBOR =
@@ -206,19 +206,19 @@ newtype ConwayTxBody era = TxBodyConstr (MemoBytes ConwayTxBodyRaw era)
   deriving (Generic, SafeToHash, ToCBOR)
 
 instance
-  (Era era, NoThunks (TxOut era), NoThunks (PParamsUpdate era)) =>
+  (NoThunks (TxOut era), EraPParams era) =>
   NoThunks (ConwayTxBody era)
 
 deriving instance
-  (Era era, Eq (TxOut era), Eq (PParamsUpdate era)) =>
+  (Eq (TxOut era), EraPParams era) =>
   Eq (ConwayTxBody era)
 
 deriving newtype instance
-  (Era era, NFData (TxOut era), NFData (PParamsUpdate era)) =>
+  (NFData (TxOut era), EraPParams era) =>
   NFData (ConwayTxBody era)
 
 deriving instance
-  (Era era, Show (TxOut era), Show (PParamsUpdate era)) =>
+  (Show (TxOut era), EraPParams era) =>
   Show (ConwayTxBody era)
 
 type instance MemoHashIndex ConwayTxBodyRaw = EraIndependentTxBody
@@ -227,7 +227,7 @@ instance (c ~ EraCrypto era) => HashAnnotated (ConwayTxBody era) EraIndependentT
   hashAnnotated = getMemoSafeHash
 
 instance
-  (Era era, FromCBOR (TxOut era), FromCBOR (PParamsUpdate era)) =>
+  (FromCBOR (TxOut era), EraPParams era) =>
   FromCBOR (Annotator (ConwayTxBodyRaw era))
   where
   fromCBOR = pure <$> fromCBOR
@@ -235,7 +235,7 @@ instance
 deriving via
   (Mem ConwayTxBodyRaw era)
   instance
-    (Era era, FromCBOR (TxOut era), FromCBOR (PParamsUpdate era)) =>
+    (FromCBOR (TxOut era), EraPParams era) =>
     FromCBOR (Annotator (ConwayTxBody era))
 
 mkConwayTxBody :: ConwayEraTxBody era => ConwayTxBody era

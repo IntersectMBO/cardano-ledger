@@ -12,34 +12,23 @@
 module Cardano.Ledger.Babbage.Translation where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
-import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.Babbage.Era (BabbageEra)
-import Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..))
+import Cardano.Ledger.Babbage.PParams ()
 import Cardano.Ledger.Babbage.Tx (AlonzoTx (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), Datum (..))
 import Cardano.Ledger.Binary (DecoderError)
-import Cardano.Ledger.Coin (Coin (..))
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core hiding (Tx)
+import qualified Cardano.Ledger.Core as Core (Tx)
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Era (
-  PreviousEra,
-  TranslateEra (..),
-  TranslationContext,
-  translateEra',
- )
-import Cardano.Ledger.HKD (HKDFunctor (..))
 import Cardano.Ledger.Shelley.API (
   EpochState (..),
   NewEpochState (..),
   StrictMaybe (..),
  )
 import qualified Cardano.Ledger.Shelley.API as API
-import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD)
 import qualified Data.Map.Strict as Map
-import Data.Proxy (Proxy (..))
 
 --------------------------------------------------------------------------------
 -- Translation from Alonzo to Babbage
@@ -56,9 +45,7 @@ import Data.Proxy (Proxy (..))
 -- being total. Do not change it!
 --------------------------------------------------------------------------------
 
-type instance PreviousEra (BabbageEra c) = AlonzoEra c
-
-type instance TranslationContext (BabbageEra c) = AlonzoGenesis
+type instance TranslationContext (BabbageEra c) = ()
 
 instance
   (Crypto c) =>
@@ -80,7 +67,7 @@ newtype Tx era = Tx {unTx :: Core.Tx era}
 
 instance
   ( Crypto c
-  , Core.Tx (BabbageEra c) ~ AlonzoTx (BabbageEra c)
+  , Tx (BabbageEra c) ~ AlonzoTx (BabbageEra c)
   ) =>
   TranslateEra (BabbageEra c) Tx
   where
@@ -89,11 +76,11 @@ instance
     -- Note that this does not preserve the hidden bytes field of the transaction.
     -- This is under the premise that this is irrelevant for TxInBlocks, which are
     -- not transmitted as contiguous chunks.
-    txBody <- Core.translateEraThroughCBOR "TxBody" $ Alonzo.body tx
-    txWits <- Core.translateEraThroughCBOR "TxWitness" $ Alonzo.wits tx
+    txBody <- translateEraThroughCBOR "TxBody" $ Alonzo.body tx
+    txWits <- translateEraThroughCBOR "TxWitness" $ Alonzo.wits tx
     auxData <- case Alonzo.auxiliaryData tx of
       SNothing -> pure SNothing
-      SJust auxData -> SJust <$> Core.translateEraThroughCBOR "AuxData" auxData
+      SJust auxData -> SJust <$> translateEraThroughCBOR "AuxData" auxData
     let validating = Alonzo.isValid tx
     pure $ Tx $ AlonzoTx txBody txWits validating auxData
 
@@ -101,7 +88,8 @@ instance
 -- Auxiliary instances and functions
 --------------------------------------------------------------------------------
 
-instance (Crypto c, Functor f) => TranslateEra (BabbageEra c) (ShelleyPParamsHKD f)
+instance Crypto c => TranslateEra (BabbageEra c) PParams where
+  translateEra _ = pure . upgradePParams ()
 
 instance Crypto c => TranslateEra (BabbageEra c) EpochState where
   translateEra ctxt es =
@@ -110,8 +98,8 @@ instance Crypto c => TranslateEra (BabbageEra c) EpochState where
         { esAccountState = esAccountState es
         , esSnapshots = esSnapshots es
         , esLState = translateEra' ctxt $ esLState es
-        , esPrevPp = translatePParams $ esPrevPp es
-        , esPp = translatePParams $ esPp es
+        , esPrevPp = upgradePParams () $ esPrevPp es
+        , esPp = upgradePParams () $ esPp es
         , esNonMyopic = esNonMyopic es
         }
 
@@ -148,29 +136,14 @@ instance Crypto c => TranslateEra (BabbageEra c) API.PPUPState where
 
 instance Crypto c => TranslateEra (BabbageEra c) API.ProposedPPUpdates where
   translateEra _ctxt (API.ProposedPPUpdates ppup) =
-    pure $ API.ProposedPPUpdates $ fmap translatePParams ppup
+    pure $ API.ProposedPPUpdates $ fmap (upgradePParamsUpdate ()) ppup
 
 translateTxOut ::
   Crypto c =>
-  Core.TxOut (AlonzoEra c) ->
-  Core.TxOut (BabbageEra c)
+  TxOut (AlonzoEra c) ->
+  TxOut (BabbageEra c)
 translateTxOut (AlonzoTxOut addr value dh) = BabbageTxOut addr value d SNothing
   where
     d = case dh of
       SNothing -> NoDatum
       SJust d' -> DatumHash d'
-
--- | A word is 8 bytes, so to convert from coinsPerUTxOWord to coinsPerUTxOByte, rounding down.
-coinsPerUTxOWordToCoinsPerUTxOByte :: Coin -> Coin
-coinsPerUTxOWordToCoinsPerUTxOByte (Coin c) = Coin $ c `div` 8
-
--- | A word is 8 bytes, so to convert from coinsPerUTxOByte to coinsPerUTxOWord.
-coinsPerUTxOByteToCoinsPerUTxOWord :: Coin -> Coin
-coinsPerUTxOByteToCoinsPerUTxOWord (Coin c) = Coin $ c * 8
-
-translatePParams ::
-  forall f c. HKDFunctor f => AlonzoPParamsHKD f (AlonzoEra c) -> BabbagePParamsHKD f (BabbageEra c)
-translatePParams AlonzoPParams {_coinsPerUTxOWord = cpuw, ..} =
-  BabbagePParams {_coinsPerUTxOByte = cpub, ..}
-  where
-    cpub = hkdMap (Proxy :: Proxy f) coinsPerUTxOWordToCoinsPerUTxOByte cpuw

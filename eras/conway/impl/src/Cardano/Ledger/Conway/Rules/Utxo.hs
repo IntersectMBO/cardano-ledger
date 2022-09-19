@@ -16,7 +16,6 @@ import Cardano.Ledger.Alonzo.Rules (
  )
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
-import Cardano.Ledger.Babbage.PParams (BabbagePParamsUpdate)
 import Cardano.Ledger.Babbage.Rules (
   BabbageUTXOW,
   BabbageUtxoPredFailure (..),
@@ -26,7 +25,6 @@ import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Conway.Era (ConwayUTXO, ConwayUTXOS)
 import Cardano.Ledger.Conway.Rules.Utxos ()
 import Cardano.Ledger.Core (
-  EraPParams (..),
   EraRule,
   EraScript (..),
   EraTx,
@@ -68,7 +66,6 @@ instance
   , Event (EraRule "UTXOS" era) ~ AlonzoUtxosEvent era
   , Script era ~ AlonzoScript era
   , State (EraRule "PPUP" era) ~ PPUPState era
-  , PParamsUpdate era ~ BabbagePParamsUpdate era
   , Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   Embed (ConwayUTXOS era) (ConwayUTXO era)

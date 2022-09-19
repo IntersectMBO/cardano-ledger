@@ -1,5 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -24,13 +26,10 @@ module Test.Cardano.Ledger.Shelley.BenchmarkFunctions (
 )
 where
 
--- Cypto and Era stuff
-
 import Cardano.Crypto.Hash.Blake2b (Blake2b_256)
 import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..), TxIx, mkTxIxPartial)
 import Cardano.Ledger.Coin (Coin (..))
-import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Keys (
@@ -44,13 +43,13 @@ import Cardano.Ledger.Keys (
  )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Delegation.Certificates (DelegCert (..))
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   LedgerState (..),
   UTxOState (..),
  )
-import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..), emptyPParams)
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), ShelleyLEDGER)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxBody (
@@ -61,7 +60,6 @@ import Cardano.Ledger.Shelley.TxBody (
   RewardAcnt (..),
   ShelleyTxBody (..),
   ShelleyTxOut (..),
-  Wdrl (..),
   ppCost,
   ppId,
   ppMargin,
@@ -85,6 +83,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Word (Word64)
 import GHC.Stack
+import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkWitnessesVKey, vKey)
 import qualified Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes as Original (
   C_Crypto,
@@ -152,24 +151,23 @@ initUTxO n =
 -- Protocal Parameters used for the benchmarknig tests.
 -- Note that the fees and deposits are set to zero for
 -- ease of creating transactions.
-ppsBench :: ShelleyPParams era
+ppsBench :: (EraPParams era, ProtVerAtMost era 4, ProtVerAtMost era 6) => PParams era
 ppsBench =
   emptyPParams
-    { _maxBBSize = 50000
-    , _d = unsafeBoundRational 0.5
-    , _eMax = EpochNo 10000
-    , _keyDeposit = Coin 0
-    , _maxBHSize = 10000
-    , _maxTxSize = 1000000000
-    , _minfeeA = 0
-    , _minfeeB = 0
-    , _minUTxOValue = Coin 10
-    , _poolDeposit = Coin 0
-    , _rho = unsafeBoundRational 0.0021
-    , _tau = unsafeBoundRational 0.2
-    }
+    & ppMaxBBSizeL .~ 50000
+    & ppDL .~ unsafeBoundRational 0.5
+    & ppEMaxL .~ EpochNo 10000
+    & ppKeyDepositL .~ Coin 0
+    & ppMaxBHSizeL .~ 10000
+    & ppMaxTxSizeL .~ 1000000000
+    & ppMinFeeAL .~ 0
+    & ppMinFeeBL .~ 0
+    & ppMinUTxOValueL .~ Coin 10
+    & ppPoolDepositL .~ Coin 0
+    & ppRhoL .~ unsafeBoundRational 0.0021
+    & ppTauL .~ unsafeBoundRational 0.2
 
-ledgerEnv :: (Core.PParams era ~ ShelleyPParams era) => LedgerEnv era
+ledgerEnv :: (EraPParams era, ProtVerAtMost era 4, ProtVerAtMost era 6) => LedgerEnv era
 ledgerEnv = LedgerEnv (SlotNo 0) minBound ppsBench (AccountState (Coin 0) (Coin 0))
 
 testLEDGER ::

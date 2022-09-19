@@ -14,18 +14,15 @@ module Cardano.Ledger.Conway (
 )
 where
 
-import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
-import qualified Cardano.Ledger.Alonzo.Translation as Alonzo (translatePParams)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..))
-import qualified Cardano.Ledger.Babbage.Translation as Babbage (translatePParams)
 import Cardano.Ledger.Babbage.Tx (babbageTxScripts, getDatumBabbage)
 import Cardano.Ledger.Babbage.TxBody (allSizedOutputsTxBodyF, referenceInputsTxBodyL)
 import Cardano.Ledger.Babbage.TxInfo (babbageTxInfo)
 import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Conway.Era (ConwayEra)
-import Cardano.Ledger.Conway.Genesis ()
+import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Rules ()
-import Cardano.Ledger.Conway.Translation (translatePParams)
+import Cardano.Ledger.Conway.Translation ()
 import Cardano.Ledger.Conway.Tx ()
 import Cardano.Ledger.Conway.TxOut (AlonzoEraTxOut (..))
 import Cardano.Ledger.Conway.UTxO ()
@@ -48,14 +45,9 @@ type Conway = ConwayEra StandardCrypto
 -- TODO instance (Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyBlock (ConwayEra c)
 
 instance Crypto c => API.CanStartFromGenesis (ConwayEra c) where
-  type AdditionalGenesisConfig (ConwayEra c) = AlonzoGenesis
-
-  fromShelleyPParams ag =
-    translatePParams
-      . Babbage.translatePParams
-      . Alonzo.translatePParams ag
-      . translateEra' ()
-      . translateEra' ()
+  type AdditionalGenesisConfig (ConwayEra c) = ConwayGenesis c
+  fromShelleyPParams cg =
+    translateEra' (cgGenDelegs cg) . API.fromShelleyPParams (cgAlonzoGenesis cg)
 
 instance Crypto c => ExtendedUTxO (ConwayEra c) where
   txInfo = babbageTxInfo

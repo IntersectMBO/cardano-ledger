@@ -11,9 +11,7 @@
 
 module Test.Cardano.Ledger.Generic.Properties where
 
-import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoTxBody (..), IsValid (..))
-import qualified Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
@@ -27,7 +25,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
   updateStakeDistribution,
  )
-import qualified Cardano.Ledger.Shelley.PParams as Shelley (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), UtxoEnv (..))
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Slotting.Slot (SlotNo (..))
@@ -119,7 +116,7 @@ genTxAndLEDGERState proof sizes = do
         let ledgerState = extract @(LedgerState era) model
             ledgerEnv = LedgerEnv slotNo txIx pp (AccountState (Coin 0) (Coin 0))
         pure $ TRC (ledgerEnv, ledgerState, tx)
-  (trc, genstate) <- runGenRS proof sizes (initStableFields proof >> genT)
+  (trc, genstate) <- runGenRS proof sizes (initStableFields >> genT)
   pure (Box proof trc genstate)
 
 -- =============================================

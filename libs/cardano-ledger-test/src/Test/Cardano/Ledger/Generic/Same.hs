@@ -17,14 +17,12 @@
 module Test.Cardano.Ledger.Generic.Same where
 
 import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (..))
-import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, AlonzoTx (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (..))
 import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
-import Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD)
 import Cardano.Ledger.Babbage.TxBody (BabbageEraTxBody, BabbageTxBody (..))
 import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Block (Block (..))
@@ -49,14 +47,13 @@ import Cardano.Ledger.Shelley.LedgerState (
   StashedAVVMAddresses,
   UTxOState (..),
  )
-import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), ShelleyPParamsHKD)
+import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..), Wdrl (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..))
 import Cardano.Ledger.UTxO (UTxO (..))
 import Control.State.Transition.Extended (STS (..), State)
 import Data.Foldable (toList)
-import Data.Maybe.Strict (StrictMaybe)
 import Prettyprinter (Doc, indent, viaShow, vsep)
 import Test.Cardano.Ledger.Generic.PrettyCore
 import Test.Cardano.Ledger.Generic.Proof
@@ -71,13 +68,22 @@ import Test.Cardano.Ledger.TerseTools
 instance Terse (KeyHash 'Genesis c) where
   terse x = show (pcKeyHash x)
 
-instance Terse (ShelleyPParamsHKD StrictMaybe c) where
+instance Terse (PParamsUpdate (ShelleyEra c)) where
   terse x = show x
 
-instance Terse (AlonzoPParamsHKD StrictMaybe c) where
+instance Terse (PParamsUpdate (AllegraEra c)) where
   terse x = show x
 
-instance Terse (BabbagePParamsHKD StrictMaybe c) where
+instance Terse (PParamsUpdate (MaryEra c)) where
+  terse x = show x
+
+instance Terse (PParamsUpdate (AlonzoEra c)) where
+  terse x = show x
+
+instance Terse (PParamsUpdate (BabbageEra c)) where
+  terse x = show x
+
+instance Terse (PParamsUpdate (ConwayEra c)) where
   terse x = show x
 
 -- ========================================
@@ -238,7 +244,7 @@ instance Reflect era => Same era (ShelleyLedgerExamples era) where
            , ("TranslationContext", sameTransCtx proof (sleTranslationContext x1) (sleTranslationContext x2))
            ]
 
-instance Same era (ShelleyResultExamples era) where
+instance Era era => Same era (ShelleyResultExamples era) where
   same proof r1 r2 =
     [ ("PParams", samePParams proof (srePParams r1) (srePParams r2))
     ,

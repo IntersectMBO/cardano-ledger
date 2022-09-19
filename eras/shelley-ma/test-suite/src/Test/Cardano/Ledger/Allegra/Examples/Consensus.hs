@@ -13,14 +13,13 @@ import Cardano.Ledger.Allegra.TxAuxData
 import Cardano.Ledger.Allegra.TxBody
 import Cardano.Ledger.AuxiliaryData
 import Cardano.Ledger.Coin
-import Cardano.Ledger.Shelley.PParams (ShelleyPParamsUpdate, Update (..))
+import Cardano.Ledger.Shelley.PParams (Update (..))
 import Cardano.Slotting.Slot
 import Data.Proxy
 import qualified Data.Sequence.Strict as StrictSeq
 import Lens.Micro
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
 import Test.Cardano.Ledger.Shelley.Examples.Consensus
-import Test.Cardano.Ledger.Shelley.Orphans ()
 
 -- | ShelleyLedgerExamples for Allegra era
 ledgerExamplesAllegra :: ShelleyLedgerExamples Allegra
@@ -36,8 +35,6 @@ ledgerExamplesAllegra =
 exampleAllegraTxBody ::
   forall era.
   ( AllegraEraTxBody era
-  , ShelleyBasedEra' era
-  , PParamsUpdate era ~ ShelleyPParamsUpdate era
   , ProtVerAtMost era 8
   ) =>
   Value era ->

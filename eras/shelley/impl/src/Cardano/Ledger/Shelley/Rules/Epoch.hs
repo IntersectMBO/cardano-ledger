@@ -49,7 +49,6 @@ import Data.Default.Class (Default)
 import qualified Data.Map.Strict as Map
 import Data.Void (Void)
 import GHC.Generics (Generic)
-import GHC.Records (HasField)
 import NoThunks.Class (NoThunks (..))
 
 data ShelleyEpochPredFailure era
@@ -79,8 +78,6 @@ data ShelleyEpochEvent era
 
 instance
   ( EraTxOut era
-  , HasField "_keyDeposit" (PParams era) Coin
-  , HasField "_poolDeposit" (PParams era) Coin
   , Embed (EraRule "SNAP" era) (ShelleyEPOCH era)
   , Environment (EraRule "SNAP" era) ~ LedgerState era
   , State (EraRule "SNAP" era) ~ SnapShots (EraCrypto era)

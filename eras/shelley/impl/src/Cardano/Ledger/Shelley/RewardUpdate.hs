@@ -58,7 +58,6 @@ import qualified Data.Set as Set
 import Data.Typeable
 import Data.VMap as VMap
 import GHC.Generics (Generic)
-import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..), allNoThunks)
 
 -- ===============================================================
@@ -178,10 +177,6 @@ instance CC.Crypto c => FromCBOR (RewardSnapShot c) where
           <! From
       )
 
--- | RewardSnapShot can act as a Proxy for PParams when only the protocol version is needed.
-instance HasField "_protocolVersion" (RewardSnapShot c) ProtVer where
-  getField x = rewprotocolVersion x
-
 -- ========================================================
 -- FreeVars is the set of variables needed to compute
 -- rewardStakePool, so that it can be made into a serializable
@@ -196,10 +191,6 @@ data FreeVars c = FreeVars
   }
   deriving (Eq, Show, Generic)
   deriving (NoThunks)
-
--- | FreeVars can act as a Proxy for PParams when only the protocol version is needed.
-instance HasField "_protocolVersion" (FreeVars c) ProtVer where
-  getField = pp_pv
 
 instance NFData (FreeVars c)
 
@@ -242,18 +233,19 @@ rewardStakePoolMember ::
   CompactForm Coin ->
   RewardAns c
 rewardStakePoolMember
-  pp@FreeVars
+  FreeVars
     { delegs
     , addrsRew
     , totalStake
     , poolRewardInfo
+    , pp_pv
     }
   inputanswer@(RewardAns accum recent)
   cred
   c = fromMaybe inputanswer $ do
     poolID <- VMap.lookup cred delegs
     poolRI <- Map.lookup poolID poolRewardInfo
-    r <- rewardOnePoolMember pp (Coin totalStake) addrsRew poolRI cred (fromCompact c)
+    r <- rewardOnePoolMember pp_pv (Coin totalStake) addrsRew poolRI cred (fromCompact c)
     let ans = Reward MemberReward poolID r
     -- There is always just 1 member reward, so Set.singleton is appropriate
     pure $ RewardAns (Map.insert cred ans accum) (Map.insert cred (Set.singleton ans) recent)

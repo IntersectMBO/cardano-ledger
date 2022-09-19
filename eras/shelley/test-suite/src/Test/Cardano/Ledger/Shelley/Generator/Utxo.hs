@@ -69,7 +69,6 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import qualified Data.Vector as V
 import Debug.Trace (trace)
-import GHC.Records (HasField (..))
 import Lens.Micro
 import NoThunks.Class ()
 import Test.Cardano.Ledger.Core.KeyPair (
@@ -222,10 +221,7 @@ genTx
         genRecipients @era (length inputs + n) ksKeyPairs ksMSigScripts
           >>= genPtrAddrs (dpsDState dpState')
 
-      -- Occasionally we have a transaction generated with insufficient inputs
-      -- to cover the deposits. In this case we discard the test case.
-      let enough = length outputAddrs <×> getField @"_minUTxOValue" pparams
-      !_ <- when (coin spendingBalance < coin enough) (myDiscard "No inputs left. Utxo.hs")
+      !_ <- when (coin spendingBalance < mempty) $ myDiscard "Negative spending balance"
 
       -------------------------------------------------------------------------
       -- Build a Draft Tx and repeatedly add to Delta until all fees are
@@ -237,6 +233,12 @@ genTx
               spendingBalance
               outputAddrs
               draftFee
+
+      -- Occasionally we have a transaction generated with insufficient inputs
+      -- to cover the deposits. In this case we discard the test case.
+      let enough = sumVal (getMinCoinTxOut pparams <$> draftOutputs)
+      !_ <- when (coin spendingBalance < enough) (myDiscard "No inputs left. Utxo.hs")
+
       (draftTxBody, additionalScripts) <-
         genEraTxBody
           ge
@@ -257,17 +259,23 @@ genTx
               metadata
           scripts' = Map.fromList $ map (\s -> (hashScript @era s, s)) additionalScripts
       -- We add now repeatedly add inputs until the process converges.
-      converge
-        (ssHash3 scriptspace, ssHash2 scriptspace)
-        remainderCoin
-        txWits
-        (scripts `Map.union` scripts')
-        ksKeyPairs
-        ksMSigScripts
-        utxo
-        pparams
-        keySpace
-        draftTx
+      tx <-
+        converge
+          (ssHash3 scriptspace, ssHash2 scriptspace)
+          remainderCoin
+          txWits
+          (scripts `Map.union` scripts')
+          ksKeyPairs
+          ksMSigScripts
+          utxo
+          pparams
+          keySpace
+          draftTx
+      let txOuts = tx ^. bodyTxL . outputsTxBodyL
+      !_ <-
+        when (any (\txOut -> getMinCoinTxOut pparams txOut > txOut ^. coinTxOutL) txOuts) $
+          myDiscard "TxOut value is too small"
+      pure tx
 
 -- | Collect additional inputs (and witnesses and keys and scripts) to make
 -- the transaction balance.
@@ -307,23 +315,38 @@ deltaZero ::
   , Monoid (TxWits era)
   ) =>
   Coin ->
-  Coin ->
+  PParams era ->
   Addr (EraCrypto era) ->
   Delta era
-deltaZero initialfee minAda addr =
+deltaZero initialfee pp addr =
   Delta
-    (initialfee <-> minAda)
+    (initialfee <-> txOut ^. coinTxOutL)
     mempty
     mempty
-    (mkBasicTxOut addr (inject minAda))
+    txOut
     mempty
     mempty
+  where
+    txOut = setMinCoinTxOut pp (mkBasicTxOut addr mempty)
+
+-- Same function as in cardano-ledger-api. We don't want to depend on the api though,
+-- because it will be problematic for dependencies (cardano-ledger-api test suite depends
+-- on this package)
+setMinCoinTxOut :: EraTxOut era => PParams era -> TxOut era -> TxOut era
+setMinCoinTxOut pp = go
+  where
+    go txOut =
+      let curMinCoin = getMinCoinTxOut pp txOut
+          curCoin = txOut ^. coinTxOutL
+       in if curCoin == curMinCoin
+            then txOut
+            else go (txOut & coinTxOutL .~ curMinCoin)
 
 encodedLen :: forall era t. (Era era, ToCBOR t) => t -> Integer
 encodedLen x = fromIntegral $ BSL.length (serialize (eraProtVerHigh @era) x)
 
--- | - Do the work of computing what additioanl inputs we need to 'fix-up' the
--- transaction so that it will balance.
+-- | Do the work of computing what additioanl inputs we need to 'fix-up' the transaction
+-- so that it will balance.
 genNextDelta ::
   forall era.
   (EraGen era, Mock (EraCrypto era)) =>
@@ -364,11 +387,11 @@ genNextDelta
         deltaScriptCost = foldr accum (Coin 0) extraScripts
           where
             accum (s1, _) ans = genEraScriptCost @era pparams s1 <+> ans
-        deltaFee = (draftSize <×> Coin (fromIntegral (getField @"_minfeeA" pparams))) <+> deltaScriptCost
+        deltaFee = (draftSize <×> Coin (fromIntegral (pparams ^. ppMinFeeAL))) <+> deltaScriptCost
         totalFee = baseTxFee <+> deltaFee :: Coin
         remainingFee = totalFee <-> dfees :: Coin
         changeAmount = getChangeAmount change
-        minAda = getField @"_minUTxOValue" pparams
+        minAda = getMinCoinTxOut pparams change
      in if remainingFee <= Coin 0 -- we've paid for all the fees
           then pure delta -- we're done
           else -- the change covers what we need, so shift Coin from change to dfees.
@@ -460,10 +483,7 @@ genNextDeltaTilFixPoint scriptinfo initialfee keys scripts utxo pparams keySpace
   fix
     0
     (genNextDelta scriptinfo utxo pparams keySpace tx)
-    (deltaZero initialfee (safetyOffset <+> getField @"_minUTxOValue" pparams) (head addr))
-  where
-    -- add a small offset here to ensure outputs above minUtxo value
-    safetyOffset = Coin 5
+    (deltaZero initialfee pparams (head addr))
 
 applyDelta ::
   forall era.

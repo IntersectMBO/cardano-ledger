@@ -30,7 +30,6 @@ import Cardano.Ledger.Mary.Value (
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API (LedgerEnv (..), ShelleyLEDGER)
 import Cardano.Ledger.Shelley.LedgerState (AccountState (..))
-import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..), emptyPParams)
 import Cardano.Ledger.Shelley.Rules (ShelleyLedgerPredFailure (..), ShelleyUtxowPredFailure (..))
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxOut (..))
@@ -80,14 +79,13 @@ initUTxO =
       , (mkTxInPartial bootstrapTxId 1, ShelleyTxOut Cast.bobAddr (Val.inject bobInitCoin))
       ]
 
-pp :: ShelleyPParams Mary
+pp :: PParams Mary
 pp =
   emptyPParams
-    { _minfeeA = 0
-    , _minfeeB = 1
-    , _maxTxSize = 16384
-    , _minUTxOValue = Coin 100
-    }
+    & ppMinFeeAL .~ 0
+    & ppMinFeeBL .~ 1
+    & ppMaxTxSizeL .~ 16384
+    & ppMinUTxOValueL .~ Coin 100
 
 ledgerEnv :: SlotNo -> LedgerEnv Mary
 ledgerEnv s = LedgerEnv s minBound pp (AccountState (Coin 0) (Coin 0))

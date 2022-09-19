@@ -31,7 +31,6 @@ import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (PulsingRewUpdate, emptyRewardUpdate)
-import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Tx (
   ShelleyTx (..),
  )
@@ -102,7 +101,7 @@ feeTx1 :: Coin
 feeTx1 = Coin 3
 
 aliceCoinEx1 :: Coin
-aliceCoinEx1 = aliceInitCoin <-> _poolDeposit ppEx <-> feeTx1
+aliceCoinEx1 = aliceInitCoin <-> Coin 250 <-> feeTx1
 
 txbodyEx1 :: Cr.Crypto c => ShelleyTxBody (ShelleyEra c)
 txbodyEx1 =

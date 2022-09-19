@@ -17,10 +17,9 @@ module Test.Cardano.Ledger.Shelley.Rules.TestDeleg (
 )
 where
 
-import Cardano.Ledger.BaseTypes (ProtVer)
 import Cardano.Ledger.Coin (addDeltaCoin)
-import qualified Cardano.Ledger.Core as Core (PParams)
 import Cardano.Ledger.Shelley.API (ShelleyDELEG)
+import Cardano.Ledger.Shelley.Core
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
 import Cardano.Ledger.Shelley.LedgerState (
   DState (..),
@@ -53,7 +52,7 @@ import Data.Foldable (fold)
 import Data.List (foldl')
 import qualified Data.Map.Strict as Map (difference, filter, keysSet, (\\))
 import qualified Data.Set as Set (isSubsetOf, singleton, size)
-import GHC.Records (HasField (..))
+import Lens.Micro.Extras (view)
 import Test.QuickCheck (Property, conjoin, counterexample, property)
 
 -- | Check stake key registration
@@ -132,7 +131,7 @@ rewardsSumInvariant
           ]
 
 checkInstantaneousRewards ::
-  (HasField "_protocolVersion" (Core.PParams era) ProtVer) =>
+  EraPParams era =>
   DelegEnv era ->
   SourceSignalTarget (ShelleyDELEG era) ->
   Property
@@ -147,7 +146,7 @@ checkInstantaneousRewards
               (Map.keysSet irwd `Set.isSubsetOf` Map.keysSet (iRReserves $ dsIRewards target))
           , counterexample
               "a ReservesMIR certificate should add the total value to the `irwd` map, overwriting any existing entries"
-              ( if (HardForks.allowMIRTransfer . ppDE $ denv)
+              ( if (HardForks.allowMIRTransfer . view ppProtocolVersionL . ppDE $ denv)
                   then -- In the Alonzo era, repeated fields are added
 
                     ( (fold $ iRReserves $ dsIRewards source)
@@ -169,7 +168,7 @@ checkInstantaneousRewards
               (Map.keysSet irwd `Set.isSubsetOf` Map.keysSet (iRTreasury $ dsIRewards target))
           , counterexample
               "a TreasuryMIR certificate should add* the total value to the `irwd` map"
-              ( if (HardForks.allowMIRTransfer . ppDE $ denv)
+              ( if HardForks.allowMIRTransfer . view ppProtocolVersionL . ppDE $ denv
                   then -- In the Alonzo era, repeated fields are added
 
                     ( (fold $ iRTreasury $ dsIRewards source)

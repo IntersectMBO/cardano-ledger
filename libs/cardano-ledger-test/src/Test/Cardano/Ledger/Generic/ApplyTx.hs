@@ -21,6 +21,7 @@ import Cardano.Ledger.Coin (Coin (..), addDeltaCoin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.API (Credential, KeyRole (Staking))
+import Cardano.Ledger.Shelley.Rewards (aggregateRewards)
 import Cardano.Ledger.Shelley.TxBody (
   DCert (..),
   DelegCert (..),
@@ -65,12 +66,9 @@ import Test.Cardano.Ledger.Generic.Fields (
   abstractTxBody,
  )
 import Test.Cardano.Ledger.Generic.Functions (
-  aggregateRewards',
   createRUpdNonPulsing',
   getBody,
   getOutputs,
-  keyPoolDeposits,
-  ppProtocolVersion,
   txInBalance,
  )
 import Test.Cardano.Ledger.Generic.ModelState (
@@ -100,7 +98,7 @@ defaultPPs =
   , CollateralPercentage 100
   ]
 
-pparams :: Proof era -> PParams era
+pparams :: EraPParams era => Proof era -> PParams era
 pparams pf = newPParams pf defaultPPs
 
 hasValid :: [TxField era] -> Maybe Bool
@@ -135,7 +133,7 @@ epochBoundary proof transactionEpoch modelEpoch model =
   where
     ru = createRUpdNonPulsing' proof model
 
-applyTxSimple :: Proof era -> Int -> Model era -> TxField era -> Model era
+applyTxSimple :: EraPParams era => Proof era -> Int -> Model era -> TxField era -> Model era
 applyTxSimple proof count model field = case field of
   Body body1 -> applyTxBody proof count model body1
   BodyI fs -> List.foldl' (applyField proof count) model fs
@@ -144,10 +142,10 @@ applyTxSimple proof count model field = case field of
   AuxData _ -> model
   Valid _ -> model
 
-applyTxBody :: Proof era -> Int -> Model era -> TxBody era -> Model era
+applyTxBody :: EraPParams era => Proof era -> Int -> Model era -> TxBody era -> Model era
 applyTxBody proof count model tx = List.foldl' (applyField proof count) model (abstractTxBody proof tx)
 
-applyField :: Proof era -> Int -> Model era -> TxBodyField era -> Model era
+applyField :: EraPParams era => Proof era -> Int -> Model era -> TxBodyField era -> Model era
 applyField proof count model field = case field of
   (Inputs txins) -> model {mUTxO = Map.withoutKeys (mUTxO model) txins}
   (Outputs seqo) -> case Map.lookup count (mIndex model) of
@@ -156,7 +154,7 @@ applyField proof count model field = case field of
       where
         newstuff = additions hash minBound (toList seqo)
   (Txfee coin) -> model {mFees = coin <+> (mFees model)}
-  (Certs seqc) -> List.foldl' (applyCert proof) model (toList seqc)
+  (Certs seqc) -> List.foldl' applyCert model (toList seqc)
   (Wdrls (Wdrl m)) -> Map.foldlWithKey' (applyWdrl proof) model m
   _other -> model
 
@@ -164,27 +162,26 @@ applyWdrl :: Proof era -> Model era -> RewardAcnt (EraCrypto era) -> Coin -> Mod
 applyWdrl _proof model (RewardAcnt _network cred) coin =
   model {mRewards = Map.adjust (\c -> c <-> coin) cred (mRewards model)}
 
-applyCert :: Proof era -> Model era -> DCert (EraCrypto era) -> Model era
-applyCert proof model dcert = case dcert of
+applyCert :: EraPParams era => Model era -> DCert (EraCrypto era) -> Model era
+applyCert model dcert = case dcert of
   (DCertDeleg (RegKey x)) ->
     model
       { mRewards = Map.insert x (Coin 0) (mRewards model)
-      , mKeyDeposits = Map.insert x keydeposit (mKeyDeposits model)
-      , mDeposited = mDeposited model <+> keydeposit
+      , mKeyDeposits = Map.insert x (pp ^. ppKeyDepositL) (mKeyDeposits model)
+      , mDeposited = mDeposited model <+> pp ^. ppKeyDepositL
       }
     where
       pp = mPParams model
-      (keydeposit, _) = keyPoolDeposits proof pp
   (DCertDeleg (DeRegKey x)) -> case Map.lookup x (mRewards model) of
     Nothing -> error ("DeRegKey not in rewards: " <> show (pcCredential x))
     Just (Coin 0) ->
       model
         { mRewards = Map.delete x (mRewards model)
         , mKeyDeposits = Map.delete x (mKeyDeposits model)
-        , mDeposited = mDeposited model <-> keydeposit
+        , mDeposited = mDeposited model <-> keyDeposit
         }
       where
-        keydeposit = case Map.lookup x (mKeyDeposits model) of
+        keyDeposit = case Map.lookup x (mKeyDeposits model) of
           Nothing -> mempty
           Just c -> c
     Just (Coin _n) -> error "DeRegKey with non-zero balance"
@@ -196,25 +193,23 @@ applyCert proof model dcert = case dcert of
       , mDeposited =
           if Map.member hk (mPoolDeposits model)
             then mDeposited model
-            else mDeposited model <+> pooldeposit
+            else mDeposited model <+> pp ^. ppPoolDepositL
       , mPoolDeposits -- Only add if it isn't already there
         =
           case Map.lookup hk (mPoolDeposits model) of
             Just _ -> mPoolDeposits model
-            Nothing -> Map.insert hk pooldeposit (mPoolDeposits model)
+            Nothing -> Map.insert hk (pp ^. ppPoolDepositL) (mPoolDeposits model)
       }
     where
       hk = ppId poolparams
       pp = mPParams model
-      (_, pooldeposit) = keyPoolDeposits proof pp
   (DCertPool (RetirePool keyhash epoch)) ->
     model
       { mRetiring = Map.insert keyhash epoch (mRetiring model)
-      , mDeposited = mDeposited model <-> pooldeposit
+      , mDeposited = mDeposited model <-> pp ^. ppPoolDepositL
       }
     where
       pp = mPParams model
-      (_, pooldeposit) = keyPoolDeposits proof pp
   (DCertGenesis _) -> model
   (DCertMir _) -> model
 
@@ -316,21 +311,21 @@ go = do
   print (pcModelNewEpochState proof model2)
 
 filterRewards ::
-  Proof era ->
+  EraPParams era =>
   PParams era ->
   Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))) ->
   ( Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era)))
   , Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era)))
   )
-filterRewards proof pp rewards =
-  if pvMajor (ppProtocolVersion proof pp) > natVersion @2
+filterRewards pp rewards =
+  if pvMajor (pp ^. ppProtocolVersionL) > natVersion @2
     then (rewards, Map.empty)
     else
       let mp = Map.map Set.deleteFindMin rewards
        in (Map.map (Set.singleton . fst) mp, Map.filter (not . Set.null) $ Map.map snd mp)
 
 filterAllRewards ::
-  Proof era ->
+  EraPParams era =>
   Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))) ->
   Model era ->
   ( Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era)))
@@ -338,18 +333,18 @@ filterAllRewards ::
   , Set (Credential 'Staking (EraCrypto era))
   , Coin
   )
-filterAllRewards proof rs' m =
+filterAllRewards rs' m =
   (registered, eraIgnored, unregistered, totalUnregistered)
   where
-    pr = mPParams m
+    pp = mPParams m
     (regRU, unregRU) =
       Map.partitionWithKey
         (\k _ -> eval (k ∈ dom (mRewards m)))
         rs'
-    totalUnregistered = fold $ aggregateRewards' proof pr unregRU
+    totalUnregistered = fold $ aggregateRewards (pp ^. ppProtocolVersionL) unregRU
     unregistered = Map.keysSet unregRU
 
-    (registered, eraIgnored) = filterRewards proof pr regRU
+    (registered, eraIgnored) = filterRewards pp regRU
 
 applyRUpd ::
   forall era.

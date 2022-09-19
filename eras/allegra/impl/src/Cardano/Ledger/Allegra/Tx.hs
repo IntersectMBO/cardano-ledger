@@ -14,6 +14,7 @@ module Cardano.Ledger.Allegra.Tx (
 where
 
 import Cardano.Ledger.Allegra.Era (AllegraEra)
+import Cardano.Ledger.Allegra.PParams ()
 import Cardano.Ledger.Allegra.Scripts (Timelock, evalTimelock)
 import Cardano.Ledger.Allegra.TxAuxData ()
 import Cardano.Ledger.Allegra.TxBody (AllegraEraTxBody (..))
@@ -21,7 +22,6 @@ import Cardano.Ledger.Allegra.TxWits ()
 import Cardano.Ledger.Core (EraTx (..), EraTxWits (..), PhasedScript (..))
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
-import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Tx (
   ShelleyTx,
   auxDataShelleyTxL,

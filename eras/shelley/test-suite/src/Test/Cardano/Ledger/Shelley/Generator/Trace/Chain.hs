@@ -15,16 +15,9 @@
 
 module Test.Cardano.Ledger.Shelley.Generator.Trace.Chain where
 
--- import Test.Cardano.Ledger.Shelley.Shrinkers (shrinkBlock) -- TODO FIX ME
-
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
-import Cardano.Ledger.BaseTypes (UnitInterval)
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (
-  Era,
-  EraCrypto,
- )
 import Cardano.Ledger.Shelley.API
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (incrementalStakeDistr)
 import Cardano.Ledger.Shelley.Rules (
   BbodyEnv,
@@ -65,7 +58,7 @@ import qualified Data.ListMap as LM
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
-import GHC.Records (HasField (getField))
+import Lens.Micro.Extras (view)
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Generator.Block (genBlock)
@@ -83,10 +76,7 @@ import Test.Cardano.Ledger.Shelley.Rules.Chain (
   initialShelleyState,
  )
 import qualified Test.Cardano.Ledger.Shelley.Rules.Chain as STS (ChainState (ChainState))
-import Test.Cardano.Ledger.Shelley.Utils (
-  maxLLSupply,
-  mkHash,
- )
+import Test.Cardano.Ledger.Shelley.Utils (maxLLSupply, mkHash)
 import Test.QuickCheck (Gen)
 
 -- ======================================================
@@ -95,26 +85,25 @@ import Test.QuickCheck (Gen)
 -- with meaningful delegation certificates, protocol and application updates, withdrawals etc.
 instance
   ( EraGen era
-  , Core.EraSegWits era
+  , EraSegWits era
   , Mock (EraCrypto era)
   , ApplyBlock era
   , GetLedgerView era
   , MinLEDGER_STS era
   , MinCHAIN_STS era
-  , Embed (Core.EraRule "BBODY" era) (CHAIN era)
-  , Environment (Core.EraRule "BBODY" era) ~ BbodyEnv era
-  , State (Core.EraRule "BBODY" era) ~ ShelleyBbodyState era
-  , Signal (Core.EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era
-  , Embed (Core.EraRule "TICKN" era) (CHAIN era)
-  , Environment (Core.EraRule "TICKN" era) ~ TicknEnv
-  , State (Core.EraRule "TICKN" era) ~ TicknState
-  , Signal (Core.EraRule "TICKN" era) ~ Bool
-  , Embed (Core.EraRule "TICK" era) (CHAIN era)
-  , Environment (Core.EraRule "TICK" era) ~ ()
-  , State (Core.EraRule "TICK" era) ~ NewEpochState era
-  , Signal (Core.EraRule "TICK" era) ~ SlotNo
-  , HasField "_d" (Core.PParams era) UnitInterval
-  , QC.HasTrace (Core.EraRule "LEDGERS" era) (GenEnv era)
+  , Embed (EraRule "BBODY" era) (CHAIN era)
+  , Environment (EraRule "BBODY" era) ~ BbodyEnv era
+  , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
+  , Signal (EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era
+  , Embed (EraRule "TICKN" era) (CHAIN era)
+  , Environment (EraRule "TICKN" era) ~ TicknEnv
+  , State (EraRule "TICKN" era) ~ TicknState
+  , Signal (EraRule "TICKN" era) ~ Bool
+  , Embed (EraRule "TICK" era) (CHAIN era)
+  , Environment (EraRule "TICK" era) ~ ()
+  , State (EraRule "TICK" era) ~ NewEpochState era
+  , Signal (EraRule "TICK" era) ~ SlotNo
+  , QC.HasTrace (EraRule "LEDGERS" era) (GenEnv era)
   ) =>
   HasTrace (CHAIN era) (GenEnv era)
   where
@@ -140,7 +129,7 @@ lastByronHeaderHash _ = HashHeader $ mkHash 0
 -- and (2) always return Right (since this function does not raise predicate failures).
 mkGenesisChainState ::
   forall era a.
-  (Default (State (Core.EraRule "PPUP" era)), EraGen era) =>
+  (Default (State (EraRule "PPUP" era)), EraGen era) =>
   GenEnv era ->
   IRC (CHAIN era) ->
   Gen (Either a (ChainState era))
@@ -193,7 +182,7 @@ mkOCertIssueNos (GenDelegs delegs0) =
 -- This allows stake pools to produce blocks from genesis.
 registerGenesisStaking ::
   forall era.
-  HasField "_keyDeposit" (Core.PParams era) Coin =>
+  EraPParams era =>
   ShelleyGenesisStaking (EraCrypto era) ->
   ChainState era ->
   ChainState era
@@ -205,7 +194,7 @@ registerGenesisStaking
       }
     where
       keyDeposit :: UM.CompactForm Coin
-      keyDeposit = (UM.compactCoinOrError . getField @"_keyDeposit" . esPp . nesEs) oldChainNes
+      keyDeposit = (UM.compactCoinOrError . view ppKeyDepositL . esPp . nesEs) oldChainNes
       oldEpochState = nesEs oldChainNes
       oldLedgerState = esLState oldEpochState
       oldDPState = lsDPState oldLedgerState

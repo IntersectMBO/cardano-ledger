@@ -21,13 +21,12 @@ import Cardano.Ledger.Alonzo.TxAuxData (
  )
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), RdmrPtr (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.Babbage (Babbage)
-import Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..), emptyPParams, emptyPParamsUpdate)
+import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Translation ()
 import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..), BabbageTxOut (..), Datum (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (mkSized)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (EraScript (hashScript), TxBody, eraProtVerHigh)
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
@@ -41,7 +40,6 @@ import Cardano.Ledger.Shelley.API (
   RewardAcnt (..),
   TxId (..),
   Update (..),
-  Wdrl (..),
  )
 import Cardano.Ledger.Shelley.Rules (ShelleyDelegsPredFailure (..), ShelleyLedgerPredFailure (..))
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
@@ -52,13 +50,12 @@ import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import Lens.Micro
 import qualified PlutusTx as Plutus
-import qualified Test.Cardano.Ledger.Alonzo.Examples.Consensus as AlonzoLE
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr, mkWitnessesVKey)
 import qualified Test.Cardano.Ledger.Mary.Examples.Consensus as MarySLE
 import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as SLE
-import Test.Cardano.Ledger.Shelley.Orphans ()
 
 -- | ShelleyLedgerExamples for Babbage era
 ledgerExamplesBabbage :: SLE.ShelleyLedgerExamples Babbage
@@ -81,7 +78,7 @@ ledgerExamplesBabbage =
     , SLE.sleResultExamples = resultExamples
     , SLE.sleNewEpochState = exampleBabbageNewEpochState
     , SLE.sleChainDepState = SLE.exampleLedgerChainDepState 1
-    , SLE.sleTranslationContext = AlonzoLE.exampleAlonzoGenesis
+    , SLE.sleTranslationContext = ()
     }
   where
     resultExamples =
@@ -96,7 +93,7 @@ ledgerExamplesBabbage =
       ProposedPPUpdates $
         Map.singleton
           (SLE.mkKeyHash 0)
-          (emptyPParamsUpdate {_collateralPercentage = SJust 150})
+          (emptyPParamsUpdate & ppuCollateralPercentageL .~ SJust 150)
 
 collateralOutput :: BabbageTxOut Babbage
 collateralOutput =
@@ -136,7 +133,7 @@ exampleTxBodyBabbage =
           ( ProposedPPUpdates $
               Map.singleton
                 (SLE.mkKeyHash 1)
-                (emptyPParamsUpdate {_maxBHSize = SJust 4000})
+                (emptyPParamsUpdate & ppuMaxBHSizeL .~ SJust 4000)
           )
           (EpochNo 0)
     ) -- txUpdates
@@ -186,4 +183,4 @@ exampleBabbageNewEpochState =
   SLE.exampleNewEpochState
     (MarySLE.exampleMultiAssetValue 1)
     emptyPParams
-    (emptyPParams {_coinsPerUTxOByte = Coin 1})
+    (emptyPParams & ppCoinsPerUTxOByteL .~ CoinPerByte (Coin 1))

@@ -13,10 +13,10 @@
 
 module Cardano.Ledger.State.Schema where
 
-import Cardano.Ledger.Alonzo.PParams as Alonzo (AlonzoPParams)
 import Cardano.Ledger.Alonzo.TxBody as Alonzo (AlonzoTxOut)
 import Cardano.Ledger.BaseTypes (TxIx (..))
 import Cardano.Ledger.Coin
+import Cardano.Ledger.Core (PParams)
 import qualified Cardano.Ledger.Credential as Credential
 import qualified Cardano.Ledger.Keys as Keys
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
@@ -41,8 +41,8 @@ share
 EpochState
   treasury Coin
   reserves Coin
-  prevPp (AlonzoPParams CurrentEra)
-  pp (AlonzoPParams CurrentEra)
+  prevPp (PParams CurrentEra)
+  pp (PParams CurrentEra)
   nonMyopic (Shelley.NonMyopic C)
   snapShotsFee Coin
 
