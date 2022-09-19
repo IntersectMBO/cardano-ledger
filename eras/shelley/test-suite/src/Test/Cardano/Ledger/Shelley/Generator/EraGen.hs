@@ -68,7 +68,6 @@ import Data.Sequence (Seq)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import GHC.Natural (Natural)
-import GHC.Records (HasField (..))
 import Lens.Micro
 import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core

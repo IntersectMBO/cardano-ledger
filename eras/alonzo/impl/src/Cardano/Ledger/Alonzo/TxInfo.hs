@@ -142,7 +142,6 @@ import Data.Time.Clock (nominalDiffTimeToSeconds)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Data.Typeable (Proxy (..), Typeable)
 import GHC.Generics (Generic)
-import GHC.Records (HasField (..))
 import Lens.Micro
 import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
@@ -267,7 +266,7 @@ transTxOutAddr txOut = do
     Nothing -> transAddr (txOut ^. addrTxOutL)
 
 slotToPOSIXTime ::
-  HasField "_protocolVersion" (PParams era) ProtVer =>
+  EraPParams era =>
   PParams era ->
   EpochInfo (Either Text) ->
   SystemStart ->
@@ -278,7 +277,7 @@ slotToPOSIXTime pp ei sysS s = do
     <$> epochInfoSlotToUTCTime ei sysS s
   where
     transTime =
-      if HardForks.translateTimeForPlutusScripts pp
+      if HardForks.translateTimeForPlutusScripts (pp ^. ppProtocolVersionL)
         then
           truncate
             -- Convert to milliseconds
@@ -287,7 +286,7 @@ slotToPOSIXTime pp ei sysS s = do
 
 -- | translate a validity interval to POSIX time
 transVITime ::
-  HasField "_protocolVersion" (PParams era) ProtVer =>
+  EraPParams era =>
   PParams era ->
   EpochInfo (Either Text) ->
   SystemStart ->
@@ -473,8 +472,7 @@ alonzoTxInfo ::
   ( EraTx era,
     AlonzoEraTxBody era,
     Value era ~ MaryValue (EraCrypto era),
-    TxWits era ~ AlonzoTxWits era,
-    HasField "_protocolVersion" (PParams era) ProtVer
+    TxWits era ~ AlonzoTxWits era
   ) =>
   PParams era ->
   Language ->

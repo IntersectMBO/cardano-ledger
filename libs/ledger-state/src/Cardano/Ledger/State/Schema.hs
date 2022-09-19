@@ -13,7 +13,6 @@
 
 module Cardano.Ledger.State.Schema where
 
-import Cardano.Ledger.Alonzo.PParams as Alonzo (AlonzoPParams)
 import Cardano.Ledger.Alonzo.TxBody as Alonzo (AlonzoTxOut)
 import Cardano.Ledger.BaseTypes (TxIx (..))
 import Cardano.Ledger.Coin
@@ -24,6 +23,7 @@ import qualified Cardano.Ledger.Shelley.PoolRank as Shelley
 import qualified Cardano.Ledger.Shelley.TxBody as Shelley
 import Cardano.Ledger.State.Orphans (Enc, SnapShotType (..))
 import Cardano.Ledger.State.UTxO
+import Cardano.Ledger.PParams
 import qualified Cardano.Ledger.TxIn as TxIn
 import qualified Data.Map.Strict as Map
 import Database.Persist.Sqlite
@@ -41,8 +41,8 @@ share
 EpochState
   treasury Coin
   reserves Coin
-  prevPp (AlonzoPParams CurrentEra)
-  pp (AlonzoPParams CurrentEra)
+  prevPp (PParams CurrentEra)
+  pp (PParams CurrentEra)
   nonMyopic (Shelley.NonMyopic C)
   snapShotsFee Coin
 

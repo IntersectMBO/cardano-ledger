@@ -59,10 +59,11 @@ import Data.Sharing
 import Data.Typeable
 import Data.VMap as VMap
 import GHC.Generics (Generic)
-import GHC.Records (HasField, getField)
-import Lens.Micro (_1, _2)
+import Lens.Micro (_1, _2, (^.))
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
+import Cardano.Ledger.Core (Era (..))
+import Cardano.Ledger.PParams
 
 -- | Type of stake as map from hash key to coins associated.
 newtype Stake c = Stake
@@ -107,18 +108,17 @@ sumStakePerPool delegs (Stake stake) = VMap.foldlWithKey accum Map.empty stake
 
 -- | Calculate total possible refunds.
 obligation ::
-  forall c pp t.
-  ( HasField "_keyDeposit" pp Coin,
-    HasField "_poolDeposit" pp Coin,
-    Foldable (t (Credential 'Staking c))
+  forall era t.
+  ( Foldable (t (Credential 'Staking (EraCrypto era)))
+  , EraPParams era
   ) =>
-  pp ->
-  t (Credential 'Staking c) Coin ->
-  Map (KeyHash 'StakePool c) (PoolParams c) ->
+  PParams era ->
+  t (Credential 'Staking (EraCrypto era)) Coin ->
+  Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)) ->
   Coin
 obligation pp rewards stakePools =
-  (length rewards <×> getField @"_keyDeposit" pp)
-    <+> (length stakePools <×> getField @"_poolDeposit" pp)
+  (length rewards <×> pp ^. ppKeyDepositL)
+    <+> (length stakePools <×> pp ^. ppPoolDepositL)
 
 -- | Calculate maximal pool reward
 maxPool' ::
@@ -140,16 +140,16 @@ maxPool' a0 nOpt r sigma pR = rationalToCoinViaFloor $ factor1 * factor2
 
 -- | Version of maxPool' that extracts a0 and nOpt from a PParam with the right HasField instances
 maxPool ::
-  (HasField "_a0" pp NonNegativeInterval, HasField "_nOpt" pp Natural) =>
-  pp ->
+  EraPParams era =>
+  PParams era ->
   Coin ->
   Rational ->
   Rational ->
   Coin
 maxPool pc r sigma pR = maxPool' a0 nOpt r sigma pR
   where
-    a0 = getField @"_a0" pc
-    nOpt = getField @"_nOpt" pc
+    a0 = pc ^. ppA0L
+    nOpt = pc ^. ppNOptL
 
 -- | Snapshot of the stake distribution.
 data SnapShot c = SnapShot

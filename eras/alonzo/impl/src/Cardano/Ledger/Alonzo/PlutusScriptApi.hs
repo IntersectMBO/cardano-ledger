@@ -27,6 +27,7 @@ where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Alonzo.Data (getPlutusData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
+import Cardano.Ledger.Alonzo.PParams.Class
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), CostModel, CostModels (..), ExUnits (..))
 import Cardano.Ledger.Alonzo.Tx (Data, ScriptPurpose (..), indexedRdmrs, txdats')
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..))
@@ -57,7 +58,6 @@ import qualified Data.Set as Set
 import Data.Text (Text)
 import Debug.Trace (traceEvent)
 import GHC.Generics
-import GHC.Records (HasField (..))
 import Lens.Micro
 import NoThunks.Class (NoThunks)
 
@@ -143,7 +143,7 @@ collectTwoPhaseScriptInputs ::
     ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     ExtendedUTxO era,
     Script era ~ AlonzoScript era,
-    HasField "_costmdls" (PParams era) CostModels
+    AlonzoEraPParams era
   ) =>
   EpochInfo (Either Text) ->
   SystemStart ->
@@ -153,7 +153,7 @@ collectTwoPhaseScriptInputs ::
   Either [CollectError (EraCrypto era)] [(ShortByteString, Language, [Data era], ExUnits, CostModel)]
 collectTwoPhaseScriptInputs ei sysS pp tx utxo =
   let usedLanguages = Set.fromList [lang | (_, lang, _) <- neededAndConfirmedToBePlutus]
-      costModels = unCostModels $ getField @"_costmdls" pp
+      costModels = unCostModels $ pp ^. ppCostmdlsL
       missingCMs = Set.filter (`Map.notMember` costModels) usedLanguages
    in case Set.lookupMin missingCMs of
         Just l -> Left [NoCostModel l]

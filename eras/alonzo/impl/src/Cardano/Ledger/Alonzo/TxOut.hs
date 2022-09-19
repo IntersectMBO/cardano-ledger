@@ -49,7 +49,7 @@ import Cardano.Crypto.Hash
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Data (Datum (..), dataHashSize)
 import Cardano.Ledger.Alonzo.Era
-import Cardano.Ledger.Alonzo.PParams (_coinsPerUTxOWord)
+import Cardano.Ledger.Alonzo.PParams.Class
 import Cardano.Ledger.Alonzo.Scripts ()
 import Cardano.Ledger.BaseTypes
   ( Network (..),
@@ -183,12 +183,12 @@ viewCompactTxOut txOut = case txOut of
   TxOutCompactDH' addr val dh -> (addr, val, SJust dh)
   TxOut_AddrHash28_AdaOnly stakeRef addr28Extra adaVal
     | Just addr <- decodeAddress28 stakeRef addr28Extra ->
-        (compactAddr addr, injectCompact adaVal, SNothing)
+      (compactAddr addr, injectCompact adaVal, SNothing)
     | otherwise -> error addressErrorMsg
   TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal dataHash32
     | Just addr <- decodeAddress28 stakeRef addr28Extra,
       Just dh <- decodeDataHash32 dataHash32 ->
-        (compactAddr addr, injectCompact adaVal, SJust dh)
+      (compactAddr addr, injectCompact adaVal, SJust dh)
     | otherwise -> error addressErrorMsg
 
 viewTxOut ::
@@ -205,11 +205,11 @@ viewTxOut (TxOutCompactDH' bs c dh) = (addr, val, SJust dh)
     val = fromCompact c
 viewTxOut (TxOut_AddrHash28_AdaOnly stakeRef addr28Extra adaVal)
   | Just addr <- decodeAddress28 stakeRef addr28Extra =
-      (addr, inject (fromCompact adaVal), SNothing)
+    (addr, inject (fromCompact adaVal), SNothing)
 viewTxOut (TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal dataHash32)
   | Just addr <- decodeAddress28 stakeRef addr28Extra,
     Just dh <- decodeDataHash32 dataHash32 =
-      (addr, inject (fromCompact adaVal), SJust dh)
+    (addr, inject (fromCompact adaVal), SJust dh)
 viewTxOut TxOut_AddrHash28_AdaOnly {} = error addressErrorMsg
 viewTxOut TxOut_AddrHash28_AdaOnly_DataHash32 {} = error addressErrorMsg
 
@@ -283,13 +283,13 @@ pattern AlonzoTxOut addr vl dh <-
       | StakeRefBase stakeCred <- stakeRef,
         Just adaCompact <- getAdaOnly (Proxy @era) vl,
         Just (Refl, addr28Extra) <- encodeAddress28 network paymentCred =
-          TxOut_AddrHash28_AdaOnly stakeCred addr28Extra adaCompact
+        TxOut_AddrHash28_AdaOnly stakeCred addr28Extra adaCompact
     AlonzoTxOut (Addr network paymentCred stakeRef) vl (SJust dh)
       | StakeRefBase stakeCred <- stakeRef,
         Just adaCompact <- getAdaOnly (Proxy @era) vl,
         Just (Refl, addr28Extra) <- encodeAddress28 network paymentCred,
         Just (Refl, dataHash32) <- encodeDataHash32 dh =
-          TxOut_AddrHash28_AdaOnly_DataHash32 stakeCred addr28Extra adaCompact dataHash32
+        TxOut_AddrHash28_AdaOnly_DataHash32 stakeCred addr28Extra adaCompact dataHash32
     AlonzoTxOut addr vl mdh =
       let v = fromMaybe (error "Illegal value in txout") $ toCompact vl
           a = compactAddr addr
@@ -299,8 +299,8 @@ pattern AlonzoTxOut addr vl dh <-
 
 {-# COMPLETE AlonzoTxOut #-}
 
-instance CC.Crypto c => EraTxOut (AlonzoEra c) where
-  {-# SPECIALIZE instance EraTxOut (AlonzoEra CC.StandardCrypto) #-}
+instance (CC.Crypto c, AlonzoEraPParams (AlonzoEra c)) => EraTxOut (AlonzoEra c) where
+  {-# SPECIALIZE instance AlonzoEraPParams (AlonzoEra CC.StandardCrypto) => EraTxOut (AlonzoEra CC.StandardCrypto) #-}
 
   type TxOut (AlonzoEra c) = AlonzoTxOut (AlonzoEra c)
 
@@ -334,7 +334,7 @@ instance CC.Crypto c => EraTxOut (AlonzoEra c) where
       )
   {-# INLINE valueEitherTxOutL #-}
 
-  getMinCoinTxOut pp txOut = Coin $ utxoEntrySize txOut * unCoin (_coinsPerUTxOWord pp)
+  getMinCoinTxOut pp txOut = Coin $ utxoEntrySize txOut * unCoin (pp ^. ppCoinsPerUTxOWordL)
 
 instance
   (Era era, Val (Value era), DecodeNonNegative (Value era), ToCBOR (CompactForm (Value era))) =>
@@ -471,8 +471,8 @@ class EraTxOut era => AlonzoEraTxOut era where
 
   datumTxOutF :: SimpleGetter (Core.TxOut era) (Datum era)
 
-instance CC.Crypto c => AlonzoEraTxOut (AlonzoEra c) where
-  {-# SPECIALIZE instance AlonzoEraTxOut (AlonzoEra CC.StandardCrypto) #-}
+instance AlonzoEraPParams (AlonzoEra c) => AlonzoEraTxOut (AlonzoEra c) where
+  {-# SPECIALIZE instance AlonzoEraPParams (AlonzoEra CC.StandardCrypto) => AlonzoEraTxOut (AlonzoEra CC.StandardCrypto) #-}
 
   dataHashTxOutL =
     lens getAlonzoTxOutDataHash (\(AlonzoTxOut addr cv _) dh -> AlonzoTxOut addr cv dh)

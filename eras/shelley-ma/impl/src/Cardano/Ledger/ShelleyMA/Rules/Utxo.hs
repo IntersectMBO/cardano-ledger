@@ -41,7 +41,7 @@ import Cardano.Ledger.Rules.ValidationMode
   )
 import Cardano.Ledger.Shelley.LedgerState (PPUPState)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
-import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..), Update)
+import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules (PpupEnv (..), ShelleyPPUP, ShelleyPpupPredFailure)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), ShelleyTxOut, TxIn)
@@ -69,10 +69,8 @@ import Data.Set (Set)
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import GHC.Records
 import Lens.Micro
 import NoThunks.Class (NoThunks)
-import Numeric.Natural (Natural)
 import Validation
 
 -- ==========================================================
@@ -140,8 +138,7 @@ newtype ShelleyMAUtxoEvent era
 consumed ::
   forall era.
   ( ShelleyMAEraTxBody era,
-    Value era ~ MaryValue (EraCrypto era),
-    HasField "_keyDeposit" (PParams era) Coin
+    Value era ~ MaryValue (EraCrypto era)
   ) =>
   PParams era ->
   UTxO era ->
@@ -161,10 +158,7 @@ utxoTransition ::
     Embed (EraRule "PPUP" era) (ShelleyMAUTXO era),
     Environment (EraRule "PPUP" era) ~ PpupEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,
-    Signal (EraRule "PPUP" era) ~ Maybe (Update era),
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_maxTxSize" (PParams era) Natural
+    Signal (EraRule "PPUP" era) ~ Maybe (Update era)
   ) =>
   TransitionRule (ShelleyMAUTXO era)
 utxoTransition = do
@@ -282,7 +276,6 @@ instance
     ShelleyMAEraTxBody era,
     Eq (PParamsUpdate era),
     Show (PParamsUpdate era),
-    PParams era ~ ShelleyPParams era,
     TxBody era ~ MATxBody era,
     TxOut era ~ ShelleyTxOut era,
     Tx era ~ ShelleyTx era,

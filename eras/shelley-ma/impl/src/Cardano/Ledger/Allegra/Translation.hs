@@ -18,12 +18,26 @@ import Cardano.Binary
   )
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era hiding (EraCrypto)
+import Cardano.Ledger.PParams
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API
+  ( EpochState (..),
+    LedgerState (..),
+    NewEpochState (..),
+    PPUPState (..),
+    ProposedPPUpdates (..),
+    ShelleyGenesis (..),
+    ShelleyTx (..),
+    ShelleyTxOut (..),
+    UTxO (..),
+    UTxOState (..),
+    Update,
+  )
 import qualified Cardano.Ledger.Shelley.LedgerState as LS
   ( returnRedeemAddrsToReserves,
   )
-import Cardano.Ledger.Shelley.TxWits (decodeWits)
+import Cardano.Ledger.Shelley.PParams (Update (..))
+import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..), decodeWits)
 import Cardano.Ledger.ShelleyMA ()
 import Cardano.Ledger.ShelleyMA.Era (AllegraEra)
 import Control.Monad.Except (throwError)
@@ -109,28 +123,9 @@ instance Crypto c => TranslateEra (AllegraEra c) ShelleyGenesis where
 -- Auxiliary instances and functions
 --------------------------------------------------------------------------------
 
-instance Crypto c => TranslateEra (AllegraEra c) (ShelleyPParamsHKD f) where
-  translateEra _ pp =
-    return $
-      ShelleyPParams
-        { _minfeeA = _minfeeA pp,
-          _minfeeB = _minfeeB pp,
-          _maxBBSize = _maxBBSize pp,
-          _maxTxSize = _maxTxSize pp,
-          _maxBHSize = _maxBHSize pp,
-          _keyDeposit = _keyDeposit pp,
-          _poolDeposit = _poolDeposit pp,
-          _eMax = _eMax pp,
-          _nOpt = _nOpt pp,
-          _a0 = _a0 pp,
-          _rho = _rho pp,
-          _tau = _tau pp,
-          _d = _d pp,
-          _extraEntropy = _extraEntropy pp,
-          _protocolVersion = _protocolVersion pp,
-          _minUTxOValue = _minUTxOValue pp,
-          _minPoolCost = _minPoolCost pp
-        }
+instance Crypto c => TranslateEra (AllegraEra c) PParams where
+
+instance Crypto c => TranslateEra (AllegraEra c) PParamsUpdate where
 
 instance Crypto c => TranslateEra (AllegraEra c) ProposedPPUpdates where
   translateEra ctxt (ProposedPPUpdates ppup) =

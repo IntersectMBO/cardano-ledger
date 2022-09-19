@@ -42,6 +42,7 @@ library
     Cardano.Ledger.Alonzo.Language
     Cardano.Ledger.Alonzo.PlutusScriptApi
     Cardano.Ledger.Alonzo.PParams
+    Cardano.Ledger.Alonzo.PParams.Class
     Cardano.Ledger.Alonzo.Rules
     Cardano.Ledger.Alonzo.Scripts
     Cardano.Ledger.Alonzo.Tools

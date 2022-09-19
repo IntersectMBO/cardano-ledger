@@ -54,8 +54,8 @@ import Data.Set (Set)
 import Data.Typeable (Typeable)
 import qualified Data.UMap as UM
 import GHC.Generics (Generic)
-import GHC.Records
 import NoThunks.Class (NoThunks (..))
+import Lens.Micro ((^.))
 
 data ShelleyPoolreapState era = PoolreapState
   { prUTxOSt :: UTxOState era,
@@ -84,8 +84,7 @@ instance
   forall era.
   ( Typeable era,
     Default (ShelleyPoolreapState era),
-    HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_keyDeposit" (PParams era) Coin
+    EraPParams era
   ) =>
   STS (ShelleyPOOLREAP era)
   where
@@ -113,7 +112,7 @@ instance
 
 poolReapTransition ::
   forall era.
-  HasField "_poolDeposit" (PParams era) Coin =>
+  EraPParams era =>
   TransitionRule (ShelleyPOOLREAP era)
 poolReapTransition = do
   TRC (pp, PoolreapState us a ds ps, e) <- judgmentContext
@@ -121,7 +120,7 @@ poolReapTransition = do
   let retired :: Set (KeyHash 'StakePool (EraCrypto era))
       retired = eval (dom (_retiring ps ▷ setSingleton e))
       pr :: Map.Map (KeyHash 'StakePool (EraCrypto era)) Coin
-      pr = Map.fromSet (const (getField @"_poolDeposit" pp)) retired
+      pr = Map.fromSet (const (pp ^. ppPoolDepositL)) retired
       rewardAcnts :: Map.Map (KeyHash 'StakePool (EraCrypto era)) (RewardAcnt (EraCrypto era))
       rewardAcnts = Map.map _poolRAcnt $ eval (retired ◁ _pParams ps)
       rewardAcnts_ :: Map.Map (KeyHash 'StakePool (EraCrypto era)) (RewardAcnt (EraCrypto era), Coin)

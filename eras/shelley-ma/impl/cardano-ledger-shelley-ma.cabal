@@ -68,6 +68,7 @@ library
     cardano-slotting,
     cborg,
     containers,
+    data-default,
     deepseq,
     groups,
     mtl,

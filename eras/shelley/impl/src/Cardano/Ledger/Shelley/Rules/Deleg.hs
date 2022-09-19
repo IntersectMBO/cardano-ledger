@@ -22,7 +22,7 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
-import Cardano.Ledger.BaseTypes (Globals (..), ProtVer, ShelleyBase, epochInfoPure, invalidKey)
+import Cardano.Ledger.BaseTypes (Globals (..), ShelleyBase, epochInfoPure, invalidKey)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), addDeltaCoin, toDeltaCoin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
@@ -81,7 +81,7 @@ import Data.UMap (View (..))
 import qualified Data.UMap as UM
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import GHC.Records (HasField)
+import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
 data DelegEnv era = DelegEnv
@@ -139,7 +139,7 @@ newtype ShelleyDelegEvent era = NewEpoch EpochNo
 
 instance
   ( Typeable era,
-    HasField "_protocolVersion" (PParams era) ProtVer
+    EraPParams era
   ) =>
   STS (ShelleyDELEG era)
   where
@@ -262,12 +262,11 @@ instance
       k -> invalidKey k
 
 delegationTransition ::
-  ( Typeable era,
-    HasField "_protocolVersion" (PParams era) ProtVer
-  ) =>
+  EraPParams era =>
   TransitionRule (ShelleyDELEG era)
 delegationTransition = do
   TRC (DelegEnv slot ptr acnt pp, ds, c) <- judgmentContext
+  let pv = pp ^. ppProtocolVersionL
   case c of
     DCertDeleg (RegKey hk) -> do
       eval (hk ∉ dom (rewards ds)) ?! StakeKeyAlreadyRegisteredDELEG hk
@@ -322,7 +321,7 @@ delegationTransition = do
               eval (_fGenDelegs ds ⨃ singleton (FutureGenDeleg s' gkh) (GenDelegPair vkh vrf))
           }
     DCertMir (MIRCert targetPot (StakeAddressesMIR credCoinMap)) -> do
-      if HardForks.allowMIRTransfer pp
+      if HardForks.allowMIRTransfer pv
         then do
           sp <- liftSTS $ asks stabilityWindow
           ei <- liftSTS $ asks epochInfoPure
@@ -383,7 +382,7 @@ delegationTransition = do
             ReservesMIR -> pure $ ds {_irwd = (_irwd ds) {iRReserves = combinedMap}}
             TreasuryMIR -> pure $ ds {_irwd = (_irwd ds) {iRTreasury = combinedMap}}
     DCertMir (MIRCert targetPot (SendToOppositePotMIR coin)) ->
-      if HardForks.allowMIRTransfer pp
+      if HardForks.allowMIRTransfer pv
         then do
           sp <- liftSTS $ asks stabilityWindow
           ei <- liftSTS $ asks epochInfoPure

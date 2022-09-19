@@ -88,15 +88,14 @@ import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Alonzo.Data (Data, hashData)
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.PParams
-  ( AlonzoPParamsHKD (..),
-    LangDepView (..),
+  ( LangDepView (..),
     encodeLangViews,
     getLanguageView,
   )
+import Cardano.Ledger.Alonzo.PParams.Class (ppPricesL, AlonzoEraPParams)
 import Cardano.Ledger.Alonzo.Scripts
   ( CostModel,
     ExUnits (..),
-    Prices,
     Tag (..),
     txscriptfee,
   )
@@ -148,10 +147,8 @@ import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
-import GHC.Records (HasField (..))
 import Lens.Micro hiding (set)
 import NoThunks.Class (NoThunks)
-import Numeric.Natural (Natural)
 
 -- ===================================================
 
@@ -333,9 +330,7 @@ toCBORForSizeComputation AlonzoTx {body, wits, auxiliaryData} =
 alonzoMinFeeTx ::
   ( EraTx era,
     AlonzoEraTxWits era,
-    HasField "_minfeeA" (PParams era) Natural,
-    HasField "_minfeeB" (PParams era) Natural,
-    HasField "_prices" (PParams era) Prices
+    AlonzoEraPParams era
   ) =>
   PParams era ->
   Core.Tx era ->
@@ -343,19 +338,15 @@ alonzoMinFeeTx ::
 alonzoMinFeeTx pp tx =
   (tx ^. sizeTxF <×> a pp)
     <+> b pp
-    <+> txscriptfee (getField @"_prices" pp) allExunits
+    <+> txscriptfee (pp ^. ppPricesL) allExunits
   where
-    a protparam = Coin (fromIntegral (getField @"_minfeeA" protparam))
-    b protparam = Coin (fromIntegral (getField @"_minfeeB" protparam))
+    a protparam = Coin (fromIntegral (protparam ^. ppMinFeeAL))
+    b protparam = Coin (fromIntegral (protparam ^. ppMinFeeBL))
     allExunits = totExUnits tx
 
 minfee ::
   ( EraTx era,
-    AlonzoEraTxWits era,
-    HasField "_minfeeA" (PParams era) Natural,
-    HasField "_minfeeB" (PParams era) Natural,
-    HasField "_prices" (PParams era) Prices
-  ) =>
+    AlonzoEraTxWits era, AlonzoEraPParams era) =>
   PParams era ->
   Core.Tx era ->
   Coin

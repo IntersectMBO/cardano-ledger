@@ -17,7 +17,7 @@ module Cardano.Ledger.Shelley.Rules.Newpp
   )
 where
 
-import Cardano.Ledger.BaseTypes (ProtVer, ShelleyBase, StrictMaybe)
+import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.EpochBoundary (obligation)
@@ -35,7 +35,7 @@ import Cardano.Ledger.Shelley.LedgerState
   )
 import Cardano.Ledger.Shelley.PParams
   ( ProposedPPUpdates (..),
-    emptyPPPUpdates,
+    emptyPPPUpdates
   )
 import Cardano.Ledger.Shelley.TxBody (MIRPot (..))
 import Control.State.Transition
@@ -49,9 +49,8 @@ import Data.Default.Class (Default, def)
 import Data.Typeable (Typeable)
 import Data.UMap (rewView)
 import GHC.Generics (Generic)
-import GHC.Natural (Natural)
-import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..))
+import Lens.Micro ((^.))
 
 data ShelleyNewppState era
   = NewppState (PParams era) (PPUPState era)
@@ -73,13 +72,7 @@ instance NoThunks (ShelleyNewppPredFailure era)
 
 instance
   ( Default (PParams era),
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_protocolVersion" (PParams era) ProtVer,
-    HasField "_maxTxSize" (PParams era) Natural,
-    HasField "_maxBHSize" (PParams era) Natural,
-    HasField "_maxBBSize" (PParams era) Natural,
-    HasField "_protocolVersion" (PParamsUpdate era) (StrictMaybe ProtVer),
+    EraPParams era,
     Typeable era
   ) =>
   STS (ShelleyNEWPP era)
@@ -96,14 +89,7 @@ instance Default (PParams era) => Default (ShelleyNewppState era) where
 
 newPpTransition ::
   forall era.
-  ( HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_protocolVersion" (PParams era) ProtVer,
-    HasField "_maxTxSize" (PParams era) Natural,
-    HasField "_maxBHSize" (PParams era) Natural,
-    HasField "_maxBBSize" (PParams era) Natural,
-    HasField "_protocolVersion" (PParamsUpdate era) (StrictMaybe ProtVer)
-  ) =>
+  EraPParams era =>
   TransitionRule (ShelleyNEWPP era)
 newPpTransition = do
   TRC
@@ -128,8 +114,8 @@ newPpTransition = do
         -- Note that instantaneous rewards from the treasury are irrelevant
         -- here, since changes in the protocol parameters do not change how much
         -- is needed from the treasury
-        && (getField @"_maxTxSize" ppNew' + getField @"_maxBHSize" ppNew')
-          < getField @"_maxBBSize" ppNew'
+        && (ppNew' ^. ppMaxTxSizeL + ppNew' ^. ppMaxBHSizeL)
+          < ppNew' ^. ppMaxBBSizeL
         then pure $ NewppState ppNew' (updatePpup ppupSt ppNew')
         else pure $ NewppState pp (updatePpup ppupSt pp)
     Nothing -> pure $ NewppState pp (updatePpup ppupSt pp)
@@ -138,18 +124,16 @@ newPpTransition = do
 -- and making the future proposals become the new proposals,
 -- provided the new proposals can follow (otherwise reset them).
 updatePpup ::
-  ( HasField "_protocolVersion" (PParams era) ProtVer,
-    HasField "_protocolVersion" (PParamsUpdate era) (StrictMaybe ProtVer)
-  ) =>
+  forall era.
+  EraPParams era =>
   PPUPState era ->
   PParams era ->
   PPUPState era
 updatePpup ppupSt pp = PPUPState ps emptyPPPUpdates
   where
     ProposedPPUpdates newProposals = futureProposals ppupSt
-    goodPV =
-      pvCanFollow (getField @"_protocolVersion" pp)
-        . getField @"_protocolVersion"
+    goodPV ppu =
+      pvCanFollow (pp ^. ppProtocolVersionL) $ ppu ^. ppuProtocolVersionL
     ps =
       if all goodPV newProposals
         then ProposedPPUpdates newProposals

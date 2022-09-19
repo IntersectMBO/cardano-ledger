@@ -40,7 +40,6 @@ import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Text (Text)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
-import GHC.Records (HasField)
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as Plutus
 import Test.Cardano.Ledger.Alonzo.PlutusScripts (testingCostModelV1)
@@ -113,8 +112,6 @@ testExUnitCalculation ::
     Signal (EraRule "UTXOS" era) ~ Tx era,
     AlonzoEraTx era,
     ExtendedUTxO era,
-    HasField "_maxTxExUnits" (PParams era) ExUnits,
-    HasField "_protocolVersion" (PParams era) ProtVer,
     Show (PredicateFailure (EraRule "UTXOS" era)),
     STS (EraRule "UTXOS" era),
     Script era ~ AlonzoScript era,

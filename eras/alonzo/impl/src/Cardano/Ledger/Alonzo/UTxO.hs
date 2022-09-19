@@ -15,7 +15,6 @@ where
 
 import Cardano.Ledger.Alonzo.Data (Datum (..))
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
-import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
 import Cardano.Ledger.Alonzo.Tx (ScriptPurpose (..), isTwoPhaseScriptAddressFromMap)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..), ShelleyMAEraTxBody (..))
 import Cardano.Ledger.Core

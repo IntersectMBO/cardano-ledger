@@ -140,7 +140,7 @@ import Cardano.Ledger.CompactAddress
   )
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core hiding (TxBody, TxOut)
-import qualified Cardano.Ledger.Core as Core (TxBody, TxOut)
+import qualified Cardano.Ledger.Core as Core (TxBody)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary.Value (MaryValue (MaryValue), MultiAsset, policies, policyID)
@@ -174,6 +174,8 @@ import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
 import Prelude hiding (lookup)
+import Cardano.Ledger.Babbage.PParams ()
+import Cardano.Ledger.Babbage.PParams.Class (BabbageEraPParams)
 
 -- ======================================
 
@@ -381,7 +383,7 @@ sizedCollateralReturnBabbageTxBodyL =
 {-# INLINEABLE sizedCollateralReturnBabbageTxBodyL #-}
 
 allSizedOutputsBabbageTxBodyF ::
-  (BabbageEraTxBody era, Core.TxOut era ~ BabbageTxOut era) =>
+  BabbageEraTxBody era =>
   SimpleGetter (Core.TxBody era) (StrictSeq (Sized (BabbageTxOut era)))
 allSizedOutputsBabbageTxBodyF =
   to $ \txBody ->
@@ -391,7 +393,7 @@ allSizedOutputsBabbageTxBodyF =
           SJust collTxOut -> txOuts |> collTxOut
 {-# INLINEABLE allSizedOutputsBabbageTxBodyF #-}
 
-instance CC.Crypto c => EraTxBody (BabbageEra c) where
+instance (CC.Crypto c, BabbageEraPParams (BabbageEra c)) => EraTxBody (BabbageEra c) where
   {-# SPECIALIZE instance EraTxBody (BabbageEra CC.StandardCrypto) #-}
 
   type TxBody (BabbageEra c) = BabbageTxBody (BabbageEra c)

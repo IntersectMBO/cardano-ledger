@@ -82,6 +82,7 @@ import Cardano.Binary
 import Cardano.Ledger.Alonzo.Core (AlonzoEraTxBody (..), ScriptIntegrityHash)
 import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash (..))
 import Cardano.Ledger.Alonzo.Era
+import Cardano.Ledger.Alonzo.PParams.Class (AlonzoEraPParams)
 import Cardano.Ledger.Alonzo.Scripts ()
 import Cardano.Ledger.Alonzo.TxOut
 import Cardano.Ledger.BaseTypes
@@ -106,7 +107,7 @@ import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), Wdrl (Wdrl), unWdrl
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Ledger.ShelleyMA.TxBody (ShelleyMAEraTxBody (..))
 import Cardano.Ledger.TxIn (TxIn (..))
-import Cardano.Ledger.Val (Val (..), decodeMint, encodeMint)
+import Cardano.Ledger.Val (DecodeNonNegative, Val (..), decodeMint, encodeMint)
 import Control.DeepSeq (NFData (..))
 import Data.Coders hiding (to)
 import Data.Sequence.Strict (StrictSeq)
@@ -144,7 +145,13 @@ data TxBodyRaw era = TxBodyRaw
   deriving (Generic, Typeable)
 
 deriving instance
-  (Era era, Eq (Core.TxOut era), Eq (PParamsUpdate era), Eq (Value era), Compactible (Value era)) =>
+  ( Era era,
+    Eq (Core.TxOut era),
+    Eq (PParamsUpdate era),
+    Eq (Value era),
+    Compactible (Value era),
+    Eq (PParamsHKD StrictMaybe era)
+  ) =>
   Eq (TxBodyRaw era)
 
 instance (Era era, NoThunks (Core.TxOut era), NoThunks (PParamsUpdate era)) => NoThunks (TxBodyRaw era)
@@ -174,8 +181,15 @@ lensTxBodyRaw getter setter =
     (\(TxBodyConstr (Memo txBodyRaw _)) val -> mkAlonzoTxBody $ setter txBodyRaw val)
 {-# INLINEABLE lensTxBodyRaw #-}
 
-instance CC.Crypto c => EraTxBody (AlonzoEra c) where
-  {-# SPECIALIZE instance EraTxBody (AlonzoEra CC.StandardCrypto) #-}
+instance
+  ( AlonzoEraPParams (AlonzoEra c),
+    EraPParams (AlonzoEra c),
+    Val (MaryValue c),
+    DecodeNonNegative (MaryValue c)
+  ) =>
+  EraTxBody (AlonzoEra c)
+  where
+  {-# SPECIALIZE instance AlonzoEraPParams (AlonzoEra CC.StandardCrypto) => EraTxBody (AlonzoEra CC.StandardCrypto) #-}
 
   type TxBody (AlonzoEra c) = AlonzoTxBody (AlonzoEra c)
 
@@ -201,8 +215,8 @@ instance CC.Crypto c => EraTxBody (AlonzoEra c) where
     to $ \txBody -> (txBody ^. inputsTxBodyL) `Set.union` (txBody ^. collateralInputsTxBodyL)
   {-# INLINEABLE allInputsTxBodyF #-}
 
-instance CC.Crypto c => ShelleyEraTxBody (AlonzoEra c) where
-  {-# SPECIALIZE instance ShelleyEraTxBody (AlonzoEra CC.StandardCrypto) #-}
+instance (CC.Crypto c, AlonzoEraPParams (AlonzoEra c)) => ShelleyEraTxBody (AlonzoEra c) where
+  {-# SPECIALIZE instance AlonzoEraPParams (AlonzoEra CC.StandardCrypto) => ShelleyEraTxBody (AlonzoEra CC.StandardCrypto) #-}
 
   wdrlsTxBodyL =
     lensTxBodyRaw _wdrls (\txBodyRaw wdrls_ -> txBodyRaw {_wdrls = wdrls_})
@@ -218,8 +232,8 @@ instance CC.Crypto c => ShelleyEraTxBody (AlonzoEra c) where
     lensTxBodyRaw _certs (\txBodyRaw certs_ -> txBodyRaw {_certs = certs_})
   {-# INLINEABLE certsTxBodyL #-}
 
-instance CC.Crypto c => ShelleyMAEraTxBody (AlonzoEra c) where
-  {-# SPECIALIZE instance ShelleyMAEraTxBody (AlonzoEra CC.StandardCrypto) #-}
+instance (CC.Crypto c, AlonzoEraPParams (AlonzoEra c)) => ShelleyMAEraTxBody (AlonzoEra c) where
+  {-# SPECIALIZE instance AlonzoEraPParams (AlonzoEra CC.StandardCrypto) => ShelleyMAEraTxBody (AlonzoEra CC.StandardCrypto) #-}
 
   vldtTxBodyL =
     lensTxBodyRaw _vldt (\txBodyRaw vldt_ -> txBodyRaw {_vldt = vldt_})
@@ -236,8 +250,8 @@ instance CC.Crypto c => ShelleyMAEraTxBody (AlonzoEra c) where
     to (\(TxBodyConstr (Memo txBodyRaw _)) -> Set.map policyID (policies (_mint txBodyRaw)))
   {-# INLINEABLE mintedTxBodyF #-}
 
-instance CC.Crypto c => AlonzoEraTxBody (AlonzoEra c) where
-  {-# SPECIALIZE instance AlonzoEraTxBody (AlonzoEra CC.StandardCrypto) #-}
+instance (CC.Crypto c, AlonzoEraPParams (AlonzoEra c)) => AlonzoEraTxBody (AlonzoEra c) where
+  {-# SPECIALIZE instance AlonzoEraPParams (AlonzoEra CC.StandardCrypto) => AlonzoEraTxBody (AlonzoEra CC.StandardCrypto) #-}
 
   collateralInputsTxBodyL =
     lensTxBodyRaw _collateral (\txBodyRaw collateral_ -> txBodyRaw {_collateral = collateral_})
@@ -556,7 +570,8 @@ txBodyRawEq ::
     Eq (Core.TxOut era),
     Compactible (Value era),
     Eq (Value era),
-    Eq (PParamsUpdate era)
+    Eq (PParamsUpdate era),
+    Eq (PParamsHKD StrictMaybe era)
   ) =>
   AlonzoTxBody era ->
   AlonzoTxBody era ->

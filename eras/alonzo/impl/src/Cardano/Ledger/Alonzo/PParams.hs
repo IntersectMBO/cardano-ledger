@@ -28,11 +28,6 @@ module Cardano.Ledger.Alonzo.PParams
     encodeLangViews,
     retractPP,
     extendPP,
-
-    -- * Deprecated
-    PParams',
-    PParams,
-    PParamsUpdate,
   )
 where
 
@@ -48,6 +43,7 @@ import Cardano.Binary
   )
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Language (Language (..))
+import Cardano.Ledger.Alonzo.PParams.Class
 import Cardano.Ledger.Alonzo.Scripts
   ( CostModel,
     CostModels (..),
@@ -60,15 +56,15 @@ import Cardano.Ledger.BaseTypes
     Nonce (NeutralNonce),
     StrictMaybe (..),
     UnitInterval,
-    fromSMaybe,
     isSNothing,
   )
 import qualified Cardano.Ledger.BaseTypes as BT (ProtVer (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core hiding (PParams, PParamsUpdate)
+import Cardano.Ledger.Core (Era, notSupportedInThisEraL)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.HKD (HKD)
+import Cardano.Ledger.PParams hiding (emptyPParams, emptyPParamsUpdate)
 import Cardano.Ledger.Serialization (FromCBORGroup (..), ToCBORGroup (..))
 import Cardano.Ledger.Shelley.Orphans ()
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (ShelleyPParams))
@@ -97,21 +93,9 @@ import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
-import GHC.Records (HasField (getField))
+import Lens.Micro (lens, (^.))
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
-
-type PParams era = AlonzoPParams era
-
-{-# DEPRECATED PParams "Use `AlonzoPParams` instead" #-}
-
-type PParams' f era = AlonzoPParamsHKD f era
-
-{-# DEPRECATED PParams' "Use `AlonzoPParamsHKD` instead" #-}
-
-type PParamsUpdate era = AlonzoPParamsUpdate era
-
-{-# DEPRECATED PParamsUpdate "Use `AlonzoPParamsUpdate` instead" #-}
 
 -- | Protocol parameters.
 -- Shelley parameters + additional ones
@@ -178,20 +162,48 @@ type AlonzoPParams era = AlonzoPParamsHKD Identity era
 type AlonzoPParamsUpdate era = AlonzoPParamsHKD StrictMaybe era
 
 instance CC.Crypto c => EraPParams (AlonzoEra c) where
-  type PParams (AlonzoEra c) = AlonzoPParams (AlonzoEra c)
-  type PParamsUpdate (AlonzoEra c) = AlonzoPParamsUpdate (AlonzoEra c)
+  type PParamsHKD f (AlonzoEra c) = AlonzoPParamsHKD f (AlonzoEra c)
 
-  applyPPUpdates = updatePParams
+  emptyPParams = def
+  emptyPParamsUpdate = def
 
-deriving instance Eq (PParams' Identity era)
+  hkdMinFeeAL = lens _minfeeA $ \pp x -> pp {_minfeeA = x}
+  hkdMinFeeBL = lens _minfeeB $ \pp x -> pp {_minfeeB = x}
+  hkdMaxBBSizeL = lens _maxBBSize $ \pp x -> pp {_maxBBSize = x}
+  hkdMaxTxSizeL = lens _maxTxSize $ \pp x -> pp {_maxTxSize = x}
+  hkdMaxBHSizeL = lens _maxBHSize $ \pp x -> pp {_maxBHSize = x}
+  hkdKeyDepositL = lens _keyDeposit $ \pp x -> pp {_keyDeposit = x}
+  hkdPoolDepositL = lens _poolDeposit $ \pp x -> pp {_poolDeposit = x}
+  hkdEMaxL = lens _eMax $ \pp x -> pp {_eMax = x}
+  hkdNOptL = lens _nOpt $ \pp x -> pp {_nOpt = x}
+  hkdA0L = lens _a0 $ \pp x -> pp {_a0 = x}
+  hkdRhoL = lens _rho $ \pp x -> pp {_rho = x}
+  hkdTauL = lens _tau $ \pp x -> pp {_tau = x}
+  hkdDL = lens _d $ \pp x -> pp {_d = x}
+  hkdExtraEntropyL = lens _extraEntropy $ \pp x -> pp {_extraEntropy = x}
+  hkdProtocolVersionL = lens _protocolVersion $ \pp x -> pp {_protocolVersion = x}
+  hkdMinUTxOValueL = notSupportedInThisEraL
+  hkdMinPoolCostL = lens _minPoolCost $ \pp x -> pp {_minPoolCost = x}
 
-deriving instance Show (PParams' Identity era)
+instance CC.Crypto c => AlonzoEraPParams (AlonzoEra c) where
+  hkdCoinsPerUTxOWordL = lens _coinsPerUTxOWord $ \pp x -> pp {_coinsPerUTxOWord = x}
+  hkdCostmdlsL = lens _costmdls $ \pp x -> pp {_costmdls = x}
+  hkdPricesL = lens _prices $ \pp x -> pp {_prices = x}
+  hkdMaxTxExUnitsL = lens _maxTxExUnits $ \pp x -> pp {_maxTxExUnits = x}
+  hkdMaxBlockExUnitsL = lens _maxBlockExUnits $ \pp x -> pp {_maxBlockExUnits = x}
+  hkdMaxValSizeL = lens _maxValSize $ \pp x -> pp {_maxValSize = x}
+  hkdCollateralPercentageL = lens _collateralPercentage $ \pp x -> pp {_collateralPercentage = x}
+  hkdMaxCollateralInputsL = lens _maxCollateralInputs $ \pp x -> pp {_maxCollateralInputs = x}
 
-deriving instance NFData (PParams' Identity era)
+deriving instance Eq (AlonzoPParamsHKD Identity era)
 
-instance NoThunks (PParams era)
+deriving instance Show (AlonzoPParamsHKD Identity era)
 
-instance (Era era) => ToCBOR (PParams era) where
+deriving instance NFData (AlonzoPParamsHKD Identity era)
+
+instance NoThunks (AlonzoPParamsHKD Identity era)
+
+instance Era era => ToCBOR (AlonzoPParamsHKD Identity era) where
   toCBOR
     AlonzoPParams
       { _minfeeA = minfeeA',
@@ -249,10 +261,7 @@ instance (Era era) => ToCBOR (PParams era) where
             !> To maxCollateralInputs'
         )
 
-instance
-  (Era era) =>
-  FromCBOR (PParams era)
-  where
+instance Era era => FromCBOR (AlonzoPParamsHKD Identity era) where
   fromCBOR =
     decode $
       RecD AlonzoPParams
@@ -283,35 +292,8 @@ instance
         <! From -- maxCollateralInputs :: Natural
 
 -- | Returns a basic "empty" `PParams` structure with all zero values.
-emptyPParams :: PParams era
-emptyPParams =
-  AlonzoPParams
-    { _minfeeA = 0,
-      _minfeeB = 0,
-      _maxBBSize = 0,
-      _maxTxSize = 2048,
-      _maxBHSize = 0,
-      _keyDeposit = Coin 0,
-      _poolDeposit = Coin 0,
-      _eMax = EpochNo 0,
-      _nOpt = 100,
-      _a0 = minBound,
-      _rho = minBound,
-      _tau = minBound,
-      _d = minBound,
-      _extraEntropy = NeutralNonce,
-      _protocolVersion = BT.ProtVer 5 0,
-      _minPoolCost = mempty,
-      -- new/updated for alonzo
-      _coinsPerUTxOWord = Coin 0,
-      _costmdls = CostModels mempty,
-      _prices = Prices minBound minBound,
-      _maxTxExUnits = ExUnits 0 0,
-      _maxBlockExUnits = ExUnits 0 0,
-      _maxValSize = 0,
-      _collateralPercentage = 150,
-      _maxCollateralInputs = 5
-    }
+emptyPParams :: AlonzoPParamsHKD Identity era
+emptyPParams = def
 
 -- | Since ExUnits does not have an Ord instance, we have to roll this Ord instance by hand.
 -- IF THE ORDER OR TYPES OF THE FIELDS OF PParams changes, this instance may need adusting.
@@ -346,8 +328,65 @@ compareEx SNothing (SJust _) = LT
 compareEx (SJust _) SNothing = GT
 compareEx (SJust (ExUnits m1 s1)) (SJust (ExUnits m2 s2)) = compare (m1, s1) (m2, s2)
 
-instance Default (PParams era) where
-  def = emptyPParams
+instance Default (AlonzoPParamsHKD Identity era) where
+  def =
+    AlonzoPParams
+      { _minfeeA = 0,
+        _minfeeB = 0,
+        _maxBBSize = 0,
+        _maxTxSize = 2048,
+        _maxBHSize = 0,
+        _keyDeposit = Coin 0,
+        _poolDeposit = Coin 0,
+        _eMax = EpochNo 0,
+        _nOpt = 100,
+        _a0 = minBound,
+        _rho = minBound,
+        _tau = minBound,
+        _d = minBound,
+        _extraEntropy = NeutralNonce,
+        _protocolVersion = BT.ProtVer 5 0,
+        _minPoolCost = mempty,
+        -- new/updated for alonzo
+        _coinsPerUTxOWord = Coin 0,
+        _costmdls = CostModels mempty,
+        _prices = Prices minBound minBound,
+        _maxTxExUnits = ExUnits 0 0,
+        _maxBlockExUnits = ExUnits 0 0,
+        _maxValSize = 0,
+        _collateralPercentage = 150,
+        _maxCollateralInputs = 5
+      }
+
+instance Default (AlonzoPParamsHKD StrictMaybe era) where
+  def =
+    AlonzoPParams
+      { _minfeeA = SNothing,
+        _minfeeB = SNothing,
+        _maxBBSize = SNothing,
+        _maxTxSize = SNothing,
+        _maxBHSize = SNothing,
+        _keyDeposit = SNothing,
+        _poolDeposit = SNothing,
+        _eMax = SNothing,
+        _nOpt = SNothing,
+        _a0 = SNothing,
+        _rho = SNothing,
+        _tau = SNothing,
+        _d = SNothing,
+        _extraEntropy = SNothing,
+        _protocolVersion = SNothing,
+        _minPoolCost = SNothing,
+        -- new/updated for alonzo
+        _coinsPerUTxOWord = SNothing,
+        _costmdls = SNothing,
+        _prices = SNothing,
+        _maxTxExUnits = SNothing,
+        _maxBlockExUnits = SNothing,
+        _maxValSize = SNothing,
+        _collateralPercentage = SNothing,
+        _maxCollateralInputs = SNothing
+      }
 
 deriving instance Eq (AlonzoPParamsHKD StrictMaybe era)
 
@@ -400,40 +439,13 @@ encodePParamsUpdate ppup =
     fromSJust (SJust x) = x
     fromSJust SNothing = error "SNothing in fromSJust. This should never happen, it is guarded by isSNothing."
 
-instance (Era era) => ToCBOR (PParamsUpdate era) where
+instance Era era => ToCBOR (AlonzoPParamsHKD StrictMaybe era) where
   toCBOR ppup = encode (encodePParamsUpdate ppup)
 
-emptyPParamsUpdate :: PParamsUpdate era
-emptyPParamsUpdate =
-  AlonzoPParams
-    { _minfeeA = SNothing,
-      _minfeeB = SNothing,
-      _maxBBSize = SNothing,
-      _maxTxSize = SNothing,
-      _maxBHSize = SNothing,
-      _keyDeposit = SNothing,
-      _poolDeposit = SNothing,
-      _eMax = SNothing,
-      _nOpt = SNothing,
-      _a0 = SNothing,
-      _rho = SNothing,
-      _tau = SNothing,
-      _d = SNothing,
-      _extraEntropy = SNothing,
-      _protocolVersion = SNothing,
-      _minPoolCost = SNothing,
-      -- new/updated for alonzo
-      _coinsPerUTxOWord = SNothing,
-      _costmdls = SNothing,
-      _prices = SNothing,
-      _maxTxExUnits = SNothing,
-      _maxBlockExUnits = SNothing,
-      _maxValSize = SNothing,
-      _collateralPercentage = SNothing,
-      _maxCollateralInputs = SNothing
-    }
+emptyPParamsUpdate :: AlonzoPParamsHKD StrictMaybe era
+emptyPParamsUpdate = def
 
-updateField :: Word -> Field (PParamsUpdate era)
+updateField :: Word -> Field (AlonzoPParamsHKD StrictMaybe era)
 updateField 0 = field (\x up -> up {_minfeeA = SJust x}) From
 updateField 1 = field (\x up -> up {_minfeeB = SJust x}) From
 updateField 2 = field (\x up -> up {_maxBBSize = SJust x}) From
@@ -460,43 +472,17 @@ updateField 23 = field (\x up -> up {_collateralPercentage = SJust x}) From
 updateField 24 = field (\x up -> up {_maxCollateralInputs = SJust x}) From
 updateField k = field (\_x up -> up) (Invalid k)
 
-instance (Era era) => FromCBOR (PParamsUpdate era) where
+instance Era era => FromCBOR (AlonzoPParamsHKD StrictMaybe era) where
   fromCBOR =
     decode
-      (SparseKeyed "PParamsUpdate" emptyPParamsUpdate updateField [])
+      (SparseKeyed "PParamsUpdate" def updateField [])
 
 -- =================================================================
 
 -- | Update operation for protocol parameters structure @PParams
-updatePParams :: PParams era -> PParamsUpdate era -> PParams era
-updatePParams pp ppup =
-  AlonzoPParams
-    { _minfeeA = fromSMaybe (_minfeeA pp) (_minfeeA ppup),
-      _minfeeB = fromSMaybe (_minfeeB pp) (_minfeeB ppup),
-      _maxBBSize = fromSMaybe (_maxBBSize pp) (_maxBBSize ppup),
-      _maxTxSize = fromSMaybe (_maxTxSize pp) (_maxTxSize ppup),
-      _maxBHSize = fromSMaybe (_maxBHSize pp) (_maxBHSize ppup),
-      _keyDeposit = fromSMaybe (_keyDeposit pp) (_keyDeposit ppup),
-      _poolDeposit = fromSMaybe (_poolDeposit pp) (_poolDeposit ppup),
-      _eMax = fromSMaybe (_eMax pp) (_eMax ppup),
-      _nOpt = fromSMaybe (_nOpt pp) (_nOpt ppup),
-      _a0 = fromSMaybe (_a0 pp) (_a0 ppup),
-      _rho = fromSMaybe (_rho pp) (_rho ppup),
-      _tau = fromSMaybe (_tau pp) (_tau ppup),
-      _d = fromSMaybe (_d pp) (_d ppup),
-      _extraEntropy = fromSMaybe (_extraEntropy pp) (_extraEntropy ppup),
-      _protocolVersion = fromSMaybe (_protocolVersion pp) (_protocolVersion ppup),
-      _minPoolCost = fromSMaybe (_minPoolCost pp) (_minPoolCost ppup),
-      -- new/updated for alonzo
-      _coinsPerUTxOWord = fromSMaybe (_coinsPerUTxOWord pp) (_coinsPerUTxOWord ppup),
-      _costmdls = fromSMaybe (_costmdls pp) (_costmdls ppup),
-      _prices = fromSMaybe (_prices pp) (_prices ppup),
-      _maxTxExUnits = fromSMaybe (_maxTxExUnits pp) (_maxTxExUnits ppup),
-      _maxBlockExUnits = fromSMaybe (_maxBlockExUnits pp) (_maxBlockExUnits ppup),
-      _maxValSize = fromSMaybe (_maxValSize pp) (_maxValSize ppup),
-      _collateralPercentage = fromSMaybe (_collateralPercentage pp) (_collateralPercentage ppup),
-      _maxCollateralInputs = fromSMaybe (_maxCollateralInputs pp) (_maxCollateralInputs ppup)
-    }
+updatePParams :: AlonzoEraPParams (AlonzoEra c) => Core.PParams (AlonzoEra c) -> Core.PParamsUpdate (AlonzoEra c) -> Core.PParams (AlonzoEra c)
+updatePParams = applyPPUpdates
+{-# DEPRECATED updatePParams "Use `applyPPUpdates` instead" #-}
 
 -- ===================================================
 -- Figure 1: "Definitions Used in Protocol Parameters"
@@ -518,7 +504,7 @@ legacyNonCanonicalCostModelEncoder = encodeFoldableAsIndefinite . getCostModelPa
 
 getLanguageView ::
   forall era.
-  (HasField "_costmdls" (Core.PParams era) CostModels) =>
+  AlonzoEraPParams era =>
   Core.PParams era ->
   Language ->
   LangDepView
@@ -528,7 +514,7 @@ getLanguageView pp lang@PlutusV1 =
     ( serialize'
         ( serializeEncoding' $
             maybe encodeNull legacyNonCanonicalCostModelEncoder $
-              Map.lookup lang (unCostModels $ getField @"_costmdls" pp)
+              Map.lookup lang (unCostModels $ pp ^. ppCostmdlsL)
         )
     )
 getLanguageView pp lang@PlutusV2 =
@@ -536,7 +522,7 @@ getLanguageView pp lang@PlutusV2 =
     (serialize' lang)
     ( serializeEncoding' $
         maybe encodeNull toCBOR $
-          Map.lookup lang (unCostModels $ getField @"_costmdls" pp)
+          Map.lookup lang (unCostModels $ pp ^. ppCostmdlsL)
     )
 
 encodeLangViews :: Set LangDepView -> Encoding
@@ -551,14 +537,14 @@ encodeLangViews views = encodeMapLen n <> foldMap encPair ascending
       | BS.length a > BS.length b = GT
       | otherwise = compare a b
 
--- | Turn an PParams' into a ShelleyParams'
+-- | Turn an AlonzoPParamsHKD into a ShelleyParams'
 retractPP :: HKD f Coin -> AlonzoPParamsHKD f era2 -> ShelleyPParamsHKD f era1
 retractPP
   c
   (AlonzoPParams ma mb mxBB mxT mxBH kd pd emx a n rho tau d eE pv mnP _ _ _ _ _ _ _ _) =
     ShelleyPParams ma mb mxBB mxT mxBH kd pd emx a n rho tau d eE pv c mnP
 
--- | Given the missing pieces Turn a ShelleyPParams' into an Params'
+-- | Given the missing pieces Turn a ShelleyAlonzoPParamsHKD into an Params'
 extendPP ::
   ShelleyPParamsHKD f era1 ->
   HKD f Coin ->
@@ -569,15 +555,7 @@ extendPP ::
   HKD f Natural ->
   HKD f Natural ->
   HKD f Natural ->
-  PParams' f era2
+  AlonzoPParamsHKD f era2
 extendPP
-  (ShelleyPParams ma mb mxBB mxT mxBH kd pd emx a n rho tau d eE pv _ mnP)
-  ada
-  cost
-  price
-  mxTx
-  mxBl
-  mxV
-  col
-  mxCol =
-    AlonzoPParams ma mb mxBB mxT mxBH kd pd emx a n rho tau d eE pv mnP ada cost price mxTx mxBl mxV col mxCol
+  (ShelleyPParams ma mb mxBB mxT mxBH kd pd emx a n rho tau d eE pv _ mnP) =
+    AlonzoPParams ma mb mxBB mxT mxBH kd pd emx a n rho tau d eE pv mnP

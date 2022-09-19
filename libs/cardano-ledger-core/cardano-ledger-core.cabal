@@ -52,6 +52,7 @@ library
     Cardano.Ledger.Credential
     Cardano.Ledger.Crypto
     Cardano.Ledger.Era
+    Cardano.Ledger.Era.Class
     Cardano.Ledger.Hashes
     Cardano.Ledger.HKD
     Cardano.Ledger.Keys
@@ -61,6 +62,8 @@ library
     Cardano.Ledger.MemoBytes
     Cardano.Ledger.PoolDistr
     Cardano.Ledger.Rewards
+    Cardano.Ledger.PParams
+    Cardano.Ledger.ProtVer
     Cardano.Ledger.Rules.ValidationMode
     Cardano.Ledger.SafeHash
     Cardano.Ledger.Serialization
@@ -94,6 +97,7 @@ library
     network,
     nothunks,
     partial-order,
+    persistent,
     quiet,
     scientific,
     set-algebra,

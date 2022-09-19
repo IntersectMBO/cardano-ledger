@@ -26,7 +26,6 @@ import Cardano.Ledger.Shelley.API.Types
   )
 import Cardano.Ledger.Shelley.EpochBoundary (emptySnapShots)
 import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses, smartUTxOState)
-import Cardano.Ledger.Shelley.PParams (ShelleyPParams)
 import Cardano.Ledger.Shelley.UTxO (coinBalance)
 import Cardano.Ledger.Val (Val ((<->)))
 import Control.State.Transition (STS (State))
@@ -63,7 +62,7 @@ initialStateFromGenesis ::
     Default (StashedAVVMAddresses era)
   ) =>
   -- | Function to extend ShelleyPParams into PParams for the specific era
-  (ShelleyPParams era -> g -> PParams era) ->
+  (PParams era -> g -> PParams era) ->
   ShelleyGenesis era ->
   -- | Genesis type
   g ->

@@ -61,7 +61,6 @@ import Cardano.Ledger.BaseTypes
   ( BlocksMade,
     Globals (..),
     NonNegativeInterval,
-    ProtVer,
     UnitInterval,
     epochInfoPure,
   )
@@ -135,7 +134,6 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.VMap as VMap
 import GHC.Generics (Generic)
-import GHC.Records (HasField (..), getField)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
@@ -241,17 +239,15 @@ getTotalStake globals ss =
 --
 -- This is not based on any snapshot, but uses the current ledger state.
 getNonMyopicMemberRewards ::
-  ( HasField "_a0" (PParams era) NonNegativeInterval,
-    HasField "_nOpt" (PParams era) Natural
-  ) =>
+  EraPParams era =>
   Globals ->
   NewEpochState era ->
   Set (Either Coin (Credential 'Staking (EraCrypto era))) ->
   Map
     (Either Coin (Credential 'Staking (EraCrypto era)))
     (Map (KeyHash 'StakePool (EraCrypto era)) Coin)
-getNonMyopicMemberRewards globals ss creds =
-  Map.fromSet (\cred -> Map.map (mkNMMRewards $ memShare cred) poolData) creds
+getNonMyopicMemberRewards globals ss =
+  Map.fromSet (\cred -> Map.map (mkNMMRewards $ memShare cred) poolData)
   where
     maxSupply = Coin . fromIntegral $ maxLovelaceSupply globals
     Coin totalStake = circulation es maxSupply
@@ -369,9 +365,7 @@ deriving instance ToJSON RewardParams
 -- Also included are global information such as
 -- the total stake or protocol parameters.
 getRewardInfoPools ::
-  ( HasField "_a0" (PParams era) NonNegativeInterval,
-    HasField "_nOpt" (PParams era) Natural
-  ) =>
+  EraPParams era =>
   Globals ->
   NewEpochState era ->
   (RewardParams, Map (KeyHash 'StakePool (EraCrypto era)) RewardInfoPool)
@@ -390,8 +384,8 @@ getRewardInfoPools globals ss =
 
     mkRewardParams =
       RewardParams
-        { a0 = getField @"_a0" pp,
-          nOpt = getField @"_nOpt" pp,
+        { a0 = pp ^. ppA0L,
+          nOpt = pp ^. ppNOptL,
           totalStake = getTotalStake globals ss,
           rPot = rPot
         }
@@ -421,13 +415,7 @@ getRewardInfoPools globals ss =
 -- on stake pool rewards.
 getRewardProvenance ::
   forall era.
-  ( HasField "_a0" (PParams era) NonNegativeInterval,
-    HasField "_d" (PParams era) UnitInterval,
-    HasField "_nOpt" (PParams era) Natural,
-    HasField "_protocolVersion" (PParams era) ProtVer,
-    HasField "_rho" (PParams era) UnitInterval,
-    HasField "_tau" (PParams era) UnitInterval
-  ) =>
+  EraPParams era =>
   Globals ->
   NewEpochState era ->
   (RewardUpdate (EraCrypto era), RewardProvenance (EraCrypto era))
@@ -507,9 +495,7 @@ evaluateTransactionFee pp tx numKeyWits = getMinFeeTx pp tx'
 -- This value will be zero for a valid transaction.
 evaluateTransactionBalance ::
   ( EraUTxO era,
-    ShelleyEraTxBody era,
-    HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_keyDeposit" (PParams era) Coin
+    ShelleyEraTxBody era
   ) =>
   -- | The current protocol parameters.
   PParams era ->

@@ -22,6 +22,7 @@ import Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..))
 import Cardano.Ledger.Babbage.Tx (AlonzoTx (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), Datum (..))
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Core (mapPParams, mapPParamsUpdate)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era
@@ -30,7 +31,6 @@ import Cardano.Ledger.Era
     TranslationContext,
     translateEra',
   )
-import Cardano.Ledger.HKD (HKDFunctor (..))
 import Cardano.Ledger.Serialization (translateViaCBORAnn)
 import Cardano.Ledger.Shelley.API
   ( EpochState (..),
@@ -40,7 +40,6 @@ import Cardano.Ledger.Shelley.API
   )
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD)
-import Data.Proxy (Proxy (..))
 
 --------------------------------------------------------------------------------
 -- Translation from Alonzo to Babbage
@@ -125,6 +124,11 @@ instance
 
 instance (Crypto c, Functor f) => TranslateEra (BabbageEra c) (ShelleyPParamsHKD f)
 
+instance Crypto c => TranslateEra (BabbageEra c) (BabbagePParamsHKD f)
+
+instance Crypto c => TranslateEra (BabbageEra c) Core.PParams where
+  translateEra _ = pure . mapPParams translatePParams
+
 instance Crypto c => TranslateEra (BabbageEra c) EpochState where
   translateEra ctxt es =
     pure
@@ -132,8 +136,8 @@ instance Crypto c => TranslateEra (BabbageEra c) EpochState where
         { esAccountState = esAccountState es,
           esSnapshots = esSnapshots es,
           esLState = translateEra' ctxt $ esLState es,
-          esPrevPp = translatePParams $ esPrevPp es,
-          esPp = translatePParams $ esPp es,
+          esPrevPp = mapPParams translatePParams $ esPrevPp es,
+          esPp = mapPParams translatePParams $ esPp es,
           esNonMyopic = esNonMyopic es
         }
 
@@ -170,7 +174,7 @@ instance Crypto c => TranslateEra (BabbageEra c) API.PPUPState where
 
 instance Crypto c => TranslateEra (BabbageEra c) API.ProposedPPUpdates where
   translateEra _ctxt (API.ProposedPPUpdates ppup) =
-    pure $ API.ProposedPPUpdates $ fmap translatePParams ppup
+    pure $ API.ProposedPPUpdates $ fmap (mapPParamsUpdate translatePParams) ppup
 
 translateTxOut ::
   Crypto c =>
@@ -191,8 +195,6 @@ coinsPerUTxOByteToCoinsPerUTxOWord :: Coin -> Coin
 coinsPerUTxOByteToCoinsPerUTxOWord (Coin c) = Coin $ c * 8
 
 translatePParams ::
-  forall f c. HKDFunctor f => AlonzoPParamsHKD f (AlonzoEra c) -> BabbagePParamsHKD f (BabbageEra c)
+  forall f c. AlonzoPParamsHKD f (AlonzoEra c) -> BabbagePParamsHKD f (BabbageEra c)
 translatePParams AlonzoPParams {_coinsPerUTxOWord = cpuw, ..} =
-  BabbagePParams {_coinsPerUTxOByte = cpub, ..}
-  where
-    cpub = hkdMap (Proxy :: Proxy f) coinsPerUTxOWordToCoinsPerUTxOByte cpuw
+  BabbagePParams {_coinsPerUTxOByte = cpuw, ..}

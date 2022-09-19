@@ -21,8 +21,6 @@ import Cardano.Ledger.Babbage.Rules ()
 import Cardano.Ledger.Babbage.Tx (babbageTxScripts, getDatumBabbage)
 import Cardano.Ledger.Babbage.TxInfo (babbageTxInfo)
 import Cardano.Ledger.Conway.Era (ConwayEra)
-import Cardano.Ledger.Conway.Genesis (extendPPWithGenesis)
-import Cardano.Ledger.Conway.PParams (BabbagePParamsHKD (..))
 import Cardano.Ledger.Conway.Translation ()
 import Cardano.Ledger.Conway.Tx ()
 import Cardano.Ledger.Conway.TxBody (BabbageEraTxBody (..))
@@ -39,6 +37,8 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict
 import qualified Data.Set as Set
 import Lens.Micro
+import Cardano.Ledger.PParams (PParams(..))
+import Cardano.Ledger.Babbage.Genesis (augmentPPWithGenesis)
 
 type Conway = ConwayEra StandardCrypto
 
@@ -52,7 +52,7 @@ instance (Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyBlock
 instance Crypto c => API.CanStartFromGenesis (ConwayEra c) where
   type AdditionalGenesisConfig (ConwayEra c) = AlonzoGenesis
 
-  initialState = API.initialStateFromGenesis extendPPWithGenesis
+  initialState = API.initialStateFromGenesis (\(PParams pp) gen -> PParams $ augmentPPWithGenesis pp gen)
 
 instance Crypto c => ExtendedUTxO (ConwayEra c) where
   txInfo = babbageTxInfo

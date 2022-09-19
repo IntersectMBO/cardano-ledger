@@ -74,7 +74,7 @@ import Cardano.Ledger.Shelley.Delegation.Certificates
     requiresVKeyWitness,
   )
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..), Update)
+import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.TxBody
   ( PoolCert (..),
     PoolParams (..),
@@ -105,7 +105,6 @@ import qualified Data.Set as Set
 import Data.Sharing (FromSharedCBOR (Share, fromSharedCBOR), Interns)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
-import GHC.Records (HasField (..))
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 import Quiet (Quiet (Quiet))
@@ -272,16 +271,15 @@ areAllAdaOnly = all (^. isAdaOnlyTxOutF)
 -- Note that this is not an issue for key registrations since subsequent
 -- registration certificates would be invalid.
 totalDeposits ::
-  ( HasField "_poolDeposit" pp Coin,
-    HasField "_keyDeposit" pp Coin
+  ( EraPParams era
   ) =>
-  pp ->
+  PParams era ->
   (KeyHash 'StakePool c -> Bool) ->
   [DCert c] ->
   Coin
 totalDeposits pp isNewPool certs =
-  (numKeys <×> getField @"_keyDeposit" pp)
-    <+> (numNewPools <×> getField @"_poolDeposit" pp)
+  (numKeys <×> pp ^. ppKeyDepositL)
+    <+> (numNewPools <×> pp ^. ppPoolDepositL)
   where
     numKeys = length $ filter isRegKey certs
     pools = Set.fromList $ Maybe.mapMaybe getKeyHashFromRegPool certs
@@ -361,12 +359,10 @@ txinsScriptHashes txInps (UTxO u) = foldr add Set.empty txInps
 
 -- | Compute the lovelace which are created by the transaction
 produced ::
-  forall era pp.
-  ( ShelleyEraTxBody era,
-    HasField "_keyDeposit" pp Coin,
-    HasField "_poolDeposit" pp Coin
+  forall era.
+  ( ShelleyEraTxBody era
   ) =>
-  pp ->
+  PParams era ->
   (KeyHash 'StakePool (EraCrypto era) -> Bool) ->
   TxBody era ->
   Value era
@@ -379,11 +375,10 @@ produced pp isNewPool txBody =
 
 -- | Compute the lovelace which are destroyed by the transaction
 getConsumedCoin ::
-  forall era pp.
-  ( ShelleyEraTxBody era,
-    HasField "_keyDeposit" pp Coin
+  forall era.
+  ( ShelleyEraTxBody era
   ) =>
-  pp ->
+  PParams era ->
   UTxO era ->
   TxBody era ->
   Coin
@@ -398,13 +393,12 @@ getConsumedCoin pp (UTxO u) txBody =
 
 -- | Compute the key deregistration refunds in a transaction
 keyRefunds ::
-  ( HasField "_keyDeposit" pp Coin,
+  (
     ShelleyEraTxBody era
-  ) =>
-  pp ->
+  ) =>PParams era ->
   TxBody era ->
   Coin
-keyRefunds pp tx = length deregistrations <×> getField @"_keyDeposit" pp
+keyRefunds pp tx = length deregistrations <×> pp ^. ppKeyDepositL
   where
     deregistrations = filter isDeRegKey (toList $ tx ^. certsTxBodyL)
 

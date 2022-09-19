@@ -104,7 +104,6 @@ benchmark performance
     base16-bytestring,
     cardano-binary,
     cardano-data,
-    cardano-ledger-alonzo,
     cardano-ledger-core,
     cardano-ledger-shelley,
     cardano-slotting,

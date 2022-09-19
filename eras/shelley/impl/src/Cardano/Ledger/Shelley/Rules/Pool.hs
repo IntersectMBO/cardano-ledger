@@ -30,7 +30,6 @@ import Cardano.Crypto.Hash.Class (sizeHash)
 import Cardano.Ledger.BaseTypes
   ( Globals (..),
     Network,
-    ProtVer,
     ShelleyBase,
     epochInfoPure,
     invalidKey,
@@ -70,8 +69,8 @@ import Data.Coders (decodeRecordSum)
 import Data.Typeable (Typeable)
 import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
-import GHC.Records (HasField (getField))
 import NoThunks.Class (NoThunks (..))
+import Lens.Micro ((^.))
 
 data PoolEnv era
   = PoolEnv SlotNo (PParams era)
@@ -105,9 +104,7 @@ instance NoThunks (ShelleyPoolPredFailure era)
 
 instance
   ( Era era,
-    HasField "_minPoolCost" (PParams era) Coin,
-    HasField "_eMax" (PParams era) EpochNo,
-    HasField "_protocolVersion" (PParams era) ProtVer
+    EraPParams era
   ) =>
   STS (ShelleyPOOL era)
   where
@@ -180,26 +177,24 @@ instance
 poolDelegationTransition ::
   forall era.
   ( Era era,
-    HasField "_minPoolCost" (PParams era) Coin,
-    HasField "_eMax" (PParams era) EpochNo,
-    HasField "_protocolVersion" (PParams era) ProtVer
-  ) =>
+    EraPParams era) =>
   TransitionRule (ShelleyPOOL era)
 poolDelegationTransition = do
   TRC (PoolEnv slot pp, ps, c) <- judgmentContext
   let stpools = _pParams ps
+  let pv = pp ^. ppProtocolVersionL
   case c of
     DCertPool (RegPool poolParam) -> do
       -- note that pattern match is used instead of cwitness, as in the spec
 
-      when (HardForks.validatePoolRewardAccountNetID pp) $ do
+      when (HardForks.validatePoolRewardAccountNetID pv) $ do
         actualNetID <- liftSTS $ asks networkId
         let suppliedNetID = getRwdNetwork (_poolRAcnt poolParam)
         actualNetID
           == suppliedNetID
           ?! WrongNetworkPOOL actualNetID suppliedNetID (_poolId poolParam)
 
-      when (SoftForks.restrictPoolMetadataHash pp) $
+      when (SoftForks.restrictPoolMetadataHash pv) $
         forM_ (_poolMD poolParam) $ \pmd ->
           let s = BS.length (_poolMDHash pmd)
            in s
@@ -207,7 +202,7 @@ poolDelegationTransition = do
                 ?! PoolMedataHashTooBig (_poolId poolParam) s
 
       let poolCost = _poolCost poolParam
-          minPoolCost = getField @"_minPoolCost" pp
+          minPoolCost = pp ^. ppMinPoolCostL
       poolCost >= minPoolCost ?! StakePoolCostTooLowPOOL poolCost minPoolCost
 
       let hk = _poolId poolParam
@@ -232,12 +227,8 @@ poolDelegationTransition = do
       EpochNo cepoch <- liftSTS $ do
         ei <- asks epochInfoPure
         epochInfoEpoch ei slot
-      let EpochNo maxEpoch = getField @"_eMax" pp
-      cepoch
-        < e
-        && e
-        <= cepoch
-        + maxEpoch
+      let EpochNo maxEpoch = pp ^. ppEMaxL
+      cepoch < e && e <= cepoch + maxEpoch
         ?! StakePoolRetirementWrongEpochPOOL cepoch e (cepoch + maxEpoch)
       pure $ ps {_retiring = eval (_retiring ps ⨃ singleton hk (EpochNo e))}
     DCertDeleg _ -> do

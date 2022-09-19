@@ -19,8 +19,21 @@ import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era hiding (EraCrypto)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
-import Cardano.Ledger.Shelley.API hiding (Metadata, TxBody)
-import Cardano.Ledger.Shelley.TxWits (decodeWits)
+import Cardano.Ledger.Shelley.API
+  ( Coin (..),
+    EpochState (..),
+    LedgerState (..),
+    NewEpochState (..),
+    PPUPState (..),
+    ProposedPPUpdates (..),
+    ShelleyGenesis (..),
+    ShelleyTx (..),
+    ShelleyTxOut (..),
+    UTxO (..),
+    UTxOState (..),
+    Update (..),
+  )
+import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..), decodeWits)
 import Cardano.Ledger.ShelleyMA.AuxiliaryData
   ( AllegraTxAuxData (..),
   )
@@ -31,6 +44,7 @@ import Control.Monad.Except (throwError)
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
+import Cardano.Ledger.PParams (PParams(..), PParamsUpdate (..))
 
 --------------------------------------------------------------------------------
 -- Translation from Allegra to Mary
@@ -102,7 +116,9 @@ instance Crypto c => TranslateEra (MaryEra c) ShelleyGenesis where
 -- Auxiliary instances and functions
 --------------------------------------------------------------------------------
 
-instance (Crypto c, Functor f) => TranslateEra (MaryEra c) (ShelleyPParamsHKD f)
+instance Crypto c => TranslateEra (MaryEra c) PParams
+
+instance Crypto c => TranslateEra (MaryEra c) PParamsUpdate
 
 instance Crypto c => TranslateEra (MaryEra c) EpochState where
   translateEra ctxt es =

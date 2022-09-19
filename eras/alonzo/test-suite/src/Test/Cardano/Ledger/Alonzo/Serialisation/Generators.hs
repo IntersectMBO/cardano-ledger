@@ -81,7 +81,6 @@ import Data.Text (pack)
 import Data.Twiddle
 import Data.Typeable (Typeable)
 import Data.Void (Void)
-import GHC.Records (HasField)
 import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Alonzo.AlonzoEraGen (costModelParamsCount)
@@ -378,8 +377,7 @@ instance Mock c => Arbitrary (ScriptPurpose c) where
 instance
   ( Era era,
     Mock (EraCrypto era),
-    Arbitrary (PParams era),
-    HasField "_costmdls" (PParams era) CostModels
+    Arbitrary (PParams era)
   ) =>
   Arbitrary (ScriptIntegrity era)
   where

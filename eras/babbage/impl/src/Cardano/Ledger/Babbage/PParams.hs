@@ -8,6 +8,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -28,11 +29,6 @@ module Cardano.Ledger.Babbage.PParams
     encodeLangViews,
     retractPP,
     extendPP,
-
-    -- * Dperecated
-    PParams,
-    PParams',
-    PParamsUpdate,
   )
 where
 
@@ -42,12 +38,14 @@ import Cardano.Binary
     ToCBOR (..),
   )
 import Cardano.Ledger.Alonzo.PParams (LangDepView (..), encodeLangViews, getLanguageView)
+import Cardano.Ledger.Alonzo.PParams.Class (AlonzoEraPParams (..))
 import Cardano.Ledger.Alonzo.Scripts
   ( CostModels (..),
     ExUnits (..),
     Prices (..),
   )
 import Cardano.Ledger.Babbage.Era (BabbageEra)
+import Cardano.Ledger.Babbage.PParams.Class (BabbageEraPParams (..))
 import Cardano.Ledger.BaseTypes
   ( NonNegativeInterval,
     Nonce,
@@ -58,8 +56,7 @@ import Cardano.Ledger.BaseTypes
   )
 import qualified Cardano.Ledger.BaseTypes as BT (ProtVer (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (Era, EraPParams (applyPPUpdates))
-import qualified Cardano.Ledger.Core as Core (PParams, PParamsUpdate)
+import Cardano.Ledger.Core (Era, EraPParams (..), notSupportedInThisEraL)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.HKD (HKD)
 import Cardano.Ledger.Serialization
@@ -85,21 +82,9 @@ import Data.Coders
 import Data.Default (Default (..))
 import Data.Functor.Identity (Identity (..))
 import GHC.Generics (Generic)
-import GHC.Records (HasField (..))
+import Lens.Micro (lens, to)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
-
-type PParams era = BabbagePParams era
-
-{-# DEPRECATED PParams "Use `BabbagePParams` instead" #-}
-
-type PParams' f era = BabbagePParamsHKD f era
-
-{-# DEPRECATED PParams' "Use `BabbagePParamsHKD` instead" #-}
-
-type PParamsUpdate era = BabbagePParamsUpdate era
-
-{-# DEPRECATED PParamsUpdate "Use `BabbagePParamsUpdate` instead" #-}
 
 -- | Protocol parameters.
 -- Alonzo parameters without d and extraEntropy
@@ -158,9 +143,45 @@ type BabbagePParams = BabbagePParamsHKD Identity
 type BabbagePParamsUpdate era = BabbagePParamsHKD StrictMaybe era
 
 instance CC.Crypto c => EraPParams (BabbageEra c) where
-  type PParams (BabbageEra c) = BabbagePParams (BabbageEra c)
-  type PParamsUpdate (BabbageEra c) = BabbagePParamsUpdate (BabbageEra c)
-  applyPPUpdates = updatePParams
+  type PParamsHKD f (BabbageEra c) = BabbagePParamsHKD f (BabbageEra c)
+
+  emptyPParams = def
+  emptyPParamsUpdate = def
+
+  hkdMinFeeAL = lens _minfeeA (\pp x -> pp {_minfeeA = x})
+  hkdMinFeeBL = lens _minfeeB (\pp x -> pp {_minfeeB = x})
+  hkdMaxBBSizeL = lens _maxBBSize (\pp x -> pp {_maxBBSize = x})
+  hkdMaxTxSizeL = lens _maxTxSize (\pp x -> pp {_maxTxSize = x})
+  hkdMaxBHSizeL = lens _maxBHSize (\pp x -> pp {_maxBHSize = x})
+  hkdKeyDepositL = lens _keyDeposit (\pp x -> pp {_keyDeposit = x})
+  hkdPoolDepositL = lens _poolDeposit (\pp x -> pp {_poolDeposit = x})
+  hkdEMaxL = lens _eMax (\pp x -> pp {_eMax = x})
+  hkdNOptL = lens _nOpt (\pp x -> pp {_nOpt = x})
+  hkdA0L = lens _a0 (\pp x -> pp {_a0 = x})
+  hkdRhoL = lens _rho (\pp x -> pp {_rho = x})
+  hkdTauL = lens _tau (\pp x -> pp {_tau = x})
+  hkdProtocolVersionL = lens _protocolVersion (\pp x -> pp {_protocolVersion = x})
+  hkdMinPoolCostL = lens _minPoolCost (\pp x -> pp {_minPoolCost = x})
+  -- Starting from Babbage, d is fixed at 1.0
+  ppDG = to (const minBound)
+
+  hkdDL = notSupportedInThisEraL
+  hkdExtraEntropyL = notSupportedInThisEraL
+  hkdMinUTxOValueL = notSupportedInThisEraL
+
+instance CC.Crypto c => AlonzoEraPParams (BabbageEra c) where
+  hkdCostmdlsL = lens _costmdls (\pp x -> pp {_costmdls = x})
+  hkdPricesL = lens _prices (\pp x -> pp {_prices = x})
+  hkdMaxTxExUnitsL = lens _maxTxExUnits (\pp x -> pp {_maxTxExUnits = x})
+  hkdMaxBlockExUnitsL = lens _maxBlockExUnits (\pp x -> pp {_maxBlockExUnits = x})
+  hkdMaxValSizeL = lens _maxValSize (\pp x -> pp {_maxValSize = x})
+  hkdCollateralPercentageL = lens _collateralPercentage (\pp x -> pp {_collateralPercentage = x})
+  hkdMaxCollateralInputsL = lens _maxCollateralInputs (\pp x -> pp {_maxCollateralInputs = x})
+
+  hkdCoinsPerUTxOWordL = notSupportedInThisEraL
+
+instance CC.Crypto c => BabbageEraPParams (BabbageEra c) where
+  hkdCoinsPerUTxOByteL = lens _coinsPerUTxOByte (\pp x -> pp {_coinsPerUTxOByte = x})
 
 deriving instance Eq (BabbagePParams era)
 
@@ -171,56 +192,32 @@ deriving instance NFData (BabbagePParams era)
 instance NoThunks (BabbagePParams era)
 
 instance Era era => ToCBOR (BabbagePParams era) where
-  toCBOR
-    BabbagePParams
-      { _minfeeA = minfeeA',
-        _minfeeB = minfeeB',
-        _maxBBSize = maxBBSize',
-        _maxTxSize = maxTxSize',
-        _maxBHSize = maxBHSize',
-        _keyDeposit = keyDeposit',
-        _poolDeposit = poolDeposit',
-        _eMax = eMax',
-        _nOpt = nOpt',
-        _a0 = a0',
-        _rho = rho',
-        _tau = tau',
-        _protocolVersion = protocolVersion',
-        _minPoolCost = minPoolCost',
-        _coinsPerUTxOByte = coinsPerUTxOByte',
-        _costmdls = costmdls',
-        _prices = prices',
-        _maxTxExUnits = maxTxExUnits',
-        _maxBlockExUnits = maxBlockExUnits',
-        _maxValSize = maxValSize',
-        _collateralPercentage = collateralPercentage',
-        _maxCollateralInputs = maxCollateralInputs'
-      } =
-      encode
-        ( Rec (BabbagePParams @Identity)
-            !> To minfeeA'
-            !> To minfeeB'
-            !> To maxBBSize'
-            !> To maxTxSize'
-            !> To maxBHSize'
-            !> To keyDeposit'
-            !> To poolDeposit'
-            !> To eMax'
-            !> To nOpt'
-            !> To a0'
-            !> To rho'
-            !> To tau'
-            !> E toCBORGroup protocolVersion'
-            !> To minPoolCost'
-            !> To coinsPerUTxOByte'
-            !> To costmdls'
-            !> To prices'
-            !> To maxTxExUnits'
-            !> To maxBlockExUnits'
-            !> To maxValSize'
-            !> To collateralPercentage'
-            !> To maxCollateralInputs'
-        )
+  toCBOR BabbagePParams {..} =
+    encode
+      ( Rec (BabbagePParams @Identity)
+          !> To _minfeeA
+          !> To _minfeeB
+          !> To _maxBBSize
+          !> To _maxTxSize
+          !> To _maxBHSize
+          !> To _keyDeposit
+          !> To _poolDeposit
+          !> To _eMax
+          !> To _nOpt
+          !> To _a0
+          !> To _rho
+          !> To _tau
+          !> E toCBORGroup _protocolVersion
+          !> To _minPoolCost
+          !> To _coinsPerUTxOByte
+          !> To _costmdls
+          !> To _prices
+          !> To _maxTxExUnits
+          !> To _maxBlockExUnits
+          !> To _maxValSize
+          !> To _collateralPercentage
+          !> To _maxCollateralInputs
+      )
 
 instance Era era => FromCBOR (BabbagePParams era) where
   fromCBOR =
@@ -248,34 +245,6 @@ instance Era era => FromCBOR (BabbagePParams era) where
         <! From -- maxValSize :: Natural
         <! From -- collateralPercentage :: Natural
         <! From -- maxCollateralInputs :: Natural
-
--- | Returns a basic "empty" `PParams` structure with all zero values.
-emptyPParams :: BabbagePParams era
-emptyPParams =
-  BabbagePParams
-    { _minfeeA = 0,
-      _minfeeB = 0,
-      _maxBBSize = 0,
-      _maxTxSize = 2048,
-      _maxBHSize = 0,
-      _keyDeposit = Coin 0,
-      _poolDeposit = Coin 0,
-      _eMax = EpochNo 0,
-      _nOpt = 100,
-      _a0 = minBound,
-      _rho = minBound,
-      _tau = minBound,
-      _protocolVersion = BT.ProtVer 7 0,
-      _minPoolCost = mempty,
-      _coinsPerUTxOByte = Coin 0,
-      _costmdls = CostModels mempty,
-      _prices = Prices minBound minBound,
-      _maxTxExUnits = ExUnits 0 0,
-      _maxBlockExUnits = ExUnits 0 0,
-      _maxValSize = 0,
-      _collateralPercentage = 150,
-      _maxCollateralInputs = 5
-    }
 
 -- | Since ExUnits does not have an Ord instance, we have to roll this Ord instance by hand.
 -- IF THE ORDER OR TYPES OF THE FIELDS OF PParams changes, this instance may need adusting.
@@ -309,7 +278,31 @@ compareEx (SJust _) SNothing = GT
 compareEx (SJust (ExUnits m1 s1)) (SJust (ExUnits m2 s2)) = compare (m1, s1) (m2, s2)
 
 instance Default (BabbagePParams era) where
-  def = emptyPParams
+  def =
+    BabbagePParams
+      { _minfeeA = 0,
+        _minfeeB = 0,
+        _maxBBSize = 0,
+        _maxTxSize = 2048,
+        _maxBHSize = 0,
+        _keyDeposit = Coin 0,
+        _poolDeposit = Coin 0,
+        _eMax = EpochNo 0,
+        _nOpt = 100,
+        _a0 = minBound,
+        _rho = minBound,
+        _tau = minBound,
+        _protocolVersion = BT.ProtVer 7 0,
+        _minPoolCost = mempty,
+        _coinsPerUTxOByte = Coin 0,
+        _costmdls = CostModels mempty,
+        _prices = Prices minBound minBound,
+        _maxTxExUnits = ExUnits 0 0,
+        _maxBlockExUnits = ExUnits 0 0,
+        _maxValSize = 0,
+        _collateralPercentage = 150,
+        _maxCollateralInputs = 5
+      }
 
 deriving instance Eq (BabbagePParamsUpdate era)
 
@@ -363,32 +356,32 @@ encodePParamsUpdate ppup =
 instance Era era => ToCBOR (BabbagePParamsUpdate era) where
   toCBOR ppup = encode (encodePParamsUpdate ppup)
 
-emptyPParamsUpdate :: BabbagePParamsUpdate era
-emptyPParamsUpdate =
-  BabbagePParams
-    { _minfeeA = SNothing,
-      _minfeeB = SNothing,
-      _maxBBSize = SNothing,
-      _maxTxSize = SNothing,
-      _maxBHSize = SNothing,
-      _keyDeposit = SNothing,
-      _poolDeposit = SNothing,
-      _eMax = SNothing,
-      _nOpt = SNothing,
-      _a0 = SNothing,
-      _rho = SNothing,
-      _tau = SNothing,
-      _protocolVersion = SNothing,
-      _minPoolCost = SNothing,
-      _coinsPerUTxOByte = SNothing,
-      _costmdls = SNothing,
-      _prices = SNothing,
-      _maxTxExUnits = SNothing,
-      _maxBlockExUnits = SNothing,
-      _maxValSize = SNothing,
-      _collateralPercentage = SNothing,
-      _maxCollateralInputs = SNothing
-    }
+instance Default (BabbagePParamsHKD StrictMaybe era) where
+  def =
+    BabbagePParams
+      { _minfeeA = SNothing,
+        _minfeeB = SNothing,
+        _maxBBSize = SNothing,
+        _maxTxSize = SNothing,
+        _maxBHSize = SNothing,
+        _keyDeposit = SNothing,
+        _poolDeposit = SNothing,
+        _eMax = SNothing,
+        _nOpt = SNothing,
+        _a0 = SNothing,
+        _rho = SNothing,
+        _tau = SNothing,
+        _protocolVersion = SNothing,
+        _minPoolCost = SNothing,
+        _coinsPerUTxOByte = SNothing,
+        _costmdls = SNothing,
+        _prices = SNothing,
+        _maxTxExUnits = SNothing,
+        _maxBlockExUnits = SNothing,
+        _maxValSize = SNothing,
+        _collateralPercentage = SNothing,
+        _maxCollateralInputs = SNothing
+      }
 
 updateField :: Word -> Field (BabbagePParamsUpdate era)
 updateField 0 = field (\x up -> up {_minfeeA = SJust x}) From
@@ -418,7 +411,7 @@ updateField k = field (\_x up -> up) (Invalid k)
 instance Era era => FromCBOR (BabbagePParamsUpdate era) where
   fromCBOR =
     decode
-      (SparseKeyed "PParamsUpdate" emptyPParamsUpdate updateField [])
+      (SparseKeyed "PParamsUpdate" def updateField [])
 
 -- =================================================================
 
@@ -477,19 +470,5 @@ extendPP ::
   HKD f Natural ->
   BabbagePParamsHKD f era2
 extendPP
-  (ShelleyPParams ma mb mxBB mxT mxBH kd pd emx a n rho tau _d _eE pv _ mnP)
-  ada
-  cost
-  price
-  mxTx
-  mxBl
-  mxV
-  col
-  mxCol =
-    BabbagePParams ma mb mxBB mxT mxBH kd pd emx a n rho tau pv mnP ada cost price mxTx mxBl mxV col mxCol
-
--- | Since Babbage removes the '_d' field from PParams, we provide this
--- 'HasField' instance which defaults '_d' to '0' in order to reuse
--- code for the reward calculation.
-instance HasField "_d" (BabbagePParams era) UnitInterval where
-  getField _ = minBound
+  (ShelleyPParams ma mb mxBB mxT mxBH kd pd emx a n rho tau _d _eE pv _ mnP) =
+    BabbagePParams ma mb mxBB mxT mxBH kd pd emx a n rho tau pv mnP

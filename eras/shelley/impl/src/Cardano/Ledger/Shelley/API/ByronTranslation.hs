@@ -38,6 +38,7 @@ import qualified Data.Map.Strict as Map
 import Data.Word
 import GHC.Stack (HasCallStack)
 import Lens.Micro.Extras (view)
+import qualified Cardano.Ledger.Core as Core
 
 -- | We use the same hashing algorithm so we can unwrap and rewrap the bytes.
 -- We don't care about the type that is hashed, which will differ going from
@@ -114,7 +115,7 @@ translateToShelleyLedgerState genesisShelley epochNo cvs =
          in UTxO redeemers
     }
   where
-    pparams :: ShelleyPParams (ShelleyEra c)
+    pparams :: Core.PParams (ShelleyEra c)
     pparams = sgProtocolParams genesisShelley
 
     -- NOTE: we ignore the Byron delegation map because the genesis and

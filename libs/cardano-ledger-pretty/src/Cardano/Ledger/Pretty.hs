@@ -51,7 +51,6 @@ import Cardano.Ledger.CompactAddress (CompactAddr (..), decompactAddr)
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core
   ( Era,
-    EraPParams (..),
     EraRule,
     EraScript (..),
     EraTx (..),
@@ -59,6 +58,8 @@ import Cardano.Ledger.Core
     EraTxBody (..),
     EraTxOut (..),
     EraTxWits (..),
+    PParams (..),
+    PParamsUpdate (..),
     Reward (..),
     RewardType (..),
     ScriptHash (..),

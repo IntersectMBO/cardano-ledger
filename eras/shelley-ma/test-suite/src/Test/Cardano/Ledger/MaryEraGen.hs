@@ -45,7 +45,6 @@ import Data.Sequence.Strict (StrictSeq (..), (<|), (><))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import GHC.Exts (fromString)
-import GHC.Records (HasField (getField))
 import Lens.Micro
 import Test.Cardano.Ledger.AllegraEraGen
   ( genValidityInterval,

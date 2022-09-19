@@ -22,7 +22,6 @@ import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoUTXOW, AlonzoUtxowEvent, AlonzoU
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxBody (ShelleyEraTxBody (..))
 import Cardano.Ledger.BaseTypes (ShelleyBase)
-import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley.EpochBoundary (obligation)
@@ -63,7 +62,6 @@ import Control.State.Transition
 import Data.Kind (Type)
 import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
-import GHC.Records (HasField)
 import Lens.Micro
 
 -- =======================================
@@ -126,9 +124,7 @@ instance
     Signal (EraRule "UTXOW" era) ~ AlonzoTx era,
     Environment (EraRule "DELEGS" era) ~ DelegsEnv era,
     State (EraRule "DELEGS" era) ~ DPState (EraCrypto era),
-    Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era)),
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin
+    Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era))
   ) =>
   STS (AlonzoLEDGER era)
   where

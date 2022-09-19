@@ -22,6 +22,7 @@ where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Crypto.DSIGN.Class (Signable)
 import Cardano.Crypto.Hash.Class (Hash)
+import Cardano.Ledger.Alonzo.PParams.Class
 import Cardano.Ledger.Alonzo.Rules
   ( AlonzoUtxowEvent (WrappedShelleyEraEvent),
     AlonzoUtxowPredFailure (ShelleyInAlonzoUtxowPredFailure),
@@ -32,7 +33,7 @@ import Cardano.Ledger.Alonzo.Rules
     witsVKeyNeeded,
   )
 import Cardano.Ledger.Alonzo.Rules as Alonzo (AlonzoUtxoEvent)
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript, CostModels)
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), validScript)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded)
@@ -44,7 +45,7 @@ import Cardano.Ledger.Babbage.TxBody
     BabbageEraTxOut (..),
     BabbageTxOut (..),
   )
-import Cardano.Ledger.BaseTypes (ProtVer, ShelleyBase, quorum, strictMaybeToMaybe)
+import Cardano.Ledger.BaseTypes (ShelleyBase, quorum, strictMaybeToMaybe)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (DSIGN, HASH)
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest, runTestOnSignal)
@@ -82,7 +83,6 @@ import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable
-import GHC.Records (HasField (..))
 import Lens.Micro
 import Lens.Micro.Extras (view)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
@@ -231,7 +231,6 @@ validateScriptsWellFormed ::
   forall era.
   ( EraTx era,
     BabbageEraTxBody era,
-    HasField "_protocolVersion" (PParams era) ProtVer,
     Script era ~ AlonzoScript era,
     TxOut era ~ BabbageTxOut era
   ) =>
@@ -245,7 +244,7 @@ validateScriptsWellFormed pp tx =
     ]
   where
     scriptWits = tx ^. witsTxL . scriptTxWitsL
-    invalidScriptWits = Map.filter (not . validScript (getField @"_protocolVersion" pp)) scriptWits
+    invalidScriptWits = Map.filter (not . validScript (pp ^. ppProtocolVersionL)) scriptWits
 
     txBody = tx ^. bodyTxL
     normalOuts = toList $ txBody ^. outputsTxBodyL
@@ -254,7 +253,7 @@ validateScriptsWellFormed pp tx =
       SNothing -> normalOuts
       SJust rOut -> rOut : normalOuts
     rScripts = mapMaybe (strictMaybeToMaybe . view referenceScriptTxOutL) outs
-    invalidRefScripts = filter (not . validScript (getField @"_protocolVersion" pp)) rScripts
+    invalidRefScripts = filter (not . validScript (pp ^. ppProtocolVersionL)) rScripts
     invalidRefScriptHashes = Set.fromList $ map (hashScript @era) invalidRefScripts
 
 -- ==============================================================
@@ -273,14 +272,13 @@ babbageUtxowTransition ::
     TxOut era ~ BabbageTxOut era,
     STS (BabbageUTXOW era),
     BabbageEraTxBody era,
-    HasField "_costmdls" (PParams era) CostModels,
-    HasField "_protocolVersion" (PParams era) ProtVer,
     Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody),
     -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (BabbageUTXOW era),
     Environment (EraRule "UTXO" era) ~ UtxoEnv era,
     State (EraRule "UTXO" era) ~ UTxOState era,
-    Signal (EraRule "UTXO" era) ~ Tx era
+    Signal (EraRule "UTXO" era) ~ Tx era,
+    AlonzoEraPParams era
   ) =>
   TransitionRule (BabbageUTXOW era)
 babbageUtxowTransition = do
@@ -372,8 +370,6 @@ instance
     ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     BabbageEraTxBody era,
     TxOut era ~ BabbageTxOut era,
-    HasField "_costmdls" (PParams era) CostModels,
-    HasField "_protocolVersion" (PParams era) ProtVer,
     Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody),
     Show (TxBody era),
     Show (TxOut era),
@@ -384,7 +380,8 @@ instance
     State (EraRule "UTXO" era) ~ UTxOState era,
     Signal (EraRule "UTXO" era) ~ Tx era,
     Eq (PredicateFailure (EraRule "UTXOS" era)),
-    Show (PredicateFailure (EraRule "UTXOS" era))
+    Show (PredicateFailure (EraRule "UTXOS" era)),
+    AlonzoEraPParams era
   ) =>
   STS (BabbageUTXOW era)
   where

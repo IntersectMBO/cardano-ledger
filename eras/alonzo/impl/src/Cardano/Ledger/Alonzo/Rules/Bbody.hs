@@ -22,12 +22,13 @@ where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Alonzo.Era (AlonzoBBODY)
+import Cardano.Ledger.Alonzo.PParams.Class (AlonzoEraPParams, ppMaxBlockExUnitsL)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), pointWiseExUnits)
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx, totExUnits)
 import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq, txSeqTxns)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
 import Cardano.Ledger.BHeaderView (BHeaderView (..), isOverlaySlot)
-import Cardano.Ledger.BaseTypes (ShelleyBase, UnitInterval, epochInfoPure)
+import Cardano.Ledger.BaseTypes (ShelleyBase, epochInfoPure)
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Era as Era
@@ -59,7 +60,7 @@ import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Typeable
 import GHC.Generics (Generic)
-import GHC.Records
+import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
 -- =======================================
@@ -128,12 +129,11 @@ bbodyTransition ::
     State (EraRule "LEDGERS" era) ~ LedgerState era,
     Signal (EraRule "LEDGERS" era) ~ Seq (Tx era),
     -- Conditions to define the rule in this Era
-    HasField "_d" (PParams era) UnitInterval,
-    HasField "_maxBlockExUnits" (PParams era) ExUnits,
     EraSegWits era,
     AlonzoEraTxWits era,
     Era.TxSeq era ~ AlonzoTxSeq era,
-    Tx era ~ AlonzoTx era
+    Tx era ~ AlonzoTx era,
+    AlonzoEraPParams era
   ) =>
   TransitionRule (someBBODY era)
 bbodyTransition =
@@ -182,14 +182,14 @@ bbodyTransition =
         {- ∑(tx ∈ txs)(totExunits tx) ≤ maxBlockExUnits pp  -}
         let txTotal, ppMax :: ExUnits
             txTotal = foldMap totExUnits txs
-            ppMax = getField @"_maxBlockExUnits" pp
+            ppMax = pp ^. ppMaxBlockExUnitsL
         pointWiseExUnits (<=) txTotal ppMax ?! TooManyExUnits txTotal ppMax
 
         pure $
           BbodyState @era
             ls'
             ( incrBlocks
-                (isOverlaySlot firstSlotNo (getField @"_d" pp) slot)
+                (isOverlaySlot firstSlotNo (pp ^. ppDG) slot)
                 hkAsStakePool
                 b
             )
@@ -202,11 +202,10 @@ instance
     Signal (EraRule "LEDGERS" era) ~ Seq (AlonzoTx era),
     AlonzoEraTxWits era,
     Tx era ~ AlonzoTx era,
-    HasField "_d" (PParams era) UnitInterval,
-    HasField "_maxBlockExUnits" (PParams era) ExUnits,
     Era.TxSeq era ~ AlonzoTxSeq era,
     Tx era ~ AlonzoTx era,
-    EraSegWits era
+    EraSegWits era,
+    AlonzoEraPParams era
   ) =>
   STS (AlonzoBBODY era)
   where

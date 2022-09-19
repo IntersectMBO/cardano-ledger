@@ -1,13 +1,14 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.ShelleyMA.TxOut (scaledMinDeposit) where
 
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core hiding (TxBody)
+import Cardano.Ledger.ProtVer ()
 import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Shelley.PParams (_minUTxOValue)
 import Cardano.Ledger.Shelley.TxBody
   ( ShelleyTxOut (..),
     addrEitherShelleyTxOutL,
@@ -23,11 +24,17 @@ import Cardano.Ledger.Val
   )
 import Lens.Micro
 
-instance MAClass ma crypto => EraTxOut (ShelleyMAEra ma crypto) where
+instance
+  ( MAClass ma c,
+    ProtVerAtMost (ShelleyMAEra ma c) 6,  -- TODO Is it possible to use transitivity to get rid of this constraint?
+    ProtVerAtMost (ShelleyMAEra ma c) 4
+  ) =>
+  EraTxOut (ShelleyMAEra ma c)
+  where
   {-# SPECIALIZE instance EraTxOut (ShelleyMAEra 'Mary StandardCrypto) #-}
   {-# SPECIALIZE instance EraTxOut (ShelleyMAEra 'Allegra StandardCrypto) #-}
 
-  type TxOut (ShelleyMAEra ma crypto) = ShelleyTxOut (ShelleyMAEra ma crypto)
+  type TxOut (ShelleyMAEra ma c) = ShelleyTxOut (ShelleyMAEra ma c)
 
   mkBasicTxOut = ShelleyTxOut
 
@@ -37,7 +44,7 @@ instance MAClass ma crypto => EraTxOut (ShelleyMAEra ma crypto) where
   valueEitherTxOutL = valueEitherShelleyTxOutL
   {-# INLINE valueEitherTxOutL #-}
 
-  getMinCoinTxOut pp txOut = scaledMinDeposit (txOut ^. valueTxOutL) (_minUTxOValue pp)
+  getMinCoinTxOut pp txOut = scaledMinDeposit (txOut ^. valueTxOutL) (pp ^. ppMinUTxOValueL)
 
 -- | The `scaledMinDeposit` calculation uses the minUTxOValue protocol parameter
 -- (passed to it as Coin mv) as a specification of "the cost of making a

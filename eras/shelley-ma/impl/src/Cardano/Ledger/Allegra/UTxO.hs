@@ -7,7 +7,6 @@
 module Cardano.Ledger.Allegra.UTxO () where
 
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.UTxO
   ( EraUTxO (..),
     ShelleyScriptsNeeded (..),

@@ -117,7 +117,6 @@ import Data.TreeDiff.QuickCheck (ediffEq)
 import qualified Data.UMap as UM
 import qualified Data.VMap as VMap
 import Data.Word (Word64)
-import GHC.Records (HasField (..))
 import Lens.Micro hiding (ix)
 import Lens.Micro.Extras (view)
 import Test.Cardano.Ledger.Shelley.Generator.Block (tickChainState)

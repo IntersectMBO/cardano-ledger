@@ -70,7 +70,6 @@ import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set ((\\))
 import qualified Data.Set as Set
 import qualified Data.UMap as UM
-import GHC.Records (HasField (..))
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core

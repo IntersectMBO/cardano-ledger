@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -25,7 +24,6 @@ import Cardano.Ledger.Alonzo.TxWits
     unTxDats,
   )
 import Cardano.Ledger.Babbage.Era (BabbageEra)
-import Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..))
 import Cardano.Ledger.Babbage.TxBody
   ( BabbageEraTxBody (..),
     BabbageEraTxOut (..),

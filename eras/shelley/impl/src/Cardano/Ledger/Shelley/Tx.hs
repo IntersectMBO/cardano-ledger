@@ -74,7 +74,6 @@ import Cardano.Ledger.MemoBytes (Mem, MemoBytes, memoBytes, mkMemoBytes, pattern
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.Metadata ()
-import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Scripts (MultiSig (..), nativeMultiSigTag)
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..), ShelleyTxOut (..), TxBody, TxOut)
 import Cardano.Ledger.Shelley.TxWits ()
@@ -93,10 +92,8 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
-import GHC.Records
 import Lens.Micro (Lens', SimpleGetter, lens, to, (^.))
 import NoThunks.Class (NoThunks (..))
-import Numeric.Natural (Natural)
 
 -- ========================================================
 
@@ -393,23 +390,18 @@ extractKeyHashWitnessSet = foldr accum Set.empty
 
 -- | Minimum fee calculation
 shelleyMinFeeTx ::
-  ( EraTx era,
-    HasField "_minfeeA" (Core.PParams era) Natural,
-    HasField "_minfeeB" (Core.PParams era) Natural
+  ( EraTx era
   ) =>
   Core.PParams era ->
   Core.Tx era ->
   Coin
 shelleyMinFeeTx pp tx =
   Coin $
-    fromIntegral (getField @"_minfeeA" pp)
-      * tx ^. sizeTxF
-      + fromIntegral (getField @"_minfeeB" pp)
+    fromIntegral (pp ^. ppMinFeeAL)
+      * tx ^. sizeTxF + fromIntegral (pp ^. ppMinFeeBL)
 
 minfee ::
-  ( EraTx era,
-    HasField "_minfeeA" (Core.PParams era) Natural,
-    HasField "_minfeeB" (Core.PParams era) Natural
+  ( EraTx era
   ) =>
   Core.PParams era ->
   Core.Tx era ->

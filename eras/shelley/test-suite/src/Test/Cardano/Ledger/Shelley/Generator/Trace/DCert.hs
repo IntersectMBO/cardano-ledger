@@ -67,7 +67,6 @@ import Data.Proxy (Proxy (..))
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Generics (Generic)
-import GHC.Records (HasField (getField))
 import GHC.Stack (HasCallStack)
 import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv (..), KeySpace (..))

@@ -53,7 +53,6 @@ import Data.List (foldl')
 import qualified Data.Map.Strict as Map (difference, filter, keysSet, (\\))
 import qualified Data.Set as Set (isSubsetOf, singleton, size)
 import qualified Data.UMap as UM
-import GHC.Records (HasField (..))
 import Test.QuickCheck (Property, conjoin, counterexample, property)
 
 -- | Check stake key registration

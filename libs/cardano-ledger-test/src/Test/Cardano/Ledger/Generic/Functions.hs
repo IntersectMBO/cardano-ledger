@@ -72,7 +72,6 @@ import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.UMap as UMap
-import GHC.Records (HasField (getField))
 import Lens.Micro
 import Numeric.Natural
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)

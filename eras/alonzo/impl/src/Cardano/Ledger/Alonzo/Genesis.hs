@@ -10,10 +10,12 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Cardano.Ledger.Alonzo.Genesis
   ( AlonzoGenesis (..),
     extendPPWithGenesis,
+    augmentPPWithGenesis,
   )
 where
 
@@ -35,7 +37,8 @@ import qualified Cardano.Ledger.BaseTypes as BT
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.SafeHash (extractHash)
-import Cardano.Ledger.Shelley.PParams (ShelleyPParams)
+import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD)
+import Cardano.Ledger.Shelley.Rules (Identity)
 import Data.Aeson (FromJSON (..), ToJSON (..), object, (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (FromJSONKey (..), ToJSONKey (..), toJSONKeyText)
@@ -67,11 +70,11 @@ data AlonzoGenesis = AlonzoGenesis
   }
   deriving (Eq, Generic, NoThunks)
 
--- | Given the missing pieces turn a Shelley.PParams' into an Params'
+-- | Given the missing pieces turn a ShelleyPParamsHKD into an AlonzoPParamsHKD
 extendPPWithGenesis ::
-  ShelleyPParams era1 ->
+  ShelleyPParamsHKD Identity era1 ->
   AlonzoGenesis ->
-  AlonzoPParams era2
+  AlonzoPParamsHKD Identity era2
 extendPPWithGenesis
   pp
   AlonzoGenesis
@@ -94,6 +97,41 @@ extendPPWithGenesis
       maxValSize
       collateralPercentage
       maxCollateralInputs
+
+augmentPPWithGenesis ::
+  AlonzoPParamsHKD Identity era1 ->
+  AlonzoGenesis ->
+  AlonzoPParamsHKD Identity era2
+augmentPPWithGenesis
+  AlonzoPParams
+    { _minfeeA,
+      _minfeeB,
+      _maxBBSize,
+      _maxTxSize,
+      _maxBHSize,
+      _keyDeposit,
+      _poolDeposit,
+      _eMax,
+      _nOpt,
+      _a0,
+      _rho,
+      _tau,
+      _d,
+      _extraEntropy,
+      _protocolVersion,
+      _minPoolCost
+    }
+  AlonzoGenesis
+    { coinsPerUTxOWord = _coinsPerUTxOWord,
+      costmdls = _costmdls,
+      prices = _prices,
+      maxTxExUnits = _maxTxExUnits,
+      maxBlockExUnits = _maxBlockExUnits,
+      maxValSize = _maxValSize,
+      collateralPercentage = _collateralPercentage,
+      maxCollateralInputs = _maxCollateralInputs
+    } =
+    AlonzoPParams {..}
 
 --------------------------------------------------------------------------------
 -- Serialisation

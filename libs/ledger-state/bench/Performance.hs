@@ -7,7 +7,7 @@ module Main where
 
 import Cardano.Binary
 import Cardano.Ledger.Address
-import Cardano.Ledger.Alonzo.PParams hiding (PParams)
+import Cardano.Ledger.PParams
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.CompactAddress
 import Cardano.Ledger.Core
@@ -217,7 +217,7 @@ mkGlobals :: ShelleyGenesis CurrentEra -> PParams CurrentEra -> Globals
 mkGlobals genesis pp =
   mkShelleyGlobals genesis epochInfoE majorPParamsVer
   where
-    majorPParamsVer = pvMajor $ _protocolVersion pp
+    majorPParamsVer = pvMajor $ pp ^. ppProtocolVersionL
     epochInfoE =
       fixedEpochInfo
         (sgEpochLength genesis)

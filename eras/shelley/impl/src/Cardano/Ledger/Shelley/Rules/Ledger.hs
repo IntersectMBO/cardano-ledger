@@ -30,7 +30,6 @@ import Cardano.Binary
     encodeListLen,
   )
 import Cardano.Ledger.BaseTypes (ShelleyBase, TxIx, invalidKey)
-import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley.EpochBoundary (obligation)
@@ -70,7 +69,6 @@ import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import GHC.Records (HasField)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
@@ -162,9 +160,7 @@ instance
     Signal (EraRule "UTXOW" era) ~ Tx era,
     Environment (EraRule "DELEGS" era) ~ DelegsEnv era,
     State (EraRule "DELEGS" era) ~ DPState (EraCrypto era),
-    Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era)),
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin
+    Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era))
   ) =>
   STS (ShelleyLEDGER era)
   where

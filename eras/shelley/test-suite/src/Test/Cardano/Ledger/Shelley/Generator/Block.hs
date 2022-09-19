@@ -44,7 +44,6 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, fromMaybe)
 import Data.Sequence (Seq)
 import qualified Data.Set as Set
-import GHC.Records (HasField (getField))
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes
   ( Mock,
   )

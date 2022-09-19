@@ -1,9 +1,13 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Ledger.Alonzo.Core
   ( AlonzoEraTxBody (..),
     ScriptIntegrityHash,
-    module Cardano.Ledger.ShelleyMA.Core,
+
+    -- * Re-exports
+    module X,
   )
 where
 
@@ -12,6 +16,12 @@ import Cardano.Ledger.BaseTypes (Network)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.SafeHash (SafeHash)
 import Cardano.Ledger.ShelleyMA.Core
+  ( Era (..),
+    EraIndependentScriptIntegrity,
+    EraTxBody (..),
+    ShelleyMAEraTxBody,
+  )
+import qualified Cardano.Ledger.ShelleyMA.Core as X
 import Cardano.Ledger.TxIn (TxIn (..))
 import Data.Maybe.Strict (StrictMaybe)
 import Data.Set (Set)

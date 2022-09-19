@@ -68,7 +68,6 @@ import Data.Default.Class (Default)
 import qualified Data.Map.Strict as Map
 import Data.Void (Void)
 import GHC.Generics (Generic)
-import GHC.Records (HasField)
 import NoThunks.Class (NoThunks (..))
 
 data ShelleyEpochPredFailure era
@@ -112,8 +111,7 @@ instance
     Signal (EraRule "UPEC" era) ~ (),
     Default (State (EraRule "PPUP" era)),
     Default (PParams era),
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin
+    EraPParams era
   ) =>
   STS (ShelleyEPOCH era)
   where
@@ -146,8 +144,7 @@ epochTransition ::
     Environment (EraRule "UPEC" era) ~ EpochState era,
     State (EraRule "UPEC" era) ~ UpecState era,
     Signal (EraRule "UPEC" era) ~ (),
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin
+    EraPParams era
   ) =>
   TransitionRule (ShelleyEPOCH era)
 epochTransition = do

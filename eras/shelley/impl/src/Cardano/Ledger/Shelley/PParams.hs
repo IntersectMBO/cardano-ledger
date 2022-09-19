@@ -1,12 +1,14 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -16,22 +18,20 @@ module Cardano.Ledger.Shelley.PParams
   ( ShelleyPParams,
     ShelleyPParamsHKD (..),
     PPUPState (..),
-    emptyPParams,
     HKD,
     HKDFunctor (..),
     PPUpdateEnv (..),
     ProposedPPUpdates (..),
     emptyPPPUpdates,
     ShelleyPParamsUpdate,
-    emptyPParamsUpdate,
     Update (..),
-    updatePParams,
     pvCanFollow,
 
     -- * Deprecated
     PParams,
     PParams',
     PParamsUpdate,
+    updatePParams,
   )
 where
 
@@ -48,17 +48,17 @@ import Cardano.Ledger.BaseTypes
     Nonce (NeutralNonce),
     StrictMaybe (..),
     UnitInterval,
-    fromSMaybe,
     invalidKey,
     strictMaybeToMaybe,
   )
 import qualified Cardano.Ledger.BaseTypes as BT
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (Era (EraCrypto), EraPParams (applyPPUpdates))
+import Cardano.Ledger.Core (Era (EraCrypto))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.HKD (HKD, HKDFunctor (..))
 import Cardano.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..))
+import Cardano.Ledger.PParams hiding (PParams, PParamsUpdate)
 import Cardano.Ledger.Serialization
   ( FromCBORGroup (..),
     ToCBORGroup (..),
@@ -87,6 +87,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
 import GHC.Generics (Generic)
+import Lens.Micro (lens)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 
@@ -166,68 +167,70 @@ data ShelleyPParamsHKD f era = ShelleyPParams
   }
   deriving (Generic)
 
+instance NFData (ShelleyPParamsHKD Identity era)
+
 type ShelleyPParams era = ShelleyPParamsHKD Identity era
 
 type ShelleyPParamsUpdate era = ShelleyPParamsHKD StrictMaybe era
 
-instance CC.Crypto c => EraPParams (ShelleyEra c) where
-  type PParams (ShelleyEra c) = ShelleyPParams (ShelleyEra c)
-  type PParamsUpdate (ShelleyEra c) = ShelleyPParamsUpdate (ShelleyEra c)
+instance CC.Crypto c => Core.EraPParams (ShelleyEra c) where
+  type PParamsHKD f (ShelleyEra c) = ShelleyPParamsHKD f (ShelleyEra c)
 
-  applyPPUpdates = updatePParams
+  emptyPParams = def
+  emptyPParamsUpdate = def
 
-deriving instance Eq (PParams' Identity era)
+  hkdMinFeeAL = lens _minfeeA $ \pp x -> pp {_minfeeA = x}
+  hkdMinFeeBL = lens _minfeeB $ \pp x -> pp {_minfeeB = x}
+  hkdMaxBBSizeL = lens _maxBBSize $ \pp x -> pp {_maxBBSize = x}
+  hkdMaxTxSizeL = lens _maxTxSize $ \pp x -> pp {_maxTxSize = x}
+  hkdMaxBHSizeL = lens _maxBHSize $ \pp x -> pp {_maxBHSize = x}
+  hkdKeyDepositL = lens _keyDeposit $ \pp x -> pp {_keyDeposit = x}
+  hkdPoolDepositL = lens _poolDeposit $ \pp x -> pp {_poolDeposit = x}
+  hkdEMaxL = lens _eMax $ \pp x -> pp {_eMax = x}
+  hkdNOptL = lens _nOpt $ \pp x -> pp {_nOpt = x}
+  hkdA0L = lens _a0 $ \pp x -> pp {_a0 = x}
+  hkdRhoL = lens _rho $ \pp x -> pp {_rho = x}
+  hkdTauL = lens _tau $ \pp x -> pp {_tau = x}
+  hkdDL = lens _d $ \pp x -> pp {_d = x}
+  hkdExtraEntropyL = lens _extraEntropy $ \pp x -> pp {_extraEntropy = x}
+  hkdProtocolVersionL = lens _protocolVersion $ \pp x -> pp {_protocolVersion = x}
+  hkdMinUTxOValueL = lens _minUTxOValue $ \pp x -> pp {_minUTxOValue = x}
+  hkdMinPoolCostL = lens _minPoolCost $ \pp x -> pp {_minPoolCost = x}
 
-deriving instance Show (PParams' Identity era)
+deriving instance Eq (ShelleyPParamsHKD Identity era)
 
-deriving instance NFData (PParams' Identity era)
+deriving instance Show (ShelleyPParamsHKD Identity era)
 
-instance NoThunks (ShelleyPParams era)
+deriving instance Ord (ShelleyPParamsHKD Identity era)
 
-instance (Era era) => ToCBOR (ShelleyPParams era) where
+instance NoThunks (ShelleyPParamsHKD Identity era)
+
+instance Era era => ToCBOR (ShelleyPParamsHKD Identity era) where
   toCBOR
-    ShelleyPParams
-      { _minfeeA = minfeeA',
-        _minfeeB = minfeeB',
-        _maxBBSize = maxBBSize',
-        _maxTxSize = maxTxSize',
-        _maxBHSize = maxBHSize',
-        _keyDeposit = keyDeposit',
-        _poolDeposit = poolDeposit',
-        _eMax = eMax',
-        _nOpt = nOpt',
-        _a0 = a0',
-        _rho = rho',
-        _tau = tau',
-        _d = d',
-        _extraEntropy = extraEntropy',
-        _protocolVersion = protocolVersion',
-        _minUTxOValue = minUTxOValue',
-        _minPoolCost = minPoolCost'
-      } =
+    ShelleyPParams {..} =
       encodeListLen 18
-        <> toCBOR minfeeA'
-        <> toCBOR minfeeB'
-        <> toCBOR maxBBSize'
-        <> toCBOR maxTxSize'
-        <> toCBOR maxBHSize'
-        <> toCBOR keyDeposit'
-        <> toCBOR poolDeposit'
-        <> toCBOR eMax'
-        <> toCBOR nOpt'
-        <> toCBOR a0'
-        <> toCBOR rho'
-        <> toCBOR tau'
-        <> toCBOR d'
-        <> toCBOR extraEntropy'
-        <> toCBORGroup protocolVersion'
-        <> toCBOR minUTxOValue'
-        <> toCBOR minPoolCost'
+        <> toCBOR _minfeeA
+        <> toCBOR _minfeeB
+        <> toCBOR _maxBBSize
+        <> toCBOR _maxTxSize
+        <> toCBOR _maxBHSize
+        <> toCBOR _keyDeposit
+        <> toCBOR _poolDeposit
+        <> toCBOR _eMax
+        <> toCBOR _nOpt
+        <> toCBOR _a0
+        <> toCBOR _rho
+        <> toCBOR _tau
+        <> toCBOR _d
+        <> toCBOR _extraEntropy
+        <> toCBORGroup _protocolVersion
+        <> toCBOR _minUTxOValue
+        <> toCBOR _minPoolCost
 
-instance (Era era) => FromCBOR (ShelleyPParams era) where
+instance Era era => FromCBOR (ShelleyPParamsHKD Identity era) where
   fromCBOR = do
     decodeRecordNamed "ShelleyPParams" (const 18) $
-      ShelleyPParams
+      ShelleyPParams @Identity
         <$> fromCBOR -- _minfeeA         :: Integer
         <*> fromCBOR -- _minfeeB         :: Natural
         <*> fromCBOR -- _maxBBSize       :: Natural
@@ -246,7 +249,7 @@ instance (Era era) => FromCBOR (ShelleyPParams era) where
         <*> fromCBOR -- _minUTxOValue    :: Natural
         <*> fromCBOR -- _minPoolCost     :: Natural
 
-instance ToJSON (ShelleyPParams era) where
+instance ToJSON (ShelleyPParamsHKD Identity era) where
   toJSON pp =
     Aeson.object
       [ "minFeeA" .= _minfeeA pp,
@@ -268,7 +271,7 @@ instance ToJSON (ShelleyPParams era) where
         "minPoolCost" .= _minPoolCost pp
       ]
 
-instance FromJSON (ShelleyPParams era) where
+instance FromJSON (ShelleyPParamsHKD Identity era) where
   parseJSON =
     Aeson.withObject "ShelleyPParams" $ \obj ->
       ShelleyPParams
@@ -290,31 +293,27 @@ instance FromJSON (ShelleyPParams era) where
         <*> obj .:? "minUTxOValue" .!= mempty
         <*> obj .:? "minPoolCost" .!= mempty
 
-instance Default (ShelleyPParams era) where
-  def = emptyPParams
-
--- | Returns a basic "empty" `PParams` structure with all zero values.
-emptyPParams :: ShelleyPParams era
-emptyPParams =
-  ShelleyPParams
-    { _minfeeA = 0,
-      _minfeeB = 0,
-      _maxBBSize = 0,
-      _maxTxSize = 2048,
-      _maxBHSize = 0,
-      _keyDeposit = Coin 0,
-      _poolDeposit = Coin 0,
-      _eMax = EpochNo 0,
-      _nOpt = 100,
-      _a0 = minBound,
-      _rho = minBound,
-      _tau = minBound,
-      _d = minBound,
-      _extraEntropy = NeutralNonce,
-      _protocolVersion = BT.ProtVer 0 0,
-      _minUTxOValue = mempty,
-      _minPoolCost = mempty
-    }
+instance Default (ShelleyPParamsHKD Identity era) where
+  def =
+    ShelleyPParams
+      { _minfeeA = 0,
+        _minfeeB = 0,
+        _maxBBSize = 0,
+        _maxTxSize = 2048,
+        _maxBHSize = 0,
+        _keyDeposit = Coin 0,
+        _poolDeposit = Coin 0,
+        _eMax = EpochNo 0,
+        _nOpt = 100,
+        _a0 = minBound,
+        _rho = minBound,
+        _tau = minBound,
+        _d = minBound,
+        _extraEntropy = NeutralNonce,
+        _protocolVersion = BT.ProtVer 0 0,
+        _minUTxOValue = mempty,
+        _minPoolCost = mempty
+      }
 
 -- | Update Proposal
 data Update era
@@ -323,7 +322,7 @@ data Update era
 
 deriving instance Eq (Core.PParamsUpdate era) => Eq (Update era)
 
-deriving instance NFData (Core.PParamsUpdate era) => NFData (Update era)
+instance NFData (Core.PParamsUpdate era) => NFData (Update era)
 
 deriving instance Show (Core.PParamsUpdate era) => Show (Update era)
 
@@ -350,25 +349,25 @@ deriving instance Show (PParams' StrictMaybe era)
 
 deriving instance Ord (PParams' StrictMaybe era)
 
-deriving instance NFData (PParams' StrictMaybe era)
+instance NFData (ShelleyPParamsHKD StrictMaybe era)
 
 instance NoThunks (PParamsUpdate era)
 
-instance (Era era) => ToCBOR (PParamsUpdate era) where
+instance Era era => ToCBOR (ShelleyPParamsHKD StrictMaybe era) where
   toCBOR ppup =
     let l =
           mapMaybe
             strictMaybeToMaybe
-            [ encodeMapElement 0 toCBOR =<< _minfeeA ppup,
-              encodeMapElement 1 toCBOR =<< _minfeeB ppup,
-              encodeMapElement 2 toCBOR =<< _maxBBSize ppup,
-              encodeMapElement 3 toCBOR =<< _maxTxSize ppup,
-              encodeMapElement 4 toCBOR =<< _maxBHSize ppup,
-              encodeMapElement 5 toCBOR =<< _keyDeposit ppup,
-              encodeMapElement 6 toCBOR =<< _poolDeposit ppup,
-              encodeMapElement 7 toCBOR =<< _eMax ppup,
-              encodeMapElement 8 toCBOR =<< _nOpt ppup,
-              encodeMapElement 9 toCBOR =<< _a0 ppup,
+            [ encodeMapElement 0  toCBOR =<< _minfeeA ppup,
+              encodeMapElement 1  toCBOR =<< _minfeeB ppup,
+              encodeMapElement 2  toCBOR =<< _maxBBSize ppup,
+              encodeMapElement 3  toCBOR =<< _maxTxSize ppup,
+              encodeMapElement 4  toCBOR =<< _maxBHSize ppup,
+              encodeMapElement 5  toCBOR =<< _keyDeposit ppup,
+              encodeMapElement 6  toCBOR =<< _poolDeposit ppup,
+              encodeMapElement 7  toCBOR =<< _eMax ppup,
+              encodeMapElement 8  toCBOR =<< _nOpt ppup,
+              encodeMapElement 9  toCBOR =<< _a0 ppup,
               encodeMapElement 10 toCBOR =<< _rho ppup,
               encodeMapElement 11 toCBOR =<< _tau ppup,
               encodeMapElement 12 toCBOR =<< _d ppup,
@@ -382,43 +381,43 @@ instance (Era era) => ToCBOR (PParamsUpdate era) where
     where
       encodeMapElement ix encoder x = SJust (encodeWord ix <> encoder x)
 
-emptyPParamsUpdate :: PParamsUpdate era
-emptyPParamsUpdate =
-  ShelleyPParams
-    { _minfeeA = SNothing,
-      _minfeeB = SNothing,
-      _maxBBSize = SNothing,
-      _maxTxSize = SNothing,
-      _maxBHSize = SNothing,
-      _keyDeposit = SNothing,
-      _poolDeposit = SNothing,
-      _eMax = SNothing,
-      _nOpt = SNothing,
-      _a0 = SNothing,
-      _rho = SNothing,
-      _tau = SNothing,
-      _d = SNothing,
-      _extraEntropy = SNothing,
-      _protocolVersion = SNothing,
-      _minUTxOValue = SNothing,
-      _minPoolCost = SNothing
-    }
+instance Default (ShelleyPParamsHKD StrictMaybe era) where
+  def =
+    ShelleyPParams
+      { _minfeeA = SNothing,
+        _minfeeB = SNothing,
+        _maxBBSize = SNothing,
+        _maxTxSize = SNothing,
+        _maxBHSize = SNothing,
+        _keyDeposit = SNothing,
+        _poolDeposit = SNothing,
+        _eMax = SNothing,
+        _nOpt = SNothing,
+        _a0 = SNothing,
+        _rho = SNothing,
+        _tau = SNothing,
+        _d = SNothing,
+        _extraEntropy = SNothing,
+        _protocolVersion = SNothing,
+        _minUTxOValue = SNothing,
+        _minPoolCost = SNothing
+      }
 
-instance (Era era) => FromCBOR (PParamsUpdate era) where
+instance Era era => FromCBOR (ShelleyPParamsHKD StrictMaybe era) where
   fromCBOR = do
     mapParts <-
       decodeMapContents $
         decodeWord >>= \case
-          0 -> fromCBOR >>= \x -> pure (0, \up -> up {_minfeeA = SJust x})
-          1 -> fromCBOR >>= \x -> pure (1, \up -> up {_minfeeB = SJust x})
-          2 -> fromCBOR >>= \x -> pure (2, \up -> up {_maxBBSize = SJust x})
-          3 -> fromCBOR >>= \x -> pure (3, \up -> up {_maxTxSize = SJust x})
-          4 -> fromCBOR >>= \x -> pure (4, \up -> up {_maxBHSize = SJust x})
-          5 -> fromCBOR >>= \x -> pure (5, \up -> up {_keyDeposit = SJust x})
-          6 -> fromCBOR >>= \x -> pure (6, \up -> up {_poolDeposit = SJust x})
-          7 -> fromCBOR >>= \x -> pure (7, \up -> up {_eMax = SJust x})
-          8 -> fromCBOR >>= \x -> pure (8, \up -> up {_nOpt = SJust x})
-          9 -> fromCBOR >>= \x -> pure (9, \up -> up {_a0 = SJust x})
+          0  -> fromCBOR >>= \x -> pure (0 , \up -> up {_minfeeA = SJust x})
+          1  -> fromCBOR >>= \x -> pure (1 , \up -> up {_minfeeB = SJust x})
+          2  -> fromCBOR >>= \x -> pure (2 , \up -> up {_maxBBSize = SJust x})
+          3  -> fromCBOR >>= \x -> pure (3 , \up -> up {_maxTxSize = SJust x})
+          4  -> fromCBOR >>= \x -> pure (4 , \up -> up {_maxBHSize = SJust x})
+          5  -> fromCBOR >>= \x -> pure (5 , \up -> up {_keyDeposit = SJust x})
+          6  -> fromCBOR >>= \x -> pure (6 , \up -> up {_poolDeposit = SJust x})
+          7  -> fromCBOR >>= \x -> pure (7 , \up -> up {_eMax = SJust x})
+          8  -> fromCBOR >>= \x -> pure (8 , \up -> up {_nOpt = SJust x})
+          9  -> fromCBOR >>= \x -> pure (9 , \up -> up {_a0 = SJust x})
           10 -> fromCBOR >>= \x -> pure (10, \up -> up {_rho = SJust x})
           11 -> fromCBOR >>= \x -> pure (11, \up -> up {_tau = SJust x})
           12 -> fromCBOR >>= \x -> pure (12, \up -> up {_d = SJust x})
@@ -431,7 +430,7 @@ instance (Era era) => FromCBOR (PParamsUpdate era) where
     unless
       (nub fields == fields)
       (fail $ "duplicate keys: " <> show fields)
-    pure $ foldr ($) emptyPParamsUpdate (snd <$> mapParts)
+    pure $ foldr ($) def (snd <$> mapParts)
 
 -- | Update operation for protocol parameters structure @PParams
 newtype ProposedPPUpdates era
@@ -461,27 +460,10 @@ instance
 emptyPPPUpdates :: ProposedPPUpdates era
 emptyPPPUpdates = ProposedPPUpdates Map.empty
 
-updatePParams :: PParams era -> PParamsUpdate era -> PParams era
-updatePParams pp ppup =
-  ShelleyPParams
-    { _minfeeA = fromSMaybe (_minfeeA pp) (_minfeeA ppup),
-      _minfeeB = fromSMaybe (_minfeeB pp) (_minfeeB ppup),
-      _maxBBSize = fromSMaybe (_maxBBSize pp) (_maxBBSize ppup),
-      _maxTxSize = fromSMaybe (_maxTxSize pp) (_maxTxSize ppup),
-      _maxBHSize = fromSMaybe (_maxBHSize pp) (_maxBHSize ppup),
-      _keyDeposit = fromSMaybe (_keyDeposit pp) (_keyDeposit ppup),
-      _poolDeposit = fromSMaybe (_poolDeposit pp) (_poolDeposit ppup),
-      _eMax = fromSMaybe (_eMax pp) (_eMax ppup),
-      _nOpt = fromSMaybe (_nOpt pp) (_nOpt ppup),
-      _a0 = fromSMaybe (_a0 pp) (_a0 ppup),
-      _rho = fromSMaybe (_rho pp) (_rho ppup),
-      _tau = fromSMaybe (_tau pp) (_tau ppup),
-      _d = fromSMaybe (_d pp) (_d ppup),
-      _extraEntropy = fromSMaybe (_extraEntropy pp) (_extraEntropy ppup),
-      _protocolVersion = fromSMaybe (_protocolVersion pp) (_protocolVersion ppup),
-      _minUTxOValue = fromSMaybe (_minUTxOValue pp) (_minUTxOValue ppup),
-      _minPoolCost = fromSMaybe (_minPoolCost pp) (_minPoolCost ppup)
-    }
+updatePParams :: Core.EraPParams era => Core.PParams era -> Core.PParamsUpdate era -> Core.PParams era
+updatePParams = applyPPUpdates
+
+{-# DEPRECATED updatePParams "Use applyPPUpdates instead" #-}
 
 data PPUPState era = PPUPState
   { proposals :: !(ProposedPPUpdates era),
@@ -493,7 +475,7 @@ deriving instance Show (Core.PParamsUpdate era) => Show (PPUPState era)
 
 deriving instance Eq (Core.PParamsUpdate era) => Eq (PPUPState era)
 
-deriving instance NFData (Core.PParamsUpdate era) => NFData (PPUPState era)
+instance NFData (Core.PParamsUpdate era) => NFData (PPUPState era)
 
 instance NoThunks (Core.PParamsUpdate era) => NoThunks (PPUPState era)
 

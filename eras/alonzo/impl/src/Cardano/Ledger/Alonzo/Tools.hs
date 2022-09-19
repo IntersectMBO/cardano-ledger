@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Ledger.Alonzo.Tools
@@ -38,7 +37,7 @@ import Cardano.Ledger.Alonzo.TxWits
     unTxDats,
   )
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
-import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Core hiding (TranslationError)
 import Cardano.Ledger.Shelley.Tx (TxIn)
 import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), UTxO (..))
@@ -51,10 +50,11 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
 import qualified Data.Set as Set
 import Data.Text (Text)
-import GHC.Records (HasField (..))
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
+import Lens.Micro.Extras (view)
+import Cardano.Ledger.Alonzo.PParams.Class
 
 -- | Script failures that can be returned by 'evaluateTransactionExecutionUnits'.
 data TransactionScriptFailure c
@@ -103,10 +103,7 @@ evaluateTransactionExecutionUnits ::
     ExtendedUTxO era,
     EraUTxO era,
     ScriptsNeeded era ~ AlonzoScriptsNeeded era,
-    HasField "_maxTxExUnits" (PParams era) ExUnits,
-    HasField "_protocolVersion" (PParams era) ProtVer,
-    Script era ~ AlonzoScript era
-  ) =>
+    Script era ~ AlonzoScript era, AlonzoEraPParams era) =>
   PParams era ->
   -- | The transaction.
   Tx era ->
@@ -187,8 +184,8 @@ evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels = do
           PlutusV2 -> Left $ ValidationFailedV2 e logs
         (_, Right exBudget) -> note (IncompatibleBudget exBudget) $ exBudgetToExUnits exBudget
       where
-        maxBudget = transExUnits . getField @"_maxTxExUnits" $ pparams
-        pv = transProtocolVersion . getField @"_protocolVersion" $ pparams
+        maxBudget = transExUnits . view ppMaxTxExUnitsL $ pparams
+        pv = transProtocolVersion . view ppProtocolVersionL $ pparams
         interpreter lang = case lang of
           PlutusV1 -> PV1.evaluateScriptRestricting pv PV1.Verbose
           PlutusV2 -> PV2.evaluateScriptRestricting pv PV2.Verbose

@@ -72,7 +72,6 @@ import Cardano.Ledger.Alonzo.TxBody
   )
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
 import Cardano.Ledger.Babbage.Era (BabbageEra)
-import Cardano.Ledger.Babbage.PParams (_coinsPerUTxOByte)
 import Cardano.Ledger.Babbage.Scripts ()
 import Cardano.Ledger.BaseTypes
   ( StrictMaybe (..),
@@ -106,11 +105,11 @@ import Data.Sharing (FromSharedCBOR (..), Interns, interns)
 import qualified Data.Text as T
 import Data.Typeable (Proxy (..), (:~:) (Refl))
 import Data.Word
-import GHC.Records
 import GHC.Stack (HasCallStack)
 import Lens.Micro
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import Prelude hiding (lookup)
+import Cardano.Ledger.Babbage.PParams.Class
 
 data BabbageTxOut era
   = TxOutCompact'
@@ -143,8 +142,8 @@ type TxOut era = BabbageTxOut era
 
 {-# DEPRECATED TxOut "Use `BabbageTxOut` instead" #-}
 
-instance CC.Crypto c => EraTxOut (BabbageEra c) where
-  {-# SPECIALIZE instance EraTxOut (BabbageEra CC.StandardCrypto) #-}
+instance (CC.Crypto c, BabbageEraPParams (BabbageEra c)) => EraTxOut (BabbageEra c) where
+  {-# SPECIALIZE instance BabbageEraPParams (BabbageEra CC.StandardCrypto) => EraTxOut (BabbageEra CC.StandardCrypto) #-}
 
   type TxOut (BabbageEra c) = BabbageTxOut (BabbageEra c)
 
@@ -169,8 +168,8 @@ dataHashBabbageTxOutL =
     )
 {-# INLINEABLE dataHashBabbageTxOutL #-}
 
-instance CC.Crypto c => AlonzoEraTxOut (BabbageEra c) where
-  {-# SPECIALIZE instance AlonzoEraTxOut (BabbageEra CC.StandardCrypto) #-}
+instance (CC.Crypto c, BabbageEraPParams (BabbageEra c)) => AlonzoEraTxOut (BabbageEra c) where
+  {-# SPECIALIZE instance BabbageEraPParams (BabbageEra CC.StandardCrypto) => AlonzoEraTxOut (BabbageEra CC.StandardCrypto) #-}
 
   dataHashTxOutL = dataHashBabbageTxOutL
   {-# INLINEABLE dataHashTxOutL #-}
@@ -206,8 +205,8 @@ referenceScriptBabbageTxOutL =
   lens getScriptBabbageTxOut (\(BabbageTxOut addr cv d _) s -> BabbageTxOut addr cv d s)
 {-# INLINEABLE referenceScriptBabbageTxOutL #-}
 
-instance CC.Crypto c => BabbageEraTxOut (BabbageEra c) where
-  {-# SPECIALIZE instance BabbageEraTxOut (BabbageEra CC.StandardCrypto) #-}
+instance (CC.Crypto c, BabbageEraPParams (BabbageEra c)) => BabbageEraTxOut (BabbageEra c) where
+  {-# SPECIALIZE instance BabbageEraPParams (BabbageEra CC.StandardCrypto) => BabbageEraTxOut (BabbageEra CC.StandardCrypto) #-}
   dataTxOutL = dataBabbageTxOutL
   {-# INLINEABLE dataTxOutL #-}
 
@@ -553,14 +552,14 @@ decodeTxOut decAddr = do
       ]
 
 babbageMinUTxOValue ::
-  HasField "_coinsPerUTxOByte" (PParams era) Coin =>
+  BabbageEraPParams era =>
   PParams era ->
   Sized a ->
   Coin
 babbageMinUTxOValue pp sizedTxOut =
   Coin $ fromIntegral (constantOverhead + sizedSize sizedTxOut) * unCoin coinsPerUTxOByte
   where
-    coinsPerUTxOByte = getField @"_coinsPerUTxOByte" pp
+    coinsPerUTxOByte = pp ^. ppCoinsPerUTxOByteL
     -- This constant is an approximation of the memory overhead that comes
     -- from TxIn and an entry in the Map data structure:
     --

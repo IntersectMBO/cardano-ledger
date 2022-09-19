@@ -27,7 +27,7 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
-import Cardano.Ledger.BaseTypes (ProtVer, ShelleyBase, invalidKey)
+import Cardano.Ledger.BaseTypes (ShelleyBase, invalidKey)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Serialization (decodeRecordSum)
 import Cardano.Ledger.Shelley.Era (ShelleyDELPL)
@@ -53,7 +53,6 @@ import Control.State.Transition
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import GHC.Records (HasField)
 import NoThunks.Class (NoThunks (..))
 
 data DelplEnv era = DelplEnv
@@ -206,8 +205,8 @@ instance
 
 instance
   ( Era era,
-    HasField "_protocolVersion" (PParams era) ProtVer,
-    PredicateFailure (EraRule "DELEG" era) ~ ShelleyDelegPredFailure era
+    PredicateFailure (EraRule "DELEG" era) ~ ShelleyDelegPredFailure era,
+    EraPParams era
   ) =>
   Embed (ShelleyDELEG era) (ShelleyDELPL era)
   where

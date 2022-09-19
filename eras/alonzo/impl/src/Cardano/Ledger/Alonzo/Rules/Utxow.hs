@@ -30,12 +30,13 @@ import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Address (Addr (..), bootstrapKeyHash, getRwdCred)
 import Cardano.Ledger.Alonzo.Era (AlonzoUTXOW)
 import Cardano.Ledger.Alonzo.PParams (getLanguageView)
+import Cardano.Ledger.Alonzo.PParams.Class
 import Cardano.Ledger.Alonzo.Rules.Utxo
   ( AlonzoUTXO,
     AlonzoUtxoEvent,
     AlonzoUtxoPredFailure,
   )
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), CostModels)
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Alonzo.Tx
   ( AlonzoEraTx,
     ScriptPurpose,
@@ -56,8 +57,7 @@ import Cardano.Ledger.Alonzo.TxWits
   )
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..), getInputDataHashesTxBody)
 import Cardano.Ledger.BaseTypes
-  ( ProtVer,
-    ShelleyBase,
+  ( ShelleyBase,
     StrictMaybe (..),
     quorum,
     strictMaybeToMaybe,
@@ -103,7 +103,6 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
-import GHC.Records
 import Lens.Micro
 import NoThunks.Class
 import Validation
@@ -309,7 +308,7 @@ ppViewHashesMatch ::
   ( AlonzoEraTx era,
     ExtendedUTxO era,
     Script era ~ AlonzoScript era,
-    HasField "_costmdls" (PParams era) CostModels
+    AlonzoEraPParams era
   ) =>
   Tx era ->
   PParams era ->
@@ -339,14 +338,13 @@ alonzoStyleWitness ::
     EraUTxO era,
     ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     Script era ~ AlonzoScript era,
-    HasField "_costmdls" (PParams era) CostModels,
-    HasField "_protocolVersion" (PParams era) ProtVer,
     Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody),
     -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (AlonzoUTXOW era),
     Environment (EraRule "UTXO" era) ~ UtxoEnv era,
     State (EraRule "UTXO" era) ~ UTxOState era,
-    Signal (EraRule "UTXO" era) ~ Tx era
+    Signal (EraRule "UTXO" era) ~ Tx era,
+    AlonzoEraPParams era
   ) =>
   TransitionRule (AlonzoUTXOW era)
 alonzoStyleWitness = do
@@ -509,13 +507,12 @@ instance
     ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody),
     Script era ~ AlonzoScript era,
-    HasField "_costmdls" (PParams era) CostModels,
-    HasField "_protocolVersion" (PParams era) ProtVer,
     -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (AlonzoUTXOW era),
     Environment (EraRule "UTXO" era) ~ UtxoEnv era,
     State (EraRule "UTXO" era) ~ UTxOState era,
-    Signal (EraRule "UTXO" era) ~ Tx era
+    Signal (EraRule "UTXO" era) ~ Tx era,
+    AlonzoEraPParams era
   ) =>
   STS (AlonzoUTXOW era)
   where

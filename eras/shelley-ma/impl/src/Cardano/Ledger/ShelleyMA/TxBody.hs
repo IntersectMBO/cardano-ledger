@@ -317,7 +317,13 @@ lensTxBodyRaw getter setter =
     (\(TxBodyConstr (Memo txBodyRaw _)) val -> mkMATxBody $ setter txBodyRaw val)
 {-# INLINEABLE lensTxBodyRaw #-}
 
-instance MAClass ma c => EraTxBody (ShelleyMAEra ma c) where
+instance
+  ( MAClass ma c,
+    ProtVerAtMost (ShelleyMAEra ma c) 6,
+    ProtVerAtMost (ShelleyMAEra ma c) 4
+  ) =>
+  EraTxBody (ShelleyMAEra ma c)
+  where
   {-# SPECIALIZE instance EraTxBody (ShelleyMAEra 'Mary StandardCrypto) #-}
   {-# SPECIALIZE instance EraTxBody (ShelleyMAEra 'Allegra StandardCrypto) #-}
 
@@ -344,7 +350,13 @@ instance MAClass ma c => EraTxBody (ShelleyMAEra ma c) where
   allInputsTxBodyF = inputsTxBodyL
   {-# INLINEABLE allInputsTxBodyF #-}
 
-instance MAClass ma c => ShelleyEraTxBody (ShelleyMAEra ma c) where
+instance
+  ( MAClass ma c,
+    ProtVerAtMost (ShelleyMAEra ma c) 4,
+    ProtVerAtMost (ShelleyMAEra ma c) 6
+  ) =>
+  ShelleyEraTxBody (ShelleyMAEra ma c)
+  where
   {-# SPECIALIZE instance ShelleyEraTxBody (ShelleyMAEra 'Mary StandardCrypto) #-}
   {-# SPECIALIZE instance ShelleyEraTxBody (ShelleyMAEra 'Allegra StandardCrypto) #-}
 
@@ -363,7 +375,13 @@ instance MAClass ma c => ShelleyEraTxBody (ShelleyMAEra ma c) where
     lensTxBodyRaw certs (\txBodyRaw certs_ -> txBodyRaw {certs = certs_})
   {-# INLINEABLE certsTxBodyL #-}
 
-instance MAClass ma c => ShelleyMAEraTxBody (ShelleyMAEra ma c) where
+instance
+  ( MAClass ma c,
+    ProtVerAtMost (ShelleyMAEra ma c) 4,
+    ProtVerAtMost (ShelleyMAEra ma c) 6
+  ) =>
+  ShelleyMAEraTxBody (ShelleyMAEra ma c)
+  where
   {-# SPECIALIZE instance ShelleyMAEraTxBody (ShelleyMAEra 'Mary StandardCrypto) #-}
   {-# SPECIALIZE instance ShelleyMAEraTxBody (ShelleyMAEra 'Allegra StandardCrypto) #-}
 

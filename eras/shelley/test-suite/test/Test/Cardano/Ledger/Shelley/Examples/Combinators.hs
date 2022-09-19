@@ -116,7 +116,6 @@ import qualified Data.Set as Set
 import Data.UMap (View (Delegations, Ptrs, Rewards), unView)
 import qualified Data.UMap as UM
 import Data.Word (Word64)
-import GHC.Records (HasField (..))
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
 import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo, getBlockNonce)

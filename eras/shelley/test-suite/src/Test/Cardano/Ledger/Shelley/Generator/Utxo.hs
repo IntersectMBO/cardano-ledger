@@ -74,7 +74,6 @@ import qualified Data.Set as Set
 import qualified Data.UMap as UM
 import qualified Data.Vector as V
 import Debug.Trace (trace)
-import GHC.Records (HasField (..))
 import Lens.Micro
 import NoThunks.Class ()
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes

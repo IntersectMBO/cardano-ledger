@@ -11,7 +11,6 @@ import Cardano.Ledger.Alonzo.UTxO
     getAlonzoScriptsNeeded,
   )
 import Cardano.Ledger.Babbage.Era (BabbageEra)
-import Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..))
 import Cardano.Ledger.Babbage.TxBody ()
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue)

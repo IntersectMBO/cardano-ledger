@@ -30,8 +30,7 @@ import Cardano.Ledger.Alonzo.Data (AlonzoTxAuxData (..), AuxiliaryData)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), Script)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..))
 import Cardano.Ledger.Babbage.Era (BabbageEra)
-import Cardano.Ledger.Babbage.Genesis (AlonzoGenesis, extendPPWithGenesis)
-import Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..))
+import Cardano.Ledger.Babbage.Genesis (AlonzoGenesis, augmentPPWithGenesis)
 import Cardano.Ledger.Babbage.Rules ()
 import Cardano.Ledger.Babbage.Translation ()
 import Cardano.Ledger.Babbage.Tx
@@ -59,6 +58,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict
 import qualified Data.Set as Set
 import Lens.Micro
+import Cardano.Ledger.Core (PParams (..))
 
 type Babbage = BabbageEra StandardCrypto
 
@@ -72,7 +72,7 @@ instance (Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyBlock
 instance Crypto c => API.CanStartFromGenesis (BabbageEra c) where
   type AdditionalGenesisConfig (BabbageEra c) = AlonzoGenesis
 
-  initialState = API.initialStateFromGenesis extendPPWithGenesis
+  initialState = API.initialStateFromGenesis (\(PParams pp) gen -> PParams $ augmentPPWithGenesis pp gen)
 
 instance Crypto c => ExtendedUTxO (BabbageEra c) where
   txInfo = babbageTxInfo

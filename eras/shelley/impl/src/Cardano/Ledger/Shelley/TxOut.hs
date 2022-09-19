@@ -37,7 +37,6 @@ import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Shelley.PParams (_minUTxOValue)
 import Cardano.Ledger.Val (DecodeNonNegative (..))
 import Control.DeepSeq (NFData (rnf))
 import Data.ByteString.Short (ShortByteString, pack)
@@ -48,6 +47,7 @@ import Data.Word (Word8)
 import GHC.Stack (HasCallStack)
 import Lens.Micro
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
+import Cardano.Ledger.Shelley.PParams ()
 
 data ShelleyTxOut era = TxOutCompact
   { txOutCompactAddr :: {-# UNPACK #-} !(CompactAddr (EraCrypto era)),
@@ -58,7 +58,7 @@ type TxOut era = ShelleyTxOut era
 
 {-# DEPRECATED TxOut "Use `ShelleyTxOut` instead" #-}
 
-instance CC.Crypto crypto => Core.EraTxOut (ShelleyEra crypto) where
+instance (CC.Crypto crypto, EraPParams (ShelleyEra crypto)) => Core.EraTxOut (ShelleyEra crypto) where
   {-# SPECIALIZE instance Core.EraTxOut (ShelleyEra CC.StandardCrypto) #-}
 
   type TxOut (ShelleyEra crypto) = ShelleyTxOut (ShelleyEra crypto)
@@ -71,7 +71,7 @@ instance CC.Crypto crypto => Core.EraTxOut (ShelleyEra crypto) where
   valueEitherTxOutL = valueEitherShelleyTxOutL
   {-# INLINE valueEitherTxOutL #-}
 
-  getMinCoinTxOut pp _ = _minUTxOValue pp
+  getMinCoinTxOut pp _ = pp ^. ppMinUTxOValueL
 
 addrEitherShelleyTxOutL ::
   Lens' (ShelleyTxOut era) (Either (Addr (EraCrypto era)) (CompactAddr (EraCrypto era)))

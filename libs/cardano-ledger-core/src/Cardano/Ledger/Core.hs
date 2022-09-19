@@ -35,7 +35,6 @@ module Cardano.Ledger.Core
     EraScript (..),
     Value,
     EraPParams (..),
-    PParamsDelta,
 
     -- * Era STS
     EraRule,
@@ -74,6 +73,8 @@ module Cardano.Ledger.Core
 
     -- * Re-exports
     module Cardano.Ledger.Hashes,
+    module Cardano.Ledger.PParams,
+    module Cardano.Ledger.Era.Class,
 
     -- * Deprecations
     hashAuxiliaryData,
@@ -91,12 +92,15 @@ import Cardano.Ledger.CompactAddress (CompactAddr, compactAddr, decompactAddr, i
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Credential
 import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Era.Class (Era (..))
 import Cardano.Ledger.Hashes
 import Cardano.Ledger.Keys (KeyRole (Staking, Witness))
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
 import Cardano.Ledger.Keys.WitVKey (WitVKey)
 import Cardano.Ledger.Language (Language)
 import Cardano.Ledger.Rewards (Reward (..), RewardType (..))
+import Cardano.Ledger.PParams
+import Cardano.Ledger.ProtVer
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash (..))
 import Cardano.Ledger.Serialization (Sized (sizedValue), ToCBORGroup (..), mkSized)
 import Cardano.Ledger.TxIn (TxIn (..))
@@ -106,41 +110,25 @@ import Control.Monad.Except (Except, runExcept)
 import qualified Data.ByteString as BS
 import Data.ByteString.Short (ShortByteString)
 import Data.Coerce (Coercible, coerce)
-import Data.Kind (Constraint, Type)
+import Data.Kind (Type)
 import Data.Map (Map, mapMaybe)
 import Data.Maybe (fromMaybe)
 import Data.Maybe.Strict (StrictMaybe)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import Data.Sharing (FromSharedCBOR (Share), Interns)
-import Data.Typeable (Typeable)
 import Data.Void (Void, absurd)
 import Data.Word (Word64)
-import GHC.Stack (HasCallStack)
 import GHC.TypeLits
 import Lens.Micro
 import NoThunks.Class (NoThunks)
-
---------------------------------------------------------------------------------
--- Era
---------------------------------------------------------------------------------
-
-class (CC.Crypto (EraCrypto era), Typeable era, ProtVerLow era <= ProtVerHigh era) => Era era where
-  type EraCrypto era :: Type
-
-  -- | Lowest major protocol version for this era
-  type ProtVerLow era :: Nat
-
-  -- | Highest major protocol version for this era. By default se to `ProtVerLow`
-  type ProtVerHigh era :: Nat
-
-  type ProtVerHigh era = ProtVerLow era
 
 -- | A transaction.
 class
   ( EraTxBody era,
     EraTxWits era,
     EraTxAuxData era,
+    EraPParams era,
     -- NFData (Tx era), TODO: Add NFData constraints to Crypto class
     NoThunks (Tx era),
     FromCBOR (Annotator (Tx era)),
@@ -302,8 +290,8 @@ bootAddrTxOutF = to $ \txOut ->
     Left (AddrBootstrap bootstrapAddr) -> Just bootstrapAddr
     Right cAddr
       | isBootstrapCompactAddr cAddr -> do
-          AddrBootstrap bootstrapAddr <- Just (decompactAddr cAddr)
-          Just bootstrapAddr
+        AddrBootstrap bootstrapAddr <- Just (decompactAddr cAddr)
+        Just bootstrapAddr
     _ -> Nothing
 {-# INLINE bootAddrTxOutF #-}
 
@@ -381,35 +369,6 @@ hashAuxiliaryData = hashTxAuxData
 validateAuxiliaryData :: EraTxAuxData era => ProtVer -> TxAuxData era -> Bool
 validateAuxiliaryData = validateTxAuxData
 {-# DEPRECATED validateAuxiliaryData "Use `validateTxAuxData` instead" #-}
-
-class
-  ( Era era,
-    Eq (PParams era),
-    Show (PParams era),
-    NFData (PParams era),
-    ToCBOR (PParams era),
-    FromCBOR (PParams era),
-    NoThunks (PParams era),
-    Ord (PParamsUpdate era),
-    Show (PParamsUpdate era),
-    NFData (PParamsUpdate era),
-    ToCBOR (PParamsUpdate era),
-    FromCBOR (PParamsUpdate era),
-    NoThunks (PParamsUpdate era)
-  ) =>
-  EraPParams era
-  where
-  -- | Protocol parameters
-  type PParams era = (r :: Type) | r -> era
-
-  -- | The type of updates to Protocol parameters
-  type PParamsUpdate era = (r :: Type) | r -> era
-
-  applyPPUpdates :: PParams era -> PParamsUpdate era -> PParams era
-
-type PParamsDelta era = PParamsUpdate era
-
-{-# DEPRECATED PParamsDelta "Use `PParamsUpdate` instead" #-}
 
 -- | A collection of witnesses in a Tx
 class
@@ -613,88 +572,6 @@ translateEraMaybe ::
   Maybe (f era)
 translateEraMaybe ctxt =
   either (const Nothing) Just . runExcept . translateEra ctxt
-
------------------------------
--- Protocol version bounds --
------------------------------
-
-type family ProtVerIsInBounds (check :: Symbol) era (v :: Nat) (b :: Bool) :: Constraint where
-  ProtVerIsInBounds check era v 'True = ()
-  ProtVerIsInBounds check era v 'False =
-    TypeError
-      ( 'ShowType era
-          ':<>: 'Text " protocol version bounds are: ["
-          ':<>: 'ShowType (ProtVerLow era)
-          ':<>: 'Text ", "
-          ':<>: 'ShowType (ProtVerHigh era)
-          ':<>: 'Text "], but required is "
-          ':<>: 'Text check
-          ':<>: 'Text " "
-          ':<>: 'ShowType v
-      )
-
--- | Requirement for the era's highest protocol version to be higher or equal to
--- the supplied value
-type family ProtVerAtLeast era (l :: Nat) :: Constraint where
-  ProtVerAtLeast era l = ProtVerIsInBounds "at least" era l (l <=? ProtVerHigh era)
-
--- | Requirement for the era's lowest protocol version to be lower or equal to
--- the supplied value
-type family ProtVerAtMost era (h :: Nat) :: Constraint where
-  ProtVerAtMost era h = ProtVerIsInBounds "at most" era h (ProtVerLow era <=? h)
-
--- | Restrict a lower and upper bounds of the protocol version for the particular era
-type ProtVerInBounds era l h = (ProtVerAtLeast era l, ProtVerAtMost era h)
-
--- | Restrict an era to the specific era through the protocol version. This is
--- equivalent to @(inEra (Crypto era) ~ era)@
-type ExactEra (inEra :: Type -> Type) era =
-  ProtVerInBounds era (ProtVerLow (inEra (EraCrypto era))) (ProtVerHigh (inEra (EraCrypto era)))
-
--- | Restrict the @era@ to equal to @eraName@ or come after it
-type AtLeastEra (eraName :: Type -> Type) era =
-  ProtVerAtLeast era (ProtVerLow (eraName (EraCrypto era)))
-
--- | Restrict the @era@ to equal to @eraName@ or come before it.
-type AtMostEra (eraName :: Type -> Type) era =
-  ProtVerAtMost era (ProtVerHigh (eraName (EraCrypto era)))
-
--- | Enforce era to be at least the specified era at the type level. In other words
--- compiler will produce type error when applied to eras prior to the specified era.
--- This function should be used in order to avoid redundant constraints warning.
---
--- For example these will type check
---
--- >>> atLeastEra @BabbageEra @(ConwayEra StandardCrypto)
--- >>> atLeastEra @BabbageEra @(BabbageEra StandardCrypto)
---
--- However this will result in a type error
---
--- >>> atLeastEra @BabbageEra @(AlonzoEra StandardCrypto)
-atLeastEra :: AtLeastEra eraName era => ()
-atLeastEra = ()
-
--- | Enforce era to be at most the specified era at the type level. In other words
--- compiler will produce type error when applied to eras prior to the specified era.
--- This function should be used in order to avoid redundant constraints warning.
---
--- For example these will type check
---
--- >>> atMostEra @BabbageEra @(ShelleyEra StandardCrypto)
--- >>> atMostEra @AlonzoEra @(MaryEra StandardCrypto)
---
--- However this will result in a type error
---
--- >>> atMostEra @BabbageEra @(ConwayEra StandardCrypto)
-atMostEra :: AtMostEra eraName era => ()
-atMostEra = ()
-
-notSupportedInThisEra :: HasCallStack => a
-notSupportedInThisEra = error "Impossible: Function is not supported in this era"
-
--- Without using `lens` we hit a ghc bug, which results in a redundant constraint warning
-notSupportedInThisEraL :: HasCallStack => Lens' a b
-notSupportedInThisEraL = lens notSupportedInThisEra notSupportedInThisEra
 
 -- ====================================================
 -- Reflecting the phase of scripts into types

@@ -14,7 +14,6 @@ module Cardano.Ledger.ShelleyMA
     ShelleyTxOut,
     MATxBody,
     AllegraTxAuxData,
-    ShelleyPParams,
 
     -- * Deprecated
     Tx,
@@ -22,10 +21,11 @@ module Cardano.Ledger.ShelleyMA
     TxBody,
     PParams,
     AuxiliaryData,
+    ShelleyPParams,
   )
 where
 
-import Cardano.Ledger.Core (EraSegWits (..))
+import Cardano.Ledger.Core (EraSegWits (..), ProtVerAtMost)
 import Cardano.Ledger.Shelley.BlockChain (ShelleyTxSeq (..))
 import qualified Cardano.Ledger.Shelley.BlockChain as Shelley
   ( bbHash,
@@ -49,7 +49,13 @@ import Cardano.Ledger.ShelleyMA.TxBody (MATxBody, TxBody)
 
 -- Uses the default instance of hashScript
 
-instance MAClass ma c => EraSegWits (ShelleyMAEra ma c) where
+instance
+  ( MAClass ma c,
+    ProtVerAtMost (ShelleyMAEra ma c) 4,
+    ProtVerAtMost (ShelleyMAEra ma c) 6
+  ) =>
+  EraSegWits (ShelleyMAEra ma c)
+  where
   type TxSeq (ShelleyMAEra ma c) = ShelleyTxSeq (ShelleyMAEra ma c)
   fromTxSeq = Shelley.txSeqTxns
   toTxSeq = ShelleyTxSeq

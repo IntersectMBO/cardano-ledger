@@ -102,7 +102,6 @@ import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq ((:|>)))
 import qualified Data.Sequence.Strict as Seq (fromList)
 import Data.Set as Set
-import GHC.Records (HasField (..))
 import Lens.Micro
 import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.V1 as PV1 (ParamName)
@@ -367,10 +366,6 @@ genAlonzoPParams constants = do
       c = 25 -- percent of fee in collateral
       mxC = 100 -- max number of inputs in collateral
   pure (extendPP shelleypp ada cost price mxTx mxBl mxV c mxC)
-
--- | Since Alonzo PParams don't have this field, we have to compute something here.
-instance HasField "_minUTxOValue" (AlonzoPParams (AlonzoEra c)) Coin where
-  getField _ = Coin 4000
 
 bigMem :: Natural
 bigMem = 50000

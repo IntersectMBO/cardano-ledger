@@ -43,14 +43,12 @@ import Cardano.Ledger.Core
     EraTx (Tx),
     PreviousEra,
     TranslateEra (..),
-    TranslationContext,
+    TranslationContext, EraPParams
   )
-import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (NewEpochState)
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
-import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Rules ()
 import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv, ShelleyLedgerPredFailure)
 import qualified Cardano.Ledger.Shelley.Rules.Ledger as Ledger
@@ -168,7 +166,7 @@ class
           $ res
 
 instance
-  ( CC.Crypto c,
+  ( EraPParams (ShelleyEra c),
     DSignable c (Hash c EraIndependentTxBody)
   ) =>
   ApplyTx (ShelleyEra c)

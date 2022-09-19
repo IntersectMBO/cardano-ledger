@@ -5,7 +5,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -60,7 +59,7 @@ import Data.Set (Set)
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import GHC.Records (HasField (..))
+import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
 data PpupEnv era
@@ -113,8 +112,7 @@ newtype PpupEvent era = NewEpoch EpochNo
 
 instance
   ( Typeable era,
-    HasField "_protocolVersion" (PParams era) ProtVer,
-    HasField "_protocolVersion" (PParamsUpdate era) (StrictMaybe ProtVer)
+    EraPParams era
   ) =>
   STS (ShelleyPPUP era)
   where
@@ -164,9 +162,7 @@ instance
       k -> invalidKey k
 
 ppupTransitionNonEmpty ::
-  ( Typeable era,
-    HasField "_protocolVersion" (PParams era) ProtVer,
-    HasField "_protocolVersion" (PParamsUpdate era) (StrictMaybe ProtVer)
+  ( EraPParams era
   ) =>
   TransitionRule (ShelleyPPUP era)
 ppupTransitionNonEmpty = do
@@ -183,10 +179,10 @@ ppupTransitionNonEmpty = do
       eval (dom pup ⊆ dom _genDelegs) ?! NonGenesisUpdatePPUP (eval (dom pup)) (eval (dom _genDelegs))
 
       let goodPV =
-            pvCanFollow (getField @"_protocolVersion" pp)
-              . getField @"_protocolVersion"
+            pvCanFollow (pp ^. ppProtocolVersionL)
+              . (^. ppuProtocolVersionL)
       let badPVs = filter (not . goodPV) (Map.elems pup)
-      case map (getField @"_protocolVersion") badPVs of
+      case map (^. ppuProtocolVersionL) badPVs of
         -- All Nothing cases have been filtered out by 'pvCanFollow'
         SJust pv : _ -> failBecause $ PVCannotFollowPPUP pv
         _ -> pure ()

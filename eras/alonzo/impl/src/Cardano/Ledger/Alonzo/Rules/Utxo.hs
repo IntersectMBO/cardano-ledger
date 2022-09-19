@@ -12,6 +12,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE TupleSections #-}
 
 module Cardano.Ledger.Alonzo.Rules.Utxo
   ( AlonzoUTXO,
@@ -33,8 +34,9 @@ where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), serialize)
 import Cardano.Ledger.Address (Addr (..), RewardAcnt)
 import Cardano.Ledger.Alonzo.Era (AlonzoUTXO)
+import Cardano.Ledger.Alonzo.PParams.Class
 import Cardano.Ledger.Alonzo.Rules.Utxos (AlonzoUTXOS, AlonzoUtxosPredFailure)
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Prices, pointWiseExUnits)
+import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), pointWiseExUnits)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), totExUnits)
 import Cardano.Ledger.Alonzo.TxBody
   ( AlonzoEraTxBody (..),
@@ -44,7 +46,6 @@ import Cardano.Ledger.Alonzo.TxBody
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), nullRedeemers)
 import Cardano.Ledger.BaseTypes
   ( Network,
-    ProtVer,
     ShelleyBase,
     StrictMaybe (..),
     epochInfo,
@@ -108,7 +109,6 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
-import GHC.Records
 import Lens.Micro
 import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
@@ -257,7 +257,7 @@ vKeyLocked txOut =
 feesOK ::
   forall era.
   ( AlonzoEraTx era,
-    HasField "_collateralPercentage" (PParams era) Natural
+    AlonzoEraPParams era
   ) =>
   PParams era ->
   Tx era ->
@@ -280,7 +280,7 @@ feesOK pp tx (UTxO utxo) =
 
 validateCollateral ::
   ( EraTxBody era,
-    HasField "_collateralPercentage" (PParams era) Natural
+    AlonzoEraPParams era
   ) =>
   PParams era ->
   TxBody era ->
@@ -311,8 +311,8 @@ validateScriptsNotPaidUTxO utxoCollateral =
 
 -- > balance ∗ 100 ≥ txfee txb ∗ (collateralPercent pp)
 validateInsufficientCollateral ::
-  ( HasField "_collateralPercentage" (PParams era) Natural,
-    EraTxBody era
+  ( EraTxBody era,
+    AlonzoEraPParams era
   ) =>
   PParams era ->
   TxBody era ->
@@ -325,7 +325,7 @@ validateInsufficientCollateral pp txBody bal =
         (fromIntegral collPerc * unCoin txfee) % 100
   where
     txfee = txBody ^. feeTxBodyL -- Coin supplied to pay fees
-    collPerc = getField @"_collateralPercentage" pp
+    collPerc = pp ^. ppCollateralPercentageL
 
 -- > isAdaOnly balance
 validateCollateralContainsNonADA ::
@@ -344,8 +344,7 @@ validateCollateralContainsNonADA collateralTxOuts =
 validateOutsideForecast ::
   ( ShelleyMAEraTxBody era,
     AlonzoEraTxWits era,
-    EraTx era,
-    HasField "_protocolVersion" (PParams era) ProtVer
+    EraTx era
   ) =>
   PParams era ->
   EpochInfo (Either a) ->
@@ -359,12 +358,12 @@ validateOutsideForecast pp ei slotNo sysSt tx =
   case tx ^. bodyTxL . vldtTxBodyL of
     ValidityInterval _ (SJust ifj)
       | not (nullRedeemers (tx ^. witsTxL . rdmrsTxWitsL)) ->
-          let ei' =
-                if allowOutsideForecastTTL pp
-                  then unsafeLinearExtendEpochInfo slotNo ei
-                  else ei
-           in -- ◇ ∉ { txrdmrs tx, i_f } ⇒
-              failureUnless (isRight (epochInfoSlotToUTCTime ei' sysSt ifj)) $ OutsideForecast ifj
+        let ei' =
+              if allowOutsideForecastTTL (pp ^. ppProtocolVersionL)
+                then unsafeLinearExtendEpochInfo slotNo ei
+                else ei
+         in -- ◇ ∉ { txrdmrs tx, i_f } ⇒
+            failureUnless (isRight (epochInfoSlotToUTCTime ei' sysSt ifj)) $ OutsideForecast ifj
     _ -> pure ()
 
 -- | Ensure that there are no `TxOut`s that have value less than the sized @coinsPerUTxOWord@
@@ -393,8 +392,8 @@ validateOutputTooSmallUTxO pp (UTxO outputs) =
 --
 -- > ∀ txout ∈ txouts txb, serSize (getValue txout) ≤ maxValSize pp
 validateOutputTooBigUTxO ::
-  ( HasField "_maxValSize" (PParams era) Natural,
-    EraTxOut era
+  ( EraTxOut era,
+    AlonzoEraPParams era
   ) =>
   PParams era ->
   UTxO era ->
@@ -402,7 +401,7 @@ validateOutputTooBigUTxO ::
 validateOutputTooBigUTxO pp (UTxO outputs) =
   failureUnless (null outputsTooBig) $ OutputTooBigUTxO outputsTooBig
   where
-    maxValSize = getField @"_maxValSize" pp
+    maxValSize = pp ^. ppMaxValSizeL
     outputsTooBig = foldl' accum [] $ Map.elems outputs
     accum ans txOut =
       let v = txOut ^. valueTxOutL
@@ -428,9 +427,9 @@ validateWrongNetworkInTxBody netId txBody =
 --
 -- > totExunits tx ≤ maxTxExUnits pp
 validateExUnitsTooBigUTxO ::
-  ( HasField "_maxTxExUnits" (PParams era) ExUnits,
-    AlonzoEraTxWits era,
-    EraTx era
+  ( AlonzoEraTxWits era,
+    EraTx era,
+    AlonzoEraPParams era
   ) =>
   PParams era ->
   Tx era ->
@@ -439,7 +438,7 @@ validateExUnitsTooBigUTxO pp tx =
   failureUnless (pointWiseExUnits (<=) totalExUnits maxTxExUnits) $
     ExUnitsTooBigUTxO maxTxExUnits totalExUnits
   where
-    maxTxExUnits = getField @"_maxTxExUnits" pp
+    maxTxExUnits = pp ^. ppMaxTxExUnitsL
     -- This sums up the ExUnits for all embedded Plutus Scripts anywhere in the transaction:
     totalExUnits = totExUnits tx
 
@@ -447,8 +446,8 @@ validateExUnitsTooBigUTxO pp tx =
 --
 -- > ‖collateral tx‖  ≤  maxCollInputs pp
 validateTooManyCollateralInputs ::
-  ( HasField "_maxCollateralInputs" (PParams era) Natural,
-    AlonzoEraTxBody era
+  ( AlonzoEraTxBody era,
+    AlonzoEraPParams era
   ) =>
   PParams era ->
   TxBody era ->
@@ -457,7 +456,7 @@ validateTooManyCollateralInputs pp txBody =
   failureUnless (numColl <= maxColl) $ TooManyCollateralInputs maxColl numColl
   where
     maxColl, numColl :: Natural
-    maxColl = getField @"_maxCollateralInputs" pp
+    maxColl = pp ^. ppMaxCollateralInputsL
     numColl = fromIntegral . Set.size $ txBody ^. collateralInputsTxBodyL
 
 -- ================================================================
@@ -473,15 +472,8 @@ utxoTransition ::
     Environment (EraRule "UTXOS" era) ~ UtxoEnv era,
     State (EraRule "UTXOS" era) ~ Shelley.UTxOState era,
     Signal (EraRule "UTXOS" era) ~ Tx era,
-    HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_maxValSize" (PParams era) Natural,
-    HasField "_maxTxSize" (PParams era) Natural,
-    HasField "_maxTxExUnits" (PParams era) ExUnits,
-    HasField "_protocolVersion" (PParams era) ProtVer,
-    HasField "_maxCollateralInputs" (PParams era) Natural,
-    HasField "_collateralPercentage" (PParams era) Natural,
-    Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era))
+    Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era)),
+    AlonzoEraPParams era
   ) =>
   TransitionRule (AlonzoUTXO era)
 utxoTransition = do
@@ -567,19 +559,8 @@ instance
     Environment (EraRule "UTXOS" era) ~ UtxoEnv era,
     State (EraRule "UTXOS" era) ~ Shelley.UTxOState era,
     Signal (EraRule "UTXOS" era) ~ Tx era,
-    HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_minfeeA" (PParams era) Natural,
-    HasField "_minfeeB" (PParams era) Natural,
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_maxValSize" (PParams era) Natural,
-    HasField "_maxTxSize" (PParams era) Natural,
-    HasField "_maxTxExUnits" (PParams era) ExUnits,
-    HasField "_coinsPerUTxOWord" (PParams era) Coin,
-    HasField "_protocolVersion" (PParams era) ProtVer,
-    HasField "_maxCollateralInputs" (PParams era) Natural,
-    HasField "_collateralPercentage" (PParams era) Natural,
-    HasField "_prices" (PParams era) Prices,
-    Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era))
+    Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era)),
+    AlonzoEraPParams era
   ) =>
   STS (AlonzoUTXO era)
   where
@@ -781,9 +762,9 @@ utxoPredFailMaToAlonzo (ShelleyMA.WrongNetworkWithdrawal x y) = WrongNetworkWith
 utxoPredFailMaToAlonzo (ShelleyMA.OutputTooSmallUTxO x) = OutputTooSmallUTxO x
 utxoPredFailMaToAlonzo (ShelleyMA.UpdateFailure x) = UtxosFailure (inject x)
 utxoPredFailMaToAlonzo (ShelleyMA.OutputBootAddrAttrsTooBig xs) =
-  OutputTooBigUTxO (map (\x -> (0, 0, x)) xs)
+  OutputTooBigUTxO (map (0, 0,) xs)
 utxoPredFailMaToAlonzo ShelleyMA.TriesToForgeADA = TriesToForgeADA
-utxoPredFailMaToAlonzo (ShelleyMA.OutputTooBigUTxO xs) = OutputTooBigUTxO (map (\x -> (0, 0, x)) xs)
+utxoPredFailMaToAlonzo (ShelleyMA.OutputTooBigUTxO xs) = OutputTooBigUTxO (map (0, 0,) xs)
 
 instance
   Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era)) =>
@@ -807,7 +788,7 @@ utxoPredFailShelleyToAlonzo (Shelley.WrongNetworkWithdrawal n as) = WrongNetwork
 utxoPredFailShelleyToAlonzo (Shelley.OutputTooSmallUTxO x) = OutputTooSmallUTxO x
 utxoPredFailShelleyToAlonzo (Shelley.UpdateFailure x) = UtxosFailure (inject x)
 utxoPredFailShelleyToAlonzo (Shelley.OutputBootAddrAttrsTooBig outs) =
-  OutputTooBigUTxO (map (\x -> (0, 0, x)) outs)
+  OutputTooBigUTxO (map (0, 0,) outs)
 
 instance InjectMaybe (ShelleyUtxoPredFailure era) (AlonzoUtxoPredFailure era) where
   injectMaybe = fromShelleyFailure
