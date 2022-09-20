@@ -1,4 +1,4 @@
-# Revision history for cardano-data
+# Revision history for cardano-ledger-binary
 
 ## 0.1.0.0 -- YYYY-mm-dd
 

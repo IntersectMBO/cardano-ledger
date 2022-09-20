@@ -6,9 +6,12 @@
 module Cardano.Ledger.Binary.Encoding.Encoder
   ( -- * Decoders
     Encoding,
+    toBuilder,
     C.Tokens (..),
     toPlainEncoding,
     fromPlainEncoding,
+    fromPlainEncodingWithVersion,
+    withCurrentEncodingVersion,
 
     -- ** Custom
     encodeMaybe,
@@ -62,7 +65,9 @@ where
 import qualified Cardano.Binary as C
 import Cardano.Ledger.Binary.Decoding.Decoder (Version (..), setTag)
 import Codec.CBOR.ByteArray.Sliced (SlicedByteArray)
+import qualified Codec.CBOR.Write as CBOR (toBuilder)
 import Data.ByteString (ByteString)
+import Data.ByteString.Builder (Builder)
 import Data.Fixed (E12, resolution)
 import Data.Foldable (foldMap')
 import Data.Int (Int16, Int32, Int64, Int8)
@@ -89,12 +94,18 @@ newtype Encoding = Encoding (Version -> C.Encoding)
 fromPlainEncoding :: C.Encoding -> Encoding
 fromPlainEncoding enc = Encoding (const enc)
 
+fromPlainEncodingWithVersion :: (Version -> C.Encoding) -> Encoding
+fromPlainEncodingWithVersion = Encoding
+
 toPlainEncoding :: Version -> Encoding -> C.Encoding
 toPlainEncoding v (Encoding enc) = enc v
 
--- withCurrentEncodingVersion :: Encoding -> (Version -> Encoding) -> Encoding
--- withCurrentEncodingVersion (Encoding enc) f =
---   Encoding
+toBuilder :: Version -> Encoding -> Builder
+toBuilder version (Encoding enc) = CBOR.toBuilder $ enc version
+
+withCurrentEncodingVersion :: (Version -> Encoding) -> Encoding
+withCurrentEncodingVersion f =
+  Encoding $ \version -> toPlainEncoding version $ f version
 
 -- | Conditionoly choose the encoder newer or older deceder, depending on the current
 -- version. Supplied version acts as a pivot.
@@ -398,4 +409,3 @@ encodeNominalDiffTime = encodeInteger . (`div` 1_000_000) . toPicoseconds
   where
     toPicoseconds t =
       numerator (toRational t * toRational (resolution $ Proxy @E12))
-

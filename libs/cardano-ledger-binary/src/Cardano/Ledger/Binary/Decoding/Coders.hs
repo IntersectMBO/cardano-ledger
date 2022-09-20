@@ -11,30 +11,6 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-
--- | This module provides tools for writing 'ToCBOR' and 'FromVCBOR' instances (see module
---   'Cardano.Binary') in an intuitive way that mirrors the way one constructs values of a
---   particular type. Advantages include:
---
--- 1. Book-keeping details neccesary to write correct instances are hidden from the user.
--- 2. Inverse 'ToCBOR' and 'FromVCBOR' instances have visually similar definitions.
--- 3. Advanced instances involving sparse-encoding, compact-representation, and
--- 'Annotator' instances are also supported.
---
--- A Guide to Visual inspection of Duality in Encode and Decode
---
--- 1. @(Sum c)@     and @(SumD c)@    are duals
--- 2. @(Rec c)@     and @(RecD c)@    are duals
--- 3. @(Keyed c)@   and @(KeyedD c)@  are duals
--- 4. @(OmitC x)@   and @(Emit x)@    are duals
--- 5. @(Omit p ..)@ and @(Emit x)@    are duals if (p x) is True
--- 6. @(To x)@      and @(From)@      are duals if (x::T) and (forall (y::T). isRight (roundTrip y))
--- 7. @(E enc x)@   and @(D dec)@     are duals if (forall x . isRight (roundTrip' enc dec x))
--- 6. @(ED d x)@    and @(DD f)@      are duals as long as d=(Dual enc dec) and (forall x . isRight (roundTrip' enc dec x))
--- 7. @(f !> x)@    and @(g <! y)@    are duals if (f and g are duals) and (x and y are duals)
---
--- Duality properties of @(Summands name decodeT)@ and @(SparseKeyed name (init::T) pick
--- required)@ also exist but are harder to describe succinctly.
 module Cardano.Ledger.Binary.Decoding.Coders
   ( -- * Creating decoders.
 
@@ -552,8 +528,8 @@ instance Applicative (Decode ('Closed d)) where
   pure x = Emit x
   f <*> x = ApplyD f x
 
--- | Use to and from, when you want to guarantee that a type has both
--- ToCBOR and FromCBR instances.
+-- | Use `Cardano.Ledger.Binary.Coders.encodeDual` and `decodeDual`, when you want to
+-- guarantee that a type has both `ToCBOR` and `FromCBR` instances.
 decodeDual :: forall t. (C.ToCBOR t, FromCBOR t) => Decode ('Closed 'Dense) t
 decodeDual = D fromCBOR
   where

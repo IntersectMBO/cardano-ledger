@@ -34,7 +34,8 @@ library
 
   exposed-modules:
                      -- Cardano.Ledger.Binary
-                     --Cardano.Ledger.Binary.Encoding
+                     Cardano.Ledger.Binary.Coders
+                     Cardano.Ledger.Binary.Encoding
                      Cardano.Ledger.Binary.Decoding
   other-modules:
                      Cardano.Ledger.Binary.Encoding.Coders

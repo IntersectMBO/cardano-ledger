@@ -15,10 +15,9 @@ module Cardano.Ledger.Binary.Decoding
     module Cardano.Ledger.Binary.Decoding.Decoder,
     module Cardano.Ledger.Binary.Decoding.Annotated,
 
-    -- * CBOR in CBOR
+    -- * Nested CBOR in CBOR
     decodeNestedCbor,
     decodeNestedCborBytes,
-    module Cardano.Ledger.Binary.Decoding.Coders,
 
     -- * Unsafe deserialization
     unsafeDeserialize,
@@ -34,11 +33,10 @@ module Cardano.Ledger.Binary.Decoding
 where
 
 import Cardano.Ledger.Binary.Decoding.Annotated
-import Cardano.Ledger.Binary.Decoding.Coders
 import Cardano.Ledger.Binary.Decoding.Decoder
 import Cardano.Ledger.Binary.Decoding.FromCBOR
 import Cardano.Ledger.Binary.Decoding.Sharing
-import Codec.CBOR.Read as Read
+import Codec.CBOR.Read as Read (DeserialiseFailure, IDecode (..), deserialiseIncremental)
 import Codec.CBOR.Write (toStrictByteString)
 import Control.Exception (displayException)
 import Control.Monad (when)

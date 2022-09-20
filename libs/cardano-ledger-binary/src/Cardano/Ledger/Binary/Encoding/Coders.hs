@@ -258,9 +258,10 @@ encodeKeyedStrictMaybe ::
   Encode ('Closed 'Sparse) (StrictMaybe a)
 encodeKeyedStrictMaybe key = encodeKeyedStrictMaybeWith key toCBOR
 
--- | Use to and from, when you want to guarantee that a type has both
--- ToCBOR and FromCBR instances.
-to :: forall t. (ToCBOR t, FromCBOR t) => t -> Encode ('Closed 'Dense) t
-to = E toCBOR
+-- | Use `encodeDual` and `Cardano.Ledger.Binary.Coders.decodeDual`, when you want to
+-- guarantee that a type has both `ToCBOR` and `FromCBR` instances.
+encodeDual :: forall t. (ToCBOR t, FromCBOR t) => t -> Encode ('Closed 'Dense) t
+encodeDual = E toCBOR
   where
+    -- Enforce FromCBOR constraint on t
     _fromCBOR = fromCBOR :: Decoder s t
