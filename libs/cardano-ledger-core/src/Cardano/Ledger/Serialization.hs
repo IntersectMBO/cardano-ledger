@@ -176,18 +176,6 @@ mapFromCBOR :: (Ord a, FromCBOR a, FromCBOR b) => Decoder s (Map a b)
 mapFromCBOR = decodeMap fromCBOR fromCBOR
 {-# DEPRECATED mapFromCBOR "Use `fromCBOR` instead" #-}
 
-newtype CborSeq a = CborSeq {unwrapCborSeq :: Seq a}
-  deriving (Foldable)
-
-instance ToCBOR a => ToCBOR (CborSeq a) where
-  toCBOR (CborSeq xs) =
-    let l = fromIntegral $ Seq.length xs
-        contents = foldMap toCBOR xs
-     in wrapCBORArray l contents
-
-instance FromCBOR a => FromCBOR (CborSeq a) where
-  fromCBOR = CborSeq <$> decodeSeq fromCBOR
-
 
 -- TODO: This is only used for TxSeq. Create a specialized `StrictSeq` as Map
 -- encoder. length is O(1) for StrictSeq, no need to recompute it here.
