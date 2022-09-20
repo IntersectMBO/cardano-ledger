@@ -18,8 +18,9 @@ import Data.Fixed (Fixed (..), Nano, Pico)
 import Data.Int (Int32, Int64)
 import Data.List.NonEmpty (NonEmpty, nonEmpty)
 import qualified Data.Map.Strict as Map
+import qualified Data.Maybe.Strict as SMaybe
 import qualified Data.Primitive.ByteArray as Prim
-import Data.Ratio (Ratio, (%))
+import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Data.Tagged (Tagged (Tagged))
 import qualified Data.Text as T
@@ -35,10 +36,8 @@ import Data.Word (Word16, Word32, Word64, Word8)
 import Numeric.Natural (Natural)
 import Prelude hiding (decodeFloat)
 
-
 -- class ToVCBOR a where
 --   toVCBOR :: KnownNat v => a -> VEncoding v
-
 
 class Typeable a => FromCBOR a where
   fromCBOR :: Decoder s a
@@ -90,14 +89,8 @@ instance FromCBOR Int32 where
 instance FromCBOR Int64 where
   fromCBOR = decodeInt64
 
-instance (Integral a, FromCBOR a) => FromCBOR (Ratio a) where
-  fromCBOR = do
-    enforceSize "Ratio" 2
-    n <- fromCBOR
-    d <- fromCBOR
-    if d <= 0
-      then cborError $ DecoderErrorCustom "Ratio" "invalid denominator"
-      else return $! n % d
+instance FromCBOR Rational where
+  fromCBOR = decodeRational
 
 instance FromCBOR Nano where
   fromCBOR = MkFixed <$> fromCBOR
@@ -223,6 +216,12 @@ instance FromCBOR a => FromCBOR (NonEmpty a) where
 
 instance FromCBOR a => FromCBOR (Maybe a) where
   fromCBOR = decodeMaybe fromCBOR
+
+instance FromCBOR a => FromCBOR (SMaybe.StrictMaybe a) where
+  fromCBOR = SMaybe.maybeToStrictMaybe <$> decodeMaybe fromCBOR
+
+instance (Ord a, FromCBOR a) => FromCBOR (SSeq.StrictSeq a) where
+  fromCBOR = decodeStrictSeq fromCBOR
 
 instance (Ord a, FromCBOR a) => FromCBOR (Set.Set a) where
   fromCBOR = decodeSet fromCBOR

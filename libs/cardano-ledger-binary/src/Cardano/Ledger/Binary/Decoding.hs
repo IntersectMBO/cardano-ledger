@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -14,6 +15,7 @@ module Cardano.Ledger.Binary.Decoding
     module Cardano.Ledger.Binary.Decoding.Sharing,
     module Cardano.Ledger.Binary.Decoding.Decoder,
     module Cardano.Ledger.Binary.Decoding.Annotated,
+    module Cardano.Ledger.Binary.Decoding.Sized,
 
     -- * Nested CBOR in CBOR
     decodeNestedCbor,
@@ -36,6 +38,7 @@ import Cardano.Ledger.Binary.Decoding.Annotated
 import Cardano.Ledger.Binary.Decoding.Decoder
 import Cardano.Ledger.Binary.Decoding.FromCBOR
 import Cardano.Ledger.Binary.Decoding.Sharing
+import Cardano.Ledger.Binary.Decoding.Sized
 import Codec.CBOR.Read as Read (DeserialiseFailure, IDecode (..), deserialiseIncremental)
 import Codec.CBOR.Write (toStrictByteString)
 import Control.Exception (displayException)
@@ -82,12 +85,13 @@ decodeFullDecoder ::
   -- | The @ByteString@ to decode
   BSL.ByteString ->
   Either DecoderError a
-decodeFullDecoder version lbl decoder bs0 = case deserialiseDecoder version decoder bs0 of
-  Right (x, leftover) ->
-    if BS.null leftover
-      then pure x
-      else Left $ DecoderErrorLeftover lbl leftover
-  Left (e, _) -> Left $ DecoderErrorDeserialiseFailure lbl e
+decodeFullDecoder version lbl decoder bs =
+  case deserialiseDecoder version decoder bs of
+    Right (x, leftover) ->
+      if BS.null leftover
+        then pure x
+        else Left $ DecoderErrorLeftover lbl leftover
+    Left (e, _) -> Left $ DecoderErrorDeserialiseFailure lbl e
 
 -- | Deserialise a 'LByteString' incrementally using the provided 'Decoder'
 deserialiseDecoder ::
@@ -108,6 +112,10 @@ supplyAllInput bs (Read.Partial k) = case bs of
   BSL.Chunk chunk bs' -> k (Just chunk) >>= supplyAllInput bs'
   BSL.Empty -> k Nothing >>= supplyAllInput BSL.Empty
 supplyAllInput _ (Read.Fail bs _ exn) = return (Left (exn, bs))
+
+--------------------------------------------------------------------------------
+-- Annotator
+--------------------------------------------------------------------------------
 
 -- | Supplies the bytestring argument to both the decoder and the produced annotator.
 decodeFullAnnotator ::

@@ -1,17 +1,13 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TupleSections #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -50,10 +46,8 @@ module Cardano.Ledger.Binary.Encoding.Coders
 
     --
     -- $Indexes
-    Density (..),
-    Wrapped (..),
     runE, -- Used in testing
-    to,
+    encodeDual,
 
     -- * Containers, Combinators, Annotators
 
@@ -64,6 +58,7 @@ module Cardano.Ledger.Binary.Encoding.Coders
   )
 where
 
+import Cardano.Ledger.Binary.Decoding.Coders (Density (Dense, Sparse), Wrapped (..))
 import Cardano.Ledger.Binary.Decoding.Decoder (Decoder)
 import Cardano.Ledger.Binary.Decoding.FromCBOR (FromCBOR (..))
 import Cardano.Ledger.Binary.Encoding.Encoder
@@ -98,29 +93,6 @@ import Data.Maybe.Strict (StrictMaybe (SJust, SNothing))
 -- (memoBytes encoding) in the where clause of the pattern contructor.
 -- See some examples of this see the file Timelocks.hs
 --
-
--- ========================================================
--- Subsidary classes and datatype used in the Coders scheme
--- =========================================================
-
--- $Indexes
---  Some CBOR instances wrap encoding sequences with prefixes and suffixes. I.e.
---  prefix , encode, encode, encode , ... , suffix.
---  There are two kinds of wrapping coders: Nary sums, and Sparsely encoded products.
---  Coders in these classes can only be decoded when they are wrapped by their
---  closing forms 'Summands' and 'SparseKeyed'. Another dimension, where we use indexes
---  to maintain type safety, are records which can be
---  encoded densely (all their fields serialised) or sparsely (only some of their
---  fields). We use indexes to types to try and mark (and enforce) these distinctions.
-
--- | Index for record density. Distinguishing (all the fields) from (some of the fields).
-data Density = Dense | Sparse
-
--- | Index for a wrapped Coder. Wrapping is necessary for 'Summands' and 'SparseKeyed'.
-data Wrapped where
-  Open :: Wrapped -- Needs some type-wide wrapping
-  Closed :: Density -> Wrapped -- Does not need type-wide wrapping,
-  -- But may need field-wide wrapping, when Density is 'Sparse
 
 -- ===========================================================
 -- The coders and the decoders as GADT datatypes

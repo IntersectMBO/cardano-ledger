@@ -12,19 +12,31 @@ module Cardano.Ledger.Binary.Encoding.Encoder
     fromPlainEncoding,
     fromPlainEncodingWithVersion,
     withCurrentEncodingVersion,
+    enforceVersionEncoding,
 
     -- ** Custom
     encodeMaybe,
     encodeNullMaybe,
     encodePair,
     encodeTuple,
+
+    -- *** Containers
     encodeList,
+    encodeSeq,
     encodeSet,
     encodeMap,
     encodeVMap,
     encodeVector,
+
+    -- *** Time
     encodeUTCTime,
     encodeNominalDiffTime,
+
+    -- *** Network
+    encodeIPv4,
+    ipv4ToBytes,
+    encodeIPv6,
+    ipv6ToBytes,
 
     -- ** Original
     encodeWord,
@@ -66,16 +78,21 @@ import qualified Cardano.Binary as C
 import Cardano.Ledger.Binary.Decoding.Decoder (Version (..), setTag)
 import Codec.CBOR.ByteArray.Sliced (SlicedByteArray)
 import qualified Codec.CBOR.Write as CBOR (toBuilder)
+import Data.Binary.Put (putWord32le, runPut)
 import Data.ByteString (ByteString)
+import qualified Data.ByteString as BS
 import Data.ByteString.Builder (Builder)
+import qualified Data.ByteString.Lazy as BSL
 import Data.Fixed (E12, resolution)
 import Data.Foldable (foldMap')
+import Data.IP (IPv4, IPv6, toHostAddress, toHostAddress6)
 import Data.Int (Int16, Int32, Int64, Int8)
 import qualified Data.Map.Strict as Map
 import Data.Monoid (Sum (..))
 import Data.Proxy (Proxy (Proxy))
 import Data.Ratio (numerator)
 import qualified Data.Set as Set
+import qualified Data.Sequence as Seq
 import Data.Text (Text)
 import Data.Time.Calendar.OrdinalDate (toOrdinalDate)
 import Data.Time.Clock (NominalDiffTime, UTCTime (..), diffTimeToPicoseconds)
@@ -103,9 +120,14 @@ toPlainEncoding v (Encoding enc) = enc v
 toBuilder :: Version -> Encoding -> Builder
 toBuilder version (Encoding enc) = CBOR.toBuilder $ enc version
 
+-- | Get access to the current version being used in the encoder
 withCurrentEncodingVersion :: (Version -> Encoding) -> Encoding
 withCurrentEncodingVersion f =
   Encoding $ \version -> toPlainEncoding version $ f version
+
+-- | Ignore the current version of the encoder and enforce the supplied one instead.
+enforceVersionEncoding :: Version -> Encoding -> Encoding
+enforceVersionEncoding version encoding = fromPlainEncoding (toPlainEncoding version encoding)
 
 -- | Conditionoly choose the encoder newer or older deceder, depending on the current
 -- version. Supplied version acts as a pivot.
@@ -126,7 +148,7 @@ ifEncodingVersionAtLeast atLeast (Encoding newerEncoding) (Encoding olderEncodin
       else olderEncoding cur
 
 --------------------------------------------------------------------------------
--- CBORG wrapped encoders
+-- Wrapped CBORG encoders
 --------------------------------------------------------------------------------
 
 encodeWord :: Word -> Encoding
@@ -234,6 +256,9 @@ encodeMaybe encodeValue = \case
   Nothing -> encodeListLen 0
   Just x -> encodeListLen 1 <> encodeValue x
 
+-- | Alternative way to encode a Maybe type.
+--
+-- /Note/ - this is not the default method for encoding `Maybe`, use `encodeMaybe` instead
 encodeNullMaybe :: (a -> Encoding) -> Maybe a -> Encoding
 encodeNullMaybe encodeValue = \case
   Nothing -> encodeNull
@@ -253,6 +278,12 @@ encodePair = encodeTuple
 -- Map
 --------------------------------------------------------------------------------
 
+-- | Encode a Map. Versions variance:
+--
+-- * [< 1] - Variable length encoding.
+--
+-- * [>= 2] - Variable length encoding for Maps larger than 23 key value pairs, otherwise exact
+--   length encoding
 encodeMap ::
   (k -> Encoding) ->
   (v -> Encoding) ->
@@ -363,6 +394,22 @@ encodeList encodeValue xs =
           _ -> varLenEncList
    in ifEncodingVersionAtLeast 2 encListVer2 varLenEncList
 
+-- | Encode a Seq. Versions variance:
+--
+-- * [< 1] - Variable length encoding. Also prefixes with a special 258 tag.
+--
+-- * [>= 2] - Variable length encoding for Sets larger than 23 elements, otherwise exact
+--   length encoding
+encodeSeq :: (a -> Encoding) -> Seq.Seq a -> Encoding
+encodeSeq encodeValue f =
+  let foldableEncoding = foldMap' encodeValue f
+   in ifEncodingVersionAtLeast
+        2
+        (variableListLenEncoding (Seq.length f) foldableEncoding)
+        (exactListLenEncoding (Seq.length f) foldableEncoding)
+{-# INLINE encodeSeq #-}
+
+
 --------------------------------------------------------------------------------
 -- Vector
 --------------------------------------------------------------------------------
@@ -394,12 +441,10 @@ encodeVector encodeValue =
 
 encodeUTCTime :: UTCTime -> Encoding
 encodeUTCTime (UTCTime day timeOfDay) =
-  mconcat
-    [ encodeListLen 3,
-      encodeInteger year,
-      encodeInt dayOfYear,
-      encodeInteger timeOfDayPico
-    ]
+  encodeListLen 3
+    <> encodeInteger year
+    <> encodeInt dayOfYear
+    <> encodeInteger timeOfDayPico
   where
     (year, dayOfYear) = toOrdinalDate day
     timeOfDayPico = diffTimeToPicoseconds timeOfDay
@@ -409,3 +454,24 @@ encodeNominalDiffTime = encodeInteger . (`div` 1_000_000) . toPicoseconds
   where
     toPicoseconds t =
       numerator (toRational t * toRational (resolution $ Proxy @E12))
+
+--------------------------------------------------------------------------------
+-- Network
+--------------------------------------------------------------------------------
+
+ipv4ToBytes :: IPv4 -> BS.ByteString
+ipv4ToBytes = BSL.toStrict . runPut . putWord32le . toHostAddress
+
+encodeIPv4 :: IPv4 -> Encoding
+encodeIPv4 = encodeBytes . ipv4ToBytes
+
+ipv6ToBytes :: IPv6 -> BS.ByteString
+ipv6ToBytes ipv6 = BSL.toStrict . runPut $ do
+  let (w1, w2, w3, w4) = toHostAddress6 ipv6
+  putWord32le w1
+  putWord32le w2
+  putWord32le w3
+  putWord32le w4
+
+encodeIPv6 :: IPv6 -> Encoding
+encodeIPv6 = encodeBytes . ipv6ToBytes

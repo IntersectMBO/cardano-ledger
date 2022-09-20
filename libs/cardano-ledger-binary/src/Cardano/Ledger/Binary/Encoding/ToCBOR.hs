@@ -12,7 +12,7 @@
 module Cardano.Ledger.Binary.Encoding.ToCBOR
   ( ToCBOR (..),
     withWordSize,
-    encodeMaybe,
+    PreEncoded (..),
 
     -- * Size of expressions
     Range (..),
@@ -53,9 +53,12 @@ import Data.Foldable (toList)
 import Data.Functor.Foldable (cata, project)
 import Data.Int (Int32, Int64)
 import Data.List.NonEmpty (NonEmpty)
-import qualified Data.Map as M
+import qualified Data.Map as Map
 import Data.Ratio (Ratio, denominator, numerator)
-import qualified Data.Set as S
+import qualified Data.Set as Set
+import qualified Data.Sequence as Seq
+import qualified Data.Maybe.Strict as SMaybe
+import qualified Data.Sequence.Strict as SSeq
 import Data.Tagged (Tagged (..))
 import Data.Text (Text)
 import qualified Data.Text as Text
@@ -97,6 +100,11 @@ defaultEncodedListSizeExpr ::
   Size
 defaultEncodedListSizeExpr size _ =
   2 + size (Proxy @(LengthOf [a])) * size (Proxy @a)
+
+newtype PreEncoded = PreEncoded {unPreEncoded :: BS.ByteString}
+
+instance ToCBOR PreEncoded where
+  toCBOR = encodePreEncoded . unPreEncoded
 
 --------------------------------------------------------------------------------
 -- Size expressions
@@ -289,8 +297,8 @@ apMono n f = \case
 
 -- | Greedily compute the size bounds for a type, using the given context to
 --   override sizes for specific types.
-szWithCtx :: (ToCBOR a) => M.Map TypeRep SizeOverride -> Proxy a -> Size
-szWithCtx ctx pxy = case M.lookup (typeRep pxy) ctx of
+szWithCtx :: (ToCBOR a) => Map.Map TypeRep SizeOverride -> Proxy a -> Size
+szWithCtx ctx pxy = case Map.lookup (typeRep pxy) ctx of
   Nothing -> normal
   Just override -> case override of
     SizeConstant sz -> sz
@@ -606,11 +614,23 @@ instance ToCBOR a => ToCBOR (Maybe a) where
   encodedSizeExpr size _ =
     szCases [Case "Nothing" 1, Case "Just" (1 + size (Proxy @a))]
 
-instance (Ord k, ToCBOR k, ToCBOR v) => ToCBOR (M.Map k v) where
+instance ToCBOR a => ToCBOR (SMaybe.StrictMaybe a) where
+  toCBOR SMaybe.SNothing = encodeListLen 0
+  toCBOR (SMaybe.SJust x) = encodeListLen 1 <> toCBOR x
+
+
+
+instance (Ord k, ToCBOR k, ToCBOR v) => ToCBOR (Map.Map k v) where
   toCBOR = encodeMap toCBOR toCBOR
 
-instance (Ord a, ToCBOR a) => ToCBOR (S.Set a) where
+instance (Ord a, ToCBOR a) => ToCBOR (Set.Set a) where
   toCBOR = encodeSet toCBOR
+
+instance (Ord a, ToCBOR a) => ToCBOR (Seq.Seq a) where
+  toCBOR = encodeSeq toCBOR
+
+instance (Ord a, ToCBOR a) => ToCBOR (SSeq.StrictSeq a) where
+  toCBOR = toCBOR . SSeq.fromStrict
 
 instance ToCBOR a => ToCBOR (V.Vector a) where
   toCBOR = encodeVector toCBOR

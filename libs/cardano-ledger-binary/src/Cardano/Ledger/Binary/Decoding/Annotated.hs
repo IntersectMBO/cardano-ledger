@@ -16,31 +16,23 @@ module Cardano.Ledger.Binary.Decoding.Annotated
     annotatorSlice,
     withSlice,
     C.FullByteString (..),
-    C.serializeEncoding,
-    encodePreEncoded,
     decodeAnnSet,
   )
 where
 
-import qualified Data.Set as Set
 import qualified Cardano.Binary as C
-import Cardano.Ledger.Binary.Decoding.Decoder (Decoder, withPlainDecoder, decodeList)
+import Cardano.Ledger.Binary.Decoding.Decoder (Decoder, decodeList, decodeWithByteSpan)
 import Cardano.Ledger.Binary.Decoding.FromCBOR (FromCBOR (..))
-import Codec.CBOR.Encoding (encodePreEncoded)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.Functor ((<&>))
+import qualified Data.Set as Set
 
 -- | A decoder for a value paired with an annotation specifying the start and end
 -- of the consumed bytes.
 annotatedDecoder :: Decoder s a -> Decoder s (C.Annotated a C.ByteSpan)
 annotatedDecoder vd =
-  withPlainDecoder
-    vd
-    ( \d ->
-        C.decodeWithByteSpan d <&> \(x, start, end) ->
-          C.Annotated x (C.ByteSpan start end)
-    )
+  decodeWithByteSpan vd <&> \(x, start, end) -> C.Annotated x (C.ByteSpan start end)
 
 -- | A decoder for a value paired with an annotation specifying the start and end
 -- of the consumed bytes.
@@ -70,7 +62,6 @@ withSlice :: Decoder s a -> Decoder s (a, C.Annotator BSL.ByteString)
 withSlice dec = do
   C.Annotated r byteSpan <- annotatedDecoder dec
   return (r, C.Annotator (\(C.Full bsl) -> C.slice bsl byteSpan))
-
 
 -- TODO: Implement version that matches the length of a list with the size of the Set in
 -- order to enforce no duplicates.

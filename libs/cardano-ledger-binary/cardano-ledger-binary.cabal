@@ -33,7 +33,7 @@ library
   import:             base, project-config
 
   exposed-modules:
-                     -- Cardano.Ledger.Binary
+                     Cardano.Ledger.Binary
                      Cardano.Ledger.Binary.Coders
                      Cardano.Ledger.Binary.Encoding
                      Cardano.Ledger.Binary.Decoding
@@ -46,17 +46,24 @@ library
                      Cardano.Ledger.Binary.Decoding.Decoder
                      Cardano.Ledger.Binary.Decoding.FromCBOR
                      Cardano.Ledger.Binary.Decoding.Sharing
+                     Cardano.Ledger.Binary.Decoding.Sized
 
   build-depends:       base >=4.11 && <5
+                     , binary
                      , bytestring
                      , cardano-crypto-class
                      , cardano-binary
+                     , strict-containers
                      , cborg
                      , containers
                      , data-fix
+                     , deepseq
                      , formatting
+                     , iproute
                      , microlens
                      , mtl
+                     , network
+                     , nothunks
                      , primitive
                      , recursion-schemes
                      , strict-containers

@@ -43,10 +43,9 @@ module Cardano.Ledger.Binary.Decoding.Coders
 
     --
     -- $Combinators
+    listDecodeA,
     mapDecodeA,
     setDecodeA,
-    listDecodeA,
-    pairDecodeA,
 
     -- * Low level (Encoding/Decoder) utility functions
     decodeRecordNamed,
@@ -63,9 +62,6 @@ import Cardano.Ledger.Binary.Decoding.Annotated (Annotator (..), decodeAnnSet)
 import Cardano.Ledger.Binary.Decoding.Decoder
 import Cardano.Ledger.Binary.Decoding.FromCBOR (FromCBOR (fromCBOR))
 import Control.Applicative (liftA2)
-import Control.Monad (unless, when)
-import Control.Monad.Trans (MonadTrans (..))
-import Control.Monad.Trans.Identity (IdentityT (runIdentityT))
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set, insert, member)
@@ -73,7 +69,6 @@ import qualified Data.Set as Set
 import qualified Data.Text as Text
 import Data.Typeable (Typeable, typeOf)
 import Data.Void (Void)
-import Numeric.Natural (Natural)
 
 -- ====================================================================
 
@@ -538,22 +533,6 @@ decodeDual = D fromCBOR
 
 -- =============================================================================
 
--- | Combinators for building (Decode ('Closed 'Dense) (Annotator x)) objects. These
--- combinators take explicit (Decode ('Closed 'Dense) i) objects as parameters rather than
--- relying on FromCBOR instances as implicit parameters. To get the annotator version,
--- just add 'A' to the end of the non-annotator version decode function.  E.g.
--- setDecodeA, listDecodeA, mapDecodeA. Suppose I want to decode x:: Map [A] (B,C) and I
--- only have Annotator instances of A and C, then the following decodes x.  mapDecodeA
--- (listDecodeA From) (pairDecodeA (Ann From) From).  ^^^^^^^^ One can always lift
--- x::(Decode w T) by using Ann. so (Ann x)::(Decode w (Annotator T)).
-pairDecodeA ::
-  Decode ('Closed 'Dense) (Annotator x) ->
-  Decode ('Closed 'Dense) (Annotator y) ->
-  Decode ('Closed 'Dense) (Annotator (x, y))
-pairDecodeA x y = D $ do
-  (xA, yA) <- decodePair (decode x) (decode y)
-  pure ((,) <$> xA <*> yA)
-
 listDecodeA :: Decode ('Closed 'Dense) (Annotator x) -> Decode ('Closed 'Dense) (Annotator [x])
 listDecodeA dx = D (sequence <$> decodeList (decode dx))
 
@@ -573,57 +552,6 @@ mapDecodeA k v = D (decodeMapTraverse (decode k) (decode v))
 --------------------------------------------------------------------------------
 -- Utility functions for working with CBOR
 --------------------------------------------------------------------------------
-
-assertTag :: Word -> Decoder s ()
-assertTag tag = do
-  t <-
-    peekTokenType >>= \case
-      TypeTag -> fromIntegral <$> decodeTag
-      TypeTag64 -> fromIntegral <$> decodeTag64
-      _ -> fail "expected tag"
-  when (t /= (fromIntegral tag :: Natural)) $
-    fail $ "expecteg tag " <> show tag <> " but got tag " <> show t
-
-decodeRecordNamed :: Text.Text -> (a -> Int) -> Decoder s a -> Decoder s a
-decodeRecordNamed name getRecordSize decoder = do
-  runIdentityT $ decodeRecordNamedT name getRecordSize (lift decoder)
-
-decodeRecordNamedT ::
-  (MonadTrans m, Monad (m (Decoder s))) =>
-  Text.Text ->
-  (a -> Int) ->
-  m (Decoder s) a ->
-  m (Decoder s) a
-decodeRecordNamedT name getRecordSize decoder = do
-  lenOrIndef <- lift decodeListLenOrIndef
-  x <- decoder
-  lift $ case lenOrIndef of
-    Just n -> matchSize (Text.pack "\nRecord " <> name) n (getRecordSize x)
-    Nothing -> do
-      isBreak <- decodeBreakOr
-      unless isBreak $ cborError $ DecoderErrorCustom name "Excess terms in array"
-  pure x
-
-decodeRecordSum :: String -> (Word -> Decoder s (Int, a)) -> Decoder s a
-decodeRecordSum name decoder = do
-  lenOrIndef <- decodeListLenOrIndef
-  tag <- decodeWord
-  (size, x) <- decoder tag -- we decode all the stuff we want
-  case lenOrIndef of
-    Just n ->
-      let errMsg =
-            "\nSum " ++ name ++ "\nreturned="
-              ++ show size
-              ++ " actually read= "
-              ++ show n
-       in matchSize (Text.pack errMsg) size n
-    Nothing -> do
-      isBreak <- decodeBreakOr -- if there is stuff left, it is unnecessary extra stuff
-      unless isBreak $ cborError $ DecoderErrorCustom (Text.pack name) "Excess terms in array"
-  pure x
-
-decodePair :: Decoder s a -> Decoder s b -> Decoder s (a, b)
-decodePair first second = decodeRecordNamed "pair" (const 2) ((,) <$> first <*> second)
 
 invalidKey :: Word -> Decoder s a
 invalidKey k = cborError $ DecoderErrorCustom "not a valid key:" (Text.pack $ show k)

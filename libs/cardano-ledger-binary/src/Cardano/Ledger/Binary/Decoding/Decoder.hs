@@ -14,7 +14,8 @@ module Cardano.Ledger.Binary.Decoding.Decoder
     toPlainDecoder,
     fromPlainDecoder,
     withPlainDecoder,
-    C.DecoderError (..),
+    enforceVersionDecoder,
+    DecoderError (..),
     C.ByteOffset,
     C.DecodeAction (..),
     C.TokenType (..),
@@ -24,13 +25,25 @@ module Cardano.Ledger.Binary.Decoding.Decoder
     getDecoderVersion,
     ifDecoderVersionAtLeast,
 
-    -- * Error reporting
+    -- ** Error reporting
     cborError,
+    assertTag,
+    enforceSize,
+    matchSize,
+
+    -- ** Compatibility tools
+    binaryGetDecoder,
 
     -- ** Custom decoders
+    decodeRational,
+    decodeRecordNamed,
+    decodeRecordNamedT,
+    decodeRecordSum,
+
+    -- *** Containers
+    decodeMaybe,
+    decodeList,
     decodeNullMaybe,
-    decodeUTCTime,
-    decodeNominalDiffTime,
     decodeVector,
     decodeSet,
     setTag,
@@ -38,16 +51,20 @@ module Cardano.Ledger.Binary.Decoding.Decoder
     decodeVMap,
     decodeSeq,
     decodeStrictSeq,
+
+    -- *** Time
+    decodeUTCTime,
+    decodeNominalDiffTime,
+
+    -- *** Network
+    decodeIPv4,
+    decodeIPv6,
     decodeMapContents,
     decodeMapNoDuplicates,
     decodeMapTraverse,
     decodeMapContentsTraverse,
 
     -- ** Lifted @cborg@ decoders
-    enforceSize,
-    matchSize,
-    decodeMaybe,
-    decodeList,
     decodeBool,
     decodeBreakOr,
     decodeByteArray,
@@ -120,12 +137,7 @@ module Cardano.Ledger.Binary.Decoding.Decoder
   )
 where
 
-import qualified Cardano.Binary as C
-  ( DecoderError (..),
-    decodeListWith,
-    enforceSize,
-    matchSize,
-  )
+import Cardano.Binary (DecoderError (..))
 import Codec.CBOR.ByteArray (ByteArray)
 import qualified Codec.CBOR.Decoding as C
   ( ByteOffset,
@@ -202,15 +214,19 @@ import qualified Codec.CBOR.Decoding as C
     peekTokenType,
   )
 import Control.Monad.Reader
+import Control.Monad.Trans.Identity (IdentityT (runIdentityT))
+import Data.Binary.Get (Get, getWord32le, runGetOrFail)
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as BSL
 import Data.Functor.Compose (Compose (..))
+import Data.IP (IPv4, IPv6, fromHostAddress, fromHostAddress6)
 import Data.Int (Int16, Int32, Int64, Int8)
 import qualified Data.Map.Strict as Map
-import Data.Ratio ((%))
+import Data.Ratio (Ratio, (%))
 import qualified Data.Sequence as Seq
-import qualified Data.Sequence.Strict as StrictSeq
+import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
-import qualified Data.Text as T
+import qualified Data.Text as Text
 import Data.Time.Calendar.OrdinalDate (fromOrdinalDate)
 import Data.Time.Clock (NominalDiffTime, UTCTime (..), picosecondsToDiffTime)
 import qualified Data.VMap as VMap
@@ -218,6 +234,7 @@ import qualified Data.Vector.Generic as VG
 import Data.Word (Word16, Word32, Word64, Word8)
 import Formatting (build, formatToString)
 import GHC.Exts as Exts (IsList (..))
+import Network.Socket (HostAddress6)
 import Numeric.Natural (Natural)
 import Prelude hiding (decodeFloat)
 
@@ -245,6 +262,10 @@ withPlainDecoder :: Decoder s a -> (C.Decoder s a -> C.Decoder s b) -> Decoder s
 withPlainDecoder vd f = do
   curVersion <- getDecoderVersion
   fromPlainDecoder (f (toPlainDecoder curVersion vd))
+
+-- | Ignore the current version of the decoder and enforce the supplied one instead.
+enforceVersionDecoder :: Version -> Decoder s a -> Decoder s a
+enforceVersionDecoder version = fromPlainDecoder . toPlainDecoder version
 
 --------------------------------------------------------------------------------
 -- Working with current decoder version
@@ -289,37 +310,130 @@ ifDecoderVersionAtLeast atLeast newerDecoder olderDecoder = do
 -- Error reporting
 --------------------------------------------------------------------------------
 
-cborError :: C.DecoderError -> Decoder s a
+cborError :: DecoderError -> Decoder s a
 cborError = fail . formatToString build
 
-decodeContainerSkelWithReplicate ::
-  -- | How to get the size of the container
-  Decoder s Int ->
-  -- | replicateM for the container
-  (Int -> Decoder s c) ->
-  -- | concat for the container
-  ([c] -> c) ->
-  Decoder s c
-decodeContainerSkelWithReplicate decodeLen replicateFun concatList = do
-  -- Look at how much data we have at the moment and use it as the limit for
-  -- the size of a single call to replicateFun. We don't want to use
-  -- replicateFun directly on the result of decodeLen since this might lead to
-  -- DOS attack (attacker providing a huge value for length). So if it's above
-  -- our limit, we'll do manual chunking and then combine the containers into
-  -- one.
-  sz <- decodeLen
-  limit <- peekAvailable
-  if sz <= limit
-    then replicateFun sz
-    else do
-      -- Take the max of limit and a fixed chunk size (note: limit can be
-      -- 0). This basically means that the attacker can make us allocate a
-      -- container of size 128 even though there's no actual input.
-      let chunkSize = max limit 128
-          (d, m) = sz `divMod` chunkSize
-      containers <- sequence $ replicateFun m : replicate d (replicateFun chunkSize)
-      return $! concatList containers
-{-# INLINE decodeContainerSkelWithReplicate #-}
+decodeRational :: Decoder s Rational
+decodeRational =
+  ifDecoderVersionAtLeast
+    2
+    (decodeFraction decodeInteger)
+    ( do
+        enforceSize "Ratio" 2
+        n <- decodeInteger
+        d <- decodeInteger
+        if d <= 0
+          then cborError $ DecoderErrorCustom "Ratio" "invalid denominator"
+          else return $! n % d
+    )
+
+decodeFraction :: Integral a => Decoder s a -> Decoder s (Ratio a)
+decodeFraction decoder = do
+  t <- decodeTag
+  unless (t == 30) $ cborError $ DecoderErrorCustom "rational" "expected tag 30"
+  (numValues, values) <- decodeCollectionWithLen decodeListLenOrIndef decoder
+  case values of
+    [n, d] -> do
+      when (d == 0) (fail "denominator cannot be 0")
+      pure $ n % d
+    _ -> cborError $ DecoderErrorSizeMismatch "rational" 2 numValues
+{-# DEPRECATED decodeFraction "In favor of `decodeRational`" #-}
+
+--------------------------------------------------------------------------------
+-- Containers
+--------------------------------------------------------------------------------
+
+-- | @'D.Decoder'@ for list.
+decodeList :: Decoder s a -> Decoder s [a]
+decodeList decodeValue =
+  ifDecoderVersionAtLeast
+    2
+    (decodeCollection decodeListLenOrIndef decodeValue)
+    (decodeListWith decodeValue)
+
+-- | @'Decoder'@ for list.
+decodeListWith :: Decoder s a -> Decoder s [a]
+decodeListWith decodeValue = do
+  decodeListLenIndef
+  decodeSequenceLenIndef (flip (:)) [] reverse decodeValue
+
+decodeMaybe :: Decoder s a -> Decoder s (Maybe a)
+decodeMaybe decodeValue = do
+  ifDecoderVersionAtLeast
+    2
+    (decodeMaybeVarLen decodeValue)
+    (decodeMaybeExactLen decodeValue)
+
+decodeMaybeExactLen :: Decoder s a -> Decoder s (Maybe a)
+decodeMaybeExactLen decodeValue = do
+  n <- decodeListLen
+  case n of
+    0 -> return Nothing
+    1 -> do
+      !x <- decodeValue
+      return (Just x)
+    _ -> fail "too many elements while decoding Maybe."
+
+decodeMaybeVarLen :: Decoder s a -> Decoder s (Maybe a)
+decodeMaybeVarLen decodeValue = do
+  maybeLength <- decodeListLenOrIndef
+  case maybeLength of
+    Just 0 -> pure Nothing
+    Just 1 -> Just <$!> decodeValue
+    Just _ -> fail "too many elements in length-style decoding of Maybe."
+    Nothing -> do
+      isBreak <- decodeBreakOr
+      if isBreak
+        then pure Nothing
+        else do
+          !x <- decodeValue
+          isBreak2 <- decodeBreakOr
+          unless isBreak2 $
+            fail "too many elements in break-style decoding of Maybe."
+          pure (Just x)
+
+-- | Alternative way to decode a Maybe type.
+--
+-- /Note/ - this is not the default method for decoding `Maybe`, use `decodeMaybe` instead.
+decodeNullMaybe :: Decoder s a -> Decoder s (Maybe a)
+decodeNullMaybe decoder = do
+  peekTokenType >>= \case
+    C.TypeNull -> do
+      decodeNull
+      pure Nothing
+    _ -> Just <$> decoder
+
+decodeRecordNamed :: Text.Text -> (a -> Int) -> Decoder s a -> Decoder s a
+decodeRecordNamed name getRecordSize decoder = do
+  runIdentityT $ decodeRecordNamedT name getRecordSize (lift decoder)
+
+decodeRecordNamedT ::
+  (MonadTrans m, Monad (m (Decoder s))) =>
+  Text.Text ->
+  (a -> Int) ->
+  m (Decoder s) a ->
+  m (Decoder s) a
+decodeRecordNamedT name getRecordSize decoder = do
+  lenOrIndef <- lift decodeListLenOrIndef
+  x <- decoder
+  lift $ case lenOrIndef of
+    Just n -> matchSize (Text.pack "Record " <> name) n (getRecordSize x)
+    Nothing -> do
+      isBreak <- decodeBreakOr
+      unless isBreak $ cborError $ DecoderErrorCustom name "Excess terms in array"
+  pure x
+
+decodeRecordSum :: String -> (Word -> Decoder s (Int, a)) -> Decoder s a
+decodeRecordSum name decoder = do
+  lenOrIndef <- decodeListLenOrIndef
+  tag <- decodeWord
+  (size, x) <- decoder tag -- we decode all the stuff we want
+  case lenOrIndef of
+    Just n -> matchSize (Text.pack "Sum " <> Text.pack name) size n
+    Nothing -> do
+      isBreak <- decodeBreakOr -- if there is stuff left, it is unnecessary extra stuff
+      unless isBreak $ cborError $ DecoderErrorCustom (Text.pack name) "Excess terms in array"
+  pure x
 
 --------------------------------------------------------------------------------
 -- Decoder for Map
@@ -367,7 +481,7 @@ decodeMapSkel fromDistinctDescList decodeKey decodeValue = do
       -- key on the list is the same in all of them.
       if newKey > previousKey
         then decodeEntries (remainingPairs - 1) newKey (p : acc)
-        else cborError $ C.DecoderErrorCanonicityViolation "Map"
+        else cborError $ DecoderErrorCanonicityViolation "Map"
 {-# INLINE decodeMapSkel #-}
 
 decodeMapV1 ::
@@ -379,9 +493,6 @@ decodeMapV1 ::
   Decoder s v ->
   Decoder s (Map.Map k v)
 decodeMapV1 = decodeMapSkel Map.fromDistinctDescList
-
--- decodeMapContents :: Decoder s a -> Decoder s [a]
--- decodeMapContents = decodeCollection decodeMapLenOrIndef
 
 decodeCollection :: Decoder s (Maybe Int) -> Decoder s a -> Decoder s [a]
 decodeCollection lenOrIndef el = snd <$> decodeCollectionWithLen lenOrIndef el
@@ -452,17 +563,6 @@ decodeMap decodeKey decodeValue =
     (decodeMapV2 decodeKey decodeValue)
     (decodeMapV1 decodeKey decodeValue)
 
--- encodeMap ::
---   Ord k =>
---   Map.Map k a ->
---   (k -> Encoder) ->
---   (v -> Encoder) ->
---   VEncoder
--- encodeMap m encodeKey encodeValue =
---   ifEncVerAtLeast 2
---     (encodeMapV2 m encodeKey encodeValue)
---     (encodeMapV1 m encodeKey encodeValue)
-
 decodeVMap ::
   (VMap.Vector kv k, VMap.Vector vv v, Ord k) =>
   Decoder s k ->
@@ -483,7 +583,7 @@ setTag = 258
 decodeSetTag :: Decoder s ()
 decodeSetTag = do
   t <- decodeTag
-  when (t /= setTag) $ cborError $ C.DecoderErrorUnknownTag "Set" (fromIntegral t)
+  when (t /= setTag) $ cborError $ DecoderErrorUnknownTag "Set" (fromIntegral t)
 
 decodeSetSkel ::
   forall a s c.
@@ -511,7 +611,7 @@ decodeSetSkel fromDistinctDescList decodeValue = do
       -- will result in the same set.
       if newValue > previousValue
         then decodeEntries (remainingEntries - 1) newValue (newValue : acc)
-        else cborError $ C.DecoderErrorCanonicityViolation "Set"
+        else cborError $ DecoderErrorCanonicityViolation "Set"
 {-# INLINE decodeSetSkel #-}
 
 decodeSet :: Ord a => Decoder s a -> Decoder s (Set.Set a)
@@ -520,6 +620,35 @@ decodeSet valueDecoder =
     2
     (Set.fromList <$> decodeList valueDecoder)
     (decodeSetSkel Set.fromDistinctDescList valueDecoder)
+
+decodeContainerSkelWithReplicate ::
+  -- | How to get the size of the container
+  Decoder s Int ->
+  -- | replicateM for the container
+  (Int -> Decoder s c) ->
+  -- | concat for the container
+  ([c] -> c) ->
+  Decoder s c
+decodeContainerSkelWithReplicate decodeLen replicateFun concatList = do
+  -- Look at how much data we have at the moment and use it as the limit for
+  -- the size of a single call to replicateFun. We don't want to use
+  -- replicateFun directly on the result of decodeLen since this might lead to
+  -- DOS attack (attacker providing a huge value for length). So if it's above
+  -- our limit, we'll do manual chunking and then combine the containers into
+  -- one.
+  sz <- decodeLen
+  limit <- peekAvailable
+  if sz <= limit
+    then replicateFun sz
+    else do
+      -- Take the max of limit and a fixed chunk size (note: limit can be
+      -- 0). This basically means that the attacker can make us allocate a
+      -- container of size 128 even though there's no actual input.
+      let chunkSize = max limit 128
+          (d, m) = sz `divMod` chunkSize
+      containers <- sequence $ replicateFun m : replicate d (replicateFun chunkSize)
+      return $! concatList containers
+{-# INLINE decodeContainerSkelWithReplicate #-}
 
 -- | Generic decoder for vectors. Its intended use is to allow easy
 -- definition of 'Serialise' instances for custom vector
@@ -534,8 +663,8 @@ decodeVector decodeValue =
 decodeSeq :: Decoder s a -> Decoder s (Seq.Seq a)
 decodeSeq decoder = Seq.fromList <$> decodeList decoder
 
-decodeStrictSeq :: Decoder s a -> Decoder s (StrictSeq.StrictSeq a)
-decodeStrictSeq decoder = StrictSeq.fromList <$> decodeList decoder
+decodeStrictSeq :: Decoder s a -> Decoder s (SSeq.StrictSeq a)
+decodeStrictSeq decoder = SSeq.fromList <$> decodeList decoder
 
 decodeAccWithLen ::
   Decoder s (Maybe Int) ->
@@ -598,58 +727,99 @@ decodeMapContentsTraverse decodeKey decodeValue =
 --------------------------------------------------------------------------------
 
 decodeUTCTime :: Decoder s UTCTime
-decodeUTCTime = do
-  enforceSize "UTCTime" 3
-  year <- decodeInteger
-  dayOfYear <- decodeInt
-  timeOfDayPico <- decodeInteger
-  return $
-    UTCTime
-      (fromOrdinalDate year dayOfYear)
-      (picosecondsToDiffTime timeOfDayPico)
+decodeUTCTime =
+  ifDecoderVersionAtLeast
+    2
+    (enforceSize "UTCTime" 3 >> timeDecoder)
+    (decodeRecordNamed "UTCTime" (const 3) timeDecoder)
+  where
+    timeDecoder = do
+      !year <- decodeInteger
+      !dayOfYear <- decodeInt
+      !timeOfDayPico <- decodeInteger
+      return
+        $! UTCTime
+          (fromOrdinalDate year dayOfYear)
+          (picosecondsToDiffTime timeOfDayPico)
 
 -- | For backwards compatibility we round pico precision to micro
 decodeNominalDiffTime :: Decoder s NominalDiffTime
 decodeNominalDiffTime = fromRational . (% 1_000_000) <$> decodeInteger
 
 --------------------------------------------------------------------------------
--- Promoted CBORG primitive decoders
+-- Network
 --------------------------------------------------------------------------------
+
+-- | Convert a `Get` monad from @binary@ package into a `Decoder`
+binaryGetDecoder ::
+  -- | Flag to allow left over at the end or not
+  Bool ->
+  -- | Name of the function or type for error reporting
+  Text.Text ->
+  -- | Deserializer for the @binary@ package
+  Get a ->
+  Decoder s a
+binaryGetDecoder allowLeftOver name getter = do
+  bs <- decodeBytes
+  case runGetOrFail getter (BSL.fromStrict bs) of
+    Left (_, _, err) -> cborError $ DecoderErrorCustom name (Text.pack err)
+    Right (leftOver, _, ha)
+      | allowLeftOver || BSL.null leftOver -> pure ha
+      | otherwise ->
+          cborError $ DecoderErrorLeftover name (BSL.toStrict leftOver)
+
+decodeIPv4 :: Decoder s IPv4
+decodeIPv4 =
+  fromHostAddress
+    <$> ifDecoderVersionAtLeast
+      8
+      (binaryGetDecoder False "decodeIPv4" getWord32le)
+      (binaryGetDecoder True "decodeIPv4" getWord32le)
+
+getHostAddress6 :: Get HostAddress6
+getHostAddress6 = do
+  !w1 <- getWord32le
+  !w2 <- getWord32le
+  !w3 <- getWord32le
+  !w4 <- getWord32le
+  return (w1, w2, w3, w4)
+
+decodeIPv6 :: Decoder s IPv6
+decodeIPv6 =
+  fromHostAddress6
+    <$> ifDecoderVersionAtLeast
+      8
+      (binaryGetDecoder False "decodeIPv6" getHostAddress6)
+      (binaryGetDecoder True "decodeIPv6" getHostAddress6)
+
+--------------------------------------------------------------------------------
+-- Wrapped CBORG decoders
+--------------------------------------------------------------------------------
+
+assertTag :: Word -> Decoder s ()
+assertTag tagExpected = do
+  tagReceived <-
+    peekTokenType >>= \case
+      C.TypeTag -> fromIntegral <$> decodeTag
+      C.TypeTag64 -> decodeTag64
+      _ -> fail "expected tag"
+  unless (tagReceived == (fromIntegral tagExpected :: Word64)) $
+    fail $ "expecteg tag " <> show tagExpected <> " but got tag " <> show tagReceived
 
 -- | Enforces that the input size is the same as the decoded one, failing in
 --   case it's not
-enforceSize :: T.Text -> Int -> Decoder s ()
-enforceSize lbl requestedSize = fromPlainDecoder (C.enforceSize lbl requestedSize)
+enforceSize :: Text.Text -> Int -> Decoder s ()
+enforceSize lbl requestedSize = decodeListLen >>= matchSize lbl requestedSize
 
 -- | Compare two sizes, failing if they are not equal
-matchSize :: T.Text -> Int -> Int -> Decoder s ()
-matchSize lbl requestedSize actualSize = fromPlainDecoder (C.matchSize lbl requestedSize actualSize)
-
--- | @'D.Decoder'@ for list.
-decodeList :: Decoder s a -> Decoder s [a]
-decodeList decodeValue =
-  ifDecoderVersionAtLeast
-    2
-    (decodeCollection decodeListLenOrIndef decodeValue)
-    (withPlainDecoder decodeValue C.decodeListWith)
-
-decodeMaybe :: Decoder s a -> Decoder s (Maybe a)
-decodeMaybe decodeValue = do
-  n <- decodeListLen
-  case n of
-    0 -> return Nothing
-    1 -> do
-      !x <- decodeValue
-      return (Just x)
-    _ -> cborError $ C.DecoderErrorUnknownTag "Maybe" (fromIntegral n)
-
-decodeNullMaybe :: Decoder s a -> Decoder s (Maybe a)
-decodeNullMaybe decoder = do
-  peekTokenType >>= \case
-    C.TypeNull -> do
-      decodeNull
-      pure Nothing
-    _ -> Just <$> decoder
+matchSize :: Text.Text -> Int -> Int -> Decoder s ()
+matchSize lbl requestedSize actualSize =
+  when (actualSize /= requestedSize) $
+    cborError $
+      DecoderErrorSizeMismatch
+        lbl
+        requestedSize
+        actualSize
 
 decodeBool :: Decoder s Bool
 decodeBool = fromPlainDecoder C.decodeBool
@@ -725,7 +895,7 @@ decodeNatural = do
   !n <- decodeInteger
   if n >= 0
     then return $! fromInteger n
-    else cborError $ C.DecoderErrorCustom "Natural" "got a negative number"
+    else cborError $ DecoderErrorCustom "Natural" "got a negative number"
 
 decodeIntegerCanonical :: Decoder s Integer
 decodeIntegerCanonical = fromPlainDecoder C.decodeIntegerCanonical
@@ -789,10 +959,10 @@ decodeSimple = fromPlainDecoder C.decodeSimple
 decodeSimpleCanonical :: Decoder s Word8
 decodeSimpleCanonical = fromPlainDecoder C.decodeSimpleCanonical
 
-decodeString :: Decoder s T.Text
+decodeString :: Decoder s Text.Text
 decodeString = fromPlainDecoder C.decodeString
 
-decodeStringCanonical :: Decoder s T.Text
+decodeStringCanonical :: Decoder s Text.Text
 decodeStringCanonical = fromPlainDecoder C.decodeStringCanonical
 
 decodeStringIndef :: Decoder s ()

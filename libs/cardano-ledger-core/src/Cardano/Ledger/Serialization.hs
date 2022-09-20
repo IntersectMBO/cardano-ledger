@@ -39,12 +39,10 @@ module Cardano.Ledger.Serialization
     translateViaCBORAnn,
     -- IPv4
     ipv4ToBytes,
-    ipv4FromBytes,
     ipv4ToCBOR,
     ipv4FromCBOR,
     -- IPv6
     ipv6ToBytes,
-    ipv6FromBytes,
     ipv6ToCBOR,
     ipv6FromCBOR,
     -- Raw
@@ -172,9 +170,11 @@ groupRecord = decodeRecordNamed "CBORGroup" (fromIntegral . toInteger . listLen)
 
 mapToCBOR :: (ToCBOR a, ToCBOR b) => Map a b -> Encoding
 mapToCBOR = encodeMap toCBOR toCBOR
+{-# DEPRECATED mapToCBOR "Use `toCBOR` instead" #-}
 
 mapFromCBOR :: (Ord a, FromCBOR a, FromCBOR b) => Decoder s (Map a b)
 mapFromCBOR = decodeMap fromCBOR fromCBOR
+{-# DEPRECATED mapFromCBOR "Use `fromCBOR` instead" #-}
 
 newtype CborSeq a = CborSeq {unwrapCborSeq :: Seq a}
   deriving (Foldable)
@@ -188,6 +188,9 @@ instance ToCBOR a => ToCBOR (CborSeq a) where
 instance FromCBOR a => FromCBOR (CborSeq a) where
   fromCBOR = CborSeq <$> decodeSeq fromCBOR
 
+
+-- TODO: This is only used for TxSeq. Create a specialized `StrictSeq` as Map
+-- encoder. length is O(1) for StrictSeq, no need to recompute it here.
 encodeFoldableMapEncoder ::
   Foldable f =>
   (Word -> a -> Maybe Encoding) ->
@@ -200,40 +203,17 @@ encodeFoldableMapEncoder encode xs = wrapCBORMap len contents
       Nothing -> (l, i + 1, enc)
       Just e -> (l + 1, i + 1, enc <> e)
 
-decodeMaybe :: Decoder s a -> Decoder s (Maybe a)
-decodeMaybe d =
-  decodeList d >>= \case
-    [] -> pure Nothing
-    [x] -> pure $ Just x
-    _ ->
-      cborError $
-        DecoderErrorCustom
-          "Maybe"
-          "Expected an array of length 0 or 1"
-
 ratioToCBOR :: ToCBOR a => Ratio a -> Encoding
 ratioToCBOR r =
   encodeTag 30
     <> encodeListLen 2
     <> toCBOR (numerator r)
     <> toCBOR (denominator r)
+{-# DEPRECATED ratioToCBOR "Use `ToCBOR` instead" #-}
 
 ratioFromCBOR :: (Bounded a, Integral a, FromCBOR a) => Decoder s (Ratio a)
 ratioFromCBOR = decodeFraction fromCBOR
-
-decodeFraction :: Integral a => Decoder s a -> Decoder s (Ratio a)
-decodeFraction decoder = do
-  t <- decodeTag
-  unless (t == 30) $ cborError $ DecoderErrorCustom "rational" "expected tag 30"
-  (numValues, values) <- decodeCollectionWithLen decodeListLenOrIndef decoder
-  case values of
-    [n, d] -> do
-      when (d == 0) (fail "denominator cannot be 0")
-      pure $ n % d
-    _ -> cborError $ DecoderErrorSizeMismatch "rational" 2 numValues
-
-ipv4ToBytes :: IPv4 -> BS.ByteString
-ipv4ToBytes = BSL.toStrict . runPut . putWord32le . toHostAddress
+{-# DEPRECATED ratioFromCBOR "Use `FromCBOR` instead" #-}
 
 ipv4FromBytes :: BS.ByteString -> Either String IPv4
 ipv4FromBytes b =
@@ -243,6 +223,7 @@ ipv4FromBytes b =
 
 ipv4ToCBOR :: IPv4 -> Encoding
 ipv4ToCBOR = toCBOR . ipv4ToBytes
+{-# DEPRECATED ipv4ToCBOR "Use `Cardano.Ledger.Binary.Encoding.Encoder.encodeIPv4` instead" #-}
 
 byteDecoderToDecoder :: Text -> (BS.ByteString -> Either String a) -> Decoder s a
 byteDecoderToDecoder name fromBytes = do
@@ -253,14 +234,7 @@ byteDecoderToDecoder name fromBytes = do
 
 ipv4FromCBOR :: Decoder s IPv4
 ipv4FromCBOR = byteDecoderToDecoder "IPv4" ipv4FromBytes
-
-ipv6ToBytes :: IPv6 -> BS.ByteString
-ipv6ToBytes ipv6 = BSL.toStrict . runPut $ do
-  let (w1, w2, w3, w4) = toHostAddress6 ipv6
-  putWord32le w1
-  putWord32le w2
-  putWord32le w3
-  putWord32le w4
+{-# DEPRECATED ipv4FromCBOR "Use `Cardano.Ledger.Binary.Decoding.Decoder.decodeIPv4` instead" #-}
 
 getHostAddress6 :: Get HostAddress6
 getHostAddress6 = do
@@ -278,26 +252,15 @@ ipv6FromBytes b =
 
 ipv6ToCBOR :: IPv6 -> Encoding
 ipv6ToCBOR = toCBOR . ipv6ToBytes
+{-# DEPRECATED ipv6ToCBOR "Use `Cardano.Ledger.Binary.Encoding.encodeIPv6` instead" #-}
 
 ipv6FromCBOR :: Decoder s IPv6
 ipv6FromCBOR = byteDecoderToDecoder "IPv6" ipv6FromBytes
+{-# DEPRECATED ipv6FromCBOR "Use `Cardano.Ledger.Binary.Decoding.decodeIPv6` instead" #-}
 
 --
 -- Raw serialisation
 --
-
--- | Run a ByteString 'BS.Builder' using a strategy aimed at making smaller
--- things efficiently.
---
--- It takes a size hint and produces a strict 'ByteString'. This will be fast
--- when the size hint is the same or slightly bigger than the true size.
-runByteBuilder :: Int -> BS.Builder -> BS.ByteString
-runByteBuilder !sizeHint =
-  BSL.toStrict
-    . BS.toLazyByteStringWith
-      (BS.safeStrategy sizeHint (2 * sizeHint))
-      mempty
-{-# NOINLINE runByteBuilder #-}
 
 utcTimeToCBOR :: UTCTime -> Encoding
 utcTimeToCBOR t =
@@ -307,6 +270,7 @@ utcTimeToCBOR t =
     <> (toCBOR . diffTimeToPicoseconds . utctDayTime) t
   where
     (year, dayOfYear) = toOrdinalDate . utctDay $ t
+{-# DEPRECATED ipv6FromCBOR "Use `Cardano.Ledger.Binary.Encoding.encodeUTCTime` instead" #-}
 
 utcTimeFromCBOR :: Decoder s UTCTime
 utcTimeFromCBOR = do
@@ -318,57 +282,15 @@ utcTimeFromCBOR = do
       UTCTime
         (fromOrdinalDate year dayOfYear)
         (picosecondsToDiffTime diff)
+{-# DEPRECATED
+utcTimeFromCBOR "Use `Cardano.Ledger.Binary.Decoding.decodeUTCTime` with version 2 at least"
+ #-}
 
 translateViaCBORAnn :: (ToCBOR a, FromCBOR (Annotator b)) => Text -> a -> Except DecoderError b
 translateViaCBORAnn name x =
   case decodeAnnotator name fromCBOR (serialize x) of
     Right newx -> pure newx
     Left decoderError -> throwError decoderError
-
--- | A CBOR deserialized value together with its size. When deserializing use
--- either `sizedDecoder` or its `FromCBOR` instance.
---
--- Use `mkSized` to construct such value.
-data Sized a = Sized
-  { sizedValue :: !a,
-    -- | Overhead in bytes. The field is lazy on purpose, because it might not
-    -- be needed, but it can be expensive to compute.
-    sizedSize :: Int64
-  }
-  deriving (Eq, Show, Generic)
-
-instance NoThunks a => NoThunks (Sized a)
-
-instance NFData a => NFData (Sized a) where
-  rnf (Sized val sz) = val `deepseq` sz `seq` ()
-
--- | Construct a `Sized` value by serializing it first and recording the amount
--- of bytes it requires. Note, however, CBOR serialization is not canonical,
--- therefore it is *NOT* a requirement that this property holds:
---
--- > sizedSize (mkSized a) === sizedSize (unsafeDeserialize (serialize a) :: a)
-mkSized :: ToCBOR a => a -> Sized a
-mkSized a =
-  Sized
-    { sizedValue = a,
-      sizedSize = BSL.length (serialize a)
-    }
-
-sizedDecoder :: Decoder s a -> Decoder s (Sized a)
-sizedDecoder decoder = do
-  Annotated v (ByteSpan start end) <- annotatedDecoder decoder
-  pure $! Sized v $! end - start
-
-instance FromCBOR a => FromCBOR (Sized a) where
-  fromCBOR = sizedDecoder fromCBOR
-
--- | Discards the size.
-instance ToCBOR a => ToCBOR (Sized a) where
-  -- Size is an auxiliary value and should not be transmitted over the wire,
-  -- therefore it is ignored.
-  toCBOR (Sized v _) = toCBOR v
-
--- | Take a lens that operates on a particular type and convert it into a lens
--- that operates on the `Sized` version of the type.
-toSizedL :: ToCBOR s => Lens' s a -> Lens' (Sized s) a
-toSizedL l = lens (\sv -> sizedValue sv ^. l) (\sv a -> mkSized (sizedValue sv & l .~ a))
+{-# DEPRECATED
+translateViaCBORAnn "Use `Cardano.Ledger.Binary.translateViaCBORAnnotator`"
+ #-}

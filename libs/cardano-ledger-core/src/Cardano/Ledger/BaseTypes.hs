@@ -180,6 +180,11 @@ instance Integral a => Ord (BoundedRatio b a) where
 
 promoteRatio :: Integral a => Ratio a -> Rational
 promoteRatio r = toInteger (numerator r) % toInteger (denominator r)
+{-# INLINE [1] promoteRatio #-}
+
+{-# RULES
+"promoteRatio/id" promoteRatio = id
+  #-}
 
 -- | Type clases that allows conversion between `Rational` and some form of bounded
 -- rational type. Bounds can be restricted by both the `Bounded` type class and underlyng
@@ -264,25 +269,37 @@ instance
   FromCBOR (BoundedRatio b a)
   where
   fromCBOR = do
-    r <- ratioFromCBOR
-    case fromRatioBoundedRatio r of
-      Nothing ->
-        cborError $ DecoderErrorCustom "BoundedRatio" (Text.pack $ show r)
-      Just u -> pure u
+    ifDecoderVersionAtLeast
+      8 -- Switched to Rational decoding in Conway era
+      ( do
+          r <- fromCBOR
+          case fromRationalBoundedRational r of
+            Nothing ->
+              cborError $ DecoderErrorCustom "BoundedRatio" (Text.pack $ show r)
+            Just u -> pure u
+      )
+      ( do
+          r <- ratioFromCBOR
+          case fromRatioBoundedRatio r of
+            Nothing ->
+              cborError $ DecoderErrorCustom "BoundedRatio" (Text.pack $ show r)
+            Just u -> pure u
+      )
 
 -- TODO: Remove `boundedRationalToCBOR`/`boundedRationalFromCBOR` in favor of
 -- serialization through `ToCBOR`/`FromCBOR` that relies on the @Tag 30@. This
 -- is a backwards incompatible change and must be done when breaking
 -- serialization changes can be introduced.
+-- Only used in To/FromCBOR instance for ShelleyGenesis
 
 -- | Serialize `BoundedRational` type in the same way `Rational` is serialized.
 boundedRationalToCBOR :: BoundedRational r => r -> Encoding
-boundedRationalToCBOR = toCBOR . unboundRational
+boundedRationalToCBOR = enforceVersionEncoding 0 . toCBOR . unboundRational
 
 -- | Deserialize `BoundedRational` type using `Rational` deserialization and
 -- fail when bounds are violated.
 boundedRationalFromCBOR :: BoundedRational r => Decoder s r
-boundedRationalFromCBOR = do
+boundedRationalFromCBOR = enforceVersionDecoder 0 $ do
   r <- fromCBOR
   case boundRational r of
     Nothing ->

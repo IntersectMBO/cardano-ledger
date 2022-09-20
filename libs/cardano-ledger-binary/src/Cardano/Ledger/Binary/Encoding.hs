@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -18,6 +19,9 @@ module Cardano.Ledger.Binary.Encoding
     encodeNestedCborBytes,
     nestedCborSizeExpr,
     nestedCborBytesSizeExpr,
+
+    -- * Tools
+    runByteBuilder,
 
     -- * Deprecated
     toCBORMaybe,
@@ -94,6 +98,24 @@ nestedCborSizeExpr x = 2 + apMono "withWordSize" withWordSize x + x
 
 nestedCborBytesSizeExpr :: Size -> Size
 nestedCborBytesSizeExpr x = 2 + apMono "withWordSize" withWordSize x + x
+
+--------------------------------------------------------------------------------
+-- Tools
+--------------------------------------------------------------------------------
+
+-- | Run a ByteString 'Builder' using a strategy aimed at making smaller
+-- things efficiently.
+--
+-- It takes a size hint and produces a strict 'ByteString'. This will be fast
+-- when the size hint is the same or slightly bigger than the true size.
+runByteBuilder :: Int -> Builder -> BS.ByteString
+runByteBuilder !sizeHint =
+  BSL.toStrict . toLazyByteStringWith (safeStrategy sizeHint (2 * sizeHint)) mempty
+{-# NOINLINE runByteBuilder #-}
+
+--------------------------------------------------------------------------------
+-- Deprecations
+--------------------------------------------------------------------------------
 
 toCBORMaybe :: (a -> Encoding) -> (Maybe a -> Encoding)
 toCBORMaybe = encodeMaybe
