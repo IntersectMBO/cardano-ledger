@@ -43,6 +43,7 @@ library
     Cardano.Ledger.Mary.Translation
     Cardano.Ledger.Mary.Value
     Cardano.Ledger.ShelleyMA
+    Cardano.Ledger.ShelleyMA.Core
     Cardano.Ledger.ShelleyMA.Era
     Cardano.Ledger.ShelleyMA.AuxiliaryData
     Cardano.Ledger.ShelleyMA.Rules

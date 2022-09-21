@@ -44,6 +44,7 @@ library
     Cardano.Ledger.Babbage.Scripts
     Cardano.Ledger.Babbage.Collateral
     Cardano.Ledger.Babbage.Rules
+    Cardano.Ledger.Babbage.Core
     Cardano.Ledger.Babbage
   other-modules:
     Cardano.Ledger.Babbage.Era
