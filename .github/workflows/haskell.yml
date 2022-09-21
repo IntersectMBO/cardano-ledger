@@ -2,9 +2,7 @@ name: Haskell CI
 
 on:
   push:
-    branches: [ '*' ]
   pull_request:
-    branches: [ "master" ]
 
 jobs:
   build:
@@ -58,7 +56,7 @@ jobs:
         cd ../..
 
 
-    - uses: haskell/actions/setup@v1
+    - uses: haskell/actions/setup@v2
       id: setup-haskell
       with:
         ghc-version: ${{ matrix.ghc }}
