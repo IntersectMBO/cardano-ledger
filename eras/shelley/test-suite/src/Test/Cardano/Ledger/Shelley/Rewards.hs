@@ -78,6 +78,7 @@ import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
     DPState (..),
     EpochState (..),
+    FilteredRewards (..),
     LedgerState (..),
     NewEpochState (..),
     RewardUpdate (..),
@@ -750,7 +751,7 @@ eventsMirrorRewards events nes = same eventRew compRew
             (completed, lastevent) = complete pulser
     total = getMostRecentTotalRewardEvent events
     aggevent = aggIncrementalRewardEvents events
-    (aggFilteredEvent, _, _, _) = filterAllRewards aggevent (nesEs nes)
+    FilteredRewards aggFilteredEvent _ _ _ = filterAllRewards aggevent (nesEs nes)
     same x y = withMaxSuccess 1 $ counterexample message (x === y)
       where
         message =

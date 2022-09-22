@@ -89,7 +89,7 @@ import Cardano.Ledger.Serialization
   )
 import Cardano.Slotting.EpochInfo (EpochInfo, hoistEpochInfo)
 import Cardano.Slotting.Time (SystemStart)
-import Control.DeepSeq (NFData)
+import Control.DeepSeq (NFData (rnf))
 import Control.Exception (throw)
 import Control.Monad (when, (<=<))
 import Control.Monad.Trans.Reader (ReaderT)
@@ -615,6 +615,9 @@ data Globals = Globals
   deriving (Show, Generic)
 
 instance NoThunks Globals
+
+instance NFData Globals where
+  rnf (Globals {}) = ()
 
 type ShelleyBase = ReaderT Globals Identity
 

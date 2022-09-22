@@ -142,7 +142,10 @@ viewTrip (TFEF x y) = (SJust x, Set.empty, SJust y)
 viewTrip (TFFE x y) = (SJust x, y, SNothing)
 viewTrip (TFFF x y z) = (SJust x, y, SJust z)
 
--- | Extract the active delegation, if it is present.
+-- | Extract the active delegation, if it is present. We can tell that the delegation
+--   is present when Txxx has an F in the 1st and 3rd positions. I.e. TFFF and TFEF
+--                                                                     ^ ^      ^ ^
+--  equivalent to the pattern (Triple (SJust c) _ (SJust _)) -> Just c
 tripRewardActiveDelegation :: Trip coin ptr pool -> Maybe coin
 tripRewardActiveDelegation =
   \case
@@ -150,7 +153,10 @@ tripRewardActiveDelegation =
     TFEF c _ -> Just c
     _ -> Nothing
 
--- | Extract the Reward 'Coin' if it is present.
+-- | Extract the Reward 'Coin' if it is present. We can tell that the reward is
+--   present when Txxx has an F in the first position TFFF TFFE TFEF TFEE
+--                                                     ^    ^    ^    ^
+--  equivalent to the pattern (Triple (SJust c) _ _) -> Just c
 tripReward :: Trip coin ptr pool -> Maybe coin
 tripReward =
   \case
@@ -160,7 +166,10 @@ tripReward =
     TFEE c -> Just c
     _ -> Nothing
 
--- | Extract the Delegation PoolParams, if present.
+-- | Extract the Delegation PoolParams, if present. We can tell that the PoolParams are
+--   present when Txxx has an F in the third position TFFF TFEF TEFF TEEF
+--                                                       ^    ^    ^    ^
+--  equivalent to the pattern (Triple _ _ (SJust p)) -> Just p
 tripDelegation :: Trip coin ptr pool -> Maybe pool
 tripDelegation =
   \case
@@ -618,7 +627,7 @@ unionHelp tm mm =
   Map.mergeWithKey
     (\_k (Triple c1 s d) c2 -> Just (Triple (appendStrictMaybe c1 (SJust c2)) s d))
     id
-    (Map.map (\c -> Triple (SJust c) Set.empty SNothing))
+    (Map.map TFEE) -- Note TFEE = (\c -> Triple (SJust c) Set.empty SNothing)
     tm
     mm
 
