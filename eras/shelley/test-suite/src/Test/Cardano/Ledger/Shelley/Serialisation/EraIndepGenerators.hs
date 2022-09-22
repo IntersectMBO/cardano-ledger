@@ -142,7 +142,10 @@ import Test.QuickCheck
     Positive (..),
     arbitrary,
     choose,
+    chooseBoundedIntegral,
+    chooseInt,
     elements,
+    frequency,
     genericShrink,
     listOf,
     oneof,
@@ -630,8 +633,26 @@ instance Arbitrary PerformanceEstimate where
 
 deriving instance Arbitrary (CompactForm Coin)
 
+-- | In the system, Stake never contains more than the sum of all Ada (which is constant).
+-- This makes it safe to store individual Coins (in CompactForm) as Word64. But we must
+-- be careful that we never generate Stake where the sum of all the coins exceeds (maxBound :: Word64)
+-- There will never be a real Stake in the system with that many Ada, because total Ada is constant.
+-- So using a restricted Arbitrary Generator is OK.
 instance CC.Crypto c => Arbitrary (Stake c) where
-  arbitrary = Stake <$> arbitrary
+  arbitrary = Stake <$> (VMap.fromMap <$> theMap)
+    where
+      genWord64 :: Int -> Gen Word64
+      genWord64 n =
+        frequency
+          [ (3, chooseBoundedIntegral (1, 100)),
+            (2, chooseBoundedIntegral (101, 10000)),
+            (1, chooseBoundedIntegral (1, maxBound `div` (fromIntegral n)))
+          ]
+      theMap = do
+        n <- frequency [(3, chooseInt (1, 20)), (2, chooseInt (21, 150)), (1, chooseInt (151, 1000))]
+        let pair = (,) <$> arbitrary <*> (CompactCoin <$> (genWord64 n))
+        list <- frequency [(1, pure []), (99, vectorOf n pair)]
+        pure (Map.fromList list)
 
 instance CC.Crypto c => Arbitrary (PoolParams c) where
   arbitrary =

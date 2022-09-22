@@ -21,6 +21,7 @@ import Test.Cardano.Ledger.Examples.Consensus (genericConsensusTest)
 import Test.Cardano.Ledger.Generic.AggPropTests (aggTests)
 import Test.Cardano.Ledger.Generic.Properties (genericProperties)
 import qualified Test.Cardano.Ledger.NoThunks as NoThunks
+import Test.Cardano.Ledger.Tickf (calcPoolDistOldEqualsNew)
 import Test.Tasty
 import Test.TestScenario (TestScenario (..), mainWithTestScenario)
 
@@ -34,7 +35,8 @@ tests = askOption $ \case
 
 mainTestTrees :: [TestTree]
 mainTestTrees =
-  [ genericConsensusTest,
+  [ calcPoolDistOldEqualsNew,
+    genericConsensusTest,
     baseTypesTests,
     Tools.tests,
     testGroup

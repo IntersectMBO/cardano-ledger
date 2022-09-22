@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -18,6 +19,8 @@ module Cardano.Ledger.Shelley.Rules.NewEpoch
     PredicateFailure,
     calculatePoolDistr,
     calculatePoolDistr',
+    updateRewards,
+    calculatePoolStake,
   )
 where
 
@@ -27,8 +30,7 @@ import Cardano.Ledger.BaseTypes
     ShelleyBase,
     StrictMaybe (SJust, SNothing),
   )
-import Cardano.Ledger.Coin (Coin (Coin), toDeltaCoin)
-import Cardano.Ledger.Compactible (fromCompact)
+import Cardano.Ledger.Coin (Coin (Coin), CompactForm (CompactCoin), toDeltaCoin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.EpochBoundary
@@ -52,6 +54,7 @@ import Data.Set (Set)
 import Data.VMap as VMap
 import GHC.Generics (Generic)
 import GHC.Records (HasField)
+import GHC.Word (Word64)
 import NoThunks.Class (NoThunks (..))
 
 data ShelleyNewEpochPredFailure era
@@ -162,22 +165,13 @@ newEpochTransition = do
   if e_ /= eL + 1
     then pure src
     else do
-      let updateRewards ru'@(RewardUpdate dt dr rs_ df _) = do
-            let totRs = sumRewards (esPrevPp es) rs_
-            Val.isZero (dt <> (dr <> toDeltaCoin totRs <> df)) ?! CorruptRewardUpdate ru'
-            let (es', regRU, eraIgnored, unregistered) = applyRUpd' ru' es
-            tellEvent $ RestrainedRewards e eraIgnored unregistered
-            -- This event (which is only generated once per epoch) must be generated even if the
-            -- map is empty (db-sync depends on it).
-            tellEvent $ TotalRewardEvent e regRU
-            pure es'
       es' <- case ru of
-        SNothing -> pure es
+        SNothing -> (pure es)
         SJust p@(Pulsing _ _) -> do
           (ans, event) <- liftSTS (completeRupd p)
           tellReward (DeltaRewardEvent (RupdEvent e event))
-          updateRewards ans
-        SJust (Complete ru') -> updateRewards ru'
+          (updateRewards es e ans)
+        SJust (Complete ru') -> updateRewards es e ru'
       es'' <- trans @(EraRule "MIR" era) $ TRC ((), es', ())
       es''' <- trans @(EraRule "EPOCH" era) $ TRC ((), es'', e)
       let adaPots = totalAdaPotsES es'''
@@ -209,20 +203,30 @@ calculatePoolDistr' :: forall c. (KeyHash 'StakePool c -> Bool) -> SnapShot c ->
 calculatePoolDistr' includeHash (SnapShot stake delegs poolParams) =
   let Coin total = sumAllStake stake
       -- total could be zero (in particular when shrinking)
+      nonZeroTotal :: Integer
       nonZeroTotal = if total == 0 then 1 else total
-      sd =
-        Map.fromListWith (+) $
-          [ (d, c % nonZeroTotal)
-            | (hk, compactCoin) <- VMap.toAscList (unStake stake),
-              let Coin c = fromCompact compactCoin,
-              Just d <- [VMap.lookup hk delegs],
-              includeHash d
-          ]
+      poolStakeMap :: Map.Map (KeyHash 'StakePool c) Word64
+      poolStakeMap = calculatePoolStake includeHash delegs stake
    in PoolDistr $
         Map.intersectionWith
-          IndividualPoolStake
-          sd
-          (toMap (VMap.map _poolVrf poolParams))
+          (\word64 poolparam -> IndividualPoolStake (toInteger word64 % nonZeroTotal) (_poolVrf poolparam))
+          poolStakeMap
+          (VMap.toMap poolParams)
+
+-- | Sum up the Coin (as CompactForm Coin = Word64) for each StakePool
+calculatePoolStake ::
+  (KeyHash 'StakePool c -> Bool) ->
+  VMap VB VB (Credential 'Staking c) (KeyHash 'StakePool c) ->
+  Stake c ->
+  Map.Map (KeyHash 'StakePool c) Word64
+calculatePoolStake includeHash delegs stake = VMap.foldlWithKey accum Map.empty delegs
+  where
+    accum ans cred keyHash =
+      if includeHash keyHash
+        then case VMap.lookup cred (unStake stake) of
+          Nothing -> ans
+          Just (CompactCoin c) -> Map.insertWith (+) keyHash c ans
+        else ans
 
 instance
   ( STS (ShelleyEPOCH era),
@@ -244,3 +248,34 @@ instance
   where
   wrapFailed = MirFailure
   wrapEvent = MirEvent
+
+-- ===========================================
+
+updateRewards ::
+  (HasField "_protocolVersion" (PParams era) ProtVer) =>
+  EpochState era ->
+  EpochNo ->
+  RewardUpdate (EraCrypto era) ->
+  Rule (ShelleyNEWEPOCH era) 'Transition (EpochState era)
+updateRewards es e ru'@(RewardUpdate dt dr rs_ df _) = do
+  let totRs = sumRewards (esPrevPp es) rs_
+  Val.isZero (dt <> (dr <> toDeltaCoin totRs <> df)) ?! CorruptRewardUpdate ru'
+  let (!es', filtered) = applyRUpdFiltered ru' es
+  tellEvent $ RestrainedRewards e (frShelleyIgnored filtered) (frUnregistered filtered)
+  -- This event (which is only generated once per epoch) must be generated even if the
+  -- map is empty (db-sync depends on it).
+  tellEvent $ TotalRewardEvent e (frRegistered filtered)
+  pure es'
+
+{-
+data FilteredRewards era = FilteredRewards
+  { -- Only the first component is strict on purpose. The others are lazy because in most instances
+    -- they are never used, so this keeps them from being evaluated.
+    -- | These are registered, but in the ShelleyEra they are ignored because of backward compatibility
+    --  in other Eras, this field will be the Map.empty
+    frRegistered :: !(Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era)))),
+    frShelleyIgnored :: Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))),
+    frUnregistered :: Set (Credential 'Staking (EraCrypto era)),
+    frTotalUnregistered :: Coin
+  }
+  -}

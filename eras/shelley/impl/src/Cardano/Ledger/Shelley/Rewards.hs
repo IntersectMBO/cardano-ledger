@@ -137,8 +137,8 @@ filterRewards ::
   (HasField "_protocolVersion" pp ProtVer) =>
   pp ->
   Map (Credential 'Staking c) (Set (Reward c)) ->
-  ( Map (Credential 'Staking c) (Set (Reward c)),
-    Map (Credential 'Staking c) (Set (Reward c))
+  ( Map (Credential 'Staking c) (Set (Reward c)), -- delivered
+    Map (Credential 'Staking c) (Set (Reward c)) -- ignored in Shelley Era
   )
 filterRewards pp rewards =
   if HardForks.aggregatedRewards pp
@@ -147,6 +147,8 @@ filterRewards pp rewards =
       let mp = Map.map Set.deleteFindMin rewards
        in (Map.map (Set.singleton . fst) mp, Map.filter (not . Set.null) $ Map.map snd mp)
 
+-- | for each (Set (Reward c)) entry in the map, sum up the coin. In the ShelleyEra
+--   some of the coins are ignored (because of backward compatibility)
 aggregateRewards ::
   forall c pp.
   (HasField "_protocolVersion" pp ProtVer) =>

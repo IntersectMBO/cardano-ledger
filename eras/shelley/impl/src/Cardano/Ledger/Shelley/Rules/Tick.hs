@@ -21,6 +21,7 @@ module Cardano.Ledger.Shelley.Rules.Tick
     adoptGenesisDelegs,
     ShelleyTICKF,
     ShelleyTickfPredFailure (..),
+    validatingTickTransition,
   )
 where
 

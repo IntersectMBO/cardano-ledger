@@ -133,6 +133,7 @@ import qualified Formatting.Buildable as B (Buildable (..))
 import GHC.TypeNats (KnownNat, type (*))
 import Numeric.Natural (Natural)
 import Prelude hiding (encodeFloat, (.))
+
 #if MIN_VERSION_recursion_schemes(5,2,0)
 import Data.Fix (Fix(..))
 #else

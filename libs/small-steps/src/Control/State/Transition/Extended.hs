@@ -75,6 +75,7 @@ module Control.State.Transition.Extended
     applyRuleInternal,
     RuleInterpreter,
     STSInterpreter,
+    runRule,
 
     -- * Random thing
     Threshold (..),
@@ -569,7 +570,7 @@ applySTSIndifferently =
 --   If the rule successfully applied, the list of predicate failures will be
 --   empty.
 applyRuleInternal ::
-  forall (ep :: EventPolicy) s m rtype.
+  forall (ep :: EventPolicy) s m rtype result.
   (STS s, RuleTypeRep rtype, m ~ BaseM s) =>
   -- | We need to know if the current STS incurred at least one
   -- PredicateFailure.  This is necessary because `applyRuleInternal` is called
@@ -581,8 +582,8 @@ applyRuleInternal ::
   -- | Interpreter for subsystems
   (IsFailing -> STSInterpreter ep) ->
   RuleContext rtype s ->
-  Rule s rtype (State s) ->
-  m (EventReturnType ep s (State s, [PredicateFailure s]))
+  Rule s rtype result ->
+  m (EventReturnType ep s (result, [PredicateFailure s]))
 applyRuleInternal isAlreadyFailing ep vp goSTS jc r = do
   (s, er) <- flip runStateT ([], []) $ foldF runClause r
   case ep of
@@ -781,3 +782,21 @@ tellEvents ::
   [Event sts] ->
   Rule sts ctx ()
 tellEvents es = liftF $ Writer es ()
+
+-- =================================
+
+-- | runRule :: RuleInterpreter 'EventPolicyDiscard
+--   run a rule given its context, to get a BaseM computation
+runRule ::
+  (STS s, RuleTypeRep rtype) =>
+  RuleContext rtype s ->
+  Rule s rtype result ->
+  BaseM s (result, [PredicateFailure s])
+runRule cntxt rule = applyRuleInternal NotFailing EPDiscard ValidateAll goSTS cntxt rule
+  where
+    goRule isFailing c r = applyRuleInternal isFailing EPDiscard ValidateAll goSTS c r
+    goSTS :: IsFailing -> STSInterpreter 'EventPolicyDiscard
+    goSTS isFailing c =
+      runExceptT (applySTSInternal EPDiscard AssertionsOff (goRule isFailing) c) >>= \case
+        Left err -> throw $! AssertionException err
+        Right res -> pure $! res

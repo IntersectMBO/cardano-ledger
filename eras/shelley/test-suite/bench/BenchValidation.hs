@@ -164,9 +164,6 @@ instance CryptoClass.Crypto c => NFData (BHeader c) where
 instance NFData (ChainDepState c) where
   rnf (ChainDepState _ _ _) = ()
 
-instance NFData Globals where
-  rnf (Globals _ _ _ _ _ _ _ _ _ _ _ _) = ()
-
 instance NFData (ChainTransitionError c) where
   rnf _ = ()
 

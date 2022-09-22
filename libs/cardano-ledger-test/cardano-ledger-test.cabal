@@ -68,6 +68,7 @@ library
     Test.Cardano.Ledger.Rational
     Test.Cardano.Ledger.TestableEra
     Test.Cardano.Ledger.ValueFromList
+    Test.Cardano.Ledger.Tickf
   other-modules:
   build-depends:
     aeson >= 2,
@@ -93,6 +94,8 @@ library
     microlens,
     mtl,
     nothunks,
+    -- plutus-ledger-api:{plutus-ledger-api-testlib} ^>=1.1,
+    plutus-ledger-api,
     plutus-core,
     plutus-ledger-api ^>=1.1,
     prettyprinter,
@@ -148,13 +151,16 @@ benchmark bench
     Bench.Cardano.Ledger.Serialisation.Generators
     Bench.Cardano.Ledger.SumStake
     Bench.Cardano.Ledger.TxOut
+    Bench.Cardano.Ledger.StakeDistr
   build-depends:
+    aeson,
     bytestring,
     cardano-binary,
     cardano-crypto-class,
     cardano-data,
     cardano-ledger-alonzo,
     cardano-ledger-alonzo-test,
+    cardano-ledger-test,
     cardano-ledger-core,
     cardano-ledger-shelley-ma-test,
     cardano-ledger-shelley-ma,
@@ -166,10 +172,13 @@ benchmark bench
     QuickCheck,
     cardano-ledger-shelley,
     cardano-ledger-shelley-test,
+    cardano-slotting,
     microlens,
+    mtl,
     random,
     small-steps,
     small-steps-test,
+    cardano-strict-containers >= 0.1.1,
     text
   ghc-options:
       -threaded
