@@ -5,12 +5,12 @@
 
 module Cardano.Ledger.Binary.Encoding
   ( -- * Running decoders
-    Version,
     serialize,
     serialize',
     serializeBuilder,
     serializeEncoding,
     serializeEncoding',
+    module Cardano.Ledger.Binary.Version,
     module Cardano.Ledger.Binary.Encoding.Encoder,
     module Cardano.Ledger.Binary.Encoding.ToCBOR,
 
@@ -28,7 +28,7 @@ module Cardano.Ledger.Binary.Encoding
   )
 where
 
-import Cardano.Ledger.Binary.Decoding.Decoder (Version)
+import Cardano.Ledger.Binary.Version
 import Cardano.Ledger.Binary.Encoding.Encoder
 import Cardano.Ledger.Binary.Encoding.ToCBOR
 import qualified Data.ByteString as BS

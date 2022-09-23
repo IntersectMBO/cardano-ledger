@@ -49,16 +49,17 @@ import Data.Fix (Fix(..))
 #else
 import Data.Functor.Foldable (Fix(..))
 #endif
+import Codec.CBOR.Term (Term (..))
 import Data.Foldable (toList)
 import Data.Functor.Foldable (cata, project)
-import Data.Int (Int32, Int64)
+import Data.Int (Int16, Int32, Int64, Int8)
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map as Map
-import Data.Ratio (Ratio, denominator, numerator)
-import qualified Data.Set as Set
-import qualified Data.Sequence as Seq
 import qualified Data.Maybe.Strict as SMaybe
+import Data.Ratio (Ratio, denominator, numerator)
+import qualified Data.Sequence as Seq
 import qualified Data.Sequence.Strict as SSeq
+import qualified Data.Set as Set
 import Data.Tagged (Tagged (..))
 import Data.Text (Text)
 import qualified Data.Text as Text
@@ -75,7 +76,6 @@ import Foreign.Storable (sizeOf)
 import Formatting (bprint, build, shown, stext)
 import qualified Formatting.Buildable as B (Buildable (..))
 import Numeric.Natural (Natural)
-import Codec.CBOR.Term (Term (..))
 
 class Typeable a => ToCBOR a where
   toCBOR :: a -> Encoding
@@ -459,9 +459,13 @@ instance ToCBOR Int where
   toCBOR = encodeInt
   encodedSizeExpr _ = encodedSizeRange
 
-instance ToCBOR Float where
-  toCBOR = encodeFloat
-  encodedSizeExpr _ _ = 1 + fromIntegral (sizeOf (0 :: Float))
+instance ToCBOR Int8 where
+  toCBOR = encodeInt8
+  encodedSizeExpr _ = encodedSizeRange
+
+instance ToCBOR Int16 where
+  toCBOR = encodeInt16
+  encodedSizeExpr _ = encodedSizeRange
 
 instance ToCBOR Int32 where
   toCBOR = encodeInt32
@@ -470,6 +474,14 @@ instance ToCBOR Int32 where
 instance ToCBOR Int64 where
   toCBOR = encodeInt64
   encodedSizeExpr _ = encodedSizeRange
+
+instance ToCBOR Float where
+  toCBOR = encodeFloat
+  encodedSizeExpr _ _ = 1 + fromIntegral (sizeOf (0 :: Float))
+
+instance ToCBOR Double where
+  toCBOR = encodeDouble
+  encodedSizeExpr _ _ = 1 + fromIntegral (sizeOf (0 :: Float))
 
 instance ToCBOR a => ToCBOR (Ratio a) where
   toCBOR r = encodeListLen 2 <> toCBOR (numerator r) <> toCBOR (denominator r)
@@ -624,8 +636,6 @@ instance ToCBOR a => ToCBOR (Maybe a) where
 instance ToCBOR a => ToCBOR (SMaybe.StrictMaybe a) where
   toCBOR SMaybe.SNothing = encodeListLen 0
   toCBOR (SMaybe.SJust x) = encodeListLen 1 <> toCBOR x
-
-
 
 instance (Ord k, ToCBOR k, ToCBOR v) => ToCBOR (Map.Map k v) where
   toCBOR = encodeMap toCBOR toCBOR

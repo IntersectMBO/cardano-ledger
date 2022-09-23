@@ -12,6 +12,7 @@ module Cardano.Ledger.Binary.Decoding
     decodeFullDecoder',
     decodeFullAnnotator,
     decodeFullAnnotatedBytes,
+    module Cardano.Ledger.Binary.Version,
     module Cardano.Ledger.Binary.Decoding.FromCBOR,
     module Cardano.Ledger.Binary.Decoding.Sharing,
     module Cardano.Ledger.Binary.Decoding.Decoder,
@@ -36,6 +37,7 @@ module Cardano.Ledger.Binary.Decoding
   )
 where
 
+import Cardano.Ledger.Binary.Version
 import Cardano.Ledger.Binary.Decoding.Annotated
 import Cardano.Ledger.Binary.Decoding.Decoder
 import Cardano.Ledger.Binary.Decoding.Drop

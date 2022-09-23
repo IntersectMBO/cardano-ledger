@@ -16,7 +16,7 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Short as SBS
 import qualified Data.ByteString.Short.Internal as SBS
 import Data.Fixed (Fixed (..), Nano, Pico)
-import Data.Int (Int32, Int64)
+import Data.Int (Int8, Int16, Int32, Int64)
 import Data.List.NonEmpty (NonEmpty, nonEmpty)
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe.Strict as SMaybe
@@ -63,6 +63,9 @@ instance FromCBOR Bool where
 instance FromCBOR Integer where
   fromCBOR = decodeInteger
 
+instance FromCBOR Natural where
+  fromCBOR = decodeNatural
+
 instance FromCBOR Word where
   fromCBOR = decodeWord
 
@@ -81,14 +84,23 @@ instance FromCBOR Word64 where
 instance FromCBOR Int where
   fromCBOR = decodeInt
 
-instance FromCBOR Float where
-  fromCBOR = decodeFloat
+instance FromCBOR Int8 where
+  fromCBOR = decodeInt8
+
+instance FromCBOR Int16 where
+  fromCBOR = decodeInt16
 
 instance FromCBOR Int32 where
   fromCBOR = decodeInt32
 
 instance FromCBOR Int64 where
   fromCBOR = decodeInt64
+
+instance FromCBOR Float where
+  fromCBOR = decodeFloat
+
+instance FromCBOR Double where
+  fromCBOR = decodeDouble
 
 instance FromCBOR Rational where
   fromCBOR = decodeRational
@@ -101,9 +113,6 @@ instance FromCBOR Pico where
 
 instance FromCBOR NominalDiffTime where
   fromCBOR = decodeNominalDiffTime
-
-instance FromCBOR Natural where
-  fromCBOR = decodeNatural
 
 instance FromCBOR Void where
   fromCBOR = cborError DecoderErrorVoid

@@ -33,8 +33,8 @@ newtype CBORBytes = CBORBytes BS.ByteString
 
 instance ToExpr CBORBytes where
   toExpr (CBORBytes bytes) =
-    -- `decodeTerm` does not care about the version, so we can use 0
-    case decodeFullDecoder' 0 "Term" decodeTerm bytes of
+    -- `decodeTerm` does not care about the version, so we can use any version
+    case decodeFullDecoder' minBound "Term" decodeTerm bytes of
       Left err -> error $ "Error decoding CBOR: " ++ showDecoderError err
       Right term -> toExpr term
 

@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -23,6 +24,7 @@ import Cardano.Ledger.Binary
     Version,
     decodeFull,
     decodeFullDecoder,
+    natVersion,
     serialize,
     serializeEncoding,
   )
@@ -59,7 +61,7 @@ import Test.Cardano.Prelude
 import Text.Show.Pretty (Value (..))
 
 byronProtVer :: Version
-byronProtVer = 1
+byronProtVer = natVersion @1
 
 type HexDump = BSL.ByteString
 

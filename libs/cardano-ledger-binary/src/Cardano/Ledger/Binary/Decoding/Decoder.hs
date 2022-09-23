@@ -1,4 +1,6 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
@@ -6,7 +8,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Cardano.Ledger.Binary.Decoding.Decoder
   ( -- * Decoders
@@ -21,7 +25,6 @@ module Cardano.Ledger.Binary.Decoding.Decoder
     C.TokenType (..),
 
     -- ** Versioning
-    Version (..),
     getDecoderVersion,
     ifDecoderVersionAtLeast,
 
@@ -140,6 +143,7 @@ module Cardano.Ledger.Binary.Decoding.Decoder
 where
 
 import Cardano.Binary (DecoderError (..))
+import Cardano.Ledger.Binary.Version
 import Codec.CBOR.ByteArray (ByteArray)
 import qualified Codec.CBOR.Decoding as C
   ( ByteOffset,
@@ -245,14 +249,6 @@ import Prelude hiding (decodeFloat)
 -- Versioned Decoder
 --------------------------------------------------------------------------------
 
-newtype Version = Version Word
-  deriving (Eq, Ord, Show, Num)
-
--- mkVersion :: Natural -> Maybe Version
--- mkVersion v
---   | 0 < v && v < 9 = Just (fromIntegral v)
---   | otherwise = Nothing
-
 newtype Decoder s a = Decoder (ReaderT Version (C.Decoder s) a)
   deriving (Functor, Applicative, Monad, MonadFail, MonadReader Version)
 
@@ -325,7 +321,7 @@ showDecoderError = formatToString build
 decodeRational :: Decoder s Rational
 decodeRational =
   ifDecoderVersionAtLeast
-    2
+    (natVersion @2)
     (decodeFraction decodeInteger)
     ( do
         enforceSize "Ratio" 2
@@ -356,7 +352,7 @@ decodeFraction decoder = do
 decodeList :: Decoder s a -> Decoder s [a]
 decodeList decodeValue =
   ifDecoderVersionAtLeast
-    2
+    (natVersion @2)
     (decodeCollection decodeListLenOrIndef decodeValue)
     (decodeListWith decodeValue)
 
@@ -369,7 +365,7 @@ decodeListWith decodeValue = do
 decodeMaybe :: Decoder s a -> Decoder s (Maybe a)
 decodeMaybe decodeValue = do
   ifDecoderVersionAtLeast
-    2
+    (natVersion @2)
     (decodeMaybeVarLen decodeValue)
     (decodeMaybeExactLen decodeValue)
 
@@ -568,7 +564,7 @@ decodeMap ::
   Decoder s (Map.Map k v)
 decodeMap decodeKey decodeValue =
   ifDecoderVersionAtLeast
-    2
+    (natVersion @2)
     (decodeMapV2 decodeKey decodeValue)
     (decodeMapV1 decodeKey decodeValue)
 
@@ -626,7 +622,7 @@ decodeSetSkel fromDistinctDescList decodeValue = do
 decodeSet :: Ord a => Decoder s a -> Decoder s (Set.Set a)
 decodeSet valueDecoder =
   ifDecoderVersionAtLeast
-    2
+    (natVersion @2)
     (Set.fromList <$> decodeList valueDecoder)
     (decodeSetSkel Set.fromDistinctDescList valueDecoder)
 
@@ -738,7 +734,7 @@ decodeMapContentsTraverse decodeKey decodeValue =
 decodeUTCTime :: Decoder s UTCTime
 decodeUTCTime =
   ifDecoderVersionAtLeast
-    2
+    (natVersion @2)
     (enforceSize "UTCTime" 3 >> timeDecoder)
     (decodeRecordNamed "UTCTime" (const 3) timeDecoder)
   where
@@ -781,7 +777,7 @@ decodeIPv4 :: Decoder s IPv4
 decodeIPv4 =
   fromHostAddress
     <$> ifDecoderVersionAtLeast
-      8
+      (natVersion @8)
       (binaryGetDecoder False "decodeIPv4" getWord32le)
       (binaryGetDecoder True "decodeIPv4" getWord32le)
 
@@ -797,7 +793,7 @@ decodeIPv6 :: Decoder s IPv6
 decodeIPv6 =
   fromHostAddress6
     <$> ifDecoderVersionAtLeast
-      8
+      (natVersion @8)
       (binaryGetDecoder False "decodeIPv6" getHostAddress6)
       (binaryGetDecoder True "decodeIPv6" getHostAddress6)
 

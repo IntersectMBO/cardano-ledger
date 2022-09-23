@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NumericUnderscores #-}
@@ -76,7 +77,8 @@ module Cardano.Ledger.Binary.Encoding.Encoder
 where
 
 import qualified Cardano.Binary as C
-import Cardano.Ledger.Binary.Decoding.Decoder (Version (..), setTag)
+import Cardano.Ledger.Binary.Decoding.Decoder (setTag)
+import Cardano.Ledger.Binary.Version
 import Codec.CBOR.ByteArray.Sliced (SlicedByteArray)
 import qualified Codec.CBOR.Term as C (Term (..), encodeTerm)
 import qualified Codec.CBOR.Write as CBOR (toBuilder)
@@ -297,7 +299,7 @@ encodeMap ::
 encodeMap encodeKey encodeValue m =
   let mapEncoding = Map.foldMapWithKey (\k v -> encodeKey k <> encodeValue v) m
    in ifEncodingVersionAtLeast
-        2
+        (natVersion @2)
         (variableMapLenEncoding (Map.size m) mapEncoding)
         (exactMapLenEncoding (Map.size m) mapEncoding)
 {-# INLINE encodeMap #-}
@@ -311,7 +313,7 @@ encodeVMap ::
 encodeVMap encodeKey encodeValue m =
   let mapEncoding = VMap.foldMapWithKey (\k v -> encodeKey k <> encodeValue v) m
    in ifEncodingVersionAtLeast
-        2
+        (natVersion @2)
         (variableMapLenEncoding (VMap.size m) mapEncoding)
         (exactMapLenEncoding (VMap.size m) mapEncoding)
 {-# INLINE encodeVMap #-}
@@ -366,7 +368,7 @@ encodeSet :: (a -> Encoding) -> Set.Set a -> Encoding
 encodeSet encodeValue f =
   let foldableEncoding = foldMap' encodeValue f
    in ifEncodingVersionAtLeast
-        2
+        (natVersion @2)
         (variableListLenEncoding (Set.size f) foldableEncoding)
         (encodeTag setTag <> exactListLenEncoding (Set.size f) foldableEncoding)
 {-# INLINE encodeSet #-}
@@ -388,7 +390,7 @@ encodeList encodeValue xs =
         case drop lengthThreshold xs of
           [] -> exactListLenEncoding len exactLenEncList
           _ -> varLenEncList
-   in ifEncodingVersionAtLeast 2 encListVer2 varLenEncList
+   in ifEncodingVersionAtLeast (natVersion @2) encListVer2 varLenEncList
 
 -- | Encode a Seq. Versions variance:
 --
@@ -400,7 +402,7 @@ encodeSeq :: (a -> Encoding) -> Seq.Seq a -> Encoding
 encodeSeq encodeValue f =
   let foldableEncoding = foldMap' encodeValue f
    in ifEncodingVersionAtLeast
-        2
+        (natVersion @2)
         (variableListLenEncoding (Seq.length f) foldableEncoding)
         (exactListLenEncoding (Seq.length f) foldableEncoding)
 {-# INLINE encodeSeq #-}

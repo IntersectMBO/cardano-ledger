@@ -11,10 +11,11 @@ module Cardano.Ledger.Binary.Decoding.Sized
 where
 
 import Cardano.Ledger.Binary.Decoding.Annotated (Annotated (..), ByteSpan (..), annotatedDecoder)
-import Cardano.Ledger.Binary.Decoding.Decoder (Decoder, Version)
+import Cardano.Ledger.Binary.Decoding.Decoder (Decoder)
 import Cardano.Ledger.Binary.Decoding.FromCBOR (FromCBOR (fromCBOR))
 import Cardano.Ledger.Binary.Encoding (serialize)
 import Cardano.Ledger.Binary.Encoding.ToCBOR (ToCBOR (toCBOR))
+import Cardano.Ledger.Binary.Version (Version)
 import Control.DeepSeq (NFData (..), deepseq)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Int (Int64)

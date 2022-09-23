@@ -1,15 +1,14 @@
-cabal-version: 2.2
+cabal-version: 3.0
 
 name:                cardano-ledger-binary
 version:             0.1.0.0
 synopsis:            Binary serialization library used throughout ledger
 homepage:            https://github.com/input-output-hk/cardano-ledger
 license:             Apache-2.0
-author:              IOHK Formal Methods Team
-maintainer:          formal.methods@iohk.io
-category:            Control
+author:              IOHK
+maintainer:          operations@iohk.io
+category:            Network
 build-type:          Simple
-extra-source-files:  CHANGELOG.md
 
 source-repository head
   type:     git
@@ -38,6 +37,7 @@ library
                      Cardano.Ledger.Binary.Decoding
                      Cardano.Ledger.Binary.Encoding
                      Cardano.Ledger.Binary.FlatTerm
+                     Cardano.Ledger.Binary.Version
   other-modules:
                      Cardano.Ledger.Binary.Encoding.Coders
                      Cardano.Ledger.Binary.Encoding.Encoder
@@ -103,7 +103,8 @@ test-suite tests
   main-is:              Main.hs
   type:                 exitcode-stdio-1.0
 
-  other-modules:        Test.Cardano.Ledger.Binary.Vintage.Coders
+  other-modules:        Test.Cardano.Ledger.Binary.RoundTripSpec
+                      , Test.Cardano.Ledger.Binary.Vintage.Coders
                       , Test.Cardano.Ledger.Binary.Vintage.Drop
                       , Test.Cardano.Ledger.Binary.Vintage.Failure
                       , Test.Cardano.Ledger.Binary.Vintage.Helpers

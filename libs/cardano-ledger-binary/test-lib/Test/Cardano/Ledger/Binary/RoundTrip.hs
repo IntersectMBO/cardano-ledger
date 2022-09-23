@@ -7,7 +7,8 @@
 
 -- | Defines reusable abstractions for testing RoundTrip properties of CBOR instances
 module Test.Cardano.Ledger.Binary.RoundTrip
-  ( roundTripExpectation,
+  ( roundTripSpec,
+    roundTripExpectation,
     RoundTripFailure (..),
     Trip (..),
     cborTrip,
@@ -30,9 +31,20 @@ import Data.Typeable
 import Test.Cardano.Ledger.Binary.TreeDiff (CBORBytes (..), showExpr, showHexBytesGrouped)
 import Test.Cardano.Ledger.Binary.Twiddle (Twiddle (..))
 import Test.Hspec
+import Test.Hspec.QuickCheck (prop)
 import Test.QuickCheck hiding (label)
 
 -- =====================================================================
+
+-- | Tests the roundtrip property using QuickCheck generators
+roundTripSpec ::
+  forall t.
+  (Show t, Eq t, Typeable t, Arbitrary t) =>
+  Version ->
+  Trip t t ->
+  Spec
+roundTripSpec version trip =
+  prop (show (typeRep $ Proxy @t)) $ roundTripExpectation version trip
 
 roundTripExpectation ::
   (Show t, Eq t, Typeable t) =>
@@ -126,7 +138,7 @@ embedTripLabel lbl version (Trip encoder decoder) s =
 
 -- | Can we serialise a type, and then deserialise it as something else?
 embedTrip :: forall a b. Typeable b => Version -> Trip a b -> a -> Either RoundTripFailure b
-embedTrip = embedTripLabel (Text.pack (show (typeOf $ Proxy @b)))
+embedTrip = embedTripLabel (Text.pack (show (typeRep $ Proxy @b)))
 
 embedTripAnn ::
   forall a b. (ToCBOR a, FromCBOR (Annotator b)) => Version -> a -> Either RoundTripFailure b

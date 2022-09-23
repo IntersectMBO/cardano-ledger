@@ -6,6 +6,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Binary.Vintage.Coders (spec) where
 
@@ -21,7 +23,7 @@ import Test.Hspec
 -- | "coders" functionality and this test module was introduced during Shelley, thus
 -- version 2
 shelleyProtVer :: Version
-shelleyProtVer = 2
+shelleyProtVer = natVersion @2
 
 -- ==========================================================================
 
