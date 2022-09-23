@@ -35,8 +35,9 @@ library
   exposed-modules:
                      Cardano.Ledger.Binary
                      Cardano.Ledger.Binary.Coders
-                     Cardano.Ledger.Binary.Encoding
                      Cardano.Ledger.Binary.Decoding
+                     Cardano.Ledger.Binary.Encoding
+                     Cardano.Ledger.Binary.FlatTerm
   other-modules:
                      Cardano.Ledger.Binary.Encoding.Coders
                      Cardano.Ledger.Binary.Encoding.Encoder
@@ -75,9 +76,64 @@ library
                      , vector-map
   hs-source-dirs:      src
 
--- test-lib
-                     -- , Data.Roundtrip
-                     -- , Data.Twiddle
+library testlib
+  import:               base, project-config
+  visibility: public
+  hs-source-dirs: test-lib
+  exposed-modules:
+                        Test.Cardano.Ledger.Binary.RoundTrip
+                      , Test.Cardano.Ledger.Binary.TreeDiff
+                      , Test.Cardano.Ledger.Binary.Twiddle
+  build-depends:        base
+                      , bytestring
+                      , base16-bytestring
+                      , cardano-ledger-binary
+                      , strict-containers
+                      , tree-diff
+                      , containers
+                      , hspec
+                      , QuickCheck
+                      , text
+
+
+test-suite tests
+  import:               base, project-config
+  hs-source-dirs:       test
+  main-is:              Main.hs
+  type:                 exitcode-stdio-1.0
+
+  other-modules:        Test.Cardano.Ledger.Binary.Vintage.Coders
+                        -- Test.Cardano.Ledger.Binary.Vintage.Drop
+                        -- Test.Cardano.Ledger.Binary.Vintage.Failure
+                        -- Test.Cardano.Ledger.Binary.Vintage.Helpers
+                        -- Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip
+                        -- Test.Cardano.Ledger.Binary.Vintage.RoundTrip
+                        -- Test.Cardano.Ledger.Binary.Vintage.Serialization
+                        -- Test.Cardano.Ledger.Binary.Vintage.SizeBounds
+
+  build-depends:        base
+                      , bytestring
+                      , cardano-ledger-binary
+                      , cardano-prelude-test
+                      , strict-containers
+                      , cborg
+                      , containers
+                      , formatting
+                      , hedgehog
+                      , hspec
+                      , pretty-show
+                      , QuickCheck
+                      , quickcheck-instances
+                      , tagged
+                      , text
+                      , testlib
+                      , time
+                      , vector
+                      , vector-map
+
+  ghc-options:          -threaded
+                        -rtsopts
+
 
 
 -- test-suite cardano-data-tests

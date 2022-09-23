@@ -10,6 +10,7 @@ where
 
 import Cardano.Ledger.Binary.Decoding.Decoder
 import Codec.CBOR.ByteArray (ByteArray (BA))
+import Codec.CBOR.Term (Term (..))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Short as SBS
@@ -106,6 +107,9 @@ instance FromCBOR Natural where
 
 instance FromCBOR Void where
   fromCBOR = cborError DecoderErrorVoid
+
+instance FromCBOR Term where
+  fromCBOR = decodeTerm
 
 --------------------------------------------------------------------------------
 -- Tagged

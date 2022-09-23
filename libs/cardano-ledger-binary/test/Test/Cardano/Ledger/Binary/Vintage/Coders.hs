@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
@@ -6,61 +7,46 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Test.Data.Coders
-  ( codersTest,
-  )
-where
+module Test.Cardano.Ledger.Binary.Vintage.Coders (spec) where
 
-import Cardano.Binary
-  ( FromCBOR (fromCBOR),
-    ToCBOR (toCBOR),
-    encodeListLen,
-    encodeWord,
-  )
-import Codec.CBOR.Encoding (Encoding)
-import Codec.CBOR.FlatTerm (TermToken, toFlatTerm)
-import Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
-import Codec.CBOR.Write (toLazyByteString)
-import qualified Data.ByteString.Lazy as Lazy
-import Data.Coders
-  ( Decode (..),
-    Density (..),
-    Dual (..),
-    Encode (..),
-    Field,
-    Wrapped (..),
-    decode,
-    decodeList,
-    decodeRecordSum,
-    decodeStrictSeq,
-    encode,
-    encodeFoldable,
-    field,
-    invalidField,
-    invalidKey,
-    runE,
-    (!>),
-    (<!),
-  )
-import Data.Roundtrip (roundTrip')
+import Cardano.Ledger.Binary
+import Cardano.Ledger.Binary.Coders
+import Cardano.Ledger.Binary.FlatTerm (FlatTerm, toFlatTerm)
 import Data.Sequence.Strict (StrictSeq, fromList)
 import Data.Text (Text, pack)
 import Data.Typeable
-import Test.Tasty
-import Test.Tasty.HUnit
-import Test.Tasty.QuickCheck hiding (scale)
+import Test.Cardano.Ledger.Binary.RoundTrip (Trip (..), cborTrip, roundTripExpectation)
+import Test.Hspec
+
+-- | "coders" functionality and this test module was introduced during Shelley, thus
+-- version 2
+shelleyProtVer :: Version
+shelleyProtVer = 2
 
 -- ==========================================================================
 
-data TT = A Int | B Int Bool | G [Int] | H (StrictSeq Bool) deriving (Show)
+data TT
+  = A Int
+  | B Int Bool
+  | G [Int]
+  | H (StrictSeq Bool)
+  deriving (Show, Eq)
 
 instance FromCBOR TT where
   fromCBOR = decodeRecordSum "TT" $
     \case
-      0 -> do i <- fromCBOR; pure (2, A i) -- Tag for A is 0
-      1 -> do i <- fromCBOR; b <- fromCBOR; pure (3, B i b) -- Tag for B is 1
-      2 -> do l <- decodeList fromCBOR; pure (2, G l) -- Tag for G is 2
-      3 -> do i <- decodeStrictSeq fromCBOR; pure (2, H i) -- Tag for H is 3
+      0 -> (\i -> (2, A i)) <$> fromCBOR -- Tag for A is 0
+      1 -> do
+        -- (,) 3 . B <$> fromCBOR <*> fromCBOR
+        i <- fromCBOR
+        b <- fromCBOR
+        pure (3, B i b) -- Tag for B is 1
+      2 -> do
+        l <- decodeList fromCBOR
+        pure (2, G l) -- Tag for G is 2
+      3 -> do
+        i <- decodeStrictSeq fromCBOR
+        pure (2, H i) -- Tag for H is 3
       k -> invalidKey k
 
 -- =============================================================================================
@@ -81,24 +67,11 @@ instance ToCBOR TT where
   toCBOR (A i) = encodeListLen 2 <> encodeWord 0 <> toCBOR i
   toCBOR (B i b) = encodeListLen 3 <> encodeWord 1 <> toCBOR i <> toCBOR b
   toCBOR (G is) = encodeListLen 2 <> encodeWord 2 <> toCBOR is
-  toCBOR (H bs) = encodeListLen 2 <> encodeWord 3 <> encodeStrictSeq bs
+  toCBOR (H bs) = encodeListLen 2 <> encodeWord 3 <> toCBOR bs
 
 -- The Key is that in (G constr tag <@> ...)
 -- The 'tag' for 'constr' aligns with the Tag in the case match
 -- in the FromCBOR instance for TT above.
-
-sA, sB, sG, sGa, sH :: Encode 'Open TT
-sA = Sum A 0 !> To 7 -- Tag for A is 0
-sB = Sum B 1 !> To 13 !> To True -- Tag for B is 1
-sG = Sum G 2 !> To [3, 4, 5] -- Tag for G is 2
-sGa = Sum G 2 !> E encodeList [2, 5] -- Tag for G is 2
-sH = Sum H 3 !> E encodeStrictSeq (fromList [False, True]) -- Tag for H is 3
-
-encodeList :: ToCBOR t => [t] -> Encoding
-encodeList = encodeFoldable
-
-encodeStrictSeq :: ToCBOR t => StrictSeq t -> Encoding
-encodeStrictSeq = encodeFoldable
 
 -- ===============================================================
 
@@ -106,7 +79,7 @@ encodeStrictSeq = encodeFoldable
 -- Examples
 
 data Two = Two Int Bool
-  deriving (Show)
+  deriving (Show, Eq)
 
 decTwo :: Decode ('Closed 'Dense) Two
 encTwo :: Two -> Encode ('Closed 'Dense) Two
@@ -123,7 +96,7 @@ instance FromCBOR Two where
 -- ============
 
 data Test = Test Int Two Integer
-  deriving (Show)
+  deriving (Show, Eq)
 
 test1 :: Test
 test1 = Test 3 (Two 9 True) 33
@@ -143,7 +116,7 @@ instance FromCBOR Test where
 -- ===========
 
 data Three = In Int | N Bool Integer | F Two
-  deriving (Show)
+  deriving (Show, Eq)
 
 three1, three2, three3 :: Three
 three1 = In 7
@@ -196,9 +169,11 @@ instance ToCBOR Three where
 -- ================================================================
 -- In this test we nest many Records, and flatten out everything
 
-data Big = Big Int Bool Integer deriving (Show)
+data Big = Big Int Bool Integer
+  deriving (Show, Eq)
 
-data Bigger = Bigger Test Two Big deriving (Show)
+data Bigger = Bigger Test Two Big
+  deriving (Show, Eq)
 
 bigger :: Bigger
 bigger = Bigger (Test 2 (Two 4 True) 99) (Two 7 False) (Big 5 False 102)
@@ -206,8 +181,8 @@ bigger = Bigger (Test 2 (Two 4 True) 99) (Two 7 False) (Big 5 False 102)
 -- Note there are 9 individual items, each which fits in one CBOR Token
 -- So we expect the encoding to have 10 items, 1 prefix and 9 others
 
-biggerItems :: [TermToken]
-biggerItems = toFlatTerm (encode (encBigger bigger))
+biggerItems :: FlatTerm
+biggerItems = toFlatTerm shelleyProtVer (encode (encBigger bigger))
 
 decBigger :: Decode ('Closed 'Dense) Bigger
 decBigger =
@@ -235,7 +210,7 @@ instance FromCBOR Bigger where
 -- in the datatype A
 
 data M = M Int [Bool] Text
-  deriving (Show, Typeable)
+  deriving (Show, Eq)
 
 a0, a1, a2, a3 :: M
 a0 = M 0 [] "ABC"
@@ -261,8 +236,8 @@ decM 2 = SumD M <! From <! Emit [] <! From
 decM 3 = SumD M <! From <! From <! From
 decM n = Invalid n
 
-dualMvirtual :: Dual M
-dualMvirtual = Dual (encode . encM) (decode (Summands "M" decM))
+dualMvirtual :: Trip M M
+dualMvirtual = Trip (encode . encM) (decode (Summands "M" decM))
 
 -- ================================================================================
 -- The Sparse encoding strategy uses N keys, one for each field that is not defaulted
@@ -305,154 +280,125 @@ boxM n = invalidField n
 decodeM :: Decode ('Closed 'Dense) M -- Only the field with Key 2 is required
 decodeM = SparseKeyed "M" (M 0 [] (pack "a")) boxM [(2, "Stringpart")]
 
-dualM :: Dual M
-dualM = Dual (encode . baz) (decode decodeM)
+dualM :: Trip M M
+dualM = Trip (encode . baz) (decode decodeM)
 
-type Answer t = Either Codec.CBOR.Read.DeserialiseFailure (Lazy.ByteString, t)
+roundTripSpec :: (HasCallStack, Show t, Eq t, Typeable t) => String -> Trip t t -> t -> Spec
+roundTripSpec name trip val =
+  it name $ roundTripExpectation shelleyProtVer trip val
 
--- FIXME: why is it unused
-_testM :: M -> Answer M
-_testM = roundTrip' (encode . baz) (decode decodeM)
+-- | Check that a value can be encoded using Coders and decoded using FromCBOR
+encodeSpec :: (HasCallStack, Show t, Eq t, FromCBOR t) => String -> Encode w t -> t -> Spec
+encodeSpec name enc = roundTripSpec name (Trip (const (encode enc)) fromCBOR)
 
-roundtrip :: Show t => String -> Dual t -> t -> TestTree
-roundtrip name (Dual enc dec) v =
-  testCase
-    ("roundtrip " ++ name ++ " =(" ++ show v ++ ")")
-    ( assertBool
-        name
-        ( case roundTrip' enc dec v of
-            Right _ -> True
-            Left s -> error (show s)
-        )
-    )
+newtype C = C Text
+  deriving (Show, Eq)
 
-testEncode ::
-  (FromCBOR t) =>
-  Encode w t ->
-  Either Codec.CBOR.Read.DeserialiseFailure (Lazy.ByteString, t)
-testEncode s = deserialiseFromBytes fromCBOR (toLazyByteString (encode s))
+instance ToCBOR C where
+  toCBOR (C t) = toCBOR t
 
-deCodeTest :: (FromCBOR t, Show t) => String -> Encode w t -> TestTree
-deCodeTest name sym =
-  testProperty (name ++ ": Decoding " ++ show (runE sym)) $
-    case testEncode sym of
-      Right _ -> True
-      Left s -> error ("Fail to decode " ++ show (runE sym) ++ " with error " ++ show s)
+instance FromCBOR C where
+  fromCBOR = C <$> fromCBOR
 
--- ====================================================================
--- Some tests
+newtype BB = BB Text
+  deriving (Show, Eq)
 
-q0, q1, q2, q3 :: Answer M
-q0 = roundTrip' (encode . baz) (decode decodeM) (M 0 [] (pack "MBC"))
-q1 = roundTrip' (encode . baz) (decode decodeM) (M 0 [True] (pack "MBC"))
-q2 = roundTrip' (encode . baz) (decode decodeM) (M 42 [] (pack "MBC"))
-q3 = roundTrip' (encode . baz) (decode decodeM) (M 9 [True, False] (pack "MBC"))
-
--- FIXME: Why is this unused?
-_ok :: Bool
-_ok = all isRight [q0, q1, q2, q3]
-  where
-    isRight (Right _) = True
-    isRight (Left _) = False
-
--- In the examples Let  Int and C have ToCBOR instances, and dualB :: Dual B
--- An example with 1 constructor (a record) uses Rec and RecD
-
-newtype C = C Text deriving (Show)
-
-instance ToCBOR C where toCBOR (C t) = toCBOR t
-
-instance FromCBOR C where fromCBOR = C <$> fromCBOR
-
-newtype BB = BB Text deriving (Show)
-
-dualBB :: Dual BB
-dualBB = Dual (\(BB t) -> toCBOR t) (BB <$> fromCBOR)
+dualBB :: Trip BB BB
+dualBB = Trip (\(BB t) -> toCBOR t) (BB <$> fromCBOR)
 
 -- Record Type
 
-data A = ACon Int BB C deriving (Show)
+data A = ACon Int BB C
+  deriving (Show, Eq)
 
 encodeA :: A -> Encode ('Closed 'Dense) A
-encodeA (ACon i b c) = Rec ACon !> To i !> ED dualBB b !> To c
+encodeA (ACon i b c) = Rec ACon !> To i !> E (tripEncoder dualBB) b !> To c
 
 decodeA :: Decode ('Closed 'Dense) A
-decodeA = RecD ACon <! From <! DD dualBB <! From
+decodeA = RecD ACon <! From <! D (tripDecoder dualBB) <! From
 
-instance ToCBOR A where toCBOR x = encode (encodeA x)
+-- codersTrip :: (a -> Encode ('Closed 'Dense) a) -> Decode ('Closed 'Dense) b -> Trip a b
+-- codersTrip enc dec = Trip (encode enc) (decode dec)
 
-instance FromCBOR A where fromCBOR = decode decodeA
+instance ToCBOR A where
+  toCBOR x = encode (encodeA x)
 
-dualA :: Dual A
-dualA = Dual (encode . encodeA) (decode decodeA)
+instance FromCBOR A where
+  fromCBOR = decode decodeA
 
-recordTests :: TestTree
+dualA :: Trip A A
+dualA = cborTrip
+
+recordTests :: Spec
 recordTests =
-  testGroup
-    "Record tests"
-    [ roundtrip "A1" dualA (ACon 34 (BB "HI") (C "There")),
-      roundtrip "A2" dualA (ACon 9 (BB "One") (C "Two"))
-    ]
+  describe "Record tests" $ do
+    roundTripSpec "A1" dualA (ACon 34 (BB "HI") (C "There"))
+    roundTripSpec "A2" dualA (ACon 9 (BB "One") (C "Two"))
 
 -- An example with multiple constructors uses Sum, SumD, and Summands
 
-data N = N1 Int | N2 BB Bool | N3 A deriving (Show)
+data N
+  = N1 Int
+  | N2 BB Bool
+  | N3 A
+  deriving (Show, Eq)
 
 encodeN :: N -> Encode 'Open N
 encodeN (N1 i) = Sum N1 0 !> To i
-encodeN (N2 b tf) = Sum N2 1 !> ED dualBB b !> To tf
+encodeN (N2 b tf) = Sum N2 1 !> E (tripEncoder dualBB) b !> To tf
 encodeN (N3 a) = Sum N3 2 !> To a
 
 decodeN :: Decode ('Closed 'Dense) N
 decodeN = Summands "N" decodeNx
   where
     decodeNx 0 = SumD N1 <! From
-    decodeNx 1 = SumD N2 <! DD dualBB <! From
+    decodeNx 1 = SumD N2 <! D (tripDecoder dualBB) <! From
     decodeNx 2 = SumD N3 <! From
     decodeNx k = Invalid k
 
-dualN :: Dual N
-dualN = Dual (encode . encodeN) (decode decodeN)
+dualN :: Trip N N
+dualN = Trip (encode . encodeN) (decode decodeN)
 
 -- ============================================================
 
-codersTest :: TestTree
-codersTest =
-  testGroup
-    "Coders"
-    [ testGroup
-        "Simple Coders"
-        [ deCodeTest "sA" sA,
-          deCodeTest "sB" sB,
-          deCodeTest "sG" sG,
-          deCodeTest "sGA" sGa,
-          deCodeTest "sH" sH,
-          deCodeTest "Three1" (encThree three1),
-          deCodeTest "Three2" (encThree three2),
-          deCodeTest "Three3" (encThree three3),
-          deCodeTest "test1" (encTestWithGroupForTwo test1),
-          testProperty "encode Bigger is compact" (length biggerItems === 10),
-          deCodeTest "Bigger inlines" (encBigger bigger)
-        ],
-      recordTests,
-      testGroup
-        "Sparse tests"
-        [ roundtrip "a0" dualM a0,
-          roundtrip "a1" dualM a1,
-          roundtrip "a2" dualM a2,
-          roundtrip "a3" dualM a3
-        ],
-      testGroup
-        "Virtual Cosntructor tests"
-        [ roundtrip "a0v" dualMvirtual a0,
-          roundtrip "a1v" dualMvirtual a1,
-          roundtrip "a2v" dualMvirtual a2,
-          roundtrip "a3v" dualMvirtual a3
-        ],
-      testGroup
-        "Sum tests"
-        [ roundtrip "N1" dualN (N1 4),
-          roundtrip "N2" dualN (N2 (BB "N2") True),
-          roundtrip "N3" dualN (N3 (ACon 6 (BB "N3") (C "Test")))
-        ]
-    ]
+ttSpec :: Spec
+ttSpec =
+  describe "Encode TT" $ do
+    -- Tag for A is 0
+    encodeSpec "sA" (Sum A 0 !> To 7) (A 7)
+    -- Tag for B is 1
+    encodeSpec "sB" (Sum B 1 !> To 13 !> To True) (B 13 True)
+    -- Tag for G is 2
+    encodeSpec "sG" (Sum G 2 !> To [3, 4, 5]) (G [3, 4, 5])
+    encodeSpec "sGa" (Sum G 2 !> E toCBOR [2, 5]) (G [2, 5])
+    -- Tag for H is 3
+    let sseq = fromList [False, True]
+    encodeSpec "sH" (Sum H 3 !> E toCBOR sseq) (H sseq)
+
+spec :: Spec
+spec =
+  describe "Coders" $ do
+    describe "Simple Coders" $ do
+      it "encode Bigger is compact" (length biggerItems `shouldBe` 10)
+      ttSpec
+      describe "Encode TT" $ do
+        encodeSpec "Three1" (encThree three1) three1
+        encodeSpec "Three2" (encThree three2) three2
+        encodeSpec "Three3" (encThree three3) three3
+      encodeSpec "test1" (encTestWithGroupForTwo test1) test1
+      encodeSpec "Bigger inlines" (encBigger bigger) bigger
+    recordTests
+    describe "Sparse tests" $ do
+      roundTripSpec "a0" dualM a0
+      roundTripSpec "a1" dualM a1
+      roundTripSpec "a2" dualM a2
+      roundTripSpec "a3" dualM a3
+    describe "Virtual Cosntructor tests" $ do
+      roundTripSpec "a0v" dualMvirtual a0
+      roundTripSpec "a1v" dualMvirtual a1
+      roundTripSpec "a2v" dualMvirtual a2
+      roundTripSpec "a3v" dualMvirtual a3
+    describe "Sum tests" $ do
+      roundTripSpec "N1" dualN (N1 4)
+      roundTripSpec "N2" dualN (N2 (BB "N2") True)
+      roundTripSpec "N3" dualN (N3 (ACon 6 (BB "N3") (C "Test")))

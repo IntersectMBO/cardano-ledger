@@ -3,12 +3,14 @@
 module Cardano.Ledger.Binary
   ( module Cardano.Ledger.Binary.Decoding,
     module Cardano.Ledger.Binary.Encoding,
+    Term (..),
     translateViaCBORAnnotator,
   )
 where
 
 import Cardano.Ledger.Binary.Decoding
 import Cardano.Ledger.Binary.Encoding
+import Codec.CBOR.Term (Term (..))
 import Control.Monad.Except (Except, MonadError (throwError))
 import Data.Text (Text)
 

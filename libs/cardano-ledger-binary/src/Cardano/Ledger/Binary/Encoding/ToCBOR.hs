@@ -75,6 +75,7 @@ import Foreign.Storable (sizeOf)
 import Formatting (bprint, build, shown, stext)
 import qualified Formatting.Buildable as B (Buildable (..))
 import Numeric.Natural (Natural)
+import Codec.CBOR.Term (Term (..))
 
 class Typeable a => ToCBOR a where
   toCBOR :: a -> Encoding
@@ -489,6 +490,12 @@ instance ToCBOR Natural where
 
 instance ToCBOR Void where
   toCBOR = absurd
+
+instance ToCBOR Term where
+  toCBOR = encodeTerm
+
+instance ToCBOR Encoding where
+  toCBOR = id
 
 --------------------------------------------------------------------------------
 -- Tagged

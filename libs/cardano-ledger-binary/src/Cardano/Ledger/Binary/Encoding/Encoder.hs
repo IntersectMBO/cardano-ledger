@@ -71,12 +71,14 @@ module Cardano.Ledger.Binary.Encoding.Encoder
     encodeFloat,
     encodeDouble,
     encodePreEncoded,
+    encodeTerm,
   )
 where
 
 import qualified Cardano.Binary as C
 import Cardano.Ledger.Binary.Decoding.Decoder (Version (..), setTag)
 import Codec.CBOR.ByteArray.Sliced (SlicedByteArray)
+import qualified Codec.CBOR.Term as C (Term (..), encodeTerm)
 import qualified Codec.CBOR.Write as CBOR (toBuilder)
 import Data.Binary.Put (putWord32le, runPut)
 import Data.ByteString (ByteString)
@@ -91,8 +93,8 @@ import qualified Data.Map.Strict as Map
 import Data.Monoid (Sum (..))
 import Data.Proxy (Proxy (Proxy))
 import Data.Ratio (numerator)
-import qualified Data.Set as Set
 import qualified Data.Sequence as Seq
+import qualified Data.Set as Set
 import Data.Text (Text)
 import Data.Time.Calendar.OrdinalDate (toOrdinalDate)
 import Data.Time.Clock (NominalDiffTime, UTCTime (..), diffTimeToPicoseconds)
@@ -247,6 +249,9 @@ encodeDouble e = fromPlainEncoding (C.encodeDouble e)
 encodePreEncoded :: ByteString -> Encoding
 encodePreEncoded e = fromPlainEncoding (C.encodePreEncoded e)
 
+encodeTerm :: C.Term -> Encoding
+encodeTerm = fromPlainEncoding . C.encodeTerm
+
 --------------------------------------------------------------------------------
 -- Containers
 --------------------------------------------------------------------------------
@@ -351,15 +356,6 @@ variableListLenEncoding len contents =
     else encodeListLenIndef <> contents <> encodeBreak
 {-# INLINE variableListLenEncoding #-}
 
--- encodeFoldable :: Foldable f => (a -> Encoding) -> f a -> Encoding
--- encodeFoldable encodeValue f =
---   let (Sum len, foldableEncoding) = foldMap' (\v -> (1, encodeValue v)) f
---    in ifEncodingVersionAtLeast
---         2
---         (variableListLenEncoding len foldableEncoding)
---         (exactListLenEncoding len foldableEncoding)
--- {-# INLINE encodeFoldable #-}
-
 -- | Encode a Set. Versions variance:
 --
 -- * [< 1] - Variable length encoding. Also prefixes with a special 258 tag.
@@ -408,7 +404,6 @@ encodeSeq encodeValue f =
         (variableListLenEncoding (Seq.length f) foldableEncoding)
         (exactListLenEncoding (Seq.length f) foldableEncoding)
 {-# INLINE encodeSeq #-}
-
 
 --------------------------------------------------------------------------------
 -- Vector

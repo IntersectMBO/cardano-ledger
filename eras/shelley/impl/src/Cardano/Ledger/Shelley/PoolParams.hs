@@ -61,7 +61,7 @@ import Cardano.Ledger.Serialization
     ipv6ToCBOR,
   )
 import Cardano.Ledger.Shelley.Orphans ()
-import Control.DeepSeq (NFData ())
+import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), ToJSON (..), Value, (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (Parser, explicitParseField)

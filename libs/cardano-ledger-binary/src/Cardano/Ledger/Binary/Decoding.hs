@@ -9,6 +9,7 @@ module Cardano.Ledger.Binary.Decoding
     decodeFull,
     decodeFull',
     decodeFullDecoder,
+    decodeFullDecoder',
     decodeFullAnnotator,
     decodeFullAnnotatedBytes,
     module Cardano.Ledger.Binary.Decoding.FromCBOR,
@@ -93,6 +94,16 @@ decodeFullDecoder version lbl decoder bs =
         else Left $ DecoderErrorLeftover lbl leftover
     Left (e, _) -> Left $ DecoderErrorDeserialiseFailure lbl e
 
+-- | Same as `decodeFullDecoder`, except works on strict `BS.ByteString`
+decodeFullDecoder' ::
+  Version ->
+  Text ->
+  (forall s. Decoder s a) ->
+  BS.ByteString ->
+  Either DecoderError a
+decodeFullDecoder' version lbl decoder = decodeFullDecoder version lbl decoder . BSL.fromStrict
+
+
 -- | Deserialise a 'LByteString' incrementally using the provided 'Decoder'
 deserialiseDecoder ::
   Version ->
@@ -124,8 +135,8 @@ decodeFullAnnotator ::
   (forall s. Decoder s (Annotator a)) ->
   BSL.ByteString ->
   Either DecoderError a
-decodeFullAnnotator v label' decoder bytes =
-  (\x -> runAnnotator x (Full bytes)) <$> decodeFullDecoder v label' decoder bytes
+decodeFullAnnotator v lbl decoder bytes =
+  (\x -> runAnnotator x (Full bytes)) <$> decodeFullDecoder v lbl decoder bytes
 
 -- | Decodes a value from a ByteString, requiring that the full ByteString is consumed, and
 -- replaces ByteSpan annotations with the corresponding substrings of the input string.

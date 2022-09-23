@@ -27,6 +27,7 @@ module Cardano.Ledger.Binary.Decoding.Decoder
 
     -- ** Error reporting
     cborError,
+    showDecoderError,
     assertTag,
     enforceSize,
     matchSize,
@@ -131,6 +132,7 @@ module Cardano.Ledger.Binary.Decoding.Decoder
     decodeWordCanonical,
     decodeWordCanonicalOf,
     decodeWordOf,
+    decodeTerm,
     peekAvailable,
     peekByteOffset,
     peekTokenType,
@@ -213,6 +215,7 @@ import qualified Codec.CBOR.Decoding as C
     peekByteOffset,
     peekTokenType,
   )
+import qualified Codec.CBOR.Term as C (Term (..), decodeTerm)
 import Control.Monad.Reader
 import Control.Monad.Trans.Identity (IdentityT (runIdentityT))
 import Data.Binary.Get (Get, getWord32le, runGetOrFail)
@@ -244,6 +247,11 @@ import Prelude hiding (decodeFloat)
 
 newtype Version = Version Word
   deriving (Eq, Ord, Show, Num)
+
+-- mkVersion :: Natural -> Maybe Version
+-- mkVersion v
+--   | 0 < v && v < 9 = Just (fromIntegral v)
+--   | otherwise = Nothing
 
 newtype Decoder s a = Decoder (ReaderT Version (C.Decoder s) a)
   deriving (Functor, Applicative, Monad, MonadFail, MonadReader Version)
@@ -288,10 +296,8 @@ getDecoderVersion = ask
 -- we change the type, but we also use this condition to keep backwards compatibility of
 -- the decoder:
 --
--- >>> :set -XTypeApplications
 -- >>> newtype Foo = Foo Word32
--- >>> decFoo = Foo <$> ifDecoderVersionAtLeast 2 (fromIntegral <$> decodeWord16) decodeWord32
--- >>> :t decFoo
+-- >>> decFoo = Foo <$> ifDecoderVersionAtLeast 2 decodeWord32 (fromIntegral <$> decodeWord16)
 ifDecoderVersionAtLeast ::
   Version ->
   -- | Use this decoder if current decoder version is larger or equal to the supplied
@@ -311,7 +317,10 @@ ifDecoderVersionAtLeast atLeast newerDecoder olderDecoder = do
 --------------------------------------------------------------------------------
 
 cborError :: DecoderError -> Decoder s a
-cborError = fail . formatToString build
+cborError = fail . showDecoderError
+
+showDecoderError :: DecoderError -> String
+showDecoderError = formatToString build
 
 decodeRational :: Decoder s Rational
 decodeRational =
@@ -1024,6 +1033,9 @@ decodeWordCanonicalOf = fromPlainDecoder . C.decodeWordCanonicalOf
 
 decodeWordOf :: Word -> Decoder s ()
 decodeWordOf = fromPlainDecoder . C.decodeWordOf
+
+decodeTerm :: Decoder s C.Term
+decodeTerm = fromPlainDecoder C.decodeTerm
 
 peekAvailable :: Decoder s Int
 peekAvailable = fromPlainDecoder C.peekAvailable
