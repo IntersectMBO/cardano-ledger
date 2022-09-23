@@ -17,6 +17,7 @@ module Cardano.Ledger.Binary.Decoding
     module Cardano.Ledger.Binary.Decoding.Decoder,
     module Cardano.Ledger.Binary.Decoding.Annotated,
     module Cardano.Ledger.Binary.Decoding.Sized,
+    module Cardano.Ledger.Binary.Decoding.Drop,
 
     -- * Nested CBOR in CBOR
     decodeNestedCbor,
@@ -37,6 +38,7 @@ where
 
 import Cardano.Ledger.Binary.Decoding.Annotated
 import Cardano.Ledger.Binary.Decoding.Decoder
+import Cardano.Ledger.Binary.Decoding.Drop
 import Cardano.Ledger.Binary.Decoding.FromCBOR
 import Cardano.Ledger.Binary.Decoding.Sharing
 import Cardano.Ledger.Binary.Decoding.Sized
@@ -102,7 +104,6 @@ decodeFullDecoder' ::
   BS.ByteString ->
   Either DecoderError a
 decodeFullDecoder' version lbl decoder = decodeFullDecoder version lbl decoder . BSL.fromStrict
-
 
 -- | Deserialise a 'LByteString' incrementally using the provided 'Decoder'
 deserialiseDecoder ::

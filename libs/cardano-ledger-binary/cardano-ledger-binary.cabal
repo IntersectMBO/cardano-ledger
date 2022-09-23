@@ -45,6 +45,7 @@ library
                      Cardano.Ledger.Binary.Decoding.Annotated
                      Cardano.Ledger.Binary.Decoding.Coders
                      Cardano.Ledger.Binary.Decoding.Decoder
+                     Cardano.Ledger.Binary.Decoding.Drop
                      Cardano.Ledger.Binary.Decoding.FromCBOR
                      Cardano.Ledger.Binary.Decoding.Sharing
                      Cardano.Ledger.Binary.Decoding.Sized
@@ -103,13 +104,13 @@ test-suite tests
   type:                 exitcode-stdio-1.0
 
   other-modules:        Test.Cardano.Ledger.Binary.Vintage.Coders
-                        -- Test.Cardano.Ledger.Binary.Vintage.Drop
-                        -- Test.Cardano.Ledger.Binary.Vintage.Failure
-                        -- Test.Cardano.Ledger.Binary.Vintage.Helpers
-                        -- Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip
-                        -- Test.Cardano.Ledger.Binary.Vintage.RoundTrip
-                        -- Test.Cardano.Ledger.Binary.Vintage.Serialization
-                        -- Test.Cardano.Ledger.Binary.Vintage.SizeBounds
+                      , Test.Cardano.Ledger.Binary.Vintage.Drop
+                      , Test.Cardano.Ledger.Binary.Vintage.Failure
+                      , Test.Cardano.Ledger.Binary.Vintage.Helpers
+                      , Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip
+                      , Test.Cardano.Ledger.Binary.Vintage.RoundTrip
+                      , Test.Cardano.Ledger.Binary.Vintage.Serialization
+                      , Test.Cardano.Ledger.Binary.Vintage.SizeBounds
 
   build-depends:        base
                       , bytestring

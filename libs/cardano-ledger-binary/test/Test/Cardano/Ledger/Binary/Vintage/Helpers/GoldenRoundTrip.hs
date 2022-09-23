@@ -3,29 +3,29 @@
 {-# LANGUAGE TypeApplications #-}
 
 -- | Golden and round-trip testing of 'FromCBOR' and 'ToCBOR' instances
-module Test.Cardano.Ledger.Binary.Helpers.Vintage.GoldenRoundTrip
+module Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip
   ( goldenTestCBOR,
     goldenTestCBORExplicit,
     goldenTestExplicit,
     roundTripsCBORShow,
     roundTripsCBORBuildable,
     compareHexDump,
-    deprecatedGoldenDecode,
+    byronProtVer,
   )
 where
 
-import Cardano.Binary
+import Cardano.Ledger.Binary
   ( Decoder,
     DecoderError,
     Encoding,
     FromCBOR (..),
     ToCBOR (..),
+    Version,
     decodeFull,
     decodeFullDecoder,
     serialize,
     serializeEncoding,
   )
-import qualified Codec.CBOR.Decoding as D
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as BS
@@ -57,6 +57,9 @@ import Test.Cardano.Prelude
     trippingBuildable,
   )
 import Text.Show.Pretty (Value (..))
+
+byronProtVer :: Version
+byronProtVer = 1
 
 type HexDump = BSL.ByteString
 
@@ -130,10 +133,10 @@ goldenTestCBORExplicit ::
   FilePath ->
   Property
 goldenTestCBORExplicit eLabel enc dec =
-  goldenTestExplicit (serializeEncoding . enc) fullDecoder
+  goldenTestExplicit (serializeEncoding byronProtVer . enc) fullDecoder
   where
     fullDecoder :: BSL.ByteString -> Either DecoderError a
-    fullDecoder = decodeFullDecoder eLabel dec
+    fullDecoder = decodeFullDecoder byronProtVer eLabel dec
 
 goldenTestExplicit ::
   forall a.
@@ -159,7 +162,8 @@ roundTripsCBORShow ::
   (FromCBOR a, ToCBOR a, Eq a, MonadTest m, Show a, HasCallStack) =>
   a ->
   m ()
-roundTripsCBORShow x = withFrozenCallStack $ tripping x serialize decodeFull
+roundTripsCBORShow x =
+  withFrozenCallStack $ tripping x (serialize byronProtVer) (decodeFull byronProtVer)
 
 -- | Round trip (via ByteString) any instance of the 'FromCBOR' and 'ToCBOR'
 --   class that also has a 'Buildable' instance.
@@ -168,12 +172,4 @@ roundTripsCBORBuildable ::
   a ->
   m ()
 roundTripsCBORBuildable a =
-  withFrozenCallStack $ trippingBuildable a serialize decodeFull
-
-deprecatedGoldenDecode ::
-  HasCallStack => Text -> (forall s. D.Decoder s ()) -> FilePath -> Property
-deprecatedGoldenDecode lbl decoder path =
-  withFrozenCallStack $
-    withTests 1 . property $ do
-      bs <- decodeBase16 <$> liftIO (BS.readFile path)
-      fmap (decodeFullDecoder lbl decoder) bs === Just (Right ())
+  withFrozenCallStack $ trippingBuildable a (serialize byronProtVer) (decodeFull byronProtVer)

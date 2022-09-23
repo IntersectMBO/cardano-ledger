@@ -4,8 +4,7 @@
 
 module Test.Cardano.Ledger.Binary.Vintage.Failure (tests) where
 
-import Cardano.Binary hiding (Range)
-import qualified Codec.CBOR.Read as CR
+import Cardano.Ledger.Binary hiding (Range)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Set (Set)
 import GHC.Stack (HasCallStack, withFrozenCallStack)
@@ -14,6 +13,7 @@ import qualified Hedgehog.Gen as Gen
 import Hedgehog.Internal.Property (failWith)
 import qualified Hedgehog.Range as Range
 import Numeric.Natural (Natural)
+import Test.Cardano.Ledger.Binary.Vintage.Helpers (byronProtVer)
 
 {- HLINT ignore "Use record patterns" -}
 
@@ -23,13 +23,21 @@ tests = checkParallel $$(discover)
 ----------------------------------------------------------------------
 -------------------------   Generators   -----------------------------
 
-genInvalidNonEmptyCBOR :: Gen Encoding -- NonEmpty Bool
-genInvalidNonEmptyCBOR = pure (toCBOR ([] :: [Bool]))
+data VEncoding = VEncoding Version Encoding
 
-genInvalidEitherCBOR :: Gen Encoding -- Either Bool Bool
+mkByronEncoding :: Encoding -> VEncoding
+mkByronEncoding = VEncoding byronProtVer
+
+instance Show VEncoding where
+  show (VEncoding v enc) = show (toPlainEncoding v enc)
+
+genInvalidNonEmptyCBOR :: Gen VEncoding -- NonEmpty Bool
+genInvalidNonEmptyCBOR = pure (mkByronEncoding (toCBOR ([] :: [Bool])))
+
+genInvalidEitherCBOR :: Gen VEncoding -- Either Bool Bool
 genInvalidEitherCBOR = do
   b <- Gen.bool
-  pure (encodeListLen 2 <> encodeWord 3 <> toCBOR b)
+  pure (mkByronEncoding (encodeListLen 2 <> encodeWord 3 <> toCBOR b))
 
 genNegativeInteger :: Gen Integer
 genNegativeInteger =
@@ -40,24 +48,24 @@ genNegativeInteger =
 
 prop_shouldFailNonEmpty :: Property
 prop_shouldFailNonEmpty = property $ do
-  ne <- forAll genInvalidNonEmptyCBOR
-  assertIsLeft (decode ne :: Either DecoderError (NonEmpty Bool))
+  VEncoding v ne <- forAll genInvalidNonEmptyCBOR
+  assertIsLeft (decode v ne :: Either DecoderError (NonEmpty Bool))
 
 prop_shouldFailEither :: Property
 prop_shouldFailEither = property $ do
-  e <- forAll genInvalidEitherCBOR
-  assertIsLeft (decode e :: Either DecoderError (Either Bool Bool))
+  VEncoding v e <- forAll genInvalidEitherCBOR
+  assertIsLeft (decode v e :: Either DecoderError (Either Bool Bool))
 
 prop_shouldFailMaybe :: Property
 prop_shouldFailMaybe = property $ do
-  e <- forAll genInvalidEitherCBOR
-  assertIsLeft (decode e :: Either DecoderError (Maybe Bool))
+  VEncoding v e <- forAll genInvalidEitherCBOR
+  assertIsLeft (decode v e :: Either DecoderError (Maybe Bool))
 
 prop_shouldFailSetTag :: Property
 prop_shouldFailSetTag = property $ do
-  set <- forAll genInvalidEitherCBOR
+  VEncoding v set <- forAll genInvalidEitherCBOR
   let wrongTag = encodeTag 266
-  assertIsLeft (decode (wrongTag <> set) :: Either DecoderError (Set Int))
+  assertIsLeft (decode v (wrongTag <> set) :: Either DecoderError (Set Int))
 
 prop_shouldFailSet :: Property
 prop_shouldFailSet = property $ do
@@ -66,12 +74,12 @@ prop_shouldFailSet = property $ do
         encodeTag 258
           <> encodeListLen (fromIntegral (length ls + 2))
           <> mconcat (toCBOR <$> (4 : 3 : ls))
-  assertIsLeft (decode set :: Either DecoderError (Set Int))
+  assertIsLeft (decode byronProtVer set :: Either DecoderError (Set Int))
 
 prop_shouldFailNegativeNatural :: Property
 prop_shouldFailNegativeNatural = property $ do
   n <- forAll genNegativeInteger
-  assertIsLeft (decode (toCBOR n) :: Either DecoderError Natural)
+  assertIsLeft (decode byronProtVer (toCBOR n) :: Either DecoderError Natural)
 
 ---------------------------------------------------------------------
 ------------------------------- helpers -----------------------------
@@ -79,7 +87,7 @@ prop_shouldFailNegativeNatural = property $ do
 assertIsLeft :: (HasCallStack, MonadTest m) => Either DecoderError b -> m ()
 assertIsLeft (Right _) = withFrozenCallStack $ failWith Nothing "This should have Left : failed"
 assertIsLeft (Left !x) = case x of
-  DecoderErrorDeserialiseFailure _ (CR.DeserialiseFailure _ str) | not (null str) -> success
+  DecoderErrorDeserialiseFailure _ (DeserialiseFailure _ str) | not (null str) -> success
   DecoderErrorCanonicityViolation _ -> success
   DecoderErrorCustom _ _ -> success
   DecoderErrorEmptyList _ -> success
@@ -88,7 +96,7 @@ assertIsLeft (Left !x) = case x of
   DecoderErrorUnknownTag _ i | i > 0 -> success
   _ -> success
 
-decode :: FromCBOR a => Encoding -> Either DecoderError a
-decode enc =
-  let encoded = serializeEncoding enc
-   in decodeFull encoded
+decode :: FromCBOR a => Version -> Encoding -> Either DecoderError a
+decode version enc =
+  let encoded = serializeEncoding version enc
+   in decodeFull version encoded

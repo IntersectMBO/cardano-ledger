@@ -317,9 +317,6 @@ encodeA (ACon i b c) = Rec ACon !> To i !> E (tripEncoder dualBB) b !> To c
 decodeA :: Decode ('Closed 'Dense) A
 decodeA = RecD ACon <! From <! D (tripDecoder dualBB) <! From
 
--- codersTrip :: (a -> Encode ('Closed 'Dense) a) -> Decode ('Closed 'Dense) b -> Trip a b
--- codersTrip enc dec = Trip (encode enc) (decode dec)
-
 instance ToCBOR A where
   toCBOR x = encode (encodeA x)
 

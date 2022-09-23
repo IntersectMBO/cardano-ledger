@@ -8,7 +8,9 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Binary.Vintage.Helpers
-  ( -- * Binary test helpers
+  ( byronProtVer,
+
+    -- * Binary test helpers
     U,
     U24,
     extensionProperty,
@@ -22,7 +24,7 @@ module Test.Cardano.Ledger.Binary.Vintage.Helpers
   )
 where
 
-import Cardano.Binary
+import Cardano.Ledger.Binary
   ( FromCBOR (..),
     Range (..),
     Size,
@@ -37,7 +39,7 @@ import Cardano.Binary
     szWithCtx,
     unsafeDeserialize,
   )
-import Codec.CBOR.FlatTerm (toFlatTerm, validFlatTerm)
+import Cardano.Ledger.Binary.FlatTerm (toFlatTerm, validFlatTerm)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Map as M
@@ -50,6 +52,7 @@ import Hedgehog (annotate, failure, forAllWith, success)
 import qualified Hedgehog as HH
 import qualified Hedgehog.Gen as HH.Gen
 import Numeric.Natural (Natural)
+import Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip (byronProtVer)
 import Test.Hspec ()
 import Test.Hspec.QuickCheck ()
 import Test.QuickCheck
@@ -69,7 +72,7 @@ import Test.QuickCheck.Instances ()
 
 -- | Machinery to test we perform "flat" encoding.
 cborFlatTermValid :: ToCBOR a => a -> Property
-cborFlatTermValid = property . validFlatTerm . toFlatTerm . toCBOR
+cborFlatTermValid = property . validFlatTerm . toFlatTerm byronProtVer . toCBOR
 
 --------------------------------------------------------------------------------
 
@@ -156,9 +159,9 @@ extensionProperty = forAll @a (arbitrary :: Gen a) $ \input ->
         remove the <Tag24> token and finally proceed to deserialise the rest.
 
   -}
-  let serialized = serialize input -- Step 1
-      (u :: U) = unsafeDeserialize serialized -- Step 2
-      (encoded :: a) = unsafeDeserialize (serialize u) -- Step 3
+  let serialized = serialize byronProtVer input -- Step 1
+      (u :: U) = unsafeDeserialize byronProtVer serialized -- Step 2
+      (encoded :: a) = unsafeDeserialize byronProtVer (serialize byronProtVer u) -- Step 3
    in encoded === input
 
 --------------------------------------------------------------------------------
@@ -255,4 +258,4 @@ szVerify ctx x = case szSimplify (szWithCtx ctx (pure x)) of
   Right range -> OutOfBounds sz range
   where
     sz :: Natural
-    sz = fromIntegral $ LBS.length $ serialize x
+    sz = fromIntegral $ LBS.length $ serialize byronProtVer x

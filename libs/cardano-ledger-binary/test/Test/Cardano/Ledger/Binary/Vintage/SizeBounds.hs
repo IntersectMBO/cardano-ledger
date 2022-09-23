@@ -3,7 +3,7 @@
 
 module Test.Cardano.Ledger.Binary.Vintage.SizeBounds (tests) where
 
-import Cardano.Binary
+import Cardano.Ledger.Binary
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Map as M
@@ -15,7 +15,7 @@ import Data.Word (Word32, Word8)
 import Hedgehog (Gen, Group (..), checkParallel)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
-import Test.Cardano.Binary.Helpers
+import Test.Cardano.Ledger.Binary.Vintage.Helpers
 
 tests :: IO Bool
 tests =

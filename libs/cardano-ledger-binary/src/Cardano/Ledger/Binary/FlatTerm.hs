@@ -5,12 +5,13 @@ module Cardano.Ledger.Binary.FlatTerm
     C.TermToken (..),
     toFlatTerm,
     fromFlatTerm,
+    C.validFlatTerm,
   )
 where
 
 import Cardano.Ledger.Binary.Decoding
 import Cardano.Ledger.Binary.Encoding
-import qualified Codec.CBOR.FlatTerm as C (FlatTerm, TermToken (..), fromFlatTerm, toFlatTerm)
+import qualified Codec.CBOR.FlatTerm as C
 
 toFlatTerm :: Version -> Encoding -> C.FlatTerm
 toFlatTerm version = C.toFlatTerm . toPlainEncoding version

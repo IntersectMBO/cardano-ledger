@@ -5,9 +5,8 @@
 
 module Test.Cardano.Ledger.Binary.Vintage.Serialization (tests) where
 
-import Cardano.Binary hiding (Range)
-import Codec.CBOR.Decoding as D
-import Codec.CBOR.Encoding as E
+import Test.Cardano.Ledger.Binary.Vintage.Helpers (byronProtVer)
+import Cardano.Ledger.Binary hiding (Range)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BS.Lazy
 import qualified Data.ByteString.Short as BS.Short
@@ -53,7 +52,6 @@ data TestStruct = TestStruct
     tsMaybeBool :: !(Maybe Bool),
     tsMapBoolBool :: !(Map Bool Bool),
     tsSetBool :: !(Set Bool),
-    tsRaw :: !Raw,
     tsVectorBool :: !(V.Vector Bool),
     tsLByteString :: BS.Lazy.ByteString,
     tsSByteString :: BS.Short.ShortByteString,
@@ -87,7 +85,6 @@ genTestStruct =
     <*> Gen.maybe Gen.bool
     <*> Gen.map (Range.constant 0 2) ((,) <$> Gen.bool <*> Gen.bool)
     <*> Gen.set (Range.constant 0 2) Gen.bool
-    <*> (Raw <$> Gen.bytes (Range.linear 0 20))
     <*> (V.fromList <$> Gen.list (Range.constant 0 10) Gen.bool)
     <*> (BS.Lazy.fromStrict <$> Gen.bytes (Range.linear 0 20))
     <*> (BS.Short.toShort <$> Gen.bytes (Range.linear 0 20))
@@ -95,7 +92,7 @@ genTestStruct =
 
 instance ToCBOR TestStruct where
   toCBOR ts =
-    E.encodeListLen 1
+    encodeListLen 1
       <> toCBOR (tsUnit ts)
       <> toCBOR (tsBool ts)
       <> toCBOR (tsInteger ts)
@@ -119,7 +116,6 @@ instance ToCBOR TestStruct where
       <> toCBOR (tsMaybeBool ts)
       <> toCBOR (tsMapBoolBool ts)
       <> toCBOR (tsSetBool ts)
-      <> toCBOR (tsRaw ts)
       <> toCBOR (tsVectorBool ts)
       <> toCBOR (tsLByteString ts)
       <> toCBOR (tsSByteString ts)
@@ -127,10 +123,9 @@ instance ToCBOR TestStruct where
 
 instance FromCBOR TestStruct where
   fromCBOR = do
-    D.decodeListLenOf 1
+    decodeListLenOf 1
     TestStruct
       <$> fromCBOR
-      <*> fromCBOR
       <*> fromCBOR
       <*> fromCBOR
       <*> fromCBOR
@@ -182,13 +177,13 @@ genDayOfYear = Gen.int (Range.constantFrom 1 1 366)
 prop_roundTripSerialize' :: Property
 prop_roundTripSerialize' = property $ do
   ts <- forAll genTestStruct
-  (unsafeDeserialize' . serialize' $ ts) === ts
+  (unsafeDeserialize' byronProtVer . serialize' byronProtVer $ ts) === ts
 
 prop_roundTripEncodeNestedCbor :: Property
 prop_roundTripEncodeNestedCbor = property $ do
   ts <- forAll genTestStruct
-  let encoded = serializeEncoding . encodeNestedCbor $ ts
-  decodeFullDecoder "" decodeNestedCbor encoded === Right ts
+  let encoded = serializeEncoding byronProtVer . encodeNestedCbor $ ts
+  decodeFullDecoder byronProtVer "" decodeNestedCbor encoded === Right ts
 
 prop_decodeContainerSkelWithReplicate :: Property
 prop_decodeContainerSkelWithReplicate = property $
@@ -197,6 +192,6 @@ prop_decodeContainerSkelWithReplicate = property $
     _ -> False
   where
     decode :: Encoding -> Either DecoderError (V.Vector ())
-    decode enc = decodeFull (serializeEncoding enc)
+    decode enc = decodeFull byronProtVer (serializeEncoding byronProtVer enc)
 
     vec = encodeListLen 4097 <> mconcat (replicate 4097 encodeNull)

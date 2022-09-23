@@ -4,13 +4,14 @@
 
 module Test.Cardano.Ledger.Binary.Vintage.Drop (tests) where
 
-import Cardano.Binary
+import Cardano.Ledger.Binary
 import Data.ByteString (ByteString)
 import Data.Int (Int32)
 import Data.Word (Word64, Word8)
 import Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
+import Test.Cardano.Ledger.Binary.Vintage.Helpers (byronProtVer)
 
 tests :: IO Bool
 tests = checkParallel $$(discover)
@@ -39,9 +40,14 @@ prop_dropMap = property $ do
         ( (,) <$> genInt32
             <*> Gen.list (Range.constant 0 10) genWord8
         )
-  let encodedBs = serialize mp
-  decodeFull encodedBs === Right mp
-  decodeFullDecoder "Drop Test Failed" (dropMap dropInt32 (dropList dropWord8)) encodedBs === Right ()
+  let encodedBs = serialize byronProtVer mp
+  decodeFull byronProtVer encodedBs === Right mp
+  decodeFullDecoder
+    byronProtVer
+    "Drop Test Failed"
+    (dropMap dropInt32 (dropList dropWord8))
+    encodedBs
+    === Right ()
 
 prop_dropTuple :: Property
 prop_dropTuple = property $ do
@@ -49,13 +55,23 @@ prop_dropTuple = property $ do
     forAll $
       (,) <$> Gen.set (Range.constant 0 10) genInt32
         <*> genBytes
-  let encodedBs = serialize (set, bs)
-  decodeFull encodedBs === Right (set, bs)
-  decodeFullDecoder "Drop Test Failed" (dropTuple (dropSet dropInt32) dropBytes) encodedBs === Right ()
+  let encodedBs = serialize byronProtVer (set, bs)
+  decodeFull byronProtVer encodedBs === Right (set, bs)
+  decodeFullDecoder
+    byronProtVer
+    "Drop Test Failed"
+    (dropTuple (dropSet dropInt32) dropBytes)
+    encodedBs
+    === Right ()
 
 prop_dropTriple :: Property
 prop_dropTriple = property $ do
   tri <- forAll $ (,,) <$> genInt32 <*> genWord8 <*> genWord64
-  let encodedBs = serialize tri
-  decodeFull encodedBs === Right tri
-  decodeFullDecoder "Drop Test Failed" (dropTriple dropInt32 dropWord8 dropWord64) encodedBs === Right ()
+  let encodedBs = serialize byronProtVer tri
+  decodeFull byronProtVer encodedBs === Right tri
+  decodeFullDecoder
+    byronProtVer
+    "Drop Test Failed"
+    (dropTriple dropInt32 dropWord8 dropWord64)
+    encodedBs
+    === Right ()

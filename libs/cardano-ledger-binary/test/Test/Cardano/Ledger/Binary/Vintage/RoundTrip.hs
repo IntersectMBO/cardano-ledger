@@ -1,4 +1,5 @@
 {-# LANGUAGE NumDecimals #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -9,7 +10,7 @@ import Data.Ratio ((%))
 import Hedgehog (Property, Range, checkParallel)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
-import Test.Cardano.Binary.Helpers.GoldenRoundTrip
+import Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip
   ( roundTripsCBORBuildable,
     roundTripsCBORShow,
   )
@@ -70,13 +71,12 @@ roundTripInt64Bi =
 
 roundTripRatioBi :: Property
 roundTripRatioBi =
-  eachOf
-    1000
-    ( (%)
-        <$> Gen.int Range.constantBounded
-        <*> Gen.int Range.constantBounded
-    )
-    roundTripsCBORBuildable
+  let r :: Range.Range Integer
+      r = Range.constant (-1_000_000_000_000_0000_000) 1_000_000_000_000_0000_000
+   in eachOf
+        1000
+        ((%) <$> Gen.integral r <*> Gen.integral r)
+        roundTripsCBORBuildable
 
 roundTripNanoBi :: Property
 roundTripNanoBi =
