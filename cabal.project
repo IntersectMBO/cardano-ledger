@@ -41,8 +41,8 @@ test-show-details: streaming
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 631cb6cf1fa01ab346233b610a38b3b4cba6e6ab
-  --sha256: 0944wg2nqazmhlmsynwgdwxxj6ay0hb9qig9l128isb2cjia0hlp
+  tag: cc049d7c9b9a0129c15b1355fd1dff9e1a1a551c
+  --sha256: 0gygawh67w79mdvzw651vcsblp2sn62liv7448jf6fha17fyaiha
   subdir:
     base-deriving-via
     binary
@@ -77,8 +77,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus
-  tag: 8ab4c3355c5fdf67dcf6acc1f5a14668d5e6f0a9
-  --sha256: 12d6bndmj0dxl6xlaqmf78326yp5hw093bmybmqfpdkvk4mgz03j
+  tag: d5f6f4a5505094490f61c8d164515adf7c8f46cc
+  --sha256: 1864g2xpcfndxb6crnl64mywlzgss3pbvvc150qgxhy2dnkiv6rg
   subdir:
     plutus-ledger-api
     plutus-tx
