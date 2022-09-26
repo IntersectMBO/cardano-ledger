@@ -64,7 +64,6 @@ library
     containers,
     data-default-class,
     hashable >= 1.4.1.0,
-    plutus-core,
     plutus-tx,
     plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib} ^>=1.0,
     QuickCheck,

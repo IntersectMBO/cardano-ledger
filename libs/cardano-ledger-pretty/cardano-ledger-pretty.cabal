@@ -43,7 +43,6 @@ library
                 bech32,
                 bytestring,
                 cardano-crypto-class,
-                cardano-data,
                 cardano-ledger-alonzo,
                 cardano-ledger-babbage,
                 cardano-ledger-byron,
