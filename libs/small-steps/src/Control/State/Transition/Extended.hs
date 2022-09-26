@@ -629,7 +629,7 @@ applyRuleInternal isAlreadyFailing ep vp goSTS jc r = do
       EPDiscard -> pure a
     validateIf lbls = case vp of
       ValidateAll -> True
-      ValidateNone -> False
+      ValidateNone -> True
       ValidateSuchThat f -> f lbls
 
 applySTSInternal ::
