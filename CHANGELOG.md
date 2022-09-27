@@ -24,6 +24,9 @@ in the naming of release branches.
 
 ### Changed
 
+- Renamed in `Cardano.Ledger.Mary.Value`: #3047
+  - `insert` to `insertMultiAsset`
+  - `lookup` to `lookupMultiAsset`
 - Changed `mint` field type to `MultiAsset (Crypto era)` in `MATxBody`, `AlonzoTxBody`, `BabbageTxBody`
   #2954
 - All Shelley rules are now available through `Cadano.Ledger.Shelley.Rules` module: #2996
