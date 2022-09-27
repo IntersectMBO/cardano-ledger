@@ -201,7 +201,7 @@ multiAssetFromListBounded ::
   MultiAsset c
 multiAssetFromListBounded =
   foldr
-    (\(p, n, fromIntegral -> i) ans -> ConcreteValue.insert comb p n i ans)
+    (\(p, n, fromIntegral -> i) ans -> ConcreteValue.insertMultiAsset comb p n i ans)
     mempty
   where
     comb :: Integer -> Integer -> Integer

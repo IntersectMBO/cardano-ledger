@@ -11,7 +11,7 @@ import Cardano.Ledger.Mary.Value as Mary
     MaryValue (..),
     MultiAsset (..),
     PolicyID (..),
-    insert,
+    insertMultiAsset,
     multiAssetFromList,
   )
 import Cardano.Ledger.Val as Val
@@ -27,7 +27,7 @@ class Val.Val val => ValueFromList val c | val -> c where
 instance C.Crypto c => ValueFromList (MaryValue c) c where
   valueFromList c triples = MaryValue c (Mary.multiAssetFromList triples)
 
-  insert combine pid an new (MaryValue c ma) = MaryValue c $ Mary.insert combine pid an new ma
+  insert combine pid an new (MaryValue c ma) = MaryValue c $ Mary.insertMultiAsset combine pid an new ma
 
   gettriples (MaryValue c (MultiAsset m1)) = (c, triples)
     where

@@ -17,8 +17,8 @@ import Cardano.Ledger.Mary.Value
     MaryValue (..),
     MultiAsset (..),
     PolicyID (..),
-    insert,
-    lookup,
+    insertMultiAsset,
+    lookupMultiAsset,
   )
 import Cardano.Ledger.Val (Val (..), invert)
 import Control.Monad (replicateM)
@@ -57,7 +57,7 @@ insertValue ::
   Integer ->
   MaryValue c ->
   MaryValue c
-insertValue combine pid aid new (MaryValue c m) = MaryValue c $ insert combine pid aid new m
+insertValue combine pid aid new (MaryValue c m) = MaryValue c $ insertMultiAsset combine pid aid new m
 
 insert3 ::
   (Integer -> Integer -> Integer) ->
@@ -98,7 +98,7 @@ insert2 ::
   MaryValue c
 insert2 combine pid aid new m1 =
   -- The trick is to correctly not store a zero. Several ways to get a zero
-  case (lookup pid aid m1, new == 0) of
+  case (lookupMultiAsset pid aid m1, new == 0) of
     -- input is zero, and its not in the map
     (0, True) -> m1
     -- input is not zero, its not in the map, so add it to the map
@@ -113,7 +113,7 @@ insert2 combine pid aid new m1 =
 valueFromList :: [(PolicyID C_Crypto, AssetName, Integer)] -> Integer -> MaryValue C_Crypto
 valueFromList list c = MaryValue c $ foldr acc mempty list
   where
-    acc (policy, asset, count) m = insert (+) policy asset count m
+    acc (policy, asset, count) m = insertMultiAsset (+) policy asset count m
 
 valueFromList3 :: [(PolicyID C_Crypto, AssetName, Integer)] -> Integer -> MaryValue C_Crypto
 valueFromList3 list c = foldr acc (MaryValue c mempty) list
@@ -273,18 +273,18 @@ valuePropList =
     ),
     ( \n m _ p a ->
         n == 0 || m == 0 || n == m
-          || lookup p a (insertValue pickOld p a m (insertValue pickNew p a n zero)) == n,
+          || lookupMultiAsset p a (insertValue pickOld p a m (insertValue pickNew p a n zero)) == n,
       "oldVsNew"
     ),
     ( \n m _ p a ->
         n == 0 || m == 0 || n == m
-          || lookup p a (insertValue pickNew p a m (insertValue pickNew p a n zero)) == m,
+          || lookupMultiAsset p a (insertValue pickNew p a m (insertValue pickNew p a n zero)) == m,
       "newVsOld"
     ),
-    (\n _ x p a -> lookup p a (insertValue pickNew p a n x) == n, "lookup-insert-overwrite"),
+    (\n _ x p a -> lookupMultiAsset p a (insertValue pickNew p a n x) == n, "lookup-insert-overwrite"),
     ( \n _ x p a ->
-        lookup p a x == 0
-          || lookup p a (insertValue pickOld p a n x) == lookup p a x,
+        lookupMultiAsset p a x == 0
+          || lookupMultiAsset p a (insertValue pickOld p a n x) == lookupMultiAsset p a x,
       "lookup-insert-retain"
     ),
     (\n _ x p a -> coin (insertValue pickOld p a n x) == coin x, "coinIgnores1"),
@@ -308,11 +308,11 @@ valueGroup ::
     )
   ]
 valueGroup =
-  [ (\_ x y p a -> lookup p a (x <+> y) === lookup p a x + lookup p a y, "lookup over <+>"),
-    (\_ x y p a -> lookup p a (x <-> y) === lookup p a x - lookup p a y, "lookup over <->"),
-    (\n x _ p a -> lookup p a (n <×> x) === n * lookup p a x, "lookup over <×>"),
-    (\_ _ _ p a -> lookup p a zero === 0, "lookup over zero"),
-    (\_ x _ p a -> lookup p a (invert x) === (-1) * lookup p a x, "lookup over invert")
+  [ (\_ x y p a -> lookupMultiAsset p a (x <+> y) === lookupMultiAsset p a x + lookupMultiAsset p a y, "lookup over <+>"),
+    (\_ x y p a -> lookupMultiAsset p a (x <-> y) === lookupMultiAsset p a x - lookupMultiAsset p a y, "lookup over <->"),
+    (\n x _ p a -> lookupMultiAsset p a (n <×> x) === n * lookupMultiAsset p a x, "lookup over <×>"),
+    (\_ _ _ p a -> lookupMultiAsset p a zero === 0, "lookup over zero"),
+    (\_ x _ p a -> lookupMultiAsset p a (invert x) === (-1) * lookupMultiAsset p a x, "lookup over invert")
   ]
 
 valueGroupTests :: TestTree
