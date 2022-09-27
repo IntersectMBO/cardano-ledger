@@ -19,7 +19,9 @@ module Cardano.Ledger.Mary.Value
     Value,
     flattenMultiAsset,
     insert,
+    insertMultiAsset,
     lookup,
+    lookupMultiAsset,
     multiAssetFromList,
     policies,
     prune,
@@ -764,7 +766,11 @@ policies :: MultiAsset c -> Set (PolicyID c)
 policies (MultiAsset m) = Map.keysSet m
 
 lookup :: PolicyID c -> AssetName -> MaryValue c -> Integer
-lookup pid aid (MaryValue _ (MultiAsset m)) =
+lookup = lookupMultiAsset
+{-# DEPRECATED lookup "In favor of `lookupMultiAsset`" #-}
+
+lookupMultiAsset :: PolicyID c -> AssetName -> MaryValue c -> Integer
+lookupMultiAsset pid aid (MaryValue _ (MultiAsset m)) =
   case Map.lookup pid m of
     Nothing -> 0
     Just m2 -> Map.findWithDefault 0 aid m2
@@ -780,7 +786,21 @@ insert ::
   Integer ->
   MultiAsset c ->
   MultiAsset c
-insert combine pid aid new (MultiAsset m1) =
+insert = insertMultiAsset
+{-# DEPRECATED insert "In favor of `insertMultiAsset`" #-}
+
+-- | insertMultiAsset comb policy asset n v,
+--   if comb = \ old new -> old, the integer in the MultiAsset is prefered over n
+--   if comb = \ old new -> new, then n is prefered over the integer in the MultiAsset
+--   if (comb old new) == 0, then that value should not be stored in the MultiAsset
+insertMultiAsset ::
+  (Integer -> Integer -> Integer) ->
+  PolicyID c ->
+  AssetName ->
+  Integer ->
+  MultiAsset c ->
+  MultiAsset c
+insertMultiAsset combine pid aid new (MultiAsset m1) =
   case splitLookup pid m1 of
     (l1, Just m2, l2) ->
       case splitLookup aid m2 of
