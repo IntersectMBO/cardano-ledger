@@ -24,6 +24,7 @@ in the naming of release branches.
 
 ### Changed
 
+- Moved `Data.AbstractSize` from `cardano-data` to `byron-spec-ledger` #3046
 - Renamed in `Cardano.Ledger.Mary.Value`: #3047
   - `insert` to `insertMultiAsset`
   - `lookup` to `lookupMultiAsset`
