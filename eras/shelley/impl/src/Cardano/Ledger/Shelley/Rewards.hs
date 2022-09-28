@@ -12,9 +12,9 @@ module Cardano.Ledger.Shelley.Rewards
     PoolRewardInfo (..),
     mkApparentPerformance,
     RewardType (..),
+    Reward (..),
     LeaderOnlyReward (..),
     leaderRewardToGeneral,
-    Reward (..),
     leaderRew,
     memberRew,
     aggregateRewards,
@@ -28,8 +28,6 @@ where
 import Cardano.Binary
   ( FromCBOR (..),
     ToCBOR (..),
-    decodeWord,
-    encodeWord,
   )
 import Cardano.Ledger.BaseTypes
   ( BlocksMade (..),
@@ -37,7 +35,6 @@ import Cardano.Ledger.BaseTypes
     NonNegativeInterval,
     ProtVer,
     UnitInterval,
-    invalidKey,
   )
 import Cardano.Ledger.Coin
   ( Coin (..),
@@ -45,7 +42,7 @@ import Cardano.Ledger.Coin
     rationalToCoinViaFloor,
   )
 import Cardano.Ledger.Compactible (fromCompact)
-import Cardano.Ledger.Core
+import Cardano.Ledger.Core (EraCrypto, PParams, Reward (..), RewardType (..))
 import Cardano.Ledger.Credential (Credential (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
@@ -123,52 +120,6 @@ memberRew (Coin f') pool (StakeShare t) (StakeShare sigma)
   where
     (Coin c, m, _) = poolSpec pool
     m' = unboundRational m
-
-data RewardType = MemberReward | LeaderReward
-  deriving (Eq, Show, Ord, Generic)
-
-instance NoThunks RewardType
-
-instance NFData RewardType
-
-instance ToCBOR RewardType where
-  toCBOR MemberReward = encodeWord 0
-  toCBOR LeaderReward = encodeWord 1
-
-instance FromCBOR RewardType where
-  fromCBOR =
-    decodeWord >>= \case
-      0 -> pure MemberReward
-      1 -> pure LeaderReward
-      n -> invalidKey n
-
-data Reward c = Reward
-  { rewardType :: RewardType,
-    rewardPool :: KeyHash 'StakePool c,
-    rewardAmount :: Coin
-  }
-  deriving (Eq, Show, Generic)
-
--- | Note that this Ord instance is chosen to align precisely
---  with the Allegra reward aggregation, as given by the
---  function 'aggregateRewards' so that 'Set.findMax' returns
---  the expected value.
-instance Ord (Reward c) where
-  compare (Reward MemberReward _ _) (Reward LeaderReward _ _) = GT
-  compare (Reward LeaderReward _ _) (Reward MemberReward _ _) = LT
-  compare (Reward _ pool1 _) (Reward _ pool2 _) = compare pool1 pool2
-
-instance NoThunks (Reward c)
-
-instance NFData (Reward c)
-
-instance CC.Crypto c => ToCBOR (Reward c) where
-  toCBOR (Reward rt pool c) =
-    encode $ Rec Reward !> To rt !> To pool !> To c
-
-instance CC.Crypto c => FromCBOR (Reward c) where
-  fromCBOR =
-    decode $ RecD Reward <! From <! From <! From
 
 sumRewards ::
   forall c pp.

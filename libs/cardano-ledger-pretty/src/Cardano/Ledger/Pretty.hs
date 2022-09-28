@@ -49,7 +49,21 @@ import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.CompactAddress (CompactAddr (..), decompactAddr)
 import Cardano.Ledger.Compactible (Compactible (..))
-import Cardano.Ledger.Core (Era, EraPParams (..), EraRule, EraScript (..), EraTx (..), EraTxAuxData (..), EraTxBody (..), EraTxOut (..), EraTxWits (..), ScriptHash (..), Value)
+import Cardano.Ledger.Core
+  ( Era,
+    EraPParams (..),
+    EraRule,
+    EraScript (..),
+    EraTx (..),
+    EraTxAuxData (..),
+    EraTxBody (..),
+    EraTxOut (..),
+    EraTxWits (..),
+    Reward (..),
+    RewardType (..),
+    ScriptHash (..),
+    Value,
+  )
 import Cardano.Ledger.Credential
   ( Credential (KeyHashObj, ScriptHashObj),
     GenesisCredential (..),
@@ -120,8 +134,6 @@ import Cardano.Ledger.Shelley.RewardUpdate
 import Cardano.Ledger.Shelley.Rewards
   ( LeaderOnlyReward (..),
     PoolRewardInfo (..),
-    Reward (..),
-    RewardType (..),
     StakeShare (..),
   )
 import Cardano.Ledger.Shelley.Scripts (MultiSig (..))

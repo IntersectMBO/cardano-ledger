@@ -58,7 +58,14 @@ import Cardano.Ledger.BaseTypes
     textToUrl,
   )
 import Cardano.Ledger.Coin (CompactForm (..), DeltaCoin (..))
-import Cardano.Ledger.Core (Era, EraCrypto, EraScript (..), EraSegWits (..))
+import Cardano.Ledger.Core
+  ( Era,
+    EraCrypto,
+    EraScript (..),
+    EraSegWits (..),
+    Reward (..),
+    RewardType (..),
+  )
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto, HASH)
@@ -85,8 +92,6 @@ import Cardano.Ledger.Shelley.RewardUpdate
 import Cardano.Ledger.Shelley.Rewards
   ( LeaderOnlyReward (..),
     PoolRewardInfo (..),
-    Reward (..),
-    RewardType (..),
     StakeShare (..),
   )
 import qualified Cardano.Ledger.Shelley.Rules as STS

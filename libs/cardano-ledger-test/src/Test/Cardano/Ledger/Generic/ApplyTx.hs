@@ -21,7 +21,6 @@ import Cardano.Ledger.Coin (Coin (..), addDeltaCoin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.API (Credential, KeyRole (Staking))
-import Cardano.Ledger.Shelley.Rewards (Reward)
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
     DelegCert (..),

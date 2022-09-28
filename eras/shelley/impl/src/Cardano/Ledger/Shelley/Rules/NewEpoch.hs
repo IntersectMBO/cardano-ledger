@@ -37,7 +37,7 @@ import Cardano.Ledger.Shelley.AdaPots (AdaPots, totalAdaPotsES)
 import Cardano.Ledger.Shelley.EpochBoundary
 import Cardano.Ledger.Shelley.Era (ShelleyNEWEPOCH)
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Shelley.Rewards (Reward, sumRewards)
+import Cardano.Ledger.Shelley.Rewards (sumRewards)
 import Cardano.Ledger.Shelley.Rules.Epoch
 import Cardano.Ledger.Shelley.Rules.Mir (ShelleyMIR, ShelleyMirEvent, ShelleyMirPredFailure)
 import Cardano.Ledger.Shelley.Rules.Rupd (RupdEvent (..))

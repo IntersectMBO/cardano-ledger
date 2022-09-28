@@ -60,6 +60,9 @@ in the naming of release branches.
 #2976
 - Moved `TxOut` to a separate module in each era #3024
 - Moved `mintedTxBodyF` into `ShelleyMAEraTxBody` class #3019
+- Moved thet `RewardType` and `Reward` types from the `Cardano.Ledger.Shelley.Reward` module in the
+  `cardano-ledger-shelley` package into a new module `Cardano.Ledger.Reward`
+  inside the `cardano-ledger-core` package. #3059
 
 ### Removed
 

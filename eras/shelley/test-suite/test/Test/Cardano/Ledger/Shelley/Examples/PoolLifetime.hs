@@ -34,6 +34,7 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Block (Block, bheader, txid)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), addDeltaCoin, toDeltaCoin)
 import Cardano.Ledger.Compactible
+import Cardano.Ledger.Core (Reward (..), RewardType (..))
 import Cardano.Ledger.Credential (Credential, Ptr (..))
 import qualified Cardano.Ledger.Crypto as Cr
 import Cardano.Ledger.Era (EraCrypto (..))
@@ -62,7 +63,6 @@ import Cardano.Ledger.Shelley.PoolRank
     leaderProbability,
     likelihood,
   )
-import Cardano.Ledger.Shelley.Rewards (Reward (..), RewardType (..))
 import Cardano.Ledger.Shelley.Tx
   ( ShelleyTx (..),
   )

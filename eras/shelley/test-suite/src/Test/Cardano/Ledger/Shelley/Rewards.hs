@@ -103,8 +103,7 @@ import Cardano.Ledger.Shelley.RewardUpdate
     RewardPulser (RSLP),
   )
 import Cardano.Ledger.Shelley.Rewards
-  ( Reward (rewardAmount),
-    StakeShare (..),
+  ( StakeShare (..),
     aggregateRewards,
     leaderRew,
     memberRew,
@@ -376,7 +375,7 @@ rewardsBoundedByPot _ = property $ do
             show slotsPerEpoch
           ]
       )
-      (fold (fmap rewardAmount rs) < rewardPot)
+      (fold (fmap Core.rewardAmount rs) < rewardPot)
 
 -- ====================================================================================
 -- To demonstrate that the code we wrote that uses pulsing does not
@@ -715,7 +714,9 @@ newEpochEventsProp tracelen propf = withMaxSuccess 10 $
         propf (concat (runShelleyBase $ getEvents tr)) (chainNes target)
       _ -> property True
 
-aggIncrementalRewardEvents :: [ChainEvent C] -> Map (Credential 'Staking (EraCrypto C)) (Set (Reward (EraCrypto C)))
+aggIncrementalRewardEvents ::
+  [ChainEvent C] ->
+  Map (Credential 'Staking (EraCrypto C)) (Set (Core.Reward (EraCrypto C)))
 aggIncrementalRewardEvents = foldl' accum Map.empty
   where
     accum ans (TickEvent (TickRupdEvent (RupdEvent _ m))) = Map.unionWith Set.union m ans
@@ -723,7 +724,9 @@ aggIncrementalRewardEvents = foldl' accum Map.empty
       Map.unionWith Set.union m ans
     accum ans _ = ans
 
-getMostRecentTotalRewardEvent :: [ChainEvent C] -> Map (Credential 'Staking (EraCrypto C)) (Set (Reward (EraCrypto C)))
+getMostRecentTotalRewardEvent ::
+  [ChainEvent C] ->
+  Map (Credential 'Staking (EraCrypto C)) (Set (Core.Reward (EraCrypto C)))
 getMostRecentTotalRewardEvent = foldl' accum Map.empty
   where
     accum ans (TickEvent (TickNewEpochEvent (TotalRewardEvent _ m))) = Map.unionWith Set.union m ans
@@ -757,16 +760,16 @@ eventsMirrorRewards events nes = same eventRew compRew
               x
               y
 
-ppAgg :: Map (Credential 'Staking (EraCrypto C)) (Set (Reward (EraCrypto C))) -> PDoc
+ppAgg :: Map (Credential 'Staking (EraCrypto C)) (Set (Core.Reward (EraCrypto C))) -> PDoc
 ppAgg = ppMap prettyA (ppSet ppReward)
 
-instance Terse (Reward c) where
+instance Terse (Core.Reward c) where
   terse x = show (ppReward x)
 
 instance PrettyA x => Terse (Set x) where
   terse x = show (ppSet prettyA x)
 
-instance PrettyA (Reward c) where
+instance PrettyA (Core.Reward c) where
   prettyA = ppReward
 
 -- ================================================================

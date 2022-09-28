@@ -46,7 +46,7 @@ import Cardano.Ledger.Shelley.LedgerState
     UTxOState (..),
   )
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..))
-import Cardano.Ledger.Shelley.Rewards (Reward, aggregateRewards)
+import Cardano.Ledger.Shelley.Rewards (aggregateRewards)
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
     DelegCert (..),

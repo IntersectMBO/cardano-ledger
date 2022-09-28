@@ -48,7 +48,6 @@ import Cardano.Ledger.Shelley.LedgerState
     pulseStep,
     startStep,
   )
-import Cardano.Ledger.Shelley.Rewards (Reward)
 import Cardano.Ledger.Slot
   ( Duration (..),
     EpochNo,

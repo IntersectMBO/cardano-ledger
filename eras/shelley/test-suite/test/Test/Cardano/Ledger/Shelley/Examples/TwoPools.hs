@@ -68,9 +68,7 @@ import Cardano.Ledger.Shelley.PoolRank
     likelihood,
   )
 import Cardano.Ledger.Shelley.Rewards
-  ( Reward (..),
-    RewardType (..),
-    StakeShare (..),
+  ( StakeShare (..),
     aggregateRewards,
     leaderRew,
     memberRew,
@@ -760,7 +758,7 @@ rewardUpdateEx9 ::
   forall era.
   ExMock (EraCrypto era) =>
   ShelleyPParams era ->
-  Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))) ->
+  Map (Credential 'Staking (EraCrypto era)) (Set (Core.Reward (EraCrypto era))) ->
   RewardUpdate (EraCrypto era)
 rewardUpdateEx9 pp rewards =
   RewardUpdate
@@ -812,15 +810,15 @@ twoPools9 = CHAINExample expectedStEx8 blockEx9 (Right $ expectedStEx9 ppEx)
 --
 -- Now test with Aggregation
 --
-carlsRewards :: forall c. ExMock c => Set (Reward c)
+carlsRewards :: forall c. ExMock c => Set (Core.Reward c)
 carlsRewards =
   Set.fromList
-    [ Reward MemberReward (hk Cast.alicePoolKeys) (carlMemberRewardsFromAlice @c),
-      Reward LeaderReward (hk Cast.alicePoolKeys) (carlLeaderRewardsFromAlice @c),
-      Reward LeaderReward (hk Cast.bobPoolKeys) (carlLeaderRewardsFromBob @c)
+    [ Core.Reward Core.MemberReward (hk Cast.alicePoolKeys) (carlMemberRewardsFromAlice @c),
+      Core.Reward Core.LeaderReward (hk Cast.alicePoolKeys) (carlLeaderRewardsFromAlice @c),
+      Core.Reward Core.LeaderReward (hk Cast.bobPoolKeys) (carlLeaderRewardsFromBob @c)
     ]
 
-rsEx9Agg :: forall c. ExMock c => Map (Credential 'Staking c) (Set (Reward c))
+rsEx9Agg :: forall c. ExMock c => Map (Credential 'Staking c) (Set (Core.Reward c))
 rsEx9Agg = Map.singleton Cast.carlSHK carlsRewards
 
 ppProtVer3 :: ShelleyPParams era
@@ -840,13 +838,13 @@ twoPools9Agg = CHAINExample expectedStEx8Agg blockEx9 (Right expectedStEx9Agg)
 testAggregateRewardsLegacy :: HasCallStack => Assertion
 testAggregateRewardsLegacy = do
   let expectedReward = carlLeaderRewardsFromBob @(EraCrypto C)
-  expectedReward @?= rewardAmount (minimum (carlsRewards @(EraCrypto C)))
+  expectedReward @?= Core.rewardAmount (minimum (carlsRewards @(EraCrypto C)))
   aggregateRewards @C_Crypto ppEx rsEx9Agg @?= Map.singleton Cast.carlSHK expectedReward
 
 testAggregateRewardsNew :: Assertion
 testAggregateRewardsNew =
   aggregateRewards @C_Crypto ppProtVer3 rsEx9Agg
-    @?= Map.singleton Cast.carlSHK (foldMap rewardAmount (carlsRewards @(EraCrypto C)))
+    @?= Map.singleton Cast.carlSHK (foldMap Core.rewardAmount (carlsRewards @(EraCrypto C)))
 
 --
 -- Two Pools Test Group
