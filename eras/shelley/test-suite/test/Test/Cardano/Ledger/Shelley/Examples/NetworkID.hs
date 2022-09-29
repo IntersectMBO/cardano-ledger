@@ -26,6 +26,7 @@ import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, assertBool, testCase)
+import Cardano.Ledger.PParams
 
 type ShelleyTest = ShelleyEra C_Crypto
 
@@ -47,7 +48,7 @@ testPoolNetworkID pv poolParams e = do
   let st =
         runShelleyBase $
           applySTSTest @(ShelleyPOOL ShelleyTest)
-            (TRC (PoolEnv (SlotNo 0) def {_protocolVersion = pv}, def, DCertPool (RegPool poolParams)))
+            (TRC (PoolEnv (SlotNo 0) $ PParams def {_protocolVersion = pv}, def, DCertPool (RegPool poolParams)))
   case (st, e) of
     (Right _, ExpectSuccess) -> assertBool "" True
     (Left _, ExpectFailure) -> assertBool "" True

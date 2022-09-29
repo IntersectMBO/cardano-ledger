@@ -49,7 +49,6 @@ import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PParams
   ( ProposedPPUpdates (..),
     ShelleyPParamsHKD (..),
-    emptyPParams,
   )
 import Cardano.Ledger.Shelley.Rules
   ( ShelleyUTXOW,
@@ -90,6 +89,8 @@ import Test.QuickCheck.Hedgehog (hedgehog)
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit (Assertion)
 import Test.Tasty.QuickCheck (testProperty, (===))
+import Cardano.Ledger.PParams
+import Data.Default.Class (Default(..))
 
 bootstrapHashTest :: TestTree
 bootstrapHashTest = testProperty "rebuild the 'addr root' using a bootstrap witness" $
@@ -171,7 +172,7 @@ utxoEnv :: UtxoEnv C
 utxoEnv =
   UtxoEnv
     0
-    emptyPParams {_maxTxSize = 1000}
+    (PParams $ def {_maxTxSize = 1000})
     mempty
     (GenDelegs mempty)
 

@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE GADTs #-}
 
 module Test.Cardano.Ledger.Shelley.Serialisation.Generators.Genesis where
 
@@ -13,10 +14,10 @@ import Cardano.Crypto.VRF.Class
 import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes hiding (Seed)
 import Cardano.Ledger.Coin
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Crypto (DSIGN, VRF)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era
 import Cardano.Ledger.Keys
   ( GenDelegPair (..),
     Hash,
@@ -31,6 +32,7 @@ import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.Shelley.TxBody
 import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..))
+import Control.Monad.Identity (Identity)
 import Data.Fixed
 import Data.IP (IPv4, IPv6, fromHostAddress, fromHostAddress6)
 import qualified Data.ListMap as LM
@@ -48,9 +50,9 @@ import Hedgehog.Internal.Gen ()
 import Hedgehog.Range (Range)
 import qualified Hedgehog.Range as Range
 import Numeric.Natural
-import Test.Cardano.Ledger.Shelley.Utils (mkHash, unsafeBoundRational)
+import Test.Cardano.Ledger.Shelley.Utils (mkHash, unsafeBoundRational, ShelleyTest)
 
-genShelleyGenesis :: Era era => Gen (ShelleyGenesis era)
+genShelleyGenesis :: ShelleyTest era => Gen (ShelleyGenesis era)
 genShelleyGenesis =
   ShelleyGenesis
     <$> genUTCTime
@@ -162,9 +164,9 @@ genWords n
   | n > 0 = (:) <$> Gen.word8 Range.constantBounded <*> genWords (n - 1)
   | otherwise = pure []
 
-genPParams :: Gen (ShelleyPParams era)
-genPParams =
-  ShelleyPParams
+genPParams :: ShelleyTest era => Gen (Core.PParams era)
+genPParams = fmap Core.PParams $
+  (ShelleyPParams @Identity)
     <$> genNatural (Range.linear 0 1000)
     <*> genNatural (Range.linear 0 3)
     <*> fmap fromIntegral (Gen.word $ Range.linear 100 1000000)
@@ -181,7 +183,7 @@ genPParams =
     <*> genNonce
     <*> genProtVer
     <*> genMinUTxOValue
-    <*> (pure mempty) -- TODO handle a min pool cost > 0
+    <*> pure mempty -- TODO handle a min pool cost > 0
 
 genNatural :: Range Natural -> Gen Natural
 genNatural = Gen.integral

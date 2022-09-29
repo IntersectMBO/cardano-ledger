@@ -33,7 +33,7 @@ import Cardano.Binary (ToCBOR (toCBOR), serializeEncoding')
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Address (toAddr)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
-import Cardano.Ledger.BaseTypes (Network (..), ProtVer, ShelleyBase, StrictMaybe, UnitInterval)
+import Cardano.Ledger.BaseTypes (Network (..), ShelleyBase, StrictMaybe)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto, HASH)
@@ -55,7 +55,6 @@ import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules (UtxoEnv)
 import Cardano.Ledger.Shelley.TxBody (DCert, ShelleyEraTxBody, Wdrl, WitVKey)
 import Cardano.Ledger.Shelley.UTxO (UTxO)
-import Cardano.Ledger.Slot (EpochNo)
 import Cardano.Ledger.TxIn (TxId (TxId), TxIn)
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Cardano.Slotting.Slot (SlotNo)
@@ -67,7 +66,6 @@ import Data.Map (Map)
 import Data.Sequence (Seq)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
-import GHC.Natural (Natural)
 import Lens.Micro
 import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core
@@ -149,16 +147,7 @@ type MinUTXO_STS era =
 -- | Minimal requirements on PParams to generate random stuff
 type MinGenPParams era =
   ( EraPParams era,
-    Default (PParams era),
-    HasField "_minPoolCost" (PParams era) Coin,
-    HasField "_protocolVersion" (PParams era) ProtVer,
-    HasField "_eMax" (PParams era) EpochNo,
-    HasField "_d" (PParams era) UnitInterval,
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_minfeeA" (PParams era) Natural,
-    HasField "_minUTxOValue" (PParams era) Coin,
-    HasField "_minfeeB" (PParams era) Natural
+    Default (PParams era)
   )
 
 class Show (TxOut era) => MinGenTxout era where

@@ -17,9 +17,8 @@ module Test.Cardano.Ledger.Shelley.Rules.TestDeleg
   )
 where
 
-import Cardano.Ledger.BaseTypes (ProtVer)
 import Cardano.Ledger.Coin (addDeltaCoin, pattern Coin)
-import qualified Cardano.Ledger.Core as Core (PParams)
+import Cardano.Ledger.PParams
 import Cardano.Ledger.Shelley.API (ShelleyDELEG)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
 import Cardano.Ledger.Shelley.LedgerState
@@ -53,6 +52,8 @@ import Data.List (foldl')
 import qualified Data.Map.Strict as Map (difference, filter, keysSet, (\\))
 import qualified Data.Set as Set (isSubsetOf, singleton, size)
 import qualified Data.UMap as UM
+import Lens.Micro.Extras (view)
+import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest)
 import Test.QuickCheck (Property, conjoin, counterexample, property)
 
 -- | Check stake key registration
@@ -131,7 +132,7 @@ rewardsSumInvariant
           ]
 
 checkInstantaneousRewards ::
-  (HasField "_protocolVersion" (Core.PParams era) ProtVer) =>
+  ShelleyTest era =>
   DelegEnv era ->
   SourceSignalTarget (ShelleyDELEG era) ->
   Property
@@ -146,7 +147,7 @@ checkInstantaneousRewards
               (Map.keysSet irwd `Set.isSubsetOf` Map.keysSet (iRReserves $ _irwd target)),
             counterexample
               "a ReservesMIR certificate should add the total value to the `irwd` map, overwriting any existing entries"
-              ( if (HardForks.allowMIRTransfer . ppDE $ denv)
+              ( if (HardForks.allowMIRTransfer . view ppProtocolVersionL . ppDE $ denv)
                   then -- In the Alonzo era, repeated fields are added
 
                     ( (fold $ iRReserves $ _irwd source)
@@ -168,7 +169,7 @@ checkInstantaneousRewards
               (Map.keysSet irwd `Set.isSubsetOf` Map.keysSet (iRTreasury $ _irwd target)),
             counterexample
               "a TreasuryMIR certificate should add* the total value to the `irwd` map"
-              ( if (HardForks.allowMIRTransfer . ppDE $ denv)
+              ( if HardForks.allowMIRTransfer . view ppProtocolVersionL . ppDE $ denv
                   then -- In the Alonzo era, repeated fields are added
 
                     ( (fold $ iRTreasury $ _irwd source)

@@ -63,10 +63,12 @@ import Test.Cardano.Ledger.Shelley.Utils
     maxKESIterations,
     runShelleyBase,
     slotFromEpoch,
-    testGlobals,
+    testGlobals, ShelleyTest
   )
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC (choose)
+import Lens.Micro ((^.))
+import Cardano.Ledger.PParams
 
 -- ======================================================
 
@@ -86,7 +88,8 @@ genBlock ::
     Mock (EraCrypto era),
     GetLedgerView era,
     QC.HasTrace (Core.EraRule "LEDGERS" era) (GenEnv era),
-    EraGen era
+    EraGen era,
+    ShelleyTest era
   ) =>
   GenEnv era ->
   ChainState era ->
@@ -104,7 +107,8 @@ genBlockWithTxGen ::
   ( Mock (EraCrypto era),
     GetLedgerView era,
     ApplyBlock era,
-    EraGen era
+    EraGen era,
+    ShelleyTest era
   ) =>
   TxGen era ->
   GenEnv era ->
@@ -172,7 +176,8 @@ selectNextSlotWithLeader ::
   ( Mock (EraCrypto era),
     EraGen era,
     GetLedgerView era,
-    ApplyBlock era
+    ApplyBlock era,
+    ShelleyTest era
   ) =>
   GenEnv era ->
   ChainState era ->
@@ -233,7 +238,7 @@ selectNextSlotWithLeader
           firstEpochSlot = slotFromEpoch (epochFromSlotNo slotNo)
           f = activeSlotCoeff testGlobals
           getUnitInterval :: Core.PParams era -> UnitInterval
-          getUnitInterval pp = getField @"_d" pp
+          getUnitInterval pp = pp ^. ppDL
           d = (getUnitInterval . esPp . nesEs . chainNes) chainSt
 
           isLeader poolHash vrfKey =

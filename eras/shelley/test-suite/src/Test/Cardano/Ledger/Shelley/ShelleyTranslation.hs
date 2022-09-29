@@ -5,6 +5,7 @@ import Cardano.Ledger.Shelley.AdaPots (totalAdaES)
 import Cardano.Ledger.Shelley.LedgerState (EpochState, returnRedeemAddrsToReserves)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
+import Test.Cardano.Ledger.Shelley.Orphans ()
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Tasty

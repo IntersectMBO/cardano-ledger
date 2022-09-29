@@ -2,6 +2,8 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 -- |
 -- Module      : Test.Cardano.Ledger.Shelley.Examples.Federation
@@ -20,7 +22,7 @@ where
 
 import Cardano.Ledger.BaseTypes (Globals (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Era, EraCrypto)
+import Cardano.Ledger.Era (EraCrypto)
 import Cardano.Ledger.Keys
   ( GenDelegPair (..),
     KeyHash (..),
@@ -33,7 +35,6 @@ import Cardano.Ledger.Keys
     hashVerKeyVRF,
     vKey,
   )
-import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..))
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import Cardano.Protocol.TPraos.Rules.Overlay
@@ -49,6 +50,8 @@ import Test.Cardano.Ledger.Shelley.Generator.Core
   ( AllIssuerKeys (..),
   )
 import Test.Cardano.Ledger.Shelley.Utils
+import Cardano.Ledger.Core (PParams(..), EraPParams (..))
+import Lens.Micro ((^.))
 
 -- | Number of Core Node
 numCoreNodes :: Word64
@@ -109,15 +112,15 @@ coreNodeIssuerKeys = snd . (coreNodes @c !!)
 -- for the given slot.
 coreNodeKeysBySchedule ::
   forall era.
-  (HasCallStack, Era era) =>
-  ShelleyPParams era ->
+  (HasCallStack, ShelleyTest era) =>
+  PParams era ->
   Word64 ->
   AllIssuerKeys (EraCrypto era) 'GenesisDelegate
 coreNodeKeysBySchedule pp slot =
   case lookupInOverlaySchedule
     firstSlot
     (Map.keysSet genDelegs)
-    (_d pp)
+    (pp ^. ppDG)
     (activeSlotCoeff testGlobals)
     slot' of
     Nothing -> error $ "coreNodesForSlot: Cannot find keys for slot " <> show slot

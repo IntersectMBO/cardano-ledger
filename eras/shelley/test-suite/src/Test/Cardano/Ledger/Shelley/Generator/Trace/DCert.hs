@@ -73,8 +73,10 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv (..), KeySpace (..))
 import Test.Cardano.Ledger.Shelley.Generator.Delegation (CertCred (..), genDCert)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
 import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (scriptKeyCombination)
-import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
+import Test.Cardano.Ledger.Shelley.Utils (testGlobals, ShelleyTest)
 import Test.QuickCheck (Gen)
+import Lens.Micro ((^.))
+import Cardano.Ledger.PParams
 
 -- | This is a non-spec STS used to generate a sequence of certificates with
 -- witnesses.
@@ -160,7 +162,8 @@ instance
     Embed (Core.EraRule "DELPL" era) (CERTS era),
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
     State (Core.EraRule "DELPL" era) ~ DPState (EraCrypto era),
-    Signal (Core.EraRule "DELPL" era) ~ DCert (EraCrypto era)
+    Signal (Core.EraRule "DELPL" era) ~ DCert (EraCrypto era),
+    ShelleyTest era
   ) =>
   QC.HasTrace (CERTS era) (GenEnv era)
   where
@@ -195,7 +198,8 @@ genDCerts ::
     Embed (Core.EraRule "DELPL" era) (CERTS era),
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
     State (Core.EraRule "DELPL" era) ~ DPState (EraCrypto era),
-    Signal (Core.EraRule "DELPL" era) ~ DCert (EraCrypto era)
+    Signal (Core.EraRule "DELPL" era) ~ DCert (EraCrypto era),
+    ShelleyTest era
   ) =>
   GenEnv era ->
   Core.PParams era ->
@@ -237,7 +241,7 @@ genDCerts
     pure
       ( StrictSeq.fromList certs,
         totalDeposits pparams (`Map.notMember` pools) certs,
-        length deRegStakeCreds <×> getField @"_keyDeposit" pparams,
+        length deRegStakeCreds <×> pparams ^. ppKeyDepositL,
         lastState_,
         ( concat (keyCredAsWitness <$> keyCreds'),
           extractScriptCred <$> scriptCreds

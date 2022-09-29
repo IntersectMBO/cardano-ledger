@@ -58,8 +58,6 @@ import Cardano.Ledger.Core
     EraTxBody (..),
     EraTxOut (..),
     EraTxWits (..),
-    PParams (..),
-    PParamsUpdate (..),
     Reward (..),
     RewardType (..),
     ScriptHash (..),
@@ -208,6 +206,7 @@ import Lens.Micro ((^.))
 import Prettyprinter
 import Prettyprinter.Internal (Doc (Empty))
 import Prettyprinter.Util (putDocW)
+import Cardano.Ledger.PParams
 
 -- =====================================================================================================
 -- HELPER FUNCTIONS

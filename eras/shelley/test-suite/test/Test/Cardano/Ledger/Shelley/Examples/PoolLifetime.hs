@@ -55,7 +55,6 @@ import Cardano.Ledger.Shelley.LedgerState
     emptyRewardUpdate,
     startStep,
   )
-import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.PoolRank
   ( Likelihood (..),
     NonMyopic (..),
@@ -127,11 +126,13 @@ import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
 import Test.Cardano.Ledger.Shelley.Utils
-  ( epochSize,
+  ( ShelleyTest,
+    epochSize,
     getBlockNonce,
     maxLLSupply,
     runShelleyBase,
     testGlobals,
+    unsafeBoundRational,
   )
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
@@ -173,9 +174,8 @@ initStPoolLifetime = initSt initUTxO
 
 aliceCoinEx1 :: Coin
 aliceCoinEx1 =
-  aliceInitCoin
-    <-> _poolDeposit ppEx
-    <-> ((3 :: Integer) <×> _keyDeposit ppEx)
+  aliceInitCoin <-> (Coin 250)
+    <-> ((3 :: Integer) <×> Coin 7)
     <-> Coin 3
 
 carlMIR :: Coin
@@ -259,7 +259,7 @@ expectedStEx1 :: forall c. (ExMock c) => ChainState (ShelleyEra c)
 expectedStEx1 =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx1 @c))
     . C.newLab blockEx1
-    . C.feesAndDeposits feeTx1 (((3 :: Integer) <×> _keyDeposit ppEx) <+> _poolDeposit ppEx)
+    . C.feesAndDeposits feeTx1 (((3 :: Integer) <×> Coin 7) <+> (Coin 250))
     . C.newUTxO txbodyEx1
     . C.newStakeCred Cast.aliceSHK (Ptr (SlotNo 10) minBound (mkCertIxPartial 0))
     . C.newStakeCred Cast.bobSHK (Ptr (SlotNo 10) minBound (mkCertIxPartial 1))
@@ -346,7 +346,7 @@ blockEx2 =
 
 makePulser ::
   forall era.
-  (C.UsesPP era) =>
+  ShelleyTest era =>
   BlocksMade (EraCrypto era) ->
   ChainState era ->
   PulsingRewUpdate (EraCrypto era)
@@ -363,14 +363,14 @@ makePulser bs cs = p
 
 makePulser' ::
   forall era.
-  (C.UsesPP era) =>
+  ShelleyTest era =>
   ChainState era ->
   PulsingRewUpdate (EraCrypto era)
 makePulser' = makePulser (BlocksMade mempty)
 
 makeCompletedPulser ::
   forall era.
-  (C.UsesPP era) =>
+  ShelleyTest era =>
   BlocksMade (EraCrypto era) ->
   ChainState era ->
   PulsingRewUpdate (EraCrypto era)
@@ -741,7 +741,7 @@ alicePerfEx8 :: Likelihood
 alicePerfEx8 = likelihood blocks t (epochSize $ EpochNo 3)
   where
     blocks = 1
-    t = leaderProbability f relativeStake (_d ppEx)
+    t = leaderProbability f relativeStake (unsafeBoundRational 0.5)
     (Coin stake) = aliceCoinEx2Base <> aliceCoinEx2Ptr <> bobInitCoin
     (Coin tot) = maxLLSupply <-> reserves7
     relativeStake = fromRational (stake % tot)
@@ -852,7 +852,7 @@ bobAda10 :: Coin
 bobAda10 =
   bobRAcnt8
     <+> bobInitCoin
-    <+> _keyDeposit ppEx
+    <+> Coin 7
     <-> feeTx10
 
 txbodyEx10 :: Cr.Crypto c => ShelleyTxBody (ShelleyEra c)
@@ -896,7 +896,7 @@ expectedStEx10 :: forall c. (ExMock (EraCrypto (ShelleyEra c))) => ChainState (S
 expectedStEx10 =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx10 @c))
     . C.newLab blockEx10
-    . C.feesAndDeposits feeTx10 (invert (_keyDeposit ppEx))
+    . C.feesAndDeposits feeTx10 (invert (Coin 7))
     . C.deregStakeCred Cast.bobSHK
     . C.newUTxO txbodyEx10
     $ expectedStEx9
@@ -969,7 +969,7 @@ alicePerfEx11 = applyDecay decayFactor alicePerfEx8 <> epoch4Likelihood
   where
     epoch4Likelihood = likelihood blocks t (epochSize $ EpochNo 4)
     blocks = 0
-    t = leaderProbability f relativeStake (_d ppEx)
+    t = leaderProbability f relativeStake (unsafeBoundRational 0.5)
     -- everyone has delegated to Alice's Pool
     Coin stake = EB.sumAllStake (EB._stake $ snapEx5 @c)
     relativeStake = fromRational (stake % supply)

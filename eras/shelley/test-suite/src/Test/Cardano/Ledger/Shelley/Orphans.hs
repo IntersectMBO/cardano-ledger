@@ -10,8 +10,14 @@ import qualified Cardano.Crypto.DSIGN as DSIGN
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Crypto (DSIGN)
 import Cardano.Ledger.Keys
+import Cardano.Ledger.PParams
+import Data.Functor.Identity (Identity)
 import Data.TreeDiff.Class (ToExpr (..))
 import Test.Cardano.Ledger.Shelley.Utils (Split (..))
+import Test.QuickCheck (Arbitrary (..))
+import Data.Maybe.Strict (StrictMaybe)
+import Generic.Random (genericArbitraryU)
+import Cardano.Ledger.Pretty (PrettyA)
 
 -- We need this here for the tests, but should not be in the actual library because
 -- a Num instance for this type does not make sense in the general case.
@@ -40,3 +46,13 @@ instance Split Coin where
 -- ============================================================
 
 instance ToExpr Coin
+
+instance Arbitrary (PParamsHKD Identity era) => Arbitrary (PParams era) where
+  arbitrary = genericArbitraryU
+
+instance Arbitrary (PParamsHKD StrictMaybe era) => Arbitrary (PParamsUpdate era) where
+  arbitrary = genericArbitraryU
+
+deriving instance PrettyA (PParamsHKD Identity era) => PrettyA (PParams era)
+
+deriving instance PrettyA (PParamsHKD StrictMaybe era) => PrettyA (PParamsUpdate era)

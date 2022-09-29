@@ -132,6 +132,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Core
     mkOCert,
   )
 import Test.Cardano.Ledger.Shelley.Generator.Presets (coreNodeKeys)
+import Test.Cardano.Ledger.Shelley.Orphans ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators.Bootstrap
   ( genBootstrapAddress,
     genSignature,
@@ -714,7 +715,7 @@ genUTCTime = do
       (Time.picosecondsToDiffTime diff)
 
 instance
-  (Mock (EraCrypto era), Arbitrary (ShelleyPParams era)) =>
+  (Mock (EraCrypto era), Arbitrary (Core.PParams era)) =>
   Arbitrary (ShelleyGenesis era)
   where
   arbitrary =

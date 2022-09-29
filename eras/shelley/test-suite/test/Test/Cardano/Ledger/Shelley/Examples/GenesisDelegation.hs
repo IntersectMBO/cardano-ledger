@@ -35,7 +35,6 @@ import Cardano.Ledger.Keys
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (FutureGenDeleg (..), PulsingRewUpdate)
-import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
@@ -102,7 +101,7 @@ initUTxO =
     bobInitCoin = Val.inject $ Coin $ 1 * 1000 * 1000 * 1000 * 1000 * 1000
 
 initStGenesisDeleg ::
-  (ShelleyTest era, PParams era ~ ShelleyPParams era) =>
+  (ShelleyTest era) =>
   ChainState era
 initStGenesisDeleg = initSt initUTxO
 
@@ -241,12 +240,12 @@ blockEx2 =
     0
     (mkOCert @c (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 50) 0 (KESPeriod 0))
 
-pulserEx2 :: forall c. (ExMock c, C.UsesPP (ShelleyEra c)) => PulsingRewUpdate c
+pulserEx2 :: forall c. (ExMock c) => PulsingRewUpdate c
 pulserEx2 = makePulser' expectedStEx1
 
 expectedStEx2 ::
   forall c.
-  (ExMock c, C.UsesPP (ShelleyEra c)) =>
+  (ExMock c) =>
   ChainState (ShelleyEra c)
 expectedStEx2 =
   C.evolveNonceUnfrozen (getBlockNonce @(ShelleyEra c) blockEx2)
@@ -259,7 +258,7 @@ expectedStEx2 =
 --
 -- Submit an empty block to trigger adopting the genesis delegation.
 genesisDelegation2 ::
-  (ExMock c, C.UsesPP (ShelleyEra c)) =>
+  (ExMock c) =>
   CHAINExample (BHeader c) (ShelleyEra c)
 genesisDelegation2 = CHAINExample expectedStEx1 blockEx2 (Right expectedStEx2)
 

@@ -164,7 +164,7 @@ bobAddr =
 mkGenesisTxIn :: (HashAlgorithm (HASH c), HasCallStack) => Integer -> TxIn c
 mkGenesisTxIn = TxIn genesisId . mkTxIxPartial
 
-pp :: ShelleyPParams era
+pp :: PParams era
 pp =
   emptyPParams
     { _minfeeA = 1,

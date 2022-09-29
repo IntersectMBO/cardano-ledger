@@ -1,5 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Test.Cardano.Ledger.Shelley.Serialisation.Tripping.JSON
   ( tests,
@@ -23,6 +25,7 @@ import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, C_Crypto)
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators.Genesis
 import Test.Tasty
 import Test.Tasty.Hedgehog hiding (testProperty)
+import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest)
 
 -- | testProperty has been deprecated. We make our own version here.
 testProperty :: TestName -> Property -> TestTree
@@ -68,7 +71,7 @@ prop_roundtrip_FundPair_JSON _ =
 
 prop_roundtrip_ShelleyGenesis_JSON ::
   forall era.
-  Era era =>
+  ShelleyTest era =>
   Proxy era ->
   Property
 prop_roundtrip_ShelleyGenesis_JSON _ = Hedgehog.withTests 500 $

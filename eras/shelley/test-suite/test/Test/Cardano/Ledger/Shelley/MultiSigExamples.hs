@@ -52,12 +52,6 @@ import Cardano.Ledger.Shelley.LedgerState
     genesisState,
   )
 import Cardano.Ledger.Shelley.Metadata (ShelleyTxAuxData)
-import Cardano.Ledger.Shelley.PParams
-  ( ShelleyPParams,
-    ShelleyPParamsHKD (..),
-    emptyPParams,
-    _maxTxSize,
-  )
 import Cardano.Ledger.Shelley.Rules (UtxoEnv (..))
 import Cardano.Ledger.Shelley.Scripts
   ( MultiSig,
@@ -207,8 +201,9 @@ genesis = genesisState genDelegs0 utxo0
           ShelleyTxOut Cast.bobAddr (Val.inject bobInitCoin)
         ]
 
-initPParams :: ShelleyPParams era
-initPParams = emptyPParams {_maxTxSize = 1000}
+initPParams :: ShelleyTest era => PParams era
+initPParams = emptyPParams 
+  & ppMaxTxSizeL .~ 1000
 
 -- | Create an initial UTxO state where Alice has 'aliceInitCoin' and Bob
 -- 'bobInitCoin' to spend. Then create and apply a transaction which, if

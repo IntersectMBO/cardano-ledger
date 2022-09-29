@@ -57,10 +57,6 @@ import Cardano.Ledger.Shelley.LedgerState
     completeStep,
     emptyRewardUpdate,
   )
-import Cardano.Ledger.Shelley.PParams
-  ( ShelleyPParams,
-    ShelleyPParamsHKD (..),
-  )
 import Cardano.Ledger.Shelley.PoolRank
   ( Likelihood (..),
     NonMyopic (..),
@@ -143,10 +139,13 @@ import Test.Cardano.Ledger.Shelley.Utils
     getBlockNonce,
     maxLLSupply,
     runShelleyBase,
-    testGlobals,
+    testGlobals, unsafeBoundRational
   )
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))
+import Cardano.Ledger.PParams
+import Lens.Micro ((^.), (&), (.~))
+import Cardano.Ledger.Shelley (ShelleyEra)
 
 -- | Type local to this module expressing the various constraints assumed
 -- amongst all tests in this module.
@@ -155,7 +154,6 @@ type TwoPoolsConstraints era =
     ExMock (EraCrypto era),
     Core.TxBody era ~ ShelleyTxBody era,
     Core.Tx era ~ ShelleyTx era,
-    Core.PParams era ~ ShelleyPParams era,
     PreAlonzo era,
     Core.EraSegWits era,
     ToCBOR (Core.Script era)
@@ -189,8 +187,8 @@ initStTwoPools = initSt initUTxO
 aliceCoinEx1 :: Coin
 aliceCoinEx1 =
   aliceInitCoin
-    <-> ((2 :: Integer) <×> _poolDeposit ppEx)
-    <-> ((3 :: Integer) <×> _keyDeposit ppEx)
+    <-> ((2 :: Integer) <×> (Coin 250))
+    <-> ((3 :: Integer) <×> (Coin 7))
     <-> feeTx1
 
 feeTx1 :: Coin
@@ -271,7 +269,7 @@ expectedStEx1 ::
 expectedStEx1 =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx1 @era))
     . C.newLab blockEx1
-    . C.feesAndDeposits feeTx1 (((3 :: Integer) <×> _keyDeposit ppEx) <+> ((2 :: Integer) <×> _poolDeposit ppEx))
+    . C.feesAndDeposits feeTx1 (((3 :: Integer) <×> (Coin 7)) <+> ((2 :: Integer) <×> (Coin 250)))
     . C.newUTxO txbodyEx1
     . C.newStakeCred Cast.aliceSHK (Ptr (SlotNo 10) minBound (mkCertIxPartial 0))
     . C.newStakeCred Cast.bobSHK (Ptr (SlotNo 10) minBound (mkCertIxPartial 1))
@@ -658,7 +656,7 @@ blocksMadeEpoch3 = 3
 expectedBlocks :: Integer
 expectedBlocks =
   floor $
-    (1 - (unboundRational . _d $ ppEx))
+    0.5
       * unboundRational (activeSlotVal $ activeSlotCoeff testGlobals)
       * fromIntegral (epochSize $ EpochNo 3)
 
@@ -669,14 +667,14 @@ deltaR1Ex9 :: Coin
 deltaR1Ex9 =
   rationalToCoinViaFloor $
     (blocksMadeEpoch3 % expectedBlocks)
-      * (unboundRational $ _rho ppEx)
+      * 0.0021
       * (fromIntegral . unCoin $ reserves9)
 
 rPot :: Integer
 rPot = unCoin deltaR1Ex9 -- There were no fees
 
 deltaTEx9 :: Integer
-deltaTEx9 = floor $ unboundRational (_tau ppEx) * fromIntegral rPot
+deltaTEx9 = floor $ (0.2 :: Double) * fromIntegral rPot
 
 bigR :: Coin
 bigR = Coin $ rPot - deltaTEx9
@@ -693,10 +691,10 @@ bobStakeShareTot = unCoin bobInitCoin % circulation
 alicePoolRewards :: forall c. ExMock c => Coin
 alicePoolRewards = rationalToCoinViaFloor (appPerf * (fromIntegral . unCoin $ maxP))
   where
-    appPerf = mkApparentPerformance (_d ppEx) alicePoolStake 2 3
+    appPerf = mkApparentPerformance ((unsafeBoundRational 0.5)) alicePoolStake 2 3
     pledge = fromIntegral . unCoin . _poolPledge $ alicePoolParams' @c
     pr = pledge % circulation
-    maxP = EB.maxPool ppEx bigR aliceStakeShareTot pr
+    maxP = EB.maxPool @(ShelleyEra c) ppEx bigR aliceStakeShareTot pr
 
 carlMemberRewardsFromAlice :: forall c. ExMock c => Coin
 carlMemberRewardsFromAlice =
@@ -717,10 +715,10 @@ carlLeaderRewardsFromAlice =
 bobPoolRewards :: forall c. ExMock c => Coin
 bobPoolRewards = rationalToCoinViaFloor (appPerf * (fromIntegral . unCoin $ maxP))
   where
-    appPerf = mkApparentPerformance (_d ppEx) bobPoolStake 1 3
+    appPerf = mkApparentPerformance ((unsafeBoundRational 0.5)) bobPoolStake 1 3
     pledge = fromIntegral . unCoin . _poolPledge $ bobPoolParams' @c
     pr = pledge % circulation
-    maxP = EB.maxPool ppEx bigR bobStakeShareTot pr
+    maxP = EB.maxPool @(ShelleyEra c) ppEx bigR bobStakeShareTot pr
 
 carlLeaderRewardsFromBob :: forall c. ExMock c => Coin
 carlLeaderRewardsFromBob =
@@ -734,14 +732,14 @@ alicePerfEx9 :: Likelihood
 alicePerfEx9 = likelihood blocks t (epochSize $ EpochNo 3)
   where
     blocks = 2
-    t = leaderProbability f alicePoolStake (_d ppEx)
+    t = leaderProbability f alicePoolStake ((unsafeBoundRational 0.5))
     f = activeSlotCoeff testGlobals
 
 bobPerfEx9 :: Likelihood
 bobPerfEx9 = likelihood blocks t (epochSize $ EpochNo 3)
   where
     blocks = 1
-    t = leaderProbability f bobPoolStake (_d ppEx)
+    t = leaderProbability f bobPoolStake ((unsafeBoundRational 0.5))
     f = activeSlotCoeff testGlobals
 
 nonMyopicEx9 :: forall c. ExMock c => NonMyopic c
@@ -756,9 +754,10 @@ nonMyopicEx9 =
 
 rewardUpdateEx9 ::
   forall era.
+  ShelleyTest era =>
   ExMock (EraCrypto era) =>
-  ShelleyPParams era ->
-  Map (Credential 'Staking (EraCrypto era)) (Set (Core.Reward (EraCrypto era))) ->
+  PParams era ->
+  Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))) ->
   RewardUpdate (EraCrypto era)
 rewardUpdateEx9 pp rewards =
   RewardUpdate
@@ -769,12 +768,13 @@ rewardUpdateEx9 pp rewards =
       nonMyopic = nonMyopicEx9
     }
   where
-    deltaR2Ex9 = bigR <-> (sumRewards pp rewards)
+    pv = pp ^. ppProtocolVersionL
+    deltaR2Ex9 = bigR <-> (sumRewards pv rewards)
 
 pulserEx9 ::
   forall era.
   (ExMock (EraCrypto era), TwoPoolsConstraints era) =>
-  ShelleyPParams era ->
+  PParams era ->
   PulsingRewUpdate (EraCrypto era)
 pulserEx9 pp =
   makeCompletedPulser
@@ -789,7 +789,7 @@ pulserEx9 pp =
 expectedStEx9 ::
   forall era.
   (TwoPoolsConstraints era) =>
-  ShelleyPParams era ->
+  PParams era ->
   ChainState era
 expectedStEx9 pp =
   C.evolveNonceFrozen (getBlockNonce (blockEx9 @era))
@@ -821,8 +821,8 @@ carlsRewards =
 rsEx9Agg :: forall c. ExMock c => Map (Credential 'Staking c) (Set (Core.Reward c))
 rsEx9Agg = Map.singleton Cast.carlSHK carlsRewards
 
-ppProtVer3 :: ShelleyPParams era
-ppProtVer3 = ppEx {_protocolVersion = ProtVer 3 0}
+ppProtVer3 :: ShelleyTest era => PParams era
+ppProtVer3 = ppEx & ppProtocolVersionL .~ ProtVer 3 0
 
 expectedStEx8Agg :: forall era. (TwoPoolsConstraints era) => ChainState era
 expectedStEx8Agg = C.setPrevPParams ppProtVer3 expectedStEx8

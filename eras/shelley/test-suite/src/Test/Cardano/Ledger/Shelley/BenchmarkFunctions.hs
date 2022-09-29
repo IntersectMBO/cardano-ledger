@@ -3,6 +3,8 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Test.Cardano.Ledger.Shelley.BenchmarkFunctions
   ( ledgerSpendOneUTxO,
@@ -52,7 +54,6 @@ import Cardano.Ledger.Shelley.LedgerState
     LedgerState (..),
     UTxOState (..),
   )
-import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..), emptyPParams)
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), ShelleyLEDGER)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxBody
@@ -103,8 +104,11 @@ import Test.Cardano.Ledger.Shelley.Utils
     mkKeyPair',
     mkVRFKeyPair,
     runShelleyBase,
-    unsafeBoundRational,
+    unsafeBoundRational, ShelleyTest
   )
+import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD(..))
+import Cardano.Ledger.PParams
+import Control.Monad.Identity (Identity)
 
 -- ===============================================
 -- A special Era to run the Benchmarks in
@@ -155,9 +159,9 @@ initUTxO n =
 -- Protocal Parameters used for the benchmarknig tests.
 -- Note that the fees and deposits are set to zero for
 -- ease of creating transactions.
-ppsBench :: ShelleyPParams era
+ppsBench :: forall era. ShelleyTest era => Core.PParams era
 ppsBench =
-  emptyPParams
+  PParams $ (def @(ShelleyPParamsHKD Identity era))
     { _maxBBSize = 50000,
       _d = unsafeBoundRational 0.5,
       _eMax = EpochNo 10000,
@@ -172,7 +176,7 @@ ppsBench =
       _tau = unsafeBoundRational 0.2
     }
 
-ledgerEnv :: (Core.PParams era ~ ShelleyPParams era) => LedgerEnv era
+ledgerEnv :: (ShelleyTest era) => LedgerEnv era
 ledgerEnv = LedgerEnv (SlotNo 0) minBound ppsBench (AccountState (Coin 0) (Coin 0))
 
 testLEDGER ::

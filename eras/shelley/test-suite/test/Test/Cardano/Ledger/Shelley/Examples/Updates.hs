@@ -26,17 +26,12 @@ import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Crypto as Cr
 import Cardano.Ledger.Era (EraCrypto (..))
 import Cardano.Ledger.Keys (asWitness, hashKey)
+import Cardano.Ledger.PParams
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import qualified Cardano.Ledger.Shelley.EpochBoundary as EB
 import Cardano.Ledger.Shelley.LedgerState (PulsingRewUpdate, emptyRewardUpdate)
-import Cardano.Ledger.Shelley.PParams
-  ( ProposedPPUpdates (..),
-    ShelleyPParams,
-    ShelleyPParamsHKD (..),
-    ShelleyPParamsUpdate,
-    Update (..),
-  )
+import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), ShelleyPParamsHKD (..), Update (..))
 import Cardano.Ledger.Shelley.Tx
   ( ShelleyTx (..),
   )
@@ -91,6 +86,7 @@ import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
 import Test.Cardano.Ledger.Shelley.Utils (getBlockNonce)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
+import Lens.Micro ((&), (.~))
 
 aliceInitCoin :: Coin
 aliceInitCoin = Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
@@ -113,37 +109,41 @@ initStUpdates = initSt initUTxO
 -- Block 1, Slot 10, Epoch 0
 --
 
-ppVoteA :: ShelleyPParamsUpdate (ShelleyEra c)
+ppVoteA :: PParamsUpdate (ShelleyEra c)
 ppVoteA =
-  ShelleyPParams
-    { _minfeeA = SNothing,
-      _minfeeB = SNothing,
-      _maxBBSize = SNothing,
-      _maxTxSize = SNothing,
-      _maxBHSize = SNothing,
-      _keyDeposit = SNothing,
-      _poolDeposit = SJust $ Coin 200,
-      _eMax = SNothing,
-      _nOpt = SNothing,
-      _a0 = SNothing,
-      _rho = SNothing,
-      _tau = SNothing,
-      _d = SNothing,
-      _extraEntropy = SJust (mkNonceFromNumber 123),
-      _protocolVersion = SNothing,
-      _minUTxOValue = SNothing,
-      _minPoolCost = SNothing
-    }
+  PParamsUpdate
+    ShelleyPParams
+      { _minfeeA = SNothing,
+        _minfeeB = SNothing,
+        _maxBBSize = SNothing,
+        _maxTxSize = SNothing,
+        _maxBHSize = SNothing,
+        _keyDeposit = SNothing,
+        _poolDeposit = SJust $ Coin 200,
+        _eMax = SNothing,
+        _nOpt = SNothing,
+        _a0 = SNothing,
+        _rho = SNothing,
+        _tau = SNothing,
+        _d = SNothing,
+        _extraEntropy = SJust (mkNonceFromNumber 123),
+        _protocolVersion = SNothing,
+        _minUTxOValue = SNothing,
+        _minPoolCost = SNothing
+      }
 
 collectVotes ::
-  Era (ShelleyEra c) =>
-  ShelleyPParamsUpdate (ShelleyEra c) ->
+  forall c.
+  Cr.Crypto c =>
+  PParamsUpdate (ShelleyEra c) ->
   [Int] ->
   ProposedPPUpdates (ShelleyEra c)
 collectVotes vote =
-  ProposedPPUpdates . Map.fromList . (fmap (\n -> (hashKey $ coreNodeVK n, vote)))
+  ProposedPPUpdates
+    . Map.fromList
+    . fmap (\n -> (hashKey $ coreNodeVK n, vote))
 
-ppVotes1 :: Era (ShelleyEra c) => ProposedPPUpdates (ShelleyEra c)
+ppVotes1 :: Cr.Crypto c => ProposedPPUpdates (ShelleyEra c)
 ppVotes1 = collectVotes ppVoteA [0, 3, 4]
 
 feeTx1 :: Coin
@@ -289,27 +289,28 @@ updates2 = CHAINExample expectedStEx1 blockEx2 (Right expectedStEx2)
 -- Block 3, Slot 80, Epoch 0
 --
 
-ppVoteB :: ShelleyPParamsUpdate (ShelleyEra c)
+ppVoteB :: PParamsUpdate (ShelleyEra c)
 ppVoteB =
-  ShelleyPParams
-    { _minfeeA = SNothing,
-      _minfeeB = SNothing,
-      _maxBBSize = SNothing,
-      _maxTxSize = SNothing,
-      _maxBHSize = SNothing,
-      _keyDeposit = SNothing,
-      _poolDeposit = SNothing,
-      _eMax = SNothing,
-      _nOpt = SNothing,
-      _a0 = SNothing,
-      _rho = SNothing,
-      _tau = SNothing,
-      _d = SNothing,
-      _extraEntropy = SNothing,
-      _protocolVersion = SNothing,
-      _minUTxOValue = SJust $ Coin 99,
-      _minPoolCost = SNothing
-    }
+  PParamsUpdate
+    ShelleyPParams
+      { _minfeeA = SNothing,
+        _minfeeB = SNothing,
+        _maxBBSize = SNothing,
+        _maxTxSize = SNothing,
+        _maxBHSize = SNothing,
+        _keyDeposit = SNothing,
+        _poolDeposit = SNothing,
+        _eMax = SNothing,
+        _nOpt = SNothing,
+        _a0 = SNothing,
+        _rho = SNothing,
+        _tau = SNothing,
+        _d = SNothing,
+        _extraEntropy = SNothing,
+        _protocolVersion = SNothing,
+        _minUTxOValue = SJust $ Coin 99,
+        _minPoolCost = SNothing
+      }
 
 ppVotes3 :: Era (ShelleyEra c) => ProposedPPUpdates (ShelleyEra c)
 ppVotes3 = collectVotes ppVoteB [1]
@@ -385,7 +386,7 @@ updates3 = CHAINExample expectedStEx2 blockEx3 (Right expectedStEx3)
 epoch1Nonce :: forall c. (ExMock (EraCrypto (ShelleyEra c))) => Nonce
 epoch1Nonce = chainCandidateNonce (expectedStEx3 @c) ⭒ mkNonceFromNumber 123
 
-blockEx4 :: forall c. ExMock (EraCrypto (ShelleyEra c)) => Block (BHeader c) (ShelleyEra c)
+blockEx4 :: forall c. (ExMock (EraCrypto (ShelleyEra c))) => Block (BHeader c) (ShelleyEra c)
 blockEx4 =
   mkBlockFakeVRF
     (bhHash $ bheader @(BHeader c) @(ShelleyEra c) blockEx3)
@@ -400,8 +401,11 @@ blockEx4 =
     0
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 110) 0 (KESPeriod 0))
 
-ppExUpdated :: ShelleyPParams (ShelleyEra c)
-ppExUpdated = ppEx {_poolDeposit = Coin 200, _extraEntropy = mkNonceFromNumber 123}
+ppExUpdated :: forall c. Cr.Crypto c => PParams (ShelleyEra c)
+ppExUpdated =
+    (ppEx @(ShelleyEra c))
+      & ppPoolDepositL .~ Coin 200
+      & ppExtraEntropyL .~ mkNonceFromNumber 123
 
 expectedStEx4 :: forall c. (ExMock (EraCrypto (ShelleyEra c))) => ChainState (ShelleyEra c)
 expectedStEx4 =

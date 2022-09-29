@@ -31,7 +31,6 @@ import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.EpochBoundary (SnapShot (_poolParams), emptySnapShot)
 import Cardano.Ledger.Shelley.LedgerState (PulsingRewUpdate, emptyRewardUpdate)
-import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Tx
   ( ShelleyTx (..),
   )
@@ -101,7 +100,7 @@ feeTx1 :: Coin
 feeTx1 = Coin 3
 
 aliceCoinEx1 :: Coin
-aliceCoinEx1 = aliceInitCoin <-> _poolDeposit ppEx <-> feeTx1
+aliceCoinEx1 = aliceInitCoin <-> (Coin 250) <-> feeTx1
 
 txbodyEx1 :: Cr.Crypto c => ShelleyTxBody (ShelleyEra c)
 txbodyEx1 =
@@ -155,7 +154,7 @@ expectedStEx1 ::
 expectedStEx1 =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx1 @c))
     . C.newLab blockEx1
-    . C.feesAndDeposits feeTx1 (_poolDeposit ppEx)
+    . C.feesAndDeposits feeTx1 ((Coin 250))
     . C.newUTxO txbodyEx1
     . C.newPool Cast.alicePoolParams
     $ initStPoolReReg

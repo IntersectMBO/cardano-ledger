@@ -18,7 +18,6 @@ module Test.Cardano.Ledger.Shelley.Generator.Trace.Chain where
 -- import Test.Cardano.Ledger.Shelley.Shrinkers (shrinkBlock) -- TODO FIX ME
 
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
-import Cardano.Ledger.BaseTypes (UnitInterval)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
   ( Era,
@@ -84,7 +83,7 @@ import Test.Cardano.Ledger.Shelley.Rules.Chain
 import qualified Test.Cardano.Ledger.Shelley.Rules.Chain as STS (ChainState (ChainState))
 import Test.Cardano.Ledger.Shelley.Utils
   ( maxLLSupply,
-    mkHash,
+    mkHash, ShelleyTest
   )
 import Test.QuickCheck (Gen)
 
@@ -112,8 +111,8 @@ instance
     Environment (Core.EraRule "TICK" era) ~ (),
     State (Core.EraRule "TICK" era) ~ NewEpochState era,
     Signal (Core.EraRule "TICK" era) ~ SlotNo,
-    HasField "_d" (Core.PParams era) UnitInterval,
-    QC.HasTrace (Core.EraRule "LEDGERS" era) (GenEnv era)
+    QC.HasTrace (Core.EraRule "LEDGERS" era) (GenEnv era),
+    ShelleyTest era
   ) =>
   HasTrace (CHAIN era) (GenEnv era)
   where

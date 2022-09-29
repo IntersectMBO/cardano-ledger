@@ -125,7 +125,7 @@ import Control.State.Transition.Trace
   )
 import Data.Coerce (Coercible, coerce)
 import Data.Default.Class (Default)
-import Data.Functor.Identity (runIdentity)
+import Data.Functor.Identity (runIdentity, Identity)
 import Data.Maybe (fromMaybe)
 import Data.Time.Clock.POSIX
 import Data.Typeable (Proxy (Proxy))
@@ -137,6 +137,8 @@ import Test.Tasty.HUnit
   ( Assertion,
     (@?=),
   )
+import Cardano.Ledger.Shelley.PParams
+import Data.Maybe.Strict (StrictMaybe)
 
 type ChainProperty era =
   ( Mock (EraCrypto era),
@@ -156,7 +158,11 @@ type ShelleyTest era =
     TxWits era ~ ShelleyTxWits era,
     Split (Value era),
     Default (State (EraRule "PPUP" era)),
-    Default (StashedAVVMAddresses era)
+    Default (StashedAVVMAddresses era),
+    ProtVerAtMost era 4,
+    ProtVerAtMost era 6,
+    PParamsHKD Identity era ~ ShelleyPParamsHKD Identity era,
+    PParamsHKD StrictMaybe era ~ ShelleyPParamsHKD StrictMaybe era
   )
 
 class Split v where
