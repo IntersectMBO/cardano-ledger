@@ -148,6 +148,7 @@ niv update hackage
 # Testing
 
 Before running tests with `cabal test`, the `CARDANO_MAINNET_MIRROR` environment variable should be set to the path to [mainnet epochs](https://github.com/input-output-hk/cardano-mainnet-mirror/tree/master/epochs) on your local storage.
+Note that this is only needed for the Byron tests.
 
 # Submitting an issue
 
