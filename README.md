@@ -145,6 +145,10 @@ You can update the `sources.json` file using niv:
 niv update hackage
 ```
 
+# Testing
+
+Before running tests with `cabal test`, the `CARDANO_MAINNET_MIRROR` environment variable should be set to the path to [mainnet epochs](https://github.com/input-output-hk/cardano-mainnet-mirror/tree/master/epochs) on your local storage.
+
 # Submitting an issue
 
 Issues can be filed in the [GitHub Issue tracker](https://github.com/input-output-hk/cardano-ledger/issues).
