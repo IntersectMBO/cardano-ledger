@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -8,7 +9,6 @@
 -- | Defines reusable abstractions for testing RoundTrip properties of CBOR instances
 module Test.Cardano.Ledger.Binary.RoundTrip
   ( roundTripSpec,
-    roundTripValidSpec,
     roundTripExpectation,
     RoundTripFailure (..),
     Trip (..),
@@ -26,7 +26,6 @@ where
 import Cardano.Ledger.Binary
 import Data.Bifunctor (first)
 import qualified Data.ByteString.Lazy as BSL
-import Data.GenValidity
 import Data.Proxy
 import qualified Data.Text as Text
 import Data.Typeable
@@ -48,18 +47,6 @@ roundTripSpec ::
 roundTripSpec version trip =
   prop (show (typeRep $ Proxy @t)) $ roundTripExpectation version trip
 
--- | Tests the roundtrip property using QuickCheck generators
-roundTripValidSpec ::
-  forall t.
-  (Show t, Eq t, Typeable t, GenValid t) =>
-  Version ->
-  Trip t t ->
-  Spec
-roundTripValidSpec version trip =
-  prop (show (typeRep $ Proxy @t)) $
-    forAllShrink genValid shrinkValid $ \v ->
-      roundTripExpectation version trip v
-
 roundTripExpectation ::
   (Show t, Eq t, Typeable t) =>
   Version ->
@@ -68,7 +55,7 @@ roundTripExpectation ::
   Expectation
 roundTripExpectation version trip t =
   case roundTrip version trip t of
-    Left err -> expectationFailure $ "Failed to deserialize: " ++ show err
+    Left err -> expectationFailure $ "Failed to deserialize encoded: " ++ show err
     Right tDecoded -> tDecoded `shouldBe` t
 
 -- =====================================================================
@@ -80,7 +67,7 @@ data RoundTripFailure = RoundTripFailure
     rtfEncoding :: Encoding,
     -- | Serialized encoding using the version in this failure
     rtfEncodedBytes :: BSL.ByteString,
-    -- | Error recieved while decoding the produced bytes
+    -- | Error received while decoding the produced bytes
     rtfDecoderError :: DecoderError
   }
 
@@ -89,11 +76,15 @@ instance Show RoundTripFailure where
     unlines $
       [ show rtfVersion,
         showDecoderError rtfDecoderError,
-        showExpr (CBORBytes bytes)
+        prettyTerm
       ]
         ++ showHexBytesGrouped bytes
     where
       bytes = BSL.toStrict rtfEncodedBytes
+      prettyTerm =
+        case decodeFullDecoder' rtfVersion "Term" decodeTerm bytes of
+          Left err -> "Could not decode as Term: " ++ show err
+          Right term -> showExpr term
 
 -- | A definition of a CBOR trip through binary representation of one type to
 -- another. In this module this is called an embed. When a source and target type is the

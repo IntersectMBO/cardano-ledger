@@ -12,8 +12,6 @@ import Codec.CBOR.ByteArray.Sliced (SlicedByteArray (..))
 import Control.Monad (forM_)
 import Data.Fixed (Fixed (..), Nano, Pico)
 import qualified Data.Foldable as F
-import Data.GenValidity
-import Data.GenValidity.Time.Clock ()
 import Data.IP (IPv4, IPv6, toIPv4w, toIPv6w)
 import Data.Int
 import qualified Data.Map.Strict as Map
@@ -41,11 +39,11 @@ import Test.QuickCheck.Instances ()
 
 -- | We do not handle the full precision of NominalDiffTime.
 newtype NominalDiffTimeRounded = NominalDiffTimeRounded NominalDiffTime
-  deriving (Show, Eq, ToCBOR, FromCBOR, Validity)
+  deriving (Show, Eq, ToCBOR, FromCBOR)
 
-instance GenValid NominalDiffTimeRounded where
-  genValid = secondsToNominalDiffTimeRounded <$> genValid
-  shrinkValid = fmap secondsToNominalDiffTimeRounded . shrinkValid . nominalDiffTimeRoundedToSeconds
+instance Arbitrary NominalDiffTimeRounded where
+  arbitrary = secondsToNominalDiffTimeRounded <$> arbitrary
+  shrink = fmap secondsToNominalDiffTimeRounded . shrink . nominalDiffTimeRoundedToSeconds
 
 secondsToNominalDiffTimeRounded :: Pico -> NominalDiffTimeRounded
 secondsToNominalDiffTimeRounded (MkFixed s) =
@@ -60,11 +58,18 @@ deriving instance Arbitrary ByteArray
 instance Arbitrary SlicedByteArray where
   arbitrary = do
     NonNegative off <- arbitrary
-    NonNegative count <- arbitrary
+    Positive count <- arbitrary
     NonNegative slack <- arbitrary
     let len = off + count + slack
     ba <- Prim.byteArrayFromListN len <$> (vector len :: Gen [Word8])
     pure $ SBA ba off count
+
+-- let off = 2
+--     count = 6
+--     slack = 0
+-- let len = off + count + slack
+--     ba = Prim.byteArrayFromListN len [(0 :: Word8) .. fromIntegral len - 1]
+-- pure $ SBA ba off count
 
 instance Arbitrary IPv4 where
   arbitrary = toIPv4w <$> arbitrary
@@ -96,25 +101,25 @@ spec =
       describe (show version) $ do
         roundTripSpec @() version cborTrip
         roundTripSpec @Bool version cborTrip
-        roundTripValidSpec @Integer version cborTrip
-        roundTripValidSpec @Natural version cborTrip
-        roundTripValidSpec @Word version cborTrip
-        roundTripValidSpec @Word8 version cborTrip
-        roundTripValidSpec @Word16 version cborTrip
-        roundTripValidSpec @Word32 version cborTrip
-        roundTripValidSpec @Word64 version cborTrip
-        roundTripValidSpec @Int version cborTrip
-        roundTripValidSpec @Int8 version cborTrip
-        roundTripValidSpec @Int16 version cborTrip
-        roundTripValidSpec @Int32 version cborTrip
-        roundTripValidSpec @Int64 version cborTrip
+        roundTripSpec @Integer version cborTrip
+        roundTripSpec @Natural version cborTrip
+        roundTripSpec @Word version cborTrip
+        roundTripSpec @Word8 version cborTrip
+        roundTripSpec @Word16 version cborTrip
+        roundTripSpec @Word32 version cborTrip
+        roundTripSpec @Word64 version cborTrip
+        roundTripSpec @Int version cborTrip
+        roundTripSpec @Int8 version cborTrip
+        roundTripSpec @Int16 version cborTrip
+        roundTripSpec @Int32 version cborTrip
+        roundTripSpec @Int64 version cborTrip
         roundTripSpec @Float version cborTrip
         roundTripSpec @Double version cborTrip
-        roundTripValidSpec @Rational version cborTrip
-        roundTripValidSpec @Nano version cborTrip
-        roundTripValidSpec @Pico version cborTrip
-        roundTripValidSpec @NominalDiffTimeRounded version cborTrip
-        roundTripValidSpec @UTCTime version cborTrip
+        roundTripSpec @Rational version cborTrip
+        roundTripSpec @Nano version cborTrip
+        roundTripSpec @Pico version cborTrip
+        roundTripSpec @NominalDiffTimeRounded version cborTrip
+        roundTripSpec @UTCTime version cborTrip
         roundTripSpec @IPv4 version cborTrip
         roundTripSpec @IPv6 version cborTrip
         roundTripSpec @[Integer] version cborTrip
@@ -129,5 +134,4 @@ spec =
         roundTripSpec @(VMap.VMap VMap.VB VMap.VS Integer Int) version cborTrip
         roundTripSpec @Prim.ByteArray version cborTrip
         roundTripSpec @ByteArray version cborTrip
-
--- roundTripSpec @SlicedByteArray version cborTrip
+        roundTripSpec @SlicedByteArray version cborTrip

@@ -109,6 +109,15 @@ source-repository-package
   tag: bfcf4415144d7d2817dfcb91b6f9a6dfd7236de7
   --sha256: 01fy4nbq6kaqi73ydn6w7rd1izkg5p217q5znyp2icybf41sl1b6
 
+-- https://github.com/well-typed/cborg/pull/301
+source-repository-package
+  type: git
+  location: https://github.com/lehins/cborg
+  tag: c2e86cdd1ac9c51dedb5ef199f513cf48668bcd7
+  --sha256: 18apsg2lqjv9cc29nbd3hzj2hqhksqjj0s4xp2rdv8cbd27racjh
+  subdir:
+    cborg
+
 allow-newer:
   monoidal-containers:aeson,
   size-based:template-haskell,
