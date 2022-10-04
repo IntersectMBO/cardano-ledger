@@ -9,7 +9,8 @@ module Cardano.Ledger.Binary.Decoding.FromCBOR
 where
 
 import Cardano.Ledger.Binary.Decoding.Decoder
-import Codec.CBOR.ByteArray (ByteArray (BA))
+import Codec.CBOR.ByteArray (ByteArray (..))
+import Codec.CBOR.ByteArray.Sliced (SlicedByteArray, fromByteArray)
 import Codec.CBOR.Term (Term (..))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
@@ -208,6 +209,15 @@ instance FromCBOR SBS.ShortByteString where
   fromCBOR = do
     BA (Prim.ByteArray ba) <- decodeByteArray
     return $ SBS.SBS ba
+
+instance FromCBOR ByteArray where
+  fromCBOR = decodeByteArray
+
+instance FromCBOR Prim.ByteArray where
+  fromCBOR = unBA <$> decodeByteArray
+
+instance FromCBOR SlicedByteArray where
+  fromCBOR = fromByteArray . unBA <$> decodeByteArray
 
 instance FromCBOR a => FromCBOR [a] where
   fromCBOR = decodeList fromCBOR

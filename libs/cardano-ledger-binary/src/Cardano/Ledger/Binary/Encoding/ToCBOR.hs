@@ -35,28 +35,23 @@ module Cardano.Ledger.Binary.Encoding.ToCBOR
 where
 
 import Cardano.Ledger.Binary.Encoding.Encoder
-import qualified Codec.CBOR.ByteArray.Sliced as BAS
+import Codec.CBOR.ByteArray (ByteArray (..))
+import Codec.CBOR.ByteArray.Sliced (SlicedByteArray (SBA), fromByteArray)
+import Codec.CBOR.Term (Term (..))
 import Control.Category (Category ((.)))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BS.Lazy
 import qualified Data.ByteString.Short as SBS
 import qualified Data.ByteString.Short.Internal as SBS
 import Data.Fixed (Fixed (..), Nano, Pico)
-import Data.IP (IPv4, IPv6)
-import qualified Data.Primitive.ByteArray as Prim
-import Prelude hiding (encodeFloat, (.))
-#if MIN_VERSION_recursion_schemes(5,2,0)
-import Data.Fix (Fix(..))
-#else
-import Data.Functor.Foldable (Fix(..))
-#endif
-import Codec.CBOR.Term (Term (..))
 import Data.Foldable (toList)
 import Data.Functor.Foldable (cata, project)
+import Data.IP (IPv4, IPv6)
 import Data.Int (Int16, Int32, Int64, Int8)
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map as Map
 import qualified Data.Maybe.Strict as SMaybe
+import qualified Data.Primitive.ByteArray as Prim (ByteArray (..))
 import Data.Ratio (Ratio)
 import qualified Data.Sequence as Seq
 import qualified Data.Sequence.Strict as SSeq
@@ -67,6 +62,7 @@ import qualified Data.Text as Text
 import Data.Text.Lazy.Builder (Builder)
 import Data.Time.Clock (NominalDiffTime, UTCTime (..))
 import Data.Typeable (Proxy (..), TypeRep, Typeable, typeRep)
+import qualified Data.VMap as VMap
 import qualified Data.Vector as V
 import qualified Data.Vector.Primitive as VP
 import qualified Data.Vector.Storable as VS
@@ -77,6 +73,12 @@ import Foreign.Storable (sizeOf)
 import Formatting (bprint, build, shown, stext)
 import qualified Formatting.Buildable as B (Buildable (..))
 import Numeric.Natural (Natural)
+import Prelude hiding (encodeFloat, (.))
+#if MIN_VERSION_recursion_schemes(5,2,0)
+import Data.Fix (Fix(..))
+#else
+import Data.Functor.Foldable (Fix(..))
+#endif
 
 class Typeable a => ToCBOR a where
   toCBOR :: a -> Encoding
@@ -605,9 +607,21 @@ instance ToCBOR Text.Text where
             * szCases [Case "minChar" 1, Case "maxChar" 4]
      in bsLength + apMono "withWordSize" withWordSize bsLength
 
+instance ToCBOR ByteArray where
+  toCBOR = toCBOR . unBA
+  {-# INLINE toCBOR #-}
+
+instance ToCBOR Prim.ByteArray where
+  toCBOR = encodeByteArray . fromByteArray
+  {-# INLINE toCBOR #-}
+
+instance ToCBOR SlicedByteArray where
+  toCBOR = encodeByteArray
+  {-# INLINE toCBOR #-}
+
 instance ToCBOR SBS.ShortByteString where
   toCBOR sbs@(SBS.SBS ba) =
-    encodeByteArray $ BAS.SBA (Prim.ByteArray ba) 0 (SBS.length sbs)
+    encodeByteArray $ SBA (Prim.ByteArray ba) 0 (SBS.length sbs)
 
   encodedSizeExpr size _ =
     let len = size (Proxy @(LengthOf SBS.ShortByteString))
@@ -656,6 +670,12 @@ instance (Ord a, ToCBOR a) => ToCBOR (Seq.Seq a) where
 
 instance (Ord a, ToCBOR a) => ToCBOR (SSeq.StrictSeq a) where
   toCBOR = toCBOR . SSeq.fromStrict
+
+instance
+  (Ord k, ToCBOR k, ToCBOR v, VMap.Vector kv k, VMap.Vector vv v, Typeable kv, Typeable vv) =>
+  ToCBOR (VMap.VMap kv vv k v)
+  where
+  toCBOR = encodeVMap toCBOR toCBOR
 
 instance ToCBOR a => ToCBOR (V.Vector a) where
   toCBOR = encodeVector toCBOR

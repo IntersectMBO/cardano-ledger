@@ -316,6 +316,7 @@ encodeMap encodeKey encodeValue m =
         (exactMapLenEncoding (Map.size m) mapEncoding)
 {-# INLINE encodeMap #-}
 
+-- | Mimics `Map` encoder `encodeMap` identically.
 encodeVMap ::
   (VMap.Vector kv k, VMap.Vector vv v) =>
   (k -> Encoding) ->
