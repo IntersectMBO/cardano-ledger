@@ -53,6 +53,7 @@ import qualified Byron.Spec.Ledger.Core.Generators as CoreGen
 import Byron.Spec.Ledger.Core.Omniscient (skey)
 import qualified Byron.Spec.Ledger.GlobalParams as GP
 import Byron.Spec.Ledger.Util (mkGoblinGens)
+import Cardano.Prelude ()
 import Control.Arrow (second, (&&&))
 import Control.Monad (mzero)
 import Control.State.Transition
@@ -88,7 +89,6 @@ import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 import Lens.Micro
 import Lens.Micro.Extras (view)
-import Lens.Micro.Internal (Field1 (..), Field2 (..), Field3 (..))
 import Lens.Micro.TH (makeLenses)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural

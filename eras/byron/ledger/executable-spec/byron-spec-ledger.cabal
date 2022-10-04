@@ -50,12 +50,13 @@ library
                      , Byron.Spec.Ledger.STS.UTXOWS
   build-depends:       bimap >=0.4 && <0.5
                      , cardano-data
+                     -- temporary fix
+                     , cardano-prelude
                      , containers
                      , filepath
                      , goblins
                      , hashable
                      , hedgehog >= 1.0.4
-                     , lens
                      , microlens
                      , microlens-th
                      , nothunks
