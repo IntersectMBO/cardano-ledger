@@ -42,6 +42,7 @@ import qualified Data.ByteString.Lazy as BS.Lazy
 import qualified Data.ByteString.Short as SBS
 import qualified Data.ByteString.Short.Internal as SBS
 import Data.Fixed (Fixed (..), Nano, Pico)
+import Data.IP (IPv4, IPv6)
 import qualified Data.Primitive.ByteArray as Prim
 import Prelude hiding (encodeFloat, (.))
 #if MIN_VERSION_recursion_schemes(5,2,0)
@@ -509,12 +510,19 @@ instance ToCBOR Term where
 instance ToCBOR Encoding where
   toCBOR = id
 
+instance ToCBOR IPv4 where
+  toCBOR = encodeIPv4
+
+instance ToCBOR IPv6 where
+  toCBOR = encodeIPv6
+
 --------------------------------------------------------------------------------
 -- Tagged
 --------------------------------------------------------------------------------
 
 instance (Typeable s, ToCBOR a) => ToCBOR (Tagged s a) where
   toCBOR (Tagged a) = toCBOR a
+
   encodedSizeExpr size _ = encodedSizeExpr size (Proxy @a)
 
 --------------------------------------------------------------------------------

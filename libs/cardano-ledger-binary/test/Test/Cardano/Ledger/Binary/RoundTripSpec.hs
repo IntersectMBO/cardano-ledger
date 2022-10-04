@@ -1,25 +1,38 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Binary.RoundTripSpec (spec) where
 
 import Cardano.Ledger.Binary
 import Control.Monad (forM_)
 import Data.Fixed (Fixed (..), Nano, Pico)
+import qualified Data.Foldable as F
 import Data.GenValidity
 import Data.GenValidity.Time.Clock ()
+import Data.IP (IPv4, IPv6, toIPv4w, toIPv6w)
 import Data.Int
+import qualified Data.Map.Strict as Map
+import qualified Data.Sequence as Seq
+import qualified Data.Sequence.Strict as SSeq
+import qualified Data.Set as Set
 import Data.Time.Clock
   ( NominalDiffTime,
     UTCTime (..),
     nominalDiffTimeToSeconds,
     secondsToNominalDiffTime,
   )
+import qualified Data.Vector as V
+import qualified Data.Vector.Primitive as VP
+import qualified Data.Vector.Storable as VS
+import qualified Data.Vector.Unboxed as VU
 import Data.Word
 import Numeric.Natural
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Hspec
+import Test.QuickCheck
+import Test.QuickCheck.Instances ()
 
 -- | We do not handle the full precision of NominalDiffTime.
 newtype NominalDiffTimeRounded = NominalDiffTimeRounded NominalDiffTime
@@ -36,6 +49,22 @@ secondsToNominalDiffTimeRounded (MkFixed s) =
 
 nominalDiffTimeRoundedToSeconds :: NominalDiffTimeRounded -> Pico
 nominalDiffTimeRoundedToSeconds (NominalDiffTimeRounded ndt) = nominalDiffTimeToSeconds ndt
+
+instance Arbitrary IPv4 where
+  arbitrary = toIPv4w <$> arbitrary
+
+instance Arbitrary IPv6 where
+  arbitrary = do
+    t <- (,,,) <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+    pure $ toIPv6w t
+
+instance (VP.Prim e, Arbitrary e) => Arbitrary (VP.Vector e) where
+  arbitrary = VP.fromList <$> arbitrary
+  shrink = fmap VP.fromList . shrink . VP.toList
+
+instance Arbitrary e => Arbitrary (SSeq.StrictSeq e) where
+  arbitrary = SSeq.fromList <$> arbitrary
+  shrink = fmap SSeq.fromList . shrink . F.toList
 
 spec :: Spec
 spec =
@@ -63,3 +92,14 @@ spec =
         roundTripValidSpec @Pico version cborTrip
         roundTripValidSpec @NominalDiffTimeRounded version cborTrip
         roundTripValidSpec @UTCTime version cborTrip
+        roundTripSpec @IPv4 version cborTrip
+        roundTripSpec @IPv6 version cborTrip
+        roundTripSpec @[Integer] version cborTrip
+        roundTripSpec @(V.Vector Integer) version cborTrip
+        roundTripSpec @(VS.Vector Int16) version cborTrip
+        roundTripSpec @(VP.Vector Int) version cborTrip
+        roundTripSpec @(VU.Vector (Bool, Word)) version cborTrip
+        roundTripSpec @(Set.Set Int) version cborTrip
+        roundTripSpec @(Map.Map Integer Int) version cborTrip
+        roundTripSpec @(Seq.Seq Int) version cborTrip
+        roundTripSpec @(SSeq.StrictSeq Int) version cborTrip

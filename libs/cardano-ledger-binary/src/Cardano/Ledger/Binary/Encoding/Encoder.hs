@@ -299,7 +299,7 @@ encodePair = encodeTuple
 
 -- | Encode a Map. Versions variance:
 --
--- * [< 1] - Variable length encoding.
+-- * [< 2] - Variable length encoding.
 --
 -- * [>= 2] - Variable length encoding for Maps larger than 23 key value pairs, otherwise exact
 --   length encoding
@@ -372,7 +372,7 @@ variableListLenEncoding len contents =
 
 -- | Encode a Set. Versions variance:
 --
--- * [< 1] - Variable length encoding. Also prefixes with a special 258 tag.
+-- * [< 2] - Variable length encoding. Also prefixes with a special 258 tag.
 --
 -- * [>= 2] - Variable length encoding for Sets larger than 23 elements, otherwise exact
 --   length encoding
@@ -387,7 +387,7 @@ encodeSet encodeValue f =
 
 -- | Encode a list. Versions variance:
 --
--- * [< 1] - Variable length encoding
+-- * [< 2] - Variable length encoding
 --
 -- * [>= 2] - Variable length encoding for lists longer than 23 elements, otherwise exact
 --   length encoding
@@ -404,19 +404,10 @@ encodeList encodeValue xs =
           _ -> varLenEncList
    in ifEncodingVersionAtLeast (natVersion @2) encListVer2 varLenEncList
 
--- | Encode a Seq. Versions variance:
---
--- * [< 1] - Variable length encoding. Also prefixes with a special 258 tag.
---
--- * [>= 2] - Variable length encoding for Sets larger than 23 elements, otherwise exact
---   length encoding
+-- | Encode a Seq. Variable length encoding for Sequences larger than 23 elements,
+--   otherwise exact length encoding
 encodeSeq :: (a -> Encoding) -> Seq.Seq a -> Encoding
-encodeSeq encodeValue f =
-  let foldableEncoding = foldMap' encodeValue f
-   in ifEncodingVersionAtLeast
-        (natVersion @2)
-        (variableListLenEncoding (Seq.length f) foldableEncoding)
-        (exactListLenEncoding (Seq.length f) foldableEncoding)
+encodeSeq encodeValue f = variableListLenEncoding (Seq.length f) (foldMap' encodeValue f)
 {-# INLINE encodeSeq #-}
 
 --------------------------------------------------------------------------------

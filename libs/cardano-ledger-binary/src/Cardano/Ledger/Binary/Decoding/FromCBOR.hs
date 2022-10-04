@@ -16,11 +16,13 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Short as SBS
 import qualified Data.ByteString.Short.Internal as SBS
 import Data.Fixed (Fixed (..), Nano, Pico)
-import Data.Int (Int8, Int16, Int32, Int64)
+import Data.IP (IPv4, IPv6)
+import Data.Int (Int16, Int32, Int64, Int8)
 import Data.List.NonEmpty (NonEmpty, nonEmpty)
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe.Strict as SMaybe
 import qualified Data.Primitive.ByteArray as Prim
+import qualified Data.Sequence as Seq
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Data.Tagged (Tagged (Tagged))
@@ -116,6 +118,12 @@ instance FromCBOR Void where
 
 instance FromCBOR Term where
   fromCBOR = decodeTerm
+
+instance FromCBOR IPv4 where
+  fromCBOR = decodeIPv4
+
+instance FromCBOR IPv6 where
+  fromCBOR = decodeIPv6
 
 --------------------------------------------------------------------------------
 -- Tagged
@@ -232,6 +240,9 @@ instance FromCBOR a => FromCBOR (SMaybe.StrictMaybe a) where
 
 instance (Ord a, FromCBOR a) => FromCBOR (SSeq.StrictSeq a) where
   fromCBOR = decodeStrictSeq fromCBOR
+
+instance (Ord a, FromCBOR a) => FromCBOR (Seq.Seq a) where
+  fromCBOR = decodeSeq fromCBOR
 
 instance (Ord a, FromCBOR a) => FromCBOR (Set.Set a) where
   fromCBOR = decodeSet fromCBOR

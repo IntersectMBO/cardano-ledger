@@ -126,6 +126,7 @@ test-suite tests
                       , formatting
                       , hedgehog
                       , hspec
+                      , iproute
                       , pretty-show
                       , QuickCheck
                       , quickcheck-instances

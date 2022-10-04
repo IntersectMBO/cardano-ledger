@@ -644,7 +644,7 @@ decodeSet :: Ord a => Decoder s a -> Decoder s (Set.Set a)
 decodeSet valueDecoder =
   ifDecoderVersionAtLeast
     (natVersion @2)
-    (Set.fromList <$> decodeList valueDecoder)
+    (Set.fromList <$> decodeCollection decodeListLenOrIndef valueDecoder)
     (decodeSetSkel Set.fromDistinctDescList valueDecoder)
 
 decodeContainerSkelWithReplicate ::
@@ -687,10 +687,10 @@ decodeVector decodeValue =
 {-# INLINE decodeVector #-}
 
 decodeSeq :: Decoder s a -> Decoder s (Seq.Seq a)
-decodeSeq decoder = Seq.fromList <$> decodeList decoder
+decodeSeq decoder = Seq.fromList <$> decodeCollection decodeListLenOrIndef decoder
 
 decodeStrictSeq :: Decoder s a -> Decoder s (SSeq.StrictSeq a)
-decodeStrictSeq decoder = SSeq.fromList <$> decodeList decoder
+decodeStrictSeq decoder = SSeq.fromList <$> decodeCollection decodeListLenOrIndef decoder
 
 decodeAccWithLen ::
   Decoder s (Maybe Int) ->
