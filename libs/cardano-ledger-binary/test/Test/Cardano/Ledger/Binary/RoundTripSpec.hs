@@ -6,12 +6,16 @@ module Test.Cardano.Ledger.Binary.RoundTripSpec (spec) where
 
 import Cardano.Ledger.Binary
 import Control.Monad (forM_)
-import Data.Fixed (Fixed(..),Nano, Pico)
+import Data.Fixed (Fixed (..), Nano, Pico)
 import Data.GenValidity
 import Data.GenValidity.Time.Clock ()
 import Data.Int
 import Data.Time.Clock
-import Data.Time.Clock (NominalDiffTime, UTCTime (..))
+  ( NominalDiffTime,
+    UTCTime (..),
+    nominalDiffTimeToSeconds,
+    secondsToNominalDiffTime,
+  )
 import Data.Word
 import Numeric.Natural
 import Test.Cardano.Ledger.Binary.RoundTrip
@@ -19,10 +23,7 @@ import Test.Hspec
 
 -- | We do not handle the full precision of NominalDiffTime.
 newtype NominalDiffTimeRounded = NominalDiffTimeRounded NominalDiffTime
-  deriving (Show, Eq, ToCBOR, Validity)
-
-instance FromCBOR NominalDiffTimeRounded where
-  fromCBOR = NominalDiffTimeRounded <$> fromCBOR
+  deriving (Show, Eq, ToCBOR, FromCBOR, Validity)
 
 instance GenValid NominalDiffTimeRounded where
   genValid = secondsToNominalDiffTimeRounded <$> genValid
@@ -59,6 +60,6 @@ spec =
         roundTripSpec @Double version cborTrip
         roundTripValidSpec @Rational version cborTrip
         roundTripValidSpec @Nano version cborTrip
-        roundTripSpec @Pico version cborTrip
+        roundTripValidSpec @Pico version cborTrip
         roundTripValidSpec @NominalDiffTimeRounded version cborTrip
         roundTripValidSpec @UTCTime version cborTrip

@@ -2,7 +2,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -220,7 +219,8 @@ import qualified Codec.CBOR.Decoding as C
     peekTokenType,
   )
 import qualified Codec.CBOR.Term as C (Term (..), decodeTerm)
-import Control.Monad.Reader
+import Control.Monad
+import Control.Monad.Trans (MonadTrans (..))
 import Control.Monad.Trans.Identity (IdentityT (runIdentityT))
 import Data.Binary.Get (Get, getWord32le, runGetOrFail)
 import qualified Data.ByteString as BS
@@ -249,23 +249,44 @@ import Prelude hiding (decodeFloat)
 -- Versioned Decoder
 --------------------------------------------------------------------------------
 
-newtype Decoder s a = Decoder (ReaderT Version (C.Decoder s) a)
-  deriving (Functor, Applicative, Monad, MonadFail, MonadReader Version)
+newtype Decoder s a = Decoder
+  { runDecoder :: Version -> C.Decoder s a
+  }
+
+instance Functor (Decoder s) where
+  fmap f (Decoder d) = Decoder (fmap f . d)
+  {-# INLINE fmap #-}
+
+instance Applicative (Decoder s) where
+  pure x = Decoder (const (pure x))
+  {-# INLINE pure #-}
+  Decoder f <*> Decoder g = Decoder $ \v -> f v <*> g v
+  {-# INLINE (<*>) #-}
+  Decoder f *> Decoder g = Decoder $ \v -> f v *> g v
+  {-# INLINE (*>) #-}
+
+instance Monad (Decoder s) where
+  Decoder f >>= g = Decoder $ \v -> do
+    x <- f v
+    runDecoder (g x) v
+  {-# INLINE (>>=) #-}
+
+instance MonadFail (Decoder s) where
+  fail msg = fromPlainDecoder $ fail msg
+  {-# INLINE fail #-}
 
 -- | Promote a regular `C.Decoder` to a versioned one. Which measn it will work for all
 -- versions.
 fromPlainDecoder :: C.Decoder s a -> Decoder s a
-fromPlainDecoder d = Decoder (ReaderT (const d))
+fromPlainDecoder d = Decoder (const d)
 
 -- | Extract the underlying `C.Decoder` by specifying the concrete version to be used.
 toPlainDecoder :: Version -> Decoder s a -> C.Decoder s a
-toPlainDecoder v (Decoder d) = runReaderT d v
+toPlainDecoder v (Decoder d) = d v
 
 -- | Use the supplied decoder as a plain decoder with current version.
 withPlainDecoder :: Decoder s a -> (C.Decoder s a -> C.Decoder s b) -> Decoder s b
-withPlainDecoder vd f = do
-  curVersion <- getDecoderVersion
-  fromPlainDecoder (f (toPlainDecoder curVersion vd))
+withPlainDecoder vd f = Decoder $ \curVersion -> f (toPlainDecoder curVersion vd)
 
 -- | Ignore the current version of the decoder and enforce the supplied one instead.
 enforceVersionDecoder :: Version -> Decoder s a -> Decoder s a
@@ -280,7 +301,7 @@ enforceVersionDecoder version = fromPlainDecoder . toPlainDecoder version
 -- >>> decodeFullDecoder 3 "Version" getDecoderVersion ""
 -- Right 3
 getDecoderVersion :: Decoder s Version
-getDecoderVersion = ask
+getDecoderVersion = Decoder pure
 
 -- | Conditionoly choose the decoder newer or older deceder, depending on the current
 -- version. Supplied version acts as a pivot.
