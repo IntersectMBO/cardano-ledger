@@ -56,7 +56,7 @@ import Data.Int (Int16, Int32, Int64, Int8)
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map as Map
 import qualified Data.Maybe.Strict as SMaybe
-import Data.Ratio (Ratio, denominator, numerator)
+import Data.Ratio (Ratio)
 import qualified Data.Sequence as Seq
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
@@ -484,7 +484,7 @@ instance ToCBOR Double where
   encodedSizeExpr _ _ = 1 + fromIntegral (sizeOf (0 :: Float))
 
 instance ToCBOR a => ToCBOR (Ratio a) where
-  toCBOR r = encodeListLen 2 <> toCBOR (numerator r) <> toCBOR (denominator r)
+  toCBOR = encodeRatio toCBOR
   encodedSizeExpr size _ = 1 + size (Proxy @a) + size (Proxy @a)
 
 instance ToCBOR Nano where

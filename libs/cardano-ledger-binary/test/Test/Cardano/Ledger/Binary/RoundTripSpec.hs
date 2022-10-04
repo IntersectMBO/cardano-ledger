@@ -1,17 +1,40 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Binary.RoundTripSpec (spec) where
 
 import Cardano.Ledger.Binary
 import Control.Monad (forM_)
+import Data.Fixed (Fixed(..),Nano, Pico)
+import Data.GenValidity
+import Data.GenValidity.Time.Clock ()
 import Data.Int
+import Data.Time.Clock
+import Data.Time.Clock (NominalDiffTime, UTCTime (..))
 import Data.Word
+import Numeric.Natural
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Hspec
-import Data.Time.Clock (NominalDiffTime, UTCTime (..))
-import Data.Fixed (Fixed (..), Nano, Pico)
 
+-- | We do not handle the full precision of NominalDiffTime.
+newtype NominalDiffTimeRounded = NominalDiffTimeRounded NominalDiffTime
+  deriving (Show, Eq, ToCBOR, Validity)
 
+instance FromCBOR NominalDiffTimeRounded where
+  fromCBOR = NominalDiffTimeRounded <$> fromCBOR
+
+instance GenValid NominalDiffTimeRounded where
+  genValid = secondsToNominalDiffTimeRounded <$> genValid
+  shrinkValid = fmap secondsToNominalDiffTimeRounded . shrinkValid . nominalDiffTimeRoundedToSeconds
+
+secondsToNominalDiffTimeRounded :: Pico -> NominalDiffTimeRounded
+secondsToNominalDiffTimeRounded (MkFixed s) =
+  NominalDiffTimeRounded $
+    secondsToNominalDiffTime $ MkFixed (1_000_000 * (s `div` 1_000_000))
+
+nominalDiffTimeRoundedToSeconds :: NominalDiffTimeRounded -> Pico
+nominalDiffTimeRoundedToSeconds (NominalDiffTimeRounded ndt) = nominalDiffTimeToSeconds ndt
 
 spec :: Spec
 spec =
@@ -20,19 +43,22 @@ spec =
       describe (show version) $ do
         roundTripSpec @() version cborTrip
         roundTripSpec @Bool version cborTrip
-        roundTripSpec @Integer version cborTrip
-        roundTripSpec @Word version cborTrip
-        roundTripSpec @Word8 version cborTrip
-        roundTripSpec @Word16 version cborTrip
-        roundTripSpec @Word32 version cborTrip
-        roundTripSpec @Word64 version cborTrip
-        roundTripSpec @Int version cborTrip
-        roundTripSpec @Int8 version cborTrip
-        roundTripSpec @Int16 version cborTrip
-        roundTripSpec @Int32 version cborTrip
-        roundTripSpec @Int64 version cborTrip
+        roundTripValidSpec @Integer version cborTrip
+        roundTripValidSpec @Natural version cborTrip
+        roundTripValidSpec @Word version cborTrip
+        roundTripValidSpec @Word8 version cborTrip
+        roundTripValidSpec @Word16 version cborTrip
+        roundTripValidSpec @Word32 version cborTrip
+        roundTripValidSpec @Word64 version cborTrip
+        roundTripValidSpec @Int version cborTrip
+        roundTripValidSpec @Int8 version cborTrip
+        roundTripValidSpec @Int16 version cborTrip
+        roundTripValidSpec @Int32 version cborTrip
+        roundTripValidSpec @Int64 version cborTrip
         roundTripSpec @Float version cborTrip
         roundTripSpec @Double version cborTrip
-        roundTripSpec @Rational version cborTrip
-        roundTripSpec @Nano version cborTrip
+        roundTripValidSpec @Rational version cborTrip
+        roundTripValidSpec @Nano version cborTrip
         roundTripSpec @Pico version cborTrip
+        roundTripValidSpec @NominalDiffTimeRounded version cborTrip
+        roundTripValidSpec @UTCTime version cborTrip

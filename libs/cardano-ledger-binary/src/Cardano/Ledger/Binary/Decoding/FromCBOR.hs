@@ -37,13 +37,10 @@ import Data.Word (Word16, Word32, Word64, Word8)
 import Numeric.Natural (Natural)
 import Prelude hiding (decodeFloat)
 
--- class ToVCBOR a where
---   toVCBOR :: KnownNat v => a -> VEncoding v
-
 class Typeable a => FromCBOR a where
   fromCBOR :: Decoder s a
 
-  label :: proxy a -> T.Text
+  label :: Proxy a -> T.Text
   label = T.pack . show . typeRep
 
 --------------------------------------------------------------------------------

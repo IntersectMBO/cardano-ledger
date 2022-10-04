@@ -89,6 +89,7 @@ library testlib
                       , bytestring
                       , base16-bytestring
                       , cardano-ledger-binary
+                      , genvalidity
                       , strict-containers
                       , tree-diff
                       , containers
@@ -120,6 +121,8 @@ test-suite tests
                       , strict-containers
                       , cborg
                       , containers
+                      , genvalidity
+                      , genvalidity-time
                       , formatting
                       , hedgehog
                       , hspec

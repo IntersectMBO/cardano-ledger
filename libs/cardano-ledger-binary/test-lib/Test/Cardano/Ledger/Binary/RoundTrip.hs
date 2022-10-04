@@ -8,6 +8,7 @@
 -- | Defines reusable abstractions for testing RoundTrip properties of CBOR instances
 module Test.Cardano.Ledger.Binary.RoundTrip
   ( roundTripSpec,
+    roundTripValidSpec,
     roundTripExpectation,
     RoundTripFailure (..),
     Trip (..),
@@ -25,6 +26,7 @@ where
 import Cardano.Ledger.Binary
 import Data.Bifunctor (first)
 import qualified Data.ByteString.Lazy as BSL
+import Data.GenValidity
 import Data.Proxy
 import qualified Data.Text as Text
 import Data.Typeable
@@ -45,6 +47,18 @@ roundTripSpec ::
   Spec
 roundTripSpec version trip =
   prop (show (typeRep $ Proxy @t)) $ roundTripExpectation version trip
+
+-- | Tests the roundtrip property using QuickCheck generators
+roundTripValidSpec ::
+  forall t.
+  (Show t, Eq t, Typeable t, GenValid t) =>
+  Version ->
+  Trip t t ->
+  Spec
+roundTripValidSpec version trip =
+  prop (show (typeRep $ Proxy @t)) $
+    forAllShrink genValid shrinkValid $ \v ->
+      roundTripExpectation version trip v
 
 roundTripExpectation ::
   (Show t, Eq t, Typeable t) =>

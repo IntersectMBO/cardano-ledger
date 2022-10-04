@@ -20,6 +20,7 @@ module Cardano.Ledger.Binary.Encoding.Encoder
     encodeNullMaybe,
     encodePair,
     encodeTuple,
+    encodeRatio,
 
     -- *** Containers
     encodeList,
@@ -94,7 +95,7 @@ import Data.Int (Int16, Int32, Int64, Int8)
 import qualified Data.Map.Strict as Map
 import Data.Monoid (Sum (..))
 import Data.Proxy (Proxy (Proxy))
-import Data.Ratio (numerator)
+import Data.Ratio (Ratio, denominator, numerator)
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 import Data.Text (Text)
@@ -253,6 +254,17 @@ encodePreEncoded e = fromPlainEncoding (C.encodePreEncoded e)
 
 encodeTerm :: C.Term -> Encoding
 encodeTerm = fromPlainEncoding . C.encodeTerm
+
+--------------------------------------------------------------------------------
+-- Custom
+--------------------------------------------------------------------------------
+
+encodeRatio :: (t -> Encoding) -> Ratio t -> Encoding
+encodeRatio encodeNumeric r =
+  ifEncodingVersionAtLeast (natVersion @2) (encodeTag 30) mempty
+    <> encodeListLen 2
+    <> encodeNumeric (numerator r)
+    <> encodeNumeric (denominator r)
 
 --------------------------------------------------------------------------------
 -- Containers
