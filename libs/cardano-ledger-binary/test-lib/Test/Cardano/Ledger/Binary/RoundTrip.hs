@@ -29,7 +29,7 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.Proxy
 import qualified Data.Text as Text
 import Data.Typeable
-import Test.Cardano.Ledger.Binary.TreeDiff (CBORBytes (..), showExpr, showHexBytesGrouped)
+import Test.Cardano.Ledger.Binary.TreeDiff (showExpr, showHexBytesGrouped)
 import Test.Cardano.Ledger.Binary.Twiddle (Twiddle (..))
 import Test.Hspec
 import Test.Hspec.QuickCheck (prop)

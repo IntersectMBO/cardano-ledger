@@ -53,7 +53,6 @@ library
   build-depends:       base >=4.11 && <5
                      , binary
                      , bytestring
-                     , cardano-crypto-class
                      , cardano-binary
                      , strict-containers
                      , cborg
@@ -89,7 +88,6 @@ library testlib
                       , bytestring
                       , base16-bytestring
                       , cardano-ledger-binary
-                      , genvalidity
                       , strict-containers
                       , tree-diff
                       , containers
