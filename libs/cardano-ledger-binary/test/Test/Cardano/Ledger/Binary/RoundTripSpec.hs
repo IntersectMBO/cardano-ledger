@@ -15,6 +15,7 @@ import qualified Data.Foldable as F
 import Data.IP (IPv4, IPv6, toIPv4w, toIPv6w)
 import Data.Int
 import qualified Data.Map.Strict as Map
+import Data.Maybe.Strict
 import qualified Data.Primitive.ByteArray as Prim (ByteArray, byteArrayFromListN)
 import qualified Data.Sequence as Seq
 import qualified Data.Sequence.Strict as SSeq
@@ -64,13 +65,6 @@ instance Arbitrary SlicedByteArray where
     ba <- Prim.byteArrayFromListN len <$> (vector len :: Gen [Word8])
     pure $ SBA ba off count
 
--- let off = 2
---     count = 6
---     slack = 0
--- let len = off + count + slack
---     ba = Prim.byteArrayFromListN len [(0 :: Word8) .. fromIntegral len - 1]
--- pure $ SBA ba off count
-
 instance Arbitrary IPv4 where
   arbitrary = toIPv4w <$> arbitrary
 
@@ -86,6 +80,10 @@ instance (VP.Prim e, Arbitrary e) => Arbitrary (VP.Vector e) where
 instance Arbitrary e => Arbitrary (SSeq.StrictSeq e) where
   arbitrary = SSeq.fromList <$> arbitrary
   shrink = fmap SSeq.fromList . shrink . F.toList
+
+instance Arbitrary e => Arbitrary (StrictMaybe e) where
+  arbitrary = maybeToStrictMaybe <$> arbitrary
+  shrink = fmap maybeToStrictMaybe . shrink . strictMaybeToMaybe
 
 instance
   (Ord k, VMap.Vector kv k, VMap.Vector vv v, Arbitrary k, Arbitrary v) =>
@@ -122,6 +120,8 @@ spec =
         roundTripSpec @UTCTime version cborTrip
         roundTripSpec @IPv4 version cborTrip
         roundTripSpec @IPv6 version cborTrip
+        roundTripSpec @(Maybe Integer) version cborTrip
+        roundTripSpec @(StrictMaybe Integer) version cborTrip
         roundTripSpec @[Integer] version cborTrip
         roundTripSpec @(V.Vector Integer) version cborTrip
         roundTripSpec @(VS.Vector Int16) version cborTrip
@@ -135,3 +135,5 @@ spec =
         roundTripSpec @Prim.ByteArray version cborTrip
         roundTripSpec @ByteArray version cborTrip
         roundTripSpec @SlicedByteArray version cborTrip
+        let maybeNullTrip = Trip (encodeNullMaybe toCBOR) (decodeNullMaybe fromCBOR)
+        roundTripSpec @(Maybe Integer) version maybeNullTrip
