@@ -172,7 +172,7 @@ instance CC.Crypto c => FromCBOR (Reward c) where
 
 sumRewards ::
   forall c pp.
-  (HasField "_protocolVersion" pp ProtVer) =>
+  (HasField "sppProtocolVersion" pp ProtVer) =>
   pp ->
   Map (Credential 'Staking c) (Set (Reward c)) ->
   Coin
@@ -183,7 +183,7 @@ sumRewards protocolVersion rs = fold $ aggregateRewards protocolVersion rs
 -- multiple sources would only receive one reward.
 filterRewards ::
   forall c pp.
-  (HasField "_protocolVersion" pp ProtVer) =>
+  (HasField "sppProtocolVersion" pp ProtVer) =>
   pp ->
   Map (Credential 'Staking c) (Set (Reward c)) ->
   ( Map (Credential 'Staking c) (Set (Reward c)),
@@ -198,7 +198,7 @@ filterRewards pp rewards =
 
 aggregateRewards ::
   forall c pp.
-  (HasField "_protocolVersion" pp ProtVer) =>
+  (HasField "sppProtocolVersion" pp ProtVer) =>
   pp ->
   Map (Credential 'Staking c) (Set (Reward c)) ->
   Map (Credential 'Staking c) Coin
@@ -267,18 +267,18 @@ instance CC.Crypto c => FromCBOR (PoolRewardInfo c) where
       )
 
 notPoolOwner ::
-  HasField "_protocolVersion" pp ProtVer =>
+  HasField "sppProtocolVersion" pp ProtVer =>
   pp ->
   PoolParams c ->
   Credential 'Staking c ->
   Bool
 notPoolOwner pp pps = \case
-  KeyHashObj hk -> hk `Set.notMember` _poolOwners pps
+  KeyHashObj hk -> hk `Set.notMember` ppPoolOwners pps
   ScriptHashObj _ -> HardForks.allowScriptStakeCredsToEarnRewards pp
 
 -- | The stake pool member reward calculation
 rewardOnePoolMember ::
-  HasField "_protocolVersion" pp ProtVer =>
+  HasField "sppProtocolVersion" pp ProtVer =>
   -- | The protocol parameters
   pp ->
   -- | The total amount of stake in the system
@@ -323,9 +323,9 @@ rewardOnePoolMember
 -- the ranking information out of the ledger code and into a separate service,
 -- and at that point we can simplify this function to not care about ranking.
 mkPoolRewardInfo ::
-  ( HasField "_d" (PParams era) UnitInterval,
-    HasField "_a0" (PParams era) NonNegativeInterval,
-    HasField "_nOpt" (PParams era) Natural
+  ( HasField "sppD" (PParams era) UnitInterval,
+    HasField "sppA0" (PParams era) NonNegativeInterval,
+    HasField "sppNOpt" (PParams era) Natural
   ) =>
   PParams era ->
   Coin ->
@@ -348,7 +348,7 @@ mkPoolRewardInfo
   stakePerPool
   (Coin totalStake)
   (Coin activeStake)
-  pool = case Map.lookup (_poolId pool) (unBlocksMade blocks) of
+  pool = case Map.lookup (ppPoolId pool) (unBlocksMade blocks) of
     -- This pool made no blocks this epoch. For the purposes of stake pool
     -- ranking only, we return the relative stake of this pool so that we
     -- can judge how likely it was that this pool made no blocks.
@@ -356,7 +356,7 @@ mkPoolRewardInfo
     -- This pool made no blocks, so we can proceed to calculate the
     -- intermediate values needed for the individual reward calculations.
     Just blocksN ->
-      let Coin pledge = _poolPledge pool
+      let Coin pledge = ppPoolPledge pool
           pledgeRelative = pledge % totalStake
           sigmaA = if activeStake == 0 then 0 else pstakeTot % activeStake
           Coin maxP =
@@ -377,17 +377,17 @@ mkPoolRewardInfo
                 poolPot = poolR,
                 poolPs = pool,
                 poolBlocks = blocksN,
-                poolLeaderReward = LeaderOnlyReward (_poolId pool) lreward
+                poolLeaderReward = LeaderOnlyReward (ppPoolId pool) lreward
               }
        in Right $! rewardInfo
     where
-      pp_d = getField @"_d" pp
-      pp_a0 = getField @"_a0" pp
-      pp_nOpt = getField @"_nOpt" pp
-      Coin pstakeTot = Map.findWithDefault mempty (_poolId pool) stakePerPool
+      pp_d = getField @"sppD" pp
+      pp_a0 = getField @"sppA0" pp
+      pp_nOpt = getField @"sppNOpt" pp
+      Coin pstakeTot = Map.findWithDefault mempty (ppPoolId pool) stakePerPool
       accOwnerStake c o = maybe c (c <>) $ do
         hk <- VMap.lookup (KeyHashObj o) delegs
-        guard (hk == _poolId pool)
+        guard (hk == ppPoolId pool)
         fromCompact <$> VMap.lookup (KeyHashObj o) (unStake stake)
-      Coin ostake = Set.foldl' accOwnerStake mempty (_poolOwners pool)
+      Coin ostake = Set.foldl' accOwnerStake mempty (ppPoolOwners pool)
       sigma = if totalStake == 0 then 0 else fromIntegral pstakeTot % fromIntegral totalStake

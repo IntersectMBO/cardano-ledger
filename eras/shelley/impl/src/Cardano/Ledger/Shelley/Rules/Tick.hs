@@ -27,7 +27,7 @@ where
 import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..), epochInfoPure)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (GenDelegs (..))
-import Cardano.Ledger.Shelley.EpochBoundary (SnapShots (_pstakeMark))
+import Cardano.Ledger.Shelley.EpochBoundary (SnapShots (ssPstakeMark))
 import Cardano.Ledger.Shelley.Era (ShelleyTICK, ShelleyTICKF)
 import Cardano.Ledger.Shelley.LedgerState
   ( DPState (..),
@@ -121,8 +121,8 @@ adoptGenesisDelegs es slot = es'
     ls = esLState es
     dp = lsDPState ls
     ds = dpsDState dp
-    fGenDelegs = _fGenDelegs ds
-    GenDelegs genDelegs = _genDelegs ds
+    fGenDelegs = dsFGenDelegs ds
+    GenDelegs genDelegs = dsGenDelegs ds
     (curr, fGenDelegs') = Map.partitionWithKey (\(FutureGenDeleg s _) _ -> s <= slot) fGenDelegs
     latestPerGKey (FutureGenDeleg s genKeyHash) delegate latest =
       case Map.lookup genKeyHash latest of
@@ -134,8 +134,8 @@ adoptGenesisDelegs es slot = es'
     genDelegs' = Map.map snd $ Map.foldrWithKey latestPerGKey Map.empty curr
     ds' =
       ds
-        { _fGenDelegs = fGenDelegs',
-          _genDelegs = GenDelegs $ eval (genDelegs ⨃ genDelegs')
+        { dsFGenDelegs = fGenDelegs',
+          dsGenDelegs = GenDelegs $ eval (genDelegs ⨃ genDelegs')
         }
     dp' = dp {dpsDState = ds'}
     ls' = ls {lsDPState = dp'}
@@ -191,7 +191,7 @@ bheadTransition = do
   -- We do NOT force it in the TICKF and TICKN rule
   -- so that it can remain a thunk when the consensus
   -- layer computes the ledger view across the epoch boundary.
-  let !_ = _pstakeMark . esSnapshots . nesEs $ nes'
+  let !_ = ssPstakeMark . esSnapshots . nesEs $ nes'
 
   ru'' <-
     trans @(EraRule "RUPD" era) $

@@ -102,7 +102,7 @@ instance
     Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era,
     State (EraRule "LEDGERS" era) ~ LedgerState era,
     Signal (EraRule "LEDGERS" era) ~ Seq (Tx era),
-    HasField "_d" (PParams era) UnitInterval
+    HasField "sppD" (PParams era) UnitInterval
   ) =>
   STS (ShelleyBBODY era)
   where
@@ -133,7 +133,7 @@ bbodyTransition ::
     Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era,
     State (EraRule "LEDGERS" era) ~ LedgerState era,
     Signal (EraRule "LEDGERS" era) ~ Seq (Tx era),
-    HasField "_d" (PParams era) UnitInterval
+    HasField "sppD" (PParams era) UnitInterval
   ) =>
   TransitionRule (ShelleyBBODY era)
 bbodyTransition =
@@ -167,7 +167,7 @@ bbodyTransition =
           ei <- asks epochInfoPure
           e <- epochInfoEpoch ei slot
           epochInfoFirst ei e
-        let isOverlay = isOverlaySlot firstSlotNo (getField @"_d" pp) slot
+        let isOverlay = isOverlaySlot firstSlotNo (getField @"sppD" pp) slot
         pure $ BbodyState ls' (incrBlocks isOverlay hkAsStakePool b)
 
 instance

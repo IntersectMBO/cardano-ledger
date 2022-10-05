@@ -51,8 +51,8 @@ import Cardano.Ledger.Shelley.LedgerState
     RewardAccounts,
     dpsDState,
     rewards,
-    _pParams,
-    _unified,
+    psPParams,
+    dsUnified,
   )
 import Cardano.Ledger.Shelley.Rules.Delpl (DelplEnv (..), ShelleyDELPL, ShelleyDelplEvent, ShelleyDelplPredFailure)
 import Cardano.Ledger.Shelley.TxBody
@@ -227,15 +227,15 @@ delegsTransition = do
               Map.empty
               wdrls_
           unified' = rewards' UM.⨃ wdrls_'
-      pure $ dpstate {dpsDState = ds {_unified = unified'}}
+      pure $ dpstate {dpsDState = ds {dsUnified = unified'}}
     gamma :|> c -> do
       dpstate' <-
         trans @(ShelleyDELEGS era) $ TRC (env, dpstate, gamma)
 
       let isDelegationRegistered = case c of
             DCertDeleg (Delegate deleg) ->
-              let stPools_ = _pParams $ dpsPState dpstate'
-                  targetPool = _delegatee deleg
+              let stPools_ = psPParams $ dpsPState dpstate'
+                  targetPool = dDelegatee deleg
                in if eval (targetPool ∈ dom stPools_)
                     then Right ()
                     else Left $ DelegateeNotRegisteredDELEG targetPool

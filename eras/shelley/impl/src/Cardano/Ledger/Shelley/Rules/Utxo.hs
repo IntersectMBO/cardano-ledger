@@ -336,14 +336,14 @@ instance
   assertions =
     [ PreCondition
         "Deposit pot must not be negative (pre)"
-        (\(TRC (_, st, _)) -> _deposited st >= mempty),
+        (\(TRC (_, st, _)) -> utxosDeposited st >= mempty),
       PostCondition
         "UTxO must increase fee pot"
-        (\(TRC (_, st, _)) st' -> _fees st' >= _fees st),
+        (\(TRC (_, st, _)) st' -> utxosFees st' >= utxosFees st),
       PostCondition
         "Deposit pot must not be negative (post)"
-        (\_ st' -> _deposited st' >= mempty),
-      let utxoBalance us = Val.inject (_deposited us <> _fees us) <> balance (_utxo us)
+        (\_ st' -> utxosDeposited st' >= mempty),
+      let utxoBalance us = Val.inject (utxosDeposited us <> utxosFees us) <> balance (utxosUtxo us)
           withdrawals :: ShelleyTxBody era -> Value era
           withdrawals txb = Val.inject $ foldl' (<>) mempty $ unWdrl $ txb ^. wdrlsTxBodyL
        in PostCondition
@@ -371,9 +371,9 @@ utxoInductive ::
     Environment (EraRule "PPUP" era) ~ PpupEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,
     Signal (EraRule "PPUP" era) ~ Maybe (Update era),
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_maxTxSize" (PParams era) Natural
+    HasField "sppKeyDeposit" (PParams era) Coin,
+    HasField "sppPoolDeposit" (PParams era) Coin,
+    HasField "sppMaxTxSize" (PParams era) Natural
   ) =>
   TransitionRule (utxo era)
 utxoInductive = do
@@ -516,8 +516,8 @@ validateWrongNetworkWithdrawal netId txb =
 validateValueNotConservedUTxO ::
   ( ShelleyEraTxBody era,
     EraUTxO era,
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin
+    HasField "sppKeyDeposit" (PParams era) Coin,
+    HasField "sppPoolDeposit" (PParams era) Coin
   ) =>
   PParams era ->
   UTxO era ->
@@ -574,7 +574,7 @@ validateOutputBootAddrAttrsTooBig outputs =
 --
 -- > txsize tx ≤ maxTxSize pp
 validateMaxTxSizeUTxO ::
-  ( HasField "_maxTxSize" (PParams era) Natural,
+  ( HasField "sppMaxTxSize" (PParams era) Natural,
     EraTx era
   ) =>
   PParams era ->
@@ -583,7 +583,7 @@ validateMaxTxSizeUTxO ::
 validateMaxTxSizeUTxO pp tx =
   failureUnless (txSize <= maxTxSize) $ MaxTxSizeUTxO txSize maxTxSize
   where
-    maxTxSize = toInteger (getField @"_maxTxSize" pp)
+    maxTxSize = toInteger (getField @"sppMaxTxSize" pp)
     txSize = tx ^. sizeTxF
 
 updateUTxOState ::
@@ -593,20 +593,20 @@ updateUTxOState ::
   Coin ->
   State (EraRule "PPUP" era) ->
   UTxOState era
-updateUTxOState UTxOState {_utxo, _deposited, _fees, _stakeDistro} txb depositChange ppups =
-  let UTxO utxo = _utxo
+updateUTxOState UTxOState {utxosUtxo, utxosDeposited, utxosFees, utxosStateDistro} txb depositChange ppups =
+  let UTxO utxo = utxosUtxo
       !utxoAdd = txouts txb -- These will be inserted into the UTxO
       {- utxoDel  = txins txb ◁ utxo -}
       !(utxoWithout, utxoDel) = extractKeys utxo (txb ^. inputsTxBodyL)
       {- newUTxO = (txins txb ⋪ utxo) ∪ outs txb -}
       newUTxO = utxoWithout `Map.union` unUTxO utxoAdd
-      newIncStakeDistro = updateStakeDistribution _stakeDistro (UTxO utxoDel) utxoAdd
+      newIncStakeDistro = updateStakeDistribution utxosStateDistro (UTxO utxoDel) utxoAdd
    in UTxOState
-        { _utxo = UTxO newUTxO,
-          _deposited = _deposited <> depositChange,
-          _fees = _fees <> txb ^. feeTxBodyL,
-          _ppups = ppups,
-          _stakeDistro = newIncStakeDistro
+        { utxosUtxo = UTxO newUTxO,
+          utxosDeposited = utxosDeposited <> depositChange,
+          utxosFees = utxosFees <> txb ^. feeTxBodyL,
+          utxosPpups = ppups,
+          utxosStateDistro = newIncStakeDistro
         }
 
 instance

@@ -44,9 +44,9 @@ import Cardano.Ledger.Shelley.LedgerState
     availableAfterMIR,
     delegations,
     rewards,
-    _fGenDelegs,
-    _genDelegs,
-    _irwd,
+    dsFGenDelegs,
+    dsGenDelegs,
+    dsIrwd,
   )
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
@@ -139,7 +139,7 @@ newtype ShelleyDelegEvent era = NewEpoch EpochNo
 
 instance
   ( Typeable era,
-    HasField "_protocolVersion" (PParams era) ProtVer
+    HasField "sppProtocolVersion" (PParams era) ProtVer
   ) =>
   STS (ShelleyDELEG era)
   where
@@ -260,7 +260,7 @@ instance
 
 delegationTransition ::
   ( Typeable era,
-    HasField "_protocolVersion" (PParams era) ProtVer
+    HasField "sppProtocolVersion" (PParams era) ProtVer
   ) =>
   TransitionRule (ShelleyDELEG era)
 delegationTransition = do
@@ -268,31 +268,31 @@ delegationTransition = do
   case c of
     DCertDeleg (RegKey hk) -> do
       eval (hk ∉ dom (rewards ds)) ?! StakeKeyAlreadyRegisteredDELEG hk
-      let u1 = _unified ds
+      let u1 = dsUnified ds
           u2 = Rewards u1 UM.∪ (hk, mempty)
           u3 = Ptrs u2 UM.∪ (ptr, hk)
-      pure ds {_unified = u3}
+      pure ds {dsUnified = u3}
     DCertDeleg (DeRegKey hk) -> do
       -- note that pattern match is used instead of cwitness, as in the spec
       eval (hk ∈ dom (rewards ds)) ?! StakeKeyNotRegisteredDELEG hk
       let rewardCoin = UM.lookup hk (rewards ds)
       rewardCoin == Just mempty ?! StakeKeyNonZeroAccountBalanceDELEG rewardCoin
 
-      let u0 = _unified ds
+      let u0 = dsUnified ds
           u1 = Set.singleton hk UM.⋪ Rewards u0
           u2 = Set.singleton hk UM.⋪ Delegations u1
           u3 = Ptrs u2 UM.⋫ Set.singleton hk
-      pure ds {_unified = u3}
+      pure ds {dsUnified = u3}
     DCertDeleg (Delegate (Delegation hk dpool)) -> do
       -- note that pattern match is used instead of cwitness and dpool, as in the spec
       eval (hk ∈ dom (rewards ds)) ?! StakeDelegationImpossibleDELEG hk
 
-      pure (ds {_unified = delegations ds UM.⨃ Map.singleton hk dpool})
+      pure (ds {dsUnified = delegations ds UM.⨃ Map.singleton hk dpool})
     DCertGenesis (GenesisDelegCert gkh vkh vrf) -> do
       sp <- liftSTS $ asks stabilityWindow
       -- note that pattern match is used instead of genesisDeleg, as in the spec
       let s' = slot +* Duration sp
-          GenDelegs genDelegs = _genDelegs ds
+          GenDelegs genDelegs = dsGenDelegs ds
 
       -- gkh ∈ dom genDelegs ?! GenesisKeyNotInMappingDELEG gkh
       isJust (Map.lookup gkh genDelegs) ?! GenesisKeyNotInMappingDELEG gkh
@@ -302,7 +302,7 @@ delegationTransition = do
               Map.filterWithKey (\g _ -> g /= gkh) genDelegs
           fod =
             range $
-              Map.filterWithKey (\(FutureGenDeleg _ g) _ -> g /= gkh) (_fGenDelegs ds)
+              Map.filterWithKey (\(FutureGenDeleg _ g) _ -> g /= gkh) (dsFGenDelegs ds)
           currentOtherColdKeyHashes = Set.map genDelegKeyHash cod
           currentOtherVrfKeyHashes = Set.map genDelegVrfHash cod
           futureOtherColdKeyHashes = Set.map genDelegKeyHash fod
@@ -315,8 +315,8 @@ delegationTransition = do
 
       pure $
         ds
-          { _fGenDelegs =
-              eval (_fGenDelegs ds ⨃ singleton (FutureGenDeleg s' gkh) (GenDelegPair vkh vrf))
+          { dsFGenDelegs =
+              eval (dsFGenDelegs ds ⨃ singleton (FutureGenDeleg s' gkh) (GenDelegPair vkh vrf))
           }
     DCertMir (MIRCert targetPot (StakeAddressesMIR credCoinMap)) -> do
       if HardForks.allowMIRTransfer pp
@@ -333,8 +333,8 @@ delegationTransition = do
 
           let (potAmount, delta, instantaneousRewards) =
                 case targetPot of
-                  ReservesMIR -> (_reserves acnt, deltaReserves $ _irwd ds, iRReserves $ _irwd ds)
-                  TreasuryMIR -> (_treasury acnt, deltaTreasury $ _irwd ds, iRTreasury $ _irwd ds)
+                  ReservesMIR -> (asReserves acnt, deltaReserves $ dsIrwd ds, iRReserves $ dsIrwd ds)
+                  TreasuryMIR -> (asTreasury acnt, deltaTreasury $ dsIrwd ds, iRTreasury $ dsIrwd ds)
               credCoinMap' = Map.map (\(DeltaCoin x) -> Coin x) credCoinMap
               combinedMap = Map.unionWith (<>) credCoinMap' instantaneousRewards
               requiredForRewards = fold combinedMap
@@ -347,8 +347,8 @@ delegationTransition = do
 
           pure $
             case targetPot of
-              ReservesMIR -> ds {_irwd = (_irwd ds) {iRReserves = combinedMap}}
-              TreasuryMIR -> ds {_irwd = (_irwd ds) {iRTreasury = combinedMap}}
+              ReservesMIR -> ds {dsIrwd = (dsIrwd ds) {iRReserves = combinedMap}}
+              TreasuryMIR -> ds {dsIrwd = (dsIrwd ds) {iRTreasury = combinedMap}}
         else do
           sp <- liftSTS $ asks stabilityWindow
           ei <- liftSTS $ asks epochInfoPure
@@ -364,8 +364,8 @@ delegationTransition = do
 
           let (potAmount, instantaneousRewards) =
                 case targetPot of
-                  ReservesMIR -> (_reserves acnt, iRReserves $ _irwd ds)
-                  TreasuryMIR -> (_treasury acnt, iRTreasury $ _irwd ds)
+                  ReservesMIR -> (asReserves acnt, iRReserves $ dsIrwd ds)
+                  TreasuryMIR -> (asTreasury acnt, iRTreasury $ dsIrwd ds)
           let credCoinMap' = Map.map (\(DeltaCoin x) -> Coin x) credCoinMap
               combinedMap = Map.union credCoinMap' instantaneousRewards
               requiredForRewards = fold combinedMap
@@ -373,8 +373,8 @@ delegationTransition = do
             ?! InsufficientForInstantaneousRewardsDELEG targetPot requiredForRewards potAmount
 
           case targetPot of
-            ReservesMIR -> pure $ ds {_irwd = (_irwd ds) {iRReserves = combinedMap}}
-            TreasuryMIR -> pure $ ds {_irwd = (_irwd ds) {iRTreasury = combinedMap}}
+            ReservesMIR -> pure $ ds {dsIrwd = (dsIrwd ds) {iRReserves = combinedMap}}
+            TreasuryMIR -> pure $ ds {dsIrwd = (dsIrwd ds) {iRTreasury = combinedMap}}
     DCertMir (MIRCert targetPot (SendToOppositePotMIR coin)) ->
       if HardForks.allowMIRTransfer pp
         then do
@@ -388,20 +388,20 @@ delegationTransition = do
           slot < tooLate
             ?! MIRCertificateTooLateinEpochDELEG slot tooLate
 
-          let available = availableAfterMIR targetPot acnt (_irwd ds)
+          let available = availableAfterMIR targetPot acnt (dsIrwd ds)
           coin >= mempty
             ?! MIRNegativeTransfer targetPot coin
           coin <= available
             ?! InsufficientForTransferDELEG targetPot coin available
 
-          let ir = _irwd ds
+          let ir = dsIrwd ds
               dr = deltaReserves ir
               dt = deltaTreasury ir
           case targetPot of
             ReservesMIR ->
               pure $
                 ds
-                  { _irwd =
+                  { dsIrwd =
                       ir
                         { deltaReserves = dr <> invert (toDeltaCoin coin),
                           deltaTreasury = dt <> toDeltaCoin coin
@@ -410,7 +410,7 @@ delegationTransition = do
             TreasuryMIR ->
               pure $
                 ds
-                  { _irwd =
+                  { dsIrwd =
                       ir
                         { deltaReserves = dr <> toDeltaCoin coin,
                           deltaTreasury = dt <> invert (toDeltaCoin coin)

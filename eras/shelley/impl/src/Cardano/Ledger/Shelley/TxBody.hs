@@ -138,14 +138,14 @@ import NoThunks.Class (NoThunks (..))
 -- The underlying type for TxBody
 
 data TxBodyRaw era = TxBodyRaw
-  { _inputsX :: !(Set (TxIn (EraCrypto era))),
-    _outputsX :: !(StrictSeq (ShelleyTxOut era)),
-    _certsX :: !(StrictSeq (DCert (EraCrypto era))),
-    _wdrlsX :: !(Wdrl (EraCrypto era)),
-    _txfeeX :: !Coin,
-    _ttlX :: !SlotNo,
-    _txUpdateX :: !(StrictMaybe (Update era)),
-    _mdHashX :: !(StrictMaybe (AuxiliaryDataHash (EraCrypto era)))
+  { txbrInputsX :: !(Set (TxIn (EraCrypto era))),
+    txbrOutputsX :: !(StrictSeq (ShelleyTxOut era)),
+    txbrCertsX :: !(StrictSeq (DCert (EraCrypto era))),
+    txbrWdrlsX :: !(Wdrl (EraCrypto era)),
+    txbrTxfeeX :: !Coin,
+    txbrTtlX :: !SlotNo,
+    txbrTxUpdateX :: !(StrictMaybe (Update era)),
+    txbrMdHashX :: !(StrictMaybe (AuxiliaryDataHash (EraCrypto era)))
   }
   deriving (Generic, Typeable)
 
@@ -207,14 +207,14 @@ boxBody ::
   ) =>
   Word ->
   Field (TxBodyRaw era)
-boxBody 0 = field (\x tx -> tx {_inputsX = x}) (D (decodeSet fromCBOR))
-boxBody 1 = field (\x tx -> tx {_outputsX = x}) (D (decodeStrictSeq fromCBOR))
-boxBody 4 = field (\x tx -> tx {_certsX = x}) (D (decodeStrictSeq fromCBOR))
-boxBody 5 = field (\x tx -> tx {_wdrlsX = x}) From
-boxBody 2 = field (\x tx -> tx {_txfeeX = x}) From
-boxBody 3 = field (\x tx -> tx {_ttlX = x}) From
-boxBody 6 = ofield (\x tx -> tx {_txUpdateX = x}) From
-boxBody 7 = ofield (\x tx -> tx {_mdHashX = x}) From
+boxBody 0 = field (\x tx -> tx {txbrInputsX = x}) (D (decodeSet fromCBOR))
+boxBody 1 = field (\x tx -> tx {txbrOutputsX = x}) (D (decodeStrictSeq fromCBOR))
+boxBody 4 = field (\x tx -> tx {txbrCertsX = x}) (D (decodeStrictSeq fromCBOR))
+boxBody 5 = field (\x tx -> tx {txbrWdrlsX = x}) From
+boxBody 2 = field (\x tx -> tx {txbrTxfeeX = x}) From
+boxBody 3 = field (\x tx -> tx {txbrTtlX = x}) From
+boxBody 6 = ofield (\x tx -> tx {txbrTxUpdateX = x}) From
+boxBody 7 = ofield (\x tx -> tx {txbrMdHashX = x}) From
 boxBody n = invalidField n
 
 -- | Tells how to serialise each field, and what tag to label it with in the
@@ -240,14 +240,14 @@ txSparse (TxBodyRaw input output cert wdrl fee ttl update hash) =
 baseTxBodyRaw :: TxBodyRaw era
 baseTxBodyRaw =
   TxBodyRaw
-    { _inputsX = Set.empty,
-      _outputsX = StrictSeq.empty,
-      _txfeeX = Coin 0,
-      _ttlX = SlotNo 0,
-      _certsX = StrictSeq.empty,
-      _wdrlsX = Wdrl Map.empty,
-      _txUpdateX = SNothing,
-      _mdHashX = SNothing
+    { txbrInputsX = Set.empty,
+      txbrOutputsX = StrictSeq.empty,
+      txbrTxfeeX = Coin 0,
+      txbrTtlX = SlotNo 0,
+      txbrCertsX = StrictSeq.empty,
+      txbrWdrlsX = Wdrl Map.empty,
+      txbrTxUpdateX = SNothing,
+      txbrMdHashX = SNothing
     }
 
 instance
@@ -279,25 +279,25 @@ instance CC.Crypto c => EraTxBody (ShelleyEra c) where
 
   inputsTxBodyL =
     lens
-      (\(TxBodyConstr (Memo m _)) -> _inputsX m)
+      (\(TxBodyConstr (Memo m _)) -> txbrInputsX m)
       (\txBody inputs -> txBody {_inputs = inputs})
   {-# INLINEABLE inputsTxBodyL #-}
 
   outputsTxBodyL =
     lens
-      (\(TxBodyConstr (Memo m _)) -> _outputsX m)
+      (\(TxBodyConstr (Memo m _)) -> txbrOutputsX m)
       (\txBody outputs -> txBody {_outputs = outputs})
   {-# INLINEABLE outputsTxBodyL #-}
 
   feeTxBodyL =
     lens
-      (\(TxBodyConstr (Memo m _)) -> _txfeeX m)
+      (\(TxBodyConstr (Memo m _)) -> txbrTxfeeX m)
       (\txBody fee -> txBody {_txfee = fee})
   {-# INLINEABLE feeTxBodyL #-}
 
   auxDataHashTxBodyL =
     lens
-      (\(TxBodyConstr (Memo m _)) -> _mdHashX m)
+      (\(TxBodyConstr (Memo m _)) -> txbrMdHashX m)
       (\txBody auxDataHash -> txBody {_mdHash = auxDataHash})
   {-# INLINEABLE auxDataHashTxBodyL #-}
 
@@ -306,25 +306,25 @@ instance CC.Crypto c => ShelleyEraTxBody (ShelleyEra c) where
 
   wdrlsTxBodyL =
     lens
-      (\(TxBodyConstr (Memo m _)) -> _wdrlsX m)
+      (\(TxBodyConstr (Memo m _)) -> txbrWdrlsX m)
       (\txBody wdrls -> txBody {_wdrls = wdrls})
   {-# INLINEABLE wdrlsTxBodyL #-}
 
   ttlTxBodyL =
     lens
-      (\(TxBodyConstr (Memo m _)) -> _ttlX m)
+      (\(TxBodyConstr (Memo m _)) -> txbrTtlX m)
       (\txBody ttl -> txBody {_ttl = ttl})
   {-# INLINEABLE ttlTxBodyL #-}
 
   updateTxBodyL =
     lens
-      (\(TxBodyConstr (Memo m _)) -> _txUpdateX m)
+      (\(TxBodyConstr (Memo m _)) -> txbrTxUpdateX m)
       (\txBody update -> txBody {_txUpdate = update})
   {-# INLINEABLE updateTxBodyL #-}
 
   certsTxBodyL =
     lens
-      (\(TxBodyConstr (Memo m _)) -> _certsX m)
+      (\(TxBodyConstr (Memo m _)) -> txbrCertsX m)
       (\txBody certs -> txBody {_certs = certs})
   {-# INLINEABLE certsTxBodyL #-}
 
@@ -355,14 +355,14 @@ pattern ShelleyTxBody {_inputs, _outputs, _certs, _wdrls, _txfee, _ttl, _txUpdat
   TxBodyConstr
     ( Memo
         TxBodyRaw
-          { _inputsX = _inputs,
-            _outputsX = _outputs,
-            _certsX = _certs,
-            _wdrlsX = _wdrls,
-            _txfeeX = _txfee,
-            _ttlX = _ttl,
-            _txUpdateX = _txUpdate,
-            _mdHashX = _mdHash
+          { txbrInputsX = _inputs,
+            txbrOutputsX = _outputs,
+            txbrCertsX = _certs,
+            txbrWdrlsX = _wdrls,
+            txbrTxfeeX = _txfee,
+            txbrTtlX = _ttl,
+            txbrTxUpdateX = _txUpdate,
+            txbrMdHashX = _mdHash
           }
         _
       )

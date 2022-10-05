@@ -560,15 +560,15 @@ newSnapshot snap fee cs = cs {chainNes = nes'}
     nes = chainNes cs
     es = nesEs nes
     SnapShots
-      { _pstakeMark = ssMark,
-        _pstakeSet = ssSet
+      { ssPstakeMark = ssMark,
+        ssPstakeSet = ssSet
       } = esSnapshots es
     snaps =
       SnapShots
-        { _pstakeMark = snap,
-          _pstakeSet = ssMark,
-          _pstakeGo = ssSet,
-          _feeSS = fee
+        { ssPstakeMark = snap,
+          ssPstakeSet = ssMark,
+          ssPstakeGo = ssSet,
+          feeSS = fee
         }
     es' = es {esSnapshots = snaps}
     nes' = nes {nesEs = es'}

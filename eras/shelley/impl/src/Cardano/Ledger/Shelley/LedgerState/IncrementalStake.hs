@@ -113,7 +113,7 @@ incrementalAggregateUtxoCoinByCredential mode (UTxO u) initial =
             _other -> ans
 
 filterAllRewards ::
-  ( HasField "_protocolVersion" (PParams era) ProtVer
+  ( HasField "sppProtocolVersion" (PParams era) ProtVer
   ) =>
   Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))) ->
   EpochState era ->
@@ -156,13 +156,13 @@ aggregateActiveStake =
 
 -- ================================================
 
--- | A valid (or self-consistent) UTxOState{_utxo, _deposited, _fees, _ppups, _stakeDistro}
---   maintains an invariant between the _utxo and _stakeDistro fields. the _stakeDistro field is
+-- | A valid (or self-consistent) UTxOState{utxosUtxo, utxosDeposited, utxosFees, utxosPpups, utxosStateDistro}
+--   maintains an invariant between the utxosUtxo and utxosStateDistro fields. the utxosStateDistro field is
 --   the aggregation of Coin over the StakeReferences in the UTxO. It can be computed by a pure
---   function from the _utxo field. In some situations, mostly unit or example tests, or when
---   initializing a small UTxO, we want to create a UTxOState that computes the _stakeDistro from
---   the _utxo. This is aways safe to do, but if the _utxo field is big, this can be very expensive,
---   which defeats the purpose of memoizing the _stakeDistro field. So use of this function should be
+--   function from the utxosUtxo field. In some situations, mostly unit or example tests, or when
+--   initializing a small UTxO, we want to create a UTxOState that computes the utxosStateDistro from
+--   the utxosUtxo. This is aways safe to do, but if the utxosUtxo field is big, this can be very expensive,
+--   which defeats the purpose of memoizing the utxosStateDistro field. So use of this function should be
 --   restricted to tests and initializations, where the invariant should be maintained.
 --
 --   TO IncrementalStake
@@ -187,7 +187,7 @@ smartUTxOState utxo c1 c2 st =
 --
 -- TO IncrementalStake
 applyRUpd ::
-  ( HasField "_protocolVersion" (PParams era) ProtVer
+  ( HasField "sppProtocolVersion" (PParams era) ProtVer
   ) =>
   RewardUpdate (EraCrypto era) ->
   EpochState era ->
@@ -198,7 +198,7 @@ applyRUpd ru es =
 
 -- TO IncrementalStake
 applyRUpd' ::
-  ( HasField "_protocolVersion" (PParams era) ProtVer
+  ( HasField "sppProtocolVersion" (PParams era) ProtVer
   ) =>
   RewardUpdate (EraCrypto era) ->
   EpochState era ->
@@ -220,18 +220,18 @@ applyRUpd'
       registeredAggregated = aggregateRewards pp registered
       as' =
         as
-          { _treasury = addDeltaCoin (_treasury as) (deltaT ru) <> totalUnregistered,
-            _reserves = addDeltaCoin (_reserves as) (deltaR ru)
+          { asTreasury = addDeltaCoin (asTreasury as) (deltaT ru) <> totalUnregistered,
+            asReserves = addDeltaCoin (asReserves as) (deltaR ru)
           }
       ls' =
         ls
           { lsUTxOState =
-              utxoState_ {_fees = _fees utxoState_ `addDeltaCoin` deltaF ru},
+              utxoState_ {utxosFees = utxosFees utxoState_ `addDeltaCoin` deltaF ru},
             lsDPState =
               delegState
                 { dpsDState =
                     dState
-                      { _unified = rewards dState UM.∪+ registeredAggregated
+                      { dsUnified = rewards dState UM.∪+ registeredAggregated
                       }
                 }
           }
@@ -276,7 +276,7 @@ incrementalStakeDistr incstake ds ps =
     delegs_
     (VMap.fromMap poolParams)
   where
-    UnifiedMap tripmap ptrmap = _unified ds
+    UnifiedMap tripmap ptrmap = dsUnified ds
     PState poolParams _ _ = ps
     delegs_ = UM.viewToVMap (delegations ds)
     -- A credential is active, only if it is being delegated

@@ -222,7 +222,7 @@ registerGenesisStaking
           { esLState = newLedgerState,
             esSnapshots =
               (esSnapshots oldEpochState)
-                { _pstakeMark = initSnapShot
+                { ssPstakeMark = initSnapShot
                 }
           }
       newLedgerState =
@@ -235,7 +235,7 @@ registerGenesisStaking
             dpsPState = newPState
           }
       -- New delegation state. Since we're using base addresses, we only care
-      -- about updating the '_delegations' field.
+      -- about updating the 'ssDelegations' field.
       --
       -- See STS DELEG for details
       newDState :: DState (EraCrypto era)

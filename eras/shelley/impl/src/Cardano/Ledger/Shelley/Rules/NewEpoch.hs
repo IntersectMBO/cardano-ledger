@@ -41,7 +41,7 @@ import Cardano.Ledger.Shelley.Rewards (Reward, sumRewards)
 import Cardano.Ledger.Shelley.Rules.Epoch
 import Cardano.Ledger.Shelley.Rules.Mir (ShelleyMIR, ShelleyMirEvent, ShelleyMirPredFailure)
 import Cardano.Ledger.Shelley.Rules.Rupd (RupdEvent (..))
-import Cardano.Ledger.Shelley.TxBody (PoolParams (_poolVrf))
+import Cardano.Ledger.Shelley.TxBody (PoolParams (ppPoolVrf))
 import Cardano.Ledger.Slot (EpochNo (EpochNo))
 import qualified Cardano.Ledger.Val as Val
 import Control.State.Transition
@@ -102,7 +102,7 @@ instance
     State (EraRule "EPOCH" era) ~ EpochState era,
     Signal (EraRule "EPOCH" era) ~ EpochNo,
     Default (EpochState era),
-    HasField "_protocolVersion" (PParams era) ProtVer,
+    HasField "sppProtocolVersion" (PParams era) ProtVer,
     Default (State (EraRule "PPUP" era)),
     Default (PParams era),
     Default (StashedAVVMAddresses era)
@@ -145,7 +145,7 @@ newEpochTransition ::
     Environment (EraRule "EPOCH" era) ~ (),
     State (EraRule "EPOCH" era) ~ EpochState era,
     Signal (EraRule "EPOCH" era) ~ EpochNo,
-    HasField "_protocolVersion" (PParams era) ProtVer,
+    HasField "sppProtocolVersion" (PParams era) ProtVer,
     Default (State (EraRule "PPUP" era)),
     Default (PParams era),
     Default (StashedAVVMAddresses era),
@@ -183,7 +183,7 @@ newEpochTransition = do
       let adaPots = totalAdaPotsES es'''
       tellEvent $ TotalAdaPotsEvent adaPots
       let ss = esSnapshots es'''
-          pd' = calculatePoolDistr (_pstakeSet ss)
+          pd' = calculatePoolDistr (ssPstakeSet ss)
       pure $
         src
           { nesEL = e,
@@ -222,7 +222,7 @@ calculatePoolDistr' includeHash (SnapShot stake delegs poolParams) =
         Map.intersectionWith
           IndividualPoolStake
           sd
-          (toMap (VMap.map _poolVrf poolParams))
+          (toMap (VMap.map ppPoolVrf poolParams))
 
 instance
   ( STS (ShelleyEPOCH era),

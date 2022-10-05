@@ -67,9 +67,9 @@ import Lens.Micro.Extras (view)
 -- transfers are accounted for.
 availableAfterMIR :: MIRPot -> AccountState -> InstantaneousRewards c -> Coin
 availableAfterMIR ReservesMIR as ir =
-  _reserves as `addDeltaCoin` deltaReserves ir <-> fold (iRReserves ir)
+  asReserves as `addDeltaCoin` deltaReserves ir <-> fold (iRReserves ir)
 availableAfterMIR TreasuryMIR as ir =
-  _treasury as `addDeltaCoin` deltaTreasury ir <-> fold (iRTreasury ir)
+  asTreasury as `addDeltaCoin` deltaTreasury ir <-> fold (iRTreasury ir)
 
 -- ========================
 -- Virtual selectors, which get the appropriate view from a DState from the embedded UnifiedMap
@@ -101,14 +101,14 @@ genesisState genDelegs0 utxo0 =
     )
     (DPState dState def)
   where
-    dState = def {_genDelegs = GenDelegs genDelegs0}
+    dState = def {dsGenDelegs = GenDelegs genDelegs0}
 
 -- Functions for stake delegation model
 
 -- | Calculate the change to the deposit pool for a given transaction.
 depositPoolChange ::
-  ( HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin,
+  ( HasField "sppKeyDeposit" (PParams era) Coin,
+    HasField "sppPoolDeposit" (PParams era) Coin,
     ShelleyEraTxBody era
   ) =>
   LedgerState era ->
@@ -121,8 +121,8 @@ depositPoolChange ls pp txBody = (currentPool <+> txDeposits) <-> txRefunds
     -- it could be that txDeposits < txRefunds. We keep the parenthesis above
     -- to emphasize this point.
 
-    currentPool = (_deposited . lsUTxOState) ls
-    pools = _pParams . dpsPState . lsDPState $ ls
+    currentPool = (utxosDeposited . lsUTxOState) ls
+    pools = psPParams . dpsPState . lsDPState $ ls
     txDeposits =
       totalDeposits pp (`Map.notMember` pools) (toList $ txBody ^. certsTxBodyL)
     txRefunds = keyRefunds pp txBody
@@ -175,14 +175,14 @@ returnRedeemAddrsToReserves es = es {esAccountState = acnt', esLState = ls'}
   where
     ls = esLState es
     us = lsUTxOState ls
-    UTxO utxo = _utxo us
+    UTxO utxo = utxosUtxo us
     (redeemers, nonredeemers) =
       Map.partition (maybe False isBootstrapRedeemer . view bootAddrTxOutF) utxo
     acnt = esAccountState es
     utxoR = UTxO redeemers :: UTxO era
     acnt' =
       acnt
-        { _reserves = _reserves acnt <+> coinBalance utxoR
+        { asReserves = asReserves acnt <+> coinBalance utxoR
         }
-    us' = us {_utxo = UTxO nonredeemers :: UTxO era}
+    us' = us {utxosUtxo = UTxO nonredeemers :: UTxO era}
     ls' = ls {lsUTxOState = us'}

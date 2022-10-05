@@ -108,7 +108,7 @@ translateToShelleyLedgerState genesisShelley epochNo cvs =
       -- to do a linear scan of the UTxO, and stash them away for use at the
       -- Shelley/Allegra boundary.
       stashedAVVMAddresses =
-        let UTxO utxo = _utxo . lsUTxOState . esLState $ epochState
+        let UTxO utxo = utxosUtxo . lsUTxOState . esLState $ epochState
             redeemers =
               Map.filter (maybe False isBootstrapRedeemer . view bootAddrTxOutF) utxo
          in UTxO redeemers
@@ -156,15 +156,15 @@ translateToShelleyLedgerState genesisShelley epochNo cvs =
       LedgerState
         { lsUTxOState =
             UTxOState
-              { _utxo = utxoShelley,
-                _deposited = Coin 0,
-                _fees = Coin 0,
-                _ppups = def,
-                _stakeDistro = IStake mempty Map.empty
+              { utxosUtxo = utxoShelley,
+                utxosDeposited = Coin 0,
+                utxosFees = Coin 0,
+                utxosPpups = def,
+                utxosStateDistro = IStake mempty Map.empty
               },
           lsDPState =
             DPState
-              { dpsDState = def {_genDelegs = genDelegs},
+              { dpsDState = def {dsGenDelegs = genDelegs},
                 dpsPState = def
               }
         }

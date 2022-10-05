@@ -89,12 +89,12 @@ instance NoThunks (ShelleyRupdPredFailure era)
 
 instance
   ( Era era,
-    HasField "_a0" (PParams era) NonNegativeInterval,
-    HasField "_d" (PParams era) UnitInterval,
-    HasField "_nOpt" (PParams era) Natural,
-    HasField "_protocolVersion" (PParams era) ProtVer,
-    HasField "_rho" (PParams era) UnitInterval,
-    HasField "_tau" (PParams era) UnitInterval
+    HasField "sppA0" (PParams era) NonNegativeInterval,
+    HasField "sppD" (PParams era) UnitInterval,
+    HasField "sppNOpt" (PParams era) Natural,
+    HasField "sppProtocolVersion" (PParams era) ProtVer,
+    HasField "sppRho" (PParams era) UnitInterval,
+    HasField "sppTao" (PParams era) UnitInterval
   ) =>
   STS (ShelleyRUPD era)
   where
@@ -129,12 +129,12 @@ determineRewardTiming currentSlot startAftterSlot endSlot
 
 rupdTransition ::
   ( Era era,
-    HasField "_a0" (PParams era) NonNegativeInterval,
-    HasField "_d" (PParams era) UnitInterval,
-    HasField "_nOpt" (PParams era) Natural,
-    HasField "_protocolVersion" (PParams era) ProtVer,
-    HasField "_rho" (PParams era) UnitInterval,
-    HasField "_tau" (PParams era) UnitInterval
+    HasField "sppA0" (PParams era) NonNegativeInterval,
+    HasField "sppD" (PParams era) UnitInterval,
+    HasField "sppNOpt" (PParams era) Natural,
+    HasField "sppProtocolVersion" (PParams era) ProtVer,
+    HasField "sppRho" (PParams era) UnitInterval,
+    HasField "sppTao" (PParams era) UnitInterval
   ) =>
   TransitionRule (ShelleyRUPD era)
 rupdTransition = do

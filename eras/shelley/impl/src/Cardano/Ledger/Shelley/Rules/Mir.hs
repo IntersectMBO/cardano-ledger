@@ -36,8 +36,8 @@ import Cardano.Ledger.Shelley.LedgerState
     esSnapshots,
     lsDPState,
     rewards,
-    _irwd,
-    _unified,
+    dsIrwd,
+    dsUnified,
     pattern EpochState,
   )
 import Cardano.Ledger.Val ((<->))
@@ -107,24 +107,24 @@ mirTransition = do
   let dpState = lsDPState ls
       ds = dpsDState dpState
       rewards' = rewards ds
-      reserves = _reserves acnt
-      treasury = _treasury acnt
-      irwdR = eval $ dom rewards' ◁ iRReserves (_irwd ds) :: RewardAccounts (EraCrypto era)
-      irwdT = eval $ dom rewards' ◁ iRTreasury (_irwd ds) :: RewardAccounts (EraCrypto era)
+      reserves = asReserves acnt
+      treasury = asTreasury acnt
+      irwdR = eval $ dom rewards' ◁ iRReserves (dsIrwd ds) :: RewardAccounts (EraCrypto era)
+      irwdT = eval $ dom rewards' ◁ iRTreasury (dsIrwd ds) :: RewardAccounts (EraCrypto era)
       totR = fold irwdR
       totT = fold irwdT
-      availableReserves = reserves `addDeltaCoin` (deltaReserves . _irwd $ ds)
-      availableTreasury = treasury `addDeltaCoin` (deltaTreasury . _irwd $ ds)
+      availableReserves = reserves `addDeltaCoin` (deltaReserves . dsIrwd $ ds)
+      availableTreasury = treasury `addDeltaCoin` (deltaTreasury . dsIrwd $ ds)
       update = eval (irwdR ∪+ irwdT) :: RewardAccounts (EraCrypto era)
 
   if totR <= availableReserves && totT <= availableTreasury
     then do
-      tellEvent $ MirTransfer ((_irwd ds) {iRReserves = irwdR, iRTreasury = irwdT})
+      tellEvent $ MirTransfer ((dsIrwd ds) {iRReserves = irwdR, iRTreasury = irwdT})
       pure $
         EpochState
           acnt
-            { _reserves = availableReserves <-> totR,
-              _treasury = availableTreasury <-> totT
+            { asReserves = availableReserves <-> totR,
+              asTreasury = availableTreasury <-> totT
             }
           ss
           ls
@@ -132,8 +132,8 @@ mirTransition = do
                 dpState
                   { dpsDState =
                       ds
-                        { _unified = rewards' UM.∪+ update,
-                          _irwd = emptyInstantaneousRewards
+                        { dsUnified = rewards' UM.∪+ update,
+                          dsIrwd = emptyInstantaneousRewards
                         }
                   }
             }
@@ -143,7 +143,7 @@ mirTransition = do
     else do
       tellEvent $
         NoMirTransfer
-          ((_irwd ds) {iRReserves = irwdR, iRTreasury = irwdT})
+          ((dsIrwd ds) {iRReserves = irwdR, iRTreasury = irwdT})
           availableReserves
           availableTreasury
       pure $
@@ -154,7 +154,7 @@ mirTransition = do
             { lsDPState =
                 dpState
                   { dpsDState =
-                      ds {_irwd = emptyInstantaneousRewards}
+                      ds {dsIrwd = emptyInstantaneousRewards}
                   }
             }
           pr

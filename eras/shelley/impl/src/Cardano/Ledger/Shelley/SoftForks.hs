@@ -12,13 +12,13 @@ import Cardano.Ledger.BaseTypes (ProtVer (..))
 import GHC.Records
 
 validMetadata ::
-  (HasField "_protocolVersion" pp ProtVer) =>
+  (HasField "sppProtocolVersion" pp ProtVer) =>
   pp ->
   Bool
-validMetadata pp = getField @"_protocolVersion" pp > ProtVer 2 0
+validMetadata pp = getField @"sppProtocolVersion" pp > ProtVer 2 0
 
 restrictPoolMetadataHash ::
-  (HasField "_protocolVersion" pp ProtVer) =>
+  (HasField "sppProtocolVersion" pp ProtVer) =>
   pp ->
   Bool
-restrictPoolMetadataHash pp = getField @"_protocolVersion" pp > ProtVer 4 0
+restrictPoolMetadataHash pp = getField @"sppProtocolVersion" pp > ProtVer 4 0

@@ -271,10 +271,10 @@ desirability (a0, nOpt) r pool (PerformanceEstimate p) (Coin totalStake) =
     fTilde = fTildeNumer / fTildeDenom
     fTildeNumer = p * fromRational (coinToRational r * (z0 + min s z0 * unboundRational a0))
     fTildeDenom = fromRational $ 1 + unboundRational a0
-    cost = (fromRational . coinToRational . _poolCost) pool
-    margin = (fromRational . unboundRational . _poolMargin) pool
+    cost = (fromRational . coinToRational . ppPoolCost) pool
+    margin = (fromRational . unboundRational . ppPoolMargin) pool
     tot = max 1 (fromIntegral totalStake)
-    Coin pledge = _poolPledge pool
+    Coin pledge = ppPoolPledge pool
     s = fromIntegral pledge % tot
     z0 = 1 % max 1 (fromIntegral nOpt)
 
@@ -282,7 +282,7 @@ desirability (a0, nOpt) r pool (PerformanceEstimate p) (Coin totalStake) =
 -- corresponding to section 5.6.1 of
 -- "Design Specification for Delegation and Incentives in Cardano"
 getTopRankedPools ::
-  (HasField "_a0" pp NonNegativeInterval, HasField "_nOpt" pp Natural) =>
+  (HasField "sppA0" pp NonNegativeInterval, HasField "sppNOpt" pp Natural) =>
   Coin ->
   Coin ->
   pp ->
@@ -294,7 +294,7 @@ getTopRankedPools rPot totalStake pp poolParams aps =
    in getTopRankedPoolsInternal rPot totalStake pp pdata
 
 getTopRankedPoolsVMap ::
-  (HasField "_a0" pp NonNegativeInterval, HasField "_nOpt" pp Natural) =>
+  (HasField "sppA0" pp NonNegativeInterval, HasField "sppNOpt" pp Natural) =>
   Coin ->
   Coin ->
   pp ->
@@ -306,7 +306,7 @@ getTopRankedPoolsVMap rPot totalStake pp poolParams aps =
    in getTopRankedPoolsInternal rPot totalStake pp pdata
 
 getTopRankedPoolsInternal ::
-  (HasField "_a0" pp NonNegativeInterval, HasField "_nOpt" pp Natural) =>
+  (HasField "sppA0" pp NonNegativeInterval, HasField "sppNOpt" pp Natural) =>
   Coin ->
   Coin ->
   pp ->
@@ -315,11 +315,11 @@ getTopRankedPoolsInternal ::
 getTopRankedPoolsInternal rPot totalStake pp pdata =
   Set.fromList $
     fst
-      <$> take (fromIntegral $ getField @"_nOpt" pp) (sortBy (flip compare `on` snd) rankings)
+      <$> take (fromIntegral $ getField @"sppNOpt" pp) (sortBy (flip compare `on` snd) rankings)
   where
     rankings =
       [ ( hk,
-          desirability (getField @"_a0" pp, getField @"_nOpt" pp) rPot pool ap totalStake
+          desirability (getField @"sppA0" pp, getField @"sppNOpt" pp) rPot pool ap totalStake
         )
         | (hk, (pool, ap)) <- pdata
       ]
@@ -332,7 +332,7 @@ getTopRankedPoolsInternal rPot totalStake pp pdata =
 --   Additionally, instead of passing a rank r to compare with k,
 --   we pass the top k desirable pools and check for membership.
 nonMyopicStake ::
-  HasField "_nOpt" pp Natural =>
+  HasField "sppNOpt" pp Natural =>
   pp ->
   StakeShare ->
   StakeShare ->
@@ -341,7 +341,7 @@ nonMyopicStake ::
   Set (KeyHash 'StakePool c) ->
   StakeShare
 nonMyopicStake pp (StakeShare s) (StakeShare sigma) (StakeShare t) kh topPools =
-  let z0 = 1 % max 1 (fromIntegral (getField @"_nOpt" pp))
+  let z0 = 1 % max 1 (fromIntegral (getField @"sppNOpt" pp))
    in if kh `Set.member` topPools
         then StakeShare (max (sigma + t) z0)
         else StakeShare (s + t)
@@ -355,8 +355,8 @@ nonMyopicStake pp (StakeShare s) (StakeShare sigma) (StakeShare t) kh topPools =
 --   r to compare with k, we pass the top k desirable pools and
 --   check for membership.
 nonMyopicMemberRew ::
-  ( HasField "_a0" pp NonNegativeInterval,
-    HasField "_nOpt" pp Natural
+  ( HasField "sppA0" pp NonNegativeInterval,
+    HasField "sppNOpt" pp Natural
   ) =>
   pp ->
   Coin ->
@@ -376,7 +376,7 @@ nonMyopicMemberRew
   t
   topPools
   (PerformanceEstimate p) =
-    let nm = nonMyopicStake pp s sigma t (_poolId pool) topPools
+    let nm = nonMyopicStake pp s sigma t (ppPoolId pool) topPools
         f = maxPool pp rPot (unStakeShare nm) (unStakeShare s)
         fHat = floor (p * (fromRational . coinToRational) f)
      in memberRew (Coin fHat) pool t nm

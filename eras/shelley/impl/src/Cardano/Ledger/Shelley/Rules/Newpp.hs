@@ -30,8 +30,8 @@ import Cardano.Ledger.Shelley.LedgerState
     UTxOState,
     availableAfterMIR,
     pvCanFollow,
-    _deposited,
-    _irwd,
+    utxosDeposited,
+    dsIrwd,
   )
 import Cardano.Ledger.Shelley.PParams
   ( ProposedPPUpdates (..),
@@ -73,13 +73,13 @@ instance NoThunks (ShelleyNewppPredFailure era)
 
 instance
   ( Default (PParams era),
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_protocolVersion" (PParams era) ProtVer,
-    HasField "_maxTxSize" (PParams era) Natural,
-    HasField "_maxBHSize" (PParams era) Natural,
-    HasField "_maxBBSize" (PParams era) Natural,
-    HasField "_protocolVersion" (PParamsUpdate era) (StrictMaybe ProtVer),
+    HasField "sppKeyDeposit" (PParams era) Coin,
+    HasField "sppPoolDeposit" (PParams era) Coin,
+    HasField "sppProtocolVersion" (PParams era) ProtVer,
+    HasField "sppMaxTxSize" (PParams era) Natural,
+    HasField "sppMaxBHSize" (PParams era) Natural,
+    HasField "sppMaxBBSize" (PParams era) Natural,
+    HasField "sppProtocolVersion" (PParamsUpdate era) (StrictMaybe ProtVer),
     Typeable era
   ) =>
   STS (ShelleyNEWPP era)
@@ -96,13 +96,13 @@ instance Default (PParams era) => Default (ShelleyNewppState era) where
 
 newPpTransition ::
   forall era.
-  ( HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_protocolVersion" (PParams era) ProtVer,
-    HasField "_maxTxSize" (PParams era) Natural,
-    HasField "_maxBHSize" (PParams era) Natural,
-    HasField "_maxBBSize" (PParams era) Natural,
-    HasField "_protocolVersion" (PParamsUpdate era) (StrictMaybe ProtVer)
+  ( HasField "sppKeyDeposit" (PParams era) Coin,
+    HasField "sppPoolDeposit" (PParams era) Coin,
+    HasField "sppProtocolVersion" (PParams era) ProtVer,
+    HasField "sppMaxTxSize" (PParams era) Natural,
+    HasField "sppMaxBHSize" (PParams era) Natural,
+    HasField "sppMaxBBSize" (PParams era) Natural,
+    HasField "sppProtocolVersion" (PParamsUpdate era) (StrictMaybe ProtVer)
   ) =>
   TransitionRule (ShelleyNEWPP era)
 newPpTransition = do
@@ -115,20 +115,20 @@ newPpTransition = do
 
   case ppNew of
     Just ppNew' -> do
-      let Coin oblgCurr = obligation pp (rewView (_unified dstate)) (_pParams pstate)
-          Coin oblgNew = obligation ppNew' (rewView (_unified dstate)) (_pParams pstate)
+      let Coin oblgCurr = obligation pp (rewView (dsUnified dstate)) (psPParams pstate)
+          Coin oblgNew = obligation ppNew' (rewView (dsUnified dstate)) (psPParams pstate)
           diff = oblgCurr - oblgNew
-          Coin availableReserves = availableAfterMIR ReservesMIR acnt (_irwd dstate)
+          Coin availableReserves = availableAfterMIR ReservesMIR acnt (dsIrwd dstate)
 
-      Coin oblgCurr == _deposited utxoSt
-        ?! UnexpectedDepositPot (Coin oblgCurr) (_deposited utxoSt)
+      Coin oblgCurr == utxosDeposited utxoSt
+        ?! UnexpectedDepositPot (Coin oblgCurr) (utxosDeposited utxoSt)
 
       if availableReserves + diff >= 0
         -- Note that instantaneous rewards from the treasury are irrelevant
         -- here, since changes in the protocol parameters do not change how much
         -- is needed from the treasury
-        && (getField @"_maxTxSize" ppNew' + getField @"_maxBHSize" ppNew')
-          < getField @"_maxBBSize" ppNew'
+        && (getField @"sppMaxTxSize" ppNew' + getField @"sppMaxBHSize" ppNew')
+          < getField @"sppMaxBBSize" ppNew'
         then pure $ NewppState ppNew' (updatePpup ppupSt ppNew')
         else pure $ NewppState pp (updatePpup ppupSt pp)
     Nothing -> pure $ NewppState pp (updatePpup ppupSt pp)
@@ -137,8 +137,8 @@ newPpTransition = do
 -- and making the future proposals become the new proposals,
 -- provided the new proposals can follow (otherwise reset them).
 updatePpup ::
-  ( HasField "_protocolVersion" (PParams era) ProtVer,
-    HasField "_protocolVersion" (PParamsUpdate era) (StrictMaybe ProtVer)
+  ( HasField "sppProtocolVersion" (PParams era) ProtVer,
+    HasField "sppProtocolVersion" (PParamsUpdate era) (StrictMaybe ProtVer)
   ) =>
   PPUPState era ->
   PParams era ->
@@ -147,8 +147,8 @@ updatePpup ppupSt pp = PPUPState ps emptyPPPUpdates
   where
     ProposedPPUpdates newProposals = futureProposals ppupSt
     goodPV =
-      pvCanFollow (getField @"_protocolVersion" pp)
-        . getField @"_protocolVersion"
+      pvCanFollow (getField @"sppProtocolVersion" pp)
+        . getField @"sppProtocolVersion"
     ps =
       if all goodPV newProposals
         then ProposedPPUpdates newProposals

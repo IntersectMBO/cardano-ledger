@@ -37,17 +37,17 @@ data ChainChecksPParams = ChainChecksPParams
   deriving (Show, Eq, Generic, NoThunks)
 
 pparamsToChainChecksPParams ::
-  ( HasField "_maxBHSize" pp Natural,
-    HasField "_maxBBSize" pp Natural,
-    HasField "_protocolVersion" pp ProtVer
+  ( HasField "sppMaxBHSize" pp Natural,
+    HasField "sppMaxBBSize" pp Natural,
+    HasField "sppProtocolVersion" pp ProtVer
   ) =>
   pp ->
   ChainChecksPParams
 pparamsToChainChecksPParams pp =
   ChainChecksPParams
-    { ccMaxBHSize = getField @"_maxBHSize" pp,
-      ccMaxBBSize = getField @"_maxBBSize" pp,
-      ccProtocolVersion = getField @"_protocolVersion" pp
+    { ccMaxBHSize = getField @"sppMaxBHSize" pp,
+      ccMaxBBSize = getField @"sppMaxBBSize" pp,
+      ccProtocolVersion = getField @"sppProtocolVersion" pp
     }
 
 data ChainPredicateFailure

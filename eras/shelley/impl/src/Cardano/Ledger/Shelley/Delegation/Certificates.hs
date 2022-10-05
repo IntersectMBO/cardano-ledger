@@ -72,8 +72,8 @@ import NoThunks.Class (NoThunks (..))
 
 -- | The delegation of one stake key to another.
 data Delegation c = Delegation
-  { _delegator :: !(StakeCredential c),
-    _delegatee :: !(KeyHash 'StakePool c)
+  { dDelegator :: !(StakeCredential c),
+    dDelegatee :: !(KeyHash 'StakePool c)
   }
   deriving (Eq, Generic, Show, NFData)
 
@@ -269,10 +269,10 @@ instance
 delegCWitness :: DelegCert c -> Credential 'Staking c
 delegCWitness (RegKey _) = error "no witness in key registration certificate"
 delegCWitness (DeRegKey hk) = hk
-delegCWitness (Delegate delegation) = _delegator delegation
+delegCWitness (Delegate delegation) = dDelegator delegation
 
 poolCWitness :: PoolCert c -> Credential 'StakePool c
-poolCWitness (RegPool pool) = KeyHashObj $ _poolId pool
+poolCWitness (RegPool pool) = KeyHashObj $ ppPoolId pool
 poolCWitness (RetirePool k _) = KeyHashObj k
 
 genesisCWitness :: GenesisDelegCert c -> KeyHash 'Genesis c

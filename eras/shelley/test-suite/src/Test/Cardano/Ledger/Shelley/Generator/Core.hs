@@ -715,7 +715,7 @@ findPlutus (GenEnv keyspace (ScriptSpace _ _ mp3 mp2) _) hsh =
       case Map.lookup hsh mp2 of
         Just info2 -> (getScript2 info2, SNothing)
         Nothing -> case Map.lookup hsh (ksIndexedPayScripts keyspace) of
-          Just (pay, _stake) -> (pay, SNothing)
+          Just (pay, ssStake) -> (pay, SNothing)
           Nothing ->
             case Map.lookup hsh (ksIndexedStakeScripts keyspace) of
               Just (_pay, stake) -> (stake, SNothing)

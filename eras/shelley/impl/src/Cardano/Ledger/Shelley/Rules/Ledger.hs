@@ -163,8 +163,8 @@ instance
     Environment (EraRule "DELEGS" era) ~ DelegsEnv era,
     State (EraRule "DELEGS" era) ~ DPState (EraCrypto era),
     Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era)),
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin
+    HasField "sppKeyDeposit" (PParams era) Coin,
+    HasField "sppPoolDeposit" (PParams era) Coin
   ) =>
   STS (ShelleyLEDGER era)
   where
@@ -190,8 +190,8 @@ instance
         "Deposit pot must equal obligation"
         ( \(TRC (LedgerEnv {ledgerPp}, _, _))
            (LedgerState utxoSt DPState {dpsDState, dpsPState}) ->
-              obligation ledgerPp (rewards dpsDState) (_pParams dpsPState) -- FIX ME
-                == _deposited utxoSt
+              obligation ledgerPp (rewards dpsDState) (psPParams dpsPState) -- FIX ME
+                == utxosDeposited utxoSt
         )
     ]
 
@@ -221,8 +221,8 @@ ledgerTransition = do
         )
 
   let DPState dstate pstate = dpstate
-      genDelegs = _genDelegs dstate
-      stpools = _pParams pstate
+      genDelegs = dsGenDelegs dstate
+      stpools = psPParams pstate
 
   utxoSt' <-
     trans @(EraRule "UTXOW" era) $

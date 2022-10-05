@@ -101,9 +101,9 @@ import Numeric.Natural (Natural)
 -- ========================================================
 
 data TxRaw era = TxRaw
-  { _body :: !(Core.TxBody era),
-    _wits :: !(TxWits era),
-    _auxiliaryData :: !(StrictMaybe (TxAuxData era))
+  { txrBody :: !(Core.TxBody era),
+    txrWits :: !(TxWits era),
+    txrAuxiliaryData :: !(StrictMaybe (TxAuxData era))
   }
   deriving (Generic, Typeable)
 
@@ -150,8 +150,8 @@ type Tx era = ShelleyTx era
 bodyShelleyTxL :: EraTx era => Lens' (ShelleyTx era) (Core.TxBody era)
 bodyShelleyTxL =
   lens
-    (\(TxConstr (Memo tx _)) -> _body tx)
-    (\(TxConstr (Memo tx _)) txBody -> TxConstr $ memoBytes $ encodeTxRaw $ tx {_body = txBody})
+    (\(TxConstr (Memo tx _)) -> txrBody tx)
+    (\(TxConstr (Memo tx _)) txBody -> TxConstr $ memoBytes $ encodeTxRaw $ tx {txrBody = txBody})
 {-# INLINEABLE bodyShelleyTxL #-}
 
 -- | `TxWits` setter and getter for `ShelleyTx`. The setter does update
@@ -159,8 +159,8 @@ bodyShelleyTxL =
 witsShelleyTxL :: EraTx era => Lens' (ShelleyTx era) (TxWits era)
 witsShelleyTxL =
   lens
-    (\(TxConstr (Memo tx _)) -> _wits tx)
-    (\(TxConstr (Memo tx _)) txWits -> TxConstr $ memoBytes $ encodeTxRaw $ tx {_wits = txWits})
+    (\(TxConstr (Memo tx _)) -> txrWits tx)
+    (\(TxConstr (Memo tx _)) txWits -> TxConstr $ memoBytes $ encodeTxRaw $ tx {txrWits = txWits})
 {-# INLINEABLE witsShelleyTxL #-}
 
 -- | `TxAuxData` setter and getter for `ShelleyTx`. The setter does update
@@ -168,8 +168,8 @@ witsShelleyTxL =
 auxDataShelleyTxL :: EraTx era => Lens' (ShelleyTx era) (StrictMaybe (TxAuxData era))
 auxDataShelleyTxL =
   lens
-    (\(TxConstr (Memo tx _)) -> _auxiliaryData tx)
-    (\(TxConstr (Memo tx _)) auxData -> mkShelleyTx $ tx {_auxiliaryData = auxData})
+    (\(TxConstr (Memo tx _)) -> txrAuxiliaryData tx)
+    (\(TxConstr (Memo tx _)) auxData -> mkShelleyTx $ tx {txrAuxiliaryData = auxData})
 {-# INLINEABLE auxDataShelleyTxL #-}
 
 -- | Size getter for `ShelleyTx`.
@@ -185,9 +185,9 @@ mkBasicShelleyTx :: EraTx era => Core.TxBody era -> ShelleyTx era
 mkBasicShelleyTx txBody =
   mkShelleyTx $
     TxRaw
-      { _body = txBody,
-        _wits = mkBasicTxWits,
-        _auxiliaryData = SNothing
+      { txrBody = txBody,
+        txrWits = mkBasicTxWits,
+        txrAuxiliaryData = SNothing
       }
 
 instance CC.Crypto c => EraTx (ShelleyEra c) where
@@ -245,9 +245,9 @@ pattern ShelleyTx {body, wits, auxiliaryData} <-
   TxConstr
     ( Memo
         TxRaw
-          { _body = body,
-            _wits = wits,
-            _auxiliaryData = auxiliaryData
+          { txrBody = body,
+            txrWits = wits,
+            txrAuxiliaryData = auxiliaryData
           }
         _
       )
@@ -261,11 +261,11 @@ pattern ShelleyTx {body, wits, auxiliaryData} <-
 --------------------------------------------------------------------------------
 
 encodeTxRaw :: EraTx era => TxRaw era -> Encode ('Closed 'Dense) (TxRaw era)
-encodeTxRaw TxRaw {_body, _wits, _auxiliaryData} =
+encodeTxRaw TxRaw {txrBody, txrWits, txrAuxiliaryData} =
   Rec TxRaw
-    !> To _body
-    !> To _wits
-    !> E (encodeNullMaybe toCBOR . strictMaybeToMaybe) _auxiliaryData
+    !> To txrBody
+    !> To txrWits
+    !> E (encodeNullMaybe toCBOR . strictMaybeToMaybe) txrAuxiliaryData
 
 instance
   ( Era era,
@@ -394,21 +394,21 @@ extractKeyHashWitnessSet = foldr accum Set.empty
 -- | Minimum fee calculation
 shelleyMinFeeTx ::
   ( EraTx era,
-    HasField "_minfeeA" (Core.PParams era) Natural,
-    HasField "_minfeeB" (Core.PParams era) Natural
+    HasField "sppMinfeeA" (Core.PParams era) Natural,
+    HasField "sppMinfeeB" (Core.PParams era) Natural
   ) =>
   Core.PParams era ->
   Core.Tx era ->
   Coin
 shelleyMinFeeTx pp tx =
   Coin $
-    fromIntegral (getField @"_minfeeA" pp)
-      * tx ^. sizeTxF + fromIntegral (getField @"_minfeeB" pp)
+    fromIntegral (getField @"sppMinfeeA" pp)
+      * tx ^. sizeTxF + fromIntegral (getField @"sppMinfeeB" pp)
 
 minfee ::
   ( EraTx era,
-    HasField "_minfeeA" (Core.PParams era) Natural,
-    HasField "_minfeeB" (Core.PParams era) Natural
+    HasField "sppMinfeeA" (Core.PParams era) Natural,
+    HasField "sppMinfeeB" (Core.PParams era) Natural
   ) =>
   Core.PParams era ->
   Core.Tx era ->

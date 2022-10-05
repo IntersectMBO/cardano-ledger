@@ -272,23 +272,23 @@ areAllAdaOnly = all (^. isAdaOnlyTxOutF)
 -- Note that this is not an issue for key registrations since subsequent
 -- registration certificates would be invalid.
 totalDeposits ::
-  ( HasField "_poolDeposit" pp Coin,
-    HasField "_keyDeposit" pp Coin
+  ( HasField "sppPoolDeposit" pp Coin,
+    HasField "sppKeyDeposit" pp Coin
   ) =>
   pp ->
   (KeyHash 'StakePool c -> Bool) ->
   [DCert c] ->
   Coin
 totalDeposits pp isNewPool certs =
-  (numKeys <×> getField @"_keyDeposit" pp)
-    <+> (numNewPools <×> getField @"_poolDeposit" pp)
+  (numKeys <×> getField @"sppKeyDeposit" pp)
+    <+> (numNewPools <×> getField @"sppPoolDeposit" pp)
   where
     numKeys = length $ filter isRegKey certs
     pools = Set.fromList $ Maybe.mapMaybe getKeyHashFromRegPool certs
     numNewPools = length $ Set.filter isNewPool pools
 
 getKeyHashFromRegPool :: DCert c -> Maybe (KeyHash 'StakePool c)
-getKeyHashFromRegPool (DCertPool (RegPool p)) = Just $ _poolId p
+getKeyHashFromRegPool (DCertPool (RegPool p)) = Just $ ppPoolId p
 getKeyHashFromRegPool _ = Nothing
 
 txup :: (EraTx era, ShelleyEraTxBody era) => Tx era -> Maybe (Update era)
@@ -363,8 +363,8 @@ txinsScriptHashes txInps (UTxO u) = foldr add Set.empty txInps
 produced ::
   forall era pp.
   ( ShelleyEraTxBody era,
-    HasField "_keyDeposit" pp Coin,
-    HasField "_poolDeposit" pp Coin
+    HasField "sppKeyDeposit" pp Coin,
+    HasField "sppPoolDeposit" pp Coin
   ) =>
   pp ->
   (KeyHash 'StakePool (EraCrypto era) -> Bool) ->
@@ -381,7 +381,7 @@ produced pp isNewPool txBody =
 getConsumedCoin ::
   forall era pp.
   ( ShelleyEraTxBody era,
-    HasField "_keyDeposit" pp Coin
+    HasField "sppKeyDeposit" pp Coin
   ) =>
   pp ->
   UTxO era ->
@@ -398,13 +398,13 @@ getConsumedCoin pp (UTxO u) txBody =
 
 -- | Compute the key deregistration refunds in a transaction
 keyRefunds ::
-  ( HasField "_keyDeposit" pp Coin,
+  ( HasField "sppKeyDeposit" pp Coin,
     ShelleyEraTxBody era
   ) =>
   pp ->
   TxBody era ->
   Coin
-keyRefunds pp tx = length deregistrations <×> getField @"_keyDeposit" pp
+keyRefunds pp tx = length deregistrations <×> getField @"sppKeyDeposit" pp
   where
     deregistrations = filter isDeRegKey (toList $ tx ^. certsTxBodyL)
 

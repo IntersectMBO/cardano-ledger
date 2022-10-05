@@ -108,8 +108,8 @@ sumStakePerPool delegs (Stake stake) = VMap.foldlWithKey accum Map.empty stake
 -- | Calculate total possible refunds.
 obligation ::
   forall c pp t.
-  ( HasField "_keyDeposit" pp Coin,
-    HasField "_poolDeposit" pp Coin,
+  ( HasField "sppKeyDeposit" pp Coin,
+    HasField "sppPoolDeposit" pp Coin,
     Foldable (t (Credential 'Staking c))
   ) =>
   pp ->
@@ -117,8 +117,8 @@ obligation ::
   Map (KeyHash 'StakePool c) (PoolParams c) ->
   Coin
 obligation pp rewards stakePools =
-  (length rewards <×> getField @"_keyDeposit" pp)
-    <+> (length stakePools <×> getField @"_poolDeposit" pp)
+  (length rewards <×> getField @"sppKeyDeposit" pp)
+    <+> (length stakePools <×> getField @"sppPoolDeposit" pp)
 
 -- | Calculate maximal pool reward
 maxPool' ::
@@ -140,7 +140,7 @@ maxPool' a0 nOpt r sigma pR = rationalToCoinViaFloor $ factor1 * factor2
 
 -- | Version of maxPool' that extracts a0 and nOpt from a PParam with the right HasField instances
 maxPool ::
-  (HasField "_a0" pp NonNegativeInterval, HasField "_nOpt" pp Natural) =>
+  (HasField "sppA0" pp NonNegativeInterval, HasField "sppNOpt" pp Natural) =>
   pp ->
   Coin ->
   Rational ->
@@ -148,14 +148,14 @@ maxPool ::
   Coin
 maxPool pc r sigma pR = maxPool' a0 nOpt r sigma pR
   where
-    a0 = getField @"_a0" pc
-    nOpt = getField @"_nOpt" pc
+    a0 = getField @"sppA0" pc
+    nOpt = getField @"sppNOpt" pc
 
 -- | Snapshot of the stake distribution.
 data SnapShot c = SnapShot
-  { _stake :: !(Stake c),
-    _delegations :: !(VMap VB VB (Credential 'Staking c) (KeyHash 'StakePool c)),
-    _poolParams :: !(VMap VB VB (KeyHash 'StakePool c) (PoolParams c))
+  { ssStake :: !(Stake c),
+    ssDelegations :: !(VMap VB VB (Credential 'Staking c) (KeyHash 'StakePool c)),
+    ssPoolParams :: !(VMap VB VB (KeyHash 'StakePool c) (PoolParams c))
   }
   deriving (Show, Eq, Generic)
 
@@ -169,9 +169,9 @@ instance
   where
   toCBOR
     SnapShot
-      { _stake = s,
-        _delegations = d,
-        _poolParams = p
+      { ssStake = s,
+        ssDelegations = d,
+        ssPoolParams = p
       } =
       encodeListLen 3
         <> toCBOR s
@@ -183,17 +183,17 @@ instance CC.Crypto c => FromSharedCBOR (SnapShot c) where
     Share (SnapShot c) =
       (Interns (Credential 'Staking c), Interns (KeyHash 'StakePool c))
   fromSharedPlusCBOR = decodeRecordNamedT "SnapShot" (const 3) $ do
-    _stake <- fromSharedPlusLensCBOR _1
-    _delegations <- fromSharedPlusCBOR
-    _poolParams <- fromSharedPlusLensCBOR (toMemptyLens _1 _2)
-    pure SnapShot {_stake, _delegations, _poolParams}
+    ssStake <- fromSharedPlusLensCBOR _1
+    ssDelegations <- fromSharedPlusCBOR
+    ssPoolParams <- fromSharedPlusLensCBOR (toMemptyLens _1 _2)
+    pure SnapShot {ssStake, ssDelegations, ssPoolParams}
 
 -- | Snapshots of the stake distribution.
 data SnapShots c = SnapShots
-  { _pstakeMark :: SnapShot c, -- Lazy on purpose
-    _pstakeSet :: !(SnapShot c),
-    _pstakeGo :: !(SnapShot c),
-    _feeSS :: !Coin
+  { ssPstakeMark :: SnapShot c, -- Lazy on purpose
+    ssPstakeSet :: !(SnapShot c),
+    ssPstakeGo :: !(SnapShot c),
+    feeSS :: !Coin
   }
   deriving (Show, Eq, Generic)
 
@@ -205,21 +205,21 @@ instance
   CC.Crypto c =>
   ToCBOR (SnapShots c)
   where
-  toCBOR (SnapShots {_pstakeMark, _pstakeSet, _pstakeGo, _feeSS}) =
+  toCBOR (SnapShots {ssPstakeMark, ssPstakeSet, ssPstakeGo, feeSS}) =
     encodeListLen 4
-      <> toCBOR _pstakeMark
-      <> toCBOR _pstakeSet
-      <> toCBOR _pstakeGo
-      <> toCBOR _feeSS
+      <> toCBOR ssPstakeMark
+      <> toCBOR ssPstakeSet
+      <> toCBOR ssPstakeGo
+      <> toCBOR feeSS
 
 instance CC.Crypto c => FromSharedCBOR (SnapShots c) where
   type Share (SnapShots c) = Share (SnapShot c)
   fromSharedPlusCBOR = decodeRecordNamedT "SnapShots" (const 4) $ do
-    !_pstakeMark <- fromSharedPlusCBOR
-    _pstakeSet <- fromSharedPlusCBOR
-    _pstakeGo <- fromSharedPlusCBOR
-    _feeSS <- lift fromCBOR
-    pure SnapShots {_pstakeMark, _pstakeSet, _pstakeGo, _feeSS}
+    !ssPstakeMark <- fromSharedPlusCBOR
+    ssPstakeSet <- fromSharedPlusCBOR
+    ssPstakeGo <- fromSharedPlusCBOR
+    feeSS <- lift fromCBOR
+    pure SnapShots {ssPstakeMark, ssPstakeSet, ssPstakeGo, feeSS}
 
 instance Default (SnapShots c) where
   def = emptySnapShots

@@ -78,8 +78,8 @@ type RewardAccounts c =
   Map (Credential 'Staking c) Coin
 
 data AccountState = AccountState
-  { _treasury :: !Coin,
-    _reserves :: !Coin
+  { asTreasury :: !Coin,
+    asReserves :: !Coin
   }
   deriving (Show, Eq, Generic)
 
@@ -247,11 +247,11 @@ instance Default (IncrementalStake c) where
 --   we update the UTxO, we carefully make INCREMENTAL changes to istake to maintain
 --   this invariant. This happens in the UTxO rule.
 data UTxOState era = UTxOState
-  { _utxo :: !(UTxO era),
-    _deposited :: !Coin,
-    _fees :: !Coin,
-    _ppups :: !(State (EraRule "PPUP" era)),
-    _stakeDistro :: !(IncrementalStake (EraCrypto era))
+  { utxosUtxo :: !(UTxO era),
+    utxosDeposited :: !Coin,
+    utxosFees :: !Coin,
+    utxosPpups :: !(State (EraRule "PPUP" era)),
+    utxosStateDistro :: !(IncrementalStake (EraCrypto era))
   }
   deriving (Generic)
 
@@ -307,12 +307,12 @@ instance
       Interns (Credential 'Staking (EraCrypto era))
   fromSharedCBOR credInterns =
     decodeRecordNamed "UTxOState" (const 5) $ do
-      _utxo <- fromSharedCBOR credInterns
-      _deposited <- fromCBOR
-      _fees <- fromCBOR
-      _ppups <- fromCBOR
-      _stakeDistro <- fromSharedCBOR credInterns
-      pure UTxOState {_utxo, _deposited, _fees, _ppups, _stakeDistro}
+      utxosUtxo <- fromSharedCBOR credInterns
+      utxosDeposited <- fromCBOR
+      utxosFees <- fromCBOR
+      utxosPpups <- fromCBOR
+      utxosStateDistro <- fromSharedCBOR credInterns
+      pure UTxOState {utxosUtxo, utxosDeposited, utxosFees, utxosPpups, utxosStateDistro}
 
 -- | New Epoch state and environment
 data NewEpochState era = NewEpochState

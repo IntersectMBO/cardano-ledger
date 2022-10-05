@@ -306,7 +306,7 @@ transitionRulesUTXOW ::
     Signal (utxow era) ~ Tx era,
     PredicateFailure (utxow era) ~ ShelleyUtxowPredFailure era,
     STS (utxow era),
-    HasField "_protocolVersion" (PParams era) ProtVer,
+    HasField "sppProtocolVersion" (PParams era) ProtVer,
     DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
   ) =>
   TransitionRule (utxow era)
@@ -315,7 +315,7 @@ transitionRulesUTXOW = do
 
   {-  (utxo,_,_,_ ) := utxoSt  -}
   {-  witsKeyHashes := { hashKey vk | vk ∈ dom(txwitsVKey txw) }  -}
-  let utxo = _utxo u
+  let utxo = utxosUtxo u
       witsKeyHashes = witsFromTxWitnesses tx
 
   -- check scripts
@@ -367,13 +367,13 @@ instance
     Tx era ~ ShelleyTx era,
     ScriptsNeeded era ~ ShelleyScriptsNeeded era,
     DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody),
-    HasField "_protocolVersion" (PParams era) ProtVer,
+    HasField "sppProtocolVersion" (PParams era) ProtVer,
     -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (ShelleyUTXOW era),
     Environment (EraRule "UTXO" era) ~ UtxoEnv era,
     State (EraRule "UTXO" era) ~ UTxOState era,
     Signal (EraRule "UTXO" era) ~ Tx era,
-    HasField "_protocolVersion" (PParams era) ProtVer,
+    HasField "sppProtocolVersion" (PParams era) ProtVer,
     DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
   ) =>
   STS (ShelleyUTXOW era)
@@ -406,7 +406,7 @@ validateFailedScripts tx = do
 {-  sReceived := Map.keysSet (getField @"scriptWits" tx)         -}
 validateMissingScripts ::
   forall era.
-  ( HasField "_protocolVersion" (PParams era) ProtVer
+  ( HasField "sppProtocolVersion" (PParams era) ProtVer
   ) =>
   PParams era ->
   ShelleyScriptsNeeded era ->
@@ -531,7 +531,7 @@ witsVKeyNeeded utxo' tx genDelegs =
       where
         accum (DCertPool (RegPool pool)) ans =
           Set.union
-            (Set.map asWitness (_poolOwners pool))
+            (Set.map asWitness (ppPoolOwners pool))
             ans
         accum _cert ans = ans
     cwitness (DCertDeleg dc) = extractKeyHashWitnessSet [delegCWitness dc]
@@ -558,14 +558,14 @@ witsVKeyNeeded utxo' tx genDelegs =
 validateMetadata ::
   forall era.
   ( EraTx era,
-    HasField "_protocolVersion" (PParams era) ProtVer
+    HasField "sppProtocolVersion" (PParams era) ProtVer
   ) =>
   PParams era ->
   Tx era ->
   Test (ShelleyUtxowPredFailure era)
 validateMetadata pp tx =
   let txBody = tx ^. bodyTxL
-      pv = getField @"_protocolVersion" pp
+      pv = getField @"sppProtocolVersion" pp
    in case (txBody ^. auxDataHashTxBodyL, tx ^. auxDataTxL) of
         (SNothing, SNothing) -> pure ()
         (SJust mdh, SNothing) -> failure $ MissingTxMetadata mdh

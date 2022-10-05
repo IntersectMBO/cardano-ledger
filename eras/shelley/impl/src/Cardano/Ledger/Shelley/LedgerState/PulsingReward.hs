@@ -105,12 +105,12 @@ import Numeric.Natural (Natural)
 -- | The EpochState has a field which is (PParams era). We need these
 --     fields, a subset of the fields in PParams, in: startStep and createRUpd.
 type UsesPP era =
-  ( HasField "_d" (PParams era) UnitInterval,
-    HasField "_tau" (PParams era) UnitInterval,
-    HasField "_a0" (PParams era) NonNegativeInterval,
-    HasField "_rho" (PParams era) UnitInterval,
-    HasField "_nOpt" (PParams era) Natural,
-    HasField "_protocolVersion" (PParams era) ProtVer
+  ( HasField "sppD" (PParams era) UnitInterval,
+    HasField "sppTao" (PParams era) UnitInterval,
+    HasField "sppA0" (PParams era) NonNegativeInterval,
+    HasField "sppRho" (PParams era) UnitInterval,
+    HasField "sppNOpt" (PParams era) Natural,
+    HasField "sppProtocolVersion" (PParams era) ProtVer
   )
 
 startStep ::
@@ -124,7 +124,7 @@ startStep ::
   Word64 ->
   PulsingRewUpdate (EraCrypto era)
 startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) maxSupply asc secparam =
-  let SnapShot stake' delegs' poolParams = _pstakeGo ss
+  let SnapShot stake' delegs' poolParams = ssPstakeGo ss
       numStakeCreds, k :: Rational
       numStakeCreds = fromIntegral (VMap.size $ unStake stake')
       k = fromIntegral secparam
@@ -142,15 +142,15 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
       pulseSize = max 1 (ceiling (numStakeCreds / (4 * k)))
       -- We now compute the amount of total rewards that can potentially be given
       -- out this epoch, and the adjustments to the reserves and the treasury.
-      Coin reserves = _reserves acnt
+      Coin reserves = asReserves acnt
       ds = dpsDState $ lsDPState ls
       -- reserves and rewards change
       deltaR1 =
         rationalToCoinViaFloor $
           min 1 eta
-            * unboundRational (getField @"_rho" pr)
+            * unboundRational (getField @"sppRho" pr)
             * fromIntegral reserves
-      d = unboundRational (getField @"_d" pr)
+      d = unboundRational (getField @"sppD" pr)
       expectedBlocks =
         floor $
           (1 - d) * unboundRational (activeSlotVal asc) * fromIntegral slotsPerEpoch
@@ -158,10 +158,10 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
       -- it would be nice to not have to compute expectedBlocks every epoch
       blocksMade = fromIntegral $ Map.foldr (+) 0 b' :: Integer
       eta
-        | unboundRational (getField @"_d" pr) >= 0.8 = 1
+        | unboundRational (getField @"sppD" pr) >= 0.8 = 1
         | otherwise = blocksMade % expectedBlocks
-      Coin rPot = _feeSS ss <> deltaR1
-      deltaT1 = floor $ unboundRational (getField @"_tau" pr) * fromIntegral rPot
+      Coin rPot = feeSS ss <> deltaR1
+      deltaT1 = floor $ unboundRational (getField @"sppTao" pr) * fromIntegral rPot
       _R = Coin $ rPot - deltaT1
       -- We now compute stake pool specific values that are needed for computing
       -- member and leader rewards.
@@ -193,18 +193,18 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
         Left (StakeShare sigma) ->
           likelihood
             0
-            (leaderProbability asc sigma $ getField @"_d" pr)
+            (leaderProbability asc sigma $ getField @"sppD" pr)
             slotsPerEpoch
         -- This pool produced at least one block this epoch
         Right info ->
           likelihood
             (poolBlocks info)
-            (leaderProbability asc (getSigma info) $ getField @"_d" pr)
+            (leaderProbability asc (getSigma info) $ getField @"sppD" pr)
             slotsPerEpoch
       newLikelihoods = VMap.toMap $ VMap.map makeLikelihoods allPoolInfo
       -- We now compute the leader rewards for each stake pool.
       collectLRs acc poolRI =
-        let rewardAcnt = getRwdCred . _poolRAcnt . poolPs $ poolRI
+        let rewardAcnt = getRwdCred . ppPoolRAcnt . poolPs $ poolRI
             packageLeaderReward = Set.singleton . leaderRewardToGeneral . poolLeaderReward
          in if HardForks.forgoRewardPrefilter pr || rewardAcnt `UM.member` rewards ds
               then
@@ -218,8 +218,8 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
       -- once all the member rewards are complete.
       rewsnap =
         RewardSnapShot
-          { rewFees = _feeSS ss,
-            rewprotocolVersion = getField @"_protocolVersion" pr,
+          { rewFees = feeSS ss,
+            rewprotocolVersion = getField @"sppProtocolVersion" pr,
             rewNonMyopic = nm,
             rewDeltaR1 = deltaR1,
             rewR = _R,
@@ -234,7 +234,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
           delegs'
           (UM.domain $ rewards ds)
           (unCoin _totalStake)
-          (getField @"_protocolVersion" pr)
+          (getField @"sppProtocolVersion" pr)
           blockProducingPoolInfo
       pulser :: Pulser (EraCrypto era)
       pulser =
@@ -336,7 +336,7 @@ createRUpd slotsPerEpoch blocksmade epstate maxSupply asc secparam = do
 -- This is used in the rewards calculation, and for API endpoints for pool ranking.
 circulation :: EpochState era -> Coin -> Coin
 circulation (EpochState acnt _ _ _ _ _) supply =
-  supply <-> _reserves acnt
+  supply <-> asReserves acnt
 
 decayFactor :: Float
 decayFactor = 0.9

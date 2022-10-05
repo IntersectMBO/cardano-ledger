@@ -13,7 +13,7 @@ import Cardano.Ledger.Shelley.API.Types
   ( AccountState (AccountState),
     Coin (Coin),
     DPState (DPState),
-    DState (_genDelegs),
+    DState (dsGenDelegs),
     EpochState (EpochState),
     GenDelegs (GenDelegs),
     LedgerState (LedgerState),
@@ -78,7 +78,7 @@ initialStateFromGenesis extendPPWithGenesis' sg ag =
         emptySnapShots
         ( LedgerState
             (smartUTxOState initialUtxo (Coin 0) (Coin 0) def)
-            (DPState (def {_genDelegs = GenDelegs genDelegs}) def)
+            (DPState (def {dsGenDelegs = GenDelegs genDelegs}) def)
         )
         (extendPPWithGenesis' pp ag)
         (extendPPWithGenesis' pp ag)

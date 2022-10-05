@@ -116,53 +116,53 @@ type PParamsUpdate era = ShelleyPParamsUpdate era
 -- @
 --   myParameters =
 --     PParams
---       { _minfeeA = 0,
---         _minfeeB = 0,
+--       { sppMinfeeA = 0,
+--         sppMinfeeB = 0,
 --         ...
 --       }
 --
 --   myUpdate =
 --     PParamsUpdate
---       { _minfeeA = SNothing,
---         _minfeeB = SJust 42,
+--       { sppMinfeeA = SNothing,
+--         sppMinfeeB = SJust 42,
 --         ...
 --       }
 -- @
 data ShelleyPParamsHKD f era = ShelleyPParams
   { -- | The linear factor for the minimum fee calculation
-    _minfeeA :: !(HKD f Natural),
+    sppMinfeeA :: !(HKD f Natural),
     -- | The constant factor for the minimum fee calculation
-    _minfeeB :: !(HKD f Natural),
+    sppMinfeeB :: !(HKD f Natural),
     -- | Maximal block body size
-    _maxBBSize :: !(HKD f Natural),
+    sppMaxBBSize :: !(HKD f Natural),
     -- | Maximal transaction size
-    _maxTxSize :: !(HKD f Natural),
+    sppMaxTxSize :: !(HKD f Natural),
     -- | Maximal block header size
-    _maxBHSize :: !(HKD f Natural),
+    sppMaxBHSize :: !(HKD f Natural),
     -- | The amount of a key registration deposit
-    _keyDeposit :: !(HKD f Coin),
+    sppKeyDeposit :: !(HKD f Coin),
     -- | The amount of a pool registration deposit
-    _poolDeposit :: !(HKD f Coin),
+    sppPoolDeposit :: !(HKD f Coin),
     -- | epoch bound on pool retirement
-    _eMax :: !(HKD f EpochNo),
+    sppEMax :: !(HKD f EpochNo),
     -- | Desired number of pools
-    _nOpt :: !(HKD f Natural),
+    sppNOpt :: !(HKD f Natural),
     -- | Pool influence
-    _a0 :: !(HKD f NonNegativeInterval),
+    sppA0 :: !(HKD f NonNegativeInterval),
     -- | Monetary expansion
-    _rho :: !(HKD f UnitInterval),
+    sppRho :: !(HKD f UnitInterval),
     -- | Treasury expansion
-    _tau :: !(HKD f UnitInterval),
+    sppTao :: !(HKD f UnitInterval),
     -- | Decentralization parameter
-    _d :: !(HKD f UnitInterval),
+    sppD :: !(HKD f UnitInterval),
     -- | Extra entropy
-    _extraEntropy :: !(HKD f Nonce),
+    sppExtraEntropy :: !(HKD f Nonce),
     -- | Protocol version
-    _protocolVersion :: !(HKD f BT.ProtVer),
+    sppProtocolVersion :: !(HKD f BT.ProtVer),
     -- | Minimum UTxO value
-    _minUTxOValue :: !(HKD f Coin),
+    sppMinUTxOValue :: !(HKD f Coin),
     -- | Minimum Stake Pool Cost
-    _minPoolCost :: !(HKD f Coin)
+    sppMinPoolCost :: !(HKD f Coin)
   }
   deriving (Generic)
 
@@ -187,23 +187,23 @@ instance NoThunks (ShelleyPParams era)
 instance (Era era) => ToCBOR (ShelleyPParams era) where
   toCBOR
     ShelleyPParams
-      { _minfeeA = minfeeA',
-        _minfeeB = minfeeB',
-        _maxBBSize = maxBBSize',
-        _maxTxSize = maxTxSize',
-        _maxBHSize = maxBHSize',
-        _keyDeposit = keyDeposit',
-        _poolDeposit = poolDeposit',
-        _eMax = eMax',
-        _nOpt = nOpt',
-        _a0 = a0',
-        _rho = rho',
-        _tau = tau',
-        _d = d',
-        _extraEntropy = extraEntropy',
-        _protocolVersion = protocolVersion',
-        _minUTxOValue = minUTxOValue',
-        _minPoolCost = minPoolCost'
+      { sppMinfeeA = minfeeA',
+        sppMinfeeB = minfeeB',
+        sppMaxBBSize = maxBBSize',
+        sppMaxTxSize = maxTxSize',
+        sppMaxBHSize = maxBHSize',
+        sppKeyDeposit = keyDeposit',
+        sppPoolDeposit = poolDeposit',
+        sppEMax = eMax',
+        sppNOpt = nOpt',
+        sppA0 = a0',
+        sppRho = rho',
+        sppTao = tau',
+        sppD = d',
+        sppExtraEntropy = extraEntropy',
+        sppProtocolVersion = protocolVersion',
+        sppMinUTxOValue = minUTxOValue',
+        sppMinPoolCost = minPoolCost'
       } =
       encodeListLen 18
         <> toCBOR minfeeA'
@@ -228,44 +228,44 @@ instance (Era era) => FromCBOR (ShelleyPParams era) where
   fromCBOR = do
     decodeRecordNamed "ShelleyPParams" (const 18) $
       ShelleyPParams
-        <$> fromCBOR -- _minfeeA         :: Integer
-        <*> fromCBOR -- _minfeeB         :: Natural
-        <*> fromCBOR -- _maxBBSize       :: Natural
-        <*> fromCBOR -- _maxTxSize       :: Natural
-        <*> fromCBOR -- _maxBHSize       :: Natural
-        <*> fromCBOR -- _keyDeposit      :: Coin
-        <*> fromCBOR -- _poolDeposit     :: Coin
-        <*> fromCBOR -- _eMax            :: EpochNo
-        <*> fromCBOR -- _nOpt            :: Natural
-        <*> fromCBOR -- _a0              :: NonNegativeInterval
-        <*> fromCBOR -- _rho             :: UnitInterval
-        <*> fromCBOR -- _tau             :: UnitInterval
-        <*> fromCBOR -- _d               :: UnitInterval
-        <*> fromCBOR -- _extraEntropy    :: Nonce
-        <*> fromCBORGroup -- _protocolVersion :: ProtVer
-        <*> fromCBOR -- _minUTxOValue    :: Natural
-        <*> fromCBOR -- _minPoolCost     :: Natural
+        <$> fromCBOR -- sppMinfeeA         :: Integer
+        <*> fromCBOR -- sppMinfeeB         :: Natural
+        <*> fromCBOR -- sppMaxBBSize       :: Natural
+        <*> fromCBOR -- sppMaxTxSize       :: Natural
+        <*> fromCBOR -- sppMaxBHSize       :: Natural
+        <*> fromCBOR -- sppKeyDeposit      :: Coin
+        <*> fromCBOR -- sppPoolDeposit     :: Coin
+        <*> fromCBOR -- sppEMax            :: EpochNo
+        <*> fromCBOR -- sppNOpt            :: Natural
+        <*> fromCBOR -- sppA0              :: NonNegativeInterval
+        <*> fromCBOR -- sppRho             :: UnitInterval
+        <*> fromCBOR -- sppTao             :: UnitInterval
+        <*> fromCBOR -- sppD               :: UnitInterval
+        <*> fromCBOR -- sppExtraEntropy    :: Nonce
+        <*> fromCBORGroup -- sppProtocolVersion :: ProtVer
+        <*> fromCBOR -- sppMinUTxOValue    :: Natural
+        <*> fromCBOR -- sppMinPoolCost     :: Natural
 
 instance ToJSON (ShelleyPParams era) where
   toJSON pp =
     Aeson.object
-      [ "minFeeA" .= _minfeeA pp,
-        "minFeeB" .= _minfeeB pp,
-        "maxBlockBodySize" .= _maxBBSize pp,
-        "maxTxSize" .= _maxTxSize pp,
-        "maxBlockHeaderSize" .= _maxBHSize pp,
-        "keyDeposit" .= _keyDeposit pp,
-        "poolDeposit" .= _poolDeposit pp,
-        "eMax" .= _eMax pp,
-        "nOpt" .= _nOpt pp,
-        "a0" .= _a0 pp,
-        "rho" .= _rho pp,
-        "tau" .= _tau pp,
-        "decentralisationParam" .= _d pp,
-        "extraEntropy" .= _extraEntropy pp,
-        "protocolVersion" .= _protocolVersion pp,
-        "minUTxOValue" .= _minUTxOValue pp,
-        "minPoolCost" .= _minPoolCost pp
+      [ "minFeeA" .= sppMinfeeA pp,
+        "minFeeB" .= sppMinfeeB pp,
+        "maxBlockBodySize" .= sppMaxBBSize pp,
+        "maxTxSize" .= sppMaxTxSize pp,
+        "maxBlockHeaderSize" .= sppMaxBHSize pp,
+        "keyDeposit" .= sppKeyDeposit pp,
+        "poolDeposit" .= sppPoolDeposit pp,
+        "eMax" .= sppEMax pp,
+        "nOpt" .= sppNOpt pp,
+        "a0" .= sppA0 pp,
+        "rho" .= sppRho pp,
+        "tau" .= sppTao pp,
+        "decentralisationParam" .= sppD pp,
+        "extraEntropy" .= sppExtraEntropy pp,
+        "protocolVersion" .= sppProtocolVersion pp,
+        "minUTxOValue" .= sppMinUTxOValue pp,
+        "minPoolCost" .= sppMinPoolCost pp
       ]
 
 instance FromJSON (ShelleyPParams era) where
@@ -297,23 +297,23 @@ instance Default (ShelleyPParams era) where
 emptyPParams :: ShelleyPParams era
 emptyPParams =
   ShelleyPParams
-    { _minfeeA = 0,
-      _minfeeB = 0,
-      _maxBBSize = 0,
-      _maxTxSize = 2048,
-      _maxBHSize = 0,
-      _keyDeposit = Coin 0,
-      _poolDeposit = Coin 0,
-      _eMax = EpochNo 0,
-      _nOpt = 100,
-      _a0 = minBound,
-      _rho = minBound,
-      _tau = minBound,
-      _d = minBound,
-      _extraEntropy = NeutralNonce,
-      _protocolVersion = BT.ProtVer 0 0,
-      _minUTxOValue = mempty,
-      _minPoolCost = mempty
+    { sppMinfeeA = 0,
+      sppMinfeeB = 0,
+      sppMaxBBSize = 0,
+      sppMaxTxSize = 2048,
+      sppMaxBHSize = 0,
+      sppKeyDeposit = Coin 0,
+      sppPoolDeposit = Coin 0,
+      sppEMax = EpochNo 0,
+      sppNOpt = 100,
+      sppA0 = minBound,
+      sppRho = minBound,
+      sppTao = minBound,
+      sppD = minBound,
+      sppExtraEntropy = NeutralNonce,
+      sppProtocolVersion = BT.ProtVer 0 0,
+      sppMinUTxOValue = mempty,
+      sppMinPoolCost = mempty
     }
 
 -- | Update Proposal
@@ -359,23 +359,23 @@ instance (Era era) => ToCBOR (PParamsUpdate era) where
     let l =
           mapMaybe
             strictMaybeToMaybe
-            [ encodeMapElement 0 toCBOR =<< _minfeeA ppup,
-              encodeMapElement 1 toCBOR =<< _minfeeB ppup,
-              encodeMapElement 2 toCBOR =<< _maxBBSize ppup,
-              encodeMapElement 3 toCBOR =<< _maxTxSize ppup,
-              encodeMapElement 4 toCBOR =<< _maxBHSize ppup,
-              encodeMapElement 5 toCBOR =<< _keyDeposit ppup,
-              encodeMapElement 6 toCBOR =<< _poolDeposit ppup,
-              encodeMapElement 7 toCBOR =<< _eMax ppup,
-              encodeMapElement 8 toCBOR =<< _nOpt ppup,
-              encodeMapElement 9 toCBOR =<< _a0 ppup,
-              encodeMapElement 10 toCBOR =<< _rho ppup,
-              encodeMapElement 11 toCBOR =<< _tau ppup,
-              encodeMapElement 12 toCBOR =<< _d ppup,
-              encodeMapElement 13 toCBOR =<< _extraEntropy ppup,
-              encodeMapElement 14 toCBOR =<< _protocolVersion ppup,
-              encodeMapElement 15 toCBOR =<< _minUTxOValue ppup,
-              encodeMapElement 16 toCBOR =<< _minPoolCost ppup
+            [ encodeMapElement 0 toCBOR =<< sppMinfeeA ppup,
+              encodeMapElement 1 toCBOR =<< sppMinfeeB ppup,
+              encodeMapElement 2 toCBOR =<< sppMaxBBSize ppup,
+              encodeMapElement 3 toCBOR =<< sppMaxTxSize ppup,
+              encodeMapElement 4 toCBOR =<< sppMaxBHSize ppup,
+              encodeMapElement 5 toCBOR =<< sppKeyDeposit ppup,
+              encodeMapElement 6 toCBOR =<< sppPoolDeposit ppup,
+              encodeMapElement 7 toCBOR =<< sppEMax ppup,
+              encodeMapElement 8 toCBOR =<< sppNOpt ppup,
+              encodeMapElement 9 toCBOR =<< sppA0 ppup,
+              encodeMapElement 10 toCBOR =<< sppRho ppup,
+              encodeMapElement 11 toCBOR =<< sppTao ppup,
+              encodeMapElement 12 toCBOR =<< sppD ppup,
+              encodeMapElement 13 toCBOR =<< sppExtraEntropy ppup,
+              encodeMapElement 14 toCBOR =<< sppProtocolVersion ppup,
+              encodeMapElement 15 toCBOR =<< sppMinUTxOValue ppup,
+              encodeMapElement 16 toCBOR =<< sppMinPoolCost ppup
             ]
         n = fromIntegral $ length l
      in encodeMapLen n <> fold l
@@ -385,23 +385,23 @@ instance (Era era) => ToCBOR (PParamsUpdate era) where
 emptyPParamsUpdate :: PParamsUpdate era
 emptyPParamsUpdate =
   ShelleyPParams
-    { _minfeeA = SNothing,
-      _minfeeB = SNothing,
-      _maxBBSize = SNothing,
-      _maxTxSize = SNothing,
-      _maxBHSize = SNothing,
-      _keyDeposit = SNothing,
-      _poolDeposit = SNothing,
-      _eMax = SNothing,
-      _nOpt = SNothing,
-      _a0 = SNothing,
-      _rho = SNothing,
-      _tau = SNothing,
-      _d = SNothing,
-      _extraEntropy = SNothing,
-      _protocolVersion = SNothing,
-      _minUTxOValue = SNothing,
-      _minPoolCost = SNothing
+    { sppMinfeeA = SNothing,
+      sppMinfeeB = SNothing,
+      sppMaxBBSize = SNothing,
+      sppMaxTxSize = SNothing,
+      sppMaxBHSize = SNothing,
+      sppKeyDeposit = SNothing,
+      sppPoolDeposit = SNothing,
+      sppEMax = SNothing,
+      sppNOpt = SNothing,
+      sppA0 = SNothing,
+      sppRho = SNothing,
+      sppTao = SNothing,
+      sppD = SNothing,
+      sppExtraEntropy = SNothing,
+      sppProtocolVersion = SNothing,
+      sppMinUTxOValue = SNothing,
+      sppMinPoolCost = SNothing
     }
 
 instance (Era era) => FromCBOR (PParamsUpdate era) where
@@ -409,23 +409,23 @@ instance (Era era) => FromCBOR (PParamsUpdate era) where
     mapParts <-
       decodeMapContents $
         decodeWord >>= \case
-          0 -> fromCBOR >>= \x -> pure (0, \up -> up {_minfeeA = SJust x})
-          1 -> fromCBOR >>= \x -> pure (1, \up -> up {_minfeeB = SJust x})
-          2 -> fromCBOR >>= \x -> pure (2, \up -> up {_maxBBSize = SJust x})
-          3 -> fromCBOR >>= \x -> pure (3, \up -> up {_maxTxSize = SJust x})
-          4 -> fromCBOR >>= \x -> pure (4, \up -> up {_maxBHSize = SJust x})
-          5 -> fromCBOR >>= \x -> pure (5, \up -> up {_keyDeposit = SJust x})
-          6 -> fromCBOR >>= \x -> pure (6, \up -> up {_poolDeposit = SJust x})
-          7 -> fromCBOR >>= \x -> pure (7, \up -> up {_eMax = SJust x})
-          8 -> fromCBOR >>= \x -> pure (8, \up -> up {_nOpt = SJust x})
-          9 -> fromCBOR >>= \x -> pure (9, \up -> up {_a0 = SJust x})
-          10 -> fromCBOR >>= \x -> pure (10, \up -> up {_rho = SJust x})
-          11 -> fromCBOR >>= \x -> pure (11, \up -> up {_tau = SJust x})
-          12 -> fromCBOR >>= \x -> pure (12, \up -> up {_d = SJust x})
-          13 -> fromCBOR >>= \x -> pure (13, \up -> up {_extraEntropy = SJust x})
-          14 -> fromCBOR >>= \x -> pure (14, \up -> up {_protocolVersion = SJust x})
-          15 -> fromCBOR >>= \x -> pure (15, \up -> up {_minUTxOValue = SJust x})
-          16 -> fromCBOR >>= \x -> pure (16, \up -> up {_minPoolCost = SJust x})
+          0 -> fromCBOR >>= \x -> pure (0, \up -> up {sppMinfeeA = SJust x})
+          1 -> fromCBOR >>= \x -> pure (1, \up -> up {sppMinfeeB = SJust x})
+          2 -> fromCBOR >>= \x -> pure (2, \up -> up {sppMaxBBSize = SJust x})
+          3 -> fromCBOR >>= \x -> pure (3, \up -> up {sppMaxTxSize = SJust x})
+          4 -> fromCBOR >>= \x -> pure (4, \up -> up {sppMaxBHSize = SJust x})
+          5 -> fromCBOR >>= \x -> pure (5, \up -> up {sppKeyDeposit = SJust x})
+          6 -> fromCBOR >>= \x -> pure (6, \up -> up {sppPoolDeposit = SJust x})
+          7 -> fromCBOR >>= \x -> pure (7, \up -> up {sppEMax = SJust x})
+          8 -> fromCBOR >>= \x -> pure (8, \up -> up {sppNOpt = SJust x})
+          9 -> fromCBOR >>= \x -> pure (9, \up -> up {sppA0 = SJust x})
+          10 -> fromCBOR >>= \x -> pure (10, \up -> up {sppRho = SJust x})
+          11 -> fromCBOR >>= \x -> pure (11, \up -> up {sppTao = SJust x})
+          12 -> fromCBOR >>= \x -> pure (12, \up -> up {sppD = SJust x})
+          13 -> fromCBOR >>= \x -> pure (13, \up -> up {sppExtraEntropy = SJust x})
+          14 -> fromCBOR >>= \x -> pure (14, \up -> up {sppProtocolVersion = SJust x})
+          15 -> fromCBOR >>= \x -> pure (15, \up -> up {sppMinUTxOValue = SJust x})
+          16 -> fromCBOR >>= \x -> pure (16, \up -> up {sppMinPoolCost = SJust x})
           k -> invalidKey k
     let fields = fst <$> mapParts :: [Int]
     unless
@@ -464,23 +464,23 @@ emptyPPPUpdates = ProposedPPUpdates Map.empty
 updatePParams :: PParams era -> PParamsUpdate era -> PParams era
 updatePParams pp ppup =
   ShelleyPParams
-    { _minfeeA = fromSMaybe (_minfeeA pp) (_minfeeA ppup),
-      _minfeeB = fromSMaybe (_minfeeB pp) (_minfeeB ppup),
-      _maxBBSize = fromSMaybe (_maxBBSize pp) (_maxBBSize ppup),
-      _maxTxSize = fromSMaybe (_maxTxSize pp) (_maxTxSize ppup),
-      _maxBHSize = fromSMaybe (_maxBHSize pp) (_maxBHSize ppup),
-      _keyDeposit = fromSMaybe (_keyDeposit pp) (_keyDeposit ppup),
-      _poolDeposit = fromSMaybe (_poolDeposit pp) (_poolDeposit ppup),
-      _eMax = fromSMaybe (_eMax pp) (_eMax ppup),
-      _nOpt = fromSMaybe (_nOpt pp) (_nOpt ppup),
-      _a0 = fromSMaybe (_a0 pp) (_a0 ppup),
-      _rho = fromSMaybe (_rho pp) (_rho ppup),
-      _tau = fromSMaybe (_tau pp) (_tau ppup),
-      _d = fromSMaybe (_d pp) (_d ppup),
-      _extraEntropy = fromSMaybe (_extraEntropy pp) (_extraEntropy ppup),
-      _protocolVersion = fromSMaybe (_protocolVersion pp) (_protocolVersion ppup),
-      _minUTxOValue = fromSMaybe (_minUTxOValue pp) (_minUTxOValue ppup),
-      _minPoolCost = fromSMaybe (_minPoolCost pp) (_minPoolCost ppup)
+    { sppMinfeeA = fromSMaybe (sppMinfeeA pp) (sppMinfeeA ppup),
+      sppMinfeeB = fromSMaybe (sppMinfeeB pp) (sppMinfeeB ppup),
+      sppMaxBBSize = fromSMaybe (sppMaxBBSize pp) (sppMaxBBSize ppup),
+      sppMaxTxSize = fromSMaybe (sppMaxTxSize pp) (sppMaxTxSize ppup),
+      sppMaxBHSize = fromSMaybe (sppMaxBHSize pp) (sppMaxBHSize ppup),
+      sppKeyDeposit = fromSMaybe (sppKeyDeposit pp) (sppKeyDeposit ppup),
+      sppPoolDeposit = fromSMaybe (sppPoolDeposit pp) (sppPoolDeposit ppup),
+      sppEMax = fromSMaybe (sppEMax pp) (sppEMax ppup),
+      sppNOpt = fromSMaybe (sppNOpt pp) (sppNOpt ppup),
+      sppA0 = fromSMaybe (sppA0 pp) (sppA0 ppup),
+      sppRho = fromSMaybe (sppRho pp) (sppRho ppup),
+      sppTao = fromSMaybe (sppTao pp) (sppTao ppup),
+      sppD = fromSMaybe (sppD pp) (sppD ppup),
+      sppExtraEntropy = fromSMaybe (sppExtraEntropy pp) (sppExtraEntropy ppup),
+      sppProtocolVersion = fromSMaybe (sppProtocolVersion pp) (sppProtocolVersion ppup),
+      sppMinUTxOValue = fromSMaybe (sppMinUTxOValue pp) (sppMinUTxOValue ppup),
+      sppMinPoolCost = fromSMaybe (sppMinPoolCost pp) (sppMinPoolCost ppup)
     }
 
 data PPUPState era = PPUPState

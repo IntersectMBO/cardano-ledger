@@ -185,7 +185,7 @@ instance CC.Crypto c => FromCBOR (RewardSnapShot c) where
       )
 
 -- | RewardSnapShot can act as a Proxy for PParams when only the protocol version is needed.
-instance HasField "_protocolVersion" (RewardSnapShot c) ProtVer where
+instance HasField "sppProtocolVersion" (RewardSnapShot c) ProtVer where
   getField x = rewprotocolVersion x
 
 -- ========================================================
@@ -204,7 +204,7 @@ data FreeVars c = FreeVars
   deriving (NoThunks)
 
 -- | FreeVars can act as a Proxy for PParams when only the protocol version is needed.
-instance HasField "_protocolVersion" (FreeVars c) ProtVer where
+instance HasField "sppProtocolVersion" (FreeVars c) ProtVer where
   getField = pp_pv
 
 instance NFData (FreeVars c)

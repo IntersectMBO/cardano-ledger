@@ -39,9 +39,9 @@ import Cardano.Ledger.Shelley.LedgerState
     lsDPState,
     lsUTxOState,
     rewards,
-    _deposited,
-    _ppups,
-    _reserves,
+    utxosDeposited,
+    utxosPpups,
+    asReserves,
     pattern DPState,
     pattern EpochState,
   )
@@ -112,8 +112,8 @@ instance
     Signal (EraRule "UPEC" era) ~ (),
     Default (State (EraRule "PPUP" era)),
     Default (PParams era),
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin
+    HasField "sppKeyDeposit" (PParams era) Coin,
+    HasField "sppPoolDeposit" (PParams era) Coin
   ) =>
   STS (ShelleyEPOCH era)
   where
@@ -146,8 +146,8 @@ epochTransition ::
     Environment (EraRule "UPEC" era) ~ EpochState era,
     State (EraRule "UPEC" era) ~ UpecState era,
     Signal (EraRule "UPEC" era) ~ (),
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin
+    HasField "sppKeyDeposit" (PParams era) Coin,
+    HasField "sppPoolDeposit" (PParams era) Coin
   ) =>
   TransitionRule (ShelleyEPOCH era)
 epochTransition = do
@@ -173,8 +173,8 @@ epochTransition = do
       ppp = eval (pParams ⨃ fPParams)
       pstate' =
         pstate
-          { _pParams = ppp,
-            _fPParams = Map.empty
+          { psPParams = ppp,
+            psFPParams = Map.empty
           }
   PoolreapState utxoSt' acnt' dstate' pstate'' <-
     trans @(EraRule "POOLREAP" era) $
@@ -191,14 +191,14 @@ epochTransition = do
 
   UpecState pp' ppupSt' <-
     trans @(EraRule "UPEC" era) $
-      TRC (epochState', UpecState pp (_ppups utxoSt'), ())
-  let utxoSt'' = utxoSt' {_ppups = ppupSt'}
+      TRC (epochState', UpecState pp (utxosPpups utxoSt'), ())
+  let utxoSt'' = utxoSt' {utxosPpups = ppupSt'}
 
-  let Coin oblgCurr = obligation pp (rewards dstate') (_pParams pstate'')
-      Coin oblgNew = obligation pp' (rewards dstate') (_pParams pstate'')
-      Coin reserves = _reserves acnt'
-      utxoSt''' = utxoSt'' {_deposited = Coin oblgNew}
-      acnt'' = acnt' {_reserves = Coin $ reserves + oblgCurr - oblgNew}
+  let Coin oblgCurr = obligation pp (rewards dstate') (psPParams pstate'')
+      Coin oblgNew = obligation pp' (rewards dstate') (psPParams pstate'')
+      Coin reserves = asReserves acnt'
+      utxoSt''' = utxoSt'' {utxosDeposited = Coin oblgNew}
+      acnt'' = acnt' {asReserves = Coin $ reserves + oblgCurr - oblgNew}
   pure $
     epochState'
       { esAccountState = acnt'',

@@ -105,9 +105,9 @@ instance NoThunks (ShelleyPoolPredFailure era)
 
 instance
   ( Era era,
-    HasField "_minPoolCost" (PParams era) Coin,
-    HasField "_eMax" (PParams era) EpochNo,
-    HasField "_protocolVersion" (PParams era) ProtVer
+    HasField "sppMinPoolCost" (PParams era) Coin,
+    HasField "sppEMax" (PParams era) EpochNo,
+    HasField "sppProtocolVersion" (PParams era) ProtVer
   ) =>
   STS (ShelleyPOOL era)
   where
@@ -180,49 +180,49 @@ instance
 poolDelegationTransition ::
   forall era.
   ( Era era,
-    HasField "_minPoolCost" (PParams era) Coin,
-    HasField "_eMax" (PParams era) EpochNo,
-    HasField "_protocolVersion" (PParams era) ProtVer
+    HasField "sppMinPoolCost" (PParams era) Coin,
+    HasField "sppEMax" (PParams era) EpochNo,
+    HasField "sppProtocolVersion" (PParams era) ProtVer
   ) =>
   TransitionRule (ShelleyPOOL era)
 poolDelegationTransition = do
   TRC (PoolEnv slot pp, ps, c) <- judgmentContext
-  let stpools = _pParams ps
+  let stpools = psPParams ps
   case c of
     DCertPool (RegPool poolParam) -> do
       -- note that pattern match is used instead of cwitness, as in the spec
 
       when (HardForks.validatePoolRewardAccountNetID pp) $ do
         actualNetID <- liftSTS $ asks networkId
-        let suppliedNetID = getRwdNetwork (_poolRAcnt poolParam)
+        let suppliedNetID = getRwdNetwork (ppPoolRAcnt poolParam)
         actualNetID == suppliedNetID
-          ?! WrongNetworkPOOL actualNetID suppliedNetID (_poolId poolParam)
+          ?! WrongNetworkPOOL actualNetID suppliedNetID (ppPoolId poolParam)
 
       when (SoftForks.restrictPoolMetadataHash pp) $
-        forM_ (_poolMD poolParam) $ \pmd ->
-          let s = BS.length (_poolMDHash pmd)
+        forM_ (ppPoolMD poolParam) $ \pmd ->
+          let s = BS.length (pmdPoolMDHash pmd)
            in s <= fromIntegral (sizeHash ([] @(CC.HASH (EraCrypto era))))
-                ?! PoolMedataHashTooBig (_poolId poolParam) s
+                ?! PoolMedataHashTooBig (ppPoolId poolParam) s
 
-      let poolCost = _poolCost poolParam
-          minPoolCost = getField @"_minPoolCost" pp
+      let poolCost = ppPoolCost poolParam
+          minPoolCost = getField @"sppMinPoolCost" pp
       poolCost >= minPoolCost ?! StakePoolCostTooLowPOOL poolCost minPoolCost
 
-      let hk = _poolId poolParam
+      let hk = ppPoolId poolParam
       if eval (hk ∉ dom stpools)
         then do
           -- register new, Pool-Reg
           tellEvent $ RegisterPool hk
           pure $
             ps
-              { _pParams = eval (_pParams ps ∪ singleton hk poolParam)
+              { psPParams = eval (psPParams ps ∪ singleton hk poolParam)
               }
         else do
           tellEvent $ ReregisterPool hk
           pure $
             ps
-              { _fPParams = eval (_fPParams ps ⨃ singleton hk poolParam),
-                _retiring = eval (setSingleton hk ⋪ _retiring ps)
+              { psFPParams = eval (psFPParams ps ⨃ singleton hk poolParam),
+                psRetiring = eval (setSingleton hk ⋪ psRetiring ps)
               }
     DCertPool (RetirePool hk (EpochNo e)) -> do
       -- note that pattern match is used instead of cwitness, as in the spec
@@ -230,10 +230,10 @@ poolDelegationTransition = do
       EpochNo cepoch <- liftSTS $ do
         ei <- asks epochInfoPure
         epochInfoEpoch ei slot
-      let EpochNo maxEpoch = getField @"_eMax" pp
+      let EpochNo maxEpoch = getField @"sppEMax" pp
       cepoch < e && e <= cepoch + maxEpoch
         ?! StakePoolRetirementWrongEpochPOOL cepoch e (cepoch + maxEpoch)
-      pure $ ps {_retiring = eval (_retiring ps ⨃ singleton hk (EpochNo e))}
+      pure $ ps {psRetiring = eval (psRetiring ps ⨃ singleton hk (EpochNo e))}
     DCertDeleg _ -> do
       failBecause $ WrongCertificateTypePOOL 0
       pure ps

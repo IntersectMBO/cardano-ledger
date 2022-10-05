@@ -113,8 +113,8 @@ newtype PpupEvent era = NewEpoch EpochNo
 
 instance
   ( Typeable era,
-    HasField "_protocolVersion" (PParams era) ProtVer,
-    HasField "_protocolVersion" (PParamsUpdate era) (StrictMaybe ProtVer)
+    HasField "sppProtocolVersion" (PParams era) ProtVer,
+    HasField "sppProtocolVersion" (PParamsUpdate era) (StrictMaybe ProtVer)
   ) =>
   STS (ShelleyPPUP era)
   where
@@ -165,13 +165,13 @@ instance
 
 ppupTransitionNonEmpty ::
   ( Typeable era,
-    HasField "_protocolVersion" (PParams era) ProtVer,
-    HasField "_protocolVersion" (PParamsUpdate era) (StrictMaybe ProtVer)
+    HasField "sppProtocolVersion" (PParams era) ProtVer,
+    HasField "sppProtocolVersion" (PParamsUpdate era) (StrictMaybe ProtVer)
   ) =>
   TransitionRule (ShelleyPPUP era)
 ppupTransitionNonEmpty = do
   TRC
-    ( PPUPEnv slot pp (GenDelegs _genDelegs),
+    ( PPUPEnv slot pp (GenDelegs dsGenDelegs),
       PPUPState (ProposedPPUpdates pupS) (ProposedPPUpdates fpupS),
       up
       ) <-
@@ -180,13 +180,13 @@ ppupTransitionNonEmpty = do
   case up of
     Nothing -> pure $ PPUPState (ProposedPPUpdates pupS) (ProposedPPUpdates fpupS)
     Just (Update (ProposedPPUpdates pup) te) -> do
-      eval (dom pup ⊆ dom _genDelegs) ?! NonGenesisUpdatePPUP (eval (dom pup)) (eval (dom _genDelegs))
+      eval (dom pup ⊆ dom dsGenDelegs) ?! NonGenesisUpdatePPUP (eval (dom pup)) (eval (dom dsGenDelegs))
 
       let goodPV =
-            pvCanFollow (getField @"_protocolVersion" pp)
-              . getField @"_protocolVersion"
+            pvCanFollow (getField @"sppProtocolVersion" pp)
+              . getField @"sppProtocolVersion"
       let badPVs = filter (not . goodPV) (Map.elems pup)
-      case map (getField @"_protocolVersion") badPVs of
+      case map (getField @"sppProtocolVersion") badPVs of
         -- All Nothing cases have been filtered out by 'pvCanFollow'
         SJust pv : _ -> failBecause $ PVCannotFollowPPUP pv
         _ -> pure ()

@@ -148,7 +148,7 @@ import Numeric.Natural (Natural)
 getUTxO ::
   NewEpochState era ->
   UTxO era
-getUTxO = _utxo . lsUTxOState . esLState . nesEs
+getUTxO = utxosUtxo . lsUTxOState . esLState . nesEs
 
 -- | Get the UTxO filtered by address.
 getFilteredUTxO ::
@@ -186,7 +186,7 @@ getPools ::
   Set (KeyHash 'StakePool (EraCrypto era))
 getPools = Map.keysSet . f
   where
-    f = _pParams . dpsPState . lsDPState . esLState . nesEs
+    f = psPParams . dpsPState . lsDPState . esLState . nesEs
 
 -- | Get the /current/ registered stake pool parameters for a given set of
 -- stake pools. The result map will contain entries for all the given stake
@@ -197,7 +197,7 @@ getPoolParameters ::
   Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era))
 getPoolParameters = Map.restrictKeys . f
   where
-    f = _pParams . dpsPState . lsDPState . esLState . nesEs
+    f = psPParams . dpsPState . lsDPState . esLState . nesEs
 
 -- | Get pool sizes, but in terms of total stake
 --
@@ -241,8 +241,8 @@ getTotalStake globals ss =
 --
 -- This is not based on any snapshot, but uses the current ledger state.
 getNonMyopicMemberRewards ::
-  ( HasField "_a0" (PParams era) NonNegativeInterval,
-    HasField "_nOpt" (PParams era) Natural
+  ( HasField "sppA0" (PParams era) NonNegativeInterval,
+    HasField "sppNOpt" (PParams era) Natural
   ) =>
   Globals ->
   NewEpochState era ->
@@ -286,16 +286,16 @@ getNonMyopicMemberRewards globals ss creds =
         then nonMyopicMemberRew pp rPot poolp s sigma t topPools hitRateEst
         else mempty
       where
-        s = (toShare . _poolPledge) poolp
+        s = (toShare . ppPoolPledge) poolp
         checkPledge pool =
           let ostake = sumPoolOwnersStake pool stake
-           in _poolPledge poolp <= ostake
+           in ppPoolPledge poolp <= ostake
 
 sumPoolOwnersStake :: PoolParams c -> EB.Stake c -> Coin
 sumPoolOwnersStake pool stake =
   let getStakeFor o =
         maybe mempty fromCompact $ VMap.lookup (KeyHashObj o) (EB.unStake stake)
-   in foldMap' getStakeFor (_poolOwners pool)
+   in foldMap' getStakeFor (ppPoolOwners pool)
 
 -- | Create a current snapshot of the ledger state.
 --
@@ -307,7 +307,7 @@ currentSnapshot ss =
   incrementalStakeDistr incrementalStake dstate pstate
   where
     ledgerState = esLState $ nesEs ss
-    incrementalStake = _stakeDistro $ lsUTxOState ledgerState
+    incrementalStake = utxosStateDistro $ lsUTxOState ledgerState
     dstate = dpsDState $ lsDPState ledgerState
     pstate = dpsPState $ lsDPState ledgerState
 
@@ -369,8 +369,8 @@ deriving instance ToJSON RewardParams
 -- Also included are global information such as
 -- the total stake or protocol parameters.
 getRewardInfoPools ::
-  ( HasField "_a0" (PParams era) NonNegativeInterval,
-    HasField "_nOpt" (PParams era) Natural
+  ( HasField "sppA0" (PParams era) NonNegativeInterval,
+    HasField "sppNOpt" (PParams era) Natural
   ) =>
   Globals ->
   NewEpochState era ->
@@ -390,8 +390,8 @@ getRewardInfoPools globals ss =
 
     mkRewardParams =
       RewardParams
-        { a0 = getField @"_a0" pp,
-          nOpt = getField @"_nOpt" pp,
+        { a0 = getField @"sppA0" pp,
+          nOpt = getField @"sppNOpt" pp,
           totalStake = getTotalStake globals ss,
           rPot = rPot
         }
@@ -399,9 +399,9 @@ getRewardInfoPools globals ss =
       RewardInfoPool
         { stake = pstake,
           ownerStake = ostake,
-          ownerPledge = _poolPledge poolp,
-          margin = _poolMargin poolp,
-          cost = _poolCost poolp,
+          ownerPledge = ppPoolPledge poolp,
+          margin = ppPoolMargin poolp,
+          cost = ppPoolCost poolp,
           performanceEstimate =
             unPerformanceEstimate $ percentile' $ histLookup key
         }
@@ -421,12 +421,12 @@ getRewardInfoPools globals ss =
 -- on stake pool rewards.
 getRewardProvenance ::
   forall era.
-  ( HasField "_a0" (PParams era) NonNegativeInterval,
-    HasField "_d" (PParams era) UnitInterval,
-    HasField "_nOpt" (PParams era) Natural,
-    HasField "_protocolVersion" (PParams era) ProtVer,
-    HasField "_rho" (PParams era) UnitInterval,
-    HasField "_tau" (PParams era) UnitInterval
+  ( HasField "sppA0" (PParams era) NonNegativeInterval,
+    HasField "sppD" (PParams era) UnitInterval,
+    HasField "sppNOpt" (PParams era) Natural,
+    HasField "sppProtocolVersion" (PParams era) ProtVer,
+    HasField "sppRho" (PParams era) UnitInterval,
+    HasField "sppTao" (PParams era) UnitInterval
   ) =>
   Globals ->
   NewEpochState era ->
@@ -508,8 +508,8 @@ evaluateTransactionFee pp tx numKeyWits = getMinFeeTx pp tx'
 evaluateTransactionBalance ::
   ( EraUTxO era,
     ShelleyEraTxBody era,
-    HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_keyDeposit" (PParams era) Coin
+    HasField "sppPoolDeposit" (PParams era) Coin,
+    HasField "sppKeyDeposit" (PParams era) Coin
   ) =>
   -- | The current protocol parameters.
   PParams era ->

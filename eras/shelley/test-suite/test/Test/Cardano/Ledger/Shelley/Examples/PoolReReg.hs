@@ -29,7 +29,7 @@ import Cardano.Ledger.Era (EraCrypto (..))
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.EpochBoundary (SnapShot (_poolParams), emptySnapShot)
+import Cardano.Ledger.Shelley.EpochBoundary (SnapShot (ssPoolParams), emptySnapShot)
 import Cardano.Ledger.Shelley.LedgerState (PulsingRewUpdate, emptyRewardUpdate)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Tx
@@ -296,7 +296,7 @@ blockEx3 =
 
 snapEx3 :: Cr.Crypto c => SnapShot c
 snapEx3 =
-  emptySnapShot {_poolParams = [(hk Cast.alicePoolKeys, Cast.alicePoolParams)]}
+  emptySnapShot {ssPoolParams = [(hk Cast.alicePoolKeys, Cast.alicePoolParams)]}
 
 expectedStEx3 :: forall c. (ExMock (EraCrypto (ShelleyEra c))) => ChainState (ShelleyEra c)
 expectedStEx3 =

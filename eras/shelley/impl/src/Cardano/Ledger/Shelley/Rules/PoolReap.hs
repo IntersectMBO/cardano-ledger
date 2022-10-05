@@ -34,7 +34,7 @@ import Cardano.Ledger.Shelley.LedgerState
     UTxOState (..),
     rewards,
   )
-import Cardano.Ledger.Shelley.TxBody (RewardAcnt, getRwdCred, _poolRAcnt)
+import Cardano.Ledger.Shelley.TxBody (RewardAcnt, getRwdCred, ppPoolRAcnt)
 import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Ledger.UnifiedMap (View (..))
 import Cardano.Ledger.Val ((<+>), (<->))
@@ -84,8 +84,8 @@ instance
   forall era.
   ( Typeable era,
     Default (ShelleyPoolreapState era),
-    HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_keyDeposit" (PParams era) Coin
+    HasField "sppPoolDeposit" (PParams era) Coin,
+    HasField "sppKeyDeposit" (PParams era) Coin
   ) =>
   STS (ShelleyPOOLREAP era)
   where
@@ -100,8 +100,8 @@ instance
     [ PostCondition
         "Deposit pot must equal obligation"
         ( \(TRC (pp, _, _)) st ->
-            obligation pp (rewards $ prDState st) (_pParams $ prPState st)
-              == _deposited (prUTxOSt st)
+            obligation pp (rewards $ prDState st) (psPParams $ prPState st)
+              == utxosDeposited (prUTxOSt st)
         ),
       PostCondition
         "PoolReap may not create or remove reward accounts"
@@ -113,17 +113,17 @@ instance
 
 poolReapTransition ::
   forall era.
-  HasField "_poolDeposit" (PParams era) Coin =>
+  HasField "sppPoolDeposit" (PParams era) Coin =>
   TransitionRule (ShelleyPOOLREAP era)
 poolReapTransition = do
   TRC (pp, PoolreapState us a ds ps, e) <- judgmentContext
 
   let retired :: Set (KeyHash 'StakePool (EraCrypto era))
-      retired = eval (dom (_retiring ps ▷ setSingleton e))
+      retired = eval (dom (psRetiring ps ▷ setSingleton e))
       pr :: Map.Map (KeyHash 'StakePool (EraCrypto era)) Coin
-      pr = Map.fromSet (const (getField @"_poolDeposit" pp)) retired
+      pr = Map.fromSet (const (getField @"sppPoolDeposit" pp)) retired
       rewardAcnts :: Map.Map (KeyHash 'StakePool (EraCrypto era)) (RewardAcnt (EraCrypto era))
-      rewardAcnts = Map.map _poolRAcnt $ eval (retired ◁ _pParams ps)
+      rewardAcnts = Map.map ppPoolRAcnt $ eval (retired ◁ psPParams ps)
       rewardAcnts_ :: Map.Map (KeyHash 'StakePool (EraCrypto era)) (RewardAcnt (EraCrypto era), Coin)
       rewardAcnts_ = Map.intersectionWith (,) rewardAcnts pr
       rewardAcnts' :: Map.Map (RewardAcnt (EraCrypto era)) Coin
@@ -160,15 +160,15 @@ poolReapTransition = do
 
   pure $
     PoolreapState
-      us {_deposited = _deposited us <-> (unclaimed <+> refunded)}
-      a {_treasury = _treasury a <+> unclaimed}
-      ( let u0 = _unified ds
+      us {utxosDeposited = utxosDeposited us <-> (unclaimed <+> refunded)}
+      a {asTreasury = asTreasury a <+> unclaimed}
+      ( let u0 = dsUnified ds
             u1 = (Rewards u0 UM.∪+ refunds)
             u2 = (Delegations u1 UM.⋫ retired)
-         in ds {_unified = u2}
+         in ds {dsUnified = u2}
       )
       ps
-        { _pParams = eval (retired ⋪ _pParams ps),
-          _fPParams = eval (retired ⋪ _fPParams ps),
-          _retiring = eval (retired ⋪ _retiring ps)
+        { psPParams = eval (retired ⋪ psPParams ps),
+          psFPParams = eval (retired ⋪ psFPParams ps),
+          psRetiring = eval (retired ⋪ psRetiring ps)
         }

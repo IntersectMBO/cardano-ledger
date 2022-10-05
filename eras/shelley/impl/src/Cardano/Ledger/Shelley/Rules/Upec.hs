@@ -32,7 +32,7 @@ import Cardano.Ledger.Shelley.LedgerState
     esLState,
     lsDPState,
     lsUTxOState,
-    _ppups,
+    utxosPpups,
     pattern DPState,
     pattern EpochState,
   )
@@ -65,13 +65,13 @@ instance
   ( EraPParams era,
     Default (PParams era),
     State (EraRule "PPUP" era) ~ PPUPState era,
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_maxBBSize" (PParams era) Natural,
-    HasField "_maxTxSize" (PParams era) Natural,
-    HasField "_maxBHSize" (PParams era) Natural,
-    HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_protocolVersion" (PParams era) ProtVer,
-    HasField "_protocolVersion" (PParamsUpdate era) (StrictMaybe ProtVer)
+    HasField "sppKeyDeposit" (PParams era) Coin,
+    HasField "sppMaxBBSize" (PParams era) Natural,
+    HasField "sppMaxTxSize" (PParams era) Natural,
+    HasField "sppMaxBHSize" (PParams era) Natural,
+    HasField "sppPoolDeposit" (PParams era) Coin,
+    HasField "sppProtocolVersion" (PParams era) ProtVer,
+    HasField "sppProtocolVersion" (PParamsUpdate era) (StrictMaybe ProtVer)
   ) =>
   STS (ShelleyUPEC era)
   where
@@ -97,7 +97,7 @@ instance
 
         let utxoSt = lsUTxOState ls
             DPState dstate pstate = lsDPState ls
-            pup = proposals . _ppups $ utxoSt
+            pup = proposals . utxosPpups $ utxoSt
             ppNew = votedValue pup pp (fromIntegral coreNodeQuorum)
         NewppState pp' ppupSt' <-
           trans @(ShelleyNEWPP era) $

@@ -373,18 +373,18 @@ blockEx3 =
 snapEx3 :: ExMock c => EB.SnapShot c
 snapEx3 =
   EB.SnapShot
-    { EB._stake =
+    { EB.ssStake =
         mkStake
           [ (Cast.aliceSHK, aliceCoinEx1),
             (Cast.bobSHK, bobInitCoin),
             (Cast.carlSHK, carlInitCoin)
           ],
-      EB._delegations =
+      EB.ssDelegations =
         [ (Cast.aliceSHK, hk Cast.alicePoolKeys),
           (Cast.bobSHK, hk Cast.bobPoolKeys),
           (Cast.carlSHK, hk Cast.alicePoolKeys)
         ],
-      EB._poolParams =
+      EB.ssPoolParams =
         [ (hk Cast.alicePoolKeys, alicePoolParams'),
           (hk Cast.bobPoolKeys, bobPoolParams')
         ]

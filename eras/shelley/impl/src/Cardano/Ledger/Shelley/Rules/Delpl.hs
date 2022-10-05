@@ -204,7 +204,7 @@ instance
 
 instance
   ( Era era,
-    HasField "_protocolVersion" (PParams era) ProtVer,
+    HasField "sppProtocolVersion" (PParams era) ProtVer,
     PredicateFailure (EraRule "DELEG" era) ~ ShelleyDelegPredFailure era
   ) =>
   Embed (ShelleyDELEG era) (ShelleyDELPL era)
