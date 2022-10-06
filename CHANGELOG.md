@@ -77,7 +77,7 @@ in the naming of release branches.
   function `EraUTxO.getScriptsNeeded` #3019
 - Remove model test framework #3019
 - The `Cardano.Ledger.Alonzo.Scripts` module no longer re-exports the
-  `plutus-ledger-api`'s `assertWellFormedCostModelParams`. #XXXX
+  `plutus-ledger-api`'s `assertWellFormedCostModelParams`. #3065
 
 ## Release branch 1.1.x
 
