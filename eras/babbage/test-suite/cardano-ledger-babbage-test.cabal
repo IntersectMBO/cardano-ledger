@@ -58,7 +58,7 @@ library
     cardano-ledger-shelley-test,
     cardano-ledger-shelley,
     small-steps,
-    strict-containers,
+    cardano-strict-containers,
 
   hs-source-dirs:
     src
@@ -97,7 +97,7 @@ test-suite cardano-ledger-babbage-test
     data-default-class,
     plutus-core,
     plutus-ledger-api,
-    strict-containers,
+    cardano-strict-containers,
     tasty,
     tasty-hunit,
     tasty-quickcheck,
