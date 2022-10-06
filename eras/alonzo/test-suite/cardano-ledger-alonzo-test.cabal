@@ -73,7 +73,7 @@ library
     microlens,
     small-steps,
     small-steps-test,
-    strict-containers,
+    cardano-strict-containers,
     text,
     transformers,
   hs-source-dirs:
@@ -119,7 +119,7 @@ test-suite cardano-ledger-alonzo-test
     cardano-ledger-shelley,
     cardano-ledger-shelley-test,
     microlens,
-    strict-containers,
+    cardano-strict-containers,
     tasty,
     tasty-hunit,
     tasty-quickcheck,

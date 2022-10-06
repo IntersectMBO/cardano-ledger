@@ -106,7 +106,7 @@ library
     small-steps,
     small-steps-test,
     set-algebra,
-    strict-containers,
+    cardano-strict-containers,
     tasty,
     tasty-hunit,
     tasty-quickcheck,

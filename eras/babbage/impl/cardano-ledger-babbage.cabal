@@ -72,7 +72,7 @@ library
                 plutus-tx ^>= 1.0,
                 set-algebra,
                 small-steps,
-                strict-containers,
+                cardano-strict-containers,
                 text,
                 transformers,
                 validation-selective
