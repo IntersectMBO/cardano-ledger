@@ -47,8 +47,8 @@ test-show-details: streaming
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 7e3ddba98a61900181fe63cdd4c9ed9708d1a6a7
-  --sha256: 1ci0aa8zkcld0d4i6xldvffhppf8bg0ys8y2jys912r7i5sxq5pa
+  tag: 46cd4c97cff9f1f0a0da976aa9e32bd2899c85ee
+  --sha256: 0qn56ahqmy79riwyaq5m0d4vpamdjkkk04b0x8zwlyd5y3pg58xd
   subdir:
     base-deriving-via
     binary
@@ -58,7 +58,7 @@ source-repository-package
     heapwords
     measures
     slotting
-    strict-containers
+    cardano-strict-containers
 
 source-repository-package
   type: git

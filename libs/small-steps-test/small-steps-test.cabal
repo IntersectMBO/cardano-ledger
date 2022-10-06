@@ -49,7 +49,7 @@ library
                      , QuickCheck
                      -- IOHK deps
                      , small-steps
-                     , strict-containers
+                     , cardano-strict-containers
   hs-source-dirs:      src
 
 test-suite examples

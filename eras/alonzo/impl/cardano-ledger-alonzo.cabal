@@ -89,7 +89,7 @@ library
     cardano-ledger-shelley,
     scientific,
     small-steps,
-    strict-containers,
+    cardano-strict-containers,
     text,
     time,
     transformers,
