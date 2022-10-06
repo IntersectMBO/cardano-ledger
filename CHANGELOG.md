@@ -76,6 +76,8 @@ in the naming of release branches.
 - Deprecated `scriptsNeededFromBody` and `scriptsNeeded` in all eras in favor of new class
   function `EraUTxO.getScriptsNeeded` #3019
 - Remove model test framework #3019
+- The `Cardano.Ledger.Alonzo.Scripts` module no longer re-exports the
+  `plutus-ledger-api`'s `assertWellFormedCostModelParams`. #XXXX
 
 ## Release branch 1.1.x
 

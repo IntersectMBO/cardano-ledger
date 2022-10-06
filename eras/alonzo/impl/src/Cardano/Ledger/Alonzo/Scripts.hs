@@ -39,7 +39,6 @@ module Cardano.Ledger.Alonzo.Scripts
     ExUnits',
     Prices (..),
     hashCostModel,
-    PV1.assertWellFormedCostModelParams,
     decodeCostModelMap,
     decodeCostModel,
     CostModels (..),
@@ -109,7 +108,6 @@ import qualified PlutusLedgerApi.V1 as PV1
     ProtocolVersion (ProtocolVersion),
     ScriptDecodeError,
     assertScriptWellFormed,
-    assertWellFormedCostModelParams,
     mkEvaluationContext,
   )
 import qualified PlutusLedgerApi.V2 as PV2 (ParamName, assertScriptWellFormed, mkEvaluationContext)
