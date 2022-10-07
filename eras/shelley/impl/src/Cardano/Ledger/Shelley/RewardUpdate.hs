@@ -25,6 +25,7 @@ import Cardano.Binary
 import Cardano.Ledger.BaseTypes (ProtVer (..), ShelleyBase)
 import Cardano.Ledger.Coin (Coin (..), CompactForm, DeltaCoin (..))
 import Cardano.Ledger.Compactible (Compactible (fromCompact))
+import Cardano.Ledger.Core (Reward (..), RewardType (MemberReward))
 import Cardano.Ledger.Credential (Credential (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
@@ -32,8 +33,6 @@ import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Cardano.Ledger.Shelley.PoolRank (Likelihood, NonMyopic)
 import Cardano.Ledger.Shelley.Rewards
   ( PoolRewardInfo (..),
-    Reward (..),
-    RewardType (..),
     rewardOnePoolMember,
   )
 import Control.DeepSeq (NFData (..))

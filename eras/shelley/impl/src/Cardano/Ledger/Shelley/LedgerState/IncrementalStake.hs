@@ -42,11 +42,7 @@ import Cardano.Ledger.Shelley.LedgerState.DPState
   )
 import Cardano.Ledger.Shelley.LedgerState.Types
 import Cardano.Ledger.Shelley.RewardUpdate (RewardUpdate (..))
-import Cardano.Ledger.Shelley.Rewards
-  ( Reward (..),
-    aggregateRewards,
-    filterRewards,
-  )
+import Cardano.Ledger.Shelley.Rewards (aggregateRewards, filterRewards)
 import Cardano.Ledger.Shelley.TxBody
   ( Ptr (..),
   )

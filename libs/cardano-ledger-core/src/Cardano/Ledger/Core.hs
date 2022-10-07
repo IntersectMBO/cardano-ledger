@@ -68,6 +68,10 @@ module Cardano.Ledger.Core
     getPhase1,
     getPhase2,
 
+    -- * Rewards
+    RewardType (..),
+    Reward (..),
+
     -- * Re-exports
     module Cardano.Ledger.Hashes,
 
@@ -92,6 +96,7 @@ import Cardano.Ledger.Keys (KeyRole (Staking, Witness))
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
 import Cardano.Ledger.Keys.WitVKey (WitVKey)
 import Cardano.Ledger.Language (Language)
+import Cardano.Ledger.Rewards (Reward (..), RewardType (..))
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash (..))
 import Cardano.Ledger.Serialization (Sized (sizedValue), ToCBORGroup (..), mkSized)
 import Cardano.Ledger.TxIn (TxIn (..))
