@@ -33,7 +33,7 @@ import NoThunks.Class (NoThunks (..))
 -- * member rewards - rewards given to a registered stake credential which has delegated
 -- to a stake pool, or
 --
--- * leader rewards - rewards given to a registered stake pool (in particular, given to to the
+-- * leader rewards - rewards given to a registered stake pool (in particular, given to the
 -- stake credential in the stake pool registration certificate).
 --
 -- See Figure 47, "Functions used in the Reward Splitting", of the
