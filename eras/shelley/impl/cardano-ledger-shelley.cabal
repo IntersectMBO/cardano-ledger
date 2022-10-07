@@ -120,7 +120,7 @@ library
     quiet,
     set-algebra,
     small-steps,
-    strict-containers,
+    cardano-strict-containers,
     text,
     time,
     transformers,

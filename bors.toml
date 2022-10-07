@@ -1,5 +1,4 @@
 status = [
-  "buildkite/cardano-ledger",
   "ci/hydra:Cardano:cardano-ledger:required",
 ]
 timeout_sec = 7200
