@@ -31,53 +31,27 @@ import qualified Byron.Spec.Chain.STS.Block as Abstract
 import Byron.Spec.Chain.STS.Rule.BBody
 import Byron.Spec.Chain.STS.Rule.Chain
   ( CHAIN,
-    ShouldGenDelegation (NoGenDelegation),
-    ShouldGenUTxO (NoGenUTxO),
-    ShouldGenUpdate (GenUpdate, NoGenUpdate),
-    coverInvalidBlockProofs,
-    invalidProofsBlockGen,
     isHeaderSizeTooBigFailure,
-    sigGenChain,
   )
-import Byron.Spec.Chain.STS.Rule.Epoch (sEpoch)
 import qualified Byron.Spec.Ledger.Core as AbstractCore
 import Byron.Spec.Ledger.Delegation
-  ( DSEnv (DSEnv),
-    tamperedDcerts,
-    _dIStateDelegationMap,
-    _dSEnvAllowedDelegators,
-    _dSEnvEpoch,
-    _dSEnvK,
-    _dSEnvSlot,
+  ( _dIStateDelegationMap,
   )
-import qualified Byron.Spec.Ledger.Delegation.Test as Delegation.Test
-import Byron.Spec.Ledger.STS.UTXO (UTxOEnv (..))
-import Byron.Spec.Ledger.STS.UTXOW (coverUtxoFailure, tamperedTxList)
 import Byron.Spec.Ledger.Update
   ( PParams,
     UPIEnv,
-    UPIREG,
     UPIState,
-    tamperWithUpdateProposal,
-    tamperWithVotes,
     _maxBkSz,
     _maxHdrSz,
   )
-import qualified Byron.Spec.Ledger.Update.Test as Update.Test
 import Cardano.Chain.Block
   ( ABlock,
     BlockValidationMode (..),
     ChainValidationError
       ( ChainValidationBlockTooLarge,
-        ChainValidationHeaderTooLarge,
-        ChainValidationProofValidationError
+        ChainValidationHeaderTooLarge
       ),
     ChainValidationState (cvsUtxo),
-    ProofValidationError
-      ( DelegationProofValidationError,
-        UTxOProofValidationError,
-        UpdateProofValidationError
-      ),
     blockHeader,
     blockLength,
     cvsUpdateState,
@@ -111,7 +85,6 @@ import Control.State.Transition.Generator
     classifyTraceLength,
     invalidTrace,
     ofLengthAtLeast,
-    sigGen,
     trace,
   )
 import qualified Control.State.Transition.Invalid.Trace as Invalid.Trace
@@ -280,45 +253,6 @@ classifyTransactions =
     . fmap (length . Abstract._bUtxo . Abstract._bBody)
     . traceSignals NewestFirst
 
-ts_prop_invalidDelegationCertificatesAreRejected :: TSProperty
-ts_prop_invalidDelegationCertificatesAreRejected =
-  invalidChainTracesAreRejected 300 delegationFailureProfile coverDcerts
-  where
-    delegationFailureProfile :: [(Int, SignalGenerator CHAIN)]
-    delegationFailureProfile = [(1, invalidDelegationGen)]
-      where
-        invalidDelegationGen :: SignalGenerator CHAIN
-        invalidDelegationGen env@(sn, _, allowedDelegators, _, k) st =
-          addDelegation
-            <$> sigGenChain NoGenDelegation NoGenUTxO NoGenUpdate env st
-            <*> invalidDelegationCerts
-          where
-            addDelegation block delegationCerts =
-              Abstract.updateBody
-                block
-                (\body -> body {Abstract._bDCerts = delegationCerts})
-
-            -- This chooses with even probability between manually tweaked
-            -- DCerts and goblin-tweaked ones.
-            invalidDelegationCerts = tamperedDcerts delegationEnv delegationSt
-              where
-                delegationEnv =
-                  ( DSEnv
-                      { _dSEnvAllowedDelegators = allowedDelegators,
-                        _dSEnvEpoch = sEpoch sn k,
-                        _dSEnvSlot = sn,
-                        _dSEnvK = k
-                      }
-                  )
-                (_, _, _, _, delegationSt, _) = st
-
-    -- @mhueschen : this is lifted from adjacent coverage checkers and does not (at least intentionally)
-    -- address the TODOs listed below.
-    coverDcerts :: [PredicateFailure CHAIN] -> ChainValidationError -> PropertyT IO ()
-    -- TODO: Establish a mapping between concrete and abstract errors. See 'coverDelegationRegistration'
-    coverDcerts abstractPfs _concretePfs =
-      Delegation.Test.coverDelegFailures 1 abstractPfs
-
 -- TODO: add coverage testing for delegation.
 --
 -- TODO: we could establish a mapping between concrete and abstract errors.
@@ -376,30 +310,6 @@ invalidChainTracesAreRejected numberOfTests failureProfile onFailureAgreement =
                   footnote $ "Concrete result: " ++ show concreteResult
                   failure
 
-ts_prop_invalidUpdateRegistrationsAreRejected :: TSProperty
-ts_prop_invalidUpdateRegistrationsAreRejected =
-  invalidChainTracesAreRejected 300 updateRegistrationFailureProfile coverUpdateRegistration
-  where
-    updateRegistrationFailureProfile :: [(Int, SignalGenerator CHAIN)]
-    updateRegistrationFailureProfile = [(1, invalidUpdateProposalGen)]
-      where
-        invalidUpdateProposalGen :: SignalGenerator CHAIN
-        invalidUpdateProposalGen env st = do
-          block <- sigGenChain NoGenDelegation NoGenUTxO NoGenUpdate env st
-          let upiEnv = mkUpiEnv block env st
-              upiSt = mkUpiSt st
-          uprop <- sigGen @UPIREG upiEnv upiSt
-          tamperedUprop <- tamperWithUpdateProposal upiEnv upiSt uprop
-          pure $!
-            Abstract.updateBody
-              block
-              (\body -> body {Abstract._bUpdProp = Just tamperedUprop})
-
-    coverUpdateRegistration :: [PredicateFailure CHAIN] -> ChainValidationError -> PropertyT IO ()
-    -- TODO: Establish a mapping between concrete and abstract errors. See 'coverDelegationRegistration'
-    coverUpdateRegistration abstractPfs _concretePfs =
-      Update.Test.coverUpiregFailures 1 abstractPfs
-
 -- | Extract the update interface environment from a given block and chain
 -- environment and state.
 --
@@ -430,69 +340,6 @@ mkUpiSt ::
   State CHAIN ->
   UPIState
 mkUpiSt (_slot, _sgs, _h, _utxoSt, _delegSt, upiSt) = upiSt
-
-ts_prop_invalidTxWitsAreRejected :: TSProperty
-ts_prop_invalidTxWitsAreRejected =
-  invalidChainTracesAreRejected 300 failureProfile coverTxWits
-  where
-    failureProfile :: [(Int, SignalGenerator CHAIN)]
-    failureProfile = [(1, invalidTxWitsGen)]
-
-    invalidTxWitsGen :: SignalGenerator CHAIN
-    invalidTxWitsGen env@(_, utxo, _, pparams, _) st = do
-      block <- sigGenChain NoGenDelegation NoGenUTxO NoGenUpdate env st
-      let (_slot, _sgs, _h, utxoSt, _delegSt, _upiSt) = st
-          utxoEnv = UTxOEnv {utxo0 = utxo, pps = pparams}
-      txWitsList <- tamperedTxList utxoEnv utxoSt
-      pure $!
-        Abstract.updateBody
-          block
-          (\body -> body {Abstract._bUtxo = txWitsList})
-
-    coverTxWits :: [PredicateFailure CHAIN] -> ChainValidationError -> PropertyT IO ()
-    -- TODO: Establish a mapping between concrete and abstract errors. See 'coverDelegationRegistration'
-    coverTxWits abstractPfs _concretePfs =
-      coverUtxoFailure 1 abstractPfs
-
-ts_prop_invalidVotesAreRejected :: TSProperty
-ts_prop_invalidVotesAreRejected =
-  invalidChainTracesAreRejected 300 votesFailureProfile coverVotes
-  where
-    votesFailureProfile :: [(Int, SignalGenerator CHAIN)]
-    votesFailureProfile = [(1, invalidVotesGen)]
-      where
-        invalidVotesGen :: SignalGenerator CHAIN
-        invalidVotesGen env st = do
-          block <- sigGenChain NoGenDelegation NoGenUTxO GenUpdate env st
-          let blockVotes = Abstract._bUpdVotes (Abstract._bBody block)
-          tamperedVotes <- tamperWithVotes (mkUpiEnv block env st) (mkUpiSt st) blockVotes
-          pure $!
-            Abstract.updateBody
-              block
-              (\body -> body {Abstract._bUpdVotes = tamperedVotes})
-
-    coverVotes :: [PredicateFailure CHAIN] -> ChainValidationError -> PropertyT IO ()
-    -- TODO: Establish a mapping between concrete and abstract errors. See 'coverDelegationRegistration'
-    coverVotes abstractPfs _concretePf =
-      Update.Test.coverUpivoteFailures 1 abstractPfs
-
-ts_prop_invalidBlockPayloadProofsAreRejected :: TSProperty
-ts_prop_invalidBlockPayloadProofsAreRejected =
-  invalidChainTracesAreRejected 300 [(1, invalidProofsBlockGen)] coverFailures
-  where
-    coverFailures :: [PredicateFailure CHAIN] -> ChainValidationError -> PropertyT IO ()
-    coverFailures abstractPfs concretePf = do
-      coverInvalidBlockProofs 15 abstractPfs
-      -- Check that the concrete failures correspond with the abstract ones.
-      when (any (== InvalidDelegationHash) $ extractValues abstractPfs) $
-        assert $
-          concretePf == ChainValidationProofValidationError DelegationProofValidationError
-      when (any (== InvalidUpdateProposalHash) $ extractValues abstractPfs) $
-        assert $
-          concretePf == ChainValidationProofValidationError UpdateProofValidationError
-      when (any (== InvalidUtxoHash) $ extractValues abstractPfs) $
-        assert $
-          concretePf == ChainValidationProofValidationError UTxOProofValidationError
 
 -- | Output resulting from elaborating and validating an abstract trace with
 -- the concrete validators.

@@ -42,8 +42,6 @@ import Data.Data (Data, Typeable)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
-import Test.Goblin (SeedGoblin (..))
-import Test.Goblin.TH (deriveSeedGoblin)
 
 data UTXO deriving (Data, Typeable)
 
@@ -117,10 +115,3 @@ instance STS UTXO where
               reserves = reserves + fee
             }
     ]
-
---------------------------------------------------------------------------------
--- SeedGoblin instances
---------------------------------------------------------------------------------
-
-deriveSeedGoblin ''UTxOEnv
-deriveSeedGoblin ''UTxOState

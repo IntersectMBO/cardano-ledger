@@ -18,7 +18,6 @@ main = defaultMain tests
               testAbstractSize,
               testProperty "Only valid signals are generated" CHAIN.onlyValidSignalsAreGenerated,
               testProperty "Signers list is bounded by k " CHAIN.signersListIsBoundedByK,
-              testProperty "We are generating reasonable Chain Traces" CHAIN.relevantCasesAreCovered,
-              testProperty "Invalid signals are generated when requested" CHAIN.invalidSignalsAreGenerated
+              testProperty "We are generating reasonable Chain Traces" CHAIN.relevantCasesAreCovered
             ]
         ]

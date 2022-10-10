@@ -37,8 +37,7 @@ library
                      , Control.State.Transition.Trace
                      , Control.State.Transition.Trace.Generator.QuickCheck
                      , Hedgehog.Extra.Manual
-  build-depends:       goblins
-                     , deepseq
+  build-depends:       deepseq
                      , hedgehog >= 1.0.4
                      , tasty-hunit
                      , microlens

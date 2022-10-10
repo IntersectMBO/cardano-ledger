@@ -28,7 +28,6 @@ import Byron.Spec.Ledger.UTxO
   )
 import qualified Byron.Spec.Ledger.UTxO.Generators as UTxOGen
 import qualified Byron.Spec.Ledger.Update.Generators as UpdateGen
-import Byron.Spec.Ledger.Util (mkGoblinGens)
 import Control.State.Transition
   ( Embed,
     Environment,
@@ -46,22 +45,17 @@ import Control.State.Transition
   )
 import Control.State.Transition.Generator
   ( HasTrace,
-    SignalGenerator,
     coverFailures,
     envGen,
     sigGen,
-    tinkerWithSigGen,
   )
 import Data.Data (Data, Typeable)
 import qualified Data.Map as Map
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
-import Hedgehog (Gen, MonadTest)
-import qualified Hedgehog.Gen as Gen
+import Hedgehog (MonadTest)
 import Hedgehog.Internal.Property (CoverPercentage)
-import qualified Hedgehog.Range as Range
 import NoThunks.Class (NoThunks (..))
-import Test.Goblin (GoblinData, mkEmptyGoblin)
 
 data UTXOW deriving (Data, Typeable)
 
@@ -128,25 +122,6 @@ instance HasTrace UTXOW where
 
   sigGen UTxOEnv {pps} st =
     UTxOGen.genTxFromUTxO traceAddrs (pcMinFee pps) (utxo st)
-
---------------------------------------------------------------------------------
--- GoblinData & goblin-tinkered SignalGenerators
---------------------------------------------------------------------------------
-
-mkGoblinGens
-  "UTXOW"
-  [ "InsufficientWitnesses",
-    "UtxoFailure_EmptyTxInputs",
-    "UtxoFailure_EmptyTxOutputs",
-    "UtxoFailure_FeeTooLow",
-    "UtxoFailure_InputsNotInUTxO",
-    "UtxoFailure_NonPositiveOutputs"
-  ]
-
-tamperedTxList :: UTxOEnv -> UTxOState -> Gen [Tx]
-tamperedTxList env st = do
-  gen <- Gen.element (map (\sg -> sg env st) goblinGensUTXOW)
-  Gen.list (Range.linear 1 10) gen
 
 --------------------------------------------------------------------------------
 -- Hedgehog coverage checking
