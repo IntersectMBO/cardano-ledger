@@ -60,8 +60,8 @@ prop_redeemSignDifferentKey = property $ do
 
   assert
     . not
-    $ verifyRedeemSig Dummy.protocolMagicId SignForTestingOnly vk a $
-      redeemSign Dummy.protocolMagicId SignForTestingOnly sk a
+    $ verifyRedeemSig Dummy.protocolMagicId SignForTestingOnly vk a
+    $ redeemSign Dummy.protocolMagicId SignForTestingOnly sk a
 
 -- | Signing fails when then wrong signature data is used
 prop_redeemSignDifferentData :: Property
@@ -72,8 +72,8 @@ prop_redeemSignDifferentData = property $ do
 
   assert
     . not
-    $ verifyRedeemSig Dummy.protocolMagicId SignForTestingOnly vk b $
-      redeemSign Dummy.protocolMagicId SignForTestingOnly sk a
+    $ verifyRedeemSig Dummy.protocolMagicId SignForTestingOnly vk b
+    $ redeemSign Dummy.protocolMagicId SignForTestingOnly sk a
 
 genData :: Gen [Int32]
 genData = Gen.list (Range.constant 0 50) (Gen.int32 Range.constantBounded)

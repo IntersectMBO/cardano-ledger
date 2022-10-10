@@ -62,8 +62,8 @@ instance HasTypeReps BlockHeader where
       <| typeOf (x ^. bhDlgHash :: Hash)
       <| typeOf (x ^. bhUpdHash :: Hash)
       <| typeReps (x ^. bhSlot :: Slot)
-      <> typeReps (x ^. bhIssuer :: VKey)
-      <> typeReps (x ^. bhSig :: Sig Hash)
+        <> typeReps (x ^. bhIssuer :: VKey)
+        <> typeReps (x ^. bhSig :: Sig Hash)
 
 data BlockBody = BlockBody
   { -- | Delegation certificates

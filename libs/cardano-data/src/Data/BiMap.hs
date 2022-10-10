@@ -83,7 +83,8 @@ decodeMapAsBimap ::
 decodeMapAsBimap = do
   bimap@(MkBiMap mf mb) <- decodeMapSkel biMapFromAscDistinctList
   unless (Map.valid mf && Map.valid mb) $
-    cborError $ DecoderErrorCustom "BiMap" "Expected distinct keys in ascending order"
+    cborError $
+      DecoderErrorCustom "BiMap" "Expected distinct keys in ascending order"
   pure bimap
 
 instance (NoThunks a, NoThunks b) => NoThunks (BiMap v a b) where

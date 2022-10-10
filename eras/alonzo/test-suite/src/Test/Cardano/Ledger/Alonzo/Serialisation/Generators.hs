@@ -106,7 +106,8 @@ instance Arbitrary PV1.Data where
               [ PV1.I <$> arbitrary,
                 PV1.B <$> arbitrary,
                 PV1.Map <$> listOf ((,) <$> gendata (n `div` 2) <*> gendata (n `div` 2)),
-                PV1.Constr <$> fmap fromIntegral (arbitrary :: Gen Natural)
+                PV1.Constr
+                  <$> fmap fromIntegral (arbitrary :: Gen Natural)
                   <*> listOf (gendata (n `div` 2)),
                 PV1.List <$> listOf (gendata (n `div` 2))
               ]

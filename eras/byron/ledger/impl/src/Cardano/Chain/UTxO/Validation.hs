@@ -178,7 +178,8 @@ validateTxAux ::
   m ()
 validateTxAux env utxo (ATxAux (Annotated tx _) _ txBytes) = do
   -- Check that the size of the transaction is less than the maximum
-  txSize <= maxTxSize
+  txSize
+    <= maxTxSize
     `orThrowError` TxValidationTxTooLarge txSize maxTxSize
 
   -- Calculate the minimum fee from the 'TxFeePolicy'
@@ -235,7 +236,8 @@ validateTx ::
   m ()
 validateTx env utxo (Annotated tx _) = do
   -- Check that the transaction attributes are less than the max size
-  unknownAttributesLength (txAttributes tx) < 128
+  unknownAttributesLength (txAttributes tx)
+    < 128
     `orThrowError` TxValidationUnknownAttributes
 
   -- Check that outputs have valid NetworkMagic
@@ -273,7 +275,8 @@ validateTxOutNM ::
   m ()
 validateTxOutNM nm txOut = do
   -- Make sure that the unknown attributes are less than the max size
-  unknownAttributesLength (addrAttributes (txOutAddress txOut)) < 128
+  unknownAttributesLength (addrAttributes (txOutAddress txOut))
+    < 128
     `orThrowError` TxValidationUnknownAddressAttributes
 
   -- Check that the network magic in the address matches the expected one

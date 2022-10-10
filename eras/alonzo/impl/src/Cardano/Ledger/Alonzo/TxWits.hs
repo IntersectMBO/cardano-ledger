@@ -489,7 +489,8 @@ instance
     where
       dec :: forall s. Decoder s (Annotator (Map RdmrPtr (Data era, ExUnits)))
       dec = do
-        entries <- fmap sequence . decodeList
+        entries <- fmap sequence
+          . decodeList
           . decodeRecordNamed "redeemer" (const 4)
           $ do
             rdmrPtr <- fromCBORGroup

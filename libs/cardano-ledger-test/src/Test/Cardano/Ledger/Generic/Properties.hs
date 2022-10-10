@@ -137,7 +137,8 @@ testTxValidForLEDGER proof (Box _ trc@(TRC (_, ledgerState, vtx)) _genstate) =
         totalAda ledgerState' === totalAda ledgerState
     Left errs ->
       counterexample
-        ( show (pcLedgerState proof ledgerState) ++ "\n\n"
+        ( show (pcLedgerState proof ledgerState)
+            ++ "\n\n"
             ++ show (pcTx proof vtx)
             ++ "\n\n"
             ++ show (ppList prettyA errs)

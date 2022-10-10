@@ -321,7 +321,8 @@ validateInsufficientCollateral ::
 validateInsufficientCollateral pp txBody bal =
   failureUnless (Val.scale (100 :: Int) bal >= Val.scale collPerc txfee) $
     InsufficientCollateral bal $
-      rationalToCoinViaCeiling $ (fromIntegral collPerc * unCoin txfee) % 100
+      rationalToCoinViaCeiling $
+        (fromIntegral collPerc * unCoin txfee) % 100
   where
     txfee = txBody ^. feeTxBodyL -- Coin supplied to pay fees
     collPerc = getField @"_collateralPercentage" pp
@@ -333,7 +334,8 @@ validateCollateralContainsNonADA ::
   Test (AlonzoUtxoPredFailure era)
 validateCollateralContainsNonADA collateralTxOuts =
   failureUnless (areAllAdaOnly collateralTxOuts) $
-    CollateralContainsNonADA $ sumAllValue collateralTxOuts
+    CollateralContainsNonADA $
+      sumAllValue collateralTxOuts
 
 -- | If tx has non-native scripts, end of validity interval must translate to time
 --

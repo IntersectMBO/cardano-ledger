@@ -90,13 +90,14 @@ exUnitsTranslationRoundTrip :: Gen Property
 exUnitsTranslationRoundTrip = do
   e <- arbitrary
   let result = exBudgetToExUnits (transExUnits e)
-  pure $
-    counterexample
-      ( "Before: " <> show e
+  pure
+    $ counterexample
+      ( "Before: "
+          <> show e
           <> "\n After: "
           <> show result
       )
-      $ result == Just e
+    $ result == Just e
 
 testSystemStart :: SystemStart
 testSystemStart = SystemStart $ posixSecondsToUTCTime 0

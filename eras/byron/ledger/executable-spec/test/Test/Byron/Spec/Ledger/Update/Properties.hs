@@ -440,7 +440,8 @@ instance HasTrace UBLOCK where
     aBlockIssuer <-
       Gen.prune $
         -- Pick a delegate from the delegation map
-        Gen.element $ Bimap.elems (Update.delegationMap upienv)
+        Gen.element $
+          Bimap.elems (Update.delegationMap upienv)
 
     aBlockVersion <-
       Update.protocolVersionEndorsementGen upienv upistate

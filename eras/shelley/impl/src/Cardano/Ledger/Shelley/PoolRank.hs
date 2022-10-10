@@ -175,7 +175,8 @@ applyDecay decay (Likelihood logWeights) = Likelihood $ mul decay <$> logWeights
 posteriorDistribution :: Histogram -> Likelihood -> Histogram
 posteriorDistribution (Histogram points) (Likelihood likelihoods) =
   normalize $
-    Histogram $ StrictSeq.zipWith (+) points likelihoods
+    Histogram $
+      StrictSeq.zipWith (+) points likelihoods
 
 -- | Normalize the histogram so that the total area is 1
 normalize :: Histogram -> Histogram

@@ -179,7 +179,10 @@ instance
   transitionRules = [ledgerTransition]
 
   renderAssertionViolation AssertionViolation {avSTS, avMsg, avCtx, avState} =
-    "AssertionViolation (" <> avSTS <> "): " <> avMsg
+    "AssertionViolation ("
+      <> avSTS
+      <> "): "
+      <> avMsg
       <> "\n"
       <> show avCtx
       <> "\n"

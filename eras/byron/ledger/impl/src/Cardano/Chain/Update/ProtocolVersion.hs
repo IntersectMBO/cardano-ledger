@@ -38,7 +38,9 @@ instance ToJSON ProtocolVersion
 
 instance ToCBOR ProtocolVersion where
   toCBOR pv =
-    encodeListLen 3 <> toCBOR (pvMajor pv) <> toCBOR (pvMinor pv)
+    encodeListLen 3
+      <> toCBOR (pvMajor pv)
+      <> toCBOR (pvMinor pv)
       <> toCBOR
         (pvAlt pv)
 

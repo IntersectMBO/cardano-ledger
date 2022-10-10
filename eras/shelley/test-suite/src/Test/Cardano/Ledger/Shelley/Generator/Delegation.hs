@@ -285,14 +285,16 @@ genDelegation
               if null availableDelegates
                 then pure Nothing
                 else
-                  mkCert <$> QC.elements availableDelegates
+                  mkCert
+                    <$> QC.elements availableDelegates
                     <*> QC.elements availablePools
             ),
             ( frequencyScriptCredDelegation,
               if null availableDelegatesScripts
                 then pure Nothing
                 else
-                  mkCertFromScript <$> QC.elements availableDelegatesScripts
+                  mkCertFromScript
+                    <$> QC.elements availableDelegatesScripts
                     <*> QC.elements availablePools
             )
           ]
@@ -462,13 +464,15 @@ genInstantaneousRewardsAccounts s genesisDelegatesByHash pparams accountState de
           (Map.lookup gk genesisDelegatesByHash)
       credentials = rewards delegSt
   winnerCreds <-
-    take <$> QC.elements [0 .. (max 0 $ UM.size credentials - 1)]
+    take
+      <$> QC.elements [0 .. (max 0 $ UM.size credentials - 1)]
       <*> QC.shuffle (Set.toList (UM.domain credentials))
   coins <- replicateM (length winnerCreds) $ genInteger 1 1000
   let credCoinMap = Map.fromList $ zip winnerCreds (fmap DeltaCoin coins)
 
   coreSigners <-
-    take <$> QC.elements [5 .. (max 0 $ length genDelegs_ - 1)]
+    take
+      <$> QC.elements [5 .. (max 0 $ length genDelegs_ - 1)]
       <*> QC.shuffle (lookupGenDelegate' . genDelegKeyHash <$> Map.elems genDelegs_)
 
   pot <- QC.elements [ReservesMIR, TreasuryMIR]
@@ -510,7 +514,8 @@ genInstantaneousRewardsTransfer s genesisDelegatesByHash pparams accountState de
           (Map.lookup gk genesisDelegatesByHash)
 
   coreSigners <-
-    take <$> QC.elements [5 .. (max 0 $ length genDelegs_ - 1)]
+    take
+      <$> QC.elements [5 .. (max 0 $ length genDelegs_ - 1)]
       <*> QC.shuffle (lookupGenDelegate' . genDelegKeyHash <$> Map.elems genDelegs_)
 
   pot <- QC.elements [ReservesMIR, TreasuryMIR]

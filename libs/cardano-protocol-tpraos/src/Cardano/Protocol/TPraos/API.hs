@@ -199,7 +199,8 @@ instance CC.Crypto c => GetLedgerView (BabbageEra c) where
           lvExtraEntropy = error "Extra entropy is not set in the Babbage era",
           lvPoolDistr = pd,
           lvGenDelegs =
-            _genDelegs . dpsDState
+            _genDelegs
+              . dpsDState
               . lsDPState
               $ esLState es,
           lvChainChecks = pparamsToChainChecksPParams . esPp $ es
@@ -226,7 +227,8 @@ instance CC.Crypto c => GetLedgerView (ConwayEra c) where
           lvExtraEntropy = error "Extra entropy is not set in the Conway era",
           lvPoolDistr = pd,
           lvGenDelegs =
-            _genDelegs . dpsDState
+            _genDelegs
+              . dpsDState
               . lsDPState
               $ esLState es,
           lvChainChecks = pparamsToChainChecksPParams . esPp $ es
@@ -299,7 +301,8 @@ view
             lvExtraEntropy = ee,
             lvPoolDistr = pd,
             lvGenDelegs =
-              _genDelegs . dpsDState
+              _genDelegs
+                . dpsDState
                 . lsDPState
                 $ esLState es,
             lvChainChecks = pparamsToChainChecksPParams . esPp $ es
@@ -475,7 +478,8 @@ tickChainDepState
       STS.Prtcl.PrtclState _ _ candidateNonce = csProtocol
       err = error "Panic! tickChainDepState failed."
       newTickState =
-        fromRight err . flip runReader globals
+        fromRight err
+          . flip runReader globals
           . applySTS @STS.Tickn.TICKN
           $ TRC
             ( STS.Tickn.TicknEnv

@@ -112,10 +112,11 @@ propDecompactErrors addr = do
         mingleDropLength,
         mingleStaking
       ]
-  pure $
-    counterexample
+  pure
+    $ counterexample
       ("Mingled address with " ++ mingler ++ " was parsed: " ++ show badAddr)
-      $ isLeft $ CA.decodeAddrEither @c badAddr
+    $ isLeft
+    $ CA.decodeAddrEither @c badAddr
 
 propDeserializeRewardAcntErrors :: forall c. CC.Crypto c => RewardAcnt c -> Gen Property
 propDeserializeRewardAcntErrors acnt = do
@@ -139,7 +140,8 @@ propDeserializeRewardAcntErrors acnt = do
         mingleAddLength,
         mingleDropLength
       ]
-  pure $
-    counterexample
+  pure
+    $ counterexample
       ("Mingled address with " ++ mingler ++ " was parsed: " ++ show badAddr)
-      $ isNothing $ CA.decodeRewardAcnt @c badAddr
+    $ isNothing
+    $ CA.decodeRewardAcnt @c badAddr

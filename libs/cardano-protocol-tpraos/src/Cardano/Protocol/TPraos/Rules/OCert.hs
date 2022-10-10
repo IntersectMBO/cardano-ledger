@@ -91,7 +91,9 @@ ocertTransition =
     maxKESiterations <- liftSTS $ asks maxKESEvo
 
     c0 <= kp ?! KESBeforeStartOCERT c0 kp
-    kp_ < c0_ + fromIntegral maxKESiterations
+    kp_
+      < c0_
+      + fromIntegral maxKESiterations
       ?! KESAfterEndOCERT kp c0 maxKESiterations
 
     let t = if kp_ >= c0_ then kp_ - c0_ else 0 -- this is required to prevent an

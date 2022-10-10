@@ -302,7 +302,8 @@ genTxBody pparams slot ins outs cert wdrl fee upd meta = do
         Just os -> (mint, os)
       ps =
         map (\k -> Map.findWithDefault (error $ "Cannot find policy: " ++ show k) k policyIndex) $
-          Set.toList $ policies mint
+          Set.toList $
+            policies mint
   pure
     ( MATxBody
         ins

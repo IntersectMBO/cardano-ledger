@@ -174,7 +174,8 @@ instance
     DuplicateGenesisDelegateDELEG kh ->
       encodeListLen 2 <> toCBOR (6 :: Word8) <> toCBOR kh
     InsufficientForInstantaneousRewardsDELEG pot needed potAmount ->
-      encodeListLen 4 <> toCBOR (7 :: Word8)
+      encodeListLen 4
+        <> toCBOR (7 :: Word8)
         <> toCBOR pot
         <> toCBOR needed
         <> toCBOR potAmount
@@ -189,14 +190,16 @@ instance
     MIRNegativesNotCurrentlyAllowed ->
       encodeListLen 1 <> toCBOR (12 :: Word8)
     InsufficientForTransferDELEG pot needed available ->
-      encodeListLen 4 <> toCBOR (13 :: Word8)
+      encodeListLen 4
+        <> toCBOR (13 :: Word8)
         <> toCBOR pot
         <> toCBOR needed
         <> toCBOR available
     MIRProducesNegativeUpdate ->
       encodeListLen 1 <> toCBOR (14 :: Word8)
     MIRNegativeTransfer pot amt ->
-      encodeListLen 3 <> toCBOR (15 :: Word8)
+      encodeListLen 3
+        <> toCBOR (15 :: Word8)
         <> toCBOR pot
         <> toCBOR amt
 
@@ -328,7 +331,8 @@ delegationTransition = do
           tellEvent (NewEpoch newEpoch)
           firstSlot <- liftSTS $ epochInfoFirst ei newEpoch
           let tooLate = firstSlot *- Duration sp
-          slot < tooLate
+          slot
+            < tooLate
             ?! MIRCertificateTooLateinEpochDELEG slot tooLate
 
           let (potAmount, delta, instantaneousRewards) =
@@ -342,7 +346,8 @@ delegationTransition = do
 
           all (>= mempty) combinedMap ?! MIRProducesNegativeUpdate
 
-          requiredForRewards <= available
+          requiredForRewards
+            <= available
             ?! InsufficientForInstantaneousRewardsDELEG targetPot requiredForRewards available
 
           pure $
@@ -357,7 +362,8 @@ delegationTransition = do
           tellEvent (NewEpoch newEpoch)
           firstSlot <- liftSTS $ epochInfoFirst ei newEpoch
           let tooLate = firstSlot *- Duration sp
-          slot < tooLate
+          slot
+            < tooLate
             ?! MIRCertificateTooLateinEpochDELEG slot tooLate
 
           all (>= mempty) credCoinMap ?! MIRNegativesNotCurrentlyAllowed
@@ -369,7 +375,8 @@ delegationTransition = do
           let credCoinMap' = Map.map (\(DeltaCoin x) -> Coin x) credCoinMap
               combinedMap = Map.union credCoinMap' instantaneousRewards
               requiredForRewards = fold combinedMap
-          requiredForRewards <= potAmount
+          requiredForRewards
+            <= potAmount
             ?! InsufficientForInstantaneousRewardsDELEG targetPot requiredForRewards potAmount
 
           case targetPot of
@@ -385,13 +392,16 @@ delegationTransition = do
           tellEvent (NewEpoch newEpoch)
           firstSlot <- liftSTS $ epochInfoFirst ei newEpoch
           let tooLate = firstSlot *- Duration sp
-          slot < tooLate
+          slot
+            < tooLate
             ?! MIRCertificateTooLateinEpochDELEG slot tooLate
 
           let available = availableAfterMIR targetPot acnt (_irwd ds)
-          coin >= mempty
+          coin
+            >= mempty
             ?! MIRNegativeTransfer targetPot coin
-          coin <= available
+          coin
+            <= available
             ?! InsufficientForTransferDELEG targetPot coin available
 
           let ir = _irwd ds

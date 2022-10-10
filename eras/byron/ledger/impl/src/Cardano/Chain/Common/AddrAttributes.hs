@@ -46,7 +46,8 @@ data AddrAttributes = AddrAttributes
 
 instance HeapWords AddrAttributes where
   heapWords aa =
-    3 + heapWords (aaVKDerivationPath aa)
+    3
+      + heapWords (aaVKDerivationPath aa)
       + heapWords (aaNetworkMagic aa)
 
 instance B.Buildable AddrAttributes where

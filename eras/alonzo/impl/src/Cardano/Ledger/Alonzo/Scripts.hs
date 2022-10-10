@@ -330,7 +330,8 @@ decodeArrayAsMap keys decodeValue = do
       numKeys = Set.size keys
   when (numValues /= numKeys) $
     fail $
-      "Expected array with " <> show numKeys
+      "Expected array with "
+        <> show numKeys
         <> " entries, but encoded array has "
         <> show numValues
         <> " entries."

@@ -113,24 +113,25 @@ exampleTypeRepsBlockBody =
         typeOf (undefined :: [DCert]),
         typeOf (undefined :: [Tx])
       ]
-    >< typeReps aTxWits
-    >< typeReps aTxWits
-    >< Seq.fromList
-      [ typeOf (undefined :: Maybe UProp),
-        typeOf (undefined :: [Vote]),
-        typeOf (undefined :: ProtVer),
-        typeOf (undefined :: Natural),
-        typeOf (undefined :: Natural),
-        typeOf (undefined :: Natural)
-      ]
+      >< typeReps aTxWits
+      >< typeReps aTxWits
+      >< Seq.fromList
+        [ typeOf (undefined :: Maybe UProp),
+          typeOf (undefined :: [Vote]),
+          typeOf (undefined :: ProtVer),
+          typeOf (undefined :: Natural),
+          typeOf (undefined :: Natural),
+          typeOf (undefined :: Natural)
+        ]
 
 -- | The typeReps for a 'Block' is a combination of typeReps for
 -- the header and body in the block.
 exampleTypeRepsBlock :: Assertion
 exampleTypeRepsBlock =
-  typeReps aBlock @?= typeOf (undefined :: Block)
-    <| typeReps aHeader
-    >< typeReps aBody
+  typeReps aBlock
+    @?= typeOf (undefined :: Block)
+      <| typeReps aHeader
+      >< typeReps aBody
 
 --------------------------------------------------------------------------------
 -- Properties of abstractSize for Block/Header/Body

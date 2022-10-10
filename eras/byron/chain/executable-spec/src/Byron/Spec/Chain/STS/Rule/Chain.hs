@@ -115,14 +115,14 @@ instance STS CHAIN where
                   _dSEnvK = k
                 }
         ds <- trans @DELEG $ IRC dsEnv
-        pure
-          $! ( s0,
-               [],
-               genesisHash,
-               utxoSt0,
-               ds,
-               upiState0
-             )
+        pure $!
+          ( s0,
+            [],
+            genesisHash,
+            utxoSt0,
+            ds,
+            upiState0
+          )
     ]
 
   transitionRules =
@@ -186,7 +186,8 @@ isHeaderSizeTooBigFailure _ = False
 headerIsValid :: UPIState -> BlockHeader -> Rule CHAIN 'Transition ()
 headerIsValid us bh = do
   let sMax = snd (us ^. _1) ^. maxHdrSz
-  bHeaderSize bh <= sMax
+  bHeaderSize bh
+    <= sMax
     ?! HeaderSizeTooBig bh (bHeaderSize bh) (Threshold sMax)
 
 -- | Lens for the delegation interface state contained in the chain state.
@@ -327,8 +328,8 @@ sigGenChain
           NoGenUpdate ->
             pure (Nothing, [])
 
-      pure
-        $! mkBlock
+      pure $!
+        mkBlock
           h
           nextSlot
           vkI

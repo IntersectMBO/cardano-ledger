@@ -84,7 +84,8 @@ instance Default Lazy.ByteString where
 instance HS.HashAlgorithm h => Default (Hash h b) where
   def =
     UnsafeHash $
-      Short.pack $ replicate (fromIntegral (Hash.sizeHash (Proxy :: Proxy h))) 0
+      Short.pack $
+        replicate (fromIntegral (Hash.sizeHash (Proxy :: Proxy h))) 0
 
 instance Default Bool where
   def = False

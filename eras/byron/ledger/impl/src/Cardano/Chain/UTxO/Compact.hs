@@ -156,14 +156,16 @@ instance ToCBOR CompactTxId where
 
 getCompactTxId :: Get CompactTxId
 getCompactTxId =
-  CompactTxId <$> getWord64le
+  CompactTxId
+    <$> getWord64le
     <*> getWord64le
     <*> getWord64le
     <*> getWord64le
 
 putCompactTxId :: CompactTxId -> Put
 putCompactTxId (CompactTxId a b c d) =
-  putWord64le a >> putWord64le b
+  putWord64le a
+    >> putWord64le b
     >> putWord64le c
     >> putWord64le d
 

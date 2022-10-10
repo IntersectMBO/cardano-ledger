@@ -148,12 +148,14 @@ bbodyTransition =
             actualBodySize = bBodySize txsSeq
             actualBodyHash = hashTxSeq @era txsSeq
 
-        actualBodySize == fromIntegral (bhviewBSize bh)
+        actualBodySize
+          == fromIntegral (bhviewBSize bh)
           ?! ShelleyInAlonzoBbodyPredFailure
             ( WrongBlockBodySizeBBODY actualBodySize (fromIntegral $ bhviewBSize bh)
             )
 
-        actualBodyHash == bhviewBHash bh
+        actualBodyHash
+          == bhviewBHash bh
           ?! ShelleyInAlonzoBbodyPredFailure
             ( InvalidBodyHashBBODY @era actualBodyHash (bhviewBHash bh)
             )

@@ -252,8 +252,8 @@ registerProposal env st proposal = do
   Registration.State registeredProtocolUpdateProposals' registeredSoftwareUpdateProposals' <-
     Registration.registerProposal subEnv subSt proposal
       `wrapError` Registration
-  pure
-    $! st
+  pure $!
+    st
       { registeredProtocolUpdateProposals = registeredProtocolUpdateProposals',
         registeredSoftwareUpdateProposals = registeredSoftwareUpdateProposals',
         proposalRegistrationSlot =
@@ -352,8 +352,8 @@ registerVote env st vote = do
   Voting.State proposalVotes' confirmedProposals' <-
     Voting.registerVoteWithConfirmation protocolMagic subEnv subSt vote
       `wrapError` Voting
-  pure
-    $! st
+  pure $!
+    st
       { confirmedProposals = confirmedProposals',
         proposalVotes = proposalVotes'
       }
@@ -415,8 +415,8 @@ registerEndorsement env st endorsement = do
           Registration.pupProtocolVersion
             <$> M.elems registeredProtocolUpdateProposals'
 
-  pure
-    $! st
+  pure $!
+    st
       { candidateProtocolUpdates = forceElemsToWHNF candidateProtocolUpdates',
         registeredProtocolUpdateProposals = registeredProtocolUpdateProposals',
         registeredSoftwareUpdateProposals =

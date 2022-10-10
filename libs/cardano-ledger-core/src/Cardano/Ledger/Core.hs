@@ -466,7 +466,8 @@ class
   -- ONE SHOULD NOT OVERIDE THE hashScript DEFAULT METHOD
   -- UNLESS YOU UNDERSTAND THE SafeToHash class, AND THE ROLE OF THE scriptPrefixTag
   hashScript =
-    ScriptHash . Hash.castHash
+    ScriptHash
+      . Hash.castHash
       . Hash.hashWith
         (\x -> scriptPrefixTag @era x <> originalBytes x)
   phaseScript :: PhaseRep phase -> Script era -> Maybe (PhasedScript phase era)

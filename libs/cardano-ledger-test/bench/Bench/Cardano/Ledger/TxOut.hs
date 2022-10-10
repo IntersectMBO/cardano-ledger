@@ -82,8 +82,8 @@ constructTxOutAlonzoBench ::
   StrictMaybe (DataHash StandardCrypto) ->
   Benchmark
 constructTxOutAlonzoBench count name mkAddr value !mdh =
-  cvalue
-    `seq` bgroup
+  cvalue `seq`
+    bgroup
       name
       [ env (pure (mkAddr <$> [1 .. count])) $
           bench "TxOut" . nf (map (\addr -> AlonzoTxOut addr value mdh :: TxOut Alonzo)),

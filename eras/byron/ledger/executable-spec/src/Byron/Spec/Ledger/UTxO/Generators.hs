@@ -168,7 +168,8 @@ genInputOutput ins inValue genOut outValue modifyOutValue =
       case treeValue (runDiscardEffectT insTree) of
         Nothing -> empty
         Just is ->
-          (,) <$> pure insTree
+          (,)
+            <$> pure insTree
             <*> toTreeMaybeT
               ( genSplitValue
                   (sum $ inValue <$> is)
@@ -364,5 +365,5 @@ viewTwo = \case
   [] -> []
   [_] -> []
   x : x' : xs ->
-    ([], x, x', xs) :
-    fmap (\(as, b, c, ds) -> (x : as, b, c, ds)) (viewTwo (x' : xs))
+    ([], x, x', xs)
+      : fmap (\(as, b, c, ds) -> (x : as, b, c, ds)) (viewTwo (x' : xs))

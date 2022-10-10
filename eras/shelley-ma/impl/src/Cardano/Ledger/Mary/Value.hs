@@ -123,7 +123,9 @@ instance FromCBOR AssetName where
       then
         cborError $
           DecoderErrorCustom "asset name exceeds 32 bytes:" $
-            decodeLatin1 $ BS16.encode $ SBS.fromShort an
+            decodeLatin1 $
+              BS16.encode $
+                SBS.fromShort an
       else pure $ AssetName an
 
 -- | Policy ID

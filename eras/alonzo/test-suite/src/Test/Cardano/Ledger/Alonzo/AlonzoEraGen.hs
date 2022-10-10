@@ -209,7 +209,9 @@ freeCostModel :: CostModel
 freeCostModel =
   let lang = PlutusV1
    in fromRight (error "freeCostModel is not well-formed") $
-        Alonzo.mkCostModel lang $ Map.fromSet (const 0) $ costModelParamsNamesSet lang
+        Alonzo.mkCostModel lang $
+          Map.fromSet (const 0) $
+            costModelParamsNamesSet lang
 
 -- ================================================================
 
@@ -353,7 +355,8 @@ genAlonzoPParams constants = do
   let mxTx = ExUnits (5 * bigMem + 1) (5 * bigStep + 1)
   -- mxTx <- ExUnits <$> (choose (100, 5000)) <*> (choose (100, 5000))
   mxBl <-
-    ExUnits <$> genNatural (20 * bigMem + 1) (30 * bigMem + 1)
+    ExUnits
+      <$> genNatural (20 * bigMem + 1) (30 * bigMem + 1)
       <*> genNatural (20 * bigStep + 1) (30 * bigStep + 1)
   mxV <- genNatural 4000 10000 -- This can't be too small. Shelley uses Hard coded 4000
   let cost = CostModels $ Map.singleton PlutusV1 freeCostModel

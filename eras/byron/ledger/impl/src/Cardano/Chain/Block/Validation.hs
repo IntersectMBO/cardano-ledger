@@ -302,15 +302,18 @@ validateHeaderMatchesBody hdr body = do
   let hdrProof = headerProof hdr
 
   -- Validate the delegation payload signature
-  proofDelegation hdrProof == hashDecoded (bodyDlgPayload body)
+  proofDelegation hdrProof
+    == hashDecoded (bodyDlgPayload body)
     `orThrowError` DelegationProofValidationError
 
   -- Validate the transaction payload proof
-  proofUTxO hdrProof == recoverTxProof (bodyTxPayload body)
+  proofUTxO hdrProof
+    == recoverTxProof (bodyTxPayload body)
     `orThrowError` UTxOProofValidationError
 
   -- Validate the update payload proof
-  proofUpdate hdrProof == hashDecoded (bodyUpdatePayload body)
+  proofUpdate hdrProof
+    == hashDecoded (bodyUpdatePayload body)
     `orThrowError` UpdateProofValidationError
 
 validateBlockProofs ::
@@ -353,7 +356,8 @@ updateBody ::
   m BodyState
 updateBody env bs b = do
   -- Validate the block size
-  blockLength b <= maxBlockSize
+  blockLength b
+    <= maxBlockSize
     `orThrowErrorInBlockValidationMode` ChainValidationBlockTooLarge maxBlockSize (blockLength b)
 
   -- Validate the delegation, transaction, and update payload proofs.
@@ -446,7 +450,8 @@ headerIsValid ::
   m ()
 headerIsValid updateState h =
   -- Validate the header size
-  headerLength h <= maxHeaderSize
+  headerLength h
+    <= maxHeaderSize
     `orThrowErrorInBlockValidationMode` ChainValidationHeaderTooLarge maxHeaderSize (headerLength h)
   where
     maxHeaderSize = Update.ppMaxHeaderSize $ UPI.adoptedProtocolParameters updateState
@@ -502,7 +507,8 @@ updateBlock ::
   m ChainValidationState
 updateBlock config cvs b = do
   -- Compare the block's 'ProtocolMagic' to the configured value
-  blockProtocolMagicId b == configProtocolMagicId config
+  blockProtocolMagicId b
+    == configProtocolMagicId config
     `orThrowErrorInBlockValidationMode` ChainValidationProtocolMagicMismatch
       (blockProtocolMagicId b)
       (configProtocolMagicId config)

@@ -148,10 +148,12 @@ bbodyTransition =
             actualBodySize = bBodySize txsSeq
             actualBodyHash = hashTxSeq @era txsSeq
 
-        actualBodySize == fromIntegral (bhviewBSize bhview)
+        actualBodySize
+          == fromIntegral (bhviewBSize bhview)
           ?! WrongBlockBodySizeBBODY actualBodySize (fromIntegral $ bhviewBSize bhview)
 
-        actualBodyHash == bhviewBHash bhview
+        actualBodyHash
+          == bhviewBHash bhview
           ?! InvalidBodyHashBBODY actualBodyHash (bhviewBHash bhview)
 
         ls' <-

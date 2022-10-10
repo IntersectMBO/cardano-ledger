@@ -296,7 +296,7 @@ checkAddrSpendingData asd addr =
   addrRoot addr
     == addressHash address'
     && addrType addr
-    == addrSpendingDataToType asd
+      == addrSpendingDataToType asd
   where
     address' = Address' (addrType addr, asd, addrAttributes addr)
 
@@ -337,7 +337,8 @@ isRedeemAddress addr = case addrType addr of
 -- indirectly once again, in an infinite loop.
 toCBORAddr :: Address -> Encoding
 toCBORAddr addr =
-  toCBOR (addrRoot addr) <> toCBOR (addrAttributes addr)
+  toCBOR (addrRoot addr)
+    <> toCBOR (addrAttributes addr)
     <> toCBOR
       (addrType addr)
 

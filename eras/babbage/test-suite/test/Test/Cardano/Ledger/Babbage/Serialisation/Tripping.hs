@@ -37,7 +37,8 @@ trippingF f x =
           x === y
     Right (remaining, y) ->
       counterexample
-        ( "Unconsumed trailing bytes:\n" <> BSL.unpack remaining
+        ( "Unconsumed trailing bytes:\n"
+            <> BSL.unpack remaining
             <> "\nbad res: "
             <> show y
             <> "\nfull term: "

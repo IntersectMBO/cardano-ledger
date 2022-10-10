@@ -159,7 +159,8 @@ genInstallerHash = InstallerHash <$> genHashRaw
 
 genPayload :: ProtocolMagicId -> Gen Payload
 genPayload pm =
-  payload <$> Gen.maybe (genProposal pm)
+  payload
+    <$> Gen.maybe (genProposal pm)
     <*> Gen.list
       (Range.linear 0 10)
       (genVote pm)
@@ -222,7 +223,7 @@ genRegistrationError =
                     (,) <$> genSystemTag <*> genInstallerHash
                 pure (name, (Registration.ApplicationVersion version slotNo meta))
             )
-          <*> genSoftwareVersion,
+        <*> genSoftwareVersion,
       Registration.MaxBlockSizeTooLarge <$> (Registration.TooLarge <$> genNatural <*> genNatural),
       Registration.MaxTxSizeTooLarge <$> (Registration.TooLarge <$> genNatural <*> genNatural),
       pure Registration.ProposalAttributesUnknown,

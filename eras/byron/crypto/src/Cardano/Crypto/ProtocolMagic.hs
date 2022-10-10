@@ -127,7 +127,8 @@ instance A.FromJSON RequiresNetworkMagic where
         "NMMustBeJust" -> Right RequiresMagic
         other ->
           Left
-            ( "invalid value " <> other
+            ( "invalid value "
+                <> other
                 <> ", acceptable values are RequiresNoMagic | RequiresMagic"
             )
 

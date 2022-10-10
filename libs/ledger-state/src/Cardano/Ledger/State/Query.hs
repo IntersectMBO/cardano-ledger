@@ -307,7 +307,8 @@ selectMap ::
   ReaderT SqlBackend m (Map.Map k a)
 selectMap fs f = do
   runConduit $
-    selectSource fs [] .| mapMC (\(Entity _ a) -> f a)
+    selectSource fs []
+      .| mapMC (\(Entity _ a) -> f a)
       .| foldlC (\m (k, v) -> Map.insert k v m) mempty
 {-# INLINEABLE selectMap #-}
 

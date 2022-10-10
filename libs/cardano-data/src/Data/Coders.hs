@@ -972,7 +972,9 @@ decodeRecordSum name decoder = do
   case lenOrIndef of
     Just n ->
       let errMsg =
-            "\nSum " ++ name ++ "\nreturned="
+            "\nSum "
+              ++ name
+              ++ "\nreturned="
               ++ show size
               ++ " actually read= "
               ++ show n

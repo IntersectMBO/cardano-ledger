@@ -173,7 +173,8 @@ initStPoolLifetime = initSt initUTxO
 
 aliceCoinEx1 :: Coin
 aliceCoinEx1 =
-  aliceInitCoin <-> _poolDeposit ppEx
+  aliceInitCoin
+    <-> _poolDeposit ppEx
     <-> ((3 :: Integer) <×> _keyDeposit ppEx)
     <-> Coin 3
 

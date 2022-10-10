@@ -53,8 +53,8 @@ prop_signDifferentKey = property $ do
 
   assert
     . not
-    $ verifySignature toCBOR Dummy.protocolMagicId SignForTestingOnly vk a $
-      sign Dummy.protocolMagicId SignForTestingOnly sk a
+    $ verifySignature toCBOR Dummy.protocolMagicId SignForTestingOnly vk a
+    $ sign Dummy.protocolMagicId SignForTestingOnly sk a
 
 -- | Signing fails when then wrong signature data is used
 prop_signDifferentData :: Property
@@ -65,8 +65,8 @@ prop_signDifferentData = property $ do
 
   assert
     . not
-    $ verifySignature toCBOR Dummy.protocolMagicId SignForTestingOnly vk b $
-      sign Dummy.protocolMagicId SignForTestingOnly sk a
+    $ verifySignature toCBOR Dummy.protocolMagicId SignForTestingOnly vk b
+    $ sign Dummy.protocolMagicId SignForTestingOnly sk a
 
 genData :: Gen [Int32]
 genData = Gen.list (Range.constant 0 50) (Gen.int32 Range.constantBounded)

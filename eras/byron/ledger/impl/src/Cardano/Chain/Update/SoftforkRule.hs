@@ -55,7 +55,9 @@ instance Aeson.ToJSON SoftforkRule
 
 instance ToCBOR SoftforkRule where
   toCBOR sr =
-    encodeListLen 3 <> toCBOR (srInitThd sr) <> toCBOR (srMinThd sr)
+    encodeListLen 3
+      <> toCBOR (srInitThd sr)
+      <> toCBOR (srMinThd sr)
       <> toCBOR
         (srThdDecrement sr)
 
