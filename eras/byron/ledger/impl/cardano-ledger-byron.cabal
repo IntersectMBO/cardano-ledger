@@ -250,7 +250,8 @@ library
                      , cardano-binary
                      , cardano-crypto
                      , cardano-crypto-wrapper
-                     , cardano-prelude
+                     -- HeapWords gets moved to a separate package in 0.1.0.1
+                     , cardano-prelude < 0.1.0.1
                      , cborg
                      , containers
                      , contra-tracer
