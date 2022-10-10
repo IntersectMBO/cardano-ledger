@@ -409,7 +409,8 @@ putPtr (Ptr slot (TxIx txIx) (CertIx certIx)) = do
 
 getPtr :: Get Ptr
 getPtr =
-  Ptr <$> (SlotNo <$> getVariableLengthWord64)
+  Ptr
+    <$> (SlotNo <$> getVariableLengthWord64)
     <*> (TxIx . fromIntegral <$> getVariableLengthWord64)
     <*> (CertIx . fromIntegral <$> getVariableLengthWord64)
 

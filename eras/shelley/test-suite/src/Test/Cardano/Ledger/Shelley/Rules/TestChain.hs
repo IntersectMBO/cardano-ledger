@@ -424,7 +424,8 @@ checkPreservation SourceSignalTarget {source, target, signal} =
     txs = map dispTx (zip txs' [0 :: Int ..])
 
     dispTx (tx, ix) =
-      "\nTransaction " ++ show ix
+      "\nTransaction "
+        ++ show ix
         ++ "\nfee :"
         ++ show (tx ^. bodyTxL . feeTxBodyL)
         ++ "\nwithdrawals: "
@@ -455,7 +456,8 @@ checkWithdrawlBound SourceSignalTarget {source, signal, target} =
     rewardDelta :: Coin
     rewardDelta =
       fold
-        ( rewards . dpsDState
+        ( rewards
+            . dpsDState
             . lsDPState
             . esLState
             . nesEs
@@ -463,7 +465,8 @@ checkWithdrawlBound SourceSignalTarget {source, signal, target} =
             $ source
         )
         <-> fold
-          ( rewards . dpsDState
+          ( rewards
+              . dpsDState
               . lsDPState
               . esLState
               . nesEs
@@ -483,8 +486,10 @@ utxoDepositsIncreaseByFeesWithdrawals ::
   Property
 utxoDepositsIncreaseByFeesWithdrawals SourceSignalTarget {source, signal, target} =
   counterexample "utxoDepositsIncreaseByFeesWithdrawals" $
-    circulation target <-> circulation source
-      === withdrawals signal <-> txFees ledgerTr
+    circulation target
+      <-> circulation source
+      === withdrawals signal
+      <-> txFees ledgerTr
   where
     us = lsUTxOState . esLState . nesEs . chainNes
     circulation chainSt =
@@ -533,8 +538,9 @@ potsSumIncreaseWdrlsPerTx SourceSignalTarget {source = chainSt, signal = block} 
           target = LedgerState UTxOState {_utxo = u', _deposited = d', _fees = f'} _
         } =
         property (hasFailedScripts tx)
-          .||. (coinBalance u' <+> d' <+> f') <-> (coinBalance u <+> d <+> f)
-          === fold (unWdrl (tx ^. bodyTxL . wdrlsTxBodyL))
+          .||. (coinBalance u' <+> d' <+> f')
+            <-> (coinBalance u <+> d <+> f)
+            === fold (unWdrl (tx ^. bodyTxL . wdrlsTxBodyL))
 
 -- | (Utxo + Deposits + Fees) increases by the reward delta
 potsSumIncreaseByRewardsPerTx ::
@@ -563,8 +569,10 @@ potsSumIncreaseByRewardsPerTx SourceSignalTarget {source = chainSt, signal = blo
               UTxOState {_utxo = u', _deposited = d', _fees = f'}
               DPState {dpsDState = DState {_unified = umap2}}
         } =
-        (coinBalance u' <+> d' <+> f') <-> (coinBalance u <+> d <+> f)
-          === fold (UM.unUnify (UM.Rewards umap1)) <-> fold (UM.unUnify (UM.Rewards umap2))
+        (coinBalance u' <+> d' <+> f')
+          <-> (coinBalance u <+> d <+> f)
+          === fold (UM.unUnify (UM.Rewards umap1))
+          <-> fold (UM.unUnify (UM.Rewards umap2))
 
 -- | The Rewards pot decreases by the sum of withdrawals in a transaction
 potsRewardsDecreaseByWdrlsPerTx ::

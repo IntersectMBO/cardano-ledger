@@ -91,7 +91,8 @@ decodeTestAnn _ x =
    in case decoded of
         Left e ->
           assertFailure $
-            "\nerror: " <> show e
+            "\nerror: "
+              <> show e
               <> "\nbytes: "
               <> show (B16.encode bytes)
               <> "\n"

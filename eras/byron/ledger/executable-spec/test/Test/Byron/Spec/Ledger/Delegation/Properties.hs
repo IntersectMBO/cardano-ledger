@@ -182,7 +182,8 @@ instance STS DBLOCK where
                 then 0
                 else Epoch $ unSlot nextSlot `div` slotsPerEpoch (_dSEnvK env)
         return
-          ( env & slot .~ nextSlot
+          ( env
+              & slot .~ nextSlot
               & epoch .~ nextEpoch,
             stNext
           )

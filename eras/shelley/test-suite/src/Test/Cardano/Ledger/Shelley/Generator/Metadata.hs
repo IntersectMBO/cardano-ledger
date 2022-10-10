@@ -49,7 +49,8 @@ genMetadata' = do
 -- | Generate one of the Metadatum
 genMetadatum :: Gen (Word64, Metadatum)
 genMetadatum = do
-  (,) <$> QC.arbitrary
+  (,)
+    <$> QC.arbitrary
     <*> ( QC.oneof
             [ genDatumInt,
               genDatumString,

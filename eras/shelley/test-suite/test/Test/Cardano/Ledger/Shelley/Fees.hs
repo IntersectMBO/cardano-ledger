@@ -130,7 +130,8 @@ alicePoolParams =
       _poolRelays =
         StrictSeq.singleton $
           SingleHostName SNothing $
-            fromJust $ textToDns "relay.io",
+            fromJust $
+              textToDns "relay.io",
       _poolMD =
         SJust $
           PoolMetadata

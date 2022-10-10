@@ -116,7 +116,8 @@ elaborateTxIns ::
   [Abstract.TxIn] ->
   NonEmpty Concrete.TxIn
 elaborateTxIns elaborateTxId =
-  fromMaybe (panic "elaborateTxIns: Empty list of TxIns") . NE.nonEmpty
+  fromMaybe (panic "elaborateTxIns: Empty list of TxIns")
+    . NE.nonEmpty
     . fmap
       (elaborateTxIn elaborateTxId)
 

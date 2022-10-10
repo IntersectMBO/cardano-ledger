@@ -217,7 +217,8 @@ instance Decoded (ACertificate ByteString) where
 instance B.Buildable (ACertificate a) where
   build (UnsafeACertificate e iVK dVK _ _) =
     bprint
-      ( "Delegation.Certificate { w = " . build
+      ( "Delegation.Certificate { w = "
+          . build
           . ", iVK = "
           . build
           . ", dVK = "

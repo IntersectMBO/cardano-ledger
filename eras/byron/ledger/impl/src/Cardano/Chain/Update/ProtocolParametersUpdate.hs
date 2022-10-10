@@ -46,7 +46,8 @@ data ProtocolParametersUpdate = ProtocolParametersUpdate
 instance B.Buildable ProtocolParametersUpdate where
   build ppu =
     bprint
-      ( "{ script version: " . bmodifier build
+      ( "{ script version: "
+          . bmodifier build
           . ", slot duration: "
           . bmodifier bytes'
           . ", block size limit: "

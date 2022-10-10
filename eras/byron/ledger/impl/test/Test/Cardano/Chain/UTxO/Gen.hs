@@ -148,7 +148,9 @@ genTxPayload pm = mkTxPayload <$> Gen.list (Range.linear 0 10) (genTxAux pm)
 
 genTxProof :: ProtocolMagicId -> Gen TxProof
 genTxProof pm =
-  TxProof <$> genWord32 <*> genMerkleRoot genTx
+  TxProof
+    <$> genWord32
+    <*> genMerkleRoot genTx
     <*> genAbstractHash
       (Gen.list (Range.linear 1 5) (genTxWitness pm))
 

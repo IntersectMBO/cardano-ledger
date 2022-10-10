@@ -140,48 +140,48 @@ upiendExamples =
                     fromList [(UpId 1, Slot {unSlot = 2})]
                   )
                   .- (ProtVer {_pvMaj = 1, _pvMin = 0, _pvAlt = 0}, VKey Owner {unOwner = 0})
-                    .-> ( ( ProtVer {_pvMaj = 0, _pvMin = 0, _pvAlt = 0},
-                            oldPParams
-                          ),
-                          [ ( Slot {unSlot = 15},
+                  .-> ( ( ProtVer {_pvMaj = 0, _pvMin = 0, _pvAlt = 0},
+                          oldPParams
+                        ),
+                        [ ( Slot {unSlot = 15},
+                            ( ProtVer {_pvMaj = 1, _pvMin = 0, _pvAlt = 0},
+                              newPParams
+                            )
+                          )
+                        ],
+                        fromList [],
+                        fromList
+                          [ ( UpId 1,
                               ( ProtVer {_pvMaj = 1, _pvMin = 0, _pvAlt = 0},
                                 newPParams
                               )
                             )
                           ],
-                          fromList [],
-                          fromList
-                            [ ( UpId 1,
-                                ( ProtVer {_pvMaj = 1, _pvMin = 0, _pvAlt = 0},
-                                  newPParams
-                                )
-                              )
-                            ],
-                          fromList [(UpId 1, (ApName "", ApVer 0, Metadata))],
-                          fromList [(UpId 1, Slot {unSlot = 5})],
-                          fromList
-                            [ ( UpId 1,
-                                VKeyGenesis {unVKeyGenesis = VKey Owner {unOwner = 1}}
-                              ),
-                              ( UpId 1,
-                                VKeyGenesis {unVKeyGenesis = VKey Owner {unOwner = 2}}
-                              ),
-                              ( UpId 1,
-                                VKeyGenesis {unVKeyGenesis = VKey Owner {unOwner = 3}}
-                              )
-                            ],
-                          fromList
-                            [ ( ProtVer {_pvMaj = 1, _pvMin = 0, _pvAlt = 0},
-                                VKeyGenesis {unVKeyGenesis = VKey Owner {unOwner = 0}}
-                              ),
-                              ( ProtVer {_pvMaj = 1, _pvMin = 0, _pvAlt = 0},
-                                VKeyGenesis {unVKeyGenesis = VKey Owner {unOwner = 1}}
-                              ),
-                              ( ProtVer {_pvMaj = 1, _pvMin = 0, _pvAlt = 0},
-                                VKeyGenesis {unVKeyGenesis = VKey Owner {unOwner = 3}}
-                              )
-                            ],
-                          fromList [(UpId 1, Slot {unSlot = 2})]
-                        )
+                        fromList [(UpId 1, (ApName "", ApVer 0, Metadata))],
+                        fromList [(UpId 1, Slot {unSlot = 5})],
+                        fromList
+                          [ ( UpId 1,
+                              VKeyGenesis {unVKeyGenesis = VKey Owner {unOwner = 1}}
+                            ),
+                            ( UpId 1,
+                              VKeyGenesis {unVKeyGenesis = VKey Owner {unOwner = 2}}
+                            ),
+                            ( UpId 1,
+                              VKeyGenesis {unVKeyGenesis = VKey Owner {unOwner = 3}}
+                            )
+                          ],
+                        fromList
+                          [ ( ProtVer {_pvMaj = 1, _pvMin = 0, _pvAlt = 0},
+                              VKeyGenesis {unVKeyGenesis = VKey Owner {unOwner = 0}}
+                            ),
+                            ( ProtVer {_pvMaj = 1, _pvMin = 0, _pvAlt = 0},
+                              VKeyGenesis {unVKeyGenesis = VKey Owner {unOwner = 1}}
+                            ),
+                            ( ProtVer {_pvMaj = 1, _pvMin = 0, _pvAlt = 0},
+                              VKeyGenesis {unVKeyGenesis = VKey Owner {unOwner = 3}}
+                            )
+                          ],
+                        fromList [(UpId 1, Slot {unSlot = 2})]
+                      )
       ]
   ]

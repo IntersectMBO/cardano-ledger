@@ -76,7 +76,8 @@ issuer (pps, dms, k) sgs =
   if null validIssuers
     then
       error $
-        "No valid issuers!" ++ "\n"
+        "No valid issuers!"
+          ++ "\n"
           ++ "k = "
           ++ show k
           ++ "\n"

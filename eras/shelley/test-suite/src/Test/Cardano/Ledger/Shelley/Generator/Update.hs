@@ -98,7 +98,8 @@ genIntervalInThousands lower upper =
 
 genPParams :: Constants -> Gen (ShelleyPParams era)
 genPParams c@Constants {maxMinFeeA, maxMinFeeB, minMajorPV} =
-  mkPParams <$> genNatural 0 maxMinFeeA -- _minfeeA
+  mkPParams
+    <$> genNatural 0 maxMinFeeA -- _minfeeA
     <*> genNatural 0 maxMinFeeB -- _minfeeB
     <*> szGen -- (maxBBSize, maxBHSize, maxTxSize)
     <*> genKeyDeposit

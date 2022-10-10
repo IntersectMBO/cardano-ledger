@@ -137,8 +137,8 @@ instance
       CRPredicateFailure hashAlgo hashToDataMap commitData
 
   initialRules =
-    [ pure
-        $! CRSt
+    [ pure $!
+        CRSt
           { hashToData = mempty,
             committedHashes = Set.empty
           }
@@ -150,16 +150,17 @@ instance
         case crSignal of
           Commit dataHash commitData -> do
             dataHash `Set.notMember` committedHashes ?! AlreadyComitted dataHash
-            pure
-              $! CRSt
+            pure $!
+              CRSt
                 { hashToData = insert dataHash commitData hashToData,
                   committedHashes = Set.insert dataHash committedHashes
                 }
           Reveal someData -> do
-            hashWithSerialiser toCBOR someData `Set.member` committedHashes
+            hashWithSerialiser toCBOR someData
+              `Set.member` committedHashes
               ?! InvalidReveal someData
-            pure
-              $! CRSt
+            pure $!
+              CRSt
                 { hashToData =
                     delete
                       (hashWithSerialiser toCBOR someData)

@@ -37,7 +37,8 @@ prop_dropMap = property $ do
     forAll $
       Gen.map
         (Range.constant 0 10)
-        ( (,) <$> genInt32
+        ( (,)
+            <$> genInt32
             <*> Gen.list (Range.constant 0 10) genWord8
         )
   let encodedBs = serialize byronProtVer mp
@@ -53,7 +54,8 @@ prop_dropTuple :: Property
 prop_dropTuple = property $ do
   (set, bs) <-
     forAll $
-      (,) <$> Gen.set (Range.constant 0 10) genInt32
+      (,)
+        <$> Gen.set (Range.constant 0 10) genInt32
         <*> genBytes
   let encodedBs = serialize byronProtVer (set, bs)
   decodeFull byronProtVer encodedBs === Right (set, bs)

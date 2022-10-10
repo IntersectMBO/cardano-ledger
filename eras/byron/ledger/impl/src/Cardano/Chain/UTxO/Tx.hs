@@ -86,12 +86,16 @@ instance ToJSON Tx
 
 instance ToCBOR Tx where
   toCBOR tx =
-    encodeListLen 3 <> toCBOR (txInputs tx) <> toCBOR (txOutputs tx)
+    encodeListLen 3
+      <> toCBOR (txInputs tx)
+      <> toCBOR (txOutputs tx)
       <> toCBOR
         (txAttributes tx)
 
   encodedSizeExpr size pxy =
-    1 + size (txInputs <$> pxy) + size (txOutputs <$> pxy)
+    1
+      + size (txInputs <$> pxy)
+      + size (txOutputs <$> pxy)
       + size
         (txAttributes <$> pxy)
 
@@ -141,7 +145,8 @@ instance ToJSON TxIn
 
 instance ToCBOR TxIn where
   toCBOR (TxInUtxo txInHash txInIndex) =
-    encodeListLen 2 <> toCBOR (0 :: Word8)
+    encodeListLen 2
+      <> toCBOR (0 :: Word8)
       <> encodeKnownCborDataItem
         (txInHash, txInIndex)
 

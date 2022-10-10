@@ -118,14 +118,16 @@ goldenTests_MockCrypto =
     keyHashHex = "01020304a1a2a3a4a5a6a7a8a9b0b1b2b3b4b5b6b7b8b9c0c1c2c3c4"
     keyHash :: Credential kh StandardCrypto
     keyHash =
-      KeyHashObj . KeyHash
+      KeyHashObj
+        . KeyHash
         . fromMaybe (error "Unable to decode")
         $ hashFromTextAsHex keyHashHex
     scriptHashHex :: IsString s => s
     scriptHashHex = "05060708b5b6b7b8d5d6d7d8d9e0e1e2e3e4e5e6e7e8e9f0f1f2f3f4"
     scriptHash :: Credential kh StandardCrypto
     scriptHash =
-      ScriptHashObj . ScriptHash
+      ScriptHashObj
+        . ScriptHash
         . fromMaybe (error "Unable to decode")
         $ hashFromTextAsHex scriptHashHex
     ptrHex :: IsString s => s
@@ -208,7 +210,8 @@ goldenTests_ShelleyCrypto =
     -- and should be 28-byte in the aftermath
     keyBlake2b224 :: BS.ByteString -> Credential kh StandardCrypto
     keyBlake2b224 vk =
-      KeyHashObj . KeyHash
+      KeyHashObj
+        . KeyHash
         . fromMaybe (error "Supplied bytes are of unexpected length")
         $ hashFromBytes hk
       where

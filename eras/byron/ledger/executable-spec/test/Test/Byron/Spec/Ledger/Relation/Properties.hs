@@ -103,8 +103,10 @@ propDomainExclusionAndUnion ::
   r ->
   m ()
 propDomainExclusionAndUnion s r1 r2 =
-  (dom r1 `union` s) ⋪ (r1 ∪ r2)
-    === (dom r1 `union` s) ⋪ r2
+  (dom r1 `union` s)
+    ⋪ (r1 ∪ r2)
+    === (dom r1 `union` s)
+    ⋪ r2
 
 --------------------------------------------------------------------------------
 -- Property helpers

@@ -83,7 +83,8 @@ genAddress = makeAddress <$> genAddrSpendingData <*> genAddrAttributes
 
 genAddressWithNM :: NetworkMagic -> Gen Address
 genAddressWithNM nm =
-  makeAddress <$> genAddrSpendingData
+  makeAddress
+    <$> genAddrSpendingData
     <*> genAddrAttributesWithNM nm
 
 genAddrType :: Gen AddrType

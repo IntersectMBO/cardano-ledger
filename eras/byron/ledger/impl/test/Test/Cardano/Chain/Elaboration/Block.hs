@@ -149,7 +149,9 @@ elaborate abstractToConcreteIdMaps config dCert st abstractBlock =
 
     dcerts =
       abstractBlock
-        ^.. ( Abstract.bBody . Abstract.bDCerts . traverse
+        ^.. ( Abstract.bBody
+                . Abstract.bDCerts
+                . traverse
                 . to
                   (elaborateDCert pm)
             )

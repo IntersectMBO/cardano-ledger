@@ -308,11 +308,11 @@ dIStateDSState =
     ( \dis dss ->
         dis
           & scheduledDelegations
-          .~ dss
-          ^. scheduledDelegations
+            .~ dss
+              ^. scheduledDelegations
           & keyEpochDelegations
-          .~ dss
-          ^. keyEpochDelegations
+            .~ dss
+              ^. keyEpochDelegations
     )
 
 dIStateDState :: Lens' DIState DState
@@ -322,11 +322,11 @@ dIStateDState =
     ( \dis dss ->
         dis
           & delegationMap
-          .~ dss
-          ^. delegationMap
+            .~ dss
+              ^. delegationMap
           & lastDelegation
-          .~ dss
-          ^. lastDelegation
+            .~ dss
+              ^. lastDelegation
     )
 
 --------------------------------------------------------------------------------
@@ -376,13 +376,20 @@ instance STS SDELEG where
         let d = liveAfter (env ^. k)
         notAlreadyScheduled d env st cert ?! IsAlreadyScheduled
         Set.member (cert ^. to dwho . _1) (env ^. allowedDelegators) ?! IsNotGenesisKey
-        env ^. epoch <= cert ^. to depoch
+        env
+          ^. epoch
+          <= cert
+          ^. to depoch
           ?! EpochInThePast
             EpochDiff
               { currentEpoch = env ^. epoch,
                 certEpoch = cert ^. to depoch
               }
-        cert ^. to depoch <= env ^. epoch + 1
+        cert
+          ^. to depoch
+          <= env
+          ^. epoch
+          + 1
           ?! EpochPastNextEpoch
             EpochDiff
               { currentEpoch = env ^. epoch,
@@ -466,8 +473,8 @@ instance STS ADELEG where
           Nothing -> pure () -- If vks hasn't delegated, then we proceed and
           -- update the @ADELEG@ state.
           Just sp -> sp < s ?! S_BeforeExistingDelegation
-        return
-          $! DState
+        return $!
+          DState
             { _dStateDelegationMap = dms ⨃ [(vks, vkd)],
               _dStateLastDelegation = dws ⨃ [(vks, s)]
             },
@@ -580,8 +587,8 @@ instance STS DELEG where
         IRC env <- judgmentContext
         initADelegsState <- trans @ADELEGS $ IRC (env ^. allowedDelegators)
         initSDelegsState <- trans @SDELEGS $ IRC env
-        pure
-          $! DIState
+        pure $!
+          DIState
             { _dIStateDelegationMap = initADelegsState ^. delegationMap,
               _dIStateLastDelegation = initADelegsState ^. lastDelegation,
               _dIStateScheduledDelegations = initSDelegsState ^. scheduledDelegations,

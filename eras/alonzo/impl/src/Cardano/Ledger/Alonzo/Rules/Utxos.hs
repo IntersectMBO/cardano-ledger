@@ -290,8 +290,8 @@ scriptsNotValidateTransition = do
       {- utxoKeep = getField @"collateral" txb ⋪ utxo -}
       {- utxoDel  = getField @"collateral" txb ◁ utxo -}
       !(utxoKeep, utxoDel) = extractKeys (unUTxO utxo) (txBody ^. collateralInputsTxBodyL)
-  pure
-    $! us
+  pure $!
+    us
       { _utxo = UTxO utxoKeep,
         _fees = fees <> coinBalance (UTxO utxoDel),
         _stakeDistro = updateStakeDistribution (_stakeDistro us) (UTxO utxoDel) mempty

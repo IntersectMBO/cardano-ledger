@@ -65,7 +65,8 @@ data ProtocolParameters = ProtocolParameters
 instance B.Buildable ProtocolParameters where
   build pp =
     bprint
-      ( "{ script version: " . build
+      ( "{ script version: "
+          . build
           . ", slot duration: "
           . bytes'
           . ", block size limit: "

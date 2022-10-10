@@ -260,8 +260,8 @@ scriptsNo = do
   let !(utxoKeep, utxoDel) = extractKeys (unUTxO utxo) (txBody ^. collateralInputsTxBodyL)
       UTxO collouts = collOuts txBody
       collateralFees = collAdaBalance txBody utxoDel -- NEW to Babbage
-  pure
-    $! us {- (collInputs txb ⋪ utxo) ∪ collouts tx -}
+  pure $!
+    us {- (collInputs txb ⋪ utxo) ∪ collouts tx -}
       { _utxo = UTxO (Map.union utxoKeep collouts), -- NEW to Babbage
       {- fees + collateralFees -}
         _fees = fees <> collateralFees, -- NEW to Babbage

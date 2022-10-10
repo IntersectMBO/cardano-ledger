@@ -410,7 +410,8 @@ transExUnits (ExUnits mem steps) =
 
 exBudgetToExUnits :: PV1.ExBudget -> Maybe ExUnits
 exBudgetToExUnits (PV1.ExBudget (PV1.ExCPU steps) (PV1.ExMemory memory)) =
-  ExUnits <$> safeFromInteger memory
+  ExUnits
+    <$> safeFromInteger memory
     <*> safeFromInteger steps
   where
     safeFromInteger :: Integral a => a -> Maybe Natural

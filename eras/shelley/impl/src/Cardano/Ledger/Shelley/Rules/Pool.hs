@@ -195,13 +195,15 @@ poolDelegationTransition = do
       when (HardForks.validatePoolRewardAccountNetID pp) $ do
         actualNetID <- liftSTS $ asks networkId
         let suppliedNetID = getRwdNetwork (_poolRAcnt poolParam)
-        actualNetID == suppliedNetID
+        actualNetID
+          == suppliedNetID
           ?! WrongNetworkPOOL actualNetID suppliedNetID (_poolId poolParam)
 
       when (SoftForks.restrictPoolMetadataHash pp) $
         forM_ (_poolMD poolParam) $ \pmd ->
           let s = BS.length (_poolMDHash pmd)
-           in s <= fromIntegral (sizeHash ([] @(CC.HASH (EraCrypto era))))
+           in s
+                <= fromIntegral (sizeHash ([] @(CC.HASH (EraCrypto era))))
                 ?! PoolMedataHashTooBig (_poolId poolParam) s
 
       let poolCost = _poolCost poolParam
@@ -231,7 +233,11 @@ poolDelegationTransition = do
         ei <- asks epochInfoPure
         epochInfoEpoch ei slot
       let EpochNo maxEpoch = getField @"_eMax" pp
-      cepoch < e && e <= cepoch + maxEpoch
+      cepoch
+        < e
+        && e
+        <= cepoch
+        + maxEpoch
         ?! StakePoolRetirementWrongEpochPOOL cepoch e (cepoch + maxEpoch)
       pure $ ps {_retiring = eval (_retiring ps ⨃ singleton hk (EpochNo e))}
     DCertDeleg _ -> do

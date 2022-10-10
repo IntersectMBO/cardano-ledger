@@ -321,10 +321,10 @@ decodeAddrStateT buf = do
       then AddrBootstrap <$> decodeBootstrapAddress buf
       else do
         -- Ensure there are no unexpected bytes in the header
-        unless (header .&. headerNonShelleyBits == 0) $
-          failDecoding
+        unless (header .&. headerNonShelleyBits == 0)
+          $ failDecoding
             "Shelley Address"
-            $ "Invalid header. Unused bits are not suppose to be set: " <> show header
+          $ "Invalid header. Unused bits are not suppose to be set: " <> show header
         -- Advance one byte for the consumed header
         modify' (+ 1)
         payment <- decodePaymentCredential header buf
@@ -346,7 +346,8 @@ ensureBufIsConsumed name buf = do
   lastOffset <- get
   let len = bufLength buf
   unless (lastOffset == len) $
-    failDecoding name $ "Left over bytes: " ++ show (len - lastOffset)
+    failDecoding name $
+      "Left over bytes: " ++ show (len - lastOffset)
 {-# INLINE ensureBufIsConsumed #-}
 
 -- | This decoder assumes the whole `ShortByteString` is occupied by the `BootstrapAddress`
@@ -566,7 +567,8 @@ decodeRewardAccountT buf = do
   modify' (+ 1)
   let header = Header $ bufUnsafeIndex buf 0
   unless (headerIsRewardAccount header) $
-    fail $ "Invalid header for the reward account: " <> show header
+    fail $
+      "Invalid header for the reward account: " <> show header
   account <-
     if headerRewardAccountIsScript header
       then ScriptHashObj <$> decodeScriptHash buf
@@ -597,12 +599,13 @@ decompactAddrLazy (UnsafeCompactAddr bytes) =
     header = run "address header" 0 bytes getWord
     addrNetId =
       unwrap "address network id" $
-        word8ToNetwork $ header .&. 0x0F -- 0b00001111 is the mask for the network id
-        -- The address format is
-        -- header | pay cred | stake cred
-        -- where the header is 1 byte
-        -- the pay cred is (sizeHash (ADDRHASH crypto)) bytes
-        -- and the stake cred can vary
+        word8ToNetwork $
+          header .&. 0x0F -- 0b00001111 is the mask for the network id
+          -- The address format is
+          -- header | pay cred | stake cred
+          -- where the header is 1 byte
+          -- the pay cred is (sizeHash (ADDRHASH crypto)) bytes
+          -- and the stake cred can vary
     paycred = run "payment credential" 1 bytes (getPayCred header)
     stakecred = run "staking credential" 1 bytes $ do
       skipHash ([] @(ADDRHASH c))
@@ -716,7 +719,8 @@ getVariableLengthWord64 = word7sToWord64 <$> getWord7s
 
 getPtr :: GetShort Ptr
 getPtr =
-  Ptr <$> (SlotNo <$> getVariableLengthWord64)
+  Ptr
+    <$> (SlotNo <$> getVariableLengthWord64)
     <*> (TxIx . fromIntegral <$> getVariableLengthWord64)
     <*> (CertIx . fromIntegral <$> getVariableLengthWord64)
 

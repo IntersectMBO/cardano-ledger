@@ -192,7 +192,7 @@ ts_mempoolValidation = withTestsTS 100 . property $ do
               vote' = elaborateVote pm upIdMap' <$> vote
            in addAnnotation
                 <$> [MempoolUpdateProposal up']
-                <> (MempoolUpdateVote <$> vote')
+                  <> (MempoolUpdateVote <$> vote')
 
   let mempoolPayloads =
         [mempoolTx]

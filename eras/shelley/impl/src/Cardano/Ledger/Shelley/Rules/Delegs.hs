@@ -167,7 +167,8 @@ instance
         <> toCBOR (1 :: Word8)
         <> mapToCBOR ws
     (DelplFailure a) ->
-      encodeListLen 2 <> toCBOR (2 :: Word8)
+      encodeListLen 2
+        <> toCBOR (2 :: Word8)
         <> toCBOR a
 
 instance

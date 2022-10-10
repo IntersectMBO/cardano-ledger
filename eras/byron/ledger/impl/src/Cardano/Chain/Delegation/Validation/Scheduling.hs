@@ -159,15 +159,21 @@ scheduleCertificate ::
   m State
 scheduleCertificate env st cert = do
   -- Check that the delegator is a genesis key
-  delegatorHash `Set.member` allowedDelegators
+  delegatorHash
+    `Set.member` allowedDelegators
     `orThrowError` NonGenesisDelegator delegatorHash
 
   -- Check that the delegation epoch refers to the current or to the next epoch
-  currentEpoch <= delegationEpoch && delegationEpoch <= currentEpoch + 1
+  currentEpoch
+    <= delegationEpoch
+    && delegationEpoch
+    <= currentEpoch
+    + 1
     `orThrowError` WrongEpoch currentEpoch delegationEpoch
 
   -- Check that the delegator hasn't already delegated in 'delegationEpoch'
-  (delegationEpoch, delegatorHash) `Set.notMember` keyEpochDelegations
+  (delegationEpoch, delegatorHash)
+    `Set.notMember` keyEpochDelegations
     `orThrowError` MultipleDelegationsForEpoch delegationEpoch delegatorHash
 
   -- Check that the delegator hasn't issued a certificate in this slot

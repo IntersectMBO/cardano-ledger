@@ -140,7 +140,8 @@ traceFromInitState baseEnv maxTraceLength traceGenEnv genSt0 = do
   env <- envGen @sts @traceGenEnv traceGenEnv
   res <-
     fromMaybe
-      ( pure . interpretSTS @sts @traceGenEnv baseEnv
+      ( pure
+          . interpretSTS @sts @traceGenEnv baseEnv
           . Trace.applySTSTest
       )
       genSt0

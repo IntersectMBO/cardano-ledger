@@ -33,7 +33,8 @@ doTestsFromStdin = do
       let c = ln' (1 - f)
       let res = taylorExpCmp 3 (1 / (1 - a)) (-(b * c))
       putStrLn $
-        show (exp' x) ++ " "
+        show (exp' x)
+          ++ " "
           ++ show (-(ln' a))
           ++ " "
           ++ show (1 - ((1 - f) *** b))

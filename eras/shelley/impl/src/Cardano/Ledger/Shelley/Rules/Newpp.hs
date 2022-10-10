@@ -120,7 +120,8 @@ newPpTransition = do
           diff = oblgCurr - oblgNew
           Coin availableReserves = availableAfterMIR ReservesMIR acnt (_irwd dstate)
 
-      Coin oblgCurr == _deposited utxoSt
+      Coin oblgCurr
+        == _deposited utxoSt
         ?! UnexpectedDepositPot (Coin oblgCurr) (_deposited utxoSt)
 
       if availableReserves + diff >= 0

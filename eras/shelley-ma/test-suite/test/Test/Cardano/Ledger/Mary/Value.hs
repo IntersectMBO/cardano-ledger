@@ -260,24 +260,32 @@ valuePropList =
     -- the following 4 laws only holds for non zero n and m, and when not(n==m).
     -- Zeros cause the inserts to be no-ops in that case.
     ( \n m _ p a ->
-        n == 0 || m == 0 || n == m
+        n == 0
+          || m == 0
+          || n == m
           || (insertValue pickOld p a m (insertValue pickNew p a n zero))
-          == (insertValue pickNew p a n zero),
+            == (insertValue pickNew p a n zero),
       "retains-old"
     ),
     ( \n m _ p a ->
-        n == 0 || m == 0 || n == m
+        n == 0
+          || m == 0
+          || n == m
           || (insertValue pickNew p a m (insertValue pickNew p a n zero))
-          == (insertValue pickNew p a m zero),
+            == (insertValue pickNew p a m zero),
       "new-overrides"
     ),
     ( \n m _ p a ->
-        n == 0 || m == 0 || n == m
+        n == 0
+          || m == 0
+          || n == m
           || lookupMultiAsset p a (insertValue pickOld p a m (insertValue pickNew p a n zero)) == n,
       "oldVsNew"
     ),
     ( \n m _ p a ->
-        n == 0 || m == 0 || n == m
+        n == 0
+          || m == 0
+          || n == m
           || lookupMultiAsset p a (insertValue pickNew p a m (insertValue pickNew p a n zero)) == m,
       "newVsOld"
     ),

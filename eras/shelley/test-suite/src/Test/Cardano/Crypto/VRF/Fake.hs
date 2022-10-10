@@ -136,7 +136,9 @@ evalVRF' a sk@(SignKeyFakeVRF n) =
   let y = sneakilyExtractResult a sk
       p = unsneakilyExtractPayload a
       realValue =
-        fromIntegral . bytesToNatural . hashToBytes
+        fromIntegral
+          . bytesToNatural
+          . hashToBytes
           . hashWithSerialiser @Blake2b_224 id
           $ toCBOR p <> toCBOR sk
    in (y, CertFakeVRF n realValue)
@@ -165,5 +167,6 @@ readBinaryWord16 =
 
 writeBinaryWord16 :: Word16 -> ByteString
 writeBinaryWord16 =
-  BS.reverse . fst
+  BS.reverse
+    . fst
     . BS.unfoldrN 2 (\w -> Just (fromIntegral w, unsafeShiftR w 8))

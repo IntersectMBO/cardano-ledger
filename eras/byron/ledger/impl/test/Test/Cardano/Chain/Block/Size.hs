@@ -175,7 +175,8 @@ ts_prop_sizeABoundaryHeader =
   encodedSizeTest
     (uncurry toCBORABoundaryHeader)
     (uncurryP toCBORABoundaryHeaderSize)
-    ( (,) <$> Crypto.genProtocolMagicId
+    ( (,)
+        <$> Crypto.genProtocolMagicId
         <*> genBoundaryHeader
     )
 

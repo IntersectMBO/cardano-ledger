@@ -122,10 +122,12 @@ instance
   where
   toCBOR = \case
     (PoolFailure a) ->
-      encodeListLen 2 <> toCBOR (0 :: Word8)
+      encodeListLen 2
+        <> toCBOR (0 :: Word8)
         <> toCBOR a
     (DelegFailure a) ->
-      encodeListLen 2 <> toCBOR (1 :: Word8)
+      encodeListLen 2
+        <> toCBOR (1 :: Word8)
         <> toCBOR a
 
 instance

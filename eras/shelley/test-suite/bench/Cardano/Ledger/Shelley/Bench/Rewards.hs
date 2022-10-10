@@ -116,7 +116,8 @@ genChainInEpoch epoch = do
       Nothing -> pure x
       Just x' -> x' >>= flip applyUntil f
     applyBlk cs' blk =
-      (either err id) . flip runReader testGlobals
+      (either err id)
+        . flip runReader testGlobals
         . applySTS @(CHAIN B)
         $ TRC ((), cs', blk)
       where

@@ -211,13 +211,15 @@ biggerItems = toFlatTerm (encode (encBigger bigger))
 
 decBigger :: Decode ('Closed 'Dense) Bigger
 decBigger =
-  RecD Bigger <! (RecD Test <! From <! (RecD Two <! From <! From) <! From)
+  RecD Bigger
+    <! (RecD Test <! From <! (RecD Two <! From <! From) <! From)
     <! (RecD Two <! From <! From)
     <! (RecD Big <! From <! From <! From)
 
 encBigger :: Bigger -> Encode ('Closed 'Dense) Bigger
 encBigger (Bigger (Test a (Two b c) d) (Two e f) (Big g h i)) =
-  Rec Bigger !> (Rec Test !> To a !> (Rec Two !> To b !> To c) !> To d)
+  Rec Bigger
+    !> (Rec Test !> To a !> (Rec Two !> To b !> To c) !> To d)
     !> (Rec Two !> To e !> To f)
     !> (Rec Big !> To g !> To h !> To i)
 

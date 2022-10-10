@@ -41,13 +41,14 @@ aTxId = TxId (hash aTx)
 exampleTypeRepsTxIn :: Assertion
 exampleTypeRepsTxIn =
   let txIn = TxIn aTxId 0
-   in typeReps txIn @?= typeOf (undefined :: TxIn)
-        <| typeOf (undefined :: TxId)
-        <| typeOf (undefined :: Hash)
-        <| typeOf (undefined :: Maybe Int)
-        <| typeOf (undefined :: Int)
-        <| typeOf (undefined :: Natural)
-        <| empty
+   in typeReps txIn
+        @?= typeOf (undefined :: TxIn)
+          <| typeOf (undefined :: TxId)
+          <| typeOf (undefined :: Hash)
+          <| typeOf (undefined :: Maybe Int)
+          <| typeOf (undefined :: Int)
+          <| typeOf (undefined :: Natural)
+          <| empty
 
 -- | A 'TxWits' term may contain multiple inputs/outputs/witnesses.
 --   In this example, we have 2 inputs and show how the 'typeReps' for
@@ -58,16 +59,17 @@ exampleTypeRepsTx =
       outs = []
       wits = []
       tx = Tx (TxBody [in0, in1] outs) wits
-   in typeReps tx @?= typeOf (undefined :: Tx)
-        <| typeOf (undefined :: TxBody)
-        <| typeOf (undefined :: [TxIn])
-        <| typeReps in0
-        >< typeReps in1
-        >< ( Seq.fromList
-               [ typeOf (undefined :: [TxOut]),
-                 typeOf (undefined :: [Wit])
-               ]
-           )
+   in typeReps tx
+        @?= typeOf (undefined :: Tx)
+          <| typeOf (undefined :: TxBody)
+          <| typeOf (undefined :: [TxIn])
+          <| typeReps in0
+          >< typeReps in1
+          >< ( Seq.fromList
+                 [ typeOf (undefined :: [TxOut]),
+                   typeOf (undefined :: [Wit])
+                 ]
+             )
 
 --------------------------------------------------------------------------------
 -- Properties of abstractSize of TxWits / TxIn /TxOut / Wit

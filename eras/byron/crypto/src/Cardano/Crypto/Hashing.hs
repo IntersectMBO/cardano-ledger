@@ -148,7 +148,8 @@ instance
     -- many bytes, fail otherwise. Then convert to a digest.
     bs <- fromCBOR @SBS.ShortByteString
     when (SBS.length bs /= expectedSize) $
-      cborError $ DecoderErrorCustom "AbstractHash" "Bytes not expected length"
+      cborError $
+        DecoderErrorCustom "AbstractHash" "Bytes not expected length"
     return (AbstractHash bs)
     where
       expectedSize = hashDigestSize (Prelude.undefined :: algo)

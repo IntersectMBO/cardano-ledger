@@ -101,7 +101,8 @@ txInfoOutV2 os txOut = do
           NoDatum -> PV2.NoOutputDatum
           DatumHash dh -> PV2.OutputDatumHash $ Alonzo.transDataHash' dh
           Datum binaryData ->
-            PV2.OutputDatum . PV2.Datum
+            PV2.OutputDatum
+              . PV2.Datum
               . PV2.dataToBuiltinData
               . getPlutusData
               . binaryDataToData

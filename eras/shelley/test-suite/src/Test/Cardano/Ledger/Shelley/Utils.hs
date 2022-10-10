@@ -170,7 +170,11 @@ data RawSeed = RawSeed !Word64 !Word64 !Word64 !Word64 !Word64
 instance Arbitrary RawSeed where
   arbitrary =
     RawSeed
-      <$> chooseAny <*> chooseAny <*> chooseAny <*> chooseAny <*> chooseAny
+      <$> chooseAny
+      <*> chooseAny
+      <*> chooseAny
+      <*> chooseAny
+      <*> chooseAny
 
 instance ToCBOR RawSeed where
   toCBOR (RawSeed w1 w2 w3 w4 w5) = toCBOR (w1, w2, w3, w4, w5)

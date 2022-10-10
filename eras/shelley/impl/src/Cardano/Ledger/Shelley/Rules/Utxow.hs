@@ -206,16 +206,20 @@ instance
     MissingVKeyWitnessesUTXOW missing ->
       encodeListLen 2 <> toCBOR (1 :: Word8) <> encodeFoldable missing
     MissingScriptWitnessesUTXOW ss ->
-      encodeListLen 2 <> toCBOR (2 :: Word8)
+      encodeListLen 2
+        <> toCBOR (2 :: Word8)
         <> encodeFoldable ss
     ScriptWitnessNotValidatingUTXOW ss ->
-      encodeListLen 2 <> toCBOR (3 :: Word8)
+      encodeListLen 2
+        <> toCBOR (3 :: Word8)
         <> encodeFoldable ss
     UtxoFailure a ->
-      encodeListLen 2 <> toCBOR (4 :: Word8)
+      encodeListLen 2
+        <> toCBOR (4 :: Word8)
         <> toCBOR a
     MIRInsufficientGenesisSigsUTXOW sigs ->
-      encodeListLen 2 <> toCBOR (5 :: Word8)
+      encodeListLen 2
+        <> toCBOR (5 :: Word8)
         <> encodeFoldable sigs
     MissingTxBodyMetadataHash h ->
       encodeListLen 2 <> toCBOR (6 :: Word8) <> toCBOR h
@@ -226,7 +230,8 @@ instance
     InvalidMetadata ->
       encodeListLen 1 <> toCBOR (9 :: Word8)
     ExtraneousScriptWitnessesUTXOW ss ->
-      encodeListLen 2 <> toCBOR (10 :: Word8)
+      encodeListLen 2
+        <> toCBOR (10 :: Word8)
         <> encodeFoldable ss
 
 instance

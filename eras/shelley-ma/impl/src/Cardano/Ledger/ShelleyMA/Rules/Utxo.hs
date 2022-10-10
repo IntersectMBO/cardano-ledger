@@ -331,42 +331,52 @@ instance
     BadInputsUTxO ins ->
       encodeListLen 2 <> toCBOR (0 :: Word8) <> encodeFoldable ins
     (OutsideValidityIntervalUTxO a b) ->
-      encodeListLen 3 <> toCBOR (1 :: Word8)
+      encodeListLen 3
+        <> toCBOR (1 :: Word8)
         <> toCBOR a
         <> toCBOR b
     (MaxTxSizeUTxO a b) ->
-      encodeListLen 3 <> toCBOR (2 :: Word8)
+      encodeListLen 3
+        <> toCBOR (2 :: Word8)
         <> toCBOR a
         <> toCBOR b
     InputSetEmptyUTxO -> encodeListLen 1 <> toCBOR (3 :: Word8)
     (FeeTooSmallUTxO a b) ->
-      encodeListLen 3 <> toCBOR (4 :: Word8)
+      encodeListLen 3
+        <> toCBOR (4 :: Word8)
         <> toCBOR a
         <> toCBOR b
     (ValueNotConservedUTxO a b) ->
-      encodeListLen 3 <> toCBOR (5 :: Word8)
+      encodeListLen 3
+        <> toCBOR (5 :: Word8)
         <> toCBOR a
         <> toCBOR b
     OutputTooSmallUTxO outs ->
-      encodeListLen 2 <> toCBOR (6 :: Word8)
+      encodeListLen 2
+        <> toCBOR (6 :: Word8)
         <> encodeFoldable outs
     (UpdateFailure a) ->
-      encodeListLen 2 <> toCBOR (7 :: Word8)
+      encodeListLen 2
+        <> toCBOR (7 :: Word8)
         <> toCBOR a
     (WrongNetwork right wrongs) ->
-      encodeListLen 3 <> toCBOR (8 :: Word8)
+      encodeListLen 3
+        <> toCBOR (8 :: Word8)
         <> toCBOR right
         <> encodeFoldable wrongs
     (WrongNetworkWithdrawal right wrongs) ->
-      encodeListLen 3 <> toCBOR (9 :: Word8)
+      encodeListLen 3
+        <> toCBOR (9 :: Word8)
         <> toCBOR right
         <> encodeFoldable wrongs
     OutputBootAddrAttrsTooBig outs ->
-      encodeListLen 2 <> toCBOR (10 :: Word8)
+      encodeListLen 2
+        <> toCBOR (10 :: Word8)
         <> encodeFoldable outs
     TriesToForgeADA -> encodeListLen 1 <> toCBOR (11 :: Word8)
     OutputTooBigUTxO outs ->
-      encodeListLen 2 <> toCBOR (12 :: Word8)
+      encodeListLen 2
+        <> toCBOR (12 :: Word8)
         <> encodeFoldable outs
 
 instance

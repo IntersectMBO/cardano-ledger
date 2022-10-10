@@ -289,7 +289,8 @@ ts_prop_invalidDelegationCertificatesAreRejected =
       where
         invalidDelegationGen :: SignalGenerator CHAIN
         invalidDelegationGen env@(sn, _, allowedDelegators, _, k) st =
-          addDelegation <$> sigGenChain NoGenDelegation NoGenUTxO NoGenUpdate env st
+          addDelegation
+            <$> sigGenChain NoGenDelegation NoGenUTxO NoGenUpdate env st
             <*> invalidDelegationCerts
           where
             addDelegation block delegationCerts =
@@ -389,8 +390,8 @@ ts_prop_invalidUpdateRegistrationsAreRejected =
               upiSt = mkUpiSt st
           uprop <- sigGen @UPIREG upiEnv upiSt
           tamperedUprop <- tamperWithUpdateProposal upiEnv upiSt uprop
-          pure
-            $! Abstract.updateBody
+          pure $!
+            Abstract.updateBody
               block
               (\body -> body {Abstract._bUpdProp = Just tamperedUprop})
 
@@ -443,8 +444,8 @@ ts_prop_invalidTxWitsAreRejected =
       let (_slot, _sgs, _h, utxoSt, _delegSt, _upiSt) = st
           utxoEnv = UTxOEnv {utxo0 = utxo, pps = pparams}
       txWitsList <- tamperedTxList utxoEnv utxoSt
-      pure
-        $! Abstract.updateBody
+      pure $!
+        Abstract.updateBody
           block
           (\body -> body {Abstract._bUtxo = txWitsList})
 
@@ -465,8 +466,8 @@ ts_prop_invalidVotesAreRejected =
           block <- sigGenChain NoGenDelegation NoGenUTxO GenUpdate env st
           let blockVotes = Abstract._bUpdVotes (Abstract._bBody block)
           tamperedVotes <- tamperWithVotes (mkUpiEnv block env st) (mkUpiSt st) blockVotes
-          pure
-            $! Abstract.updateBody
+          pure $!
+            Abstract.updateBody
               block
               (\body -> body {Abstract._bUpdVotes = tamperedVotes})
 
@@ -484,11 +485,14 @@ ts_prop_invalidBlockPayloadProofsAreRejected =
       coverInvalidBlockProofs 15 abstractPfs
       -- Check that the concrete failures correspond with the abstract ones.
       when (any (== InvalidDelegationHash) $ extractValues abstractPfs) $
-        assert $ concretePf == ChainValidationProofValidationError DelegationProofValidationError
+        assert $
+          concretePf == ChainValidationProofValidationError DelegationProofValidationError
       when (any (== InvalidUpdateProposalHash) $ extractValues abstractPfs) $
-        assert $ concretePf == ChainValidationProofValidationError UpdateProofValidationError
+        assert $
+          concretePf == ChainValidationProofValidationError UpdateProofValidationError
       when (any (== InvalidUtxoHash) $ extractValues abstractPfs) $
-        assert $ concretePf == ChainValidationProofValidationError UTxOProofValidationError
+        assert $
+          concretePf == ChainValidationProofValidationError UTxOProofValidationError
 
 -- | Output resulting from elaborating and validating an abstract trace with
 -- the concrete validators.
@@ -658,17 +662,17 @@ invalidSizesAreRejected
         where
           genAlteredUpdateState ((pv, pps), fads, avs, rpus, raus, cps, vts, bvs, pws) = do
             newMaxSize <- Gen.integral (Range.constant 0 maxSize)
-            pure
-              $! ( (pv, pps `setAbstractParamTo` newMaxSize),
-                   fads,
-                   avs,
-                   rpus,
-                   raus,
-                   cps,
-                   vts,
-                   bvs,
-                   pws
-                 )
+            pure $!
+              ( (pv, pps `setAbstractParamTo` newMaxSize),
+                fads,
+                avs,
+                rpus,
+                raus,
+                cps,
+                vts,
+                bvs,
+                pws
+              )
 
       genConcreteAlteredState ::
         ChainValidationState -> Natural -> Gen ChainValidationState
@@ -699,7 +703,8 @@ ts_prop_invalidBlockSizesAreRejected =
       PropertyT IO ()
     checkMaxSizeFailure abstractPfs ChainValidationBlockTooLarge {} = do
       assert $
-        any (== InvalidBlockSize) $ extractValues abstractPfs
+        any (== InvalidBlockSize) $
+          extractValues abstractPfs
       footnote $
         "InvalidBlockSize not found in the abstract predicate failures: "
           ++ show abstractPfs
