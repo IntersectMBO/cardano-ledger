@@ -15,8 +15,6 @@ module Test.Byron.Spec.Ledger.Update.Properties
     ublockOnlyValidSignalsAreGenerated,
     ublockRelevantTracesAreCovered,
     ublockSampleTraceMetrics,
-    invalidRegistrationsAreGenerated,
-    invalidSignalsAreGenerated,
   )
 where
 
@@ -41,11 +39,8 @@ import Byron.Spec.Ledger.Update
     Vote,
     emptyUPIState,
     protocolParameters,
-    tamperWithUpdateProposal,
-    tamperWithVotes,
   )
 import qualified Byron.Spec.Ledger.Update as Update
-import qualified Byron.Spec.Ledger.Update.Test as Update.Test
 import Control.State.Transition
   ( Embed,
     Environment,
@@ -64,7 +59,6 @@ import Control.State.Transition
   )
 import Control.State.Transition.Generator
   ( HasTrace,
-    SignalGenerator,
     envGen,
     randomTraceOfSize,
     ratio,
@@ -637,45 +631,3 @@ numberOfVotes sample =
   traceSignals OldestFirst sample
     & concatMap votes
     & length
-
---------------------------------------------------------------------------------
--- Invalid trace generation
---------------------------------------------------------------------------------
-
-invalidRegistrationsAreGenerated :: Property
-invalidRegistrationsAreGenerated =
-  withTests 300 $
-    Transition.Generator.invalidSignalsAreGenerated
-      @UPIREG
-      ()
-      [(1, invalidUPropGen)]
-      100
-      (Update.Test.coverUpiregFailures 2)
-  where
-    invalidUPropGen :: SignalGenerator UPIREG
-    invalidUPropGen env st = do
-      uprop <- sigGen @UPIREG env st
-      tamperWithUpdateProposal env st uprop
-
-invalidSignalsAreGenerated :: Property
-invalidSignalsAreGenerated =
-  withTests 300 $
-    Transition.Generator.invalidSignalsAreGenerated
-      @UBLOCK
-      ()
-      [(1, invalidUBlockGen)]
-      100
-      (Update.Test.coverUpivoteFailures 2)
-  where
-    invalidUBlockGen :: SignalGenerator UBLOCK
-    invalidUBlockGen env st = do
-      ublock <- sigGen @UBLOCK env st
-      Gen.choice
-        [ do
-            uprop <- sigGen @UPIREG (upienv st) (upistate st)
-            tamperedUprop <- tamperWithUpdateProposal (upienv st) (upistate st) uprop
-            pure $! ublock {optionalUpdateProposal = Just tamperedUprop},
-          do
-            tamperedVotes <- tamperWithVotes (upienv st) (upistate st) (votes ublock)
-            pure $! ublock {votes = tamperedVotes}
-        ]

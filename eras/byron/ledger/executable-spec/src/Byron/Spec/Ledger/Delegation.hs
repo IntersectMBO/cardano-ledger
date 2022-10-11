@@ -69,7 +69,6 @@ module Byron.Spec.Ledger.Delegation
     dcertsGen,
     initialEnvFromGenesisKeys,
     randomDCertGen,
-    goblinGensDELEG,
 
     -- * Functions on delegation state
     delegatorOf,
@@ -95,7 +94,6 @@ module Byron.Spec.Ledger.Delegation
     SdelegsPredicateFailure (..),
     MsdelegPredicateFailure (..),
     DelegPredicateFailure (..),
-    tamperedDcerts,
   )
 where
 
@@ -125,7 +123,6 @@ import Byron.Spec.Ledger.Core
 import Byron.Spec.Ledger.Core.Generators (epochGen, slotGen)
 import qualified Byron.Spec.Ledger.Core.Generators as CoreGen
 import Byron.Spec.Ledger.Core.Omniscient (signWithGenesisKey)
-import Byron.Spec.Ledger.Util (mkGoblinGens)
 import Control.Arrow ((&&&))
 import Control.State.Transition
   ( Embed,
@@ -145,11 +142,9 @@ import Control.State.Transition
   )
 import Control.State.Transition.Generator
   ( HasTrace,
-    SignalGenerator,
     envGen,
     genTrace,
     sigGen,
-    tinkerWithSigGen,
   )
 import Control.State.Transition.Trace (TraceOrder (OldestFirst), traceSignals)
 import Data.AbstractSize
@@ -173,14 +168,6 @@ import qualified Hedgehog.Range as Range
 import Lens.Micro (Lens', lens, to, (%~), (&), (.~), (<>~), (^.), _1)
 import Lens.Micro.TH (makeFields)
 import NoThunks.Class (NoThunks (..), allNoThunks, noThunksInKeysAndValues)
-import Test.Goblin
-  ( AddShrinks (..),
-    Goblin (..),
-    GoblinData,
-    SeedGoblin (..),
-    mkEmptyGoblin,
-  )
-import Test.Goblin.TH (deriveAddShrinks, deriveGoblin, deriveSeedGoblin)
 
 --------------------------------------------------------------------------------
 -- Abstract types
@@ -871,43 +858,3 @@ maxCertsPerBlock groupedCerts =
   case groupedCerts of
     [] -> 0
     _ -> List.maximum (length <$> groupedCerts)
-
---------------------------------------------------------------------------------
--- Goblins instances
---------------------------------------------------------------------------------
-
-deriveGoblin ''DCert
-
---------------------------------------------------------------------------------
--- AddShrinks instances
---------------------------------------------------------------------------------
-
-deriveAddShrinks ''DCert
-
---------------------------------------------------------------------------------
--- SeedGoblin instances
---------------------------------------------------------------------------------
-
-deriveSeedGoblin ''DSEnv
-deriveSeedGoblin ''DIState
-
---------------------------------------------------------------------------------
--- GoblinData & goblin-tinkered SignalGenerators
---------------------------------------------------------------------------------
-
-mkGoblinGens
-  "DELEG"
-  [ "SDelegSFailure_SDelegFailure_EpochInThePast",
-    "SDelegSFailure_SDelegFailure_EpochPastNextEpoch",
-    "SDelegSFailure_SDelegFailure_IsAlreadyScheduled",
-    "SDelegSFailure_SDelegFailure_IsNotGenesisKey"
-  ]
-
-tamperedDcerts :: DIEnv -> DIState -> Gen [DCert]
-tamperedDcerts env st =
-  Gen.choice
-    [ Gen.list (Range.constant 0 10) (randomDCertGen env),
-      do
-        sg <- Gen.element goblinGensDELEG
-        sg env st
-    ]

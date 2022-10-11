@@ -41,7 +41,6 @@ library
                      , bytestring
                      , containers
                      , byron-spec-ledger
-                     , goblins
                      , hashable
                      , hedgehog >= 1.0.4
                      , microlens

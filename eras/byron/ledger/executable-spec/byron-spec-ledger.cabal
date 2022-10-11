@@ -12,7 +12,6 @@ category:            Testing
 build-type:          Simple
 
 extra-source-files:  CHANGELOG.md
-                     src/goblin_genomes/*.genome
 
 common base
   build-depends:      base >= 4.12 && < 4.15
@@ -43,7 +42,6 @@ library
                      , Byron.Spec.Ledger.Update.Test
                      , Byron.Spec.Ledger.UTxO
                      , Byron.Spec.Ledger.UTxO.Generators
-                     , Byron.Spec.Ledger.Util
                      , Byron.Spec.Ledger.STS.UTXO
                      , Byron.Spec.Ledger.STS.UTXOW
                      , Byron.Spec.Ledger.STS.UTXOWS
@@ -53,8 +51,6 @@ library
                      , cardano-crypto-class
                      , containers
                      , cryptonite
-                     , filepath
-                     , goblins
                      , hashable
                      , hedgehog >= 1.0.4
                      , microlens

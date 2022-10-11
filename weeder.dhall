@@ -14,9 +14,6 @@
   , "^Cardano.Ledger.Shelley.TxData.TxOut$"
   , "^Cardano.Ledger.Shelley.Scripts.hashAnyScript$"
 
-    -- Things we're not interested in
-  , "^Test.Goblin.*"
-
     -- Testing stuff we want to keep
   , "Test.Byron.Spec.Ledger.UTxO.Properties.tracesAreClassified"
   ]

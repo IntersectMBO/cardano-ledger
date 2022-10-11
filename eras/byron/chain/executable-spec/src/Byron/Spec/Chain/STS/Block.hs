@@ -27,8 +27,6 @@ import Lens.Micro ((^.))
 import Lens.Micro.Extras (view)
 import Lens.Micro.TH (makeLenses)
 import Numeric.Natural (Natural)
-import Test.Goblin (AddShrinks (..), Goblin (..))
-import Test.Goblin.TH (deriveAddShrinks, deriveGoblin)
 
 data BlockHeader = BlockHeader
   { -- | Hash of the previous block header, or 'genesisHash' in case of
@@ -321,19 +319,3 @@ chainBlockStats (b : bs) = Just $ go b b b 1 bs
           }
         (cnt + 1)
         bs'
-
---------------------------------------------------------------------------------
--- Goblins instances
---------------------------------------------------------------------------------
-
-deriveGoblin ''Block
-deriveGoblin ''BlockBody
-deriveGoblin ''BlockHeader
-
---------------------------------------------------------------------------------
--- AddShrinks instances
---------------------------------------------------------------------------------
-
-deriveAddShrinks ''Block
-deriveAddShrinks ''BlockBody
-deriveAddShrinks ''BlockHeader

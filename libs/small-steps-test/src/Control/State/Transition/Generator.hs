@@ -62,7 +62,6 @@ module Control.State.Transition.Generator
     invalidSignalsAreGenerated,
 
     -- * Helpers
-    tinkerWithSigGen,
     coverFailures,
   )
 where
@@ -70,7 +69,6 @@ where
 import Control.Arrow (second)
 import Control.Monad (forM, void)
 import Control.Monad.Trans.Maybe (MaybeT)
-import Control.Monad.Trans.State.Strict (evalState)
 import Control.State.Transition.Extended
   ( BaseM,
     Environment,
@@ -124,7 +122,6 @@ import Hedgehog.Internal.Property (CoverPercentage)
 import Hedgehog.Internal.Tree (NodeT (NodeT), TreeT, nodeChildren, treeValue)
 import Hedgehog.Range (Size (Size))
 import qualified Hedgehog.Range as Range
-import Test.Goblin (Goblin (..), GoblinData, SeedGoblin (..))
 
 class STS s => HasTrace s where
   type BaseEnv s :: Type
@@ -724,22 +721,3 @@ invalidSignalsAreGenerated baseEnv failureProfile maximumTraceLength checkFailur
     (isLeft $ Invalid.errorOrLastState tr)
 
   either checkFailures (const success) (Invalid.errorOrLastState tr)
-
---------------------------------------------------------------------------------
--- Helpers
---------------------------------------------------------------------------------
-
-tinkerWithSigGen ::
-  forall g sts.
-  ( HasTrace sts,
-    Goblin g (Signal sts),
-    SeedGoblin (Environment sts),
-    SeedGoblin (State sts)
-  ) =>
-  GoblinData g ->
-  Environment sts ->
-  State sts ->
-  Gen (Signal sts)
-tinkerWithSigGen gd env state =
-  flip evalState gd $
-    seeder env >> seeder state >> tinker (sigGen @sts env state)

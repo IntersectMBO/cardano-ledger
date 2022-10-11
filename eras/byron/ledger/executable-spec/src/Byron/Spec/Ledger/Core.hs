@@ -38,16 +38,6 @@ import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
-import Test.Goblin
-  ( AddShrinks (..),
-    GeneOps,
-    Goblin (..),
-    SeedGoblin (..),
-    saveInBagOfTricks,
-    tinkerRummagedOrConjureOrSave,
-    (<$$>),
-  )
-import Test.Goblin.TH (deriveAddShrinks, deriveGoblin, deriveSeedGoblin)
 
 -- | An encoded hash of part of the system.
 --
@@ -483,71 +473,3 @@ toSet = Set.fromList . toList
 
 (∩) :: Ord a => Set a -> Set a -> Set a
 (∩) = intersection
-
---------------------------------------------------------------------------------
--- Goblins instances
---------------------------------------------------------------------------------
-
-deriveGoblin ''Addr
-deriveGoblin ''BlockCount
-deriveGoblin ''Epoch
-deriveGoblin ''Owner
-deriveGoblin ''Sig
-deriveGoblin ''Slot
-deriveGoblin ''SlotCount
-deriveGoblin ''VKey
-deriveGoblin ''VKeyGenesis
-
-instance GeneOps g => Goblin g Hash where
-  tinker gen =
-    tinkerRummagedOrConjureOrSave
-      ( (Hash . Just . (`mod` 30))
-          <$$> tinker (unwrapValue <$> gen)
-      )
-    where
-      unwrapValue (Hash (Just x)) = x
-      unwrapValue (Hash Nothing) =
-        error $
-          "tinker Hash instance: trying to tinker with an invalid hash"
-            ++ " (which contains nothing)"
-
-  conjure = saveInBagOfTricks =<< (Hash . Just . (`mod` 30) <$> conjure)
-
-instance GeneOps g => Goblin g Lovelace where
-  tinker gen =
-    tinkerRummagedOrConjureOrSave
-      ( (\x -> (Lovelace x) `mod` lovelaceCap)
-          <$$> tinker ((\(Lovelace x) -> x) <$> gen)
-      )
-  conjure = saveInBagOfTricks =<< ((`mod` lovelaceCap) . Lovelace <$> conjure)
-
---------------------------------------------------------------------------------
--- AddShrinks instances
---------------------------------------------------------------------------------
-
-deriveAddShrinks ''Addr
-deriveAddShrinks ''BlockCount
-deriveAddShrinks ''Epoch
-deriveAddShrinks ''Hash
-deriveAddShrinks ''Lovelace
-deriveAddShrinks ''Owner
-deriveAddShrinks ''Sig
-deriveAddShrinks ''Slot
-deriveAddShrinks ''SlotCount
-deriveAddShrinks ''VKey
-deriveAddShrinks ''VKeyGenesis
-
---------------------------------------------------------------------------------
--- SeedGoblin instances
---------------------------------------------------------------------------------
-
-deriveSeedGoblin ''Addr
-deriveSeedGoblin ''BlockCount
-deriveSeedGoblin ''Epoch
-deriveSeedGoblin ''Hash
-deriveSeedGoblin ''Lovelace
-deriveSeedGoblin ''Owner
-deriveSeedGoblin ''Slot
-deriveSeedGoblin ''SlotCount
-deriveSeedGoblin ''VKey
-deriveSeedGoblin ''VKeyGenesis

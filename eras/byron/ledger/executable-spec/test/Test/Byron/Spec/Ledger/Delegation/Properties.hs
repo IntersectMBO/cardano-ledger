@@ -11,13 +11,11 @@
 -- associated with this aspect of the ledger.
 module Test.Byron.Spec.Ledger.Delegation.Properties
   ( dcertsAreTriggered,
-    dcertsAreNotReplayed,
     rejectDupSchedDelegs,
     tracesAreClassified,
     dblockTracesAreClassified,
     relevantCasesAreCovered,
     onlyValidSignalsAreGenerated,
-    invalidSignalsAreGenerated,
   )
 where
 
@@ -37,7 +35,6 @@ import Byron.Spec.Ledger.Core
 import Byron.Spec.Ledger.Core.Generators (epochGen, slotGen, vkGen)
 import qualified Byron.Spec.Ledger.Core.Generators as CoreGen
 import Byron.Spec.Ledger.Delegation
-import qualified Byron.Spec.Ledger.Delegation.Test
 import Byron.Spec.Ledger.GlobalParams (slotsPerEpoch)
 import Control.Arrow (first, (***))
 import Control.State.Transition
@@ -60,20 +57,15 @@ import Control.State.Transition
 import Control.State.Transition.Generator
   ( HasSizeInfo,
     HasTrace,
-    SignalGenerator,
-    TraceProfile (TraceProfile),
     classifySize,
     classifyTraceLength,
     envGen,
-    failures,
     isTrivial,
     nonTrivialTrace,
-    proportionOfValidSignals,
     sigGen,
     suchThatLastState,
     trace,
     traceLengthsAreClassified,
-    traceWithProfile,
   )
 import qualified Control.State.Transition.Generator as Transition.Generator
 import Control.State.Transition.Trace
@@ -89,7 +81,6 @@ import Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
 import Data.Data (Data, Typeable)
 import Data.List (foldl')
-import Data.List.Unique (repeated)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Hedgehog
@@ -252,40 +243,6 @@ expectedDms s d sbs =
 
     activationSlot :: Int
     activationSlot = s - d
-
--- | Check that there are no duplicated certificates in the trace.
-dcertsAreNotReplayed :: Property
-dcertsAreNotReplayed = withTests 300 $
-  property $ do
-    let (thisTraceLength, step) = (100, 10)
-    sample <- forAll (traceWithProfile @DBLOCK () thisTraceLength profile)
-    classifyTraceLength sample thisTraceLength step
-    dcertsAreNotReplayedInTrace sample
-  where
-    dcertsAreNotReplayedInTrace ::
-      MonadTest m =>
-      Trace DBLOCK ->
-      m ()
-    dcertsAreNotReplayedInTrace traceSample =
-      repeated traceDelegationCertificates === []
-      where
-        traceDelegationCertificates =
-          traceSignals OldestFirst traceSample
-            & fmap _blockCerts
-            & concat
-
-profile :: TraceProfile DBLOCK
-profile =
-  TraceProfile
-    { proportionOfValidSignals = 95,
-      failures = [(5, invalidDBlockGen)]
-    }
-  where
-    invalidDBlockGen :: SignalGenerator DBLOCK
-    invalidDBlockGen env (diEnv, diState) =
-      DBlock
-        <$> nextSlotGen env
-        <*> tamperedDcerts diEnv diState -- Gen.list (Range.constant 0 10) (randomDCertGen env)
 
 instance HasTrace DBLOCK where
   envGen
@@ -454,23 +411,3 @@ rejectDupSchedDelegs = withTests 300 $
 -- | Classify the traces.
 tracesAreClassified :: Property
 tracesAreClassified = traceLengthsAreClassified @DELEG () 1000 100
-
--- | The signal generator generates invalid signals with high probability when
--- invalid signals are requested.
-invalidSignalsAreGenerated :: Property
-invalidSignalsAreGenerated =
-  withTests 300 $
-    Transition.Generator.invalidSignalsAreGenerated
-      @DBLOCK
-      ()
-      (failures profile)
-      100
-      -- We have 6 failures we're interested in. However demanding an uniform
-      -- distribution of predicate failures requires precise tweaking, which is
-      -- difficult to guarantee. For this reason we allow for an order of
-      -- magnitude deviation from the uniform distribution:
-      --
-      -- > 1/6 * 0.1 * 100 ~ 1.67
-      --
-      -- which we round up to 2.
-      (Byron.Spec.Ledger.Delegation.Test.coverDelegFailures 2)

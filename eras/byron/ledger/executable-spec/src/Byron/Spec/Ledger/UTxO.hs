@@ -19,7 +19,6 @@ module Byron.Spec.Ledger.UTxO where
 
 import Byron.Spec.Ledger.Core hiding ((<|))
 import Byron.Spec.Ledger.Update (FactorA (..), FactorB (..), PParams (PParams), _factorA, _factorB)
-import Control.Monad (replicateM)
 import Data.AbstractSize (HasTypeReps, abstractSize)
 import Data.Data (Data, Typeable)
 import Data.Hashable (Hashable)
@@ -31,17 +30,6 @@ import Data.Typeable (typeOf)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
-import Test.Goblin
-  ( AddShrinks (..),
-    GeneOps (..),
-    Goblin (..),
-    SeedGoblin (..),
-    TinkerM,
-    saveInBagOfTricks,
-    tinkerRummagedOrConjureOrSave,
-    (<$$>),
-  )
-import Test.Goblin.TH (deriveAddShrinks, deriveGoblin, deriveSeedGoblin)
 
 -- | A unique ID of a transaction, which is computable from the transaction.
 newtype TxId = TxId {getTxId :: Hash}
@@ -225,71 +213,3 @@ makeTxWits (UTxO utxo) tx =
        in KeyPair (SKey o) (VKey o)
     keys = getKey <$> inputs tx
     wits = makeWitness <$> keys <*> pure tx
-
---------------------------------------------------------------------------------
--- Goblins instances
---------------------------------------------------------------------------------
-
-deriveGoblin ''TxIn
-deriveGoblin ''TxOut
-deriveGoblin ''Tx
-deriveGoblin ''Wit
-deriveGoblin ''TxId
-
-instance GeneOps g => Goblin g TxBody where
-  tinker gen = do
-    fIs <- fillEmptyList
-    fOs <- fillEmptyList
-    is <-
-      tinkerRummagedOrConjureOrSave
-        ( fIs
-            <$$> (tinker ((\(TxBody x _) -> x) <$> gen))
-        )
-    os <-
-      tinkerRummagedOrConjureOrSave
-        ( fOs
-            <$$> (tinker ((\(TxBody _ x) -> x) <$> gen))
-        )
-    tinkerRummagedOrConjureOrSave
-      (pure (TxBody <$> is <*> os))
-    where
-      -- This function will insert a conjured value to an empty list. We can
-      -- thus use it to ensure that the `txIns` and `txOuts` will never be
-      -- empty.
-      fillEmptyList :: Goblin g a => TinkerM g ([a] -> [a])
-      fillEmptyList = do
-        v <- conjure
-        pure
-          ( \xs -> case xs of
-              [] -> [v]
-              _ -> xs
-          )
-
-  conjure =
-    saveInBagOfTricks =<< do
-      -- Ensure that these lists are never empty.
-      listLenI <- (+ 1) <$> transcribeGenesAsInt 15
-      listLenO <- (+ 1) <$> transcribeGenesAsInt 15
-      inputs <- replicateM listLenI conjure
-      outputs <- replicateM listLenO conjure
-      pure (TxBody inputs outputs)
-
---------------------------------------------------------------------------------
--- AddShrinks instances
---------------------------------------------------------------------------------
-
-deriveAddShrinks ''TxBody
-deriveAddShrinks ''TxId
-deriveAddShrinks ''TxIn
-deriveAddShrinks ''TxOut
-deriveAddShrinks ''Tx
-deriveAddShrinks ''Wit
-
---------------------------------------------------------------------------------
--- SeedGoblin instances
---------------------------------------------------------------------------------
-
-deriveSeedGoblin ''UTxO
-deriveSeedGoblin ''TxId
-deriveSeedGoblin ''TxIn
-deriveSeedGoblin ''TxOut

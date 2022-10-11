@@ -228,13 +228,3 @@ traceDCertsByBlock tr = _bDCerts . _bBody <$> traceSignals OldestFirst tr
 -- | Flattended list of DCerts for the given Trace
 traceDCerts :: Trace CHAIN -> [DCert]
 traceDCerts = concat . traceDCertsByBlock
-
-invalidSignalsAreGenerated :: Property
-invalidSignalsAreGenerated =
-  withTests 100 $
-    Transition.Generator.invalidSignalsAreGenerated
-      @CHAIN
-      ()
-      [(1, invalidProofsBlockGen)]
-      50
-      (coverInvalidBlockProofs 20)

@@ -42,7 +42,7 @@ import Hedgehog (Gen, MonadTest)
 import qualified Hedgehog.Gen as Gen
 import Hedgehog.Internal.Property (CoverPercentage)
 import qualified Hedgehog.Range as Range
-import Lens.Micro (Lens', (&), (.~), (^.))
+import Lens.Micro (Lens', (^.))
 import Lens.Micro.Internal (Field1 (..), Field5 (..))
 import Numeric.Natural (Natural)
 
@@ -338,32 +338,6 @@ sigGenChain
           anOptionalUpdateProposal
           aListOfVotes
           utxoPayload
-
--- | Produce an invalid hash for one of the three types of block payloads:
---
--- - Delegation
--- - Update
--- - UTxO
-tamperWithPayloadHash ::
-  Block -> Gen Block
-tamperWithPayloadHash block = do
-  hashLens <-
-    Gen.element
-      [ bhDlgHash,
-        bhUpdHash,
-        bhUtxoHash
-      ]
-  pure $! block & bHeader . hashLens .~ Hash Nothing
-
--- | Generate a block in which one of the three types of payload hashes:
---
--- - Delegation
--- - Update
--- - UTxO
---
--- is invalid.
-invalidProofsBlockGen :: SignalGenerator CHAIN
-invalidProofsBlockGen env st = sigGen @CHAIN env st >>= tamperWithPayloadHash
 
 coverInvalidBlockProofs ::
   forall m a.
