@@ -73,8 +73,6 @@ constraints:
 
   , protolude >= 0.3.2
 
-  , persistent < 2.14
-
 -- This is a pre-release version of plutus so we can do some early integration
 source-repository-package
   type: git

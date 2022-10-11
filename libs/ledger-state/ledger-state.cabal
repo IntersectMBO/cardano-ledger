@@ -45,7 +45,7 @@ library
                     , foldl
                     , vector
                     , microlens
-                    , persistent
+                    , persistent < 2.14
                     , persistent-sqlite
                     , prettyprinter
                     , set-algebra
