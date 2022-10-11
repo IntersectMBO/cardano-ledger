@@ -132,7 +132,7 @@ class SafeToHash t where
     Proxy c ->
     Proxy index ->
     t ->
-    SafeHash c indexl
+    SafeHash c index
 
   -- | Build a @(SafeHash crypto index)@ value given to proxies (determining @i@ and @crypto@), and the
   --   value to be hashed.

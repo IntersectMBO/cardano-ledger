@@ -83,6 +83,10 @@ in the naming of release branches.
 - The `Cardano.Ledger.Alonzo.Scripts` module no longer re-exports the
   `plutus-ledger-api`'s `assertWellFormedCostModelParams`. #3065
 
+### Fixed
+
+- Fixed typo in makeHashWithExplicitProxys phantom type (indexl to index). #3072
+
 ## Release branch 1.1.x
 
 ### Added
