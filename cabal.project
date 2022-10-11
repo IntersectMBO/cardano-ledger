@@ -63,8 +63,6 @@ benchmarks: true
 test-show-details: streaming
 
 allow-newer:
-  monoidal-containers:aeson,
-  size-based:template-haskell,
   Unique:hashable
 
 constraints:
@@ -72,9 +70,6 @@ constraints:
   -- ones they reuse the one from 'some', but there isn't e.g. a proper version
   -- constraint from dependent-sum-template (which is the library we actually use).
   , dependent-sum > 0.6.2.0
-
-  -- Plutus dependency
-  , algebraic-graphs >= 0.7
 
   , protolude >= 0.3.2
 
