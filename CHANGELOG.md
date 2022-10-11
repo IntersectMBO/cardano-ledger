@@ -85,7 +85,7 @@ in the naming of release branches.
 
 ### Fixed
 
-- Fixed typo in makeHashWithExplicitProxys phantom type (indexl to index). #XXXX
+- Fixed typo in makeHashWithExplicitProxys phantom type (indexl to index). #3072
 
 ## Release branch 1.1.x
 
