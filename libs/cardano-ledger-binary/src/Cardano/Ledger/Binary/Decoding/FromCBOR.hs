@@ -24,7 +24,11 @@ import Cardano.Crypto.KES.CompactSingle (CompactSingleKES)
 import Cardano.Crypto.KES.CompactSum (CompactSumKES)
 import Cardano.Crypto.KES.Mock (MockKES)
 import Cardano.Crypto.KES.Simple (SimpleKES)
+import Cardano.Crypto.KES.Single (SingleKES)
 import Cardano.Crypto.KES.Sum (SumKES)
+import Cardano.Crypto.VRF.Class (CertVRF, SignKeyVRF, VerKeyVRF)
+import Cardano.Crypto.VRF.Mock (MockVRF)
+import Cardano.Crypto.VRF.Simple (SimpleVRF)
 import Cardano.Ledger.Binary.Crypto
 import Cardano.Ledger.Binary.Decoding.Decoder
 import Codec.CBOR.ByteArray (ByteArray (..))
@@ -319,6 +323,10 @@ instance FromCBOR UTCTime where
 -- Crypto
 --------------------------------------------------------------------------------
 
+--------------------------------------------------------------------------------
+-- DSIGN
+--------------------------------------------------------------------------------
+
 instance FromCBOR (VerKeyDSIGN EcdsaSecp256k1DSIGN) where
   fromCBOR = decodeVerKeyDSIGN
 
@@ -364,6 +372,10 @@ instance FromCBOR (SignKeyDSIGN SchnorrSecp256k1DSIGN) where
 instance FromCBOR (SigDSIGN SchnorrSecp256k1DSIGN) where
   fromCBOR = decodeSigDSIGN
 
+--------------------------------------------------------------------------------
+-- Hash
+--------------------------------------------------------------------------------
+
 instance (HashAlgorithm h, Typeable a) => FromCBOR (Hash h a) where
   fromCBOR = do
     bs <- decodeBytes
@@ -378,6 +390,10 @@ instance (HashAlgorithm h, Typeable a) => FromCBOR (Hash h a) where
         where
           expected = sizeHash (Proxy :: Proxy h)
           actual = BS.length bs
+
+--------------------------------------------------------------------------------
+-- KES
+--------------------------------------------------------------------------------
 
 instance
   (DSIGNAlgorithm d, KnownNat t, KnownNat (SeedSizeDSIGN d * t)) =>
@@ -433,6 +449,15 @@ instance
   where
   fromCBOR = decodeSigKES
 
+instance DSIGNAlgorithm d => FromCBOR (VerKeyKES (SingleKES d)) where
+  fromCBOR = decodeVerKeyKES
+
+instance DSIGNAlgorithm d => FromCBOR (SignKeyKES (SingleKES d)) where
+  fromCBOR = decodeSignKeyKES
+
+instance DSIGNAlgorithm d => FromCBOR (SigKES (SingleKES d)) where
+  fromCBOR = decodeSigKES
+
 instance KnownNat t => FromCBOR (VerKeyKES (MockKES t)) where
   fromCBOR = decodeVerKeyKES
 
@@ -441,3 +466,25 @@ instance KnownNat t => FromCBOR (SignKeyKES (MockKES t)) where
 
 instance KnownNat t => FromCBOR (SigKES (MockKES t)) where
   fromCBOR = decodeSigKES
+
+--------------------------------------------------------------------------------
+-- VRF
+--------------------------------------------------------------------------------
+
+instance FromCBOR (VerKeyVRF SimpleVRF) where
+  fromCBOR = decodeVerKeyVRF
+
+instance FromCBOR (SignKeyVRF SimpleVRF) where
+  fromCBOR = decodeSignKeyVRF
+
+instance FromCBOR (CertVRF SimpleVRF) where
+  fromCBOR = decodeCertVRF
+
+instance FromCBOR (VerKeyVRF MockVRF) where
+  fromCBOR = decodeVerKeyVRF
+
+instance FromCBOR (SignKeyVRF MockVRF) where
+  fromCBOR = decodeSignKeyVRF
+
+instance FromCBOR (CertVRF MockVRF) where
+  fromCBOR = decodeCertVRF

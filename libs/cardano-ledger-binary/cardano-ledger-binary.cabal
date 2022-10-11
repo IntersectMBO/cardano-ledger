@@ -90,6 +90,8 @@ library testlib
                       , bytestring
                       , base16-bytestring
                       , cardano-ledger-binary
+                      , cardano-crypto-class
+                      , cardano-crypto-tests
                       , cborg
                       , containers
                       , cardano-strict-containers
@@ -123,6 +125,7 @@ test-suite tests
   build-depends:        base
                       , bytestring
                       , cardano-ledger-binary
+                      , cardano-crypto-class
                       , cardano-prelude-test
                       , cardano-strict-containers
                       , cborg

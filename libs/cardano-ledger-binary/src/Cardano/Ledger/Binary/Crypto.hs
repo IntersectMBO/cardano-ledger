@@ -1,7 +1,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Ledger.Binary.Crypto
-  ( encodeVerKeyDSIGN,
+  ( -- * DSIGN
+    encodeVerKeyDSIGN,
     decodeVerKeyDSIGN,
     encodeSignKeyDSIGN,
     decodeSignKeyDSIGN,
@@ -9,6 +10,8 @@ module Cardano.Ledger.Binary.Crypto
     decodeSigDSIGN,
     encodeSignedDSIGN,
     decodeSignedDSIGN,
+
+    -- * KES
     encodeVerKeyKES,
     decodeVerKeyKES,
     encodeSignKeyKES,
@@ -17,13 +20,26 @@ module Cardano.Ledger.Binary.Crypto
     decodeSigKES,
     encodeSignedKES,
     decodeSignedKES,
+
+    -- * VRF
+    encodeVerKeyVRF,
+    decodeVerKeyVRF,
+    encodeSignKeyVRF,
+    decodeSignKeyVRF,
+    encodeCertVRF,
+    decodeCertVRF,
   )
 where
 
 import qualified Cardano.Crypto.DSIGN.Class as C
 import qualified Cardano.Crypto.KES.Class as C
+import qualified Cardano.Crypto.VRF.Class as C
 import Cardano.Ledger.Binary.Decoding.Decoder (Decoder, fromPlainDecoder)
 import Cardano.Ledger.Binary.Encoding.Encoder (Encoding, fromPlainEncoding)
+
+--------------------------------------------------------------------------------
+-- DSIGN
+--------------------------------------------------------------------------------
 
 encodeVerKeyDSIGN :: C.DSIGNAlgorithm v => C.VerKeyDSIGN v -> Encoding
 encodeVerKeyDSIGN = fromPlainEncoding . C.encodeVerKeyDSIGN
@@ -49,6 +65,10 @@ encodeSignedDSIGN = fromPlainEncoding . C.encodeSignedDSIGN
 decodeSignedDSIGN :: C.DSIGNAlgorithm v => Decoder s (C.SignedDSIGN v a)
 decodeSignedDSIGN = fromPlainDecoder C.decodeSignedDSIGN
 
+--------------------------------------------------------------------------------
+-- KES
+--------------------------------------------------------------------------------
+
 encodeVerKeyKES :: C.KESAlgorithm v => C.VerKeyKES v -> Encoding
 encodeVerKeyKES = fromPlainEncoding . C.encodeVerKeyKES
 
@@ -72,3 +92,25 @@ encodeSignedKES = fromPlainEncoding . C.encodeSignedKES
 
 decodeSignedKES :: C.KESAlgorithm v => Decoder s (C.SignedKES v a)
 decodeSignedKES = fromPlainDecoder C.decodeSignedKES
+
+--------------------------------------------------------------------------------
+-- VRF
+--------------------------------------------------------------------------------
+
+encodeVerKeyVRF :: C.VRFAlgorithm v => C.VerKeyVRF v -> Encoding
+encodeVerKeyVRF = fromPlainEncoding . C.encodeVerKeyVRF
+
+decodeVerKeyVRF :: C.VRFAlgorithm v => Decoder s (C.VerKeyVRF v)
+decodeVerKeyVRF = fromPlainDecoder C.decodeVerKeyVRF
+
+encodeSignKeyVRF :: C.VRFAlgorithm v => C.SignKeyVRF v -> Encoding
+encodeSignKeyVRF = fromPlainEncoding . C.encodeSignKeyVRF
+
+decodeSignKeyVRF :: C.VRFAlgorithm v => Decoder s (C.SignKeyVRF v)
+decodeSignKeyVRF = fromPlainDecoder C.decodeSignKeyVRF
+
+encodeCertVRF :: C.VRFAlgorithm v => C.CertVRF v -> Encoding
+encodeCertVRF = fromPlainEncoding . C.encodeCertVRF
+
+decodeCertVRF :: C.VRFAlgorithm v => Decoder s (C.CertVRF v)
+decodeCertVRF = fromPlainDecoder C.decodeCertVRF

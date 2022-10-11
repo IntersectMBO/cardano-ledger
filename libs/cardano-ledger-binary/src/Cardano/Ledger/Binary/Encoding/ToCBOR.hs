@@ -73,7 +73,19 @@ import Cardano.Crypto.KES.CompactSingle (CompactSingleKES)
 import Cardano.Crypto.KES.CompactSum (CompactSumKES)
 import Cardano.Crypto.KES.Mock (MockKES)
 import Cardano.Crypto.KES.Simple (SimpleKES)
+import Cardano.Crypto.KES.Single (SingleKES)
 import Cardano.Crypto.KES.Sum (SumKES)
+import Cardano.Crypto.VRF.Class
+  ( CertVRF,
+    SignKeyVRF,
+    VRFAlgorithm,
+    VerKeyVRF,
+    sizeCertVRF,
+    sizeSignKeyVRF,
+    sizeVerKeyVRF,
+  )
+import Cardano.Crypto.VRF.Mock (MockVRF)
+import Cardano.Crypto.VRF.Simple (SimpleVRF)
 import Cardano.Ledger.Binary.Crypto
 import Cardano.Ledger.Binary.Encoding.Encoder
 import Codec.CBOR.ByteArray (ByteArray (..))
@@ -781,32 +793,9 @@ encodedSigDSIGNSizeExpr _proxy =
     -- payload
     + fromIntegral (sizeSigDSIGN (Proxy :: Proxy v))
 
--- | 'Size' expression for 'VerKeyKES' which is using 'sizeVerKeyKES' encoded
--- as 'Size'.
-encodedVerKeyKESSizeExpr :: forall v. KESAlgorithm v => Proxy (VerKeyKES v) -> Size
-encodedVerKeyKESSizeExpr _proxy =
-  -- 'encodeBytes' envelope
-  fromIntegral ((withWordSize :: Word -> Integer) (sizeVerKeyKES (Proxy :: Proxy v)))
-    -- payload
-    + fromIntegral (sizeVerKeyKES (Proxy :: Proxy v))
-
--- | 'Size' expression for 'SignKeyKES' which is using 'sizeSignKeyKES' encoded
--- as 'Size'.
-encodedSignKeyKESSizeExpr :: forall v. KESAlgorithm v => Proxy (SignKeyKES v) -> Size
-encodedSignKeyKESSizeExpr _proxy =
-  -- 'encodeBytes' envelope
-  fromIntegral ((withWordSize :: Word -> Integer) (sizeSignKeyKES (Proxy :: Proxy v)))
-    -- payload
-    + fromIntegral (sizeSignKeyKES (Proxy :: Proxy v))
-
--- | 'Size' expression for 'SigKES' which is using 'sizeSigKES' encoded as
--- 'Size'.
-encodedSigKESSizeExpr :: forall v. KESAlgorithm v => Proxy (SigKES v) -> Size
-encodedSigKESSizeExpr _proxy =
-  -- 'encodeBytes' envelope
-  fromIntegral ((withWordSize :: Word -> Integer) (sizeSigKES (Proxy :: Proxy v)))
-    -- payload
-    + fromIntegral (sizeSigKES (Proxy :: Proxy v))
+--------------------------------------------------------------------------------
+-- DSIGN
+--------------------------------------------------------------------------------
 
 instance ToCBOR (VerKeyDSIGN EcdsaSecp256k1DSIGN) where
   toCBOR = encodeVerKeyDSIGN
@@ -868,6 +857,10 @@ instance ToCBOR (SigDSIGN SchnorrSecp256k1DSIGN) where
   toCBOR = encodeSigDSIGN
   encodedSizeExpr _ = encodedSigDSIGNSizeExpr
 
+--------------------------------------------------------------------------------
+-- Hash
+--------------------------------------------------------------------------------
+
 instance (HashAlgorithm h, Typeable a) => ToCBOR (Hash h a) where
   toCBOR (UnsafeHash h) = toCBOR h
 
@@ -881,6 +874,37 @@ instance (HashAlgorithm h, Typeable a) => ToCBOR (Hash h a) where
     where
       hashSize :: Size
       hashSize = fromIntegral (sizeHash (Proxy :: Proxy h))
+
+--------------------------------------------------------------------------------
+-- KES
+--------------------------------------------------------------------------------
+
+-- | 'Size' expression for 'VerKeyKES' which is using 'sizeVerKeyKES' encoded
+-- as 'Size'.
+encodedVerKeyKESSizeExpr :: forall v. KESAlgorithm v => Proxy (VerKeyKES v) -> Size
+encodedVerKeyKESSizeExpr _proxy =
+  -- 'encodeBytes' envelope
+  fromIntegral ((withWordSize :: Word -> Integer) (sizeVerKeyKES (Proxy :: Proxy v)))
+    -- payload
+    + fromIntegral (sizeVerKeyKES (Proxy :: Proxy v))
+
+-- | 'Size' expression for 'SignKeyKES' which is using 'sizeSignKeyKES' encoded
+-- as 'Size'.
+encodedSignKeyKESSizeExpr :: forall v. KESAlgorithm v => Proxy (SignKeyKES v) -> Size
+encodedSignKeyKESSizeExpr _proxy =
+  -- 'encodeBytes' envelope
+  fromIntegral ((withWordSize :: Word -> Integer) (sizeSignKeyKES (Proxy :: Proxy v)))
+    -- payload
+    + fromIntegral (sizeSignKeyKES (Proxy :: Proxy v))
+
+-- | 'Size' expression for 'SigKES' which is using 'sizeSigKES' encoded as
+-- 'Size'.
+encodedSigKESSizeExpr :: forall v. KESAlgorithm v => Proxy (SigKES v) -> Size
+encodedSigKESSizeExpr _proxy =
+  -- 'encodeBytes' envelope
+  fromIntegral ((withWordSize :: Word -> Integer) (sizeSigKES (Proxy :: Proxy v)))
+    -- payload
+    + fromIntegral (sizeSigKES (Proxy :: Proxy v))
 
 instance
   (DSIGNAlgorithm d, KnownNat t, KnownNat (SeedSizeDSIGN d * t)) =>
@@ -957,6 +981,18 @@ instance
   toCBOR = encodeSigKES
   encodedSizeExpr _size = encodedSigKESSizeExpr
 
+instance DSIGNAlgorithm d => ToCBOR (VerKeyKES (SingleKES d)) where
+  toCBOR = encodeVerKeyKES
+  encodedSizeExpr _size = encodedVerKeyKESSizeExpr
+
+instance DSIGNAlgorithm d => ToCBOR (SignKeyKES (SingleKES d)) where
+  toCBOR = encodeSignKeyKES
+  encodedSizeExpr _size = encodedSignKeyKESSizeExpr
+
+instance DSIGNAlgorithm d => ToCBOR (SigKES (SingleKES d)) where
+  toCBOR = encodeSigKES
+  encodedSizeExpr _size = encodedSigKESSizeExpr
+
 instance KnownNat t => ToCBOR (VerKeyKES (MockKES t)) where
   toCBOR = encodeVerKeyKES
   encodedSizeExpr _size = encodedVerKeyKESSizeExpr
@@ -968,3 +1004,58 @@ instance KnownNat t => ToCBOR (SignKeyKES (MockKES t)) where
 instance KnownNat t => ToCBOR (SigKES (MockKES t)) where
   toCBOR = encodeSigKES
   encodedSizeExpr _size = encodedSigKESSizeExpr
+
+--------------------------------------------------------------------------------
+-- VRF
+--------------------------------------------------------------------------------
+
+-- | 'Size' expression for 'VerKeyVRF' which is using 'sizeVerKeyVRF' encoded as
+-- 'Size'.
+encodedVerKeyVRFSizeExpr :: forall v. VRFAlgorithm v => Proxy (VerKeyVRF v) -> Size
+encodedVerKeyVRFSizeExpr _proxy =
+  -- 'encodeBytes' envelope
+  fromIntegral ((withWordSize :: Word -> Integer) (sizeVerKeyVRF (Proxy :: Proxy v)))
+    -- payload
+    + fromIntegral (sizeVerKeyVRF (Proxy :: Proxy v))
+
+-- | 'Size' expression for 'SignKeyVRF' which is using 'sizeSignKeyVRF' encoded
+-- as 'Size'
+encodedSignKeyVRFSizeExpr :: forall v. VRFAlgorithm v => Proxy (SignKeyVRF v) -> Size
+encodedSignKeyVRFSizeExpr _proxy =
+  -- 'encodeBytes' envelope
+  fromIntegral ((withWordSize :: Word -> Integer) (sizeSignKeyVRF (Proxy :: Proxy v)))
+    -- payload
+    + fromIntegral (sizeSignKeyVRF (Proxy :: Proxy v))
+
+-- | 'Size' expression for 'CertVRF' which is using 'sizeCertVRF' encoded as
+-- 'Size'.
+encodedCertVRFSizeExpr :: forall v. VRFAlgorithm v => Proxy (CertVRF v) -> Size
+encodedCertVRFSizeExpr _proxy =
+  -- 'encodeBytes' envelope
+  fromIntegral ((withWordSize :: Word -> Integer) (sizeCertVRF (Proxy :: Proxy v)))
+    -- payload
+    + fromIntegral (sizeCertVRF (Proxy :: Proxy v))
+
+instance ToCBOR (VerKeyVRF SimpleVRF) where
+  toCBOR = encodeVerKeyVRF
+  encodedSizeExpr _size = encodedVerKeyVRFSizeExpr
+
+instance ToCBOR (SignKeyVRF SimpleVRF) where
+  toCBOR = encodeSignKeyVRF
+  encodedSizeExpr _size = encodedSignKeyVRFSizeExpr
+
+instance ToCBOR (CertVRF SimpleVRF) where
+  toCBOR = encodeCertVRF
+  encodedSizeExpr _size = encodedCertVRFSizeExpr
+
+instance ToCBOR (VerKeyVRF MockVRF) where
+  toCBOR = encodeVerKeyVRF
+  encodedSizeExpr _size = encodedVerKeyVRFSizeExpr
+
+instance ToCBOR (SignKeyVRF MockVRF) where
+  toCBOR = encodeSignKeyVRF
+  encodedSizeExpr _size = encodedSignKeyVRFSizeExpr
+
+instance ToCBOR (CertVRF MockVRF) where
+  toCBOR = encodeCertVRF
+  encodedSizeExpr _size = encodedCertVRFSizeExpr
