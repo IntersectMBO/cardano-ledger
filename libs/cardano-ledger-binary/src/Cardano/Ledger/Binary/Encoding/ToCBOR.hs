@@ -1,6 +1,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiWayIf #-}
@@ -8,6 +9,9 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE NoStarIsType #-}
 
 module Cardano.Ledger.Binary.Encoding.ToCBOR
   ( ToCBOR (..),
@@ -34,13 +38,42 @@ module Cardano.Ledger.Binary.Encoding.ToCBOR
   )
 where
 
-import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm, sizeSigDSIGN, sizeSignKeyDSIGN, sizeVerKeyDSIGN)
-import Cardano.Crypto.DSIGN.EcdsaSecp256k1
-import Cardano.Crypto.DSIGN.Ed25519
-import Cardano.Crypto.DSIGN.Ed448
-import Cardano.Crypto.DSIGN.Mock
-import Cardano.Crypto.DSIGN.SchnorrSecp256k1
+import Cardano.Crypto.DSIGN.Class
+  ( DSIGNAlgorithm,
+    SeedSizeDSIGN,
+    SigDSIGN,
+    SignKeyDSIGN,
+    VerKeyDSIGN,
+    sizeSigDSIGN,
+    sizeSignKeyDSIGN,
+    sizeVerKeyDSIGN,
+  )
+import Cardano.Crypto.DSIGN.EcdsaSecp256k1 (EcdsaSecp256k1DSIGN)
+import Cardano.Crypto.DSIGN.Ed25519 (Ed25519DSIGN)
+import Cardano.Crypto.DSIGN.Ed448 (Ed448DSIGN)
+import Cardano.Crypto.DSIGN.Mock (MockDSIGN)
+import Cardano.Crypto.DSIGN.SchnorrSecp256k1 (SchnorrSecp256k1DSIGN)
 import Cardano.Crypto.Hash.Class
+  ( Hash (..),
+    HashAlgorithm,
+    hashToBytes,
+    sizeHash,
+  )
+import Cardano.Crypto.KES.Class
+  ( KESAlgorithm,
+    OptimizedKESAlgorithm,
+    SigKES,
+    SignKeyKES,
+    VerKeyKES,
+    sizeSigKES,
+    sizeSignKeyKES,
+    sizeVerKeyKES,
+  )
+import Cardano.Crypto.KES.CompactSingle (CompactSingleKES)
+import Cardano.Crypto.KES.CompactSum (CompactSumKES)
+import Cardano.Crypto.KES.Mock (MockKES)
+import Cardano.Crypto.KES.Simple (SimpleKES)
+import Cardano.Crypto.KES.Sum (SumKES)
 import Cardano.Ledger.Binary.Crypto
 import Cardano.Ledger.Binary.Encoding.Encoder
 import Codec.CBOR.ByteArray (ByteArray (..))
@@ -80,6 +113,7 @@ import Data.Word (Word16, Word32, Word64, Word8)
 import Foreign.Storable (sizeOf)
 import Formatting (bprint, build, shown, stext)
 import qualified Formatting.Buildable as B (Buildable (..))
+import GHC.TypeNats (KnownNat, type (*))
 import Numeric.Natural (Natural)
 import Prelude hiding (encodeFloat, (.))
 #if MIN_VERSION_recursion_schemes(5,2,0)
@@ -747,6 +781,33 @@ encodedSigDSIGNSizeExpr _proxy =
     -- payload
     + fromIntegral (sizeSigDSIGN (Proxy :: Proxy v))
 
+-- | 'Size' expression for 'VerKeyKES' which is using 'sizeVerKeyKES' encoded
+-- as 'Size'.
+encodedVerKeyKESSizeExpr :: forall v. KESAlgorithm v => Proxy (VerKeyKES v) -> Size
+encodedVerKeyKESSizeExpr _proxy =
+  -- 'encodeBytes' envelope
+  fromIntegral ((withWordSize :: Word -> Integer) (sizeVerKeyKES (Proxy :: Proxy v)))
+    -- payload
+    + fromIntegral (sizeVerKeyKES (Proxy :: Proxy v))
+
+-- | 'Size' expression for 'SignKeyKES' which is using 'sizeSignKeyKES' encoded
+-- as 'Size'.
+encodedSignKeyKESSizeExpr :: forall v. KESAlgorithm v => Proxy (SignKeyKES v) -> Size
+encodedSignKeyKESSizeExpr _proxy =
+  -- 'encodeBytes' envelope
+  fromIntegral ((withWordSize :: Word -> Integer) (sizeSignKeyKES (Proxy :: Proxy v)))
+    -- payload
+    + fromIntegral (sizeSignKeyKES (Proxy :: Proxy v))
+
+-- | 'Size' expression for 'SigKES' which is using 'sizeSigKES' encoded as
+-- 'Size'.
+encodedSigKESSizeExpr :: forall v. KESAlgorithm v => Proxy (SigKES v) -> Size
+encodedSigKESSizeExpr _proxy =
+  -- 'encodeBytes' envelope
+  fromIntegral ((withWordSize :: Word -> Integer) (sizeSigKES (Proxy :: Proxy v)))
+    -- payload
+    + fromIntegral (sizeSigKES (Proxy :: Proxy v))
+
 instance ToCBOR (VerKeyDSIGN EcdsaSecp256k1DSIGN) where
   toCBOR = encodeVerKeyDSIGN
   encodedSizeExpr _ = encodedVerKeyDSIGNSizeExpr
@@ -820,3 +881,90 @@ instance (HashAlgorithm h, Typeable a) => ToCBOR (Hash h a) where
     where
       hashSize :: Size
       hashSize = fromIntegral (sizeHash (Proxy :: Proxy h))
+
+instance
+  (DSIGNAlgorithm d, KnownNat t, KnownNat (SeedSizeDSIGN d * t)) =>
+  ToCBOR (VerKeyKES (SimpleKES d t))
+  where
+  toCBOR = encodeVerKeyKES
+  encodedSizeExpr _size = encodedVerKeyKESSizeExpr
+
+instance
+  (DSIGNAlgorithm d, KnownNat t, KnownNat (SeedSizeDSIGN d * t)) =>
+  ToCBOR (SignKeyKES (SimpleKES d t))
+  where
+  toCBOR = encodeSignKeyKES
+  encodedSizeExpr _size = encodedSignKeyKESSizeExpr
+
+instance
+  (DSIGNAlgorithm d, KnownNat t, KnownNat (SeedSizeDSIGN d * t)) =>
+  ToCBOR (SigKES (SimpleKES d t))
+  where
+  toCBOR = encodeSigKES
+  encodedSizeExpr _size = encodedSigKESSizeExpr
+
+instance
+  (KESAlgorithm d, HashAlgorithm h) =>
+  ToCBOR (VerKeyKES (SumKES h d))
+  where
+  toCBOR = encodeVerKeyKES
+  encodedSizeExpr _size = encodedVerKeyKESSizeExpr
+
+instance
+  (KESAlgorithm d, HashAlgorithm h) =>
+  ToCBOR (SignKeyKES (SumKES h d))
+  where
+  toCBOR = encodeSignKeyKES
+  encodedSizeExpr _size = encodedSignKeyKESSizeExpr
+
+instance
+  (KESAlgorithm d, HashAlgorithm h) =>
+  ToCBOR (SigKES (SumKES h d))
+  where
+  toCBOR = encodeSigKES
+  encodedSizeExpr _size = encodedSigKESSizeExpr
+
+instance DSIGNAlgorithm d => ToCBOR (VerKeyKES (CompactSingleKES d)) where
+  toCBOR = encodeVerKeyKES
+  encodedSizeExpr _size = encodedVerKeyKESSizeExpr
+
+instance DSIGNAlgorithm d => ToCBOR (SignKeyKES (CompactSingleKES d)) where
+  toCBOR = encodeSignKeyKES
+  encodedSizeExpr _size = encodedSignKeyKESSizeExpr
+
+instance DSIGNAlgorithm d => ToCBOR (SigKES (CompactSingleKES d)) where
+  toCBOR = encodeSigKES
+  encodedSizeExpr _size = encodedSigKESSizeExpr
+
+instance
+  (OptimizedKESAlgorithm d, HashAlgorithm h) =>
+  ToCBOR (VerKeyKES (CompactSumKES h d))
+  where
+  toCBOR = encodeVerKeyKES
+  encodedSizeExpr _size = encodedVerKeyKESSizeExpr
+
+instance
+  (OptimizedKESAlgorithm d, HashAlgorithm h) =>
+  ToCBOR (SignKeyKES (CompactSumKES h d))
+  where
+  toCBOR = encodeSignKeyKES
+  encodedSizeExpr _size = encodedSignKeyKESSizeExpr
+
+instance
+  (OptimizedKESAlgorithm d, HashAlgorithm h) =>
+  ToCBOR (SigKES (CompactSumKES h d))
+  where
+  toCBOR = encodeSigKES
+  encodedSizeExpr _size = encodedSigKESSizeExpr
+
+instance KnownNat t => ToCBOR (VerKeyKES (MockKES t)) where
+  toCBOR = encodeVerKeyKES
+  encodedSizeExpr _size = encodedVerKeyKESSizeExpr
+
+instance KnownNat t => ToCBOR (SignKeyKES (MockKES t)) where
+  toCBOR = encodeSignKeyKES
+  encodedSizeExpr _size = encodedSignKeyKESSizeExpr
+
+instance KnownNat t => ToCBOR (SigKES (MockKES t)) where
+  toCBOR = encodeSigKES
+  encodedSizeExpr _size = encodedSigKESSizeExpr

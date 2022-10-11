@@ -1,19 +1,30 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE NoStarIsType #-}
 
 module Cardano.Ledger.Binary.Decoding.FromCBOR
   ( FromCBOR (..),
   )
 where
 
-import Cardano.Crypto.DSIGN.EcdsaSecp256k1
-import Cardano.Crypto.DSIGN.Ed25519
-import Cardano.Crypto.DSIGN.Ed448
-import Cardano.Crypto.DSIGN.Mock
-import Cardano.Crypto.DSIGN.SchnorrSecp256k1
-import Cardano.Crypto.Hash.Class
+import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm, SeedSizeDSIGN, SigDSIGN, SignKeyDSIGN, VerKeyDSIGN)
+import Cardano.Crypto.DSIGN.EcdsaSecp256k1 (EcdsaSecp256k1DSIGN)
+import Cardano.Crypto.DSIGN.Ed25519 (Ed25519DSIGN)
+import Cardano.Crypto.DSIGN.Ed448 (Ed448DSIGN)
+import Cardano.Crypto.DSIGN.Mock (MockDSIGN)
+import Cardano.Crypto.DSIGN.SchnorrSecp256k1 (SchnorrSecp256k1DSIGN)
+import Cardano.Crypto.Hash.Class (Hash, HashAlgorithm, hashFromBytes, sizeHash)
+import Cardano.Crypto.KES.Class (KESAlgorithm, OptimizedKESAlgorithm, SigKES, SignKeyKES, VerKeyKES)
+import Cardano.Crypto.KES.CompactSingle (CompactSingleKES)
+import Cardano.Crypto.KES.CompactSum (CompactSumKES)
+import Cardano.Crypto.KES.Mock (MockKES)
+import Cardano.Crypto.KES.Simple (SimpleKES)
+import Cardano.Crypto.KES.Sum (SumKES)
 import Cardano.Ledger.Binary.Crypto
 import Cardano.Ledger.Binary.Decoding.Decoder
 import Codec.CBOR.ByteArray (ByteArray (..))
@@ -36,7 +47,7 @@ import qualified Data.Set as Set
 import Data.Tagged (Tagged (Tagged))
 import qualified Data.Text as T
 import Data.Time.Clock (NominalDiffTime, UTCTime (..))
-import Data.Typeable
+import Data.Typeable (Proxy (..), Typeable, typeRep)
 import qualified Data.VMap as VMap
 import qualified Data.Vector as V
 import qualified Data.Vector.Primitive as VP
@@ -44,6 +55,7 @@ import qualified Data.Vector.Storable as VS
 import qualified Data.Vector.Unboxed as VU
 import Data.Void (Void)
 import Data.Word (Word16, Word32, Word64, Word8)
+import GHC.TypeNats (KnownNat, type (*))
 import Numeric.Natural (Natural)
 import Prelude hiding (decodeFloat)
 
@@ -366,3 +378,66 @@ instance (HashAlgorithm h, Typeable a) => FromCBOR (Hash h a) where
         where
           expected = sizeHash (Proxy :: Proxy h)
           actual = BS.length bs
+
+instance
+  (DSIGNAlgorithm d, KnownNat t, KnownNat (SeedSizeDSIGN d * t)) =>
+  FromCBOR (VerKeyKES (SimpleKES d t))
+  where
+  fromCBOR = decodeVerKeyKES
+
+instance
+  (DSIGNAlgorithm d, KnownNat t, KnownNat (SeedSizeDSIGN d * t)) =>
+  FromCBOR (SignKeyKES (SimpleKES d t))
+  where
+  fromCBOR = decodeSignKeyKES
+
+instance
+  (DSIGNAlgorithm d, KnownNat t, KnownNat (SeedSizeDSIGN d * t)) =>
+  FromCBOR (SigKES (SimpleKES d t))
+  where
+  fromCBOR = decodeSigKES
+
+instance (KESAlgorithm d, HashAlgorithm h) => FromCBOR (VerKeyKES (SumKES h d)) where
+  fromCBOR = decodeVerKeyKES
+
+instance (KESAlgorithm d, HashAlgorithm h) => FromCBOR (SignKeyKES (SumKES h d)) where
+  fromCBOR = decodeSignKeyKES
+
+instance (KESAlgorithm d, HashAlgorithm h) => FromCBOR (SigKES (SumKES h d)) where
+  fromCBOR = decodeSigKES
+
+instance DSIGNAlgorithm d => FromCBOR (VerKeyKES (CompactSingleKES d)) where
+  fromCBOR = decodeVerKeyKES
+
+instance DSIGNAlgorithm d => FromCBOR (SignKeyKES (CompactSingleKES d)) where
+  fromCBOR = decodeSignKeyKES
+
+instance DSIGNAlgorithm d => FromCBOR (SigKES (CompactSingleKES d)) where
+  fromCBOR = decodeSigKES
+
+instance
+  (OptimizedKESAlgorithm d, HashAlgorithm h) =>
+  FromCBOR (VerKeyKES (CompactSumKES h d))
+  where
+  fromCBOR = decodeVerKeyKES
+
+instance
+  (OptimizedKESAlgorithm d, HashAlgorithm h) =>
+  FromCBOR (SignKeyKES (CompactSumKES h d))
+  where
+  fromCBOR = decodeSignKeyKES
+
+instance
+  (OptimizedKESAlgorithm d, HashAlgorithm h) =>
+  FromCBOR (SigKES (CompactSumKES h d))
+  where
+  fromCBOR = decodeSigKES
+
+instance KnownNat t => FromCBOR (VerKeyKES (MockKES t)) where
+  fromCBOR = decodeVerKeyKES
+
+instance KnownNat t => FromCBOR (SignKeyKES (MockKES t)) where
+  fromCBOR = decodeSignKeyKES
+
+instance KnownNat t => FromCBOR (SigKES (MockKES t)) where
+  fromCBOR = decodeSigKES
