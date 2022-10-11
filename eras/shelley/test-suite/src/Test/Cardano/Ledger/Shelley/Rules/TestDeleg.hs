@@ -132,7 +132,7 @@ rewardsSumInvariant
           ]
 
 checkInstantaneousRewards ::
-  (HasField "_protocolVersion" (Core.PParams era) ProtVer) =>
+  (HasField "sppProtocolVersion" (Core.PParams era) ProtVer) =>
   DelegEnv era ->
   SourceSignalTarget (ShelleyDELEG era) ->
   Property

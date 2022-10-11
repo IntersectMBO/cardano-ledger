@@ -117,10 +117,10 @@ instance
     Environment (EraRule "PPUP" era) ~ PpupEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,
     Signal (EraRule "PPUP" era) ~ Maybe (Update era),
-    HasField "_costmdls" (PParams era) CostModels,
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_protocolVersion" (PParams era) ProtVer,
+    HasField "appCostmdls" (PParams era) CostModels,
+    HasField "appKeyDeposit" (PParams era) Coin,
+    HasField "appPoolDeposit" (PParams era) Coin,
+    HasField "appProtocolVersion" (PParams era) ProtVer,
     ToCBOR (PredicateFailure (EraRule "PPUP" era)) -- Serializing the PredicateFailure
   ) =>
   STS (AlonzoUTXOS era)
@@ -160,10 +160,10 @@ utxosTransition ::
     State (EraRule "PPUP" era) ~ PPUPState era,
     Signal (EraRule "PPUP" era) ~ Maybe (Update era),
     Embed (EraRule "PPUP" era) (AlonzoUTXOS era),
-    HasField "_costmdls" (PParams era) CostModels,
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_protocolVersion" (PParams era) ProtVer,
+    HasField "appCostmdls" (PParams era) CostModels,
+    HasField "appKeyDeposit" (PParams era) Coin,
+    HasField "appPoolDeposit" (PParams era) Coin,
+    HasField "appProtocolVersion" (PParams era) ProtVer,
     ToCBOR (PredicateFailure (EraRule "PPUP" era)) -- Serializing the PredicateFailure
   ) =>
   TransitionRule (AlonzoUTXOS era)
@@ -185,8 +185,8 @@ scriptsTransition ::
     ExtendedUTxO era,
     EraUTxO era,
     ScriptsNeeded era ~ AlonzoScriptsNeeded era,
-    HasField "_costmdls" (PParams era) CostModels,
-    HasField "_protocolVersion" (PParams era) ProtVer,
+    HasField "appCostmdls" (PParams era) CostModels,
+    HasField "appProtocolVersion" (PParams era) ProtVer,
     BaseM sts ~ ReaderT Globals m,
     PredicateFailure sts ~ AlonzoUtxosPredFailure era
   ) =>
@@ -201,7 +201,7 @@ scriptsTransition slot pp tx utxo action = do
   ei <- liftSTS $ asks epochInfo
   case collectTwoPhaseScriptInputs (unsafeLinearExtendEpochInfo slot ei) sysSt pp tx utxo of
     Right sLst ->
-      when2Phase $ action $ evalScripts (getField @"_protocolVersion" pp) tx sLst
+      when2Phase $ action $ evalScripts (getField @"appProtocolVersion" pp) tx sLst
     Left info
       | alonzoFailures <- filter isNotBadTranslation info,
         not (null alonzoFailures) ->
@@ -225,10 +225,10 @@ scriptsValidateTransition ::
     State (EraRule "PPUP" era) ~ PPUPState era,
     Signal (EraRule "PPUP" era) ~ Maybe (Update era),
     Embed (EraRule "PPUP" era) (AlonzoUTXOS era),
-    HasField "_costmdls" (PParams era) CostModels,
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_protocolVersion" (PParams era) ProtVer
+    HasField "appCostmdls" (PParams era) CostModels,
+    HasField "appKeyDeposit" (PParams era) Coin,
+    HasField "appPoolDeposit" (PParams era) Coin,
+    HasField "appProtocolVersion" (PParams era) ProtVer
   ) =>
   TransitionRule (AlonzoUTXOS era)
 scriptsValidateTransition = do
@@ -267,8 +267,8 @@ scriptsNotValidateTransition ::
     ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     STS (AlonzoUTXOS era),
     Script era ~ AlonzoScript era,
-    HasField "_costmdls" (PParams era) CostModels,
-    HasField "_protocolVersion" (PParams era) ProtVer
+    HasField "appCostmdls" (PParams era) CostModels,
+    HasField "appProtocolVersion" (PParams era) ProtVer
   ) =>
   TransitionRule (AlonzoUTXOS era)
 scriptsNotValidateTransition = do

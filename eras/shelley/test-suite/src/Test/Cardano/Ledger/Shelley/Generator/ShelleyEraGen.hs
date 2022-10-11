@@ -137,7 +137,7 @@ genTimeToLive currentSlot = do
   pure $ currentSlot + SlotNo (fromIntegral ttl)
 
 instance Mock c => MinGenTxout (ShelleyEra c) where
-  calcEraMinUTxO _txout = _minUTxOValue
+  calcEraMinUTxO _txout = sppMinUTxOValue
   addValToTxOut v (ShelleyTxOut a u) = ShelleyTxOut a (v <+> u)
   genEraTxOut _genenv genVal addrs = do
     values <- replicateM (length addrs) genVal

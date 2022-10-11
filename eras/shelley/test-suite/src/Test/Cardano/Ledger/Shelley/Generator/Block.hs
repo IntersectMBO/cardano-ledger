@@ -234,7 +234,7 @@ selectNextSlotWithLeader
           firstEpochSlot = slotFromEpoch (epochFromSlotNo slotNo)
           f = activeSlotCoeff testGlobals
           getUnitInterval :: Core.PParams era -> UnitInterval
-          getUnitInterval pp = getField @"_d" pp
+          getUnitInterval pp = getField @"sppD" pp
           d = (getUnitInterval . esPp . nesEs . chainNes) chainSt
 
           isLeader poolHash vrfKey =

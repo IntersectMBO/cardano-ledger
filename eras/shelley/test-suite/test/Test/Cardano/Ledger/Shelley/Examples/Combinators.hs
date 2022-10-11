@@ -124,12 +124,12 @@ import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo, getBlockNonce)
 -- ==================================================
 
 type UsesPP era =
-  ( HasField "_d" (Core.PParams era) UnitInterval,
-    HasField "_tau" (Core.PParams era) UnitInterval,
-    HasField "_a0" (Core.PParams era) NonNegativeInterval,
-    HasField "_rho" (Core.PParams era) UnitInterval,
-    HasField "_nOpt" (Core.PParams era) Natural,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer
+  ( HasField "sppD" (Core.PParams era) UnitInterval,
+    HasField "sppTau" (Core.PParams era) UnitInterval,
+    HasField "sppA0" (Core.PParams era) NonNegativeInterval,
+    HasField "sppRho" (Core.PParams era) UnitInterval,
+    HasField "sppNOpt" (Core.PParams era) Natural,
+    HasField "sppProtocolVersion" (Core.PParams era) ProtVer
   )
 
 -- ======================================================
@@ -429,15 +429,15 @@ reapPool pool cs = cs {chainNes = nes'}
     RewardAcnt _ rewardAddr = _poolRAcnt pool
     (rewards', unclaimed) =
       case UM.lookup rewardAddr (rewards ds) of
-        Nothing -> (rewards ds, _poolDeposit pp)
-        Just era -> (UM.insert' rewardAddr (era <+> _poolDeposit pp) (rewards ds), Coin 0)
+        Nothing -> (rewards ds, sppPoolDeposit pp)
+        Just era -> (UM.insert' rewardAddr (era <+> sppPoolDeposit pp) (rewards ds), Coin 0)
     umap1 = unView rewards'
     umap2 = (UM.Delegations umap1 UM.⋫ Set.singleton kh)
     ds' = ds {_unified = umap2}
     as = esAccountState es
     as' = as {_treasury = (_treasury as) <+> unclaimed}
     utxoSt = lsUTxOState ls
-    utxoSt' = utxoSt {_deposited = (_deposited utxoSt) <-> (_poolDeposit pp)}
+    utxoSt' = utxoSt {_deposited = (_deposited utxoSt) <-> (sppPoolDeposit pp)}
     dps' = dps {dpsPState = ps', dpsDState = ds'}
     ls' = ls {lsDPState = dps', lsUTxOState = utxoSt'}
     es' = es {esLState = ls', esAccountState = as'}
@@ -536,7 +536,7 @@ pulserUpdate p cs = cs {chainNes = nes'}
 -- Apply the given reward update to the chain state
 applyRewardUpdate ::
   forall era.
-  HasField "_protocolVersion" (Core.PParams era) ProtVer =>
+  HasField "sppProtocolVersion" (Core.PParams era) ProtVer =>
   RewardUpdate (EraCrypto era) ->
   ChainState era ->
   ChainState era
@@ -651,7 +651,7 @@ newEpoch b cs = cs'
     cs' =
       cs
         { chainNes = nes',
-          chainEpochNonce = cNonce ⭒ pNonce ⭒ _extraEntropy pp,
+          chainEpochNonce = cNonce ⭒ pNonce ⭒ sppExtraEntropy pp,
           chainEvolvingNonce = evNonce ⭒ n,
           chainCandidateNonce = evNonce ⭒ n,
           chainPrevEpochNonce = prevHashToNonce . lastAppliedHash $ lab,

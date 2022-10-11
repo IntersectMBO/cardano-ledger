@@ -185,7 +185,7 @@ feesOK ::
   ( EraTx era,
     BabbageEraTxBody era,
     AlonzoEraTxWits era,
-    HasField "_collateralPercentage" (PParams era) Natural
+    HasField "bppCollateralPercentage" (PParams era) Natural
   ) =>
   PParams era ->
   Tx era ->
@@ -209,7 +209,7 @@ feesOK pp tx (UTxO utxo) =
 validateTotalCollateral ::
   forall era.
   ( BabbageEraTxBody era,
-    HasField "_collateralPercentage" (PParams era) Natural
+    HasField "bppCollateralPercentage" (PParams era) Natural
   ) =>
   PParams era ->
   TxBody era ->
@@ -300,7 +300,7 @@ validateOutputTooSmallUTxO pp outs =
 
 -- > serSize (getValue txout) ≤ maxValSize pp
 validateOutputTooBigUTxO ::
-  ( HasField "_maxValSize" (PParams era) Natural,
+  ( HasField "bppMaxValSize" (PParams era) Natural,
     EraTxOut era
   ) =>
   PParams era ->
@@ -309,7 +309,7 @@ validateOutputTooBigUTxO ::
 validateOutputTooBigUTxO pp outs =
   failureUnless (null outputsTooBig) $ OutputTooBigUTxO outputsTooBig
   where
-    maxValSize = getField @"_maxValSize" pp
+    maxValSize = getField @"bppMaxValSize" pp
     outputsTooBig = foldl' accum [] outs
     accum ans txOut =
       let v = txOut ^. valueTxOutL
@@ -329,14 +329,14 @@ utxoTransition ::
     TxBody era ~ BabbageTxBody era,
     TxOut era ~ BabbageTxOut era,
     STS (BabbageUTXO era),
-    HasField "_maxTxSize" (PParams era) Natural,
-    HasField "_maxValSize" (PParams era) Natural,
-    HasField "_maxCollateralInputs" (PParams era) Natural,
-    HasField "_maxTxExUnits" (PParams era) ExUnits,
-    HasField "_protocolVersion" (PParams era) ProtVer,
-    HasField "_collateralPercentage" (PParams era) Natural,
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin,
+    HasField "bppMaxTxSize" (PParams era) Natural,
+    HasField "bppMaxValSize" (PParams era) Natural,
+    HasField "bppMaxCollateralInputs" (PParams era) Natural,
+    HasField "bppMaxTxExUnits" (PParams era) ExUnits,
+    HasField "bppProtocolVersion" (PParams era) ProtVer,
+    HasField "bppCollateralPercentage" (PParams era) Natural,
+    HasField "bppKeyDeposit" (PParams era) Coin,
+    HasField "bppPoolDeposit" (PParams era) Coin,
     -- In this function we we call the UTXOS rule, so we need some assumptions
     Embed (EraRule "UTXOS" era) (BabbageUTXO era),
     Environment (EraRule "UTXOS" era) ~ UtxoEnv era,
@@ -425,15 +425,15 @@ instance
     TxOut era ~ BabbageTxOut era,
     TxBody era ~ BabbageTxBody era,
     TxWits era ~ AlonzoTxWits era,
-    HasField "_maxCollateralInputs" (PParams era) Natural,
-    HasField "_coinsPerUTxOByte" (PParams era) Coin,
-    HasField "_collateralPercentage" (PParams era) Natural,
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_maxTxExUnits" (PParams era) ExUnits,
-    HasField "_maxTxSize" (PParams era) Natural,
-    HasField "_maxValSize" (PParams era) Natural,
-    HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_protocolVersion" (PParams era) ProtVer,
+    HasField "bppMaxCollateralInputs" (PParams era) Natural,
+    HasField "bppCoinsPerUTxOByte" (PParams era) Coin,
+    HasField "bppCollateralPercentage" (PParams era) Natural,
+    HasField "bppKeyDeposit" (PParams era) Coin,
+    HasField "bppMaxTxExUnits" (PParams era) ExUnits,
+    HasField "bppMaxTxSize" (PParams era) Natural,
+    HasField "bppMaxValSize" (PParams era) Natural,
+    HasField "bppPoolDeposit" (PParams era) Coin,
+    HasField "bppProtocolVersion" (PParams era) ProtVer,
     -- instructions for calling UTXOS from BabbageUTXO
     Embed (EraRule "UTXOS" era) (BabbageUTXO era),
     Environment (EraRule "UTXOS" era) ~ UtxoEnv era,

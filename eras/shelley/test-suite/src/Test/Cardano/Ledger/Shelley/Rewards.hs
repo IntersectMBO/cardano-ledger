@@ -301,7 +301,7 @@ genRewardPPs = do
   d <- g decentralizationRange
   t <- g tauRange
   r <- g rhoRange
-  pure $ emptyPParams {_d = d, _tau = t, _rho = r}
+  pure $ emptyPParams {sppD = d, sppTau = t, sppRho = r}
   where
     g xs = unsafeBoundRational <$> elements xs
 
@@ -383,10 +383,10 @@ rewardsBoundedByPot _ = property $ do
 -- change the result of reward calculation. we reproduce the old style functions here.
 
 rewardOnePool ::
-  ( HasField "_d" (Core.PParams era) UnitInterval,
-    HasField "_a0" (Core.PParams era) NonNegativeInterval,
-    HasField "_nOpt" (Core.PParams era) Natural,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer
+  ( HasField "sppD" (Core.PParams era) UnitInterval,
+    HasField "sppA0" (Core.PParams era) NonNegativeInterval,
+    HasField "sppNOpt" (Core.PParams era) Natural,
+    HasField "sppProtocolVersion" (Core.PParams era) ProtVer
   ) =>
   Core.PParams era ->
   Coin ->
@@ -423,7 +423,7 @@ rewardOnePool
         if pledge <= ostake
           then maxPool pp r sigma pr
           else mempty
-      appPerf = mkApparentPerformance (getField @"_d" pp) sigmaA blocksN blocksTotal
+      appPerf = mkApparentPerformance (getField @"sppD" pp) sigmaA blocksN blocksTotal
       poolR = rationalToCoinViaFloor (appPerf * fromIntegral maxP)
       tot = fromIntegral totalStake
       mRewards =
@@ -460,10 +460,10 @@ rewardOnePool
 
 rewardOld ::
   forall era.
-  ( HasField "_d" (Core.PParams era) UnitInterval,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "_a0" (Core.PParams era) NonNegativeInterval,
-    HasField "_nOpt" (Core.PParams era) Natural
+  ( HasField "sppD" (Core.PParams era) UnitInterval,
+    HasField "sppProtocolVersion" (Core.PParams era) ProtVer,
+    HasField "sppA0" (Core.PParams era) NonNegativeInterval,
+    HasField "sppNOpt" (Core.PParams era) Natural
   ) =>
   Core.PParams era ->
   BlocksMade (EraCrypto era) ->
@@ -520,7 +520,7 @@ rewardOld
             ls =
               likelihood
                 (fromMaybe 0 blocksProduced)
-                (leaderProbability asc sigma (getField @"_d" pp))
+                (leaderProbability asc sigma (getField @"sppD" pp))
                 slotsPerEpoch
         pure (hk, rewardMap, ls)
       f =
@@ -541,12 +541,12 @@ data RewardUpdateOld c = RewardUpdateOld
 
 createRUpdOld ::
   forall era.
-  ( HasField "_d" (Core.PParams era) UnitInterval,
-    HasField "_rho" (Core.PParams era) UnitInterval,
-    HasField "_tau" (Core.PParams era) UnitInterval,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "_a0" (Core.PParams era) NonNegativeInterval,
-    HasField "_nOpt" (Core.PParams era) Natural
+  ( HasField "sppD" (Core.PParams era) UnitInterval,
+    HasField "sppRho" (Core.PParams era) UnitInterval,
+    HasField "sppTau" (Core.PParams era) UnitInterval,
+    HasField "sppProtocolVersion" (Core.PParams era) ProtVer,
+    HasField "sppA0" (Core.PParams era) NonNegativeInterval,
+    HasField "sppNOpt" (Core.PParams era) Natural
   ) =>
   EpochSize ->
   BlocksMade (EraCrypto era) ->
@@ -563,12 +563,12 @@ createRUpdOld slotsPerEpoch b es@(EpochState acnt ss ls pr _ nm) maxSupply =
 
 createRUpdOld_ ::
   forall era.
-  ( HasField "_d" (Core.PParams era) UnitInterval,
-    HasField "_rho" (Core.PParams era) UnitInterval,
-    HasField "_tau" (Core.PParams era) UnitInterval,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "_a0" (Core.PParams era) NonNegativeInterval,
-    HasField "_nOpt" (Core.PParams era) Natural
+  ( HasField "sppD" (Core.PParams era) UnitInterval,
+    HasField "sppRho" (Core.PParams era) UnitInterval,
+    HasField "sppTau" (Core.PParams era) UnitInterval,
+    HasField "sppProtocolVersion" (Core.PParams era) ProtVer,
+    HasField "sppA0" (Core.PParams era) NonNegativeInterval,
+    HasField "sppNOpt" (Core.PParams era) Natural
   ) =>
   EpochSize ->
   BlocksMade (EraCrypto era) ->
@@ -586,19 +586,19 @@ createRUpdOld_ slotsPerEpoch b@(BlocksMade b') ss (Coin reserves) pr totalStake 
       deltaR1 =
         rationalToCoinViaFloor $
           min 1 eta
-            * unboundRational (getField @"_rho" pr)
+            * unboundRational (getField @"sppRho" pr)
             * fromIntegral reserves
-      d = unboundRational (getField @"_d" pr)
+      d = unboundRational (getField @"sppD" pr)
       expectedBlocks =
         floor $
           (1 - d) * unboundRational (activeSlotVal asc) * fromIntegral slotsPerEpoch
       -- TODO asc is a global constant, and slotsPerEpoch should not change often at all,
       -- it would be nice to not have to compute expectedBlocks every epoch
       eta
-        | unboundRational (getField @"_d" pr) >= 0.8 = 1
+        | unboundRational (getField @"sppD" pr) >= 0.8 = 1
         | otherwise = blocksMade % expectedBlocks
       Coin rPot = feeSS ss <> deltaR1
-      deltaT1 = floor $ unboundRational (getField @"_tau" pr) * fromIntegral rPot
+      deltaT1 = floor $ unboundRational (getField @"sppTau" pr) * fromIntegral rPot
       _R = Coin $ rPot - deltaT1
       (rs_, newLikelihoods) =
         rewardOld
@@ -632,7 +632,7 @@ overrideProtocolVersionUsedInRewardCalc pv es =
   es {esPrevPp = pp'}
   where
     pp = esPrevPp es
-    pp' = pp {_protocolVersion = pv}
+    pp' = pp {sppProtocolVersion = pv}
 
 oldEqualsNew ::
   forall era.
@@ -659,7 +659,7 @@ oldEqualsNew pv newepochstate =
     unAggregated =
       runReader (createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc k) globals
     old = rsOld $ runReader (createRUpdOld slotsPerEpoch blocksmade epochstate maxsupply) globals
-    new_with_zeros = aggregateRewards @(EraCrypto era) (emptyPParams {_protocolVersion = pv}) (rs unAggregated)
+    new_with_zeros = aggregateRewards @(EraCrypto era) (emptyPParams {sppProtocolVersion = pv}) (rs unAggregated)
     new = Map.filter (/= Coin 0) new_with_zeros
     asc = activeSlotCoeff globals
     k = securityParameter testGlobals
@@ -688,7 +688,7 @@ oldEqualsNewOn pv newepochstate = old === new
     old :: Map (Credential 'Staking (EraCrypto era)) Coin
     old = rsOld $ runReader (createRUpdOld slotsPerEpoch blocksmade epochstate maxsupply) globals
     new_with_zeros =
-      aggregateRewards @(EraCrypto era) (emptyPParams {_protocolVersion = pv}) (rs unAggregated)
+      aggregateRewards @(EraCrypto era) (emptyPParams {sppProtocolVersion = pv}) (rs unAggregated)
     new = Map.filter (/= Coin 0) new_with_zeros
     asc = activeSlotCoeff globals
     k = securityParameter testGlobals
@@ -811,7 +811,7 @@ reward
           (Coin activeStake)
           pool
       poolRewardInfo = VMap.toMap $ VMap.mapMaybe (either (const Nothing) Just . mkPoolRewardInfo') poolParams
-      pp_pv = _protocolVersion pp
+      pp_pv = sppProtocolVersion pp
       free =
         FreeVars
           { addrsRew,

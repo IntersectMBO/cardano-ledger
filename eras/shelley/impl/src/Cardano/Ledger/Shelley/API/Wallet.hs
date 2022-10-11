@@ -307,7 +307,7 @@ currentSnapshot ss =
   incrementalStakeDistr incrementalStake dstate pstate
   where
     ledgerState = esLState $ nesEs ss
-    incrementalStake = utxosStateDistro $ lsUTxOState ledgerState
+    incrementalStake = utxosStakeDistr $ lsUTxOState ledgerState
     dstate = dpsDState $ lsDPState ledgerState
     pstate = dpsPState $ lsDPState ledgerState
 
@@ -426,7 +426,7 @@ getRewardProvenance ::
     HasField "sppNOpt" (PParams era) Natural,
     HasField "sppProtocolVersion" (PParams era) ProtVer,
     HasField "sppRho" (PParams era) UnitInterval,
-    HasField "sppTao" (PParams era) UnitInterval
+    HasField "sppTau" (PParams era) UnitInterval
   ) =>
   Globals ->
   NewEpochState era ->

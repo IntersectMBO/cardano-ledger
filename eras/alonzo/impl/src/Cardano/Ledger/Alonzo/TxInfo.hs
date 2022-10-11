@@ -267,7 +267,7 @@ transTxOutAddr txOut = do
     Nothing -> transAddr (txOut ^. addrTxOutL)
 
 slotToPOSIXTime ::
-  HasField "_protocolVersion" (PParams era) ProtVer =>
+  HasField "sppProtocolVersion" (PParams era) ProtVer =>
   PParams era ->
   EpochInfo (Either Text) ->
   SystemStart ->
@@ -287,7 +287,7 @@ slotToPOSIXTime pp ei sysS s = do
 
 -- | translate a validity interval to POSIX time
 transVITime ::
-  HasField "_protocolVersion" (PParams era) ProtVer =>
+  HasField "sppProtocolVersion" (PParams era) ProtVer =>
   PParams era ->
   EpochInfo (Either Text) ->
   SystemStart ->
@@ -380,7 +380,7 @@ transDCert (DCertDeleg (Delegate (Delegation stkcred keyhash))) =
     (PV1.StakingHash (transStakeCred stkcred))
     (transKeyHash keyhash)
 transDCert (DCertPool (RegPool pp)) =
-  PV1.DCertPoolRegister (transKeyHash (_poolId pp)) (PV1.PubKeyHash (PV1.toBuiltin (transHash (_poolVrf pp))))
+  PV1.DCertPoolRegister (transKeyHash (ppPoolId pp)) (PV1.PubKeyHash (PV1.toBuiltin (transHash (ppPoolVrf pp))))
 transDCert (DCertPool (RetirePool keyhash (EpochNo i))) =
   PV1.DCertPoolRetire (transKeyHash keyhash) (fromIntegral i)
 transDCert (DCertGenesis _) = PV1.DCertGenesis
@@ -473,7 +473,7 @@ alonzoTxInfo ::
     AlonzoEraTxBody era,
     Value era ~ MaryValue (EraCrypto era),
     TxWits era ~ AlonzoTxWits era,
-    HasField "_protocolVersion" (PParams era) ProtVer
+    HasField "sppProtocolVersion" (PParams era) ProtVer
   ) =>
   PParams era ->
   Language ->

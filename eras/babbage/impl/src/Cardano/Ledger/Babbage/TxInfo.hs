@@ -164,7 +164,7 @@ babbageTxInfo ::
     BabbageEraTxBody era,
     Value era ~ MaryValue (EraCrypto era),
     TxWits era ~ AlonzoTxWits era,
-    HasField "_protocolVersion" (PParams era) ProtVer
+    HasField "bppProtocolVersion" (PParams era) ProtVer
   ) =>
   PParams era ->
   Language ->

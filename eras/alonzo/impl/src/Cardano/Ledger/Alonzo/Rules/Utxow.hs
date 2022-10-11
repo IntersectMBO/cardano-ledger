@@ -309,7 +309,7 @@ ppViewHashesMatch ::
   ( AlonzoEraTx era,
     ExtendedUTxO era,
     Script era ~ AlonzoScript era,
-    HasField "_costmdls" (PParams era) CostModels
+    HasField "appCostmdls" (PParams era) CostModels
   ) =>
   Tx era ->
   PParams era ->
@@ -339,8 +339,8 @@ alonzoStyleWitness ::
     EraUTxO era,
     ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     Script era ~ AlonzoScript era,
-    HasField "_costmdls" (PParams era) CostModels,
-    HasField "_protocolVersion" (PParams era) ProtVer,
+    HasField "appCostmdls" (PParams era) CostModels,
+    HasField "appProtocolVersion" (PParams era) ProtVer,
     Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody),
     -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (AlonzoUTXOW era),
@@ -509,8 +509,8 @@ instance
     ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody),
     Script era ~ AlonzoScript era,
-    HasField "_costmdls" (PParams era) CostModels,
-    HasField "_protocolVersion" (PParams era) ProtVer,
+    HasField "appCostmdls" (PParams era) CostModels,
+    HasField "appProtocolVersion" (PParams era) ProtVer,
     -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (AlonzoUTXOW era),
     Environment (EraRule "UTXO" era) ~ UtxoEnv era,

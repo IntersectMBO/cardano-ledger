@@ -49,7 +49,7 @@ import Cardano.Crypto.Hash
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Data (Datum (..), dataHashSize)
 import Cardano.Ledger.Alonzo.Era
-import Cardano.Ledger.Alonzo.PParams (_coinsPerUTxOWord)
+import Cardano.Ledger.Alonzo.PParams (appCoinsPerUTxOWord)
 import Cardano.Ledger.Alonzo.Scripts ()
 import Cardano.Ledger.BaseTypes
   ( Network (..),
@@ -334,7 +334,7 @@ instance CC.Crypto c => EraTxOut (AlonzoEra c) where
       )
   {-# INLINE valueEitherTxOutL #-}
 
-  getMinCoinTxOut pp txOut = Coin $ utxoEntrySize txOut * unCoin (_coinsPerUTxOWord pp)
+  getMinCoinTxOut pp txOut = Coin $ utxoEntrySize txOut * unCoin (appCoinsPerUTxOWord pp)
 
 instance
   (Era era, Val (Value era), DecodeNonNegative (Value era), ToCBOR (CompactForm (Value era))) =>

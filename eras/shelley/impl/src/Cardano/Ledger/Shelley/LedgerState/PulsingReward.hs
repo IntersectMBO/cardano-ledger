@@ -106,7 +106,7 @@ import Numeric.Natural (Natural)
 --     fields, a subset of the fields in PParams, in: startStep and createRUpd.
 type UsesPP era =
   ( HasField "sppD" (PParams era) UnitInterval,
-    HasField "sppTao" (PParams era) UnitInterval,
+    HasField "sppTau" (PParams era) UnitInterval,
     HasField "sppA0" (PParams era) NonNegativeInterval,
     HasField "sppRho" (PParams era) UnitInterval,
     HasField "sppNOpt" (PParams era) Natural,
@@ -161,7 +161,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
         | unboundRational (getField @"sppD" pr) >= 0.8 = 1
         | otherwise = blocksMade % expectedBlocks
       Coin rPot = feeSS ss <> deltaR1
-      deltaT1 = floor $ unboundRational (getField @"sppTao" pr) * fromIntegral rPot
+      deltaT1 = floor $ unboundRational (getField @"sppTau" pr) * fromIntegral rPot
       _R = Coin $ rPot - deltaT1
       -- We now compute stake pool specific values that are needed for computing
       -- member and leader rewards.

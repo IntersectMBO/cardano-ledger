@@ -166,7 +166,7 @@ makeBinaryData sbs = do
   -- We need to verify that binary data is indeed valid Plutus Data.
   case decodeBinaryData binaryData of
     Left e -> Left $ "Invalid CBOR for Data: " <> show e
-    Right _d -> Right binaryData
+    Right _appD -> Right binaryData
 
 decodeBinaryData :: Era era => BinaryData era -> Either DecoderError (Data era)
 decodeBinaryData (BinaryData sbs) = do

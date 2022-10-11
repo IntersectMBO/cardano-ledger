@@ -87,9 +87,9 @@ instance (CC.Crypto c) => ScriptClass (MaryEra c) where
 
 instance (CC.Crypto c, Mock c) => EraGen (MaryEra c) where
   genGenesisValue = maryGenesisValue
-  genEraTxBody _ge _utxo = genTxBody
+  genEraTxBody _ge utxosUtxo = genTxBody
   genEraAuxiliaryData = genAuxiliaryData
-  updateEraTxBody _utxo _pp _wits txBody fee ins out =
+  updateEraTxBody utxosUtxo _pp _wits txBody fee ins out =
     case txBody of
       MATxBody existingins outs cert wdrl _txfee vi upd meta mint ->
         MATxBody (existingins <> ins) (outs :|> out) cert wdrl fee vi upd meta mint
@@ -271,7 +271,7 @@ addTokens ::
   Maybe (StrictSeq (TxOut era))
 addTokens proxy tooLittleLovelace pparams ts (txOut :<| os) =
   let v = txOut ^. valueTxOutL
-   in if Val.coin v < scaledMinDeposit v (getField @"_minUTxOValue" pparams)
+   in if Val.coin v < scaledMinDeposit v (getField @"sppMinUTxOValue" pparams)
         then addTokens proxy (txOut :<| tooLittleLovelace) pparams ts os
         else Just $ tooLittleLovelace >< addValToTxOut @era (MaryValue 0 ts) txOut <| os
 addTokens _proxy _ _ _ StrictSeq.Empty = Nothing
@@ -327,7 +327,7 @@ instance Split (MaryValue era) where
         )
 
 instance Mock c => MinGenTxout (MaryEra c) where
-  calcEraMinUTxO _txout pp = _minUTxOValue pp
+  calcEraMinUTxO _txout pp = sppMinUTxOValue pp
   addValToTxOut v (ShelleyTxOut a u) = ShelleyTxOut a (v <+> u)
   genEraTxOut _genenv genVal addrs = do
     values <- replicateM (length addrs) genVal

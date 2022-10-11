@@ -47,7 +47,7 @@ testPoolNetworkID pv poolParams e = do
   let st =
         runShelleyBase $
           applySTSTest @(ShelleyPOOL ShelleyTest)
-            (TRC (PoolEnv (SlotNo 0) def {_protocolVersion = pv}, def, DCertPool (RegPool poolParams)))
+            (TRC (PoolEnv (SlotNo 0) def {sppProtocolVersion = pv}, def, DCertPool (RegPool poolParams)))
   case (st, e) of
     (Right _, ExpectSuccess) -> assertBool "" True
     (Left _, ExpectFailure) -> assertBool "" True

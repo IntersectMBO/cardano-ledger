@@ -15,6 +15,7 @@
 module Cardano.Ledger.Shelley.PParams
   ( ShelleyPParams,
     ShelleyPParamsHKD (..),
+    -- sppKeyDeposit,
     PPUPState (..),
     emptyPParams,
     HKD,
@@ -152,7 +153,7 @@ data ShelleyPParamsHKD f era = ShelleyPParams
     -- | Monetary expansion
     sppRho :: !(HKD f UnitInterval),
     -- | Treasury expansion
-    sppTao :: !(HKD f UnitInterval),
+    sppTau :: !(HKD f UnitInterval),
     -- | Decentralization parameter
     sppD :: !(HKD f UnitInterval),
     -- | Extra entropy
@@ -198,7 +199,7 @@ instance (Era era) => ToCBOR (ShelleyPParams era) where
         sppNOpt = nOpt',
         sppA0 = a0',
         sppRho = rho',
-        sppTao = tau',
+        sppTau = tau',
         sppD = d',
         sppExtraEntropy = extraEntropy',
         sppProtocolVersion = protocolVersion',
@@ -239,7 +240,7 @@ instance (Era era) => FromCBOR (ShelleyPParams era) where
         <*> fromCBOR -- sppNOpt            :: Natural
         <*> fromCBOR -- sppA0              :: NonNegativeInterval
         <*> fromCBOR -- sppRho             :: UnitInterval
-        <*> fromCBOR -- sppTao             :: UnitInterval
+        <*> fromCBOR -- sppTau             :: UnitInterval
         <*> fromCBOR -- sppD               :: UnitInterval
         <*> fromCBOR -- sppExtraEntropy    :: Nonce
         <*> fromCBORGroup -- sppProtocolVersion :: ProtVer
@@ -260,7 +261,7 @@ instance ToJSON (ShelleyPParams era) where
         "nOpt" .= sppNOpt pp,
         "a0" .= sppA0 pp,
         "rho" .= sppRho pp,
-        "tau" .= sppTao pp,
+        "tau" .= sppTau pp,
         "decentralisationParam" .= sppD pp,
         "extraEntropy" .= sppExtraEntropy pp,
         "protocolVersion" .= sppProtocolVersion pp,
@@ -308,7 +309,7 @@ emptyPParams =
       sppNOpt = 100,
       sppA0 = minBound,
       sppRho = minBound,
-      sppTao = minBound,
+      sppTau = minBound,
       sppD = minBound,
       sppExtraEntropy = NeutralNonce,
       sppProtocolVersion = BT.ProtVer 0 0,
@@ -370,7 +371,7 @@ instance (Era era) => ToCBOR (PParamsUpdate era) where
               encodeMapElement 8 toCBOR =<< sppNOpt ppup,
               encodeMapElement 9 toCBOR =<< sppA0 ppup,
               encodeMapElement 10 toCBOR =<< sppRho ppup,
-              encodeMapElement 11 toCBOR =<< sppTao ppup,
+              encodeMapElement 11 toCBOR =<< sppTau ppup,
               encodeMapElement 12 toCBOR =<< sppD ppup,
               encodeMapElement 13 toCBOR =<< sppExtraEntropy ppup,
               encodeMapElement 14 toCBOR =<< sppProtocolVersion ppup,
@@ -396,7 +397,7 @@ emptyPParamsUpdate =
       sppNOpt = SNothing,
       sppA0 = SNothing,
       sppRho = SNothing,
-      sppTao = SNothing,
+      sppTau = SNothing,
       sppD = SNothing,
       sppExtraEntropy = SNothing,
       sppProtocolVersion = SNothing,
@@ -420,7 +421,7 @@ instance (Era era) => FromCBOR (PParamsUpdate era) where
           8 -> fromCBOR >>= \x -> pure (8, \up -> up {sppNOpt = SJust x})
           9 -> fromCBOR >>= \x -> pure (9, \up -> up {sppA0 = SJust x})
           10 -> fromCBOR >>= \x -> pure (10, \up -> up {sppRho = SJust x})
-          11 -> fromCBOR >>= \x -> pure (11, \up -> up {sppTao = SJust x})
+          11 -> fromCBOR >>= \x -> pure (11, \up -> up {sppTau = SJust x})
           12 -> fromCBOR >>= \x -> pure (12, \up -> up {sppD = SJust x})
           13 -> fromCBOR >>= \x -> pure (13, \up -> up {sppExtraEntropy = SJust x})
           14 -> fromCBOR >>= \x -> pure (14, \up -> up {sppProtocolVersion = SJust x})
@@ -475,7 +476,7 @@ updatePParams pp ppup =
       sppNOpt = fromSMaybe (sppNOpt pp) (sppNOpt ppup),
       sppA0 = fromSMaybe (sppA0 pp) (sppA0 ppup),
       sppRho = fromSMaybe (sppRho pp) (sppRho ppup),
-      sppTao = fromSMaybe (sppTao pp) (sppTao ppup),
+      sppTau = fromSMaybe (sppTau pp) (sppTau ppup),
       sppD = fromSMaybe (sppD pp) (sppD ppup),
       sppExtraEntropy = fromSMaybe (sppExtraEntropy pp) (sppExtraEntropy ppup),
       sppProtocolVersion = fromSMaybe (sppProtocolVersion pp) (sppProtocolVersion ppup),

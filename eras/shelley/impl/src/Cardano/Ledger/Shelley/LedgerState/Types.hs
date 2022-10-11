@@ -251,7 +251,7 @@ data UTxOState era = UTxOState
     utxosDeposited :: !Coin,
     utxosFees :: !Coin,
     utxosPpups :: !(State (EraRule "PPUP" era)),
-    utxosStateDistro :: !(IncrementalStake (EraCrypto era))
+    utxosStakeDistr :: !(IncrementalStake (EraCrypto era))
   }
   deriving (Generic)
 
@@ -311,8 +311,8 @@ instance
       utxosDeposited <- fromCBOR
       utxosFees <- fromCBOR
       utxosPpups <- fromCBOR
-      utxosStateDistro <- fromSharedCBOR credInterns
-      pure UTxOState {utxosUtxo, utxosDeposited, utxosFees, utxosPpups, utxosStateDistro}
+      utxosStakeDistr <- fromSharedCBOR credInterns
+      pure UTxOState {utxosUtxo, utxosDeposited, utxosFees, utxosPpups, utxosStakeDistr}
 
 -- | New Epoch state and environment
 data NewEpochState era = NewEpochState

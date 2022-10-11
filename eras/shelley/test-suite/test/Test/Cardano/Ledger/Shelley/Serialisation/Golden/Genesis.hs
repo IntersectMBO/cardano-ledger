@@ -210,9 +210,9 @@ exampleShelleyGenesis =
       sgMaxLovelaceSupply = 71,
       sgProtocolParams =
         emptyPParams
-          { _d = unsafeBoundRational . realToFrac $ (1.9e-2 :: Scientific),
-            _maxBBSize = 239857,
-            _maxBHSize = 217569
+          { sppD = unsafeBoundRational . realToFrac $ (1.9e-2 :: Scientific),
+            sppMaxBBSize = 239857,
+            sppMaxBHSize = 217569
           },
       sgGenDelegs = Map.fromList [(genesisVerKeyHash, genDelegPair)],
       sgInitialFunds = LM.ListMap [(initialFundedAddress, initialFunds)],

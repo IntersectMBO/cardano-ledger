@@ -257,7 +257,7 @@ vKeyLocked txOut =
 feesOK ::
   forall era.
   ( AlonzoEraTx era,
-    HasField "_collateralPercentage" (PParams era) Natural
+    HasField "appCollateralPercentage" (PParams era) Natural
   ) =>
   PParams era ->
   Tx era ->
@@ -280,7 +280,7 @@ feesOK pp tx (UTxO utxo) =
 
 validateCollateral ::
   ( EraTxBody era,
-    HasField "_collateralPercentage" (PParams era) Natural
+    HasField "appCollateralPercentage" (PParams era) Natural
   ) =>
   PParams era ->
   TxBody era ->
@@ -311,7 +311,7 @@ validateScriptsNotPaidUTxO utxoCollateral =
 
 -- > balance ∗ 100 ≥ txfee txb ∗ (collateralPercent pp)
 validateInsufficientCollateral ::
-  ( HasField "_collateralPercentage" (PParams era) Natural,
+  ( HasField "appCollateralPercentage" (PParams era) Natural,
     EraTxBody era
   ) =>
   PParams era ->
@@ -324,7 +324,7 @@ validateInsufficientCollateral pp txBody bal =
       rationalToCoinViaCeiling $ (fromIntegral collPerc * unCoin txfee) % 100
   where
     txfee = txBody ^. feeTxBodyL -- Coin supplied to pay fees
-    collPerc = getField @"_collateralPercentage" pp
+    collPerc = getField @"appCollateralPercentage" pp
 
 -- > isAdaOnly balance
 validateCollateralContainsNonADA ::
@@ -343,7 +343,7 @@ validateOutsideForecast ::
   ( ShelleyMAEraTxBody era,
     AlonzoEraTxWits era,
     EraTx era,
-    HasField "_protocolVersion" (PParams era) ProtVer
+    HasField "appProtocolVersion" (PParams era) ProtVer
   ) =>
   PParams era ->
   EpochInfo (Either a) ->
@@ -391,7 +391,7 @@ validateOutputTooSmallUTxO pp (UTxO outputs) =
 --
 -- > ∀ txout ∈ txouts txb, serSize (getValue txout) ≤ maxValSize pp
 validateOutputTooBigUTxO ::
-  ( HasField "_maxValSize" (PParams era) Natural,
+  ( HasField "appMaxValSize" (PParams era) Natural,
     EraTxOut era
   ) =>
   PParams era ->
@@ -400,7 +400,7 @@ validateOutputTooBigUTxO ::
 validateOutputTooBigUTxO pp (UTxO outputs) =
   failureUnless (null outputsTooBig) $ OutputTooBigUTxO outputsTooBig
   where
-    maxValSize = getField @"_maxValSize" pp
+    maxValSize = getField @"appMaxValSize" pp
     outputsTooBig = foldl' accum [] $ Map.elems outputs
     accum ans txOut =
       let v = txOut ^. valueTxOutL
@@ -426,7 +426,7 @@ validateWrongNetworkInTxBody netId txBody =
 --
 -- > totExunits tx ≤ maxTxExUnits pp
 validateExUnitsTooBigUTxO ::
-  ( HasField "_maxTxExUnits" (PParams era) ExUnits,
+  ( HasField "appMaxTxExUnits" (PParams era) ExUnits,
     AlonzoEraTxWits era,
     EraTx era
   ) =>
@@ -437,7 +437,7 @@ validateExUnitsTooBigUTxO pp tx =
   failureUnless (pointWiseExUnits (<=) totalExUnits maxTxExUnits) $
     ExUnitsTooBigUTxO maxTxExUnits totalExUnits
   where
-    maxTxExUnits = getField @"_maxTxExUnits" pp
+    maxTxExUnits = getField @"appMaxTxExUnits" pp
     -- This sums up the ExUnits for all embedded Plutus Scripts anywhere in the transaction:
     totalExUnits = totExUnits tx
 
@@ -445,7 +445,7 @@ validateExUnitsTooBigUTxO pp tx =
 --
 -- > ‖collateral tx‖  ≤  maxCollInputs pp
 validateTooManyCollateralInputs ::
-  ( HasField "_maxCollateralInputs" (PParams era) Natural,
+  ( HasField "appMaxCollateralInputs" (PParams era) Natural,
     AlonzoEraTxBody era
   ) =>
   PParams era ->
@@ -455,7 +455,7 @@ validateTooManyCollateralInputs pp txBody =
   failureUnless (numColl <= maxColl) $ TooManyCollateralInputs maxColl numColl
   where
     maxColl, numColl :: Natural
-    maxColl = getField @"_maxCollateralInputs" pp
+    maxColl = getField @"appMaxCollateralInputs" pp
     numColl = fromIntegral . Set.size $ txBody ^. collateralInputsTxBodyL
 
 -- ================================================================
@@ -471,14 +471,14 @@ utxoTransition ::
     Environment (EraRule "UTXOS" era) ~ UtxoEnv era,
     State (EraRule "UTXOS" era) ~ Shelley.UTxOState era,
     Signal (EraRule "UTXOS" era) ~ Tx era,
-    HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_maxValSize" (PParams era) Natural,
-    HasField "_maxTxSize" (PParams era) Natural,
-    HasField "_maxTxExUnits" (PParams era) ExUnits,
-    HasField "_protocolVersion" (PParams era) ProtVer,
-    HasField "_maxCollateralInputs" (PParams era) Natural,
-    HasField "_collateralPercentage" (PParams era) Natural,
+    HasField "appPoolDeposit" (PParams era) Coin,
+    HasField "appKeyDeposit" (PParams era) Coin,
+    HasField "appMaxValSize" (PParams era) Natural,
+    HasField "appMaxTxSize" (PParams era) Natural,
+    HasField "appMaxTxExUnits" (PParams era) ExUnits,
+    HasField "appProtocolVersion" (PParams era) ProtVer,
+    HasField "appMaxCollateralInputs" (PParams era) Natural,
+    HasField "appCollateralPercentage" (PParams era) Natural,
     Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   TransitionRule (AlonzoUTXO era)
@@ -565,18 +565,18 @@ instance
     Environment (EraRule "UTXOS" era) ~ UtxoEnv era,
     State (EraRule "UTXOS" era) ~ Shelley.UTxOState era,
     Signal (EraRule "UTXOS" era) ~ Tx era,
-    HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_minfeeA" (PParams era) Natural,
-    HasField "_minfeeB" (PParams era) Natural,
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_maxValSize" (PParams era) Natural,
-    HasField "_maxTxSize" (PParams era) Natural,
-    HasField "_maxTxExUnits" (PParams era) ExUnits,
-    HasField "_coinsPerUTxOWord" (PParams era) Coin,
-    HasField "_protocolVersion" (PParams era) ProtVer,
-    HasField "_maxCollateralInputs" (PParams era) Natural,
-    HasField "_collateralPercentage" (PParams era) Natural,
-    HasField "_prices" (PParams era) Prices,
+    HasField "appPoolDeposit" (PParams era) Coin,
+    HasField "appMinfeeA" (PParams era) Natural,
+    HasField "appMinfeeB" (PParams era) Natural,
+    HasField "appKeyDeposit" (PParams era) Coin,
+    HasField "appMaxValSize" (PParams era) Natural,
+    HasField "appMaxTxSize" (PParams era) Natural,
+    HasField "appMaxTxExUnits" (PParams era) ExUnits,
+    HasField "appCoinsPerUTxOWord" (PParams era) Coin,
+    HasField "appProtocolVersion" (PParams era) ProtVer,
+    HasField "appMaxCollateralInputs" (PParams era) Natural,
+    HasField "appCollateralPercentage" (PParams era) Natural,
+    HasField "appPrices" (PParams era) Prices,
     Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   STS (AlonzoUTXO era)

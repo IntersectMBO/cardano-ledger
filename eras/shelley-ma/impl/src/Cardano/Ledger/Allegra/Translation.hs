@@ -113,23 +113,23 @@ instance Crypto c => TranslateEra (AllegraEra c) (ShelleyPParamsHKD f) where
   translateEra _ pp =
     return $
       ShelleyPParams
-        { _minfeeA = _minfeeA pp,
-          _minfeeB = _minfeeB pp,
-          _maxBBSize = _maxBBSize pp,
-          _maxTxSize = _maxTxSize pp,
-          _maxBHSize = _maxBHSize pp,
-          _keyDeposit = _keyDeposit pp,
-          _poolDeposit = _poolDeposit pp,
-          _eMax = _eMax pp,
-          _nOpt = _nOpt pp,
-          _a0 = _a0 pp,
-          _rho = _rho pp,
-          _tau = _tau pp,
-          _d = _d pp,
-          _extraEntropy = _extraEntropy pp,
-          _protocolVersion = _protocolVersion pp,
-          _minUTxOValue = _minUTxOValue pp,
-          _minPoolCost = _minPoolCost pp
+        { sppMinfeeA = sppMinfeeA pp,
+          sppMinfeeB = sppMinfeeB pp,
+          sppMaxBBSize = sppMaxBBSize pp,
+          sppMaxTxSize = sppMaxTxSize pp,
+          sppMaxBHSize = sppMaxBHSize pp,
+          sppKeyDeposit = sppKeyDeposit pp,
+          sppPoolDeposit = sppPoolDeposit pp,
+          sppEMax = sppEMax pp,
+          sppNOpt = sppNOpt pp,
+          sppA0 = sppA0 pp,
+          sppRho = sppRho pp,
+          sppTau = sppTau pp,
+          sppD = sppD pp,
+          sppExtraEntropy = sppExtraEntropy pp,
+          sppProtocolVersion = sppProtocolVersion pp,
+          sppMinUTxOValue = sppMinUTxOValue pp,
+          sppMinPoolCost = sppMinPoolCost pp
         }
 
 instance Crypto c => TranslateEra (AllegraEra c) ProposedPPUpdates where
@@ -156,11 +156,11 @@ instance Crypto c => TranslateEra (AllegraEra c) UTxOState where
   translateEra ctxt us =
     return
       UTxOState
-        { _utxo = translateEra' ctxt $ _utxo us,
-          _deposited = _deposited us,
-          _fees = _fees us,
-          _ppups = translateEra' ctxt $ _ppups us,
-          _stakeDistro = _stakeDistro us
+        { utxosUtxo = translateEra' ctxt $ utxosUtxo us,
+          utxosDeposited = utxosDeposited us,
+          utxosFees = utxosFees us,
+          utxosPpups = translateEra' ctxt $ utxosPpups us,
+          utxosStakeDistr = utxosStakeDistr us
         }
 
 instance Crypto c => TranslateEra (AllegraEra c) LedgerState where

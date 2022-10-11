@@ -116,23 +116,23 @@ initStUpdates = initSt initUTxO
 ppVoteA :: ShelleyPParamsUpdate (ShelleyEra c)
 ppVoteA =
   ShelleyPParams
-    { _minfeeA = SNothing,
-      _minfeeB = SNothing,
-      _maxBBSize = SNothing,
-      _maxTxSize = SNothing,
-      _maxBHSize = SNothing,
-      _keyDeposit = SNothing,
-      _poolDeposit = SJust $ Coin 200,
-      _eMax = SNothing,
-      _nOpt = SNothing,
-      _a0 = SNothing,
-      _rho = SNothing,
-      _tau = SNothing,
-      _d = SNothing,
-      _extraEntropy = SJust (mkNonceFromNumber 123),
-      _protocolVersion = SNothing,
-      _minUTxOValue = SNothing,
-      _minPoolCost = SNothing
+    { sppMinfeeA = SNothing,
+      sppMinfeeB = SNothing,
+      sppMaxBBSize = SNothing,
+      sppMaxTxSize = SNothing,
+      sppMaxBHSize = SNothing,
+      sppKeyDeposit = SNothing,
+      sppPoolDeposit = SJust $ Coin 200,
+      sppEMax = SNothing,
+      sppNOpt = SNothing,
+      sppA0 = SNothing,
+      sppRho = SNothing,
+      sppTau = SNothing,
+      sppD = SNothing,
+      sppExtraEntropy = SJust (mkNonceFromNumber 123),
+      sppProtocolVersion = SNothing,
+      sppMinUTxOValue = SNothing,
+      sppMinPoolCost = SNothing
     }
 
 collectVotes ::
@@ -292,23 +292,23 @@ updates2 = CHAINExample expectedStEx1 blockEx2 (Right expectedStEx2)
 ppVoteB :: ShelleyPParamsUpdate (ShelleyEra c)
 ppVoteB =
   ShelleyPParams
-    { _minfeeA = SNothing,
-      _minfeeB = SNothing,
-      _maxBBSize = SNothing,
-      _maxTxSize = SNothing,
-      _maxBHSize = SNothing,
-      _keyDeposit = SNothing,
-      _poolDeposit = SNothing,
-      _eMax = SNothing,
-      _nOpt = SNothing,
-      _a0 = SNothing,
-      _rho = SNothing,
-      _tau = SNothing,
-      _d = SNothing,
-      _extraEntropy = SNothing,
-      _protocolVersion = SNothing,
-      _minUTxOValue = SJust $ Coin 99,
-      _minPoolCost = SNothing
+    { sppMinfeeA = SNothing,
+      sppMinfeeB = SNothing,
+      sppMaxBBSize = SNothing,
+      sppMaxTxSize = SNothing,
+      sppMaxBHSize = SNothing,
+      sppKeyDeposit = SNothing,
+      sppPoolDeposit = SNothing,
+      sppEMax = SNothing,
+      sppNOpt = SNothing,
+      sppA0 = SNothing,
+      sppRho = SNothing,
+      sppTau = SNothing,
+      sppD = SNothing,
+      sppExtraEntropy = SNothing,
+      sppProtocolVersion = SNothing,
+      sppMinUTxOValue = SJust $ Coin 99,
+      sppMinPoolCost = SNothing
     }
 
 ppVotes3 :: Era (ShelleyEra c) => ProposedPPUpdates (ShelleyEra c)
@@ -401,7 +401,7 @@ blockEx4 =
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 110) 0 (KESPeriod 0))
 
 ppExUpdated :: ShelleyPParams (ShelleyEra c)
-ppExUpdated = ppEx {_poolDeposit = Coin 200, _extraEntropy = mkNonceFromNumber 123}
+ppExUpdated = ppEx {sppPoolDeposit = Coin 200, sppExtraEntropy = mkNonceFromNumber 123}
 
 expectedStEx4 :: forall c. (ExMock (EraCrypto (ShelleyEra c))) => ChainState (ShelleyEra c)
 expectedStEx4 =

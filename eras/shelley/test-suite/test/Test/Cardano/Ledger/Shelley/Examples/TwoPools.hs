@@ -191,8 +191,8 @@ initStTwoPools = initSt initUTxO
 aliceCoinEx1 :: Coin
 aliceCoinEx1 =
   aliceInitCoin
-    <-> ((2 :: Integer) <×> _poolDeposit ppEx)
-    <-> ((3 :: Integer) <×> _keyDeposit ppEx)
+    <-> ((2 :: Integer) <×> sppPoolDeposit ppEx)
+    <-> ((3 :: Integer) <×> sppKeyDeposit ppEx)
     <-> feeTx1
 
 feeTx1 :: Coin
@@ -273,7 +273,7 @@ expectedStEx1 ::
 expectedStEx1 =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx1 @era))
     . C.newLab blockEx1
-    . C.feesAndDeposits feeTx1 (((3 :: Integer) <×> _keyDeposit ppEx) <+> ((2 :: Integer) <×> _poolDeposit ppEx))
+    . C.feesAndDeposits feeTx1 (((3 :: Integer) <×> sppKeyDeposit ppEx) <+> ((2 :: Integer) <×> sppPoolDeposit ppEx))
     . C.newUTxO txbodyEx1
     . C.newStakeCred Cast.aliceSHK (Ptr (SlotNo 10) minBound (mkCertIxPartial 0))
     . C.newStakeCred Cast.bobSHK (Ptr (SlotNo 10) minBound (mkCertIxPartial 1))
@@ -660,7 +660,7 @@ blocksMadeEpoch3 = 3
 expectedBlocks :: Integer
 expectedBlocks =
   floor $
-    (1 - (unboundRational . _d $ ppEx))
+    (1 - (unboundRational . sppD $ ppEx))
       * unboundRational (activeSlotVal $ activeSlotCoeff testGlobals)
       * fromIntegral (epochSize $ EpochNo 3)
 
@@ -671,14 +671,14 @@ deltaR1Ex9 :: Coin
 deltaR1Ex9 =
   rationalToCoinViaFloor $
     (blocksMadeEpoch3 % expectedBlocks)
-      * (unboundRational $ _rho ppEx)
+      * (unboundRational $ sppRho ppEx)
       * (fromIntegral . unCoin $ reserves9)
 
 rPot :: Integer
 rPot = unCoin deltaR1Ex9 -- There were no fees
 
 deltaTEx9 :: Integer
-deltaTEx9 = floor $ unboundRational (_tau ppEx) * fromIntegral rPot
+deltaTEx9 = floor $ unboundRational (sppTau ppEx) * fromIntegral rPot
 
 bigR :: Coin
 bigR = Coin $ rPot - deltaTEx9
@@ -695,7 +695,7 @@ bobStakeShareTot = unCoin bobInitCoin % circulation
 alicePoolRewards :: forall c. ExMock c => Coin
 alicePoolRewards = rationalToCoinViaFloor (appPerf * (fromIntegral . unCoin $ maxP))
   where
-    appPerf = mkApparentPerformance (_d ppEx) alicePoolStake 2 3
+    appPerf = mkApparentPerformance (sppD ppEx) alicePoolStake 2 3
     pledge = fromIntegral . unCoin . _poolPledge $ alicePoolParams' @c
     pr = pledge % circulation
     maxP = EB.maxPool ppEx bigR aliceStakeShareTot pr
@@ -719,7 +719,7 @@ carlLeaderRewardsFromAlice =
 bobPoolRewards :: forall c. ExMock c => Coin
 bobPoolRewards = rationalToCoinViaFloor (appPerf * (fromIntegral . unCoin $ maxP))
   where
-    appPerf = mkApparentPerformance (_d ppEx) bobPoolStake 1 3
+    appPerf = mkApparentPerformance (sppD ppEx) bobPoolStake 1 3
     pledge = fromIntegral . unCoin . _poolPledge $ bobPoolParams' @c
     pr = pledge % circulation
     maxP = EB.maxPool ppEx bigR bobStakeShareTot pr
@@ -736,14 +736,14 @@ alicePerfEx9 :: Likelihood
 alicePerfEx9 = likelihood blocks t (epochSize $ EpochNo 3)
   where
     blocks = 2
-    t = leaderProbability f alicePoolStake (_d ppEx)
+    t = leaderProbability f alicePoolStake (sppD ppEx)
     f = activeSlotCoeff testGlobals
 
 bobPerfEx9 :: Likelihood
 bobPerfEx9 = likelihood blocks t (epochSize $ EpochNo 3)
   where
     blocks = 1
-    t = leaderProbability f bobPoolStake (_d ppEx)
+    t = leaderProbability f bobPoolStake (sppD ppEx)
     f = activeSlotCoeff testGlobals
 
 nonMyopicEx9 :: forall c. ExMock c => NonMyopic c
@@ -824,7 +824,7 @@ rsEx9Agg :: forall c. ExMock c => Map (Credential 'Staking c) (Set (Reward c))
 rsEx9Agg = Map.singleton Cast.carlSHK carlsRewards
 
 ppProtVer3 :: ShelleyPParams era
-ppProtVer3 = ppEx {_protocolVersion = ProtVer 3 0}
+ppProtVer3 = ppEx {sppProtocolVersion = ProtVer 3 0}
 
 expectedStEx8Agg :: forall era. (TwoPoolsConstraints era) => ChainState era
 expectedStEx8Agg = C.setPrevPParams ppProtVer3 expectedStEx8

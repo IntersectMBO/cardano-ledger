@@ -160,7 +160,7 @@ translateToShelleyLedgerState genesisShelley epochNo cvs =
                 utxosDeposited = Coin 0,
                 utxosFees = Coin 0,
                 utxosPpups = def,
-                utxosStateDistro = IStake mempty Map.empty
+                utxosStakeDistr = IStake mempty Map.empty
               },
           lsDPState =
             DPState

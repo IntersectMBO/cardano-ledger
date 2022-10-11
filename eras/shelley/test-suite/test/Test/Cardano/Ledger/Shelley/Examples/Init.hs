@@ -51,31 +51,31 @@ import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest, maxLLSupply, mkHash, unsa
 --
 -- @
 --   emptyPParams
---     { _maxBBSize = 50000,
---       _maxBHSize = 10000,
---       _maxTxSize = 10000,
---       _eMax = EpochNo 10000,
---       _keyDeposit = Coin 7,
---       _poolDeposit = Coin 250,
---       _d = unsafeBoundRational 0.5,
---       _tau = unsafeBoundRational 0.2,
---       _rho = unsafeBoundRational 0.0021,
---       _minUTxOValue = 100
+--     { sppMaxBBSize = 50000,
+--       sppMaxBHSize = 10000,
+--       sppMaxTxSize = 10000,
+--       sppEMax = EpochNo 10000,
+--       sppKeyDeposit = Coin 7,
+--       sppPoolDeposit = Coin 250,
+--       sppD = unsafeBoundRational 0.5,
+--       sppTau = unsafeBoundRational 0.2,
+--       sppRho = unsafeBoundRational 0.0021,
+--       sppMinUTxOValue = 100
 --     }
 -- @
 ppEx :: ShelleyPParams era
 ppEx =
   emptyPParams
-    { _maxBBSize = 50000,
-      _maxBHSize = 10000,
-      _maxTxSize = 10000,
-      _eMax = EpochNo 10000,
-      _keyDeposit = Coin 7,
-      _poolDeposit = Coin 250,
-      _d = unsafeBoundRational 0.5,
-      _tau = unsafeBoundRational 0.2,
-      _rho = unsafeBoundRational 0.0021,
-      _minUTxOValue = Coin 100
+    { sppMaxBBSize = 50000,
+      sppMaxBHSize = 10000,
+      sppMaxTxSize = 10000,
+      sppEMax = EpochNo 10000,
+      sppKeyDeposit = Coin 7,
+      sppPoolDeposit = Coin 250,
+      sppD = unsafeBoundRational 0.5,
+      sppTau = unsafeBoundRational 0.2,
+      sppRho = unsafeBoundRational 0.0021,
+      sppMinUTxOValue = Coin 100
     }
 
 -- | === The hash of the last Bryon Header

@@ -95,7 +95,7 @@ ledgerExamplesBabbage =
       ProposedPPUpdates $
         Map.singleton
           (SLE.mkKeyHash 0)
-          (emptyPParamsUpdate {_collateralPercentage = SJust 150})
+          (emptyPParamsUpdate {bppCollateralPercentage = SJust 150})
 
 collateralOutput :: BabbageTxOut Babbage
 collateralOutput =
@@ -135,7 +135,7 @@ exampleTxBodyBabbage =
           ( ProposedPPUpdates $
               Map.singleton
                 (SLE.mkKeyHash 1)
-                (emptyPParamsUpdate {_maxBHSize = SJust 4000})
+                (emptyPParamsUpdate {bppMaxBHSize = SJust 4000})
           )
           (EpochNo 0)
     ) -- txUpdates
@@ -187,4 +187,4 @@ exampleBabbageNewEpochState =
   SLE.exampleNewEpochState
     (MarySLE.exampleMultiAssetValue 1)
     emptyPParams
-    (emptyPParams {_coinsPerUTxOByte = Coin 1})
+    (emptyPParams {bppCoinsPerUTxOByte = Coin 1})

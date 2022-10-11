@@ -117,23 +117,23 @@ testUpdate =
         ( Map.singleton
             testGKeyHash
             ( ShelleyPParams
-                { _minfeeA = SNothing,
-                  _minfeeB = SNothing,
-                  _maxBBSize = SNothing,
-                  _maxTxSize = SNothing,
-                  _maxBHSize = SNothing,
-                  _keyDeposit = SNothing,
-                  _poolDeposit = SNothing,
-                  _eMax = SNothing,
-                  _nOpt = SJust 100,
-                  _a0 = SNothing,
-                  _rho = SNothing,
-                  _tau = SNothing,
-                  _d = SNothing,
-                  _extraEntropy = SNothing,
-                  _protocolVersion = SNothing,
-                  _minUTxOValue = SNothing,
-                  _minPoolCost = SNothing
+                { sppMinfeeA = SNothing,
+                  sppMinfeeB = SNothing,
+                  sppMaxBBSize = SNothing,
+                  sppMaxTxSize = SNothing,
+                  sppMaxBHSize = SNothing,
+                  sppKeyDeposit = SNothing,
+                  sppPoolDeposit = SNothing,
+                  sppEMax = SNothing,
+                  sppNOpt = SJust 100,
+                  sppA0 = SNothing,
+                  sppRho = SNothing,
+                  sppTau = SNothing,
+                  sppD = SNothing,
+                  sppExtraEntropy = SNothing,
+                  sppProtocolVersion = SNothing,
+                  sppMinUTxOValue = SNothing,
+                  sppMinPoolCost = SNothing
                 }
             )
         )

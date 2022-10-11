@@ -501,7 +501,7 @@ testEvaluateTransactionFee =
     1
     @?= getMinFeeTx pp txSimpleUTxO
   where
-    pp = emptyPParams {_minfeeA = 1, _minfeeB = 1}
+    pp = emptyPParams {sppMinfeeA = 1, sppMinfeeB = 1}
 
     txSimpleUTxONoWit =
       ShelleyTx

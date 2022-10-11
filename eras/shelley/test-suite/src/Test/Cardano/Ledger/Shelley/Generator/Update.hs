@@ -98,8 +98,8 @@ genIntervalInThousands lower upper =
 
 genPParams :: Constants -> Gen (ShelleyPParams era)
 genPParams c@Constants {maxMinFeeA, maxMinFeeB, minMajorPV} =
-  mkPParams <$> genNatural 0 maxMinFeeA -- _minfeeA
-    <*> genNatural 0 maxMinFeeB -- _minfeeB
+  mkPParams <$> genNatural 0 maxMinFeeA -- sppMinfeeA
+    <*> genNatural 0 maxMinFeeB -- sppMinfeeB
     <*> szGen -- (maxBBSize, maxBHSize, maxTxSize)
     <*> genKeyDeposit
     <*> genPoolDeposit
@@ -208,7 +208,7 @@ genNextProtocolVersion pp = do
       ProtVer m (n + 1)
     ]
   where
-    ProtVer m n = getField @"_protocolVersion" pp
+    ProtVer m n = getField @"sppProtocolVersion" pp
 
 genM :: Gen a -> Gen (StrictMaybe a)
 genM gen = frequency [(1, SJust <$> gen), (2, pure SNothing)]
@@ -240,23 +240,23 @@ genShelleyPParamsUpdate c@Constants {maxMinFeeA, maxMinFeeB} pp = do
   minPoolCost <- genM $ genMinPoolCost
   pure
     ( ShelleyPParams
-        { _minfeeA = minFeeA,
-          _minfeeB = minFeeB,
-          _maxBBSize = maxBBSize,
-          _maxTxSize = maxTxSize,
-          _maxBHSize = maxBHSize,
-          _keyDeposit = keyDeposit,
-          _poolDeposit = poolDeposit,
-          _eMax = eMax,
-          _nOpt = nopt,
-          _a0 = a0,
-          _rho = rho,
-          _tau = tau,
-          _d = d,
-          _extraEntropy = extraEntropy,
-          _protocolVersion = protocolVersion,
-          _minUTxOValue = minUTxOValue,
-          _minPoolCost = minPoolCost
+        { sppMinfeeA = minFeeA,
+          sppMinfeeB = minFeeB,
+          sppMaxBBSize = maxBBSize,
+          sppMaxTxSize = maxTxSize,
+          sppMaxBHSize = maxBHSize,
+          sppKeyDeposit = keyDeposit,
+          sppPoolDeposit = poolDeposit,
+          sppEMax = eMax,
+          sppNOpt = nopt,
+          sppA0 = a0,
+          sppRho = rho,
+          sppTau = tau,
+          sppD = d,
+          sppExtraEntropy = extraEntropy,
+          sppProtocolVersion = protocolVersion,
+          sppMinUTxOValue = minUTxOValue,
+          sppMinPoolCost = minPoolCost
         }
     )
 

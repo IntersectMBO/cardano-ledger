@@ -143,7 +143,7 @@ genDCert
   slot =
     QC.frequency
       [ (frequencyRegKeyCert, genRegKeyCert c ksKeyPairs ksMSigScripts dState),
-        (frequencyRegPoolCert, genRegPool ksStakePools ksKeyPairs (getField @"_minPoolCost" pparams)),
+        (frequencyRegPoolCert, genRegPool ksStakePools ksKeyPairs (getField @"sppMinPoolCost" pparams)),
         (frequencyDelegationCert, genDelegation c ksKeyPairs ksMSigScripts dpState),
         ( frequencyGenesisDelegationCert,
           genGenesisDelegation ksCoreNodes ksGenesisDelegates dpState
@@ -412,7 +412,7 @@ genRegPool poolKeys keyPairs minPoolCost = do
 -- constructed value, return the keypair which corresponds to the selected
 -- `KeyHash`, by doing a lookup in the set of `availableKeys`.
 genRetirePool ::
-  HasField "_eMax" (Core.PParams era) EpochNo =>
+  HasField "sppEMax" (Core.PParams era) EpochNo =>
   Core.PParams era ->
   [AllIssuerKeys (EraCrypto era) 'StakePool] ->
   PState (EraCrypto era) ->
@@ -441,12 +441,12 @@ genRetirePool pp poolKeys pState slot =
         (List.find (\x -> hk x == hk') poolKeys)
     EpochNo cepoch = epochFromSlotNo slot
     epochLow = cepoch + 1
-    EpochNo retirementBound = getField @"_eMax" pp
+    EpochNo retirementBound = getField @"sppEMax" pp
     epochHigh = cepoch + retirementBound - 1
 
 -- | Generate an InstantaneousRewards Transfer certificate
 genInstantaneousRewardsAccounts ::
-  (Era era, HasField "_d" (Core.PParams era) UnitInterval) =>
+  (Era era, HasField "sppD" (Core.PParams era) UnitInterval) =>
   SlotNo ->
   -- | Index over the cold key hashes of all possible Genesis Delegates
   Map (KeyHash 'GenesisDelegate (EraCrypto era)) (AllIssuerKeys (EraCrypto era) 'GenesisDelegate) ->
@@ -478,7 +478,7 @@ genInstantaneousRewardsAccounts s genesisDelegatesByHash pparams accountState de
   pure $
     if -- Discard this generator (by returning Nothing) if:
     -- we are in full decentralisation mode (d=0) when IR certs are not allowed
-    getField @"_d" pparams == minBound
+    getField @"sppD" pparams == minBound
       -- or when we don't have keys available for generating an IR cert
       || null credCoinMap
       -- or it's too late in the epoch for IR certs
@@ -494,7 +494,7 @@ genInstantaneousRewardsAccounts s genesisDelegatesByHash pparams accountState de
 
 -- | Generate an InstantaneousRewards Transfer
 genInstantaneousRewardsTransfer ::
-  (HasField "_d" (Core.PParams era) UnitInterval, Era era) =>
+  (HasField "sppD" (Core.PParams era) UnitInterval, Era era) =>
   SlotNo ->
   -- | Index over the cold key hashes of all possible Genesis Delegates
   Map (KeyHash 'GenesisDelegate (EraCrypto era)) (AllIssuerKeys (EraCrypto era) 'GenesisDelegate) ->
@@ -519,7 +519,7 @@ genInstantaneousRewardsTransfer s genesisDelegatesByHash pparams accountState de
   pure $
     if -- Discard this generator (by returning Nothing) if:
     -- we are in full decentralisation mode (d=0) when IR certs are not allowed
-    getField @"_d" pparams == minBound
+    getField @"sppD" pparams == minBound
       -- or it's too late in the epoch for IR certs
       || tooLateInEpoch s
       then Nothing
@@ -531,8 +531,8 @@ genInstantaneousRewardsTransfer s genesisDelegatesByHash pparams accountState de
 
 genInstantaneousRewards ::
   ( Era era,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "_d" (Core.PParams era) UnitInterval
+    HasField "sppProtocolVersion" (Core.PParams era) ProtVer,
+    HasField "sppD" (Core.PParams era) UnitInterval
   ) =>
   SlotNo ->
   -- | Index over the cold key hashes of all possible Genesis Delegates

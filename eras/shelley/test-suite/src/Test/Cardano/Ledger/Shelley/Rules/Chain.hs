@@ -256,11 +256,11 @@ instance
     State (Core.EraRule "TICK" era) ~ NewEpochState era,
     Signal (Core.EraRule "TICK" era) ~ SlotNo,
     Embed (PRTCL (EraCrypto era)) (CHAIN era),
-    HasField "_maxBHSize" (Core.PParams era) Natural,
-    HasField "_maxBBSize" (Core.PParams era) Natural,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "_extraEntropy" (Core.PParams era) Nonce,
-    HasField "_d" (Core.PParams era) UnitInterval,
+    HasField "sppMaxBHSize" (Core.PParams era) Natural,
+    HasField "sppMaxBBSize" (Core.PParams era) Natural,
+    HasField "sppProtocolVersion" (Core.PParams era) ProtVer,
+    HasField "sppExtraEntropy" (Core.PParams era) Nonce,
+    HasField "sppD" (Core.PParams era) UnitInterval,
     ToCBORGroup (Era.TxSeq era)
   ) =>
   STS (CHAIN era)
@@ -299,11 +299,11 @@ chainTransition ::
     State (Core.EraRule "TICK" era) ~ NewEpochState era,
     Signal (Core.EraRule "TICK" era) ~ SlotNo,
     Embed (PRTCL (EraCrypto era)) (CHAIN era),
-    HasField "_maxBHSize" (Core.PParams era) Natural,
-    HasField "_maxBBSize" (Core.PParams era) Natural,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "_extraEntropy" (Core.PParams era) Nonce,
-    HasField "_d" (Core.PParams era) UnitInterval,
+    HasField "sppMaxBHSize" (Core.PParams era) Natural,
+    HasField "sppMaxBBSize" (Core.PParams era) Natural,
+    HasField "sppProtocolVersion" (Core.PParams era) ProtVer,
+    HasField "sppExtraEntropy" (Core.PParams era) Nonce,
+    HasField "sppD" (Core.PParams era) UnitInterval,
     ToCBORGroup (Era.TxSeq era)
   ) =>
   TransitionRule (CHAIN era)
@@ -349,7 +349,7 @@ chainTransition =
         TicknState eta0' etaH' <-
           trans @(Core.EraRule "TICKN" era) $
             TRC
-              ( TicknEnv (getField @"_extraEntropy" pp') etaC etaPH,
+              ( TicknEnv (getField @"sppExtraEntropy" pp') etaC etaPH,
                 TicknState eta0 etaH,
                 e1 /= e2
               )
@@ -357,7 +357,7 @@ chainTransition =
         PrtclState cs' etaV' etaC' <-
           trans @(PRTCL (EraCrypto era)) $
             TRC
-              ( PrtclEnv (getField @"_d" pp') _pd genDelegs eta0',
+              ( PrtclEnv (getField @"sppD" pp') _pd genDelegs eta0',
                 PrtclState cs etaV etaC,
                 bh
               )

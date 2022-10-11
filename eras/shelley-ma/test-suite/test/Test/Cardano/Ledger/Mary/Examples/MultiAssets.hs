@@ -93,10 +93,10 @@ initUTxO =
 pp :: ShelleyPParams MaryTest
 pp =
   emptyPParams
-    { _minfeeA = 0,
-      _minfeeB = 1,
-      _maxTxSize = 16384,
-      _minUTxOValue = Coin 100
+    { sppMinfeeA = 0,
+      sppMinfeeB = 1,
+      sppMaxTxSize = 16384,
+      sppMinUTxOValue = Coin 100
     }
 
 ledgerEnv :: SlotNo -> LedgerEnv MaryTest

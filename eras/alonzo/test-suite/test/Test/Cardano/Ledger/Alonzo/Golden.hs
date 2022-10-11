@@ -221,7 +221,7 @@ goldenMinFee =
             priceMem = fromJust $ boundRational 0.0577
             priceSteps = fromJust $ boundRational 0.0000721
             prices = Prices priceMem priceSteps
-            pp = emptyPParams {_minfeeA = 44, _minfeeB = 155381, _prices = prices}
+            pp = emptyPParams {appMinfeeA = 44, appMinfeeB = 155381, appPrices = prices}
 
         Coin 1006053 @?= getMinFeeTx pp firstTx
     ]
@@ -240,7 +240,7 @@ freeCostModel lang =
 exPP :: AlonzoPParams Alonzo
 exPP =
   emptyPParams
-    { _costmdls =
+    { appCostmdls =
         CostModels $ Map.fromList [(l, freeCostModel l) | l <- [PlutusV1, PlutusV2]]
     }
 

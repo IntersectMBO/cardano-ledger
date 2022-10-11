@@ -156,13 +156,13 @@ aggregateActiveStake =
 
 -- ================================================
 
--- | A valid (or self-consistent) UTxOState{utxosUtxo, utxosDeposited, utxosFees, utxosPpups, utxosStateDistro}
---   maintains an invariant between the utxosUtxo and utxosStateDistro fields. the utxosStateDistro field is
+-- | A valid (or self-consistent) UTxOState{utxosUtxo, utxosDeposited, utxosFees, utxosPpups, utxosStakeDistr}
+--   maintains an invariant between the utxosUtxo and utxosStakeDistr fields. the utxosStakeDistr field is
 --   the aggregation of Coin over the StakeReferences in the UTxO. It can be computed by a pure
 --   function from the utxosUtxo field. In some situations, mostly unit or example tests, or when
---   initializing a small UTxO, we want to create a UTxOState that computes the utxosStateDistro from
+--   initializing a small UTxO, we want to create a UTxOState that computes the utxosStakeDistr from
 --   the utxosUtxo. This is aways safe to do, but if the utxosUtxo field is big, this can be very expensive,
---   which defeats the purpose of memoizing the utxosStateDistro field. So use of this function should be
+--   which defeats the purpose of memoizing the utxosStakeDistr field. So use of this function should be
 --   restricted to tests and initializations, where the invariant should be maintained.
 --
 --   TO IncrementalStake

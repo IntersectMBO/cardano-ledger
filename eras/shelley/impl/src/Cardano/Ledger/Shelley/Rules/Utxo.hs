@@ -593,20 +593,20 @@ updateUTxOState ::
   Coin ->
   State (EraRule "PPUP" era) ->
   UTxOState era
-updateUTxOState UTxOState {utxosUtxo, utxosDeposited, utxosFees, utxosStateDistro} txb depositChange ppups =
+updateUTxOState UTxOState {utxosUtxo, utxosDeposited, utxosFees, utxosStakeDistr} txb depositChange ppups =
   let UTxO utxo = utxosUtxo
       !utxoAdd = txouts txb -- These will be inserted into the UTxO
       {- utxoDel  = txins txb ◁ utxo -}
       !(utxoWithout, utxoDel) = extractKeys utxo (txb ^. inputsTxBodyL)
       {- newUTxO = (txins txb ⋪ utxo) ∪ outs txb -}
       newUTxO = utxoWithout `Map.union` unUTxO utxoAdd
-      newIncStakeDistro = updateStakeDistribution utxosStateDistro (UTxO utxoDel) utxoAdd
+      newIncStakeDistro = updateStakeDistribution utxosStakeDistr (UTxO utxoDel) utxoAdd
    in UTxOState
         { utxosUtxo = UTxO newUTxO,
           utxosDeposited = utxosDeposited <> depositChange,
           utxosFees = utxosFees <> txb ^. feeTxBodyL,
           utxosPpups = ppups,
-          utxosStateDistro = newIncStakeDistro
+          utxosStakeDistr = newIncStakeDistro
         }
 
 instance

@@ -101,7 +101,7 @@ feeTx1 :: Coin
 feeTx1 = Coin 3
 
 aliceCoinEx1 :: Coin
-aliceCoinEx1 = aliceInitCoin <-> _poolDeposit ppEx <-> feeTx1
+aliceCoinEx1 = aliceInitCoin <-> sppPoolDeposit ppEx <-> feeTx1
 
 txbodyEx1 :: Cr.Crypto c => ShelleyTxBody (ShelleyEra c)
 txbodyEx1 =
@@ -155,7 +155,7 @@ expectedStEx1 ::
 expectedStEx1 =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx1 @c))
     . C.newLab blockEx1
-    . C.feesAndDeposits feeTx1 (_poolDeposit ppEx)
+    . C.feesAndDeposits feeTx1 (sppPoolDeposit ppEx)
     . C.newUTxO txbodyEx1
     . C.newPool Cast.alicePoolParams
     $ initStPoolReReg

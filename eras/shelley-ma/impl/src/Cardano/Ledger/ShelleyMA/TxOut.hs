@@ -7,7 +7,7 @@ module Cardano.Ledger.ShelleyMA.TxOut (scaledMinDeposit) where
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core hiding (TxBody)
 import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Shelley.PParams (_minUTxOValue)
+import Cardano.Ledger.Shelley.PParams (sppMinUTxOValue)
 import Cardano.Ledger.Shelley.TxBody
   ( ShelleyTxOut (..),
     addrEitherShelleyTxOutL,
@@ -37,15 +37,15 @@ instance MAClass ma crypto => EraTxOut (ShelleyMAEra ma crypto) where
   valueEitherTxOutL = valueEitherShelleyTxOutL
   {-# INLINE valueEitherTxOutL #-}
 
-  getMinCoinTxOut pp txOut = scaledMinDeposit (txOut ^. valueTxOutL) (_minUTxOValue pp)
+  getMinCoinTxOut pp txOut = scaledMinDeposit (txOut ^. valueTxOutL) (sppMinUTxOValue pp)
 
--- | The `scaledMinDeposit` calculation uses the minUTxOValue protocol parameter
+-- | The `scaledMinDeposit` calculation uses the sppMinUTxOValue protocol parameter
 -- (passed to it as Coin mv) as a specification of "the cost of making a
 -- Shelley-sized UTxO entry", calculated here by "utxoEntrySizeWithoutVal +
 -- uint", using the constants in the "where" clause.  In the case when a UTxO
 -- entry contains coins only (and the Shelley UTxO entry format is used - we
 -- will extend this to be correct for other UTxO formats shortly), the deposit
--- should be exactly the minUTxOValue.  This is the "inject (coin v) == v" case.
+-- should be exactly the sppMinUTxOValue.  This is the "inject (coin v) == v" case.
 -- Otherwise, we calculate the per-byte deposit by multiplying the minimum
 -- deposit (which is for the number of Shelley UTxO-entry bytes) by the size of
 -- a Shelley UTxO entry.  This is the "(mv * (utxoEntrySizeWithoutVal + uint))"
@@ -58,7 +58,7 @@ instance MAClass ma crypto => EraTxOut (ShelleyMAEra ma crypto) where
 -- This scaling function is right for UTxO, not EUTxO
 scaledMinDeposit :: Val v => v -> Coin -> Coin
 scaledMinDeposit v (Coin mv)
-  | isAdaOnly v = Coin mv -- without non-Coin assets, scaled deposit should be exactly minUTxOValue
+  | isAdaOnly v = Coin mv -- without non-Coin assets, scaled deposit should be exactly sppMinUTxOValue
   -- The calculation should represent this equation
   -- minValueParameter / coinUTxOSize = actualMinValue / valueUTxOSize
   -- actualMinValue = (minValueParameter / coinUTxOSize) * valueUTxOSize

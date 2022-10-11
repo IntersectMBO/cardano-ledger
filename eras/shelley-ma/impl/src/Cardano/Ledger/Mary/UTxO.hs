@@ -50,7 +50,7 @@ instance Crypto c => EraUTxO (ShelleyMAEra 'Mary c) where
 getConsumedMaryValue ::
   ( ShelleyMAEraTxBody era,
     Value era ~ MaryValue (EraCrypto era),
-    HasField "_keyDeposit" (PParams era) Coin
+    HasField "_keyDeposit" (PParams era) Coin -- TODO: Fix `PParams era` issue with HasField as per lenses work
   ) =>
   PParams era ->
   UTxO era ->

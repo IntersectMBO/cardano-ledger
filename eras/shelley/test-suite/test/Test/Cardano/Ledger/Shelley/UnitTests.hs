@@ -167,14 +167,14 @@ mkGenesisTxIn = TxIn genesisId . mkTxIxPartial
 pp :: ShelleyPParams era
 pp =
   emptyPParams
-    { _minfeeA = 1,
-      _minfeeB = 1,
-      _keyDeposit = Coin 100,
-      _poolDeposit = Coin 250,
-      _maxTxSize = 1024,
-      _eMax = EpochNo 10,
-      _minUTxOValue = Coin 100,
-      _minPoolCost = Coin 100
+    { sppMinfeeA = 1,
+      sppMinfeeB = 1,
+      sppKeyDeposit = Coin 100,
+      sppPoolDeposit = Coin 250,
+      sppMaxTxSize = 1024,
+      sppEMax = EpochNo 10,
+      sppMinUTxOValue = Coin 100,
+      sppMinPoolCost = Coin 100
     }
 
 testVRFCheckWithActiveSlotCoeffOne :: Assertion
@@ -690,7 +690,7 @@ testPoolCostTooSmall =
     [ DelegsFailure
         ( DelplFailure
             ( PoolFailure
-                ( StakePoolCostTooLowPOOL (_poolCost alicePoolParamsSmallCost) (_minPoolCost (pp @C))
+                ( StakePoolCostTooLowPOOL (_poolCost alicePoolParamsSmallCost) (sppMinPoolCost (pp @C))
                 )
             )
         )

@@ -381,7 +381,7 @@ instance
   ( Era era,
     Mock (EraCrypto era),
     Arbitrary (PParams era),
-    HasField "_costmdls" (PParams era) CostModels
+    HasField "appCostmdls" (PParams era) CostModels
   ) =>
   Arbitrary (ScriptIntegrity era)
   where

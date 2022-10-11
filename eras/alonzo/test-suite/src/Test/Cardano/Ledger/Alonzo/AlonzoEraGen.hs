@@ -343,7 +343,7 @@ genAlonzoPParams ::
   Gen (PParams (AlonzoEra c))
 genAlonzoPParams constants = do
   let constants' = constants {minMajorPV = 5}
-  -- This ensures that "_d" field is not 0, and that the major protocol version
+  -- This ensures that "appD" field is not 0, and that the major protocol version
   -- is large enough to not trigger plutus script failures
   -- (no bultins are alllowed before major version 5).
   shelleypp <- Shelley.genPParams @(MaryEra c) constants'
@@ -441,7 +441,7 @@ instance Mock c => EraGen (AlonzoEra c) where
     if isPlutusScript script
       then case List.find (\info -> getScript3 @(AlonzoEra c) info == script) genEraTwoPhase3Arg of
         Just (TwoPhase3ArgInfo _script _hash inputdata (rdmr, mems, steps) _succeed) ->
-          txscriptfee (getField @"_prices" pp) (ExUnits mems steps)
+          txscriptfee (getField @"appPrices" pp) (ExUnits mems steps)
             <+> storageCost 10 pp (rdmr, ExUnits mems steps) -- Extra 10 for the RdmrPtr
             <+> storageCost 32 pp inputdata -- Extra 32 for the hash
             <+> storageCost 0 pp script
@@ -471,7 +471,7 @@ instance Mock c => EraGen (AlonzoEra c) where
   genEraTweakBlock pp txns =
     let txTotal, ppMax :: ExUnits
         txTotal = foldMap totExUnits txns
-        ppMax = getField @"_maxBlockExUnits" pp
+        ppMax = getField @"appMaxBlockExUnits" pp
      in if pointWiseExUnits (<=) txTotal ppMax
           then pure txns
           else myDiscard "TotExUnits violation: genEraTweakBlock: AlonzoEraGen.hs"
@@ -490,7 +490,7 @@ sumCollateral tx (UTxO utxo) =
     collateral_ = tx ^. bodyTxL . collateralInputsTxBodyL
 
 storageCost :: ToCBOR t => Integer -> AlonzoPParams era -> t -> Coin
-storageCost extra pp x = (extra + encodedLen x) <×> Coin (fromIntegral (getField @"_minfeeA" pp))
+storageCost extra pp x = (extra + encodedLen x) <×> Coin (fromIntegral (getField @"appMinfeeA" pp))
 
 addRedeemMap ::
   forall c.
@@ -523,7 +523,7 @@ getDataMap (scriptInfo3, _) = Map.foldlWithKey' accum Map.empty
           Map.insert (hashData @era dat) (Data dat) ans
 
 instance Mock c => MinGenTxout (AlonzoEra c) where
-  calcEraMinUTxO tout pp = utxoEntrySize tout <×> getField @"_coinsPerUTxOWord" pp
+  calcEraMinUTxO tout pp = utxoEntrySize tout <×> getField @"appCoinsPerUTxOWord" pp
   addValToTxOut v (AlonzoTxOut a u _b) = AlonzoTxOut a (v <+> u) (dataFromAddr a)
   genEraTxOut genv genVal addrs = do
     values <- replicateM (length addrs) genVal

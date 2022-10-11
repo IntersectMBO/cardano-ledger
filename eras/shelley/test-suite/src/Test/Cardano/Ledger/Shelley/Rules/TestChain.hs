@@ -315,9 +315,9 @@ checkPreservation ::
   forall era.
   ( EraSegWits era,
     ShelleyEraTxBody era,
-    HasField "_protocolVersion" (PParams era) ProtVer,
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin,
+    HasField "sppProtocolVersion" (PParams era) ProtVer,
+    HasField "sppKeyDeposit" (PParams era) Coin,
+    HasField "sppPoolDeposit" (PParams era) Coin,
     State (EraRule "PPUP" era) ~ PPUPState era
   ) =>
   SourceSignalTarget (CHAIN era) ->
@@ -650,8 +650,8 @@ preserveBalanceRestricted ::
     TestingLedger era ledger,
     ShelleyEraTxBody era,
     EraSegWits era,
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin
+    HasField "sppKeyDeposit" (PParams era) Coin,
+    HasField "sppPoolDeposit" (PParams era) Coin
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -934,8 +934,8 @@ poolRetirement ::
   ( ChainProperty era,
     EraSegWits era,
     ShelleyEraTxBody era,
-    HasField "_eMax" (PParams era) EpochNo,
-    HasField "_minPoolCost" (PParams era) Coin
+    HasField "sppEMax" (PParams era) EpochNo,
+    HasField "sppMinPoolCost" (PParams era) Coin
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -946,7 +946,7 @@ poolRetirement SourceSignalTarget {source = chainSt, signal = block} =
     (chainSt', poolTr) = poolTraceFromBlock chainSt block
     bhb = bhbody $ bheader block
     currentEpoch = (epochFromSlotNo . bheaderSlotNo) bhb
-    maxEpoch = (getField @"_eMax" . esPp . nesEs . chainNes) chainSt'
+    maxEpoch = (getField @"sppEMax" . esPp . nesEs . chainNes) chainSt'
 
 -- | Check that a newly registered pool key is registered and not
 -- in the retiring map.
@@ -954,8 +954,8 @@ poolRegistration ::
   ( ChainProperty era,
     EraSegWits era,
     ShelleyEraTxBody era,
-    HasField "_eMax" (PParams era) EpochNo,
-    HasField "_minPoolCost" (PParams era) Coin
+    HasField "sppEMax" (PParams era) EpochNo,
+    HasField "sppMinPoolCost" (PParams era) Coin
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -971,8 +971,8 @@ poolStateIsInternallyConsistent ::
   ( ChainProperty era,
     EraSegWits era,
     ShelleyEraTxBody era,
-    HasField "_eMax" (PParams era) EpochNo,
-    HasField "_minPoolCost" (PParams era) Coin
+    HasField "sppEMax" (PParams era) EpochNo,
+    HasField "sppMinPoolCost" (PParams era) Coin
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -1071,8 +1071,8 @@ poolTraceFromBlock ::
   ( ChainProperty era,
     ShelleyEraTxBody era,
     EraSegWits era,
-    HasField "_eMax" (PParams era) EpochNo,
-    HasField "_minPoolCost" (PParams era) Coin
+    HasField "sppEMax" (PParams era) EpochNo,
+    HasField "sppMinPoolCost" (PParams era) Coin
   ) =>
   ChainState era ->
   Block (BHeader (EraCrypto era)) era ->

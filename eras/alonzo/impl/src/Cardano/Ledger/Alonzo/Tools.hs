@@ -103,8 +103,8 @@ evaluateTransactionExecutionUnits ::
     ExtendedUTxO era,
     EraUTxO era,
     ScriptsNeeded era ~ AlonzoScriptsNeeded era,
-    HasField "_maxTxExUnits" (PParams era) ExUnits,
-    HasField "_protocolVersion" (PParams era) ProtVer,
+    HasField "appMaxTxExUnits" (PParams era) ExUnits,
+    HasField "appProtocolVersion" (PParams era) ProtVer,
     Script era ~ AlonzoScript era
   ) =>
   PParams era ->
@@ -187,8 +187,8 @@ evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels = do
           PlutusV2 -> Left $ ValidationFailedV2 e logs
         (_, Right exBudget) -> note (IncompatibleBudget exBudget) $ exBudgetToExUnits exBudget
       where
-        maxBudget = transExUnits . getField @"_maxTxExUnits" $ pparams
-        pv = transProtocolVersion . getField @"_protocolVersion" $ pparams
+        maxBudget = transExUnits . getField @"appMaxTxExUnits" $ pparams
+        pv = transProtocolVersion . getField @"appProtocolVersion" $ pparams
         interpreter lang = case lang of
           PlutusV1 -> PV1.evaluateScriptRestricting pv PV1.Verbose
           PlutusV2 -> PV2.evaluateScriptRestricting pv PV2.Verbose

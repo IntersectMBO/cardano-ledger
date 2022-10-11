@@ -52,7 +52,7 @@ env pv acnt =
     { slotNo = SlotNo 50,
       ptr_ = Ptr (SlotNo 50) minBound minBound,
       acnt_ = acnt,
-      ppDE = emptyPParams {_protocolVersion = pv}
+      ppDE = emptyPParams {sppProtocolVersion = pv}
     }
 
 shelleyPV :: ProtVer

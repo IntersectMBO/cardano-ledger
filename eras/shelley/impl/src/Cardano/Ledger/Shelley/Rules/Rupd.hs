@@ -94,7 +94,7 @@ instance
     HasField "sppNOpt" (PParams era) Natural,
     HasField "sppProtocolVersion" (PParams era) ProtVer,
     HasField "sppRho" (PParams era) UnitInterval,
-    HasField "sppTao" (PParams era) UnitInterval
+    HasField "sppTau" (PParams era) UnitInterval
   ) =>
   STS (ShelleyRUPD era)
   where
@@ -134,7 +134,7 @@ rupdTransition ::
     HasField "sppNOpt" (PParams era) Natural,
     HasField "sppProtocolVersion" (PParams era) ProtVer,
     HasField "sppRho" (PParams era) UnitInterval,
-    HasField "sppTao" (PParams era) UnitInterval
+    HasField "sppTau" (PParams era) UnitInterval
   ) =>
   TransitionRule (ShelleyRUPD era)
 rupdTransition = do

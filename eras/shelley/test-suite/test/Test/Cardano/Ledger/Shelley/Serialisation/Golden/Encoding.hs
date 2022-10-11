@@ -649,23 +649,23 @@ tests =
       checkEncodingCBOR
         "pparams_update_key_deposit_only"
         ( ShelleyPParams
-            { _minfeeA = SNothing,
-              _minfeeB = SNothing,
-              _maxBBSize = SNothing,
-              _maxTxSize = SNothing,
-              _maxBHSize = SNothing,
-              _keyDeposit = SJust (Coin 5),
-              _poolDeposit = SNothing,
-              _eMax = SNothing,
-              _nOpt = SNothing,
-              _a0 = SNothing,
-              _rho = SNothing,
-              _tau = SNothing,
-              _d = SNothing,
-              _extraEntropy = SNothing,
-              _protocolVersion = SNothing,
-              _minUTxOValue = SNothing,
-              _minPoolCost = SNothing
+            { sppMinfeeA = SNothing,
+              sppMinfeeB = SNothing,
+              sppMaxBBSize = SNothing,
+              sppMaxTxSize = SNothing,
+              sppMaxBHSize = SNothing,
+              sppKeyDeposit = SJust (Coin 5),
+              sppPoolDeposit = SNothing,
+              sppEMax = SNothing,
+              sppNOpt = SNothing,
+              sppA0 = SNothing,
+              sppRho = SNothing,
+              sppTau = SNothing,
+              sppD = SNothing,
+              sppExtraEntropy = SNothing,
+              sppProtocolVersion = SNothing,
+              sppMinUTxOValue = SNothing,
+              sppMinPoolCost = SNothing
             } ::
             ShelleyPParamsUpdate C
         )
@@ -691,23 +691,23 @@ tests =
        in checkEncodingCBOR
             "pparams_update_all"
             ( ShelleyPParams
-                { _minfeeA = SJust minfeea,
-                  _minfeeB = SJust minfeeb,
-                  _maxBBSize = SJust maxbbsize,
-                  _maxTxSize = SJust maxtxsize,
-                  _maxBHSize = SJust maxbhsize,
-                  _keyDeposit = SJust keydeposit,
-                  _poolDeposit = SJust pooldeposit,
-                  _eMax = SJust emax,
-                  _nOpt = SJust nopt,
-                  _a0 = SJust a0,
-                  _rho = SJust rho,
-                  _tau = SJust tau,
-                  _d = SJust d,
-                  _extraEntropy = SJust extraEntropy,
-                  _protocolVersion = SJust protocolVersion,
-                  _minUTxOValue = SJust minUTxOValue,
-                  _minPoolCost = SJust minPoolCost
+                { sppMinfeeA = SJust minfeea,
+                  sppMinfeeB = SJust minfeeb,
+                  sppMaxBBSize = SJust maxbbsize,
+                  sppMaxTxSize = SJust maxtxsize,
+                  sppMaxBHSize = SJust maxbhsize,
+                  sppKeyDeposit = SJust keydeposit,
+                  sppPoolDeposit = SJust pooldeposit,
+                  sppEMax = SJust emax,
+                  sppNOpt = SJust nopt,
+                  sppA0 = SJust a0,
+                  sppRho = SJust rho,
+                  sppTau = SJust tau,
+                  sppD = SJust d,
+                  sppExtraEntropy = SJust extraEntropy,
+                  sppProtocolVersion = SJust protocolVersion,
+                  sppMinUTxOValue = SJust minUTxOValue,
+                  sppMinPoolCost = SJust minPoolCost
                 } ::
                 ShelleyPParamsUpdate C
             )
@@ -753,23 +753,23 @@ tests =
               ( Map.singleton
                   (testGKeyHash @C_Crypto)
                   ( ShelleyPParams
-                      { _minfeeA = SNothing,
-                        _minfeeB = SNothing,
-                        _maxBBSize = SNothing,
-                        _maxTxSize = SNothing,
-                        _maxBHSize = SNothing,
-                        _keyDeposit = SNothing,
-                        _poolDeposit = SNothing,
-                        _eMax = SNothing,
-                        _nOpt = SJust 100,
-                        _a0 = SNothing,
-                        _rho = SNothing,
-                        _tau = SNothing,
-                        _d = SNothing,
-                        _extraEntropy = SNothing,
-                        _protocolVersion = SNothing,
-                        _minUTxOValue = SNothing,
-                        _minPoolCost = SNothing
+                      { sppMinfeeA = SNothing,
+                        sppMinfeeB = SNothing,
+                        sppMaxBBSize = SNothing,
+                        sppMaxTxSize = SNothing,
+                        sppMaxBHSize = SNothing,
+                        sppKeyDeposit = SNothing,
+                        sppPoolDeposit = SNothing,
+                        sppEMax = SNothing,
+                        sppNOpt = SJust 100,
+                        sppA0 = SNothing,
+                        sppRho = SNothing,
+                        sppTau = SNothing,
+                        sppD = SNothing,
+                        sppExtraEntropy = SNothing,
+                        sppProtocolVersion = SNothing,
+                        sppMinUTxOValue = SNothing,
+                        sppMinPoolCost = SNothing
                       }
                   )
               )
@@ -817,23 +817,23 @@ tests =
                   ( Map.singleton
                       testGKeyHash
                       ( ShelleyPParams
-                          { _minfeeA = SNothing,
-                            _minfeeB = SNothing,
-                            _maxBBSize = SNothing,
-                            _maxTxSize = SNothing,
-                            _maxBHSize = SNothing,
-                            _keyDeposit = SNothing,
-                            _poolDeposit = SNothing,
-                            _eMax = SNothing,
-                            _nOpt = SJust 100,
-                            _a0 = SNothing,
-                            _rho = SNothing,
-                            _tau = SNothing,
-                            _d = SNothing,
-                            _extraEntropy = SNothing,
-                            _protocolVersion = SNothing,
-                            _minUTxOValue = SNothing,
-                            _minPoolCost = SNothing
+                          { sppMinfeeA = SNothing,
+                            sppMinfeeB = SNothing,
+                            sppMaxBBSize = SNothing,
+                            sppMaxTxSize = SNothing,
+                            sppMaxBHSize = SNothing,
+                            sppKeyDeposit = SNothing,
+                            sppPoolDeposit = SNothing,
+                            sppEMax = SNothing,
+                            sppNOpt = SJust 100,
+                            sppA0 = SNothing,
+                            sppRho = SNothing,
+                            sppTau = SNothing,
+                            sppD = SNothing,
+                            sppExtraEntropy = SNothing,
+                            sppProtocolVersion = SNothing,
+                            sppMinUTxOValue = SNothing,
+                            sppMinPoolCost = SNothing
                           }
                       )
                   )
@@ -878,23 +878,23 @@ tests =
                   ( Map.singleton
                       testGKeyHash
                       ( ShelleyPParams
-                          { _minfeeA = SNothing,
-                            _minfeeB = SNothing,
-                            _maxBBSize = SNothing,
-                            _maxTxSize = SNothing,
-                            _maxBHSize = SNothing,
-                            _keyDeposit = SNothing,
-                            _poolDeposit = SNothing,
-                            _eMax = SNothing,
-                            _nOpt = SJust 100,
-                            _a0 = SNothing,
-                            _rho = SNothing,
-                            _tau = SNothing,
-                            _d = SNothing,
-                            _extraEntropy = SNothing,
-                            _protocolVersion = SNothing,
-                            _minUTxOValue = SNothing,
-                            _minPoolCost = SNothing
+                          { sppMinfeeA = SNothing,
+                            sppMinfeeB = SNothing,
+                            sppMaxBBSize = SNothing,
+                            sppMaxTxSize = SNothing,
+                            sppMaxBHSize = SNothing,
+                            sppKeyDeposit = SNothing,
+                            sppPoolDeposit = SNothing,
+                            sppEMax = SNothing,
+                            sppNOpt = SJust 100,
+                            sppA0 = SNothing,
+                            sppRho = SNothing,
+                            sppTau = SNothing,
+                            sppD = SNothing,
+                            sppExtraEntropy = SNothing,
+                            sppProtocolVersion = SNothing,
+                            sppMinUTxOValue = SNothing,
+                            sppMinPoolCost = SNothing
                           }
                       )
                   )

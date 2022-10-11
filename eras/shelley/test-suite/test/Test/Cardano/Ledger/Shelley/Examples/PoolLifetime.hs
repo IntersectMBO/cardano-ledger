@@ -173,8 +173,8 @@ initStPoolLifetime = initSt initUTxO
 
 aliceCoinEx1 :: Coin
 aliceCoinEx1 =
-  aliceInitCoin <-> _poolDeposit ppEx
-    <-> ((3 :: Integer) <×> _keyDeposit ppEx)
+  aliceInitCoin <-> sppPoolDeposit ppEx
+    <-> ((3 :: Integer) <×> sppKeyDeposit ppEx)
     <-> Coin 3
 
 carlMIR :: Coin
@@ -258,7 +258,7 @@ expectedStEx1 :: forall c. (ExMock c) => ChainState (ShelleyEra c)
 expectedStEx1 =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx1 @c))
     . C.newLab blockEx1
-    . C.feesAndDeposits feeTx1 (((3 :: Integer) <×> _keyDeposit ppEx) <+> _poolDeposit ppEx)
+    . C.feesAndDeposits feeTx1 (((3 :: Integer) <×> sppKeyDeposit ppEx) <+> sppPoolDeposit ppEx)
     . C.newUTxO txbodyEx1
     . C.newStakeCred Cast.aliceSHK (Ptr (SlotNo 10) minBound (mkCertIxPartial 0))
     . C.newStakeCred Cast.bobSHK (Ptr (SlotNo 10) minBound (mkCertIxPartial 1))
@@ -740,7 +740,7 @@ alicePerfEx8 :: Likelihood
 alicePerfEx8 = likelihood blocks t (epochSize $ EpochNo 3)
   where
     blocks = 1
-    t = leaderProbability f relativeStake (_d ppEx)
+    t = leaderProbability f relativeStake (sppD ppEx)
     (Coin stake) = aliceCoinEx2Base <> aliceCoinEx2Ptr <> bobInitCoin
     (Coin tot) = maxLLSupply <-> reserves7
     relativeStake = fromRational (stake % tot)
@@ -851,7 +851,7 @@ bobAda10 :: Coin
 bobAda10 =
   bobRAcnt8
     <+> bobInitCoin
-    <+> _keyDeposit ppEx
+    <+> sppKeyDeposit ppEx
     <-> feeTx10
 
 txbodyEx10 :: Cr.Crypto c => ShelleyTxBody (ShelleyEra c)
@@ -895,7 +895,7 @@ expectedStEx10 :: forall c. (ExMock (EraCrypto (ShelleyEra c))) => ChainState (S
 expectedStEx10 =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx10 @c))
     . C.newLab blockEx10
-    . C.feesAndDeposits feeTx10 (invert (_keyDeposit ppEx))
+    . C.feesAndDeposits feeTx10 (invert (sppKeyDeposit ppEx))
     . C.deregStakeCred Cast.bobSHK
     . C.newUTxO txbodyEx10
     $ expectedStEx9
@@ -968,7 +968,7 @@ alicePerfEx11 = applyDecay decayFactor alicePerfEx8 <> epoch4Likelihood
   where
     epoch4Likelihood = likelihood blocks t (epochSize $ EpochNo 4)
     blocks = 0
-    t = leaderProbability f relativeStake (_d ppEx)
+    t = leaderProbability f relativeStake (sppD ppEx)
     -- everyone has delegated to Alice's Pool
     Coin stake = EB.sumAllStake (EB.ssStake $ snapEx5 @c)
     relativeStake = fromRational (stake % supply)

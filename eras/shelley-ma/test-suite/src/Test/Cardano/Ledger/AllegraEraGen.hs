@@ -83,9 +83,9 @@ instance (CryptoClass.Crypto c) => ScriptClass (AllegraEra c) where
 instance (CryptoClass.Crypto c, Mock c) => EraGen (AllegraEra c) where
   genGenesisValue (GenEnv _keySpace _scriptspace Constants {minGenesisOutputVal, maxGenesisOutputVal}) =
     genCoin minGenesisOutputVal maxGenesisOutputVal
-  genEraTxBody _ge _utxo _pparams = genTxBody
+  genEraTxBody _ge utxosUtxo _pparams = genTxBody
   genEraAuxiliaryData = genAuxiliaryData
-  updateEraTxBody _utxo _pp _wits txBody fee ins out =
+  updateEraTxBody utxosUtxo _pp _wits txBody fee ins out =
     case txBody of
       MATxBody existingins outs cert wdrl _txfee vi upd ad forge ->
         MATxBody (existingins <> ins) (outs :|> out) cert wdrl fee vi upd ad forge
@@ -123,7 +123,7 @@ genTxBody slot ins outs cert wdrl fee upd ad = do
     )
 
 instance Mock c => MinGenTxout (AllegraEra c) where
-  calcEraMinUTxO _txout pp = _minUTxOValue pp
+  calcEraMinUTxO _txout pp = sppMinUTxOValue pp
   addValToTxOut v (ShelleyTxOut a u) = ShelleyTxOut a (v <+> u)
   genEraTxOut _genenv genVal addrs = do
     values <- replicateM (length addrs) genVal

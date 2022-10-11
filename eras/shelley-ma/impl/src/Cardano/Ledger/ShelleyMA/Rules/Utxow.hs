@@ -52,7 +52,7 @@ instance
     Environment (EraRule "UTXO" era) ~ UtxoEnv era,
     State (EraRule "UTXO" era) ~ UTxOState era,
     Signal (EraRule "UTXO" era) ~ Tx era,
-    HasField "_protocolVersion" (PParams era) ProtVer,
+    HasField "sppProtocolVersion" (PParams era) ProtVer,
     DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
   ) =>
   STS (ShelleyMAUTXOW era)

@@ -128,8 +128,8 @@ bbodyTransition ::
     State (EraRule "LEDGERS" era) ~ LedgerState era,
     Signal (EraRule "LEDGERS" era) ~ Seq (Tx era),
     -- Conditions to define the rule in this Era
-    HasField "_d" (PParams era) UnitInterval,
-    HasField "_maxBlockExUnits" (PParams era) ExUnits,
+    HasField "appD" (PParams era) UnitInterval,
+    HasField "appMaxBlockExUnits" (PParams era) ExUnits,
     EraSegWits era,
     AlonzoEraTxWits era,
     Era.TxSeq era ~ AlonzoTxSeq era,
@@ -180,14 +180,14 @@ bbodyTransition =
         {- ∑(tx ∈ txs)(totExunits tx) ≤ maxBlockExUnits pp  -}
         let txTotal, ppMax :: ExUnits
             txTotal = foldMap totExUnits txs
-            ppMax = getField @"_maxBlockExUnits" pp
+            ppMax = getField @"appMaxBlockExUnits" pp
         pointWiseExUnits (<=) txTotal ppMax ?! TooManyExUnits txTotal ppMax
 
         pure $
           BbodyState @era
             ls'
             ( incrBlocks
-                (isOverlaySlot firstSlotNo (getField @"_d" pp) slot)
+                (isOverlaySlot firstSlotNo (getField @"appD" pp) slot)
                 hkAsStakePool
                 b
             )
@@ -200,8 +200,8 @@ instance
     Signal (EraRule "LEDGERS" era) ~ Seq (AlonzoTx era),
     AlonzoEraTxWits era,
     Tx era ~ AlonzoTx era,
-    HasField "_d" (PParams era) UnitInterval,
-    HasField "_maxBlockExUnits" (PParams era) ExUnits,
+    HasField "appD" (PParams era) UnitInterval,
+    HasField "appMaxBlockExUnits" (PParams era) ExUnits,
     Era.TxSeq era ~ AlonzoTxSeq era,
     Tx era ~ AlonzoTx era,
     EraSegWits era

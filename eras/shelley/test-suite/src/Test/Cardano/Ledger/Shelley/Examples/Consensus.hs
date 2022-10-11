@@ -155,7 +155,7 @@ defaultShelleyLedgerExamples mkWitnesses mkAlonzoTx value txBody auxData transla
         exampleNewEpochState
           value
           emptyPParams
-          (emptyPParams {_minUTxOValue = Coin 1}),
+          (emptyPParams {sppMinUTxOValue = Coin 1}),
       sleChainDepState = exampleLedgerChainDepState 1,
       sleTranslationContext = translationContext
     }
@@ -253,7 +253,7 @@ exampleProposedPParamsUpdates =
   ProposedPPUpdates $
     Map.singleton
       (mkKeyHash 0)
-      (emptyPParamsUpdate {_keyDeposit = SJust (Coin 100)})
+      (emptyPParamsUpdate {sppKeyDeposit = SJust (Coin 100)})
 
 examplePoolDistr :: forall c. PraosCrypto c => PoolDistr c
 examplePoolDistr =
@@ -307,12 +307,12 @@ testShelleyGenesis =
 exampleNewEpochState ::
   forall era.
   ( ShelleyBasedEra' era,
-    HasField "_a0" (Core.PParams era) NonNegativeInterval,
-    HasField "_d" (Core.PParams era) UnitInterval,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "_nOpt" (Core.PParams era) Natural,
-    HasField "_rho" (Core.PParams era) UnitInterval,
-    HasField "_tau" (Core.PParams era) UnitInterval,
+    HasField "sppA0" (Core.PParams era) NonNegativeInterval,
+    HasField "sppD" (Core.PParams era) UnitInterval,
+    HasField "sppProtocolVersion" (Core.PParams era) ProtVer,
+    HasField "sppNOpt" (Core.PParams era) Natural,
+    HasField "sppRho" (Core.PParams era) UnitInterval,
+    HasField "sppTau" (Core.PParams era) UnitInterval,
     Default (StashedAVVMAddresses era),
     Core.EraTxOut era
   ) =>
@@ -512,7 +512,7 @@ exampleProposedPPUpdates =
   ProposedPPUpdates $
     Map.singleton
       (mkKeyHash 1)
-      (emptyPParamsUpdate {_maxBHSize = SJust 4000})
+      (emptyPParamsUpdate {sppMaxBHSize = SJust 4000})
 
 examplePayKey :: CC.Crypto c => KeyPair 'Payment c
 examplePayKey = mkDSIGNKeyPair 0

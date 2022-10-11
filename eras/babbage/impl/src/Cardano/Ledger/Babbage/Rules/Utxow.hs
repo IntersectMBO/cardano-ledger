@@ -231,7 +231,7 @@ validateScriptsWellFormed ::
   forall era.
   ( EraTx era,
     BabbageEraTxBody era,
-    HasField "_protocolVersion" (PParams era) ProtVer,
+    HasField "bppProtocolVersion" (PParams era) ProtVer,
     Script era ~ AlonzoScript era,
     TxOut era ~ BabbageTxOut era
   ) =>
@@ -245,7 +245,7 @@ validateScriptsWellFormed pp tx =
     ]
   where
     scriptWits = tx ^. witsTxL . scriptTxWitsL
-    invalidScriptWits = Map.filter (not . validScript (getField @"_protocolVersion" pp)) scriptWits
+    invalidScriptWits = Map.filter (not . validScript (getField @"bppProtocolVersion" pp)) scriptWits
 
     txBody = tx ^. bodyTxL
     normalOuts = toList $ txBody ^. outputsTxBodyL
@@ -254,7 +254,7 @@ validateScriptsWellFormed pp tx =
       SNothing -> normalOuts
       SJust rOut -> rOut : normalOuts
     rScripts = mapMaybe (strictMaybeToMaybe . view referenceScriptTxOutL) outs
-    invalidRefScripts = filter (not . validScript (getField @"_protocolVersion" pp)) rScripts
+    invalidRefScripts = filter (not . validScript (getField @"bppProtocolVersion" pp)) rScripts
     invalidRefScriptHashes = Set.fromList $ map (hashScript @era) invalidRefScripts
 
 -- ==============================================================
@@ -273,8 +273,8 @@ babbageUtxowTransition ::
     TxOut era ~ BabbageTxOut era,
     STS (BabbageUTXOW era),
     BabbageEraTxBody era,
-    HasField "_costmdls" (PParams era) CostModels,
-    HasField "_protocolVersion" (PParams era) ProtVer,
+    HasField "bppCostmdls" (PParams era) CostModels,
+    HasField "bppProtocolVersion" (PParams era) ProtVer,
     Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody),
     -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (BabbageUTXOW era),
@@ -372,8 +372,8 @@ instance
     ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     BabbageEraTxBody era,
     TxOut era ~ BabbageTxOut era,
-    HasField "_costmdls" (PParams era) CostModels,
-    HasField "_protocolVersion" (PParams era) ProtVer,
+    HasField "bppCostmdls" (PParams era) CostModels,
+    HasField "bppProtocolVersion" (PParams era) ProtVer,
     Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody),
     Show (TxBody era),
     Show (TxOut era),

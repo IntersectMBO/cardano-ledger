@@ -149,7 +149,7 @@ txbodyEx1 pot =
     SNothing
   where
     aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
-    aliceCoinEx1 = aliceInitCoin <-> (Val.inject $ feeTx1 <+> _keyDeposit ppEx)
+    aliceCoinEx1 = aliceInitCoin <-> (Val.inject $ feeTx1 <+> sppKeyDeposit ppEx)
 
 mirWits :: (CryptoClass.Crypto c) => [Int] -> [KeyPair 'Witness c]
 mirWits nodes = asWitness <$> map (\x -> cold . coreNodeIssuerKeys $ x) nodes
@@ -213,7 +213,7 @@ expectedStEx1' ::
 expectedStEx1' txwits pot =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx1' @c txwits pot))
     . C.newLab (blockEx1' txwits pot)
-    . C.feesAndDeposits feeTx1 (_keyDeposit ppEx)
+    . C.feesAndDeposits feeTx1 (sppKeyDeposit ppEx)
     . C.newUTxO (txbodyEx1 pot)
     . C.newStakeCred Cast.aliceSHK (Ptr (SlotNo 10) minBound (mkCertIxPartial 1))
     . C.mir Cast.aliceSHK pot aliceMIRCoin

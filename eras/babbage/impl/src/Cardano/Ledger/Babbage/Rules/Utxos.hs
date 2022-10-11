@@ -92,10 +92,10 @@ instance
     TxBody era ~ BabbageTxBody era,
     TxWits era ~ AlonzoTxWits era,
     Script era ~ AlonzoScript era,
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_costmdls" (PParams era) CostModels,
-    HasField "_protocolVersion" (PParams era) ProtVer,
+    HasField "bppKeyDeposit" (PParams era) Coin,
+    HasField "bppPoolDeposit" (PParams era) Coin,
+    HasField "bppCostmdls" (PParams era) CostModels,
+    HasField "bppProtocolVersion" (PParams era) ProtVer,
     Embed (EraRule "PPUP" era) (BabbageUTXOS era),
     Environment (EraRule "PPUP" era) ~ PpupEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,
@@ -135,10 +135,10 @@ utxosTransition ::
     TxBody era ~ BabbageTxBody era,
     TxWits era ~ AlonzoTxWits era,
     Script era ~ AlonzoScript era,
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_costmdls" (PParams era) CostModels,
-    HasField "_protocolVersion" (PParams era) ProtVer,
+    HasField "bppKeyDeposit" (PParams era) Coin,
+    HasField "bppPoolDeposit" (PParams era) Coin,
+    HasField "bppCostmdls" (PParams era) CostModels,
+    HasField "bppProtocolVersion" (PParams era) ProtVer,
     Environment (EraRule "PPUP" era) ~ PpupEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,
     Signal (EraRule "PPUP" era) ~ Maybe (Update era),
@@ -167,10 +167,10 @@ scriptsYes ::
     State (EraRule "PPUP" era) ~ PPUPState era,
     Signal (EraRule "PPUP" era) ~ Maybe (Update era),
     Embed (EraRule "PPUP" era) (BabbageUTXOS era),
-    HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_costmdls" (PParams era) CostModels,
-    HasField "_protocolVersion" (PParams era) ProtVer
+    HasField "bppPoolDeposit" (PParams era) Coin,
+    HasField "bppKeyDeposit" (PParams era) Coin,
+    HasField "bppCostmdls" (PParams era) CostModels,
+    HasField "bppProtocolVersion" (PParams era) ProtVer
   ) =>
   TransitionRule (BabbageUTXOS era)
 scriptsYes = do
@@ -203,7 +203,7 @@ scriptsYes = do
       {- isValid tx = evalScripts tx sLst = True -}
       whenFailureFree $
         when2Phase $
-          case evalScripts @era (getField @"_protocolVersion" pp) tx sLst of
+          case evalScripts @era (getField @"bppProtocolVersion" pp) tx sLst of
             Fails _ fs ->
               failBecause $
                 ValidationTagMismatch
@@ -228,8 +228,8 @@ scriptsNo ::
     TxOut era ~ BabbageTxOut era,
     TxBody era ~ BabbageTxBody era,
     Script era ~ AlonzoScript era,
-    HasField "_protocolVersion" (PParams era) ProtVer,
-    HasField "_costmdls" (PParams era) CostModels
+    HasField "bppProtocolVersion" (PParams era) ProtVer,
+    HasField "bppCostmdls" (PParams era) CostModels
   ) =>
   TransitionRule (BabbageUTXOS era)
 scriptsNo = do
@@ -246,7 +246,7 @@ scriptsNo = do
       {- sLst := collectTwoPhaseScriptInputs pp tx utxo -}
       {- isValid tx = evalScripts tx sLst = False -}
       whenFailureFree $
-        when2Phase $ case evalScripts @era (getField @"_protocolVersion" pp) tx sLst of
+        when2Phase $ case evalScripts @era (getField @"bppProtocolVersion" pp) tx sLst of
           Passes _ -> failBecause $ ValidationTagMismatch (tx ^. isValidTxL) PassedUnexpectedly
           Fails ps fs -> do
             mapM_ (tellEvent . SuccessfulPlutusScriptsEvent) (nonEmpty ps)

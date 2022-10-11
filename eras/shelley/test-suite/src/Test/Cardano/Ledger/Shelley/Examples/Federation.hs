@@ -117,7 +117,7 @@ coreNodeKeysBySchedule pp slot =
   case lookupInOverlaySchedule
     firstSlot
     (Map.keysSet genDelegs)
-    (_d pp)
+    (sppD pp)
     (activeSlotCoeff testGlobals)
     slot' of
     Nothing -> error $ "coreNodesForSlot: Cannot find keys for slot " <> show slot

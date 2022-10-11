@@ -72,7 +72,7 @@ import Cardano.Ledger.Alonzo.TxBody
   )
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
 import Cardano.Ledger.Babbage.Era (BabbageEra)
-import Cardano.Ledger.Babbage.PParams (_coinsPerUTxOByte)
+import Cardano.Ledger.Babbage.PParams (bppCoinsPerUTxOByte)
 import Cardano.Ledger.Babbage.Scripts ()
 import Cardano.Ledger.BaseTypes
   ( StrictMaybe (..),
@@ -553,14 +553,14 @@ decodeTxOut decAddr = do
       ]
 
 babbageMinUTxOValue ::
-  HasField "_coinsPerUTxOByte" (PParams era) Coin =>
+  HasField "bppCoinsPerUTxOByte" (PParams era) Coin =>
   PParams era ->
   Sized a ->
   Coin
 babbageMinUTxOValue pp sizedTxOut =
   Coin $ fromIntegral (constantOverhead + sizedSize sizedTxOut) * unCoin coinsPerUTxOByte
   where
-    coinsPerUTxOByte = getField @"_coinsPerUTxOByte" pp
+    coinsPerUTxOByte = getField @"bppCoinsPerUTxOByte" pp
     -- This constant is an approximation of the memory overhead that comes
     -- from TxIn and an entry in the Map data structure:
     --

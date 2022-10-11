@@ -141,7 +141,7 @@ consumed ::
   forall era.
   ( ShelleyMAEraTxBody era,
     Value era ~ MaryValue (EraCrypto era),
-    HasField "_keyDeposit" (PParams era) Coin
+    HasField "sppKeyDeposit" (PParams era) Coin
   ) =>
   PParams era ->
   UTxO era ->
@@ -162,9 +162,9 @@ utxoTransition ::
     Environment (EraRule "PPUP" era) ~ PpupEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,
     Signal (EraRule "PPUP" era) ~ Maybe (Update era),
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_maxTxSize" (PParams era) Natural
+    HasField "sppKeyDeposit" (PParams era) Coin,
+    HasField "sppPoolDeposit" (PParams era) Coin,
+    HasField "sppMaxTxSize" (PParams era) Natural
   ) =>
   TransitionRule (ShelleyMAUTXO era)
 utxoTransition = do

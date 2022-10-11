@@ -238,7 +238,7 @@ genDCerts
     pure
       ( StrictSeq.fromList certs,
         totalDeposits pparams (`Map.notMember` pools) certs,
-        length deRegStakeCreds <×> getField @"_keyDeposit" pparams,
+        length deRegStakeCreds <×> getField @"sppKeyDeposit" pparams,
         lastState_,
         ( concat (keyCredAsWitness <$> keyCreds'),
           extractScriptCred <$> scriptCreds

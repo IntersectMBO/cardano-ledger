@@ -127,8 +127,8 @@ instance
     Environment (EraRule "DELEGS" era) ~ DelegsEnv era,
     State (EraRule "DELEGS" era) ~ DPState (EraCrypto era),
     Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era)),
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin
+    HasField "appKeyDeposit" (PParams era) Coin,
+    HasField "appPoolDeposit" (PParams era) Coin
   ) =>
   STS (AlonzoLEDGER era)
   where

@@ -113,7 +113,7 @@ instance
     Environment (Core.EraRule "TICK" era) ~ (),
     State (Core.EraRule "TICK" era) ~ NewEpochState era,
     Signal (Core.EraRule "TICK" era) ~ SlotNo,
-    HasField "_d" (Core.PParams era) UnitInterval,
+    HasField "sppD" (Core.PParams era) UnitInterval,
     QC.HasTrace (Core.EraRule "LEDGERS" era) (GenEnv era)
   ) =>
   HasTrace (CHAIN era) (GenEnv era)

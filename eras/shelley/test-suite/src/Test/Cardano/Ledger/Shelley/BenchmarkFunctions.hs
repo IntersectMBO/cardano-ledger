@@ -158,18 +158,18 @@ initUTxO n =
 ppsBench :: ShelleyPParams era
 ppsBench =
   emptyPParams
-    { _maxBBSize = 50000,
-      _d = unsafeBoundRational 0.5,
-      _eMax = EpochNo 10000,
-      _keyDeposit = Coin 0,
-      _maxBHSize = 10000,
-      _maxTxSize = 1000000000,
-      _minfeeA = 0,
-      _minfeeB = 0,
-      _minUTxOValue = Coin 10,
-      _poolDeposit = Coin 0,
-      _rho = unsafeBoundRational 0.0021,
-      _tau = unsafeBoundRational 0.2
+    { sppMaxBBSize = 50000,
+      sppD = unsafeBoundRational 0.5,
+      sppEMax = EpochNo 10000,
+      sppKeyDeposit = Coin 0,
+      sppMaxBHSize = 10000,
+      sppMaxTxSize = 1000000000,
+      sppMinfeeA = 0,
+      sppMinfeeB = 0,
+      sppMinUTxOValue = Coin 10,
+      sppPoolDeposit = Coin 0,
+      sppRho = unsafeBoundRational 0.0021,
+      sppTau = unsafeBoundRational 0.2
     }
 
 ledgerEnv :: (Core.PParams era ~ ShelleyPParams era) => LedgerEnv era

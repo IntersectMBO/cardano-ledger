@@ -222,7 +222,7 @@ genTx
 
       -- Occasionally we have a transaction generated with insufficient inputs
       -- to cover the deposits. In this case we discard the test case.
-      let enough = length outputAddrs <×> getField @"_minUTxOValue" pparams
+      let enough = length outputAddrs <×> getField @"sppMinUTxOValue" pparams
       !_ <- when (coin spendingBalance < coin enough) (myDiscard "No inputs left. Utxo.hs")
 
       -------------------------------------------------------------------------
@@ -362,11 +362,11 @@ genNextDelta
         deltaScriptCost = foldr accum (Coin 0) extraScripts
           where
             accum (s1, _) ans = genEraScriptCost @era pparams s1 <+> ans
-        deltaFee = (draftSize <×> Coin (fromIntegral (getField @"_minfeeA" pparams))) <+> deltaScriptCost
+        deltaFee = (draftSize <×> Coin (fromIntegral (getField @"sppMinfeeA" pparams))) <+> deltaScriptCost
         totalFee = baseTxFee <+> deltaFee :: Coin
         remainingFee = totalFee <-> dfees :: Coin
         changeAmount = getChangeAmount change
-        minAda = getField @"_minUTxOValue" pparams
+        minAda = getField @"sppMinUTxOValue" pparams
      in if remainingFee <= Coin 0 -- we've paid for all the fees
           then pure delta -- we're done
           else -- the change covers what we need, so shift Coin from change to dfees.
@@ -458,7 +458,7 @@ genNextDeltaTilFixPoint scriptinfo initialfee keys scripts utxo pparams keySpace
   fix
     0
     (genNextDelta scriptinfo utxo pparams keySpace tx)
-    (deltaZero initialfee (safetyOffset <+> getField @"_minUTxOValue" pparams) (head addr))
+    (deltaZero initialfee (safetyOffset <+> getField @"sppMinUTxOValue" pparams) (head addr))
   where
     -- add a small offset here to ensure outputs above minUtxo value
     safetyOffset = Coin 5

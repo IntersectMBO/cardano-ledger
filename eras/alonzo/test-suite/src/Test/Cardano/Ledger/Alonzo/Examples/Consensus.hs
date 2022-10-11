@@ -94,7 +94,7 @@ ledgerExamplesAlonzo =
       ProposedPPUpdates $
         Map.singleton
           (SLE.mkKeyHash 0)
-          (emptyPParamsUpdate {_collateralPercentage = SJust 150})
+          (emptyPParamsUpdate {appCollateralPercentage = SJust 150})
 
 exampleTxBodyAlonzo :: AlonzoTxBody Alonzo
 exampleTxBodyAlonzo =
@@ -121,7 +121,7 @@ exampleTxBodyAlonzo =
           ( ProposedPPUpdates $
               Map.singleton
                 (SLE.mkKeyHash 1)
-                (emptyPParamsUpdate {_maxBHSize = SJust 4000})
+                (emptyPParamsUpdate {appMaxBHSize = SJust 4000})
           )
           (EpochNo 0)
     ) -- txUpdates
@@ -173,7 +173,7 @@ exampleAlonzoNewEpochState =
   SLE.exampleNewEpochState
     (SLE.exampleMultiAssetValue 1)
     emptyPParams
-    (emptyPParams {_coinsPerUTxOWord = Coin 1})
+    (emptyPParams {appCoinsPerUTxOWord = Coin 1})
 
 exampleAlonzoGenesis :: AlonzoGenesis
 exampleAlonzoGenesis =

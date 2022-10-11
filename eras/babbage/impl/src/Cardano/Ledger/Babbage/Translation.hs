@@ -193,6 +193,6 @@ coinsPerUTxOByteToCoinsPerUTxOWord (Coin c) = Coin $ c * 8
 translatePParams ::
   forall f c. HKDFunctor f => AlonzoPParamsHKD f (AlonzoEra c) -> BabbagePParamsHKD f (BabbageEra c)
 translatePParams AlonzoPParams {_coinsPerUTxOWord = cpuw, ..} =
-  BabbagePParams {_coinsPerUTxOByte = cpub, ..}
+  BabbagePParams {bppCoinsPerUTxOByte = cpub, ..}
   where
     cpub = hkdMap (Proxy :: Proxy f) coinsPerUTxOWordToCoinsPerUTxOByte cpuw

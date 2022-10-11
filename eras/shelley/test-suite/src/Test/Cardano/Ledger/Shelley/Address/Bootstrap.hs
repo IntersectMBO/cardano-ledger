@@ -171,7 +171,7 @@ utxoEnv :: UtxoEnv C
 utxoEnv =
   UtxoEnv
     0
-    emptyPParams {_maxTxSize = 1000}
+    emptyPParams {sppMaxTxSize = 1000}
     mempty
     (GenDelegs mempty)
 

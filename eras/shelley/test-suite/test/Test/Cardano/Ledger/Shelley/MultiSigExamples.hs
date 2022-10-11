@@ -56,7 +56,7 @@ import Cardano.Ledger.Shelley.PParams
   ( ShelleyPParams,
     ShelleyPParamsHKD (..),
     emptyPParams,
-    _maxTxSize,
+    sppMaxTxSize,
   )
 import Cardano.Ledger.Shelley.Rules (UtxoEnv (..))
 import Cardano.Ledger.Shelley.Scripts
@@ -208,7 +208,7 @@ genesis = genesisState genDelegs0 utxo0
         ]
 
 initPParams :: ShelleyPParams era
-initPParams = emptyPParams {_maxTxSize = 1000}
+initPParams = emptyPParams {sppMaxTxSize = 1000}
 
 -- | Create an initial UTxO state where Alice has 'aliceInitCoin' and Bob
 -- 'bobInitCoin' to spend. Then create and apply a transaction which, if

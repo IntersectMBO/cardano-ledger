@@ -156,7 +156,7 @@ instance CryptoClass.Crypto c => Show (UpdateInputs c) where
     show vl ++ "\n" ++ show bh ++ "\n" ++ show st
 
 instance NFData (LedgerView era) where
-  rnf (LedgerView _D _extraEntropy _pool _delegs _ccd) = ()
+  rnf (LedgerView _D sppExtraEntropy _pool _delegs _ccd) = ()
 
 instance CryptoClass.Crypto c => NFData (BHeader c) where
   rnf (BHeader _ _) = ()

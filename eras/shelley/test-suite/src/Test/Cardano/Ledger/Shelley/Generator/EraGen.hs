@@ -151,15 +151,15 @@ type MinUTXO_STS era =
 type MinGenPParams era =
   ( EraPParams era,
     Default (PParams era),
-    HasField "_minPoolCost" (PParams era) Coin,
-    HasField "_protocolVersion" (PParams era) ProtVer,
-    HasField "_eMax" (PParams era) EpochNo,
-    HasField "_d" (PParams era) UnitInterval,
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_minfeeA" (PParams era) Natural,
-    HasField "_minUTxOValue" (PParams era) Coin,
-    HasField "_minfeeB" (PParams era) Natural
+    HasField "sppMinPoolCost" (PParams era) Coin,
+    HasField "sppProtocolVersion" (PParams era) ProtVer,
+    HasField "sppEMax" (PParams era) EpochNo,
+    HasField "sppD" (PParams era) UnitInterval,
+    HasField "sppKeyDeposit" (PParams era) Coin,
+    HasField "sppPoolDeposit" (PParams era) Coin,
+    HasField "sppMinfeeA" (PParams era) Natural,
+    HasField "sppMinUTxOValue" (PParams era) Coin,
+    HasField "sppMinfeeB" (PParams era) Natural
   )
 
 class Show (TxOut era) => MinGenTxout era where
@@ -239,7 +239,7 @@ class
 
   genEraPParams :: Constants -> Gen (PParams era)
 
-  -- Its is VERY IMPORTANT that the decentralisation parameter "_d" be non-zero and less than 1.
+  -- Its is VERY IMPORTANT that the decentralisation parameter "sppD" be non-zero and less than 1.
   -- The system will deadlock if d==0 and there are no registered stake pools.
   -- use Test.Cardano.Ledger.Shelley.Generator.Update(genDecentralisationParam) in your instance.
 
