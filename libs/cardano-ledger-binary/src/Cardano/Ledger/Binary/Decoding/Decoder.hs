@@ -616,7 +616,7 @@ decodeMapV2 decodeKey decodeValue = decodeMapByKey decodeKey (const decodeValue)
 -- >>> import Codec.CBOR.FlatTerm
 -- >>> fromFlatTerm (toPlainDecoder 1 (decodeMap decodeInt decodeBytes)) [TkMapLen 2,TkInt 1,TkBytes "Foo",TkInt 2,TkBytes "Bar"]
 -- Right (fromList [(1,"Foo"),(2,"Bar")])
--- >>> fromFlatTerm (toPlainDecoder 2 (decodeMap decodeInt decodeBytes)) [TkMapBegin,TkInt 1,TkBytes "Foo",TkInt 2,TkBytes "Bar"]
+-- >>> fromFlatTerm (toPlainDecoder 1 (decodeMap decodeInt decodeBytes)) [TkMapBegin,TkInt 1,TkBytes "Foo",TkInt 2,TkBytes "Bar"]
 -- Left "decodeMapLen: unexpected token TkMapBegin"
 -- >>> fromFlatTerm (toPlainDecoder 2 (decodeMap decodeInt decodeBytes)) [TkMapBegin,TkInt 1,TkBytes "Foo",TkInt 2,TkBytes "Bar",TkBreak]
 -- Right (fromList [(1,"Foo"),(2,"Bar")])

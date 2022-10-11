@@ -34,6 +34,14 @@ module Cardano.Ledger.Binary.Encoding.ToCBOR
   )
 where
 
+import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm, sizeSigDSIGN, sizeSignKeyDSIGN, sizeVerKeyDSIGN)
+import Cardano.Crypto.DSIGN.EcdsaSecp256k1
+import Cardano.Crypto.DSIGN.Ed25519
+import Cardano.Crypto.DSIGN.Ed448
+import Cardano.Crypto.DSIGN.Mock
+import Cardano.Crypto.DSIGN.SchnorrSecp256k1
+import Cardano.Crypto.Hash.Class
+import Cardano.Ledger.Binary.Crypto
 import Cardano.Ledger.Binary.Encoding.Encoder
 import Codec.CBOR.ByteArray (ByteArray (..))
 import Codec.CBOR.ByteArray.Sliced (SlicedByteArray (SBA), fromByteArray)
@@ -707,3 +715,108 @@ instance (ToCBOR a, VU.Unbox a) => ToCBOR (VU.Vector a) where
 
 instance ToCBOR UTCTime where
   toCBOR = encodeUTCTime
+
+--------------------------------------------------------------------------------
+-- Crypto
+--------------------------------------------------------------------------------
+
+-- | 'Size' expression for 'VerKeyDSIGN' which is using 'sizeVerKeyDSIGN'
+-- encoded as 'Size'.
+encodedVerKeyDSIGNSizeExpr :: forall v. DSIGNAlgorithm v => Proxy (VerKeyDSIGN v) -> Size
+encodedVerKeyDSIGNSizeExpr _proxy =
+  -- 'encodeBytes' envelope
+  fromIntegral ((withWordSize :: Word -> Integer) (sizeVerKeyDSIGN (Proxy :: Proxy v)))
+    -- payload
+    + fromIntegral (sizeVerKeyDSIGN (Proxy :: Proxy v))
+
+-- | 'Size' expression for 'SignKeyDSIGN' which is using 'sizeSignKeyDSIGN'
+-- encoded as 'Size'.
+encodedSignKeyDSIGNSizeExpr :: forall v. DSIGNAlgorithm v => Proxy (SignKeyDSIGN v) -> Size
+encodedSignKeyDSIGNSizeExpr _proxy =
+  -- 'encodeBytes' envelope
+  fromIntegral ((withWordSize :: Word -> Integer) (sizeSignKeyDSIGN (Proxy :: Proxy v)))
+    -- payload
+    + fromIntegral (sizeSignKeyDSIGN (Proxy :: Proxy v))
+
+-- | 'Size' expression for 'SigDSIGN' which is using 'sizeSigDSIGN' encoded as
+-- 'Size'.
+encodedSigDSIGNSizeExpr :: forall v. DSIGNAlgorithm v => Proxy (SigDSIGN v) -> Size
+encodedSigDSIGNSizeExpr _proxy =
+  -- 'encodeBytes' envelope
+  fromIntegral ((withWordSize :: Word -> Integer) (sizeSigDSIGN (Proxy :: Proxy v)))
+    -- payload
+    + fromIntegral (sizeSigDSIGN (Proxy :: Proxy v))
+
+instance ToCBOR (VerKeyDSIGN EcdsaSecp256k1DSIGN) where
+  toCBOR = encodeVerKeyDSIGN
+  encodedSizeExpr _ = encodedVerKeyDSIGNSizeExpr
+
+instance ToCBOR (SignKeyDSIGN EcdsaSecp256k1DSIGN) where
+  toCBOR = encodeSignKeyDSIGN
+  encodedSizeExpr _ = encodedSignKeyDSIGNSizeExpr
+
+instance ToCBOR (SigDSIGN EcdsaSecp256k1DSIGN) where
+  toCBOR = encodeSigDSIGN
+  encodedSizeExpr _ = encodedSigDSIGNSizeExpr
+
+instance ToCBOR (VerKeyDSIGN MockDSIGN) where
+  toCBOR = encodeVerKeyDSIGN
+  encodedSizeExpr _ = encodedVerKeyDSIGNSizeExpr
+
+instance ToCBOR (SignKeyDSIGN MockDSIGN) where
+  toCBOR = encodeSignKeyDSIGN
+  encodedSizeExpr _ = encodedSignKeyDSIGNSizeExpr
+
+instance ToCBOR (SigDSIGN MockDSIGN) where
+  toCBOR = encodeSigDSIGN
+  encodedSizeExpr _ = encodedSigDSIGNSizeExpr
+
+instance ToCBOR (VerKeyDSIGN Ed25519DSIGN) where
+  toCBOR = encodeVerKeyDSIGN
+  encodedSizeExpr _ = encodedVerKeyDSIGNSizeExpr
+
+instance ToCBOR (SignKeyDSIGN Ed25519DSIGN) where
+  toCBOR = encodeSignKeyDSIGN
+  encodedSizeExpr _ = encodedSignKeyDSIGNSizeExpr
+
+instance ToCBOR (SigDSIGN Ed25519DSIGN) where
+  toCBOR = encodeSigDSIGN
+  encodedSizeExpr _ = encodedSigDSIGNSizeExpr
+
+instance ToCBOR (VerKeyDSIGN Ed448DSIGN) where
+  toCBOR = encodeVerKeyDSIGN
+  encodedSizeExpr _ = encodedVerKeyDSIGNSizeExpr
+
+instance ToCBOR (SignKeyDSIGN Ed448DSIGN) where
+  toCBOR = encodeSignKeyDSIGN
+  encodedSizeExpr _ = encodedSignKeyDSIGNSizeExpr
+
+instance ToCBOR (SigDSIGN Ed448DSIGN) where
+  toCBOR = encodeSigDSIGN
+  encodedSizeExpr _ = encodedSigDSIGNSizeExpr
+
+instance ToCBOR (VerKeyDSIGN SchnorrSecp256k1DSIGN) where
+  toCBOR = encodeVerKeyDSIGN
+  encodedSizeExpr _ = encodedVerKeyDSIGNSizeExpr
+
+instance ToCBOR (SignKeyDSIGN SchnorrSecp256k1DSIGN) where
+  toCBOR = encodeSignKeyDSIGN
+  encodedSizeExpr _ = encodedSignKeyDSIGNSizeExpr
+
+instance ToCBOR (SigDSIGN SchnorrSecp256k1DSIGN) where
+  toCBOR = encodeSigDSIGN
+  encodedSizeExpr _ = encodedSigDSIGNSizeExpr
+
+instance (HashAlgorithm h, Typeable a) => ToCBOR (Hash h a) where
+  toCBOR (UnsafeHash h) = toCBOR h
+
+  -- \| 'Size' expression for @Hash h a@, which is expressed using the 'ToCBOR'
+  -- instance for 'ByteString' (as is the above 'toCBOR' method).  'Size'
+  -- computation of length of the bytestring is passed as the first argument to
+  -- 'encodedSizeExpr'.  The 'ByteString' instance will use it to calculate
+  -- @'size' ('Proxy' @('LengthOf' 'ByteString'))@.
+  encodedSizeExpr _size proxy =
+    encodedSizeExpr (const hashSize) (hashToBytes <$> proxy)
+    where
+      hashSize :: Size
+      hashSize = fromIntegral (sizeHash (Proxy :: Proxy h))
