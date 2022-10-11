@@ -18,6 +18,7 @@ module Test.Cardano.Ledger.Binary.Twiddle
     encodingToTerm,
     toTwiddler,
     toTerm,
+    twiddleInvariantProp,
   )
 where
 
@@ -47,7 +48,7 @@ import Data.Typeable (Typeable)
 import Data.Void (Void, absurd)
 import GHC.Generics
 import Test.Cardano.Ledger.Binary.Arbitrary ()
-import Test.QuickCheck (Arbitrary (..), Gen, elements, shuffle)
+import Test.QuickCheck (Arbitrary (..), Gen, elements, shuffle, Property, (===))
 
 -- | `Twiddler` is a wrapper that lets us introduce random variations to the
 --   CBOR encoding of arbitrary data as long as that data implements
@@ -67,7 +68,7 @@ gTwiddleTList v a = TList <$> twiddleL v (from @a @p a)
 --   For any value `x :: a`, where `a` derives `Twiddle`, and for any version
 --   of the decoder, the following property must hold:
 --   >>> fmap ((== x) . encodingToTerm version . toCBOR) (twiddle x)
-class Twiddle a where
+class FromCBOR a => Twiddle a where
   -- | Given a value of type `a`, generates a CBOR `Term` that can contain
   -- slight variations without changing the semantics. After encoding and
   -- decoding the `Term`, we should get back the original value that was being
@@ -88,7 +89,7 @@ instance Twiddle a => Twiddle [a] where
     l' <- traverse (twiddle v) l
     pure $ f l'
 
-instance (Twiddle k, Twiddle v) => Twiddle (Map k v) where
+instance (Twiddle k, Twiddle v, Ord k) => Twiddle (Map k v) where
   twiddle v m = do
     -- Elements of a map do not have to be in a specific order so we shuffle them
     m' <- shuffle $ Map.toList m
@@ -119,7 +120,7 @@ instance (Twiddle a, Arbitrary a, ToCBOR a) => Arbitrary (Twiddler a) where
     enc' <- twiddle v x
     pure $ Twiddler v x enc'
 
-instance Twiddle a => Twiddle (Set a) where
+instance (Twiddle a, Ord a) => Twiddle (Set a) where
   twiddle v = twiddle v . toList
 
 instance Twiddle a => Twiddle (Seq a) where
@@ -215,3 +216,11 @@ toTerm version = encodingToTerm version . toCBOR
 -- | Wraps an arbitrary value into a `Twiddler`
 toTwiddler :: Twiddle a => Version -> a -> Gen (Twiddler a)
 toTwiddler v x = Twiddler v x <$> twiddle v x
+
+-- | Function for testing the invariant of a `Twiddle` instance. For a correct
+-- implementation, this property should always hold.
+twiddleInvariantProp :: forall a. Twiddle a => Version -> a -> Gen Property
+twiddleInvariantProp version x = do
+  t <- twiddle version x
+  let t' = encodingToTerm version $ toCBOR t
+  pure $ t === t'

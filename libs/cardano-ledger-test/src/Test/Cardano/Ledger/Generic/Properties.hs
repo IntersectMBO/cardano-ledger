@@ -318,6 +318,17 @@ adaIsPreservedInEachEpoch proof genSize =
         trcInit = _traceInitState trc
         trcLast = lastState trc
 
+twiddlerInvariantHolds ::
+  forall era.
+  ( Reflect era
+  ) => 
+  Proof era ->
+  GenSize ->
+  TestTree
+twiddlerInvariantHolds proof genSize =
+  testProperty (show proof) $
+    _
+
 -- ==============================================================
 -- Infrastrucure for running individual tests, with easy replay.
 -- In ghci just type
