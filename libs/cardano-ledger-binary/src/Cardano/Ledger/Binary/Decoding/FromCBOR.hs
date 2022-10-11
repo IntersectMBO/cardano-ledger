@@ -8,6 +8,13 @@ module Cardano.Ledger.Binary.Decoding.FromCBOR
   )
 where
 
+import Cardano.Crypto.DSIGN.EcdsaSecp256k1
+import Cardano.Crypto.DSIGN.Ed25519
+import Cardano.Crypto.DSIGN.Ed448
+import Cardano.Crypto.DSIGN.Mock
+import Cardano.Crypto.DSIGN.SchnorrSecp256k1
+import Cardano.Crypto.Hash.Class
+import Cardano.Ledger.Binary.Crypto
 import Cardano.Ledger.Binary.Decoding.Decoder
 import Codec.CBOR.ByteArray (ByteArray (..))
 import Codec.CBOR.ByteArray.Sliced (SlicedByteArray, fromByteArray)
@@ -295,3 +302,67 @@ instance (FromCBOR a, VU.Unbox a) => FromCBOR (VU.Vector a) where
 
 instance FromCBOR UTCTime where
   fromCBOR = decodeUTCTime
+
+--------------------------------------------------------------------------------
+-- Crypto
+--------------------------------------------------------------------------------
+
+instance FromCBOR (VerKeyDSIGN EcdsaSecp256k1DSIGN) where
+  fromCBOR = decodeVerKeyDSIGN
+
+instance FromCBOR (SignKeyDSIGN EcdsaSecp256k1DSIGN) where
+  fromCBOR = decodeSignKeyDSIGN
+
+instance FromCBOR (SigDSIGN EcdsaSecp256k1DSIGN) where
+  fromCBOR = decodeSigDSIGN
+
+instance FromCBOR (VerKeyDSIGN MockDSIGN) where
+  fromCBOR = decodeVerKeyDSIGN
+
+instance FromCBOR (SignKeyDSIGN MockDSIGN) where
+  fromCBOR = decodeSignKeyDSIGN
+
+instance FromCBOR (SigDSIGN MockDSIGN) where
+  fromCBOR = decodeSigDSIGN
+
+instance FromCBOR (VerKeyDSIGN Ed25519DSIGN) where
+  fromCBOR = decodeVerKeyDSIGN
+
+instance FromCBOR (SignKeyDSIGN Ed25519DSIGN) where
+  fromCBOR = decodeSignKeyDSIGN
+
+instance FromCBOR (SigDSIGN Ed25519DSIGN) where
+  fromCBOR = decodeSigDSIGN
+
+instance FromCBOR (VerKeyDSIGN Ed448DSIGN) where
+  fromCBOR = decodeVerKeyDSIGN
+
+instance FromCBOR (SignKeyDSIGN Ed448DSIGN) where
+  fromCBOR = decodeSignKeyDSIGN
+
+instance FromCBOR (SigDSIGN Ed448DSIGN) where
+  fromCBOR = decodeSigDSIGN
+
+instance FromCBOR (VerKeyDSIGN SchnorrSecp256k1DSIGN) where
+  fromCBOR = decodeVerKeyDSIGN
+
+instance FromCBOR (SignKeyDSIGN SchnorrSecp256k1DSIGN) where
+  fromCBOR = decodeSignKeyDSIGN
+
+instance FromCBOR (SigDSIGN SchnorrSecp256k1DSIGN) where
+  fromCBOR = decodeSigDSIGN
+
+instance (HashAlgorithm h, Typeable a) => FromCBOR (Hash h a) where
+  fromCBOR = do
+    bs <- decodeBytes
+    case hashFromBytes bs of
+      Just x -> return x
+      Nothing ->
+        fail $
+          "hash bytes wrong size, expected "
+            ++ show expected
+            ++ " but got "
+            ++ show actual
+        where
+          expected = sizeHash (Proxy :: Proxy h)
+          actual = BS.length bs
