@@ -56,6 +56,7 @@ library
                    , bytestring
                    , cardano-binary
                    , cardano-crypto-class
+                   , cardano-crypto-praos
                    , cardano-strict-containers
                    , cborg
                    , containers
@@ -126,6 +127,7 @@ test-suite tests
                    , bytestring
                    , cardano-ledger-binary
                    , cardano-crypto-class
+                   , cardano-crypto-praos
                    , cardano-prelude-test
                    , cardano-strict-containers
                    , cborg

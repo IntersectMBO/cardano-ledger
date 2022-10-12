@@ -15,7 +15,7 @@ import Data.IP (IPv4, IPv6, toIPv4w, toIPv6w)
 import Data.Maybe (fromMaybe)
 import Data.Maybe.Strict
 import qualified Data.Primitive.ByteArray as Prim (byteArrayFromListN)
-import Data.Proxy (Proxy(..))
+import Data.Proxy (Proxy (..))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.VMap as VMap
 import qualified Data.Vector.Primitive as VP
