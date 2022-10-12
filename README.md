@@ -100,7 +100,7 @@ When using `nix` the documents and Haskell code can be readily
 built by running:
 
 ```shell
-nix build
+nix-build
 ```
 
 The LaTeX documents will be places inside directories named `result*`, e.g.:
