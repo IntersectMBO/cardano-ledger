@@ -508,5 +508,5 @@ instance Typeable c => Twiddle (AlonzoScript (AlonzoEra c)) where
 instance Typeable c => Twiddle (Data (AlonzoEra c)) where
   twiddle v = twiddle v . toTerm v
 
-instance (Crypto c, Typeable c) => Twiddle (BinaryData (AlonzoEra c)) where
+instance Crypto c => Twiddle (BinaryData (AlonzoEra c)) where
   twiddle v = twiddle v . toTerm v

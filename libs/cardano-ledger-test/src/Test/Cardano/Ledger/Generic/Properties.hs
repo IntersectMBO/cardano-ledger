@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -11,7 +12,7 @@
 module Test.Cardano.Ledger.Generic.Properties where
 
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
-import Cardano.Ledger.Alonzo.Tx (IsValid (..))
+import Cardano.Ledger.Alonzo.Tx (AlonzoTxBody (..), IsValid (..))
 import qualified Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
@@ -36,6 +37,8 @@ import Control.State.Transition.Trace.Generator.QuickCheck (HasTrace (..))
 import Data.Coerce (coerce)
 import Data.Default.Class (Default (def))
 import qualified Data.Map.Strict as Map
+import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
+import Test.Cardano.Ledger.Binary.Arbitrary ()
 import Test.Cardano.Ledger.Generic.Fields (abstractTx, abstractTxBody, abstractTxOut, abstractWitnesses)
 import Test.Cardano.Ledger.Generic.Functions (TotalAda (totalAda), isValid')
 import Test.Cardano.Ledger.Generic.GenState
@@ -63,10 +66,12 @@ import Test.Cardano.Ledger.Generic.TxGen
     genAlonzoTx,
     genUTxO,
   )
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes ()
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.QuickCheck
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.QuickCheck (testProperty)
+import Test.Cardano.Ledger.Binary.Twiddle (Twiddle, twiddleInvariantProp)
 
 -- =====================================
 -- Top level generators of TRC
@@ -287,7 +292,8 @@ genericProperties genSize =
       tracePreserveAda 45 genSize,
       incrementalStake genSize,
       testTraces 45,
-      epochPreserveAda genSize
+      epochPreserveAda genSize,
+      twiddleInvariantHoldsEras
     ]
 
 epochPreserveAda :: GenSize -> TestTree
@@ -318,16 +324,23 @@ adaIsPreservedInEachEpoch proof genSize =
         trcInit = _traceInitState trc
         trcLast = lastState trc
 
-twiddlerInvariantHolds ::
-  forall era.
-  ( Reflect era
-  ) => 
+twiddleInvariantHolds ::
+  forall a era.
+  ( Arbitrary a,
+    Show a,
+    Twiddle a
+  ) =>
   Proof era ->
-  GenSize ->
   TestTree
-twiddlerInvariantHolds proof genSize =
-  testProperty (show proof) $
-    _
+twiddleInvariantHolds proof =
+  testProperty (show proof) $ twiddleInvariantProp @a
+
+twiddleInvariantHoldsEras :: TestTree
+twiddleInvariantHoldsEras =
+  testGroup
+    "Twiddle invariant holds for TxBody"
+    [ twiddleInvariantHolds @(AlonzoTxBody (AlonzoEra Mock)) (Alonzo Mock)
+    ]
 
 -- ==============================================================
 -- Infrastrucure for running individual tests, with easy replay.

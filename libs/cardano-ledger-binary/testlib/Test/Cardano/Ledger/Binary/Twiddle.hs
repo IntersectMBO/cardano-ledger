@@ -10,8 +10,6 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
--- | This module provides type classes that allow us to introduce random
---   yet valid variations to CBOR-encoded data
 module Test.Cardano.Ledger.Binary.Twiddle
   ( Twiddler (..),
     Twiddle (..),
@@ -50,9 +48,6 @@ import GHC.Generics
 import Test.Cardano.Ledger.Binary.Arbitrary ()
 import Test.QuickCheck (Arbitrary (..), Gen, elements, shuffle, Property, (===))
 
--- | `Twiddler` is a wrapper that lets us introduce random variations to the
---   CBOR encoding of arbitrary data as long as that data implements
---   `Twiddle`.
 data Twiddler a = Twiddler
   { twiddlerVersion :: !Version,
     twiddlerType :: !a,
@@ -68,7 +63,7 @@ gTwiddleTList v a = TList <$> twiddleL v (from @a @p a)
 --   For any value `x :: a`, where `a` derives `Twiddle`, and for any version
 --   of the decoder, the following property must hold:
 --   >>> fmap ((== x) . encodingToTerm version . toCBOR) (twiddle x)
-class FromCBOR a => Twiddle a where
+class Twiddle a where
   -- | Given a value of type `a`, generates a CBOR `Term` that can contain
   -- slight variations without changing the semantics. After encoding and
   -- decoding the `Term`, we should get back the original value that was being
@@ -89,7 +84,7 @@ instance Twiddle a => Twiddle [a] where
     l' <- traverse (twiddle v) l
     pure $ f l'
 
-instance (Twiddle k, Twiddle v, Ord k) => Twiddle (Map k v) where
+instance (Twiddle k, Twiddle v) => Twiddle (Map k v) where
   twiddle v m = do
     -- Elements of a map do not have to be in a specific order so we shuffle them
     m' <- shuffle $ Map.toList m
@@ -120,7 +115,7 @@ instance (Twiddle a, Arbitrary a, ToCBOR a) => Arbitrary (Twiddler a) where
     enc' <- twiddle v x
     pure $ Twiddler v x enc'
 
-instance (Twiddle a, Ord a) => Twiddle (Set a) where
+instance Twiddle a => Twiddle (Set a) where
   twiddle v = twiddle v . toList
 
 instance Twiddle a => Twiddle (Seq a) where
@@ -202,14 +197,12 @@ instance Twiddle Term where
   twiddle v (TFloat x) = twiddle v x
   twiddle v (TDouble x) = twiddle v x
 
--- | Helper function for decoding an `Encoding` into a CBOR `Term`
 encodingToTerm :: Version -> Encoding -> Term
 encodingToTerm version enc =
   case decodeFull version (serialize version enc) of
     Right t -> t
     Left err -> error $ show err
 
--- | Helper function for converting an arbitrary value into a CBOR `Term`
 toTerm :: ToCBOR a => Version -> a -> Term
 toTerm version = encodingToTerm version . toCBOR
 
