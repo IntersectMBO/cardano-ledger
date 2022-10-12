@@ -3,11 +3,13 @@
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -85,6 +87,7 @@ import Cardano.Crypto.VRF.Class
     sizeVerKeyVRF,
   )
 import Cardano.Crypto.VRF.Mock (MockVRF)
+import qualified Cardano.Crypto.VRF.Praos as Praos
 import Cardano.Crypto.VRF.Simple (SimpleVRF)
 import Cardano.Ledger.Binary.Crypto
 import Cardano.Ledger.Binary.Encoding.Encoder
@@ -1059,3 +1062,24 @@ instance ToCBOR (SignKeyVRF MockVRF) where
 instance ToCBOR (CertVRF MockVRF) where
   toCBOR = encodeCertVRF
   encodedSizeExpr _size = encodedCertVRFSizeExpr
+
+instance ToCBOR Praos.Proof where
+  toCBOR = toCBOR . Praos.proofBytes
+  encodedSizeExpr _ _ =
+    encodedSizeExpr (\_ -> fromIntegral Praos.certSizeVRF) (Proxy :: Proxy BS.ByteString)
+
+instance ToCBOR Praos.SignKey where
+  toCBOR = toCBOR . Praos.skBytes
+  encodedSizeExpr _ _ =
+    encodedSizeExpr (\_ -> fromIntegral Praos.signKeySizeVRF) (Proxy :: Proxy BS.ByteString)
+
+instance ToCBOR Praos.VerKey where
+  toCBOR = toCBOR . Praos.vkBytes
+  encodedSizeExpr _ _ =
+    encodedSizeExpr (\_ -> fromIntegral Praos.verKeySizeVRF) (Proxy :: Proxy BS.ByteString)
+
+deriving instance ToCBOR (VerKeyVRF Praos.PraosVRF)
+
+deriving instance ToCBOR (SignKeyVRF Praos.PraosVRF)
+
+deriving instance ToCBOR (CertVRF Praos.PraosVRF)

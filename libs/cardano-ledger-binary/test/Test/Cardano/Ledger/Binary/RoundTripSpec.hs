@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NumericUnderscores #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Binary.RoundTripSpec (spec) where
@@ -35,6 +34,7 @@ import Cardano.Crypto.KES.Simple (SimpleKES)
 import Cardano.Crypto.KES.Sum (Sum0KES, Sum1KES, Sum2KES, Sum3KES, Sum4KES, Sum5KES, Sum6KES, Sum7KES)
 import Cardano.Crypto.VRF.Class (CertVRF, SignKeyVRF, VerKeyVRF)
 import Cardano.Crypto.VRF.Mock (MockVRF)
+import Cardano.Crypto.VRF.Praos (PraosVRF)
 import Cardano.Crypto.VRF.Simple (SimpleVRF)
 import Cardano.Ledger.Binary
 import Codec.CBOR.ByteArray (ByteArray (..))
@@ -159,6 +159,10 @@ spec =
               roundTripSpec @(VerKeyDSIGN MockDSIGN) version cborTrip
               roundTripSpec @(SigDSIGN MockDSIGN) version cborTrip
           describe "VRF" $ do
+            describe "Praos" $ do
+              roundTripSpec @(SignKeyVRF PraosVRF) version cborTrip
+              roundTripSpec @(VerKeyVRF PraosVRF) version cborTrip
+              roundTripSpec @(CertVRF PraosVRF) version cborTrip
             describe "Simple" $ do
               roundTripSpec @(SignKeyVRF SimpleVRF) version cborTrip
               roundTripSpec @(VerKeyVRF SimpleVRF) version cborTrip

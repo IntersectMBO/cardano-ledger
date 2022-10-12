@@ -1,8 +1,10 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE NoStarIsType #-}
@@ -28,6 +30,7 @@ import Cardano.Crypto.KES.Single (SingleKES)
 import Cardano.Crypto.KES.Sum (SumKES)
 import Cardano.Crypto.VRF.Class (CertVRF, SignKeyVRF, VerKeyVRF)
 import Cardano.Crypto.VRF.Mock (MockVRF)
+import qualified Cardano.Crypto.VRF.Praos as Praos
 import Cardano.Crypto.VRF.Simple (SimpleVRF)
 import Cardano.Ledger.Binary.Crypto
 import Cardano.Ledger.Binary.Decoding.Decoder
@@ -488,3 +491,18 @@ instance FromCBOR (SignKeyVRF MockVRF) where
 
 instance FromCBOR (CertVRF MockVRF) where
   fromCBOR = decodeCertVRF
+
+instance FromCBOR Praos.Proof where
+  fromCBOR = fromCBOR >>= Praos.proofFromBytes
+
+instance FromCBOR Praos.SignKey where
+  fromCBOR = fromCBOR >>= Praos.skFromBytes
+
+instance FromCBOR Praos.VerKey where
+  fromCBOR = fromCBOR >>= Praos.vkFromBytes
+
+deriving instance FromCBOR (VerKeyVRF Praos.PraosVRF)
+
+deriving instance FromCBOR (SignKeyVRF Praos.PraosVRF)
+
+deriving instance FromCBOR (CertVRF Praos.PraosVRF)
