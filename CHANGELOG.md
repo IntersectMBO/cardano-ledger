@@ -11,7 +11,8 @@ in the naming of release branches.
 
 ### Added
 
-- Start on the `cardano-ledger-binary` package as a replacement for `cardano-binary` package: #3036
+- Create a `cardano-ledger-binary` package that does versioned serialization as a
+  replacement for `cardano-binary` package: #3063, #3078
 - Start on the `cardano-ledger-api` package and implement
   `setMinCoinTxOut`+`setMinCoinSizedTxOut`: #2995
 - Added `getMinCoinTxOut`/`getMinCoinSizedTxOut` to `EraTxOut`: #3008
