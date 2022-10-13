@@ -64,7 +64,7 @@ library
     cardano-ledger-shelley-test,
     cardano-ledger-shelley,
     small-steps,
-    strict-containers,
+    cardano-strict-containers,
     text,
   hs-source-dirs:
     src
@@ -107,7 +107,7 @@ test-suite cardano-ledger-babbage-test
     plutus-tx,
     small-steps,
     small-steps-test,
-    strict-containers,
+    cardano-strict-containers,
     tasty,
     tasty-hunit,
     tasty-quickcheck,

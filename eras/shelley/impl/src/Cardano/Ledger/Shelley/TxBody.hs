@@ -81,6 +81,7 @@ import Cardano.Binary
     szCases,
   )
 import qualified Cardano.Crypto.Hash.Class as HS
+import Cardano.HeapWords (HeapWords (..))
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes
@@ -141,7 +142,6 @@ import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import qualified Cardano.Ledger.TxIn as Core
 import Cardano.Ledger.Val (DecodeNonNegative (..))
-import Cardano.Prelude (HeapWords (..), panic)
 import Control.DeepSeq (NFData (rnf))
 import Control.SetAlgebra (BaseRep (MapR), Embed (..), Exp (Base), HasExp (toExp))
 import Data.Aeson (FromJSON (..), ToJSON (..), Value, (.!=), (.:), (.:?), (.=))
@@ -1030,14 +1030,14 @@ instance FromCBOR PoolMetadata where
 data SizeOfPoolOwners = SizeOfPoolOwners
 
 instance ToCBOR SizeOfPoolOwners where
-  toCBOR = panic "The `SizeOfPoolOwners` type cannot be encoded!"
+  toCBOR = error "The `SizeOfPoolOwners` type cannot be encoded!"
 
 -- | The size of the '_poolRelays' 'Set'.  Only used to compute size of encoded
 -- 'PoolParams'.
 data SizeOfPoolRelays = SizeOfPoolRelays
 
 instance ToCBOR SizeOfPoolRelays where
-  toCBOR = panic "The `SizeOfPoolRelays` type cannot be encoded!"
+  toCBOR = error "The `SizeOfPoolRelays` type cannot be encoded!"
 
 instance
   CC.Crypto crypto =>

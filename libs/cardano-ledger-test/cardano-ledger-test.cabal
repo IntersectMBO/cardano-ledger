@@ -141,7 +141,7 @@ library
     small-steps-test,
     set-algebra,
     some,
-    strict-containers,
+    cardano-strict-containers,
     tagged,
     tasty,
     tasty-hunit,

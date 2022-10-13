@@ -38,7 +38,7 @@ let
     ];
 
     tools = {
-      cabal = "3.4.0.0";
+      cabal = "latest";
       ghcid = "0.8.7";
       haskell-language-server="latest";
     };

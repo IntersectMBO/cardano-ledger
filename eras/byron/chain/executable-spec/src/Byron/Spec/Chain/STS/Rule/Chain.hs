@@ -382,15 +382,3 @@ coverInvalidBlockProofs coverPercentage =
       InvalidUpdateProposalHash,
       InvalidUtxoHash
     ]
-
---------------------------------------------------------------------------------
--- FieldX instances for a 6-tuple
---------------------------------------------------------------------------------
-
-instance Field1 (a, b, c, d, e, f) (a', b, c, d, e, f) a a' where
-  _1 k ~(a, b, c, d, e, f) = (\a' -> (a', b, c, d, e, f)) <$> k a
-  {-# INLINE _1 #-}
-
-instance Field5 (a, b, c, d, e, f) (a, b, c, d, e', f) e e' where
-  _5 k ~(a, b, c, d, e, f) = (\e' -> (a, b, c, d, e', f)) <$> k e
-  {-# INLINE _5 #-}

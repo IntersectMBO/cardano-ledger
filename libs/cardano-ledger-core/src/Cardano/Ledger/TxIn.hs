@@ -26,14 +26,15 @@ where
 
 import Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (..), encodeListLen)
 import Cardano.Crypto.Hash.Class (HashAlgorithm)
+import Cardano.HeapWords (HeapWords (..))
+import qualified Cardano.HeapWords as HW
 import Cardano.Ledger.BaseTypes (TxIx (..), mkTxIxPartial)
 import Cardano.Ledger.Core (TxBody)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeHash, hashAnnotated)
 import Cardano.Ledger.Serialization (decodeRecordNamed)
-import Cardano.Prelude (HeapWords (..))
-import qualified Cardano.Prelude as HW
+import Cardano.Prelude (HasCallStack)
 import Control.DeepSeq (NFData)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
@@ -79,7 +80,7 @@ data TxIn crypto = TxIn !(TxId crypto) {-# UNPACK #-} !TxIx
 
 -- | Construct `TxIn` while throwing an error for an out of range `TxIx`. Make
 -- sure to use it only for testing.
-mkTxInPartial :: HW.HasCallStack => TxId crypto -> Integer -> TxIn crypto
+mkTxInPartial :: HasCallStack => TxId crypto -> Integer -> TxIn crypto
 mkTxInPartial txId = TxIn txId . mkTxIxPartial
 
 deriving instance Eq (TxIn crypto)

@@ -51,6 +51,7 @@ import qualified Byron.Spec.Ledger.Core.Generators as CoreGen
 import Byron.Spec.Ledger.Core.Omniscient (skey)
 import qualified Byron.Spec.Ledger.GlobalParams as GP
 import Byron.Spec.Ledger.Util (mkGoblinGens)
+import Cardano.Prelude ()
 import Control.Arrow (second, (&&&))
 import Control.Monad (mzero)
 import Control.State.Transition
@@ -86,7 +87,6 @@ import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 import Lens.Micro
 import Lens.Micro.Extras (view)
-import Lens.Micro.Internal (Field1 (..), Field2 (..), Field3 (..))
 import Lens.Micro.TH (makeLenses)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural
@@ -2131,18 +2131,3 @@ tamperWithVote vote =
       pure $! vote
     ]
 
---------------------------------------------------------------------------------
--- FieldX instances for a 9-tuple
---------------------------------------------------------------------------------
-
-instance Field1 (a, b, c, d, e, f, g, h, i) (a', b, c, d, e, f, g, h, i) a a' where
-  _1 k ~(a, b, c, d, e, f, g, h, i) = (\a' -> (a', b, c, d, e, f, g, h, i)) <$> k a
-  {-# INLINE _1 #-}
-
-instance Field2 (a, b, c, d, e, f, g, h, i) (a, b', c, d, e, f, g, h, i) b b' where
-  _2 k ~(a, b, c, d, e, f, g, h, i) = (\b' -> (a, b', c, d, e, f, g, h, i)) <$> k b
-  {-# INLINE _2 #-}
-
-instance Field3 (a, b, c, d, e, f, g, h, i) (a, b, c', d, e, f, g, h, i) c c' where
-  _3 k ~(a, b, c, d, e, f, g, h, i) = (\c' -> (a, b, c', d, e, f, g, h, i)) <$> k c
-  {-# INLINE _3 #-}

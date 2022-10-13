@@ -16,6 +16,7 @@ module Cardano.Chain.Common.LovelacePortion
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.HeapWords
 import Cardano.Prelude
 import Control.Monad (fail)
 import qualified Data.Aeson as Aeson

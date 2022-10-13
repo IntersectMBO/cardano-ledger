@@ -37,6 +37,7 @@ import Cardano.Chain.Common.CBOR
     knownCborDataItemSizeExpr,
   )
 import Cardano.Crypto (Hash, serializeCborHash, shortHashF)
+import Cardano.HeapWords
 import Cardano.Prelude
 import Data.Aeson (ToJSON)
 import Formatting (Format, bprint, build, builder, int)

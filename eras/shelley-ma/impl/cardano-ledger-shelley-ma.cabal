@@ -68,7 +68,7 @@ library
     primitive,
     cardano-ledger-shelley,
     small-steps,
-    strict-containers,
+    cardano-strict-containers,
     text,
     transformers,
     validation-selective,
