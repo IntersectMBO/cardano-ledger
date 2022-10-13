@@ -46,6 +46,15 @@ import Cardano.Ledger.Alonzo.Tx
     rdptr,
     totExUnits,
   )
+import Cardano.Ledger.Alonzo.Tx
+  ( AlonzoEraTx (..),
+    AlonzoTx (..),
+    IsValid (..),
+    ScriptPurpose (..),
+    hashScriptIntegrity,
+    rdptr,
+    totExUnits,
+  )
 import Cardano.Ledger.Alonzo.TxBody
   ( AlonzoEraTxBody (..),
     AlonzoTxBody (..),
@@ -79,13 +88,7 @@ import Cardano.Ledger.Mary.Value
 import Cardano.Ledger.Pretty.Alonzo ()
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl)
-import Cardano.Ledger.Shelley.UTxO
-  ( EraUTxO (..),
-    UTxO (..),
-    coinBalance,
-    getScriptsHashesNeeded,
-    getScriptsNeeded,
-  )
+import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), UTxO (..), coinBalance)
 import Cardano.Ledger.ShelleyMA.AuxiliaryData (AllegraTxAuxData (..))
 import Cardano.Ledger.ShelleyMA.Era ()
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), translateTimelock)
@@ -451,25 +454,12 @@ instance Mock c => EraGen (AlonzoEra c) where
         Nothing -> storageCost 0 pp script
       else storageCost 0 pp script
 
-  -- For some reason, the EraGen generators occasionally generate an extra script witness.
-  --    There is some evidence that this arises because the script hash appears as the PolicyId
-  --    in a Value. But that is not been verified. Regardless of the cause, we can fix this by
-  --    discarding the trace. Note that this is failure to generate a "random" but valid
-  --    transaction. Discarding the trace adjust for this inadequacy in the generation process.
-  --    This only appears in the Alonzo era, so this "fix" is applied here, in the genEraDone
-  --    method of the EraGen class in the (AlonzoEra c) instance.
-  genEraDone utxo pp tx =
+  genEraDone pp tx =
     let theFee = tx ^. bodyTxL . feeTxBodyL -- Coin supplied to pay fees
         minimumFee = getMinFeeTx @(AlonzoEra c) pp tx
-        neededHashes = getScriptsHashesNeeded (getScriptsNeeded utxo (tx ^. bodyTxL))
-        oldScriptWits = tx ^. witsTxL . scriptTxWitsL
-        newWits = oldScriptWits `Map.restrictKeys` neededHashes
      in if minimumFee <= theFee
-          then
-            if oldScriptWits == newWits
-              then pure tx
-              else myDiscard "Random extra scriptwitness: genEraDone: AlonzoEraGen.hs"
-          else myDiscard "MinFeee violation: genEraDone: AlonzoEraGen.hs"
+          then pure tx
+          else myDiscard "MinFeee violation: genEraDne: AlonzoEraGen.hs"
 
   genEraTweakBlock pp txns =
     let txTotal, ppMax :: ExUnits

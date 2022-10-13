@@ -547,7 +547,7 @@ converge
   keySpace
   tx = do
     delta <- genNextDeltaTilFixPoint scriptinfo initialfee keys scripts utxo pparams keySpace tx
-    genEraDone @era utxo pparams (applyDelta utxo scriptinfo pparams neededKeys neededScripts keySpace tx delta)
+    genEraDone @era pparams (applyDelta utxo scriptinfo pparams neededKeys neededScripts keySpace tx delta)
 
 -- | Return up to /k/ random elements from /items/
 -- (instead of the less efficient /take k <$> QC.shuffle items/)
