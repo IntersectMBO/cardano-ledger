@@ -45,11 +45,11 @@ library
   build-depends:       aeson
                      , base >=4.11 && <5
                      , containers
+                     , cardano-strict-containers
                      , data-default-class
                      , free
                      , mtl
                      , nothunks
-                     , strict-containers
                      , text
                      , transformers >= 0.5
                      , validation-selective

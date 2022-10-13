@@ -38,6 +38,7 @@ library
                     , cardano-ledger-alonzo
                     , cardano-ledger-shelley
                     , cardano-ledger-shelley-ma
+                    , cardano-strict-containers
                     , conduit
                     , containers
                     , vector-map
@@ -48,7 +49,6 @@ library
                     , persistent-sqlite
                     , prettyprinter
                     , set-algebra
-                    , strict-containers
                     , text
                     , transformers
 
@@ -132,9 +132,9 @@ benchmark address
     cardano-crypto-class,
     cardano-ledger-core,
     cardano-slotting,
+    cardano-strict-containers,
     criterion,
     deepseq,
-    strict-containers,
     text
   ghc-options:
       -threaded

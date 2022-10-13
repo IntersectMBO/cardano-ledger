@@ -64,6 +64,7 @@ import Cardano.Binary
     serialize,
     withWordSize,
   )
+import Cardano.HeapWords
 import Cardano.Prelude
 import Crypto.Hash (Blake2b_256, Digest, HashAlgorithm, hashDigestSize)
 import qualified Crypto.Hash as Hash
@@ -82,6 +83,7 @@ import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Short as SBS
+import Data.String (String)
 import qualified Data.Text.Encoding as T
 import Formatting (Format, bprint, build, fitLeft, later, sformat, (%.))
 import qualified Formatting.Buildable as B (Buildable (..))
@@ -119,7 +121,7 @@ instance ToJSON (AbstractHash algo a) where
   toJSON = toJSON . sformat hashHexF
 
 instance HashAlgorithm algo => FromJSON (AbstractHash algo a) where
-  parseJSON = toAesonError . readEither <=< parseJSON
+  parseJSON = toAesonError . readEither @_ @String <=< parseJSON
 
 instance
   (HashAlgorithm algo, FromJSON (AbstractHash algo a)) =>

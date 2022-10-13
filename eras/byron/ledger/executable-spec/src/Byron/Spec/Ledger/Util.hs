@@ -81,7 +81,7 @@ mkGoblinDecls stsNameStr pfNameStr = do
       body <-
         [|
           tinkerWithSigGen @Bool
-            @ $(pure (ConT stsName))
+            @($(pure (ConT stsName)))
               $(pure (VarE gdName))
           |]
       let sigDec =

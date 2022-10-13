@@ -95,6 +95,7 @@ library
     cardano-ledger-pretty,
     cardano-protocol-tpraos,
     cardano-slotting,
+    cardano-strict-containers,
     cborg,
     containers,
     vector-map,
@@ -115,7 +116,6 @@ library
     set-algebra,
     small-steps-test,
     small-steps,
-    strict-containers,
     tasty-hunit,
     tasty-quickcheck,
     tasty,
@@ -182,6 +182,7 @@ test-suite cardano-ledger-shelley-test
       cardano-ledger-pretty,
       cardano-protocol-tpraos,
       cardano-slotting,
+      cardano-strict-containers,
       cborg,
       containers,
       data-default-class,
@@ -195,7 +196,6 @@ test-suite cardano-ledger-shelley-test
       scientific,
       small-steps-test,
       small-steps,
-      strict-containers,
       tasty-hedgehog,
       tasty-hunit,
       tasty-quickcheck,
@@ -224,6 +224,7 @@ benchmark mainbench
     cardano-ledger-core,
     cardano-protocol-tpraos,
     cardano-slotting,
+    cardano-strict-containers,
     containers,
     criterion,
     data-default-class,
@@ -235,7 +236,6 @@ benchmark mainbench
     set-algebra,
     small-steps,
     small-steps-test,
-    strict-containers,
     transformers
   ghc-options:
       -threaded

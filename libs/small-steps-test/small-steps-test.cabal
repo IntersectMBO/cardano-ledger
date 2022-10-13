@@ -48,8 +48,8 @@ library
                      , transformers >= 0.5
                      , QuickCheck
                      -- IOHK deps
+                     , cardano-strict-containers
                      , small-steps
-                     , strict-containers
   hs-source-dirs:      src
 
 test-suite examples

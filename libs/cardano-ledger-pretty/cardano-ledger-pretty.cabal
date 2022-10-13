@@ -51,6 +51,7 @@ library
     cardano-ledger-shelley-ma,
     cardano-protocol-tpraos,
     cardano-slotting,
+    cardano-strict-containers,
     vector-map,
     containers,
     hashable,
@@ -59,5 +60,4 @@ library
     plutus-ledger-api,
     prettyprinter,
     small-steps,
-    strict-containers,
     text,

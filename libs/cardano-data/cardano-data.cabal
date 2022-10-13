@@ -46,6 +46,7 @@ library
   build-depends:       base >=4.11 && <5
                      , bytestring
                      , cborg
+                     , cardano-strict-containers
                      , containers
                      , vector-map
                      , cryptonite
@@ -55,7 +56,6 @@ library
                      , microlens
                      , nothunks
                      , primitive
-                     , strict-containers
                      , text
                      , transformers >= 0.5
                      -- IOHK deps
@@ -78,9 +78,9 @@ test-suite cardano-data-tests
   build-depends:       base
                      , bytestring
                      , cardano-binary
+                     , cardano-strict-containers
                      , cborg
                      , containers
-                     , strict-containers
                      , tasty
                      , tasty-quickcheck
                      , tasty-hunit
