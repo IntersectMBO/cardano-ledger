@@ -24,6 +24,7 @@ import Cardano.Crypto.ProtocolMagic
     RequiresNetworkMagic (..),
     getProtocolMagic,
   )
+import Cardano.HeapWords
 import Cardano.Prelude hiding ((%))
 import Data.Aeson (ToJSON)
 import Formatting (bprint, build, (%))

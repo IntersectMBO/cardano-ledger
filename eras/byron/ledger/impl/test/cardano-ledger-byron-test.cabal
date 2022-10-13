@@ -120,6 +120,7 @@ library
                      , filepath
                      , formatting
                      , generic-monoid
+                     , heapwords
                      , hedgehog >= 1.0.4
                      , microlens
                      , resourcet

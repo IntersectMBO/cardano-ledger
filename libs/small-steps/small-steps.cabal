@@ -49,7 +49,7 @@ library
                      , free
                      , mtl
                      , nothunks
-                     , strict-containers
+                     , cardano-strict-containers
                      , text
                      , transformers >= 0.5
                      , validation-selective

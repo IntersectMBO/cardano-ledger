@@ -57,6 +57,6 @@ library
                 containers,
                 microlens,
                 nothunks,
-                strict-containers,
+                cardano-strict-containers,
   hs-source-dirs:
     src

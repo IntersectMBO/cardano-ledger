@@ -116,7 +116,7 @@ library
                 set-algebra,
                 small-steps,
                 small-steps-test,
-                strict-containers,
+                cardano-strict-containers,
                 tasty,
                 tasty-hunit,
                 tasty-quickcheck,
@@ -198,7 +198,7 @@ test-suite cardano-ledger-shelley-test
                 scientific,
                 small-steps,
                 small-steps-test,
-                strict-containers,
+                cardano-strict-containers,
                 tasty,
                 tasty-hedgehog,
                 tasty-hunit,
@@ -237,7 +237,7 @@ benchmark mainbench
                 set-algebra,
                 small-steps,
                 small-steps-test,
-                strict-containers,
+                cardano-strict-containers,
                 transformers
   ghc-options:
       -threaded

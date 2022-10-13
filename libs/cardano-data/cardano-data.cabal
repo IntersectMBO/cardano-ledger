@@ -57,7 +57,7 @@ library
                      , microlens
                      , nothunks
                      , primitive
-                     , strict-containers
+                     , cardano-strict-containers
                      , text
                      , transformers >= 0.5
                      , vector
@@ -83,7 +83,7 @@ test-suite cardano-data-tests
                      , cardano-binary
                      , cborg
                      , containers
-                     , strict-containers
+                     , cardano-strict-containers
                      , tasty
                      , tasty-quickcheck
                      , tasty-hunit
