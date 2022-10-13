@@ -89,8 +89,8 @@ import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 import Numeric.Natural (Natural)
-import Plutus.V1.Ledger.Api as PV1 hiding (Map, Script)
-import Plutus.V2.Ledger.Api as PV2 (costModelParamNames, mkEvaluationContext)
+import PlutusLedgerApi.V1 as PV1 hiding (Map, Script)
+import PlutusLedgerApi.V2 as PV2 (costModelParamNames, mkEvaluationContext)
 
 -- | Marker indicating the part of a transaction for which this script is acting
 -- as a validator.
