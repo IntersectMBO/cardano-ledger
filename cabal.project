@@ -15,7 +15,7 @@ repository cardano-haskell-packages
 -- Bump this if you need newer packages from Hackage
 index-state: 2022-09-07T00:00:00Z
 -- Bump this if you need newer packages from CHaP
-index-state: cardano-haskell-packages 2022-10-10T00:00:00Z
+index-state: cardano-haskell-packages 2022-10-14T19:00:00Z
 
 packages:
   eras/alonzo/impl
