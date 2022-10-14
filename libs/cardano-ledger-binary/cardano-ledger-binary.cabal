@@ -56,7 +56,7 @@ library
                    , bytestring
                    , cardano-binary
                    , cardano-crypto-class
-                   , cardano-crypto-praos
+                   , cardano-crypto-praos >= 2.1.0.0
                    , cardano-strict-containers
                    , cborg
                    , containers
