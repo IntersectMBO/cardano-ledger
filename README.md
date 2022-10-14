@@ -124,12 +124,14 @@ for the ledger specification corresponding to the Shelley release, or
 the Byron release). Then, build the latex document by running:
 
 ```shell
+cd <myLaTexDir>
 nix-shell --pure --run make
 ```
 
 For a continuous compilation of the `LaTeX` file run:
 
 ```shell
+cd <myLaTexDir>
 nix-shell --pure --run "make watch"
 ```
 
