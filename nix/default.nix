@@ -44,7 +44,7 @@ let
         latex = import ./latex.nix { inherit (pkgs) stdenv lib texlive; };
       })
       # And, of course, our haskell-nix-ified cabal project:
-      (import ./pkgs.nix)
+      (import ./pkgs.nix { inherit sources; } )
     ];
 
   pkgs = import nixpkgs {

@@ -5,6 +5,7 @@
 , stdenv
 , pkgs
 , haskell-nix
+, CHaP
 , buildPackages
 , config ? {}
 # GHC attribute name
@@ -26,6 +27,7 @@ let
   # https://input-output-hk.github.io/haskell.nix/user-guide/projects/
   pkgSet = haskell-nix.cabalProject {
     inherit src;
+    inputMap = { "https://input-output-hk.github.io/cardano-haskell-packages" = CHaP; };
     compiler-nix-name = compiler;
     modules = [
       {
