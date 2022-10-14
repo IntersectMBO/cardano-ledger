@@ -20,7 +20,7 @@ import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO, exBudgetToExUnits, transExUni
 import Cardano.Ledger.Alonzo.TxWits
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded)
 import qualified Cardano.Ledger.Babbage.PParams as Babbage.PParams
-import Cardano.Ledger.BaseTypes (ProtVer (..), ShelleyBase)
+import Cardano.Ledger.BaseTypes (ProtVer (..), ShelleyBase, natVersion)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC
@@ -114,7 +114,6 @@ testExUnitCalculation ::
     AlonzoEraTx era,
     ExtendedUTxO era,
     HasField "_maxTxExUnits" (PParams era) ExUnits,
-    HasField "_protocolVersion" (PParams era) ProtVer,
     STS (EraRule "UTXOS" era),
     Script era ~ AlonzoScript era,
     EraUTxO era,
@@ -148,7 +147,6 @@ exampleExUnitCalc ::
     Signal (EraRule "UTXOS" era) ~ Tx era,
     ExtendedUTxO era,
     HasField "_maxTxExUnits" (PParams era) ExUnits,
-    HasField "_protocolVersion" (PParams era) ProtVer,
     STS (EraRule "UTXOS" era),
     AlonzoEraTx era,
     PostShelley era,
@@ -178,7 +176,6 @@ exampleInvalidExUnitCalc ::
     EraUTxO era,
     ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     HasField "_maxTxExUnits" (PParams era) ExUnits,
-    HasField "_protocolVersion" (PParams era) ProtVer,
     Script era ~ AlonzoScript era,
     Signable
       (CC.DSIGN (EraCrypto era))
@@ -278,7 +275,6 @@ updateTxExUnits ::
     EraUTxO era,
     ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     HasField "_maxTxExUnits" (PParams era) ExUnits,
-    HasField "_protocolVersion" (PParams era) ProtVer,
     Script era ~ AlonzoScript era
   ) =>
   Proof era ->
@@ -325,5 +321,5 @@ pparams proof =
       MaxValSize 1000000000,
       MaxTxExUnits $ ExUnits 100000000 100000000,
       MaxBlockExUnits $ ExUnits 100000000 100000000,
-      ProtocolVersion $ ProtVer 5 0
+      ProtocolVersion $ ProtVer (natVersion @5) 0
     ]

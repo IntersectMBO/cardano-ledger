@@ -1,15 +1,20 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Alonzo.Serialisation.Canonical (tests) where
 
-import Cardano.Binary
+import Cardano.Ledger.Alonzo (Alonzo, AlonzoEra)
+import Cardano.Ledger.Alonzo.Language (Language)
+import Cardano.Ledger.Alonzo.PParams hiding (PParams)
+import Cardano.Ledger.Binary
   ( Annotator (..),
     Decoder,
     TokenType (..),
-    decodeAnnotator,
     decodeBool,
     decodeBytesCanonical,
     decodeDoubleCanonical,
+    decodeFullAnnotator,
     decodeIntegerCanonical,
     decodeListLenCanonical,
     decodeMapLenCanonical,
@@ -20,10 +25,8 @@ import Cardano.Binary
     serializeEncoding,
     withSlice,
   )
-import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.Language (Language)
-import Cardano.Ledger.Alonzo.PParams
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core
+import Cardano.Ledger.Crypto
 import Control.Monad (replicateM, unless, void)
 import qualified Data.ByteString.Base16 as B16
 import Data.ByteString.Lazy as LBS
@@ -36,12 +39,12 @@ import Test.Tasty
 import Test.Tasty.QuickCheck
 
 tests :: TestTree
-tests = testProperty "LangDepView encoding is canonical" canonicalLangDepView
+tests = testProperty "LangDepView encoding is canonical" (canonicalLangDepView @StandardCrypto)
 
-canonicalLangDepView :: Core.PParams (AlonzoEra era) -> Set Language -> Property
+canonicalLangDepView :: forall c. Crypto c => PParams (AlonzoEra c) -> Set Language -> Property
 canonicalLangDepView pparams langs =
   let langViews = Set.fromList $ getLanguageView pparams <$> Set.toList langs
-      encodedViews = serializeEncoding $ encodeLangViews langViews
+      encodedViews = serializeEncoding (eraProtVerHigh @(AlonzoEra c)) $ encodeLangViews langViews
       base16String = show (B16.encode $ LBS.toStrict encodedViews)
    in counterexample base16String $ case isCanonical encodedViews of
         Right () -> QCP.succeeded
@@ -49,7 +52,7 @@ canonicalLangDepView pparams langs =
 
 isCanonical :: LBS.ByteString -> Either String ()
 isCanonical bytes =
-  case decodeAnnotator "canonicity check" checkCanonicalTerm bytes of
+  case decodeFullAnnotator (eraProtVerHigh @Alonzo) "Canonicity check" checkCanonicalTerm bytes of
     Left err -> Left (show err)
     Right x -> x
 
@@ -104,7 +107,7 @@ checkCanonicalMap = do
   n <- decodeMapLenCanonical
   keys <- replicateM n checkCanonicalKVPair
   let keys' :: Annotator (Either String [ByteString])
-      keys' = (getCompose . traverse Compose) keys
+      keys' = getCompose (traverse Compose keys)
   pure $
     Annotator $ \fullBytes -> do
       ks <- runAnnotator keys' fullBytes
@@ -114,7 +117,7 @@ checkCanonicalList :: Decoder s (Annotator (Either String ()))
 checkCanonicalList = do
   len <- decodeListLenCanonical
   checkedTerms <- replicateM len checkCanonicalTerm
-  pure $ void <$> (getCompose . traverse Compose) checkedTerms
+  pure $ void <$> getCompose (traverse Compose checkedTerms)
 
 isSorted :: [ByteString] -> Bool
 isSorted [] = True

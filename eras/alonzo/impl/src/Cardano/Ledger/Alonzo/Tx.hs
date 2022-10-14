@@ -76,13 +76,6 @@ module Cardano.Ledger.Alonzo.Tx
   )
 where
 
-import Cardano.Binary
-  ( FromCBOR (..),
-    ToCBOR (toCBOR),
-    encodeListLen,
-    serializeEncoding,
-    serializeEncoding',
-  )
 import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Alonzo.Data (Data, hashData)
@@ -118,6 +111,18 @@ import Cardano.Ledger.Alonzo.TxWits
     txrdmrs,
     unRedeemers,
   )
+import Cardano.Ledger.Binary
+  ( Annotator (..),
+    Encoding,
+    FromCBOR (..),
+    ToCBOR (toCBOR),
+    decodeNullMaybe,
+    encodeListLen,
+    encodeNullMaybe,
+    serializeEncoding,
+    serializeEncoding',
+  )
+import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core hiding (TxBody)
 import qualified Cardano.Ledger.Core as Core
@@ -134,7 +139,6 @@ import qualified Cardano.Ledger.UTxO as Shelley
 import Cardano.Ledger.Val (Val ((<+>), (<×>)))
 import Control.DeepSeq (NFData (..))
 import qualified Data.ByteString.Lazy as LBS
-import Data.Coders hiding (to)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict
   ( StrictMaybe (..),
@@ -225,8 +229,13 @@ auxDataAlonzoTxL = lens auxiliaryData (\tx txTxAuxData -> tx {auxiliaryData = tx
 {-# INLINEABLE auxDataAlonzoTxL #-}
 
 -- | txsize computes the length of the serialised bytes
-sizeAlonzoTxF :: EraTx era => SimpleGetter (AlonzoTx era) Integer
-sizeAlonzoTxF = to (fromIntegral . LBS.length . serializeEncoding . toCBORForSizeComputation)
+sizeAlonzoTxF :: forall era. EraTx era => SimpleGetter (AlonzoTx era) Integer
+sizeAlonzoTxF =
+  to $
+    fromIntegral
+      . LBS.length
+      . serializeEncoding (eraProtVerLow @era)
+      . toCBORForSizeComputation
 {-# INLINEABLE sizeAlonzoTxF #-}
 
 isValidAlonzoTxL :: Lens' (AlonzoTx era) IsValid
@@ -282,7 +291,7 @@ deriving instance Typeable era => NoThunks (ScriptIntegrity era)
 instance Era era => SafeToHash (ScriptIntegrity era) where
   originalBytes (ScriptIntegrity m d l) =
     let dBytes = if nullDats d then mempty else originalBytes d
-        lBytes = serializeEncoding' (encodeLangViews l)
+        lBytes = serializeEncoding' (eraProtVerLow @era) (encodeLangViews l)
      in originalBytes m <> dBytes <> lBytes
 
 instance

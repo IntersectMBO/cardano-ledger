@@ -31,13 +31,6 @@ module Cardano.Ledger.CompactAddress
   )
 where
 
-import Cardano.Binary
-  ( Decoder,
-    DecoderError (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    decodeFull',
-  )
 import qualified Cardano.Crypto.Hash.Class as Hash
 import Cardano.Ledger.Address
   ( Addr (..),
@@ -55,6 +48,15 @@ import Cardano.Ledger.Address
     word7sToWord64,
   )
 import Cardano.Ledger.BaseTypes (CertIx (..), Network (..), TxIx (..), word8ToNetwork)
+import Cardano.Ledger.Binary
+  ( Decoder,
+    DecoderError (..),
+    FromCBOR (..),
+    ToCBOR (..),
+    byronProtVer,
+    cborError,
+    decodeFull',
+  )
 import Cardano.Ledger.Credential
   ( Credential (KeyHashObj, ScriptHashObj),
     PaymentCredential,
@@ -78,7 +80,6 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.ByteString.Short as SBS (fromShort, index, length, toShort)
 import Data.ByteString.Short.Internal as SBS (ShortByteString (SBS))
 import qualified Data.ByteString.Unsafe as BS (unsafeDrop, unsafeIndex)
-import Data.Coders (cborError)
 import Data.Maybe (fromMaybe)
 import qualified Data.Primitive.ByteArray as BA
 import Data.Proxy (Proxy (..))
@@ -358,7 +359,7 @@ decodeBootstrapAddress ::
   b ->
   StateT Int m (BootstrapAddress c)
 decodeBootstrapAddress buf =
-  case decodeFull' $ bufToByteString buf of
+  case decodeFull' byronProtVer $ bufToByteString buf of
     Left e -> fail $ show e
     Right addr -> BootstrapAddress addr <$ modify' (+ bufLength buf)
 {-# INLINE decodeBootstrapAddress #-}
@@ -666,7 +667,7 @@ getShortAddr = do
 getBootstrapAddress :: GetShort (BootstrapAddress c)
 getBootstrapAddress = do
   bs <- getRemainingAsByteString
-  case decodeFull' bs of
+  case decodeFull' byronProtVer bs of
     Left e -> fail $ show e
     Right r -> pure $ BootstrapAddress r
 

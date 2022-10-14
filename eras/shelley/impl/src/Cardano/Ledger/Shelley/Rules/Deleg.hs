@@ -17,12 +17,13 @@ module Cardano.Ledger.Shelley.Rules.Deleg
   )
 where
 
-import Cardano.Binary
+import Cardano.Ledger.BaseTypes (Globals (..), ProtVer, ShelleyBase, epochInfoPure, invalidKey)
+import Cardano.Ledger.Binary
   ( FromCBOR (..),
     ToCBOR (..),
+    decodeRecordSum,
     encodeListLen,
   )
-import Cardano.Ledger.BaseTypes (Globals (..), ProtVer, ShelleyBase, epochInfoPure, invalidKey)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), addDeltaCoin, toDeltaCoin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
@@ -70,7 +71,6 @@ import Cardano.Ledger.Slot
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, range, singleton, (∈), (∉), (∪), (⨃))
 import Control.State.Transition
-import Data.Coders (decodeRecordSum)
 import Data.Foldable (fold)
 import Data.Group (Group (..))
 import qualified Data.Map.Strict as Map

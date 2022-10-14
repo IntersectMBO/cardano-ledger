@@ -10,12 +10,12 @@ module Test.Cardano.Ledger.Api.Tx.Out
   )
 where
 
-import Cardano.Binary (serialize)
 import Cardano.Ledger.Alonzo.PParams hiding (PParams)
 import Cardano.Ledger.Api.Era
 import Cardano.Ledger.Api.Tx.Out
 import Cardano.Ledger.Babbage.PParams hiding (PParams)
 import Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
+import Cardano.Ledger.Binary (serialize)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.PParams hiding (PParams)
@@ -33,7 +33,6 @@ propSetShelleyMinTxOut ::
   ( EraTxOut era,
     Arbitrary (PParams era),
     Arbitrary (TxOut era),
-    Show (PParams era),
     AtMostEra MaryEra era,
     HasField "_minUTxOValue" (PParams era) Coin
   ) =>
@@ -69,7 +68,6 @@ propSetBabbageMinTxOut ::
   ( EraTxOut era,
     Arbitrary (PParams era),
     Arbitrary (TxOut era),
-    Show (PParams era),
     AtLeastEra BabbageEra era,
     HasField "_coinsPerUTxOByte" (PParams era) Coin
   ) =>
@@ -81,7 +79,7 @@ propSetBabbageMinTxOut = testProperty "setBabbageMinTxOut" prop
     prop pp txOut =
       within 1000000 $ -- just in case if there is a problem with termination
         let txOut' = setMinCoinTxOut pp txOut
-            sz = toInteger (BSL.length (serialize txOut'))
+            sz = toInteger (BSL.length (serialize (eraProtVerLow @era) txOut'))
          in (txOut' ^. coinTxOutL)
               === Coin ((160 + sz) * unCoin (getField @"_coinsPerUTxOByte" pp))
 

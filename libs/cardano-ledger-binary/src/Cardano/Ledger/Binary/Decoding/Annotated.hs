@@ -23,6 +23,7 @@ where
 import qualified Cardano.Binary as C
 import Cardano.Ledger.Binary.Decoding.Decoder (Decoder, decodeList, decodeWithByteSpan)
 import Cardano.Ledger.Binary.Decoding.FromCBOR (FromCBOR (..))
+import Cardano.Ledger.Binary.Encoding (ToCBOR, Version, serialize')
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.Functor ((<&>))
@@ -40,8 +41,8 @@ fromCBORAnnotated :: FromCBOR a => Decoder s (C.Annotated a C.ByteSpan)
 fromCBORAnnotated = annotatedDecoder fromCBOR
 
 -- | Reconstruct an annotation by re-serialising the payload to a ByteString.
-reAnnotate :: C.ToCBOR a => C.Annotated a b -> C.Annotated a BS.ByteString
-reAnnotate (C.Annotated x _) = C.Annotated x (C.serialize' x)
+reAnnotate :: ToCBOR a => Version -> C.Annotated a b -> C.Annotated a BS.ByteString
+reAnnotate version (C.Annotated x _) = C.Annotated x (serialize' version x)
 
 -------------------------------------------------------------------------
 -- Annotator

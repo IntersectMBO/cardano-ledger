@@ -50,18 +50,25 @@ module Cardano.Ledger.Alonzo.TxWits
   )
 where
 
-import Cardano.Binary
-  ( FromCBOR (..),
-    ToCBOR (..),
-    encodeListLen,
-    serializeEncoding',
-  )
 import Cardano.Crypto.DSIGN.Class (SigDSIGN, VerKeyDSIGN)
 import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.Alonzo.Data (Data, hashData)
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..), Tag)
+import Cardano.Ledger.Binary
+  ( Annotator,
+    Decoder,
+    FromCBOR (..),
+    FromCBORGroup (..),
+    ToCBOR (..),
+    ToCBORGroup (..),
+    decodeList,
+    encodeFoldableEncoder,
+    encodeListLen,
+    serializeEncoding',
+  )
+import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (HASH)
@@ -70,11 +77,9 @@ import Cardano.Ledger.Keys
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
 import Cardano.Ledger.MemoBytes (Mem, MemoBytes (..), memoBytes)
 import Cardano.Ledger.SafeHash (SafeToHash (..))
-import Cardano.Ledger.Serialization (FromCBORGroup (..), ToCBORGroup (..))
 import Cardano.Ledger.Shelley.TxBody (WitVKey)
 import Control.DeepSeq
 import qualified Data.ByteString.Short as SBS
-import Data.Coders
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
@@ -141,6 +146,7 @@ pattern Redeemers' rs' <-
 {-# COMPLETE Redeemers' #-}
 
 pattern Redeemers ::
+  forall era.
   Era era =>
   Map RdmrPtr (Data era, ExUnits) ->
   Redeemers era
@@ -156,7 +162,7 @@ pattern Redeemers rs <-
        in RedeemersConstr $
             Memo
               (RedeemersRaw rs')
-              (SBS.toShort . serializeEncoding' . enc . Map.assocs $ rs')
+              (SBS.toShort . serializeEncoding' (eraProtVerLow @era) . enc . Map.assocs $ rs')
 
 {-# COMPLETE Redeemers #-}
 
@@ -243,7 +249,7 @@ encodeTxDatsRaw ::
   ToCBOR (Data era) =>
   TxDatsRaw era ->
   Encode ('Closed 'Dense) (TxDatsRaw era)
-encodeTxDatsRaw = E (encodeFoldable . Map.elems . unTxDatsRaw)
+encodeTxDatsRaw = E (toCBOR . Map.elems . unTxDatsRaw)
   where
     unTxDatsRaw (TxDatsRaw m) = m
 
@@ -442,27 +448,27 @@ encodeWitnessRaw ::
 encodeWitnessRaw (TxWitnessRaw vkeys boots scripts dats rdmrs) =
   Keyed
     (\a b c d e f g -> TxWitnessRaw a b (c <> d <> e) f g)
-    !> Omit null (Key 0 $ setEncode vkeys)
-    !> Omit null (Key 2 $ setEncode boots)
+    !> Omit null (Key 0 $ To vkeys)
+    !> Omit null (Key 2 $ To boots)
     !> Omit
       null
       ( Key 1 $
           E
-            (encodeFoldable . mapMaybe unwrapTS . Map.elems)
+            (toCBOR . mapMaybe unwrapTS . Map.elems)
             (Map.filter isTimelock scripts)
       )
     !> Omit
       null
       ( Key 3 $
           E
-            (encodeFoldable . mapMaybe unwrapPS1 . Map.elems)
+            (toCBOR . mapMaybe unwrapPS1 . Map.elems)
             (Map.filter (isPlutus PlutusV1) scripts)
       )
     !> Omit
       null
       ( Key 6 $
           E
-            (encodeFoldable . mapMaybe unwrapPS2 . Map.elems)
+            (toCBOR . mapMaybe unwrapPS2 . Map.elems)
             (Map.filter (isPlutus PlutusV2) scripts)
       )
     !> Omit nullDats (Key 4 $ E toCBOR dats)
@@ -540,7 +546,7 @@ instance
       txWitnessField 3 =
         fieldA
           addScripts
-          (fmap (PlutusScript PlutusV1) <$> listDecode)
+          (fmap (PlutusScript PlutusV1) <$> From)
       txWitnessField 4 =
         fieldAA
           (\x wits -> wits {_txdats = x})
@@ -549,7 +555,7 @@ instance
       txWitnessField 6 =
         fieldA
           addScripts
-          (fmap (PlutusScript PlutusV2) <$> listDecode)
+          (fmap (PlutusScript PlutusV2) <$> From)
       txWitnessField n = field (\_ t -> t) (Invalid n)
 
       addScripts :: [AlonzoScript era] -> TxWitnessRaw era -> TxWitnessRaw era

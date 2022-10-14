@@ -1,7 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Cardano.Chain.Common.ChainDifficulty
   ( ChainDifficulty (..),
@@ -9,7 +8,7 @@ module Cardano.Chain.Common.ChainDifficulty
   )
 where
 
-import Cardano.Binary
+import Cardano.Ledger.Binary
   ( Dropper,
     FromCBOR (..),
     ToCBOR (..),

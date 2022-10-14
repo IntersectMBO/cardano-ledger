@@ -6,13 +6,10 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
--- For deriving Eq instances that involve Eq of type families
 {-# LANGUAGE UndecidableInstances #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Shelley.Examples.Consensus where
 
-import Cardano.Binary
 import Cardano.Crypto.DSIGN as DSIGN
 import Cardano.Crypto.Hash as Hash
 import Cardano.Crypto.Seed as Seed
@@ -39,9 +36,7 @@ import Cardano.Protocol.TPraos.BHeader
 import Cardano.Protocol.TPraos.OCert
 import Cardano.Protocol.TPraos.Rules.Prtcl
 import Cardano.Protocol.TPraos.Rules.Tickn
-import Cardano.Slotting.Block
 import Cardano.Slotting.EpochInfo
-import Cardano.Slotting.Slot
 import qualified Data.ByteString as Strict
 import Data.Coerce (coerce)
 import Data.Default.Class
@@ -57,6 +52,7 @@ import Data.Time
 import Data.Word (Word64, Word8)
 import GHC.Records (HasField)
 import Numeric.Natural (Natural)
+import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
 import Test.Cardano.Ledger.Shelley.Generator.Core
 import Test.Cardano.Ledger.Shelley.Orphans ()
 import Test.Cardano.Ledger.Shelley.Utils hiding (mkVRFKeyPair)
@@ -196,7 +192,7 @@ exampleShelleyLedgerBlock tx = Block blockHeader blockBody
       BHBody
         { bheaderBlockNo = BlockNo 3,
           bheaderSlotNo = SlotNo 9,
-          bheaderPrev = BlockHash (HashHeader (mkDummyHash Proxy 2)),
+          bheaderPrev = BlockHash (HashHeader (mkDummyHash (2 :: Int))),
           bheaderVk = coerceKeyRole vKeyCold,
           bheaderVrfVk = snd $ vrf keys,
           bheaderEta = mkCertifiedVRF (mkBytes 0) (fst $ vrf keys),
@@ -204,26 +200,26 @@ exampleShelleyLedgerBlock tx = Block blockHeader blockBody
           bsize = 2345,
           bhash = hashTxSeq @era blockBody,
           bheaderOCert = mkOCert keys 0 (KESPeriod 0),
-          bprotver = ProtVer 2 0
+          bprotver = ProtVer (natVersion @2) 0
         }
 
     blockBody = toTxSeq @era (StrictSeq.fromList [tx])
 
     mkBytes :: Int -> Cardano.Ledger.BaseTypes.Seed
-    mkBytes = Seed . mkDummyHash (Proxy @Blake2b_256)
+    mkBytes = Seed . mkDummyHash @Blake2b_256
 
 exampleHashHeader ::
   forall era.
   ShelleyBasedEra' era =>
   Proxy era ->
   HashHeader (EraCrypto era)
-exampleHashHeader _ = coerce $ mkDummyHash (Proxy @(HASH (EraCrypto era))) 0
+exampleHashHeader _ = coerce $ mkDummyHash @(HASH (EraCrypto era)) (0 :: Int)
 
 mkKeyHash :: forall c discriminator. CC.Crypto c => Int -> KeyHash discriminator c
-mkKeyHash = KeyHash . mkDummyHash (Proxy @(ADDRHASH c))
+mkKeyHash = KeyHash . mkDummyHash @(ADDRHASH c)
 
 mkScriptHash :: forall c. CC.Crypto c => Int -> ScriptHash c
-mkScriptHash = ScriptHash . mkDummyHash (Proxy @(ADDRHASH c))
+mkScriptHash = ScriptHash . mkDummyHash @(ADDRHASH c)
 
 -- | This is not a valid transaction. We don't care, we are only interested in
 -- serialisation, not validation.
@@ -309,7 +305,6 @@ exampleNewEpochState ::
   ( ShelleyBasedEra' era,
     HasField "_a0" (Core.PParams era) NonNegativeInterval,
     HasField "_d" (Core.PParams era) UnitInterval,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
     HasField "_nOpt" (Core.PParams era) Natural,
     HasField "_rho" (Core.PParams era) UnitInterval,
     HasField "_tau" (Core.PParams era) UnitInterval,
@@ -403,13 +398,10 @@ exampleLedgerChainDepState seed =
 testEpochInfo :: EpochInfo Identity
 testEpochInfo = epochInfoPure testGlobals
 
-mkDummyHash :: forall h a. HashAlgorithm h => Proxy h -> Int -> Hash.Hash h a
-mkDummyHash _ = coerce . hashWithSerialiser @h toCBOR
-
 mkDummySafeHash :: forall c a. CC.Crypto c => Proxy c -> Int -> SafeHash c a
 mkDummySafeHash _ =
   unsafeMakeSafeHash
-    . mkDummyHash (Proxy @(HASH c))
+    . mkDummyHash @(HASH c)
 
 {-------------------------------------------------------------------------------
   Shelley era specific functions

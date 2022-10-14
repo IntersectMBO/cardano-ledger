@@ -4,19 +4,19 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Babbage.Serialisation.Generators where
 
-import Cardano.Binary (ToCBOR)
 import Cardano.Ledger.Babbage.PParams
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..), BabbageUtxowPredFailure (..))
 import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.Babbage.TxBody (BabbageEraTxBody, BabbageTxOut (..))
+import Cardano.Ledger.Binary (Sized, ToCBOR, mkSized)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Serialization (Sized, mkSized)
 import Control.State.Transition (STS (PredicateFailure))
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
@@ -24,8 +24,8 @@ import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators (genMintValues)
 import Test.QuickCheck
 
-instance (ToCBOR a, Arbitrary a) => Arbitrary (Sized a) where
-  arbitrary = mkSized <$> arbitrary
+instance (Era era, ToCBOR (f era), Arbitrary (f era)) => Arbitrary (Sized (f era)) where
+  arbitrary = mkSized (eraProtVerHigh @era) <$> arbitrary
 
 instance
   ( EraTxOut era,

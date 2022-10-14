@@ -29,7 +29,6 @@ module Test.Cardano.Chain.Common.Gen
   )
 where
 
-import Cardano.Binary (ToCBOR)
 import Cardano.Chain.Common
   ( AddrAttributes (..),
     AddrSpendingData (..),
@@ -59,6 +58,7 @@ import Cardano.Chain.Common
     rationalToLovelacePortion,
     toCompactAddress,
   )
+import Cardano.Ledger.Binary (ToCBOR)
 import Cardano.Prelude
 import Formatting (build, sformat)
 import Hedgehog

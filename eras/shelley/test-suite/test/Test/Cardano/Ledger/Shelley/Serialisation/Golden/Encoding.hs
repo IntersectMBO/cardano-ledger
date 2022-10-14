@@ -13,18 +13,6 @@
 -- | Golden tests that check CBOR token encoding.
 module Test.Cardano.Ledger.Shelley.Serialisation.Golden.Encoding (tests) where
 
-import Cardano.Binary
-  ( Annotator,
-    Decoder,
-    DecoderError,
-    FromCBOR (..),
-    ToCBOR (..),
-    decodeAnnotator,
-    decodeFullDecoder,
-    serialize',
-    toCBOR,
-  )
-import Cardano.Crypto.DSIGN (encodeSignedDSIGN, encodeVerKeyDSIGN)
 import qualified Cardano.Crypto.Hash as Monomorphic
 import Cardano.Crypto.KES (SignedKES)
 import Cardano.Crypto.VRF (CertifiedVRF)
@@ -41,6 +29,31 @@ import Cardano.Ledger.BaseTypes
     mkTxIxPartial,
     textToDns,
     textToUrl,
+  )
+import Cardano.Ledger.Binary
+  ( Annotator,
+    Decoder,
+    DecoderError,
+    FromCBOR (..),
+    FromCBORGroup (..),
+    ToCBOR (..),
+    ToCBORGroup (..),
+    Tokens (..),
+    byronProtVer,
+    decodeFullAnnotator,
+    decodeFullDecoder,
+    decodeMapTraverse,
+    fromNotSharedCBOR,
+    hashWithEncoder,
+    ipv4ToBytes,
+    serialize',
+    shelleyProtVer,
+    toCBOR,
+    toPlainEncoding,
+  )
+import Cardano.Ledger.Binary.Crypto
+  ( encodeSignedDSIGN,
+    encodeVerKeyDSIGN,
   )
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
@@ -69,7 +82,6 @@ import Cardano.Ledger.Keys
     encodeSignedKES,
     hashKey,
     hashVerKeyVRF,
-    hashWithSerialiser,
     sKey,
     signedDSIGN,
     signedKES,
@@ -77,12 +89,6 @@ import Cardano.Ledger.Keys
   )
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
-import Cardano.Ledger.Serialization
-  ( FromCBORGroup (..),
-    ToCBORGroup (..),
-    decodeMapTraverse,
-    ipv4ToBytes,
-  )
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API
   ( MultiSig,
@@ -174,7 +180,8 @@ import Cardano.Protocol.TPraos.OCert
     OCertSignable (..),
     pattern OCert,
   )
-import Codec.CBOR.Encoding (Encoding (..), Tokens (..))
+import qualified Codec.CBOR.Encoding as CBOR (Encoding (..))
+import Control.Monad
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Char8 as BS (pack)
@@ -187,10 +194,10 @@ import qualified Data.Maybe as Maybe (fromJust)
 import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
-import Data.Sharing (fromNotSharedCBOR)
 import Data.String (fromString)
 import Numeric.Natural (Natural)
 import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
+import Test.Cardano.Ledger.Binary.TreeDiff (CBORBytes (CBORBytes), diffExpr)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, C_Crypto, ExMock, Mock)
 import Test.Cardano.Ledger.Shelley.Examples.Consensus as Ex (ledgerExamplesShelley, sleNewEpochState)
 import Test.Cardano.Ledger.Shelley.Generator.Core (PreAlonzo)
@@ -203,7 +210,7 @@ import Test.Cardano.Ledger.Shelley.Serialisation.GoldenUtils
   )
 import Test.Cardano.Ledger.Shelley.Utils
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, (@?=))
+import Test.Tasty.HUnit (assertFailure, testCase)
 
 -- ============================================
 
@@ -213,7 +220,8 @@ decodeMultiSigMap :: Decoder s (Annotator MultiSigMap)
 decodeMultiSigMap = decodeMapTraverse (pure <$> fromCBOR) fromCBOR
 
 deserializeMultiSigMap :: BSL.ByteString -> Either DecoderError MultiSigMap
-deserializeMultiSigMap = decodeAnnotator "Map ScriptHash MultiSig" decodeMultiSigMap
+deserializeMultiSigMap =
+  decodeFullAnnotator shelleyProtVer "Map ScriptHash MultiSig" decodeMultiSigMap
 
 checkEncodingCBORCBORGroup ::
   (FromCBORGroup a, ToCBORGroup a, Show a, Eq a) =>
@@ -222,8 +230,8 @@ checkEncodingCBORCBORGroup ::
   ToTokens ->
   TestTree
 checkEncodingCBORCBORGroup name x t =
-  let d = decodeFullDecoder (fromString name) fromCBORGroup
-   in checkEncoding toCBORGroup d name x t
+  let d = decodeFullDecoder shelleyProtVer (fromString name) fromCBORGroup
+   in checkEncoding shelleyProtVer toCBORGroup d name x t
 
 getRawKeyHash :: KeyHash 'Payment h -> ByteString
 getRawKeyHash (KeyHash hsh) = Monomorphic.hashToBytes hsh
@@ -295,7 +303,7 @@ testBlockIssuerKeyTokens :: Tokens -> Tokens
 testBlockIssuerKeyTokens = e
   where
     VKey vk = vKey (testBlockIssuerKey @C_Crypto)
-    Encoding e = encodeVerKeyDSIGN vk
+    CBOR.Encoding e = toPlainEncoding shelleyProtVer (encodeVerKeyDSIGN vk)
 
 testKey1SigToken ::
   forall era.
@@ -309,7 +317,7 @@ testKey1SigToken = e
         (sKey $ testKey1 @(EraCrypto era))
         (extractHash (testTxbHash @era)) ::
         SignedDSIGN (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
-    Encoding e = encodeSignedDSIGN s
+    CBOR.Encoding e = toPlainEncoding shelleyProtVer (encodeSignedDSIGN s)
 
 testOpCertSigTokens ::
   forall c.
@@ -322,7 +330,7 @@ testOpCertSigTokens = e
       signedDSIGN @c
         (sKey $ testKey1 @c)
         (OCertSignable @c (snd $ testKESKeys @c) 0 (KESPeriod 0))
-    Encoding e = encodeSignedDSIGN s
+    CBOR.Encoding e = toPlainEncoding shelleyProtVer (encodeSignedDSIGN s)
 
 testKeyHash1 :: CC.Crypto c => KeyHash 'Payment c
 testKeyHash1 = (hashKey . vKey) testKey1
@@ -362,7 +370,7 @@ testHeaderHash ::
 testHeaderHash =
   HashHeader $
     coerce
-      (hashWithSerialiser toCBOR 0 :: Hash c Int)
+      (hashWithEncoder shelleyProtVer toCBOR 0 :: Hash c Int)
 
 testBHB ::
   forall era c.
@@ -405,7 +413,7 @@ testBHB =
               (sKey $ testKey1 @c)
               (OCertSignable (snd $ testKESKeys @c) 0 (KESPeriod 0))
           ),
-      bprotver = ProtVer 0 0
+      bprotver = ProtVer minBound 0
     }
 
 testBHBSigTokens ::
@@ -425,58 +433,80 @@ testBHBSigTokens = e
         0
         (testBHB @era)
         (fst $ testKESKeys @(EraCrypto era))
-    Encoding e = encodeSignedKES s
+    CBOR.Encoding e = toPlainEncoding shelleyProtVer (encodeSignedKES s)
 
 tests :: TestTree
 tests =
   testGroup
     "CBOR Serialization Tests (Encoding)"
     [ checkEncodingCBOR
-        "list"
+        byronProtVer
+        "list (Byron)"
         ([1] :: [Integer])
         (T (TkListBegin . TkInteger 1 . TkBreak)),
       checkEncodingCBOR
-        "set"
+        shelleyProtVer
+        "list (Shelley)"
+        ([1] :: [Integer])
+        (T (TkListLen 1 . TkInteger 1)),
+      checkEncodingCBOR
+        byronProtVer
+        "set (Byron)"
         (Set.singleton (1 :: Integer))
         (T (TkTag 258 . TkListLen 1 . TkInteger 1)),
       checkEncodingCBOR
+        shelleyProtVer
+        "set (Shelley)"
+        (Set.singleton (1 :: Integer))
+        (T (TkListLen 1 . TkInteger 1)),
+      checkEncodingCBOR
+        shelleyProtVer
         "map"
         (Map.singleton (1 :: Integer) (1 :: Integer))
         (T (TkMapLen 1 . TkInteger 1 . TkInteger 1)),
       checkEncodingCBOR
+        shelleyProtVer
         "coin"
         (Coin 30)
         (T (TkWord64 30)),
       checkEncodingCBOR
+        shelleyProtVer
         "rational"
         (unsafeBoundRational (1 % 2) :: UnitInterval)
         (T (TkTag 30 . TkListLen 2 . TkWord64 1 . TkWord64 2)),
       checkEncodingCBOR
+        shelleyProtVer
         "slot"
         (SlotNo 7)
         (T (TkWord64 7)),
       checkEncodingCBOR
+        shelleyProtVer
         "neutral_nonce"
         NeutralNonce
         (T (TkListLen 1 . TkWord 0)),
       checkEncodingCBOR
+        shelleyProtVer
         "nonce"
         (mkNonceFromNumber 99)
         (T (TkListLen 2 . TkWord 1 . TkBytes (getRawNonce $ mkNonceFromNumber 99))),
       checkEncodingCBOR
+        shelleyProtVer
         "key_hash"
         (testKeyHash1 @C_Crypto)
         (T (TkBytes (getRawKeyHash (testKeyHash1 @C_Crypto)))),
       checkEncodingCBOR
+        shelleyProtVer
         "credential_key_hash"
         (testPayCred @C_Crypto)
         (T (TkListLen 2 . TkWord 0) <> S (testKeyHash1 @C_Crypto)),
       checkEncodingCBOR
+        shelleyProtVer
         "txin"
         (TxIn @C_Crypto genesisId minBound)
         (T (TkListLen 2) <> S (genesisId :: TxId C_Crypto) <> T (TkWord64 0)),
       let a = Addr Testnet testPayCred StakeRefNull
        in checkEncodingCBOR
+            shelleyProtVer
             "txout"
             (ShelleyTxOut @C a (Coin 2))
             ( T (TkListLen 2)
@@ -486,6 +516,7 @@ tests =
       case makeWitnessVKey @C_Crypto (testTxbHash @C) testKey1 of
         w@(WitVKey vk _sig) ->
           checkEncodingCBORAnnotated
+            shelleyProtVer
             "vkey_witnesses"
             w -- Transaction _witnessVKeySet element
             ( T (TkListLen 2)
@@ -493,6 +524,7 @@ tests =
                 <> T (testKey1SigToken @C) -- signature
             ),
       checkEncoding
+        shelleyProtVer
         toCBOR
         deserializeMultiSigMap
         "script_hash_to_scripts"
@@ -504,6 +536,7 @@ tests =
       -- checkEncodingCBOR "withdrawal_key"
       let r = RewardAcnt Testnet (testStakeCred @C_Crypto)
        in checkEncodingCBOR
+            shelleyProtVer
             "withdrawal"
             (Map.singleton r (Coin 123))
             ( (T $ TkMapLen 1)
@@ -514,6 +547,7 @@ tests =
       --
       let r = RewardAcnt Testnet (ScriptHashObj (testScriptHash @C_Crypto))
        in checkEncodingCBOR
+            shelleyProtVer
             "withdrawal"
             (Map.singleton r (Coin 123))
             ( (T $ TkMapLen 1)
@@ -521,6 +555,7 @@ tests =
                 <> S (Coin 123)
             ),
       checkEncodingCBOR
+        shelleyProtVer
         "register_stake_reference"
         (DCertDeleg (RegKey (testStakeCred @C_Crypto)))
         ( T (TkListLen 2)
@@ -528,6 +563,7 @@ tests =
             <> S (testStakeCred @C_Crypto) -- keyhash
         ),
       checkEncodingCBOR
+        shelleyProtVer
         "deregister_stake_reference"
         (DCertDeleg (DeRegKey (testStakeCred @C_Crypto)))
         ( T (TkListLen 2)
@@ -535,6 +571,7 @@ tests =
             <> S (testStakeCred @C_Crypto) -- keyhash
         ),
       checkEncodingCBOR
+        shelleyProtVer
         "stake_delegation"
         (DCertDeleg (Delegate (Delegation (testStakeCred @C_Crypto) (hashKey . vKey $ testStakePoolKey))))
         ( T
@@ -561,6 +598,7 @@ tests =
                 MultiHostName $ Maybe.fromJust $ textToDns "multihost.relay.com"
               ]
        in checkEncodingCBOR
+            shelleyProtVer
             "register_pool"
             ( DCertPool
                 ( RegPool
@@ -602,6 +640,7 @@ tests =
                 <> S poolMDHash -- metadata hash
             ),
       checkEncodingCBOR
+        shelleyProtVer
         "retire_pool"
         ( DCertPool
             ( RetirePool @C_Crypto
@@ -617,6 +656,7 @@ tests =
             <> S (EpochNo 1729) -- epoch
         ),
       checkEncodingCBOR
+        shelleyProtVer
         "genesis_delegation"
         ( DCertGenesis
             ( GenesisDelegCert @C_Crypto
@@ -636,6 +676,7 @@ tests =
       -- checkEncodingCBOR "mir"
       let rws = StakeAddressesMIR $ Map.singleton (testStakeCred @C_Crypto) (DeltaCoin 77)
        in checkEncodingCBOR
+            shelleyProtVer
             "mir"
             (DCertMir (MIRCert ReservesMIR rws))
             ( T
@@ -647,6 +688,7 @@ tests =
                 <> S rws
             ),
       checkEncodingCBOR
+        shelleyProtVer
         "pparams_update_key_deposit_only"
         ( ShelleyPParams
             { _minfeeA = SNothing,
@@ -685,10 +727,11 @@ tests =
           tau = unsafeBoundRational $ 1 % 7
           d = unsafeBoundRational $ 1 % 9
           extraEntropy = NeutralNonce
-          protocolVersion = ProtVer 0 1
+          protocolVersion = ProtVer minBound 1
           minUTxOValue = Coin 121
           minPoolCost = Coin 987
        in checkEncodingCBOR
+            shelleyProtVer
             "pparams_update_all"
             ( ShelleyPParams
                 { _minfeeA = SJust minfeea,
@@ -775,6 +818,7 @@ tests =
               )
           e = EpochNo 0
        in checkEncodingCBOR
+            shelleyProtVer
             "full_update"
             (Update ppup e)
             ( T (TkListLen 2)
@@ -784,6 +828,7 @@ tests =
       -- checkEncodingCBOR "minimal_txn_body"
       let tout = ShelleyTxOut @C testAddrE (Coin 2)
        in checkEncodingCBORAnnotated
+            shelleyProtVer
             "txbody"
             ( ShelleyTxBody @C -- minimal transaction body
                 (Set.fromList [genesisTxIn1])
@@ -840,6 +885,7 @@ tests =
               )
               (EpochNo 0)
        in checkEncodingCBORAnnotated
+            shelleyProtVer
             "txbody_partial"
             ( ShelleyTxBody @C -- transaction body with some optional components
                 (Set.fromList [genesisTxIn1])
@@ -902,6 +948,7 @@ tests =
               (EpochNo 0)
           mdh = hashTxAuxData @C $ MD.ShelleyTxAuxData $ Map.singleton 13 (MD.I 17)
        in checkEncodingCBORAnnotated
+            shelleyProtVer
             "txbody_full"
             ( ShelleyTxBody @C -- transaction body with all components
                 (Set.fromList [genesisTxIn1])
@@ -948,6 +995,7 @@ tests =
           txbh = (hashAnnotated txb)
           w = makeWitnessVKey @C_Crypto txbh testKey1
        in checkEncodingCBORAnnotated
+            shelleyProtVer
             "tx_min"
             ( ShelleyTx @(ShelleyEra C_Crypto)
                 txb
@@ -980,6 +1028,7 @@ tests =
           txwits = mempty {addrWits = Set.singleton w, scriptWits = s}
           md = (MD.ShelleyTxAuxData @C) $ Map.singleton 17 (MD.I 42)
        in checkEncodingCBORAnnotated
+            shelleyProtVer
             "tx_full"
             (ShelleyTx @(ShelleyEra C_Crypto) txb txwits (SJust md))
             ( T (TkListLen 3)
@@ -1022,8 +1071,9 @@ tests =
                   (sKey (testBlockIssuerKey @C_Crypto))
                   (OCertSignable (snd $ testKESKeys @C_Crypto) 0 (KESPeriod 0))
               )
-          protover = ProtVer 0 0
+          protover = ProtVer minBound 0
        in checkEncodingCBOR
+            shelleyProtVer
             "block_header_body"
             ( BHBody
                 { bheaderBlockNo = blockNo,
@@ -1077,6 +1127,7 @@ tests =
       let sig :: (SignedKES (CC.KES C_Crypto) (BHBody C_Crypto))
           sig = signedKES () 0 (testBHB @C) (fst $ testKESKeys @C_Crypto)
        in checkEncodingCBORAnnotated
+            shelleyProtVer
             "block_header"
             (BHeader (testBHB @C) sig)
             ( (T $ TkListLen 2)
@@ -1089,6 +1140,7 @@ tests =
           bh = BHeader (testBHB @C) sig
           txns = ShelleyTxSeq StrictSeq.Empty
        in checkEncodingCBORAnnotated
+            shelleyProtVer
             "empty_block"
             (Block @C bh txns)
             ( (T $ TkListLen 4)
@@ -1138,6 +1190,7 @@ tests =
           tx5 = ShelleyTx txb5 mempty {addrWits = ws, scriptWits = ss} (SJust tx5MD)
           txns = ShelleyTxSeq $ StrictSeq.fromList [tx1, tx2, tx3, tx4, tx5]
        in checkEncodingCBORAnnotated
+            shelleyProtVer
             "rich_block"
             (Block @C bh txns)
             ( (T $ TkListLen 4)
@@ -1188,12 +1241,14 @@ tests =
                 <> S tx5MD
             ),
       checkEncodingCBOR
+        shelleyProtVer
         "epoch"
         (EpochNo 13)
         (T (TkWord64 13)),
       let n = (17 :: Natural)
           bs = Map.singleton (hashKey . vKey $ testStakePoolKey @C_Crypto) n
        in checkEncodingCBOR
+            shelleyProtVer
             "blocks_made"
             (BlocksMade bs)
             ( T (TkMapLen 1)
@@ -1201,6 +1256,7 @@ tests =
                 <> S n
             ),
       checkEncodingCBOR
+        shelleyProtVer
         "account_state"
         (AccountState (Coin 1) (Coin 2))
         ( T (TkListLen 2)
@@ -1209,6 +1265,7 @@ tests =
         ),
       let stk = [(testStakeCred @C_Crypto, CompactCoin 13)]
        in checkEncodingCBOR
+            shelleyProtVer
             "stake"
             (Stake stk)
             ( T (TkMapLen 1)
@@ -1250,6 +1307,7 @@ tests =
           ps = [(hashKey $ vKey testStakePoolKey, params)]
           fs = Coin 123
        in checkEncodingCBOR
+            shelleyProtVer
             "snapshots"
             (SnapShots mark set go fs)
             ( T (TkListLen 4)
@@ -1321,6 +1379,7 @@ tests =
               pd
               (UTxO mempty)
        in checkEncodingCBOR
+            shelleyProtVer
             "new_epoch_state"
             nes
             ( T (TkListLen 7)
@@ -1332,8 +1391,12 @@ tests =
                 <> S pd
                 <> S (UTxO @(ShelleyEra C_Crypto) mempty)
             ),
-      let actual = B16.encode . serialize' $ Ex.sleNewEpochState Ex.ledgerExamplesShelley
-          expected =
+      let actual =
+            serialize' shelleyProtVer $
+              Ex.sleNewEpochState Ex.ledgerExamplesShelley
+          expected = either error id $ B16.decode expectedHex
+          actualHex = B16.encode actual
+          expectedHex =
             "8700a1581ce0a714319812c3f773ba04ec5d6b3ffcd5aad85006805b047b082541"
               <> "0aa1581ca646474b8f5431261506b6c273d307c7569a4eb6c96b42dd4a29520a03"
               <> "86821927101903e8828283a0a0a08482a0a0a0a084a0a0000085a1825820ee155a"
@@ -1341,12 +1404,19 @@ tests =
               <> "00cb9358529df4729c3246a2a033cb9821abbfd16de4888005904abc410d6a577e"
               <> "9441ad8ed9663931906e4d43ece8f82c712b1d0235affb060a1903e80182a0a082"
               <> "a0a08483a0a0a083a0a0a083a0a0a00092000000190800000000001864d81e8200"
-              <> "01d81e820001d81e820001d81e8200018100000000009200000019080000000000"
-              <> "1864d81e820001d81e820001d81e820001d81e82000181000000010082a0008183"
-              <> "00880082000082a000000000a0a0840185a0803903ba820000a0a082a0a0a1581c"
+              <> "01d81e820001d81e820001d81e8200018100020000009200000019080000000000"
+              <> "1864d81e820001d81e820001d81e820001d81e82000181000200010082a0008183"
+              <> "00880082020082a000000000a0a0840185a0803903ba820200a0a082a0a0a1581c"
               <> "e0a714319812c3f773ba04ec5d6b3ffcd5aad85006805b047b0825418282010158"
               <> "20c5e21ab1c9f6022d81c3b25e3436cb7f1df77f9652ae3e1310c28e621dd87b4ca0"
-       in testCase "ledger state golden test" (actual @?= expected)
+       in testCase "ledger state golden test" $
+            unless (actual == expected) $
+              assertFailure $
+                unlines
+                  [ "Expected: " ++ show expectedHex,
+                    "Actual: " ++ show actualHex,
+                    diffExpr (CBORBytes expected) (CBORBytes actual)
+                  ]
     ]
   where
     genesisTxIn1 = TxIn @C_Crypto genesisId (mkTxIxPartial 1)

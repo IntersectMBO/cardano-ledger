@@ -23,14 +23,13 @@ module Cardano.Ledger.TxIn
   )
 where
 
-import Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (..), encodeListLen)
 import Cardano.HeapWords (HeapWords (..))
 import qualified Cardano.HeapWords as HW
 import Cardano.Ledger.BaseTypes (TxIx (..), mkTxIxPartial)
+import Cardano.Ledger.Binary (FromCBOR (fromCBOR), ToCBOR (..), decodeRecordNamed, encodeListLen)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.SafeHash (SafeHash)
-import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Control.DeepSeq (NFData)
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)

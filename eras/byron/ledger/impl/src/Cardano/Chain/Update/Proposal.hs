@@ -40,16 +40,6 @@ module Cardano.Chain.Update.Proposal
   )
 where
 
-import Cardano.Binary
-  ( Annotated (..),
-    ByteSpan,
-    Decoded (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    annotatedDecoder,
-    encodeListLen,
-    enforceSize,
-  )
 import Cardano.Chain.Common.Attributes (dropEmptyAttributes)
 import Cardano.Chain.Update.InstallerHash (InstallerHash)
 import Cardano.Chain.Update.ProtocolParametersUpdate (ProtocolParametersUpdate)
@@ -67,6 +57,16 @@ import Cardano.Crypto
     safeSign,
     safeToVerification,
     serializeCborHash,
+  )
+import Cardano.Ledger.Binary
+  ( Annotated (..),
+    ByteSpan,
+    Decoded (..),
+    FromCBOR (..),
+    ToCBOR (..),
+    annotatedDecoder,
+    encodeListLen,
+    enforceSize,
   )
 import Cardano.Prelude
 import Data.Aeson (ToJSON)

@@ -20,7 +20,6 @@ module Test.Cardano.Ledger.Shelley.Examples.TwoPools
   )
 where
 
-import Cardano.Binary (ToCBOR)
 import Cardano.Ledger.BaseTypes
   ( BlocksMade (..),
     BoundedRational (..),
@@ -31,8 +30,10 @@ import Cardano.Ledger.BaseTypes
     StrictMaybe (..),
     activeSlotVal,
     mkCertIxPartial,
+    natVersion,
     (⭒),
   )
+import Cardano.Ledger.Binary (ToCBOR)
 import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin
   ( Coin (..),
@@ -822,7 +823,7 @@ rsEx9Agg :: forall c. ExMock c => Map (Credential 'Staking c) (Set (Core.Reward 
 rsEx9Agg = Map.singleton Cast.carlSHK carlsRewards
 
 ppProtVer3 :: ShelleyPParams era
-ppProtVer3 = ppEx {_protocolVersion = ProtVer 3 0}
+ppProtVer3 = ppEx {_protocolVersion = ProtVer (natVersion @3) 0}
 
 expectedStEx8Agg :: forall era. (TwoPoolsConstraints era) => ChainState era
 expectedStEx8Agg = C.setPrevPParams ppProtVer3 expectedStEx8

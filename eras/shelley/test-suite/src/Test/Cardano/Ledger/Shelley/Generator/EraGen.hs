@@ -25,15 +25,16 @@ module Test.Cardano.Ledger.Shelley.Generator.EraGen
     Sets (..),
     someKeyPairs,
     allScripts,
+    mkDummyHash,
     randomByHash,
   )
 where
 
-import Cardano.Binary (ToCBOR (toCBOR), serializeEncoding')
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Address (toAddr)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (Network (..), ProtVer, ShelleyBase, StrictMaybe, UnitInterval)
+import Cardano.Ledger.Binary (ToCBOR (..), serializeEncoding', shelleyProtVer)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto, HASH)
@@ -60,7 +61,6 @@ import Cardano.Ledger.UTxO (UTxO)
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Cardano.Slotting.Slot (SlotNo)
 import Control.State.Transition.Extended (STS (..))
-import Data.Coerce (coerce)
 import Data.Default.Class (Default)
 import Data.Hashable (Hashable (..))
 import Data.Map (Map)
@@ -70,6 +70,7 @@ import Data.Set (Set)
 import GHC.Natural (Natural)
 import GHC.Records (HasField (..))
 import Lens.Micro
+import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
 import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core
   ( GenEnv (..),
@@ -78,7 +79,12 @@ import Test.Cardano.Ledger.Shelley.Generator.Core
     TwoPhase3ArgInfo (..),
     genesisCoins,
   )
-import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (ScriptClass, baseScripts, combinedScripts, keyPairs)
+import Test.Cardano.Ledger.Shelley.Generator.ScriptClass
+  ( ScriptClass,
+    baseScripts,
+    combinedScripts,
+    keyPairs,
+  )
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState)
 import Test.Cardano.Ledger.Shelley.Utils (Split (..))
 import Test.QuickCheck (Gen, choose, shuffle)
@@ -314,10 +320,7 @@ genUtxo0 ge@(GenEnv _ _ c@Constants {minGenesisUTxOouts, maxGenesisUTxOouts}) = 
 genesisId ::
   Hash.HashAlgorithm (CC.HASH c) =>
   TxId c
-genesisId = TxId (unsafeMakeSafeHash (mkDummyHash 0))
-  where
-    mkDummyHash :: forall h a. Hash.HashAlgorithm h => Int -> Hash.Hash h a
-    mkDummyHash = coerce . Hash.hashWithSerialiser @h toCBOR
+genesisId = TxId (unsafeMakeSafeHash (mkDummyHash (0 :: Int)))
 
 -- ==========================================================
 
@@ -369,7 +372,7 @@ allScripts c =
 randomByHash :: forall x. ToCBOR x => Int -> Int -> x -> Int
 randomByHash low high x = low + remainder
   where
-    n = hash (serializeEncoding' (toCBOR x))
+    n = hash (serializeEncoding' shelleyProtVer (toCBOR x))
     -- We don't really care about the hash, we only
     -- use it to pseudo-randomly pick a number bewteen low and high
     m = high - low + 1

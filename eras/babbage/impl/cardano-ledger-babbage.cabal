@@ -55,10 +55,10 @@ library
     Cardano.Ledger.Babbage.UTxO
   build-depends:
                 bytestring,
-                cardano-binary,
                 cardano-crypto-class,
                 cardano-data,
                 cardano-ledger-alonzo,
+                cardano-ledger-binary,
                 cardano-ledger-core,
                 cardano-ledger-shelley,
                 cardano-ledger-shelley-ma,

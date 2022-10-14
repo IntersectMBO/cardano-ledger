@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.ShelleyMA.Era
@@ -16,7 +17,7 @@ module Cardano.Ledger.ShelleyMA.Era
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.Binary (FromCBOR (..), MaxVersion, MinVersion, ToCBOR (..))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible (CompactForm, Compactible)
 import Cardano.Ledger.Core
@@ -73,7 +74,10 @@ class
     ToCBOR (MAValue ma c),
     EncodeMint (MAValue ma c),
     DecodeMint (MAValue ma c),
-    NoThunks (MAValue ma c)
+    NoThunks (MAValue ma c),
+    KnownNat (MAProtVer ma),
+    MinVersion <= MAProtVer ma,
+    MAProtVer ma <= MaxVersion
   ) =>
   MAClass (ma :: MaryOrAllegra) c
   where
@@ -91,8 +95,6 @@ instance CC.Crypto c => MAClass 'Allegra c where
   getScriptHash _ _ = Set.empty
   promoteMultiAsset _ _ = zero
 
--- | The actual Mary and Allegra instances, rolled into one, the MAClass superclass
---   provides the era-specific code for where they differ.
 instance MAClass ma c => Era (ShelleyMAEra ma c) where
   type EraCrypto (ShelleyMAEra ma c) = c
   type ProtVerLow (ShelleyMAEra ma c) = MAProtVer ma

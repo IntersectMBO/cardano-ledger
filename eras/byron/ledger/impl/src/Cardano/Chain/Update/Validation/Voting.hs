@@ -18,17 +18,6 @@ module Cardano.Chain.Update.Validation.Voting
   )
 where
 
-import Cardano.Binary
-  ( Annotated,
-    Decoder,
-    DecoderError (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    decodeListLen,
-    decodeWord8,
-    encodeListLen,
-    matchSize,
-  )
 import Cardano.Chain.Common (KeyHash, hashKey)
 import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Slotting (SlotNumber)
@@ -43,7 +32,19 @@ import Cardano.Crypto
     SignTag (SignUSVote),
     verifySignatureDecoded,
   )
-import Cardano.Prelude hiding (State)
+import Cardano.Ledger.Binary
+  ( Annotated,
+    Decoder,
+    DecoderError (..),
+    FromCBOR (..),
+    ToCBOR (..),
+    cborError,
+    decodeListLen,
+    decodeWord8,
+    encodeListLen,
+    matchSize,
+  )
+import Cardano.Prelude hiding (State, cborError)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as Set
 

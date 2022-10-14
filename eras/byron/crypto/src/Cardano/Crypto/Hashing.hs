@@ -1,6 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -56,17 +55,19 @@ module Cardano.Crypto.Hashing
   )
 where
 
-import Cardano.Binary
+import Cardano.Crypto.Raw (Raw (..))
+import Cardano.HeapWords
+import Cardano.Ledger.Binary
   ( Decoded (..),
     DecoderError (..),
     FromCBOR (..),
-    Raw,
     ToCBOR (..),
+    byronProtVer,
+    cborError,
     serialize,
     withWordSize,
   )
-import Cardano.HeapWords
-import Cardano.Prelude
+import Cardano.Prelude hiding (cborError)
 import Crypto.Hash (Blake2b_256, Digest, HashAlgorithm, hashDigestSize)
 import qualified Crypto.Hash as Hash
 import Data.Aeson
@@ -201,7 +202,7 @@ decodeAbstractHash prettyHash = do
 -- | Hash the 'ToCBOR'-serialised version of a value
 -- Once this is no longer used outside this module it should be made private.
 abstractHash :: (HashAlgorithm algo, ToCBOR a) => a -> AbstractHash algo a
-abstractHash = unsafeAbstractHash . serialize
+abstractHash = unsafeAbstractHash . serialize byronProtVer
 
 -- | Hash a lazy 'LByteString'
 --
@@ -237,7 +238,7 @@ abstractHashToBytes (AbstractHash h) = SBS.fromShort h
 
 -- | The 'SBS.ShortByteString' representation of the hash value.
 unsafeAbstractHashFromShort :: SBS.ShortByteString -> AbstractHash algo a
-unsafeAbstractHashFromShort h = (AbstractHash h)
+unsafeAbstractHashFromShort = AbstractHash
 
 -- | The 'SBS.ShortByteString' representation of the hash value.
 abstractHashToShort :: AbstractHash algo a -> SBS.ShortByteString

@@ -13,7 +13,6 @@ import qualified Hedgehog.Gen as Gen
 import Hedgehog.Internal.Property (failWith)
 import qualified Hedgehog.Range as Range
 import Numeric.Natural (Natural)
-import Test.Cardano.Ledger.Binary.Vintage.Helpers (byronProtVer)
 
 {- HLINT ignore "Use record patterns" -}
 

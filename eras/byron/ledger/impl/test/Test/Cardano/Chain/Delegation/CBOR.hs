@@ -10,11 +10,6 @@ import Cardano.Prelude
 import Data.List ((!!))
 import GetDataFileName ((<:<))
 import Hedgehog (Property)
-import Test.Cardano.Binary.Helpers.GoldenRoundTrip
-  ( goldenTestCBOR,
-    roundTripsCBORBuildable,
-    roundTripsCBORShow,
-  )
 import Test.Cardano.Chain.Delegation.Example (exampleCertificates)
 import Test.Cardano.Chain.Delegation.Gen
   ( genCertificate,
@@ -22,6 +17,11 @@ import Test.Cardano.Chain.Delegation.Gen
     genPayload,
   )
 import Test.Cardano.Crypto.Gen (feedPM)
+import Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip
+  ( goldenTestCBOR,
+    roundTripsCBORBuildable,
+    roundTripsCBORShow,
+  )
 import Test.Cardano.Prelude
 import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
 

@@ -12,7 +12,6 @@ module Cardano.Chain.Byron.API.Mempool
   )
 where
 
-import Cardano.Binary
 import qualified Cardano.Chain.Block as CC
 import Cardano.Chain.Byron.API.Common
 import qualified Cardano.Chain.Delegation as Delegation
@@ -26,9 +25,8 @@ import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Chain.Update.Validation.Interface as U.Iface
 import qualified Cardano.Chain.ValidationMode as CC
 import Cardano.Crypto.ProtocolMagic
+import Cardano.Ledger.Binary
 import Cardano.Prelude hiding (cborError)
-import qualified Codec.CBOR.Decoding as CBOR
-import qualified Codec.CBOR.Encoding as CBOR
 import qualified Codec.CBOR.Write as CBOR
 import qualified Data.Set as Set
 
@@ -51,18 +49,18 @@ data ApplyMempoolPayloadErr
 
 instance ToCBOR ApplyMempoolPayloadErr where
   toCBOR (MempoolTxErr err) =
-    CBOR.encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR err
+    encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR err
   toCBOR (MempoolDlgErr err) =
-    CBOR.encodeListLen 2 <> toCBOR (1 :: Word8) <> toCBOR err
+    encodeListLen 2 <> toCBOR (1 :: Word8) <> toCBOR err
   toCBOR (MempoolUpdateProposalErr err) =
-    CBOR.encodeListLen 2 <> toCBOR (2 :: Word8) <> toCBOR err
+    encodeListLen 2 <> toCBOR (2 :: Word8) <> toCBOR err
   toCBOR (MempoolUpdateVoteErr err) =
-    CBOR.encodeListLen 2 <> toCBOR (3 :: Word8) <> toCBOR err
+    encodeListLen 2 <> toCBOR (3 :: Word8) <> toCBOR err
 
 instance FromCBOR ApplyMempoolPayloadErr where
   fromCBOR = do
     enforceSize "ApplyMempoolPayloadErr" 2
-    CBOR.decodeWord8 >>= \case
+    decodeWord8 >>= \case
       0 -> MempoolTxErr <$> fromCBOR
       1 -> MempoolDlgErr <$> fromCBOR
       2 -> MempoolUpdateProposalErr <$> fromCBOR
@@ -113,7 +111,7 @@ mempoolPayloadReencode = go
     go (CC.MempoolUpdateVote payload) = reencode payload
 
     reencode :: (Functor f, ToCBOR (f ())) => f a -> ByteString
-    reencode = CBOR.toStrictByteString . toCBOR . void
+    reencode = CBOR.toStrictByteString . toPlainEncoding byronProtVer . toCBOR . void
 
 {-------------------------------------------------------------------------------
   Applying transactions
@@ -174,8 +172,7 @@ mkUpdateEnvironment cfg currentSlot delegationMap =
     toNumGenKeys :: Int -> Word8
     toNumGenKeys n
       | n > fromIntegral (maxBound :: Word8) =
-          panic $
-            "toNumGenKeys: Too many genesis keys"
+          panic "toNumGenKeys: Too many genesis keys"
       | otherwise = fromIntegral n
 
 applyTxAux ::

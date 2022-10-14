@@ -14,19 +14,20 @@ module Cardano.Crypto.Signing.Redeem.Signature
   )
 where
 
-import Cardano.Binary
-  ( Annotated,
-    Decoded (..),
-    FromCBOR,
-    Raw,
-    ToCBOR,
-    serialize',
-  )
 import Cardano.Crypto.Orphans ()
 import Cardano.Crypto.ProtocolMagic (ProtocolMagicId)
+import Cardano.Crypto.Raw (Raw (..))
 import Cardano.Crypto.Signing.Redeem.SigningKey (RedeemSigningKey (..))
 import Cardano.Crypto.Signing.Redeem.VerificationKey (RedeemVerificationKey (..))
 import Cardano.Crypto.Signing.Tag (SignTag, signTag, signTagDecoded)
+import Cardano.Ledger.Binary
+  ( Annotated,
+    Decoded (..),
+    FromCBOR,
+    ToCBOR,
+    byronProtVer,
+    serialize',
+  )
 import Cardano.Prelude
 import qualified Crypto.PubKey.Ed25519 as Ed25519
 import Data.Aeson.TH (defaultOptions, deriveJSON)
@@ -55,7 +56,7 @@ redeemSign ::
   RedeemSigningKey ->
   a ->
   RedeemSignature a
-redeemSign pm tag k = coerce . redeemSignRaw pm (Just tag) k . serialize'
+redeemSign pm tag k = coerce . redeemSignRaw pm (Just tag) k . serialize' byronProtVer
 
 -- | Alias for constructor
 redeemSignRaw ::
@@ -79,7 +80,7 @@ verifyRedeemSig ::
   RedeemSignature a ->
   Bool
 verifyRedeemSig pm tag k x s =
-  verifyRedeemSigRaw k (signTag pm tag <> serialize' x) (coerce s)
+  verifyRedeemSigRaw k (signTag pm tag <> serialize' minBound x) (coerce s)
 
 verifyRedeemSigDecoded ::
   Decoded t =>

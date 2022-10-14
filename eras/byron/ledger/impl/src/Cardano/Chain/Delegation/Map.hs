@@ -20,8 +20,8 @@ module Cardano.Chain.Delegation.Map
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Chain.Common.KeyHash (KeyHash)
+import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Prelude hiding (Map)
 import Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap

@@ -1,9 +1,13 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeApplications #-}
+
 module Test.Cardano.Ledger.Shelley.Generator.Constants
   ( Constants (..),
     defaultConstants,
   )
 where
 
+import Cardano.Ledger.BaseTypes (Version, natVersion)
 import Data.Word (Word64)
 import Numeric.Natural (Natural)
 
@@ -89,7 +93,7 @@ data Constants = Constants
     maxTreasury :: Integer,
     minReserves :: Integer,
     maxReserves :: Integer,
-    minMajorPV :: Natural,
+    minMajorPV :: Version,
     -- | When generating Tx, we want the UTxO size to fluctuate around this point. If
     --   it gets too small, we can't balance the fee, too large it gets too complicated.
     genTxStableUtxoSize :: Int,
@@ -141,7 +145,7 @@ defaultConstants =
       maxTreasury = 10000000,
       minReserves = 1000000,
       maxReserves = 10000000,
-      minMajorPV = 2,
+      minMajorPV = natVersion @2,
       genTxStableUtxoSize = 100,
       genTxUtxoIncrement = 3
     }

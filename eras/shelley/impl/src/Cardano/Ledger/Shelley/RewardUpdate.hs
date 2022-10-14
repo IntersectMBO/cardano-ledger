@@ -17,39 +17,34 @@
 --     compuation over many blocks, once the chain reaches a stability point.
 module Cardano.Ledger.Shelley.RewardUpdate where
 
-import Cardano.Binary
+import Cardano.Ledger.BaseTypes (ProtVer (..), ShelleyBase)
+import Cardano.Ledger.Binary
   ( FromCBOR (..),
     ToCBOR (..),
+    decodeRecordNamed,
     encodeListLen,
+    fromNotSharedCBOR,
   )
-import Cardano.Ledger.BaseTypes (ProtVer (..), ShelleyBase)
+import Cardano.Ledger.Binary.Coders
+  ( Decode (..),
+    Encode (..),
+    decode,
+    encode,
+    (!>),
+    (<!),
+  )
 import Cardano.Ledger.Coin (Coin (..), CompactForm, DeltaCoin (..))
 import Cardano.Ledger.Compactible (Compactible (fromCompact))
 import Cardano.Ledger.Core (Reward (..), RewardType (MemberReward))
 import Cardano.Ledger.Credential (Credential (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Cardano.Ledger.Shelley.PoolRank (Likelihood, NonMyopic)
 import Cardano.Ledger.Shelley.Rewards
   ( PoolRewardInfo (..),
     rewardOnePoolMember,
   )
 import Control.DeepSeq (NFData (..))
-import Data.Coders
-  ( Decode (..),
-    Encode (..),
-    decode,
-    encode,
-    mapDecode,
-    mapEncode,
-    setDecode,
-    setEncode,
-    vMapDecode,
-    vMapEncode,
-    (!>),
-    (<!),
-  )
 import Data.Default.Class (def)
 import Data.Group (invert)
 import Data.Kind (Type)
@@ -59,7 +54,6 @@ import Data.Maybe (fromMaybe)
 import Data.Pulse (Pulsable (..), completeM)
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Sharing (fromNotSharedCBOR)
 import Data.Typeable
 import Data.VMap as VMap
 import GHC.Generics (Generic)
@@ -165,8 +159,8 @@ instance CC.Crypto c => ToCBOR (RewardSnapShot c) where
           !> To dr1
           !> To r
           !> To dt1
-          !> mapEncode lhs
-          !> mapEncode lrs
+          !> To lhs
+          !> To lrs
       )
 
 instance CC.Crypto c => FromCBOR (RewardSnapShot c) where
@@ -179,8 +173,8 @@ instance CC.Crypto c => FromCBOR (RewardSnapShot c) where
           <! From
           <! From
           <! From
-          <! mapDecode
-          <! mapDecode
+          <! From
+          <! From
       )
 
 -- | RewardSnapShot can act as a Proxy for PParams when only the protocol version is needed.
@@ -219,22 +213,22 @@ instance (CC.Crypto c) => ToCBOR (FreeVars c) where
       } =
       encode
         ( Rec FreeVars
-            !> vMapEncode delegs
-            !> setEncode addrsRew
+            !> To delegs
+            !> To addrsRew
             !> To totalStake
             !> To pp_pv
-            !> mapEncode poolRewardInfo
+            !> To poolRewardInfo
         )
 
 instance (CC.Crypto c) => FromCBOR (FreeVars c) where
   fromCBOR =
     decode
       ( RecD FreeVars
-          <! vMapDecode {- delegs -}
-          <! setDecode {- addrsRew -}
+          <! From {- delegs -}
+          <! From {- addrsRew -}
           <! From {- totalStake -}
           <! From {- pp_pv -}
-          <! mapDecode {- poolRewardInfo -}
+          <! From {- poolRewardInfo -}
       )
 
 -- =====================================================================
@@ -298,7 +292,8 @@ instance Pulsable (RewardPulser c) where
         let !(steps, !balance') = VMap.splitAt n balance
             ans' = VMap.foldlWithKey (rewardStakePoolMember free) ans steps
         pure $! RSLP n free balance' ans'
-  completeM (RSLP _ free balance (clearRecent -> ans)) = pure $ VMap.foldlWithKey (rewardStakePoolMember free) ans balance
+  completeM (RSLP _ free balance (clearRecent -> ans)) =
+    pure $ VMap.foldlWithKey (rewardStakePoolMember free) ans balance
 
 deriving instance Eq ans => Eq (RewardPulser c m ans)
 
@@ -319,13 +314,11 @@ instance NFData (Pulser c) where
 
 instance (CC.Crypto c) => ToCBOR (Pulser c) where
   toCBOR (RSLP n free balance ans) =
-    encode (Rec RSLP !> To n !> To free !> vMapEncode balance !> To ans)
+    encode (Rec RSLP !> To n !> To free !> To balance !> To ans)
 
 instance (CC.Crypto c) => FromCBOR (Pulser c) where
   fromCBOR =
-    decode
-      ( RecD RSLP <! From <! From <! vMapDecode <! From
-      )
+    decode (RecD RSLP <! From <! From <! From <! From)
 
 -- =========================================================================
 

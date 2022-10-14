@@ -16,16 +16,16 @@ module Cardano.Chain.Slotting.EpochAndSlotCount
   )
 where
 
-import Cardano.Binary
+import Cardano.Chain.Slotting.EpochNumber (EpochNumber (..))
+import Cardano.Chain.Slotting.EpochSlots (EpochSlots (..))
+import Cardano.Chain.Slotting.SlotCount (SlotCount (..))
+import Cardano.Chain.Slotting.SlotNumber (SlotNumber (..))
+import Cardano.Ledger.Binary
   ( FromCBOR (..),
     ToCBOR (..),
     encodeListLen,
     enforceSize,
   )
-import Cardano.Chain.Slotting.EpochNumber (EpochNumber (..))
-import Cardano.Chain.Slotting.EpochSlots (EpochSlots (..))
-import Cardano.Chain.Slotting.SlotCount (SlotCount (..))
-import Cardano.Chain.Slotting.SlotNumber (SlotNumber (..))
 import Cardano.Prelude
 import Formatting (bprint, ords)
 import qualified Formatting.Buildable as B

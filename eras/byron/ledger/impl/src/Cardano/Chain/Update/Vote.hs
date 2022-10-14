@@ -34,18 +34,6 @@ module Cardano.Chain.Update.Vote
   )
 where
 
-import Cardano.Binary
-  ( Annotated (Annotated, unAnnotated),
-    ByteSpan,
-    Decoded (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    annotatedDecoder,
-    encodeListLen,
-    enforceSize,
-    fromCBORAnnotated,
-  )
-import qualified Cardano.Binary as Binary (annotation)
 import Cardano.Chain.Common (addressHash)
 import Cardano.Chain.Update.Proposal (Proposal, UpId)
 import Cardano.Crypto
@@ -63,6 +51,18 @@ import Cardano.Crypto
     sign,
     toVerification,
   )
+import Cardano.Ledger.Binary
+  ( Annotated (Annotated, unAnnotated),
+    ByteSpan,
+    Decoded (..),
+    FromCBOR (..),
+    ToCBOR (..),
+    annotatedDecoder,
+    encodeListLen,
+    enforceSize,
+    fromCBORAnnotated,
+  )
+import qualified Cardano.Ledger.Binary as Binary (annotation)
 import Cardano.Prelude
 import Data.Aeson (ToJSON)
 import Data.Text.Lazy.Builder (Builder)

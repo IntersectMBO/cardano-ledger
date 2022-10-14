@@ -37,23 +37,6 @@ module Cardano.Protocol.TPraos.BHeader
   )
 where
 
-import Cardano.Binary
-  ( Annotator (..),
-    Case (..),
-    FromCBOR (fromCBOR),
-    ToCBOR (..),
-    TokenType (TypeNull),
-    annotatorSlice,
-    decodeNull,
-    encodeListLen,
-    encodeNull,
-    encodePreEncoded,
-    peekTokenType,
-    serialize',
-    serializeEncoding,
-    szCases,
-    withWordSize,
-  )
 import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation (..))
@@ -69,6 +52,31 @@ import Cardano.Ledger.BaseTypes
     activeSlotVal,
     mkNonceFromNumber,
     mkNonceFromOutputVRF,
+  )
+import Cardano.Ledger.Binary
+  ( Annotator (..),
+    Case (..),
+    FromCBOR (fromCBOR),
+    FromCBORGroup (..),
+    ToCBOR (..),
+    ToCBORGroup (..),
+    TokenType (TypeNull),
+    annotatorSlice,
+    decodeNull,
+    decodeRecordNamed,
+    encodeListLen,
+    encodeNull,
+    encodePreEncoded,
+    encodedSigKESSizeExpr,
+    encodedVerKeyVRFSizeExpr,
+    hashToCBOR,
+    listLenInt,
+    peekTokenType,
+    runByteBuilder,
+    serialize',
+    serializeEncoding,
+    szCases,
+    withWordSize,
   )
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Hashes
@@ -90,13 +98,6 @@ import Cardano.Ledger.Keys
     hashKey,
   )
 import Cardano.Ledger.NonIntegral (CompareResult (..), taylorExpCmp)
-import Cardano.Ledger.Serialization
-  ( FromCBORGroup (..),
-    ToCBORGroup (..),
-    decodeRecordNamed,
-    listLenInt,
-    runByteBuilder,
-  )
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Cardano.Protocol.TPraos.OCert (OCert (..))
 import Cardano.Slotting.Slot (WithOrigin (..))
@@ -185,7 +186,7 @@ instance
   CC.Crypto c =>
   SignableRepresentation (BHBody c)
   where
-  getSignableRepresentation = serialize'
+  getSignableRepresentation bh = serialize' (pvMajor (bprotver bh)) bh
 
 instance
   CC.Crypto c =>
@@ -218,7 +219,7 @@ instance
       + encodedSizeExpr size (bheaderSlotNo <$> proxy)
       + encodedSizeExpr size (bheaderPrev <$> proxy)
       + encodedSizeExpr size (bheaderVk <$> proxy)
-      + VRF.encodedVerKeyVRFSizeExpr (bheaderVrfVk <$> proxy)
+      + encodedVerKeyVRFSizeExpr (bheaderVrfVk <$> proxy)
       + encodedSizeExpr size (bheaderEta <$> proxy)
       + encodedSizeExpr size (bheaderL <$> proxy)
       + encodedSizeExpr size (toWord64 . bsize <$> proxy)
@@ -290,7 +291,7 @@ pattern BHeader bHeaderBody' bHeaderSig' <-
   where
     BHeader body sig =
       let mkBytes bhBody kESig =
-            serializeEncoding $
+            serializeEncoding (pvMajor (bprotver bhBody)) $
               encodeListLen 2
                 <> toCBOR bhBody
                 <> encodeSignedKES kESig
@@ -306,7 +307,7 @@ instance
   encodedSizeExpr size proxy =
     1
       + encodedSizeExpr size (bHeaderBody' <$> proxy)
-      + KES.encodedSigKESSizeExpr (KES.getSig . bHeaderSig' <$> proxy)
+      + encodedSigKESSizeExpr (KES.getSig . bHeaderSig' <$> proxy)
 
 instance
   CC.Crypto c =>
@@ -323,7 +324,9 @@ bhHash ::
   CC.Crypto c =>
   BHeader c ->
   HashHeader c
-bhHash = HashHeader . Hash.castHash . Hash.hashWithSerialiser toCBOR
+bhHash bh = HashHeader . Hash.castHash . hashToCBOR version $ bh
+  where
+    version = pvMajor (bprotver (bHeaderBody' bh))
 
 -- | HashHeader to Nonce
 -- What is going on here?

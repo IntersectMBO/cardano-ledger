@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -13,9 +12,9 @@ module Cardano.Chain.Common.Compact
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeFull', serialize')
 import Cardano.Chain.Common.Address (Address (..))
 import Cardano.HeapWords (HeapWords)
+import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), byronProtVer, decodeFull', serialize')
 import Cardano.Prelude
 import Data.ByteString.Short (ShortByteString)
 import qualified Data.ByteString.Short as BSS (fromShort, toShort)
@@ -41,11 +40,11 @@ instance ToCBOR CompactAddress where
 
 toCompactAddress :: Address -> CompactAddress
 toCompactAddress addr =
-  CompactAddress (BSS.toShort (serialize' addr))
+  CompactAddress (BSS.toShort (serialize' byronProtVer addr))
 
 fromCompactAddress :: CompactAddress -> Address
 fromCompactAddress (CompactAddress addr) =
-  case decodeFull' (BSS.fromShort addr) of
+  case decodeFull' byronProtVer (BSS.fromShort addr) of
     Left err -> panic ("fromCompactAddress: impossible: " <> show err)
     Right decAddr -> decAddr
 

@@ -31,31 +31,29 @@ module Cardano.Ledger.MemoBytes
     shorten,
     showMemo,
     printMemo,
-    roundTripMemo,
     shortToLazy,
     contentsEq,
   )
 where
 
-import Cardano.Binary
+import Cardano.Crypto.Hash (HashAlgorithm (hashAlgorithmName))
+import Cardano.Ledger.Binary
   ( Annotator (..),
     FromCBOR (fromCBOR),
     ToCBOR (toCBOR),
     encodePreEncoded,
+    serializeEncoding,
     withSlice,
   )
-import Cardano.Crypto.Hash (HashAlgorithm (hashAlgorithmName))
-import Cardano.Ledger.Core (Era (EraCrypto))
+import Cardano.Ledger.Binary.Coders (Encode, encode, runE)
+import Cardano.Ledger.Core (Era (EraCrypto), eraProtVerLow)
 import Cardano.Ledger.Crypto (HASH)
 import Cardano.Ledger.SafeHash (SafeHash, SafeToHash (..))
-import Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
-import Codec.CBOR.Write (toLazyByteString)
 import Control.DeepSeq (NFData (..))
 import Data.ByteString.Lazy (fromStrict, toStrict)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy as Lazy
 import Data.ByteString.Short (ShortByteString, fromShort, toShort)
-import Data.Coders (Encode, encode, runE)
 import Data.Typeable
 import GHC.Base (Type)
 import GHC.Generics (Generic)
@@ -104,7 +102,9 @@ instance
     (Annotator getT, Annotator getBytes) <- withSlice fromCBOR
     pure (Annotator (\fullbytes -> mkMemoBytes (getT fullbytes) (getBytes fullbytes)))
 
-instance Eq (MemoBytes t era) where (Memo' _ x _) == (Memo' _ y _) = x == y
+-- | Binary representation is compared, rather than the Haskell type
+instance Eq (MemoBytes t era) where
+  x == y = mbBytes x == mbBytes y
 
 instance (Show (t era), HashAlgorithm (HASH (EraCrypto era))) => Show (MemoBytes t era) where
   show (Memo' y _ h) = show y <> " (" <> hashAlgorithmName (Proxy :: Proxy (HASH (EraCrypto era))) <> ": " <> show h <> ")"
@@ -136,17 +136,8 @@ printMemo :: Show (t era) => MemoBytes t era -> IO ()
 printMemo x = putStrLn (showMemo x)
 
 -- | Create MemoBytes from its CBOR encoding
-memoBytes :: Era era => Encode w (t era) -> MemoBytes t era
-memoBytes t = mkMemoBytes (runE t) (toLazyByteString (encode t))
-
--- | Try and deserialize a MemoBytes, and then reconstruct it. Useful in tests.
-roundTripMemo :: (FromCBOR (t era), Era era) => MemoBytes t era -> Either DeserialiseFailure (Lazy.ByteString, MemoBytes t era)
-roundTripMemo (Memo' _t bytes _hash) =
-  case deserialiseFromBytes fromCBOR lbs of
-    Left err -> Left err
-    Right (leftover, newt) -> Right (leftover, mkMemoBytes newt lbs)
-  where
-    lbs = fromStrict (fromShort bytes)
+memoBytes :: forall era w t. Era era => Encode w (t era) -> MemoBytes t era
+memoBytes t = mkMemoBytes (runE t) (serializeEncoding (eraProtVerLow @era) (encode t))
 
 -- | Helper function. Converts a short bytestring to a lazy bytestring.
 shortToLazy :: ShortByteString -> BSL.ByteString

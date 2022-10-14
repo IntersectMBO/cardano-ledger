@@ -23,7 +23,6 @@ module Cardano.Ledger.Babbage.Rules.Utxo
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..), serialize)
 import Cardano.Ledger.Alonzo.Rules
   ( AlonzoUtxoEvent (..),
     AlonzoUtxoPredFailure (..),
@@ -54,12 +53,14 @@ import Cardano.Ledger.Babbage.TxBody
     BabbageTxOut,
   )
 import Cardano.Ledger.BaseTypes
-  ( ProtVer,
+  ( ProtVer (..),
     ShelleyBase,
     epochInfo,
     networkId,
     systemStart,
   )
+import Cardano.Ledger.Binary (FromCBOR (..), Sized (..), ToCBOR (..), serialize)
+import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Rules.ValidationMode
@@ -68,7 +69,6 @@ import Cardano.Ledger.Rules.ValidationMode
     runTest,
     runTestOnSignal,
   )
-import Cardano.Ledger.Serialization (Sized (..))
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, UtxoEnv)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
@@ -94,7 +94,6 @@ import Control.State.Transition.Extended
   )
 import Data.Bifunctor (first)
 import qualified Data.ByteString.Lazy as BSL
-import Data.Coders
 import Data.Coerce (coerce)
 import Data.Foldable (Foldable (foldl'), sequenceA_, toList)
 import Data.List.NonEmpty (NonEmpty)
@@ -310,10 +309,11 @@ validateOutputTooBigUTxO pp outs =
   failureUnless (null outputsTooBig) $ OutputTooBigUTxO outputsTooBig
   where
     maxValSize = getField @"_maxValSize" pp
+    protVer = getField @"_protocolVersion" pp
     outputsTooBig = foldl' accum [] outs
     accum ans txOut =
       let v = txOut ^. valueTxOutL
-          serSize = fromIntegral $ BSL.length $ serialize v
+          serSize = fromIntegral $ BSL.length $ serialize (pvMajor protVer) v
        in if serSize > maxValSize
             then (fromIntegral serSize, fromIntegral maxValSize, txOut) : ans
             else ans
@@ -333,7 +333,6 @@ utxoTransition ::
     HasField "_maxValSize" (PParams era) Natural,
     HasField "_maxCollateralInputs" (PParams era) Natural,
     HasField "_maxTxExUnits" (PParams era) ExUnits,
-    HasField "_protocolVersion" (PParams era) ProtVer,
     HasField "_collateralPercentage" (PParams era) Natural,
     HasField "_keyDeposit" (PParams era) Coin,
     HasField "_poolDeposit" (PParams era) Coin,

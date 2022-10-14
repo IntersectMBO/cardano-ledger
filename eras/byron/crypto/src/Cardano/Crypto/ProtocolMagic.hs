@@ -20,7 +20,7 @@ module Cardano.Crypto.ProtocolMagic
   )
 where
 
-import Cardano.Binary
+import Cardano.Ledger.Binary
   ( Annotated (..),
     FromCBOR (..),
     ToCBOR (..),

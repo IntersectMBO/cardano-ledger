@@ -8,11 +8,12 @@ module Test.Cardano.Chain.MempoolPayload.CBOR
   )
 where
 
-import Cardano.Binary
+import Cardano.Ledger.Binary
   ( ByteSpan,
     Decoder,
     FromCBOR (..),
     ToCBOR,
+    byronProtVer,
     decodeFull,
     decodeFullDecoder,
     fromCBOR,
@@ -24,11 +25,6 @@ import Cardano.Prelude
 import qualified Data.ByteString.Lazy as LBS
 import GetDataFileName ((<:<))
 import Hedgehog (Property, tripping)
-import Test.Cardano.Binary.Helpers.GoldenRoundTrip
-  ( goldenTestCBOR,
-    goldenTestCBORExplicit,
-    roundTripsCBORShow,
-  )
 import Test.Cardano.Chain.MempoolPayload.Example
   ( exampleMempoolPayload,
     exampleMempoolPayload1,
@@ -37,6 +33,11 @@ import Test.Cardano.Chain.MempoolPayload.Example
   )
 import Test.Cardano.Chain.MempoolPayload.Gen (genMempoolPayload)
 import Test.Cardano.Crypto.Gen (feedPM)
+import Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip
+  ( goldenTestCBOR,
+    goldenTestCBORExplicit,
+    roundTripsCBORShow,
+  )
 import Test.Cardano.Prelude
 import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
 
@@ -52,10 +53,10 @@ fillInByteString ::
   f () ->
   f ByteString
 fillInByteString a =
-  either (panic . show) identity $ decodeFullDecoder mempty dec bytes
+  either (panic . show) identity $ decodeFullDecoder byronProtVer mempty dec bytes
   where
     bytes :: LByteString
-    bytes = serialize a
+    bytes = serialize byronProtVer a
 
     dec :: Decoder s (f ByteString)
     dec = fmap (LBS.toStrict . slice bytes) <$> fromCBOR
@@ -143,7 +144,7 @@ ts_roundTripMempoolPayload =
 ts_roundTripMempoolPayloadFilledIn :: TSProperty
 ts_roundTripMempoolPayloadFilledIn =
   eachOfTS 200 (feedPM genMempoolPayload) $ \x ->
-    tripping x (serialize . fillInByteString) decodeFull
+    tripping x (serialize byronProtVer . fillInByteString) (decodeFull byronProtVer)
 
 tests :: TSGroup
 tests = concatTSGroups [const $$discoverGolden, $$discoverRoundTripArg]

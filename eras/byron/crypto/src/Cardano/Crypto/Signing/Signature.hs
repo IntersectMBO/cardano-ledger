@@ -1,10 +1,8 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -31,18 +29,8 @@ module Cardano.Crypto.Signing.Signature
   )
 where
 
-import Cardano.Binary
-  ( Annotated (..),
-    Decoded (..),
-    Decoder,
-    Encoding,
-    FromCBOR (..),
-    Raw,
-    ToCBOR (..),
-    serialize',
-    serializeEncoding,
-  )
 import Cardano.Crypto.ProtocolMagic (ProtocolMagicId)
+import Cardano.Crypto.Raw (Raw (..))
 import Cardano.Crypto.Signing.Safe
   ( PassPhrase (..),
     SafeSigner (..),
@@ -51,7 +39,19 @@ import Cardano.Crypto.Signing.SigningKey (SigningKey (..))
 import Cardano.Crypto.Signing.Tag (SignTag (..), signTag, signTagDecoded)
 import Cardano.Crypto.Signing.VerificationKey (VerificationKey (..))
 import qualified Cardano.Crypto.Wallet as CC
-import Cardano.Prelude
+import Cardano.Ledger.Binary
+  ( Annotated (..),
+    Decoded (..),
+    Decoder,
+    Encoding,
+    FromCBOR (..),
+    ToCBOR (..),
+    byronProtVer,
+    serialize',
+    serializeEncoding,
+    toCborError,
+  )
+import Cardano.Prelude hiding (toCborError)
 import Data.Aeson (FromJSON (..), ToJSON (..))
 import Data.ByteArray (ScrubbedBytes)
 import qualified Data.ByteString.Base16 as B16
@@ -151,7 +151,8 @@ sign pm tag sk = signEncoded pm tag sk . toCBOR
 -- | Like 'sign' but without the 'ToCBOR' constraint
 signEncoded ::
   ProtocolMagicId -> SignTag -> SigningKey -> Encoding -> Signature a
-signEncoded pm tag sk = coerce . signRaw pm (Just tag) sk . BSL.toStrict . serializeEncoding
+signEncoded pm tag sk =
+  coerce . signRaw pm (Just tag) sk . BSL.toStrict . serializeEncoding byronProtVer
 
 -- | Sign a 'Raw' bytestring
 signRaw ::
@@ -170,7 +171,7 @@ signRaw pm mTag (SigningKey sk) x =
 
 safeSign ::
   ToCBOR a => ProtocolMagicId -> SignTag -> SafeSigner -> a -> Signature a
-safeSign pm t ss = coerce . safeSignRaw pm (Just t) ss . serialize'
+safeSign pm t ss = coerce . safeSignRaw pm (Just t) ss . serialize' byronProtVer
 
 safeSignRaw ::
   ProtocolMagicId ->
@@ -197,7 +198,10 @@ verifySignature ::
   Signature a ->
   Bool
 verifySignature toEnc pm tag vk x sig =
-  verifySignatureRaw vk (signTag pm tag <> (BSL.toStrict . serializeEncoding $ toEnc x)) (coerce sig)
+  verifySignatureRaw
+    vk
+    (signTag pm tag <> BSL.toStrict (serializeEncoding byronProtVer $ toEnc x))
+    (coerce sig)
 
 -- | Verify a signature
 verifySignatureDecoded ::

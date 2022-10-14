@@ -38,6 +38,7 @@ library
                      Cardano.Ledger.Binary.Decoding
                      Cardano.Ledger.Binary.Encoding
                      Cardano.Ledger.Binary.FlatTerm
+                     Cardano.Ledger.Binary.Group
                      Cardano.Ledger.Binary.Version
   other-modules:
                      Cardano.Ledger.Binary.Encoding.Coders
@@ -57,6 +58,7 @@ library
                    , cardano-binary
                    , cardano-crypto-class
                    , cardano-crypto-praos >= 2.1.0.0
+                   , cardano-slotting
                    , cardano-strict-containers
                    , cborg
                    , containers
@@ -70,6 +72,7 @@ library
                    , nothunks
                    , primitive
                    , recursion-schemes
+                   , serialise
                    , tagged
                    , text
                    , time
@@ -84,24 +87,33 @@ library testlib
   hs-source-dirs:    test-lib
   exposed-modules:
                      Test.Cardano.Ledger.Binary.Arbitrary
+                   , Test.Cardano.Ledger.Binary.Random
                    , Test.Cardano.Ledger.Binary.RoundTrip
                    , Test.Cardano.Ledger.Binary.TreeDiff
                    , Test.Cardano.Ledger.Binary.Twiddle
+                   , Test.Cardano.Ledger.Binary.Vintage.Helpers
+                   , Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip
   build-depends:     base
                    , bytestring
                    , base16-bytestring
                    , cardano-ledger-binary
                    , cardano-crypto-class
                    , cardano-crypto-tests
+                   , cardano-prelude-test
+                   , cardano-strict-containers
+                   , cardano-slotting
                    , cborg
                    , containers
-                   , cardano-strict-containers
+                   , formatting
                    , tree-diff
                    , iproute
+                   , hedgehog
                    , hspec
+                   , pretty-show
                    , primitive
                    , QuickCheck
                    , quickcheck-instances
+                   , random >= 1.2
                    , text
                    , vector
                    , vector-map
@@ -117,8 +129,6 @@ test-suite tests
                    , Test.Cardano.Ledger.Binary.Vintage.Coders
                    , Test.Cardano.Ledger.Binary.Vintage.Drop
                    , Test.Cardano.Ledger.Binary.Vintage.Failure
-                   , Test.Cardano.Ledger.Binary.Vintage.Helpers
-                   , Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip
                    , Test.Cardano.Ledger.Binary.Vintage.RoundTrip
                    , Test.Cardano.Ledger.Binary.Vintage.Serialization
                    , Test.Cardano.Ledger.Binary.Vintage.SizeBounds
@@ -129,14 +139,13 @@ test-suite tests
                    , cardano-crypto-class
                    , cardano-crypto-praos
                    , cardano-prelude-test
+                   , cardano-slotting
                    , cardano-strict-containers
                    , cborg
                    , containers
-                   , formatting
                    , hedgehog
                    , hspec
                    , iproute
-                   , pretty-show
                    , primitive
                    , QuickCheck
                    , tagged

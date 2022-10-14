@@ -12,10 +12,10 @@ module Cardano.Crypto.Signing.SigningKey
   )
 where
 
-import Cardano.Binary (Decoder, Encoding, FromCBOR (..), ToCBOR (..))
 import Cardano.Crypto.Signing.VerificationKey (VerificationKey (..), shortVerificationKeyHexF)
 import qualified Cardano.Crypto.Wallet as CC
-import Cardano.Prelude
+import Cardano.Ledger.Binary (Decoder, Encoding, FromCBOR (..), ToCBOR (..), toCborError)
+import Cardano.Prelude hiding (toCborError)
 import Formatting (bprint)
 import Formatting.Buildable
 import qualified GHC.Show

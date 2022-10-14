@@ -45,12 +45,41 @@ module Cardano.Ledger.Alonzo.Scripts
   )
 where
 
-import Cardano.Binary (DecoderError (..), FromCBOR (fromCBOR), ToCBOR (toCBOR), serialize')
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.BaseTypes (BoundedRational (unboundRational), NonNegativeInterval, ProtVer (..))
+import Cardano.Ledger.Binary
+  ( Annotator,
+    Decoder,
+    DecoderError (..),
+    FromCBOR (fromCBOR),
+    ToCBOR (toCBOR),
+    byronProtVer,
+    cborError,
+    decodeMapByKey,
+    encodeFoldableAsDefLenList,
+    getVersion64,
+    serialize',
+  )
+import Cardano.Ledger.Binary.Coders
+  ( Decode (Ann, D, From, Invalid, RecD, SumD, Summands),
+    Encode (Rec, Sum, To),
+    Wrapped (Open),
+    decode,
+    encode,
+    (!>),
+    (<!),
+    (<*!),
+  )
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (Era (EraCrypto), EraScript, Phase (..), PhaseRep (..), PhasedScript (..), SomeScript)
+import Cardano.Ledger.Core
+  ( Era (EraCrypto),
+    EraScript,
+    Phase (..),
+    PhaseRep (..),
+    PhasedScript (..),
+    SomeScript,
+  )
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.SafeHash
@@ -58,7 +87,6 @@ import Cardano.Ledger.SafeHash
     SafeHash,
     SafeToHash (..),
   )
-import Cardano.Ledger.Serialization (mapToCBOR)
 import Cardano.Ledger.Shelley (nativeMultiSigTag)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock)
 import qualified Cardano.Ledger.ShelleyMA.Timelocks as Timelocks
@@ -66,22 +94,6 @@ import Control.DeepSeq (NFData (..), deepseq, rwhnf)
 import Control.Monad (when)
 import Control.Monad.Trans.Writer (WriterT (runWriterT))
 import Data.ByteString.Short (ShortByteString, fromShort)
-import Data.Coders
-  ( Annotator,
-    Decode (Ann, D, From, Invalid, RecD, SumD, Summands),
-    Decoder,
-    Encode (Rec, Sum, To),
-    Wrapped (Open),
-    cborError,
-    decode,
-    decodeList,
-    decodeMapByKey,
-    encode,
-    encodeFoldableAsDefinite,
-    (!>),
-    (<!),
-    (<*!),
-  )
 import Data.DerivingVia (InstantiatedAt (..))
 import Data.Either (isRight)
 import Data.Int (Int64)
@@ -256,15 +268,16 @@ instance Ord CostModel where
   compare (CostModel l1 x _) (CostModel l2 y _) = compare l1 l2 <> compare x y
 
 -- NOTE: Since cost model serializations need to be independently reproduced,
--- we use the 'canonical' serialization approach used in Byron.
+-- we use the 'canonical' serialization with definite list length.
 instance ToCBOR CostModel where
-  toCBOR (CostModel _ cm _) = encodeFoldableAsDefinite cm
+  toCBOR (CostModel _ cm _) = encodeFoldableAsDefLenList toCBOR cm
 
+-- See comment on the `ToCBOR` instance for the usage of byronProtVer
 instance SafeToHash CostModel where
-  originalBytes = serialize'
+  originalBytes = serialize' byronProtVer
 
 -- CostModel does not determine 'crypto' so make a HashWithCrypto
--- rather than a HashAnotated instance.
+-- rather than a HashAnnotated instance.
 
 instance HashWithCrypto CostModel CostModel
 
@@ -299,13 +312,10 @@ decodeCostModelMap = decodeMapByKey fromCBOR decodeCostModel
 
 decodeCostModel :: Language -> Decoder s CostModel
 decodeCostModel lang = do
-  checked <- mkCostModel lang <$> decodeParamsValues
+  checked <- mkCostModel lang <$> fromCBOR
   case checked of
     Left e -> fail $ show e
     Right cm -> pure cm
-
-decodeParamsValues :: Decoder s [Integer]
-decodeParamsValues = decodeList fromCBOR
 
 hashCostModel ::
   forall e.
@@ -325,7 +335,7 @@ instance FromCBOR CostModels where
   fromCBOR = CostModels <$> decodeCostModelMap
 
 instance ToCBOR CostModels where
-  toCBOR = mapToCBOR . unCostModels
+  toCBOR = toCBOR . unCostModels
 
 -- ==================================
 
@@ -431,7 +441,7 @@ validScript pv script =
 
 transProtocolVersion :: ProtVer -> PV1.ProtocolVersion
 transProtocolVersion (ProtVer major minor) =
-  PV1.ProtocolVersion (fromIntegral major) (fromIntegral minor)
+  PV1.ProtocolVersion ((fromIntegral :: Word64 -> Int) (getVersion64 major)) (fromIntegral minor)
 
 contentsEq :: Script era -> Script era -> Bool
 contentsEq (TimelockScript x) (TimelockScript y) = Timelocks.contentsEq x y

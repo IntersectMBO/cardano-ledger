@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -17,18 +16,18 @@ module Cardano.Crypto.Signing.Redeem.Compact
   )
 where
 
-import Cardano.Binary
-  ( FromCBOR (..),
-    ToCBOR (..),
-    encodeListLen,
-    enforceSize,
-  )
 import Cardano.Crypto.Signing.Redeem.VerificationKey
   ( RedeemVerificationKey (..),
     fromAvvmVK,
     fromVerificationKeyToByteString,
     redeemVKB64UrlF,
     redeemVKBuild,
+  )
+import Cardano.Ledger.Binary
+  ( FromCBOR (..),
+    ToCBOR (..),
+    encodeListLen,
+    enforceSize,
   )
 import Cardano.Prelude
 import Data.Aeson

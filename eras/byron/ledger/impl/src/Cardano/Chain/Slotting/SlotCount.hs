@@ -8,7 +8,7 @@ module Cardano.Chain.Slotting.SlotCount
   )
 where
 
-import Cardano.Binary (FromCBOR, ToCBOR)
+import Cardano.Ledger.Binary (FromCBOR, ToCBOR)
 import Cardano.Prelude
 import Formatting.Buildable (Buildable)
 

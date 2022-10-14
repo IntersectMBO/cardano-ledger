@@ -6,7 +6,7 @@ module Test.Cardano.Ledger.Shelley.Examples.NetworkID
   )
 where
 
-import Cardano.Ledger.BaseTypes (ProtVer (..))
+import Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API
   ( DCert (..),
@@ -30,10 +30,10 @@ import Test.Tasty.HUnit (Assertion, assertBool, testCase)
 type ShelleyTest = ShelleyEra C_Crypto
 
 shelleyPV :: ProtVer
-shelleyPV = ProtVer 2 0
+shelleyPV = ProtVer (natVersion @2) 0
 
 alonzoPV :: ProtVer
-alonzoPV = ProtVer 5 0
+alonzoPV = ProtVer (natVersion @5) 0
 
 data Expectation = ExpectSuccess | ExpectFailure
   deriving (Show, Eq)

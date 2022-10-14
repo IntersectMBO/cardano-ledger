@@ -64,7 +64,6 @@ where
 
 -- =============================================
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeFull')
 import Cardano.Crypto.Hash.Class (Hash, hashToBytes)
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Alonzo.Data (Data (..), Datum, getPlutusData)
@@ -87,6 +86,22 @@ import Cardano.Ledger.Alonzo.TxBody
   )
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits, RdmrPtr, unTxDats)
 import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..), TxIx, certIxToInt, txIxToInt)
+import Cardano.Ledger.Binary
+  ( FromCBOR (..),
+    ToCBOR (..),
+    Version,
+    decodeFull',
+    decodeList,
+    fromPlainDecoder,
+  )
+import Cardano.Ledger.Binary.Coders
+  ( Decode (..),
+    Encode (..),
+    decode,
+    encode,
+    (!>),
+    (<!),
+  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core as Core hiding (TranslationError)
 import Cardano.Ledger.Credential
@@ -122,15 +137,6 @@ import Data.ByteString as BS (ByteString, length)
 import qualified Data.ByteString.Base64 as B64
 import Data.ByteString.Short as SBS (ShortByteString, fromShort)
 import qualified Data.ByteString.UTF8 as BSU
-import Data.Coders
-  ( Decode (..),
-    Encode (..),
-    decode,
-    decodeList,
-    encode,
-    (!>),
-    (<!),
-  )
 import Data.Fixed (HasResolution (resolution))
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map.Strict as Map
@@ -473,8 +479,7 @@ alonzoTxInfo ::
   ( EraTx era,
     AlonzoEraTxBody era,
     Value era ~ MaryValue (EraCrypto era),
-    TxWits era ~ AlonzoTxWits era,
-    HasField "_protocolVersion" (PParams era) ProtVer
+    TxWits era ~ AlonzoTxWits era
   ) =>
   PParams era ->
   Language ->
@@ -596,23 +601,23 @@ instance FromCBOR PlutusDebug where
           <! D (decodeCostModel PlutusV1)
           <! From
           <! From
-          <! D (decodeList Cborg.decode)
+          <! D (decodeList (fromPlainDecoder Cborg.decode))
           <! From
       dec 1 =
         SumD PlutusDebugV2
           <! D (decodeCostModel PlutusV2)
           <! From
           <! From
-          <! D (decodeList Cborg.decode)
+          <! D (decodeList (fromPlainDecoder Cborg.decode))
           <! From
       dec n = Invalid n
 
-debugPlutus :: String -> PlutusDebugInfo
-debugPlutus db =
+debugPlutus :: Version -> String -> PlutusDebugInfo
+debugPlutus version db =
   case B64.decode (BSU.fromString db) of
     Left e -> DebugBadHex (show e)
     Right bs ->
-      case decodeFull' bs of
+      case decodeFull' version bs of
         Left e -> DebugCannotDecode (show e)
         Right pdb@(PlutusDebugV1 cm units script ds pv) ->
           case PV1.evaluateScriptRestricting

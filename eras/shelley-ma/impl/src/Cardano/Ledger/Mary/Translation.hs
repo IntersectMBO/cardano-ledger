@@ -8,26 +8,19 @@
 
 module Cardano.Ledger.Mary.Translation where
 
-import Cardano.Binary
-  ( DecoderError,
-    decodeAnnotator,
-    fromCBOR,
-    serialize,
-  )
 import Cardano.Ledger.Allegra (AllegraEra)
+import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.Compactible (Compactible (..))
+import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Era hiding (EraCrypto)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Shelley.API hiding (Metadata, TxBody)
-import Cardano.Ledger.Shelley.TxWits (decodeWits)
 import Cardano.Ledger.ShelleyMA.AuxiliaryData
   ( AllegraTxAuxData (..),
   )
 import Cardano.Ledger.ShelleyMA.Era (MaryEra)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock, translateTimelock)
 import qualified Cardano.Ledger.Val as Val
-import Control.Monad.Except (throwError)
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
@@ -70,10 +63,7 @@ instance Crypto c => TranslateEra (MaryEra c) NewEpochState where
 
 instance Crypto c => TranslateEra (MaryEra c) ShelleyTx where
   type TranslationError (MaryEra c) ShelleyTx = DecoderError
-  translateEra _ctx tx =
-    case decodeAnnotator "tx" fromCBOR (serialize tx) of
-      Right newTx -> pure newTx
-      Left decoderError -> throwError decoderError
+  translateEra _ctx = translateEraThroughCBOR "ShelleyTx"
 
 -- TODO when a genesis has been introduced for Mary, this instance can be
 -- removed.
@@ -157,10 +147,7 @@ instance Crypto c => TranslateEra (MaryEra c) UTxO where
 
 instance Crypto c => TranslateEra (MaryEra c) ShelleyTxWits where
   type TranslationError (MaryEra c) ShelleyTxWits = DecoderError
-  translateEra _ctx ws =
-    case decodeAnnotator "witnessSet" decodeWits (serialize ws) of
-      Right new -> pure new
-      Left decoderError -> throwError decoderError
+  translateEra _ctx = translateEraThroughCBOR "ShelleyTxWits"
 
 instance Crypto c => TranslateEra (MaryEra c) Update where
   translateEra _ (Update pp en) = pure $ Update (coerce pp) en

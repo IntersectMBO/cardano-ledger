@@ -23,16 +23,16 @@ import Test.Tasty (TestTree, testGroup, withResource)
 tests :: Int -> TestTree
 tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
   testGroup "CDDL roundtrip tests" $
-    [ cddlTest @(Value Alonzo) n "coin",
-      cddlAnnotatorTest @(TxBody Alonzo) n "transaction_body",
-      cddlAnnotatorTest @(TxAuxData Alonzo) n "auxiliary_data",
-      cddlAnnotatorTest @(MA.Timelock Alonzo) n "native_script",
-      cddlAnnotatorTest @(Data Alonzo) n "plutus_data",
-      cddlTest @(TxOut Alonzo) n "transaction_output",
-      cddlAnnotatorTest @(AlonzoTxWits Alonzo) n "transaction_witness_set",
-      cddlTest @(PParamsUpdate Alonzo) n "protocol_param_update",
-      cddlAnnotatorTest @(Redeemers Alonzo) n "[* redeemer]",
-      cddlAnnotatorTest @(Tx Alonzo) n "transaction"
+    [ cddlTest @(Value Alonzo) (eraProtVerHigh @Alonzo) n "coin",
+      cddlAnnotatorTest @(TxBody Alonzo) (eraProtVerHigh @Alonzo) n "transaction_body",
+      cddlAnnotatorTest @(TxAuxData Alonzo) (eraProtVerHigh @Alonzo) n "auxiliary_data",
+      cddlAnnotatorTest @(MA.Timelock Alonzo) (eraProtVerHigh @Alonzo) n "native_script",
+      cddlAnnotatorTest @(Data Alonzo) (eraProtVerHigh @Alonzo) n "plutus_data",
+      cddlTest @(TxOut Alonzo) (eraProtVerHigh @Alonzo) n "transaction_output",
+      cddlAnnotatorTest @(AlonzoTxWits Alonzo) (eraProtVerHigh @Alonzo) n "transaction_witness_set",
+      cddlTest @(PParamsUpdate Alonzo) (eraProtVerHigh @Alonzo) n "protocol_param_update",
+      cddlAnnotatorTest @(Redeemers Alonzo) (eraProtVerHigh @Alonzo) n "[* redeemer]",
+      cddlAnnotatorTest @(Tx Alonzo) (eraProtVerHigh @Alonzo) n "transaction"
     ]
       <*> pure cddl
 

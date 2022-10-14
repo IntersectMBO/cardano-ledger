@@ -53,14 +53,6 @@ module Cardano.Ledger.Address
   )
 where
 
-import Cardano.Binary
-  ( Decoder,
-    DecoderError (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    decodeFull,
-    serialize,
-  )
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.Hashing as Byron
@@ -70,6 +62,16 @@ import Cardano.Ledger.BaseTypes
     TxIx (..),
     networkToWord8,
     word8ToNetwork,
+  )
+import Cardano.Ledger.Binary
+  ( Decoder,
+    DecoderError (..),
+    FromCBOR (..),
+    ToCBOR (..),
+    byronProtVer,
+    cborError,
+    decodeFull,
+    serialize,
   )
 import Cardano.Ledger.Credential
   ( Credential (..),
@@ -102,7 +104,6 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Lazy as BSL
-import Data.Coders (cborError)
 import Data.Foldable (foldl')
 import Data.Maybe (fromMaybe)
 import Data.String (fromString)
@@ -260,7 +261,8 @@ rewardCredIsScript :: Int
 rewardCredIsScript = 4
 
 putAddr :: Addr c -> Put
-putAddr (AddrBootstrap (BootstrapAddress byronAddr)) = B.putLazyByteString (serialize byronAddr)
+putAddr (AddrBootstrap (BootstrapAddress byronAddr)) =
+  B.putLazyByteString (serialize byronProtVer byronAddr)
 putAddr (Addr network pc sr) =
   let setPayCredBit = case pc of
         ScriptHashObj _ -> flip setBit payCredIsScript
@@ -376,7 +378,7 @@ putCredential (KeyHashObj (KeyHash h)) = putHash h
 
 getByron :: Get (Addr c)
 getByron =
-  decodeFull <$> B.getRemainingLazyByteString >>= \case
+  decodeFull byronProtVer <$> B.getRemainingLazyByteString >>= \case
     Left e -> fail (show e)
     Right r -> pure $ AddrBootstrap $ BootstrapAddress r
 

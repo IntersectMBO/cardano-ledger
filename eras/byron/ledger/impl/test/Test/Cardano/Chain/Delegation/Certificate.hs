@@ -6,13 +6,13 @@ module Test.Cardano.Chain.Delegation.Certificate
   )
 where
 
-import Cardano.Binary (decodeFull, serialize, slice)
 import Cardano.Chain.Delegation
   ( ACertificate (delegateVK),
     Certificate,
     isValid,
     signCertificate,
   )
+import Cardano.Ledger.Binary (byronProtVer, decodeFull, serialize, slice)
 import Cardano.Prelude
 import qualified Data.ByteString.Lazy as BSL
 import Hedgehog (Group, Property, assert, discover, forAll, property)
@@ -67,6 +67,6 @@ annotateCert cert =
   fmap (BSL.toStrict . slice bytes)
     . fromRight
       (panic "prop_certificateCorrect: Round trip broken for Certificate")
-    $ decodeFull bytes
+    $ decodeFull byronProtVer bytes
   where
-    bytes = serialize cert
+    bytes = serialize byronProtVer cert

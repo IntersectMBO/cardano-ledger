@@ -1,9 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Chain.UTxO.Tx
@@ -16,15 +14,6 @@ module Cardano.Chain.UTxO.Tx
   )
 where
 
-import Cardano.Binary
-  ( Case (..),
-    DecoderError (DecoderErrorUnknownTag),
-    FromCBOR (..),
-    ToCBOR (..),
-    encodeListLen,
-    enforceSize,
-    szCases,
-  )
 import Cardano.Chain.Common
   ( Address (..),
     Lovelace,
@@ -38,7 +27,17 @@ import Cardano.Chain.Common.CBOR
   )
 import Cardano.Crypto (Hash, serializeCborHash, shortHashF)
 import Cardano.HeapWords (HeapWords (..))
-import Cardano.Prelude
+import Cardano.Ledger.Binary
+  ( Case (..),
+    DecoderError (DecoderErrorUnknownTag),
+    FromCBOR (..),
+    ToCBOR (..),
+    cborError,
+    encodeListLen,
+    enforceSize,
+    szCases,
+  )
+import Cardano.Prelude hiding (cborError)
 import Data.Aeson (ToJSON)
 import Formatting (Format, bprint, build, builder, int)
 import qualified Formatting.Buildable as B

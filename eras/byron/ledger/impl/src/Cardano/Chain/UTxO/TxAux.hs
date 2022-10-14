@@ -5,7 +5,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -20,13 +19,16 @@ module Cardano.Chain.UTxO.TxAux
   )
 where
 
-import Cardano.Binary
+import Cardano.Chain.UTxO.Tx (Tx)
+import Cardano.Chain.UTxO.TxWitness (TxWitness)
+import Cardano.Ledger.Binary
   ( Annotated (..),
     ByteSpan,
     Decoded (..),
     FromCBOR (..),
     ToCBOR (..),
     annotatedDecoder,
+    byronProtVer,
     encodeListLen,
     enforceSize,
     fromCBORAnnotated,
@@ -34,8 +36,6 @@ import Cardano.Binary
     slice,
     unsafeDeserialize,
   )
-import Cardano.Chain.UTxO.Tx (Tx)
-import Cardano.Chain.UTxO.TxWitness (TxWitness)
 import Cardano.Prelude
 import Data.Aeson (ToJSON)
 import qualified Data.ByteString.Lazy as Lazy
@@ -51,8 +51,8 @@ mkTxAux tx tw = ATxAux (Annotated tx ()) (Annotated tw ()) ()
 annotateTxAux :: TxAux -> ATxAux ByteString
 annotateTxAux ta = Lazy.toStrict . slice bs <$> ta'
   where
-    bs = serialize ta
-    ta' = unsafeDeserialize bs
+    bs = serialize byronProtVer ta
+    ta' = unsafeDeserialize byronProtVer bs
 
 data ATxAux a = ATxAux
   { aTaTx :: !(Annotated Tx a),

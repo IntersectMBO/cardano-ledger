@@ -37,14 +37,6 @@ module Cardano.Ledger.Alonzo.TxOut
   )
 where
 
-import Cardano.Binary
-  ( DecoderError (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    decodeBreakOr,
-    decodeListLenOrIndef,
-    encodeListLen,
-  )
 import Cardano.Crypto.Hash
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Data (Datum (..), dataHashSize)
@@ -55,6 +47,19 @@ import Cardano.Ledger.BaseTypes
   ( Network (..),
     StrictMaybe (..),
     maybeToStrictMaybe,
+  )
+import Cardano.Ledger.Binary
+  ( DecoderError (DecoderErrorCustom),
+    FromCBOR (fromCBOR),
+    FromSharedCBOR (Share, fromSharedCBOR),
+    Interns,
+    ToCBOR (toCBOR),
+    cborError,
+    decodeBreakOr,
+    decodeListLenOrIndef,
+    encodeListLen,
+    fromNotSharedCBOR,
+    interns,
   )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.CompactAddress
@@ -80,9 +85,7 @@ import Cardano.Ledger.Val
 import Control.DeepSeq (NFData (..), rwhnf)
 import Control.Monad (guard, (<$!>))
 import Data.Bits
-import Data.Coders hiding (to)
 import Data.Maybe (fromMaybe)
-import Data.Sharing
 import Data.Typeable (Proxy (..), (:~:) (Refl))
 import Data.Word
 import GHC.Generics (Generic)

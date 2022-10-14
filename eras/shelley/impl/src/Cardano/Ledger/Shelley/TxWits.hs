@@ -8,7 +8,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
@@ -41,13 +40,18 @@ module Cardano.Ledger.Shelley.TxWits
   )
 where
 
-import Cardano.Binary
-  ( FromCBOR (fromCBOR),
+import Cardano.Ledger.Binary
+  ( Annotator,
+    Decoder,
+    FromCBOR (fromCBOR),
     ToCBOR (toCBOR),
+    decodeList,
+    decodeMapContents,
     decodeWord,
     encodeMapLen,
     encodePreEncoded,
     encodeWord,
+    invalidKey,
     serializeEncoding,
     withSlice,
   )
@@ -69,14 +73,6 @@ import Cardano.Ledger.Shelley.Metadata ()
 import Cardano.Ledger.Shelley.Scripts ()
 import Control.DeepSeq (NFData)
 import qualified Data.ByteString.Lazy as BSL
-import Data.Coders
-  ( Annotator,
-    Decoder,
-    decodeList,
-    decodeMapContents,
-    encodeFoldable,
-    invalidKey,
-  )
 import Data.Foldable (fold)
 import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
@@ -202,6 +198,7 @@ instance EraScript era => Monoid (ShelleyTxWits era) where
   mempty = ShelleyTxWits mempty mempty mempty
 
 pattern ShelleyTxWits ::
+  forall era.
   EraScript era =>
   Set (WitVKey 'Witness (EraCrypto era)) ->
   Map (ScriptHash (EraCrypto era)) (Script era) ->
@@ -215,12 +212,12 @@ pattern ShelleyTxWits {addrWits, scriptWits, bootWits} <-
             if null x then Nothing else Just (encodeWord ix <> enc x)
           l =
             catMaybes
-              [ encodeMapElement 0 encodeFoldable awits,
-                encodeMapElement 1 encodeFoldable scriptWitMap,
-                encodeMapElement 2 encodeFoldable bootstrapWits
+              [ encodeMapElement 0 toCBOR awits,
+                encodeMapElement 1 toCBOR (Map.elems scriptWitMap),
+                encodeMapElement 2 toCBOR bootstrapWits
               ]
           n = fromIntegral $ length l
-          witsBytes = serializeEncoding $ encodeMapLen n <> fold l
+          witsBytes = serializeEncoding (Core.eraProtVerLow @era) $ encodeMapLen n <> fold l
        in ShelleyTxWitsConstr
             ( WitnessSet'
                 { addrWits' = awits,

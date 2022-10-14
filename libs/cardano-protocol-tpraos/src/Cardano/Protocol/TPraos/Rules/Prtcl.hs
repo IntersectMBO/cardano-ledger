@@ -22,17 +22,18 @@ module Cardano.Protocol.TPraos.Rules.Prtcl
   )
 where
 
-import Cardano.Binary
-  ( FromCBOR (fromCBOR),
-    ToCBOR (toCBOR),
-    encodeListLen,
-  )
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BaseTypes
   ( Nonce,
     Seed,
     ShelleyBase,
     UnitInterval,
+  )
+import Cardano.Ledger.Binary
+  ( FromCBOR (fromCBOR),
+    ToCBOR (toCBOR),
+    decodeRecordNamed,
+    encodeListLen,
   )
 import Cardano.Ledger.Crypto (Crypto, VRF)
 import Cardano.Ledger.Keys
@@ -44,7 +45,6 @@ import Cardano.Ledger.Keys
     VRFSignable,
   )
 import Cardano.Ledger.PoolDistr (PoolDistr)
-import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Cardano.Ledger.Slot (BlockNo, SlotNo)
 import Cardano.Protocol.TPraos.BHeader
   ( BHBody (..),

@@ -1,22 +1,18 @@
-{-# LANGUAGE ConstrainedClassMethods #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NumDecimals #-}
 {-# LANGUAGE StrictData #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Byron.Spec.Ledger.Core where
 
-import Cardano.Binary (FromCBOR, ToCBOR)
+import Cardano.Ledger.Binary (FromCBOR, ToCBOR)
 import Data.AbstractSize
 import Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap

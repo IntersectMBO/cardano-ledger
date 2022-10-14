@@ -9,16 +9,16 @@
 
 module Test.Cardano.Ledger.Shelley.LaxBlock where
 
-import Cardano.Binary
+import Cardano.Ledger.Binary
   ( Annotator (..),
     Decoder,
     FromCBOR (fromCBOR),
     ToCBOR (..),
     annotatorSlice,
+    decodeRecordNamed,
   )
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Core (Era, EraSegWits (TxSeq), EraTx)
-import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Cardano.Ledger.Shelley.BlockChain (ShelleyTxSeq, txSeqDecoder)
 import Data.Typeable (Typeable)
 

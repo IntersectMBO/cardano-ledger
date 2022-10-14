@@ -1,27 +1,31 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Binary.TreeDiff
   ( CBORBytes (..),
+    HexBytes (..),
     showExpr,
     diffExpr,
+    expectExprEqual,
     hexByteStringExpr,
     showHexBytesGrouped,
   )
 where
 
 import Cardano.Ledger.Binary
+import Control.Monad
 import Data.Bifunctor (bimap)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Lazy as BSL
 import Data.TreeDiff
+import Test.Hspec
 
-{-------------------------------------------------------------------------------
-  Diffing Cbor
--------------------------------------------------------------------------------}
+--------------------------------------------------------------------------------
+--  Diffing and pretty showing CBOR
+--------------------------------------------------------------------------------
 
 diffExpr :: ToExpr a => a -> a -> String
 diffExpr x y = show (ansiWlEditExpr (ediff x y))
@@ -29,7 +33,29 @@ diffExpr x y = show (ansiWlEditExpr (ediff x y))
 showExpr :: ToExpr a => a -> String
 showExpr = show . ansiWlExpr . toExpr
 
-newtype CBORBytes = CBORBytes BS.ByteString
+-- | Wraps regular ByteString, but shows and diffs it as hex
+newtype HexBytes = HexBytes {unHexBytes :: BS.ByteString}
+  deriving (Eq)
+
+instance Show HexBytes where
+  show = showExpr
+
+instance ToExpr HexBytes where
+  toExpr = App "HexBytes" . hexByteStringExpr . unHexBytes
+
+-- | Check that two values are equal and if they are not raise an exception with the
+-- `ToExpr` diff
+expectExprEqual :: (Eq a, ToExpr a) => a -> a -> Expectation
+expectExprEqual x y =
+  unless (x == y) $
+    expectationFailure
+      ("Expected for two values to be equal:\n" ++ diffExpr x y)
+
+newtype CBORBytes = CBORBytes {unCBORBytes :: BS.ByteString}
+  deriving (Eq)
+
+instance Show CBORBytes where
+  show = showExpr
 
 instance ToExpr CBORBytes where
   toExpr (CBORBytes bytes) =

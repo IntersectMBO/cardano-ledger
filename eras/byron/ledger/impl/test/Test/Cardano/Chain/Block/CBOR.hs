@@ -15,7 +15,6 @@ module Test.Cardano.Chain.Block.CBOR
   )
 where
 
-import Cardano.Binary (decodeFullDecoder, dropBytes, serializeEncoding)
 import Cardano.Chain.Block
   ( ABlockSignature (..),
     ABoundaryBlock (boundaryBlockLength),
@@ -57,19 +56,13 @@ import Cardano.Crypto
     sign,
     toVerification,
   )
+import Cardano.Ledger.Binary (byronProtVer, decodeFullDecoder, dropBytes, serializeEncoding)
 import Cardano.Prelude
 import Data.Coerce (coerce)
 import Data.Maybe (fromJust)
 import GetDataFileName ((<:<))
 import Hedgehog (Property)
 import qualified Hedgehog as H
-import Test.Cardano.Binary.Helpers.GoldenRoundTrip
-  ( deprecatedGoldenDecode,
-    goldenTestCBOR,
-    goldenTestCBORExplicit,
-    roundTripsCBORBuildable,
-    roundTripsCBORShow,
-  )
 import Test.Cardano.Chain.Block.Gen
 import Test.Cardano.Chain.Common.Example (exampleChainDifficulty)
 import Test.Cardano.Chain.Delegation.Example (exampleCertificates)
@@ -79,6 +72,13 @@ import Test.Cardano.Chain.UTxO.Example (exampleTxPayload, exampleTxProof)
 import qualified Test.Cardano.Chain.Update.Example as Update
 import Test.Cardano.Crypto.Example (exampleSigningKeys)
 import Test.Cardano.Crypto.Gen (feedPM)
+import Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip
+  ( deprecatedGoldenDecode,
+    goldenTestCBOR,
+    goldenTestCBORExplicit,
+    roundTripsCBORBuildable,
+    roundTripsCBORShow,
+  )
 import Test.Cardano.Prelude
 import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
 
@@ -112,9 +112,9 @@ ts_roundTripHeaderCompat =
     roundTripsHeaderCompat esh@(WithEpochSlots es _) =
       trippingBuildable
         esh
-        (serializeEncoding . toCBORHeaderToHash es . unWithEpochSlots)
+        (serializeEncoding byronProtVer . toCBORHeaderToHash es . unWithEpochSlots)
         ( fmap (WithEpochSlots es . fromJust)
-            . decodeFullDecoder "Header" (fromCBORHeaderToHash es)
+            . decodeFullDecoder byronProtVer "Header" (fromCBORHeaderToHash es)
         )
 
 --------------------------------------------------------------------------------
@@ -133,9 +133,9 @@ ts_roundTripBlockCompat =
     roundTripsBlockCompat esb@(WithEpochSlots es _) =
       trippingBuildable
         esb
-        (serializeEncoding . toCBORABOBBlock es . unWithEpochSlots)
+        (serializeEncoding byronProtVer . toCBORABOBBlock es . unWithEpochSlots)
         ( fmap (WithEpochSlots es . fromJust)
-            . decodeFullDecoder "Block" (fromCBORABOBBlock es)
+            . decodeFullDecoder byronProtVer "Block" (fromCBORABOBBlock es)
         )
 
 --------------------------------------------------------------------------------
@@ -173,8 +173,10 @@ ts_roundTripBoundaryBlock =
     roundTripsBVD (pm, bvd) =
       trippingBuildable
         bvd
-        (serializeEncoding . toCBORABoundaryBlock pm)
-        (fmap (dropSize . fmap (const ())) <$> decodeFullDecoder "BoundaryBlock" fromCBORABoundaryBlock)
+        (serializeEncoding byronProtVer . toCBORABoundaryBlock pm)
+        ( fmap (dropSize . fmap (const ()))
+            <$> decodeFullDecoder byronProtVer "BoundaryBlock" fromCBORABoundaryBlock
+        )
 
     genBVDWithPM :: ProtocolMagicId -> H.Gen (ProtocolMagicId, ABoundaryBlock ())
     genBVDWithPM pm = (,) <$> pure pm <*> genBoundaryBlock

@@ -17,13 +17,8 @@ import Cardano.Ledger.Binary.FlatTerm (FlatTerm, toFlatTerm)
 import Data.Sequence.Strict (StrictSeq, fromList)
 import Data.Text (Text, pack)
 import Data.Typeable
-import Test.Cardano.Ledger.Binary.RoundTrip (Trip (..), cborTrip, roundTripExpectation)
+import Test.Cardano.Ledger.Binary.RoundTrip (Trip (..), cborTrip, mkTrip, roundTripExpectation)
 import Test.Hspec
-
--- | "coders" functionality and this test module was introduced during Shelley, thus
--- version 2
-shelleyProtVer :: Version
-shelleyProtVer = natVersion @2
 
 -- ==========================================================================
 
@@ -241,7 +236,7 @@ decM 3 = SumD M <! From <! From <! From
 decM n = Invalid n
 
 dualMvirtual :: Trip M M
-dualMvirtual = Trip (encode . encM) (decode (Summands "M" decM))
+dualMvirtual = mkTrip (encode . encM) (decode (Summands "M" decM))
 
 -- ================================================================================
 -- The Sparse encoding strategy uses N keys, one for each field that is not defaulted
@@ -285,7 +280,7 @@ decodeM :: Decode ('Closed 'Dense) M -- Only the field with Key 2 is required
 decodeM = SparseKeyed "M" (M 0 [] (pack "a")) boxM [(2, "Stringpart")]
 
 dualM :: Trip M M
-dualM = Trip (encode . baz) (decode decodeM)
+dualM = mkTrip (encode . baz) (decode decodeM)
 
 roundTripSpec :: (HasCallStack, Show t, Eq t, Typeable t) => String -> Trip t t -> t -> Spec
 roundTripSpec name trip val =
@@ -293,7 +288,7 @@ roundTripSpec name trip val =
 
 -- | Check that a value can be encoded using Coders and decoded using FromCBOR
 encodeSpec :: (HasCallStack, Show t, Eq t, FromCBOR t) => String -> Encode w t -> t -> Spec
-encodeSpec name enc = roundTripSpec name (Trip (const (encode enc)) fromCBOR)
+encodeSpec name enc = roundTripSpec name (mkTrip (const (encode enc)) fromCBOR)
 
 newtype C = C Text
   deriving (Show, Eq)
@@ -308,7 +303,7 @@ newtype BB = BB Text
   deriving (Show, Eq)
 
 dualBB :: Trip BB BB
-dualBB = Trip (\(BB t) -> toCBOR t) (BB <$> fromCBOR)
+dualBB = mkTrip (\(BB t) -> toCBOR t) (BB <$> fromCBOR)
 
 -- Record Type
 
@@ -358,7 +353,7 @@ decodeN = Summands "N" decodeNx
     decodeNx k = Invalid k
 
 dualN :: Trip N N
-dualN = Trip (encode . encodeN) (decode decodeN)
+dualN = mkTrip (encode . encodeN) (decode decodeN)
 
 -- ============================================================
 

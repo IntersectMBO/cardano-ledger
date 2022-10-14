@@ -14,18 +14,6 @@ module Cardano.Chain.Delegation.Validation.Scheduling
   )
 where
 
-import Cardano.Binary
-  ( Annotated (..),
-    Decoder,
-    DecoderError (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    decodeListLen,
-    decodeWord8,
-    encodeListLen,
-    enforceSize,
-    matchSize,
-  )
 import Cardano.Chain.Common (BlockCount, KeyHash, hashKey)
 import Cardano.Chain.Delegation.Certificate (ACertificate)
 import qualified Cardano.Chain.Delegation.Certificate as Certificate
@@ -36,7 +24,20 @@ import Cardano.Chain.Slotting
     addSlotCount,
   )
 import Cardano.Crypto (ProtocolMagicId)
-import Cardano.Prelude hiding (State)
+import Cardano.Ledger.Binary
+  ( Annotated (..),
+    Decoder,
+    DecoderError (..),
+    FromCBOR (..),
+    ToCBOR (..),
+    cborError,
+    decodeListLen,
+    decodeWord8,
+    encodeListLen,
+    enforceSize,
+    matchSize,
+  )
+import Cardano.Prelude hiding (State, cborError)
 import Data.Sequence ((|>))
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set

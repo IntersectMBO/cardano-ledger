@@ -17,7 +17,6 @@ module Test.Cardano.Crypto.Example
   )
 where
 
-import Cardano.Binary (Annotated (..))
 import Cardano.Crypto
   ( AProtocolMagic (..),
     ProtocolMagic,
@@ -31,6 +30,7 @@ import Cardano.Crypto
     redeemDeterministicKeyGen,
   )
 import qualified Cardano.Crypto.Wallet as CC
+import Cardano.Ledger.Binary (Annotated (..))
 import Cardano.Prelude
 import Data.List ((!!))
 import Data.Maybe (fromJust)

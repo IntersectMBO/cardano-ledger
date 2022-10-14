@@ -2,13 +2,14 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Main where
 
-import Cardano.Binary
 import Cardano.Ledger.Address
 import Cardano.Ledger.Alonzo.PParams hiding (PParams)
 import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Binary
 import Cardano.Ledger.CompactAddress
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.API.Mempool
@@ -19,7 +20,6 @@ import Cardano.Ledger.State.UTxO
 import Cardano.Ledger.UTxO
 import Cardano.Ledger.Val
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
-import Cardano.Slotting.Slot
 import Cardano.Slotting.Time (mkSlotLength)
 import Control.DeepSeq
 import Criterion.Main
@@ -154,7 +154,7 @@ extractKeysNaive sm s = (Map.withoutKeys sm s, Map.restrictKeys sm s)
 decodeTx :: ByteString -> Tx CurrentEra
 decodeTx hex = either error id $ do
   bsl <- BSL16.decode hex
-  first show $ decodeAnnotator "Tx" fromCBOR bsl
+  first show $ decodeFullAnnotator (eraProtVerHigh @CurrentEra) "Tx" fromCBOR bsl
 
 -- | Most basic ada-only transaction:
 --

@@ -15,7 +15,6 @@
 --   it should be easier to maintain. It is meant to be byte for byte exact.
 module Test.Cardano.Ledger.Generic.Consensus where
 
-import Cardano.Binary
 import Cardano.Crypto.DSIGN as DSIGN
 import Cardano.Crypto.Hash as Hash
 import Cardano.Crypto.Seed as Seed
@@ -40,6 +39,7 @@ import qualified Cardano.Ledger.Babbage.PParams as BabbagePP
 import Cardano.Ledger.Babbage.Translation ()
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), Datum (..))
 import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import qualified Cardano.Ledger.Conway.PParams as ConwayPP
@@ -70,9 +70,7 @@ import Cardano.Protocol.TPraos.BHeader
 import Cardano.Protocol.TPraos.OCert
 import Cardano.Protocol.TPraos.Rules.Prtcl
 import Cardano.Protocol.TPraos.Rules.Tickn
-import Cardano.Slotting.Block
 import Cardano.Slotting.EpochInfo
-import Cardano.Slotting.Slot
 import qualified Data.ByteString as Strict
 import Data.Coerce (coerce)
 import Data.Default.Class
@@ -97,6 +95,7 @@ import qualified Test.Cardano.Ledger.Alonzo.Examples.Consensus as Old (ledgerExa
 import Test.Cardano.Ledger.Alonzo.PlutusScripts (testingCostModelV1)
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import qualified Test.Cardano.Ledger.Babbage.Examples.Consensus as Old (ledgerExamplesBabbage)
+import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
 import qualified Test.Cardano.Ledger.Conway.Examples.Consensus as Old (ledgerExamplesConway)
 import Test.Cardano.Ledger.Generic.Fields
   ( TxBodyField (..),
@@ -224,18 +223,13 @@ defaultLedgerExamples proof value txBody auxData translationContext =
 -- ============================================
 
 mkKeyHash :: forall c discriminator. CC.Crypto c => Int -> KeyHash discriminator c
-mkKeyHash = KeyHash . mkDummyHash (Proxy @(ADDRHASH c))
+mkKeyHash = KeyHash . mkDummyHash @(ADDRHASH c)
 
 mkScriptHash :: forall c. CC.Crypto c => Int -> ScriptHash c
-mkScriptHash = ScriptHash . mkDummyHash (Proxy @(ADDRHASH c))
-
-mkDummyHash :: forall h a. HashAlgorithm h => Proxy h -> Int -> Hash.Hash h a
-mkDummyHash _ = coerce . hashWithSerialiser @h toCBOR
+mkScriptHash = ScriptHash . mkDummyHash @(ADDRHASH c)
 
 mkDummySafeHash :: forall c a. CC.Crypto c => Proxy c -> Int -> SafeHash c a
-mkDummySafeHash _ =
-  unsafeMakeSafeHash
-    . mkDummyHash (Proxy @(HASH c))
+mkDummySafeHash _ = unsafeMakeSafeHash . mkDummyHash @(HASH c)
 
 exampleLedgerBlock ::
   forall era.
@@ -259,7 +253,7 @@ exampleLedgerBlock proof tx = specialize @EraSegWits proof (Block blockHeader bl
       BHBody
         { bheaderBlockNo = BlockNo 3,
           bheaderSlotNo = SlotNo 9,
-          bheaderPrev = BlockHash (HashHeader (mkDummyHash Proxy 2)),
+          bheaderPrev = BlockHash (HashHeader (mkDummyHash (2 :: Int))),
           bheaderVk = coerceKeyRole vKeyCold,
           bheaderVrfVk = snd $ vrf keys,
           bheaderEta = mkCertifiedVRF (mkBytes 0) (fst $ vrf keys),
@@ -267,13 +261,13 @@ exampleLedgerBlock proof tx = specialize @EraSegWits proof (Block blockHeader bl
           bsize = 2345,
           bhash = specialize @EraSegWits proof (hashTxSeq @era blockBody),
           bheaderOCert = mkOCert keys 0 (KESPeriod 0),
-          bprotver = ProtVer 2 0
+          bprotver = ProtVer (natVersion @2) 0
         }
 
     blockBody = specialize @EraSegWits proof (toTxSeq @era (StrictSeq.fromList [tx]))
 
     mkBytes :: Int -> Cardano.Ledger.BaseTypes.Seed
-    mkBytes = Seed . mkDummyHash (Proxy @Blake2b_256)
+    mkBytes = Seed . mkDummyHash @Blake2b_256
 {-# NOINLINE exampleLedgerBlock #-}
 
 exampleKeys :: forall c r. CC.Crypto c => AllIssuerKeys c r
@@ -325,7 +319,7 @@ exampleHashHeader ::
   Reflect era =>
   Proof era ->
   HashHeader (EraCrypto era)
-exampleHashHeader _proof = coerce $ mkDummyHash (Proxy @(HASH (EraCrypto era))) 0
+exampleHashHeader _proof = coerce $ mkDummyHash @(HASH (EraCrypto era)) (0 :: Int)
 
 -- | Use this in the sreProposedPPUpdates field of ResultExample
 --   Do not confuse this with exampleProposedPPUpdates which is used in exampleTxBody

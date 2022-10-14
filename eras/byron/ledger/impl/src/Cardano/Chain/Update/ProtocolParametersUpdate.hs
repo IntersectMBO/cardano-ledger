@@ -12,11 +12,11 @@ module Cardano.Chain.Update.ProtocolParametersUpdate
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
 import Cardano.Chain.Common (LovelacePortion, TxFeePolicy)
 import Cardano.Chain.Slotting (EpochNumber, SlotNumber (..))
 import Cardano.Chain.Update.ProtocolParameters (ProtocolParameters (..))
 import Cardano.Chain.Update.SoftforkRule (SoftforkRule)
+import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
 import Cardano.Prelude hiding (empty)
 import Data.Aeson (ToJSON)
 import Data.Text.Lazy.Builder (Builder)

@@ -16,13 +16,6 @@ module Cardano.Chain.Genesis.NonAvvmBalances
   )
 where
 
-import Cardano.Binary
-  ( DecoderError,
-    FromCBOR (..),
-    ToCBOR (..),
-    encodeListLen,
-    enforceSize,
-  )
 import Cardano.Chain.Common
   ( Address,
     Lovelace,
@@ -30,6 +23,13 @@ import Cardano.Chain.Common
     addLovelace,
     decodeAddressBase58,
     integerToLovelace,
+  )
+import Cardano.Ledger.Binary
+  ( DecoderError,
+    FromCBOR (..),
+    ToCBOR (..),
+    encodeListLen,
+    enforceSize,
   )
 import Cardano.Prelude
 import qualified Data.Map.Strict as M

@@ -15,16 +15,6 @@ module Cardano.Chain.Update.Payload
   )
 where
 
-import Cardano.Binary
-  ( Annotated (..),
-    ByteSpan,
-    Decoded (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    annotatedDecoder,
-    encodeListLen,
-    enforceSize,
-  )
 import Cardano.Chain.Update.Proposal
   ( AProposal,
     Proposal,
@@ -34,6 +24,16 @@ import Cardano.Chain.Update.Vote
   ( AVote,
     Vote,
     formatVoteShort,
+  )
+import Cardano.Ledger.Binary
+  ( Annotated (..),
+    ByteSpan,
+    Decoded (..),
+    FromCBOR (..),
+    ToCBOR (..),
+    annotatedDecoder,
+    encodeListLen,
+    enforceSize,
   )
 import Cardano.Prelude
 import Data.Aeson (ToJSON)

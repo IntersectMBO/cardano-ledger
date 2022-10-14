@@ -11,7 +11,6 @@ module Test.Cardano.Ledger.Shelley.Fees
   )
 where
 
-import Cardano.Binary (serialize)
 import Cardano.Crypto.VRF (VRFAlgorithm)
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BaseTypes
@@ -20,6 +19,7 @@ import Cardano.Ledger.BaseTypes
     textToDns,
     textToUrl,
   )
+import Cardano.Ledger.Binary (serialize, shelleyProtVer)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as Cr
@@ -90,7 +90,7 @@ import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 
 sizeTest :: HasCallStack => BSL.ByteString -> ShelleyTx Shelley -> Assertion
 sizeTest b16 tx = do
-  Base16.encode (serialize tx) @?= b16
+  Base16.encode (serialize shelleyProtVer tx) @?= b16
   (tx ^. sizeTxF) @?= toInteger (BSL.length b16 `div` 2)
 
 alicePay :: forall c. Cr.Crypto c => KeyPair 'Payment c
@@ -390,7 +390,7 @@ txRetirePoolBytes16 = "83a5008182582003170a2e7597b7b7e3d84c05391d139a62b157e7878
 
 -- | Simple Transaction which consumes one UTxO and creates one UTxO
 -- | and has one witness
-md :: MD.ShelleyTxAuxData era
+md :: Era era => MD.ShelleyTxAuxData era
 md = MD.ShelleyTxAuxData $ Map.singleton 0 (MD.List [MD.I 5, MD.S "hello"])
 
 txbWithMD :: ShelleyTxBody Shelley

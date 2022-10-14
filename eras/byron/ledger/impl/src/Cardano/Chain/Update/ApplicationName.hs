@@ -4,7 +4,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Cardano.Chain.Update.ApplicationName
   ( ApplicationName (..),
@@ -14,19 +13,20 @@ module Cardano.Chain.Update.ApplicationName
   )
 where
 
-import Cardano.Binary
+import Cardano.Ledger.Binary
   ( Case (..),
     Decoder,
     DecoderError (..),
     FromCBOR (..),
     ToCBOR (..),
+    cborError,
     decodeListLen,
     decodeWord8,
     encodeListLen,
     matchSize,
     szCases,
   )
-import Cardano.Prelude
+import Cardano.Prelude hiding (cborError)
 import Data.Aeson (ToJSON)
 import Data.Data (Data)
 import qualified Data.Text as T

@@ -36,6 +36,7 @@ import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..), TxDats (..), 
 import Cardano.Ledger.BaseTypes
   ( Network (..),
     StrictMaybe (..),
+    natVersion,
   )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core hiding (TranslationError)
@@ -963,7 +964,7 @@ defaultPPs =
     MaxValSize 1000000000,
     MaxTxExUnits $ ExUnits 1000000 1000000,
     MaxBlockExUnits $ ExUnits 1000000 1000000,
-    ProtocolVersion $ ProtVer 7 0,
+    ProtocolVersion $ ProtVer (natVersion @7) 0,
     CollateralPercentage 100
   ]
 

@@ -36,11 +36,6 @@ module Cardano.Ledger.Babbage.PParams
   )
 where
 
-import Cardano.Binary
-  ( Encoding,
-    FromCBOR (..),
-    ToCBOR (..),
-  )
 import Cardano.Ledger.Alonzo.PParams (LangDepView (..), encodeLangViews, getLanguageView)
 import Cardano.Ledger.Alonzo.Scripts
   ( CostModels (..),
@@ -55,22 +50,17 @@ import Cardano.Ledger.BaseTypes
     UnitInterval,
     fromSMaybe,
     isSNothing,
+    natVersion,
   )
 import qualified Cardano.Ledger.BaseTypes as BT (ProtVer (..))
-import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (Era, EraPParams (applyPPUpdates))
-import qualified Cardano.Ledger.Core as Core (PParams, PParamsUpdate)
-import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.HKD (HKD)
-import Cardano.Ledger.Orphans ()
-import Cardano.Ledger.Serialization
-  ( FromCBORGroup (..),
+import Cardano.Ledger.Binary
+  ( Encoding,
+    FromCBOR (..),
+    FromCBORGroup (..),
+    ToCBOR (..),
     ToCBORGroup (..),
   )
-import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (ShelleyPParams))
-import Cardano.Ledger.Slot (EpochNo (..))
-import Control.DeepSeq (NFData)
-import Data.Coders
+import Cardano.Ledger.Binary.Coders
   ( Decode (..),
     Density (..),
     Encode (..),
@@ -82,6 +72,15 @@ import Data.Coders
     (!>),
     (<!),
   )
+import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Core (Era, EraPParams (applyPPUpdates))
+import qualified Cardano.Ledger.Core as Core (PParams, PParamsUpdate)
+import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.HKD (HKD)
+import Cardano.Ledger.Orphans ()
+import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (ShelleyPParams))
+import Cardano.Ledger.Slot (EpochNo (..))
+import Control.DeepSeq (NFData)
 import Data.Default (Default (..))
 import Data.Functor.Identity (Identity (..))
 import GHC.Generics (Generic)
@@ -265,7 +264,7 @@ emptyPParams =
       _a0 = minBound,
       _rho = minBound,
       _tau = minBound,
-      _protocolVersion = BT.ProtVer 7 0,
+      _protocolVersion = BT.ProtVer (natVersion @7) 0,
       _minPoolCost = mempty,
       _coinsPerUTxOByte = Coin 0,
       _costmdls = CostModels mempty,

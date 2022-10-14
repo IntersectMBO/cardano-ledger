@@ -1,4 +1,4 @@
-cabal-version: 2.2
+cabal-version: 3.0
 
 name:                cardano-ledger-shelley-ma-test
 version:             0.1.0.0
@@ -54,11 +54,8 @@ library
     Test.Cardano.Ledger.ShelleyMA.Serialisation.Roundtrip
 
   build-depends:
-    base16-bytestring,
     bytestring,
-    cardano-binary,
-    cardano-data,
-    cardano-crypto-class,
+    cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-ledger-core,
     cardano-ledger-pretty,
     cardano-ledger-shelley-ma,
@@ -109,8 +106,8 @@ test-suite cardano-ledger-shelley-ma-test
                       "-with-rtsopts=-K4m -M250m"
   build-depends:
       bytestring,
-      cardano-binary,
       cardano-data,
+      cardano-ledger-binary:{cardano-ledger-binary, testlib},
       cardano-ledger-core,
       cardano-ledger-shelley-ma-test,
       cardano-ledger-shelley-ma,

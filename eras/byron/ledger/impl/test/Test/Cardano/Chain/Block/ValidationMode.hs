@@ -22,7 +22,6 @@ import Byron.Spec.Ledger.GlobalParams (lovelaceCap)
 import Byron.Spec.Ledger.STS.UTXO (UTxOEnv (..), UTxOState (..))
 import Byron.Spec.Ledger.STS.UTXOWS (UTXOWS)
 import qualified Byron.Spec.Ledger.UTxO as Abstract
-import Cardano.Binary (Annotated (..))
 import Cardano.Chain.Block
   ( ABlock (..),
     AHeader (..),
@@ -39,6 +38,7 @@ import Cardano.Chain.ValidationMode
     fromBlockValidationMode,
   )
 import Cardano.Crypto (Hash)
+import Cardano.Ledger.Binary (Annotated (..))
 import Cardano.Prelude hiding (State, trace)
 import Control.State.Transition
 import Control.State.Transition.Generator (trace)

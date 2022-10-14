@@ -8,15 +8,15 @@ module Cardano.Chain.Update.InstallerHash
   )
 where
 
-import Cardano.Binary
+import Cardano.Crypto (Hash, hashRaw)
+import Cardano.Crypto.Raw (Raw)
+import Cardano.Ledger.Binary
   ( FromCBOR (..),
-    Raw,
     ToCBOR (..),
     dropBytes,
     encodeListLen,
     enforceSize,
   )
-import Cardano.Crypto (Hash, hashRaw)
 import Cardano.Prelude
 import Data.Aeson (ToJSON)
 import Formatting (bprint, build)

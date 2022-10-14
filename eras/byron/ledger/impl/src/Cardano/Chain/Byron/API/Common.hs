@@ -1,15 +1,9 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Chain.Byron.API.Common
@@ -33,7 +27,6 @@ module Cardano.Chain.Byron.API.Common
   )
 where
 
-import Cardano.Binary
 import qualified Cardano.Chain.Block as CC
 import qualified Cardano.Chain.Common as CC
 import qualified Cardano.Chain.Delegation as Delegation
@@ -43,6 +36,7 @@ import qualified Cardano.Chain.Slotting as CC
 import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Chain.Update.Validation.Interface as U.Iface
 import Cardano.Crypto.ProtocolMagic
+import Cardano.Ledger.Binary
 import Cardano.Prelude
 import qualified Codec.CBOR.Read as CBOR
 import qualified Codec.CBOR.Write as CBOR
@@ -83,10 +77,10 @@ getMaxBlockSize =
 -------------------------------------------------------------------------------}
 
 reAnnotateMagicId :: ProtocolMagicId -> Annotated ProtocolMagicId ByteString
-reAnnotateMagicId pmi = reAnnotate $ Annotated pmi ()
+reAnnotateMagicId pmi = reAnnotate byronProtVer $ Annotated pmi ()
 
 reAnnotateMagic :: ProtocolMagic -> AProtocolMagic ByteString
-reAnnotateMagic (AProtocolMagic a b) = AProtocolMagic (reAnnotate a) b
+reAnnotateMagic (AProtocolMagic a b) = AProtocolMagic (reAnnotate byronProtVer a) b
 
 reAnnotateBlock :: CC.EpochSlots -> CC.ABlock () -> CC.ABlock ByteString
 reAnnotateBlock epochSlots =
@@ -112,8 +106,9 @@ reAnnotateUsing ::
   f a ->
   f ByteString
 reAnnotateUsing encoder decoder =
-  (\bs -> splice bs $ CBOR.deserialiseFromBytes decoder bs)
+  (\bs -> splice bs $ CBOR.deserialiseFromBytes (toPlainDecoder byronProtVer decoder) bs)
     . CBOR.toLazyByteString
+    . toPlainEncoding byronProtVer
     . encoder
   where
     splice ::
@@ -122,14 +117,15 @@ reAnnotateUsing encoder decoder =
       Either err (Lazy.ByteString, f ByteSpan) ->
       f ByteString
     splice bs (Right (left, fSpan))
-      | Lazy.null left = (Lazy.toStrict . slice bs) <$> fSpan
+      | Lazy.null left = Lazy.toStrict . slice bs <$> fSpan
       | otherwise = roundtripFailure "leftover bytes"
     splice _ (Left err) = roundtripFailure $ show err
 
     roundtripFailure :: forall x. T.Text -> x
     roundtripFailure err =
       panic $
-        T.intercalate ": " $
+        T.intercalate
+          ": "
           [ "annotateBoundary",
             "serialization roundtrip failure",
             show err

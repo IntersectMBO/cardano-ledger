@@ -21,14 +21,12 @@ import Cardano.Ledger.Alonzo.Scripts
   )
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
 import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..))
+import Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (getMinFeeTx)
 import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Shelley.API
-  ( ProtVer (..),
-    evaluateTransactionFee,
-  )
+import Cardano.Ledger.Shelley.API (evaluateTransactionFee)
 import Cardano.Ledger.UTxO (makeWitnessVKey)
 import Cardano.Ledger.Val (Val (inject))
 import qualified Data.Map.Strict as Map
@@ -110,6 +108,6 @@ defaultPPs =
     MaxValSize 1000000000,
     MaxTxExUnits $ ExUnits 1000000 1000000,
     MaxBlockExUnits $ ExUnits 1000000 1000000,
-    ProtocolVersion $ ProtVer 5 0,
+    ProtocolVersion $ ProtVer (natVersion @5) 0,
     CollateralPercentage 100
   ]

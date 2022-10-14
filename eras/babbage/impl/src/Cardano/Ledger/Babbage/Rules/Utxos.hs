@@ -16,7 +16,6 @@ module Cardano.Ledger.Babbage.Rules.Utxos
   )
 where
 
-import Cardano.Binary (ToCBOR (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi
   ( collectTwoPhaseScriptInputs,
     evalScripts,
@@ -47,6 +46,7 @@ import Cardano.Ledger.Babbage.TxBody
     ShelleyEraTxBody (certsTxBodyL, updateTxBodyL),
   )
 import Cardano.Ledger.BaseTypes (ProtVer, ShelleyBase, epochInfo, strictMaybeToMaybe, systemStart)
+import Cardano.Ledger.Binary (ToCBOR (..))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.LedgerState
@@ -136,7 +136,6 @@ utxosTransition ::
     HasField "_keyDeposit" (PParams era) Coin,
     HasField "_poolDeposit" (PParams era) Coin,
     HasField "_costmdls" (PParams era) CostModels,
-    HasField "_protocolVersion" (PParams era) ProtVer,
     Environment (EraRule "PPUP" era) ~ PpupEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,
     Signal (EraRule "PPUP" era) ~ Maybe (Update era),
@@ -167,8 +166,7 @@ scriptsYes ::
     Embed (EraRule "PPUP" era) (BabbageUTXOS era),
     HasField "_poolDeposit" (PParams era) Coin,
     HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_costmdls" (PParams era) CostModels,
-    HasField "_protocolVersion" (PParams era) ProtVer
+    HasField "_costmdls" (PParams era) CostModels
   ) =>
   TransitionRule (BabbageUTXOS era)
 scriptsYes = do
@@ -182,6 +180,7 @@ scriptsYes = do
       {- depositChange := (totalDeposits pp poolParams txcerts txb) − refunded -}
       depositChange =
         totalDeposits pp (`Map.notMember` poolParams) txCerts Val.<-> refunded
+      protVer = getField @"_protocolVersion" pp
   sysSt <- liftSTS $ asks systemStart
   ei <- liftSTS $ asks epochInfo
 
@@ -201,12 +200,12 @@ scriptsYes = do
       {- isValid tx = evalScripts tx sLst = True -}
       whenFailureFree $
         when2Phase $
-          case evalScripts @era (getField @"_protocolVersion" pp) tx sLst of
+          case evalScripts @era protVer tx sLst of
             Fails _ fs ->
               failBecause $
                 ValidationTagMismatch
                   (tx ^. isValidTxL)
-                  (FailedUnexpectedly (scriptFailuresToPredicateFailure fs))
+                  (FailedUnexpectedly (scriptFailuresToPredicateFailure protVer fs))
             Passes ps -> mapM_ (tellEvent . SuccessfulPlutusScriptsEvent) (nonEmpty ps)
     Left info -> failBecause (CollectErrors info)
 
@@ -226,7 +225,6 @@ scriptsNo ::
     TxOut era ~ BabbageTxOut era,
     TxBody era ~ BabbageTxBody era,
     Script era ~ AlonzoScript era,
-    HasField "_protocolVersion" (PParams era) ProtVer,
     HasField "_costmdls" (PParams era) CostModels
   ) =>
   TransitionRule (BabbageUTXOS era)

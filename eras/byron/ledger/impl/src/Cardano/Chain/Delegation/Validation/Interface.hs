@@ -18,14 +18,6 @@ module Cardano.Chain.Delegation.Validation.Interface
   )
 where
 
-import Cardano.Binary
-  ( Annotated (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    encodeListLen,
-    enforceSize,
-    serialize',
-  )
 import Cardano.Chain.Common (BlockCount (..), KeyHash, hashKey)
 import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Delegation.Certificate (ACertificate, Certificate)
@@ -37,6 +29,15 @@ import Cardano.Chain.Slotting
     SlotNumber (..),
   )
 import Cardano.Crypto (ProtocolMagicId, VerificationKey)
+import Cardano.Ledger.Binary
+  ( Annotated (..),
+    FromCBOR (..),
+    ToCBOR (..),
+    byronProtVer,
+    encodeListLen,
+    enforceSize,
+    serialize',
+  )
 import Cardano.Prelude hiding (State)
 import qualified Data.Map.Strict as M
 import qualified Data.Sequence as Seq
@@ -122,8 +123,8 @@ initialState env genesisDelegation = updateDelegation env' is certificates
         { Delegation.aEpoch =
             Annotated
               (Delegation.epoch c)
-              (serialize' $ Delegation.epoch c),
-          Delegation.annotation = serialize' c
+              (serialize' byronProtVer $ Delegation.epoch c),
+          Delegation.annotation = serialize' byronProtVer c
         }
 
 -- | Check whether a delegation is valid in the 'State'

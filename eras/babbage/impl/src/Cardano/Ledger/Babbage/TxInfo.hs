@@ -27,7 +27,7 @@ import Cardano.Ledger.Babbage.TxBody
     ShelleyEraTxBody (..),
     ShelleyMAEraTxBody (..),
   )
-import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..), isSJust)
+import Cardano.Ledger.BaseTypes (StrictMaybe (..), isSJust)
 import Cardano.Ledger.Core hiding (TranslationError)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
@@ -41,7 +41,6 @@ import Control.Monad (unless, when, zipWithM)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Text (Text)
-import GHC.Records (HasField (..))
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
 import PlutusLedgerApi.V1.Contexts ()
@@ -164,8 +163,7 @@ babbageTxInfo ::
   ( EraTx era,
     BabbageEraTxBody era,
     Value era ~ MaryValue (EraCrypto era),
-    TxWits era ~ AlonzoTxWits era,
-    HasField "_protocolVersion" (PParams era) ProtVer
+    TxWits era ~ AlonzoTxWits era
   ) =>
   PParams era ->
   Language ->

@@ -10,7 +10,6 @@
 
 module Test.Cardano.Ledger.Shelley.Serialisation.Generators () where
 
-import Cardano.Binary (ToCBOR)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.API (ShelleyTxBody (ShelleyTxBody))
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams)
@@ -32,7 +31,7 @@ import Test.QuickCheck
 -------------------------------------------------------------------------------}
 
 instance
-  (EraTxOut era, Mock (EraCrypto era), Arbitrary (Value era), ToCBOR (PParamsUpdate era)) =>
+  (EraTxOut era, Mock (EraCrypto era), Arbitrary (Value era)) =>
   Arbitrary (ShelleyTxBody era)
   where
   arbitrary =

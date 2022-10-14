@@ -9,8 +9,8 @@ module Test.Cardano.Chain.Block.Size
   )
 where
 
-import Cardano.Binary hiding (label)
 import Cardano.Chain.Block
+import Cardano.Ledger.Binary hiding (label)
 import Cardano.Prelude
 import qualified Data.ByteString as BS
 import Data.String (IsString (..))
@@ -37,7 +37,7 @@ encodedSizeTest encode encodedSize gen = eachOfTS
   $ \a -> case szSimplify (encodedSize (Proxy :: Proxy a)) of
     Right rng@Range {lo, hi} ->
       let size :: Natural
-          size = fromIntegral $ BS.length (toStrictByteString (encode a))
+          size = fromIntegral $ BS.length (serialize' byronProtVer (encode a))
        in if
               | size < lo -> do
                   footnote $ "actual size not greater or equal the minimal size: " ++ show size ++ " ≱ " ++ show lo

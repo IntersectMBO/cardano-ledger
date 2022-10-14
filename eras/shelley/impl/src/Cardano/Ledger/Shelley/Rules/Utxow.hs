@@ -33,11 +33,6 @@ module Cardano.Ledger.Shelley.Rules.Utxow
   )
 where
 
-import Cardano.Binary
-  ( FromCBOR (..),
-    ToCBOR (..),
-    encodeListLen,
-  )
 import Cardano.Ledger.Address (Addr (..), bootstrapKeyHash)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes
@@ -49,6 +44,7 @@ import Cardano.Ledger.BaseTypes
     strictMaybeToMaybe,
     (==>),
   )
+import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), decodeRecordSum, encodeListLen)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys
@@ -69,12 +65,6 @@ import Cardano.Ledger.Rules.ValidationMode
     runTestOnSignal,
   )
 import Cardano.Ledger.SafeHash (extractHash, hashAnnotated)
-import Cardano.Ledger.Serialization
-  ( decodeList,
-    decodeRecordSum,
-    decodeSet,
-    encodeFoldable,
-  )
 import Cardano.Ledger.Shelley.Delegation.Certificates
   ( delegCWitness,
     genesisCWitness,
@@ -202,17 +192,17 @@ instance
   where
   toCBOR = \case
     InvalidWitnessesUTXOW wits ->
-      encodeListLen 2 <> toCBOR (0 :: Word8) <> encodeFoldable wits
+      encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR wits
     MissingVKeyWitnessesUTXOW missing ->
-      encodeListLen 2 <> toCBOR (1 :: Word8) <> encodeFoldable missing
+      encodeListLen 2 <> toCBOR (1 :: Word8) <> toCBOR missing
     MissingScriptWitnessesUTXOW ss ->
       encodeListLen 2
         <> toCBOR (2 :: Word8)
-        <> encodeFoldable ss
+        <> toCBOR ss
     ScriptWitnessNotValidatingUTXOW ss ->
       encodeListLen 2
         <> toCBOR (3 :: Word8)
-        <> encodeFoldable ss
+        <> toCBOR ss
     UtxoFailure a ->
       encodeListLen 2
         <> toCBOR (4 :: Word8)
@@ -220,7 +210,7 @@ instance
     MIRInsufficientGenesisSigsUTXOW sigs ->
       encodeListLen 2
         <> toCBOR (5 :: Word8)
-        <> encodeFoldable sigs
+        <> toCBOR sigs
     MissingTxBodyMetadataHash h ->
       encodeListLen 2 <> toCBOR (6 :: Word8) <> toCBOR h
     MissingTxMetadata h ->
@@ -232,7 +222,7 @@ instance
     ExtraneousScriptWitnessesUTXOW ss ->
       encodeListLen 2
         <> toCBOR (10 :: Word8)
-        <> encodeFoldable ss
+        <> toCBOR ss
 
 instance
   ( Era era,
@@ -245,22 +235,22 @@ instance
   fromCBOR = decodeRecordSum "PredicateFailure (UTXOW era)" $
     \case
       0 -> do
-        wits <- decodeList fromCBOR
+        wits <- fromCBOR
         pure (2, InvalidWitnessesUTXOW wits)
       1 -> do
-        missing <- decodeSet fromCBOR
+        missing <- fromCBOR
         pure (2, MissingVKeyWitnessesUTXOW missing)
       2 -> do
-        ss <- decodeSet fromCBOR
+        ss <- fromCBOR
         pure (2, MissingScriptWitnessesUTXOW ss)
       3 -> do
-        ss <- decodeSet fromCBOR
+        ss <- fromCBOR
         pure (2, ScriptWitnessNotValidatingUTXOW ss)
       4 -> do
         a <- fromCBOR
         pure (2, UtxoFailure a)
       5 -> do
-        s <- decodeSet fromCBOR
+        s <- fromCBOR
         pure (2, MIRInsufficientGenesisSigsUTXOW s)
       6 -> do
         h <- fromCBOR
@@ -274,7 +264,7 @@ instance
         pure (3, ConflictingMetadataHash bodyHash fullMDHash)
       9 -> pure (1, InvalidMetadata)
       10 -> do
-        ss <- decodeSet fromCBOR
+        ss <- fromCBOR
         pure (2, ExtraneousScriptWitnessesUTXOW ss)
       k -> invalidKey k
 
@@ -311,7 +301,6 @@ transitionRulesUTXOW ::
     Signal (utxow era) ~ Tx era,
     PredicateFailure (utxow era) ~ ShelleyUtxowPredFailure era,
     STS (utxow era),
-    HasField "_protocolVersion" (PParams era) ProtVer,
     DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
   ) =>
   TransitionRule (utxow era)
@@ -560,14 +549,7 @@ witsVKeyNeeded utxo' tx genDelegs =
 
 -- | check metadata hash
 --   ((adh = ◇) ∧ (ad= ◇)) ∨ (adh = hashAD ad)
-validateMetadata ::
-  forall era.
-  ( EraTx era,
-    HasField "_protocolVersion" (PParams era) ProtVer
-  ) =>
-  PParams era ->
-  Tx era ->
-  Test (ShelleyUtxowPredFailure era)
+validateMetadata :: EraTx era => PParams era -> Tx era -> Test (ShelleyUtxowPredFailure era)
 validateMetadata pp tx =
   let txBody = tx ^. bodyTxL
       pv = getField @"_protocolVersion" pp
@@ -575,14 +557,14 @@ validateMetadata pp tx =
         (SNothing, SNothing) -> pure ()
         (SJust mdh, SNothing) -> failure $ MissingTxMetadata mdh
         (SNothing, SJust md') ->
-          failure $ MissingTxBodyMetadataHash (hashTxAuxData @era md')
+          failure $ MissingTxBodyMetadataHash (hashTxAuxData md')
         (SJust mdh, SJust md') ->
           sequenceA_
-            [ failureUnless (hashTxAuxData @era md' == mdh) $
-                ConflictingMetadataHash mdh (hashTxAuxData @era md'),
+            [ failureUnless (hashTxAuxData md' == mdh) $
+                ConflictingMetadataHash mdh (hashTxAuxData md'),
               -- check metadata value sizes
               when (SoftForks.validMetadata pp) $
-                failureUnless (validateTxAuxData @era pv md') InvalidMetadata
+                failureUnless (validateTxAuxData pv md') InvalidMetadata
             ]
 
 -- | check genesis keys signatures for instantaneous rewards certificates

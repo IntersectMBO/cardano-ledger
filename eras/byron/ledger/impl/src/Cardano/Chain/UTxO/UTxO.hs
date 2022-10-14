@@ -30,15 +30,6 @@ module Cardano.Chain.UTxO.UTxO
   )
 where
 
-import Cardano.Binary
-  ( DecoderError (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    decodeListLen,
-    decodeWord8,
-    encodeListLen,
-    matchSize,
-  )
 import Cardano.Chain.Common
   ( Address,
     Lovelace,
@@ -57,7 +48,17 @@ import Cardano.Chain.UTxO.Compact
 import Cardano.Chain.UTxO.Tx (Tx (..), TxId, TxIn (..), TxOut (..))
 import Cardano.Crypto (serializeCborHash)
 import Cardano.HeapWords (HeapWords)
-import Cardano.Prelude hiding (concat, empty, toList)
+import Cardano.Ledger.Binary
+  ( DecoderError (..),
+    FromCBOR (..),
+    ToCBOR (..),
+    cborError,
+    decodeListLen,
+    decodeWord8,
+    encodeListLen,
+    matchSize,
+  )
+import Cardano.Prelude hiding (cborError, concat, empty, toList)
 import Data.Coerce
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as M

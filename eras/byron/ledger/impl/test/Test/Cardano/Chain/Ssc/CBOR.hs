@@ -6,7 +6,6 @@ module Test.Cardano.Chain.Ssc.CBOR
   )
 where
 
-import Cardano.Binary (dropBytes)
 import Cardano.Chain.Ssc
   ( SscPayload (..),
     SscProof (..),
@@ -21,10 +20,11 @@ import Cardano.Chain.Ssc
     dropVssCertificate,
     dropVssCertificatesMap,
   )
+import Cardano.Ledger.Binary (dropBytes)
 import Cardano.Prelude
 import GetDataFileName ((<:<))
 import Hedgehog (Group (..), Property)
-import Test.Cardano.Binary.Helpers.GoldenRoundTrip
+import Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip
   ( deprecatedGoldenDecode,
     roundTripsCBORShow,
   )

@@ -43,7 +43,7 @@ library
     Test.Cardano.Ledger.Babbage.Examples.Consensus,
     Test.Cardano.Ledger.Babbage.Serialisation.Generators
   build-depends:
-    cardano-binary,
+    cardano-ledger-binary,
     cardano-ledger-alonzo,
     cardano-ledger-alonzo-test,
     cardano-ledger-babbage,
@@ -76,10 +76,8 @@ test-suite cardano-ledger-babbage-test
     Test.Cardano.Ledger.Babbage.TxInfo,
     Paths_cardano_ledger_babbage_test
   build-depends:
-    base16-bytestring,
     bytestring,
-    cardano-binary,
-    cardano-data,
+    cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-ledger-alonzo,
     cardano-ledger-alonzo-test,
     cardano-ledger-babbage,
@@ -91,7 +89,6 @@ test-suite cardano-ledger-babbage-test
     cardano-ledger-shelley-test,
     cardano-protocol-tpraos,
     cardano-slotting,
-    cborg,
     containers,
     data-default-class,
     plutus-ledger-api,
@@ -100,4 +97,3 @@ test-suite cardano-ledger-babbage-test
     tasty-hunit,
     tasty-quickcheck,
     time,
-    pretty-show,

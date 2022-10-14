@@ -19,12 +19,27 @@ module Test.Cardano.Crypto.VRF.Fake
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Crypto.Hash
 import Cardano.Crypto.Seed (runMonadRandomWithSeed)
 import Cardano.Crypto.Util
-import Cardano.Crypto.VRF.Class
-import Cardano.Ledger.BaseTypes (Seed)
+import Cardano.Crypto.VRF.Class hiding
+  ( decodeCertVRF,
+    decodeSignKeyVRF,
+    decodeVerKeyVRF,
+    encodeCertVRF,
+    encodeSignKeyVRF,
+    encodeVerKeyVRF,
+  )
+import Cardano.Ledger.BaseTypes (Seed, shelleyProtVer)
+import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), hashWithEncoder)
+import Cardano.Ledger.Binary.Crypto
+  ( decodeCertVRF,
+    decodeSignKeyVRF,
+    decodeVerKeyVRF,
+    encodeCertVRF,
+    encodeSignKeyVRF,
+    encodeVerKeyVRF,
+  )
 import Data.Bits
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Builder as BS
@@ -65,7 +80,7 @@ instance SneakilyContainResult Seed where
   sneakilyExtractResult s sk =
     OutputVRF
       . hashToBytes
-      . hashWithSerialiser @Blake2b_224 id
+      . hashWithEncoder @Blake2b_224 shelleyProtVer id
       $ toCBOR s <> toCBOR sk
   unsneakilyExtractPayload = id
 
@@ -139,7 +154,7 @@ evalVRF' a sk@(SignKeyFakeVRF n) =
         fromIntegral
           . bytesToNatural
           . hashToBytes
-          . hashWithSerialiser @Blake2b_224 id
+          . hashWithEncoder @Blake2b_224 shelleyProtVer id
           $ toCBOR p <> toCBOR sk
    in (y, CertFakeVRF n realValue)
 
