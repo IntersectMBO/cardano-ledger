@@ -24,11 +24,8 @@ import Cardano.Ledger.Alonzo.PParams
     getLanguageView,
   )
 import Cardano.Ledger.Alonzo.Scripts
-  ( CostModel,
-    CostModels (..),
+  ( CostModels (..),
     Prices (..),
-    costModelParamsNamesSet,
-    mkCostModel,
   )
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), utxoEntrySize)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), boundRational)
@@ -46,6 +43,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import GHC.Stack (HasCallStack)
 import PlutusLedgerApi.V1 (Data (..))
+import Test.Cardano.Ledger.Alonzo.AlonzoEraGen (freeCostModel)
 import Test.Cardano.Ledger.Alonzo.Examples.Consensus (ledgerExamplesAlonzo)
 import Test.Cardano.Ledger.Alonzo.Serialisation.CDDL (readDataFile)
 import Test.Cardano.Ledger.EraBuffet (StandardCrypto)
@@ -229,13 +227,6 @@ goldenMinFee =
 fromRightError :: (HasCallStack, Show a) => String -> Either a b -> b
 fromRightError errorMsg =
   either (\e -> error $ errorMsg ++ ": " ++ show e) id
-
--- | A cost model that sets everything as being free
-freeCostModel :: HasCallStack => Language -> CostModel
-freeCostModel lang =
-  fromRightError "freeCostModel is not well-formed" $ mkCostModel lang cmps
-  where
-    cmps = Map.fromSet (const 0) $ costModelParamsNamesSet lang
 
 exPP :: AlonzoPParams Alonzo
 exPP =
