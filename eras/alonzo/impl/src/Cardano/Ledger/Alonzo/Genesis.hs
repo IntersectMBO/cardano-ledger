@@ -27,7 +27,6 @@ import Cardano.Ledger.Alonzo.Scripts
     ExUnits (..),
     ExUnits',
     Prices (..),
-    costModelParamsNames,
     getCostModelParams,
     mkCostModel,
   )
@@ -43,12 +42,18 @@ import Data.Aeson.Types (FromJSONKey (..), ToJSONKey (..), toJSONKeyText)
 import Data.Coders
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (mapMaybe)
 import Data.Scientific (fromRationalRepetendLimited)
 import Data.Text (Text)
+import qualified Data.Text as Text
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
+import PlutusLedgerApi.Common (IsParamName, showParamName)
+import qualified PlutusLedgerApi.V1 as PV1
+import qualified PlutusLedgerApi.V2 as PV2
+import PlutusPrelude (enumerate)
 
 data AlonzoGenesis = AlonzoGenesis
   { coinsPerUTxOWord :: !Coin,
@@ -211,27 +216,31 @@ instance ToJSONKey Language where
 instance FromJSONKey Language where
   fromJSONKey = Aeson.FromJSONKeyTextParser languageFromText
 
-validateCostModel :: MonadFail m => Language -> Map Text Integer -> m (Language, CostModel)
-validateCostModel lang cmps = case mkCostModel lang (Map.elems cmps) of
+validateCostModel :: MonadFail m => Language -> [Integer] -> m (Language, CostModel)
+validateCostModel lang cmps = case mkCostModel lang cmps of
   Left err -> fail $ show err
   Right cm -> pure (lang, cm)
 
--- | The keys of the Plutus V1 cost models have changed since the Alonzo genesis file was created.
--- The number of keys, and the ordering of the keys, however, has not changed.
--- Therefore we just replace (in order) the new keys for the old ones.
-translateLegacyV1paramNames :: Map Text Integer -> Map Text Integer
-translateLegacyV1paramNames cmps =
-  Map.fromList $ zip (costModelParamsNames PlutusV1) (Map.elems cmps)
+cmParamValues :: Language -> Map Text Integer -> [Integer]
+cmParamValues lang cmMap =
+  case lang of
+    PlutusV1 -> filterPreservingOrder $ paramNames (enumerate @PV1.ParamName)
+    PlutusV2 -> filterPreservingOrder $ paramNames (enumerate @PV2.ParamName)
+  where
+    filterPreservingOrder = mapMaybe (`Map.lookup` cmMap)
+    paramNames :: IsParamName a => [a] -> [Text]
+    paramNames = map (Text.pack . showParamName)
 
 instance FromJSON CostModels where
   parseJSON = Aeson.withObject "CostModels" $ \o -> do
     plutusV1 <- o .:? "PlutusV1"
     plutusV2 <- o .:? "PlutusV2"
-    let plutusV1' = translateLegacyV1paramNames <$> plutusV1
+    let plutusV1' = cmParamValues PlutusV1 <$> plutusV1
+    let plutusV2' = cmParamValues PlutusV2 <$> plutusV2
     cms <-
       sequence
         [ validateCostModel lang cm
-          | (lang, Just cm) <- [(PlutusV1, plutusV1'), (PlutusV2, plutusV2)]
+          | (lang, Just cm) <- [(PlutusV1, plutusV1'), (PlutusV2, plutusV2')]
         ]
     pure . CostModels . Map.fromList $ cms
 
