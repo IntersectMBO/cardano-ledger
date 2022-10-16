@@ -30,7 +30,6 @@ module Cardano.Ledger.Alonzo.Scripts
     -- * Cost Model
     CostModel,
     mkCostModel,
-    costModelParamsNames,
     getCostModelLanguage,
     getCostModelParams,
     getEvaluationContext,
@@ -88,26 +87,21 @@ import Data.Either (isRight)
 import Data.Int (Int64)
 import Data.Map (Map)
 import Data.Measure (BoundedMeasure, Measure)
-import Data.Text (Text)
-import qualified Data.Text as Text
 import Data.Typeable (Proxy (..), Typeable)
 import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import Numeric.Natural (Natural)
 import PlutusCore.Evaluation.Machine.CostModelInterface (CostModelApplyWarn)
-import PlutusLedgerApi.Common (showParamName)
 import qualified PlutusLedgerApi.V1 as PV1
   ( CostModelApplyError (..),
     EvaluationContext,
-    ParamName,
     ProtocolVersion (ProtocolVersion),
     ScriptDecodeError,
     assertScriptWellFormed,
     mkEvaluationContext,
   )
-import qualified PlutusLedgerApi.V2 as PV2 (ParamName, assertScriptWellFormed, mkEvaluationContext)
-import PlutusPrelude (enumerate)
+import qualified PlutusLedgerApi.V2 as PV2 (assertScriptWellFormed, mkEvaluationContext)
 
 -- | Marker indicating the part of a transaction for which this script is acting
 -- as a validator.
@@ -309,11 +303,6 @@ decodeCostModel lang = do
   case checked of
     Left e -> fail $ show e
     Right cm -> pure cm
-
-costModelParamsNames :: Language -> [Text]
-costModelParamsNames = \case
-  PlutusV1 -> Text.pack . showParamName <$> enumerate @PV1.ParamName
-  PlutusV2 -> Text.pack . showParamName <$> enumerate @PV2.ParamName
 
 decodeParamsValues :: Decoder s [Integer]
 decodeParamsValues = decodeList fromCBOR
