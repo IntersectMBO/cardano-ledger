@@ -212,7 +212,7 @@ instance FromJSONKey Language where
   fromJSONKey = Aeson.FromJSONKeyTextParser languageFromText
 
 validateCostModel :: MonadFail m => Language -> Map Text Integer -> m (Language, CostModel)
-validateCostModel lang cmps = case mkCostModel lang cmps of
+validateCostModel lang cmps = case mkCostModel lang (Map.elems cmps) of
   Left err -> fail $ show err
   Right cm -> pure (lang, cm)
 

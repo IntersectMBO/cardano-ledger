@@ -39,17 +39,16 @@ import Cardano.Ledger.Alonzo.Rules
   )
 import Cardano.Ledger.Alonzo.Scripts
   ( AlonzoScript (..),
+    CostModel,
     CostModels (..),
     ExUnits (..),
     Prices (..),
     Tag (..),
-    costModelParamsNamesSet,
     mkCostModel,
   )
 import Cardano.Ledger.Alonzo.Tx
   ( AlonzoTx (AlonzoTx),
     AlonzoTxBody (..),
-    CostModel,
     IsValid (..),
     ScriptIntegrity (..),
     ScriptPurpose (..),
@@ -71,20 +70,21 @@ import Cardano.Ledger.Val (DecodeNonNegative, EncodeMint (..), Val)
 import Cardano.Slotting.Slot (SlotNo)
 import Codec.CBOR.Term (Term (..))
 import Control.State.Transition (PredicateFailure)
+import Data.Either (fromRight)
 import Data.Int (Int64)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
-import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Text (Text, pack)
+import Data.Text (pack)
 import Data.Twiddle
 import Data.Typeable (Typeable)
 import Data.Void (Void)
 import GHC.Records (HasField)
 import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.V1 as PV1
+import Test.Cardano.Ledger.Alonzo.AlonzoEraGen (costModelParamsCount)
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
@@ -234,16 +234,13 @@ instance Arbitrary Language where
 instance Arbitrary Prices where
   arbitrary = Prices <$> arbitrary <*> arbitrary
 
-mkNullCostModel :: Set Text -> Map Text Integer
-mkNullCostModel = Map.fromSet (const 0)
-
-genCM :: Language -> Set Text -> Gen CostModel
-genCM lang costModelParamNames = do
-  newCMPs <- traverse (const arbitrary) (mkNullCostModel costModelParamNames)
-  either (error "Corrupt cost model") pure $ mkCostModel lang newCMPs
+genCM :: Language -> Gen CostModel
+genCM lang = do
+  newParamValues <- (vectorOf (costModelParamsCount lang) (arbitrary :: Gen Integer))
+  pure $ fromRight (error "Corrupt cost model") (mkCostModel lang newParamValues)
 
 genCostModel :: Language -> Gen (Language, CostModel)
-genCostModel lang = (,) lang <$> genCM lang (costModelParamsNamesSet lang)
+genCostModel lang = (,) lang <$> genCM lang
 
 instance Arbitrary CostModel where
   arbitrary = snd <$> (elements nonNativeLanguages >>= genCostModel)

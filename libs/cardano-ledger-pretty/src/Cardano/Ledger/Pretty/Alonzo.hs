@@ -97,7 +97,7 @@ instance PrettyA ExUnits where
 
 ppCostModel :: CostModel -> PDoc
 ppCostModel cm =
-  ppSexp "CostModel" [ppLanguage (getCostModelLanguage cm), ppMap text ppInteger (getCostModelParams cm)]
+  ppSexp "CostModel" [ppLanguage (getCostModelLanguage cm), ppList ppInteger (getCostModelParams cm)]
 
 instance PrettyA CostModel where
   prettyA = ppCostModel

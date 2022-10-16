@@ -31,7 +31,6 @@ module Cardano.Ledger.Alonzo.Scripts
     CostModel,
     mkCostModel,
     costModelParamsNames,
-    costModelParamsNamesSet,
     getCostModelLanguage,
     getCostModelParams,
     getEvaluationContext,
@@ -88,10 +87,7 @@ import Data.DerivingVia (InstantiatedAt (..))
 import Data.Either (isRight)
 import Data.Int (Int64)
 import Data.Map (Map)
-import qualified Data.Map.Strict as Map
 import Data.Measure (BoundedMeasure, Measure)
-import Data.Set (Set)
-import qualified Data.Set as Set
 import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Typeable (Proxy (..), Typeable)
@@ -245,7 +241,7 @@ pointWiseExUnits oper (ExUnits m1 s1) (ExUnits m2 s2) = (m1 `oper` m2) && (s1 `o
 -- to hide the evaluation context.
 data CostModel = CostModel
   { cmLanguage :: !Language,
-    cmMap :: !(Map Text Integer),
+    cmMap :: [Integer],
     cmEvalCtx :: !PV1.EvaluationContext
   }
   deriving (Generic)
@@ -268,7 +264,7 @@ instance Ord CostModel where
 -- NOTE: Since cost model serializations need to be independently reproduced,
 -- we use the 'canonical' serialization approach used in Byron.
 instance ToCBOR CostModel where
-  toCBOR (CostModel _ cm _) = encodeFoldableAsDefinite $ Map.elems cm
+  toCBOR (CostModel _ cm _) = encodeFoldableAsDefinite cm
 
 instance SafeToHash CostModel where
   originalBytes = serialize'
@@ -285,7 +281,7 @@ instance NFData CostModel where
 
 -- | Convert cost model parameters to a cost model, making use of the
 --  conversion function mkEvaluationContext from the Plutus API.
-mkCostModel :: Language -> Map Text Integer -> Either PV1.CostModelApplyError CostModel
+mkCostModel :: Language -> [Integer] -> Either PV1.CostModelApplyError CostModel
 mkCostModel lang cm =
   case eCostModel of
     Right (evalCtx, _) -> Right (CostModel lang cm evalCtx)
@@ -296,12 +292,12 @@ mkCostModel lang cm =
         PlutusV1 -> PV1.mkEvaluationContext
         PlutusV2 -> PV2.mkEvaluationContext
     eCostModel :: Either PV1.CostModelApplyError (PV1.EvaluationContext, [CostModelApplyWarn])
-    eCostModel = runWriterT (mkEvaluationContext (Map.elems cm))
+    eCostModel = runWriterT (mkEvaluationContext cm)
 
 getCostModelLanguage :: CostModel -> Language
 getCostModelLanguage (CostModel lang _ _) = lang
 
-getCostModelParams :: CostModel -> Map Text Integer
+getCostModelParams :: CostModel -> [Integer]
 getCostModelParams (CostModel _ cm _) = cm
 
 decodeCostModelMap :: Decoder s (Map Language CostModel)
@@ -309,8 +305,7 @@ decodeCostModelMap = decodeMapByKey fromCBOR decodeCostModel
 
 decodeCostModel :: Language -> Decoder s CostModel
 decodeCostModel lang = do
-  let keys = costModelParamsNamesSet lang
-  checked <- mkCostModel lang <$> decodeArrayAsMap keys fromCBOR
+  checked <- mkCostModel lang <$> decodeParamsValues
   case checked of
     Left e -> fail $ show e
     Right cm -> pure cm
@@ -320,25 +315,8 @@ costModelParamsNames = \case
   PlutusV1 -> Text.pack . showParamName <$> enumerate @PV1.ParamName
   PlutusV2 -> Text.pack . showParamName <$> enumerate @PV2.ParamName
 
-costModelParamsNamesSet :: Language -> Set.Set Text
-costModelParamsNamesSet = Set.fromList . costModelParamsNames
-
-decodeArrayAsMap :: Ord a => Set a -> Decoder s b -> Decoder s (Map a b)
-decodeArrayAsMap keys decodeValue = do
-  values <- decodeList decodeValue
-  let numValues = length values
-      numKeys = Set.size keys
-  when (numValues /= numKeys) $
-    fail $
-      "Expected array with "
-        <> show numKeys
-        <> " entries, but encoded array has "
-        <> show numValues
-        <> " entries."
-  pure $ Map.fromList $ zip (Set.toAscList keys) values
-
--- CostModel is not parameterized by Crypto or Era so we use the
--- hashWithCrypto function, rather than hashAnnotated
+decodeParamsValues :: Decoder s [Integer]
+decodeParamsValues = decodeList fromCBOR
 
 hashCostModel ::
   forall e.

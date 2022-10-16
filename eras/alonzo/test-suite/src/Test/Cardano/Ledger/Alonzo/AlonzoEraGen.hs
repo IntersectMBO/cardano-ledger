@@ -31,7 +31,6 @@ import Cardano.Ledger.Alonzo.Scripts as Alonzo
     CostModels (..),
     ExUnits (..),
     Prices (..),
-    costModelParamsNamesSet,
     isPlutusScript,
     mkCostModel,
     pointWiseExUnits,
@@ -106,6 +105,9 @@ import Data.Set as Set
 import GHC.Records (HasField (..))
 import Lens.Micro
 import Numeric.Natural (Natural)
+import qualified PlutusLedgerApi.V1 as PV1 (ParamName)
+import qualified PlutusLedgerApi.V2 as PV2 (ParamName)
+import PlutusPrelude (enumerate)
 import qualified PlutusTx as P (Data (..))
 import qualified PlutusTx as Plutus
 import Test.Cardano.Ledger.AllegraEraGen (genValidityInterval)
@@ -204,14 +206,16 @@ genAlonzoMint startvalue = do
 
 -- ================================================================
 
+costModelParamsCount :: Language -> Int
+costModelParamsCount lang = case lang of
+  PlutusV1 -> length (enumerate @PV1.ParamName)
+  PlutusV2 -> length (enumerate @PV2.ParamName)
+
 -- | A cost model that sets everything as being free
-freeCostModel :: CostModel
-freeCostModel =
-  let lang = PlutusV1
-   in fromRight (error "freeCostModel is not well-formed") $
-        Alonzo.mkCostModel lang $
-          Map.fromSet (const 0) $
-            costModelParamsNamesSet lang
+freeCostModel :: Language -> CostModel
+freeCostModel lang =
+  fromRight (error "freeCostModel is not well-formed") $
+    Alonzo.mkCostModel lang (replicate (costModelParamsCount lang) 0)
 
 -- ================================================================
 
@@ -334,7 +338,7 @@ genAlonzoPParamsUpdate constants pp = do
   -- Not too small for mxV, if this is too small then any Tx with Value
   -- that has lots of policyIds will fail. The Shelley Era uses hard coded 4000
   mxV <- genM (genNatural 4000 5000)
-  let cost = SJust . CostModels $ Map.singleton PlutusV1 freeCostModel
+  let cost = SJust . CostModels $ Map.singleton PlutusV1 (freeCostModel PlutusV1)
       c = SJust 25 -- percent of fee in collateral
       mxC = SJust 100 -- max number of inputs in collateral
   pure (extendPP shelleypp ada cost price mxTx mxBl mxV c mxC)
@@ -359,7 +363,7 @@ genAlonzoPParams constants = do
       <$> genNatural (20 * bigMem + 1) (30 * bigMem + 1)
       <*> genNatural (20 * bigStep + 1) (30 * bigStep + 1)
   mxV <- genNatural 4000 10000 -- This can't be too small. Shelley uses Hard coded 4000
-  let cost = CostModels $ Map.singleton PlutusV1 freeCostModel
+  let cost = CostModels $ Map.singleton PlutusV1 (freeCostModel PlutusV1)
       c = 25 -- percent of fee in collateral
       mxC = 100 -- max number of inputs in collateral
   pure (extendPP shelleypp ada cost price mxTx mxBl mxV c mxC)

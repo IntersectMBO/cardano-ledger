@@ -104,8 +104,9 @@ import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import GHC.Natural (Natural)
 import GHC.Stack
-import PlutusLedgerApi.Test.EvaluationContext (costModelParamsForTesting)
-import qualified PlutusLedgerApi.V1 as Plutus
+import qualified PlutusLedgerApi.V1 as PV1
+import qualified PlutusLedgerApi.V2 as PV2
+import PlutusPrelude (enumerate)
 import Test.Cardano.Ledger.Generic.Fields
   ( TxOutField (..),
   )
@@ -140,13 +141,15 @@ alwaysSucceedsHash n pf = hashScript @era $ always n pf
 freeCostModelV1 :: CostModel
 freeCostModelV1 =
   fromRight (error "corrupt freeCostModelV1") $
-    mkCostModel PlutusV1 (0 <$ costModelParamsForTesting)
+    mkCostModel PlutusV1 $
+      const 0 <$> (enumerate @PV1.ParamName)
 
 -- | A cost model that sets everything as being free
 freeCostModelV2 :: CostModel
 freeCostModelV2 =
-  fromRight (error "corrupt freeCostModelV1") $
-    mkCostModel PlutusV1 (0 <$ costModelParamsForTesting) -- TODO use PV2 when it exist
+  fromRight (error "corrupt freeCostModelV2") $
+    mkCostModel PlutusV1 $
+      const 0 <$> (enumerate @PV2.ParamName)
 
 someKeys :: forall era. Era era => Proof era -> KeyPair 'Payment (EraCrypto era)
 someKeys _pf = KeyPair vk sk
@@ -248,10 +251,10 @@ initUTxO pf =
         ]
 
 datumExample1 :: Era era => Data era
-datumExample1 = Data (Plutus.I 123)
+datumExample1 = Data (PV1.I 123)
 
 datumExample2 :: Era era => Data era
-datumExample2 = Data (Plutus.I 0)
+datumExample2 = Data (PV1.I 0)
 
 -- ======================================================================
 -- ====================== Shared classes and Instances ==================
