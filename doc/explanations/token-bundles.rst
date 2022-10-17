@@ -1,4 +1,4 @@
-Token Bundles
+Assets, tokens, and token bundles
 =============
 
 Terminology
@@ -6,18 +6,43 @@ Terminology
 
 **Asset**
 
-	An object of value which we may wish to track on the blockchain. Such an object can be a variety of things, eg. a digital asset such as ada, a role, a credential, a quantity of a good, etc. This term can refer to both
+An asset is an object that represents value on the blockchain. These objects can be a variety of things, such as a digital asset like ada, a role, a credential, or a quantity of goods. The term asset can refer to either:
 
-* the identifier of the object of value, such as "ada is an asset", or
-* a particular quantity of a specific object, such as "this house is an asset", or "these 10 tonnes of coffee" are an asset
+* the identifier of a class of objects, such as 'ada' or
+* a particular quantity of a specific object, such as '100 lovelace', 'this house' or 'these 10 tonnes of coffee'
+
+An asset is uniquely identified by an asset ID.
+
+**Asset ID**
+
+A pair of both the *policy ID* and *asset name*. It is important to note that although ada can *act* as an asset, it is not represented using an explicit policy ID. 
+
+Tokens that have the same asset ID have the property of being fungible with each other, and are *not* fungible with tokens that have a different asset ID. An asset ID is a unique identifier for a collection of fungible tokens.
+
+- *PolicyID* - the unique identifier that is associated with a minting policy. Let’s take a look at two policy ID examples: `NFLPlayerCardsPolicyID` and `RushConcertPolicyID`. The ID is computed by applying a hash function to the policy itself, and is thus a sequence of letters and numbers. For example:
+
+```
+NFLPlayerCardsPolicyID = e0d123e5f316bef7
+```
+
+- *Asset name* - an (immutable) property of an asset that is used to distinguish different assets within the same policy. Unlike the *policyID*, the asset name does not refer to any code or set of rules, and can be common words, such as `‘tickets’` or `‘VIPTickets’`, for example. However, the policy under which an asset is scoped can specify some constraints on valid asset names. 
+
+Different policies can use the same asset names for different tokens. For example, the token bundle:
+
+```
+FAKERushConcertPolicyID {  (Tickets, 500),
+                           (VIPTickets, 50)}
+```
+
+contains the `Tickets` and `VIPTickets` asset names, but these are not fungible with the `RushConcertPolicyID` tickets that have been defined in another token bundle, since they are scoped under different policies.
 
 **Token**
 
-	Short for "asset token", the on-chain representation of an asset.
+A *token* is a short term for 'asset token', which is the on-chain representation of an asset and its basic accounting unit. A token can represent one ada, one house, or the value of ten tonnes of coffee, for example. 
 
-**Policy**
+**Policy or minting policy**
 
-	Short for "minting policy", it is the set of rules that governs the token-minting operation for all assets associated with that specific policy. We do not see the actual policies in ``TB_Example`` below, only the references to them, ie. their IDs. The association of an asset to its minting policy is permanent, and made at the time of issuance of the asset, necessarily under that very policy.
+A set of rules that govern the minting and burning of assets scoped under that policy. There are no actual policies in ``TB_Example`` below, only references to them, ie, their IDs. The association of an asset with its minting policy is permanent, and made at the time of the asset issuance, necessarily under that very policy.
 
 **Policy ID**
 
@@ -44,17 +69,7 @@ Different policies can have the same asset names for tokens scoped under them, e
 contains ``Tickets`` and ``VIPTickets`` asset names, but these are not fungible with real ``RushConcertPolicyID`` tickets in the ``TB_Example`` token bundle, as they are scoped under different policies.
 
 
-**Asset ID**
 
-	The pair of a policy ID and an asset name. Tokens with the same asset ID have the property that they are all fungible with each other, and not fungible with tokens with a different asset ID. An asset ID is the unique identifier for a collection of tokens with this property. A policy may have assets scoped under it which have different asset names, eg.
-
-	``RushConcertPolicyID { (Tickets, 500), (VIPTickets, 50) }``
-
-is a token bundle with assets scoped under a single policy ID ``RushConcertPolicyID``, but two asset names, and therefore two asset IDs. They are
-
-	``(RushConcertPolicyID, Tickets)``, and ``(RushConcertPolicyID, VIPTickets)``
-
-Intuitively, all regular tickets are fungible with each other, and all VIP tickets are fungible with each other. But a VIP ticket is not fungible with a regular ticket, as they have different asset IDs.
 
 **Quantity**
 
