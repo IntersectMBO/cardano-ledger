@@ -26,12 +26,9 @@ import Control.Iterate.SetAlgebra
     sameDomain,
   )
 import Control.SetAlgebra
-  ( BaseRep (BiMapR, ListR, MapR, SetR, SingleR),
-    BiMap,
-    Bimap,
+  ( BaseRep (ListR, MapR, SetR, SingleR),
     Iter (element),
     Single (Fail),
-    biMapFromList,
     dom,
     eval,
     fromList,
@@ -50,7 +47,6 @@ import Control.SetAlgebra
     (◁),
     (➖),
   )
-import Data.BiMap (BiMap (..))
 import Data.Char (ord)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -347,43 +343,31 @@ iterTests =
     "Iterator tests"
     [ testAnd1 "(And l1 l2) as List, fifo" ListR,
       testAnd1 "(And l1 l2) as Map, fifo" MapR,
-      testAnd1 "(And l1 l2) as BiMap, fifo" BiMapR,
       testAnd2 "(And l1 l2) as List, lifo" ListR,
       testAnd2 "(And l1 l2) as Map, lifo" MapR,
-      testAnd2 "(And l1 l2) as BiMap, lifo" BiMapR,
       testOr "(Or l1 l2) as List" ListR,
       testOr "(Or l1 l2) as Map" MapR,
-      testOr "(Or l1 l2) as BiMap" BiMapR,
       testDiff1 "(Diff l1 l2) as List" ListR, -- (Diff is not symmetric)
       testDiff2 "(Diff l2 l1) as List" ListR,
       testDiff1 "(Diff l1 l2) as Map" MapR,
       testDiff2 "(Diff l2 l1) as Map" MapR,
-      testDiff1 "(Diff l1 l2) as BiMap" BiMapR,
-      testDiff2 "(Diff l2 l1) as BiMap" BiMapR,
       testGuard "(Guard l1 even) as List" ListR l1,
       testGuard "(Guard l1 even) as Map" MapR l1,
-      testGuard "(Guard l1 even) as BiMap" BiMapR l1,
       testGuard "(Guard l2 even) as List" ListR l2,
       testGuard "(Guard l2 even) as Map" MapR l2,
-      testGuard "(Guard l2 even) as BiMap" BiMapR l2,
       testProj "(Proj l1 ord) as List" ListR l1,
       testProj "(Proj l1 ord) as Map" MapR l1,
-      testProj "(Proj l1 ord) as BiMap" BiMapR l1,
       testProj "(Proj l2 ord) as List" ListR l2,
       testProj "(Proj l2 ord) as Map" MapR l2,
-      testProj "(Proj l2 ord) as BiMap" BiMapR l2,
       testAndP "(AndP l1:List l3:Map ord)" ListR MapR,
       testAndP "(AndP l1:Map l3:List ord)" MapR ListR,
       testAndP "(AndP l1:Map l3:List Map)" MapR MapR,
-      testAndP "(AndP l1:BiMap l3:List Map)" BiMapR MapR,
       testChain "(Chain l4:List l5:Map)" ListR MapR,
       testChain "(Chain l4:Map l5:List)" MapR ListR,
       testChain "(Chain l4:Map l5:List Map)" MapR MapR,
-      testChain "(Chain l4:BiMap l5:List Map)" BiMapR MapR,
       testChain2 "(Chain2 l5:List l4:Map)" ListR MapR,
       testChain2 "(Chain2 l5:Map l4:List)" MapR ListR,
       testChain2 "(Chain2 l5:Map l4:List Map)" MapR MapR,
-      testChain2 "(Chain2 l5:BiMap l4:List Map)" BiMapR MapR,
       testEpochEx
     ]
 
@@ -447,9 +431,6 @@ instance Monoid Range where
 
 flipRng :: (Ord b, Num b) => List a b -> List b b
 flipRng (UnSafeList xs) = fromPairs (+) (map (\(_a, b) -> (b, b)) xs)
-
-bimap :: (Ord k, Ord v) => Map k v -> BiMap v k v
-bimap xs = biMapFromList (\_earlier later -> later) (Map.toList xs)
 
 duplicate :: Ord a => Set.Set a -> Map.Map a a
 duplicate s = foldr (\a m -> Map.insert a a m) Map.empty s
@@ -516,12 +497,6 @@ slowProperties k v m1 m2 s1 s2 rs ls =
         (qtest (DExclude (Rng (Singleton v k)) (Base MapR m1)), "slow37"),
         (qtest (DExclude (Base SetR (Sett s1)) (Base MapR m1)), "slow38"),
         (qtest (DExclude (Dom (Base MapR m1)) (Base MapR m2)), "slow39"),
-        (qtest (DExclude (SetSingleton k) (Base BiMapR (bimap m1))), "slow40"),
-        (qtest (DExclude (Dom (Singleton k v)) (Base BiMapR (bimap m1))), "slow41"),
-        (qtest (DExclude (Rng (Singleton v k)) (Base BiMapR (bimap m1))), "slow42"),
-        (qtest (RExclude (Base BiMapR (bimap m1)) (SetSingleton v)), "slow44"),
-        (qtest (RExclude (Base BiMapR (bimap m1)) (Dom (Singleton v k))), "slow45"),
-        (qtest (RExclude (Base BiMapR (bimap m1)) (Rng (Singleton k v))), "slow46"),
         (qtest (RExclude (Base MapR m1) (Base SetR (Sett rs))), "slow47"),
         (qtest (RExclude (Base MapR m1) (SetSingleton v)), "slow48"),
         (qtest (RExclude (Base ListR ls) (Base SetR (Sett rs))), "slow49"),
@@ -569,9 +544,7 @@ slowProperties k v m1 m2 s1 s2 rs ls =
         (qtest (Singleton k v), "slow98"),
         (qtest (SetSingleton k), "slow99"),
         (btest (KeyEqual (Base MapR m1) (Base MapR m2)), "slow100"),
-        (btest (KeyEqual (Base BiMapR (bimap m1)) (Base BiMapR (bimap m2))), "slow101"),
         (btest (KeyEqual (Dom (Base MapR m1)) (Dom (Base MapR m2))), "slow102"),
-        (btest (KeyEqual (Dom (Base BiMapR (bimap m1))) (Dom (Base BiMapR (bimap m2)))), "slow103"),
         (btest (KeyEqual (Base SetR (Sett s1)) (Base SetR (Sett s2))), "slow104"),
         (btest (KeyEqual (Base MapR m1) (Base SetR (Sett s1))), "slow105"),
         (qtest (SetDiff (Base SetR (Sett s1)) (Base SetR (Sett s2))), "slow108"),
@@ -619,31 +592,6 @@ instance (Ord k, Arbitrary k) => Arbitrary (Sett k ()) where
     xs <- vectorOf n arbitrary
     pure (Sett (Set.fromList xs))
 
-instance (Ord k, Ord v, Arbitrary k, Arbitrary v) => Arbitrary (Bimap k v) where
-  arbitrary = bimap <$> arbitrary
-
--- ========================================
--- BiMap tests. BiMaps have two parts that
--- should encode the same information. Test
--- that every randomly generated one does.
--- =========================================
-
-flatten :: (Ord k) => Map.Map v (Set.Set k) -> Map.Map k v
-flatten = Map.foldrWithKey accum Map.empty
-  where
-    accum val setk ans = Set.foldr accum2 ans setk
-      where
-        accum2 key m2 = Map.insert key val m2
-
-ok :: (Ord k, Ord v) => BiMap v k v -> Bool
-ok (MkBiMap forwrd backwrd) = forwrd == flatten backwrd
-
-okfromList :: [(Int, Int)] -> Bool
-okfromList xs = ok (biMapFromList (\_earlier later -> later) xs)
-
-biMapTest :: TestTree
-biMapTest = testProperty "BiMap Consistent" okfromList
-
 -- ====================================================
 -- Tie all the tests together
 -- ====================================================
@@ -658,6 +606,5 @@ setAlgTest =
       intersectDomPLeftTest,
       ledgerStateTest,
       threeWayTest,
-      slowFastEquiv,
-      biMapTest
+      slowFastEquiv
     ]

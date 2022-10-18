@@ -24,7 +24,6 @@ import Control.Iterate.BaseTypes
     fromPairs,
   )
 import Control.Iterate.Collect (Collect (..), hasElem, none, one)
-import Data.BiMap (BiMap, Bimap)
 import Data.List (sortBy)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -120,9 +119,6 @@ instance (Ord k) => HasExp [(k, v)] (List k v) where
 
 instance (Ord k) => HasExp (Single k v) (Single k v) where
   toExp x = Base SingleR x
-
-instance (Ord k, Ord v) => HasExp (Bimap k v) (Bimap k v) where
-  toExp x = Base BiMapR x
 
 type OrdAll coin cred pool ptr k = (Ord k, Ord coin, Ord cred, Ord ptr, Ord pool)
 
@@ -533,9 +529,6 @@ instance Ord k => HasQuery (Map.Map k v) k v where
 
 instance Ord k => HasQuery (Single k v) k v where
   query xs = BaseD SingleR xs
-
-instance (Ord v, Ord k) => HasQuery (BiMap v k v) k v where
-  query xs = BaseD BiMapR xs
 
 instance
   (UnifiedView coin cred pool ptr k v, Monoid coin, Ord k, Ord coin, Ord cred, Ord ptr, Ord pool) =>

@@ -10,7 +10,6 @@
 module Control.Iterate.BaseTypes where
 
 import Control.Iterate.Collect (Collect (..), hasElem, isempty, none, one, when)
-import Data.BiMap
 import Data.List (sortBy)
 import qualified Data.List as List
 import qualified Data.Map.Strict as Map
@@ -88,7 +87,6 @@ data BaseRep f k v where
   SetR :: Basic Sett => BaseRep Sett k ()
   ListR :: Basic List => BaseRep List k v
   SingleR :: Basic Single => BaseRep Single k v
-  BiMapR :: (Basic (BiMap v), Ord v) => BaseRep (BiMap v) k v
   ViewR ::
     (Monoid coin, Ord cred, Ord ptr, Ord coin, Ord pool) =>
     UM.Tag coin cred pool ptr k v ->
@@ -99,7 +97,6 @@ instance Show (BaseRep f k v) where
   show SetR = "Set"
   show ListR = "List"
   show SingleR = "Single"
-  show BiMapR = "BiMap"
   show (ViewR UM.Rew) = "ViewR-cred-coin"
   show (ViewR UM.Del) = "ViewR-cred-keyhash"
   show (ViewR UM.Ptr) = "ViewR-ptr-cred"
@@ -248,46 +245,11 @@ instance Iter Sett where
   isnull (Sett x) = Set.null x
   lookup k (Sett m) = if Set.member k m then Just () else Nothing
 
--- ================ Basic BiMap ================================
-
-instance Ord v => Basic (BiMap v) where
-  addkv (k, v) (MkBiMap f b) comb = MkBiMap (Map.insertWith (mapflip comb) k v f) (insertBackwards oldv newv k b)
-    where
-      (oldv, newv) = case Map.lookup k f of Nothing -> (v, v); Just v2 -> (v2, comb v2 v)
-  removekey k (m@(MkBiMap m1 m2)) =
-    -- equality constraint (a ~ v) from (BiMap a k v) into scope.
-    case Map.lookup k m1 of
-      Just v -> MkBiMap (Map.delete k m1) (retract v k m2)
-      Nothing -> m
-  domain (MkBiMap left _right) = Map.keysSet left
-  range (MkBiMap _left right) = Map.keysSet right
-
-instance Ord v => Iter (BiMap v) where
-  nxt (MkBiMap left right) =
-    Collect
-      ( \ans f ->
-          case Map.minViewWithKey left of
-            Nothing -> ans
-            Just ((k, v), nextm) -> f (k, v, MkBiMap nextm right) ans
-      )
-  lub key (MkBiMap forward backward) =
-    Collect
-      ( \ans f ->
-          case Map.splitLookup key forward of -- NOTE in Log time, we skip over all those tuples in _left
-            (_left, Just v, right) -> f (key, v, MkBiMap right backward) ans
-            (_left, Nothing, right) | Map.null right -> ans
-            (_left, Nothing, right) -> f (k, v, MkBiMap m3 backward) ans
-              where
-                ((k, v), m3) = Map.deleteFindMin right
-      )
-  isnull (MkBiMap f _g) = isnull f
-  lookup x (MkBiMap left _right) = Map.lookup x left
-  haskey k (MkBiMap left _right) = haskey k left
-
 -- ============== Basic Map =========================
 
 instance Basic Map.Map where
-  addkv (k, v) m comb = Map.insertWith (mapflip comb) k v m
+  -- Data.Map uses(\ new old -> ...) while our convention is (\ old new -> ...)
+  addkv (k, v) m comb = Map.insertWith (flip comb) k v m
   removekey k m = Map.delete k m
   domain x = Map.keysSet x
   range xs = Map.foldrWithKey (\_k v ans -> Set.insert v ans) Set.empty xs
@@ -371,10 +333,6 @@ instance Embed (Set.Set k) (Sett k ()) where
   fromBase (Sett xs) = xs
 
 instance Embed (Map.Map k v) (Map.Map k v) where
-  toBase xs = xs
-  fromBase xs = xs
-
-instance Embed (BiMap v k v) (BiMap v k v) where
   toBase xs = xs
   fromBase xs = xs
 

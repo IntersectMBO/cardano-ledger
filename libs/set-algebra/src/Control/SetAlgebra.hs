@@ -8,7 +8,7 @@
 --  interpreted as sets, the value is always the unit type: (). The binary GADT 'Sett' links to the
 --  usual 'Data.Set' type. Its constructor has the following type @Sett :: Set k -> Sett k ()@, programmers can
 --  use similar strategies to interpret other types as sets. Predefined instances of Basic include 'Data.Map',
---  'Data.Set', 'List', 'BiMap', and 'Single'. Programmers can add 'Basic' instances for their own types as well.
+--  'Data.Set', 'List', and 'Single'. Programmers can add 'Basic' instances for their own types as well.
 --
 --  A typical set algebra expression (involving range restriction, ('▷'), here) looks like @(eval (x ▷ y))@.
 --  Where @x@ and @y@ are program variables or expressions, the operator ('▷') builds an 'Exp' tree, and
@@ -52,8 +52,6 @@ module Control.SetAlgebra
   ( -- * In addition to 'Data.Map.Map' and 'Data.Set.Set', types interpretable as maps and sets.
     -- $MapAndSetTypes
     List,
-    BiMap,
-    Bimap,
     Single (..),
 
     -- * Classes supporting abstract constructors of Set Algebra Expressions. These show up in the types of overloaded functions.
@@ -104,16 +102,10 @@ module Control.SetAlgebra
     keysEqual,
     setdiff,
 
-    -- * Miscellaneous operators, including smart constructors for 'BiMap' and 'List', whose constructors are hidden.
+    -- * Miscellaneous operators, including smart constructors for 'List', whose constructors are hidden.
     -- $Misc
     materialize,
-    biMapToMap,
-    biMapFromMap,
-    biMapFromList,
-    biMapEmpty,
     fromList,
-    forwards,
-    backwards,
   )
 where
 
@@ -153,15 +145,4 @@ import Control.Iterate.Exp
     (⨃),
   )
 import Control.Iterate.SetAlgebra
-import Data.BiMap (BiMap (..), Bimap, biMapEmpty, biMapFromList, biMapFromMap, biMapToMap)
-import Data.Map (Map)
 import Data.MapExtras (keysEqual)
-import Data.Set (Set)
-
--- | Extract the forwards 'Map' from a 'BiMap'.
-forwards :: BiMap v k v -> Map k v
-forwards (MkBiMap l _r) = l
-
--- | Extract the backwards 'Map' from a 'BiMap'.
-backwards :: BiMap v k v -> Map v (Set k)
-backwards (MkBiMap _l r) = r
