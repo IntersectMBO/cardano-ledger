@@ -277,7 +277,7 @@ testCheckLeaderVal =
           r > 0 ==>
             let ascVal :: Double
                 ascVal = fromRational . unboundRational $ activeSlotVal f
-                numTrials = 500
+                numTrials = 2000
                 -- 4 standard deviations
                 δ = 4 * sqrt (realToFrac numTrials * p * (1 - p))
                 p = 1 - (1 - ascVal) ** fromRational r
