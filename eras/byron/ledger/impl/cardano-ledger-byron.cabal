@@ -250,8 +250,7 @@ library
                      , cardano-binary
                      , cardano-crypto
                      , cardano-crypto-wrapper
-                     -- HeapWords gets moved to a separate package in 0.1.0.1
-                     , cardano-prelude < 0.1.0.1
+                     , cardano-prelude 
                      , cborg
                      , containers
                      , contra-tracer
@@ -262,6 +261,7 @@ library
                      , directory
                      , filepath
                      , formatting
+                     , heapwords
                      , mtl
                      , nothunks
                      , quiet
@@ -370,6 +370,7 @@ test-suite cardano-ledger-byron-test
                      , filepath
                      , formatting
                      , generic-monoid
+                     , heapwords
                      , hedgehog >= 1.0.4
                      , microlens
                      , resourcet
