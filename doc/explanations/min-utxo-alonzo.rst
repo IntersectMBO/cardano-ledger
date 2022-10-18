@@ -1,17 +1,14 @@
-Min-Ada-Value Calculation in Alonzo
+Minimum ada value calculation in Alonzo
 ===================================
-
-The calculation
-#################
 
 There is no longer a ``minUTxOValue`` protocol parameter in Alonzo, it was
 deprecated at the end of the Mary era. However, the requirement that each
-UTxO must contain an amount of ada that depends on the size of the entry is
+UTXO must contain an amount of ada that depends on the size of the entry is
 still enforced in the Alonzo era.
-The size-dependent minimum ada amount in a UTxO is still referred to as the min-ada-value, and
+The size-dependent minimum ada amount in a UTXO is still referred to as the min-ada-value, and
 is now calculated using the Alonzo parameter ``coinsPerUTxOWord``.
 
-The formula for the min-ada-value calculation, for a UTxO containing an output ``txout``, is:
+The formula for the min-ada-value calculation, for a UTXO containing an output ``txout``, is:
 
 ``utxoEntrySize (txout) * coinsPerUTxOWord``
 
@@ -28,7 +25,7 @@ The variable ``dh`` is the hash of the datum that is contained in the output. If
 no datum, the hash is represented by ``Nothing``, and takes up ``0`` space. If there
 is a datum in the output, it takes up ``10`` words of memory space. 
 
-Example min-ada-value calculations and current constants
+Example minimum ada value calculations and constants
 #########################################################
 
 Note that the ``coinsPerUTxOWord`` is a protocol parameter and is subject to
@@ -86,7 +83,7 @@ Recall that
 
 The following are calculations of the sizes of token bundles (values)
 described in the tables above. These are according to the ``size`` function
-give in the min-ada-value document for the Mary era.
+given in the min-ada-value document for the Mary era.
 
 * (i) : ``6 + FLOOR(((1 * 12) + 0 + (1 * 28) + 7)/8, 1) = 11``
 
@@ -105,7 +102,7 @@ give in the min-ada-value document for the Mary era.
 * (viii) : ``6 + FLOOR(((3 * 12) + 96 + (1 * 28) + 7)/8, 1) = 16``
 
 
-Constraint on Token Bundle Size
+Constraint on the token bundle size
 ##################################
 
 In addition to the min-ada-value requirement, the ledger enforces a constraint
