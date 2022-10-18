@@ -56,7 +56,7 @@ library
                      , microlens
                      , microlens-th
                      , nothunks
-                     , template-haskell
+                     --, template-haskell
                      , Unique >= 0.4.7.6
                      -- IOHK deps
                      , cardano-binary

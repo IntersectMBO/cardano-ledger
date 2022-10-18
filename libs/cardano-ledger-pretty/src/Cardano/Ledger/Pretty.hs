@@ -208,6 +208,13 @@ import Prettyprinter
 import Prettyprinter.Internal (Doc (Empty))
 import Prettyprinter.Util (putDocW)
 
+type Debuggable era =
+  ( CanPrettyPrintLedgerState era,
+    PrettyA (TxBody era),
+    PrettyA (TxAuxData era),
+    PrettyA (TxWits era)
+  )
+
 -- =====================================================================================================
 -- HELPER FUNCTIONS
 -- =====================================================================================================

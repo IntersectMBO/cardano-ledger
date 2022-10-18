@@ -63,6 +63,7 @@ import Test.Cardano.Ledger.Shelley.Utils
     runShelleyBase,
   )
 import Test.QuickCheck (Gen)
+import Cardano.Ledger.Pretty (ppLedgerState, Debuggable, ppTx)
 
 -- ======================================================
 
@@ -119,7 +120,8 @@ instance
     PredicateFailure (Core.EraRule "DELPL" era) ~ ShelleyDelplPredFailure era,
     Embed (Core.EraRule "DELEG" era) (ShelleyDELPL era),
     Embed (Core.EraRule "LEDGER" era) (ShelleyLEDGERS era),
-    Default (State (Core.EraRule "PPUP" era))
+    Default (State (Core.EraRule "PPUP" era)),
+    Debuggable era
   ) =>
   TQC.HasTrace (ShelleyLEDGERS era) (GenEnv era)
   where
@@ -155,7 +157,7 @@ instance
                   applySTSTest @(Core.EraRule "LEDGER" era)
                     (TRC (ledgerEnv, ls', tx))
           case res of
-            Left pf -> error ("LEDGER sigGen: " <> show pf)
+            Left pf -> error ("Transaction:\n" <> show (ppTx tx) <> "\n\nLedger state:\n" <> show (ppLedgerState ls') <> "\n\nLEDGER sigGen: " <> show pf)
             Right ls'' -> pure (ls'', tx : txs)
 
   shrinkSignal = const []
