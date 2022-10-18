@@ -29,7 +29,7 @@ The ID is computed by applying a hash function to the policy itself, and is thus
 
 ``NFLPlayerCardsPolicyID = e0d123e5f316bef7``
 
-**Asset Name**
+**Asset name**
 
 An (immutable) property of an asset that is used to distinguish different assets within the same policy. Unlike the *policyID*, the asset name does not refer to any code or set of rules, and can be common words. In ``TB_Example``, the names for the assets with policy ID ``RushConcertPolicyID`` are:
 
@@ -79,7 +79,7 @@ A script that determines whether a transaction is allowed to mint or burn a part
 Token bundle
 ####################
 
-A token bundle is a heterogeneous (‘mixed’) collection of tokens. Any tokens can be bundled together. Token bundles are the standard - and only - way to represent and store assets on the Cardano blockchain.
+A token bundle is a heterogeneous (‘mixed’) collection of tokens. Any tokens can be bundled together. Token bundles are the standard – and only – way to represent and store assets on the Cardano blockchain.
 
 Token bundles organize tokens into a particular kind of data structure (see example and explanation below), so that which tokens are fungible with which other tokens explicitly adheres to this organization.
 
@@ -103,7 +103,6 @@ Here is an example of a token bundle, let’s call it ``TB_Example`` : ::
 			(VIPTickets, 50)}
 	}
 
-We will use this example to explain the terminology below.
 
 How and where are token bundles stored?
 ********************************************
