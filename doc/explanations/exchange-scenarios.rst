@@ -9,9 +9,8 @@ who can do it, and might also define the point in the transaction
 lifecycle at which it can be done.
 
 A minting policy is bound by the network protocol and ledger-defined
-rules. One such rule is `the minimum UTXO
-value <https://docs.cardano.org/native-tokens/minimum-ada-value-requirement>`__
-(the minimum amount of ada that must be sent in a single transaction.)
+rules. One such rule is the minimum UTXO
+value, which is the minimum amount of ada that must be sent in a single transaction.
 The value is currently set to 1 ada, so to transact any native asset on
 the Cardano network, a minimum of 1 ada must be included and accounted
 for within the transaction. This does not mean that you have to send
@@ -65,22 +64,17 @@ Getting started with native assets
 
 After understanding what a transaction with native assets might look
 like, you might want to create or burn some native assets or tokens on
-the testnet. See `these
-prerequisites <https://docs.cardano.org/native-tokens/getting-started#prerequisites>`__
-and follow the below steps to start minting some native assets:
+the testnet. Follow the below steps to start minting some native assets:
 
 -  Connect ``cardano-node`` to testnet
 -  Build ``cardano-node`` and connect to testnet
 -  Download ``cardano-cli`` prebuilt binary or use build from source
--  Follow `these
-   steps <https://docs.cardano.org/native-tokens/getting-started>`__
+-  Follow the 'Getting started with native tokens' steps.
 
 Spending UTXO with native assets attached
 -----------------------------------------
 
-When building a transaction with native assets using ``cardano-cli`` as
-outlined in `this
-section <https://docs.cardano.org/native-tokens/getting-started/#example:mintinganewnativetoken>`__,
+When building a transaction with native assets using ``cardano-cli``,
 it is important to account for two things:
 
 1. The ada value you wish to send
@@ -123,11 +117,6 @@ You control what to do with the native asset. You can either return it
 to the sender only if you know the address or alternatively you can move
 the native asset to an address in your wallet adhering to the network
 guidelines and the minimum UTXO value.
-
-Read the `native tokens
-topic <https://docs.cardano.org/native-tokens/getting-started#example:mintinganewnativetoken>`__
-for more information on creating and balancing a transaction with a
-native asset attached.
 
 Scenario 2 - Unexpectedly received multi-asset in cardano-wallet
 ================================================================
@@ -187,10 +176,8 @@ topic <https://cardano-ledger.readthedocs.io/en/latest/explanations/policies.htm
 for more information on minting policies.
 
    Note: The minimum cost of sending any amount of native asset is one
-   ada, plus the transaction fee. Read the `minimum ada value
-   requirement
-   topic <https://docs.cardano.org/native-tokens/minimum-ada-value-requirement>`__
-   for more information on the minimum UTXO requirements.
+   ada, plus the transaction fee. Read the minimum ada value
+   requirement topic for more information on the minimum UTXO requirements.
 
 **Option 1**: Send tokens back to the issuer or sender:
 
