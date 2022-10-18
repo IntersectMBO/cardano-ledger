@@ -89,6 +89,7 @@ library
                      , cardano-binary
                      , cardano-crypto
                      , cardano-prelude
+                     , heapwords
                      , cryptonite
                      , data-default
                      , formatting
