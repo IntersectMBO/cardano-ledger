@@ -1,88 +1,12 @@
-What is a native token and how does it compare to ada and ERC20?
+How does a native token compare to ada and ERC20?
 ==================================================================
 
-Terminology
-###########
-
-+-----------------+-------------------------------------------------------+-----------------------------------------------------------+
-|Term             | Meaning                                               | Examples                                                  |
-+-----------------+-------------------------------------------------------+-----------------------------------------------------------+
-|Token            | The basic accounting unit for a single Asset type.    | 1 lovelace                                                |
-|                 |                                                       |                                                           |
-|                 |                                                       | 1 USDT                                                    |
-+-----------------+-------------------------------------------------------+-----------------------------------------------------------+
-|Value            | The type which is used by the ledger to represent     | 1 lovelace and 3 USDT                                     |
-|                 |                                                       |                                                           |
-|                 | tokens that are tracked. Pre-Mary, Value is just a    | 1000 lovelace and 100 USDT                                |
-|                 |                                                       |                                                           |
-|                 | quantity of Ada; post-Mary, Value is a bundle of      | Just 10 lovelace.                                         |
-|                 |                                                       |                                                           |
-|                 | tokens with associated quantities.                    |                                                           |
-|                 |                                                       |                                                           |
-|                 | The ledger never talks about bare “tokens”, rather it |                                                           |
-|                 |                                                       |                                                           |
-|                 | always uses Value.                                    |                                                           |
-+-----------------+-------------------------------------------------------+-----------------------------------------------------------+
-|Token bundle     | Another word for Value.                               |                                                           |
-+-----------------+-------------------------------------------------------+-----------------------------------------------------------+
-|Script           | A piece of code which runs on the Cardano blockchain. |  A multisig script stating that the transaction is        |
-|                 |                                                       |                                                           |
-|                 | Used to support “smart contracts”.                    |  authorized if it is signed by both Alice and Bob.        |
-|                 |                                                       |                                                           |
-|                 | Cardano will support several scripting languages: in  |                                                           |
-|                 |                                                       |                                                           |
-|                 | Mary this will just be the multisig language, in      |                                                           |
-|                 |                                                       |                                                           |
-|                 | subsequent eras, it will include Plutus Core as well. |                                                           |
-+-----------------+-------------------------------------------------------+-----------------------------------------------------------+
-|Minting policy   | A script which determines whether a transaction is    | A multisig script stating the minting (burning) is        |
-|                 |                                                       |                                                           |
-|script           | allowed to mint or burn a particular currency.        | authorized if the transaction is signed by Alice.         |
-|                 |                                                       |                                                           |
-|                 |                                                       | Alice therefore has complete freedom to mint and burn     |
-|                 |                                                       |                                                           |
-|                 |                                                       | tokens as she desires.                                    |
-+-----------------+-------------------------------------------------------+-----------------------------------------------------------+
-|Policy ID        | An identifier that uniquely identifies a currency.    |                                                           |
-|                 |                                                       |                                                           |
-|                 | The Policy ID is the hash of the minting policy       |                                                           |
-|                 |                                                       |                                                           |
-|                 | script for the currency.                              |                                                           |
-+-----------------+-------------------------------------------------------+-----------------------------------------------------------+
-|Asset            | The type of a collection of equivalent token values   | ada                                                       |
-|                 |                                                       |                                                           |
-|                 | in a single currency.  An asset is uniquely           | Sword                                                     |
-|                 |                                                       |                                                           |
-|                 | identified by an Asset ID.                            | Voting Shares                                             |
-|                 |                                                       |                                                           |
-|                 |                                                       | Non Voting Shares                                         |
-+-----------------+-------------------------------------------------------+-----------------------------------------------------------+
-|Asset name       | A name for a particular asset type inside a currency. | ``"ada"``                                                 |
-|                 |                                                       |                                                           |
-|                 | Asset names must be unique within a currency, but do  | ``"Sword"``                                               |
-|                 |                                                       |                                                           |
-|                 | not need to be unique across different currencies.    | ``“Voting shares”``                                       |
-|                 |                                                       |                                                           |
-|                 |                                                       | ``“Non-voting shares”``                                   |
-+-----------------+-------------------------------------------------------+-----------------------------------------------------------+
-|Asset ID         | A pair of a policy ID and and asset name. Uniquely    | ``(<hash of a script>, “Sword”)``                         |
-|                 |                                                       |                                                           |
-|                 | identifies an asset.                                  |                                                           |
-+-----------------+-------------------------------------------------------+-----------------------------------------------------------+
-
-
-How do native tokens compare to Ada?
-####################################
-
-Native tokens behave the same as ada in most ways.
-However, Ada is the “principal” currency of Cardano, and is the only one which
-can be used for some special purposes, such as paying fees.
-
+Native tokens behave the same as ada in most cases. However, ada is Cardano's *principal* currency and is the only currency used for such special purposes as paying fees or earning rewards.
 
 +-----------------------------------+-------+-----------------+-------------------------------------------------+
 |                                   | Ada   | Native tokens   | Comment                                         |
 +-----------------------------------+-------+-----------------+-------------------------------------------------+
-|Can be sent in transactions?       | Y     | Y               |                                                 |
+|Can be sent in transactions        | Y     | Y               |                                                 |
 +-----------------------------------+-------+-----------------+-------------------------------------------------+
 |Can be kept in UTXO outputs        | Y     | Y               |                                                 |
 +-----------------------------------+-------+-----------------+-------------------------------------------------+
@@ -92,28 +16,30 @@ can be used for some special purposes, such as paying fees.
 +-----------------------------------+-------+-----------------+-------------------------------------------------+
 |Can be minted/burned               | N     | Y               | Ada cannot be created or destroyed,             |
 |                                   |       |                 |                                                 |
-|                                   |       |                 | its policy ID does not correspond to a script   |
+|                                   |       |                 | its policy ID does not correspond to a script.  |
 +-----------------------------------+-------+-----------------+-------------------------------------------------+
 |Can be used to pay fees, receive   | Y     | N               | Ada is the only currency which can be used for  |
 |                                   |       |                 |                                                 |
-|rewards, etc.                      |       |                 | fees and rewards.                               |
+|rewards, etc.                      |       |                 | paying fees and earning rewards.                |
 +-----------------------------------+-------+-----------------+-------------------------------------------------+
 |Can be used to cover the minimum   | Y     | N               | Ada is the only currency which can be used      |
 |                                   |       |                 |                                                 |
 |UTXO value                         |       |                 | for deposits.                                   |
 +-----------------------------------+-------+-----------------+-------------------------------------------------+
 
-How do native tokens compare to ERC-20 tokens?
+How do native tokens compare to ERC20 tokens?
 ###############################################
 
-ERC-20 is a token standard on Ethereum, and the most popular way to issue tokens on a blockchain today.
+ERC20 is an Ethereum token standard, widely used for the purpose of token issuance on various platforms. The peculiarity of this token type lies in the fact that it can represent value and serve for such purposes as payments, value transfer, exchange, rewards or incentives, access to services and products, represent voting rights, etc. Also, these tokens can hold both utility and security features, which opens a range of possible use cases for businesses, applications, and enterprises. 
 
+On Cardano, users can create native tokens that will serve the above-mentioned purposes and in addition, it is possible to create *unique* (non-fungible) assets representing value like real estate or intellectual rights, for example (in Ethereum, this functionality requires a separate standard, ERC721). 
 
+Unlike ERC20 tokens, the tracking and accounting of native tokens is supported by the ledger natively (ERC20 tokens require smart contracts to achieve the same thing). An important benefit of using native tokens is that they do not require smart contracts to transfer their value and can be transferred alongside other token types. Also, unlike ERC20, native tokens do not require special transfer fees or additional event-handling logic to track transactions. 
 
 +------------------------------------+-----------------------------------------+--------------------------------------------+
-|                                    | ERC-20                                  |Native tokens                               |
+|                                    | ERC20                                   |Native tokens                               |
 +------------------------------------+-----------------------------------------+--------------------------------------------+
-|Backing blockchain                  | Ethereum                                |Cardano                                     |
+|Blockchain                          | Ethereum                                |Cardano                                     |
 +------------------------------------+-----------------------------------------+--------------------------------------------+
 |Relationship to the blockchain      | A contract standard, users copy-paste   |Not a standard. Most functionality          |
 |                                    |                                         |                                            |
@@ -141,19 +67,19 @@ ERC-20 is a token standard on Ethereum, and the most popular way to issue tokens
 |                                    |                                         |                                            |
 |tokens?                             |                                         |                                            |
 +------------------------------------+-----------------------------------------+--------------------------------------------+
-|Transfer logic provided by?         | Copy-pasting from the ERC-20 template   |The Cardano ledger itself                   |
+|Transfer logic provided by          | Copy-pasting from the ERC20 template    |The Cardano ledger itself                   |
 +------------------------------------+-----------------------------------------+--------------------------------------------+
-|Transfer logic can be customized?   | Y                                       |N                                           |
+|Transfer logic can be customized    | Y                                       |N                                           |
 +------------------------------------+-----------------------------------------+--------------------------------------------+
-|Requires special fees to transfer?  | Y                                       |N                                           |
+|Requires special fees to transfer   | Y                                       |N                                           |
 +------------------------------------+-----------------------------------------+--------------------------------------------+
 |Requires additional event-handling  | Y                                       |N                                           |
 |                                    |                                         |                                            |
-|logic to track transfers?           |                                         |                                            |
+|logic to track transfers            |                                         |                                            |
 +------------------------------------+-----------------------------------------+--------------------------------------------+
-|Supports non-fungible tokens?       | N                                       |Y                                           |
+|Supports non-fungible tokens        | N                                       |Y                                           |
 +------------------------------------+-----------------------------------------+--------------------------------------------+
-|Human readable metadata             | Provided by the operating smart         |Provided by the off-chain metadata server   |
+|Readable metadata                   | Provided by the operating smart         |Provided by the off-chain metadata server   |
 |                                    |                                         |                                            |
 |                                    | contract                                |                                            |
 +------------------------------------+-----------------------------------------+--------------------------------------------+
@@ -162,16 +88,16 @@ ERC-20 is a token standard on Ethereum, and the most popular way to issue tokens
 Security
 ####################
 
-ERC-20 tokens have proven vulnerable to a wide range of security issues, most of which are not present for Native Tokens.
+ERC20 tokens have proven vulnerable to a wide range of `security issues <https://peckshield.medium.com/alert-new-batchoverflow-bug-in-multiple-erc20-smart-contracts-cve-2018-10299-511067db6536>`_. This is conditioned by the fact that ERC20 token creation requires manual modification of the contract standard, which can result in errors and possible bugs. Creating and transacting tokens natively removes the possibility of human error, since the ledger itself handles the token logic. Additionally, over- and under-flow vulnerabilities that are present for ERC20 are eliminated for native tokens, as Cardano’s scripting language does not have fixed-size integers and the ledger itself (rather than the ERC20 user code) tracks tokens movement.
 
 +----------------------------------------+---------+---------------+----------------------------------------------------------------------+
-|                                        |ERC-20   |Native tokens  |Comment                                                               |
+|                                        |ERC20    |Native tokens  |Comment                                                               |
 +----------------------------------------+---------+---------------+----------------------------------------------------------------------+
 |User errors in copying standard code    |Y        |N              |All shared functionality is provided by the ledger                    |
 +----------------------------------------+---------+---------------+----------------------------------------------------------------------+
 |Over-/under-flow vulnerabilities        |Y        |N              |Cardano’s scripting languages don’t have fixed-size integers          |
 +----------------------------------------+---------+---------------+----------------------------------------------------------------------+
-|Unprotected functions                   |Y        |N              |User code is called only in very specific cases, to validate minting. |
+|Unprotected functions                   |Y        |N              |User code is called only in very specific cases  to validate minting. |
 +----------------------------------------+---------+---------------+----------------------------------------------------------------------+
 |Denial of service via gas price attacks |Y        |N              |Denial of service attacks on the entire system are still possible.    |
 +----------------------------------------+---------+---------------+----------------------------------------------------------------------+
