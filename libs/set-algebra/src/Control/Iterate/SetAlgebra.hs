@@ -2,7 +2,7 @@
 {-# LANGUAGE GADTs #-}
 
 -- | Supports writing 'Set algebra' expressions, using overloaded set operations, that can
---   be applied to a variety of Basic types (Set, List, Map, BiMap etc). Also supports
+--   be applied to a variety of Basic types (Set, List, Map, etc). Also supports
 --   a mechanism to evaluate them efficiently, choosing datatype specific algorithms.
 --   This mechanism uses run-time rewrite rules to get the best algorithm. If there are
 --   no rewrite rules for a specific expression, falls back to a less efficient generic algorithm.
@@ -38,7 +38,6 @@ import Control.Iterate.Exp
     rngSnd,
     second,
   )
-import Data.BiMap (BiMap (..), biMapEmpty, biMapFromList, removeval)
 import qualified Data.Map.Strict as Map
 import Data.MapExtras
   ( disjointMapSetFold,
@@ -120,7 +119,6 @@ run :: (Ord k) => (Query k v, BaseRep f k v) -> f k v
 run (BaseD SetR x, SetR) = x -- If it is already data (BaseD)
 run (BaseD MapR x, MapR) = x -- and in the right form (the BaseRep's match)
 run (BaseD SingleR x, SingleR) = x -- just return the data
-run (BaseD BiMapR x, BiMapR) = x -- only need to materialize data
 run (BaseD ListR x, ListR) = x -- if the forms do not match.
 run (BaseD _source x, ListR) = materialize ListR (fifo x) -- use fifo, since the order matters for Lists.
 run (BaseD _source x, target) = materialize target (lifo x) -- use lifo, for others
@@ -179,7 +177,6 @@ sameDomain m n = loop (hasNxt m) (hasNxt n)
 --  x  ∉ (dom y)            not . haskey
 -- x ∪ (singleton y)        addpair
 -- (Set.singleton x) ⋪ y    removekey
--- x ⋫ (Set.singleton y)    easy on Bimap  remove val
 -- (dom x) ⊆ (dom y)
 -- ===============================================================================================
 
@@ -246,12 +243,6 @@ compute (DExclude (Dom (Singleton n _v)) (Base MapR m)) = Map.withoutKeys m (Set
 compute (DExclude (Rng (Singleton _n v)) (Base MapR m)) = Map.withoutKeys m (Set.singleton v)
 compute (DExclude (Base SetR (Sett x1)) (Base MapR x2)) = Map.withoutKeys x2 x1
 compute (DExclude (Dom (Base MapR x1)) (Base MapR x2)) = noKeys x2 x1
-compute (DExclude (SetSingleton k) (Base BiMapR x)) = removekey k x
-compute (DExclude (Dom (Singleton k _)) (Base BiMapR x)) = removekey k x
-compute (DExclude (Rng (Singleton _ v)) (Base BiMapR x)) = removekey v x
-compute (RExclude (Base BiMapR x) (SetSingleton k)) = removeval k x
-compute (RExclude (Base BiMapR x) (Dom (Singleton k _v))) = removeval k x
-compute (RExclude (Base BiMapR x) (Rng (Singleton _k v))) = removeval v x
 compute (RExclude (Base MapR xs) (Base SetR (Sett y))) = Map.filter (\x -> not (Set.member x y)) xs
 compute (RExclude (Base MapR xs) (SetSingleton k)) = Map.filter (not . (== k)) xs
 compute (RExclude (Base _rep lhs) (Base SetR (Sett rhs))) | Set.null rhs = lhs
@@ -317,9 +308,7 @@ compute (UnionPlus (Base SetR (Sett x)) (Base SetR (Sett y))) = Sett (Set.union 
 compute (Singleton k v) = Single k v
 compute (SetSingleton k) = (SetSingle k)
 compute (KeyEqual (Base MapR m) (Base MapR n)) = keysEqual m n
-compute (KeyEqual (Base BiMapR (MkBiMap m _)) (Base BiMapR (MkBiMap n _))) = keysEqual m n
 compute (KeyEqual (Dom (Base MapR m)) (Dom (Base MapR n))) = keysEqual m n
-compute (KeyEqual (Dom (Base BiMapR (MkBiMap m _))) (Dom (Base BiMapR (MkBiMap n _)))) = keysEqual m n
 compute (KeyEqual (Base SetR (Sett m)) (Base SetR (Sett n))) = n == m
 compute (KeyEqual (Base MapR xs) (Base SetR (Sett ys))) = Map.keysSet xs == ys
 compute x = computeSlow x
@@ -378,7 +367,6 @@ fromList :: Ord k => BaseRep f k v -> (v -> v -> v) -> [(k, v)] -> f k v
 fromList MapR combine xs = Map.fromListWith combine xs
 fromList ListR combine xs = fromPairs combine xs
 fromList SetR combine xs = foldr (addp combine) (Sett (Set.empty)) xs
-fromList BiMapR combine xs = biMapFromList combine xs
 fromList SingleR combine xs = foldr (addp combine) Fail xs
 fromList (ViewR Rew) combine xs = foldr (addp combine) (Rewards UM.empty) xs
 fromList (ViewR Del) combine xs = foldr (addp combine) (Delegations UM.empty) xs
@@ -395,7 +383,6 @@ materialize :: (Ord k) => BaseRep f k v -> Collect (k, v) -> f k v
 materialize ListR x = fromPairs (\l _r -> l) (runCollect x [] (:))
 materialize MapR x = runCollect x Map.empty (\(k, v) ans -> Map.insert k v ans)
 materialize SetR x = Sett (runCollect x Set.empty (\(k, _) ans -> Set.insert k ans))
-materialize BiMapR x = runCollect x biMapEmpty (\(k, v) ans -> addpair k v ans)
 materialize SingleR x = runCollect x Fail (\(k, v) _ignore -> Single k v)
 materialize (ViewR Rew) x = runCollect x (Rewards UM.empty) (\(k, v) ans -> UM.insert' k v ans)
 materialize (ViewR Del) x = runCollect x (Delegations UM.empty) (\(k, v) ans -> UM.insert' k v ans)

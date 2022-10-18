@@ -214,7 +214,6 @@ benchmark mainbench
     bench
   main-is:          Main.hs
   other-modules:
-    Bench.Control.Iterate.SetAlgebra.Bimap,
     BenchUTxOAggregate,
     BenchValidation,
     Cardano.Ledger.Shelley.Bench.Gen

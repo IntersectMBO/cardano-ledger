@@ -11,9 +11,10 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
 
--- | A 'UMap' (for Unified map) represents 2 'Data.Map's and one 'Data.BiMap' into a single structure.
+-- | A 'UMap' (for Unified map) represents 3 Maps of the same size in one direction,
+--   and a fourth one in the inverse direction.
 --   The advantage of using 'UMap' is that 'UMap' stores all the information compactly, by exploiting the
---   the large amount of sharing in the 2 maps and 1 bimap.
+--   the large amount of sharing in the 2 maps.
 module Data.UMap
   ( -- * Constructing 'UMap'
     -- $UMAP
@@ -192,7 +193,8 @@ instance (Show coin, Show pool, Show ptr) => Show (Trip coin ptr pool) where
 
 -- =====================================================
 
--- A unified map represents 2 maps and a bimap compactly.
+-- | A unified map represents three Maps of the same size in one direction with @cred@ for
+--   keys and one more in the inverse direction with @ptr@ for keys and @cred@ for values.
 data UMap coin cred pool ptr = UnifiedMap !(Map cred (Trip coin ptr pool)) !(Map ptr cred)
   deriving (Show, Eq, Generic, NoThunks, NFData)
 

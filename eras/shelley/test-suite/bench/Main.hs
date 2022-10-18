@@ -6,7 +6,6 @@
 
 module Main where
 
-import qualified Bench.Control.Iterate.SetAlgebra.Bimap as Bimap
 import BenchUTxOAggregate (expr, genTestCase)
 import BenchValidation
   ( applyBlock,
@@ -507,6 +506,5 @@ main = do
                 bench "createRUpdWithProvenance" $ whnf (createRUpdWithProv testGlobals) cs
             ),
           bench "likelihood" $ whnf (likelihood 1234 0.1) (EpochSize 10000)
-        ],
-      bgroup "bimap" $ [Bimap.fromList]
+        ]
     ]

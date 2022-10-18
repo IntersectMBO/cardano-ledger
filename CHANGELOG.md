@@ -83,6 +83,7 @@ in the naming of release branches.
 - Remove model test framework #3019
 - The `Cardano.Ledger.Alonzo.Scripts` module no longer re-exports the
   `plutus-ledger-api`'s `assertWellFormedCostModelParams`. #3065
+- Removed unused `Data.BiMap` module from `cardano-data` #3089
 
 ### Fixed
 

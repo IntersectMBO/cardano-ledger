@@ -26,12 +26,11 @@ module Data.Sharing
   )
 where
 
-import Cardano.Binary (Decoder, FromCBOR (..), decodeListLen, dropMap)
-import Control.Monad (void, (<$!>))
+import Cardano.Binary (Decoder, FromCBOR (..))
+import Control.Monad ((<$!>))
 import Control.Monad.Trans
 import Control.Monad.Trans.State.Strict
-import Data.BiMap (BiMap (..), biMapFromMap)
-import Data.Coders (decodeMap, decodeVMap, invalidKey)
+import Data.Coders (decodeMap, decodeVMap)
 import qualified Data.Foldable as F
 import Data.Kind
 import qualified Data.Map.Strict as Map
@@ -199,25 +198,6 @@ instance (Ord k, FromCBOR k, FromCBOR v, Prim v) => FromSharedCBOR (VMap VB VP k
   fromSharedCBOR kis = do
     decodeVMap (interns kis <$> fromCBOR) fromCBOR
   getShare !m = internsFromVMap m
-
--- ==============================================================================
--- These BiMap instances are adapted from the FromCBOR instances in Data.Coders
-
-instance (Ord a, Ord b, FromCBOR a, FromCBOR b) => FromSharedCBOR (BiMap b a b) where
-  type Share (BiMap b a b) = (Interns a, Interns b)
-  fromSharedCBOR share =
-    decodeListLen >>= \case
-      1 -> biMapFromMap <$> fromSharedCBOR share
-      -- Previous encoding of 'BiMap' encoded both the forward and reverse
-      -- directions. In this case we skip the reverse encoding. Note that,
-      -- further, the reverse encoding was from 'b' to 'a', not the current 'b'
-      -- to 'Set a', and hence the dropper reflects that.
-      2 -> do
-        !x <- biMapFromMap <$> fromSharedCBOR share
-        dropMap (void $ fromCBOR @b) (void $ fromCBOR @a)
-        return x
-      k -> invalidKey (fromIntegral k)
-  getShare (MkBiMap m1 m2) = (internsFromMap m1, internsFromMap m2)
 
 -- | Share every item in a functor, have deserializing it
 fromShareCBORfunctor :: (FromCBOR (f b), Monad f) => Interns b -> Decoder s (f b)
