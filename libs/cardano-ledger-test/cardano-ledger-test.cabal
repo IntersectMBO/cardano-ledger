@@ -17,7 +17,7 @@ source-repository head
   subdir:   libs/cardano-ledger-test
 
 common base
-  build-depends:      base >= 4.12 && < 4.15
+  build-depends:      base >= 4.12 && < 4.17
 
 common project-config
   default-language:   Haskell2010
@@ -93,7 +93,7 @@ library
     microlens,
     mtl,
     nothunks,
-    plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib} ^>=1.0,
+    plutus-ledger-api,
     plutus-core,
     prettyprinter,
     QuickCheck,
@@ -188,7 +188,6 @@ benchmark benchProperty
     cardano-ledger-alonzo,
     cardano-ledger-alonzo-test,
     cardano-ledger-shelley-ma-test,
-    QuickCheck,
     small-steps,
     cardano-ledger-shelley,
     cardano-ledger-shelley-test,

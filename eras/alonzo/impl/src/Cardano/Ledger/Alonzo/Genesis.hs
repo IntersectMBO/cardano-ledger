@@ -331,7 +331,7 @@ instance FromJSON (AlonzoPParams era) where
 deriving instance ToJSON (AlonzoPParamsUpdate era)
 
 instance
-  (EraTxOut era, Show (Value era), ToJSON (Value era)) =>
+  (EraTxOut era, ToJSON (Value era)) =>
   ToJSON (AlonzoTxOut era)
   where
   toJSON (AlonzoTxOut addr v dataHash) =

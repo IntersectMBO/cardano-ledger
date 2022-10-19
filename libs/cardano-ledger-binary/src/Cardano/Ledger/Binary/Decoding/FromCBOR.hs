@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -40,7 +41,9 @@ import Codec.CBOR.Term (Term (..))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Short as SBS
+#if __GLASGOW_HASKELL__ < 900
 import qualified Data.ByteString.Short.Internal as SBS
+#endif
 import Data.Fixed (Fixed (..), Nano, Pico)
 import Data.IP (IPv4, IPv6)
 import Data.Int (Int16, Int32, Int64, Int8)

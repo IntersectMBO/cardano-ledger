@@ -52,7 +52,6 @@ import Control.DeepSeq (NFData)
 import qualified Data.ByteString as BS
 import Data.ByteString.Short (ShortByteString)
 import Data.Coders (Encode (..), (!>))
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
@@ -149,7 +148,7 @@ pattern RequireMOf n ms <-
 {-# COMPLETE RequireSignature, RequireAllOf, RequireAnyOf, RequireMOf #-}
 
 instance
-  (Era era, Typeable era) =>
+  (Era era) =>
   FromCBOR (Annotator (MultiSigRaw era))
   where
   fromCBOR = decodeRecordSum "MultiSig" $

@@ -1,5 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Crypto.Signing.Safe.PassPhrase
@@ -19,6 +20,7 @@ import Formatting (int, sformat)
 import Formatting.Buildable (Buildable (..))
 import qualified Prelude
 
+type PassPhrase :: Type
 newtype PassPhrase
   = PassPhrase ScrubbedBytes
   deriving (Eq, Ord, Semigroup, Monoid, NFData, ByteArray, ByteArrayAccess)

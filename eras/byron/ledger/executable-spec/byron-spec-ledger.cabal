@@ -14,7 +14,7 @@ build-type:          Simple
 extra-source-files:  CHANGELOG.md
 
 common base
-  build-depends:      base >= 4.12 && < 4.15
+  build-depends:      base >= 4.12 && < 4.17
 
 common project-config
   default-language:   Haskell2010
@@ -56,7 +56,6 @@ library
                      , microlens
                      , microlens-th
                      , nothunks
-                     , template-haskell
                      , Unique >= 0.4.7.6
                      -- IOHK deps
                      , cardano-binary

@@ -120,7 +120,7 @@ newtype Data era = DataConstr (MemoBytes PlutusData era)
 
 deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (Data era)
 
-instance (Typeable era, Era era) => FromCBOR (Annotator (Data era)) where
+instance (Era era) => FromCBOR (Annotator (Data era)) where
   fromCBOR = do
     (Annotator getT, Annotator getBytes) <- withSlice fromCBOR
     pure (Annotator (\fullbytes -> DataConstr (mkMemoBytes (getT fullbytes) (getBytes fullbytes))))

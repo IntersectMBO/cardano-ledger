@@ -141,7 +141,7 @@ instance
   type
     PredicateFailure (ShelleyDELEGS era) =
       ShelleyDelegsPredFailure era
-  type Event _ = ShelleyDelegsEvent era
+  type Event (ShelleyDELEGS era) = ShelleyDelegsEvent era
 
   transitionRules = [delegsTransition]
 

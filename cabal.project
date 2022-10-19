@@ -13,9 +13,9 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for some Nix commands you will need to run if you
 -- update either of these.
 -- Bump this if you need newer packages from Hackage
-index-state: 2022-09-07T00:00:00Z
+index-state: 2022-10-19T05:43:20Z
 -- Bump this if you need newer packages from CHaP
-index-state: cardano-haskell-packages 2022-10-19T00:00:00Z
+index-state: cardano-haskell-packages 2022-10-19T10:03:21Z
 
 packages:
   eras/alonzo/impl
@@ -62,52 +62,14 @@ benchmarks: true
 -- The only sensible test display option
 test-show-details: streaming
 
+constraints:
+  algebraic-graphs < 0.7
+
 allow-newer:
   monoidal-containers:aeson,
   size-based:template-haskell,
-  Unique:hashable
+  plutus-core:ral,
+  plutus-core:some,
+  plutus-tx-plugin:ghc,
+  Unique:hashable,
 
-constraints:
-  -- bizarre issue: in earlier versions they define their own 'GEq', in newer
-  -- ones they reuse the one from 'some', but there isn't e.g. a proper version
-  -- constraint from dependent-sum-template (which is the library we actually use).
-  , dependent-sum > 0.6.2.0
-
-  -- Plutus dependency
-  , algebraic-graphs >= 0.7
-
-  , protolude >= 0.3.2
-
-  , persistent < 2.14
-
--- This is a pre-release version of plutus so we can do some early integration
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/plutus
-  tag: ecbfc46d3302f438a31c4f2f8f30cd1a87dab271
-  --sha256: 1r16a9xk49bw3r9wihmf49p2f8pfqqymrpgf85lzccyjrxdvxd7r
-  subdir:
-    plutus-ledger-api
-    plutus-tx
-    plutus-tx-plugin
-    plutus-core
-    prettyprinter-configurable
-    word-array
-
--- This is an unreleased version of `weigh` that includes `WallTime`.
--- It's okay for us to have this since it's only our benchmarks
--- that depend on `weigh`, not our released packages.
-source-repository-package
-  type: git
-  location: https://github.com/fpco/weigh.git
-  tag: bfcf4415144d7d2817dfcb91b6f9a6dfd7236de7
-  --sha256: 01fy4nbq6kaqi73ydn6w7rd1izkg5p217q5znyp2icybf41sl1b6
-
--- https://github.com/well-typed/cborg/pull/301
-source-repository-package
-  type: git
-  location: https://github.com/lehins/cborg
-  tag: c2e86cdd1ac9c51dedb5ef199f513cf48668bcd7
-  --sha256: 18apsg2lqjv9cc29nbd3hzj2hqhksqjj0s4xp2rdv8cbd27racjh
-  subdir:
-    cborg
