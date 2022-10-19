@@ -1,8 +1,8 @@
 # code owners are automatically assigned to review PRs
 
 # Devops
-.buildkite @devops
-.github    @devops
-nix        @devops
-*.nix      @devops
-bors.toml  @devops
+.buildkite @input-output-hk/devops
+.github    @input-output-hk/devops
+nix        @input-output-hk/devops
+*.nix      @input-output-hk/devops
+bors.toml  @input-output-hk/devops
