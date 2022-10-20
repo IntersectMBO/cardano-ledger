@@ -2,6 +2,9 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 
 module Test.Cardano.Ledger.Shelley.RulesTests
   ( chainExamples,
@@ -41,16 +44,17 @@ import Test.Cardano.Ledger.Shelley.MultiSigExamples
     applyTxWithScript,
     bobOnly,
   )
+import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, assertBool, testCase, (@?=))
 
-chainExamples :: TestTree
+chainExamples :: forall era. (ShelleyTest era) => TestTree
 chainExamples =
   testGroup
     "CHAIN examples"
     [ testCase "empty block" $ testCHAINExample exEmptyBlock,
       poolLifetimeExample,
-      twoPoolsExample,
+      twoPoolsExample @era,
       poolReRegExample,
       updatesExample,
       genesisDelegExample,

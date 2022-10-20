@@ -99,7 +99,7 @@ import Cardano.Ledger.Shelley.Metadata as X
     ShelleyTxAuxData (..),
   )
 import Cardano.Ledger.Shelley.PParams as X
-  ( PParams,
+  ( -- PParams,
     PParams',
     ProposedPPUpdates (..),
     ShelleyPParams,

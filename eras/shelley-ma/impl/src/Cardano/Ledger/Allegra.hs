@@ -13,7 +13,7 @@ module Cardano.Ledger.Allegra
     Value,
     Script,
     AuxiliaryData,
-    PParams,
+    -- PParams,
     PParamsDelta,
     Tx,
     TxWits,
@@ -26,7 +26,7 @@ import Cardano.Ledger.Core (EraCrypto)
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys (DSignable)
-import Cardano.Ledger.Shelley.API hiding (PParams, Tx, TxBody, TxOut)
+import Cardano.Ledger.Shelley.API hiding ({- PParams,-} Tx, TxBody, TxOut)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsUpdate)
 import Cardano.Ledger.ShelleyMA
 import Cardano.Ledger.ShelleyMA.Era (AllegraEra)

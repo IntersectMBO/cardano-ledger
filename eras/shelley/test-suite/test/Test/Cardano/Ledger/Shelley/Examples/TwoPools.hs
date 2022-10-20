@@ -145,7 +145,7 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 import Cardano.Ledger.PParams
 import Lens.Micro ((^.), (&), (.~))
-import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley (ShelleyEra, ShelleyPParams)
 
 -- | Type local to this module expressing the various constraints assumed
 -- amongst all tests in this module.
@@ -757,7 +757,7 @@ rewardUpdateEx9 ::
   ShelleyTest era =>
   ExMock (EraCrypto era) =>
   PParams era ->
-  Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))) ->
+  Map (Credential 'Staking (EraCrypto era)) (Set (Core.Reward (EraCrypto era))) ->
   RewardUpdate (EraCrypto era)
 rewardUpdateEx9 pp rewards =
   RewardUpdate
@@ -835,22 +835,22 @@ expectedStEx9Agg = C.setPrevPParams ppProtVer3 (expectedStEx9 ppProtVer3)
 twoPools9Agg :: forall era. (TwoPoolsConstraints era) => CHAINExample (BHeader (EraCrypto era)) era
 twoPools9Agg = CHAINExample expectedStEx8Agg blockEx9 (Right expectedStEx9Agg)
 
-testAggregateRewardsLegacy :: HasCallStack => Assertion
+testAggregateRewardsLegacy :: forall era. (ShelleyTest era, HasCallStack) => Assertion
 testAggregateRewardsLegacy = do
   let expectedReward = carlLeaderRewardsFromBob @(EraCrypto C)
   expectedReward @?= Core.rewardAmount (minimum (carlsRewards @(EraCrypto C)))
-  aggregateRewards @C_Crypto ppEx rsEx9Agg @?= Map.singleton Cast.carlSHK expectedReward
+  aggregateRewards @C_Crypto (ppEx ^. ppProtocolVersionL @era) rsEx9Agg @?= Map.singleton Cast.carlSHK expectedReward
 
-testAggregateRewardsNew :: Assertion
+testAggregateRewardsNew :: forall era. (ShelleyTest era) => Assertion
 testAggregateRewardsNew =
-  aggregateRewards @C_Crypto ppProtVer3 rsEx9Agg
+  aggregateRewards @C_Crypto (ppProtVer3 ^. ppProtocolVersionL @era) rsEx9Agg
     @?= Map.singleton Cast.carlSHK (foldMap Core.rewardAmount (carlsRewards @(EraCrypto C)))
 
 --
 -- Two Pools Test Group
 --
 
-twoPoolsExample :: TestTree
+twoPoolsExample :: forall era. (ShelleyTest era) => TestTree
 twoPoolsExample =
   testGroup
     "two pools"
@@ -864,8 +864,8 @@ twoPoolsExample =
             @?= (fst . runShelleyBase . completeStep $ pulserEx9 @C ppProtVer3)
         ),
       testCase "create aggregated pulser" $ testCHAINExample twoPools9Agg,
-      testCase "create legacy aggregatedRewards" testAggregateRewardsLegacy,
-      testCase "create new aggregatedRewards" testAggregateRewardsNew
+      testCase "create legacy aggregatedRewards" (testAggregateRewardsLegacy @era),
+      testCase "create new aggregatedRewards" (testAggregateRewardsNew @era)
     ]
 
 -- This test group tests each block individually, which is really only

@@ -11,7 +11,7 @@ module Cardano.Ledger.Shelley
     TxWits,
     nativeMultiSigTag,
     -- Deprecated
-    PParams,
+    -- PParams,
     Shelley.Tx,
     Shelley.TxOut,
     Shelley.TxBody,
@@ -26,7 +26,7 @@ import Cardano.Ledger.Core
   )
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Shelley.PParams (PParams, ShelleyPParams)
+import Cardano.Ledger.Shelley.PParams (ShelleyPParams)
 import Cardano.Ledger.Shelley.Rules ()
 import Cardano.Ledger.Shelley.Tx
   ( ShelleyTx,

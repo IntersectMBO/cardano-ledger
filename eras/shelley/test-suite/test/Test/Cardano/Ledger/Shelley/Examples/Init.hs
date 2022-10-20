@@ -22,7 +22,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Shelley.PParams
-  ( ShelleyPParamsHKD (..),
+  ( ShelleyPParamsHKD (..), ShelleyPParams
   )
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance)
 import Cardano.Ledger.Slot
@@ -62,7 +62,8 @@ import Data.Default.Class (Default(..))
 --       _minUTxOValue = 100
 --     }
 -- @
-ppEx :: ShelleyTest era => PParams era
+-- ppEx :: ShelleyTest era => PParams era
+ppEx :: forall era. (ShelleyTest era) => PParams era
 ppEx = PParams $
   def
     { _maxBBSize = 50000,
@@ -116,5 +117,5 @@ initSt utxo =
     utxo
     (maxLLSupply <-> Val.coin (balance utxo))
     genDelegs
-    ppEx
+    (ppEx @era)
     (nonce0 @(EraCrypto era))

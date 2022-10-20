@@ -20,7 +20,7 @@ module Cardano.Ledger.Mary
     Cardano.Ledger.Shelley.API.Tx,
     Cardano.Ledger.Shelley.API.TxOut,
     Cardano.Ledger.ShelleyMA.TxBody,
-    Cardano.Ledger.Shelley.PParams.PParams,
+    -- Cardano.Ledger.Shelley.PParams.PParams,
     Cardano.Ledger.Mary.Value,
     Cardano.Ledger.Mary.Script,
     Cardano.Ledger.Mary.PParamsDelta,
@@ -36,7 +36,7 @@ import Cardano.Ledger.Mary.Translation ()
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Shelley.API hiding (TxBody)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsUpdate)
-import qualified Cardano.Ledger.Shelley.PParams
+-- import qualified Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.ShelleyMA
 import Cardano.Ledger.ShelleyMA.AuxiliaryData (AuxiliaryData)
 import Cardano.Ledger.ShelleyMA.Era (MaryEra)

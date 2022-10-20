@@ -154,7 +154,7 @@ type ShelleyTest era =
     ShelleyEraTxBody era,
     Tx era ~ ShelleyTx era,
     TxSeq era ~ ShelleyTxSeq era,
-    ShelleyTxOut era ~ TxOut era,
+    TxOut era ~ ShelleyTxOut era,
     TxWits era ~ ShelleyTxWits era,
     Split (Value era),
     Default (State (EraRule "PPUP" era)),

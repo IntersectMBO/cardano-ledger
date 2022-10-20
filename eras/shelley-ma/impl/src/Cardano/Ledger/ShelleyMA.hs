@@ -19,7 +19,7 @@ module Cardano.Ledger.ShelleyMA
     Tx,
     TxOut,
     TxBody,
-    PParams,
+    -- PParams,
     AuxiliaryData,
     ShelleyPParams,
   )
@@ -31,7 +31,7 @@ import qualified Cardano.Ledger.Shelley.BlockChain as Shelley
   ( bbHash,
     txSeqTxns,
   )
-import Cardano.Ledger.Shelley.PParams (PParams, ShelleyPParams)
+import Cardano.Ledger.Shelley.PParams (ShelleyPParams)
 import Cardano.Ledger.Shelley.Tx
   ( ShelleyTx,
     ShelleyTxOut,

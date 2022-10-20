@@ -44,7 +44,7 @@ import Cardano.Ledger.BaseTypes
   )
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
-import Cardano.Ledger.Core (EraTx, Tx, hashScript, hashTxAuxData)
+import Cardano.Ledger.Core (EraTx, Tx, hashScript, hashTxAuxData, PParamsUpdate)
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (EraCrypto (..))
@@ -70,6 +70,7 @@ import Cardano.Ledger.Keys
     signedKES,
     vKey,
   )
+import Cardano.Ledger.PParams (PParamsUpdate (..))
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
 import Cardano.Ledger.Serialization
@@ -111,6 +112,7 @@ import Cardano.Ledger.Shelley.PParams
     ShelleyPParamsUpdate,
     emptyPParams,
     pattern ProposedPPUpdates,
+    ProposedPPUpdates (..),
     pattern Update,
   )
 import Cardano.Ledger.Shelley.Rewards ()
@@ -176,6 +178,7 @@ import Cardano.Protocol.TPraos.OCert
   )
 import Codec.CBOR.Encoding (Encoding (..), Tokens (..))
 import Data.ByteString (ByteString)
+import Data.Functor.Identity (Identity)
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Char8 as BS (pack)
 import qualified Data.ByteString.Lazy as BSL (ByteString)
@@ -208,6 +211,8 @@ import Test.Tasty.HUnit (testCase, (@?=))
 -- ============================================
 
 type MultiSigMap = Map.Map (ScriptHash C_Crypto) (MultiSig (ShelleyEra C_Crypto))
+
+-- type Shelley = ShelleyEra C_Crypto
 
 decodeMultiSigMap :: Decoder s (Annotator MultiSigMap)
 decodeMultiSigMap = decodeMapTraverse (pure <$> fromCBOR) fromCBOR
@@ -752,7 +757,7 @@ tests =
             ProposedPPUpdates @C
               ( Map.singleton
                   (testGKeyHash @C_Crypto)
-                  ( ShelleyPParams
+                  ( PParamsUpdate $ ShelleyPParams
                       { _minfeeA = SNothing,
                         _minfeeB = SNothing,
                         _maxBBSize = SNothing,
@@ -816,7 +821,7 @@ tests =
               ( ProposedPPUpdates
                   ( Map.singleton
                       testGKeyHash
-                      ( ShelleyPParams
+                      ( PParamsUpdate $ ShelleyPParams
                           { _minfeeA = SNothing,
                             _minfeeB = SNothing,
                             _maxBBSize = SNothing,
@@ -873,11 +878,11 @@ tests =
           ra = RewardAcnt Testnet (KeyHashObj testKeyHash2)
           ras = Map.singleton ra (Coin 123)
           up =
-            Update
+            Update 
               ( ProposedPPUpdates
                   ( Map.singleton
                       testGKeyHash
-                      ( ShelleyPParams
+                      ( PParamsUpdate $ ShelleyPParams
                           { _minfeeA = SNothing,
                             _minfeeB = SNothing,
                             _maxBBSize = SNothing,

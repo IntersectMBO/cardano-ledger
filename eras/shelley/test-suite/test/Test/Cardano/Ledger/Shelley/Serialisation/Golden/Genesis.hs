@@ -20,9 +20,10 @@ import Cardano.Ledger.Crypto (HASH)
 import Cardano.Ledger.Era (EraCrypto (..))
 import Cardano.Ledger.Keys (hashKey, hashVerKeyVRF, vKey)
 import Cardano.Ledger.Shelley (Shelley)
+import Cardano.Ledger.PParams (PParams (..), emptyPParams)
 import qualified Cardano.Ledger.Shelley.API as L
 import Cardano.Ledger.Shelley.Genesis
-import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..), emptyPParams)
+-- import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..){- , emptyPParams-})
 import Cardano.Slotting.Slot (EpochSize (..))
 import Data.Aeson
 import qualified Data.ByteString.Char8 as BS (pack)

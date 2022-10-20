@@ -16,6 +16,7 @@
 -- | This module contains just the type of protocol parameters.
 module Cardano.Ledger.Shelley.PParams
   ( ShelleyPParams,
+    emptyPParams,
     ShelleyPParamsHKD (..),
     PPUPState (..),
     HKD,
@@ -28,9 +29,9 @@ module Cardano.Ledger.Shelley.PParams
     pvCanFollow,
 
     -- * Deprecated
-    PParams,
+    -- PParams,
     PParams',
-    PParamsUpdate,
+    -- PParamsUpdate,
     updatePParams,
   )
 where
@@ -93,17 +94,17 @@ import Numeric.Natural (Natural)
 
 -- ====================================================================
 
-type PParams era = ShelleyPParams era
+-- type PParams era = ShelleyPParams era
 
-{-# DEPRECATED PParams "Use `ShelleyPParams` instead" #-}
+-- {-# DEPRECATED PParams "Use `ShelleyPParams` instead" #-}
 
 type PParams' f era = ShelleyPParamsHKD f era
 
 {-# DEPRECATED PParams' "Use `ShelleyPParamsHKD` instead" #-}
 
-type PParamsUpdate era = ShelleyPParamsUpdate era
+-- type PParamsUpdate era = ShelleyPParamsUpdate era
 
-{-# DEPRECATED PParamsUpdate "Use `ShelleyPParamsUpdate` instead" #-}
+-- {-# DEPRECATED PParamsUpdate "Use `ShelleyPParamsUpdate` instead" #-}
 
 -- | Protocol parameters.
 --
@@ -351,7 +352,9 @@ deriving instance Ord (PParams' StrictMaybe era)
 
 instance NFData (ShelleyPParamsHKD StrictMaybe era)
 
-instance NoThunks (PParamsUpdate era)
+instance NoThunks (ShelleyPParamsHKD StrictMaybe era)
+
+-- instance NoThunks (PParamsUpdate era)
 
 instance Era era => ToCBOR (ShelleyPParamsHKD StrictMaybe era) where
   toCBOR ppup =
