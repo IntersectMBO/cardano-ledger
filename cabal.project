@@ -62,9 +62,6 @@ benchmarks: true
 -- The only sensible test display option
 test-show-details: streaming
 
-constraints:
-  algebraic-graphs < 0.7
-
 allow-newer:
   monoidal-containers:aeson,
   size-based:template-haskell,
@@ -73,3 +70,15 @@ allow-newer:
   plutus-tx-plugin:ghc,
   Unique:hashable,
 
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/plutus
+  tag: cec1eaca9ade859797acec66d9741c9aaac48b45
+  --sha256: 084yvxcx56i5nync597029v23idgvcxysvk7zghsiqfvv4qr911x
+  subdir:
+    plutus-ledger-api
+    plutus-tx
+    plutus-tx-plugin
+    plutus-core
+    prettyprinter-configurable
+    word-array

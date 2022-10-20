@@ -58,7 +58,7 @@ main = do
               (long "help" <> short 'h' <> help "Display this message.")
         )
         (header "ledger-state:memory - Tool for analyzing memory consumption of ledger state")
-  let cols = [Case, Max, MaxOS, Live, Allocated, GCs, WallTime]
+  let cols = [Case, Max, MaxOS, Live, Allocated, GCs]
   mainWith $ do
     setColumns cols
     forM_ (optsNewEpochStateBinaryFile opts) $ \binFp -> do
