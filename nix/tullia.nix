@@ -5,7 +5,11 @@
 }: {
   imports = [inputs.tullia.flakePartsModules.default];
 
-  perSystem = {system, ...}: {
+  perSystem = {
+    system,
+    lib,
+    ...
+  }: {
     tullia = let
       ciInputName = "GitHub event";
     in rec {
@@ -41,13 +45,21 @@
           })
           (flakeOutputTasks ["hydraJobs" system] {outputs = config.flake;});
 
-        ciTasksSeq = taskSequence "ci/" ciTasks (__attrNames ciTasks);
+        # make sure the aggregate is built last
+        ciTasksSeqOrder = let
+          required = "hydraJobs.${system}.required";
+          all = __attrNames ciTasks;
+        in
+          assert __elem required all;
+            lib.remove required all ++ [required];
+
+        ciTasksSeq = taskSequence "ci/" ciTasks ciTasksSeqOrder;
       in
         ciTasksSeq # for running in an arbitrary sequence
         // {
           "ci" = {lib, ...}: {
             imports = [common];
-            after = [(lib.last (__attrNames ciTasksSeq))];
+            after = ["ci/${lib.last ciTasksSeqOrder}"];
           };
         };
 
