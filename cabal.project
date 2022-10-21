@@ -49,7 +49,94 @@ packages:
   libs/set-algebra
   libs/vector-map
 
-program-options
+packge cardano-ledger-alonzo
+  ghc-options: -Werror
+
+packge cardano-ledger-alonzo-test
+  ghc-options: -Werror
+
+packge cardano-ledger-babbage
+  ghc-options: -Werror
+
+packge cardano-ledger-babbage-test
+  ghc-options: -Werror
+
+packge cardano-ledger-conway
+  ghc-options: -Werror
+
+packge cardano-ledger-conway-test
+  ghc-options: -Werror
+
+packge byron-spec-chain
+  ghc-options: -Werror
+
+packge byron-spec-ledger
+  ghc-options: -Werror
+
+packge cardano-ledger-byron
+  ghc-options: -Werror
+
+packge cardano-ledger-byron-test
+  ghc-options: -Werror
+
+packge cardano-crypto-wrapper
+  ghc-options: -Werror
+
+packge cardano-crypto-test
+  ghc-options: -Werror
+
+packge cardano-ledger-shelley
+  ghc-options: -Werror
+
+packge cardano-ledger-shelley-test
+  ghc-options: -Werror
+
+packge cardano-ledger-shelley-ma
+  ghc-options: -Werror
+
+packge cardano-ledger-shelley-ma-test
+  ghc-options: -Werror
+
+packge cardano-ledger-api
+  ghc-options: -Werror
+
+packge cardano-ledger-core
+  ghc-options: -Werror
+
+packge cardano-ledger-binary
+  ghc-options: -Werror
+
+packge cardano-ledger-pretty
+  ghc-options: -Werror
+
+packge cardano-ledger-test
+  ghc-options: -Werror
+
+packge cardano-protocol-tpraos
+  ghc-options: -Werror
+
+packge plutus-preprocessor
+  ghc-options: -Werror
+
+packge ledger-state
+  ghc-options: -Werror
+
+packge non-integral
+  ghc-options: -Werror
+
+packge small-steps
+  ghc-options: -Werror
+
+packge small-steps-test
+  ghc-options: -Werror
+
+packge cardano-data
+  ghc-options: -Werror
+
+packge set-algebra
+  ghc-options: -Werror
+
+packge vector-map
   ghc-options: -Werror
 
 -- Always write GHC env files, because they are needed by the doctests.
@@ -73,7 +160,7 @@ allow-newer:
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus
-  tag: cec1eaca9ade859797acec66d9741c9aaac48b45
+  tag: c3918d6027a9a34b6f72a6e4c7bf2e5350e6467e
   --sha256: 084yvxcx56i5nync597029v23idgvcxysvk7zghsiqfvv4qr911x
   subdir:
     plutus-ledger-api
