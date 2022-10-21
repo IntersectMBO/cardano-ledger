@@ -8,8 +8,6 @@
 }:
 with pkgs;
 let
-  ormolu = import pkgs.commonLib.sources.ormolu {};
-
   # For building the sphinx doc
   pyEnv =
     # TODO: deduplicate with default.nix
@@ -29,7 +27,7 @@ let
       niv
       pkg-config
       hlint
-      ormolu.ormolu
+      ormolu # XXX switch to ormolu_0_5_0_1 once our pkgs has it
       pyEnv
     ];
 
