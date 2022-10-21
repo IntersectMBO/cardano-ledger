@@ -20,7 +20,7 @@ let
     (selectProjectPackages cardanoLedgerSpecsHaskellPackages);
 
   self = {
-    inherit haskellPackages check-hydra;
+    inherit haskellPackages hydraEvalErrors;
 
     # `tests` are the test suites which have been built.
     tests = collectComponents' "tests" haskellPackages;
