@@ -21,6 +21,17 @@ See the CHaP README for [instructions](https://github.com/input-output-hk/cardan
 
 See the [Readme](https://github.com/input-output-hk/cardano-ledger#building) for instructions on building.
 
+### GHC 9.2 transition
+
+We are transitioning to use GHC 9.2 rather than GHC 8.10.
+The main `nix-shell` will now give you a GHC 9.2 compiler, but you can get a GHC 8.10 shell by calling
+```
+nix-shell --arg config '{ haskellNix.compiler = "ghc8107"; }'
+```
+The only reason why you should need the 8.10 shell is to use `plutus-preprocessor`, which is the only package that does not yet build on 9.2.
+Once we fix that we will use 9.2 exclusively.
+However, until that point we will need compatibility with both versions, which means we can't use any 9.2-exclusive features.
+
 ## Updating dependencies
 
 Our Haskell packages come from two package repositories:
