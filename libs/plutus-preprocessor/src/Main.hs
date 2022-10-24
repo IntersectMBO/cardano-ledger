@@ -89,52 +89,52 @@ $redeemerIs10Decl2Args
 
 guessTheNumberBytes :: ShortByteString
 guessTheNumberBytes =
-  toShort . toStrict . serialise . P.fromCompiledCode $
+  P.serialiseCompiledCode
     $$(P.compile [||guessTheNumber'3||])
 
 guess2args :: ShortByteString
 guess2args =
-  toShort . toStrict . serialise . P.fromCompiledCode $
+  P.serialiseCompiledCode
     $$(P.compile [||guessTheNumber'2||])
 
 evendataBytes :: ShortByteString
 evendataBytes =
-  toShort . toStrict . serialise . P.fromCompiledCode $
+  P.serialiseCompiledCode
     $$(P.compile [||evendata'||])
 
 evenRedeemerBytes :: ShortByteString
 evenRedeemerBytes =
-  toShort . toStrict . serialise . P.fromCompiledCode $
+  P.serialiseCompiledCode
     $$(P.compile [||evenRedeemer'||])
 
 odddataBytes :: ShortByteString
 odddataBytes =
-  toShort . toStrict . serialise . P.fromCompiledCode $
+  P.serialiseCompiledCode
     $$(P.compile [||odddata'||])
 
 oddRedeemerBytes :: ShortByteString
 oddRedeemerBytes =
-  toShort . toStrict . serialise . P.fromCompiledCode $
+  P.serialiseCompiledCode
     $$(P.compile [||oddRedeemer'||])
 
 sumsTo10Bytes :: ShortByteString
 sumsTo10Bytes =
-  toShort . toStrict . serialise . P.fromCompiledCode $
+  P.serialiseCompiledCode
     $$(P.compile [||sumsTo10'||])
 
 oddRedeemerBytes2Arg :: ShortByteString
 oddRedeemerBytes2Arg =
-  toShort . toStrict . serialise . P.fromCompiledCode $
+  P.serialiseCompiledCode
     $$(P.compile [||oddRedeemer2'||])
 
 evenRedeemerBytes2Args :: ShortByteString
 evenRedeemerBytes2Args =
-  toShort . toStrict . serialise . P.fromCompiledCode $
+  P.serialiseCompiledCode
     $$(P.compile [||evenRedeemer2'||])
 
 redeemerIs10Bytes2Args :: ShortByteString
 redeemerIs10Bytes2Args =
-  toShort . toStrict . serialise . P.fromCompiledCode $
+  P.serialiseCompiledCode
     $$(P.compile [||redeemerIs102'||])
 
 -- ========================================================================
