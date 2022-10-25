@@ -192,12 +192,6 @@ native tokens?**
 
 A. Currently, only ada can be used to make fee payments or deposits.
 
-**Q. How does coin selection work for custom native tokens?**
-
-A. From the users’ perspective, it is similar to ada coin selection,
-i.e., the user selects the tokens and the quantities that they wish to
-spend, and the wallet picks appropriate inputs and covers fees.
-
 **Q. Is it possible to send tokens to an address?**
 
 A. Yes, sending native tokens to an address is done in the same way as
