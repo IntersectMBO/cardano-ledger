@@ -11,9 +11,6 @@ Ledger Explanations
    policies
    min-utxo-mary
    min-utxo-alonzo
-   get-started
-   exercises
-   exchange-scenarios
    listing
    faq
    glossary
