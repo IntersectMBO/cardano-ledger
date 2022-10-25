@@ -77,6 +77,10 @@ constraints:
 
   , persistent < 2.14
 
+  -- cardano-crypto-class: has instance derivation problems with newer 'vector'
+  -- added to the cabal file on master but needed here still
+  , vector < 0.13
+
 -- This is an unreleased version of `weigh` that includes `WallTime`.
 -- It's okay for us to have this since it's only our benchmarks
 -- that depend on `weigh`, not our released packages.
