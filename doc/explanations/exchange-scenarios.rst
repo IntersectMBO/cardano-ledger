@@ -137,7 +137,7 @@ Verify that you have received a multi-asset
 
    curl http://localhost:8090/v2/byron-wallets/ 
 
-**Shelley**
+**Shelley and beyond**
 
 ::
 
