@@ -18,6 +18,7 @@ data-files:
   cddl-files/real/crypto.cddl
   cddl-files/mock/extras.cddl
   golden/*.cbor
+  golden/mainnet-alonzo-genesis.json
 
 source-repository head
   type:     git
@@ -97,6 +98,7 @@ test-suite cardano-ledger-alonzo-test
     Test.Cardano.Ledger.Alonzo.TxInfo
     Paths_cardano_ledger_alonzo_test
   build-depends:
+    aeson >= 2,
     base16-bytestring,
     bytestring,
     cardano-binary,
