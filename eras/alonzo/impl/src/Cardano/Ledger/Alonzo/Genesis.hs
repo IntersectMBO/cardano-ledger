@@ -36,24 +36,19 @@ import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.SafeHash (extractHash)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams)
-import Data.Aeson (FromJSON (..), ToJSON (..), object, (.!=), (.:), (.:?), (.=))
+import Data.Aeson (FromJSON (..), Object, ToJSON (..), object, (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
-import Data.Aeson.Types (FromJSONKey (..), ToJSONKey (..), toJSONKeyText)
+import Data.Aeson.Types (FromJSONKey (..), Parser, ToJSONKey (..), toJSONKeyText)
 import Data.Coders
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (mapMaybe)
+import Data.Maybe (mapMaybe, maybeToList)
 import Data.Scientific (fromRationalRepetendLimited)
 import Data.Text (Text)
-import qualified Data.Text as Text
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
-import PlutusLedgerApi.Common (IsParamName, showParamName)
-import qualified PlutusLedgerApi.V1 as PV1
-import qualified PlutusLedgerApi.V2 as PV2
-import PlutusPrelude (enumerate)
 
 data AlonzoGenesis = AlonzoGenesis
   { coinsPerUTxOWord :: !Coin,
@@ -216,38 +211,30 @@ instance ToJSONKey Language where
 instance FromJSONKey Language where
   fromJSONKey = Aeson.FromJSONKeyTextParser languageFromText
 
+-- The costmodel parameters in Alonzo Genesis are represented as a map.
+-- Plutus API does no longer require the map as a parameter to `mkEvaluationContext`, but the list of Integers representing the values of the map.
+-- The expectation on this list of Integers is that they are sorted in the order given by the `ParamName` enum,
+-- so even though we just have to pass the list to plutus, we still need to use the names of the parameters in order to sort the list.
+-- In new versions, we want to represent the costmodel parameters directly as a list, so we can avoid this reordering, hence the name of this function.
+legacyParseCostModels :: Object -> Parser CostModels
+legacyParseCostModels o =
+  do
+    plutusV1 <- o .:? "PlutusV1"
+    cms <- traverse (validateCostModel PlutusV1 . cmParamValues) plutusV1
+    pure . CostModels . Map.fromList $ maybeToList cms
+  where
+    cmParamValues :: Map Text Integer -> [Integer]
+    cmParamValues cmMap = mapMaybe (`Map.lookup` cmMap) plutusV1ParamNames
+
 validateCostModel :: MonadFail m => Language -> [Integer] -> m (Language, CostModel)
 validateCostModel lang cmps = case mkCostModel lang cmps of
   Left err -> fail $ show err
   Right cm -> pure (lang, cm)
 
-cmParamValues :: Language -> Map Text Integer -> [Integer]
-cmParamValues lang cmMap =
-  case lang of
-    PlutusV1 -> filterPreservingOrder $ paramNames (enumerate @PV1.ParamName)
-    PlutusV2 -> filterPreservingOrder $ paramNames (enumerate @PV2.ParamName)
-  where
-    filterPreservingOrder = mapMaybe (`Map.lookup` cmMap)
-    paramNames :: IsParamName a => [a] -> [Text]
-    paramNames = map (Text.pack . showParamName)
-
-instance FromJSON CostModels where
-  parseJSON = Aeson.withObject "CostModels" $ \o -> do
-    plutusV1 <- o .:? "PlutusV1"
-    plutusV2 <- o .:? "PlutusV2"
-    let plutusV1' = cmParamValues PlutusV1 <$> plutusV1
-    let plutusV2' = cmParamValues PlutusV2 <$> plutusV2
-    cms <-
-      sequence
-        [ validateCostModel lang cm
-          | (lang, Just cm) <- [(PlutusV1, plutusV1'), (PlutusV2, plutusV2')]
-        ]
-    pure . CostModels . Map.fromList $ cms
-
 instance FromJSON AlonzoGenesis where
   parseJSON = Aeson.withObject "Alonzo Genesis" $ \o -> do
     coinsPerUTxOWord <- o .: "lovelacePerUTxOWord"
-    costmdls <- o .: "costModels"
+    costmdls <- o .: "costModels" >>= legacyParseCostModels
     prices <- o .: "executionPrices"
     maxTxExUnits <- o .: "maxTxExUnits"
     maxBlockExUnits <- o .: "maxBlockExUnits"
@@ -329,7 +316,7 @@ instance FromJSON (AlonzoPParams era) where
         <*> obj .: "protocolVersion"
         <*> obj .: "minPoolCost" .!= mempty
         <*> obj .: "lovelacePerUTxOWord"
-        <*> obj .: "costmdls"
+        <*> (obj .: "costmdls" >>= legacyParseCostModels)
         <*> obj .: "prices"
         <*> obj .: "maxTxExUnits"
         <*> obj .: "maxBlockExUnits"
@@ -355,3 +342,176 @@ instance
       ]
 
 deriving instance Show AlonzoGenesis
+
+-- We list the param names instead of using `enumerate PlutusLedgerApi.V1.ParamName`, because there is a difference in 6 parameter names
+-- between the ones appearing alonzo genesis files and the values returned by plutus via `showParamName` on the `ParamName` enum.
+-- This listed is sorted in the order given by `ParamName` enum, so we can use it to sort the costmodel param values before passing them to plutus `mkEvaluationContext`.
+plutusV1ParamNames :: [Text]
+plutusV1ParamNames =
+  [ "addInteger-cpu-arguments-intercept",
+    "addInteger-cpu-arguments-slope",
+    "addInteger-memory-arguments-intercept",
+    "addInteger-memory-arguments-slope",
+    "appendByteString-cpu-arguments-intercept",
+    "appendByteString-cpu-arguments-slope",
+    "appendByteString-memory-arguments-intercept",
+    "appendByteString-memory-arguments-slope",
+    "appendString-cpu-arguments-intercept",
+    "appendString-cpu-arguments-slope",
+    "appendString-memory-arguments-intercept",
+    "appendString-memory-arguments-slope",
+    "bData-cpu-arguments",
+    "bData-memory-arguments",
+    "blake2b-cpu-arguments-intercept",
+    "blake2b-cpu-arguments-slope",
+    "blake2b-memory-arguments",
+    "cekApplyCost-exBudgetCPU",
+    "cekApplyCost-exBudgetMemory",
+    "cekBuiltinCost-exBudgetCPU",
+    "cekBuiltinCost-exBudgetMemory",
+    "cekConstCost-exBudgetCPU",
+    "cekConstCost-exBudgetMemory",
+    "cekDelayCost-exBudgetCPU",
+    "cekDelayCost-exBudgetMemory",
+    "cekForceCost-exBudgetCPU",
+    "cekForceCost-exBudgetMemory",
+    "cekLamCost-exBudgetCPU",
+    "cekLamCost-exBudgetMemory",
+    "cekStartupCost-exBudgetCPU",
+    "cekStartupCost-exBudgetMemory",
+    "cekVarCost-exBudgetCPU",
+    "cekVarCost-exBudgetMemory",
+    "chooseData-cpu-arguments",
+    "chooseData-memory-arguments",
+    "chooseList-cpu-arguments",
+    "chooseList-memory-arguments",
+    "chooseUnit-cpu-arguments",
+    "chooseUnit-memory-arguments",
+    "consByteString-cpu-arguments-intercept",
+    "consByteString-cpu-arguments-slope",
+    "consByteString-memory-arguments-intercept",
+    "consByteString-memory-arguments-slope",
+    "constrData-cpu-arguments",
+    "constrData-memory-arguments",
+    "decodeUtf8-cpu-arguments-intercept",
+    "decodeUtf8-cpu-arguments-slope",
+    "decodeUtf8-memory-arguments-intercept",
+    "decodeUtf8-memory-arguments-slope",
+    "divideInteger-cpu-arguments-constant",
+    "divideInteger-cpu-arguments-model-arguments-intercept",
+    "divideInteger-cpu-arguments-model-arguments-slope",
+    "divideInteger-memory-arguments-intercept",
+    "divideInteger-memory-arguments-minimum",
+    "divideInteger-memory-arguments-slope",
+    "encodeUtf8-cpu-arguments-intercept",
+    "encodeUtf8-cpu-arguments-slope",
+    "encodeUtf8-memory-arguments-intercept",
+    "encodeUtf8-memory-arguments-slope",
+    "equalsByteString-cpu-arguments-constant",
+    "equalsByteString-cpu-arguments-intercept",
+    "equalsByteString-cpu-arguments-slope",
+    "equalsByteString-memory-arguments",
+    "equalsData-cpu-arguments-intercept",
+    "equalsData-cpu-arguments-slope",
+    "equalsData-memory-arguments",
+    "equalsInteger-cpu-arguments-intercept",
+    "equalsInteger-cpu-arguments-slope",
+    "equalsInteger-memory-arguments",
+    "equalsString-cpu-arguments-constant",
+    "equalsString-cpu-arguments-intercept",
+    "equalsString-cpu-arguments-slope",
+    "equalsString-memory-arguments",
+    "fstPair-cpu-arguments",
+    "fstPair-memory-arguments",
+    "headList-cpu-arguments",
+    "headList-memory-arguments",
+    "iData-cpu-arguments",
+    "iData-memory-arguments",
+    "ifThenElse-cpu-arguments",
+    "ifThenElse-memory-arguments",
+    "indexByteString-cpu-arguments",
+    "indexByteString-memory-arguments",
+    "lengthOfByteString-cpu-arguments",
+    "lengthOfByteString-memory-arguments",
+    "lessThanByteString-cpu-arguments-intercept",
+    "lessThanByteString-cpu-arguments-slope",
+    "lessThanByteString-memory-arguments",
+    "lessThanEqualsByteString-cpu-arguments-intercept",
+    "lessThanEqualsByteString-cpu-arguments-slope",
+    "lessThanEqualsByteString-memory-arguments",
+    "lessThanEqualsInteger-cpu-arguments-intercept",
+    "lessThanEqualsInteger-cpu-arguments-slope",
+    "lessThanEqualsInteger-memory-arguments",
+    "lessThanInteger-cpu-arguments-intercept",
+    "lessThanInteger-cpu-arguments-slope",
+    "lessThanInteger-memory-arguments",
+    "listData-cpu-arguments",
+    "listData-memory-arguments",
+    "mapData-cpu-arguments",
+    "mapData-memory-arguments",
+    "mkCons-cpu-arguments",
+    "mkCons-memory-arguments",
+    "mkNilData-cpu-arguments",
+    "mkNilData-memory-arguments",
+    "mkNilPairData-cpu-arguments",
+    "mkNilPairData-memory-arguments",
+    "mkPairData-cpu-arguments",
+    "mkPairData-memory-arguments",
+    "modInteger-cpu-arguments-constant",
+    "modInteger-cpu-arguments-model-arguments-intercept",
+    "modInteger-cpu-arguments-model-arguments-slope",
+    "modInteger-memory-arguments-intercept",
+    "modInteger-memory-arguments-minimum",
+    "modInteger-memory-arguments-slope",
+    "multiplyInteger-cpu-arguments-intercept",
+    "multiplyInteger-cpu-arguments-slope",
+    "multiplyInteger-memory-arguments-intercept",
+    "multiplyInteger-memory-arguments-slope",
+    "nullList-cpu-arguments",
+    "nullList-memory-arguments",
+    "quotientInteger-cpu-arguments-constant",
+    "quotientInteger-cpu-arguments-model-arguments-intercept",
+    "quotientInteger-cpu-arguments-model-arguments-slope",
+    "quotientInteger-memory-arguments-intercept",
+    "quotientInteger-memory-arguments-minimum",
+    "quotientInteger-memory-arguments-slope",
+    "remainderInteger-cpu-arguments-constant",
+    "remainderInteger-cpu-arguments-model-arguments-intercept",
+    "remainderInteger-cpu-arguments-model-arguments-slope",
+    "remainderInteger-memory-arguments-intercept",
+    "remainderInteger-memory-arguments-minimum",
+    "remainderInteger-memory-arguments-slope",
+    "sha2_256-cpu-arguments-intercept",
+    "sha2_256-cpu-arguments-slope",
+    "sha2_256-memory-arguments",
+    "sha3_256-cpu-arguments-intercept",
+    "sha3_256-cpu-arguments-slope",
+    "sha3_256-memory-arguments",
+    "sliceByteString-cpu-arguments-intercept",
+    "sliceByteString-cpu-arguments-slope",
+    "sliceByteString-memory-arguments-intercept",
+    "sliceByteString-memory-arguments-slope",
+    "sndPair-cpu-arguments",
+    "sndPair-memory-arguments",
+    "subtractInteger-cpu-arguments-intercept",
+    "subtractInteger-cpu-arguments-slope",
+    "subtractInteger-memory-arguments-intercept",
+    "subtractInteger-memory-arguments-slope",
+    "tailList-cpu-arguments",
+    "tailList-memory-arguments",
+    "trace-cpu-arguments",
+    "trace-memory-arguments",
+    "unBData-cpu-arguments",
+    "unBData-memory-arguments",
+    "unConstrData-cpu-arguments",
+    "unConstrData-memory-arguments",
+    "unIData-cpu-arguments",
+    "unIData-memory-arguments",
+    "unListData-cpu-arguments",
+    "unListData-memory-arguments",
+    "unMapData-cpu-arguments",
+    "unMapData-memory-arguments",
+    "verifySignature-cpu-arguments-intercept",
+    "verifySignature-cpu-arguments-slope",
+    "verifySignature-memory-arguments"
+  ]
