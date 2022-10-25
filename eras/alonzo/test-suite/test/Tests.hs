@@ -37,6 +37,7 @@ mainTests =
       CDDL.tests 5,
       Golden.goldenUTxOEntryMinAda,
       Golden.goldenSerialization,
+      Golden.goldenGenesisSerialization,
       Golden.goldenMinFee,
       Golden.goldenScriptIntegrity,
       plutusScriptExamples,

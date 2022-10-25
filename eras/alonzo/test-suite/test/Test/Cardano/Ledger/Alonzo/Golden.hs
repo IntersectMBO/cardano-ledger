@@ -9,12 +9,14 @@ module Test.Cardano.Ledger.Alonzo.Golden
     goldenSerialization,
     goldenMinFee,
     goldenScriptIntegrity,
+    goldenGenesisSerialization,
   )
 where
 
 import Cardano.Binary (Annotator (..), FullByteString (Full), fromCBOR, serialize)
 import Cardano.Ledger.Alonzo (Alonzo)
 import Cardano.Ledger.Alonzo.Data (Data (..), hashData)
+import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams
   ( AlonzoPParams,
@@ -24,8 +26,11 @@ import Cardano.Ledger.Alonzo.PParams
     getLanguageView,
   )
 import Cardano.Ledger.Alonzo.Scripts
-  ( CostModels (..),
+  ( CostModel,
+    CostModels (..),
+    ExUnits (..),
     Prices (..),
+    mkCostModel,
   )
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), utxoEntrySize)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), boundRational)
@@ -35,6 +40,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Mary.Value (MaryValue (..), valueFromList)
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Codec.CBOR.Read (deserialiseFromBytes)
+import Data.Aeson (eitherDecodeFileStrict)
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Base16.Lazy as B16L
 import Data.Either (fromRight)
@@ -190,6 +196,16 @@ goldenSerialization =
         serialize (SLE.sleTx ledgerExamplesAlonzo) @?= expected
     ]
 
+goldenGenesisSerialization :: TestTree
+goldenGenesisSerialization =
+  testGroup
+    "golden tests - Alonzo Genesis serialization"
+    [ testCase "JSON deserialization" $ do
+        let file = "golden/mainnet-alonzo-genesis.json"
+        deserialized <- (eitherDecodeFileStrict file :: IO (Either String AlonzoGenesis))
+        deserialized @?= Right expectedGenesis
+    ]
+
 goldenMinFee :: TestTree
 goldenMinFee =
   testGroup
@@ -218,8 +234,8 @@ goldenMinFee =
             -- at the time this block was rejected.
             priceMem = fromJust $ boundRational 0.0577
             priceSteps = fromJust $ boundRational 0.0000721
-            prices = Prices priceMem priceSteps
-            pp = emptyPParams {_minfeeA = 44, _minfeeB = 155381, _prices = prices}
+            pricesParam = Prices priceMem priceSteps
+            pp = emptyPParams {_minfeeA = 44, _minfeeB = 155381, _prices = pricesParam}
 
         Coin 1006053 @?= getMinFeeTx pp firstTx
     ]
@@ -281,3 +297,192 @@ goldenScriptIntegrity =
     [ testCase "PlutusV1" $ testScriptIntegritpHash exPP PlutusV1 exampleLangDepViewPV1,
       testCase "PlutusV2" $ testScriptIntegritpHash exPP PlutusV2 exampleLangDepViewPV2
     ]
+
+expectedGenesis :: AlonzoGenesis
+expectedGenesis =
+  AlonzoGenesis
+    { coinsPerUTxOWord = Coin 34482,
+      prices = Prices (fromJust $ boundRational 0.0577) (fromJust $ boundRational 0.0000721),
+      costmdls = CostModels $ Map.fromList [(PlutusV1, expectedCostModel)],
+      maxTxExUnits = ExUnits 10000000 10000000000,
+      maxBlockExUnits = ExUnits 50000000 40000000000,
+      maxValSize = 5000,
+      collateralPercentage = 150,
+      maxCollateralInputs = 3
+    }
+
+expectedCostModel :: CostModel
+expectedCostModel =
+  fromRight
+    (error ("Error creating CostModel from known parameters" <> show expectedPParams))
+    (mkCostModel PlutusV1 expectedPParams)
+
+expectedPParams :: [Integer]
+expectedPParams =
+  [ 197209,
+    0,
+    1,
+    1,
+    396231,
+    621,
+    0,
+    1,
+    150000,
+    1000,
+    0,
+    1,
+    150000,
+    32,
+    2477736,
+    29175,
+    4,
+    29773,
+    100,
+    29773,
+    100,
+    29773,
+    100,
+    29773,
+    100,
+    29773,
+    100,
+    29773,
+    100,
+    100,
+    100,
+    29773,
+    100,
+    150000,
+    32,
+    150000,
+    32,
+    150000,
+    32,
+    150000,
+    1000,
+    0,
+    1,
+    150000,
+    32,
+    150000,
+    1000,
+    0,
+    8,
+    148000,
+    425507,
+    118,
+    0,
+    1,
+    1,
+    150000,
+    1000,
+    0,
+    8,
+    150000,
+    112536,
+    247,
+    1,
+    150000,
+    10000,
+    1,
+    136542,
+    1326,
+    1,
+    1000,
+    150000,
+    1000,
+    1,
+    150000,
+    32,
+    150000,
+    32,
+    150000,
+    32,
+    1,
+    1,
+    150000,
+    1,
+    150000,
+    4,
+    103599,
+    248,
+    1,
+    103599,
+    248,
+    1,
+    145276,
+    1366,
+    1,
+    179690,
+    497,
+    1,
+    150000,
+    32,
+    150000,
+    32,
+    150000,
+    32,
+    150000,
+    32,
+    150000,
+    32,
+    150000,
+    32,
+    148000,
+    425507,
+    118,
+    0,
+    1,
+    1,
+    61516,
+    11218,
+    0,
+    1,
+    150000,
+    32,
+    148000,
+    425507,
+    118,
+    0,
+    1,
+    1,
+    148000,
+    425507,
+    118,
+    0,
+    1,
+    1,
+    2477736,
+    29175,
+    4,
+    0,
+    82363,
+    4,
+    150000,
+    5000,
+    0,
+    1,
+    150000,
+    32,
+    197209,
+    0,
+    1,
+    1,
+    150000,
+    32,
+    150000,
+    32,
+    150000,
+    32,
+    150000,
+    32,
+    150000,
+    32,
+    150000,
+    32,
+    150000,
+    32,
+    3345831,
+    1,
+    1
+  ]
