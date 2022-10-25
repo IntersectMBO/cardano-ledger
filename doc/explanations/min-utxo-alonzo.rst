@@ -1,5 +1,5 @@
 Minimum ada value calculation in Alonzo
-===================================
+=======================================
 
 There is no longer a ``minUTxOValue`` protocol parameter in Alonzo, it was
 deprecated at the end of the Mary era. However, the requirement that each
@@ -26,7 +26,7 @@ no datum, the hash is represented by ``Nothing``, and takes up ``0`` space. If t
 is a datum in the output, it takes up ``10`` words of memory space. 
 
 Example minimum ada value calculations and constants
-#########################################################
+####################################################
 
 Note that the ``coinsPerUTxOWord`` is a protocol parameter and is subject to
 change. The values ``utxoEntrySizeWithoutVal`` and ``dataHashSize (dh)``
@@ -103,7 +103,7 @@ given in the min-ada-value document for the Mary era.
 
 
 Constraint on the token bundle size
-##################################
+###################################
 
 In addition to the min-ada-value requirement, the ledger enforces a constraint
 on the sizes of token bundles in transaction outputs. The reason for having this

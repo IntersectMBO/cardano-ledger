@@ -29,7 +29,7 @@ Below, we present a calculation and a more detailed justification for this adjus
 
 
 Minimum ada value calculation
-###########################
+#############################
 
 The minimum ada amount required to be contained in every ada-only UTXO with no additional data (ie, a UTXO containing only the address and ada amount) is a protocol parameter of the Cardano system, called : ``minUTxOValue``
 
