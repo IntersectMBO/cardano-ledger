@@ -85,14 +85,6 @@ transaction is processed by running the code or checking the relevant
 signatures. Transaction data must satisfy all the minting policies of
 all assets the transaction is attempting to mint.
 
-**Q. What is a token builder and what is its functionality?**
-
-A. A token builder is a piece of software that allows the user to define
-the tokens to be minted and include them in a minting transaction. It
-also ensures that the appropriate additional data needed to verify that
-the transaction is allowed to perform the mint is included in the
-transaction (see minting policy question below).
-
 Policy examples and ways to define policies
 ===========================================
 
