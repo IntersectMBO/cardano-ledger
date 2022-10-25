@@ -3,6 +3,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 
 module Main where
 
@@ -378,7 +379,7 @@ varyDelegState tag fixed changes initstate action =
 main :: IO ()
 -- main=profileValid
 main = do
-  (genenv, chainstate, genTxfun) <- genTriple (Proxy :: Proxy BenchEra) 1000
+  (genenv, chainstate, genTxfun) <- genTriple (Proxy :: Proxy (ShelleyEra BenchCrypto)) 1000
   defaultMain
     [ bgroup
         "vary input size"

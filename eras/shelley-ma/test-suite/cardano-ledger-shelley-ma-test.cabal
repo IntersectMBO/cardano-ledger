@@ -54,29 +54,19 @@ library
     Test.Cardano.Ledger.ShelleyMA.Serialisation.Roundtrip
 
   build-depends:
-    base16-bytestring,
     bytestring,
     cardano-binary,
     cardano-data,
     cardano-crypto-class,
     cardano-ledger-core,
-    cardano-ledger-pretty,
     cardano-ledger-shelley-ma,
     cardano-slotting,
-    cborg,
     containers,
-    generic-random,
     hashable,
-    mtl,
-    microlens,
-    QuickCheck >= 2.13.2,
     cardano-ledger-shelley-test,
     cardano-ledger-shelley,
     cardano-strict-containers,
     small-steps,
-    tasty-hunit,
-    tasty-quickcheck,
-    tasty,
     text,
   hs-source-dirs: src
 

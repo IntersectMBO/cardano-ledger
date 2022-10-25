@@ -82,7 +82,7 @@ instance Compactible Coin where
 
   toCompact (Coin c) = CompactCoin <$> integerToWord64 c
   fromCompact (CompactCoin c) = word64ToCoin c
-
+  
 instance Compactible DeltaCoin where
   newtype CompactForm DeltaCoin = CompactDeltaCoin Word64
     deriving (Eq, Show, NoThunks, NFData, Typeable, HeapWords, Prim)

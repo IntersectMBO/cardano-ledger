@@ -9,7 +9,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
+{-# OPTIONS_GHC -Wno-name-shadowing -Wno-orphans #-}
 
 module Cardano.Ledger.State.Schema where
 
@@ -28,12 +28,20 @@ import qualified Cardano.Ledger.TxIn as TxIn
 import qualified Data.Map.Strict as Map
 import Database.Persist.Sqlite
 import Database.Persist.TH
+import Data.Functor.Identity (Identity)
+
 
 type FGenDelegs = (Enc (Map.Map (Shelley.FutureGenDeleg C) (Keys.GenDelegPair C)))
 
 type CredentialWitness = Credential.Credential 'Keys.Witness C
 
 type KeyHashWitness = Keys.KeyHash 'Keys.Witness C
+
+deriving newtype instance
+  PersistField (PParamsHKD Identity era) => PersistField (PParams era)
+
+deriving newtype instance
+  PersistFieldSql (PParamsHKD Identity era) => PersistFieldSql (PParams era)
 
 share
   [mkPersist sqlSettings, mkMigrate "migrateAll"]

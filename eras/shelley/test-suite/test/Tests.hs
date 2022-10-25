@@ -1,4 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -14,6 +16,7 @@ import Test.Cardano.Ledger.Shelley.RulesTests (chainExamples, multisigExamples)
 import Test.Cardano.Ledger.Shelley.SafeHash (safeHashTest)
 import qualified Test.Cardano.Ledger.Shelley.Serialisation as Serialisation
 import Test.Cardano.Ledger.Shelley.UnitTests (unitTests)
+import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest)
 import Test.Tasty
 import Test.TestScenario (TestScenario (..), mainWithTestScenario)
 
@@ -30,7 +33,7 @@ mainTests =
     [ minimalPropertyTests @C @(ShelleyLEDGER C),
       rewardTests,
       Serialisation.tests 5,
-      chainExamples,
+      chainExamples @C,
       multisigExamples,
       unitTests,
       prettyTest,
@@ -50,7 +53,7 @@ fastTests =
   testGroup
     "Ledger with Delegation fast"
     [ Serialisation.tests 1,
-      chainExamples,
+      chainExamples @C,
       multisigExamples,
       unitTests,
       prettyTest,

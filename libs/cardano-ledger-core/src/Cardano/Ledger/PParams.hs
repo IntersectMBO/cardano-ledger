@@ -84,8 +84,6 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Data (Typeable)
 import Data.Default.Class (Default)
 import Data.Kind (Type)
-import Database.Persist (PersistField)
-import Database.Persist.Sql (PersistFieldSql)
 import GHC.Generics (Generic (..), K1 (..), M1 (..), U1, V1, type (:*:) (..))
 import GHC.Natural (Natural)
 import Lens.Micro (Lens', SimpleGetter, lens)
@@ -125,12 +123,6 @@ deriving newtype instance
   (Typeable era, FromCBOR (PParamsHKD Identity era)) => FromCBOR (PParams era)
 
 deriving instance Generic (PParams era)
-
-deriving newtype instance
-  PersistField (PParamsHKD Identity era) => PersistField (PParams era)
-
-deriving newtype instance
-  PersistFieldSql (PParamsHKD Identity era) => PersistFieldSql (PParams era)
 
 -- | The type of updates to Protocol parameters
 newtype PParamsUpdate era = PParamsUpdate (PParamsHKD StrictMaybe era)

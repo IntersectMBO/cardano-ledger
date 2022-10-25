@@ -97,7 +97,6 @@ library
     network,
     nothunks,
     partial-order,
-    persistent,
     quiet,
     scientific,
     set-algebra,

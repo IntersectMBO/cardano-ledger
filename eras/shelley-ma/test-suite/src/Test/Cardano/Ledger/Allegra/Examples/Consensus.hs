@@ -2,6 +2,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE PartialTypeSignatures #-}
 
 module Test.Cardano.Ledger.Allegra.Examples.Consensus where
 
@@ -10,7 +11,7 @@ import Cardano.Ledger.AuxiliaryData
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Shelley.PParams (ShelleyPParamsUpdate, Update (..))
+import Cardano.Ledger.Shelley.PParams (Update (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxOut (..))
 import Cardano.Ledger.ShelleyMA
 import Cardano.Ledger.ShelleyMA.AuxiliaryData
@@ -42,9 +43,7 @@ exampleTxBodyAllegra = exampleTxBodyMA exampleCoin
 
 exampleTxBodyMA ::
   forall era.
-  ( ShelleyMAEraTxBody era,
-    ShelleyBasedEra' era,
-    PParamsUpdate era ~ ShelleyPParamsUpdate era
+  ( ShelleyTest era
   ) =>
   Value era ->
   MATxBody era

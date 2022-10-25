@@ -26,6 +26,7 @@ import Test.Cardano.Ledger.Shelley.Serialisation.Generators.Genesis
 import Test.Tasty
 import Test.Tasty.Hedgehog hiding (testProperty)
 import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest)
+import Test.Cardano.Ledger.Shelley.Orphans ()
 
 -- | testProperty has been deprecated. We make our own version here.
 testProperty :: TestName -> Property -> TestTree

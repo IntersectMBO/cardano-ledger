@@ -37,6 +37,7 @@ import Cardano.Ledger.Keys
     vKey,
   )
 import Cardano.Ledger.SafeHash (hashAnnotated)
+import Cardano.Ledger.Core (PParams (..), emptyPParams, ppMinPoolCostL, ppMinFeeAL, ppMinFeeBL, ppKeyDepositL, ppPoolDepositL, ppMaxTxSizeL, ppEMaxL, ppMinUTxOValueL)
 import Cardano.Ledger.Shelley.API
   ( DCert (..),
     LedgerEnv (..),
@@ -53,7 +54,7 @@ import Cardano.Ledger.Shelley.LedgerState
     rewards,
     _unified,
   )
-import Cardano.Ledger.Shelley.PParams
+import Cardano.Ledger.Shelley.PParams hiding (emptyPParams)
 import Cardano.Ledger.Shelley.Rules
   ( ShelleyDelegsPredFailure (..),
     ShelleyDelplPredFailure (..),
@@ -109,6 +110,7 @@ import qualified Data.UMap as UM
 import Data.Word (Word64)
 import GHC.Stack
 import Numeric.Natural (Natural)
+import Lens.Micro
 import Test.Cardano.Ledger.Shelley.Address.Bootstrap
   ( testBootstrapNotSpending,
     testBootstrapSpending,
@@ -164,18 +166,17 @@ bobAddr =
 mkGenesisTxIn :: (HashAlgorithm (HASH c), HasCallStack) => Integer -> TxIn c
 mkGenesisTxIn = TxIn genesisId . mkTxIxPartial
 
-pp :: PParams era
-pp =
+pp :: forall era. ShelleyTest era => PParams era
+pp = 
   emptyPParams
-    { _minfeeA = 1,
-      _minfeeB = 1,
-      _keyDeposit = Coin 100,
-      _poolDeposit = Coin 250,
-      _maxTxSize = 1024,
-      _eMax = EpochNo 10,
-      _minUTxOValue = Coin 100,
-      _minPoolCost = Coin 100
-    }
+    & ppMinFeeAL .~ (1)
+    & ppMinFeeBL .~ (1)
+    & ppKeyDepositL .~ (Coin 100)
+    & ppPoolDepositL .~ (Coin 250)
+    & ppMaxTxSizeL .~ (1024)
+    & ppEMaxL .~ (EpochNo 10)
+    & ppMinUTxOValueL .~ (Coin 100)
+    & ppMinPoolCostL .~ (Coin 10)
 
 testVRFCheckWithActiveSlotCoeffOne :: Assertion
 testVRFCheckWithActiveSlotCoeffOne =
@@ -690,7 +691,7 @@ testPoolCostTooSmall =
     [ DelegsFailure
         ( DelplFailure
             ( PoolFailure
-                ( StakePoolCostTooLowPOOL (_poolCost alicePoolParamsSmallCost) (_minPoolCost (pp @C))
+                ( StakePoolCostTooLowPOOL (_poolCost alicePoolParamsSmallCost) ((pp @C ^. ppMinPoolCostL))
                 )
             )
         )

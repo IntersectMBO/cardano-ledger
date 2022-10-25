@@ -3,6 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Shelley.Serialisation.Golden.Genesis
   ( tests,
@@ -20,10 +21,9 @@ import Cardano.Ledger.Crypto (HASH)
 import Cardano.Ledger.Era (EraCrypto (..))
 import Cardano.Ledger.Keys (hashKey, hashVerKeyVRF, vKey)
 import Cardano.Ledger.Shelley (Shelley)
-import Cardano.Ledger.PParams (PParams (..), emptyPParams)
+import Cardano.Ledger.PParams (PParams (..), emptyPParams, ppDL, ppMaxBBSizeL, ppMaxBHSizeL)
 import qualified Cardano.Ledger.Shelley.API as L
 import Cardano.Ledger.Shelley.Genesis
--- import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..){- , emptyPParams-})
 import Cardano.Slotting.Slot (EpochSize (..))
 import Data.Aeson
 import qualified Data.ByteString.Char8 as BS (pack)
@@ -36,11 +36,13 @@ import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Paths_cardano_ledger_shelley_test (getDataFileName)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
+import Lens.Micro
 import Test.Cardano.Ledger.Shelley.Utils
   ( RawSeed (..),
     mkKeyPair,
     mkVRFKeyPair,
     unsafeBoundRational,
+    ShelleyTest,
   )
 import Test.Tasty
 import Test.Tasty.HUnit (Assertion, assertFailure, testCase, (@?=))
@@ -194,7 +196,8 @@ tests =
 
 exampleShelleyGenesis ::
   forall era.
-  Era era =>
+  ( ShelleyTest era
+  ) =>
   ShelleyGenesis era
 exampleShelleyGenesis =
   ShelleyGenesis
@@ -209,12 +212,11 @@ exampleShelleyGenesis =
       sgSlotLength = 8,
       sgUpdateQuorum = 16991,
       sgMaxLovelaceSupply = 71,
-      sgProtocolParams =
-        emptyPParams
-          { _d = unsafeBoundRational . realToFrac $ (1.9e-2 :: Scientific),
-            _maxBBSize = 239857,
-            _maxBHSize = 217569
-          },
+      sgProtocolParams = 
+        emptyPParams @era
+          & ppDL .~ (unsafeBoundRational . realToFrac $ (1.9e-2 :: Scientific))
+          & ppMaxBBSizeL .~ 239857
+          & ppMaxBHSizeL .~ 217569,
       sgGenDelegs = Map.fromList [(genesisVerKeyHash, genDelegPair)],
       sgInitialFunds = LM.ListMap [(initialFundedAddress, initialFunds)],
       sgStaking = staking
