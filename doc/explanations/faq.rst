@@ -163,50 +163,6 @@ For more detail, see the token bundle section.
 Transacting with native tokens
 ==============================
 
-**Q. How do native tokens appear in a user’s wallet?**
-
-A. Prior to the introduction of MA functionality into the Cardano
-system, a user’s wallet contains both outputs with addresses that belong
-to the user, and the amounts of ada that these addresses hold. For
-example, ``(users_address1, someAdaAmount)``
-
-With MA support, the user’s wallet will be able to contain multiple
-types of assets in a single output, i.e., the wallet can contain a token
-bundle. This means that wallets can contain:
-
--  Assets scoped under different policies in a single UTXO (including
-   ada)
--  Assets scoped under one policy, spread over multiple UTXOs
-
-A user’s wallet might contain something like:
-
-``(users_address1, (adaPolicy, someAdaTokens))``
-``(users_address1, (cryptoDoggie, someDoggies),  (adaPolicy, moreAdaTokens))``
-``(users_address2, (cryptoDoggie, otherDoggies), (cryptoBirds, justCockatoos))``
-
-In this example, there are three policies: ``adaPolicy``,
-``cryptoDoggie``, and ``cryptoBirds``.
-
-**Q. Do native tokens have human-readable identifiers and other
-metadata?**
-
-A. Human-readable names for assets (instead of the long alphanumeric
-Policy ID strings and asset names) can be registered on a metadata
-server. If a user is using a wallet integrated with a metadata server,
-they will be able to view the human-readable names when looking at their
-assets.
-
-Users will be able to upload names for their tokens, along with any
-other metadata pertaining to the specific tokens, to a metadata server.
-There might be more than one metadata server operational at a time
-(including one run by Cardano), so users will have to choose which
-server(s) to upload their metadata to, or to download their metadata
-from.
-
-Users might also choose to add names and other metadata directly into
-the metadata field of the transaction. This will increase transaction
-fees proportionally to the size of the additional metadata.
-
 **Q. What are the costs related to minting and trading native tokens?**
 
 A. Costs related to multi assets can be divided into two categories:
