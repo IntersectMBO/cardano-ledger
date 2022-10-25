@@ -90,8 +90,7 @@ Policy examples and ways to define policies
 
 **Q. What is ‘multisig’ and how is it related to minting policies?**
 
-A. The multisig scripting language (which existed prior to the
-introduction of MA functionality on Cardano) specifies some minimal set
+A. The multisig scripting language specifies some minimal set
 of signatures required to allow a transaction to perform a certain
 action, usually to spend a UTXO entry.
 
