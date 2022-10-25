@@ -107,7 +107,7 @@ Here is an example of a token bundle, let’s call it ``TB_Example`` : ::
 How and where are token bundles stored?
 ********************************************
 
-Token bundles can be found: 
+Token bundles can be found:
 
 1. As the mint field of a transaction, indicating that the transaction is minting the tokens in the bundle.
 2. In an output of a transaction or an output in the current UTXO tracked by the ledger, alongside the address of the output, e.g:
