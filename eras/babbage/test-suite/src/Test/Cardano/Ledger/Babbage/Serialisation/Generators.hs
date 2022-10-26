@@ -44,7 +44,6 @@ instance
 
 instance
   ( Mock (EraCrypto era),
-    ToCBOR (Script era),
     BabbageEraTxBody era,
     Arbitrary (Value era),
     Arbitrary (Script era)

@@ -128,7 +128,7 @@ instance (Twiddle a, Ord a) => Twiddle (StrictSeq a) where
 instance Typeable a => ToCBOR (Twiddler a) where
   toCBOR (Twiddler _ x) = encodeTerm x
 
-instance (Typeable a, ToCBOR a, FromCBOR a) => FromCBOR (Twiddler a) where
+instance (ToCBOR a, FromCBOR a) => FromCBOR (Twiddler a) where
   fromCBOR = do
     version <- getDecoderVersion
     (\x -> Twiddler x $ toTerm version x) <$> fromCBOR

@@ -534,7 +534,7 @@ classifyTraceLength tr = classifySize "trace length:" tr (fromIntegral . traceLe
 -- - belonging to one of the intervals between 2 and the maximum size - 1. The
 --   number of intervals are determined by the @step@ parameter.
 classifySize ::
-  (Ord n, Show n, Integral n) =>
+  (Show n, Integral n) =>
   -- | Prefix to be added to the label intervals
   String ->
   -- | Value to classify

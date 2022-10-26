@@ -335,7 +335,7 @@ validatingWithWithdrawalRedeemers =
   Redeemers $
     Map.singleton (RdmrPtr Tag.Rewrd 0) (Data (Plutus.I 42), ExUnits 5000 5000)
 
-validatingTxWithWithdrawalOut :: (Scriptic era, EraTxOut era) => Proof era -> TxOut era
+validatingTxWithWithdrawalOut :: EraTxOut era => Proof era -> TxOut era
 validatingTxWithWithdrawalOut pf = newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 1995)]
 
 notValidatingTxWithWithdrawal ::

@@ -8,7 +8,7 @@ module Test.Cardano.Chain.Common.Compact
 where
 
 import Cardano.Chain.Common (fromCompactAddress, toCompactAddress)
-import Cardano.HeapWords
+import Cardano.HeapWords (HeapWords (..))
 import Cardano.Prelude
 import Hedgehog (MonadTest, assert, forAll, property, tripping)
 import Test.Cardano.Chain.Common.Gen (genAddress)

@@ -155,7 +155,7 @@ instance
 instance NoThunks (ShelleyDelegPredFailure era)
 
 instance
-  (Typeable era, Era era, Typeable (Script era)) =>
+  (Era era, Typeable (Script era)) =>
   ToCBOR (ShelleyDelegPredFailure era)
   where
   toCBOR = \case

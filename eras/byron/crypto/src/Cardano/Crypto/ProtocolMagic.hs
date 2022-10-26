@@ -7,6 +7,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Crypto.ProtocolMagic
@@ -40,14 +41,17 @@ import Text.JSON.Canonical (FromJSON (..), JSValue (..), ToJSON (..), expected)
 -- mhueschen: As part of CO-353 I am adding `getRequiresNetworkMagic` in
 -- order to pipe configuration to functions which must generate & verify
 -- Addresses (which now must be aware of `NetworkMagic`).
+type AProtocolMagic :: Type -> Type
 data AProtocolMagic a = AProtocolMagic
   { getAProtocolMagicId :: !(Annotated ProtocolMagicId a),
     getRequiresNetworkMagic :: !RequiresNetworkMagic
   }
   deriving (Eq, Show, Generic, NFData, NoThunks)
 
+type ProtocolMagic :: Type
 type ProtocolMagic = AProtocolMagic ()
 
+type ProtocolMagicId :: Type
 newtype ProtocolMagicId = ProtocolMagicId
   { unProtocolMagicId :: Word32
   }
@@ -92,6 +96,7 @@ instance MonadError SchemaError m => FromJSON m ProtocolMagicId where
 
 -- | Bool-isomorphic flag indicating whether we're on testnet
 -- or mainnet/staging.
+type RequiresNetworkMagic :: Type
 data RequiresNetworkMagic
   = RequiresNoMagic
   | RequiresMagic

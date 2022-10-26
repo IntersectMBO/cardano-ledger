@@ -280,8 +280,6 @@ instance
   ( EraTx era,
     EraUTxO era,
     ShelleyMAEraTxBody era,
-    Eq (PParamsUpdate era),
-    Show (PParamsUpdate era),
     PParams era ~ ShelleyPParams era,
     TxBody era ~ MATxBody era,
     TxOut era ~ ShelleyTxOut era,

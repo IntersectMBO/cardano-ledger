@@ -66,6 +66,7 @@ import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Keys (KeyHash (..))
 import Cardano.Ledger.Slot (SlotNo (..))
+import Cardano.Prelude (unsafeShortByteStringIndex)
 import Control.DeepSeq (NFData)
 import Control.Monad (ap, guard, unless, when)
 import qualified Control.Monad.Fail
@@ -75,7 +76,7 @@ import Data.Bits (Bits, clearBit, shiftL, testBit, (.&.), (.|.))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.ByteString.Short as SBS (fromShort, index, length, toShort)
-import Data.ByteString.Short.Internal as SBS (ShortByteString (SBS), unsafeIndex)
+import Data.ByteString.Short.Internal as SBS (ShortByteString (SBS))
 import qualified Data.ByteString.Unsafe as BS (unsafeDrop, unsafeIndex)
 import Data.Coders (cborError)
 import Data.Maybe (fromMaybe)
@@ -179,7 +180,7 @@ class AddressBuffer b where
 instance AddressBuffer ShortByteString where
   bufLength = SBS.length
   {-# INLINE bufLength #-}
-  bufUnsafeIndex = SBS.unsafeIndex
+  bufUnsafeIndex = unsafeShortByteStringIndex
   {-# INLINE bufUnsafeIndex #-}
   bufToByteString = SBS.fromShort
   {-# INLINE bufToByteString #-}
