@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE RankNTypes #-}
 
 -- | Benchmarks for Shelley test generators.
 module Cardano.Ledger.Shelley.Bench.Gen
@@ -106,7 +107,7 @@ genBlock ge cs = generate $ GenBlock.genBlock ge cs
 -- 4) get a DPState from the ChainState
 -- 5) get a Transaction (Tx) from GenEnv and ChainState
 
-genTriple ::
+genTriple :: forall era.
   ( EraGen era,
     Core.PParams era ~ ShelleyPParams era,
     Mock (EraCrypto era),

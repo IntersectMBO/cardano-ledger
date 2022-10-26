@@ -23,8 +23,14 @@ import Cardano.Crypto.KES
 import Cardano.Crypto.VRF.Praos
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Crypto as CryptoClass
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (EraCrypto)
-import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley.API
+  ( DCert,
+    DPState,
+    DelplEnv,
+  )
+import Cardano.Ledger.Shelley (ShelleyEra, ShelleyPParams)
 import Cardano.Ledger.Shelley.Bench.Gen
   ( genBlock,
     genTriple,
@@ -40,11 +46,15 @@ import Cardano.Ledger.Shelley.LedgerState
     incrementalStakeDistr,
     updateStakeDistribution,
   )
-import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
+-- import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.PoolRank (likelihood)
 import Cardano.Ledger.Shelley.UTxO (UTxO)
 import Cardano.Protocol.TPraos.API (PraosCrypto)
 import Cardano.Slotting.Slot (EpochSize (..))
+import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
+import Test.Cardano.Ledger.Shelley.Generator.Trace.DCert (CERTS)
+import Control.State.Transition.Extended
 import Control.DeepSeq (NFData)
 import Control.Iterate.SetAlgebra (compile, compute, run)
 import Control.SetAlgebra (dom, keysEqual, (▷), (◁))
@@ -376,10 +386,19 @@ varyDelegState tag fixed changes initstate action =
 
 -- =============================================================================
 
-main :: IO ()
+main :: forall era. 
+  ( EraGen era,
+    Core.PParams era ~ ShelleyPParams era,
+    Mock (EraCrypto era),
+    Embed (Core.EraRule "DELPL" era) (CERTS era),
+    Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
+    State (Core.EraRule "DELPL" era) ~ DPState (EraCrypto era),
+    Signal (Core.EraRule "DELPL" era) ~ DCert (EraCrypto era),
+    ShelleyTest era
+  ) => IO ()
 -- main=profileValid
 main = do
-  (genenv, chainstate, genTxfun) <- genTriple (Proxy :: Proxy (ShelleyEra BenchCrypto)) 1000
+  (genenv, chainstate, genTxfun) <- genTriple (Proxy :: Proxy era) 1000
   defaultMain
     [ bgroup
         "vary input size"

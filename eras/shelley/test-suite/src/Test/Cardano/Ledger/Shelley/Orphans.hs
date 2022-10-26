@@ -13,7 +13,7 @@ import Cardano.Ledger.Keys
 import Cardano.Ledger.PParams
 import Data.Functor.Identity (Identity)
 import Data.TreeDiff.Class (ToExpr (..))
-import Test.Cardano.Ledger.Shelley.Utils (Split (..))
+import Cardano.Ledger.Shelley.Utils (Split (..))
 import Test.QuickCheck (Arbitrary (..))
 import Data.Maybe.Strict (StrictMaybe)
 import Generic.Random (genericArbitraryU)

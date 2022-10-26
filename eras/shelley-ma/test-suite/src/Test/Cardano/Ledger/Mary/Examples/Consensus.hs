@@ -16,6 +16,7 @@ import Data.Proxy
 import Test.Cardano.Ledger.Allegra.Examples.Consensus
 import Test.Cardano.Ledger.Shelley.Examples.Consensus
 import Test.Cardano.Ledger.Shelley.Orphans ()
+import Test.Cardano.Ledger.MaryEraGen ()
 
 type StandardMary = MaryEra CC.StandardCrypto
 

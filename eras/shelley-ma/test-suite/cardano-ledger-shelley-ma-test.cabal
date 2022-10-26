@@ -59,15 +59,22 @@ library
     cardano-data,
     cardano-crypto-class,
     cardano-ledger-core,
+    cardano-ledger-pretty,
     cardano-ledger-shelley-ma,
     cardano-slotting,
     containers,
+    generic-random,
     hashable,
     cardano-ledger-shelley-test,
     cardano-ledger-shelley,
     cardano-strict-containers,
+    microlens,
     small-steps,
+    tasty,
+    tasty-quickcheck,
+    tasty-hunit,
     text,
+    QuickCheck
   hs-source-dirs: src
 
 test-suite cardano-ledger-shelley-ma-test

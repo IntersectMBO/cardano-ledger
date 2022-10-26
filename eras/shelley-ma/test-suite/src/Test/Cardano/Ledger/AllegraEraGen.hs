@@ -31,7 +31,7 @@ import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Keys (KeyHash)
 import Cardano.Ledger.Pretty.Mary ()
 import Cardano.Ledger.Shelley.API (KeyRole (Witness))
-import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..), Update)
+import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Tx (pattern ShelleyTx)
 import Cardano.Ledger.Shelley.TxBody (DCert, ShelleyTxOut (..), Wdrl)
 import Cardano.Ledger.Shelley.TxWits (pattern ShelleyTxWits)
@@ -48,6 +48,7 @@ import Control.Monad (replicateM)
 import Data.Hashable (hash)
 import Data.Sequence.Strict (StrictSeq (..), fromList)
 import qualified Data.Set as Set
+import Lens.Micro
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv (..), genCoin)
@@ -123,7 +124,7 @@ genTxBody slot ins outs cert wdrl fee upd ad = do
     )
 
 instance Mock c => MinGenTxout (AllegraEra c) where
-  calcEraMinUTxO _txout pp = _minUTxOValue pp
+  calcEraMinUTxO _txout pp = pp ^. Core.ppMinUTxOValueL
   addValToTxOut v (ShelleyTxOut a u) = ShelleyTxOut a (v <+> u)
   genEraTxOut _genenv genVal addrs = do
     values <- replicateM (length addrs) genVal

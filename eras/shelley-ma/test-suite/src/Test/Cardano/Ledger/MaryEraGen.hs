@@ -25,7 +25,7 @@ import Cardano.Ledger.Mary.Value
     multiAssetFromList,
     policies,
   )
-import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..), Update)
+import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..), Update, ShelleyPParamsUpdate)
 import Cardano.Ledger.Shelley.Tx
   ( ShelleyTxOut (..),
     TxIn,
@@ -61,8 +61,9 @@ import Test.Cardano.Ledger.Shelley.Generator.ScriptClass
   ( ScriptClass (..),
     exponential,
   )
+import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest)
 import Test.Cardano.Ledger.Shelley.Generator.Update (genPParams, genShelleyPParamsUpdate)
-import Test.Cardano.Ledger.Shelley.Utils (Split (..))
+import Cardano.Ledger.Shelley.Utils (Split (..))
 import Test.QuickCheck (Gen, arbitrary, frequency)
 import qualified Test.QuickCheck as QC
 
@@ -84,9 +85,9 @@ instance (CC.Crypto c) => ScriptClass (MaryEra c) where
   quantify _ = quantifyTL
   unQuantify _ = unQuantifyTL
 
-instance (CC.Crypto c, Mock c) => EraGen (MaryEra c) where
+instance (CC.Crypto c, Mock c, ShelleyTest c) => EraGen (MaryEra c) where
   genGenesisValue = maryGenesisValue
-  genEraTxBody _ge _utxo = genTxBody
+  genEraTxBody _ge _utxo = _ -- genTxBody
   genEraAuxiliaryData = genAuxiliaryData
   updateEraTxBody _utxo _pp _wits txBody fee ins out =
     case txBody of
@@ -270,7 +271,7 @@ addTokens ::
   Maybe (StrictSeq (TxOut era))
 addTokens proxy tooLittleLovelace pparams ts (txOut :<| os) =
   let v = txOut ^. valueTxOutL
-   in if Val.coin v < scaledMinDeposit v (getField @"_minUTxOValue" pparams)
+   in if Val.coin v < scaledMinDeposit v (pparams ^. ppMinUTxOValueL)
         then addTokens proxy (txOut :<| tooLittleLovelace) pparams ts os
         else Just $ tooLittleLovelace >< addValToTxOut @era (MaryValue 0 ts) txOut <| os
 addTokens _proxy _ _ _ StrictSeq.Empty = Nothing
@@ -278,12 +279,14 @@ addTokens _proxy _ _ _ StrictSeq.Empty = Nothing
 -- | This function is only good in the Mary Era
 genTxBody ::
   forall era.
-  ( EraGen era,
+  ( ShelleyTest era,
+    EraGen era,
     Value era ~ MaryValue (EraCrypto era),
     PParams era ~ ShelleyPParams era,
+    PParamsUpdate era ~ ShelleyPParamsUpdate era,
     TxOut era ~ ShelleyTxOut era
   ) =>
-  ShelleyPParams era ->
+  PParams era ->
   SlotNo ->
   Set.Set (TxIn (EraCrypto era)) ->
   StrictSeq (ShelleyTxOut era) ->
@@ -327,7 +330,7 @@ instance Split (MaryValue era) where
         )
 
 instance Mock c => MinGenTxout (MaryEra c) where
-  calcEraMinUTxO _txout pp = _minUTxOValue pp
+  calcEraMinUTxO _txout pp = pp ^. ppMinUTxOValueL
   addValToTxOut v (ShelleyTxOut a u) = ShelleyTxOut a (v <+> u)
   genEraTxOut _genenv genVal addrs = do
     values <- replicateM (length addrs) genVal

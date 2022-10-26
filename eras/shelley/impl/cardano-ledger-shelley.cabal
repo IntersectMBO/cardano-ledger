@@ -67,6 +67,7 @@ library
     Cardano.Ledger.Shelley.TxBody
     Cardano.Ledger.Shelley.TxOut
     Cardano.Ledger.Shelley.UTxO
+    Cardano.Ledger.Shelley.Utils
   other-modules:
     Cardano.Ledger.Shelley.Era
     Cardano.Ledger.Shelley.LedgerState.Types

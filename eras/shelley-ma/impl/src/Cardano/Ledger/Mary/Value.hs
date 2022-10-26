@@ -49,7 +49,6 @@ import Cardano.Ledger.Coin (Coin (..), CompactForm (..), integerToWord64)
 import Cardano.Ledger.Compactible (Compactible (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Shelley.Scripts (ScriptHash (..))
-import Test.Cardano.Ledger.Shelley.Utils (Split (..))
 import Cardano.Ledger.Val
   ( DecodeMint (..),
     DecodeNonNegative (..),
@@ -192,12 +191,6 @@ instance Group (MaryValue c) where
       (invert m)
 
 instance Abelian (MaryValue c)
-
-instance CC.Crypto c => Split (MaryValue c) where
-  vsplit mv 0 = ([], coin mv)
-  vsplit (MaryValue n ma) m
-    | m <= 0 = error "must split maryvalue into positive parts"
-    | otherwise = (take (fromIntegral m) (repeat (MaryValue (n `div` m) ma)), Coin (n `rem` m))
 
 -- ===================================================
 -- Make the Val instance of MaryValue

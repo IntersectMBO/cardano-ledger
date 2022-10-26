@@ -94,7 +94,8 @@ import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
 import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (scriptKeyCombination)
 import Test.Cardano.Ledger.Shelley.Generator.Trace.DCert (CERTS, genDCerts)
 import Test.Cardano.Ledger.Shelley.Generator.Update (genUpdate)
-import Test.Cardano.Ledger.Shelley.Utils (Split (..), ShelleyTest)
+import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest)
+import Cardano.Ledger.Shelley.Utils (Split (..))
 import Test.QuickCheck (Gen, discard)
 import qualified Test.QuickCheck as QC
 
