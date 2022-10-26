@@ -1,3 +1,5 @@
+{-# LANGUAGE UndecidableSuperClasses #-}
+
 module Cardano.Ledger.Babbage.Core
   ( BabbageEraTxBody (..),
     module Cardano.Ledger.Alonzo.Core,

@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 
 module Cardano.Ledger.Alonzo.Core
   ( AlonzoEraTxBody (..),
