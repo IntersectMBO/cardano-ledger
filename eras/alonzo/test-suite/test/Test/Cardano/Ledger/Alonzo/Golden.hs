@@ -303,7 +303,7 @@ expectedGenesis =
   AlonzoGenesis
     { coinsPerUTxOWord = Coin 34482,
       prices = Prices (fromJust $ boundRational 0.0577) (fromJust $ boundRational 0.0000721),
-      costmdls = CostModels $ Map.fromList [(PlutusV1, expectedCostModel)],
+      costmdls = CostModels $ Map.fromList [(PlutusV1, expectedCostModel), (PlutusV2, expectedCostModelV2)],
       maxTxExUnits = ExUnits 10000000 10000000000,
       maxBlockExUnits = ExUnits 50000000 40000000000,
       maxValSize = 5000,
@@ -316,6 +316,12 @@ expectedCostModel =
   fromRight
     (error ("Error creating CostModel from known parameters" <> show expectedPParams))
     (mkCostModel PlutusV1 expectedPParams)
+
+expectedCostModelV2 :: CostModel
+expectedCostModelV2 =
+  fromRight
+    (error ("Error creating CostModel from known PlutusV2 parameters" <> show expectedPParams))
+    (mkCostModel PlutusV2 (expectedPParams ++ (replicate 9 0)))
 
 expectedPParams :: [Integer]
 expectedPParams =
