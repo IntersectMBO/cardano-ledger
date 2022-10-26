@@ -22,18 +22,18 @@ let
     name = "cabal-dev-shell";
 
     # These programs will be available inside the nix-shell.
-    buildInputs = with haskellPackages; [
+    nativeBuildInputs = with haskellPackages; [
       nix-prefetch-git
       niv
       pkg-config
       hlint
-      ormolu # XXX switch to ormolu_0_5_0_1 once our pkgs has it
       pyEnv
     ];
 
     tools = {
       cabal = "3.8.1.0";
       ghcid = "0.8.7";
+      ormolu = "0.5.0.1";
       haskell-language-server="latest";
     };
 
