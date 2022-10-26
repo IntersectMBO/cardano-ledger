@@ -36,7 +36,7 @@ import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.SafeHash (extractHash)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams)
-import Data.Aeson (FromJSON (..), Object, ToJSON (..), object, (.!=), (.:), (.:?), (.=))
+import Data.Aeson (Array, FromJSON (..), Object, ToJSON (..), object, (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (FromJSONKey (..), Parser, ToJSONKey (..), toJSONKeyText)
 import Data.Coders
@@ -45,6 +45,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe, maybeToList)
 import Data.Scientific (fromRationalRepetendLimited)
 import Data.Text (Text)
+import Data.Vector as Vector (toList)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
@@ -211,20 +212,38 @@ instance ToJSONKey Language where
 instance FromJSONKey Language where
   fromJSONKey = Aeson.FromJSONKeyTextParser languageFromText
 
+instance FromJSON CostModels where
+  parseJSON = Aeson.withObject "CostModels" $ \o -> do
+    v1CostModels <- legacyParseCostModels o
+    v2CostModels <- parseCostModels o
+    pure $ CostModels $ Map.fromList (v1CostModels ++ v2CostModels)
+
 -- The costmodel parameters in Alonzo Genesis are represented as a map.
 -- Plutus API does no longer require the map as a parameter to `mkEvaluationContext`, but the list of Integers representing the values of the map.
 -- The expectation on this list of Integers is that they are sorted in the order given by the `ParamName` enum,
 -- so even though we just have to pass the list to plutus, we still need to use the names of the parameters in order to sort the list.
 -- In new versions, we want to represent the costmodel parameters directly as a list, so we can avoid this reordering, hence the name of this function.
-legacyParseCostModels :: Object -> Parser CostModels
+legacyParseCostModels :: Object -> Parser [(Language, CostModel)]
 legacyParseCostModels o =
   do
     plutusV1 <- o .:? "PlutusV1"
     cms <- traverse (validateCostModel PlutusV1 . cmParamValues) plutusV1
-    pure . CostModels . Map.fromList $ maybeToList cms
+    pure $ maybeToList cms
   where
     cmParamValues :: Map Text Integer -> [Integer]
     cmParamValues cmMap = mapMaybe (`Map.lookup` cmMap) plutusV1ParamNames
+
+parseCostModels :: Object -> Parser [(Language, CostModel)]
+parseCostModels o =
+  do
+    plutusV2 <- o .:? "PlutusV2"
+    maybeCostModels <- traverse (Aeson.withArray "PlutusV2 values" parseCostModelsV2) plutusV2
+    pure $ maybeToList maybeCostModels
+  where
+    parseCostModelsV2 :: Array -> Parser ((Language, CostModel))
+    parseCostModelsV2 array = do
+      paramValues <- mapM parseJSON $ Vector.toList array
+      validateCostModel PlutusV2 paramValues
 
 validateCostModel :: MonadFail m => Language -> [Integer] -> m (Language, CostModel)
 validateCostModel lang cmps = case mkCostModel lang cmps of
@@ -234,7 +253,7 @@ validateCostModel lang cmps = case mkCostModel lang cmps of
 instance FromJSON AlonzoGenesis where
   parseJSON = Aeson.withObject "Alonzo Genesis" $ \o -> do
     coinsPerUTxOWord <- o .: "lovelacePerUTxOWord"
-    costmdls <- o .: "costModels" >>= legacyParseCostModels
+    costmdls <- o .: "costModels"
     prices <- o .: "executionPrices"
     maxTxExUnits <- o .: "maxTxExUnits"
     maxBlockExUnits <- o .: "maxBlockExUnits"
@@ -316,7 +335,7 @@ instance FromJSON (AlonzoPParams era) where
         <*> obj .: "protocolVersion"
         <*> obj .: "minPoolCost" .!= mempty
         <*> obj .: "lovelacePerUTxOWord"
-        <*> (obj .: "costmdls" >>= legacyParseCostModels)
+        <*> obj .: "costmdls"
         <*> obj .: "prices"
         <*> obj .: "maxTxExUnits"
         <*> obj .: "maxBlockExUnits"
