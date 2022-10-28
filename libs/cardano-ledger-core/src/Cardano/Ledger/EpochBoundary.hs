@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -230,12 +229,3 @@ emptySnapShot = SnapShot (Stake VMap.empty) VMap.empty VMap.empty
 
 emptySnapShots :: SnapShots c
 emptySnapShots = SnapShots emptySnapShot emptySnapShot emptySnapShot (Coin 0)
-=======
-module Cardano.Ledger.Shelley.EpochBoundary
-  {-# DEPRECATED "Use 'import Cardano.Ledger.EpochBoundary' instead" #-}
-  ( module X,
-  )
-where
-
-import Cardano.Ledger.EpochBoundary as X
->>>>>>> 478954246 (moved Orphans PoolParams EpochBoundary files to core)
