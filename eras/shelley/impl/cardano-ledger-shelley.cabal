@@ -96,10 +96,8 @@ library
   hs-source-dirs: src
   build-depends:
     aeson >= 2,
-    base16-bytestring >= 1,
     bytestring,
     cardano-binary,
-    cardano-crypto,
     cardano-crypto-class,
     cardano-crypto-wrapper,
     cardano-data,
@@ -113,7 +111,6 @@ library
     deepseq,
     groups,
     heapwords,
-    iproute,
     mtl,
     microlens,
     nothunks,

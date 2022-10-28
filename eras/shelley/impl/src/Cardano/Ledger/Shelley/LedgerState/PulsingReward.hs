@@ -37,14 +37,14 @@ import Cardano.Ledger.Coin
     toDeltaCoin,
   )
 import Cardano.Ledger.Core
-import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool))
-import Cardano.Ledger.Shelley.EpochBoundary
+import Cardano.Ledger.EpochBoundary
   ( SnapShot (..),
     SnapShots (..),
     Stake (..),
     sumAllStake,
     sumStakePerPool,
   )
+import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool))
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState.DPState
   ( DPState (..),

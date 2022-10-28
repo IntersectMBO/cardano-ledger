@@ -44,9 +44,9 @@ import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact, toCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (StakeRefBase, StakeRefPtr))
+import Cardano.Ledger.EpochBoundary (SnapShot (..), Stake (..), obligation)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking, Witness))
 import Cardano.Ledger.Shelley.API (ApplyBlock, ShelleyDELEG)
-import Cardano.Ledger.Shelley.EpochBoundary (SnapShot (..), Stake (..), obligation)
 import Cardano.Ledger.Shelley.LedgerState
   ( DPState (..),
     DState (..),

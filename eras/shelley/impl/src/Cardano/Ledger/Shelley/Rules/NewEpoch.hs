@@ -31,10 +31,10 @@ import Cardano.Ledger.Coin (Coin (Coin), toDeltaCoin)
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
+import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.Shelley.AdaPots (AdaPots, totalAdaPotsES)
-import Cardano.Ledger.Shelley.EpochBoundary
 import Cardano.Ledger.Shelley.Era (ShelleyNEWEPOCH)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rewards (sumRewards)

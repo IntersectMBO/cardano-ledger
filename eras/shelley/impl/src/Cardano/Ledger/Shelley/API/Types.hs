@@ -38,6 +38,11 @@ import Cardano.Ledger.Credential as X
   ( Credential (..),
     StakeReference (..),
   )
+import Cardano.Ledger.EpochBoundary as X
+  ( SnapShot (..),
+    SnapShots (..),
+    Stake (..),
+  )
 import Cardano.Ledger.Keys as X
   ( CertifiedVRF,
     GenDelegPair (..),
@@ -71,11 +76,6 @@ import Cardano.Ledger.Shelley.Delegation.Certificates as X
   ( DCert (..),
     DelegCert (..),
     PoolCert (..),
-  )
-import Cardano.Ledger.Shelley.EpochBoundary as X
-  ( SnapShot (..),
-    SnapShots (..),
-    Stake (..),
   )
 import Cardano.Ledger.Shelley.Genesis as X
 import Cardano.Ledger.Shelley.LedgerState as X
