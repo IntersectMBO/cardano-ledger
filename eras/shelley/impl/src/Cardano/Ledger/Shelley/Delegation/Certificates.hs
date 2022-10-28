@@ -53,6 +53,7 @@ import Cardano.Ledger.Keys
     KeyRole (..),
     VerKeyVRF,
   )
+import Cardano.Ledger.PoolParams
 import Cardano.Ledger.Serialization
   ( FromCBORGroup (..),
     ToCBORGroup (..),
@@ -62,7 +63,6 @@ import Cardano.Ledger.Serialization
     mapFromCBOR,
     mapToCBOR,
   )
-import Cardano.Ledger.Shelley.PoolParams
 import Cardano.Ledger.Slot (EpochNo (..))
 import Control.DeepSeq (NFData)
 import Data.Map.Strict (Map)

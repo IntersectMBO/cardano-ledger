@@ -47,6 +47,11 @@ import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
 import Cardano.Ledger.Core (EraTx, Tx, hashScript, hashTxAuxData)
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.EpochBoundary
+  ( SnapShot (..),
+    SnapShots (..),
+    Stake (..),
+  )
 import Cardano.Ledger.Era (EraCrypto (..))
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys
@@ -92,11 +97,6 @@ import Cardano.Ledger.Shelley.Delegation.Certificates
     pattern RegKey,
     pattern RegPool,
     pattern RetirePool,
-  )
-import Cardano.Ledger.Shelley.EpochBoundary
-  ( SnapShot (..),
-    SnapShots (..),
-    Stake (..),
   )
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),

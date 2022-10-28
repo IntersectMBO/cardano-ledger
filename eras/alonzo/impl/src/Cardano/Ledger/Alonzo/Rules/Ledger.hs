@@ -24,8 +24,8 @@ import Cardano.Ledger.Alonzo.TxBody (ShelleyEraTxBody (..))
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
+import Cardano.Ledger.EpochBoundary (obligation)
 import Cardano.Ledger.Keys (DSignable, Hash)
-import Cardano.Ledger.Shelley.EpochBoundary (obligation)
 import Cardano.Ledger.Shelley.LedgerState
   ( DPState (..),
     DState (..),

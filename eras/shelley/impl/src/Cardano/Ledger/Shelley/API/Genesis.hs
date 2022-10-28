@@ -8,6 +8,7 @@ module Cardano.Ledger.Shelley.API.Genesis where
 import Cardano.Ledger.BaseTypes (BlocksMade (..))
 import Cardano.Ledger.Core (EraRule, EraTxOut, PParams)
 import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.EpochBoundary (emptySnapShots)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.Types
   ( AccountState (AccountState),
@@ -24,7 +25,6 @@ import Cardano.Ledger.Shelley.API.Types
     genesisUTxO,
     word64ToCoin,
   )
-import Cardano.Ledger.Shelley.EpochBoundary (emptySnapShots)
 import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses, smartUTxOState)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams)
 import Cardano.Ledger.Shelley.UTxO (coinBalance)

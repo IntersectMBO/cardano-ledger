@@ -19,7 +19,7 @@
 -- Description : Functions and definitions for rules at epoch boundary.
 --
 -- This modules implements the necessary functions for the changes that can happen at epoch boundaries.
-module Cardano.Ledger.Shelley.EpochBoundary
+module Cardano.Ledger.EpochBoundary
   ( Stake (..),
     sumAllStake,
     sumStakePerPool,
@@ -46,8 +46,8 @@ import Cardano.Ledger.Compactible
 import Cardano.Ledger.Credential (Credential)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
+import Cardano.Ledger.PoolParams (PoolParams)
 import Cardano.Ledger.Serialization (decodeRecordNamedT)
-import Cardano.Ledger.Shelley.TxBody (PoolParams)
 import Cardano.Ledger.Val ((<+>), (<×>))
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans (lift)

@@ -71,6 +71,11 @@ import Cardano.Ledger.Credential
     StakeReference (..),
   )
 import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.EpochBoundary
+  ( SnapShot (..),
+    SnapShots (..),
+    Stake (..),
+  )
 import qualified Cardano.Ledger.Era as Era (TxSeq)
 import Cardano.Ledger.Keys
   ( GKeys (..),
@@ -87,11 +92,6 @@ import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness (..), ChainCode (..))
 import Cardano.Ledger.MemoBytes (MemoBytes (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
-import Cardano.Ledger.Shelley.EpochBoundary
-  ( SnapShot (..),
-    SnapShots (..),
-    Stake (..),
-  )
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
     DPState (..),
@@ -861,7 +861,7 @@ instance PrettyA Likelihood where
   prettyA = ppLikelihood
 
 -- =================================
--- Cardano.Ledger.Shelley.EpochBoundary
+-- Cardano.Ledger.EpochBoundary
 
 ppStake :: Stake c -> PDoc
 ppStake (Stake m) =

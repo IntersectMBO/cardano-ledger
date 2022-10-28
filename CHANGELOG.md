@@ -9,6 +9,7 @@ in the naming of release branches.
 
 ## [Unreleased]
 
+
 ### Added
 
 - Create a `cardano-ledger-binary` package that does versioned serialization as a
@@ -26,6 +27,10 @@ in the naming of release branches.
 
 ### Changed
 
+- Moved Cardano.Ledger.Shelley.Orphans to Cardano.Ledger.Orphans  in the core modules
+- Moved Cardano.Ledger.Shelley.PoolParms to Cardano.Ledger.PoolParams  in the core modules
+- Moved Cardano.Ledger.Shelley.EpochBoundary to Cardano.Ledger.EpochBoundary  in the core modules
+- Added deprecated modules that import the moved ones and export their contents	
 - Moved `Data.AbstractSize` from `cardano-data` to `byron-spec-ledger` #3046
 - Renamed in `Cardano.Ledger.Mary.Value`: #3047
   - `insert` to `insertMultiAsset`

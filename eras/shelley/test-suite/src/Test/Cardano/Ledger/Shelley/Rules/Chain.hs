@@ -42,6 +42,7 @@ import Cardano.Ledger.Chain
   )
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.EpochBoundary (emptySnapShots)
 import Cardano.Ledger.Era (Era, EraCrypto)
 import qualified Cardano.Ledger.Era as Era
 import Cardano.Ledger.Keys
@@ -60,7 +61,6 @@ import Cardano.Ledger.Shelley.AdaPots
     totalAdaES,
     totalAdaPotsES,
   )
-import Cardano.Ledger.Shelley.EpochBoundary (emptySnapShots)
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
     DPState (..),

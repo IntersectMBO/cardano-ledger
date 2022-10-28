@@ -7,7 +7,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Ledger.Shelley.PoolParams
+module Cardano.Ledger.PoolParams
   ( PoolParams (..),
     PoolMetadata (..),
     StakePoolRelay (..),
@@ -43,6 +43,7 @@ import Cardano.Ledger.Keys
     KeyRole (..),
     VerKeyVRF,
   )
+import Cardano.Ledger.Orphans ()
 import Cardano.Ledger.Serialization
   ( CBORGroup (..),
     CborSeq (..),
@@ -60,7 +61,6 @@ import Cardano.Ledger.Serialization
     ipv6FromCBOR,
     ipv6ToCBOR,
   )
-import Cardano.Ledger.Shelley.Orphans ()
 import Control.DeepSeq (NFData ())
 import Data.Aeson (FromJSON (..), ToJSON (..), Value, (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson

@@ -44,13 +44,13 @@ import Cardano.Ledger.BaseTypes
   )
 import Cardano.Ledger.Coin (Coin (..), coinToRational)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.EpochBoundary (maxPool)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Serialization
   ( decodeRecordNamedT,
     decodeSeq,
     encodeFoldable,
   )
-import Cardano.Ledger.Shelley.EpochBoundary (maxPool)
 import Cardano.Ledger.Shelley.Rewards (StakeShare (..), memberRew)
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..))
 import Cardano.Slotting.Slot (EpochSize (..))

@@ -26,8 +26,8 @@ where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..), epochInfoPure)
 import Cardano.Ledger.Core
+import Cardano.Ledger.EpochBoundary (SnapShots (_pstakeMark))
 import Cardano.Ledger.Keys (GenDelegs (..))
-import Cardano.Ledger.Shelley.EpochBoundary (SnapShots (_pstakeMark))
 import Cardano.Ledger.Shelley.Era (ShelleyTICK, ShelleyTICKF)
 import Cardano.Ledger.Shelley.LedgerState
   ( DPState (..),

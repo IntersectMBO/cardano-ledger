@@ -4,7 +4,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Shelley.Orphans where
+module Cardano.Ledger.Orphans where
 
 import Cardano.Crypto.Hash (Hash (..))
 import qualified Cardano.Crypto.Hash as Hash

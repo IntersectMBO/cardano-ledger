@@ -32,8 +32,8 @@ import Cardano.Binary
 import Cardano.Ledger.BaseTypes (ShelleyBase, TxIx, invalidKey)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
+import Cardano.Ledger.EpochBoundary (obligation)
 import Cardano.Ledger.Keys (DSignable, Hash)
-import Cardano.Ledger.Shelley.EpochBoundary (obligation)
 import Cardano.Ledger.Shelley.Era (ShelleyLEDGER)
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState,
