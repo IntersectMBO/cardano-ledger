@@ -69,8 +69,8 @@ import Cardano.Ledger.Core hiding (PParams, PParamsUpdate)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.HKD (HKD)
+import Cardano.Ledger.Orphans ()
 import Cardano.Ledger.Serialization (FromCBORGroup (..), ToCBORGroup (..))
-import Cardano.Ledger.Shelley.Orphans ()
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (ShelleyPParams))
 import Cardano.Ledger.Slot (EpochNo (..))
 import Control.DeepSeq (NFData)

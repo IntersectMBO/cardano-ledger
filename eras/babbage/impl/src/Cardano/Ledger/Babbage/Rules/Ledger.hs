@@ -20,7 +20,7 @@ import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUTXOW, BabbageUtxowPredFailure
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.EpochBoundary (obligation)
+import Cardano.Ledger.EpochBoundary (obligation)
 import Cardano.Ledger.Shelley.LedgerState
   ( DPState (..),
     LedgerState (..),

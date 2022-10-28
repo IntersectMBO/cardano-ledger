@@ -53,6 +53,13 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (VRF)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.EpochBoundary
+  ( Stake (..),
+    maxPool,
+    poolStake,
+    sumAllStake,
+    sumStakePerPool,
+  )
 import Cardano.Ledger.Era (Era, EraCrypto)
 import Cardano.Ledger.Keys
   ( KeyHash,
@@ -66,13 +73,6 @@ import Cardano.Ledger.Keys
 import Cardano.Ledger.Pretty (PDoc, PrettyA (..), ppMap, ppReward, ppSet)
 import Cardano.Ledger.Shelley.API (NonMyopic, SnapShot (..), SnapShots (..))
 import Cardano.Ledger.Shelley.API.Types (PoolParams (..))
-import Cardano.Ledger.Shelley.EpochBoundary
-  ( Stake (..),
-    maxPool,
-    poolStake,
-    sumAllStake,
-    sumStakePerPool,
-  )
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),

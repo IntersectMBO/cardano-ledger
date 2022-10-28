@@ -51,6 +51,7 @@ library
     Cardano.Ledger.Core
     Cardano.Ledger.Credential
     Cardano.Ledger.Crypto
+    Cardano.Ledger.EpochBoundary
     Cardano.Ledger.Era
     Cardano.Ledger.Hashes
     Cardano.Ledger.HKD
@@ -59,7 +60,9 @@ library
     Cardano.Ledger.Keys.WitVKey
     Cardano.Ledger.Language
     Cardano.Ledger.MemoBytes
+    Cardano.Ledger.Orphans
     Cardano.Ledger.PoolDistr
+    Cardano.Ledger.PoolParams
     Cardano.Ledger.Rewards
     Cardano.Ledger.Rules.ValidationMode
     Cardano.Ledger.SafeHash
@@ -105,3 +108,4 @@ library
     time,
     transformers,
     validation-selective,
+    vector-map,

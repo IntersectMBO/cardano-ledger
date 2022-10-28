@@ -26,12 +26,12 @@ import Cardano.Ledger.Credential
   ( Credential (..),
     StakeReference (StakeRefBase, StakeRefPtr),
   )
-import Cardano.Ledger.Keys
-  ( KeyRole (..),
-  )
-import Cardano.Ledger.Shelley.EpochBoundary
+import Cardano.Ledger.EpochBoundary
   ( SnapShot (..),
     Stake (..),
+  )
+import Cardano.Ledger.Keys
+  ( KeyRole (..),
   )
 import Cardano.Ledger.Shelley.LedgerState.DPState
   ( DPState (..),

@@ -24,10 +24,10 @@ import Cardano.Ledger.Coin (CompactForm (CompactCoin))
 import Cardano.Ledger.CompactAddress (CompactAddr (UnsafeCompactAddr))
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.Types
-import Cardano.Ledger.Shelley.EpochBoundary
 import Cardano.Ledger.Shelley.Rules ()
 import Cardano.Ledger.Shelley.UTxO (coinBalance)
 import Cardano.Ledger.Slot

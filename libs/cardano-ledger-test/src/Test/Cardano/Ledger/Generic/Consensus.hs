@@ -46,13 +46,13 @@ import qualified Cardano.Ledger.Conway.PParams as ConwayPP
 import Cardano.Ledger.Conway.Translation ()
 import Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Keys
 import Cardano.Ledger.Mary.Translation ()
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.SafeHash
 import Cardano.Ledger.Shelley.API hiding (RequireAllOf, RequireAnyOf, RequireMOf, RequireSignature)
-import Cardano.Ledger.Shelley.EpochBoundary
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PParams
 import qualified Cardano.Ledger.Shelley.PParams as PParams (Update (..))

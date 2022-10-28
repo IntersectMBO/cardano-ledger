@@ -20,7 +20,7 @@ where
 import Cardano.Ledger.BaseTypes (ProtVer, ShelleyBase, StrictMaybe)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.EpochBoundary (obligation)
+import Cardano.Ledger.EpochBoundary (obligation)
 import Cardano.Ledger.Shelley.Era (ShelleyNEWPP)
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState,

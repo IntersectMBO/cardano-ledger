@@ -71,6 +71,7 @@ import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (DSIGN)
+import qualified Cardano.Ledger.EpochBoundary as EB
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolDistr
   ( IndividualPoolStake (..),
@@ -81,7 +82,6 @@ import Cardano.Ledger.Shelley.AdaPots
     totalAdaES,
     totalAdaPotsES,
   )
-import qualified Cardano.Ledger.Shelley.EpochBoundary as EB
 import Cardano.Ledger.Shelley.LedgerState
   ( DPState (..),
     EpochState (..),
