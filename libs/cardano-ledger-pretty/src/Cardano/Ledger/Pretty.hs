@@ -861,7 +861,7 @@ instance PrettyA Likelihood where
   prettyA = ppLikelihood
 
 -- =================================
--- Cardano.Ledger.Shelley.EpochBoundary
+-- Cardano.Ledger.EpochBoundary
 
 ppStake :: Stake c -> PDoc
 ppStake (Stake m) =

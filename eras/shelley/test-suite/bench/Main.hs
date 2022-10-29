@@ -22,6 +22,7 @@ import Cardano.Crypto.KES
 import Cardano.Crypto.VRF.Praos
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Crypto as CryptoClass
+import qualified Cardano.Ledger.EpochBoundary as EB
 import Cardano.Ledger.Era (EraCrypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Bench.Gen
@@ -29,7 +30,6 @@ import Cardano.Ledger.Shelley.Bench.Gen
     genTriple,
   )
 import Cardano.Ledger.Shelley.Bench.Rewards (createRUpd, createRUpdWithProv, genChainInEpoch)
-import qualified Cardano.Ledger.Shelley.EpochBoundary as EB
 import Cardano.Ledger.Shelley.LedgerState
   ( DPState (..),
     DState (..),
