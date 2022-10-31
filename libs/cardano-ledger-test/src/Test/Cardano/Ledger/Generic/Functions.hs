@@ -33,9 +33,9 @@ import Cardano.Ledger.BaseTypes (BlocksMade (BlocksMade), Globals (epochInfo), P
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential, StakeReference (..))
+import Cardano.Ledger.EpochBoundary (obligation)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Shelley.AdaPots (AdaPots (..), totalAdaPotsES)
-import Cardano.Ledger.Shelley.EpochBoundary (obligation)
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
     DPState (..),

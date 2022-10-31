@@ -24,8 +24,8 @@ import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
+import Cardano.Ledger.EpochBoundary (obligation)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking))
-import Cardano.Ledger.Shelley.EpochBoundary (obligation)
 import Cardano.Ledger.Shelley.Era (ShelleyPOOLREAP)
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),

@@ -23,7 +23,7 @@ where
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.EpochBoundary (SnapShots, obligation)
+import Cardano.Ledger.EpochBoundary (SnapShots, obligation)
 import Cardano.Ledger.Shelley.Era (ShelleyEPOCH)
 import Cardano.Ledger.Shelley.LedgerState
   ( EpochState,

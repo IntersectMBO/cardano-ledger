@@ -37,6 +37,7 @@ import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core (Reward (..), RewardType (..))
 import Cardano.Ledger.Credential (Credential, Ptr (..))
 import qualified Cardano.Ledger.Crypto as Cr
+import qualified Cardano.Ledger.EpochBoundary as EB
 import Cardano.Ledger.Era (EraCrypto (..))
 import Cardano.Ledger.Keys (KeyRole (..), asWitness, coerceKeyRole)
 import Cardano.Ledger.PoolDistr
@@ -45,7 +46,6 @@ import Cardano.Ledger.PoolDistr
   )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import qualified Cardano.Ledger.Shelley.EpochBoundary as EB
 import Cardano.Ledger.Shelley.LedgerState
   ( NewEpochState (..),
     PulsingRewUpdate (..),

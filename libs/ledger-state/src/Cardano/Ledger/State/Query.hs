@@ -10,8 +10,8 @@ module Cardano.Ledger.State.Query where
 
 import Cardano.Ledger.Alonzo.TxBody as Alonzo
 import qualified Cardano.Ledger.Credential as Credential
+import qualified Cardano.Ledger.EpochBoundary as EpochBoundary
 import qualified Cardano.Ledger.Keys as Keys
-import qualified Cardano.Ledger.Shelley.EpochBoundary as EpochBoundary
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import qualified Cardano.Ledger.Shelley.UTxO as Shelley
 import Cardano.Ledger.State.Orphans

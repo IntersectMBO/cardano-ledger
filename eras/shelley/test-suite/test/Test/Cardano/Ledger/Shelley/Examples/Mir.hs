@@ -21,6 +21,7 @@ import Cardano.Ledger.Coin (Coin (..), toDeltaCoin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Ptr (..))
 import qualified Cardano.Ledger.Crypto as CryptoClass
+import Cardano.Ledger.EpochBoundary (emptySnapShot)
 import Cardano.Ledger.Keys
   ( KeyPair (..),
     KeyRole (..),
@@ -29,7 +30,6 @@ import Cardano.Ledger.Keys
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Delegation.Certificates (DelegCert (..), MIRCert (..))
-import Cardano.Ledger.Shelley.EpochBoundary (emptySnapShot)
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
     EpochState (..),

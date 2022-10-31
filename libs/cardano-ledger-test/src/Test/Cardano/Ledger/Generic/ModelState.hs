@@ -43,6 +43,11 @@ import Cardano.Ledger.BaseTypes (BlocksMade (..))
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.EpochBoundary
+  ( SnapShot (..),
+    SnapShots (..),
+    Stake (..),
+  )
 import Cardano.Ledger.Era (Era (..))
 import Cardano.Ledger.Keys
   ( GenDelegs (..),
@@ -64,11 +69,6 @@ import Cardano.Ledger.Pretty
   )
 import Cardano.Ledger.Pretty.Alonzo ()
 import Cardano.Ledger.Pretty.Babbage ()
-import Cardano.Ledger.Shelley.EpochBoundary
-  ( SnapShot (..),
-    SnapShots (..),
-    Stake (..),
-  )
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
     DPState (..),

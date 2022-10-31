@@ -79,6 +79,7 @@ import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Keys.WitVKey
 import Cardano.Ledger.MemoBytes (Mem, MemoBytes (..), MemoHashIndex, memoBytes, pattern Memo)
+import Cardano.Ledger.PoolParams
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
 import Cardano.Ledger.Serialization
   ( decodeSet,
@@ -98,7 +99,6 @@ import Cardano.Ledger.Shelley.Delegation.Certificates
   )
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (Update)
-import Cardano.Ledger.Shelley.PoolParams
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..), TxOut, addrEitherShelleyTxOutL, valueEitherShelleyTxOutL)
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn)
