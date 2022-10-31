@@ -101,7 +101,7 @@ instance
         "Deposit pot must equal obligation"
         ( \(TRC (pp, _, _)) st ->
             obligation pp (rewards $ prDState st) (_pParams $ prPState st)
-              == _deposited (prUTxOSt st)
+              == utxosDeposited (prUTxOSt st)
         ),
       PostCondition
         "PoolReap may not create or remove reward accounts"
@@ -160,7 +160,7 @@ poolReapTransition = do
 
   pure $
     PoolreapState
-      us {_deposited = _deposited us <-> (unclaimed <+> refunded)}
+      us {utxosDeposited = utxosDeposited us <-> (unclaimed <+> refunded)}
       a {_treasury = _treasury a <+> unclaimed}
       ( let u0 = _unified ds
             u1 = (Rewards u0 UM.∪+ refunds)

@@ -261,6 +261,6 @@ registerGenesisStaking
       -- establish an initial stake distribution.
       initSnapShot =
         incrementalStakeDistr
-          (_stakeDistro . lsUTxOState . esLState $ oldEpochState)
+          (utxosStakeDistr . lsUTxOState . esLState $ oldEpochState)
           newDState
           newPState

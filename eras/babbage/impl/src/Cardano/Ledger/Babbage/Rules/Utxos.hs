@@ -262,8 +262,8 @@ scriptsNo = do
       collateralFees = collAdaBalance txBody utxoDel -- NEW to Babbage
   pure $!
     us {- (collInputs txb ⋪ utxo) ∪ collouts tx -}
-      { _utxo = UTxO (Map.union utxoKeep collouts), -- NEW to Babbage
+      { utxosUtxo = UTxO (Map.union utxoKeep collouts), -- NEW to Babbage
       {- fees + collateralFees -}
-        _fees = fees <> collateralFees, -- NEW to Babbage
-        _stakeDistro = updateStakeDistribution (_stakeDistro us) (UTxO utxoDel) (UTxO collouts)
+        utxosFees = fees <> collateralFees, -- NEW to Babbage
+        utxosStakeDistr = updateStakeDistribution (utxosStakeDistr us) (UTxO utxoDel) (UTxO collouts)
       }

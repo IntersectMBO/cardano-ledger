@@ -356,7 +356,7 @@ alonzoStyleWitness = do
   {-  txb := txbody tx  -}
   {-  txw := txwits tx  -}
   {-  witsKeyHashes := { hashKey vk | vk ∈ dom(txwitsVKey txw) }  -}
-  let utxo = _utxo u
+  let utxo = utxosUtxo u
       txBody = tx ^. bodyTxL
       witsKeyHashes = witsFromTxWitnesses @era tx
 

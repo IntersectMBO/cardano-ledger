@@ -65,7 +65,7 @@ consistentUtxoSizeProp proof trace = aggProp agg0 aggregate makeprop trace
         IsValid valid = isValid' proof tx
     makeprop firstSt lastSt n = getUtxoSize firstSt === getUtxoSize lastSt - n
     getUtxoSize :: MockChainState era -> Int
-    getUtxoSize state = (Map.size . unUTxO . _utxo . lsUTxOState . esLState . nesEs . mcsNes) state
+    getUtxoSize state = (Map.size . unUTxO . utxosUtxo . lsUTxOState . esLState . nesEs . mcsNes) state
 
 aggUTxO ::
   forall era.

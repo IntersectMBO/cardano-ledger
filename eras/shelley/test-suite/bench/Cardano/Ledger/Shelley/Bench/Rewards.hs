@@ -83,7 +83,7 @@ genChainInEpoch epoch = do
   --   each group becomes the pool owner, with pledge set to the value in that
   --   address.
   let initUtxo =
-        LS._utxo
+        LS.utxosUtxo
           . LS.lsUTxOState
           . LS.esLState
           . LS.nesEs

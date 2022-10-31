@@ -193,8 +193,8 @@ feesAndDeposits newFees depositChange cs = cs {chainNes = nes'}
     utxoSt = lsUTxOState ls
     utxoSt' =
       utxoSt
-        { _deposited = (_deposited utxoSt) <+> depositChange,
-          _fees = (_fees utxoSt) <+> newFees
+        { utxosDeposited = (utxosDeposited utxoSt) <+> depositChange,
+          utxosFees = (utxosFees utxoSt) <+> newFees
         }
     ls' = ls {lsUTxOState = utxoSt'}
     es' = es {esLState = ls'}
@@ -215,14 +215,14 @@ newUTxO txb cs = cs {chainNes = nes'}
     es = nesEs nes
     ls = esLState es
     utxoSt = lsUTxOState ls
-    utxo = unUTxO $ _utxo utxoSt
+    utxo = unUTxO $ utxosUtxo utxoSt
     utxoAdd = txouts @era txb
     utxoToDel = Map.restrictKeys utxo (txins @era txb)
     utxoWithout = Map.withoutKeys utxo (txins @era txb)
     utxoDel = UTxO utxoToDel
     utxo' = UTxO (utxoWithout `Map.union` unUTxO utxoAdd)
-    sd' = updateStakeDistribution @era (_stakeDistro utxoSt) utxoDel utxoAdd
-    utxoSt' = utxoSt {_utxo = utxo', _stakeDistro = sd'}
+    sd' = updateStakeDistribution @era (utxosStakeDistr utxoSt) utxoDel utxoAdd
+    utxoSt' = utxoSt {utxosUtxo = utxo', utxosStakeDistr = sd'}
     ls' = ls {lsUTxOState = utxoSt'}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}
@@ -437,7 +437,7 @@ reapPool pool cs = cs {chainNes = nes'}
     as = esAccountState es
     as' = as {_treasury = (_treasury as) <+> unclaimed}
     utxoSt = lsUTxOState ls
-    utxoSt' = utxoSt {_deposited = (_deposited utxoSt) <-> (_poolDeposit pp)}
+    utxoSt' = utxoSt {utxosDeposited = (utxosDeposited utxoSt) <-> (_poolDeposit pp)}
     dps' = dps {dpsPState = ps', dpsDState = ds'}
     ls' = ls {lsDPState = dps', lsUTxOState = utxoSt'}
     es' = es {esLState = ls', esAccountState = as'}
@@ -673,9 +673,9 @@ setCurrentProposals ps cs = cs {chainNes = nes'}
     es = nesEs nes
     ls = esLState es
     utxoSt = lsUTxOState ls
-    ppupSt = _ppups utxoSt
+    ppupSt = utxosPpups utxoSt
     ppupSt' = ppupSt {proposals = ps}
-    utxoSt' = utxoSt {_ppups = ppupSt'}
+    utxoSt' = utxoSt {utxosPpups = ppupSt'}
     ls' = ls {lsUTxOState = utxoSt'}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}
@@ -695,9 +695,9 @@ setFutureProposals ps cs = cs {chainNes = nes'}
     es = nesEs nes
     ls = esLState es
     utxoSt = lsUTxOState ls
-    ppupSt = _ppups utxoSt
+    ppupSt = utxosPpups utxoSt
     ppupSt' = ppupSt {futureProposals = ps}
-    utxoSt' = utxoSt {_ppups = ppupSt'}
+    utxoSt' = utxoSt {utxosPpups = ppupSt'}
     ls' = ls {lsUTxOState = utxoSt'}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}
