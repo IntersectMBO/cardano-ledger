@@ -29,6 +29,7 @@ import Cardano.Ledger.Shelley.LedgerState
   ( EpochState,
     LedgerState,
     PState (..),
+    UTxOState (utxosDeposited, utxosPpups),
     UpecState (..),
     esAccountState,
     esLState,
@@ -39,8 +40,6 @@ import Cardano.Ledger.Shelley.LedgerState
     lsDPState,
     lsUTxOState,
     rewards,
-    _deposited,
-    _ppups,
     _reserves,
     pattern DPState,
     pattern EpochState,
@@ -191,13 +190,13 @@ epochTransition = do
 
   UpecState pp' ppupSt' <-
     trans @(EraRule "UPEC" era) $
-      TRC (epochState', UpecState pp (_ppups utxoSt'), ())
-  let utxoSt'' = utxoSt' {_ppups = ppupSt'}
+      TRC (epochState', UpecState pp (utxosPpups utxoSt'), ())
+  let utxoSt'' = utxoSt' {utxosPpups = ppupSt'}
 
   let Coin oblgCurr = obligation pp (rewards dstate') (_pParams pstate'')
       Coin oblgNew = obligation pp' (rewards dstate') (_pParams pstate'')
       Coin reserves = _reserves acnt'
-      utxoSt''' = utxoSt'' {_deposited = Coin oblgNew}
+      utxoSt''' = utxoSt'' {utxosDeposited = Coin oblgNew}
       acnt'' = acnt' {_reserves = Coin $ reserves + oblgCurr - oblgNew}
   pure $
     epochState'

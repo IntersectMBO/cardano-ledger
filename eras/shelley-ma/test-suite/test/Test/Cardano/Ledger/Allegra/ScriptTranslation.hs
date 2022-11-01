@@ -66,7 +66,7 @@ testScriptPostTranslation =
                 (S.TxIn bootstrapTxId minBound)
                 (S.ShelleyTxOut addr (Val.inject (S.Coin 1)))
           env = S.LedgerEnv (SlotNo 0) minBound emptyPParams (S.AccountState (S.Coin 0) (S.Coin 0))
-          utxoStShelley = def {S._utxo = utxo}
+          utxoStShelley = def {S.utxosUtxo = utxo}
           utxoStAllegra = fromRight . runExcept $ translateEra @Allegra () utxoStShelley
           txb =
             S.ShelleyTxBody

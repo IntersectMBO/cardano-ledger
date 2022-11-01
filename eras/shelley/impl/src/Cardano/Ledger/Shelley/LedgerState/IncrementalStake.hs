@@ -222,7 +222,7 @@ applyRUpd'
       ls' =
         ls
           { lsUTxOState =
-              utxoState_ {_fees = _fees utxoState_ `addDeltaCoin` deltaF ru},
+              utxoState_ {utxosFees = utxosFees utxoState_ `addDeltaCoin` deltaF ru},
             lsDPState =
               delegState
                 { dpsDState =

@@ -149,11 +149,11 @@ instance Crypto c => TranslateEra (BabbageEra c) API.UTxOState where
   translateEra ctxt us =
     pure
       API.UTxOState
-        { API._utxo = translateEra' ctxt $ API._utxo us,
-          API._deposited = API._deposited us,
-          API._fees = API._fees us,
-          API._ppups = translateEra' ctxt $ API._ppups us,
-          API._stakeDistro = API._stakeDistro us
+        { API.utxosUtxo = translateEra' ctxt $ API.utxosUtxo us,
+          API.utxosDeposited = API.utxosDeposited us,
+          API.utxosFees = API.utxosFees us,
+          API.utxosPpups = translateEra' ctxt $ API.utxosPpups us,
+          API.utxosStakeDistr = API.utxosStakeDistr us
         }
 
 instance Crypto c => TranslateEra (BabbageEra c) API.UTxO where

@@ -27,12 +27,12 @@ import Cardano.Ledger.Shelley.Era (ShelleyUPEC)
 import Cardano.Ledger.Shelley.LedgerState
   ( EpochState,
     PPUPState (..),
+    UTxOState (utxosPpups),
     UpecState (..),
     esAccountState,
     esLState,
     lsDPState,
     lsUTxOState,
-    _ppups,
     pattern DPState,
     pattern EpochState,
   )
@@ -97,7 +97,7 @@ instance
 
         let utxoSt = lsUTxOState ls
             DPState dstate pstate = lsDPState ls
-            pup = proposals . _ppups $ utxoSt
+            pup = proposals . utxosPpups $ utxoSt
             ppNew = votedValue pup pp (fromIntegral coreNodeQuorum)
         NewppState pp' ppupSt' <-
           trans @(ShelleyNEWPP era) $

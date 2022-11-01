@@ -121,7 +121,7 @@ depositPoolChange ls pp txBody = (currentPool <+> txDeposits) <-> txRefunds
     -- it could be that txDeposits < txRefunds. We keep the parenthesis above
     -- to emphasize this point.
 
-    currentPool = (_deposited . lsUTxOState) ls
+    currentPool = (utxosDeposited . lsUTxOState) ls
     pools = _pParams . dpsPState . lsDPState $ ls
     txDeposits =
       totalDeposits pp (`Map.notMember` pools) (toList $ txBody ^. certsTxBodyL)
@@ -175,7 +175,7 @@ returnRedeemAddrsToReserves es = es {esAccountState = acnt', esLState = ls'}
   where
     ls = esLState es
     us = lsUTxOState ls
-    UTxO utxo = _utxo us
+    UTxO utxo = utxosUtxo us
     (redeemers, nonredeemers) =
       Map.partition (maybe False isBootstrapRedeemer . view bootAddrTxOutF) utxo
     acnt = esAccountState es
@@ -184,5 +184,5 @@ returnRedeemAddrsToReserves es = es {esAccountState = acnt', esLState = ls'}
       acnt
         { _reserves = _reserves acnt <+> coinBalance utxoR
         }
-    us' = us {_utxo = UTxO nonredeemers :: UTxO era}
+    us' = us {utxosUtxo = UTxO nonredeemers :: UTxO era}
     ls' = ls {lsUTxOState = us'}

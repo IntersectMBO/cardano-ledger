@@ -27,10 +27,9 @@ import Cardano.Ledger.Shelley.LedgerState
     DState (..),
     PPUPState (..),
     PState (..),
-    UTxOState,
+    UTxOState (utxosDeposited),
     availableAfterMIR,
     pvCanFollow,
-    _deposited,
     _irwd,
   )
 import Cardano.Ledger.Shelley.PParams
@@ -121,8 +120,8 @@ newPpTransition = do
           Coin availableReserves = availableAfterMIR ReservesMIR acnt (_irwd dstate)
 
       Coin oblgCurr
-        == _deposited utxoSt
-        ?! UnexpectedDepositPot (Coin oblgCurr) (_deposited utxoSt)
+        == utxosDeposited utxoSt
+        ?! UnexpectedDepositPot (Coin oblgCurr) (utxosDeposited utxoSt)
 
       if availableReserves + diff >= 0
         -- Note that instantaneous rewards from the treasury are irrelevant
