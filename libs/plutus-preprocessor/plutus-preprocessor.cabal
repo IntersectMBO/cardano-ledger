@@ -23,9 +23,12 @@ source-repository head
 executable plutus-preprocessor
     main-is:          Main.hs
 
+    if impl (ghc < 9.2)
+      buildable: false
+
     -- Modules included in this executable, other than Main.
     other-modules:
-       PlutusScripts
+      PlutusScripts
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
