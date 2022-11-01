@@ -194,7 +194,7 @@ instance
         ( \(TRC (LedgerEnv {ledgerPp}, _, _))
            (LedgerState utxoSt DPState {dpsDState, dpsPState}) ->
               obligation ledgerPp (rewards dpsDState) (_pParams dpsPState) -- FIX ME
-                == _deposited utxoSt
+                == utxosDeposited utxoSt
         )
     ]
 

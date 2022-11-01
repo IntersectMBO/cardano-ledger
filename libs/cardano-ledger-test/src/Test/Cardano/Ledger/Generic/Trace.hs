@@ -217,7 +217,7 @@ makeEpochState gstate ledgerstate =
     }
 
 snaps :: EraTxOut era => LedgerState era -> SnapShots (EraCrypto era)
-snaps (LedgerState UTxOState {_utxo = u, _fees = f} (DPState dstate pstate)) =
+snaps (LedgerState UTxOState {utxosUtxo = u, utxosFees = f} (DPState dstate pstate)) =
   SnapShots snap snap snap f
   where
     snap = stakeDistr u dstate pstate
@@ -244,7 +244,7 @@ raiseMockError ::
   GenState era ->
   String
 raiseMockError slot (SlotNo next) epochstate pdfs txs GenState {..} =
-  let utxo = unUTxO $ (_utxo . lsUTxOState . esLState) epochstate
+  let utxo = unUTxO $ (utxosUtxo . lsUTxOState . esLState) epochstate
       _poolParams = (_pParams . dpsPState . lsDPState . esLState) epochstate
    in show $
         vsep

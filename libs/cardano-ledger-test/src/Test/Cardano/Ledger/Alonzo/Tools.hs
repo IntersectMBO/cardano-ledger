@@ -138,7 +138,7 @@ testExUnitCalculation proof tx utxoState ue ei ss costmdls err = do
         applySTSTest @(EraRule "UTXOS" era) (TRC (ue, utxoState, tx'))
   pure ()
   where
-    utxo = _utxo utxoState
+    utxo = utxosUtxo utxoState
 
 exampleExUnitCalc ::
   forall era.
@@ -264,11 +264,11 @@ ustate ::
   UTxOState era
 ustate pf =
   UTxOState
-    { _utxo = initUTxO pf,
-      _deposited = Coin 0,
-      _fees = Coin 0,
-      _ppups = def,
-      _stakeDistro = IStake mempty mempty
+    { utxosUtxo = initUTxO pf,
+      utxosDeposited = Coin 0,
+      utxosFees = Coin 0,
+      utxosPpups = def,
+      utxosStakeDistr = IStake mempty mempty
     }
 
 updateTxExUnits ::

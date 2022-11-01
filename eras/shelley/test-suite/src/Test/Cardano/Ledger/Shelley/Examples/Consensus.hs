@@ -344,17 +344,17 @@ exampleNewEpochState value ppp pp =
             LedgerState
               { lsUTxOState =
                   UTxOState
-                    { _utxo =
+                    { utxosUtxo =
                         UTxO $
                           Map.fromList
                             [ ( TxIn (TxId (mkDummySafeHash Proxy 1)) minBound,
                                 Core.mkBasicTxOut addr value
                               )
                             ],
-                      _deposited = Coin 1000,
-                      _fees = Coin 1,
-                      _ppups = def,
-                      _stakeDistro = mempty
+                      utxosDeposited = Coin 1000,
+                      utxosFees = Coin 1,
+                      utxosPpups = def,
+                      utxosStakeDistr = mempty
                     },
                 lsDPState = def
               },

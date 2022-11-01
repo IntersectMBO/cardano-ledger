@@ -27,6 +27,12 @@ in the naming of release branches.
 
 ### Changed
 
+- Renamed `Cardano.Ledger.Shelley.LedgerState.Types.UTxOState` fields to names without `_` (underscores) #3108
+  - `_utxo -> utxosUtxo`
+  - `_deposited -> utxosDeposited`
+  - `_fees -> utxosFees`
+  - `_ppups -> utxosPpups`
+  - `_stakeDistro -> utxosStakeDistr` (notice the lacking `o` at the end)
 - Moved Cardano.Ledger.Shelley.Orphans to Cardano.Ledger.Orphans  in the core modules
 - Moved Cardano.Ledger.Shelley.PoolParms to Cardano.Ledger.PoolParams  in the core modules
 - Moved Cardano.Ledger.Shelley.EpochBoundary to Cardano.Ledger.EpochBoundary  in the core modules

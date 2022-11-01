@@ -147,11 +147,11 @@ samePPUP (Conway _) x y = eqByShow x y
 
 instance (Era era) => Same era (UTxOState era) where
   same proof u1 u2 =
-    [ ("UTxO", sameUTxO proof (_utxo u1) (_utxo u2)),
-      ("Deposited", eqByShow (_deposited u1) (_deposited u2)),
-      ("Fees", eqByShow (_fees u1) (_fees u2)),
-      ("PPUpdates", samePPUP proof (_ppups u1) (_ppups u2)),
-      ("StakeDistr", eqByShow (_stakeDistro u1) (_stakeDistro u2))
+    [ ("UTxO", sameUTxO proof (utxosUtxo u1) (utxosUtxo u2)),
+      ("Deposited", eqByShow (utxosDeposited u1) (utxosDeposited u2)),
+      ("Fees", eqByShow (utxosFees u1) (utxosFees u2)),
+      ("PPUpdates", samePPUP proof (utxosPpups u1) (utxosPpups u2)),
+      ("StakeDistr", eqByShow (utxosStakeDistr u1) (utxosStakeDistr u2))
     ]
 
 instance (Era era) => Same era (LedgerState era) where
