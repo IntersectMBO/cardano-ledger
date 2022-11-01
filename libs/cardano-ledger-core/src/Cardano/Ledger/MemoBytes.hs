@@ -95,7 +95,6 @@ instance (Typeable t, Typeable era) => ToCBOR (MemoBytes t era) where
 
 instance
   ( Typeable t,
-    Typeable era,
     FromCBOR (Annotator (t era)),
     Era era
   ) =>

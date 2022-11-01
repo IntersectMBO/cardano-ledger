@@ -98,7 +98,9 @@ import Control.Category (Category ((.)))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BS.Lazy
 import qualified Data.ByteString.Short as SBS
+#if __GLASGOW_HASKELL__ < 900
 import qualified Data.ByteString.Short.Internal as SBS
+#endif
 import Data.Fixed (Fixed (..), Nano, Pico)
 import Data.Foldable (toList)
 import Data.Functor.Foldable (cata, project)

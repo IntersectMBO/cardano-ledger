@@ -325,7 +325,7 @@ scriptsNeeded u tx =
 
 getShelleyScriptsNeeded ::
   forall era.
-  (EraTxBody era, ShelleyEraTxBody era) =>
+  (ShelleyEraTxBody era) =>
   UTxO era ->
   TxBody era ->
   ShelleyScriptsNeeded era

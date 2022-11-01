@@ -337,7 +337,7 @@ instance CC.Crypto c => EraTxOut (AlonzoEra c) where
   getMinCoinTxOut pp txOut = Coin $ utxoEntrySize txOut * unCoin (_coinsPerUTxOWord pp)
 
 instance
-  (Era era, Val (Value era), DecodeNonNegative (Value era), ToCBOR (CompactForm (Value era))) =>
+  (Era era, Val (Value era), DecodeNonNegative (Value era)) =>
   ToCBOR (AlonzoTxOut era)
   where
   toCBOR (TxOutCompact addr cv) =

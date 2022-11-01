@@ -130,7 +130,6 @@ alonzoUTXOWTests ::
     State (EraRule "UTXOW" era) ~ UTxOState era,
     GoodCrypto (EraCrypto era),
     HasTokens era,
-    Scriptic era,
     Default (State (EraRule "PPUP" era)),
     EraTx era,
     PostShelley era, -- MAYBE WE CAN REPLACE THIS BY GoodCrypto,

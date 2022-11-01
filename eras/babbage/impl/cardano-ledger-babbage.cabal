@@ -17,7 +17,7 @@ source-repository head
   subdir:   eras/babbage/impl
 
 common base
-  build-depends:      base >= 4.12 && < 4.15
+  build-depends:      base >= 4.12 && < 4.17
 
 common project-config
   default-language:   Haskell2010
@@ -69,7 +69,6 @@ library
                 microlens,
                 nothunks,
                 plutus-ledger-api ^>= 1.1,
-                plutus-tx ^>= 1.1,
                 set-algebra,
                 small-steps,
                 cardano-strict-containers,

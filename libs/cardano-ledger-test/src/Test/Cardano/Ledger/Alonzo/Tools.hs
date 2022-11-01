@@ -27,7 +27,7 @@ import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (GenDelegs (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.LedgerState (IncrementalStake (..), UTxOState (..))
-import Cardano.Ledger.Shelley.Rules (PredicateFailure, UtxoEnv (..))
+import Cardano.Ledger.Shelley.Rules (UtxoEnv (..))
 import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), UTxO (..), makeWitnessVKey)
 import Cardano.Ledger.Val (Val (inject))
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
@@ -115,7 +115,6 @@ testExUnitCalculation ::
     ExtendedUTxO era,
     HasField "_maxTxExUnits" (PParams era) ExUnits,
     HasField "_protocolVersion" (PParams era) ProtVer,
-    Show (PredicateFailure (EraRule "UTXOS" era)),
     STS (EraRule "UTXOS" era),
     Script era ~ AlonzoScript era,
     EraUTxO era,

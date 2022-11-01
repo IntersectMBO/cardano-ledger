@@ -1,6 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeApplications #-}
 
 -- | Secure generation of random numbers and 'ByteString's
@@ -33,6 +34,7 @@ import Crypto.Random.Entropy (getEntropy)
 --
 -- This is suitable for key generation but is inappropriate for other uses
 -- since it can quickly drain the operating system entropy.
+type SecureRandom :: Type -> Type
 newtype SecureRandom a = SecureRandom
   { runSecureRandom :: IO a
   }

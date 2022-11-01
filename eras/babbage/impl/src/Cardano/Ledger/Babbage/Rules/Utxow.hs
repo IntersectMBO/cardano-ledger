@@ -129,7 +129,6 @@ instance Inject (ShelleyUtxowPredFailure era) (BabbageUtxowPredFailure era) wher
 
 instance
   ( Era era,
-    Typeable era,
     ToCBOR (TxOut era),
     ToCBOR (Value era),
     ToCBOR (PredicateFailure (EraRule "UTXOS" era)),
@@ -148,7 +147,6 @@ instance
 
 instance
   ( Era era,
-    Typeable era,
     FromCBOR (TxOut era),
     FromCBOR (Value era),
     FromCBOR (PredicateFailure (EraRule "UTXOS" era)),
@@ -375,8 +373,6 @@ instance
     HasField "_costmdls" (PParams era) CostModels,
     HasField "_protocolVersion" (PParams era) ProtVer,
     Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody),
-    Show (TxBody era),
-    Show (TxOut era),
     Script era ~ AlonzoScript era,
     -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (BabbageUTXOW era),

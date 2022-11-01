@@ -179,7 +179,6 @@ updateTxBody pf txBody dt =
       Wdrls wdrls -> txBody & wdrlsTxBodyL .~ wdrls
       Vldt vldt -> txBody & vldtTxBodyL .~ vldt
       Update update -> txBody & updateTxBodyL .~ update
-      AdHash auxDataHash -> txBody & auxDataHashTxBodyL .~ auxDataHash
       Mint mint -> txBody & mintTxBodyL .~ mint
       _ -> txBody
     Mary _ -> case dt of
@@ -187,7 +186,6 @@ updateTxBody pf txBody dt =
       Wdrls wdrls -> txBody & wdrlsTxBodyL .~ wdrls
       Vldt vldt -> txBody & vldtTxBodyL .~ vldt
       Update update -> txBody & updateTxBodyL .~ update
-      AdHash auxDataHash -> txBody & auxDataHashTxBodyL .~ auxDataHash
       Mint mint -> txBody & mintTxBodyL .~ mint
       _ -> txBody
     Alonzo _ -> case dt of
@@ -195,7 +193,6 @@ updateTxBody pf txBody dt =
       Wdrls wdrls -> txBody & wdrlsTxBodyL .~ wdrls
       Vldt vldt -> txBody & vldtTxBodyL .~ vldt
       Update update -> txBody & updateTxBodyL .~ update
-      AdHash auxDataHash -> txBody & auxDataHashTxBodyL .~ auxDataHash
       Mint mint -> txBody & mintTxBodyL .~ mint
       Collateral collateral -> txBody & collateralInputsTxBodyL .~ collateral
       ReqSignerHashes reqSignerHashes -> txBody & reqSignerHashesTxBodyL .~ reqSignerHashes
@@ -207,7 +204,6 @@ updateTxBody pf txBody dt =
       Wdrls wdrls -> txBody & wdrlsTxBodyL .~ wdrls
       Vldt vldt -> txBody & vldtTxBodyL .~ vldt
       Update update -> txBody & updateTxBodyL .~ update
-      AdHash auxDataHash -> txBody & auxDataHashTxBodyL .~ auxDataHash
       Mint mint -> txBody & mintTxBodyL .~ mint
       Collateral collateral -> txBody & collateralInputsTxBodyL .~ collateral
       ReqSignerHashes reqSignerHashes -> txBody & reqSignerHashesTxBodyL .~ reqSignerHashes
@@ -222,7 +218,6 @@ updateTxBody pf txBody dt =
       Wdrls wdrls -> txBody & wdrlsTxBodyL .~ wdrls
       Vldt vldt -> txBody & vldtTxBodyL .~ vldt
       Update update -> txBody & updateTxBodyL .~ update
-      AdHash auxDataHash -> txBody & auxDataHashTxBodyL .~ auxDataHash
       Mint mint -> txBody & mintTxBodyL .~ mint
       Collateral collateral -> txBody & collateralInputsTxBodyL .~ collateral
       ReqSignerHashes reqSignerHashes -> txBody & reqSignerHashesTxBodyL .~ reqSignerHashes

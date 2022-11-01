@@ -21,6 +21,17 @@ See the CHaP README for [instructions](https://github.com/input-output-hk/cardan
 
 See the [Readme](https://github.com/input-output-hk/cardano-ledger#building) for instructions on building.
 
+### GHC 9.2 transition
+
+We are transitioning to use GHC 9.2 rather than GHC 8.10.
+We need to retain 8.10 compatibility until we are sure that the Cardano node can switch over to 9.2 without any problems.
+At that point we can drop it.
+
+The main `nix-shell` will now give you a GHC 9.2 compiler, but you can get a GHC 8.10 shell by calling
+```
+nix-shell --arg config '{ haskellNix.compiler = "ghc8107"; }'
+```
+
 ## Updating dependencies
 
 Our Haskell packages come from two package repositories:

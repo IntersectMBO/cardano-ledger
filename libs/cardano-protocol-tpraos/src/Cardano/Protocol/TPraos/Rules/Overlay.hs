@@ -171,8 +171,7 @@ deriving instance
 vrfChecks ::
   forall c.
   ( Crypto c,
-    VRF.Signable (VRF c) Seed,
-    VRF.ContextVRF (VRF c) ~ ()
+    VRF.Signable (VRF c) Seed
   ) =>
   Nonce ->
   BHBody c ->
@@ -201,8 +200,7 @@ vrfChecks eta0 bhb = do
 praosVrfChecks ::
   forall c.
   ( Crypto c,
-    VRF.Signable (VRF c) Seed,
-    VRF.ContextVRF (VRF c) ~ ()
+    VRF.Signable (VRF c) Seed
   ) =>
   Nonce ->
   PoolDistr c ->
@@ -228,8 +226,7 @@ praosVrfChecks eta0 (PoolDistr pd) f bhb = do
 pbftVrfChecks ::
   forall c.
   ( Crypto c,
-    VRF.Signable (VRF c) Seed,
-    VRF.ContextVRF (VRF c) ~ ()
+    VRF.Signable (VRF c) Seed
   ) =>
   Hash c (VerKeyVRF c) ->
   Nonce ->

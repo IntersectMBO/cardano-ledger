@@ -257,7 +257,6 @@ instance
 
 instance
   ( EraTxOut era,
-    FromCBOR (TxOut era),
     FromCBOR (PredicateFailure (EraRule "PPUP" era))
   ) =>
   FromCBOR (ShelleyUtxoPredFailure era)
@@ -310,15 +309,11 @@ instance
     ShelleyEraTxBody era,
     ExactEra ShelleyEra era,
     TxOut era ~ ShelleyTxOut era,
-    Show (Value era),
-    Show (TxWits era),
-    Show (PParamsUpdate era),
     TxBody era ~ ShelleyTxBody era,
     PParams era ~ ShelleyPParams era,
     Tx era ~ ShelleyTx era,
     Value era ~ Coin,
     Show (ShelleyTx era),
-    Eq (PredicateFailure (EraRule "PPUP" era)),
     Embed (EraRule "PPUP" era) (ShelleyUTXO era),
     Environment (EraRule "PPUP" era) ~ PpupEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,

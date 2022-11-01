@@ -470,7 +470,6 @@ instance
 
 instance
   ( Era era,
-    Typeable era,
     ToCBOR (TxOut era),
     ToCBOR (Value era),
     ToCBOR (PredicateFailure (EraRule "UTXOS" era)),
@@ -488,7 +487,6 @@ instance
 
 instance
   ( Era era,
-    Typeable era,
     FromCBOR (TxOut era),
     FromCBOR (Value era),
     FromCBOR (PredicateFailure (EraRule "UTXOS" era)),

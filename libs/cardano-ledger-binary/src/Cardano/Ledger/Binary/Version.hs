@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -21,7 +22,10 @@ where
 
 import Data.Proxy
 import GHC.TypeLits
-import Numeric.Natural
+#if __GLASGOW_HASKELL__ < 900
+-- This import is dedundant wih ghc-9.2.
+import Numeric.Natural (Natural)
+#endif
 
 --------------------------------------------------------------------------------
 -- Versioned Decoder

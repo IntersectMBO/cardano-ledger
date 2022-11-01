@@ -885,6 +885,15 @@ type UPIState =
     Map UpId Core.Slot -- pws
   )
 
+fstUPIState :: UPIState -> (ProtVer, PParams)
+fstUPIState (f, _, _, _, _, _, _, _, _) = f
+
+sndUPIState :: UPIState -> [(Core.Slot, (ProtVer, PParams))]
+sndUPIState (_, s, _, _, _, _, _, _, _) = s
+
+trdUPIState :: UPIState -> Map ApName (ApVer, Core.Slot, Metadata)
+trdUPIState (_, _, t, _, _, _, _, _, _) = t
+
 emptyUPIState :: UPIState
 emptyUPIState =
   ( ( ProtVer 0 0 0,
@@ -1743,8 +1752,8 @@ instance STS UPIEC where
   transitionRules =
     [ do
         TRC ((e_n, k), us, ()) <- judgmentContext
-        let (pv, pps) = us ^. _1 :: (ProtVer, PParams)
-            fads = us ^. _2 :: [(Core.Slot, (ProtVer, PParams))]
+        let (pv, pps) = fstUPIState us :: (ProtVer, PParams)
+            fads = sndUPIState us :: [(Core.Slot, (ProtVer, PParams))]
         (pv', pps') <-
           trans @PVBUMP $
             TRC ((GP.epochFirstSlot k e_n, fads, k), (pv, pps), ())
@@ -1754,7 +1763,7 @@ instance STS UPIEC where
             else
               ( (pv', pps') :: (ProtVer, PParams),
                 [] :: [(Core.Slot, (ProtVer, PParams))],
-                us ^. _3 :: Map ApName (ApVer, Core.Slot, Metadata),
+                trdUPIState us :: Map ApName (ApVer, Core.Slot, Metadata),
                 Map.empty :: Map UpId (ProtVer, PParams),
                 -- Note that we delete the registered application proposals from the
                 -- state on epoch change, since adopting these depends on the @cps@

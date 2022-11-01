@@ -7,6 +7,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Crypto.Signing.VerificationKey
@@ -51,6 +52,7 @@ import Text.JSON.Canonical (JSValue (..), toJSString)
 import qualified Text.JSON.Canonical as TJC (FromJSON (..), ToJSON (..))
 
 -- | Wrapper around 'CC.XPub'.
+type VerificationKey :: Type
 newtype VerificationKey = VerificationKey
   { unVerificationKey :: CC.XPub
   }
@@ -105,6 +107,7 @@ fullVerificationKeyHexF = later $ \(VerificationKey x) -> base16Builder . CC.unX
 shortVerificationKeyHexF :: Format r (VerificationKey -> r)
 shortVerificationKeyHexF = fitLeft 8 %. fullVerificationKeyHexF
 
+type VerificationKeyParseError :: Type
 data VerificationKeyParseError
   = VerificationKeyParseBase64Error Text
   | VerificationKeyParseXPubError Text
