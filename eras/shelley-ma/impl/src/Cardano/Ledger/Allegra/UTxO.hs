@@ -9,13 +9,15 @@ module Cardano.Ledger.Allegra.UTxO () where
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.UTxO
-  ( EraUTxO (..),
-    ShelleyScriptsNeeded (..),
+  ( ShelleyScriptsNeeded (..),
     getConsumedCoin,
     getShelleyScriptsNeeded,
   )
 import Cardano.Ledger.ShelleyMA.Era (MaryOrAllegra (Allegra), ShelleyMAEra)
 import Cardano.Ledger.ShelleyMA.TxBody ()
+import Cardano.Ledger.UTxO
+  ( EraUTxO (..),
+  )
 
 instance Crypto c => EraUTxO (ShelleyMAEra 'Allegra c) where
   type ScriptsNeeded (ShelleyMAEra 'Allegra c) = ShelleyScriptsNeeded (ShelleyMAEra 'Allegra c)

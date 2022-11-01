@@ -32,7 +32,7 @@ import Cardano.Ledger.SafeHash (SafeHash)
 import Cardano.Ledger.Shelley.API (LedgerState, PPUPState)
 import Cardano.Ledger.Shelley.Rules (LedgerEnv)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx)
-import Cardano.Ledger.Shelley.UTxO (makeWitnessVKey)
+import Cardano.Ledger.UTxO (makeWitnessVKey)
 import Control.Monad.Trans.Reader (ReaderT)
 import Control.State.Transition
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC

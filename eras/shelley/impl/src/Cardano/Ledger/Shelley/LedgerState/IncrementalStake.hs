@@ -46,7 +46,7 @@ import Cardano.Ledger.Shelley.Rewards (aggregateRewards, filterRewards)
 import Cardano.Ledger.Shelley.TxBody
   ( Ptr (..),
   )
-import Cardano.Ledger.Shelley.UTxO
+import Cardano.Ledger.UTxO
   ( UTxO (..),
   )
 import Cardano.Ledger.UnifiedMap

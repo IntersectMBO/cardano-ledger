@@ -13,13 +13,13 @@ import qualified Cardano.Ledger.Credential as Credential
 import qualified Cardano.Ledger.EpochBoundary as EpochBoundary
 import qualified Cardano.Ledger.Keys as Keys
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
-import qualified Cardano.Ledger.Shelley.UTxO as Shelley
 import Cardano.Ledger.State.Orphans
 import Cardano.Ledger.State.Schema
 import Cardano.Ledger.State.Transform
 import Cardano.Ledger.State.UTxO
 import Cardano.Ledger.State.Vector
 import qualified Cardano.Ledger.TxIn as TxIn
+import qualified Cardano.Ledger.UTxO as Shelley
 import Conduit
 import Control.Foldl (Fold (..))
 import Control.Monad

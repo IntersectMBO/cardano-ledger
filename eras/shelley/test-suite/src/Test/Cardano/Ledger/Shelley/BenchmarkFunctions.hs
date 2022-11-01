@@ -75,9 +75,9 @@ import Cardano.Ledger.Shelley.TxBody
     _poolVrf,
   )
 import Cardano.Ledger.Shelley.TxWits (addrWits)
-import Cardano.Ledger.Shelley.UTxO (makeWitnessesVKey)
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn (..), mkTxInPartial)
+import Cardano.Ledger.UTxO (makeWitnessesVKey)
 import Cardano.Ledger.Val (Val (inject))
 import Cardano.Protocol.TPraos.API (PraosCrypto)
 import Control.State.Transition.Extended (TRC (..), applySTS)

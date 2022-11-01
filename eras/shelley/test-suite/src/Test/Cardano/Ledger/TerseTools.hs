@@ -18,8 +18,8 @@ import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Keys (KeyHash (..))
 import Cardano.Ledger.SafeHash (extractHash)
 import Cardano.Ledger.Shelley.LedgerState (IncrementalStake (..))
-import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Slotting.Slot (SlotNo (..))
 import qualified Data.Map.Strict as Map
 

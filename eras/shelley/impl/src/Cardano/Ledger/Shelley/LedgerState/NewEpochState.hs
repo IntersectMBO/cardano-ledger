@@ -41,10 +41,12 @@ import Cardano.Ledger.Shelley.TxBody
     ShelleyEraTxBody (..),
   )
 import Cardano.Ledger.Shelley.UTxO
+  ( keyRefunds,
+    totalDeposits,
+  )
+import Cardano.Ledger.UTxO
   ( UTxO (..),
     coinBalance,
-    keyRefunds,
-    totalDeposits,
   )
 import Cardano.Ledger.UnifiedMap
   ( Trip (..),

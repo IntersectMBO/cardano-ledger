@@ -21,8 +21,8 @@ import Cardano.Ledger.BaseTypes (TxIx (..), txIxFromIntegral)
 import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.UTxO (UTxO (..), coinBalance)
 import Cardano.Ledger.TxIn (TxIn (..))
+import Cardano.Ledger.UTxO (UTxO (..), coinBalance)
 import Cardano.Ledger.Val ((<->))
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))

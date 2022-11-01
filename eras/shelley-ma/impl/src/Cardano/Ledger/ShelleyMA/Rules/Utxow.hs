@@ -22,9 +22,10 @@ import Cardano.Ledger.Shelley.Rules
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody)
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits)
-import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), ShelleyScriptsNeeded)
+import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded)
 import Cardano.Ledger.ShelleyMA.Era (ShelleyMAUTXOW)
 import Cardano.Ledger.ShelleyMA.Rules.Utxo (ShelleyMAUTXO, ShelleyMAUtxoPredFailure)
+import Cardano.Ledger.UTxO (EraUTxO (..))
 import Control.State.Transition.Extended
 import GHC.Records
 

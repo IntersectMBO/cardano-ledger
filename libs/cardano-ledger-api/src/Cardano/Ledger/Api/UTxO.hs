@@ -4,4 +4,4 @@ module Cardano.Ledger.Api.UTxO
   )
 where
 
-import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), UTxO (..))
+import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..))

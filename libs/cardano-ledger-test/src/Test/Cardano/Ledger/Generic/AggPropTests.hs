@@ -15,7 +15,7 @@ import Cardano.Ledger.Shelley.LedgerState
     UTxOState (..),
   )
 import qualified Cardano.Ledger.Shelley.PParams as Shelley (ShelleyPParamsHKD (..))
-import Cardano.Ledger.Shelley.UTxO (UTxO (..))
+import Cardano.Ledger.UTxO (UTxO (..))
 import Control.State.Transition (STS (..))
 import Control.State.Transition.Trace (Trace (..), TraceOrder (..), firstAndLastState, traceSignals)
 import Control.State.Transition.Trace.Generator.QuickCheck (HasTrace (..))

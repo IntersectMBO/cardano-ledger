@@ -87,16 +87,18 @@ import Cardano.Ledger.Shelley.TxBody
     Wdrl (..),
   )
 import Cardano.Ledger.Shelley.UTxO
-  ( EraUTxO (getConsumedValue),
-    UTxO (..),
-    balance,
-    keyRefunds,
+  ( keyRefunds,
     produced,
     totalDeposits,
-    txouts,
     txup,
   )
 import Cardano.Ledger.Slot (SlotNo)
+import Cardano.Ledger.UTxO
+  ( EraUTxO (getConsumedValue),
+    UTxO (..),
+    balance,
+    txouts,
+  )
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
 import Control.Monad.Trans.Reader (asks)

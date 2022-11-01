@@ -29,7 +29,7 @@ import Cardano.Ledger.Shelley.API
   ( ProtVer (..),
     evaluateTransactionFee,
   )
-import Cardano.Ledger.Shelley.UTxO (makeWitnessVKey)
+import Cardano.Ledger.UTxO (makeWitnessVKey)
 import Cardano.Ledger.Val (Val (inject))
 import qualified Data.Map.Strict as Map
 import qualified PlutusLedgerApi.V1 as Plutus

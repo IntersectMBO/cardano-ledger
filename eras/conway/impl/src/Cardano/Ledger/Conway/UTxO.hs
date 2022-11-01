@@ -15,7 +15,7 @@ import Cardano.Ledger.Conway.PParams (BabbagePParamsHKD (..))
 import Cardano.Ledger.Conway.TxBody ()
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue)
-import Cardano.Ledger.Shelley.UTxO (EraUTxO (..))
+import Cardano.Ledger.UTxO (EraUTxO (..))
 
 instance Crypto c => EraUTxO (ConwayEra c) where
   type ScriptsNeeded (ConwayEra c) = AlonzoScriptsNeeded (ConwayEra c)

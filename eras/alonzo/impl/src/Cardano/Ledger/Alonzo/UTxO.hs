@@ -25,13 +25,13 @@ import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue)
 import Cardano.Ledger.Mary.Value (PolicyID (..))
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert (..), DelegCert (..), Delegation (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), Wdrl (..), getRwdCred)
-import Cardano.Ledger.Shelley.UTxO
+import Cardano.Ledger.Shelley.UTxO (scriptCred)
+import Cardano.Ledger.TxIn
+import Cardano.Ledger.UTxO
   ( EraUTxO (..),
     UTxO (..),
     getScriptHash,
-    scriptCred,
   )
-import Cardano.Ledger.TxIn
 import Control.SetAlgebra (eval, (◁))
 import Data.Foldable (foldl')
 import qualified Data.Map.Strict as Map

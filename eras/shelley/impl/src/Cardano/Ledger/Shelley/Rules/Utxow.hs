@@ -107,9 +107,9 @@ import Cardano.Ledger.Shelley.TxBody
     getRwdCred,
     unWdrl,
   )
-import Cardano.Ledger.Shelley.UTxO
+import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded (..))
+import Cardano.Ledger.UTxO
   ( EraUTxO (..),
-    ShelleyScriptsNeeded (..),
     UTxO,
     txinLookup,
     verifyWitVKey,

@@ -57,7 +57,7 @@ import Cardano.Ledger.Shelley.Rules
     ShelleyLedgersPredFailure (..),
     ShelleyUtxowPredFailure (ScriptWitnessNotValidatingUTXOW),
   )
-import Cardano.Ledger.Shelley.UTxO (UTxO (..))
+import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import Control.Monad (forM)
 import Control.Monad.Trans.Class (MonadTrans (lift))

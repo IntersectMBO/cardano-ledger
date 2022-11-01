@@ -38,8 +38,8 @@ import Cardano.Ledger.SafeHash (SafeHash)
 import Cardano.Ledger.Shelley.Scripts (MultiSig)
 import qualified Cardano.Ledger.Shelley.Scripts as Multi
 import Cardano.Ledger.Shelley.TxBody (WitVKey (..))
-import Cardano.Ledger.Shelley.UTxO (makeWitnessVKey)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
+import Cardano.Ledger.UTxO (makeWitnessVKey)
 import Cardano.Slotting.Slot (SlotNo (..))
 import Data.ByteString.Short (ShortByteString, pack, unpack)
 import qualified Data.Map.Strict as Map

@@ -128,9 +128,9 @@ import Cardano.Ledger.Mary.Value (AssetName, MaryValue (..), MultiAsset (..), Po
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash (..), hashAnnotated)
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), Wdrl (..), unWdrl)
-import qualified Cardano.Ledger.Shelley.UTxO as Shelley
 import Cardano.Ledger.ShelleyMA.Tx (validateTimelock)
 import Cardano.Ledger.TxIn (TxIn (..))
+import qualified Cardano.Ledger.UTxO as Shelley
 import Cardano.Ledger.Val (Val ((<+>), (<×>)))
 import Control.DeepSeq (NFData (..))
 import qualified Data.ByteString.Lazy as LBS

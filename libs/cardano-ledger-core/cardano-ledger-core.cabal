@@ -70,6 +70,7 @@ library
     Cardano.Ledger.Slot
     Cardano.Ledger.TxIn
     Cardano.Ledger.UnifiedMap
+    Cardano.Ledger.UTxO
     Cardano.Ledger.Val
 
   build-depends:

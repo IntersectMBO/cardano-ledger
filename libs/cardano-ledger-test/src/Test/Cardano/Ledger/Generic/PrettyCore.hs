@@ -77,10 +77,10 @@ import Cardano.Ledger.Shelley.Rules as Shelley
   )
 import qualified Cardano.Ledger.Shelley.Scripts as SS (MultiSig (..))
 import Cardano.Ledger.Shelley.TxBody (DCert (..), DelegCert (..), Delegation (..), PoolCert (..), PoolParams (..), ShelleyTxOut (..), Wdrl (..), WitVKey (..))
-import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import qualified Cardano.Ledger.ShelleyMA.Rules as Mary (ShelleyMAUtxoPredFailure (..))
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.UnifiedMap (UnifiedMap)
 import qualified Cardano.Ledger.Val as Val
 import Control.State.Transition.Extended (STS (..))

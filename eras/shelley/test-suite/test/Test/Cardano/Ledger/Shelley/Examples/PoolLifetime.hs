@@ -83,13 +83,13 @@ import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.Shelley.TxWits
   ( addrWits,
   )
-import Cardano.Ledger.Shelley.UTxO (UTxO (..), makeWitnessesVKey)
 import Cardano.Ledger.Slot
   ( BlockNo (..),
     EpochNo (..),
     SlotNo (..),
   )
 import Cardano.Ledger.TxIn (TxIn (..), mkTxInPartial)
+import Cardano.Ledger.UTxO (UTxO (..), makeWitnessesVKey)
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Protocol.TPraos.BHeader (BHeader, bhHash, hashHeaderToNonce)

@@ -35,9 +35,9 @@ import Cardano.Ledger.Babbage.TxBody
   )
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.ShelleyMA.Tx (validateTimelock)
 import Cardano.Ledger.TxIn (TxIn)
+import Cardano.Ledger.UTxO (UTxO (..))
 import Control.Applicative ((<|>))
 import Control.SetAlgebra (eval, (◁))
 import qualified Data.Map.Strict as Map

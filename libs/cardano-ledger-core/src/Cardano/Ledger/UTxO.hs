@@ -14,42 +14,31 @@
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Ledger.Shelley.UTxO
+module Cardano.Ledger.UTxO
   ( -- * Primitives
     UTxO (..),
     EraUTxO (..),
-    ShelleyScriptsNeeded (..),
 
     -- * Functions
     txins,
     txinLookup,
     txouts,
-    txup,
     balance,
     coinBalance,
     sumAllValue,
     sumAllCoin,
     areAllAdaOnly,
-    totalDeposits,
     makeWitnessVKey,
     makeWitnessesVKey,
     makeWitnessesFromScriptKeys,
     verifyWitVKey,
     getScriptHash,
-    scriptsNeeded,
-    getShelleyScriptsNeeded,
-    scriptCred,
-    scriptStakeCred,
-    getConsumedCoin,
-    produced,
-    keyRefunds,
   )
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import qualified Cardano.Crypto.Hash as CH
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
 import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Coin (Coin, CompactForm (CompactCoin))
 import Cardano.Ledger.Compactible (Compactible (..))
@@ -66,46 +55,24 @@ import Cardano.Ledger.Keys
     signedDSIGN,
     verifySignedDSIGN,
   )
+import Cardano.Ledger.Keys.WitVKey
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
-import Cardano.Ledger.Shelley.Delegation.Certificates
-  ( DCert (..),
-    isDeRegKey,
-    isRegKey,
-    requiresVKeyWitness,
-  )
-import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..), Update)
-import Cardano.Ledger.Shelley.TxBody
-  ( PoolCert (..),
-    PoolParams (..),
-    ShelleyEraTxBody (..),
-    Wdrl (..),
-    WitVKey (..),
-    getRwdCred,
-    pattern DeRegKey,
-    pattern Delegate,
-    pattern Delegation,
-  )
 import Cardano.Ledger.TxIn (TxIn (..))
-import Cardano.Ledger.Val ((<+>), (<×>))
-import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData)
 import Control.Monad ((<$!>))
 import Data.Coders (decodeMapNoDuplicates, encodeMap)
 import Data.Coerce (coerce)
 import Data.Default.Class (Default)
-import Data.Foldable (Foldable (fold), foldMap', toList)
+import Data.Foldable (foldMap', toList)
 import Data.Kind
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import qualified Data.Maybe as Maybe
 import Data.Monoid (Sum (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Sharing (FromSharedCBOR (Share, fromSharedCBOR), Interns)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
-import GHC.Records (HasField (..))
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 import Quiet (Quiet (Quiet))
@@ -263,150 +230,10 @@ areAllAdaOnly :: (EraTxOut era, Foldable f) => f (TxOut era) -> Bool
 areAllAdaOnly = all (^. isAdaOnlyTxOutF)
 {-# INLINE areAllAdaOnly #-}
 
--- | Determine the total deposit amount needed.
--- The block may (legitimately) contain multiple registration certificates
--- for the same pool, where the first will be treated as a registration and
--- any subsequent ones as re-registration. As such, we must only take a
--- deposit for the first such registration.
---
--- Note that this is not an issue for key registrations since subsequent
--- registration certificates would be invalid.
-totalDeposits ::
-  ( HasField "_poolDeposit" pp Coin,
-    HasField "_keyDeposit" pp Coin
-  ) =>
-  pp ->
-  (KeyHash 'StakePool c -> Bool) ->
-  [DCert c] ->
-  Coin
-totalDeposits pp isNewPool certs =
-  (numKeys <×> getField @"_keyDeposit" pp)
-    <+> (numNewPools <×> getField @"_poolDeposit" pp)
-  where
-    numKeys = length $ filter isRegKey certs
-    pools = Set.fromList $ Maybe.mapMaybe getKeyHashFromRegPool certs
-    numNewPools = length $ Set.filter isNewPool pools
-
-getKeyHashFromRegPool :: DCert c -> Maybe (KeyHash 'StakePool c)
-getKeyHashFromRegPool (DCertPool (RegPool p)) = Just $ _poolId p
-getKeyHashFromRegPool _ = Nothing
-
-txup :: (EraTx era, ShelleyEraTxBody era) => Tx era -> Maybe (Update era)
-txup tx = strictMaybeToMaybe (tx ^. bodyTxL . updateTxBodyL)
-
 -- | Extract script hash from value address with script.
 getScriptHash :: Addr c -> Maybe (ScriptHash c)
 getScriptHash (Addr _ (ScriptHashObj hs) _) = Just hs
 getScriptHash _ = Nothing
-
-scriptStakeCred :: DCert c -> Maybe (ScriptHash c)
-scriptStakeCred (DCertDeleg (DeRegKey (KeyHashObj _))) = Nothing
-scriptStakeCred (DCertDeleg (DeRegKey (ScriptHashObj hs))) = Just hs
-scriptStakeCred (DCertDeleg (Delegate (Delegation (KeyHashObj _) _))) = Nothing
-scriptStakeCred (DCertDeleg (Delegate (Delegation (ScriptHashObj hs) _))) = Just hs
-scriptStakeCred _ = Nothing
-
-scriptCred :: Credential kr c -> Maybe (ScriptHash c)
-scriptCred (KeyHashObj _) = Nothing
-scriptCred (ScriptHashObj hs) = Just hs
-
--- | Computes the set of script hashes required to unlock the transaction inputs
--- and the withdrawals.
-scriptsNeeded ::
-  forall era.
-  (EraTx era, ShelleyEraTxBody era) =>
-  UTxO era ->
-  Tx era ->
-  Set (ScriptHash (EraCrypto era))
-scriptsNeeded u tx =
-  case getShelleyScriptsNeeded u (tx ^. bodyTxL) of
-    ShelleyScriptsNeeded sn -> sn
-{-# DEPRECATED scriptsNeeded "In favor of `getScriptsNeeded`" #-}
-
-getShelleyScriptsNeeded ::
-  forall era.
-  (ShelleyEraTxBody era) =>
-  UTxO era ->
-  TxBody era ->
-  ShelleyScriptsNeeded era
-getShelleyScriptsNeeded u txBody =
-  ShelleyScriptsNeeded
-    ( scriptHashes
-        `Set.union` Set.fromList
-          [sh | w <- withdrawals, Just sh <- [scriptCred (getRwdCred w)]]
-        `Set.union` Set.fromList
-          [sh | c <- certificates, requiresVKeyWitness c, Just sh <- [scriptStakeCred c]]
-    )
-  where
-    withdrawals = Map.keys (unWdrl (txBody ^. wdrlsTxBodyL))
-    scriptHashes = txinsScriptHashes (txBody ^. inputsTxBodyL) u
-    certificates = toList (txBody ^. certsTxBodyL)
-
--- | Compute the subset of inputs of the set 'txInps' for which each input is
--- locked by a script in the UTxO 'u'.
-txinsScriptHashes ::
-  EraTxOut era =>
-  Set (TxIn (EraCrypto era)) ->
-  UTxO era ->
-  Set (ScriptHash (EraCrypto era))
-txinsScriptHashes txInps (UTxO u) = foldr add Set.empty txInps
-  where
-    -- to get subset, start with empty, and only insert those inputs in txInps
-    -- that are locked in u
-    add input ans = case Map.lookup input u of
-      Just txOut -> case txOut ^. addrTxOutL of
-        Addr _ (ScriptHashObj h) _ -> Set.insert h ans
-        _ -> ans
-      Nothing -> ans
-
--- | Compute the lovelace which are created by the transaction
-produced ::
-  forall era pp.
-  ( ShelleyEraTxBody era,
-    HasField "_keyDeposit" pp Coin,
-    HasField "_poolDeposit" pp Coin
-  ) =>
-  pp ->
-  (KeyHash 'StakePool (EraCrypto era) -> Bool) ->
-  TxBody era ->
-  Value era
-produced pp isNewPool txBody =
-  balance (txouts txBody)
-    <+> Val.inject
-      ( txBody ^. feeTxBodyL
-          <+> totalDeposits pp isNewPool (toList $ txBody ^. certsTxBodyL)
-      )
-
--- | Compute the lovelace which are destroyed by the transaction
-getConsumedCoin ::
-  forall era pp.
-  ( ShelleyEraTxBody era,
-    HasField "_keyDeposit" pp Coin
-  ) =>
-  pp ->
-  UTxO era ->
-  TxBody era ->
-  Coin
-getConsumedCoin pp (UTxO u) txBody =
-  {- balance (txins tx ◁ u) + wbalance (txwdrls tx) + keyRefunds pp tx -}
-  coinBalance (UTxO (Map.restrictKeys u (txBody ^. inputsTxBodyL)))
-    <> refunds
-    <> withdrawals
-  where
-    refunds = keyRefunds pp txBody
-    withdrawals = fold . unWdrl $ txBody ^. wdrlsTxBodyL
-
--- | Compute the key deregistration refunds in a transaction
-keyRefunds ::
-  ( HasField "_keyDeposit" pp Coin,
-    ShelleyEraTxBody era
-  ) =>
-  pp ->
-  TxBody era ->
-  Coin
-keyRefunds pp tx = length deregistrations <×> getField @"_keyDeposit" pp
-  where
-    deregistrations = filter isDeRegKey (toList $ tx ^. certsTxBodyL)
 
 class EraTxBody era => EraUTxO era where
   -- | A customizable type on per era basis for the information required to find all
@@ -422,14 +249,3 @@ class EraTxBody era => EraUTxO era where
 
   -- | Extract the set of all script hashes that are needed for script validation.
   getScriptsHashesNeeded :: ScriptsNeeded era -> Set (ScriptHash (EraCrypto era))
-
-newtype ShelleyScriptsNeeded era = ShelleyScriptsNeeded (Set (ScriptHash (EraCrypto era)))
-  deriving (Eq, Show)
-
-instance Crypto c => EraUTxO (ShelleyEra c) where
-  type ScriptsNeeded (ShelleyEra c) = ShelleyScriptsNeeded (ShelleyEra c)
-  getConsumedValue = getConsumedCoin
-
-  getScriptsNeeded = getShelleyScriptsNeeded
-
-  getScriptsHashesNeeded (ShelleyScriptsNeeded scriptsHashes) = scriptsHashes

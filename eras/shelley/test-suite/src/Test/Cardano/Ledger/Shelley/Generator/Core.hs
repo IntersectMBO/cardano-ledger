@@ -109,10 +109,6 @@ import qualified Cardano.Ledger.Shelley.Tx as Ledger
 import Cardano.Ledger.Shelley.TxWits
   ( ShelleyTxWits,
   )
-import Cardano.Ledger.Shelley.UTxO
-  ( UTxO,
-    pattern UTxO,
-  )
 import Cardano.Ledger.Slot
   ( BlockNo (..),
     Duration (..),
@@ -120,6 +116,7 @@ import Cardano.Ledger.Slot
     epochInfoFirst,
     (*-),
   )
+import Cardano.Ledger.UTxO (UTxO (UTxO))
 import Cardano.Protocol.TPraos.BHeader
   ( BHeader,
     HashHeader,

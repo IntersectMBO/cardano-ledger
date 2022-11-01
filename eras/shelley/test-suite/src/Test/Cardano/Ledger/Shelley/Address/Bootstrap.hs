@@ -67,9 +67,9 @@ import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.Shelley.TxWits
   ( bootWits,
   )
-import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..), mkTxInPartial)
+import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val ((<->))
 import Data.ByteString (ByteString)
 import qualified Data.Map.Strict as Map

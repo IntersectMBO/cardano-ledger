@@ -58,12 +58,12 @@ import Cardano.Ledger.Shelley.PParams
 import qualified Cardano.Ledger.Shelley.PParams as PParams (Update (..))
 import qualified Cardano.Ledger.Shelley.PParams as ShelleyPP
 import Cardano.Ledger.Shelley.Rules
-import Cardano.Ledger.Shelley.UTxO (makeWitnessesVKey)
 import Cardano.Ledger.ShelleyMA (ShelleyMAEra)
 import Cardano.Ledger.ShelleyMA.AuxiliaryData (AllegraTxAuxData (..))
 import Cardano.Ledger.ShelleyMA.Era (MAClass)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.TxIn (mkTxInPartial)
+import Cardano.Ledger.UTxO (makeWitnessesVKey)
 import Cardano.Ledger.Val (inject)
 import Cardano.Protocol.TPraos.API
 import Cardano.Protocol.TPraos.BHeader

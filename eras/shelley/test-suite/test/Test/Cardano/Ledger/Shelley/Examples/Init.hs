@@ -26,12 +26,12 @@ import Cardano.Ledger.Shelley.PParams
     ShelleyPParamsHKD (..),
     emptyPParams,
   )
-import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance)
 import Cardano.Ledger.Slot
   ( BlockNo (..),
     EpochNo (..),
     SlotNo (..),
   )
+import Cardano.Ledger.UTxO (UTxO (..), balance)
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Protocol.TPraos.BHeader

@@ -92,7 +92,8 @@ import Cardano.Ledger.Shelley.TxBody
     PoolParams (..),
     unWdrl,
   )
-import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), ShelleyScriptsNeeded (..), UTxO (..), txinLookup)
+import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded (..))
+import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), txinLookup)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (domain, eval, (⊆), (➖))
 import Control.State.Transition.Extended

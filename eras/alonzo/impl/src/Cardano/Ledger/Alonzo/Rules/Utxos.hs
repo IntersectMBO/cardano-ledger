@@ -80,7 +80,8 @@ import Cardano.Ledger.Shelley.Rules
     UtxoEnv (..),
     updateUTxOState,
   )
-import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), UTxO (..), coinBalance, totalDeposits)
+import Cardano.Ledger.Shelley.UTxO (totalDeposits)
+import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), coinBalance)
 import Cardano.Ledger.Val as Val (Val ((<->)))
 import Cardano.Slotting.EpochInfo.Extend (unsafeLinearExtendEpochInfo)
 import Cardano.Slotting.Slot (SlotNo)

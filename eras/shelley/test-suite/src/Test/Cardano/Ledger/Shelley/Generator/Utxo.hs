@@ -52,7 +52,7 @@ import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (DelplEnv, LedgerEnv (..))
 import Cardano.Ledger.Shelley.Tx (TxIn (..))
 import Cardano.Ledger.Shelley.TxBody (Wdrl (..))
-import Cardano.Ledger.Shelley.UTxO
+import Cardano.Ledger.UTxO
   ( UTxO (..),
     makeWitnessesFromScriptKeys,
     makeWitnessesVKey,

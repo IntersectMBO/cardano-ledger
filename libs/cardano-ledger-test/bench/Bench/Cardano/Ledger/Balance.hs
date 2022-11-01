@@ -6,7 +6,7 @@ module Bench.Cardano.Ledger.Balance (balanceBenchmarks) where
 
 import Bench.Cardano.Ledger.ApplyTx (ShelleyBench)
 import Cardano.Ledger.Coin
-import Cardano.Ledger.Shelley.UTxO (sumAllValue)
+import Cardano.Ledger.UTxO (sumAllValue)
 import Control.DeepSeq
 import Control.Monad
 import Criterion

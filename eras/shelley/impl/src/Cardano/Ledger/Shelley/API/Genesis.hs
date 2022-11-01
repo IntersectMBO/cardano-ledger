@@ -27,7 +27,7 @@ import Cardano.Ledger.Shelley.API.Types
   )
 import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses, smartUTxOState)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams)
-import Cardano.Ledger.Shelley.UTxO (coinBalance)
+import Cardano.Ledger.UTxO (coinBalance)
 import Cardano.Ledger.Val (Val ((<->)))
 import Control.State.Transition (STS (State))
 import Data.Default.Class (Default, def)
