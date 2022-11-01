@@ -23,11 +23,6 @@ source-repository head
 executable plutus-preprocessor
     main-is:          Main.hs
 
-    -- plutus-tx-plugin is not yet buildable on 9.2, remove this
-    -- when it is
-    if impl (ghc >= 9)
-      buildable: False
-
     -- Modules included in this executable, other than Main.
     other-modules:
        PlutusScripts
@@ -40,10 +35,12 @@ executable plutus-preprocessor
       cardano-ledger-alonzo,
       flat,
       hashable >= 1.4.1.0,
-      plutus-core,
-      plutus-tx,
-      plutus-tx-plugin,
-      plutus-ledger-api,
+      plutus-core ^>= 1.1,
+      plutus-tx ^>= 1.1,
+      -- This package needs at least 1.1.1 for 9.2
+      -- compatibility in the plugin
+      plutus-tx-plugin ^>= 1.1.1,
+      plutus-ledger-api ^>= 1.1,
       serialise,
       template-haskell
     hs-source-dirs:   src
