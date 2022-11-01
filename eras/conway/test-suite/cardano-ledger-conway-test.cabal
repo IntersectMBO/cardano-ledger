@@ -1,0 +1,77 @@
+cabal-version: 3.0
+
+name:                cardano-ledger-conway-test
+version:             0.1.0.0
+synopsis:            Tests for Cardano ledger Conway era
+description:
+  This package builds upon the Alonzo ledger
+bug-reports:         https://github.com/input-output-hk/cardano-ledger/issues
+license:             Apache-2.0
+author:              IOHK
+maintainer:          operations@iohk.io
+category:            Network
+build-type:          Simple
+
+source-repository head
+  type:     git
+  location: https://github.com/input-output-hk/cardano-ledger
+  subdir:   eras/conway/test-suite
+
+common base
+  build-depends:      base >= 4.12 && < 4.17
+
+common project-config
+  default-language:   Haskell2010
+
+  ghc-options:        -Wall
+                      -Wcompat
+                      -Wincomplete-record-updates
+                      -Wincomplete-uni-patterns
+                      -Wpartial-fields
+                      -Wredundant-constraints
+                      -Wunused-packages
+
+library
+  import:             base, project-config
+
+  exposed-modules:
+    Test.Cardano.Ledger.Conway.Examples.Consensus,
+    Test.Cardano.Ledger.Conway.Serialisation.Generators,
+    Test.Cardano.Ledger.Conway.Serialisation.Roundtrip
+  build-depends:
+    cardano-ledger-alonzo,
+    cardano-ledger-alonzo-test,
+    cardano-ledger-babbage,
+    cardano-ledger-babbage-test,
+    cardano-ledger-conway,
+    cardano-ledger-core,
+    cardano-ledger-shelley-ma-test,
+    cardano-ledger-shelley-ma,
+    cardano-slotting,
+    containers,
+    data-default-class,
+    plutus-tx,
+    cardano-ledger-shelley-test,
+    cardano-ledger-shelley,
+    cardano-strict-containers,
+    tasty,
+    tasty-quickcheck,
+    QuickCheck,
+  hs-source-dirs:
+    src
+
+test-suite cardano-ledger-conway-test
+  import: base, project-config
+  type: exitcode-stdio-1.0
+  main-is: Tests.hs
+  hs-source-dirs: test
+  build-depends:
+    cardano-ledger-conway,
+    cardano-ledger-conway-test,
+    cardano-ledger-shelley-test,
+    tasty,
+  ghc-options:        -threaded
+                      -rtsopts
+                      -with-rtsopts=-N
+                      "-with-rtsopts=-K4m -M250m"
+

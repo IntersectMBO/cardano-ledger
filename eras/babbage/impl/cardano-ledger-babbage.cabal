@@ -18,7 +18,7 @@ source-repository head
   subdir:   eras/babbage/impl
 
 common base
-  build-depends:      base >= 4.12 && < 4.15
+  build-depends:      base >= 4.12 && < 4.17
 
 common project-config
   default-language:   Haskell2010
@@ -48,27 +48,27 @@ library
     Cardano.Ledger.Babbage.Rules.Ledger
     Cardano.Ledger.Babbage
   build-depends:
-    bytestring,
-    cardano-binary,
-    cardano-crypto-class,
-    cardano-data,
-    cardano-ledger-alonzo,
-    cardano-ledger-core,
-    cardano-ledger-shelley,
-    cardano-ledger-shelley-ma,
-    cardano-slotting,
-    containers,
-    data-default,
-    deepseq,
-    mtl,
-    nothunks,
-    plutus-ledger-api ^>= 1.0,
-    plutus-tx ^>= 1.0,
-    set-algebra,
-    small-steps,
-    strict-containers,
-    text,
-    transformers,
-    validation-selective,
+                bytestring,
+                cardano-binary,
+                cardano-crypto-class,
+                cardano-data,
+                cardano-ledger-alonzo,
+                cardano-ledger-core,
+                cardano-ledger-shelley,
+                cardano-ledger-shelley-ma,
+                cardano-slotting,
+                containers,
+                data-default,
+                deepseq,
+                microlens,
+                nothunks,
+                plutus-ledger-api ^>= 1.0,
+                -- plutus-tx ^>= 1.0,
+                set-algebra,
+                small-steps,
+                cardano-strict-containers,
+                text,
+                transformers,
+                validation-selective
   hs-source-dirs:
     src

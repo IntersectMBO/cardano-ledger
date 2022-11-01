@@ -463,6 +463,7 @@ instance
 
 instance
   ( Era era,
+<<<<<<< HEAD
     Typeable era,
     ToCBOR (Core.TxOut era),
     ToCBOR (Core.Value era),
@@ -470,6 +471,14 @@ instance
     ToCBOR (PredicateFailure (Core.EraRule "UTXO" era)),
     ToCBOR (Core.Script era),
     Typeable (Core.AuxiliaryData era)
+=======
+    ToCBOR (TxOut era),
+    ToCBOR (Value era),
+    ToCBOR (PredicateFailure (EraRule "UTXOS" era)),
+    ToCBOR (PredicateFailure (EraRule "UTXO" era)),
+    ToCBOR (Script era),
+    Typeable (TxAuxData era)
+>>>>>>> f63095744 (Fixes to compile on ghc-9.2.4)
   ) =>
   ToCBOR (BabbageUtxoPred era)
   where
@@ -481,6 +490,7 @@ instance
 
 instance
   ( Era era,
+<<<<<<< HEAD
     Typeable era,
     FromCBOR (Core.TxOut era),
     FromCBOR (Core.Value era),
@@ -488,6 +498,14 @@ instance
     FromCBOR (PredicateFailure (Core.EraRule "UTXO" era)),
     Typeable (Core.Script era),
     Typeable (Core.AuxiliaryData era)
+=======
+    FromCBOR (TxOut era),
+    FromCBOR (Value era),
+    FromCBOR (PredicateFailure (EraRule "UTXOS" era)),
+    FromCBOR (PredicateFailure (EraRule "UTXO" era)),
+    Typeable (Script era),
+    Typeable (TxAuxData era)
+>>>>>>> f63095744 (Fixes to compile on ghc-9.2.4)
   ) =>
   FromCBOR (BabbageUtxoPred era)
   where

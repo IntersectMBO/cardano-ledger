@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -16,6 +17,7 @@ module Cardano.Chain.Common.LovelacePortion
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.HeapWords (HeapWords)
 import Cardano.Prelude
 import Control.Monad (fail)
 import qualified Data.Aeson as Aeson

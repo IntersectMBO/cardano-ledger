@@ -26,7 +26,7 @@ source-repository head
   subdir:   eras/alonzo/test-suite
 
 common base
-  build-depends:      base >= 4.12 && < 4.15
+  build-depends:      base >= 4.12 && < 4.17
 
 common project-config
   default-language:   Haskell2010
@@ -64,7 +64,7 @@ library
     data-default-class,
     hashable,
     plutus-tx,
-    plutus-ledger-api,
+    plutus-ledger-api ^>= 1.0,
     QuickCheck,
     cardano-ledger-shelley-test,
     cardano-ledger-shelley,
@@ -106,8 +106,8 @@ test-suite cardano-ledger-alonzo-test
     cardano-slotting,
     containers,
     data-default-class,
-    plutus-core,
-    plutus-ledger-api,
+    -- plutus-core,
+    plutus-ledger-api ^>= 1.0,
     QuickCheck,
     small-steps,
     small-steps-test,

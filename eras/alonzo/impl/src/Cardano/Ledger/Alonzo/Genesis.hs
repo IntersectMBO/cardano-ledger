@@ -336,8 +336,13 @@ instance FromJSON (PParams era) where
 deriving instance ToJSON (PParamsUpdate era)
 
 instance
+<<<<<<< HEAD
   (Era era, Show (Core.Value era), ToJSON (Core.Value era)) =>
   ToJSON (TxOut era)
+=======
+  (EraTxOut era, ToJSON (Value era)) =>
+  ToJSON (AlonzoTxOut era)
+>>>>>>> f63095744 (Fixes to compile on ghc-9.2.4)
   where
   toJSON (TxOut addr v dataHash) =
     object

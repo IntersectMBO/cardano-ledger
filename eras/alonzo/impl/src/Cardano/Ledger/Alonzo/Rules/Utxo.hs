@@ -92,7 +92,6 @@ import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks)
@@ -572,6 +571,7 @@ utxoTransition = do
 
 instance
   forall era.
+<<<<<<< HEAD
   ( ValidateScript era,
     ConcreteAlonzo era, -- Unlike the Tests, we are only going to use this once, so we fix the Core.XX types
     Core.Tx era ~ ValidatedTx era,
@@ -582,6 +582,27 @@ instance
     Signal (Core.EraRule "UTXOS" era) ~ ValidatedTx era,
     Inject (PredicateFailure (Core.EraRule "PPUP" era)) (PredicateFailure (Core.EraRule "UTXOS" era)),
     Era.TxSeq era ~ Alonzo.TxSeq era
+=======
+  ( EraUTxO era,
+    AlonzoEraTx era,
+    Embed (EraRule "UTXOS" era) (AlonzoUTXO era),
+    Environment (EraRule "UTXOS" era) ~ UtxoEnv era,
+    State (EraRule "UTXOS" era) ~ Shelley.UTxOState era,
+    Signal (EraRule "UTXOS" era) ~ Tx era,
+    HasField "_poolDeposit" (PParams era) Coin,
+    HasField "_minfeeA" (PParams era) Natural,
+    HasField "_minfeeB" (PParams era) Natural,
+    HasField "_keyDeposit" (PParams era) Coin,
+    HasField "_maxValSize" (PParams era) Natural,
+    HasField "_maxTxSize" (PParams era) Natural,
+    HasField "_maxTxExUnits" (PParams era) ExUnits,
+    HasField "_coinsPerUTxOWord" (PParams era) Coin,
+    HasField "_protocolVersion" (PParams era) ProtVer,
+    HasField "_maxCollateralInputs" (PParams era) Natural,
+    HasField "_collateralPercentage" (PParams era) Natural,
+    HasField "_prices" (PParams era) Prices,
+    Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era))
+>>>>>>> f63095744 (Fixes to compile on ghc-9.2.4)
   ) =>
   STS (AlonzoUTXO era)
   where
@@ -611,11 +632,18 @@ instance
 --------------------------------------------------------------------------------
 
 instance
+<<<<<<< HEAD
   ( Typeable era,
     Era era,
     ToCBOR (Core.TxOut era),
     ToCBOR (Core.Value era),
     ToCBOR (PredicateFailure (Core.EraRule "UTXOS" era))
+=======
+  ( Era era,
+    ToCBOR (TxOut era),
+    ToCBOR (Value era),
+    ToCBOR (PredicateFailure (EraRule "UTXOS" era))
+>>>>>>> f63095744 (Fixes to compile on ghc-9.2.4)
   ) =>
   ToCBOR (UtxoPredicateFailure era)
   where

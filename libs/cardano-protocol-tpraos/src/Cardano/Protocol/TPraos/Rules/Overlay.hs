@@ -169,10 +169,16 @@ deriving instance
   Eq (OverlayPredicateFailure crypto)
 
 vrfChecks ::
+<<<<<<< HEAD
   forall crypto.
   ( Crypto crypto,
     VRF.Signable (VRF crypto) Seed,
     VRF.ContextVRF (VRF crypto) ~ ()
+=======
+  forall c.
+  ( Crypto c,
+    VRF.Signable (VRF c) Seed
+>>>>>>> f63095744 (Fixes to compile on ghc-9.2.4)
   ) =>
   Nonce ->
   BHBody crypto ->
@@ -199,10 +205,16 @@ vrfChecks eta0 bhb = do
     slot = bheaderSlotNo bhb
 
 praosVrfChecks ::
+<<<<<<< HEAD
   forall crypto.
   ( Crypto crypto,
     VRF.Signable (VRF crypto) Seed,
     VRF.ContextVRF (VRF crypto) ~ ()
+=======
+  forall c.
+  ( Crypto c,
+    VRF.Signable (VRF c) Seed
+>>>>>>> f63095744 (Fixes to compile on ghc-9.2.4)
   ) =>
   Nonce ->
   PoolDistr crypto ->
@@ -226,10 +238,16 @@ praosVrfChecks eta0 (PoolDistr pd) f bhb = do
     vrfK = bheaderVrfVk bhb
 
 pbftVrfChecks ::
+<<<<<<< HEAD
   forall crypto.
   ( Crypto crypto,
     VRF.Signable (VRF crypto) Seed,
     VRF.ContextVRF (VRF crypto) ~ ()
+=======
+  forall c.
+  ( Crypto c,
+    VRF.Signable (VRF c) Seed
+>>>>>>> f63095744 (Fixes to compile on ghc-9.2.4)
   ) =>
   Hash crypto (VerKeyVRF crypto) ->
   Nonce ->

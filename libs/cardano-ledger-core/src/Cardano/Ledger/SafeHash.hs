@@ -57,15 +57,12 @@ module Cardano.Ledger.SafeHash
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.HeapWords
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Prelude (HeapWords (..))
-import Control.DeepSeq (NFData)
-import Data.ByteString (ByteString)
+import Cardano.Prelude hiding ((.))
 import Data.ByteString.Short (ShortByteString, fromShort)
-import Data.Foldable (fold)
 import Data.MemoBytes (MemoBytes (..))
-import Data.Typeable
 import NoThunks.Class (NoThunks (..))
 
 -- ==========================================================
@@ -88,7 +85,7 @@ deriving newtype instance
   Hash.HashAlgorithm (CC.HASH crypto) =>
   SafeToHash (SafeHash crypto index)
 
-deriving newtype instance HeapWords (Hash.Hash (CC.HASH c) i) => HeapWords (SafeHash c i)
+deriving newtype instance HeapWords (SafeHash c i)
 
 deriving instance (Typeable index, CC.Crypto c) => ToCBOR (SafeHash c index)
 

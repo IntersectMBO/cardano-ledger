@@ -779,7 +779,11 @@ simpleScriptOutWithRefScriptUTxOState pf =
 largeDatum :: Data era
 largeDatum = Data (Plutus.B . BS.pack $ replicate 1500 0)
 
+<<<<<<< HEAD
 largeOutput' :: forall era. Scriptic era => Proof era -> Core.TxOut era
+=======
+largeOutput' :: forall era. (EraTxOut era) => Proof era -> TxOut era
+>>>>>>> f63095744 (Fixes to compile on ghc-9.2.4)
 largeOutput' pf =
   newTxOut
     pf
@@ -788,7 +792,11 @@ largeOutput' pf =
       Datum . Babbage.Datum . dataToBinaryData $ largeDatum @era
     ]
 
+<<<<<<< HEAD
 largeOutput :: forall era. (Scriptic era) => Proof era -> TestCaseData era
+=======
+largeOutput :: forall era. BabbageEraTxBody era => Proof era -> TestCaseData era
+>>>>>>> f63095744 (Fixes to compile on ghc-9.2.4)
 largeOutput pf =
   TestCaseData
     { txBody =

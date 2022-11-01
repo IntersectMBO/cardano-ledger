@@ -12,13 +12,13 @@ category:            Currency
 build-type:          Simple
 
 common base
-  build-depends:      base >= 4.12 && < 4.15
+  build-depends:      base >= 4.12 && < 4.17
 
 common project-config
   default-language:   Haskell2010
   default-extensions: NoImplicitPrelude
 
-  ghc-options:        -Weverything
+  ghc-options:        -Wall
                       -Wno-all-missed-specialisations
                       -Wno-missing-deriving-strategies
                       -Wno-missing-import-lists
@@ -116,6 +116,7 @@ library
                      , filepath
                      , formatting
                      , generic-monoid
+                     , heapwords
                      , hedgehog >= 1.0.4
                      , microlens
                      , resourcet

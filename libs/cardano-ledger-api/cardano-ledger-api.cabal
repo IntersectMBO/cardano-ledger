@@ -1,0 +1,79 @@
+cabal-version:      2.4
+name:               cardano-ledger-api
+version:            0.1.0.0
+synopsis:           Public API for the cardano ledger codebase
+description:
+  This package a public interface into the cardano ledger codebase. It also
+  provides functionality that works for all eras and is useful for downstream
+  packages.
+bug-reports:        https://github.com/input-output-hk/cardano-ledger/issues
+
+license:            Apache-2.0
+author:             IOHK
+maintainer:         operations@iohk.io
+
+source-repository head
+  type:     git
+  location: https://github.com/input-output-hk/cardano-ledger
+  subdir:   libs/cardano-ledger-api
+
+common base
+  build-depends:
+    base >= 4.12 && < 4.17
+
+common project-config
+  default-language: Haskell2010
+
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+    -Wpartial-fields
+    -Wunused-packages
+
+library
+  import:
+    base, project-config
+
+  hs-source-dirs: src
+
+  exposed-modules:
+    Cardano.Ledger.Api.Era
+    Cardano.Ledger.Api.Tx
+    Cardano.Ledger.Api.Tx.Out
+    Cardano.Ledger.Api.UTxO
+
+  build-depends:
+    cardano-ledger-alonzo,
+    cardano-ledger-babbage,
+    cardano-ledger-conway,
+    cardano-ledger-core,
+    cardano-ledger-shelley,
+    cardano-ledger-shelley-ma,
+    microlens,
+
+test-suite cardano-ledger-api-test
+  import:             base, project-config
+
+  type:                exitcode-stdio-1.0
+  main-is:             Tests.hs
+  ghc-options: -rtsopts -threaded
+
+  hs-source-dirs:      test
+  other-modules:
+    Test.Cardano.Ledger.Api.Tx.Out
+  build-depends:
+    bytestring,
+    cardano-binary,
+    cardano-ledger-api,
+    cardano-ledger-core,
+    cardano-ledger-alonzo,
+    cardano-ledger-babbage,
+    cardano-ledger-babbage-test,
+    cardano-ledger-shelley,
+    microlens,
+    tasty,
+    tasty-quickcheck,
+    QuickCheck,

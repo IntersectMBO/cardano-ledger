@@ -155,10 +155,16 @@ instance
 
 instance
   ( Era era,
+<<<<<<< HEAD
     ToCBOR (PredicateFailure (Core.EraRule "UTXO" era)),
     Typeable (Core.AuxiliaryData era),
     Typeable (Core.Script era),
     ToCBOR (Core.Script era)
+=======
+    ToCBOR (PredicateFailure (EraRule "UTXO" era)),
+    Typeable (TxAuxData era),
+    ToCBOR (Script era)
+>>>>>>> f63095744 (Fixes to compile on ghc-9.2.4)
   ) =>
   ToCBOR (UtxowPredicateFail era)
   where

@@ -146,6 +146,7 @@ newTx era = List.foldl' (updateTx era) (initialTx era)
 --------------------------------------------------------------------
 -- Updaters for TxBody
 
+<<<<<<< HEAD
 updateTxBody :: Proof era -> Core.TxBody era -> TxBodyField era -> Core.TxBody era
 updateTxBody (Shelley _) tx dt = case dt of
   (Inputs is) -> tx {Shelley._inputs = is}
@@ -214,6 +215,75 @@ updateTxBody (Babbage _) tx dt = case dt of
   (Txnetworkid i) -> tx {Babbage.txnetworkid = i}
   (TotalCol coin) -> tx {Babbage.totalCollateral = coin}
   (TTL _) -> tx
+=======
+updateTxBody :: EraTxBody era => Proof era -> TxBody era -> TxBodyField era -> TxBody era
+updateTxBody pf txBody dt =
+  case pf of
+    _ | Inputs ins <- dt -> txBody & inputsTxBodyL .~ ins
+    _ | Outputs outs <- dt -> txBody & outputsTxBodyL .~ outs
+    _ | Txfee fee <- dt -> txBody & feeTxBodyL .~ fee
+    _ | AdHash auxDataHash <- dt -> txBody & auxDataHashTxBodyL .~ auxDataHash
+    Shelley _ -> case dt of
+      Certs certs -> txBody & certsTxBodyL .~ certs
+      Wdrls wdrls -> txBody & wdrlsTxBodyL .~ wdrls
+      TTL ttl -> txBody & ttlTxBodyL .~ ttl
+      Update update -> txBody & updateTxBodyL .~ update
+      _ -> txBody
+    Allegra _ -> case dt of
+      Certs certs -> txBody & certsTxBodyL .~ certs
+      Wdrls wdrls -> txBody & wdrlsTxBodyL .~ wdrls
+      Vldt vldt -> txBody & vldtTxBodyL .~ vldt
+      Update update -> txBody & updateTxBodyL .~ update
+      Mint mint -> txBody & mintTxBodyL .~ mint
+      _ -> txBody
+    Mary _ -> case dt of
+      Certs certs -> txBody & certsTxBodyL .~ certs
+      Wdrls wdrls -> txBody & wdrlsTxBodyL .~ wdrls
+      Vldt vldt -> txBody & vldtTxBodyL .~ vldt
+      Update update -> txBody & updateTxBodyL .~ update
+      Mint mint -> txBody & mintTxBodyL .~ mint
+      _ -> txBody
+    Alonzo _ -> case dt of
+      Certs certs -> txBody & certsTxBodyL .~ certs
+      Wdrls wdrls -> txBody & wdrlsTxBodyL .~ wdrls
+      Vldt vldt -> txBody & vldtTxBodyL .~ vldt
+      Update update -> txBody & updateTxBodyL .~ update
+      Mint mint -> txBody & mintTxBodyL .~ mint
+      Collateral collateral -> txBody & collateralInputsTxBodyL .~ collateral
+      ReqSignerHashes reqSignerHashes -> txBody & reqSignerHashesTxBodyL .~ reqSignerHashes
+      WppHash scriptIntegrityHash -> txBody & scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
+      Txnetworkid networkId -> txBody & networkIdTxBodyL .~ networkId
+      _ -> txBody
+    Babbage _ -> case dt of
+      Certs certs -> txBody & certsTxBodyL .~ certs
+      Wdrls wdrls -> txBody & wdrlsTxBodyL .~ wdrls
+      Vldt vldt -> txBody & vldtTxBodyL .~ vldt
+      Update update -> txBody & updateTxBodyL .~ update
+      Mint mint -> txBody & mintTxBodyL .~ mint
+      Collateral collateral -> txBody & collateralInputsTxBodyL .~ collateral
+      ReqSignerHashes reqSignerHashes -> txBody & reqSignerHashesTxBodyL .~ reqSignerHashes
+      WppHash scriptIntegrityHash -> txBody & scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
+      Txnetworkid networkId -> txBody & networkIdTxBodyL .~ networkId
+      RefInputs refInputs -> txBody & referenceInputsTxBodyL .~ refInputs
+      TotalCol totalCol -> txBody & totalCollateralTxBodyL .~ totalCol
+      CollateralReturn collateralReturn -> txBody & collateralReturnTxBodyL .~ collateralReturn
+      _ -> txBody
+    Conway _ -> case dt of
+      Certs certs -> txBody & certsTxBodyL .~ certs
+      Wdrls wdrls -> txBody & wdrlsTxBodyL .~ wdrls
+      Vldt vldt -> txBody & vldtTxBodyL .~ vldt
+      Update update -> txBody & updateTxBodyL .~ update
+      Mint mint -> txBody & mintTxBodyL .~ mint
+      Collateral collateral -> txBody & collateralInputsTxBodyL .~ collateral
+      ReqSignerHashes reqSignerHashes -> txBody & reqSignerHashesTxBodyL .~ reqSignerHashes
+      WppHash scriptIntegrityHash -> txBody & scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
+      Txnetworkid networkId -> txBody & networkIdTxBodyL .~ networkId
+      RefInputs refInputs -> txBody & referenceInputsTxBodyL .~ refInputs
+      TotalCol totalCol -> txBody & totalCollateralTxBodyL .~ totalCol
+      CollateralReturn collateralReturn -> txBody & collateralReturnTxBodyL .~ collateralReturn
+      _ -> txBody
+{-# NOINLINE updateTxBody #-}
+>>>>>>> f63095744 (Fixes to compile on ghc-9.2.4)
 
 newTxBody :: Era era => Proof era -> [TxBodyField era] -> Core.TxBody era
 newTxBody era = List.foldl' (updateTxBody era) (initialTxBody era)

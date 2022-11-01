@@ -163,7 +163,11 @@ defaultShelleyLedgerExamples mkWitnesses mkValidatedTx value txBody auxData tran
 
 exampleShelleyLedgerBlock ::
   forall era.
+<<<<<<< HEAD
   ShelleyBasedEra' era =>
+=======
+  (EraSegWits era, ShelleyBasedEra' era) =>
+>>>>>>> f63095744 (Fixes to compile on ghc-9.2.4)
   Core.Tx era ->
   Block (BHeader (Era.Crypto era)) era
 exampleShelleyLedgerBlock tx = Block blockHeader blockBody

@@ -24,7 +24,7 @@ source-repository head
   subdir:   eras/babbage/test-suite
 
 common base
-  build-depends:      base >= 4.12 && < 4.15
+  build-depends:      base >= 4.12 && < 4.17
 
 common project-config
   default-language:   Haskell2010
@@ -81,7 +81,6 @@ test-suite cardano-ledger-babbage-test
     Test.Cardano.Ledger.Babbage.Serialisation.CDDL,
     Test.Cardano.Ledger.Babbage.TxInfo
   build-depends:
-    QuickCheck,
     base16-bytestring,
     bytestring,
     cardano-binary,
@@ -102,7 +101,6 @@ test-suite cardano-ledger-babbage-test
     vector-map,
     containers,
     data-default-class,
-    plutus-core,
     plutus-ledger-api,
     plutus-tx,
     small-steps,

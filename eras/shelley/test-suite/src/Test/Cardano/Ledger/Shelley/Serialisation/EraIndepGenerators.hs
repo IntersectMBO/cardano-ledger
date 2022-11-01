@@ -63,6 +63,7 @@ import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era, SupportsSegWit (..), ValidateScript)
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
+<<<<<<< HEAD
 import Cardano.Ledger.SafeHash (HasAlgorithm, SafeHash, unsafeMakeSafeHash)
 import Cardano.Ledger.Serialization (ToCBORGroup)
 import Cardano.Ledger.Shelley.API hiding (SignedDSIGN, TxBody (..))
@@ -73,6 +74,10 @@ import Cardano.Ledger.Shelley.Constraints
     UsesTxOut,
     UsesValue,
   )
+=======
+import Cardano.Ledger.SafeHash (SafeHash, unsafeMakeSafeHash)
+import Cardano.Ledger.Shelley.API hiding (SignedDSIGN, TxBody)
+>>>>>>> f63095744 (Fixes to compile on ghc-9.2.4)
 import Cardano.Ledger.Shelley.LedgerState (FutureGenDeleg, StashedAVVMAddresses)
 import qualified Cardano.Ledger.Shelley.Metadata as MD
 import Cardano.Ledger.Shelley.PoolRank
@@ -896,7 +901,11 @@ genCoherentBlock = do
       ocert
 
 instance
+<<<<<<< HEAD
   ( Era era,
+=======
+  ( Core.EraTx era,
+>>>>>>> f63095744 (Fixes to compile on ghc-9.2.4)
     Arbitrary (Core.TxBody era),
     Arbitrary (Core.Value era),
     Arbitrary (Core.AuxiliaryData era),
@@ -911,10 +920,16 @@ instance
   arbitrary = genTx
 
 instance
+<<<<<<< HEAD
   ( UsesTxBody era,
     ToCBORGroup (TxSeq era),
     SupportsSegWit era,
     Mock (Crypto era),
+=======
+  ( Core.EraTxBody era,
+    EraSegWits era,
+    Mock (EraCrypto era),
+>>>>>>> f63095744 (Fixes to compile on ghc-9.2.4)
     Arbitrary (Core.Tx era),
     h ~ BHeader (Crypto era)
   ) =>

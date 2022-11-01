@@ -27,9 +27,15 @@ import Cardano.Ledger.Keys (GenDelegs (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API (DCert, Wdrl)
 import Cardano.Ledger.Shelley.LedgerState (IncrementalStake (..), UTxOState (..))
+<<<<<<< HEAD
 import Cardano.Ledger.Shelley.Rules.Utxo (PredicateFailure, UtxoEnv (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), makeWitnessVKey)
 import Cardano.Ledger.TxIn (TxIn)
+=======
+import Cardano.Ledger.Shelley.Rules (UtxoEnv (..))
+import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), UTxO (..), makeWitnessVKey)
+import Cardano.Ledger.Val (Val (inject))
+>>>>>>> f63095744 (Fixes to compile on ghc-9.2.4)
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..), SlotNo (..))
 import Cardano.Slotting.Time (SystemStart, mkSlotLength)
@@ -103,6 +109,7 @@ testExUnitCalculation ::
     Signal (Core.EraRule "UTXOS" era) ~ Core.Tx era,
     Era era,
     ExtendedUTxO era,
+<<<<<<< HEAD
     HasField "_maxTxExUnits" (Core.PParams era) ExUnits,
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
@@ -113,6 +120,14 @@ testExUnitCalculation ::
     Show (PredicateFailure (Core.EraRule "UTXOS" era)),
     STS (Core.EraRule "UTXOS" era),
     Core.Script era ~ Script era
+=======
+    HasField "_maxTxExUnits" (PParams era) ExUnits,
+    HasField "_protocolVersion" (PParams era) ProtVer,
+    STS (EraRule "UTXOS" era),
+    Script era ~ AlonzoScript era,
+    EraUTxO era,
+    ScriptsNeeded era ~ AlonzoScriptsNeeded era
+>>>>>>> f63095744 (Fixes to compile on ghc-9.2.4)
   ) =>
   Proof era ->
   Core.Tx era ->

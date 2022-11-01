@@ -109,7 +109,7 @@ import Cardano.Ledger.Shelley.PoolParams
 import Cardano.Ledger.Slot (SlotNo (..))
 import qualified Cardano.Ledger.TxIn as Core
 import Cardano.Ledger.Val (DecodeNonNegative (..))
-import Cardano.Prelude (HeapWords (..))
+import Cardano.HeapWords (HeapWords (..))
 import Control.DeepSeq (NFData (rnf))
 import qualified Data.ByteString.Lazy as BSL
 import Data.ByteString.Short (ShortByteString, pack)

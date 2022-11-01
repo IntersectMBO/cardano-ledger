@@ -102,7 +102,9 @@ newtype Data era = DataConstr (MemoBytes Plutus.Data)
   deriving (Eq, Generic, Show)
   deriving newtype (SafeToHash, ToCBOR, NFData)
 
-instance Typeable era => FromCBOR (Annotator (Data era)) where
+deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (Data era)
+
+instance (Era era) => FromCBOR (Annotator (Data era)) where
   fromCBOR = do
     (Annotator getT, Annotator getBytes) <- withSlice fromCBOR
     pure (Annotator (\fullbytes -> DataConstr (Memo (getT fullbytes) (toShort (toStrict (getBytes fullbytes))))))

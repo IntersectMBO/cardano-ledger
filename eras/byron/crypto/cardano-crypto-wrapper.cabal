@@ -1,5 +1,4 @@
 cabal-version: 2.2
-
 name:                cardano-crypto-wrapper
 version:             1.3.0
 synopsis:            Cryptographic primitives used in the Cardano project
@@ -13,13 +12,13 @@ build-type:          Simple
 extra-source-files:  README.md
 
 common base
-  build-depends:      base >= 4.12 && < 4.15
+  build-depends:      base >= 4.12 && < 4.17
 
 common project-config
   default-language:   Haskell2010
   default-extensions: NoImplicitPrelude
 
-  ghc-options:        -Weverything
+  ghc-options:        -Wall
                       -Wno-all-missed-specialisations
                       -Wno-missing-deriving-strategies
                       -Wno-missing-import-lists
@@ -75,8 +74,8 @@ library
                      , cryptonite
                      , data-default
                      , formatting
+                     , heapwords
                      , memory
-                     , mtl
                      , nothunks
                      , text
 
@@ -114,7 +113,6 @@ test-suite test
                      , formatting
                      , hedgehog >= 1.0.4
                      , memory
-                     , text
 
   ghc-options:         -threaded
                        -rtsopts

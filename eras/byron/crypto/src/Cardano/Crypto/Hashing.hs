@@ -9,6 +9,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -64,6 +65,7 @@ import Cardano.Binary
     serialize,
     withWordSize,
   )
+import Cardano.HeapWords
 import Cardano.Prelude
 import Crypto.Hash (Blake2b_256, Digest, HashAlgorithm, hashDigestSize)
 import qualified Crypto.Hash as Hash
@@ -96,6 +98,7 @@ import qualified Prelude
 -- | Hash wrapper with phantom type for more type-safety
 --
 --   Made abstract in order to support different algorithms
+type AbstractHash :: Type -> Type -> Type
 newtype AbstractHash algo a = AbstractHash SBS.ShortByteString
   deriving (Eq, Ord, Generic, NFData, NoThunks)
 
@@ -244,6 +247,7 @@ abstractHashToShort (AbstractHash h) = h
 --------------------------------------------------------------------------------
 
 -- | The type of our commonly used hash, Blake2b 256
+type Hash :: Type -> Type
 type Hash = AbstractHash Blake2b_256
 
 {-# DEPRECATED hash "Use serializeCborHash or hash the annotation instead." #-}

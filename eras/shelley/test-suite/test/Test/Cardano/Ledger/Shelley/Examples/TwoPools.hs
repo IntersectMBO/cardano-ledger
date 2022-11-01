@@ -769,9 +769,15 @@ rewardUpdateEx9 pp rewards =
 
 pulserEx9 ::
   forall era.
+<<<<<<< HEAD
   (ExMock (Crypto era), TwoPoolsConstraints era) =>
   PParams era ->
   PulsingRewUpdate (Crypto era)
+=======
+  (TwoPoolsConstraints era) =>
+  ShelleyPParams era ->
+  PulsingRewUpdate (EraCrypto era)
+>>>>>>> f63095744 (Fixes to compile on ghc-9.2.4)
 pulserEx9 pp =
   makeCompletedPulser
     ( BlocksMade $

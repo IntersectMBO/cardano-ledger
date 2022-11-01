@@ -55,11 +55,18 @@ instance
       <*> arbitrary
 
 instance
+<<<<<<< HEAD
   ( UsesValue era,
     Mock (Crypto era),
     BabbageBody era,
     Arbitrary (Core.Value era),
     Arbitrary (Core.Script era)
+=======
+  ( Mock (EraCrypto era),
+    BabbageEraTxBody era,
+    Arbitrary (Value era),
+    Arbitrary (Script era)
+>>>>>>> f63095744 (Fixes to compile on ghc-9.2.4)
   ) =>
   Arbitrary (TxBody era)
   where

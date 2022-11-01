@@ -79,12 +79,31 @@ instance
   ( Era era,
     ConcreteBabbage era,
     ExtendedUTxO era,
+<<<<<<< HEAD
     Embed (Core.EraRule "PPUP" era) (BabbageUTXOS era),
     Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
     State (Core.EraRule "PPUP" era) ~ PPUPState era,
     Signal (Core.EraRule "PPUP" era) ~ Maybe (Update era),
     ValidateScript era,
     ToCBOR (PredicateFailure (Core.EraRule "PPUP" era)) -- Serializing the PredicateFailure
+=======
+    EraUTxO era,
+    ScriptsNeeded era ~ AlonzoScriptsNeeded era,
+    Tx era ~ AlonzoTx era,
+    TxOut era ~ BabbageTxOut era,
+    TxBody era ~ BabbageTxBody era,
+    TxWits era ~ AlonzoTxWits era,
+    Script era ~ AlonzoScript era,
+    HasField "_keyDeposit" (PParams era) Coin,
+    HasField "_poolDeposit" (PParams era) Coin,
+    HasField "_costmdls" (PParams era) CostModels,
+    HasField "_protocolVersion" (PParams era) ProtVer,
+    Embed (EraRule "PPUP" era) (BabbageUTXOS era),
+    Environment (EraRule "PPUP" era) ~ PpupEnv era,
+    State (EraRule "PPUP" era) ~ PPUPState era,
+    Signal (EraRule "PPUP" era) ~ Maybe (Update era),
+    ToCBOR (PredicateFailure (EraRule "PPUP" era)) -- Serializing the PredicateFailure
+>>>>>>> f63095744 (Fixes to compile on ghc-9.2.4)
   ) =>
   STS (BabbageUTXOS era)
   where

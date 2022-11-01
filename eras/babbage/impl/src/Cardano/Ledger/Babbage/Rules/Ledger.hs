@@ -56,6 +56,7 @@ import Data.Sequence (Seq)
 data BabbageLEDGER c
 
 instance
+<<<<<<< HEAD
   ( Era era,
     ValidateScript era,
     ConcreteBabbage era,
@@ -69,6 +70,20 @@ instance
     State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
     Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
     Show (ValidatedTx era)
+=======
+  ( AlonzoEraTx era,
+    Show (State (EraRule "PPUP" era)),
+    HasField "_keyDeposit" (PParams era) Coin,
+    HasField "_poolDeposit" (PParams era) Coin,
+    Embed (EraRule "DELEGS" era) (BabbageLEDGER era),
+    Embed (EraRule "UTXOW" era) (BabbageLEDGER era),
+    Environment (EraRule "UTXOW" era) ~ UtxoEnv era,
+    State (EraRule "UTXOW" era) ~ UTxOState era,
+    Signal (EraRule "UTXOW" era) ~ Tx era,
+    Environment (EraRule "DELEGS" era) ~ DelegsEnv era,
+    State (EraRule "DELEGS" era) ~ DPState (EraCrypto era),
+    Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era))
+>>>>>>> f63095744 (Fixes to compile on ghc-9.2.4)
   ) =>
   STS (BabbageLEDGER era)
   where

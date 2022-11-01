@@ -64,6 +64,7 @@ source-repository-package
 allow-newer:
   monoidal-containers:aeson,
   size-based:template-haskell,
+  Unique:hashable
 
 constraints:
   -- bizarre issue: in earlier versions they define their own 'GEq', in newer
@@ -72,7 +73,6 @@ constraints:
   , dependent-sum > 0.6.2.0
 
   -- Plutus dependency
-  , algebraic-graphs < 0.7
 
   , protolude >= 0.3.2
 
@@ -154,3 +154,16 @@ package small-steps
 
 package set-algebra
   ghc-options: -Werror
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/plutus
+  tag: 6391df52c059a30e430dd2aa5df55be77f3711fd
+  --sha256: 180jq8hd0jlg48ya7b5yw3bnd2d5czy0b1agy9ng3mgnzpyq747i
+  subdir:
+    plutus-ledger-api
+    plutus-tx
+    plutus-tx-plugin
+    plutus-core
+    prettyprinter-configurable
+    word-array

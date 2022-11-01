@@ -27,6 +27,7 @@ import Cardano.Chain.Common.Attributes
     toCBORAttributes,
   )
 import Cardano.Chain.Common.NetworkMagic (NetworkMagic (..))
+import Cardano.HeapWords (HeapWords (..))
 import Cardano.Prelude
 import Data.Aeson (ToJSON (..), object, (.=))
 import qualified Data.ByteString.Char8 as Char8

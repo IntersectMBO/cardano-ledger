@@ -127,6 +127,7 @@ instance Inject (UtxowPredicateFailure era) (BabbageUtxowPred era) where
 
 instance
   ( Era era,
+<<<<<<< HEAD
     Typeable era,
     ToCBOR (Core.TxOut era),
     ToCBOR (Core.Value era),
@@ -134,6 +135,14 @@ instance
     ToCBOR (PredicateFailure (Core.EraRule "UTXO" era)),
     ToCBOR (Core.Script era),
     Typeable (Core.AuxiliaryData era)
+=======
+    ToCBOR (TxOut era),
+    ToCBOR (Value era),
+    ToCBOR (PredicateFailure (EraRule "UTXOS" era)),
+    ToCBOR (PredicateFailure (EraRule "UTXO" era)),
+    ToCBOR (Script era),
+    Typeable (TxAuxData era)
+>>>>>>> f63095744 (Fixes to compile on ghc-9.2.4)
   ) =>
   ToCBOR (BabbageUtxowPred era)
   where
@@ -146,6 +155,7 @@ instance
 
 instance
   ( Era era,
+<<<<<<< HEAD
     Typeable era,
     FromCBOR (Core.TxOut era),
     FromCBOR (Core.Value era),
@@ -153,6 +163,14 @@ instance
     FromCBOR (PredicateFailure (Core.EraRule "UTXO" era)),
     Typeable (Core.Script era),
     Typeable (Core.AuxiliaryData era)
+=======
+    FromCBOR (TxOut era),
+    FromCBOR (Value era),
+    FromCBOR (PredicateFailure (EraRule "UTXOS" era)),
+    FromCBOR (PredicateFailure (EraRule "UTXO" era)),
+    Typeable (Script era),
+    Typeable (TxAuxData era)
+>>>>>>> f63095744 (Fixes to compile on ghc-9.2.4)
   ) =>
   FromCBOR (BabbageUtxowPred era)
   where
@@ -362,6 +380,7 @@ babbageUtxowTransition = do
 
 instance
   forall era.
+<<<<<<< HEAD
   ( ValidateScript era,
     ValidateAuxiliaryData era (Crypto era),
     ExtendedUTxO era,
@@ -369,6 +388,18 @@ instance
     -- Fix some Core types to the Babbage Era
     Core.Tx era ~ ValidatedTx era,
     ConcreteBabbage era,
+=======
+  ( ExtendedUTxO era,
+    AlonzoEraTx era,
+    EraUTxO era,
+    ScriptsNeeded era ~ AlonzoScriptsNeeded era,
+    BabbageEraTxBody era,
+    TxOut era ~ BabbageTxOut era,
+    HasField "_costmdls" (PParams era) CostModels,
+    HasField "_protocolVersion" (PParams era) ProtVer,
+    Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody),
+    Script era ~ AlonzoScript era,
+>>>>>>> f63095744 (Fixes to compile on ghc-9.2.4)
     -- Allow UTXOW to call UTXO
     Embed (Core.EraRule "UTXO" era) (BabbageUTXOW era),
     Environment (Core.EraRule "UTXO" era) ~ UtxoEnv era,
