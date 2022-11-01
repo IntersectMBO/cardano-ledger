@@ -41,7 +41,7 @@ import Cardano.Ledger.Shelley.LedgerState
   )
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.PoolRank (likelihood)
-import Cardano.Ledger.Shelley.UTxO (UTxO)
+import Cardano.Ledger.UTxO (UTxO)
 import Cardano.Protocol.TPraos.API (PraosCrypto)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.DeepSeq (NFData)

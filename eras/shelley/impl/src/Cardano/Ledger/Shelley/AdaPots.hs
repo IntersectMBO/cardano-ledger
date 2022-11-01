@@ -24,7 +24,7 @@ import Cardano.Ledger.Shelley.LedgerState
     UTxOState (..),
     rewards,
   )
-import Cardano.Ledger.Shelley.UTxO (coinBalance)
+import Cardano.Ledger.UTxO (coinBalance)
 import Data.Foldable (fold)
 
 data AdaPots = AdaPots

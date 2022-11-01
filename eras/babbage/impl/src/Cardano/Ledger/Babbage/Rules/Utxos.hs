@@ -63,7 +63,8 @@ import Cardano.Ledger.Shelley.Rules
     UtxoEnv (..),
     updateUTxOState,
   )
-import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), UTxO (..), totalDeposits)
+import Cardano.Ledger.Shelley.UTxO (totalDeposits)
+import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..))
 import qualified Cardano.Ledger.Val as Val
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended

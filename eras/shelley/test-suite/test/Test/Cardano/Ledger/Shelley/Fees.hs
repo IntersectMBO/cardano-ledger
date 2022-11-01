@@ -63,9 +63,9 @@ import Cardano.Ledger.Shelley.TxWits
   ( addrWits,
     scriptWits,
   )
-import Cardano.Ledger.Shelley.UTxO (makeWitnessesVKey)
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (mkTxInPartial)
+import Cardano.Ledger.UTxO (makeWitnessesVKey)
 import qualified Cardano.Ledger.Val as Val
 import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Char8 as BS (pack)

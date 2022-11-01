@@ -48,8 +48,8 @@ import Cardano.Ledger.Serialization
 import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Shelley.StabilityWindow
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..))
-import Cardano.Ledger.Shelley.UTxO (UTxO (UTxO))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import Cardano.Ledger.UTxO (UTxO (UTxO))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..))

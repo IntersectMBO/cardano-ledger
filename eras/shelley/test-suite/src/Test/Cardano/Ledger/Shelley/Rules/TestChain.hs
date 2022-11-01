@@ -80,8 +80,9 @@ import Cardano.Ledger.Shelley.Rules
     votedValue,
   )
 import Cardano.Ledger.Shelley.TxBody hiding (TxBody, TxOut)
-import Cardano.Ledger.Shelley.UTxO (UTxO (..), coinBalance, totalDeposits, txins, txouts)
+import Cardano.Ledger.Shelley.UTxO (totalDeposits)
 import Cardano.Ledger.TxIn (TxIn (..))
+import Cardano.Ledger.UTxO (UTxO (..), coinBalance, txins, txouts)
 import Cardano.Ledger.UnifiedMap (ViewMap)
 import Cardano.Ledger.Val ((<+>), (<->))
 import Cardano.Protocol.TPraos.API (GetLedgerView)

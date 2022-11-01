@@ -14,11 +14,11 @@ import Cardano.Ledger.BaseTypes (Nonce)
 import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams)
-import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.Slot
   ( BlockNo (..),
     SlotNo (..),
   )
+import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import GHC.Stack (HasCallStack)

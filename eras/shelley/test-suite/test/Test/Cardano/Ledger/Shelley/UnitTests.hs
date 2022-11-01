@@ -90,8 +90,8 @@ import Cardano.Ledger.Shelley.TxWits
   ( ShelleyTxWits,
     addrWits,
   )
-import Cardano.Ledger.Shelley.UTxO (makeWitnessVKey, makeWitnessesVKey)
 import Cardano.Ledger.Slot
+import Cardano.Ledger.UTxO (makeWitnessVKey, makeWitnessesVKey)
 import Cardano.Ledger.Val ((<+>), (<->))
 import Cardano.Protocol.TPraos.BHeader (checkLeaderValue)
 import Control.State.Transition.Extended (PredicateFailure, TRC (..))

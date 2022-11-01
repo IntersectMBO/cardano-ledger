@@ -30,7 +30,7 @@ import Cardano.Ledger.Shelley.Genesis (ShelleyGenesisStaking (..))
 import qualified Cardano.Ledger.Shelley.LedgerState as LS
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..), ShelleyTxOut (..))
-import Cardano.Ledger.Shelley.UTxO (UTxO (..))
+import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Slotting.EpochInfo
 import Cardano.Slotting.Slot (EpochNo)
 import Control.Monad.Reader (runReader, runReaderT)

@@ -38,7 +38,7 @@ import Cardano.Ledger.Shelley.API
     ProtVer (..),
     UTxO (..),
   )
-import Cardano.Ledger.Shelley.UTxO (makeWitnessVKey)
+import Cardano.Ledger.UTxO (makeWitnessVKey)
 import Cardano.Ledger.Val (inject)
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..))

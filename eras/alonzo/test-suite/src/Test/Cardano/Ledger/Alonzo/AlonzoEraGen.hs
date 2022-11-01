@@ -78,17 +78,17 @@ import Cardano.Ledger.Mary.Value
 import Cardano.Ledger.Pretty.Alonzo ()
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl)
-import Cardano.Ledger.Shelley.UTxO
+import Cardano.Ledger.ShelleyMA.AuxiliaryData (AllegraTxAuxData (..))
+import Cardano.Ledger.ShelleyMA.Era ()
+import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), translateTimelock)
+import Cardano.Ledger.TxIn (TxIn)
+import Cardano.Ledger.UTxO
   ( EraUTxO (..),
     UTxO (..),
     coinBalance,
     getScriptsHashesNeeded,
     getScriptsNeeded,
   )
-import Cardano.Ledger.ShelleyMA.AuxiliaryData (AllegraTxAuxData (..))
-import Cardano.Ledger.ShelleyMA.Era ()
-import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), translateTimelock)
-import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val (Val (isAdaOnly, (<+>), (<×>)))
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad (replicateM)

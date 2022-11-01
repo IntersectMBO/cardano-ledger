@@ -15,8 +15,8 @@ import Cardano.Ledger.Shelley.API.Mempool
 import Cardano.Ledger.Shelley.API.Wallet (getFilteredUTxO, getUTxO)
 import Cardano.Ledger.Shelley.Genesis (ShelleyGenesis (..), mkShelleyGlobals)
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Shelley.UTxO
 import Cardano.Ledger.State.UTxO
+import Cardano.Ledger.UTxO
 import Cardano.Ledger.Val
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
 import Cardano.Slotting.Slot

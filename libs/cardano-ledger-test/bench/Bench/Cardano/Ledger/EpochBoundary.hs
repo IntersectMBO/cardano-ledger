@@ -26,10 +26,10 @@ import Cardano.Ledger.SafeHash
     castSafeHash,
   )
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxOut (..))
-import Cardano.Ledger.Shelley.UTxO (UTxO (UTxO))
 import Cardano.Ledger.ShelleyMA ()
 import Cardano.Ledger.Slot (SlotNo (SlotNo))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import Cardano.Ledger.UTxO (UTxO (UTxO))
 import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData (..), deepseq)
 import Criterion

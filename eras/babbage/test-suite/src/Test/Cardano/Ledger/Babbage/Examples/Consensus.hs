@@ -42,9 +42,9 @@ import Cardano.Ledger.Shelley.API
   )
 import Cardano.Ledger.Shelley.Rules (ShelleyDelegsPredFailure (..), ShelleyLedgerPredFailure (..))
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
-import Cardano.Ledger.Shelley.UTxO (makeWitnessesVKey)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.TxIn (mkTxInPartial)
+import Cardano.Ledger.UTxO (makeWitnessesVKey)
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import Data.Default.Class (def)
 import qualified Data.Map.Strict as Map

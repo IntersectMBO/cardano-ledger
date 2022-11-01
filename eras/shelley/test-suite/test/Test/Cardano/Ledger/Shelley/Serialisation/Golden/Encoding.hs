@@ -145,9 +145,9 @@ import Cardano.Ledger.Shelley.TxBody
     pattern RewardAcnt,
   )
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits, addrWits, scriptWits)
-import Cardano.Ledger.Shelley.UTxO (UTxO (UTxO), makeWitnessVKey)
 import Cardano.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxId, TxIn (..))
+import Cardano.Ledger.UTxO (UTxO (UTxO), makeWitnessVKey)
 import Cardano.Protocol.TPraos.BHeader
   ( BHBody (..),
     BHeader (..),

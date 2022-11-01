@@ -35,5 +35,6 @@ import Cardano.Ledger.Shelley.Tx
     nativeMultiSigTag,
   )
 import qualified Cardano.Ledger.Shelley.Tx as Shelley (Tx, TxBody, TxOut)
+import Cardano.Ledger.Shelley.UTxO ()
 
 type Shelley = ShelleyEra StandardCrypto

@@ -56,7 +56,7 @@ import Cardano.Ledger.Shelley.Rules
     validateNeededWitnesses,
   )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), UTxO (..))
+import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
   ( Embed (..),

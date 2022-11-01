@@ -30,8 +30,8 @@ import Cardano.Ledger.Shelley.TxBody
     RewardAcnt (..),
     Wdrl (..),
   )
-import Cardano.Ledger.Shelley.UTxO (UTxO (..), makeWitnessVKey)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import Cardano.Ledger.UTxO (UTxO (..), makeWitnessVKey)
 import Cardano.Ledger.Val (Val (inject), (<+>), (<->))
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import Control.Iterate.Exp (dom, (∈))

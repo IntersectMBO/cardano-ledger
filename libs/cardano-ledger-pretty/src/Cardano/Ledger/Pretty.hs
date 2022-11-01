@@ -162,7 +162,6 @@ import Cardano.Ledger.Shelley.TxWits
   ( ShelleyTxWits,
     prettyWitnessSetParts,
   )
-import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.Slot
   ( BlockNo (..),
     Duration (..),
@@ -171,6 +170,7 @@ import Cardano.Ledger.Slot
     SlotNo (..),
   )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.UnifiedMap (Trip (Triple), Triple, UMap (..), UnifiedMap)
 import Cardano.Protocol.TPraos.BHeader
   ( BHBody (..),
@@ -902,7 +902,7 @@ instance PrettyA (SnapShots c) where
   prettyA = ppSnapShots
 
 -- ============================
--- Cardano.Ledger.Shelley.UTxO
+-- Cardano.Ledger.UTxO
 
 ppUTxO ::
   PrettyA (TxOut era) =>

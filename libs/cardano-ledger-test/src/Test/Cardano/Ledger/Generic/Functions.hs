@@ -55,9 +55,10 @@ import Cardano.Ledger.Shelley.TxBody
     ShelleyEraTxBody (..),
     ShelleyTxOut (..),
   )
-import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), UTxO (..), coinBalance, totalDeposits)
+import Cardano.Ledger.Shelley.UTxO (totalDeposits)
 import Cardano.Ledger.Slot (EpochNo)
 import Cardano.Ledger.TxIn (TxIn (..))
+import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), coinBalance)
 import Cardano.Ledger.Val (Val (inject, (<+>), (<->)))
 import Cardano.Slotting.EpochInfo.API (epochInfoSize)
 import Control.Monad.Reader (runReader)

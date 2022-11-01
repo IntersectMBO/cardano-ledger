@@ -46,10 +46,11 @@ import Cardano.Ledger.Shelley.Rules (PpupEnv (..), ShelleyPPUP, ShelleyPpupPredF
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), ShelleyTxOut, TxIn)
 import Cardano.Ledger.Shelley.TxBody (RewardAcnt, ShelleyEraTxBody (..))
-import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), UTxO (..), totalDeposits, txouts, txup)
+import Cardano.Ledger.Shelley.UTxO (totalDeposits, txup)
 import Cardano.Ledger.ShelleyMA.Era (ShelleyMAUTXO)
 import Cardano.Ledger.ShelleyMA.Timelocks
 import Cardano.Ledger.ShelleyMA.TxBody (MATxBody, ShelleyMAEraTxBody (..))
+import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), txouts)
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (SlotNo)
 import Control.Monad.Trans.Reader (asks)

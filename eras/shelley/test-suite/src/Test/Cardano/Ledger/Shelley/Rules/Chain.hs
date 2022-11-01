@@ -83,8 +83,8 @@ import Cardano.Ledger.Shelley.Rules
     ShelleyTickEvent,
     ShelleyTickPredFailure,
   )
-import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.Slot (EpochNo)
+import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Protocol.TPraos.BHeader
   ( BHeader,
     LastAppliedBlock (..),

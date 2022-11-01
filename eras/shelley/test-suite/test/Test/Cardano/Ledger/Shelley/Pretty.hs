@@ -4,7 +4,7 @@ import Cardano.Ledger.Pretty
 import Cardano.Ledger.Shelley.LedgerState (LedgerState)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx)
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody)
-import Cardano.Ledger.Shelley.UTxO (UTxO)
+import Cardano.Ledger.UTxO (UTxO)
 import Prettyprinter (defaultLayoutOptions, layoutPretty)
 import Prettyprinter.Render.Text (renderStrict)
 import Prettyprinter.Util (putDocW)
