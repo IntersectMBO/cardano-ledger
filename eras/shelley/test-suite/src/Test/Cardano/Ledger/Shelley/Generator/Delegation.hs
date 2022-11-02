@@ -312,7 +312,7 @@ genDelegation
       availableDelegates = filter (registeredDelegate . toCred . snd) keys
       availableDelegatesScripts =
         filter (registeredDelegate . scriptToCred' . snd) scripts
-      registeredPools = _pParams (dpsPState dpState)
+      registeredPools = psStakePoolParams (dpsPState dpState)
       availablePools = Set.toList $ domain registeredPools
 
 genGenesisDelegation ::
@@ -433,9 +433,9 @@ genRetirePool pp poolKeys pState slot =
         <$> QC.elements retireable
         <*> (EpochNo <$> genWord64 epochLow epochHigh)
   where
-    stakePools = _pParams pState
+    stakePools = psStakePoolParams pState
     registered_ = eval (dom stakePools)
-    retiring_ = domain (_retiring pState)
+    retiring_ = domain (psRetiring pState)
     retireable = Set.toList (registered_ \\ retiring_)
     lookupHash hk' =
       fromMaybe

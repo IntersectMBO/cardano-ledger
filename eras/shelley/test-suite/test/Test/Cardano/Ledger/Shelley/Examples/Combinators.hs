@@ -328,7 +328,7 @@ newPool pool cs = cs {chainNes = nes'}
     ps = dpsPState dps
     ps' =
       ps
-        { _pParams = Map.insert (_poolId pool) pool (_pParams ps)
+        { psStakePoolParams = Map.insert (_poolId pool) pool (psStakePoolParams ps)
         }
     dps' = dps {dpsPState = ps'}
     ls' = ls {lsDPState = dps'}
@@ -350,7 +350,7 @@ reregPool pool cs = cs {chainNes = nes'}
     ps = dpsPState dps
     ps' =
       ps
-        { _fPParams = Map.insert (_poolId pool) pool (_pParams ps)
+        { psFutureStakePoolParams = Map.insert (_poolId pool) pool (psStakePoolParams ps)
         }
     dps' = dps {dpsPState = ps'}
     ls' = ls {lsDPState = dps'}
@@ -372,8 +372,8 @@ updatePoolParams pool cs = cs {chainNes = nes'}
     ps = dpsPState dps
     ps' =
       ps
-        { _pParams = Map.insert (_poolId pool) pool (_pParams ps),
-          _fPParams = Map.delete (_poolId pool) (_pParams ps)
+        { psStakePoolParams = Map.insert (_poolId pool) pool (psStakePoolParams ps),
+          psFutureStakePoolParams = Map.delete (_poolId pool) (psStakePoolParams ps)
         }
     dps' = dps {dpsPState = ps'}
     ls' = ls {lsDPState = dps'}
@@ -396,7 +396,7 @@ stageRetirement kh e cs = cs {chainNes = nes'}
     ls = esLState es
     dps = lsDPState ls
     ps = dpsPState dps
-    ps' = ps {_retiring = Map.insert kh e (_retiring ps)}
+    ps' = ps {psRetiring = Map.insert kh e (psRetiring ps)}
     dps' = dps {dpsPState = ps'}
     ls' = ls {lsDPState = dps'}
     es' = es {esLState = ls'}
@@ -421,8 +421,8 @@ reapPool pool cs = cs {chainNes = nes'}
     ps = dpsPState dps
     ps' =
       ps
-        { _retiring = Map.delete kh (_retiring ps),
-          _pParams = Map.delete kh (_pParams ps)
+        { psRetiring = Map.delete kh (psRetiring ps),
+          psStakePoolParams = Map.delete kh (psStakePoolParams ps)
         }
     pp = esPp es
     ds = dpsDState dps

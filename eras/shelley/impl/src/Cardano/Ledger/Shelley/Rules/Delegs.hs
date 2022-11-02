@@ -51,7 +51,7 @@ import Cardano.Ledger.Shelley.LedgerState
     RewardAccounts,
     dpsDState,
     rewards,
-    _pParams,
+    psStakePoolParams,
     dsUnified,
   )
 import Cardano.Ledger.Shelley.Rules.Delpl (DelplEnv (..), ShelleyDELPL, ShelleyDelplEvent, ShelleyDelplPredFailure)
@@ -235,7 +235,7 @@ delegsTransition = do
 
       let isDelegationRegistered = case c of
             DCertDeleg (Delegate deleg) ->
-              let stPools_ = _pParams $ dpsPState dpstate'
+              let stPools_ = psStakePoolParams $ dpsPState dpstate'
                   targetPool = _delegatee deleg
                in if eval (targetPool ∈ dom stPools_)
                     then Right ()

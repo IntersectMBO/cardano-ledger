@@ -1098,8 +1098,8 @@ genPool = frequencyT [(10, genNew), (90, pickExisting)]
       modifyModelPoolParams (Map.insert kh pp)
       return (kh, pp)
     pickExisting = do
-      _pParams <- gets (mPoolParams . gsModel)
+      psStakePoolParams <- gets (mPoolParams . gsModel)
       avoidKey <- gets gsAvoidKey
-      lift (genMapElemWhere _pParams 10 (\kh _ -> kh `Set.notMember` avoidKey)) >>= \case
+      lift (genMapElemWhere psStakePoolParams 10 (\kh _ -> kh `Set.notMember` avoidKey)) >>= \case
         Nothing -> genNew
         Just (kh, pp) -> pure (kh, pp)

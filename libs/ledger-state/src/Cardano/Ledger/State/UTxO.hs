@@ -465,11 +465,11 @@ countPStateStats :: PState C -> PStateStats
 countPStateStats PState {..} =
   PStateStats
     { pssKeyHashStakePool =
-        statMapKeys _pParams
-          <> statMapKeys _fPParams
-          <> statMapKeys _retiring,
+        statMapKeys psStakePoolParams
+          <> statMapKeys psFutureStakePoolParams
+          <> statMapKeys psRetiring,
       pssPoolParamsStats =
-        foldMap countPoolParamsStats _pParams <> foldMap countPoolParamsStats _fPParams
+        foldMap countPoolParamsStats psStakePoolParams <> foldMap countPoolParamsStats psFutureStakePoolParams
     }
 
 data LedgerStateStats = LedgerStateStats

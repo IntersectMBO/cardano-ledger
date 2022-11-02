@@ -15,7 +15,7 @@ where
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool))
 import Cardano.Ledger.Shelley.LedgerState
   ( PState (..),
-    _pParams,
+    psStakePoolParams,
   )
 import Cardano.Ledger.Slot (EpochNo (..))
 import Control.SetAlgebra (dom, eval, setSingleton, (∩), (⊆), (▷))
@@ -40,9 +40,9 @@ removedAfterPoolreap p p' e =
       && Set.null (eval (retire ∩ dom stp'))
       && Set.null (eval (retire ∩ dom retiring'))
   where
-    stp = _pParams p
-    stp' = _pParams p'
-    retiring = _retiring p
-    retiring' = _retiring p'
+    stp = psStakePoolParams p
+    stp' = psStakePoolParams p'
+    retiring = psRetiring p
+    retiring' = psRetiring p'
     retire :: Set.Set (KeyHash 'StakePool c) -- This declaration needed to disambiguate 'eval'
     retire = eval (dom (retiring ▷ setSingleton e))

@@ -253,7 +253,7 @@ registerGenesisStaking
       newPState :: PState (EraCrypto era)
       newPState =
         (dpsPState oldDPState)
-          { _pParams = LM.toMap sgsPools
+          { psStakePoolParams = LM.toMap sgsPools
           }
 
       -- The new stake distribution is made on the basis of a snapshot taken

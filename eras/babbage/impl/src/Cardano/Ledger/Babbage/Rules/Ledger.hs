@@ -97,7 +97,7 @@ instance
         "Deposit pot must equal obligation"
         ( \(TRC (LedgerEnv {ledgerPp}, _, _))
            (LedgerState utxoSt DPState {dpsDState, dpsPState}) ->
-              obligation ledgerPp (rewards dpsDState) (_pParams dpsPState)
+              obligation ledgerPp (rewards dpsDState) (psStakePoolParams dpsPState)
                 == utxosDeposited utxoSt
         )
     ]

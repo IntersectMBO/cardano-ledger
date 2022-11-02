@@ -100,7 +100,7 @@ instance
     [ PostCondition
         "Deposit pot must equal obligation"
         ( \(TRC (pp, _, _)) st ->
-            obligation pp (rewards $ prDState st) (_pParams $ prPState st)
+            obligation pp (rewards $ prDState st) (psStakePoolParams $ prPState st)
               == utxosDeposited (prUTxOSt st)
         ),
       PostCondition
@@ -119,11 +119,11 @@ poolReapTransition = do
   TRC (pp, PoolreapState us a ds ps, e) <- judgmentContext
 
   let retired :: Set (KeyHash 'StakePool (EraCrypto era))
-      retired = eval (dom (_retiring ps ▷ setSingleton e))
+      retired = eval (dom (psRetiring ps ▷ setSingleton e))
       pr :: Map.Map (KeyHash 'StakePool (EraCrypto era)) Coin
       pr = Map.fromSet (const (getField @"_poolDeposit" pp)) retired
       rewardAcnts :: Map.Map (KeyHash 'StakePool (EraCrypto era)) (RewardAcnt (EraCrypto era))
-      rewardAcnts = Map.map _poolRAcnt $ eval (retired ◁ _pParams ps)
+      rewardAcnts = Map.map _poolRAcnt $ eval (retired ◁ psStakePoolParams ps)
       rewardAcnts_ :: Map.Map (KeyHash 'StakePool (EraCrypto era)) (RewardAcnt (EraCrypto era), Coin)
       rewardAcnts_ = Map.intersectionWith (,) rewardAcnts pr
       rewardAcnts' :: Map.Map (RewardAcnt (EraCrypto era)) Coin
@@ -168,7 +168,7 @@ poolReapTransition = do
          in ds {dsUnified = u2}
       )
       ps
-        { _pParams = eval (retired ⋪ _pParams ps),
-          _fPParams = eval (retired ⋪ _fPParams ps),
-          _retiring = eval (retired ⋪ _retiring ps)
+        { psStakePoolParams = eval (retired ⋪ psStakePoolParams ps),
+          psFutureStakePoolParams = eval (retired ⋪ psFutureStakePoolParams ps),
+          psRetiring = eval (retired ⋪ psRetiring ps)
         }

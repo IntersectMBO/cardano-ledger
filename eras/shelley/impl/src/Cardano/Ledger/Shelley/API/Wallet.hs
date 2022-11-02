@@ -186,7 +186,7 @@ getPools ::
   Set (KeyHash 'StakePool (EraCrypto era))
 getPools = Map.keysSet . f
   where
-    f = _pParams . dpsPState . lsDPState . esLState . nesEs
+    f = psStakePoolParams . dpsPState . lsDPState . esLState . nesEs
 
 -- | Get the /current/ registered stake pool parameters for a given set of
 -- stake pools. The result map will contain entries for all the given stake
@@ -197,7 +197,7 @@ getPoolParameters ::
   Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era))
 getPoolParameters = Map.restrictKeys . f
   where
-    f = _pParams . dpsPState . lsDPState . esLState . nesEs
+    f = psStakePoolParams . dpsPState . lsDPState . esLState . nesEs
 
 -- | Get pool sizes, but in terms of total stake
 --

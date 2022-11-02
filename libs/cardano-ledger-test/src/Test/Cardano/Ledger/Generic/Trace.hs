@@ -245,7 +245,7 @@ raiseMockError ::
   String
 raiseMockError slot (SlotNo next) epochstate pdfs txs GenState {..} =
   let utxo = unUTxO $ (utxosUtxo . lsUTxOState . esLState) epochstate
-      _poolParams = (_pParams . dpsPState . lsDPState . esLState) epochstate
+      _poolParams = (psStakePoolParams . dpsPState . lsDPState . esLState) epochstate
    in show $
         vsep
           [ ppString "===================================",

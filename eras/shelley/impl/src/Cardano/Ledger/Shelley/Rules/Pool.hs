@@ -186,7 +186,7 @@ poolDelegationTransition ::
   TransitionRule (ShelleyPOOL era)
 poolDelegationTransition = do
   TRC (PoolEnv slot pp, ps, c) <- judgmentContext
-  let stpools = _pParams ps
+  let stpools = psStakePoolParams ps
   case c of
     DCertPool (RegPool poolParam) -> do
       -- note that pattern match is used instead of cwitness, as in the spec
@@ -216,14 +216,14 @@ poolDelegationTransition = do
           tellEvent $ RegisterPool hk
           pure $
             ps
-              { _pParams = eval (_pParams ps ∪ singleton hk poolParam)
+              { psStakePoolParams = eval (psStakePoolParams ps ∪ singleton hk poolParam)
               }
         else do
           tellEvent $ ReregisterPool hk
           pure $
             ps
-              { _fPParams = eval (_fPParams ps ⨃ singleton hk poolParam),
-                _retiring = eval (setSingleton hk ⋪ _retiring ps)
+              { psFutureStakePoolParams = eval (psFutureStakePoolParams ps ⨃ singleton hk poolParam),
+                psRetiring = eval (setSingleton hk ⋪ psRetiring ps)
               }
     DCertPool (RetirePool hk (EpochNo e)) -> do
       -- note that pattern match is used instead of cwitness, as in the spec
@@ -238,7 +238,7 @@ poolDelegationTransition = do
         <= cepoch
         + maxEpoch
         ?! StakePoolRetirementWrongEpochPOOL cepoch e (cepoch + maxEpoch)
-      pure $ ps {_retiring = eval (_retiring ps ⨃ singleton hk (EpochNo e))}
+      pure $ ps {psRetiring = eval (psRetiring ps ⨃ singleton hk (EpochNo e))}
     DCertDeleg _ -> do
       failBecause $ WrongCertificateTypePOOL 0
       pure ps

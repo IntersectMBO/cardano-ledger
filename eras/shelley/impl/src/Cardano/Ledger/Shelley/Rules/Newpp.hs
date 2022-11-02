@@ -114,8 +114,8 @@ newPpTransition = do
 
   case ppNew of
     Just ppNew' -> do
-      let Coin oblgCurr = obligation pp (rewView (dsUnified dstate)) (_pParams pstate)
-          Coin oblgNew = obligation ppNew' (rewView (dsUnified dstate)) (_pParams pstate)
+      let Coin oblgCurr = obligation pp (rewView (dsUnified dstate)) (psStakePoolParams pstate)
+          Coin oblgNew = obligation ppNew' (rewView (dsUnified dstate)) (psStakePoolParams pstate)
           diff = oblgCurr - oblgNew
           Coin availableReserves = availableAfterMIR ReservesMIR acnt (dsIRewards dstate)
 
