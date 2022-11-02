@@ -227,7 +227,7 @@ applyRUpd'
               delegState
                 { dpsDState =
                     dState
-                      { _unified = rewards dState UM.∪+ registeredAggregated
+                      { dsUnified = rewards dState UM.∪+ registeredAggregated
                       }
                 }
           }
@@ -272,7 +272,7 @@ incrementalStakeDistr incstake ds ps =
     delegs_
     (VMap.fromMap poolParams)
   where
-    UnifiedMap tripmap ptrmap = _unified ds
+    UnifiedMap tripmap ptrmap = dsUnified ds
     PState poolParams _ _ = ps
     delegs_ = UM.viewToVMap (delegations ds)
     -- A credential is active, only if it is being delegated

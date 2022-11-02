@@ -390,7 +390,7 @@ checkPreservation SourceSignalTarget {source, target, signal} =
               show obligationDiff
             ]
 
-    mir = _irwd . dpsDState . lsDPState $ lsOld
+    mir = dsIRewards . dpsDState . lsDPState $ lsOld
     isRegistered kh _ = UM.member kh oldRAs
     (regMirRes, unRegMirRes) = Map.partitionWithKey isRegistered (iRReserves mir)
     (regMirTre, unRegMirTre) = Map.partitionWithKey isRegistered (iRTreasury mir)
@@ -563,11 +563,11 @@ potsSumIncreaseByRewardsPerTx SourceSignalTarget {source = chainSt, signal = blo
         { source =
             LedgerState
               UTxOState {utxosUtxo = u, utxosDeposited = d, utxosFees = f}
-              DPState {dpsDState = DState {_unified = umap1}},
+              DPState {dpsDState = DState {dsUnified = umap1}},
           target =
             LedgerState
               UTxOState {utxosUtxo = u', utxosDeposited = d', utxosFees = f'}
-              DPState {dpsDState = DState {_unified = umap2}}
+              DPState {dpsDState = DState {dsUnified = umap2}}
         } =
         (coinBalance u' <+> d' <+> f')
           <-> (coinBalance u <+> d <+> f)

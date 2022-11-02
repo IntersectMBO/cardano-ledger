@@ -51,7 +51,7 @@ import Cardano.Ledger.Shelley.LedgerState
     UTxOState (..),
     dpsDState,
     rewards,
-    _unified,
+    dsUnified,
   )
 import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Shelley.Rules
@@ -392,7 +392,7 @@ ledgerState :: LedgerState C
 ledgerState = LedgerState utxoState dpState
 
 addReward :: DPState C_Crypto -> Credential 'Staking C_Crypto -> Coin -> DPState C_Crypto
-addReward dp ra c = dp {dpsDState = ds {_unified = rewards'}}
+addReward dp ra c = dp {dpsDState = ds {dsUnified = rewards'}}
   where
     ds = dpsDState dp
     rewards' = UM.insert ra c (rewards ds)

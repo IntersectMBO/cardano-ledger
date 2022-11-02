@@ -162,10 +162,10 @@ poolReapTransition = do
     PoolreapState
       us {utxosDeposited = utxosDeposited us <-> (unclaimed <+> refunded)}
       a {_treasury = _treasury a <+> unclaimed}
-      ( let u0 = _unified ds
+      ( let u0 = dsUnified ds
             u1 = (Rewards u0 UM.∪+ refunds)
             u2 = (Delegations u1 UM.⋫ retired)
-         in ds {_unified = u2}
+         in ds {dsUnified = u2}
       )
       ps
         { _pParams = eval (retired ⋪ _pParams ps),

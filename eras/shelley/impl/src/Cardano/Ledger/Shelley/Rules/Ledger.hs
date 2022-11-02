@@ -224,7 +224,7 @@ ledgerTransition = do
         )
 
   let DPState dstate pstate = dpstate
-      genDelegs = _genDelegs dstate
+      genDelegs = dsGenDelegs dstate
       stpools = _pParams pstate
 
   utxoSt' <-

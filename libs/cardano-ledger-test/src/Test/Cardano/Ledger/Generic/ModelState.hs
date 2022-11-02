@@ -363,8 +363,8 @@ abstract :: NewEpochState era -> ModelNewEpochState era
 abstract x =
   ModelNewEpochState
     { mPoolParams = (_pParams . dpsPState . lsDPState . esLState . nesEs) x,
-      mRewards = (UMap.rewView . _unified . dpsDState . lsDPState . esLState . nesEs) x,
-      mDelegations = (UMap.delView . _unified . dpsDState . lsDPState . esLState . nesEs) x,
+      mRewards = (UMap.rewView . dsUnified . dpsDState . lsDPState . esLState . nesEs) x,
+      mDelegations = (UMap.delView . dsUnified . dpsDState . lsDPState . esLState . nesEs) x,
       mUTxO = (unUTxO . utxosUtxo . lsUTxOState . esLState . nesEs) x,
       mMutFee = Map.empty,
       mAccountState = (esAccountState . nesEs) x,

@@ -52,7 +52,7 @@ import Cardano.Ledger.Shelley.LedgerState
     dpsDState,
     rewards,
     _pParams,
-    _unified,
+    dsUnified,
   )
 import Cardano.Ledger.Shelley.Rules.Delpl (DelplEnv (..), ShelleyDELPL, ShelleyDelplEvent, ShelleyDelplPredFailure)
 import Cardano.Ledger.Shelley.TxBody
@@ -228,7 +228,7 @@ delegsTransition = do
               Map.empty
               wdrls_
           unified' = rewards' UM.⨃ wdrls_'
-      pure $ dpstate {dpsDState = ds {_unified = unified'}}
+      pure $ dpstate {dpsDState = ds {dsUnified = unified'}}
     gamma :|> c -> do
       dpstate' <-
         trans @(ShelleyDELEGS era) $ TRC (env, dpstate, gamma)

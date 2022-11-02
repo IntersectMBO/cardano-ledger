@@ -345,11 +345,11 @@ genGenesisDelegation coreNodes delegateKeys dpState =
             ),
           CoreKeyCred [gkey]
         )
-    (GenDelegs genDelegs_) = _genDelegs $ dpsDState dpState
+    (GenDelegs genDelegs_) = dsGenDelegs $ dpsDState dpState
     genesisDelegator k = eval (k ∈ dom genDelegs_)
     genesisDelegators = filter (genesisDelegator . hashVKey) (fst <$> coreNodes)
     notActiveDelegatee k = not (coerceKeyRole k `List.elem` fmap genDelegKeyHash (Map.elems genDelegs_))
-    fGenDelegs = _fGenDelegs $ dpsDState dpState
+    fGenDelegs = dsFutureGenDelegs $ dpsDState dpState
     notFutureDelegatee k = not (coerceKeyRole k `List.elem` fmap genDelegKeyHash (Map.elems fGenDelegs))
     notDelegatee k = notActiveDelegatee k && notFutureDelegatee k
     availableDelegatees = filter (notDelegatee . hashVKey . cold) allDelegateKeys
@@ -457,7 +457,7 @@ genInstantaneousRewardsAccounts ::
   DState (EraCrypto era) ->
   Gen (Maybe (DCert (EraCrypto era), CertCred era))
 genInstantaneousRewardsAccounts s genesisDelegatesByHash pparams accountState delegSt = do
-  let (GenDelegs genDelegs_) = _genDelegs delegSt
+  let (GenDelegs genDelegs_) = dsGenDelegs delegSt
       lookupGenDelegate' gk =
         fromMaybe
           (error "genInstantaneousRewardsAccounts: lookupGenDelegate failed")
@@ -476,7 +476,7 @@ genInstantaneousRewardsAccounts s genesisDelegatesByHash pparams accountState de
       <*> QC.shuffle (lookupGenDelegate' . genDelegKeyHash <$> Map.elems genDelegs_)
 
   pot <- QC.elements [ReservesMIR, TreasuryMIR]
-  let available = availableAfterMIR pot accountState (_irwd delegSt)
+  let available = availableAfterMIR pot accountState (dsIRewards delegSt)
   let rewardAmount = fold $ Map.elems credCoinMap
       insufficientFunds = toDeltaCoin available < rewardAmount
   pure $
@@ -507,7 +507,7 @@ genInstantaneousRewardsTransfer ::
   DState (EraCrypto era) ->
   Gen (Maybe (DCert (EraCrypto era), CertCred era))
 genInstantaneousRewardsTransfer s genesisDelegatesByHash pparams accountState delegSt = do
-  let (GenDelegs genDelegs_) = _genDelegs delegSt
+  let (GenDelegs genDelegs_) = dsGenDelegs delegSt
       lookupGenDelegate' gk =
         fromMaybe
           (error "genInstantaneousRewardsTransfer: lookupGenDelegate failed")
@@ -519,7 +519,7 @@ genInstantaneousRewardsTransfer s genesisDelegatesByHash pparams accountState de
       <*> QC.shuffle (lookupGenDelegate' . genDelegKeyHash <$> Map.elems genDelegs_)
 
   pot <- QC.elements [ReservesMIR, TreasuryMIR]
-  let Coin available = availableAfterMIR pot accountState (_irwd delegSt)
+  let Coin available = availableAfterMIR pot accountState (dsIRewards delegSt)
   amount <- if available > 0 then QC.choose (0, available) else pure 0
   pure $
     if -- Discard this generator (by returning Nothing) if:

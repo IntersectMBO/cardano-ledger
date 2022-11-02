@@ -82,7 +82,7 @@ import Cardano.Ledger.Shelley.LedgerState
     NewEpochState (..),
     dpsDState,
     lsDPState,
-    _genDelegs,
+    dsGenDelegs,
   )
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Rules (ShelleyTickfPredFailure)
@@ -199,7 +199,7 @@ instance CC.Crypto c => GetLedgerView (BabbageEra c) where
           lvExtraEntropy = error "Extra entropy is not set in the Babbage era",
           lvPoolDistr = pd,
           lvGenDelegs =
-            _genDelegs
+            dsGenDelegs
               . dpsDState
               . lsDPState
               $ esLState es,
@@ -227,7 +227,7 @@ instance CC.Crypto c => GetLedgerView (ConwayEra c) where
           lvExtraEntropy = error "Extra entropy is not set in the Conway era",
           lvPoolDistr = pd,
           lvGenDelegs =
-            _genDelegs
+            dsGenDelegs
               . dpsDState
               . lsDPState
               $ esLState es,
@@ -301,7 +301,7 @@ view
             lvExtraEntropy = ee,
             lvPoolDistr = pd,
             lvGenDelegs =
-              _genDelegs
+              dsGenDelegs
                 . dpsDState
                 . lsDPState
                 $ esLState es,

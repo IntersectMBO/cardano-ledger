@@ -103,13 +103,13 @@ data DState c = DState
   { -- | Unified Reward Maps. This contains the reward map (which is the source
     -- of truth regarding the registered stake credentials, the delegation map,
     -- and the stake credential pointer map.
-    _unified :: !(UnifiedMap c),
+    dsUnified :: !(UnifiedMap c),
     -- | Future genesis key delegations
-    _fGenDelegs :: !(Map (FutureGenDeleg c) (GenDelegPair c)),
+    dsFutureGenDelegs :: !(Map (FutureGenDeleg c) (GenDelegPair c)),
     -- | Genesis key delegations
-    _genDelegs :: !(GenDelegs c),
+    dsGenDelegs :: !(GenDelegs c),
     -- | Instantaneous Rewards
-    _irwd :: !(InstantaneousRewards c)
+    dsIRewards :: !(InstantaneousRewards c)
   }
   deriving (Show, Eq, Generic)
 

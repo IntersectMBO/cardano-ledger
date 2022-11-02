@@ -427,21 +427,21 @@ countDStateStats :: DState C -> DStateStats
 countDStateStats DState {..} =
   DStateStats
     { dssCredentialStaking =
-        statMapKeys (rewView _unified)
-          <> statMapKeys (delView _unified)
-          <> statSet (range (ptrView _unified)),
-      dssDelegations = statFoldable (delView _unified),
+        statMapKeys (rewView dsUnified)
+          <> statMapKeys (delView dsUnified)
+          <> statSet (range (ptrView dsUnified)),
+      dssDelegations = statFoldable (delView dsUnified),
       dssKeyHashGenesis =
-        statFoldable (fGenDelegGenKeyHash <$> Map.keys _fGenDelegs)
-          <> statMapKeys (unGenDelegs _genDelegs),
+        statFoldable (fGenDelegGenKeyHash <$> Map.keys dsFutureGenDelegs)
+          <> statMapKeys (unGenDelegs dsGenDelegs),
       dssKeyHashGenesisDelegate =
-        statFoldable (genDelegKeyHash <$> Map.elems _fGenDelegs)
+        statFoldable (genDelegKeyHash <$> Map.elems dsFutureGenDelegs)
           <> statFoldable
-            (genDelegKeyHash <$> Map.elems (unGenDelegs _genDelegs)),
+            (genDelegKeyHash <$> Map.elems (unGenDelegs dsGenDelegs)),
       dssHashVerKeyVRF =
-        statFoldable (genDelegVrfHash <$> Map.elems _fGenDelegs)
+        statFoldable (genDelegVrfHash <$> Map.elems dsFutureGenDelegs)
           <> statFoldable
-            (genDelegVrfHash <$> Map.elems (unGenDelegs _genDelegs))
+            (genDelegVrfHash <$> Map.elems (unGenDelegs dsGenDelegs))
     }
 
 data PStateStats = PStateStats

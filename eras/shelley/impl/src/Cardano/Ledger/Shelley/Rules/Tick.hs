@@ -121,8 +121,8 @@ adoptGenesisDelegs es slot = es'
     ls = esLState es
     dp = lsDPState ls
     ds = dpsDState dp
-    fGenDelegs = _fGenDelegs ds
-    GenDelegs genDelegs = _genDelegs ds
+    fGenDelegs = dsFutureGenDelegs ds
+    GenDelegs genDelegs = dsGenDelegs ds
     (curr, fGenDelegs') = Map.partitionWithKey (\(FutureGenDeleg s _) _ -> s <= slot) fGenDelegs
     latestPerGKey (FutureGenDeleg s genKeyHash) delegate latest =
       case Map.lookup genKeyHash latest of
@@ -134,8 +134,8 @@ adoptGenesisDelegs es slot = es'
     genDelegs' = Map.map snd $ Map.foldrWithKey latestPerGKey Map.empty curr
     ds' =
       ds
-        { _fGenDelegs = fGenDelegs',
-          _genDelegs = GenDelegs $ eval (genDelegs ⨃ genDelegs')
+        { dsFutureGenDelegs = fGenDelegs',
+          dsGenDelegs = GenDelegs $ eval (genDelegs ⨃ genDelegs')
         }
     dp' = dp {dpsDState = ds'}
     ls' = ls {lsDPState = dp'}

@@ -30,7 +30,7 @@ import Cardano.Ledger.Shelley.LedgerState
     UTxOState (utxosDeposited),
     availableAfterMIR,
     pvCanFollow,
-    _irwd,
+    dsIRewards,
   )
 import Cardano.Ledger.Shelley.PParams
   ( ProposedPPUpdates (..),
@@ -114,10 +114,10 @@ newPpTransition = do
 
   case ppNew of
     Just ppNew' -> do
-      let Coin oblgCurr = obligation pp (rewView (_unified dstate)) (_pParams pstate)
-          Coin oblgNew = obligation ppNew' (rewView (_unified dstate)) (_pParams pstate)
+      let Coin oblgCurr = obligation pp (rewView (dsUnified dstate)) (_pParams pstate)
+          Coin oblgNew = obligation ppNew' (rewView (dsUnified dstate)) (_pParams pstate)
           diff = oblgCurr - oblgNew
-          Coin availableReserves = availableAfterMIR ReservesMIR acnt (_irwd dstate)
+          Coin availableReserves = availableAfterMIR ReservesMIR acnt (dsIRewards dstate)
 
       Coin oblgCurr
         == utxosDeposited utxoSt

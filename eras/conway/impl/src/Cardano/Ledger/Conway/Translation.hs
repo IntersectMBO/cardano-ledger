@@ -149,7 +149,7 @@ instance Crypto c => TranslateEra (ConwayEra c) API.LedgerState where
     where
       updateGenesisKeys (DPState dstate pstate) = DPState dstate' pstate
         where
-          dstate' = dstate {_genDelegs = newGenDelegs}
+          dstate' = dstate {dsGenDelegs = newGenDelegs}
 
 instance Crypto c => TranslateEra (ConwayEra c) API.UTxOState where
   translateEra ctxt us =

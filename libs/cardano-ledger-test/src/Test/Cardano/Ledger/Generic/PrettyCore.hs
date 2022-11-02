@@ -1324,7 +1324,7 @@ pcUTxOState proof (UTxOState u dep fees _pups _stakedistro) =
 instance Reflect era => PrettyC (UTxOState era) era where prettyC = pcUTxOState
 
 pcDPState :: p -> DPState era -> PDoc
-pcDPState _proof (DPState (DState {_unified = un}) (PState {_pParams = pool})) =
+pcDPState _proof (DPState (DState {dsUnified = un}) (PState {_pParams = pool})) =
   ppRecord
     "DPState summary"
     [ ("rewards", ppMap pcCredential pcCoin (UMap.rewView un)),

@@ -241,11 +241,11 @@ registerGenesisStaking
       newDState :: DState (EraCrypto era)
       newDState =
         (dpsDState oldDPState)
-          { _unified =
+          { dsUnified =
               UM.unify
                 (Map.map (const $ Coin 0) . Map.mapKeys KeyHashObj . LM.toMap $ sgsStake)
                 (Map.mapKeys KeyHashObj $ LM.toMap sgsStake)
-                (UM.ptrView (_unified (dpsDState oldDPState)))
+                (UM.ptrView (dsUnified (dpsDState oldDPState)))
           }
 
       -- We consider pools as having been registered in slot 0

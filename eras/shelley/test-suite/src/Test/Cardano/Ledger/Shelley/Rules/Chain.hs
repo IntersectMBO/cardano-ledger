@@ -72,7 +72,7 @@ import Cardano.Ledger.Shelley.LedgerState
     StashedAVVMAddresses,
     smartUTxOState,
     updateNES,
-    _genDelegs,
+    dsGenDelegs,
   )
 import Cardano.Ledger.Shelley.Rules
   ( BbodyEnv (..),
@@ -217,7 +217,7 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
                     (Coin 0)
                     def
                 )
-                (DPState (def {_genDelegs = GenDelegs genDelegs}) def)
+                (DPState (def {dsGenDelegs = GenDelegs genDelegs}) def)
             )
             pp
             pp

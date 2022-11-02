@@ -101,7 +101,7 @@ genesisState genDelegs0 utxo0 =
     )
     (DPState dState def)
   where
-    dState = def {_genDelegs = GenDelegs genDelegs0}
+    dState = def {dsGenDelegs = GenDelegs genDelegs0}
 
 -- Functions for stake delegation model
 
