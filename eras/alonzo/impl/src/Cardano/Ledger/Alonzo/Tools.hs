@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -222,7 +221,7 @@ evaluateTransactionExecutionUnitsWithLogs pp tx utxo ei sysS costModels = do
         (logs, Left e) -> case lang of
           PlutusV1 -> Left $ ValidationFailedV1 e logs
           PlutusV2 -> Left $ ValidationFailedV2 e logs
-        (logs, Right exBudget) -> note (IncompatibleBudget exBudget) $ (logs,) <$> exBudgetToExUnits exBudget
+        (logs, Right exBudget) -> note (IncompatibleBudget exBudget) $ (,) logs <$> exBudgetToExUnits exBudget
       where
         maxBudget = transExUnits . getField @"_maxTxExUnits" $ pparams
         pv = transProtocolVersion . getField @"_protocolVersion" $ pparams
