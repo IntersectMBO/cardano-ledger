@@ -24,6 +24,7 @@ in the naming of release branches.
 - Added type synonyms for eras: `Shelley`, `Allegra`, `Mary`, `Alonzo`, `Babbage` and `Conway`.
 - Added `Twiddle` class to test alternative serializations: #2994
 - Added `getScriptsNeeded` and `getScriptsHashesNeeded` to `EraUTxO` class: #3019
+- Added `evaluateTransactionExecutionUnitsWithLogs` to `Alonzo`: #3111
 
 ### Changed
 

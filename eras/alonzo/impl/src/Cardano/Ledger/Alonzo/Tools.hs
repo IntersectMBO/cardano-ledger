@@ -92,6 +92,7 @@ note _ (Just x) = Right x
 note e Nothing = Left e
 
 type RedeemerReport c = Map RdmrPtr (Either (TransactionScriptFailure c) ExUnits)
+
 type RedeemerReportWithLogs c = Map RdmrPtr (Either (TransactionScriptFailure c) ([Text], ExUnits))
 
 -- | Evaluate the execution budgets needed for all the redeemers in
