@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                cardano-ledger-test
-version:             0.1.0.0
+version:             0.1.0.1
 synopsis:
   Testing harness, tests and benchmarks for Shelley style cardano ledgers
 license:             Apache-2.0

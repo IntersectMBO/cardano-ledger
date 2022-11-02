@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                cardano-ledger-conway-test
-version:             0.1.0.0
+version:             0.1.0.1
 synopsis:            Tests for Cardano ledger Conway era
 description:
   This package builds upon the Alonzo ledger

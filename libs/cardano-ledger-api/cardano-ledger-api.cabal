@@ -1,6 +1,6 @@
 cabal-version:      2.4
 name:               cardano-ledger-api
-version:            0.1.0.0
+version:            0.1.0.1
 synopsis:           Public API for the cardano ledger codebase
 description:
   This package a public interface into the cardano ledger codebase. It also

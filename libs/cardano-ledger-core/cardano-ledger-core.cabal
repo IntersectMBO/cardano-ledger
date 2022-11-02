@@ -1,6 +1,6 @@
 cabal-version:      2.4
 name:               cardano-ledger-core
-version:            0.1.0.0
+version:            0.1.0.1
 synopsis:           Core components of Cardano ledgers from the Shelley release on.
 description:
   Cardano ledgers from the Shelley release onwards share a core basis rooted in

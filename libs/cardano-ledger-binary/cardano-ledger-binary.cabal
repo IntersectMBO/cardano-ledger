@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                cardano-ledger-binary
-version:             0.1.0.0
+version:             0.1.0.1
 synopsis:            Binary serialization library used throughout ledger
 homepage:            https://github.com/input-output-hk/cardano-ledger
 license:             Apache-2.0
