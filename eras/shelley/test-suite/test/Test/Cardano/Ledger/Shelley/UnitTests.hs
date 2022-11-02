@@ -50,8 +50,8 @@ import Cardano.Ledger.Shelley.LedgerState
     LedgerState (..),
     UTxOState (..),
     dpsDState,
-    rewards,
     dsUnified,
+    rewards,
   )
 import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Shelley.Rules

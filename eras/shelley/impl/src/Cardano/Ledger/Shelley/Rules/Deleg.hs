@@ -43,10 +43,10 @@ import Cardano.Ledger.Shelley.LedgerState
     InstantaneousRewards (..),
     availableAfterMIR,
     delegations,
-    rewards,
     dsFutureGenDelegs,
     dsGenDelegs,
     dsIRewards,
+    rewards,
   )
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),

@@ -28,6 +28,8 @@ import Cardano.Ledger.Shelley.LedgerState
     InstantaneousRewards (..),
     RewardAccounts,
     dpsDState,
+    dsIRewards,
+    dsUnified,
     esAccountState,
     esLState,
     esNonMyopic,
@@ -36,8 +38,6 @@ import Cardano.Ledger.Shelley.LedgerState
     esSnapshots,
     lsDPState,
     rewards,
-    dsIRewards,
-    dsUnified,
     pattern EpochState,
   )
 import Cardano.Ledger.Val ((<->))

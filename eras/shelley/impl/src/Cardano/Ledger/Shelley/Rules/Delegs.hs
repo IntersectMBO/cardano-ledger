@@ -50,9 +50,9 @@ import Cardano.Ledger.Shelley.LedgerState
     DPState (..),
     RewardAccounts,
     dpsDState,
-    rewards,
-    psStakePoolParams,
     dsUnified,
+    psStakePoolParams,
+    rewards,
   )
 import Cardano.Ledger.Shelley.Rules.Delpl (DelplEnv (..), ShelleyDELPL, ShelleyDelplEvent, ShelleyDelplPredFailure)
 import Cardano.Ledger.Shelley.TxBody

@@ -70,9 +70,9 @@ import Cardano.Ledger.Shelley.LedgerState
     NewEpochState (..),
     PState (..),
     StashedAVVMAddresses,
+    dsGenDelegs,
     smartUTxOState,
     updateNES,
-    dsGenDelegs,
   )
 import Cardano.Ledger.Shelley.Rules
   ( BbodyEnv (..),

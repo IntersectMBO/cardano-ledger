@@ -29,8 +29,8 @@ import Cardano.Ledger.Shelley.LedgerState
     PState (..),
     UTxOState (utxosDeposited),
     availableAfterMIR,
-    pvCanFollow,
     dsIRewards,
+    pvCanFollow,
   )
 import Cardano.Ledger.Shelley.PParams
   ( ProposedPPUpdates (..),

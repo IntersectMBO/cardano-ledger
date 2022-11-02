@@ -81,8 +81,8 @@ import Cardano.Ledger.Shelley.LedgerState
   ( EpochState (..),
     NewEpochState (..),
     dpsDState,
-    lsDPState,
     dsGenDelegs,
+    lsDPState,
   )
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Rules (ShelleyTickfPredFailure)
