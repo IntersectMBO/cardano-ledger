@@ -256,9 +256,9 @@ instance AggregateStat PoolParamsStats where
 countPoolParamsStats :: PoolParams C -> PoolParamsStats
 countPoolParamsStats PoolParams {..} =
   PoolParamsStats
-    { ppsPoolId = statSingleton _poolId,
-      ppsRewardAcnt = statSingleton (getRwdCred _poolRAcnt),
-      ppsOwners = statSet _poolOwners
+    { ppsPoolId = statSingleton ppId,
+      ppsRewardAcnt = statSingleton (getRwdCred ppRewardAcnt),
+      ppsOwners = statSet ppOwners
     }
 
 data RewardUpdateStats = RewardUpdateStats

@@ -1052,14 +1052,14 @@ ppPoolParams (PoolParams idx vrf pledge cost margin acnt owners relays md) =
       ("Pledge", ppCoin pledge),
       ("Cost", ppCoin cost),
       ("Margin", ppUnitInterval margin),
-      ("RAcnt", ppRewardAcnt acnt),
+      ("RAcnt", ppRewardAcnt' acnt),
       ("Owners", ppSet ppKeyHash owners),
       ("Relays", ppStrictSeq ppStakePoolRelay relays),
       ("Metadata", ppStrictMaybe ppPoolMetadata md)
     ]
 
 ppWdrl :: Wdrl c -> PDoc
-ppWdrl (Wdrl m) = ppSexp "" [ppMap' (text "Wdr") ppRewardAcnt ppCoin m]
+ppWdrl (Wdrl m) = ppSexp "" [ppMap' (text "Wdr") ppRewardAcnt' ppCoin m]
 
 ppTxId :: TxId c -> PDoc
 ppTxId (TxId x) = ppSexp "TxId" [ppSafeHash x]
@@ -1343,14 +1343,14 @@ ppAddr (AddrBootstrap x) = ppSexp' mempty [ppBootstrapAddress x]
 ppHDAddressPayload :: HDAddressPayload -> PDoc
 ppHDAddressPayload (HDAddressPayload x) = ppLong x
 
-ppRewardAcnt :: RewardAcnt c -> PDoc
-ppRewardAcnt (RewardAcnt net cred) = ppRecord "RewardAcnt" [("network", ppNetwork net), ("credential", ppCredential cred)]
+ppRewardAcnt' :: RewardAcnt c -> PDoc
+ppRewardAcnt' (RewardAcnt net cred) = ppRecord "RewardAcnt" [("network", ppNetwork net), ("credential", ppCredential cred)]
 
 instance PrettyA (Addr c) where
   prettyA = ppAddr
 
 instance PrettyA (RewardAcnt c) where
-  prettyA = ppRewardAcnt
+  prettyA = ppRewardAcnt'
 
 -- ===========================================
 -- Cardano.Ledger.Shelley.Credential

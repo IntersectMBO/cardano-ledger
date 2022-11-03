@@ -272,10 +272,10 @@ desirability (a0, nOpt) r pool (PerformanceEstimate p) (Coin totalStake) =
     fTilde = fTildeNumer / fTildeDenom
     fTildeNumer = p * fromRational (coinToRational r * (z0 + min s z0 * unboundRational a0))
     fTildeDenom = fromRational $ 1 + unboundRational a0
-    cost = (fromRational . coinToRational . _poolCost) pool
-    margin = (fromRational . unboundRational . _poolMargin) pool
+    cost = (fromRational . coinToRational . ppCost) pool
+    margin = (fromRational . unboundRational . ppMargin) pool
     tot = max 1 (fromIntegral totalStake)
-    Coin pledge = _poolPledge pool
+    Coin pledge = ppPledge pool
     s = fromIntegral pledge % tot
     z0 = 1 % max 1 (fromIntegral nOpt)
 
@@ -377,7 +377,7 @@ nonMyopicMemberRew
   t
   topPools
   (PerformanceEstimate p) =
-    let nm = nonMyopicStake pp s sigma t (_poolId pool) topPools
+    let nm = nonMyopicStake pp s sigma t (ppId pool) topPools
         f = maxPool pp rPot (unStakeShare nm) (unStakeShare s)
         fHat = floor (p * (fromRational . coinToRational) f)
      in memberRew (Coin fHat) pool t nm

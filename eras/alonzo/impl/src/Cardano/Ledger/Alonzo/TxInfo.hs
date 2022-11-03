@@ -380,7 +380,7 @@ transDCert (DCertDeleg (Delegate (Delegation stkcred keyhash))) =
     (PV1.StakingHash (transStakeCred stkcred))
     (transKeyHash keyhash)
 transDCert (DCertPool (RegPool pp)) =
-  PV1.DCertPoolRegister (transKeyHash (_poolId pp)) (PV1.PubKeyHash (PV1.toBuiltin (transHash (_poolVrf pp))))
+  PV1.DCertPoolRegister (transKeyHash (ppId pp)) (PV1.PubKeyHash (PV1.toBuiltin (transHash (ppVrf pp))))
 transDCert (DCertPool (RetirePool keyhash (EpochNo i))) =
   PV1.DCertPoolRetire (transKeyHash keyhash) (fromIntegral i)
 transDCert (DCertGenesis _) = PV1.DCertGenesis

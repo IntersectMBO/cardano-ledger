@@ -120,23 +120,23 @@ aliceVRF = mkVRFKeyPair (RawSeed 0 0 0 0 3)
 alicePoolParams :: forall c. Cr.Crypto c => PoolParams c
 alicePoolParams =
   PoolParams
-    { _poolId = alicePoolKH,
-      _poolVrf = hashVerKeyVRF . snd $ aliceVRF @(Cr.VRF c),
-      _poolPledge = Coin 1,
-      _poolCost = Coin 5,
-      _poolMargin = unsafeBoundRational 0.1,
-      _poolRAcnt = RewardAcnt Testnet aliceSHK,
-      _poolOwners = Set.singleton $ (hashKey . vKey) aliceStake,
-      _poolRelays =
+    { ppId = alicePoolKH,
+      ppVrf = hashVerKeyVRF . snd $ aliceVRF @(Cr.VRF c),
+      ppPledge = Coin 1,
+      ppCost = Coin 5,
+      ppMargin = unsafeBoundRational 0.1,
+      ppRewardAcnt = RewardAcnt Testnet aliceSHK,
+      ppOwners = Set.singleton $ (hashKey . vKey) aliceStake,
+      ppRelays =
         StrictSeq.singleton $
           SingleHostName SNothing $
             fromJust $
               textToDns "relay.io",
-      _poolMD =
+      ppMetadata =
         SJust $
           PoolMetadata
-            { _poolMDUrl = fromJust $ textToUrl "alice.pool",
-              _poolMDHash = BS.pack "{}"
+            { pmUrl = fromJust $ textToUrl "alice.pool",
+              pmHash = BS.pack "{}"
             }
     }
 

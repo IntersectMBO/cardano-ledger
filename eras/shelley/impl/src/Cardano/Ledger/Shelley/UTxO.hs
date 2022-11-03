@@ -94,7 +94,7 @@ totalDeposits pp isNewPool certs =
     numNewPools = length $ Set.filter isNewPool pools
 
 getKeyHashFromRegPool :: DCert c -> Maybe (KeyHash 'StakePool c)
-getKeyHashFromRegPool (DCertPool (RegPool p)) = Just $ _poolId p
+getKeyHashFromRegPool (DCertPool (RegPool p)) = Just $ ppId p
 getKeyHashFromRegPool _ = Nothing
 
 txup :: (EraTx era, ShelleyEraTxBody era) => Tx era -> Maybe (Update era)

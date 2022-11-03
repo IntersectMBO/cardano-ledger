@@ -172,7 +172,7 @@ mkGenesisChainState ge@(GenEnv _ _ constants) (IRC _slotNo) = do
                   (nesEs chainNes)
                     { esAccountState =
                         (esAccountState (nesEs chainNes))
-                          { _treasury = Coin 1000000
+                          { asTreasury = Coin 1000000
                           }
                     }
               }

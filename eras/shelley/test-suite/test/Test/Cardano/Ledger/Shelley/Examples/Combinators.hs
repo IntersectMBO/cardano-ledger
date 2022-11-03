@@ -328,7 +328,7 @@ newPool pool cs = cs {chainNes = nes'}
     ps = dpsPState dps
     ps' =
       ps
-        { psStakePoolParams = Map.insert (_poolId pool) pool (psStakePoolParams ps)
+        { psStakePoolParams = Map.insert (ppId pool) pool (psStakePoolParams ps)
         }
     dps' = dps {dpsPState = ps'}
     ls' = ls {lsDPState = dps'}
@@ -350,7 +350,7 @@ reregPool pool cs = cs {chainNes = nes'}
     ps = dpsPState dps
     ps' =
       ps
-        { psFutureStakePoolParams = Map.insert (_poolId pool) pool (psStakePoolParams ps)
+        { psFutureStakePoolParams = Map.insert (ppId pool) pool (psStakePoolParams ps)
         }
     dps' = dps {dpsPState = ps'}
     ls' = ls {lsDPState = dps'}
@@ -372,8 +372,8 @@ updatePoolParams pool cs = cs {chainNes = nes'}
     ps = dpsPState dps
     ps' =
       ps
-        { psStakePoolParams = Map.insert (_poolId pool) pool (psStakePoolParams ps),
-          psFutureStakePoolParams = Map.delete (_poolId pool) (psStakePoolParams ps)
+        { psStakePoolParams = Map.insert (ppId pool) pool (psStakePoolParams ps),
+          psFutureStakePoolParams = Map.delete (ppId pool) (psStakePoolParams ps)
         }
     dps' = dps {dpsPState = ps'}
     ls' = ls {lsDPState = dps'}
@@ -413,7 +413,7 @@ reapPool ::
   ChainState era
 reapPool pool cs = cs {chainNes = nes'}
   where
-    kh = _poolId pool
+    kh = ppId pool
     nes = chainNes cs
     es = nesEs nes
     ls = esLState es
@@ -426,7 +426,7 @@ reapPool pool cs = cs {chainNes = nes'}
         }
     pp = esPp es
     ds = dpsDState dps
-    RewardAcnt _ rewardAddr = _poolRAcnt pool
+    RewardAcnt _ rewardAddr = ppRewardAcnt pool
     (rewards', unclaimed) =
       case UM.lookup rewardAddr (rewards ds) of
         Nothing -> (rewards ds, _poolDeposit pp)
@@ -435,7 +435,7 @@ reapPool pool cs = cs {chainNes = nes'}
     umap2 = (UM.Delegations umap1 UM.⋫ Set.singleton kh)
     ds' = ds {dsUnified = umap2}
     as = esAccountState es
-    as' = as {_treasury = (_treasury as) <+> unclaimed}
+    as' = as {asTreasury = (asTreasury as) <+> unclaimed}
     utxoSt = lsUTxOState ls
     utxoSt' = utxoSt {utxosDeposited = (utxosDeposited utxoSt) <-> (_poolDeposit pp)}
     dps' = dps {dpsPState = ps', dpsDState = ds'}
@@ -502,8 +502,8 @@ applyMIR pot newrewards cs = cs {chainNes = nes'}
     as = esAccountState es
     as' =
       if pot == ReservesMIR
-        then as {_reserves = (_reserves as) <-> tot}
-        else as {_treasury = (_treasury as) <-> tot}
+        then as {asReserves = (asReserves as) <-> tot}
+        else as {asTreasury = (asTreasury as) <-> tot}
     es' = es {esAccountState = as', esLState = ls'}
     nes' = nes {nesEs = es'}
 

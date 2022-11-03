@@ -197,10 +197,10 @@ feeTx1 :: Coin
 feeTx1 = Coin 3
 
 alicePoolParams' :: CryptoClass.Crypto c => PoolParams c
-alicePoolParams' = Cast.alicePoolParams {_poolRAcnt = RewardAcnt Testnet Cast.carlSHK}
+alicePoolParams' = Cast.alicePoolParams {ppRewardAcnt = RewardAcnt Testnet Cast.carlSHK}
 
 bobPoolParams' :: CryptoClass.Crypto c => PoolParams c
-bobPoolParams' = Cast.bobPoolParams {_poolRAcnt = RewardAcnt Testnet Cast.carlSHK}
+bobPoolParams' = Cast.bobPoolParams {ppRewardAcnt = RewardAcnt Testnet Cast.carlSHK}
 
 txbodyEx1 :: forall era. TwoPoolsConstraints era => ShelleyTxBody era
 txbodyEx1 =
@@ -278,9 +278,9 @@ expectedStEx1 =
     . C.newStakeCred Cast.carlSHK (Ptr (SlotNo 10) minBound (mkCertIxPartial 2))
     . C.newPool alicePoolParams'
     . C.newPool bobPoolParams'
-    . C.delegation Cast.aliceSHK (_poolId alicePoolParams')
-    . C.delegation Cast.bobSHK (_poolId bobPoolParams')
-    . C.delegation Cast.carlSHK (_poolId alicePoolParams')
+    . C.delegation Cast.aliceSHK (ppId alicePoolParams')
+    . C.delegation Cast.bobSHK (ppId bobPoolParams')
+    . C.delegation Cast.carlSHK (ppId alicePoolParams')
     $ initStTwoPools
 
 -- === Block 1, Slot 10, Epoch 0
@@ -694,7 +694,7 @@ alicePoolRewards :: forall c. ExMock c => Coin
 alicePoolRewards = rationalToCoinViaFloor (appPerf * (fromIntegral . unCoin $ maxP))
   where
     appPerf = mkApparentPerformance (_d ppEx) alicePoolStake 2 3
-    pledge = fromIntegral . unCoin . _poolPledge $ alicePoolParams' @c
+    pledge = fromIntegral . unCoin . ppPledge $ alicePoolParams' @c
     pr = pledge % circulation
     maxP = EB.maxPool ppEx bigR aliceStakeShareTot pr
 
@@ -718,7 +718,7 @@ bobPoolRewards :: forall c. ExMock c => Coin
 bobPoolRewards = rationalToCoinViaFloor (appPerf * (fromIntegral . unCoin $ maxP))
   where
     appPerf = mkApparentPerformance (_d ppEx) bobPoolStake 1 3
-    pledge = fromIntegral . unCoin . _poolPledge $ bobPoolParams' @c
+    pledge = fromIntegral . unCoin . ppPledge $ bobPoolParams' @c
     pr = pledge % circulation
     maxP = EB.maxPool ppEx bigR bobStakeShareTot pr
 

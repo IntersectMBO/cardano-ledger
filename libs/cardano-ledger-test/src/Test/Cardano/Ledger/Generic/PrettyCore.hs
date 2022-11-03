@@ -337,7 +337,7 @@ ppUtxoPredicateFailure (Alonzo.WrongNetworkWithdrawal n accnt) =
   ppRecord
     "WrongNetworkWithdrawal"
     [ ("expected network id", ppNetwork n),
-      ("set reward address with wrong network id", ppSet ppRewardAcnt accnt)
+      ("set reward address with wrong network id", ppSet ppRewardAcnt' accnt)
     ]
 ppUtxoPredicateFailure (Alonzo.OutputTooSmallUTxO xs) =
   ppSexp "OutputTooSmallUTxO" [ppList prettyTxOut xs]
@@ -488,7 +488,7 @@ ppUtxoPFShelley (Shelley.WrongNetworkWithdrawal n accnt) =
   ppRecord
     "WrongNetworkWithdrawal"
     [ ("expected network id", ppNetwork n),
-      ("set of reward address with wrong network id", ppSet ppRewardAcnt accnt)
+      ("set of reward address with wrong network id", ppSet ppRewardAcnt' accnt)
     ]
 ppUtxoPFShelley (Shelley.OutputTooSmallUTxO xs) =
   ppRecord
@@ -577,7 +577,7 @@ ppUtxoPFMary (Mary.WrongNetworkWithdrawal n accnt) =
   ppRecord
     "WrongNetworkWithdrawal"
     [ ("expected network id", ppNetwork n),
-      ("set reward address with wrong network id", ppSet ppRewardAcnt accnt)
+      ("set reward address with wrong network id", ppSet ppRewardAcnt' accnt)
     ]
 ppUtxoPFMary (Mary.OutputTooSmallUTxO xs) =
   ppRecord
@@ -610,7 +610,7 @@ ppWitHashes hs = ppSexp "WitHashes" [ppSet ppKeyHash hs]
 ppScriptPurpose :: ScriptPurpose c -> PDoc
 ppScriptPurpose (Minting policy) = ppSexp "Minting" [prettyA policy] -- FIXME fill in the blanks
 ppScriptPurpose (Spending txin) = ppSexp "Spending" [ppTxIn txin]
-ppScriptPurpose (Rewarding acct) = ppSexp "Rewarding" [ppRewardAcnt acct]
+ppScriptPurpose (Rewarding acct) = ppSexp "Rewarding" [ppRewardAcnt' acct]
 ppScriptPurpose (Certifying dcert) = ppSexp "Certifying" [ppDCert dcert]
 
 instance PrettyA (ScriptPurpose c) where
@@ -1201,8 +1201,8 @@ pcPoolParams :: PoolParams era -> PDoc
 pcPoolParams x =
   ppRecord
     "PoolParams"
-    [ ("Id", keyHashSummary (_poolId x)),
-      ("reward accnt", pcCredential (getRwdCred (_poolRAcnt x)))
+    [ ("Id", keyHashSummary (ppId x)),
+      ("reward accnt", pcCredential (getRwdCred (ppRewardAcnt x)))
     ]
 
 instance PrettyC (PoolParams era) era where prettyC _ = pcPoolParams

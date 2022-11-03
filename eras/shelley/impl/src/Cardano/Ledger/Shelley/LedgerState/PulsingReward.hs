@@ -142,7 +142,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
       pulseSize = max 1 (ceiling (numStakeCreds / (4 * k)))
       -- We now compute the amount of total rewards that can potentially be given
       -- out this epoch, and the adjustments to the reserves and the treasury.
-      Coin reserves = _reserves acnt
+      Coin reserves = asReserves acnt
       ds = dpsDState $ lsDPState ls
       -- reserves and rewards change
       deltaR1 =
@@ -204,7 +204,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
       newLikelihoods = VMap.toMap $ VMap.map makeLikelihoods allPoolInfo
       -- We now compute the leader rewards for each stake pool.
       collectLRs acc poolRI =
-        let rewardAcnt = getRwdCred . _poolRAcnt . poolPs $ poolRI
+        let rewardAcnt = getRwdCred . ppRewardAcnt . poolPs $ poolRI
             packageLeaderReward = Set.singleton . leaderRewardToGeneral . poolLeaderReward
          in if HardForks.forgoRewardPrefilter pr || rewardAcnt `UM.member` rewards ds
               then
@@ -336,7 +336,7 @@ createRUpd slotsPerEpoch blocksmade epstate maxSupply asc secparam = do
 -- This is used in the rewards calculation, and for API endpoints for pool ranking.
 circulation :: EpochState era -> Coin -> Coin
 circulation (EpochState acnt _ _ _ _ _) supply =
-  supply <-> _reserves acnt
+  supply <-> asReserves acnt
 
 decayFactor :: Float
 decayFactor = 0.9

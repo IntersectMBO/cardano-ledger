@@ -286,16 +286,16 @@ getNonMyopicMemberRewards globals ss creds =
         then nonMyopicMemberRew pp rPot poolp s sigma t topPools hitRateEst
         else mempty
       where
-        s = (toShare . _poolPledge) poolp
+        s = (toShare . ppPledge) poolp
         checkPledge pool =
           let ostake = sumPoolOwnersStake pool stake
-           in _poolPledge poolp <= ostake
+           in ppPledge poolp <= ostake
 
 sumPoolOwnersStake :: PoolParams c -> EB.Stake c -> Coin
 sumPoolOwnersStake pool stake =
   let getStakeFor o =
         maybe mempty fromCompact $ VMap.lookup (KeyHashObj o) (EB.unStake stake)
-   in foldMap' getStakeFor (_poolOwners pool)
+   in foldMap' getStakeFor (ppOwners pool)
 
 -- | Create a current snapshot of the ledger state.
 --
@@ -399,9 +399,9 @@ getRewardInfoPools globals ss =
       RewardInfoPool
         { stake = pstake,
           ownerStake = ostake,
-          ownerPledge = _poolPledge poolp,
-          margin = _poolMargin poolp,
-          cost = _poolCost poolp,
+          ownerPledge = ppPledge poolp,
+          margin = ppMargin poolp,
+          cost = ppCost poolp,
           performanceEstimate =
             unPerformanceEstimate $ percentile' $ histLookup key
         }

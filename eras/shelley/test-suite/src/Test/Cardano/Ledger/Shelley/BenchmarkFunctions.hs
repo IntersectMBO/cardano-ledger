@@ -64,15 +64,15 @@ import Cardano.Ledger.Shelley.TxBody
     ShelleyTxBody (..),
     ShelleyTxOut (..),
     Wdrl (..),
-    _poolCost,
-    _poolId,
-    _poolMD,
-    _poolMargin,
-    _poolOwners,
-    _poolPledge,
-    _poolRAcnt,
-    _poolRelays,
-    _poolVrf,
+    ppCost,
+    ppId,
+    ppMargin,
+    ppMetadata,
+    ppOwners,
+    ppPledge,
+    ppRelays,
+    ppRewardAcnt,
+    ppVrf,
   )
 import Cardano.Ledger.Shelley.TxWits (addrWits)
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
@@ -404,15 +404,15 @@ vrfKeyHash = hashVerKeyVRF . snd . mkVRFKeyPair $ RawSeed 0 0 0 0 0
 mkPoolParameters :: KeyPair 'StakePool B_Crypto -> PoolParams B_Crypto
 mkPoolParameters keys =
   PoolParams
-    { _poolId = (hashKey . vKey) keys,
-      _poolVrf = vrfKeyHash,
-      _poolPledge = Coin 0,
-      _poolCost = Coin 0,
-      _poolMargin = unsafeBoundRational 0,
-      _poolRAcnt = RewardAcnt Testnet firstStakeKeyCred,
-      _poolOwners = Set.singleton $ (hashKey . vKey) stakeKeyOne,
-      _poolRelays = StrictSeq.empty,
-      _poolMD = SNothing
+    { ppId = (hashKey . vKey) keys,
+      ppVrf = vrfKeyHash,
+      ppPledge = Coin 0,
+      ppCost = Coin 0,
+      ppMargin = unsafeBoundRational 0,
+      ppRewardAcnt = RewardAcnt Testnet firstStakeKeyCred,
+      ppOwners = Set.singleton $ (hashKey . vKey) stakeKeyOne,
+      ppRelays = StrictSeq.empty,
+      ppMetadata = SNothing
     }
 
 -- Create stake pool registration certs

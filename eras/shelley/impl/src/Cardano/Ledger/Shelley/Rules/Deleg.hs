@@ -337,8 +337,8 @@ delegationTransition = do
 
           let (potAmount, delta, instantaneousRewards) =
                 case targetPot of
-                  ReservesMIR -> (_reserves acnt, deltaReserves $ dsIRewards ds, iRReserves $ dsIRewards ds)
-                  TreasuryMIR -> (_treasury acnt, deltaTreasury $ dsIRewards ds, iRTreasury $ dsIRewards ds)
+                  ReservesMIR -> (asReserves acnt, deltaReserves $ dsIRewards ds, iRReserves $ dsIRewards ds)
+                  TreasuryMIR -> (asTreasury acnt, deltaTreasury $ dsIRewards ds, iRTreasury $ dsIRewards ds)
               credCoinMap' = Map.map (\(DeltaCoin x) -> Coin x) credCoinMap
               combinedMap = Map.unionWith (<>) credCoinMap' instantaneousRewards
               requiredForRewards = fold combinedMap
@@ -370,8 +370,8 @@ delegationTransition = do
 
           let (potAmount, instantaneousRewards) =
                 case targetPot of
-                  ReservesMIR -> (_reserves acnt, iRReserves $ dsIRewards ds)
-                  TreasuryMIR -> (_treasury acnt, iRTreasury $ dsIRewards ds)
+                  ReservesMIR -> (asReserves acnt, iRReserves $ dsIRewards ds)
+                  TreasuryMIR -> (asTreasury acnt, iRTreasury $ dsIRewards ds)
           let credCoinMap' = Map.map (\(DeltaCoin x) -> Coin x) credCoinMap
               combinedMap = Map.union credCoinMap' instantaneousRewards
               requiredForRewards = fold combinedMap

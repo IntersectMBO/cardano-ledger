@@ -34,7 +34,7 @@ poolRegistration
       source = sourceSt,
       target = targetSt
     } =
-    let hk = _poolId poolParams
+    let hk = ppId poolParams
         reRegistration = eval (hk ∈ dom (psStakePoolParams sourceSt))
      in if reRegistration
           then

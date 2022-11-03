@@ -125,17 +125,17 @@ import Cardano.Ledger.Shelley.TxBody
     StakePoolRelay (..),
     Wdrl (..),
     WitVKey (..),
-    _poolCost,
-    _poolId,
-    _poolMD,
-    _poolMDHash,
-    _poolMDUrl,
-    _poolMargin,
-    _poolOwners,
-    _poolPledge,
-    _poolRAcnt,
-    _poolRelays,
-    _poolVrf,
+    pmHash,
+    pmUrl,
+    ppCost,
+    ppId,
+    ppMargin,
+    ppMetadata,
+    ppOwners,
+    ppPledge,
+    ppRelays,
+    ppRewardAcnt,
+    ppVrf,
     pattern DCertDeleg,
     pattern DCertGenesis,
     pattern DCertMir,
@@ -565,19 +565,19 @@ tests =
             ( DCertPool
                 ( RegPool
                     ( PoolParams
-                        { _poolId = hashKey . vKey $ testStakePoolKey,
-                          _poolVrf = testVRFKH @C_Crypto,
-                          _poolPledge = poolPledge,
-                          _poolCost = poolCost,
-                          _poolMargin = poolMargin,
-                          _poolRAcnt = poolRAcnt,
-                          _poolOwners = Set.singleton poolOwner,
-                          _poolRelays = poolRelays,
-                          _poolMD =
+                        { ppId = hashKey . vKey $ testStakePoolKey,
+                          ppVrf = testVRFKH @C_Crypto,
+                          ppPledge = poolPledge,
+                          ppCost = poolCost,
+                          ppMargin = poolMargin,
+                          ppRewardAcnt = poolRAcnt,
+                          ppOwners = Set.singleton poolOwner,
+                          ppRelays = poolRelays,
+                          ppMetadata =
                             SJust $
                               PoolMetadata
-                                { _poolMDUrl = Maybe.fromJust $ textToUrl poolUrl,
-                                  _poolMDHash = poolMDHash
+                                { pmUrl = Maybe.fromJust $ textToUrl poolUrl,
+                                  pmHash = poolMDHash
                                 }
                         }
                     )
@@ -1232,19 +1232,19 @@ tests =
               ps
           params =
             PoolParams
-              { _poolId = hashKey $ vKey testStakePoolKey,
-                _poolVrf = testVRFKH @C_Crypto,
-                _poolPledge = Coin 5,
-                _poolCost = Coin 4,
-                _poolMargin = unsafeBoundRational 0.7,
-                _poolRAcnt = RewardAcnt Testnet (testStakeCred @C_Crypto),
-                _poolOwners = Set.singleton testKeyHash2,
-                _poolRelays = StrictSeq.empty,
-                _poolMD =
+              { ppId = hashKey $ vKey testStakePoolKey,
+                ppVrf = testVRFKH @C_Crypto,
+                ppPledge = Coin 5,
+                ppCost = Coin 4,
+                ppMargin = unsafeBoundRational 0.7,
+                ppRewardAcnt = RewardAcnt Testnet (testStakeCred @C_Crypto),
+                ppOwners = Set.singleton testKeyHash2,
+                ppRelays = StrictSeq.empty,
+                ppMetadata =
                   SJust $
                     PoolMetadata
-                      { _poolMDUrl = Maybe.fromJust $ textToUrl "web.site",
-                        _poolMDHash = BS.pack "{}"
+                      { pmUrl = Maybe.fromJust $ textToUrl "web.site",
+                        pmHash = BS.pack "{}"
                       }
               }
           ps = [(hashKey $ vKey testStakePoolKey, params)]
@@ -1277,19 +1277,19 @@ tests =
               ps
           params =
             PoolParams
-              { _poolId = hashKey $ vKey testStakePoolKey,
-                _poolVrf = testVRFKH @C_Crypto,
-                _poolPledge = Coin 5,
-                _poolCost = Coin 4,
-                _poolMargin = unsafeBoundRational 0.7,
-                _poolRAcnt = RewardAcnt Testnet (testStakeCred @C_Crypto),
-                _poolOwners = Set.singleton testKeyHash2,
-                _poolRelays = StrictSeq.empty,
-                _poolMD =
+              { ppId = hashKey $ vKey testStakePoolKey,
+                ppVrf = testVRFKH @C_Crypto,
+                ppPledge = Coin 5,
+                ppCost = Coin 4,
+                ppMargin = unsafeBoundRational 0.7,
+                ppRewardAcnt = RewardAcnt Testnet (testStakeCred @C_Crypto),
+                ppOwners = Set.singleton testKeyHash2,
+                ppRelays = StrictSeq.empty,
+                ppMetadata =
                   SJust $
                     PoolMetadata
-                      { _poolMDUrl = Maybe.fromJust $ textToUrl "web.site",
-                        _poolMDHash = BS.pack "{}"
+                      { pmUrl = Maybe.fromJust $ textToUrl "web.site",
+                        pmHash = BS.pack "{}"
                       }
               }
           ps = [(hashKey $ vKey testStakePoolKey, params)]

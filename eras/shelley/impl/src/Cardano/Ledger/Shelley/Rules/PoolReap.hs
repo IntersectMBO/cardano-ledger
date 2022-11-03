@@ -34,7 +34,7 @@ import Cardano.Ledger.Shelley.LedgerState
     UTxOState (..),
     rewards,
   )
-import Cardano.Ledger.Shelley.TxBody (RewardAcnt, getRwdCred, _poolRAcnt)
+import Cardano.Ledger.Shelley.TxBody (RewardAcnt, getRwdCred, ppRewardAcnt)
 import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Ledger.UnifiedMap (View (..))
 import Cardano.Ledger.Val ((<+>), (<->))
@@ -123,7 +123,7 @@ poolReapTransition = do
       pr :: Map.Map (KeyHash 'StakePool (EraCrypto era)) Coin
       pr = Map.fromSet (const (getField @"_poolDeposit" pp)) retired
       rewardAcnts :: Map.Map (KeyHash 'StakePool (EraCrypto era)) (RewardAcnt (EraCrypto era))
-      rewardAcnts = Map.map _poolRAcnt $ eval (retired ◁ psStakePoolParams ps)
+      rewardAcnts = Map.map ppRewardAcnt $ eval (retired ◁ psStakePoolParams ps)
       rewardAcnts_ :: Map.Map (KeyHash 'StakePool (EraCrypto era)) (RewardAcnt (EraCrypto era), Coin)
       rewardAcnts_ = Map.intersectionWith (,) rewardAcnts pr
       rewardAcnts' :: Map.Map (RewardAcnt (EraCrypto era)) Coin
@@ -161,7 +161,7 @@ poolReapTransition = do
   pure $
     PoolreapState
       us {utxosDeposited = utxosDeposited us <-> (unclaimed <+> refunded)}
-      a {_treasury = _treasury a <+> unclaimed}
+      a {asTreasury = asTreasury a <+> unclaimed}
       ( let u0 = dsUnified ds
             u1 = (Rewards u0 UM.∪+ refunds)
             u2 = (Delegations u1 UM.⋫ retired)

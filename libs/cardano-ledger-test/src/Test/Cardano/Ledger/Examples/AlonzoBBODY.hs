@@ -556,15 +556,15 @@ poolMDHTooBigTx pf =
         tooManyBytes = BS.replicate (hashsize @(EraCrypto era) + 1) 0
         poolParams =
           PoolParams
-            { _poolId = coerceKeyRole . hashKey . vKey $ someKeys pf,
-              _poolVrf = hashVerKeyVRF . snd . mkVRFKeyPair $ RawSeed 0 0 0 0 0,
-              _poolPledge = Coin 0,
-              _poolCost = Coin 0,
-              _poolMargin = minBound,
-              _poolRAcnt = RewardAcnt Testnet (scriptStakeCredSuceed pf),
-              _poolOwners = mempty,
-              _poolRelays = mempty,
-              _poolMD = SJust $ PoolMetadata (fromJust $ textToUrl "") tooManyBytes
+            { ppId = coerceKeyRole . hashKey . vKey $ someKeys pf,
+              ppVrf = hashVerKeyVRF . snd . mkVRFKeyPair $ RawSeed 0 0 0 0 0,
+              ppPledge = Coin 0,
+              ppCost = Coin 0,
+              ppMargin = minBound,
+              ppRewardAcnt = RewardAcnt Testnet (scriptStakeCredSuceed pf),
+              ppOwners = mempty,
+              ppRelays = mempty,
+              ppMetadata = SJust $ PoolMetadata (fromJust $ textToUrl "") tooManyBytes
             }
 
 -- ============================== Expected UTXO  ===============================

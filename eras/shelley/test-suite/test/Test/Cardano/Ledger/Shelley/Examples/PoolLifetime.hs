@@ -388,8 +388,8 @@ expectedStEx2 =
     . C.newLab blockEx2
     . C.feesAndDeposits feeTx2 (Coin 0)
     . C.newUTxO txbodyEx2
-    . C.delegation Cast.aliceSHK (_poolId $ Cast.alicePoolParams @c)
-    . C.delegation Cast.bobSHK (_poolId $ Cast.alicePoolParams @c)
+    . C.delegation Cast.aliceSHK (ppId $ Cast.alicePoolParams @c)
+    . C.delegation Cast.bobSHK (ppId $ Cast.alicePoolParams @c)
     . C.pulserUpdate pulserEx2
     $ expectedStEx1
 
@@ -528,7 +528,7 @@ expectedStEx4 =
     . C.newLab blockEx4
     . C.feesAndDeposits feeTx4 (Coin 0)
     . C.newUTxO txbodyEx4
-    . C.delegation Cast.carlSHK (_poolId $ Cast.alicePoolParams @c)
+    . C.delegation Cast.carlSHK (ppId $ Cast.alicePoolParams @c)
     . C.pulserUpdate pulserEx4
     $ expectedStEx3
 

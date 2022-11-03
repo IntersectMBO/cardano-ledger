@@ -79,8 +79,8 @@ type RewardAccounts c =
   Map (Credential 'Staking c) Coin
 
 data AccountState = AccountState
-  { _treasury :: !Coin,
-    _reserves :: !Coin
+  { asTreasury :: !Coin,
+    asReserves :: !Coin
   }
   deriving (Show, Eq, Generic)
 

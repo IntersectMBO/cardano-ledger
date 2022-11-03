@@ -233,15 +233,15 @@ showPoolParams x =
   "PoolParams\n"
     ++ mylines
       6
-      [ "poolId = " ++ show (_poolId x),
-        "poolVrf = " ++ show (_poolVrf x),
-        "poolPledge = " ++ show (_poolPledge x),
-        "poolCost = " ++ show (_poolCost x),
-        "poolMargin = " ++ show (_poolMargin x),
-        "poolRAcnt = " ++ show (_poolRAcnt x),
-        "poolOwners = " ++ show (_poolOwners x),
-        "poolRelays = " ++ show (_poolRelays x),
-        "poolMD = " ++ show (_poolMD x)
+      [ "poolId = " ++ show (ppId x),
+        "poolVrf = " ++ show (ppVrf x),
+        "poolPledge = " ++ show (ppPledge x),
+        "poolCost = " ++ show (ppCost x),
+        "poolMargin = " ++ show (ppMargin x),
+        "poolRAcnt = " ++ show (ppRewardAcnt x),
+        "poolOwners = " ++ show (ppOwners x),
+        "poolRelays = " ++ show (ppRelays x),
+        "poolMD = " ++ show (ppMetadata x)
       ]
 
 instance Show (RewardProvenance c) where

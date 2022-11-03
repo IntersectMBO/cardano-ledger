@@ -56,13 +56,13 @@ testPoolNetworkID pv poolParams e = do
 
 matchingNetworkIDPoolParams :: PoolParams C_Crypto
 matchingNetworkIDPoolParams =
-  Cast.alicePoolParams {_poolRAcnt = RewardAcnt Testnet Cast.aliceSHK}
+  Cast.alicePoolParams {ppRewardAcnt = RewardAcnt Testnet Cast.aliceSHK}
 
 -- test globals use Testnet
 
 mismatchingNetworkIDPoolParams :: PoolParams C_Crypto
 mismatchingNetworkIDPoolParams =
-  Cast.alicePoolParams {_poolRAcnt = RewardAcnt Mainnet Cast.aliceSHK}
+  Cast.alicePoolParams {ppRewardAcnt = RewardAcnt Mainnet Cast.aliceSHK}
 
 -- test globals use Testnet
 

@@ -140,15 +140,15 @@ genChainInEpoch epoch = do
                 | (AllIssuerKeys {vrf, hk}, (owner : _)) <- stakeMap,
                   let pp =
                         PoolParams
-                          { _poolId = hk,
-                            _poolVrf = hashVerKeyVRF $ snd vrf,
-                            _poolPledge = Coin 1,
-                            _poolCost = Coin 1,
-                            _poolMargin = minBound,
-                            _poolRAcnt = mkRwdAcnt Testnet $ KeyHashObj owner,
-                            _poolOwners = Set.singleton owner,
-                            _poolRelays = StrictSeq.empty,
-                            _poolMD = SNothing
+                          { ppId = hk,
+                            ppVrf = hashVerKeyVRF $ snd vrf,
+                            ppPledge = Coin 1,
+                            ppCost = Coin 1,
+                            ppMargin = minBound,
+                            ppRewardAcnt = mkRwdAcnt Testnet $ KeyHashObj owner,
+                            ppOwners = Set.singleton owner,
+                            ppRelays = StrictSeq.empty,
+                            ppMetadata = SNothing
                           }
               ],
           sgsStake =

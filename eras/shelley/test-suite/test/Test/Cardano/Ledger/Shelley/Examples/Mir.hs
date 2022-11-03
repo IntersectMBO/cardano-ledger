@@ -114,8 +114,8 @@ initStMIR treasury = cs {chainNes = (chainNes cs) {nesEs = es'}}
     as = esAccountState . nesEs . chainNes $ cs
     as' =
       as
-        { _treasury = _treasury as <+> treasury,
-          _reserves = _reserves as <-> treasury
+        { asTreasury = asTreasury as <+> treasury,
+          asReserves = asReserves as <-> treasury
         }
     es' = (nesEs $ chainNes cs) {esAccountState = as'}
 
