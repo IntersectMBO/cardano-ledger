@@ -193,7 +193,7 @@ instance
         "Deposit pot must equal obligation"
         ( \(TRC (LedgerEnv {ledgerPp}, _, _))
            (LedgerState utxoSt DPState {dpsDState, dpsPState}) ->
-              obligation ledgerPp (rewards dpsDState) (_pParams dpsPState) -- FIX ME
+              obligation ledgerPp (rewards dpsDState) (psStakePoolParams dpsPState) -- FIX ME
                 == utxosDeposited utxoSt
         )
     ]
@@ -224,8 +224,8 @@ ledgerTransition = do
         )
 
   let DPState dstate pstate = dpstate
-      genDelegs = _genDelegs dstate
-      stpools = _pParams pstate
+      genDelegs = dsGenDelegs dstate
+      stpools = psStakePoolParams pstate
 
   utxoSt' <-
     trans @(EraRule "UTXOW" era) $

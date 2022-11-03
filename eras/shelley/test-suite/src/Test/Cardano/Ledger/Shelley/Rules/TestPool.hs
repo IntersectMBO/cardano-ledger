@@ -13,8 +13,8 @@ where
 import Cardano.Ledger.Shelley.Delegation.Certificates (PoolCert (RegPool, RetirePool))
 import Cardano.Ledger.Shelley.LedgerState
   ( PState (..),
-    _fPParams,
-    _pParams,
+    psFutureStakePoolParams,
+    psStakePoolParams,
   )
 import Cardano.Ledger.Shelley.Rules (ShelleyPOOL)
 import Cardano.Ledger.Shelley.TxBody (DCert (DCertPool), PoolParams (..))
@@ -35,32 +35,32 @@ poolRegistration
       target = targetSt
     } =
     let hk = _poolId poolParams
-        reRegistration = eval (hk ∈ dom (_pParams sourceSt))
+        reRegistration = eval (hk ∈ dom (psStakePoolParams sourceSt))
      in if reRegistration
           then
             conjoin
               [ counterexample
                   "Pre-existing PoolParams must still be registered in pParams"
-                  (eval (hk ∈ dom (_pParams targetSt)) :: Bool),
+                  (eval (hk ∈ dom (psStakePoolParams targetSt)) :: Bool),
                 counterexample
                   "New PoolParams are registered in future Params map"
-                  (Map.lookup hk (_fPParams targetSt) === Just poolParams),
+                  (Map.lookup hk (psFutureStakePoolParams targetSt) === Just poolParams),
                 counterexample
                   "PoolParams are removed in 'retiring'"
-                  (eval (hk ∉ dom (_retiring targetSt)) :: Bool)
+                  (eval (hk ∉ dom (psRetiring targetSt)) :: Bool)
               ]
           else -- first registration
 
             conjoin
               [ counterexample
                   "New PoolParams are registered in pParams"
-                  (Map.lookup hk (_pParams targetSt) === Just poolParams),
+                  (Map.lookup hk (psStakePoolParams targetSt) === Just poolParams),
                 counterexample
                   "PoolParams are not present in 'future pool params'"
-                  (eval (hk ∉ dom (_fPParams targetSt)) :: Bool),
+                  (eval (hk ∉ dom (psFutureStakePoolParams targetSt)) :: Bool),
                 counterexample
                   "PoolParams are removed in 'retiring'"
-                  (eval (hk ∉ dom (_retiring targetSt)) :: Bool)
+                  (eval (hk ∉ dom (psRetiring targetSt)) :: Bool)
               ]
 poolRegistration _ = property ()
 
@@ -75,13 +75,13 @@ poolRetirement
           (currentEpoch < e && e < EpochNo (ce + maxEpoch)),
         counterexample
           "hk must be in source stPools"
-          (eval (hk ∈ dom (_pParams sourceSt)) :: Bool),
+          (eval (hk ∈ dom (psStakePoolParams sourceSt)) :: Bool),
         counterexample
           "hk must be in target stPools"
-          (eval (hk ∈ dom (_pParams targetSt)) :: Bool),
+          (eval (hk ∈ dom (psStakePoolParams targetSt)) :: Bool),
         counterexample
           "hk must be in target's retiring"
-          (eval (hk ∈ dom (_retiring targetSt)) :: Bool)
+          (eval (hk ∈ dom (psRetiring targetSt)) :: Bool)
       ]
 poolRetirement _ _ _ = property ()
 

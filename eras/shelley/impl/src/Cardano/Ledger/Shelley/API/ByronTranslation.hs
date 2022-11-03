@@ -164,7 +164,7 @@ translateToShelleyLedgerState genesisShelley epochNo cvs =
               },
           lsDPState =
             DPState
-              { dpsDState = def {_genDelegs = genDelegs},
+              { dpsDState = def {dsGenDelegs = genDelegs},
                 dpsPState = def
               }
         }

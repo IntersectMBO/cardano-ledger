@@ -463,7 +463,7 @@ instance Reflect era => TotalAda (UTxO era) where
       accum ans txOut = (txOut ^. coinTxOutL) <+> ans
 
 instance TotalAda (DState era) where
-  totalAda dstate = Fold.foldl' (<+>) mempty (UMap.Rewards (_unified dstate))
+  totalAda dstate = Fold.foldl' (<+>) mempty (UMap.Rewards (dsUnified dstate))
 
 instance TotalAda (DPState era) where
   totalAda (DPState ds _) = totalAda ds

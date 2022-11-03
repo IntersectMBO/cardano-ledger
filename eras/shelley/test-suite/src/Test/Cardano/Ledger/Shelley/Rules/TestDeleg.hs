@@ -144,21 +144,21 @@ checkInstantaneousRewards
         conjoin
           [ counterexample
               "a ReservesMIR certificate should add all entries to the `irwd` mapping"
-              (Map.keysSet irwd `Set.isSubsetOf` Map.keysSet (iRReserves $ _irwd target)),
+              (Map.keysSet irwd `Set.isSubsetOf` Map.keysSet (iRReserves $ dsIRewards target)),
             counterexample
               "a ReservesMIR certificate should add the total value to the `irwd` map, overwriting any existing entries"
               ( if (HardForks.allowMIRTransfer . ppDE $ denv)
                   then -- In the Alonzo era, repeated fields are added
 
-                    ( (fold $ iRReserves $ _irwd source)
+                    ( (fold $ iRReserves $ dsIRewards source)
                         `addDeltaCoin` (fold irwd)
-                        == (fold $ (iRReserves $ _irwd target))
+                        == (fold $ (iRReserves $ dsIRewards target))
                     )
                   else -- Prior to the Alonzo era, repeated fields overridden
 
-                    ( (fold $ (iRReserves $ _irwd source) Map.\\ irwd)
+                    ( (fold $ (iRReserves $ dsIRewards source) Map.\\ irwd)
                         `addDeltaCoin` (fold irwd)
-                        == (fold $ (iRReserves $ _irwd target))
+                        == (fold $ (iRReserves $ dsIRewards target))
                     )
               )
           ]
@@ -166,21 +166,21 @@ checkInstantaneousRewards
         conjoin
           [ counterexample
               "a TreasuryMIR certificate should add all entries to the `irwd` mapping"
-              (Map.keysSet irwd `Set.isSubsetOf` Map.keysSet (iRTreasury $ _irwd target)),
+              (Map.keysSet irwd `Set.isSubsetOf` Map.keysSet (iRTreasury $ dsIRewards target)),
             counterexample
               "a TreasuryMIR certificate should add* the total value to the `irwd` map"
               ( if (HardForks.allowMIRTransfer . ppDE $ denv)
                   then -- In the Alonzo era, repeated fields are added
 
-                    ( (fold $ iRTreasury $ _irwd source)
+                    ( (fold $ iRTreasury $ dsIRewards source)
                         `addDeltaCoin` (fold irwd)
-                        == (fold $ (iRTreasury $ _irwd target))
+                        == (fold $ (iRTreasury $ dsIRewards target))
                     )
                   else -- Prior to the Alonzo era, repeated fields overridden
 
-                    ( (fold $ (iRTreasury $ _irwd source) Map.\\ irwd)
+                    ( (fold $ (iRTreasury $ dsIRewards source) Map.\\ irwd)
                         `addDeltaCoin` (fold irwd)
-                        == (fold $ (iRTreasury $ _irwd target))
+                        == (fold $ (iRTreasury $ dsIRewards target))
                     )
               )
           ]

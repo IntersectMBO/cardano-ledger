@@ -172,8 +172,8 @@ epochTransition = do
       ppp = eval (pParams ⨃ fPParams)
       pstate' =
         pstate
-          { _pParams = ppp,
-            _fPParams = Map.empty
+          { psStakePoolParams = ppp,
+            psFutureStakePoolParams = Map.empty
           }
   PoolreapState utxoSt' acnt' dstate' pstate'' <-
     trans @(EraRule "POOLREAP" era) $
@@ -193,8 +193,8 @@ epochTransition = do
       TRC (epochState', UpecState pp (utxosPpups utxoSt'), ())
   let utxoSt'' = utxoSt' {utxosPpups = ppupSt'}
 
-  let Coin oblgCurr = obligation pp (rewards dstate') (_pParams pstate'')
-      Coin oblgNew = obligation pp' (rewards dstate') (_pParams pstate'')
+  let Coin oblgCurr = obligation pp (rewards dstate') (psStakePoolParams pstate'')
+      Coin oblgNew = obligation pp' (rewards dstate') (psStakePoolParams pstate'')
       Coin reserves = _reserves acnt'
       utxoSt''' = utxoSt'' {utxosDeposited = Coin oblgNew}
       acnt'' = acnt' {_reserves = Coin $ reserves + oblgCurr - oblgNew}

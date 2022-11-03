@@ -362,9 +362,9 @@ instance forall era. Reflect era => Extract (NewEpochState era) era where
 abstract :: NewEpochState era -> ModelNewEpochState era
 abstract x =
   ModelNewEpochState
-    { mPoolParams = (_pParams . dpsPState . lsDPState . esLState . nesEs) x,
-      mRewards = (UMap.rewView . _unified . dpsDState . lsDPState . esLState . nesEs) x,
-      mDelegations = (UMap.delView . _unified . dpsDState . lsDPState . esLState . nesEs) x,
+    { mPoolParams = (psStakePoolParams . dpsPState . lsDPState . esLState . nesEs) x,
+      mRewards = (UMap.rewView . dsUnified . dpsDState . lsDPState . esLState . nesEs) x,
+      mDelegations = (UMap.delView . dsUnified . dpsDState . lsDPState . esLState . nesEs) x,
       mUTxO = (unUTxO . utxosUtxo . lsUTxOState . esLState . nesEs) x,
       mMutFee = Map.empty,
       mAccountState = (esAccountState . nesEs) x,
@@ -375,8 +375,8 @@ abstract x =
       mCount = 0,
       mIndex = Map.empty,
       -- below here NO EFFECT until we model EpochBoundary
-      mFPoolParams = (_fPParams . dpsPState . lsDPState . esLState . nesEs) x,
-      mRetiring = (_retiring . dpsPState . lsDPState . esLState . nesEs) x,
+      mFPoolParams = (psFutureStakePoolParams . dpsPState . lsDPState . esLState . nesEs) x,
+      mRetiring = (psRetiring . dpsPState . lsDPState . esLState . nesEs) x,
       mSnapshots = (esSnapshots . nesEs) x,
       mEL = nesEL x,
       mBprev = unBlocksMade (nesBprev x),

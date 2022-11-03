@@ -89,23 +89,23 @@ insertUTxO utxo stateKey = do
 
 insertDState :: MonadIO m => Shelley.DState C -> ReaderT SqlBackend m DStateId
 insertDState Shelley.DState {..} = do
-  let irDeltaReserves = Shelley.deltaReserves _irwd
-  let irDeltaTreasury = Shelley.deltaTreasury _irwd
-  dstateId <- insert $ DState (Enc _fGenDelegs) _genDelegs irDeltaReserves irDeltaTreasury
-  forM_ (Map.toList (rewView _unified)) $ \(cred, c) -> do
+  let irDeltaReserves = Shelley.deltaReserves dsIRewards
+  let irDeltaTreasury = Shelley.deltaTreasury dsIRewards
+  dstateId <- insert $ DState (Enc dsFutureGenDelegs) dsGenDelegs irDeltaReserves irDeltaTreasury
+  forM_ (Map.toList (rewView dsUnified)) $ \(cred, c) -> do
     credId <- insertGetKey (Credential (Keys.asWitness cred))
     insert_ (Reward dstateId credId c)
-  forM_ (Map.toList (delView _unified)) $ \(cred, spKeyHash) -> do
+  forM_ (Map.toList (delView dsUnified)) $ \(cred, spKeyHash) -> do
     credId <- insertGetKey (Credential (Keys.asWitness cred))
     keyHashId <- insertGetKey (KeyHash (Keys.asWitness spKeyHash))
     insert_ (Delegation dstateId credId keyHashId)
-  forM_ (Map.toList (ptrView _unified)) $ \(ptr, cred) -> do
+  forM_ (Map.toList (ptrView dsUnified)) $ \(ptr, cred) -> do
     credId <- insertGetKey (Credential (Keys.asWitness cred))
     insert_ (Ptr dstateId credId ptr)
-  forM_ (Map.toList (Shelley.iRReserves _irwd)) $ \(cred, c) -> do
+  forM_ (Map.toList (Shelley.iRReserves dsIRewards)) $ \(cred, c) -> do
     credId <- insertGetKey (Credential (Keys.asWitness cred))
     insert_ (IRReserves dstateId credId c)
-  forM_ (Map.toList (Shelley.iRTreasury _irwd)) $ \(cred, c) -> do
+  forM_ (Map.toList (Shelley.iRTreasury dsIRewards)) $ \(cred, c) -> do
     credId <- insertGetKey (Credential (Keys.asWitness cred))
     insert_ (IRTreasury dstateId credId c)
   pure dstateId
@@ -556,10 +556,10 @@ getDStateNoSharing dstateId = do
         pure (Keys.coerceKeyRole credential, iRTreasuryCoin)
   pure
     Shelley.DState
-      { _unified = unify rewards delegations ptrs,
-        _fGenDelegs = unEnc dStateFGenDelegs,
-        _genDelegs = dStateGenDelegs,
-        _irwd =
+      { dsUnified = unify rewards delegations ptrs,
+        dsFutureGenDelegs = unEnc dStateFGenDelegs,
+        dsGenDelegs = dStateGenDelegs,
+        dsIRewards =
           Shelley.InstantaneousRewards
             { iRReserves = iRReserves,
               iRTreasury = iRTreasury,
@@ -609,10 +609,10 @@ getDStateWithSharing dstateId = do
         pure (cred, iRTreasuryCoin)
   pure
     Shelley.DState
-      { _unified = unify rewards delegations ptrs,
-        _fGenDelegs = unEnc dStateFGenDelegs,
-        _genDelegs = dStateGenDelegs,
-        _irwd =
+      { dsUnified = unify rewards delegations ptrs,
+        dsFutureGenDelegs = unEnc dStateFGenDelegs,
+        dsGenDelegs = dStateGenDelegs,
+        dsIRewards =
           Shelley.InstantaneousRewards
             { iRReserves = iRReserves,
               iRTreasury = iRTreasury,

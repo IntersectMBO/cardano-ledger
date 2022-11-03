@@ -313,7 +313,7 @@ genUpdate
       nodes <- take 5 <$> QC.shuffle coreNodes
 
       let e = epochFromSlotNo s
-          (GenDelegs genDelegs) = (_genDelegs . dpsDState) delegPoolSt
+          (GenDelegs genDelegs) = (dsGenDelegs . dpsDState) delegPoolSt
           genesisKeys = fst <$> nodes
           coreSigners =
             catMaybes $

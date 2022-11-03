@@ -44,7 +44,7 @@ type ShelleyTest = ShelleyEra C_Crypto
 ignoreAllButIRWD ::
   Either [PredicateFailure (ShelleyDELEG ShelleyTest)] (DState C_Crypto) ->
   Either [PredicateFailure (ShelleyDELEG ShelleyTest)] (InstantaneousRewards C_Crypto)
-ignoreAllButIRWD = fmap _irwd
+ignoreAllButIRWD = fmap dsIRewards
 
 env :: ProtVer -> AccountState -> DelegEnv ShelleyTest
 env pv acnt =
@@ -71,12 +71,12 @@ testMirTransfer ::
   Assertion
 testMirTransfer pv pot target ir acnt (Right expected) = do
   checkTrace @(ShelleyDELEG ShelleyTest) runShelleyBase (env pv acnt) $
-    (pure (def {_irwd = ir})) .- (DCertMir (MIRCert pot target)) .-> (def {_irwd = expected})
+    (pure (def {dsIRewards = ir})) .- (DCertMir (MIRCert pot target)) .-> (def {dsIRewards = expected})
 testMirTransfer pv pot target ir acnt predicateFailure@(Left _) = do
   let st =
         runShelleyBase $
           applySTSTest @(ShelleyDELEG ShelleyTest)
-            (TRC (env pv acnt, def {_irwd = ir}, DCertMir (MIRCert pot target)))
+            (TRC (env pv acnt, def {dsIRewards = ir}, DCertMir (MIRCert pot target)))
   (ignoreAllButIRWD st) @?= predicateFailure
 
 alice :: Credential 'Staking C_Crypto

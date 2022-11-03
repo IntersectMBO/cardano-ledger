@@ -180,7 +180,7 @@ initialBBodyState pf utxo =
     dpstate =
       def
         { dpsDState =
-            def {_unified = UM.insert (scriptStakeCredSuceed pf) (Coin 1000) (Rewards UM.empty)}
+            def {dsUnified = UM.insert (scriptStakeCredSuceed pf) (Coin 1000) (Rewards UM.empty)}
         }
 
 testAlonzoBlock ::

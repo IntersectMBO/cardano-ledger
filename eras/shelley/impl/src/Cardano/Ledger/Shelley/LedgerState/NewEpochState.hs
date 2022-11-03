@@ -101,7 +101,7 @@ genesisState genDelegs0 utxo0 =
     )
     (DPState dState def)
   where
-    dState = def {_genDelegs = GenDelegs genDelegs0}
+    dState = def {dsGenDelegs = GenDelegs genDelegs0}
 
 -- Functions for stake delegation model
 
@@ -122,7 +122,7 @@ depositPoolChange ls pp txBody = (currentPool <+> txDeposits) <-> txRefunds
     -- to emphasize this point.
 
     currentPool = (utxosDeposited . lsUTxOState) ls
-    pools = _pParams . dpsPState . lsDPState $ ls
+    pools = psStakePoolParams . dpsPState . lsDPState $ ls
     txDeposits =
       totalDeposits pp (`Map.notMember` pools) (toList $ txBody ^. certsTxBodyL)
     txRefunds = keyRefunds pp txBody

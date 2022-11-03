@@ -27,6 +27,16 @@ in the naming of release branches.
 
 ### Changed
 
+- Renamed records fields in `Cardano.Ledger.Shelley.LedgerState.DPState` to names without `_` (underscores) #3116
+  - `DState`
+    - `_unified -> dsUnified`
+    - `_fGenDelegs -> dsFutureGenDelegs`
+    - `_genDelegs -> dsGenDelegs`
+    - `_irwd -> dsIRewards`
+  - `PState`
+    - `_pParams -> psStakePoolParams`
+    - `_fPParams -> psFutureStakePoolParams`
+    - `_retiring -> psRetiring`
 - Renamed `Cardano.Ledger.Shelley.LedgerState.Types.UTxOState` fields to names without `_` (underscores) #3108
   - `_utxo -> utxosUtxo`
   - `_deposited -> utxosDeposited`

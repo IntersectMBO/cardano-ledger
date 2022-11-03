@@ -103,13 +103,13 @@ data DState c = DState
   { -- | Unified Reward Maps. This contains the reward map (which is the source
     -- of truth regarding the registered stake credentials, the delegation map,
     -- and the stake credential pointer map.
-    _unified :: !(UnifiedMap c),
+    dsUnified :: !(UnifiedMap c),
     -- | Future genesis key delegations
-    _fGenDelegs :: !(Map (FutureGenDeleg c) (GenDelegPair c)),
+    dsFutureGenDelegs :: !(Map (FutureGenDeleg c) (GenDelegPair c)),
     -- | Genesis key delegations
-    _genDelegs :: !(GenDelegs c),
+    dsGenDelegs :: !(GenDelegs c),
     -- | Instantaneous Rewards
-    _irwd :: !(InstantaneousRewards c)
+    dsIRewards :: !(InstantaneousRewards c)
   }
   deriving (Show, Eq, Generic)
 
@@ -140,15 +140,15 @@ instance (CC.Crypto c, FromSharedCBOR (InstantaneousRewards c)) => FromSharedCBO
 -- | The state used by the POOL rule, which tracks stake pool information.
 data PState c = PState
   { -- | The stake pool parameters.
-    _pParams :: !(Map (KeyHash 'StakePool c) (PoolParams c)),
+    psStakePoolParams :: !(Map (KeyHash 'StakePool c) (PoolParams c)),
     -- | The future stake pool parameters.
     -- Changes to existing stake pool parameters are staged in order
     -- to give delegators time to react to changes.
     -- See section 11.2, "Example Illustration of the Reward Cycle",
     -- of the Shelley Ledger Specification for a sequence diagram.
-    _fPParams :: !(Map (KeyHash 'StakePool c) (PoolParams c)),
+    psFutureStakePoolParams :: !(Map (KeyHash 'StakePool c) (PoolParams c)),
     -- | A map of retiring stake pools to the epoch when they retire.
-    _retiring :: !(Map (KeyHash 'StakePool c) EpochNo)
+    psRetiring :: !(Map (KeyHash 'StakePool c) EpochNo)
   }
   deriving (Show, Eq, Generic)
 
@@ -165,10 +165,10 @@ instance CC.Crypto c => FromSharedCBOR (PState c) where
     Share (PState c) =
       Interns (KeyHash 'StakePool c)
   fromSharedPlusCBOR = decodeRecordNamedT "PState" (const 3) $ do
-    _pParams <- fromSharedPlusLensCBOR (toMemptyLens _1 id)
-    _fPParams <- fromSharedPlusLensCBOR (toMemptyLens _1 id)
-    _retiring <- fromSharedPlusLensCBOR (toMemptyLens _1 id)
-    pure PState {_pParams, _fPParams, _retiring}
+    psStakePoolParams <- fromSharedPlusLensCBOR (toMemptyLens _1 id)
+    psFutureStakePoolParams <- fromSharedPlusLensCBOR (toMemptyLens _1 id)
+    psRetiring <- fromSharedPlusLensCBOR (toMemptyLens _1 id)
+    pure PState {psStakePoolParams, psFutureStakePoolParams, psRetiring}
 
 instance (CC.Crypto c, FromSharedCBOR (PState c)) => FromCBOR (PState c) where
   fromCBOR = fromNotSharedCBOR
