@@ -297,7 +297,7 @@ applyRUpdFiltered
               delegState
                 { dpsDState =
                     dState
-                      { _unified = rewards dState UM.∪+ registeredAggregated
+                      { dsUnified = rewards dState UM.∪+ registeredAggregated
                       }
                 }
           }
