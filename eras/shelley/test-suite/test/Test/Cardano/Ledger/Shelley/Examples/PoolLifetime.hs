@@ -259,7 +259,7 @@ expectedStEx1 :: forall c. (ExMock c) => ChainState (ShelleyEra c)
 expectedStEx1 =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx1 @c))
     . C.newLab blockEx1
-    . C.feesAndDeposits feeTx1 (((3 :: Integer) <×> _keyDeposit ppEx) <+> _poolDeposit ppEx)
+    . C.feesAndDeposits ppEx feeTx1 [Cast.aliceSHK, Cast.bobSHK, Cast.carlSHK] [Cast.alicePoolParams]
     . C.newUTxO txbodyEx1
     . C.newStakeCred Cast.aliceSHK (Ptr (SlotNo 10) minBound (mkCertIxPartial 0))
     . C.newStakeCred Cast.bobSHK (Ptr (SlotNo 10) minBound (mkCertIxPartial 1))
@@ -386,7 +386,7 @@ expectedStEx2 ::
 expectedStEx2 =
   C.evolveNonceFrozen (getBlockNonce (blockEx2 @c))
     . C.newLab blockEx2
-    . C.feesAndDeposits feeTx2 (Coin 0)
+    . C.feesAndDeposits ppEx feeTx2 [] []
     . C.newUTxO txbodyEx2
     . C.delegation Cast.aliceSHK (ppId $ Cast.alicePoolParams @c)
     . C.delegation Cast.bobSHK (ppId $ Cast.alicePoolParams @c)
@@ -526,7 +526,7 @@ expectedStEx4 ::
 expectedStEx4 =
   C.evolveNonceFrozen (getBlockNonce (blockEx4 @c))
     . C.newLab blockEx4
-    . C.feesAndDeposits feeTx4 (Coin 0)
+    . C.feesAndDeposits ppEx feeTx4 [] []
     . C.newUTxO txbodyEx4
     . C.delegation Cast.carlSHK (ppId $ Cast.alicePoolParams @c)
     . C.pulserUpdate pulserEx4
@@ -896,7 +896,7 @@ expectedStEx10 :: forall c. (ExMock (EraCrypto (ShelleyEra c))) => ChainState (S
 expectedStEx10 =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx10 @c))
     . C.newLab blockEx10
-    . C.feesAndDeposits feeTx10 (invert (_keyDeposit ppEx))
+    . C.feesAndKeyRefund feeTx10 Cast.bobSHK
     . C.deregStakeCred Cast.bobSHK
     . C.newUTxO txbodyEx10
     $ expectedStEx9
@@ -999,7 +999,7 @@ expectedStEx11 :: forall c. (ExMock (EraCrypto (ShelleyEra c))) => ChainState (S
 expectedStEx11 =
   C.evolveNonceFrozen (getBlockNonce (blockEx11 @c))
     . C.newLab blockEx11
-    . C.feesAndDeposits feeTx11 (Coin 0)
+    . C.feesAndDeposits ppEx feeTx11 [] []
     . C.newUTxO txbodyEx11
     . C.pulserUpdate pulserEx11
     . C.stageRetirement (hk Cast.alicePoolKeys) aliceRetireEpoch

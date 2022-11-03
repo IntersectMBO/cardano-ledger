@@ -94,7 +94,7 @@ import Cardano.Ledger.UTxO (makeWitnessVKey, makeWitnessesVKey)
 import Cardano.Ledger.Val ((<+>), (<->))
 import Cardano.Protocol.TPraos.BHeader (checkLeaderValue)
 import Control.State.Transition.Extended (PredicateFailure, TRC (..))
-import Control.State.Transition.Trace (checkTrace, (.-), (.->))
+import Control.State.Transition.Trace (checkTrace, (.-), (.->>))
 import qualified Data.ByteString.Char8 as BS (pack)
 import Data.Default.Class (def)
 import qualified Data.Map.Strict as Map
@@ -321,7 +321,7 @@ testLEDGER ::
   Either [PredicateFailure (ShelleyLEDGER C)] (LedgerState C) ->
   Assertion
 testLEDGER initSt tx env (Right expectedSt) = do
-  checkTrace @(ShelleyLEDGER C) runShelleyBase env $ pure initSt .- tx .-> expectedSt
+  checkTrace @(ShelleyLEDGER C) runShelleyBase env $ pure initSt .- tx .->> expectedSt
 testLEDGER initSt tx env predicateFailure@(Left _) = do
   let st = runShelleyBase $ applySTSTest @(ShelleyLEDGER C) (TRC (env, initSt, tx))
   st @?= predicateFailure

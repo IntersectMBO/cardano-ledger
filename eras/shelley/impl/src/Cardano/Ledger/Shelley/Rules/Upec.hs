@@ -29,7 +29,6 @@ import Cardano.Ledger.Shelley.LedgerState
     PPUPState (..),
     UTxOState (utxosPpups),
     UpecState (..),
-    esAccountState,
     esLState,
     lsDPState,
     lsUTxOState,
@@ -85,8 +84,7 @@ instance
     [ do
         TRC
           ( EpochState
-              { esAccountState = acnt,
-                esLState = ls
+              { esLState = ls
               },
             UpecState pp ppupSt,
             _
@@ -101,7 +99,7 @@ instance
             ppNew = votedValue pup pp (fromIntegral coreNodeQuorum)
         NewppState pp' ppupSt' <-
           trans @(ShelleyNEWPP era) $
-            TRC (NewppEnv dstate pstate utxoSt acnt, NewppState pp ppupSt, ppNew)
+            TRC (NewppEnv dstate pstate utxoSt, NewppState pp ppupSt, ppNew)
         pure $
           UpecState pp' ppupSt'
     ]

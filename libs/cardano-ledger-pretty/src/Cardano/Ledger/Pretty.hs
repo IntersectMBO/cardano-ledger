@@ -637,13 +637,14 @@ ppDPState :: DPState c -> PDoc
 ppDPState (DPState d p) = ppRecord "DPState" [("dstate", ppDState d), ("pstate", ppPState p)]
 
 ppDState :: DState c -> PDoc
-ppDState (DState unified future gen irwd) =
+ppDState (DState unified future gen irwd deposits) =
   ppRecord
     "DState"
     [ ("unifiedMap", ppUnifiedMap unified),
       ("futuregendelegs", ppMap ppFutureGenDeleg ppGenDelegPair future),
       ("gendelegs", ppGenDelegs gen),
-      ("instantaeousrewards", ppInstantaneousRewards irwd)
+      ("instantaeousrewards", ppInstantaneousRewards irwd),
+      ("deposits", ppMap ppCredential ppCoin deposits)
     ]
 
 ppFutureGenDeleg :: FutureGenDeleg c -> PDoc
@@ -673,12 +674,13 @@ ppPPUPState (PPUPState p fp) =
     ]
 
 ppPState :: PState c -> PDoc
-ppPState (PState par fpar ret) =
+ppPState (PState par fpar ret deposits) =
   ppRecord
     "PState"
     [ ("poolparams", ppMap' mempty ppKeyHash ppPoolParams par),
       ("futurepoolparams", ppMap' mempty ppKeyHash ppPoolParams fpar),
-      ("retiring", ppMap' mempty ppKeyHash ppEpochNo ret)
+      ("retiring", ppMap' mempty ppKeyHash ppEpochNo ret),
+      ("deposits", ppMap ppKeyHash ppCoin deposits)
     ]
 
 ppRewardAccounts :: Map.Map (Credential 'Staking c) Coin -> PDoc

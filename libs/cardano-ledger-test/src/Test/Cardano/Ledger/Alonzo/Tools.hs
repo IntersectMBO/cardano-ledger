@@ -249,7 +249,7 @@ exampleEpochInfo :: Monad m => EpochInfo m
 exampleEpochInfo = fixedEpochInfo (EpochSize 100) (mkSlotLength 1)
 
 uenv :: Proof era -> UtxoEnv era
-uenv pf = UtxoEnv (SlotNo 0) (pparams pf) mempty (GenDelegs mempty)
+uenv pf = UtxoEnv (SlotNo 0) (pparams pf) def (GenDelegs mempty)
 
 costmodels :: Array Language CostModel
 costmodels = array (PlutusV1, PlutusV1) [(PlutusV1, testingCostModelV1)]

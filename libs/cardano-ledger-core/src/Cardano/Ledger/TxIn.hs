@@ -30,6 +30,7 @@ import Cardano.Ledger.Binary (FromCBOR (fromCBOR), ToCBOR (..), decodeRecordName
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.SafeHash (SafeHash)
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
@@ -93,3 +94,9 @@ instance CC.Crypto c => FromCBOR (TxIn c) where
       "TxIn"
       (const 2)
       (TxIn <$> fromCBOR <*> fromCBOR)
+
+-- ============================================================
+
+instance ToExpr (TxIn c)
+
+instance ToExpr (TxId c)

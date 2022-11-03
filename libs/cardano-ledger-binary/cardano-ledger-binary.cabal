@@ -32,6 +32,7 @@ library
   import:            base, project-config
 
   exposed-modules:
+                     Cardano.Ledger.TreeDiff
                      Cardano.Ledger.Binary
                      Cardano.Ledger.Binary.Coders
                      Cardano.Ledger.Binary.Crypto
@@ -78,6 +79,7 @@ library
                    , text
                    , time
                    , transformers >= 0.5
+                   , tree-diff
                    , vector
                    , vector-map
   hs-source-dirs:    src

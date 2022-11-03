@@ -44,6 +44,7 @@ import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
     DPState (..),
+    DState (dsDeposits),
     EpochState (..),
     LedgerState (..),
     NewEpochState (..),
@@ -105,6 +106,7 @@ import Test.Cardano.Ledger.Generic.GenState
     getSlot,
     getSlotDelta,
     getTreasury,
+    gsModel,
     initStableFields,
     initialLedgerState,
     modifyModel,
@@ -246,6 +248,8 @@ raiseMockError ::
 raiseMockError slot (SlotNo next) epochstate pdfs txs GenState {..} =
   let utxo = unUTxO $ (utxosUtxo . lsUTxOState . esLState) epochstate
       _ssPoolParams = (psStakePoolParams . dpsPState . lsDPState . esLState) epochstate
+      _pooldeposits = (psDeposits . dpsPState . lsDPState . esLState) epochstate
+      _keydeposits = (dsDeposits . dpsDState . lsDPState . esLState) epochstate
    in show $
         vsep
           [ ppString "===================================",
@@ -253,16 +257,20 @@ raiseMockError slot (SlotNo next) epochstate pdfs txs GenState {..} =
             ppString "===================================",
             ppString "Stable Pools\n" <> ppSet pcKeyHash gsStablePools,
             ppString "===================================",
+            ppString "Stable Delegators\n" <> ppSet pcCredential gsStableDelegators,
             -- You never know what is NEEDED to debug a failure, and what is a DISTRACTION
             -- These things certainly fall in that category. I leave them commented out so if
             -- they are not a distraction in the current error, they are easy to turn back on.
+            -- ppString "===================================",
+            -- ppString "PoolDeposits\n" <> ppMap pcKeyHash pcCoin _pooldeposits,
+            -- ppString "===================================",
+            -- ppString "KeyDeposits\n" <> ppMap pcCredential pcCoin _keydeposits,
+            -- ppString "Model KeyDeposits\n" <> ppMap pcCredential pcCoin (mKeyDeposits gsModel),
             -- ppString "Initial Pool Distr\n" <> ppMap pcKeyHash pcIndividualPoolStake gsInitialPoolDistr,
             -- ppString "===================================",
             -- ppString "Initial Pool Params\n" <> ppMap pcKeyHash pcPoolParams gsInitialPoolParams,
-            ppString "===================================",
-            ppString "Stable Delegators\n" <> ppSet pcCredential gsStableDelegators,
-            ppString "===================================",
-            ppString "Initial Rewards\n" <> ppMap pcCredential pcCoin gsInitialRewards,
+            -- ppString "===================================",
+            -- ppString "Initial Rewards\n" <> ppMap pcCredential pcCoin gsInitialRewards,
             ppString "===================================",
             showBlock utxo txs,
             ppString "===================================",
@@ -277,9 +285,11 @@ raiseMockError slot (SlotNo next) epochstate pdfs txs GenState {..} =
               <> ppMap
                 pcScriptHash
                 (scriptSummary @era reify)
-                (Map.restrictKeys gsScripts (badScripts reify pdfs))
-                -- ppString "===================================",
-                -- ppString "Real Pool Params\n" <> ppMap pcKeyHash pcPoolParams poolParams
+                (Map.restrictKeys gsScripts (badScripts reify pdfs)),
+            -- ppString "===================================",
+            -- ppString "Real Pool Params\n" <> ppMap pcKeyHash pcPoolParams poolParams,
+            ppString "=====================================",
+            ppString ("Protocol Parameters\n" ++ show (esPp epochstate))
           ]
 
 badScripts :: Proof era -> [MockChainFailure era] -> Set.Set (ScriptHash (EraCrypto era))

@@ -88,6 +88,7 @@ import Cardano.Ledger.Keys
     hashKey,
   )
 import Cardano.Ledger.Slot (SlotNo (..))
+import Cardano.Ledger.TreeDiff (ToExpr (toExpr), defaultExprViaShow)
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), FromJSONKey (..), ToJSON (..), ToJSONKey (..), (.:), (.=))
 import qualified Data.Aeson as Aeson
@@ -482,3 +483,12 @@ bootstrapKeyHash (BootstrapAddress byronAddress) =
         fromMaybe (error "bootstrapKeyHash: incorrect hash length") $
           Hash.hashFromBytes bytes
    in KeyHash hash
+
+-- ==============================================
+
+instance ToExpr (Addr c)
+
+instance ToExpr (RewardAcnt era)
+
+instance ToExpr (BootstrapAddress c) where
+  toExpr = defaultExprViaShow

@@ -32,7 +32,6 @@ module Cardano.Ledger.Shelley.API.Wallet
 
     -- * Transaction helpers
     addKeyWitnesses,
-    evaluateConsumed,
     evaluateMinFee,
     evaluateTransactionFee,
     evaluateTransactionBalance,
@@ -454,12 +453,6 @@ getRewardProvenance globals newepochstate =
 -- Transaction helpers
 --------------------------------------------------------------------------------
 
--- | The consumed calculation.
--- Used for the default implentation of 'evaluateTransactionBalance'.
-evaluateConsumed :: EraUTxO era => PParams era -> UTxO era -> TxBody era -> Value era
-evaluateConsumed = getConsumedValue
-{-# DEPRECATED evaluateConsumed "In favor of 'getConsumedValue'" #-}
-
 -- | The minimum fee calculation.
 -- Used for the default implentation of 'evaluateTransactionFee'.
 evaluateMinFee :: EraTx era => PParams era -> Tx era -> Coin
@@ -515,26 +508,22 @@ evaluateTransactionFee pp tx numKeyWits = getMinFeeTx pp tx'
 evaluateTransactionBalance ::
   ( EraUTxO era,
     ShelleyEraTxBody era,
+    DepositInfo era ~ DPState (EraCrypto era),
     HasField "_poolDeposit" (PParams era) Coin,
     HasField "_keyDeposit" (PParams era) Coin
   ) =>
-  -- | The current protocol parameters.
+  -- | Current protocol parameters
   PParams era ->
+  -- | Where the deposit info is stored
+  DepositInfo era ->
   -- | The UTxO relevant to the transaction.
   UTxO era ->
-  -- | A predicate that a stake pool ID is new (i.e. unregistered).
-  -- Typically this will be:
-  --
-  -- @
-  --   (`Map.notMember` stakepools)
-  -- @
-  (KeyHash 'StakePool (EraCrypto era) -> Bool) ->
   -- | The transaction being evaluated for balance.
   TxBody era ->
   -- | The difference between what the transaction consumes and what it produces.
   Value era
-evaluateTransactionBalance pp u isNewPool txb =
-  getConsumedValue pp u txb <-> produced pp isNewPool txb
+evaluateTransactionBalance pp dpstate u txb =
+  getConsumedValue pp dpstate u txb <-> produced pp dpstate txb
 
 --------------------------------------------------------------------------------
 -- Shelley specifics

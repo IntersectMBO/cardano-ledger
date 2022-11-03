@@ -86,7 +86,7 @@ poolRetirement
 poolRetirement _ _ _ = property ()
 
 poolStateIsInternallyConsistent :: PState c -> Property
-poolStateIsInternallyConsistent (PState pParams_ _ retiring_) = do
+poolStateIsInternallyConsistent PState {psStakePoolParams = pParams_, psRetiring = retiring_} = do
   let poolKeys = Map.keysSet pParams_
       pParamKeys = Map.keysSet pParams_
       retiringKeys = Map.keysSet retiring_

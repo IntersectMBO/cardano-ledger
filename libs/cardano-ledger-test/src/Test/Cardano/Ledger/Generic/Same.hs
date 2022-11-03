@@ -113,18 +113,20 @@ instance (EraCrypto era ~ c) => Same era (DPState c) where
     extendLabel "DState " (same proof d1 d2) ++ extendLabel "PState " (same proof p1 p2)
 
 instance (EraCrypto era ~ c) => Same era (PState c) where
-  same _proof (PState pp1 fpp1 ret1) (PState pp2 fpp2 ret2) =
+  same _proof (PState pp1 fpp1 ret1 d1) (PState pp2 fpp2 ret2 d2) =
     [ ("PoolParams", eqByShow pp1 pp2),
       ("FuturePoolParams", eqByShow fpp1 fpp2),
-      ("Retiring", eqByShow ret1 ret2)
+      ("Retiring", eqByShow ret1 ret2),
+      ("Deposits", eqByShow d1 d2)
     ]
 
 instance (EraCrypto era ~ c) => Same era (DState c) where
-  same _proof (DState u1 fgd1 gd1 ir1) (DState u2 fgd2 gd2 ir2) =
+  same _proof (DState u1 fgd1 gd1 ir1 d1) (DState u2 fgd2 gd2 ir2 d2) =
     [ ("Unified", eqByShow u1 u2),
       ("FutureGenDelegs", eqByShow fgd1 fgd2),
       ("GenDelegs", eqByShow gd1 gd2),
-      ("InstantaneousRewards", eqByShow ir1 ir2)
+      ("InstantaneousRewards", eqByShow ir1 ir2),
+      ("Deposits", eqByShow d1 d2)
     ]
 
 sameUTxO :: Proof era -> UTxO era -> UTxO era -> Maybe PDoc

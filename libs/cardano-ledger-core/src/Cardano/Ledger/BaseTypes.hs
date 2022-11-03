@@ -89,6 +89,7 @@ import Cardano.Ledger.Binary
 import Cardano.Ledger.Binary.Version
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.NonIntegral (ln')
+import Cardano.Ledger.TreeDiff (Expr (..), ToExpr (toExpr), trimExprViaShow)
 import Cardano.Slotting.Block as Slotting (BlockNo (..))
 import Cardano.Slotting.EpochInfo (EpochInfo, hoistEpochInfo)
 import Cardano.Slotting.Slot as Slotting (EpochNo (..), EpochSize (..), SlotNo (..), WithOrigin (..))
@@ -690,3 +691,32 @@ word16FromInteger :: Integer -> Maybe Word16
 word16FromInteger i
   | i < fromIntegral (minBound :: Word16) || i > fromIntegral (maxBound :: Word16) = Nothing
   | otherwise = Just (fromInteger i)
+
+-- =================================
+
+instance ToExpr TxIx
+
+instance ToExpr CertIx where
+  toExpr (CertIx x) = App "CertIx" [toExpr x]
+
+instance ToExpr UnitInterval
+
+instance ToExpr Network
+
+instance ToExpr Port
+
+instance ToExpr Url
+
+instance ToExpr Nonce where
+  toExpr NeutralNonce = App "NeutralNonce" []
+  toExpr (Nonce x) = App "Nonce" [trimExprViaShow 10 x]
+
+instance ToExpr DnsName
+
+instance (ToExpr x, ToExpr y, Integral y) => ToExpr (BoundedRatio x y)
+
+instance ToExpr NonNegativeInterval
+
+instance ToExpr (BlocksMade c)
+
+instance ToExpr ProtVer

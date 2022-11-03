@@ -8,7 +8,7 @@ import Cardano.Ledger.Shelley.Rules (ShelleyLEDGER)
 import System.IO (hSetEncoding, stdout, utf8)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C)
 import Test.Cardano.Ledger.Shelley.Pretty (prettyTest)
-import Test.Cardano.Ledger.Shelley.PropertyTests (minimalPropertyTests, propertyTests)
+import Test.Cardano.Ledger.Shelley.PropertyTests (depositTests, minimalPropertyTests, propertyTests)
 import Test.Cardano.Ledger.Shelley.Rewards (rewardTests)
 import Test.Cardano.Ledger.Shelley.RulesTests (chainExamples, multisigExamples)
 import Test.Cardano.Ledger.Shelley.SafeHash (safeHashTest)
@@ -27,7 +27,8 @@ mainTests :: TestTree
 mainTests =
   testGroup
     "Ledger with Delegation"
-    [ minimalPropertyTests @C @(ShelleyLEDGER C),
+    [ depositTests @C,
+      minimalPropertyTests @C @(ShelleyLEDGER C),
       rewardTests,
       Serialisation.tests 5,
       chainExamples,

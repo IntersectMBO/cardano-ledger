@@ -94,6 +94,8 @@ defaultPPs =
     MaxTxExUnits $ ExUnits 1000000 1000000,
     MaxBlockExUnits $ ExUnits 1000000 1000000,
     ProtocolVersion $ ProtVer (natVersion @5) 0,
+    KeyDeposit (Coin 2),
+    PoolDeposit (Coin 5),
     CollateralPercentage 100
   ]
 
@@ -166,6 +168,7 @@ applyCert proof model dcert = case dcert of
   (DCertDeleg (RegKey x)) ->
     model
       { mRewards = Map.insert x (Coin 0) (mRewards model),
+        mKeyDeposits = Map.insert x keydeposit (mKeyDeposits model),
         mDeposited = mDeposited model <+> keydeposit
       }
     where
@@ -176,18 +179,28 @@ applyCert proof model dcert = case dcert of
     Just (Coin 0) ->
       model
         { mRewards = Map.delete x (mRewards model),
+          mKeyDeposits = Map.delete x (mKeyDeposits model),
           mDeposited = mDeposited model <-> keydeposit
         }
       where
-        pp = mPParams model
-        (keydeposit, _) = keyPoolDeposits proof pp
+        keydeposit = case Map.lookup x (mKeyDeposits model) of
+          Nothing -> mempty
+          Just c -> c
     Just (Coin _n) -> error "DeRegKey with non-zero balance"
   (DCertDeleg (Delegate (Delegation cred hash))) ->
     model {mDelegations = Map.insert cred hash (mDelegations model)}
   (DCertPool (RegPool poolparams)) ->
     model
       { mPoolParams = Map.insert hk poolparams (mPoolParams model),
-        mDeposited = mDeposited model <+> pooldeposit
+        mDeposited =
+          if Map.member hk (mPoolDeposits model)
+            then mDeposited model
+            else mDeposited model <+> pooldeposit,
+        mPoolDeposits -- Only add if it isn't already there
+        =
+          case Map.lookup hk (mPoolDeposits model) of
+            Just _ -> mPoolDeposits model
+            Nothing -> Map.insert hk pooldeposit (mPoolDeposits model)
       }
     where
       hk = ppId poolparams

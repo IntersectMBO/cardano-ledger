@@ -46,11 +46,7 @@ import Cardano.Ledger.Keys
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (ShelleyUTXOW)
-import Cardano.Ledger.Shelley.LedgerState
-  ( LedgerState (..),
-    UTxOState,
-    genesisState,
-  )
+import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), UTxOState, genesisState)
 import Cardano.Ledger.Shelley.Metadata (ShelleyTxAuxData)
 import Cardano.Ledger.Shelley.PParams
   ( ShelleyPParams,
@@ -78,6 +74,7 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (makeWitnessesVKey)
 import qualified Cardano.Ledger.Val as Val
 import Control.State.Transition.Extended (PredicateFailure, TRC (..))
+import Data.Default.Class (Default (def))
 import Data.Foldable (fold)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (empty, fromList)
@@ -250,7 +247,7 @@ initialUTxOState aliceKeep msigs =
                     ( UtxoEnv
                         (SlotNo 0)
                         initPParams
-                        Map.empty
+                        def
                         (GenDelegs Map.empty),
                       lsUTxOState genesis,
                       tx
@@ -304,7 +301,7 @@ applyTxWithScript lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
               ( UtxoEnv
                   (SlotNo 0)
                   initPParams
-                  Map.empty
+                  def
                   (GenDelegs Map.empty),
                 utxoSt,
                 tx

@@ -102,6 +102,7 @@ import Cardano.Ledger.Shelley.Tx (ShelleyTx, ShelleyTxOut)
 import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody)
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits)
 import Cardano.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Protocol.TPraos.API (GetLedgerView)
 import Cardano.Protocol.TPraos.BHeader (BHBody (..), BHeader, bhbody)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
@@ -119,7 +120,7 @@ import Control.State.Transition.Trace
   ( applySTSTest,
     checkTrace,
     (.-),
-    (.->),
+    (.->>),
   )
 import Data.Coerce (Coercible, coerce)
 import Data.Default.Class (Default)
@@ -314,14 +315,14 @@ maxLLSupply = Coin $ fromIntegral $ runShelleyBase (asks maxLovelaceSupply)
 
 testSTS ::
   forall s.
-  (BaseM s ~ ShelleyBase, STS s, Eq (State s), Show (State s)) =>
+  (BaseM s ~ ShelleyBase, STS s, Eq (State s), Show (State s), ToExpr (State s)) =>
   Environment s ->
   State s ->
   Signal s ->
   Either [PredicateFailure s] (State s) ->
   Assertion
 testSTS env initSt signal (Right expectedSt) = do
-  checkTrace @s runShelleyBase env $ pure initSt .- signal .-> expectedSt
+  checkTrace @s runShelleyBase env $ pure initSt .- signal .->> expectedSt
 testSTS env initSt sig predicateFailure@(Left _) = do
   let st = runShelleyBase $ applySTSTest @s (TRC (env, initSt, sig))
   st @?= predicateFailure

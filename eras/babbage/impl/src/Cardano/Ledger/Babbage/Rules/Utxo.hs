@@ -73,6 +73,7 @@ import Cardano.Ledger.Rules.ValidationMode
     runTest,
     runTestOnSignal,
   )
+import Cardano.Ledger.Shelley.LedgerState (DPState)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, UtxoEnv)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
@@ -328,6 +329,7 @@ utxoTransition ::
     Tx era ~ AlonzoTx era,
     TxBody era ~ BabbageTxBody era,
     TxOut era ~ BabbageTxOut era,
+    DepositInfo era ~ DPState (EraCrypto era),
     STS (BabbageUTXO era),
     HasField "_maxTxSize" (PParams era) Natural,
     HasField "_maxValSize" (PParams era) Natural,
@@ -345,7 +347,7 @@ utxoTransition ::
   ) =>
   TransitionRule (BabbageUTXO era)
 utxoTransition = do
-  TRC (Shelley.UtxoEnv slot pp stakepools _genDelegs, u, tx) <- judgmentContext
+  TRC (Shelley.UtxoEnv slot pp dpstate _genDelegs, u, tx) <- judgmentContext
   let Shelley.UTxOState utxo _deposits _fees _ppup _ = u
 
   {-   txb := txbody tx   -}
@@ -372,7 +374,7 @@ utxoTransition = do
   runTest $ Shelley.validateBadInputsUTxO utxo allInputs
 
   {- consumed pp utxo txb = produced pp poolParams txb -}
-  runTest $ Shelley.validateValueNotConservedUTxO pp utxo stakepools txBody
+  runTest $ Shelley.validateValueNotConservedUTxO pp utxo dpstate txBody
 
   {-   adaID ∉ supp mint tx - check not needed because mint field of type MultiAsset
    cannot contain ada -}
@@ -424,6 +426,7 @@ instance
     TxOut era ~ BabbageTxOut era,
     TxBody era ~ BabbageTxBody era,
     TxWits era ~ AlonzoTxWits era,
+    DepositInfo era ~ DPState (EraCrypto era),
     HasField "_maxCollateralInputs" (PParams era) Natural,
     HasField "_coinsPerUTxOByte" (PParams era) Coin,
     HasField "_collateralPercentage" (PParams era) Natural,

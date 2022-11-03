@@ -18,26 +18,22 @@ module Test.Cardano.Ledger.Shelley.Generator.Trace.DCert
 where
 
 import Cardano.Ledger.BaseTypes (CertIx, Globals, ShelleyBase, TxIx)
-import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era, EraCrypto)
 import Cardano.Ledger.Keys (HasKeyRole (coerceKeyRole), asWitness)
 import Cardano.Ledger.Shelley.API
   ( AccountState,
-    DCert,
-    DPState (..),
     DelplEnv (..),
     KeyPair (..),
     KeyRole (..),
-    PState (..),
     Ptr (..),
     ShelleyDELPL,
   )
-import Cardano.Ledger.Shelley.Delegation.Certificates (isDeRegKey)
+import Cardano.Ledger.Shelley.Delegation.Certificates (DCert (..))
+import Cardano.Ledger.Shelley.LedgerState (DPState (..), keyCertsRefunds, totalCertsDeposits)
 import Cardano.Ledger.Shelley.Rules (ShelleyDelplEvent, ShelleyDelplPredFailure)
-import Cardano.Ledger.Shelley.UTxO (totalDeposits)
 import Cardano.Ledger.Slot (SlotNo (..))
-import Cardano.Ledger.Val ((<×>))
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition
   ( BaseM,
@@ -67,7 +63,6 @@ import Data.Proxy (Proxy (..))
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Generics (Generic)
-import GHC.Records (HasField (getField))
 import GHC.Stack (HasCallStack)
 import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv (..), KeySpace (..))
@@ -231,21 +226,19 @@ genDCerts
     let certsCreds = catMaybes . traceSignals OldestFirst $ certsTrace
         (lastState_, _) = lastState certsTrace
         (certs, creds) = unzip certsCreds
-        deRegStakeCreds = filter isDeRegKey certs
         (scriptCreds, keyCreds) = partition isScript creds
         keyCreds' = concat (keyCreds : map scriptWitnesses scriptCreds)
-
+        refunds = keyCertsRefunds pparams dpState certs
     pure
       ( StrictSeq.fromList certs,
-        totalDeposits pparams (`Map.notMember` pools) certs,
-        length deRegStakeCreds <×> getField @"_keyDeposit" pparams,
+        totalCertsDeposits pparams dpState certs,
+        refunds,
         lastState_,
         ( concat (keyCredAsWitness <$> keyCreds'),
           extractScriptCred <$> scriptCreds
         )
       )
     where
-      pools = psStakePoolParams (dpsPState dpState)
       isScript (ScriptCred _) = True
       isScript _ = False
 

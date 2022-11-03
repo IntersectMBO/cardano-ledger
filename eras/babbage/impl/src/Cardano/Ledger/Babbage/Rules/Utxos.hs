@@ -43,18 +43,13 @@ import Cardano.Ledger.Babbage.TxBody
   ( AlonzoEraTxBody (collateralInputsTxBodyL),
     BabbageEraTxBody,
     BabbageTxOut,
-    ShelleyEraTxBody (certsTxBodyL, updateTxBodyL),
+    ShelleyEraTxBody (updateTxBodyL),
   )
 import Cardano.Ledger.BaseTypes (ProtVer, ShelleyBase, epochInfo, strictMaybeToMaybe, systemStart)
 import Cardano.Ledger.Binary (ToCBOR (..))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.LedgerState
-  ( PPUPState (..),
-    UTxOState (..),
-    keyRefunds,
-    updateStakeDistribution,
-  )
+import Cardano.Ledger.Shelley.LedgerState (PPUPState (..), UTxOState (..), keyTxRefunds, totalTxDeposits, updateStakeDistribution)
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules
   ( PpupEnv (..),
@@ -63,12 +58,10 @@ import Cardano.Ledger.Shelley.Rules
     UtxoEnv (..),
     updateUTxOState,
   )
-import Cardano.Ledger.Shelley.UTxO (totalDeposits)
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..))
-import qualified Cardano.Ledger.Val as Val
+import Cardano.Ledger.Val ((<->))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
-import Data.Foldable (toList)
 import Data.List.NonEmpty (nonEmpty)
 import qualified Data.Map.Strict as Map
 import Data.MapExtras (extractKeys)
@@ -170,17 +163,14 @@ scriptsYes ::
   ) =>
   TransitionRule (BabbageUTXOS era)
 scriptsYes = do
-  TRC (UtxoEnv slot pp poolParams genDelegs, u@(UTxOState utxo _ _ pup _), tx) <-
+  TRC (UtxoEnv slot pp dpstate genDelegs, u@(UTxOState utxo _ _ pup _), tx) <-
     judgmentContext
-  let {- txb := txbody tx -}
-      txBody = body tx
+  let txBody = body tx
       {- refunded := keyRefunds pp txb -}
-      refunded = keyRefunds pp txBody
-      txCerts = toList $ txBody ^. certsTxBodyL
+      refunded = keyTxRefunds pp dpstate txBody
       {- depositChange := (totalDeposits pp poolParams txcerts txb) − refunded -}
-      depositChange =
-        totalDeposits pp (`Map.notMember` poolParams) txCerts Val.<-> refunded
       protVer = getField @"_protocolVersion" pp
+      depositChange = totalTxDeposits pp dpstate txBody <-> refunded
   sysSt <- liftSTS $ asks systemStart
   ei <- liftSTS $ asks epochInfo
 

@@ -63,6 +63,7 @@ import Cardano.Ledger.Keys
   )
 import Cardano.Ledger.Keys.WitVKey
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.DeepSeq (NFData)
 import Control.Monad ((<$!>))
@@ -77,6 +78,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
+import GHC.Records (HasField (..))
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 import Quiet (Quiet (Quiet))
@@ -243,8 +245,10 @@ class EraTxBody era => EraUTxO era where
   -- scripts needed for the transaction.
   type ScriptsNeeded era = (r :: Type) | r -> era
 
+  type DepositInfo era :: Type
+
   -- | Calculate all the value that is being consumed by the transaction.
-  getConsumedValue :: PParams era -> UTxO era -> TxBody era -> Value era
+  getConsumedValue :: HasField "_keyDeposit" pp Coin => pp -> DepositInfo era -> UTxO era -> TxBody era -> Value era
 
   -- | Produce all the information required for figuring out which scripts are required
   -- for the transaction to be valid, once those scripts are evaluated
@@ -252,3 +256,7 @@ class EraTxBody era => EraUTxO era where
 
   -- | Extract the set of all script hashes that are needed for script validation.
   getScriptsHashesNeeded :: ScriptsNeeded era -> Set (ScriptHash (EraCrypto era))
+
+-- ============================================================
+
+instance ToExpr (TxOut era) => ToExpr (UTxO era)

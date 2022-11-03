@@ -76,13 +76,13 @@ import Cardano.Ledger.Shelley.Delegation.Certificates
   )
 import Cardano.Ledger.Shelley.LedgerState
   ( UTxOState (..),
-    propWits,
     witsFromTxWitnesses,
   )
 import Cardano.Ledger.Shelley.Rules
   ( ShelleyUtxowEvent (UtxoEvent),
     ShelleyUtxowPredFailure (..),
     UtxoEnv (..),
+    propWits,
     validateNeededWitnesses,
   )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley

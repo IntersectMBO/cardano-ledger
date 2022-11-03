@@ -565,7 +565,8 @@ getDStateNoSharing dstateId = do
               iRTreasury = iRTreasury,
               deltaReserves = dStateIrDeltaReserves,
               deltaTreasury = dStateIrDeltaTreasury
-            }
+            },
+        dsDeposits = Map.empty -- FIXME, HELP ME FIX THIS
       }
 
 getDStateWithSharing ::
@@ -618,7 +619,8 @@ getDStateWithSharing dstateId = do
               iRTreasury = iRTreasury,
               deltaReserves = dStateIrDeltaReserves,
               deltaTreasury = dStateIrDeltaTreasury
-            }
+            },
+        dsDeposits = Map.empty -- FIXME, HELP ME FIX THIS TOO
       }
 
 loadDStateNoSharing :: MonadUnliftIO m => T.Text -> m (Shelley.DState C)

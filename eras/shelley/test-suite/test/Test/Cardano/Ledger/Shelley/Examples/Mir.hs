@@ -213,7 +213,7 @@ expectedStEx1' ::
 expectedStEx1' txwits pot =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx1' @c txwits pot))
     . C.newLab (blockEx1' txwits pot)
-    . C.feesAndDeposits feeTx1 (_keyDeposit ppEx)
+    . C.feesAndDeposits ppEx feeTx1 [Cast.aliceSHK] []
     . C.newUTxO (txbodyEx1 pot)
     . C.newStakeCred Cast.aliceSHK (Ptr (SlotNo 10) minBound (mkCertIxPartial 1))
     . C.mir Cast.aliceSHK pot aliceMIRCoin

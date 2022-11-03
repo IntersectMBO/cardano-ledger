@@ -51,6 +51,7 @@ import Cardano.Ledger.Keys
     VerKeyVRF,
   )
 import Cardano.Ledger.Orphans ()
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData ())
 import Data.Aeson (FromJSON (..), ToJSON (..), Value, (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
@@ -334,3 +335,11 @@ instance
           ppRelays = relays,
           ppMetadata = maybeToStrictMaybe md
         }
+
+-- ============================================
+
+instance ToExpr PoolMetadata
+
+instance ToExpr (PoolParams era)
+
+instance ToExpr StakePoolRelay

@@ -26,6 +26,7 @@ where
 import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), decodeRecordNamed, encodeListLen)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (Hash, KeyHash, KeyRole (..), VerKeyVRF)
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
 import Control.SetAlgebra (BaseRep (MapR), Embed (..), Exp (Base), HasExp (..))
 import Data.Map.Strict (Map)
@@ -73,7 +74,7 @@ newtype PoolDistr c = PoolDistr
   { unPoolDistr ::
       Map (KeyHash 'StakePool c) (IndividualPoolStake c)
   }
-  deriving stock (Show, Eq)
+  deriving stock (Show, Eq, Generic)
   deriving newtype (ToCBOR, FromCBOR, NFData, NoThunks)
 
 -- ===============================
@@ -99,3 +100,9 @@ instance
   where
   toBase (PoolDistr x) = x
   fromBase = PoolDistr
+
+-- =======================================
+
+instance ToExpr (PoolDistr c)
+
+instance ToExpr (IndividualPoolStake c)

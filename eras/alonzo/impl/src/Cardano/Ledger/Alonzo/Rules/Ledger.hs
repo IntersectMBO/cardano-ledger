@@ -24,15 +24,13 @@ import Cardano.Ledger.Alonzo.TxBody (ShelleyEraTxBody (..))
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
-import Cardano.Ledger.EpochBoundary (obligation)
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley.LedgerState
   ( DPState (..),
     DState (..),
     LedgerState (..),
-    PState (..),
     UTxOState (..),
-    rewards,
+    obligationDPState,
   )
 import Cardano.Ledger.Shelley.Rules
   ( DelegsEnv (..),
@@ -101,14 +99,13 @@ ledgerTransition = do
             )
       else pure dpstate
 
-  let DPState dstate pstate = dpstate
+  let DPState dstate _pstate = dpstate
       genDelegs = dsGenDelegs dstate
-      stpools = psStakePoolParams pstate
 
   utxoSt' <-
     trans @(EraRule "UTXOW" era) $
       TRC
-        ( UtxoEnv @era slot pp stpools genDelegs,
+        ( UtxoEnv @era slot pp dpstate genDelegs,
           utxoSt,
           tx
         )
@@ -155,10 +152,9 @@ instance
   assertions =
     [ PostCondition
         "Deposit pot must equal obligation"
-        ( \(TRC (LedgerEnv {ledgerPp}, _, _))
-           (LedgerState utxoSt DPState {dpsDState, dpsPState}) ->
-              obligation ledgerPp (rewards dpsDState) (psStakePoolParams dpsPState)
-                == utxosDeposited utxoSt
+        ( \(TRC (_, _, _))
+           (LedgerState utxoSt dpstate) ->
+              obligationDPState dpstate == utxosDeposited utxoSt
         )
     ]
 

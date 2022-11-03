@@ -24,6 +24,7 @@ module Control.State.Transition.Trace
     -- * Trace checking
     (.-),
     (.->),
+    (.->>),
     checkTrace,
 
     -- * Trace
@@ -52,6 +53,7 @@ module Control.State.Transition.Trace
   )
 where
 
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
 import Control.Monad (void)
 import Control.Monad.IO.Class (MonadIO, liftIO)
@@ -68,6 +70,7 @@ import GHC.Stack (HasCallStack)
 import Lens.Micro (Lens', lens, to, (^.), (^..))
 import Lens.Micro.TH (makeLenses)
 import NoThunks.Class (NoThunks (..))
+import Test.Cardano.Ledger.Binary.TreeDiff (expectExprEqualWithMessage)
 import Test.Tasty.HUnit (assertFailure, (@?=))
 
 -- Signal and resulting state.
@@ -413,7 +416,21 @@ mSt .- sig = do
     Right st' -> pure st'
 
 -- | Bind the state inside the first argument, and check whether it is equal to
--- the expected state, given in the second argument.
+-- the expected state, given in the second argument. If it isn't raise an Assertion that
+-- uses a tree-diff to describe the differences.
+(.->>) ::
+  forall m st.
+  (MonadIO m, Eq st, ToExpr st, HasCallStack) =>
+  m st ->
+  st ->
+  m st
+mSt .->> stExpected = do
+  stActual <- mSt
+  liftIO $ expectExprEqualWithMessage "check trace fails" stExpected stActual
+  return stActual
+
+-- | Bind the state inside the first argument, and check whether it is equal to
+-- the expected state, given in the second argument. raises an Assertion if it does not.
 (.->) ::
   forall m st.
   (MonadIO m, Eq st, Show st, HasCallStack) =>

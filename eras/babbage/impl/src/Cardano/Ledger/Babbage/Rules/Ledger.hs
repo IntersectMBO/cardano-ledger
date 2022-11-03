@@ -20,13 +20,11 @@ import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUTXOW, BabbageUtxowPredFailure
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
-import Cardano.Ledger.EpochBoundary (obligation)
 import Cardano.Ledger.Shelley.LedgerState
   ( DPState (..),
     LedgerState (..),
-    PState (..),
     UTxOState (..),
-    rewards,
+    obligationDPState,
   )
 import Cardano.Ledger.Shelley.Rules
   ( DelegsEnv (..),
@@ -95,9 +93,9 @@ instance
   assertions =
     [ PostCondition
         "Deposit pot must equal obligation"
-        ( \(TRC (LedgerEnv {ledgerPp}, _, _))
-           (LedgerState utxoSt DPState {dpsDState, dpsPState}) ->
-              obligation ledgerPp (rewards dpsDState) (psStakePoolParams dpsPState)
+        ( \(TRC (_, _, _))
+           (LedgerState utxoSt dpstate) ->
+              obligationDPState dpstate
                 == utxosDeposited utxoSt
         )
     ]

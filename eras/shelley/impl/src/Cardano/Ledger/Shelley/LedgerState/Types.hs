@@ -57,6 +57,7 @@ import Cardano.Ledger.Shelley.RewardUpdate
   ( PulsingRewUpdate (..),
   )
 import Cardano.Ledger.Slot (EpochNo (..))
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.UTxO (UTxO (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.State.Strict (evalStateT)
@@ -69,6 +70,8 @@ import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
 import Lens.Micro (_1, _2)
 import NoThunks.Class (NoThunks (..))
+
+-- ==================================
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
 type KeyPairs c = [(KeyPair 'Payment c, KeyPair 'Staking c)]
@@ -516,3 +519,37 @@ instance Default (UTxOState era) => Default (LedgerState era) where
 
 instance Default AccountState where
   def = AccountState (Coin 0) (Coin 0)
+
+-- =============================================================
+-- TreeDiff ToExpr instances
+
+instance ToExpr AccountState
+
+instance
+  ( ToExpr (TxOut era),
+    ToExpr (State (EraRule "PPUP" era)),
+    ToExpr (PParams era),
+    ToExpr (StashedAVVMAddresses era)
+  ) =>
+  ToExpr (NewEpochState era)
+
+instance
+  ( ToExpr (TxOut era),
+    ToExpr (State (EraRule "PPUP" era)),
+    ToExpr (PParams era)
+  ) =>
+  ToExpr (EpochState era)
+
+instance
+  ( ToExpr (TxOut era),
+    ToExpr (State (EraRule "PPUP" era))
+  ) =>
+  ToExpr (LedgerState era)
+
+instance
+  ( ToExpr (TxOut era),
+    ToExpr (State (EraRule "PPUP" era))
+  ) =>
+  ToExpr (UTxOState era)
+
+instance ToExpr (IncrementalStake c)

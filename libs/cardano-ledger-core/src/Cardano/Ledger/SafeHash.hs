@@ -62,6 +62,7 @@ import qualified Cardano.Crypto.Hash as Hash
 import Cardano.HeapWords (HeapWords (..))
 import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
 import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (toExpr))
 import Control.DeepSeq (NFData)
 import Data.ByteString (ByteString)
 import Data.ByteString.Short (ShortByteString, fromShort)
@@ -218,3 +219,8 @@ instance SafeToHash Safe where
 
 hashSafeList :: Hash.HashAlgorithm (CC.HASH c) => Proxy c -> Proxy index -> [Safe] -> SafeHash c index
 hashSafeList pc pindex xs = makeHashWithExplicitProxys pc pindex (fold $ originalBytes <$> xs)
+
+-- ===========================================================
+
+instance ToExpr (SafeHash c index) where
+  toExpr x = App "SafeHash" [toExpr (extractHash x)]

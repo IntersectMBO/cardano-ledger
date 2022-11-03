@@ -56,13 +56,13 @@ import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..))
+import Cardano.Ledger.Keys (GenDelegs)
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest)
+import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyUTXO)
+import Cardano.Ledger.Shelley.LedgerState (DPState (..), keyTxRefunds, totalTxDeposits)
 import Cardano.Ledger.Shelley.LedgerState.IncrementalStake
-import Cardano.Ledger.Shelley.LedgerState.Types
-  ( UTxOState (..),
-  )
+import Cardano.Ledger.Shelley.LedgerState.Types (UTxOState (..))
 import Cardano.Ledger.Shelley.PParams
   ( PPUPState (..),
     ShelleyPParams,
@@ -75,32 +75,26 @@ import Cardano.Ledger.Shelley.Rules.Ppup
     ShelleyPPUP,
     ShelleyPpupPredFailure,
   )
+import Cardano.Ledger.Shelley.Rules.Reports (showTxCerts)
 import Cardano.Ledger.Shelley.Tx
   ( ShelleyTx (..),
     ShelleyTxOut (..),
     TxIn,
   )
 import Cardano.Ledger.Shelley.TxBody
-  ( PoolParams,
-    RewardAcnt,
+  ( RewardAcnt,
     ShelleyEraTxBody (..),
     ShelleyTxBody,
     Wdrl (..),
   )
-import Cardano.Ledger.Shelley.UTxO
-  ( keyRefunds,
-    produced,
-    totalDeposits,
-    txup,
-  )
+import Cardano.Ledger.Shelley.UTxO (produced, txup)
 import Cardano.Ledger.Slot (SlotNo)
 import Cardano.Ledger.UTxO
-  ( EraUTxO (getConsumedValue),
+  ( EraUTxO (DepositInfo, getConsumedValue),
     UTxO (..),
     balance,
     txouts,
   )
-import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
@@ -118,7 +112,6 @@ import Control.State.Transition
     wrapFailed,
   )
 import Data.Foldable (foldl', toList)
-import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.MapExtras (extractKeys)
 import Data.Set (Set)
@@ -137,7 +130,7 @@ data UtxoEnv era
   = UtxoEnv
       SlotNo
       (PParams era)
-      (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
+      (DPState (EraCrypto era))
       (GenDelegs (EraCrypto era))
 
 deriving instance Show (PParams era) => Show (UtxoEnv era)
@@ -310,6 +303,7 @@ instance
     PParams era ~ ShelleyPParams era,
     Tx era ~ ShelleyTx era,
     Value era ~ Coin,
+    DepositInfo era ~ DPState (EraCrypto era),
     Show (ShelleyTx era),
     Embed (EraRule "PPUP" era) (ShelleyUTXO era),
     Environment (EraRule "PPUP" era) ~ PpupEnv era,
@@ -327,15 +321,26 @@ instance
 
   transitionRules = [utxoInductive]
 
-  renderAssertionViolation AssertionViolation {avSTS, avMsg, avCtx, avState} =
-    "AssertionViolation ("
-      <> avSTS
-      <> "): "
-      <> avMsg
-      <> "\n"
-      <> show avCtx
-      <> "\n"
-      <> show avState
+  renderAssertionViolation
+    AssertionViolation
+      { avSTS,
+        avMsg,
+        avCtx = TRC (UtxoEnv _slot pp dpstate _, UTxOState {utxosDeposited, utxosUtxo}, tx)
+      } =
+      "AssertionViolation ("
+        <> avSTS
+        <> "): "
+        <> avMsg
+        <> "\n PParams\n"
+        <> show pp
+        <> "\n Certs\n"
+        <> showTxCerts (tx ^. bodyTxL)
+        <> "\n Deposits\n"
+        <> show utxosDeposited
+        <> "\n Consumed\n"
+        <> show (consumedTxBody (tx ^. bodyTxL) pp dpstate utxosUtxo)
+        <> "\n Produced\n"
+        <> show (producedTxBody (tx ^. bodyTxL) pp dpstate)
 
   assertions =
     [ PreCondition
@@ -352,8 +357,8 @@ instance
           withdrawals txb = Val.inject $ foldl' (<>) mempty $ unWdrl $ txb ^. wdrlsTxBodyL
        in PostCondition
             "Should preserve value in the UTxO state"
-            ( \(TRC (_, us, tx)) us' ->
-                utxoBalance us <> withdrawals (tx ^. bodyTxL) == utxoBalance us'
+            ( \(TRC (UtxoEnv _ _pp _pools _, us, tx)) us' ->
+                (utxoBalance us <> withdrawals (tx ^. bodyTxL) == utxoBalance us')
             )
     ]
 
@@ -364,6 +369,7 @@ utxoInductive ::
     ShelleyEraTxBody era,
     ExactEra ShelleyEra era,
     TxOut era ~ ShelleyTxOut era,
+    DepositInfo era ~ DPState (EraCrypto era),
     STS (utxo era),
     Embed (EraRule "PPUP" era) (utxo era),
     BaseM (utxo era) ~ ShelleyBase,
@@ -381,7 +387,7 @@ utxoInductive ::
   ) =>
   TransitionRule (utxo era)
 utxoInductive = do
-  TRC (UtxoEnv slot pp stakepools genDelegs, u, tx) <- judgmentContext
+  TRC (UtxoEnv slot pp dpstate genDelegs, u, tx) <- judgmentContext
   let UTxOState utxo _ _ ppup _ = u
   let txb = tx ^. bodyTxL
 
@@ -406,7 +412,7 @@ utxoInductive = do
   runTest $ validateWrongNetworkWithdrawal netId txb
 
   {- consumed pp utxo txb = produced pp poolParams txb -}
-  runTest $ validateValueNotConservedUTxO pp utxo stakepools txb
+  runTest $ validateValueNotConservedUTxO pp utxo dpstate txb
 
   -- process Protocol Parameter Update Proposals
   ppup' <- trans @(EraRule "PPUP" era) $ TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
@@ -421,11 +427,10 @@ utxoInductive = do
   {- txsize tx ≤ maxTxSize pp -}
   runTest $ validateMaxTxSizeUTxO pp tx
 
-  let refunded = keyRefunds pp txb
-  let txCerts = toList $ txb ^. certsTxBodyL
-  let totalDeposits' = totalDeposits pp (`Map.notMember` stakepools) txCerts
+  let refunded = keyTxRefunds pp dpstate txb
+  let totalDeposits' = totalTxDeposits pp dpstate txb
   tellEvent $ TotalDeposits totalDeposits'
-  let depositChange = totalDeposits' <-> refunded
+  let depositChange = totalDeposits' Val.<-> refunded
   pure $! updateUTxOState u txb depositChange ppup'
 
 -- | The ttl field marks the top of an open interval, so it must be strictly
@@ -519,21 +524,22 @@ validateWrongNetworkWithdrawal netId txb =
 -- > consumed pp utxo txb = produced pp poolParams txb
 validateValueNotConservedUTxO ::
   ( ShelleyEraTxBody era,
+    DepositInfo era ~ DPState (EraCrypto era),
     EraUTxO era,
     HasField "_keyDeposit" (PParams era) Coin,
     HasField "_poolDeposit" (PParams era) Coin
   ) =>
   PParams era ->
   UTxO era ->
-  Map (KeyHash 'StakePool (EraCrypto era)) a ->
+  DPState (EraCrypto era) ->
   TxBody era ->
   Test (ShelleyUtxoPredFailure era)
-validateValueNotConservedUTxO pp utxo stakepools txb =
+validateValueNotConservedUTxO pp utxo dpstate txb =
   failureUnless (consumedValue == producedValue) $
-    ValueNotConservedUTxO consumedValue producedValue
+    (ValueNotConservedUTxO consumedValue producedValue)
   where
-    consumedValue = getConsumedValue pp utxo txb
-    producedValue = produced pp (`Map.notMember` stakepools) txb
+    consumedValue = getConsumedValue pp dpstate utxo txb
+    producedValue = produced pp dpstate txb
 
 -- | Ensure there are no `TxOut`s that have less than @minUTxOValue@
 --
@@ -591,6 +597,7 @@ validateMaxTxSizeUTxO pp tx =
     txSize = tx ^. sizeTxF
 
 updateUTxOState ::
+  forall era.
   EraTxBody era =>
   UTxOState era ->
   TxBody era ->

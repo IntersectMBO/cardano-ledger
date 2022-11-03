@@ -90,6 +90,7 @@ import Cardano.Ledger.HKD (HKD)
 import Cardano.Ledger.Orphans ()
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (ShelleyPParams))
 import Cardano.Ledger.Slot (EpochNo (..))
+import Cardano.Ledger.TreeDiff (ToExpr (..))
 import Control.DeepSeq (NFData)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
@@ -590,3 +591,9 @@ extendPP
   col
   mxCol =
     AlonzoPParams ma mb mxBB mxT mxBH kd pd emx a n rho tau d eE pv mnP ada cost price mxTx mxBl mxV col mxCol
+
+-- ======================================
+
+instance ToExpr (AlonzoPParamsHKD StrictMaybe era)
+
+instance ToExpr (AlonzoPParamsHKD Identity era)

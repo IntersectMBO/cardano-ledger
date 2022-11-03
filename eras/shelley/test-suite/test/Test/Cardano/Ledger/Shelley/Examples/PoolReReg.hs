@@ -155,7 +155,7 @@ expectedStEx1 ::
 expectedStEx1 =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx1 @c))
     . C.newLab blockEx1
-    . C.feesAndDeposits feeTx1 (_poolDeposit ppEx)
+    . C.feesAndDeposits ppEx feeTx1 [] [Cast.alicePoolParams]
     . C.newUTxO txbodyEx1
     . C.newPool Cast.alicePoolParams
     $ initStPoolReReg
@@ -234,7 +234,7 @@ blockEx2A = blockEx2 20
 
 expectedStEx2 :: forall c. (ExMock (EraCrypto (ShelleyEra c))) => ChainState (ShelleyEra c)
 expectedStEx2 =
-  C.feesAndDeposits feeTx2 (Coin 0)
+  C.feesAndDeposits ppEx feeTx2 [] [newPoolParams] -- The deposit should be ignored because the poolId is already registered
     . C.newUTxO txbodyEx2
     . C.reregPool newPoolParams
     $ expectedStEx1

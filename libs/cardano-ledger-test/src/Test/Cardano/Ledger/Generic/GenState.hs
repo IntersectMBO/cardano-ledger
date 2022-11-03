@@ -96,6 +96,7 @@ import Cardano.Ledger.Shelley.LedgerState
     LedgerState (..),
     PState (..),
     RewardAccounts,
+    obligationDPState,
     smartUTxOState,
   )
 import qualified Cardano.Ledger.Shelley.Scripts as Shelley (MultiSig (..))
@@ -125,7 +126,6 @@ import Test.Cardano.Ledger.Generic.Functions
   ( alwaysFalse,
     alwaysTrue,
     keyPoolDeposits,
-    obligation',
     primaryLanguage,
     protocolVersion,
     txoutFields,
@@ -134,7 +134,9 @@ import Test.Cardano.Ledger.Generic.ModelState
   ( ModelNewEpochState (..),
     genDelegsZero,
     instantaneousRewardsZero,
+    mKeyDeposits,
     mNewEpochStateZero,
+    mPoolDeposits,
     pPUPStateZero,
     pcModelNewEpochState,
   )
@@ -218,7 +220,7 @@ emptyGenState proof genv =
     mempty
     mempty
     mempty
-    mNewEpochStateZero
+    (mNewEpochStateZero {mPParams = gePParams genv})
     Map.empty
     Map.empty
     Map.empty
@@ -426,6 +428,10 @@ modifyModelRewards f = modifyModel (\ms -> ms {mRewards = f (mRewards ms)})
 modifyModelDeposited :: (Coin -> Coin) -> GenRS era ()
 modifyModelDeposited f = modifyModel (\ms -> ms {mDeposited = f (mDeposited ms)})
 
+modifyKeyDeposits :: Credential 'Staking (EraCrypto era) -> Coin -> GenRS era ()
+modifyKeyDeposits cred c =
+  modifyModel (\ms -> ms {mKeyDeposits = Map.insert cred c (mKeyDeposits ms)})
+
 modifyModelPoolParams ::
   ( Map.Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)) ->
     Map.Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era))
@@ -439,6 +445,10 @@ modifyModelPoolDistr ::
   ) ->
   GenRS era ()
 modifyModelPoolDistr f = modifyModel (\ms -> ms {mPoolDistr = f (mPoolDistr ms)})
+
+modifyModelKeyDeposits :: KeyHash 'StakePool (EraCrypto era) -> Coin -> GenRS era ()
+modifyModelKeyDeposits kh pooldeposit =
+  modifyModel (\ms -> ms {mPoolDeposits = Map.insert kh pooldeposit (mPoolDeposits ms)})
 
 modifyModelCount :: (Int -> Int) -> GenRS era ()
 modifyModelCount f = modifyModel (\ms -> ms {mCount = f (mCount ms)})
@@ -692,14 +702,12 @@ initialLedgerState gstate = LedgerState utxostate dpstate
         Map.empty
         genDelegsZero
         instantaneousRewardsZero
-    pstate = PState (gsInitialPoolParams gstate) Map.empty Map.empty
+        (fmap (const keydeposit) (gsInitialRewards gstate))
+    pstate = PState pools Map.empty Map.empty (fmap (const pooldeposit) pools)
     -- In a wellformed LedgerState the deposited equals the obligation
-    deposited =
-      obligation'
-        reify
-        (gePParams (gsGenEnv gstate))
-        (gsInitialRewards gstate)
-        (gsInitialPoolParams gstate)
+    deposited = obligationDPState dpstate
+    pools = gsInitialPoolParams gstate
+    (keydeposit, pooldeposit) = keyPoolDeposits reify (mPParams (gsModel gstate))
 
 -- =============================================
 -- Generators of inter-related items
@@ -1016,11 +1024,14 @@ initStableFields :: forall era. Reflect era => Proof era -> GenRS era ()
 initStableFields proof = do
   GenEnv {geSize} <- ask
   hashes <- replicateM (maxStablePools geSize) $ do
+    pparam <- asks gePParams
+    let (_, pooldeposit) = keyPoolDeposits proof pparam
     (kh, pp, ips) <- genNewPool
     modifyGenStateStablePools (Set.insert kh)
     modifyGenStateInitialPoolParams (Map.insert kh pp)
     modifyGenStateInitialPoolDistr (Map.insert kh ips)
     modifyModelPoolParams (Map.insert kh pp)
+    modifyModelKeyDeposits kh pooldeposit
     return kh
 
   -- This incantation gets a list of fresh (not previously generated) Credential
@@ -1038,6 +1049,7 @@ initStableFields proof = do
         modifyModelDelegations (Map.insert cred kh)
         modifyModelRewards (Map.insert cred (Coin 0))
         modifyModelDeposited (<+> keydeposit)
+        modifyKeyDeposits cred keydeposit
         modifyGenStateInitialDelegations (Map.insert cred kh)
   zipWithM_ f credentials hashes
 
@@ -1057,6 +1069,9 @@ genRewards = do
   credentials <- genFreshCredentials n 100 Rewrd (Set.union old prev) []
   newRewards <- Map.fromList <$> mapM (\x -> (,) x <$> lift genRewardVal) credentials
   modifyModelRewards (\rewards -> eval (rewards ⨃ newRewards)) -- Prefers coins in newrewards
+  pp <- asks gePParams
+  let (keydeposit, _) = keyPoolDeposits reify pp
+  sequence_ (map (\cred -> modifyKeyDeposits cred keydeposit) credentials)
   modifyGenStateInitialRewards (\rewards -> eval (rewards ⨃ newRewards))
   modifyGenStateAvoidCred (Set.union (Set.fromList credentials))
   pure newRewards
