@@ -237,7 +237,7 @@ tickfRuleBench =
                   bgroup
                     "calculatePoolDistr subparts"
                     [ bench "poolStake" $
-                        whnf (calculatePoolStake (const True) (_delegations (getSnap nes))) (_stake (getSnap nes)),
+                        whnf (calculatePoolStake (const True) (ssDelegations (getSnap nes))) (ssStake (getSnap nes)),
                       bench "old calculatePoolDistr" $
                         whnf (oldCalculatePoolDistr (const True)) (getSnap nes)
                     ]
@@ -246,7 +246,7 @@ tickfRuleBench =
         ]
 
 getSnap :: NewEpochState (AlonzoEra StandardCrypto) -> SnapShot StandardCrypto
-getSnap nes = (_pstakeSet . esSnapshots . nesEs) nes
+getSnap nes = (ssStakeSet . esSnapshots . nesEs) nes
 
 getRewardUpdate :: NewEpochState era -> RewardUpdate (EraCrypto era)
 getRewardUpdate nes =

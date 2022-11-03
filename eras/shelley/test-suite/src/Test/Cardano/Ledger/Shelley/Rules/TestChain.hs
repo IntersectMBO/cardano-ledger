@@ -1304,7 +1304,7 @@ testIncrementalStake _ (LedgerState (UTxOState utxo _ _ _ incStake) (DPState dst
       istake = incrementalStakeDistr @(EraCrypto era) incStake dstate pstate
    in counterexample
         ( "\nIncremental stake distribution does not match old style stake distribution"
-            ++ tersediffincremental "differences: Old vs Incremental" (_stake stake) (_stake istake)
+            ++ tersediffincremental "differences: Old vs Incremental" (ssStake stake) (ssStake istake)
         )
         (stake === istake)
 

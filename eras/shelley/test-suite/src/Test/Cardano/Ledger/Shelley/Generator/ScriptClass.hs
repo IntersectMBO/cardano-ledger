@@ -159,7 +159,7 @@ mkPayScriptHashMap ::
 mkPayScriptHashMap scripts =
   Map.fromList (f <$> scripts)
   where
-    f script@(pay, _stake) = (hashScript @era pay, script)
+    f script@(pay, _ssStake) = (hashScript @era pay, script)
 
 -- | Generate a mapping from stake script hash to script pair.
 mkStakeScriptHashMap ::
