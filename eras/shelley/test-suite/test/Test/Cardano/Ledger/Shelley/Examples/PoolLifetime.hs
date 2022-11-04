@@ -296,22 +296,22 @@ aliceCoinEx2Ptr = aliceCoinEx1 <-> (aliceCoinEx2Base <+> feeTx2)
 txbodyEx2 :: forall c. Cr.Crypto c => ShelleyTxBody (ShelleyEra c)
 txbodyEx2 =
   ShelleyTxBody
-    { _inputs = Set.fromList [TxIn (txid (txbodyEx1 @c)) minBound],
-      _outputs =
+    { stbInputs = Set.fromList [TxIn (txid (txbodyEx1 @c)) minBound],
+      stbOutputs =
         StrictSeq.fromList
           [ ShelleyTxOut Cast.aliceAddr (Val.inject aliceCoinEx2Base),
             ShelleyTxOut Cast.alicePtrAddr (Val.inject aliceCoinEx2Ptr)
           ],
-      _certs =
+      stbCerts =
         StrictSeq.fromList
           [ DCertDeleg (Delegate $ Delegation Cast.aliceSHK (hk Cast.alicePoolKeys)),
             DCertDeleg (Delegate $ Delegation Cast.bobSHK (hk Cast.alicePoolKeys))
           ],
-      _wdrls = Wdrl Map.empty,
-      _txfee = feeTx2,
-      _ttl = SlotNo 90,
-      _txUpdate = SNothing,
-      _mdHash = SNothing
+      stbWdrls = Wdrl Map.empty,
+      stbTxFee = feeTx2,
+      stbTTL = SlotNo 90,
+      stbUpdate = SNothing,
+      stbMDHash = SNothing
     }
 
 txEx2 :: forall c. (ExMock (EraCrypto (ShelleyEra c))) => ShelleyTx (ShelleyEra c)
@@ -467,16 +467,16 @@ aliceCoinEx4Base = aliceCoinEx2Base <-> feeTx4
 txbodyEx4 :: forall c. Cr.Crypto c => ShelleyTxBody (ShelleyEra c)
 txbodyEx4 =
   ShelleyTxBody
-    { _inputs = Set.fromList [TxIn (txid txbodyEx2) minBound],
-      _outputs = StrictSeq.fromList [ShelleyTxOut Cast.aliceAddr (Val.inject aliceCoinEx4Base)],
-      _certs =
+    { stbInputs = Set.fromList [TxIn (txid txbodyEx2) minBound],
+      stbOutputs = StrictSeq.fromList [ShelleyTxOut Cast.aliceAddr (Val.inject aliceCoinEx4Base)],
+      stbCerts =
         StrictSeq.fromList
           [DCertDeleg (Delegate $ Delegation Cast.carlSHK (hk Cast.alicePoolKeys))],
-      _wdrls = Wdrl Map.empty,
-      _txfee = feeTx4,
-      _ttl = SlotNo 500,
-      _txUpdate = SNothing,
-      _mdHash = SNothing
+      stbWdrls = Wdrl Map.empty,
+      stbTxFee = feeTx4,
+      stbTTL = SlotNo 500,
+      stbUpdate = SNothing,
+      stbMDHash = SNothing
     }
 
 txEx4 :: forall c. (ExMock (EraCrypto (ShelleyEra c))) => ShelleyTx (ShelleyEra c)

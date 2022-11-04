@@ -104,22 +104,22 @@ utxo =
 txb :: TxIn StandardCrypto -> Maybe (TxIn StandardCrypto) -> TxOut Babbage -> TxBody Babbage
 txb i mRefInp o =
   BabbageTxBody
-    { inputs = Set.singleton i,
-      collateral = mempty,
-      referenceInputs = maybe mempty Set.singleton mRefInp,
-      outputs = StrictSeq.singleton (mkSized o),
-      collateralReturn = SNothing,
-      totalCollateral = SNothing,
-      txcerts = mempty,
-      txwdrls = Wdrl mempty,
-      txfee = Coin 2,
-      txvldt = ValidityInterval SNothing SNothing,
-      txUpdates = SNothing,
-      reqSignerHashes = mempty,
-      mint = mempty,
-      scriptIntegrityHash = SNothing,
-      adHash = SNothing,
-      txnetworkid = SNothing
+    { btbInputs = Set.singleton i,
+      btbCollateral = mempty,
+      btbReferenceInputs = maybe mempty Set.singleton mRefInp,
+      btbOutputs = StrictSeq.singleton (mkSized o),
+      btbCollateralReturn = SNothing,
+      btbTotalCollateral = SNothing,
+      btbCerts = mempty,
+      btbWdrls = Wdrl mempty,
+      btbTxFee = Coin 2,
+      btbValidityInterval = ValidityInterval SNothing SNothing,
+      btbUpdate = SNothing,
+      btbReqSignerHashes = mempty,
+      btbMint = mempty,
+      btbScriptIntegrityHash = SNothing,
+      btbAuxDataHash = SNothing,
+      btbTxNetworkId = SNothing
     }
 
 txBare :: TxIn StandardCrypto -> TxOut Babbage -> AlonzoTx Babbage

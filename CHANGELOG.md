@@ -28,7 +28,107 @@ in the naming of release branches.
 
 ### Changed
 
-- Renamed records fields in `Cardano.Ledger` to names without `_` (underscores) #3118
+- Renamed records fields in `Cardano.Ledger` to names without `_` (underscores) #3126
+  - `Alonzo.TxBody.TxBodyRaw` to `Alonzo.TxBody.AlonzoTxBodyRaw`
+    - `_inputs` to `atbrInputs`
+    - `_collateral` to `atbrCollateral`
+    - `_outputs` to `atbrOutputs`
+    - `_certs` to `atbrCerts`
+    - `_wdrls` to `atbrWdrls`
+    - `_txfee` to `atbrTxFee`
+    - `_vldt` to `atbrValidityInterval`
+    - `_update` to `atbrUpdate`
+    - `_reqSignerHashes` to `atbrReqSignerHashes`
+    - `_mint` to `atbrMint`
+    - `_scriptIntegrityHash` to `atbrScriptIntegrityHash`
+    - `_adHash` to `atbrAuxDataHash`
+    - `_txnetworkid` to `atbrTxNetworkId`
+  - `Alonzo.TxBody.AlonzoTxBody` pattern synonym
+    - `inputs` to `atbInputs`
+    - `collateral` to `atbCollateral`
+    - `outputs` to `atbOutputs`
+    - `txcerts` to `atbCerts`
+    - `txwdrls` to `atbWdrls`
+    - `txfee` to `atbTxFee`
+    - `txvldt` to `atbValidityInterval`
+    - `txUpdates` to `atbUpdate`
+    - `reqSignerHashes` to `atbReqSignerHashes`
+    - `mint` to `atbMint`
+    - `scriptIntegrityHash` to `atbScriptIntegrityHash`
+    - `adHash` to `atbAuxDataHash`
+    - `txnetworkid` to `atbTxNetworkId`
+  - `Babbage.TxBody.TxBodyRaw` to `Babbage.TxBody.BabbageTxBodyRaw`
+    - `_spendInputs` to `btbrSpendInputs`
+    - `_collateralInputs` to `btbrCollateralInputs`
+    - `_referenceInputs` to `btbrReferenceInputs`
+    - `_outputs` to `btbrOutputs`
+    - `_collateralReturn` to `btbrCollateralReturn`
+    - `_certs` to `btbrCerts`
+    - `_wdrls` to `btbrWdrls`
+    - `_txfee` to `btbrTxFee`
+    - `_vldt` to `btbrValidityInterval`
+    - `_update` to `btbrUpdate`
+    - `_reqSignerHashes` to `btbrReqSignerHashes`
+    - `_mint` to `btbrMint`
+    - `_scriptIntegrityHash` to `btbrScriptIntegrityHash`
+    - `_adHash` to `btbrAuxDataHash`
+    - `_txnetworkid` to `btbrTxNetworkId`
+  - `Babbage.TxBody.BabbageTxBody` pattern synonym
+    - `inputs` to `btbInputs`
+    - `collateral` to `btbCollateral`
+    - `referenceInputs` to `btbReferenceInputs`
+    - `outputs` to `btbOutputs`
+    - `collateralReturn` to `btbCollateralReturn`
+    - `totalCollateral` to `btbTotalCollateral`
+    - `txcerts` to `btbCerts`
+    - `txwdrls` to `btbWdrls`
+    - `txfee` to `btbTxFee`
+    - `txvldt` to `btbValidityInterval`
+    - `txUpdates` to `btbUpdate`
+    - `reqSignerHashes` to `btbReqSignerHashes`
+    - `mint` to `btbMint`
+    - `scriptIntegrityHash` to `btbScriptIntegrityHash`
+    - `adHash` to `btbAuxDataHash`
+    - `txnetworkid` to `btbrTxNetworkId`
+  - `ShelleyMA.TxBody.TxBodyRaw` to `ShelleyMA.TxBody.MATxBodyRaw`
+    - `inputs` to `matbrInputs`
+    - `outputs` to `matbrOutputs`
+    - `certs` to `matbrCerts`
+    - `wdrls` to `matbrWdrls`
+    - `txfee` to `matbrTxFee`
+    - `vldt` to `matbrValidityInterval`
+    - `update` to `matbrUpdate`
+    - `adHash` to `matbrAuxDataHash`
+    - `mint` to `matbrMint`
+  - `ShelleyMA.TxBody.MATxBody` pattern synonym
+    - `inputs` to `matbInputs`
+    - `outputs` to `matbOutputs`
+    - `certs` to `matbCerts`
+    - `wdrls` to `matbWdrls`
+    - `txfee` to `matbTxFee`
+    - `vldt` to `matbValidityInterval`
+    - `update` to `matbUpdate`
+    - `adHash` to `matbAuxDataHash`
+    - `mint` to `matbMint`
+  - `Shelley.TxBody.TxBodyRaw` to `Shelley.TxBody.ShelleyTxBodyRaw`
+    - `inputsX` to `stbrInputs`
+    - `outputsX` to `stbrOutputs`
+    - `certsX` to `stbrCerts`
+    - `wdrlsX` to `stbrWdrls`
+    - `txfeeX` to `stbrTxFee`
+    - `ttlX` to `stbrTTL`
+    - `txUpdateX` to `stbrUpdate`
+    - `mdHashX` to `stbrMDHash`
+  - `Shelley.TxBody.ShelleyTxBody` pattern synonym
+    - `_inputs` to `stbInputs`
+    - `_outputs` to `stbOutputs`
+    - `_certs` to `stbCerts`
+    - `_wdrls` to `stbWdrls`
+    - `_txfee` to `stbTxFee`
+    - `_ttl` to `stbTTL`
+    - `_txUpdate` to `stbUpdate`
+    - `_mdHash` to `stbMDHash`
+ - Renamed records fields in `Cardano.Ledger` to names without `_` (underscores) #3118
   - `Shelley.LedgerState.Types.AccountState`
     - `_treasury -> asTreasury`
     - `_reserves -> asReserves`
@@ -45,7 +145,7 @@ in the naming of release branches.
   - `PoolParams.PoolMetadata`
     - `_poolMDUrl -> pmUrl`
     - `_poolMDHash -> pmHash`
-- Renamed records fields in `Cardano.Ledger` to names without `_` (underscores) #?
+- Renamed records fields in `Cardano.Ledger` to names without `_` (underscores) #3120
   - `Shelley.Delegation.Certificates`
     - `_delegator` to `dDelegator`
     - `_delegatee` to `dDelegatee`
@@ -120,6 +220,16 @@ in the naming of release branches.
 
 ### Removed
 
+- Removed pattern synonym `Cardano.Ledger.ShelleyMA.TxBody.MATxBody.TxBody'` with fields #3126
+  - `adHash'`
+  - `certs'`
+  - `inputs'`
+  - `mint'`
+  - `outputs'`
+  - `txfee'`
+  - `update'`
+  - `vldt'`
+  - `wdrls'`
 - Deprecated the `validPlutusdata` function: #3006
 - Deprecated the misspelled `HasAlgorithm` type alias: #3007
 - Deprecated `CLI.evaluateMinLovelaceOutput` in favor of newly added

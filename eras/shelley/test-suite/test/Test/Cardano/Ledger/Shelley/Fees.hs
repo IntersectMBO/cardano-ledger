@@ -169,14 +169,14 @@ carlPay = KeyPair vk sk
 txbSimpleUTxO :: ShelleyTxBody Shelley
 txbSimpleUTxO =
   ShelleyTxBody
-    { _inputs = Set.fromList [TxIn genesisId minBound],
-      _outputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)],
-      _certs = StrictSeq.empty,
-      _wdrls = Wdrl Map.empty,
-      _txfee = Coin 94,
-      _ttl = SlotNo 10,
-      _txUpdate = SNothing,
-      _mdHash = SNothing
+    { stbInputs = Set.fromList [TxIn genesisId minBound],
+      stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)],
+      stbCerts = StrictSeq.empty,
+      stbWdrls = Wdrl Map.empty,
+      stbTxFee = Coin 94,
+      stbTTL = SlotNo 10,
+      stbUpdate = SNothing,
+      stbMDHash = SNothing
     }
 
 txSimpleUTxO :: ShelleyTx Shelley
@@ -198,12 +198,12 @@ txSimpleUTxOBytes16 = "83a4008182582003170a2e7597b7b7e3d84c05391d139a62b157e7878
 txbMutiUTxO :: ShelleyTxBody Shelley
 txbMutiUTxO =
   ShelleyTxBody
-    { _inputs =
+    { stbInputs =
         Set.fromList
           [ mkTxInPartial genesisId 0,
             mkTxInPartial genesisId 1
           ],
-      _outputs =
+      stbOutputs =
         StrictSeq.fromList
           [ ShelleyTxOut aliceAddr (Val.inject $ Coin 10),
             ShelleyTxOut aliceAddr (Val.inject $ Coin 20),
@@ -211,12 +211,12 @@ txbMutiUTxO =
             ShelleyTxOut bobAddr (Val.inject $ Coin 40),
             ShelleyTxOut bobAddr (Val.inject $ Coin 50)
           ],
-      _certs = StrictSeq.empty,
-      _wdrls = Wdrl Map.empty,
-      _txfee = Coin 199,
-      _ttl = SlotNo 10,
-      _txUpdate = SNothing,
-      _mdHash = SNothing
+      stbCerts = StrictSeq.empty,
+      stbWdrls = Wdrl Map.empty,
+      stbTxFee = Coin 199,
+      stbTTL = SlotNo 10,
+      stbUpdate = SNothing,
+      stbMDHash = SNothing
     }
 
 txMutiUTxO :: ShelleyTx Shelley
@@ -242,14 +242,14 @@ txMutiUTxOBytes16 = "83a4008282582003170a2e7597b7b7e3d84c05391d139a62b157e78786d
 txbRegisterStake :: ShelleyTxBody Shelley
 txbRegisterStake =
   ShelleyTxBody
-    { _inputs = Set.fromList [TxIn genesisId minBound],
-      _outputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)],
-      _certs = StrictSeq.fromList [DCertDeleg (RegKey aliceSHK)],
-      _wdrls = Wdrl Map.empty,
-      _txfee = Coin 94,
-      _ttl = SlotNo 10,
-      _txUpdate = SNothing,
-      _mdHash = SNothing
+    { stbInputs = Set.fromList [TxIn genesisId minBound],
+      stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)],
+      stbCerts = StrictSeq.fromList [DCertDeleg (RegKey aliceSHK)],
+      stbWdrls = Wdrl Map.empty,
+      stbTxFee = Coin 94,
+      stbTTL = SlotNo 10,
+      stbUpdate = SNothing,
+      stbMDHash = SNothing
     }
 
 txRegisterStake :: ShelleyTx Shelley
@@ -270,18 +270,18 @@ txRegisterStakeBytes16 = "83a5008182582003170a2e7597b7b7e3d84c05391d139a62b157e7
 txbDelegateStake :: ShelleyTxBody Shelley
 txbDelegateStake =
   ShelleyTxBody
-    { _inputs = Set.fromList [TxIn genesisId minBound],
-      _outputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)],
-      _certs =
+    { stbInputs = Set.fromList [TxIn genesisId minBound],
+      stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)],
+      stbCerts =
         StrictSeq.fromList
           [ DCertDeleg
               (Delegate $ Delegation bobSHK alicePoolKH)
           ],
-      _wdrls = Wdrl Map.empty,
-      _txfee = Coin 94,
-      _ttl = SlotNo 10,
-      _txUpdate = SNothing,
-      _mdHash = SNothing
+      stbWdrls = Wdrl Map.empty,
+      stbTxFee = Coin 94,
+      stbTTL = SlotNo 10,
+      stbUpdate = SNothing,
+      stbMDHash = SNothing
     }
 
 txDelegateStake :: ShelleyTx Shelley
@@ -305,14 +305,14 @@ txDelegateStakeBytes16 = "83a5008182582003170a2e7597b7b7e3d84c05391d139a62b157e7
 txbDeregisterStake :: ShelleyTxBody Shelley
 txbDeregisterStake =
   ShelleyTxBody
-    { _inputs = Set.fromList [TxIn genesisId minBound],
-      _outputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)],
-      _certs = StrictSeq.fromList [DCertDeleg (DeRegKey aliceSHK)],
-      _wdrls = Wdrl Map.empty,
-      _txfee = Coin 94,
-      _ttl = SlotNo 10,
-      _txUpdate = SNothing,
-      _mdHash = SNothing
+    { stbInputs = Set.fromList [TxIn genesisId minBound],
+      stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)],
+      stbCerts = StrictSeq.fromList [DCertDeleg (DeRegKey aliceSHK)],
+      stbWdrls = Wdrl Map.empty,
+      stbTxFee = Coin 94,
+      stbTTL = SlotNo 10,
+      stbUpdate = SNothing,
+      stbMDHash = SNothing
     }
 
 txDeregisterStake :: ShelleyTx Shelley
@@ -336,14 +336,14 @@ txDeregisterStakeBytes16 = "83a5008182582003170a2e7597b7b7e3d84c05391d139a62b157
 txbRegisterPool :: ShelleyTxBody Shelley
 txbRegisterPool =
   ShelleyTxBody
-    { _inputs = Set.fromList [TxIn genesisId minBound],
-      _outputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)],
-      _certs = StrictSeq.fromList [DCertPool (RegPool alicePoolParams)],
-      _wdrls = Wdrl Map.empty,
-      _txfee = Coin 94,
-      _ttl = SlotNo 10,
-      _txUpdate = SNothing,
-      _mdHash = SNothing
+    { stbInputs = Set.fromList [TxIn genesisId minBound],
+      stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)],
+      stbCerts = StrictSeq.fromList [DCertPool (RegPool alicePoolParams)],
+      stbWdrls = Wdrl Map.empty,
+      stbTxFee = Coin 94,
+      stbTTL = SlotNo 10,
+      stbUpdate = SNothing,
+      stbMDHash = SNothing
     }
 
 txRegisterPool :: ShelleyTx Shelley
@@ -364,14 +364,14 @@ txRegisterPoolBytes16 = "83a5008182582003170a2e7597b7b7e3d84c05391d139a62b157e78
 txbRetirePool :: ShelleyTxBody Shelley
 txbRetirePool =
   ShelleyTxBody
-    { _inputs = Set.fromList [TxIn genesisId minBound],
-      _outputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)],
-      _certs = StrictSeq.fromList [DCertPool (RetirePool alicePoolKH (EpochNo 5))],
-      _wdrls = Wdrl Map.empty,
-      _txfee = Coin 94,
-      _ttl = SlotNo 10,
-      _txUpdate = SNothing,
-      _mdHash = SNothing
+    { stbInputs = Set.fromList [TxIn genesisId minBound],
+      stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)],
+      stbCerts = StrictSeq.fromList [DCertPool (RetirePool alicePoolKH (EpochNo 5))],
+      stbWdrls = Wdrl Map.empty,
+      stbTxFee = Coin 94,
+      stbTTL = SlotNo 10,
+      stbUpdate = SNothing,
+      stbMDHash = SNothing
     }
 
 txRetirePool :: ShelleyTx Shelley
@@ -396,14 +396,14 @@ md = MD.ShelleyTxAuxData $ Map.singleton 0 (MD.List [MD.I 5, MD.S "hello"])
 txbWithMD :: ShelleyTxBody Shelley
 txbWithMD =
   ShelleyTxBody
-    { _inputs = Set.fromList [TxIn genesisId minBound],
-      _outputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)],
-      _certs = StrictSeq.empty,
-      _wdrls = Wdrl Map.empty,
-      _txfee = Coin 94,
-      _ttl = SlotNo 10,
-      _txUpdate = SNothing,
-      _mdHash = SJust $ hashTxAuxData @Shelley md
+    { stbInputs = Set.fromList [TxIn genesisId minBound],
+      stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)],
+      stbCerts = StrictSeq.empty,
+      stbWdrls = Wdrl Map.empty,
+      stbTxFee = Coin 94,
+      stbTTL = SlotNo 10,
+      stbUpdate = SNothing,
+      stbMDHash = SJust $ hashTxAuxData @Shelley md
     }
 
 txWithMD :: ShelleyTx Shelley
@@ -433,14 +433,14 @@ msig =
 txbWithMultiSig :: ShelleyTxBody Shelley
 txbWithMultiSig =
   ShelleyTxBody
-    { _inputs = Set.fromList [TxIn genesisId minBound], -- acting as if this is multi-sig
-      _outputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)],
-      _certs = StrictSeq.empty,
-      _wdrls = Wdrl Map.empty,
-      _txfee = Coin 94,
-      _ttl = SlotNo 10,
-      _txUpdate = SNothing,
-      _mdHash = SNothing
+    { stbInputs = Set.fromList [TxIn genesisId minBound], -- acting as if this is multi-sig
+      stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)],
+      stbCerts = StrictSeq.empty,
+      stbWdrls = Wdrl Map.empty,
+      stbTxFee = Coin 94,
+      stbTTL = SlotNo 10,
+      stbUpdate = SNothing,
+      stbMDHash = SNothing
     }
 
 txWithMultiSig :: ShelleyTx Shelley
@@ -465,14 +465,14 @@ txWithMultiSigBytes16 = "83a4008182582003170a2e7597b7b7e3d84c05391d139a62b157e78
 txbWithWithdrawal :: ShelleyTxBody Shelley
 txbWithWithdrawal =
   ShelleyTxBody
-    { _inputs = Set.fromList [TxIn genesisId minBound],
-      _outputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)],
-      _certs = StrictSeq.empty,
-      _wdrls = Wdrl $ Map.singleton (RewardAcnt Testnet aliceSHK) (Val.inject $ Coin 100),
-      _txfee = Coin 94,
-      _ttl = SlotNo 10,
-      _txUpdate = SNothing,
-      _mdHash = SNothing
+    { stbInputs = Set.fromList [TxIn genesisId minBound],
+      stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)],
+      stbCerts = StrictSeq.empty,
+      stbWdrls = Wdrl $ Map.singleton (RewardAcnt Testnet aliceSHK) (Val.inject $ Coin 100),
+      stbTxFee = Coin 94,
+      stbTTL = SlotNo 10,
+      stbUpdate = SNothing,
+      stbMDHash = SNothing
     }
 
 txWithWithdrawal :: ShelleyTx Shelley
