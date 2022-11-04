@@ -6,6 +6,7 @@
 
 module Cardano.Ledger.Alonzo.Tools
   ( evaluateTransactionExecutionUnits,
+    evaluateTransactionExecutionUnitsWithLogs,
     TransactionScriptFailure (..),
   )
 where
@@ -92,6 +93,8 @@ note e Nothing = Left e
 
 type RedeemerReport c = Map RdmrPtr (Either (TransactionScriptFailure c) ExUnits)
 
+type RedeemerReportWithLogs c = Map RdmrPtr (Either (TransactionScriptFailure c) ([Text], ExUnits))
+
 -- | Evaluate the execution budgets needed for all the redeemers in
 --  a given transaction. If a redeemer is invalid, a failure is returned instead.
 --
@@ -123,7 +126,41 @@ evaluateTransactionExecutionUnits ::
   --  Otherwise, we return a 'TranslationError' manifesting from failed attempts
   --  to construct a valid execution context for the given transaction.
   Either (TranslationError (EraCrypto era)) (RedeemerReport (EraCrypto era))
-evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels = do
+evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels =
+  fmap (Map.map (fmap snd)) $ evaluateTransactionExecutionUnitsWithLogs pp tx utxo ei sysS costModels
+
+-- | Evaluate the execution budgets needed for all the redeemers in
+--  a given transaction. If a redeemer is invalid, a failure is returned instead.
+--
+--  The execution budgets in the supplied transaction are completely ignored.
+--  The results of 'evaluateTransactionExecutionUnitsWithLogs' are intended to replace them.
+evaluateTransactionExecutionUnitsWithLogs ::
+  forall era.
+  ( AlonzoEraTx era,
+    ExtendedUTxO era,
+    EraUTxO era,
+    ScriptsNeeded era ~ AlonzoScriptsNeeded era,
+    HasField "_maxTxExUnits" (PParams era) ExUnits,
+    HasField "_protocolVersion" (PParams era) ProtVer,
+    Script era ~ AlonzoScript era
+  ) =>
+  PParams era ->
+  -- | The transaction.
+  Tx era ->
+  -- | The current UTxO set (or the relevant portion for the transaction).
+  UTxO era ->
+  -- | The epoch info, used to translate slots to POSIX time for plutus.
+  EpochInfo (Either Text) ->
+  -- | The start time of the given block chain.
+  SystemStart ->
+  -- | The array of cost models, indexed by the supported languages.
+  Array Language CostModel ->
+  -- | We return a map from redeemer pointers to either a failure or a
+  --  sufficient execution budget with logs of the script.
+  --  Otherwise, we return a 'TranslationError' manifesting from failed attempts
+  --  to construct a valid execution context for the given transaction.
+  Either (TranslationError (EraCrypto era)) (RedeemerReportWithLogs (EraCrypto era))
+evaluateTransactionExecutionUnitsWithLogs pp tx utxo ei sysS costModels = do
   let getInfo :: Language -> Either (TranslationError (EraCrypto era)) VersionedTxInfo
       getInfo lang = txInfo pp lang ei sysS utxo tx
   ctx <- sequence $ Map.fromSet getInfo languagesUsed
@@ -158,7 +195,7 @@ evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels = do
       Map Language VersionedTxInfo ->
       RdmrPtr ->
       (Data era, ExUnits) ->
-      Either (TransactionScriptFailure (EraCrypto era)) ExUnits
+      Either (TransactionScriptFailure (EraCrypto era)) ([Text], ExUnits)
     findAndCount pparams info pointer (rdmr, _) = do
       (sp, mscript, sh) <-
         note (RedeemerPointsToUnknownScriptHash pointer) $
@@ -185,7 +222,7 @@ evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels = do
         (logs, Left e) -> case lang of
           PlutusV1 -> Left $ ValidationFailedV1 e logs
           PlutusV2 -> Left $ ValidationFailedV2 e logs
-        (_, Right exBudget) -> note (IncompatibleBudget exBudget) $ exBudgetToExUnits exBudget
+        (logs, Right exBudget) -> note (IncompatibleBudget exBudget) $ (,) logs <$> exBudgetToExUnits exBudget
       where
         maxBudget = transExUnits . getField @"_maxTxExUnits" $ pparams
         pv = transProtocolVersion . getField @"_protocolVersion" $ pparams
