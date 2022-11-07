@@ -424,16 +424,16 @@ blockEx3 =
 snapEx3 :: Cr.Crypto c => EB.SnapShot c
 snapEx3 =
   EB.SnapShot
-    { EB._stake =
+    { EB.ssStake =
         mkStake
           [ (Cast.aliceSHK, aliceCoinEx2Base <> aliceCoinEx2Ptr),
             (Cast.bobSHK, bobInitCoin)
           ],
-      EB._delegations =
+      EB.ssDelegations =
         [ (Cast.aliceSHK, hk Cast.alicePoolKeys),
           (Cast.bobSHK, hk Cast.alicePoolKeys)
         ],
-      EB._poolParams = [(hk Cast.alicePoolKeys, Cast.alicePoolParams)]
+      EB.ssPoolParams = [(hk Cast.alicePoolKeys, Cast.alicePoolParams)]
     }
 
 expectedStEx3 ::
@@ -567,18 +567,18 @@ blockEx5 =
 snapEx5 :: forall c. Cr.Crypto c => EB.SnapShot c
 snapEx5 =
   EB.SnapShot
-    { EB._stake =
+    { EB.ssStake =
         mkStake
           [ (Cast.aliceSHK, aliceCoinEx4Base <> aliceCoinEx2Ptr),
             (Cast.carlSHK, carlMIR),
             (Cast.bobSHK, bobInitCoin)
           ],
-      EB._delegations =
+      EB.ssDelegations =
         [ (Cast.aliceSHK, hk Cast.alicePoolKeys),
           (Cast.carlSHK, hk Cast.alicePoolKeys),
           (Cast.bobSHK, hk Cast.alicePoolKeys)
         ],
-      EB._poolParams = [(hk Cast.alicePoolKeys, Cast.alicePoolParams)]
+      EB.ssPoolParams = [(hk Cast.alicePoolKeys, Cast.alicePoolParams)]
     }
 
 pdEx5 :: forall c. Cr.Crypto c => PoolDistr c
@@ -817,7 +817,7 @@ blockEx9 =
 snapEx9 :: forall c. Cr.Crypto c => EB.SnapShot c
 snapEx9 =
   snapEx5
-    { EB._stake =
+    { EB.ssStake =
         mkStake
           [ (Cast.bobSHK, bobInitCoin <> bobRAcnt8),
             (Cast.aliceSHK, aliceCoinEx4Base <> aliceCoinEx2Ptr <> aliceRAcnt8),
@@ -971,7 +971,7 @@ alicePerfEx11 = applyDecay decayFactor alicePerfEx8 <> epoch4Likelihood
     blocks = 0
     t = leaderProbability f relativeStake (_d ppEx)
     -- everyone has delegated to Alice's Pool
-    Coin stake = EB.sumAllStake (EB._stake $ snapEx5 @c)
+    Coin stake = EB.sumAllStake (EB.ssStake $ snapEx5 @c)
     relativeStake = fromRational (stake % supply)
     Coin supply = maxLLSupply <-> reserves12
     f = activeSlotCoeff testGlobals
@@ -1038,12 +1038,12 @@ blockEx12 =
 snapEx12 :: forall c. Cr.Crypto c => EB.SnapShot c
 snapEx12 =
   snapEx9
-    { EB._stake =
+    { EB.ssStake =
         mkStake
           [ (Cast.aliceSHK, aliceRAcnt8 <> aliceCoinEx2Ptr <> aliceCoinEx11Ptr),
             (Cast.carlSHK, carlMIR)
           ],
-      EB._delegations =
+      EB.ssDelegations =
         [ (Cast.aliceSHK, hk Cast.alicePoolKeys),
           (Cast.carlSHK, hk Cast.alicePoolKeys)
         ]

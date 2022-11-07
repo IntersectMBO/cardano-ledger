@@ -23,8 +23,8 @@ import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core (EraTxOut)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.EpochBoundary
-  ( SnapShot (_delegations, _stake),
-    SnapShots (_feeSS, _pstakeGo, _pstakeMark, _pstakeSet),
+  ( SnapShot (ssDelegations, ssStake),
+    SnapShots (ssFee, ssStakeGo, ssStakeMark, ssStakeSet),
     Stake (unStake),
     emptySnapShots,
   )
@@ -90,13 +90,13 @@ snapTransition = do
 
   tellEvent $
     let stMap :: Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin)
-        stMap = VMap.toMap . unStake $ _stake istakeSnap
+        stMap = VMap.toMap . unStake $ ssStake istakeSnap
 
         stakeCoinMap :: Map (Credential 'Staking (EraCrypto era)) Coin
         stakeCoinMap = fmap fromCompact stMap
 
         stakePoolMap :: Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))
-        stakePoolMap = VMap.toMap $ _delegations istakeSnap
+        stakePoolMap = VMap.toMap $ ssDelegations istakeSnap
 
         stakeMap :: Map (Credential 'Staking (EraCrypto era)) (Coin, KeyHash 'StakePool (EraCrypto era))
         stakeMap = Map.intersectionWith (,) stakeCoinMap stakePoolMap
@@ -104,8 +104,8 @@ snapTransition = do
 
   pure $
     s
-      { _pstakeMark = istakeSnap,
-        _pstakeSet = _pstakeMark s,
-        _pstakeGo = _pstakeSet s,
-        _feeSS = fees
+      { ssStakeMark = istakeSnap,
+        ssStakeSet = ssStakeMark s,
+        ssStakeGo = ssStakeSet s,
+        ssFee = fees
       }

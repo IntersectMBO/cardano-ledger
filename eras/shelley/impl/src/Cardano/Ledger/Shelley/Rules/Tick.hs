@@ -27,7 +27,7 @@ where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..), epochInfoPure)
 import Cardano.Ledger.Core
-import Cardano.Ledger.EpochBoundary (SnapShots (_pstakeMark))
+import Cardano.Ledger.EpochBoundary (SnapShots (ssStakeMark))
 import Cardano.Ledger.Keys (GenDelegs (..))
 import Cardano.Ledger.Shelley.Era (ShelleyTICK, ShelleyTICKF)
 import Cardano.Ledger.Shelley.LedgerState
@@ -192,7 +192,7 @@ bheadTransition = do
   -- We do NOT force it in the TICKF and TICKN rule
   -- so that it can remain a thunk when the consensus
   -- layer computes the ledger view across the epoch boundary.
-  let !_ = _pstakeMark . esSnapshots . nesEs $ nes'
+  let !_ = ssStakeMark . esSnapshots . nesEs $ nes'
 
   ru'' <-
     trans @(EraRule "RUPD" era) $

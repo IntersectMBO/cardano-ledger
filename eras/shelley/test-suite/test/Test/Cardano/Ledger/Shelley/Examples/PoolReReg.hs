@@ -25,7 +25,7 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Block (Block, bheader, txid)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Crypto as Cr
-import Cardano.Ledger.EpochBoundary (SnapShot (_poolParams), emptySnapShot)
+import Cardano.Ledger.EpochBoundary (SnapShot (ssPoolParams), emptySnapShot)
 import Cardano.Ledger.Era (EraCrypto (..))
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.SafeHash (hashAnnotated)
@@ -296,7 +296,7 @@ blockEx3 =
 
 snapEx3 :: Cr.Crypto c => SnapShot c
 snapEx3 =
-  emptySnapShot {_poolParams = [(hk Cast.alicePoolKeys, Cast.alicePoolParams)]}
+  emptySnapShot {ssPoolParams = [(hk Cast.alicePoolKeys, Cast.alicePoolParams)]}
 
 expectedStEx3 :: forall c. (ExMock (EraCrypto (ShelleyEra c))) => ChainState (ShelleyEra c)
 expectedStEx3 =

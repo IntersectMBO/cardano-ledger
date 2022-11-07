@@ -45,6 +45,19 @@ in the naming of release branches.
   - `PoolParams.PoolMetadata`
     - `_poolMDUrl -> pmUrl`
     - `_poolMDHash -> pmHash`
+- Renamed records fields in `Cardano.Ledger` to names without `_` (underscores) #?
+  - `Shelley.Delegation.Certificates`
+    - `_delegator` to `dDelegator`
+    - `_delegatee` to `dDelegatee`
+  - `EpochBoundary.SnapShot`
+    - `_stake` to `ssStake`
+    - `_delegations` to `ssDelegations`
+    - `_poolParams` to `ssPoolParams`
+  - `EpochBoundary.SnapShots`
+    - `_pstakeMark` to `ssStakeMark`
+    - `_pstakeSet` to `ssStakeSet`
+    - `_pstakeGo` to `ssStakeGo`
+    - `_feeSS` to `ssFee`
 - Renamed records fields in `Cardano.Ledger.Shelley.LedgerState.DPState` to names without `_` (underscores) #3116
   - `DState`
     - `_unified -> dsUnified`

@@ -236,7 +236,7 @@ delegsTransition = do
       let isDelegationRegistered = case c of
             DCertDeleg (Delegate deleg) ->
               let stPools_ = psStakePoolParams $ dpsPState dpstate'
-                  targetPool = _delegatee deleg
+                  targetPool = dDelegatee deleg
                in if eval (targetPool ∈ dom stPools_)
                     then Right ()
                     else Left $ DelegateeNotRegisteredDELEG targetPool

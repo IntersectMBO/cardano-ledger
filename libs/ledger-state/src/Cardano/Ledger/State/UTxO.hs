@@ -217,11 +217,11 @@ instance AggregateStat SnapShotStats where
 countSnapShotStat :: SnapShot C -> SnapShotStats
 countSnapShotStat SnapShot {..} =
   SnapShotStats
-    { sssStake = statMapKeys (VMap.toMap (unStake _stake)),
-      sssDelegationCredential = statMapKeys (VMap.toMap _delegations),
-      sssDelegationStakePool = statFoldable (VMap.toMap _delegations),
-      sssPoolParams = statMapKeys (VMap.toMap _poolParams),
-      sssPoolParamsStats = VMap.foldMap countPoolParamsStats _poolParams
+    { sssStake = statMapKeys (VMap.toMap (unStake ssStake)),
+      sssDelegationCredential = statMapKeys (VMap.toMap ssDelegations),
+      sssDelegationStakePool = statFoldable (VMap.toMap ssDelegations),
+      sssPoolParams = statMapKeys (VMap.toMap ssPoolParams),
+      sssPoolParamsStats = VMap.foldMap countPoolParamsStats ssPoolParams
     }
 
 data PoolParamsStats = PoolParamsStats
@@ -372,9 +372,9 @@ instance Pretty EpochStateStats where
 
 countEpochStateStats :: EpochState CurrentEra -> EpochStateStats
 countEpochStateStats EpochState {..} =
-  let markSnap = countSnapShotStat (_pstakeMark esSnapshots)
-      setSnap = countSnapShotStat (_pstakeSet esSnapshots)
-      goSnap = countSnapShotStat (_pstakeGo esSnapshots)
+  let markSnap = countSnapShotStat (ssStakeMark esSnapshots)
+      setSnap = countSnapShotStat (ssStakeSet esSnapshots)
+      goSnap = countSnapShotStat (ssStakeGo esSnapshots)
       stats =
         EpochStateStats
           { essMarkSnapShotStats = markSnap,

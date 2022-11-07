@@ -177,7 +177,7 @@ newEpochTransition = do
       let adaPots = totalAdaPotsES es'''
       tellEvent $ TotalAdaPotsEvent adaPots
       let ss = esSnapshots es'''
-          pd' = calculatePoolDistr (_pstakeSet ss)
+          pd' = calculatePoolDistr (ssStakeSet ss)
       pure $
         src
           { nesEL = e,

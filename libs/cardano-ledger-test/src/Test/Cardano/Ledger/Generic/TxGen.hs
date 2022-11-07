@@ -576,7 +576,7 @@ genDCert proof slot = do
     genDelegation = do
       rewardAccount <- genFreshRegCred Cert
       (kh, _) <- genPool
-      pure $ Delegation {_delegator = rewardAccount, _delegatee = kh}
+      pure $ Delegation {dDelegator = rewardAccount, dDelegatee = kh}
     genFreshPool = do
       (_kh, pp, _) <- genNewPool
       return pp

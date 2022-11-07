@@ -124,7 +124,7 @@ startStep ::
   Word64 ->
   PulsingRewUpdate (EraCrypto era)
 startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) maxSupply asc secparam =
-  let SnapShot stake' delegs' poolParams = _pstakeGo ss
+  let SnapShot stake' delegs' poolParams = ssStakeGo ss
       numStakeCreds, k :: Rational
       numStakeCreds = fromIntegral (VMap.size $ unStake stake')
       k = fromIntegral secparam
@@ -160,7 +160,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
       eta
         | unboundRational (getField @"_d" pr) >= 0.8 = 1
         | otherwise = blocksMade % expectedBlocks
-      Coin rPot = _feeSS ss <> deltaR1
+      Coin rPot = ssFee ss <> deltaR1
       deltaT1 = floor $ unboundRational (getField @"_tau" pr) * fromIntegral rPot
       _R = Coin $ rPot - deltaT1
       -- We now compute stake pool specific values that are needed for computing
@@ -218,7 +218,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
       -- once all the member rewards are complete.
       rewsnap =
         RewardSnapShot
-          { rewFees = _feeSS ss,
+          { rewFees = ssFee ss,
             rewprotocolVersion = getField @"_protocolVersion" pr,
             rewNonMyopic = nm,
             rewDeltaR1 = deltaR1,
