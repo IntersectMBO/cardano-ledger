@@ -581,7 +581,7 @@ createRUpdOld_ ::
   ShelleyBase (RewardUpdateOld (EraCrypto era))
 createRUpdOld_ slotsPerEpoch b@(BlocksMade b') ss (Coin reserves) pr totalStake rs nm = do
   asc <- asks activeSlotCoeff
-  let SnapShot stake' delegs' poolParams = _pstakeGo ss
+  let SnapShot stake' delegs' poolParams = ssStakeGo ss
       -- reserves and rewards change
       deltaR1 =
         rationalToCoinViaFloor $
@@ -597,7 +597,7 @@ createRUpdOld_ slotsPerEpoch b@(BlocksMade b') ss (Coin reserves) pr totalStake 
       eta
         | unboundRational (getField @"_d" pr) >= 0.8 = 1
         | otherwise = blocksMade % expectedBlocks
-      Coin rPot = _feeSS ss <> deltaR1
+      Coin rPot = ssFee ss <> deltaR1
       deltaT1 = floor $ unboundRational (getField @"_tau" pr) * fromIntegral rPot
       _R = Coin $ rPot - deltaT1
       (rs_, newLikelihoods) =
@@ -619,7 +619,7 @@ createRUpdOld_ slotsPerEpoch b@(BlocksMade b') ss (Coin reserves) pr totalStake 
       { deltaTOld = DeltaCoin deltaT1,
         deltaROld = invert (toDeltaCoin deltaR1) <> toDeltaCoin deltaR2,
         rsOld = rs_,
-        deltaFOld = invert (toDeltaCoin $ _feeSS ss),
+        deltaFOld = invert (toDeltaCoin $ ssFee ss),
         nonMyopicOld = updateNonMyopic nm _R newLikelihoods
       }
 

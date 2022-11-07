@@ -153,9 +153,9 @@ maxPool pc r sigma pR = maxPool' a0 nOpt r sigma pR
 
 -- | Snapshot of the stake distribution.
 data SnapShot c = SnapShot
-  { _stake :: !(Stake c),
-    _delegations :: !(VMap VB VB (Credential 'Staking c) (KeyHash 'StakePool c)),
-    _poolParams :: !(VMap VB VB (KeyHash 'StakePool c) (PoolParams c))
+  { ssStake :: !(Stake c),
+    ssDelegations :: !(VMap VB VB (Credential 'Staking c) (KeyHash 'StakePool c)),
+    ssPoolParams :: !(VMap VB VB (KeyHash 'StakePool c) (PoolParams c))
   }
   deriving (Show, Eq, Generic)
 
@@ -169,9 +169,9 @@ instance
   where
   toCBOR
     SnapShot
-      { _stake = s,
-        _delegations = d,
-        _poolParams = p
+      { ssStake = s,
+        ssDelegations = d,
+        ssPoolParams = p
       } =
       encodeListLen 3
         <> toCBOR s
@@ -183,17 +183,17 @@ instance CC.Crypto c => FromSharedCBOR (SnapShot c) where
     Share (SnapShot c) =
       (Interns (Credential 'Staking c), Interns (KeyHash 'StakePool c))
   fromSharedPlusCBOR = decodeRecordNamedT "SnapShot" (const 3) $ do
-    _stake <- fromSharedPlusLensCBOR _1
-    _delegations <- fromSharedPlusCBOR
-    _poolParams <- fromSharedPlusLensCBOR (toMemptyLens _1 _2)
-    pure SnapShot {_stake, _delegations, _poolParams}
+    ssStake <- fromSharedPlusLensCBOR _1
+    ssDelegations <- fromSharedPlusCBOR
+    ssPoolParams <- fromSharedPlusLensCBOR (toMemptyLens _1 _2)
+    pure SnapShot {ssStake, ssDelegations, ssPoolParams}
 
 -- | Snapshots of the stake distribution.
 data SnapShots c = SnapShots
-  { _pstakeMark :: SnapShot c, -- Lazy on purpose
-    _pstakeSet :: !(SnapShot c),
-    _pstakeGo :: !(SnapShot c),
-    _feeSS :: !Coin
+  { ssStakeMark :: SnapShot c, -- Lazy on purpose
+    ssStakeSet :: !(SnapShot c),
+    ssStakeGo :: !(SnapShot c),
+    ssFee :: !Coin
   }
   deriving (Show, Eq, Generic)
 
@@ -205,21 +205,21 @@ instance
   CC.Crypto c =>
   ToCBOR (SnapShots c)
   where
-  toCBOR (SnapShots {_pstakeMark, _pstakeSet, _pstakeGo, _feeSS}) =
+  toCBOR (SnapShots {ssStakeMark, ssStakeSet, ssStakeGo, ssFee}) =
     encodeListLen 4
-      <> toCBOR _pstakeMark
-      <> toCBOR _pstakeSet
-      <> toCBOR _pstakeGo
-      <> toCBOR _feeSS
+      <> toCBOR ssStakeMark
+      <> toCBOR ssStakeSet
+      <> toCBOR ssStakeGo
+      <> toCBOR ssFee
 
 instance CC.Crypto c => FromSharedCBOR (SnapShots c) where
   type Share (SnapShots c) = Share (SnapShot c)
   fromSharedPlusCBOR = decodeRecordNamedT "SnapShots" (const 4) $ do
-    !_pstakeMark <- fromSharedPlusCBOR
-    _pstakeSet <- fromSharedPlusCBOR
-    _pstakeGo <- fromSharedPlusCBOR
-    _feeSS <- lift fromCBOR
-    pure SnapShots {_pstakeMark, _pstakeSet, _pstakeGo, _feeSS}
+    !ssStakeMark <- fromSharedPlusCBOR
+    ssStakeSet <- fromSharedPlusCBOR
+    ssStakeGo <- fromSharedPlusCBOR
+    ssFee <- lift fromCBOR
+    pure SnapShots {ssStakeMark, ssStakeSet, ssStakeGo, ssFee}
 
 instance Default (SnapShots c) where
   def = emptySnapShots
