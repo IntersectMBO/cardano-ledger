@@ -441,8 +441,8 @@ exampleNewEpochState proof spendvalue ppp pp =
       EpochState
         { esAccountState =
             AccountState
-              { _treasury = Coin 10000,
-                _reserves = Coin 1000
+              { asTreasury = Coin 10000,
+                asReserves = Coin 1000
               },
           esSnapshots = emptySnapShots,
           esLState =
@@ -813,19 +813,19 @@ exampleCerts =
 examplePoolParams :: forall c. CC.Crypto c => PoolParams c
 examplePoolParams =
   PoolParams
-    { _poolId = hashKey $ vKey $ cold poolKeys,
-      _poolVrf = hashVerKeyVRF $ snd $ vrf poolKeys,
-      _poolPledge = Coin 1,
-      _poolCost = Coin 5,
-      _poolMargin = unsafeBoundRational 0.1,
-      _poolRAcnt = RewardAcnt Testnet (keyToCredential exampleStakeKey),
-      _poolOwners = Set.singleton $ hashKey $ vKey exampleStakeKey,
-      _poolRelays = StrictSeq.empty,
-      _poolMD =
+    { ppId = hashKey $ vKey $ cold poolKeys,
+      ppVrf = hashVerKeyVRF $ snd $ vrf poolKeys,
+      ppPledge = Coin 1,
+      ppCost = Coin 5,
+      ppMargin = unsafeBoundRational 0.1,
+      ppRewardAcnt = RewardAcnt Testnet (keyToCredential exampleStakeKey),
+      ppOwners = Set.singleton $ hashKey $ vKey exampleStakeKey,
+      ppRelays = StrictSeq.empty,
+      ppMetadata =
         SJust $
           PoolMetadata
-            { _poolMDUrl = fromJust $ textToUrl "consensus.pool",
-              _poolMDHash = "{}"
+            { pmUrl = fromJust $ textToUrl "consensus.pool",
+              pmHash = "{}"
             }
     }
   where
@@ -834,9 +834,9 @@ examplePoolParams =
 exampleWithdrawals :: Era era => Proof era -> Wdrl (EraCrypto era)
 exampleWithdrawals proof =
   case proof of
-    Shelley _ -> Wdrl $ Map.fromList [(_poolRAcnt examplePoolParams, Coin 100)]
-    Allegra _ -> Wdrl $ Map.fromList [(_poolRAcnt examplePoolParams, Coin 100)]
-    Mary _ -> Wdrl $ Map.fromList [(_poolRAcnt examplePoolParams, Coin 100)]
+    Shelley _ -> Wdrl $ Map.fromList [(ppRewardAcnt examplePoolParams, Coin 100)]
+    Allegra _ -> Wdrl $ Map.fromList [(ppRewardAcnt examplePoolParams, Coin 100)]
+    Mary _ -> Wdrl $ Map.fromList [(ppRewardAcnt examplePoolParams, Coin 100)]
     Alonzo _ ->
       Wdrl $
         Map.singleton

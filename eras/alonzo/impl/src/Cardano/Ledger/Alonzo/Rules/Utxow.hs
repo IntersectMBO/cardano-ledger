@@ -468,7 +468,7 @@ witsVKeyNeeded utxo' tx genDelegs =
       where
         accum (DCertPool (RegPool pool)) ans =
           Set.union
-            (Set.map asWitness (_poolOwners pool))
+            (Set.map asWitness (ppOwners pool))
             ans
         accum _cert ans = ans
     cwitness (DCertDeleg dc) = extractKeyHashWitnessSet [delegCWitness dc]

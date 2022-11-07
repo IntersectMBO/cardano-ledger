@@ -82,8 +82,8 @@ import NoThunks.Class (NoThunks (..))
 -- ========================================================================
 
 data PoolMetadata = PoolMetadata
-  { _poolMDUrl :: !Url,
-    _poolMDHash :: !ByteString
+  { pmUrl :: !Url,
+    pmHash :: !ByteString
   }
   deriving (Eq, Ord, Generic, Show)
 
@@ -92,8 +92,8 @@ deriving instance NFData PoolMetadata
 instance ToJSON PoolMetadata where
   toJSON pmd =
     Aeson.object
-      [ "url" .= _poolMDUrl pmd,
-        "hash" .= (Text.decodeLatin1 . B16.encode) (_poolMDHash pmd)
+      [ "url" .= pmUrl pmd,
+        "hash" .= (Text.decodeLatin1 . B16.encode) (pmHash pmd)
       ]
 
 instance FromJSON PoolMetadata where
@@ -209,15 +209,15 @@ instance FromCBOR StakePoolRelay where
 
 -- | A stake pool.
 data PoolParams c = PoolParams
-  { _poolId :: !(KeyHash 'StakePool c),
-    _poolVrf :: !(Hash c (VerKeyVRF c)),
-    _poolPledge :: !Coin,
-    _poolCost :: !Coin,
-    _poolMargin :: !UnitInterval,
-    _poolRAcnt :: !(RewardAcnt c),
-    _poolOwners :: !(Set (KeyHash 'Staking c)),
-    _poolRelays :: !(StrictSeq StakePoolRelay),
-    _poolMD :: !(StrictMaybe PoolMetadata)
+  { ppId :: !(KeyHash 'StakePool c),
+    ppVrf :: !(Hash c (VerKeyVRF c)),
+    ppPledge :: !Coin,
+    ppCost :: !Coin,
+    ppMargin :: !UnitInterval,
+    ppRewardAcnt :: !(RewardAcnt c),
+    ppOwners :: !(Set (KeyHash 'Staking c)),
+    ppRelays :: !(StrictSeq StakePoolRelay),
+    ppMetadata :: !(StrictMaybe PoolMetadata)
   }
   deriving (Show, Generic, Eq, Ord)
   deriving (ToCBOR) via CBORGroup (PoolParams c)
@@ -230,15 +230,15 @@ deriving instance NFData (PoolParams c)
 instance CC.Crypto c => ToJSON (PoolParams c) where
   toJSON pp =
     Aeson.object
-      [ "publicKey" .= _poolId pp, -- TODO publicKey is an unfortunate name, should be poolId
-        "vrf" .= _poolVrf pp,
-        "pledge" .= _poolPledge pp,
-        "cost" .= _poolCost pp,
-        "margin" .= _poolMargin pp,
-        "rewardAccount" .= _poolRAcnt pp,
-        "owners" .= _poolOwners pp,
-        "relays" .= _poolRelays pp,
-        "metadata" .= _poolMD pp
+      [ "publicKey" .= ppId pp, -- TODO publicKey is an unfortunate name, should be poolId
+        "vrf" .= ppVrf pp,
+        "pledge" .= ppPledge pp,
+        "cost" .= ppCost pp,
+        "margin" .= ppMargin pp,
+        "rewardAccount" .= ppRewardAcnt pp,
+        "owners" .= ppOwners pp,
+        "relays" .= ppRelays pp,
+        "metadata" .= ppMetadata pp
       ]
 
 instance CC.Crypto c => FromJSON (PoolParams c) where
@@ -265,14 +265,14 @@ instance FromCBOR PoolMetadata where
   fromCBOR = do
     decodeRecordNamed "PoolMetadata" (const 2) (PoolMetadata <$> fromCBOR <*> fromCBOR)
 
--- | The size of the '_poolOwners' 'Set'.  Only used to compute size of encoded
+-- | The size of the 'ppOwners' 'Set'.  Only used to compute size of encoded
 -- 'PoolParams'.
 data SizeOfPoolOwners = SizeOfPoolOwners
 
 instance ToCBOR SizeOfPoolOwners where
   toCBOR = error "The `SizeOfPoolOwners` type cannot be encoded!"
 
--- | The size of the '_poolRelays' 'Set'.  Only used to compute size of encoded
+-- | The size of the 'ppRelays' 'Set'.  Only used to compute size of encoded
 -- 'PoolParams'.
 data SizeOfPoolRelays = SizeOfPoolRelays
 
@@ -284,30 +284,30 @@ instance
   ToCBORGroup (PoolParams c)
   where
   toCBORGroup poolParams =
-    toCBOR (_poolId poolParams)
-      <> toCBOR (_poolVrf poolParams)
-      <> toCBOR (_poolPledge poolParams)
-      <> toCBOR (_poolCost poolParams)
-      <> toCBOR (_poolMargin poolParams)
-      <> toCBOR (_poolRAcnt poolParams)
-      <> encodeFoldable (_poolOwners poolParams)
-      <> toCBOR (CborSeq (StrictSeq.fromStrict (_poolRelays poolParams)))
-      <> encodeNullMaybe toCBOR (strictMaybeToMaybe (_poolMD poolParams))
+    toCBOR (ppId poolParams)
+      <> toCBOR (ppVrf poolParams)
+      <> toCBOR (ppPledge poolParams)
+      <> toCBOR (ppCost poolParams)
+      <> toCBOR (ppMargin poolParams)
+      <> toCBOR (ppRewardAcnt poolParams)
+      <> encodeFoldable (ppOwners poolParams)
+      <> toCBOR (CborSeq (StrictSeq.fromStrict (ppRelays poolParams)))
+      <> encodeNullMaybe toCBOR (strictMaybeToMaybe (ppMetadata poolParams))
 
   encodedGroupSizeExpr size' proxy =
-    encodedSizeExpr size' (_poolId <$> proxy)
-      + encodedSizeExpr size' (_poolVrf <$> proxy)
-      + encodedSizeExpr size' (_poolPledge <$> proxy)
-      + encodedSizeExpr size' (_poolCost <$> proxy)
-      + encodedSizeExpr size' (_poolMargin <$> proxy)
-      + encodedSizeExpr size' (_poolRAcnt <$> proxy)
+    encodedSizeExpr size' (ppId <$> proxy)
+      + encodedSizeExpr size' (ppVrf <$> proxy)
+      + encodedSizeExpr size' (ppPledge <$> proxy)
+      + encodedSizeExpr size' (ppCost <$> proxy)
+      + encodedSizeExpr size' (ppMargin <$> proxy)
+      + encodedSizeExpr size' (ppRewardAcnt <$> proxy)
       + 2
-      + poolSize * encodedSizeExpr size' (elementProxy (_poolOwners <$> proxy))
+      + poolSize * encodedSizeExpr size' (elementProxy (ppOwners <$> proxy))
       + 2
-      + relaySize * encodedSizeExpr size' (elementProxy (_poolRelays <$> proxy))
+      + relaySize * encodedSizeExpr size' (elementProxy (ppRelays <$> proxy))
       + szCases
         [ Case "Nothing" 1,
-          Case "Just" $ encodedSizeExpr size' (elementProxy (_poolMD <$> proxy))
+          Case "Just" $ encodedSizeExpr size' (elementProxy (ppMetadata <$> proxy))
         ]
     where
       poolSize, relaySize :: Size
@@ -335,13 +335,13 @@ instance
     md <- decodeNullMaybe fromCBOR
     pure $
       PoolParams
-        { _poolId = hk,
-          _poolVrf = vrf,
-          _poolPledge = pledge,
-          _poolCost = cost,
-          _poolMargin = margin,
-          _poolRAcnt = ra,
-          _poolOwners = owners,
-          _poolRelays = relays,
-          _poolMD = maybeToStrictMaybe md
+        { ppId = hk,
+          ppVrf = vrf,
+          ppPledge = pledge,
+          ppCost = cost,
+          ppMargin = margin,
+          ppRewardAcnt = ra,
+          ppOwners = owners,
+          ppRelays = relays,
+          ppMetadata = maybeToStrictMaybe md
         }

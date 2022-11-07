@@ -439,8 +439,8 @@ checkPreservation SourceSignalTarget {source, target, signal} =
     dispCert (DCertDeleg (DeRegKey kh)) = "deregkey " <> show kh
     dispCert (DCertDeleg (Delegate (Delegation _ _))) = "deleg"
     dispCert (DCertPool (RegPool p)) =
-      if _poolId p `Map.member` pools
-        then "PoolReg" <> show (_poolId p)
+      if ppId p `Map.member` pools
+        then "PoolReg" <> show (ppId p)
         else "Pool Re-Reg"
     dispCert (DCertPool (RetirePool _ _)) = "retire"
     dispCert (DCertGenesis (GenesisDelegCert _ _ _)) = "gen"

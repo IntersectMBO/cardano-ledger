@@ -257,19 +257,19 @@ exampleShelleyGenesis =
     poolParams :: L.PoolParams (EraCrypto era)
     poolParams =
       L.PoolParams
-        { L._poolId = hashKey . snd $ mkKeyPair (RawSeed 1 0 0 0 1),
-          L._poolVrf = hashVerKeyVRF . snd $ mkVRFKeyPair (RawSeed 1 0 0 0 2),
-          L._poolPledge = L.Coin 1,
-          L._poolCost = L.Coin 5,
-          L._poolMargin = unsafeBoundRational 0.25,
-          L._poolRAcnt = L.RewardAcnt L.Testnet Cast.aliceSHK,
-          L._poolOwners = Set.singleton $ (hashKey . vKey) Cast.aliceStake,
-          L._poolRelays = relays,
-          L._poolMD =
+        { L.ppId = hashKey . snd $ mkKeyPair (RawSeed 1 0 0 0 1),
+          L.ppVrf = hashVerKeyVRF . snd $ mkVRFKeyPair (RawSeed 1 0 0 0 2),
+          L.ppPledge = L.Coin 1,
+          L.ppCost = L.Coin 5,
+          L.ppMargin = unsafeBoundRational 0.25,
+          L.ppRewardAcnt = L.RewardAcnt L.Testnet Cast.aliceSHK,
+          L.ppOwners = Set.singleton $ (hashKey . vKey) Cast.aliceStake,
+          L.ppRelays = relays,
+          L.ppMetadata =
             L.SJust $
               L.PoolMetadata
-                { L._poolMDUrl = fromJust $ textToUrl "best.pool.com",
-                  L._poolMDHash = BS.pack "100ab{}100ab{}"
+                { L.pmUrl = fromJust $ textToUrl "best.pool.com",
+                  L.pmHash = BS.pack "100ab{}100ab{}"
                 }
         }
     staking =

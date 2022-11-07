@@ -31,6 +31,7 @@ import Cardano.Ledger.Shelley.LedgerState
     PState (..),
     UTxOState (utxosDeposited, utxosPpups),
     UpecState (..),
+    asReserves,
     esAccountState,
     esLState,
     esNonMyopic,
@@ -40,7 +41,6 @@ import Cardano.Ledger.Shelley.LedgerState
     lsDPState,
     lsUTxOState,
     rewards,
-    _reserves,
     pattern DPState,
     pattern EpochState,
   )
@@ -195,9 +195,9 @@ epochTransition = do
 
   let Coin oblgCurr = obligation pp (rewards dstate') (psStakePoolParams pstate'')
       Coin oblgNew = obligation pp' (rewards dstate') (psStakePoolParams pstate'')
-      Coin reserves = _reserves acnt'
+      Coin reserves = asReserves acnt'
       utxoSt''' = utxoSt'' {utxosDeposited = Coin oblgNew}
-      acnt'' = acnt' {_reserves = Coin $ reserves + oblgCurr - oblgNew}
+      acnt'' = acnt' {asReserves = Coin $ reserves + oblgCurr - oblgNew}
   pure $
     epochState'
       { esAccountState = acnt'',

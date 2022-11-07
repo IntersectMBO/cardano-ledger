@@ -177,7 +177,7 @@ aliceCoinEx2 :: Coin
 aliceCoinEx2 = aliceCoinEx1 <-> feeTx2
 
 newPoolParams :: Cr.Crypto c => PoolParams c
-newPoolParams = Cast.alicePoolParams {_poolCost = Coin 500}
+newPoolParams = Cast.alicePoolParams {ppCost = Coin 500}
 
 txbodyEx2 :: forall c. Cr.Crypto c => ShelleyTxBody (ShelleyEra c)
 txbodyEx2 =

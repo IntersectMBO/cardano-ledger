@@ -969,15 +969,15 @@ genPoolParams ::
   Reflect era =>
   KeyHash 'StakePool (EraCrypto era) ->
   GenRS era (PoolParams (EraCrypto era))
-genPoolParams _poolId = do
-  _poolVrf <- lift arbitrary
-  _poolPledge <- lift genPositiveVal
-  _poolCost <- lift genPositiveVal
-  _poolMargin <- lift arbitrary
-  _poolRAcnt <- RewardAcnt Testnet <$> genFreshRegCred Rewrd
-  let _poolOwners = mempty
-  let _poolRelays = mempty
-  let _poolMD = SNothing
+genPoolParams ppId = do
+  ppVrf <- lift arbitrary
+  ppPledge <- lift genPositiveVal
+  ppCost <- lift genPositiveVal
+  ppMargin <- lift arbitrary
+  ppRewardAcnt <- RewardAcnt Testnet <$> genFreshRegCred Rewrd
+  let ppOwners = mempty
+  let ppRelays = mempty
+  let ppMetadata = SNothing
   pure PoolParams {..}
 
 -- | Generate a 'n' fresh credentials (ones not in the set 'old'). We get 'tries' chances,
@@ -1006,7 +1006,7 @@ genNewPool = do
   poolId <- genFreshKeyHash
   poolParam <- genPoolParams poolId
   percent <- lift $ choose (0, 1 :: Float)
-  let stake = IndividualPoolStake @(EraCrypto era) (toRational percent) (_poolVrf poolParam)
+  let stake = IndividualPoolStake @(EraCrypto era) (toRational percent) (ppVrf poolParam)
   modifyGenStateAvoidKey (Set.insert (coerceKeyRole poolId))
   pure (poolId, poolParam, stake)
 

@@ -28,6 +28,23 @@ in the naming of release branches.
 
 ### Changed
 
+- Renamed records fields in `Cardano.Ledger` to names without `_` (underscores) #3118
+  - `Shelley.LedgerState.Types.AccountState`
+    - `_treasury -> asTreasury`
+    - `_reserves -> asReserves`
+  - `PoolParams.PoolParams`
+    - `_poolId -> ppId`
+    - `_poolVrf -> ppVrf`
+    - `_poolPledge -> ppPledge`
+    - `_poolCost -> ppCost`
+    - `_poolMargin -> ppMargin`
+    - `_poolRAcnt -> ppRewardAcnt`
+    - `_poolOwners -> ppOwners`
+    - `_poolRelays -> ppRelays`
+    - `_poolMD -> ppMetadata`
+  - `PoolParams.PoolMetadata`
+    - `_poolMDUrl -> pmUrl`
+    - `_poolMDHash -> pmHash`
 - Renamed records fields in `Cardano.Ledger` to names without `_` (underscores) #?
   - `Shelley.Delegation.Certificates`
     - `_delegator` to `dDelegator`

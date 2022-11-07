@@ -15,7 +15,7 @@ import Cardano.Ledger.EpochBoundary (SnapShot (..), Stake (..), sumAllStake)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.Shelley.Rules (calculatePoolDistr)
-import Cardano.Ledger.Shelley.TxBody (PoolParams (_poolVrf))
+import Cardano.Ledger.Shelley.TxBody (PoolParams (ppVrf))
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
 import qualified Data.VMap as VMap
@@ -59,4 +59,4 @@ oldCalculatePoolDistr includeHash (SnapShot stake delegs poolParams) =
         Map.intersectionWith
           IndividualPoolStake
           sd
-          (VMap.toMap (VMap.map _poolVrf poolParams))
+          (VMap.toMap (VMap.map ppVrf poolParams))

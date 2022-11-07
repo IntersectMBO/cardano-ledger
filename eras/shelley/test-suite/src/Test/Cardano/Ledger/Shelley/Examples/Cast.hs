@@ -126,19 +126,19 @@ alicePtrAddr = Addr Testnet alicePHK (StakeRefPtr $ Ptr (SlotNo 10) minBound min
 alicePoolParams :: forall c. CC.Crypto c => PoolParams c
 alicePoolParams =
   PoolParams
-    { _poolId = (hashKey . vKey . cold) alicePoolKeys,
-      _poolVrf = hashVerKeyVRF . snd $ vrf (alicePoolKeys @c),
-      _poolPledge = Coin 1,
-      _poolCost = Coin 5,
-      _poolMargin = unsafeBoundRational 0.1,
-      _poolRAcnt = RewardAcnt Testnet aliceSHK,
-      _poolOwners = Set.singleton $ (hashKey . vKey) aliceStake,
-      _poolRelays = StrictSeq.empty,
-      _poolMD =
+    { ppId = (hashKey . vKey . cold) alicePoolKeys,
+      ppVrf = hashVerKeyVRF . snd $ vrf (alicePoolKeys @c),
+      ppPledge = Coin 1,
+      ppCost = Coin 5,
+      ppMargin = unsafeBoundRational 0.1,
+      ppRewardAcnt = RewardAcnt Testnet aliceSHK,
+      ppOwners = Set.singleton $ (hashKey . vKey) aliceStake,
+      ppRelays = StrictSeq.empty,
+      ppMetadata =
         SJust $
           PoolMetadata
-            { _poolMDUrl = fromJust $ textToUrl "alice.pool",
-              _poolMDHash = BS.pack "{}"
+            { pmUrl = fromJust $ textToUrl "alice.pool",
+              pmHash = BS.pack "{}"
             }
     }
 
@@ -184,15 +184,15 @@ bobPoolKeys =
 bobPoolParams :: forall c. CC.Crypto c => PoolParams c
 bobPoolParams =
   PoolParams
-    { _poolId = (hashKey . vKey . cold) bobPoolKeys,
-      _poolVrf = hashVerKeyVRF . snd $ vrf (bobPoolKeys @c),
-      _poolPledge = Coin 2,
-      _poolCost = Coin 1,
-      _poolMargin = unsafeBoundRational 0.1,
-      _poolRAcnt = RewardAcnt Testnet bobSHK,
-      _poolOwners = Set.singleton $ (hashKey . vKey) bobStake,
-      _poolRelays = StrictSeq.empty,
-      _poolMD = SNothing
+    { ppId = (hashKey . vKey . cold) bobPoolKeys,
+      ppVrf = hashVerKeyVRF . snd $ vrf (bobPoolKeys @c),
+      ppPledge = Coin 2,
+      ppCost = Coin 1,
+      ppMargin = unsafeBoundRational 0.1,
+      ppRewardAcnt = RewardAcnt Testnet bobSHK,
+      ppOwners = Set.singleton $ (hashKey . vKey) bobStake,
+      ppRelays = StrictSeq.empty,
+      ppMetadata = SNothing
     }
 
 -- | Bob's VRF key hash

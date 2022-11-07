@@ -286,8 +286,8 @@ applyRUpdFiltered
       registeredAggregated = aggregateRewards pp frRegistered
       as' =
         as
-          { _treasury = addDeltaCoin (_treasury as) (deltaT ru) <> frTotalUnregistered,
-            _reserves = addDeltaCoin (_reserves as) (deltaR ru)
+          { asTreasury = addDeltaCoin (asTreasury as) (deltaT ru) <> frTotalUnregistered,
+            asReserves = addDeltaCoin (asReserves as) (deltaR ru)
           }
       ls' =
         ls

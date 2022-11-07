@@ -773,7 +773,7 @@ getDCertCredential = \case
       Delegate (Delegation dk _) -> Just dk
   DCertPool pc ->
     case pc of
-      RegPool PoolParams {..} -> Just . coerceKeyRole $ KeyHashObj _poolId
+      RegPool PoolParams {..} -> Just . coerceKeyRole $ KeyHashObj ppId
       RetirePool kh _ -> Just . coerceKeyRole $ KeyHashObj kh
   DCertGenesis _g -> Nothing
   DCertMir _m -> Nothing

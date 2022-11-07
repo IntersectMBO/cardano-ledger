@@ -193,23 +193,23 @@ poolDelegationTransition = do
 
       when (HardForks.validatePoolRewardAccountNetID pp) $ do
         actualNetID <- liftSTS $ asks networkId
-        let suppliedNetID = getRwdNetwork (_poolRAcnt poolParam)
+        let suppliedNetID = getRwdNetwork (ppRewardAcnt poolParam)
         actualNetID
           == suppliedNetID
-          ?! WrongNetworkPOOL actualNetID suppliedNetID (_poolId poolParam)
+          ?! WrongNetworkPOOL actualNetID suppliedNetID (ppId poolParam)
 
       when (SoftForks.restrictPoolMetadataHash pp) $
-        forM_ (_poolMD poolParam) $ \pmd ->
-          let s = BS.length (_poolMDHash pmd)
+        forM_ (ppMetadata poolParam) $ \pmd ->
+          let s = BS.length (pmHash pmd)
            in s
                 <= fromIntegral (sizeHash ([] @(CC.HASH (EraCrypto era))))
-                ?! PoolMedataHashTooBig (_poolId poolParam) s
+                ?! PoolMedataHashTooBig (ppId poolParam) s
 
-      let poolCost = _poolCost poolParam
+      let poolCost = ppCost poolParam
           minPoolCost = getField @"_minPoolCost" pp
       poolCost >= minPoolCost ?! StakePoolCostTooLowPOOL poolCost minPoolCost
 
-      let hk = _poolId poolParam
+      let hk = ppId poolParam
       if eval (hk ∉ dom stpools)
         then do
           -- register new, Pool-Reg

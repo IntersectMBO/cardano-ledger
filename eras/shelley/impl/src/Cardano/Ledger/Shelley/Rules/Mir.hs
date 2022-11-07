@@ -107,8 +107,8 @@ mirTransition = do
   let dpState = lsDPState ls
       ds = dpsDState dpState
       rewards' = rewards ds
-      reserves = _reserves acnt
-      treasury = _treasury acnt
+      reserves = asReserves acnt
+      treasury = asTreasury acnt
       irwdR = eval $ dom rewards' ◁ iRReserves (dsIRewards ds) :: RewardAccounts (EraCrypto era)
       irwdT = eval $ dom rewards' ◁ iRTreasury (dsIRewards ds) :: RewardAccounts (EraCrypto era)
       totR = fold irwdR
@@ -123,8 +123,8 @@ mirTransition = do
       pure $
         EpochState
           acnt
-            { _reserves = availableReserves <-> totR,
-              _treasury = availableTreasury <-> totT
+            { asReserves = availableReserves <-> totR,
+              asTreasury = availableTreasury <-> totT
             }
           ss
           ls

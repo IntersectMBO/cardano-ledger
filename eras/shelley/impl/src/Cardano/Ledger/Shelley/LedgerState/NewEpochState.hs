@@ -69,9 +69,9 @@ import Lens.Micro.Extras (view)
 -- transfers are accounted for.
 availableAfterMIR :: MIRPot -> AccountState -> InstantaneousRewards c -> Coin
 availableAfterMIR ReservesMIR as ir =
-  _reserves as `addDeltaCoin` deltaReserves ir <-> fold (iRReserves ir)
+  asReserves as `addDeltaCoin` deltaReserves ir <-> fold (iRReserves ir)
 availableAfterMIR TreasuryMIR as ir =
-  _treasury as `addDeltaCoin` deltaTreasury ir <-> fold (iRTreasury ir)
+  asTreasury as `addDeltaCoin` deltaTreasury ir <-> fold (iRTreasury ir)
 
 -- ========================
 -- Virtual selectors, which get the appropriate view from a DState from the embedded UnifiedMap
@@ -184,7 +184,7 @@ returnRedeemAddrsToReserves es = es {esAccountState = acnt', esLState = ls'}
     utxoR = UTxO redeemers :: UTxO era
     acnt' =
       acnt
-        { _reserves = _reserves acnt <+> coinBalance utxoR
+        { asReserves = asReserves acnt <+> coinBalance utxoR
         }
     us' = us {utxosUtxo = UTxO nonredeemers :: UTxO era}
     ls' = ls {lsUTxOState = us'}

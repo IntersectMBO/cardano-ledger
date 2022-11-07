@@ -671,8 +671,8 @@ tooLateInEpoch s = runShelleyBase $ do
 genesisAccountState :: AccountState
 genesisAccountState =
   AccountState
-    { _treasury = Coin 0,
-      _reserves = maxLLSupply
+    { asTreasury = Coin 0,
+      asReserves = maxLLSupply
     }
 
 -- | Creates the UTxO for a new ledger with the specified

@@ -183,7 +183,7 @@ applyCert proof model dcert = case dcert of
         mDeposited = mDeposited model <+> pooldeposit
       }
     where
-      hk = _poolId poolparams
+      hk = ppId poolparams
       pp = mPParams model
       (_, pooldeposit) = keyPoolDeposits proof pp
   (DCertPool (RetirePool keyhash epoch)) ->

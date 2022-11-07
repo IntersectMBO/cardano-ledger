@@ -226,7 +226,7 @@ notPoolOwner ::
   Credential 'Staking c ->
   Bool
 notPoolOwner pp pps = \case
-  KeyHashObj hk -> hk `Set.notMember` _poolOwners pps
+  KeyHashObj hk -> hk `Set.notMember` ppOwners pps
   ScriptHashObj _ -> HardForks.allowScriptStakeCredsToEarnRewards pp
 
 -- | The stake pool member reward calculation
@@ -301,7 +301,7 @@ mkPoolRewardInfo
   stakePerPool
   (Coin totalStake)
   (Coin activeStake)
-  pool = case Map.lookup (_poolId pool) (unBlocksMade blocks) of
+  pool = case Map.lookup (ppId pool) (unBlocksMade blocks) of
     -- This pool made no blocks this epoch. For the purposes of stake pool
     -- ranking only, we return the relative stake of this pool so that we
     -- can judge how likely it was that this pool made no blocks.
@@ -309,7 +309,7 @@ mkPoolRewardInfo
     -- This pool made no blocks, so we can proceed to calculate the
     -- intermediate values needed for the individual reward calculations.
     Just blocksN ->
-      let Coin pledge = _poolPledge pool
+      let Coin pledge = ppPledge pool
           pledgeRelative = pledge % totalStake
           sigmaA = if activeStake == 0 then 0 else pstakeTot % activeStake
           Coin maxP =
@@ -330,17 +330,17 @@ mkPoolRewardInfo
                 poolPot = poolR,
                 poolPs = pool,
                 poolBlocks = blocksN,
-                poolLeaderReward = LeaderOnlyReward (_poolId pool) lreward
+                poolLeaderReward = LeaderOnlyReward (ppId pool) lreward
               }
        in Right $! rewardInfo
     where
       pp_d = getField @"_d" pp
       pp_a0 = getField @"_a0" pp
       pp_nOpt = getField @"_nOpt" pp
-      Coin pstakeTot = Map.findWithDefault mempty (_poolId pool) stakePerPool
+      Coin pstakeTot = Map.findWithDefault mempty (ppId pool) stakePerPool
       accOwnerStake c o = maybe c (c <>) $ do
         hk <- VMap.lookup (KeyHashObj o) delegs
-        guard (hk == _poolId pool)
+        guard (hk == ppId pool)
         fromCompact <$> VMap.lookup (KeyHashObj o) (unStake stake)
-      Coin ostake = Set.foldl' accOwnerStake mempty (_poolOwners pool)
+      Coin ostake = Set.foldl' accOwnerStake mempty (ppOwners pool)
       sigma = if totalStake == 0 then 0 else fromIntegral pstakeTot % fromIntegral totalStake
