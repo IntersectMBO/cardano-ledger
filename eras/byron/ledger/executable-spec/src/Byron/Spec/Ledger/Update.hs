@@ -2130,4 +2130,3 @@ tamperWithVote vote =
         pure $! vote & vSig .~ Core.sign (skey vk) (vote ^. vPropId),
       pure $! vote
     ]
-
