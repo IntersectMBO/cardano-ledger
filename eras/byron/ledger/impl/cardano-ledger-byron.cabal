@@ -1,7 +1,7 @@
 cabal-version: 2.2
 
 name:                cardano-ledger-byron
-version:             0.1.0.0
+version:             0.1.1.1
 synopsis:            The blockchain layer of Cardano during the Byron era
 description:         The blockchain layer of Cardano during the Byron era
 license:             Apache-2.0

@@ -1,7 +1,7 @@
 cabal-version: 2.2
 
 name:                cardano-ledger-shelley-test
-version:             0.1.0.0
+version:             0.1.1.1
 description:         Test helpers from cardano-ledger-shelley exposed to other packages
 license:             Apache-2.0
 author:              IOHK Formal Methods Team

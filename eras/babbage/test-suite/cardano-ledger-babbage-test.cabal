@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                cardano-ledger-babbage-test
-version:             0.1.0.0
+version:             0.1.1.1
 synopsis:            Tests for Cardano ledger babbage era
 description:
   This package builds upon the Alonzo ledger
