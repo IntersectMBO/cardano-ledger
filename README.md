@@ -6,6 +6,8 @@
   </a>
 </p>
 
+[![handbook](https://img.shields.io/badge/policy-Cardano%20Engineering%20Handbook-informational)](https://input-output-hk.github.io/cardano-engineering-handbook)
+
 This repository contains the formal specifications, executable models,
 and implementations of the Cardano Ledger.
 
