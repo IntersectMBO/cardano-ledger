@@ -100,6 +100,7 @@ import Cardano.Ledger.Shelley.EpochBoundary
   ( SnapShot (..),
     SnapShots (..),
     Stake (..),
+    calculatePoolDistr,
   )
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
@@ -1253,7 +1254,7 @@ tests =
           fs = Coin 123
        in checkEncodingCBOR
             "snapshots"
-            (SnapShots mark set go fs)
+            (SnapShots mark (calculatePoolDistr mark) set go fs)
             ( T (TkListLen 4)
                 <> S mark
                 <> S set
@@ -1296,7 +1297,7 @@ tests =
               }
           ps = [(hashKey $ vKey testStakePoolKey, params)]
           fs = Coin 123
-          ss = SnapShots mark set go fs
+          ss = SnapShots mark (calculatePoolDistr mark) set go fs
           ls = def
           pps = emptyPParams
           bs = Map.singleton (hashKey $ vKey testStakePoolKey) 1

@@ -68,6 +68,7 @@ import Cardano.Ledger.Shelley.EpochBoundary
   ( SnapShot (..),
     SnapShots (..),
     Stake (..),
+    calculatePoolDistr,
   )
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
@@ -196,7 +197,7 @@ snapShotZero :: SnapShot crypto
 snapShotZero = SnapShot stakeZero VMap.empty VMap.empty
 
 snapShotsZero :: SnapShots crypto
-snapShotsZero = SnapShots snapShotZero snapShotZero snapShotZero (Coin 0)
+snapShotsZero = SnapShots snapShotZero (calculatePoolDistr snapShotZero) snapShotZero snapShotZero (Coin 0)
 
 accountStateZero :: AccountState
 accountStateZero = AccountState (Coin 0) (Coin 0)

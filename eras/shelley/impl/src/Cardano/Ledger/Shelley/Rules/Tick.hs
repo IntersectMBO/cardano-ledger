@@ -28,7 +28,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys (GenDelegs (..))
 import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
-import Cardano.Ledger.Shelley.EpochBoundary (SnapShots (_pstakeMark))
+import Cardano.Ledger.Shelley.EpochBoundary (SnapShots (_pstakeMark0, _pstakeMarkPoolDistr))
 import Cardano.Ledger.Shelley.LedgerState
   ( DPState (..),
     DState (..),
@@ -188,7 +188,8 @@ bheadTransition = do
   -- We do NOT force it in the TICKF and TICKN rule
   -- so that it can remain a thunk when the consensus
   -- layer computes the ledger view across the epoch boundary.
-  let !_ = _pstakeMark . esSnapshots . nesEs $ nes'
+  let !_ = _pstakeMark0 . esSnapshots . nesEs $ nes'
+      !_ = _pstakeMarkPoolDistr . esSnapshots . nesEs $ nes'
 
   ru'' <-
     trans @(Core.EraRule "RUPD" era) $

@@ -31,6 +31,8 @@ module Cardano.Ledger.Shelley.EpochBoundary
     obligation,
     maxPool,
     maxPool',
+    calculatePoolDistr,
+    calculatePoolDistr',
   )
 where
 
@@ -46,8 +48,10 @@ import Cardano.Ledger.Compactible
 import Cardano.Ledger.Credential (Credential)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
+import qualified Cardano.Ledger.PoolDistr as PD
 import Cardano.Ledger.Serialization (decodeRecordNamedT)
 import Cardano.Ledger.Shelley.TxBody (PoolParams)
+import qualified Cardano.Ledger.Shelley.TxBody as PP
 import Cardano.Ledger.Val ((<+>), (<×>))
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans (lift)
@@ -61,7 +65,7 @@ import Data.VMap as VMap
 import GHC.Generics (Generic)
 import GHC.Records (HasField, getField)
 import Lens.Micro (_1, _2)
-import NoThunks.Class (NoThunks (..))
+import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 import Numeric.Natural (Natural)
 
 -- | Type of stake as map from hash key to coins associated.
@@ -190,14 +194,14 @@ instance CC.Crypto crypto => FromSharedCBOR (SnapShot crypto) where
 
 -- | Snapshots of the stake distribution.
 data SnapShots crypto = SnapShots
-  { _pstakeMark :: SnapShot crypto, -- Lazy on purpose
+  { _pstakeMark0 :: SnapShot crypto, -- Lazy on purpose
+    _pstakeMarkPoolDistr :: PD.PoolDistr crypto, -- Lazy on purpose
     _pstakeSet :: !(SnapShot crypto),
     _pstakeGo :: !(SnapShot crypto),
     _feeSS :: !Coin
   }
   deriving (Show, Eq, Generic)
-
-instance Typeable crypto => NoThunks (SnapShots crypto)
+  deriving (NoThunks) via AllowThunksIn '["_pstakeMark0", "_pstakeMarkPoolDistr"] (SnapShots crypto)
 
 instance NFData (SnapShots crypto)
 
@@ -205,9 +209,9 @@ instance
   CC.Crypto crypto =>
   ToCBOR (SnapShots crypto)
   where
-  toCBOR (SnapShots {_pstakeMark, _pstakeSet, _pstakeGo, _feeSS}) =
+  toCBOR (SnapShots {_pstakeMark0, _pstakeSet, _pstakeGo, _feeSS}) =
     encodeListLen 4
-      <> toCBOR _pstakeMark
+      <> toCBOR _pstakeMark0
       <> toCBOR _pstakeSet
       <> toCBOR _pstakeGo
       <> toCBOR _feeSS
@@ -215,11 +219,11 @@ instance
 instance CC.Crypto crypto => FromSharedCBOR (SnapShots crypto) where
   type Share (SnapShots crypto) = Share (SnapShot crypto)
   fromSharedPlusCBOR = decodeRecordNamedT "SnapShots" (const 4) $ do
-    !_pstakeMark <- fromSharedPlusCBOR
+    !_pstakeMark0 <- fromSharedPlusCBOR
     _pstakeSet <- fromSharedPlusCBOR
     _pstakeGo <- fromSharedPlusCBOR
     _feeSS <- lift fromCBOR
-    pure SnapShots {_pstakeMark, _pstakeSet, _pstakeGo, _feeSS}
+    pure SnapShots {_pstakeMark0, _pstakeMarkPoolDistr = calculatePoolDistr _pstakeMark0, _pstakeSet, _pstakeGo, _feeSS}
 
 instance Default (SnapShots crypto) where
   def = emptySnapShots
@@ -228,4 +232,28 @@ emptySnapShot :: SnapShot crypto
 emptySnapShot = SnapShot (Stake VMap.empty) VMap.empty VMap.empty
 
 emptySnapShots :: SnapShots crypto
-emptySnapShots = SnapShots emptySnapShot emptySnapShot emptySnapShot (Coin 0)
+emptySnapShots = SnapShots emptySnapShot (calculatePoolDistr emptySnapShot) emptySnapShot emptySnapShot (Coin 0)
+
+-----
+
+calculatePoolDistr' :: forall crypto. (KeyHash 'StakePool crypto -> Bool) -> SnapShot crypto -> PD.PoolDistr crypto
+calculatePoolDistr' includeHash (SnapShot stake delegs poolParams) =
+  let Coin total = sumAllStake stake
+      -- total could be zero (in particular when shrinking)
+      nonZeroTotal = if total == 0 then 1 else total
+      sd =
+        Map.fromListWith (+) $
+          [ (d, c % nonZeroTotal)
+            | (hk, compactCoin) <- VMap.toAscList (unStake stake),
+              let Coin c = fromCompact compactCoin,
+              Just d <- [VMap.lookup hk delegs],
+              includeHash d
+          ]
+   in PD.PoolDistr $
+        Map.intersectionWith
+          PD.IndividualPoolStake
+          sd
+          (toMap (VMap.map PP._poolVrf poolParams))
+
+calculatePoolDistr :: SnapShot crypto -> PD.PoolDistr crypto
+calculatePoolDistr = calculatePoolDistr' (const True)

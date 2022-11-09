@@ -74,7 +74,7 @@ import Cardano.Ledger.Keys
   )
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.Shelley.Constraints (UsesTxBody)
-import Cardano.Ledger.Shelley.EpochBoundary (SnapShot, SnapShots (..))
+import Cardano.Ledger.Shelley.EpochBoundary (SnapShot, SnapShots (..), calculatePoolDistr)
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
     DPState (..),
@@ -565,12 +565,13 @@ newSnapshot snap fee cs = cs {chainNes = nes'}
     nes = chainNes cs
     es = nesEs nes
     SnapShots
-      { _pstakeMark = ssMark,
+      { _pstakeMark0 = ssMark,
         _pstakeSet = ssSet
       } = esSnapshots es
     snaps =
       SnapShots
-        { _pstakeMark = snap,
+        { _pstakeMark0 = snap,
+          _pstakeMarkPoolDistr = calculatePoolDistr snap,
           _pstakeSet = ssMark,
           _pstakeGo = ssSet,
           _feeSS = fee
