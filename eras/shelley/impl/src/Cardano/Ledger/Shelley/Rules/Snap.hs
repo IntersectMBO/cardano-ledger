@@ -25,7 +25,7 @@ import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking))
 import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
 import Cardano.Ledger.Shelley.EpochBoundary
   ( SnapShot (_delegations, _stake),
-    SnapShots (SnapShots, _feeSS, _pstakeGo, _pstakeMark0, _pstakeMarkPoolDistr, _pstakeSet),
+    SnapShots (SnapShots, _feeSS, _pstakeGo, _pstakeMark, _pstakeMarkPoolDistr, _pstakeSet),
     Stake (unStake),
     calculatePoolDistr,
     emptySnapShots,
@@ -105,9 +105,9 @@ snapTransition = do
 
   pure $
     SnapShots
-      { _pstakeMark0 = istakeSnap,
+      { _pstakeMark = istakeSnap,
         _pstakeMarkPoolDistr = calculatePoolDistr istakeSnap,
-        _pstakeSet = _pstakeMark0 s,
+        _pstakeSet = _pstakeMark s,
         _pstakeGo = _pstakeSet s,
         _feeSS = fees
       }

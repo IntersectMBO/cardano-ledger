@@ -151,7 +151,7 @@ insertSnapShots ::
 insertSnapShots epochStateKey EpochBoundary.SnapShots {..} = do
   mapM_
     (uncurry (insertSnapShot epochStateKey))
-    [ (SnapShotMark, _pstakeMark0),
+    [ (SnapShotMark, _pstakeMark),
       (SnapShotSet, _pstakeSet),
       (SnapShotGo, _pstakeGo)
     ]
@@ -356,7 +356,7 @@ getSnapShotsNoSharing (Entity epochStateId EpochState {epochStateSnapShotsFee}) 
   go <- getSnapShotNoSharing epochStateId SnapShotGo
   pure $
     EpochBoundary.SnapShots
-      { _pstakeMark0 = mark,
+      { _pstakeMark = mark,
         _pstakeMarkPoolDistr = EpochBoundary.calculatePoolDistr mark,
         _pstakeSet = set,
         _pstakeGo = go,
@@ -437,7 +437,7 @@ getSnapShotsWithSharing (Entity epochStateId EpochState {epochStateSnapShotsFee}
   go <- getSnapShotWithSharing [mark, set] epochStateId SnapShotGo
   pure $
     EpochBoundary.SnapShots
-      { _pstakeMark0 = mark,
+      { _pstakeMark = mark,
         _pstakeMarkPoolDistr = EpochBoundary.calculatePoolDistr mark,
         _pstakeSet = set,
         _pstakeGo = go,

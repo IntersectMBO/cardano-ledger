@@ -371,7 +371,7 @@ instance Pretty EpochStateStats where
 
 countEpochStateStats :: EpochState CurrentEra -> EpochStateStats
 countEpochStateStats EpochState {..} =
-  let markSnap = countSnapShotStat (_pstakeMark0 esSnapshots)
+  let markSnap = countSnapShotStat (_pstakeMark esSnapshots)
       setSnap = countSnapShotStat (_pstakeSet esSnapshots)
       goSnap = countSnapShotStat (_pstakeGo esSnapshots)
       stats =

@@ -222,7 +222,7 @@ registerGenesisStaking
           { esLState = newLedgerState,
             esSnapshots =
               (esSnapshots oldEpochState)
-                { _pstakeMark0 = initSnapShot
+                { _pstakeMark = initSnapShot
                 , _pstakeMarkPoolDistr = calculatePoolDistr initSnapShot
                 }
           }

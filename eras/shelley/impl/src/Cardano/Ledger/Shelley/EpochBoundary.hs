@@ -194,14 +194,14 @@ instance CC.Crypto crypto => FromSharedCBOR (SnapShot crypto) where
 
 -- | Snapshots of the stake distribution.
 data SnapShots crypto = SnapShots
-  { _pstakeMark0 :: SnapShot crypto, -- Lazy on purpose
+  { _pstakeMark :: SnapShot crypto, -- Lazy on purpose
     _pstakeMarkPoolDistr :: PD.PoolDistr crypto, -- Lazy on purpose
     _pstakeSet :: !(SnapShot crypto),
     _pstakeGo :: !(SnapShot crypto),
     _feeSS :: !Coin
   }
   deriving (Show, Eq, Generic)
-  deriving (NoThunks) via AllowThunksIn '["_pstakeMark0", "_pstakeMarkPoolDistr"] (SnapShots crypto)
+  deriving (NoThunks) via AllowThunksIn '["_pstakeMark", "_pstakeMarkPoolDistr"] (SnapShots crypto)
 
 instance NFData (SnapShots crypto)
 
@@ -209,9 +209,9 @@ instance
   CC.Crypto crypto =>
   ToCBOR (SnapShots crypto)
   where
-  toCBOR (SnapShots {_pstakeMark0, _pstakeSet, _pstakeGo, _feeSS}) =
+  toCBOR (SnapShots {_pstakeMark, _pstakeSet, _pstakeGo, _feeSS}) =
     encodeListLen 4
-      <> toCBOR _pstakeMark0
+      <> toCBOR _pstakeMark
       <> toCBOR _pstakeSet
       <> toCBOR _pstakeGo
       <> toCBOR _feeSS
@@ -219,11 +219,11 @@ instance
 instance CC.Crypto crypto => FromSharedCBOR (SnapShots crypto) where
   type Share (SnapShots crypto) = Share (SnapShot crypto)
   fromSharedPlusCBOR = decodeRecordNamedT "SnapShots" (const 4) $ do
-    !_pstakeMark0 <- fromSharedPlusCBOR
+    !_pstakeMark <- fromSharedPlusCBOR
     _pstakeSet <- fromSharedPlusCBOR
     _pstakeGo <- fromSharedPlusCBOR
     _feeSS <- lift fromCBOR
-    pure SnapShots {_pstakeMark0, _pstakeMarkPoolDistr = calculatePoolDistr _pstakeMark0, _pstakeSet, _pstakeGo, _feeSS}
+    pure SnapShots {_pstakeMark, _pstakeMarkPoolDistr = calculatePoolDistr _pstakeMark, _pstakeSet, _pstakeGo, _feeSS}
 
 instance Default (SnapShots crypto) where
   def = emptySnapShots

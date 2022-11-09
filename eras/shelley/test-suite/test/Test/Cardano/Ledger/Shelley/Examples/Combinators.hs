@@ -565,12 +565,12 @@ newSnapshot snap fee cs = cs {chainNes = nes'}
     nes = chainNes cs
     es = nesEs nes
     SnapShots
-      { _pstakeMark0 = ssMark,
+      { _pstakeMark = ssMark,
         _pstakeSet = ssSet
       } = esSnapshots es
     snaps =
       SnapShots
-        { _pstakeMark0 = snap,
+        { _pstakeMark = snap,
           _pstakeMarkPoolDistr = calculatePoolDistr snap,
           _pstakeSet = ssMark,
           _pstakeGo = ssSet,
