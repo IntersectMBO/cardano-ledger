@@ -27,7 +27,7 @@ where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..), epochInfoPure)
 import Cardano.Ledger.Core
-import Cardano.Ledger.EpochBoundary (SnapShots (ssStakeMark))
+import Cardano.Ledger.EpochBoundary (SnapShots (ssStakeMark, ssStakeMarkPoolDistr))
 import Cardano.Ledger.Keys (GenDelegs (..))
 import Cardano.Ledger.Shelley.Era (ShelleyTICK, ShelleyTICKF)
 import Cardano.Ledger.Shelley.LedgerState
@@ -193,6 +193,7 @@ bheadTransition = do
   -- so that it can remain a thunk when the consensus
   -- layer computes the ledger view across the epoch boundary.
   let !_ = ssStakeMark . esSnapshots . nesEs $ nes'
+      !_ = ssStakeMarkPoolDistr . esSnapshots . nesEs $ nes'
 
   ru'' <-
     trans @(EraRule "RUPD" era) $

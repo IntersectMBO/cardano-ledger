@@ -22,14 +22,15 @@ import Cardano.Ledger.Coin (Coin, CompactForm)
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core (EraTxOut)
 import Cardano.Ledger.Credential (Credential)
+import Cardano.Ledger.Era (EraCrypto)
+import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking))
 import Cardano.Ledger.EpochBoundary
-  ( SnapShot (ssDelegations, ssStake),
-    SnapShots (ssFee, ssStakeGo, ssStakeMark, ssStakeSet),
+  ( calculatePoolDistr,
+    SnapShot (ssDelegations, ssStake),
+    SnapShots (ssFee, ssStakeGo, ssStakeMark, ssStakeMarkPoolDistr, ssStakeSet),
     Stake (unStake),
     emptySnapShots,
   )
-import Cardano.Ledger.Era (EraCrypto)
-import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking))
 import Cardano.Ledger.Shelley.Era (ShelleySNAP)
 import Cardano.Ledger.Shelley.LedgerState
   ( DPState (..),
@@ -105,6 +106,7 @@ snapTransition = do
   pure $
     s
       { ssStakeMark = istakeSnap,
+        ssStakeMarkPoolDistr = calculatePoolDistr istakeSnap,
         ssStakeSet = ssStakeMark s,
         ssStakeGo = ssStakeSet s,
         ssFee = fees

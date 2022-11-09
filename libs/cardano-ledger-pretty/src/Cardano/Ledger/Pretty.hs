@@ -879,8 +879,8 @@ ppSnapShot (SnapShot st deleg params) =
       ("poolParams", ppVMap ppKeyHash ppPoolParams params)
     ]
 
-ppSnapShots :: SnapShots c -> PDoc
-ppSnapShots (SnapShots mark set go fees) =
+ppSnapShots :: SnapShots crypto -> PDoc
+ppSnapShots (SnapShots mark _markPD set go fees) =
   ppRecord
     "SnapShots"
     [ ("pstakeMark", ppSnapShot mark),

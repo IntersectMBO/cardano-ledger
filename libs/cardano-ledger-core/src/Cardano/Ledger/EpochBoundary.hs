@@ -31,6 +31,8 @@ module Cardano.Ledger.EpochBoundary
     obligation,
     maxPool,
     maxPool',
+    calculatePoolDistr,
+    calculatePoolDistr',
   )
 where
 
@@ -47,7 +49,9 @@ import Cardano.Ledger.Credential (Credential)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolParams (PoolParams)
+import qualified Cardano.Ledger.PoolDistr as PD
 import Cardano.Ledger.Serialization (decodeRecordNamedT)
+import qualified Cardano.Ledger.PoolParams as PP
 import Cardano.Ledger.Val ((<+>), (<×>))
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans (lift)
@@ -60,8 +64,9 @@ import Data.Typeable
 import Data.VMap as VMap
 import GHC.Generics (Generic)
 import GHC.Records (HasField, getField)
+import GHC.Word (Word64)
 import Lens.Micro (_1, _2)
-import NoThunks.Class (NoThunks (..))
+import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 import Numeric.Natural (Natural)
 
 -- | Type of stake as map from hash key to coins associated.
@@ -191,13 +196,13 @@ instance CC.Crypto c => FromSharedCBOR (SnapShot c) where
 -- | Snapshots of the stake distribution.
 data SnapShots c = SnapShots
   { ssStakeMark :: SnapShot c, -- Lazy on purpose
+    ssStakeMarkPoolDistr :: PD.PoolDistr c, -- Lazy on purpose
     ssStakeSet :: !(SnapShot c),
     ssStakeGo :: !(SnapShot c),
     ssFee :: !Coin
   }
   deriving (Show, Eq, Generic)
-
-instance Typeable c => NoThunks (SnapShots c)
+  deriving (NoThunks) via AllowThunksIn '["ssStakeMark","ssStakeMarkPoolDistr"] (SnapShots c)
 
 instance NFData (SnapShots c)
 
@@ -219,7 +224,7 @@ instance CC.Crypto c => FromSharedCBOR (SnapShots c) where
     ssStakeSet <- fromSharedPlusCBOR
     ssStakeGo <- fromSharedPlusCBOR
     ssFee <- lift fromCBOR
-    pure SnapShots {ssStakeMark, ssStakeSet, ssStakeGo, ssFee}
+    pure SnapShots {ssStakeMark, ssStakeMarkPoolDistr = calculatePoolDistr ssStakeMark, ssStakeSet, ssStakeGo, ssFee}
 
 instance Default (SnapShots c) where
   def = emptySnapShots
@@ -228,4 +233,37 @@ emptySnapShot :: SnapShot c
 emptySnapShot = SnapShot (Stake VMap.empty) VMap.empty VMap.empty
 
 emptySnapShots :: SnapShots c
-emptySnapShots = SnapShots emptySnapShot emptySnapShot emptySnapShot (Coin 0)
+emptySnapShots = SnapShots emptySnapShot (calculatePoolDistr emptySnapShot) emptySnapShot emptySnapShot (Coin 0)
+
+
+calculatePoolDistr :: SnapShot c -> PD.PoolDistr c
+calculatePoolDistr = calculatePoolDistr' (const True)
+
+calculatePoolDistr' :: forall c. (KeyHash 'StakePool c -> Bool) -> SnapShot c -> PD.PoolDistr c
+calculatePoolDistr' includeHash (SnapShot stake delegs poolParams) =
+  let Coin total = sumAllStake stake
+      -- total could be zero (in particular when shrinking)
+      nonZeroTotal :: Integer
+      nonZeroTotal = if total == 0 then 1 else total
+      poolStakeMap :: Map.Map (KeyHash 'StakePool c) Word64
+      poolStakeMap = calculatePoolStake includeHash delegs stake
+   in PD.PoolDistr $
+        Map.intersectionWith
+          (\word64 poolparam -> PD.IndividualPoolStake (toInteger word64 % nonZeroTotal) (PP.ppVrf poolparam))
+          poolStakeMap
+          (VMap.toMap poolParams)
+
+-- | Sum up the Coin (as CompactForm Coin = Word64) for each StakePool
+calculatePoolStake ::
+  (KeyHash 'StakePool c -> Bool) ->
+  VMap VB VB (Credential 'Staking c) (KeyHash 'StakePool c) ->
+  Stake c ->
+  Map.Map (KeyHash 'StakePool c) Word64
+calculatePoolStake includeHash delegs stake = VMap.foldlWithKey accum Map.empty delegs
+  where
+    accum ans cred keyHash =
+      if includeHash keyHash
+        then case VMap.lookup cred (unStake stake) of
+          Nothing -> ans
+          Just (CompactCoin c) -> Map.insertWith (+) keyHash c ans
+        else ans

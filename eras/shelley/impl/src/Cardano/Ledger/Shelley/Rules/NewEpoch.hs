@@ -20,7 +20,6 @@ module Cardano.Ledger.Shelley.Rules.NewEpoch
     calculatePoolDistr,
     calculatePoolDistr',
     updateRewards,
-    calculatePoolStake,
   )
 where
 
@@ -30,12 +29,12 @@ import Cardano.Ledger.BaseTypes
     ShelleyBase,
     StrictMaybe (SJust, SNothing),
   )
-import Cardano.Ledger.Coin (Coin (Coin), CompactForm (CompactCoin), toDeltaCoin)
+import Cardano.Ledger.Coin (toDeltaCoin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.EpochBoundary
-import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking))
-import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
+import Cardano.Ledger.Keys (KeyRole (Staking))
+import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.Shelley.AdaPots (AdaPots, totalAdaPotsES)
 import Cardano.Ledger.Shelley.Era (ShelleyNEWEPOCH)
 import Cardano.Ledger.Shelley.LedgerState
@@ -43,18 +42,14 @@ import Cardano.Ledger.Shelley.Rewards (sumRewards)
 import Cardano.Ledger.Shelley.Rules.Epoch
 import Cardano.Ledger.Shelley.Rules.Mir (ShelleyMIR, ShelleyMirEvent, ShelleyMirPredFailure)
 import Cardano.Ledger.Shelley.Rules.Rupd (RupdEvent (..))
-import Cardano.Ledger.Shelley.TxBody (PoolParams (ppVrf))
 import Cardano.Ledger.Slot (EpochNo (EpochNo))
 import qualified Cardano.Ledger.Val as Val
 import Control.State.Transition
 import Data.Default.Class (Default, def)
 import qualified Data.Map.Strict as Map
-import Data.Ratio ((%))
 import Data.Set (Set)
-import Data.VMap as VMap
 import GHC.Generics (Generic)
 import GHC.Records (HasField)
-import GHC.Word (Word64)
 import NoThunks.Class (NoThunks (..))
 
 data ShelleyNewEpochPredFailure era
@@ -176,8 +171,13 @@ newEpochTransition = do
       es''' <- trans @(EraRule "EPOCH" era) $ TRC ((), es'', e)
       let adaPots = totalAdaPotsES es'''
       tellEvent $ TotalAdaPotsEvent adaPots
-      let ss = esSnapshots es'''
-          pd' = calculatePoolDistr (ssStakeSet ss)
+      let pd' = ssStakeMarkPoolDistr (esSnapshots es)
+            -- RUPD does not alter `esSnaphots`
+            -- MIR does not alter `esSnaphots`
+            -- SNAP rotates mark to set.
+            --
+            -- Thus: pd' = calcPoolDistr $ _pstakeSet $ esSnapshots es'''
+
       pure $
         src
           { nesEL = e,
@@ -195,38 +195,6 @@ tellReward ::
   Rule (ShelleyNEWEPOCH era) rtype ()
 tellReward (DeltaRewardEvent (RupdEvent _ m)) | Map.null m = pure ()
 tellReward x = tellEvent x
-
-calculatePoolDistr :: SnapShot c -> PoolDistr c
-calculatePoolDistr = calculatePoolDistr' (const True)
-
-calculatePoolDistr' :: forall c. (KeyHash 'StakePool c -> Bool) -> SnapShot c -> PoolDistr c
-calculatePoolDistr' includeHash (SnapShot stake delegs poolParams) =
-  let Coin total = sumAllStake stake
-      -- total could be zero (in particular when shrinking)
-      nonZeroTotal :: Integer
-      nonZeroTotal = if total == 0 then 1 else total
-      poolStakeMap :: Map.Map (KeyHash 'StakePool c) Word64
-      poolStakeMap = calculatePoolStake includeHash delegs stake
-   in PoolDistr $
-        Map.intersectionWith
-          (\word64 poolparam -> IndividualPoolStake (toInteger word64 % nonZeroTotal) (ppVrf poolparam))
-          poolStakeMap
-          (VMap.toMap poolParams)
-
--- | Sum up the Coin (as CompactForm Coin = Word64) for each StakePool
-calculatePoolStake ::
-  (KeyHash 'StakePool c -> Bool) ->
-  VMap VB VB (Credential 'Staking c) (KeyHash 'StakePool c) ->
-  Stake c ->
-  Map.Map (KeyHash 'StakePool c) Word64
-calculatePoolStake includeHash delegs stake = VMap.foldlWithKey accum Map.empty delegs
-  where
-    accum ans cred keyHash =
-      if includeHash keyHash
-        then case VMap.lookup cred (unStake stake) of
-          Nothing -> ans
-          Just (CompactCoin c) -> Map.insertWith (+) keyHash c ans
-        else ans
 
 instance
   ( STS (ShelleyEPOCH era),
