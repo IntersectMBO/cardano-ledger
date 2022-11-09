@@ -1,7 +1,7 @@
 cabal-version: 2.2
 
 name:                cardano-ledger-shelley
-version:             0.1.0.0
+version:             0.1.1.1
 description:         Shelley Ledger Executable Model
 license:             Apache-2.0
 author:              IOHK Formal Methods Team
@@ -110,6 +110,7 @@ library
     data-default-class,
     deepseq,
     groups,
+    heapwords,
     iproute,
     mtl,
     microlens,
@@ -117,7 +118,7 @@ library
     quiet,
     set-algebra,
     small-steps,
-    strict-containers,
+    cardano-strict-containers,
     text,
     time,
     transformers,

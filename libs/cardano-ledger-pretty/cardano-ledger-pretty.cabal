@@ -1,7 +1,7 @@
 cabal-version: 2.2
 
 name:                cardano-ledger-pretty
-version:             0.1.0.0
+version:             0.1.1.1
 license:             Apache-2.0
 author:              IOHK Formal Methods Team
 maintainer:          formal.methods@iohk.io
@@ -59,6 +59,6 @@ library
                 plutus-ledger-api,
                 prettyprinter,
                 small-steps,
-                strict-containers,
+                cardano-strict-containers,
                 text,
                 vector-map

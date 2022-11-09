@@ -1,7 +1,7 @@
 cabal-version: 2.2
 
 name:                cardano-ledger-shelley-test
-version:             0.1.0.0
+version:             0.1.1.1
 description:         Test helpers from cardano-ledger-shelley exposed to other packages
 license:             Apache-2.0
 author:              IOHK Formal Methods Team
@@ -116,7 +116,7 @@ library
                 set-algebra,
                 small-steps,
                 small-steps-test,
-                strict-containers,
+                cardano-strict-containers,
                 tasty,
                 tasty-hunit,
                 tasty-quickcheck,
@@ -198,7 +198,7 @@ test-suite cardano-ledger-shelley-test
                 scientific,
                 small-steps,
                 small-steps-test,
-                strict-containers,
+                cardano-strict-containers,
                 tasty,
                 tasty-hedgehog,
                 tasty-hunit,
@@ -237,7 +237,7 @@ benchmark mainbench
                 set-algebra,
                 small-steps,
                 small-steps-test,
-                strict-containers,
+                cardano-strict-containers,
                 transformers
   ghc-options:
       -threaded

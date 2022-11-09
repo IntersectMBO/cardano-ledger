@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                cardano-ledger-babbage
-version:             0.1.0.0
+version:             0.1.1.1
 synopsis:            TODO
 description:         TODO
 bug-reports:         https://github.com/input-output-hk/cardano-ledger/issues
@@ -69,7 +69,7 @@ library
                 plutus-tx ^>= 1.0,
                 set-algebra,
                 small-steps,
-                strict-containers,
+                cardano-strict-containers,
                 text,
                 transformers,
                 validation-selective

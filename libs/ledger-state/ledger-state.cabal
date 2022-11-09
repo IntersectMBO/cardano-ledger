@@ -1,7 +1,7 @@
 cabal-version: 2.2
 
 name:                ledger-state
-version:             0.1.0.0
+version:             0.1.1.1
 license:             Apache-2.0
 author:              IOHK Formal Methods Team
 maintainer:          formal.methods@iohk.io
@@ -49,7 +49,7 @@ library
                     , persistent-sqlite
                     , prettyprinter
                     , set-algebra
-                    , strict-containers
+                    , cardano-strict-containers
                     , text
                     , transformers
 
@@ -136,7 +136,7 @@ benchmark address
     cardano-slotting,
     criterion,
     deepseq,
-    strict-containers,
+    cardano-strict-containers,
     text
   ghc-options:
       -threaded

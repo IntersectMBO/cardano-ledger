@@ -1,7 +1,7 @@
 cabal-version: 2.2
 
 name:                cardano-ledger-shelley-ma-test
-version:             0.1.0.0
+version:             0.1.1.1
 synopsis:            Shelley ledger with multiasset and time lock support.
 description:
   This package extends the Shelley ledger with support for
@@ -73,7 +73,7 @@ library
     QuickCheck >= 2.13.2,
     cardano-ledger-shelley-test,
     cardano-ledger-shelley,
-    strict-containers,
+    cardano-strict-containers,
     small-steps,
     tasty-hunit,
     tasty-quickcheck,
@@ -128,7 +128,7 @@ test-suite cardano-ledger-shelley-ma-test
       cardano-ledger-shelley,
       small-steps-test,
       small-steps,
-      strict-containers,
+      cardano-strict-containers,
       tasty-hunit,
       tasty-quickcheck,
       tasty,

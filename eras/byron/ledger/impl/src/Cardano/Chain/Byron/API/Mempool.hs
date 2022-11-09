@@ -12,7 +12,7 @@ module Cardano.Chain.Byron.API.Mempool
   )
 where
 
-import Cardano.Binary
+import Cardano.Binary hiding (cborError)
 import qualified Cardano.Chain.Block as CC
 import Cardano.Chain.Byron.API.Common
 import qualified Cardano.Chain.Delegation as Delegation

@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                cardano-ledger-conway-test
-version:             0.1.0.0
+version:             0.1.1.1
 synopsis:            Tests for Cardano ledger conway era
 description:
   This package builds upon the Alonzo ledger
@@ -61,7 +61,7 @@ library
     cardano-ledger-shelley-test,
     cardano-ledger-shelley,
     small-steps,
-    strict-containers,
+    cardano-strict-containers,
     text,
   hs-source-dirs:
     src

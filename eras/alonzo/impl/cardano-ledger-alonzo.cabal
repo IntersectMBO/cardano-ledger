@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                cardano-ledger-alonzo
-version:             0.1.0.0
+version:             0.1.1.1
 synopsis:            Cardano ledger introducing Plutus Core
 description:
   This package builds upon the Mary ledger with support for extended UTxO
@@ -74,6 +74,7 @@ library
     containers,
     data-default,
     deepseq,
+    heapwords,
     measures,
     mtl,
     microlens,
@@ -87,7 +88,7 @@ library
     cardano-ledger-shelley,
     scientific,
     small-steps,
-    strict-containers,
+    cardano-strict-containers,
     text,
     time,
     transformers,

@@ -1,7 +1,7 @@
 cabal-version: 2.2
 
 name:                small-steps-test
-version:             0.1.0.0
+version:             0.1.1.1
 synopsis:            Small step semantics testing library
 homepage:            https://github.com/input-output-hk/cardano-legder-specs
 license:             Apache-2.0
@@ -49,7 +49,7 @@ library
                      , QuickCheck
                      -- IOHK deps
                      , small-steps
-                     , strict-containers
+                     , cardano-strict-containers
   hs-source-dirs:      src
 
 test-suite examples

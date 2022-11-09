@@ -1,7 +1,7 @@
 cabal-version: 2.2
 
 name:                cardano-ledger-shelley-ma
-version:             0.1.0.0
+version:             0.1.1.1
 synopsis:            Shelley ledger with multiasset and time lock support.
 description:
   This package extends the Shelley ledger with support for
@@ -72,7 +72,7 @@ library
     primitive,
     cardano-ledger-shelley,
     small-steps,
-    strict-containers,
+    cardano-strict-containers,
     text,
     transformers,
     validation-selective,

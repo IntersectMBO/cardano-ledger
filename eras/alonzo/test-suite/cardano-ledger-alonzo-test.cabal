@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                cardano-ledger-alonzo-test
-version:             0.1.0.0
+version:             0.1.1.1
 synopsis:            Tests for Cardano ledger introducing Plutus Core
 description:
   This package builds upon the Mary ledger with support for extended UTxO
@@ -71,7 +71,7 @@ library
     microlens,
     small-steps,
     small-steps-test,
-    strict-containers,
+    cardano-strict-containers,
     text,
     transformers,
   hs-source-dirs:
@@ -117,7 +117,7 @@ test-suite cardano-ledger-alonzo-test
     cardano-ledger-shelley,
     cardano-ledger-shelley-test,
     microlens,
-    strict-containers,
+    cardano-strict-containers,
     tasty,
     tasty-hunit,
     tasty-quickcheck,

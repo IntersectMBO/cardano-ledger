@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                cardano-ledger-babbage-test
-version:             0.1.0.0
+version:             0.1.1.1
 synopsis:            Tests for Cardano ledger babbage era
 description:
   This package builds upon the Alonzo ledger
@@ -64,7 +64,7 @@ library
     cardano-ledger-shelley-test,
     cardano-ledger-shelley,
     small-steps,
-    strict-containers,
+    cardano-strict-containers,
     text,
   hs-source-dirs:
     src
@@ -108,7 +108,7 @@ test-suite cardano-ledger-babbage-test
     plutus-tx,
     small-steps,
     small-steps-test,
-    strict-containers,
+    cardano-strict-containers,
     tasty,
     tasty-hunit,
     tasty-quickcheck,

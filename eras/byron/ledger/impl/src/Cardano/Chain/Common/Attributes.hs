@@ -39,6 +39,7 @@ import Cardano.Binary
     dropMap,
     dropWord8,
   )
+import Cardano.HeapWords
 import Cardano.Prelude
 import Data.Aeson (ToJSON (..))
 import qualified Data.ByteString.Lazy as LBS
