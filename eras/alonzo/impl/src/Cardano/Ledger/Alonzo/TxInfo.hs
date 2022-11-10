@@ -568,10 +568,12 @@ data PlutusDebug
       ProtVer
   deriving (Eq, Generic, NoThunks)
 
--- There is no Show instance for PlutusDebug intentionally, because it is too
+-- | There is dummy Show instance for PlutusDebug intentionally, because it is too
 -- expensive and it will be too tempting to use it incorrectly. If needed for
 -- testing use 'StandaloneDeriving', otherwise define an efficient way to display
 -- this info.
+instance Show PlutusDebug where
+  show _ = "PlutusDebug Omitted"
 
 data PlutusError = PlutusErrorV1 PV1.EvaluationError | PlutusErrorV2 PV2.EvaluationError
   deriving (Show)

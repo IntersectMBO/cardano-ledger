@@ -12,8 +12,7 @@ import Cardano.Ledger.Alonzo (Alonzo)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
 import Cardano.Ledger.Alonzo.TxInfo
-  ( PlutusDebug (..),
-    PlutusDebugInfo (..),
+  ( PlutusDebugInfo (..),
     ScriptFailure (..),
     ScriptResult (Fails, Passes),
     runPLCScript,
@@ -40,12 +39,6 @@ import qualified Test.Cardano.Ledger.Alonzo.PlutusScripts as Generated
   )
 import Test.Tasty
 import Test.Tasty.HUnit (Assertion, assertBool, testCase)
-
--- Do not remove these instances. They are here for two resons:
---
---  * Prevent usage of Show on these huge data types in production
---  * Allow printing for testing.
-deriving instance Show PlutusDebug
 
 deriving instance Show PlutusDebugInfo
 
