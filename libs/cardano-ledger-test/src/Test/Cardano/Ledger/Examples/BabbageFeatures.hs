@@ -900,7 +900,7 @@ largeOutput' pf =
       FDatum . Datum . dataToBinaryData $ largeDatum @era
     ]
 
-largeOutput :: forall era. (BabbageEraTxBody era, Scriptic era) => Proof era -> TestCaseData era
+largeOutput :: forall era. (BabbageEraTxBody era) => Proof era -> TestCaseData era
 largeOutput pf =
   TestCaseData
     { txBody =

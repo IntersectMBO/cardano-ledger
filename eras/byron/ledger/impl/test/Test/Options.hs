@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneKindSignatures #-}
@@ -19,9 +20,13 @@ module Test.Options
   )
 where
 
-import Cardano.Prelude
 import Hedgehog (Gen, Group (..), Property, PropertyT, TestLimit, withTests)
 import Hedgehog.Internal.Property (GroupName (..), PropertyName (..))
+#if __GLASGOW_HASKELL__ >= 900
+import Cardano.Prelude
+#else
+import Cardano.Prelude hiding (Option)
+#endif
 import Test.Cardano.Prelude
 import Test.Tasty
   ( TestName,
