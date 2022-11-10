@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               plutus-preprocessor
-version:            0.1.1.1
+version:            0.1.1.2
 
 synopsis: A preproceesor for creating plutus scripts as bytestrings and equivalents
 

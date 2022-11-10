@@ -1,7 +1,7 @@
 cabal-version: 2.2
 
 name:                cardano-crypto-wrapper
-version:             1.4.1
+version:             1.4.2
 synopsis:            Cryptographic primitives used in the Cardano project
 description:         Cryptographic primitives used in the Cardano project
 license:             Apache-2.0

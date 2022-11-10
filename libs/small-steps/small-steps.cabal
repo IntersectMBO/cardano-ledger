@@ -1,7 +1,7 @@
 cabal-version: 2.2
 
 name:                small-steps
-version:             0.1.1.1
+version:             0.1.1.2
 synopsis:            Small step semantics
 homepage:            https://github.com/input-output-hk/cardano-legder-specs
 license:             Apache-2.0
