@@ -7,6 +7,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -63,10 +64,26 @@ import Text.JSON.Canonical
   )
 
 -- | Wrapper around 'Ed25519.PublicKey'.
+type RedeemVerificationKey :: Type
 newtype RedeemVerificationKey
   = RedeemVerificationKey Ed25519.PublicKey
   deriving (Eq, Show, Generic, NFData, FromCBOR, ToCBOR)
   deriving (NoThunks) via InspectHeap RedeemVerificationKey
+
+type AvvmVKError :: Type
+data AvvmVKError
+  = ApeAddressFormat Text
+  | ApeAddressLength Int
+  deriving (Show)
+
+instance B.Buildable AvvmVKError where
+  build = \case
+    ApeAddressFormat addrText ->
+      bprint ("Address " . stext . " is not base64(url) format") addrText
+    ApeAddressLength len ->
+      bprint
+        ("Address length is " . build . ", expected 32, can't be redeeming vk")
+        len
 
 -- Note that normally we would not provide any Ord instances.
 -- The crypto libraries encourage using key /hashes/ not keys for
@@ -74,34 +91,6 @@ newtype RedeemVerificationKey
 -- AVVM balances use whole keys, not key hashes. So we compromise here
 -- and provide Ord instances so we can use RedeemVerificationKey
 -- as the key type in a Data.Map.
-
-instance Ord RedeemVerificationKey where
-  RedeemVerificationKey a `compare` RedeemVerificationKey b =
-    BA.convert a `compare` (BA.convert b :: ByteString)
-
-instance Monad m => ToObjectKey m RedeemVerificationKey where
-  toObjectKey = pure . toJSString . formatToString redeemVKB64UrlF
-
-instance MonadError SchemaError m => FromObjectKey m RedeemVerificationKey where
-  fromObjectKey =
-    fmap Just . parseJSString (first (sformat build) . fromAvvmVK) . JSString
-
-instance ToJSONKey RedeemVerificationKey where
-  toJSONKey = ToJSONKeyText render (A.key . render)
-    where
-      render = A.fromText . sformat redeemVKB64UrlF
-
-instance FromJSONKey RedeemVerificationKey where
-  fromJSONKey =
-    FromJSONKeyTextParser $ toAesonError . first (sformat build) . fromAvvmVK
-  fromJSONKeyList =
-    FromJSONKeyTextParser $
-      toAesonError
-        . bimap (sformat build) pure
-        . fromAvvmVK
-
-instance B.Buildable RedeemVerificationKey where
-  build = bprint ("redeem_vk:" . redeemVKB64F)
 
 fromVerificationKeyToByteString :: Ed25519.PublicKey -> BS.ByteString
 fromVerificationKeyToByteString = BA.convert
@@ -149,18 +138,32 @@ redeemVKBuild bs
               "Cardano.Crypto.Signing.Types.Redeem.hs consRedeemVK failed because "
               (T.pack $ show e)
 
-data AvvmVKError
-  = ApeAddressFormat Text
-  | ApeAddressLength Int
-  deriving (Show)
+instance Ord RedeemVerificationKey where
+  RedeemVerificationKey a `compare` RedeemVerificationKey b =
+    BA.convert a `compare` (BA.convert b :: ByteString)
 
-instance B.Buildable AvvmVKError where
-  build = \case
-    ApeAddressFormat addrText ->
-      bprint ("Address " . stext . " is not base64(url) format") addrText
-    ApeAddressLength len ->
-      bprint
-        ("Address length is " . build . ", expected 32, can't be redeeming vk")
-        len
+instance Monad m => ToObjectKey m RedeemVerificationKey where
+  toObjectKey = pure . toJSString . formatToString redeemVKB64UrlF
+
+instance MonadError SchemaError m => FromObjectKey m RedeemVerificationKey where
+  fromObjectKey =
+    fmap Just . parseJSString (first (sformat build) . fromAvvmVK) . JSString
 
 deriveJSON defaultOptions ''RedeemVerificationKey
+
+instance ToJSONKey RedeemVerificationKey where
+  toJSONKey = ToJSONKeyText render (A.key . render)
+    where
+      render = A.fromText . sformat redeemVKB64UrlF
+
+instance FromJSONKey RedeemVerificationKey where
+  fromJSONKey =
+    FromJSONKeyTextParser $ toAesonError . first (sformat build) . fromAvvmVK
+  fromJSONKeyList =
+    FromJSONKeyTextParser $
+      toAesonError
+        . bimap (sformat build) pure
+        . fromAvvmVK
+
+instance B.Buildable RedeemVerificationKey where
+  build = bprint ("redeem_vk:" . redeemVKB64F)

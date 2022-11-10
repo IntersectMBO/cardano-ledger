@@ -218,8 +218,7 @@ feesOK pp tx u@(UTxO utxo) =
 
 validateTotalCollateral ::
   forall era.
-  ( EraTxOut era,
-    BabbageEraTxBody era,
+  ( BabbageEraTxBody era,
     HasField "_collateralPercentage" (PParams era) Natural
   ) =>
   PParams era ->
@@ -452,10 +451,6 @@ instance
     TxOut era ~ BabbageTxOut era,
     TxBody era ~ BabbageTxBody era,
     Witnesses era ~ TxWitness era,
-    Show (TxBody era),
-    Show (TxOut era),
-    Show (Script era),
-    Eq (Script era),
     HasField "_maxCollateralInputs" (PParams era) Natural,
     HasField "_coinsPerUTxOByte" (PParams era) Coin,
     HasField "_collateralPercentage" (PParams era) Natural,
@@ -505,7 +500,6 @@ instance
 
 instance
   ( Era era,
-    Typeable era,
     ToCBOR (TxOut era),
     ToCBOR (Value era),
     ToCBOR (PredicateFailure (EraRule "UTXOS" era)),
@@ -523,7 +517,6 @@ instance
 
 instance
   ( Era era,
-    Typeable era,
     FromCBOR (TxOut era),
     FromCBOR (Value era),
     FromCBOR (PredicateFailure (EraRule "UTXOS" era)),

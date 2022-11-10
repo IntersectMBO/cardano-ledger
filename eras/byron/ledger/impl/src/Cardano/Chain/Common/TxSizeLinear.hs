@@ -3,6 +3,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Chain.Common.TxSizeLinear
@@ -39,6 +40,7 @@ import NoThunks.Class (NoThunks (..))
 -- | A linear equation on the transaction size. Represents the @\s -> a + b*s@
 -- function where @s@ is the transaction size in bytes, @a@ and @b@ are
 -- constant coefficients.
+type TxSizeLinear :: Type
 data TxSizeLinear
   = TxSizeLinear !Lovelace !Rational
   deriving (Eq, Ord, Show, Generic)

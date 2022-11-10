@@ -113,7 +113,6 @@ import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import GHC.Records
 import Lens.Micro
@@ -596,8 +595,6 @@ instance
   ( AlonzoEraTx era,
     Tx era ~ AlonzoTx era,
     TxSeq era ~ AlonzoTxSeq era,
-    Show (TxOut era),
-    Show (TxBody era),
     Embed (EraRule "UTXOS" era) (AlonzoUTXO era),
     Environment (EraRule "UTXOS" era) ~ UtxoEnv era,
     State (EraRule "UTXOS" era) ~ Shelley.UTxOState era,
@@ -644,8 +641,7 @@ instance
 --------------------------------------------------------------------------------
 
 instance
-  ( Typeable era,
-    Era era,
+  ( Era era,
     ToCBOR (TxOut era),
     ToCBOR (Value era),
     ToCBOR (PredicateFailure (EraRule "UTXOS" era))

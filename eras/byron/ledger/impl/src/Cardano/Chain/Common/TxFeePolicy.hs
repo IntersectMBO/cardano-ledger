@@ -8,6 +8,7 @@
 {-# LANGUAGE NumDecimals #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -62,6 +63,7 @@ import Text.JSON.Canonical
 --   Equation on the transaction size), but in the future other policies may Be
 --   added. To make this future-proof, we also have an "unknown" policy used By
 --   older node versions (the ones that haven't updated yet).
+type TxFeePolicy :: Type
 data TxFeePolicy
   = TxFeePolicyTxSizeLinear !TxSizeLinear
   deriving (Eq, Ord, Show, Generic)

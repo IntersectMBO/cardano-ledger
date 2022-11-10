@@ -227,14 +227,23 @@ makeTxWits (UTxO utxo) tx =
     wits = makeWitness <$> keys <*> pure tx
 
 --------------------------------------------------------------------------------
+-- AddShrinks instances
+--------------------------------------------------------------------------------
+
+deriveAddShrinks ''TxId
+deriveAddShrinks ''TxIn
+deriveAddShrinks ''TxOut
+deriveAddShrinks ''TxBody
+deriveAddShrinks ''Wit
+deriveAddShrinks ''Tx
+
+--------------------------------------------------------------------------------
 -- Goblins instances
 --------------------------------------------------------------------------------
 
+deriveGoblin ''TxId
 deriveGoblin ''TxIn
 deriveGoblin ''TxOut
-deriveGoblin ''Tx
-deriveGoblin ''Wit
-deriveGoblin ''TxId
 
 instance GeneOps g => Goblin g TxBody where
   tinker gen = do
@@ -274,22 +283,14 @@ instance GeneOps g => Goblin g TxBody where
       outputs <- replicateM listLenO conjure
       pure (TxBody inputs outputs)
 
---------------------------------------------------------------------------------
--- AddShrinks instances
---------------------------------------------------------------------------------
-
-deriveAddShrinks ''TxBody
-deriveAddShrinks ''TxId
-deriveAddShrinks ''TxIn
-deriveAddShrinks ''TxOut
-deriveAddShrinks ''Tx
-deriveAddShrinks ''Wit
+deriveGoblin ''Wit
+deriveGoblin ''Tx
 
 --------------------------------------------------------------------------------
 -- SeedGoblin instances
 --------------------------------------------------------------------------------
 
-deriveSeedGoblin ''UTxO
 deriveSeedGoblin ''TxId
 deriveSeedGoblin ''TxIn
 deriveSeedGoblin ''TxOut
+deriveSeedGoblin ''UTxO

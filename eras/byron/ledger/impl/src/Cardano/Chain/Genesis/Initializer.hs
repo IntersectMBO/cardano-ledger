@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Cardano.Chain.Genesis.Initializer
@@ -12,6 +13,7 @@ import Cardano.Chain.Common (Lovelace)
 import Cardano.Prelude
 
 -- | Options determining generated genesis stakes, balances, and delegation
+type GenesisInitializer :: Type
 data GenesisInitializer = GenesisInitializer
   { giTestBalance :: !TestnetBalanceOptions,
     giFakeAvvmBalance :: !FakeAvvmOptions,
@@ -23,6 +25,7 @@ data GenesisInitializer = GenesisInitializer
   deriving (Eq, Show)
 
 -- | These options determine balances of nodes specific for testnet
+type TestnetBalanceOptions :: Type
 data TestnetBalanceOptions = TestnetBalanceOptions
   { -- | Number of poor nodes (with small balance).
     tboPoors :: !Word,
@@ -37,6 +40,7 @@ data TestnetBalanceOptions = TestnetBalanceOptions
 
 -- | These options determines balances of fake AVVM nodes which didn't really go
 --   through vending, but pretend they did
+type FakeAvvmOptions :: Type
 data FakeAvvmOptions = FakeAvvmOptions
   { faoCount :: !Word,
     faoOneBalance :: !Lovelace

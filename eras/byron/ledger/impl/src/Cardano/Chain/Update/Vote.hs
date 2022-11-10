@@ -6,6 +6,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -74,13 +75,16 @@ import qualified Formatting.Buildable as B
 --------------------------------------------------------------------------------
 
 -- | An update proposal vote identifier (the 'Hash' of a 'Vote').
+type VoteId :: Type
 type VoteId = Hash Vote
 
+type Vote :: Type
 type Vote = AVote ()
 
 -- | Vote for update proposal
 --
 --   Invariant: The signature is valid.
+type AVote :: Type -> Type
 data AVote a = UnsafeVote
   { -- | Verification key casting the vote
     voterVK :: !VerificationKey,

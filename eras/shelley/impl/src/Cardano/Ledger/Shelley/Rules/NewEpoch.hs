@@ -138,7 +138,6 @@ newEpochTransition ::
   ( EraTxOut era,
     Embed (EraRule "MIR" era) (ShelleyNEWEPOCH era),
     Embed (EraRule "EPOCH" era) (ShelleyNEWEPOCH era),
-    Event (EraRule "RUPD" era) ~ RupdEvent (Crypto era),
     Environment (EraRule "MIR" era) ~ (),
     State (EraRule "MIR" era) ~ EpochState era,
     Signal (EraRule "MIR" era) ~ (),

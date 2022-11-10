@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Chain.Block.Body
@@ -33,6 +34,7 @@ import Cardano.Prelude
 import Data.Aeson (ToJSON)
 
 -- | 'Body' consists of payloads of all block components
+type Body :: Type
 type Body = ABody ()
 
 -- | Constructor for 'Body'
@@ -40,6 +42,7 @@ pattern Body :: TxPayload -> SscPayload -> Delegation.Payload -> Update.Payload 
 pattern Body tx ssc dlg upd = ABody tx ssc dlg upd
 
 -- | 'Body' consists of payloads of all block components
+type ABody :: Type -> Type
 data ABody a = ABody
   { -- | UTxO payload
     bodyTxPayload :: !(ATxPayload a),

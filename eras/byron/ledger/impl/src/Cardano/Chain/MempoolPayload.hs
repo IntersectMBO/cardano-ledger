@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Chain.MempoolPayload
@@ -28,10 +29,12 @@ import Cardano.Prelude
 
 -- | A payload which can be submitted into or between mempools via the
 -- transaction submission protocol.
+type MempoolPayload :: Type
 type MempoolPayload = AMempoolPayload ()
 
 -- | A payload which can be submitted into or between mempools via the
 -- transaction submission protocol.
+type AMempoolPayload :: Type -> Type
 data AMempoolPayload a
   = -- | A transaction payload (transaction and witness).
     MempoolTx !(ATxAux a)

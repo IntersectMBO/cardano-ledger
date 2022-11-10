@@ -3,6 +3,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 
 module Cardano.Chain.Byron.API.Mempool
   ( ApplyMempoolPayloadErr (..),
@@ -42,6 +43,7 @@ import qualified Data.Set as Set
 -- corresponding error type. We could 'ChainValidationError', but it's too
 -- large, which is problematic because we actually sent encoded versions of
 -- these errors across the wire.
+type ApplyMempoolPayloadErr :: Type
 data ApplyMempoolPayloadErr
   = MempoolTxErr Utxo.UTxOValidationError
   | MempoolDlgErr D.Sched.Error

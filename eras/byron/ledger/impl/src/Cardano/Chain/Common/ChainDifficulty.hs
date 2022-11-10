@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Cardano.Chain.Common.ChainDifficulty
@@ -24,6 +25,7 @@ import NoThunks.Class (NoThunks (..))
 
 -- | Chain difficulty represents necessary effort to generate a
 -- chain. In the simplest case it can be number of blocks in chain.
+type ChainDifficulty :: Type
 newtype ChainDifficulty = ChainDifficulty
   { unChainDifficulty :: Word64
   }

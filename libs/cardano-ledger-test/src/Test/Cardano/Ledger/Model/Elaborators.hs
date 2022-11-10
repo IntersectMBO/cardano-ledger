@@ -914,7 +914,6 @@ data TxWitnessArguments era = TxWitnessArguments
 mkTxWitnessArguments ::
   forall era m.
   ( Monad m,
-    C.Crypto (Crypto era),
     ElaborateEraModel era,
     ShelleyEraTxBody era,
     DSIGN.Signable (C.DSIGN (Crypto era)) (Hash.Hash (C.HASH (Crypto era)) Shelley.EraIndependentTxBody)

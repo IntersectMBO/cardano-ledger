@@ -6,6 +6,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Chain.Slotting.EpochAndSlotCount
@@ -32,6 +33,7 @@ import qualified Formatting.Buildable as B
 
 -- | 'EpochAndSlotCount' identifies a slot by its 'EpochNumber' and the number of
 --   slots into the epoch that it sits
+type EpochAndSlotCount :: Type
 data EpochAndSlotCount = EpochAndSlotCount
   { epochNo :: !EpochNumber,
     slotCount :: !SlotCount

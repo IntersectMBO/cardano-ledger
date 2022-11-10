@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -5,8 +6,14 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+
+#if __GLASGOW_HASKELL__ >= 900
+-- this is needed for 9.2: recoveryBytes = annotation
+{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
+#endif
 
 module Cardano.Chain.Update.Proposal
   ( -- * Proposal
@@ -74,9 +81,11 @@ import qualified Formatting.Buildable as B
 --------------------------------------------------------------------------------
 
 -- | ID of software update proposal
+type UpId :: Type
 type UpId = Hash Proposal
 
 -- | Proposal for software update
+type AProposal :: Type -> Type
 data AProposal a = AProposal
   { aBody :: !(Annotated ProposalBody a),
     -- | Who proposed this UP.
@@ -87,6 +96,7 @@ data AProposal a = AProposal
   deriving (Eq, Show, Generic, Functor)
   deriving anyclass (NFData)
 
+type Proposal :: Type
 type Proposal = AProposal ()
 
 -- Used for debugging purposes only
@@ -201,6 +211,7 @@ formatMaybeProposal = maybe "no proposal" B.build
 -- ProposalBody
 --------------------------------------------------------------------------------
 
+type ProposalBody :: Type
 data ProposalBody = ProposalBody
   { protocolVersion :: !ProtocolVersion,
     protocolParametersUpdate :: !ProtocolParametersUpdate,

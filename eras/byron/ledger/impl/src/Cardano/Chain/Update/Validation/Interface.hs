@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 
 -- | Blockchain interface validation rules.
 module Cardano.Chain.Update.Validation.Interface
@@ -86,6 +87,7 @@ import Data.Set (union)
 import qualified Data.Set as S
 import NoThunks.Class (NoThunks (..))
 
+type Environment :: Type
 data Environment = Environment
   { protocolMagic :: !(Annotated ProtocolMagicId ByteString),
     -- | TODO: this is the chain security parameter, a.k.a. @stableAfter@, it is not part
@@ -102,6 +104,7 @@ data Environment = Environment
   }
 
 -- | Update interface state.
+type State :: Type
 data State = State
   { -- | Current epoch
     currentEpoch :: !EpochNumber,
@@ -159,6 +162,7 @@ instance ToCBOR State where
       <> toCBOR (registeredEndorsements s)
       <> toCBOR (proposalRegistrationSlot s)
 
+type Error :: Type
 data Error
   = Registration Registration.Error
   | Voting Voting.Error
@@ -199,6 +203,7 @@ instance FromCBOR Error where
       _ -> cborError $ DecoderErrorUnknownTag "Interface.Error" tag
 
 -- | Signal combining signals from various rules
+type Signal :: Type
 data Signal = Signal
   { proposal :: !(Maybe (AProposal ByteString)),
     votes :: ![AVote ByteString],

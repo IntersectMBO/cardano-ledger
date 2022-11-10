@@ -1,3 +1,5 @@
+{-# LANGUAGE StandaloneKindSignatures #-}
+
 module Cardano.Chain.Update.Proof
   ( Proof,
     mkProof,
@@ -10,6 +12,7 @@ import Cardano.Crypto (Hash, hashDecoded, serializeCborHash)
 import Cardano.Prelude
 
 -- | Proof that body of update message contains 'Update.Payload'
+type Proof :: Type
 type Proof = Hash Payload
 
 mkProof :: Payload -> Proof

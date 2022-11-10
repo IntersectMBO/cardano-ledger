@@ -95,7 +95,6 @@ library
                      , formatting
                      , heapwords
                      , memory
-                     , mtl
                      , nothunks
                      , text
 
@@ -135,7 +134,6 @@ test-suite test
                      , filepath
                      , hedgehog >= 1.0.4
                      , memory
-                     , text
 
   ghc-options:         -threaded
                        -rtsopts

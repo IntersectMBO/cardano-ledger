@@ -1,5 +1,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Options
@@ -18,7 +19,7 @@ module Test.Options
   )
 where
 
-import Cardano.Prelude hiding (Option)
+import Cardano.Prelude
 import Hedgehog (Gen, Group (..), Property, PropertyT, TestLimit, withTests)
 import Hedgehog.Internal.Property (GroupName (..), PropertyName (..))
 import Test.Cardano.Prelude
@@ -48,6 +49,7 @@ testProperty s p = testPropertyNamed s (Hedgehog.Internal.Property.PropertyName 
 -- TestScenario
 --------------------------------------------------------------------------------
 
+type TestScenario :: Type
 data TestScenario
   = ContinuousIntegration
   | Development
@@ -84,6 +86,7 @@ helpText =
 --------------------------------------------------------------------------------
 
 -- | Convenient alias for TestScenario-dependent @Group@s
+type TSGroup :: Type
 type TSGroup = TestScenario -> Group
 
 concatGroups :: [Group] -> Group
@@ -101,6 +104,7 @@ tsGroupToTree tsGroup = askOption $ \scenario -> case tsGroup scenario of
       (uncurry testProperty . first unPropertyName <$> groupProperties)
 
 -- | Convenient alias for TestScenario-dependent @Property@s
+type TSProperty :: Type
 type TSProperty = TestScenario -> Property
 
 -- | Default ratio of tests in development
@@ -161,6 +165,7 @@ withTestsTS count prop scenario =
 -- ShouldAssertNF
 --------------------------------------------------------------------------------
 
+type ShouldAssertNF :: Type
 data ShouldAssertNF
   = AssertNF
   | NoAssertNF

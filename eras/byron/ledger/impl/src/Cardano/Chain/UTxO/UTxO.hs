@@ -5,6 +5,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -fno-warn-missed-specialisations #-}
 
@@ -64,6 +65,7 @@ import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 import NoThunks.Class (NoThunks (..))
 
+type UTxO :: Type
 newtype UTxO = UTxO
   { unUTxO :: Map CompactTxIn CompactTxOut
   }
@@ -71,6 +73,7 @@ newtype UTxO = UTxO
   deriving newtype (HeapWords, FromCBOR, ToCBOR)
   deriving anyclass (NFData, NoThunks)
 
+type UTxOError :: Type
 data UTxOError
   = UTxOMissingInput TxIn
   | UTxOOverlappingUnion

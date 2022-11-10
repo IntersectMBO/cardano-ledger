@@ -229,7 +229,6 @@ benchmark benchProperty
     cardano-ledger-alonzo,
     cardano-ledger-alonzo-test,
     cardano-ledger-shelley-ma-test,
-    QuickCheck,
     small-steps,
     cardano-ledger-shelley,
     cardano-ledger-shelley-test,

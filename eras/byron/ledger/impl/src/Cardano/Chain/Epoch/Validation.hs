@@ -2,6 +2,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 
 module Cardano.Chain.Epoch.Validation
   ( EpochError (..),
@@ -35,6 +36,7 @@ import Control.Tracer
 import Streaming (Of (..), Stream, hoist)
 import qualified Streaming.Prelude as S
 
+type EpochError :: Type
 data EpochError
   = EpochParseError ParseError
   | EpochChainValidationError (Maybe EpochAndSlotCount) ChainValidationError

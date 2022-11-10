@@ -4,6 +4,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 
 module Cardano.Chain.Common.Compact
   ( CompactAddress,
@@ -28,6 +29,7 @@ import NoThunks.Class (NoThunks (..))
 -- | A compact in-memory representation for an 'Address'.
 --
 -- Convert using 'toCompactAddress' and 'fromCompactAddress'.
+type CompactAddress :: Type
 newtype CompactAddress = CompactAddress ShortByteString
   deriving (Eq, Ord, Generic, Show)
   deriving newtype (HeapWords, NoThunks)

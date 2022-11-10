@@ -891,7 +891,7 @@ simpleScriptOutWithRefScriptUTxOState pf =
 largeDatum :: Data era
 largeDatum = Data (Plutus.B . BS.pack $ replicate 1500 0)
 
-largeOutput' :: forall era. (Scriptic era, EraTxOut era) => Proof era -> TxOut era
+largeOutput' :: forall era. EraTxOut era => Proof era -> TxOut era
 largeOutput' pf =
   newTxOut
     pf

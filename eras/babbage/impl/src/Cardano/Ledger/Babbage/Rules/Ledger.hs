@@ -61,9 +61,6 @@ import GHC.Records (HasField)
 instance
   ( AlonzoEraTx era,
     Tx era ~ AlonzoTx era,
-    Show (PParams era),
-    Show (TxOut era),
-    Show (Tx era),
     Show (State (EraRule "PPUP" era)),
     HasField "_keyDeposit" (PParams era) Coin,
     HasField "_poolDeposit" (PParams era) Coin,

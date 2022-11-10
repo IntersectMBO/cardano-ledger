@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Cardano.Chain.Update.ProtocolVersion
@@ -18,6 +19,7 @@ import NoThunks.Class (NoThunks (..))
 import qualified Prelude
 
 -- | Communication protocol version
+type ProtocolVersion :: Type
 data ProtocolVersion = ProtocolVersion
   { pvMajor :: !Word16,
     pvMinor :: !Word16,

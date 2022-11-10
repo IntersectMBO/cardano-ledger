@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Chain.UTxO.TxPayload
@@ -27,11 +28,13 @@ import Cardano.Prelude
 import Data.Aeson (ToJSON)
 
 -- | Payload of UTxO component which is part of the block body
+type TxPayload :: Type
 type TxPayload = ATxPayload ()
 
 mkTxPayload :: [TxAux] -> TxPayload
 mkTxPayload = ATxPayload
 
+type ATxPayload :: Type -> Type
 newtype ATxPayload a = ATxPayload
   { aUnTxPayload :: [ATxAux a]
   }

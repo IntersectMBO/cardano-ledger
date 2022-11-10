@@ -135,8 +135,8 @@ import Data.UMap (View (Rewards))
 import qualified Data.UMap as UM
 import GHC.Stack
 import Numeric.Natural (Natural)
-import qualified PlutusLedgerApi.V1 as Plutus
 import PlutusLedgerApi.Test.EvaluationContext (costModelParamsForTesting)
+import qualified PlutusLedgerApi.V1 as Plutus
 import Test.Cardano.Ledger.Generic.Fields
   ( PParamsField (..),
     TxBodyField (..),
@@ -501,7 +501,7 @@ alwaysFailsOutput pf =
       DHash' [hashData $ datumExample2 @era]
     ]
 
-outEx2 :: (Scriptic era, EraTxOut era) => Proof era -> TxOut era
+outEx2 :: EraTxOut era => Proof era -> TxOut era
 outEx2 pf = newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 2995)]
 
 notValidatingBody :: (Scriptic era, EraTxBody era) => Proof era -> TxBody era
@@ -605,7 +605,7 @@ utxoStEx3 pf = smartUTxOState (utxoEx3 pf) (Coin 0) (Coin 5) def
 --  Example 4: Process a CERT transaction with a failing Plutus script.
 -- =====================================================================
 
-outEx4 :: (Scriptic era, EraTxOut era) => Proof era -> TxOut era
+outEx4 :: EraTxOut era => Proof era -> TxOut era
 outEx4 pf = newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 995)]
 
 redeemerExample4 :: Data era
@@ -663,7 +663,7 @@ utxoStEx4 pf = smartUTxOState (utxoEx4 pf) (Coin 0) (Coin 5) def
 --  Example 5: Process a WITHDRAWAL transaction with a succeeding Plutus script.
 -- ==============================================================================
 
-outEx5 :: (Scriptic era, EraTxOut era) => Proof era -> TxOut era
+outEx5 :: EraTxOut era => Proof era -> TxOut era
 outEx5 pf = newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 1995)]
 
 redeemerExample5 :: Data era
@@ -723,7 +723,7 @@ utxoStEx5 pf = smartUTxOState (utxoEx5 pf) (Coin 0) (Coin 5) def
 --  Example 6: Process a WITHDRAWAL transaction with a failing Plutus script.
 -- ===========================================================================
 
-outEx6 :: (Scriptic era, EraTxOut era) => Proof era -> TxOut era
+outEx6 :: EraTxOut era => Proof era -> TxOut era
 outEx6 pf = newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 1995)]
 
 redeemerExample6 :: Data era
@@ -2089,7 +2089,6 @@ alonzoUTXOWexamplesB ::
     State (EraRule "UTXOW" era) ~ UTxOState era,
     GoodCrypto (Crypto era),
     HasTokens era,
-    Scriptic era,
     Default (State (EraRule "PPUP" era)),
     EraTx era,
     PostShelley era -- MAYBE WE CAN REPLACE THIS BY GoodCrypto

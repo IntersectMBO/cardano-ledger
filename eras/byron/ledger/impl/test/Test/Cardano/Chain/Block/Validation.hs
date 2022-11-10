@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
 
@@ -98,6 +99,7 @@ ts_prop_mainnetEpochsValid shouldAssertNF scenario = withTests 1 . property $ do
 
   void $ evalEither result
 
+type Error :: Type
 data Error
   = ErrorParseError ParseError
   | ErrorChainValidationError (Maybe SlotNumber) ChainValidationError

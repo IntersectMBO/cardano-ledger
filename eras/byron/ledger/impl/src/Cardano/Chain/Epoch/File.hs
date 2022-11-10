@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 
 module Cardano.Chain.Epoch.File
   ( mainnetEpochSlots,
@@ -42,6 +43,7 @@ import System.FilePath ((-<.>))
 epochHeader :: LBS.ByteString
 epochHeader = "Epoch data v1\n"
 
+type ParseError :: Type
 data ParseError
   = -- | The CBOR is invalid
     ParseErrorDecoder !DecoderError

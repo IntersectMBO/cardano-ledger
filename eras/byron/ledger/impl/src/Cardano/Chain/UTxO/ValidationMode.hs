@@ -1,3 +1,5 @@
+{-# LANGUAGE StandaloneKindSignatures #-}
+
 module Cardano.Chain.UTxO.ValidationMode
   ( TxValidationMode (..),
   )
@@ -10,6 +12,7 @@ import Cardano.Prelude
 --------------------------------------------------------------------------------
 
 -- | Indicates what sort of transaction validation should be performed.
+type TxValidationMode :: Type
 data TxValidationMode
   = -- | Perform all transaction validations.
     TxValidation

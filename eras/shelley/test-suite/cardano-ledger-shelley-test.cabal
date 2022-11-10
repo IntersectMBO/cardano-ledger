@@ -237,8 +237,7 @@ benchmark mainbench
                 set-algebra,
                 small-steps,
                 small-steps-test,
-                cardano-strict-containers,
-                transformers
+                cardano-strict-containers
   ghc-options:
       -threaded
       -rtsopts

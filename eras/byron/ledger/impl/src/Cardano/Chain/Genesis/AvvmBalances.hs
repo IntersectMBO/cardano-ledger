@@ -4,6 +4,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-missed-specialisations #-}
@@ -28,6 +29,7 @@ import Text.JSON.Canonical (FromJSON (..), ToJSON (..))
 -- | Predefined balances of AVVM (Ada Voucher Vending Machine) entries.
 -- People who purchased Ada at a pre-sale were issued a certificate during
 -- the pre-sale period. These certificates allow customers to redeem ADA.
+type GenesisAvvmBalances :: Type
 newtype GenesisAvvmBalances = GenesisAvvmBalances
   { unGenesisAvvmBalances :: Map CompactRedeemVerificationKey Lovelace
   }

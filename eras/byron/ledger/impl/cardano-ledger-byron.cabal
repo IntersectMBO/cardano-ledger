@@ -257,13 +257,11 @@ library
                      , contra-tracer
                      , cryptonite
                      , Cabal
-                     , deepseq
                      , digest
                      , directory
                      , filepath
                      , formatting
                      , heapwords
-                     , mtl
                      , nothunks
                      , quiet
                      , resourcet

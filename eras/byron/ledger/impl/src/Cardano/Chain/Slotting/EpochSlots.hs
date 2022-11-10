@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 
 module Cardano.Chain.Slotting.EpochSlots
   ( EpochSlots (..),
@@ -19,6 +20,7 @@ import Formatting.Buildable (Buildable)
 import NoThunks.Class (NoThunks (..))
 
 -- | The number of slots per epoch.
+type EpochSlots :: Type
 newtype EpochSlots = EpochSlots
   { unEpochSlots :: Word64
   }
@@ -31,6 +33,7 @@ instance FromCBOR EpochSlots where
   fromCBOR = EpochSlots <$> fromCBOR
 
 -- | Data with an accompanying slots per epoch context.
+type WithEpochSlots :: Type -> Type
 data WithEpochSlots a = WithEpochSlots
   { epochSlots :: EpochSlots,
     unWithEpochSlots :: a

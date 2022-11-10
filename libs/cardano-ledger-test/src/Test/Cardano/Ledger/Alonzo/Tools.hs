@@ -24,7 +24,7 @@ import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (GenDelegs (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.LedgerState (IncrementalStake (..), UTxOState (..))
-import Cardano.Ledger.Shelley.Rules.Utxo (PredicateFailure, UtxoEnv (..))
+import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), makeWitnessVKey)
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..), SlotNo (..))
@@ -37,7 +37,6 @@ import qualified Data.Map.Strict as Map
 import Data.Text (Text)
 import GHC.Records (HasField)
 import Lens.Micro
-import qualified PlutusLedgerApi.V1 as Plutus
 import Test.Cardano.Ledger.Alonzo.PlutusScripts (testingCostModelV1)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
@@ -101,7 +100,6 @@ testExUnitCalculation ::
     ExtendedUTxO era,
     HasField "_maxTxExUnits" (PParams era) ExUnits,
     HasField "_protocolVersion" (PParams era) ProtVer,
-    Show (PredicateFailure (EraRule "UTXOS" era)),
     STS (EraRule "UTXOS" era),
     Script era ~ AlonzoScript era
   ) =>

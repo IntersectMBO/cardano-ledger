@@ -5,6 +5,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 
 -- | Validation rules for registering updates
 --
@@ -82,6 +83,7 @@ import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as M
 import NoThunks.Class (NoThunks (..))
 
+type Environment :: Type
 data Environment = Environment
   { protocolMagic :: !(Annotated ProtocolMagicId ByteString),
     currentSlot :: !SlotNumber,
@@ -91,6 +93,7 @@ data Environment = Environment
     delegationMap :: !Delegation.Map
   }
 
+type ApplicationVersion :: Type
 data ApplicationVersion = ApplicationVersion
   { avNumSoftwareVersion :: !NumSoftwareVersion,
     avSlotNumber :: !SlotNumber,
@@ -111,17 +114,21 @@ instance ToCBOR ApplicationVersion where
       <> toCBOR (avSlotNumber av)
       <> toCBOR (avMetadata av)
 
+type ApplicationVersions :: Type
 type ApplicationVersions = Map ApplicationName ApplicationVersion
 
+type Metadata :: Type
 type Metadata = Map SystemTag InstallerHash
 
 -- | State keeps track of registered protocol and software update
 --   proposals
+type State :: Type
 data State = State
   { rsProtocolUpdateProposals :: !ProtocolUpdateProposals,
     rsSoftwareUpdateProposals :: !SoftwareUpdateProposals
   }
 
+type ProtocolUpdateProposal :: Type
 data ProtocolUpdateProposal = ProtocolUpdateProposal
   { pupProtocolVersion :: !ProtocolVersion,
     pupProtocolParameters :: !ProtocolParameters
@@ -140,8 +147,10 @@ instance ToCBOR ProtocolUpdateProposal where
       <> toCBOR (pupProtocolVersion pup)
       <> toCBOR (pupProtocolParameters pup)
 
+type ProtocolUpdateProposals :: Type
 type ProtocolUpdateProposals = Map UpId ProtocolUpdateProposal
 
+type SoftwareUpdateProposal :: Type
 data SoftwareUpdateProposal = SoftwareUpdateProposal
   { supSoftwareVersion :: !SoftwareVersion,
     supSoftwareMetadata :: !Metadata
@@ -160,9 +169,11 @@ instance ToCBOR SoftwareUpdateProposal where
       <> toCBOR (supSoftwareVersion sup)
       <> toCBOR (supSoftwareMetadata sup)
 
+type SoftwareUpdateProposals :: Type
 type SoftwareUpdateProposals = Map UpId SoftwareUpdateProposal
 
 -- | Error captures the ways in which registration could fail
+type Error :: Type
 data Error
   = DuplicateProtocolVersion ProtocolVersion
   | DuplicateSoftwareVersion SoftwareVersion
@@ -264,6 +275,7 @@ instance FromCBOR Error where
       13 -> checkSize 1 >> pure NullUpdateProposal
       _ -> cborError $ DecoderErrorUnknownTag "Registration.Error" tag
 
+type TooLarge :: Type -> Type
 data TooLarge n = TooLarge
   { tlActual :: n,
     tlMaxBound :: n
@@ -281,6 +293,7 @@ instance (FromCBOR n) => FromCBOR (TooLarge n) where
     enforceSize "TooLarge" 2
     TooLarge <$> fromCBOR <*> fromCBOR
 
+type Adopted :: Type
 newtype Adopted = Adopted ProtocolVersion
   deriving (Eq, Show)
   deriving newtype (ToCBOR, FromCBOR)

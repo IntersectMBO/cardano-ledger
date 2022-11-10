@@ -3,6 +3,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Chain.Update.ProtocolParametersUpdate
@@ -24,6 +25,7 @@ import Formatting (Format, bprint, build, bytes, later, shortest)
 import qualified Formatting.Buildable as B
 
 -- | Data which represents modifications of block (aka protocol) version
+type ProtocolParametersUpdate :: Type
 data ProtocolParametersUpdate = ProtocolParametersUpdate
   { ppuScriptVersion :: !(Maybe Word16),
     ppuSlotDuration :: !(Maybe Natural),

@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Chain.Slotting.SlotNumber
@@ -28,6 +29,7 @@ import Text.JSON.Canonical (FromJSON (..), ToJSON (..))
 --
 --   'SlotNumber' is held in a 'Word64'. Assuming a slot every 20 seconds, 'Word64'
 --   is sufficient for slot indices for 10^13 years.
+type SlotNumber :: Type
 newtype SlotNumber = SlotNumber
   { unSlotNumber :: Word64
   }

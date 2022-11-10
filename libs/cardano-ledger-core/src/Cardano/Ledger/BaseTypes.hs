@@ -256,11 +256,11 @@ fromRatioBoundedRatio ratio
     lowerBound = minBound :: BoundedRatio b a
     upperBound = maxBound :: BoundedRatio b a
 
-instance (ToCBOR a, Integral a, Bounded a, Typeable b, Typeable a) => ToCBOR (BoundedRatio b a) where
+instance (ToCBOR a, Integral a, Bounded a, Typeable b) => ToCBOR (BoundedRatio b a) where
   toCBOR (BoundedRatio u) = ratioToCBOR u
 
 instance
-  (FromCBOR a, Bounded (BoundedRatio b a), Bounded a, Integral a, Typeable b, Typeable a, Show a) =>
+  (FromCBOR a, Bounded (BoundedRatio b a), Bounded a, Integral a, Typeable b, Show a) =>
   FromCBOR (BoundedRatio b a)
   where
   fromCBOR = do

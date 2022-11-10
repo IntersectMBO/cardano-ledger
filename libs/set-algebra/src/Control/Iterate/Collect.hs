@@ -24,8 +24,7 @@ instance Applicative (Cont ans) where
   f <*> x = do g <- f; y <- x; pure (g y)
 
 instance Monad (Cont r) where
-  return a = Cont $ \k -> k a -- i.e. return a = \k -> k a
-  (Cont c) >>= f = Cont $ \k -> c (\a -> runCont (f a) k) -- i.e. c >>= f = \k -> c (\a -> f a k)
+  Cont c >>= f = Cont $ \k -> c (\a -> runCont (f a) k) -- i.e. c >>= f = \k -> c (\a -> f a k)
 
 -- ========================================================================
 -- Now we want to make the following, more complicated continuation a Monad

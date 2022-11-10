@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Cardano.Chain.Update.SoftwareVersion
@@ -33,9 +34,11 @@ import NoThunks.Class (NoThunks (..))
 import qualified Prelude
 
 -- | Numeric software version associated with 'ApplicationName'
+type NumSoftwareVersion :: Type
 type NumSoftwareVersion = Word32
 
 -- | Software version
+type SoftwareVersion :: Type
 data SoftwareVersion = SoftwareVersion
   { svAppName :: !ApplicationName,
     svNumber :: !NumSoftwareVersion
@@ -66,6 +69,7 @@ instance FromCBOR SoftwareVersion where
     enforceSize "SoftwareVersion" 2
     SoftwareVersion <$> fromCBOR <*> fromCBOR
 
+type SoftwareVersionError :: Type
 data SoftwareVersionError
   = SoftwareVersionApplicationNameError ApplicationNameError
   deriving (Data, Eq, Show)

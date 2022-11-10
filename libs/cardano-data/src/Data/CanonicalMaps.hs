@@ -36,7 +36,7 @@ instance CanonicalZero Integer where
   zeroC = 0
   joinC = (+)
 
-instance (Eq k, Eq v, Ord k, CanonicalZero v) => CanonicalZero (Map k v) where
+instance (Ord k, CanonicalZero v) => CanonicalZero (Map k v) where
   zeroC = Map.empty
   joinC = canonicalMapUnion joinC
 

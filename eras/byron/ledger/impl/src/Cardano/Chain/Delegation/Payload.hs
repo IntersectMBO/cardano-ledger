@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -30,6 +31,7 @@ import Formatting (bprint, int)
 import Formatting.Buildable (Buildable (..))
 
 -- | The delegation 'Payload' contains a list of delegation 'Certificate's
+type APayload :: Type -> Type
 data APayload a = UnsafeAPayload
   { getPayload :: [Delegation.ACertificate a],
     getAnnotation :: a
@@ -37,6 +39,7 @@ data APayload a = UnsafeAPayload
   deriving (Show, Eq, Generic, Functor)
   deriving anyclass (NFData)
 
+type Payload :: Type
 type Payload = APayload ()
 
 unsafePayload :: [Delegation.Certificate] -> Payload

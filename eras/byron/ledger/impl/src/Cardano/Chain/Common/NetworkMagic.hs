@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Chain.Common.NetworkMagic
@@ -35,6 +36,7 @@ import NoThunks.Class (NoThunks (..))
 -- NetworkMagic
 --------------------------------------------------------------------------------
 
+type NetworkMagic :: Type
 data NetworkMagic
   = NetworkMainOrStage
   | NetworkTestnet {-# UNPACK #-} !Word32

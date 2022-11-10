@@ -76,7 +76,7 @@ import Data.Bits (Bits, clearBit, shiftL, testBit, (.&.), (.|.))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.ByteString.Short as SBS (fromShort, index, length, toShort)
-import Data.ByteString.Short.Internal as SBS (ShortByteString (SBS), unsafeIndex)
+import Data.ByteString.Short.Internal as SBS (ShortByteString (SBS))
 import qualified Data.ByteString.Unsafe as BS (unsafeDrop, unsafeIndex)
 import Data.Coders (cborError)
 import Data.Maybe (fromMaybe)
@@ -180,7 +180,7 @@ class AddressBuffer b where
 instance AddressBuffer ShortByteString where
   bufLength = SBS.length
   {-# INLINE bufLength #-}
-  bufUnsafeIndex = SBS.unsafeIndex
+  bufUnsafeIndex = unsafeShortByteStringIndex
   {-# INLINE bufUnsafeIndex #-}
   bufToByteString = SBS.fromShort
   {-# INLINE bufToByteString #-}

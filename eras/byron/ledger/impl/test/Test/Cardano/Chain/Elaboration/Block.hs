@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeApplications #-}
 
 -- | This module provides functionality for translating abstract blocks into
@@ -78,6 +79,7 @@ import Test.Cardano.Chain.Elaboration.Update
 import Test.Cardano.Chain.UTxO.Model (elaborateTxWitnesses)
 import qualified Test.Cardano.Crypto.Dummy as Dummy
 
+type AbstractToConcreteIdMaps :: Type
 data AbstractToConcreteIdMaps = AbstractToConcreteIdMaps
   { transactionIds :: !(Map Abstract.TxId UTxO.TxId),
     proposalIds :: !(Map Abstract.Update.UpId Update.UpId)

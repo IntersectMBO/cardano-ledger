@@ -9,6 +9,7 @@
 {-# LANGUAGE NumDecimals #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
@@ -141,8 +142,10 @@ import NoThunks.Class (NoThunks (..))
 -- Header
 --------------------------------------------------------------------------------
 
+type Header :: Type
 type Header = AHeader ()
 
+type AHeader :: Type -> Type
 data AHeader a = AHeader
   { aHeaderProtocolMagicId :: !(Annotated ProtocolMagicId a),
     -- | Pointer to the header of the previous block
@@ -466,6 +469,7 @@ renderHeader es header =
 --------------------------------------------------------------------------------
 
 -- | 'Hash' of block header
+type HeaderHash :: Type
 type HeaderHash = Hash Header
 
 -- | Specialized formatter for 'HeaderHash'
@@ -499,7 +503,7 @@ headerHashAnnotated = hashDecoded . fmap wrapHeaderBytes
 --------------------------------------------------------------------------------
 -- BoundaryHeader
 --------------------------------------------------------------------------------
-
+type ABoundaryHeader :: Type -> Type
 data ABoundaryHeader a = UnsafeABoundaryHeader
   { boundaryPrevHash :: !(Either GenesisHash HeaderHash),
     boundaryEpoch :: !Word64,
@@ -631,7 +635,7 @@ wrapBoundaryBytes = mappend "\130\NUL"
 --------------------------------------------------------------------------------
 -- BlockSignature
 --------------------------------------------------------------------------------
-
+type BlockSignature :: Type
 type BlockSignature = ABlockSignature ()
 
 -- | Signature of the 'Block'
@@ -640,6 +644,7 @@ type BlockSignature = ABlockSignature ()
 --
 --   1. A delegation certificate from a genesis key to the block signer
 --   2. The actual signature over `ToSign`
+type ABlockSignature :: Type -> Type
 data ABlockSignature a = ABlockSignature
   { delegationCertificate :: !(Delegation.ACertificate a),
     signature :: !(Signature ToSign)
@@ -709,6 +714,7 @@ recoverSignedBytes es h = Annotated (headerToSign es h) bytes
         ]
 
 -- | Data to be signed in 'Block'
+type ToSign :: Type
 data ToSign = ToSign
   { -- | Hash of previous header in the chain
     tsHeaderHash :: !HeaderHash,

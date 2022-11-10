@@ -13,6 +13,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -74,6 +75,7 @@ import qualified Text.JSON.Canonical as Canonical
   )
 
 -- | Lovelace is the least possible unit of currency
+type Lovelace :: Type
 newtype Lovelace = Lovelace
   { unLovelace :: Word64
   }
@@ -107,6 +109,7 @@ instance Monad m => Canonical.ToJSON m Lovelace where
 instance Canonical.ReportSchemaErrors m => Canonical.FromJSON m Lovelace where
   fromJSON = fmap Lovelace . Canonical.fromJSON
 
+type LovelaceError :: Type
 data LovelaceError
   = LovelaceOverflow Word64
   | LovelaceTooLarge Integer

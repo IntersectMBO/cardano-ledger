@@ -4,6 +4,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -53,9 +54,11 @@ import qualified Formatting.Buildable as B
 -- | A witness is a proof that a transaction is allowed to spend the funds it
 --   spends (by providing signatures, redeeming scripts, etc). A separate proof
 --   is provided for each input.
+type TxWitness :: Type
 type TxWitness = Vector TxInWitness
 
 -- | A witness for a single input
+type TxInWitness :: Type
 data TxInWitness
   = -- | VKWitness twKey twSig
     VKWitness !VerificationKey !TxSig
@@ -119,6 +122,7 @@ instance FromCBOR TxInWitness where
       tag -> cborError $ DecoderErrorUnknownTag "TxInWitness" tag
 
 -- | Data that is being signed when creating a TxSig
+type TxSigData :: Type
 newtype TxSigData = TxSigData
   { txSigTxHash :: Hash Tx
   }
@@ -141,4 +145,5 @@ instance FromCBOR TxSigData where
   fromCBOR = TxSigData <$> fromCBOR
 
 -- | 'Signature' of addrId
+type TxSig :: Type
 type TxSig = Signature TxSigData

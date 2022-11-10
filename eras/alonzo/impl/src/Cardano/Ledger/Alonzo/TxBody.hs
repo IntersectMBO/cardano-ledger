@@ -712,7 +712,7 @@ txnetworkid' (TxBodyConstr (Memo raw _)) = _txnetworkid raw
 --------------------------------------------------------------------------------
 
 instance
-  (Era era, Val (Value era), DecodeNonNegative (Value era), ToCBOR (CompactForm (Value era))) =>
+  (Era era, Val (Value era), DecodeNonNegative (Value era)) =>
   ToCBOR (AlonzoTxOut era)
   where
   toCBOR (TxOutCompact addr cv) =

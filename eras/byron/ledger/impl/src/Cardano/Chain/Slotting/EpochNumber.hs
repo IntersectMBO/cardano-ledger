@@ -6,6 +6,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Chain.Slotting.EpochNumber
@@ -25,6 +26,7 @@ import NoThunks.Class (NoThunks (..))
 import Text.JSON.Canonical (FromJSON (..), ToJSON (..))
 
 -- | Index of epoch.
+type EpochNumber :: Type
 newtype EpochNumber = EpochNumber
   { getEpochNumber :: Word64
   }

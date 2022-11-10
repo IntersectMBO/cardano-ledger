@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -28,6 +29,7 @@ import Text.JSON.Canonical
   )
 
 -- | A 'KeyHash' refers to a 'VerificationKey'
+type KeyHash :: Type
 newtype KeyHash = KeyHash
   { unKeyHash :: AddressHash VerificationKey
   }

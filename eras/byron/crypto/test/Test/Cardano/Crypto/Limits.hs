@@ -1,6 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -42,6 +43,7 @@ tests = checkParallel $$discover
 --   TODO should check for overflow in the Num instance.
 --   Although, if the limit is anywhere near maxBound :: Word32 then something
 --   is almost certainly amiss.
+type Limit :: Type -> Type
 newtype Limit t = Limit
   { getLimit :: Word32
   }

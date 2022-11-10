@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 
 module Cardano.Chain.Delegation.Validation.Scheduling
   ( -- * Scheduling
@@ -46,6 +47,7 @@ import NoThunks.Class (NoThunks (..))
 -- Scheduling
 --------------------------------------------------------------------------------
 
+type Environment :: Type
 data Environment = Environment
   { protocolMagic :: !(Annotated ProtocolMagicId ByteString),
     allowedDelegators :: !(Set KeyHash),
@@ -55,6 +57,7 @@ data Environment = Environment
   }
   deriving (Eq, Show, Generic, NFData)
 
+type State :: Type
 data State = State
   { scheduledDelegations :: !(Seq ScheduledDelegation),
     keyEpochDelegations :: !(Set (EpochNumber, KeyHash))
@@ -74,6 +77,7 @@ instance ToCBOR State where
       <> toCBOR (toList (scheduledDelegations s))
       <> toCBOR (keyEpochDelegations s)
 
+type ScheduledDelegation :: Type
 data ScheduledDelegation = ScheduledDelegation
   { sdSlot :: !SlotNumber,
     sdDelegator :: !KeyHash,
@@ -96,6 +100,7 @@ instance ToCBOR ScheduledDelegation where
       <> toCBOR (sdDelegator sd)
       <> toCBOR (sdDelegate sd)
 
+type Error :: Type
 data Error
   = -- | The delegation certificate has an invalid signature
     InvalidCertificate

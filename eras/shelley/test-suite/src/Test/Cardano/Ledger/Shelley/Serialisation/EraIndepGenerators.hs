@@ -65,7 +65,6 @@ import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys.Bootstrap (ChainCode (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
 import Cardano.Ledger.SafeHash (HasAlgorithm, SafeHash, unsafeMakeSafeHash)
-import Cardano.Ledger.Serialization (ToCBORGroup)
 import Cardano.Ledger.Shelley.API hiding (SignedDSIGN, TxBody)
 import Cardano.Ledger.Shelley.LedgerState (FutureGenDeleg, StashedAVVMAddresses)
 import qualified Cardano.Ledger.Shelley.Metadata as MD
@@ -880,7 +879,6 @@ genCoherentBlock = do
 
 instance
   ( Core.EraTx era,
-    ToCBOR (Core.Witnesses era),
     Arbitrary (Core.TxBody era),
     Arbitrary (Core.Value era),
     Arbitrary (Core.AuxiliaryData era),
@@ -893,7 +891,6 @@ instance
 
 instance
   ( Core.EraTxBody era,
-    ToCBORGroup (TxSeq era),
     EraSegWits era,
     Mock (Crypto era),
     Arbitrary (Core.Tx era),

@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -43,6 +44,7 @@ import Formatting (Format, bprint, build, later)
 import qualified Formatting.Buildable as B
 
 -- | Transaction + auxiliary data
+type TxAux :: Type
 type TxAux = ATxAux ()
 
 mkTxAux :: Tx -> TxWitness -> TxAux
@@ -54,6 +56,7 @@ annotateTxAux ta = Lazy.toStrict . slice bs <$> ta'
     bs = serialize ta
     ta' = unsafeDeserialize bs
 
+type ATxAux :: Type -> Type
 data ATxAux a = ATxAux
   { aTaTx :: !(Annotated Tx a),
     aTaWitness :: !(Annotated TxWitness a),

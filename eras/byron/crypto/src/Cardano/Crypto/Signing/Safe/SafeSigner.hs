@@ -1,3 +1,5 @@
+{-# LANGUAGE StandaloneKindSignatures #-}
+
 module Cardano.Crypto.Signing.Safe.SafeSigner
   ( SafeSigner (..),
     noPassSafeSigner,
@@ -11,6 +13,7 @@ import Cardano.Crypto.Signing.VerificationKey (VerificationKey (..))
 import Cardano.Prelude
 
 -- | SafeSigner datatype to encapsulate sensitive data
+type SafeSigner :: Type
 data SafeSigner = SafeSigner !SigningKey !PassPhrase
   deriving (Show)
 

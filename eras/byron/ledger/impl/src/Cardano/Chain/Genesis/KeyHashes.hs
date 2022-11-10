@@ -4,6 +4,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-missed-specialisations #-}
@@ -25,6 +26,7 @@ import Text.JSON.Canonical (FromJSON (..), ToJSON (..))
 
 -- | The set of genesis keys, who are able to produce blocks and submit votes
 --   and proposals in the Byron era
+type GenesisKeyHashes :: Type
 newtype GenesisKeyHashes = GenesisKeyHashes
   { unGenesisKeyHashes :: Set KeyHash
   }

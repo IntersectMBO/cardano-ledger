@@ -4,6 +4,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Cardano.Chain.Update.ApplicationName
@@ -34,6 +35,7 @@ import Formatting (bprint, int, stext)
 import qualified Formatting.Buildable as B
 import NoThunks.Class (NoThunks (..))
 
+type ApplicationName :: Type
 newtype ApplicationName = ApplicationName
   { unApplicationName :: Text
   }
@@ -51,6 +53,7 @@ instance ToCBOR ApplicationName where
 instance FromCBOR ApplicationName where
   fromCBOR = ApplicationName <$> fromCBOR
 
+type ApplicationNameError :: Type
 data ApplicationNameError
   = ApplicationNameTooLong Text
   | ApplicationNameNotAscii Text

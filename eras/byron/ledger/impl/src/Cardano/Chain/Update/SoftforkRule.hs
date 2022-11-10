@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -31,6 +32,7 @@ import Text.JSON.Canonical (FromJSON (..), ToJSON (..), fromJSField, mkObject)
 --   Softfork resolution threshold is the portion of total stake such that if
 --   total stake of issuers of blocks with some block version is greater than
 --   this portion, this block version becomes adopted.
+type SoftforkRule :: Type
 data SoftforkRule = SoftforkRule
   { -- | Initial threshold (right after proposal is confirmed).
     srInitThd :: !LovelacePortion,

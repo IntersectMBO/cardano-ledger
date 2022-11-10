@@ -5,6 +5,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -fno-warn-missed-specialisations #-}
@@ -54,6 +55,7 @@ import qualified Prelude
 -- | Representation of unparsed fields in Attributes. Newtype wrapper is used
 --   for clear backward compatibility between previous representation (which was
 --   just a single ByteString) during transition from Store to CBOR.
+type UnparsedFields :: Type
 newtype UnparsedFields
   = UnparsedFields (Map Word8 LBS.ByteString)
   deriving (Eq, Ord, Show, Generic)
@@ -74,6 +76,7 @@ mkAttributes dat = Attributes dat (UnparsedFields M.empty)
 
 -- | Convenient wrapper for the datatype to represent it (in binary format) as
 --   k-v map
+type Attributes :: Type -> Type
 data Attributes h = Attributes
   { -- | Data, containing known keys (deserialized)
     attrData :: !h,

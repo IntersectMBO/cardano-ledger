@@ -7,6 +7,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | Functionality related to 'Address' data type and related types.
@@ -110,6 +111,7 @@ import Text.JSON.Canonical
 
 -- | Hash of this data is stored in 'Address'. This type exists mostly
 --   for internal usage.
+type Address' :: Type
 newtype Address' = Address'
   { unAddress' :: (AddrType, AddrSpendingData, Attributes AddrAttributes)
   }
@@ -126,6 +128,7 @@ instance FromCBOR Address' where
     fmap Address' $ (,,) <$> fromCBOR <*> fromCBOR <*> fromCBOR
 
 -- | 'Address' is where you can send Lovelace
+type Address :: Type
 data Address = Address
   { -- | Root of imaginary pseudo Merkle tree stored in this address.
     addrRoot :: !(AddressHash Address'),
