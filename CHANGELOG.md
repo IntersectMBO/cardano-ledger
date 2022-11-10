@@ -12,6 +12,8 @@ in the naming of release branches.
 
 ### Added
 
+- Add `PlutusDebug` to `TransactionScriptFailure.ValidationFailedV{1|2}`: #3135
+  - Also add a harmless dummy `Show` instance for `PlutusDebug` with a constant `"PlutusDebug Omitted"`
 - Create a `cardano-ledger-binary` package that does versioned serialization as a
   replacement for `cardano-binary` package: #3063, #3078
 - Start on the `cardano-ledger-api` package and implement
