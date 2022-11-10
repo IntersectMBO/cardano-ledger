@@ -1,5 +1,18 @@
 # Contributing to the Cardano Ledger
 
+## Roles and responsibilities
+
+The
+[@cardano-ledger](https://github.com/orgs/input-output-hk/teams/cardano-ledger)
+group is responsible for
+helping with reviewing and merging pull requests, adjudicating technical (or other) disputes,
+releasing the ledger packages on [CHaP](https://github.com/input-output-hk/cardano-haskell-packages).
+
+@hamishmack can help with issues regarding this repository's continuous integration and nix infrastructure.
+
+**For security related issues** please consult the security file in the
+[Cardano engineering handbook](https://github.com/input-output-hk/cardano-engineering-handbook/blob/main/SECURITY.md).
+
 ## Branching Model
 
 We use [trunk based developement](https://trunkbaseddevelopment.com/).

@@ -1,6 +1,9 @@
 <h1 align="center">Cardano Ledger</h1>
 
 <p align="center">
+  <a href="https://input-output-hk.github.io/cardano-engineering-handbook">
+    <img alt="CEH" src="https://img.shields.io/badge/policy-Cardano%20Engineering%20Handbook-informational?style=for-the-badge" />
+  </a>
   <a href="https://github.com/input-output-hk/cardano-ledger/actions/workflows/haskell.yml">
     <img alt="GitHub Workflow Status (master)" src="https://img.shields.io/github/workflow/status/input-output-hk/cardano-ledger/Haskell%20CI/master.svg?style=for-the-badge" />
   </a>
