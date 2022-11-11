@@ -36,7 +36,6 @@ import qualified Data.VMap as VMap
 import qualified Data.Vector.Generic as VG
 import qualified Data.Vector.Generic.Mutable as VGM
 import Database.Persist.Sqlite
-import Database.Persist.Class.PersistEntity (SafeToInsert)
 
 -- Populate database
 

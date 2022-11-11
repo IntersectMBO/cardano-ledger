@@ -25,7 +25,7 @@ import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals (..), pvMajor)
 import Cardano.Ledger.Coin (DeltaCoin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.EpochBoundary (SnapShot (..), SnapShots (..))
+import Cardano.Ledger.EpochBoundary (SnapShot (..), SnapShots (..), calculatePoolStake)
 import Cardano.Ledger.Era (EraCrypto)
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.Shelley.Genesis (ShelleyGenesis (..), mkShelleyGlobals)
@@ -49,7 +49,6 @@ import Cardano.Ledger.Shelley.Rules
     ShelleyTICKF,
     adoptGenesisDelegs,
     calculatePoolDistr,
-    calculatePoolStake,
     updateRewards,
     validatingTickTransition,
   )

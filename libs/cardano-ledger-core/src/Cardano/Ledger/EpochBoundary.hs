@@ -33,6 +33,7 @@ module Cardano.Ledger.EpochBoundary
     maxPool',
     calculatePoolDistr,
     calculatePoolDistr',
+    calculatePoolStake,
   )
 where
 

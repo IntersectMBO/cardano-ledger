@@ -75,7 +75,7 @@ constraints:
 
   , protolude >= 0.3.2
 
-  , persistent < 2.14
+  , persistent < 2.15
 
   -- cardano-crypto-class: has instance derivation problems with newer 'vector'
   -- added to the cabal file on master but needed here still
