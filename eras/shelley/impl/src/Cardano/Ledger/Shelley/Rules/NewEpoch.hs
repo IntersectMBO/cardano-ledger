@@ -172,11 +172,11 @@ newEpochTransition = do
       let adaPots = totalAdaPotsES es'''
       tellEvent $ TotalAdaPotsEvent adaPots
       let pd' = ssStakeMarkPoolDistr (esSnapshots es)
-            -- RUPD does not alter `esSnaphots`
-            -- MIR does not alter `esSnaphots`
-            -- SNAP rotates mark to set.
-            --
-            -- Thus: pd' = calcPoolDistr $ _pstakeSet $ esSnapshots es'''
+      -- RUPD does not alter `esSnaphots`
+      -- MIR does not alter `esSnaphots`
+      -- SNAP rotates mark to set.
+      --
+      -- Thus: pd' = calcPoolDistr $ _pstakeSet $ esSnapshots es'''
 
       pure $
         src

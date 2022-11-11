@@ -222,8 +222,8 @@ registerGenesisStaking
           { esLState = newLedgerState,
             esSnapshots =
               (esSnapshots oldEpochState)
-                { ssStakeMark = initSnapShot
-                , ssStakeMarkPoolDistr = calculatePoolDistr initSnapShot
+                { ssStakeMark = initSnapShot,
+                  ssStakeMarkPoolDistr = calculatePoolDistr initSnapShot
                 }
           }
       newLedgerState =

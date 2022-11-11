@@ -49,10 +49,10 @@ import Cardano.Ledger.Compactible
 import Cardano.Ledger.Credential (Credential)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.PoolParams (PoolParams)
 import qualified Cardano.Ledger.PoolDistr as PD
-import Cardano.Ledger.Serialization (decodeRecordNamedT)
+import Cardano.Ledger.PoolParams (PoolParams)
 import qualified Cardano.Ledger.PoolParams as PP
+import Cardano.Ledger.Serialization (decodeRecordNamedT)
 import Cardano.Ledger.Val ((<+>), (<×>))
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans (lift)
@@ -203,7 +203,7 @@ data SnapShots c = SnapShots
     ssFee :: !Coin
   }
   deriving (Show, Eq, Generic)
-  deriving (NoThunks) via AllowThunksIn '["ssStakeMark","ssStakeMarkPoolDistr"] (SnapShots c)
+  deriving (NoThunks) via AllowThunksIn '["ssStakeMark", "ssStakeMarkPoolDistr"] (SnapShots c)
 
 instance NFData (SnapShots c)
 
@@ -235,7 +235,6 @@ emptySnapShot = SnapShot (Stake VMap.empty) VMap.empty VMap.empty
 
 emptySnapShots :: SnapShots c
 emptySnapShots = SnapShots emptySnapShot (calculatePoolDistr emptySnapShot) emptySnapShot emptySnapShot (Coin 0)
-
 
 calculatePoolDistr :: SnapShot c -> PD.PoolDistr c
 calculatePoolDistr = calculatePoolDistr' (const True)
