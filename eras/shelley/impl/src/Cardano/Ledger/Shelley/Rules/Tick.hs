@@ -1,7 +1,9 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -19,15 +21,16 @@ module Cardano.Ledger.Shelley.Rules.Tick
     PredicateFailure,
     adoptGenesisDelegs,
     TICKF,
-    TickfPredicateFailure (..),
+    TickfPredicateFailure,
+    TickfEvent,
   )
 where
 
-import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..), epochInfoPure)
+import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..), epochInfoPure, quorum)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys (GenDelegs (..))
-import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
+import Cardano.Ledger.Shelley.Constraints (UsesPParams, UsesTxOut, UsesValue)
 import Cardano.Ledger.Shelley.EpochBoundary (SnapShots (_pstakeMark, _pstakeMarkPoolDistr))
 import Cardano.Ledger.Shelley.LedgerState
   ( DPState (..),
@@ -36,11 +39,15 @@ import Cardano.Ledger.Shelley.LedgerState
     FutureGenDeleg (..),
     LedgerState (..),
     NewEpochState (..),
+    PPUPState (..),
     PulsingRewUpdate,
+    UTxOState (..),
+    proposals,
   )
 import Cardano.Ledger.Shelley.Rules.NewEpoch (NEWEPOCH, NewEpochEvent, NewEpochPredicateFailure)
 import Cardano.Ledger.Shelley.Rules.Rupd (RUPD, RupdEnv (..), RupdEvent, RupdPredicateFailure)
-import Cardano.Ledger.Slot (EpochNo, SlotNo, epochInfoEpoch)
+import Cardano.Ledger.Shelley.Rules.Upec (votedValue)
+import Cardano.Ledger.Slot (EpochNo (unEpochNo), SlotNo, epochInfoEpoch)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (⨃))
 import Control.State.Transition
@@ -138,8 +145,6 @@ adoptGenesisDelegs es slot = es'
     ls' = ls {lsDPState = dp'}
     es' = es {esLState = ls'}
 
--- | This is a limited version of 'bheadTransition' which is suitable for the
--- future ledger view.
 validatingTickTransition ::
   forall tick era.
   ( Embed (Core.EraRule "NEWEPOCH" era) (tick era),
@@ -162,6 +167,64 @@ validatingTickTransition nes slot = do
   let es'' = adoptGenesisDelegs (nesEs nes') slot
 
   pure $ nes' {nesEs = es''}
+
+-- | This is a limited version of 'validatingTickTransition' which is only suitable
+-- for the future ledger view.
+validatingTickTransitionFORECAST ::
+  forall tick era.
+  ( State (tick era) ~ NewEpochState era,
+    State (Core.EraRule "PPUP" era) ~ PPUPState era,
+    UsesPParams era,
+
+    BaseM (tick era) ~ ShelleyBase,
+    STS (tick era)
+  ) =>
+  NewEpochState era ->
+  SlotNo ->
+  TransitionRule (tick era)
+validatingTickTransitionFORECAST nes slot = do
+  -- This whole function is a specialization of an inlined 'NEWEPOCH'.
+  --
+  -- The ledger view is built entirely from the 'nesPd' and 'esPP' and
+  -- '_genDelegs', so those are the only pieces we bother to update here.
+
+  epoch <- liftSTS $ do
+    ei <- asks epochInfoPure
+    epochInfoEpoch ei slot
+
+  let es = nesEs nes
+      EpochState
+        { esSnapshots = ss,
+          esLState = ls,
+          esPp = pp
+        } = es
+
+  -- the relevant 'NEWEPOCH' logic
+  let pd' = _pstakeMarkPoolDistr ss
+  if unEpochNo epoch /= unEpochNo (nesEL nes) + 1 then pure nes else do
+
+    -- We can skip 'SNAP'; we already have the equivalent pd'.
+
+    -- We can skip 'MIR', 'POOLREAP', 'UPEC' (which calls 'NEWPP'); we don't
+    -- need to do the checks: if the checks would fail, then the node will fail
+    -- in the 'TICK' rule if it ever tries to validate blocks for which the
+    -- return value here was used to validate their headers.
+
+    coreNodeQuorum <- liftSTS $ asks quorum
+
+    let pp' =
+            maybe pp id
+          $ votedValue
+              (proposals $ _ppups $ lsUTxOState ls)
+              pp
+              (fromIntegral coreNodeQuorum)
+
+    pure $! nes {
+        nesPd = pd'
+      , nesEs = adoptGenesisDelegs
+                  (es { esPrevPp = pp, esPp = pp' })
+                  slot
+      }
 
 bheadTransition ::
   forall era.
@@ -230,38 +293,18 @@ to tick the ledger state to a future slot.
 
 data TICKF era
 
-newtype TickfPredicateFailure era
-  = TickfNewEpochFailure (PredicateFailure (Core.EraRule "NEWEPOCH" era)) -- Subtransition Failures
-  deriving (Generic)
+-- | TICKF cannot fail
+data TickfPredicateFailure era
+  deriving (Eq, Generic, NoThunks, Show)
 
-deriving stock instance
-  ( Era era,
-    Show (PredicateFailure (Core.EraRule "NEWEPOCH" era))
-  ) =>
-  Show (TickfPredicateFailure era)
-
-deriving stock instance
-  ( Era era,
-    Eq (PredicateFailure (Core.EraRule "NEWEPOCH" era))
-  ) =>
-  Eq (TickfPredicateFailure era)
+-- | TICKF has no observable behavior
+data TickfEvent era
 
 instance
-  ( UsesTxOut era,
-    UsesValue era,
-    NoThunks (PredicateFailure (Core.EraRule "NEWEPOCH" era))
-  ) =>
-  NoThunks (TickfPredicateFailure era)
+  ( State (Core.EraRule "PPUP" era) ~ PPUPState era,
+    UsesPParams era,
 
-newtype TickfEvent era
-  = TickfNewEpochEvent (Event (Core.EraRule "NEWEPOCH" era)) -- Subtransition Events
-
-instance
-  ( Era era,
-    Embed (Core.EraRule "NEWEPOCH" era) (TICKF era),
-    Environment (Core.EraRule "NEWEPOCH" era) ~ (),
-    State (Core.EraRule "NEWEPOCH" era) ~ NewEpochState era,
-    Signal (Core.EraRule "NEWEPOCH" era) ~ EpochNo
+    Era era
   ) =>
   STS (TICKF era)
   where
@@ -280,17 +323,5 @@ instance
   transitionRules =
     [ do
         TRC ((), nes, slot) <- judgmentContext
-        validatingTickTransition nes slot
+        validatingTickTransitionFORECAST nes slot
     ]
-
-instance
-  ( UsesTxOut era,
-    UsesValue era,
-    STS (NEWEPOCH era),
-    PredicateFailure (Core.EraRule "NEWEPOCH" era) ~ NewEpochPredicateFailure era,
-    Event (Core.EraRule "NEWEPOCH" era) ~ NewEpochEvent era
-  ) =>
-  Embed (NEWEPOCH era) (TICKF era)
-  where
-  wrapFailed = TickfNewEpochFailure
-  wrapEvent = TickfNewEpochEvent
