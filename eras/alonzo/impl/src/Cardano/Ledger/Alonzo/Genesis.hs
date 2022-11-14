@@ -318,55 +318,30 @@ instance FromJSON (AlonzoPParams era) where
   parseJSON =
     Aeson.withObject "PParams" $ \obj ->
       AlonzoPParams
-        <$> obj
-          .: "minFeeA"
-        <*> obj
-          .: "minFeeB"
-        <*> obj
-          .: "maxBlockBodySize"
-        <*> obj
-          .: "maxTxSize"
-        <*> obj
-          .: "maxBlockHeaderSize"
-        <*> obj
-          .: "keyDeposit"
-        <*> obj
-          .: "poolDeposit"
-        <*> obj
-          .: "eMax"
-        <*> obj
-          .: "nOpt"
-        <*> obj
-          .: "a0"
-        <*> obj
-          .: "rho"
-        <*> obj
-          .: "tau"
-        <*> obj
-          .: "decentralisationParam"
-        <*> obj
-          .: "extraEntropy"
-        <*> obj
-          .: "protocolVersion"
-        <*> obj
-          .: "minPoolCost"
-          .!= mempty
-        <*> obj
-          .: "lovelacePerUTxOWord"
-        <*> obj
-          .: "costmdls"
-        <*> obj
-          .: "prices"
-        <*> obj
-          .: "maxTxExUnits"
-        <*> obj
-          .: "maxBlockExUnits"
-        <*> obj
-          .: "maxValSize"
-        <*> obj
-          .: "collateralPercentage"
-        <*> obj
-          .: "maxCollateralInputs"
+        <$> obj .: "minFeeA"
+        <*> obj .: "minFeeB"
+        <*> obj .: "maxBlockBodySize"
+        <*> obj .: "maxTxSize"
+        <*> obj .: "maxBlockHeaderSize"
+        <*> obj .: "keyDeposit"
+        <*> obj .: "poolDeposit"
+        <*> obj .: "eMax"
+        <*> obj .: "nOpt"
+        <*> obj .: "a0"
+        <*> obj .: "rho"
+        <*> obj .: "tau"
+        <*> obj .: "decentralisationParam"
+        <*> obj .: "extraEntropy"
+        <*> obj .: "protocolVersion"
+        <*> obj .: "minPoolCost" .!= mempty
+        <*> obj .: "lovelacePerUTxOWord"
+        <*> obj .: "costmdls"
+        <*> obj .: "prices"
+        <*> obj .: "maxTxExUnits"
+        <*> obj .: "maxBlockExUnits"
+        <*> obj .: "maxValSize"
+        <*> obj .: "collateralPercentage"
+        <*> obj .: "maxCollateralInputs"
 
 deriving instance ToJSON (AlonzoPParamsUpdate era)
 

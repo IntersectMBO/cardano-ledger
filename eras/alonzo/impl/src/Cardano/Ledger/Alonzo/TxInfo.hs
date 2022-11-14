@@ -71,6 +71,7 @@ import Cardano.Ledger.Alonzo.Scripts
   ( AlonzoScript (..),
     ExUnits (..),
     decodeCostModel,
+    encodeCostModel,
     getEvaluationContext,
     transProtocolVersion,
     validScript,
@@ -590,8 +591,10 @@ data PlutusDebugInfo
   | DebugBadHex String
 
 instance ToCBOR PlutusDebug where
-  toCBOR (PlutusDebugV1 a b c d e) = encode $ Sum PlutusDebugV1 0 !> To a !> To b !> To c !> To d !> To e
-  toCBOR (PlutusDebugV2 a b c d e) = encode $ Sum PlutusDebugV2 1 !> To a !> To b !> To c !> To d !> To e
+  toCBOR (PlutusDebugV1 a b c d e) =
+    encode $ Sum PlutusDebugV1 0 !> E encodeCostModel a !> To b !> To c !> To d !> To e
+  toCBOR (PlutusDebugV2 a b c d e) =
+    encode $ Sum PlutusDebugV2 1 !> E encodeCostModel a !> To b !> To c !> To d !> To e
 
 instance FromCBOR PlutusDebug where
   fromCBOR = decode (Summands "PlutusDebug" dec)

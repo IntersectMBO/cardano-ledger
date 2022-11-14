@@ -30,13 +30,13 @@ module Cardano.Ledger.Alonzo.Scripts
     -- * Cost Model
     CostModel,
     mkCostModel,
+    encodeCostModel,
     getCostModelLanguage,
     getCostModelParams,
     getEvaluationContext,
     ExUnits (ExUnits, exUnitsMem, exUnitsSteps, ..),
     ExUnits',
     Prices (..),
-    hashCostModel,
     decodeCostModelMap,
     decodeCostModel,
     CostModels (..),
@@ -52,14 +52,14 @@ import Cardano.Ledger.Binary
   ( Annotator,
     Decoder,
     DecoderError (..),
+    Encoding,
     FromCBOR (fromCBOR),
     ToCBOR (toCBOR),
-    byronProtVer,
     cborError,
     decodeMapByKey,
     encodeFoldableAsDefLenList,
+    encodeMap,
     getVersion64,
-    serialize',
   )
 import Cardano.Ledger.Binary.Coders
   ( Decode (Ann, D, From, Invalid, RecD, SumD, Summands),
@@ -82,11 +82,7 @@ import Cardano.Ledger.Core
   )
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.SafeHash
-  ( HashWithCrypto (..),
-    SafeHash,
-    SafeToHash (..),
-  )
+import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley (nativeMultiSigTag)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock)
 import qualified Cardano.Ledger.ShelleyMA.Timelocks as Timelocks
@@ -99,7 +95,7 @@ import Data.Either (isRight)
 import Data.Int (Int64)
 import Data.Map (Map)
 import Data.Measure (BoundedMeasure, Measure)
-import Data.Typeable (Proxy (..), Typeable)
+import Data.Typeable (Typeable)
 import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
@@ -267,20 +263,6 @@ instance Show CostModel where
 instance Ord CostModel where
   compare (CostModel l1 x _) (CostModel l2 y _) = compare l1 l2 <> compare x y
 
--- NOTE: Since cost model serializations need to be independently reproduced,
--- we use the 'canonical' serialization with definite list length.
-instance ToCBOR CostModel where
-  toCBOR (CostModel _ cm _) = encodeFoldableAsDefLenList toCBOR cm
-
--- See comment on the `ToCBOR` instance for the usage of byronProtVer
-instance SafeToHash CostModel where
-  originalBytes = serialize' byronProtVer
-
--- CostModel does not determine 'crypto' so make a HashWithCrypto
--- rather than a HashAnnotated instance.
-
-instance HashWithCrypto CostModel CostModel
-
 instance NoThunks CostModel
 
 instance NFData CostModel where
@@ -317,14 +299,6 @@ decodeCostModel lang = do
     Left e -> fail $ show e
     Right cm -> pure cm
 
-hashCostModel ::
-  forall e.
-  Era e =>
-  Proxy e ->
-  CostModel ->
-  SafeHash (EraCrypto e) CostModel
-hashCostModel _proxy = hashWithCrypto (Proxy @(EraCrypto e))
-
 getEvaluationContext :: CostModel -> PV1.EvaluationContext
 getEvaluationContext (CostModel _ _ ec) = ec
 
@@ -335,7 +309,12 @@ instance FromCBOR CostModels where
   fromCBOR = CostModels <$> decodeCostModelMap
 
 instance ToCBOR CostModels where
-  toCBOR = toCBOR . unCostModels
+  toCBOR = encodeMap toCBOR encodeCostModel . unCostModels
+
+-- | Encoding for the `CostModel`. Important to note that it differs from `Encoding` used
+-- by `Cardano.Ledger.Alonzo.PParams.getLanguageView`
+encodeCostModel :: CostModel -> Encoding
+encodeCostModel = encodeFoldableAsDefLenList toCBOR . getCostModelParams
 
 -- ==================================
 

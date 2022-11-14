@@ -257,7 +257,8 @@ in the naming of release branches.
 - The `Cardano.Ledger.Alonzo.Scripts` module no longer re-exports the
   `plutus-ledger-api`'s `assertWellFormedCostModelParams`. #3065
 - Removed unused `Data.BiMap` module from `cardano-data` #3089
-- Removed `getMultiSigBytes` as unused #?
+- Removed `getMultiSigBytes` as unused #3138
+- Removed `hashCostModel` as unused and invalid #3138
 
 ### Fixed
 

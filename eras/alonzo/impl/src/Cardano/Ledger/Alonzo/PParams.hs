@@ -43,6 +43,7 @@ import Cardano.Ledger.Alonzo.Scripts
     CostModels (..),
     ExUnits (..),
     Prices (..),
+    getCostModelLanguage,
     getCostModelParams,
   )
 import Cardano.Ledger.BaseTypes
@@ -61,6 +62,7 @@ import Cardano.Ledger.Binary
     FromCBORGroup (..),
     ToCBOR (..),
     ToCBORGroup (..),
+    encodeFoldableAsDefLenList,
     encodeFoldableAsIndefLenList,
     encodeMapLen,
     encodeNull,
@@ -509,14 +511,19 @@ updatePParams pp ppup =
 data LangDepView = LangDepView {tag :: ByteString, params :: ByteString}
   deriving (Eq, Show, Ord, Generic, NoThunks)
 
--- In the Alonzo era, the map of languages to cost models was mistakenly encoded
--- using an indefinite CBOR map (contrary to canonical CBOR, as intended) when
--- computing the script integrity hash.
--- For this reason, PlutusV1 remains with this encoding.
--- Future versions of Plutus, starting with PlutusV2 in the Babbage era, will
--- use the intended definite length encoding.
-legacyNonCanonicalCostModelEncoder :: CostModel -> Encoding
-legacyNonCanonicalCostModelEncoder = encodeFoldableAsIndefLenList toCBOR . getCostModelParams
+encodeCostModel :: CostModel -> Encoding
+encodeCostModel cm =
+  case getCostModelLanguage cm of
+    -- In the Alonzo era, the map of languages to cost models was mistakenly encoded
+    -- using an indefinite CBOR map (contrary to canonical CBOR, as intended) when
+    -- computing the script integrity hash.
+    -- For this reason, PlutusV1 remains with this encoding.
+    -- Future versions of Plutus, starting with PlutusV2 in the Babbage era, will
+    -- use the intended definite length encoding.
+    PlutusV1 -> encodeFoldableAsIndefLenList toCBOR $ getCostModelParams cm
+    -- Since cost model serializations need to be independently reproduced,
+    -- we use the 'canonical' serialization with definite list length.
+    PlutusV2 -> encodeFoldableAsDefLenList toCBOR $ getCostModelParams cm
 
 getLanguageView ::
   forall era.
@@ -531,16 +538,14 @@ getLanguageView pp lang =
     PlutusV1 ->
       LangDepView -- The silly double bagging is to keep compatibility with a past bug
         (serialize' version (serialize' version lang))
-        ( serialize' version $
-            serializeEncoding' version $
-              maybe encodeNull legacyNonCanonicalCostModelEncoder costModel
-        )
+        (serialize' version costModelEncoding)
     PlutusV2 ->
       LangDepView
         (serialize' version lang)
-        (serializeEncoding' version $ maybe encodeNull toCBOR costModel)
+        costModelEncoding
   where
     costModel = Map.lookup lang (unCostModels $ getField @"_costmdls" pp)
+    costModelEncoding = serializeEncoding' version $ maybe encodeNull encodeCostModel costModel
     version = BT.pvMajor $ getField @"_protocolVersion" pp
 
 encodeLangViews :: Set LangDepView -> Encoding
