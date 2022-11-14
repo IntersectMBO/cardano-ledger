@@ -26,7 +26,7 @@ import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Scripts (MultiSig (..))
 import Cardano.Ledger.Shelley.Tx (TxIn (..))
 import Cardano.Ledger.Shelley.TxBody
-  ( ShelleyTxBody (ShelleyTxBody, _inputs, _outputs, _txfee),
+  ( ShelleyTxBody (ShelleyTxBody, stbInputs, stbOutputs, stbTxFee),
     ShelleyTxOut (..),
     Wdrl (..),
   )
@@ -78,9 +78,9 @@ instance
 
   updateEraTxBody _utxo _pp _wits body' fee ins out =
     body'
-      { _txfee = fee,
-        _inputs = _inputs body' <> ins,
-        _outputs = _outputs body' :|> out
+      { stbTxFee = fee,
+        stbInputs = stbInputs body' <> ins,
+        stbOutputs = stbOutputs body' :|> out
       }
   genEraPParamsUpdate = genShelleyPParamsUpdate
   genEraPParams = genPParams

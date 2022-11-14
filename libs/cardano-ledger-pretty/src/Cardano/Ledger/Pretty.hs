@@ -152,9 +152,9 @@ import Cardano.Ledger.Shelley.TxBody
     PoolMetadata (..),
     PoolParams (..),
     ShelleyTxBody (..),
+    ShelleyTxBodyRaw (..),
     ShelleyTxOut (..),
     StakePoolRelay (..),
-    TxBodyRaw (..),
     Wdrl (..),
     WitVKey (..),
   )
@@ -1109,7 +1109,7 @@ ppTxBody ::
   PrettyA (PParamsUpdate era) =>
   ShelleyTxBody era ->
   PDoc
-ppTxBody (TxBodyConstr (Memo (TxBodyRaw ins outs cs wdrls fee ttl upd mdh) _)) =
+ppTxBody (TxBodyConstr (Memo (ShelleyTxBodyRaw ins outs cs wdrls fee ttl upd mdh) _)) =
   ppRecord
     "TxBody"
     [ ("inputs", ppSet ppTxIn ins),

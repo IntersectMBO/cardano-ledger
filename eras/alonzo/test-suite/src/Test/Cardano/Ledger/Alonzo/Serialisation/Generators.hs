@@ -462,22 +462,22 @@ instance Twiddle Coin where
 
 instance C.Crypto c => Twiddle (AlonzoTxBody (AlonzoEra c)) where
   twiddle txBody = do
-    inputs' <- twiddle $ inputs txBody
-    outputs' <- twiddle $ outputs txBody
-    fee' <- twiddle $ txfee txBody
+    inputs' <- twiddle $ atbInputs txBody
+    outputs' <- twiddle $ atbOutputs txBody
+    fee' <- twiddle $ atbTxFee txBody
     -- Empty collateral can be represented by empty set or the
     -- value can be omitted entirely
-    ttl' <- twiddleStrictMaybe . invalidHereafter $ txvldt txBody
-    cert' <- emptyOrNothing txBody txcerts
-    wdrls' <- twiddle $ txwdrls txBody
-    update' <- twiddleStrictMaybe $ txUpdates txBody
-    auxDataHash' <- twiddleStrictMaybe $ adHash txBody
-    validityStart' <- twiddleStrictMaybe . invalidBefore $ txvldt txBody
-    mint' <- twiddle $ mint txBody
-    scriptDataHash' <- twiddleStrictMaybe $ scriptIntegrityHash txBody
-    collateral' <- emptyOrNothing txBody collateral
-    requiredSigners' <- emptyOrNothing txBody reqSignerHashes
-    networkId' <- twiddleStrictMaybe $ txnetworkid txBody
+    ttl' <- twiddleStrictMaybe . invalidHereafter $ atbValidityInterval txBody
+    cert' <- emptyOrNothing txBody atbCerts
+    wdrls' <- twiddle $ atbWdrls txBody
+    update' <- twiddleStrictMaybe $ atbUpdate txBody
+    auxDataHash' <- twiddleStrictMaybe $ atbAuxDataHash txBody
+    validityStart' <- twiddleStrictMaybe . invalidBefore $ atbValidityInterval txBody
+    mint' <- twiddle $ atbMint txBody
+    scriptDataHash' <- twiddleStrictMaybe $ atbScriptIntegrityHash txBody
+    collateral' <- emptyOrNothing txBody atbCollateral
+    requiredSigners' <- emptyOrNothing txBody atbReqSignerHashes
+    networkId' <- twiddleStrictMaybe $ atbTxNetworkId txBody
     mp <- elements [TMap, TMapI]
     let fields =
           [ (TInt 0, inputs'),

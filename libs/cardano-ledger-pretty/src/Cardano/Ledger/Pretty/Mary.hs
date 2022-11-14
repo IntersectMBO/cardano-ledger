@@ -6,6 +6,7 @@
 
 module Cardano.Ledger.Pretty.Mary where
 
+import Cardano.Binary (ToCBOR)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
@@ -88,11 +89,12 @@ ppTxBody ::
   ( Core.EraTxOut era,
     PrettyA (Core.Value era),
     PrettyA (Core.PParamsUpdate era),
+    ToCBOR (Core.PParamsUpdate era),
     Core.TxOut era ~ ShelleyTxOut era
   ) =>
   MATxBody era ->
   PDoc
-ppTxBody (TxBody' i o d w fee vi u m mnt) =
+ppTxBody (MATxBody i o d w fee vi u m mnt) =
   ppRecord
     "TxBody(Mary or Allegra)"
     [ ("inputs", ppSet ppTxIn i),
@@ -110,6 +112,7 @@ instance
   ( Core.EraTxOut era,
     PrettyA (Core.Value era),
     PrettyA (Core.PParamsUpdate era),
+    ToCBOR (Core.PParamsUpdate era),
     Core.TxOut era ~ ShelleyTxOut era
   ) =>
   PrettyA (MATxBody era)

@@ -391,19 +391,19 @@ instance Mock c => EraGen (AlonzoEra c) where
       langViews = Set.map (getLanguageView pp) langs
       new =
         txb
-          { inputs = inputs txb <> txin,
-            collateral = collateral txb <> Set.filter (okAsCollateral utxo) txin, -- In Alonzo, extra inputs also are added to collateral
-            txfee = coinx,
-            outputs = outputs txb :|> txout,
+          { atbInputs = atbInputs txb <> txin,
+            atbCollateral = atbCollateral txb <> Set.filter (okAsCollateral utxo) txin, -- In Alonzo, extra inputs also are added to collateral
+            atbTxFee = coinx,
+            atbOutputs = atbOutputs txb :|> txout,
             -- The witnesses may have changed, recompute the scriptIntegrityHash.
-            scriptIntegrityHash =
+            atbScriptIntegrityHash =
               hashScriptIntegrity
                 langViews
                 (witnesses ^. rdmrsTxWitsL)
                 (witnesses ^. datsTxWitsL)
           }
 
-  addInputs txb txin = txb {inputs = inputs txb <> txin}
+  addInputs txb txin = txb {atbInputs = atbInputs txb <> txin}
 
   genEraPParamsUpdate = genAlonzoPParamsUpdate
   genEraPParams = genAlonzoPParams

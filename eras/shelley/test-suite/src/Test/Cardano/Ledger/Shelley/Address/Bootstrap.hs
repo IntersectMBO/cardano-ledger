@@ -210,7 +210,7 @@ aliceWitness =
 aliceBadWitness :: BootstrapWitness C_crypto
 aliceBadWitness =
   makeBootstrapWitness
-    (extractHash (hashAnnotated txBody {_ttl = SlotNo 100000000}))
+    (extractHash (hashAnnotated txBody {stbTTL = SlotNo 100000000}))
     aliceSigningKey
     (Byron.addrAttributes aliceByronAddr)
 
@@ -225,14 +225,14 @@ coinsToBob = Coin 1000
 txBody :: ShelleyTxBody C
 txBody =
   ShelleyTxBody
-    { _inputs = Set.fromList [TxIn genesisId minBound],
-      _outputs = StrictSeq.fromList [ShelleyTxOut bobAddr coinsToBob, ShelleyTxOut aliceAddr change],
-      _certs = StrictSeq.fromList mempty,
-      _wdrls = Wdrl Map.empty,
-      _txfee = fee,
-      _ttl = SlotNo 10,
-      _txUpdate = SNothing,
-      _mdHash = SNothing
+    { stbInputs = Set.fromList [TxIn genesisId minBound],
+      stbOutputs = StrictSeq.fromList [ShelleyTxOut bobAddr coinsToBob, ShelleyTxOut aliceAddr change],
+      stbCerts = StrictSeq.fromList mempty,
+      stbWdrls = Wdrl Map.empty,
+      stbTxFee = fee,
+      stbTTL = SlotNo 10,
+      stbUpdate = SNothing,
+      stbMDHash = SNothing
     }
   where
     change = (aliceInitCoin <-> coinsToBob) <-> fee
