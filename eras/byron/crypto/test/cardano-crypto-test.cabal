@@ -29,7 +29,7 @@ data-files:          golden/AbstractHash
                      golden/json/ProtocolMagic_Legacy_NMMustBeNothing
 
 common base
-  build-depends:      base >= 4.12 && < 4.17
+  build-depends:      base >= 4.12 && < 5
 
 common project-config
   default-language:   Haskell2010

@@ -119,7 +119,7 @@ flag test-normal-form
     manual: True
 
 common base
-  build-depends:      base >= 4.12 && < 4.17
+  build-depends:      base >= 4.12 && < 5
 
 common project-config
   default-language:   Haskell2010
