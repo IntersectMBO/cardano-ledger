@@ -1,6 +1,6 @@
--- | Defines the requirements on an era to be testable
 {-# LANGUAGE UndecidableSuperClasses #-}
 
+-- | Defines the requirements on an era to be testable
 module Test.Cardano.Ledger.TestableEra where
 
 import Cardano.Ledger.Shelley.API
