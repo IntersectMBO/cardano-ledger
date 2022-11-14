@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 
 -- | Validation rules for registering votes and confirming proposals
 --
@@ -48,6 +49,7 @@ import qualified Data.Map.Strict as M
 import qualified Data.Set as Set
 
 -- | Environment used to register votes and confirm proposals
+type Environment :: Type
 data Environment = Environment
   { veCurrentSlot :: SlotNumber,
     veConfirmationThreshold :: Int,
@@ -57,6 +59,7 @@ data Environment = Environment
   deriving anyclass (NFData)
 
 -- | Environment required to validate and register a vote
+type RegistrationEnvironment :: Type
 data RegistrationEnvironment = RegistrationEnvironment
   { vreRegisteredUpdateProposal :: !(Set UpId),
     vreDelegationMap :: !Delegation.Map
@@ -65,14 +68,17 @@ data RegistrationEnvironment = RegistrationEnvironment
   deriving anyclass (NFData)
 
 -- | State keeps track of registered votes and confirmed proposals
+type State :: Type
 data State = State
   { vsVotes :: !RegisteredVotes,
     vsConfirmedProposals :: !(Map UpId SlotNumber)
   }
 
+type RegisteredVotes :: Type
 type RegisteredVotes = Map UpId (Set KeyHash)
 
 -- | Error captures the ways in which vote registration could fail
+type Error :: Type
 data Error
   = VotingInvalidSignature
   | VotingProposalNotRegistered UpId

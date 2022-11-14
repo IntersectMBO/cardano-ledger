@@ -1,7 +1,7 @@
 cabal-version: 2.2
 
 name:                cardano-ledger-shelley-test
-version:             0.1.1.1
+version:             0.1.1.2
 description:         Test helpers from cardano-ledger-shelley exposed to other packages
 license:             Apache-2.0
 author:              IOHK Formal Methods Team
@@ -20,7 +20,7 @@ source-repository head
   subdir:   eras/shelley/test-suite
 
 common base
-  build-depends:      base >= 4.12 && < 4.15
+  build-depends:      base >= 4.12 && < 4.17
 
 common project-config
   default-language:   Haskell2010
@@ -237,8 +237,7 @@ benchmark mainbench
                 set-algebra,
                 small-steps,
                 small-steps-test,
-                cardano-strict-containers,
-                transformers
+                cardano-strict-containers
   ghc-options:
       -threaded
       -rtsopts

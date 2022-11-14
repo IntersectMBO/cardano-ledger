@@ -5,6 +5,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -51,6 +52,7 @@ import Text.JSON.Canonical
 
 -- | Genesis data contains all data which determines consensus rules. It must be
 --   same for all nodes. It's used to initialize global state, slotting, etc.
+type GenesisData :: Type
 data GenesisData = GenesisData
   { gdGenesisKeyHashes :: !GenesisKeyHashes,
     gdHeavyDelegation :: !GenesisDelegation,
@@ -101,6 +103,7 @@ instance MonadError SchemaError m => FromJSON m GenesisData where
       <*> (ProtocolMagicId <$> fromJSField protocolConsts "protocolMagic")
       <*> fromJSField obj "avvmDistr"
 
+type GenesisDataError :: Type
 data GenesisDataError
   = GenesisDataParseError Text
   | GenesisDataSchemaError SchemaError

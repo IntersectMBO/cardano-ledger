@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Cardano.Crypto.Signing.Redeem.Signature
@@ -33,6 +34,7 @@ import Data.Coerce (coerce)
 import qualified Formatting.Buildable as B (Buildable (..))
 
 -- | Wrapper around 'Ed25519.Signature'
+type RedeemSignature :: Type -> Type
 newtype RedeemSignature a
   = RedeemSignature Ed25519.Signature
   deriving (Eq, Show, Generic, NFData, FromCBOR, ToCBOR)

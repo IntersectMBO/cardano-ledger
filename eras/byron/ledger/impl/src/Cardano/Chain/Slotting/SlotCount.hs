@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 
 module Cardano.Chain.Slotting.SlotCount
   ( SlotCount (..),
@@ -13,6 +14,7 @@ import Cardano.Prelude
 import Formatting.Buildable (Buildable)
 
 -- | A number of slots
+type SlotCount :: Type
 newtype SlotCount = SlotCount
   { unSlotCount :: Word64
   }

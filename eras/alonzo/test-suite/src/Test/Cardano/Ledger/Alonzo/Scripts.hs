@@ -9,7 +9,7 @@ import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Data.ByteString.Short (ShortByteString)
 import Numeric.Natural (Natural)
-import qualified Plutus.V1.Ledger.Examples as Plutus
+import qualified PlutusLedgerApi.Test.Examples as Plutus
   ( alwaysFailingNAryFunction,
     alwaysSucceedingNAryFunction,
     saltFunction,

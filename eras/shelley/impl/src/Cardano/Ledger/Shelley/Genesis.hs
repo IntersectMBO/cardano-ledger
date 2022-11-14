@@ -314,7 +314,7 @@ instance Era era => FromCBOR (ShelleyGenesis era) where
 
 genesisUTxO ::
   forall era.
-  (Era era, EraTxOut era) =>
+  EraTxOut era =>
   ShelleyGenesis era ->
   UTxO era
 genesisUTxO genesis =

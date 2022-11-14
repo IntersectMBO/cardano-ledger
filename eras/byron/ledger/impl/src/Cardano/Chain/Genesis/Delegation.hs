@@ -5,6 +5,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -40,6 +41,7 @@ import Text.JSON.Canonical (FromJSON (..), ReportSchemaErrors (..), ToJSON (..))
 --      equal to the key in the map.
 --   3. Delegates can't be issuers, i. e. transitive delegation is not
 --      supported. It's not needed in genesis, it can always be reduced.
+type GenesisDelegation :: Type
 newtype GenesisDelegation = UnsafeGenesisDelegation
   { unGenesisDelegation :: Map KeyHash Certificate
   }
@@ -68,6 +70,7 @@ instance FromCBOR GenesisDelegation where
     enforceSize "GenesisDelegation" 1
     UnsafeGenesisDelegation <$> fromCBOR @(Map KeyHash Certificate)
 
+type GenesisDelegationError :: Type
 data GenesisDelegationError
   = GenesisDelegationDuplicateIssuer
   | GenesisDelegationInvalidKey KeyHash KeyHash

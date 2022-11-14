@@ -66,7 +66,6 @@ import Control.State.Transition
 import qualified Data.ByteString as BS
 import Data.Coders (decodeRecordSum)
 import Data.Kind (Type)
-import Data.Typeable (Typeable)
 import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
 import GHC.Records (HasField (getField))
@@ -129,7 +128,7 @@ data PoolEvent era
   | ReregisterPool (KeyHash 'StakePool (Crypto era))
 
 instance
-  (Typeable era, Era era) =>
+  Era era =>
   ToCBOR (ShelleyPoolPredFailure era)
   where
   toCBOR = \case

@@ -6,6 +6,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | Merkle tree implementation.
@@ -60,6 +61,7 @@ import qualified Prelude
 --------------------------------------------------------------------------------
 
 -- | Data type for root of Merkle tree
+type MerkleRoot :: Type -> Type
 newtype MerkleRoot a = MerkleRoot
   { -- | returns root 'Hash' of Merkle Tree
     getMerkleRoot :: Hash Raw
@@ -96,6 +98,7 @@ emptyHash = MerkleRoot (hashRaw mempty)
 -- MerkleTree
 --------------------------------------------------------------------------------
 
+type MerkleTree :: Type -> Type
 data MerkleTree a
   = MerkleEmpty
   | MerkleTree !Word32 !(MerkleNode a)
@@ -177,6 +180,7 @@ mtRoot (MerkleTree _ n) = nodeRoot n
 -- MerkleNode
 --------------------------------------------------------------------------------
 
+type MerkleNode :: Type -> Type
 data MerkleNode a
   = -- | MerkleBranch mRoot mLeft mRight
     MerkleBranch !(MerkleRoot a) !(MerkleNode a) !(MerkleNode a)

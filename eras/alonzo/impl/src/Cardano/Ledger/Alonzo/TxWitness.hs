@@ -257,7 +257,7 @@ unTxDats (TxDats' m) = m
 nullDats :: TxDats era -> Bool
 nullDats (TxDats' d) = Map.null d
 
-instance (Typeable era, Era era) => FromCBOR (Annotator (TxDatsRaw era)) where
+instance Era era => FromCBOR (Annotator (TxDatsRaw era)) where
   fromCBOR = decode $ fmap (TxDatsRaw . keyBy hashData) <$> listDecodeA From
 
 newtype TxDats era = TxDatsConstr (MemoBytes (TxDatsRaw era))

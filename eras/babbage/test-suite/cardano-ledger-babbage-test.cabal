@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                cardano-ledger-babbage-test
-version:             0.1.1.1
+version:             0.1.1.2
 synopsis:            Tests for Cardano ledger babbage era
 description:
   This package builds upon the Alonzo ledger
@@ -24,7 +24,7 @@ source-repository head
   subdir:   eras/babbage/test-suite
 
 common base
-  build-depends:      base >= 4.12 && < 4.15
+  build-depends:      base >= 4.12 && < 4.17
 
 common project-config
   default-language:   Haskell2010

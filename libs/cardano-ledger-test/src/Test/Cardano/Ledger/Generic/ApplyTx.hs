@@ -42,7 +42,12 @@ import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
 import Lens.Micro
 import Test.Cardano.Ledger.Examples.TwoPhaseValidation (initUTxO, notValidatingTx)
-import Test.Cardano.Ledger.Generic.Fields (TxBodyField (..), TxField (..), abstractTx, abstractTxBody)
+import Test.Cardano.Ledger.Generic.Fields
+  ( TxBodyField (..),
+    TxField (..),
+    abstractTx,
+    abstractTxBody,
+  )
 import Test.Cardano.Ledger.Generic.Functions
   ( aggregateRewards',
     createRUpdNonPulsing',

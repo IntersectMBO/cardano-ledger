@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 
 module Cardano.Chain.Update.Validation.Endorsement
   ( Environment (..),
@@ -36,6 +37,7 @@ import qualified Data.Map.Strict as M
 import qualified Data.Set as Set
 import NoThunks.Class (NoThunks (..))
 
+type Environment :: Type
 data Environment = Environment
   { -- | Chain stability parameter.
     k :: !BlockCount,
@@ -46,11 +48,13 @@ data Environment = Environment
     registeredProtocolUpdateProposals :: !Registration.ProtocolUpdateProposals
   }
 
+type State :: Type
 data State = State
   { candidateProtocolVersions :: ![CandidateProtocolUpdate],
     registeredEndorsements :: !(Set Endorsement)
   }
 
+type CandidateProtocolUpdate :: Type
 data CandidateProtocolUpdate = CandidateProtocolUpdate
   { -- | Slot at which this protocol version and parameters gathered enough
     -- endorsements and became a candidate. This is used to check which
@@ -80,6 +84,7 @@ instance ToCBOR CandidateProtocolUpdate where
       <> toCBOR (cpuProtocolVersion cpu)
       <> toCBOR (cpuProtocolParameters cpu)
 
+type Endorsement :: Type
 data Endorsement = Endorsement
   { endorsementProtocolVersion :: !ProtocolVersion,
     endorsementKeyHash :: !KeyHash
@@ -100,6 +105,7 @@ instance ToCBOR Endorsement where
       <> toCBOR (endorsementProtocolVersion sh)
       <> toCBOR (endorsementKeyHash sh)
 
+type Error :: Type
 data Error
   = -- | Multiple proposals were found, which propose an update to the same
     -- protocol version.

@@ -1,7 +1,7 @@
 cabal-version: 2.2
 
 name:                non-integral
-version:             0.1.1.1
+version:             0.1.1.2
 license:             Apache-2.0
 author:              IOHK Formal Methods Team
 maintainer:          formal.methods@iohk.io
@@ -18,7 +18,7 @@ source-repository head
   subdir:   libs/non-integral
 
 common base
-  build-depends:      base >= 4.12 && < 4.15
+  build-depends:      base >= 4.12 && < 4.17
 
 common project-config
   default-language:   Haskell2010

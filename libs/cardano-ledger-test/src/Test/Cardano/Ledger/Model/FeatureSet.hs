@@ -75,9 +75,6 @@ data TyScriptFeature = TyScriptFeature
     _tyScript_plutus :: !Bool
   }
 
-type family PlutusScriptFeature (a :: TyScriptFeature) where
-  PlutusScriptFeature ('TyScriptFeature _ x) = x
-
 type ShelleyScriptFeatures = 'TyScriptFeature 'False 'False
 
 -- | GADT to reify into a value the type level information in 'TyScriptFeature'
@@ -301,12 +298,6 @@ data ValueFeatureTag (v :: TyValueExpected) where
   ValueFeatureTag_AnyOutput :: ValueFeatureTag 'ExpectAnyOutput
 
 deriving instance Show (ValueFeatureTag s)
-
-type family MaxValueFeature (a :: TyValueExpected) (b :: TyValueExpected) :: TyValueExpected where
-  MaxValueFeature 'ExpectAdaOnly b = b
-  MaxValueFeature a 'ExpectAdaOnly = a
-  MaxValueFeature 'ExpectAnyOutput b = b
-  MaxValueFeature a 'ExpectAnyOutput = a
 
 class RequiredFeatures (f :: FeatureSet -> Type) where
   -- | restrict a model to a subset of ledger features.

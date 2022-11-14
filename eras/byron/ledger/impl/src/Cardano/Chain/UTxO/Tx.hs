@@ -3,6 +3,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -50,6 +51,7 @@ import qualified Formatting.Buildable as B
 -- | Transaction
 --
 --   NB: transaction witnesses are stored separately
+type Tx :: Type
 data Tx = UnsafeTx
   { -- | Inputs of transaction.
     txInputs :: !(NonEmpty TxIn),
@@ -110,6 +112,7 @@ txF = build
 --------------------------------------------------------------------------------
 
 -- | Represents transaction identifier as 'Hash' of 'Tx'
+type TxId :: Type
 type TxId = Hash Tx
 
 --------------------------------------------------------------------------------
@@ -119,6 +122,7 @@ type TxId = Hash Tx
 -- | Represents transaction attributes: map from 1-byte integer to
 --   arbitrary-type value. To be used for extending transaction with new fields
 --   via softfork.
+type TxAttributes :: Type
 type TxAttributes = Attributes ()
 
 --------------------------------------------------------------------------------
@@ -126,6 +130,7 @@ type TxAttributes = Attributes ()
 --------------------------------------------------------------------------------
 
 -- | Transaction arbitrary input
+type TxIn :: Type
 data TxIn
   = -- | TxId = Which transaction's output is used
     -- | Word16 = Index of the output in transaction's outputs
@@ -167,6 +172,7 @@ instance HeapWords TxIn where
 --------------------------------------------------------------------------------
 
 -- | Transaction output
+type TxOut :: Type
 data TxOut = TxOut
   { txOutAddress :: !Address,
     txOutValue :: !Lovelace

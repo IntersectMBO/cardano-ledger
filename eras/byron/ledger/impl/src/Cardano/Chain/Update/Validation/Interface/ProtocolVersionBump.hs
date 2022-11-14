@@ -1,4 +1,5 @@
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 
 module Cardano.Chain.Update.Validation.Interface.ProtocolVersionBump
   ( Environment (..),
@@ -20,12 +21,14 @@ import Cardano.Chain.Update.Validation.Endorsement
   )
 import Cardano.Prelude hiding (State)
 
+type Environment :: Type
 data Environment = Environment
   { k :: !BlockCount,
     epochFirstSlot :: !SlotNumber,
     candidateProtocolVersions :: ![CandidateProtocolUpdate]
   }
 
+type State :: Type
 data State = State
   { nextProtocolVersion :: !ProtocolVersion,
     nextProtocolParameters :: !ProtocolParameters

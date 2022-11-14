@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands 
 -- you need to run if you change them
 
-index-state: 2022-11-01T00:00:00Z
-index-state: cardano-haskell-packages 2022-11-01T20:00:00Z
+index-state: 2022-11-09T00:00:00Z
+index-state: cardano-haskell-packages 2022-11-10T20:00:00Z
 
 packages:
   eras/alonzo/impl
@@ -67,9 +67,8 @@ allow-newer:
   monoidal-containers:aeson,
   size-based:template-haskell,
   Unique:hashable,
-  ral:hashable,
-  fin:hashable,
-  bin:hashable,
+  plutus-core:ral,
+  plutus-core:some,
 
 constraints:
   -- bizarre issue: in earlier versions they define their own 'GEq', in newer
@@ -85,7 +84,6 @@ constraints:
     -- that dependency
   , network >= 3.1.1.0
   , HSOpenSSL >= 0.11.7.2
-  , algebraic-graphs < 0.7
   , persistent < 2.14
   -- Just sanity checks to make sure we've actually pinned the latest versions
   , cardano-binary >= 1.5.0.1
@@ -98,20 +96,13 @@ constraints:
   -- TODO: these should be set in cabal files, but avoiding setting them in lower dependencies for initial CHaP release
   , base-deriving-via == 0.1.0.0
   , cardano-crypto-class  == 2.0.0.1
-  , cardano-crypto-praos  == 2.0.0.0.1
+  , cardano-crypto-praos  ^>= 2.0.0.0.1
   , cardano-crypto-tests  == 2.0.0.0.1
-  , cardano-slotting  == 0.1.0.0
-  , measures == 0.1.0.0
+  , cardano-slotting  ^>= 0.1.0.0
+  , measures >= 0.1.0.1
   , orphans-deriving-via == 0.1.0.0
   , strict-containers == 0.1.0.0
-  , plutus-core == 1.0.0.1
-  , plutus-ledger-api == 1.0.0.1
-  , plutus-tx == 1.0.0.0
-  , plutus-tx-plugin == 1.0.0.0
-  , prettyprinter-configurable == 0.1.0.0
-  , plutus-ghc-stub == 8.6.5
-  , word-array == 0.1.0.0
-  , word-array == 0.1.0.0
+  , plutus-tx-plugin >= 1.1.0
   , io-classes == 0.2.0.0
   , typed-protocols == 0.1.0.0
   , typed-protocols-examples == 0.1.0.0

@@ -5,6 +5,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -89,10 +90,12 @@ import qualified Formatting.Buildable as B
 import NoThunks.Class (NoThunks (..))
 
 -- | Poor node secret
+type PoorSecret :: Type
 newtype PoorSecret = PoorSecret {poorSecretToKey :: SigningKey}
   deriving (Generic, NoThunks)
 
 -- | Valuable secrets which can unlock genesis data.
+type GeneratedSecrets :: Type
 data GeneratedSecrets = GeneratedSecrets
   { -- | Secret keys which issued heavyweight delegation certificates
     -- in genesis data. If genesis heavyweight delegation isn't used,
@@ -113,6 +116,7 @@ gsSigningKeys gs = gsRichSecrets gs <> gsSigningKeysPoor gs
 gsSigningKeysPoor :: GeneratedSecrets -> [SigningKey]
 gsSigningKeysPoor = map poorSecretToKey . gsPoorSecrets
 
+type GenesisDataGenerationError :: Type
 data GenesisDataGenerationError
   = GenesisDataAddressBalanceMismatch Text Int Int
   | GenesisDataGenerationDelegationError GenesisDelegationError

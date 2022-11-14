@@ -1,3 +1,4 @@
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -81,8 +82,8 @@ mkGoblinDecls stsNameStr pfNameStr = do
       body <-
         [|
           tinkerWithSigGen @Bool
-            @ $(pure (ConT stsName))
-              $(pure (VarE gdName))
+            @($(pure (ConT stsName)))
+            $(pure (VarE gdName))
           |]
       let sigDec =
             SigD

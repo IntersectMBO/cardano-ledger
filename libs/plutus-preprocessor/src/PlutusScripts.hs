@@ -19,7 +19,7 @@ where
 
 import Data.String (fromString)
 import Language.Haskell.TH
-import qualified Plutus.V1.Ledger.Api as P
+import qualified PlutusLedgerApi.V1 as P
 import qualified PlutusTx as P (Data (..), compile)
 import qualified PlutusTx.Builtins as P
 import qualified PlutusTx.Prelude as P

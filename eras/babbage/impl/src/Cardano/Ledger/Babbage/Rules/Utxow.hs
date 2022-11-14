@@ -129,7 +129,6 @@ instance Inject (ShelleyUtxowPredFailure era) (BabbageUtxowPredFailure era) wher
 
 instance
   ( Era era,
-    Typeable era,
     ToCBOR (TxOut era),
     ToCBOR (Value era),
     ToCBOR (PredicateFailure (EraRule "UTXOS" era)),
@@ -148,7 +147,6 @@ instance
 
 instance
   ( Era era,
-    Typeable era,
     FromCBOR (TxOut era),
     FromCBOR (Value era),
     FromCBOR (PredicateFailure (EraRule "UTXOS" era)),
@@ -369,8 +367,6 @@ instance
     HasField "_costmdls" (PParams era) CostModels,
     HasField "_protocolVersion" (PParams era) ProtVer,
     Signable (DSIGN (Crypto era)) (Hash (HASH (Crypto era)) EraIndependentTxBody),
-    Show (TxBody era),
-    Show (TxOut era),
     -- Fix some Core types to the Babbage Era
     Tx era ~ AlonzoTx era,
     Script era ~ AlonzoScript era,

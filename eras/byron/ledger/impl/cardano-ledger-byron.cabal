@@ -1,7 +1,7 @@
 cabal-version: 2.2
 
 name:                cardano-ledger-byron
-version:             0.1.1.1
+version:             0.1.1.2
 synopsis:            The blockchain layer of Cardano during the Byron era
 description:         The blockchain layer of Cardano during the Byron era
 license:             Apache-2.0
@@ -120,7 +120,7 @@ flag test-normal-form
     manual: True
 
 common base
-  build-depends:      base >= 4.12 && < 4.15
+  build-depends:      base >= 4.12 && < 4.17
 
 common project-config
   default-language:   Haskell2010
@@ -257,13 +257,11 @@ library
                      , contra-tracer
                      , cryptonite
                      , Cabal
-                     , deepseq
                      , digest
                      , directory
                      , filepath
                      , formatting
                      , heapwords
-                     , mtl
                      , nothunks
                      , quiet
                      , resourcet
@@ -363,7 +361,6 @@ test-suite cardano-ledger-byron-test
                      , cardano-crypto-wrapper
                      , cardano-prelude
                      , cardano-prelude-test
-                     , cborg
                      , containers
                      , byron-spec-chain
                      , byron-spec-ledger

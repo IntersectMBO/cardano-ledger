@@ -323,17 +323,17 @@ chainBlockStats (b : bs) = Just $ go b b b 1 bs
         bs'
 
 --------------------------------------------------------------------------------
--- Goblins instances
---------------------------------------------------------------------------------
-
-deriveGoblin ''Block
-deriveGoblin ''BlockBody
-deriveGoblin ''BlockHeader
-
---------------------------------------------------------------------------------
 -- AddShrinks instances
 --------------------------------------------------------------------------------
 
-deriveAddShrinks ''Block
-deriveAddShrinks ''BlockBody
 deriveAddShrinks ''BlockHeader
+deriveAddShrinks ''BlockBody
+deriveAddShrinks ''Block
+
+--------------------------------------------------------------------------------
+-- Goblins instances
+--------------------------------------------------------------------------------
+
+deriveGoblin ''BlockHeader
+deriveGoblin ''BlockBody
+deriveGoblin ''Block

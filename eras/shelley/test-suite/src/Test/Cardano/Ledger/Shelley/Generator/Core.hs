@@ -146,7 +146,7 @@ import Data.Ratio (denominator, numerator, (%))
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Word (Word64)
 import Numeric.Natural (Natural)
-import qualified Plutus.V1.Ledger.Api as Plutus
+import qualified PlutusLedgerApi.V1 as Plutus
 import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (ExMock, Mock)
 import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))

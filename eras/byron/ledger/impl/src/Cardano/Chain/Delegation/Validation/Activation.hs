@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 
 module Cardano.Chain.Delegation.Validation.Activation
   ( -- * Activation
@@ -25,6 +26,7 @@ import NoThunks.Class (NoThunks (..))
 
 -- | Maps containing, for each delegator, the active delegation and the slot it
 --   became active in.
+type State :: Type
 data State = State
   { delegationMap :: !Delegation.Map,
     delegationSlots :: !(Map KeyHash SlotNumber)

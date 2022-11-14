@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Cardano.Chain.Genesis.Spec
@@ -19,6 +20,7 @@ import Data.List (nub)
 import qualified Data.Map.Strict as M
 
 -- | Specification how to generate full 'GenesisData'
+type GenesisSpec :: Type
 data GenesisSpec = UnsafeGenesisSpec
   { -- | Genesis data describes avvm utxo
     gsAvvmDistr :: !GenesisAvvmBalances,

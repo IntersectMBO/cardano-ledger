@@ -384,13 +384,13 @@ data ScriptPurpose crypto
   | Certifying !(DCert crypto)
   deriving (Eq, Show, Generic, NoThunks, NFData)
 
-instance (Typeable c, CC.Crypto c) => ToCBOR (ScriptPurpose c) where
+instance CC.Crypto c => ToCBOR (ScriptPurpose c) where
   toCBOR (Minting x) = encode (Sum Minting 0 !> To x)
   toCBOR (Spending x) = encode (Sum Spending 1 !> To x)
   toCBOR (Rewarding x) = encode (Sum Rewarding 2 !> To x)
   toCBOR (Certifying x) = encode (Sum Certifying 3 !> To x)
 
-instance (Typeable c, CC.Crypto c) => FromCBOR (ScriptPurpose c) where
+instance CC.Crypto c => FromCBOR (ScriptPurpose c) where
   fromCBOR = decode (Summands "ScriptPurpose" dec)
     where
       dec 0 = SumD Minting <! From

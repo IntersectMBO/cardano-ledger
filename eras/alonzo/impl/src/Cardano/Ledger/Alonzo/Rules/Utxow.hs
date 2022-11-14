@@ -164,7 +164,6 @@ instance
   ( Era era,
     ToCBOR (PredicateFailure (EraRule "UTXO" era)),
     Typeable (AuxiliaryData era),
-    Typeable (Script era),
     ToCBOR (Script era)
   ) =>
   ToCBOR (AlonzoUtxowPredFailure era)

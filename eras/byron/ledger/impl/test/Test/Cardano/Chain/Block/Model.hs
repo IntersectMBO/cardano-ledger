@@ -3,6 +3,7 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
@@ -492,6 +493,7 @@ ts_prop_invalidBlockPayloadProofsAreRejected =
 
 -- | Output resulting from elaborating and validating an abstract trace with
 -- the concrete validators.
+type ValidationOutput :: Type
 data ValidationOutput = ValidationOutput
   { -- | Elaborated configuration. This configuration results from elaborating
     -- the trace initial environment.

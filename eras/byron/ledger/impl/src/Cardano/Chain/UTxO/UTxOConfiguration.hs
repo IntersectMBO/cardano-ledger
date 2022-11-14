@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Chain.UTxO.UTxOConfiguration
@@ -23,6 +24,7 @@ import qualified Data.Set as Set
 import NoThunks.Class (NoThunks (..))
 
 -- | Additional configuration for ledger validation.
+type UTxOConfiguration :: Type
 data UTxOConfiguration = UTxOConfiguration
   { -- | Set of source address which are asset-locked. Transactions which
     -- use these addresses as transaction inputs will be deemed invalid.

@@ -8,6 +8,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumDecimals #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 
 module Cardano.Chain.Block.Validation
   ( UPI.adoptedProtocolParameters,
@@ -131,6 +132,7 @@ import qualified Streaming.Prelude as S
 -- ChainValidationState
 --------------------------------------------------------------------------------
 
+type ChainValidationState :: Type
 data ChainValidationState = ChainValidationState
   { cvsLastSlot :: !SlotNumber,
     -- | GenesisHash for the previous hash of the zeroth boundary block and
@@ -199,6 +201,7 @@ initialChainValidationState config = do
 -- ChainValidationError
 --------------------------------------------------------------------------------
 
+type ChainValidationError :: Type
 data ChainValidationError
   = -- | The size of an epoch boundary block exceeds the limit
     ChainValidationBoundaryTooLarge
@@ -326,6 +329,7 @@ validateBlockProofs b =
         blockBody
       } = b
 
+type BodyEnvironment :: Type
 data BodyEnvironment = BodyEnvironment
   { protocolMagic :: !(AProtocolMagic ByteString),
     utxoConfiguration :: !UTxOConfiguration,
@@ -335,6 +339,7 @@ data BodyEnvironment = BodyEnvironment
     currentEpoch :: !EpochNumber
   }
 
+type BodyState :: Type
 data BodyState = BodyState
   { utxo :: !UTxO,
     updateState :: !UPI.State,
@@ -452,6 +457,7 @@ headerIsValid updateState h =
   where
     maxHeaderSize = Update.ppMaxHeaderSize $ UPI.adoptedProtocolParameters updateState
 
+type EpochEnvironment :: Type
 data EpochEnvironment = EpochEnvironment
   { protocolMagic :: !(Annotated ProtocolMagicId ByteString),
     k :: !BlockCount,
@@ -563,6 +569,7 @@ updateBlock config cvs b = do
 -- UTxO
 --------------------------------------------------------------------------------
 
+type Error :: Type
 data Error
   = ErrorParseError ParseError
   | ErrorUTxOValidationError EpochAndSlotCount UTxO.UTxOValidationError
@@ -596,11 +603,13 @@ foldUTxOBlock env utxo block =
     $ UTxO.updateUTxO env utxo (aUnTxPayload $ blockTxPayload block)
 
 -- | Size of a heap value, in words
+type HeapSize :: Type -> Type
 newtype HeapSize a = HeapSize {unHeapSize :: Int}
   deriving (Show)
   deriving newtype (Buildable)
 
 -- | Number of entries in the UTxO
+type UTxOSize :: Type
 newtype UTxOSize = UTxOSize {unUTxOSize :: Int}
   deriving (Show)
   deriving newtype (Buildable)

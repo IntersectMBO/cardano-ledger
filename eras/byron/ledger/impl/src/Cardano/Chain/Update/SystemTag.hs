@@ -7,6 +7,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Cardano.Chain.Update.SystemTag
@@ -40,6 +41,7 @@ import qualified Formatting.Buildable as B
 import NoThunks.Class (NoThunks (..))
 
 -- | Tag of system for which update data is purposed, e.g. win64, mac32
+type SystemTag :: Type
 newtype SystemTag = SystemTag
   { getSystemTag :: Text
   }
@@ -62,6 +64,7 @@ instance FromCBOR SystemTag where
 systemTagMaxLength :: Integral i => i
 systemTagMaxLength = 10
 
+type SystemTagError :: Type
 data SystemTagError
   = SystemTagNotAscii Text
   | SystemTagTooLong Text

@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 
 module Cardano.Chain.ValidationMode
   ( ValidationMode (..),
@@ -24,6 +25,7 @@ import Cardano.Prelude
 -- ValidationMode
 --------------------------------------------------------------------------------
 
+type ValidationMode :: Type
 data ValidationMode = ValidationMode
   { blockValidationMode :: !BlockValidationMode,
     txValidationMode :: !TxValidationMode

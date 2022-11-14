@@ -2,6 +2,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 
 module Cardano.Chain.Genesis.Hash
   ( GenesisHash (..),
@@ -14,6 +15,7 @@ import Cardano.Prelude
 import Data.Aeson (ToJSON)
 import NoThunks.Class (NoThunks (..))
 
+type GenesisHash :: Type
 newtype GenesisHash = GenesisHash
   { unGenesisHash :: Hash Raw
   }

@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 
 module Cardano.Chain.UTxO.TxProof
   ( TxProof (..),
@@ -34,6 +35,7 @@ import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 import NoThunks.Class (NoThunks (..))
 
+type TxProof :: Type
 data TxProof = TxProof
   { txpNumber :: !Word32,
     txpRoot :: !(MerkleRoot Tx),

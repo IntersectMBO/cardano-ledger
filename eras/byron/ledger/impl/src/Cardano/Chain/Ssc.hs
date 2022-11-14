@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 
 module Cardano.Chain.Ssc
   ( SscPayload (..),
@@ -44,6 +45,7 @@ import NoThunks.Class (NoThunks (..))
 -- SscPayload
 --------------------------------------------------------------------------------
 
+type SscPayload :: Type
 data SscPayload
   = SscPayload
   deriving (Eq, Show, Generic, NFData)
@@ -86,7 +88,7 @@ dropSscPayload = do
 --------------------------------------------------------------------------------
 -- SscProof
 --------------------------------------------------------------------------------
-
+type SscProof :: Type
 data SscProof
   = SscProof
   deriving (Eq, Show, Generic, NFData, NoThunks)

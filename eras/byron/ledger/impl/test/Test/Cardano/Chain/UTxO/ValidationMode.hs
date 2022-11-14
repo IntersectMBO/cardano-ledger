@@ -1,5 +1,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Test.Cardano.Chain.UTxO.ValidationMode
@@ -194,7 +195,7 @@ genValidationMode =
 --------------------------------------------------------------------------------
 -- Helpers
 --------------------------------------------------------------------------------
-
+type PParamsAddrsAndUTxO :: Type
 data PParamsAddrsAndUTxO = PParamsAddrsAndUTxO
   { ppauPParams :: !Abstract.PParams,
     ppauAddrs :: ![Abstract.Addr],

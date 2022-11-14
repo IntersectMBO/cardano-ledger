@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 
 module Cardano.Chain.Delegation.Map
   ( Map (..),
@@ -28,6 +29,7 @@ import qualified Data.Bimap as Bimap
 import qualified Data.Set as Set
 import NoThunks.Class (NoThunks (..), noThunksInKeysAndValues)
 
+type Map :: Type
 newtype Map = Map
   { unMap :: Bimap KeyHash KeyHash
   }

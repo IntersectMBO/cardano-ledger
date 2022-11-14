@@ -7,6 +7,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
@@ -77,8 +78,10 @@ import Text.JSON.Canonical
 --------------------------------------------------------------------------------
 
 -- | A delegation certificate identifier (the 'Hash' of a 'Certificate').
+type CertificateId :: Type
 type CertificateId = Hash Certificate
 
+type Certificate :: Type
 type Certificate = ACertificate ()
 
 -- | Delegation certificate allowing the @delegateVK@ to sign blocks on behalf
@@ -87,6 +90,7 @@ type Certificate = ACertificate ()
 --   Each delegator can publish at most one 'Certificate' per 'EpochNumber', and
 --   that 'EpochNumber' must correspond to the current or next 'EpochNumber' at
 --   the time of publishing
+type ACertificate :: Type -> Type
 data ACertificate a = UnsafeACertificate
   { -- | The epoch from which the delegation is valid
     aEpoch :: !(Annotated EpochNumber a),

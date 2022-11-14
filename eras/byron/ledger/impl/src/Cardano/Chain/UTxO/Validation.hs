@@ -4,6 +4,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Chain.UTxO.Validation
@@ -85,6 +86,7 @@ import qualified Data.Set as S
 import qualified Data.Vector as V
 
 -- | A representation of all the ways a transaction might be invalid
+type TxValidationError :: Type
 data TxValidationError
   = TxValidationLovelaceError Text LovelaceError
   | TxValidationFeeTooSmall Tx Lovelace Lovelace
@@ -309,6 +311,7 @@ validateWitness pmi sigData addr witness = case witness of
     checkRedeemAddress vk addr
       `orThrowError` TxValidationWitnessWrongKey witness addr
 
+type Environment :: Type
 data Environment = Environment
   { protocolMagic :: !(AProtocolMagic ByteString),
     protocolParameters :: !ProtocolParameters,
@@ -316,6 +319,7 @@ data Environment = Environment
   }
   deriving (Eq, Show)
 
+type UTxOValidationError :: Type
 data UTxOValidationError
   = UTxOValidationTxValidationError TxValidationError
   | UTxOValidationUTxOError UTxOError

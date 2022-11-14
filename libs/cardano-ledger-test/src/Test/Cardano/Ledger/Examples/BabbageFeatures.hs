@@ -74,7 +74,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import GHC.Stack
 import Lens.Micro
-import qualified Plutus.V1.Ledger.Api as Plutus
+import qualified PlutusLedgerApi.V1 as Plutus
 import Test.Cardano.Ledger.Examples.TwoPhaseValidation
   ( AlonzoBased (..),
     freeCostModelV1,
@@ -891,7 +891,7 @@ simpleScriptOutWithRefScriptUTxOState pf =
 largeDatum :: Data era
 largeDatum = Data (Plutus.B . BS.pack $ replicate 1500 0)
 
-largeOutput' :: forall era. (Scriptic era, EraTxOut era) => Proof era -> TxOut era
+largeOutput' :: forall era. EraTxOut era => Proof era -> TxOut era
 largeOutput' pf =
   newTxOut
     pf
@@ -900,7 +900,7 @@ largeOutput' pf =
       FDatum . Datum . dataToBinaryData $ largeDatum @era
     ]
 
-largeOutput :: forall era. (BabbageEraTxBody era, Scriptic era) => Proof era -> TestCaseData era
+largeOutput :: forall era. (BabbageEraTxBody era) => Proof era -> TestCaseData era
 largeOutput pf =
   TestCaseData
     { txBody =

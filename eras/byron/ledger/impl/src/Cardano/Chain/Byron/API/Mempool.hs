@@ -3,6 +3,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 
 module Cardano.Chain.Byron.API.Mempool
   ( ApplyMempoolPayloadErr (..),
@@ -12,7 +13,7 @@ module Cardano.Chain.Byron.API.Mempool
   )
 where
 
-import Cardano.Binary hiding (cborError)
+import Cardano.Binary
 import qualified Cardano.Chain.Block as CC
 import Cardano.Chain.Byron.API.Common
 import qualified Cardano.Chain.Delegation as Delegation
@@ -26,7 +27,7 @@ import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Chain.Update.Validation.Interface as U.Iface
 import qualified Cardano.Chain.ValidationMode as CC
 import Cardano.Crypto.ProtocolMagic
-import Cardano.Prelude
+import Cardano.Prelude hiding (cborError)
 import qualified Codec.CBOR.Decoding as CBOR
 import qualified Codec.CBOR.Encoding as CBOR
 import qualified Codec.CBOR.Write as CBOR
@@ -42,6 +43,7 @@ import qualified Data.Set as Set
 -- corresponding error type. We could 'ChainValidationError', but it's too
 -- large, which is problematic because we actually sent encoded versions of
 -- these errors across the wire.
+type ApplyMempoolPayloadErr :: Type
 data ApplyMempoolPayloadErr
   = MempoolTxErr Utxo.UTxOValidationError
   | MempoolDlgErr D.Sched.Error

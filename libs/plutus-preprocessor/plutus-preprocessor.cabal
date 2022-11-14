@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               plutus-preprocessor
-version:            0.1.1.1
+version:            0.1.1.2
 
 synopsis: A preproceesor for creating plutus scripts as bytestrings and equivalents
 
@@ -35,6 +35,7 @@ executable plutus-preprocessor
       bytestring,
       cardano-ledger-alonzo,
       flat,
+      hashable >= 1.4.1.0,
       plutus-core,
       plutus-tx,
       plutus-tx-plugin,

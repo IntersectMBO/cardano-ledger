@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Chain.Genesis.Config
@@ -70,6 +71,7 @@ import NoThunks.Class (NoThunks (..))
 -- Config
 --------------------------------------------------------------------------------
 
+type Config :: Type
 data Config = Config
   { -- | The data needed at genesis
     configGenesisData :: !GenesisData,
@@ -155,6 +157,7 @@ mkConfigFromFile rnm fp expectedHash = do
         configUTxOConfiguration = defaultUTxOConfiguration -- TODO: add further config plumbing
       }
 
+type ConfigurationError :: Type
 data ConfigurationError
   = -- | An error in constructing 'GenesisData'
     ConfigurationGenesisDataError GenesisDataError

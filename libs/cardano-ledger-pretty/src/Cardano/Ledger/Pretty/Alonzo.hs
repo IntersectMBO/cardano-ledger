@@ -36,7 +36,7 @@ import Cardano.Ledger.BaseTypes (BoundedRational (unboundRational))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Pretty hiding (ppPParams, ppPParamsUpdate, ppTx, ppTxBody, ppTxOut)
 import Cardano.Ledger.Pretty.Mary (ppTimelock, ppValidityInterval, ppValue)
-import qualified Plutus.V1.Ledger.Api as Plutus
+import qualified PlutusLedgerApi.V1 as Plutus
 import qualified Prettyprinter as PP
 
 ppTxSeq ::

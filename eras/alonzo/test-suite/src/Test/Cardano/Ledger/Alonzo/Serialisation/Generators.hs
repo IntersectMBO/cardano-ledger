@@ -41,6 +41,7 @@ import Cardano.Ledger.Alonzo.Scripts
     ExUnits (..),
     Prices (..),
     Tag (..),
+    costModelParamsNamesSet,
     mkCostModel,
   )
 import Cardano.Ledger.Alonzo.Tx
@@ -65,8 +66,7 @@ import qualified Data.Set as Set
 import Data.Text (Text, pack)
 import GHC.Records (HasField)
 import Numeric.Natural (Natural)
-import qualified Plutus.V1.Ledger.Api as PV1
-import qualified Plutus.V2.Ledger.Api as PV2
+import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
@@ -227,8 +227,7 @@ genCM lang costModelParamNames = do
   either (error "Corrupt cost model") pure $ mkCostModel lang newCMPs
 
 genCostModel :: Language -> Gen (Language, CostModel)
-genCostModel PlutusV1 = (PlutusV1,) <$> genCM PlutusV1 PV1.costModelParamNames
-genCostModel PlutusV2 = (PlutusV2,) <$> genCM PlutusV2 PV2.costModelParamNames
+genCostModel lang = (,) lang <$> genCM lang (costModelParamsNamesSet lang)
 
 instance Arbitrary CostModel where
   arbitrary = snd <$> (elements nonNativeLanguages >>= genCostModel)

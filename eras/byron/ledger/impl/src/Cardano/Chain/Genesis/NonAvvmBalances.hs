@@ -6,6 +6,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-missed-specialisations #-}
@@ -39,6 +40,7 @@ import NoThunks.Class (NoThunks (..))
 import Text.JSON.Canonical (FromJSON (..), ToJSON (..))
 
 -- | Predefined balances of non avvm entries.
+type GenesisNonAvvmBalances :: Type
 newtype GenesisNonAvvmBalances = GenesisNonAvvmBalances
   { unGenesisNonAvvmBalances :: Map Address Lovelace
   }
@@ -68,6 +70,7 @@ instance FromCBOR GenesisNonAvvmBalances where
     enforceSize "GenesisNonAvvmBalances" 1
     GenesisNonAvvmBalances <$> fromCBOR @(Map Address Lovelace)
 
+type NonAvvmBalancesError :: Type
 data NonAvvmBalancesError
   = NonAvvmBalancesLovelaceError LovelaceError
   | NonAvvmBalancesDecoderError DecoderError

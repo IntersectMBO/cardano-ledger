@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Cardano.Chain.Common.BlockCount
@@ -12,6 +13,7 @@ import Cardano.Prelude
 import Formatting.Buildable (Buildable)
 import NoThunks.Class (NoThunks (..))
 
+type BlockCount :: Type
 newtype BlockCount = BlockCount
   { unBlockCount :: Word64
   }

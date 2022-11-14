@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 
 module Cardano.Chain.Block.Proof
   ( Proof (..),
@@ -31,6 +32,7 @@ import qualified Formatting.Buildable as B
 import NoThunks.Class (NoThunks (..))
 
 -- | Proof of everything contained in the payload
+type Proof :: Type
 data Proof = Proof
   { proofUTxO :: !TxProof,
     proofSsc :: !SscProof,
@@ -92,6 +94,7 @@ recoverProof body =
 
 -- | Error which can result from attempting to validate an invalid payload
 -- proof.
+type ProofValidationError :: Type
 data ProofValidationError
   = -- | The delegation payload proof did not match
     DelegationProofValidationError

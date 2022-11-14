@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TupleSections #-}
 
 module Cardano.Chain.Delegation.Validation.Interface
@@ -46,7 +47,7 @@ import NoThunks.Class (NoThunks (..))
 --------------------------------------------------------------------------------
 -- Blockchain Interface
 --------------------------------------------------------------------------------
-
+type Environment :: Type
 data Environment = Environment
   { protocolMagic :: !(Annotated ProtocolMagicId ByteString),
     allowedDelegators :: !(Set KeyHash),
@@ -57,6 +58,7 @@ data Environment = Environment
   deriving (Eq, Show, Generic, NFData)
 
 -- | State shared between the blockchain and the ledger
+type State :: Type
 data State = State
   { schedulingState :: !Scheduling.State,
     activationState :: !Activation.State

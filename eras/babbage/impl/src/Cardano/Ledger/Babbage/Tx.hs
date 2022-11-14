@@ -180,7 +180,7 @@ babbageTxScripts utxo tx = ans
 -- | Collect all the reference scripts found in the TxOuts, pointed to by some input.
 refScripts ::
   forall era.
-  (EraTx era, BabbageEraTxOut era) =>
+  BabbageEraTxOut era =>
   Set (TxIn (Crypto era)) ->
   UTxO era ->
   Map.Map (ScriptHash (Crypto era)) (Script era)

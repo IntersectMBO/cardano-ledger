@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -30,6 +31,7 @@ import NoThunks.Class (NoThunks (..))
 import Text.JSON.Canonical (FromJSON (..), ToJSON (..), fromJSField, mkObject)
 
 -- | Data which is associated with 'BlockVersion'
+type ProtocolParameters :: Type
 data ProtocolParameters = ProtocolParameters
   { ppScriptVersion :: !Word16,
     -- | Milliseconds.

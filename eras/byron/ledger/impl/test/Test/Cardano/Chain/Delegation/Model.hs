@@ -2,6 +2,7 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -56,6 +57,7 @@ prop_commandSDELEG = withTests 25 . property $ do
 -- SDELEG State
 --------------------------------------------------------------------------------
 
+type StateSDELEG :: (Type -> Type) -> Type
 data StateSDELEG (v :: Type -> Type) = StateSDELEG
   { abstractState :: Abstract.DSState,
     lastAbstractResult :: Either [STS.PredicateFailure SDELEG] (STS.State SDELEG)
@@ -69,7 +71,7 @@ initialState = StateSDELEG initialAbstractState (Right initialAbstractState)
 --------------------------------------------------------------------------------
 -- SDELEG Signal
 --------------------------------------------------------------------------------
-
+type SignalSDELEG :: (Type -> Type) -> Type
 newtype SignalSDELEG (v :: Type -> Type)
   = SignalSDELEG (STS.Signal SDELEG)
   deriving (Show)

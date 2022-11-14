@@ -773,7 +773,7 @@ rewardUpdateEx9 pp rewards =
 
 pulserEx9 ::
   forall era.
-  (ExMock (Crypto era), TwoPoolsConstraints era) =>
+  TwoPoolsConstraints era =>
   ShelleyPParams era ->
   PulsingRewUpdate (Crypto era)
 pulserEx9 pp =

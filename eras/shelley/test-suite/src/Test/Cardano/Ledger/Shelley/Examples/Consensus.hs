@@ -157,7 +157,7 @@ defaultShelleyLedgerExamples mkWitnesses mkAlonzoTx value txBody auxData transla
 
 exampleShelleyLedgerBlock ::
   forall era.
-  (Core.EraTx era, EraSegWits era, ShelleyBasedEra' era) =>
+  (EraSegWits era, ShelleyBasedEra' era) =>
   Core.Tx era ->
   Block (BHeader (Era.Crypto era)) era
 exampleShelleyLedgerBlock tx = Block blockHeader blockBody

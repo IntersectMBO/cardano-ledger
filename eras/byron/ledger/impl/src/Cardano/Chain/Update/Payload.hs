@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -41,6 +42,7 @@ import Formatting (bprint)
 import qualified Formatting.Buildable as B
 
 -- | Update System payload
+type APayload :: Type -> Type
 data APayload a = APayload
   { payloadProposal :: !(Maybe (AProposal a)),
     payloadVotes :: ![AVote a],
@@ -49,6 +51,7 @@ data APayload a = APayload
   deriving (Eq, Show, Generic, Functor)
   deriving anyclass (NFData)
 
+type Payload :: Type
 type Payload = APayload ()
 
 payload :: Maybe Proposal -> [Vote] -> Payload

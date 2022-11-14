@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 
 module Cardano.Chain.Update.InstallerHash
   ( InstallerHash (..),
@@ -24,6 +25,7 @@ import qualified Formatting.Buildable as B
 import NoThunks.Class (NoThunks (..))
 
 -- | The hash of the installer of the new application
+type InstallerHash :: Type
 newtype InstallerHash = InstallerHash
   { unInstallerHash :: Hash Raw
   }

@@ -88,7 +88,7 @@ deriving newtype instance
   Hash.HashAlgorithm (CC.HASH crypto) =>
   SafeToHash (SafeHash crypto index)
 
-deriving newtype instance HeapWords (Hash.Hash (CC.HASH c) i) => HeapWords (SafeHash c i)
+deriving newtype instance HeapWords (SafeHash c i)
 
 deriving instance (Typeable index, CC.Crypto c) => ToCBOR (SafeHash c index)
 

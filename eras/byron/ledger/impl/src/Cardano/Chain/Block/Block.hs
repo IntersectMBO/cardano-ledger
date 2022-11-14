@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -169,8 +170,10 @@ import NoThunks.Class (NoThunks (..))
 -- Block
 --------------------------------------------------------------------------------
 
+type Block :: Type
 type Block = ABlock ()
 
+type ABlock :: Type -> Type
 data ABlock a = ABlock
   { blockHeader :: AHeader a,
     blockBody :: ABody a,
@@ -373,7 +376,7 @@ renderBlock es block =
 --------------------------------------------------------------------------------
 -- ABlockOrBoundary
 --------------------------------------------------------------------------------
-
+type ABlockOrBoundary :: Type -> Type
 data ABlockOrBoundary a
   = ABOBBlock (ABlock a)
   | ABOBBoundary (ABoundaryBlock a)
@@ -431,6 +434,7 @@ toCBORABlockOrBoundary pm epochSlots abob = case abob of
 
 -- | For boundary body data, we only keep an annotation. It's the body and
 -- extra body data.
+type ABoundaryBody :: Type -> Type
 data ABoundaryBody a = ABoundaryBody
   { boundaryBodyAnnotation :: !a
   }
@@ -460,6 +464,7 @@ toCBORABoundaryBody _ =
 
 -- | For a boundary block, we keep the header, body, and an annotation for
 -- the whole thing (commonly the bytes from which it was decoded).
+type ABoundaryBlock :: Type -> Type
 data ABoundaryBlock a = ABoundaryBlock
   { -- | Needed for validation.
     boundaryBlockLength :: !Int64,
@@ -541,7 +546,7 @@ boundaryBlockSlot (EpochSlots es) epoch =
 {-------------------------------------------------------------------------------
   Header of a regular block or EBB
 -------------------------------------------------------------------------------}
-
+type ABlockOrBoundaryHdr :: Type -> Type
 data ABlockOrBoundaryHdr a
   = ABOBBlockHdr !(AHeader a)
   | ABOBBoundaryHdr !(ABoundaryHeader a)

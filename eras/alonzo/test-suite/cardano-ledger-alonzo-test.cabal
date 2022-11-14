@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                cardano-ledger-alonzo-test
-version:             0.1.1.1
+version:             0.1.1.2
 synopsis:            Tests for Cardano ledger introducing Plutus Core
 description:
   This package builds upon the Mary ledger with support for extended UTxO
@@ -26,7 +26,7 @@ source-repository head
   subdir:   eras/alonzo/test-suite
 
 common base
-  build-depends:      base >= 4.12 && < 4.15
+  build-depends:      base >= 4.12 && < 4.17
 
 common project-config
   default-language:   Haskell2010
@@ -62,9 +62,9 @@ library
     cardano-slotting,
     containers,
     data-default-class,
-    hashable,
+    hashable >= 1.4.1.0,
     plutus-tx,
-    plutus-ledger-api,
+    plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib} ^>=1.1,
     QuickCheck,
     cardano-ledger-shelley-test,
     cardano-ledger-shelley,
@@ -109,8 +109,7 @@ test-suite cardano-ledger-alonzo-test
     cborg,
     containers,
     data-default-class,
-    plutus-core,
-    plutus-ledger-api,
+    plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib} ^>=1.1,
     QuickCheck,
     small-steps,
     small-steps-test,
