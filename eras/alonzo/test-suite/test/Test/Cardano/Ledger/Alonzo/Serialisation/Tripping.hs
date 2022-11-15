@@ -15,6 +15,7 @@ import Cardano.Ledger.Alonzo.Scripts (CostModels)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits)
 import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Core
+import Cardano.Ledger.MemoBytes (zipMemoRawType)
 import Cardano.Ledger.Shelley.Metadata (ShelleyTxAuxData)
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
@@ -31,19 +32,19 @@ tests =
     "Alonzo CBOR round-trip"
     [ testProperty "alonzo/Script" $
         roundTripAnnExpectation @(Script Alonzo) v,
-      skip $
-        testProperty "alonzo/Script twiddled" $
-          roundTripAnnTwiddledProperty @(Script Alonzo),
+      -- skip $
+      -- testProperty "alonzo/Script twiddled" $
+      --   roundTripAnnTwiddledProperty @(Script Alonzo) (zipMemoRawType (===)) v,
       testProperty "alonzo/Data" $
         roundTripAnnExpectation @(Data Alonzo) v,
       skip $
-        testProperty "alonzo/Data twiddled" $
-          roundTripAnnTwiddledProperty @(Data Alonzo) v,
+      testProperty "alonzo/Data twiddled" $
+        roundTripAnnTwiddledProperty @(Data Alonzo) (zipMemoRawType (===)) v,
       testProperty "alonzo/BinaryData" $
         roundTripCborExpectation @(BinaryData Alonzo) v,
       skip $
-        testProperty "alonzo/BinaryData twiddled" $
-          roundTripTwiddledProperty @(BinaryData Alonzo) v,
+      testProperty "alonzo/BinaryData twiddled" $
+        roundTripTwiddledProperty @(BinaryData Alonzo) v,
       testProperty "alonzo/TxAuxData" $
         roundTripAnnExpectation @(ShelleyTxAuxData Alonzo) v,
       testProperty "alonzo/AlonzoTxWits" $
@@ -51,8 +52,8 @@ tests =
       testProperty "alonzo/TxBody" $
         roundTripAnnExpectation @(TxBody Alonzo) v,
       skip $
-        testProperty "alonzo/TxBody twiddled" $
-          roundTripAnnTwiddledProperty @(TxBody Alonzo),
+      testProperty "alonzo/TxBody twiddled" $
+        roundTripAnnTwiddledProperty @(TxBody Alonzo) (zipMemoRawType (===)) v,
       testProperty "alonzo/CostModels" $
         roundTripCborExpectation @CostModels v,
       testProperty "alonzo/PParams" $
@@ -76,4 +77,5 @@ tests =
     ]
   where
     v = eraProtVerHigh @Alonzo
+
     skip _ = testProperty "Test skipped" True

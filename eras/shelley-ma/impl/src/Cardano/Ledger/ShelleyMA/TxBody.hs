@@ -15,6 +15,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.ShelleyMA.TxBody
@@ -34,12 +35,8 @@ module Cardano.Ledger.ShelleyMA.TxBody
     TxBody,
     ShelleyMAEraTxBody (..),
     MATxBodyRaw (..),
-    txSparse,
-    bodyFields,
     StrictMaybe (..),
-    fromSJust,
     ValidityInterval (..),
-    initial,
     scaledMinDeposit,
   )
 where
@@ -49,11 +46,10 @@ import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import Cardano.Ledger.Binary (Annotator, FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Binary.Coders
   ( Decode (..),
-    Density (..),
     Encode (..),
     Field,
-    Wrapped (..),
     decode,
+    encode,
     encodeKeyedStrictMaybe,
     field,
     invalidField,
@@ -66,7 +62,16 @@ import Cardano.Ledger.Core hiding (TxBody)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Mary.Value (MultiAsset)
-import Cardano.Ledger.MemoBytes (Mem, MemoBytes (..), MemoHashIndex, memoBytes)
+import Cardano.Ledger.MemoBytes
+  ( Mem,
+    MemoBytes,
+    MemoHashIndex,
+    Memoized (RawType),
+    getMemoRawType,
+    getMemoSafeHash,
+    lensMemoRawType,
+    mkMemoized,
+  )
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.TxBody
@@ -134,8 +139,8 @@ instance ShelleyMAEraTxBody era => FromCBOR (MATxBodyRaw era) where
   fromCBOR =
     decode
       ( SparseKeyed
-          "ShelleyMATxBodyRaw"
-          initial
+          "MATxBodyRaw"
+          emptyMATxBodyRaw
           bodyFields
           [(0, "matbrInputs"), (1, "matbrOutputs"), (2, "matbrTxFee")]
       )
@@ -143,30 +148,26 @@ instance ShelleyMAEraTxBody era => FromCBOR (MATxBodyRaw era) where
 instance ShelleyMAEraTxBody era => FromCBOR (Annotator (MATxBodyRaw era)) where
   fromCBOR = pure <$> fromCBOR
 
-fromSJust :: StrictMaybe a -> a
-fromSJust (SJust x) = x
-fromSJust SNothing = error "SNothing in fromSJust"
-
--- Sparse encodings of ShelleyMATxBodyRaw, the key values are fixed by backwarad compatibility
+-- Sparse encodings of ShelleyMATxBodyRaw, the key values are fixed by backward compatibility
 -- concerns as we want the Shelley era TxBody to deserialise as a Shelley-ma TxBody.
 -- txXparse and bodyFields should be Duals, visual inspection helps ensure this.
-
-txSparse ::
-  EraTxOut era =>
-  MATxBodyRaw era ->
-  Encode ('Closed 'Sparse) (MATxBodyRaw era)
-txSparse (MATxBodyRaw inp out cert wdrl fee (ValidityInterval bot top) up hash frge) =
-  Keyed (\i o f topx c w u h botx forg -> MATxBodyRaw i o c w f (ValidityInterval botx topx) u h forg)
-    !> Key 0 (To inp) -- We don't have to send these in TxBodyX order
-    !> Key 1 (To out) -- Just hack up a fake constructor with the lambda.
-    !> Key 2 (To fee)
-    !> encodeKeyedStrictMaybe 3 top
-    !> Omit null (Key 4 (To cert))
-    !> Omit (null . unWdrl) (Key 5 (To wdrl))
-    !> encodeKeyedStrictMaybe 6 up
-    !> encodeKeyedStrictMaybe 7 hash
-    !> encodeKeyedStrictMaybe 8 bot
-    !> Omit (== mempty) (Key 9 (E encodeMint frge))
+instance EraTxOut era => ToCBOR (MATxBodyRaw era) where
+  toCBOR (MATxBodyRaw inp out cert wdrl fee (ValidityInterval bot top) up hash frge) =
+    encode $
+      Keyed
+        ( \i o f topx c w u h botx forg ->
+            MATxBodyRaw i o c w f (ValidityInterval botx topx) u h forg
+        )
+        !> Key 0 (To inp) -- We don't have to send these in TxBodyX order
+        !> Key 1 (To out) -- Just hack up a fake constructor with the lambda.
+        !> Key 2 (To fee)
+        !> encodeKeyedStrictMaybe 3 top
+        !> Omit null (Key 4 (To cert))
+        !> Omit (null . unWdrl) (Key 5 (To wdrl))
+        !> encodeKeyedStrictMaybe 6 up
+        !> encodeKeyedStrictMaybe 7 hash
+        !> encodeKeyedStrictMaybe 8 bot
+        !> Omit (== mempty) (Key 9 (E encodeMint frge))
 
 bodyFields :: EraTxOut era => Word -> Field (MATxBodyRaw era)
 bodyFields 0 = field (\x tx -> tx {matbrInputs = x}) From
@@ -197,8 +198,8 @@ bodyFields 8 =
 bodyFields 9 = field (\x tx -> tx {matbrMint = x}) (D decodeMint)
 bodyFields n = invalidField n
 
-initial :: MATxBodyRaw era
-initial =
+emptyMATxBodyRaw :: MATxBodyRaw era
+emptyMATxBodyRaw =
   MATxBodyRaw
     empty
     (fromList [])
@@ -215,6 +216,9 @@ initial =
 
 newtype MATxBody e = TxBodyConstr (MemoBytes MATxBodyRaw e)
   deriving newtype (SafeToHash)
+
+instance Memoized MATxBody where
+  type RawType MATxBody = MATxBodyRaw
 
 type TxBody era = MATxBody era
 
@@ -251,7 +255,7 @@ deriving via
 type instance MemoHashIndex MATxBodyRaw = EraIndependentTxBody
 
 instance (c ~ EraCrypto era, Era era) => HashAnnotated (MATxBody era) EraIndependentTxBody c where
-  hashAnnotated (TxBodyConstr mb) = mbHash mb
+  hashAnnotated = getMemoSafeHash
 
 -- | A pattern to keep the newtype and the MemoBytes hidden
 pattern MATxBody ::
@@ -277,21 +281,19 @@ pattern MATxBody
     matbAuxDataHash,
     matbMint
   } <-
-  TxBodyConstr
-    ( Memo
-        MATxBodyRaw
-          { matbrInputs = matbInputs,
-            matbrOutputs = matbOutputs,
-            matbrCerts = matbCerts,
-            matbrWdrls = matbWdrls,
-            matbrTxFee = matbTxFee,
-            matbrValidityInterval = matbValidityInterval,
-            matbrUpdate = matbUpdate,
-            matbrAuxDataHash = matbAuxDataHash,
-            matbrMint = matbMint
-          }
-        _
-      )
+  ( getMemoRawType ->
+      MATxBodyRaw
+        { matbrInputs = matbInputs,
+          matbrOutputs = matbOutputs,
+          matbrCerts = matbCerts,
+          matbrWdrls = matbWdrls,
+          matbrTxFee = matbTxFee,
+          matbrValidityInterval = matbValidityInterval,
+          matbrUpdate = matbUpdate,
+          matbrAuxDataHash = matbAuxDataHash,
+          matbrMint = matbMint
+        }
+    )
   where
     MATxBody
       inputs
@@ -303,7 +305,7 @@ pattern MATxBody
       update
       auxDataHash
       mint =
-        mkMATxBody $
+        mkMemoized $
           MATxBodyRaw
             { matbrInputs = inputs,
               matbrOutputs = outputs,
@@ -318,46 +320,29 @@ pattern MATxBody
 
 {-# COMPLETE MATxBody #-}
 
-mkMATxBody ::
-  EraTxOut era =>
-  MATxBodyRaw era ->
-  MATxBody era
-mkMATxBody = TxBodyConstr . memoBytes . txSparse
-{-# INLINEABLE mkMATxBody #-}
-
-lensTxBodyRaw ::
-  ShelleyMAEraTxBody era =>
-  (MATxBodyRaw era -> a) ->
-  (MATxBodyRaw era -> t -> MATxBodyRaw era) ->
-  Lens (MATxBody era) (MATxBody era) a t
-lensTxBodyRaw getter setter =
-  lens
-    (\(TxBodyConstr (Memo txBodyRaw _)) -> getter txBodyRaw)
-    (\(TxBodyConstr (Memo txBodyRaw _)) val -> mkMATxBody $ setter txBodyRaw val)
-{-# INLINEABLE lensTxBodyRaw #-}
-
 instance MAClass ma c => EraTxBody (ShelleyMAEra ma c) where
   {-# SPECIALIZE instance EraTxBody (ShelleyMAEra 'Mary StandardCrypto) #-}
   {-# SPECIALIZE instance EraTxBody (ShelleyMAEra 'Allegra StandardCrypto) #-}
 
   type TxBody (ShelleyMAEra ma c) = MATxBody (ShelleyMAEra ma c)
 
-  mkBasicTxBody = mkMATxBody initial
+  mkBasicTxBody = mkMemoized emptyMATxBodyRaw
 
   inputsTxBodyL =
-    lensTxBodyRaw matbrInputs (\txBodyRaw inputs_ -> txBodyRaw {matbrInputs = inputs_})
+    lensMemoRawType matbrInputs $ \txBodyRaw inputs -> txBodyRaw {matbrInputs = inputs}
   {-# INLINEABLE inputsTxBodyL #-}
 
   outputsTxBodyL =
-    lensTxBodyRaw matbrOutputs (\txBodyRaw outputs_ -> txBodyRaw {matbrOutputs = outputs_})
+    lensMemoRawType matbrOutputs $ \txBodyRaw outputs -> txBodyRaw {matbrOutputs = outputs}
   {-# INLINEABLE outputsTxBodyL #-}
 
   feeTxBodyL =
-    lensTxBodyRaw matbrTxFee (\txBodyRaw fee_ -> txBodyRaw {matbrTxFee = fee_})
+    lensMemoRawType matbrTxFee $ \txBodyRaw fee -> txBodyRaw {matbrTxFee = fee}
   {-# INLINEABLE feeTxBodyL #-}
 
   auxDataHashTxBodyL =
-    lensTxBodyRaw matbrAuxDataHash (\txBodyRaw auxDataHash -> txBodyRaw {matbrAuxDataHash = auxDataHash})
+    lensMemoRawType matbrAuxDataHash $
+      \txBodyRaw auxDataHash -> txBodyRaw {matbrAuxDataHash = auxDataHash}
   {-# INLINEABLE auxDataHashTxBodyL #-}
 
   allInputsTxBodyF = inputsTxBodyL
@@ -368,18 +353,18 @@ instance MAClass ma c => ShelleyEraTxBody (ShelleyMAEra ma c) where
   {-# SPECIALIZE instance ShelleyEraTxBody (ShelleyMAEra 'Allegra StandardCrypto) #-}
 
   wdrlsTxBodyL =
-    lensTxBodyRaw matbrWdrls (\txBodyRaw wdrls_ -> txBodyRaw {matbrWdrls = wdrls_})
+    lensMemoRawType matbrWdrls $ \txBodyRaw wdrls -> txBodyRaw {matbrWdrls = wdrls}
   {-# INLINEABLE wdrlsTxBodyL #-}
 
   ttlTxBodyL = notSupportedInThisEraL
   {-# INLINEABLE ttlTxBodyL #-}
 
   updateTxBodyL =
-    lensTxBodyRaw matbrUpdate (\txBodyRaw update_ -> txBodyRaw {matbrUpdate = update_})
+    lensMemoRawType matbrUpdate $ \txBodyRaw update -> txBodyRaw {matbrUpdate = update}
   {-# INLINEABLE updateTxBodyL #-}
 
   certsTxBodyL =
-    lensTxBodyRaw matbrCerts (\txBodyRaw certs_ -> txBodyRaw {matbrCerts = certs_})
+    lensMemoRawType matbrCerts $ \txBodyRaw certs -> txBodyRaw {matbrCerts = certs}
   {-# INLINEABLE certsTxBodyL #-}
 
 instance MAClass ma c => ShelleyMAEraTxBody (ShelleyMAEra ma c) where
@@ -387,17 +372,16 @@ instance MAClass ma c => ShelleyMAEraTxBody (ShelleyMAEra ma c) where
   {-# SPECIALIZE instance ShelleyMAEraTxBody (ShelleyMAEra 'Allegra StandardCrypto) #-}
 
   vldtTxBodyL =
-    lensTxBodyRaw matbrValidityInterval (\txBodyRaw vldt_ -> txBodyRaw {matbrValidityInterval = vldt_})
+    lensMemoRawType matbrValidityInterval $
+      \txBodyRaw vldt -> txBodyRaw {matbrValidityInterval = vldt}
   {-# INLINEABLE vldtTxBodyL #-}
 
   mintTxBodyL =
-    lensTxBodyRaw matbrMint (\txBodyRaw mint_ -> txBodyRaw {matbrMint = mint_})
+    lensMemoRawType matbrMint $ \txBodyRaw mint -> txBodyRaw {matbrMint = mint}
   {-# INLINEABLE mintTxBodyL #-}
 
-  mintValueTxBodyF =
-    to (\(TxBodyConstr (Memo txBodyRaw _)) -> promoteMultiAsset (Proxy @ma) (matbrMint txBodyRaw))
+  mintValueTxBodyF = to (promoteMultiAsset (Proxy @ma) . matbrMint . getMemoRawType)
   {-# INLINEABLE mintValueTxBodyF #-}
 
-  mintedTxBodyF =
-    to (\(TxBodyConstr (Memo txBodyRaw _)) -> getScriptHash (Proxy @ma) (matbrMint txBodyRaw))
+  mintedTxBodyF = to (getScriptHash (Proxy @ma) . matbrMint . getMemoRawType)
   {-# INLINEABLE mintedTxBodyF #-}

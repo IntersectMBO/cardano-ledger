@@ -16,6 +16,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Alonzo.TxBody
@@ -67,7 +68,6 @@ module Cardano.Ledger.Alonzo.TxBody
     ScriptIntegrityHash,
     getAlonzoTxOutEitherAddr,
     utxoEntrySize,
-    txBodyRawEq,
 
     -- * Deprecated
     TxOut,
@@ -97,11 +97,17 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary.Value (MaryValue (MaryValue), MultiAsset (..), policies, policyID)
-import Cardano.Ledger.MemoBytes (Mem, MemoBytes (..), MemoHashIndex, contentsEq, memoBytes)
-import Cardano.Ledger.SafeHash
-  ( HashAnnotated (..),
-    SafeToHash,
+import Cardano.Ledger.MemoBytes
+  ( Mem,
+    MemoBytes,
+    MemoHashIndex,
+    Memoized (..),
+    getMemoRawType,
+    getMemoSafeHash,
+    lensMemoRawType,
+    mkMemoized,
   )
+import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert)
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), Wdrl (Wdrl), unWdrl)
@@ -160,42 +166,34 @@ newtype AlonzoTxBody era = TxBodyConstr (MemoBytes AlonzoTxBodyRaw era)
   deriving (ToCBOR)
   deriving newtype (SafeToHash)
 
+instance Memoized AlonzoTxBody where
+  type RawType AlonzoTxBody = AlonzoTxBodyRaw
+
 type TxBody era = AlonzoTxBody era
 
 {-# DEPRECATED TxBody "Use `AlonzoTxBody` instead" #-}
-
-lensTxBodyRaw ::
-  (Era era, ToCBOR (Core.TxOut era), ToCBOR (PParamsUpdate era)) =>
-  (AlonzoTxBodyRaw era -> a) ->
-  (AlonzoTxBodyRaw era -> t -> AlonzoTxBodyRaw era) ->
-  Lens (AlonzoTxBody era) (AlonzoTxBody era) a t
-lensTxBodyRaw getter setter =
-  lens
-    (\(TxBodyConstr (Memo txBodyRaw _)) -> getter txBodyRaw)
-    (\(TxBodyConstr (Memo txBodyRaw _)) val -> mkAlonzoTxBody $ setter txBodyRaw val)
-{-# INLINEABLE lensTxBodyRaw #-}
 
 instance CC.Crypto c => EraTxBody (AlonzoEra c) where
   {-# SPECIALIZE instance EraTxBody (AlonzoEra CC.StandardCrypto) #-}
 
   type TxBody (AlonzoEra c) = AlonzoTxBody (AlonzoEra c)
 
-  mkBasicTxBody = mkAlonzoTxBody initial
+  mkBasicTxBody = mkMemoized basicAlonzoTxBodyRaw
 
   inputsTxBodyL =
-    lensTxBodyRaw atbrInputs (\txBodyRaw inputs_ -> txBodyRaw {atbrInputs = inputs_})
+    lensMemoRawType atbrInputs (\txBodyRaw inputs_ -> txBodyRaw {atbrInputs = inputs_})
   {-# INLINEABLE inputsTxBodyL #-}
 
   outputsTxBodyL =
-    lensTxBodyRaw atbrOutputs (\txBodyRaw outputs_ -> txBodyRaw {atbrOutputs = outputs_})
+    lensMemoRawType atbrOutputs (\txBodyRaw outputs_ -> txBodyRaw {atbrOutputs = outputs_})
   {-# INLINEABLE outputsTxBodyL #-}
 
   feeTxBodyL =
-    lensTxBodyRaw atbrTxFee (\txBodyRaw fee_ -> txBodyRaw {atbrTxFee = fee_})
+    lensMemoRawType atbrTxFee (\txBodyRaw fee_ -> txBodyRaw {atbrTxFee = fee_})
   {-# INLINEABLE feeTxBodyL #-}
 
   auxDataHashTxBodyL =
-    lensTxBodyRaw atbrAuxDataHash (\txBodyRaw auxDataHash -> txBodyRaw {atbrAuxDataHash = auxDataHash})
+    lensMemoRawType atbrAuxDataHash (\txBodyRaw auxDataHash -> txBodyRaw {atbrAuxDataHash = auxDataHash})
   {-# INLINEABLE auxDataHashTxBodyL #-}
 
   allInputsTxBodyF =
@@ -206,58 +204,57 @@ instance CC.Crypto c => ShelleyEraTxBody (AlonzoEra c) where
   {-# SPECIALIZE instance ShelleyEraTxBody (AlonzoEra CC.StandardCrypto) #-}
 
   wdrlsTxBodyL =
-    lensTxBodyRaw atbrWdrls (\txBodyRaw wdrls_ -> txBodyRaw {atbrWdrls = wdrls_})
+    lensMemoRawType atbrWdrls (\txBodyRaw wdrls_ -> txBodyRaw {atbrWdrls = wdrls_})
   {-# INLINEABLE wdrlsTxBodyL #-}
 
   ttlTxBodyL = notSupportedInThisEraL
 
   updateTxBodyL =
-    lensTxBodyRaw atbrUpdate (\txBodyRaw update_ -> txBodyRaw {atbrUpdate = update_})
+    lensMemoRawType atbrUpdate (\txBodyRaw update_ -> txBodyRaw {atbrUpdate = update_})
   {-# INLINEABLE updateTxBodyL #-}
 
   certsTxBodyL =
-    lensTxBodyRaw atbrCerts (\txBodyRaw certs_ -> txBodyRaw {atbrCerts = certs_})
+    lensMemoRawType atbrCerts (\txBodyRaw certs_ -> txBodyRaw {atbrCerts = certs_})
   {-# INLINEABLE certsTxBodyL #-}
 
 instance CC.Crypto c => ShelleyMAEraTxBody (AlonzoEra c) where
   {-# SPECIALIZE instance ShelleyMAEraTxBody (AlonzoEra CC.StandardCrypto) #-}
 
   vldtTxBodyL =
-    lensTxBodyRaw atbrValidityInterval (\txBodyRaw vldt_ -> txBodyRaw {atbrValidityInterval = vldt_})
+    lensMemoRawType atbrValidityInterval (\txBodyRaw vldt_ -> txBodyRaw {atbrValidityInterval = vldt_})
   {-# INLINEABLE vldtTxBodyL #-}
 
   mintTxBodyL =
-    lensTxBodyRaw atbrMint (\txBodyRaw mint_ -> txBodyRaw {atbrMint = mint_})
+    lensMemoRawType atbrMint (\txBodyRaw mint_ -> txBodyRaw {atbrMint = mint_})
   {-# INLINEABLE mintTxBodyL #-}
 
   mintValueTxBodyF = mintTxBodyL . to (MaryValue 0)
   {-# INLINEABLE mintValueTxBodyF #-}
 
-  mintedTxBodyF =
-    to (\(TxBodyConstr (Memo txBodyRaw _)) -> Set.map policyID (policies (atbrMint txBodyRaw)))
+  mintedTxBodyF = to (Set.map policyID . policies . atbrMint . getMemoRawType)
   {-# INLINEABLE mintedTxBodyF #-}
 
 instance CC.Crypto c => AlonzoEraTxBody (AlonzoEra c) where
   {-# SPECIALIZE instance AlonzoEraTxBody (AlonzoEra CC.StandardCrypto) #-}
 
   collateralInputsTxBodyL =
-    lensTxBodyRaw atbrCollateral (\txBodyRaw collateral_ -> txBodyRaw {atbrCollateral = collateral_})
+    lensMemoRawType atbrCollateral (\txBodyRaw collateral_ -> txBodyRaw {atbrCollateral = collateral_})
   {-# INLINEABLE collateralInputsTxBodyL #-}
 
   reqSignerHashesTxBodyL =
-    lensTxBodyRaw
+    lensMemoRawType
       atbrReqSignerHashes
       (\txBodyRaw reqSignerHashes_ -> txBodyRaw {atbrReqSignerHashes = reqSignerHashes_})
   {-# INLINEABLE reqSignerHashesTxBodyL #-}
 
   scriptIntegrityHashTxBodyL =
-    lensTxBodyRaw
+    lensMemoRawType
       atbrScriptIntegrityHash
       (\txBodyRaw scriptIntegrityHash_ -> txBodyRaw {atbrScriptIntegrityHash = scriptIntegrityHash_})
   {-# INLINEABLE scriptIntegrityHashTxBodyL #-}
 
   networkIdTxBodyL =
-    lensTxBodyRaw atbrTxNetworkId (\txBodyRaw networkId -> txBodyRaw {atbrTxNetworkId = networkId})
+    lensMemoRawType atbrTxNetworkId (\txBodyRaw networkId -> txBodyRaw {atbrTxNetworkId = networkId})
   {-# INLINEABLE networkIdTxBodyL #-}
 
 deriving newtype instance
@@ -317,25 +314,23 @@ pattern AlonzoTxBody
     atbAuxDataHash,
     atbTxNetworkId
   } <-
-  TxBodyConstr
-    ( Memo
-        AlonzoTxBodyRaw
-          { atbrInputs = atbInputs,
-            atbrCollateral = atbCollateral,
-            atbrOutputs = atbOutputs,
-            atbrCerts = atbCerts,
-            atbrWdrls = atbWdrls,
-            atbrTxFee = atbTxFee,
-            atbrValidityInterval = atbValidityInterval,
-            atbrUpdate = atbUpdate,
-            atbrReqSignerHashes = atbReqSignerHashes,
-            atbrMint = atbMint,
-            atbrScriptIntegrityHash = atbScriptIntegrityHash,
-            atbrAuxDataHash = atbAuxDataHash,
-            atbrTxNetworkId = atbTxNetworkId
-          }
-        _
-      )
+  ( getMemoRawType ->
+      AlonzoTxBodyRaw
+        { atbrInputs = atbInputs,
+          atbrCollateral = atbCollateral,
+          atbrOutputs = atbOutputs,
+          atbrCerts = atbCerts,
+          atbrWdrls = atbWdrls,
+          atbrTxFee = atbTxFee,
+          atbrValidityInterval = atbValidityInterval,
+          atbrUpdate = atbUpdate,
+          atbrReqSignerHashes = atbReqSignerHashes,
+          atbrMint = atbMint,
+          atbrScriptIntegrityHash = atbScriptIntegrityHash,
+          atbrAuxDataHash = atbAuxDataHash,
+          atbrTxNetworkId = atbTxNetworkId
+        }
+    )
   where
     AlonzoTxBody
       inputs
@@ -351,7 +346,7 @@ pattern AlonzoTxBody
       scriptIntegrityHash
       auxDataHash
       txNetworkId =
-        mkAlonzoTxBody $
+        mkMemoized $
           AlonzoTxBodyRaw
             { atbrInputs = inputs,
               atbrCollateral = collateral,
@@ -370,16 +365,10 @@ pattern AlonzoTxBody
 
 {-# COMPLETE AlonzoTxBody #-}
 
-mkAlonzoTxBody ::
-  (Era era, ToCBOR (Core.TxOut era), ToCBOR (PParamsUpdate era)) =>
-  AlonzoTxBodyRaw era ->
-  AlonzoTxBody era
-mkAlonzoTxBody = TxBodyConstr . memoBytes . encodeTxBodyRaw
-
 type instance MemoHashIndex AlonzoTxBodyRaw = EraIndependentTxBody
 
 instance (c ~ EraCrypto era) => HashAnnotated (AlonzoTxBody era) EraIndependentTxBody c where
-  hashAnnotated (TxBodyConstr mb) = mbHash mb
+  hashAnnotated = getMemoSafeHash
 
 -- ==============================================================================
 -- We define these accessor functions manually, because if we define them using
@@ -387,90 +376,88 @@ instance (c ~ EraCrypto era) => HashAnnotated (AlonzoTxBody era) EraIndependentT
 -- constraint as a precondition. This is unnecessary, as one can see below
 -- they need not be constrained at all. This should be fixed in the GHC compiler.
 
-inputs' :: Era era => AlonzoTxBody era -> Set (TxIn (EraCrypto era))
-collateral' :: Era era => AlonzoTxBody era -> Set (TxIn (EraCrypto era))
-outputs' :: Era era => AlonzoTxBody era -> StrictSeq (Core.TxOut era)
-certs' :: Era era => AlonzoTxBody era -> StrictSeq (DCert (EraCrypto era))
-txfee' :: Era era => AlonzoTxBody era -> Coin
-wdrls' :: Era era => AlonzoTxBody era -> Wdrl (EraCrypto era)
-vldt' :: Era era => AlonzoTxBody era -> ValidityInterval
-update' :: Era era => AlonzoTxBody era -> StrictMaybe (Update era)
-reqSignerHashes' :: Era era => AlonzoTxBody era -> Set (KeyHash 'Witness (EraCrypto era))
-adHash' :: Era era => AlonzoTxBody era -> StrictMaybe (AuxiliaryDataHash (EraCrypto era))
-mint' :: Era era => AlonzoTxBody era -> MultiAsset (EraCrypto era)
-scriptIntegrityHash' :: Era era => AlonzoTxBody era -> StrictMaybe (ScriptIntegrityHash (EraCrypto era))
-txnetworkid' :: Era era => AlonzoTxBody era -> StrictMaybe Network
-inputs' (TxBodyConstr (Memo raw _)) = atbrInputs raw
+inputs' :: AlonzoTxBody era -> Set (TxIn (EraCrypto era))
+collateral' :: AlonzoTxBody era -> Set (TxIn (EraCrypto era))
+outputs' :: AlonzoTxBody era -> StrictSeq (Core.TxOut era)
+certs' :: AlonzoTxBody era -> StrictSeq (DCert (EraCrypto era))
+txfee' :: AlonzoTxBody era -> Coin
+wdrls' :: AlonzoTxBody era -> Wdrl (EraCrypto era)
+vldt' :: AlonzoTxBody era -> ValidityInterval
+update' :: AlonzoTxBody era -> StrictMaybe (Update era)
+reqSignerHashes' :: AlonzoTxBody era -> Set (KeyHash 'Witness (EraCrypto era))
+adHash' :: AlonzoTxBody era -> StrictMaybe (AuxiliaryDataHash (EraCrypto era))
+mint' :: AlonzoTxBody era -> MultiAsset (EraCrypto era)
+scriptIntegrityHash' :: AlonzoTxBody era -> StrictMaybe (ScriptIntegrityHash (EraCrypto era))
+txnetworkid' :: AlonzoTxBody era -> StrictMaybe Network
+inputs' = atbrInputs . getMemoRawType
 
-collateral' (TxBodyConstr (Memo raw _)) = atbrCollateral raw
+collateral' = atbrCollateral . getMemoRawType
 
-outputs' (TxBodyConstr (Memo raw _)) = atbrOutputs raw
+outputs' = atbrOutputs . getMemoRawType
 
-certs' (TxBodyConstr (Memo raw _)) = atbrCerts raw
+certs' = atbrCerts . getMemoRawType
 
-wdrls' (TxBodyConstr (Memo raw _)) = atbrWdrls raw
+wdrls' = atbrWdrls . getMemoRawType
 
-txfee' (TxBodyConstr (Memo raw _)) = atbrTxFee raw
+txfee' = atbrTxFee . getMemoRawType
 
-vldt' (TxBodyConstr (Memo raw _)) = atbrValidityInterval raw
+vldt' = atbrValidityInterval . getMemoRawType
 
-update' (TxBodyConstr (Memo raw _)) = atbrUpdate raw
+update' = atbrUpdate . getMemoRawType
 
-reqSignerHashes' (TxBodyConstr (Memo raw _)) = atbrReqSignerHashes raw
+reqSignerHashes' = atbrReqSignerHashes . getMemoRawType
 
-adHash' (TxBodyConstr (Memo raw _)) = atbrAuxDataHash raw
+adHash' = atbrAuxDataHash . getMemoRawType
 
-mint' (TxBodyConstr (Memo raw _)) = atbrMint raw
+mint' = atbrMint . getMemoRawType
 
-scriptIntegrityHash' (TxBodyConstr (Memo raw _)) = atbrScriptIntegrityHash raw
+scriptIntegrityHash' = atbrScriptIntegrityHash . getMemoRawType
 
-txnetworkid' (TxBodyConstr (Memo raw _)) = atbrTxNetworkId raw
+txnetworkid' = atbrTxNetworkId . getMemoRawType
 
 --------------------------------------------------------------------------------
 -- Serialisation
 --------------------------------------------------------------------------------
 
-encodeTxBodyRaw ::
-  ( Era era,
-    ToCBOR (Core.TxOut era),
-    ToCBOR (PParamsUpdate era)
-  ) =>
-  AlonzoTxBodyRaw era ->
-  Encode ('Closed 'Sparse) (AlonzoTxBodyRaw era)
-encodeTxBodyRaw
-  AlonzoTxBodyRaw
-    { atbrInputs,
-      atbrCollateral,
-      atbrOutputs,
-      atbrCerts,
-      atbrWdrls,
-      atbrTxFee,
-      atbrValidityInterval = ValidityInterval bot top,
-      atbrUpdate,
-      atbrReqSignerHashes,
-      atbrMint,
-      atbrScriptIntegrityHash,
-      atbrAuxDataHash,
-      atbrTxNetworkId
-    } =
-    Keyed
-      ( \i ifee o f t c w u b rsh mi sh ah ni ->
-          AlonzoTxBodyRaw i ifee o c w f (ValidityInterval b t) u rsh mi sh ah ni
-      )
-      !> Key 0 (To atbrInputs)
-      !> Omit null (Key 13 (To atbrCollateral))
-      !> Key 1 (To atbrOutputs)
-      !> Key 2 (To atbrTxFee)
-      !> encodeKeyedStrictMaybe 3 top
-      !> Omit null (Key 4 (To atbrCerts))
-      !> Omit (null . unWdrl) (Key 5 (To atbrWdrls))
-      !> encodeKeyedStrictMaybe 6 atbrUpdate
-      !> encodeKeyedStrictMaybe 8 bot
-      !> Omit null (Key 14 (To atbrReqSignerHashes))
-      !> Omit (== mempty) (Key 9 (E encodeMint atbrMint))
-      !> encodeKeyedStrictMaybe 11 atbrScriptIntegrityHash
-      !> encodeKeyedStrictMaybe 7 atbrAuxDataHash
-      !> encodeKeyedStrictMaybe 15 atbrTxNetworkId
+instance
+  (Era era, ToCBOR (Core.TxOut era), ToCBOR (PParamsUpdate era)) =>
+  ToCBOR (AlonzoTxBodyRaw era)
+  where
+  toCBOR
+    AlonzoTxBodyRaw
+      { atbrInputs,
+        atbrCollateral,
+        atbrOutputs,
+        atbrCerts,
+        atbrWdrls,
+        atbrTxFee,
+        atbrValidityInterval = ValidityInterval bot top,
+        atbrUpdate,
+        atbrReqSignerHashes,
+        atbrMint,
+        atbrScriptIntegrityHash,
+        atbrAuxDataHash,
+        atbrTxNetworkId
+      } =
+      encode $
+        Keyed
+          ( \i ifee o f t c w u b rsh mi sh ah ni ->
+              AlonzoTxBodyRaw i ifee o c w f (ValidityInterval b t) u rsh mi sh ah ni
+          )
+          !> Key 0 (To atbrInputs)
+          !> Omit null (Key 13 (To atbrCollateral))
+          !> Key 1 (To atbrOutputs)
+          !> Key 2 (To atbrTxFee)
+          !> encodeKeyedStrictMaybe 3 top
+          !> Omit null (Key 4 (To atbrCerts))
+          !> Omit (null . unWdrl) (Key 5 (To atbrWdrls))
+          !> encodeKeyedStrictMaybe 6 atbrUpdate
+          !> encodeKeyedStrictMaybe 8 bot
+          !> Omit null (Key 14 (To atbrReqSignerHashes))
+          !> Omit (== mempty) (Key 9 (E encodeMint atbrMint))
+          !> encodeKeyedStrictMaybe 11 atbrScriptIntegrityHash
+          !> encodeKeyedStrictMaybe 7 atbrAuxDataHash
+          !> encodeKeyedStrictMaybe 15 atbrTxNetworkId
 
 instance
   ( Era era,
@@ -484,7 +471,7 @@ instance
     decode $
       SparseKeyed
         "AlonzoTxBodyRaw"
-        initial
+        basicAlonzoTxBodyRaw
         bodyFields
         requiredFields
     where
@@ -516,8 +503,8 @@ instance
           (2, "fee")
         ]
 
-initial :: AlonzoTxBodyRaw era
-initial =
+basicAlonzoTxBodyRaw :: AlonzoTxBodyRaw era
+basicAlonzoTxBodyRaw =
   AlonzoTxBodyRaw
     mempty
     mempty
@@ -542,15 +529,3 @@ instance
   FromCBOR (Annotator (AlonzoTxBodyRaw era))
   where
   fromCBOR = pure <$> fromCBOR
-
-txBodyRawEq ::
-  ( Era era,
-    Eq (Core.TxOut era),
-    Compactible (Value era),
-    Eq (Value era),
-    Eq (PParamsUpdate era)
-  ) =>
-  AlonzoTxBody era ->
-  AlonzoTxBody era ->
-  Bool
-txBodyRawEq (TxBodyConstr x) (TxBodyConstr y) = contentsEq x y

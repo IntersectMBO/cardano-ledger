@@ -12,6 +12,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.TxBody
@@ -92,7 +93,16 @@ import Cardano.Ledger.Credential (Ptr (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Keys.WitVKey
-import Cardano.Ledger.MemoBytes (Mem, MemoBytes (..), MemoHashIndex, memoBytes, pattern Memo)
+import Cardano.Ledger.MemoBytes
+  ( Mem,
+    MemoBytes,
+    MemoHashIndex,
+    Memoized (..),
+    getMemoRawType,
+    getMemoSafeHash,
+    lensMemoRawType,
+    mkMemoized,
+  )
 import Cardano.Ledger.PoolParams
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
 import Cardano.Ledger.Shelley.Core (ShelleyEraTxBody (..), Wdrl (..))
@@ -108,7 +118,12 @@ import Cardano.Ledger.Shelley.Delegation.Certificates
   )
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (Update)
-import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..), TxOut, addrEitherShelleyTxOutL, valueEitherShelleyTxOutL)
+import Cardano.Ledger.Shelley.TxOut
+  ( ShelleyTxOut (..),
+    TxOut,
+    addrEitherShelleyTxOutL,
+    valueEitherShelleyTxOutL,
+  )
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val (DecodeNonNegative (..))
@@ -121,13 +136,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
-import Lens.Micro
 import NoThunks.Class (NoThunks (..))
-
--- ========================================================================
-
--- ---------------------------
--- WellFormed instances
 
 -- ==============================
 -- The underlying type for TxBody
@@ -169,7 +178,7 @@ instance
     decode
       ( SparseKeyed
           "TxBody"
-          baseTxBodyRaw
+          basicShelleyTxBodyRaw
           boxBody
           [(0, "inputs"), (1, "outputs"), (2, "fee"), (3, "ttl")]
       )
@@ -232,8 +241,8 @@ txSparse (ShelleyTxBodyRaw input output cert wdrl fee ttl update hash) =
 
 -- The initial TxBody. We will overide some of these fields as we build a TxBody,
 -- adding one field at a time, using optional serialisers, inside the Pattern.
-baseTxBodyRaw :: ShelleyTxBodyRaw era
-baseTxBodyRaw =
+basicShelleyTxBodyRaw :: ShelleyTxBodyRaw era
+basicShelleyTxBodyRaw =
   ShelleyTxBodyRaw
     { stbrInputs = Set.empty,
       stbrOutputs = StrictSeq.empty,
@@ -256,7 +265,10 @@ instance
 
 newtype ShelleyTxBody era = TxBodyConstr (MemoBytes ShelleyTxBodyRaw era)
   deriving (Generic, Typeable)
-  deriving newtype (SafeToHash)
+  deriving newtype (SafeToHash, ToCBOR)
+
+instance Memoized ShelleyTxBody where
+  type RawType ShelleyTxBody = ShelleyTxBodyRaw
 
 type TxBody era = ShelleyTxBody era
 
@@ -267,60 +279,44 @@ instance CC.Crypto c => EraTxBody (ShelleyEra c) where
 
   type TxBody (ShelleyEra c) = ShelleyTxBody (ShelleyEra c)
 
-  mkBasicTxBody = mkShelleyTxBody baseTxBodyRaw
+  mkBasicTxBody = mkMemoized basicShelleyTxBodyRaw
 
   allInputsTxBodyF = inputsTxBodyL
   {-# INLINE allInputsTxBodyF #-}
 
   inputsTxBodyL =
-    lens
-      (\(TxBodyConstr (Memo m _)) -> stbrInputs m)
-      (\txBody inputs -> txBody {stbInputs = inputs})
+    lensMemoRawType stbrInputs $ \txBodyRaw inputs -> txBodyRaw {stbrInputs = inputs}
   {-# INLINEABLE inputsTxBodyL #-}
 
   outputsTxBodyL =
-    lens
-      (\(TxBodyConstr (Memo m _)) -> stbrOutputs m)
-      (\txBody outputs -> txBody {stbOutputs = outputs})
+    lensMemoRawType stbrOutputs $ \txBodyRaw outputs -> txBodyRaw {stbrOutputs = outputs}
   {-# INLINEABLE outputsTxBodyL #-}
 
   feeTxBodyL =
-    lens
-      (\(TxBodyConstr (Memo m _)) -> stbrTxFee m)
-      (\txBody fee -> txBody {stbTxFee = fee})
+    lensMemoRawType stbrTxFee $ \txBodyRaw fee -> txBodyRaw {stbrTxFee = fee}
   {-# INLINEABLE feeTxBodyL #-}
 
   auxDataHashTxBodyL =
-    lens
-      (\(TxBodyConstr (Memo m _)) -> stbrMDHash m)
-      (\txBody auxDataHash -> txBody {stbMDHash = auxDataHash})
+    lensMemoRawType stbrMDHash $ \txBodyRaw auxDataHash -> txBodyRaw {stbrMDHash = auxDataHash}
   {-# INLINEABLE auxDataHashTxBodyL #-}
 
 instance CC.Crypto c => ShelleyEraTxBody (ShelleyEra c) where
   {-# SPECIALIZE instance ShelleyEraTxBody (ShelleyEra CC.StandardCrypto) #-}
 
   wdrlsTxBodyL =
-    lens
-      (\(TxBodyConstr (Memo m _)) -> stbrWdrls m)
-      (\txBody wdrls -> txBody {stbWdrls = wdrls})
+    lensMemoRawType stbrWdrls $ \txBodyRaw wdrls -> txBodyRaw {stbrWdrls = wdrls}
   {-# INLINEABLE wdrlsTxBodyL #-}
 
   ttlTxBodyL =
-    lens
-      (\(TxBodyConstr (Memo m _)) -> stbrTTL m)
-      (\txBody ttl -> txBody {stbTTL = ttl})
+    lensMemoRawType stbrTTL $ \txBodyRaw ttl -> txBodyRaw {stbrTTL = ttl}
   {-# INLINEABLE ttlTxBodyL #-}
 
   updateTxBodyL =
-    lens
-      (\(TxBodyConstr (Memo m _)) -> stbrUpdate m)
-      (\txBody update -> txBody {stbUpdate = update})
+    lensMemoRawType stbrUpdate $ \txBodyRaw update -> txBodyRaw {stbrUpdate = update}
   {-# INLINEABLE updateTxBodyL #-}
 
   certsTxBodyL =
-    lens
-      (\(TxBodyConstr (Memo m _)) -> stbrCerts m)
-      (\txBody certs -> txBody {stbCerts = certs})
+    lensMemoRawType stbrCerts $ \txBodyRaw certs -> txBodyRaw {stbrCerts = certs}
   {-# INLINEABLE certsTxBodyL #-}
 
 deriving newtype instance
@@ -356,20 +352,18 @@ pattern ShelleyTxBody
     stbUpdate,
     stbMDHash
   } <-
-  TxBodyConstr
-    ( Memo
-        ShelleyTxBodyRaw
-          { stbrInputs = stbInputs,
-            stbrOutputs = stbOutputs,
-            stbrCerts = stbCerts,
-            stbrWdrls = stbWdrls,
-            stbrTxFee = stbTxFee,
-            stbrTTL = stbTTL,
-            stbrUpdate = stbUpdate,
-            stbrMDHash = stbMDHash
-          }
-        _
-      )
+  ( getMemoRawType ->
+      ShelleyTxBodyRaw
+        { stbrInputs = stbInputs,
+          stbrOutputs = stbOutputs,
+          stbrCerts = stbCerts,
+          stbrWdrls = stbWdrls,
+          stbrTxFee = stbTxFee,
+          stbrTTL = stbTTL,
+          stbrUpdate = stbUpdate,
+          stbrMDHash = stbMDHash
+        }
+    )
   where
     ShelleyTxBody
       inputs
@@ -380,7 +374,7 @@ pattern ShelleyTxBody
       ttl
       update
       mDHash =
-        mkShelleyTxBody $
+        mkMemoized $
           ShelleyTxBodyRaw
             { stbrInputs = inputs,
               stbrOutputs = outputs,
@@ -394,9 +388,6 @@ pattern ShelleyTxBody
 
 {-# COMPLETE ShelleyTxBody #-}
 
-mkShelleyTxBody :: EraTxOut era => ShelleyTxBodyRaw era -> ShelleyTxBody era
-mkShelleyTxBody = TxBodyConstr . memoBytes . txSparse
-
 -- =========================================
 
 type instance MemoHashIndex ShelleyTxBodyRaw = EraIndependentTxBody
@@ -405,10 +396,7 @@ instance
   (Era era, c ~ EraCrypto era) =>
   HashAnnotated (ShelleyTxBody era) EraIndependentTxBody c
   where
-  hashAnnotated (TxBodyConstr mb) = mbHash mb
-
-instance Era era => ToCBOR (TxBody era) where
-  toCBOR (TxBodyConstr memo) = toCBOR memo
+  hashAnnotated = getMemoSafeHash
 
 -- ===============================================================
 

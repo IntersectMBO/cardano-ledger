@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -13,7 +14,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | MemoBytes is an abstraction for a data type that encodes its own serialization.
@@ -23,16 +24,27 @@
 --   can be derived for free. MemoBytes plays an important role in the 'SafeToHash' class
 --   introduced in the module 'Cardano.Ledger.SafeHash'
 module Cardano.Ledger.MemoBytes
-  ( MemoBytes (Memo, mbHash),
+  ( MemoBytes (Memo),
     MemoHashIndex,
     Mem,
     mkMemoBytes,
+    getMemoBytesType,
+    getMemoBytesHash,
     memoBytes,
     shorten,
     showMemo,
     printMemo,
     shortToLazy,
     contentsEq,
+
+    -- * Memoized
+    Memoized (RawType),
+    mkMemoized,
+    getMemoSafeHash,
+    getMemoRawType,
+    zipMemoRawType,
+    getMemoRawBytes,
+    lensMemoRawType,
   )
 where
 
@@ -42,6 +54,7 @@ import Cardano.Ledger.Binary
     FromCBOR (fromCBOR),
     ToCBOR (toCBOR),
     encodePreEncoded,
+    serialize,
     serializeEncoding,
     withSlice,
   )
@@ -54,9 +67,11 @@ import Data.ByteString.Lazy (fromStrict, toStrict)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy as Lazy
 import Data.ByteString.Short (ShortByteString, fromShort, toShort)
+import Data.Coerce
 import Data.Typeable
 import GHC.Base (Type)
 import GHC.Generics (Generic)
+import Lens.Micro
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 import Prelude hiding (span)
 
@@ -68,7 +83,7 @@ import Prelude hiding (span)
 --   from the serialization of a type, and ToCBOR instances do not have unique
 --   serializations.
 data MemoBytes t era = Memo'
-  { mbType :: !(t era),
+  { mbRawType :: !(t era),
     mbBytes :: ShortByteString,
     mbHash :: SafeHash (EraCrypto era) (MemoHashIndex t)
   }
@@ -104,10 +119,16 @@ instance
 
 -- | Both binary representation and Haskell types are compared.
 instance Eq (t era) => Eq (MemoBytes t era) where
-  x == y = mbBytes x == mbBytes y && mbType x == mbType y
+  x == y = mbBytes x == mbBytes y && mbRawType x == mbRawType y
 
 instance (Show (t era), HashAlgorithm (HASH (EraCrypto era))) => Show (MemoBytes t era) where
-  show (Memo' y _ h) = show y <> " (" <> hashAlgorithmName (Proxy :: Proxy (HASH (EraCrypto era))) <> ": " <> show h <> ")"
+  show (Memo' y _ h) =
+    show y
+      <> " ("
+      <> hashAlgorithmName (Proxy :: Proxy (HASH (EraCrypto era)))
+      <> ": "
+      <> show h
+      <> ")"
 
 instance SafeToHash (MemoBytes t era) where
   originalBytes = fromShort . mbBytes
@@ -145,4 +166,71 @@ shortToLazy = fromStrict . fromShort
 
 -- | Returns true if the contents of the MemoBytes are equal
 contentsEq :: Eq (t era) => MemoBytes t era -> MemoBytes t era -> Bool
-contentsEq x y = mbType x == mbType y
+contentsEq x y = mbRawType x == mbRawType y
+
+-- | Extract the inner type of the MemoBytes
+getMemoBytesType :: MemoBytes t era -> t era
+getMemoBytesType = mbRawType
+
+-- | Extract the hash value of the binary representation of the MemoBytes
+getMemoBytesHash :: MemoBytes t era -> SafeHash (EraCrypto era) (MemoHashIndex t)
+getMemoBytesHash = mbHash
+
+-- | Class that relates the actual type with its raw and byte representations
+class Memoized t where
+  type RawType t = (r :: Type -> Type) | r -> t
+
+  -- | This is a coercion from the memoized type to the MemoBytes. This implementation
+  -- cannot be changed since `getMemoBytes` is not exported, therefore it will only work
+  -- on newtypes around `MemoBytes`
+  getMemoBytes :: t era -> MemoBytes (RawType t) era
+  default getMemoBytes ::
+    Coercible (t era) (MemoBytes (RawType t) era) =>
+    t era ->
+    MemoBytes (RawType t) era
+  getMemoBytes = coerce
+
+  -- | This is a coercion from the MemoBytes to the momoized type. This implementation
+  -- cannot be changed since `warpMemoBytes` is not exported, therefore it will only work
+  -- on newtypes around `MemoBytes`
+  wrapMemoBytes :: MemoBytes (RawType t) era -> t era
+  default wrapMemoBytes ::
+    Coercible (MemoBytes (RawType t) era) (t era) =>
+    MemoBytes (RawType t) era ->
+    t era
+  wrapMemoBytes = coerce
+
+-- | Construct memoized type from the raw type using its ToCBOR instance
+mkMemoized :: forall era t. (Era era, ToCBOR (RawType t era), Memoized t) => RawType t era -> t era
+mkMemoized rawType = wrapMemoBytes (mkMemoBytes rawType (serialize (eraProtVerLow @era) rawType))
+
+-- | Extract memoized SafeHash
+getMemoSafeHash :: Memoized t => t era -> SafeHash (EraCrypto era) (MemoHashIndex (RawType t))
+getMemoSafeHash t = mbHash (getMemoBytes t)
+
+-- | Extract the raw type from the memoized version
+getMemoRawType :: Memoized t => t era -> RawType t era
+getMemoRawType t = mbRawType (getMemoBytes t)
+
+-- | Extract the raw bytes from the memoized version
+getMemoRawBytes :: Memoized t => t era -> ShortByteString
+getMemoRawBytes t = mbBytes (getMemoBytes t)
+
+-- | This is a helper function that operates on raw types of two memoized types.
+zipMemoRawType ::
+  (Memoized t1, Memoized t2) =>
+  (RawType t1 era -> RawType t2 era -> a) ->
+  t1 era ->
+  t2 era ->
+  a
+zipMemoRawType f x y = f (getMemoRawType x) (getMemoRawType y)
+
+-- | This is a helper Lens creator for any Memoized type.
+lensMemoRawType ::
+  (Era era, ToCBOR (RawType t era), Memoized t) =>
+  (RawType t era -> a) ->
+  (RawType t era -> b -> RawType t era) ->
+  Lens (t era) (t era) a b
+lensMemoRawType getter setter =
+  lens (getter . getMemoRawType) (\t v -> mkMemoized $ setter (getMemoRawType t) v)
+{-# INLINEABLE lensMemoRawType #-}

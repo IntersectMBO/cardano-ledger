@@ -12,6 +12,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.ShelleyMA.AuxiliaryData
@@ -36,7 +37,15 @@ import qualified Cardano.Ledger.Core as Core (TxAuxData)
 import Cardano.Ledger.Crypto (HASH)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Hashes (EraIndependentTxAuxData)
-import Cardano.Ledger.MemoBytes (Mem, MemoBytes (..), MemoHashIndex, memoBytes)
+import Cardano.Ledger.MemoBytes
+  ( Mem,
+    MemoBytes,
+    MemoHashIndex,
+    Memoized (RawType),
+    getMemoRawType,
+    getMemoSafeHash,
+    mkMemoized,
+  )
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash, hashAnnotated)
 import Cardano.Ledger.Shelley.Metadata (Metadatum, validMetadatum)
 import Cardano.Ledger.ShelleyMA.Era
@@ -90,10 +99,13 @@ newtype AllegraTxAuxData era = AuxiliaryDataWithBytes (MemoBytes AuxiliaryDataRa
   deriving (Generic)
   deriving newtype (ToCBOR, SafeToHash)
 
+instance Memoized AllegraTxAuxData where
+  type RawType AllegraTxAuxData = AuxiliaryDataRaw
+
 type instance MemoHashIndex AuxiliaryDataRaw = EraIndependentTxAuxData
 
 instance (c ~ EraCrypto era) => HashAnnotated (AllegraTxAuxData era) EraIndependentTxAuxData c where
-  hashAnnotated (AuxiliaryDataWithBytes mb) = mbHash mb
+  hashAnnotated = getMemoSafeHash
 
 deriving newtype instance Eq (Script era) => Eq (AllegraTxAuxData era)
 
@@ -110,13 +122,9 @@ pattern AllegraTxAuxData ::
   Map Word64 Metadatum ->
   StrictSeq (Script era) ->
   AllegraTxAuxData era
-pattern AllegraTxAuxData blob sp <-
-  AuxiliaryDataWithBytes (Memo (AuxiliaryDataRaw blob sp) _)
+pattern AllegraTxAuxData blob sp <- (getMemoRawType -> AuxiliaryDataRaw blob sp)
   where
-    AllegraTxAuxData blob sp =
-      AuxiliaryDataWithBytes $
-        memoBytes
-          (encAuxiliaryDataRaw $ AuxiliaryDataRaw blob sp)
+    AllegraTxAuxData blob sp = mkMemoized $ AuxiliaryDataRaw blob sp
 
 {-# COMPLETE AllegraTxAuxData #-}
 
@@ -130,7 +138,7 @@ pattern AllegraTxAuxData' ::
   StrictSeq (Script era) ->
   AllegraTxAuxData era
 pattern AllegraTxAuxData' blob sp <-
-  AuxiliaryDataWithBytes (Memo (AuxiliaryDataRaw blob sp) _)
+  (getMemoRawType -> AuxiliaryDataRaw blob sp)
 
 {-# COMPLETE AllegraTxAuxData' #-}
 
@@ -138,13 +146,9 @@ pattern AllegraTxAuxData' blob sp <-
 -- Serialisation
 --------------------------------------------------------------------------------
 
--- | Encode AuxiliaryData
-encAuxiliaryDataRaw ::
-  ToCBOR (Script era) =>
-  AuxiliaryDataRaw era ->
-  Encode ('Closed 'Dense) (AuxiliaryDataRaw era)
-encAuxiliaryDataRaw (AuxiliaryDataRaw blob sp) =
-  Rec AuxiliaryDataRaw !> To blob !> To sp
+instance (Era era, ToCBOR (Script era)) => ToCBOR (AuxiliaryDataRaw era) where
+  toCBOR (AuxiliaryDataRaw blob sp) =
+    encode (Rec AuxiliaryDataRaw !> To blob !> To sp)
 
 instance
   (Era era, FromCBOR (Annotator (Script era))) =>
