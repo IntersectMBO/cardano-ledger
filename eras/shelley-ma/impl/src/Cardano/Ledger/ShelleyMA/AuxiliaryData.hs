@@ -95,7 +95,7 @@ type instance MemoHashIndex AuxiliaryDataRaw = EraIndependentTxAuxData
 instance (c ~ EraCrypto era) => HashAnnotated (AllegraTxAuxData era) EraIndependentTxAuxData c where
   hashAnnotated (AuxiliaryDataWithBytes mb) = mbHash mb
 
-deriving newtype instance Eq (AllegraTxAuxData era)
+deriving newtype instance Eq (Script era) => Eq (AllegraTxAuxData era)
 
 deriving newtype instance (Show (Script era), HashAlgorithm (HASH (EraCrypto era))) => Show (AllegraTxAuxData era)
 

@@ -330,7 +330,7 @@ deriving newtype instance EraTxBody era => NFData (TxBody era)
 
 deriving instance EraTxBody era => Show (TxBody era)
 
-deriving instance Eq (TxBody era)
+deriving instance (Era era, Eq (PParamsUpdate era), Eq (CompactForm (Value era))) => Eq (TxBody era)
 
 deriving via Mem ShelleyTxBodyRaw era instance EraTxBody era => FromCBOR (Annotator (TxBody era))
 

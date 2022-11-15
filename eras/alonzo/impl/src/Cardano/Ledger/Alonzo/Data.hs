@@ -389,7 +389,7 @@ instance (EraCrypto era ~ c) => HashAnnotated (AuxiliaryData era) EraIndependent
 
 deriving newtype instance NFData (Script era) => NFData (AuxiliaryData era)
 
-deriving instance Eq (AuxiliaryData era)
+deriving instance Eq (Script era) => Eq (AuxiliaryData era)
 
 deriving instance (Show (Script era), HashAlgorithm (HASH (EraCrypto era))) => Show (AuxiliaryData era)
 

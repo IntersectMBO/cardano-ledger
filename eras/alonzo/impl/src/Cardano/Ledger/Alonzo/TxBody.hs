@@ -260,7 +260,9 @@ instance CC.Crypto c => AlonzoEraTxBody (AlonzoEra c) where
     lensTxBodyRaw atbrTxNetworkId (\txBodyRaw networkId -> txBodyRaw {atbrTxNetworkId = networkId})
   {-# INLINEABLE networkIdTxBodyL #-}
 
-deriving newtype instance CC.Crypto (EraCrypto era) => Eq (AlonzoTxBody era)
+deriving newtype instance
+  (Era era, Eq (Core.TxOut era), Eq (PParamsUpdate era), Eq (Value era), Compactible (Value era)) =>
+  Eq (AlonzoTxBody era)
 
 deriving instance
   (Era era, NoThunks (Core.TxOut era), NoThunks (PParamsUpdate era)) =>
