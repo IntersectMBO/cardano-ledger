@@ -18,6 +18,8 @@ module Test.Cardano.Ledger.Binary.RoundTrip
     embedTripSpec,
     embedTripExpectation,
     embedTripAnnExpectation,
+    roundTripTwiddledProperty,
+    roundTripAnnTwiddledProperty,
     RoundTripFailure (..),
     Trip (..),
     mkTrip,
@@ -115,6 +117,24 @@ roundTripAnnExpectation version t =
   case roundTripAnn version t of
     Left err -> expectationFailure $ "Failed to deserialize encoded: " ++ show err
     Right tDecoded -> tDecoded `shouldBe` t
+
+roundTripTwiddledProperty ::
+  (Show t, Eq t, Twiddle t, FromCBOR t) => Version -> t -> Property
+roundTripTwiddledProperty version t = property $ do
+  roundTripTwiddled version t >>= \case
+    Left err ->
+      pure $ counterexample ("Failed to deserialize twiddled encoding: " ++ show err) False
+    Right tDecoded ->
+      pure (tDecoded === t)
+
+roundTripAnnTwiddledProperty ::
+  (Show t, Eq t, Twiddle t, FromCBOR (Annotator t)) => Version -> t -> Property
+roundTripAnnTwiddledProperty version t = property $ do
+  roundTripAnnTwiddled version t >>= \case
+    Left err ->
+      pure $ counterexample ("Failed to deserialize twiddled encoding: " ++ show err) False
+    Right tDecoded ->
+      pure (tDecoded === t)
 
 embedTripExpectation ::
   forall a b.
@@ -282,18 +302,21 @@ embedTripLabelExtra ::
 embedTripLabelExtra lbl encVersion decVersion (Trip encoder decoder dropper) s =
   case decodeFullDecoder decVersion lbl decoder encodedBytes of
     Right val
-      | Nothing <- dropperError -> Right (val, encoding, encodedBytes)
-      | Just err <- dropperError ->
+      | Nothing <- mDropperError -> Right (val, encoding, encodedBytes)
+      | Just err <- mDropperError ->
           Left $
             RoundTripFailure encVersion decVersion encoding encodedBytes Nothing (Just err) Nothing
     Left err ->
-      let mErr = dropperError >>= \dropErr -> guard (dropErr /= err) >> dropperError
+      let mErr = do
+            dropperError <- mDropperError
+            guard (dropperError /= err)
+            pure dropperError
        in Left $
             RoundTripFailure encVersion decVersion encoding encodedBytes Nothing mErr (Just err)
   where
     encoding = encoder s
     encodedBytes = serializeEncoding encVersion encoding
-    dropperError =
+    mDropperError =
       case decodeFullDecoder decVersion lbl dropper encodedBytes of
         Left err -> Just err
         Right () -> Nothing
