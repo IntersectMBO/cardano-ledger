@@ -14,6 +14,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Alonzo.TxWits
@@ -66,7 +67,6 @@ import Cardano.Ledger.Binary
     decodeList,
     encodeFoldableEncoder,
     encodeListLen,
-    serializeEncoding',
   )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
@@ -75,11 +75,17 @@ import Cardano.Ledger.Crypto (HASH)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
-import Cardano.Ledger.MemoBytes (Mem, MemoBytes (..), memoBytes)
+import Cardano.Ledger.MemoBytes
+  ( Mem,
+    MemoBytes,
+    Memoized (..),
+    getMemoRawType,
+    lensMemoRawType,
+    mkMemoized,
+  )
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.TxBody (WitVKey)
 import Control.DeepSeq
-import qualified Data.ByteString.Short as SBS
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
@@ -128,6 +134,18 @@ newtype RedeemersRaw era = RedeemersRaw (Map RdmrPtr (Data era, ExUnits))
 
 deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (RedeemersRaw era)
 
+instance Typeable era => ToCBOR (RedeemersRaw era) where
+  toCBOR (RedeemersRaw rs) = encodeFoldableEncoder keyValueEncoder $ Map.toAscList rs
+    where
+      keyValueEncoder (ptr, (dats, exs)) =
+        encodeListLen 4
+          <> toCBORGroup ptr
+          <> toCBOR dats
+          <> toCBOR exs
+
+instance Memoized Redeemers where
+  type RawType Redeemers = RedeemersRaw
+
 newtype Redeemers era = RedeemersConstr (MemoBytes RedeemersRaw era)
   deriving newtype (Eq, ToCBOR, NoThunks, SafeToHash, Typeable, NFData)
 
@@ -140,8 +158,7 @@ pattern Redeemers' ::
   Era era =>
   Map RdmrPtr (Data era, ExUnits) ->
   Redeemers era
-pattern Redeemers' rs' <-
-  RedeemersConstr (Memo (RedeemersRaw rs') _)
+pattern Redeemers' rs <- (getMemoRawType -> RedeemersRaw rs)
 
 {-# COMPLETE Redeemers' #-}
 
@@ -151,18 +168,9 @@ pattern Redeemers ::
   Map RdmrPtr (Data era, ExUnits) ->
   Redeemers era
 pattern Redeemers rs <-
-  RedeemersConstr (Memo (RedeemersRaw rs) _)
+  (getMemoRawType -> RedeemersRaw rs)
   where
-    Redeemers rs' =
-      let enc = encodeFoldableEncoder $ \(ptr, (dats, exs)) ->
-            encodeListLen 4
-              <> toCBORGroup ptr
-              <> toCBOR dats
-              <> toCBOR exs
-       in RedeemersConstr $
-            Memo
-              (RedeemersRaw rs')
-              (SBS.toShort . serializeEncoding' (eraProtVerLow @era) . enc . Map.assocs $ rs')
+    Redeemers rs' = mkMemoized $ RedeemersRaw rs'
 
 {-# COMPLETE Redeemers #-}
 
@@ -189,12 +197,12 @@ nullRedeemers = Map.null . unRedeemers
 --      (Map RdmrPtr (Data era, ExUnits))
 
 -- | Internal 'AlonzoTxWits' type, lacking serialised bytes.
-data TxWitnessRaw era = TxWitnessRaw
-  { _txwitsVKey :: Set (WitVKey 'Witness (EraCrypto era)),
-    _txwitsBoot :: Set (BootstrapWitness (EraCrypto era)),
-    _txscripts :: Map (ScriptHash (EraCrypto era)) (Core.Script era),
-    _txdats :: TxDats era,
-    _txrdmrs :: Redeemers era
+data AlonzoTxWitsRaw era = AlonzoTxWitsRaw
+  { atwrAddrTxWits :: Set (WitVKey 'Witness (EraCrypto era)),
+    atwrBootAddrTxWits :: Set (BootstrapWitness (EraCrypto era)),
+    atwrScriptTxWits :: Map (ScriptHash (EraCrypto era)) (Core.Script era),
+    atwrDatsTxWits :: TxDats era,
+    atwrRdmrsTxWits :: Redeemers era
   }
   deriving (Generic, Typeable)
 
@@ -207,17 +215,20 @@ instance
     NFData (SigDSIGN (CC.DSIGN c)),
     NFData (VerKeyDSIGN (CC.DSIGN c))
   ) =>
-  NFData (TxWitnessRaw era)
+  NFData (AlonzoTxWitsRaw era)
 
-newtype AlonzoTxWits era = TxWitnessConstr (MemoBytes TxWitnessRaw era)
+newtype AlonzoTxWits era = TxWitnessConstr (MemoBytes AlonzoTxWitsRaw era)
   deriving newtype (SafeToHash, ToCBOR)
+
+instance Memoized AlonzoTxWits where
+  type RawType AlonzoTxWits = AlonzoTxWitsRaw
 
 instance (Era era, Core.Script era ~ AlonzoScript era) => Semigroup (AlonzoTxWits era) where
   (<>) x y | isEmptyTxWitness x = y
   (<>) x y | isEmptyTxWitness y = x
   (<>)
-    (TxWitnessConstr (Memo (TxWitnessRaw a b c d (Redeemers' e)) _))
-    (TxWitnessConstr (Memo (TxWitnessRaw u v w x (Redeemers' y)) _)) =
+    (getMemoRawType -> AlonzoTxWitsRaw a b c d (Redeemers' e))
+    (getMemoRawType -> AlonzoTxWitsRaw u v w x (Redeemers' y)) =
       AlonzoTxWits (a <> u) (b <> v) (c <> w) (d <> x) (Redeemers (e <> y))
 
 instance (Era era, Core.Script era ~ AlonzoScript era) => Monoid (AlonzoTxWits era) where
@@ -235,7 +246,7 @@ deriving instance
   NFData (AlonzoTxWits era)
 
 isEmptyTxWitness :: Era era => AlonzoTxWits era -> Bool
-isEmptyTxWitness (TxWitnessConstr (Memo (TxWitnessRaw a b c d (Redeemers' e)) _)) =
+isEmptyTxWitness (getMemoRawType -> AlonzoTxWitsRaw a b c d (Redeemers' e)) =
   Set.null a && Set.null b && Map.null c && nullDats d && Map.null e
 
 -- =====================================================
@@ -245,31 +256,25 @@ newtype TxDatsRaw era = TxDatsRaw (Map (DataHash (EraCrypto era)) (Data era))
 
 deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (TxDatsRaw era)
 
-encodeTxDatsRaw ::
-  ToCBOR (Data era) =>
-  TxDatsRaw era ->
-  Encode ('Closed 'Dense) (TxDatsRaw era)
-encodeTxDatsRaw = E (toCBOR . Map.elems . unTxDatsRaw)
-  where
-    unTxDatsRaw (TxDatsRaw m) = m
+instance (Typeable era, ToCBOR (Data era)) => ToCBOR (TxDatsRaw era) where
+  toCBOR (TxDatsRaw m) = toCBOR $ Map.elems m
 
-pattern TxDats' :: Era era => Map (DataHash (EraCrypto era)) (Data era) -> TxDats era
-pattern TxDats' m <- TxDatsConstr (Memo (TxDatsRaw m) _)
+pattern TxDats' :: Map (DataHash (EraCrypto era)) (Data era) -> TxDats era
+pattern TxDats' m <- (getMemoRawType -> TxDatsRaw m)
 
 {-# COMPLETE TxDats' #-}
 
 pattern TxDats :: Era era => Typeable era => Map (DataHash (EraCrypto era)) (Data era) -> TxDats era
-pattern TxDats m <-
-  TxDatsConstr (Memo (TxDatsRaw m) _)
+pattern TxDats m <- (getMemoRawType -> TxDatsRaw m)
   where
-    TxDats m = TxDatsConstr $ memoBytes (encodeTxDatsRaw (TxDatsRaw m))
+    TxDats m = mkMemoized (TxDatsRaw m)
 
 {-# COMPLETE TxDats #-}
 
-unTxDats :: Era era => TxDats era -> Map (DataHash (EraCrypto era)) (Data era)
+unTxDats :: TxDats era -> Map (DataHash (EraCrypto era)) (Data era)
 unTxDats (TxDats' m) = m
 
-nullDats :: Era era => TxDats era -> Bool
+nullDats :: TxDats era -> Bool
 nullDats (TxDats' d) = Map.null d
 
 instance (Era era) => FromCBOR (Annotator (TxDatsRaw era)) where
@@ -277,6 +282,9 @@ instance (Era era) => FromCBOR (Annotator (TxDatsRaw era)) where
 
 newtype TxDats era = TxDatsConstr (MemoBytes TxDatsRaw era)
   deriving newtype (SafeToHash, ToCBOR, Eq, NoThunks, NFData)
+
+instance Memoized TxDats where
+  type RawType TxDats = TxDatsRaw
 
 deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (TxDats era)
 
@@ -298,13 +306,13 @@ deriving stock instance
   ( Era era,
     Eq (Core.Script era)
   ) =>
-  Eq (TxWitnessRaw era)
+  Eq (AlonzoTxWitsRaw era)
 
 deriving stock instance
   (Era era, Show (Core.Script era)) =>
-  Show (TxWitnessRaw era)
+  Show (AlonzoTxWitsRaw era)
 
-instance (Era era, NoThunks (Core.Script era)) => NoThunks (TxWitnessRaw era)
+instance (Era era, NoThunks (Core.Script era)) => NoThunks (AlonzoTxWitsRaw era)
 
 deriving newtype instance
   ( Era era,
@@ -332,8 +340,7 @@ pattern AlonzoTxWits' ::
   Redeemers era ->
   AlonzoTxWits era
 pattern AlonzoTxWits' {txwitsVKey', txwitsBoot', txscripts', txdats', txrdmrs'} <-
-  TxWitnessConstr
-    (Memo (TxWitnessRaw txwitsVKey' txwitsBoot' txscripts' txdats' txrdmrs') _)
+  (getMemoRawType -> AlonzoTxWitsRaw txwitsVKey' txwitsBoot' txscripts' txdats' txrdmrs')
 
 {-# COMPLETE AlonzoTxWits' #-}
 
@@ -346,69 +353,51 @@ pattern AlonzoTxWits ::
   Redeemers era ->
   AlonzoTxWits era
 pattern AlonzoTxWits {txwitsVKey, txwitsBoot, txscripts, txdats, txrdmrs} <-
-  TxWitnessConstr
-    (Memo (TxWitnessRaw txwitsVKey txwitsBoot txscripts txdats txrdmrs) _)
+  (getMemoRawType -> AlonzoTxWitsRaw txwitsVKey txwitsBoot txscripts txdats txrdmrs)
   where
     AlonzoTxWits witsVKey' witsBoot' witsScript' witsDat' witsRdmr' =
-      mkAlonzoTxWitness $ TxWitnessRaw witsVKey' witsBoot' witsScript' witsDat' witsRdmr'
+      mkMemoized $ AlonzoTxWitsRaw witsVKey' witsBoot' witsScript' witsDat' witsRdmr'
 
 {-# COMPLETE AlonzoTxWits #-}
-
-mkAlonzoTxWitness ::
-  (Era era, Core.Script era ~ AlonzoScript era) =>
-  TxWitnessRaw era ->
-  AlonzoTxWits era
-mkAlonzoTxWitness = TxWitnessConstr . memoBytes . encodeWitnessRaw
-{-# INLINEABLE mkAlonzoTxWitness #-}
 
 -- =======================================================
 -- Accessors
 -- =======================================================
 
-lensWitsRaw ::
-  (Era e, Era era, Core.Script era ~ AlonzoScript era) =>
-  (TxWitnessRaw e -> a) ->
-  (TxWitnessRaw e -> t -> TxWitnessRaw era) ->
-  Lens (AlonzoTxWits e) (AlonzoTxWits era) a t
-lensWitsRaw getter setter =
-  lens
-    (\(TxWitnessConstr (Memo witsRaw _)) -> getter witsRaw)
-    (\(TxWitnessConstr (Memo witsRaw _)) val -> mkAlonzoTxWitness $ setter witsRaw val)
-{-# INLINEABLE lensWitsRaw #-}
-
 addrAlonzoTxWitsL ::
   (Era era, Core.Script era ~ AlonzoScript era) =>
   Lens' (AlonzoTxWits era) (Set (WitVKey 'Witness (EraCrypto era)))
 addrAlonzoTxWitsL =
-  lensWitsRaw _txwitsVKey (\witsRaw addrWits -> witsRaw {_txwitsVKey = addrWits})
+  lensMemoRawType atwrAddrTxWits $ \witsRaw addrWits -> witsRaw {atwrAddrTxWits = addrWits}
 {-# INLINEABLE addrAlonzoTxWitsL #-}
 
 bootAddrAlonzoTxWitsL ::
   (Era era, Core.Script era ~ AlonzoScript era) =>
   Lens' (AlonzoTxWits era) (Set (BootstrapWitness (EraCrypto era)))
 bootAddrAlonzoTxWitsL =
-  lensWitsRaw _txwitsBoot (\witsRaw bootAddrWits -> witsRaw {_txwitsBoot = bootAddrWits})
+  lensMemoRawType atwrBootAddrTxWits $
+    \witsRaw bootAddrWits -> witsRaw {atwrBootAddrTxWits = bootAddrWits}
 {-# INLINEABLE bootAddrAlonzoTxWitsL #-}
 
 scriptAlonzoTxWitsL ::
   (Era era, Core.Script era ~ AlonzoScript era) =>
   Lens' (AlonzoTxWits era) (Map (ScriptHash (EraCrypto era)) (Script era))
 scriptAlonzoTxWitsL =
-  lensWitsRaw _txscripts (\witsRaw scriptWits -> witsRaw {_txscripts = scriptWits})
+  lensMemoRawType atwrScriptTxWits $ \witsRaw scriptWits -> witsRaw {atwrScriptTxWits = scriptWits}
 {-# INLINEABLE scriptAlonzoTxWitsL #-}
 
 datsAlonzoTxWitsL ::
   (Era era, Core.Script era ~ AlonzoScript era) =>
   Lens' (AlonzoTxWits era) (TxDats era)
 datsAlonzoTxWitsL =
-  lensWitsRaw _txdats (\witsRaw datsWits -> witsRaw {_txdats = datsWits})
+  lensMemoRawType atwrDatsTxWits $ \witsRaw datsWits -> witsRaw {atwrDatsTxWits = datsWits}
 {-# INLINEABLE datsAlonzoTxWitsL #-}
 
 rdmrsAlonzoTxWitsL ::
   (Era era, Core.Script era ~ AlonzoScript era) =>
   Lens' (AlonzoTxWits era) (Redeemers era)
 rdmrsAlonzoTxWitsL =
-  lensWitsRaw _txrdmrs (\witsRaw rdmrsWits -> witsRaw {_txrdmrs = rdmrsWits})
+  lensMemoRawType atwrRdmrsTxWits $ \witsRaw rdmrsWits -> witsRaw {atwrRdmrsTxWits = rdmrsWits}
 {-# INLINEABLE rdmrsAlonzoTxWitsL #-}
 
 instance (EraScript (AlonzoEra c), CC.Crypto c) => EraTxWits (AlonzoEra c) where
@@ -445,51 +434,49 @@ instance (EraScript (AlonzoEra c), CC.Crypto c) => AlonzoEraTxWits (AlonzoEra c)
 -- Serialisation
 --------------------------------------------------------------------------------
 
-encodeWitnessRaw ::
-  (Era era, Core.Script era ~ AlonzoScript era) =>
-  TxWitnessRaw era ->
-  Encode ('Closed 'Sparse) (TxWitnessRaw era)
-encodeWitnessRaw (TxWitnessRaw vkeys boots scripts dats rdmrs) =
-  Keyed
-    (\a b c d e f g -> TxWitnessRaw a b (c <> d <> e) f g)
-    !> Omit null (Key 0 $ To vkeys)
-    !> Omit null (Key 2 $ To boots)
-    !> Omit
-      null
-      ( Key 1 $
-          E
-            (toCBOR . mapMaybe unwrapTS . Map.elems)
-            (Map.filter isTimelock scripts)
-      )
-    !> Omit
-      null
-      ( Key 3 $
-          E
-            (toCBOR . mapMaybe unwrapPS1 . Map.elems)
-            (Map.filter (isPlutus PlutusV1) scripts)
-      )
-    !> Omit
-      null
-      ( Key 6 $
-          E
-            (toCBOR . mapMaybe unwrapPS2 . Map.elems)
-            (Map.filter (isPlutus PlutusV2) scripts)
-      )
-    !> Omit nullDats (Key 4 $ E toCBOR dats)
-    !> Omit nullRedeemers (Key 5 $ To rdmrs)
-  where
-    unwrapTS (TimelockScript x) = Just x
-    unwrapTS _ = Nothing
-    unwrapPS1 (PlutusScript PlutusV1 x) = Just x
-    unwrapPS1 _ = Nothing
-    unwrapPS2 (PlutusScript PlutusV2 x) = Just x
-    unwrapPS2 _ = Nothing
+instance (Era era, Script era ~ AlonzoScript era) => ToCBOR (AlonzoTxWitsRaw era) where
+  toCBOR (AlonzoTxWitsRaw vkeys boots scripts dats rdmrs) =
+    encode $
+      Keyed
+        (\a b c d e f g -> AlonzoTxWitsRaw a b (c <> d <> e) f g)
+        !> Omit null (Key 0 $ To vkeys)
+        !> Omit null (Key 2 $ To boots)
+        !> Omit
+          null
+          ( Key 1 $
+              E
+                (toCBOR . mapMaybe unwrapTS . Map.elems)
+                (Map.filter isTimelock scripts)
+          )
+        !> Omit
+          null
+          ( Key 3 $
+              E
+                (toCBOR . mapMaybe unwrapPS1 . Map.elems)
+                (Map.filter (isPlutus PlutusV1) scripts)
+          )
+        !> Omit
+          null
+          ( Key 6 $
+              E
+                (toCBOR . mapMaybe unwrapPS2 . Map.elems)
+                (Map.filter (isPlutus PlutusV2) scripts)
+          )
+        !> Omit nullDats (Key 4 $ E toCBOR dats)
+        !> Omit nullRedeemers (Key 5 $ To rdmrs)
+    where
+      unwrapTS (TimelockScript x) = Just x
+      unwrapTS _ = Nothing
+      unwrapPS1 (PlutusScript PlutusV1 x) = Just x
+      unwrapPS1 _ = Nothing
+      unwrapPS2 (PlutusScript PlutusV2 x) = Just x
+      unwrapPS2 _ = Nothing
 
-    isTimelock (TimelockScript _) = True
-    isTimelock (PlutusScript _ _) = False
+      isTimelock (TimelockScript _) = True
+      isTimelock (PlutusScript _ _) = False
 
-    isPlutus _ (TimelockScript _) = False
-    isPlutus lang (PlutusScript l _) = lang == l
+      isPlutus _ (TimelockScript _) = False
+      isPlutus lang (PlutusScript l _) = lang == l
 
 instance
   (Era era) =>
@@ -521,7 +508,7 @@ instance
     EraScript era,
     Core.Script era ~ AlonzoScript era
   ) =>
-  FromCBOR (Annotator (TxWitnessRaw era))
+  FromCBOR (Annotator (AlonzoTxWitsRaw era))
   where
   fromCBOR =
     decode $
@@ -531,17 +518,17 @@ instance
         txWitnessField
         []
     where
-      emptyTxWitness = TxWitnessRaw mempty mempty mempty mempty emptyRedeemers
+      emptyTxWitness = AlonzoTxWitsRaw mempty mempty mempty mempty emptyRedeemers
       emptyRedeemers = Redeemers mempty
 
-      txWitnessField :: Word -> Field (Annotator (TxWitnessRaw era))
+      txWitnessField :: Word -> Field (Annotator (AlonzoTxWitsRaw era))
       txWitnessField 0 =
         fieldAA
-          (\x wits -> wits {_txwitsVKey = x})
+          (\x wits -> wits {atwrAddrTxWits = x})
           (setDecodeA From)
       txWitnessField 2 =
         fieldAA
-          (\x wits -> wits {_txwitsBoot = x})
+          (\x wits -> wits {atwrBootAddrTxWits = x})
           (setDecodeA From)
       txWitnessField 1 =
         fieldAA
@@ -553,17 +540,17 @@ instance
           (fmap (PlutusScript PlutusV1) <$> From)
       txWitnessField 4 =
         fieldAA
-          (\x wits -> wits {_txdats = x})
+          (\x wits -> wits {atwrDatsTxWits = x})
           From
-      txWitnessField 5 = fieldAA (\x wits -> wits {_txrdmrs = x}) From
+      txWitnessField 5 = fieldAA (\x wits -> wits {atwrRdmrsTxWits = x}) From
       txWitnessField 6 =
         fieldA
           addScripts
           (fmap (PlutusScript PlutusV2) <$> From)
       txWitnessField n = field (\_ t -> t) (Invalid n)
 
-      addScripts :: [AlonzoScript era] -> TxWitnessRaw era -> TxWitnessRaw era
-      addScripts x wits = wits {_txscripts = getKeys ([] :: [era]) x <> _txscripts wits}
+      addScripts :: [AlonzoScript era] -> AlonzoTxWitsRaw era -> AlonzoTxWitsRaw era
+      addScripts x wits = wits {atwrScriptTxWits = getKeys ([] :: [era]) x <> atwrScriptTxWits wits}
       getKeys ::
         forall proxy e.
         EraScript e =>
@@ -576,7 +563,7 @@ keyBy :: forall a b. Ord b => (a -> b) -> [a] -> Map b a
 keyBy f xs = Map.fromList $ (\x -> (f x, x)) <$> xs
 
 deriving via
-  (Mem TxWitnessRaw era)
+  (Mem AlonzoTxWitsRaw era)
   instance
     (EraScript era, Core.Script era ~ AlonzoScript era) =>
     FromCBOR (Annotator (AlonzoTxWits era))

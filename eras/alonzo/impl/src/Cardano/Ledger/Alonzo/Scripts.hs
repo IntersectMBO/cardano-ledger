@@ -41,7 +41,6 @@ module Cardano.Ledger.Alonzo.Scripts
     decodeCostModel,
     CostModels (..),
     PV1.CostModelApplyError (..),
-    contentsEq,
   )
 where
 
@@ -85,7 +84,6 @@ import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley (nativeMultiSigTag)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock)
-import qualified Cardano.Ledger.ShelleyMA.Timelocks as Timelocks
 import Control.DeepSeq (NFData (..), deepseq, rwhnf)
 import Control.Monad (when)
 import Control.Monad.Trans.Writer (WriterT (runWriterT))
@@ -384,7 +382,7 @@ instance ToCBOR Prices where
 instance FromCBOR Prices where
   fromCBOR = decode $ RecD Prices <! From <! From
 
-instance forall era. (Typeable (EraCrypto era), Typeable era) => ToCBOR (Script era) where
+instance (Typeable (EraCrypto era), Typeable era) => ToCBOR (Script era) where
   toCBOR x = encode (encodeScript x)
 
 encodeScript :: (Typeable era) => Script era -> Encode 'Open (Script era)
@@ -421,7 +419,3 @@ validScript pv script =
 transProtocolVersion :: ProtVer -> PV1.ProtocolVersion
 transProtocolVersion (ProtVer major minor) =
   PV1.ProtocolVersion ((fromIntegral :: Word64 -> Int) (getVersion64 major)) (fromIntegral minor)
-
-contentsEq :: Script era -> Script era -> Bool
-contentsEq (TimelockScript x) (TimelockScript y) = Timelocks.contentsEq x y
-contentsEq x y = x == y

@@ -393,7 +393,7 @@ getWitVKeyHash =
     . hashKey
     . (\(WitVKey x _) -> x)
 
-transDataPair :: Era era => (DataHash c, Data era) -> (PV1.DatumHash, PV1.Datum)
+transDataPair :: (DataHash c, Data era) -> (PV1.DatumHash, PV1.Datum)
 transDataPair (x, y) = (transDataHash' x, PV1.Datum (PV1.dataToBuiltinData (getPlutusData y)))
 
 transExUnits :: ExUnits -> PV1.ExBudget
