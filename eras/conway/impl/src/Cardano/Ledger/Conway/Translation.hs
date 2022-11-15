@@ -44,6 +44,7 @@ import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD)
 import Cardano.Ledger.ShelleyMA.Timelocks (translateTimelock)
 import Data.Coerce
+import qualified Data.Map.Strict as Map
 
 --------------------------------------------------------------------------------
 -- Translation from Babbage to Conway
@@ -164,7 +165,7 @@ instance Crypto c => TranslateEra (ConwayEra c) API.UTxOState where
 
 instance Crypto c => TranslateEra (ConwayEra c) API.UTxO where
   translateEra _ctxt utxo =
-    pure $ API.UTxO $ translateTxOut <$> API.unUTxO utxo
+    pure $ API.UTxO $ translateTxOut `Map.map` API.unUTxO utxo
 
 instance Crypto c => TranslateEra (ConwayEra c) API.PPUPState where
   translateEra ctxt ps =
