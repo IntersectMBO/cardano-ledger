@@ -224,7 +224,13 @@ deriving newtype instance
   ) =>
   NFData (ShelleyTx era)
 
-deriving newtype instance Eq (ShelleyTx era)
+deriving newtype instance
+  ( Era era,
+    Eq (Core.TxBody era),
+    Eq (TxWits era),
+    Eq (TxAuxData era)
+  ) =>
+  Eq (ShelleyTx era)
 
 deriving newtype instance
   (Era era, Show (Core.TxBody era), Show (TxWits era), Show (TxAuxData era)) =>

@@ -490,7 +490,9 @@ type TxBody era = BabbageTxBody era
 
 {-# DEPRECATED TxBody "Use `BabbageTxBody` instead" #-}
 
-deriving newtype instance CC.Crypto (EraCrypto era) => Eq (BabbageTxBody era)
+deriving newtype instance
+  (Era era, Eq (Script era), Eq (PParamsUpdate era), Eq (CompactForm (Value era))) =>
+  Eq (BabbageTxBody era)
 
 deriving instance (Era era, NoThunks (PParamsUpdate era)) => NoThunks (BabbageTxBody era)
 

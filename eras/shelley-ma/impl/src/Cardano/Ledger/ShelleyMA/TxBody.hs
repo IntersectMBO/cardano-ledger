@@ -220,7 +220,9 @@ type TxBody era = MATxBody era
 
 {-# DEPRECATED TxBody "Use `MATxBody` instead" #-}
 
-deriving instance Eq (MATxBody era)
+deriving instance
+  (Era era, Eq (PParamsUpdate era), Eq (Value era), Eq (CompactForm (Value era))) =>
+  Eq (MATxBody era)
 
 deriving instance
   (Era era, Show (Value era), Compactible (Value era), Show (PParamsUpdate era)) =>
