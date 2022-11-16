@@ -36,6 +36,7 @@ import qualified Cardano.Ledger.Shelley.API as API
 import qualified Cardano.Ledger.Shelley.PParams as Shelley
 import qualified Cardano.Ledger.Shelley.Tx as LTX
 import qualified Cardano.Ledger.Shelley.TxBody as Shelley
+import qualified Data.Map.Strict as Map
 
 --------------------------------------------------------------------------------
 -- Translation from Mary to Alonzo
@@ -151,7 +152,7 @@ instance Crypto c => TranslateEra (AlonzoEra c) API.UTxOState where
 
 instance Crypto c => TranslateEra (AlonzoEra c) API.UTxO where
   translateEra _ctxt utxo =
-    return $ API.UTxO $ translateTxOut <$> API.unUTxO utxo
+    return $ API.UTxO $ translateTxOut `Map.map` API.unUTxO utxo
 
 instance Crypto c => TranslateEra (AlonzoEra c) API.PPUPState where
   translateEra ctxt ps =

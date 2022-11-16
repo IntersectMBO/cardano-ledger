@@ -40,6 +40,7 @@ import Cardano.Ledger.Shelley.API
   )
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD)
+import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
 
 --------------------------------------------------------------------------------
@@ -158,7 +159,7 @@ instance Crypto c => TranslateEra (BabbageEra c) API.UTxOState where
 
 instance Crypto c => TranslateEra (BabbageEra c) API.UTxO where
   translateEra _ctxt utxo =
-    pure $ API.UTxO $ translateTxOut <$> API.unUTxO utxo
+    pure $ API.UTxO $ translateTxOut `Map.map` API.unUTxO utxo
 
 instance Crypto c => TranslateEra (BabbageEra c) API.PPUPState where
   translateEra ctxt ps =
