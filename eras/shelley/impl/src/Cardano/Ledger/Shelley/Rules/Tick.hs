@@ -22,8 +22,9 @@ module Cardano.Ledger.Shelley.Rules.Tick
     PredicateFailure,
     adoptGenesisDelegs,
     ShelleyTICKF,
-    ShelleyTickfPredFailure (..),
+    ShelleyTickfPredFailure,
     validatingTickTransition,
+    validatingTickTransitionFORECAST,
   )
 where
 
@@ -294,38 +295,17 @@ instance
 to tick the ledger state to a future slot.
 ------------------------------------------------------------------------------}
 
-newtype ShelleyTickfPredFailure era
-  = TickfNewEpochFailure (PredicateFailure (EraRule "NEWEPOCH" era)) -- Subtransition Failures
-  deriving (Generic)
+-- | TICKF cannot fail
+data ShelleyTickfPredFailure era
+  deriving (Eq, Generic, NoThunks, Show)
 
-deriving stock instance
-  ( Era era,
-    Show (PredicateFailure (EraRule "NEWEPOCH" era))
-  ) =>
-  Show (ShelleyTickfPredFailure era)
-
-deriving stock instance
-  ( Era era,
-    Eq (PredicateFailure (EraRule "NEWEPOCH" era))
-  ) =>
-  Eq (ShelleyTickfPredFailure era)
-
-instance
-  ( NoThunks (PredicateFailure (EraRule "NEWEPOCH" era))
-  ) =>
-  NoThunks (ShelleyTickfPredFailure era)
-
-newtype ShelleyTickfEvent era
-  = TickfNewEpochEvent (Event (EraRule "NEWEPOCH" era)) -- Subtransition Events
+-- | TICKF has no observable behavior
+data ShelleyTickfEvent era
 
 instance
   ( Era era,
     EraPParams era,
-    Embed (EraRule "NEWEPOCH" era) (ShelleyTICKF era),
-    Environment (EraRule "NEWEPOCH" era) ~ (),
-    State (EraRule "NEWEPOCH" era) ~ NewEpochState era,
-    State (EraRule "PPUP" era) ~ PPUPState era,
-    Signal (EraRule "NEWEPOCH" era) ~ EpochNo
+    State (EraRule "PPUP" era) ~ PPUPState era
   ) =>
   STS (ShelleyTICKF era)
   where
@@ -346,13 +326,3 @@ instance
         TRC ((), nes, slot) <- judgmentContext
         validatingTickTransitionFORECAST nes slot
     ]
-
-instance
-  ( STS (ShelleyNEWEPOCH era),
-    PredicateFailure (EraRule "NEWEPOCH" era) ~ ShelleyNewEpochPredFailure era,
-    Event (EraRule "NEWEPOCH" era) ~ ShelleyNewEpochEvent era
-  ) =>
-  Embed (ShelleyNEWEPOCH era) (ShelleyTICKF era)
-  where
-  wrapFailed = TickfNewEpochFailure
-  wrapEvent = TickfNewEpochEvent

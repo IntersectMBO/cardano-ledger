@@ -43,8 +43,7 @@ insertGetKey ::
   ( MonadIO m,
     PersistUniqueWrite backend,
     PersistRecordBackend record backend,
-    AtLeastOneUniqueKey record,
-    SafeToInsert record
+    AtLeastOneUniqueKey record
   ) =>
   record ->
   ReaderT backend m (Key record)

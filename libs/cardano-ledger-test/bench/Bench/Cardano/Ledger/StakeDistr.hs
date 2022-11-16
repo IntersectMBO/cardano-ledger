@@ -50,7 +50,7 @@ import Cardano.Ledger.Shelley.Rules
     adoptGenesisDelegs,
     calculatePoolDistr,
     updateRewards,
-    validatingTickTransition,
+    validatingTickTransitionFORECAST,
   )
 import Cardano.Ledger.Slot (EpochNo, SlotNo (..))
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
@@ -177,7 +177,7 @@ tickfR2 ::
   Cardano.Slotting.Slot.SlotNo ->
   NewEpochState CurrentEra ->
   NewEpochState CurrentEra
-tickfR2 globals slot nes = liftRule globals (TRC ((), nes, slot)) (validatingTickTransition @ShelleyTICKF nes slot)
+tickfR2 globals slot nes = liftRule globals (TRC ((), nes, slot)) (validatingTickTransitionFORECAST @ShelleyTICKF nes slot)
 
 mirR :: Globals -> EpochState CurrentEra -> EpochState CurrentEra
 mirR globals es' = liftApplySTS globals (applySTS @(ShelleyMIR CurrentEra) (TRC ((), es', ())))
