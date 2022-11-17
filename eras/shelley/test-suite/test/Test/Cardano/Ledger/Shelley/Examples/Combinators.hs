@@ -566,7 +566,6 @@ newSnapshot snap fee cs = cs {chainNes = nes'}
     snaps =
       SnapShots
         { ssStakeMark = snap,
-          ssStakeMarkPoolDistr = calculatePoolDistr snap,
           ssStakeSet = ssMark,
           ssStakeGo = ssSet,
           ssFee = fee

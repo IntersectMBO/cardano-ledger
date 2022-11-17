@@ -232,7 +232,8 @@ tickfRuleBench =
                     ],
                   bench "mir rule" $ whnf (mirR globals) (nesEs nes),
                   bench "epoch rule" $ whnf (epochR globals (nesEL nes + 1)) (nesEs nes),
-                  bench "calculatePoolDistr, improved (current) version" $ whnf calculatePoolDistr (getSnap nes),
+                  bench "calculatePoolDistr, improved (current) version" $ 
+                    whnf (calculatePoolDistr (ssStake (getSnap nes)) (ssDelegations (getSnap nes))) (ssPoolParams (getSnap nes)),
                   bgroup
                     "calculatePoolDistr subparts"
                     [ bench "poolStake" $

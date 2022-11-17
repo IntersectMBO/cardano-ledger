@@ -215,7 +215,7 @@ instance AggregateStat SnapShotStats where
       }
 
 countSnapShotStat :: SnapShot C -> SnapShotStats
-countSnapShotStat SnapShot {..} =
+countSnapShotStat (SnapShot ssStake ssDelegations ssPoolParams) =
   SnapShotStats
     { sssStake = statMapKeys (VMap.toMap (unStake ssStake)),
       sssDelegationCredential = statMapKeys (VMap.toMap ssDelegations),

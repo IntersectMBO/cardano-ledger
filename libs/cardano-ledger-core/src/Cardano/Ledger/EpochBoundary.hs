@@ -13,6 +13,8 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE PatternSynonyms #-}
+
 
 -- |
 -- Module      : EpochBoundary
@@ -23,7 +25,7 @@ module Cardano.Ledger.EpochBoundary
   ( Stake (..),
     sumAllStake,
     sumStakePerPool,
-    SnapShot (..),
+    SnapShot (.., SnapShot),
     SnapShots (..),
     emptySnapShot,
     emptySnapShots,
@@ -156,16 +158,44 @@ maxPool pc r sigma pR = maxPool' a0 nOpt r sigma pR
   where
     a0 = getField @"_a0" pc
     nOpt = getField @"_nOpt" pc
+    
+pattern SnapShot ::
+  forall c.
+  Stake c ->
+  VMap VB VB (Credential 'Staking c) (KeyHash 'StakePool c) ->
+  VMap VB VB (KeyHash 'StakePool c) (PoolParams c) ->
+  SnapShot c
+pattern SnapShot {ssStake, ssDelegations, ssPoolParams} <- 
+  SnapShotRaw 
+    { ssStake, 
+      ssDelegations, 
+      ssPoolParams,
+      ssStakePoolDistr = _ssStakePoolDistr
+    }
+  where
+    SnapShot
+      ssStake
+      ssDelegations
+      ssPoolParams
+      =
+      SnapShotRaw 
+        { ssStake, 
+          ssDelegations, 
+          ssPoolParams, 
+          ssStakePoolDistr = calculatePoolDistr ssStake ssDelegations ssPoolParams
+        }
+        
+{-# COMPLETE SnapShot #-}
 
 -- | Snapshot of the stake distribution.
-data SnapShot c = SnapShot
+data SnapShot c = SnapShotRaw
   { ssStake :: !(Stake c),
     ssDelegations :: !(VMap VB VB (Credential 'Staking c) (KeyHash 'StakePool c)),
-    ssPoolParams :: !(VMap VB VB (KeyHash 'StakePool c) (PoolParams c))
+    ssPoolParams :: !(VMap VB VB (KeyHash 'StakePool c) (PoolParams c)),
+    ssStakePoolDistr :: PD.PoolDistr c -- Lazy on purpose
   }
   deriving (Show, Eq, Generic)
-
-instance Typeable c => NoThunks (SnapShot c)
+  deriving NoThunks via AllowThunksIn '["ssStakePoolDistr"] (SnapShot c)
 
 instance NFData (SnapShot c)
 
@@ -174,7 +204,7 @@ instance
   ToCBOR (SnapShot c)
   where
   toCBOR
-    SnapShot
+    SnapShotRaw
       { ssStake = s,
         ssDelegations = d,
         ssPoolParams = p
@@ -197,13 +227,12 @@ instance CC.Crypto c => FromSharedCBOR (SnapShot c) where
 -- | Snapshots of the stake distribution.
 data SnapShots c = SnapShots
   { ssStakeMark :: SnapShot c, -- Lazy on purpose
-    ssStakeMarkPoolDistr :: PD.PoolDistr c, -- Lazy on purpose
     ssStakeSet :: !(SnapShot c),
     ssStakeGo :: !(SnapShot c),
     ssFee :: !Coin
   }
   deriving (Show, Eq, Generic)
-  deriving (NoThunks) via AllowThunksIn '["ssStakeMark", "ssStakeMarkPoolDistr"] (SnapShots c)
+  deriving (NoThunks) via AllowThunksIn '["ssStakeMark"] (SnapShots c)
 
 instance NFData (SnapShots c)
 
@@ -225,7 +254,7 @@ instance CC.Crypto c => FromSharedCBOR (SnapShots c) where
     ssStakeSet <- fromSharedPlusCBOR
     ssStakeGo <- fromSharedPlusCBOR
     ssFee <- lift fromCBOR
-    pure SnapShots {ssStakeMark, ssStakeMarkPoolDistr = calculatePoolDistr ssStakeMark, ssStakeSet, ssStakeGo, ssFee}
+    pure SnapShots {ssStakeMark, ssStakeSet, ssStakeGo, ssFee}
 
 instance Default (SnapShots c) where
   def = emptySnapShots
@@ -234,13 +263,23 @@ emptySnapShot :: SnapShot c
 emptySnapShot = SnapShot (Stake VMap.empty) VMap.empty VMap.empty
 
 emptySnapShots :: SnapShots c
-emptySnapShots = SnapShots emptySnapShot (calculatePoolDistr emptySnapShot) emptySnapShot emptySnapShot (Coin 0)
+emptySnapShots = SnapShots emptySnapShot emptySnapShot emptySnapShot (Coin 0)
 
-calculatePoolDistr :: SnapShot c -> PD.PoolDistr c
+calculatePoolDistr :: 
+  Stake c -> 
+  VMap VB VB (Credential 'Staking c) (KeyHash 'StakePool c) ->
+  VMap VB VB (KeyHash 'StakePool c) (PoolParams c) ->
+  PD.PoolDistr c
 calculatePoolDistr = calculatePoolDistr' (const True)
 
-calculatePoolDistr' :: forall c. (KeyHash 'StakePool c -> Bool) -> SnapShot c -> PD.PoolDistr c
-calculatePoolDistr' includeHash (SnapShot stake delegs poolParams) =
+calculatePoolDistr' :: 
+  forall c. 
+  (KeyHash 'StakePool c -> Bool) -> 
+  Stake c -> 
+  VMap VB VB (Credential 'Staking c) (KeyHash 'StakePool c) ->
+  VMap VB VB (KeyHash 'StakePool c) (PoolParams c) ->
+  PD.PoolDistr c
+calculatePoolDistr' includeHash stake delegs poolParams =
   let Coin total = sumAllStake stake
       -- total could be zero (in particular when shrinking)
       nonZeroTotal :: Integer

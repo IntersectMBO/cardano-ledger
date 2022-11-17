@@ -196,7 +196,7 @@ snapShotZero :: SnapShot c
 snapShotZero = SnapShot stakeZero VMap.empty VMap.empty
 
 snapShotsZero :: SnapShots c
-snapShotsZero = SnapShots snapShotZero (calculatePoolDistr snapShotZero) snapShotZero snapShotZero (Coin 0)
+snapShotsZero = SnapShots snapShotZero snapShotZero snapShotZero (Coin 0)
 
 accountStateZero :: AccountState
 accountStateZero = AccountState (Coin 0) (Coin 0)

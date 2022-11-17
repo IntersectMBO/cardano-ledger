@@ -210,8 +210,7 @@ registerGenesisStaking
       -- Note that this is only applicable in the initial configuration where
       -- there is no existing stake distribution, since it would completely
       -- overwrite any such thing.
-      newPoolDistr = calculatePoolDistr initSnapShot
-
+      newPoolDistr = calculatePoolDistr (ssStake initSnapShot) (ssDelegations initSnapShot) (ssPoolParams initSnapShot)
       newChainNes =
         oldChainNes
           { nesEs = newEpochState,
@@ -222,9 +221,7 @@ registerGenesisStaking
           { esLState = newLedgerState,
             esSnapshots =
               (esSnapshots oldEpochState)
-                { ssStakeMark = initSnapShot,
-                  ssStakeMarkPoolDistr = calculatePoolDistr initSnapShot
-                }
+                { ssStakeMark = initSnapShot }
           }
       newLedgerState =
         oldLedgerState
