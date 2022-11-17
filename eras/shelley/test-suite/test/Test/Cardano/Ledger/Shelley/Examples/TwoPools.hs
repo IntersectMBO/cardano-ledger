@@ -372,10 +372,11 @@ snapEx3 :: ExMock c => EB.SnapShot c
 snapEx3 =
   EB.SnapShot
     ( mkStake
-          [ (Cast.aliceSHK, aliceCoinEx1),
-            (Cast.bobSHK, bobInitCoin),
-            (Cast.carlSHK, carlInitCoin)
-          ])
+        [ (Cast.aliceSHK, aliceCoinEx1),
+          (Cast.bobSHK, bobInitCoin),
+          (Cast.carlSHK, carlInitCoin)
+        ]
+    )
     [ (Cast.aliceSHK, hk Cast.alicePoolKeys),
       (Cast.bobSHK, hk Cast.bobPoolKeys),
       (Cast.carlSHK, hk Cast.alicePoolKeys)

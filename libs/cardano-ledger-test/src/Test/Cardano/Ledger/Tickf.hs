@@ -1,8 +1,8 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE NamedFieldPuns #-}
 
 -- | Test that modifications to the calculatePoolDistr function
 --   made when building the Tickf benchmarks behave the same as
@@ -34,7 +34,7 @@ calcPoolDistOldEqualsNew =
         "old==new"
         ( withMaxSuccess
             500
-            ( \snap@SnapShotRaw{ssStake, ssDelegations, ssPoolParams} ->
+            ( \snap@SnapShotRaw {ssStake, ssDelegations, ssPoolParams} ->
                 counterexample
                   "BAD"
                   (oldCalculatePoolDistr @StandardCrypto (const True) snap === calculatePoolDistr ssStake ssDelegations ssPoolParams)

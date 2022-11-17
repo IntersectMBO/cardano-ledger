@@ -130,22 +130,22 @@ insertSnapShot ::
   SnapShotType ->
   EpochBoundary.SnapShot C ->
   ReaderT SqlBackend m ()
-insertSnapShot 
-  snapShotEpochStateId 
-  snapShotType 
-  (EpochBoundary.SnapShot ssStake ssDelegations ssPoolParams) 
-  = do
-  snapShotId <- insert $ SnapShot {snapShotType, snapShotEpochStateId}
-  VG.forM_ (VMap.unVMap (EpochBoundary.unStake ssStake)) $ \(cred, c) -> do
-    credId <- insertGetKey (Credential (Keys.asWitness cred))
-    insert_ (SnapShotStake snapShotId credId c)
-  VG.forM_ (VMap.unVMap ssDelegations) $ \(cred, spKeyHash) -> do
-    credId <- insertGetKey (Credential (Keys.asWitness cred))
-    keyHashId <- insertGetKey (KeyHash (Keys.asWitness spKeyHash))
-    insert_ (SnapShotDelegation snapShotId credId keyHashId)
-  VG.forM_ (VMap.unVMap ssPoolParams) $ \(keyHash, pps) -> do
-    keyHashId <- insertGetKey (KeyHash (Keys.asWitness keyHash))
-    insert_ (SnapShotPool snapShotId keyHashId pps)
+insertSnapShot
+  snapShotEpochStateId
+  snapShotType
+  (EpochBoundary.SnapShot ssStake ssDelegations ssPoolParams) =
+    do
+      snapShotId <- insert $ SnapShot {snapShotType, snapShotEpochStateId}
+      VG.forM_ (VMap.unVMap (EpochBoundary.unStake ssStake)) $ \(cred, c) -> do
+        credId <- insertGetKey (Credential (Keys.asWitness cred))
+        insert_ (SnapShotStake snapShotId credId c)
+      VG.forM_ (VMap.unVMap ssDelegations) $ \(cred, spKeyHash) -> do
+        credId <- insertGetKey (Credential (Keys.asWitness cred))
+        keyHashId <- insertGetKey (KeyHash (Keys.asWitness spKeyHash))
+        insert_ (SnapShotDelegation snapShotId credId keyHashId)
+      VG.forM_ (VMap.unVMap ssPoolParams) $ \(keyHash, pps) -> do
+        keyHashId <- insertGetKey (KeyHash (Keys.asWitness keyHash))
+        insert_ (SnapShotPool snapShotId keyHashId pps)
 
 insertSnapShots ::
   MonadIO m =>

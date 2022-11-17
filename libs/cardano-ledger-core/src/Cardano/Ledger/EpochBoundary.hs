@@ -8,13 +8,12 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE PatternSynonyms #-}
-
 
 -- |
 -- Module      : EpochBoundary
@@ -158,17 +157,17 @@ maxPool pc r sigma pR = maxPool' a0 nOpt r sigma pR
   where
     a0 = getField @"_a0" pc
     nOpt = getField @"_nOpt" pc
-    
+
 pattern SnapShot ::
   forall c.
   Stake c ->
   VMap VB VB (Credential 'Staking c) (KeyHash 'StakePool c) ->
   VMap VB VB (KeyHash 'StakePool c) (PoolParams c) ->
   SnapShot c
-pattern SnapShot {ssStake, ssDelegations, ssPoolParams} <- 
-  SnapShotRaw 
-    { ssStake, 
-      ssDelegations, 
+pattern SnapShot {ssStake, ssDelegations, ssPoolParams} <-
+  SnapShotRaw
+    { ssStake,
+      ssDelegations,
       ssPoolParams,
       ssStakePoolDistr = _ssStakePoolDistr
     }
@@ -176,15 +175,14 @@ pattern SnapShot {ssStake, ssDelegations, ssPoolParams} <-
     SnapShot
       ssStake
       ssDelegations
-      ssPoolParams
-      =
-      SnapShotRaw 
-        { ssStake, 
-          ssDelegations, 
-          ssPoolParams, 
-          ssStakePoolDistr = calculatePoolDistr ssStake ssDelegations ssPoolParams
-        }
-        
+      ssPoolParams =
+        SnapShotRaw
+          { ssStake,
+            ssDelegations,
+            ssPoolParams,
+            ssStakePoolDistr = calculatePoolDistr ssStake ssDelegations ssPoolParams
+          }
+
 {-# COMPLETE SnapShot #-}
 
 -- | Snapshot of the stake distribution.
@@ -195,7 +193,7 @@ data SnapShot c = SnapShotRaw
     ssStakePoolDistr :: PD.PoolDistr c -- Lazy on purpose
   }
   deriving (Show, Eq, Generic)
-  deriving NoThunks via AllowThunksIn '["ssStakePoolDistr"] (SnapShot c)
+  deriving (NoThunks) via AllowThunksIn '["ssStakePoolDistr"] (SnapShot c)
 
 instance NFData (SnapShot c)
 
@@ -265,17 +263,17 @@ emptySnapShot = SnapShot (Stake VMap.empty) VMap.empty VMap.empty
 emptySnapShots :: SnapShots c
 emptySnapShots = SnapShots emptySnapShot emptySnapShot emptySnapShot (Coin 0)
 
-calculatePoolDistr :: 
-  Stake c -> 
+calculatePoolDistr ::
+  Stake c ->
   VMap VB VB (Credential 'Staking c) (KeyHash 'StakePool c) ->
   VMap VB VB (KeyHash 'StakePool c) (PoolParams c) ->
   PD.PoolDistr c
 calculatePoolDistr = calculatePoolDistr' (const True)
 
-calculatePoolDistr' :: 
-  forall c. 
-  (KeyHash 'StakePool c -> Bool) -> 
-  Stake c -> 
+calculatePoolDistr' ::
+  forall c.
+  (KeyHash 'StakePool c -> Bool) ->
+  Stake c ->
   VMap VB VB (Credential 'Staking c) (KeyHash 'StakePool c) ->
   VMap VB VB (KeyHash 'StakePool c) (PoolParams c) ->
   PD.PoolDistr c
