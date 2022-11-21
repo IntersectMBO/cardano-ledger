@@ -6,7 +6,6 @@ module Cardano.Ledger.Shelley.HardForks
   ( aggregatedRewards,
     allowMIRTransfer,
     validatePoolRewardAccountNetID,
-    allowScriptStakeCredsToEarnRewards,
     missingScriptsSymmetricDifference,
     forgoRewardPrefilter,
     allowOutsideForecastTTL,
@@ -42,14 +41,6 @@ validatePoolRewardAccountNetID ::
   pp ->
   Bool
 validatePoolRewardAccountNetID pp = pvMajor (getField @"_protocolVersion" pp) > natVersion @4
-
--- | Starting with protocol version 5, Stake Credentials bound by scripts
--- will be eligibile for staking rewards.
-allowScriptStakeCredsToEarnRewards ::
-  (HasField "_protocolVersion" pp ProtVer) =>
-  pp ->
-  Bool
-allowScriptStakeCredsToEarnRewards pp = pvMajor (getField @"_protocolVersion" pp) > natVersion @4
 
 -- | Starting with protocol version 7, the UTXO rule predicate failure
 -- MissingScriptWitnessesUTXOW will not be used for extraneous scripts

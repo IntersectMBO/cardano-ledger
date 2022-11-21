@@ -438,7 +438,7 @@ rewardOnePool
               notPoolOwner hk
           ]
       notPoolOwner (KeyHashObj hk) = hk `Set.notMember` ppOwners pool
-      notPoolOwner (ScriptHashObj _) = HardForks.allowScriptStakeCredsToEarnRewards pp
+      notPoolOwner (ScriptHashObj _) = True
       lReward =
         leaderRew
           poolR
