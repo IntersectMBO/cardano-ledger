@@ -359,7 +359,7 @@ utxoTransition = do
   ei <- liftSTS $ asks epochInfo
 
   {- epochInfoSlotToUTCTime epochInfo systemTime i_f ≠ ◇ -}
-  runTest $ validateOutsideForecast pp ei slot sysSt tx
+  runTest $ validateOutsideForecast ei slot sysSt tx
 
   {-   txins txb ≠ ∅   -}
   runTestOnSignal $ Shelley.validateInputSetEmptyUTxO txBody

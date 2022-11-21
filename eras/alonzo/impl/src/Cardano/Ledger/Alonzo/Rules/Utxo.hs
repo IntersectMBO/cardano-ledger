@@ -76,7 +76,6 @@ import Cardano.Ledger.Rules.ValidationMode
     runTest,
     runTestOnSignal,
   )
-import Cardano.Ledger.Shelley.HardForks (allowOutsideForecastTTL)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, UtxoEnv)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
@@ -341,22 +340,18 @@ validateOutsideForecast ::
     AlonzoEraTxWits era,
     EraTx era
   ) =>
-  PParams era ->
   EpochInfo (Either a) ->
   -- | Current slot number
   SlotNo ->
   SystemStart ->
   Tx era ->
   Test (AlonzoUtxoPredFailure era)
-validateOutsideForecast pp ei slotNo sysSt tx =
+validateOutsideForecast ei slotNo sysSt tx =
   {-   (_,i_f) := txvldt tx   -}
   case tx ^. bodyTxL . vldtTxBodyL of
     ValidityInterval _ (SJust ifj)
       | not (nullRedeemers (tx ^. witsTxL . rdmrsTxWitsL)) ->
-          let ei' =
-                if allowOutsideForecastTTL pp
-                  then unsafeLinearExtendEpochInfo slotNo ei
-                  else ei
+          let ei' = unsafeLinearExtendEpochInfo slotNo ei
            in -- ◇ ∉ { txrdmrs tx, i_f } ⇒
               failureUnless (isRight (epochInfoSlotToUTCTime ei' sysSt ifj)) $ OutsideForecast ifj
     _ -> pure ()
@@ -497,7 +492,7 @@ utxoTransition = do
   ei <- liftSTS $ asks epochInfo
 
   {- epochInfoSlotToUTCTime epochInfo systemTime i_f ≠ ◇ -}
-  runTest $ validateOutsideForecast pp ei slot sysSt tx
+  runTest $ validateOutsideForecast ei slot sysSt tx
 
   {-   txins txb ≠ ∅   -}
   runTestOnSignal $ Shelley.validateInputSetEmptyUTxO txBody
