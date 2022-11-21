@@ -35,7 +35,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import GHC.Stack
-import qualified PlutusLedgerApi.V1 as Plutus
+import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysSucceeds)
 import Test.Cardano.Ledger.EraBuffet (StandardCrypto)
@@ -74,7 +74,7 @@ shelleyOutput :: TxOut Babbage
 shelleyOutput = BabbageTxOut shelleyAddr (Val.inject $ Coin 2) NoDatum SNothing
 
 datumEx :: Datum Babbage
-datumEx = Datum . dataToBinaryData . Data . Plutus.I $ 123
+datumEx = Datum . dataToBinaryData . Data . PV1.I $ 123
 
 inlineDatumOutput :: TxOut Babbage
 inlineDatumOutput = BabbageTxOut shelleyAddr (Val.inject $ Coin 3) datumEx SNothing

@@ -103,7 +103,7 @@ import qualified Data.Set as Set
 import Data.Text (Text, pack)
 import Data.Typeable (Typeable)
 import qualified Data.UMap as UMap (View (..), delView, rewView, size)
-import qualified PlutusCore.Data as Plutus (Data (..))
+import qualified PlutusCore.Data as PCD (Data (..))
 import Prettyprinter (hsep, parens, viaShow, vsep)
 import Test.Cardano.Ledger.Generic.Fields
   ( TxBodyField (..),
@@ -912,12 +912,12 @@ datumSummary (Datum b) = dataSummary (binaryDataToData b)
 dataSummary :: Era era => Cardano.Ledger.Alonzo.Data.Data era -> PDoc
 dataSummary (Data x) = plutusDataSummary x
 
-plutusDataSummary :: Plutus.Data -> PDoc
-plutusDataSummary (Plutus.Constr n ds) = (ppString (show n)) <> ppList plutusDataSummary ds
-plutusDataSummary (Plutus.Map ds) = ppString "Map" <> ppList (ppPair plutusDataSummary plutusDataSummary) ds
-plutusDataSummary (Plutus.List xs) = ppList plutusDataSummary xs
-plutusDataSummary (Plutus.I n) = ppInteger n
-plutusDataSummary (Plutus.B bs) = trim (ppLong bs)
+plutusDataSummary :: PCD.Data -> PDoc
+plutusDataSummary (PCD.Constr n ds) = (ppString (show n)) <> ppList plutusDataSummary ds
+plutusDataSummary (PCD.Map ds) = ppString "Map" <> ppList (ppPair plutusDataSummary plutusDataSummary) ds
+plutusDataSummary (PCD.List xs) = ppList plutusDataSummary xs
+plutusDataSummary (PCD.I n) = ppInteger n
+plutusDataSummary (PCD.B bs) = trim (ppLong bs)
 
 multiAssetSummary :: MultiAsset c -> PDoc
 multiAssetSummary (MultiAsset m) = ppString ("num tokens = " ++ show (Map.size m))
@@ -1128,15 +1128,15 @@ pcDatum (Datum b) = pcData (binaryDataToData b)
 instance Era era => PrettyC (Datum era) era where prettyC _ = pcDatum
 
 pcData :: forall era. Era era => Data era -> PDoc
-pcData d@(Data (Plutus.Constr n _)) =
+pcData d@(Data (PCD.Constr n _)) =
   ppSexp (pack ("Constr" ++ show n)) [ppString "Hash", trim $ ppSafeHash (hashData d)]
-pcData d@(Data (Plutus.Map _)) =
+pcData d@(Data (PCD.Map _)) =
   ppSexp "Map" [ppString "Hash", trim $ ppSafeHash (hashData d)]
-pcData d@(Data (Plutus.List _)) =
+pcData d@(Data (PCD.List _)) =
   ppSexp "List" [ppString "Hash", trim $ ppSafeHash (hashData d)]
-pcData d@(Data (Plutus.I n)) =
+pcData d@(Data (PCD.I n)) =
   ppSexp "I" [ppInteger n, ppString "Hash", trim $ ppSafeHash (hashData d)]
-pcData d@(Data (Plutus.B bytes)) =
+pcData d@(Data (PCD.B bytes)) =
   ppSexp "B" [trim (viaShow bytes), ppString "Hash", trim $ ppSafeHash (hashData d)]
 
 instance Era era => PrettyC (Data era) era where prettyC _ = pcData

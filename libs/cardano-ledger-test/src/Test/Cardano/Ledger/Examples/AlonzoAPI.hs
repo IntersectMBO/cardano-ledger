@@ -30,7 +30,7 @@ import Cardano.Ledger.Shelley.API (evaluateTransactionFee)
 import Cardano.Ledger.UTxO (makeWitnessVKey)
 import Cardano.Ledger.Val (Val (inject))
 import qualified Data.Map.Strict as Map
-import qualified PlutusLedgerApi.V1 as Plutus
+import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Examples.STSTestUtils
   ( freeCostModelV1,
     mkGenesisTxIn,
@@ -74,7 +74,7 @@ testEvaluateTransactionFee =
         [ Body validatingBody,
           WitnessesI
             [ ScriptWits' [always 3 pf],
-              DataWits' [Data (Plutus.I 123)],
+              DataWits' [Data (PV1.I 123)],
               RdmrWits redeemers
             ]
         ]
@@ -85,7 +85,7 @@ testEvaluateTransactionFee =
           WitnessesI
             [ AddrWits' [makeWitnessVKey (hashAnnotated validatingBody) (someKeys pf)],
               ScriptWits' [always 3 pf],
-              DataWits' [Data (Plutus.I 123)],
+              DataWits' [Data (PV1.I 123)],
               RdmrWits redeemers
             ]
         ]
@@ -96,11 +96,11 @@ testEvaluateTransactionFee =
           Collateral' [mkGenesisTxIn 11],
           Outputs' [newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 4995)]],
           Txfee (Coin 5),
-          WppHash (newScriptIntegrityHash pf (newPParams pf defaultPPs) [PlutusV1] redeemers (mkTxDats (Data (Plutus.I 123))))
+          WppHash (newScriptIntegrityHash pf (newPParams pf defaultPPs) [PlutusV1] redeemers (mkTxDats (Data (PV1.I 123))))
         ]
     redeemers =
       Redeemers $
-        Map.singleton (RdmrPtr Tag.Spend 0) (Data (Plutus.I 42), ExUnits 5000 5000)
+        Map.singleton (RdmrPtr Tag.Spend 0) (Data (PV1.I 42), ExUnits 5000 5000)
 
 defaultPPs :: [PParamsField era]
 defaultPPs =

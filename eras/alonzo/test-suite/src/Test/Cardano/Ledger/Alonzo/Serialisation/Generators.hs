@@ -82,6 +82,7 @@ import Data.Text (pack)
 import Data.Typeable (Typeable)
 import GHC.Records (HasField)
 import Numeric.Natural (Natural)
+import qualified PlutusCore.Data as PCD
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Alonzo.AlonzoEraGen (costModelParamsCount)
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
@@ -97,7 +98,7 @@ instance Era era => Arbitrary (Data era) where
 instance Era era => Arbitrary (BinaryData era) where
   arbitrary = dataToBinaryData <$> arbitrary
 
-instance Arbitrary PV1.Data where
+instance Arbitrary PCD.Data where
   arbitrary = resize 5 (sized gendata)
     where
       gendata n
