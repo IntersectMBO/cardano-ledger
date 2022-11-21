@@ -49,7 +49,6 @@ module Data.VMap
   )
 where
 
-import Cardano.Binary
 import Control.DeepSeq
 import qualified Data.Map.Strict as Map
 import Data.Maybe as Maybe hiding (mapMaybe)
@@ -76,7 +75,7 @@ type VS = VS.Vector
 newtype VMap kv vv k v = VMap
   { unVMap :: KVVector kv vv (k, v)
   }
-  deriving (Eq, Generic, NoThunks, ToCBOR, FromCBOR, NFData, Semigroup, Monoid)
+  deriving (Eq, Generic, NoThunks, NFData, Semigroup, Monoid)
 
 instance (Show k, Show v, VG.Vector kv k, VG.Vector vv v) => Show (VMap kv vv k v) where
   show = show . KV.toMap . unVMap

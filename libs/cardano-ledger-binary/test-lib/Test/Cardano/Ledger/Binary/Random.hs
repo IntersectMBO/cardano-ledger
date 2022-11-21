@@ -44,7 +44,7 @@ mkDummyHash :: forall h a b. (HashAlgorithm h, ToCBOR a) => a -> Hash h b
 mkDummyHash = coerce . hashWithEncoder @h shelleyProtVer toCBOR
 
 -- | Use a hash of the binary representation of a type as a seed to construct `StdGen`,
--- taht can be further used to generate random values.
+-- that can be further used to generate random values.
 mkHashStdGen :: ToCBOR x => x -> StdGen
 mkHashStdGen x =
   case hashToBytesShort $ mkDummyHash @(Blake2bPrefix 8) x of

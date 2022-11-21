@@ -32,7 +32,6 @@ library
   exposed-modules:     Data.VMap
   other-modules:       Data.VMap.KVVector
   build-depends:       base >=4.11 && <5
-                     , cardano-binary
                      , containers
                      , deepseq
                      , nothunks

@@ -36,7 +36,6 @@ module Data.VMap.KVVector
   )
 where
 
-import Cardano.Binary
 import Control.Applicative
 import Control.DeepSeq
 import Control.Monad
@@ -418,18 +417,6 @@ instance
   where
   wNoThunks c (KVVector kv vv) = (<|>) <$> wNoThunks c kv <*> wNoThunks c vv
   showTypeOf px = showsTypeRep (typeRep px) ""
-
-instance
-  (ToCBOR k, ToCBOR v, Ord k, VG.Vector kv k, VG.Vector vv v, Typeable kv, Typeable vv) =>
-  ToCBOR (KVVector kv vv (k, v))
-  where
-  toCBOR = toCBOR . toMap
-
-instance
-  (FromCBOR k, FromCBOR v, Ord k, VG.Vector kv k, VG.Vector vv v, Typeable kv, Typeable vv) =>
-  FromCBOR (KVVector kv vv (k, v))
-  where
-  fromCBOR = fromMap <$> fromCBOR
 
 instance Typeable e => NoThunks (VS.Vector e) where
   wNoThunks _ !_ = pure Nothing
