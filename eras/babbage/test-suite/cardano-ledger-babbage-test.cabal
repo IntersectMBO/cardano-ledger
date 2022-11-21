@@ -90,7 +90,6 @@ test-suite cardano-ledger-babbage-test
     cardano-protocol-tpraos,
     cardano-slotting,
     containers,
-    data-default-class,
     plutus-ledger-api,
     cardano-strict-containers,
     tasty,

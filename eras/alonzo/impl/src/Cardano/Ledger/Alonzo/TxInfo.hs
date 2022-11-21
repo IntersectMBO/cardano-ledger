@@ -115,7 +115,6 @@ import Cardano.Ledger.Keys (KeyHash (..), hashKey)
 import Cardano.Ledger.Language (Language (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
-import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
     DelegCert (..),
@@ -138,7 +137,6 @@ import Data.ByteString as BS (ByteString, length)
 import qualified Data.ByteString.Base64 as B64
 import Data.ByteString.Short as SBS (ShortByteString, fromShort)
 import qualified Data.ByteString.UTF8 as BSU
-import Data.Fixed (HasResolution (resolution))
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
@@ -149,7 +147,6 @@ import Data.Time.Clock (nominalDiffTimeToSeconds)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Data.Typeable (Proxy (..), Typeable)
 import GHC.Generics (Generic)
-import GHC.Records (HasField (..))
 import Lens.Micro
 import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
@@ -274,42 +271,30 @@ transTxOutAddr txOut = do
     Nothing -> transAddr (txOut ^. addrTxOutL)
 
 slotToPOSIXTime ::
-  HasField "_protocolVersion" (PParams era) ProtVer =>
-  PParams era ->
   EpochInfo (Either Text) ->
   SystemStart ->
   SlotNo ->
   Either Text PV1.POSIXTime
-slotToPOSIXTime pp ei sysS s = do
-  PV1.POSIXTime . transTime . nominalDiffTimeToSeconds . utcTimeToPOSIXSeconds
+slotToPOSIXTime ei sysS s = do
+  PV1.POSIXTime . (truncate . (* 1000)) . nominalDiffTimeToSeconds . utcTimeToPOSIXSeconds
     <$> epochInfoSlotToUTCTime ei sysS s
-  where
-    transTime =
-      if HardForks.translateTimeForPlutusScripts pp
-        then
-          truncate
-            -- Convert to milliseconds
-            . (* 1000)
-        else resolution
 
 -- | translate a validity interval to POSIX time
 transVITime ::
-  HasField "_protocolVersion" (PParams era) ProtVer =>
-  PParams era ->
   EpochInfo (Either Text) ->
   SystemStart ->
   ValidityInterval ->
   Either Text PV1.POSIXTimeRange
-transVITime _ _ _ (ValidityInterval SNothing SNothing) = pure PV1.always
-transVITime pp ei sysS (ValidityInterval (SJust i) SNothing) = do
-  t <- slotToPOSIXTime pp ei sysS i
+transVITime _ _ (ValidityInterval SNothing SNothing) = pure PV1.always
+transVITime ei sysS (ValidityInterval (SJust i) SNothing) = do
+  t <- slotToPOSIXTime ei sysS i
   pure $ PV1.from t
-transVITime pp ei sysS (ValidityInterval SNothing (SJust i)) = do
-  t <- slotToPOSIXTime pp ei sysS i
+transVITime ei sysS (ValidityInterval SNothing (SJust i)) = do
+  t <- slotToPOSIXTime ei sysS i
   pure $ PV1.to t
-transVITime pp ei sysS (ValidityInterval (SJust i) (SJust j)) = do
-  t1 <- slotToPOSIXTime pp ei sysS i
-  t2 <- slotToPOSIXTime pp ei sysS j
+transVITime ei sysS (ValidityInterval (SJust i) (SJust j)) = do
+  t1 <- slotToPOSIXTime ei sysS i
+  t2 <- slotToPOSIXTime ei sysS j
   pure $
     PV1.Interval
       (PV1.lowerBound t1)
@@ -447,7 +432,6 @@ class ExtendedUTxO era where
   -- Compute a Digest of the current transaction to pass to the script
   --    This is the major component of the valContext function.
   txInfo ::
-    PParams era ->
     Language ->
     EpochInfo (Either Text) ->
     SystemStart ->
@@ -482,15 +466,14 @@ alonzoTxInfo ::
     Value era ~ MaryValue (EraCrypto era),
     TxWits era ~ AlonzoTxWits era
   ) =>
-  PParams era ->
   Language ->
   EpochInfo (Either Text) ->
   SystemStart ->
   UTxO era ->
   Tx era ->
   Either (TranslationError (EraCrypto era)) VersionedTxInfo
-alonzoTxInfo pp lang ei sysS utxo tx = do
-  timeRange <- left TimeTranslationPastHorizon $ transVITime pp ei sysS interval
+alonzoTxInfo lang ei sysS utxo tx = do
+  timeRange <- left TimeTranslationPastHorizon $ transVITime ei sysS interval
   -- We need to do this as a separate step
   let lookupTxOut txIn =
         case Map.lookup txIn (unUTxO utxo) of

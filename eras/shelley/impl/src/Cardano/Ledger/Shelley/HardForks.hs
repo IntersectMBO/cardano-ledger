@@ -7,7 +7,6 @@ module Cardano.Ledger.Shelley.HardForks
     allowMIRTransfer,
     validatePoolRewardAccountNetID,
     allowScriptStakeCredsToEarnRewards,
-    translateTimeForPlutusScripts,
     missingScriptsSymmetricDifference,
     forgoRewardPrefilter,
     allowOutsideForecastTTL,
@@ -51,14 +50,6 @@ allowScriptStakeCredsToEarnRewards ::
   pp ->
   Bool
 allowScriptStakeCredsToEarnRewards pp = pvMajor (getField @"_protocolVersion" pp) > natVersion @4
-
--- | Starting with protocol version 6, we translate slots to time correctly for
--- Plutus scripts.
-translateTimeForPlutusScripts ::
-  (HasField "_protocolVersion" pp ProtVer) =>
-  pp ->
-  Bool
-translateTimeForPlutusScripts pp = pvMajor (getField @"_protocolVersion" pp) > natVersion @5
 
 -- | Starting with protocol version 7, the UTXO rule predicate failure
 -- MissingScriptWitnessesUTXOW will not be used for extraneous scripts

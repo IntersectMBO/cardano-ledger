@@ -161,7 +161,7 @@ evaluateTransactionExecutionUnitsWithLogs ::
   Either (TranslationError (EraCrypto era)) (RedeemerReportWithLogs (EraCrypto era))
 evaluateTransactionExecutionUnitsWithLogs pp tx utxo ei sysS costModels = do
   let getInfo :: Language -> Either (TranslationError (EraCrypto era)) VersionedTxInfo
-      getInfo lang = txInfo pp lang ei sysS utxo tx
+      getInfo lang = txInfo lang ei sysS utxo tx
   ctx <- sequence $ Map.fromSet getInfo languagesUsed
   pure $
     Map.mapWithKey

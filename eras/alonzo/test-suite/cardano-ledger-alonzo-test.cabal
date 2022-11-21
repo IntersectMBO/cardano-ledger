@@ -109,7 +109,6 @@ test-suite cardano-ledger-alonzo-test
     cardano-protocol-tpraos,
     cardano-slotting,
     containers,
-    data-default-class,
     plutus-ledger-api:{plutus-ledger-api,plutus-ledger-api-testlib} ^>=1.1,
     QuickCheck,
     small-steps,
