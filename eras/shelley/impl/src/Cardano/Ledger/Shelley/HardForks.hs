@@ -8,7 +8,6 @@ module Cardano.Ledger.Shelley.HardForks
     validatePoolRewardAccountNetID,
     missingScriptsSymmetricDifference,
     forgoRewardPrefilter,
-    allowOutsideForecastTTL,
   )
 where
 
@@ -58,13 +57,3 @@ forgoRewardPrefilter ::
   pp ->
   Bool
 forgoRewardPrefilter pp = pvMajor (getField @"_protocolVersion" pp) > natVersion @6
-
--- | In versions 5 and 6, we allow the ttl field to lie outside the stability
--- window.
-allowOutsideForecastTTL ::
-  (HasField "_protocolVersion" pp ProtVer) =>
-  pp ->
-  Bool
-allowOutsideForecastTTL pp =
-  let mv = pvMajor (getField @"_protocolVersion" pp)
-   in mv == natVersion @5 || mv == natVersion @6
