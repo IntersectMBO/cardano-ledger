@@ -74,29 +74,6 @@ instance Crypto c => TranslateEra (MaryEra c) ShelleyTx where
       Right newTx -> pure newTx
       Left decoderError -> throwError decoderError
 
--- TODO when a genesis has been introduced for Mary, this instance can be
--- removed.
-instance Crypto c => TranslateEra (MaryEra c) ShelleyGenesis where
-  translateEra ctxt genesis =
-    return
-      ShelleyGenesis
-        { sgSystemStart = sgSystemStart genesis,
-          sgNetworkMagic = sgNetworkMagic genesis,
-          sgNetworkId = sgNetworkId genesis,
-          sgActiveSlotsCoeff = sgActiveSlotsCoeff genesis,
-          sgSecurityParam = sgSecurityParam genesis,
-          sgEpochLength = sgEpochLength genesis,
-          sgSlotsPerKESPeriod = sgSlotsPerKESPeriod genesis,
-          sgMaxKESEvolutions = sgMaxKESEvolutions genesis,
-          sgSlotLength = sgSlotLength genesis,
-          sgUpdateQuorum = sgUpdateQuorum genesis,
-          sgMaxLovelaceSupply = sgMaxLovelaceSupply genesis,
-          sgProtocolParams = translateEra' ctxt (sgProtocolParams genesis),
-          sgGenDelegs = sgGenDelegs genesis,
-          sgInitialFunds = sgInitialFunds genesis,
-          sgStaking = sgStaking genesis
-        }
-
 --------------------------------------------------------------------------------
 -- Auxiliary instances and functions
 --------------------------------------------------------------------------------

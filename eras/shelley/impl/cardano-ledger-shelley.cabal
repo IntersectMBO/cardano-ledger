@@ -80,6 +80,7 @@ library
     Cardano.Ledger.Shelley.Rules.Upec
     Cardano.Ledger.Shelley.Rules.Utxo
     Cardano.Ledger.Shelley.Rules.Utxow
+    Cardano.Ledger.Shelley.Translation
     Cardano.Ledger.Shelley.Tx
     Cardano.Ledger.Shelley.TxBody
     Cardano.Ledger.Shelley.UTxO

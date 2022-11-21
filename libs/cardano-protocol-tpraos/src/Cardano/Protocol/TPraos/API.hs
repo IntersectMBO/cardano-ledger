@@ -76,7 +76,7 @@ import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.PoolDistr (PoolDistr (..), individualPoolStake)
 import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.Genesis (ShelleyGenesis (..))
+import Cardano.Ledger.Shelley.Translation (FromByronTranslationContext (..))
 import Cardano.Ledger.Shelley.LedgerState
   ( EpochState (..),
     NewEpochState (..),
@@ -596,14 +596,14 @@ getLeaderSchedule globals ss cds poolHash key pp = Set.filter isLeader epochSlot
 -- way as 'translateToShelleyLedgerState'.
 mkInitialShelleyLedgerView ::
   forall c.
-  ShelleyGenesis (ShelleyEra c) ->
+  FromByronTranslationContext (ShelleyEra c) ->
   LedgerView c
-mkInitialShelleyLedgerView genesisShelley =
-  let !ee = _extraEntropy . sgProtocolParams $ genesisShelley
+mkInitialShelleyLedgerView transCtxt =
+  let !ee = _extraEntropy . fbtcProtocolParams $ transCtxt
    in LedgerView
-        { lvD = _d . sgProtocolParams $ genesisShelley,
+        { lvD = _d . fbtcProtocolParams $ transCtxt,
           lvExtraEntropy = ee,
           lvPoolDistr = PoolDistr Map.empty,
-          lvGenDelegs = GenDelegs $ sgGenDelegs genesisShelley,
-          lvChainChecks = pparamsToChainChecksPParams . sgProtocolParams $ genesisShelley
+          lvGenDelegs = GenDelegs $ fbtcGenDelegs transCtxt,
+          lvChainChecks = pparamsToChainChecksPParams . fbtcProtocolParams $ transCtxt
         }

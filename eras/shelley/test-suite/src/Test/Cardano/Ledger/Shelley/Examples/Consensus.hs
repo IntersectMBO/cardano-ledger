@@ -32,6 +32,7 @@ import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Shelley.Rules.Delegs
 import Cardano.Ledger.Shelley.Rules.Ledger
 import Cardano.Ledger.Shelley.Tx
+import Cardano.Ledger.Shelley.Translation (emptyFromByronTranslationContext)
 import Cardano.Ledger.Shelley.UTxO
 import Cardano.Protocol.TPraos.API
 import Cardano.Protocol.TPraos.BHeader
@@ -406,7 +407,7 @@ ledgerExamplesShelley =
     exampleCoin
     exampleTxBodyShelley
     exampleAuxiliaryDataShelley
-    ()
+    emptyFromByronTranslationContext
 
 mkWitnessesPreAlonzo ::
   ( Core.EraTx era,
