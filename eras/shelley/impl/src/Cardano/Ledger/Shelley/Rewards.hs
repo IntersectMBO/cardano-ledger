@@ -220,14 +220,12 @@ instance CC.Crypto c => FromCBOR (PoolRewardInfo c) where
       )
 
 notPoolOwner ::
-  HasField "_protocolVersion" pp ProtVer =>
-  pp ->
   PoolParams c ->
   Credential 'Staking c ->
   Bool
-notPoolOwner pp pps = \case
+notPoolOwner pps = \case
   KeyHashObj hk -> hk `Set.notMember` ppOwners pps
-  ScriptHashObj _ -> HardForks.allowScriptStakeCredsToEarnRewards pp
+  ScriptHashObj _ -> True
 
 -- | The stake pool member reward calculation
 rewardOnePoolMember ::
@@ -257,7 +255,7 @@ rewardOnePoolMember
   rewardInfo
   hk
   (Coin c) =
-    if prefilter && notPoolOwner pp (poolPs rewardInfo) hk && r /= Coin 0
+    if prefilter && notPoolOwner (poolPs rewardInfo) hk && r /= Coin 0
       then Just r
       else Nothing
     where
