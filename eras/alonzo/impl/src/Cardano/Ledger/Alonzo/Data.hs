@@ -287,11 +287,11 @@ instance
       getTimelock _ = Nothing
       getPlutus (PlutusScript _ x) = Just x
       getPlutus _ = Nothing
-      sortScripts (ts, v1, v2) s@(TimelockScript _) = (s : ts, v1, v2)
-      sortScripts (ts, v1, v2) s@(PlutusScript PlutusV1 _) = (ts, s : v1, v2)
-      sortScripts (ts, v1, v2) s@(PlutusScript PlutusV2 _) = (ts, v1, s : v2)
+      sortScripts s@(TimelockScript _) (ts, v1, v2) = (s : ts, v1, v2)
+      sortScripts s@(PlutusScript PlutusV1 _) (ts, v1, v2) = (ts, s : v1, v2)
+      sortScripts s@(PlutusScript PlutusV2 _) (ts, v1, v2) = (ts, v1, s : v2)
       (timelocks, plutusV1Scripts, plutusV2Scripts) =
-        foldl' sortScripts (mempty, mempty, mempty) allScripts
+        foldr sortScripts (mempty, mempty, mempty) allScripts
 
 instance
   ( Era era,
