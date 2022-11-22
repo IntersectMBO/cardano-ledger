@@ -6,10 +6,10 @@ module Test.Cardano.Ledger.Alonzo.Examples.Consensus where
 
 import Cardano.Ledger.Alonzo (Alonzo)
 import Cardano.Ledger.Alonzo.Data
-  ( AlonzoTxAuxData (..),
-    AuxiliaryDataHash (..),
+  ( AuxiliaryDataHash (..),
     Data (..),
     hashData,
+    mkAlonzoTxAuxData,
   )
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.Language (Language (..))
@@ -156,11 +156,9 @@ exampleTx =
         ) -- redeemers
     )
     ( SJust $
-        AlonzoTxAuxData
+        mkAlonzoTxAuxData
           SLE.exampleAuxDataMap -- auxiliary data
-          ( StrictSeq.fromList
-              [alwaysFails PlutusV1 2, TimelockScript $ RequireAllOf mempty] -- Scripts
-          )
+          [alwaysFails PlutusV1 2, TimelockScript $ RequireAllOf mempty] -- Scripts
     )
 
 exampleTransactionInBlock :: AlonzoTx Alonzo
