@@ -21,6 +21,7 @@ import Cardano.Ledger.Alonzo.Data
     Data (..),
     Datum (..),
     dataToBinaryData,
+    mkAlonzoTxAuxData,
   )
 import Cardano.Ledger.Alonzo.Language
 import Cardano.Ledger.Alonzo.PParams
@@ -119,7 +120,7 @@ instance
   ) =>
   Arbitrary (AlonzoTxAuxData era)
   where
-  arbitrary = AlonzoTxAuxData <$> arbitrary <*> arbitrary
+  arbitrary = mkAlonzoTxAuxData @[] <$> arbitrary <*> arbitrary
 
 instance Arbitrary Tag where
   arbitrary = elements [Spend, Mint, Cert, Rewrd]

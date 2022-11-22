@@ -25,6 +25,7 @@ import Cardano.Ledger.Alonzo.Data
     Data (..),
     dataToBinaryData,
     hashData,
+    mkAlonzoTxAuxData,
   )
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.Language (Language (PlutusV1, PlutusV2))
@@ -39,7 +40,6 @@ import qualified Cardano.Ledger.Babbage.PParams as BabbagePP
 import Cardano.Ledger.Babbage.Translation ()
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), Datum (..))
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import qualified Cardano.Ledger.Conway.PParams as ConwayPP
@@ -1006,17 +1006,11 @@ multiAssetOf (MaryValue _ ma) = ma
 
 -- ============================================================
 
-exampleAlonzoTxAuxData ::
-  forall era.
-  ( Era era,
-    ToCBOR (Core.Script era),
-    Core.Script era ~ AlonzoScript era
-  ) =>
-  AlonzoTxAuxData era
+exampleAlonzoTxAuxData :: Era era => AlonzoTxAuxData era
 exampleAlonzoTxAuxData =
-  AlonzoTxAuxData
+  mkAlonzoTxAuxData
     SLE.exampleAuxDataMap
-    (StrictSeq.fromList [alwaysFails PlutusV1 2, TimelockScript $ RequireAllOf mempty])
+    [alwaysFails PlutusV1 2, TimelockScript $ RequireAllOf mempty]
 
 ledgerExamplesAlonzo :: ShelleyLedgerExamples (AlonzoEra StandardCrypto)
 ledgerExamplesAlonzo =

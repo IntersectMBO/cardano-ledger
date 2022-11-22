@@ -13,7 +13,7 @@ module Test.Cardano.Ledger.Alonzo.AlonzoEraGen where
 
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.Data (AlonzoTxAuxData (..), Data (..))
+import Cardano.Ledger.Alonzo.Data (AlonzoTxAuxData (..), Data (..), mkAlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams
   ( AlonzoPParams,
@@ -249,7 +249,7 @@ genAux constants = do
   maybeAux <- genEraAuxiliaryData @(MaryEra c) constants
   pure $
     fmap
-      (\(AllegraTxAuxData x y) -> AlonzoTxAuxData x (TimelockScript . translateTimelock <$> y))
+      (\(AllegraTxAuxData x y) -> mkAlonzoTxAuxData x (TimelockScript . translateTimelock <$> y))
       maybeAux
 
 instance CC.Crypto c => ScriptClass (AlonzoEra c) where

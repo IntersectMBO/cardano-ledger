@@ -19,6 +19,7 @@
 
 module Cardano.Ledger.Alonzo.Scripts
   ( Tag (..),
+    BinaryPlutus (..),
     AlonzoScript (TimelockScript, PlutusScript),
     Script,
     txscriptfee,
@@ -128,6 +129,14 @@ instance NFData Tag where
   rnf = rwhnf
 
 -- =======================================================
+
+-- | Binary representation of a Plutus script.
+newtype BinaryPlutus = BinaryPlutus {unBinaryPlutus :: ShortByteString}
+  deriving stock (Eq, Show)
+  deriving newtype (ToCBOR, FromCBOR, NFData)
+
+instance FromCBOR (Annotator BinaryPlutus) where
+  fromCBOR = pure <$> fromCBOR
 
 -- | Scripts in the Alonzo Era, Either a Timelock script or a Plutus script.
 data AlonzoScript era
