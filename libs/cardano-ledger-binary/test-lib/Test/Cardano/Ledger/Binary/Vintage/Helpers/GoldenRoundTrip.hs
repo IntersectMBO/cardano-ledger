@@ -11,7 +11,7 @@ module Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip
     roundTripsCBORShow,
     roundTripsCBORBuildable,
     compareHexDump,
-    byronProtVer,
+    deprecatedGoldenDecode,
   )
 where
 
@@ -175,3 +175,10 @@ roundTripsCBORBuildable ::
   m ()
 roundTripsCBORBuildable a =
   withFrozenCallStack $ trippingBuildable a (serialize byronProtVer) (decodeFull byronProtVer)
+
+deprecatedGoldenDecode ::
+  HasCallStack => Text -> (forall s. Decoder s ()) -> FilePath -> Property
+deprecatedGoldenDecode lbl decoder path =
+  withFrozenCallStack $ withTests 1 . property $ do
+    bs <- decodeBase16 <$> liftIO (BS.readFile path)
+    fmap (decodeFullDecoder byronProtVer lbl decoder) bs === Just (Right ())

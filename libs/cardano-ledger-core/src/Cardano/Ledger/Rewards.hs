@@ -13,18 +13,18 @@ module Cardano.Ledger.Rewards
   )
 where
 
-import Cardano.Binary
+import Cardano.Ledger.BaseTypes (invalidKey)
+import Cardano.Ledger.Binary
   ( FromCBOR (..),
     ToCBOR (..),
     decodeWord,
     encodeWord,
   )
-import Cardano.Ledger.BaseTypes (invalidKey)
+import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Control.DeepSeq (NFData)
-import Data.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 

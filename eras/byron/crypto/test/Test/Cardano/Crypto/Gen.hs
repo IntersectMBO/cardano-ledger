@@ -39,7 +39,6 @@ module Test.Cardano.Crypto.Gen
   )
 where
 
-import Cardano.Binary (Annotated (..), Raw (..), ToCBOR)
 import Cardano.Crypto (PassPhrase)
 import Cardano.Crypto.Hashing
   ( AbstractHash,
@@ -54,6 +53,7 @@ import Cardano.Crypto.ProtocolMagic
     ProtocolMagicId (..),
     RequiresNetworkMagic (..),
   )
+import Cardano.Crypto.Raw (Raw (..))
 import Cardano.Crypto.Signing
   ( SafeSigner (..),
     SignTag (..),
@@ -74,6 +74,7 @@ import Cardano.Crypto.Signing.Redeem
     redeemSign,
     toCompactRedeemVerificationKey,
   )
+import Cardano.Ledger.Binary (Annotated (..), ToCBOR)
 import Cardano.Prelude
 import qualified Data.ByteArray as ByteArray
 import Data.Coerce (coerce)

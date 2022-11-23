@@ -2,7 +2,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Chain.Common.KeyHash
@@ -11,11 +10,11 @@ module Cardano.Chain.Common.KeyHash
   )
 where
 
-import Cardano.Binary (FromCBOR, ToCBOR)
 import Cardano.Chain.Common.AddressHash
 import Cardano.Crypto (decodeAbstractHash, hashHexF)
 import Cardano.Crypto.Signing (VerificationKey)
 import Cardano.HeapWords (HeapWords)
+import Cardano.Ledger.Binary (FromCBOR, ToCBOR)
 import Cardano.Prelude
 import Formatting (formatToString)
 import Formatting.Buildable (Buildable)

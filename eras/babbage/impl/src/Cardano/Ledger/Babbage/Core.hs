@@ -6,8 +6,8 @@ where
 
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Babbage.TxOut (BabbageEraTxOut)
+import Cardano.Ledger.Binary (Sized (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Serialization (Sized (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Data.Maybe.Strict (StrictMaybe)
 import Data.Sequence.Strict (StrictSeq)

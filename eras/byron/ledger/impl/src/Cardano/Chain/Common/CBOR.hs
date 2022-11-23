@@ -36,12 +36,14 @@ module Cardano.Chain.Common.CBOR
   )
 where
 
-import Cardano.Binary
+import Cardano.Ledger.Binary
   ( Decoder,
     Encoding,
     FromCBOR (..),
     Size,
     ToCBOR (..),
+    byronProtVer,
+    cborError,
     decodeFull',
     decodeNestedCbor,
     decodeNestedCborBytes,
@@ -52,8 +54,9 @@ import Cardano.Binary
     nestedCborBytesSizeExpr,
     nestedCborSizeExpr,
     serialize,
+    toCborError,
   )
-import Cardano.Prelude
+import Cardano.Prelude hiding (cborError, toCborError)
 import Data.Digest.CRC32 (CRC32 (..))
 import Formatting (Format, sformat, shown)
 
@@ -101,7 +104,7 @@ encodeCrcProtected :: ToCBOR a => a -> Encoding
 encodeCrcProtected x =
   encodeListLen 2 <> encodeUnknownCborDataItem body <> toCBOR (crc32 body)
   where
-    body = serialize x
+    body = serialize byronProtVer x
 
 encodedCrcProtectedSizeExpr ::
   forall a.
@@ -112,7 +115,7 @@ encodedCrcProtectedSizeExpr ::
 encodedCrcProtectedSizeExpr size pxy =
   2
     + unknownCborDataItemSizeExpr (size pxy)
-    + size (pure $ crc32 (serialize (panic "unused" :: a)))
+    + size (pure $ crc32 (serialize byronProtVer (panic "unused" :: a)))
 
 -- | Decodes a CBOR blob into a value of type @a@, checking the serialised CRC
 --   corresponds to the computed one
@@ -131,4 +134,4 @@ decodeCrcProtected = do
           . shown
   when (actualCrc /= expectedCrc) $
     cborError (sformat crcErrorFmt expectedCrc actualCrc)
-  toCborError $ decodeFull' body
+  toCborError $ decodeFull' byronProtVer body

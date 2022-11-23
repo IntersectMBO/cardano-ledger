@@ -56,7 +56,6 @@ module Test.Cardano.Ledger.Shelley.Generator.Core
   )
 where
 
-import Cardano.Binary (ToCBOR)
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Crypto.VRF (evalCertified)
@@ -70,6 +69,7 @@ import Cardano.Ledger.BaseTypes
     epochInfoPure,
     stabilityWindow,
   )
+import Cardano.Ledger.Binary (ToCBOR)
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core hiding (DataHash)
@@ -484,6 +484,7 @@ unitIntervalToNatural ui =
 
 mkBlockHeader ::
   Mock c =>
+  ProtVer ->
   -- | Hash of previous block
   HashHeader c ->
   -- | All keys in the stake pool
@@ -505,7 +506,7 @@ mkBlockHeader ::
   -- | Block body hash
   Hash c EraIndependentBlockBody ->
   BHeader c
-mkBlockHeader prev pkeys s blockNo enonce kesPeriod c0 oCert bodySize bodyHash =
+mkBlockHeader protVer prev pkeys s blockNo enonce kesPeriod c0 oCert bodySize bodyHash =
   let (_, (sHot, _)) = head $ hot pkeys
       KeyPair vKeyCold _ = cold pkeys
       nonceNonce = mkSeed seedEta s enonce
@@ -522,7 +523,7 @@ mkBlockHeader prev pkeys s blockNo enonce kesPeriod c0 oCert bodySize bodyHash =
           bodySize
           bodyHash
           oCert
-          (ProtVer 0 0)
+          protVer
       kpDiff = kesPeriod - c0
       hotKey = case evolveKESUntil sHot (KESPeriod 0) (KESPeriod kpDiff) of
         Nothing ->
@@ -554,10 +555,11 @@ mkBlock ::
   OCert (EraCrypto era) ->
   Block (BHeader (EraCrypto era)) era
 mkBlock prev pkeys txns s blockNo enonce kesPeriod c0 oCert =
-  let txseq = (toTxSeq @era . StrictSeq.fromList) txns
-      bodySize = fromIntegral $ bBodySize txseq
+  let protVer = ProtVer (eraProtVerHigh @era) 0
+      txseq = (toTxSeq @era . StrictSeq.fromList) txns
+      bodySize = fromIntegral $ bBodySize protVer txseq
       bodyHash = hashTxSeq @era txseq
-      bh = mkBlockHeader prev pkeys s blockNo enonce kesPeriod c0 oCert bodySize bodyHash
+      bh = mkBlockHeader protVer prev pkeys s blockNo enonce kesPeriod c0 oCert bodySize bodyHash
    in Block bh txseq
 
 -- | Create a block with a faked VRF result.
@@ -593,6 +595,7 @@ mkBlockFakeVRF prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod c0
       nonceNonce = mkSeed seedEta s enonce
       leaderNonce = mkSeed seedL s enonce
       txseq = toTxSeq @era (StrictSeq.fromList txns)
+      protVer = ProtVer (eraProtVerHigh @era) 0
       bhb =
         BHBody
           blockNo
@@ -608,10 +611,10 @@ mkBlockFakeVRF prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod c0
               (WithResult leaderNonce (fromIntegral $ unitIntervalToNatural l))
               (fst $ vrf pkeys)
           )
-          (fromIntegral $ bBodySize $ txseq)
+          (fromIntegral $ bBodySize protVer txseq)
           (hashTxSeq @era txseq)
           oCert
-          (ProtVer 0 0)
+          protVer
       kpDiff = kesPeriod - c0
       hotKey = case evolveKESUntil sHot (KESPeriod 0) (KESPeriod kpDiff) of
         Nothing ->

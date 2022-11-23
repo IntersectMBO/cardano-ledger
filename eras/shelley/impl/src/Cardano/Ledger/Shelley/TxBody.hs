@@ -62,14 +62,28 @@ module Cardano.Ledger.Shelley.TxBody
   )
 where
 
-import Cardano.Binary
+import Cardano.Ledger.Address (RewardAcnt (..))
+import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
+import Cardano.Ledger.BaseTypes (StrictMaybe (..), Url)
+import Cardano.Ledger.Binary
   ( Annotator (..),
     FromCBOR (fromCBOR),
     ToCBOR (..),
   )
-import Cardano.Ledger.Address (RewardAcnt (..))
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
-import Cardano.Ledger.BaseTypes (StrictMaybe (..), Url)
+import Cardano.Ledger.Binary.Coders
+  ( Decode (..),
+    Density (..),
+    Encode (..),
+    Field,
+    Wrapped (..),
+    decode,
+    encode,
+    encodeKeyedStrictMaybe,
+    field,
+    invalidField,
+    ofield,
+    (!>),
+  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (Compactible (CompactForm))
 import Cardano.Ledger.Core hiding (TxBody, TxOut)
@@ -81,11 +95,6 @@ import Cardano.Ledger.Keys.WitVKey
 import Cardano.Ledger.MemoBytes (Mem, MemoBytes (..), MemoHashIndex, memoBytes, pattern Memo)
 import Cardano.Ledger.PoolParams
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
-import Cardano.Ledger.Serialization
-  ( decodeSet,
-    decodeStrictSeq,
-    encodeFoldable,
-  )
 import Cardano.Ledger.Shelley.Core (ShelleyEraTxBody (..), Wdrl (..))
 import Cardano.Ledger.Shelley.Delegation.Certificates
   ( DCert (..),
@@ -105,20 +114,6 @@ import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val (DecodeNonNegative (..))
 import Control.DeepSeq (NFData)
 import qualified Data.ByteString.Lazy as BSL
-import Data.Coders
-  ( Decode (..),
-    Density (..),
-    Encode (..),
-    Field,
-    Wrapped (..),
-    decode,
-    encode,
-    encodeKeyedStrictMaybe,
-    field,
-    invalidField,
-    ofield,
-    (!>),
-  )
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -207,9 +202,9 @@ boxBody ::
   ) =>
   Word ->
   Field (ShelleyTxBodyRaw era)
-boxBody 0 = field (\x tx -> tx {stbrInputs = x}) (D (decodeSet fromCBOR))
-boxBody 1 = field (\x tx -> tx {stbrOutputs = x}) (D (decodeStrictSeq fromCBOR))
-boxBody 4 = field (\x tx -> tx {stbrCerts = x}) (D (decodeStrictSeq fromCBOR))
+boxBody 0 = field (\x tx -> tx {stbrInputs = x}) From
+boxBody 1 = field (\x tx -> tx {stbrOutputs = x}) From
+boxBody 4 = field (\x tx -> tx {stbrCerts = x}) From
 boxBody 5 = field (\x tx -> tx {stbrWdrls = x}) From
 boxBody 2 = field (\x tx -> tx {stbrTxFee = x}) From
 boxBody 3 = field (\x tx -> tx {stbrTTL = x}) From
@@ -226,11 +221,11 @@ txSparse ::
   Encode ('Closed 'Sparse) (ShelleyTxBodyRaw era)
 txSparse (ShelleyTxBodyRaw input output cert wdrl fee ttl update hash) =
   Keyed (\i o f t c w u h -> ShelleyTxBodyRaw i o c w f t u h)
-    !> Key 0 (E encodeFoldable input) -- We don't have to send these in ShelleyTxBodyRaw order
-    !> Key 1 (E encodeFoldable output) -- Just hack up a fake constructor with the lambda.
+    !> Key 0 (To input) -- We don't have to send these in ShelleyTxBodyRaw order
+    !> Key 1 (To output) -- Just hack up a fake constructor with the lambda.
     !> Key 2 (To fee)
     !> Key 3 (To ttl)
-    !> Omit null (Key 4 (E encodeFoldable cert))
+    !> Omit null (Key 4 (To cert))
     !> Omit (null . unWdrl) (Key 5 (To wdrl))
     !> encodeKeyedStrictMaybe 6 update
     !> encodeKeyedStrictMaybe 7 hash
@@ -341,7 +336,7 @@ deriving via Mem ShelleyTxBodyRaw era instance EraTxBody era => FromCBOR (Annota
 
 -- | Pattern for use by external users
 pattern ShelleyTxBody ::
-  (EraTxOut era, ToCBOR (PParamsUpdate era)) =>
+  EraTxOut era =>
   Set (TxIn (EraCrypto era)) ->
   StrictSeq (ShelleyTxOut era) ->
   StrictSeq (DCert (EraCrypto era)) ->
@@ -399,7 +394,7 @@ pattern ShelleyTxBody
 
 {-# COMPLETE ShelleyTxBody #-}
 
-mkShelleyTxBody :: (EraTxOut era, ToCBOR (PParamsUpdate era)) => ShelleyTxBodyRaw era -> ShelleyTxBody era
+mkShelleyTxBody :: EraTxOut era => ShelleyTxBodyRaw era -> ShelleyTxBody era
 mkShelleyTxBody = TxBodyConstr . memoBytes . txSparse
 
 -- =========================================

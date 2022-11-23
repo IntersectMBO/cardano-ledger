@@ -10,12 +10,12 @@ module Cardano.Chain.Epoch.File
   )
 where
 
-import Cardano.Binary (DecoderError, decodeFullDecoder, slice)
 import Cardano.Chain.Block.Block
   ( ABlockOrBoundary (..),
     fromCBORABlockOrBoundary,
   )
 import Cardano.Chain.Slotting (EpochSlots (..))
+import Cardano.Ledger.Binary (DecoderError, byronProtVer, decodeFullDecoder, slice)
 import Cardano.Prelude
 import Control.Monad.Trans.Resource (ResIO)
 import qualified Data.Binary as B
@@ -130,6 +130,7 @@ getSlotData epochSlots = runExceptT $ do
     bb <-
       ExceptT . pure $
         decodeFullDecoder
+          byronProtVer
           "ABlockOrBoundary"
           (fromCBORABlockOrBoundary epochSlots)
           blockBytes

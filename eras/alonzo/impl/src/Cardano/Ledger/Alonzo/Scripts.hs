@@ -30,13 +30,13 @@ module Cardano.Ledger.Alonzo.Scripts
     -- * Cost Model
     CostModel,
     mkCostModel,
+    encodeCostModel,
     getCostModelLanguage,
     getCostModelParams,
     getEvaluationContext,
     ExUnits (ExUnits, exUnitsMem, exUnitsSteps, ..),
     ExUnits',
     Prices (..),
-    hashCostModel,
     decodeCostModelMap,
     decodeCostModel,
     CostModels (..),
@@ -45,20 +45,44 @@ module Cardano.Ledger.Alonzo.Scripts
   )
 where
 
-import Cardano.Binary (DecoderError (..), FromCBOR (fromCBOR), ToCBOR (toCBOR), serialize')
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.BaseTypes (BoundedRational (unboundRational), NonNegativeInterval, ProtVer (..))
+import Cardano.Ledger.Binary
+  ( Annotator,
+    Decoder,
+    DecoderError (..),
+    Encoding,
+    FromCBOR (fromCBOR),
+    ToCBOR (toCBOR),
+    cborError,
+    decodeMapByKey,
+    encodeFoldableAsDefLenList,
+    encodeMap,
+    getVersion64,
+  )
+import Cardano.Ledger.Binary.Coders
+  ( Decode (Ann, D, From, Invalid, RecD, SumD, Summands),
+    Encode (Rec, Sum, To),
+    Wrapped (Open),
+    decode,
+    encode,
+    (!>),
+    (<!),
+    (<*!),
+  )
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (Era (EraCrypto), EraScript, Phase (..), PhaseRep (..), PhasedScript (..), SomeScript)
+import Cardano.Ledger.Core
+  ( Era (EraCrypto),
+    EraScript,
+    Phase (..),
+    PhaseRep (..),
+    PhasedScript (..),
+    SomeScript,
+  )
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.SafeHash
-  ( HashWithCrypto (..),
-    SafeHash,
-    SafeToHash (..),
-  )
-import Cardano.Ledger.Serialization (mapToCBOR)
+import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley (nativeMultiSigTag)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock)
 import qualified Cardano.Ledger.ShelleyMA.Timelocks as Timelocks
@@ -66,28 +90,12 @@ import Control.DeepSeq (NFData (..), deepseq, rwhnf)
 import Control.Monad (when)
 import Control.Monad.Trans.Writer (WriterT (runWriterT))
 import Data.ByteString.Short (ShortByteString, fromShort)
-import Data.Coders
-  ( Annotator,
-    Decode (Ann, D, From, Invalid, RecD, SumD, Summands),
-    Decoder,
-    Encode (Rec, Sum, To),
-    Wrapped (Open),
-    cborError,
-    decode,
-    decodeList,
-    decodeMapByKey,
-    encode,
-    encodeFoldableAsDefinite,
-    (!>),
-    (<!),
-    (<*!),
-  )
 import Data.DerivingVia (InstantiatedAt (..))
 import Data.Either (isRight)
 import Data.Int (Int64)
 import Data.Map (Map)
 import Data.Measure (BoundedMeasure, Measure)
-import Data.Typeable (Proxy (..), Typeable)
+import Data.Typeable (Typeable)
 import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
@@ -255,19 +263,6 @@ instance Show CostModel where
 instance Ord CostModel where
   compare (CostModel l1 x _) (CostModel l2 y _) = compare l1 l2 <> compare x y
 
--- NOTE: Since cost model serializations need to be independently reproduced,
--- we use the 'canonical' serialization approach used in Byron.
-instance ToCBOR CostModel where
-  toCBOR (CostModel _ cm _) = encodeFoldableAsDefinite cm
-
-instance SafeToHash CostModel where
-  originalBytes = serialize'
-
--- CostModel does not determine 'crypto' so make a HashWithCrypto
--- rather than a HashAnotated instance.
-
-instance HashWithCrypto CostModel CostModel
-
 instance NoThunks CostModel
 
 instance NFData CostModel where
@@ -299,21 +294,10 @@ decodeCostModelMap = decodeMapByKey fromCBOR decodeCostModel
 
 decodeCostModel :: Language -> Decoder s CostModel
 decodeCostModel lang = do
-  checked <- mkCostModel lang <$> decodeParamsValues
+  checked <- mkCostModel lang <$> fromCBOR
   case checked of
     Left e -> fail $ show e
     Right cm -> pure cm
-
-decodeParamsValues :: Decoder s [Integer]
-decodeParamsValues = decodeList fromCBOR
-
-hashCostModel ::
-  forall e.
-  Era e =>
-  Proxy e ->
-  CostModel ->
-  SafeHash (EraCrypto e) CostModel
-hashCostModel _proxy = hashWithCrypto (Proxy @(EraCrypto e))
 
 getEvaluationContext :: CostModel -> PV1.EvaluationContext
 getEvaluationContext (CostModel _ _ ec) = ec
@@ -325,7 +309,12 @@ instance FromCBOR CostModels where
   fromCBOR = CostModels <$> decodeCostModelMap
 
 instance ToCBOR CostModels where
-  toCBOR = mapToCBOR . unCostModels
+  toCBOR = encodeMap toCBOR encodeCostModel . unCostModels
+
+-- | Encoding for the `CostModel`. Important to note that it differs from `Encoding` used
+-- by `Cardano.Ledger.Alonzo.PParams.getLanguageView`
+encodeCostModel :: CostModel -> Encoding
+encodeCostModel = encodeFoldableAsDefLenList toCBOR . getCostModelParams
 
 -- ==================================
 
@@ -431,7 +420,7 @@ validScript pv script =
 
 transProtocolVersion :: ProtVer -> PV1.ProtocolVersion
 transProtocolVersion (ProtVer major minor) =
-  PV1.ProtocolVersion (fromIntegral major) (fromIntegral minor)
+  PV1.ProtocolVersion ((fromIntegral :: Word64 -> Int) (getVersion64 major)) (fromIntegral minor)
 
 contentsEq :: Script era -> Script era -> Bool
 contentsEq (TimelockScript x) (TimelockScript y) = Timelocks.contentsEq x y

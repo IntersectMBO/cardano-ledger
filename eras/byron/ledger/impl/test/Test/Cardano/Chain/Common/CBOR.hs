@@ -9,15 +9,6 @@ module Test.Cardano.Chain.Common.CBOR
   )
 where
 
-import Cardano.Binary
-  ( Case (..),
-    Raw (..),
-    SizeOverride (..),
-    ToCBOR,
-    decodeFullDecoder,
-    serializeEncoding,
-    szCases,
-  )
 import Cardano.Chain.Common
   ( AddrAttributes (..),
     AddrSpendingData (..),
@@ -43,17 +34,21 @@ import Cardano.Crypto
     abstractHash,
     redeemDeterministicKeyGen,
   )
+import Cardano.Crypto.Raw (Raw (..))
+import Cardano.Ledger.Binary
+  ( Case (..),
+    SizeOverride (..),
+    ToCBOR,
+    byronProtVer,
+    decodeFullDecoder,
+    serializeEncoding,
+    szCases,
+  )
 import Cardano.Prelude hiding (check)
 import qualified Data.Map as M
 import GetDataFileName ((<:<))
 import Hedgehog (Gen, Property, cover, forAll, property, (===))
 import qualified Hedgehog as H
-import Test.Cardano.Binary.Helpers (SizeTestConfig (..), scfg, sizeTest)
-import Test.Cardano.Binary.Helpers.GoldenRoundTrip
-  ( goldenTestCBOR,
-    roundTripsCBORBuildable,
-    roundTripsCBORShow,
-  )
 import Test.Cardano.Chain.Common.Example
   ( exampleAddrSpendingData_VerKey,
     exampleAddress,
@@ -82,6 +77,12 @@ import Test.Cardano.Chain.Common.Gen
   )
 import Test.Cardano.Crypto.CBOR (getBytes)
 import Test.Cardano.Crypto.Gen (genHashRaw)
+import Test.Cardano.Ledger.Binary.Vintage.Helpers (SizeTestConfig (..), scfg, sizeTest)
+import Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip
+  ( goldenTestCBOR,
+    roundTripsCBORBuildable,
+    roundTripsCBORShow,
+  )
 import Test.Cardano.Prelude
 import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
 
@@ -92,8 +93,8 @@ import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
 prop_roundTripCrcProtected :: Property
 prop_roundTripCrcProtected = property $ do
   x <- forAll genAddress
-  let crcEncodedBS = serializeEncoding . encodeCrcProtected $ x
-  decodeFullDecoder "" decodeCrcProtected crcEncodedBS === Right x
+  let crcEncodedBS = serializeEncoding byronProtVer . encodeCrcProtected $ x
+  decodeFullDecoder byronProtVer "" decodeCrcProtected crcEncodedBS === Right x
 
 --------------------------------------------------------------------------------
 -- Address

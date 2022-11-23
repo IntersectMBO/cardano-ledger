@@ -13,7 +13,6 @@ import qualified Byron.Spec.Ledger.UTxO as Abstract
 import qualified Byron.Spec.Ledger.UTxO.Generators as Abstract
 import qualified Byron.Spec.Ledger.Update as Abstract
 import qualified Byron.Spec.Ledger.Update.Generators as Abstract
-import Cardano.Binary (Annotated (..))
 import Cardano.Chain.Block (BlockValidationMode (..))
 import Cardano.Chain.Common
   ( TxFeePolicy (..),
@@ -32,6 +31,7 @@ import qualified Cardano.Chain.UTxO as UTxO
 import Cardano.Chain.Update (ProtocolParameters (..))
 import Cardano.Chain.ValidationMode (ValidationMode (..))
 import Cardano.Crypto (getProtocolMagicId)
+import Cardano.Ledger.Binary (Annotated (..))
 import Cardano.Prelude
 import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as M

@@ -3,16 +3,18 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Cardano.Ledger.State.Orphans where
 
-import Cardano.Binary
 import Cardano.Crypto.Hash.Class
 import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.TxBody
 import Cardano.Ledger.BaseTypes (TxIx (..))
+import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Keys
 import Cardano.Ledger.SafeHash
@@ -22,7 +24,6 @@ import Cardano.Ledger.Shelley.TxBody (PoolParams (..))
 import Cardano.Ledger.State.UTxO
 import Cardano.Ledger.TxIn
 import Data.ByteString.Short
-import Data.Sharing (fromNotSharedCBOR)
 import qualified Data.Text as T
 import Data.Typeable
 import Database.Persist
@@ -88,7 +89,7 @@ instance PersistFieldSql DeltaCoin where
 newtype Enc a = Enc {unEnc :: a}
 
 instance (ToCBOR a, FromCBOR a) => PersistField (Enc a) where
-  toPersistValue = PersistByteString . serialize' . unEnc
+  toPersistValue = PersistByteString . serialize' (eraProtVerHigh @CurrentEra) . unEnc
   fromPersistValue = fmap Enc . decodePersistValue
 
 instance (ToCBOR a, FromCBOR a) => PersistFieldSql (Enc a) where
@@ -96,7 +97,7 @@ instance (ToCBOR a, FromCBOR a) => PersistFieldSql (Enc a) where
 
 decodePersistValue :: FromCBOR b => PersistValue -> Either T.Text b
 decodePersistValue (PersistByteString bs) =
-  case decodeFull' bs of
+  case decodeFull' (eraProtVerHigh @CurrentEra) bs of
     Left err -> Left $ "Could not decode: " <> T.pack (show err)
     Right v -> Right v
 decodePersistValue _ = Left "Unexpected type"

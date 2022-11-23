@@ -23,39 +23,31 @@ module Cardano.Ledger.Alonzo.TxSeq
   )
 where
 
-import Cardano.Binary
+import qualified Cardano.Crypto.Hash as Hash
+import Cardano.Ledger.Alonzo.Era
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..), alonzoSegwitTx)
+import Cardano.Ledger.Binary
   ( Annotator,
     FromCBOR (..),
+    ToCBORGroup (..),
+    encodeFoldableEncoder,
+    encodeFoldableMapEncoder,
     encodePreEncoded,
     encodedSizeExpr,
     serializeEncoding,
     toCBOR,
     withSlice,
   )
-import qualified Cardano.Crypto.Hash as Hash
-import Cardano.Ledger.Alonzo.Era
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..), alonzoSegwitTx)
 import Cardano.Ledger.Core hiding (TxSeq, hashTxSeq)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (Hash)
 import Cardano.Ledger.SafeHash (SafeToHash, originalBytes)
-import Cardano.Ledger.Serialization
-  ( ToCBORGroup (..),
-    encodeFoldableMapEncoder,
-  )
 import Cardano.Ledger.Shelley.BlockChain (constructMetadata)
 import Control.Monad (unless)
 import Data.ByteString (ByteString)
 import Data.ByteString.Builder (shortByteString, toLazyByteString)
 import qualified Data.ByteString.Lazy as BSL
-import Data.Coders
-  ( decodeList,
-    decodeMap,
-    decodeSeq,
-    encodeFoldable,
-    encodeFoldableEncoder,
-  )
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (strictMaybeToMaybe)
@@ -111,23 +103,24 @@ pattern AlonzoTxSeq xs <-
   TxSeq' xs _ _ _ _
   where
     AlonzoTxSeq txns =
-      let serializeFoldable x =
-            serializeEncoding $
+      let version = eraProtVerLow @era
+          serializeFoldablePreEncoded x =
+            serializeEncoding version $
               encodeFoldableEncoder encodePreEncoded x
-          metaChunk index m = encodePair <$> strictMaybeToMaybe m
+          metaChunk index m = encodeIndexed <$> strictMaybeToMaybe m
             where
-              encodePair metadata = toCBOR index <> encodePreEncoded metadata
+              encodeIndexed metadata = toCBOR index <> encodePreEncoded metadata
        in TxSeq'
             { txSeqTxns = txns,
               txSeqBodyBytes =
-                serializeFoldable $ originalBytes . view bodyTxL <$> txns,
+                serializeFoldablePreEncoded $ originalBytes . view bodyTxL <$> txns,
               txSeqWitsBytes =
-                serializeFoldable $ originalBytes . view witsTxL <$> txns,
+                serializeFoldablePreEncoded $ originalBytes . view witsTxL <$> txns,
               txSeqMetadataBytes =
-                serializeEncoding . encodeFoldableMapEncoder metaChunk $
+                serializeEncoding version . encodeFoldableMapEncoder metaChunk $
                   fmap originalBytes . view auxDataTxL <$> txns,
               txSeqIsValidBytes =
-                serializeEncoding $ encodeFoldable $ nonValidatingIndices txns
+                serializeEncoding version $ toCBOR $ nonValidatingIndices txns
             }
 
 {-# COMPLETE AlonzoTxSeq #-}
@@ -204,14 +197,14 @@ hashAlonzoTxSeq (TxSeq' _ bodies ws md vs) =
 
 instance AlonzoEraTx era => FromCBOR (Annotator (TxSeq era)) where
   fromCBOR = do
-    (bodies, bodiesAnn) <- withSlice $ decodeSeq fromCBOR
-    (ws, witsAnn) <- withSlice $ decodeSeq fromCBOR
+    (bodies, bodiesAnn) <- withSlice fromCBOR
+    (ws, witsAnn) <- withSlice fromCBOR
     let b = length bodies
         inRange x = (0 <= x) && (x <= (b - 1))
         w = length ws
     (auxData, auxDataAnn) <- withSlice $
       do
-        m <- decodeMap fromCBOR fromCBOR
+        m <- fromCBOR
         unless
           (all inRange (Map.keysSet m))
           ( fail
@@ -220,7 +213,7 @@ instance AlonzoEraTx era => FromCBOR (Annotator (TxSeq era)) where
               )
           )
         pure (constructMetadata b m)
-    (isValIdxs, isValAnn) <- withSlice $ decodeList fromCBOR
+    (isValIdxs, isValAnn) <- withSlice fromCBOR
     let vs = alignedValidFlags b isValIdxs
     unless
       (b == w)

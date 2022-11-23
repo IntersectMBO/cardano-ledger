@@ -24,7 +24,6 @@ module Cardano.Ledger.Alonzo.Rules.Utxow
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Crypto.DSIGN.Class (Signable)
 import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Address (Addr (..), bootstrapKeyHash, getRwdCred)
@@ -62,6 +61,8 @@ import Cardano.Ledger.BaseTypes
     quorum,
     strictMaybeToMaybe,
   )
+import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (KeyHashObj))
 import Cardano.Ledger.Crypto (DSIGN, HASH)
@@ -97,7 +98,6 @@ import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), txinLookup)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (domain, eval, (⊆), (➖))
 import Control.State.Transition.Extended
-import Data.Coders
 import Data.Foldable (foldr', sequenceA_)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
@@ -340,7 +340,6 @@ alonzoStyleWitness ::
     ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     Script era ~ AlonzoScript era,
     HasField "_costmdls" (PParams era) CostModels,
-    HasField "_protocolVersion" (PParams era) ProtVer,
     Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody),
     -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (AlonzoUTXOW era),

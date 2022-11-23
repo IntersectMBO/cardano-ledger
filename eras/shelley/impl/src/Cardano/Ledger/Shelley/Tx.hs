@@ -6,7 +6,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -54,14 +53,19 @@ module Cardano.Ledger.Shelley.Tx
   )
 where
 
-import Cardano.Binary
-  ( FromCBOR (fromCBOR),
+import Cardano.Ledger.Binary
+  ( Annotator (..),
+    FromCBOR (fromCBOR),
     ToCBOR (toCBOR),
+    decodeNullMaybe,
     encodeListLen,
     encodeNull,
+    encodeNullMaybe,
+    runAnnotator,
     serialize,
     serializeEncoding,
   )
+import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (Coin))
 import Cardano.Ledger.Core hiding (Tx, TxBody, TxOut)
 import qualified Cardano.Ledger.Core as Core
@@ -82,7 +86,6 @@ import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Control.DeepSeq (NFData)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Short as SBS
-import Data.Coders hiding (to)
 import Data.Map.Strict (Map)
 import Data.Maybe.Strict
   ( StrictMaybe (..),
@@ -309,6 +312,7 @@ unsafeConstructTxWithBytes b w a bytes = TxConstr (mkMemoBytes (TxRaw b w a) byt
 --------------------------------------------------------------------------------
 
 segwitTx ::
+  forall era.
   EraTx era =>
   Annotator (Core.TxBody era) ->
   Annotator (TxWits era) ->
@@ -318,16 +322,17 @@ segwitTx
   bodyAnn
   witsAnn
   metaAnn = Annotator $ \bytes ->
-    let body' = runAnnotator bodyAnn bytes
+    let version = eraProtVerLow @era
+        body' = runAnnotator bodyAnn bytes
         witnessSet = runAnnotator witsAnn bytes
         metadata = flip runAnnotator bytes <$> metaAnn
         wrappedMetadataBytes = case metadata of
-          Nothing -> serializeEncoding encodeNull
-          Just b -> serialize b
+          Nothing -> serializeEncoding version encodeNull
+          Just b -> serialize version b
         fullBytes =
-          serializeEncoding (encodeListLen 3)
-            <> serialize body'
-            <> serialize witnessSet
+          serializeEncoding version (encodeListLen 3)
+            <> serialize version body'
+            <> serialize version witnessSet
             <> wrappedMetadataBytes
      in unsafeConstructTxWithBytes
           body'

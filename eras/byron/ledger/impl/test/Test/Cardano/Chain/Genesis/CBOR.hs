@@ -6,9 +6,12 @@ module Test.Cardano.Chain.Genesis.CBOR
 where
 
 import Cardano.Prelude
-import Test.Cardano.Binary.Helpers.GoldenRoundTrip (roundTripsCBORBuildable, roundTripsCBORShow)
 import Test.Cardano.Chain.Genesis.Gen
 import Test.Cardano.Crypto.Gen (genProtocolMagicId)
+import Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip
+  ( roundTripsCBORBuildable,
+    roundTripsCBORShow,
+  )
 import Test.Cardano.Prelude (discoverRoundTripArg)
 import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
 

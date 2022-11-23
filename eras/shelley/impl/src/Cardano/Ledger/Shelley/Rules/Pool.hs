@@ -21,11 +21,6 @@ module Cardano.Ledger.Shelley.Rules.Pool
   )
 where
 
-import Cardano.Binary
-  ( FromCBOR (..),
-    ToCBOR (..),
-    encodeListLen,
-  )
 import Cardano.Crypto.Hash.Class (sizeHash)
 import Cardano.Ledger.BaseTypes
   ( Globals (..),
@@ -35,6 +30,12 @@ import Cardano.Ledger.BaseTypes
     epochInfoPure,
     invalidKey,
     networkId,
+  )
+import Cardano.Ledger.Binary
+  ( FromCBOR (..),
+    ToCBOR (..),
+    decodeRecordSum,
+    encodeListLen,
   )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
@@ -66,7 +67,6 @@ import Control.State.Transition
     (?!),
   )
 import qualified Data.ByteString as BS
-import Data.Coders (decodeRecordSum)
 import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
 import GHC.Records (HasField (getField))

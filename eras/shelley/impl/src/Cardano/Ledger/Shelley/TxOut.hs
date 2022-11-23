@@ -24,10 +24,18 @@ module Cardano.Ledger.Shelley.TxOut
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
 import qualified Cardano.Crypto.Hash as HS
 import Cardano.HeapWords (HeapWords (..))
 import Cardano.Ledger.Address (Addr (..))
+import Cardano.Ledger.Binary
+  ( FromCBOR (..),
+    FromSharedCBOR (..),
+    Interns (..),
+    ToCBOR (..),
+    decodeRecordNamed,
+    encodeListLen,
+    fromNotSharedCBOR,
+  )
 import Cardano.Ledger.CompactAddress (CompactAddr, compactAddr, decompactAddr)
 import Cardano.Ledger.Compactible (Compactible (CompactForm, fromCompact, toCompact))
 import Cardano.Ledger.Core hiding (TxBody, TxOut)
@@ -35,7 +43,6 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (KeyRole (..))
-import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (_minUTxOValue)
 import Cardano.Ledger.Val (DecodeNonNegative (..))
@@ -43,7 +50,6 @@ import Control.DeepSeq (NFData (rnf))
 import Data.ByteString.Short (ShortByteString, pack)
 import Data.Maybe (fromMaybe)
 import Data.Proxy (Proxy (..))
-import Data.Sharing (FromSharedCBOR (..), Interns (..), fromNotSharedCBOR)
 import Data.Word (Word8)
 import GHC.Stack (HasCallStack)
 import Lens.Micro

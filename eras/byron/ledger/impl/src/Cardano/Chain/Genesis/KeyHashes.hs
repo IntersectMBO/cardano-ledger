@@ -13,8 +13,8 @@ module Cardano.Chain.Genesis.KeyHashes
   )
 where
 
-import Cardano.Binary
 import Cardano.Chain.Common (KeyHash)
+import Cardano.Ledger.Binary
 import Cardano.Prelude
 import qualified Data.Map.Strict as M
 import qualified Data.Set as Set

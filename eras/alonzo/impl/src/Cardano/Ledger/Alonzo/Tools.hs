@@ -24,6 +24,7 @@ import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, ScriptPurpose (..), rdptr)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..))
 import Cardano.Ledger.Alonzo.TxInfo
   ( ExtendedUTxO (txscripts),
+    PlutusDebug (..),
     TranslationError,
     VersionedTxInfo (..),
     exBudgetToExUnits,
@@ -39,7 +40,7 @@ import Cardano.Ledger.Alonzo.TxWits
     unTxDats,
   )
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
-import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Core hiding (TranslationError)
 import Cardano.Ledger.Shelley.Tx (TxIn)
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..))
@@ -71,9 +72,9 @@ data TransactionScriptFailure c
   | -- | Missing datum.
     MissingDatum !(DataHash c)
   | -- | Plutus V1 evaluation error.
-    ValidationFailedV1 !PV1.EvaluationError ![Text]
+    ValidationFailedV1 !PV1.EvaluationError ![Text] PlutusDebug
   | -- | Plutus V2 evaluation error.
-    ValidationFailedV2 !PV2.EvaluationError ![Text]
+    ValidationFailedV2 !PV2.EvaluationError ![Text] PlutusDebug
   | -- | A redeemer points to a transaction input which is not
     --  present in the current UTxO.
     UnknownTxIn !(TxIn c)
@@ -107,7 +108,6 @@ evaluateTransactionExecutionUnits ::
     EraUTxO era,
     ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     HasField "_maxTxExUnits" (PParams era) ExUnits,
-    HasField "_protocolVersion" (PParams era) ProtVer,
     Script era ~ AlonzoScript era
   ) =>
   PParams era ->
@@ -141,7 +141,6 @@ evaluateTransactionExecutionUnitsWithLogs ::
     EraUTxO era,
     ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     HasField "_maxTxExUnits" (PParams era) ExUnits,
-    HasField "_protocolVersion" (PParams era) ProtVer,
     Script era ~ AlonzoScript era
   ) =>
   PParams era ->
@@ -196,7 +195,7 @@ evaluateTransactionExecutionUnitsWithLogs pp tx utxo ei sysS costModels = do
       RdmrPtr ->
       (Data era, ExUnits) ->
       Either (TransactionScriptFailure (EraCrypto era)) ([Text], ExUnits)
-    findAndCount pparams info pointer (rdmr, _) = do
+    findAndCount pparams info pointer (rdmr, exunits) = do
       (sp, mscript, sh) <-
         note (RedeemerPointsToUnknownScriptHash pointer) $
           Map.lookup pointer ptrToPlutusScript
@@ -220,12 +219,17 @@ evaluateTransactionExecutionUnitsWithLogs pp tx utxo ei sysS costModels = do
 
       case interpreter lang (getEvaluationContext cm) maxBudget script pArgs of
         (logs, Left e) -> case lang of
-          PlutusV1 -> Left $ ValidationFailedV1 e logs
-          PlutusV2 -> Left $ ValidationFailedV2 e logs
+          PlutusV1 ->
+            let debug = PlutusDebugV1 cm exunits script pArgs protVer
+             in Left $ ValidationFailedV1 e logs debug
+          PlutusV2 ->
+            let debug = PlutusDebugV2 cm exunits script pArgs protVer
+             in Left $ ValidationFailedV2 e logs debug
         (logs, Right exBudget) -> note (IncompatibleBudget exBudget) $ (,) logs <$> exBudgetToExUnits exBudget
       where
         maxBudget = transExUnits . getField @"_maxTxExUnits" $ pparams
-        pv = transProtocolVersion . getField @"_protocolVersion" $ pparams
+        protVer = getField @"_protocolVersion" pparams
+        pv = transProtocolVersion protVer
         interpreter lang = case lang of
           PlutusV1 -> PV1.evaluateScriptRestricting pv PV1.Verbose
           PlutusV2 -> PV2.evaluateScriptRestricting pv PV2.Verbose

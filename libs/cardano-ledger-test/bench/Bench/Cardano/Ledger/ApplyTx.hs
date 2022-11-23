@@ -15,11 +15,16 @@
 module Bench.Cardano.Ledger.ApplyTx (applyTxBenchmarks, ShelleyBench) where
 
 import Bench.Cardano.Ledger.ApplyTx.Gen (ApplyTxEnv (..), generateApplyTxEnvForEra)
-import Cardano.Binary (FromCBOR (fromCBOR), decodeAnnotator, serialize)
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
 import Cardano.Ledger.Alonzo.Rules ()
+import Cardano.Ledger.Binary
+  ( FromCBOR (fromCBOR),
+    decodeFullAnnotator,
+    fromNotSharedCBOR,
+    serialize,
+  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -39,7 +44,6 @@ import Criterion
 import Data.Default.Class (Default)
 import Data.Proxy (Proxy (..))
 import qualified Data.Sequence as Seq
-import Data.Sharing (fromNotSharedCBOR)
 import Data.Typeable (typeRep)
 import Test.Cardano.Ledger.Alonzo.AlonzoEraGen ()
 import Test.Cardano.Ledger.Alonzo.Trace ()
@@ -127,8 +131,10 @@ deserialiseTxEra ::
   Proxy era ->
   Benchmark
 deserialiseTxEra px =
-  benchWithGenState px (pure . serialize . ateTx) $
-    nf (either (error . show) (id @(Tx era)) . decodeAnnotator "tx" fromCBOR)
+  benchWithGenState px (pure . serialize v . ateTx) $
+    nf (either (error . show) (id @(Tx era)) . decodeFullAnnotator v "tx" fromCBOR)
+  where
+    v = eraProtVerHigh @era
 
 --------------------------------------------------------------------------------
 -- Benchmark suite

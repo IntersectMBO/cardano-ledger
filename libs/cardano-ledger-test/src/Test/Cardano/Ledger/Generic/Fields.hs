@@ -56,13 +56,13 @@ import Cardano.Ledger.BaseTypes
     StrictMaybe (..),
     UnitInterval,
   )
+import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Keys (KeyHash, KeyPair (..), KeyRole (..), hashKey)
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness (..))
 import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
-import Cardano.Ledger.Serialization (sizedValue)
 import qualified Cardano.Ledger.Shelley.PParams as PP (Update)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxBody (DCert (..), ShelleyTxBody (..), Wdrl (..), WitVKey (..))

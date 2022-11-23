@@ -16,7 +16,6 @@ module Cardano.Chain.Genesis.Data
   )
 where
 
-import Cardano.Binary
 import Cardano.Chain.Common (BlockCount (..))
 import Cardano.Chain.Genesis.AvvmBalances (GenesisAvvmBalances)
 import Cardano.Chain.Genesis.Delegation (GenesisDelegation)
@@ -28,6 +27,7 @@ import Cardano.Crypto
   ( ProtocolMagicId (..),
     hashRaw,
   )
+import Cardano.Ledger.Binary
 import Cardano.Prelude
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL

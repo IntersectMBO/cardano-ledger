@@ -22,13 +22,13 @@ import Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..), emptyPParams, emp
 import Cardano.Ledger.Babbage.Translation ()
 import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..), BabbageTxOut (..), Datum (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.Binary (mkSized)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (EraScript (hashScript), TxBody)
+import Cardano.Ledger.Core (EraScript (hashScript), TxBody, eraProtVerHigh)
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Serialization (mkSized)
 import Cardano.Ledger.Shelley.API
   ( ApplyTxError (..),
     Credential (..),
@@ -112,7 +112,7 @@ exampleTxBodyBabbage =
     (Set.fromList [mkTxInPartial (TxId (SLE.mkDummySafeHash Proxy 2)) 1]) -- collateral inputs
     (Set.fromList [mkTxInPartial (TxId (SLE.mkDummySafeHash Proxy 1)) 3]) -- reference inputs
     ( StrictSeq.fromList
-        [ mkSized $
+        [ mkSized (eraProtVerHigh @Babbage) $
             BabbageTxOut
               (mkAddr (SLE.examplePayKey, SLE.exampleStakeKey))
               (MarySLE.exampleMultiAssetValue 2)
@@ -120,7 +120,7 @@ exampleTxBodyBabbage =
               (SJust $ alwaysSucceeds PlutusV2 3) -- reference script
         ]
     )
-    (SJust $ mkSized collateralOutput) -- collateral return
+    (SJust $ mkSized (eraProtVerHigh @Babbage) collateralOutput) -- collateral return
     (SJust $ Coin 8675309) -- collateral tot
     SLE.exampleCerts -- txcerts
     ( Wdrl $

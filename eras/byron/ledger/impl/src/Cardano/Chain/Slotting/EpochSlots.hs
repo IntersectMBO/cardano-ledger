@@ -1,7 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 module Cardano.Chain.Slotting.EpochSlots
   ( EpochSlots (..),
@@ -10,9 +9,9 @@ module Cardano.Chain.Slotting.EpochSlots
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Chain.Slotting.EpochNumber
 import Cardano.Chain.Slotting.SlotNumber
+import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Prelude
 import Data.Data (Data)
 import Formatting.Buildable (Buildable)

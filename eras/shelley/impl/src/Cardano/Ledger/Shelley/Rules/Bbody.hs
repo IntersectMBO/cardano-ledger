@@ -145,7 +145,7 @@ bbodyTransition =
                )
            ) -> do
         let txs = fromTxSeq @era txsSeq
-            actualBodySize = bBodySize txsSeq
+            actualBodySize = bBodySize @era (getField @"_protocolVersion" pp) txsSeq
             actualBodyHash = hashTxSeq @era txsSeq
 
         actualBodySize

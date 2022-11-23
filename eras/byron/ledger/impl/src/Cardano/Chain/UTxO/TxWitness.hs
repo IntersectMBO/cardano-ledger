@@ -4,7 +4,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Chain.UTxO.TxWitness
@@ -16,18 +15,6 @@ module Cardano.Chain.UTxO.TxWitness
   )
 where
 
-import Cardano.Binary
-  ( Annotated (..),
-    Case (..),
-    DecoderError (DecoderErrorUnknownTag),
-    FromCBOR (..),
-    ToCBOR (..),
-    decodeListLen,
-    encodeListLen,
-    matchSize,
-    serialize',
-    szCases,
-  )
 import Cardano.Chain.Common (addressHash)
 import Cardano.Chain.Common.CBOR
   ( decodeKnownCborDataItem,
@@ -44,7 +31,21 @@ import Cardano.Crypto
     hashDecoded,
     shortHashF,
   )
-import Cardano.Prelude
+import Cardano.Ledger.Binary
+  ( Annotated (..),
+    Case (..),
+    DecoderError (DecoderErrorUnknownTag),
+    FromCBOR (..),
+    ToCBOR (..),
+    byronProtVer,
+    cborError,
+    decodeListLen,
+    encodeListLen,
+    matchSize,
+    serialize',
+    szCases,
+  )
+import Cardano.Prelude hiding (cborError)
 import Data.Aeson (ToJSON)
 import Data.Vector (Vector)
 import Formatting (bprint, build)
@@ -127,7 +128,7 @@ newtype TxSigData = TxSigData
 recoverSigData :: Annotated Tx ByteString -> Annotated TxSigData ByteString
 recoverSigData atx =
   let txHash = hashDecoded atx
-      signedBytes = serialize' txHash -- TODO: make the prefix bytes explicit
+      signedBytes = serialize' byronProtVer txHash -- TODO: make the prefix bytes explicit
    in Annotated (TxSigData txHash) signedBytes
 
 -- Used for debugging purposes only

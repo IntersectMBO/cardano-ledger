@@ -3,7 +3,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NumDecimals #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -16,13 +15,6 @@ module Cardano.Chain.Common.TxFeePolicy
   )
 where
 
-import Cardano.Binary
-  ( DecoderError (DecoderErrorUnknownTag),
-    FromCBOR (..),
-    ToCBOR (..),
-    encodeListLen,
-    enforceSize,
-  )
 import Cardano.Chain.Common.CBOR
   ( decodeKnownCborDataItem,
     encodeKnownCborDataItem,
@@ -34,7 +26,15 @@ import Cardano.Chain.Common.Lovelace
     mkLovelace,
   )
 import Cardano.Chain.Common.TxSizeLinear (TxSizeLinear (..))
-import Cardano.Prelude
+import Cardano.Ledger.Binary
+  ( DecoderError (DecoderErrorUnknownTag),
+    FromCBOR (..),
+    ToCBOR (..),
+    cborError,
+    encodeListLen,
+    enforceSize,
+  )
+import Cardano.Prelude hiding (cborError)
 import qualified Data.Aeson as Aeson
 import Formatting (bprint, build, formatToString)
 import qualified Formatting.Buildable as B

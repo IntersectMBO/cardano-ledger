@@ -38,8 +38,17 @@ module Cardano.Ledger.EpochBoundary
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
 import Cardano.Ledger.BaseTypes (BoundedRational (..), NonNegativeInterval)
+import Cardano.Ledger.Binary
+  ( FromCBOR (fromCBOR),
+    FromSharedCBOR (..),
+    Interns,
+    ToCBOR (toCBOR),
+    decodeRecordNamedT,
+    encodeListLen,
+    fromSharedPlusLensCBOR,
+    toMemptyLens,
+  )
 import Cardano.Ledger.Coin
   ( Coin (..),
     CompactForm (..),
@@ -53,7 +62,6 @@ import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import qualified Cardano.Ledger.PoolDistr as PD
 import Cardano.Ledger.PoolParams (PoolParams)
 import qualified Cardano.Ledger.PoolParams as PP
-import Cardano.Ledger.Serialization (decodeRecordNamedT)
 import Cardano.Ledger.Val ((<+>), (<×>))
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans (lift)
@@ -61,7 +69,6 @@ import Data.Default.Class (Default, def)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
-import Data.Sharing
 import Data.Typeable
 import Data.VMap as VMap
 import GHC.Generics (Generic)

@@ -25,7 +25,7 @@ import Cardano.Ledger.Babbage.Rules (BabbageUtxowPredFailure (..))
 import Cardano.Ledger.Babbage.TxBody (certs')
 import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals)
 import Cardano.Ledger.Core
-import Cardano.Ledger.EpochBoundary (SnapShots (..), calculatePoolDistr)
+import Cardano.Ledger.EpochBoundary (SnapShots (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.Pretty

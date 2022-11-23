@@ -1,6 +1,5 @@
 module Main where
 
-import Test.Data.Coders (codersTest)
 import Test.Data.MapExtras (mapExtrasTests)
 import Test.Data.UMap (alltests)
 import Test.Tasty
@@ -12,8 +11,7 @@ tests =
   testGroup
     "cardano-data"
     [ mapExtrasTests,
-      alltests,
-      codersTest
+      alltests
     ]
 
 main :: IO ()

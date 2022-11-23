@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -30,18 +29,6 @@ module Cardano.Chain.Update.Validation.Interface
   )
 where
 
-import Cardano.Binary
-  ( Annotated,
-    Decoder,
-    DecoderError (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    decodeListLen,
-    decodeWord8,
-    encodeListLen,
-    enforceSize,
-    matchSize,
-  )
 import Cardano.Chain.Common.BlockCount (BlockCount)
 import Cardano.Chain.Common.KeyHash (KeyHash)
 import qualified Cardano.Chain.Delegation as Delegation
@@ -80,7 +67,20 @@ import qualified Cardano.Chain.Update.Validation.Registration as Registration
 import qualified Cardano.Chain.Update.Validation.Voting as Voting
 import Cardano.Chain.Update.Vote (AVote)
 import Cardano.Crypto (ProtocolMagicId)
-import Cardano.Prelude hiding (State)
+import Cardano.Ledger.Binary
+  ( Annotated,
+    Decoder,
+    DecoderError (..),
+    FromCBOR (..),
+    ToCBOR (..),
+    cborError,
+    decodeListLen,
+    decodeWord8,
+    encodeListLen,
+    enforceSize,
+    matchSize,
+  )
+import Cardano.Prelude hiding (State, cborError)
 import qualified Data.Map.Strict as M
 import Data.Set (union)
 import qualified Data.Set as S

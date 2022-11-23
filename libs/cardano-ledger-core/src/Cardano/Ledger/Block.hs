@@ -23,18 +23,19 @@ module Cardano.Ledger.Block
   )
 where
 
-import Cardano.Binary
+import Cardano.Ledger.Binary
   ( Annotator (..),
     FromCBOR (fromCBOR),
     ToCBOR (..),
+    ToCBORGroup (..),
     annotatorSlice,
+    decodeRecordNamed,
     encodeListLen,
     encodePreEncoded,
     serializeEncoding,
   )
 import Cardano.Ledger.Core
 import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Serialization (ToCBORGroup (..), decodeRecordNamed)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import qualified Data.ByteString.Lazy as BSL
 import Data.Foldable (toList)
@@ -65,6 +66,7 @@ deriving anyclass instance
   NoThunks (Block h era)
 
 pattern Block ::
+  forall era h.
   ( Era era,
     ToCBORGroup (TxSeq era),
     ToCBOR h
@@ -77,7 +79,7 @@ pattern Block h txns <-
   where
     Block h txns =
       let bytes =
-            serializeEncoding $
+            serializeEncoding (eraProtVerLow @era) $
               encodeListLen (1 + listLen txns) <> toCBOR h <> toCBORGroup txns
        in Block' h txns bytes
 

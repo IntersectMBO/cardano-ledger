@@ -12,14 +12,6 @@ module Cardano.Chain.Common.TxSizeLinear
   )
 where
 
-import Cardano.Binary
-  ( Decoder,
-    DecoderError (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    encodeListLen,
-    enforceSize,
-  )
 import Cardano.Chain.Common.Lovelace
   ( Lovelace,
     LovelaceError,
@@ -29,7 +21,16 @@ import Cardano.Chain.Common.Lovelace
     scaleLovelaceRationalUp,
     unsafeGetLovelace,
   )
-import Cardano.Prelude
+import Cardano.Ledger.Binary
+  ( Decoder,
+    DecoderError (..),
+    FromCBOR (..),
+    ToCBOR (..),
+    encodeListLen,
+    enforceSize,
+    toCborError,
+  )
+import Cardano.Prelude hiding (toCborError)
 import Data.Aeson (ToJSON)
 import Data.Fixed (Nano)
 import Formatting (bprint, build, sformat)

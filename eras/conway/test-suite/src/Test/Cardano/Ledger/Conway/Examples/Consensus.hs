@@ -24,21 +24,21 @@ import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.Babbage.TxBody (Datum (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.Binary (mkSized)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway (Conway)
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.PParams (BabbagePParamsHKD (..), emptyPParams, emptyPParamsUpdate)
 import Cardano.Ledger.Conway.Translation ()
 import Cardano.Ledger.Conway.Tx (AlonzoTx (..))
 import Cardano.Ledger.Conway.TxBody (BabbageTxBody (..), BabbageTxOut (..))
 import Cardano.Ledger.Conway.TxWits (AlonzoTxWits (..))
-import Cardano.Ledger.Core (EraScript (hashScript), TxBody)
+import Cardano.Ledger.Core (EraScript (hashScript), TxBody, eraProtVerHigh)
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj))
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (GenDelegs (..), asWitness)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Serialization (mkSized)
 import Cardano.Ledger.Shelley.API
   ( ApplyTxError (..),
     Network (..),
@@ -72,20 +72,18 @@ import Test.Cardano.Ledger.Shelley.Utils (mkAddr)
 
 -- ==============================================================
 
-type StandardConway = ConwayEra StandardCrypto
-
 -- | ShelleyLedgerExamples for Conway era
-ledgerExamplesConway :: SLE.ShelleyLedgerExamples StandardConway
+ledgerExamplesConway :: SLE.ShelleyLedgerExamples Conway
 ledgerExamplesConway =
   SLE.ShelleyLedgerExamples
     { SLE.sleBlock = SLE.exampleShelleyLedgerBlock exampleTransactionInBlock,
-      SLE.sleHashHeader = SLE.exampleHashHeader (Proxy @StandardConway),
+      SLE.sleHashHeader = SLE.exampleHashHeader (Proxy @Conway),
       SLE.sleTx = exampleTransactionInBlock,
       SLE.sleApplyTxError =
         ApplyTxError $
           pure $
             DelegsFailure $
-              DelegateeNotRegisteredDELEG @StandardConway (SLE.mkKeyHash 1),
+              DelegateeNotRegisteredDELEG @Conway (SLE.mkKeyHash 1),
       SLE.sleRewardsCredentials =
         Set.fromList
           [ Left (Coin 100),
@@ -112,7 +110,7 @@ ledgerExamplesConway =
           (SLE.mkKeyHash 0)
           (emptyPParamsUpdate {_collateralPercentage = SJust 150})
 
-collateralOutput :: BabbageTxOut StandardConway
+collateralOutput :: BabbageTxOut Conway
 collateralOutput =
   BabbageTxOut
     (mkAddr (SLE.examplePayKey, SLE.exampleStakeKey))
@@ -120,14 +118,14 @@ collateralOutput =
     NoDatum
     SNothing
 
-exampleTxBodyConway :: TxBody StandardConway
+exampleTxBodyConway :: TxBody Conway
 exampleTxBodyConway =
   BabbageTxBody
     (Set.fromList [mkTxInPartial (TxId (SLE.mkDummySafeHash Proxy 1)) 0]) -- spending inputs
     (Set.fromList [mkTxInPartial (TxId (SLE.mkDummySafeHash Proxy 2)) 1]) -- collateral inputs
     (Set.fromList [mkTxInPartial (TxId (SLE.mkDummySafeHash Proxy 1)) 3]) -- reference inputs
     ( StrictSeq.fromList
-        [ mkSized $
+        [ mkSized (eraProtVerHigh @Conway) $
             BabbageTxOut
               (mkAddr (SLE.examplePayKey, SLE.exampleStakeKey))
               (MarySLE.exampleMultiAssetValue 2)
@@ -135,7 +133,7 @@ exampleTxBodyConway =
               (SJust $ alwaysSucceeds PlutusV2 3) -- reference script
         ]
     )
-    (SJust $ mkSized collateralOutput) -- collateral return
+    (SJust $ mkSized (eraProtVerHigh @Conway) collateralOutput) -- collateral return
     (SJust $ Coin 8675309) -- collateral tot
     SLE.exampleCerts -- txcerts
     ( Wdrl $
@@ -162,13 +160,13 @@ exampleTxBodyConway =
   where
     MaryValue _ exampleMultiAsset = MarySLE.exampleMultiAssetValue 3
 
-datumExample :: Data StandardConway
+datumExample :: Data Conway
 datumExample = Data (Plutus.I 191)
 
-redeemerExample :: Data StandardConway
+redeemerExample :: Data Conway
 redeemerExample = Data (Plutus.I 919)
 
-exampleTx :: ShelleyTx StandardConway
+exampleTx :: ShelleyTx Conway
 exampleTx =
   ShelleyTx
     exampleTxBodyConway
@@ -176,7 +174,7 @@ exampleTx =
         (makeWitnessesVKey (hashAnnotated exampleTxBodyConway) [asWitness SLE.examplePayKey]) -- vkey
         mempty -- bootstrap
         ( Map.singleton
-            (hashScript @StandardConway $ alwaysSucceeds PlutusV1 3)
+            (hashScript @Conway $ alwaysSucceeds PlutusV1 3)
             (alwaysSucceeds PlutusV1 3) -- txscripts
         )
         (TxDats $ Map.singleton (hashData datumExample) datumExample)
@@ -192,12 +190,12 @@ exampleTx =
           )
     )
 
-exampleTransactionInBlock :: AlonzoTx StandardConway
+exampleTransactionInBlock :: AlonzoTx Conway
 exampleTransactionInBlock = AlonzoTx b w (IsValid True) a
   where
     (ShelleyTx b w a) = exampleTx
 
-exampleConwayNewEpochState :: NewEpochState StandardConway
+exampleConwayNewEpochState :: NewEpochState Conway
 exampleConwayNewEpochState =
   SLE.exampleNewEpochState
     (MarySLE.exampleMultiAssetValue 1)

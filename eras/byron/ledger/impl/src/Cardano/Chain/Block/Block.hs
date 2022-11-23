@@ -7,7 +7,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 
 module Cardano.Chain.Block.Block
   ( -- * Block
@@ -78,24 +77,6 @@ where
 
 -- TODO `contramap` should be in `Cardano.Prelude`
 
-import Cardano.Binary
-  ( Annotated (..),
-    ByteSpan (..),
-    Case (..),
-    Decoded (..),
-    Decoder,
-    DecoderError (..),
-    Encoding,
-    FromCBOR (..),
-    Size,
-    ToCBOR (..),
-    annotatedDecoder,
-    encodeBreak,
-    encodeListLen,
-    encodeListLenIndef,
-    enforceSize,
-    szCases,
-  )
 import Cardano.Chain.Block.Body
   ( ABody,
     Body,
@@ -154,8 +135,28 @@ import qualified Cardano.Chain.Update.Payload as Update
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
 import Cardano.Chain.Update.SoftwareVersion (SoftwareVersion)
 import Cardano.Crypto (ProtocolMagicId, SigningKey, VerificationKey)
-import Cardano.Prelude
-import qualified Codec.CBOR.Encoding as CBOR
+import Cardano.Ledger.Binary
+  ( Annotated (..),
+    ByteSpan (..),
+    Case (..),
+    Decoded (..),
+    Decoder,
+    DecoderError (..),
+    Encoding,
+    FromCBOR (..),
+    Size,
+    ToCBOR (..),
+    annotatedDecoder,
+    cborError,
+    encodeBreak,
+    encodeListLen,
+    encodeListLenIndef,
+    encodePreEncoded,
+    encodeWord,
+    enforceSize,
+    szCases,
+  )
+import Cardano.Prelude hiding (cborError)
 import Control.Monad.Fail (fail)
 import Control.Tracer (contramap)
 import Data.Aeson (ToJSON)
@@ -567,14 +568,14 @@ fromCBORABlockOrBoundaryHdr epochSlots = do
 -- which does not type check, but convey the meaning.
 toCBORABlockOrBoundaryHdr :: ABlockOrBoundaryHdr ByteString -> Encoding
 toCBORABlockOrBoundaryHdr hdr =
-  CBOR.encodeListLen 2
+  encodeListLen 2
     <> case hdr of
       ABOBBoundaryHdr h ->
-        CBOR.encodeWord 0
-          <> CBOR.encodePreEncoded (boundaryHeaderAnnotation h)
+        encodeWord 0
+          <> encodePreEncoded (boundaryHeaderAnnotation h)
       ABOBBlockHdr h ->
-        CBOR.encodeWord 1
-          <> CBOR.encodePreEncoded (headerAnnotation h)
+        encodeWord 1
+          <> encodePreEncoded (headerAnnotation h)
 
 -- | The size computation is compatible with 'toCBORABlockOrBoundaryHdr'
 toCBORABlockOrBoundaryHdrSize :: Proxy (ABlockOrBoundaryHdr a) -> Size

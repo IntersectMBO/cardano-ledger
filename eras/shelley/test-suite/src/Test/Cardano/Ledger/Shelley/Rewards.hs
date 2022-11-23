@@ -27,7 +27,6 @@ module Test.Cardano.Ledger.Shelley.Rewards
   )
 where
 
-import Cardano.Binary (toCBOR)
 import qualified Cardano.Crypto.DSIGN as Crypto
 import Cardano.Crypto.Hash (Blake2b_256, hashToBytes)
 import Cardano.Crypto.Seed (mkSeedFromBytes)
@@ -47,6 +46,7 @@ import Cardano.Ledger.BaseTypes
     epochInfoPure,
     mkActiveSlotCoeff,
   )
+import Cardano.Ledger.Binary (hashWithEncoder, natVersion, shelleyProtVer, toCBOR)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), rationalToCoinViaFloor, toDeltaCoin)
 import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
@@ -67,7 +67,6 @@ import Cardano.Ledger.Keys
     KeyRole (..),
     VKey (..),
     hashKey,
-    hashWithSerialiser,
     vKey,
   )
 import Cardano.Ledger.Pretty (PDoc, PrettyA (..), ppMap, ppReward, ppSet)
@@ -213,7 +212,7 @@ keyPair seed = KeyPair vk sk
     sk =
       Crypto.genKeyDSIGN $
         mkSeedFromBytes . hashToBytes $
-          hashWithSerialiser @Blake2b_256 toCBOR seed
+          hashWithEncoder @Blake2b_256 shelleyProtVer toCBOR seed
 
 vrfKeyPair :: forall v. Crypto.VRFAlgorithm v => Int -> (Crypto.SignKeyVRF v, Crypto.VerKeyVRF v)
 vrfKeyPair seed = (sk, vk)
@@ -222,7 +221,7 @@ vrfKeyPair seed = (sk, vk)
     sk =
       Crypto.genKeyVRF $
         mkSeedFromBytes . hashToBytes $
-          hashWithSerialiser @Blake2b_256 toCBOR seed
+          hashWithEncoder @Blake2b_256 shelleyProtVer toCBOR seed
 
 data PoolSetUpArgs c f = PoolSetUpArgs
   { poolPledge :: f Coin,
@@ -838,9 +837,14 @@ rewardTests :: TestTree
 rewardTests =
   testGroup
     "Reward Tests"
-    [ testProperty "Sum of rewards is bounded by reward pot" (withMaxSuccess numberOfTests (rewardsBoundedByPot (Proxy @C))),
-      testProperty "compare with reference impl, no provenance, v3" (newEpochProp chainlen (oldEqualsNew @C (ProtVer 3 0))),
-      testProperty "compare with reference impl, no provenance, v7" (newEpochProp chainlen (oldEqualsNew @C (ProtVer 7 0))),
-      testProperty "compare with reference impl, with provenance" (newEpochProp chainlen (oldEqualsNewOn @C (ProtVer 3 0))),
-      testProperty "delta events mirror reward updates" (newEpochEventsProp chainlen eventsMirrorRewards)
+    [ testProperty "Sum of rewards is bounded by reward pot" $
+        withMaxSuccess numberOfTests (rewardsBoundedByPot (Proxy @C)),
+      testProperty "compare with reference impl, no provenance, v3" $
+        newEpochProp chainlen (oldEqualsNew @C (ProtVer (natVersion @3) 0)),
+      testProperty "compare with reference impl, no provenance, v7" $
+        newEpochProp chainlen (oldEqualsNew @C (ProtVer (natVersion @7) 0)),
+      testProperty "compare with reference impl, with provenance" $
+        newEpochProp chainlen (oldEqualsNewOn @C (ProtVer (natVersion @3) 0)),
+      testProperty "delta events mirror reward updates" $
+        newEpochEventsProp chainlen eventsMirrorRewards
     ]

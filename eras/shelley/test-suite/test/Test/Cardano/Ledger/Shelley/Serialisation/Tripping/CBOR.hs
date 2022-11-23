@@ -3,282 +3,115 @@
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Shelley.Serialisation.Tripping.CBOR
   ( tests,
-
-    -- * Individual properties
-    prop_roundtrip_Addr,
-    prop_roundtrip_RewardAcnt,
-    prop_roundtrip_BootstrapWitness,
-    prop_roundtrip_Block,
-    prop_roundtrip_Header,
-    prop_roundtrip_BlockHeaderHash,
-    prop_roundtrip_Tx,
-    prop_roundtrip_TxId,
-    prop_roundtrip_TxOut,
-    prop_roundtrip_LEDGER_PredicateFails,
-    prop_roundtrip_PrtclState,
-    prop_roundtrip_LedgerState,
-    prop_roundtrip_NewEpochState,
-    prop_roundtrip_ShelleyGenesis,
-
-    -- * pusing properties
-    prop_roundtrip_RewardUpdate,
-    prop_roundtrip_RewardSnapShot,
-    prop_roundtrip_FreeVars,
-    prop_roundtrip_RewardPulser,
-    prop_roundtrip_PulsingRewUpdate,
   )
 where
 
-import Cardano.Binary
-  ( Annotator (..),
-    FromCBOR (..),
-    FullByteString (..),
+import Cardano.Ledger.Binary
+  ( FromCBOR (..),
     ToCBOR (..),
-    serializeEncoding,
-    toCBOR,
+    Version,
+    fromNotSharedCBOR,
+    shelleyProtVer,
   )
-import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.CompactAddress (fromCborAddr, fromCborRewardAcnt)
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
-import qualified Cardano.Ledger.Shelley.API as Ledger
-import Cardano.Ledger.Shelley.Genesis (ShelleyGenesis)
+import Cardano.Ledger.Shelley.API as Ledger
 import Cardano.Ledger.Shelley.RewardUpdate
   ( FreeVars (..),
     Pulser,
     PulsingRewUpdate (..),
     RewardSnapShot (..),
-    RewardUpdate (..),
   )
 import qualified Cardano.Ledger.Shelley.Rules as STS
 import qualified Cardano.Protocol.TPraos.BHeader as TP
 import qualified Cardano.Protocol.TPraos.Rules.Prtcl as STS (PrtclState)
-import Codec.CBOR.Decoding (Decoder)
-import Codec.CBOR.Encoding (Encoding)
-import Codec.CBOR.Read (deserialiseFromBytes)
-import Codec.CBOR.Write (toLazyByteString)
-import qualified Data.ByteString.Lazy as Lazy
 import Data.Maybe (fromJust)
-import Data.Sharing (fromNotSharedCBOR)
+import Test.Cardano.Ledger.Binary.RoundTrip
 import qualified Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes as Mock
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Tasty
-import Test.Tasty.QuickCheck (Property, counterexample, testProperty, (.&&.), (===))
-
--- | Check that: deserialize . serialize = id
-roundtrip ::
-  (Eq a, Show a) =>
-  (a -> Encoding) ->
-  (forall s. Decoder s a) ->
-  a ->
-  Property
-roundtrip enc dec = roundtrip' enc (const <$> dec)
-
--- | Roundtrip property for values annotated with their serialized form
---
--- NOTE: Suppose @a@ consists of a pair of the unannotated value @a'@ and some
--- 'Lazy.ByteString'. The roundtrip property will fail if that
--- 'Lazy.ByteString' encoding is not equal to @enc a'@. One way in which this
--- might happen is if the annotation is not canonical CBOR, but @enc@ does
--- produce canonical CBOR.
-roundtrip' ::
-  (Eq a, Show a) =>
-  -- | @enc@
-  (a -> Encoding) ->
-  (forall s. Decoder s (Lazy.ByteString -> a)) ->
-  a ->
-  Property
-roundtrip' enc dec a = case deserialiseFromBytes dec bs of
-  Right (bs', a')
-    | Lazy.null bs' ->
-        a === a' bs
-    | otherwise ->
-        counterexample ("left-over bytes: " <> show bs') False
-  Left e ->
-    counterexample (show e) False
-  where
-    bs = toLazyByteString (enc a)
-
--- | Check that: serialize . deserialize . serialize = serialize
-roundtrip2 ::
-  (a -> Encoding) ->
-  (forall s. Decoder s a) ->
-  a ->
-  Property
-roundtrip2 enc dec = roundtrip2' enc (const <$> dec)
-
-roundtrip2' ::
-  -- | @enc@
-  (a -> Encoding) ->
-  (forall s. Decoder s (Lazy.ByteString -> a)) ->
-  a ->
-  Property
-roundtrip2' enc dec a = case deserialiseFromBytes dec bs of
-  Right (bs', a')
-    | Lazy.null bs' ->
-        serializeEncoding (enc a) === serializeEncoding (enc (a' bs))
-    | otherwise ->
-        counterexample ("left-over bytes: " <> show bs') False
-  Left e ->
-    counterexample (show e) False
-  where
-    bs = toLazyByteString (enc a)
+import Test.Tasty.QuickCheck (testProperty)
 
 {-------------------------------------------------------------------------------
   Serialization Properties
 -------------------------------------------------------------------------------}
 
-prop_roundtrip_Addr :: Ledger.Addr Mock.C_Crypto -> Property
-prop_roundtrip_Addr addr =
-  roundtrip toCBOR fromCBOR addr
-    .&&. roundtrip toCBOR fromCborAddr addr
-
-prop_roundtrip_RewardAcnt :: Ledger.RewardAcnt Mock.C_Crypto -> Property
-prop_roundtrip_RewardAcnt acnt =
-  roundtrip toCBOR fromCBOR acnt
-    .&&. roundtrip toCBOR fromCborRewardAcnt acnt
-
-prop_roundtrip_Block :: Ledger.Block (TP.BHeader Mock.C_Crypto) Mock.C -> Property
-prop_roundtrip_Block = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
-
-prop_roundtrip_Header :: TP.BHeader Mock.C_Crypto -> Property
-prop_roundtrip_Header = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
-
-prop_roundtrip_BlockHeaderHash :: TP.HashHeader Mock.C_Crypto -> Property
-prop_roundtrip_BlockHeaderHash = roundtrip toCBOR fromCBOR
-
-prop_roundtrip_TxBody :: Ledger.ShelleyTxBody Mock.C -> Property
-prop_roundtrip_TxBody = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
-
-prop_roundtrip_Tx :: Ledger.ShelleyTx Mock.C -> Property
-prop_roundtrip_Tx = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
-
-prop_roundtrip_TxId :: Ledger.TxId Mock.C_Crypto -> Property
-prop_roundtrip_TxId = roundtrip toCBOR fromCBOR
-
-prop_roundtrip_TxOut :: Ledger.ShelleyTxOut Mock.C -> Property
-prop_roundtrip_TxOut = roundtrip toCBOR fromCBOR
-
-prop_roundtrip_BootstrapWitness ::
-  Ledger.BootstrapWitness Mock.C_Crypto -> Property
-prop_roundtrip_BootstrapWitness =
-  roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
-
-prop_roundtrip_LEDGER_PredicateFails ::
-  [STS.PredicateFailure (STS.ShelleyLEDGERS Mock.C)] -> Property
-prop_roundtrip_LEDGER_PredicateFails = roundtrip toCBOR fromCBOR
-
-prop_roundtrip_PrtclState :: STS.PrtclState Mock.C_Crypto -> Property
-prop_roundtrip_PrtclState = roundtrip toCBOR fromCBOR
-
-prop_roundtrip_LedgerState :: Ledger.LedgerState Mock.C -> Property
-prop_roundtrip_LedgerState = roundtrip toCBOR fromCBOR
-
-prop_roundtrip_SnapShots :: Ledger.SnapShots Mock.C_Crypto -> Property
-prop_roundtrip_SnapShots = roundtrip2 toCBOR fromNotSharedCBOR
-
-prop_roundtrip_EpochState :: Ledger.EpochState Mock.C -> Property
-prop_roundtrip_EpochState = roundtrip2 toCBOR fromCBOR
-
-prop_roundtrip_NewEpochState :: Ledger.NewEpochState Mock.C -> Property
-prop_roundtrip_NewEpochState = roundtrip2 toCBOR fromCBOR
-
-prop_roundtrip_MultiSig :: Ledger.MultiSig (ShelleyEra Mock.C_Crypto) -> Property
-prop_roundtrip_MultiSig = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
-
-prop_roundtrip_auxData :: Ledger.ShelleyTxAuxData Mock.C -> Property
-prop_roundtrip_auxData = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
-
-prop_roundtrip_ShelleyGenesis :: ShelleyGenesis Mock.C -> Property
-prop_roundtrip_ShelleyGenesis = roundtrip toCBOR fromCBOR
-
-prop_roundtrip_Coin_1 :: Coin -> Property
-prop_roundtrip_Coin_1 = roundtrip (toCBOR . fromJust . toCompact) fromCBOR
-
-prop_roundtrip_Coin_2 :: Coin -> Property
-prop_roundtrip_Coin_2 = roundtrip toCBOR (fromCompact <$> fromCBOR)
-
-prop_roundtrip_RewardUpdate :: RewardUpdate Mock.C_Crypto -> Property
-prop_roundtrip_RewardUpdate = roundtrip toCBOR fromCBOR
-
-prop_roundtrip_RewardSnapShot :: RewardSnapShot Mock.C_Crypto -> Property
-prop_roundtrip_RewardSnapShot = roundtrip toCBOR fromCBOR
-
-prop_roundtrip_FreeVars :: FreeVars Mock.C_Crypto -> Property
-prop_roundtrip_FreeVars x = roundtrip toCBOR fromCBOR x
-
-prop_roundtrip_RewardPulser :: Pulser Mock.C_Crypto -> Property
-prop_roundtrip_RewardPulser = roundtrip toCBOR fromCBOR
-
-prop_roundtrip_PulsingRewUpdate :: PulsingRewUpdate Mock.C_Crypto -> Property
-prop_roundtrip_PulsingRewUpdate = roundtrip toCBOR fromCBOR
-
-pulsingTest :: TestTree
-pulsingTest =
+testsVersion :: Version -> TestTree
+testsVersion v =
   testGroup
-    "Serialisable Pulser tests"
-    [ testProperty "roundtrip RewardUpdate" prop_roundtrip_RewardUpdate,
-      testProperty "roundtrip RewardSnapShot" prop_roundtrip_RewardSnapShot,
-      testProperty "roundtrip RewardFreeVars" prop_roundtrip_FreeVars,
-      testProperty "roundtrip RewardPulser" prop_roundtrip_RewardPulser,
-      testProperty "roundtrip PulsingRewUpdate" prop_roundtrip_PulsingRewUpdate
+    ("Version: " ++ show v)
+    [ testProperty "Addr" $
+        roundTripExpectation @(Addr Mock.C_Crypto) v cborTrip,
+      testProperty "Addr (fromCborAddr)" $
+        roundTripExpectation @(Addr Mock.C_Crypto) v (mkTrip toCBOR fromCborAddr),
+      testProperty "RewardAcnt" $
+        roundTripExpectation @(RewardAcnt Mock.C_Crypto) v cborTrip,
+      testProperty "RewardAcnt (fromCborRewardAcnt)" $
+        roundTripExpectation @(RewardAcnt Mock.C_Crypto) v (mkTrip toCBOR fromCborRewardAcnt),
+      testProperty "Header" $
+        roundTripAnnExpectation @(TP.BHeader Mock.C_Crypto) v,
+      testProperty "Block Header Hash" $
+        roundTripExpectation @(TP.HashHeader Mock.C_Crypto) v cborTrip,
+      testProperty "Bootstrap Witness" $
+        roundTripAnnExpectation @(BootstrapWitness Mock.C_Crypto) v,
+      testProperty "TxId" $
+        roundTripExpectation @(TxId Mock.C_Crypto) v cborTrip,
+      testProperty "Protocol State" $
+        roundTripExpectation @(STS.PrtclState Mock.C_Crypto) v cborTrip,
+      testProperty "SnapShots" $
+        roundTripExpectation @(SnapShots Mock.C_Crypto) v (mkTrip toCBOR fromNotSharedCBOR),
+      testProperty "coin CompactCoin cbor" $
+        roundTripExpectation @Coin v (mkTrip (toCBOR . fromJust . toCompact) fromCBOR),
+      testProperty "coin cbor CompactCoin" $
+        roundTripExpectation @Coin v (mkTrip toCBOR (fromCompact <$> fromCBOR)),
+      testProperty "RewardUpdate" $
+        roundTripExpectation @(RewardUpdate Mock.C_Crypto) v cborTrip,
+      testProperty "RewardSnapShot" $
+        roundTripExpectation @(RewardSnapShot Mock.C_Crypto) v cborTrip,
+      testProperty "RewardFreeVars" $
+        roundTripExpectation @(FreeVars Mock.C_Crypto) v cborTrip,
+      testProperty "RewardPulser" $
+        roundTripExpectation @(Pulser Mock.C_Crypto) v cborTrip,
+      testProperty "PulsingRewUpdate" $
+        roundTripExpectation @(PulsingRewUpdate Mock.C_Crypto) v cborTrip
     ]
-
--- TODO
-
--- roundTripIpv4 :: Property
--- roundTripIpv4 =
---   -- We are using a QC generator which means we need QC test
---   Hedgehog.property $ do
---     ha <- forAll genIPv4
---     Hedgehog.tripping ha ipv4ToBytes ipv4FromBytes
-
--- roundTripIpv6 :: Property
--- roundTripIpv6 =
---   -- We are using a QC generator which means we need QC test
---   Hedgehog.property $ do
---     ha <- forAll genIPv6
---     Hedgehog.tripping ha ipv6ToBytes ipv6FromBytes
 
 tests :: TestTree
 tests =
   testGroup
     "Serialisation roundtrip Property Tests"
-    [ testProperty "roundtrip Block" prop_roundtrip_Block,
-      testProperty "roundtrip Addr" prop_roundtrip_Addr,
-      testProperty "roundtrip RewardAcnt" prop_roundtrip_RewardAcnt,
-      testProperty "roundtrip Header" prop_roundtrip_Header,
-      testProperty "roundtrip Block Header Hash" prop_roundtrip_BlockHeaderHash,
-      testProperty "roundtrip TxBody" prop_roundtrip_TxBody,
-      testProperty "roundtrip Tx" prop_roundtrip_Tx,
-      testProperty
-        "roundtrip Bootstrap Witness"
-        prop_roundtrip_BootstrapWitness,
-      testProperty "roundtrip TxId" prop_roundtrip_TxId,
-      testProperty "roundtrip TxOut" prop_roundtrip_TxOut,
-      testProperty
-        "roundtrip LEDGER Predicate Failures"
-        prop_roundtrip_LEDGER_PredicateFails,
-      testProperty "roundtrip Protocol State" prop_roundtrip_PrtclState,
-      testProperty "roundtrip Ledger State" prop_roundtrip_LedgerState,
-      testProperty "roundtrip SnapShots" prop_roundtrip_SnapShots,
-      testProperty "roundtrip Epoch State" prop_roundtrip_EpochState,
-      testProperty "roundtrip NewEpoch State" prop_roundtrip_NewEpochState,
-      testProperty "roundtrip MultiSig" prop_roundtrip_MultiSig,
-      testProperty "roundtrip TxAuxData" prop_roundtrip_auxData,
-      testProperty "roundtrip Shelley Genesis" prop_roundtrip_ShelleyGenesis,
-      testProperty "roundtrip coin compactcoin cbor" prop_roundtrip_Coin_1,
-      testProperty "roundtrip coin cbor compactcoin" prop_roundtrip_Coin_2,
-      pulsingTest
-    ]
-
-instance FromCBOR (Ledger.LedgerState Mock.C) where
-  fromCBOR = fromNotSharedCBOR
+    $ [ testProperty "Block" $
+          roundTripAnnExpectation @(Block (TP.BHeader Mock.C_Crypto) Mock.C) v,
+        testProperty "TxBody" $
+          roundTripAnnExpectation @(ShelleyTxBody Mock.C) v,
+        testProperty "Tx" $
+          roundTripAnnExpectation @(ShelleyTx Mock.C) v,
+        testProperty "TxOut" $
+          roundTripExpectation @(ShelleyTxOut Mock.C) v cborTrip,
+        testProperty "LEDGER Predicate Failures" $
+          roundTripExpectation @([STS.PredicateFailure (STS.ShelleyLEDGERS Mock.C)]) v cborTrip,
+        testProperty "Ledger State" $
+          roundTripExpectation @(LedgerState Mock.C) v (mkTrip toCBOR fromNotSharedCBOR),
+        testProperty "Epoch State" $
+          roundTripExpectation @(EpochState Mock.C) v cborTrip,
+        testProperty "NewEpoch State" $
+          roundTripExpectation @(NewEpochState Mock.C) v cborTrip,
+        testProperty "MultiSig" $
+          roundTripAnnExpectation @(MultiSig (ShelleyEra Mock.C_Crypto)) v,
+        testProperty "TxAuxData" $
+          roundTripAnnExpectation @(ShelleyTxAuxData Mock.C) v,
+        testProperty "Shelley Genesis" $
+          roundTripExpectation @(ShelleyGenesis Mock.C) v cborTrip
+      ]
+      ++ map testsVersion [shelleyProtVer .. maxBound]
+  where
+    v = shelleyProtVer

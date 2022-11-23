@@ -43,9 +43,9 @@ import Data.Maybe (fromJust)
 import qualified Data.Sequence as Seq
 import qualified Data.UMap as UM
 import Data.Word (Word16)
+import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, C_Crypto)
 import Test.Cardano.Ledger.Shelley.Examples.Cast (alicePoolParams)
-import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators (mkDummyHash)
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.QuickCheck
 
@@ -63,7 +63,7 @@ genTestCase numUTxO numAddr = do
       TxOutCompact
         (compactAddr addr)
         (fromJust $ toCompact $ Val.inject (Coin $ fromIntegral i))
-  let mktxid i = TxId (unsafeMakeSafeHash (mkDummyHash i))
+  let mktxid i = TxId (unsafeMakeSafeHash (mkDummyHash (i :: Int)))
   let mktxin i = TxIn (mktxid i) (mkTxIxPartial (toInteger (fromIntegral i :: Word16)))
   let utxo = Map.fromList $ zip (mktxin <$> [1 ..]) txOuts
       liveptrs :: [Ptr]

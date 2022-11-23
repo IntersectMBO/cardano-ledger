@@ -47,10 +47,10 @@ library
 
   build-depends:
     bytestring,
-    cardano-binary,
     cardano-crypto-class,
     cardano-ledger-alonzo,
     cardano-ledger-babbage,
+    cardano-ledger-binary,
     cardano-ledger-conway,
     cardano-ledger-core,
     cardano-ledger-shelley,

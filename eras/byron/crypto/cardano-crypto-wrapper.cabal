@@ -1,4 +1,5 @@
-cabal-version: 2.2
+cabal-version: 3.0
+
 name:                cardano-crypto-wrapper
 version:             1.3.0
 synopsis:            Cryptographic primitives used in the Cardano project
@@ -56,6 +57,7 @@ library
                        Cardano.Crypto.Orphans
                        Cardano.Crypto.ProtocolMagic
                        Cardano.Crypto.Random
+                       Cardano.Crypto.Raw
                        Cardano.Crypto.Signing
                        Cardano.Crypto.Signing.Redeem
                        Cardano.Crypto.Signing.Safe
@@ -85,12 +87,13 @@ library
                      , binary
                      , bytestring
                      , canonical-json
-                     , cardano-binary
+                     , cardano-ledger-binary
                      , cardano-crypto
                      , cardano-prelude
                      , heapwords
                      , cryptonite
                      , data-default
+                     , deepseq
                      , formatting
                      , memory
                      , nothunks
@@ -121,8 +124,8 @@ test-suite test
                        Paths_cardano_crypto_wrapper
                        GetDataFileName
   build-depends:       bytestring
-                     , cardano-binary
-                     , cardano-binary-test
+                     , cardano-ledger-binary
+                     , cardano-ledger-binary:testlib
                      , cardano-crypto
                      , cardano-crypto-wrapper
                      , cardano-prelude

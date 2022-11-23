@@ -18,7 +18,6 @@ module Test.Cardano.Ledger.Shelley.Generator.Utxo
   )
 where
 
-import Cardano.Binary (ToCBOR, serialize)
 import Cardano.Ledger.Address
   ( Addr (..),
     RewardAcnt (..),
@@ -28,6 +27,7 @@ import Cardano.Ledger.BaseTypes
   ( Network (..),
     maybeToStrictMaybe,
   )
+import Cardano.Ledger.Binary (ToCBOR, serialize)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
@@ -317,8 +317,8 @@ deltaZero initialfee minAda addr =
     mempty
     mempty
 
-encodedLen :: ToCBOR t => t -> Integer
-encodedLen x = fromIntegral $ BSL.length (serialize x)
+encodedLen :: forall era t. (Era era, ToCBOR t) => t -> Integer
+encodedLen x = fromIntegral $ BSL.length (serialize (eraProtVerHigh @era) x)
 
 -- | - Do the work of computing what additioanl inputs we need to 'fix-up' the
 -- transaction so that it will balance.
@@ -353,11 +353,11 @@ genNextDelta
             [ 1100 :: Integer, -- safety net in case the coin or a list prefix rolls over into a
             -- larger encoding, or some other fudge factor occurs. Sometimes we need extra buffer
             -- when minting tokens. 1100 has been empirically determined to make non-failing Txs
-              encodedLen (max dfees (Coin 0)) - 1,
-              (foldr (\a b -> b + encodedLen a) 0 extraInputs) * 2,
+              encodedLen @era (max dfees (Coin 0)) - 1,
+              (foldr (\a b -> b + encodedLen @era a) 0 extraInputs) * 2,
               --  inputs end up in collateral as well, so we ^ multiply by 2
-              encodedLen change,
-              encodedLen extraWitnesses
+              encodedLen @era change,
+              encodedLen @era extraWitnesses
             ]
         deltaScriptCost = foldr accum (Coin 0) extraScripts
           where

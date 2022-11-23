@@ -34,8 +34,8 @@ module Cardano.Ledger.Shelley.API.Mempool
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.BaseTypes (Globals, ShelleyBase)
+import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Core
   ( Era,
     EraIndependentTxBody,

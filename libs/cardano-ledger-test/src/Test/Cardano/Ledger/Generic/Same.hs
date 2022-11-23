@@ -25,6 +25,7 @@ import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD)
 import Cardano.Ledger.Babbage.TxBody (BabbageEraTxBody, BabbageTxBody (..), BabbageTxOut (..))
+import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Block (Block (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era, EraCrypto)
@@ -33,7 +34,6 @@ import Cardano.Ledger.Pretty
 import Cardano.Ledger.Pretty.Alonzo (ppRdmrPtr)
 import Cardano.Ledger.Pretty.Mary (ppValidityInterval)
 import Cardano.Ledger.SafeHash (SafeToHash)
-import Cardano.Ledger.Serialization (sizedValue)
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTxError)
 import Cardano.Ledger.Shelley.BlockChain (ShelleyTxSeq (..))
 import Cardano.Ledger.Shelley.LedgerState

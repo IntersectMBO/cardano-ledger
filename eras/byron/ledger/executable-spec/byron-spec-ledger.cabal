@@ -49,6 +49,7 @@ library
   build-depends:       bimap >=0.4 && <0.5
                      , bytestring
                      , cardano-crypto-class
+                     , cardano-ledger-binary
                      , containers
                      , cryptonite
                      , hashable
@@ -56,12 +57,9 @@ library
                      , microlens
                      , microlens-th
                      , nothunks
-                     , Unique >= 0.4.7.6
-                     -- IOHK deps
-                     , cardano-binary
-                     -- Local deps
                      , small-steps
                      , small-steps-test
+                     , Unique >= 0.4.7.6
 
 test-suite byron-spec-ledger-test
   import:             base, project-config

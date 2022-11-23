@@ -9,23 +9,18 @@ module Test.Cardano.Ledger.Allegra.Translation
   )
 where
 
-import Cardano.Binary
-  ( ToCBOR (..),
-  )
 import Cardano.Ledger.Allegra (Allegra)
 import Cardano.Ledger.Allegra.Translation ()
-import Cardano.Ledger.Era (TranslateEra (..))
+import Cardano.Ledger.Binary
+import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley (Shelley)
 import qualified Cardano.Ledger.Shelley.API as S
-import Cardano.Ledger.ShelleyMA.AuxiliaryData
--- instance EraGen ShelleyEra
+import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
-import Test.Cardano.Ledger.TranslationTools
-  ( decodeTestAnn,
-    translationCompatToCBOR,
-  )
+import Test.Cardano.Ledger.TranslationTools (translateEraToCBOR)
 import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (Assertion)
 import Test.Tasty.QuickCheck (testProperty)
 
 allegraEncodeDecodeTests :: TestTree
@@ -34,27 +29,31 @@ allegraEncodeDecodeTests =
     "encoded shelley types can be decoded as allegra types"
     [ testProperty
         "decoding auxiliary data"
-        (decodeTestAnn @(S.ShelleyTxAuxData Allegra) ([] :: [AllegraTxAuxData Allegra]))
+        ( embedTripAnnExpectation @(TxAuxData Shelley) @(TxAuxData Allegra)
+            (eraProtVerLow @Shelley)
+            (eraProtVerLow @Allegra)
+            (\_ _ -> pure ())
+        )
     ]
 
 allegraTranslationTests :: TestTree
 allegraTranslationTests =
   testGroup
     "Allegra translation binary compatibiliby tests"
-    [ testProperty "Tx compatibility" (test @S.ShelleyTx),
-      testProperty "ShelleyGenesis compatibility" (test @S.ShelleyGenesis),
-      testProperty "ProposedPPUpdates compatibility" (test @S.ProposedPPUpdates),
-      testProperty "PPUPState compatibility" (test @S.PPUPState),
-      testProperty "TxOut compatibility" (test @S.ShelleyTxOut),
-      testProperty "UTxO compatibility" (test @S.UTxO),
-      testProperty "UTxOState compatibility" (test @S.UTxOState),
-      testProperty "LedgerState compatibility" (test @S.LedgerState),
-      testProperty "EpochState compatibility" (test @S.EpochState),
-      testProperty "ShelleyTxWits compatibility" (test @S.ShelleyTxWits),
-      testProperty "Update compatibility" (test @S.Update)
+    [ testProperty "Tx compatibility" (testTranslation @S.ShelleyTx),
+      testProperty "ShelleyGenesis compatibility" (testTranslation @S.ShelleyGenesis),
+      testProperty "ProposedPPUpdates compatibility" (testTranslation @S.ProposedPPUpdates),
+      testProperty "PPUPState compatibility" (testTranslation @S.PPUPState),
+      testProperty "TxOut compatibility" (testTranslation @S.ShelleyTxOut),
+      testProperty "UTxO compatibility" (testTranslation @S.UTxO),
+      testProperty "UTxOState compatibility" (testTranslation @S.UTxOState),
+      testProperty "LedgerState compatibility" (testTranslation @S.LedgerState),
+      testProperty "EpochState compatibility" (testTranslation @S.EpochState),
+      testProperty "ShelleyTxWits compatibility" (testTranslation @S.ShelleyTxWits),
+      testProperty "Update compatibility" (testTranslation @S.Update)
     ]
 
-test ::
+testTranslation ::
   forall f.
   ( ToCBOR (f Allegra),
     ToCBOR (f Shelley),
@@ -62,5 +61,5 @@ test ::
     Show (TranslationError Allegra f)
   ) =>
   f Shelley ->
-  Bool
-test = translationCompatToCBOR ([] :: [Allegra]) ()
+  Assertion
+testTranslation = translateEraToCBOR ([] :: [Allegra]) ()

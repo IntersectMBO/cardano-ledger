@@ -43,6 +43,7 @@ import Cardano.Ledger.BaseTypes
   ( Network (..),
     StrictMaybe (..),
     mkTxIxPartial,
+    natVersion,
   )
 import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Coin (Coin (..))
@@ -204,7 +205,7 @@ defaultPPs =
     MaxValSize 1000000000,
     MaxTxExUnits $ ExUnits 1000000 1000000,
     MaxBlockExUnits $ ExUnits 1000000 1000000,
-    ProtocolVersion $ ProtVer 7 0,
+    ProtocolVersion $ ProtVer (natVersion @7) 0,
     CollateralPercentage 1,
     AdaPerUTxOByte (Coin 5)
   ]

@@ -22,14 +22,14 @@ module Cardano.Ledger.Shelley.Rules.Delpl
   )
 where
 
-import Cardano.Binary
+import Cardano.Ledger.BaseTypes (ProtVer, ShelleyBase, invalidKey)
+import Cardano.Ledger.Binary
   ( FromCBOR (..),
     ToCBOR (..),
+    decodeRecordSum,
     encodeListLen,
   )
-import Cardano.Ledger.BaseTypes (ProtVer, ShelleyBase, invalidKey)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Serialization (decodeRecordSum)
 import Cardano.Ledger.Shelley.Era (ShelleyDELPL)
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState,

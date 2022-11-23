@@ -65,7 +65,7 @@ import Cardano.Ledger.Credential
   ( Credential (..),
     Ptr,
   )
-import Cardano.Ledger.EpochBoundary (SnapShot, SnapShots (..), calculatePoolDistr)
+import Cardano.Ledger.EpochBoundary (SnapShot, SnapShots (..))
 import Cardano.Ledger.Era (Era, EraCrypto)
 import Cardano.Ledger.Keys
   ( GenDelegPair,

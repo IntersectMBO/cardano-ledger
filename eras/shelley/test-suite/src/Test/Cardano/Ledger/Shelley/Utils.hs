@@ -42,14 +42,12 @@ module Test.Cardano.Ledger.Shelley.Utils
   )
 where
 
-import Cardano.Binary (ToCBOR (..))
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
 import Cardano.Crypto.Hash
   ( Blake2b_256,
     Hash,
     HashAlgorithm,
     hashToBytes,
-    hashWithSerialiser,
   )
 import Cardano.Crypto.KES
   ( KESAlgorithm,
@@ -82,6 +80,7 @@ import Cardano.Ledger.BaseTypes
     mkActiveSlotCoeff,
     mkNonceFromOutputVRF,
   )
+import Cardano.Ledger.Binary (ToCBOR (..), hashWithEncoder, shelleyProtVer)
 import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
@@ -188,7 +187,7 @@ mkSeedFromWords ::
   RawSeed ->
   Seed
 mkSeedFromWords stuff =
-  mkSeedFromBytes . hashToBytes $ hashWithSerialiser @Blake2b_256 toCBOR stuff
+  mkSeedFromBytes . hashToBytes $ hashWithEncoder @Blake2b_256 shelleyProtVer toCBOR stuff
 
 -- | For testing purposes, generate a deterministic genesis key pair given a seed.
 mkGenKey ::
@@ -277,7 +276,7 @@ testGlobals =
       securityParameter = 10,
       maxKESEvo = 10,
       quorum = 5,
-      maxMajorPV = 1000,
+      maxMajorPV = maxBound,
       maxLovelaceSupply = 45 * 1000 * 1000 * 1000 * 1000 * 1000,
       activeSlotCoeff = mkActiveSlotCoeff . unsafeBoundRational $ 0.9,
       networkId = Testnet,
@@ -338,7 +337,7 @@ testSTS env initSt sig predicateFailure@(Left _) = do
   st @?= predicateFailure
 
 mkHash :: forall a h. HashAlgorithm h => Int -> Hash h a
-mkHash i = coerce (hashWithSerialiser @h toCBOR i)
+mkHash i = coerce (hashWithEncoder @h shelleyProtVer toCBOR i)
 
 getBlockNonce :: forall era. Era era => Block (BHeader (EraCrypto era)) era -> Nonce
 getBlockNonce =

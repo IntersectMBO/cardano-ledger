@@ -20,7 +20,6 @@ import qualified Byron.Spec.Ledger.Delegation as Spec
 import qualified Byron.Spec.Ledger.STS.UTXO as STS
 import qualified Byron.Spec.Ledger.STS.UTXOW as STS
 import qualified Byron.Spec.Ledger.Update as Spec
-import Cardano.Binary (fromCBOR, toCBOR)
 import Cardano.Chain.Block
   ( BlockValidationMode (..),
     ChainValidationError (..),
@@ -45,6 +44,7 @@ import Cardano.Chain.UTxO (TxValidationMode (..))
 import Cardano.Chain.ValidationMode (ValidationMode (..))
 import Cardano.Crypto (ProtocolMagicId)
 import qualified Cardano.Crypto.Hashing as H
+import Cardano.Ledger.Binary (fromCBOR, toCBOR)
 import Cardano.Prelude
 import qualified Control.State.Transition as STS
 import qualified Control.State.Transition.Generator as STS
@@ -55,7 +55,6 @@ import qualified Data.Set as Set
 import Hedgehog (Gen, Group (..), annotateShow, forAll, property, (===))
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
-import Test.Cardano.Binary.Helpers.GoldenRoundTrip (roundTripsCBORShow)
 import Test.Cardano.Chain.Block.Model (elaborateAndUpdate, elaborateBlock)
 import qualified Test.Cardano.Chain.Delegation.Gen as Dlg
 import Test.Cardano.Chain.Elaboration.Block
@@ -71,6 +70,7 @@ import Test.Cardano.Chain.UTxO.Model
   )
 import qualified Test.Cardano.Chain.Update.Gen as UpdateIface
 import Test.Cardano.Crypto.Gen (feedPM)
+import Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip (roundTripsCBORShow)
 import Test.Options (TSGroup, TSProperty, eachOfTS, withTestsTS)
 
 tests :: TSGroup

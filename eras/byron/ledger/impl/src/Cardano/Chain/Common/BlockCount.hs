@@ -1,13 +1,12 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Cardano.Chain.Common.BlockCount
   ( BlockCount (..),
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Prelude
 import Formatting.Buildable (Buildable)
 import NoThunks.Class (NoThunks (..))

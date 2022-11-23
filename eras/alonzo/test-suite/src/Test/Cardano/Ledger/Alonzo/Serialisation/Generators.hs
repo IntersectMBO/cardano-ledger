@@ -13,7 +13,6 @@
 
 module Test.Cardano.Ledger.Alonzo.Serialisation.Generators where
 
-import Cardano.Binary (ToCBOR (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Data
   ( AlonzoTxAuxData (..),
@@ -56,10 +55,10 @@ import Cardano.Ledger.Alonzo.Tx
   )
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), ScriptIntegrityHash)
 import Cardano.Ledger.Alonzo.TxWits
-import Cardano.Ledger.BaseTypes (Network, StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (Network, StrictMaybe (..), Version)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
-import qualified Cardano.Ledger.Crypto as C
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash)
 import Cardano.Ledger.Mary.Value (MultiAsset)
 import Cardano.Ledger.Shelley.PParams (Update)
@@ -78,7 +77,6 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
 import qualified Data.Set as Set
 import Data.Text (pack)
-import Data.Twiddle
 import Data.Typeable (Typeable)
 import Data.Void (Void)
 import GHC.Records (HasField)
@@ -86,6 +84,7 @@ import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Alonzo.AlonzoEraGen (costModelParamsCount)
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
+import Test.Cardano.Ledger.Binary.Twiddle
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators (genMintValues)
@@ -181,7 +180,7 @@ instance
       <*> arbitrary
 
 instance
-  (EraTxOut era, ToCBOR (PParamsUpdate era), Arbitrary (TxOut era), Mock (EraCrypto era)) =>
+  (EraTxOut era, Arbitrary (TxOut era), Mock (EraCrypto era)) =>
   Arbitrary (AlonzoTxBody era)
   where
   arbitrary =
@@ -376,7 +375,7 @@ instance Mock c => Arbitrary (ScriptPurpose c) where
       ]
 
 instance
-  ( Era era,
+  ( EraPParams era,
     Mock (EraCrypto era),
     Arbitrary (PParams era),
     HasField "_costmdls" (PParams era) CostModels
@@ -402,19 +401,19 @@ instance
       ]
 
 instance (Era era, Val (Value era), DecodeNonNegative (Value era)) => Twiddle (AlonzoTxOut era) where
-  twiddle = twiddle . toTerm
+  twiddle v = twiddle v . toTerm v
 
 instance Twiddle SlotNo where
-  twiddle = twiddle . toTerm
+  twiddle v = twiddle v . toTerm v
 
-instance C.Crypto c => Twiddle (DCert c) where
-  twiddle = twiddle . toTerm
+instance Crypto c => Twiddle (DCert c) where
+  twiddle v = twiddle v . toTerm v
 
-instance C.Crypto c => Twiddle (Wdrl c) where
-  twiddle = twiddle . toTerm
+instance Crypto c => Twiddle (Wdrl c) where
+  twiddle v = twiddle v . toTerm v
 
-instance C.Crypto c => Twiddle (AuxiliaryDataHash c) where
-  twiddle = twiddle . toTerm
+instance Crypto c => Twiddle (AuxiliaryDataHash c) where
+  twiddle v = twiddle v . toTerm v
 
 emptyOrNothing ::
   forall t a c.
@@ -423,61 +422,62 @@ emptyOrNothing ::
     Monoid (t Void),
     Twiddle (t a)
   ) =>
+  Version ->
   AlonzoTxBody (AlonzoEra c) ->
   (AlonzoTxBody (AlonzoEra c) -> t a) ->
   Gen (Maybe Term)
-emptyOrNothing txBody f =
+emptyOrNothing v txBody f =
   if null $ f txBody
     then
       oneof
-        [ Just <$> twiddle @(t Void) mempty,
+        [ Just <$> twiddle @(t Void) v mempty,
           pure Nothing
         ]
-    else Just <$> twiddle (f txBody)
+    else Just <$> twiddle v (f txBody)
 
-twiddleStrictMaybe :: Twiddle a => StrictMaybe a -> Gen (Maybe Term)
-twiddleStrictMaybe SNothing = pure Nothing
-twiddleStrictMaybe (SJust x) = Just <$> twiddle x
+twiddleStrictMaybe :: Twiddle a => Version -> StrictMaybe a -> Gen (Maybe Term)
+twiddleStrictMaybe _ SNothing = pure Nothing
+twiddleStrictMaybe v (SJust x) = Just <$> twiddle v x
 
-instance C.Crypto c => Twiddle (Update (AlonzoEra c)) where
-  twiddle = twiddle . toTerm
+instance Crypto c => Twiddle (Update (AlonzoEra c)) where
+  twiddle v = twiddle v . toTerm v
 
-instance C.Crypto c => Twiddle (MultiAsset c) where
-  twiddle = twiddle . encodingToTerm . encodeMint
+instance Crypto c => Twiddle (MultiAsset c) where
+  twiddle v = twiddle v . encodingToTerm v . encodeMint
 
-instance C.Crypto c => Twiddle (ScriptIntegrityHash c) where
-  twiddle = twiddle . toTerm
+instance Crypto c => Twiddle (ScriptIntegrityHash c) where
+  twiddle v = twiddle v . toTerm v
 
-instance (C.Crypto c, Typeable t) => Twiddle (KeyHash t c) where
-  twiddle = twiddle . toTerm
+instance (Crypto c, Typeable t) => Twiddle (KeyHash t c) where
+  twiddle v = twiddle v . toTerm v
 
 instance Twiddle Network where
-  twiddle = twiddle . toTerm
+  twiddle v = twiddle v . toTerm v
 
-instance C.Crypto c => Twiddle (TxIn c) where
-  twiddle = twiddle . toTerm
+instance Crypto c => Twiddle (TxIn c) where
+  twiddle v = twiddle v . toTerm v
 
 instance Twiddle Coin where
-  twiddle = twiddle . toTerm
+  twiddle v = twiddle v . toTerm v
 
-instance C.Crypto c => Twiddle (AlonzoTxBody (AlonzoEra c)) where
-  twiddle txBody = do
-    inputs' <- twiddle $ atbInputs txBody
-    outputs' <- twiddle $ atbOutputs txBody
-    fee' <- twiddle $ atbTxFee txBody
+instance Crypto c => Twiddle (AlonzoTxBody (AlonzoEra c)) where
+  twiddle v txBody = do
+    inputs' <- twiddle v $ atbInputs txBody
+    outputs' <- twiddle v $ atbOutputs txBody
+    fee' <- twiddle v $ atbTxFee txBody
     -- Empty collateral can be represented by empty set or the
     -- value can be omitted entirely
-    ttl' <- twiddleStrictMaybe . invalidHereafter $ atbValidityInterval txBody
-    cert' <- emptyOrNothing txBody atbCerts
-    wdrls' <- twiddle $ atbWdrls txBody
-    update' <- twiddleStrictMaybe $ atbUpdate txBody
-    auxDataHash' <- twiddleStrictMaybe $ atbAuxDataHash txBody
-    validityStart' <- twiddleStrictMaybe . invalidBefore $ atbValidityInterval txBody
-    mint' <- twiddle $ atbMint txBody
-    scriptDataHash' <- twiddleStrictMaybe $ atbScriptIntegrityHash txBody
-    collateral' <- emptyOrNothing txBody atbCollateral
-    requiredSigners' <- emptyOrNothing txBody atbReqSignerHashes
-    networkId' <- twiddleStrictMaybe $ atbTxNetworkId txBody
+    ttl' <- twiddleStrictMaybe v . invalidHereafter $ atbValidityInterval txBody
+    cert' <- emptyOrNothing v txBody atbCerts
+    wdrls' <- twiddle v $ atbWdrls txBody
+    update' <- twiddleStrictMaybe v $ atbUpdate txBody
+    auxDataHash' <- twiddleStrictMaybe v $ atbAuxDataHash txBody
+    validityStart' <- twiddleStrictMaybe v . invalidBefore $ atbValidityInterval txBody
+    mint' <- twiddle v $ atbMint txBody
+    scriptDataHash' <- twiddleStrictMaybe v $ atbScriptIntegrityHash txBody
+    collateral' <- emptyOrNothing v txBody atbCollateral
+    requiredSigners' <- emptyOrNothing v txBody atbReqSignerHashes
+    networkId' <- twiddleStrictMaybe v $ atbTxNetworkId txBody
     mp <- elements [TMap, TMapI]
     let fields =
           [ (TInt 0, inputs'),
@@ -501,10 +501,10 @@ instance C.Crypto c => Twiddle (AlonzoTxBody (AlonzoEra c)) where
     pure $ mp fields'
 
 instance Typeable c => Twiddle (AlonzoScript (AlonzoEra c)) where
-  twiddle = twiddle . toTerm
+  twiddle v = twiddle v . toTerm v
 
 instance Typeable c => Twiddle (Data (AlonzoEra c)) where
-  twiddle = twiddle . toTerm
+  twiddle v = twiddle v . toTerm v
 
-instance Typeable c => Twiddle (BinaryData (AlonzoEra c)) where
-  twiddle = twiddle . toTerm
+instance (Crypto c, Typeable c) => Twiddle (BinaryData (AlonzoEra c)) where
+  twiddle v = twiddle v . toTerm v

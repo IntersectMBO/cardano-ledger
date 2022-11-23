@@ -2,7 +2,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -50,16 +49,18 @@ module Cardano.Chain.Common.Lovelace
   )
 where
 
-import Cardano.Binary
+import Cardano.Ledger.Binary
   ( DecoderError (..),
     FromCBOR (..),
     ToCBOR (..),
+    cborError,
     decodeListLen,
     decodeWord8,
     encodeListLen,
     matchSize,
+    toCborError,
   )
-import Cardano.Prelude
+import Cardano.Prelude hiding (cborError, toCborError)
 import Data.Aeson (ToJSON)
 import Data.Data (Data)
 import Formatting (Format, bprint, build, int, sformat)

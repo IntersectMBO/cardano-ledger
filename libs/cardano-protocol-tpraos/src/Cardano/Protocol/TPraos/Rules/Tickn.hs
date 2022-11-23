@@ -13,9 +13,8 @@ module Cardano.Protocol.TPraos.Rules.Tickn
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Serialization (decodeRecordNamed)
+import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), decodeRecordNamed, encodeListLen)
 import Control.State.Transition
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))

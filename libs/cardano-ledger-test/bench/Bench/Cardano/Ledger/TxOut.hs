@@ -6,13 +6,13 @@
 
 module Bench.Cardano.Ledger.TxOut (benchTxOut) where
 
-import Cardano.Binary (decodeFull, serialize)
 import Cardano.Crypto.Hash.Class
 import Cardano.Ledger.Address
 import Cardano.Ledger.Alonzo (Alonzo)
 import Cardano.Ledger.Alonzo.Data
 import Cardano.Ledger.Alonzo.TxBody hiding (TxOut)
 import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Binary (decodeFull, serialize)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.CompactAddress
 import Cardano.Ledger.Compactible
@@ -131,10 +131,12 @@ serializeTxOutAlonzoBench :: Int -> String -> (Int -> TxOut Alonzo) -> Benchmark
 serializeTxOutAlonzoBench count name mkTxOuts =
   bgroup
     name
-    [ env (pure (mkTxOuts <$> [1 .. count])) $ bench "ToCBOR" . nf (map serialize),
-      env (pure (serialize . mkTxOuts <$> [1 .. count])) $
-        bench "FromCBOR" . nf (map (either (error . show) (id @(TxOut Alonzo)) . decodeFull))
+    [ env (pure (mkTxOuts <$> [1 .. count])) $ bench "ToCBOR" . nf (map (serialize v)),
+      env (pure (serialize v . mkTxOuts <$> [1 .. count])) $
+        bench "FromCBOR" . nf (map (either (error . show) (id @(TxOut Alonzo)) . decodeFull v))
     ]
+  where
+    v = eraProtVerHigh @Alonzo
 
 payAddr28 :: Int -> KeyHash 'Payment StandardCrypto
 payAddr28 n =

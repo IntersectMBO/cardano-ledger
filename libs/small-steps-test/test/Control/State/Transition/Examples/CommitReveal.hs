@@ -12,9 +12,9 @@
 
 module Control.State.Transition.Examples.CommitReveal where
 
-import Cardano.Binary (ToCBOR (..))
-import Cardano.Crypto.Hash (Hash, HashAlgorithm, hashWithSerialiser)
+import Cardano.Crypto.Hash (Hash, HashAlgorithm)
 import Cardano.Crypto.Hash.Short (ShortHash)
+import Cardano.Ledger.Binary (ToCBOR (..), hashToCBOR)
 import Control.State.Transition
   ( Environment,
     PredicateFailure,
@@ -156,18 +156,18 @@ instance
                   committedHashes = Set.insert dataHash committedHashes
                 }
           Reveal someData -> do
-            hashWithSerialiser toCBOR someData
+            hashToCBOR minBound someData
               `Set.member` committedHashes
               ?! InvalidReveal someData
             pure $!
               CRSt
                 { hashToData =
                     delete
-                      (hashWithSerialiser toCBOR someData)
+                      (hashToCBOR minBound someData)
                       hashToData,
                   committedHashes =
                     Set.delete
-                      (hashWithSerialiser toCBOR someData)
+                      (hashToCBOR minBound someData)
                       committedHashes
                 }
     ]
@@ -187,7 +187,7 @@ instance
         id <- Id <$> QC.arbitrary
         n <- QC.choose (-2, 2)
         let newData = Data (id, n)
-        pure $! Commit (hashWithSerialiser toCBOR newData) newData
+        pure $! Commit (hashToCBOR minBound newData) newData
       genReveal = do
         hashToReveal <- QC.elements $ Set.toList committedHashes
         let dataToReveal = hashToData Map.! hashToReveal
@@ -198,7 +198,7 @@ instance
     where
       recalculateCommit shrunkData =
         Commit
-          (hashWithSerialiser toCBOR shrunkData)
+          (hashToCBOR minBound shrunkData)
           shrunkData
   shrinkSignal (Reveal someData) = Reveal <$> QC.shrink someData
 

@@ -10,22 +10,23 @@ module Cardano.Chain.Common.NetworkMagic
   )
 where
 
-import Cardano.Binary
-  ( DecoderError (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    decodeListLen,
-    decodeWord8,
-    encodeListLen,
-    matchSize,
-  )
 import Cardano.Crypto.ProtocolMagic
   ( AProtocolMagic (..),
     RequiresNetworkMagic (..),
     getProtocolMagic,
   )
 import Cardano.HeapWords (HeapWords (..))
-import Cardano.Prelude hiding ((%))
+import Cardano.Ledger.Binary
+  ( DecoderError (..),
+    FromCBOR (..),
+    ToCBOR (..),
+    cborError,
+    decodeListLen,
+    decodeWord8,
+    encodeListLen,
+    matchSize,
+  )
+import Cardano.Prelude hiding (cborError, (%))
 import Data.Aeson (ToJSON)
 import Formatting (bprint, build, (%))
 import qualified Formatting.Buildable as B

@@ -15,8 +15,8 @@ module Cardano.Chain.Slotting.SlotNumber
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Chain.Slotting.SlotCount (SlotCount (..))
+import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Prelude
 import qualified Data.Aeson as Aeson
 import Formatting (bprint, int)

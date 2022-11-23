@@ -10,7 +10,6 @@ module Cardano.Chain.UTxO.TxProof
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
 import Cardano.Chain.Common.Merkle
   ( MerkleRoot,
     mkMerkleTree,
@@ -28,6 +27,7 @@ import Cardano.Chain.UTxO.TxPayload
   )
 import Cardano.Chain.UTxO.TxWitness (TxWitness)
 import Cardano.Crypto (Hash, hashDecoded, serializeCborHash)
+import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
 import Cardano.Prelude
 import Data.Aeson (ToJSON)
 import Formatting (bprint, build)

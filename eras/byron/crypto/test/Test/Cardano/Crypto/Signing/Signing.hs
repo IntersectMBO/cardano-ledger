@@ -2,8 +2,8 @@
 
 module Test.Cardano.Crypto.Signing.Signing (tests) where
 
-import Cardano.Binary (toCBOR)
 import Cardano.Crypto.Signing (SignTag (..), sign, toVerification, verifySignature)
+import Cardano.Ledger.Binary (toCBOR)
 import Cardano.Prelude
 import Hedgehog
   ( Gen,

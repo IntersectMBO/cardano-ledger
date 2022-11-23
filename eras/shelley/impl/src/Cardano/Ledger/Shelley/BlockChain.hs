@@ -30,36 +30,33 @@ module Cardano.Ledger.Shelley.BlockChain
   )
 where
 
-import Cardano.Binary
-  ( Annotator (..),
-    Decoder,
-    FromCBOR (fromCBOR),
-    ToCBOR (..),
-    encodePreEncoded,
-    serializeEncoding,
-    serializeEncoding',
-    withSlice,
-  )
 import qualified Cardano.Crypto.Hash.Class as Hash
 import Cardano.Ledger.BaseTypes
   ( BlocksMade (..),
     Nonce (..),
+    ProtVer (..),
     StrictMaybe (..),
     mkNonceFromNumber,
     strictMaybeToMaybe,
+  )
+import Cardano.Ledger.Binary
+  ( Annotator (..),
+    Decoder,
+    FromCBOR (fromCBOR),
+    ToCBOR (..),
+    ToCBORGroup (..),
+    encodeFoldableEncoder,
+    encodeFoldableMapEncoder,
+    encodePreEncoded,
+    serializeEncoding,
+    serializeEncoding',
+    withSlice,
   )
 import Cardano.Ledger.Core hiding (TxSeq)
 import qualified Cardano.Ledger.Core as Core (TxSeq)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (Hash, KeyHash, KeyRole (..))
 import Cardano.Ledger.SafeHash (SafeToHash (..))
-import Cardano.Ledger.Serialization
-  ( ToCBORGroup (..),
-    decodeMap,
-    decodeSeq,
-    encodeFoldableEncoder,
-    encodeFoldableMapEncoder,
-  )
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx, segwitTx)
 import Cardano.Ledger.Slot (SlotNo (..))
@@ -124,13 +121,13 @@ coreWitnessBytes ::
   (EraTx era, SafeToHash (TxWits era)) =>
   Tx era ->
   ByteString
-coreWitnessBytes coretx = originalBytes $ coretx ^. witsTxL
+coreWitnessBytes tx = originalBytes $ tx ^. witsTxL
 
 coreBodyBytes :: EraTx era => Tx era -> ByteString
-coreBodyBytes coretx = originalBytes $ coretx ^. bodyTxL
+coreBodyBytes tx = originalBytes $ tx ^. bodyTxL
 
 coreAuxDataBytes :: EraTx era => Tx era -> StrictMaybe ByteString
-coreAuxDataBytes coretx = originalBytes <$> coretx ^. auxDataTxL
+coreAuxDataBytes tx = originalBytes <$> tx ^. auxDataTxL
 
 -- ===========================
 
@@ -147,8 +144,9 @@ pattern ShelleyTxSeq xs <-
   TxSeq' xs _ _ _
   where
     ShelleyTxSeq txns =
-      let serializeFoldable x =
-            serializeEncoding $
+      let version = eraProtVerLow @era
+          serializeFoldable x =
+            serializeEncoding version $
               encodeFoldableEncoder encodePreEncoded x
           metaChunk index m = encodePair <$> strictMaybeToMaybe m
             where
@@ -161,7 +159,7 @@ pattern ShelleyTxSeq xs <-
               txSeqWitsBytes = serializeFoldable $ coreWitnessBytes @era <$> txns,
               -- bytes encoding a (Map Int (TxAuxData))
               txSeqMetadataBytes =
-                serializeEncoding . encodeFoldableMapEncoder metaChunk $
+                serializeEncoding version . encodeFoldableMapEncoder metaChunk $
                   coreAuxDataBytes @era <$> txns
             }
 
@@ -223,14 +221,14 @@ txSeqDecoder ::
   Bool ->
   forall s. Decoder s (Annotator (ShelleyTxSeq era))
 txSeqDecoder lax = do
-  (bodies, bodiesAnn) <- withSlice $ decodeSeq fromCBOR
-  (wits, witsAnn) <- withSlice $ decodeSeq fromCBOR
+  (bodies, bodiesAnn) <- withSlice fromCBOR
+  (wits, witsAnn) <- withSlice fromCBOR
   let b = length bodies
       inRange x = (0 <= x) && (x <= (b - 1))
       w = length wits
   (metadata, metadataAnn) <- withSlice $
     do
-      m <- decodeMap fromCBOR fromCBOR
+      m <- fromCBOR
       unless -- TODO this PR introduces this new test, That didn't used to run in the Shelley
         (lax || all inRange (Map.keysSet m)) -- Era,  Is it possible there might be some blocks, that should have been caught on the chain?
         (fail ("Some Auxiliarydata index is not in the range: 0 .. " ++ show (b - 1)))
@@ -255,9 +253,8 @@ txSeqDecoder lax = do
 instance EraTx era => FromCBOR (Annotator (ShelleyTxSeq era)) where
   fromCBOR = txSeqDecoder False
 
-bBodySize ::
-  ToCBORGroup txSeq => txSeq -> Int
-bBodySize = BS.length . serializeEncoding' . toCBORGroup
+bBodySize :: forall era. EraSegWits era => ProtVer -> Core.TxSeq era -> Int
+bBodySize (ProtVer v _) = BS.length . serializeEncoding' v . toCBORGroup
 
 slotToNonce :: SlotNo -> Nonce
 slotToNonce (SlotNo s) = mkNonceFromNumber s

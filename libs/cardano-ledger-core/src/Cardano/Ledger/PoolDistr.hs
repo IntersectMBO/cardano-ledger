@@ -19,14 +19,9 @@
 -- <https://hydra.iohk.io/job/Cardano/cardano-ledger/shelleyLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec formal specification>.
 module Cardano.Ledger.PoolDistr where
 
-import Cardano.Binary
-  ( FromCBOR (fromCBOR),
-    ToCBOR (..),
-    encodeListLen,
-  )
+import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), decodeRecordNamed, encodeListLen)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (Hash, KeyHash, KeyRole (..), VerKeyVRF)
-import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Control.DeepSeq (NFData)
 import Control.SetAlgebra (BaseRep (MapR), Embed (..), Exp (Base), HasExp (..))
 import Data.Map.Strict (Map)

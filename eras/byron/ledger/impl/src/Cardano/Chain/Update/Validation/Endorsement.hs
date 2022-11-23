@@ -15,14 +15,6 @@ module Cardano.Chain.Update.Validation.Endorsement
   )
 where
 
-import Cardano.Binary
-  ( DecoderError (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    decodeWord8,
-    encodeListLen,
-    enforceSize,
-  )
 import Cardano.Chain.Common (BlockCount, KeyHash)
 import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.ProtocolConstants (kSlotSecurityParam)
@@ -31,7 +23,16 @@ import Cardano.Chain.Update.Proposal (UpId)
 import Cardano.Chain.Update.ProtocolParameters (ProtocolParameters)
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
 import qualified Cardano.Chain.Update.Validation.Registration as Registration
-import Cardano.Prelude hiding (State)
+import Cardano.Ledger.Binary
+  ( DecoderError (..),
+    FromCBOR (..),
+    ToCBOR (..),
+    cborError,
+    decodeWord8,
+    encodeListLen,
+    enforceSize,
+  )
+import Cardano.Prelude hiding (State, cborError)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as Set
 import NoThunks.Class (NoThunks (..))

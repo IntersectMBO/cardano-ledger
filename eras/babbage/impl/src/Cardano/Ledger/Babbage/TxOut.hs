@@ -39,18 +39,6 @@ module Cardano.Ledger.Babbage.TxOut
   )
 where
 
-import Cardano.Binary
-  ( DecoderError (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    TokenType (..),
-    decodeAnnotator,
-    decodeBreakOr,
-    decodeListLenOrIndef,
-    decodeNestedCborBytes,
-    encodeNestedCbor,
-    peekTokenType,
-  )
 import Cardano.Crypto.Hash
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Data
@@ -79,6 +67,28 @@ import Cardano.Ledger.BaseTypes
     maybeToStrictMaybe,
     strictMaybeToMaybe,
   )
+import Cardano.Ledger.Binary
+  ( Annotator (..),
+    Decoder,
+    DecoderError (..),
+    Encoding,
+    FromCBOR (..),
+    FromSharedCBOR (..),
+    Interns,
+    Sized (..),
+    ToCBOR (..),
+    TokenType (..),
+    cborError,
+    decodeBreakOr,
+    decodeFullAnnotator,
+    decodeListLenOrIndef,
+    decodeNestedCborBytes,
+    encodeNestedCbor,
+    getDecoderVersion,
+    interns,
+    peekTokenType,
+  )
+import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.CompactAddress
   ( CompactAddr,
@@ -92,7 +102,6 @@ import qualified Cardano.Ledger.Core as Core (TxOut)
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (KeyRole (..))
-import Cardano.Ledger.Serialization (Sized (..))
 import Cardano.Ledger.Val
   ( DecodeNonNegative (decodeNonNegative),
     Val (..),
@@ -100,9 +109,7 @@ import Cardano.Ledger.Val
 import Control.DeepSeq (NFData (rnf), rwhnf)
 import Control.Monad ((<$!>))
 import qualified Data.ByteString.Lazy as LBS
-import Data.Coders hiding (to)
 import Data.Maybe (fromMaybe)
-import Data.Sharing (FromSharedCBOR (..), Interns, interns)
 import qualified Data.Text as T
 import Data.Typeable (Proxy (..), (:~:) (Refl))
 import Data.Word
@@ -668,7 +675,8 @@ txOutScript = strictMaybeToMaybe . getScriptBabbageTxOut
 
 decodeCIC :: (FromCBOR (Annotator b)) => T.Text -> Decoder s b
 decodeCIC s = do
+  version <- getDecoderVersion
   lbs <- decodeNestedCborBytes
-  case decodeAnnotator s fromCBOR (LBS.fromStrict lbs) of
+  case decodeFullAnnotator version s fromCBOR (LBS.fromStrict lbs) of
     Left e -> fail $ T.unpack s <> ": " <> show e
     Right x -> pure x

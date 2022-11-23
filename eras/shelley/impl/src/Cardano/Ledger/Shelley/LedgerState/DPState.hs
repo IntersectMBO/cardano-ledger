@@ -18,10 +18,18 @@ module Cardano.Ledger.Shelley.LedgerState.DPState
   )
 where
 
-import Cardano.Binary
+import Cardano.Ledger.Binary
   ( FromCBOR (..),
+    FromSharedCBOR (..),
+    Interns,
     ToCBOR (..),
+    decodeRecordNamed,
+    decodeRecordNamedT,
     encodeListLen,
+    fromNotSharedCBOR,
+    fromSharedPlusCBOR,
+    fromSharedPlusLensCBOR,
+    toMemptyLens,
   )
 import Cardano.Ledger.Coin
   ( Coin (..),
@@ -35,7 +43,6 @@ import Cardano.Ledger.Keys
     KeyHash (..),
     KeyRole (..),
   )
-import Cardano.Ledger.Serialization (decodeRecordNamedT, mapToCBOR)
 import Cardano.Ledger.Shelley.TxBody
   ( PoolParams (..),
   )
@@ -46,13 +53,9 @@ import Cardano.Ledger.Slot
 import Cardano.Ledger.UnifiedMap (UMap (UnifiedMap), UnifiedMap, View (Delegations, Rewards), ViewMap)
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans
-import Data.Coders
-  ( decodeRecordNamed,
-  )
 import Data.Default.Class (Default (def))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Sharing
 import qualified Data.UMap as UM
 import GHC.Generics (Generic)
 import Lens.Micro (_1, _2)
@@ -187,7 +190,7 @@ instance NFData (InstantaneousRewards c) => NFData (DPState c)
 
 instance CC.Crypto c => ToCBOR (InstantaneousRewards c) where
   toCBOR (InstantaneousRewards irR irT dR dT) =
-    encodeListLen 4 <> mapToCBOR irR <> mapToCBOR irT <> toCBOR dR <> toCBOR dT
+    encodeListLen 4 <> toCBOR irR <> toCBOR irT <> toCBOR dR <> toCBOR dT
 
 instance CC.Crypto c => FromSharedCBOR (InstantaneousRewards c) where
   type Share (InstantaneousRewards c) = Interns (Credential 'Staking c)

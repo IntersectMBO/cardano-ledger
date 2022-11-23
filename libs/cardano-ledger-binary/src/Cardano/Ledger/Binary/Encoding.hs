@@ -10,6 +10,10 @@ module Cardano.Ledger.Binary.Encoding
     serializeBuilder,
     serializeEncoding,
     serializeEncoding',
+
+    -- ** Hash
+    hashWithEncoder,
+    hashToCBOR,
     module Cardano.Ledger.Binary.Version,
     module Cardano.Ledger.Binary.Encoding.Encoder,
     module Cardano.Ledger.Binary.Encoding.ToCBOR,
@@ -28,6 +32,7 @@ module Cardano.Ledger.Binary.Encoding
   )
 where
 
+import qualified Cardano.Crypto.Hash.Class as C
 import Cardano.Ledger.Binary.Encoding.Encoder
 import Cardano.Ledger.Binary.Encoding.ToCBOR
 import Cardano.Ledger.Binary.Version
@@ -72,6 +77,16 @@ serializeEncoding version =
 -- | A strict version of 'serializeEncoding'
 serializeEncoding' :: Version -> Encoding -> BS.ByteString
 serializeEncoding' version = BSL.toStrict . serializeEncoding version
+
+--------------------------------------------------------------------------------
+-- Hashing
+--------------------------------------------------------------------------------
+
+hashWithEncoder :: forall h a. C.HashAlgorithm h => Version -> (a -> Encoding) -> a -> C.Hash h a
+hashWithEncoder version toEnc = C.hashWith (serializeEncoding' version . toEnc)
+
+hashToCBOR :: forall h a. (C.HashAlgorithm h, ToCBOR a) => Version -> a -> C.Hash h a
+hashToCBOR version = hashWithEncoder version toCBOR
 
 --------------------------------------------------------------------------------
 -- Nested CBOR-in-CBOR

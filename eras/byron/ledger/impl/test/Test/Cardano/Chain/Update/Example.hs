@@ -19,7 +19,6 @@ module Test.Cardano.Chain.Update.Example
   )
 where
 
-import Cardano.Binary (Raw (..))
 import Cardano.Chain.Common
   ( TxFeePolicy (..),
     TxSizeLinear (..),
@@ -48,6 +47,7 @@ import Cardano.Chain.Update
     signVote,
   )
 import Cardano.Crypto (ProtocolMagicId (..), serializeCborHash)
+import Cardano.Crypto.Raw (Raw (..))
 import Cardano.Prelude
 import Data.List ((!!))
 import qualified Data.Map.Strict as Map

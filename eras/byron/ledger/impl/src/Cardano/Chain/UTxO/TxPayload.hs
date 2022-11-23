@@ -19,10 +19,10 @@ module Cardano.Chain.UTxO.TxPayload
   )
 where
 
-import Cardano.Binary (Annotated (..), ByteSpan, FromCBOR (..), ToCBOR (..))
 import Cardano.Chain.UTxO.Tx (Tx)
 import Cardano.Chain.UTxO.TxAux (ATxAux (..), TxAux, taTx, taWitness)
 import Cardano.Chain.UTxO.TxWitness (TxWitness)
+import Cardano.Ledger.Binary (Annotated (..), ByteSpan, FromCBOR (..), ToCBOR (..))
 import Cardano.Prelude
 import Data.Aeson (ToJSON)
 

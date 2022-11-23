@@ -21,8 +21,8 @@ module Cardano.Ledger.Shelley.Rules.Ledgers
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley.Era (ShelleyLEDGERS)

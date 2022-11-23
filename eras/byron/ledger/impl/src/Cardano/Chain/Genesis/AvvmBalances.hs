@@ -3,7 +3,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-missed-specialisations #-}
@@ -13,14 +12,14 @@ module Cardano.Chain.Genesis.AvvmBalances
   )
 where
 
-import Cardano.Binary
+import Cardano.Chain.Common (Lovelace)
+import Cardano.Crypto.Signing.Redeem (CompactRedeemVerificationKey)
+import Cardano.Ledger.Binary
   ( FromCBOR (..),
     ToCBOR (..),
     encodeListLen,
     enforceSize,
   )
-import Cardano.Chain.Common (Lovelace)
-import Cardano.Crypto.Signing.Redeem (CompactRedeemVerificationKey)
 import Cardano.Prelude
 import NoThunks.Class (NoThunks (..))
 import Text.JSON.Canonical (FromJSON (..), ToJSON (..))

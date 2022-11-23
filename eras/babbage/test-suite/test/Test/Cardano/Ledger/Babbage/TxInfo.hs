@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Test.Cardano.Ledger.Babbage.TxInfo where
 
 import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..))
@@ -15,10 +17,10 @@ import Cardano.Ledger.Babbage (Babbage)
 import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..), BabbageTxOut (..), Datum (..))
 import Cardano.Ledger.Babbage.TxInfo (txInfoInV2, txInfoOutV2)
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
+import Cardano.Ledger.Binary (mkSized)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core hiding (TranslationError)
 import Cardano.Ledger.Credential (StakeReference (..))
-import Cardano.Ledger.Serialization (mkSized)
 import Cardano.Ledger.Shelley.TxBody (Wdrl (..))
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Ledger.TxIn (TxIn (..), mkTxInPartial)
@@ -107,7 +109,7 @@ txb i mRefInp o =
     { btbInputs = Set.singleton i,
       btbCollateral = mempty,
       btbReferenceInputs = maybe mempty Set.singleton mRefInp,
-      btbOutputs = StrictSeq.singleton (mkSized o),
+      btbOutputs = StrictSeq.singleton (mkSized (eraProtVerHigh @Babbage) o),
       btbCollateralReturn = SNothing,
       btbTotalCollateral = SNothing,
       btbCerts = mempty,

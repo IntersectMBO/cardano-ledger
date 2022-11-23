@@ -1,13 +1,11 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Cardano.Chain.Update.SystemTag
   ( SystemTag (..),
@@ -19,17 +17,18 @@ module Cardano.Chain.Update.SystemTag
   )
 where
 
-import Cardano.Binary
+import Cardano.Ledger.Binary
   ( Decoder,
     DecoderError (..),
     FromCBOR (..),
     ToCBOR (..),
+    cborError,
     decodeListLen,
     decodeWord8,
     encodeListLen,
     matchSize,
   )
-import Cardano.Prelude
+import Cardano.Prelude hiding (cborError)
 import Data.Aeson (ToJSON, ToJSONKey)
 import Data.Data (Data)
 import qualified Data.Text as T

@@ -1,4 +1,4 @@
-cabal-version: 2.2
+cabal-version: 3.0
 
 name:                cardano-ledger-shelley-test
 version:             0.1.0.0
@@ -85,12 +85,12 @@ library
                 base16-bytestring >= 1,
                 binary,
                 bytestring,
-                cardano-binary,
                 cardano-crypto,
                 cardano-crypto-class,
                 cardano-crypto-test,
                 cardano-crypto-wrapper,
                 cardano-data,
+                cardano-ledger-binary:{cardano-ledger-binary, testlib},
                 cardano-ledger-byron,
                 cardano-ledger-byron-test,
                 cardano-ledger-core,
@@ -112,6 +112,7 @@ library
                 nothunks,
                 plutus-ledger-api,
                 process-extras,
+                random >= 1.2,
                 serialise,
                 set-algebra,
                 small-steps,
@@ -177,7 +178,7 @@ test-suite cardano-ledger-shelley-test
                 base16-bytestring >= 1,
                 binary,
                 bytestring,
-                cardano-binary,
+                cardano-ledger-binary:{cardano-ledger-binary, testlib},
                 cardano-crypto-class,
                 cardano-data,
                 cardano-ledger-byron,
@@ -216,7 +217,7 @@ benchmark mainbench
   other-modules:
     BenchUTxOAggregate,
     BenchValidation,
-    Cardano.Ledger.Shelley.Bench.Gen
+    Cardano.Ledger.Shelley.Bench.Gen,
     Cardano.Ledger.Shelley.Bench.Rewards
 
   build-depends:
@@ -224,6 +225,7 @@ benchmark mainbench
                 cardano-crypto-class,
                 cardano-crypto-praos,
                 cardano-data,
+                cardano-ledger-binary:testlib,
                 cardano-ledger-core,
                 cardano-ledger-shelley,
                 cardano-ledger-shelley-test,

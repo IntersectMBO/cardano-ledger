@@ -12,17 +12,17 @@
 
 module Cardano.Ledger.Conway.Translation where
 
-import Cardano.Binary (Annotator, DecoderError, FromCBOR)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..))
 import Cardano.Ledger.Babbage.Tx (AlonzoTx (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), Datum (..))
+import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Scripts ()
-import Cardano.Ledger.Conway.TxOut ()
+import Cardano.Ledger.Conway.Tx ()
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era
@@ -31,7 +31,6 @@ import Cardano.Ledger.Era
     TranslationContext,
     translateEra',
   )
-import Cardano.Ledger.Serialization (translateViaCBORAnn)
 import Cardano.Ledger.Shelley.API
   ( DPState (..),
     DState (..),
@@ -44,6 +43,7 @@ import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD)
 import Cardano.Ledger.ShelleyMA.Timelocks (translateTimelock)
 import Data.Coerce
+import qualified Data.Map.Strict as Map
 
 --------------------------------------------------------------------------------
 -- Translation from Babbage to Conway
@@ -102,9 +102,7 @@ newtype Tx era = Tx {unTx :: Core.Tx era}
 
 instance
   ( Crypto c,
-    Core.Tx (ConwayEra c) ~ AlonzoTx (ConwayEra c),
-    FromCBOR (Annotator (Core.TxBody (ConwayEra c))),
-    FromCBOR (Annotator (Core.TxWits (ConwayEra c)))
+    Core.Tx (ConwayEra c) ~ AlonzoTx (ConwayEra c)
   ) =>
   TranslateEra (ConwayEra c) Tx
   where
@@ -113,13 +111,13 @@ instance
     -- Note that this does not preserve the hidden bytes field of the transaction.
     -- This is under the premise that this is irrelevant for TxInBlocks, which are
     -- not transmitted as contiguous chunks.
-    bdy <- translateViaCBORAnn "txbody" $ Alonzo.body tx
-    txwits <- translateViaCBORAnn "txwitness" $ Alonzo.wits tx
-    aux <- case Alonzo.auxiliaryData tx of
+    txBody <- Core.translateEraThroughCBOR "TxBody" $ Alonzo.body tx
+    txWits <- Core.translateEraThroughCBOR "TxWitness" $ Alonzo.wits tx
+    auxData <- case Alonzo.auxiliaryData tx of
       SNothing -> pure SNothing
-      SJust axd -> SJust <$> translateViaCBORAnn "auxiliarydata" axd
+      SJust auxData -> SJust <$> Core.translateEraThroughCBOR "AuxData" auxData
     let validating = Alonzo.isValid tx
-    pure $ Tx $ AlonzoTx bdy txwits validating aux
+    pure $ Tx $ AlonzoTx txBody txWits validating auxData
 
 --------------------------------------------------------------------------------
 -- Auxiliary instances and functions
@@ -164,7 +162,7 @@ instance Crypto c => TranslateEra (ConwayEra c) API.UTxOState where
 
 instance Crypto c => TranslateEra (ConwayEra c) API.UTxO where
   translateEra _ctxt utxo =
-    pure $ API.UTxO $ translateTxOut <$> API.unUTxO utxo
+    pure $ API.UTxO $ translateTxOut `Map.map` API.unUTxO utxo
 
 instance Crypto c => TranslateEra (ConwayEra c) API.PPUPState where
   translateEra ctxt ps =

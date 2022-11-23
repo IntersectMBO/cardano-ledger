@@ -21,7 +21,7 @@ module Cardano.Ledger.Chain
 where
 
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
-import Cardano.Ledger.BaseTypes (ProtVer (..))
+import Cardano.Ledger.BaseTypes (ProtVer (..), Version)
 import Control.Monad (unless)
 import Control.Monad.Except (MonadError, throwError)
 import GHC.Generics (Generic)
@@ -58,15 +58,15 @@ data ChainPredicateFailure
       !Natural -- Block Size
       !Natural -- Max Block Size
   | ObsoleteNodeCHAIN
-      !Natural -- protocol version used
-      !Natural -- max protocol version
+      !Version -- protocol version used
+      !Version -- max protocol version
   deriving (Generic, Show, Eq, Ord)
 
 instance NoThunks ChainPredicateFailure
 
 chainChecks ::
   MonadError ChainPredicateFailure m =>
-  Natural ->
+  Version ->
   ChainChecksPParams ->
   BHeaderView c ->
   m ()
@@ -79,4 +79,4 @@ chainChecks maxpv ccd bhv = do
     throwError $
       BlockSizeTooLargeCHAIN (bhviewBSize bhv) (ccMaxBBSize ccd)
   where
-    (ProtVer m _) = ccProtocolVersion ccd
+    ProtVer m _ = ccProtocolVersion ccd

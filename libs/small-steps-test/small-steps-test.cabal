@@ -73,7 +73,7 @@ test-suite examples
                      , Unique
                      -- IOHK deps
                      , cardano-crypto-class
-                     , cardano-binary
+                     , cardano-ledger-binary
                      -- Local deps
                      , small-steps
                      , small-steps-test

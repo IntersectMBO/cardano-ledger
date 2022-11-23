@@ -3,7 +3,9 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Test.Cardano.Ledger.Alonzo.Examples where
@@ -12,13 +14,12 @@ import Cardano.Ledger.Alonzo (Alonzo)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
 import Cardano.Ledger.Alonzo.TxInfo
-  ( PlutusDebug (..),
-    PlutusDebugInfo (..),
+  ( PlutusDebugInfo (..),
     ScriptFailure (..),
     ScriptResult (Fails, Passes),
     runPLCScript,
   )
-import Cardano.Ledger.BaseTypes (ProtVer (..))
+import Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
 import Data.ByteString.Short (ShortByteString)
 import Data.Proxy (Proxy (..))
 import PlutusLedgerApi.Test.EvaluationContext
@@ -40,12 +41,6 @@ import qualified Test.Cardano.Ledger.Alonzo.PlutusScripts as Generated
   )
 import Test.Tasty
 import Test.Tasty.HUnit (Assertion, assertBool, testCase)
-
--- Do not remove these instances. They are here for two resons:
---
---  * Prevent usage of Show on these huge data types in production
---  * Allow printing for testing.
-deriving instance Show PlutusDebug
 
 deriving instance Show PlutusDebugInfo
 
@@ -197,7 +192,7 @@ explainTest script@(PlutusScript _ bytes) mode ds =
   case ( mode,
          runPLCScript
            alonzo
-           (ProtVer 6 0)
+           (ProtVer (natVersion @6) 0)
            PlutusV1
            testingCostModelV1
            bytes

@@ -14,21 +14,20 @@ module Test.Cardano.Ledger.Shelley.Serialisation.CDDLUtils
   )
 where
 
-import Cardano.Binary
+import Cardano.Ledger.Binary
   ( Annotator,
     DecoderError,
     FromCBOR (..),
+    FromCBORGroup (..),
     ToCBOR (..),
-    decodeAnnotator,
+    ToCBORGroup (..),
+    Version,
+    decodeFullAnnotator,
     decodeFullDecoder,
     encodeListLen,
+    groupRecord,
     serialize,
     serializeEncoding,
-  )
-import Cardano.Ledger.Serialization
-  ( FromCBORGroup (..),
-    ToCBORGroup (..),
-    groupRecord,
   )
 import Codec.CBOR.Read (deserialiseFromBytes)
 import Codec.CBOR.Term (decodeTerm)
@@ -53,11 +52,12 @@ import UnliftIO.Temporary (withTempFile)
 cddlTest ::
   forall a.
   (ToCBOR a, FromCBOR a, Show a, HasCallStack) =>
+  Version ->
   Int ->
   BSL.ByteString ->
   IO BSL.ByteString ->
   TestTree
-cddlTest = cddlRoundtripTest @a serialize (decodeFullDecoder "cbor test" fromCBOR)
+cddlTest v = cddlRoundtripTest @a (serialize v) (decodeFullDecoder v "cbor test" fromCBOR)
 
 -- Round trip test for a type t with instances:
 -- ToCBOR t
@@ -65,11 +65,12 @@ cddlTest = cddlRoundtripTest @a serialize (decodeFullDecoder "cbor test" fromCBO
 cddlAnnotatorTest ::
   forall a.
   (ToCBOR a, FromCBOR (Annotator a), Show a, HasCallStack) =>
+  Version ->
   Int ->
   BSL.ByteString ->
   IO BSL.ByteString ->
   TestTree
-cddlAnnotatorTest = cddlRoundtripTest @a serialize (decodeAnnotator "cbor test" fromCBOR)
+cddlAnnotatorTest v = cddlRoundtripTest @a (serialize v) (decodeFullAnnotator v "cbor test" fromCBOR)
 
 -- | Round trip test for a type t with instances:
 -- ToCBORGroup t
@@ -77,13 +78,14 @@ cddlAnnotatorTest = cddlRoundtripTest @a serialize (decodeAnnotator "cbor test" 
 cddlGroupTest ::
   forall a.
   (ToCBORGroup a, FromCBORGroup a, Show a, HasCallStack) =>
+  Version ->
   Int ->
   BSL.ByteString ->
   IO BSL.ByteString ->
   TestTree
-cddlGroupTest n entryName =
-  let serializeGroup x = serializeEncoding $ encodeListLen (listLen x) <> toCBORGroup x
-      desrializeGroup = decodeFullDecoder "cbor test" groupRecord
+cddlGroupTest v n entryName =
+  let serializeGroup x = serializeEncoding v $ encodeListLen (listLen x) <> toCBORGroup x
+      desrializeGroup = decodeFullDecoder v "cbor test" groupRecord
    in cddlRoundtripTest @a serializeGroup desrializeGroup n ("[" <> entryName <> "]")
 
 cddlRoundtripTest ::

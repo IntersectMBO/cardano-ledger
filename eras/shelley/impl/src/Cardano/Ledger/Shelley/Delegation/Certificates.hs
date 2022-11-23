@@ -35,15 +35,20 @@ module Cardano.Ledger.Shelley.Delegation.Certificates
   )
 where
 
-import Cardano.Binary
+import Cardano.Ledger.BaseTypes (invalidKey)
+import Cardano.Ledger.Binary
   ( FromCBOR (fromCBOR),
+    FromCBORGroup (..),
     ToCBOR (..),
+    ToCBORGroup (..),
     TokenType (TypeMapLen, TypeMapLen64, TypeMapLenIndef),
+    decodeRecordNamed,
+    decodeRecordSum,
     decodeWord,
     encodeListLen,
+    listLenInt,
     peekTokenType,
   )
-import Cardano.Ledger.BaseTypes (invalidKey)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
 import Cardano.Ledger.Credential (Credential (..), StakeCredential)
 import qualified Cardano.Ledger.Crypto as CC
@@ -54,15 +59,6 @@ import Cardano.Ledger.Keys
     VerKeyVRF,
   )
 import Cardano.Ledger.PoolParams
-import Cardano.Ledger.Serialization
-  ( FromCBORGroup (..),
-    ToCBORGroup (..),
-    decodeRecordNamed,
-    decodeRecordSum,
-    listLenInt,
-    mapFromCBOR,
-    mapToCBOR,
-  )
 import Cardano.Ledger.Slot (EpochNo (..))
 import Control.DeepSeq (NFData)
 import Data.Map.Strict (Map)
@@ -135,16 +131,16 @@ instance
   where
   fromCBOR = do
     peekTokenType >>= \case
-      TypeMapLen -> StakeAddressesMIR <$> mapFromCBOR
-      TypeMapLen64 -> StakeAddressesMIR <$> mapFromCBOR
-      TypeMapLenIndef -> StakeAddressesMIR <$> mapFromCBOR
+      TypeMapLen -> StakeAddressesMIR <$> fromCBOR
+      TypeMapLen64 -> StakeAddressesMIR <$> fromCBOR
+      TypeMapLenIndef -> StakeAddressesMIR <$> fromCBOR
       _ -> SendToOppositePotMIR <$> fromCBOR
 
 instance
   CC.Crypto c =>
   ToCBOR (MIRTarget c)
   where
-  toCBOR (StakeAddressesMIR m) = mapToCBOR m
+  toCBOR (StakeAddressesMIR m) = toCBOR m
   toCBOR (SendToOppositePotMIR c) = toCBOR c
 
 -- | Move instantaneous rewards certificate

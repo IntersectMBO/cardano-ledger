@@ -1,5 +1,4 @@
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -20,15 +19,16 @@ module Cardano.Crypto.Signing.VerificationKey
   )
 where
 
-import Cardano.Binary
+import qualified Cardano.Crypto.Wallet as CC
+import Cardano.Ledger.Binary
   ( Decoder,
     Encoding,
     FromCBOR (..),
     ToCBOR (..),
     decodeBytesCanonical,
+    toCborError,
   )
-import qualified Cardano.Crypto.Wallet as CC
-import Cardano.Prelude
+import Cardano.Prelude hiding (toCborError)
 import Data.Aeson (FromJSON (..), ToJSON (..))
 import qualified Data.ByteString.Base64 as B64
 import qualified Data.ByteString.Char8 as BS

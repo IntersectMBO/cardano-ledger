@@ -79,10 +79,9 @@ module Data.UMap
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
+import Cardano.Ledger.Binary
 import Control.DeepSeq (NFData (..))
 import Control.Monad.Trans.State.Strict (StateT (..))
-import Data.Coders (decodeMap, decodeRecordNamed, encodeMap)
 import Data.Foldable (Foldable (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -92,7 +91,6 @@ import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.Set.Internal as SI (Set (..))
-import Data.Sharing
 import Data.Typeable (Typeable)
 import qualified Data.VMap as VMap
 import GHC.Generics (Generic)

@@ -9,7 +9,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Chain.Delegation.Certificate
@@ -31,18 +30,6 @@ module Cardano.Chain.Delegation.Certificate
   )
 where
 
-import Cardano.Binary
-  ( Annotated (Annotated, unAnnotated),
-    ByteSpan,
-    Decoded (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    annotatedDecoder,
-    encodeListLen,
-    enforceSize,
-    fromCBORAnnotated,
-    serialize',
-  )
 import Cardano.Chain.Slotting (EpochNumber)
 import Cardano.Crypto
   ( Hash,
@@ -57,6 +44,19 @@ import Cardano.Crypto
     verifySignatureDecoded,
   )
 import qualified Cardano.Crypto.Wallet as CC
+import Cardano.Ledger.Binary
+  ( Annotated (Annotated, unAnnotated),
+    ByteSpan,
+    Decoded (..),
+    FromCBOR (..),
+    ToCBOR (..),
+    annotatedDecoder,
+    byronProtVer,
+    encodeListLen,
+    enforceSize,
+    fromCBORAnnotated,
+    serialize',
+  )
 import Cardano.Prelude
 import qualified Data.Aeson as Aeson
 import Data.Coerce (coerce)
@@ -129,7 +129,7 @@ signCertificate protocolMagicId delegateVK epochNumber safeSigner =
         mconcat
           [ "00",
             CC.unXPub (unVerificationKey delegateVK),
-            serialize' epochNumber
+            serialize' byronProtVer epochNumber
           ]
 
 -- | Create a certificate using the provided signature.
@@ -167,7 +167,7 @@ isValid pm UnsafeACertificate {aEpoch, issuerVK, delegateVK, signature} =
     pm
     SignCertificate
     issuerVK
-    ( serialize'
+    ( serialize' byronProtVer
         . mappend ("00" <> CC.unXPub (unVerificationKey delegateVK))
         <$> aEpoch
     )

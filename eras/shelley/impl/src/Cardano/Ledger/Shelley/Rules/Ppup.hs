@@ -20,12 +20,6 @@ module Cardano.Ledger.Shelley.Rules.Ppup
   )
 where
 
-import Cardano.Binary
-  ( FromCBOR (..),
-    ToCBOR (..),
-    decodeWord,
-    encodeListLen,
-  )
 import Cardano.Ledger.BaseTypes
   ( Globals (stabilityWindow),
     ProtVer,
@@ -33,6 +27,13 @@ import Cardano.Ledger.BaseTypes
     StrictMaybe (SJust),
     epochInfoPure,
     invalidKey,
+  )
+import Cardano.Ledger.Binary
+  ( FromCBOR (..),
+    ToCBOR (..),
+    decodeRecordSum,
+    decodeWord,
+    encodeListLen,
   )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (GenDelegs (GenDelegs), KeyHash, KeyRole (Genesis))
@@ -54,7 +55,6 @@ import Cardano.Ledger.Slot
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, (⊆), (⨃))
 import Control.State.Transition
-import Data.Coders (decodeRecordSum)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import Data.Typeable (Typeable)

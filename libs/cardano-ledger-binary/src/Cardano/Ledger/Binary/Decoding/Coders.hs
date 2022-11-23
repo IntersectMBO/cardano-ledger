@@ -557,9 +557,6 @@ mapDecodeA k v = D (decodeMapTraverse (decode k) (decode v))
 -- Utility functions for working with CBOR
 --------------------------------------------------------------------------------
 
-invalidKey :: Word -> Decoder s a
-invalidKey k = cborError $ DecoderErrorCustom "not a valid key:" (Text.pack $ show k)
-
 duplicateKey :: String -> Word -> Decoder s a
 duplicateKey name k =
   cborError $

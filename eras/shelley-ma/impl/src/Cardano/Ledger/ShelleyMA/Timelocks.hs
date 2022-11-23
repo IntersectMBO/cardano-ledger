@@ -11,7 +11,6 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -32,20 +31,30 @@ module Cardano.Ledger.ShelleyMA.Timelocks
     ValidityInterval (..),
     encodeVI,
     decodeVI,
-    translate,
+    -- translate,
     translateTimelock,
     contentsEq,
   )
 where
 
-import Cardano.Binary
-  ( Annotator (..),
-    FromCBOR (fromCBOR),
-    FullByteString (Full),
-    ToCBOR (toCBOR),
-  )
 import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
+import Cardano.Ledger.Binary
+  ( Annotator (..),
+    FromCBOR (fromCBOR),
+    ToCBOR (toCBOR),
+  )
+import Cardano.Ledger.Binary.Coders
+  ( Decode (..),
+    Density (..),
+    Encode (..),
+    Wrapped (..),
+    decode,
+    encode,
+    (!>),
+    (<!),
+    (<*!),
+  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (HASH)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (Witness))
@@ -57,44 +66,16 @@ import Cardano.Ledger.MemoBytes
   )
 import qualified Cardano.Ledger.MemoBytes as Memo
 import Cardano.Ledger.SafeHash (SafeToHash)
-import Cardano.Ledger.Serialization (decodeStrictSeq, encodeFoldable)
-import Cardano.Ledger.Shelley.Scripts (MultiSig, getMultiSigBytes, nativeMultiSigTag)
+import Cardano.Ledger.Shelley.Scripts (nativeMultiSigTag)
 import Cardano.Ledger.ShelleyMA.Era (MAClass, ShelleyMAEra)
 import Cardano.Slotting.Slot (SlotNo (..))
-import Codec.CBOR.Read (deserialiseFromBytes)
 import Control.DeepSeq (NFData (..))
 import Data.ByteString.Lazy (fromStrict)
-import qualified Data.ByteString.Lazy as Lazy
 import Data.ByteString.Short (fromShort)
-import Data.Coders
-  ( Decode (..),
-    Density (..),
-    Encode (..),
-    Wrapped (..),
-    decode,
-    encode,
-    (!>),
-    (<!),
-    (<*!),
-  )
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set, member)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
-
--- =================================================================
--- We translate a MultiSig by deserializing its bytes as a Timelock
--- If this succeeds (and it should, we designed Timelock to have
--- that property), then both version should have the same bytes,
--- because we are using FromCBOR(Annotator Timelock) instance.
-
-translate :: Era era => MultiSig era -> Timelock era
-translate multi =
-  let bytes = Lazy.fromStrict (fromShort (getMultiSigBytes multi))
-   in case deserialiseFromBytes fromCBOR bytes of
-        Left err -> error ("Translating MultiSig script to Timelock script fails\n" ++ show err)
-        Right (left, Annotator f) | left == Lazy.empty -> f (Full bytes)
-        Right (left, _) -> error ("Translating MultiSig script to Timelock script does not consume all the bytes: " ++ show left)
 
 -- ================================================================
 -- A pair of optional SlotNo.
@@ -160,17 +141,17 @@ translateTimelock (TimelockConstr (Memo tl bs)) =
 
 encRaw :: Era era => TimelockRaw era -> Encode 'Open (TimelockRaw era)
 encRaw (Signature hash) = Sum Signature 0 !> To hash
-encRaw (AllOf xs) = Sum AllOf 1 !> E encodeFoldable xs
-encRaw (AnyOf xs) = Sum AnyOf 2 !> E encodeFoldable xs
-encRaw (MOfN m xs) = Sum MOfN 3 !> To m !> E encodeFoldable xs
+encRaw (AllOf xs) = Sum AllOf 1 !> To xs
+encRaw (AnyOf xs) = Sum AnyOf 2 !> To xs
+encRaw (MOfN m xs) = Sum MOfN 3 !> To m !> To xs
 encRaw (TimeStart m) = Sum TimeStart 4 !> To m
 encRaw (TimeExpire m) = Sum TimeExpire 5 !> To m
 
 decRaw :: Era era => Word -> Decode 'Open (Annotator (TimelockRaw era))
 decRaw 0 = Ann (SumD Signature <! From)
-decRaw 1 = Ann (SumD AllOf) <*! D (sequence <$> decodeStrictSeq fromCBOR)
-decRaw 2 = Ann (SumD AnyOf) <*! D (sequence <$> decodeStrictSeq fromCBOR)
-decRaw 3 = Ann (SumD MOfN) <*! Ann From <*! D (sequence <$> decodeStrictSeq fromCBOR)
+decRaw 1 = Ann (SumD AllOf) <*! D (sequence <$> fromCBOR)
+decRaw 2 = Ann (SumD AnyOf) <*! D (sequence <$> fromCBOR)
+decRaw 3 = Ann (SumD MOfN) <*! Ann From <*! D (sequence <$> fromCBOR)
 decRaw 4 = Ann (SumD TimeStart <! From)
 decRaw 5 = Ann (SumD TimeExpire <! From)
 decRaw n = Invalid n

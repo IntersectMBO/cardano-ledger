@@ -30,6 +30,7 @@ import Cardano.Ledger.Binary
     Size,
     SizeOverride (..),
     ToCBOR (..),
+    byronProtVer,
     decodeListLenOf,
     decodeNestedCborBytes,
     encodeListLen,
@@ -53,7 +54,6 @@ import qualified Hedgehog as HH
 import qualified Hedgehog.Gen as HH.Gen
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Binary.Arbitrary ()
-import Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip (byronProtVer)
 import Test.Hspec ()
 import Test.Hspec.QuickCheck ()
 import Test.QuickCheck

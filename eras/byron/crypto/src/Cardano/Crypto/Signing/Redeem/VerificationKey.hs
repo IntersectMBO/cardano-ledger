@@ -22,8 +22,8 @@ module Cardano.Crypto.Signing.Redeem.VerificationKey
   )
 where
 
-import Cardano.Binary (FromCBOR, ToCBOR)
 import Cardano.Crypto.Orphans ()
+import Cardano.Ledger.Binary (FromCBOR, ToCBOR)
 import Cardano.Prelude
 import Crypto.Error (CryptoFailable (..))
 import qualified Crypto.PubKey.Ed25519 as Ed25519

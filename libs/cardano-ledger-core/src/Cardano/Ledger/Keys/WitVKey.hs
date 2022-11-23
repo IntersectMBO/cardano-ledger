@@ -16,14 +16,20 @@ module Cardano.Ledger.Keys.WitVKey
   )
 where
 
-import Cardano.Binary
+import Cardano.Ledger.Binary
   ( Annotator (..),
     FromCBOR (fromCBOR),
     ToCBOR (..),
     annotatorSlice,
+    decodeRecordNamed,
     encodeListLen,
     encodePreEncoded,
     serializeEncoding,
+    shelleyProtVer,
+  )
+import Cardano.Ledger.Binary.Crypto
+  ( decodeSignedDSIGN,
+    encodeSignedDSIGN,
   )
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
@@ -34,12 +40,9 @@ import Cardano.Ledger.Keys
     SignedDSIGN,
     VKey,
     asWitness,
-    decodeSignedDSIGN,
-    encodeSignedDSIGN,
     hashKey,
     hashSignature,
   )
-import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Control.DeepSeq
 import qualified Data.ByteString.Lazy as BSL
 import Data.Ord (comparing)
@@ -104,7 +107,7 @@ pattern WitVKey k s <-
   where
     WitVKey k s =
       let bytes =
-            serializeEncoding $
+            serializeEncoding shelleyProtVer $
               encodeListLen 2
                 <> toCBOR k
                 <> encodeSignedDSIGN s
@@ -113,7 +116,7 @@ pattern WitVKey k s <-
 
 {-# COMPLETE WitVKey #-}
 
--- | Acess computed hash. Evaluated lazily
+-- | Access computed hash. Evaluated lazily
 witVKeyHash :: WitVKey kr c -> KeyHash 'Witness c
 witVKeyHash = wvkKeyHash
 

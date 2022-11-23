@@ -27,24 +27,39 @@ module Cardano.Ledger.Shelley.Genesis
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import Cardano.Crypto.KES.Class (totalPeriodsKES)
 import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes
+  ( ActiveSlotCoeff,
+    BoundedRational (boundRational, unboundRational),
+    EpochSize (..),
+    Globals (..),
+    Network,
+    PositiveUnitInterval,
+    Version,
+    mkActiveSlotCoeff,
+  )
+import Cardano.Ledger.Binary
+  ( Decoder,
+    DecoderError (..),
+    Encoding,
+    FromCBOR (..),
+    ToCBOR (..),
+    cborError,
+    decodeRational,
+    decodeRecordNamed,
+    encodeListLen,
+    enforceDecoderVersion,
+    enforceEncodingVersion,
+    shelleyProtVer,
+  )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (HASH, KES)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys
 import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
-import Cardano.Ledger.Serialization
-  ( decodeRecordNamed,
-    mapFromCBOR,
-    mapToCBOR,
-    utcTimeFromCBOR,
-    utcTimeToCBOR,
-  )
 import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Shelley.StabilityWindow
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..))
@@ -52,7 +67,6 @@ import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (UTxO))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.EpochInfo (EpochInfo)
-import Cardano.Slotting.Slot (EpochSize (..))
 import Cardano.Slotting.Time (SystemStart (SystemStart))
 import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
@@ -67,7 +81,6 @@ import Data.Time (NominalDiffTime, UTCTime (..))
 import Data.Unit.Strict (forceElemsToWHNF)
 import Data.Word (Word32, Word64)
 import GHC.Generics (Generic)
-import GHC.Natural (Natural)
 import NoThunks.Class (NoThunks (..))
 
 -- | Genesis Shelley staking configuration.
@@ -256,10 +269,10 @@ instance Era era => ToCBOR (ShelleyGenesis era) where
         sgStaking
       } =
       encodeListLen 15
-        <> utcTimeToCBOR sgSystemStart
+        <> toCBOR sgSystemStart
         <> toCBOR sgNetworkMagic
         <> toCBOR sgNetworkId
-        <> boundedRationalToCBOR sgActiveSlotsCoeff
+        <> activeSlotsCoeffToCBOR sgActiveSlotsCoeff
         <> toCBOR sgSecurityParam
         <> toCBOR (unEpochSize sgEpochLength)
         <> toCBOR sgSlotsPerKESPeriod
@@ -268,17 +281,17 @@ instance Era era => ToCBOR (ShelleyGenesis era) where
         <> toCBOR sgUpdateQuorum
         <> toCBOR sgMaxLovelaceSupply
         <> toCBOR sgProtocolParams
-        <> mapToCBOR sgGenDelegs
+        <> toCBOR sgGenDelegs
         <> toCBOR sgInitialFunds
         <> toCBOR sgStaking
 
 instance Era era => FromCBOR (ShelleyGenesis era) where
   fromCBOR = do
     decodeRecordNamed "ShelleyGenesis" (const 15) $ do
-      sgSystemStart <- utcTimeFromCBOR
+      sgSystemStart <- fromCBOR
       sgNetworkMagic <- fromCBOR
       sgNetworkId <- fromCBOR
-      sgActiveSlotsCoeff <- boundedRationalFromCBOR
+      sgActiveSlotsCoeff <- activeSlotsCoeffFromCBOR
       sgSecurityParam <- fromCBOR
       sgEpochLength <- fromCBOR
       sgSlotsPerKESPeriod <- fromCBOR
@@ -287,7 +300,7 @@ instance Era era => FromCBOR (ShelleyGenesis era) where
       sgUpdateQuorum <- fromCBOR
       sgMaxLovelaceSupply <- fromCBOR
       sgProtocolParams <- fromCBOR
-      sgGenDelegs <- mapFromCBOR
+      sgGenDelegs <- fromCBOR
       sgInitialFunds <- fromCBOR
       sgStaking <- fromCBOR
       pure $
@@ -307,6 +320,22 @@ instance Era era => FromCBOR (ShelleyGenesis era) where
           sgGenDelegs
           sgInitialFunds
           sgStaking
+
+-- | Serialize `PositiveUnitInterval` type in the same way `Rational` is serialized,
+-- however ensure there is no usage of tag 30 by enforcing Shelley protocol version.
+activeSlotsCoeffToCBOR :: PositiveUnitInterval -> Encoding
+activeSlotsCoeffToCBOR = enforceEncodingVersion shelleyProtVer . toCBOR . unboundRational
+
+-- | Deserialize `PositiveUnitInterval` type using `Rational` deserialization and fail
+-- when bounds are violated. Also, ensure there is no usage of tag 30 by enforcing Shelley
+-- protocol version.
+activeSlotsCoeffFromCBOR :: Decoder s PositiveUnitInterval
+activeSlotsCoeffFromCBOR = do
+  r <- enforceDecoderVersion shelleyProtVer $ decodeRational
+  case boundRational r of
+    Nothing ->
+      cborError $ DecoderErrorCustom "ActiveSlotsCoeff (PositiveUnitInterval)" (Text.pack $ show r)
+    Just u -> pure u
 
 {-------------------------------------------------------------------------------
   Genesis UTxO
@@ -454,7 +483,7 @@ validateGenesis
 mkShelleyGlobals ::
   ShelleyGenesis era ->
   EpochInfo (Either Text) ->
-  Natural ->
+  Version ->
   Globals
 mkShelleyGlobals genesis epochInfoAc maxMajorPV =
   Globals

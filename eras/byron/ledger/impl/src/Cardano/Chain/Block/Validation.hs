@@ -34,14 +34,6 @@ module Cardano.Chain.Block.Validation
   )
 where
 
-import Cardano.Binary
-  ( Annotated (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    encodeListLen,
-    enforceSize,
-    serialize',
-  )
 import Cardano.Chain.Block.Block
   ( ABlock (..),
     ABlockOrBoundary (..),
@@ -116,6 +108,15 @@ import Cardano.Crypto
     hashRaw,
   )
 import Cardano.HeapWords (HeapWords (..))
+import Cardano.Ledger.Binary
+  ( Annotated (..),
+    FromCBOR (..),
+    ToCBOR (..),
+    byronProtVer,
+    encodeListLen,
+    enforceSize,
+    serialize',
+  )
 import Cardano.Prelude
 import Control.Monad.Trans.Resource (ResIO)
 import qualified Data.ByteString.Lazy as BSL
@@ -184,7 +185,7 @@ initialChainValidationState config = do
   where
     delegationEnv =
       DI.Environment
-        { DI.protocolMagic = Annotated pm (serialize' pm),
+        { DI.protocolMagic = Annotated pm (serialize' byronProtVer pm),
           DI.allowedDelegators = unGenesisKeyHashes $ configGenesisKeyHashes config,
           DI.k = configK config,
           DI.currentEpoch = EpochNumber 0,

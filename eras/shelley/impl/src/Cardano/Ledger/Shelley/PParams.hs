@@ -7,6 +7,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -35,14 +36,6 @@ module Cardano.Ledger.Shelley.PParams
   )
 where
 
-import Cardano.Binary
-  ( FromCBOR (..),
-    ToCBOR (..),
-    decodeWord,
-    encodeListLen,
-    encodeMapLen,
-    encodeWord,
-  )
 import Cardano.Ledger.BaseTypes
   ( NonNegativeInterval,
     Nonce (NeutralNonce),
@@ -50,9 +43,24 @@ import Cardano.Ledger.BaseTypes
     UnitInterval,
     fromSMaybe,
     invalidKey,
+    natVersion,
     strictMaybeToMaybe,
+    succVersion,
   )
 import qualified Cardano.Ledger.BaseTypes as BT
+import Cardano.Ledger.Binary
+  ( FromCBOR (..),
+    FromCBORGroup (..),
+    ToCBOR (..),
+    ToCBORGroup (..),
+    decodeMapContents,
+    decodeRecordNamed,
+    decodeWord,
+    encodeListLen,
+    encodeMapLen,
+    encodeWord,
+  )
+import Cardano.Ledger.Binary.Coders (Decode (From, RecD), decode, (<!))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (Era (EraCrypto), EraPParams (applyPPUpdates))
 import qualified Cardano.Ledger.Core as Core
@@ -60,25 +68,12 @@ import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.HKD (HKD, HKDFunctor (..))
 import Cardano.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..))
 import Cardano.Ledger.Orphans ()
-import Cardano.Ledger.Serialization
-  ( FromCBORGroup (..),
-    ToCBORGroup (..),
-    decodeMapContents,
-    decodeRecordNamed,
-    mapFromCBOR,
-    mapToCBOR,
-  )
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
 import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
-import Data.Coders
-  ( Decode (From, RecD),
-    decode,
-    (<!),
-  )
 import Data.Default.Class (Default, def)
 import Data.Foldable (fold)
 import Data.Functor.Identity (Identity)
@@ -311,7 +306,7 @@ emptyPParams =
       _tau = minBound,
       _d = minBound,
       _extraEntropy = NeutralNonce,
-      _protocolVersion = BT.ProtVer 0 0,
+      _protocolVersion = BT.ProtVer (natVersion @2) 0,
       _minUTxOValue = mempty,
       _minPoolCost = mempty
     }
@@ -450,13 +445,13 @@ instance
   (Era era, ToCBOR (Core.PParamsUpdate era)) =>
   ToCBOR (ProposedPPUpdates era)
   where
-  toCBOR (ProposedPPUpdates m) = mapToCBOR m
+  toCBOR (ProposedPPUpdates m) = toCBOR m
 
 instance
   (Era era, FromCBOR (Core.PParamsUpdate era)) =>
   FromCBOR (ProposedPPUpdates era)
   where
-  fromCBOR = ProposedPPUpdates <$> mapFromCBOR
+  fromCBOR = ProposedPPUpdates <$> fromCBOR
 
 emptyPPPUpdates :: ProposedPPUpdates era
 emptyPPPUpdates = ProposedPPUpdates Map.empty
@@ -517,4 +512,4 @@ instance Default (PPUPState era) where
 pvCanFollow :: BT.ProtVer -> StrictMaybe BT.ProtVer -> Bool
 pvCanFollow _ SNothing = True
 pvCanFollow (BT.ProtVer m n) (SJust (BT.ProtVer m' n')) =
-  (m + 1, 0) == (m', n') || (m, n + 1) == (m', n')
+  (succVersion m, 0) == (Just m', n') || (m, n + 1) == (m', n')

@@ -8,8 +8,8 @@ module Cardano.Ledger.Conway.Genesis
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Babbage.Genesis (extendPPWithGenesis)
+import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (GenDelegs (..))
 import Data.Aeson (FromJSON (..), ToJSON, object, withObject, (.:))

@@ -22,15 +22,19 @@ module Cardano.Ledger.Credential
   )
 where
 
-import Cardano.Binary
-  ( FromCBOR (..),
-    ToCBOR (..),
-    encodeListLen,
-  )
 import Cardano.Ledger.BaseTypes
   ( CertIx (..),
     TxIx (..),
     invalidKey,
+  )
+import Cardano.Ledger.Binary
+  ( CBORGroup (..),
+    FromCBOR (..),
+    FromCBORGroup (..),
+    ToCBOR (..),
+    ToCBORGroup (..),
+    decodeRecordSum,
+    encodeListLen,
   )
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Hashes (ScriptHash)
@@ -38,12 +42,6 @@ import Cardano.Ledger.Keys
   ( HasKeyRole (..),
     KeyHash,
     KeyRole (..),
-  )
-import Cardano.Ledger.Serialization
-  ( CBORGroup (..),
-    FromCBORGroup (..),
-    ToCBORGroup (..),
-    decodeRecordSum,
   )
 import Cardano.Ledger.Slot (SlotNo (..))
 import Control.DeepSeq (NFData)

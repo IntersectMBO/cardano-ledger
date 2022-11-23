@@ -7,13 +7,17 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 
 module Cardano.Ledger.BaseTypes
-  ( ProtVer (..),
+  ( module Slotting,
+    ProtVer (..),
+    module Cardano.Ledger.Binary.Version,
     FixedPoint,
     (==>),
     (⭒),
@@ -27,8 +31,6 @@ module Cardano.Ledger.BaseTypes
     PositiveInterval,
     NonNegativeInterval,
     BoundedRational (..),
-    boundedRationalFromCBOR,
-    boundedRationalToCBOR,
     fpPrecision,
     promoteRatio,
     invalidKey,
@@ -65,29 +67,31 @@ module Cardano.Ledger.BaseTypes
   )
 where
 
-import Cardano.Binary
-  ( Decoder,
-    DecoderError (..),
-    Encoding,
-    FromCBOR (fromCBOR),
-    ToCBOR (toCBOR),
-    encodeListLen,
-    encodedSizeExpr,
-  )
 import Cardano.Crypto.Hash
 import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.VRF as VRF
+import Cardano.Ledger.Binary
+  ( CBORGroup (..),
+    Decoder,
+    DecoderError (..),
+    FromCBOR (fromCBOR),
+    FromCBORGroup (..),
+    ToCBOR (toCBOR),
+    ToCBORGroup (..),
+    cborError,
+    decodeRationalWithTag,
+    decodeRecordSum,
+    encodeListLen,
+    encodeRatioWithTag,
+    encodedSizeExpr,
+    invalidKey,
+  )
+import Cardano.Ledger.Binary.Version
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.NonIntegral (ln')
-import Cardano.Ledger.Serialization
-  ( CBORGroup (..),
-    FromCBORGroup (..),
-    ToCBORGroup (..),
-    decodeRecordSum,
-    ratioFromCBOR,
-    ratioToCBOR,
-  )
+import Cardano.Slotting.Block as Slotting (BlockNo (..))
 import Cardano.Slotting.EpochInfo (EpochInfo, hoistEpochInfo)
+import Cardano.Slotting.Slot as Slotting (EpochNo (..), EpochSize (..), SlotNo (..), WithOrigin (..))
 import Cardano.Slotting.Time (SystemStart)
 import Control.DeepSeq (NFData (rnf))
 import Control.Exception (throw)
@@ -98,7 +102,6 @@ import qualified Data.Aeson as Aeson
 import qualified Data.Binary.Put as B
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
-import Data.Coders (cborError, invalidKey)
 import Data.Default.Class (Default (def))
 import qualified Data.Fixed as FP (Fixed, HasResolution, resolution)
 import Data.Functor.Identity (Identity)
@@ -119,7 +122,7 @@ import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 import Quiet (Quiet (Quiet))
 
-data ProtVer = ProtVer {pvMajor :: !Natural, pvMinor :: !Natural}
+data ProtVer = ProtVer {pvMajor :: !Version, pvMinor :: !Natural}
   deriving (Show, Eq, Generic, Ord, NFData)
   deriving (ToCBOR) via (CBORGroup ProtVer)
   deriving (FromCBOR) via (CBORGroup ProtVer)
@@ -129,22 +132,22 @@ instance NoThunks ProtVer
 instance ToJSON ProtVer where
   toJSON (ProtVer major minor) =
     Aeson.object
-      [ "major" .= major,
+      [ "major" .= getVersion64 major,
         "minor" .= minor
       ]
 
 instance FromJSON ProtVer where
   parseJSON =
-    Aeson.withObject "ProtVer" $ \obj ->
-      ProtVer
-        <$> obj .: "major"
-        <*> obj .: "minor"
+    Aeson.withObject "ProtVer" $ \obj -> do
+      pvMajor <- mkVersion64 =<< obj .: "major"
+      pvMinor <- obj .: "minor"
+      pure ProtVer {..}
 
 instance ToCBORGroup ProtVer where
   toCBORGroup (ProtVer x y) = toCBOR x <> toCBOR y
   encodedGroupSizeExpr l proxy =
-    encodedSizeExpr l ((\(ProtVer x _) -> toWord x) <$> proxy)
-      + encodedSizeExpr l ((\(ProtVer _ y) -> toWord y) <$> proxy)
+    encodedSizeExpr l (pvMajor <$> proxy)
+      + encodedSizeExpr l (toWord . pvMinor <$> proxy)
     where
       toWord :: Natural -> Word
       toWord = fromIntegral
@@ -257,37 +260,18 @@ fromRatioBoundedRatio ratio
     upperBound = maxBound :: BoundedRatio b a
 
 instance (ToCBOR a, Integral a, Bounded a, Typeable b) => ToCBOR (BoundedRatio b a) where
-  toCBOR (BoundedRatio u) = ratioToCBOR u
+  toCBOR (BoundedRatio u) = encodeRatioWithTag toCBOR u
 
 instance
   (FromCBOR a, Bounded (BoundedRatio b a), Bounded a, Integral a, Typeable b, Show a) =>
   FromCBOR (BoundedRatio b a)
   where
   fromCBOR = do
-    r <- ratioFromCBOR
-    case fromRatioBoundedRatio r of
+    r <- decodeRationalWithTag
+    case fromRationalBoundedRatio r of
       Nothing ->
         cborError $ DecoderErrorCustom "BoundedRatio" (Text.pack $ show r)
       Just u -> pure u
-
--- TODO: Remove `boundedRationalToCBOR`/`boundedRationalFromCBOR` in favor of
--- serialization through `ToCBOR`/`FromCBOR` that relies on the @Tag 30@. This
--- is a backwards incompatible change and must be done when breaking
--- serialization changes can be introduced.
-
--- | Serialize `BoundedRational` type in the same way `Rational` is serialized.
-boundedRationalToCBOR :: BoundedRational r => r -> Encoding
-boundedRationalToCBOR = toCBOR . unboundRational
-
--- | Deserialize `BoundedRational` type using `Rational` deserialization and
--- fail when bounds are violated.
-boundedRationalFromCBOR :: BoundedRational r => Decoder s r
-boundedRationalFromCBOR = do
-  r <- fromCBOR
-  case boundRational r of
-    Nothing ->
-      cborError $ DecoderErrorCustom "BoundedRational" (Text.pack $ show r)
-    Just u -> pure u
 
 instance ToJSON (BoundedRatio b Word64) where
   toJSON = toJSON . toScientificBoundedRatioWord64WithRounding
@@ -601,7 +585,7 @@ data Globals = Globals
     -- | Quorum for update system votes and MIR certificates
     quorum :: !Word64,
     -- | All blocks invalid after this protocol version
-    maxMajorPV :: !Natural,
+    maxMajorPV :: !Version,
     -- | Maximum number of lovelace in the system
     maxLovelaceSupply :: !Word64,
     -- | Active Slot Coefficient, named f in

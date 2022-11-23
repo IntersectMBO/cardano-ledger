@@ -16,19 +16,19 @@ module Cardano.Chain.Block.Body
   )
 where
 
-import Cardano.Binary
-  ( ByteSpan,
-    FromCBOR (..),
-    ToCBOR (..),
-    encodeListLen,
-    enforceSize,
-  )
 import qualified Cardano.Chain.Delegation.Payload as Delegation
 import Cardano.Chain.Ssc (SscPayload (..))
 import Cardano.Chain.UTxO.Tx (Tx)
 import Cardano.Chain.UTxO.TxPayload (ATxPayload, TxPayload, txpTxs, txpWitnesses)
 import Cardano.Chain.UTxO.TxWitness (TxWitness)
 import qualified Cardano.Chain.Update.Payload as Update
+import Cardano.Ledger.Binary
+  ( ByteSpan,
+    FromCBOR (..),
+    ToCBOR (..),
+    encodeListLen,
+    enforceSize,
+  )
 import Cardano.Prelude
 import Data.Aeson (ToJSON)
 

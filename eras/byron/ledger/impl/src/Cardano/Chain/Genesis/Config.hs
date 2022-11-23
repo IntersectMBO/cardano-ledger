@@ -24,14 +24,6 @@ module Cardano.Chain.Genesis.Config
   )
 where
 
-import Cardano.Binary
-  ( Annotated (..),
-    FromCBOR (..),
-    Raw,
-    ToCBOR (..),
-    encodeListLen,
-    enforceSize,
-  )
 import Cardano.Chain.Block.Header (HeaderHash, genesisHeaderHash)
 import Cardano.Chain.Common (BlockCount)
 import Cardano.Chain.Genesis.AvvmBalances (GenesisAvvmBalances (..))
@@ -61,6 +53,14 @@ import Cardano.Crypto
     ProtocolMagic,
     ProtocolMagicId (..),
     RequiresNetworkMagic,
+  )
+import Cardano.Crypto.Raw (Raw)
+import Cardano.Ledger.Binary
+  ( Annotated (..),
+    FromCBOR (..),
+    ToCBOR (..),
+    encodeListLen,
+    enforceSize,
   )
 import Cardano.Prelude
 import Data.Time (UTCTime)

@@ -15,32 +15,39 @@ module Cardano.Ledger.Binary.Version
     MaxVersion,
     natVersion,
     natVersionProxy,
+    succVersion,
     mkVersion,
+    mkVersion64,
+    getVersion64,
     allVersions,
+
+    -- ** Concrete era versions
+    byronProtVer,
+    shelleyProtVer,
   )
 where
 
-import Data.Proxy
-import GHC.TypeLits
-#if __GLASGOW_HASKELL__ < 900
--- This import is dedundant wih ghc-9.2.
+import Control.DeepSeq (NFData)
+import Data.Proxy (Proxy (..))
+import Data.Word (Word64)
+import GHC.TypeLits (KnownNat, natVal, type (<=))
+import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
-#endif
 
 --------------------------------------------------------------------------------
--- Versioned Decoder
+-- Version
 --------------------------------------------------------------------------------
 
 -- | Protocol version number that is used during encoding and decoding. All supported
 -- versions are in the range from `MinVersion` to `MaxVersion`.
-newtype Version = Version Word
-  deriving (Eq, Ord, Show, Enum)
+newtype Version = Version Word64
+  deriving (Eq, Ord, Show, Enum, NFData, NoThunks)
 
 -- | Minimum supported version
 type MinVersion = 1
 
--- | Maximum supported version
-type MaxVersion = 8
+-- | Maximum supported version. This is the protocol version of the next upcoming era
+type MaxVersion = 9
 
 instance Bounded Version where
   minBound = Version (fromInteger (natVal (Proxy @MinVersion)))
@@ -58,7 +65,13 @@ natVersionProxy = Version . fromInteger . natVal
 -- | Construct a `Version` and fail if the supplied value is not supported version number.
 mkVersion :: MonadFail m => Natural -> m Version
 mkVersion v
-  | fromIntegral minVersion <= v && v <= fromIntegral maxVersion =
+  | v <= fromIntegral (maxBound :: Word64) = mkVersion64 (fromIntegral v)
+  | otherwise = fail $ "Decoder version is too big: " ++ show v
+
+-- | Construct a `Version` and fail if the supplied value is not supported version number.
+mkVersion64 :: MonadFail m => Word64 -> m Version
+mkVersion64 v
+  | minVersion <= v && v <= maxVersion =
       pure (Version (fromIntegral v))
   | otherwise =
       fail $
@@ -73,5 +86,19 @@ mkVersion v
     Version minVersion = minBound
     Version maxVersion = maxBound
 
+-- | Extract `Word64` representation of the `Version`
+getVersion64 :: Version -> Word64
+getVersion64 (Version w64) = w64
+
+-- | Increment version by 1.
+succVersion :: MonadFail m => Version -> m Version
+succVersion (Version v64) = mkVersion64 (v64 + 1)
+
 allVersions :: [Version]
 allVersions = [minBound .. maxBound]
+
+byronProtVer :: Version
+byronProtVer = natVersion @1
+
+shelleyProtVer :: Version
+shelleyProtVer = natVersion @2

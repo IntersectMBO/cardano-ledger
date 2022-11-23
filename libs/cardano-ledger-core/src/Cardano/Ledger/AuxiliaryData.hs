@@ -14,7 +14,7 @@ module Cardano.Ledger.AuxiliaryData
   )
 where
 
-import Cardano.Binary (FromCBOR, ToCBOR)
+import Cardano.Ledger.Binary (FromCBOR, ToCBOR)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Hashes (EraIndependentTxAuxData)
 import Cardano.Ledger.SafeHash (SafeHash)

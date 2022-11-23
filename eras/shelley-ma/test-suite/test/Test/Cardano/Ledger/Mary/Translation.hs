@@ -9,22 +9,22 @@ module Test.Cardano.Ledger.Mary.Translation
   )
 where
 
-import Cardano.Binary
-  ( ToCBOR (..),
-  )
 import Cardano.Ledger.Allegra (Allegra)
-import Cardano.Ledger.Era (TranslateEra (..))
+import Cardano.Ledger.Binary
+import Cardano.Ledger.Core
 import Cardano.Ledger.Mary (Mary)
 import Cardano.Ledger.Mary.Translation ()
+import Cardano.Ledger.Shelley (Shelley)
 import qualified Cardano.Ledger.Shelley.API as S
-import Cardano.Ledger.ShelleyMA.AuxiliaryData (AllegraTxAuxData)
 import Test.Cardano.Ledger.AllegraEraGen ()
+import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
-import Test.Cardano.Ledger.TranslationTools (decodeTestAnn, translationCompatToCBOR)
+import Test.Cardano.Ledger.TranslationTools (translateEraToCBOR)
 import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (Assertion)
 import Test.Tasty.QuickCheck (testProperty)
 
 maryEncodeDecodeTests :: TestTree
@@ -33,7 +33,11 @@ maryEncodeDecodeTests =
     "encoded allegra types can be decoded as mary types"
     [ testProperty
         "decoding metadata"
-        (decodeTestAnn @(S.ShelleyTxAuxData Allegra) ([] :: [AllegraTxAuxData Mary]))
+        ( embedTripAnnExpectation @(TxAuxData Allegra) @(TxAuxData Mary)
+            (eraProtVerLow @Shelley)
+            (eraProtVerLow @Allegra)
+            (\_ _ -> pure ())
+        )
     ]
 
 maryTranslationTests :: TestTree
@@ -60,5 +64,5 @@ test ::
     Show (TranslationError Mary f)
   ) =>
   f Allegra ->
-  Bool
-test = translationCompatToCBOR ([] :: [Mary]) ()
+  Assertion
+test = translateEraToCBOR ([] :: [Mary]) ()

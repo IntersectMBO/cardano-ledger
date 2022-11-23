@@ -6,12 +6,10 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE NumDecimals #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 
 module Cardano.Chain.Block.Header
   ( -- * Header
@@ -72,28 +70,6 @@ module Cardano.Chain.Block.Header
   )
 where
 
-import Cardano.Binary
-  ( Annotated (..),
-    ByteSpan,
-    Case (..),
-    Decoded (..),
-    Decoder,
-    DecoderError (..),
-    Encoding,
-    FromCBOR (..),
-    Raw,
-    Size,
-    ToCBOR (..),
-    annotatedDecoder,
-    dropBytes,
-    dropInt32,
-    encodeListLen,
-    enforceSize,
-    fromCBORAnnotated,
-    serializeEncoding,
-    szCases,
-    szGreedy,
-  )
 import Cardano.Chain.Block.Body (Body)
 import Cardano.Chain.Block.Boundary
   ( dropBoundaryExtraHeaderDataRetainGenesisTag,
@@ -127,7 +103,31 @@ import Cardano.Crypto
     sign,
     unsafeAbstractHash,
   )
-import Cardano.Prelude
+import Cardano.Crypto.Raw (Raw)
+import Cardano.Ledger.Binary
+  ( Annotated (..),
+    ByteSpan,
+    Case (..),
+    Decoded (..),
+    Decoder,
+    DecoderError (..),
+    Encoding,
+    FromCBOR (..),
+    Size,
+    ToCBOR (..),
+    annotatedDecoder,
+    byronProtVer,
+    cborError,
+    dropBytes,
+    dropInt32,
+    encodeListLen,
+    enforceSize,
+    fromCBORAnnotated,
+    serializeEncoding,
+    szCases,
+    szGreedy,
+  )
+import Cardano.Prelude hiding (cborError)
 import Data.Aeson (ToJSON)
 import qualified Data.ByteString as BS
 import Data.Coerce (coerce)
@@ -491,7 +491,7 @@ wrapHeaderBytes = mappend "\130\SOH"
 --   For backwards compatibility we have to take the hash of the header
 --   serialised with 'toCBORHeaderToHash'
 hashHeader :: EpochSlots -> Header -> HeaderHash
-hashHeader es = unsafeAbstractHash . serializeEncoding . toCBORHeaderToHash es
+hashHeader es = unsafeAbstractHash . serializeEncoding byronProtVer . toCBORHeaderToHash es
 
 headerHashAnnotated :: AHeader ByteString -> HeaderHash
 headerHashAnnotated = hashDecoded . fmap wrapHeaderBytes
