@@ -29,9 +29,19 @@ in the naming of release branches.
 - Added `Twiddle` class to test alternative serializations: #2994
 - Added `getScriptsNeeded` and `getScriptsHashesNeeded` to `EraUTxO` class: #3019
 - Added `evaluateTransactionExecutionUnitsWithLogs` to `Alonzo`: #3111
+- Added `mkAlonzoTxAuxData` and `getAlonzoTxAuxDataScripts` that help to recover previous
+  behavior of `AlonzoTxAuxData` #3165 and #3166
+- Addition of `Memoized` type class and helper functions that utilize this new
+  abstraction: `mkMemoized`, `getMemoSafeHash`, `getMemoRawType`, `zipMemoRawType`,
+  `getMemoRawBytes` and `lensMemoRawType` #3165
+
 
 ### Changed
 
+- Changed structure and field names of `Cardano.Ledger.Alonzo.Data.AlonzoTxAuxData` #3165:
+  - Renamed `AlonzoTxAuxData.txMD` to `AlonzoTxAuxData.atadMetadata`:
+  - Removed `AlonzoTxAuxData.scripts` in favor of two new fields `atadTimelock` and
+    `atadPlutus`. This was needed due to #3166
 - Changed major version in `ProtVer` to use new type `Version` instead of `Natural`: #3138
 - Renamed records fields in `Cardano.Ledger` to names without `_` (underscores) #3126
   - `Alonzo.TxBody.TxBodyRaw` to `Alonzo.TxBody.AlonzoTxBodyRaw`
