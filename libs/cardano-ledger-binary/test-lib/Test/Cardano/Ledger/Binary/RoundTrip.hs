@@ -128,8 +128,9 @@ roundTripTwiddledProperty version t = property $ do
       pure (tDecoded === t)
 
 roundTripAnnTwiddledProperty ::
-  (Twiddle t, FromCBOR (Annotator t)) =>
-  (t -> t -> Property) ->
+  forall t q.
+  (Twiddle t, FromCBOR (Annotator t), Testable q) =>
+  (t -> t -> q) ->
   Version ->
   t ->
   Property
@@ -138,7 +139,7 @@ roundTripAnnTwiddledProperty eqProp version t = property $ do
     Left err ->
       pure $ counterexample ("Failed to deserialize twiddled encoding: " ++ show err) False
     Right tDecoded ->
-      pure (tDecoded `eqProp` t)
+      pure $ property (tDecoded `eqProp` t)
 
 embedTripExpectation ::
   forall a b.

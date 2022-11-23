@@ -27,6 +27,7 @@ module Cardano.Ledger.Alonzo.Scripts
     pointWiseExUnits,
     validScript,
     transProtocolVersion,
+    eqAlonzoScriptRaw,
 
     -- * Cost Model
     CostModel,
@@ -84,7 +85,7 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley (nativeMultiSigTag)
-import Cardano.Ledger.ShelleyMA.Timelocks (Timelock)
+import Cardano.Ledger.ShelleyMA.Timelocks (Timelock, eqTimelockRaw)
 import Control.DeepSeq (NFData (..), deepseq, rwhnf)
 import Control.Monad (when)
 import Control.Monad.Trans.Writer (WriterT (runWriterT))
@@ -428,3 +429,10 @@ validScript pv script =
 transProtocolVersion :: ProtVer -> PV1.ProtocolVersion
 transProtocolVersion (ProtVer major minor) =
   PV1.ProtocolVersion ((fromIntegral :: Word64 -> Int) (getVersion64 major)) (fromIntegral minor)
+
+-- | Check the equality of two underlying types, while ignoring their binary
+-- representation, which `Eq` instance normally does. This is used for testing.
+eqAlonzoScriptRaw :: AlonzoScript era -> AlonzoScript era -> Bool
+eqAlonzoScriptRaw (TimelockScript t1) (TimelockScript t2) = eqTimelockRaw t1 t2
+eqAlonzoScriptRaw (PlutusScript l1 s1) (PlutusScript l2 s2) = l1 == l2 && s1 == s2
+eqAlonzoScriptRaw _ _ = False

@@ -11,7 +11,7 @@ module Test.Cardano.Ledger.Alonzo.Serialisation.Tripping where
 import Cardano.Ledger.Alonzo (Alonzo)
 import Cardano.Ledger.Alonzo.Data (BinaryData, Data (..))
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxoPredFailure, AlonzoUtxosPredFailure, AlonzoUtxowPredFailure)
-import Cardano.Ledger.Alonzo.Scripts (CostModels)
+import Cardano.Ledger.Alonzo.Scripts (CostModels, eqAlonzoScriptRaw)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits)
 import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Core
@@ -32,19 +32,19 @@ tests =
     "Alonzo CBOR round-trip"
     [ testProperty "alonzo/Script" $
         roundTripAnnExpectation @(Script Alonzo) v,
-      -- skip $
-      -- testProperty "alonzo/Script twiddled" $
-      --   roundTripAnnTwiddledProperty @(Script Alonzo) (zipMemoRawType (===)) v,
+      skip $
+        testProperty "alonzo/Script twiddled" $
+          roundTripAnnTwiddledProperty @(Script Alonzo) eqAlonzoScriptRaw v,
       testProperty "alonzo/Data" $
         roundTripAnnExpectation @(Data Alonzo) v,
       skip $
-      testProperty "alonzo/Data twiddled" $
-        roundTripAnnTwiddledProperty @(Data Alonzo) (zipMemoRawType (===)) v,
+        testProperty "alonzo/Data twiddled" $
+          roundTripAnnTwiddledProperty @(Data Alonzo) (zipMemoRawType (===)) v,
       testProperty "alonzo/BinaryData" $
         roundTripCborExpectation @(BinaryData Alonzo) v,
       skip $
-      testProperty "alonzo/BinaryData twiddled" $
-        roundTripTwiddledProperty @(BinaryData Alonzo) v,
+        testProperty "alonzo/BinaryData twiddled" $
+          roundTripTwiddledProperty @(BinaryData Alonzo) v,
       testProperty "alonzo/TxAuxData" $
         roundTripAnnExpectation @(ShelleyTxAuxData Alonzo) v,
       testProperty "alonzo/AlonzoTxWits" $
@@ -52,8 +52,8 @@ tests =
       testProperty "alonzo/TxBody" $
         roundTripAnnExpectation @(TxBody Alonzo) v,
       skip $
-      testProperty "alonzo/TxBody twiddled" $
-        roundTripAnnTwiddledProperty @(TxBody Alonzo) (zipMemoRawType (===)) v,
+        testProperty "alonzo/TxBody twiddled" $
+          roundTripAnnTwiddledProperty @(TxBody Alonzo) (zipMemoRawType (===)) v,
       testProperty "alonzo/CostModels" $
         roundTripCborExpectation @CostModels v,
       testProperty "alonzo/PParams" $

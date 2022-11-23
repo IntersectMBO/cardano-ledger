@@ -30,6 +30,7 @@ module Cardano.Ledger.ShelleyMA.Timelocks
     inInterval,
     showTimelock,
     evalTimelock,
+    eqTimelockRaw,
     ValidityInterval (..),
     encodeVI,
     decodeVI,
@@ -74,7 +75,7 @@ import Cardano.Slotting.Slot (SlotNo (..))
 import Control.DeepSeq (NFData (..))
 import Data.ByteString.Lazy (fromStrict)
 import Data.ByteString.Short (fromShort)
-import Data.Sequence.Strict (StrictSeq)
+import Data.Sequence.Strict (StrictSeq (Empty, (:<|)))
 import Data.Set (Set, member)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
@@ -293,3 +294,19 @@ showTimelock (RequireMOf m xs) = "(MOf " ++ show m ++ " " ++ foldl accum ")" xs
   where
     accum ans x = showTimelock x ++ " " ++ ans
 showTimelock (RequireSignature hash) = "(Signature " ++ show hash ++ ")"
+
+-- | Check the equality of two underlying types, while ignoring their binary
+-- representation, which `Eq` instance normally does. This is used for testing.
+eqTimelockRaw :: Timelock era -> Timelock era -> Bool
+eqTimelockRaw t1 t2 = go (getMemoRawType t1) (getMemoRawType t2)
+  where
+    seqEq Empty Empty = True
+    seqEq (x :<| xs) (y :<| ys) = eqTimelockRaw x y && seqEq xs ys
+    seqEq _ _ = False
+    go (Signature kh1) (Signature kh2) = kh1 == kh2
+    go (AllOf ts1) (AllOf ts2) = seqEq ts1 ts2
+    go (AnyOf ts1) (AnyOf ts2) = seqEq ts1 ts2
+    go (MOfN n1 ts1) (MOfN n2 ts2) = n1 == n2 && seqEq ts1 ts2
+    go (TimeStart sn1) (TimeStart sn2) = sn1 == sn2
+    go (TimeExpire sn1) (TimeExpire sn2) = sn1 == sn2
+    go _ _ = False
