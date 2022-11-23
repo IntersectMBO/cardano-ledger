@@ -11,7 +11,6 @@
 -- |  AlonzoEra instances for EraGen and ScriptClass
 module Test.Cardano.Ledger.Alonzo.AlonzoEraGen where
 
-import Cardano.Binary (ToCBOR (toCBOR), serializeEncoding')
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Data (AlonzoTxAuxData (..), Data (..))
@@ -61,7 +60,8 @@ import Cardano.Ledger.Alonzo.TxWits
   )
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
-import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
+import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Binary (ToCBOR)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
@@ -90,10 +90,8 @@ import Cardano.Ledger.UTxO
     getScriptsNeeded,
   )
 import Cardano.Ledger.Val (Val (isAdaOnly, (<+>), (<×>)))
-import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad (replicateM)
 import Data.Either (fromRight)
-import Data.Hashable (Hashable (..))
 import qualified Data.List as List
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -110,6 +108,7 @@ import qualified PlutusLedgerApi.V2 as PV2 (ParamName)
 import PlutusPrelude (enumerate)
 import qualified PlutusTx as P (Data (..))
 import qualified PlutusTx as Plutus
+import System.Random
 import Test.Cardano.Ledger.AllegraEraGen (genValidityInterval)
 import Test.Cardano.Ledger.Alonzo.PlutusScripts
   ( evenRedeemer2,
@@ -121,6 +120,7 @@ import Test.Cardano.Ledger.Alonzo.PlutusScripts
     sumsTo103,
   )
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
+import Test.Cardano.Ledger.Binary.Random
 import Test.Cardano.Ledger.MaryEraGen (addTokens, genMint, maryGenesisValue, policyIndex)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
@@ -348,7 +348,7 @@ genAlonzoPParams ::
   Constants ->
   Gen (PParams (AlonzoEra c))
 genAlonzoPParams constants = do
-  let constants' = constants {minMajorPV = 5}
+  let constants' = constants {minMajorPV = natVersion @5}
   -- This ensures that "_d" field is not 0, and that the major protocol version
   -- is large enough to not trigger plutus script failures
   -- (no bultins are alllowed before major version 5).
@@ -496,8 +496,8 @@ sumCollateral tx (UTxO utxo) =
   where
     collateral_ = tx ^. bodyTxL . collateralInputsTxBodyL
 
-storageCost :: ToCBOR t => Integer -> AlonzoPParams era -> t -> Coin
-storageCost extra pp x = (extra + encodedLen x) <×> Coin (fromIntegral (getField @"_minfeeA" pp))
+storageCost :: forall era t. (Era era, ToCBOR t) => Integer -> AlonzoPParams era -> t -> Coin
+storageCost extra pp x = (extra + encodedLen @era x) <×> Coin (fromIntegral (getField @"_minfeeA" pp))
 
 addRedeemMap ::
   forall c.
@@ -578,15 +578,17 @@ someLeaf ::
   Proxy era ->
   KeyHash 'Witness (EraCrypto era) ->
   AlonzoScript era
-someLeaf _proxy x =
-  let n = hash (serializeEncoding' (toCBOR x)) -- We don't really care about the hash, we only
-      slot = SlotNo (fromIntegral (mod n 200)) -- use it to pseudo-randomly pick a slot and mode
-      mode = mod n 3 -- mode==0 is a time leaf,  mode 1 or 2 is a signature leaf
+someLeaf _proxy keyHash =
+  let -- We use KeyHash as a source of entropy for initialization of an StdGen for
+      -- generating slot and mode
+      (s, g) = uniformR (0, 199) $ mkHashStdGen keyHash
+      slot = SlotNo s
+      (mode, _) = uniformR (0 :: Int, 2) g -- mode==0 is a time leaf,  mode 1 or 2 is a signature leaf
    in case mode of
         0 ->
           TimelockScript $
             (RequireAnyOf . Seq.fromList) [RequireTimeStart slot, RequireTimeExpire slot]
-        _ -> TimelockScript $ RequireSignature x
+        _ -> TimelockScript $ RequireSignature keyHash
 
 -- | given the "txscripts" field of the TxWits, compute the set of languages used in a transaction
 langsUsed ::

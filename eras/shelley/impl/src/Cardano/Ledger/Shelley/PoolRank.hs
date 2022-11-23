@@ -28,13 +28,6 @@ module Cardano.Ledger.Shelley.PoolRank
   )
 where
 
-import Cardano.Binary
-  ( FromCBOR (..),
-    ToCBOR (..),
-    decodeDouble,
-    encodeDouble,
-    encodeListLen,
-  )
 import Cardano.Ledger.BaseTypes
   ( ActiveSlotCoeff,
     BoundedRational (..),
@@ -42,15 +35,22 @@ import Cardano.Ledger.BaseTypes
     UnitInterval,
     activeSlotVal,
   )
+import Cardano.Ledger.Binary
+  ( FromCBOR (fromCBOR),
+    FromSharedCBOR (Share, fromSharedPlusCBOR),
+    Interns,
+    ToCBOR (toCBOR),
+    decodeDouble,
+    decodeRecordNamedT,
+    encodeDouble,
+    encodeListLen,
+    fromSharedPlusLensCBOR,
+    toMemptyLens,
+  )
 import Cardano.Ledger.Coin (Coin (..), coinToRational)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.EpochBoundary (maxPool)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.Serialization
-  ( decodeRecordNamedT,
-    decodeSeq,
-    encodeFoldable,
-  )
 import Cardano.Ledger.Shelley.Rewards (StakeShare (..), memberRew)
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..))
 import Cardano.Slotting.Slot (EpochSize (..))
@@ -69,7 +69,6 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Sharing
 import qualified Data.VMap as VMap
 import GHC.Generics (Generic)
 import GHC.Records (HasField (getField))
@@ -93,7 +92,7 @@ newtype Histogram = Histogram {unHistogram :: StrictSeq LogWeight}
 
 newtype Likelihood = Likelihood {unLikelihood :: StrictSeq LogWeight}
   -- TODO: replace with small data structure
-  deriving (Show, Ord, Generic, NFData)
+  deriving (Show, Ord, Generic, NFData, ToCBOR, FromCBOR)
 
 instance NoThunks Likelihood
 
@@ -111,12 +110,6 @@ normalizeLikelihood :: Likelihood -> Likelihood
 normalizeLikelihood (Likelihood xs) = Likelihood $ (\x -> x - m) <$> xs
   where
     m = minimum xs
-
-instance ToCBOR Likelihood where
-  toCBOR (Likelihood logweights) = encodeFoldable logweights
-
-instance FromCBOR Likelihood where
-  fromCBOR = Likelihood . StrictSeq.forceToStrict <$> decodeSeq fromCBOR
 
 leaderProbability :: ActiveSlotCoeff -> Rational -> UnitInterval -> Double
 leaderProbability activeSlotCoeff relativeStake decentralizationParameter =

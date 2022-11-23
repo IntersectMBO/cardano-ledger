@@ -31,6 +31,7 @@ import Cardano.Ledger.BaseTypes
   ( BlocksMade (..),
     Network (..),
     StrictMaybe (..),
+    natVersion,
     textToUrl,
   )
 import Cardano.Ledger.Block (Block (..), txid)
@@ -662,17 +663,17 @@ coldKeys = KeyPair vk sk
 
 makeNaiveBlock ::
   forall era. EraSegWits era => [Tx era] -> Block (BHeaderView (EraCrypto era)) era
-makeNaiveBlock txs = UnsafeUnserialisedBlock bhView txs'
+makeNaiveBlock txs = UnsafeUnserialisedBlock bhView txSeq
   where
     bhView =
       BHeaderView
         { bhviewID = hashKey (vKey coldKeys),
-          bhviewBSize = fromIntegral $ bBodySize txs',
+          bhviewBSize = fromIntegral $ bBodySize (ProtVer (eraProtVerLow @era) 0) txSeq,
           bhviewHSize = 0,
-          bhviewBHash = hashTxSeq @era txs',
+          bhviewBHash = hashTxSeq txSeq,
           bhviewSlot = SlotNo 0
         }
-    txs' = (toTxSeq @era) . StrictSeq.fromList $ txs
+    txSeq = toTxSeq $ StrictSeq.fromList txs
 
 scriptStakeCredFail :: forall era. Scriptic era => Proof era -> StakeCredential (EraCrypto era)
 scriptStakeCredFail pf = ScriptHashObj (alwaysFailsHash 1 pf)
@@ -691,7 +692,7 @@ defaultPPs =
     MaxValSize 1000000000,
     MaxTxExUnits $ ExUnits 1000000 1000000,
     MaxBlockExUnits $ ExUnits 1000000 1000000,
-    ProtocolVersion $ ProtVer 5 0,
+    ProtocolVersion $ ProtVer (natVersion @5) 0,
     CollateralPercentage 100
   ]
 

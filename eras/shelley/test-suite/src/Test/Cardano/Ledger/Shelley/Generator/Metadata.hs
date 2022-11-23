@@ -9,6 +9,7 @@ where
 import Cardano.Ledger.BaseTypes
   ( StrictMaybe (..),
   )
+import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Metadata
   ( Metadatum (..),
     ShelleyTxAuxData (..),
@@ -32,7 +33,7 @@ metadataMaxSize :: Int
 metadataMaxSize = 3
 
 -- | Generate ShelleyTxAuxData (and compute hash) with frequency 'frequencyTxWithMetadata'
-genMetadata :: Constants -> Gen (StrictMaybe (ShelleyTxAuxData era))
+genMetadata :: Era era => Constants -> Gen (StrictMaybe (ShelleyTxAuxData era))
 genMetadata (Constants {frequencyTxWithMetadata}) =
   QC.frequency
     [ (frequencyTxWithMetadata, SJust <$> genMetadata'),
@@ -40,7 +41,7 @@ genMetadata (Constants {frequencyTxWithMetadata}) =
     ]
 
 -- | Generate Metadata (and compute hash) of size up to 'metadataMaxSize'
-genMetadata' :: Gen (ShelleyTxAuxData era)
+genMetadata' :: Era era => Gen (ShelleyTxAuxData era)
 genMetadata' = do
   n <- QC.choose (1, metadataMaxSize)
   ShelleyTxAuxData . Map.fromList

@@ -148,7 +148,6 @@ newEpochTransition ::
     Environment (EraRule "EPOCH" era) ~ (),
     State (EraRule "EPOCH" era) ~ EpochState era,
     Signal (EraRule "EPOCH" era) ~ EpochNo,
-    HasField "_protocolVersion" (PParams era) ProtVer,
     Default (State (EraRule "PPUP" era)),
     Default (PParams era),
     Default (StashedAVVMAddresses era),

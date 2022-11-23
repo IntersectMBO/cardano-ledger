@@ -12,6 +12,7 @@ import Cardano.Ledger.Address
   ( Addr,
     RewardAcnt,
   )
+import Cardano.Ledger.BaseTypes (shelleyProtVer)
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (KeyRole (Staking))
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
@@ -47,27 +48,29 @@ import Test.Tasty (TestTree, testGroup, withResource)
 tests :: Int -> TestTree
 tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
   testGroup "CDDL roundtrip tests" $
-    [ cddlAnnotatorTest @(BHeader StandardCrypto) n "header",
-      cddlAnnotatorTest @(BootstrapWitness StandardCrypto) n "bootstrap_witness",
-      cddlTest @(BHBody StandardCrypto) n "header_body",
-      cddlGroupTest @(OCert StandardCrypto) n "operational_cert",
-      cddlTest @(Addr StandardCrypto) n "address",
-      cddlTest @(RewardAcnt StandardCrypto) n "reward_account",
-      cddlTest @(Credential 'Staking StandardCrypto) n "stake_credential",
-      cddlAnnotatorTest @(ShelleyTxBody Shelley) n "transaction_body",
-      cddlTest @(ShelleyTxOut Shelley) n "transaction_output",
-      cddlTest @StakePoolRelay n "relay",
-      cddlTest @(DCert StandardCrypto) n "certificate",
-      cddlTest @(TxIn StandardCrypto) n "transaction_input",
-      cddlAnnotatorTest @(ShelleyTxAuxData Shelley) n "transaction_metadata",
-      cddlAnnotatorTest @(MultiSig Shelley) n "multisig_script",
-      cddlTest @(Update Shelley) n "update",
-      cddlTest @(ProposedPPUpdates Shelley) n "proposed_protocol_parameter_updates",
-      cddlTest @(ShelleyPParamsUpdate Shelley) n "protocol_param_update",
-      cddlAnnotatorTest @(ShelleyTx Shelley) n "transaction",
-      cddlAnnotatorTest @(LaxBlock (BHeader StandardCrypto) Shelley) n "block"
+    [ cddlAnnotatorTest @(BHeader StandardCrypto) v n "header",
+      cddlAnnotatorTest @(BootstrapWitness StandardCrypto) v n "bootstrap_witness",
+      cddlTest @(BHBody StandardCrypto) v n "header_body",
+      cddlGroupTest @(OCert StandardCrypto) v n "operational_cert",
+      cddlTest @(Addr StandardCrypto) v n "address",
+      cddlTest @(RewardAcnt StandardCrypto) v n "reward_account",
+      cddlTest @(Credential 'Staking StandardCrypto) v n "stake_credential",
+      cddlAnnotatorTest @(ShelleyTxBody Shelley) v n "transaction_body",
+      cddlTest @(ShelleyTxOut Shelley) v n "transaction_output",
+      cddlTest @StakePoolRelay v n "relay",
+      cddlTest @(DCert StandardCrypto) v n "certificate",
+      cddlTest @(TxIn StandardCrypto) v n "transaction_input",
+      cddlAnnotatorTest @(ShelleyTxAuxData Shelley) v n "transaction_metadata",
+      cddlAnnotatorTest @(MultiSig Shelley) v n "multisig_script",
+      cddlTest @(Update Shelley) v n "update",
+      cddlTest @(ProposedPPUpdates Shelley) v n "proposed_protocol_parameter_updates",
+      cddlTest @(ShelleyPParamsUpdate Shelley) v n "protocol_param_update",
+      cddlAnnotatorTest @(ShelleyTx Shelley) v n "transaction",
+      cddlAnnotatorTest @(LaxBlock (BHeader StandardCrypto) Shelley) v n "block"
     ]
       <*> pure cddl
+  where
+    v = shelleyProtVer
 
 combinedCDDL :: IO BSL.ByteString
 combinedCDDL = do

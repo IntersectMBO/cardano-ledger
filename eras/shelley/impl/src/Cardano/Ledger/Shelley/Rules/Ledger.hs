@@ -24,12 +24,13 @@ module Cardano.Ledger.Shelley.Rules.Ledger
   )
 where
 
-import Cardano.Binary
+import Cardano.Ledger.BaseTypes (ShelleyBase, TxIx, invalidKey)
+import Cardano.Ledger.Binary
   ( FromCBOR (..),
     ToCBOR (..),
+    decodeRecordSum,
     encodeListLen,
   )
-import Cardano.Ledger.BaseTypes (ShelleyBase, TxIx, invalidKey)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.EpochBoundary (obligation)
@@ -65,7 +66,6 @@ import Control.State.Transition
     judgmentContext,
     trans,
   )
-import Data.Coders (decodeRecordSum)
 import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Word (Word8)

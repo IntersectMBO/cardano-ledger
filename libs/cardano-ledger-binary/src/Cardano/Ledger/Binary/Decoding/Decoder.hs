@@ -17,7 +17,7 @@ module Cardano.Ledger.Binary.Decoding.Decoder
     toPlainDecoder,
     fromPlainDecoder,
     withPlainDecoder,
-    enforceVersionDecoder,
+    enforceDecoderVersion,
     DecoderError (..),
     C.ByteOffset,
     C.DecodeAction (..),
@@ -26,10 +26,13 @@ module Cardano.Ledger.Binary.Decoding.Decoder
     -- ** Versioning
     getDecoderVersion,
     ifDecoderVersionAtLeast,
+    whenDecoderVersionAtLeast,
 
     -- ** Error reporting
     cborError,
+    toCborError,
     showDecoderError,
+    invalidKey,
     assertTag,
     enforceSize,
     matchSize,
@@ -38,19 +41,23 @@ module Cardano.Ledger.Binary.Decoding.Decoder
     binaryGetDecoder,
 
     -- ** Custom decoders
+    decodeVersion,
     decodeRational,
+    decodeRationalWithTag,
     decodeRecordNamed,
     decodeRecordNamedT,
     decodeRecordSum,
 
     -- *** Containers
     decodeMaybe,
+    decodeEither,
     decodeList,
     decodeNullMaybe,
     decodeVector,
     decodeSet,
     setTag,
     decodeMap,
+    decodeMapByKey,
     decodeVMap,
     decodeSeq,
     decodeStrictSeq,
@@ -229,7 +236,7 @@ import Data.Functor.Compose (Compose (..))
 import Data.IP (IPv4, IPv6, fromHostAddress, fromHostAddress6)
 import Data.Int (Int16, Int32, Int64, Int8)
 import qualified Data.Map.Strict as Map
-import Data.Ratio (Ratio, (%))
+import Data.Ratio ((%))
 import qualified Data.Sequence as Seq
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
@@ -240,6 +247,7 @@ import qualified Data.VMap as VMap
 import qualified Data.Vector.Generic as VG
 import Data.Word (Word16, Word32, Word64, Word8)
 import Formatting (build, formatToString)
+import qualified Formatting.Buildable as B (Buildable (..))
 import GHC.Exts as Exts (IsList (..))
 import Network.Socket (HostAddress6)
 import Numeric.Natural (Natural)
@@ -289,8 +297,8 @@ withPlainDecoder :: Decoder s a -> (C.Decoder s a -> C.Decoder s b) -> Decoder s
 withPlainDecoder vd f = Decoder $ \curVersion -> f (toPlainDecoder curVersion vd)
 
 -- | Ignore the current version of the decoder and enforce the supplied one instead.
-enforceVersionDecoder :: Version -> Decoder s a -> Decoder s a
-enforceVersionDecoder version = fromPlainDecoder . toPlainDecoder version
+enforceDecoderVersion :: Version -> Decoder s a -> Decoder s a
+enforceDecoderVersion version = fromPlainDecoder . toPlainDecoder version
 
 --------------------------------------------------------------------------------
 -- Working with current decoder version
@@ -331,64 +339,98 @@ ifDecoderVersionAtLeast atLeast newerDecoder olderDecoder = do
     then newerDecoder
     else olderDecoder
 
+-- | Optionally run a decoder depending on the current version and the supplied one.
+whenDecoderVersionAtLeast ::
+  Version ->
+  -- | Run this decoder whenever current decoder version is larger or equal to the supplied
+  -- `Version`
+  Decoder s a ->
+  Decoder s ()
+whenDecoderVersionAtLeast atLeast decoder = do
+  cur <- getDecoderVersion
+  when (cur >= atLeast) (void decoder)
+
 --------------------------------------------------------------------------------
 -- Error reporting
 --------------------------------------------------------------------------------
 
-cborError :: DecoderError -> Decoder s a
+cborError :: B.Buildable e => e -> Decoder s a
 cborError = fail . showDecoderError
 
-showDecoderError :: DecoderError -> String
+showDecoderError :: B.Buildable e => e -> String
 showDecoderError = formatToString build
+
+-- | Report an error when a numeric key of the type constructor doesn't match.
+invalidKey :: Word -> Decoder s a
+invalidKey k = cborError $ DecoderErrorCustom "Not a valid key:" (Text.pack $ show k)
+
+-- | Convert an 'Either'-encoded failure to a 'cborg' decoder failure
+toCborError :: B.Buildable e => Either e a -> Decoder s a
+toCborError = either cborError pure
+
+decodeVersion :: Decoder s Version
+decodeVersion = decodeWord64 >>= mkVersion64
 
 -- | `Decoder` for `Rational`. Versions variance:
 --
--- * [>= 8] - Allows variable as well as exact list length encoding. Enforces
---   tag 30 and ensures that the denominator cannot be negative
+-- * [>= 2] - Allows variable as well as exact list length encoding.
 --
--- * [>= 2] - Allows variable as well as exact list length encoding. Also
---   enforces special set tag 30
---
--- * [< 2] - Expects exact list length encoding.
+-- * [== 1] - Expects exact list length encoding.
 decodeRational :: Decoder s Rational
 decodeRational =
   ifDecoderVersionAtLeast
-    (natVersion @8)
-    decodeRationalV8
+    (natVersion @2)
+    decodeRationalWithoutTag
+    decodeRationalFixedSizeTuple
+  where
+    decodeRationalFixedSizeTuple = do
+      enforceSize "Rational" 2
+      n <- decodeInteger
+      d <- decodeInteger
+      if d <= 0
+        then cborError $ DecoderErrorCustom "Rational" "invalid denominator"
+        else return $! n % d
+
+-- | Future `Decoder` for `Rational` type. This decoder will be applied in future and is
+-- prepared here as use case on how to do upgrades to serialization. Versions variance:
+--
+-- * [>= 10] - Enforces tag 30
+--
+-- * [>= 9] - Allows variable as well as exact list length encoding. Consumes tag 30 if
+--   one is present, but does not enforce it.
+--
+-- * [>= 2] - Allows variable as well as exact list length encoding.
+--
+-- * [== 1] - Expects exact list length encoding.
+_decodeRationalFuture :: Decoder s Rational
+_decodeRationalFuture = do
+  -- We are not using `natVersion` because these versions aren't yet supported.
+  v9 <- mkVersion 9
+  v10 <- mkVersion 10
+  ifDecoderVersionAtLeast
+    v10
+    decodeRationalWithTag
     ( ifDecoderVersionAtLeast
-        (natVersion @2)
-        (decodeFraction decodeInteger)
-        ( do
-            enforceSize "Ratio" 2
-            n <- decodeInteger
-            d <- decodeInteger
-            if d <= 0
-              then cborError $ DecoderErrorCustom "Ratio" "invalid denominator"
-              else return $! n % d
-        )
+        v9
+        (allowTag 30 >> decodeRational)
+        decodeRational
     )
 
-decodeFraction :: Integral a => Decoder s a -> Decoder s (Ratio a)
-decodeFraction decoder = do
-  t <- decodeTag
-  unless (t == 30) $ cborError $ DecoderErrorCustom "rational" "expected tag 30"
-  (numValues, values) <- decodeCollectionWithLen decodeListLenOrIndef decoder
-  case values of
-    [n, d] -> do
-      when (d == 0) (fail "denominator cannot be 0")
-      pure $ n % d
-    _ -> cborError $ DecoderErrorSizeMismatch "rational" 2 numValues
-{-# DEPRECATED decodeFraction "In favor of `decodeRational`" #-}
+-- | Enforces tag 30 to indicate a rational number, as per tag assignment:
+-- <https://www.iana.org/assignments/cbor-tags/cbor-tags.xhtml>
+--
+-- <https://peteroupc.github.io/CBOR/rational.html>
+decodeRationalWithTag :: Decoder s Rational
+decodeRationalWithTag = assertTag 30 >> decodeRationalWithoutTag
 
-decodeRationalV8 :: Decoder s Rational
-decodeRationalV8 = do
-  assertTag 30
+decodeRationalWithoutTag :: Decoder s Rational
+decodeRationalWithoutTag = do
   (numValues, values) <- decodeCollectionWithLen decodeListLenOrIndef decodeInteger
   case values of
     [n, d] -> do
-      when (d <= 0) (fail "Denominator must be positive")
-      pure $ n % d
-    _ -> cborError $ DecoderErrorSizeMismatch "rational" 2 numValues
+      when (d == 0) (fail "Denominator cannot be zero")
+      pure $! n % d
+    _ -> cborError $ DecoderErrorSizeMismatch "Rational" 2 numValues
 
 --------------------------------------------------------------------------------
 -- Containers
@@ -463,6 +505,15 @@ decodeNullMaybe decoder = do
       pure Nothing
     _ -> Just <$> decoder
 
+decodeEither :: Decoder s a -> Decoder s b -> Decoder s (Either a b)
+decodeEither decodeLeft decodeRight = do
+  decodeListLenOf 2
+  t <- decodeWord
+  case t of
+    0 -> Left <$> decodeLeft
+    1 -> Right <$> decodeRight
+    _ -> cborError $ DecoderErrorUnknownTag "Either" (fromIntegral t)
+
 decodeRecordNamed :: Text.Text -> (a -> Int) -> Decoder s a -> Decoder s a
 decodeRecordNamed name getRecordSize decoder = do
   runIdentityT $ decodeRecordNamedT name getRecordSize (lift decoder)
@@ -503,6 +554,9 @@ decodeRecordSum name decoder = do
 --   the previous one, to enfore these are sorted the correct way.
 --   See: https://tools.ietf.org/html/rfc7049#section-3.9
 --   "[..]The keys in every map must be sorted lowest value to highest.[...]"
+--
+-- In other words this decoder enforces strict monotonically increasing order on keys. It
+-- also uses exact map length encoding.
 decodeMapSkel ::
   forall k m v s.
   Ord k =>
@@ -512,7 +566,7 @@ decodeMapSkel ::
   -- | Decoder for keys
   Decoder s k ->
   -- | Decoder for values
-  Decoder s v ->
+  (k -> Decoder s v) ->
   Decoder s m
 decodeMapSkel fromDistinctDescList decodeKey decodeValue = do
   n <- decodeMapLen
@@ -526,7 +580,7 @@ decodeMapSkel fromDistinctDescList decodeKey decodeValue = do
     decodeEntry :: Decoder s (k, v)
     decodeEntry = do
       !k <- decodeKey
-      !v <- decodeValue
+      !v <- decodeValue k
       return (k, v)
 
     -- Decode all the entries, enforcing canonicity by ensuring that the
@@ -543,16 +597,6 @@ decodeMapSkel fromDistinctDescList decodeKey decodeValue = do
         then decodeEntries (remainingPairs - 1) newKey (p : acc)
         else cborError $ DecoderErrorCanonicityViolation "Map"
 {-# INLINE decodeMapSkel #-}
-
-decodeMapV1 ::
-  forall k v s.
-  Ord k =>
-  -- | Decoder for keys
-  Decoder s k ->
-  -- | Decoder for values
-  Decoder s v ->
-  Decoder s (Map.Map k v)
-decodeMapV1 = decodeMapSkel Map.fromDistinctDescList
 
 decodeCollection :: Decoder s (Maybe Int) -> Decoder s a -> Decoder s [a]
 decodeCollection lenOrIndef el = snd <$> decodeCollectionWithLen lenOrIndef el
@@ -571,7 +615,7 @@ decodeCollectionWithLen lenOrIndef el = do
         False -> pure (n, reverse acc)
         True -> action >>= \v -> loop (n + 1, v : acc) condition action
 
-decodeMapByKey ::
+decodeIsListByKey ::
   forall k t v s.
   (Exts.IsList t, Exts.Item t ~ (k, v)) =>
   -- | Decoder for keys
@@ -579,7 +623,7 @@ decodeMapByKey ::
   -- | Decoder for values
   (k -> Decoder s v) ->
   Decoder s t
-decodeMapByKey decodeKey decodeValueFor =
+decodeIsListByKey decodeKey decodeValueFor =
   uncurry Exts.fromListN
     <$> decodeCollectionWithLen decodeMapLenOrIndef decodeInlinedPair
   where
@@ -587,20 +631,6 @@ decodeMapByKey decodeKey decodeValueFor =
       !key <- decodeKey
       !value <- decodeValueFor key
       pure (key, value)
-
--- | We want to make a uniform way of encoding and decoding `Map.Map`. The original `ToCBOR`
--- and `FromCBOR` instances date to Byron Era didn't support versioning were not always
--- cannonical. We want to make these cannonical improvements staring with protocol version
--- 2.
-decodeMapV2 ::
-  forall k v s.
-  Ord k =>
-  -- | Decoder for keys
-  Decoder s k ->
-  -- | Decoder for values
-  Decoder s v ->
-  Decoder s (Map.Map k v)
-decodeMapV2 decodeKey decodeValue = decodeMapByKey decodeKey (const decodeValue)
 
 -- | `Decoder` for `Map.Map`. Versions variance:
 --
@@ -625,11 +655,19 @@ decodeMap ::
   Decoder s k ->
   Decoder s v ->
   Decoder s (Map.Map k v)
-decodeMap decodeKey decodeValue =
+decodeMap decodeKey decodeValue = decodeMapByKey decodeKey (const decodeValue)
+
+-- | Just like `decodeMap`, but also gives access to the key for the value decoder.
+decodeMapByKey ::
+  Ord k =>
+  Decoder s k ->
+  (k -> Decoder s v) ->
+  Decoder s (Map.Map k v)
+decodeMapByKey decodeKey decodeValue =
   ifDecoderVersionAtLeast
     (natVersion @2)
-    (decodeMapV2 decodeKey decodeValue)
-    (decodeMapV1 decodeKey decodeValue)
+    (decodeIsListByKey decodeKey decodeValue)
+    (decodeMapSkel Map.fromDistinctDescList decodeKey decodeValue)
 
 -- | Decode `VMap`. Unlike `decodeMap` it does not behavee differently for
 -- version prior to 2.
@@ -638,7 +676,7 @@ decodeVMap ::
   Decoder s k ->
   Decoder s v ->
   Decoder s (VMap.VMap kv vv k v)
-decodeVMap decodeKey decodeValue = decodeMapByKey decodeKey (const decodeValue)
+decodeVMap decodeKey decodeValue = decodeIsListByKey decodeKey (const decodeValue)
 
 -- | We stitch a `258` in from of a (Hash)Set, so that tools which
 -- programmatically check for canonicity can recognise it from a normal
@@ -647,6 +685,8 @@ decodeVMap decodeKey decodeValue = decodeMapByKey decodeKey (const decodeValue)
 -- https://www.iana.org/assignments/cbor-tags/cbor-tags.xhtml Currently `258` is
 -- the first unassigned tag and as it requires 2 bytes to be encoded, it sounds
 -- like the best fit.
+--
+-- <https://github.com/input-output-hk/cbor-sets-spec/blob/master/CBOR_SETS.md>
 setTag :: Word
 setTag = 258
 
@@ -860,7 +900,7 @@ decodeIPv4 :: Decoder s IPv4
 decodeIPv4 =
   fromHostAddress
     <$> ifDecoderVersionAtLeast
-      (natVersion @8)
+      (natVersion @9)
       (binaryGetDecoder False "decodeIPv4" getWord32le)
       (binaryGetDecoder True "decodeIPv4" getWord32le)
 
@@ -876,7 +916,7 @@ decodeIPv6 :: Decoder s IPv6
 decodeIPv6 =
   fromHostAddress6
     <$> ifDecoderVersionAtLeast
-      (natVersion @8)
+      (natVersion @9)
       (binaryGetDecoder False "decodeIPv6" getHostAddress6)
       (binaryGetDecoder True "decodeIPv6" getHostAddress6)
 
@@ -884,16 +924,30 @@ decodeIPv6 =
 -- Wrapped CBORG decoders
 --------------------------------------------------------------------------------
 
+decodeTagMaybe :: Decoder s (Maybe Word64)
+decodeTagMaybe =
+  peekTokenType >>= \case
+    C.TypeTag -> Just . fromIntegral <$> decodeTag
+    C.TypeTag64 -> Just <$> decodeTag64
+    _ -> pure Nothing
+
+allowTag :: Word -> Decoder s ()
+allowTag tagExpected = do
+  mTagReceived <- decodeTagMaybe
+  forM_ mTagReceived $ \tagReceived ->
+    unless (tagReceived == (fromIntegral tagExpected :: Word64)) $
+      fail $
+        "Expecteg tag " <> show tagExpected <> " but got tag " <> show tagReceived
+
 assertTag :: Word -> Decoder s ()
 assertTag tagExpected = do
   tagReceived <-
-    peekTokenType >>= \case
-      C.TypeTag -> fromIntegral <$> decodeTag
-      C.TypeTag64 -> decodeTag64
-      _ -> fail "expected tag"
+    decodeTagMaybe >>= \case
+      Just tag -> pure tag
+      Nothing -> fail "Expected tag"
   unless (tagReceived == (fromIntegral tagExpected :: Word64)) $
     fail $
-      "expecteg tag " <> show tagExpected <> " but got tag " <> show tagReceived
+      "Expecteg tag " <> show tagExpected <> " but got tag " <> show tagReceived
 
 -- | Enforces that the input size is the same as the decoded one, failing in
 --   case it's not

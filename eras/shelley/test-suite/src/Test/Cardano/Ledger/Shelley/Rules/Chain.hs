@@ -34,6 +34,7 @@ import Cardano.Ledger.BaseTypes
     StrictMaybe (..),
     UnitInterval,
   )
+import Cardano.Ledger.Binary (ToCBORGroup)
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Chain
   ( ChainPredicateFailure (..),
@@ -54,7 +55,6 @@ import Cardano.Ledger.Keys
   )
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import qualified Cardano.Ledger.Pretty as PP
-import Cardano.Ledger.Serialization (ToCBORGroup)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.AdaPots
   ( AdaPots (..),

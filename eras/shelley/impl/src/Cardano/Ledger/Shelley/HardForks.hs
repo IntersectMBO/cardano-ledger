@@ -14,14 +14,14 @@ module Cardano.Ledger.Shelley.HardForks
   )
 where
 
-import Cardano.Ledger.BaseTypes (ProtVer (..))
+import Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
 import GHC.Records
 
 aggregatedRewards ::
   (HasField "_protocolVersion" pp ProtVer) =>
   pp ->
   Bool
-aggregatedRewards pp = pvMajor (getField @"_protocolVersion" pp) > 2
+aggregatedRewards pp = pvMajor (getField @"_protocolVersion" pp) > natVersion @2
 
 -- | Starting with protocol version 5, the MIR certs will also be
 -- able to transfer funds between the reserves and the treasury.
@@ -34,7 +34,7 @@ allowMIRTransfer ::
   (HasField "_protocolVersion" pp ProtVer) =>
   pp ->
   Bool
-allowMIRTransfer pp = pvMajor (getField @"_protocolVersion" pp) > 4
+allowMIRTransfer pp = pvMajor (getField @"_protocolVersion" pp) > natVersion @4
 
 -- | Starting with protocol version 5, we will validate the network ID
 -- for the reward account listed in stake pool registration certificates.
@@ -42,7 +42,7 @@ validatePoolRewardAccountNetID ::
   (HasField "_protocolVersion" pp ProtVer) =>
   pp ->
   Bool
-validatePoolRewardAccountNetID pp = pvMajor (getField @"_protocolVersion" pp) > 4
+validatePoolRewardAccountNetID pp = pvMajor (getField @"_protocolVersion" pp) > natVersion @4
 
 -- | Starting with protocol version 5, Stake Credentials bound by scripts
 -- will be eligibile for staking rewards.
@@ -50,7 +50,7 @@ allowScriptStakeCredsToEarnRewards ::
   (HasField "_protocolVersion" pp ProtVer) =>
   pp ->
   Bool
-allowScriptStakeCredsToEarnRewards pp = pvMajor (getField @"_protocolVersion" pp) > 4
+allowScriptStakeCredsToEarnRewards pp = pvMajor (getField @"_protocolVersion" pp) > natVersion @4
 
 -- | Starting with protocol version 6, we translate slots to time correctly for
 -- Plutus scripts.
@@ -58,7 +58,7 @@ translateTimeForPlutusScripts ::
   (HasField "_protocolVersion" pp ProtVer) =>
   pp ->
   Bool
-translateTimeForPlutusScripts pp = pvMajor (getField @"_protocolVersion" pp) > 5
+translateTimeForPlutusScripts pp = pvMajor (getField @"_protocolVersion" pp) > natVersion @5
 
 -- | Starting with protocol version 7, the UTXO rule predicate failure
 -- MissingScriptWitnessesUTXOW will not be used for extraneous scripts
@@ -66,7 +66,7 @@ missingScriptsSymmetricDifference ::
   (HasField "_protocolVersion" pp ProtVer) =>
   pp ->
   Bool
-missingScriptsSymmetricDifference pp = pvMajor (getField @"_protocolVersion" pp) > 6
+missingScriptsSymmetricDifference pp = pvMajor (getField @"_protocolVersion" pp) > natVersion @6
 
 -- | Starting with protocol version 7, the reward calculation no longer
 -- filters out unregistered stake addresses at the moment the calculation begins.
@@ -75,7 +75,7 @@ forgoRewardPrefilter ::
   (HasField "_protocolVersion" pp ProtVer) =>
   pp ->
   Bool
-forgoRewardPrefilter pp = pvMajor (getField @"_protocolVersion" pp) > 6
+forgoRewardPrefilter pp = pvMajor (getField @"_protocolVersion" pp) > natVersion @6
 
 -- | In versions 5 and 6, we allow the ttl field to lie outside the stability
 -- window.
@@ -85,4 +85,4 @@ allowOutsideForecastTTL ::
   Bool
 allowOutsideForecastTTL pp =
   let mv = pvMajor (getField @"_protocolVersion" pp)
-   in mv == 5 || mv == 6
+   in mv == natVersion @5 || mv == natVersion @6

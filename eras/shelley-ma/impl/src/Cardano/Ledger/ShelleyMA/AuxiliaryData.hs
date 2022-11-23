@@ -23,9 +23,10 @@ module Cardano.Ledger.ShelleyMA.AuxiliaryData
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..), peekTokenType)
 import Cardano.Crypto.Hash (HashAlgorithm)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
+import Cardano.Ledger.Binary (Annotator (..), FromCBOR (..), ToCBOR (..), peekTokenType)
+import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
   ( Era (..),
     EraTxAuxData (hashTxAuxData, validateTxAuxData),
@@ -37,7 +38,6 @@ import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Hashes (EraIndependentTxAuxData)
 import Cardano.Ledger.MemoBytes (Mem, MemoBytes (..), MemoHashIndex, memoBytes)
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash, hashAnnotated)
-import Cardano.Ledger.Serialization (mapFromCBOR, mapToCBOR)
 import Cardano.Ledger.Shelley.Metadata (Metadatum, validMetadatum)
 import Cardano.Ledger.ShelleyMA.Era
 import Cardano.Ledger.ShelleyMA.Timelocks ()
@@ -52,7 +52,6 @@ import Codec.CBOR.Decoding
       ),
   )
 import Control.DeepSeq
-import Data.Coders
 import Data.Map.Strict (Map)
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -145,9 +144,7 @@ encAuxiliaryDataRaw ::
   AuxiliaryDataRaw era ->
   Encode ('Closed 'Dense) (AuxiliaryDataRaw era)
 encAuxiliaryDataRaw (AuxiliaryDataRaw blob sp) =
-  Rec AuxiliaryDataRaw
-    !> E mapToCBOR blob
-    !> E encodeFoldable sp
+  Rec AuxiliaryDataRaw !> To blob !> To sp
 
 instance
   (Era era, FromCBOR (Annotator (Script era))) =>
@@ -166,14 +163,14 @@ instance
       decodeFromMap =
         decode
           ( Ann (Emit AuxiliaryDataRaw)
-              <*! Ann (D mapFromCBOR)
+              <*! Ann From
               <*! Ann (Emit StrictSeq.empty)
           )
       decodeFromList =
         decode
           ( Ann (RecD AuxiliaryDataRaw)
-              <*! Ann (D mapFromCBOR)
-              <*! D (sequence <$> decodeStrictSeq fromCBOR)
+              <*! Ann From
+              <*! D (sequence <$> fromCBOR)
           )
 
 deriving via

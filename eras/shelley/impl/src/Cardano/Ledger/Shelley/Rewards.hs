@@ -25,10 +25,6 @@ module Cardano.Ledger.Shelley.Rewards
   )
 where
 
-import Cardano.Binary
-  ( FromCBOR (..),
-    ToCBOR (..),
-  )
 import Cardano.Ledger.BaseTypes
   ( BlocksMade (..),
     BoundedRational (..),
@@ -36,6 +32,11 @@ import Cardano.Ledger.BaseTypes
     ProtVer,
     UnitInterval,
   )
+import Cardano.Ledger.Binary
+  ( FromCBOR (..),
+    ToCBOR (..),
+  )
+import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin
   ( Coin (..),
     coinToRational,
@@ -53,7 +54,6 @@ import Cardano.Ledger.Shelley.TxBody (PoolParams (..))
 import Cardano.Ledger.Val ((<->))
 import Control.DeepSeq (NFData)
 import Control.Monad (guard)
-import Data.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Data.Foldable (fold, foldMap')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map

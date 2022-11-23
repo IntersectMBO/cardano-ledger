@@ -13,10 +13,10 @@ module Test.Cardano.Ledger.ShelleyMA.Serialisation.Golden.Encoding (goldenEncodi
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (EraCrypto (..), EraScript (hashScript), PParamsUpdate, hashTxAuxData)
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), hashKey)
+import Cardano.Ledger.Mary (Mary)
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import qualified Cardano.Ledger.Shelley.Metadata as SMD
 import Cardano.Ledger.Shelley.PParams
@@ -47,6 +47,7 @@ import qualified Data.ByteString.Short as SBS
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import Test.Cardano.Ledger.Binary.RoundTrip (roundTripFailureExpectation)
 import Test.Cardano.Ledger.EraBuffet (AllegraEra, MaryEra, TestCrypto)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Serialisation.GoldenUtils
@@ -55,7 +56,6 @@ import Test.Cardano.Ledger.Shelley.Serialisation.GoldenUtils
     checkEncodingCBORAnnotated,
   )
 import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkGenKey, mkKeyPair)
-import Test.Cardano.Ledger.TranslationTools (expectDecodeFailure)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase)
 
@@ -149,6 +149,7 @@ scriptGoldenTest =
   let kh0 = hashKey . snd . mkGenKey $ RawSeed 0 0 0 0 0 :: KeyHash 'Witness (EraCrypto era)
       kh1 = hashKey . snd . mkGenKey $ RawSeed 1 1 1 1 1 :: KeyHash 'Witness (EraCrypto era)
    in checkEncodingCBORAnnotated
+        (eraProtVerHigh @era)
         "timelock_script"
         ( RequireAllOf @era
             ( StrictSeq.fromList
@@ -185,9 +186,10 @@ scriptGoldenTest =
               )
         )
 
-metadataNoScriptsGoldenTest :: forall era. (Era era, Core.Script era ~ Timelock era) => TestTree
+metadataNoScriptsGoldenTest :: forall era. (Era era, Script era ~ Timelock era) => TestTree
 metadataNoScriptsGoldenTest =
   checkEncodingCBORAnnotated
+    (eraProtVerHigh @era)
     "metadata_no_scripts"
     (AllegraTxAuxData @era (Map.singleton 17 (SMD.I 42)) StrictSeq.empty)
     ( T
@@ -200,9 +202,10 @@ metadataNoScriptsGoldenTest =
     )
 
 -- CONTINUE also Scripts
-metadataWithScriptsGoldenTest :: forall era. (Era era, Core.Script era ~ Timelock era) => TestTree
+metadataWithScriptsGoldenTest :: forall era. (Era era, Script era ~ Timelock era) => TestTree
 metadataWithScriptsGoldenTest =
   checkEncodingCBORAnnotated
+    (eraProtVerHigh @era)
     "metadata_with_scripts"
     ( AllegraTxAuxData @era
         (Map.singleton 17 (SMD.I 42))
@@ -224,6 +227,7 @@ goldenEncodingTestsAllegra =
   testGroup
     "Allegra"
     [ checkEncodingCBOR
+        (eraProtVerHigh @Mary)
         "value"
         (Val.inject (Coin 1) :: MaryValue TestCrypto)
         (T (TkInteger 1)),
@@ -234,6 +238,7 @@ goldenEncodingTestsAllegra =
       let tin = mkTxInPartial genesisId 1
           tout = ShelleyTxOut @A testAddrE (Coin 2)
        in checkEncodingCBORAnnotated
+            (eraProtVerHigh @Mary)
             "minimal_txbody"
             ( MATxBody
                 (Set.fromList [tin])
@@ -264,6 +269,7 @@ goldenEncodingTestsAllegra =
           up = testUpdate
           mdh = hashTxAuxData @A $ AllegraTxAuxData Map.empty StrictSeq.empty
        in checkEncodingCBORAnnotated
+            (eraProtVerHigh @Mary)
             "full_txn_body"
             ( MATxBody
                 (Set.fromList [tin])
@@ -307,10 +313,12 @@ goldenEncodingTestsMary =
   testGroup
     "Mary"
     [ checkEncodingCBOR
+        (eraProtVerHigh @Mary)
         "ada_only_value"
         (Val.inject (Coin 1) :: MaryValue TestCrypto)
         (T (TkInteger 1)),
       checkEncodingCBOR
+        (eraProtVerHigh @Mary)
         "not_just_ada_value"
         ( MaryValue @TestCrypto 2 $
             MultiAsset $
@@ -347,6 +355,7 @@ goldenEncodingTestsMary =
               )
         ),
       checkEncodingCBOR
+        (eraProtVerHigh @Mary)
         "value_with_negative"
         (MaryValue 0 $ MultiAsset $ Map.singleton policyID1 (Map.singleton (AssetName assetName1) (-19)))
         ( T
@@ -368,6 +377,7 @@ goldenEncodingTestsMary =
       let tin = mkTxInPartial genesisId 1
           tout = ShelleyTxOut @M testAddrE (Val.inject $ Coin 2)
        in checkEncodingCBORAnnotated
+            (eraProtVerHigh @Mary)
             "minimal_txbody"
             ( MATxBody
                 (Set.fromList [tin])
@@ -399,6 +409,7 @@ goldenEncodingTestsMary =
           mdh = hashTxAuxData @A $ AllegraTxAuxData Map.empty StrictSeq.empty
           mint = Map.singleton policyID1 $ Map.singleton (AssetName assetName1) 13
        in checkEncodingCBORAnnotated
+            (eraProtVerHigh @Mary)
             "full_txn_body"
             ( MATxBody
                 (Set.fromList [tin])
@@ -439,7 +450,9 @@ goldenEncodingTestsMary =
     ]
 
 assetName32Bytes :: Assertion
-assetName32Bytes = expectDecodeFailure $ AssetName "123456789-123456789-123456789-123"
+assetName32Bytes =
+  roundTripFailureExpectation (eraProtVerHigh @Mary) $
+    AssetName "123456789-123456789-123456789-123"
 
 -- | Golden Tests for Allegra and Mary
 goldenEncodingTests :: TestTree

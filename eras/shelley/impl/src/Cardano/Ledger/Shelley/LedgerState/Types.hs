@@ -19,15 +19,21 @@
 
 module Cardano.Ledger.Shelley.LedgerState.Types where
 
-import Cardano.Binary
-  ( FromCBOR (..),
-    ToCBOR (..),
-    encodeListLen,
-  )
 import Cardano.Ledger.BaseTypes
   ( BlocksMade (..),
     StrictMaybe (..),
   )
+import Cardano.Ledger.Binary
+  ( FromCBOR (fromCBOR),
+    FromSharedCBOR (Share, fromSharedCBOR, fromSharedPlusCBOR),
+    Interns,
+    ToCBOR (toCBOR),
+    decodeRecordNamed,
+    decodeRecordNamedT,
+    encodeListLen,
+    fromSharedLensCBOR,
+  )
+import Cardano.Ledger.Binary.Coders (Decode (From, RecD), decode, (<!))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), Ptr (..))
@@ -42,7 +48,6 @@ import Cardano.Ledger.Keys
   )
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.SafeHash (HashAnnotated)
-import Cardano.Ledger.Serialization (decodeRecordNamedT, mapFromCBOR, mapToCBOR)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState.DPState (DPState)
 import Cardano.Ledger.Shelley.PoolRank
@@ -57,17 +62,10 @@ import Control.DeepSeq (NFData)
 import Control.Monad.State.Strict (evalStateT)
 import Control.Monad.Trans (MonadTrans (lift))
 import Control.State.Transition (STS (State))
-import Data.Coders
-  ( Decode (From, RecD),
-    decode,
-    decodeRecordNamed,
-    (<!),
-  )
 import Data.Default.Class (Default, def)
 import Data.Group (Group, invert)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Sharing
 import GHC.Generics (Generic)
 import Lens.Micro (_1, _2)
 import NoThunks.Class (NoThunks (..))
@@ -217,14 +215,14 @@ data IncrementalStake c = IStake
 
 instance CC.Crypto c => ToCBOR (IncrementalStake c) where
   toCBOR (IStake st dangle) =
-    encodeListLen 2 <> mapToCBOR st <> mapToCBOR dangle
+    encodeListLen 2 <> toCBOR st <> toCBOR dangle
 
 instance CC.Crypto c => FromSharedCBOR (IncrementalStake c) where
   type Share (IncrementalStake c) = Interns (Credential 'Staking c)
   fromSharedCBOR credInterns =
     decodeRecordNamed "Stake" (const 2) $ do
       stake <- fromSharedCBOR (credInterns, mempty)
-      IStake stake <$> mapFromCBOR
+      IStake stake <$> fromCBOR
 
 instance Semigroup (IncrementalStake c) where
   (IStake a b) <> (IStake c d) = IStake (Map.unionWith (<>) a c) (Map.unionWith (<>) b d)

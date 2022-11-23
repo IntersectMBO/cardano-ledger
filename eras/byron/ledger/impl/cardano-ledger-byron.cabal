@@ -1,4 +1,4 @@
-cabal-version: 2.2
+cabal-version: 3.0
 
 name:                cardano-ledger-byron
 version:             0.1.0.0
@@ -247,9 +247,9 @@ library
                      , binary
                      , bytestring
                      , canonical-json
-                     , cardano-binary
                      , cardano-crypto
                      , cardano-crypto-wrapper
+                     , cardano-ledger-binary
                      , cardano-prelude
                      , cborg
                      , containers
@@ -352,12 +352,12 @@ test-suite cardano-ledger-byron-test
   build-depends:       base16-bytestring >= 1
                      , bimap >=0.4 && <0.5
                      , bytestring
-                     , cardano-binary
-                     , cardano-binary-test
-                     , cardano-ledger-byron
                      , cardano-crypto
                      , cardano-crypto-test
                      , cardano-crypto-wrapper
+                     , cardano-ledger-binary
+                     , cardano-ledger-binary:testlib
+                     , cardano-ledger-byron
                      , cardano-prelude
                      , cardano-prelude-test
                      , containers
@@ -399,8 +399,8 @@ test-suite epoch-validation-normal-form-test
                        Test.Options
 
   build-depends:       bytestring
-                     , cardano-binary
                      , cardano-ledger
+                     , cardano-ledger-binary
                      , cardano-crypto-wrapper
                      , cardano-prelude
                      , cardano-prelude-test

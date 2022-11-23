@@ -11,7 +11,7 @@ The cryptographic primitives used in Cardano
 
 * Cryptographic signing and signature checking.
 
-* `To/FromCBOR` (see the `cardano-binary` package) instances for the
+* `To/FromCBOR` (see the `cardano-ledger-binary` package) instances for the
   cryptographic data types.
 
 [cryptonite]: https://hackage.haskell.org/package/cryptonite

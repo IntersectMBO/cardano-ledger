@@ -10,12 +10,12 @@
 
 module Cardano.Ledger.Alonzo.Translation where
 
-import Cardano.Binary (DecoderError)
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..), extendPPWithGenesis)
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParams, AlonzoPParamsUpdate, extendPP)
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
+import Cardano.Ledger.Binary (DecoderError)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era
@@ -25,7 +25,6 @@ import Cardano.Ledger.Era
     translateEra',
   )
 import Cardano.Ledger.Mary (MaryEra)
-import Cardano.Ledger.Serialization (translateViaCBORAnn)
 import Cardano.Ledger.Shelley.API
   ( EpochState (..),
     NewEpochState (..),
@@ -104,14 +103,14 @@ instance
     -- Note that this does not preserve the hidden bytes field of the transaction.
     -- This is under the premise that this is irrelevant for TxInBlocks, which are
     -- not transmitted as contiguous chunks.
-    bdy <- translateViaCBORAnn "txbody" $ LTX.body tx
-    txwits <- translateViaCBORAnn "txwitness" $ LTX.wits tx
+    txBody <- Core.translateEraThroughCBOR "TxBody" $ LTX.body tx
+    txWits <- Core.translateEraThroughCBOR "TxWits" $ LTX.wits tx
     -- transactions from Mary era always pass script ("phase 2") validation
-    aux <- case LTX.auxiliaryData tx of
+    auxData <- case LTX.auxiliaryData tx of
       SNothing -> pure SNothing
-      SJust axd -> SJust <$> translateViaCBORAnn "auxiliarydata" axd
+      SJust auxData -> SJust <$> Core.translateEraThroughCBOR "AuxData" auxData
     let validating = IsValid True
-    pure $ Tx $ AlonzoTx bdy txwits validating aux
+    pure $ Tx $ AlonzoTx txBody txWits validating auxData
 
 --------------------------------------------------------------------------------
 -- Auxiliary instances and functions

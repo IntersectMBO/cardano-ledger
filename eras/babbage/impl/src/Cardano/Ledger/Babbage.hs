@@ -48,10 +48,10 @@ import Cardano.Ledger.Babbage.TxBody
   )
 import Cardano.Ledger.Babbage.TxInfo (babbageTxInfo)
 import Cardano.Ledger.Babbage.UTxO ()
+import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys (DSignable, Hash)
-import Cardano.Ledger.Serialization (sizedValue)
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.UTxO (UTxO (..))
 import Data.Foldable (toList)

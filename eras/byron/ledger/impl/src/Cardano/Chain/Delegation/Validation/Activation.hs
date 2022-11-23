@@ -10,11 +10,11 @@ module Cardano.Chain.Delegation.Validation.Activation
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
 import Cardano.Chain.Common (KeyHash)
 import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Delegation.Validation.Scheduling (ScheduledDelegation (..))
 import Cardano.Chain.Slotting (SlotNumber (..))
+import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
 import Cardano.Prelude hiding (State)
 import qualified Data.Map.Strict as M
 import NoThunks.Class (NoThunks (..))

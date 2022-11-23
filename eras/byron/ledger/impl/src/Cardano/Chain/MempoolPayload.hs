@@ -10,21 +10,22 @@ module Cardano.Chain.MempoolPayload
   )
 where
 
-import Cardano.Binary
+import qualified Cardano.Chain.Delegation as Delegation
+import Cardano.Chain.UTxO (ATxAux)
+import qualified Cardano.Chain.Update as Update
+import Cardano.Ledger.Binary
   ( ByteSpan,
     DecoderError (..),
     FromCBOR (..),
     ToCBOR (..),
+    cborError,
     decodeWord8,
     encodeListLen,
     encodePreEncoded,
     enforceSize,
     recoverBytes,
   )
-import qualified Cardano.Chain.Delegation as Delegation
-import Cardano.Chain.UTxO (ATxAux)
-import qualified Cardano.Chain.Update as Update
-import Cardano.Prelude
+import Cardano.Prelude hiding (cborError)
 
 -- | A payload which can be submitted into or between mempools via the
 -- transaction submission protocol.

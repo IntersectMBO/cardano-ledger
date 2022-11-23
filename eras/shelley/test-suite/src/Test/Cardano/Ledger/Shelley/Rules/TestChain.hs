@@ -33,7 +33,7 @@ module Test.Cardano.Ledger.Shelley.Rules.TestChain
 where
 
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.BaseTypes (Globals, ProtVer, StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (Globals, StrictMaybe (..))
 import Cardano.Ledger.Block
   ( Block (..),
     bbody,
@@ -316,7 +316,6 @@ checkPreservation ::
   forall era.
   ( EraSegWits era,
     ShelleyEraTxBody era,
-    HasField "_protocolVersion" (PParams era) ProtVer,
     HasField "_keyDeposit" (PParams era) Coin,
     HasField "_poolDeposit" (PParams era) Coin,
     State (EraRule "PPUP" era) ~ PPUPState era

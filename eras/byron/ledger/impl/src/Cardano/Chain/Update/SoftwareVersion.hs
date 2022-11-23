@@ -5,7 +5,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Cardano.Chain.Update.SoftwareVersion
   ( SoftwareVersion (..),
@@ -15,16 +14,17 @@ module Cardano.Chain.Update.SoftwareVersion
   )
 where
 
-import Cardano.Binary
+import Cardano.Chain.Update.ApplicationName
+import Cardano.Ledger.Binary
   ( DecoderError (..),
     FromCBOR (..),
     ToCBOR (..),
+    cborError,
     decodeWord8,
     encodeListLen,
     enforceSize,
   )
-import Cardano.Chain.Update.ApplicationName
-import Cardano.Prelude
+import Cardano.Prelude hiding (cborError)
 import Data.Aeson (ToJSON)
 import Data.Data (Data)
 import Formatting (bprint, build, formatToString, int, stext)

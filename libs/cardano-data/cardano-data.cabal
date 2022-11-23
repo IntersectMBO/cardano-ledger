@@ -33,34 +33,22 @@ library
   import:             base, project-config
 
   exposed-modules:     Data.CanonicalMaps
-                     , Data.Coders
                      , Data.Pulse
-                     , Data.Sharing
                      , Data.MapExtras
-                     , Data.Roundtrip
                      , Data.UMap
                      , Data.ListMap
-                     , Data.Twiddle
 
   build-depends:       aeson
                      , base >=4.11 && <5
-                     , bytestring
-                     , cborg
+                     , cardano-ledger-binary
+                     , cardano-strict-containers
                      , containers
                      , vector-map
                      , deepseq
-                     , formatting
                      , mtl
-                     , microlens
                      , nothunks
-                     , primitive
-                     , cardano-strict-containers
-                     , text
                      , transformers >= 0.5
                      , vector
-                     , QuickCheck
-                     -- IOHK deps
-                     , cardano-binary
   hs-source-dirs:      src
 
 
@@ -70,21 +58,14 @@ test-suite cardano-data-tests
   hs-source-dirs:      test
   main-is:             Main.hs
   other-modules:       Test.Data.UMap
-                     , Test.Data.Coders
                      , Test.Data.MapExtras
 
   type:                exitcode-stdio-1.0
   default-language:    Haskell2010
   build-depends:       base
-                     , bytestring
-                     , cardano-binary
-                     , cborg
                      , containers
-                     , cardano-strict-containers
                      , tasty
                      , tasty-quickcheck
-                     , tasty-hunit
-                     , text
                      , cardano-data
                      , QuickCheck
   ghc-options:        -threaded

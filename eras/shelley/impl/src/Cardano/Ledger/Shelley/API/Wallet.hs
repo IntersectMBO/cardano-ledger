@@ -46,16 +46,7 @@ module Cardano.Ledger.Shelley.API.Wallet
   )
 where
 
-import Cardano.Binary
-  ( FromCBOR (..),
-    ToCBOR (..),
-    decodeDouble,
-    decodeFull,
-    decodeFullDecoder,
-    encodeDouble,
-    serialize,
-  )
-import Cardano.Crypto.DSIGN.Class (decodeSignedDSIGN, sizeSigDSIGN, sizeVerKeyDSIGN)
+import Cardano.Crypto.DSIGN.Class (sizeSigDSIGN, sizeVerKeyDSIGN)
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes
   ( BlocksMade,
@@ -65,6 +56,24 @@ import Cardano.Ledger.BaseTypes
     UnitInterval,
     epochInfoPure,
   )
+import Cardano.Ledger.Binary
+  ( FromCBOR (..),
+    ToCBOR (..),
+    decodeDouble,
+    decodeFull,
+    decodeFullDecoder,
+    encodeDouble,
+    serialize,
+  )
+import Cardano.Ledger.Binary.Coders
+  ( Decode (..),
+    Encode (..),
+    decode,
+    encode,
+    (!>),
+    (<!),
+  )
+import Cardano.Ledger.Binary.Crypto (decodeSignedDSIGN)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.CompactAddress (compactAddr)
 import Cardano.Ledger.Compactible (fromCompact)
@@ -116,14 +125,6 @@ import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (runReader)
 import Data.Aeson (FromJSON, ToJSON)
 import qualified Data.ByteString.Lazy as LBS
-import Data.Coders
-  ( Decode (..),
-    Encode (..),
-    decode,
-    encode,
-    (!>),
-    (<!),
-  )
 import Data.Default.Class (Default (def))
 import Data.Either (fromRight)
 import Data.Foldable (foldMap')
@@ -487,18 +488,24 @@ evaluateTransactionFee ::
   Coin
 evaluateTransactionFee pp tx numKeyWits = getMinFeeTx pp tx'
   where
+    version = eraProtVerLow @era
     sigSize = fromIntegral $ sizeSigDSIGN (Proxy @(DSIGN (EraCrypto era)))
     dummySig =
       fromRight
         (error "corrupt dummy signature")
-        (decodeFullDecoder "dummy signature" decodeSignedDSIGN (serialize $ LBS.replicate sigSize 0))
+        ( decodeFullDecoder
+            version
+            "dummy signature"
+            decodeSignedDSIGN
+            (serialize version $ LBS.replicate sigSize 0)
+        )
     vkeySize = fromIntegral $ sizeVerKeyDSIGN (Proxy @(DSIGN (EraCrypto era)))
     dummyVKey w =
       let padding = LBS.replicate paddingSize 0
           paddingSize = vkeySize - LBS.length sw
-          sw = serialize w
-          keyBytes = serialize $ padding <> sw
-       in fromRight (error "corrupt dummy vkey") (decodeFull keyBytes)
+          sw = serialize version w
+          keyBytes = serialize version $ padding <> sw
+       in fromRight (error "corrupt dummy vkey") (decodeFull version keyBytes)
     dummyKeyWits = Set.fromList [WitVKey (dummyVKey x) dummySig | x <- [1 .. numKeyWits]]
     tx' = addKeyWitnesses tx dummyKeyWits
 

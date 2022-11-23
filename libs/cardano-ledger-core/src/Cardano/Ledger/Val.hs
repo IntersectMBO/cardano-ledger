@@ -19,7 +19,7 @@ module Cardano.Ledger.Val
   )
 where
 
-import Cardano.Binary (Decoder, Encoding, decodeWord64, toCBOR)
+import Cardano.Ledger.Binary (Decoder, Encoding, decodeWord64, toCBOR)
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Data.Coerce

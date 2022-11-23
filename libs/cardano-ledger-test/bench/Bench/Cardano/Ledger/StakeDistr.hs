@@ -18,15 +18,14 @@ module Bench.Cardano.Ledger.StakeDistr
   )
 where
 
-import Cardano.Binary (FromCBOR (..), decodeFullDecoder)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
 import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals (..), pvMajor)
+import Cardano.Ledger.Binary (FromCBOR (..), decodeFullDecoder)
 import Cardano.Ledger.Coin (DeltaCoin (..))
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.EpochBoundary (SnapShot (..), SnapShots (..))
-import Cardano.Ledger.Era (EraCrypto)
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.Shelley.Genesis (ShelleyGenesis (..), mkShelleyGlobals)
 import Cardano.Ledger.Shelley.LedgerState
@@ -102,9 +101,9 @@ readNewEpochState = do
     Just ledgerStateFilePath -> do
       lazyBytes <- Lazy.readFile ledgerStateFilePath
       let lbl = "NewEpochState from " <> pack ledgerStateFilePath
-      case decodeFullDecoder @(NewEpochState CurrentEra) lbl fromCBOR lazyBytes of
+      case decodeFullDecoder (eraProtVerHigh @CurrentEra) lbl fromCBOR lazyBytes of
         Left err -> error (show err)
-        Right nes -> pure nes
+        Right (nes :: NewEpochState CurrentEra) -> pure nes
     Nothing ->
       bogusNewEpochState <$ do
         putStrLn $
@@ -124,7 +123,7 @@ bogusNewEpochState =
     (PoolDistr Map.empty)
     def
 
-mkGlobals :: ShelleyGenesis CurrentEra -> Core.PParams CurrentEra -> Globals
+mkGlobals :: ShelleyGenesis CurrentEra -> PParams CurrentEra -> Globals
 mkGlobals genesis pp =
   mkShelleyGlobals genesis epochInfoE majorPParamsVer
   where

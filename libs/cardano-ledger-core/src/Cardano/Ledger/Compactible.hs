@@ -9,7 +9,7 @@ module Cardano.Ledger.Compactible
   )
 where
 
-import Cardano.Binary (ToCBOR)
+import Cardano.Ledger.Binary.Encoding (ToCBOR)
 import Data.Kind (Type)
 
 --------------------------------------------------------------------------------

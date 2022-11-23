@@ -9,6 +9,7 @@
 module Cardano.Ledger.State.Query where
 
 import Cardano.Ledger.Alonzo.TxBody as Alonzo
+import Cardano.Ledger.Binary
 import qualified Cardano.Ledger.Credential as Credential
 import qualified Cardano.Ledger.EpochBoundary as EpochBoundary
 import qualified Cardano.Ledger.Keys as Keys
@@ -29,7 +30,6 @@ import Data.Conduit.List (sourceList)
 import Data.Functor
 import qualified Data.IntMap.Strict as IntMap
 import qualified Data.Map.Strict as Map
-import Data.Sharing
 import qualified Data.Text as T
 import Data.UMap (delView, ptrView, rewView, unify)
 import qualified Data.VMap as VMap

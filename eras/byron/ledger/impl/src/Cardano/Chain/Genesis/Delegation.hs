@@ -17,12 +17,12 @@ module Cardano.Chain.Genesis.Delegation
   )
 where
 
-import Cardano.Binary
 import Cardano.Chain.Common (KeyHash, hashKey)
 import Cardano.Chain.Delegation.Certificate
   ( ACertificate (delegateVK, issuerVK),
     Certificate,
   )
+import Cardano.Ledger.Binary
 import Cardano.Prelude
 import Data.List (nub)
 import qualified Data.Map.Strict as M

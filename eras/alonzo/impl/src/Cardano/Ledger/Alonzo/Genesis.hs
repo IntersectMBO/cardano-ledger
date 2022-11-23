@@ -17,7 +17,6 @@ module Cardano.Ledger.Alonzo.Genesis
   )
 where
 
-import Cardano.Binary
 import Cardano.Crypto.Hash.Class (hashToTextAsHex)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams
@@ -32,6 +31,8 @@ import Cardano.Ledger.Alonzo.Scripts
   )
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (AlonzoTxOut))
 import qualified Cardano.Ledger.BaseTypes as BT
+import Cardano.Ledger.Binary
+import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.SafeHash (extractHash)
@@ -39,7 +40,6 @@ import Cardano.Ledger.Shelley.PParams (ShelleyPParams)
 import Data.Aeson (Array, FromJSON (..), Object, ToJSON (..), object, (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (FromJSONKey (..), Parser, ToJSONKey (..), toJSONKeyText)
-import Data.Coders
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe, maybeToList)

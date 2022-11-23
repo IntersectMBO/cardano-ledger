@@ -10,7 +10,13 @@ module Cardano.Chain.Block.Boundary
   )
 where
 
-import Cardano.Binary
+import Cardano.Chain.Common
+  ( ChainDifficulty,
+    attrData,
+    dropAttributes,
+    fromCBORAttributes,
+  )
+import Cardano.Ledger.Binary
   ( Decoder,
     Dropper,
     decodeWord64,
@@ -18,12 +24,6 @@ import Cardano.Binary
     dropList,
     enforceSize,
     fromCBOR,
-  )
-import Cardano.Chain.Common
-  ( ChainDifficulty,
-    attrData,
-    dropAttributes,
-    fromCBORAttributes,
   )
 import Cardano.Prelude
 

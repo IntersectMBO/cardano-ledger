@@ -5,8 +5,8 @@ module Cardano.Chain.Common.AddressHash
   )
 where
 
-import Cardano.Binary (ToCBOR, serialize)
 import Cardano.Crypto.Hashing (AbstractHash, abstractHashFromDigest)
+import Cardano.Ledger.Binary (ToCBOR, byronProtVer, serialize)
 import Cardano.Prelude
 import Crypto.Hash (Blake2b_224, Digest, SHA3_256)
 import qualified Crypto.Hash as CryptoHash
@@ -18,7 +18,7 @@ unsafeAddressHash :: ToCBOR a => a -> AddressHash b
 unsafeAddressHash = abstractHashFromDigest . secondHash . firstHash
   where
     firstHash :: ToCBOR a => a -> Digest SHA3_256
-    firstHash = CryptoHash.hashlazy . serialize
+    firstHash = CryptoHash.hashlazy . serialize byronProtVer
     secondHash :: Digest SHA3_256 -> Digest Blake2b_224
     secondHash = CryptoHash.hash
 

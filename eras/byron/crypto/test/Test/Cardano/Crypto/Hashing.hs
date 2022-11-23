@@ -6,8 +6,8 @@ module Test.Cardano.Crypto.Hashing
   )
 where
 
-import Cardano.Binary (ToCBOR)
 import Cardano.Crypto (decodeAbstractHash, hashHexF, serializeCborHash)
+import Cardano.Ledger.Binary (ToCBOR)
 import Cardano.Prelude
 import Formatting (sformat)
 import Hedgehog

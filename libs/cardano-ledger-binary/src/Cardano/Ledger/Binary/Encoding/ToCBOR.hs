@@ -37,6 +37,17 @@ module Cardano.Ledger.Binary.Encoding.ToCBOR
     szSimplify,
     apMono,
     szBounds,
+
+    -- ** Crypto
+    encodedVerKeyDSIGNSizeExpr,
+    encodedSignKeyDSIGNSizeExpr,
+    encodedSigDSIGNSizeExpr,
+    encodedVerKeyKESSizeExpr,
+    encodedSignKeyKESSizeExpr,
+    encodedSigKESSizeExpr,
+    encodedVerKeyVRFSizeExpr,
+    encodedSignKeyVRFSizeExpr,
+    encodedCertVRFSizeExpr,
   )
 where
 
@@ -79,10 +90,13 @@ import Cardano.Crypto.KES.Single (SingleKES)
 import Cardano.Crypto.KES.Sum (SumKES)
 import Cardano.Crypto.VRF.Class
   ( CertVRF,
+    CertifiedVRF (..),
+    OutputVRF (..),
     SignKeyVRF,
     VRFAlgorithm,
     VerKeyVRF,
     sizeCertVRF,
+    sizeOutputVRF,
     sizeSignKeyVRF,
     sizeVerKeyVRF,
   )
@@ -91,9 +105,15 @@ import qualified Cardano.Crypto.VRF.Praos as Praos
 import Cardano.Crypto.VRF.Simple (SimpleVRF)
 import Cardano.Ledger.Binary.Crypto
 import Cardano.Ledger.Binary.Encoding.Encoder
+import Cardano.Ledger.Binary.Version (Version, getVersion64)
+import Cardano.Slotting.Block (BlockNo (..))
+import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..), SlotNo (..), WithOrigin (..))
+import Cardano.Slotting.Time (SystemStart (..))
 import Codec.CBOR.ByteArray (ByteArray (..))
 import Codec.CBOR.ByteArray.Sliced (SlicedByteArray (SBA), fromByteArray)
+import qualified Codec.CBOR.Encoding as C (Encoding (..))
 import Codec.CBOR.Term (Term (..))
+import Codec.Serialise as Serialise (Serialise (encode))
 import Control.Category (Category ((.)))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BS.Lazy
@@ -107,7 +127,7 @@ import Data.Functor.Foldable (cata, project)
 import Data.IP (IPv4, IPv6)
 import Data.Int (Int16, Int32, Int64, Int8)
 import Data.List.NonEmpty (NonEmpty)
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import qualified Data.Maybe.Strict as SMaybe
 import qualified Data.Primitive.ByteArray as Prim (ByteArray (..))
 import Data.Ratio (Ratio)
@@ -169,6 +189,10 @@ newtype PreEncoded = PreEncoded {unPreEncoded :: BS.ByteString}
 
 instance ToCBOR PreEncoded where
   toCBOR = encodePreEncoded . unPreEncoded
+
+instance ToCBOR Version where
+  toCBOR = encodeVersion
+  encodedSizeExpr f px = f (getVersion64 <$> px)
 
 --------------------------------------------------------------------------------
 -- Size expressions
@@ -566,17 +590,27 @@ instance ToCBOR Natural where
 instance ToCBOR Void where
   toCBOR = absurd
 
+instance ToCBOR IPv4 where
+  toCBOR = encodeIPv4
+
+instance ToCBOR IPv6 where
+  toCBOR = encodeIPv6
+
+--------------------------------------------------------------------------------
+-- CBOR
+--------------------------------------------------------------------------------
+
 instance ToCBOR Term where
   toCBOR = encodeTerm
 
 instance ToCBOR Encoding where
   toCBOR = id
 
-instance ToCBOR IPv4 where
-  toCBOR = encodeIPv4
+instance ToCBOR C.Encoding where
+  toCBOR = fromPlainEncoding
 
-instance ToCBOR IPv6 where
-  toCBOR = encodeIPv6
+instance ToCBOR (Tokens -> Tokens) where
+  toCBOR t = fromPlainEncoding (C.Encoding t)
 
 --------------------------------------------------------------------------------
 -- Tagged
@@ -628,6 +662,28 @@ instance
       + size (Proxy @c)
       + size (Proxy @d)
       + size (Proxy @e)
+
+instance
+  (ToCBOR a, ToCBOR b, ToCBOR c, ToCBOR d, ToCBOR e, ToCBOR f) =>
+  ToCBOR (a, b, c, d, e, f)
+  where
+  toCBOR (a, b, c, d, e, f) =
+    encodeListLen 6
+      <> toCBOR a
+      <> toCBOR b
+      <> toCBOR c
+      <> toCBOR d
+      <> toCBOR e
+      <> toCBOR f
+
+  encodedSizeExpr size _ =
+    1
+      + size (Proxy @a)
+      + size (Proxy @b)
+      + size (Proxy @c)
+      + size (Proxy @d)
+      + size (Proxy @e)
+      + size (Proxy @f)
 
 instance
   (ToCBOR a, ToCBOR b, ToCBOR c, ToCBOR d, ToCBOR e, ToCBOR f, ToCBOR g) =>
@@ -725,10 +781,10 @@ instance (Ord k, ToCBOR k, ToCBOR v) => ToCBOR (Map.Map k v) where
 instance (Ord a, ToCBOR a) => ToCBOR (Set.Set a) where
   toCBOR = encodeSet toCBOR
 
-instance (Ord a, ToCBOR a) => ToCBOR (Seq.Seq a) where
+instance ToCBOR a => ToCBOR (Seq.Seq a) where
   toCBOR = encodeSeq toCBOR
 
-instance (Ord a, ToCBOR a) => ToCBOR (SSeq.StrictSeq a) where
+instance ToCBOR a => ToCBOR (SSeq.StrictSeq a) where
   toCBOR = toCBOR . SSeq.fromStrict
 
 instance
@@ -1066,6 +1122,23 @@ instance ToCBOR (CertVRF MockVRF) where
   toCBOR = encodeCertVRF
   encodedSizeExpr _size = encodedCertVRFSizeExpr
 
+deriving instance Typeable v => ToCBOR (OutputVRF v)
+
+instance (VRFAlgorithm v, Typeable a) => ToCBOR (CertifiedVRF v a) where
+  toCBOR cvrf =
+    encodeListLen 2
+      <> toCBOR (certifiedOutput cvrf)
+      <> encodeCertVRF (certifiedProof cvrf)
+
+  encodedSizeExpr _size proxy =
+    1
+      + certifiedOutputSize (certifiedOutput <$> proxy)
+      + fromIntegral (sizeCertVRF (Proxy :: Proxy v))
+    where
+      certifiedOutputSize :: Proxy (OutputVRF v) -> Size
+      certifiedOutputSize _proxy =
+        fromIntegral $ sizeOutputVRF (Proxy :: Proxy v)
+
 instance ToCBOR Praos.Proof where
   toCBOR = toCBOR . Praos.proofBytes
   encodedSizeExpr _ _ =
@@ -1086,3 +1159,25 @@ deriving instance ToCBOR (VerKeyVRF Praos.PraosVRF)
 deriving instance ToCBOR (SignKeyVRF Praos.PraosVRF)
 
 deriving instance ToCBOR (CertVRF Praos.PraosVRF)
+
+--------------------------------------------------------------------------------
+-- Slotting
+--------------------------------------------------------------------------------
+
+-- TODO: Remove usage of 'serialise' package
+instance ToCBOR SlotNo where
+  toCBOR = fromPlainEncoding . Serialise.encode
+  encodedSizeExpr size = encodedSizeExpr size . fmap unSlotNo
+
+instance (Serialise t, Typeable t) => ToCBOR (WithOrigin t) where
+  toCBOR = fromPlainEncoding . Serialise.encode
+
+deriving instance ToCBOR EpochNo
+
+deriving instance ToCBOR EpochSize
+
+deriving instance ToCBOR SystemStart
+
+instance ToCBOR BlockNo where
+  toCBOR = fromPlainEncoding . Serialise.encode
+  encodedSizeExpr size = encodedSizeExpr size . fmap unBlockNo

@@ -2,14 +2,13 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Cardano.Chain.Update.ProtocolVersion
   ( ProtocolVersion (..),
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
+import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
 import Cardano.Prelude
 import Data.Aeson (ToJSON)
 import Formatting (bprint, shown)

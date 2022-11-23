@@ -8,17 +8,17 @@ module Cardano.Ledger.Shelley.SoftForks
   )
 where
 
-import Cardano.Ledger.BaseTypes (ProtVer (..))
+import Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
 import GHC.Records
 
 validMetadata ::
   (HasField "_protocolVersion" pp ProtVer) =>
   pp ->
   Bool
-validMetadata pp = getField @"_protocolVersion" pp > ProtVer 2 0
+validMetadata pp = getField @"_protocolVersion" pp > ProtVer (natVersion @2) 0
 
 restrictPoolMetadataHash ::
   (HasField "_protocolVersion" pp ProtVer) =>
   pp ->
   Bool
-restrictPoolMetadataHash pp = getField @"_protocolVersion" pp > ProtVer 4 0
+restrictPoolMetadataHash pp = getField @"_protocolVersion" pp > ProtVer (natVersion @4) 0

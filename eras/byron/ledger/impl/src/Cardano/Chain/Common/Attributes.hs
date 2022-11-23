@@ -5,7 +5,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -fno-warn-missed-specialisations #-}
 
@@ -27,20 +26,21 @@ module Cardano.Chain.Common.Attributes
   )
 where
 
-import Cardano.Binary
+import Cardano.HeapWords (HeapWords (..), heapWords2)
+import Cardano.Ledger.Binary
   ( Decoder,
     DecoderError (..),
     Dropper,
     Encoding,
     FromCBOR (..),
     ToCBOR (..),
+    cborError,
     decodeMapLen,
     dropBytes,
     dropMap,
     dropWord8,
   )
-import Cardano.HeapWords (HeapWords (..), heapWords2)
-import Cardano.Prelude
+import Cardano.Prelude hiding (cborError)
 import Data.Aeson (ToJSON (..))
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Lazy.Char8 as LChar8

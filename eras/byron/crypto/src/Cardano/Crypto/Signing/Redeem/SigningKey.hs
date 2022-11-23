@@ -10,11 +10,11 @@ module Cardano.Crypto.Signing.Redeem.SigningKey
   )
 where
 
-import Cardano.Binary (FromCBOR, ToCBOR)
 import Cardano.Crypto.Signing.Redeem.VerificationKey
   ( RedeemVerificationKey (..),
     redeemVKB64F,
   )
+import Cardano.Ledger.Binary (FromCBOR, ToCBOR)
 import Cardano.Prelude
 import qualified Crypto.PubKey.Ed25519 as Ed25519
 import Formatting (bprint)

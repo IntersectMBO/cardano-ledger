@@ -40,7 +40,7 @@ import Cardano.Ledger.Alonzo.TxWits
     unTxDats,
   )
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
-import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Core hiding (TranslationError)
 import Cardano.Ledger.Shelley.Tx (TxIn)
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..))
@@ -108,7 +108,6 @@ evaluateTransactionExecutionUnits ::
     EraUTxO era,
     ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     HasField "_maxTxExUnits" (PParams era) ExUnits,
-    HasField "_protocolVersion" (PParams era) ProtVer,
     Script era ~ AlonzoScript era
   ) =>
   PParams era ->
@@ -142,7 +141,6 @@ evaluateTransactionExecutionUnitsWithLogs ::
     EraUTxO era,
     ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     HasField "_maxTxExUnits" (PParams era) ExUnits,
-    HasField "_protocolVersion" (PParams era) ProtVer,
     Script era ~ AlonzoScript era
   ) =>
   PParams era ->

@@ -16,13 +16,13 @@ where
 import qualified Byron.Spec.Ledger.Core as Abstract
 import qualified Byron.Spec.Ledger.STS.UTXO as Abstract
 import qualified Byron.Spec.Ledger.UTxO as Abstract
-import qualified Cardano.Binary as CBOR
 import qualified Cardano.Chain.Common as Concrete
 import qualified Cardano.Chain.UTxO as Concrete
 import qualified Cardano.Chain.UTxO.UTxO as Concrete.UTxO
 import qualified Cardano.Chain.UTxO.Validation as Concrete.UTxO
 import qualified Cardano.Chain.Update as Concrete
 import Cardano.Crypto
+import qualified Cardano.Ledger.Binary as CBOR
 import Cardano.Prelude
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.List.NonEmpty as NE
@@ -79,9 +79,9 @@ elaborateTxBS elaborateTxId =
     annotateTxAux txAux =
       map (LBS.toStrict . CBOR.slice bytes)
         . fromRight (panic "elaborateTxBS: Error decoding TxAux")
-        $ CBOR.decodeFull bytes
+        $ CBOR.decodeFull CBOR.byronProtVer bytes
       where
-        bytes = CBOR.serialize txAux
+        bytes = CBOR.serialize CBOR.byronProtVer txAux
 
 elaborateTx ::
   (Abstract.TxId -> Concrete.TxId) -> Abstract.Tx -> Concrete.TxAux

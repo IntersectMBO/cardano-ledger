@@ -12,7 +12,6 @@ module Test.Cardano.Chain.Genesis.Example
   )
 where
 
-import Cardano.Binary (Annotated (..))
 import Cardano.Chain.Common
   ( BlockCount (..),
     hashKey,
@@ -42,6 +41,7 @@ import Cardano.Crypto
   )
 import Cardano.Crypto.Signing (VerificationKey (..))
 import qualified Cardano.Crypto.Wallet as CC
+import Cardano.Ledger.Binary (Annotated (..))
 import Cardano.Prelude
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.Map.Strict as M

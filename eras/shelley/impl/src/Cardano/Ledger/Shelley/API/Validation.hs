@@ -24,13 +24,13 @@ module Cardano.Ledger.Shelley.API.Validation
 where
 
 import Cardano.Ledger.BHeaderView (BHeaderView)
-import Cardano.Ledger.BaseTypes (Globals (..), ShelleyBase)
+import Cardano.Ledger.BaseTypes (Globals (..), ShelleyBase, Version)
+import Cardano.Ledger.Binary (ToCBORGroup)
 import Cardano.Ledger.Block (Block)
 import qualified Cardano.Ledger.Chain as STS
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (DSignable, Hash)
-import Cardano.Ledger.Serialization (ToCBORGroup)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (NewEpochState)
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
@@ -44,7 +44,6 @@ import Control.Monad.Trans.Reader (runReader)
 import Control.State.Transition.Extended
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
-import Numeric.Natural (Natural)
 
 {-------------------------------------------------------------------------------
   Block validation API
@@ -184,7 +183,7 @@ chainChecks ::
   forall c m.
   MonadError STS.ChainPredicateFailure m =>
   -- | Max major protocol version
-  Natural ->
+  Version ->
   STS.ChainChecksPParams ->
   BHeaderView c ->
   m ()

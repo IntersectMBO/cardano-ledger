@@ -39,10 +39,12 @@ import Cardano.Ledger.BaseTypes
     StrictMaybe (..),
     UnitInterval,
     Url (..),
+    Version,
     activeSlotLog,
     activeSlotVal,
     certIxToInt,
     dnsToText,
+    getVersion64,
     txIxToInt,
   )
 import Cardano.Ledger.Block (Block (..))
@@ -934,13 +936,13 @@ ppMetadatum (I n) = ppSexp "I" [ppInteger n]
 ppMetadatum (B bs) = ppSexp "B" [ppLong bs]
 ppMetadatum (S txt) = ppSexp "S" [text txt]
 
-ppShelleyTxAuxData :: ShelleyTxAuxData era -> PDoc
+ppShelleyTxAuxData :: Era era => ShelleyTxAuxData era -> PDoc
 ppShelleyTxAuxData (ShelleyTxAuxData m) = ppMap' (text "ShelleyTxAuxData") ppWord64 ppMetadatum m
 
 instance PrettyA Metadatum where
   prettyA = ppMetadatum
 
-instance PrettyA (ShelleyTxAuxData era) where
+instance Era era => PrettyA (ShelleyTxAuxData era) where
   prettyA = ppShelleyTxAuxData
 
 -- ============================
@@ -1208,8 +1210,14 @@ instance Crypto c => PrettyA (CompactAddr c) where
 -- ================================================
 -- Cardano.Ledger.Shelley.PParams
 
+ppVersion :: Version -> PDoc
+ppVersion = ppWord64 . getVersion64
+
+instance PrettyA Version where
+  prettyA = ppVersion
+
 ppProtVer :: ProtVer -> PDoc
-ppProtVer (ProtVer maj mi) = ppRecord "Version" [("major", ppNatural maj), ("minor", ppNatural mi)]
+ppProtVer (ProtVer maj mi) = ppRecord "ProtVer" [("major", ppVersion maj), ("minor", ppNatural mi)]
 
 ppPParams :: ShelleyPParams era -> PDoc
 ppPParams (ShelleyPParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau d ex pv mutxo mpool) =
@@ -1526,7 +1534,7 @@ ppGlobals
         ("securityParameter", pretty sec),
         ("maxKESEvo", pretty maxkes),
         ("quorum", pretty quor),
-        ("maxMajorPV", pretty maxmaj),
+        ("maxMajorPV", prettyA maxmaj),
         ("maxLovelaceSupply", pretty maxlove),
         ("activeSlotCoeff", ppActiveSlotCoeff active),
         ("networkId", ppNetwork net),

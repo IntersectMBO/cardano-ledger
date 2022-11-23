@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
 -- |
@@ -13,7 +14,6 @@ module Test.Cardano.Ledger.Alonzo.Golden
   )
 where
 
-import Cardano.Binary (Annotator (..), FullByteString (Full), fromCBOR, serialize)
 import Cardano.Ledger.Alonzo (Alonzo)
 import Cardano.Ledger.Alonzo.Data (Data (..), hashData)
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
@@ -34,19 +34,19 @@ import Cardano.Ledger.Alonzo.Scripts
   )
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), utxoEntrySize)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), boundRational)
+import Cardano.Ledger.Binary (decodeFullAnnotator, fromCBOR, serialize)
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary.Value (MaryValue (..), valueFromList)
 import Cardano.Protocol.TPraos.BHeader (BHeader)
-import Codec.CBOR.Read (deserialiseFromBytes)
 import Data.Aeson (eitherDecodeFileStrict)
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Base16.Lazy as B16L
 import Data.Either (fromRight)
-import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
+import Data.Sequence.Strict
 import GHC.Stack (HasCallStack)
 import PlutusLedgerApi.V1 (Data (..))
 import Test.Cardano.Ledger.Alonzo.AlonzoEraGen (freeCostModel)
@@ -190,10 +190,10 @@ goldenSerialization =
     "golden tests - serialization"
     [ testCase "Alonzo Block" $ do
         expected <- readDataFile "golden/block.cbor"
-        serialize (SLE.sleBlock ledgerExamplesAlonzo) @?= expected,
+        serialize (eraProtVerHigh @Alonzo) (SLE.sleBlock ledgerExamplesAlonzo) @?= expected,
       testCase "Alonzo Tx" $ do
         expected <- readDataFile "golden/tx.cbor"
-        serialize (SLE.sleTx ledgerExamplesAlonzo) @?= expected
+        serialize (eraProtVerHigh @Alonzo) (SLE.sleTx ledgerExamplesAlonzo) @?= expected
     ]
 
 goldenGenesisSerialization :: TestTree
@@ -214,21 +214,25 @@ goldenMinFee =
         -- This golden test uses the block from:
         -- https://github.com/input-output-hk/cardano-node/issues/4228#issuecomment-1195707491
         --
-        -- The first transaction in this block is invalide due to:
+        -- The first transaction in this block is invalid due to:
         --   FeeTooSmallUTxO (Coin 1006053) (Coin 1001829)
         --
         -- The correct behavior is for the minimum fee for this transaction
         -- to be 1006053 lovelace, as indicated by the failure above.
         -- Nodes that had the bug determined the minimum fee to be 1001829.
         hex <- readDataFile "golden/hex-block-node-issue-4228.cbor"
-        let cborBlock = fromRight mempty (B16L.decode hex)
-            (_leftover, Annotator f) =
-              fromRight (error "bad golden block 4228") $
-                deserialiseFromBytes fromCBOR cborBlock
-            _block :: Block (BHeader StandardCrypto) Alonzo
-            _block@(Block _header txs) = f (Full cborBlock)
-            txs' = fromTxSeq @Alonzo txs
-            firstTx = head $ toList txs'
+        let cborBytesBlock =
+              case B16L.decode hex of
+                Left err -> error err
+                Right val -> val
+            txsSeq =
+              case decodeFullAnnotator (eraProtVerHigh @Alonzo) "Block" fromCBOR cborBytesBlock of
+                Left err -> error (show err)
+                Right (Block _h txs :: Block (BHeader StandardCrypto) Alonzo) -> txs
+            firstTx =
+              case fromTxSeq @Alonzo txsSeq of
+                tx :<| _ -> tx
+                Empty -> error "Block doesn't have any transactions"
 
             -- Below are the relevant protocol parameters that were active
             -- at the time this block was rejected.
@@ -284,6 +288,7 @@ exampleLangDepViewPV2 = LangDepView b1 b2
             <> "0000000000000000000000000000000000"
 
 testScriptIntegritpHash ::
+  HasCallStack =>
   AlonzoPParams Alonzo ->
   Language ->
   LangDepView ->

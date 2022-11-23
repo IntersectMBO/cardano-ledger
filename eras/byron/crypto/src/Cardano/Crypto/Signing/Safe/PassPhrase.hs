@@ -10,8 +10,8 @@ module Cardano.Crypto.Signing.Safe.PassPhrase
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..))
-import Cardano.Prelude
+import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), toCborError)
+import Cardano.Prelude hiding (toCborError)
 import Data.ByteArray (ByteArray, ByteArrayAccess, ScrubbedBytes)
 import qualified Data.ByteArray as ByteArray
 import qualified Data.ByteString as BS

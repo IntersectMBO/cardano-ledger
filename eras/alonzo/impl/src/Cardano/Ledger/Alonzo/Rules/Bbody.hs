@@ -20,7 +20,6 @@ module Cardano.Ledger.Alonzo.Rules.Bbody
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Alonzo.Era (AlonzoBBODY)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), pointWiseExUnits)
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx, totExUnits)
@@ -28,6 +27,8 @@ import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq, txSeqTxns)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
 import Cardano.Ledger.BHeaderView (BHeaderView (..), isOverlaySlot)
 import Cardano.Ledger.BaseTypes (ShelleyBase, UnitInterval, epochInfoPure)
+import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Era as Era
@@ -53,7 +54,6 @@ import Control.State.Transition
     trans,
     (?!),
   )
-import Data.Coders
 import Data.Kind (Type)
 import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -145,7 +145,7 @@ bbodyTransition =
                )
            ) -> do
         let txs = txSeqTxns txsSeq
-            actualBodySize = bBodySize txsSeq
+            actualBodySize = bBodySize (getField @"_protocolVersion" pp) txsSeq
             actualBodyHash = hashTxSeq @era txsSeq
 
         actualBodySize

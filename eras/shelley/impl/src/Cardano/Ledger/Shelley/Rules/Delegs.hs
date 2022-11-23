@@ -22,11 +22,6 @@ module Cardano.Ledger.Shelley.Rules.Delegs
   )
 where
 
-import Cardano.Binary
-  ( FromCBOR (..),
-    ToCBOR (..),
-    encodeListLen,
-  )
 import Cardano.Ledger.Address (mkRwdAcnt)
 import Cardano.Ledger.BaseTypes
   ( ShelleyBase,
@@ -35,15 +30,16 @@ import Cardano.Ledger.BaseTypes
     mkCertIxPartial,
     networkId,
   )
+import Cardano.Ledger.Binary
+  ( FromCBOR (..),
+    ToCBOR (..),
+    decodeRecordSum,
+    encodeListLen,
+  )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.Serialization
-  ( decodeRecordSum,
-    mapFromCBOR,
-    mapToCBOR,
-  )
 import Cardano.Ledger.Shelley.Era (ShelleyDELEGS)
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState,
@@ -165,7 +161,7 @@ instance
     WithdrawalsNotInRewardsDELEGS ws ->
       encodeListLen 2
         <> toCBOR (1 :: Word8)
-        <> mapToCBOR ws
+        <> toCBOR ws
     (DelplFailure a) ->
       encodeListLen 2
         <> toCBOR (2 :: Word8)
@@ -185,7 +181,7 @@ instance
           kh <- fromCBOR
           pure (2, DelegateeNotRegisteredDELEG kh)
         1 -> do
-          ws <- mapFromCBOR
+          ws <- fromCBOR
           pure (2, WithdrawalsNotInRewardsDELEGS ws)
         2 -> do
           a <- fromCBOR

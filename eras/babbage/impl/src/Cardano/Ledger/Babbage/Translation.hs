@@ -11,7 +11,6 @@
 
 module Cardano.Ledger.Babbage.Translation where
 
-import Cardano.Binary (DecoderError)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
@@ -21,6 +20,7 @@ import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..))
 import Cardano.Ledger.Babbage.Tx (AlonzoTx (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), Datum (..))
+import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (Crypto)
@@ -31,7 +31,6 @@ import Cardano.Ledger.Era
     translateEra',
   )
 import Cardano.Ledger.HKD (HKDFunctor (..))
-import Cardano.Ledger.Serialization (translateViaCBORAnn)
 import Cardano.Ledger.Shelley.API
   ( EpochState (..),
     NewEpochState (..),
@@ -112,13 +111,13 @@ instance
     -- Note that this does not preserve the hidden bytes field of the transaction.
     -- This is under the premise that this is irrelevant for TxInBlocks, which are
     -- not transmitted as contiguous chunks.
-    bdy <- translateViaCBORAnn "txbody" $ Alonzo.body tx
-    txwits <- translateViaCBORAnn "txwitness" $ Alonzo.wits tx
-    aux <- case Alonzo.auxiliaryData tx of
+    txBody <- Core.translateEraThroughCBOR "TxBody" $ Alonzo.body tx
+    txWits <- Core.translateEraThroughCBOR "TxWitness" $ Alonzo.wits tx
+    auxData <- case Alonzo.auxiliaryData tx of
       SNothing -> pure SNothing
-      SJust axd -> SJust <$> translateViaCBORAnn "auxiliarydata" axd
+      SJust auxData -> SJust <$> Core.translateEraThroughCBOR "AuxData" auxData
     let validating = Alonzo.isValid tx
-    pure $ Tx $ AlonzoTx bdy txwits validating aux
+    pure $ Tx $ AlonzoTx txBody txWits validating auxData
 
 --------------------------------------------------------------------------------
 -- Auxiliary instances and functions

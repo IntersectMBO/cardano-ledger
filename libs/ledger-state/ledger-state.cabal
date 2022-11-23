@@ -31,11 +31,11 @@ common project-config
 library
   import:             project-config
   build-depends:      bytestring
-                    , cardano-binary
                     , cardano-data
                     , cardano-crypto-class
-                    , cardano-ledger-core
                     , cardano-ledger-alonzo
+                    , cardano-ledger-binary
+                    , cardano-ledger-core
                     , cardano-ledger-shelley
                     , cardano-ledger-shelley-ma
                     , conduit
@@ -101,9 +101,9 @@ benchmark performance
     aeson >= 2,
     bytestring,
     base16-bytestring,
-    cardano-binary,
     cardano-data,
     cardano-ledger-alonzo,
+    cardano-ledger-binary,
     cardano-ledger-core,
     cardano-ledger-shelley,
     cardano-slotting,
@@ -129,10 +129,9 @@ benchmark address
   build-depends:
     base,
     bytestring,
-    cardano-binary,
+    cardano-ledger-binary,
     cardano-crypto-class,
     cardano-ledger-core,
-    cardano-slotting,
     criterion,
     deepseq,
     cardano-strict-containers,

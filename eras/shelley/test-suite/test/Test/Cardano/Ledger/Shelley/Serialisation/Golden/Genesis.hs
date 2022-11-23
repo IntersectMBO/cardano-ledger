@@ -13,9 +13,14 @@ module Test.Cardano.Ledger.Shelley.Serialisation.Golden.Genesis
   )
 where
 
-import Cardano.Binary (Encoding (..), ToCBOR (..), Tokens (..), serializeEncoding)
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.BaseTypes (textToDns, textToUrl)
+import Cardano.Ledger.Binary
+  ( ToCBOR (..),
+    Tokens (..),
+    serializeEncoding',
+    shelleyProtVer,
+  )
 import Cardano.Ledger.Crypto (HASH)
 import Cardano.Ledger.Era (EraCrypto (..))
 import Cardano.Ledger.Keys (hashKey, hashVerKeyVRF, vKey)
@@ -24,7 +29,8 @@ import qualified Cardano.Ledger.Shelley.API as L
 import Cardano.Ledger.Shelley.Genesis
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..), emptyPParams)
 import Cardano.Slotting.Slot (EpochSize (..))
-import Data.Aeson
+import Control.Monad
+import Data.Aeson hiding (Encoding)
 import qualified Data.ByteString.Char8 as BS (pack)
 import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
@@ -34,6 +40,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Paths_cardano_ledger_shelley_test (getDataFileName)
+import Test.Cardano.Ledger.Binary.TreeDiff (CBORBytes (CBORBytes), diffExpr)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
 import Test.Cardano.Ledger.Shelley.Utils
   ( RawSeed (..),
@@ -61,23 +68,15 @@ golden_json_ShelleyGenesis =
 
 golden_cbor_ShelleyGenesis :: Assertion
 golden_cbor_ShelleyGenesis =
-  if serializeEncoding received /= serializeEncoding expected
-    then
-      assertFailure $
-        mconcat
-          [ "\nexpected:\n",
-            show expected,
-            "\nreceived:\n",
-            show received,
-            "\n"
-          ]
-    else return ()
+  when (received /= expected) $
+    assertFailure
+      (diffExpr (CBORBytes expected) (CBORBytes received))
   where
     example :: ShelleyGenesis Shelley
     example = exampleShelleyGenesis
 
-    received = Encoding expectedTokens
-    expected = toCBOR example
+    received = serializeEncoding' shelleyProtVer (toCBOR expectedTokens)
+    expected = serializeEncoding' shelleyProtVer (toCBOR example)
 
     expectedTokens =
       TkListLen 15
@@ -125,7 +124,7 @@ golden_cbor_ShelleyGenesis =
         . TkInt 1000
         . TkListLen 1
         . TkInt 0
-        . TkInt 0
+        . TkInt 2
         . TkInt 0
         . TkInt 0
         . TkInt 0
@@ -210,7 +209,7 @@ exampleShelleyGenesis =
       sgMaxLovelaceSupply = 71,
       sgProtocolParams =
         emptyPParams
-          { _d = unsafeBoundRational . realToFrac $ (1.9e-2 :: Scientific),
+          { _d = unsafeBoundRational $ realToFrac (1.9e-2 :: Scientific),
             _maxBBSize = 239857,
             _maxBHSize = 217569
           },

@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
@@ -13,14 +14,16 @@ module Cardano.Ledger.Binary.Encoding.Encoder
     fromPlainEncoding,
     fromPlainEncodingWithVersion,
     withCurrentEncodingVersion,
-    enforceVersionEncoding,
+    enforceEncodingVersion,
 
     -- ** Custom
+    encodeVersion,
     encodeMaybe,
     encodeNullMaybe,
     encodePair,
     encodeTuple,
     encodeRatio,
+    encodeRatioWithTag,
 
     -- *** Containers
     encodeList,
@@ -29,6 +32,12 @@ module Cardano.Ledger.Binary.Encoding.Encoder
     encodeMap,
     encodeVMap,
     encodeVector,
+
+    -- **** Helpers
+    encodeFoldableEncoder,
+    encodeFoldableAsDefLenList,
+    encodeFoldableAsIndefLenList,
+    encodeFoldableMapEncoder,
 
     -- *** Time
     encodeUTCTime,
@@ -89,7 +98,7 @@ import qualified Data.ByteString as BS
 import Data.ByteString.Builder (Builder)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Fixed (E12, resolution)
-import Data.Foldable (foldMap')
+import Data.Foldable as F (foldMap', foldl')
 import Data.IP (IPv4, IPv6, toHostAddress, toHostAddress6)
 import Data.Int (Int16, Int32, Int64, Int8)
 import qualified Data.Map.Strict as Map
@@ -131,8 +140,8 @@ withCurrentEncodingVersion f =
   Encoding $ \version -> toPlainEncoding version $ f version
 
 -- | Ignore the current version of the encoder and enforce the supplied one instead.
-enforceVersionEncoding :: Version -> Encoding -> Encoding
-enforceVersionEncoding version encoding = fromPlainEncoding (toPlainEncoding version encoding)
+enforceEncodingVersion :: Version -> Encoding -> Encoding
+enforceEncodingVersion version encoding = fromPlainEncoding (toPlainEncoding version encoding)
 
 -- | Conditionoly choose the encoder newer or older deceder, depending on the current
 -- version. Supplied version acts as a pivot.
@@ -259,9 +268,29 @@ encodeTerm = fromPlainEncoding . C.encodeTerm
 -- Custom
 --------------------------------------------------------------------------------
 
+encodeVersion :: Version -> Encoding
+encodeVersion = encodeWord64 . getVersion64
+
 encodeRatio :: (t -> Encoding) -> Ratio t -> Encoding
 encodeRatio encodeNumeric r =
-  ifEncodingVersionAtLeast (natVersion @2) (encodeTag 30) mempty
+  encodeListLen 2
+    <> encodeNumeric (numerator r)
+    <> encodeNumeric (denominator r)
+
+_encodeRatioFuture :: (t -> Encoding) -> Ratio t -> Encoding
+_encodeRatioFuture encodeNumeric r =
+  ifEncodingVersionAtLeast
+    (natVersion @9)
+    (encodeTag 30 <> encodeRatio encodeNumeric r)
+    (encodeRatio encodeNumeric r)
+
+-- | Encode a rational number with tag 30, as per tag assignment:
+-- <https://www.iana.org/assignments/cbor-tags/cbor-tags.xhtml>
+--
+-- <https://peteroupc.github.io/CBOR/rational.html>
+encodeRatioWithTag :: (t -> Encoding) -> Ratio t -> Encoding
+encodeRatioWithTag encodeNumeric r =
+  encodeTag 30
     <> encodeListLen 2
     <> encodeNumeric (numerator r)
     <> encodeNumeric (denominator r)
@@ -292,6 +321,42 @@ encodeTuple encodeFirst encodeSecond (x, y) =
 encodePair :: (a -> Encoding) -> (b -> Encoding) -> (a, b) -> Encoding
 encodePair = encodeTuple
 {-# DEPRECATED encodePair "In favor of `encodeTuple`" #-}
+
+-- | Encode any Foldable with indefinite list length encoding
+encodeFoldableAsIndefLenList :: Foldable f => (a -> Encoding) -> f a -> Encoding
+encodeFoldableAsIndefLenList encodeValue xs =
+  encodeListLenIndef <> foldr (\x r -> encodeValue x <> r) encodeBreak xs
+
+encodeFoldableAsDefLenList :: Foldable f => (a -> Encoding) -> f a -> Encoding
+encodeFoldableAsDefLenList encodeValue xs =
+  case foldMap' (\v -> (1, encodeValue v)) xs of
+    (Sum len, exactLenEncList) -> encodeListLen len <> exactLenEncList
+
+-- | Encode any Foldable with the variable list length encoding, which will use indefinite
+-- encoding over 23 elements and definite otherwise.
+encodeFoldableEncoder :: Foldable f => (a -> Encoding) -> f a -> Encoding
+encodeFoldableEncoder encoder xs = variableListLenEncoding len contents
+  where
+    (len, contents) = foldl' go (0, mempty) xs
+    go (!l, !enc) next = (l + 1, enc <> encoder next)
+
+-- | Encode a data structure as a Map with the 0-based index for a Key to a value. Uses
+-- variable map length encoding, which means an indefinite encoding for maps with over 23
+-- elements and definite otherwise.
+encodeFoldableMapEncoder ::
+  Foldable f =>
+  -- | A function that accepts an index of the value in the foldable data strucure, the
+  -- actual value and optionally produces the encoding of the value and an index if that
+  -- value should be encoded.
+  (Word -> a -> Maybe Encoding) ->
+  f a ->
+  Encoding
+encodeFoldableMapEncoder encode xs = variableMapLenEncoding len contents
+  where
+    (len, _, contents) = F.foldl' go (0, 0, mempty) xs
+    go (!l, !i, !enc) next = case encode i next of
+      Nothing -> (l, i + 1, enc)
+      Just e -> (l + 1, i + 1, enc <> e)
 
 --------------------------------------------------------------------------------
 -- Map
@@ -362,9 +427,14 @@ exactListLenEncoding len contents =
   encodeListLen (fromIntegral len :: Word) <> contents
 {-# INLINE exactListLenEncoding #-}
 
--- | Conditionally use variable length encoding, but only for lists and sets larger than
--- 23
-variableListLenEncoding :: Int -> Encoding -> Encoding
+-- | Conditionally use variable length encoding for list like structures with length
+-- larger than 23, otherwise use exact list length encoding.
+variableListLenEncoding ::
+  -- | Number of elements in the encoded data structure.
+  Int ->
+  -- | Encoding for the actual data structure
+  Encoding ->
+  Encoding
 variableListLenEncoding len contents =
   if len <= lengthThreshold
     then exactListLenEncoding len contents
@@ -394,14 +464,12 @@ encodeSet encodeValue f =
 -- * [< 2] - Variable length encoding
 encodeList :: (a -> Encoding) -> [a] -> Encoding
 encodeList encodeValue xs =
-  let varLenEncList =
-        encodeListLenIndef <> foldr (\x r -> encodeValue x <> r) encodeBreak xs
-      (Sum len, exactLenEncList) = foldMap' (\v -> (1, encodeValue v)) xs
+  let varLenEncList = encodeFoldableAsIndefLenList encodeValue xs
       -- we don't want to compute the length of the list, unless it is smaller than the
       -- threshold
       encListVer2 =
         case drop lengthThreshold xs of
-          [] -> exactListLenEncoding len exactLenEncList
+          [] -> encodeFoldableAsDefLenList encodeValue xs
           _ -> varLenEncList
    in ifEncodingVersionAtLeast (natVersion @2) encListVer2 varLenEncList
 

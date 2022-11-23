@@ -12,7 +12,6 @@ module Test.Cardano.Crypto.CBOR
   )
 where
 
-import Cardano.Binary (Dropper, ToCBOR, dropBytes, dropList, enforceSize)
 import Cardano.Crypto
   ( AbstractHash,
     PassPhrase,
@@ -28,6 +27,7 @@ import Cardano.Crypto
     sign,
   )
 import Cardano.Crypto.Wallet (xprv, xpub)
+import Cardano.Ledger.Binary (Dropper, ToCBOR, dropBytes, dropList, enforceSize)
 import Cardano.Prelude
 import Crypto.Hash (Blake2b_224, Blake2b_256, Blake2b_384, Blake2b_512, SHA1)
 import qualified Data.ByteArray as ByteArray
@@ -35,14 +35,14 @@ import qualified Data.ByteString as BS
 import GetDataFileName ((<:<))
 import Hedgehog (Gen, Property)
 import qualified Hedgehog as H
-import Test.Cardano.Binary.Helpers (SizeTestConfig (..), scfg, sizeTest)
-import Test.Cardano.Binary.Helpers.GoldenRoundTrip
+import Test.Cardano.Crypto.Gen
+import Test.Cardano.Ledger.Binary.Vintage.Helpers (SizeTestConfig (..), scfg, sizeTest)
+import Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip
   ( deprecatedGoldenDecode,
     goldenTestCBOR,
     roundTripsCBORBuildable,
     roundTripsCBORShow,
   )
-import Test.Cardano.Crypto.Gen
 import Test.Cardano.Prelude
 
 --------------------------------------------------------------------------------

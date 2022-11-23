@@ -16,6 +16,8 @@ in the naming of release branches.
   - Also add a harmless dummy `Show` instance for `PlutusDebug` with a constant `"PlutusDebug Omitted"`
 - Create a `cardano-ledger-binary` package that does versioned serialization as a
   replacement for `cardano-binary` package: #3063, #3078
+- Switch to `cardano-ledger-binary` package throughout the ledger codebase: #3138
+- Created `translateEraThroughCBOR`: #3138
 - Start on the `cardano-ledger-api` package and implement
   `setMinCoinTxOut`+`setMinCoinSizedTxOut`: #2995
 - Added `getMinCoinTxOut`/`getMinCoinSizedTxOut` to `EraTxOut`: #3008
@@ -30,6 +32,7 @@ in the naming of release branches.
 
 ### Changed
 
+- Changed major version in `ProtVer` to use new type `Version` instead of `Natural`: #3138
 - Renamed records fields in `Cardano.Ledger` to names without `_` (underscores) #3126
   - `Alonzo.TxBody.TxBodyRaw` to `Alonzo.TxBody.AlonzoTxBodyRaw`
     - `_inputs` to `atbrInputs`
@@ -179,7 +182,7 @@ in the naming of release branches.
 - Moved Cardano.Ledger.Shelley.Orphans to Cardano.Ledger.Orphans  in the core modules
 - Moved Cardano.Ledger.Shelley.PoolParms to Cardano.Ledger.PoolParams  in the core modules
 - Moved Cardano.Ledger.Shelley.EpochBoundary to Cardano.Ledger.EpochBoundary  in the core modules
-- Added deprecated modules that import the moved ones and export their contents	
+- Added deprecated modules that import the moved ones and export their contents
 - Moved `Data.AbstractSize` from `cardano-data` to `byron-spec-ledger` #3046
 - Renamed in `Cardano.Ledger.Mary.Value`: #3047
   - `insert` to `insertMultiAsset`
@@ -188,7 +191,7 @@ in the naming of release branches.
   #2954
 - All Shelley rules are now available through `Cadano.Ledger.Shelley.Rules` module: #2996
 - Renamed the `Crypto` dependent type in the `Era` class to `EraCrypto` #3009
-- Renamed in `Cardano.Ledger.Core`:
+- Renamed in `Cardano.Ledger.Core` #2976:
   - `EraWitnesses` to `EraTxWits`
   - `Witnesses` to `EraTxWits`
   - `mkBasicWitnesses` to `mkBasicTxWits`
@@ -196,7 +199,7 @@ in the naming of release branches.
   - `bootAddrWitsL` to `bootAddrTxWitsL`
   - `scriptWitsL` to `scriptTxWitsL`
 
-- Renamed in (new) module `Cardano.Ledger.Alonzo.TxWits` (renamed from `Cardano.Ledger.Alonzo.TxWitness`):
+- Renamed in (new) module `Cardano.Ledger.Alonzo.TxWits` (renamed from `Cardano.Ledger.Alonzo.TxWitness`) #2976:
   - `AlonzoEraWitnesses` to `AlonzoEraTxWits`
   - `TxWitness` to `AlonzoTxWits`
   - `addrAlonzoWitsL` to `addrAlonzoTxWitsL`
@@ -207,13 +210,12 @@ in the naming of release branches.
   - `rdmrsWitsL` to `rdmrsTxWitsL`
   - `rdmrsAlonzoWitsL` to `rdmrsAlonzoTxWitsL`
 
-- Renamed in (new) module `Cardano.Ledger.Shelley.TxWits` (extracted from `Cardano.Ledger.Shelley.Tx`):
+- Renamed in (new) module `Cardano.Ledger.Shelley.TxWits` (extracted from `Cardano.Ledger.Shelley.Tx`) #2976:
   - `ShelleyWitnesses` to `ShelleyTxWits`
   - `addrShelleyWitsL` to `addrShelleyTxWitsL`
   - `bootAddrShelleyWitsL` to `bootAddrShelleyTxWitsL`
   - `scriptShelleyWitsL` to `scriptShelleyTxWitsL`
 - Updated package metadata #3023
-#2976
 - Moved `TxOut` to a separate module in each era #3024
 - Moved `mintedTxBodyF` into `ShelleyMAEraTxBody` class #3019
 - Moved thet `RewardType` and `Reward` types from the `Cardano.Ledger.Shelley.Reward` module in the
@@ -222,6 +224,13 @@ in the naming of release branches.
 
 ### Removed
 
+- Deprecated `Cardano.Ledger.Serialization` in favor of `Cardano.Ledger.Binary` from
+  `cardano-ledger-binary`: #3138
+- Removed `Data.Coders` from `cardano-data` in favor of `Cardano.Ledger.Binary.Coders` from
+  `cardano-ledger-binary`: #3138
+- Removed `Data.Sharing` from `cardano-data` in favor of `Cardano.Ledger.Binary` from
+  `cardano-ledger-binary`: #3138
+- Removed `boundedRationalFromCBOR`/`boundedRationalToCBOR` as obsolete and invalid: #3138
 - Removed pattern synonym `Cardano.Ledger.ShelleyMA.TxBody.MATxBody.TxBody'` with fields #3126
   - `adHash'`
   - `certs'`
@@ -248,6 +257,8 @@ in the naming of release branches.
 - The `Cardano.Ledger.Alonzo.Scripts` module no longer re-exports the
   `plutus-ledger-api`'s `assertWellFormedCostModelParams`. #3065
 - Removed unused `Data.BiMap` module from `cardano-data` #3089
+- Removed `getMultiSigBytes` as unused #3138
+- Removed `hashCostModel` as unused and invalid #3138
 
 ### Fixed
 

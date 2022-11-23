@@ -31,20 +31,28 @@ module Cardano.Ledger.Mary.Value
   )
 where
 
-import Cardano.Binary
+import qualified Cardano.Crypto.Hash.Class as Hash
+import Cardano.Ledger.Binary
   ( Decoder,
     DecoderError (..),
     Encoding,
-    FromCBOR,
-    ToCBOR,
+    FromCBOR (..),
+    ToCBOR (..),
     TokenType (..),
+    cborError,
     decodeInteger,
+    decodeMap,
     decodeWord64,
-    fromCBOR,
     peekTokenType,
-    toCBOR,
   )
-import qualified Cardano.Crypto.Hash.Class as Hash
+import Cardano.Ledger.Binary.Coders
+  ( Decode (..),
+    Encode (..),
+    decode,
+    encode,
+    (!>),
+    (<!),
+  )
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), integerToWord64)
 import Cardano.Ledger.Compactible (Compactible (..))
 import qualified Cardano.Ledger.Crypto as CC
@@ -66,17 +74,6 @@ import Data.CanonicalMaps
   ( canonicalMap,
     canonicalMapUnion,
     pointWise,
-  )
-import Data.Coders
-  ( Decode (..),
-    Encode (..),
-    cborError,
-    decode,
-    decodeMap,
-    encode,
-    encodeMap,
-    (!>),
-    (<!),
   )
 import Data.Foldable (foldMap')
 import Data.Group (Abelian, Group (..))
@@ -301,7 +298,7 @@ encodeMultiAssetMaps ::
   CC.Crypto c =>
   MultiAsset c ->
   Encoding
-encodeMultiAssetMaps (MultiAsset m) = encodeMap toCBOR (encodeMap toCBOR toCBOR) m
+encodeMultiAssetMaps (MultiAsset m) = toCBOR m
 
 decodeMultiAssetMaps ::
   CC.Crypto c =>

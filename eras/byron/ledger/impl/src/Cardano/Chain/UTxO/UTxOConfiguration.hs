@@ -10,14 +10,14 @@ module Cardano.Chain.UTxO.UTxOConfiguration
   )
 where
 
-import Cardano.Binary
+import Cardano.Chain.Common.Address (Address)
+import Cardano.Chain.Common.Compact (CompactAddress, toCompactAddress)
+import Cardano.Ledger.Binary
   ( FromCBOR (..),
     ToCBOR (..),
     encodeListLen,
     enforceSize,
   )
-import Cardano.Chain.Common.Address (Address)
-import Cardano.Chain.Common.Compact (CompactAddress, toCompactAddress)
 import Cardano.Prelude
 import qualified Data.Set as Set
 import NoThunks.Class (NoThunks (..))

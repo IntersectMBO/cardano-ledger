@@ -75,10 +75,6 @@ module Cardano.Ledger.Alonzo.TxBody
   )
 where
 
-import Cardano.Binary
-  ( FromCBOR (..),
-    ToCBOR (..),
-  )
 import Cardano.Ledger.Alonzo.Core (AlonzoEraTxBody (..), ScriptIntegrityHash)
 import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash (..))
 import Cardano.Ledger.Alonzo.Era
@@ -88,6 +84,12 @@ import Cardano.Ledger.BaseTypes
   ( Network (..),
     StrictMaybe (..),
   )
+import Cardano.Ledger.Binary
+  ( Annotator,
+    FromCBOR (..),
+    ToCBOR (..),
+  )
+import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core hiding (TxBody, TxOut)
@@ -108,7 +110,6 @@ import Cardano.Ledger.ShelleyMA.TxBody (ShelleyMAEraTxBody (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (..), decodeMint, encodeMint)
 import Control.DeepSeq (NFData (..))
-import Data.Coders hiding (to)
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
@@ -284,7 +285,7 @@ deriving via
     FromCBOR (Annotator (AlonzoTxBody era))
 
 pattern AlonzoTxBody ::
-  (EraTxOut era, ToCBOR (PParamsUpdate era)) =>
+  EraTxOut era =>
   Set (TxIn (EraCrypto era)) ->
   Set (TxIn (EraCrypto era)) ->
   StrictSeq (Core.TxOut era) ->
@@ -454,16 +455,16 @@ encodeTxBodyRaw
       ( \i ifee o f t c w u b rsh mi sh ah ni ->
           AlonzoTxBodyRaw i ifee o c w f (ValidityInterval b t) u rsh mi sh ah ni
       )
-      !> Key 0 (E encodeFoldable atbrInputs)
-      !> Omit null (Key 13 (E encodeFoldable atbrCollateral))
-      !> Key 1 (E encodeFoldable atbrOutputs)
+      !> Key 0 (To atbrInputs)
+      !> Omit null (Key 13 (To atbrCollateral))
+      !> Key 1 (To atbrOutputs)
       !> Key 2 (To atbrTxFee)
       !> encodeKeyedStrictMaybe 3 top
-      !> Omit null (Key 4 (E encodeFoldable atbrCerts))
+      !> Omit null (Key 4 (To atbrCerts))
       !> Omit (null . unWdrl) (Key 5 (To atbrWdrls))
       !> encodeKeyedStrictMaybe 6 atbrUpdate
       !> encodeKeyedStrictMaybe 8 bot
-      !> Omit null (Key 14 (E encodeFoldable atbrReqSignerHashes))
+      !> Omit null (Key 14 (To atbrReqSignerHashes))
       !> Omit (== mempty) (Key 9 (E encodeMint atbrMint))
       !> encodeKeyedStrictMaybe 11 atbrScriptIntegrityHash
       !> encodeKeyedStrictMaybe 7 atbrAuxDataHash
@@ -485,28 +486,16 @@ instance
         bodyFields
         requiredFields
     where
-      bodyFields :: (Word -> Field (AlonzoTxBodyRaw era))
-      bodyFields 0 =
-        field
-          (\x tx -> tx {atbrInputs = x})
-          (D (decodeSet fromCBOR))
-      bodyFields 13 =
-        field
-          (\x tx -> tx {atbrCollateral = x})
-          (D (decodeSet fromCBOR))
-      bodyFields 1 =
-        field
-          (\x tx -> tx {atbrOutputs = x})
-          (D (decodeStrictSeq fromCBOR))
+      bodyFields :: Word -> Field (AlonzoTxBodyRaw era)
+      bodyFields 0 = field (\x tx -> tx {atbrInputs = x}) From
+      bodyFields 13 = field (\x tx -> tx {atbrCollateral = x}) From
+      bodyFields 1 = field (\x tx -> tx {atbrOutputs = x}) From
       bodyFields 2 = field (\x tx -> tx {atbrTxFee = x}) From
       bodyFields 3 =
         ofield
           (\x tx -> tx {atbrValidityInterval = (atbrValidityInterval tx) {invalidHereafter = x}})
           From
-      bodyFields 4 =
-        field
-          (\x tx -> tx {atbrCerts = x})
-          (D (decodeStrictSeq fromCBOR))
+      bodyFields 4 = field (\x tx -> tx {atbrCerts = x}) From
       bodyFields 5 = field (\x tx -> tx {atbrWdrls = x}) From
       bodyFields 6 = ofield (\x tx -> tx {atbrUpdate = x}) From
       bodyFields 7 = ofield (\x tx -> tx {atbrAuxDataHash = x}) From
@@ -516,7 +505,7 @@ instance
           From
       bodyFields 9 = field (\x tx -> tx {atbrMint = x}) (D decodeMint)
       bodyFields 11 = ofield (\x tx -> tx {atbrScriptIntegrityHash = x}) From
-      bodyFields 14 = field (\x tx -> tx {atbrReqSignerHashes = x}) (D (decodeSet fromCBOR))
+      bodyFields 14 = field (\x tx -> tx {atbrReqSignerHashes = x}) From
       bodyFields 15 = ofield (\x tx -> tx {atbrTxNetworkId = x}) From
       bodyFields n = field (\_ t -> t) (Invalid n)
       requiredFields =

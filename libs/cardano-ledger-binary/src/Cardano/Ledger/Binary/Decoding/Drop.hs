@@ -1,4 +1,7 @@
--- | A 'Dropper s' is a 'Decoder s ()', that is a decoder that returns nothing
+-- | /DEPRECATED/ - This module is deprecated and used in Byron era exclusively. For newer
+-- implementation of this functionality use `Cardano.Ledger.Binary.Decoding.FromCBOR.dropCBOR`
+--
+-- A 'Dropper s' is a 'Decoder s ()', that is a decoder that returns nothing
 --
 --   We use 'Dropper's when we don't care about the result of decoding, for
 --   example when we have deprecated some part of the serialised blockchain, but

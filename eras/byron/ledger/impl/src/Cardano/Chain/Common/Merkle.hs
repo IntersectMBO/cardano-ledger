@@ -2,8 +2,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -36,14 +34,15 @@ where
 -- used unqualified. The hiding in fact makes it clearer for the human reader
 -- what's going on.
 
-import Cardano.Binary
+import Cardano.Crypto (Hash, hashDecoded, hashRaw, hashToBytes)
+import Cardano.Crypto.Raw (Raw)
+import Cardano.Ledger.Binary
   ( Annotated (..),
     FromCBOR (..),
-    Raw,
     ToCBOR (..),
+    byronProtVer,
     serializeBuilder,
   )
-import Cardano.Crypto (Hash, hashDecoded, hashRaw, hashToBytes)
 import Cardano.Prelude
 import Data.Aeson (ToJSON)
 import Data.ByteString.Builder (Builder, byteString, word8)
@@ -206,7 +205,7 @@ mkLeaf a = MerkleLeaf mRoot a
     mRoot =
       MerkleRoot $
         hashRaw
-          (toLazyByteString (word8 0 <> serializeBuilder a))
+          (toLazyByteString (word8 0 <> serializeBuilder byronProtVer a))
 
 mkLeafDecoded :: Annotated a ByteString -> MerkleNode a
 mkLeafDecoded a = MerkleLeaf mRoot (unAnnotated a)

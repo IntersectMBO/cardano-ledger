@@ -11,7 +11,6 @@ import Data.Word (Word64, Word8)
 import Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
-import Test.Cardano.Ledger.Binary.Vintage.Helpers (byronProtVer)
 
 tests :: IO Bool
 tests = checkParallel $$(discover)

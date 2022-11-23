@@ -15,7 +15,6 @@ module Cardano.Chain.Update.ProtocolParameters
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
 import Cardano.Chain.Common
   ( LovelacePortion,
     TxFeePolicy,
@@ -23,6 +22,7 @@ import Cardano.Chain.Common
   )
 import Cardano.Chain.Slotting (EpochNumber, SlotNumber (..), isBootstrapEra)
 import Cardano.Chain.Update.SoftforkRule
+import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
 import Cardano.Prelude
 import Formatting (Format, bprint, build, bytes, shortest)
 import qualified Formatting.Buildable as B

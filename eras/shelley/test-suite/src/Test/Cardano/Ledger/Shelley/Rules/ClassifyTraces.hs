@@ -17,8 +17,8 @@ module Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces
   )
 where
 
-import Cardano.Binary (serialize')
 import Cardano.Ledger.BaseTypes (Globals, StrictMaybe (..), epochInfoPure)
+import Cardano.Ledger.Binary (serialize')
 import Cardano.Ledger.Block (Block (..), bheader)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.API
@@ -303,7 +303,7 @@ propAbstractSizeBoundsBytes ::
   Property
 propAbstractSizeBoundsBytes = property $ do
   let tl = 100
-      numBytes = toInteger . BS.length . serialize'
+      numBytes = toInteger . BS.length . serialize' (eraProtVerHigh @era)
   forAllTraceFromInitState @(ShelleyLEDGER era)
     testGlobals
     tl
@@ -335,7 +335,7 @@ propAbstractSizeNotTooBig = property $ do
       -- It will be interesting to see the test fail with
       -- an acceptableMagnitude of three, though.
       acceptableMagnitude = (3 :: Integer)
-      numBytes = toInteger . BS.length . serialize'
+      numBytes = toInteger . BS.length . serialize' (eraProtVerHigh @era)
       notTooBig tx = txSizeBound tx <= acceptableMagnitude * numBytes tx
   forAllTraceFromInitState @(ShelleyLEDGER era)
     testGlobals

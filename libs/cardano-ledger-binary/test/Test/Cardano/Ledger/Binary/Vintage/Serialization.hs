@@ -21,7 +21,6 @@ import Data.Word (Word16, Word32, Word64, Word8)
 import Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
-import Test.Cardano.Ledger.Binary.Vintage.Helpers (byronProtVer)
 
 {- HLINT ignore "Redundant <$>" -}
 

@@ -1,11 +1,9 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications #-}
 
 -- | This module provides functionality for translating abstract blocks into
 -- concrete blocks. The abstract blocks are generated according the small-step
@@ -35,7 +33,6 @@ import Byron.Spec.Ledger.Delegation
   )
 import qualified Byron.Spec.Ledger.UTxO as Abstract
 import qualified Byron.Spec.Ledger.Update as Abstract.Update
-import qualified Cardano.Binary as Binary
 import qualified Cardano.Chain.Block as Concrete
 import Cardano.Chain.Common
   ( BlockCount (BlockCount),
@@ -51,6 +48,7 @@ import qualified Cardano.Chain.UTxO as UTxO
 import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Crypto.Hashing as H
 import Cardano.Crypto.ProtocolMagic (AProtocolMagic (..))
+import qualified Cardano.Ledger.Binary as Binary
 import Cardano.Prelude hiding (to)
 import Control.Arrow ((&&&))
 import qualified Control.State.Transition as Transition
@@ -243,6 +241,7 @@ annotateBlock :: Slotting.EpochSlots -> Concrete.Block -> Concrete.ABlock ByteSt
 annotateBlock epochSlots block =
   let decodedABlockOrBoundary =
         case Binary.decodeFullDecoder
+          Binary.byronProtVer
           "Block"
           (Concrete.fromCBORABlockOrBoundary epochSlots)
           bytes of
@@ -257,7 +256,7 @@ annotateBlock epochSlots block =
         Concrete.ABOBBoundary _ ->
           panic "This function should have decoded a block."
   where
-    bytes = Binary.serializeEncoding (Concrete.toCBORABOBBlock epochSlots block)
+    bytes = Binary.serializeEncoding Binary.byronProtVer (Concrete.toCBORABOBBlock epochSlots block)
 
 -- | Re-construct an abstract delegation certificate from the abstract state.
 --

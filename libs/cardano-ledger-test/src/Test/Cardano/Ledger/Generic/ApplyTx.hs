@@ -16,7 +16,7 @@ import Cardano.Ledger.Alonzo.Scripts (CostModels (..), ExUnits (ExUnits))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (RdmrPtr), Redeemers (..))
-import Cardano.Ledger.BaseTypes (ProtVer (..), TxIx, mkTxIxPartial)
+import Cardano.Ledger.BaseTypes (ProtVer (..), TxIx, mkTxIxPartial, natVersion)
 import Cardano.Ledger.Coin (Coin (..), addDeltaCoin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
@@ -46,7 +46,14 @@ import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as Plutus
-import Test.Cardano.Ledger.Examples.STSTestUtils (freeCostModelV1, initUTxO, mkGenesisTxIn, mkTxDats, someAddr, someKeys)
+import Test.Cardano.Ledger.Examples.STSTestUtils
+  ( freeCostModelV1,
+    initUTxO,
+    mkGenesisTxIn,
+    mkTxDats,
+    someAddr,
+    someKeys,
+  )
 import Test.Cardano.Ledger.Generic.Fields
   ( PParamsField (..),
     TxBodyField (..),
@@ -86,7 +93,7 @@ defaultPPs =
     MaxValSize 1000000000,
     MaxTxExUnits $ ExUnits 1000000 1000000,
     MaxBlockExUnits $ ExUnits 1000000 1000000,
-    ProtocolVersion $ ProtVer 5 0,
+    ProtocolVersion $ ProtVer (natVersion @5) 0,
     CollateralPercentage 100
   ]
 
@@ -302,7 +309,7 @@ filterRewards ::
     Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era)))
   )
 filterRewards proof pp rewards =
-  if pvMajor (ppProtocolVersion proof pp) > 2
+  if pvMajor (ppProtocolVersion proof pp) > natVersion @2
     then (rewards, Map.empty)
     else
       let mp = Map.map Set.deleteFindMin rewards

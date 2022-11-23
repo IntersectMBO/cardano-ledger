@@ -5,10 +5,10 @@ module Test.Cardano.Chain.Config
   )
 where
 
-import Cardano.Binary (Raw)
 import qualified Cardano.Chain.Genesis as Genesis
 import Cardano.Crypto.Hashing (Hash, decodeHash)
 import Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic (..))
+import Cardano.Crypto.Raw (Raw)
 import Cardano.Prelude
 
 -- | Read the test mainnet configuration file from the @test@ directory.

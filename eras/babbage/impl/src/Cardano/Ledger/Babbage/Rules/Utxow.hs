@@ -19,7 +19,6 @@ module Cardano.Ledger.Babbage.Rules.Utxow
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Crypto.DSIGN.Class (Signable)
 import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Alonzo.Rules
@@ -45,6 +44,15 @@ import Cardano.Ledger.Babbage.TxBody
     BabbageTxOut (..),
   )
 import Cardano.Ledger.BaseTypes (ProtVer, ShelleyBase, quorum, strictMaybeToMaybe)
+import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.Binary.Coders
+  ( Decode (From, Invalid, SumD, Summands),
+    Encode (Sum, To),
+    decode,
+    encode,
+    (!>),
+    (<!),
+  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (DSIGN, HASH)
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest, runTestOnSignal)
@@ -66,14 +74,6 @@ import Control.State.Transition.Extended
     judgmentContext,
     liftSTS,
     trans,
-  )
-import Data.Coders
-  ( Decode (From, Invalid, SumD, Summands),
-    Encode (Sum, To),
-    decode,
-    encode,
-    (!>),
-    (<!),
   )
 import Data.Foldable (sequenceA_, toList)
 import qualified Data.Map.Strict as Map
@@ -229,7 +229,6 @@ validateScriptsWellFormed ::
   forall era.
   ( EraTx era,
     BabbageEraTxBody era,
-    HasField "_protocolVersion" (PParams era) ProtVer,
     Script era ~ AlonzoScript era,
     TxOut era ~ BabbageTxOut era
   ) =>
@@ -272,7 +271,6 @@ babbageUtxowTransition ::
     STS (BabbageUTXOW era),
     BabbageEraTxBody era,
     HasField "_costmdls" (PParams era) CostModels,
-    HasField "_protocolVersion" (PParams era) ProtVer,
     Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody),
     -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (BabbageUTXOW era),

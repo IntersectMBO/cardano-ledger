@@ -48,7 +48,7 @@ library
   build-depends:
                 aeson,
                 bytestring,
-                cardano-binary,
+                cardano-ledger-binary,
                 cardano-ledger-alonzo,
                 cardano-ledger-babbage,
                 cardano-ledger-core,

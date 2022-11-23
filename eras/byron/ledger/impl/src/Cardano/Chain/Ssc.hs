@@ -19,11 +19,12 @@ module Cardano.Chain.Ssc
   )
 where
 
-import Cardano.Binary
+import Cardano.Ledger.Binary
   ( DecoderError (..),
     Dropper,
     FromCBOR (..),
     ToCBOR (..),
+    cborError,
     decodeListLen,
     dropBytes,
     dropList,
@@ -35,7 +36,7 @@ import Cardano.Binary
     enforceSize,
     matchSize,
   )
-import Cardano.Prelude
+import Cardano.Prelude hiding (cborError)
 import Data.Aeson (ToJSON)
 import qualified Data.ByteString as ByteString (pack)
 import NoThunks.Class (NoThunks (..))

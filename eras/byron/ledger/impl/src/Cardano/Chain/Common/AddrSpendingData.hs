@@ -12,20 +12,21 @@ module Cardano.Chain.Common.AddrSpendingData
   )
 where
 
-import Cardano.Binary
+import Cardano.Crypto.Signing (RedeemVerificationKey, VerificationKey)
+import Cardano.HeapWords
+import Cardano.Ledger.Binary
   ( Case (..),
     DecoderError (..),
     FromCBOR (..),
     ToCBOR (..),
+    cborError,
     decodeListLenCanonical,
     decodeWord8Canonical,
     encodeListLen,
     matchSize,
     szCases,
   )
-import Cardano.Crypto.Signing (RedeemVerificationKey, VerificationKey)
-import Cardano.HeapWords
-import Cardano.Prelude
+import Cardano.Prelude hiding (cborError)
 import Data.Aeson (ToJSON)
 import Formatting (bprint, build)
 import qualified Formatting.Buildable as B

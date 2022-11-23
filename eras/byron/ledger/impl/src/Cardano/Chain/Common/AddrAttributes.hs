@@ -11,16 +11,6 @@ module Cardano.Chain.Common.AddrAttributes
   )
 where
 
-import Cardano.Binary
-  ( Decoder,
-    FromCBOR (..),
-    ToCBOR (..),
-    decodeBytesCanonical,
-    decodeFull,
-    decodeFullDecoder,
-    decodeWord32Canonical,
-    serialize,
-  )
 import Cardano.Chain.Common.Attributes
   ( Attributes (..),
     fromCBORAttributes,
@@ -28,7 +18,19 @@ import Cardano.Chain.Common.Attributes
   )
 import Cardano.Chain.Common.NetworkMagic (NetworkMagic (..))
 import Cardano.HeapWords (HeapWords (..))
-import Cardano.Prelude
+import Cardano.Ledger.Binary
+  ( Decoder,
+    FromCBOR (..),
+    ToCBOR (..),
+    byronProtVer,
+    decodeBytesCanonical,
+    decodeFull,
+    decodeFullDecoder,
+    decodeWord32Canonical,
+    serialize,
+    toCborError,
+  )
+import Cardano.Prelude hiding (toCborError)
 import Data.Aeson (ToJSON (..), object, (.=))
 import qualified Data.ByteString.Char8 as Char8
 import Data.Text.Lazy.Builder (Builder)
@@ -95,7 +97,7 @@ instance ToCBOR (Attributes AddrAttributes) where
         Nothing -> []
         -- 'unsafeFromJust' is safe, because 'case' ensures
         -- that derivation path is 'Just'.
-        Just _ -> [(1, serialize . unsafeFromJust . aaVKDerivationPath)]
+        Just _ -> [(1, serialize byronProtVer . unsafeFromJust . aaVKDerivationPath)]
       unsafeFromJust :: Maybe a -> a
       unsafeFromJust =
         fromMaybe (panic "Maybe was Nothing in ToCBOR (Attributes AddrAttributes)")
@@ -105,7 +107,7 @@ instance ToCBOR (Attributes AddrAttributes) where
         case networkMagic of
           NetworkMainOrStage -> []
           NetworkTestnet x ->
-            [(2, \_ -> serialize x)]
+            [(2, \_ -> serialize byronProtVer x)]
 
 instance FromCBOR (Attributes AddrAttributes) where
   fromCBOR = fromCBORAttributes initValue go
@@ -124,11 +126,11 @@ instance FromCBOR (Attributes AddrAttributes) where
       go n v acc = case n of
         1 ->
           (\deriv -> Just $ acc {aaVKDerivationPath = Just deriv})
-            <$> toCborError (decodeFull v)
+            <$> toCborError (decodeFull byronProtVer v)
         2 ->
           (\deriv -> Just $ acc {aaNetworkMagic = NetworkTestnet deriv})
             <$> toCborError
-              (decodeFullDecoder "NetworkMagic" decodeWord32Canonical v)
+              (decodeFullDecoder byronProtVer "NetworkMagic" decodeWord32Canonical v)
         _ -> pure Nothing
 
 -- | Passphrase is a hash of root verification key.

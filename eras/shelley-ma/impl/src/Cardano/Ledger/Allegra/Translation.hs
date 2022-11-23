@@ -10,23 +10,16 @@
 
 module Cardano.Ledger.Allegra.Translation where
 
-import Cardano.Binary
-  ( DecoderError,
-    decodeAnnotator,
-    fromCBOR,
-    serialize,
-  )
+import Cardano.Ledger.Binary (DecoderError)
+import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Era hiding (EraCrypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API
 import qualified Cardano.Ledger.Shelley.LedgerState as LS
   ( returnRedeemAddrsToReserves,
   )
-import Cardano.Ledger.Shelley.TxWits (decodeWits)
 import Cardano.Ledger.ShelleyMA ()
 import Cardano.Ledger.ShelleyMA.Era (AllegraEra)
-import Control.Monad.Except (throwError)
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map
 
@@ -79,10 +72,7 @@ instance Crypto c => TranslateEra (AllegraEra c) NewEpochState where
 
 instance forall c. Crypto c => TranslateEra (AllegraEra c) ShelleyTx where
   type TranslationError (AllegraEra c) ShelleyTx = DecoderError
-  translateEra _ctx tx =
-    case decodeAnnotator "tx" fromCBOR (serialize tx) of
-      Right newTx -> pure newTx
-      Left decoderError -> throwError decoderError
+  translateEra _ctx = translateEraThroughCBOR "ShelleyTx"
 
 instance Crypto c => TranslateEra (AllegraEra c) ShelleyGenesis where
   translateEra ctxt genesis =
@@ -185,10 +175,7 @@ instance Crypto c => TranslateEra (AllegraEra c) EpochState where
 
 instance Crypto c => TranslateEra (AllegraEra c) ShelleyTxWits where
   type TranslationError (AllegraEra c) ShelleyTxWits = DecoderError
-  translateEra _ctx ws =
-    case decodeAnnotator "witnessSet" decodeWits (serialize ws) of
-      Right new -> pure new
-      Left decoderError -> throwError decoderError
+  translateEra _ctx = translateEraThroughCBOR "ShelleyTxWits"
 
 instance Crypto c => TranslateEra (AllegraEra c) Update where
   translateEra _ (Update pp en) = pure $ Update (coerce pp) en

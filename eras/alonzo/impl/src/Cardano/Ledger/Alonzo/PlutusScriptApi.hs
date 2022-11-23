@@ -24,7 +24,6 @@ module Cardano.Ledger.Alonzo.PlutusScriptApi
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Alonzo.Data (getPlutusData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), CostModel, CostModels (..), ExUnits (..))
@@ -40,6 +39,8 @@ import Cardano.Ledger.Alonzo.TxInfo
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), AlonzoTxWits, unTxDats)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..))
+import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core hiding (TranslationError)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.ShelleyMA.TxBody (ShelleyMAEraTxBody (..))
@@ -48,7 +49,6 @@ import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Data.ByteString.Short (ShortByteString)
-import Data.Coders
 import Data.List (intercalate)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)

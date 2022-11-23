@@ -6,17 +6,18 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -fno-warn-orphans -funbox-strict-fields #-}
 
 module Cardano.Ledger.State.UTxO where
 
-import Cardano.Binary
 import Cardano.Ledger.Address
 import Cardano.Ledger.Alonzo hiding (TxOut)
 import Cardano.Ledger.Alonzo.Data hiding (scripts)
 import Cardano.Ledger.Alonzo.TxBody hiding (TxOut)
 import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Binary
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Crypto
@@ -55,12 +56,12 @@ readEpochState = readFromCBOR
 
 readFromCBOR :: FromCBOR a => FilePath -> IO a
 readFromCBOR fp =
-  LBS.readFile fp <&> decodeFull >>= \case
+  LBS.readFile fp <&> decodeFull (eraProtVerHigh @CurrentEra) >>= \case
     Left exc -> throwIO exc
     Right res -> pure res
 
 writeEpochState :: FilePath -> EpochState CurrentEra -> IO ()
-writeEpochState fp = LBS.writeFile fp . serialize
+writeEpochState fp = LBS.writeFile fp . serialize (eraProtVerHigh @CurrentEra)
 
 loadLedgerState :: FilePath -> IO (LedgerState CurrentEra)
 loadLedgerState fp = esLState . nesEs <$> readNewEpochState fp

@@ -6,7 +6,7 @@ module Test.Cardano.Ledger.Shelley.Examples.MirTransfer
   )
 where
 
-import Cardano.Ledger.BaseTypes (ProtVer (..))
+import Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Keys
   ( KeyRole (..),
@@ -56,10 +56,10 @@ env pv acnt =
     }
 
 shelleyPV :: ProtVer
-shelleyPV = ProtVer 2 0
+shelleyPV = ProtVer (natVersion @2) 0
 
 alonzoPV :: ProtVer
-alonzoPV = ProtVer 5 0
+alonzoPV = ProtVer (natVersion @5) 0
 
 testMirTransfer ::
   ProtVer ->

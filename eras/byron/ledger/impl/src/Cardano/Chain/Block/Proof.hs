@@ -11,7 +11,6 @@ module Cardano.Chain.Block.Proof
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
 import Cardano.Chain.Block.Body
   ( ABody (..),
     Body,
@@ -24,6 +23,7 @@ import Cardano.Chain.Ssc (SscProof (..))
 import Cardano.Chain.UTxO.TxProof (TxProof, mkTxProof, recoverTxProof)
 import qualified Cardano.Chain.Update.Proof as Update
 import Cardano.Crypto (Hash, hashDecoded, serializeCborHash)
+import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
 import Cardano.Prelude
 import Data.Aeson (ToJSON)
 import Formatting (bprint, build, shown)

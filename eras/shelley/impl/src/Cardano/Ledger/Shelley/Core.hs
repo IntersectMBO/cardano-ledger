@@ -12,12 +12,11 @@ module Cardano.Ledger.Shelley.Core
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Address (RewardAcnt (..))
+import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Serialization (mapFromCBOR, mapToCBOR)
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (Update)
@@ -44,7 +43,7 @@ newtype Wdrl c = Wdrl {unWdrl :: Map (RewardAcnt c) Coin}
   deriving newtype (NoThunks, NFData)
 
 instance Crypto c => ToCBOR (Wdrl c) where
-  toCBOR = mapToCBOR . unWdrl
+  toCBOR = toCBOR . unWdrl
 
 instance Crypto c => FromCBOR (Wdrl c) where
-  fromCBOR = Wdrl <$> mapFromCBOR
+  fromCBOR = Wdrl <$> fromCBOR

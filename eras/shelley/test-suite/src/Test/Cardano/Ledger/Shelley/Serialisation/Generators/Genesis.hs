@@ -30,7 +30,6 @@ import Cardano.Ledger.Shelley.Genesis
 import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.Shelley.TxBody
-import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..))
 import Data.Fixed
 import Data.IP (IPv4, IPv6, fromHostAddress, fromHostAddress6)
 import qualified Data.ListMap as LM
@@ -205,8 +204,14 @@ genNonce =
 genProtVer :: Gen ProtVer
 genProtVer =
   ProtVer
-    <$> genNatural (Range.linear 0 1000)
+    <$> genVersion (Range.linear (getVersion64 minBound) (getVersion64 maxBound))
     <*> genNatural (Range.linear 0 1000)
+  where
+    genVersion r = do
+      v64 <- Gen.word64 r
+      case mkVersion64 v64 of
+        Nothing -> error $ "Invalid version generated: " ++ show v64
+        Just v -> pure v
 
 genUnitInterval :: Gen UnitInterval
 genUnitInterval = genDecimalBoundedRational (Gen.word64 . Range.linear 0)

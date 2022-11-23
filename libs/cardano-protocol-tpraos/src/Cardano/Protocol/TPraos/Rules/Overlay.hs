@@ -22,14 +22,6 @@ module Cardano.Protocol.TPraos.Rules.Overlay
   )
 where
 
-import Cardano.Binary
-  ( FromCBOR (..),
-    ToCBOR (..),
-    TokenType (TypeNull),
-    decodeNull,
-    encodeNull,
-    peekTokenType,
-  )
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BHeaderView (isOverlaySlot)
 import Cardano.Ledger.BaseTypes
@@ -42,6 +34,14 @@ import Cardano.Ledger.BaseTypes
     activeSlotCoeff,
     activeSlotVal,
     epochInfoPure,
+  )
+import Cardano.Ledger.Binary
+  ( FromCBOR (..),
+    ToCBOR (..),
+    TokenType (TypeNull),
+    decodeNull,
+    encodeNull,
+    peekTokenType,
   )
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys

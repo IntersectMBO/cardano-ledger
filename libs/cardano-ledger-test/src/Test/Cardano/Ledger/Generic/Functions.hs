@@ -29,7 +29,12 @@ import Cardano.Ledger.Babbage.TxBody
     referenceInputs',
     spendInputs',
   )
-import Cardano.Ledger.BaseTypes (BlocksMade (BlocksMade), Globals (epochInfo), ProtVer (..))
+import Cardano.Ledger.BaseTypes
+  ( BlocksMade (BlocksMade),
+    Globals (epochInfo),
+    ProtVer (..),
+    natVersion,
+  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential, StakeReference (..))
@@ -110,12 +115,12 @@ collateralPercentage' _proof _x = 0
 {-# NOINLINE collateralPercentage' #-}
 
 protocolVersion :: Proof era -> ProtVer
-protocolVersion (Conway _) = ProtVer 7 0
-protocolVersion (Babbage _) = ProtVer 7 0
-protocolVersion (Alonzo _) = ProtVer 6 0
-protocolVersion (Mary _) = ProtVer 4 0
-protocolVersion (Allegra _) = ProtVer 3 0
-protocolVersion (Shelley _) = ProtVer 2 0
+protocolVersion (Conway _) = ProtVer (natVersion @7) 0
+protocolVersion (Babbage _) = ProtVer (natVersion @7) 0
+protocolVersion (Alonzo _) = ProtVer (natVersion @6) 0
+protocolVersion (Mary _) = ProtVer (natVersion @4) 0
+protocolVersion (Allegra _) = ProtVer (natVersion @3) 0
+protocolVersion (Shelley _) = ProtVer (natVersion @2) 0
 {-# NOINLINE protocolVersion #-}
 
 ppProtocolVersion :: Proof era -> PParams era -> ProtVer

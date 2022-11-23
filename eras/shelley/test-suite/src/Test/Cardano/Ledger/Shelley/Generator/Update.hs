@@ -28,7 +28,12 @@ import Cardano.Ledger.BaseTypes
     ProtVer (..),
     StrictMaybe (..),
     UnitInterval,
+    Version,
+    getVersion64,
     mkNonceFromNumber,
+    mkVersion,
+    mkVersion64,
+    succVersion,
   )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
@@ -68,6 +73,7 @@ import Data.Word (Word64)
 import GHC.Records
 import GHC.Stack (HasCallStack)
 import Numeric.Natural (Natural)
+import Test.Cardano.Ledger.Binary.Arbitrary (genVersion)
 import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core
   ( AllIssuerKeys (cold),
@@ -83,7 +89,7 @@ import Test.Cardano.Ledger.Shelley.Utils
     epochFromSlotNo,
     unsafeBoundRational,
   )
-import Test.QuickCheck (Gen, frequency)
+import Test.QuickCheck (Gen, choose, frequency)
 import qualified Test.QuickCheck as QC
 
 -- ====================================
@@ -191,8 +197,9 @@ genDecentralisationParam = unsafeBoundRational <$> QC.elements [0.1, 0.2 .. 1]
 -- ^ ^ TODO jc - generating d=0 takes some care, if there are no registered
 --  stake pools then d=0 deadlocks the system.
 
-genProtocolVersion :: HasCallStack => Natural -> Gen ProtVer
-genProtocolVersion minMajPV = ProtVer <$> genNatural minMajPV 10 <*> genNatural 1 50
+genProtocolVersion :: HasCallStack => Version -> Gen ProtVer
+genProtocolVersion minMajPV =
+  ProtVer <$> genVersion minMajPV maxBound <*> genNatural 1 50
 
 genMinUTxOValue :: HasCallStack => Gen Coin
 genMinUTxOValue = Coin <$> genInteger 1 20
@@ -204,10 +211,7 @@ genMinPoolCost = Coin <$> genInteger 10 50
 -- Increments the Major or Minor versions and possibly the Alt version.
 genNextProtocolVersion :: HasCallStack => ShelleyPParams era -> Gen ProtVer
 genNextProtocolVersion pp = do
-  QC.elements
-    [ ProtVer (m + 1) 0,
-      ProtVer m (n + 1)
-    ]
+  QC.elements $ ProtVer m (n + 1) : [ProtVer m' 0 | Just m' <- [succVersion m]]
   where
     ProtVer m n = getField @"_protocolVersion" pp
 

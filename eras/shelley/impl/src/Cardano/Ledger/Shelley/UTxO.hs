@@ -67,8 +67,6 @@ import qualified Data.Set as Set
 import GHC.Records (HasField (..))
 import Lens.Micro ((^.))
 
--- =============================================================
-
 -- | Determine the total deposit amount needed.
 -- The block may (legitimately) contain multiple registration certificates
 -- for the same pool, where the first will be treated as a registration and

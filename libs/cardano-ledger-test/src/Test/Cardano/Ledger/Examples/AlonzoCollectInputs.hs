@@ -30,6 +30,7 @@ import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Alonzo.TxInfo (TranslationError, VersionedTxInfo, txInfo, valContext)
 import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..))
 import qualified Cardano.Ledger.Babbage.PParams as Babbage (BabbagePParamsHKD (..))
+import Cardano.Ledger.BaseTypes (natVersion)
 import Cardano.Ledger.Core hiding (TranslationError)
 import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (hashAnnotated)
@@ -203,7 +204,7 @@ defaultPPs =
     MaxValSize 1000000000,
     MaxTxExUnits $ ExUnits 1000000 1000000,
     MaxBlockExUnits $ ExUnits 1000000 1000000,
-    ProtocolVersion $ ProtVer 5 0,
+    ProtocolVersion $ ProtVer (natVersion @5) 0,
     CollateralPercentage 100
   ]
 

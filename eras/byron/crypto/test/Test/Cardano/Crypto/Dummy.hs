@@ -7,13 +7,13 @@ module Test.Cardano.Crypto.Dummy
   )
 where
 
-import Cardano.Binary (Annotated (..), serialize')
 import Cardano.Crypto
   ( AProtocolMagic (..),
     ProtocolMagic,
     ProtocolMagicId (..),
     RequiresNetworkMagic (..),
   )
+import Cardano.Ledger.Binary (Annotated (..), byronProtVer, serialize')
 import Cardano.Prelude
 
 aProtocolMagic :: AProtocolMagic ByteString
@@ -24,7 +24,7 @@ protocolMagic = AProtocolMagic (Annotated protocolMagicId ()) RequiresMagic
 
 annotatedProtocolMagicId :: Annotated ProtocolMagicId ByteString
 annotatedProtocolMagicId =
-  Annotated protocolMagicId (serialize' protocolMagicId)
+  Annotated protocolMagicId (serialize' byronProtVer protocolMagicId)
 
 protocolMagicId :: ProtocolMagicId
 protocolMagicId = ProtocolMagicId 55550001

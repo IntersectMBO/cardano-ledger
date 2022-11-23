@@ -44,9 +44,22 @@ module Cardano.Ledger.ShelleyMA.TxBody
   )
 where
 
-import Cardano.Binary (Annotator, FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
+import Cardano.Ledger.Binary (Annotator, FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.Binary.Coders
+  ( Decode (..),
+    Density (..),
+    Encode (..),
+    Field,
+    Wrapped (..),
+    decode,
+    encodeKeyedStrictMaybe,
+    field,
+    invalidField,
+    ofield,
+    (!>),
+  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core hiding (TxBody)
@@ -55,7 +68,6 @@ import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Mary.Value (MultiAsset)
 import Cardano.Ledger.MemoBytes (Mem, MemoBytes (..), MemoHashIndex, memoBytes)
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
-import Cardano.Ledger.Serialization (encodeFoldable)
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
@@ -77,21 +89,6 @@ import Cardano.Ledger.Val
     EncodeMint (..),
   )
 import Control.DeepSeq (NFData (..))
-import Data.Coders
-  ( Decode (..),
-    Density (..),
-    Encode (..),
-    Field,
-    Wrapped (..),
-    decode,
-    decodeSet,
-    decodeStrictSeq,
-    encodeKeyedStrictMaybe,
-    field,
-    invalidField,
-    ofield,
-    (!>),
-  )
 import qualified Data.Map.Strict as Map
 import Data.Proxy
 import Data.Sequence.Strict (StrictSeq, fromList)
@@ -155,32 +152,48 @@ fromSJust SNothing = error "SNothing in fromSJust"
 -- txXparse and bodyFields should be Duals, visual inspection helps ensure this.
 
 txSparse ::
-  (EraTxOut era, ToCBOR (PParamsUpdate era)) =>
+  EraTxOut era =>
   MATxBodyRaw era ->
   Encode ('Closed 'Sparse) (MATxBodyRaw era)
 txSparse (MATxBodyRaw inp out cert wdrl fee (ValidityInterval bot top) up hash frge) =
   Keyed (\i o f topx c w u h botx forg -> MATxBodyRaw i o c w f (ValidityInterval botx topx) u h forg)
-    !> Key 0 (E encodeFoldable inp) -- We don't have to send these in TxBodyX order
-    !> Key 1 (E encodeFoldable out) -- Just hack up a fake constructor with the lambda.
+    !> Key 0 (To inp) -- We don't have to send these in TxBodyX order
+    !> Key 1 (To out) -- Just hack up a fake constructor with the lambda.
     !> Key 2 (To fee)
     !> encodeKeyedStrictMaybe 3 top
-    !> Omit null (Key 4 (E encodeFoldable cert))
+    !> Omit null (Key 4 (To cert))
     !> Omit (null . unWdrl) (Key 5 (To wdrl))
     !> encodeKeyedStrictMaybe 6 up
     !> encodeKeyedStrictMaybe 7 hash
     !> encodeKeyedStrictMaybe 8 bot
     !> Omit (== mempty) (Key 9 (E encodeMint frge))
 
-bodyFields :: (EraTxOut era, FromCBOR (PParamsUpdate era)) => Word -> Field (MATxBodyRaw era)
-bodyFields 0 = field (\x tx -> tx {matbrInputs = x}) (D (decodeSet fromCBOR))
-bodyFields 1 = field (\x tx -> tx {matbrOutputs = x}) (D (decodeStrictSeq fromCBOR))
+bodyFields :: EraTxOut era => Word -> Field (MATxBodyRaw era)
+bodyFields 0 = field (\x tx -> tx {matbrInputs = x}) From
+bodyFields 1 = field (\x tx -> tx {matbrOutputs = x}) From
 bodyFields 2 = field (\x tx -> tx {matbrTxFee = x}) From
-bodyFields 3 = ofield (\x tx -> tx {matbrValidityInterval = (matbrValidityInterval tx) {invalidHereafter = x}}) From
-bodyFields 4 = field (\x tx -> tx {matbrCerts = x}) (D (decodeStrictSeq fromCBOR))
+bodyFields 3 =
+  ofield
+    ( \x tx ->
+        tx
+          { matbrValidityInterval =
+              (matbrValidityInterval tx) {invalidHereafter = x}
+          }
+    )
+    From
+bodyFields 4 = field (\x tx -> tx {matbrCerts = x}) From
 bodyFields 5 = field (\x tx -> tx {matbrWdrls = x}) From
 bodyFields 6 = ofield (\x tx -> tx {matbrUpdate = x}) From
 bodyFields 7 = ofield (\x tx -> tx {matbrAuxDataHash = x}) From
-bodyFields 8 = ofield (\x tx -> tx {matbrValidityInterval = (matbrValidityInterval tx) {invalidBefore = x}}) From
+bodyFields 8 =
+  ofield
+    ( \x tx ->
+        tx
+          { matbrValidityInterval =
+              (matbrValidityInterval tx) {invalidBefore = x}
+          }
+    )
+    From
 bodyFields 9 = field (\x tx -> tx {matbrMint = x}) (D decodeMint)
 bodyFields n = invalidField n
 
@@ -240,7 +253,7 @@ instance (c ~ EraCrypto era, Era era) => HashAnnotated (MATxBody era) EraIndepen
 
 -- | A pattern to keep the newtype and the MemoBytes hidden
 pattern MATxBody ::
-  (EraTxOut era, ToCBOR (PParamsUpdate era)) =>
+  EraTxOut era =>
   Set (TxIn (EraCrypto era)) ->
   StrictSeq (ShelleyTxOut era) ->
   StrictSeq (DCert (EraCrypto era)) ->
@@ -304,7 +317,7 @@ pattern MATxBody
 {-# COMPLETE MATxBody #-}
 
 mkMATxBody ::
-  (EraTxOut era, ToCBOR (PParamsUpdate era)) =>
+  EraTxOut era =>
   MATxBodyRaw era ->
   MATxBody era
 mkMATxBody = TxBodyConstr . memoBytes . txSparse

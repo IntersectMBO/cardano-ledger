@@ -20,13 +20,21 @@ module Cardano.Ledger.ShelleyMA.Rules.Utxo
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, serialize)
 import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.BaseTypes
   ( Network,
+    ProtVer (pvMajor),
     ShelleyBase,
     StrictMaybe (..),
     networkId,
+  )
+import Cardano.Ledger.Binary
+  ( FromCBOR (..),
+    ToCBOR (..),
+    decodeRecordSum,
+    encodeListLen,
+    invalidKey,
+    serialize,
   )
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
@@ -56,13 +64,6 @@ import Cardano.Slotting.Slot (SlotNo)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
 import qualified Data.ByteString.Lazy as BSL (length)
-import Data.Coders
-  ( decodeList,
-    decodeRecordSum,
-    decodeSet,
-    encodeFoldable,
-    invalidKey,
-  )
 import Data.Foldable (toList)
 import Data.Int (Int64)
 import qualified Data.Map.Strict as Map
@@ -210,7 +211,7 @@ utxoTransition = do
 
   {- ∀ txout ∈ txouts txb, serSize (getValue txout) ≤ MaxValSize -}
   -- MaxValSize = 4000
-  runTest $ validateOutputTooBigUTxO outputs
+  runTest $ validateOutputTooBigUTxO pp outputs
 
   {- ∀ ( _ ↦ (a,_)) ∈ txoutstxb,  a ∈ Addrbootstrap → bootstrapAttrsSize a ≤ 64 -}
   runTest $ Shelley.validateOutputBootAddrAttrsTooBig (Map.elems (unUTxO outputs))
@@ -240,17 +241,19 @@ validateOutsideValidityIntervalUTxO slot txb =
 -- > ∀ txout ∈ txouts txb, serSize (getValue txout) ≤ MaxValSize
 validateOutputTooBigUTxO ::
   EraTxOut era =>
+  PParams era ->
   UTxO era ->
   Test (ShelleyMAUtxoPredFailure era)
-validateOutputTooBigUTxO (UTxO outputs) =
+validateOutputTooBigUTxO pp (UTxO outputs) =
   failureUnless (null outputsTooBig) $ OutputTooBigUTxO outputsTooBig
   where
+    version = pvMajor (getField @"_protocolVersion" pp)
     maxValSize = 4000 :: Int64
     outputsTooBig =
       filter
         ( \out ->
             let v = out ^. valueTxOutL
-             in BSL.length (serialize v) > maxValSize
+             in BSL.length (serialize version v) > maxValSize
         )
         (Map.elems outputs)
 
@@ -328,7 +331,7 @@ instance
   where
   toCBOR = \case
     BadInputsUTxO ins ->
-      encodeListLen 2 <> toCBOR (0 :: Word8) <> encodeFoldable ins
+      encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR ins
     (OutsideValidityIntervalUTxO a b) ->
       encodeListLen 3
         <> toCBOR (1 :: Word8)
@@ -353,7 +356,7 @@ instance
     OutputTooSmallUTxO outs ->
       encodeListLen 2
         <> toCBOR (6 :: Word8)
-        <> encodeFoldable outs
+        <> toCBOR outs
     (UpdateFailure a) ->
       encodeListLen 2
         <> toCBOR (7 :: Word8)
@@ -362,21 +365,21 @@ instance
       encodeListLen 3
         <> toCBOR (8 :: Word8)
         <> toCBOR right
-        <> encodeFoldable wrongs
+        <> toCBOR wrongs
     (WrongNetworkWithdrawal right wrongs) ->
       encodeListLen 3
         <> toCBOR (9 :: Word8)
         <> toCBOR right
-        <> encodeFoldable wrongs
+        <> toCBOR wrongs
     OutputBootAddrAttrsTooBig outs ->
       encodeListLen 2
         <> toCBOR (10 :: Word8)
-        <> encodeFoldable outs
+        <> toCBOR outs
     TriesToForgeADA -> encodeListLen 1 <> toCBOR (11 :: Word8)
     OutputTooBigUTxO outs ->
       encodeListLen 2
         <> toCBOR (12 :: Word8)
-        <> encodeFoldable outs
+        <> toCBOR outs
 
 instance
   ( EraTxOut era,
@@ -388,7 +391,7 @@ instance
     decodeRecordSum "PredicateFailureUTXO" $
       \case
         0 -> do
-          ins <- decodeSet fromCBOR
+          ins <- fromCBOR
           pure (2, BadInputsUTxO ins) -- The (2,..) indicates the number of things decoded, INCLUDING the tags, which are decoded by decodeRecordSumNamed
         1 -> do
           a <- fromCBOR
@@ -408,25 +411,25 @@ instance
           b <- fromCBOR
           pure (3, ValueNotConservedUTxO a b)
         6 -> do
-          outs <- decodeList fromCBOR
+          outs <- fromCBOR
           pure (2, OutputTooSmallUTxO outs)
         7 -> do
           a <- fromCBOR
           pure (2, UpdateFailure a)
         8 -> do
           right <- fromCBOR
-          wrongs <- decodeSet fromCBOR
+          wrongs <- fromCBOR
           pure (3, WrongNetwork right wrongs)
         9 -> do
           right <- fromCBOR
-          wrongs <- decodeSet fromCBOR
+          wrongs <- fromCBOR
           pure (3, WrongNetworkWithdrawal right wrongs)
         10 -> do
-          outs <- decodeList fromCBOR
+          outs <- fromCBOR
           pure (2, OutputBootAddrAttrsTooBig outs)
         11 -> pure (1, TriesToForgeADA)
         12 -> do
-          outs <- decodeList fromCBOR
+          outs <- fromCBOR
           pure (2, OutputTooBigUTxO outs)
         k -> invalidKey k
 

@@ -5,7 +5,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Chain.Slotting.EpochNumber
@@ -14,7 +13,7 @@ module Cardano.Chain.Slotting.EpochNumber
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Prelude
 import qualified Data.Aeson as Aeson
 import Data.Data (Data)

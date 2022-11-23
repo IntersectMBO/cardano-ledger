@@ -48,6 +48,7 @@ library
   build-depends:
     cardano-ledger-alonzo,
     cardano-ledger-babbage,
+    cardano-ledger-binary,
     cardano-ledger-conway,
     cardano-ledger-core,
     cardano-ledger-shelley,
@@ -66,10 +67,10 @@ test-suite cardano-ledger-api-test
     Test.Cardano.Ledger.Api.Tx.Out
   build-depends:
     bytestring,
-    cardano-binary,
-    cardano-ledger-api,
-    cardano-ledger-core,
     cardano-ledger-alonzo,
+    cardano-ledger-api,
+    cardano-ledger-binary,
+    cardano-ledger-core,
     cardano-ledger-babbage,
     cardano-ledger-babbage-test,
     cardano-ledger-shelley,

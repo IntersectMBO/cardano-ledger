@@ -3,7 +3,9 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Test.Cardano.Ledger.Alonzo.Examples where
@@ -17,7 +19,7 @@ import Cardano.Ledger.Alonzo.TxInfo
     ScriptResult (Fails, Passes),
     runPLCScript,
   )
-import Cardano.Ledger.BaseTypes (ProtVer (..))
+import Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
 import Data.ByteString.Short (ShortByteString)
 import Data.Proxy (Proxy (..))
 import PlutusLedgerApi.Test.EvaluationContext
@@ -190,7 +192,7 @@ explainTest script@(PlutusScript _ bytes) mode ds =
   case ( mode,
          runPLCScript
            alonzo
-           (ProtVer 6 0)
+           (ProtVer (natVersion @6) 0)
            PlutusV1
            testingCostModelV1
            bytes

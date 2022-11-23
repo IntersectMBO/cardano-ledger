@@ -30,7 +30,6 @@ module Cardano.Ledger.Alonzo.Rules.Utxo
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..), serialize)
 import Cardano.Ledger.Address (Addr (..), RewardAcnt)
 import Cardano.Ledger.Alonzo.Era (AlonzoUTXO)
 import Cardano.Ledger.Alonzo.Rules.Utxos (AlonzoUTXOS, AlonzoUtxosPredFailure)
@@ -44,12 +43,22 @@ import Cardano.Ledger.Alonzo.TxBody
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), nullRedeemers)
 import Cardano.Ledger.BaseTypes
   ( Network,
-    ProtVer,
+    ProtVer (..),
     ShelleyBase,
     StrictMaybe (..),
     epochInfo,
     networkId,
     systemStart,
+  )
+import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), serialize)
+import Cardano.Ledger.Binary.Coders
+  ( Decode (..),
+    Encode (..),
+    Wrapped (Open),
+    decode,
+    encode,
+    (!>),
+    (<!),
   )
 import Cardano.Ledger.Coin
 import Cardano.Ledger.CompactAddress
@@ -86,19 +95,6 @@ import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (◁))
 import Control.State.Transition.Extended
 import qualified Data.ByteString.Lazy as BSL (length)
-import Data.Coders
-  ( Decode (..),
-    Encode (..),
-    Wrapped (Open),
-    decode,
-    decodeList,
-    decodeMap,
-    decodeSet,
-    encode,
-    encodeFoldable,
-    (!>),
-    (<!),
-  )
 import Data.Coerce (coerce)
 import Data.Either (isRight)
 import Data.Foldable (foldl', sequenceA_, toList)
@@ -343,8 +339,7 @@ validateCollateralContainsNonADA collateralTxOuts =
 validateOutsideForecast ::
   ( ShelleyMAEraTxBody era,
     AlonzoEraTxWits era,
-    EraTx era,
-    HasField "_protocolVersion" (PParams era) ProtVer
+    EraTx era
   ) =>
   PParams era ->
   EpochInfo (Either a) ->
@@ -402,10 +397,11 @@ validateOutputTooBigUTxO pp (UTxO outputs) =
   failureUnless (null outputsTooBig) $ OutputTooBigUTxO outputsTooBig
   where
     maxValSize = getField @"_maxValSize" pp
+    protVer = getField @"_protocolVersion" pp
     outputsTooBig = foldl' accum [] $ Map.elems outputs
     accum ans txOut =
       let v = txOut ^. valueTxOutL
-          serSize = fromIntegral $ BSL.length $ serialize v
+          serSize = fromIntegral $ BSL.length $ serialize (pvMajor protVer) v
        in if serSize > maxValSize
             then (fromIntegral serSize, fromIntegral maxValSize, txOut) : ans
             else ans
@@ -477,7 +473,6 @@ utxoTransition ::
     HasField "_maxValSize" (PParams era) Natural,
     HasField "_maxTxSize" (PParams era) Natural,
     HasField "_maxTxExUnits" (PParams era) ExUnits,
-    HasField "_protocolVersion" (PParams era) ProtVer,
     HasField "_maxCollateralInputs" (PParams era) Natural,
     HasField "_collateralPercentage" (PParams era) Natural,
     Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era))
@@ -625,7 +620,7 @@ encFail ::
   AlonzoUtxoPredFailure era ->
   Encode 'Open (AlonzoUtxoPredFailure era)
 encFail (BadInputsUTxO ins) =
-  Sum (BadInputsUTxO @era) 0 !> E encodeFoldable ins
+  Sum (BadInputsUTxO @era) 0 !> To ins
 encFail (OutsideValidityIntervalUTxO a b) =
   Sum OutsideValidityIntervalUTxO 1 !> To a !> To b
 encFail (MaxTxSizeUTxO a b) =
@@ -637,19 +632,19 @@ encFail (FeeTooSmallUTxO a b) =
 encFail (ValueNotConservedUTxO a b) =
   Sum (ValueNotConservedUTxO @era) 5 !> To a !> To b
 encFail (OutputTooSmallUTxO outs) =
-  Sum (OutputTooSmallUTxO @era) 6 !> E encodeFoldable outs
+  Sum (OutputTooSmallUTxO @era) 6 !> To outs
 encFail (UtxosFailure a) =
   Sum (UtxosFailure @era) 7 !> To a
 encFail (WrongNetwork right wrongs) =
-  Sum (WrongNetwork @era) 8 !> To right !> E encodeFoldable wrongs
+  Sum (WrongNetwork @era) 8 !> To right !> To wrongs
 encFail (WrongNetworkWithdrawal right wrongs) =
-  Sum (WrongNetworkWithdrawal @era) 9 !> To right !> E encodeFoldable wrongs
+  Sum (WrongNetworkWithdrawal @era) 9 !> To right !> To wrongs
 encFail (OutputBootAddrAttrsTooBig outs) =
-  Sum (OutputBootAddrAttrsTooBig @era) 10 !> E encodeFoldable outs
+  Sum (OutputBootAddrAttrsTooBig @era) 10 !> To outs
 encFail TriesToForgeADA =
   Sum TriesToForgeADA 11
 encFail (OutputTooBigUTxO outs) =
-  Sum (OutputTooBigUTxO @era) 12 !> E encodeFoldable outs
+  Sum (OutputTooBigUTxO @era) 12 !> To outs
 encFail (InsufficientCollateral a b) =
   Sum InsufficientCollateral 13 !> To a !> To b
 encFail (ScriptsNotPaidUTxO a) =
@@ -675,26 +670,26 @@ decFail ::
   ) =>
   Word ->
   Decode 'Open (AlonzoUtxoPredFailure era)
-decFail 0 = SumD BadInputsUTxO <! D (decodeSet fromCBOR)
+decFail 0 = SumD BadInputsUTxO <! From
 decFail 1 = SumD OutsideValidityIntervalUTxO <! From <! From
 decFail 2 = SumD MaxTxSizeUTxO <! From <! From
 decFail 3 = SumD InputSetEmptyUTxO
 decFail 4 = SumD FeeTooSmallUTxO <! From <! From
 decFail 5 = SumD ValueNotConservedUTxO <! From <! From
-decFail 6 = SumD OutputTooSmallUTxO <! D (decodeList fromCBOR)
+decFail 6 = SumD OutputTooSmallUTxO <! From
 decFail 7 = SumD UtxosFailure <! From
-decFail 8 = SumD WrongNetwork <! From <! D (decodeSet fromCBOR)
-decFail 9 = SumD WrongNetworkWithdrawal <! From <! D (decodeSet fromCBOR)
-decFail 10 = SumD OutputBootAddrAttrsTooBig <! D (decodeList fromCBOR)
+decFail 8 = SumD WrongNetwork <! From <! From
+decFail 9 = SumD WrongNetworkWithdrawal <! From <! From
+decFail 10 = SumD OutputBootAddrAttrsTooBig <! From
 decFail 11 = SumD TriesToForgeADA
 decFail 12 =
   let fromRestricted :: (Int, Int, TxOut era) -> (Integer, Integer, TxOut era)
       fromRestricted (sz, mv, txOut) = (toInteger sz, toInteger mv, txOut)
-   in SumD OutputTooBigUTxO <! D (map fromRestricted <$> decodeList fromCBOR)
+   in SumD OutputTooBigUTxO <! D (map fromRestricted <$> fromCBOR)
 decFail 13 = SumD InsufficientCollateral <! From <! From
 decFail 14 =
   SumD ScriptsNotPaidUTxO
-    <! D (UTxO <$> decodeMap fromCBOR fromCBOR)
+    <! D (UTxO <$> fromCBOR)
 decFail 15 = SumD ExUnitsTooBigUTxO <! From <! From
 decFail 16 = SumD CollateralContainsNonADA <! From
 decFail 17 = SumD WrongNetworkInTxBody <! From <! From

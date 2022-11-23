@@ -22,19 +22,20 @@ module Cardano.Ledger.Shelley.Scripts
         RequireSignature,
         RequireMOf
       ),
-    getMultiSigBytes,
     ScriptHash (..),
     nativeMultiSigTag,
   )
 where
 
-import Cardano.Binary
+import Cardano.Crypto.Hash.Class (HashAlgorithm)
+import Cardano.Ledger.BaseTypes (invalidKey)
+import Cardano.Ledger.Binary
   ( Annotator (..),
     FromCBOR (fromCBOR),
     ToCBOR,
+    decodeRecordSum,
   )
-import Cardano.Crypto.Hash.Class (HashAlgorithm)
-import Cardano.Ledger.BaseTypes (invalidKey)
+import Cardano.Ledger.Binary.Coders (Encode (..), (!>))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (HASH)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
@@ -46,12 +47,9 @@ import Cardano.Ledger.MemoBytes
     pattern Memo,
   )
 import Cardano.Ledger.SafeHash (SafeToHash (..))
-import Cardano.Ledger.Serialization (decodeList, decodeRecordSum, encodeFoldable)
 import Cardano.Ledger.Shelley.Era
 import Control.DeepSeq (NFData)
 import qualified Data.ByteString as BS
-import Data.ByteString.Short (ShortByteString)
-import Data.Coders (Encode (..), (!>))
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
@@ -109,9 +107,6 @@ instance CC.Crypto c => EraScript (ShelleyEra c) where
 
 deriving newtype instance NFData (MultiSig era)
 
-getMultiSigBytes :: Era era => MultiSig era -> ShortByteString
-getMultiSigBytes (MultiSigConstr (Memo _ bytes)) = bytes
-
 deriving via
   Mem MultiSigRaw era
   instance
@@ -129,21 +124,21 @@ pattern RequireAllOf ms <-
   MultiSigConstr (Memo (RequireAllOf' ms) _)
   where
     RequireAllOf ms =
-      MultiSigConstr $ memoBytes (Sum RequireAllOf' 1 !> E encodeFoldable ms)
+      MultiSigConstr $ memoBytes (Sum RequireAllOf' 1 !> To ms)
 
 pattern RequireAnyOf :: Era era => [MultiSig era] -> MultiSig era
 pattern RequireAnyOf ms <-
   MultiSigConstr (Memo (RequireAnyOf' ms) _)
   where
     RequireAnyOf ms =
-      MultiSigConstr $ memoBytes (Sum RequireAnyOf' 2 !> E encodeFoldable ms)
+      MultiSigConstr $ memoBytes (Sum RequireAnyOf' 2 !> To ms)
 
 pattern RequireMOf :: Era era => Int -> [MultiSig era] -> MultiSig era
 pattern RequireMOf n ms <-
   MultiSigConstr (Memo (RequireMOf' n ms) _)
   where
     RequireMOf n ms =
-      MultiSigConstr $ memoBytes (Sum RequireMOf' 3 !> To n !> E encodeFoldable ms)
+      MultiSigConstr $ memoBytes (Sum RequireMOf' 3 !> To n !> To ms)
 
 {-# COMPLETE RequireSignature, RequireAllOf, RequireAnyOf, RequireMOf #-}
 
@@ -155,13 +150,13 @@ instance
     \case
       0 -> (,) 2 . pure . RequireSignature' . KeyHash <$> fromCBOR
       1 -> do
-        multiSigs <- sequence <$> decodeList fromCBOR
+        multiSigs <- sequence <$> fromCBOR
         pure (2, RequireAllOf' <$> multiSigs)
       2 -> do
-        multiSigs <- sequence <$> decodeList fromCBOR
+        multiSigs <- sequence <$> fromCBOR
         pure (2, RequireAnyOf' <$> multiSigs)
       3 -> do
         m <- fromCBOR
-        multiSigs <- sequence <$> decodeList fromCBOR
+        multiSigs <- sequence <$> fromCBOR
         pure (3, RequireMOf' m <$> multiSigs)
       k -> invalidKey k

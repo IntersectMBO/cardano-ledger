@@ -6,9 +6,8 @@
 --     versions of old languages) will be added here.
 module Cardano.Ledger.Language where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeInt)
+import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), decodeInt, invalidKey)
 import Control.DeepSeq (NFData (..))
-import Data.Coders (invalidKey)
 import Data.Ix (Ix)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
@@ -39,6 +38,7 @@ instance ToCBOR Language where
 instance FromCBOR Language where
   fromCBOR = do
     n <- decodeInt
+    -- We need to check bounds in order to avoid partial cases of `toEnum`
     lang <-
       if n >= fromEnum (minBound :: Language) && n <= fromEnum (maxBound :: Language)
         then pure $ toEnum n

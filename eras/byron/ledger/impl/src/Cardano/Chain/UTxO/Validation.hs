@@ -18,18 +18,6 @@ module Cardano.Chain.UTxO.Validation
   )
 where
 
-import Cardano.Binary
-  ( Annotated (..),
-    Decoder,
-    DecoderError (DecoderErrorUnknownTag),
-    FromCBOR (..),
-    ToCBOR (..),
-    decodeListLen,
-    decodeWord8,
-    encodeListLen,
-    enforceSize,
-    matchSize,
-  )
 import Cardano.Chain.Common
   ( Address (..),
     Lovelace,
@@ -78,7 +66,20 @@ import Cardano.Crypto
     verifyRedeemSigDecoded,
     verifySignatureDecoded,
   )
-import Cardano.Prelude
+import Cardano.Ledger.Binary
+  ( Annotated (..),
+    Decoder,
+    DecoderError (DecoderErrorUnknownTag),
+    FromCBOR (..),
+    ToCBOR (..),
+    cborError,
+    decodeListLen,
+    decodeWord8,
+    encodeListLen,
+    enforceSize,
+    matchSize,
+  )
+import Cardano.Prelude hiding (cborError)
 import qualified Data.ByteString as BS
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Set as S

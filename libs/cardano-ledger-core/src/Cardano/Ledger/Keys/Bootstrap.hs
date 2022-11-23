@@ -29,21 +29,27 @@ module Cardano.Ledger.Keys.Bootstrap
   )
 where
 
-import Cardano.Binary
-  ( Annotator,
-    FromCBOR (..),
-    ToCBOR (..),
-    annotatorSlice,
-    encodeListLen,
-    encodePreEncoded,
-    serialize',
-    serializeEncoding,
-  )
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.Signing as Byron
 import qualified Cardano.Crypto.Wallet as WC
+import Cardano.Ledger.Binary
+  ( Annotator,
+    FromCBOR (..),
+    ToCBOR (..),
+    annotatorSlice,
+    byronProtVer,
+    decodeRecordNamed,
+    encodeListLen,
+    encodePreEncoded,
+    serialize',
+    serializeEncoding,
+  )
+import Cardano.Ledger.Binary.Crypto
+  ( decodeSignedDSIGN,
+    encodeSignedDSIGN,
+  )
 import Cardano.Ledger.Crypto (ADDRHASH, DSIGN)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
@@ -55,7 +61,6 @@ import Cardano.Ledger.Keys
     verifySignedDSIGN,
   )
 import qualified Cardano.Ledger.Keys as Keys
-import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Control.DeepSeq (NFData)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
@@ -113,10 +118,10 @@ pattern BootstrapWitness {bwKey, bwSig, bwChainCode, bwAttributes} <-
   where
     BootstrapWitness key sig cc attributes =
       let bytes =
-            serializeEncoding $
+            serializeEncoding byronProtVer $
               encodeListLen 4
                 <> toCBOR key
-                <> DSIGN.encodeSignedDSIGN sig
+                <> encodeSignedDSIGN sig
                 <> toCBOR cc
                 <> toCBOR attributes
        in BootstrapWitness' key sig cc attributes bytes
@@ -134,7 +139,7 @@ instance CC.Crypto c => FromCBOR (Annotator (BootstrapWitness c)) where
     decodeRecordNamed "BootstrapWitness" (const 4) $
       do
         key <- fromCBOR
-        sig <- DSIGN.decodeSignedDSIGN
+        sig <- decodeSignedDSIGN
         cc <- fromCBOR
         attributes <- fromCBOR
         pure . pure $ BootstrapWitness' key sig cc attributes
@@ -216,7 +221,7 @@ makeBootstrapWitness ::
   Byron.Attributes Byron.AddrAttributes ->
   BootstrapWitness c
 makeBootstrapWitness txBodyHash byronSigningKey addrAttributes =
-  BootstrapWitness vk signature cc (serialize' addrAttributes)
+  BootstrapWitness vk signature cc (serialize' byronProtVer addrAttributes)
   where
     (vk, cc) = unpackByronVKey $ Byron.toVerification byronSigningKey
     signature =

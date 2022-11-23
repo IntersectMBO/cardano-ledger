@@ -13,13 +13,21 @@ module Cardano.Ledger.Shelley.RewardProvenance
   )
 where
 
-import Cardano.Binary
+import Cardano.Ledger.BaseTypes (BlocksMade (..))
+import Cardano.Ledger.Binary
   ( FromCBOR (fromCBOR),
     ToCBOR (toCBOR),
     decodeDouble,
     encodeDouble,
   )
-import Cardano.Ledger.BaseTypes (BlocksMade (..))
+import Cardano.Ledger.Binary.Coders
+  ( Decode (..),
+    Encode (..),
+    decode,
+    encode,
+    (!>),
+    (<!),
+  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..))
 import qualified Cardano.Ledger.Crypto as CC
@@ -29,14 +37,6 @@ import Cardano.Ledger.SafeHash (SafeHash, unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..), RewardAcnt (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, ToJSON)
-import Data.Coders
-  ( Decode (..),
-    Encode (..),
-    decode,
-    encode,
-    (!>),
-    (<!),
-  )
 import Data.Default.Class (Default (..))
 import Data.Map.Strict (Map)
 import Data.Word (Word64)

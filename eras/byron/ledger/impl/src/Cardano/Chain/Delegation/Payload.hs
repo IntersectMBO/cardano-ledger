@@ -15,7 +15,8 @@ module Cardano.Chain.Delegation.Payload
   )
 where
 
-import Cardano.Binary
+import qualified Cardano.Chain.Delegation.Certificate as Delegation
+import Cardano.Ledger.Binary
   ( Annotated (..),
     ByteSpan,
     Decoded (..),
@@ -23,7 +24,6 @@ import Cardano.Binary
     ToCBOR (..),
     annotatedDecoder,
   )
-import qualified Cardano.Chain.Delegation.Certificate as Delegation
 import Cardano.Prelude
 import Data.Aeson (ToJSON)
 import Formatting (bprint, int)

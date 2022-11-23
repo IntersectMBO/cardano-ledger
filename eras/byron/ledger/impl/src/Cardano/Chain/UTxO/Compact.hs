@@ -1,7 +1,6 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 -- | The UTxO is large and is kept in-memory. It is important to use as
@@ -27,7 +26,6 @@ module Cardano.Chain.UTxO.Compact
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
 import Cardano.Chain.Common.Compact
   ( CompactAddress,
     fromCompactAddress,
@@ -37,6 +35,7 @@ import Cardano.Chain.Common.Lovelace (Lovelace)
 import Cardano.Chain.UTxO.Tx (TxId, TxIn (..), TxOut (..))
 import Cardano.Crypto.Hashing (hashToBytes, unsafeHashFromBytes)
 import Cardano.HeapWords (HeapWords (..), heapWordsUnpacked)
+import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
 import Cardano.Prelude
 import Data.Binary.Get (Get, getWord64le, runGet)
 import Data.Binary.Put (Put, putWord64le, runPut)

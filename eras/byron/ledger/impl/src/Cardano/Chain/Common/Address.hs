@@ -46,16 +46,6 @@ module Cardano.Chain.Common.Address
   )
 where
 
-import Cardano.Binary
-  ( DecoderError (..),
-    Encoding,
-    FromCBOR (..),
-    ToCBOR (..),
-    decodeFull',
-    decodeListLenCanonical,
-    matchSize,
-    serialize',
-  )
 import Cardano.Chain.Common.AddrAttributes
   ( AddrAttributes (..),
     HDAddressPayload,
@@ -79,6 +69,17 @@ import Cardano.Crypto.Signing
     VerificationKey,
   )
 import Cardano.HeapWords (HeapWords (..), heapWords3)
+import Cardano.Ledger.Binary
+  ( DecoderError (..),
+    Encoding,
+    FromCBOR (..),
+    ToCBOR (..),
+    byronProtVer,
+    decodeFull',
+    decodeListLenCanonical,
+    matchSize,
+    serialize',
+  )
 import Cardano.Prelude
 import qualified Data.Aeson as Aeson
 import Data.ByteString.Base58
@@ -204,7 +205,7 @@ addrAlphabet :: Alphabet
 addrAlphabet = bitcoinAlphabet
 
 addrToBase58 :: Address -> ByteString
-addrToBase58 = encodeBase58 addrAlphabet . serialize'
+addrToBase58 = encodeBase58 addrAlphabet . serialize' byronProtVer
 
 instance B.Buildable Address where
   build = B.build . decodeLatin1 . addrToBase58
@@ -225,7 +226,7 @@ fromCBORTextAddress = fromCBORAddress . encodeUtf8
               "Address"
               "Invalid base58 representation of address"
       dbs <- maybeToRight base58Err $ decodeBase58 addrAlphabet bs
-      decodeFull' dbs
+      decodeFull' byronProtVer dbs
 
 -- | Decode an address from Base58 encoded Text.
 decodeAddressBase58 :: Text -> Either DecoderError Address
