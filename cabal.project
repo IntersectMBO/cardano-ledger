@@ -98,3 +98,16 @@ source-repository-package
   --sha256: 18apsg2lqjv9cc29nbd3hzj2hqhksqjj0s4xp2rdv8cbd27racjh
   subdir:
     cborg
+
+source-repository-package
+  type: git
+  location: https://github.com/milloni/cardano-base
+  tag: a82587d621d6b64cf5001cf2845a958887aef9cc
+  --sha256: 1zx8li963wfc7kq5p2nxdj8lnw2nj59jli47bww7h2silbr60apf
+  subdir:
+    binary
+    binary/test
+    cardano-crypto-class
+    cardano-crypto-praos
+    cardano-crypto-tests
+    slotting
