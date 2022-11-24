@@ -382,8 +382,7 @@ checkSlotNotTooLate ::
   ) =>
   SlotNo ->
   Rule (ShelleyDELEG era) 'Transition ()
-checkSlotNotTooLate slot =
-  do
+checkSlotNotTooLate slot = do
     sp <- liftSTS $ asks stabilityWindow
     ei <- liftSTS $ asks epochInfoPure
     EpochNo currEpoch <- liftSTS $ epochInfoEpoch ei slot
@@ -399,8 +398,7 @@ updateReservesAndTreasury ::
   Coin ->
   DState (EraCrypto era) ->
   Rule (ShelleyDELEG era) 'Transition (DState (EraCrypto era))
-updateReservesAndTreasury targetPot combinedMap available ds =
-  do
+updateReservesAndTreasury targetPot combinedMap available ds = do
     let requiredForRewards = fold combinedMap
     requiredForRewards
       <= available
