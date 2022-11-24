@@ -16,25 +16,26 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Shelley.Genesis (
-  ShelleyGenesisStaking (..),
-  ShelleyGenesis (..),
-  ValidationErr (..),
-  NominalDiffTimeMicro (..),
-  emptyGenesisStaking,
-  sgActiveSlotCoeff,
-  genesisUTxO,
-  initialFundsPseudoTxIn,
-  validateGenesis,
-  describeValidationErr,
-  mkShelleyGlobals,
-  nominalDiffTimeMicroToMicroseconds,
-  nominalDiffTimeMicroToSeconds,
-  toNominalDiffTimeMicro,
-  toNominalDiffTimeMicroWithRounding,
-  fromNominalDiffTimeMicro,
-  secondsToNominalDiffTimeMicro,
-)
+module Cardano.Ledger.Shelley.Genesis
+  ( ShelleyGenesisStaking (..),
+    ShelleyGenesis (..),
+    ValidationErr (..),
+    NominalDiffTimeMicro (..),
+    emptyGenesisStaking,
+    sgActiveSlotCoeff,
+    genesisUTxO,
+    initialFundsPseudoTxIn,
+    validateGenesis,
+    describeValidationErr,
+    mkShelleyGlobals,
+    nominalDiffTimeMicroToMicroseconds,
+    nominalDiffTimeMicroToSeconds,
+    toNominalDiffTimeMicro,
+    toNominalDiffTimeMicroWithRounding,
+    fromNominalDiffTimeMicro,
+    secondsToNominalDiffTimeMicro,
+    translateShelleyGenesis,
+  )
 where
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
@@ -210,7 +211,54 @@ data ShelleyGenesis c = ShelleyGenesis
 
 deriving instance Crypto c => NoThunks (ShelleyGenesis c)
 
-sgActiveSlotCoeff :: ShelleyGenesis c -> ActiveSlotCoeff
+-- | Although there could be (and was) a `TranslateEra` instance for ShelleyGenesis, it is morally
+-- more correct to have a separate function fulfill that task. The reason is that conceptually there
+-- is no need to translate ShelleyGenesis values when moving to the next era. A `TranslateEra`
+-- instance would be a convenience that is ultimately more confusing.
+translateShelleyGenesis ::
+  CC.Crypto era1 ~ CC.Crypto era2 => ShelleyGenesis era1 -> ShelleyGenesis era2
+translateShelleyGenesis genesis =
+  ShelleyGenesis
+    { sgSystemStart = sgSystemStart genesis,
+      sgNetworkMagic = sgNetworkMagic genesis,
+      sgNetworkId = sgNetworkId genesis,
+      sgActiveSlotsCoeff = sgActiveSlotsCoeff genesis,
+      sgSecurityParam = sgSecurityParam genesis,
+      sgEpochLength = sgEpochLength genesis,
+      sgSlotsPerKESPeriod = sgSlotsPerKESPeriod genesis,
+      sgMaxKESEvolutions = sgMaxKESEvolutions genesis,
+      sgSlotLength = sgSlotLength genesis,
+      sgUpdateQuorum = sgUpdateQuorum genesis,
+      sgMaxLovelaceSupply = sgMaxLovelaceSupply genesis,
+      sgProtocolParams = translatePParams $ sgProtocolParams genesis,
+      sgGenDelegs = sgGenDelegs genesis,
+      sgInitialFunds = sgInitialFunds genesis,
+      sgStaking = sgStaking genesis
+    }
+  where
+    translatePParams :: ShelleyPParams era1 -> ShelleyPParams era2
+    translatePParams pp =
+      ShelleyPParams
+        { _minfeeA = _minfeeA pp,
+          _minfeeB = _minfeeB pp,
+          _maxBBSize = _maxBBSize pp,
+          _maxTxSize = _maxTxSize pp,
+          _maxBHSize = _maxBHSize pp,
+          _keyDeposit = _keyDeposit pp,
+          _poolDeposit = _poolDeposit pp,
+          _eMax = _eMax pp,
+          _nOpt = _nOpt pp,
+          _a0 = _a0 pp,
+          _rho = _rho pp,
+          _tau = _tau pp,
+          _d = _d pp,
+          _extraEntropy = _extraEntropy pp,
+          _protocolVersion = _protocolVersion pp,
+          _minUTxOValue = _minUTxOValue pp,
+          _minPoolCost = _minPoolCost pp
+        }
+
+sgActiveSlotCoeff :: ShelleyGenesis era -> ActiveSlotCoeff
 sgActiveSlotCoeff = mkActiveSlotCoeff . sgActiveSlotsCoeff
 
 instance Crypto c => ToJSON (ShelleyGenesis c) where
