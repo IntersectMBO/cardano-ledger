@@ -383,14 +383,14 @@ checkSlotNotTooLate ::
   SlotNo ->
   Rule (ShelleyDELEG era) 'Transition ()
 checkSlotNotTooLate slot = do
-    sp <- liftSTS $ asks stabilityWindow
-    ei <- liftSTS $ asks epochInfoPure
-    EpochNo currEpoch <- liftSTS $ epochInfoEpoch ei slot
-    let newEpoch = EpochNo (currEpoch + 1)
-    tellEvent (NewEpoch newEpoch)
-    firstSlot <- liftSTS $ epochInfoFirst ei newEpoch
-    let tooLate = firstSlot *- Duration sp
-    slot < tooLate ?! MIRCertificateTooLateinEpochDELEG slot tooLate
+  sp <- liftSTS $ asks stabilityWindow
+  ei <- liftSTS $ asks epochInfoPure
+  EpochNo currEpoch <- liftSTS $ epochInfoEpoch ei slot
+  let newEpoch = EpochNo (currEpoch + 1)
+  tellEvent (NewEpoch newEpoch)
+  firstSlot <- liftSTS $ epochInfoFirst ei newEpoch
+  let tooLate = firstSlot *- Duration sp
+  slot < tooLate ?! MIRCertificateTooLateinEpochDELEG slot tooLate
 
 updateReservesAndTreasury ::
   MIRPot ->
@@ -399,11 +399,11 @@ updateReservesAndTreasury ::
   DState (EraCrypto era) ->
   Rule (ShelleyDELEG era) 'Transition (DState (EraCrypto era))
 updateReservesAndTreasury targetPot combinedMap available ds = do
-    let requiredForRewards = fold combinedMap
-    requiredForRewards
-      <= available
-      ?! InsufficientForInstantaneousRewardsDELEG targetPot requiredForRewards available
-    pure $
-      case targetPot of
-        ReservesMIR -> ds {dsIRewards = (dsIRewards ds) {iRReserves = combinedMap}}
-        TreasuryMIR -> ds {dsIRewards = (dsIRewards ds) {iRTreasury = combinedMap}}
+  let requiredForRewards = fold combinedMap
+  requiredForRewards
+    <= available
+    ?! InsufficientForInstantaneousRewardsDELEG targetPot requiredForRewards available
+  pure $
+    case targetPot of
+      ReservesMIR -> ds {dsIRewards = (dsIRewards ds) {iRReserves = combinedMap}}
+      TreasuryMIR -> ds {dsIRewards = (dsIRewards ds) {iRTreasury = combinedMap}}
