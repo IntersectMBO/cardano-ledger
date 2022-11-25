@@ -2,8 +2,10 @@ cabal-version: 3.0
 
 name:                cardano-ledger-babbage
 version:             0.1.0.0
-synopsis:            TODO
-description:         TODO
+synopsis:            Cardano ledger introducing refrence scripts and inline datums
+description:
+  This package builds upon the Alonzo ledger with support for reference scripts,
+  reference inputs and inline datums.
 bug-reports:         https://github.com/input-output-hk/cardano-ledger/issues
 license:             Apache-2.0
 author:              IOHK
