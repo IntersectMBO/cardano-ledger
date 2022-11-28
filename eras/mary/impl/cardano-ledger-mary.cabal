@@ -1,0 +1,82 @@
+cabal-version: 3.0
+
+name:                cardano-ledger-shelley-ma
+version:             0.1.0.0
+synopsis:            Shelley ledger with multiasset and time lock support.
+description:
+  This package extends the Shelley ledger with support for
+  native tokens and timelocks.
+bug-reports:         https://github.com/input-output-hk/cardano-ledger/issues
+license:             Apache-2.0
+author:              IOHK
+maintainer:          operations@iohk.io
+category:            Network
+build-type:          Simple
+
+source-repository head
+  type:     git
+  location: https://github.com/input-output-hk/cardano-ledger
+  subdir:   eras/shelley-ma/impl
+
+common base
+  build-depends:      base >= 4.12 && < 4.17
+
+common project-config
+  default-language:   Haskell2010
+
+  ghc-options:        -Wall
+                      -Wcompat
+                      -Wincomplete-record-updates
+                      -Wincomplete-uni-patterns
+                      -Wredundant-constraints
+                      -Wpartial-fields
+                      -Wunused-packages
+
+library
+  import:             base, project-config
+
+  exposed-modules:
+    Cardano.Ledger.Allegra
+    Cardano.Ledger.Allegra.Translation
+    Cardano.Ledger.Mary
+    Cardano.Ledger.Mary.UTxO
+    Cardano.Ledger.Mary.Translation
+    Cardano.Ledger.Mary.Value
+    Cardano.Ledger.ShelleyMA
+    Cardano.Ledger.ShelleyMA.Core
+    Cardano.Ledger.ShelleyMA.Era
+    Cardano.Ledger.ShelleyMA.AuxiliaryData
+    Cardano.Ledger.ShelleyMA.Rules
+    Cardano.Ledger.ShelleyMA.Timelocks
+    Cardano.Ledger.ShelleyMA.TxBody
+    Cardano.Ledger.ShelleyMA.TxOut
+    Cardano.Ledger.ShelleyMA.Tx
+    Cardano.Ledger.ShelleyMA.TxWits
+
+  other-modules:
+    Cardano.Ledger.Allegra.UTxO
+    Cardano.Ledger.ShelleyMA.Rules.Utxo
+    Cardano.Ledger.ShelleyMA.Rules.Utxow
+
+  build-depends:
+    bytestring,
+    base16-bytestring,
+    cardano-crypto-class,
+    cardano-data,
+    cardano-ledger-binary,
+    cardano-ledger-core,
+    cardano-slotting,
+    cborg,
+    containers,
+    deepseq,
+    groups,
+    microlens,
+    nothunks,
+    primitive,
+    cardano-ledger-shelley,
+    small-steps,
+    cardano-strict-containers,
+    text,
+    transformers,
+    validation-selective,
+  hs-source-dirs: src
