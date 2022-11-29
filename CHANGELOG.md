@@ -95,6 +95,8 @@ in the naming of release branches.
   - Renamed `AlonzoTxAuxData.txMD` to `AlonzoTxAuxData.atadMetadata`:
   - Removed `AlonzoTxAuxData.scripts` in favor of two new fields `atadTimelock` and
     `atadPlutus`. This was needed due to #3166
+- Changed instance for `TranslationContext (ShelleyEra c)` to a data type that can be used to
+  translate from Byron to Shelley: #3164
 - Changed major version in `ProtVer` to use new type `Version` instead of `Natural`: #3138
 - Renamed records fields in `Cardano.Ledger` to names without `_` (underscores) #3126
   - `Alonzo.TxBody.AlonzoTxBody` pattern synonym
@@ -248,6 +250,7 @@ in the naming of release branches.
 - `MAClass` is gone: #3175
 - `ShelleyMAEra` type in favor of `AllegraEra` and `MaryEra`: #3175
 - `MATxBody` type in favor of `AllegraTxBody` and `MaryTxBody`: #3175
+- Removed the `TranslateEra` instances for `ShelleyGenesis`: #3164
 - Deprecated `Cardano.Ledger.Serialization` in favor of `Cardano.Ledger.Binary` from
   `cardano-ledger-binary`: #3138
 - Removed `Data.Coders` from `cardano-data` in favor of `Cardano.Ledger.Binary.Coders` from
