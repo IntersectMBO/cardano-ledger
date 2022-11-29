@@ -12,10 +12,9 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.ShelleyMA.Rules.Utxo
-  ( ShelleyMAUTXO,
-    ShelleyMAUtxoPredFailure (..),
-    consumed,
+module Cardano.Ledger.Allegra.Rules.Utxo
+  ( AllegraUTXO,
+    AllegraUtxoPredFailure (..),
     validateOutsideValidityIntervalUTxO,
   )
 where
@@ -39,8 +38,6 @@ import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue)
-import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Rules.ValidationMode
   ( Inject (..),
     InjectMaybe (..),
@@ -55,9 +52,9 @@ import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), ShelleyTxOut, TxIn)
 import Cardano.Ledger.Shelley.TxBody (RewardAcnt, ShelleyEraTxBody (..))
 import Cardano.Ledger.Shelley.UTxO (totalDeposits, txup)
-import Cardano.Ledger.ShelleyMA.Era (ShelleyMAUTXO)
-import Cardano.Ledger.ShelleyMA.Timelocks
-import Cardano.Ledger.ShelleyMA.TxBody (MATxBody, ShelleyMAEraTxBody (..))
+import Cardano.Ledger.Allegra.Era (AllegraUTXO)
+import Cardano.Ledger.Allegra.Timelocks
+import Cardano.Ledger.Allegra.TxBody (AllegraTxBody, AllegraEraTxBody (..))
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), txouts)
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (SlotNo)
@@ -79,7 +76,7 @@ import Validation
 
 -- ==========================================================
 
-data ShelleyMAUtxoPredFailure era
+data AllegraUtxoPredFailure era
   = BadInputsUTxO
       !(Set (TxIn (EraCrypto era))) -- The bad transaction inputs
   | OutsideValidityIntervalUTxO
@@ -118,7 +115,7 @@ deriving stock instance
     Show (Shelley.UTxOState era),
     Show (PredicateFailure (EraRule "PPUP" era))
   ) =>
-  Show (ShelleyMAUtxoPredFailure era)
+  Show (AllegraUtxoPredFailure era)
 
 deriving stock instance
   ( Eq (TxOut era),
@@ -126,7 +123,7 @@ deriving stock instance
     Eq (Shelley.UTxOState era),
     Eq (PredicateFailure (EraRule "PPUP" era))
   ) =>
-  Eq (ShelleyMAUtxoPredFailure era)
+  Eq (AllegraUtxoPredFailure era)
 
 instance
   ( NoThunks (TxOut era),
@@ -134,33 +131,20 @@ instance
     NoThunks (Shelley.UTxOState era),
     NoThunks (PredicateFailure (EraRule "PPUP" era))
   ) =>
-  NoThunks (ShelleyMAUtxoPredFailure era)
+  NoThunks (AllegraUtxoPredFailure era)
 
-newtype ShelleyMAUtxoEvent era
+newtype AllegraUtxoEvent era
   = UpdateEvent (Event (EraRule "PPUP" era))
-
-consumed ::
-  forall era.
-  ( ShelleyMAEraTxBody era,
-    Value era ~ MaryValue (EraCrypto era),
-    HasField "_keyDeposit" (PParams era) Coin
-  ) =>
-  PParams era ->
-  UTxO era ->
-  TxBody era ->
-  MaryValue (EraCrypto era)
-consumed = getConsumedMaryValue
-{-# DEPRECATED consumed "In favor of `getConsumedMaryValue`" #-}
 
 -- | The UTxO transition rule for the Shelley-MA (Mary and Allegra) eras.
 utxoTransition ::
   forall era.
   ( EraTx era,
     EraUTxO era,
-    ShelleyMAEraTxBody era,
-    STS (ShelleyMAUTXO era),
+    AllegraEraTxBody era,
+    STS (AllegraUTXO era),
     Tx era ~ ShelleyTx era,
-    Embed (EraRule "PPUP" era) (ShelleyMAUTXO era),
+    Embed (EraRule "PPUP" era) (AllegraUTXO era),
     Environment (EraRule "PPUP" era) ~ PpupEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,
     Signal (EraRule "PPUP" era) ~ Maybe (Update era),
@@ -168,7 +152,7 @@ utxoTransition ::
     HasField "_poolDeposit" (PParams era) Coin,
     HasField "_maxTxSize" (PParams era) Natural
   ) =>
-  TransitionRule (ShelleyMAUTXO era)
+  TransitionRule (AllegraUTXO era)
 utxoTransition = do
   TRC (Shelley.UtxoEnv slot pp stakepools genDelegs, u, tx) <- judgmentContext
   let Shelley.UTxOState utxo _ _ ppup _ = u
@@ -228,10 +212,10 @@ utxoTransition = do
 --
 -- > ininterval slot (txvld tx)
 validateOutsideValidityIntervalUTxO ::
-  ShelleyMAEraTxBody era =>
+  AllegraEraTxBody era =>
   SlotNo ->
   TxBody era ->
-  Test (ShelleyMAUtxoPredFailure era)
+  Test (AllegraUtxoPredFailure era)
 validateOutsideValidityIntervalUTxO slot txb =
   failureUnless (inInterval slot (txb ^. vldtTxBodyL)) $
     OutsideValidityIntervalUTxO (txb ^. vldtTxBodyL) slot
@@ -243,7 +227,7 @@ validateOutputTooBigUTxO ::
   EraTxOut era =>
   PParams era ->
   UTxO era ->
-  Test (ShelleyMAUtxoPredFailure era)
+  Test (AllegraUtxoPredFailure era)
 validateOutputTooBigUTxO pp (UTxO outputs) =
   failureUnless (null outputsTooBig) $ OutputTooBigUTxO outputsTooBig
   where
@@ -264,7 +248,7 @@ validateOutputTooSmallUTxO ::
   EraTxOut era =>
   PParams era ->
   UTxO era ->
-  Test (ShelleyMAUtxoPredFailure era)
+  Test (AllegraUtxoPredFailure era)
 validateOutputTooSmallUTxO pp (UTxO outputs) =
   failureUnless (null outputsTooSmall) $ OutputTooSmallUTxO outputsTooSmall
   where
@@ -283,24 +267,24 @@ instance
   forall era.
   ( EraTx era,
     EraUTxO era,
-    ShelleyMAEraTxBody era,
+    AllegraEraTxBody era,
     PParams era ~ ShelleyPParams era,
-    TxBody era ~ MATxBody era,
+    TxBody era ~ AllegraTxBody era,
     TxOut era ~ ShelleyTxOut era,
     Tx era ~ ShelleyTx era,
-    Embed (EraRule "PPUP" era) (ShelleyMAUTXO era),
+    Embed (EraRule "PPUP" era) (AllegraUTXO era),
     Environment (EraRule "PPUP" era) ~ PpupEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,
     Signal (EraRule "PPUP" era) ~ Maybe (Update era)
   ) =>
-  STS (ShelleyMAUTXO era)
+  STS (AllegraUTXO era)
   where
-  type State (ShelleyMAUTXO era) = Shelley.UTxOState era
-  type Signal (ShelleyMAUTXO era) = ShelleyTx era
-  type Environment (ShelleyMAUTXO era) = Shelley.UtxoEnv era
-  type BaseM (ShelleyMAUTXO era) = ShelleyBase
-  type PredicateFailure (ShelleyMAUTXO era) = ShelleyMAUtxoPredFailure era
-  type Event (ShelleyMAUTXO era) = ShelleyMAUtxoEvent era
+  type State (AllegraUTXO era) = Shelley.UTxOState era
+  type Signal (AllegraUTXO era) = ShelleyTx era
+  type Environment (AllegraUTXO era) = Shelley.UtxoEnv era
+  type BaseM (AllegraUTXO era) = ShelleyBase
+  type PredicateFailure (AllegraUTXO era) = AllegraUtxoPredFailure era
+  type Event (AllegraUTXO era) = AllegraUtxoEvent era
 
   initialRules = []
   transitionRules = [utxoTransition]
@@ -311,7 +295,7 @@ instance
     PredicateFailure (EraRule "PPUP" era) ~ ShelleyPpupPredFailure era,
     Event (EraRule "PPUP" era) ~ Event (ShelleyPPUP era)
   ) =>
-  Embed (ShelleyPPUP era) (ShelleyMAUTXO era)
+  Embed (ShelleyPPUP era) (AllegraUTXO era)
   where
   wrapFailed = UpdateFailure
   wrapEvent = UpdateEvent
@@ -327,7 +311,7 @@ instance
     ToCBOR (Shelley.UTxOState era),
     ToCBOR (PredicateFailure (EraRule "PPUP" era))
   ) =>
-  ToCBOR (ShelleyMAUtxoPredFailure era)
+  ToCBOR (AllegraUtxoPredFailure era)
   where
   toCBOR = \case
     BadInputsUTxO ins ->
@@ -385,7 +369,7 @@ instance
   ( EraTxOut era,
     FromCBOR (PredicateFailure (EraRule "PPUP" era))
   ) =>
-  FromCBOR (ShelleyMAUtxoPredFailure era)
+  FromCBOR (AllegraUtxoPredFailure era)
   where
   fromCBOR =
     decodeRecordSum "PredicateFailureUTXO" $
@@ -436,7 +420,7 @@ instance
 -- ===============================================
 -- Inject instances
 
-fromShelleyFailure :: Shelley.ShelleyUtxoPredFailure era -> Maybe (ShelleyMAUtxoPredFailure era)
+fromShelleyFailure :: Shelley.ShelleyUtxoPredFailure era -> Maybe (AllegraUtxoPredFailure era)
 fromShelleyFailure = \case
   Shelley.BadInputsUTxO ins -> Just $ BadInputsUTxO ins
   Shelley.ExpiredUTxO {} -> Nothing -- Rule was replaced with `OutsideValidityIntervalUTxO`
@@ -450,13 +434,13 @@ fromShelleyFailure = \case
   Shelley.UpdateFailure ppf -> Just $ UpdateFailure ppf
   Shelley.OutputBootAddrAttrsTooBig outs -> Just $ OutputBootAddrAttrsTooBig outs
 
-instance InjectMaybe (Shelley.ShelleyUtxoPredFailure era) (ShelleyMAUtxoPredFailure era) where
+instance InjectMaybe (Shelley.ShelleyUtxoPredFailure era) (AllegraUtxoPredFailure era) where
   injectMaybe = fromShelleyFailure
 
-instance Inject (ShelleyMAUtxoPredFailure era) (ShelleyMAUtxoPredFailure era) where
+instance Inject (AllegraUtxoPredFailure era) (AllegraUtxoPredFailure era) where
   inject = id
 
-instance Inject (Shelley.ShelleyUtxoPredFailure era) (ShelleyMAUtxoPredFailure era) where
+instance Inject (Shelley.ShelleyUtxoPredFailure era) (AllegraUtxoPredFailure era) where
   inject (Shelley.BadInputsUTxO ins) = BadInputsUTxO ins
   inject (Shelley.ExpiredUTxO ttl current) =
     OutsideValidityIntervalUTxO (ValidityInterval SNothing (SJust ttl)) current

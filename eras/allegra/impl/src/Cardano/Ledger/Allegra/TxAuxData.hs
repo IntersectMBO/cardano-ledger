@@ -15,7 +15,7 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.ShelleyMA.AuxiliaryData
+module Cardano.Ledger.Allegra.TxAuxData
   ( AllegraTxAuxData (AllegraTxAuxData, AllegraTxAuxData', ..),
     Core.TxAuxData,
 
@@ -25,6 +25,8 @@ module Cardano.Ledger.ShelleyMA.AuxiliaryData
 where
 
 import Cardano.Crypto.Hash (HashAlgorithm)
+import Cardano.Ledger.Allegra.Era
+import Cardano.Ledger.Allegra.Timelocks ()
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Binary (Annotator (..), FromCBOR (..), ToCBOR (..), peekTokenType)
 import Cardano.Ledger.Binary.Coders
@@ -34,8 +36,7 @@ import Cardano.Ledger.Core
     Script,
   )
 import qualified Cardano.Ledger.Core as Core (TxAuxData)
-import Cardano.Ledger.Crypto (HASH)
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Hashes (EraIndependentTxAuxData)
 import Cardano.Ledger.MemoBytes
   ( Mem,
@@ -48,8 +49,6 @@ import Cardano.Ledger.MemoBytes
   )
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash, hashAnnotated)
 import Cardano.Ledger.Shelley.Metadata (Metadatum, validMetadatum)
-import Cardano.Ledger.ShelleyMA.Era
-import Cardano.Ledger.ShelleyMA.Timelocks ()
 import Codec.CBOR.Decoding
   ( TokenType
       ( TypeListLen,
@@ -82,8 +81,8 @@ data AuxiliaryDataRaw era = AuxiliaryDataRaw
   }
   deriving (Generic)
 
-instance (CC.Crypto c, MAClass ma c) => EraTxAuxData (ShelleyMAEra ma c) where
-  type TxAuxData (ShelleyMAEra ma c) = AllegraTxAuxData (ShelleyMAEra ma c)
+instance (Crypto c) => EraTxAuxData (AllegraEra c) where
+  type TxAuxData (AllegraEra c) = AllegraTxAuxData (AllegraEra c)
   validateTxAuxData _ (AllegraTxAuxData md as) = as `deepseq` all validMetadatum md
   hashTxAuxData aux = AuxiliaryDataHash (hashAnnotated aux)
 
@@ -109,7 +108,9 @@ instance (c ~ EraCrypto era) => HashAnnotated (AllegraTxAuxData era) EraIndepend
 
 deriving newtype instance Eq (Script era) => Eq (AllegraTxAuxData era)
 
-deriving newtype instance (Show (Script era), HashAlgorithm (HASH (EraCrypto era))) => Show (AllegraTxAuxData era)
+deriving newtype instance
+  (Show (Script era), HashAlgorithm (HASH (EraCrypto era))) =>
+  Show (AllegraTxAuxData era)
 
 deriving newtype instance
   (NoThunks (Script era), Era era) =>

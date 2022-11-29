@@ -18,8 +18,8 @@ import Cardano.Ledger.Shelley.API
 import qualified Cardano.Ledger.Shelley.LedgerState as LS
   ( returnRedeemAddrsToReserves,
   )
-import Cardano.Ledger.ShelleyMA ()
-import Cardano.Ledger.ShelleyMA.Era (AllegraEra)
+import Cardano.Ledger.Allegra.Tx ()
+import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map
 

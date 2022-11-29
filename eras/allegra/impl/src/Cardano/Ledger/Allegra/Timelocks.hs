@@ -17,7 +17,7 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.ShelleyMA.Timelocks
+module Cardano.Ledger.Allegra.Timelocks
   ( Timelock
       ( RequireSignature,
         RequireAllOf,
@@ -40,6 +40,7 @@ module Cardano.Ledger.ShelleyMA.Timelocks
 where
 
 import Cardano.Crypto.Hash.Class (HashAlgorithm)
+import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import Cardano.Ledger.Binary
   ( Annotator (..),
@@ -58,7 +59,7 @@ import Cardano.Ledger.Binary.Coders
     (<*!),
   )
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (HASH)
+import Cardano.Ledger.Crypto (Crypto, HASH)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (Witness))
 import Cardano.Ledger.MemoBytes
   ( Mem,
@@ -70,7 +71,6 @@ import Cardano.Ledger.MemoBytes
   )
 import Cardano.Ledger.SafeHash (SafeToHash)
 import Cardano.Ledger.Shelley.Scripts (nativeMultiSigTag)
-import Cardano.Ledger.ShelleyMA.Era (MAClass, ShelleyMAEra)
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.DeepSeq (NFData (..))
 import Data.ByteString.Lazy (fromStrict)
@@ -183,13 +183,13 @@ instance Memoized Timelock where
 
 deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (Timelock era)
 
-type instance SomeScript 'PhaseOne (ShelleyMAEra ma c) = Timelock (ShelleyMAEra ma c)
+type instance SomeScript 'PhaseOne (AllegraEra c) = Timelock (AllegraEra c)
 
 -- | Since Timelock scripts are a strictly backwards compatible extension of
 -- MultiSig scripts, we can use the same 'scriptPrefixTag' tag here as we did
 -- for the ValidateScript instance in Multisig
-instance MAClass ma c => EraScript (ShelleyMAEra ma c) where
-  type Script (ShelleyMAEra ma c) = Timelock (ShelleyMAEra ma c)
+instance Crypto c => EraScript (AllegraEra c) where
+  type Script (AllegraEra c) = Timelock (AllegraEra c)
   scriptPrefixTag _script = nativeMultiSigTag -- "\x00"
   phaseScript PhaseOneRep timelock = Just (Phase1Script timelock)
   phaseScript PhaseTwoRep _ = Nothing

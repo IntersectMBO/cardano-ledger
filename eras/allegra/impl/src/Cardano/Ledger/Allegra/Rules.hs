@@ -1,8 +1,8 @@
-module Cardano.Ledger.ShelleyMA.Rules
-  ( module Cardano.Ledger.ShelleyMA.Rules.Utxo,
-    module Cardano.Ledger.ShelleyMA.Rules.Utxow,
+module Cardano.Ledger.Allegra.Rules
+  ( module Cardano.Ledger.Allegra.Rules.Utxo,
+    module Cardano.Ledger.Allegra.Rules.Utxow,
   )
 where
 
-import Cardano.Ledger.ShelleyMA.Rules.Utxo
-import Cardano.Ledger.ShelleyMA.Rules.Utxow
+import Cardano.Ledger.Allegra.Rules.Utxo
+import Cardano.Ledger.Allegra.Rules.Utxow
