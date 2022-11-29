@@ -9,6 +9,7 @@ import Cardano.Crypto.Hash
 import Cardano.Crypto.KES
 import Cardano.Crypto.VRF
 import Cardano.Crypto.VRF.Praos
+import Cardano.Crypto.VRF.PraosBatchCompat
 import Data.Kind (Type)
 import Data.Typeable (Typeable)
 
@@ -42,3 +43,15 @@ instance Crypto StandardCrypto where
   type VRF StandardCrypto = PraosVRF
   type HASH StandardCrypto = Blake2b_256
   type ADDRHASH StandardCrypto = Blake2b_224
+
+-- | A crypto with batch verification and compact KES
+data StandardCryptoV2 -- A better name should be given (?)
+
+instance Crypto StandardCryptoV2 where
+  type DSIGN StandardCryptoV2 = Ed25519DSIGN
+  -- Use compact KES implementation
+  type KES StandardCryptoV2 = CompactSum6KES Ed25519DSIGN Blake2b_256
+  -- Use batch compatible verification
+  type VRF StandardCryptoV2 = PraosBatchCompatVRF
+  type HASH StandardCryptoV2 = Blake2b_256
+  type ADDRHASH StandardCryptoV2 = Blake2b_224
