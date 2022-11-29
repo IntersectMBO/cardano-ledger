@@ -20,6 +20,9 @@ module Cardano.Ledger.Allegra.Rules.Utxo
 where
 
 import Cardano.Ledger.Address (Addr)
+import Cardano.Ledger.Allegra.Era (AllegraUTXO)
+import Cardano.Ledger.Allegra.Scripts (ValidityInterval (ValidityInterval), inInterval)
+import Cardano.Ledger.Allegra.TxBody (AllegraEraTxBody (..), AllegraTxBody)
 import Cardano.Ledger.BaseTypes
   ( Network,
     ProtVer (pvMajor),
@@ -35,7 +38,7 @@ import Cardano.Ledger.Binary
     invalidKey,
     serialize,
   )
-import Cardano.Ledger.Coin
+import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Rules.ValidationMode
@@ -52,9 +55,6 @@ import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), ShelleyTxOut, TxIn)
 import Cardano.Ledger.Shelley.TxBody (RewardAcnt, ShelleyEraTxBody (..))
 import Cardano.Ledger.Shelley.UTxO (totalDeposits, txup)
-import Cardano.Ledger.Allegra.Era (AllegraUTXO)
-import Cardano.Ledger.Allegra.Timelocks
-import Cardano.Ledger.Allegra.TxBody (AllegraTxBody, AllegraEraTxBody (..))
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), txouts)
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (SlotNo)

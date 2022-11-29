@@ -41,7 +41,7 @@ where
 
 import Cardano.Ledger.Allegra.Core (AllegraEraTxBody (..))
 import Cardano.Ledger.Allegra.Era (AllegraEra)
-import Cardano.Ledger.Allegra.Timelocks (ValidityInterval (..))
+import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Allegra.TxOut ()
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))

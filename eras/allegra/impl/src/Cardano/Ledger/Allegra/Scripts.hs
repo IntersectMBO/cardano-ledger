@@ -17,7 +17,7 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Allegra.Timelocks
+module Cardano.Ledger.Allegra.Scripts
   ( Timelock
       ( RequireSignature,
         RequireAllOf,

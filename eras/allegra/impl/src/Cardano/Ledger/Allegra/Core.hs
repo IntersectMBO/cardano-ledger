@@ -7,7 +7,7 @@ module Cardano.Ledger.Allegra.Core
 where
 
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Allegra.Timelocks (ValidityInterval (..))
+import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Lens.Micro (Lens')
 
 class ShelleyEraTxBody era => AllegraEraTxBody era where

@@ -14,7 +14,7 @@ module Cardano.Ledger.Allegra.Tx
 where
 
 import Cardano.Ledger.Allegra.Era (AllegraEra)
-import Cardano.Ledger.Allegra.Timelocks (Timelock, evalTimelock)
+import Cardano.Ledger.Allegra.Scripts (Timelock, evalTimelock)
 import Cardano.Ledger.Allegra.TxAuxData ()
 import Cardano.Ledger.Allegra.TxBody (AllegraEraTxBody (..))
 import Cardano.Ledger.Allegra.TxWits ()

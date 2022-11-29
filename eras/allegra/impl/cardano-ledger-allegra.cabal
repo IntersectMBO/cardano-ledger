@@ -39,7 +39,7 @@ library
     Cardano.Ledger.Allegra.Core
     Cardano.Ledger.Allegra.Era
     Cardano.Ledger.Allegra.Rules
-    Cardano.Ledger.Allegra.Timelocks
+    Cardano.Ledger.Allegra.Scripts
     Cardano.Ledger.Allegra.Translation
     Cardano.Ledger.Allegra.Tx
     Cardano.Ledger.Allegra.TxAuxData

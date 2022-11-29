@@ -25,8 +25,8 @@ module Cardano.Ledger.Allegra.TxAuxData
 where
 
 import Cardano.Crypto.Hash (HashAlgorithm)
-import Cardano.Ledger.Allegra.Era
-import Cardano.Ledger.Allegra.Timelocks ()
+import Cardano.Ledger.Allegra.Era (AllegraEra)
+import Cardano.Ledger.Allegra.Scripts ()
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Binary (Annotator (..), FromCBOR (..), ToCBOR (..), peekTokenType)
 import Cardano.Ledger.Binary.Coders
@@ -36,7 +36,7 @@ import Cardano.Ledger.Core
     Script,
   )
 import qualified Cardano.Ledger.Core as Core (TxAuxData)
-import Cardano.Ledger.Crypto
+import Cardano.Ledger.Crypto (Crypto (HASH))
 import Cardano.Ledger.Hashes (EraIndependentTxAuxData)
 import Cardano.Ledger.MemoBytes
   ( Mem,
@@ -59,7 +59,7 @@ import Codec.CBOR.Decoding
         TypeMapLenIndef
       ),
   )
-import Control.DeepSeq
+import Control.DeepSeq (NFData, deepseq)
 import Data.Map.Strict (Map)
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
