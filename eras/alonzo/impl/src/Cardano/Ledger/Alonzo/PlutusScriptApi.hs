@@ -24,6 +24,7 @@ module Cardano.Ledger.Alonzo.PlutusScriptApi
   )
 where
 
+import Cardano.Ledger.Alonzo.Core (MaryEraTxBody (..))
 import Cardano.Ledger.Alonzo.Data (getPlutusData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), CostModel, CostModels (..), ExUnits (..))
@@ -43,7 +44,6 @@ import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core hiding (TranslationError)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.ShelleyMA.TxBody (ShelleyMAEraTxBody (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
@@ -137,7 +137,7 @@ knownToNotBe1Phase scriptsAvailable (sp, sh) = do
 collectTwoPhaseScriptInputs ::
   forall era.
   ( EraTx era,
-    ShelleyMAEraTxBody era,
+    MaryEraTxBody era,
     AlonzoEraTxWits era,
     EraUTxO era,
     ScriptsNeeded era ~ AlonzoScriptsNeeded era,

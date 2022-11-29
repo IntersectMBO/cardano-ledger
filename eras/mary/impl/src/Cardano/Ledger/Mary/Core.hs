@@ -1,20 +1,17 @@
 {-# LANGUAGE FlexibleContexts #-}
 
-module Cardano.Ledger.ShelleyMA.Core
-  ( ShelleyMAEraTxBody (..),
-    module Cardano.Ledger.Shelley.Core,
+module Cardano.Ledger.Mary.Core
+  ( MaryEraTxBody (..),
+    module Cardano.Ledger.Allegra.Core,
   )
 where
 
+import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Mary.Value (MultiAsset (..))
-import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Data.Set (Set)
 import Lens.Micro (Lens', SimpleGetter)
 
-class ShelleyEraTxBody era => ShelleyMAEraTxBody era where
-  vldtTxBodyL :: Lens' (TxBody era) ValidityInterval
-
+class AllegraEraTxBody era => MaryEraTxBody era where
   mintTxBodyL :: Lens' (TxBody era) (MultiAsset (EraCrypto era))
 
   mintValueTxBodyF :: SimpleGetter (TxBody era) (Value era)

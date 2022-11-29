@@ -13,6 +13,8 @@
 module Test.Cardano.Ledger.Generic.PrettyCore where
 
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
+import Cardano.Ledger.Allegra.Rules as Allegra (AllegraUtxoPredFailure (..))
+import Cardano.Ledger.Allegra.Scripts (Timelock (..))
 import Cardano.Ledger.Alonzo.Data (Data (..), Datum (..), binaryDataToData, hashData)
 import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (..))
 import Cardano.Ledger.Alonzo.Rules as Alonzo
@@ -76,9 +78,16 @@ import Cardano.Ledger.Shelley.Rules as Shelley
     ShelleyUtxowPredFailure (..),
   )
 import qualified Cardano.Ledger.Shelley.Scripts as SS (MultiSig (..))
-import Cardano.Ledger.Shelley.TxBody (DCert (..), DelegCert (..), Delegation (..), PoolCert (..), PoolParams (..), ShelleyTxOut (..), Wdrl (..), WitVKey (..))
-import qualified Cardano.Ledger.ShelleyMA.Rules as Mary (ShelleyMAUtxoPredFailure (..))
-import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
+import Cardano.Ledger.Shelley.TxBody
+  ( DCert (..),
+    DelegCert (..),
+    Delegation (..),
+    PoolCert (..),
+    PoolParams (..),
+    ShelleyTxOut (..),
+    Wdrl (..),
+    WitVKey (..),
+  )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.UnifiedMap (UnifiedMap)
@@ -125,7 +134,7 @@ instance CC.Crypto c => PrettyCore (ShelleyEra c) where
 instance CC.Crypto c => PrettyCore (AllegraEra c) where
   prettyTx = Cardano.Ledger.Pretty.ppTx
   prettyScript = ppTimelock
-  prettyTxBody = Cardano.Ledger.Pretty.Mary.ppTxBody
+  prettyTxBody = prettyA
   prettyWitnesses = ppWitnessSetHKD
   prettyValue = ppCoin
   prettyTxOut = Cardano.Ledger.Pretty.ppTxOut
@@ -133,7 +142,7 @@ instance CC.Crypto c => PrettyCore (AllegraEra c) where
 instance CC.Crypto c => PrettyCore (MaryEra c) where
   prettyTx = Cardano.Ledger.Pretty.ppTx
   prettyScript = ppTimelock
-  prettyTxBody = Cardano.Ledger.Pretty.Mary.ppTxBody
+  prettyTxBody = prettyA
   prettyWitnesses = ppWitnessSetHKD
   prettyValue = ppValue
   prettyTxOut = Cardano.Ledger.Pretty.ppTxOut
@@ -305,7 +314,7 @@ ppUtxoPredicateFailure ::
   PDoc
 ppUtxoPredicateFailure (Alonzo.BadInputsUTxO x) =
   ppSexp "BadInputsUTxO" [ppSet ppTxIn x]
-ppUtxoPredicateFailure (OutsideValidityIntervalUTxO vi slot) =
+ppUtxoPredicateFailure (Alonzo.OutsideValidityIntervalUTxO vi slot) =
   ppRecord "OutsideValidityIntervalUTxO" [("validity interval", ppValidityInterval vi), ("slot", ppSlotNo slot)]
 ppUtxoPredicateFailure (Alonzo.MaxTxSizeUTxO actual maxs) =
   ppRecord
@@ -538,64 +547,64 @@ ppUtxoPFMary ::
   ( PrettyCore era,
     PrettyA (PredicateFailure (EraRule "PPUP" era))
   ) =>
-  Mary.ShelleyMAUtxoPredFailure era ->
+  AllegraUtxoPredFailure era ->
   PDoc
-ppUtxoPFMary (Mary.BadInputsUTxO txins) =
+ppUtxoPFMary (Allegra.BadInputsUTxO txins) =
   ppSexp "BadInputsUTxO" [ppSet ppTxIn txins]
-ppUtxoPFMary (Mary.OutsideValidityIntervalUTxO vi slot) =
+ppUtxoPFMary (Allegra.OutsideValidityIntervalUTxO vi slot) =
   ppRecord
     "OutsideValidityIntervalUTxO"
     [ ("provided interval", ppValidityInterval vi),
       ("current slot", ppSlotNo slot)
     ]
-ppUtxoPFMary (Mary.MaxTxSizeUTxO actual maxs) =
+ppUtxoPFMary (Allegra.MaxTxSizeUTxO actual maxs) =
   ppRecord
     "MaxTxSizeUTxO"
     [ ("Actual", ppInteger actual),
       ("max transaction size", ppInteger maxs)
     ]
-ppUtxoPFMary (Mary.InputSetEmptyUTxO) = ppSexp "InputSetEmptyUTxO" []
-ppUtxoPFMary (Mary.FeeTooSmallUTxO computed supplied) =
+ppUtxoPFMary (Allegra.InputSetEmptyUTxO) = ppSexp "InputSetEmptyUTxO" []
+ppUtxoPFMary (Allegra.FeeTooSmallUTxO computed supplied) =
   ppRecord
     "FeeTooSmallUTxO"
     [ ("min fee for this transaction", ppCoin computed),
       ("fee supplied by this transaction", ppCoin supplied)
     ]
-ppUtxoPFMary (Mary.ValueNotConservedUTxO consumed produced) =
+ppUtxoPFMary (Allegra.ValueNotConservedUTxO consumed produced) =
   ppRecord
     "ValueNotConservedUTxO"
     [ ("coin consumed", prettyValue @era consumed),
       ("coin produced", prettyValue @era produced)
     ]
-ppUtxoPFMary (Mary.WrongNetwork n add) =
+ppUtxoPFMary (Allegra.WrongNetwork n add) =
   ppRecord
     "WrongNetwork"
     [ ("expected network id", ppNetwork n),
       ("set of addresses with wrong network id", ppSet ppAddr add)
     ]
-ppUtxoPFMary (Mary.WrongNetworkWithdrawal n accnt) =
+ppUtxoPFMary (Allegra.WrongNetworkWithdrawal n accnt) =
   ppRecord
     "WrongNetworkWithdrawal"
     [ ("expected network id", ppNetwork n),
       ("set reward address with wrong network id", ppSet ppRewardAcnt' accnt)
     ]
-ppUtxoPFMary (Mary.OutputTooSmallUTxO xs) =
+ppUtxoPFMary (Allegra.OutputTooSmallUTxO xs) =
   ppRecord
     "OutputTooSmallUTxO"
     [("list of supplied transaction outputs that are too small", ppList prettyTxOut xs)]
-ppUtxoPFMary (Mary.UpdateFailure x) =
+ppUtxoPFMary (Allegra.UpdateFailure x) =
   ppSexp "UpdateFailure" [prettyA x]
-ppUtxoPFMary (Mary.OutputBootAddrAttrsTooBig xs) =
+ppUtxoPFMary (Allegra.OutputBootAddrAttrsTooBig xs) =
   ppRecord "OutputBootAddrAttrsTooBig" [("list of supplied bad transaction outputs", ppList prettyTxOut xs)]
-ppUtxoPFMary (Mary.TriesToForgeADA) = ppSexp "TriesToForgeADA" []
-ppUtxoPFMary (Mary.OutputTooBigUTxO outs) =
+ppUtxoPFMary (Allegra.TriesToForgeADA) = ppSexp "TriesToForgeADA" []
+ppUtxoPFMary (Allegra.OutputTooBigUTxO outs) =
   ppRecord "OutputTooBigUTxO" [("list of TxOuts which are too big", ppList prettyTxOut outs)]
 
 instance
   ( PrettyCore era,
     PrettyA (PredicateFailure (EraRule "PPUP" era))
   ) =>
-  PrettyA (Mary.ShelleyMAUtxoPredFailure era)
+  PrettyA (AllegraUtxoPredFailure era)
   where
   prettyA = ppUtxoPFMary
 

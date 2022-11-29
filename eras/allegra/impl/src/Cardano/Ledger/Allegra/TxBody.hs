@@ -9,7 +9,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -21,18 +20,18 @@
 module Cardano.Ledger.Allegra.TxBody
   ( AllegraTxBody
       ( AllegraTxBody,
-        TxBodyConstr,
-        matbAuxDataHash,
-        matbCerts,
-        matbInputs,
-        matbOutputs,
-        matbTxFee,
-        matbUpdate,
-        matbValidityInterval,
-        matbWdrls
+        atbAuxDataHash,
+        atbCerts,
+        atbInputs,
+        atbOutputs,
+        atbTxFee,
+        atbUpdate,
+        atbValidityInterval,
+        atbWdrls
       ),
     TxBody,
     AllegraEraTxBody (..),
+    emptyAllegraTxBodyRaw,
     AllegraTxBodyRaw (..),
     StrictMaybe (..),
     ValidityInterval (..),
@@ -136,7 +135,7 @@ instance AllegraEraTxBody era => FromCBOR (Annotator (AllegraTxBodyRaw () era)) 
   fromCBOR = pure <$> fromCBOR
 
 -- Sparse encodings of AllegraTxBodyRaw, the key values are fixed by backward compatibility
--- concerns as we want the Shelley era TxBody to deserialise as a Shelley-ma TxBody.
+-- concerns as we want the ShelleyTxBody to deserialise as AllegraTxBody.
 -- txXparse and bodyFields should be Duals, visual inspection helps ensure this.
 instance (EraTxOut era, Eq ma, ToCBOR ma, Monoid ma) => ToCBOR (AllegraTxBodyRaw ma era) where
   toCBOR (AllegraTxBodyRaw inp out cert wdrl fee (ValidityInterval bot top) up hash frge) =
@@ -257,25 +256,25 @@ pattern AllegraTxBody ::
   StrictMaybe (AuxiliaryDataHash (EraCrypto era)) ->
   AllegraTxBody era
 pattern AllegraTxBody
-  { matbInputs,
-    matbOutputs,
-    matbCerts,
-    matbWdrls,
-    matbTxFee,
-    matbValidityInterval,
-    matbUpdate,
-    matbAuxDataHash
+  { atbInputs,
+    atbOutputs,
+    atbCerts,
+    atbWdrls,
+    atbTxFee,
+    atbValidityInterval,
+    atbUpdate,
+    atbAuxDataHash
   } <-
   ( getMemoRawType ->
       AllegraTxBodyRaw
-        { atbrInputs = matbInputs,
-          atbrOutputs = matbOutputs,
-          atbrCerts = matbCerts,
-          atbrWdrls = matbWdrls,
-          atbrTxFee = matbTxFee,
-          atbrValidityInterval = matbValidityInterval,
-          atbrUpdate = matbUpdate,
-          atbrAuxDataHash = matbAuxDataHash
+        { atbrInputs = atbInputs,
+          atbrOutputs = atbOutputs,
+          atbrCerts = atbCerts,
+          atbrWdrls = atbWdrls,
+          atbrTxFee = atbTxFee,
+          atbrValidityInterval = atbValidityInterval,
+          atbrUpdate = atbUpdate,
+          atbrAuxDataHash = atbAuxDataHash
         }
     )
   where

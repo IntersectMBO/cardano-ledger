@@ -8,14 +8,18 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.ShelleyMA.Tx
+module Cardano.Ledger.Mary.Tx
   ( validateTimelock,
   )
 where
 
-import Cardano.Ledger.Core (EraTx (..), EraTxWits (..), PhasedScript (..))
-import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
+import Cardano.Ledger.Allegra.Tx (validateTimelock)
+import Cardano.Ledger.Core (EraTx (..), PhasedScript (..))
+import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
+import Cardano.Ledger.Mary.Era (MaryEra)
+import Cardano.Ledger.Mary.TxAuxData ()
+import Cardano.Ledger.Mary.TxBody ()
+import Cardano.Ledger.Mary.TxWits ()
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Tx
   ( ShelleyTx,
@@ -26,21 +30,13 @@ import Cardano.Ledger.Shelley.Tx
     sizeShelleyTxF,
     witsShelleyTxL,
   )
-import Cardano.Ledger.ShelleyMA.AuxiliaryData ()
-import Cardano.Ledger.ShelleyMA.Era (MAClass, MaryOrAllegra (..), ShelleyMAEra)
-import Cardano.Ledger.ShelleyMA.Timelocks (Timelock, evalTimelock)
-import Cardano.Ledger.ShelleyMA.TxBody (ShelleyMAEraTxBody (..))
-import Cardano.Ledger.ShelleyMA.TxWits ()
-import qualified Data.Set as Set (map)
-import Lens.Micro ((^.))
 
 -- ========================================
 
-instance MAClass ma c => EraTx (ShelleyMAEra ma c) where
-  {-# SPECIALIZE instance EraTx (ShelleyMAEra 'Mary StandardCrypto) #-}
-  {-# SPECIALIZE instance EraTx (ShelleyMAEra 'Allegra StandardCrypto) #-}
+instance Crypto c => EraTx (MaryEra c) where
+  {-# SPECIALIZE instance EraTx (MaryEra StandardCrypto) #-}
 
-  type Tx (ShelleyMAEra ma c) = ShelleyTx (ShelleyMAEra ma c)
+  type Tx (MaryEra c) = ShelleyTx (MaryEra c)
 
   mkBasicTx = mkBasicShelleyTx
 
@@ -56,19 +52,7 @@ instance MAClass ma c => EraTx (ShelleyMAEra ma c) where
   sizeTxF = sizeShelleyTxF
   {-# INLINE sizeTxF #-}
 
-  validateScript (Phase1Script script) tx = validateTimelock @(ShelleyMAEra ma c) script tx
+  validateScript (Phase1Script script) tx = validateTimelock @(MaryEra c) script tx
   {-# INLINE validateScript #-}
 
   getMinFeeTx = shelleyMinFeeTx
-
--- =======================================================
--- Validating timelock scripts
--- We extract ValidityInterval from TxBody with vldtTxBodyL getter
--- We still need to correctly compute the witness set for TxBody as well.
-
-validateTimelock ::
-  (EraTx era, ShelleyMAEraTxBody era) => Timelock era -> Tx era -> Bool
-validateTimelock timelock tx = evalTimelock vhks (tx ^. bodyTxL . vldtTxBodyL) timelock
-  where
-    vhks = Set.map witVKeyHash (tx ^. witsTxL . addrTxWitsL)
-{-# INLINEABLE validateTimelock #-}

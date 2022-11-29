@@ -1,11 +1,11 @@
 cabal-version: 3.0
 
-name:                cardano-ledger-shelley-ma
+name:                cardano-ledger-mary
 version:             0.1.0.0
-synopsis:            Shelley ledger with multiasset and time lock support.
+synopsis:            Cardano ledger with multiasset support.
 description:
-  This package extends the Shelley ledger with support for
-  native tokens and timelocks.
+  This package extends the Allegra ledger with support for
+  native tokens.
 bug-reports:         https://github.com/input-output-hk/cardano-ledger/issues
 license:             Apache-2.0
 author:              IOHK
@@ -16,7 +16,7 @@ build-type:          Simple
 source-repository head
   type:     git
   location: https://github.com/input-output-hk/cardano-ledger
-  subdir:   eras/shelley-ma/impl
+  subdir:   eras/mary/impl
 
 common base
   build-depends:      base >= 4.12 && < 4.17
@@ -36,47 +36,37 @@ library
   import:             base, project-config
 
   exposed-modules:
-    Cardano.Ledger.Allegra
-    Cardano.Ledger.Allegra.Translation
     Cardano.Ledger.Mary
-    Cardano.Ledger.Mary.UTxO
     Cardano.Ledger.Mary.Translation
     Cardano.Ledger.Mary.Value
-    Cardano.Ledger.ShelleyMA
-    Cardano.Ledger.ShelleyMA.Core
-    Cardano.Ledger.ShelleyMA.Era
-    Cardano.Ledger.ShelleyMA.AuxiliaryData
-    Cardano.Ledger.ShelleyMA.Rules
-    Cardano.Ledger.ShelleyMA.Timelocks
-    Cardano.Ledger.ShelleyMA.TxBody
-    Cardano.Ledger.ShelleyMA.TxOut
-    Cardano.Ledger.ShelleyMA.Tx
-    Cardano.Ledger.ShelleyMA.TxWits
+    Cardano.Ledger.Mary.Core
+    Cardano.Ledger.Mary.TxBody
+    Cardano.Ledger.Mary.TxOut
+    Cardano.Ledger.Mary.UTxO
 
   other-modules:
-    Cardano.Ledger.Allegra.UTxO
-    Cardano.Ledger.ShelleyMA.Rules.Utxo
-    Cardano.Ledger.ShelleyMA.Rules.Utxow
+    Cardano.Ledger.Mary.Era
+    Cardano.Ledger.Mary.Scripts
+    Cardano.Ledger.Mary.Tx
+    Cardano.Ledger.Mary.TxAuxData
+    Cardano.Ledger.Mary.TxSeq
+    Cardano.Ledger.Mary.TxWits
 
   build-depends:
     bytestring,
     base16-bytestring,
     cardano-crypto-class,
     cardano-data,
+    cardano-ledger-allegra,
     cardano-ledger-binary,
     cardano-ledger-core,
-    cardano-slotting,
-    cborg,
+    cardano-ledger-shelley,
     containers,
     deepseq,
     groups,
     microlens,
     nothunks,
     primitive,
-    cardano-ledger-shelley,
-    small-steps,
     cardano-strict-containers,
     text,
-    transformers,
-    validation-selective,
   hs-source-dirs: src

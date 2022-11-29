@@ -8,24 +8,23 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.ShelleyMA.TxWits () where
+module Cardano.Ledger.Mary.TxWits () where
 
 import Cardano.Ledger.Core (EraTxWits (..))
-import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
+import Cardano.Ledger.Mary.Era (MaryEra)
+import Cardano.Ledger.Mary.TxAuxData ()
 import Cardano.Ledger.Shelley.TxWits
   ( ShelleyTxWits,
     addrShelleyTxWitsL,
     bootAddrShelleyTxWitsL,
     scriptShelleyTxWitsL,
   )
-import Cardano.Ledger.ShelleyMA.AuxiliaryData ()
-import Cardano.Ledger.ShelleyMA.Era (MAClass, MaryOrAllegra (..), ShelleyMAEra)
 
-instance MAClass ma c => EraTxWits (ShelleyMAEra ma c) where
-  {-# SPECIALIZE instance EraTxWits (ShelleyMAEra 'Mary StandardCrypto) #-}
-  {-# SPECIALIZE instance EraTxWits (ShelleyMAEra 'Allegra StandardCrypto) #-}
+instance Crypto c => EraTxWits (MaryEra c) where
+  {-# SPECIALIZE instance EraTxWits (MaryEra StandardCrypto) #-}
 
-  type TxWits (ShelleyMAEra ma c) = ShelleyTxWits (ShelleyMAEra ma c)
+  type TxWits (MaryEra c) = ShelleyTxWits (MaryEra c)
 
   mkBasicTxWits = mempty
 

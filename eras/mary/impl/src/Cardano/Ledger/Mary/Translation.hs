@@ -13,13 +13,12 @@ import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Mary.Era (MaryEra)
+import Cardano.Ledger.Mary.Scripts (Timelock, translateTimelock)
+import Cardano.Ledger.Mary.Tx ()
+import Cardano.Ledger.Mary.TxAuxData (AllegraTxAuxData (..))
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Shelley.API hiding (Metadata, TxBody)
-import Cardano.Ledger.ShelleyMA.AuxiliaryData
-  ( AllegraTxAuxData (..),
-  )
-import Cardano.Ledger.ShelleyMA.Era (MaryEra)
-import Cardano.Ledger.ShelleyMA.Timelocks (Timelock, translateTimelock)
 import qualified Cardano.Ledger.Val as Val
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map

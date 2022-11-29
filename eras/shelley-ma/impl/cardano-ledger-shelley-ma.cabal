@@ -2,10 +2,9 @@ cabal-version: 3.0
 
 name:                cardano-ledger-shelley-ma
 version:             0.1.0.0
-synopsis:            Shelley ledger with multiasset and time lock support.
+synopsis:            Deprecated package that used to implement Allegra and Mary eras.
 description:
-  This package extends the Shelley ledger with support for
-  native tokens and timelocks.
+  Deprecated package that used to implement Allegra and Mary eras. Use 'cardano-ledger-allegra' and 'cardano-ledger-mary' instead.
 bug-reports:         https://github.com/input-output-hk/cardano-ledger/issues
 license:             Apache-2.0
 author:              IOHK
@@ -36,15 +35,8 @@ library
   import:             base, project-config
 
   exposed-modules:
-    Cardano.Ledger.Allegra
-    Cardano.Ledger.Allegra.Translation
-    Cardano.Ledger.Mary
-    Cardano.Ledger.Mary.UTxO
-    Cardano.Ledger.Mary.Translation
-    Cardano.Ledger.Mary.Value
     Cardano.Ledger.ShelleyMA
     Cardano.Ledger.ShelleyMA.Core
-    Cardano.Ledger.ShelleyMA.Era
     Cardano.Ledger.ShelleyMA.AuxiliaryData
     Cardano.Ledger.ShelleyMA.Rules
     Cardano.Ledger.ShelleyMA.Timelocks
@@ -53,30 +45,8 @@ library
     Cardano.Ledger.ShelleyMA.Tx
     Cardano.Ledger.ShelleyMA.TxWits
 
-  other-modules:
-    Cardano.Ledger.Allegra.UTxO
-    Cardano.Ledger.ShelleyMA.Rules.Utxo
-    Cardano.Ledger.ShelleyMA.Rules.Utxow
-
   build-depends:
-    bytestring,
-    base16-bytestring,
-    cardano-crypto-class,
-    cardano-data,
-    cardano-ledger-binary,
-    cardano-ledger-core,
-    cardano-slotting,
-    cborg,
-    containers,
-    deepseq,
-    groups,
-    microlens,
-    nothunks,
-    primitive,
+    cardano-ledger-allegra,
+    cardano-ledger-mary,
     cardano-ledger-shelley,
-    small-steps,
-    cardano-strict-containers,
-    text,
-    transformers,
-    validation-selective,
   hs-source-dirs: src

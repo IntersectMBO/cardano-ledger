@@ -6,9 +6,8 @@ module Test.Cardano.Ledger.Allegra.ScriptTranslation
 where
 
 import Cardano.Ledger.Allegra (Allegra)
-import Cardano.Ledger.Allegra.Translation ()
 import Cardano.Ledger.Block (txid)
-import Cardano.Ledger.Core (TranslateEra (..), hashScript)
+import Cardano.Ledger.Core (TranslateEra (..), hashScript, mkBasicTxBody)
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Shelley (Shelley)
 import qualified Cardano.Ledger.Shelley.API as S
@@ -28,18 +27,7 @@ import Test.Tasty (TestTree)
 import Test.Tasty.HUnit (testCase)
 
 bootstrapTxId :: S.TxId StandardCrypto
-bootstrapTxId = txid @Shelley txb
-  where
-    txb =
-      S.ShelleyTxBody
-        mempty
-        StrictSeq.empty
-        StrictSeq.empty
-        (S.Wdrl mempty)
-        (S.Coin 0)
-        (SlotNo 0)
-        S.SNothing
-        S.SNothing
+bootstrapTxId = txid @Shelley mkBasicTxBody
 
 fromRight :: Either e a -> a
 fromRight (Right x) = x

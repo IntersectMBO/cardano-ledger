@@ -80,9 +80,6 @@ import Data.Set (Set, member)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
--- ================================================================
--- A pair of optional SlotNo.
-
 -- | ValidityInterval is a half open interval. Closed on the bottom, open on the top.
 --   A SNothing on the bottom is negative infinity, and a SNothing on the top is positive infinity
 data ValidityInterval = ValidityInterval
@@ -187,7 +184,7 @@ type instance SomeScript 'PhaseOne (AllegraEra c) = Timelock (AllegraEra c)
 
 -- | Since Timelock scripts are a strictly backwards compatible extension of
 -- MultiSig scripts, we can use the same 'scriptPrefixTag' tag here as we did
--- for the ValidateScript instance in Multisig
+-- for the ValidateScript instance in MultiSig
 instance Crypto c => EraScript (AllegraEra c) where
   type Script (AllegraEra c) = Timelock (AllegraEra c)
   scriptPrefixTag _script = nativeMultiSigTag -- "\x00"

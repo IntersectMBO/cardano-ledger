@@ -9,6 +9,8 @@
 
 module Cardano.Ledger.Allegra.Rules.Utxow (AllegraUTXOW) where
 
+import Cardano.Ledger.Allegra.Era (AllegraUTXOW)
+import Cardano.Ledger.Allegra.Rules.Utxo (AllegraUTXO, AllegraUtxoPredFailure)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (DSignable, Hash)
@@ -23,8 +25,6 @@ import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody)
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits)
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded)
-import Cardano.Ledger.Allegra.Era (AllegraUTXOW)
-import Cardano.Ledger.Allegra.Rules.Utxo (AllegraUTXO, AllegraUtxoPredFailure)
 import Cardano.Ledger.UTxO (EraUTxO (..))
 import Control.State.Transition.Extended
 import GHC.Records

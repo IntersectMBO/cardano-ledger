@@ -12,6 +12,8 @@
 module Test.Cardano.Ledger.Alonzo.AlonzoEraGen where
 
 import Cardano.Ledger.Address (Addr (..))
+import Cardano.Ledger.Allegra.Scripts (Timelock (..), translateTimelock)
+import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Data (AlonzoTxAuxData (..), Data (..), mkAlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
@@ -78,9 +80,6 @@ import Cardano.Ledger.Mary.Value
 import Cardano.Ledger.Pretty.Alonzo ()
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl)
-import Cardano.Ledger.ShelleyMA.AuxiliaryData (AllegraTxAuxData (..))
-import Cardano.Ledger.ShelleyMA.Era ()
-import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), translateTimelock)
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UTxO
   ( EraUTxO (..),

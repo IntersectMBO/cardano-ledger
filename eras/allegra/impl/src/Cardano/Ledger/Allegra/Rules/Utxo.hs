@@ -22,7 +22,7 @@ where
 import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.Allegra.Era (AllegraUTXO)
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (ValidityInterval), inInterval)
-import Cardano.Ledger.Allegra.TxBody (AllegraEraTxBody (..), AllegraTxBody)
+import Cardano.Ledger.Allegra.TxBody (AllegraEraTxBody (..))
 import Cardano.Ledger.BaseTypes
   ( Network,
     ProtVer (pvMajor),
@@ -52,7 +52,7 @@ import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..), Update)
 import Cardano.Ledger.Shelley.Rules (PpupEnv (..), ShelleyPPUP, ShelleyPpupPredFailure)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), ShelleyTxOut, TxIn)
+import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), TxIn)
 import Cardano.Ledger.Shelley.TxBody (RewardAcnt, ShelleyEraTxBody (..))
 import Cardano.Ledger.Shelley.UTxO (totalDeposits, txup)
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), txouts)
@@ -269,8 +269,6 @@ instance
     EraUTxO era,
     AllegraEraTxBody era,
     PParams era ~ ShelleyPParams era,
-    TxBody era ~ AllegraTxBody era,
-    TxOut era ~ ShelleyTxOut era,
     Tx era ~ ShelleyTx era,
     Embed (EraRule "PPUP" era) (AllegraUTXO era),
     Environment (EraRule "PPUP" era) ~ PpupEnv era,

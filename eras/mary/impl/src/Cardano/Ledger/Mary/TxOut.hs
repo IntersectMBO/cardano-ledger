@@ -2,32 +2,25 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.ShelleyMA.TxOut (scaledMinDeposit) where
+module Cardano.Ledger.Mary.TxOut (scaledMinDeposit) where
 
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core hiding (TxBody)
-import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Core
+import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
+import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Shelley.PParams (_minUTxOValue)
 import Cardano.Ledger.Shelley.TxBody
   ( ShelleyTxOut (..),
     addrEitherShelleyTxOutL,
     valueEitherShelleyTxOutL,
   )
-import Cardano.Ledger.ShelleyMA.Era
-  ( MAClass,
-    MaryOrAllegra (..),
-    ShelleyMAEra,
-  )
-import Cardano.Ledger.Val
-  ( Val (isAdaOnly, size),
-  )
-import Lens.Micro
+import Cardano.Ledger.Val (Val (isAdaOnly, size))
+import Lens.Micro ((^.))
 
-instance MAClass ma crypto => EraTxOut (ShelleyMAEra ma crypto) where
-  {-# SPECIALIZE instance EraTxOut (ShelleyMAEra 'Mary StandardCrypto) #-}
-  {-# SPECIALIZE instance EraTxOut (ShelleyMAEra 'Allegra StandardCrypto) #-}
+instance Crypto c => EraTxOut (MaryEra c) where
+  {-# SPECIALIZE instance EraTxOut (MaryEra StandardCrypto) #-}
 
-  type TxOut (ShelleyMAEra ma crypto) = ShelleyTxOut (ShelleyMAEra ma crypto)
+  type TxOut (MaryEra c) = ShelleyTxOut (MaryEra c)
 
   mkBasicTxOut = ShelleyTxOut
 

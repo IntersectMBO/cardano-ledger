@@ -86,7 +86,7 @@ type instance EraRule "TICKF" (AllegraEra c) = ShelleyTICKF (AllegraEra c)
 
 type instance EraRule "UPEC" (AllegraEra c) = ShelleyUPEC (AllegraEra c)
 
--- These rules are defined anew in the Allegra era(s)
+-- These rules are defined anew in the Allegra era
 
 data AllegraUTXO era
 

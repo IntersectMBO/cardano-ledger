@@ -9,6 +9,8 @@ module Cardano.Ledger.Mary.UTxO (getConsumedMaryValue) where
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
+import Cardano.Ledger.Mary.Era (MaryEra)
+import Cardano.Ledger.Mary.TxBody (MaryEraTxBody (..))
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), Wdrl (..))
@@ -17,8 +19,6 @@ import Cardano.Ledger.Shelley.UTxO
     getShelleyScriptsNeeded,
     keyRefunds,
   )
-import Cardano.Ledger.ShelleyMA.Era (MaryOrAllegra (Mary), ShelleyMAEra)
-import Cardano.Ledger.ShelleyMA.TxBody (ShelleyMAEraTxBody (..))
 import Cardano.Ledger.UTxO
   ( EraUTxO (..),
     UTxO (UTxO),
@@ -31,8 +31,8 @@ import qualified Data.Set as Set
 import GHC.Records (HasField)
 import Lens.Micro
 
-instance Crypto c => EraUTxO (ShelleyMAEra 'Mary c) where
-  type ScriptsNeeded (ShelleyMAEra 'Mary c) = ShelleyScriptsNeeded (ShelleyMAEra 'Mary c)
+instance Crypto c => EraUTxO (MaryEra c) where
+  type ScriptsNeeded (MaryEra c) = ShelleyScriptsNeeded (MaryEra c)
 
   getConsumedValue = getConsumedMaryValue
 
@@ -50,7 +50,7 @@ instance Crypto c => EraUTxO (ShelleyMAEra 'Mary c) where
 --   _created_ by the transaction, depending on the sign of the quantities in
 --   the mint field.
 getConsumedMaryValue ::
-  ( ShelleyMAEraTxBody era,
+  ( MaryEraTxBody era,
     Value era ~ MaryValue (EraCrypto era),
     HasField "_keyDeposit" (PParams era) Coin
   ) =>
@@ -71,7 +71,7 @@ getConsumedMaryValue pp (UTxO u) txBody = consumedValue <> txBody ^. mintValueTx
 -- withdrawals. Unlike the one from Shelley, this one also includes script hashes needed
 -- for minting multi-assets in the transaction.
 getMaryScriptsNeeded ::
-  ShelleyMAEraTxBody era =>
+  MaryEraTxBody era =>
   UTxO era ->
   TxBody era ->
   ShelleyScriptsNeeded era

@@ -17,12 +17,12 @@ module Test.Cardano.Ledger.Mary.Golden
   )
 where
 
+import Cardano.Ledger.Allegra.Scripts (Timelock (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (hashScript)
 import Cardano.Ledger.Mary (Mary)
+import Cardano.Ledger.Mary.TxOut (scaledMinDeposit)
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
-import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
-import Cardano.Ledger.ShelleyMA.TxBody (scaledMinDeposit)
 import Cardano.Ledger.Slot (SlotNo (..))
 import qualified Data.ByteString.Short as SBS
 import qualified Data.Map.Strict as Map

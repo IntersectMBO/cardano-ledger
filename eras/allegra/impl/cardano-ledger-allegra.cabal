@@ -37,21 +37,21 @@ library
   exposed-modules:
     Cardano.Ledger.Allegra
     Cardano.Ledger.Allegra.Core
-    Cardano.Ledger.Allegra.Era
     Cardano.Ledger.Allegra.Rules
     Cardano.Ledger.Allegra.Scripts
     Cardano.Ledger.Allegra.Translation
     Cardano.Ledger.Allegra.Tx
     Cardano.Ledger.Allegra.TxAuxData
     Cardano.Ledger.Allegra.TxBody
+
+  other-modules:
+    Cardano.Ledger.Allegra.Era
     Cardano.Ledger.Allegra.TxOut
     Cardano.Ledger.Allegra.TxSeq
     Cardano.Ledger.Allegra.TxWits
-
-  other-modules:
-    Cardano.Ledger.Allegra.UTxO
     Cardano.Ledger.Allegra.Rules.Utxo
     Cardano.Ledger.Allegra.Rules.Utxow
+    Cardano.Ledger.Allegra.UTxO
 
   build-depends:
     bytestring,

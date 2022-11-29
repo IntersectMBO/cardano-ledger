@@ -8,6 +8,7 @@ module Cardano.Ledger.Conway.Tx
   )
 where
 
+import Cardano.Ledger.Allegra.Tx (validateTimelock)
 import Cardano.Ledger.Alonzo.Tx
   ( alonzoMinFeeTx,
     auxDataAlonzoTxL,
@@ -31,7 +32,6 @@ import Cardano.Ledger.Conway.TxBody ()
 import Cardano.Ledger.Conway.TxWits ()
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.ShelleyMA.Tx (validateTimelock)
 
 instance CC.Crypto c => EraTx (ConwayEra c) where
   {-# SPECIALIZE instance EraTx (ConwayEra CC.StandardCrypto) #-}

@@ -41,11 +41,12 @@ import Cardano.Ledger.Babbage.TxBody
     wdrlsBabbbageTxBodyL,
   )
 import Cardano.Ledger.Babbage.TxBody as BabbageTxBodyReExports
-  ( AlonzoEraTxBody (..),
+  ( AllegraEraTxBody (..),
+    AlonzoEraTxBody (..),
     BabbageEraTxBody (..),
     BabbageTxBody (..),
+    MaryEraTxBody (..),
     ShelleyEraTxBody (..),
-    ShelleyMAEraTxBody (..),
   )
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.PParams ()
@@ -90,11 +91,14 @@ instance CC.Crypto c => ShelleyEraTxBody (ConwayEra c) where
   certsTxBodyL = certsBabbageTxBodyL
   {-# INLINE certsTxBodyL #-}
 
-instance CC.Crypto c => ShelleyMAEraTxBody (ConwayEra c) where
-  {-# SPECIALIZE instance ShelleyMAEraTxBody (ConwayEra CC.StandardCrypto) #-}
+instance CC.Crypto c => AllegraEraTxBody (ConwayEra c) where
+  {-# SPECIALIZE instance AllegraEraTxBody (ConwayEra CC.StandardCrypto) #-}
 
   vldtTxBodyL = vldtBabbageTxBodyL
   {-# INLINE vldtTxBodyL #-}
+
+instance CC.Crypto c => MaryEraTxBody (ConwayEra c) where
+  {-# SPECIALIZE instance MaryEraTxBody (ConwayEra CC.StandardCrypto) #-}
 
   mintTxBodyL = mintBabbageTxBodyL
   {-# INLINE mintTxBodyL #-}

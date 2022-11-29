@@ -42,8 +42,8 @@ import Cardano.Ledger.Alonzo.Scripts (AlonzoScript, CostModels)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxBody
   ( AlonzoEraTxBody (..),
+    MaryEraTxBody (..),
     ShelleyEraTxBody (..),
-    ShelleyMAEraTxBody (..),
   )
 import Cardano.Ledger.Alonzo.TxInfo
   ( ExtendedUTxO (..),
@@ -180,7 +180,7 @@ scriptsTransition ::
     Monad m,
     EraTx era,
     Script era ~ AlonzoScript era,
-    ShelleyMAEraTxBody era,
+    MaryEraTxBody era,
     AlonzoEraTxWits era,
     ExtendedUTxO era,
     EraUTxO era,
