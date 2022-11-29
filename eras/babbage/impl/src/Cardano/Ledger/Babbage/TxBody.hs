@@ -163,12 +163,7 @@ import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.TxBody (Wdrl (Wdrl), unWdrl)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Ledger.TxIn (TxIn (..))
-import Cardano.Ledger.Val
-  ( DecodeNonNegative,
-    Val (..),
-    decodeMint,
-    encodeMint,
-  )
+import Cardano.Ledger.Val (DecodeNonNegative, Val (..))
 import Control.DeepSeq (NFData)
 import Data.Sequence.Strict (StrictSeq, (|>))
 import qualified Data.Sequence.Strict as StrictSeq
@@ -727,7 +722,7 @@ encodeTxBodyRaw
       !> encodeKeyedStrictMaybe 6 btbrUpdate
       !> encodeKeyedStrictMaybe 8 bot
       !> Omit null (Key 14 (To btbrReqSignerHashes))
-      !> Omit (== mempty) (Key 9 (E encodeMint btbrMint))
+      !> Omit (== mempty) (Key 9 (To btbrMint))
       !> encodeKeyedStrictMaybe 11 btbrScriptIntegrityHash
       !> encodeKeyedStrictMaybe 7 btbrAuxDataHash
       !> encodeKeyedStrictMaybe 15 btbrTxNetworkId
@@ -784,7 +779,7 @@ instance
         ofield
           (\x tx -> tx {btbrValidityInterval = (btbrValidityInterval tx) {invalidBefore = x}})
           From
-      bodyFields 9 = field (\x tx -> tx {btbrMint = x}) (D decodeMint)
+      bodyFields 9 = field (\x tx -> tx {btbrMint = x}) From
       bodyFields 11 = ofield (\x tx -> tx {btbrScriptIntegrityHash = x}) From
       bodyFields 14 = field (\x tx -> tx {btbrReqSignerHashes = x}) From
       bodyFields 15 = ofield (\x tx -> tx {btbrTxNetworkId = x}) From
