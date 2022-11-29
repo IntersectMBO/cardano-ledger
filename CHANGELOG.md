@@ -259,6 +259,7 @@ in the naming of release branches.
 - Removed unused `Data.BiMap` module from `cardano-data` #3089
 - Removed `getMultiSigBytes` as unused #3138
 - Removed `hashCostModel` as unused and invalid #3138
+- Removed `EncodeMint`/`DecodeMint` classes in favor of regular `ToCBOR`/`FromCBOR` #3172
 
 ### Fixed
 

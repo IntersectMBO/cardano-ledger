@@ -35,7 +35,7 @@ import Cardano.Ledger.Shelley.Rules
     ShelleyTICKF,
     ShelleyUPEC,
   )
-import Cardano.Ledger.Val (DecodeMint, DecodeNonNegative, EncodeMint, Val, zero)
+import Cardano.Ledger.Val (DecodeNonNegative, Val, zero)
 import Control.DeepSeq (NFData (..))
 import Data.Kind (Type)
 import Data.Set as Set (Set, empty, map)
@@ -72,8 +72,6 @@ class
     Eq (MAValue ma c),
     FromCBOR (MAValue ma c),
     ToCBOR (MAValue ma c),
-    EncodeMint (MAValue ma c),
-    DecodeMint (MAValue ma c),
     NoThunks (MAValue ma c),
     KnownNat (MAProtVer ma),
     MinVersion <= MAProtVer ma,

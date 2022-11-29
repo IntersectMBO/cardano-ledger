@@ -84,10 +84,6 @@ import Cardano.Ledger.ShelleyMA.Era
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Ledger.ShelleyMA.TxOut
 import Cardano.Ledger.TxIn (TxIn (..))
-import Cardano.Ledger.Val
-  ( DecodeMint (..),
-    EncodeMint (..),
-  )
 import Control.DeepSeq (NFData (..))
 import qualified Data.Map.Strict as Map
 import Data.Proxy
@@ -166,7 +162,7 @@ txSparse (MATxBodyRaw inp out cert wdrl fee (ValidityInterval bot top) up hash f
     !> encodeKeyedStrictMaybe 6 up
     !> encodeKeyedStrictMaybe 7 hash
     !> encodeKeyedStrictMaybe 8 bot
-    !> Omit (== mempty) (Key 9 (E encodeMint frge))
+    !> Omit (== mempty) (Key 9 (To frge))
 
 bodyFields :: EraTxOut era => Word -> Field (MATxBodyRaw era)
 bodyFields 0 = field (\x tx -> tx {matbrInputs = x}) From
@@ -194,7 +190,7 @@ bodyFields 8 =
           }
     )
     From
-bodyFields 9 = field (\x tx -> tx {matbrMint = x}) (D decodeMint)
+bodyFields 9 = field (\x tx -> tx {matbrMint = x}) From
 bodyFields n = invalidField n
 
 initial :: MATxBodyRaw era

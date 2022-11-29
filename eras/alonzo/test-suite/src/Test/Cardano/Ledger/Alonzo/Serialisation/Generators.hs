@@ -56,6 +56,7 @@ import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), ScriptIntegrityHash)
 import Cardano.Ledger.Alonzo.TxWits
 import Cardano.Ledger.BaseTypes (Network, StrictMaybe (..), Version)
+import Cardano.Ledger.Binary (toCBOR)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
@@ -65,7 +66,7 @@ import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Ledger.TxIn (TxIn)
-import Cardano.Ledger.Val (DecodeNonNegative, EncodeMint (..), Val)
+import Cardano.Ledger.Val (DecodeNonNegative, Val)
 import Cardano.Slotting.Slot (SlotNo)
 import Codec.CBOR.Term (Term (..))
 import Control.State.Transition (PredicateFailure)
@@ -443,7 +444,7 @@ instance Crypto c => Twiddle (Update (AlonzoEra c)) where
   twiddle v = twiddle v . toTerm v
 
 instance Crypto c => Twiddle (MultiAsset c) where
-  twiddle v = twiddle v . encodingToTerm v . encodeMint
+  twiddle v = twiddle v . encodingToTerm v . toCBOR
 
 instance Crypto c => Twiddle (ScriptIntegrityHash c) where
   twiddle v = twiddle v . toTerm v

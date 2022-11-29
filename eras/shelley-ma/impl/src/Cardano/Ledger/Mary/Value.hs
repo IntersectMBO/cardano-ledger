@@ -57,12 +57,7 @@ import Cardano.Ledger.Coin (Coin (..), CompactForm (..), integerToWord64)
 import Cardano.Ledger.Compactible (Compactible (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Shelley.Scripts (ScriptHash (..))
-import Cardano.Ledger.Val
-  ( DecodeMint (..),
-    DecodeNonNegative (..),
-    EncodeMint (..),
-    Val (..),
-  )
+import Cardano.Ledger.Val (DecodeNonNegative (..), Val (..))
 import Control.DeepSeq (NFData (..), deepseq, rwhnf)
 import Control.Monad (forM_)
 import Control.Monad.ST (runST)
@@ -152,11 +147,11 @@ instance Group (MultiAsset c) where
   invert (MultiAsset m) =
     MultiAsset (canonicalMap (canonicalMap ((-1 :: Integer) *)) m)
 
-instance CC.Crypto c => DecodeMint (MultiAsset c) where
-  decodeMint = decodeMultiAssetMaps decodeIntegerBounded64
+instance CC.Crypto c => FromCBOR (MultiAsset c) where
+  fromCBOR = decodeMultiAssetMaps decodeIntegerBounded64
 
-instance CC.Crypto c => EncodeMint (MultiAsset c) where
-  encodeMint = encodeMultiAssetMaps
+instance CC.Crypto c => ToCBOR (MultiAsset c) where
+  toCBOR = encodeMultiAssetMaps
 
 -- | The Value representing MultiAssets
 data MaryValue c = MaryValue !Integer !(MultiAsset c)
@@ -334,7 +329,7 @@ instance
         encode $
           Rec MaryValue
             !> To c
-            !> E encodeMultiAssetMaps ma
+            !> To ma
 
 instance
   CC.Crypto c =>
@@ -347,12 +342,6 @@ instance
   DecodeNonNegative (MaryValue c)
   where
   decodeNonNegative = decodeNonNegativeValue
-
-instance
-  CC.Crypto c =>
-  DecodeMint (MaryValue c)
-  where
-  decodeMint = MaryValue 0 <$> decodeMint
 
 -- Note: we do not use `decodeInt64` from the cborg library here because the
 -- implementation contains "-- TODO FIXME: overflow"
@@ -381,12 +370,6 @@ decodeIntegerBounded64 = do
   where
     maxval = fromIntegral (maxBound :: Int64)
     minval = fromIntegral (minBound :: Int64)
-
-instance
-  CC.Crypto c =>
-  EncodeMint (MaryValue c)
-  where
-  encodeMint (MaryValue _ multiasset) = encodeMint multiasset
 
 -- ========================================================================
 -- Compactible
