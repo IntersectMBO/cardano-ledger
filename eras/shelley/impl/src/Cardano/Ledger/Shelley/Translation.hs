@@ -5,7 +5,12 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Ledger.Shelley.Translation where
+module Cardano.Ledger.Shelley.Translation
+  ( FromByronTranslationContext (..),
+    emptyFromByronTranslationContext,
+    toFromByronTranslationContext
+  )
+where
 
 import Cardano.Ledger.Core (Era, EraCrypto, TranslationContext)
 import Cardano.Ledger.Keys
