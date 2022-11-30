@@ -10,7 +10,11 @@
 
 module Cardano.Ledger.Pretty.Alonzo where
 
-import Cardano.Ledger.Alonzo.Data (AlonzoTxAuxData (AlonzoTxAuxData), Data (..))
+import Cardano.Ledger.Alonzo.Data
+  ( AlonzoTxAuxData (AlonzoTxAuxData, atadMetadata),
+    Data (..),
+    getAlonzoTxAuxDataScripts,
+  )
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams
   ( AlonzoPParams,
@@ -174,8 +178,12 @@ ppAuxiliaryData ::
   (PrettyA (Script era), EraTx era, Script era ~ AlonzoScript era) =>
   AlonzoTxAuxData era ->
   PDoc
-ppAuxiliaryData (AlonzoTxAuxData m s) =
-  ppSexp "AuxiliaryData" [ppMap ppWord64 ppMetadatum m, ppStrictSeq prettyA s]
+ppAuxiliaryData auxData@AlonzoTxAuxData {atadMetadata = metadata} =
+  ppSexp
+    "AuxiliaryData"
+    [ ppMap ppWord64 ppMetadatum metadata,
+      ppStrictSeq prettyA (getAlonzoTxAuxDataScripts auxData)
+    ]
 
 instance
   (PrettyA (Script era), EraTx era, Script era ~ AlonzoScript era) =>

@@ -29,25 +29,21 @@ in the naming of release branches.
 - Added `Twiddle` class to test alternative serializations: #2994
 - Added `getScriptsNeeded` and `getScriptsHashesNeeded` to `EraUTxO` class: #3019
 - Added `evaluateTransactionExecutionUnitsWithLogs` to `Alonzo`: #3111
+- Added `mkAlonzoTxAuxData` and `getAlonzoTxAuxDataScripts` that help to recover previous
+  behavior of `AlonzoTxAuxData` #3165 and #3166
+- Addition of `Memoized` type class and helper functions that utilize this new
+  abstraction: `mkMemoized`, `getMemoSafeHash`, `getMemoRawType`, `zipMemoRawType`,
+  `getMemoRawBytes` and `lensMemoRawType` #3165
+
 
 ### Changed
 
+- Changed structure and field names of `Cardano.Ledger.Alonzo.Data.AlonzoTxAuxData` #3165:
+  - Renamed `AlonzoTxAuxData.txMD` to `AlonzoTxAuxData.atadMetadata`:
+  - Removed `AlonzoTxAuxData.scripts` in favor of two new fields `atadTimelock` and
+    `atadPlutus`. This was needed due to #3166
 - Changed major version in `ProtVer` to use new type `Version` instead of `Natural`: #3138
 - Renamed records fields in `Cardano.Ledger` to names without `_` (underscores) #3126
-  - `Alonzo.TxBody.TxBodyRaw` to `Alonzo.TxBody.AlonzoTxBodyRaw`
-    - `_inputs` to `atbrInputs`
-    - `_collateral` to `atbrCollateral`
-    - `_outputs` to `atbrOutputs`
-    - `_certs` to `atbrCerts`
-    - `_wdrls` to `atbrWdrls`
-    - `_txfee` to `atbrTxFee`
-    - `_vldt` to `atbrValidityInterval`
-    - `_update` to `atbrUpdate`
-    - `_reqSignerHashes` to `atbrReqSignerHashes`
-    - `_mint` to `atbrMint`
-    - `_scriptIntegrityHash` to `atbrScriptIntegrityHash`
-    - `_adHash` to `atbrAuxDataHash`
-    - `_txnetworkid` to `atbrTxNetworkId`
   - `Alonzo.TxBody.AlonzoTxBody` pattern synonym
     - `inputs` to `atbInputs`
     - `collateral` to `atbCollateral`
@@ -62,22 +58,6 @@ in the naming of release branches.
     - `scriptIntegrityHash` to `atbScriptIntegrityHash`
     - `adHash` to `atbAuxDataHash`
     - `txnetworkid` to `atbTxNetworkId`
-  - `Babbage.TxBody.TxBodyRaw` to `Babbage.TxBody.BabbageTxBodyRaw`
-    - `_spendInputs` to `btbrSpendInputs`
-    - `_collateralInputs` to `btbrCollateralInputs`
-    - `_referenceInputs` to `btbrReferenceInputs`
-    - `_outputs` to `btbrOutputs`
-    - `_collateralReturn` to `btbrCollateralReturn`
-    - `_certs` to `btbrCerts`
-    - `_wdrls` to `btbrWdrls`
-    - `_txfee` to `btbrTxFee`
-    - `_vldt` to `btbrValidityInterval`
-    - `_update` to `btbrUpdate`
-    - `_reqSignerHashes` to `btbrReqSignerHashes`
-    - `_mint` to `btbrMint`
-    - `_scriptIntegrityHash` to `btbrScriptIntegrityHash`
-    - `_adHash` to `btbrAuxDataHash`
-    - `_txnetworkid` to `btbrTxNetworkId`
   - `Babbage.TxBody.BabbageTxBody` pattern synonym
     - `inputs` to `btbInputs`
     - `collateral` to `btbCollateral`

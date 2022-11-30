@@ -113,11 +113,12 @@ import Codec.CBOR.ByteArray (ByteArray (..))
 import Codec.CBOR.ByteArray.Sliced (SlicedByteArray (SBA), fromByteArray)
 import qualified Codec.CBOR.Encoding as C (Encoding (..))
 import Codec.CBOR.Term (Term (..))
-import Codec.Serialise as Serialise (Serialise (encode))
+import qualified Codec.Serialise as Serialise (Serialise (encode))
 import Control.Category (Category ((.)))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BS.Lazy
 import qualified Data.ByteString.Short as SBS
+import qualified PlutusLedgerApi.V1 as Plutus
 #if __GLASGOW_HASKELL__ < 900
 import qualified Data.ByteString.Short.Internal as SBS
 #endif
@@ -1169,7 +1170,7 @@ instance ToCBOR SlotNo where
   toCBOR = fromPlainEncoding . Serialise.encode
   encodedSizeExpr size = encodedSizeExpr size . fmap unSlotNo
 
-instance (Serialise t, Typeable t) => ToCBOR (WithOrigin t) where
+instance (Serialise.Serialise t, Typeable t) => ToCBOR (WithOrigin t) where
   toCBOR = fromPlainEncoding . Serialise.encode
 
 deriving instance ToCBOR EpochNo
@@ -1181,3 +1182,10 @@ deriving instance ToCBOR SystemStart
 instance ToCBOR BlockNo where
   toCBOR = fromPlainEncoding . Serialise.encode
   encodedSizeExpr size = encodedSizeExpr size . fmap unBlockNo
+
+--------------------------------------------------------------------------------
+-- Plutus
+--------------------------------------------------------------------------------
+
+instance ToCBOR Plutus.Data where
+  toCBOR = fromPlainEncoding . Serialise.encode
