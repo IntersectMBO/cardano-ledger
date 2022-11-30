@@ -14,6 +14,7 @@ module Test.Cardano.Ledger.Generic.Properties where
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoTxBody (..), IsValid (..))
 import qualified Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..))
+import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (GenDelegs (..))
@@ -39,6 +40,7 @@ import Data.Default.Class (Default (def))
 import qualified Data.Map.Strict as Map
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Binary.Arbitrary ()
+import Test.Cardano.Ledger.Binary.Twiddle (Twiddle, twiddleInvariantProp)
 import Test.Cardano.Ledger.Generic.Fields (abstractTx, abstractTxBody, abstractTxOut, abstractWitnesses)
 import Test.Cardano.Ledger.Generic.Functions (TotalAda (totalAda), isValid')
 import Test.Cardano.Ledger.Generic.GenState
@@ -66,12 +68,11 @@ import Test.Cardano.Ledger.Generic.TxGen
     genAlonzoTx,
     genUTxO,
   )
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes ()
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (StandardCrypto)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.QuickCheck
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.QuickCheck (testProperty)
-import Test.Cardano.Ledger.Binary.Twiddle (Twiddle, twiddleInvariantProp)
 
 -- =====================================
 -- Top level generators of TRC
@@ -325,21 +326,22 @@ adaIsPreservedInEachEpoch proof genSize =
         trcLast = lastState trc
 
 twiddleInvariantHolds ::
-  forall a era.
+  forall a.
   ( Arbitrary a,
     Show a,
     Twiddle a
   ) =>
-  Proof era ->
+  String ->
   TestTree
-twiddleInvariantHolds proof =
-  testProperty (show proof) $ twiddleInvariantProp @a
+twiddleInvariantHolds name =
+  testProperty name $ twiddleInvariantProp @a
 
 twiddleInvariantHoldsEras :: TestTree
 twiddleInvariantHoldsEras =
   testGroup
     "Twiddle invariant holds for TxBody"
-    [ twiddleInvariantHolds @(AlonzoTxBody (AlonzoEra Mock)) (Alonzo Mock)
+    [ twiddleInvariantHolds @(AlonzoTxBody (AlonzoEra StandardCrypto)) "Alonzo",
+      twiddleInvariantHolds @(BabbageTxBody (BabbageEra StandardCrypto)) "Babbage"
     ]
 
 -- ==============================================================

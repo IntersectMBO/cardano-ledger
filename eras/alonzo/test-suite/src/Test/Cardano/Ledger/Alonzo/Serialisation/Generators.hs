@@ -57,7 +57,7 @@ import Cardano.Ledger.Alonzo.Tx
   )
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), ScriptIntegrityHash)
 import Cardano.Ledger.Alonzo.TxWits
-import Cardano.Ledger.BaseTypes (Network, StrictMaybe (..), Version)
+import Cardano.Ledger.BaseTypes (Network)
 import Cardano.Ledger.Binary (toCBOR)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
@@ -80,7 +80,6 @@ import Data.Maybe (catMaybes)
 import qualified Data.Set as Set
 import Data.Text (pack)
 import Data.Typeable (Typeable)
-import Data.Void (Void)
 import GHC.Records (HasField)
 import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.V1 as PV1
@@ -417,30 +416,6 @@ instance Crypto c => Twiddle (Wdrl c) where
 instance Crypto c => Twiddle (AuxiliaryDataHash c) where
   twiddle v = twiddle v . toTerm v
 
-emptyOrNothing ::
-  forall t a c.
-  ( Foldable t,
-    Twiddle (t Void),
-    Monoid (t Void),
-    Twiddle (t a)
-  ) =>
-  Version ->
-  AlonzoTxBody (AlonzoEra c) ->
-  (AlonzoTxBody (AlonzoEra c) -> t a) ->
-  Gen (Maybe Term)
-emptyOrNothing v txBody f =
-  if null $ f txBody
-    then
-      oneof
-        [ Just <$> twiddle @(t Void) v mempty,
-          pure Nothing
-        ]
-    else Just <$> twiddle v (f txBody)
-
-twiddleStrictMaybe :: Twiddle a => Version -> StrictMaybe a -> Gen (Maybe Term)
-twiddleStrictMaybe _ SNothing = pure Nothing
-twiddleStrictMaybe v (SJust x) = Just <$> twiddle v x
-
 instance Crypto c => Twiddle (Update (AlonzoEra c)) where
   twiddle v = twiddle v . toTerm v
 
@@ -470,15 +445,15 @@ instance Crypto c => Twiddle (AlonzoTxBody (AlonzoEra c)) where
     -- Empty collateral can be represented by empty set or the
     -- value can be omitted entirely
     ttl' <- twiddleStrictMaybe v . invalidHereafter $ atbValidityInterval txBody
-    cert' <- emptyOrNothing v txBody atbCerts
+    cert' <- emptyOrNothing v $ atbCerts txBody
     wdrls' <- twiddle v $ atbWdrls txBody
     update' <- twiddleStrictMaybe v $ atbUpdate txBody
     auxDataHash' <- twiddleStrictMaybe v $ atbAuxDataHash txBody
     validityStart' <- twiddleStrictMaybe v . invalidBefore $ atbValidityInterval txBody
     mint' <- twiddle v $ atbMint txBody
     scriptDataHash' <- twiddleStrictMaybe v $ atbScriptIntegrityHash txBody
-    collateral' <- emptyOrNothing v txBody atbCollateral
-    requiredSigners' <- emptyOrNothing v txBody atbReqSignerHashes
+    collateral' <- emptyOrNothing v $ atbCollateral txBody
+    requiredSigners' <- emptyOrNothing v $ atbReqSignerHashes txBody
     networkId' <- twiddleStrictMaybe v $ atbTxNetworkId txBody
     mp <- elements [TMap, TMapI]
     let fields =
