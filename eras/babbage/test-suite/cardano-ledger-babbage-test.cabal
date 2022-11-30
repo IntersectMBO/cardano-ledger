@@ -43,8 +43,8 @@ library
     Test.Cardano.Ledger.Babbage.Examples.Consensus,
     Test.Cardano.Ledger.Babbage.Serialisation.Generators
   build-depends:
-    cardano-ledger-binary,
     cardano-ledger-allegra,
+    cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-ledger-alonzo,
     cardano-ledger-alonzo-test,
     cardano-ledger-babbage,

@@ -17,6 +17,8 @@ module Test.Cardano.Ledger.Binary.Twiddle
     toTwiddler,
     toTerm,
     twiddleInvariantProp,
+    emptyOrNothing,
+    twiddleStrictMaybe,
   )
 where
 
@@ -35,8 +37,10 @@ import Data.Bitraversable (bimapM)
 import Data.ByteString (ByteString)
 import Data.ByteString.Lazy (fromStrict, toStrict)
 import Data.Foldable (toList)
+import Data.Int (Int64)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Sequence (Seq)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
@@ -46,7 +50,7 @@ import Data.Typeable (Typeable)
 import Data.Void (Void, absurd)
 import GHC.Generics
 import Test.Cardano.Ledger.Binary.Arbitrary ()
-import Test.QuickCheck (Arbitrary (..), Gen, elements, shuffle, Property, (===))
+import Test.QuickCheck (Arbitrary (..), Gen, Property, elements, oneof, shuffle, (===))
 
 data Twiddler a = Twiddler
   { twiddlerVersion :: !Version,
@@ -178,6 +182,9 @@ instance Twiddle Float where
 instance Twiddle Double where
   twiddle _ = pure . TDouble
 
+instance Twiddle Int64 where
+  twiddle _ = pure . TInt . fromIntegral
+
 instance Twiddle Term where
   twiddle v (TInt n) = twiddle v n
   twiddle v (TInteger n) = twiddle v n
@@ -217,3 +224,34 @@ twiddleInvariantProp version x = do
   t <- twiddle version x
   let t' = encodingToTerm version $ toCBOR t
   pure $ t === t'
+
+-- | Optional containers have two "empty" representations. One of
+-- them is to return an empty container and the other is to omit the field.
+-- This utility function randomly picks one of these representations, where
+-- omission is represented by `Nothing` and empty container is returned with
+-- `Just`. These values can then be easily concatenated with `catMaybes`.
+emptyOrNothing ::
+  forall t b.
+  ( Foldable t,
+    Twiddle (t Void),
+    Monoid (t Void),
+    Twiddle (t b)
+  ) =>
+  Version ->
+  t b ->
+  Gen (Maybe Term)
+emptyOrNothing v x =
+  if null x
+    then
+      oneof
+        [ Just <$> twiddle @(t Void) v mempty,
+          pure Nothing
+        ]
+    else Just <$> twiddle v x
+
+-- | Utility function for twiddling optional fields. It works similarly to
+-- the twiddle method of StrictMaybe, but lifts the Maybe constructor out from
+-- the term so it can be easily concatenated with `catMaybes`.
+twiddleStrictMaybe :: Twiddle a => Version -> StrictMaybe a -> Gen (Maybe Term)
+twiddleStrictMaybe _ SNothing = pure Nothing
+twiddleStrictMaybe v (SJust x) = Just <$> twiddle v x
