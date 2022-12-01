@@ -50,6 +50,7 @@ import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.Pretty
 import Cardano.Ledger.Pretty.Alonzo
 import qualified Cardano.Ledger.Pretty.Babbage as Babbage
+import Cardano.Ledger.Pretty.Conway (ppConwayTxBody)
 import Cardano.Ledger.Pretty.Mary
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.LedgerState
@@ -166,7 +167,7 @@ instance CC.Crypto c => PrettyCore (BabbageEra c) where
 instance CC.Crypto c => PrettyCore (ConwayEra c) where
   prettyTx = Cardano.Ledger.Pretty.Alonzo.ppTx
   prettyScript = ppScript
-  prettyTxBody = Babbage.ppTxBody
+  prettyTxBody = ppConwayTxBody
   prettyWitnesses = ppTxWitness
   prettyValue = ppValue
   prettyTxOut = Babbage.ppTxOut
@@ -1273,6 +1274,8 @@ pcTxBodyField proof x = case x of
   AdHash (SJust (AuxiliaryDataHash h)) -> [("aux data hash", trim (ppSafeHash h))]
   Txnetworkid SNothing -> []
   Txnetworkid (SJust nid) -> [("network id", pcNetwork nid)]
+  GovernanceActions _ -> undefined
+  Votes _ -> undefined
 
 pcTxField :: forall era. Reflect era => Proof era -> TxField era -> [(Text, PDoc)]
 pcTxField proof x = case x of

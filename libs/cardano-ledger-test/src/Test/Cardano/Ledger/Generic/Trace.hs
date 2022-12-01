@@ -503,7 +503,7 @@ forEachEpochTrace ::
 forEachEpochTrace proof tracelen genSize f = do
   let newEpoch tr1 tr2 = nesEL (mcsNes tr1) /= nesEL (mcsNes tr2)
   trc <- case proof of
-    Conway _ -> genTrace proof tracelen genSize (initStableFields proof)
+    Conway _ -> undefined -- genTrace proof tracelen genSize (initStableFields proof)
     Babbage _ -> genTrace proof tracelen genSize (initStableFields proof)
     Alonzo _ -> genTrace proof tracelen genSize (initStableFields proof)
     Allegra _ -> genTrace proof tracelen genSize (initStableFields proof)

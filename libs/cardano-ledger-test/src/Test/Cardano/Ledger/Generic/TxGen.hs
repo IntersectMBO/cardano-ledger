@@ -1086,7 +1086,7 @@ applySTSByProof ::
   Proof era ->
   RuleContext 'Transition (EraRule "LEDGER" era) ->
   Either [PredicateFailure (EraRule "LEDGER" era)] (State (EraRule "LEDGER" era))
-applySTSByProof (Conway _) _trc = runShelleyBase $ applySTS @(EraRule "LEDGER" (ConwayEra (EraCrypto era))) _trc
+applySTSByProof (Conway _) _trc = runShelleyBase $ undefined -- applySTS @(EraRule "LEDGER" (ConwayEra (EraCrypto era))) _trc
 applySTSByProof (Babbage _) _trc = runShelleyBase $ applySTS @(EraRule "LEDGER" (BabbageEra (EraCrypto era))) _trc
 applySTSByProof (Alonzo _) trc = runShelleyBase $ applySTS trc
 applySTSByProof (Mary _) trc = runShelleyBase $ applySTS trc

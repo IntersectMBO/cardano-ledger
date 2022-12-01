@@ -43,6 +43,11 @@ library
     Cardano.Ledger.Conway.Translation
     Cardano.Ledger.Conway.Scripts
     Cardano.Ledger.Conway
+    Cardano.Ledger.Conway.Rules
+    Cardano.Ledger.Conway.Rules.Utxo
+    Cardano.Ledger.Conway.Rules.Utxos
+    Cardano.Ledger.Conway.Core
+    Cardano.Ledger.Conway.Delegation.Certificates
   other-modules:
     Cardano.Ledger.Conway.Era
     Cardano.Ledger.Conway.UTxO
@@ -57,8 +62,10 @@ library
                 cardano-ledger-mary,
                 cardano-ledger-shelley,
                 containers,
+                deepseq,
                 microlens,
                 nothunks,
+                small-steps,
                 cardano-strict-containers,
   hs-source-dirs:
     src

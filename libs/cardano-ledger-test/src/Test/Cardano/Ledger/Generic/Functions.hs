@@ -16,12 +16,13 @@ import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
-import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), collateral')
+import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody (..), AlonzoTxOut (..), collateral')
 import Cardano.Ledger.Alonzo.TxInfo (languages)
 import qualified Cardano.Ledger.Babbage.PParams as Babbage (BabbagePParamsHKD (..))
 import Cardano.Ledger.Babbage.Tx (refScripts)
 import Cardano.Ledger.Babbage.TxBody
-  ( BabbageTxOut (..),
+  ( BabbageEraTxBody (..),
+    BabbageTxOut (..),
     Datum (..),
     collateralInputs',
     collateralReturn',
@@ -186,7 +187,7 @@ scriptWitsNeeded' :: Proof era -> MUtxo era -> TxBody era -> Set (ScriptHash (Er
 scriptWitsNeeded' (Conway _) utxo txBody = regularScripts `Set.difference` inlineScripts
   where
     theUtxo = UTxO utxo
-    inputs = spendInputs' txBody `Set.union` referenceInputs' txBody
+    inputs = txBody ^. inputsTxBodyL
     inlineScripts = keysSet $ refScripts inputs theUtxo
     regularScripts = getScriptsHashesNeeded (getScriptsNeeded theUtxo txBody)
 scriptWitsNeeded' (Babbage _) utxo txBody = regularScripts `Set.difference` inlineScripts
@@ -314,7 +315,7 @@ getBody :: EraTx era => Proof era -> Tx era -> TxBody era
 getBody _ tx = tx ^. bodyTxL
 
 getCollateralInputs :: Proof era -> TxBody era -> Set (TxIn (EraCrypto era))
-getCollateralInputs (Conway _) tx = collateralInputs' tx
+getCollateralInputs (Conway _) tx = tx ^. collateralInputsTxBodyL
 getCollateralInputs (Babbage _) tx = collateralInputs' tx
 getCollateralInputs (Alonzo _) tx = collateral' tx
 getCollateralInputs (Mary _) _ = Set.empty
@@ -323,7 +324,7 @@ getCollateralInputs (Shelley _) _ = Set.empty
 {-# NOINLINE getCollateralInputs #-}
 
 getCollateralOutputs :: Proof era -> TxBody era -> [TxOut era]
-getCollateralOutputs (Conway _) tx = case collateralReturn' tx of SNothing -> []; SJust x -> [x]
+getCollateralOutputs (Conway _) tx = case tx ^. collateralReturnTxBodyL of SNothing -> []; SJust x -> [x]
 getCollateralOutputs (Babbage _) tx = case collateralReturn' tx of SNothing -> []; SJust x -> [x]
 getCollateralOutputs (Alonzo _) _ = []
 getCollateralOutputs (Mary _) _ = []

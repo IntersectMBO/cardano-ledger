@@ -47,6 +47,7 @@ import Cardano.Ledger.BaseTypes
   )
 import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway.Rules ()
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC
@@ -1249,5 +1250,5 @@ babbageFeatures =
   testGroup
     "Babbage Features"
     [ genericBabbageFeatures (Babbage Mock),
-      genericBabbageFeatures (Conway Mock)
+      undefined -- genericBabbageFeatures (Conway Mock)
     ]

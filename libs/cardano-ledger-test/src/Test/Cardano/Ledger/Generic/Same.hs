@@ -27,6 +27,7 @@ import Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD)
 import Cardano.Ledger.Babbage.TxBody (BabbageEraTxBody, BabbageTxBody (..), BabbageTxOut (..))
 import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Block (Block (..))
+import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era, EraCrypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (Genesis))
@@ -297,7 +298,7 @@ sameLedgerFail (Allegra _) x y = eqByShow x y
 sameLedgerFail (Mary _) x y = eqByShow x y
 sameLedgerFail (Alonzo _) x y = eqByShow x y
 sameLedgerFail (Babbage _) x y = eqByShow x y
-sameLedgerFail (Conway _) x y = eqByShow x y
+sameLedgerFail (Conway _) _ _ = undefined
 {-# NOINLINE sameLedgerFail #-}
 
 sameTransCtx :: Proof era -> Core.TranslationContext era -> Core.TranslationContext era -> Maybe PDoc
@@ -468,13 +469,16 @@ sameBabbageTxBody
       ("NetworkId", eqVia (ppStrictMaybe pcNetwork) n1 n2)
     ]
 
+sameConwayTxBody :: Proof era -> ConwayTxBody era -> ConwayTxBody era -> [(String, Maybe PDoc)]
+sameConwayTxBody _proof _x _y = undefined
+
 sameTxBody :: Reflect era => Proof era -> Core.TxBody era -> Core.TxBody era -> [(String, Maybe PDoc)]
 sameTxBody proof@(Shelley _) x y = sameShelleyTxBody proof x y
 sameTxBody proof@(Allegra _) x y = sameAllegraTxBody proof x y
 sameTxBody proof@(Mary _) x y = sameMaryTxBody proof x y
 sameTxBody proof@(Alonzo _) x y = sameAlonzoTxBody proof x y
 sameTxBody proof@(Babbage _) x y = sameBabbageTxBody proof x y
-sameTxBody proof@(Conway _) x y = sameBabbageTxBody proof x y
+sameTxBody proof@(Conway _) x y = sameConwayTxBody proof x y
 
 -- =======================
 -- Comparing Tx for Sameness

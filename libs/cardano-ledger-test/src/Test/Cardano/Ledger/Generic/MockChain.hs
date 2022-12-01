@@ -247,7 +247,7 @@ instance PrettyA (MockBlock era) where prettyA = ppMockBlock
 
 ppMockChainFailure :: Proof era -> MockChainFailure era -> PDoc
 ppMockChainFailure proof x = case proof of
-  (Conway _) -> help x
+  (Conway _) -> undefined
   (Babbage _) -> help x
   (Alonzo _) -> help x
   (Mary _) -> help x

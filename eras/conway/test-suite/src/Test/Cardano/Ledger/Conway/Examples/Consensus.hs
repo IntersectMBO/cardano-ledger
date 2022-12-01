@@ -23,31 +23,34 @@ import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..), TxDats (..))
-import Cardano.Ledger.Babbage.TxBody (Datum (..))
+import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), Datum (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (mkSized)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (Conway)
+import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert (..))
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.PParams (BabbagePParamsHKD (..), emptyPParams, emptyPParamsUpdate)
 import Cardano.Ledger.Conway.Translation ()
 import Cardano.Ledger.Conway.Tx (AlonzoTx (..))
-import Cardano.Ledger.Conway.TxBody (BabbageTxBody (..), BabbageTxOut (..))
+import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
 import Cardano.Ledger.Conway.TxWits (AlonzoTxWits (..))
 import Cardano.Ledger.Core (EraScript (hashScript), TxBody, eraProtVerHigh)
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj))
 import Cardano.Ledger.Crypto (StandardCrypto)
+import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (GenDelegs (..), asWitness)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API
   ( ApplyTxError (..),
+    DelegCert (..),
     Network (..),
     NewEpochState (..),
+    PoolCert (..),
     ProposedPPUpdates (..),
     RewardAcnt (..),
     TxId (..),
-    Update (..),
     Wdrl (..),
   )
 import Cardano.Ledger.Shelley.Rules
@@ -57,15 +60,17 @@ import Cardano.Ledger.Shelley.Rules
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.TxIn (mkTxInPartial)
 import Cardano.Ledger.UTxO (makeWitnessesVKey)
-import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
+import Cardano.Slotting.Slot (SlotNo (..))
 import Data.Default.Class (Default (def))
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
+import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import qualified PlutusTx as Plutus
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import qualified Test.Cardano.Ledger.Mary.Examples.Consensus as MarySLE
+import Test.Cardano.Ledger.Shelley.Examples.Consensus (examplePoolParams, exampleStakeKey, keyToCredential)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as SLE
 import Test.Cardano.Ledger.Shelley.Orphans ()
 import Test.Cardano.Ledger.Shelley.Utils (mkAddr)
@@ -118,9 +123,16 @@ collateralOutput =
     NoDatum
     SNothing
 
+exampleConwayCerts :: CC.Crypto c => StrictSeq (ConwayDCert c)
+exampleConwayCerts =
+  StrictSeq.fromList
+    [ ConwayDCertDeleg (RegKey (keyToCredential exampleStakeKey)),
+      ConwayDCertPool (RegPool examplePoolParams)
+    ]
+
 exampleTxBodyConway :: TxBody Conway
 exampleTxBodyConway =
-  BabbageTxBody
+  ConwayTxBody
     (Set.fromList [mkTxInPartial (TxId (SLE.mkDummySafeHash Proxy 1)) 0]) -- spending inputs
     (Set.fromList [mkTxInPartial (TxId (SLE.mkDummySafeHash Proxy 2)) 1]) -- collateral inputs
     (Set.fromList [mkTxInPartial (TxId (SLE.mkDummySafeHash Proxy 1)) 3]) -- reference inputs
@@ -135,7 +147,7 @@ exampleTxBodyConway =
     )
     (SJust $ mkSized (eraProtVerHigh @Conway) collateralOutput) -- collateral return
     (SJust $ Coin 8675309) -- collateral tot
-    SLE.exampleCerts -- txcerts
+    exampleConwayCerts -- txcerts
     ( Wdrl $
         Map.singleton
           (RewardAcnt Testnet (SLE.keyToCredential SLE.exampleStakeKey))
@@ -143,20 +155,13 @@ exampleTxBodyConway =
     )
     (Coin 999) -- txfee
     (ValidityInterval (SJust (SlotNo 2)) (SJust (SlotNo 4))) -- txvldt
-    ( SJust $
-        Update
-          ( ProposedPPUpdates $
-              Map.singleton
-                (SLE.mkKeyHash 1)
-                (emptyPParamsUpdate {_maxBHSize = SJust 4000})
-          )
-          (EpochNo 0)
-    ) -- txUpdates
     (Set.singleton $ SLE.mkKeyHash 212) -- reqSignerHashes
     exampleMultiAsset -- mint
     (SJust $ SLE.mkDummySafeHash (Proxy @StandardCrypto) 42) -- scriptIntegrityHash
     (SJust . AuxiliaryDataHash $ SLE.mkDummySafeHash (Proxy @StandardCrypto) 42) -- adHash
     (SJust Mainnet) -- txnetworkid
+    mempty
+    mempty
   where
     MaryValue _ exampleMultiAsset = MarySLE.exampleMultiAssetValue 3
 

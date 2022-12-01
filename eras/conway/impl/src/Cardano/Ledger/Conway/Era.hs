@@ -3,11 +3,13 @@
 
 module Cardano.Ledger.Conway.Era
   ( ConwayEra,
+    ConwayUTXO,
+    ConwayUTXOS,
   )
 where
 
 import Cardano.Ledger.Alonzo.Rules (AlonzoBBODY)
-import Cardano.Ledger.Babbage.Rules (BabbageLEDGER, BabbageUTXO, BabbageUTXOS, BabbageUTXOW)
+import Cardano.Ledger.Babbage.Rules (BabbageLEDGER, BabbageUTXOW)
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Mary.Value (MaryValue)
@@ -40,9 +42,13 @@ type instance Value (ConwayEra c) = MaryValue c
 
 -- Rules inherited from Babbage
 
-type instance EraRule "UTXOS" (ConwayEra c) = BabbageUTXOS (ConwayEra c)
+data ConwayUTXOS era
 
-type instance EraRule "UTXO" (ConwayEra c) = BabbageUTXO (ConwayEra c)
+type instance EraRule "UTXOS" (ConwayEra c) = ConwayUTXOS (ConwayEra c)
+
+data ConwayUTXO era
+
+type instance EraRule "UTXO" (ConwayEra c) = ConwayUTXO (ConwayEra c)
 
 type instance EraRule "UTXOW" (ConwayEra c) = BabbageUTXOW (ConwayEra c)
 
