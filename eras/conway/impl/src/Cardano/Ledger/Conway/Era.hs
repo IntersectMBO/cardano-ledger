@@ -25,12 +25,12 @@ import Cardano.Ledger.Shelley.Rules
 
 -- =====================================================
 
--- | The Babbage era
+-- | The Conway era
 data ConwayEra c
 
 instance CC.Crypto c => Era (ConwayEra c) where
   type EraCrypto (ConwayEra c) = c
-  type ProtVerLow (ConwayEra c) = 8
+  type ProtVerLow (ConwayEra c) = 9
 
 type instance Value (ConwayEra c) = MaryValue c
 
