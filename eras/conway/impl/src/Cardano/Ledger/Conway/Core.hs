@@ -26,7 +26,9 @@ import Cardano.Ledger.Shelley.TxBody (Url)
 import Cardano.Ledger.SafeHash (SafeHash)
 import Data.ByteString (ByteString)
 import Cardano.Ledger.Core (EraPParams(..))
-import Cardano.Ledger.BaseTypes (TxIx(..))
+import Cardano.Ledger.BaseTypes (TxIx(..), ProtVer (..))
+import Data.Map.Strict (Map)
+import Cardano.Ledger.Credential (Credential)
 
 class BabbageEraTxBody era => ConwayEraTxBody era where
   govActionsL :: Lens' (TxBody era) (StrictSeq (GovernanceActionInfo era))
@@ -59,8 +61,8 @@ instance Era era => ToCBOR (GovernanceActionInfo era) where
 
 data GovernanceAction era
   = ParameterChange (PParamsUpdate era)
-  | HardForkInitiation
-  | TreasuryWithdrawals
+  | HardForkInitiation ProtVer
+  | TreasuryWithdrawals (Map (Credential 'Staking (EraCrypto era)) Coin)
   deriving (Generic)
 
 deriving instance Eq (PParamsUpdate era) => Eq (GovernanceAction era)

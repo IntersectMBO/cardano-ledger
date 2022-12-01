@@ -1,0 +1,14 @@
+; These are definitions which are being overwritten n a mock cddl file for
+; use in tests
+
+set = [* a]
+
+unit_interval = #6.30([uint, uint])
+
+rational = #6.30([uint, uint])
+
+positive_interval = #6.30([uint, uint])
+
+; The description of the contents of these bytes is in the main cddl
+address = bytes
+reward_account = bytes
