@@ -103,7 +103,6 @@ collectTwoPhaseScriptInputsOutputOrdering =
         ( fromRight (error "translation error") $
             getTxInfo
               apf
-              (pp apf)
               PlutusV1
               testEpochInfo
               testSystemStart
@@ -178,7 +177,6 @@ collectInputs x = error ("collectInputs Not defined in era " ++ show x)
 
 getTxInfo ::
   Proof era ->
-  PParams era ->
   Language ->
   EpochInfo (Either Text) ->
   SystemStart ->

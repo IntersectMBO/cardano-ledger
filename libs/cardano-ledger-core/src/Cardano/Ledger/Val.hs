@@ -14,12 +14,10 @@ module Cardano.Ledger.Val
     sumVal,
     adaOnly,
     DecodeNonNegative (..),
-    DecodeMint (..),
-    EncodeMint (..),
   )
 where
 
-import Cardano.Ledger.Binary (Decoder, Encoding, decodeWord64, toCBOR)
+import Cardano.Ledger.Binary (Decoder, decodeWord64)
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Data.Coerce
@@ -144,21 +142,3 @@ instance (DecodeNonNegative a, Compactible a, Show a) => DecodeNonNegative (Comp
   decodeNonNegative = do
     v <- decodeNonNegative
     maybe (fail $ "illegal value: " <> show v) pure (toCompact v)
-
--- =============================================================
-
-class DecodeMint v where
-  decodeMint :: Decoder s v
-
-instance DecodeMint Coin where
-  decodeMint = fail "cannot have coin in mint field"
-
--- =============================================================
-
-class EncodeMint v where
-  encodeMint :: v -> Encoding
-
-instance EncodeMint Coin where
-  -- we expect nothing to be able to successfully decode this
-  -- this is an alternative to throwing an error at encoding
-  encodeMint = toCBOR

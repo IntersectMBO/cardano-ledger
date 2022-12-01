@@ -145,7 +145,7 @@ txInfoInV2 (UTxO mp) txin =
       out <- txInfoOutV2 (TxOutFromInput txin) txout
       Right (PV2.TxInInfo (Alonzo.txInfoIn' txin) out)
 
-transRedeemer :: Era era => Data era -> PV2.Redeemer
+transRedeemer :: Data era -> PV2.Redeemer
 transRedeemer = PV2.Redeemer . PV2.dataToBuiltinData . getPlutusData
 
 transRedeemerPtr ::
@@ -165,15 +165,14 @@ babbageTxInfo ::
     Value era ~ MaryValue (EraCrypto era),
     TxWits era ~ AlonzoTxWits era
   ) =>
-  PParams era ->
   Language ->
   EpochInfo (Either Text) ->
   SystemStart ->
   UTxO era ->
   Tx era ->
   Either (TranslationError (EraCrypto era)) VersionedTxInfo
-babbageTxInfo pp lang ei sysS utxo tx = do
-  timeRange <- left TimeTranslationPastHorizon $ Alonzo.transVITime pp ei sysS interval
+babbageTxInfo lang ei sysS utxo tx = do
+  timeRange <- left TimeTranslationPastHorizon $ Alonzo.transVITime ei sysS interval
   case lang of
     PlutusV1 -> do
       let refInputs = txBody ^. referenceInputsTxBodyL

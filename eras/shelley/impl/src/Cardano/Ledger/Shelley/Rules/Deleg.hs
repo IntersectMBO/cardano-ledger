@@ -321,114 +321,89 @@ delegationTransition = do
           { dsFutureGenDelegs =
               eval (dsFutureGenDelegs ds ⨃ singleton (FutureGenDeleg s' gkh) (GenDelegPair vkh vrf))
           }
-    DCertMir (MIRCert targetPot (StakeAddressesMIR credCoinMap)) -> do
-      if HardForks.allowMIRTransfer pp
-        then do
-          sp <- liftSTS $ asks stabilityWindow
-          ei <- liftSTS $ asks epochInfoPure
-          EpochNo currEpoch <- liftSTS $ epochInfoEpoch ei slot
-          let newEpoch = EpochNo (currEpoch + 1)
-          tellEvent (NewEpoch newEpoch)
-          firstSlot <- liftSTS $ epochInfoFirst ei newEpoch
-          let tooLate = firstSlot *- Duration sp
-          slot
-            < tooLate
-            ?! MIRCertificateTooLateinEpochDELEG slot tooLate
-
+    DCertMir (MIRCert targetPot mirTarget) -> do
+      checkSlotNotTooLate slot
+      case mirTarget of
+        StakeAddressesMIR credCoinMap -> do
           let (potAmount, delta, instantaneousRewards) =
                 case targetPot of
                   ReservesMIR -> (asReserves acnt, deltaReserves $ dsIRewards ds, iRReserves $ dsIRewards ds)
                   TreasuryMIR -> (asTreasury acnt, deltaTreasury $ dsIRewards ds, iRTreasury $ dsIRewards ds)
-              credCoinMap' = Map.map (\(DeltaCoin x) -> Coin x) credCoinMap
-              combinedMap = Map.unionWith (<>) credCoinMap' instantaneousRewards
-              requiredForRewards = fold combinedMap
-              available = potAmount `addDeltaCoin` delta
-
-          all (>= mempty) combinedMap ?! MIRProducesNegativeUpdate
-
-          requiredForRewards
-            <= available
-            ?! InsufficientForInstantaneousRewardsDELEG targetPot requiredForRewards available
-
-          pure $
-            case targetPot of
-              ReservesMIR -> ds {dsIRewards = (dsIRewards ds) {iRReserves = combinedMap}}
-              TreasuryMIR -> ds {dsIRewards = (dsIRewards ds) {iRTreasury = combinedMap}}
-        else do
-          sp <- liftSTS $ asks stabilityWindow
-          ei <- liftSTS $ asks epochInfoPure
-          EpochNo currEpoch <- liftSTS $ epochInfoEpoch ei slot
-          let newEpoch = EpochNo (currEpoch + 1)
-          tellEvent (NewEpoch newEpoch)
-          firstSlot <- liftSTS $ epochInfoFirst ei newEpoch
-          let tooLate = firstSlot *- Duration sp
-          slot
-            < tooLate
-            ?! MIRCertificateTooLateinEpochDELEG slot tooLate
-
-          all (>= mempty) credCoinMap ?! MIRNegativesNotCurrentlyAllowed
-
-          let (potAmount, instantaneousRewards) =
-                case targetPot of
-                  ReservesMIR -> (asReserves acnt, iRReserves $ dsIRewards ds)
-                  TreasuryMIR -> (asTreasury acnt, iRTreasury $ dsIRewards ds)
           let credCoinMap' = Map.map (\(DeltaCoin x) -> Coin x) credCoinMap
-              combinedMap = Map.union credCoinMap' instantaneousRewards
-              requiredForRewards = fold combinedMap
-          requiredForRewards
-            <= potAmount
-            ?! InsufficientForInstantaneousRewardsDELEG targetPot requiredForRewards potAmount
+          (combinedMap, available) <-
+            if HardForks.allowMIRTransfer pp
+              then do
+                let cm = Map.unionWith (<>) credCoinMap' instantaneousRewards
+                all (>= mempty) cm ?! MIRProducesNegativeUpdate
+                pure (cm, potAmount `addDeltaCoin` delta)
+              else do
+                all (>= mempty) credCoinMap ?! MIRNegativesNotCurrentlyAllowed
+                pure (Map.union credCoinMap' instantaneousRewards, potAmount)
+          updateReservesAndTreasury targetPot combinedMap available ds
+        SendToOppositePotMIR coin ->
+          if HardForks.allowMIRTransfer pp
+            then do
+              let available = availableAfterMIR targetPot acnt (dsIRewards ds)
+              coin >= mempty ?! MIRNegativeTransfer targetPot coin
+              coin <= available ?! InsufficientForTransferDELEG targetPot coin available
 
-          case targetPot of
-            ReservesMIR -> pure $ ds {dsIRewards = (dsIRewards ds) {iRReserves = combinedMap}}
-            TreasuryMIR -> pure $ ds {dsIRewards = (dsIRewards ds) {iRTreasury = combinedMap}}
-    DCertMir (MIRCert targetPot (SendToOppositePotMIR coin)) ->
-      if HardForks.allowMIRTransfer pp
-        then do
-          sp <- liftSTS $ asks stabilityWindow
-          ei <- liftSTS $ asks epochInfoPure
-          EpochNo currEpoch <- liftSTS $ epochInfoEpoch ei slot
-          let newEpoch = EpochNo (currEpoch + 1)
-          tellEvent (NewEpoch newEpoch)
-          firstSlot <- liftSTS $ epochInfoFirst ei newEpoch
-          let tooLate = firstSlot *- Duration sp
-          slot
-            < tooLate
-            ?! MIRCertificateTooLateinEpochDELEG slot tooLate
-
-          let available = availableAfterMIR targetPot acnt (dsIRewards ds)
-          coin
-            >= mempty
-            ?! MIRNegativeTransfer targetPot coin
-          coin
-            <= available
-            ?! InsufficientForTransferDELEG targetPot coin available
-
-          let ir = dsIRewards ds
-              dr = deltaReserves ir
-              dt = deltaTreasury ir
-          case targetPot of
-            ReservesMIR ->
-              pure $
-                ds
-                  { dsIRewards =
-                      ir
-                        { deltaReserves = dr <> invert (toDeltaCoin coin),
-                          deltaTreasury = dt <> toDeltaCoin coin
-                        }
-                  }
-            TreasuryMIR ->
-              pure $
-                ds
-                  { dsIRewards =
-                      ir
-                        { deltaReserves = dr <> toDeltaCoin coin,
-                          deltaTreasury = dt <> invert (toDeltaCoin coin)
-                        }
-                  }
-        else do
-          failBecause MIRTransferNotCurrentlyAllowed
-          pure ds
+              let ir = dsIRewards ds
+                  dr = deltaReserves ir
+                  dt = deltaTreasury ir
+              case targetPot of
+                ReservesMIR ->
+                  pure $
+                    ds
+                      { dsIRewards =
+                          ir
+                            { deltaReserves = dr <> invert (toDeltaCoin coin),
+                              deltaTreasury = dt <> toDeltaCoin coin
+                            }
+                      }
+                TreasuryMIR ->
+                  pure $
+                    ds
+                      { dsIRewards =
+                          ir
+                            { deltaReserves = dr <> toDeltaCoin coin,
+                              deltaTreasury = dt <> invert (toDeltaCoin coin)
+                            }
+                      }
+            else do
+              failBecause MIRTransferNotCurrentlyAllowed
+              pure ds
     DCertPool _ -> do
       failBecause WrongCertificateTypeDELEG -- this always fails
       pure ds
+
+checkSlotNotTooLate ::
+  ( Typeable era,
+    HasField "_protocolVersion" (PParams era) ProtVer
+  ) =>
+  SlotNo ->
+  Rule (ShelleyDELEG era) 'Transition ()
+checkSlotNotTooLate slot = do
+  sp <- liftSTS $ asks stabilityWindow
+  ei <- liftSTS $ asks epochInfoPure
+  EpochNo currEpoch <- liftSTS $ epochInfoEpoch ei slot
+  let newEpoch = EpochNo (currEpoch + 1)
+  tellEvent (NewEpoch newEpoch)
+  firstSlot <- liftSTS $ epochInfoFirst ei newEpoch
+  let tooLate = firstSlot *- Duration sp
+  slot < tooLate ?! MIRCertificateTooLateinEpochDELEG slot tooLate
+
+updateReservesAndTreasury ::
+  MIRPot ->
+  Map.Map (Credential 'Staking (EraCrypto era)) Coin ->
+  Coin ->
+  DState (EraCrypto era) ->
+  Rule (ShelleyDELEG era) 'Transition (DState (EraCrypto era))
+updateReservesAndTreasury targetPot combinedMap available ds = do
+  let requiredForRewards = fold combinedMap
+  requiredForRewards
+    <= available
+    ?! InsufficientForInstantaneousRewardsDELEG targetPot requiredForRewards available
+  pure $
+    case targetPot of
+      ReservesMIR -> ds {dsIRewards = (dsIRewards ds) {iRReserves = combinedMap}}
+      TreasuryMIR -> ds {dsIRewards = (dsIRewards ds) {iRTreasury = combinedMap}}

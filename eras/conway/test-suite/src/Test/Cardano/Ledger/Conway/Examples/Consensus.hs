@@ -11,11 +11,11 @@
 module Test.Cardano.Ledger.Conway.Examples.Consensus where
 
 import Cardano.Ledger.Alonzo.Data
-  ( AlonzoTxAuxData (..),
-    AuxiliaryDataHash (..),
+  ( AuxiliaryDataHash (..),
     Data (..),
     dataToBinaryData,
     hashData,
+    mkAlonzoTxAuxData,
   )
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
@@ -183,11 +183,9 @@ exampleTx =
         ) -- redeemers
     )
     ( SJust $
-        AlonzoTxAuxData
+        mkAlonzoTxAuxData
           SLE.exampleAuxDataMap -- metadata
-          ( StrictSeq.fromList
-              [alwaysFails PlutusV1 2, TimelockScript $ RequireAllOf mempty] -- Scripts
-          )
+          [alwaysFails PlutusV1 2, TimelockScript $ RequireAllOf mempty] -- Scripts
     )
 
 exampleTransactionInBlock :: AlonzoTx Conway

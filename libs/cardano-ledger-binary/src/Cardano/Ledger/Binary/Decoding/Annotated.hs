@@ -2,6 +2,8 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
+-- TODO: remove once Annotator migrated here
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Binary.Decoding.Annotated
   ( C.Annotated (..),
@@ -21,13 +23,20 @@ module Cardano.Ledger.Binary.Decoding.Annotated
 where
 
 import qualified Cardano.Binary as C
-import Cardano.Ledger.Binary.Decoding.Decoder (Decoder, decodeList, decodeWithByteSpan)
+import Cardano.Ledger.Binary.Decoding.Decoder
+  ( Decoder,
+    decodeList,
+    decodeWithByteSpan,
+    fromPlainDecoder,
+  )
 import Cardano.Ledger.Binary.Decoding.FromCBOR (FromCBOR (..))
 import Cardano.Ledger.Binary.Encoding (ToCBOR, Version, serialize')
+import qualified Codec.Serialise as Serialise (decode)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.Functor ((<&>))
 import qualified Data.Set as Set
+import qualified PlutusLedgerApi.V1 as Plutus
 
 -- | A decoder for a value paired with an annotation specifying the start and end
 -- of the consumed bytes.
@@ -70,3 +79,10 @@ decodeAnnSet :: Ord t => Decoder s (C.Annotator t) -> Decoder s (C.Annotator (Se
 decodeAnnSet dec = do
   xs <- decodeList dec
   pure (Set.fromList <$> sequence xs)
+
+--------------------------------------------------------------------------------
+-- Plutus
+--------------------------------------------------------------------------------
+
+instance FromCBOR (C.Annotator Plutus.Data) where
+  fromCBOR = pure <$> fromPlainDecoder Serialise.decode

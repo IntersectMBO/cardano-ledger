@@ -5,63 +5,45 @@
 }: {
   imports = [inputs.tullia.flakePartsModules.default];
 
-  perSystem = {
-    system,
-    lib,
-    ...
-  }: {
+  perSystem = {lib, ...}: {
     tullia = let
       ciInputName = "GitHub event";
     in rec {
-      tasks = let
-        inherit (inputs.tullia) flakeOutputTasks taskSequence;
+      tasks.ci = {
+        config,
+        lib,
+        pkgs,
+        ...
+      }: {
+        preset = {
+          nix.enable = true;
 
-        common = {config, ...}: {
-          preset = {
-            # needed on top-level task to set runtime options
-            nix.enable = true;
-
-            github-ci = {
-              # Tullia tasks can run locally or on Cicero.
-              # When no facts are present we know that we are running locally
-              # and vice versa.
-              # When running locally, the current directory is already
-              # bind-mounted into the container, so we don't need to fetch the
-              # source from GitHub and we don't want to report a GitHub status.
-              enable = config.actionRun.facts != {};
-              repo = "input-output-hk/cardano-ledger";
-              sha = config.preset.github-ci.lib.getRevision ciInputName null;
-            };
+          github.ci = {
+            # Tullia tasks can run locally or on Cicero.
+            # When no facts are present we know that we are running locally
+            # and vice versa.
+            # When running locally, the current directory is already
+            # bind-mounted into the container, so we don't need to fetch the
+            # source from GitHub and we don't want to report a GitHub status.
+            enable = config.actionRun.facts != {};
+            repository = "input-output-hk/cardano-ledger";
+            revision = config.preset.github.lib.readRevision ciInputName null;
           };
         };
 
-        ciTasks =
-          __mapAttrs
-          (_: flakeOutputTask: {...}: {
-            imports = [common flakeOutputTask];
-
-            memory = 1024 * 8;
-            nomad.resources.cpu = 10000;
-          })
-          (flakeOutputTasks ["hydraJobs" system] {outputs = config.flake;});
-
-        # make sure the aggregate is built last
-        ciTasksSeqOrder = let
-          required = "hydraJobs.${system}.required";
-          all = __attrNames ciTasks;
-        in
-          assert __elem required all;
-            lib.remove required all ++ [required];
-
-        ciTasksSeq = taskSequence "ci/" ciTasks ciTasksSeqOrder;
-      in
-        ciTasksSeq # for running in an arbitrary sequence
-        // {
-          "ci" = {lib, ...}: {
-            imports = [common];
-            after = ["ci/${lib.last ciTasksSeqOrder}"];
-          };
+        command.text = config.preset.github.status.lib.reportBulk {
+          bulk.text = ''
+            nix eval .#hydraJobs --apply __attrNames --json | nix-systems -i
+          '';
+          each.text = ''nix build -L .#hydraJobs."$1".required'';
+          skippedDescription =
+            lib.escapeShellArg
+            "No nix builder available for this system";
         };
+
+        memory = 1024 * 8;
+        nomad.resources.cpu = 10000;
+      };
 
       actions."cardano-ledger/ci" = {
         task = "ci";

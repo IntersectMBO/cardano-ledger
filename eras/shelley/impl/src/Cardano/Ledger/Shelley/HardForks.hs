@@ -6,11 +6,8 @@ module Cardano.Ledger.Shelley.HardForks
   ( aggregatedRewards,
     allowMIRTransfer,
     validatePoolRewardAccountNetID,
-    allowScriptStakeCredsToEarnRewards,
-    translateTimeForPlutusScripts,
     missingScriptsSymmetricDifference,
     forgoRewardPrefilter,
-    allowOutsideForecastTTL,
   )
 where
 
@@ -44,22 +41,6 @@ validatePoolRewardAccountNetID ::
   Bool
 validatePoolRewardAccountNetID pp = pvMajor (getField @"_protocolVersion" pp) > natVersion @4
 
--- | Starting with protocol version 5, Stake Credentials bound by scripts
--- will be eligibile for staking rewards.
-allowScriptStakeCredsToEarnRewards ::
-  (HasField "_protocolVersion" pp ProtVer) =>
-  pp ->
-  Bool
-allowScriptStakeCredsToEarnRewards pp = pvMajor (getField @"_protocolVersion" pp) > natVersion @4
-
--- | Starting with protocol version 6, we translate slots to time correctly for
--- Plutus scripts.
-translateTimeForPlutusScripts ::
-  (HasField "_protocolVersion" pp ProtVer) =>
-  pp ->
-  Bool
-translateTimeForPlutusScripts pp = pvMajor (getField @"_protocolVersion" pp) > natVersion @5
-
 -- | Starting with protocol version 7, the UTXO rule predicate failure
 -- MissingScriptWitnessesUTXOW will not be used for extraneous scripts
 missingScriptsSymmetricDifference ::
@@ -76,13 +57,3 @@ forgoRewardPrefilter ::
   pp ->
   Bool
 forgoRewardPrefilter pp = pvMajor (getField @"_protocolVersion" pp) > natVersion @6
-
--- | In versions 5 and 6, we allow the ttl field to lie outside the stability
--- window.
-allowOutsideForecastTTL ::
-  (HasField "_protocolVersion" pp ProtVer) =>
-  pp ->
-  Bool
-allowOutsideForecastTTL pp =
-  let mv = pvMajor (getField @"_protocolVersion" pp)
-   in mv == natVersion @5 || mv == natVersion @6

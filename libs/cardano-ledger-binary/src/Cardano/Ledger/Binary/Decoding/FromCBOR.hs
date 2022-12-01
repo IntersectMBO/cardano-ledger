@@ -594,7 +594,7 @@ instance (VRFAlgorithm v, Typeable a) => FromCBOR (CertifiedVRF v a) where
 instance FromCBOR SlotNo where
   fromCBOR = fromPlainDecoder Serialise.decode
 
-instance (Serialise t, Typeable t) => FromCBOR (WithOrigin t) where
+instance (Serialise.Serialise t, Typeable t) => FromCBOR (WithOrigin t) where
   fromCBOR = fromPlainDecoder Serialise.decode
 
 deriving instance FromCBOR EpochNo

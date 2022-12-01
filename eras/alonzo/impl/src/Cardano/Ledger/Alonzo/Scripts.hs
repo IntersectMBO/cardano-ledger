@@ -19,6 +19,7 @@
 
 module Cardano.Ledger.Alonzo.Scripts
   ( Tag (..),
+    BinaryPlutus (..),
     AlonzoScript (TimelockScript, PlutusScript),
     Script,
     txscriptfee,
@@ -26,6 +27,7 @@ module Cardano.Ledger.Alonzo.Scripts
     pointWiseExUnits,
     validScript,
     transProtocolVersion,
+    eqAlonzoScriptRaw,
 
     -- * Cost Model
     CostModel,
@@ -41,7 +43,6 @@ module Cardano.Ledger.Alonzo.Scripts
     decodeCostModel,
     CostModels (..),
     PV1.CostModelApplyError (..),
-    contentsEq,
   )
 where
 
@@ -84,8 +85,7 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley (nativeMultiSigTag)
-import Cardano.Ledger.ShelleyMA.Timelocks (Timelock)
-import qualified Cardano.Ledger.ShelleyMA.Timelocks as Timelocks
+import Cardano.Ledger.ShelleyMA.Timelocks (Timelock, eqTimelockRaw)
 import Control.DeepSeq (NFData (..), deepseq, rwhnf)
 import Control.Monad (when)
 import Control.Monad.Trans.Writer (WriterT (runWriterT))
@@ -130,6 +130,14 @@ instance NFData Tag where
   rnf = rwhnf
 
 -- =======================================================
+
+-- | Binary representation of a Plutus script.
+newtype BinaryPlutus = BinaryPlutus {unBinaryPlutus :: ShortByteString}
+  deriving stock (Eq, Show)
+  deriving newtype (ToCBOR, FromCBOR, NFData)
+
+instance FromCBOR (Annotator BinaryPlutus) where
+  fromCBOR = pure <$> fromCBOR
 
 -- | Scripts in the Alonzo Era, Either a Timelock script or a Plutus script.
 data AlonzoScript era
@@ -384,7 +392,7 @@ instance ToCBOR Prices where
 instance FromCBOR Prices where
   fromCBOR = decode $ RecD Prices <! From <! From
 
-instance forall era. (Typeable (EraCrypto era), Typeable era) => ToCBOR (Script era) where
+instance (Typeable (EraCrypto era), Typeable era) => ToCBOR (Script era) where
   toCBOR x = encode (encodeScript x)
 
 encodeScript :: (Typeable era) => Script era -> Encode 'Open (Script era)
@@ -422,6 +430,9 @@ transProtocolVersion :: ProtVer -> PV1.ProtocolVersion
 transProtocolVersion (ProtVer major minor) =
   PV1.ProtocolVersion ((fromIntegral :: Word64 -> Int) (getVersion64 major)) (fromIntegral minor)
 
-contentsEq :: Script era -> Script era -> Bool
-contentsEq (TimelockScript x) (TimelockScript y) = Timelocks.contentsEq x y
-contentsEq x y = x == y
+-- | Check the equality of two underlying types, while ignoring their binary
+-- representation, which `Eq` instance normally does. This is used for testing.
+eqAlonzoScriptRaw :: AlonzoScript era -> AlonzoScript era -> Bool
+eqAlonzoScriptRaw (TimelockScript t1) (TimelockScript t2) = eqTimelockRaw t1 t2
+eqAlonzoScriptRaw (PlutusScript l1 s1) (PlutusScript l2 s2) = l1 == l2 && s1 == s2
+eqAlonzoScriptRaw _ _ = False
