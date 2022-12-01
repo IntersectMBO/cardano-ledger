@@ -17,7 +17,6 @@ module Cardano.Ledger.Address
     toCred,
     serialiseAddr,
     deserialiseAddr,
-    deserialiseAddrStakeRef,
     Addr (..),
     BootstrapAddress (..),
     bootstrapAddressAttrsSize,
@@ -79,7 +78,6 @@ import Cardano.Ledger.Credential
     Ptr (..),
     StakeReference (..),
   )
-import Cardano.Ledger.Crypto (ADDRHASH)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Keys
@@ -154,15 +152,6 @@ deserialiseAddr bs = case B.runGetOrFail getAddr (BSL.fromStrict bs) of
     if BSL.null remaining
       then Just result
       else Nothing
-
--- | Deserialise a stake refence from a address. This will fail if this
--- is a Bootstrap address (or malformed).
-deserialiseAddrStakeRef :: CC.Crypto c => ByteString -> Maybe (StakeReference c)
-deserialiseAddrStakeRef bs =
-  case B.runGetOrFail getAddrStakeReference (BSL.fromStrict bs) of
-    Right (remaining, _offset, result)
-      | not (BSL.null remaining) -> result
-    _ -> Nothing
 
 -- | Serialise a reward account to the external format.
 serialiseRewardAcnt :: RewardAcnt c -> ByteString
@@ -302,15 +291,6 @@ getAddr = do
             concat
               ["Address with unknown network Id. (", show addrNetId, ")"]
 
--- | We are "expecting" an address, but we are only interested in the StakeReference.
---   If the Addr is A Byron style address, there are no Stake References, return Nothing.
-getAddrStakeReference :: forall c. CC.Crypto c => Get (Maybe (StakeReference c))
-getAddrStakeReference = do
-  header <- B.getWord8
-  if testBit header byron
-    then pure Nothing
-    else skipHash ([] @(ADDRHASH c)) >> Just <$> getStakeReference header
-
 putRewardAcnt :: RewardAcnt c -> Put
 putRewardAcnt (RewardAcnt network cred) = do
   let setPayCredBit = case cred of
@@ -338,9 +318,6 @@ getRewardAcnt = do
         True -> getScriptHash
         False -> getKeyHash
       pure $ RewardAcnt network cred
-
-skipHash :: forall proxy h. Hash.HashAlgorithm h => proxy h -> Get ()
-skipHash p = B.skip . fromIntegral $ Hash.sizeHash p
 
 getHash :: forall h a. Hash.HashAlgorithm h => Get (Hash.Hash h a)
 getHash = do
