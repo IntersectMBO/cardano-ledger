@@ -8,7 +8,7 @@
 module Cardano.Ledger.Shelley.Translation
   ( FromByronTranslationContext (..),
     emptyFromByronTranslationContext,
-    toFromByronTranslationContext
+    toFromByronTranslationContext,
   )
 where
 
