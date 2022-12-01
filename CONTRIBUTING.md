@@ -366,6 +366,10 @@ cabal run db-analyser -- --db <PATH_TO_NODE>/cardano-node/state-node-mainnet/db-
 
 This produces the profiling file `db-analyser.prof`.
 
-### Odds and Ends
+## Architectural Decision Records
+
+See [ADR-1](docs/adr/2022-12-01_001-record-architectural-decisions.md).
+
+## Odds and Ends
 
 See the [wiki](https://github.com/input-output-hk/cardano-ledger/wiki) for some other odds and ends.
