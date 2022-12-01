@@ -170,7 +170,7 @@ newEpochTransition = do
       es''' <- trans @(EraRule "EPOCH" era) $ TRC ((), es'', e)
       let adaPots = totalAdaPotsES es'''
       tellEvent $ TotalAdaPotsEvent adaPots
-      let pd' = ssStakePoolDistr $ ssStakeMark $ esSnapshots es
+      let pd' = ssrStakePoolDistr $ ssStakeMark $ esSnapshots es
       -- RUPD does not alter `esSnaphots`
       -- MIR does not alter `esSnaphots`
       -- SNAP rotates mark to set.

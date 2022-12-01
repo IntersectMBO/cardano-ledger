@@ -34,10 +34,10 @@ calcPoolDistOldEqualsNew =
         "old==new"
         ( withMaxSuccess
             500
-            ( \snap@SnapShotRaw {ssStake, ssDelegations, ssPoolParams} ->
+            ( \snap@SnapShotRaw {ssrStake, ssrDelegations, ssrPoolParams} ->
                 counterexample
                   "BAD"
-                  (oldCalculatePoolDistr @StandardCrypto (const True) snap === calculatePoolDistr ssStake ssDelegations ssPoolParams)
+                  (oldCalculatePoolDistr @StandardCrypto (const True) snap === calculatePoolDistr ssrStake ssrDelegations ssrPoolParams)
             )
         )
     ]

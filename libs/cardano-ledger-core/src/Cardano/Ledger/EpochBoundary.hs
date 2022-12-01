@@ -24,7 +24,7 @@ module Cardano.Ledger.EpochBoundary
   ( Stake (..),
     sumAllStake,
     sumStakePerPool,
-    SnapShot (.., SnapShot),
+    SnapShot (.., SnapShot, ssStake, ssDelegations, ssPoolParams),
     SnapShots (..),
     emptySnapShot,
     emptySnapShots,
@@ -173,34 +173,34 @@ pattern SnapShot ::
   SnapShot c
 pattern SnapShot {ssStake, ssDelegations, ssPoolParams} <-
   SnapShotRaw
-    { ssStake,
-      ssDelegations,
-      ssPoolParams,
-      ssStakePoolDistr = _ssStakePoolDistr
+    { ssrStake = ssStake,
+      ssrDelegations = ssDelegations,
+      ssrPoolParams = ssPoolParams,
+      ssrStakePoolDistr = _ssStakePoolDistr
     }
   where
     SnapShot
-      ssStake
-      ssDelegations
-      ssPoolParams =
+      stake
+      delegations
+      poolParams =
         SnapShotRaw
-          { ssStake,
-            ssDelegations,
-            ssPoolParams,
-            ssStakePoolDistr = calculatePoolDistr ssStake ssDelegations ssPoolParams
+          { ssrStake = stake,
+            ssrDelegations = delegations,
+            ssrPoolParams = poolParams,
+            ssrStakePoolDistr = calculatePoolDistr stake delegations poolParams
           }
 
 {-# COMPLETE SnapShot #-}
 
 -- | Snapshot of the stake distribution.
 data SnapShot c = SnapShotRaw
-  { ssStake :: !(Stake c),
-    ssDelegations :: !(VMap VB VB (Credential 'Staking c) (KeyHash 'StakePool c)),
-    ssPoolParams :: !(VMap VB VB (KeyHash 'StakePool c) (PoolParams c)),
-    ssStakePoolDistr :: PD.PoolDistr c -- Lazy on purpose
+  { ssrStake :: !(Stake c),
+    ssrDelegations :: !(VMap VB VB (Credential 'Staking c) (KeyHash 'StakePool c)),
+    ssrPoolParams :: !(VMap VB VB (KeyHash 'StakePool c) (PoolParams c)),
+    ssrStakePoolDistr :: PD.PoolDistr c -- Lazy on purpose
   }
   deriving (Show, Eq, Generic)
-  deriving (NoThunks) via AllowThunksIn '["ssStakePoolDistr"] (SnapShot c)
+  deriving (NoThunks) via AllowThunksIn '["ssrStakePoolDistr"] (SnapShot c)
 
 instance NFData (SnapShot c)
 
@@ -210,9 +210,9 @@ instance
   where
   toCBOR
     SnapShotRaw
-      { ssStake = s,
-        ssDelegations = d,
-        ssPoolParams = p
+      { ssrStake = s,
+        ssrDelegations = d,
+        ssrPoolParams = p
       } =
       encodeListLen 3
         <> toCBOR s
@@ -224,10 +224,10 @@ instance CC.Crypto c => FromSharedCBOR (SnapShot c) where
     Share (SnapShot c) =
       (Interns (Credential 'Staking c), Interns (KeyHash 'StakePool c))
   fromSharedPlusCBOR = decodeRecordNamedT "SnapShot" (const 3) $ do
-    ssStake <- fromSharedPlusLensCBOR _1
-    ssDelegations <- fromSharedPlusCBOR
-    ssPoolParams <- fromSharedPlusLensCBOR (toMemptyLens _1 _2)
-    pure SnapShot {ssStake, ssDelegations, ssPoolParams}
+    stake <- fromSharedPlusLensCBOR _1
+    delegations <- fromSharedPlusCBOR
+    poolParams <- fromSharedPlusLensCBOR (toMemptyLens _1 _2)
+    pure SnapShot {ssStake = stake, ssDelegations = delegations, ssPoolParams = poolParams}
 
 -- | Snapshots of the stake distribution.
 data SnapShots c = SnapShots
