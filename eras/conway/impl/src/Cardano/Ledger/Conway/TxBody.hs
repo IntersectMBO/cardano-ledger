@@ -20,23 +20,23 @@
 module Cardano.Ledger.Conway.TxBody
   ( ConwayTxBody
       ( ConwayTxBody,
-        _spendInputs,
-        _collateralInputs,
-        _referenceInputs,
-        _outputs,
-        _collateralReturn,
-        _totalCollateral,
-        _certs,
-        _wdrls,
-        _txfee,
-        _vldt,
-        _reqSignerHashes,
-        _mint,
-        _scriptIntegrityHash,
-        _adHash,
-        _txNetworkId,
-        _govActions,
-        _votes
+        ctbSpendInputs,
+        ctbCollateralInputs,
+        ctbReferenceInputs,
+        ctbOutputs,
+        ctbCollateralReturn,
+        ctbTotalCollateral,
+        ctbCerts,
+        ctbWdrls,
+        ctbTxfee,
+        ctbVldt,
+        ctbReqSignerHashes,
+        ctbMint,
+        ctbScriptIntegrityHash,
+        ctbAdHash,
+        ctbTxNetworkId,
+        ctbGovActions,
+        ctbVotes
       ),
   )
 where
@@ -56,7 +56,7 @@ import Cardano.Ledger.Binary (Annotator, FromCBOR (..), Sized (..), ToCBOR (..),
 import Cardano.Ledger.Binary.Coders (Decode (..), Density (..), Encode (..), Field (..), Wrapped (..), decode, encodeKeyedStrictMaybe, field, ofield, (!>))
 import Cardano.Ledger.Coin (Coin (..), CompactForm)
 import Cardano.Ledger.CompactAddress (fromCborBothAddr, fromCborRewardAcnt)
-import Cardano.Ledger.Conway.Core (ConwayEraTxBody (..), GovernanceAction, Vote)
+import Cardano.Ledger.Conway.Core (ConwayEraTxBody (..), GovernanceActionInfo (..), Vote)
 import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert)
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.PParams ()
@@ -84,34 +84,35 @@ import NoThunks.Class (NoThunks)
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 
 data TxBodyRaw era = TxBodyRaw
-  { spendInputs :: !(Set (TxIn (EraCrypto era))),
-    collateralInputs :: !(Set (TxIn (EraCrypto era))),
-    referenceInputs :: !(Set (TxIn (EraCrypto era))),
-    outputs :: !(StrictSeq (Sized (BabbageTxOut era))),
-    collateralReturn :: !(StrictMaybe (Sized (BabbageTxOut era))),
-    totalCollateral :: !(StrictMaybe Coin),
-    certs :: !(StrictSeq (ConwayDCert (EraCrypto era))),
-    wdrls :: !(Wdrl (EraCrypto era)),
-    txfee :: !Coin,
-    vldt :: !ValidityInterval,
-    reqSignerHashes :: !(Set (KeyHash 'Witness (EraCrypto era))),
-    mint :: !(MultiAsset (EraCrypto era)),
+  { ctbrSpendInputs :: !(Set (TxIn (EraCrypto era))),
+    ctbrCollateralInputs :: !(Set (TxIn (EraCrypto era))),
+    ctbrReferenceInputs :: !(Set (TxIn (EraCrypto era))),
+    ctbrOutputs :: !(StrictSeq (Sized (BabbageTxOut era))),
+    ctbrCollateralReturn :: !(StrictMaybe (Sized (BabbageTxOut era))),
+    ctbrTotalCollateral :: !(StrictMaybe Coin),
+    ctbrCerts :: !(StrictSeq (ConwayDCert (EraCrypto era))),
+    ctbrWdrls :: !(Wdrl (EraCrypto era)),
+    ctbrTxfee :: !Coin,
+    ctbrVldt :: !ValidityInterval,
+    ctbrReqSignerHashes :: !(Set (KeyHash 'Witness (EraCrypto era))),
+    ctbrMint :: !(MultiAsset (EraCrypto era)),
     -- The spec makes it clear that the mint field is a
     -- Cardano.Ledger.Mary.Value.MaryValue, not a Value.
     -- Operations on the TxBody in the BabbageEra depend upon this.
     -- We now store only the MultiAsset part of a Mary.Value.
-    scriptIntegrityHash :: !(StrictMaybe (ScriptIntegrityHash (EraCrypto era))),
-    adHash :: !(StrictMaybe (AuxiliaryDataHash (EraCrypto era))),
-    txNetworkId :: !(StrictMaybe Network),
-    govActions :: !(StrictSeq (GovernanceAction era)),
-    votes :: !(StrictSeq (Vote era))
+    ctbrScriptIntegrityHash :: !(StrictMaybe (ScriptIntegrityHash (EraCrypto era))),
+    ctbrAdHash :: !(StrictMaybe (AuxiliaryDataHash (EraCrypto era))),
+    ctbrTxNetworkId :: !(StrictMaybe Network),
+    ctbrGovActions :: !(StrictSeq (GovernanceActionInfo era)),
+    ctbrVotes :: !(StrictSeq (Vote era))
   }
   deriving (Generic, Typeable)
 
 deriving instance
   ( Era era,
     Eq (Script era),
-    Eq (CompactForm (Value era))
+    Eq (CompactForm (Value era)),
+    Eq (PParamsUpdate era)
   ) =>
   Eq (TxBodyRaw era)
 
@@ -136,15 +137,16 @@ initialTxBodyRaw =
     mempty
     mempty
 
-instance NoThunks (TxBodyRaw era)
+instance NoThunks (PParamsUpdate era) => NoThunks (TxBodyRaw era)
 
-instance Era era => NFData (TxBodyRaw era)
+instance (Era era, NFData (PParamsUpdate era)) => NFData (TxBodyRaw era)
 
 deriving instance
   ( Era era,
     Val (Value era),
     Show (Value era),
-    Show (Script era)
+    Show (Script era),
+    Show (PParamsUpdate era)
   ) =>
   Show (TxBodyRaw era)
 
@@ -168,52 +170,52 @@ instance
       bodyFields :: (Word -> Field (TxBodyRaw era))
       bodyFields 0 =
         field
-          (\x tx -> tx {spendInputs = x})
+          (\x tx -> tx {ctbrSpendInputs = x})
           (D (decodeSet fromCBOR))
       bodyFields 13 =
         field
-          (\x tx -> tx {collateralInputs = x})
+          (\x tx -> tx {ctbrCollateralInputs = x})
           (D (decodeSet fromCBOR))
       bodyFields 18 =
         field
-          (\x tx -> tx {referenceInputs = x})
+          (\x tx -> tx {ctbrReferenceInputs = x})
           (D (decodeSet fromCBOR))
       bodyFields 1 =
         field
-          (\x tx -> tx {outputs = x})
+          (\x tx -> tx {ctbrOutputs = x})
           (D (decodeStrictSeq (decodeSized (fromCborTxOutWithAddr fromCborBothAddr))))
       bodyFields 16 =
         ofield
-          (\x tx -> tx {collateralReturn = x})
+          (\x tx -> tx {ctbrCollateralReturn = x})
           (D (decodeSized (fromCborTxOutWithAddr fromCborBothAddr)))
       bodyFields 17 =
         ofield
-          (\x tx -> tx {totalCollateral = x})
+          (\x tx -> tx {ctbrTotalCollateral = x})
           From
-      bodyFields 2 = field (\x tx -> tx {txfee = x}) From
+      bodyFields 2 = field (\x tx -> tx {ctbrTxfee = x}) From
       bodyFields 3 =
         ofield
-          (\x tx -> tx {vldt = (vldt tx) {invalidHereafter = x}})
+          (\x tx -> tx {ctbrVldt = (ctbrVldt tx) {invalidHereafter = x}})
           From
       bodyFields 4 =
         field
-          (\x tx -> tx {certs = x})
+          (\x tx -> tx {ctbrCerts = x})
           (D (decodeStrictSeq fromCBOR))
       bodyFields 5 =
         field
-          (\x tx -> tx {wdrls = x})
+          (\x tx -> tx {ctbrWdrls = x})
           (D (Wdrl <$> decodeMap fromCborRewardAcnt fromCBOR))
-      bodyFields 7 = ofield (\x tx -> tx {adHash = x}) From
+      bodyFields 7 = ofield (\x tx -> tx {ctbrAdHash = x}) From
       bodyFields 8 =
         ofield
-          (\x tx -> tx {vldt = (vldt tx) {invalidBefore = x}})
+          (\x tx -> tx {ctbrVldt = (ctbrVldt tx) {invalidBefore = x}})
           From
-      bodyFields 9 = field (\x tx -> tx {mint = x}) (D fromCBOR)
-      bodyFields 11 = ofield (\x tx -> tx {scriptIntegrityHash = x}) From
-      bodyFields 14 = field (\x tx -> tx {reqSignerHashes = x}) (D (decodeSet fromCBOR))
-      bodyFields 15 = ofield (\x tx -> tx {txNetworkId = x}) From
-      bodyFields 19 = field (\x tx -> tx {govActions = x}) (D (decodeStrictSeq fromCBOR))
-      bodyFields 20 = field (\x tx -> tx {votes = x}) (D (decodeStrictSeq fromCBOR))
+      bodyFields 9 = field (\x tx -> tx {ctbrMint = x}) (D fromCBOR)
+      bodyFields 11 = ofield (\x tx -> tx {ctbrScriptIntegrityHash = x}) From
+      bodyFields 14 = field (\x tx -> tx {ctbrReqSignerHashes = x}) (D (decodeSet fromCBOR))
+      bodyFields 15 = ofield (\x tx -> tx {ctbrTxNetworkId = x}) From
+      bodyFields 19 = field (\x tx -> tx {ctbrGovActions = x}) (D (decodeStrictSeq fromCBOR))
+      bodyFields 20 = field (\x tx -> tx {ctbrVotes = x}) (D (decodeStrictSeq fromCBOR))
       bodyFields n = field (\_ t -> t) (Invalid n)
       requiredFields =
         [ (0, "inputs"),
@@ -222,17 +224,26 @@ instance
         ]
 
 newtype ConwayTxBody era = TxBodyConstr (MemoBytes TxBodyRaw era)
-  deriving (Generic, SafeToHash, NoThunks, ToCBOR)
+  deriving (Generic, SafeToHash, ToCBOR)
 
-deriving instance (Era era, Eq (Script era), Eq (CompactForm (Value era))) => Eq (ConwayTxBody era)
+instance (Era era, NoThunks (PParamsUpdate era)) => NoThunks (ConwayTxBody era)
 
-deriving newtype instance Era era => NFData (ConwayTxBody era)
+deriving instance
+  ( Era era,
+    Eq (Script era),
+    Eq (CompactForm (Value era)),
+    Eq (PParamsUpdate era)
+  ) =>
+  Eq (ConwayTxBody era)
+
+deriving newtype instance (Era era, NFData (PParamsUpdate era)) => NFData (ConwayTxBody era)
 
 deriving instance
   ( Era era,
     Val (Value era),
     Show (Value era),
-    Show (Script era)
+    Show (Script era),
+    Show (PParamsUpdate era)
   ) =>
   Show (ConwayTxBody era)
 
@@ -284,16 +295,16 @@ instance CC.Crypto c => EraTxBody (ConwayEra c) where
 
   mkBasicTxBody = mkConwayTxBodyFromRaw initialTxBodyRaw
 
-  inputsTxBodyL = lensTxBodyRaw spendInputs (\txb x -> txb {spendInputs = x})
+  inputsTxBodyL = lensTxBodyRaw ctbrSpendInputs (\txb x -> txb {ctbrSpendInputs = x})
   {-# INLINE inputsTxBodyL #-}
 
-  outputsTxBodyL = lensTxBodyRaw (fmap sizedValue . outputs) (\txb x -> txb {outputs = mkSized (eraProtVerLow @(ConwayEra c)) <$> x})
+  outputsTxBodyL = lensTxBodyRaw (fmap sizedValue . ctbrOutputs) (\txb x -> txb {ctbrOutputs = mkSized (eraProtVerLow @(ConwayEra c)) <$> x})
   {-# INLINE outputsTxBodyL #-}
 
-  feeTxBodyL = lensTxBodyRaw txfee (\txb x -> txb {txfee = x})
+  feeTxBodyL = lensTxBodyRaw ctbrTxfee (\txb x -> txb {ctbrTxfee = x})
   {-# INLINE feeTxBodyL #-}
 
-  auxDataHashTxBodyL = lensTxBodyRaw adHash (\txb x -> txb {adHash = x})
+  auxDataHashTxBodyL = lensTxBodyRaw ctbrAdHash (\txb x -> txb {ctbrAdHash = x})
   {-# INLINE auxDataHashTxBodyL #-}
 
   allInputsTxBodyF =
@@ -308,7 +319,7 @@ instance CC.Crypto c => EraTxBody (ConwayEra c) where
 instance CC.Crypto c => ShelleyEraTxBody (ConwayEra c) where
   {-# SPECIALIZE instance ShelleyEraTxBody (ConwayEra CC.StandardCrypto) #-}
 
-  wdrlsTxBodyL = lensTxBodyRaw wdrls (\txb x -> txb {wdrls = x})
+  wdrlsTxBodyL = lensTxBodyRaw ctbrWdrls (\txb x -> txb {ctbrWdrls = x})
   {-# INLINE wdrlsTxBodyL #-}
 
   ttlTxBodyL = notSupportedInThisEraL
@@ -323,54 +334,54 @@ instance CC.Crypto c => ShelleyEraTxBody (ConwayEra c) where
 instance CC.Crypto c => MaryEraTxBody (ConwayEra c) where
   {-# SPECIALIZE instance MaryEraTxBody (ConwayEra CC.StandardCrypto) #-}
 
-  mintTxBodyL = lensTxBodyRaw mint (\txb x -> txb {mint = x})
+  mintTxBodyL = lensTxBodyRaw ctbrMint (\txb x -> txb {ctbrMint = x})
   {-# INLINE mintTxBodyL #-}
 
   mintValueTxBodyF = mintTxBodyL . to (MaryValue 0)
 
-  mintedTxBodyF = to (\(TxBodyConstr (Memo txBodyRaw _)) -> Set.map policyID (policies (mint txBodyRaw)))
+  mintedTxBodyF = to (\(TxBodyConstr (Memo txBodyRaw _)) -> Set.map policyID (policies (ctbrMint txBodyRaw)))
   {-# INLINE mintedTxBodyF #-}
 
 instance CC.Crypto c => AllegraEraTxBody (ConwayEra c) where
   {-# SPECIALIZE instance AllegraEraTxBody (ConwayEra CC.StandardCrypto) #-}
 
-  vldtTxBodyL = lensTxBodyRaw vldt (\txb x -> txb {vldt = x})
+  vldtTxBodyL = lensTxBodyRaw ctbrVldt (\txb x -> txb {ctbrVldt = x})
   {-# INLINE vldtTxBodyL #-}
 
 instance CC.Crypto c => AlonzoEraTxBody (ConwayEra c) where
   {-# SPECIALIZE instance AlonzoEraTxBody (ConwayEra CC.StandardCrypto) #-}
 
-  collateralInputsTxBodyL = lensTxBodyRaw collateralInputs (\txb x -> txb {collateralInputs = x})
+  collateralInputsTxBodyL = lensTxBodyRaw ctbrCollateralInputs (\txb x -> txb {ctbrCollateralInputs = x})
   {-# INLINE collateralInputsTxBodyL #-}
 
-  reqSignerHashesTxBodyL = lensTxBodyRaw reqSignerHashes (\txb x -> txb {reqSignerHashes = x})
+  reqSignerHashesTxBodyL = lensTxBodyRaw ctbrReqSignerHashes (\txb x -> txb {ctbrReqSignerHashes = x})
   {-# INLINE reqSignerHashesTxBodyL #-}
 
-  scriptIntegrityHashTxBodyL = lensTxBodyRaw scriptIntegrityHash (\txb x -> txb {scriptIntegrityHash = x})
+  scriptIntegrityHashTxBodyL = lensTxBodyRaw ctbrScriptIntegrityHash (\txb x -> txb {ctbrScriptIntegrityHash = x})
   {-# INLINE scriptIntegrityHashTxBodyL #-}
 
-  networkIdTxBodyL = lensTxBodyRaw txNetworkId (\txb x -> txb {txNetworkId = x})
+  networkIdTxBodyL = lensTxBodyRaw ctbrTxNetworkId (\txb x -> txb {ctbrTxNetworkId = x})
   {-# INLINE networkIdTxBodyL #-}
 
 instance CC.Crypto c => BabbageEraTxBody (ConwayEra c) where
   {-# SPECIALIZE instance BabbageEraTxBody (ConwayEra CC.StandardCrypto) #-}
 
-  sizedOutputsTxBodyL = lensTxBodyRaw outputs (\txb x -> txb {outputs = x})
+  sizedOutputsTxBodyL = lensTxBodyRaw ctbrOutputs (\txb x -> txb {ctbrOutputs = x})
   {-# INLINE sizedOutputsTxBodyL #-}
 
-  referenceInputsTxBodyL = lensTxBodyRaw referenceInputs (\txb x -> txb {referenceInputs = x})
+  referenceInputsTxBodyL = lensTxBodyRaw ctbrReferenceInputs (\txb x -> txb {ctbrReferenceInputs = x})
   {-# INLINE referenceInputsTxBodyL #-}
 
-  totalCollateralTxBodyL = lensTxBodyRaw totalCollateral (\txb x -> txb {totalCollateral = x})
+  totalCollateralTxBodyL = lensTxBodyRaw ctbrTotalCollateral (\txb x -> txb {ctbrTotalCollateral = x})
   {-# INLINE totalCollateralTxBodyL #-}
 
   collateralReturnTxBodyL =
     lensTxBodyRaw
-      (fmap sizedValue . collateralReturn)
-      (\txb x -> txb {collateralReturn = mkSized (eraProtVerLow @(ConwayEra c)) <$> x})
+      (fmap sizedValue . ctbrCollateralReturn)
+      (\txb x -> txb {ctbrCollateralReturn = mkSized (eraProtVerLow @(ConwayEra c)) <$> x})
   {-# INLINE collateralReturnTxBodyL #-}
 
-  sizedCollateralReturnTxBodyL = lensTxBodyRaw collateralReturn (\txb x -> txb {collateralReturn = x})
+  sizedCollateralReturnTxBodyL = lensTxBodyRaw ctbrCollateralReturn (\txb x -> txb {ctbrCollateralReturn = x})
   {-# INLINE sizedCollateralReturnTxBodyL #-}
 
   allSizedOutputsTxBodyF = to $ \txb ->
@@ -381,8 +392,8 @@ instance CC.Crypto c => BabbageEraTxBody (ConwayEra c) where
   {-# INLINE allSizedOutputsTxBodyF #-}
 
 instance CC.Crypto c => ConwayEraTxBody (ConwayEra c) where
-  govActionsL = lensTxBodyRaw govActions (\txb x -> txb {govActions = x})
-  votesL = lensTxBodyRaw votes (\txb x -> txb {votes = x})
+  govActionsL = lensTxBodyRaw ctbrGovActions (\txb x -> txb {ctbrGovActions = x})
+  votesL = lensTxBodyRaw ctbrVotes (\txb x -> txb {ctbrVotes = x})
 
 pattern ConwayTxBody ::
   ConwayEraTxBody era =>
@@ -401,48 +412,48 @@ pattern ConwayTxBody ::
   StrictMaybe (ScriptIntegrityHash (EraCrypto era)) ->
   StrictMaybe (AuxiliaryDataHash (EraCrypto era)) ->
   StrictMaybe Network ->
-  StrictSeq (GovernanceAction era) ->
+  StrictSeq (GovernanceActionInfo era) ->
   StrictSeq (Vote era) ->
   ConwayTxBody era
 pattern ConwayTxBody
-  { _spendInputs,
-    _collateralInputs,
-    _referenceInputs,
-    _outputs,
-    _collateralReturn,
-    _totalCollateral,
-    _certs,
-    _wdrls,
-    _txfee,
-    _vldt,
-    _reqSignerHashes,
-    _mint,
-    _scriptIntegrityHash,
-    _adHash,
-    _txNetworkId,
-    _govActions,
-    _votes
+  { ctbSpendInputs,
+    ctbCollateralInputs,
+    ctbReferenceInputs,
+    ctbOutputs,
+    ctbCollateralReturn,
+    ctbTotalCollateral,
+    ctbCerts,
+    ctbWdrls,
+    ctbTxfee,
+    ctbVldt,
+    ctbReqSignerHashes,
+    ctbMint,
+    ctbScriptIntegrityHash,
+    ctbAdHash,
+    ctbTxNetworkId,
+    ctbGovActions,
+    ctbVotes
   } <-
   TxBodyConstr
     ( Memo
         TxBodyRaw
-          { spendInputs = _spendInputs,
-            collateralInputs = _collateralInputs,
-            referenceInputs = _referenceInputs,
-            outputs = _outputs,
-            collateralReturn = _collateralReturn,
-            totalCollateral = _totalCollateral,
-            certs = _certs,
-            wdrls = _wdrls,
-            txfee = _txfee,
-            vldt = _vldt,
-            reqSignerHashes = _reqSignerHashes,
-            mint = _mint,
-            scriptIntegrityHash = _scriptIntegrityHash,
-            adHash = _adHash,
-            txNetworkId = _txNetworkId,
-            govActions = _govActions,
-            votes = _votes
+          { ctbrSpendInputs = ctbSpendInputs,
+            ctbrCollateralInputs = ctbCollateralInputs,
+            ctbrReferenceInputs = ctbReferenceInputs,
+            ctbrOutputs = ctbOutputs,
+            ctbrCollateralReturn = ctbCollateralReturn,
+            ctbrTotalCollateral = ctbTotalCollateral,
+            ctbrCerts = ctbCerts,
+            ctbrWdrls = ctbWdrls,
+            ctbrTxfee = ctbTxfee,
+            ctbrVldt = ctbVldt,
+            ctbrReqSignerHashes = ctbReqSignerHashes,
+            ctbrMint = ctbMint,
+            ctbrScriptIntegrityHash = ctbScriptIntegrityHash,
+            ctbrAdHash = ctbAdHash,
+            ctbrTxNetworkId = ctbTxNetworkId,
+            ctbrGovActions = ctbGovActions,
+            ctbrVotes = ctbVotes
           }
         _
       )
@@ -496,26 +507,26 @@ encodeTxBodyRaw ::
   TxBodyRaw era ->
   Encode ('Closed 'Sparse) (TxBodyRaw era)
 encodeTxBodyRaw TxBodyRaw {..} =
-  let ValidityInterval bot top = vldt
+  let ValidityInterval bot top = ctbrVldt
    in Keyed
         ( \i ifee ri o cr tc f t c w b rsh mi sh ah ni ga vs ->
             TxBodyRaw i ifee ri o cr tc c w f (ValidityInterval b t) rsh mi sh ah ni ga vs
         )
-        !> Key 0 (To spendInputs)
-        !> Omit null (Key 13 (To collateralInputs))
-        !> Omit null (Key 18 (To referenceInputs))
-        !> Key 1 (To outputs)
-        !> encodeKeyedStrictMaybe 16 collateralReturn
-        !> encodeKeyedStrictMaybe 17 totalCollateral
-        !> Key 2 (To txfee)
+        !> Key 0 (To ctbrSpendInputs)
+        !> Omit null (Key 13 (To ctbrCollateralInputs))
+        !> Omit null (Key 18 (To ctbrReferenceInputs))
+        !> Key 1 (To ctbrOutputs)
+        !> encodeKeyedStrictMaybe 16 ctbrCollateralReturn
+        !> encodeKeyedStrictMaybe 17 ctbrTotalCollateral
+        !> Key 2 (To ctbrTxfee)
         !> encodeKeyedStrictMaybe 3 top
-        !> Omit null (Key 4 (To certs))
-        !> Omit (null . unWdrl) (Key 5 (To wdrls))
+        !> Omit null (Key 4 (To ctbrCerts))
+        !> Omit (null . unWdrl) (Key 5 (To ctbrWdrls))
         !> encodeKeyedStrictMaybe 8 bot
-        !> Omit null (Key 14 (To reqSignerHashes))
-        !> Omit (== mempty) (Key 9 (To mint))
-        !> encodeKeyedStrictMaybe 11 scriptIntegrityHash
-        !> encodeKeyedStrictMaybe 7 adHash
-        !> encodeKeyedStrictMaybe 15 txNetworkId
-        !> Omit null (Key 19 (To govActions))
-        !> Omit null (Key 20 (To votes))
+        !> Omit null (Key 14 (To ctbrReqSignerHashes))
+        !> Omit (== mempty) (Key 9 (To ctbrMint))
+        !> encodeKeyedStrictMaybe 11 ctbrScriptIntegrityHash
+        !> encodeKeyedStrictMaybe 7 ctbrAdHash
+        !> encodeKeyedStrictMaybe 15 ctbrTxNetworkId
+        !> Omit null (Key 19 (To ctbrGovActions))
+        !> Omit null (Key 20 (To ctbrVotes))

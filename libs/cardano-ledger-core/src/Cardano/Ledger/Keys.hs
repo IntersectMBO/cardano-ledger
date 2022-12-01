@@ -123,6 +123,7 @@ data KeyRole
   | StakePool
   | BlockIssuer
   | Witness
+  | Voting
   deriving (Show)
 
 class HasKeyRole (a :: KeyRole -> Type -> Type) where

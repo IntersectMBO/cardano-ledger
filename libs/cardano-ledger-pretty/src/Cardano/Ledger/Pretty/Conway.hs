@@ -15,7 +15,7 @@ where
 
 import Cardano.Ledger.Babbage.TxBody (BabbageEraTxBody (..))
 import Cardano.Ledger.Babbage.TxOut (BabbageTxOut (..))
-import Cardano.Ledger.Conway.Core (ConwayEraTxBody, GovernanceAction, Vote)
+import Cardano.Ledger.Conway.Core (ConwayEraTxBody, Vote, GovernanceActionInfo (..))
 import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert (..))
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
 import Cardano.Ledger.Core (EraTxBody (..), EraTxOut (..), Value)
@@ -69,27 +69,27 @@ ppConwayTxBody ::
 ppConwayTxBody txb@ConwayTxBody {..} =
   ppRecord
     "TxBody (Conway)"
-    [ ("spending inputs", ppSet ppTxIn _spendInputs),
-      ("collateral inputs", ppSet ppTxIn _collateralInputs),
-      ("reference inputs", ppSet ppTxIn _referenceInputs),
+    [ ("spending inputs", ppSet ppTxIn ctbSpendInputs),
+      ("collateral inputs", ppSet ppTxIn ctbCollateralInputs),
+      ("reference inputs", ppSet ppTxIn ctbReferenceInputs),
       ("outputs", ppStrictSeq (ppTxOut @era) (txb ^. outputsTxBodyL)),
       ("collateral return", ppStrictMaybe (ppTxOut @era) (txb ^. collateralReturnTxBodyL)),
-      ("total collateral", ppStrictMaybe ppCoin _totalCollateral),
-      ("certificates", ppStrictSeq ppConwayDCert _certs),
-      ("withdrawals", ppWdrl _wdrls),
-      ("transaction fee", ppCoin _txfee),
-      ("validity interval", ppValidityInterval _vldt),
-      ("required signer hashes", ppSet ppKeyHash _reqSignerHashes),
-      ("mint", ppMultiAsset _mint),
-      ("script integrity hash", ppStrictMaybe ppSafeHash _scriptIntegrityHash),
-      ("auxiliary data hash", ppStrictMaybe ppAuxiliaryDataHash _adHash),
-      ("network id", ppStrictMaybe ppNetwork _txNetworkId),
-      ("governance actions", ppStrictSeq ppGovAction _govActions),
-      ("votes", ppStrictSeq ppVote _votes)
+      ("total collateral", ppStrictMaybe ppCoin ctbTotalCollateral),
+      ("certificates", ppStrictSeq ppConwayDCert ctbCerts),
+      ("withdrawals", ppWdrl ctbWdrls),
+      ("transaction fee", ppCoin ctbTxfee),
+      ("validity interval", ppValidityInterval ctbVldt),
+      ("required signer hashes", ppSet ppKeyHash ctbReqSignerHashes),
+      ("mint", ppMultiAsset ctbMint),
+      ("script integrity hash", ppStrictMaybe ppSafeHash ctbScriptIntegrityHash),
+      ("auxiliary data hash", ppStrictMaybe ppAuxiliaryDataHash ctbAdHash),
+      ("network id", ppStrictMaybe ppNetwork ctbTxNetworkId),
+      ("governance actions", ppStrictSeq ppGovAction ctbGovActions),
+      ("votes", ppStrictSeq ppVote ctbVotes)
     ]
 
 ppVote :: Vote era -> PDoc
 ppVote = undefined
 
-ppGovAction :: GovernanceAction era -> PDoc
+ppGovAction :: GovernanceActionInfo era -> PDoc
 ppGovAction = undefined
