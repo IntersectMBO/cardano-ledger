@@ -85,7 +85,7 @@ library
 library testlib
   import:            base, project-config
   visibility:        public
-  hs-source-dirs:    test-lib
+  hs-source-dirs:    testlib
   exposed-modules:
                      Test.Cardano.Ledger.Binary.Arbitrary
                    , Test.Cardano.Ledger.Binary.Random
