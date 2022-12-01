@@ -102,8 +102,7 @@ import Data.Set as Set
 import GHC.Records (HasField (..))
 import Lens.Micro
 import Numeric.Natural (Natural)
-import qualified PlutusCore.Data as PCD
-import qualified PlutusLedgerApi.V1 as PV1 (ParamName)
+import qualified PlutusLedgerApi.V1 as PV1 (Data, ParamName)
 import qualified PlutusLedgerApi.V2 as PV2 (ParamName)
 import PlutusPrelude (enumerate)
 import qualified PlutusTx as P (Data (..))
@@ -222,7 +221,7 @@ freeCostModel lang =
 genPair :: Gen a -> Gen b -> Gen (a, b)
 genPair x y = (,) <$> x <*> y
 
-genPlutusData :: Gen PCD.Data
+genPlutusData :: Gen PV1.Data
 genPlutusData = resize 5 (sized gendata)
   where
     gendata n
@@ -503,7 +502,7 @@ addRedeemMap ::
   forall c.
   Crypto c =>
   TxBody (AlonzoEra c) ->
-  (PCD.Data, Natural, Natural) ->
+  (PV1.Data, Natural, Natural) ->
   ScriptPurpose c ->
   Map RdmrPtr (Data (AlonzoEra c), ExUnits) ->
   Map RdmrPtr (Data (AlonzoEra c), ExUnits)

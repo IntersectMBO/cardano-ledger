@@ -3,11 +3,14 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Alonzo.TxInfo
   ( TxOutSource (..),
@@ -49,7 +52,9 @@ module Cardano.Ledger.Alonzo.TxInfo
     ScriptResult (..),
     scriptPass,
     scriptFail,
+    PlutusDebugLang (..),
     PlutusDebug (..),
+    PlutusData (..),
     PlutusError (..),
     PlutusDebugInfo (..),
     debugPlutus,
@@ -89,12 +94,11 @@ import Cardano.Ledger.Alonzo.TxBody
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits, RdmrPtr, unTxDats)
 import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..), TxIx, certIxToInt, txIxToInt)
 import Cardano.Ledger.Binary
-  ( FromCBOR (..),
+  ( DecoderError (..),
+    FromCBOR (..),
     ToCBOR (..),
     Version,
     decodeFull',
-    decodeList,
-    fromPlainDecoder,
   )
 import Cardano.Ledger.Binary.Coders
   ( Decode (..),
@@ -104,6 +108,7 @@ import Cardano.Ledger.Binary.Coders
     (!>),
     (<!),
   )
+import Cardano.Ledger.Binary.Decoding (decodeRecordSum)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core as Core hiding (TranslationError)
 import Cardano.Ledger.Credential
@@ -113,7 +118,7 @@ import Cardano.Ledger.Credential
   )
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash (..), hashKey)
-import Cardano.Ledger.Language (Language (..))
+import Cardano.Ledger.Language (IsLanguage (..), Language (..), SLanguage (..), fromSLanguage)
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
@@ -132,8 +137,8 @@ import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.EpochInfo (EpochInfo, epochInfoSlotToUTCTime)
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Slotting.Time (SystemStart)
-import qualified Codec.Serialise as Cborg (Serialise (..))
 import Control.Arrow (left)
+import Control.Monad (when)
 import Data.ByteString as BS (ByteString, length)
 import qualified Data.ByteString.Base64 as B64
 import Data.ByteString.Short as SBS (ShortByteString, fromShort)
@@ -179,6 +184,7 @@ instance Crypto c => FromCBOR (TxOutSource c) where
       dec 1 = SumD TxOutFromOutput <! From
       dec n = Invalid n
 
+-- | NOTE: class 'TranslateEra' defines an associated type with the same name. Not to be confused.
 data TranslationError c
   = ByronTxOutInContext !(TxOutSource c)
   | TranslationLogicMissingInput !(TxIn c)
@@ -529,8 +535,8 @@ valContext ::
 valContext (TxInfoPV1 txinfo) sp = Data (PV1.toData (PV1.ScriptContext txinfo (transScriptPurpose sp)))
 valContext (TxInfoPV2 txinfo) sp = Data (PV2.toData (PV2.ScriptContext txinfo (transScriptPurpose sp)))
 
-data ScriptFailure = PlutusSF Text PlutusDebug
-  deriving (Eq, Generic, NoThunks)
+data ScriptFailure = PlutusSF Text (PlutusDebug)
+  deriving (Show, Generic)
 
 data ScriptResult
   = Passes [PlutusDebug]
@@ -543,8 +549,6 @@ scriptPass pd = Passes [pd]
 scriptFail :: ScriptFailure -> ScriptResult
 scriptFail pd = Fails [] (pure pd)
 
-instance NoThunks ScriptResult
-
 instance Semigroup ScriptResult where
   (Passes ps) <> (Passes qs) = Passes (ps <> qs)
   (Passes ps) <> (Fails qs xs) = Fails (ps <> qs) xs
@@ -554,89 +558,144 @@ instance Semigroup ScriptResult where
 instance Monoid ScriptResult where
   mempty = Passes mempty
 
-data PlutusDebug
-  = PlutusDebugV1
-      CostModel
-      ExUnits
-      SBS.ShortByteString
-      [PV1.Data]
-      ProtVer
-  | PlutusDebugV2
-      CostModel
-      ExUnits
-      SBS.ShortByteString
-      [PV2.Data]
-      ProtVer
-  deriving (Eq, Generic, NoThunks)
+newtype PlutusData = PlutusData {unPlutusData :: [PV1.Data]}
+  deriving (Eq)
 
--- | There is dummy Show instance for PlutusDebug intentionally, because it is too
+instance ToCBOR PlutusData where
+  toCBOR (PlutusData d) = toCBOR d
+
+instance FromCBOR PlutusData where
+  fromCBOR = PlutusData <$> fromCBOR
+
+data PlutusDebugLang (l :: Language) where
+  PlutusDebugLang ::
+    { pdSLanguage :: SLanguage l,
+      pdCostModel :: CostModel,
+      pdExUnits :: ExUnits,
+      pdSBS :: SBS.ShortByteString,
+      pdPlutusData :: PlutusData,
+      pdProtVer :: ProtVer
+    } ->
+    PlutusDebugLang l
+
+-- | There is dummy Show instance for PlutusDebugLang intentionally, because it is too
 -- expensive and it will be too tempting to use it incorrectly. If needed for
 -- testing use 'StandaloneDeriving', otherwise define an efficient way to display
 -- this info.
-instance Show PlutusDebug where
+instance Show (PlutusDebugLang l) where
   show _ = "PlutusDebug Omitted"
 
-data PlutusError = PlutusErrorV1 PV1.EvaluationError | PlutusErrorV2 PV2.EvaluationError
+deriving instance forall (l :: Language). (Eq (SLanguage l)) => Eq (PlutusDebugLang l)
+
+deriving instance Generic (PlutusDebugLang l)
+
+instance
+  forall (l :: Language).
+  (Typeable l, IsLanguage l, ToCBOR (SLanguage l)) =>
+  ToCBOR (PlutusDebugLang l)
+  where
+  toCBOR (PlutusDebugLang slang costModel exUnits sbs pData protVer) =
+    let tag =
+          case slang of
+            SPlutusV1 -> 0
+            SPlutusV2 -> 1
+     in encode $
+          Sum PlutusDebugLang tag
+            !> To slang
+            !> E encodeCostModel costModel
+            !> To exUnits
+            !> To sbs
+            !> To pData
+            !> To protVer
+
+instance
+  forall (l :: Language).
+  (Typeable l, IsLanguage l) =>
+  FromCBOR (PlutusDebugLang l)
+  where
+  fromCBOR = decodeRecordSum "PlutusDebugLang" $ \tag -> do
+    let lang = fromSLanguage $ isLanguage @l
+    when (fromEnum lang /= fromIntegral tag) $ fail $ "Unexpected language: " <> show tag
+    slang <- fromCBOR
+    costModel <- decodeCostModel lang
+    exUnits <- fromCBOR
+    sbs <- fromCBOR
+    pData <- fromCBOR
+    protVer <- fromCBOR
+    -- We need to return a tuple here, with the size of the tag in bytes.
+    pure $ (1, PlutusDebugLang slang costModel exUnits sbs pData protVer)
+
+data PlutusDebug where
+  PlutusDebug :: (IsLanguage l, Typeable l) => PlutusDebugLang l -> PlutusDebug
+
+deriving instance Show PlutusDebug
+
+instance ToCBOR PlutusDebug where
+  toCBOR (PlutusDebug pdbg) = toCBOR pdbg
+
+data PlutusError
+  = PlutusErrorV1 PV1.EvaluationError
+  | PlutusErrorV2 PV2.EvaluationError -- TODO: Should this also be made a GADT?
   deriving (Show)
 
 data PlutusDebugInfo
-  = DebugSuccess PV1.ExBudget
+  = DebugSuccess PV1.ExBudget -- NOTE: PV1.ExBudget == PV2.ExBudget, hence this works
   | DebugCannotDecode String
   | DebugInfo [Text] PlutusError PlutusDebug
   | DebugBadHex String
+  deriving (Show)
 
-instance ToCBOR PlutusDebug where
-  toCBOR (PlutusDebugV1 a b c d e) =
-    encode $ Sum PlutusDebugV1 0 !> E encodeCostModel a !> To b !> To c !> To d !> To e
-  toCBOR (PlutusDebugV2 a b c d e) =
-    encode $ Sum PlutusDebugV2 1 !> E encodeCostModel a !> To b !> To c !> To d !> To e
-
-instance FromCBOR PlutusDebug where
-  fromCBOR = decode (Summands "PlutusDebug" dec)
-    where
-      dec 0 =
-        SumD PlutusDebugV1
-          <! D (decodeCostModel PlutusV1)
-          <! From
-          <! From
-          <! D (decodeList (fromPlainDecoder Cborg.decode))
-          <! From
-      dec 1 =
-        SumD PlutusDebugV2
-          <! D (decodeCostModel PlutusV2)
-          <! From
-          <! From
-          <! D (decodeList (fromPlainDecoder Cborg.decode))
-          <! From
-      dec n = Invalid n
-
-debugPlutus :: Version -> String -> PlutusDebugInfo
+debugPlutus ::
+  Version ->
+  String ->
+  PlutusDebugInfo
 debugPlutus version db =
   case B64.decode (BSU.fromString db) of
     Left e -> DebugBadHex (show e)
     Right bs ->
-      case decodeFull' version bs of
-        Left e -> DebugCannotDecode (show e)
-        Right pdb@(PlutusDebugV1 cm units script ds pv) ->
-          case PV1.evaluateScriptRestricting
-            (transProtocolVersion pv)
-            PV1.Verbose
-            (getEvaluationContext cm)
-            (transExUnits units)
-            script
-            ds of
-            (logs, Left e) -> DebugInfo logs (PlutusErrorV1 e) pdb
-            (_, Right ex) -> DebugSuccess ex
-        Right pdb@(PlutusDebugV2 cm units script ds pv) ->
-          case PV2.evaluateScriptRestricting
-            (transProtocolVersion pv)
-            PV2.Verbose
-            (getEvaluationContext cm)
-            (transExUnits units)
-            script
-            ds of
-            (logs, Left e) -> DebugInfo logs (PlutusErrorV2 e) pdb
-            (_, Right ex) -> DebugSuccess ex
+      let plutusDebugLangDecoder ::
+            (Typeable l, IsLanguage l) =>
+            Either DecoderError (PlutusDebugLang l)
+          plutusDebugLangDecoder = decodeFull' version bs
+          plutusDebugDecoder =
+            case plutusDebugLangDecoder @'PlutusV1 of
+              Right plutusDebug -> pure $ PlutusDebug plutusDebug
+              Left _ ->
+                case plutusDebugLangDecoder @'PlutusV2 of
+                  Right plutusDebug -> pure $ PlutusDebug plutusDebug
+                  Left err -> Left err
+       in case plutusDebugDecoder of
+            Left e -> DebugCannotDecode (show e)
+            Right (PlutusDebug (PlutusDebugLang sl costModel exUnits scripts pData protVer)) ->
+              let evalV1 =
+                    PV1.evaluateScriptRestricting
+                      (transProtocolVersion protVer)
+                      PV1.Verbose
+                      (getEvaluationContext costModel)
+                      (transExUnits exUnits)
+                      scripts
+                  evalV2 =
+                    PV2.evaluateScriptRestricting
+                      (transProtocolVersion protVer)
+                      PV2.Verbose
+                      (getEvaluationContext costModel)
+                      (transExUnits exUnits)
+                      scripts
+               in case sl of
+                    SPlutusV1 ->
+                      case evalV1 $ unPlutusData pData of
+                        (logs, Left e) ->
+                          DebugInfo logs (PlutusErrorV1 e) $
+                            PlutusDebug $
+                              PlutusDebugLang sl costModel exUnits scripts pData protVer
+                        (_, Right ex) -> DebugSuccess ex
+                    SPlutusV2 ->
+                      case evalV2 $ unPlutusData pData of
+                        (logs, Left e) ->
+                          DebugInfo logs (PlutusErrorV2 e) $
+                            PlutusDebug $
+                              PlutusDebugLang sl costModel exUnits scripts pData protVer
+                        (_, Right ex) -> DebugSuccess ex
 
 -- The runPLCScript in the Specification has a slightly different type
 -- than the one in the implementation below. Made necessary by the the type
@@ -664,13 +723,14 @@ runPLCScript proxy pv lang cm scriptbytestring units ds =
     scriptbytestring
     ds of
     (_, Left e) -> explainPlutusFailure proxy pv lang scriptbytestring e ds cm units
-    (_, Right _) -> scriptPass $ successConstructor lang cm units scriptbytestring ds pv
+    (_, Right _) ->
+      scriptPass $ case lang of
+        PlutusV1 -> PlutusDebug $ PlutusDebugLang SPlutusV1 cm units scriptbytestring (PlutusData ds) pv
+        PlutusV2 -> PlutusDebug $ PlutusDebugLang SPlutusV2 cm units scriptbytestring (PlutusData ds) pv
   where
     plutusPV = transProtocolVersion pv
     plutusInterpreter PlutusV1 = PV1.evaluateScriptRestricting plutusPV
-    plutusInterpreter PlutusV2 = PV2.evaluateScriptRestricting plutusPV
-    successConstructor PlutusV1 = PlutusDebugV1
-    successConstructor PlutusV2 = PlutusDebugV2
+    plutusInterpreter PlutusV2 = PV2.evaluateScriptRestricting plutusPV -- TODO: Make class to unify all plutus versioned operations
 
 -- | Explain why a script might fail. Scripts come in two flavors:
 --
@@ -758,8 +818,8 @@ explainPlutusFailure _proxy pv lang scriptbytestring e ds cm eu =
       line = pack . unlines $ firstLine : plutusError : pvLine : dataLines
 
       db = case lang of
-        PlutusV1 -> PlutusDebugV1 cm eu scriptbytestring ds pv
-        PlutusV2 -> PlutusDebugV2 cm eu scriptbytestring ds pv
+        PlutusV1 -> PlutusDebug $ PlutusDebugLang SPlutusV1 cm eu scriptbytestring (PlutusData ds) pv
+        PlutusV2 -> PlutusDebug $ PlutusDebugLang SPlutusV2 cm eu scriptbytestring (PlutusData ds) pv
    in scriptFail $ PlutusSF line db
 
 {-# DEPRECATED validPlutusdata "Plutus data bytestrings are not restricted to sixty-four bytes." #-}

@@ -14,15 +14,12 @@ import Cardano.Ledger.Alonzo (Alonzo)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
 import Cardano.Ledger.Alonzo.TxInfo
-  ( PlutusDebugInfo (..),
-    ScriptFailure (..),
-    ScriptResult (Fails, Passes),
+  ( ScriptResult (Fails, Passes),
     runPLCScript,
   )
 import Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
 import Data.ByteString.Short (ShortByteString)
 import Data.Proxy (Proxy (..))
-import qualified PlutusCore.Data as PCD
 import PlutusLedgerApi.Test.EvaluationContext
 import PlutusLedgerApi.Test.Examples
   ( alwaysFailingNAryFunction,
@@ -43,17 +40,13 @@ import qualified Test.Cardano.Ledger.Alonzo.PlutusScripts as Generated
 import Test.Tasty
 import Test.Tasty.HUnit (Assertion, assertBool, testCase)
 
-deriving instance Show PlutusDebugInfo
-
-deriving instance Show ScriptFailure
-
 -- =============================================
 
 -- Tests running Plutus scripts directely
 
 data ShouldSucceed = ShouldSucceed | ShouldFail
 
-directPlutusTest :: ShouldSucceed -> ShortByteString -> [PCD.Data] -> Assertion
+directPlutusTest :: ShouldSucceed -> ShortByteString -> [PV1.Data] -> Assertion
 directPlutusTest expectation script ds =
   case (expectation, evalWithTightBudget script ds) of
     (ShouldSucceed, Left e) ->
@@ -69,7 +62,7 @@ directPlutusTest expectation script ds =
   where
     -- Evaluate a script with sufficient budget to run it.
     pv = PV1.ProtocolVersion 6 0
-    evalWithTightBudget :: ShortByteString -> [PCD.Data] -> Either PV1.EvaluationError PV1.ExBudget
+    evalWithTightBudget :: ShortByteString -> [PV1.Data] -> Either PV1.EvaluationError PV1.ExBudget
     evalWithTightBudget scr datums = do
       budget <- snd $ PV1.evaluateScriptCounting pv PV1.Quiet evalCtxForTesting scr datums
       snd $ PV1.evaluateScriptRestricting pv PV1.Verbose evalCtxForTesting budget scr datums
@@ -188,7 +181,7 @@ plutusScriptExamples =
 alonzo :: Proxy Alonzo
 alonzo = Proxy
 
-explainTest :: AlonzoScript Alonzo -> ShouldSucceed -> [PCD.Data] -> Assertion
+explainTest :: AlonzoScript Alonzo -> ShouldSucceed -> [PV1.Data] -> Assertion
 explainTest script@(PlutusScript _ bytes) mode ds =
   case ( mode,
          runPLCScript

@@ -47,7 +47,7 @@ import Cardano.Ledger.Alonzo.TxBody
   )
 import Cardano.Ledger.Alonzo.TxInfo
   ( ExtendedUTxO (..),
-    PlutusDebug,
+    PlutusDebug (..),
     ScriptFailure (..),
     ScriptResult (..),
   )

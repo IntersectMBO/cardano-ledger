@@ -46,7 +46,6 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Pretty hiding (ppPParams, ppPParamsUpdate, ppTx, ppTxBody, ppTxOut)
 import Cardano.Ledger.Pretty.Mary (ppMultiAsset, ppTimelock, ppValidityInterval)
 import Cardano.Ledger.SafeHash (SafeToHash)
-import qualified PlutusCore.Data as PCD
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified Prettyprinter as PP
 
@@ -159,14 +158,14 @@ ppPParamsUpdate (AlonzoPParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau d ex
 instance PrettyA (AlonzoPParamsUpdate era) where
   prettyA = ppPParamsUpdate
 
-ppPlutusData :: PCD.Data -> PDoc
+ppPlutusData :: PV1.Data -> PDoc
 ppPlutusData (PV1.Constr tag args) = ppSexp "Constr" [ppInteger tag, ppList ppPlutusData args]
 ppPlutusData (PV1.Map pairs) = ppSexp "Map" [ppList (ppPair ppPlutusData ppPlutusData) pairs]
 ppPlutusData (PV1.List xs) = ppSexp "List" [ppList ppPlutusData xs]
 ppPlutusData (PV1.I i) = ppSexp "I" [ppInteger i]
 ppPlutusData (PV1.B bytes) = ppSexp "B" [ppLong bytes]
 
-instance PrettyA PCD.Data where
+instance PrettyA PV1.Data where
   prettyA = ppPlutusData
 
 ppData :: Era era => Data era -> PDoc

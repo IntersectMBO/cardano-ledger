@@ -38,7 +38,6 @@ executable plutus-preprocessor
       cardano-ledger-alonzo,
       flat,
       hashable >= 1.4.1.0,
-      plutus-core ^>= 1.1,
       plutus-tx ^>= 1.1,
       -- This package needs at least 1.1.1 for 9.2
       -- compatibility in the plugin

@@ -81,6 +81,7 @@ import Data.Void (Void)
 import Data.Word (Word16, Word32, Word64, Word8)
 import GHC.TypeNats (KnownNat, type (*))
 import Numeric.Natural (Natural)
+import qualified PlutusLedgerApi.V1 as PV1
 import Prelude hiding (decodeFloat)
 
 class Typeable a => FromCBOR a where
@@ -605,4 +606,11 @@ deriving instance FromCBOR EpochSize
 deriving instance FromCBOR SystemStart
 
 instance FromCBOR BlockNo where
+  fromCBOR = fromPlainDecoder decode
+
+--------------------------------------------------------------------------------
+-- Plutus
+--------------------------------------------------------------------------------
+
+instance FromCBOR PV1.Data where
   fromCBOR = fromPlainDecoder decode
