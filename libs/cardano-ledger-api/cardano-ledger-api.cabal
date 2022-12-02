@@ -40,9 +40,16 @@ library
   hs-source-dirs: src
 
   exposed-modules:
+    Cardano.Ledger.Api
     Cardano.Ledger.Api.Era
+    Cardano.Ledger.Api.PParams
+    Cardano.Ledger.Api.Scripts
+    Cardano.Ledger.Api.Scripts.Data
     Cardano.Ledger.Api.Tx
+    Cardano.Ledger.Api.Tx.AuxData
+    Cardano.Ledger.Api.Tx.Body
     Cardano.Ledger.Api.Tx.Out
+    Cardano.Ledger.Api.Tx.Wits
     Cardano.Ledger.Api.UTxO
 
   build-depends:
