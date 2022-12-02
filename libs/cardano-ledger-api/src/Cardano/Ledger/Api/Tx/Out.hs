@@ -4,22 +4,31 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
--- \* Building and inspecting transaction outputs
+-- | This module is used for building and inspecting transaction outputs.
+--
+-- You'll find some examples below.
+--
+-- Let's start by defining the GHC extensions and imports.
+--
+-- >>> :set -XTypeApplications
+-- >>> import Cardano.Ledger.Api.Era (Babbage)
+-- >>> import Lens.Micro
+-- >>> import Test.Cardano.Ledger.Babbage.Serialisation.Generators () -- Neded for doctests only
+-- >>> import Test.QuickCheck -- Needed for doctests only
 --
 -- Here's an example on how to build a very basic Babbage era transaction output with a random
 -- address and value, and without any datum or reference script.
 --
--- >>> :set -XTypeApplications
--- >>> import Test.QuickCheck
--- >>> import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
--- >>> import Lens.Micro
--- prop> \addr val ->
+-- >>> :{
+-- quickCheck $ \addr val ->
 --     let
 --         -- Defining a Babbage era transaction output with some random address and value.
 --         txOut = mkBasicTxOut @Babbage addr val
 --      in
 --         -- We verify that the transaction output contains our random address and value.
 --         txOut ^. addrTxOutL == addr && txOut ^. valueTxOutL == val
+-- :}
+-- +++ OK, passed 100 tests.
 module Cardano.Ledger.Api.Tx.Out
   ( module Cardano.Ledger.Api.Scripts.Data,
     EraTxOut (..),
