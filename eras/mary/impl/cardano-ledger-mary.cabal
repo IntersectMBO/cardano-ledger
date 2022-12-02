@@ -1,0 +1,72 @@
+cabal-version: 3.0
+
+name:                cardano-ledger-mary
+version:             0.1.0.0
+synopsis:            Cardano ledger with multiasset support.
+description:
+  This package extends the Allegra ledger with support for
+  native tokens.
+bug-reports:         https://github.com/input-output-hk/cardano-ledger/issues
+license:             Apache-2.0
+author:              IOHK
+maintainer:          operations@iohk.io
+category:            Network
+build-type:          Simple
+
+source-repository head
+  type:     git
+  location: https://github.com/input-output-hk/cardano-ledger
+  subdir:   eras/mary/impl
+
+common base
+  build-depends:      base >= 4.12 && < 4.17
+
+common project-config
+  default-language:   Haskell2010
+
+  ghc-options:        -Wall
+                      -Wcompat
+                      -Wincomplete-record-updates
+                      -Wincomplete-uni-patterns
+                      -Wredundant-constraints
+                      -Wpartial-fields
+                      -Wunused-packages
+
+library
+  import:             base, project-config
+
+  exposed-modules:
+    Cardano.Ledger.Mary
+    Cardano.Ledger.Mary.Translation
+    Cardano.Ledger.Mary.Value
+    Cardano.Ledger.Mary.Core
+    Cardano.Ledger.Mary.TxBody
+    Cardano.Ledger.Mary.TxOut
+    Cardano.Ledger.Mary.UTxO
+
+  other-modules:
+    Cardano.Ledger.Mary.Era
+    Cardano.Ledger.Mary.Scripts
+    Cardano.Ledger.Mary.Tx
+    Cardano.Ledger.Mary.TxAuxData
+    Cardano.Ledger.Mary.TxSeq
+    Cardano.Ledger.Mary.TxWits
+
+  build-depends:
+    bytestring,
+    base16-bytestring,
+    cardano-crypto-class,
+    cardano-data,
+    cardano-ledger-allegra,
+    cardano-ledger-binary,
+    cardano-ledger-core,
+    cardano-ledger-shelley,
+    containers,
+    deepseq,
+    groups,
+    microlens,
+    nothunks,
+    primitive,
+    cardano-strict-containers,
+    text,
+  hs-source-dirs: src

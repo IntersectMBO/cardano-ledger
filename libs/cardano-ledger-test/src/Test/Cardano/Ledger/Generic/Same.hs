@@ -15,7 +15,7 @@
 --   equality failed.
 module Test.Cardano.Ledger.Generic.Same where
 
-import Cardano.Ledger.Allegra.Translation ()
+import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (..))
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, AlonzoTx (..))
@@ -30,6 +30,7 @@ import Cardano.Ledger.Block (Block (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era, EraCrypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (Genesis))
+import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
 import Cardano.Ledger.Pretty
 import Cardano.Ledger.Pretty.Alonzo (ppRdmrPtr)
 import Cardano.Ledger.Pretty.Mary (ppValidityInterval)
@@ -50,7 +51,6 @@ import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), ShelleyPParamsHKD
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..), ShelleyTxOut, Wdrl (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..))
-import Cardano.Ledger.ShelleyMA.TxBody (MATxBody (..))
 import Cardano.Ledger.UTxO (UTxO (..))
 import Control.State.Transition.Extended (State)
 import Data.Foldable (toList)
@@ -371,15 +371,34 @@ sameShelleyTxBody proof (ShelleyTxBody i1 o1 c1 (Wdrl w1) f1 s1 pu1 d1) (Shelley
     ("AuxDataHash", eqVia (ppStrictMaybe (\(AuxiliaryDataHash h) -> trim (ppSafeHash h))) d1 d2)
   ]
 
-sameMATxBody ::
+sameAllegraTxBody ::
   ( Reflect era,
     Core.TxOut era ~ ShelleyTxOut era
   ) =>
   Proof era ->
-  MATxBody era ->
-  MATxBody era ->
+  AllegraTxBody era ->
+  AllegraTxBody era ->
   [(String, Maybe PDoc)]
-sameMATxBody proof (MATxBody i1 o1 c1 (Wdrl w1) f1 v1 pu1 d1 m1) (MATxBody i2 o2 c2 (Wdrl w2) f2 v2 pu2 d2 m2) =
+sameAllegraTxBody proof (AllegraTxBody i1 o1 c1 (Wdrl w1) f1 v1 pu1 d1) (AllegraTxBody i2 o2 c2 (Wdrl w2) f2 v2 pu2 d2) =
+  [ ("Inputs", eqVia (ppSet pcTxIn) i1 i2),
+    ("Outputs", eqVia (ppList (pcTxOut proof) . toList) o1 o2),
+    ("DCert", eqVia (ppList pcDCert . toList) c1 c2),
+    ("WDRL", eqVia (ppMap pcRewardAcnt pcCoin) w1 w2),
+    ("Fee", eqVia pcCoin f1 f2),
+    ("ValidityInterval", eqVia ppValidityInterval v1 v2),
+    ("PPupdate", eqVia (\_ -> ppString "Update") pu1 pu2),
+    ("AuxDataHash", eqVia (ppStrictMaybe (\(AuxiliaryDataHash h) -> trim (ppSafeHash h))) d1 d2)
+  ]
+
+sameMaryTxBody ::
+  ( Reflect era,
+    Core.TxOut era ~ ShelleyTxOut era
+  ) =>
+  Proof era ->
+  MaryTxBody era ->
+  MaryTxBody era ->
+  [(String, Maybe PDoc)]
+sameMaryTxBody proof (MaryTxBody i1 o1 c1 (Wdrl w1) f1 v1 pu1 d1 m1) (MaryTxBody i2 o2 c2 (Wdrl w2) f2 v2 pu2 d2 m2) =
   [ ("Inputs", eqVia (ppSet pcTxIn) i1 i2),
     ("Outputs", eqVia (ppList (pcTxOut proof) . toList) o1 o2),
     ("DCert", eqVia (ppList pcDCert . toList) c1 c2),
@@ -449,8 +468,8 @@ sameBabbageTxBody
 
 sameTxBody :: Reflect era => Proof era -> Core.TxBody era -> Core.TxBody era -> [(String, Maybe PDoc)]
 sameTxBody proof@(Shelley _) x y = sameShelleyTxBody proof x y
-sameTxBody proof@(Allegra _) x y = sameMATxBody proof x y
-sameTxBody proof@(Mary _) x y = sameMATxBody proof x y
+sameTxBody proof@(Allegra _) x y = sameAllegraTxBody proof x y
+sameTxBody proof@(Mary _) x y = sameMaryTxBody proof x y
 sameTxBody proof@(Alonzo _) x y = sameAlonzoTxBody proof x y
 sameTxBody proof@(Babbage _) x y = sameBabbageTxBody proof x y
 sameTxBody proof@(Conway _) x y = sameBabbageTxBody proof x y

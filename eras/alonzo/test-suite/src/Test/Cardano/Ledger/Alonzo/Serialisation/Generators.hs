@@ -13,6 +13,7 @@
 
 module Test.Cardano.Ledger.Alonzo.Serialisation.Generators where
 
+import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Data
   ( AlonzoTxAuxData (..),
@@ -65,7 +66,6 @@ import Cardano.Ledger.Keys (KeyHash)
 import Cardano.Ledger.Mary.Value (MultiAsset)
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl)
-import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val (DecodeNonNegative, Val)
 import Cardano.Slotting.Slot (SlotNo)

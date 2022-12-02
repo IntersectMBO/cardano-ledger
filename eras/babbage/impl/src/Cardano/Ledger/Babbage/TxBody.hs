@@ -111,6 +111,7 @@ module Cardano.Ledger.Babbage.TxBody
   )
 where
 
+import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Data
   ( AuxiliaryDataHash (..),
     Datum (..),
@@ -119,9 +120,10 @@ import Cardano.Ledger.Alonzo.TxBody
   ( AlonzoEraTxOut (..),
   )
 import Cardano.Ledger.Alonzo.TxBody as AlonzoTxBodyReExports
-  ( AlonzoEraTxBody (..),
+  ( AllegraEraTxBody (..),
+    AlonzoEraTxBody (..),
+    MaryEraTxBody (..),
     ShelleyEraTxBody (..),
-    ShelleyMAEraTxBody (..),
   )
 import Cardano.Ledger.Babbage.Core (BabbageEraTxBody (..))
 import Cardano.Ledger.Babbage.Era (BabbageEra)
@@ -171,7 +173,6 @@ import Cardano.Ledger.SafeHash
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert)
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.TxBody (Wdrl (Wdrl), unWdrl)
-import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (DecodeNonNegative, Val (..))
 import Control.DeepSeq (NFData)
@@ -424,11 +425,14 @@ instance CC.Crypto c => ShelleyEraTxBody (BabbageEra c) where
   certsTxBodyL = certsBabbageTxBodyL
   {-# INLINE certsTxBodyL #-}
 
-instance CC.Crypto c => ShelleyMAEraTxBody (BabbageEra c) where
-  {-# SPECIALIZE instance ShelleyMAEraTxBody (BabbageEra CC.StandardCrypto) #-}
+instance CC.Crypto c => AllegraEraTxBody (BabbageEra c) where
+  {-# SPECIALIZE instance AllegraEraTxBody (BabbageEra CC.StandardCrypto) #-}
 
   vldtTxBodyL = vldtBabbageTxBodyL
   {-# INLINE vldtTxBodyL #-}
+
+instance CC.Crypto c => MaryEraTxBody (BabbageEra c) where
+  {-# SPECIALIZE instance MaryEraTxBody (BabbageEra CC.StandardCrypto) #-}
 
   mintTxBodyL = mintBabbageTxBodyL
   {-# INLINE mintTxBodyL #-}

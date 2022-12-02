@@ -14,6 +14,7 @@ module Cardano.Ledger.Babbage.Tx
   )
 where
 
+import Cardano.Ledger.Allegra.Tx (validateTimelock)
 import Cardano.Ledger.Alonzo.PlutusScriptApi (getSpendingTxIn)
 import Cardano.Ledger.Alonzo.Tx as X hiding (AlonzoTxBody (..), TxBody)
 import Cardano.Ledger.Alonzo.TxSeq
@@ -35,7 +36,6 @@ import Cardano.Ledger.Babbage.TxBody
 import Cardano.Ledger.Babbage.TxWits ()
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.ShelleyMA.Tx (validateTimelock)
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UTxO (UTxO (..))
 import Control.Applicative ((<|>))

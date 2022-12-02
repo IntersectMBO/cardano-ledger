@@ -5,77 +5,60 @@
 
 module Test.Cardano.Ledger.Allegra.Examples.Consensus where
 
-import Cardano.Ledger.Allegra.Translation ()
+import Cardano.Ledger.Allegra
+import Cardano.Ledger.Allegra.Core
+import Cardano.Ledger.Allegra.Scripts
+import Cardano.Ledger.Allegra.TxAuxData
+import Cardano.Ledger.Allegra.TxBody hiding (TxBody)
 import Cardano.Ledger.AuxiliaryData
 import Cardano.Ledger.Coin
-import Cardano.Ledger.Core
-import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsUpdate, Update (..))
-import Cardano.Ledger.Shelley.TxBody (ShelleyTxOut (..))
-import Cardano.Ledger.ShelleyMA
-import Cardano.Ledger.ShelleyMA.AuxiliaryData
-import Cardano.Ledger.ShelleyMA.Era
-import Cardano.Ledger.ShelleyMA.Timelocks
-import Cardano.Ledger.ShelleyMA.TxBody
 import Cardano.Slotting.Slot
 import Data.Proxy
 import qualified Data.Sequence.Strict as StrictSeq
+import Lens.Micro
 import Test.Cardano.Ledger.Shelley.Examples.Consensus
 import Test.Cardano.Ledger.Shelley.Orphans ()
 import Test.Cardano.Ledger.Shelley.Utils hiding (mkVRFKeyPair)
 
-type StandardAllegra = AllegraEra CC.StandardCrypto
-
 -- | ShelleyLedgerExamples for Allegra era
-ledgerExamplesAllegra :: ShelleyLedgerExamples StandardAllegra
+ledgerExamplesAllegra :: ShelleyLedgerExamples Allegra
 ledgerExamplesAllegra =
   defaultShelleyLedgerExamples
-    (mkWitnessesPreAlonzo (Proxy @StandardAllegra))
+    (mkWitnessesPreAlonzo (Proxy @Allegra))
     id
     exampleCoin
-    exampleTxBodyAllegra
-    exampleAuxiliaryDataMA
+    (exampleAllegraTxBody exampleCoin)
+    exampleAllegraTxAuxData
     ()
 
-exampleTxBodyAllegra :: MATxBody StandardAllegra
-exampleTxBodyAllegra = exampleTxBodyMA exampleCoin
-
-exampleTxBodyMA ::
+exampleAllegraTxBody ::
   forall era.
-  ( ShelleyMAEraTxBody era,
+  ( AllegraEraTxBody era,
     ShelleyBasedEra' era,
     PParamsUpdate era ~ ShelleyPParamsUpdate era
   ) =>
   Value era ->
-  MATxBody era
-exampleTxBodyMA value =
-  MATxBody
-    exampleTxIns
-    ( StrictSeq.fromList
-        [ ShelleyTxOut (mkAddr (examplePayKey, exampleStakeKey)) value
-        ]
-    )
-    exampleCerts
-    exampleWithdrawals
-    (Coin 3)
-    (ValidityInterval (SJust (SlotNo 2)) (SJust (SlotNo 4)))
-    (SJust (Update exampleProposedPPUpdates (EpochNo 0)))
-    (SJust auxiliaryDataHash)
-    mempty -- Minted MultiAsset
+  TxBody era
+exampleAllegraTxBody value =
+  mkBasicTxBody
+    & inputsTxBodyL .~ exampleTxIns
+    & outputsTxBodyL
+      .~ StrictSeq.singleton (mkBasicTxOut (mkAddr (examplePayKey, exampleStakeKey)) value)
+    & certsTxBodyL .~ exampleCerts
+    & wdrlsTxBodyL .~ exampleWithdrawals
+    & feeTxBodyL .~ Coin 3
+    & vldtTxBodyL .~ ValidityInterval (SJust (SlotNo 2)) (SJust (SlotNo 4))
+    & updateTxBodyL .~ SJust (Update exampleProposedPPUpdates (EpochNo 0))
+    & auxDataHashTxBodyL .~ SJust auxiliaryDataHash
   where
     -- Dummy hash to decouple from the auxiliary data in 'exampleTx'.
     auxiliaryDataHash :: AuxiliaryDataHash (EraCrypto era)
     auxiliaryDataHash =
       AuxiliaryDataHash $ mkDummySafeHash (Proxy @(EraCrypto era)) 30
 
-exampleAuxiliaryDataMA :: (MAClass ma c) => AllegraTxAuxData (ShelleyMAEra ma c)
-exampleAuxiliaryDataMA =
-  AllegraTxAuxData
-    exampleAuxDataMap
-    (StrictSeq.fromList [exampleScriptMA])
-
-exampleScriptMA :: (MAClass ma c) => Script (ShelleyMAEra ma c)
-exampleScriptMA =
+exampleTimelock :: Era era => Timelock era
+exampleTimelock =
   RequireMOf 2 $
     StrictSeq.fromList
       [ RequireAllOf $
@@ -90,3 +73,6 @@ exampleScriptMA =
             ],
         RequireSignature (mkKeyHash 100)
       ]
+
+exampleAllegraTxAuxData :: (Era era, Script era ~ Timelock era) => AllegraTxAuxData era
+exampleAllegraTxAuxData = AllegraTxAuxData exampleAuxDataMap (StrictSeq.fromList [exampleTimelock])

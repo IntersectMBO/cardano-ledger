@@ -8,8 +8,10 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Allegra.Translation where
+module Cardano.Ledger.Allegra.Translation (shelleyToAllegraAVVMsToDelete) where
 
+import Cardano.Ledger.Allegra.Era (AllegraEra)
+import Cardano.Ledger.Allegra.Tx ()
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
@@ -18,8 +20,6 @@ import Cardano.Ledger.Shelley.API
 import qualified Cardano.Ledger.Shelley.LedgerState as LS
   ( returnRedeemAddrsToReserves,
   )
-import Cardano.Ledger.ShelleyMA ()
-import Cardano.Ledger.ShelleyMA.Era (AllegraEra)
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map
 

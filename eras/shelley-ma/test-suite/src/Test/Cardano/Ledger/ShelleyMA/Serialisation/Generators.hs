@@ -21,16 +21,17 @@ module Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators
   )
 where
 
+import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
+import Cardano.Ledger.Allegra.Scripts (Timelock (..), ValidityInterval (..))
+import qualified Cardano.Ledger.Allegra.Scripts as MA (Timelock (..))
+import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
+import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (..))
 import Cardano.Ledger.Binary (Annotator, FromCBOR, ToCBOR)
 import Cardano.Ledger.Core
+import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import qualified Cardano.Ledger.Mary.Value as ConcreteValue
 import Cardano.Ledger.Shelley.API (KeyHash (KeyHash), ShelleyTxAuxData (ShelleyTxAuxData))
-import Cardano.Ledger.ShelleyMA.AuxiliaryData (AllegraTxAuxData (..))
-import Cardano.Ledger.ShelleyMA.Rules (ShelleyMAUtxoPredFailure)
-import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
-import qualified Cardano.Ledger.ShelleyMA.Timelocks as MA (Timelock (..))
-import Cardano.Ledger.ShelleyMA.TxBody (MATxBody (..))
 import Control.State.Transition (PredicateFailure)
 import qualified Data.ByteString.Short as SBS
 import Data.Int (Int64)
@@ -55,7 +56,7 @@ import Test.QuickCheck
 import Test.Tasty.QuickCheck (Gen)
 
 {-------------------------------------------------------------------------------
-  ShelleyMAEra Generators
+  AllegraEra Generators
   Generators used for roundtrip tests, generated values are not
   necessarily valid
 -------------------------------------------------------------------------------}
@@ -100,7 +101,7 @@ instance
   ( Era era,
     c ~ EraCrypto era,
     Mock c,
-    FromCBOR (Annotator (Script era)),
+    FromCBOR (Annotator (Timelock era)),
     ToCBOR (Script era),
     Arbitrary (Script era)
   ) =>
@@ -121,8 +122,7 @@ instance
     genMetadata' @era >>= \case
       ShelleyTxAuxData m -> AllegraTxAuxData m <$> (genScriptSeq @era)
 
-genScriptSeq ::
-  forall era. Arbitrary (Script era) => Gen (StrictSeq (Script era))
+genScriptSeq :: Era era => Gen (StrictSeq (Timelock era))
 genScriptSeq = do
   n <- choose (0, 3)
   l <- vectorOf n arbitrary
@@ -135,16 +135,35 @@ instance
     Arbitrary (TxOut era),
     Arbitrary (PredicateFailure (EraRule "PPUP" era))
   ) =>
-  Arbitrary (ShelleyMAUtxoPredFailure era)
+  Arbitrary (AllegraUtxoPredFailure era)
   where
   arbitrary = genericArbitraryU
 
 instance
   (EraTxOut era, Mock (EraCrypto era), Arbitrary (Value era)) =>
-  Arbitrary (MATxBody era)
+  Arbitrary (AllegraTxBody era)
   where
   arbitrary =
-    MATxBody
+    AllegraTxBody
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+
+{-------------------------------------------------------------------------------
+  MaryEra Generators
+-------------------------------------------------------------------------------}
+
+instance
+  (EraTxOut era, Mock (EraCrypto era), Arbitrary (Value era)) =>
+  Arbitrary (MaryTxBody era)
+  where
+  arbitrary =
+    MaryTxBody
       <$> arbitrary
       <*> arbitrary
       <*> arbitrary
@@ -154,10 +173,6 @@ instance
       <*> arbitrary
       <*> arbitrary
       <*> genMintValues
-
-{-------------------------------------------------------------------------------
-  MaryEra Generators
--------------------------------------------------------------------------------}
 
 instance Mock c => Arbitrary (PolicyID c) where
   arbitrary = PolicyID <$> arbitrary

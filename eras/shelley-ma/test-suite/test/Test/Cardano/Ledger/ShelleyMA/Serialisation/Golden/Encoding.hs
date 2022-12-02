@@ -11,12 +11,21 @@
 module Test.Cardano.Ledger.ShelleyMA.Serialisation.Golden.Encoding (goldenEncodingTests) where
 
 import Cardano.Ledger.Address (Addr (..))
+import Cardano.Ledger.Allegra (Allegra)
+import Cardano.Ledger.Allegra.Scripts
+  ( Timelock (..),
+    ValidityInterval (..),
+  )
+import Cardano.Ledger.Allegra.TxAuxData (pattern AllegraTxAuxData)
+import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (..))
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
+import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), hashKey)
 import Cardano.Ledger.Mary (Mary)
+import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import qualified Cardano.Ledger.Shelley.Metadata as SMD
 import Cardano.Ledger.Shelley.PParams
@@ -33,12 +42,6 @@ import Cardano.Ledger.Shelley.TxBody
     ShelleyTxOut (..),
     Wdrl (..),
   )
-import Cardano.Ledger.ShelleyMA.AuxiliaryData (pattern AllegraTxAuxData)
-import Cardano.Ledger.ShelleyMA.Timelocks
-  ( Timelock (..),
-    ValidityInterval (..),
-  )
-import Cardano.Ledger.ShelleyMA.TxBody (MATxBody (..))
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (mkTxInPartial)
 import qualified Cardano.Ledger.Val as Val
@@ -48,7 +51,6 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Binary.RoundTrip (roundTripFailureExpectation)
-import Test.Cardano.Ledger.EraBuffet (AllegraEra, MaryEra, TestCrypto)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Serialisation.GoldenUtils
   ( ToTokens (..),
@@ -59,10 +61,6 @@ import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkGenKey, mkKeyPair)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase)
 
-type A = AllegraEra TestCrypto
-
-type M = MaryEra TestCrypto
-
 -- ===============================================
 -- == Test Values for Building Timelock Scripts ==
 -- ===============================================
@@ -70,11 +68,11 @@ type M = MaryEra TestCrypto
 policy1 :: Era era => Timelock era
 policy1 = RequireAnyOf . StrictSeq.fromList $ []
 
-policyID1 :: PolicyID TestCrypto
-policyID1 = PolicyID . (hashScript @A) $ policy1
+policyID1 :: PolicyID StandardCrypto
+policyID1 = PolicyID . (hashScript @Allegra) $ policy1
 
-policyID2 :: PolicyID TestCrypto
-policyID2 = PolicyID . (hashScript @A) . RequireAllOf . StrictSeq.fromList $ []
+policyID2 :: PolicyID StandardCrypto
+policyID2 = PolicyID . (hashScript @Allegra) . RequireAllOf . StrictSeq.fromList $ []
 
 assetName1 :: SBS.ShortByteString
 assetName1 = "a1"
@@ -89,25 +87,25 @@ assetName3 = "a3"
 -- == Test Values for Building Transactions ==
 -- ===========================================
 
-testGKeyHash :: KeyHash 'Genesis TestCrypto
+testGKeyHash :: KeyHash 'Genesis StandardCrypto
 testGKeyHash = hashKey . snd . mkGenKey $ RawSeed 0 0 0 0 0
 
-testAddrE :: Addr TestCrypto
+testAddrE :: Addr StandardCrypto
 testAddrE =
   Addr
     Testnet
     (KeyHashObj . hashKey . snd $ mkKeyPair (RawSeed 0 0 0 0 1))
     StakeRefNull
 
-testKeyHash :: KeyHash 'Staking TestCrypto
+testKeyHash :: KeyHash 'Staking StandardCrypto
 testKeyHash = hashKey . snd $ mkKeyPair (RawSeed 0 0 0 0 2)
 
-testStakeCred :: Credential 'Staking TestCrypto
+testStakeCred :: Credential 'Staking StandardCrypto
 testStakeCred = KeyHashObj . hashKey . snd $ mkKeyPair (RawSeed 0 0 0 0 3)
 
 testUpdate ::
   forall era.
-  ( EraCrypto era ~ TestCrypto,
+  ( EraCrypto era ~ StandardCrypto,
     PParamsUpdate era ~ ShelleyPParamsUpdate era
   ) =>
   Update era
@@ -229,18 +227,18 @@ goldenEncodingTestsAllegra =
     [ checkEncodingCBOR
         (eraProtVerHigh @Mary)
         "value"
-        (Val.inject (Coin 1) :: MaryValue TestCrypto)
+        (Val.inject (Coin 1) :: Value Allegra)
         (T (TkInteger 1)),
-      scriptGoldenTest @A,
-      metadataNoScriptsGoldenTest @A,
-      metadataWithScriptsGoldenTest @A,
+      scriptGoldenTest @Allegra,
+      metadataNoScriptsGoldenTest @Allegra,
+      metadataWithScriptsGoldenTest @Allegra,
       -- "minimal_txn_body"
       let tin = mkTxInPartial genesisId 1
-          tout = ShelleyTxOut @A testAddrE (Coin 2)
+          tout = ShelleyTxOut @Allegra testAddrE (Coin 2)
        in checkEncodingCBORAnnotated
-            (eraProtVerHigh @Mary)
+            (eraProtVerHigh @Allegra)
             "minimal_txbody"
-            ( MATxBody
+            ( AllegraTxBody
                 (Set.fromList [tin])
                 (StrictSeq.singleton tout)
                 StrictSeq.empty
@@ -249,7 +247,6 @@ goldenEncodingTestsAllegra =
                 (ValidityInterval SNothing SNothing)
                 SNothing
                 SNothing
-                (MultiAsset Map.empty)
             )
             ( T (TkMapLen 3)
                 <> T (TkWord 0) -- Tx Ins
@@ -263,15 +260,15 @@ goldenEncodingTestsAllegra =
             ),
       -- "full_txn_body"
       let tin = mkTxInPartial genesisId 1
-          tout = ShelleyTxOut @A testAddrE (Coin 2)
+          tout = ShelleyTxOut @Allegra testAddrE (Coin 2)
           reg = DCertDeleg (RegKey testStakeCred)
           ras = Map.singleton (RewardAcnt Testnet (KeyHashObj testKeyHash)) (Coin 123)
           up = testUpdate
-          mdh = hashTxAuxData @A $ AllegraTxAuxData Map.empty StrictSeq.empty
+          mdh = hashTxAuxData @Allegra $ AllegraTxAuxData Map.empty StrictSeq.empty
        in checkEncodingCBORAnnotated
-            (eraProtVerHigh @Mary)
+            (eraProtVerHigh @Allegra)
             "full_txn_body"
-            ( MATxBody
+            ( AllegraTxBody
                 (Set.fromList [tin])
                 (StrictSeq.singleton tout)
                 (StrictSeq.fromList [reg])
@@ -280,7 +277,6 @@ goldenEncodingTestsAllegra =
                 (ValidityInterval (SJust $ SlotNo 500) (SJust $ SlotNo 600))
                 (SJust up)
                 (SJust mdh)
-                mempty
             )
             ( T (TkMapLen 9)
                 <> T (TkWord 0) -- Tx Ins
@@ -315,12 +311,12 @@ goldenEncodingTestsMary =
     [ checkEncodingCBOR
         (eraProtVerHigh @Mary)
         "ada_only_value"
-        (Val.inject (Coin 1) :: MaryValue TestCrypto)
+        (Val.inject (Coin 1) :: MaryValue StandardCrypto)
         (T (TkInteger 1)),
       checkEncodingCBOR
         (eraProtVerHigh @Mary)
         "not_just_ada_value"
-        ( MaryValue @TestCrypto 2 $
+        ( MaryValue @StandardCrypto 2 $
             MultiAsset $
               Map.fromList
                 [ ( policyID1,
@@ -370,16 +366,16 @@ goldenEncodingTestsMary =
                   . TkInteger (-19)
               )
         ),
-      scriptGoldenTest @M,
-      metadataNoScriptsGoldenTest @M,
-      metadataWithScriptsGoldenTest @M,
+      scriptGoldenTest @Mary,
+      metadataNoScriptsGoldenTest @Mary,
+      metadataWithScriptsGoldenTest @Mary,
       -- "minimal_txn_body"
       let tin = mkTxInPartial genesisId 1
-          tout = ShelleyTxOut @M testAddrE (Val.inject $ Coin 2)
+          tout = ShelleyTxOut @Mary testAddrE (Val.inject $ Coin 2)
        in checkEncodingCBORAnnotated
             (eraProtVerHigh @Mary)
             "minimal_txbody"
-            ( MATxBody
+            ( MaryTxBody
                 (Set.fromList [tin])
                 (StrictSeq.singleton tout)
                 StrictSeq.empty
@@ -402,16 +398,16 @@ goldenEncodingTestsMary =
             ),
       -- "full_txn_body"
       let tin = mkTxInPartial genesisId 1
-          tout = ShelleyTxOut @M testAddrE (Val.inject $ Coin 2)
+          tout = ShelleyTxOut @Mary testAddrE (Val.inject $ Coin 2)
           reg = DCertDeleg (RegKey testStakeCred)
           ras = Map.singleton (RewardAcnt Testnet (KeyHashObj testKeyHash)) (Coin 123)
           up = testUpdate
-          mdh = hashTxAuxData @A $ AllegraTxAuxData Map.empty StrictSeq.empty
+          mdh = hashTxAuxData @Allegra $ AllegraTxAuxData Map.empty StrictSeq.empty
           mint = Map.singleton policyID1 $ Map.singleton (AssetName assetName1) 13
        in checkEncodingCBORAnnotated
             (eraProtVerHigh @Mary)
             "full_txn_body"
-            ( MATxBody
+            ( MaryTxBody
                 (Set.fromList [tin])
                 (StrictSeq.singleton tout)
                 (StrictSeq.fromList [reg])

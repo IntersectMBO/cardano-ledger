@@ -21,26 +21,24 @@ module Test.Cardano.Ledger.AllegraEraGen
 where
 
 import Cardano.Ledger.Allegra (AllegraEra)
+import Cardano.Ledger.Allegra.Core
+import Cardano.Ledger.Allegra.Scripts (Timelock (..))
+import Cardano.Ledger.Allegra.TxBody
+  ( AllegraTxBody (..),
+    ValidityInterval (ValidityInterval),
+  )
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (serializeEncoding', toCBOR)
 import Cardano.Ledger.Coin (Coin)
-import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
-import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Keys (KeyHash)
 import Cardano.Ledger.Pretty.Mary ()
 import Cardano.Ledger.Shelley.API (KeyRole (Witness))
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..), Update)
 import Cardano.Ledger.Shelley.Tx (pattern ShelleyTx)
-import Cardano.Ledger.Shelley.TxBody (DCert, ShelleyTxOut (..), Wdrl)
+import Cardano.Ledger.Shelley.TxBody (DCert, ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (pattern ShelleyTxWits)
-import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
-import Cardano.Ledger.ShelleyMA.TxBody
-  ( MATxBody (..),
-    ShelleyMAEraTxBody,
-    ValidityInterval (ValidityInterval),
-  )
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val ((<+>))
 import Cardano.Slotting.Slot (SlotNo (SlotNo))
@@ -48,6 +46,7 @@ import Control.Monad (replicateM)
 import Data.Hashable (hash)
 import Data.Sequence.Strict (StrictSeq (..), fromList)
 import qualified Data.Set as Set
+import Lens.Micro
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv (..), genCoin)
@@ -69,7 +68,7 @@ import Test.QuickCheck (Arbitrary, Gen, arbitrary, frequency)
  This instance is layered on top of the ShelleyMA instances
  in Cardano.Ledger.ShelleyMA.Scripts:
 
- `type instance Core.Script (AllegraEra c) = Timelock (AllegraEra c)`
+ `type instance Script (AllegraEra c) = Timelock (AllegraEra c)`
  `instance ValidateScript (ShelleyMAEra ma c) where ...`
 ------------------------------------------------------------------------------}
 
@@ -86,16 +85,17 @@ instance (CryptoClass.Crypto c, Mock c) => EraGen (AllegraEra c) where
   genEraTxBody _ge _utxo _pparams = genTxBody
   genEraAuxiliaryData = genAuxiliaryData
   updateEraTxBody _utxo _pp _wits txBody fee ins out =
-    case txBody of
-      MATxBody existingins outs cert wdrl _txfee vi upd ad forge ->
-        MATxBody (existingins <> ins) (outs :|> out) cert wdrl fee vi upd ad forge
+    txBody
+      & inputsTxBodyL %~ (<> ins)
+      & outputsTxBodyL %~ (:|> out)
+      & feeTxBodyL .~ fee
   genEraPParamsUpdate = genShelleyPParamsUpdate
   genEraPParams = genPParams
   genEraTxWits _scriptinfo setWitVKey mapScriptWit = ShelleyTxWits setWitVKey mapScriptWit mempty
   constructTx = ShelleyTx
 
 genTxBody ::
-  ShelleyMAEraTxBody era =>
+  AllegraEraTxBody era =>
   SlotNo ->
   Set.Set (TxIn (EraCrypto era)) ->
   StrictSeq (ShelleyTxOut era) ->
@@ -104,12 +104,11 @@ genTxBody ::
   Coin ->
   StrictMaybe (Update era) ->
   StrictMaybe (AuxiliaryDataHash (EraCrypto era)) ->
-  Gen (MATxBody era, [Timelock era])
+  Gen (AllegraTxBody era, [Timelock era])
 genTxBody slot ins outs cert wdrl fee upd ad = do
   validityInterval <- genValidityInterval slot
-  let mint = mempty -- the mint field is always empty for an Allegra TxBody
   pure
-    ( MATxBody
+    ( AllegraTxBody
         ins
         outs
         cert
@@ -117,8 +116,7 @@ genTxBody slot ins outs cert wdrl fee upd ad = do
         fee
         validityInterval
         upd
-        ad
-        mint,
+        ad,
       [] -- Allegra does not need any additional script witnesses
     )
 
@@ -127,7 +125,7 @@ instance Mock c => MinGenTxout (AllegraEra c) where
   addValToTxOut v (ShelleyTxOut a u) = ShelleyTxOut a (v <+> u)
   genEraTxOut _genenv genVal addrs = do
     values <- replicateM (length addrs) genVal
-    pure (zipWith Core.mkBasicTxOut addrs values)
+    pure (zipWith mkBasicTxOut addrs values)
 
 {------------------------------------------------------------------------------
   ShelleyMA helpers, shared by Allegra and Mary
@@ -146,9 +144,9 @@ unQuantifyTL (MOf n xs) = RequireMOf n (fromList xs)
 unQuantifyTL (Leaf t) = t
 
 genAuxiliaryData ::
-  Arbitrary (Core.TxAuxData era) =>
+  Arbitrary (TxAuxData era) =>
   Constants ->
-  Gen (StrictMaybe (Core.TxAuxData era))
+  Gen (StrictMaybe (TxAuxData era))
 genAuxiliaryData Constants {frequencyTxWithMetadata} =
   frequency
     [ (frequencyTxWithMetadata, SJust <$> arbitrary),
@@ -191,7 +189,7 @@ someLeaf ::
   KeyHash 'Witness (EraCrypto era) ->
   Timelock era
 someLeaf x =
-  let n = mod (hash (serializeEncoding' (Core.eraProtVerLow @era) (toCBOR x))) 200
+  let n = mod (hash (serializeEncoding' (eraProtVerLow @era) (toCBOR x))) 200
    in partition @era [n] [RequireSignature x]
 
 partition ::

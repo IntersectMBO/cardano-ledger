@@ -1,22 +1,12 @@
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE ConstraintKinds #-}
 
 module Cardano.Ledger.ShelleyMA.Core
-  ( ShelleyMAEraTxBody (..),
-    module Cardano.Ledger.Shelley.Core,
+  {-# DEPRECATED "Use `Cardano.Ledger.Allegra.Core` from 'cardano-ledger-allegra' or `Cardano.Ledger.Mary.Core` from 'cardano-ledger-mary' packages instead" #-}
+  ( module Cardano.Ledger.Mary.Core,
+    ShelleyMAEraTxBody,
   )
 where
 
-import Cardano.Ledger.Mary.Value (MultiAsset (..))
-import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
-import Data.Set (Set)
-import Lens.Micro (Lens', SimpleGetter)
+import Cardano.Ledger.Mary.Core
 
-class ShelleyEraTxBody era => ShelleyMAEraTxBody era where
-  vldtTxBodyL :: Lens' (TxBody era) ValidityInterval
-
-  mintTxBodyL :: Lens' (TxBody era) (MultiAsset (EraCrypto era))
-
-  mintValueTxBodyF :: SimpleGetter (TxBody era) (Value era)
-
-  mintedTxBodyF :: SimpleGetter (TxBody era) (Set (ScriptHash (EraCrypto era)))
+type ShelleyMAEraTxBody era = (AllegraEraTxBody era, MaryEraTxBody era)

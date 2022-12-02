@@ -7,11 +7,11 @@ module Test.Cardano.Ledger.Alonzo.Serialisation.CDDL
   )
 where
 
+import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Alonzo (Alonzo)
 import Cardano.Ledger.Alonzo.Data (Data)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits, Redeemers)
 import Cardano.Ledger.Core
-import qualified Cardano.Ledger.ShelleyMA.Timelocks as MA
 import qualified Data.ByteString.Lazy as BSL
 import Paths_cardano_ledger_alonzo_test
 import Test.Cardano.Ledger.Shelley.Serialisation.CDDLUtils
@@ -26,7 +26,7 @@ tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
     [ cddlTest @(Value Alonzo) (eraProtVerHigh @Alonzo) n "coin",
       cddlAnnotatorTest @(TxBody Alonzo) (eraProtVerHigh @Alonzo) n "transaction_body",
       cddlAnnotatorTest @(TxAuxData Alonzo) (eraProtVerHigh @Alonzo) n "auxiliary_data",
-      cddlAnnotatorTest @(MA.Timelock Alonzo) (eraProtVerHigh @Alonzo) n "native_script",
+      cddlAnnotatorTest @(Timelock Alonzo) (eraProtVerHigh @Alonzo) n "native_script",
       cddlAnnotatorTest @(Data Alonzo) (eraProtVerHigh @Alonzo) n "plutus_data",
       cddlTest @(TxOut Alonzo) (eraProtVerHigh @Alonzo) n "transaction_output",
       cddlAnnotatorTest @(AlonzoTxWits Alonzo) (eraProtVerHigh @Alonzo) n "transaction_witness_set",

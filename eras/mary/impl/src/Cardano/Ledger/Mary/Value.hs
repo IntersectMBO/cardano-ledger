@@ -16,7 +16,6 @@ module Cardano.Ledger.Mary.Value
     AssetName (..),
     MaryValue (..),
     MultiAsset (..),
-    Value,
     flattenMultiAsset,
     insert,
     insertMultiAsset,
@@ -156,10 +155,6 @@ instance CC.Crypto c => ToCBOR (MultiAsset c) where
 -- | The Value representing MultiAssets
 data MaryValue c = MaryValue !Integer !(MultiAsset c)
   deriving (Show, Generic)
-
-type Value = MaryValue
-
-{-# DEPRECATED Value "Use `MaryValue` instead" #-}
 
 instance CC.Crypto c => Eq (MaryValue c) where
   x == y = pointwise (==) x y

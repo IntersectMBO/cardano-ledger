@@ -13,6 +13,7 @@
 
 module Test.Cardano.Ledger.Examples.AlonzoInvalidTxUTXOW (tests) where
 
+import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Data (Data (..), hashData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (..))
@@ -68,7 +69,6 @@ import Cardano.Ledger.Shelley.TxBody
     RewardAcnt (..),
     Wdrl (..),
   )
-import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Ledger.UTxO (makeWitnessVKey)
 import Cardano.Ledger.Val (inject, (<+>))
 import Cardano.Slotting.Slot (SlotNo (..))

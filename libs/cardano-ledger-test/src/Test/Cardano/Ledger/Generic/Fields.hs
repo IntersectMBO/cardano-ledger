@@ -27,7 +27,6 @@ module Test.Cardano.Ledger.Generic.Fields
     TxOutField (.., DHash', RefScript'),
     initVI,
     initWdrl,
-    initValue,
     initialTxBody,
     initialWitnesses,
     initialTx,
@@ -42,6 +41,8 @@ module Test.Cardano.Ledger.Generic.Fields
 where
 
 import Cardano.Ledger.Address (Addr (..))
+import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
+import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (..))
 import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash, Data (..), hashData)
 import Cardano.Ledger.Alonzo.Scripts (CostModels (..), ExUnits (..), Prices)
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..), ScriptIntegrityHash)
@@ -62,21 +63,19 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Keys (KeyHash, KeyPair (..), KeyRole (..), hashKey)
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness (..))
-import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
+import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
+import Cardano.Ledger.Mary.Value (MultiAsset (..))
 import qualified Cardano.Ledger.Shelley.PParams as PP (Update)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxBody (DCert (..), ShelleyTxBody (..), Wdrl (..), WitVKey (..))
 import Cardano.Ledger.Shelley.TxWits (pattern ShelleyTxWits)
-import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
-import Cardano.Ledger.ShelleyMA.TxBody (MATxBody (..))
 import Cardano.Ledger.TxIn (TxIn (..))
-import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import Data.Default.Class (def)
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
-import qualified Data.Sequence.Strict as Seq (empty, fromList)
+import qualified Data.Sequence.Strict as SSeq (fromList)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Numeric.Natural (Natural)
@@ -237,98 +236,29 @@ initVI = ValidityInterval SNothing SNothing
 initWdrl :: Wdrl c
 initWdrl = Wdrl Map.empty
 
-initMultiAsset :: MultiAsset c
-initMultiAsset = MultiAsset Map.empty
-
-initValue :: MaryValue c
-initValue = MaryValue 0 mempty
-
 initialTxBody :: Era era => Proof era -> TxBody era
-initialTxBody (Shelley _) = ShelleyTxBody Set.empty Seq.empty Seq.empty initWdrl (Coin 0) (SlotNo 0) SNothing SNothing
-initialTxBody (Allegra _) = MATxBody Set.empty Seq.empty Seq.empty initWdrl (Coin 0) initVI SNothing SNothing mempty
-initialTxBody (Mary _) = MATxBody Set.empty Seq.empty Seq.empty initWdrl (Coin 0) initVI SNothing SNothing mempty
-initialTxBody (Alonzo _) =
-  AlonzoTxBody
-    Set.empty
-    Set.empty
-    Seq.empty
-    Seq.empty
-    initWdrl
-    (Coin 0)
-    initVI
-    SNothing
-    Set.empty
-    initMultiAsset
-    SNothing
-    SNothing
-    SNothing
-initialTxBody (Babbage _) =
-  BabbageTxBody
-    Set.empty
-    Set.empty
-    Set.empty
-    Seq.empty
-    SNothing
-    SNothing
-    Seq.empty
-    initWdrl
-    (Coin 0)
-    initVI
-    SNothing
-    Set.empty
-    initMultiAsset
-    SNothing
-    SNothing
-    SNothing
-initialTxBody (Conway _) =
-  BabbageTxBody
-    Set.empty
-    Set.empty
-    Set.empty
-    Seq.empty
-    SNothing
-    SNothing
-    Seq.empty
-    initWdrl
-    (Coin 0)
-    initVI
-    SNothing
-    Set.empty
-    initMultiAsset
-    SNothing
-    SNothing
-    SNothing
+initialTxBody (Shelley _) = mkBasicTxBody
+initialTxBody (Allegra _) = mkBasicTxBody
+initialTxBody (Mary _) = mkBasicTxBody
+initialTxBody (Alonzo _) = mkBasicTxBody
+initialTxBody (Babbage _) = mkBasicTxBody
+initialTxBody (Conway _) = mkBasicTxBody
 
 initialWitnesses :: Era era => Proof era -> TxWits era
-initialWitnesses (Shelley _) = ShelleyTxWits Set.empty Map.empty Set.empty
-initialWitnesses (Allegra _) = ShelleyTxWits Set.empty Map.empty Set.empty
-initialWitnesses (Mary _) = ShelleyTxWits Set.empty Map.empty Set.empty
-initialWitnesses (Alonzo _) = AlonzoTxWits mempty mempty mempty mempty (Redeemers mempty)
-initialWitnesses (Babbage _) = AlonzoTxWits mempty mempty mempty mempty (Redeemers mempty)
-initialWitnesses (Conway _) = AlonzoTxWits mempty mempty mempty mempty (Redeemers mempty)
+initialWitnesses (Shelley _) = mkBasicTxWits
+initialWitnesses (Allegra _) = mkBasicTxWits
+initialWitnesses (Mary _) = mkBasicTxWits
+initialWitnesses (Alonzo _) = mkBasicTxWits
+initialWitnesses (Babbage _) = mkBasicTxWits
+initialWitnesses (Conway _) = mkBasicTxWits
 
 initialTx :: forall era. Proof era -> Tx era
-initialTx era@(Shelley _) = ShelleyTx (initialTxBody era) (initialWitnesses era) SNothing
-initialTx era@(Allegra _) = ShelleyTx (initialTxBody era) (initialWitnesses era) SNothing
-initialTx era@(Mary _) = ShelleyTx (initialTxBody era) (initialWitnesses era) SNothing
-initialTx era@(Alonzo _) =
-  AlonzoTx
-    (initialTxBody era)
-    (initialWitnesses era)
-    (IsValid True)
-    SNothing
-initialTx era@(Babbage _) =
-  AlonzoTx
-    (initialTxBody era)
-    (initialWitnesses era)
-    (IsValid True)
-    SNothing
-initialTx era@(Conway _) =
-  AlonzoTx
-    (initialTxBody era)
-    (initialWitnesses era)
-    (IsValid True)
-    SNothing
+initialTx era@(Shelley _) = mkBasicTx (initialTxBody era)
+initialTx era@(Allegra _) = mkBasicTx (initialTxBody era)
+initialTx era@(Mary _) = mkBasicTx (initialTxBody era)
+initialTx era@(Alonzo _) = mkBasicTx (initialTxBody era)
+initialTx era@(Babbage _) = mkBasicTx (initialTxBody era)
+initialTx era@(Conway _) = mkBasicTx (initialTxBody era)
 
 -- | A Meaningless Addr.
 initialAddr :: Era era => Proof era -> Addr (EraCrypto era)
@@ -339,12 +269,12 @@ initialAddr _wit = Addr Testnet pCred sCred
     sCred = StakeRefBase . KeyHashObj . hashKey $ svk
 
 initialTxOut :: Era era => Proof era -> TxOut era
-initialTxOut wit@(Shelley _) = ShelleyTxOut (initialAddr wit) (Coin 0)
-initialTxOut wit@(Allegra _) = ShelleyTxOut (initialAddr wit) (Coin 0)
-initialTxOut wit@(Mary _) = ShelleyTxOut (initialAddr wit) (inject (Coin 0))
-initialTxOut wit@(Alonzo _) = AlonzoTxOut (initialAddr wit) (inject (Coin 0)) SNothing
-initialTxOut wit@(Babbage _) = BabbageTxOut (initialAddr wit) (inject (Coin 0)) NoDatum SNothing
-initialTxOut wit@(Conway _) = BabbageTxOut (initialAddr wit) (inject (Coin 0)) NoDatum SNothing
+initialTxOut wit@(Shelley _) = mkBasicTxOut (initialAddr wit) mempty
+initialTxOut wit@(Allegra _) = mkBasicTxOut (initialAddr wit) mempty
+initialTxOut wit@(Mary _) = mkBasicTxOut (initialAddr wit) mempty
+initialTxOut wit@(Alonzo _) = mkBasicTxOut (initialAddr wit) mempty
+initialTxOut wit@(Babbage _) = mkBasicTxOut (initialAddr wit) mempty
+initialTxOut wit@(Conway _) = mkBasicTxOut (initialAddr wit) mempty
 
 initialPParams :: forall era. Proof era -> PParams era
 initialPParams (Shelley _) = def
@@ -424,10 +354,10 @@ abstractTxBody (Babbage _) (BabbageTxBody inp col ref out colret totcol cert wdr
   ]
 abstractTxBody (Shelley _) (ShelleyTxBody inp out cert wdrl fee ttlslot up adh) =
   [Inputs inp, Outputs out, Certs cert, Wdrls wdrl, Txfee fee, TTL ttlslot, Update up, AdHash adh]
-abstractTxBody (Mary _) (MATxBody inp out cert wdrl fee vldt up adh mnt) =
+abstractTxBody (Mary _) (MaryTxBody inp out cert wdrl fee vldt up adh mnt) =
   [Inputs inp, Outputs out, Certs cert, Wdrls wdrl, Txfee fee, Vldt vldt, Update up, AdHash adh, Mint mnt]
-abstractTxBody (Allegra _) (MATxBody inp out cert wdrl fee vldt up adh mnt) =
-  [Inputs inp, Outputs out, Certs cert, Wdrls wdrl, Txfee fee, Vldt vldt, Update up, AdHash adh, Mint mnt]
+abstractTxBody (Allegra _) (AllegraTxBody inp out cert wdrl fee vldt up adh) =
+  [Inputs inp, Outputs out, Certs cert, Wdrls wdrl, Txfee fee, Vldt vldt, Update up, AdHash adh]
 
 abstractWitnesses :: Proof era -> TxWits era -> [WitnessesField era]
 abstractWitnesses (Shelley _) (ShelleyTxWits keys scripts boot) = [AddrWits keys, ScriptWits scripts, BootWits boot]
@@ -463,7 +393,7 @@ fromSet :: Set a -> [a]
 fromSet = Set.toList
 
 toStrictSeq :: [a] -> StrictSeq a
-toStrictSeq = Seq.fromList
+toStrictSeq = SSeq.fromList
 
 fromStrictSeq :: StrictSeq a -> [a]
 fromStrictSeq s = foldr (:) [] s

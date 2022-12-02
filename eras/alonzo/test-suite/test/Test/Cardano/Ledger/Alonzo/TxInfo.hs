@@ -1,6 +1,7 @@
 module Test.Cardano.Ledger.Alonzo.TxInfo where
 
 import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..))
+import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo (Alonzo)
 import Cardano.Ledger.Alonzo.PParams ()
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
@@ -13,7 +14,6 @@ import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Language (Language (..))
 import Cardano.Ledger.Shelley.TxBody (Wdrl (..))
-import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Ledger.TxIn (TxIn (..), mkTxInPartial)
 import Cardano.Ledger.UTxO (UTxO (..))
 import qualified Cardano.Ledger.Val as Val

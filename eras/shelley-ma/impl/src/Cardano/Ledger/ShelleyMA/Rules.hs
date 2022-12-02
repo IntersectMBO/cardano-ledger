@@ -1,8 +1,7 @@
 module Cardano.Ledger.ShelleyMA.Rules
-  ( module Cardano.Ledger.ShelleyMA.Rules.Utxo,
-    module Cardano.Ledger.ShelleyMA.Rules.Utxow,
+  {-# DEPRECATED "Use `Cardano.Ledger.Allegra.Rules` from 'cardano-ledger-allegra' package instead" #-}
+  ( module Cardano.Ledger.Allegra.Rules,
   )
 where
 
-import Cardano.Ledger.ShelleyMA.Rules.Utxo
-import Cardano.Ledger.ShelleyMA.Rules.Utxow
+import Cardano.Ledger.Allegra.Rules

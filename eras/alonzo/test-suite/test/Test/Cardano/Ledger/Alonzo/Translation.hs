@@ -21,8 +21,6 @@ import Cardano.Ledger.Binary (ToCBOR (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary (Mary)
 import qualified Cardano.Ledger.Shelley.API as API
-import Cardano.Ledger.ShelleyMA.AuxiliaryData (AllegraTxAuxData)
-import Cardano.Ledger.ShelleyMA.TxBody (MATxBody)
 import Data.Typeable (Typeable)
 import Test.Cardano.Ledger.AllegraEraGen ()
 import Test.Cardano.Ledger.Binary.RoundTrip
@@ -48,12 +46,12 @@ alonzoEncodeDecodeTests =
   testGroup
     "encoded mary types can be decoded as alonzo types"
     [ testProperty "decoding auxilliary" $
-        embedTripAnnExpectation @(AllegraTxAuxData Mary) @(TxAuxData Alonzo)
+        embedTripAnnExpectation @(TxAuxData Mary) @(TxAuxData Alonzo)
           (eraProtVerLow @Mary)
           (eraProtVerLow @Alonzo)
           (\_ _ -> pure ()),
       testProperty "decoding txbody" $
-        embedTripAnnExpectation @(MATxBody Mary) @(TxBody Alonzo)
+        embedTripAnnExpectation @(TxBody Mary) @(TxBody Alonzo)
           (eraProtVerLow @Mary)
           (eraProtVerLow @Alonzo)
           (\_ _ -> pure ()),

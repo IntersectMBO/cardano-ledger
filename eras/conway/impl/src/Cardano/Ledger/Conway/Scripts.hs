@@ -12,6 +12,7 @@ module Cardano.Ledger.Conway.Scripts
   )
 where
 
+import Cardano.Ledger.Allegra.Scripts (Timelock)
 import Cardano.Ledger.Alonzo.Data
   ( AlonzoTxAuxData,
     hashAlonzoTxAuxData,
@@ -23,7 +24,6 @@ import Cardano.Ledger.Babbage.Scripts (babbageScriptPrefixTag)
 import Cardano.Ledger.Conway.Era
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.ShelleyMA.Timelocks (Timelock)
 import Data.ByteString.Short (ShortByteString)
 
 type instance SomeScript 'PhaseOne (ConwayEra c) = Timelock (ConwayEra c)

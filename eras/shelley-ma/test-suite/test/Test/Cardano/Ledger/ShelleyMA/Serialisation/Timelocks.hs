@@ -13,11 +13,11 @@ module Test.Cardano.Ledger.ShelleyMA.Serialisation.Timelocks
 where
 
 import Cardano.Ledger.Allegra (Allegra)
+import Cardano.Ledger.Allegra.Scripts (Timelock (..))
 import Cardano.Ledger.Core (eraProtVerHigh, eraProtVerLow)
 import Cardano.Ledger.SafeHash (originalBytes)
 import Cardano.Ledger.Shelley (Shelley)
 import Cardano.Ledger.Shelley.Scripts (MultiSig)
-import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
 import Cardano.Slotting.Slot (SlotNo (..))
 import Data.Sequence.Strict (fromList)
 import Test.Cardano.Ledger.Binary.RoundTrip (embedTripAnnExpectation, roundTripAnnExpectation)

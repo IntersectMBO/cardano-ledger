@@ -36,6 +36,12 @@ cradle:
     - path: "eras/shelley/test-suite/bench"
       component: "cardano-ledger-shelley-test:bench:mainbench"
 
+    - path: "eras/allegra/impl/src"
+      component: "lib:cardano-ledger-allegra"
+
+    - path: "eras/mary/impl/src"
+      component: "lib:cardano-ledger-mary"
+
     - path: "eras/shelley-ma/impl/src"
       component: "lib:cardano-ledger-shelley-ma"
 

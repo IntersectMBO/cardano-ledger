@@ -19,28 +19,26 @@ import qualified Cardano.Ledger.Alonzo.PParams as Alonzo (AlonzoPParamsHKD (..))
 import Cardano.Ledger.Alonzo.Scripts (CostModels (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), hashScriptIntegrity)
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
-import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody (..), AlonzoTxOut (..))
+import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))
+import Cardano.Ledger.Babbage.Core
 import qualified Cardano.Ledger.Babbage.PParams as Babbage (BabbagePParamsHKD (..))
 import Cardano.Ledger.Babbage.TxBody as Babbage
-  ( BabbageEraTxBody (..),
-    BabbageTxOut (..),
+  ( BabbageTxOut (..),
     Datum (..),
   )
 import Cardano.Ledger.Coin (Coin (Coin, unCoin))
-import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams)
 import qualified Cardano.Ledger.Shelley.PParams as Shelley (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Tx as Shelley
   ( ShelleyTx (..),
   )
-import Cardano.Ledger.Shelley.TxBody as Shelley (ShelleyEraTxBody (..), ShelleyTxOut (..))
+import Cardano.Ledger.Shelley.TxBody as Shelley (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits as Shelley
   ( addrWits,
     bootWits,
     scriptWits,
   )
-import Cardano.Ledger.ShelleyMA.TxBody (ShelleyMAEraTxBody (..))
 import Cardano.Ledger.Val ((<×>))
 import qualified Data.List as List
 import Data.Map (Map)
@@ -179,7 +177,6 @@ updateTxBody pf txBody dt =
       Wdrls wdrls -> txBody & wdrlsTxBodyL .~ wdrls
       Vldt vldt -> txBody & vldtTxBodyL .~ vldt
       Update update -> txBody & updateTxBodyL .~ update
-      Mint mint -> txBody & mintTxBodyL .~ mint
       _ -> txBody
     Mary _ -> case dt of
       Certs certs -> txBody & certsTxBodyL .~ certs

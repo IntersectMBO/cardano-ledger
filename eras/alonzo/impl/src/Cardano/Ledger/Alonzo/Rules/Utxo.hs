@@ -31,14 +31,18 @@ module Cardano.Ledger.Alonzo.Rules.Utxo
 where
 
 import Cardano.Ledger.Address (Addr (..), RewardAcnt)
+import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
+import qualified Cardano.Ledger.Allegra.Rules as Allegra
+import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Era (AlonzoUTXO)
 import Cardano.Ledger.Alonzo.Rules.Utxos (AlonzoUTXOS, AlonzoUtxosPredFailure)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Prices, pointWiseExUnits)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), totExUnits)
 import Cardano.Ledger.Alonzo.TxBody
-  ( AlonzoEraTxBody (..),
+  ( AllegraEraTxBody (..),
+    AlonzoEraTxBody (..),
     AlonzoEraTxOut (..),
-    ShelleyMAEraTxBody (..),
+    MaryEraTxBody (..),
   )
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), nullRedeemers)
 import Cardano.Ledger.BaseTypes
@@ -80,9 +84,6 @@ import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, UtxoEnv)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Tx (TxIn)
-import Cardano.Ledger.ShelleyMA.Rules (ShelleyMAUtxoPredFailure)
-import qualified Cardano.Ledger.ShelleyMA.Rules as ShelleyMA
-import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), areAllAdaOnly, coinBalance, sumAllValue, txouts)
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.EpochInfo.API (EpochInfo, epochInfoSlotToUTCTime)
@@ -336,7 +337,7 @@ validateCollateralContainsNonADA collateralTxOuts =
 -- > (_,i_f) := txvldt tx
 -- > ◇ ∉ { txrdmrs tx, i_f } ⇒ epochInfoSlotToUTCTime epochInfo systemTime i_f ≠ ◇
 validateOutsideForecast ::
-  ( ShelleyMAEraTxBody era,
+  ( MaryEraTxBody era,
     AlonzoEraTxWits era,
     EraTx era
   ) =>
@@ -486,7 +487,7 @@ utxoTransition = do
 
   {- ininterval slot (txvld txb) -}
   runTest $
-    ShelleyMA.validateOutsideValidityIntervalUTxO slot txBody
+    Allegra.validateOutsideValidityIntervalUTxO slot txBody
 
   sysSt <- liftSTS $ asks systemStart
   ei <- liftSTS $ asks epochInfo
@@ -709,32 +710,32 @@ instance
 fromShelleyFailure :: ShelleyUtxoPredFailure era -> Maybe (AlonzoUtxoPredFailure era)
 fromShelleyFailure = \case
   Shelley.BadInputsUTxO ins -> Just $ BadInputsUTxO ins
-  Shelley.ExpiredUTxO {} -> Nothing -- Replaced with `OutsideValidityIntervalUTxO` in ShelleyMA
+  Shelley.ExpiredUTxO {} -> Nothing -- Replaced with `OutsideValidityIntervalUTxO` in Allegra
   Shelley.MaxTxSizeUTxO a m -> Just $ MaxTxSizeUTxO a m
   Shelley.InputSetEmptyUTxO -> Just InputSetEmptyUTxO
   Shelley.FeeTooSmallUTxO mf af -> Just $ FeeTooSmallUTxO mf af
   Shelley.ValueNotConservedUTxO vc vp -> Just $ ValueNotConservedUTxO vc vp
   Shelley.WrongNetwork n as -> Just $ WrongNetwork n as
   Shelley.WrongNetworkWithdrawal n as -> Just $ WrongNetworkWithdrawal n as
-  Shelley.OutputTooSmallUTxO {} -> Nothing -- Updated in ShelleyMA
+  Shelley.OutputTooSmallUTxO {} -> Nothing -- Updated in Allegra
   Shelley.UpdateFailure {} -> Nothing -- Removed
   Shelley.OutputBootAddrAttrsTooBig outs -> Just $ OutputBootAddrAttrsTooBig outs
 
-fromShelleyMAFailure :: ShelleyMAUtxoPredFailure era -> Maybe (AlonzoUtxoPredFailure era)
-fromShelleyMAFailure = \case
-  ShelleyMA.BadInputsUTxO {} -> Nothing -- Inherited from Shelley
-  ShelleyMA.OutsideValidityIntervalUTxO vi slotNo -> Just $ OutsideValidityIntervalUTxO vi slotNo
-  ShelleyMA.MaxTxSizeUTxO {} -> Nothing -- Inherited from Shelley
-  ShelleyMA.InputSetEmptyUTxO -> Nothing -- Inherited from Shelley
-  ShelleyMA.FeeTooSmallUTxO {} -> Nothing -- Inherited from Shelley
-  ShelleyMA.ValueNotConservedUTxO {} -> Nothing -- Inherited from Shelley
-  ShelleyMA.WrongNetwork {} -> Nothing -- Inherited from Shelley
-  ShelleyMA.WrongNetworkWithdrawal {} -> Nothing -- Inherited from Shelley
-  ShelleyMA.OutputTooSmallUTxO {} -> Nothing -- Updated
-  ShelleyMA.UpdateFailure {} -> Nothing -- Removed
-  ShelleyMA.OutputBootAddrAttrsTooBig {} -> Nothing -- Inherited from Shelley
-  ShelleyMA.TriesToForgeADA -> Just TriesToForgeADA
-  ShelleyMA.OutputTooBigUTxO {} -> Nothing -- Updated error reporting
+fromAllegraFailure :: AllegraUtxoPredFailure era -> Maybe (AlonzoUtxoPredFailure era)
+fromAllegraFailure = \case
+  Allegra.BadInputsUTxO {} -> Nothing -- Inherited from Shelley
+  Allegra.OutsideValidityIntervalUTxO vi slotNo -> Just $ OutsideValidityIntervalUTxO vi slotNo
+  Allegra.MaxTxSizeUTxO {} -> Nothing -- Inherited from Shelley
+  Allegra.InputSetEmptyUTxO -> Nothing -- Inherited from Shelley
+  Allegra.FeeTooSmallUTxO {} -> Nothing -- Inherited from Shelley
+  Allegra.ValueNotConservedUTxO {} -> Nothing -- Inherited from Shelley
+  Allegra.WrongNetwork {} -> Nothing -- Inherited from Shelley
+  Allegra.WrongNetworkWithdrawal {} -> Nothing -- Inherited from Shelley
+  Allegra.OutputTooSmallUTxO {} -> Nothing -- Updated
+  Allegra.UpdateFailure {} -> Nothing -- Removed
+  Allegra.OutputBootAddrAttrsTooBig {} -> Nothing -- Inherited from Shelley
+  Allegra.TriesToForgeADA -> Just TriesToForgeADA
+  Allegra.OutputTooBigUTxO {} -> Nothing -- Updated error reporting
 
 instance Inject (AlonzoUtxoPredFailure era) (AlonzoUtxoPredFailure era) where
   inject = id
@@ -747,29 +748,29 @@ instance
 
 instance
   Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era)) =>
-  Inject (ShelleyMAUtxoPredFailure era) (AlonzoUtxoPredFailure era)
+  Inject (AllegraUtxoPredFailure era) (AlonzoUtxoPredFailure era)
   where
   inject = utxoPredFailMaToAlonzo
 
 utxoPredFailMaToAlonzo ::
   Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era)) =>
-  ShelleyMAUtxoPredFailure era ->
+  AllegraUtxoPredFailure era ->
   AlonzoUtxoPredFailure era
-utxoPredFailMaToAlonzo (ShelleyMA.BadInputsUTxO x) = BadInputsUTxO x
-utxoPredFailMaToAlonzo (ShelleyMA.OutsideValidityIntervalUTxO vi slotNo) =
+utxoPredFailMaToAlonzo (Allegra.BadInputsUTxO x) = BadInputsUTxO x
+utxoPredFailMaToAlonzo (Allegra.OutsideValidityIntervalUTxO vi slotNo) =
   OutsideValidityIntervalUTxO vi slotNo
-utxoPredFailMaToAlonzo (ShelleyMA.MaxTxSizeUTxO x y) = MaxTxSizeUTxO x y
-utxoPredFailMaToAlonzo ShelleyMA.InputSetEmptyUTxO = InputSetEmptyUTxO
-utxoPredFailMaToAlonzo (ShelleyMA.FeeTooSmallUTxO c1 c2) = FeeTooSmallUTxO c1 c2
-utxoPredFailMaToAlonzo (ShelleyMA.ValueNotConservedUTxO vc vp) = ValueNotConservedUTxO vc vp
-utxoPredFailMaToAlonzo (ShelleyMA.WrongNetwork x y) = WrongNetwork x y
-utxoPredFailMaToAlonzo (ShelleyMA.WrongNetworkWithdrawal x y) = WrongNetworkWithdrawal x y
-utxoPredFailMaToAlonzo (ShelleyMA.OutputTooSmallUTxO x) = OutputTooSmallUTxO x
-utxoPredFailMaToAlonzo (ShelleyMA.UpdateFailure x) = UtxosFailure (inject x)
-utxoPredFailMaToAlonzo (ShelleyMA.OutputBootAddrAttrsTooBig xs) =
+utxoPredFailMaToAlonzo (Allegra.MaxTxSizeUTxO x y) = MaxTxSizeUTxO x y
+utxoPredFailMaToAlonzo Allegra.InputSetEmptyUTxO = InputSetEmptyUTxO
+utxoPredFailMaToAlonzo (Allegra.FeeTooSmallUTxO c1 c2) = FeeTooSmallUTxO c1 c2
+utxoPredFailMaToAlonzo (Allegra.ValueNotConservedUTxO vc vp) = ValueNotConservedUTxO vc vp
+utxoPredFailMaToAlonzo (Allegra.WrongNetwork x y) = WrongNetwork x y
+utxoPredFailMaToAlonzo (Allegra.WrongNetworkWithdrawal x y) = WrongNetworkWithdrawal x y
+utxoPredFailMaToAlonzo (Allegra.OutputTooSmallUTxO x) = OutputTooSmallUTxO x
+utxoPredFailMaToAlonzo (Allegra.UpdateFailure x) = UtxosFailure (inject x)
+utxoPredFailMaToAlonzo (Allegra.OutputBootAddrAttrsTooBig xs) =
   OutputTooBigUTxO (map (\x -> (0, 0, x)) xs)
-utxoPredFailMaToAlonzo ShelleyMA.TriesToForgeADA = TriesToForgeADA
-utxoPredFailMaToAlonzo (ShelleyMA.OutputTooBigUTxO xs) = OutputTooBigUTxO (map (\x -> (0, 0, x)) xs)
+utxoPredFailMaToAlonzo Allegra.TriesToForgeADA = TriesToForgeADA
+utxoPredFailMaToAlonzo (Allegra.OutputTooBigUTxO xs) = OutputTooBigUTxO (map (\x -> (0, 0, x)) xs)
 
 instance
   Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era)) =>
@@ -798,5 +799,5 @@ utxoPredFailShelleyToAlonzo (Shelley.OutputBootAddrAttrsTooBig outs) =
 instance InjectMaybe (ShelleyUtxoPredFailure era) (AlonzoUtxoPredFailure era) where
   injectMaybe = fromShelleyFailure
 
-instance InjectMaybe (ShelleyMAUtxoPredFailure era) (AlonzoUtxoPredFailure era) where
-  injectMaybe = fromShelleyMAFailure
+instance InjectMaybe (AllegraUtxoPredFailure era) (AlonzoUtxoPredFailure era) where
+  injectMaybe = fromAllegraFailure

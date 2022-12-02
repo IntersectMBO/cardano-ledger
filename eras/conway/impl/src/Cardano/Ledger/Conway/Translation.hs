@@ -12,6 +12,7 @@
 
 module Cardano.Ledger.Conway.Translation where
 
+import Cardano.Ledger.Allegra.Scripts (translateTimelock)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import Cardano.Ledger.Babbage (BabbageEra)
@@ -41,7 +42,6 @@ import Cardano.Ledger.Shelley.API
   )
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD)
-import Cardano.Ledger.ShelleyMA.Timelocks (translateTimelock)
 import Data.Coerce
 import qualified Data.Map.Strict as Map
 

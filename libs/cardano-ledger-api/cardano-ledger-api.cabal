@@ -46,13 +46,14 @@ library
     Cardano.Ledger.Api.UTxO
 
   build-depends:
+    cardano-ledger-allegra,
     cardano-ledger-alonzo,
     cardano-ledger-babbage,
     cardano-ledger-binary,
     cardano-ledger-conway,
     cardano-ledger-core,
+    cardano-ledger-mary,
     cardano-ledger-shelley,
-    cardano-ledger-shelley-ma,
     microlens,
 
 test-suite cardano-ledger-api-test

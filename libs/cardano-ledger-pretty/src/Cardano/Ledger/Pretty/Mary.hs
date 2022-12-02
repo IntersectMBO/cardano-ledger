@@ -6,17 +6,19 @@
 
 module Cardano.Ledger.Pretty.Mary where
 
+import Cardano.Ledger.Allegra.Core
+import Cardano.Ledger.Allegra.Scripts
+import Cardano.Ledger.Allegra.TxAuxData
+import Cardano.Ledger.Allegra.TxBody hiding (TxBody)
 import Cardano.Ledger.Coin (Coin (..))
-import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Mary.TxBody
 import Cardano.Ledger.Mary.Value
-import Cardano.Ledger.Pretty hiding (ppTxBody)
+import Cardano.Ledger.Pretty
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxOut)
-import Cardano.Ledger.ShelleyMA.AuxiliaryData
-import Cardano.Ledger.ShelleyMA.Timelocks
-import Cardano.Ledger.ShelleyMA.TxBody
 import qualified Data.Map as Map
+import Data.Text (Text)
+import Lens.Micro
 import Prettyprinter (hsep, viaShow)
 
 ppPolicyID :: PolicyID c -> PDoc
@@ -73,7 +75,7 @@ ppValidityInterval (ValidityInterval b a) =
 
 instance PrettyA ValidityInterval where prettyA = ppValidityInterval
 
-ppAuxiliaryData :: Era era => PrettyA (Core.Script era) => AllegraTxAuxData era -> PDoc
+ppAuxiliaryData :: Era era => AllegraTxAuxData era -> PDoc
 ppAuxiliaryData (AllegraTxAuxData' m sp) =
   ppRecord
     "AllegraTxAuxData"
@@ -81,37 +83,50 @@ ppAuxiliaryData (AllegraTxAuxData' m sp) =
       ("auxiliaryscripts", ppStrictSeq prettyA sp)
     ]
 
-instance (Era era, PrettyA (Core.Script era)) => PrettyA (AllegraTxAuxData era) where
+instance Era era => PrettyA (AllegraTxAuxData era) where
   prettyA = ppAuxiliaryData
 
-ppTxBody ::
-  ( Core.EraTxOut era,
-    PrettyA (Core.Value era),
-    PrettyA (Core.PParamsUpdate era),
-    Core.TxOut era ~ ShelleyTxOut era
+allegraFields ::
+  ( AllegraEraTxBody era,
+    PrettyA (Value era),
+    PrettyA (PParamsUpdate era)
   ) =>
-  MATxBody era ->
-  PDoc
-ppTxBody (MATxBody i o d w fee vi u m mnt) =
-  ppRecord
-    "TxBody(Mary or Allegra)"
-    [ ("inputs", ppSet ppTxIn i),
-      ("outputs", ppStrictSeq ppTxOut o),
-      ("certificates", ppStrictSeq ppDCert d),
-      ("withdrawals", ppWdrl w),
-      ("txfee", ppCoin fee),
-      ("vldt", ppValidityInterval vi),
-      ("update", ppStrictMaybe ppUpdate u),
-      ("auxDataHash", ppStrictMaybe ppAuxiliaryDataHash m),
-      ("mint", prettyA mnt)
-    ]
+  TxBody era ->
+  [(Text, PDoc)]
+allegraFields txBody =
+  [ ("inputs", ppSet ppTxIn (txBody ^. inputsTxBodyL)),
+    ("outputs", ppStrictSeq ppTxOut (txBody ^. outputsTxBodyL)),
+    ("certificates", ppStrictSeq ppDCert (txBody ^. certsTxBodyL)),
+    ("withdrawals", ppWdrl (txBody ^. wdrlsTxBodyL)),
+    ("txfee", ppCoin (txBody ^. feeTxBodyL)),
+    ("vldt", ppValidityInterval (txBody ^. vldtTxBodyL)),
+    ("update", ppStrictMaybe ppUpdate (txBody ^. updateTxBodyL)),
+    ("auxDataHash", ppStrictMaybe ppAuxiliaryDataHash (txBody ^. auxDataHashTxBodyL))
+  ]
 
 instance
-  ( Core.EraTxOut era,
-    PrettyA (Core.Value era),
-    PrettyA (Core.PParamsUpdate era),
-    Core.TxOut era ~ ShelleyTxOut era
+  ( AllegraEraTxBody era,
+    PrettyA (Value era),
+    PrettyA (PParamsUpdate era),
+    TxOut era ~ ShelleyTxOut era,
+    TxBody era ~ AllegraTxBody era
   ) =>
-  PrettyA (MATxBody era)
+  PrettyA (AllegraTxBody era)
   where
-  prettyA = ppTxBody
+  prettyA txBody = ppRecord "AllegraTxBody" (allegraFields txBody)
+
+instance
+  ( MaryEraTxBody era,
+    PrettyA (Value era),
+    PrettyA (PParamsUpdate era),
+    TxOut era ~ ShelleyTxOut era,
+    TxBody era ~ MaryTxBody era
+  ) =>
+  PrettyA (MaryTxBody era)
+  where
+  prettyA txBody =
+    ppRecord
+      "MaryTxBody"
+      ( allegraFields txBody
+          ++ [("mint", prettyA (txBody ^. mintTxBodyL))]
+      )

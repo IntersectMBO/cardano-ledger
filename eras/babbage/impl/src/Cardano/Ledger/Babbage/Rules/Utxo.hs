@@ -23,6 +23,10 @@ module Cardano.Ledger.Babbage.Rules.Utxo
   )
 where
 
+import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
+import qualified Cardano.Ledger.Allegra.Rules as Allegra
+  ( validateOutsideValidityIntervalUTxO,
+  )
 import Cardano.Ledger.Alonzo.Rules
   ( AlonzoUtxoEvent (..),
     AlonzoUtxoPredFailure (..),
@@ -72,10 +76,6 @@ import Cardano.Ledger.Rules.ValidationMode
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, UtxoEnv)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.ShelleyMA.Rules (ShelleyMAUtxoPredFailure)
-import qualified Cardano.Ledger.ShelleyMA.Rules as ShelleyMA
-  ( validateOutsideValidityIntervalUTxO,
-  )
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), areAllAdaOnly, balance)
 import Cardano.Ledger.Val ((<->))
@@ -151,7 +151,7 @@ instance Inject (BabbageUtxoPredFailure era) (BabbageUtxoPredFailure era) where
 
 instance
   Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era)) =>
-  Inject (ShelleyMAUtxoPredFailure era) (BabbageUtxoPredFailure era)
+  Inject (AllegraUtxoPredFailure era) (BabbageUtxoPredFailure era)
   where
   inject = AlonzoInBabbageUtxoPredFailure . utxoPredFailMaToAlonzo
 
@@ -353,7 +353,7 @@ utxoTransition = do
       allInputs = txBody ^. allInputsTxBodyF
 
   {- ininterval slot (txvld txb) -}
-  runTest $ ShelleyMA.validateOutsideValidityIntervalUTxO slot txBody
+  runTest $ Allegra.validateOutsideValidityIntervalUTxO slot txBody
 
   sysSt <- liftSTS $ asks systemStart
   ei <- liftSTS $ asks epochInfo
