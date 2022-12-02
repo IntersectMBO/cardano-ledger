@@ -15,7 +15,7 @@ where
 
 import Cardano.Ledger.Babbage.TxBody (BabbageEraTxBody (..))
 import Cardano.Ledger.Babbage.TxOut (BabbageTxOut (..))
-import Cardano.Ledger.Conway.Core (ConwayEraTxBody, Vote, GovernanceActionInfo (..))
+import Cardano.Ledger.Conway.Core (ConwayEraTxBody, GovernanceActionInfo (..), Vote)
 import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert (..))
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
 import Cardano.Ledger.Core (EraTxBody (..), EraTxOut (..), Value)

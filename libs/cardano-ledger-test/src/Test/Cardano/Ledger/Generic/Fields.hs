@@ -59,7 +59,7 @@ import Cardano.Ledger.BaseTypes
   )
 import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway.Core (Vote, GovernanceActionInfo (..))
+import Cardano.Ledger.Conway.Core (GovernanceActionInfo (..), Vote)
 import Cardano.Ledger.Conway.Delegation.Certificates (transDCert)
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
 import Cardano.Ledger.Core

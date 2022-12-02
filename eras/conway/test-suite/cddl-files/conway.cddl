@@ -90,6 +90,15 @@ hard_fork_initiation_action = protocol_version
 
 treasury_withdrawals_action = $addr_keyhash => coin
 
+vote =
+  [ governance_action_id : governance_action_id
+  ]
+
+governance_action_id =
+  [ transaction_id : $hash32
+  , governance_action_index : uint
+  ]
+
 required_signers = set<$addr_keyhash>
 
 transaction_input = [ transaction_id : $hash32
