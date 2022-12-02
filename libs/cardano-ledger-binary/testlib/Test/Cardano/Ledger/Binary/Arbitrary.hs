@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -6,7 +7,14 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Binary.Arbitrary (genVersion) where
+module Test.Cardano.Ledger.Binary.Arbitrary
+  ( genVersion,
+    genByteArray,
+    genByteString,
+    genLazyByteString,
+    genShortByteString,
+  )
+where
 
 import Cardano.Crypto.DSIGN.Class hiding (Signable)
 import Cardano.Crypto.Util
@@ -17,17 +25,23 @@ import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..), SlotNo (..), WithOri
 import Cardano.Slotting.Time (SystemStart (..))
 import Codec.CBOR.ByteArray (ByteArray (..))
 import Codec.CBOR.ByteArray.Sliced (SlicedByteArray (..))
+import qualified Data.ByteString as BS (ByteString)
+import qualified Data.ByteString.Lazy as BSL (ByteString, fromStrict)
+#if MIN_VERSION_bytestring(0,11,1)
+import qualified Data.ByteString.Short as SBS
+#else
+import qualified Data.ByteString.Short.Internal as SBS
+#endif
 import qualified Data.Foldable as F
 import Data.IP (IPv4, IPv6, toIPv4w, toIPv6w)
 import Data.Maybe.Strict
-import qualified Data.Primitive.ByteArray as Prim (byteArrayFromListN)
+import qualified Data.Primitive.ByteArray as Prim (ByteArray (..))
 import Data.Proxy (Proxy (..))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.VMap as VMap
 import qualified Data.Vector.Primitive as VP
-import Data.Word
 import GHC.Stack
-import System.Random.Stateful
+import System.Random.Stateful hiding (genByteString, genShortByteString)
 import Test.Cardano.Ledger.Binary.Random (QC (QC))
 import Test.Crypto.Hash ()
 import Test.Crypto.KES ()
@@ -43,7 +57,7 @@ instance Arbitrary SlicedByteArray where
     Positive count <- arbitrary
     NonNegative slack <- arbitrary
     let len = off + count + slack
-    ba <- Prim.byteArrayFromListN len <$> (vector len :: Gen [Word8])
+    ba <- genByteArray len
     pure $ SBA ba off count
 
 instance Arbitrary IPv4 where
@@ -76,21 +90,27 @@ instance
 instance DSIGNAlgorithm v => Arbitrary (VerKeyDSIGN v) where
   arbitrary = deriveVerKeyDSIGN <$> arbitrary
 
+errorInvalidSize :: HasCallStack => Int -> Maybe a -> Gen a
+errorInvalidSize n = maybe (error $ "Impossible: Invalid size " ++ show n) pure
+
 instance DSIGNAlgorithm v => Arbitrary (SignKeyDSIGN v) where
   arbitrary = do
-    let n = sizeSignKeyDSIGN (Proxy @v) :: Word
-    bs <- uniformByteStringM (fromIntegral n) QC
-    maybe (error $ "Impossible: Invalid size " ++ show n) pure $ rawDeserialiseSignKeyDSIGN bs
+    let n = fromIntegral (sizeSignKeyDSIGN (Proxy @v))
+    bs <- genByteString n
+    errorInvalidSize n $ rawDeserialiseSignKeyDSIGN bs
 
 instance DSIGNAlgorithm v => Arbitrary (SigDSIGN v) where
   arbitrary = do
-    let n = sizeSigDSIGN (Proxy @v) :: Word
-    bs <- uniformByteStringM (fromIntegral n) QC
-    maybe (error $ "Impossible: Invalid size " ++ show n) pure $ rawDeserialiseSigDSIGN bs
+    let n = fromIntegral (sizeSigDSIGN (Proxy @v))
+    bs <- genByteString n
+    errorInvalidSize n $ rawDeserialiseSigDSIGN bs
+
+instance DSIGNAlgorithm v => Arbitrary (SignedDSIGN v a) where
+  arbitrary = SignedDSIGN <$> arbitrary
 
 instance VRFAlgorithm v => Arbitrary (OutputVRF v) where
   arbitrary =
-    OutputVRF <$> uniformByteStringM (fromIntegral (sizeOutputVRF (Proxy :: Proxy v))) QC
+    OutputVRF <$> genByteString (fromIntegral (sizeOutputVRF (Proxy :: Proxy v)))
 
 instance
   (ContextVRF v ~ (), Signable v ~ SignableRepresentation, VRFAlgorithm v) =>
@@ -126,3 +146,17 @@ genVersion minVersion maxVersion =
       case mkVersion64 v64 of
         Nothing -> error $ "Impossible: Invalid version generated: " ++ show v64
         Just v -> pure v
+
+genByteString :: Int -> Gen BS.ByteString
+genByteString n = uniformByteStringM (fromIntegral n) QC
+
+genLazyByteString :: Int -> Gen BSL.ByteString
+genLazyByteString n = BSL.fromStrict <$> genByteString n
+
+genShortByteString :: Int -> Gen SBS.ShortByteString
+genShortByteString n = uniformShortByteString (fromIntegral n) QC
+
+genByteArray :: Int -> Gen Prim.ByteArray
+genByteArray n = do
+  SBS.SBS ba <- genShortByteString n
+  pure (Prim.ByteArray ba)

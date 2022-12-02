@@ -145,6 +145,7 @@ test-suite tests
                    , cborg
                    , containers
                    , hedgehog
+                   , hedgehog-quickcheck
                    , hspec
                    , iproute
                    , primitive

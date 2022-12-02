@@ -15,12 +15,13 @@ import Data.Map (Map)
 import Data.Set (Set)
 import Data.Text (Text)
 import qualified Data.Time as Time
-import qualified Data.Time.Calendar.OrdinalDate as Time
 import qualified Data.Vector as V
 import Data.Word (Word16, Word32, Word64, Word8)
 import Hedgehog
 import qualified Hedgehog.Gen as Gen
+import Hedgehog.Gen.QuickCheck (arbitrary)
 import qualified Hedgehog.Range as Range
+import Test.Cardano.Ledger.Binary.Arbitrary ()
 
 {- HLINT ignore "Redundant <$>" -}
 
@@ -87,7 +88,7 @@ genTestStruct =
     <*> (V.fromList <$> Gen.list (Range.constant 0 10) Gen.bool)
     <*> (BS.Lazy.fromStrict <$> Gen.bytes (Range.linear 0 20))
     <*> (BS.Short.toShort <$> Gen.bytes (Range.linear 0 20))
-    <*> genUTCTime
+    <*> arbitrary
 
 instance ToCBOR TestStruct where
   toCBOR ts =
@@ -151,27 +152,6 @@ instance FromCBOR TestStruct where
       <*> fromCBOR
       <*> fromCBOR
       <*> fromCBOR
-
-genUTCTime :: Gen Time.UTCTime
-genUTCTime =
-  Time.UTCTime
-    <$> genDay
-    <*> genDiffTimeOfDay
-  where
-    -- UTC time takes a DiffTime s.t. 0 <= t < 86401s
-    genDiffTimeOfDay :: Gen Time.DiffTime
-    genDiffTimeOfDay =
-      Time.picosecondsToDiffTime
-        <$> Gen.integral (Range.constantFrom 0 0 ((86401e12) - 1))
-
-genDay :: Gen Time.Day
-genDay = Time.fromOrdinalDate <$> genYear <*> genDayOfYear
-
-genYear :: Gen Integer
-genYear = Gen.integral (Range.linear (-10000) 10000)
-
-genDayOfYear :: Gen Int
-genDayOfYear = Gen.int (Range.constantFrom 1 1 366)
 
 prop_roundTripSerialize' :: Property
 prop_roundTripSerialize' = property $ do

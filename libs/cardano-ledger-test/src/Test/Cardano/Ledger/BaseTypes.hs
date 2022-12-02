@@ -10,7 +10,7 @@ import Cardano.Ledger.Binary
 import Data.Aeson
 import Data.ByteString.Lazy (ByteString)
 import Data.Either
-import Data.GenValidity (genValid)
+import Data.GenValidity (GenValid (genValid))
 import Data.GenValidity.Scientific ()
 import Data.Scientific
 import Data.Typeable
@@ -32,6 +32,7 @@ boundedRationalTests ::
     ToCBOR a,
     FromCBOR a,
     Arbitrary a,
+    GenValid a,
     Show a,
     Ord a
   ) =>
@@ -63,23 +64,25 @@ boundedRationalTests badJSONValues =
                       ]
           ],
         testGroup "JSON" $
-          [ testProperty "ToJSON/FromJSON roundtrip up to an epsilon" $ \(br :: a) ->
-              within 500000 $
-                case eitherDecode (encode br) of
-                  Left err -> error err
-                  Right (br' :: a) ->
-                    epsilonMaybeEq 1e-18 (unboundRational br) (unboundRational br'),
-            testProperty "Roundtrip to Scientific and back up to an epsilon" $ \ui ->
-              within 500000 $
-                case fromRationalRepetendLimited 20 (unboundRational ui) of
-                  Left (s, r) -> Just ui === boundRational (toRational s + r)
-                  Right (s, Nothing) ->
-                    classify
-                      True
-                      "no-repeat digits"
-                      (Right ui === boundedFromJSON (encode s))
-                  Right (s, Just r) ->
-                    Just ui === boundRational (toRationalRepetend s r),
+          [ testProperty "ToJSON/FromJSON roundtrip up to an epsilon" $
+              forAll genValid $ \(br :: a) ->
+                within 500000 $
+                  case eitherDecode (encode br) of
+                    Left err -> error err
+                    Right (br' :: a) ->
+                      epsilonMaybeEq 1e-18 (unboundRational br) (unboundRational br'),
+            testProperty "Roundtrip to Scientific and back up to an epsilon" $
+              forAll genValid $ \ui ->
+                within 500000 $
+                  case fromRationalRepetendLimited 20 (unboundRational ui) of
+                    Left (s, r) -> Just ui === boundRational (toRational s + r)
+                    Right (s, Nothing) ->
+                      classify
+                        True
+                        "no-repeat digits"
+                        (Right ui === boundedFromJSON (encode s))
+                    Right (s, Just r) ->
+                      Just ui === boundRational (toRationalRepetend s r),
             testProperty "Roundtrip from valid Scientific and back exactly" $
               within 500000 $
                 forAll genValid $ \(s :: Scientific) ->
@@ -93,7 +96,8 @@ boundedRationalTests badJSONValues =
             ++ [ testCase testName $ expectLeft $ boundedFromJSON invalidInput
                  | (testName, invalidInput) <- badJSONValues
                ],
-        testProperty "CBOR roundtrip" $ \v (br :: a) -> roundTripCborExpectation v br
+        testProperty "CBOR roundtrip" $ \v -> forAll genValid $ \(br :: a) ->
+          roundTripCborExpectation v br
       ]
   where
     boundedFromJSON = eitherDecode :: ByteString -> Either String a
