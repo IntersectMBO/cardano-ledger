@@ -85,7 +85,8 @@ propSetBabbageMinTxOut = testProperty "setBabbageMinTxOut" prop
 
 txOutTests :: TestTree
 txOutTests =
-  testGroup "TxOut" $
+  testGroup
+    "TxOut"
     [ testGroup "ShelleyEra" [propSetShelleyMinTxOut @Shelley],
       testGroup "AllegraEra" [propSetShelleyMinTxOut @Allegra],
       testGroup "MaryEra" [propSetShelleyMinTxOut @Mary],
