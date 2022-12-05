@@ -21,19 +21,24 @@ where
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.LedgerState (
-  AccountState (..),
+import Cardano.Ledger.DPState (
   DPState (..),
   DState (..),
-  EpochState (..),
-  LedgerState (..),
   PState (..),
-  UTxOState (..),
-  keyTxRefunds,
   rewards,
+ )
+import Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits (
+  keyTxRefunds,
   totalTxDeposits,
  )
+import Cardano.Ledger.Shelley.LedgerState.Types (
+  AccountState (..),
+  EpochState (..),
+  LedgerState (..),
+  UTxOState (..),
+ )
 import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), unWdrl)
+import Cardano.Ledger.UMapCompact (View (RewardDeposits), sumDepositView, sumRewardsView)
 import Cardano.Ledger.UTxO (UTxO (..), coinBalance, txouts)
 import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
@@ -71,9 +76,9 @@ totalAdaPotsES (EpochState (AccountState treasury_ reserves_) _ ls _ _ _) =
   where
     UTxOState u deposits fees_ _ _ = lsUTxOState ls
     DPState dstate _ = lsDPState ls
-    rewards_ = fromCompact $ fold (rewards dstate)
+    rewards_ = fromCompact $ sumRewardsView (rewards dstate)
     coins = coinBalance u
-    keyDeposits_ = fold ((dsDeposits . dpsDState . lsDPState) ls)
+    keyDeposits_ = (fromCompact . sumDepositView . RewardDeposits . dsUnified . dpsDState . lsDPState) ls
     poolDeposits_ = fold ((psDeposits . dpsPState . lsDPState) ls)
 
 -- | Calculate the total ada in the epoch state
@@ -115,7 +120,7 @@ data Produced = Produced
 
 instance Show Produced where
   show (Produced (Coin out) (Coin f) (Coin d)) =
-    "Produced(Outputs " ++ show out ++ ", Fees " ++ show f ++ " Deposits " ++ show d ++ ") = " ++ show (out + f + d)
+    "Produced(Outputs " ++ show out ++ ", Fees " ++ show f ++ ", Deposits " ++ show d ++ ") = " ++ show (out + f + d)
 
 -- =========================
 

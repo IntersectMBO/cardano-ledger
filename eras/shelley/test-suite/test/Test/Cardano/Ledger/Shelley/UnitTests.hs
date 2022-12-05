@@ -391,8 +391,9 @@ addReward :: DPState C_Crypto -> Credential 'Staking C_Crypto -> Coin -> DPState
 addReward dp ra c = dp {dpsDState = ds {dsUnified = rewards'}}
   where
     ds = dpsDState dp
-    rewards' = UM.insert ra (UM.compactCoinOrError c) (rewards ds)
+    rewards' = UM.insert ra (UM.RDPair (UM.compactCoinOrError c) (UM.CompactCoin 2)) (rewards ds)
 
+-- Any key deposit works in this test ^
 ledgerEnv :: LedgerEnv C
 ledgerEnv = LedgerEnv (SlotNo 0) minBound pp (AccountState (Coin 0) (Coin 0))
 

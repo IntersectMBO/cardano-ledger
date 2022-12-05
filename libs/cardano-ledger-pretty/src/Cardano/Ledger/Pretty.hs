@@ -174,7 +174,7 @@ import Cardano.Ledger.Slot (
   SlotNo (..),
  )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
-import Cardano.Ledger.UMapCompact (Trip (Triple), UMap (..))
+import Cardano.Ledger.UMapCompact (RDPair (..), Trip (Triple), UMap (..))
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Protocol.TPraos.BHeader (
   BHBody (..),
@@ -419,11 +419,19 @@ class PrettyA t where
 -- =====================================================
 -- Data.UMap
 
+ppRDPair :: RDPair -> PDoc
+ppRDPair (RDPair rew dep) =
+  ppRecord
+    "RDPair"
+    [ ("reward", ppCoin (fromCompact rew))
+    , ("deposit", ppCoin (fromCompact dep))
+    ]
+
 ppTrip :: Trip c -> PDoc
-ppTrip (Triple mcoin set mpool) =
+ppTrip (Triple mpair set mpool) =
   ppSexp
     "Triple"
-    [ ppStrictMaybe ppCoin (fromCompact <$> mcoin)
+    [ ppStrictMaybe ppRDPair mpair
     , ppSet ppPtr set
     , ppStrictMaybe ppKeyHash mpool
     ]
@@ -639,14 +647,13 @@ ppDPState :: DPState c -> PDoc
 ppDPState (DPState d p) = ppRecord "DPState" [("dstate", ppDState d), ("pstate", ppPState p)]
 
 ppDState :: DState c -> PDoc
-ppDState (DState unified future gen irwd deposits) =
+ppDState (DState unified future gen irwd) =
   ppRecord
     "DState"
     [ ("unifiedMap", ppUnifiedMap unified)
     , ("futuregendelegs", ppMap ppFutureGenDeleg ppGenDelegPair future)
     , ("gendelegs", ppGenDelegs gen)
     , ("instantaeousrewards", ppInstantaneousRewards irwd)
-    , ("deposits", ppMap ppCredential ppCoin deposits)
     ]
 
 ppFutureGenDeleg :: FutureGenDeleg c -> PDoc

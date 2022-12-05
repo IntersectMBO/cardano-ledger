@@ -23,6 +23,7 @@ module Cardano.Ledger.Shelley.Rules.Ledger (
   Event,
   PredicateFailure,
   epochFromSlot,
+  depositEqualsObligation,
 )
 where
 
@@ -36,6 +37,7 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (DSignable, Hash)
+import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.Era (ShelleyLEDGER)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState,
@@ -57,6 +59,7 @@ import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
 import Cardano.Ledger.Shelley.Rules.Utxow (ShelleyUTXOW, ShelleyUtxowPredFailure)
 import Cardano.Ledger.Shelley.TxBody (DCert (..), ShelleyEraTxBody (..))
 import Cardano.Ledger.Slot (EpochNo, SlotNo, epochInfoEpoch)
+import Cardano.Ledger.UMapCompact (depositView)
 import Control.DeepSeq (NFData (..))
 import Control.Monad.Reader (Reader)
 import Control.Monad.Trans.Reader (asks)
@@ -157,10 +160,7 @@ epochFromSlot slot = do
   epochInfoEpoch ei slot
 
 instance
-  ( Show (PParams era)
-  , Show (TxOut era)
-  , Show (State (EraRule "PPUP" era))
-  , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
+  ( DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
   , EraTx era
   , ShelleyEraTxBody era
   , Embed (EraRule "DELEGS" era) (ShelleyLEDGER era)
@@ -187,29 +187,11 @@ instance
   initialRules = []
   transitionRules = [ledgerTransition]
 
-  renderAssertionViolation AssertionViolation {avSTS, avMsg, avCtx = (TRC (LedgerEnv slot _ pp _, _, tx)), avState} =
-    "AssertionViolation ("
-      <> avSTS
-      <> "): "
-      <> avMsg
-      <> "\n CERTS\n"
-      <> showTxCerts (tx ^. bodyTxL)
-      <> "\n (slot,PParams) "
-      <> show (slot, pp)
-      <> "\n"
-      <> seq (show avState) "avState"
-      <> "\n Deposits "
-      <> show (utxosDeposited <$> (lsUTxOState <$> avState))
-      <> "\n dsDeposits\n"
-      <> synopsisCoinMap (dsDeposits <$> (dpsDState <$> (lsDPState <$> avState)))
-      <> "\n"
-      <> show (dsDeposits <$> (dpsDState <$> (lsDPState <$> avState)))
-      <> "\n psDeposits\n"
-      <> synopsisCoinMap (psDeposits <$> (dpsPState <$> (lsDPState <$> avState)))
+  renderAssertionViolation = depositEqualsObligation
 
   assertions =
     [ PostCondition
-        "Deposit pot must equal obligation"
+        "Deposit pot must equal obligation (ShelleyLedger)"
         ( \(TRC (_, _, _))
            (LedgerState utxoSt dpstate) ->
               obligationDPState dpstate == utxosDeposited utxoSt
@@ -263,8 +245,7 @@ instance
   wrapEvent = DelegsEvent
 
 instance
-  ( Era era
-  , STS (ShelleyUTXOW era)
+  ( STS (ShelleyUTXOW era)
   , PredicateFailure (EraRule "UTXOW" era) ~ ShelleyUtxowPredFailure era
   , Event (EraRule "UTXOW" era) ~ Event (ShelleyUTXOW era)
   ) =>
@@ -274,3 +255,38 @@ instance
   wrapEvent = UtxowEvent
 
 -- =============================================================
+
+depositEqualsObligation ::
+  ( EraTx era
+  , ShelleyEraTxBody era
+  , Environment t ~ LedgerEnv era
+  , Signal t ~ Tx era
+  , State t ~ LedgerState era
+  , HasField "_keyDeposit" (PParams era) Coin
+  , HasField "_poolDeposit" (PParams era) Coin
+  ) =>
+  AssertionViolation t ->
+  String
+depositEqualsObligation
+  AssertionViolation {avSTS, avMsg, avCtx = (TRC (LedgerEnv slot _ pp _, _, tx)), avState} =
+    let dpstate = lsDPState <$> avState
+        utxo = (utxosUtxo . lsUTxOState) <$> avState
+        txb = tx ^. bodyTxL
+     in "\n\nAssertionViolation ("
+          <> avSTS
+          <> ")\n   "
+          <> avMsg
+          <> "\nCERTS\n"
+          <> showTxCerts txb
+          <> "\n(slot,keyDeposit,poolDeposit) "
+          <> show (slot, getField @"_keyDeposit" pp, getField @"_poolDeposit" pp)
+          <> "\nutxosDeposited = "
+          <> show ((utxosDeposited . lsUTxOState) <$> avState)
+          <> "\nKey Deposits summary = "
+          <> synopsisCoinMap ((depositView . dsUnified . dpsDState . lsDPState) <$> avState)
+          <> "\nPool Deposits summary = "
+          <> synopsisCoinMap ((psDeposits . dpsPState . lsDPState) <$> avState)
+          <> "\nConsumed = "
+          <> show (consumedTxBody txb pp <$> dpstate <*> utxo)
+          <> "\nProduced = "
+          <> show (producedTxBody txb pp <$> dpstate)

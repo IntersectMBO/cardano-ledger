@@ -5,6 +5,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -47,8 +48,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   dsFutureGenDelegs,
   dsGenDelegs,
   dsIRewards,
-  payKeyDeposit,
-  refundKeyDeposit,
   rewards,
  )
 import Cardano.Ledger.Shelley.TxBody (
@@ -70,7 +69,7 @@ import Cardano.Ledger.Slot (
   (*-),
   (+*),
  )
-import Cardano.Ledger.UMapCompact (View (..), fromCompact)
+import Cardano.Ledger.UMapCompact (RDPair (..), View (..), compactCoinOrError, fromCompact)
 import qualified Cardano.Ledger.UMapCompact as UM
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, range, singleton, (∉), (∪), (⨃))
@@ -83,7 +82,7 @@ import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import GHC.Records (HasField)
+import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..))
 
 data DelegEnv era = DelegEnv
@@ -277,21 +276,22 @@ delegationTransition = do
       -- (hk ∉ dom (rewards ds))
       UM.notMember hk (rewards ds) ?! StakeKeyAlreadyRegisteredDELEG hk
       let u1 = dsUnified ds
-          u2 = Rewards u1 UM.∪ (hk, mempty)
+          deposit = compactCoinOrError (getField @"_keyDeposit" pp)
+          u2 = RewardDeposits u1 UM.∪ (hk, RDPair (UM.CompactCoin 0) deposit)
           u3 = Ptrs u2 UM.∪ (ptr, hk)
-      pure (payKeyDeposit hk pp (ds {dsUnified = u3}))
+      pure (ds {dsUnified = u3})
     DCertDeleg (DeRegKey hk) -> do
       -- note that pattern match is used instead of cwitness, as in the spec
       -- (hk ∈ dom (rewards ds))
       UM.member hk (rewards ds) ?! StakeKeyNotRegisteredDELEG hk
-      let rewardCoin = UM.lookup hk (rewards ds)
+      let rewardCoin = rdReward <$> UM.lookup hk (rewards ds)
       rewardCoin == Just mempty ?! StakeKeyNonZeroAccountBalanceDELEG (fromCompact <$> rewardCoin)
 
       let u0 = dsUnified ds
-          u1 = Set.singleton hk UM.⋪ Rewards u0
+          u1 = Set.singleton hk UM.⋪ RewardDeposits u0
           u2 = Set.singleton hk UM.⋪ Delegations u1
           u3 = Ptrs u2 UM.⋫ Set.singleton hk
-          u4 = refundKeyDeposit hk (ds {dsUnified = u3})
+          u4 = ds {dsUnified = u3}
       pure u4
     DCertDeleg (Delegate (Delegation hk dpool)) -> do
       -- note that pattern match is used instead of cwitness and dpool, as in the spec

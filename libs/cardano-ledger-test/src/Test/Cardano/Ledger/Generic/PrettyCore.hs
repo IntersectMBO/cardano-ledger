@@ -1006,14 +1006,13 @@ plutusSummary (Alonzo _) (TimelockScript x) = timelockSummary x
 plutusSummary other _ = ppString ("Plutus script in era " ++ show other ++ "???")
 
 dStateSummary :: DState c -> PDoc
-dStateSummary (DState umap future (GenDelegs current) irwd deposit) =
+dStateSummary (DState umap future (GenDelegs current) irwd) =
   ppRecord
     "DState"
     [ ("Unified Reward Map", uMapSummary umap)
     , ("Future genesis key delegations", ppInt (Map.size future))
     , ("Genesis key delegations", ppInt (Map.size current))
     , ("Instantaneous Rewards", instantSummary irwd)
-    , ("deposit", ppInt (Map.size deposit))
     ]
 
 instantSummary :: InstantaneousRewards c -> PDoc
@@ -1030,7 +1029,7 @@ uMapSummary :: UM.UMap c -> PDoc
 uMapSummary umap =
   ppRecord
     "UMap"
-    [ ("Reward Map", ppInt (UM.size (UM.Rewards umap)))
+    [ ("Reward Map", ppInt (UM.size (UM.RewardDeposits umap)))
     , ("Delegations Map", ppInt (UM.size (UM.Delegations umap)))
     , ("Ptrs Map", ppInt (UM.size (UM.Ptrs umap)))
     ]

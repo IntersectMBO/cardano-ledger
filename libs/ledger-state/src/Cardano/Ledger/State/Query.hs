@@ -21,6 +21,7 @@ import Cardano.Ledger.State.UTxO
 import Cardano.Ledger.State.Vector
 import qualified Cardano.Ledger.TxIn as TxIn
 import Cardano.Ledger.UMapCompact (delView, ptrView, rewView, unify)
+import qualified Cardano.Ledger.UMapCompact as UM
 import qualified Cardano.Ledger.UTxO as Shelley
 import Conduit
 import Control.Foldl (Fold (..))
@@ -530,7 +531,11 @@ getDStateNoSharing dstateId = do
       rws <- selectList [RewardDstateId ==. dstateId] []
       forM rws $ \(Entity _ Reward {..}) -> do
         Credential credential <- getJust rewardCredentialId
-        pure (Keys.coerceKeyRole credential, rewardCoin)
+        pure (Keys.coerceKeyRole credential, UM.RDPair (UM.compactCoinOrError rewardCoin) (UM.CompactCoin 0))
+  -- FIXME the deposit is not accounted for ^
+  -- The PR ts-keydeposit-intoUMap breaks this tool since it changes the DPState data type.
+  -- https://github.com/input-output-hk/cardano-ledger/pull/3217
+  -- All the FIXME-s in this file will have to be addressed in a follow on PR
   delegations <-
     Map.fromList <$> do
       ds <- selectList [DelegationDstateId ==. dstateId] []
@@ -568,7 +573,6 @@ getDStateNoSharing dstateId = do
             , deltaReserves = dStateIrDeltaReserves
             , deltaTreasury = dStateIrDeltaTreasury
             }
-      , dsDeposits = Map.empty -- FIXME, HELP ME FIX THIS
       }
 
 getDStateWithSharing ::
@@ -580,7 +584,8 @@ getDStateWithSharing dstateId = do
       rws <- selectList [RewardDstateId ==. dstateId] []
       forM rws $ \(Entity _ Reward {..}) -> do
         Credential credential <- getJust rewardCredentialId
-        pure (Keys.coerceKeyRole credential, rewardCoin)
+        pure (Keys.coerceKeyRole credential, UM.RDPair (UM.compactCoinOrError rewardCoin) (UM.CompactCoin 0))
+  -- FIXME the deposit is not accounted for ^
   delegations <-
     Map.fromList <$> do
       ds <- selectList [DelegationDstateId ==. dstateId] []
@@ -622,7 +627,6 @@ getDStateWithSharing dstateId = do
             , deltaReserves = dStateIrDeltaReserves
             , deltaTreasury = dStateIrDeltaTreasury
             }
-      , dsDeposits = Map.empty -- FIXME, HELP ME FIX THIS TOO
       }
 
 loadDStateNoSharing :: MonadUnliftIO m => T.Text -> m (Shelley.DState C)

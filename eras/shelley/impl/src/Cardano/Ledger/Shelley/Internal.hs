@@ -4,7 +4,10 @@
 --   Feel free to add new things as they are developed.
 module Cardano.Ledger.Shelley.Internal (
   trace,
+  totalAdaPotsES,
   compareAdaPots,
+  producedTxBody,
+  consumedTxBody,
   showCred,
   showIR,
   showKeyHash,
@@ -19,7 +22,12 @@ module Cardano.Ledger.Shelley.Internal (
 )
 where
 
-import Cardano.Ledger.Shelley.AdaPots (AdaPots (..))
+import Cardano.Ledger.Shelley.AdaPots (
+  AdaPots (..),
+  consumedTxBody,
+  producedTxBody,
+  totalAdaPotsES,
+ )
 import Cardano.Ledger.Shelley.Rules.Reports (
   showCred,
   showIR,

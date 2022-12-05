@@ -226,7 +226,7 @@ resolveActiveIncrementalPtrs isActive ptrMap_ (IStake credStake ptrStake) =
             else ans
 
 -- | Aggregate active stake by merging two maps. The triple map from the
---   UMap, and the IncrementalStake Only keep the active stake. Active can
+--   UMap, and the IncrementalStake. Only keep the active stake. Active can
 --   be determined if there is a (SJust deleg) in the Triple.  This is step2 =
 --   aggregate (dom activeDelegs ◁ rewards) step1
 aggregateActiveStake :: Ord k => Map k (Trip c) -> Map k Coin -> Map k Coin
@@ -234,13 +234,16 @@ aggregateActiveStake =
   Map.mergeWithKey
     -- How to merge the ranges of the two maps where they have a common key. Below
     -- 'coin1' and 'coin2' have the same key, '_k', and the stake is active if the delegation is SJust
-    (\_k trip coin2 -> (<> coin2) <$> (fromCompact <$> UM.tripRewardActiveDelegation trip))
+    (\_k trip coin2 -> extractAndAdd coin2 <$> UM.tripRewardActiveDelegation trip)
     -- what to do when a key appears just in 'tripmap', we only add the coin if the key is active
-    (Map.mapMaybe (\trip -> fromCompact <$> UM.tripRewardActiveDelegation trip))
+    (Map.mapMaybe (\trip -> fromCompact . UM.rdReward <$> UM.tripRewardActiveDelegation trip))
     -- what to do when a key is only in 'incremental', keep everything, because at
     -- the call site of aggregateActiveStake, the arg 'incremental' is filtered by
     -- 'resolveActiveIncrementalPtrs' which guarantees that only active stake is included.
     id
+  where
+    extractAndAdd :: Coin -> UM.RDPair -> Coin
+    extractAndAdd coin (UM.RDPair rew _dep) = coin <> fromCompact rew
 
 -- =====================================================
 -- Part 3 Apply a reward update, in NewEpoch rule
@@ -270,15 +273,20 @@ applyRUpdFiltered ::
   (EpochState era, FilteredRewards era)
 applyRUpdFiltered
   ru
-  es@(EpochState as ss ls pr pp _nm) =
-    (epochStateAns, filteredRewards)
+  es@(EpochState as ss ls pr pp _nm) = (epochStateAns, filteredRewards)
     where
-      utxoState_ = lsUTxOState ls
-      delegState = lsDPState ls
       !epochStateAns = EpochState as' ss ls' pr pp nm'
-      dState = dpsDState delegState
-      filteredRewards@FilteredRewards {frRegistered, frTotalUnregistered} = filterAllRewards (rs ru) es
+      utxoState_ = lsUTxOState ls
+      dpState = lsDPState ls
+      dState = dpsDState dpState
+      prevPParams = esPrevPp es
+      filteredRewards@FilteredRewards
+        { frRegistered
+        , frTotalUnregistered
+        } = filterAllRewards' (rs ru) prevPParams dState
+      -- Note: domain filteredRewards is a subset of domain (rewards dstate)
       registeredAggregated = aggregateCompactRewards pp frRegistered
+      -- Note: domain registeredAggregated is a subset of domain (rewards dstate)
       as' =
         as
           { asTreasury = addDeltaCoin (asTreasury as) (deltaT ru) <> frTotalUnregistered
@@ -289,7 +297,7 @@ applyRUpdFiltered
           { lsUTxOState =
               utxoState_ {utxosFees = utxosFees utxoState_ `addDeltaCoin` deltaF ru}
           , lsDPState =
-              delegState
+              dpState
                 { dpsDState =
                     dState
                       { dsUnified = rewards dState UM.∪+ registeredAggregated
@@ -303,35 +311,48 @@ data FilteredRewards era = FilteredRewards
     -- they are never used, so this keeps them from being evaluated.
 
     frRegistered :: !(Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))))
-  -- ^ These are registered, but in the ShelleyEra they are ignored because of backward compatibility
-  --  in other Eras, this field will be the Map.empty
+  -- ^ These are registered, in the current Unified map of the DPState
   , frShelleyIgnored :: Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era)))
+  -- ^ These are registered, but ignored in the ShelleyEra because of backward
+  --   compatibility in non-Shelley Eras, this field will be Map.empty
   , frUnregistered :: Set (Credential 'Staking (EraCrypto era))
+  -- ^ These are NOT registered in the current Unified map of the DPState
   , frTotalUnregistered :: Coin
+  -- ^ Total Coin of the unregistered rewards. These will end up in the Treasury or Reserves.
   }
 
 instance NFData (FilteredRewards era) where
   rnf (FilteredRewards a b c d) = a `deepseq` b `deepseq` c `deepseq` rnf d
 
--- | Return aggregated information from a reward mapping from the previous Epoch
+-- | Return aggregated information from a reward mapping from the previous Epoch.
 --   Breaks the mapping into several parts captured by the 'Filtered' data type.
-filterAllRewards ::
+--   Note that the 'registered' field of the returned (FilteredRewards) is a Map
+--   whose domain is always a subset of the Rewards View of the Unified Map in the DState of the EpochState.
+--   'prevPParams' is the ProtocolParams of the previous Epoch
+--   'rs' is the rewards mapping of the RewardUpdate from that previous Epoch
+filterAllRewards' ::
   ( HasField "_protocolVersion" (PParams era) ProtVer
   ) =>
   Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))) ->
-  EpochState era ->
+  PParams era ->
+  DState (EraCrypto era) ->
   FilteredRewards era
-filterAllRewards rs' (EpochState _as _ss ls pr _pp _nm) =
-  -- pr is the ProtocolParams of the previous Epoch
-  -- rs' is the rewards mapping of the RewardUpdate from that previous Epoch
+filterAllRewards' rs prevPParams dState =
   FilteredRewards registered shelleyIgnored unregistered totalUnregistered
   where
-    delegState = lsDPState ls
-    dState = dpsDState delegState
-    (regRU, unregRU) =
-      Map.partitionWithKey
-        (\k _ -> member k (rewards dState)) -- The rewards view of the unified map of DState
-        rs'
-    totalUnregistered = fold $ aggregateRewards pr unregRU
+    (regRU, unregRU) = Map.partitionWithKey (\k _ -> member k (rewards dState)) rs
+    -- Partition on memebership in the rewards view of the unified map of DState
+    -- Note that only registered rewards appear in 'regRU' because of this 'member' check.
+    totalUnregistered = fold $ aggregateRewards prevPParams unregRU
     unregistered = Map.keysSet unregRU
-    (registered, shelleyIgnored) = filterRewards pr regRU
+    (registered, shelleyIgnored) = filterRewards prevPParams regRU
+
+filterAllRewards ::
+  HasField "_protocolVersion" (PParams era) ProtVer =>
+  Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))) ->
+  EpochState era ->
+  FilteredRewards era
+filterAllRewards mp epochstate = filterAllRewards' mp prevPP dState
+  where
+    prevPP = esPrevPp epochstate
+    dState = (dpsDState . lsDPState . esLState) epochstate

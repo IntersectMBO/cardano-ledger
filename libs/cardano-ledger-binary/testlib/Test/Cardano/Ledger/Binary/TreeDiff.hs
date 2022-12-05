@@ -11,6 +11,7 @@ module Test.Cardano.Ledger.Binary.TreeDiff (
   showHexBytesGrouped,
   expectExprEqual,
   expectExprEqualWithMessage,
+  assertExprEqualWithMessage,
 )
 where
 
@@ -24,6 +25,7 @@ import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Lazy as BSL
 import Data.TreeDiff
 import Test.Hspec (Expectation, HasCallStack, expectationFailure)
+import Test.Tasty.HUnit (Assertion, assertFailure)
 
 --------------------------------------------------------------------------------
 --  Diffing and pretty showing CBOR
@@ -98,8 +100,16 @@ showHexBytesGrouped bs =
 expectExprEqual :: (Eq a, ToExpr a) => a -> a -> Expectation
 expectExprEqual x y = expectExprEqualWithMessage "Expected two values to be equal:" x y
 
+-- | Use this with HSpec, but with Tasty use 'assertExprEqualWithMessage' below
 expectExprEqualWithMessage :: (ToExpr a, Eq a, HasCallStack) => [Char] -> a -> a -> Expectation
 expectExprEqualWithMessage message expected actual =
   unless (actual == expected) (expectationFailure msg)
+  where
+    msg = (if null message then "" else message ++ "\n") ++ diffExpr expected actual
+
+-- | Use this with Tasty, but with HSpec use 'expectExprEqualWithMessage' above
+assertExprEqualWithMessage :: (ToExpr a, Eq a, HasCallStack) => [Char] -> a -> a -> Assertion
+assertExprEqualWithMessage message expected actual =
+  unless (actual == expected) (assertFailure msg)
   where
     msg = (if null message then "" else message ++ "\n") ++ diffExpr expected actual

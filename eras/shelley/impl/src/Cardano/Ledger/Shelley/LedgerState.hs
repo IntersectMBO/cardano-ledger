@@ -52,9 +52,7 @@ module Cardano.Ledger.Shelley.LedgerState (
 
   -- * DelegationState
   keyTxRefunds,
-  payKeyDeposit,
   payPoolDeposit,
-  refundKeyDeposit,
   refundPoolDeposit,
   totalTxDeposits,
   obligationDPState,

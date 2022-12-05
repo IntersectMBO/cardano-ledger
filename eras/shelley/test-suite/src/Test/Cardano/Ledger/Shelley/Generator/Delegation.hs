@@ -259,9 +259,9 @@ genDeRegKeyCert Constants {frequencyKeyCredDeReg, frequencyScriptCredDeReg} keys
              in ((&&) <$> registered <*> zeroRewards) cred
         )
         scripts
-    zeroRewards k =
-      UM.CompactCoin 0
-        == UM.findWithDefault (UM.CompactCoin 1) (getRwdCred $ mkRwdAcnt Testnet k) (rewards dState)
+    zeroRewards k = case UM.lookup (getRwdCred $ mkRwdAcnt Testnet k) (rewards dState) of
+      Nothing -> False
+      Just (UM.RDPair ccoin _) -> ccoin == UM.CompactCoin 0
 
 -- | Generate a new delegation certificate by picking a registered staking
 -- credential and pool. The delegation is witnessed by the delegator's

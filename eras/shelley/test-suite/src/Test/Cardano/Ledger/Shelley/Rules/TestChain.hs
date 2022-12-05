@@ -97,7 +97,7 @@ import Cardano.Ledger.Shelley.Rules.Reports (
 import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.TreeDiff (diffExpr, ediffEq)
 import Cardano.Ledger.TxIn (TxIn (..))
-import Cardano.Ledger.UMapCompact (sumCompactCoin)
+import Cardano.Ledger.UMapCompact (depositView, sumRewardsView)
 import qualified Cardano.Ledger.UMapCompact as UM
 import Cardano.Ledger.UTxO (UTxO (..), coinBalance, txins, txouts)
 import Cardano.Ledger.Val ((<+>), (<->))
@@ -512,8 +512,8 @@ checkWithdrawlBound SourceSignalTarget {source, signal, target} =
   where
     rewardDelta :: Coin
     rewardDelta =
-      fromCompact (sumCompactCoin (rewards . dpsDState . lsDPState . esLState . nesEs . chainNes $ source))
-        <-> fromCompact (sumCompactCoin (rewards . dpsDState . lsDPState . esLState . nesEs . chainNes $ target))
+      fromCompact (sumRewardsView (rewards . dpsDState . lsDPState . esLState . nesEs . chainNes $ source))
+        <-> fromCompact (sumRewardsView (rewards . dpsDState . lsDPState . esLState . nesEs . chainNes $ target))
 
 -- | If we are not at an Epoch Boundary, then (Utxo + Deposits)
 -- increases by Withdrawals minus Fees (for all transactions in a block)
@@ -612,8 +612,8 @@ potsSumIncreaseByRewardsPerTx SourceSignalTarget {source = chainSt, signal = blo
         } =
         (coinBalance u' <+> d' <+> f')
           <-> (coinBalance u <+> d <+> f)
-          === UM.fromCompact (fold (UM.unUnify (UM.Rewards umap1)))
-          <-> UM.fromCompact (fold (UM.unUnify (UM.Rewards umap2)))
+          === (UM.fromCompact (sumRewardsView (UM.RewardDeposits umap1)))
+          <-> (UM.fromCompact (sumRewardsView (UM.RewardDeposits umap2)))
 
 -- | The Rewards pot decreases by the sum of withdrawals in a transaction
 potsRewardsDecreaseByWdrlsPerTx ::
@@ -630,7 +630,7 @@ potsRewardsDecreaseByWdrlsPerTx SourceSignalTarget {source = chainSt, signal = b
       map rewardsDecreaseByWdrls $
         sourceSignalTargets ledgerTr
   where
-    rewardsSum = UM.fromCompact . fold . rewards . dpsDState
+    rewardsSum = UM.fromCompact . sumRewardsView . rewards . dpsDState
     (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
     rewardsDecreaseByWdrls
       SourceSignalTarget
@@ -940,7 +940,7 @@ nonNegativeDeposits SourceSignalTarget {source = chainSt} =
       UTxOState {utxosDeposited = d} = (lsUTxOState . esLState) es
    in counterexample ("nonNegativeDeposits: " ++ show d) (d >= mempty)
 
--- | Check that the sum of dsDeposits and the psDepoits are equal to the utsosDeposits
+-- | Check that the sum of key Deposits (in the UMap) and the pool Depoits (in psDeposits) are equal to the utsosDeposits
 depositInvariant ::
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -948,13 +948,13 @@ depositInvariant SourceSignalTarget {source = chainSt} =
   let LedgerState {lsUTxOState = utxost, lsDPState = DPState dstate pstate} = (esLState . nesEs . chainNes) chainSt
       allDeposits = utxosDeposited utxost
       sumCoin m = Map.foldl' (<+>) (Coin 0) m
-      keyDeposits = sumCoin (dsDeposits dstate)
+      keyDeposits = (UM.fromCompact . UM.sumDepositView . UM.RewardDeposits . dsUnified) dstate
       poolDeposits = sumCoin (psDeposits pstate)
    in counterexample
         ( unlines
             [ "Deposit invariant fails"
             , "All deposits = " ++ show allDeposits
-            , "Key deposits = " ++ synopsisCoinMap (Just (dsDeposits dstate))
+            , "Key deposits = " ++ synopsisCoinMap (Just (depositView (dsUnified dstate)))
             , "Pool deposits = " ++ synopsisCoinMap (Just (psDeposits pstate))
             ]
         )
@@ -965,8 +965,8 @@ rewardDepositDomainInvariant ::
   Property
 rewardDepositDomainInvariant SourceSignalTarget {source = chainSt} =
   let LedgerState {lsDPState = DPState dstate _} = (esLState . nesEs . chainNes) chainSt
-      rewardDomain = UM.domain (UM.Rewards (dsUnified dstate))
-      depositDomain = Map.keysSet (dsDeposits dstate)
+      rewardDomain = UM.domain (UM.RewardDeposits (dsUnified dstate))
+      depositDomain = Map.keysSet (depositView (dsUnified dstate))
    in counterexample
         ( unlines
             [ "Reward-Deposit domain invariant fails"

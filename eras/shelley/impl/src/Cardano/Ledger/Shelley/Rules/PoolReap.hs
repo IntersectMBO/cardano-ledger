@@ -38,7 +38,7 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.TxBody (RewardAcnt, getRwdCred, ppRewardAcnt)
 import Cardano.Ledger.Slot (EpochNo (..))
-import Cardano.Ledger.UMapCompact (View (Delegations, Rewards), compactCoinOrError)
+import Cardano.Ledger.UMapCompact (View (Delegations, RewardDeposits), compactCoinOrError)
 import qualified Cardano.Ledger.UMapCompact as UM
 import Cardano.Ledger.Val ((<+>), (<->))
 import Control.SetAlgebra (dom, eval, setSingleton, (⋪), (▷), (◁))
@@ -101,7 +101,7 @@ instance
   transitionRules = [poolReapTransition]
   assertions =
     [ PostCondition
-        "Deposit pot must equal obligation"
+        "Deposit pot must equal obligation (PoolReap)"
         ( \(TRC (_, _, _)) st ->
             obligationDPState (DPState (prDState st) (prPState st)) == utxosDeposited (prUTxOSt st)
         )
@@ -166,7 +166,7 @@ poolReapTransition = do
       us {utxosDeposited = utxosDeposited us <-> (unclaimed <+> refunded)}
       a {asTreasury = asTreasury a <+> unclaimed}
       ( let u0 = dsUnified ds
-            u1 = Rewards u0 UM.∪+ Map.map compactCoinOrError refunds
+            u1 = RewardDeposits u0 UM.∪+ Map.map compactCoinOrError refunds
             u2 = (Delegations u1 UM.⋫ retired)
          in ds {dsUnified = u2}
       )

@@ -15,6 +15,7 @@ import Test.Cardano.Ledger.Shelley.SafeHash (safeHashTest)
 import qualified Test.Cardano.Ledger.Shelley.Serialisation as Serialisation
 import Test.Cardano.Ledger.Shelley.UnitTests (unitTests)
 import Test.Tasty
+import Test.Tasty.Ingredients.ConsoleReporter (UseColor (Always))
 import Test.TestScenario (TestScenario (..), mainWithTestScenario)
 
 tests :: TestTree
@@ -25,19 +26,20 @@ tests = askOption $ \case
 
 mainTests :: TestTree
 mainTests =
-  testGroup
-    "Ledger with Delegation"
-    [ depositTests @C
-    , minimalPropertyTests @C @(ShelleyLEDGER C)
-    , rewardTests
-    , Serialisation.tests 5
-    , chainExamples
-    , multisigExamples
-    , testTickF
-    , unitTests
-    , prettyTest
-    , safeHashTest
-    ]
+  localOption Always $
+    testGroup
+      "Ledger with Delegation"
+      [ depositTests @C
+      , minimalPropertyTests @C @(ShelleyLEDGER C)
+      , rewardTests
+      , Serialisation.tests 5
+      , chainExamples
+      , multisigExamples
+      , testTickF
+      , unitTests
+      , prettyTest
+      , safeHashTest
+      ]
 
 nightlyTests :: TestTree
 nightlyTests =

@@ -177,7 +177,7 @@ epochTransition = do
   let
     -- At the epoch boundary refunds are made, so we need to change what
     -- the utxosDeposited field is. The other two places where deposits are
-    -- kept (dsDeposits of DState and psDeposits of PState) are adjusted by
+    -- kept (dsUnified of DState and psDeposits of PState) are adjusted by
     -- the rules, So we can recompute the utxosDeposited field using adjustedDPState
     -- since we have the invariant that: obligationDPState dpstate == utxosDeposited utxostate
     Coin oblgNew = obligationDPState adjustedDPstate
