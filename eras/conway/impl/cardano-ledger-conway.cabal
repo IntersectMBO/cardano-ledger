@@ -10,7 +10,13 @@ license:             Apache-2.0
 author:              IOHK
 maintainer:          operations@iohk.io
 category:            Network
-build-type:          Simple
+build-type:          Custom
+
+custom-setup
+  setup-depends:
+    , base           >=4 && <5
+    , Cabal
+    , cabal-doctest  ^>=1
 
 source-repository head
   type:     git
@@ -62,3 +68,17 @@ library
                 cardano-strict-containers,
   hs-source-dirs:
     src
+  
+test-suite doctests
+  hs-source-dirs:    doctests
+  x-doctest-options: --no-magic
+  type:              exitcode-stdio-1.0
+  main-is:           Doctests.hs
+  ghc-options:       -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+    , base     >=4.7 && <5
+    , doctest
+    , cardano-ledger-conway
+
+  default-language:  Haskell2010
+

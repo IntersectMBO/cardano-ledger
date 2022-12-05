@@ -6,7 +6,13 @@ synopsis:            Test helpers from cardano-ledger-shelley exposed to other p
 license:             Apache-2.0
 author:              IOHK
 maintainer:          operations@iohk.io
-build-type:          Simple
+build-type:          Custom
+
+custom-setup
+  setup-depends:
+    , base           >=4 && <5
+    , Cabal
+    , cabal-doctest  ^>=1
 
 data-files:
   cddl-files/shelley.cddl
@@ -244,3 +250,17 @@ benchmark mainbench
       -threaded
       -rtsopts
       -O2
+  
+test-suite doctests
+  hs-source-dirs:    doctests
+  x-doctest-options: --no-magic
+  type:              exitcode-stdio-1.0
+  main-is:           Doctests.hs
+  ghc-options:       -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+    , base     >=4.7 && <5
+    , doctest
+    , cardano-ledger-shelley-test
+
+  default-language:  Haskell2010
+
