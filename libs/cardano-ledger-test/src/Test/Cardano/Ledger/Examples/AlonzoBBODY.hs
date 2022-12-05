@@ -83,6 +83,8 @@ import Cardano.Ledger.Shelley.TxBody
     Wdrl (..),
   )
 import Cardano.Ledger.TxIn (TxIn (..))
+import Cardano.Ledger.UMapCompact (View (Rewards))
+import qualified Cardano.Ledger.UMapCompact as UM
 import Cardano.Ledger.UTxO (makeWitnessVKey)
 import Cardano.Ledger.Val (inject, (<+>))
 import Cardano.Slotting.Slot (SlotNo (..))
@@ -181,7 +183,7 @@ initialBBodyState pf utxo =
     dpstate =
       def
         { dpsDState =
-            def {dsUnified = UM.insert (scriptStakeCredSuceed pf) (Coin 1000) (Rewards UM.empty)}
+            def {dsUnified = UM.insert (scriptStakeCredSuceed pf) (UM.CompactCoin 1000) (Rewards UM.empty)}
         }
 
 testAlonzoBlock ::

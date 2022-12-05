@@ -58,8 +58,9 @@ import Cardano.Ledger.Shelley.API
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState (availableAfterMIR, rewards)
 import Cardano.Ledger.Slot (EpochNo (EpochNo), SlotNo)
+import qualified Cardano.Ledger.UMapCompact as UM
 import Control.Monad (replicateM)
-import Control.SetAlgebra (dom, domain, eval, (∈), (∉))
+import Control.SetAlgebra (dom, domain, eval, (∈))
 import Data.Foldable (fold)
 import qualified Data.List as List
 import Data.Map.Strict (Map)
@@ -69,7 +70,6 @@ import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set ((\\))
 import qualified Data.Set as Set
-import qualified Data.UMap as UM
 import GHC.Records (HasField (..))
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
@@ -203,7 +203,7 @@ genRegKeyCert
       ]
     where
       scriptToCred' = ScriptHashObj . hashScript @era
-      notRegistered k = eval (k ∉ dom (rewards delegSt))
+      notRegistered k = UM.notMember k (rewards delegSt)
       availableKeys = filter (notRegistered . toCred . snd) keys
       availableScripts = filter (notRegistered . scriptToCred' . snd) scripts
 
@@ -240,7 +240,7 @@ genDeRegKeyCert Constants {frequencyKeyCredDeReg, frequencyScriptCredDeReg} keys
     ]
   where
     scriptToCred' = ScriptHashObj . hashScript @era
-    registered k = eval (k ∈ dom (rewards dState))
+    registered k = UM.member k (rewards dState)
     availableKeys =
       filter
         ( \(_, k) ->
@@ -256,7 +256,8 @@ genDeRegKeyCert Constants {frequencyKeyCredDeReg, frequencyScriptCredDeReg} keys
         )
         scripts
     zeroRewards k =
-      Coin 0 == UM.findWithDefault (Coin 1) (getRwdCred $ mkRwdAcnt Testnet k) (rewards dState)
+      UM.CompactCoin 0
+        == UM.findWithDefault (UM.CompactCoin 1) (getRwdCred $ mkRwdAcnt Testnet k) (rewards dState)
 
 -- | Generate a new delegation certificate by picking a registered staking
 -- credential and pool. The delegation is witnessed by the delegator's
@@ -308,7 +309,7 @@ genDelegation
         where
           scriptCert =
             DCertDeleg (Delegate (Delegation (scriptToCred' delegatorScript) poolKey))
-      registeredDelegate k = eval (k ∈ dom (rewards (dpsDState dpState)))
+      registeredDelegate k = UM.member k (rewards (dpsDState dpState))
       availableDelegates = filter (registeredDelegate . toCred . snd) keys
       availableDelegatesScripts =
         filter (registeredDelegate . scriptToCred' . snd) scripts

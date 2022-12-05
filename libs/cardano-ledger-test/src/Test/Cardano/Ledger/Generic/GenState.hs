@@ -102,6 +102,7 @@ import Cardano.Ledger.Shelley.LedgerState
 import qualified Cardano.Ledger.Shelley.Scripts as Shelley (MultiSig (..))
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..))
 import Cardano.Ledger.TxIn (TxId, TxIn (..))
+import qualified Cardano.Ledger.UMapCompact as UM
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.Slot (SlotNo (..))
@@ -116,7 +117,6 @@ import Data.Maybe.Strict (StrictMaybe (SJust, SNothing))
 import qualified Data.Sequence.Strict as Seq
 import Data.Set (Set)
 import qualified Data.Set as Set
-import qualified Data.UMap as UMap
 import GHC.Word (Word64)
 import Numeric.Natural
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
@@ -693,7 +693,7 @@ instance era ~ BabbageEra Mock => Show (GenState era) where
 initialLedgerState :: forall era. Reflect era => GenState era -> LedgerState era
 initialLedgerState gstate = LedgerState utxostate dpstate
   where
-    umap = UMap.unify (gsInitialRewards gstate) (gsInitialDelegations gstate) Map.empty
+    umap = UM.unify (gsInitialRewards gstate) (gsInitialDelegations gstate) Map.empty
     utxostate = smartUTxOState (UTxO (gsInitialUtxo gstate)) deposited (Coin 0) (pPUPStateZero @era)
     dpstate = DPState dstate pstate
     dstate =

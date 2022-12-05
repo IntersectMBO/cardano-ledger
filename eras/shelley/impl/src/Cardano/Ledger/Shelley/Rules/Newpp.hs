@@ -34,6 +34,8 @@ import Cardano.Ledger.Shelley.PParams
   ( ProposedPPUpdates (..),
     emptyPPPUpdates,
   )
+import Cardano.Ledger.Shelley.TxBody (MIRPot (..))
+import Cardano.Ledger.UMapCompact (rewView)
 import Control.State.Transition
   ( STS (..),
     TRC (..),

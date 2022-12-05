@@ -18,7 +18,7 @@ module Test.Cardano.Ledger.Shelley.Rules.TestDeleg
 where
 
 import Cardano.Ledger.BaseTypes (ProtVer)
-import Cardano.Ledger.Coin (addDeltaCoin, pattern Coin)
+import Cardano.Ledger.Coin (addDeltaCoin)
 import qualified Cardano.Ledger.Core as Core (PParams)
 import Cardano.Ledger.Shelley.API (ShelleyDELEG)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
@@ -40,7 +40,8 @@ import Cardano.Ledger.Shelley.TxBody
     pattern MIRCert,
     pattern RegKey,
   )
-import Control.SetAlgebra (dom, eval, rng, (∈), (∉), (◁))
+import qualified Cardano.Ledger.UMapCompact as UM
+import Control.SetAlgebra (eval, rng, (∈))
 import Control.State.Transition.Trace
   ( SourceSignalTarget,
     signal,
@@ -52,7 +53,6 @@ import Data.Foldable (fold)
 import Data.List (foldl')
 import qualified Data.Map.Strict as Map (difference, filter, keysSet, (\\))
 import qualified Data.Set as Set (isSubsetOf, singleton, size)
-import qualified Data.UMap as UM
 import GHC.Records (HasField (..))
 import Test.QuickCheck (Property, conjoin, counterexample, property)
 
@@ -66,7 +66,7 @@ keyRegistration
     conjoin
       [ counterexample
           "a newly registered key should have a reward account"
-          ((eval (hk ∈ dom (rewards targetSt))) :: Bool),
+          ((UM.member hk (rewards targetSt)) :: Bool),
         counterexample
           "a newly registered key should have a reward account with 0 balance"
           (UM.lookup hk (rewards targetSt) == Just mempty)
@@ -83,10 +83,10 @@ keyDeRegistration
     conjoin
       [ counterexample
           "a deregistered stake key should no longer be in the rewards mapping"
-          ((eval (hk ∉ dom (rewards targetSt))) :: Bool),
+          ((UM.notMember hk (rewards targetSt)) :: Bool),
         counterexample
           "a deregistered stake key should no longer be in the delegations mapping"
-          ((eval (hk ∉ dom (delegations targetSt))) :: Bool)
+          ((UM.notMember hk (delegations targetSt)) :: Bool)
       ]
 keyDeRegistration _ = property ()
 
@@ -97,11 +97,11 @@ keyDelegation
     { signal = (DCertDeleg (Delegate (Delegation from to))),
       target = targetSt
     } =
-    let fromImage = eval (rng (Set.singleton from ◁ delegations targetSt))
+    let fromImage = eval (rng (Set.singleton from `UM.domRestrictedView` delegations targetSt))
      in conjoin
           [ counterexample
               "a delegated key should have a reward account"
-              ((eval (from ∈ dom (rewards targetSt))) :: Bool),
+              ((UM.member from (rewards targetSt)) :: Bool),
             counterexample
               "a registered stake credential should be delegated"
               ((eval (to ∈ fromImage)) :: Bool),
@@ -125,10 +125,10 @@ rewardsSumInvariant
               (rewardsSum sourceRewards == rewardsSum targetRewards),
             counterexample
               "dropped elements have a zero reward balance"
-              (null (Map.filter (/= Coin 0) $ sourceRewards `Map.difference` targetRewards)),
+              (null (Map.filter (/= UM.CompactCoin 0) $ sourceRewards `Map.difference` targetRewards)),
             counterexample
               "added elements have a zero reward balance"
-              (null (Map.filter (/= Coin 0) $ targetRewards `Map.difference` sourceRewards))
+              (null (Map.filter (/= UM.CompactCoin 0) $ targetRewards `Map.difference` sourceRewards))
           ]
 
 checkInstantaneousRewards ::

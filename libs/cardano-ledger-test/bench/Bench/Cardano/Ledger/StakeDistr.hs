@@ -56,6 +56,7 @@ import Cardano.Ledger.Shelley.Rules
     validatingTickTransitionFORECAST,
   )
 import Cardano.Ledger.Slot (EpochNo, SlotNo (..))
+import qualified Cardano.Ledger.UMapCompact as UM
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo)
 import Cardano.Slotting.Time (mkSlotLength)
@@ -68,7 +69,6 @@ import Data.Default.Class (Default (def))
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Text (pack)
-import qualified Data.UMap as UM
 import System.Environment (lookupEnv)
 import Test.Cardano.Ledger.Tickf (oldCalculatePoolDistr)
 

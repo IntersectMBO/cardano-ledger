@@ -43,7 +43,7 @@ import Cardano.Ledger.Block
     neededTxInsForBlock,
   )
 import Cardano.Ledger.Coin
-import Cardano.Ledger.Compactible (fromCompact, toCompact)
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (StakeRefBase, StakeRefPtr))
 import Cardano.Ledger.EpochBoundary (SnapShot (..), Stake (..))
@@ -63,7 +63,6 @@ import Cardano.Ledger.Shelley.LedgerState
     UTxOState (..),
     completeRupd,
     credMap,
-    delegations,
     deltaF,
     deltaR,
     deltaT,
@@ -98,8 +97,8 @@ import Cardano.Ledger.Shelley.Rules.Reports
 import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.TreeDiff (diffExpr, ediffEq)
 import Cardano.Ledger.TxIn (TxIn (..))
+import qualified Cardano.Ledger.UMapCompact as UM
 import Cardano.Ledger.UTxO (UTxO (..), coinBalance, txins, txouts)
-import Cardano.Ledger.UnifiedMap (ViewMap)
 import Cardano.Ledger.Val ((<+>), (<->))
 import Cardano.Protocol.TPraos.API (GetLedgerView)
 import Cardano.Protocol.TPraos.BHeader
@@ -132,6 +131,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.UMap (View (Rewards), domain)
 import qualified Data.UMap as UM
+import Data.TreeDiff.QuickCheck (ediffEq)
 import qualified Data.VMap as VMap
 import Data.Word (Word64)
 import GHC.Records (HasField (..))
@@ -514,23 +514,27 @@ checkWithdrawlBound SourceSignalTarget {source, signal, target} =
   where
     rewardDelta :: Coin
     rewardDelta =
-      fold
-        ( rewards
-            . dpsDState
-            . lsDPState
-            . esLState
-            . nesEs
-            . chainNes
-            $ source
+      fromCompact
+        ( fold
+            ( rewards
+                . dpsDState
+                . lsDPState
+                . esLState
+                . nesEs
+                . chainNes
+                $ source
+            )
         )
-        <-> fold
-          ( rewards
-              . dpsDState
-              . lsDPState
-              . esLState
-              . nesEs
-              . chainNes
-              $ target
+        <-> fromCompact
+          ( fold
+              ( rewards
+                  . dpsDState
+                  . lsDPState
+                  . esLState
+                  . nesEs
+                  . chainNes
+                  $ target
+              )
           )
 
 -- | If we are not at an Epoch Boundary, then (Utxo + Deposits)
@@ -630,8 +634,8 @@ potsSumIncreaseByRewardsPerTx SourceSignalTarget {source = chainSt, signal = blo
         } =
         (coinBalance u' <+> d' <+> f')
           <-> (coinBalance u <+> d <+> f)
-          === fold (UM.unUnify (UM.Rewards umap1))
-          <-> fold (UM.unUnify (UM.Rewards umap2))
+          === (UM.fromCompact (fold (UM.unUnify (UM.Rewards umap1))))
+          <-> (UM.fromCompact (fold (UM.unUnify (UM.Rewards umap2))))
 
 -- | The Rewards pot decreases by the sum of withdrawals in a transaction
 potsRewardsDecreaseByWdrlsPerTx ::
@@ -648,7 +652,7 @@ potsRewardsDecreaseByWdrlsPerTx SourceSignalTarget {source = chainSt, signal = b
       map rewardsDecreaseByWdrls $
         sourceSignalTargets ledgerTr
   where
-    rewardsSum = fold . rewards . dpsDState
+    rewardsSum = UM.fromCompact . fold . rewards . dpsDState
     (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
     rewardsDecreaseByWdrls
       SourceSignalTarget
@@ -1469,22 +1473,20 @@ stakeDistr ::
   SnapShot (EraCrypto era)
 stakeDistr u ds ps =
   SnapShot
-    (Stake $ VMap.fromMap (compactCoinOrError <$> eval (dom activeDelegs ◁ stakeRelation)))
-    (VMap.fromMap (UM.unUnify delegs))
+    (Stake $ VMap.fromMap (UM.compactCoinOrError <$> eval (dom activeDelegs ◁ stakeRelation)))
+    (VMap.fromMap delegs)
     (VMap.fromMap poolParams)
   where
-    rewards' = rewards ds
-    delegs = delegations ds
+    rewards' :: Map.Map (Credential 'Staking (EraCrypto era)) Coin
+    rewards' = UM.rewView (dsUnified ds)
+    delegs :: Map.Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))
+    delegs = UM.delView (dsUnified ds)
     ptrs' = ptrsMap ds
     PState {psStakePoolParams = poolParams} = ps
     stakeRelation :: Map (Credential 'Staking (EraCrypto era)) Coin
-    stakeRelation = aggregateUtxoCoinByCredential ptrs' u (UM.unUnify rewards')
-    activeDelegs :: ViewMap (EraCrypto era) (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))
+    stakeRelation = aggregateUtxoCoinByCredential ptrs' u rewards'
+    activeDelegs :: Map.Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))
     activeDelegs = eval ((dom rewards' ◁ delegs) ▷ dom poolParams)
-    compactCoinOrError c =
-      case toCompact c of
-        Nothing -> error $ "Invalid ADA value in staking: " <> show c
-        Just compactCoin -> compactCoin
 
 -- | Sum up all the Coin for each staking Credential. This function has an
 --   incremental analog. See 'incrementalAggregateUtxoCoinByCredential'

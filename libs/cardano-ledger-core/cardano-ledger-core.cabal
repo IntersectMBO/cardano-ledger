@@ -73,6 +73,8 @@ library
     Cardano.Ledger.UnifiedMap
     Cardano.Ledger.UTxO
     Cardano.Ledger.Val
+     Cardano.Ledger.UMap
+    Cardano.Ledger.UMapCompact
 
   build-depends:
     aeson >= 2,

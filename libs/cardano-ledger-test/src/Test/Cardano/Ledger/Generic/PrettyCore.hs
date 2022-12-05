@@ -91,8 +91,8 @@ import Cardano.Ledger.Shelley.TxBody
     WitVKey (..),
   )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import qualified Cardano.Ledger.UMapCompact as UM (UMap, View (..), delView, rewView, size)
 import Cardano.Ledger.UTxO (UTxO (..))
-import Cardano.Ledger.UnifiedMap (UnifiedMap)
 import qualified Cardano.Ledger.Val as Val
 import Control.State.Transition.Extended (STS (..))
 import Data.Foldable (toList)
@@ -104,6 +104,7 @@ import Data.Text (Text, pack)
 import Data.Typeable (Typeable)
 import qualified Data.UMap as UMap (View (..), delView, rewView, size)
 import qualified PlutusLedgerApi.V1 as PV1 (Data (..))
+import qualified PlutusCore.Data as Plutus (Data (..))
 import Prettyprinter (hsep, parens, viaShow, vsep)
 import Test.Cardano.Ledger.Generic.Fields
   ( TxBodyField (..),
@@ -1027,13 +1028,13 @@ instantSummary (InstantaneousRewards reserves treasury dreserves dtreasury) =
       ("Reserves to treasury", ppDeltaCoin dtreasury)
     ]
 
-uMapSummary :: UnifiedMap c -> PDoc
+uMapSummary :: UM.UMap c -> PDoc
 uMapSummary umap =
   ppRecord
     "UMap"
-    [ ("Reward Map", ppInt (UMap.size (UMap.Rewards umap))),
-      ("Delegations Map", ppInt (UMap.size (UMap.Delegations umap))),
-      ("Ptrs Map", ppInt (UMap.size (UMap.Ptrs umap)))
+    [ ("Reward Map", ppInt (UM.size (UM.Rewards umap))),
+      ("Delegations Map", ppInt (UM.size (UM.Delegations umap))),
+      ("Ptrs Map", ppInt (UM.size (UM.Ptrs umap)))
     ]
 
 pStateSummary :: PState c -> PDoc
@@ -1348,8 +1349,8 @@ pcDPState :: p -> DPState era -> PDoc
 pcDPState _proof (DPState (DState {dsUnified = un}) (PState {psStakePoolParams = pool})) =
   ppRecord
     "DPState summary"
-    [ ("rewards", ppMap pcCredential pcCoin (UMap.rewView un)),
-      ("delegations", ppMap pcCredential keyHashSummary (UMap.delView un)),
+    [ ("rewards", ppMap pcCredential pcCoin (UM.rewView un)),
+      ("delegations", ppMap pcCredential keyHashSummary (UM.delView un)),
       ("pool params", ppMap pcKeyHash pcPoolParams pool)
     ]
 

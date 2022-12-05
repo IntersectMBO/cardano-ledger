@@ -38,9 +38,10 @@ import Cardano.Ledger.Shelley.LedgerState
   )
 import Cardano.Ledger.Shelley.TxBody (RewardAcnt, getRwdCred, ppRewardAcnt)
 import Cardano.Ledger.Slot (EpochNo (..))
-import Cardano.Ledger.UnifiedMap (View (..))
+import Cardano.Ledger.UMapCompact (View (Delegations, Rewards))
+import qualified Cardano.Ledger.UMapCompact as UM
 import Cardano.Ledger.Val ((<+>), (<->))
-import Control.SetAlgebra (dom, eval, setSingleton, (∈), (⋪), (▷), (◁))
+import Control.SetAlgebra (dom, eval, setSingleton, (⋪), (▷), (◁))
 import Control.State.Transition
   ( Assertion (..),
     STS (..),
@@ -55,7 +56,6 @@ import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set (member)
 import Data.Typeable (Typeable)
-import qualified Data.UMap as UM
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks (..))
@@ -138,7 +138,7 @@ poolReapTransition = do
       mRefunds :: Map.Map (Credential 'Staking (EraCrypto era)) Coin
       (refunds, mRefunds) =
         Map.partitionWithKey
-          (\k _ -> eval (k ∈ dom (rewards ds)))
+          (\k _ -> UM.member k (rewards ds)) -- (k ∈ dom (rewards ds))
           (Map.mapKeys getRwdCred rewardAcnts')
       refunded = fold $ Map.elems refunds
       unclaimed = fold $ Map.elems mRefunds
@@ -153,7 +153,7 @@ poolReapTransition = do
             rewardAcnts_
         (refundPools', unclaimedPools') =
           Map.partitionWithKey
-            (\k _ -> eval (k ∈ dom (rewards ds)))
+            (\k _ -> UM.member k (rewards ds)) -- (k ∈ dom (rewards ds))
             rewardAcntsWithPool
      in RetiredPools
           { refundPools = refundPools',

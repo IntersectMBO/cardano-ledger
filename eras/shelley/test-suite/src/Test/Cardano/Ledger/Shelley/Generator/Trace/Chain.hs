@@ -35,6 +35,7 @@ import Cardano.Ledger.Slot
     EpochNo (..),
     SlotNo (..),
   )
+import qualified Cardano.Ledger.UMapCompact as UM
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Protocol.TPraos.API
@@ -64,7 +65,6 @@ import qualified Data.ListMap as LM
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
-import qualified Data.UMap as UM
 import GHC.Records (HasField)
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)

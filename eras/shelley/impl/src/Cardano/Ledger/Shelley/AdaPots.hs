@@ -19,6 +19,7 @@ module Cardano.Ledger.Shelley.AdaPots
 where
 
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
@@ -70,7 +71,7 @@ totalAdaPotsES (EpochState (AccountState treasury_ reserves_) _ ls _ _ _) =
   where
     UTxOState u deposits fees_ _ _ = lsUTxOState ls
     DPState dstate _ = lsDPState ls
-    rewards_ = fold (rewards dstate)
+    rewards_ = fromCompact $ fold (rewards dstate)
     coins = coinBalance u
     keyDeposits_ = fold ((dsDeposits . dpsDState . lsDPState) ls)
     poolDeposits_ = fold ((psDeposits . dpsPState . lsDPState) ls)

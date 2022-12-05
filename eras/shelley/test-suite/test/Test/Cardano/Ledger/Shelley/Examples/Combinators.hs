@@ -97,6 +97,8 @@ import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates, ShelleyPParams, ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Rules (emptyInstantaneousRewards)
 import Cardano.Ledger.Shelley.TxBody (MIRPot (..), PoolParams (..), RewardAcnt (..))
+import Cardano.Ledger.UMapCompact (View (Delegations, Ptrs, Rewards), unView)
+import qualified Cardano.Ledger.UMapCompact as UM
 import Cardano.Ledger.UTxO (UTxO (..), txins, txouts)
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import Cardano.Protocol.TPraos.BHeader
@@ -114,8 +116,6 @@ import Data.Foldable (fold, foldl')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import Data.UMap (View (Delegations, Ptrs, Rewards), unView)
-import qualified Data.UMap as UM
 import Data.Word (Word64)
 import GHC.Records (HasField (..))
 import Numeric.Natural (Natural)
@@ -290,7 +290,7 @@ newStakeCred cred ptr cs = cs {chainNes = nes'}
       ds
         { dsUnified =
             let um0 = dsUnified ds
-                um1 = (UM.insert cred (Coin 0) (Rewards um0))
+                um1 = (UM.insert cred (UM.CompactCoin 0) (Rewards um0))
                 um2 = (Ptrs um1 UM.∪ (ptr, cred))
              in um2
         }
@@ -474,7 +474,7 @@ reapPool pool cs = cs {chainNes = nes'}
     (rewards', unclaimed) =
       case UM.lookup rewardAddr (rewards ds) of
         Nothing -> (rewards ds, _poolDeposit pp)
-        Just era -> (UM.insert' rewardAddr (era <+> _poolDeposit pp) (rewards ds), Coin 0)
+        Just era -> (UM.insert' rewardAddr (UM.addCompact era (UM.compactCoinOrError (_poolDeposit pp))) (rewards ds), Coin 0)
     umap1 = unView rewards'
     umap2 = (UM.Delegations umap1 UM.⋫ Set.singleton kh)
     ds' = ds {dsUnified = umap2}

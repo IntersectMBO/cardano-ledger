@@ -26,6 +26,7 @@ import Cardano.Ledger.PoolDistr (individualPoolStakeVrf)
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PoolRank
+import Cardano.Ledger.UMapCompact (delView, ptrView, rewView)
 import Conduit
 import Control.Exception (throwIO)
 import Control.Foldl (Fold (..))
@@ -37,7 +38,6 @@ import qualified Data.IntMap.Strict as IntMap
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Typeable
-import Data.UMap (delView, ptrView, rewView)
 import qualified Data.VMap as VMap
 import Lens.Micro
 import Prettyprinter

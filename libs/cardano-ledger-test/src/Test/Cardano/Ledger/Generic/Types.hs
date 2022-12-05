@@ -20,7 +20,7 @@ import Cardano.Ledger.Shelley.API
     UTxOState (UTxOState),
   )
 import Cardano.Ledger.Shelley.LedgerState (dsUnified)
-import qualified Cardano.Ledger.UnifiedMap as UMap
+import qualified Cardano.Ledger.UMapCompact as UM
 import Cardano.Ledger.Val (Val ((<+>)))
 import qualified Data.Foldable as Fold
 import qualified Data.Map.Strict as Map
@@ -38,7 +38,7 @@ instance Reflect era => TotalAda (UTxOState era) where
   totalAda (UTxOState utxo deposits fees _ _) = totalAda utxo <+> deposits <+> fees
 
 instance TotalAda (DState era) where
-  totalAda dstate = Fold.foldl' (<+>) mempty (UMap.Rewards (dsUnified dstate))
+  totalAda dstate = UM.fromCompact $ Fold.foldl' UM.addCompact mempty (UM.Rewards (dsUnified dstate))
 
 instance TotalAda (DPState era) where
   totalAda (DPState ds _) = totalAda ds
