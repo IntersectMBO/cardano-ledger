@@ -16,6 +16,8 @@
 
 module Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators
   ( genCoherentBlock,
+    genNonPtrAddress,
+    genPtrAddress,
     MockGen,
     maxTxWits,
   )
@@ -185,6 +187,14 @@ instance Era era => Arbitrary (MD.ShelleyTxAuxData era) where
 
 maxTxWits :: Int
 maxTxWits = 5
+
+genPtrAddress :: Crypto c => Gen (Addr c)
+genPtrAddress = Addr <$> arbitrary <*> arbitrary <*> (StakeRefPtr <$> arbitrary)
+
+genNonPtrAddress :: Crypto c => Gen (Addr c)
+genNonPtrAddress = oneof [AddrBootstrap <$> arbitrary, Addr <$> arbitrary <*> arbitrary <*> genNonPtrStakeRef]
+  where
+    genNonPtrStakeRef = oneof [StakeRefBase <$> arbitrary, pure StakeRefNull]
 
 instance
   (Core.EraTxOut era, Mock (EraCrypto era), Arbitrary (Core.Value era)) =>

@@ -52,6 +52,7 @@ library
     cardano-slotting,
     containers,
     data-default-class,
+    microlens,
     plutus-tx,
     cardano-ledger-shelley-test,
     cardano-ledger-shelley,
