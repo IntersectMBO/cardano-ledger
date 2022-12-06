@@ -196,6 +196,16 @@ extract k m =
 -- | Partition the `Map` according to keys in the `Set`. This is equivalent to:
 --
 -- > extractKeys m s === (withoutKeys m s, restrictKeys m s)
+--
+-- >>> import qualified Data.Map.Internal as M (singleton)
+-- >>> import qualified Data.Set.Internal as S (singleton)
+-- >>>
+-- >>> let a = M.singleton 1 'a'
+-- >>> let b = M.singleton 1 'b'
+-- >>> let s = S.singleton 1
+-- >>> extractKeys a s
+-- 0
+-- 
 extractKeys :: Ord k => Map k a -> Set k -> (Map k a, Map k a)
 extractKeys m s
   | Set.size s < 6 = extractKeysSmallSet m s -- See haddock for value 6
