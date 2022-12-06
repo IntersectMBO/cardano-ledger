@@ -30,7 +30,8 @@
 -- :}
 -- +++ OK, passed 100 tests.
 module Cardano.Ledger.Api.Tx.Out
-  ( EraTxOut (..),
+  ( module Cardano.Ledger.Api.Scripts.Data,
+    EraTxOut (..),
 
     -- * Shelley, Allegra and Mary Era
     ShelleyTxOut,
@@ -48,6 +49,7 @@ module Cardano.Ledger.Api.Tx.Out
 where
 
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..), AlonzoTxOut)
+import Cardano.Ledger.Api.Scripts.Data
 import Cardano.Ledger.Babbage.TxBody (BabbageEraTxOut (..), BabbageTxOut)
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Core (EraTxOut (..), PParams, coinTxOutL, eraProtVerLow)

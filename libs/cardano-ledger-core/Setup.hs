@@ -1,3 +1,3 @@
-import Distribution.Extra.Doctest (defaultMainWithDoctests)
+import Distribution.Simple
 
-main = defaultMainWithDoctests "doctests"
+main = defaultMain

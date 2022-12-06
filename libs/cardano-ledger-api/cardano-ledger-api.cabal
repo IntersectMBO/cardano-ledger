@@ -98,3 +98,21 @@ test-suite cardano-ledger-api-test
     tasty,
     tasty-quickcheck,
     QuickCheck,
+
+-- Inspired from https://github.com/input-output-hk/haskell.nix/blob/master/test/cabal-doctests/cabal-doctests-test.cabal
+test-suite doctests
+  hs-source-dirs:    doctests
+  x-doctest-options: --no-magic
+  type:              exitcode-stdio-1.0
+  main-is:           Doctests.hs
+  ghc-options:       -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+    , base     >=4.7 && <5
+    , cardano-ledger-api
+    , cardano-ledger-babbage-test
+    , cardano-strict-containers
+    , doctest
+    , template-haskell
+    , QuickCheck
+
+  default-language:  Haskell2010

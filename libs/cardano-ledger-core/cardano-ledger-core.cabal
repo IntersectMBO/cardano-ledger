@@ -11,13 +11,7 @@ bug-reports:        https://github.com/input-output-hk/cardano-ledger/issues
 license:            Apache-2.0
 author:             IOHK
 maintainer:         operations@iohk.io
-build-type:         Custom
-
-custom-setup
-  setup-depends:
-    , base           >=4 && <5
-    , Cabal
-    , cabal-doctest  ^>=1
+build-type:         Simple
 
 source-repository head
   type:     git
@@ -135,17 +129,4 @@ library testlib
                      hedgehog-quickcheck,
                      QuickCheck,
                      text,
-
-test-suite doctests
-  hs-source-dirs:    doctests
-  x-doctest-options: --no-magic
-  type:              exitcode-stdio-1.0
-  main-is:           Doctests.hs
-  ghc-options:       -threaded -rtsopts -with-rtsopts=-N
-  build-depends:
-    , base     >=4.7 && <5
-    , doctest
-    , cardano-ledger-core
-
-  default-language:  Haskell2010
 
