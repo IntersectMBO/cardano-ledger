@@ -38,6 +38,7 @@ where
 import qualified Cardano.Crypto.Hash as CH
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Data (Data (..), hashData)
+import Cardano.Ledger.Conway.Rules ()
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
 import Cardano.Ledger.Alonzo.Rules
@@ -284,8 +285,8 @@ instance AlonzoBased (BabbageEra c) (BabbageUtxowPredFailure (BabbageEra c)) whe
   fromPredFail = AlonzoInBabbageUtxowPredFailure
 
 instance AlonzoBased (ConwayEra c) (BabbageUtxowPredFailure (ConwayEra c)) where
-  fromUtxos = undefined -- Babbage.UtxoFailure . AlonzoInBabbageUtxoPredFailure . UtxosFailure
-  fromUtxo = undefined -- Babbage.UtxoFailure . AlonzoInBabbageUtxoPredFailure
+  fromUtxos = Babbage.UtxoFailure . AlonzoInBabbageUtxoPredFailure . UtxosFailure
+  fromUtxo = Babbage.UtxoFailure . AlonzoInBabbageUtxoPredFailure
   fromUtxow = AlonzoInBabbageUtxowPredFailure . ShelleyInAlonzoUtxowPredFailure
   fromPredFail = AlonzoInBabbageUtxowPredFailure
 
@@ -322,7 +323,7 @@ testBBODY wit@(BBODY proof) initialSt block expected pparams =
    in case proof of
         Alonzo _ -> runSTS wit (TRC (env, initialSt, block)) (genericCont "" expected)
         Babbage _ -> runSTS wit (TRC (env, initialSt, block)) (genericCont "" expected)
-        Conway _ -> undefined -- runSTS wit (TRC (env, initialSt, block)) (genericCont "" expected)
+        Conway _ -> runSTS wit (TRC (env, initialSt, block)) (genericCont "" expected)
         other -> error ("We cannot testBBODY in era " ++ show other)
 
 testUTXOW ::
@@ -343,7 +344,7 @@ testUTXOW ::
 -- | Use an equality test on the expected and computed [PredicateFailure]
 testUTXOW wit@(UTXOW (Alonzo _)) utxo p tx = testUTXOWwith wit (genericCont (show tx)) utxo p tx
 testUTXOW wit@(UTXOW (Babbage _)) utxo p tx = testUTXOWwith wit (genericCont (show tx)) utxo p tx
-testUTXOW _wit@(UTXOW (Conway _)) _utxo _p _tx = undefined -- testUTXOWwith wit (genericCont (show tx)) utxo p tx
+testUTXOW wit@(UTXOW (Conway _)) utxo p tx = testUTXOWwith wit (genericCont (show tx)) utxo p tx
 testUTXOW (UTXOW other) _ _ _ = error ("Cannot use testUTXOW in era " ++ show other)
 
 testUTXOWsubset,
@@ -365,7 +366,7 @@ testUTXOWsubset,
 -- | Use a subset test on the expected and computed [PredicateFailure]
 testUTXOWsubset wit@(UTXOW (Alonzo _)) utxo = testUTXOWwith wit subsetCont utxo
 testUTXOWsubset wit@(UTXOW (Babbage _)) utxo = testUTXOWwith wit subsetCont utxo
-testUTXOWsubset _wit@(UTXOW (Conway _)) _utxo = undefined -- testUTXOWwith wit subsetCont utxo
+testUTXOWsubset wit@(UTXOW (Conway _)) utxo = testUTXOWwith wit subsetCont utxo
 testUTXOWsubset (UTXOW other) _ = error ("Cannot use testUTXOW in era " ++ show other)
 
 -- | Use a test where any two (ValidationTagMismatch x y) failures match regardless of 'x' and 'y'
@@ -375,7 +376,7 @@ testUTXOspecialCase wit@(UTXOW proof) utxo pparam tx expected =
    in case proof of
         Alonzo _ -> runSTS wit (TRC (env, state, tx)) (specialCont proof expected)
         Babbage _ -> runSTS wit (TRC (env, state, tx)) (specialCont proof expected)
-        Conway _ -> undefined -- runSTS wit (TRC (env, state, tx)) (specialCont proof expected)
+        Conway _ -> runSTS wit (TRC (env, state, tx)) (specialCont proof expected)
         other -> error ("Cannot use specialCase in era " ++ show other)
 
 -- ======================================================================
@@ -403,7 +404,7 @@ testUTXOWwith wit@(UTXOW proof) cont utxo pparams tx expected =
   let env = UtxoEnv (SlotNo 0) pparams def (GenDelegs mempty)
       state = smartUTxOState utxo (Coin 0) (Coin 0) def
    in case proof of
-        Conway _ -> undefined -- runSTS wit (TRC (env, state, tx)) (cont expected)
+        Conway _ -> runSTS wit (TRC (env, state, tx)) (cont expected)
         Babbage _ -> runSTS wit (TRC (env, state, tx)) (cont expected)
         Alonzo _ -> runSTS wit (TRC (env, state, tx)) (cont expected)
         Mary _ -> runSTS wit (TRC (env, state, tx)) (cont expected)
@@ -505,8 +506,7 @@ findMismatch ::
   Maybe (AlonzoUtxosPredFailure era)
 findMismatch (Alonzo _) (ShelleyInAlonzoUtxowPredFailure (Shelley.UtxoFailure (UtxosFailure x@(ValidationTagMismatch _ _)))) = Just x
 findMismatch (Babbage _) (Babbage.UtxoFailure (AlonzoInBabbageUtxoPredFailure (UtxosFailure x@(ValidationTagMismatch _ _)))) = Just x
--- findMismatch (Conway _) (Babbage.UtxoFailure (AlonzoInBabbageUtxoPredFailure (UtxosFailure x@(ValidationTagMismatch _ _)))) = Just x
-findMismatch (Conway _) _ = undefined
+findMismatch (Conway _) (Babbage.UtxoFailure (AlonzoInBabbageUtxoPredFailure (UtxosFailure x@(ValidationTagMismatch _ _)))) = Just x
 findMismatch _ _ = Nothing
 
 isSubset :: Eq t => [t] -> [t] -> Bool

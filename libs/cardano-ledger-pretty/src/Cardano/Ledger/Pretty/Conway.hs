@@ -15,10 +15,10 @@ where
 
 import Cardano.Ledger.Babbage.TxBody (BabbageEraTxBody (..))
 import Cardano.Ledger.Babbage.TxOut (BabbageTxOut (..))
-import Cardano.Ledger.Conway.Core (ConwayEraTxBody, GovernanceActionInfo (..), Vote)
+import Cardano.Ledger.Conway.Core (ConwayEraTxBody, GovernanceAction (..), GovernanceActionId (..), GovernanceActionInfo (..), GovernanceActionIx (..), Vote (..), VoteDecision (..), VoterRole (..))
 import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert (..))
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
-import Cardano.Ledger.Core (EraTxBody (..), EraTxOut (..), Value)
+import Cardano.Ledger.Core (EraTxBody (..), EraTxOut (..), Value, EraPParams (..))
 import Cardano.Ledger.Pretty
   ( PDoc,
     PrettyA (..),
@@ -35,9 +35,12 @@ import Cardano.Ledger.Pretty
     ppSexp,
     ppStrictMaybe,
     ppStrictSeq,
+    ppTxId,
     ppTxIn,
     ppTxOut,
+    ppUrl,
     ppWdrl,
+    ppWord64,
   )
 import Cardano.Ledger.Pretty.Mary (ppMultiAsset, ppValidityInterval)
 import Lens.Micro ((^.))
@@ -46,7 +49,8 @@ instance
   ( TxOut era ~ BabbageTxOut era,
     ConwayEraTxBody era,
     PrettyA (Value era),
-    TxBody era ~ ConwayTxBody era
+    TxBody era ~ ConwayTxBody era,
+    PrettyA (PParamsUpdate era)
   ) =>
   PrettyA (ConwayTxBody era)
   where
@@ -62,7 +66,7 @@ ppConwayTxBody ::
   ( ConwayEraTxBody era,
     PrettyA (Value era),
     TxOut era ~ BabbageTxOut era,
-    TxBody era ~ ConwayTxBody era
+    TxBody era ~ ConwayTxBody era, PrettyA (GovernanceActionInfo era)
   ) =>
   ConwayTxBody era ->
   PDoc
@@ -84,12 +88,61 @@ ppConwayTxBody txb@ConwayTxBody {..} =
       ("script integrity hash", ppStrictMaybe ppSafeHash ctbScriptIntegrityHash),
       ("auxiliary data hash", ppStrictMaybe ppAuxiliaryDataHash ctbAdHash),
       ("network id", ppStrictMaybe ppNetwork ctbTxNetworkId),
-      ("governance actions", ppStrictSeq ppGovAction ctbGovActions),
-      ("votes", ppStrictSeq ppVote ctbVotes)
+      ("governance actions", ppStrictSeq prettyA ctbGovActions),
+      ("votes", ppStrictSeq prettyA ctbVotes)
     ]
 
-ppVote :: Vote era -> PDoc
-ppVote = undefined
+ppGovernanceActionIx :: GovernanceActionIx -> PDoc
+ppGovernanceActionIx (GovernanceActionIx idx) = ppWord64 idx
 
-ppGovAction :: GovernanceActionInfo era -> PDoc
-ppGovAction = undefined
+ppGovernanceActionId :: GovernanceActionId era -> PDoc
+ppGovernanceActionId GovernanceActionId {..} =
+  ppRecord
+    "GovernanceActionId"
+    [ ("transaction id", ppTxId gaidTxId),
+      ("governance action index", ppGovernanceActionIx gaidGovActionIx)
+    ]
+
+ppVoterRole :: VoterRole -> PDoc
+ppVoterRole ConstitutionalCommittee = "constitutional committee"
+ppVoterRole DRep = "DRep"
+ppVoterRole SPO = "SPO"
+
+ppVoteDecision :: VoteDecision -> PDoc
+ppVoteDecision No = "no"
+ppVoteDecision Yes = "yes"
+ppVoteDecision Abstain = "abstain"
+
+instance PrettyA (Vote era) where
+  prettyA Vote {..} =
+    ppRecord
+      "Vote"
+      [ ("governance action ID", ppGovernanceActionId voteGovActionId),
+        ("voter role", ppVoterRole voteRole),
+        ("vote role key hash", ppKeyHash voteRoleKeyHash),
+        ("vote metadata URL", ppUrl voteMetadataURL),
+        ("vote metadata hash", ppSafeHash voteMetadataHash),
+        ("vote decision", ppVoteDecision voteDecision)
+      ]
+
+instance PrettyA (PParamsUpdate era) => PrettyA (GovernanceAction era) where
+  prettyA (ParameterChange ppup) =
+    ppRecord "ParameterChange" $
+      [("protocol parameters update", prettyA ppup)]
+  prettyA (HardForkInitiation pv) =
+    ppRecord "HardForkInitiation" $
+      [("protocol version", prettyA pv)]
+  prettyA (TreasuryWithdrawals ws) =
+    ppRecord "TreasuryWithdrawals" $
+      [("withdrawals map", prettyA ws)]
+
+instance PrettyA (PParamsUpdate era) => PrettyA (GovernanceActionInfo era) where
+  prettyA GovernanceActionInfo {..} =
+    ppRecord
+      "GovernanceActionInfo"
+      [ ("deposit amount", ppCoin gaiDepositAmount),
+        ("reward address", ppKeyHash gaiRewardAddress),
+        ("metadata URL", ppUrl gaiMetadataURL),
+        ("metadata hash", ppSafeHash gaiMetadataHash),
+        ("governance action", prettyA gaiAction)
+      ]

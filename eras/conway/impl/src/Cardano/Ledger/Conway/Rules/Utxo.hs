@@ -5,7 +5,10 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Conway.Rules.Utxo () where
+module Cardano.Ledger.Conway.Rules.Utxo
+  ( ConwayUTXO,
+  )
+where
 
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxoEvent (..), AlonzoUtxoPredFailure (..), AlonzoUtxosEvent, AlonzoUtxosPredFailure, AlonzoUtxowEvent (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
@@ -33,8 +36,9 @@ import Cardano.Ledger.Shelley.Rules (ShelleyPpupPredFailure, ShelleyUtxowEvent (
 import Control.State.Transition.Extended (Embed (..), STS (..))
 
 instance
-  ( EraTx era,
-    Value era ~ MaryValue era,
+  ( Era era,
+    EraTx era,
+    Value era ~ MaryValue (EraCrypto era),
     TxOut era ~ BabbageTxOut era,
     State (EraRule "PPUP" era) ~ PPUPState era,
     PredicateFailure (EraRule "UTXOS" era) ~ AlonzoUtxosPredFailure era,
@@ -55,6 +59,7 @@ instance
 
 instance
   ( EraScript era,
+    Era era,
     PredicateFailure (EraRule "PPUP" era) ~ ShelleyPpupPredFailure era,
     PredicateFailure (EraRule "UTXOS" era) ~ AlonzoUtxosPredFailure era,
     Event (EraRule "UTXOS" era) ~ AlonzoUtxosEvent era,

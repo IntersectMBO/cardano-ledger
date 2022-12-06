@@ -4,7 +4,9 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Conway.Rules.Utxos () where
+module Cardano.Ledger.Conway.Rules.Utxos 
+  ( ConwayUTXOS
+  ) where
 
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxosEvent, AlonzoUtxosPredFailure)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)

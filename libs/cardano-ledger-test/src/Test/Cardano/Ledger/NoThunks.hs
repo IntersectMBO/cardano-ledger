@@ -20,6 +20,8 @@ import Test.Cardano.Ledger.Generic.Proof (Evidence (Mock), Proof (..), Reflect)
 import Test.Cardano.Ledger.Generic.Trace (traceProp)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperty)
+import Cardano.Ledger.Pretty (PrettyA)
+import Cardano.Ledger.Core (EraPParams(..))
 
 test :: TestTree
 test =
@@ -37,7 +39,8 @@ test =
 testThunks ::
   forall era.
   ( Reflect era,
-    STS (MOCKCHAIN era)
+    STS (MOCKCHAIN era),
+    PrettyA (PParamsUpdate era)
   ) =>
   Proof era ->
   Int ->

@@ -113,6 +113,7 @@ import Test.Cardano.Ledger.Generic.Fields
     abstractWitnesses,
   )
 import Test.Cardano.Ledger.Generic.Proof
+import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert (..))
 
 -- =====================================================
 
@@ -1238,6 +1239,11 @@ pcDCert (DCertPool x) = pcPoolCert x
 pcDCert (DCertGenesis _) = ppString "GenesisCert"
 pcDCert (DCertMir _) = ppString "MirCert"
 
+pcConwayDCert :: ConwayDCert c -> PDoc
+pcConwayDCert (ConwayDCertDeleg dc) = pcDelegCert dc
+pcConwayDCert (ConwayDCertPool poolc) = pcPoolCert poolc
+pcConwayDCert (ConwayDCertGenesis _) = ppString "GenesisCert"
+
 instance c ~ EraCrypto era => PrettyC (DCert c) era where prettyC _ = pcDCert
 
 pcRewardAcnt :: RewardAcnt c -> PDoc
@@ -1249,7 +1255,7 @@ pcExUnits :: ExUnits -> PDoc
 pcExUnits (ExUnits mem step) =
   ppSexp "ExUnits" [ppNatural mem, ppNatural step]
 
-pcTxBodyField :: Reflect era => Proof era -> TxBodyField era -> [(Text, PDoc)]
+pcTxBodyField :: (Reflect era, PrettyA (PParamsUpdate era)) => Proof era -> TxBodyField era -> [(Text, PDoc)]
 pcTxBodyField proof x = case x of
   Inputs s -> [("spend inputs", ppSet pcTxIn s)]
   Collateral s -> [("coll inputs", ppSet pcTxIn s)]
@@ -1274,10 +1280,10 @@ pcTxBodyField proof x = case x of
   AdHash (SJust (AuxiliaryDataHash h)) -> [("aux data hash", trim (ppSafeHash h))]
   Txnetworkid SNothing -> []
   Txnetworkid (SJust nid) -> [("network id", pcNetwork nid)]
-  GovernanceActions _ -> undefined
-  Votes _ -> undefined
+  GovernanceActions ga -> [("governance actions", ppStrictSeq prettyA ga)]
+  Votes vs -> [("votes", ppStrictSeq prettyA vs)]
 
-pcTxField :: forall era. Reflect era => Proof era -> TxField era -> [(Text, PDoc)]
+pcTxField :: forall era. (Reflect era, PrettyA (PParamsUpdate era)) => Proof era -> TxField era -> [(Text, PDoc)]
 pcTxField proof x = case x of
   Body b -> [("txbody hash", ppSafeHash (hashAnnotated b)), ("body", pcTxBody proof b)]
   BodyI xs -> [("body", ppRecord "TxBody" (concat (map (pcTxBodyField proof) xs)))]
@@ -1312,13 +1318,13 @@ pcWitnesses proof wits = ppRecord "Witnesses" pairs
     fields = abstractWitnesses proof wits
     pairs = concat (map (pcWitnessesField proof) fields)
 
-pcTx :: Reflect era => Proof era -> Tx era -> PDoc
+pcTx :: (Reflect era, PrettyA (PParamsUpdate era)) => Proof era -> Tx era -> PDoc
 pcTx proof tx = ppRecord "Tx" pairs
   where
     fields = abstractTx proof tx
     pairs = concat (map (pcTxField proof) fields)
 
-pcTxBody :: Reflect era => Proof era -> TxBody era -> PDoc
+pcTxBody :: (Reflect era, PrettyA (PParamsUpdate era)) => Proof era -> TxBody era -> PDoc
 pcTxBody proof txbody = ppRecord "TxBody" pairs
   where
     fields = abstractTxBody proof txbody

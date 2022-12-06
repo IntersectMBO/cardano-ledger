@@ -27,7 +27,7 @@ oneTest proof = assertBool (displayResults results) (null results)
         Mary _ -> old == new
         Alonzo _ -> old == new
         Babbage _ -> old == new
-        Conway _ -> undefined -- old == new
+        Conway _ -> old == new
         -- A result is bad, if the snd component is a Just (i.e. contains a description of an inequality)
     bad (_, Nothing) = False
     bad (_, Just _) = True

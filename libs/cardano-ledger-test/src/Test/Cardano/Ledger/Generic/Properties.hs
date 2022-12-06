@@ -130,7 +130,8 @@ testTxValidForLEDGER ::
   ( Reflect era,
     Signal (EraRule "LEDGER" era) ~ Tx era,
     State (EraRule "LEDGER" era) ~ LedgerState era,
-    PrettyA (PredicateFailure (EraRule "LEDGER" era))
+    PrettyA (PredicateFailure (EraRule "LEDGER" era)),
+    PrettyA (PParamsUpdate era)
   ) =>
   Proof era ->
   Box era ->
@@ -277,7 +278,7 @@ incrementalStake :: GenSize -> TestTree
 incrementalStake genSize =
   testGroup
     "Incremental Stake invariant holds"
-    [ undefined, -- incrementStakeInvariant (Conway Mock) genSize,
+    [ incrementStakeInvariant (Conway Mock) genSize,
       incrementStakeInvariant (Babbage Mock) genSize,
       incrementStakeInvariant (Alonzo Mock) genSize,
       incrementStakeInvariant (Mary Mock) genSize,

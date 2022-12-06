@@ -15,8 +15,10 @@ module Cardano.Ledger.Conway.Core
   ( ConwayEraTxBody (..),
     GovernanceActionInfo (..),
     GovernanceAction (..),
-    GovernanceActionIx,
+    GovernanceActionIx (..),
+    GovernanceActionId (..),
     Vote (..),
+    VoterRole (..),
     VoteDecision (..),
   )
 where
@@ -155,7 +157,7 @@ deriving newtype instance FromCBOR GovernanceActionIx
 deriving newtype instance ToCBOR GovernanceActionIx
 
 data GovernanceActionId c = GovernanceActionId
-  { gaidTransactionId :: TxId c,
+  { gaidTxId :: TxId c,
     gaidGovActionIx :: GovernanceActionIx
   }
   deriving (Generic, Eq, Show)
@@ -205,7 +207,7 @@ instance Crypto c => ToCBOR (GovernanceActionId c) where
   toCBOR GovernanceActionId {..} =
     encode $
       Rec GovernanceActionId
-        !> To gaidTransactionId
+        !> To gaidTxId
         !> To gaidGovActionIx
 
 instance

@@ -38,9 +38,11 @@ import Cardano.Ledger.Alonzo.TxWits
     TxDats (..),
   )
 import Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..))
+import Cardano.Ledger.Babbage.Rules ()
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), Datum (..))
 import Cardano.Ledger.BaseTypes (Network (..), mkTxIxPartial)
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway.Rules ()
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys
   ( KeyHash,
@@ -1082,12 +1084,12 @@ testTx = do
 
 applySTSByProof ::
   forall era.
-  (GoodCrypto (EraCrypto era)) =>
+  (Era era, GoodCrypto (EraCrypto era)) =>
   Proof era ->
   RuleContext 'Transition (EraRule "LEDGER" era) ->
   Either [PredicateFailure (EraRule "LEDGER" era)] (State (EraRule "LEDGER" era))
-applySTSByProof (Conway _) _trc = runShelleyBase $ undefined -- applySTS @(EraRule "LEDGER" (ConwayEra (EraCrypto era))) _trc
-applySTSByProof (Babbage _) _trc = runShelleyBase $ applySTS @(EraRule "LEDGER" (BabbageEra (EraCrypto era))) _trc
+applySTSByProof (Conway _) trc = runShelleyBase $ applySTS trc
+applySTSByProof (Babbage _) trc = runShelleyBase $ applySTS trc
 applySTSByProof (Alonzo _) trc = runShelleyBase $ applySTS trc
 applySTSByProof (Mary _) trc = runShelleyBase $ applySTS trc
 applySTSByProof (Allegra _) trc = runShelleyBase $ applySTS trc

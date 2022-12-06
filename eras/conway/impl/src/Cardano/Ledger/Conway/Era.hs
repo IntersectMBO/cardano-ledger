@@ -40,8 +40,6 @@ type instance Value (ConwayEra c) = MaryValue c
 -- Era Mapping
 -------------------------------------------------------------------------------
 
--- Rules inherited from Babbage
-
 data ConwayUTXOS era
 
 type instance EraRule "UTXOS" (ConwayEra c) = ConwayUTXOS (ConwayEra c)
@@ -49,6 +47,8 @@ type instance EraRule "UTXOS" (ConwayEra c) = ConwayUTXOS (ConwayEra c)
 data ConwayUTXO era
 
 type instance EraRule "UTXO" (ConwayEra c) = ConwayUTXO (ConwayEra c)
+
+-- Rules inherited from Babbage
 
 type instance EraRule "UTXOW" (ConwayEra c) = BabbageUTXOW (ConwayEra c)
 
