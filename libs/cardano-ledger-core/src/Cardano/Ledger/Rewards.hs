@@ -40,7 +40,7 @@ import NoThunks.Class (NoThunks (..))
 -- <https://hydra.iohk.io/job/Cardano/cardano-ledger/shelleyLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec formal specification>
 -- for more details.
 data RewardType = MemberReward | LeaderReward
-  deriving (Eq, Show, Ord, Generic)
+  deriving (Eq, Show, Ord, Bounded, Enum, Generic)
 
 instance NoThunks RewardType
 

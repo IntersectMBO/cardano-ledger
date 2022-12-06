@@ -452,9 +452,6 @@ mkNonceFromNumber =
     . hashWith (BSL.toStrict . B.runPut . B.putWord64be)
 
 -- | Seed to the verifiable random function.
---
---   We do not expose the constructor to `Seed`. Instead, a `Seed` should be
---   created using `mkSeed` for a VRF calculation.
 newtype Seed = Seed (Hash Blake2b_256 Seed)
   deriving (Eq, Ord, Show, Generic)
   deriving newtype (NoThunks, ToCBOR)
@@ -471,18 +468,14 @@ infix 1 ==>
 -- Helper functions for text with a 64 byte bound
 --
 
-text64 :: Text -> Maybe Text
+text64 :: MonadFail m => Text -> m Text
 text64 t =
-  if (BS.length . encodeUtf8) t <= 64
-    then Just t
-    else Nothing
+  if BS.length (encodeUtf8 t) <= 64
+    then pure t
+    else fail $ "Text exceeds 64 bytes:" ++ show t
 
 text64FromCBOR :: Decoder s Text
-text64FromCBOR = do
-  t <- fromCBOR
-  if (BS.length . encodeUtf8) t > 64
-    then cborError $ DecoderErrorCustom "text exceeds 64 bytes:" t
-    else pure t
+text64FromCBOR = fromCBOR >>= text64
 
 --
 -- Types used in the Stake Pool Relays

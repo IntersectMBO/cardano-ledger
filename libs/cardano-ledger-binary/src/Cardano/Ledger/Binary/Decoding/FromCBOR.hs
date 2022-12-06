@@ -53,9 +53,10 @@ import Codec.CBOR.Term (Term (..))
 import Codec.Serialise as Serialise (Serialise (decode))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
-import qualified Data.ByteString.Short as SBS
-#if __GLASGOW_HASKELL__ < 900
-import qualified Data.ByteString.Short.Internal as SBS
+#if MIN_VERSION_bytestring(0,11,1)
+import Data.ByteString.Short (ShortByteString(SBS))
+#else
+import Data.ByteString.Short.Internal (ShortByteString(SBS))
 #endif
 import Data.Fixed (Fixed (..), Nano, Pico)
 import Data.IP (IPv4, IPv6)
@@ -309,10 +310,10 @@ instance FromCBOR T.Text where
 instance FromCBOR BSL.ByteString where
   fromCBOR = BSL.fromStrict <$> fromCBOR
 
-instance FromCBOR SBS.ShortByteString where
+instance FromCBOR ShortByteString where
   fromCBOR = do
     BA (Prim.ByteArray ba) <- decodeByteArray
-    return $ SBS.SBS ba
+    return $ SBS ba
 
 instance FromCBOR ByteArray where
   fromCBOR = decodeByteArray
