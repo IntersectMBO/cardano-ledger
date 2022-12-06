@@ -424,15 +424,18 @@ blockEx3 =
 snapEx3 :: Cr.Crypto c => EB.SnapShot c
 snapEx3 =
   EB.SnapShot
-    ( mkStake
-        [ (Cast.aliceSHK, aliceCoinEx2Base <> aliceCoinEx2Ptr),
-          (Cast.bobSHK, bobInitCoin)
-        ]
-    )
-    [ (Cast.aliceSHK, hk Cast.alicePoolKeys),
-      (Cast.bobSHK, hk Cast.alicePoolKeys)
-    ]
-    [(hk Cast.alicePoolKeys, Cast.alicePoolParams)]
+    { EB.ssStake = 
+        mkStake
+          [ (Cast.aliceSHK, aliceCoinEx2Base <> aliceCoinEx2Ptr),
+            (Cast.bobSHK, bobInitCoin)
+          ],
+      EB.ssDelegations =
+        [ (Cast.aliceSHK, hk Cast.alicePoolKeys),
+          (Cast.bobSHK, hk Cast.alicePoolKeys)
+        ],
+      EB.ssPoolParams = 
+        [(hk Cast.alicePoolKeys, Cast.alicePoolParams)]
+    }
 
 expectedStEx3 ::
   forall c.
@@ -565,17 +568,20 @@ blockEx5 =
 snapEx5 :: forall c. Cr.Crypto c => EB.SnapShot c
 snapEx5 =
   EB.SnapShot
-    ( mkStake
-        [ (Cast.aliceSHK, aliceCoinEx4Base <> aliceCoinEx2Ptr),
-          (Cast.carlSHK, carlMIR),
-          (Cast.bobSHK, bobInitCoin)
-        ]
-    )
-    [ (Cast.aliceSHK, hk Cast.alicePoolKeys),
-      (Cast.carlSHK, hk Cast.alicePoolKeys),
-      (Cast.bobSHK, hk Cast.alicePoolKeys)
-    ]
-    [(hk Cast.alicePoolKeys, Cast.alicePoolParams)]
+    { EB.ssStake =
+        mkStake
+          [ (Cast.aliceSHK, aliceCoinEx4Base <> aliceCoinEx2Ptr),
+            (Cast.carlSHK, carlMIR),
+            (Cast.bobSHK, bobInitCoin)
+          ],
+      EB.ssDelegations =
+        [ (Cast.aliceSHK, hk Cast.alicePoolKeys),
+          (Cast.carlSHK, hk Cast.alicePoolKeys),
+          (Cast.bobSHK, hk Cast.alicePoolKeys)
+        ],
+      EB.ssPoolParams =
+        [(hk Cast.alicePoolKeys, Cast.alicePoolParams)]
+    }
 
 pdEx5 :: forall c. Cr.Crypto c => PoolDistr c
 pdEx5 =

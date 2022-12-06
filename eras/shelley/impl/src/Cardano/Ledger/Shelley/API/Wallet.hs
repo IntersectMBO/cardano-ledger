@@ -216,11 +216,11 @@ poolsByTotalStakeFraction ::
 poolsByTotalStakeFraction globals ss =
   PoolDistr poolsByTotalStake
   where
-    EB.SnapShotRaw stake delegations poolparams _ = currentSnapshot ss
+    snap@(EB.SnapShot stake _ _) = currentSnapshot ss
     Coin totalStake = getTotalStake globals ss
     Coin activeStake = EB.sumAllStake stake
     stakeRatio = activeStake % totalStake
-    PoolDistr poolsByActiveStake = calculatePoolDistr stake delegations poolparams
+    PoolDistr poolsByActiveStake = calculatePoolDistr snap
     poolsByTotalStake = Map.map toTotalStakeFrac poolsByActiveStake
     toTotalStakeFrac ::
       IndividualPoolStake (EraCrypto era) ->
@@ -263,7 +263,7 @@ getNonMyopicMemberRewards globals ss creds =
     es = nesEs ss
     pp = esPp es
     NonMyopic {likelihoodsNM = ls, rewardPotNM = rPot} = esNonMyopic es
-    EB.SnapShotRaw stake delegs poolParams _ = currentSnapshot ss
+    EB.SnapShot stake delegs poolParams = currentSnapshot ss
     poolData =
       Map.fromDistinctAscList
         [ ( k,
@@ -387,7 +387,7 @@ getRewardInfoPools globals ss =
       } = esNonMyopic es
     histLookup key = Map.findWithDefault mempty key ls
 
-    EB.SnapShotRaw stakes delegs poolParams _ = currentSnapshot ss
+    EB.SnapShot stakes delegs poolParams = currentSnapshot ss
 
     mkRewardParams =
       RewardParams

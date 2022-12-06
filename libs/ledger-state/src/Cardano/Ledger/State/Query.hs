@@ -133,7 +133,7 @@ insertSnapShot ::
 insertSnapShot
   snapShotEpochStateId
   snapShotType
-  (EpochBoundary.SnapShot ssStake ssDelegations ssPoolParams) =
+  EpochBoundary.SnapShot {..} =
     do
       snapShotId <- insert $ SnapShot {snapShotType, snapShotEpochStateId}
       VG.forM_ (VMap.unVMap (EpochBoundary.unStake ssStake)) $ \(cred, c) -> do
@@ -344,7 +344,11 @@ getSnapShotNoSharing epochStateId snapShotType = do
       KeyHash keyHash <- getJust snapShotPoolKeyHashId
       pure (Keys.coerceKeyRole keyHash, snapShotPoolParams)
   pure $
-    EpochBoundary.SnapShot (EpochBoundary.Stake stake) delegations poolParams
+    EpochBoundary.SnapShot 
+      { ssStake = (EpochBoundary.Stake stake),
+        ssDelegations = delegations,
+        ssPoolParams = poolParams
+      }
 {-# INLINEABLE getSnapShotNoSharing #-}
 
 getSnapShotsNoSharing ::
@@ -358,6 +362,7 @@ getSnapShotsNoSharing (Entity epochStateId EpochState {epochStateSnapShotsFee}) 
   pure $
     EpochBoundary.SnapShots
       { ssStakeMark = mark,
+        ssStakeMarkPoolDistr = EpochBoundary.calculatePoolDistr mark,
         ssStakeSet = set,
         ssStakeGo = go,
         ssFee = epochStateSnapShotsFee
@@ -434,6 +439,7 @@ getSnapShotsWithSharing (Entity epochStateId EpochState {epochStateSnapShotsFee}
   pure $
     EpochBoundary.SnapShots
       { ssStakeMark = mark,
+        ssStakeMarkPoolDistr = EpochBoundary.calculatePoolDistr mark,
         ssStakeSet = set,
         ssStakeGo = go,
         ssFee = epochStateSnapShotsFee

@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -34,10 +33,10 @@ calcPoolDistOldEqualsNew =
         "old==new"
         ( withMaxSuccess
             500
-            ( \snap@SnapShotRaw {ssrStake, ssrDelegations, ssrPoolParams} ->
+            ( \snap ->
                 counterexample
                   "BAD"
-                  (oldCalculatePoolDistr @StandardCrypto (const True) snap === calculatePoolDistr ssrStake ssrDelegations ssrPoolParams)
+                  (oldCalculatePoolDistr @StandardCrypto (const True) snap === calculatePoolDistr snap)
             )
         )
     ]

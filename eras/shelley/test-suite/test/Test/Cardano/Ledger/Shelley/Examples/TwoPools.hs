@@ -372,19 +372,22 @@ blockEx3 =
 snapEx3 :: ExMock c => EB.SnapShot c
 snapEx3 =
   EB.SnapShot
-    ( mkStake
-        [ (Cast.aliceSHK, aliceCoinEx1),
-          (Cast.bobSHK, bobInitCoin),
-          (Cast.carlSHK, carlInitCoin)
+    { EB.ssStake =
+        mkStake
+          [ (Cast.aliceSHK, aliceCoinEx1),
+            (Cast.bobSHK, bobInitCoin),
+            (Cast.carlSHK, carlInitCoin)
+          ],
+      EB.ssDelegations =
+        [ (Cast.aliceSHK, hk Cast.alicePoolKeys),
+          (Cast.bobSHK, hk Cast.bobPoolKeys),
+          (Cast.carlSHK, hk Cast.alicePoolKeys)
+        ],
+      EB.ssPoolParams =
+        [ (hk Cast.alicePoolKeys, alicePoolParams'),
+          (hk Cast.bobPoolKeys, bobPoolParams')
         ]
-    )
-    [ (Cast.aliceSHK, hk Cast.alicePoolKeys),
-      (Cast.bobSHK, hk Cast.bobPoolKeys),
-      (Cast.carlSHK, hk Cast.alicePoolKeys)
-    ]
-    [ (hk Cast.alicePoolKeys, alicePoolParams'),
-      (hk Cast.bobPoolKeys, bobPoolParams')
-    ]
+    }
 
 expectedStEx3 ::
   forall era.

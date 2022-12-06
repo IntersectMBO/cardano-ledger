@@ -216,13 +216,13 @@ instance AggregateStat SnapShotStats where
       }
 
 countSnapShotStat :: SnapShot C -> SnapShotStats
-countSnapShotStat (SnapShot stake delegs poolParams) =
+countSnapShotStat SnapShot {..} =
   SnapShotStats
-    { sssStake = statMapKeys (VMap.toMap (unStake stake)),
-      sssDelegationCredential = statMapKeys (VMap.toMap delegs),
-      sssDelegationStakePool = statFoldable (VMap.toMap delegs),
-      sssPoolParams = statMapKeys (VMap.toMap poolParams),
-      sssPoolParamsStats = VMap.foldMap countPoolParamsStats poolParams
+    { sssStake = statMapKeys (VMap.toMap (unStake ssStake)),
+      sssDelegationCredential = statMapKeys (VMap.toMap ssDelegations),
+      sssDelegationStakePool = statFoldable (VMap.toMap ssDelegations),
+      sssPoolParams = statMapKeys (VMap.toMap ssPoolParams),
+      sssPoolParamsStats = VMap.foldMap countPoolParamsStats ssPoolParams
     }
 
 data PoolParamsStats = PoolParamsStats

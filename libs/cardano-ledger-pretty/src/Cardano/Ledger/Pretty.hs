@@ -882,7 +882,7 @@ ppSnapShot (SnapShot st deleg params) =
     ]
 
 ppSnapShots :: SnapShots crypto -> PDoc
-ppSnapShots (SnapShots mark set go fees) =
+ppSnapShots (SnapShots mark _markPD set go fees) =
   ppRecord
     "SnapShots"
     [ ("pstakeMark", ppSnapShot mark),

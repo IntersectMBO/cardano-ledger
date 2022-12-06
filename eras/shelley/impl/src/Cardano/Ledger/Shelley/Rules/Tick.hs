@@ -30,7 +30,7 @@ where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..), epochInfoPure, quorum)
 import Cardano.Ledger.Core
-import Cardano.Ledger.EpochBoundary (SnapShots (ssStakeMark), ssrStakePoolDistr)
+import Cardano.Ledger.EpochBoundary (SnapShots (ssStakeMark), ssStakeMarkPoolDistr)
 import Cardano.Ledger.Keys (GenDelegs (..))
 import Cardano.Ledger.Shelley.Era (ShelleyTICK, ShelleyTICKF)
 import Cardano.Ledger.Shelley.LedgerState
@@ -203,7 +203,7 @@ validatingTickTransitionFORECAST nes slot = do
         } = es
 
   -- the relevant 'NEWEPOCH' logic
-  let pd' = ssrStakePoolDistr $ ssStakeMark ss
+  let pd' = ssStakeMarkPoolDistr ss
   if unEpochNo epoch /= unEpochNo (nesEL nes) + 1
     then pure nes
     else do
@@ -258,7 +258,7 @@ bheadTransition = do
   -- so that it can remain a thunk when the consensus
   -- layer computes the ledger view across the epoch boundary.
   let !_ = ssStakeMark . esSnapshots . nesEs $ nes'
-      !_ = ssrStakePoolDistr . ssStakeMark . esSnapshots . nesEs $ nes'
+      !_ = ssStakeMarkPoolDistr . esSnapshots . nesEs $ nes'
 
   ru'' <-
     trans @(EraRule "RUPD" era) $
