@@ -1,28 +1,32 @@
--- \* Building and inspecting transactions
---
-
 -- | Transaction building and inspecting relies heavily on lenses (`microlens`). Therefore, some
 -- familiarity with those is necessary. However, you can probably go a long way by simply
 -- looking at the examples and try to go from there.
 --
--- Here's an example on how to build a very simple Babbage era unbalanced transaction using the
--- provided interface.
+-- Let's start by defining the GHC extensions and imports.
 --
--- >>> :set -XTypeApplications
+-- >>> :set -XScopedTypeVariables
 -- >>> import Test.QuickCheck
 -- >>> import qualified Data.Sequence.Strict as StrictSeq
--- >>> import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
+-- >>> import Cardano.Ledger.Api.Era (Babbage)
 -- >>> import Lens.Micro
--- prop> \txOut ->
+-- >>> import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
+--
+-- Here's an example on how to build a Babbage era unbalanced transaction containing a single
+-- transaction output using the provided interface.
+--
+-- >>> :{
+-- quickCheck $ \(txOut :: TxOut Babbage) ->
 --     let
 --         -- Defining a Babbage era transaction body with a single random transaction output
 --         txBody = mkBasicTxBody
---                & outputsTxBodyL <>~ StrictSeq.singleton (txOut @Babbage)
+--                & outputsTxBodyL <>~ StrictSeq.singleton txOut
 --         -- Defining a basic transaction with our transaction body
 --         tx = mkBasicTx txBody
 --      in
 --         -- We verify that the transaction's outputs contains our single random output
 --         tx ^. bodyTxL . outputsTxBodyL == StrictSeq.singleton txOut
+-- :}
+-- +++ OK, passed 100 tests.
 module Cardano.Ledger.Api.Tx
   ( -- | Building and inspecting transaction bodies
     module Cardano.Ledger.Api.Tx.Body,
