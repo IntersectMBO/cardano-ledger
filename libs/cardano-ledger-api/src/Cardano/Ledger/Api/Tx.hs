@@ -8,7 +8,6 @@
 -- >>> import Test.QuickCheck
 -- >>> import qualified Data.Sequence.Strict as StrictSeq
 -- >>> import Cardano.Ledger.Api.Era (Babbage)
--- >>> import Cardano.Ledger.Core (TxOut, mkBasicTxBody, outputsTxBodyL)
 -- >>> import Lens.Micro
 -- >>> import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 --

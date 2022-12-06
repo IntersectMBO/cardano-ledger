@@ -82,7 +82,7 @@ instance ToJSON PoolMetadata where
   toJSON pmd =
     Aeson.object
       [ "url" .= pmUrl pmd,
-        "hash" .= (Text.decodeLatin1 . B16.encode) (pmHash pmd)
+        "hash" .= Text.decodeLatin1 (B16.encode (pmHash pmd))
       ]
 
 instance FromJSON PoolMetadata where

@@ -6,6 +6,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE QuantifiedConstraints #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -15,59 +16,25 @@
 
 module Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators
   ( genCoherentBlock,
-    genHash,
-    genShelleyAddress,
-    genByronAddress,
     MockGen,
     maxTxWits,
   )
 where
 
-import Cardano.Crypto.DSIGN.Class
-  ( DSIGNAlgorithm,
-    SignedDSIGN (..),
-    rawDeserialiseSigDSIGN,
-    sizeSigDSIGN,
-  )
 import Cardano.Crypto.DSIGN.Mock (VerKeyDSIGN (..))
-import Cardano.Crypto.Hash (HashAlgorithm)
-import qualified Cardano.Crypto.Hash as Hash
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes
-  ( ActiveSlotCoeff,
-    BlockNo (..),
-    BlocksMade (..),
-    DnsName,
-    EpochSize (..),
-    NonNegativeInterval,
-    PositiveInterval,
-    PositiveUnitInterval,
+  ( BlockNo (..),
     SlotNo (..),
-    UnitInterval,
-    Url,
-    mkActiveSlotCoeff,
-    mkCertIxPartial,
-    mkNonceFromNumber,
-    mkTxIxPartial,
-    promoteRatio,
-    textToDns,
-    textToUrl,
   )
-import Cardano.Ledger.Coin (CompactForm (..), DeltaCoin (..))
+import Cardano.Ledger.Coin (CompactForm (..))
 import Cardano.Ledger.Core
   ( Era,
     EraCrypto,
     EraScript (..),
     EraSegWits (..),
-    Reward (..),
-    RewardType (..),
   )
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Crypto (DSIGN)
-import qualified Cardano.Ledger.Crypto as CC (Crypto, HASH)
-import Cardano.Ledger.Keys.Bootstrap (ChainCode (..))
-import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
-import Cardano.Ledger.SafeHash (SafeHash, unsafeMakeSafeHash)
+import Cardano.Ledger.Crypto (Crypto, DSIGN)
 import Cardano.Ledger.Shelley.API hiding (SignedDSIGN, TxBody)
 import Cardano.Ledger.Shelley.LedgerState (FutureGenDeleg, StashedAVVMAddresses)
 import qualified Cardano.Ledger.Shelley.Metadata as MD
@@ -99,22 +66,13 @@ import qualified Cardano.Protocol.TPraos.Rules.Overlay as STS
 import qualified Cardano.Protocol.TPraos.Rules.Prtcl as STS (PrtclState)
 import qualified Cardano.Protocol.TPraos.Rules.Tickn as STS
 import Control.State.Transition (STS (State))
-import qualified Data.ByteString.Char8 as BS
 import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromJust)
-import Data.Proxy (Proxy (..))
-import Data.Ratio ((%))
 import qualified Data.Text as T
-import qualified Data.Time as Time
-import qualified Data.Time.Calendar.OrdinalDate as Time
-import Data.Typeable (Typeable)
 import qualified Data.VMap as VMap
-import Data.Word (Word16, Word32, Word64, Word8)
+import Data.Word (Word64)
 import Generic.Random (genericArbitraryU)
-import System.Random.Stateful (uniformByteStringM)
-import Test.Cardano.Ledger.Binary.Arbitrary ()
-import Test.Cardano.Ledger.Binary.Random (QC (..), mkDummyHash)
+import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Generator.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core
@@ -123,15 +81,9 @@ import Test.Cardano.Ledger.Shelley.Generator.Core
     mkOCert,
   )
 import Test.Cardano.Ledger.Shelley.Generator.Presets (coreNodeKeys)
-import Test.Cardano.Ledger.Shelley.Serialisation.Generators.Bootstrap
-  ( genBootstrapAddress,
-    genSignature,
-  )
-import Test.Cardano.Ledger.Shelley.Utils (unsafeBoundRational)
 import Test.QuickCheck
   ( Arbitrary,
     Gen,
-    Positive (..),
     arbitrary,
     choose,
     chooseBoundedIntegral,
@@ -148,12 +100,6 @@ import Test.QuickCheck
   )
 
 -- =======================================================
-
-genHash :: forall a h. HashAlgorithm h => Gen (Hash.Hash h a)
-genHash = mkDummyHash <$> (arbitrary :: Gen Int)
-
-instance Hash.HashAlgorithm (CC.HASH c) => Arbitrary (SafeHash c i) where
-  arbitrary = unsafeMakeSafeHash <$> arbitrary
 
 {-------------------------------------------------------------------------------
   Generators
@@ -194,29 +140,10 @@ instance Mock c => Arbitrary (BHeader c) where
         bodySize
         bodyHash
 
-instance DSIGNAlgorithm c => Arbitrary (SignedDSIGN c a) where
-  arbitrary =
-    SignedDSIGN . fromJust . rawDeserialiseSigDSIGN
-      <$> (genByteString . fromIntegral $ sizeSigDSIGN (Proxy @c))
+instance Crypto c => Arbitrary (TP.HashHeader c) where
+  arbitrary = TP.HashHeader <$> arbitrary
 
-instance CC.Crypto c => Arbitrary (BootstrapWitness c) where
-  arbitrary = do
-    key <- arbitrary
-    sig <- genSignature
-    chainCode <- ChainCode <$> arbitrary
-    attributes <- arbitrary
-    pure $ BootstrapWitness key sig chainCode attributes
-
-instance CC.Crypto c => Arbitrary (TP.HashHeader c) where
-  arbitrary = TP.HashHeader <$> genHash
-
-instance (Typeable kr, CC.Crypto c) => Arbitrary (WitVKey kr c) where
-  arbitrary =
-    WitVKey
-      <$> arbitrary
-      <*> arbitrary
-
-instance CC.Crypto c => Arbitrary (Wdrl c) where
+instance Crypto c => Arbitrary (Wdrl c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -259,59 +186,16 @@ instance Era era => Arbitrary (MD.ShelleyTxAuxData era) where
 maxTxWits :: Int
 maxTxWits = 5
 
-instance CC.Crypto c => Arbitrary (TxId c) where
-  arbitrary = TxId <$> arbitrary
-
-instance CC.Crypto c => Arbitrary (TxIn c) where
-  arbitrary =
-    TxIn
-      <$> (TxId <$> arbitrary)
-      <*> arbitrary
-
 instance
   (Core.EraTxOut era, Mock (EraCrypto era), Arbitrary (Core.Value era)) =>
   Arbitrary (ShelleyTxOut era)
   where
   arbitrary = ShelleyTxOut <$> arbitrary <*> arbitrary
 
-instance Arbitrary Nonce where
-  arbitrary =
-    oneof
-      [ return NeutralNonce,
-        mkNonceFromNumber <$> choose (1, 123 :: Word64)
-      ]
-
-instance Arbitrary UnitInterval where
-  arbitrary = do
-    x :: Word64 <- arbitrary
-    Positive (y :: Word64) <- arbitrary
-    pure $ unsafeBoundRational $ promoteRatio (if x > y then y % x else x % y)
-
-instance Arbitrary PositiveUnitInterval where
-  arbitrary = do
-    Positive (x :: Word64) <- arbitrary
-    Positive (y :: Word64) <- arbitrary
-    pure $ unsafeBoundRational $ promoteRatio (if x > y then y % x else x % y)
-
-instance Arbitrary PositiveInterval where
-  arbitrary = do
-    Positive (x :: Word64) <- arbitrary
-    Positive (y :: Word64) <- arbitrary
-    pure $ unsafeBoundRational $ promoteRatio (x % y)
-
-instance Arbitrary NonNegativeInterval where
-  arbitrary = do
-    x :: Word64 <- arbitrary
-    Positive (y :: Word64) <- arbitrary
-    pure $ unsafeBoundRational $ promoteRatio (x % y)
-
-instance CC.Crypto c => Arbitrary (KeyHash a c) where
-  arbitrary = KeyHash <$> genHash
-
 instance Arbitrary MIRPot where
   arbitrary = genericArbitraryU
 
-instance CC.Crypto c => Arbitrary (MIRTarget c) where
+instance Crypto c => Arbitrary (MIRTarget c) where
   arbitrary =
     oneof
       [ StakeAddressesMIR <$> arbitrary,
@@ -322,89 +206,23 @@ instance Arbitrary STS.VotingPeriod where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Arbitrary Coin where
-  -- Cannot be negative even though it is an 'Integer'
-  arbitrary = Coin <$> choose (0, 1000)
-  shrink (Coin i) = Coin <$> shrink i
-
-instance Arbitrary DeltaCoin where
-  arbitrary = DeltaCoin <$> choose (-1000, 1000)
-
-instance CC.Crypto c => Arbitrary (Addr c) where
-  arbitrary = oneof [genShelleyAddress, genByronAddress]
-
-genShelleyAddress :: CC.Crypto c => Gen (Addr c)
-genShelleyAddress = Addr <$> arbitrary <*> arbitrary <*> arbitrary
-
-genByronAddress :: Gen (Addr c)
-genByronAddress = AddrBootstrap <$> genBootstrapAddress
-
-instance CC.Crypto c => Arbitrary (StakeReference c) where
-  arbitrary = genericArbitraryU
-  shrink = genericShrink
-
-instance CC.Crypto c => Arbitrary (Credential r c) where
-  arbitrary =
-    oneof
-      [ ScriptHashObj . ScriptHash <$> genHash,
-        KeyHashObj <$> arbitrary
-      ]
-
-instance Arbitrary TxIx where
-  arbitrary = mkTxIxPartial . toInteger <$> (arbitrary :: Gen Word16)
-
-instance Arbitrary CertIx where
-  arbitrary = mkCertIxPartial . toInteger <$> (arbitrary :: Gen Word16)
-
-instance Arbitrary Ptr where
-  arbitrary = Ptr <$> genSlotNo <*> arbitrary <*> arbitrary
-    where
-      -- We are only allowing 32bit large slot numbers in Ptrs
-      genSlotNo = SlotNo . (fromIntegral :: Word32 -> Word64) <$> arbitrary
-
-instance CC.Crypto c => Arbitrary (RewardAcnt c) where
-  arbitrary = RewardAcnt <$> arbitrary <*> arbitrary
-
-instance Arbitrary Network where
-  arbitrary = genericArbitraryU
-  shrink = genericShrink
-
-instance (Arbitrary (VerKeyDSIGN (DSIGN c))) => Arbitrary (VKey kd c) where
-  arbitrary = VKey <$> arbitrary
-
-instance Arbitrary ProtVer where
-  arbitrary = ProtVer <$> arbitrary <*> arbitrary
-
-instance CC.Crypto c => Arbitrary (ScriptHash c) where
-  arbitrary = ScriptHash <$> genHash
-
-instance CC.Crypto c => Arbitrary (AuxiliaryDataHash c) where
-  arbitrary = AuxiliaryDataHash <$> arbitrary
-
 instance Arbitrary STS.TicknState where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance CC.Crypto c => Arbitrary (STS.PrtclState c) where
+instance Crypto c => Arbitrary (STS.PrtclState c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-deriving instance
-  ( Core.EraTxOut era,
-    Mock (EraCrypto era),
-    Arbitrary (Core.TxOut era)
-  ) =>
-  Arbitrary (UTxO era)
-
-instance CC.Crypto c => Arbitrary (PState c) where
+instance Crypto c => Arbitrary (PState c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance CC.Crypto c => Arbitrary (InstantaneousRewards c) where
+instance Crypto c => Arbitrary (InstantaneousRewards c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance CC.Crypto c => Arbitrary (FutureGenDeleg c) where
+instance Crypto c => Arbitrary (FutureGenDeleg c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -412,23 +230,15 @@ instance (Arbitrary k, Arbitrary v) => Arbitrary (LM.ListMap k v) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance CC.Crypto c => Arbitrary (GenDelegs c) where
-  arbitrary = genericArbitraryU
-  shrink = genericShrink
-
-instance CC.Crypto c => Arbitrary (GenDelegPair c) where
-  arbitrary = genericArbitraryU
-  shrink = genericShrink
-
-instance CC.Crypto c => Arbitrary (Triple c) where
+instance Crypto c => Arbitrary (Triple c) where
   arbitrary = Triple <$> arbitrary <*> arbitrary <*> arbitrary
   shrink = genericShrink
 
-instance CC.Crypto c => Arbitrary (UnifiedMap c) where
+instance Crypto c => Arbitrary (UnifiedMap c) where
   arbitrary = UnifiedMap <$> arbitrary <*> arbitrary
   shrink = genericShrink
 
-instance CC.Crypto c => Arbitrary (DState c) where
+instance Crypto c => Arbitrary (DState c) where
   arbitrary =
     DState
       <$> arbitrary
@@ -436,27 +246,27 @@ instance CC.Crypto c => Arbitrary (DState c) where
       <*> arbitrary
       <*> arbitrary
 
-instance CC.Crypto c => Arbitrary (DelegCert c) where
+instance Crypto c => Arbitrary (DelegCert c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance CC.Crypto c => Arbitrary (Delegation c) where
+instance Crypto c => Arbitrary (Delegation c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance CC.Crypto c => Arbitrary (PoolCert c) where
+instance Crypto c => Arbitrary (PoolCert c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance CC.Crypto c => Arbitrary (GenesisDelegCert c) where
+instance Crypto c => Arbitrary (GenesisDelegCert c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance CC.Crypto c => Arbitrary (MIRCert c) where
+instance Crypto c => Arbitrary (MIRCert c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance CC.Crypto c => Arbitrary (DCert c) where
+instance Crypto c => Arbitrary (DCert c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -464,7 +274,7 @@ instance (Era era, Mock (EraCrypto era)) => Arbitrary (PPUPState era) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance CC.Crypto c => Arbitrary (DPState c) where
+instance Crypto c => Arbitrary (DPState c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -479,7 +289,7 @@ instance
   arbitrary = genericArbitraryU
   shrink = recursivelyShrink
 
-instance CC.Crypto c => Arbitrary (IncrementalStake c) where
+instance Crypto c => Arbitrary (IncrementalStake c) where
   arbitrary = IStake <$> arbitrary <*> arbitrary
   shrink = genericShrink
 
@@ -519,16 +329,6 @@ instance
   where
   arbitrary = genericArbitraryU
 
-instance CC.Crypto c => Arbitrary (BlocksMade c) where
-  arbitrary = BlocksMade <$> arbitrary
-
-instance CC.Crypto c => Arbitrary (PoolDistr c) where
-  arbitrary =
-    PoolDistr . Map.fromList
-      <$> listOf ((,) <$> arbitrary <*> genVal)
-    where
-      genVal = IndividualPoolStake <$> arbitrary <*> genHash
-
 instance
   ( Core.EraTxOut era,
     Mock (EraCrypto era),
@@ -548,28 +348,17 @@ instance
       <*> arbitrary
       <*> arbitrary
 
-instance Arbitrary RewardType where
+instance Crypto c => Arbitrary (LeaderOnlyReward c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance CC.Crypto c => Arbitrary (Reward c) where
+instance Crypto c => Arbitrary (RewardUpdate c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance CC.Crypto c => Arbitrary (LeaderOnlyReward c) where
+instance Crypto c => Arbitrary (STS.OBftSlot c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
-
-instance CC.Crypto c => Arbitrary (RewardUpdate c) where
-  arbitrary = genericArbitraryU
-  shrink = genericShrink
-
-instance CC.Crypto c => Arbitrary (STS.OBftSlot c) where
-  arbitrary = genericArbitraryU
-  shrink = genericShrink
-
-instance Arbitrary ActiveSlotCoeff where
-  arbitrary = mkActiveSlotCoeff <$> arbitrary
 
 instance Arbitrary Likelihood where
   arbitrary = Likelihood <$> arbitrary
@@ -577,29 +366,27 @@ instance Arbitrary Likelihood where
 instance Arbitrary LogWeight where
   arbitrary = LogWeight <$> arbitrary
 
-instance CC.Crypto c => Arbitrary (NonMyopic c) where
+instance Crypto c => Arbitrary (NonMyopic c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance CC.Crypto c => Arbitrary (SnapShot c) where
+instance Crypto c => Arbitrary (SnapShot c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance CC.Crypto c => Arbitrary (SnapShots c) where
+instance Crypto c => Arbitrary (SnapShots c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
 instance Arbitrary PerformanceEstimate where
   arbitrary = PerformanceEstimate <$> arbitrary
 
-deriving instance Arbitrary (CompactForm Coin)
-
 -- | In the system, Stake never contains more than the sum of all Ada (which is constant).
 -- This makes it safe to store individual Coins (in CompactForm) as Word64. But we must
 -- be careful that we never generate Stake where the sum of all the coins exceeds (maxBound :: Word64)
 -- There will never be a real Stake in the system with that many Ada, because total Ada is constant.
 -- So using a restricted Arbitrary Generator is OK.
-instance CC.Crypto c => Arbitrary (Stake c) where
+instance Crypto c => Arbitrary (Stake c) where
   arbitrary = Stake <$> (VMap.fromMap <$> theMap)
     where
       genWord64 :: Int -> Gen Word64
@@ -614,35 +401,6 @@ instance CC.Crypto c => Arbitrary (Stake c) where
         let pair = (,) <$> arbitrary <*> (CompactCoin <$> (genWord64 n))
         list <- frequency [(1, pure []), (99, vectorOf n pair)]
         pure (Map.fromList list)
-
-instance CC.Crypto c => Arbitrary (PoolParams c) where
-  arbitrary =
-    PoolParams
-      <$> arbitrary
-      <*> genHash
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-
-instance Arbitrary PoolMetadata where
-  arbitrary = (`PoolMetadata` BS.pack "bytestring") <$> arbitrary
-
-instance Arbitrary Url where
-  arbitrary = return . fromJust $ textToUrl "text"
-
-instance Arbitrary StakePoolRelay where
-  arbitrary = genericArbitraryU
-  shrink = genericShrink
-
-instance Arbitrary Port where
-  arbitrary = fromIntegral @Word8 @Port <$> arbitrary
-
-instance Arbitrary DnsName where
-  arbitrary = pure . fromJust $ textToDns "foo.example.com"
 
 instance Arbitrary AccountState where
   arbitrary = genericArbitraryU
@@ -667,42 +425,30 @@ sizedMultiSig n =
 instance Era era => Arbitrary (MultiSig era) where
   arbitrary = sizedMultiSig maxMultiSigDepth
 
--- |
--- Generate a byte string of a given size.
-genByteString :: Int -> Gen BS.ByteString
-genByteString size = uniformByteStringM size QC
-
-genUTCTime :: Gen Time.UTCTime
-genUTCTime = do
-  year <- arbitrary
-  dayOfYear <- arbitrary
-  diff <- arbitrary
-  pure $
-    Time.UTCTime
-      (Time.fromOrdinalDate year dayOfYear)
-      (Time.picosecondsToDiffTime diff)
-
 instance
   (Mock (EraCrypto era), Arbitrary (ShelleyPParams era)) =>
   Arbitrary (ShelleyGenesis era)
   where
-  arbitrary =
-    ShelleyGenesis
-      <$> genUTCTime -- sgSystemStart
-      <*> arbitrary -- sgNetworkMagic
-      <*> arbitrary -- sgNetworkId
-      <*> arbitrary -- sgActiveSlotsCoeff
-      <*> arbitrary -- sgSecurityParam
-      <*> (EpochSize <$> arbitrary) -- sgEpochLength
-      <*> arbitrary -- sgSlotsPerKESPeriod
-      <*> arbitrary -- sgMaxKESEvolutions
-      <*> (fromInteger <$> arbitrary) -- sgSlotLength
-      <*> arbitrary -- sgUpdateQuorum
-      <*> arbitrary -- sgMaxLovelaceSupply
-      <*> arbitrary -- sgProtocolParams
-      <*> arbitrary -- sgGenDelegs
-      <*> arbitrary -- sgInitialFunds
-      <*> (ShelleyGenesisStaking <$> arbitrary <*> arbitrary) -- sgStaking
+  arbitrary = do
+    sgSystemStart <- arbitrary
+    sgNetworkMagic <- arbitrary
+    sgNetworkId <- arbitrary
+    sgActiveSlotsCoeff <- arbitrary
+    sgSecurityParam <- arbitrary
+    sgEpochLength <- arbitrary
+    sgSlotsPerKESPeriod <- arbitrary
+    sgMaxKESEvolutions <- arbitrary
+    sgSlotLength <- (* 1000000) <$> arbitrary
+    sgUpdateQuorum <- arbitrary
+    sgMaxLovelaceSupply <- arbitrary
+    sgProtocolParams <- arbitrary
+    sgGenDelegs <- arbitrary
+    sgInitialFunds <- arbitrary
+    sgStaking <- arbitrary
+    pure ShelleyGenesis {..}
+
+instance Crypto c => Arbitrary (ShelleyGenesisStaking c) where
+  arbitrary = ShelleyGenesisStaking <$> arbitrary <*> arbitrary
 
 instance
   ( Mock (EraCrypto era),

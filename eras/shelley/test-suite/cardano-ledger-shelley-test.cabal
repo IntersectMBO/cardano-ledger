@@ -79,8 +79,6 @@ library
     Test.Cardano.Ledger.Shelley.Serialisation.CDDLUtils
     Test.Cardano.Ledger.Shelley.Serialisation.Generators
     Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators
-    Test.Cardano.Ledger.Shelley.Serialisation.Generators.Bootstrap
-    Test.Cardano.Ledger.Shelley.Serialisation.Generators.Genesis
     Test.Cardano.Ledger.Shelley.Serialisation.GoldenUtils
     Test.Cardano.Ledger.Shelley.ShelleyTranslation
     Test.Cardano.Ledger.Shelley.Shrinkers
@@ -99,7 +97,7 @@ library
                 cardano-ledger-binary:{cardano-ledger-binary, testlib},
                 cardano-ledger-byron,
                 cardano-ledger-byron-test,
-                cardano-ledger-core,
+                cardano-ledger-core:{cardano-ledger-core, testlib},
                 cardano-ledger-pretty,
                 cardano-ledger-shelley,
                 cardano-protocol-tpraos,
@@ -112,13 +110,11 @@ library
                 hashable,
                 hedgehog >= 1.0.4,
                 hedgehog-quickcheck,
-                iproute,
                 microlens,
                 mtl,
                 nothunks,
                 plutus-ledger-api,
                 process-extras,
-                random >= 1.2,
                 serialise,
                 set-algebra,
                 small-steps,
@@ -198,7 +194,6 @@ test-suite cardano-ledger-shelley-test
                 containers,
                 data-default-class,
                 groups,
-                hedgehog >= 1.0.4,
                 iproute,
                 microlens,
                 prettyprinter,
@@ -207,7 +202,6 @@ test-suite cardano-ledger-shelley-test
                 small-steps-test,
                 cardano-strict-containers,
                 tasty,
-                tasty-hedgehog,
                 tasty-hunit,
                 tasty-quickcheck,
                 time

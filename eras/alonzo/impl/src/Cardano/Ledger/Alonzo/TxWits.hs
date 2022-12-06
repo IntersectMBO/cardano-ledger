@@ -198,13 +198,13 @@ nullRedeemers = Map.null . unRedeemers
 
 -- | Internal 'AlonzoTxWits' type, lacking serialised bytes.
 data AlonzoTxWitsRaw era = AlonzoTxWitsRaw
-  { atwrAddrTxWits :: Set (WitVKey 'Witness (EraCrypto era)),
-    atwrBootAddrTxWits :: Set (BootstrapWitness (EraCrypto era)),
-    atwrScriptTxWits :: Map (ScriptHash (EraCrypto era)) (Core.Script era),
-    atwrDatsTxWits :: TxDats era,
-    atwrRdmrsTxWits :: Redeemers era
+  { atwrAddrTxWits :: !(Set (WitVKey 'Witness (EraCrypto era))),
+    atwrBootAddrTxWits :: !(Set (BootstrapWitness (EraCrypto era))),
+    atwrScriptTxWits :: !(Map (ScriptHash (EraCrypto era)) (Core.Script era)),
+    atwrDatsTxWits :: !(TxDats era),
+    atwrRdmrsTxWits :: !(Redeemers era)
   }
-  deriving (Generic, Typeable)
+  deriving (Generic)
 
 instance
   ( Era era,

@@ -71,8 +71,7 @@ import Cardano.Crypto.VRF
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Address (Addr, pattern Addr)
 import Cardano.Ledger.BaseTypes
-  ( BoundedRational (..),
-    Globals (..),
+  ( Globals (..),
     Network (..),
     Nonce,
     ShelleyBase,
@@ -125,11 +124,10 @@ import Control.State.Transition.Trace
 import Data.Coerce (Coercible, coerce)
 import Data.Default.Class (Default)
 import Data.Functor.Identity (runIdentity)
-import Data.Maybe (fromMaybe)
 import Data.Time.Clock.POSIX
 import Data.Typeable (Proxy (Proxy))
 import Data.Word (Word64)
-import GHC.Stack
+import Test.Cardano.Ledger.Core.Utils (unsafeBoundRational)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.QuickCheck (Arbitrary (..), chooseAny)
 import Test.Tasty.HUnit
@@ -217,9 +215,6 @@ mkKeyPair' seed = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair seed
 
-instance DSIGNAlgorithm (DSIGN c) => Arbitrary (KeyPair kd c) where
-  arbitrary = mkKeyPair' <$> arbitrary
-
 -- | For testing purposes, generate a deterministic VRF key pair given a seed.
 mkVRFKeyPair ::
   VRFAlgorithm v =>
@@ -260,11 +255,6 @@ mkAddr (payKey, stakeKey) =
     Testnet
     (KeyHashObj . hashKey $ vKey payKey)
     (StakeRefBase . KeyHashObj . hashKey $ vKey stakeKey)
-
--- | Convert to a bounded rational type why throwing an error on failure
-unsafeBoundRational :: (HasCallStack, BoundedRational r) => Rational -> r
-unsafeBoundRational r =
-  fromMaybe (error $ "Could not convert from Rational: " ++ show r) $ boundRational r
 
 testGlobals :: Globals
 testGlobals =

@@ -117,7 +117,24 @@ library
     transformers,
     validation-selective,
     vector-map,
-  
+
+library testlib
+  import:            base, project-config
+  visibility:        public
+  hs-source-dirs:    testlib
+  exposed-modules:
+                     Test.Cardano.Ledger.Core.Arbitrary
+                     Test.Cardano.Ledger.Core.Utils
+  build-depends:     base,
+                     cardano-crypto-class,
+                     cardano-ledger-core,
+                     cardano-ledger-binary:{testlib},
+                     cardano-ledger-byron-test,
+                     generic-random,
+                     genvalidity,
+                     hedgehog-quickcheck,
+                     QuickCheck,
+                     text,
 
 test-suite doctests
   hs-source-dirs:    doctests

@@ -38,6 +38,7 @@ in the naming of release branches.
 
 ### Changed
 
+- Fixed mismathed parenthesis in the `Show` instance for `Ptr`: #3184.
 - Split `cardano-ledger-shelley-ma` into `cardano-ledger-allegra` and `cardano-ledger-mary` #3175:
   - Moved `ShelleyMA.AuxiliaryData` -> `Allegra.TxAuxData`
   - Moved `ShelleyMA.Timelocks` -> `Allegra.Scripts`
