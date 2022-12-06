@@ -44,7 +44,7 @@ operational_cert =
   , sigma           : $signature
   )
 
-next_major_protocol_version = 8
+next_major_protocol_version = 10
 
 major_protocol_version = 1..next_major_protocol_version
 

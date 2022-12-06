@@ -52,17 +52,17 @@ import Lens.Micro (Lens')
 import NoThunks.Class (NoThunks)
 
 class BabbageEraTxBody era => ConwayEraTxBody era where
-  govActionsL :: Lens' (TxBody era) (StrictSeq (GovernanceActionInfo era))
-  votesL :: Lens' (TxBody era) (StrictSeq (Vote era))
+  govActionsTxBodyL :: Lens' (TxBody era) (StrictSeq (GovernanceActionInfo era))
+  votesTxBodyL :: Lens' (TxBody era) (StrictSeq (Vote era))
 
 ----- PLACEHOLDERS -----
 
 data GovernanceActionInfo era = GovernanceActionInfo
-  { gaiDepositAmount :: Coin,
-    gaiRewardAddress :: KeyHash 'Staking (EraCrypto era),
-    gaiMetadataURL :: Url,
-    gaiMetadataHash :: SafeHash (EraCrypto era) ByteString,
-    gaiAction :: GovernanceAction era
+  { gaiDepositAmount :: !Coin,
+    gaiRewardAddress :: !(KeyHash 'Staking (EraCrypto era)),
+    gaiMetadataURL :: !Url,
+    gaiMetadataHash :: !(SafeHash (EraCrypto era) ByteString),
+    gaiAction :: !(GovernanceAction era)
   }
   deriving (Generic)
 
@@ -105,9 +105,9 @@ instance
         !> To gaiAction
 
 data GovernanceAction era
-  = ParameterChange (PParamsUpdate era)
-  | HardForkInitiation ProtVer
-  | TreasuryWithdrawals (Map (Credential 'Staking (EraCrypto era)) Coin)
+  = ParameterChange !(PParamsUpdate era)
+  | HardForkInitiation !ProtVer
+  | TreasuryWithdrawals !(Map (Credential 'Staking (EraCrypto era)) Coin)
   deriving (Generic)
 
 deriving instance Eq (PParamsUpdate era) => Eq (GovernanceAction era)
@@ -157,8 +157,8 @@ deriving newtype instance FromCBOR GovernanceActionIx
 deriving newtype instance ToCBOR GovernanceActionIx
 
 data GovernanceActionId c = GovernanceActionId
-  { gaidTxId :: TxId c,
-    gaidGovActionIx :: GovernanceActionIx
+  { gaidTxId :: !(TxId c),
+    gaidGovActionIx :: !(GovernanceActionIx)
   }
   deriving (Generic, Eq, Show)
 
@@ -174,12 +174,12 @@ instance NoThunks (GovernanceActionId c)
 instance Crypto c => NFData (GovernanceActionId c)
 
 data Vote era = Vote
-  { voteGovActionId :: GovernanceActionId (EraCrypto era),
-    voteRole :: VoterRole,
-    voteRoleKeyHash :: KeyHash 'Voting (EraCrypto era),
-    voteMetadataURL :: Url,
-    voteMetadataHash :: SafeHash (EraCrypto era) ByteString,
-    voteDecision :: VoteDecision
+  { voteGovActionId :: !(GovernanceActionId (EraCrypto era)),
+    voteRole :: !VoterRole,
+    voteRoleKeyHash :: !(KeyHash 'Voting (EraCrypto era)),
+    voteMetadataURL :: !Url,
+    voteMetadataHash :: !(SafeHash (EraCrypto era) ByteString),
+    voteDecision :: !VoteDecision
   }
   deriving (Generic, Eq, Show)
 
@@ -211,10 +211,7 @@ instance Crypto c => ToCBOR (GovernanceActionId c) where
         !> To gaidGovActionIx
 
 instance
-  ( Era era,
-    Crypto (EraCrypto era)
-  ) =>
-  ToCBOR (Vote era)
+  Era era => ToCBOR (Vote era)
   where
   toCBOR Vote {..} =
     encode $
@@ -245,7 +242,10 @@ instance FromCBOR VoterRole where
 instance ToCBOR VoterRole where
   toCBOR x =
     encode $
-      Sum x (fromIntegral $ fromEnum x)
+      Sum x $ case x of
+        ConstitutionalCommittee -> 0
+        DRep -> 1
+        SPO -> 2
 
 instance NoThunks VoterRole
 
@@ -274,4 +274,7 @@ instance FromCBOR VoteDecision where
 instance ToCBOR VoteDecision where
   toCBOR x =
     encode $
-      Sum x (fromIntegral $ fromEnum x)
+      Sum x $ case x of
+        No -> 0
+        Yes -> 1
+        Abstain -> 2

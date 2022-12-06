@@ -5,10 +5,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Conway.Rules.Utxo
-  ( ConwayUTXO,
-  )
-where
+module Cardano.Ledger.Conway.Rules.Utxo (ConwayUTXO) where
 
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxoEvent (..), AlonzoUtxoPredFailure (..), AlonzoUtxosEvent, AlonzoUtxosPredFailure, AlonzoUtxowEvent (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)

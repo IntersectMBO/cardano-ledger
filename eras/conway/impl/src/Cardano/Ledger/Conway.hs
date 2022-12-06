@@ -33,6 +33,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict
 import qualified Data.Set as Set
 import Lens.Micro
+import Cardano.Ledger.Babbage.Core (BabbageEraTxBody(..))
 
 type Conway = ConwayEra StandardCrypto
 
