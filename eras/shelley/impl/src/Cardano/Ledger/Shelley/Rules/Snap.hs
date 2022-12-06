@@ -24,9 +24,10 @@ import Cardano.Ledger.Core (EraTxOut)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.EpochBoundary
   ( SnapShot (ssDelegations, ssStake),
-    SnapShots (SnapShots, ssFee, ssStakeGo, ssStakeMark, ssStakeSet, ssStakeMarkPoolDistr),
+    SnapShots (SnapShots, ssFee, ssStakeGo, ssStakeMark, ssStakeMarkPoolDistr, ssStakeSet),
     Stake (unStake),
-    emptySnapShots, calculatePoolDistr,
+    calculatePoolDistr,
+    emptySnapShots,
   )
 import Cardano.Ledger.Era (EraCrypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking))

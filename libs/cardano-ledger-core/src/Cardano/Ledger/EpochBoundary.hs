@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE DuplicateRecordFields #-}
@@ -13,7 +14,6 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE DeriveAnyClass #-}
 
 -- |
 -- Module      : EpochBoundary
@@ -233,7 +233,6 @@ instance CC.Crypto c => FromSharedCBOR (SnapShots c) where
     ssStakeGo <- fromSharedPlusCBOR
     ssFee <- lift fromCBOR
     pure SnapShots {ssStakeMark, ssStakeMarkPoolDistr = calculatePoolDistr ssStakeMark, ssStakeSet, ssStakeGo, ssFee}
-
 
 instance Default (SnapShots c) where
   def = emptySnapShots

@@ -77,8 +77,9 @@ import Cardano.Ledger.Rules.ValidationMode
   ( Inject (..),
     InjectMaybe (..),
     Test,
+    mapMaybeValidation,
     runTest,
-    runTestOnSignal, mapMaybeValidation,
+    runTestOnSignal,
   )
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, UtxoEnv)
@@ -263,9 +264,9 @@ feesOK pp tx (UTxO utxo) =
       collateral = txBody ^. collateralInputsTxBodyL -- Inputs allocated to pay txfee
       -- restrict Utxo to those inputs we use to pay fees.
       utxoCollateral = eval (collateral ◁ utxo)
-      -- theFee = txBody ^. feeTxBodyL
+   in -- theFee = txBody ^. feeTxBodyL
       -- minFee = getMinFeeTx pp tx
-   in sequenceA_
+      sequenceA_
         [ -- Part 1: minfee pp tx ≤ txfee txb
           mapMaybeValidation fromShelleyFailure $ Shelley.validateFeeTooSmallUTxO pp tx,
           -- failureUnless (minFee <= theFee) (inject (FeeTooSmallUTxO @era minFee theFee)),

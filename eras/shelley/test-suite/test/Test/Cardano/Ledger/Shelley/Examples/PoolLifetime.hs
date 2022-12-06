@@ -424,7 +424,7 @@ blockEx3 =
 snapEx3 :: Cr.Crypto c => EB.SnapShot c
 snapEx3 =
   EB.SnapShot
-    { EB.ssStake = 
+    { EB.ssStake =
         mkStake
           [ (Cast.aliceSHK, aliceCoinEx2Base <> aliceCoinEx2Ptr),
             (Cast.bobSHK, bobInitCoin)
@@ -433,7 +433,7 @@ snapEx3 =
         [ (Cast.aliceSHK, hk Cast.alicePoolKeys),
           (Cast.bobSHK, hk Cast.alicePoolKeys)
         ],
-      EB.ssPoolParams = 
+      EB.ssPoolParams =
         [(hk Cast.alicePoolKeys, Cast.alicePoolParams)]
     }
 

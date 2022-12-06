@@ -47,7 +47,7 @@ import Cardano.Ledger.EpochBoundary
   ( SnapShot (..),
     SnapShots (..),
     Stake (..),
-    calculatePoolDistr
+    calculatePoolDistr,
   )
 import Cardano.Ledger.Era (Era (..))
 import Cardano.Ledger.Keys

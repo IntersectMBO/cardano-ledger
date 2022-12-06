@@ -344,7 +344,7 @@ getSnapShotNoSharing epochStateId snapShotType = do
       KeyHash keyHash <- getJust snapShotPoolKeyHashId
       pure (Keys.coerceKeyRole keyHash, snapShotPoolParams)
   pure $
-    EpochBoundary.SnapShot 
+    EpochBoundary.SnapShot
       { ssStake = (EpochBoundary.Stake stake),
         ssDelegations = delegations,
         ssPoolParams = poolParams
