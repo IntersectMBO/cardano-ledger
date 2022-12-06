@@ -66,6 +66,7 @@ where
 
 import Cardano.Crypto.Hash.Class (Hash, hashToBytes)
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
+import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Data (Data (..), Datum, getPlutusData)
 import Cardano.Ledger.Alonzo.Scripts
   ( AlonzoScript (..),
@@ -124,7 +125,6 @@ import Cardano.Ledger.Shelley.TxBody
     Wdrl (..),
     WitVKey (..),
   )
-import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val (Val (..))

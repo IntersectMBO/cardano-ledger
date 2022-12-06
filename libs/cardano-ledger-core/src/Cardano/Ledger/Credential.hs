@@ -148,7 +148,7 @@ instance Show Ptr where
           . shows slotNo
           . (") (" ++)
           . shows txIx
-          . (") " ++)
+          . (") (" ++)
           . shows certIx
           . (')' :)
 

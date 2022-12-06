@@ -43,7 +43,8 @@ module Cardano.Ledger.Alonzo.TxBody
       ),
     AlonzoEraTxBody (..),
     ShelleyEraTxBody (..),
-    ShelleyMAEraTxBody (..),
+    AllegraEraTxBody (..),
+    MaryEraTxBody (..),
     inputs',
     collateral',
     outputs',
@@ -75,7 +76,13 @@ module Cardano.Ledger.Alonzo.TxBody
   )
 where
 
-import Cardano.Ledger.Alonzo.Core (AlonzoEraTxBody (..), ScriptIntegrityHash)
+import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
+import Cardano.Ledger.Alonzo.Core
+  ( AllegraEraTxBody (..),
+    AlonzoEraTxBody (..),
+    MaryEraTxBody (..),
+    ScriptIntegrityHash,
+  )
 import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash (..))
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Scripts ()
@@ -111,8 +118,6 @@ import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert)
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), Wdrl (Wdrl), unWdrl)
-import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
-import Cardano.Ledger.ShelleyMA.TxBody (ShelleyMAEraTxBody (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..))
@@ -217,12 +222,15 @@ instance CC.Crypto c => ShelleyEraTxBody (AlonzoEra c) where
     lensMemoRawType atbrCerts (\txBodyRaw certs_ -> txBodyRaw {atbrCerts = certs_})
   {-# INLINEABLE certsTxBodyL #-}
 
-instance CC.Crypto c => ShelleyMAEraTxBody (AlonzoEra c) where
-  {-# SPECIALIZE instance ShelleyMAEraTxBody (AlonzoEra CC.StandardCrypto) #-}
+instance CC.Crypto c => AllegraEraTxBody (AlonzoEra c) where
+  {-# SPECIALIZE instance AllegraEraTxBody (AlonzoEra CC.StandardCrypto) #-}
 
   vldtTxBodyL =
     lensMemoRawType atbrValidityInterval (\txBodyRaw vldt_ -> txBodyRaw {atbrValidityInterval = vldt_})
   {-# INLINEABLE vldtTxBodyL #-}
+
+instance CC.Crypto c => MaryEraTxBody (AlonzoEra c) where
+  {-# SPECIALIZE instance MaryEraTxBody (AlonzoEra CC.StandardCrypto) #-}
 
   mintTxBodyL =
     lensMemoRawType atbrMint (\txBodyRaw mint_ -> txBodyRaw {atbrMint = mint_})

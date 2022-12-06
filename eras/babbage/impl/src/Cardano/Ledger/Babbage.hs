@@ -15,6 +15,8 @@ module Cardano.Ledger.Babbage
     BabbageTxBody,
     AlonzoScript,
     AlonzoTxAuxData,
+    BabbagePParams,
+    BabbagePParamsUpdate,
 
     -- * Deprecated
     Self,
@@ -31,7 +33,7 @@ import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), Script)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..))
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.Genesis (AlonzoGenesis, extendPPWithGenesis)
-import Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..))
+import Cardano.Ledger.Babbage.PParams (BabbagePParams, BabbagePParamsHKD (..), BabbagePParamsUpdate)
 import Cardano.Ledger.Babbage.Rules ()
 import Cardano.Ledger.Babbage.Translation ()
 import Cardano.Ledger.Babbage.Tx

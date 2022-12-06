@@ -72,6 +72,7 @@ module Test.Cardano.Ledger.Generic.GenState
 where
 
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
+import Cardano.Ledger.Allegra.Scripts (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Data (Data (..), hashData)
 import Cardano.Ledger.Alonzo.Scripts hiding (Mint, Script)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
@@ -99,7 +100,6 @@ import Cardano.Ledger.Shelley.LedgerState
   )
 import qualified Cardano.Ledger.Shelley.Scripts as Shelley (MultiSig (..))
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..))
-import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.TxIn (TxId, TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val (Val (..))

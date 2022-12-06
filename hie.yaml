@@ -36,6 +36,12 @@ cradle:
     - path: "eras/shelley/test-suite/bench"
       component: "cardano-ledger-shelley-test:bench:mainbench"
 
+    - path: "eras/allegra/impl/src"
+      component: "lib:cardano-ledger-allegra"
+
+    - path: "eras/mary/impl/src"
+      component: "lib:cardano-ledger-mary"
+
     - path: "eras/shelley-ma/impl/src"
       component: "lib:cardano-ledger-shelley-ma"
 
@@ -93,7 +99,7 @@ cradle:
     - path: "libs/cardano-ledger-binary/src"
       component: "cardano-ledger-binary:lib:cardano-ledger-binary"
 
-    - path: "libs/cardano-ledger-binary/test-lib"
+    - path: "libs/cardano-ledger-binary/testlib"
       component: "cardano-ledger-binary:lib:testlib"
 
     - path: "libs/cardano-ledger-binary/test"
@@ -110,6 +116,9 @@ cradle:
 
     - path: "libs/cardano-ledger-core/src"
       component: "lib:cardano-ledger-core"
+
+    - path: "libs/cardano-ledger-core/testlib"
+      component: "cardano-ledger-core:lib:testlib"
 
     - path: "libs/non-integral/src"
       component: "lib:non-integral"

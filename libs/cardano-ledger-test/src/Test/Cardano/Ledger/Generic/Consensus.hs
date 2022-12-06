@@ -19,7 +19,8 @@ import Cardano.Crypto.DSIGN as DSIGN
 import Cardano.Crypto.Hash as Hash
 import Cardano.Crypto.Seed as Seed
 import Cardano.Crypto.VRF as VRF
-import Cardano.Ledger.Allegra.Translation ()
+import Cardano.Ledger.Allegra.Scripts (Timelock (..), ValidityInterval (..))
+import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
 import Cardano.Ledger.Alonzo.Data
   ( AlonzoTxAuxData (..),
     Data (..),
@@ -45,7 +46,7 @@ import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import qualified Cardano.Ledger.Conway.PParams as ConwayPP
 import Cardano.Ledger.Conway.Translation ()
 import Cardano.Ledger.Core as Core
-import Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Keys
 import Cardano.Ledger.Mary.Translation ()
@@ -58,10 +59,6 @@ import Cardano.Ledger.Shelley.PParams
 import qualified Cardano.Ledger.Shelley.PParams as PParams (Update (..))
 import qualified Cardano.Ledger.Shelley.PParams as ShelleyPP
 import Cardano.Ledger.Shelley.Rules
-import Cardano.Ledger.ShelleyMA (ShelleyMAEra)
-import Cardano.Ledger.ShelleyMA.AuxiliaryData (AllegraTxAuxData (..))
-import Cardano.Ledger.ShelleyMA.Era (MAClass)
-import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.TxIn (mkTxInPartial)
 import Cardano.Ledger.UTxO (makeWitnessesVKey)
 import Cardano.Ledger.Val (inject)
@@ -222,13 +219,13 @@ defaultLedgerExamples proof value txBody auxData translationContext =
 
 -- ============================================
 
-mkKeyHash :: forall c discriminator. CC.Crypto c => Int -> KeyHash discriminator c
+mkKeyHash :: forall c discriminator. Crypto c => Int -> KeyHash discriminator c
 mkKeyHash = KeyHash . mkDummyHash @(ADDRHASH c)
 
-mkScriptHash :: forall c. CC.Crypto c => Int -> ScriptHash c
+mkScriptHash :: forall c. Crypto c => Int -> ScriptHash c
 mkScriptHash = ScriptHash . mkDummyHash @(ADDRHASH c)
 
-mkDummySafeHash :: forall c a. CC.Crypto c => Proxy c -> Int -> SafeHash c a
+mkDummySafeHash :: forall c a. Crypto c => Proxy c -> Int -> SafeHash c a
 mkDummySafeHash _ = unsafeMakeSafeHash . mkDummyHash @(HASH c)
 
 exampleLedgerBlock ::
@@ -270,7 +267,7 @@ exampleLedgerBlock proof tx = specialize @EraSegWits proof (Block blockHeader bl
     mkBytes = Seed . mkDummyHash @Blake2b_256
 {-# NOINLINE exampleLedgerBlock #-}
 
-exampleKeys :: forall c r. CC.Crypto c => AllIssuerKeys c r
+exampleKeys :: forall c r. Crypto c => AllIssuerKeys c r
 exampleKeys =
   AllIssuerKeys
     coldKey
@@ -382,7 +379,7 @@ exampleProposedPPUpdates proof@(Conway _) =
 
 exampleNonMyopicRewards ::
   forall c.
-  CC.Crypto c =>
+  Crypto c =>
   Map
     (Either Coin (Credential 'Staking c))
     (Map (KeyHash 'StakePool c) Coin)
@@ -487,13 +484,13 @@ exampleNewEpochState proof spendvalue ppp pp =
         (activeSlotCoeff testGlobals)
         10
 
-keyToCredential :: CC.Crypto c => KeyPair r c -> Credential r c
+keyToCredential :: Crypto c => KeyPair r c -> Credential r c
 keyToCredential = KeyHashObj . hashKey . vKey
 
-examplePayKey :: CC.Crypto c => KeyPair 'Payment c
+examplePayKey :: Crypto c => KeyPair 'Payment c
 examplePayKey = mkDSIGNKeyPair 0
 
-exampleStakeKey :: CC.Crypto c => KeyPair 'Staking c
+exampleStakeKey :: Crypto c => KeyPair 'Staking c
 exampleStakeKey = mkDSIGNKeyPair 1
 
 examplePoolDistr :: forall c. PraosCrypto c => PoolDistr c
@@ -507,7 +504,7 @@ examplePoolDistr =
         )
       ]
 
-exampleLedgerChainDepState :: forall c. CC.Crypto c => Word64 -> ChainDepState c
+exampleLedgerChainDepState :: forall c. Crypto c => Word64 -> ChainDepState c
 exampleLedgerChainDepState seed =
   ChainDepState
     { csProtocol =
@@ -791,7 +788,7 @@ exampleTxOut proof spendval =
         (Datum $ dataToBinaryData datumExample) -- inline datum
         (SJust $ alwaysSucceeds PlutusV2 3) -- reference script
 
-exampleCerts :: CC.Crypto c => StrictSeq (DCert c)
+exampleCerts :: Crypto c => StrictSeq (DCert c)
 exampleCerts =
   StrictSeq.fromList
     [ DCertDeleg (RegKey (keyToCredential exampleStakeKey)),
@@ -804,7 +801,7 @@ exampleCerts =
               ]
     ]
 
-examplePoolParams :: forall c. CC.Crypto c => PoolParams c
+examplePoolParams :: forall c. Crypto c => PoolParams c
 examplePoolParams =
   PoolParams
     { ppId = hashKey $ vKey $ cold poolKeys,
@@ -950,14 +947,14 @@ ledgerExamplesAllegra =
     exampleAllegraTxAuxData
     ()
 
-exampleAllegraTxAuxData :: MAClass ma c => AllegraTxAuxData (ShelleyMAEra ma c)
+exampleAllegraTxAuxData :: (Era era, Script era ~ Timelock era) => AllegraTxAuxData era
 exampleAllegraTxAuxData =
   AllegraTxAuxData
     exampleAuxDataMap
-    (StrictSeq.fromList [exampleScriptMA])
+    (StrictSeq.fromList [exampleTimelock])
 
-exampleScriptMA :: MAClass ma c => Core.Script (ShelleyMAEra ma c)
-exampleScriptMA =
+exampleTimelock :: Era era => Timelock era
+exampleTimelock =
   RequireMOf 2 $
     StrictSeq.fromList
       [ RequireAllOf $
@@ -982,14 +979,14 @@ ledgerExamplesMary =
     (exampleMultiAssetValue 1)
     ( exampleTxBody @(MaryEra StandardCrypto)
         (Mary Standard)
-        (exampleMultiAssetValue @CC.StandardCrypto 1)
+        (exampleMultiAssetValue @StandardCrypto 1)
     )
     exampleAllegraTxAuxData
     ()
 
 exampleMultiAssetValue ::
   forall c.
-  CC.Crypto c =>
+  Crypto c =>
   Int ->
   MaryValue c
 exampleMultiAssetValue x =

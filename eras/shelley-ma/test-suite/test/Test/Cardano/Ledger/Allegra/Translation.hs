@@ -10,7 +10,6 @@ module Test.Cardano.Ledger.Allegra.Translation
 where
 
 import Cardano.Ledger.Allegra (Allegra)
-import Cardano.Ledger.Allegra.Translation ()
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley (Shelley)

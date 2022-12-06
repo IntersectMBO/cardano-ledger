@@ -12,11 +12,14 @@
 -- | Export the EraGen instance for MaryEra, as well as some reusable functions for future Eras
 module Test.Cardano.Ledger.MaryEraGen (genMint, maryGenesisValue, policyIndex, addTokens) where
 
+import Cardano.Ledger.Allegra.Scripts (Timelock (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Mary.TxBody (MaryTxBody (MaryTxBody))
+import Cardano.Ledger.Mary.TxOut (scaledMinDeposit)
 import Cardano.Ledger.Mary.Value
   ( AssetName (..),
     MaryValue (..),
@@ -32,8 +35,6 @@ import Cardano.Ledger.Shelley.Tx
   )
 import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl)
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (ShelleyTxWits))
-import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
-import Cardano.Ledger.ShelleyMA.TxBody (MATxBody (MATxBody), scaledMinDeposit)
 import Cardano.Ledger.Val ((<+>))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (SlotNo)
@@ -90,9 +91,10 @@ instance (CC.Crypto c, Mock c) => EraGen (MaryEra c) where
   genEraTxBody _ge _utxo = genTxBody
   genEraAuxiliaryData = genAuxiliaryData
   updateEraTxBody _utxo _pp _wits txBody fee ins out =
-    case txBody of
-      MATxBody existingins outs cert wdrl _txfee vi upd meta mint ->
-        MATxBody (existingins <> ins) (outs :|> out) cert wdrl fee vi upd meta mint
+    txBody
+      & inputsTxBodyL %~ (<> ins)
+      & outputsTxBodyL %~ (:|> out)
+      & feeTxBodyL .~ fee
   genEraPParamsUpdate = genShelleyPParamsUpdate
   genEraPParams = genPParams
   genEraTxWits _scriptinfo setWitVKey mapScriptWit = ShelleyTxWits setWitVKey mapScriptWit mempty
@@ -293,7 +295,7 @@ genTxBody ::
   Coin ->
   StrictMaybe (Update era) ->
   StrictMaybe (AuxiliaryDataHash (EraCrypto era)) ->
-  Gen (MATxBody era, [Timelock era])
+  Gen (MaryTxBody era, [Timelock era])
 genTxBody pparams slot ins outs cert wdrl fee upd meta = do
   validityInterval <- genValidityInterval slot
   mint <- genMint
@@ -305,7 +307,7 @@ genTxBody pparams slot ins outs cert wdrl fee upd meta = do
           Set.toList $
             policies mint
   pure
-    ( MATxBody
+    ( MaryTxBody
         ins
         outs'
         cert

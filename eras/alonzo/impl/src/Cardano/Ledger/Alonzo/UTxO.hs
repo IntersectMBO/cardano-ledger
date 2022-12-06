@@ -17,7 +17,7 @@ import Cardano.Ledger.Alonzo.Data (Datum (..))
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
 import Cardano.Ledger.Alonzo.Tx (ScriptPurpose (..), isTwoPhaseScriptAddressFromMap)
-import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..), ShelleyMAEraTxBody (..))
+import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..), MaryEraTxBody (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (ScriptHashObj))
 import Cardano.Ledger.Crypto
@@ -122,7 +122,7 @@ getInputDataHashesTxBody (UTxO mp) txBody hashScriptMap =
 -- function 'validateMissingScripts' in the Utxow rule.
 getAlonzoScriptsNeeded ::
   forall era.
-  ShelleyMAEraTxBody era =>
+  MaryEraTxBody era =>
   UTxO era ->
   TxBody era ->
   AlonzoScriptsNeeded era

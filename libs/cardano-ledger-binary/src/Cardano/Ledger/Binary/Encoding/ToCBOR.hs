@@ -117,10 +117,11 @@ import qualified Codec.Serialise as Serialise (Serialise (encode))
 import Control.Category (Category ((.)))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BS.Lazy
-import qualified Data.ByteString.Short as SBS
-import qualified PlutusLedgerApi.V1 as Plutus
-#if __GLASGOW_HASKELL__ < 900
-import qualified Data.ByteString.Short.Internal as SBS
+import qualified Data.ByteString.Short as SBS (length)
+#if MIN_VERSION_bytestring(0,11,1)
+import Data.ByteString.Short (ShortByteString(SBS))
+#else
+import Data.ByteString.Short.Internal (ShortByteString(SBS))
 #endif
 import Data.Fixed (Fixed (..), Nano, Pico)
 import Data.Foldable (toList)
@@ -153,6 +154,7 @@ import Formatting (bprint, build, shown, stext)
 import qualified Formatting.Buildable as B (Buildable (..))
 import GHC.TypeNats (KnownNat, type (*))
 import Numeric.Natural (Natural)
+import qualified PlutusLedgerApi.V1 as Plutus
 import Prelude hiding (encodeFloat, (.))
 
 #if MIN_VERSION_recursion_schemes(5,2,0)
@@ -736,12 +738,12 @@ instance ToCBOR SlicedByteArray where
   toCBOR = encodeByteArray
   {-# INLINE toCBOR #-}
 
-instance ToCBOR SBS.ShortByteString where
-  toCBOR sbs@(SBS.SBS ba) =
+instance ToCBOR ShortByteString where
+  toCBOR sbs@(SBS ba) =
     encodeByteArray $ SBA (Prim.ByteArray ba) 0 (SBS.length sbs)
 
   encodedSizeExpr size _ =
-    let len = size (Proxy @(LengthOf SBS.ShortByteString))
+    let len = size (Proxy @(LengthOf ShortByteString))
      in apMono "withWordSize@Int" (withWordSize @Int . fromIntegral) len + len
 
 instance ToCBOR BS.Lazy.ByteString where

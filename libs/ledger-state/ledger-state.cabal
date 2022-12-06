@@ -36,8 +36,8 @@ library
                     , cardano-ledger-alonzo
                     , cardano-ledger-binary
                     , cardano-ledger-core
+                    , cardano-ledger-mary
                     , cardano-ledger-shelley
-                    , cardano-ledger-shelley-ma
                     , conduit
                     , containers
                     , vector-map

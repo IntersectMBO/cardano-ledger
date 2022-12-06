@@ -20,12 +20,13 @@ import Cardano.Ledger.Alonzo.TxInfo
 import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), RdmrPtr, unRedeemers, unTxDats)
 import Cardano.Ledger.Babbage.TxBody
-  ( AlonzoEraTxBody (..),
+  ( AllegraEraTxBody (..),
+    AlonzoEraTxBody (..),
     AlonzoEraTxOut (..),
     BabbageEraTxBody (..),
     BabbageEraTxOut (..),
+    MaryEraTxBody (..),
     ShelleyEraTxBody (..),
-    ShelleyMAEraTxBody (..),
   )
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), isSJust)
 import Cardano.Ledger.Core hiding (TranslationError)
@@ -149,7 +150,7 @@ transRedeemer :: Data era -> PV2.Redeemer
 transRedeemer = PV2.Redeemer . PV2.dataToBuiltinData . getPlutusData
 
 transRedeemerPtr ::
-  ShelleyMAEraTxBody era =>
+  MaryEraTxBody era =>
   TxBody era ->
   (RdmrPtr, (Data era, ExUnits)) ->
   Either (TranslationError (EraCrypto era)) (PV2.ScriptPurpose, PV2.Redeemer)

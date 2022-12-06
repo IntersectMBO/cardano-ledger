@@ -5,15 +5,15 @@
 
 module Main where
 
+import Cardano.Ledger.Allegra (Allegra, AllegraEra)
 import Cardano.Ledger.Core as Core
+import Cardano.Ledger.Mary (Mary, MaryEra)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Rules (ShelleyLEDGER)
-import Cardano.Ledger.ShelleyMA (ShelleyMAEra)
 import qualified Cardano.Protocol.TPraos.Rules.Tickn as TPraos
 import Test.Cardano.Ledger.Allegra.ScriptTranslation (testScriptPostTranslation)
 import Test.Cardano.Ledger.Allegra.Translation (allegraTranslationTests)
 import Test.Cardano.Ledger.AllegraEraGen ()
-import Test.Cardano.Ledger.EraBuffet (AllegraEra, MaryEra, TestCrypto)
 import Test.Cardano.Ledger.Mary.Examples.MultiAssets (multiAssetsExample)
 import Test.Cardano.Ledger.Mary.Golden (goldenScaledMinDeposit)
 import Test.Cardano.Ledger.Mary.Translation (maryTranslationTests)
@@ -22,18 +22,11 @@ import Test.Cardano.Ledger.MaryEraGen ()
 import Test.Cardano.Ledger.Shelley.PropertyTests (minimalPropertyTests, propertyTests)
 import qualified Test.Cardano.Ledger.ShelleyMA.Serialisation as Serialisation
 import Test.Tasty
-import Test.Tasty.HUnit ()
 import Test.TestScenario (TestScenario (..), mainWithTestScenario)
 
-type A = AllegraEra TestCrypto
+type instance Core.EraRule "TICKN" (MaryEra _c) = TPraos.TICKN
 
-type AL = ShelleyLEDGER (AllegraEra TestCrypto)
-
-type M = MaryEra TestCrypto
-
-type ML = ShelleyLEDGER (MaryEra TestCrypto)
-
-type instance Core.EraRule "TICKN" (ShelleyMAEra _ma _c) = TPraos.TICKN
+type instance Core.EraRule "TICKN" (AllegraEra _c) = TPraos.TICKN
 
 tests :: TestTree
 tests = askOption $ \case
@@ -58,7 +51,7 @@ allegraTests =
   testGroup
     "Allegra Ledger Tests"
     [ allegraTranslationTests,
-      minimalPropertyTests @A @AL,
+      minimalPropertyTests @Allegra @(ShelleyLEDGER Allegra),
       testScriptPostTranslation
     ]
 
@@ -78,14 +71,13 @@ nightlyTests =
     "ShelleyMA Ledger - nightly"
     [ testGroup
         "Allegra Ledger - nightly"
-        [ propertyTests @A @AL
+        [ propertyTests @Allegra @(ShelleyLEDGER Allegra)
         ],
       testGroup
         "Mary Ledger - nightly"
-        [ propertyTests @M @ML
+        [ propertyTests @Mary @(ShelleyLEDGER Mary)
         ]
     ]
 
--- main entry point
 main :: IO ()
 main = mainWithTestScenario tests

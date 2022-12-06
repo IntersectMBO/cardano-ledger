@@ -15,6 +15,7 @@
 module Test.Cardano.Ledger.Generic.Indexed where
 
 import Cardano.Crypto.DSIGN.Class ()
+import Cardano.Ledger.Allegra.Scripts (Timelock (..))
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Coin (Coin (..))
@@ -38,7 +39,6 @@ import Cardano.Ledger.SafeHash (SafeHash)
 import Cardano.Ledger.Shelley.Scripts (MultiSig)
 import qualified Cardano.Ledger.Shelley.Scripts as Multi
 import Cardano.Ledger.Shelley.TxBody (WitVKey (..))
-import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
 import Cardano.Ledger.UTxO (makeWitnessVKey)
 import Cardano.Slotting.Slot (SlotNo (..))
 import Data.ByteString.Short (ShortByteString, pack, unpack)

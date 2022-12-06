@@ -4,6 +4,7 @@
 
 module Test.Cardano.Ledger.Babbage.Examples.Consensus where
 
+import Cardano.Ledger.Allegra.Scripts (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Data
   ( AuxiliaryDataHash (..),
     Data (..),
@@ -42,7 +43,6 @@ import Cardano.Ledger.Shelley.API
   )
 import Cardano.Ledger.Shelley.Rules (ShelleyDelegsPredFailure (..), ShelleyLedgerPredFailure (..))
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
-import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.TxIn (mkTxInPartial)
 import Cardano.Ledger.UTxO (makeWitnessesVKey)
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))

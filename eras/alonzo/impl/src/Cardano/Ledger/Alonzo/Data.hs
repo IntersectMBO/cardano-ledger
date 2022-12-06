@@ -59,6 +59,7 @@ where
 
 import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.HeapWords (HeapWords (..), heapWords0, heapWords1)
+import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), BinaryPlutus (..), validScript)
@@ -99,7 +100,6 @@ import Cardano.Ledger.SafeHash
     hashAnnotated,
   )
 import Cardano.Ledger.Shelley.Metadata (Metadatum, validMetadatum)
-import Cardano.Ledger.ShelleyMA.Timelocks
 import qualified Codec.Serialise as Cborg (Serialise (..))
 import Control.DeepSeq (NFData, deepseq)
 import Data.ByteString.Lazy (fromStrict)

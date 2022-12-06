@@ -17,6 +17,7 @@ module Cardano.Ledger.Babbage.Scripts
   )
 where
 
+import Cardano.Ledger.Allegra.Scripts (Timelock)
 import Cardano.Ledger.Alonzo.Data
   ( AlonzoTxAuxData,
     hashAlonzoTxAuxData,
@@ -28,7 +29,6 @@ import Cardano.Ledger.Babbage.Era
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Shelley.Scripts (nativeMultiSigTag)
-import Cardano.Ledger.ShelleyMA.Timelocks (Timelock)
 import Data.ByteString (ByteString)
 import Data.ByteString.Short (ShortByteString)
 

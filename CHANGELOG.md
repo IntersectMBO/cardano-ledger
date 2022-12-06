@@ -38,6 +38,20 @@ in the naming of release branches.
 
 ### Changed
 
+- Fixed mismathed parenthesis in the `Show` instance for `Ptr`: #3184.
+- Split `cardano-ledger-shelley-ma` into `cardano-ledger-allegra` and `cardano-ledger-mary` #3175:
+  - Moved `ShelleyMA.AuxiliaryData` -> `Allegra.TxAuxData`
+  - Moved `ShelleyMA.Timelocks` -> `Allegra.Scripts`
+  - `ShelleyMA.TxBody.MATxBody` was split into `Allegra.AllegraTxBody` and `Mary.MaryTxBody`. pattern record fields were renamed correspondingly
+    - `inputs` to `atbInputs` and `mtbInputs`
+    - `outputs` to `atbOutputs` and `mtbOutputs`
+    - `certs` to `atbCerts` and `mtbCerts`
+    - `wdrls` to `atbWdrls` and `mtbWdrls`
+    - `txfee` to `atbTxFee` and `mtbTxFee`
+    - `vldt` to `atbValidityInterval` and `mtbValidityInterval`
+    - `update` to `atbUpdate` and `mtbUpdate`
+    - `adHash` to `atbAuxDataHash` and `mtbAuxDataHash`
+    - `mint` to `mtbMint`
 - Changed structure and field names of `Cardano.Ledger.Alonzo.Data.AlonzoTxAuxData` #3165:
   - Renamed `AlonzoTxAuxData.txMD` to `AlonzoTxAuxData.atadMetadata`:
   - Removed `AlonzoTxAuxData.scripts` in favor of two new fields `atadTimelock` and
@@ -75,26 +89,6 @@ in the naming of release branches.
     - `scriptIntegrityHash` to `btbScriptIntegrityHash`
     - `adHash` to `btbAuxDataHash`
     - `txnetworkid` to `btbrTxNetworkId`
-  - `ShelleyMA.TxBody.TxBodyRaw` to `ShelleyMA.TxBody.MATxBodyRaw`
-    - `inputs` to `matbrInputs`
-    - `outputs` to `matbrOutputs`
-    - `certs` to `matbrCerts`
-    - `wdrls` to `matbrWdrls`
-    - `txfee` to `matbrTxFee`
-    - `vldt` to `matbrValidityInterval`
-    - `update` to `matbrUpdate`
-    - `adHash` to `matbrAuxDataHash`
-    - `mint` to `matbrMint`
-  - `ShelleyMA.TxBody.MATxBody` pattern synonym
-    - `inputs` to `matbInputs`
-    - `outputs` to `matbOutputs`
-    - `certs` to `matbCerts`
-    - `wdrls` to `matbWdrls`
-    - `txfee` to `matbTxFee`
-    - `vldt` to `matbValidityInterval`
-    - `update` to `matbUpdate`
-    - `adHash` to `matbAuxDataHash`
-    - `mint` to `matbMint`
   - `Shelley.TxBody.TxBodyRaw` to `Shelley.TxBody.ShelleyTxBodyRaw`
     - `inputsX` to `stbrInputs`
     - `outputsX` to `stbrOutputs`
@@ -204,6 +198,9 @@ in the naming of release branches.
 
 ### Removed
 
+- `MAClass` is gone: #3175
+- `ShelleyMAEra` type in favor of `AllegraEra` and `MaryEra`: #3175
+- `MATxBody` type in favor of `AllegraTxBody` and `MaryTxBody`: #3175
 - Deprecated `Cardano.Ledger.Serialization` in favor of `Cardano.Ledger.Binary` from
   `cardano-ledger-binary`: #3138
 - Removed `Data.Coders` from `cardano-data` in favor of `Cardano.Ledger.Binary.Coders` from
