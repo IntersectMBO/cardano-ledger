@@ -61,6 +61,12 @@ forgoRewardPrefilter pp = pvMajor (getField @"_protocolVersion" pp) > natVersion
 
 -- | Starting with protocol version 9, we translate the upper bound of validity interval
 -- correctly for Plutus scripts.
+--
+-- TODO - After mainnet has successfully moved to protocol version 9, we can check
+-- to see if the semantic difference here has even been exercised.
+-- (We probably also need to check preprod and potentially preview.)
+-- If it has not been exercised by version 9, we can safely remove this check
+-- and always use the correct semantics (which cleans up the code).
 translateUpperBoundForPlutusScripts ::
   (HasField "_protocolVersion" pp ProtVer) =>
   pp ->
