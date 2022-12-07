@@ -220,8 +220,7 @@ sameWithDependency (SomeM labx actx x1 x2 : more) =
     [] -> sameWithDependency more
     ansx -> extendLabel (labx ++ " ") ansx ++ sameWithDependency more
 
-instance Reflect era => Same era (ShelleyLedgerExamples era)
-  where
+instance Reflect era => Same era (ShelleyLedgerExamples era) where
   same proof x1 x2 = case (sleBlock x1, sleBlock x2) of
     (Block' h1 a1 _, Block' h2 a2 _) ->
       sameWithDependency

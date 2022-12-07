@@ -333,7 +333,8 @@ adaPreservationChain ::
     TestingLedger era ledger,
     State (EraRule "PPUP" era) ~ PPUPState era,
     ChainProperty era,
-    QC.HasTrace (CHAIN era) (GenEnv era)
+    QC.HasTrace (CHAIN era) (GenEnv era),
+    ProtVerAtMost era 8
   ) =>
   Property
 adaPreservationChain =
@@ -378,7 +379,8 @@ checkPreservation ::
     ShelleyEraTxBody era,
     HasField "_keyDeposit" (PParams era) Coin,
     HasField "_poolDeposit" (PParams era) Coin,
-    State (EraRule "PPUP" era) ~ PPUPState era
+    State (EraRule "PPUP" era) ~ PPUPState era,
+    ProtVerAtMost era 8
   ) =>
   (SourceSignalTarget (CHAIN era), Int) ->
   Property
@@ -673,7 +675,8 @@ preserveBalance ::
   forall era ledger.
   ( ChainProperty era,
     EraGen era,
-    TestingLedger era ledger
+    TestingLedger era ledger,
+    ProtVerAtMost era 8
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -713,7 +716,8 @@ preserveBalanceRestricted ::
     ShelleyEraTxBody era,
     EraSegWits era,
     HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin
+    HasField "_poolDeposit" (PParams era) Coin,
+    ProtVerAtMost era 8
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -1042,7 +1046,8 @@ poolProperties ::
   ( EraGen era,
     Default (State (EraRule "PPUP" era)),
     ChainProperty era,
-    QC.HasTrace (CHAIN era) (GenEnv era)
+    QC.HasTrace (CHAIN era) (GenEnv era),
+    ProtVerAtMost era 8
   ) =>
   Property
 poolProperties =
@@ -1062,7 +1067,8 @@ poolRetirement ::
     ShelleyEraTxBody era,
     HasField "_eMax" (PParams era) EpochNo,
     HasField "_minPoolCost" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin
+    HasField "_poolDeposit" (PParams era) Coin,
+    ProtVerAtMost era 8
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -1083,7 +1089,8 @@ poolRegistration ::
     ShelleyEraTxBody era,
     HasField "_eMax" (PParams era) EpochNo,
     HasField "_minPoolCost" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin
+    HasField "_poolDeposit" (PParams era) Coin,
+    ProtVerAtMost era 8
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -1101,7 +1108,8 @@ poolStateIsInternallyConsistent ::
     ShelleyEraTxBody era,
     HasField "_eMax" (PParams era) EpochNo,
     HasField "_minPoolCost" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin
+    HasField "_poolDeposit" (PParams era) Coin,
+    ProtVerAtMost era 8
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -1122,7 +1130,8 @@ delegProperties ::
   ( EraGen era,
     Default (State (EraRule "PPUP" era)),
     QC.HasTrace (CHAIN era) (GenEnv era),
-    ChainProperty era
+    ChainProperty era,
+    ProtVerAtMost era 8
   ) =>
   Property
 delegProperties =
@@ -1202,7 +1211,8 @@ poolTraceFromBlock ::
     EraSegWits era,
     HasField "_eMax" (PParams era) EpochNo,
     HasField "_minPoolCost" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin
+    HasField "_poolDeposit" (PParams era) Coin,
+    ProtVerAtMost era 8
   ) =>
   ChainState era ->
   Block (BHeader (EraCrypto era)) era ->
@@ -1231,7 +1241,8 @@ delegTraceFromBlock ::
   ( ChainProperty era,
     ShelleyEraTxBody era,
     EraSegWits era,
-    HasField "_keyDeposit" (PParams era) Coin
+    HasField "_keyDeposit" (PParams era) Coin,
+    ProtVerAtMost era 8
   ) =>
   ChainState era ->
   Block (BHeader (EraCrypto era)) era ->

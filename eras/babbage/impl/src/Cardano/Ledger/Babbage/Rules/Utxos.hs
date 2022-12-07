@@ -91,7 +91,8 @@ instance
     Environment (EraRule "PPUP" era) ~ PpupEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,
     Signal (EraRule "PPUP" era) ~ Maybe (Update era),
-    ToCBOR (PredicateFailure (EraRule "PPUP" era)) -- Serializing the PredicateFailure
+    ToCBOR (PredicateFailure (EraRule "PPUP" era)), -- Serializing the PredicateFailure
+    ProtVerAtMost era 8
   ) =>
   STS (BabbageUTXOS era)
   where
@@ -133,7 +134,8 @@ utxosTransition ::
     State (EraRule "PPUP" era) ~ PPUPState era,
     Signal (EraRule "PPUP" era) ~ Maybe (Update era),
     Embed (EraRule "PPUP" era) (BabbageUTXOS era),
-    ToCBOR (PredicateFailure (EraRule "PPUP" era))
+    ToCBOR (PredicateFailure (EraRule "PPUP" era)),
+    ProtVerAtMost era 8
   ) =>
   TransitionRule (BabbageUTXOS era)
 utxosTransition =
@@ -159,7 +161,8 @@ scriptsYes ::
     Embed (EraRule "PPUP" era) (BabbageUTXOS era),
     HasField "_poolDeposit" (PParams era) Coin,
     HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_costmdls" (PParams era) CostModels
+    HasField "_costmdls" (PParams era) CostModels,
+    ProtVerAtMost era 8
   ) =>
   TransitionRule (BabbageUTXOS era)
 scriptsYes = do
@@ -215,7 +218,8 @@ scriptsNo ::
     TxOut era ~ BabbageTxOut era,
     TxBody era ~ BabbageTxBody era,
     Script era ~ AlonzoScript era,
-    HasField "_costmdls" (PParams era) CostModels
+    HasField "_costmdls" (PParams era) CostModels,
+    ProtVerAtMost era 8
   ) =>
   TransitionRule (BabbageUTXOS era)
 scriptsNo = do

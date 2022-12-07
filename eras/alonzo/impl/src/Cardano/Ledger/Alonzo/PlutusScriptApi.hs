@@ -143,7 +143,8 @@ collectTwoPhaseScriptInputs ::
     ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     ExtendedUTxO era,
     Script era ~ AlonzoScript era,
-    HasField "_costmdls" (PParams era) CostModels
+    HasField "_costmdls" (PParams era) CostModels,
+    ProtVerAtMost era 8
   ) =>
   EpochInfo (Either Text) ->
   SystemStart ->

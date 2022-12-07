@@ -509,7 +509,8 @@ evaluateTransactionBalance ::
   ( EraUTxO era,
     ShelleyEraTxBody era,
     HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_keyDeposit" (PParams era) Coin
+    HasField "_keyDeposit" (PParams era) Coin,
+    ProtVerAtMost era 8
   ) =>
   -- | Current protocol parameters
   PParams era ->

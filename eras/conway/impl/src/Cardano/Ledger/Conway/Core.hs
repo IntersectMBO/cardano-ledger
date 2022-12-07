@@ -210,9 +210,7 @@ instance Crypto c => ToCBOR (GovernanceActionId c) where
         !> To gaidTxId
         !> To gaidGovActionIx
 
-instance
-  Era era => ToCBOR (Vote era)
-  where
+instance Era era => ToCBOR (Vote era) where
   toCBOR Vote {..} =
     encode $
       Rec (Vote @era)

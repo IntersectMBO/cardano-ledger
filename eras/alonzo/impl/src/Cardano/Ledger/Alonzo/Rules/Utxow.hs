@@ -264,7 +264,8 @@ hasExactSetOfRedeemers ::
   forall era.
   ( AlonzoEraTx era,
     ExtendedUTxO era,
-    Script era ~ AlonzoScript era
+    Script era ~ AlonzoScript era,
+    ProtVerAtMost era 8
   ) =>
   UTxO era ->
   Tx era ->
@@ -345,7 +346,8 @@ alonzoStyleWitness ::
     Embed (EraRule "UTXO" era) (AlonzoUTXOW era),
     Environment (EraRule "UTXO" era) ~ UtxoEnv era,
     State (EraRule "UTXO" era) ~ UTxOState era,
-    Signal (EraRule "UTXO" era) ~ Tx era
+    Signal (EraRule "UTXO" era) ~ Tx era,
+    ProtVerAtMost era 8
   ) =>
   TransitionRule (AlonzoUTXOW era)
 alonzoStyleWitness = do
@@ -428,7 +430,7 @@ alonzoStyleWitness = do
 --  required to authenticate collateral witnesses.
 witsVKeyNeeded ::
   forall era.
-  (EraTx era, AlonzoEraTxBody era) =>
+  (EraTx era, AlonzoEraTxBody era, ProtVerAtMost era 8) =>
   UTxO era ->
   Tx era ->
   GenDelegs (EraCrypto era) ->
@@ -514,7 +516,8 @@ instance
     Embed (EraRule "UTXO" era) (AlonzoUTXOW era),
     Environment (EraRule "UTXO" era) ~ UtxoEnv era,
     State (EraRule "UTXO" era) ~ UTxOState era,
-    Signal (EraRule "UTXO" era) ~ Tx era
+    Signal (EraRule "UTXO" era) ~ Tx era,
+    ProtVerAtMost era 8
   ) =>
   STS (AlonzoUTXOW era)
   where

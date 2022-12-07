@@ -104,10 +104,10 @@ import Cardano.Ledger.MemoBytes
     MemoBytes (..),
     MemoHashIndex,
     Memoized (..),
-    getMemoBytesHash,
     getMemoRawType,
+    getMemoSafeHash,
     lensMemoRawType,
-    mkMemoized, getMemoSafeHash,
+    mkMemoized,
   )
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
 import Cardano.Ledger.Shelley.TxBody (Wdrl (..))

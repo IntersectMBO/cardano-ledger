@@ -307,7 +307,8 @@ instance
     Embed (EraRule "PPUP" era) (ShelleyUTXO era),
     Environment (EraRule "PPUP" era) ~ PpupEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,
-    Signal (EraRule "PPUP" era) ~ Maybe (Update era)
+    Signal (EraRule "PPUP" era) ~ Maybe (Update era),
+    ProtVerAtMost era 8
   ) =>
   STS (ShelleyUTXO era)
   where
@@ -381,7 +382,8 @@ utxoInductive ::
     Signal (EraRule "PPUP" era) ~ Maybe (Update era),
     HasField "_keyDeposit" (PParams era) Coin,
     HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_maxTxSize" (PParams era) Natural
+    HasField "_maxTxSize" (PParams era) Natural,
+    ProtVerAtMost era 8
   ) =>
   TransitionRule (utxo era)
 utxoInductive = do
@@ -524,7 +526,8 @@ validateValueNotConservedUTxO ::
   ( ShelleyEraTxBody era,
     EraUTxO era,
     HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin
+    HasField "_poolDeposit" (PParams era) Coin,
+    ProtVerAtMost era 8
   ) =>
   PParams era ->
   UTxO era ->

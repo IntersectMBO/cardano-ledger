@@ -16,6 +16,7 @@
 module Test.Cardano.Ledger.Shelley.Generator.Trace.Ledger where
 
 import Cardano.Ledger.BaseTypes (Globals, TxIx, mkTxIxPartial)
+import Cardano.Ledger.Core (ProtVerAtMost)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (EraCrypto)
 import Cardano.Ledger.Shelley.LedgerState
@@ -91,7 +92,8 @@ instance
     Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
     State (Core.EraRule "DELEGS" era) ~ DPState (EraCrypto era),
     Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era)),
-    Show (State (Core.EraRule "PPUP" era))
+    Show (State (Core.EraRule "PPUP" era)),
+    ProtVerAtMost era 8
   ) =>
   TQC.HasTrace (ShelleyLEDGER era) (GenEnv era)
   where

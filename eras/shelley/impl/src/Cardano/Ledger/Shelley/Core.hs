@@ -1,10 +1,10 @@
 {-# LANGUAGE ConstrainedClassMethods #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE DataKinds #-}
 
 module Cardano.Ledger.Shelley.Core
   ( ShelleyEraTxBody (..),
@@ -35,9 +35,9 @@ class EraTxBody era => ShelleyEraTxBody era where
 
   ttlTxBodyL :: ExactEra ShelleyEra era => Lens' (TxBody era) SlotNo
 
-  updateTxBodyL :: Lens' (TxBody era) (StrictMaybe (Update era))
+  updateTxBodyL :: ProtVerAtMost era 8 => Lens' (TxBody era) (StrictMaybe (Update era))
 
-  certsTxBodyL :: Lens' (TxBody era) (StrictSeq (DCert (EraCrypto era)))
+  certsTxBodyL :: ProtVerAtMost era 8 => Lens' (TxBody era) (StrictSeq (DCert (EraCrypto era)))
 
 newtype Wdrl c = Wdrl {unWdrl :: Map (RewardAcnt c) Coin}
   deriving (Show, Eq, Generic)

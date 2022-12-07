@@ -475,7 +475,8 @@ alonzoTxInfo ::
   ( EraTx era,
     AlonzoEraTxBody era,
     Value era ~ MaryValue (EraCrypto era),
-    TxWits era ~ AlonzoTxWits era
+    TxWits era ~ AlonzoTxWits era,
+    ProtVerAtMost era 8
   ) =>
   PParams era ->
   Language ->

@@ -114,7 +114,8 @@ instance
     HasField "_protocolVersion" (PParams era) ProtVer,
     HasField "_keyDeposit" (PParams era) Coin,
     HasField "_poolDeposit" (PParams era) Coin,
-    ToCBOR (PredicateFailure (EraRule "PPUP" era)) -- Serializing the PredicateFailure
+    ToCBOR (PredicateFailure (EraRule "PPUP" era)), -- Serializing the PredicateFailure,
+    ProtVerAtMost era 8
   ) =>
   STS (AlonzoUTXOS era)
   where
@@ -156,7 +157,8 @@ utxosTransition ::
     HasField "_costmdls" (PParams era) CostModels,
     HasField "_keyDeposit" (PParams era) Coin,
     HasField "_poolDeposit" (PParams era) Coin,
-    ToCBOR (PredicateFailure (EraRule "PPUP" era)) -- Serializing the PredicateFailure
+    ToCBOR (PredicateFailure (EraRule "PPUP" era)), -- Serializing the PredicateFailure
+    ProtVerAtMost era 8
   ) =>
   TransitionRule (AlonzoUTXOS era)
 utxosTransition =
@@ -179,7 +181,8 @@ scriptsTransition ::
     ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     HasField "_costmdls" (PParams era) CostModels,
     BaseM sts ~ ReaderT Globals m,
-    PredicateFailure sts ~ AlonzoUtxosPredFailure era
+    PredicateFailure sts ~ AlonzoUtxosPredFailure era,
+    ProtVerAtMost era 8
   ) =>
   SlotNo ->
   PParams era ->
@@ -218,7 +221,8 @@ scriptsValidateTransition ::
     Embed (EraRule "PPUP" era) (AlonzoUTXOS era),
     HasField "_keyDeposit" (PParams era) Coin,
     HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_costmdls" (PParams era) CostModels
+    HasField "_costmdls" (PParams era) CostModels,
+    ProtVerAtMost era 8
   ) =>
   TransitionRule (AlonzoUTXOS era)
 scriptsValidateTransition = do
@@ -256,7 +260,8 @@ scriptsNotValidateTransition ::
     ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     STS (AlonzoUTXOS era),
     Script era ~ AlonzoScript era,
-    HasField "_costmdls" (PParams era) CostModels
+    HasField "_costmdls" (PParams era) CostModels,
+    ProtVerAtMost era 8
   ) =>
   TransitionRule (AlonzoUTXOS era)
 scriptsNotValidateTransition = do

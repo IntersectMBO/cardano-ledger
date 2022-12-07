@@ -18,7 +18,7 @@ import Cardano.Ledger.Babbage.TxOut (BabbageTxOut (..))
 import Cardano.Ledger.Conway.Core (ConwayEraTxBody, GovernanceAction (..), GovernanceActionId (..), GovernanceActionInfo (..), GovernanceActionIx (..), Vote (..), VoteDecision (..), VoterRole (..))
 import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert (..))
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
-import Cardano.Ledger.Core (EraTxBody (..), EraTxOut (..), Value, EraPParams (..))
+import Cardano.Ledger.Core (EraPParams (..), EraTxBody (..), EraTxOut (..), Value)
 import Cardano.Ledger.Pretty
   ( PDoc,
     PrettyA (..),
@@ -66,7 +66,8 @@ ppConwayTxBody ::
   ( ConwayEraTxBody era,
     PrettyA (Value era),
     TxOut era ~ BabbageTxOut era,
-    TxBody era ~ ConwayTxBody era, PrettyA (GovernanceActionInfo era)
+    TxBody era ~ ConwayTxBody era,
+    PrettyA (GovernanceActionInfo era)
   ) =>
   ConwayTxBody era ->
   PDoc

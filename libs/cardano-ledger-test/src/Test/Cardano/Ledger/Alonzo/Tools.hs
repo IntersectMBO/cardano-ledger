@@ -117,7 +117,8 @@ testExUnitCalculation ::
     STS (EraRule "UTXOS" era),
     Script era ~ AlonzoScript era,
     EraUTxO era,
-    ScriptsNeeded era ~ AlonzoScriptsNeeded era
+    ScriptsNeeded era ~ AlonzoScriptsNeeded era,
+    ProtVerAtMost era 8
   ) =>
   Proof era ->
   Tx era ->
@@ -153,7 +154,8 @@ exampleExUnitCalc ::
     EraUTxO era,
     ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     Default (State (EraRule "PPUP" era)),
-    Script era ~ AlonzoScript era
+    Script era ~ AlonzoScript era,
+    ProtVerAtMost era 8
   ) =>
   Proof era ->
   IO ()
@@ -179,7 +181,8 @@ exampleInvalidExUnitCalc ::
     Script era ~ AlonzoScript era,
     Signable
       (CC.DSIGN (EraCrypto era))
-      (Crypto.Hash (CC.HASH (EraCrypto era)) EraIndependentTxBody)
+      (Crypto.Hash (CC.HASH (EraCrypto era)) EraIndependentTxBody),
+    ProtVerAtMost era 8
   ) =>
   Proof era ->
   IO ()
@@ -275,7 +278,8 @@ updateTxExUnits ::
     EraUTxO era,
     ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     HasField "_maxTxExUnits" (PParams era) ExUnits,
-    Script era ~ AlonzoScript era
+    Script era ~ AlonzoScript era,
+    ProtVerAtMost era 8
   ) =>
   Proof era ->
   Tx era ->

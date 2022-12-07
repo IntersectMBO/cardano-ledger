@@ -28,7 +28,7 @@ oneTest proof = assertBool (displayResults results) (null results)
         Alonzo _ -> old == new
         Babbage _ -> old == new
         Conway _ -> old == new
-        -- A result is bad, if the snd component is a Just (i.e. contains a description of an inequality)
+    -- A result is bad, if the snd component is a Just (i.e. contains a description of an inequality)
     bad (_, Nothing) = False
     bad (_, Just _) = True
     results = if equal then [] else filter bad (same proof old new)

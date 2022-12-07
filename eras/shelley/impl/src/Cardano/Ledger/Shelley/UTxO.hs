@@ -60,6 +60,34 @@ import qualified Data.Set as Set
 import GHC.Records (HasField (..))
 import Lens.Micro ((^.))
 
+-- | Determine the total deposit amount needed.
+-- The block may (legitimately) contain multiple registration certificates
+-- for the same pool, where the first will be treated as a registration and
+-- any subsequent ones as re-registration. As such, we must only take a
+-- deposit for the first such registration.
+--
+-- Note that this is not an issue for key registrations since subsequent
+-- registration certificates would be invalid.
+totalDeposits ::
+  ( HasField "_poolDeposit" pp Coin,
+    HasField "_keyDeposit" pp Coin
+  ) =>
+  pp ->
+  (KeyHash 'StakePool c -> Bool) ->
+  [DCert c] ->
+  Coin
+totalDeposits pp isNewPool certs =
+  (numKeys <×> getField @"_keyDeposit" pp)
+    <+> (numNewPools <×> getField @"_poolDeposit" pp)
+  where
+    numKeys = length $ filter isRegKey certs
+    pools = Set.fromList $ Maybe.mapMaybe getKeyHashFromRegPool certs
+    numNewPools = length $ Set.filter isNewPool pools
+
+getKeyHashFromRegPool :: DCert c -> Maybe (KeyHash 'StakePool c)
+getKeyHashFromRegPool (DCertPool (RegPool p)) = Just $ ppId p
+getKeyHashFromRegPool _ = Nothing
+
 txup :: (EraTx era, ShelleyEraTxBody era) => Tx era -> Maybe (Update era)
 txup tx = strictMaybeToMaybe (tx ^. bodyTxL . updateTxBodyL)
 
@@ -78,7 +106,7 @@ scriptCred (ScriptHashObj hs) = Just hs
 -- and the withdrawals.
 scriptsNeeded ::
   forall era.
-  (EraTx era, ShelleyEraTxBody era) =>
+  (EraTx era, ShelleyEraTxBody era, ProtVerAtMost era 8) =>
   UTxO era ->
   Tx era ->
   Set.Set (ScriptHash (EraCrypto era))
@@ -106,7 +134,7 @@ txinsScriptHashes txInps (UTxO u) = foldr add Set.empty txInps
 
 getShelleyScriptsNeeded ::
   forall era.
-  (ShelleyEraTxBody era) =>
+  (ShelleyEraTxBody era, ProtVerAtMost era 8) =>
   UTxO era ->
   TxBody era ->
   ShelleyScriptsNeeded era
@@ -128,7 +156,8 @@ produced ::
   forall era pp.
   ( ShelleyEraTxBody era,
     HasField "_keyDeposit" pp Coin,
-    HasField "_poolDeposit" pp Coin
+    HasField "_poolDeposit" pp Coin,
+    ProtVerAtMost era 8
   ) =>
   pp ->
   DPState (EraCrypto era) ->
@@ -142,7 +171,11 @@ produced pp dpstate txBody =
 -- | Compute the lovelace which are destroyed by the transaction
 getConsumedCoin ::
   forall era pp.
-  (ShelleyEraTxBody era, HasField "_keyDeposit" pp Coin) =>
+  ( ShelleyEraTxBody era,
+    HasField "_keyDeposit" pp Coin,
+    HasField "_keyDeposit" pp Coin,
+    ProtVerAtMost era 8
+  ) =>
   pp ->
   DPState (EraCrypto era) ->
   UTxO era ->

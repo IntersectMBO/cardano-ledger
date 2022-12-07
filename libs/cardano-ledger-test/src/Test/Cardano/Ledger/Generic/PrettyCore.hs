@@ -33,6 +33,7 @@ import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (BlocksMade (..), Network (..), TxIx (..), txIxToInt)
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
@@ -113,7 +114,6 @@ import Test.Cardano.Ledger.Generic.Fields
     abstractWitnesses,
   )
 import Test.Cardano.Ledger.Generic.Proof
-import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert (..))
 
 -- =====================================================
 

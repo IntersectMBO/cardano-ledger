@@ -21,6 +21,7 @@ import Cardano.Ledger.Babbage.TxInfo (babbageTxInfo)
 import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Genesis (extendPPWithGenesis)
+import Cardano.Ledger.Conway.Rules ()
 import Cardano.Ledger.Conway.Translation ()
 import Cardano.Ledger.Conway.Tx ()
 import Cardano.Ledger.Conway.TxOut (AlonzoEraTxOut (..))
@@ -33,7 +34,6 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict
 import qualified Data.Set as Set
 import Lens.Micro
-import Cardano.Ledger.Babbage.Core (BabbageEraTxBody(..))
 
 type Conway = ConwayEra StandardCrypto
 

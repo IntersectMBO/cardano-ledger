@@ -341,7 +341,8 @@ utxoTransition ::
     Environment (EraRule "UTXOS" era) ~ UtxoEnv era,
     State (EraRule "UTXOS" era) ~ Shelley.UTxOState era,
     Signal (EraRule "UTXOS" era) ~ Tx era,
-    Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era))
+    Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era)),
+    ProtVerAtMost era 8
   ) =>
   TransitionRule (BabbageUTXO era)
 utxoTransition = do
@@ -439,7 +440,8 @@ instance
     State (EraRule "UTXOS" era) ~ Shelley.UTxOState era,
     Signal (EraRule "UTXOS" era) ~ Tx era,
     Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era)),
-    PredicateFailure (EraRule "UTXO" era) ~ BabbageUtxoPredFailure era
+    PredicateFailure (EraRule "UTXO" era) ~ BabbageUtxoPredFailure era,
+    ProtVerAtMost era 8
   ) =>
   STS (BabbageUTXO era)
   where

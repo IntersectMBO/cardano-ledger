@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -121,7 +122,7 @@ getInputDataHashesTxBody (UTxO mp) txBody hashScriptMap =
 -- function 'validateMissingScripts' in the Utxow rule.
 getAlonzoScriptsNeeded ::
   forall era.
-  MaryEraTxBody era =>
+  (MaryEraTxBody era, ProtVerAtMost era 8) =>
   UTxO era ->
   TxBody era ->
   AlonzoScriptsNeeded era

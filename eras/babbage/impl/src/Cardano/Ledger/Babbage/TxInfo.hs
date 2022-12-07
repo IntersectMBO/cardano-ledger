@@ -150,7 +150,7 @@ transRedeemer :: Data era -> PV2.Redeemer
 transRedeemer = PV2.Redeemer . PV2.dataToBuiltinData . getPlutusData
 
 transRedeemerPtr ::
-  MaryEraTxBody era =>
+  (MaryEraTxBody era, ProtVerAtMost era 8) =>
   TxBody era ->
   (RdmrPtr, (Data era, ExUnits)) ->
   Either (TranslationError (EraCrypto era)) (PV2.ScriptPurpose, PV2.Redeemer)
@@ -164,7 +164,8 @@ babbageTxInfo ::
   ( EraTx era,
     BabbageEraTxBody era,
     Value era ~ MaryValue (EraCrypto era),
-    TxWits era ~ AlonzoTxWits era
+    TxWits era ~ AlonzoTxWits era,
+    ProtVerAtMost era 8
   ) =>
   PParams era ->
   Language ->

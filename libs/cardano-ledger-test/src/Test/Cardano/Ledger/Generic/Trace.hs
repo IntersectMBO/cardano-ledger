@@ -30,6 +30,7 @@ import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.Pretty
   ( PDoc,
+    PrettyA,
     ppInt,
     ppList,
     ppMap,
@@ -38,7 +39,7 @@ import Cardano.Ledger.Pretty
     ppSet,
     ppSlotNo,
     ppString,
-    ppWord64, PrettyA,
+    ppWord64,
   )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.LedgerState
@@ -461,7 +462,8 @@ genTrace ::
   forall era.
   ( Reflect era,
     HasTrace (MOCKCHAIN era) (Gen1 era)
-  ) =>Proof era ->
+  ) =>
+  Proof era ->
   Int ->
   GenSize ->
   GenRS era () -> -- An arbitrary 'initialization action', to run before we generate the sequence

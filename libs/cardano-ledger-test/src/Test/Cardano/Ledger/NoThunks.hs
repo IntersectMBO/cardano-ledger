@@ -11,6 +11,8 @@ where
 
 import qualified Cardano.Ledger.Alonzo.PParams
 import qualified Cardano.Ledger.Babbage.PParams
+import Cardano.Ledger.Core (EraPParams (..))
+import Cardano.Ledger.Pretty (PrettyA)
 import qualified Cardano.Ledger.Shelley.PParams
 import Control.State.Transition.Extended (STS)
 import Data.Default.Class (def)
@@ -20,8 +22,6 @@ import Test.Cardano.Ledger.Generic.Proof (Evidence (Mock), Proof (..), Reflect)
 import Test.Cardano.Ledger.Generic.Trace (traceProp)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperty)
-import Cardano.Ledger.Pretty (PrettyA)
-import Cardano.Ledger.Core (EraPParams(..))
 
 test :: TestTree
 test =

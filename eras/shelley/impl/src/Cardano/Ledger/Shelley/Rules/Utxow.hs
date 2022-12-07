@@ -301,7 +301,8 @@ transitionRulesUTXOW ::
     Signal (utxow era) ~ Tx era,
     PredicateFailure (utxow era) ~ ShelleyUtxowPredFailure era,
     STS (utxow era),
-    DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
+    DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody),
+    ProtVerAtMost era 8
   ) =>
   TransitionRule (utxow era)
 transitionRulesUTXOW = do
@@ -368,7 +369,8 @@ instance
     State (EraRule "UTXO" era) ~ UTxOState era,
     Signal (EraRule "UTXO" era) ~ Tx era,
     HasField "_protocolVersion" (PParams era) ProtVer,
-    DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
+    DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody),
+    ProtVerAtMost era 8
   ) =>
   STS (ShelleyUTXOW era)
   where
@@ -489,7 +491,8 @@ validateNeededWitnesses witsvkeyneeded genDelegs utxo tx witsKeyHashes =
 witsVKeyNeeded ::
   forall era.
   ( EraTx era,
-    ShelleyEraTxBody era
+    ShelleyEraTxBody era,
+    ProtVerAtMost era 8
   ) =>
   UTxO era ->
   Tx era ->
@@ -573,7 +576,8 @@ validateMetadata pp tx =
 -- { c ∈ txcerts txb ∩ DCert_mir} ≠ ∅  ⇒ |genSig| ≥ Quorum
 validateMIRInsufficientGenesisSigs ::
   ( EraTx era,
-    ShelleyEraTxBody era
+    ShelleyEraTxBody era,
+    ProtVerAtMost era 8
   ) =>
   GenDelegs (EraCrypto era) ->
   Word64 ->

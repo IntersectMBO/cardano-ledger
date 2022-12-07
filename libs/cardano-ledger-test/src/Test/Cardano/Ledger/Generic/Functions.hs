@@ -378,7 +378,7 @@ alwaysFalse p@(Allegra _) _ n = never n p
 alwaysFalse p@(Shelley _) _ n = never n p
 {-# NOINLINE alwaysFalse #-}
 
-certs :: (ShelleyEraTxBody era, EraTx era) => Proof era -> Tx era -> [DCert (EraCrypto era)]
+certs :: (ShelleyEraTxBody era, EraTx era, ProtVerAtMost era 8) => Proof era -> Tx era -> [DCert (EraCrypto era)]
 certs _ tx = Fold.toList $ tx ^. bodyTxL . certsTxBodyL
 
 -- | Create an old style RewardUpdate to be used in tests, in any Era.

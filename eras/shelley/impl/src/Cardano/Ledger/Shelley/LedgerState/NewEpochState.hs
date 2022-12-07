@@ -106,7 +106,8 @@ genesisState genDelegs0 utxo0 =
 depositPoolChange ::
   ( HasField "_keyDeposit" (PParams era) Coin,
     HasField "_poolDeposit" (PParams era) Coin,
-    ShelleyEraTxBody era
+    ShelleyEraTxBody era,
+    ProtVerAtMost era 8
   ) =>
   LedgerState era ->
   PParams era ->
