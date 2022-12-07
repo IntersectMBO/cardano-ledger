@@ -358,6 +358,7 @@ getSnapShotsNoSharing (Entity epochStateId EpochState {epochStateSnapShotsFee}) 
   pure $
     EpochBoundary.SnapShots
       { ssStakeMark = mark,
+        ssStakeMarkPoolDistr = EpochBoundary.calculatePoolDistr mark,
         ssStakeSet = set,
         ssStakeGo = go,
         ssFee = epochStateSnapShotsFee
@@ -438,6 +439,7 @@ getSnapShotsWithSharing (Entity epochStateId EpochState {epochStateSnapShotsFee}
   pure $
     EpochBoundary.SnapShots
       { ssStakeMark = mark,
+        ssStakeMarkPoolDistr = EpochBoundary.calculatePoolDistr mark,
         ssStakeSet = set,
         ssStakeGo = go,
         ssFee = epochStateSnapShotsFee

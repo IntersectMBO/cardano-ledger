@@ -378,7 +378,12 @@ instance Crypto c => Arbitrary (SnapShot c) where
   shrink = genericShrink
 
 instance Crypto c => Arbitrary (SnapShots c) where
-  arbitrary = genericArbitraryU
+  arbitrary = do
+    mark <- arbitrary
+    set <- arbitrary
+    go <- arbitrary
+    fee <- arbitrary
+    pure $ SnapShots mark (calculatePoolDistr mark) set go fee
   shrink = genericShrink
 
 instance Arbitrary PerformanceEstimate where

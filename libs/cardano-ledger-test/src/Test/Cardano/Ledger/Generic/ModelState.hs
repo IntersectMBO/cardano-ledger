@@ -43,11 +43,7 @@ import Cardano.Ledger.BaseTypes (BlocksMade (..))
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.EpochBoundary
-  ( SnapShot (..),
-    SnapShots (..),
-    Stake (..),
-  )
+import Cardano.Ledger.EpochBoundary (SnapShots, emptySnapShots)
 import Cardano.Ledger.Era (Era (..))
 import Cardano.Ledger.Keys
   ( GenDelegs (..),
@@ -101,7 +97,6 @@ import qualified Data.Maybe as Maybe
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Text (Text)
 import qualified Data.UMap as UMap
-import qualified Data.VMap as VMap
 import GHC.Natural (Natural)
 import Test.Cardano.Ledger.Generic.PrettyCore
   ( PrettyC (..),
@@ -190,15 +185,6 @@ blocksMadeZero = BlocksMade Map.empty
 poolDistrZero :: PoolDistr c
 poolDistrZero = PoolDistr Map.empty
 
-stakeZero :: Stake c
-stakeZero = Stake VMap.empty
-
-snapShotZero :: SnapShot c
-snapShotZero = SnapShot stakeZero VMap.empty VMap.empty
-
-snapShotsZero :: SnapShots c
-snapShotsZero = SnapShots snapShotZero snapShotZero snapShotZero (Coin 0)
-
 accountStateZero :: AccountState
 accountStateZero = AccountState (Coin 0) (Coin 0)
 
@@ -258,7 +244,7 @@ ledgerStateZero :: Reflect era => LedgerState era
 ledgerStateZero = LedgerState uTxOStateZero dPStateZero
 
 epochStateZero :: Reflect era => EpochState era
-epochStateZero = EpochState accountStateZero snapShotsZero ledgerStateZero pParamsZero pParamsZero nonMyopicZero
+epochStateZero = EpochState accountStateZero emptySnapShots ledgerStateZero pParamsZero pParamsZero nonMyopicZero
 
 newEpochStateZero :: forall era. Reflect era => NewEpochState era
 newEpochStateZero =
@@ -299,7 +285,7 @@ mNewEpochStateZero =
       -- below here NO EFFECT until we model EpochBoundary
       mFPoolParams = Map.empty,
       mRetiring = Map.empty,
-      mSnapshots = snapShotsZero,
+      mSnapshots = emptySnapShots,
       mEL = EpochNo 0,
       mBprev = Map.empty,
       mBcur = Map.empty,
