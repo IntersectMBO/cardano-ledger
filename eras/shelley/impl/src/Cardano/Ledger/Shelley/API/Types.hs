@@ -117,7 +117,7 @@ import Cardano.Ledger.Shelley.Rules.NewEpoch as X
 import Cardano.Ledger.Shelley.Rules.Pool as X (PoolEnv (..), ShelleyPOOL)
 import Cardano.Ledger.Shelley.Rules.PoolReap as X (ShelleyPOOLREAP)
 import Cardano.Ledger.Shelley.Rules.Ppup as X (PpupEnv (..), ShelleyPPUP)
-import Cardano.Ledger.Shelley.Rules.Tick as X (ShelleyTICK)
+import Cardano.Ledger.Shelley.Rules.Tick as X (ShelleyTICK, ShelleyTICKF)
 import Cardano.Ledger.Shelley.Rules.Utxo as X
   ( ShelleyUTXO,
     UtxoEnv (..),

@@ -24,8 +24,9 @@ import Cardano.Ledger.Core (EraTxOut)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.EpochBoundary
   ( SnapShot (ssDelegations, ssStake),
-    SnapShots (ssFee, ssStakeGo, ssStakeMark, ssStakeSet),
+    SnapShots (..),
     Stake (unStake),
+    calculatePoolDistr,
     emptySnapShots,
   )
 import Cardano.Ledger.Era (EraCrypto)
@@ -103,8 +104,10 @@ snapTransition = do
      in StakeDistEvent stakeMap
 
   pure $
-    s
+    SnapShots
       { ssStakeMark = istakeSnap,
+        ssStakeMarkPoolDistr = calculatePoolDistr istakeSnap,
+        -- ssStakeMarkPoolDistr exists for performance reasons, see ADR-7
         ssStakeSet = ssStakeMark s,
         ssStakeGo = ssStakeSet s,
         ssFee = fees

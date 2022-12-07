@@ -30,6 +30,9 @@ module Cardano.Ledger.EpochBoundary
     poolStake,
     maxPool,
     maxPool',
+    calculatePoolDistr,
+    calculatePoolDistr',
+    calculatePoolStake,
   )
 where
 
@@ -54,7 +57,8 @@ import Cardano.Ledger.Compactible
 import Cardano.Ledger.Credential (Credential)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.PoolParams (PoolParams)
+import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
+import Cardano.Ledger.PoolParams (PoolParams (ppVrf))
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.Val ((<+>))
 import Control.DeepSeq (NFData)
@@ -67,8 +71,9 @@ import Data.Typeable
 import Data.VMap as VMap
 import GHC.Generics (Generic)
 import GHC.Records (HasField, getField)
+import GHC.Word (Word64)
 import Lens.Micro (_1, _2)
-import NoThunks.Class (NoThunks (..))
+import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 import Numeric.Natural (Natural)
 
 -- | Type of stake as map from hash key to coins associated.
@@ -181,15 +186,20 @@ instance CC.Crypto c => FromSharedCBOR (SnapShot c) where
     pure SnapShot {ssStake, ssDelegations, ssPoolParams}
 
 -- | Snapshots of the stake distribution.
+--
+-- Note that ssStakeMark and ssStakeMarkPoolDistr are lazy on
+-- purpose since we only want to force the thunk after one stability window
+-- when we know that they are stable (so that we do not compute them if we do not have to).
+-- See more info in the [Optimize TICKF ADR](https://github.com/input-output-hk/cardano-ledger/blob/master/docs/adr/2022-12-12_007-optimize-ledger-view.md)
 data SnapShots c = SnapShots
   { ssStakeMark :: SnapShot c, -- Lazy on purpose
+    ssStakeMarkPoolDistr :: PoolDistr c, -- Lazy on purpose
     ssStakeSet :: !(SnapShot c),
     ssStakeGo :: !(SnapShot c),
     ssFee :: !Coin
   }
   deriving (Show, Eq, Generic)
-
-instance Typeable c => NoThunks (SnapShots c)
+  deriving (NoThunks) via AllowThunksIn '["ssStakeMark", "ssStakeMarkPoolDistr"] (SnapShots c)
 
 instance NFData (SnapShots c)
 
@@ -200,6 +210,7 @@ instance
   toCBOR (SnapShots {ssStakeMark, ssStakeSet, ssStakeGo, ssFee}) =
     encodeListLen 4
       <> toCBOR ssStakeMark
+      -- We intentionaly do not serialize the redundant ssStakeMarkPoolDistr
       <> toCBOR ssStakeSet
       <> toCBOR ssStakeGo
       <> toCBOR ssFee
@@ -211,7 +222,8 @@ instance CC.Crypto c => FromSharedCBOR (SnapShots c) where
     ssStakeSet <- fromSharedPlusCBOR
     ssStakeGo <- fromSharedPlusCBOR
     ssFee <- lift fromCBOR
-    pure SnapShots {ssStakeMark, ssStakeSet, ssStakeGo, ssFee}
+    let ssStakeMarkPoolDistr = calculatePoolDistr ssStakeMark
+    pure SnapShots {ssStakeMark, ssStakeMarkPoolDistr, ssStakeSet, ssStakeGo, ssFee}
 
 instance Default (SnapShots c) where
   def = emptySnapShots
@@ -220,7 +232,7 @@ emptySnapShot :: SnapShot c
 emptySnapShot = SnapShot (Stake VMap.empty) VMap.empty VMap.empty
 
 emptySnapShots :: SnapShots c
-emptySnapShots = SnapShots emptySnapShot emptySnapShot emptySnapShot (Coin 0)
+emptySnapShots = SnapShots emptySnapShot (calculatePoolDistr emptySnapShot) emptySnapShot emptySnapShot (Coin 0)
 
 -- =======================================
 
@@ -229,3 +241,35 @@ instance ToExpr (SnapShots c)
 instance ToExpr (SnapShot c)
 
 instance ToExpr (Stake c)
+
+-- | Sum up the Coin (as CompactForm Coin = Word64) for each StakePool
+calculatePoolStake ::
+  (KeyHash 'StakePool c -> Bool) ->
+  VMap VB VB (Credential 'Staking c) (KeyHash 'StakePool c) ->
+  Stake c ->
+  Map.Map (KeyHash 'StakePool c) Word64
+calculatePoolStake includeHash delegs stake = VMap.foldlWithKey accum Map.empty delegs
+  where
+    accum ans cred keyHash =
+      if includeHash keyHash
+        then case VMap.lookup cred (unStake stake) of
+          Nothing -> ans
+          Just (CompactCoin c) -> Map.insertWith (+) keyHash c ans
+        else ans
+
+calculatePoolDistr :: SnapShot c -> PoolDistr c
+calculatePoolDistr = calculatePoolDistr' (const True)
+
+calculatePoolDistr' :: forall c. (KeyHash 'StakePool c -> Bool) -> SnapShot c -> PoolDistr c
+calculatePoolDistr' includeHash (SnapShot stake delegs poolParams) =
+  let Coin total = sumAllStake stake
+      -- total could be zero (in particular when shrinking)
+      nonZeroTotal :: Integer
+      nonZeroTotal = if total == 0 then 1 else total
+      poolStakeMap :: Map.Map (KeyHash 'StakePool c) Word64
+      poolStakeMap = calculatePoolStake includeHash delegs stake
+   in PoolDistr $
+        Map.intersectionWith
+          (\word64 poolparam -> IndividualPoolStake (toInteger word64 % nonZeroTotal) (ppVrf poolparam))
+          poolStakeMap
+          (VMap.toMap poolParams)
