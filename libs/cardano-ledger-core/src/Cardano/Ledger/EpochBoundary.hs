@@ -117,7 +117,6 @@ sumStakePerPool delegs (Stake stake) = VMap.foldlWithKey accum Map.empty stake
         Nothing -> acc
         Just kh -> Map.insertWith (<+>) kh (fromCompact compactCoin) acc
 
-
 -- | Calculate maximal pool reward
 maxPool' ::
   NonNegativeInterval ->

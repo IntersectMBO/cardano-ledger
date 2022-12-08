@@ -97,6 +97,7 @@ import Cardano.Ledger.Shelley.Rules.Reports
 import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.TreeDiff (diffExpr, ediffEq)
 import Cardano.Ledger.TxIn (TxIn (..))
+import Cardano.Ledger.UMapCompact (sumCompactCoin)
 import qualified Cardano.Ledger.UMapCompact as UM
 import Cardano.Ledger.UTxO (UTxO (..), coinBalance, txins, txouts)
 import Cardano.Ledger.Val ((<+>), (<->))
@@ -129,9 +130,6 @@ import qualified Data.Map.Strict as Map
 import Data.Proxy
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.UMap (View (Rewards), domain)
-import qualified Data.UMap as UM
-import Data.TreeDiff.QuickCheck (ediffEq)
 import qualified Data.VMap as VMap
 import Data.Word (Word64)
 import GHC.Records (HasField (..))
@@ -514,28 +512,8 @@ checkWithdrawlBound SourceSignalTarget {source, signal, target} =
   where
     rewardDelta :: Coin
     rewardDelta =
-      fromCompact
-        ( fold
-            ( rewards
-                . dpsDState
-                . lsDPState
-                . esLState
-                . nesEs
-                . chainNes
-                $ source
-            )
-        )
-        <-> fromCompact
-          ( fold
-              ( rewards
-                  . dpsDState
-                  . lsDPState
-                  . esLState
-                  . nesEs
-                  . chainNes
-                  $ target
-              )
-          )
+      fromCompact (sumCompactCoin (rewards . dpsDState . lsDPState . esLState . nesEs . chainNes $ source))
+        <-> fromCompact (sumCompactCoin (rewards . dpsDState . lsDPState . esLState . nesEs . chainNes $ target))
 
 -- | If we are not at an Epoch Boundary, then (Utxo + Deposits)
 -- increases by Withdrawals minus Fees (for all transactions in a block)
@@ -634,8 +612,8 @@ potsSumIncreaseByRewardsPerTx SourceSignalTarget {source = chainSt, signal = blo
         } =
         (coinBalance u' <+> d' <+> f')
           <-> (coinBalance u <+> d <+> f)
-          === (UM.fromCompact (fold (UM.unUnify (UM.Rewards umap1))))
-          <-> (UM.fromCompact (fold (UM.unUnify (UM.Rewards umap2))))
+          === UM.fromCompact (fold (UM.unUnify (UM.Rewards umap1)))
+          <-> UM.fromCompact (fold (UM.unUnify (UM.Rewards umap2)))
 
 -- | The Rewards pot decreases by the sum of withdrawals in a transaction
 potsRewardsDecreaseByWdrlsPerTx ::
@@ -987,7 +965,7 @@ rewardDepositDomainInvariant ::
   Property
 rewardDepositDomainInvariant SourceSignalTarget {source = chainSt} =
   let LedgerState {lsDPState = DPState dstate _} = (esLState . nesEs . chainNes) chainSt
-      rewardDomain = domain (Rewards (dsUnified dstate))
+      rewardDomain = UM.domain (UM.Rewards (dsUnified dstate))
       depositDomain = Map.keysSet (dsDeposits dstate)
    in counterexample
         ( unlines

@@ -474,7 +474,7 @@ reapPool pool cs = cs {chainNes = nes'}
     (rewards', unclaimed) =
       case UM.lookup rewardAddr (rewards ds) of
         Nothing -> (rewards ds, _poolDeposit pp)
-        Just era -> (UM.insert' rewardAddr (UM.addCompact era (UM.compactCoinOrError (_poolDeposit pp))) (rewards ds), Coin 0)
+        Just ccoin -> (UM.insert' rewardAddr (UM.addCompact ccoin (UM.compactCoinOrError (_poolDeposit pp))) (rewards ds), Coin 0)
     umap1 = unView rewards'
     umap2 = (UM.Delegations umap1 UM.⋫ Set.singleton kh)
     ds' = ds {dsUnified = umap2}
@@ -538,7 +538,7 @@ applyMIR pot newrewards cs = cs {chainNes = nes'}
     ds = dpsDState dps
     ds' =
       ds
-        { dsUnified = (rewards ds) UM.∪+ newrewards,
+        { dsUnified = rewards ds UM.∪+ Map.map UM.compactCoinOrError newrewards,
           dsIRewards = emptyInstantaneousRewards
         }
     dps' = dps {dpsDState = ds'}

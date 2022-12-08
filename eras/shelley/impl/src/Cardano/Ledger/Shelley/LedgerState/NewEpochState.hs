@@ -20,6 +20,7 @@ import Cardano.Ledger.BaseTypes
   )
 import Cardano.Ledger.Coin
   ( Coin (..),
+    CompactForm (CompactCoin),
     addDeltaCoin,
   )
 import Cardano.Ledger.Core
@@ -40,13 +41,13 @@ import Cardano.Ledger.Shelley.TxBody
   ( MIRPot (..),
     ShelleyEraTxBody (..),
   )
-import Cardano.Ledger.UTxO
-  ( UTxO (..),
-    coinBalance,
-  )
 import Cardano.Ledger.UMapCompact
   ( Trip (..),
     UMap (..),
+  )
+import Cardano.Ledger.UTxO
+  ( UTxO (..),
+    coinBalance,
   )
 import Cardano.Ledger.Val ((<+>), (<->))
 import Control.State.Transition (STS (State))
@@ -128,7 +129,7 @@ reapRewards ::
 reapRewards (UMap tmap ptrmap) withdrawals = UMap (Map.mapWithKey g tmap) ptrmap
   where
     g k (Triple x y z) = Triple (fmap (removeRewards k) x) y z
-    removeRewards k v = if k `Map.member` withdrawals then 0 else v
+    removeRewards k v = if k `Map.member` withdrawals then (CompactCoin 0) else v
 
 -- A TxOut has 4 different shapes, depending on the shape of its embedded Addr.
 -- Credentials are stored in only 2 of the 4 cases.

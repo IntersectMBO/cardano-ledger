@@ -40,6 +40,7 @@ import Cardano.Ledger.Shelley.LedgerState
     rewards,
     pattern EpochState,
   )
+import Cardano.Ledger.UMapCompact (compactCoinOrError)
 import qualified Cardano.Ledger.UMapCompact as UM
 import Cardano.Ledger.Val ((<->))
 import Control.SetAlgebra (eval, (∪+))
@@ -132,7 +133,7 @@ mirTransition = do
                 dpState
                   { dpsDState =
                       ds
-                        { dsUnified = rewards' UM.∪+ update,
+                        { dsUnified = rewards' UM.∪+ Map.map compactCoinOrError update,
                           dsIRewards = emptyInstantaneousRewards
                         }
                   }

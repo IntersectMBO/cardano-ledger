@@ -48,7 +48,7 @@ import Cardano.Ledger.BaseTypes
     txIxToInt,
   )
 import Cardano.Ledger.Block (Block (..))
-import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), word64ToCoin)
+import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.CompactAddress (CompactAddr (..), decompactAddr)
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core
@@ -421,7 +421,7 @@ ppTrip :: Trip c -> PDoc
 ppTrip (Triple mcoin set mpool) =
   ppSexp
     "Triple"
-    [ ppStrictMaybe ppCoin (word64ToCoin <$> mcoin),
+    [ ppStrictMaybe ppCoin (fromCompact <$> mcoin),
       ppSet ppPtr set,
       ppStrictMaybe ppKeyHash mpool
     ]

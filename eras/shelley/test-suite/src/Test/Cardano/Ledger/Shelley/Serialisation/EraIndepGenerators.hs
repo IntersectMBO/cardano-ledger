@@ -232,19 +232,11 @@ instance (Arbitrary k, Arbitrary v) => Arbitrary (LM.ListMap k v) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance CC.Crypto c => Arbitrary (GenDelegs c) where
-  arbitrary = genericArbitraryU
-  shrink = genericShrink
-
-instance CC.Crypto c => Arbitrary (GenDelegPair c) where
-  arbitrary = genericArbitraryU
-  shrink = genericShrink
-
-instance CC.Crypto c => Arbitrary (Trip c) where
+instance Crypto c => Arbitrary (Trip c) where
   arbitrary = Triple <$> arbitrary <*> arbitrary <*> arbitrary
   shrink = genericShrink
 
-instance CC.Crypto c => Arbitrary (UMap c) where
+instance Crypto c => Arbitrary (UMap c) where
   arbitrary = UMap <$> arbitrary <*> arbitrary
   shrink = genericShrink
 

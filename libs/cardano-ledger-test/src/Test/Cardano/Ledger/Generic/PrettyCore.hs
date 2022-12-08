@@ -102,9 +102,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text, pack)
 import Data.Typeable (Typeable)
-import qualified Data.UMap as UMap (View (..), delView, rewView, size)
 import qualified PlutusLedgerApi.V1 as PV1 (Data (..))
-import qualified PlutusCore.Data as Plutus (Data (..))
 import Prettyprinter (hsep, parens, viaShow, vsep)
 import Test.Cardano.Ledger.Generic.Fields
   ( TxBodyField (..),

@@ -261,17 +261,17 @@ instance Default (PState c) where
   def =
     PState Map.empty Map.empty Map.empty Map.empty
 
-rewards :: DState c -> ViewMap c (Credential 'Staking c) Coin
+rewards :: DState c -> View c (Credential 'Staking c) (CompactForm Coin)
 rewards = Rewards . dsUnified
 
 delegations ::
   DState c ->
-  ViewMap c (Credential 'Staking c) (KeyHash 'StakePool c)
+  View c (Credential 'Staking c) (KeyHash 'StakePool c)
 delegations = Delegations . dsUnified
 
 -- | get the actual ptrs map, we don't need a view
 ptrsMap :: DState c -> Map Ptr (Credential 'Staking c)
-ptrsMap (DState {dsUnified = UnifiedMap _ ptrmap}) = ptrmap
+ptrsMap (DState {dsUnified = UMap _ ptrmap}) = ptrmap
 
 -- ==========================================================
 -- Functions that handle Deposits for stake credentials and key hashes.

@@ -23,6 +23,7 @@ import Cardano.Ledger.Shelley.LedgerState
 import qualified Cardano.Ledger.Shelley.PParams as Shelley (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Rules.Reports (synopsisCoinMap)
 import Cardano.Ledger.TreeDiff (diffExpr)
+import Cardano.Ledger.UMapCompact (View (Rewards), domain)
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val ((<+>))
 import Control.State.Transition (STS (..))
@@ -39,7 +40,6 @@ import Data.Default.Class (Default (def))
 import Data.List (foldl')
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import Data.UMap (View (Rewards), domain)
 import Test.Cardano.Ledger.Generic.Functions
   ( getBody,
     getCollateralInputs,

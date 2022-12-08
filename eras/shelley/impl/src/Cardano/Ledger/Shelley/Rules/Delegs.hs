@@ -36,7 +36,7 @@ import Cardano.Ledger.Binary
     decodeRecordSum,
     encodeListLen,
   )
-import Cardano.Ledger.Coin (Coin, word64ToCoin)
+import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
@@ -61,7 +61,7 @@ import Cardano.Ledger.Shelley.TxBody
     Wdrl (..),
   )
 import Cardano.Ledger.Slot (SlotNo)
-import Cardano.Ledger.UMapCompact (Trip (..), UMap (..), View (..), compactCoinOrError)
+import Cardano.Ledger.UMapCompact (Trip (..), UMap (..), View (..), compactCoinOrError, fromCompact)
 import qualified Cardano.Ledger.UMapCompact as UM
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, (∈))
@@ -223,7 +223,7 @@ delegsTransition = do
               )
               Map.empty
               wdrls_
-          unified' = rewards' UM.⨃ (Map.map compactCoinOrError wdrls_')
+          unified' = rewards' UM.⨃ Map.map compactCoinOrError wdrls_'
       pure $ dpstate {dpsDState = ds {dsUnified = unified'}}
     gamma :|> c -> do
       dpstate' <-
@@ -260,7 +260,7 @@ delegsTransition = do
               | (RewardAcnt _ cred, coin) <- Map.toList wdrls_
             ]
         f :: Coin -> Trip (EraCrypto era) -> Bool
-        f coin1 (Triple (SJust coin2) _ _) = coin1 == (word64ToCoin coin2)
+        f coin1 (Triple (SJust coin2) _ _) = coin1 == (fromCompact coin2)
         f _ _ = False
 
 instance

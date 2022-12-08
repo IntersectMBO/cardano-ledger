@@ -45,7 +45,7 @@ import Cardano.Ledger.Shelley.LedgerState
     lsDPState,
     rewards,
   )
-import Cardano.Ledger.Shelley.Rewards (aggregateRewards, sumRewards)
+import Cardano.Ledger.Shelley.Rewards (aggregateCompactRewards, sumRewards)
 import Cardano.Ledger.Shelley.Rules
   ( ShelleyEPOCH,
     ShelleyMIR,
@@ -216,10 +216,10 @@ tickfRuleBench =
                         [ bench "filterAllRewards" $ nf (filterAllRewards (rs (getRewardUpdate nes))) (nesEs nes),
                           env
                             (pure (filterAllRewards (rs (getRewardUpdate nes)) (nesEs nes)))
-                            (bench "aggregateRewards" . whnf (aggregateRewards (esPp (nesEs nes))) . frRegistered),
+                            (bench "aggregateRewards" . whnf (aggregateCompactRewards (esPp (nesEs nes))) . frRegistered),
                           env
                             ( pure
-                                ( aggregateRewards
+                                ( aggregateCompactRewards
                                     (esPp (nesEs nes))
                                     ( frRegistered $
                                         filterAllRewards (rs (getRewardUpdate nes)) (nesEs nes)

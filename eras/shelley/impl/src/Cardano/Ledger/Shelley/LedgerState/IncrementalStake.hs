@@ -10,7 +10,7 @@
 --    adding Inputs and deleting consumed Outputs. Done in the Utxo rules.
 -- 2) Finalizing and aggregating by stake credential to create a Snapshot.
 --    done in the Snap rules.
--- 3) Applying the RewardUpdate, to the Rewards component of the UnifiedMap.
+-- 3) Applying the RewardUpdate, to the Rewards component of the UMap.
 --    done in the NewEpoch rules.
 
 module Cardano.Ledger.Shelley.LedgerState.IncrementalStake
@@ -54,7 +54,7 @@ import Cardano.Ledger.Keys
   )
 import Cardano.Ledger.Shelley.LedgerState.Types
 import Cardano.Ledger.Shelley.RewardUpdate (RewardUpdate (..))
-import Cardano.Ledger.Shelley.Rewards (aggregateRewards, filterRewards)
+import Cardano.Ledger.Shelley.Rewards (aggregateCompactRewards, aggregateRewards, filterRewards)
 import Cardano.Ledger.Shelley.TxBody
   ( Ptr (..),
   )
@@ -197,7 +197,7 @@ incrementalStakeDistr incstake ds ps =
     (VMap.fromMap poolParams)
   where
     UMap tripmap ptrmap = dsUnified ds
-    PState poolParams _ _ = ps
+    PState {psStakePoolParams = poolParams} = ps
     delegs_ = UM.viewToVMap (delegations ds)
     -- A credential is active, only if it is being delegated
     step1 = resolveActiveIncrementalPtrs (`VMap.member` delegs_) ptrmap incstake
@@ -226,7 +226,7 @@ resolveActiveIncrementalPtrs isActive ptrMap_ (IStake credStake ptrStake) =
             else ans
 
 -- | Aggregate active stake by merging two maps. The triple map from the
---   UnifiedMap, and the IncrementalStake Only keep the active stake. Active can
+--   UMap, and the IncrementalStake Only keep the active stake. Active can
 --   be determined if there is a (SJust deleg) in the Triple.  This is step2 =
 --   aggregate (dom activeDelegs ◁ rewards) step1
 aggregateActiveStake :: Ord k => Map k (Trip c) -> Map k Coin -> Map k Coin
@@ -247,7 +247,7 @@ aggregateActiveStake =
 -- =====================================================
 
 -- | Apply a RewardUpdate to the EpochState. Does several things
---   1) Adds reward coins to Rewards component of the UnifiedMap field of the DState,
+--   1) Adds reward coins to Rewards component of the UMap field of the DState,
 --      for actively delegated Stake
 --   2) Adds to the Treasury of the AccountState for non-actively delegated stake
 --   3) Adds fees to the UTxOState
@@ -278,7 +278,7 @@ applyRUpdFiltered
       !epochStateAns = EpochState as' ss ls' pr pp nm'
       dState = dpsDState delegState
       filteredRewards@FilteredRewards {frRegistered, frTotalUnregistered} = filterAllRewards (rs ru) es
-      registeredAggregated = aggregateRewards pp frRegistered
+      registeredAggregated = aggregateCompactRewards pp frRegistered
       as' =
         as
           { asTreasury = addDeltaCoin (asTreasury as) (deltaT ru) <> frTotalUnregistered,

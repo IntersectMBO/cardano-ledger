@@ -97,11 +97,6 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Maybe as Maybe
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Text (Text)
-<<<<<<< HEAD
-import qualified Data.UMap as UMap
-=======
-import qualified Data.VMap as VMap
->>>>>>> a9aa5260b (Preparing to add Cardano.Ledger.UMapCompact(UMap), which will replace)
 import GHC.Natural (Natural)
 import Test.Cardano.Ledger.Generic.PrettyCore
   ( PrettyC (..),
@@ -201,11 +196,25 @@ genDelegsZero = GenDelegs Map.empty
 
 instantaneousRewardsZero :: InstantaneousRewards c
 instantaneousRewardsZero = InstantaneousRewards Map.empty Map.empty mempty mempty
+
 dStateZero :: DState c
-dStateZero = DState UM.empty Map.empty genDelegsZero instantaneousRewardsZero
+dStateZero =
+  DState
+    { dsUnified = UM.empty,
+      dsFutureGenDelegs = Map.empty,
+      dsGenDelegs = genDelegsZero,
+      dsIRewards = instantaneousRewardsZero,
+      dsDeposits = Map.empty
+    }
 
 pStateZero :: PState c
-pStateZero = PState Map.empty Map.empty Map.empty Map.empty
+pStateZero =
+  PState
+    { psStakePoolParams = Map.empty,
+      psFutureStakePoolParams = Map.empty,
+      psRetiring = Map.empty,
+      psDeposits = Map.empty
+    }
 
 dPStateZero :: DPState c
 dPStateZero = DPState dStateZero pStateZero
@@ -359,8 +368,6 @@ abstract x =
   ModelNewEpochState
     { mPoolParams = (psStakePoolParams . dpsPState . lsDPState . esLState . nesEs) x,
       mPoolDeposits = (psDeposits . dpsPState . lsDPState . esLState . nesEs) x,
-      mRewards = (UMap.rewView . dsUnified . dpsDState . lsDPState . esLState . nesEs) x,
-      mDelegations = (UMap.delView . dsUnified . dpsDState . lsDPState . esLState . nesEs) x,
       mKeyDeposits = (dsDeposits . dpsDState . lsDPState . esLState . nesEs) x,
       mRewards = (UM.rewView . dsUnified . dpsDState . lsDPState . esLState . nesEs) x,
       mDelegations = (UM.delView . dsUnified . dpsDState . lsDPState . esLState . nesEs) x,

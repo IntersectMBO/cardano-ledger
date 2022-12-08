@@ -62,6 +62,7 @@ in the naming of release branches.
 - Replace `NominalDiffTime` with a `newtype` wrapper `NominalDiffTimeMicro`. Remove use of `NominalDiffTime`, as we don't use its full precision. #3208
 - Switched `PlutusDebug` to use a `GADT` with `singletons` for better type-safety. #3167
   - Made `Plutus` imports uniform.
+- Removed the module `Test.Cardano.Ledger.Generic.Types`. Functionality moved to `Test.Cardano.Ledger.Generic.Functions`
 - Renamed module `Cardano.Ledger.Shelley.Metadata` -> `Cardano.Ledger.Shelley.TxAuxData` #3205
 - Updated `Conway` low protocol version to 9 and `Babbage` high protocol version to 8: #3174
 - Fixed mismathed parenthesis in the `Show` instance for `Ptr`: #3184.

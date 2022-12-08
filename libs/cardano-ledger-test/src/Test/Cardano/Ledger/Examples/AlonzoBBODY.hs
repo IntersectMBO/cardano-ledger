@@ -94,8 +94,6 @@ import Data.Default.Class (Default (..))
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import qualified Data.Sequence.Strict as StrictSeq
-import Data.UMap (View (Rewards))
-import qualified Data.UMap as UM
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Examples.STSTestUtils
   ( alwaysFailsHash,

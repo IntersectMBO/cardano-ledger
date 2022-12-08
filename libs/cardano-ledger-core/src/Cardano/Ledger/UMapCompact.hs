@@ -40,15 +40,9 @@ module Cardano.Ledger.UMapCompact
     CompactForm (CompactCoin),
     toCompact,
     fromCompact,
-    compactCoinOrError,
     addCompact,
-
-    -- * Operations to implement the 'Iter' class
-    -- $ITER
-    mapNext,
-    mapLub,
-    next,
-    leastUpperBound,
+    sumCompactCoin,
+    compactCoinOrError,
 
     -- * Set and Map operations on Views
     -- $VIEWOPS
@@ -72,11 +66,6 @@ module Cardano.Ledger.UMapCompact
     member,
     notMember,
     domRestrict,
-
-    -- * Runtime evidence of a View
-    -- $Tag
-    Tag (..),
-    UnifiedView (..),
     --  * Derived functions
     --  $DFUNS
     findWithDefault,
@@ -91,6 +80,7 @@ import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Credential (Credential (..), Ptr)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData (..))
 import Control.Monad.Trans.State.Strict (StateT (..))
 import Data.Foldable (Foldable (..))
@@ -103,8 +93,8 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.Set.Internal as SI (Set (..))
 import qualified Data.VMap as VMap
-import Data.Word (Word64)
 import GHC.Generics (Generic)
+import GHC.Stack (HasCallStack)
 import NoThunks.Class (NoThunks (..))
 import Prelude hiding (lookup)
 
@@ -116,7 +106,7 @@ import Prelude hiding (lookup)
 --
 -- @
 -- data Trip c = Triple
---   { coinT :: !(StrictMaybe Coin),
+--   { coinT :: !(StrictMaybe (CompactForm Coin)),
 --     ptrT :: !(Set Ptr),
 --     poolidT :: !(StrictMaybe (KeyHash 'StakePool c))
 --   }
@@ -136,14 +126,14 @@ data Trip c
   | TEEF !(KeyHash 'StakePool c)
   | TEFE !(Set Ptr)
   | TEFF !(Set Ptr) !(KeyHash 'StakePool c)
-  | TFEE {-# UNPACK #-} !Word64
-  | TFEF {-# UNPACK #-} !Word64 !(KeyHash 'StakePool c)
-  | TFFE {-# UNPACK #-} !Word64 !(Set Ptr)
-  | TFFF {-# UNPACK #-} !Word64 !(Set Ptr) !(KeyHash 'StakePool c)
+  | TFEE {-# UNPACK #-} !(CompactForm Coin)
+  | TFEF {-# UNPACK #-} !(CompactForm Coin) !(KeyHash 'StakePool c)
+  | TFFE {-# UNPACK #-} !(CompactForm Coin) !(Set Ptr)
+  | TFFF {-# UNPACK #-} !(CompactForm Coin) !(Set Ptr) !(KeyHash 'StakePool c)
   deriving (Eq, Ord, Generic, NoThunks, NFData)
 
 -- | We can view all of the constructors as a Triple.
-viewTrip :: Trip c -> (StrictMaybe Word64, Set Ptr, StrictMaybe (KeyHash 'StakePool c))
+viewTrip :: Trip c -> (StrictMaybe (CompactForm Coin), Set Ptr, StrictMaybe (KeyHash 'StakePool c))
 viewTrip TEEE = (SNothing, Set.empty, SNothing)
 viewTrip (TEEF x) = (SNothing, Set.empty, SJust x)
 viewTrip (TEFE x) = (SNothing, x, SNothing)
@@ -160,8 +150,8 @@ viewTrip (TFFF x y z) = (SJust x, y, SJust z)
 tripRewardActiveDelegation :: Trip c -> Maybe (CompactForm Coin)
 tripRewardActiveDelegation =
   \case
-    TFFF c _ _ -> Just (CompactCoin c)
-    TFEF c _ -> Just (CompactCoin c)
+    TFFF c _ _ -> Just c
+    TFEF c _ -> Just c
     _ -> Nothing
 
 -- | Extract the Reward 'Coin' if it is present. We can tell that the reward is
@@ -171,10 +161,10 @@ tripRewardActiveDelegation =
 tripReward :: Trip c -> Maybe (CompactForm Coin)
 tripReward =
   \case
-    TFFF c _ _ -> Just (CompactCoin c)
-    TFFE c _ -> Just (CompactCoin c)
-    TFEF c _ -> Just (CompactCoin c)
-    TFEE c -> Just (CompactCoin c)
+    TFFF c _ _ -> Just c
+    TFFE c _ -> Just c
+    TFEF c _ -> Just c
+    TFEE c -> Just c
     _ -> Nothing
 
 -- | Extract the Delegation PoolParams, if present. We can tell that the PoolParams are
@@ -191,7 +181,7 @@ tripDelegation =
     _ -> Nothing
 
 -- | A Triple can be extracted and injected into the TEEE ... TFFF constructors.
-pattern Triple :: StrictMaybe Word64 -> Set Ptr -> StrictMaybe (KeyHash 'StakePool c) -> Trip c
+pattern Triple :: StrictMaybe (CompactForm Coin) -> Set Ptr -> StrictMaybe (KeyHash 'StakePool c) -> Trip c
 pattern Triple a b c <-
   (viewTrip -> (a, b, c))
   where
@@ -245,7 +235,7 @@ umInvariant stake ptr (UMap tripmap ptrmap) = forwards && backwards
 -- VIEW
 
 -- | A 'View' lets one view a 'UMap' in three different ways
---   A view with type @(View coin cred poolparam ptr key value)@ can be used like a @(Map key value)@
+--   A view with type @(View c key value)@ can be used like a @(Map key value)@
 data View c k v where
   Rewards ::
     !(UMap c) ->
@@ -333,7 +323,7 @@ domRestrictedView setk (Ptrs (UMap _ ptrmap)) = Map.restrictKeys ptrmap setk
 instance Foldable (View c k) where
   foldMap f (Rewards (UMap tmap _)) = Map.foldlWithKey accum mempty tmap
     where
-      accum ans _ (Triple (SJust w64) _ _) = ans <> f (CompactCoin w64)
+      accum ans _ (Triple (SJust ccoin) _ _) = ans <> f ccoin
       accum ans _ _ = ans
   foldMap f (Delegations (UMap tmap _)) = Map.foldlWithKey accum mempty tmap
     where
@@ -342,7 +332,7 @@ instance Foldable (View c k) where
   foldMap f (Ptrs (UMap _ ptrmap)) = foldMap f ptrmap
   foldr accum ans0 (Rewards (UMap tmap _)) = Map.foldr accum2 ans0 tmap
     where
-      accum2 (Triple (SJust w64) _ _) ans = accum (CompactCoin w64) ans
+      accum2 (Triple (SJust ccoin) _ _) ans = accum ccoin ans
       accum2 _ ans = ans
   foldr accum ans0 (Delegations (UMap tmap _)) = Map.foldr accum2 ans0 tmap
     where
@@ -362,23 +352,11 @@ instance Foldable (View c k) where
 -- =======================================================
 -- Operations on Triple
 
-instance Semigroup (Trip c) where
-  (<>) (Triple c1 ptrs1 x) (Triple c2 ptrs2 y) =
-    Triple (addStrictMaybe c1 c2) (Set.union ptrs1 ptrs2) (add x y)
-    where
-      add SNothing SNothing = SNothing
-      add (SJust w) SNothing = SJust w
-      add SNothing (SJust z) = SJust z
-      add (SJust w) (SJust _) = SJust w
-
-addStrictMaybe :: StrictMaybe Word64 -> StrictMaybe Word64 -> StrictMaybe Word64
+addStrictMaybe :: StrictMaybe (CompactForm Coin) -> StrictMaybe (CompactForm Coin) -> StrictMaybe (CompactForm Coin)
 addStrictMaybe SNothing SNothing = SNothing
 addStrictMaybe (SJust w) SNothing = SJust w
 addStrictMaybe SNothing (SJust z) = SJust z
-addStrictMaybe (SJust c1) (SJust c2) = SJust (c1 + c2)
-
-instance Monoid (Trip c) where
-  mempty = Triple SNothing Set.empty SNothing
+addStrictMaybe (SJust (CompactCoin c1)) (SJust (CompactCoin c2)) = SJust (CompactCoin (c1 + c2))
 
 -- | Is there no information in a Triple? If so then we can delete it from the UnifedMap
 zero :: Trip c -> Bool
@@ -388,58 +366,6 @@ zero _ = False
 zeroMaybe :: Trip c -> Maybe (Trip c)
 zeroMaybe t | zero t = Nothing
 zeroMaybe t = Just t
-
--- ===============================================================
--- Iter Operations
-
--- ITER
-
-mapNext :: Map k v -> Maybe (k, v, Map k v)
-mapNext m =
-  case Map.minViewWithKey m of
-    Nothing -> Nothing
-    Just ((k, v), m2) -> Just (k, v, m2)
-
-mapLub :: Ord k => k -> Map k v -> Maybe (k, v, Map k v)
-mapLub k m =
-  case Map.splitLookup k m of
-    (_, Nothing, m2) -> mapNext m2
-    (_, Just v, m2) -> Just (k, v, m2)
-
-next :: View c k v -> Maybe (k, v, View c k v)
-next (Rewards (UMap tripmap _)) =
-  case mapNext tripmap of
-    Nothing -> Nothing
-    Just (k, Triple (SJust w64) _ _, tripmap2) -> Just (k, CompactCoin w64, rewards tripmap2 Map.empty)
-    Just (_, Triple SNothing _ _, tripmap2) -> next (rewards tripmap2 Map.empty)
-next (Delegations (UMap tripmap _)) =
-  case mapNext tripmap of
-    Nothing -> Nothing
-    Just (k, Triple _ _ (SJust poolid), tripmap2) -> Just (k, poolid, delegations tripmap2 Map.empty)
-    Just (_, Triple _ _ SNothing, tripmap2) -> next (delegations tripmap2 Map.empty)
-next (Ptrs (UMap tripmap ptrmap)) =
-  case mapNext ptrmap of
-    Nothing -> Nothing
-    Just (k, stakeid, m2) -> Just (k, stakeid, ptrs (Map.empty `asTypeOf` tripmap) m2)
-
-leastUpperBound ::
-  k ->
-  View c k v ->
-  Maybe (k, v, View c k v)
-leastUpperBound stakeid (Rewards (UMap tripmap _)) =
-  case mapLub stakeid tripmap of
-    Nothing -> Nothing
-    Just (k, Triple (SJust w64) _ _, tripmap2) -> Just (k, CompactCoin w64, rewards tripmap2 Map.empty)
-    Just (_, Triple SNothing _ _, tripmap2) -> next (rewards tripmap2 Map.empty)
-leastUpperBound stakeid (Delegations (UMap tripmap _)) =
-  case mapLub stakeid tripmap of
-    Nothing -> Nothing
-    Just (k, Triple _ _ (SJust poolid), tripmap2) -> Just (k, poolid, delegations tripmap2 Map.empty)
-    Just (_, Triple _ _ SNothing, tripmap2) -> next (Delegations (UMap tripmap2 Map.empty))
-leastUpperBound ptr (Ptrs (UMap tripmap ptrmap)) =
-  case mapLub ptr ptrmap of
-    Nothing -> Nothing
-    Just (k, stakeid, m2) -> Just (k, stakeid, ptrs (Map.empty `asTypeOf` tripmap) m2)
 
 -- ==============================================================
 -- Basic operations on ViewMap
@@ -471,8 +397,6 @@ delete' ptr (Ptrs (UMap tripmap ptrmap)) =
 delete :: k -> View c k v -> UMap c
 delete k m = unView (delete' k m)
 
--- liftold :: (Coin -> Coin -> Coin) -> Coin -> Word64 -> Word64
-
 -- | Special insertion:
 --
 --  Keeps the value already in the ViewMap if the key 'k' is already there:
@@ -499,13 +423,11 @@ insertWith' ::
 insertWith' comb stakeid newcoin (Rewards (UMap tripmap ptrmap)) =
   rewards (Map.alter comb2 stakeid tripmap) ptrmap
   where
-    -- Here 'v' is (CompactForm Coin), but the UMap stores Word64, so there is some coercion going on here
-    combine :: Word64 -> CompactForm Coin -> Word64
-    combine w64 ccoin = case comb (CompactCoin w64) ccoin of CompactCoin w -> w
-    CompactCoin newW64 = newcoin
-    comb2 Nothing = zeroMaybe (Triple (SJust newW64) Set.empty SNothing)
-    comb2 (Just (Triple (SJust oldcoin) x y)) = zeroMaybe (Triple (SJust (combine oldcoin newcoin)) x y)
-    comb2 (Just (Triple SNothing x y)) = zeroMaybe (Triple (SJust newW64) x y)
+    -- Here 'v' is (CompactForm Coin), but the UMap stores Word64,
+    -- so there is some implict coercion going on here using the Triple pattern
+    comb2 Nothing = zeroMaybe (Triple (SJust newcoin) Set.empty SNothing)
+    comb2 (Just (Triple (SJust oldcoin) x y)) = zeroMaybe (Triple (SJust (comb oldcoin newcoin)) x y)
+    comb2 (Just (Triple SNothing x y)) = zeroMaybe (Triple (SJust newcoin) x y)
 insertWith' comb stakeid newpoolid (Delegations (UMap tripmap ptrmap)) =
   delegations (Map.alter comb2 stakeid tripmap) ptrmap
   where
@@ -517,13 +439,14 @@ insertWith' comb ptr stake (Ptrs (UMap tripmap ptrmap)) =
         case Map.lookup ptr ptrmap of -- This is tricky, because we need to retract the oldstake
           Nothing -> (stake, stake) -- and to add the newstake to maintain the UMap invariant
           Just stake2 -> (stake2, comb stake2 stake)
-      -- Delete pointer from set in Triple, but also delete the whole triple if it goes to Zero.
+      -- Delete old pointer from set in Triple, but also delete the whole triple if it goes to Zero.
       retract stakeid pointer m = Map.update ok stakeid m
         where
           ok (Triple c set d) = zeroMaybe (Triple c (Set.delete pointer set) d)
-      add stakeid pointer m =
-        Map.insertWith (<>) stakeid (Triple SNothing (Set.singleton pointer) SNothing) m
-      tripmap2 = add newstake ptr (retract oldstake ptr tripmap)
+      -- Add the new pointer to the set in Triple
+      tripmap2 = Map.update addPtr newstake (retract oldstake ptr tripmap)
+        where
+          addPtr (Triple a set b) = Just (Triple a (Set.insert ptr set) b)
       ptrmap2 = Map.insert ptr newstake ptrmap
    in Ptrs (UMap tripmap2 ptrmap2)
 
@@ -575,7 +498,7 @@ domain (Ptrs (UMap _ ptrmap)) = Map.keysSet ptrmap
 range :: View c k v -> Set v
 range (Rewards (UMap tripmap _)) = Map.foldlWithKey' accum Set.empty tripmap
   where
-    accum ans _ (Triple (SJust w64) _ _) = Set.insert (CompactCoin w64) ans
+    accum ans _ (Triple (SJust ccoin) _ _) = Set.insert ccoin ans
     accum ans _ _ = ans
 range (Delegations (UMap tripmap _)) = Map.foldlWithKey' accum Set.empty tripmap
   where
@@ -615,7 +538,7 @@ view ⨃ mp = unView $ Map.foldlWithKey' accum view mp
 
 (∪+) ::
   View c k (CompactForm Coin) ->
-  Map k Coin ->
+  Map k (CompactForm Coin) ->
   UMap c
 (Rewards (UMap tm pm)) ∪+ mp = UMap (unionHelp tm mp) pm
 
@@ -624,21 +547,15 @@ view ⨃ mp = unView $ Map.foldlWithKey' accum view mp
 unionHelp ::
   Ord k =>
   Map k (Trip c) ->
-  Map k Coin ->
+  Map k (CompactForm Coin) ->
   Map k (Trip c)
 unionHelp tm mm =
   Map.mergeWithKey
-    (\_k (Triple c1 s d) c2 -> Just (Triple (addStrictMaybe c1 (coinToWord64 c2)) s d))
+    (\_k (Triple c1 s d) c2 -> Just (Triple (addStrictMaybe c1 (SJust c2)) s d))
     id
-    (Map.map (\c -> Triple (coinToWord64 c) Set.empty SNothing))
+    (Map.map (\ccoin -> (Triple (SJust ccoin) Set.empty SNothing)))
     tm
     mm
-
-coinToWord64 :: Coin -> StrictMaybe Word64
-coinToWord64 (Coin c)
-  | c < 0 = SNothing -- Should these 2 cases be an error?
-  | c > fromIntegral (maxBound :: Word64) = SNothing
-  | otherwise = SJust $ fromIntegral c
 
 -- ============================================
 -- evalUnified (setSingleton hk ⋪ Rewards u0)
@@ -661,7 +578,6 @@ set ⋪ view = unView (Set.foldl' (flip delete') view set)
   UMap c
 Ptrs um ⋫ set = Set.foldl' removeCredStaking um set
   where
-    -- removeCredStaking :: UMap crypto -> Credential 'Staking crypto -> UMap crypto
     removeCredStaking m@(UMap m2 m1) cred =
       case Map.lookup cred m2 of
         Just (Triple _ kset _) ->
@@ -680,8 +596,8 @@ Delegations (UMap tmap pmap) ⋫ delegset = UMap (Map.foldlWithKey' accum tmap t
 Rewards (UMap tmap pmap) ⋫ coinset = UMap (Map.foldlWithKey' accum tmap tmap) pmap
   where
     ok (Triple _ set d) = zeroMaybe (Triple SNothing set d)
-    accum ans key (Triple (SJust coin) _ _) =
-      if Set.member (CompactCoin coin) coinset
+    accum ans key (Triple (SJust ccoin) _ _) =
+      if Set.member ccoin coinset
         then Map.update ok key ans
         else ans
     accum ans _ _ = ans
@@ -763,42 +679,6 @@ instance Crypto c => FromSharedCBOR (UMap c) where
             pure (UMap tripmap ptrmap, (a', b))
       )
 
--- =================================================================
--- ===================================================
--- Tag
-
-data Tag c k v where
-  Rew :: Tag c (Credential 'Staking c) (CompactForm Coin)
-  Del :: Tag c (Credential 'Staking c) (KeyHash 'StakePool c)
-  Ptr :: Tag c Ptr (Credential 'Staking c)
-
-class UnifiedView c k v where
-  tag :: Tag c k v
-
-instance
-  UnifiedView
-    c
-    (Credential 'Staking c)
-    (CompactForm Coin)
-  where
-  tag = Rew
-
-instance
-  UnifiedView
-    c
-    (Credential 'Staking c)
-    (KeyHash 'StakePool c)
-  where
-  tag = Del
-
-instance
-  UnifiedView
-    c
-    Ptr
-    (Credential 'Staking c)
-  where
-  tag = Ptr
-
 -- ==================================================
 -- derived operations
 
@@ -826,7 +706,7 @@ unify rews dels ptrss = um3
     um2 = unView $ Map.foldlWithKey' (\um k v -> insert' k v um) (Delegations um1) dels
     um3 = unView $ Map.foldlWithKey' (\um k v -> insert' k v um) (Ptrs um2) ptrss
 
-compactCoinOrError :: Coin -> CompactForm Coin
+compactCoinOrError :: HasCallStack => Coin -> CompactForm Coin
 compactCoinOrError c =
   case toCompact c of
     Nothing -> error $ "Invalid ADA value in staking: " <> show c
@@ -834,3 +714,12 @@ compactCoinOrError c =
 
 addCompact :: CompactForm Coin -> CompactForm Coin -> CompactForm Coin
 addCompact (CompactCoin x) (CompactCoin y) = CompactCoin (x + y)
+
+sumCompactCoin :: Foldable t => t (CompactForm Coin) -> CompactForm Coin
+sumCompactCoin t = foldl' addCompact (CompactCoin 0) t
+
+-- =================================================
+
+instance ToExpr (Trip c)
+
+instance ToExpr (UMap c)

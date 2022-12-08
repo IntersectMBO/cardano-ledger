@@ -445,8 +445,13 @@ instance Reflect era => TotalAda (UTxO era) where
 instance TotalAda (DState era) where
   totalAda dstate = UM.fromCompact $ Fold.foldl' UM.addCompact mempty (UM.Rewards (dsUnified dstate))
 
+-- we deliberately do NOT add the dsDeposits, because they are accounted for by the utxosDeposits
+
 instance TotalAda (DPState era) where
   totalAda (DPState ds _) = totalAda ds
+
+-- we deliberately do NOT add anything from PState
+-- In particular the psDeposits, because they are accounted for by the utxosDeposits
 
 instance Reflect era => TotalAda (LedgerState era) where
   totalAda (LedgerState utxos dps) = totalAda utxos <+> totalAda dps
