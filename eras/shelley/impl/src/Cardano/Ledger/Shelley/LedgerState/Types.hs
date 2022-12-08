@@ -38,6 +38,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), Ptr (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.DPState (DPState)
 import Cardano.Ledger.EpochBoundary
   ( SnapShots (..),
   )
@@ -49,7 +50,6 @@ import Cardano.Ledger.Keys
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.SafeHash (HashAnnotated)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Shelley.LedgerState.DPState (DPState)
 import Cardano.Ledger.Shelley.PoolRank
   ( NonMyopic (..),
   )

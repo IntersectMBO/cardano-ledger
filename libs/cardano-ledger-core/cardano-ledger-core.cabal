@@ -51,6 +51,7 @@ library
     Cardano.Ledger.Core
     Cardano.Ledger.Credential
     Cardano.Ledger.Crypto
+    Cardano.Ledger.DPState
     Cardano.Ledger.EpochBoundary
     Cardano.Ledger.Era
     Cardano.Ledger.Hashes

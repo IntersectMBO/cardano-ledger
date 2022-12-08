@@ -38,19 +38,19 @@ import Cardano.Ledger.Credential
   ( Credential (..),
     StakeReference (StakeRefBase, StakeRefPtr),
   )
+import Cardano.Ledger.DPState
+  ( DPState (..),
+    DState (..),
+    PState (..),
+    delegations,
+    rewards,
+  )
 import Cardano.Ledger.EpochBoundary
   ( SnapShot (..),
     Stake (..),
   )
 import Cardano.Ledger.Keys
   ( KeyRole (..),
-  )
-import Cardano.Ledger.Shelley.LedgerState.DPState
-  ( DPState (..),
-    DState (..),
-    PState (..),
-    delegations,
-    rewards,
   )
 import Cardano.Ledger.Shelley.LedgerState.Types
 import Cardano.Ledger.Shelley.RewardUpdate (RewardUpdate (..))

@@ -37,6 +37,10 @@ import Cardano.Ledger.Coin
     toDeltaCoin,
   )
 import Cardano.Ledger.Core
+import Cardano.Ledger.DPState
+  ( DPState (..),
+    rewards,
+  )
 import Cardano.Ledger.EpochBoundary
   ( SnapShot (..),
     SnapShots (..),
@@ -46,10 +50,6 @@ import Cardano.Ledger.EpochBoundary
   )
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool))
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
-import Cardano.Ledger.Shelley.LedgerState.DPState
-  ( DPState (..),
-    rewards,
-  )
 import Cardano.Ledger.Shelley.LedgerState.Types
 import Cardano.Ledger.Shelley.PoolRank
   ( Likelihood (..),

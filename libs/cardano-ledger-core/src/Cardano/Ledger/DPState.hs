@@ -6,7 +6,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Ledger.Shelley.LedgerState.DPState
+module Cardano.Ledger.DPState
   ( DPState (..),
     DState (..),
     PState (..),
@@ -43,7 +43,7 @@ import Cardano.Ledger.Keys
     KeyHash (..),
     KeyRole (..),
   )
-import Cardano.Ledger.Shelley.TxBody
+import Cardano.Ledger.PoolParams
   ( PoolParams (..),
   )
 import Cardano.Ledger.Slot

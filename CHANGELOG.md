@@ -38,9 +38,12 @@ in the naming of release branches.
 
 ### Changed
 
+
 - Changed `FromCBOR` instance in `Babbage.TxOut` to fail pointer address deserialization starting with protocol version 9: #3174
 - Updated `Conway` low protocol version to 9 and `Babbage` high protocol version to 8: #3174
 - Fixed mismathed parenthesis in the `Show` instance for `Ptr`: #3184.
+- Moved Cardano.Ledger.Shelley.LedgerState(DPState) to Cardano.Ledger(DPState) in Core
+  - Since the old file was hidden, this will have no noticeable effects.
 - Split `cardano-ledger-shelley-ma` into `cardano-ledger-allegra` and `cardano-ledger-mary` #3175:
   - Moved `ShelleyMA.AuxiliaryData` -> `Allegra.TxAuxData`
   - Moved `ShelleyMA.Timelocks` -> `Allegra.Scripts`
