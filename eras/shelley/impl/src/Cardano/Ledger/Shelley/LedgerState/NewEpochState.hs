@@ -23,17 +23,17 @@ import Cardano.Ledger.Coin
     addDeltaCoin,
   )
 import Cardano.Ledger.Core
+import Cardano.Ledger.DPState
+  ( DPState (..),
+    DState (..),
+    InstantaneousRewards (..),
+    PState (..),
+  )
 import Cardano.Ledger.Keys
   ( GenDelegPair (..),
     GenDelegs (..),
     KeyHash (..),
     KeyRole (..),
-  )
-import Cardano.Ledger.Shelley.LedgerState.DPState
-  ( DPState (..),
-    DState (..),
-    InstantaneousRewards (..),
-    PState (..),
   )
 import Cardano.Ledger.Shelley.LedgerState.Types
 import Cardano.Ledger.Shelley.TxBody

@@ -70,7 +70,6 @@ library
   other-modules:
     Cardano.Ledger.Shelley.Era
     Cardano.Ledger.Shelley.LedgerState.Types
-    Cardano.Ledger.Shelley.LedgerState.DPState
     Cardano.Ledger.Shelley.LedgerState.IncrementalStake
     Cardano.Ledger.Shelley.LedgerState.NewEpochState
     Cardano.Ledger.Shelley.LedgerState.PulsingReward
