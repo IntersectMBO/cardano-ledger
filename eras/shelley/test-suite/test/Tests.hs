@@ -10,7 +10,7 @@ import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C)
 import Test.Cardano.Ledger.Shelley.Pretty (prettyTest)
 import Test.Cardano.Ledger.Shelley.PropertyTests (depositTests, minimalPropertyTests, propertyTests)
 import Test.Cardano.Ledger.Shelley.Rewards (rewardTests)
-import Test.Cardano.Ledger.Shelley.RulesTests (chainExamples, multisigExamples)
+import Test.Cardano.Ledger.Shelley.RulesTests (chainExamples, multisigExamples, testTickF)
 import Test.Cardano.Ledger.Shelley.SafeHash (safeHashTest)
 import qualified Test.Cardano.Ledger.Shelley.Serialisation as Serialisation
 import Test.Cardano.Ledger.Shelley.UnitTests (unitTests)
@@ -33,6 +33,7 @@ mainTests =
       Serialisation.tests 5,
       chainExamples,
       multisigExamples,
+      testTickF,
       unitTests,
       prettyTest,
       safeHashTest
