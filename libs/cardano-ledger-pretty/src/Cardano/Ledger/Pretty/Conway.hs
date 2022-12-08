@@ -13,9 +13,9 @@ module Cardano.Ledger.Pretty.Conway
   )
 where
 
-import Cardano.Ledger.Babbage.TxBody (BabbageEraTxBody (..))
+import Cardano.Ledger.Babbage.TxBody (AllegraEraTxBody (..), AlonzoEraTxBody (..), BabbageEraTxBody (..), MaryEraTxBody (..), ShelleyEraTxBody (..))
 import Cardano.Ledger.Babbage.TxOut (BabbageTxOut (..))
-import Cardano.Ledger.Conway.Core (ConwayEraTxBody, GovernanceAction (..), GovernanceActionId (..), GovernanceActionInfo (..), GovernanceActionIx (..), Vote (..), VoteDecision (..), VoterRole (..))
+import Cardano.Ledger.Conway.Core (ConwayEraTxBody (..), GovernanceAction (..), GovernanceActionId (..), GovernanceActionInfo (..), GovernanceActionIx (..), Vote (..), VoteDecision (..), VoterRole (..))
 import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert (..))
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
 import Cardano.Ledger.Core (EraPParams (..), EraTxBody (..), EraTxOut (..), Value)
@@ -71,26 +71,26 @@ ppConwayTxBody ::
   ) =>
   ConwayTxBody era ->
   PDoc
-ppConwayTxBody txb@ConwayTxBody {..} =
+ppConwayTxBody txb =
   ppRecord
     "TxBody (Conway)"
-    [ ("spending inputs", ppSet ppTxIn ctbSpendInputs),
-      ("collateral inputs", ppSet ppTxIn ctbCollateralInputs),
-      ("reference inputs", ppSet ppTxIn ctbReferenceInputs),
+    [ ("spending inputs", ppSet ppTxIn $ txb ^. inputsTxBodyL),
+      ("collateral inputs", ppSet ppTxIn $ txb ^. collateralInputsTxBodyL),
+      ("reference inputs", ppSet ppTxIn $ txb ^. referenceInputsTxBodyL),
       ("outputs", ppStrictSeq (ppTxOut @era) (txb ^. outputsTxBodyL)),
       ("collateral return", ppStrictMaybe (ppTxOut @era) (txb ^. collateralReturnTxBodyL)),
-      ("total collateral", ppStrictMaybe ppCoin ctbTotalCollateral),
-      ("certificates", ppStrictSeq ppConwayDCert ctbCerts),
-      ("withdrawals", ppWdrl ctbWdrls),
-      ("transaction fee", ppCoin ctbTxfee),
-      ("validity interval", ppValidityInterval ctbVldt),
-      ("required signer hashes", ppSet ppKeyHash ctbReqSignerHashes),
-      ("mint", ppMultiAsset ctbMint),
-      ("script integrity hash", ppStrictMaybe ppSafeHash ctbScriptIntegrityHash),
-      ("auxiliary data hash", ppStrictMaybe ppAuxiliaryDataHash ctbAdHash),
-      ("network id", ppStrictMaybe ppNetwork ctbTxNetworkId),
-      ("governance actions", ppStrictSeq prettyA ctbGovActions),
-      ("votes", ppStrictSeq prettyA ctbVotes)
+      ("total collateral", ppStrictMaybe ppCoin $ txb ^. totalCollateralTxBodyL),
+      ("certificates", ppStrictSeq ppConwayDCert $ txb ^. conwayCertsTxBodyL),
+      ("withdrawals", ppWdrl $ txb ^. wdrlsTxBodyL),
+      ("transaction fee", ppCoin $ txb ^. feeTxBodyL),
+      ("validity interval", ppValidityInterval $ txb ^. vldtTxBodyL),
+      ("required signer hashes", ppSet ppKeyHash $ txb ^. reqSignerHashesTxBodyL),
+      ("mint", ppMultiAsset $ txb ^. mintTxBodyL),
+      ("script integrity hash", ppStrictMaybe ppSafeHash $ txb ^. scriptIntegrityHashTxBodyL),
+      ("auxiliary data hash", ppStrictMaybe ppAuxiliaryDataHash $ txb ^. auxDataHashTxBodyL),
+      ("network id", ppStrictMaybe ppNetwork $ txb ^. networkIdTxBodyL),
+      ("governance actions", ppStrictSeq prettyA $ txb ^. govActionsTxBodyL),
+      ("votes", ppStrictSeq prettyA $ txb ^. votesTxBodyL)
     ]
 
 ppGovernanceActionIx :: GovernanceActionIx -> PDoc

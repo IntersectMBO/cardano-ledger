@@ -427,6 +427,7 @@ instance CC.Crypto c => BabbageEraTxBody (ConwayEra c) where
 instance CC.Crypto c => ConwayEraTxBody (ConwayEra c) where
   govActionsTxBodyL = lensMemoRawType ctbrGovActions (\txb x -> txb {ctbrGovActions = x})
   votesTxBodyL = lensMemoRawType ctbrVotes (\txb x -> txb {ctbrVotes = x})
+  conwayCertsTxBodyL = lensMemoRawType ctbrCerts (\txb x -> txb {ctbrCerts = x})
 
 pattern ConwayTxBody ::
   ConwayEraTxBody era =>

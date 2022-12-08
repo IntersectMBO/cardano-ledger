@@ -35,6 +35,7 @@ import Cardano.Ledger.Binary.Coders
     (<!),
   )
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert)
 import Cardano.Ledger.Core (EraPParams (..))
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto)
@@ -54,6 +55,7 @@ import NoThunks.Class (NoThunks)
 class BabbageEraTxBody era => ConwayEraTxBody era where
   govActionsTxBodyL :: Lens' (TxBody era) (StrictSeq (GovernanceActionInfo era))
   votesTxBodyL :: Lens' (TxBody era) (StrictSeq (Vote era))
+  conwayCertsTxBodyL :: Lens' (TxBody era) (StrictSeq (ConwayDCert (EraCrypto era)))
 
 ----- PLACEHOLDERS -----
 
