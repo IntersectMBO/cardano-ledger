@@ -44,10 +44,9 @@ import Cardano.Ledger.UTxO
   ( UTxO (..),
     coinBalance,
   )
-import Cardano.Ledger.UnifiedMap
+import Cardano.Ledger.UMapCompact
   ( Trip (..),
     UMap (..),
-    UnifiedMap,
   )
 import Cardano.Ledger.Val ((<+>), (<->))
 import Control.State.Transition (STS (State))
@@ -123,13 +122,13 @@ depositPoolChange ls pp txBody = (currentPool <+> txDeposits) <-> txRefunds
     txRefunds = keyTxRefunds pp (lsDPState ls) txBody
 
 reapRewards ::
-  UnifiedMap c ->
+  UMap c ->
   RewardAccounts c ->
-  UnifiedMap c
-reapRewards (UnifiedMap tmap ptrmap) withdrawals = UnifiedMap (Map.mapWithKey g tmap) ptrmap
+  UMap c
+reapRewards (UMap tmap ptrmap) withdrawals = UMap (Map.mapWithKey g tmap) ptrmap
   where
     g k (Triple x y z) = Triple (fmap (removeRewards k) x) y z
-    removeRewards k v = if k `Map.member` withdrawals then Coin 0 else v
+    removeRewards k v = if k `Map.member` withdrawals then 0 else v
 
 -- A TxOut has 4 different shapes, depending on the shape of its embedded Addr.
 -- Credentials are stored in only 2 of the 4 cases.
