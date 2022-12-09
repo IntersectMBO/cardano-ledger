@@ -150,7 +150,7 @@ transRedeemer :: Data era -> PV2.Redeemer
 transRedeemer = PV2.Redeemer . PV2.dataToBuiltinData . getPlutusData
 
 transRedeemerPtr ::
-  (MaryEraTxBody era, ProtVerAtMost era 8) =>
+  (MaryEraTxBody era) =>
   TxBody era ->
   (RdmrPtr, (Data era, ExUnits)) ->
   Either (TranslationError (EraCrypto era)) (PV2.ScriptPurpose, PV2.Redeemer)
@@ -164,8 +164,7 @@ babbageTxInfo ::
   ( EraTx era,
     BabbageEraTxBody era,
     Value era ~ MaryValue (EraCrypto era),
-    TxWits era ~ AlonzoTxWits era,
-    ProtVerAtMost era 8
+    TxWits era ~ AlonzoTxWits era
   ) =>
   PParams era ->
   Language ->
@@ -192,7 +191,7 @@ babbageTxInfo pp lang ei sysS utxo tx = do
             PV1.txInfoOutputs = outputs,
             PV1.txInfoFee = Alonzo.transValue (inject @(MaryValue (EraCrypto era)) fee),
             PV1.txInfoMint = Alonzo.transMultiAsset multiAsset,
-            PV1.txInfoDCert = foldr (\c ans -> Alonzo.transDCert c : ans) [] (txBody ^. certsTxBodyL),
+            PV1.txInfoDCert = foldr (\c ans -> Alonzo.transDCert c : ans) [] (txBody ^. certsTxBodyG),
             PV1.txInfoWdrl = Map.toList (Alonzo.transWdrl (txBody ^. wdrlsTxBodyL)),
             PV1.txInfoValidRange = timeRange,
             PV1.txInfoSignatories =
@@ -216,7 +215,7 @@ babbageTxInfo pp lang ei sysS utxo tx = do
             PV2.txInfoReferenceInputs = refInputs,
             PV2.txInfoFee = Alonzo.transValue (inject @(MaryValue (EraCrypto era)) fee),
             PV2.txInfoMint = Alonzo.transMultiAsset multiAsset,
-            PV2.txInfoDCert = foldr (\c ans -> Alonzo.transDCert c : ans) [] (txBody ^. certsTxBodyL),
+            PV2.txInfoDCert = foldr (\c ans -> Alonzo.transDCert c : ans) [] (txBody ^. certsTxBodyG),
             PV2.txInfoWdrl = PV2.fromList $ Map.toList (Alonzo.transWdrl (txBody ^. wdrlsTxBodyL)),
             PV2.txInfoValidRange = timeRange,
             PV2.txInfoSignatories =

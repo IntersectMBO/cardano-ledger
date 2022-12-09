@@ -51,8 +51,7 @@ instance Crypto c => EraUTxO (MaryEra c) where
 getConsumedMaryValue ::
   ( MaryEraTxBody era,
     Value era ~ MaryValue (EraCrypto era),
-    HasField "_keyDeposit" pp Coin,
-    ProtVerAtMost era 8
+    HasField "_keyDeposit" pp Coin
   ) =>
   pp ->
   DPState (EraCrypto era) ->
@@ -72,7 +71,7 @@ getConsumedMaryValue pp dpstate (UTxO u) txBody = consumedValue <> txBody ^. min
 -- withdrawals. Unlike the one from Shelley, this one also includes script hashes needed
 -- for minting multi-assets in the transaction.
 getMaryScriptsNeeded ::
-  (MaryEraTxBody era, ProtVerAtMost era 8) =>
+  MaryEraTxBody era =>
   UTxO era ->
   TxBody era ->
   ShelleyScriptsNeeded era

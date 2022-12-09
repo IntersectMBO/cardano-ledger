@@ -470,8 +470,7 @@ utxoTransition ::
     HasField "_maxTxSize" (PParams era) Natural,
     HasField "_maxTxExUnits" (PParams era) ExUnits,
     HasField "_collateralPercentage" (PParams era) Natural,
-    Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era)),
-    ProtVerAtMost era 8
+    Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   TransitionRule (AlonzoUTXO era)
 utxoTransition = do

@@ -98,7 +98,7 @@ allegraFields ::
 allegraFields txBody =
   [ ("inputs", ppSet ppTxIn (txBody ^. inputsTxBodyL)),
     ("outputs", ppStrictSeq ppTxOut (txBody ^. outputsTxBodyL)),
-    ("certificates", ppStrictSeq ppDCert (txBody ^. certsTxBodyL)),
+    ("certificates", ppStrictSeq ppDCert (txBody ^. certsTxBodyG)),
     ("withdrawals", ppWdrl (txBody ^. wdrlsTxBodyL)),
     ("txfee", ppCoin (txBody ^. feeTxBodyL)),
     ("vldt", ppValidityInterval (txBody ^. vldtTxBodyL)),

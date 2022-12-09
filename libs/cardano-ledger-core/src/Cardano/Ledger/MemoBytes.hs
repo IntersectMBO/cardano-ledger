@@ -45,6 +45,7 @@ module Cardano.Ledger.MemoBytes
     zipMemoRawType,
     getMemoRawBytes,
     lensMemoRawType,
+    getterMemoRawType,
   )
 where
 
@@ -234,3 +235,12 @@ lensMemoRawType ::
 lensMemoRawType getter setter =
   lens (getter . getMemoRawType) (\t v -> mkMemoized $ setter (getMemoRawType t) v)
 {-# INLINEABLE lensMemoRawType #-}
+
+-- | This is a helper SimpleGetter creator for any Memoized type
+getterMemoRawType ::
+  Memoized t =>
+  (RawType t era -> a) ->
+  SimpleGetter (t era) a
+getterMemoRawType getter =
+  to (getter . getMemoRawType)
+{-# INLINEABLE getterMemoRawType #-}

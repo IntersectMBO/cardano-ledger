@@ -675,8 +675,7 @@ preserveBalance ::
   forall era ledger.
   ( ChainProperty era,
     EraGen era,
-    TestingLedger era ledger,
-    ProtVerAtMost era 8
+    TestingLedger era ledger
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -716,8 +715,7 @@ preserveBalanceRestricted ::
     ShelleyEraTxBody era,
     EraSegWits era,
     HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin,
-    ProtVerAtMost era 8
+    HasField "_poolDeposit" (PParams era) Coin
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property

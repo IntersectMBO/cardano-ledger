@@ -264,8 +264,7 @@ hasExactSetOfRedeemers ::
   forall era.
   ( AlonzoEraTx era,
     ExtendedUTxO era,
-    Script era ~ AlonzoScript era,
-    ProtVerAtMost era 8
+    Script era ~ AlonzoScript era
   ) =>
   UTxO era ->
   Tx era ->
@@ -465,7 +464,7 @@ witsVKeyNeeded utxo' tx genDelegs =
       where
         accum key _ ans = Set.union (extractKeyHashWitnessSet [getRwdCred key]) ans
     owners :: Set (KeyHash 'Witness (EraCrypto era))
-    owners = foldr' accum Set.empty (txBody ^. certsTxBodyL)
+    owners = foldr' accum Set.empty (txBody ^. certsTxBodyG)
       where
         accum (DCertPool (RegPool pool)) ans =
           Set.union
@@ -480,7 +479,7 @@ witsVKeyNeeded utxo' tx genDelegs =
     -- before the call to `cwitness`, so this error should never be reached.
 
     certAuthors :: Set (KeyHash 'Witness (EraCrypto era))
-    certAuthors = foldr' accum Set.empty (txBody ^. certsTxBodyL)
+    certAuthors = foldr' accum Set.empty (txBody ^. certsTxBodyG)
       where
         accum cert ans | requiresVKeyWitness cert = Set.union (cwitness cert) ans
         accum _cert ans = ans

@@ -108,8 +108,7 @@ evaluateTransactionExecutionUnits ::
     EraUTxO era,
     ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     HasField "_maxTxExUnits" (PParams era) ExUnits,
-    Script era ~ AlonzoScript era,
-    ProtVerAtMost era 8
+    Script era ~ AlonzoScript era
   ) =>
   PParams era ->
   -- | The transaction.
@@ -142,8 +141,7 @@ evaluateTransactionExecutionUnitsWithLogs ::
     EraUTxO era,
     ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     HasField "_maxTxExUnits" (PParams era) ExUnits,
-    Script era ~ AlonzoScript era,
-    ProtVerAtMost era 8
+    Script era ~ AlonzoScript era
   ) =>
   PParams era ->
   -- | The transaction.

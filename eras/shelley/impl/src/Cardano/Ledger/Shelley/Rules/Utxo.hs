@@ -526,8 +526,7 @@ validateValueNotConservedUTxO ::
   ( ShelleyEraTxBody era,
     EraUTxO era,
     HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin,
-    ProtVerAtMost era 8
+    HasField "_poolDeposit" (PParams era) Coin
   ) =>
   PParams era ->
   UTxO era ->

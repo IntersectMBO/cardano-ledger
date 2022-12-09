@@ -1282,6 +1282,7 @@ pcTxBodyField proof x = case x of
   Txnetworkid (SJust nid) -> [("network id", pcNetwork nid)]
   GovernanceActions ga -> [("governance actions", ppStrictSeq prettyA ga)]
   Votes vs -> [("votes", ppStrictSeq prettyA vs)]
+  ConwayCerts certs -> [("conway certs", ppStrictSeq prettyA certs)]
 
 pcTxField :: forall era. (Reflect era, PrettyA (PParamsUpdate era)) => Proof era -> TxField era -> [(Text, PDoc)]
 pcTxField proof x = case x of

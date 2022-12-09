@@ -81,10 +81,9 @@ import Cardano.Ledger.Alonzo.Tx (CostModel, ScriptPurpose (..), txdats')
 import Cardano.Ledger.Alonzo.TxBody
   ( AlonzoEraTxBody (..),
     AlonzoEraTxOut (..),
-    certsTxBodyL,
     mintTxBodyL,
     vldtTxBodyL,
-    wdrlsTxBodyL,
+    wdrlsTxBodyL, ShelleyEraTxBody (..),
   )
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits, RdmrPtr, unTxDats)
 import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..), TxIx, certIxToInt, txIxToInt)
@@ -475,8 +474,7 @@ alonzoTxInfo ::
   ( EraTx era,
     AlonzoEraTxBody era,
     Value era ~ MaryValue (EraCrypto era),
-    TxWits era ~ AlonzoTxWits era,
-    ProtVerAtMost era 8
+    TxWits era ~ AlonzoTxWits era
   ) =>
   PParams era ->
   Language ->
@@ -501,7 +499,7 @@ alonzoTxInfo pp lang ei sysS utxo tx = do
             PV1.txInfoOutputs = mapMaybe txInfoOut (foldr (:) [] txOuts),
             PV1.txInfoFee = transValue (inject @(MaryValue (EraCrypto era)) fee),
             PV1.txInfoMint = transMultiAsset (txBody ^. mintTxBodyL),
-            PV1.txInfoDCert = foldr (\c ans -> transDCert c : ans) [] (txBody ^. certsTxBodyL),
+            PV1.txInfoDCert = foldr (\c ans -> transDCert c : ans) [] (txBody ^. certsTxBodyG),
             PV1.txInfoWdrl = Map.toList (transWdrl (txBody ^. wdrlsTxBodyL)),
             PV1.txInfoValidRange = timeRange,
             PV1.txInfoSignatories = map transKeyHash (Set.toList (txBody ^. reqSignerHashesTxBodyL)),

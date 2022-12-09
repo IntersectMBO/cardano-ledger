@@ -181,8 +181,7 @@ scriptsTransition ::
     ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     HasField "_costmdls" (PParams era) CostModels,
     BaseM sts ~ ReaderT Globals m,
-    PredicateFailure sts ~ AlonzoUtxosPredFailure era,
-    ProtVerAtMost era 8
+    PredicateFailure sts ~ AlonzoUtxosPredFailure era
   ) =>
   SlotNo ->
   PParams era ->
@@ -260,8 +259,7 @@ scriptsNotValidateTransition ::
     ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     STS (AlonzoUTXOS era),
     Script era ~ AlonzoScript era,
-    HasField "_costmdls" (PParams era) CostModels,
-    ProtVerAtMost era 8
+    HasField "_costmdls" (PParams era) CostModels
   ) =>
   TransitionRule (AlonzoUTXOS era)
 scriptsNotValidateTransition = do

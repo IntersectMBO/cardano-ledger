@@ -106,7 +106,7 @@ scriptCred (ScriptHashObj hs) = Just hs
 -- and the withdrawals.
 scriptsNeeded ::
   forall era.
-  (EraTx era, ShelleyEraTxBody era, ProtVerAtMost era 8) =>
+  (EraTx era, ShelleyEraTxBody era) =>
   UTxO era ->
   Tx era ->
   Set.Set (ScriptHash (EraCrypto era))
@@ -134,7 +134,7 @@ txinsScriptHashes txInps (UTxO u) = foldr add Set.empty txInps
 
 getShelleyScriptsNeeded ::
   forall era.
-  (ShelleyEraTxBody era, ProtVerAtMost era 8) =>
+  ShelleyEraTxBody era =>
   UTxO era ->
   TxBody era ->
   ShelleyScriptsNeeded era
@@ -149,15 +149,14 @@ getShelleyScriptsNeeded u txBody =
   where
     withdrawals = Map.keys (unWdrl (txBody ^. wdrlsTxBodyL))
     scriptHashes = txinsScriptHashes (txBody ^. inputsTxBodyL) u
-    certificates = toList (txBody ^. certsTxBodyL)
+    certificates = toList (txBody ^. certsTxBodyG)
 
 -- | Compute the lovelace which are created by the transaction
 produced ::
   forall era pp.
   ( ShelleyEraTxBody era,
     HasField "_keyDeposit" pp Coin,
-    HasField "_poolDeposit" pp Coin,
-    ProtVerAtMost era 8
+    HasField "_poolDeposit" pp Coin
   ) =>
   pp ->
   DPState (EraCrypto era) ->
@@ -172,7 +171,6 @@ produced pp dpstate txBody =
 getConsumedCoin ::
   forall era pp.
   ( ShelleyEraTxBody era,
-    HasField "_keyDeposit" pp Coin,
     HasField "_keyDeposit" pp Coin,
     ProtVerAtMost era 8
   ) =>

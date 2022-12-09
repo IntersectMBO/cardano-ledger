@@ -122,7 +122,7 @@ getInputDataHashesTxBody (UTxO mp) txBody hashScriptMap =
 -- function 'validateMissingScripts' in the Utxow rule.
 getAlonzoScriptsNeeded ::
   forall era.
-  (MaryEraTxBody era, ProtVerAtMost era 8) =>
+  (MaryEraTxBody era) =>
   UTxO era ->
   TxBody era ->
   AlonzoScriptsNeeded era
@@ -146,7 +146,7 @@ getAlonzoScriptsNeeded (UTxO u) txBody =
           hash <- scriptCred $ getRwdCred accnt
           return (Rewarding accnt, hash)
 
-    !cert = foldl' addOnlyCwitness [] (txBody ^. certsTxBodyL)
+    !cert = foldl' addOnlyCwitness [] (txBody ^. certsTxBodyG)
 
     !minted = map (\hash -> (Minting (PolicyID hash), hash)) $ Set.toList $ txBody ^. mintedTxBodyF
 

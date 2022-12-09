@@ -43,7 +43,7 @@ import Cardano.Ledger.Babbage.TxBody
   ( AlonzoEraTxBody (collateralInputsTxBodyL),
     BabbageEraTxBody,
     BabbageTxOut,
-    ShelleyEraTxBody (updateTxBodyL),
+    ShelleyEraTxBody (..),
   )
 import Cardano.Ledger.BaseTypes (ProtVer, ShelleyBase, epochInfo, strictMaybeToMaybe, systemStart)
 import Cardano.Ledger.Binary (ToCBOR (..))
@@ -218,8 +218,7 @@ scriptsNo ::
     TxOut era ~ BabbageTxOut era,
     TxBody era ~ BabbageTxBody era,
     Script era ~ AlonzoScript era,
-    HasField "_costmdls" (PParams era) CostModels,
-    ProtVerAtMost era 8
+    HasField "_costmdls" (PParams era) CostModels
   ) =>
   TransitionRule (BabbageUTXOS era)
 scriptsNo = do

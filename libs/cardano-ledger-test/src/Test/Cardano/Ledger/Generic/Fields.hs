@@ -60,7 +60,7 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core (GovernanceActionInfo (..), Vote)
-import Cardano.Ledger.Conway.Delegation.Certificates (transDCert)
+import Cardano.Ledger.Conway.Delegation.Certificates (transDCert, ConwayDCert)
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
@@ -127,6 +127,7 @@ data TxBodyField era
   | Txnetworkid (StrictMaybe Network)
   | GovernanceActions (StrictSeq (GovernanceActionInfo era))
   | Votes (StrictSeq (Vote era))
+  | ConwayCerts (StrictSeq (ConwayDCert (EraCrypto era)))
 
 pattern Inputs' :: [TxIn (EraCrypto era)] -> TxBodyField era -- Set
 

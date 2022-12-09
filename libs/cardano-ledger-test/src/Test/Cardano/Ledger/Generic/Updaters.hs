@@ -50,6 +50,7 @@ import Lens.Micro
 import Test.Cardano.Ledger.Alonzo.PlutusScripts (testingCostModelV1, testingCostModelV2)
 import Test.Cardano.Ledger.Generic.Fields
 import Test.Cardano.Ledger.Generic.Proof
+import Cardano.Ledger.Conway.Core (ConwayEraTxBody(..))
 
 -- ===========================================================================
 -- Upaters and the use of Policy to specify Merge Semantics and use of [t] as inputs.
@@ -211,10 +212,8 @@ updateTxBody pf txBody dt =
       CollateralReturn collateralReturn -> txBody & collateralReturnTxBodyL .~ collateralReturn
       _ -> txBody
     Conway _ -> case dt of
-      Certs certs -> txBody & certsTxBodyL .~ certs
       Wdrls wdrls -> txBody & wdrlsTxBodyL .~ wdrls
       Vldt vldt -> txBody & vldtTxBodyL .~ vldt
-      Update update -> txBody & updateTxBodyL .~ update
       Mint mint -> txBody & mintTxBodyL .~ mint
       Collateral collateral -> txBody & collateralInputsTxBodyL .~ collateral
       ReqSignerHashes reqSignerHashes -> txBody & reqSignerHashesTxBodyL .~ reqSignerHashes
@@ -223,6 +222,7 @@ updateTxBody pf txBody dt =
       RefInputs refInputs -> txBody & referenceInputsTxBodyL .~ refInputs
       TotalCol totalCol -> txBody & totalCollateralTxBodyL .~ totalCol
       CollateralReturn collateralReturn -> txBody & collateralReturnTxBodyL .~ collateralReturn
+      ConwayCerts certs -> txBody & conwayCertsTxBodyL .~ certs
       _ -> txBody
 {-# NOINLINE updateTxBody #-}
 

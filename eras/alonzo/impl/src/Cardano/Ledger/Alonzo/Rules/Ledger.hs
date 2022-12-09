@@ -81,8 +81,7 @@ ledgerTransition ::
     Environment (EraRule "UTXOW" era) ~ UtxoEnv era,
     State (EraRule "UTXOW" era) ~ UTxOState era,
     Signal (EraRule "UTXOW" era) ~ Tx era,
-    AlonzoEraTx era,
-    ProtVerAtMost era 8
+    AlonzoEraTx era
   ) =>
   TransitionRule (someLEDGER era)
 ledgerTransition = do
@@ -96,7 +95,7 @@ ledgerTransition = do
           TRC
             ( DelegsEnv slot txIx pp tx account,
               dpstate,
-              StrictSeq.fromStrict $ txBody ^. certsTxBodyL
+              StrictSeq.fromStrict $ txBody ^. certsTxBodyG
             )
       else pure dpstate
 

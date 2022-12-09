@@ -16,7 +16,7 @@ where
 import Cardano.Ledger.Babbage.TxBody (AllegraEraTxBody (..), AlonzoEraTxBody (..), BabbageEraTxBody (..), MaryEraTxBody (..), ShelleyEraTxBody (..))
 import Cardano.Ledger.Babbage.TxOut (BabbageTxOut (..))
 import Cardano.Ledger.Conway.Core (ConwayEraTxBody (..), GovernanceAction (..), GovernanceActionId (..), GovernanceActionInfo (..), GovernanceActionIx (..), Vote (..), VoteDecision (..), VoterRole (..))
-import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert (..))
+import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert (..), transDCert)
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
 import Cardano.Ledger.Core (EraPParams (..), EraTxBody (..), EraTxOut (..), Value)
 import Cardano.Ledger.Pretty
@@ -147,3 +147,6 @@ instance PrettyA (PParamsUpdate era) => PrettyA (GovernanceActionInfo era) where
         ("metadata hash", ppSafeHash gaiMetadataHash),
         ("governance action", prettyA gaiAction)
       ]
+
+instance forall c. PrettyA (ConwayDCert c) where
+  prettyA = prettyA . transDCert
