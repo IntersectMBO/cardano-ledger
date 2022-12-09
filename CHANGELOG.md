@@ -38,6 +38,8 @@ in the naming of release branches.
 
 ### Changed
 
+- Changed `FromCBOR` instance in `Babbage.TxOut` to fail pointer address deserialization starting with protocol version 9: #3174
+- Updated `Conway` low protocol version to 9 and `Babbage` high protocol version to 8: #3174
 - Fixed mismathed parenthesis in the `Show` instance for `Ptr`: #3184.
 - Split `cardano-ledger-shelley-ma` into `cardano-ledger-allegra` and `cardano-ledger-mary` #3175:
   - Moved `ShelleyMA.AuxiliaryData` -> `Allegra.TxAuxData`
@@ -198,6 +200,7 @@ in the naming of release branches.
 
 ### Removed
 
+- Removed unused `deserialiseAddrStakeRef` function from `Address` module:  #3174
 - `MAClass` is gone: #3175
 - `ShelleyMAEra` type in favor of `AllegraEra` and `MaryEra`: #3175
 - `MATxBody` type in favor of `AllegraTxBody` and `MaryTxBody`: #3175
