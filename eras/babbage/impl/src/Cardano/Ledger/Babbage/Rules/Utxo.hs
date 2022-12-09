@@ -73,7 +73,6 @@ import Cardano.Ledger.Rules.ValidationMode
     runTest,
     runTestOnSignal,
   )
-import Cardano.Ledger.Shelley.LedgerState (DPState)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, UtxoEnv)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
@@ -329,7 +328,6 @@ utxoTransition ::
     Tx era ~ AlonzoTx era,
     TxBody era ~ BabbageTxBody era,
     TxOut era ~ BabbageTxOut era,
-    DepositInfo era ~ DPState (EraCrypto era),
     STS (BabbageUTXO era),
     HasField "_maxTxSize" (PParams era) Natural,
     HasField "_maxValSize" (PParams era) Natural,
@@ -426,7 +424,6 @@ instance
     TxOut era ~ BabbageTxOut era,
     TxBody era ~ BabbageTxBody era,
     TxWits era ~ AlonzoTxWits era,
-    DepositInfo era ~ DPState (EraCrypto era),
     HasField "_maxCollateralInputs" (PParams era) Natural,
     HasField "_coinsPerUTxOByte" (PParams era) Coin,
     HasField "_collateralPercentage" (PParams era) Natural,

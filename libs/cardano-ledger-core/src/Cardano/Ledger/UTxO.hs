@@ -51,6 +51,7 @@ import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (Crypto, HASH)
+import Cardano.Ledger.DPState (DPState)
 import Cardano.Ledger.Keys
   ( DSignable,
     Hash,
@@ -245,10 +246,8 @@ class EraTxBody era => EraUTxO era where
   -- scripts needed for the transaction.
   type ScriptsNeeded era = (r :: Type) | r -> era
 
-  type DepositInfo era :: Type
-
   -- | Calculate all the value that is being consumed by the transaction.
-  getConsumedValue :: HasField "_keyDeposit" pp Coin => pp -> DepositInfo era -> UTxO era -> TxBody era -> Value era
+  getConsumedValue :: HasField "_keyDeposit" pp Coin => pp -> DPState (EraCrypto era) -> UTxO era -> TxBody era -> Value era
 
   -- | Produce all the information required for figuring out which scripts are required
   -- for the transaction to be valid, once those scripts are evaluated

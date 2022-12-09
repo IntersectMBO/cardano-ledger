@@ -32,7 +32,6 @@ import Lens.Micro
 
 instance Crypto c => EraUTxO (MaryEra c) where
   type ScriptsNeeded (MaryEra c) = ShelleyScriptsNeeded (MaryEra c)
-  type DepositInfo (MaryEra c) = DPState c
 
   getConsumedValue = getConsumedMaryValue
 
@@ -52,11 +51,10 @@ instance Crypto c => EraUTxO (MaryEra c) where
 getConsumedMaryValue ::
   ( MaryEraTxBody era,
     Value era ~ MaryValue (EraCrypto era),
-    DepositInfo era ~ DPState (EraCrypto era),
     HasField "_keyDeposit" pp Coin
   ) =>
   pp ->
-  DepositInfo era ->
+  DPState (EraCrypto era) ->
   UTxO era ->
   TxBody era ->
   MaryValue (EraCrypto era)

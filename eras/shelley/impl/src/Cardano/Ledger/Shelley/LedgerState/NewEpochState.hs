@@ -27,7 +27,6 @@ import Cardano.Ledger.DPState
   ( DPState (..),
     DState (..),
     InstantaneousRewards (..),
-    PState (..),
   )
 import Cardano.Ledger.Keys
   ( GenDelegPair (..),
@@ -35,6 +34,7 @@ import Cardano.Ledger.Keys
     KeyHash (..),
     KeyRole (..),
   )
+import Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits (keyTxRefunds, totalTxDeposits)
 import Cardano.Ledger.Shelley.LedgerState.Types
 import Cardano.Ledger.Shelley.TxBody
   ( MIRPot (..),

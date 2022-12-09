@@ -47,7 +47,7 @@ import Cardano.Ledger.Rules.ValidationMode
     Test,
     runTest,
   )
-import Cardano.Ledger.Shelley.LedgerState (DPState, PPUPState, keyTxRefunds, totalTxDeposits)
+import Cardano.Ledger.Shelley.LedgerState (PPUPState, keyTxRefunds, totalTxDeposits)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..), Update)
 import Cardano.Ledger.Shelley.Rules (PpupEnv (..), ShelleyPPUP, ShelleyPpupPredFailure)
@@ -144,7 +144,6 @@ utxoTransition ::
     STS (AllegraUTXO era),
     Tx era ~ ShelleyTx era,
     Embed (EraRule "PPUP" era) (AllegraUTXO era),
-    DepositInfo era ~ DPState (EraCrypto era),
     Environment (EraRule "PPUP" era) ~ PpupEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,
     Signal (EraRule "PPUP" era) ~ Maybe (Update era),
@@ -270,7 +269,6 @@ instance
     AllegraEraTxBody era,
     PParams era ~ ShelleyPParams era,
     Tx era ~ ShelleyTx era,
-    DepositInfo era ~ DPState (EraCrypto era),
     Embed (EraRule "PPUP" era) (AllegraUTXO era),
     Environment (EraRule "PPUP" era) ~ PpupEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,

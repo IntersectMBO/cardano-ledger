@@ -15,8 +15,8 @@ where
 
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (EraCrypto, TxBody)
+import Cardano.Ledger.DPState (DPState (..), DState (..), PState (..))
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert (..), isRegKey)
-import Cardano.Ledger.Shelley.LedgerState.DPState (DPState (..), DState (..), PState (..))
 import Cardano.Ledger.Shelley.TxBody
   ( PoolParams (..),
     ShelleyEraTxBody,

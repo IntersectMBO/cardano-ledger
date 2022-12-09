@@ -80,7 +80,6 @@ import Cardano.Ledger.Rules.ValidationMode
     runTest,
     runTestOnSignal,
   )
-import Cardano.Ledger.Shelley.LedgerState (DPState)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, UtxoEnv)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
@@ -465,13 +464,11 @@ utxoTransition ::
     Environment (EraRule "UTXOS" era) ~ UtxoEnv era,
     State (EraRule "UTXOS" era) ~ Shelley.UTxOState era,
     Signal (EraRule "UTXOS" era) ~ Tx era,
-    DepositInfo era ~ DPState (EraCrypto era),
     HasField "_poolDeposit" (PParams era) Coin,
     HasField "_keyDeposit" (PParams era) Coin,
     HasField "_maxValSize" (PParams era) Natural,
     HasField "_maxTxSize" (PParams era) Natural,
     HasField "_maxTxExUnits" (PParams era) ExUnits,
-    HasField "_maxCollateralInputs" (PParams era) Natural,
     HasField "_collateralPercentage" (PParams era) Natural,
     Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era))
   ) =>
@@ -541,7 +538,6 @@ utxoTransition = do
   runTest $ validateExUnitsTooBigUTxO pp tx
 
   {-   ‖collateral tx‖  ≤  maxCollInputs pp   -}
-  runTest $ validateTooManyCollateralInputs pp txBody
 
   trans @(EraRule "UTXOS" era) =<< coerce <$> judgmentContext
 
@@ -557,7 +553,6 @@ instance
     Environment (EraRule "UTXOS" era) ~ UtxoEnv era,
     State (EraRule "UTXOS" era) ~ Shelley.UTxOState era,
     Signal (EraRule "UTXOS" era) ~ Tx era,
-    DepositInfo era ~ DPState (EraCrypto era),
     HasField "_poolDeposit" (PParams era) Coin,
     HasField "_minfeeA" (PParams era) Natural,
     HasField "_minfeeB" (PParams era) Natural,

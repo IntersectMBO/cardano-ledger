@@ -90,7 +90,7 @@ import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.Shelley.UTxO (produced, txup)
 import Cardano.Ledger.Slot (SlotNo)
 import Cardano.Ledger.UTxO
-  ( EraUTxO (DepositInfo, getConsumedValue),
+  ( EraUTxO (getConsumedValue),
     UTxO (..),
     balance,
     txouts,
@@ -303,7 +303,6 @@ instance
     PParams era ~ ShelleyPParams era,
     Tx era ~ ShelleyTx era,
     Value era ~ Coin,
-    DepositInfo era ~ DPState (EraCrypto era),
     Show (ShelleyTx era),
     Embed (EraRule "PPUP" era) (ShelleyUTXO era),
     Environment (EraRule "PPUP" era) ~ PpupEnv era,
@@ -369,7 +368,6 @@ utxoInductive ::
     ShelleyEraTxBody era,
     ExactEra ShelleyEra era,
     TxOut era ~ ShelleyTxOut era,
-    DepositInfo era ~ DPState (EraCrypto era),
     STS (utxo era),
     Embed (EraRule "PPUP" era) (utxo era),
     BaseM (utxo era) ~ ShelleyBase,
@@ -524,7 +522,6 @@ validateWrongNetworkWithdrawal netId txb =
 -- > consumed pp utxo txb = produced pp poolParams txb
 validateValueNotConservedUTxO ::
   ( ShelleyEraTxBody era,
-    DepositInfo era ~ DPState (EraCrypto era),
     EraUTxO era,
     HasField "_keyDeposit" (PParams era) Coin,
     HasField "_poolDeposit" (PParams era) Coin

@@ -34,12 +34,12 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.DPState (DPState)
 import Cardano.Ledger.Shelley.Delegation.Certificates
   ( DCert (..),
     requiresVKeyWitness,
   )
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Shelley.LedgerState.DPState (DPState)
 import Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits (keyTxRefunds, totalTxDeposits)
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.TxBody
@@ -165,7 +165,6 @@ newtype ShelleyScriptsNeeded era = ShelleyScriptsNeeded (Set.Set (ScriptHash (Er
 
 instance Crypto c => EraUTxO (ShelleyEra c) where
   type ScriptsNeeded (ShelleyEra c) = ShelleyScriptsNeeded (ShelleyEra c)
-  type DepositInfo (ShelleyEra c) = DPState c
 
   getConsumedValue = getConsumedCoin
 

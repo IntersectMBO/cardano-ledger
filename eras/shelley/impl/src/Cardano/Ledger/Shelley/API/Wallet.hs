@@ -508,14 +508,13 @@ evaluateTransactionFee pp tx numKeyWits = getMinFeeTx pp tx'
 evaluateTransactionBalance ::
   ( EraUTxO era,
     ShelleyEraTxBody era,
-    DepositInfo era ~ DPState (EraCrypto era),
     HasField "_poolDeposit" (PParams era) Coin,
     HasField "_keyDeposit" (PParams era) Coin
   ) =>
   -- | Current protocol parameters
   PParams era ->
   -- | Where the deposit info is stored
-  DepositInfo era ->
+  DPState (EraCrypto era) ->
   -- | The UTxO relevant to the transaction.
   UTxO era ->
   -- | The transaction being evaluated for balance.
