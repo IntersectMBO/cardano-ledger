@@ -98,7 +98,7 @@ import Cardano.Ledger.SafeHash
     SafeToHash (..),
     hashAnnotated,
   )
-import Cardano.Ledger.Shelley.Metadata (Metadatum, validMetadatum)
+import Cardano.Ledger.Shelley.TxAuxData (Metadatum, validMetadatum)
 import qualified Codec.Serialise as Cborg (Serialise (..))
 import Control.DeepSeq (NFData, deepseq)
 import Data.ByteString.Lazy (fromStrict)

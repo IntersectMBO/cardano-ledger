@@ -22,7 +22,7 @@ import Test.Cardano.Ledger.Binary.RoundTrip
     roundTripCborExpectation,
     roundTripExpectation,
   )
-import Test.Cardano.Ledger.Shelley.Generator.Metadata ()
+import Test.Cardano.Ledger.Shelley.Generator.TxAuxData ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
 import Test.QuickCheck (Arbitrary)

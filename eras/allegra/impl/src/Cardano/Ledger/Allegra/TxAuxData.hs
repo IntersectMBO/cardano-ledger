@@ -47,7 +47,7 @@ import Cardano.Ledger.MemoBytes
     mkMemoized,
   )
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash, hashAnnotated)
-import Cardano.Ledger.Shelley.Metadata (Metadatum, validMetadatum)
+import Cardano.Ledger.Shelley.TxAuxData (Metadatum, validMetadatum)
 import Codec.CBOR.Decoding
   ( TokenType
       ( TypeListLen,

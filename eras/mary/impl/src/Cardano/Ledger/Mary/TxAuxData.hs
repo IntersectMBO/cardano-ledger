@@ -27,7 +27,7 @@ import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.Scripts ()
 import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Shelley.Metadata (validMetadatum)
+import Cardano.Ledger.Shelley.TxAuxData (validMetadatum)
 import Control.DeepSeq (deepseq)
 
 -- =======================================

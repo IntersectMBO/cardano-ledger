@@ -45,12 +45,12 @@ import Test.Cardano.Ledger.Shelley.Generator.Core
     genNatural,
   )
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..), MinGenTxout (..))
-import Test.Cardano.Ledger.Shelley.Generator.Metadata (genMetadata)
 import Test.Cardano.Ledger.Shelley.Generator.ScriptClass
   ( Quantifier (..),
     ScriptClass (..),
   )
 import Test.Cardano.Ledger.Shelley.Generator.Trace.Chain ()
+import Test.Cardano.Ledger.Shelley.Generator.TxAuxData (genMetadata)
 import Test.Cardano.Ledger.Shelley.Generator.Update (genPParams, genShelleyPParamsUpdate)
 import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest)
 import Test.QuickCheck (Gen)

@@ -93,11 +93,6 @@ import Cardano.Ledger.Shelley.LedgerState as X
     RewardUpdate (..),
     UTxOState (..),
   )
-import Cardano.Ledger.Shelley.Metadata as X
-  ( Metadata,
-    Metadatum (..),
-    ShelleyTxAuxData (..),
-  )
 import Cardano.Ledger.Shelley.PParams as X
   ( PParams,
     PParams',
@@ -140,6 +135,11 @@ import Cardano.Ledger.Shelley.Tx as X
   ( ShelleyTx (..),
     ShelleyTxBody (..),
     ShelleyTxOut (..),
+  )
+import Cardano.Ledger.Shelley.TxAuxData as X
+  ( Metadata,
+    Metadatum (..),
+    ShelleyTxAuxData (..),
   )
 import Cardano.Ledger.Shelley.TxBody as X
   ( Delegation (..),

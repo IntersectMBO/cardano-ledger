@@ -108,7 +108,6 @@ import Cardano.Ledger.Shelley.LedgerState
     PState (..),
     UTxOState (..),
   )
-import Cardano.Ledger.Shelley.Metadata (Metadatum (..), ShelleyTxAuxData (..))
 import Cardano.Ledger.Shelley.PParams
   ( PPUpdateEnv (..),
     ProposedPPUpdates (..),
@@ -142,6 +141,7 @@ import Cardano.Ledger.Shelley.Scripts (MultiSig (..))
 import Cardano.Ledger.Shelley.Tx
   ( ShelleyTx (..),
   )
+import Cardano.Ledger.Shelley.TxAuxData (Metadatum (..), ShelleyTxAuxData (..))
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
     DelegCert (..),

@@ -14,7 +14,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Shelley.Metadata
+module Cardano.Ledger.Shelley.TxAuxData
   ( Metadatum (..),
     ShelleyTxAuxData (ShelleyTxAuxData),
     hashShelleyTxAuxData,

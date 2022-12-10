@@ -25,8 +25,8 @@ import Cardano.Ledger.Shelley.API
     ShelleyTx,
     Update,
   )
-import Cardano.Ledger.Shelley.Metadata (ShelleyTxAuxData)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsUpdate)
+import Cardano.Ledger.Shelley.TxAuxData (ShelleyTxAuxData)
 import Cardano.Ledger.Shelley.TxBody
   ( ShelleyTxBody,
     ShelleyTxOut,

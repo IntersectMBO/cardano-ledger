@@ -73,9 +73,9 @@ import Cardano.Ledger.MemoBytes (Mem, MemoBytes, memoBytes, mkMemoBytes, pattern
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Shelley.Metadata ()
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Scripts (MultiSig (..), nativeMultiSigTag)
+import Cardano.Ledger.Shelley.TxAuxData ()
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..), ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits ()
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
@@ -410,7 +410,7 @@ shelleyMinFeeTx pp tx =
   Coin $
     fromIntegral (getField @"_minfeeA" pp)
       * tx
-        ^. sizeTxF
+      ^. sizeTxF
       + fromIntegral (getField @"_minfeeB" pp)
 
 minfee ::

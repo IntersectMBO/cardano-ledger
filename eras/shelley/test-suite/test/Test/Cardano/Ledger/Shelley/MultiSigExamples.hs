@@ -47,7 +47,7 @@ import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (ShelleyUTXOW)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), UTxOState, genesisState)
-import Cardano.Ledger.Shelley.Metadata (ShelleyTxAuxData)
+import Cardano.Ledger.Shelley.TxAuxData (ShelleyTxAuxData)
 import Cardano.Ledger.Shelley.PParams
   ( ShelleyPParams,
     ShelleyPParamsHKD (..),
