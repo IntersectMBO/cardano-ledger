@@ -140,9 +140,6 @@ import Cardano.Ledger.Shelley.Tx as X
   ( ShelleyTx (..),
     ShelleyTxBody (..),
     ShelleyTxOut (..),
-    Tx,
-    TxBody,
-    TxOut,
   )
 import Cardano.Ledger.Shelley.TxBody as X
   ( Delegation (..),

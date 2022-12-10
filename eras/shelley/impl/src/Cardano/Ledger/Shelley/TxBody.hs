@@ -29,7 +29,6 @@ module Cardano.Ledger.Shelley.TxBody
     Ptr (..),
     RewardAcnt (..),
     StakePoolRelay (..),
-    TxBody,
     ShelleyTxBody
       ( ShelleyTxBody,
         TxBodyConstr,
@@ -87,10 +86,8 @@ import Cardano.Ledger.Binary.Coders
   )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (Compactible (CompactForm))
-import Cardano.Ledger.Core hiding (TxBody, TxOut)
-import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Ptr (..))
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Keys.WitVKey
 import Cardano.Ledger.MemoBytes
@@ -105,7 +102,7 @@ import Cardano.Ledger.MemoBytes
   )
 import Cardano.Ledger.PoolParams
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
-import Cardano.Ledger.Shelley.Core (ShelleyEraTxBody (..), Wdrl (..))
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Delegation.Certificates
   ( DCert (..),
     DelegCert (..),
@@ -120,7 +117,6 @@ import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.TxOut
   ( ShelleyTxOut (..),
-    TxOut,
     addrEitherShelleyTxOutL,
     valueEitherShelleyTxOutL,
   )
@@ -270,12 +266,8 @@ newtype ShelleyTxBody era = TxBodyConstr (MemoBytes ShelleyTxBodyRaw era)
 instance Memoized ShelleyTxBody where
   type RawType ShelleyTxBody = ShelleyTxBodyRaw
 
-type TxBody era = ShelleyTxBody era
-
-{-# DEPRECATED TxBody "Use `ShelleyTxBody` instead" #-}
-
-instance CC.Crypto c => EraTxBody (ShelleyEra c) where
-  {-# SPECIALIZE instance EraTxBody (ShelleyEra CC.StandardCrypto) #-}
+instance Crypto c => EraTxBody (ShelleyEra c) where
+  {-# SPECIALIZE instance EraTxBody (ShelleyEra StandardCrypto) #-}
 
   type TxBody (ShelleyEra c) = ShelleyTxBody (ShelleyEra c)
 
@@ -300,8 +292,8 @@ instance CC.Crypto c => EraTxBody (ShelleyEra c) where
     lensMemoRawType stbrMDHash $ \txBodyRaw auxDataHash -> txBodyRaw {stbrMDHash = auxDataHash}
   {-# INLINEABLE auxDataHashTxBodyL #-}
 
-instance CC.Crypto c => ShelleyEraTxBody (ShelleyEra c) where
-  {-# SPECIALIZE instance ShelleyEraTxBody (ShelleyEra CC.StandardCrypto) #-}
+instance Crypto c => ShelleyEraTxBody (ShelleyEra c) where
+  {-# SPECIALIZE instance ShelleyEraTxBody (ShelleyEra StandardCrypto) #-}
 
   wdrlsTxBodyL =
     lensMemoRawType stbrWdrls $ \txBodyRaw wdrls -> txBodyRaw {stbrWdrls = wdrls}
@@ -320,15 +312,20 @@ instance CC.Crypto c => ShelleyEraTxBody (ShelleyEra c) where
   {-# INLINEABLE certsTxBodyL #-}
 
 deriving newtype instance
-  (Era era, NoThunks (PParamsUpdate era)) => NoThunks (TxBody era)
+  (Era era, NoThunks (PParamsUpdate era)) => NoThunks (ShelleyTxBody era)
 
-deriving newtype instance EraTxBody era => NFData (TxBody era)
+deriving newtype instance EraTxBody era => NFData (ShelleyTxBody era)
 
-deriving instance EraTxBody era => Show (TxBody era)
+deriving instance EraTxBody era => Show (ShelleyTxBody era)
 
-deriving instance (Era era, Eq (PParamsUpdate era), Eq (CompactForm (Value era))) => Eq (TxBody era)
+deriving instance
+  (Era era, Eq (PParamsUpdate era), Eq (CompactForm (Value era))) =>
+  Eq (ShelleyTxBody era)
 
-deriving via Mem ShelleyTxBodyRaw era instance EraTxBody era => FromCBOR (Annotator (TxBody era))
+deriving via
+  Mem ShelleyTxBodyRaw era
+  instance
+    EraTxBody era => FromCBOR (Annotator (ShelleyTxBody era))
 
 -- | Pattern for use by external users
 pattern ShelleyTxBody ::

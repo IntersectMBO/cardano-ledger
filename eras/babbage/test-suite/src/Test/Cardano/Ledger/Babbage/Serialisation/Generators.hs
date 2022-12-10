@@ -13,7 +13,7 @@
 module Test.Cardano.Ledger.Babbage.Serialisation.Generators where
 
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
-import Cardano.Ledger.Babbage.PParams hiding (PParamsUpdate)
+import Cardano.Ledger.Babbage.PParams
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..), BabbageUtxowPredFailure (..))
 import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.Babbage.TxBody (BabbageEraTxBody, BabbageTxOut (..))

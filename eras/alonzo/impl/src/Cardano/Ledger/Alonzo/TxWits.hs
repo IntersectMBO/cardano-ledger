@@ -54,7 +54,7 @@ where
 import Cardano.Crypto.DSIGN.Class (SigDSIGN, VerKeyDSIGN)
 import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.Alonzo.Data (Data, hashData)
-import Cardano.Ledger.Alonzo.Era
+import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..), Tag)
 import Cardano.Ledger.Binary
@@ -70,10 +70,8 @@ import Cardano.Ledger.Binary
   )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Crypto (HASH)
-import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Keys
+import Cardano.Ledger.Crypto (Crypto (DSIGN, HASH), StandardCrypto)
+import Cardano.Ledger.Keys (KeyRole (Witness))
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
 import Cardano.Ledger.MemoBytes
   ( Mem,
@@ -85,7 +83,7 @@ import Cardano.Ledger.MemoBytes
   )
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.TxBody (WitVKey)
-import Control.DeepSeq
+import Control.DeepSeq (NFData)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
@@ -94,8 +92,8 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word64)
-import GHC.Generics
-import Lens.Micro
+import GHC.Generics (Generic)
+import Lens.Micro (Lens')
 import NoThunks.Class (NoThunks)
 
 -- ==========================================
@@ -192,7 +190,7 @@ nullRedeemers = Map.null . unRedeemers
 --   data AlonzoTxWits = AlonzoTxWits
 --      (Set (WitVKey 'Witness (Crypto era)))
 --      (Set (BootstrapWitness (Crypto era)))
---      (Map (ScriptHash (Crypto era)) (Core.Script era))
+--      (Map (ScriptHash (Crypto era)) (Script era))
 --      (TxDats era)
 --      (Map RdmrPtr (Data era, ExUnits))
 
@@ -200,7 +198,7 @@ nullRedeemers = Map.null . unRedeemers
 data AlonzoTxWitsRaw era = AlonzoTxWitsRaw
   { atwrAddrTxWits :: !(Set (WitVKey 'Witness (EraCrypto era))),
     atwrBootAddrTxWits :: !(Set (BootstrapWitness (EraCrypto era))),
-    atwrScriptTxWits :: !(Map (ScriptHash (EraCrypto era)) (Core.Script era)),
+    atwrScriptTxWits :: !(Map (ScriptHash (EraCrypto era)) (Script era)),
     atwrDatsTxWits :: !(TxDats era),
     atwrRdmrsTxWits :: !(Redeemers era)
   }
@@ -208,12 +206,12 @@ data AlonzoTxWitsRaw era = AlonzoTxWitsRaw
 
 instance
   ( Era era,
-    Core.Script era ~ AlonzoScript era,
+    Script era ~ AlonzoScript era,
     c ~ EraCrypto era,
     NFData (TxDats era),
     NFData (Redeemers era),
-    NFData (SigDSIGN (CC.DSIGN c)),
-    NFData (VerKeyDSIGN (CC.DSIGN c))
+    NFData (SigDSIGN (DSIGN c)),
+    NFData (VerKeyDSIGN (DSIGN c))
   ) =>
   NFData (AlonzoTxWitsRaw era)
 
@@ -223,7 +221,7 @@ newtype AlonzoTxWits era = TxWitnessConstr (MemoBytes AlonzoTxWitsRaw era)
 instance Memoized AlonzoTxWits where
   type RawType AlonzoTxWits = AlonzoTxWitsRaw
 
-instance (Era era, Core.Script era ~ AlonzoScript era) => Semigroup (AlonzoTxWits era) where
+instance (Era era, Script era ~ AlonzoScript era) => Semigroup (AlonzoTxWits era) where
   (<>) x y | isEmptyTxWitness x = y
   (<>) x y | isEmptyTxWitness y = x
   (<>)
@@ -231,17 +229,17 @@ instance (Era era, Core.Script era ~ AlonzoScript era) => Semigroup (AlonzoTxWit
     (getMemoRawType -> AlonzoTxWitsRaw u v w x (Redeemers' y)) =
       AlonzoTxWits (a <> u) (b <> v) (c <> w) (d <> x) (Redeemers (e <> y))
 
-instance (Era era, Core.Script era ~ AlonzoScript era) => Monoid (AlonzoTxWits era) where
+instance (Era era, Script era ~ AlonzoScript era) => Monoid (AlonzoTxWits era) where
   mempty = AlonzoTxWits mempty mempty mempty mempty (Redeemers mempty)
 
 deriving instance
   ( Era era,
-    Core.Script era ~ AlonzoScript era,
+    Script era ~ AlonzoScript era,
     c ~ EraCrypto era,
     NFData (TxDats era),
     NFData (Redeemers era),
-    NFData (SigDSIGN (CC.DSIGN c)),
-    NFData (VerKeyDSIGN (CC.DSIGN c))
+    NFData (SigDSIGN (DSIGN c)),
+    NFData (VerKeyDSIGN (DSIGN c))
   ) =>
   NFData (AlonzoTxWits era)
 
@@ -304,28 +302,28 @@ deriving via
 
 deriving stock instance
   ( Era era,
-    Eq (Core.Script era)
+    Eq (Script era)
   ) =>
   Eq (AlonzoTxWitsRaw era)
 
 deriving stock instance
-  (Era era, Show (Core.Script era)) =>
+  (Era era, Show (Script era)) =>
   Show (AlonzoTxWitsRaw era)
 
-instance (Era era, NoThunks (Core.Script era)) => NoThunks (AlonzoTxWitsRaw era)
+instance (Era era, NoThunks (Script era)) => NoThunks (AlonzoTxWitsRaw era)
 
 deriving newtype instance
   ( Era era,
-    Eq (Core.Script era)
+    Eq (Script era)
   ) =>
   Eq (AlonzoTxWits era)
 
 deriving newtype instance
-  (Era era, Show (Core.Script era)) =>
+  (Era era, Show (Script era)) =>
   Show (AlonzoTxWits era)
 
 deriving newtype instance
-  (Era era, NoThunks (Core.Script era)) =>
+  (Era era, NoThunks (Script era)) =>
   NoThunks (AlonzoTxWits era)
 
 -- =====================================================
@@ -335,7 +333,7 @@ pattern AlonzoTxWits' ::
   Era era =>
   Set (WitVKey 'Witness (EraCrypto era)) ->
   Set (BootstrapWitness (EraCrypto era)) ->
-  Map (ScriptHash (EraCrypto era)) (Core.Script era) ->
+  Map (ScriptHash (EraCrypto era)) (Script era) ->
   TxDats era ->
   Redeemers era ->
   AlonzoTxWits era
@@ -345,10 +343,10 @@ pattern AlonzoTxWits' {txwitsVKey', txwitsBoot', txscripts', txdats', txrdmrs'} 
 {-# COMPLETE AlonzoTxWits' #-}
 
 pattern AlonzoTxWits ::
-  (Era era, Core.Script era ~ AlonzoScript era) =>
+  (Era era, Script era ~ AlonzoScript era) =>
   Set (WitVKey 'Witness (EraCrypto era)) ->
   Set (BootstrapWitness (EraCrypto era)) ->
-  Map (ScriptHash (EraCrypto era)) (Core.Script era) ->
+  Map (ScriptHash (EraCrypto era)) (Script era) ->
   TxDats era ->
   Redeemers era ->
   AlonzoTxWits era
@@ -365,14 +363,14 @@ pattern AlonzoTxWits {txwitsVKey, txwitsBoot, txscripts, txdats, txrdmrs} <-
 -- =======================================================
 
 addrAlonzoTxWitsL ::
-  (Era era, Core.Script era ~ AlonzoScript era) =>
+  (Era era, Script era ~ AlonzoScript era) =>
   Lens' (AlonzoTxWits era) (Set (WitVKey 'Witness (EraCrypto era)))
 addrAlonzoTxWitsL =
   lensMemoRawType atwrAddrTxWits $ \witsRaw addrWits -> witsRaw {atwrAddrTxWits = addrWits}
 {-# INLINEABLE addrAlonzoTxWitsL #-}
 
 bootAddrAlonzoTxWitsL ::
-  (Era era, Core.Script era ~ AlonzoScript era) =>
+  (Era era, Script era ~ AlonzoScript era) =>
   Lens' (AlonzoTxWits era) (Set (BootstrapWitness (EraCrypto era)))
 bootAddrAlonzoTxWitsL =
   lensMemoRawType atwrBootAddrTxWits $
@@ -380,28 +378,28 @@ bootAddrAlonzoTxWitsL =
 {-# INLINEABLE bootAddrAlonzoTxWitsL #-}
 
 scriptAlonzoTxWitsL ::
-  (Era era, Core.Script era ~ AlonzoScript era) =>
+  (Era era, Script era ~ AlonzoScript era) =>
   Lens' (AlonzoTxWits era) (Map (ScriptHash (EraCrypto era)) (Script era))
 scriptAlonzoTxWitsL =
   lensMemoRawType atwrScriptTxWits $ \witsRaw scriptWits -> witsRaw {atwrScriptTxWits = scriptWits}
 {-# INLINEABLE scriptAlonzoTxWitsL #-}
 
 datsAlonzoTxWitsL ::
-  (Era era, Core.Script era ~ AlonzoScript era) =>
+  (Era era, Script era ~ AlonzoScript era) =>
   Lens' (AlonzoTxWits era) (TxDats era)
 datsAlonzoTxWitsL =
   lensMemoRawType atwrDatsTxWits $ \witsRaw datsWits -> witsRaw {atwrDatsTxWits = datsWits}
 {-# INLINEABLE datsAlonzoTxWitsL #-}
 
 rdmrsAlonzoTxWitsL ::
-  (Era era, Core.Script era ~ AlonzoScript era) =>
+  (Era era, Script era ~ AlonzoScript era) =>
   Lens' (AlonzoTxWits era) (Redeemers era)
 rdmrsAlonzoTxWitsL =
   lensMemoRawType atwrRdmrsTxWits $ \witsRaw rdmrsWits -> witsRaw {atwrRdmrsTxWits = rdmrsWits}
 {-# INLINEABLE rdmrsAlonzoTxWitsL #-}
 
-instance (EraScript (AlonzoEra c), CC.Crypto c) => EraTxWits (AlonzoEra c) where
-  {-# SPECIALIZE instance EraTxWits (AlonzoEra CC.StandardCrypto) #-}
+instance (EraScript (AlonzoEra c), Crypto c) => EraTxWits (AlonzoEra c) where
+  {-# SPECIALIZE instance EraTxWits (AlonzoEra StandardCrypto) #-}
 
   type TxWits (AlonzoEra c) = AlonzoTxWits (AlonzoEra c)
 
@@ -421,8 +419,8 @@ class EraTxWits era => AlonzoEraTxWits era where
 
   rdmrsTxWitsL :: Lens' (TxWits era) (Redeemers era)
 
-instance (EraScript (AlonzoEra c), CC.Crypto c) => AlonzoEraTxWits (AlonzoEra c) where
-  {-# SPECIALIZE instance AlonzoEraTxWits (AlonzoEra CC.StandardCrypto) #-}
+instance (EraScript (AlonzoEra c), Crypto c) => AlonzoEraTxWits (AlonzoEra c) where
+  {-# SPECIALIZE instance AlonzoEraTxWits (AlonzoEra StandardCrypto) #-}
 
   datsTxWitsL = datsAlonzoTxWitsL
   {-# INLINE datsTxWitsL #-}
@@ -506,7 +504,7 @@ instance
   ( EraScript era,
     ToCBOR (Data era),
     EraScript era,
-    Core.Script era ~ AlonzoScript era
+    Script era ~ AlonzoScript era
   ) =>
   FromCBOR (Annotator (AlonzoTxWitsRaw era))
   where
@@ -555,8 +553,8 @@ instance
         forall proxy e.
         EraScript e =>
         proxy e ->
-        [Core.Script e] ->
-        Map (ScriptHash (EraCrypto e)) (Core.Script e)
+        [Script e] ->
+        Map (ScriptHash (EraCrypto e)) (Script e)
       getKeys _ = keyBy (hashScript @e)
 
 keyBy :: forall a b. Ord b => (a -> b) -> [a] -> Map b a
@@ -565,5 +563,5 @@ keyBy f xs = Map.fromList $ (\x -> (f x, x)) <$> xs
 deriving via
   (Mem AlonzoTxWitsRaw era)
   instance
-    (EraScript era, Core.Script era ~ AlonzoScript era) =>
+    (EraScript era, Script era ~ AlonzoScript era) =>
     FromCBOR (Annotator (AlonzoTxWits era))

@@ -36,9 +36,9 @@ babbageScriptPrefixTag ::
   Script era ~ AlonzoScript era => Script era -> ByteString
 babbageScriptPrefixTag script =
   case script of
-    (TimelockScript _) -> nativeMultiSigTag -- "\x00"
-    (PlutusScript PlutusV1 _) -> "\x01"
-    (PlutusScript PlutusV2 _) -> "\x02"
+    TimelockScript _ -> nativeMultiSigTag -- "\x00"
+    PlutusScript PlutusV1 _ -> "\x01"
+    PlutusScript PlutusV2 _ -> "\x02"
 
 type instance SomeScript 'PhaseOne (BabbageEra c) = Timelock (BabbageEra c)
 

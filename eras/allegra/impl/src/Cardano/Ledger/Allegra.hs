@@ -20,7 +20,7 @@ import Cardano.Ledger.Allegra.UTxO ()
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys (DSignable)
-import Cardano.Ledger.Shelley.API hiding (PParams, Tx, TxBody, TxOut)
+import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.PParams ()
 
 type Allegra = AllegraEra StandardCrypto

@@ -17,7 +17,6 @@ where
 import Cardano.Ledger.Alonzo (reapplyAlonzoTx)
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..))
-import Cardano.Ledger.Babbage.Rules ()
 import Cardano.Ledger.Babbage.Tx (babbageTxScripts, getDatumBabbage)
 import Cardano.Ledger.Babbage.TxInfo (babbageTxInfo)
 import Cardano.Ledger.Binary (sizedValue)

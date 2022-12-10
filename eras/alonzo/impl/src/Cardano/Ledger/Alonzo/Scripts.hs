@@ -75,15 +75,7 @@ import Cardano.Ledger.Binary.Coders
   )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-  ( Era (EraCrypto),
-    EraScript,
-    Phase (..),
-    PhaseRep (..),
-    PhasedScript (..),
-    SomeScript,
-  )
-import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley (nativeMultiSigTag)
 import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (..), defaultExprViaShow)
@@ -146,13 +138,9 @@ data AlonzoScript era
   | PlutusScript Language ShortByteString
   deriving (Eq, Generic)
 
-type Script era = AlonzoScript era
-
-{-# DEPRECATED Script "Use `AlonzoScript` instead" #-}
-
-instance (EraScript era, Core.Script era ~ AlonzoScript era) => Show (AlonzoScript era) where
+instance (EraScript era, Script era ~ AlonzoScript era) => Show (AlonzoScript era) where
   show (TimelockScript x) = "TimelockScript " ++ show x
-  show s@(PlutusScript v _) = "PlutusScript " ++ show v ++ " " ++ show (Core.hashScript @era s)
+  show s@(PlutusScript v _) = "PlutusScript " ++ show v ++ " " ++ show (hashScript @era s)
 
 deriving via
   InspectHeapNamed "AlonzoScript" (AlonzoScript era)
@@ -174,7 +162,7 @@ isPlutusScript :: AlonzoScript era -> Bool
 isPlutusScript (PlutusScript _ _) = True
 isPlutusScript (TimelockScript _) = False
 
-instance CC.Crypto c => EraScript (AlonzoEra c) where
+instance Crypto c => EraScript (AlonzoEra c) where
   type Script (AlonzoEra c) = AlonzoScript (AlonzoEra c)
   phaseScript PhaseOneRep (TimelockScript s) = Just (Phase1Script s)
   phaseScript PhaseTwoRep (PlutusScript lang bytes) = Just (Phase2Script lang bytes)
@@ -393,19 +381,19 @@ instance ToCBOR Prices where
 instance FromCBOR Prices where
   fromCBOR = decode $ RecD Prices <! From <! From
 
-instance (Typeable (EraCrypto era), Typeable era) => ToCBOR (Script era) where
+instance (Typeable (EraCrypto era), Typeable era) => ToCBOR (AlonzoScript era) where
   toCBOR x = encode (encodeScript x)
 
-encodeScript :: (Typeable era) => Script era -> Encode 'Open (Script era)
+encodeScript :: (Typeable era) => AlonzoScript era -> Encode 'Open (AlonzoScript era)
 encodeScript (TimelockScript i) = Sum TimelockScript 0 !> To i
 -- Use the ToCBOR instance of ShortByteString:
 encodeScript (PlutusScript PlutusV1 s) = Sum (PlutusScript PlutusV1) 1 !> To s
 encodeScript (PlutusScript PlutusV2 s) = Sum (PlutusScript PlutusV2) 2 !> To s
 
-instance Era era => FromCBOR (Annotator (Script era)) where
+instance Era era => FromCBOR (Annotator (AlonzoScript era)) where
   fromCBOR = decode (Summands "Alonzo Script" decodeScript)
     where
-      decodeScript :: Word -> Decode 'Open (Annotator (Script era))
+      decodeScript :: Word -> Decode 'Open (Annotator (AlonzoScript era))
       decodeScript 0 = Ann (SumD TimelockScript) <*! From
       decodeScript 1 = Ann (SumD $ PlutusScript PlutusV1) <*! Ann From
       decodeScript 2 = Ann (SumD $ PlutusScript PlutusV2) <*! Ann From
@@ -414,7 +402,7 @@ instance Era era => FromCBOR (Annotator (Script era)) where
 -- | Test that every Alonzo script represents a real Script.
 --     Run deepseq to see that there are no infinite computations and that
 --     every Plutus Script unflattens into a real PV1.Script
-validScript :: ProtVer -> Script era -> Bool
+validScript :: ProtVer -> AlonzoScript era -> Bool
 validScript pv script =
   case script of
     TimelockScript sc -> deepseq sc True

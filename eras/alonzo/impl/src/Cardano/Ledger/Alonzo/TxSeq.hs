@@ -40,7 +40,7 @@ import Cardano.Ledger.Binary
   )
 import Cardano.Ledger.Core hiding (TxSeq, hashTxSeq)
 import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (Hash)
 import Cardano.Ledger.SafeHash (SafeToHash, originalBytes)
 import Cardano.Ledger.Shelley.BlockChain (constructMetadata)
@@ -85,7 +85,7 @@ data AlonzoTxSeq era = TxSeq'
   }
   deriving (Generic)
 
-instance CC.Crypto c => EraSegWits (AlonzoEra c) where
+instance Crypto c => EraSegWits (AlonzoEra c) where
   type TxSeq (AlonzoEra c) = AlonzoTxSeq (AlonzoEra c)
   fromTxSeq = txSeqTxns
   toTxSeq = AlonzoTxSeq

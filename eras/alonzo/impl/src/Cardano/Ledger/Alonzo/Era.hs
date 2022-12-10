@@ -11,10 +11,9 @@ module Cardano.Ledger.Alonzo.Era
   )
 where
 
-import Cardano.Ledger.Core
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Core (Era (..), EraRule, Value)
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary.Value (MaryValue)
-import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.Rules
 
 -- =====================================================
@@ -22,7 +21,7 @@ import Cardano.Ledger.Shelley.Rules
 -- | The Alonzo era
 data AlonzoEra c
 
-instance CC.Crypto c => Era (AlonzoEra c) where
+instance Crypto c => Era (AlonzoEra c) where
   type EraCrypto (AlonzoEra c) = c
   type ProtVerLow (AlonzoEra c) = 5
   type ProtVerHigh (AlonzoEra c) = 6
@@ -57,27 +56,27 @@ type instance EraRule "BBODY" (AlonzoEra c) = AlonzoBBODY (AlonzoEra c)
 
 -- Rules inherited from Shelley
 
-type instance EraRule "DELEG" (AlonzoEra c) = API.ShelleyDELEG (AlonzoEra c)
+type instance EraRule "DELEG" (AlonzoEra c) = ShelleyDELEG (AlonzoEra c)
 
-type instance EraRule "DELEGS" (AlonzoEra c) = API.ShelleyDELEGS (AlonzoEra c)
+type instance EraRule "DELEGS" (AlonzoEra c) = ShelleyDELEGS (AlonzoEra c)
 
-type instance EraRule "DELPL" (AlonzoEra c) = API.ShelleyDELPL (AlonzoEra c)
+type instance EraRule "DELPL" (AlonzoEra c) = ShelleyDELPL (AlonzoEra c)
 
 type instance EraRule "EPOCH" (AlonzoEra c) = ShelleyEPOCH (AlonzoEra c)
 
-type instance EraRule "LEDGERS" (AlonzoEra c) = API.ShelleyLEDGERS (AlonzoEra c)
+type instance EraRule "LEDGERS" (AlonzoEra c) = ShelleyLEDGERS (AlonzoEra c)
 
 type instance EraRule "MIR" (AlonzoEra c) = ShelleyMIR (AlonzoEra c)
 
-type instance EraRule "NEWEPOCH" (AlonzoEra c) = API.ShelleyNEWEPOCH (AlonzoEra c)
+type instance EraRule "NEWEPOCH" (AlonzoEra c) = ShelleyNEWEPOCH (AlonzoEra c)
 
 type instance EraRule "NEWPP" (AlonzoEra c) = ShelleyNEWPP (AlonzoEra c)
 
-type instance EraRule "POOL" (AlonzoEra c) = API.ShelleyPOOL (AlonzoEra c)
+type instance EraRule "POOL" (AlonzoEra c) = ShelleyPOOL (AlonzoEra c)
 
-type instance EraRule "POOLREAP" (AlonzoEra c) = API.ShelleyPOOLREAP (AlonzoEra c)
+type instance EraRule "POOLREAP" (AlonzoEra c) = ShelleyPOOLREAP (AlonzoEra c)
 
-type instance EraRule "PPUP" (AlonzoEra c) = API.ShelleyPPUP (AlonzoEra c)
+type instance EraRule "PPUP" (AlonzoEra c) = ShelleyPPUP (AlonzoEra c)
 
 type instance EraRule "RUPD" (AlonzoEra c) = ShelleyRUPD (AlonzoEra c)
 

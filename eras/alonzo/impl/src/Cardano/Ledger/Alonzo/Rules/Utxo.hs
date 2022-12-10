@@ -64,7 +64,7 @@ import Cardano.Ledger.Binary.Coders
     (!>),
     (<!),
   )
-import Cardano.Ledger.Coin
+import Cardano.Ledger.Coin (Coin (unCoin), rationalToCoinViaCeiling)
 import Cardano.Ledger.CompactAddress
   ( CompactAddr,
     isBootstrapCompactAddr,
@@ -72,7 +72,7 @@ import Cardano.Ledger.CompactAddress
   )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Rules.ValidationMode
   ( Inject (..),
     InjectMaybe (..),
@@ -80,8 +80,8 @@ import Cardano.Ledger.Rules.ValidationMode
     runTest,
     runTestOnSignal,
   )
-import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
-import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, UtxoEnv)
+import Cardano.Ledger.Shelley.LedgerState (UTxOState (UTxOState))
+import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, UtxoEnv(..))
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Tx (TxIn)
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), areAllAdaOnly, coinBalance, sumAllValue, txouts)
@@ -203,7 +203,7 @@ deriving stock instance
   Show (AlonzoUtxoPredFailure era)
 
 deriving stock instance
-  ( CC.Crypto (EraCrypto era),
+  ( Crypto (EraCrypto era),
     Eq (Value era),
     Eq (TxOut era),
     Eq (PredicateFailure (EraRule "UTXOS" era))
@@ -462,7 +462,7 @@ utxoTransition ::
     -- instructions for calling UTXOS from AlonzoUTXO
     Embed (EraRule "UTXOS" era) (AlonzoUTXO era),
     Environment (EraRule "UTXOS" era) ~ UtxoEnv era,
-    State (EraRule "UTXOS" era) ~ Shelley.UTxOState era,
+    State (EraRule "UTXOS" era) ~ UTxOState era,
     Signal (EraRule "UTXOS" era) ~ Tx era,
     HasField "_poolDeposit" (PParams era) Coin,
     HasField "_keyDeposit" (PParams era) Coin,
@@ -474,8 +474,8 @@ utxoTransition ::
   ) =>
   TransitionRule (AlonzoUTXO era)
 utxoTransition = do
-  TRC (Shelley.UtxoEnv slot pp dpstate _genDelegs, u, tx) <- judgmentContext
-  let Shelley.UTxOState utxo _deposits _fees _ppup _ = u
+  TRC (UtxoEnv slot pp dpstate _genDelegs, u, tx) <- judgmentContext
+  let UTxOState utxo _deposits _fees _ppup _ = u
 
   {-   txb := txbody tx   -}
   let txBody = tx ^. bodyTxL
@@ -551,7 +551,7 @@ instance
     AlonzoEraTx era,
     Embed (EraRule "UTXOS" era) (AlonzoUTXO era),
     Environment (EraRule "UTXOS" era) ~ UtxoEnv era,
-    State (EraRule "UTXOS" era) ~ Shelley.UTxOState era,
+    State (EraRule "UTXOS" era) ~ UTxOState era,
     Signal (EraRule "UTXOS" era) ~ Tx era,
     HasField "_poolDeposit" (PParams era) Coin,
     HasField "_minfeeA" (PParams era) Natural,
@@ -569,7 +569,7 @@ instance
   ) =>
   STS (AlonzoUTXO era)
   where
-  type State (AlonzoUTXO era) = Shelley.UTxOState era
+  type State (AlonzoUTXO era) = UTxOState era
   type Signal (AlonzoUTXO era) = Tx era
   type Environment (AlonzoUTXO era) = UtxoEnv era
   type BaseM (AlonzoUTXO era) = ShelleyBase

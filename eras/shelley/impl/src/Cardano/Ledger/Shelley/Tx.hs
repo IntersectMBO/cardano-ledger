@@ -20,7 +20,6 @@
 
 module Cardano.Ledger.Shelley.Tx
   ( -- * Transaction
-    Tx,
     ShelleyTx
       ( ShelleyTx,
         body,
@@ -44,9 +43,7 @@ module Cardano.Ledger.Shelley.Tx
     witsFromTxWitnesses,
 
     -- * Re-exports
-    TxBody,
     ShelleyTxBody (..),
-    TxOut,
     ShelleyTxOut (..),
     TxIn (..),
     TxId (..),
@@ -67,20 +64,19 @@ import Cardano.Ledger.Binary
   )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (Coin))
-import Cardano.Ledger.Core hiding (Tx, TxBody, TxOut)
-import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..))
-import qualified Cardano.Ledger.Crypto as CC (Crypto, StandardCrypto)
+import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Keys (HasKeyRole (coerceKeyRole), KeyHash, KeyRole (Witness), asWitness)
 import Cardano.Ledger.Keys.Bootstrap (bootstrapWitKeyHash)
 import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
 import Cardano.Ledger.MemoBytes (Mem, MemoBytes, memoBytes, mkMemoBytes, pattern Memo)
 import Cardano.Ledger.SafeHash (SafeToHash (..))
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.Metadata ()
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Scripts (MultiSig (..), nativeMultiSigTag)
-import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..), ShelleyTxOut (..), TxBody, TxOut)
+import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..), ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits ()
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Control.DeepSeq (NFData)
@@ -103,58 +99,54 @@ import Numeric.Natural (Natural)
 
 -- ========================================================
 
-data TxRaw era = TxRaw
-  { trBody :: !(Core.TxBody era),
-    trWits :: !(TxWits era),
-    trAuxiliaryData :: !(StrictMaybe (TxAuxData era))
+data ShelleyTxRaw era = ShelleyTxRaw
+  { strBody :: !(TxBody era),
+    strWits :: !(TxWits era),
+    strAuxiliaryData :: !(StrictMaybe (TxAuxData era))
   }
   deriving (Generic, Typeable)
 
 instance
-  ( NFData (Core.TxBody era),
+  ( NFData (TxBody era),
     NFData (TxWits era),
     NFData (TxAuxData era)
   ) =>
-  NFData (TxRaw era)
+  NFData (ShelleyTxRaw era)
 
 deriving instance
   ( Era era,
-    Eq (Core.TxBody era),
+    Eq (TxBody era),
     Eq (TxWits era),
     Eq (TxAuxData era)
   ) =>
-  Eq (TxRaw era)
+  Eq (ShelleyTxRaw era)
 
 deriving instance
   ( Era era,
-    Show (Core.TxBody era),
+    Show (TxBody era),
     Show (TxWits era),
     Show (TxAuxData era)
   ) =>
-  Show (TxRaw era)
+  Show (ShelleyTxRaw era)
 
 instance
   ( Era era,
     NoThunks (TxAuxData era),
-    NoThunks (Core.TxBody era),
+    NoThunks (TxBody era),
     NoThunks (TxWits era)
   ) =>
-  NoThunks (TxRaw era)
+  NoThunks (ShelleyTxRaw era)
 
-newtype ShelleyTx era = TxConstr (MemoBytes TxRaw era)
+newtype ShelleyTx era = TxConstr (MemoBytes ShelleyTxRaw era)
   deriving newtype (SafeToHash, ToCBOR)
 
-type Tx era = ShelleyTx era
-
-{-# DEPRECATED Tx "Use `ShelleyTx` instead" #-}
-
--- | `Core.TxBody` setter and getter for `ShelleyTx`. The setter does update
+-- | `TxBody` setter and getter for `ShelleyTx`. The setter does update
 -- memoized binary representation.
-bodyShelleyTxL :: EraTx era => Lens' (ShelleyTx era) (Core.TxBody era)
+bodyShelleyTxL :: EraTx era => Lens' (ShelleyTx era) (TxBody era)
 bodyShelleyTxL =
   lens
-    (\(TxConstr (Memo tx _)) -> trBody tx)
-    (\(TxConstr (Memo tx _)) txBody -> TxConstr $ memoBytes $ encodeTxRaw $ tx {trBody = txBody})
+    (\(TxConstr (Memo tx _)) -> strBody tx)
+    (\(TxConstr (Memo tx _)) txBody -> TxConstr $ memoBytes $ encodeShelleyTxRaw $ tx {strBody = txBody})
 {-# INLINEABLE bodyShelleyTxL #-}
 
 -- | `TxWits` setter and getter for `ShelleyTx`. The setter does update
@@ -162,8 +154,8 @@ bodyShelleyTxL =
 witsShelleyTxL :: EraTx era => Lens' (ShelleyTx era) (TxWits era)
 witsShelleyTxL =
   lens
-    (\(TxConstr (Memo tx _)) -> trWits tx)
-    (\(TxConstr (Memo tx _)) txWits -> TxConstr $ memoBytes $ encodeTxRaw $ tx {trWits = txWits})
+    (\(TxConstr (Memo tx _)) -> strWits tx)
+    (\(TxConstr (Memo tx _)) txWits -> TxConstr $ memoBytes $ encodeShelleyTxRaw $ tx {strWits = txWits})
 {-# INLINEABLE witsShelleyTxL #-}
 
 -- | `TxAuxData` setter and getter for `ShelleyTx`. The setter does update
@@ -171,30 +163,30 @@ witsShelleyTxL =
 auxDataShelleyTxL :: EraTx era => Lens' (ShelleyTx era) (StrictMaybe (TxAuxData era))
 auxDataShelleyTxL =
   lens
-    (\(TxConstr (Memo tx _)) -> trAuxiliaryData tx)
-    (\(TxConstr (Memo tx _)) auxData -> mkShelleyTx $ tx {trAuxiliaryData = auxData})
+    (\(TxConstr (Memo tx _)) -> strAuxiliaryData tx)
+    (\(TxConstr (Memo tx _)) auxData -> mkShelleyTx $ tx {strAuxiliaryData = auxData})
 {-# INLINEABLE auxDataShelleyTxL #-}
 
 -- | Size getter for `ShelleyTx`.
-sizeShelleyTxF :: Era era => SimpleGetter (Tx era) Integer
+sizeShelleyTxF :: Era era => SimpleGetter (ShelleyTx era) Integer
 sizeShelleyTxF = to (\(TxConstr (Memo _ bytes)) -> fromIntegral $ SBS.length bytes)
 {-# INLINEABLE sizeShelleyTxF #-}
 
-mkShelleyTx :: EraTx era => TxRaw era -> ShelleyTx era
-mkShelleyTx = TxConstr . memoBytes . encodeTxRaw
+mkShelleyTx :: EraTx era => ShelleyTxRaw era -> ShelleyTx era
+mkShelleyTx = TxConstr . memoBytes . encodeShelleyTxRaw
 {-# INLINEABLE mkShelleyTx #-}
 
-mkBasicShelleyTx :: EraTx era => Core.TxBody era -> ShelleyTx era
+mkBasicShelleyTx :: EraTx era => TxBody era -> ShelleyTx era
 mkBasicShelleyTx txBody =
   mkShelleyTx $
-    TxRaw
-      { trBody = txBody,
-        trWits = mkBasicTxWits,
-        trAuxiliaryData = SNothing
+    ShelleyTxRaw
+      { strBody = txBody,
+        strWits = mkBasicTxWits,
+        strAuxiliaryData = SNothing
       }
 
-instance CC.Crypto c => EraTx (ShelleyEra c) where
-  {-# SPECIALIZE instance EraTx (ShelleyEra CC.StandardCrypto) #-}
+instance Crypto c => EraTx (ShelleyEra c) where
+  {-# SPECIALIZE instance EraTx (ShelleyEra StandardCrypto) #-}
 
   type Tx (ShelleyEra c) = ShelleyTx (ShelleyEra c)
 
@@ -218,7 +210,7 @@ instance CC.Crypto c => EraTx (ShelleyEra c) where
   getMinFeeTx = shelleyMinFeeTx
 
 deriving newtype instance
-  ( NFData (Core.TxBody era),
+  ( NFData (TxBody era),
     NFData (TxWits era),
     NFData (TxAuxData era)
   ) =>
@@ -226,42 +218,42 @@ deriving newtype instance
 
 deriving newtype instance
   ( Era era,
-    Eq (Core.TxBody era),
+    Eq (TxBody era),
     Eq (TxWits era),
     Eq (TxAuxData era)
   ) =>
   Eq (ShelleyTx era)
 
 deriving newtype instance
-  (Era era, Show (Core.TxBody era), Show (TxWits era), Show (TxAuxData era)) =>
+  (Era era, Show (TxBody era), Show (TxWits era), Show (TxAuxData era)) =>
   Show (ShelleyTx era)
 
 deriving newtype instance
   ( Era era,
     NoThunks (TxAuxData era),
-    NoThunks (Core.TxBody era),
+    NoThunks (TxBody era),
     NoThunks (TxWits era)
   ) =>
   NoThunks (ShelleyTx era)
 
 pattern ShelleyTx ::
   EraTx era =>
-  Core.TxBody era ->
+  TxBody era ->
   TxWits era ->
   StrictMaybe (TxAuxData era) ->
   ShelleyTx era
 pattern ShelleyTx {body, wits, auxiliaryData} <-
   TxConstr
     ( Memo
-        TxRaw
-          { trBody = body,
-            trWits = wits,
-            trAuxiliaryData = auxiliaryData
+        ShelleyTxRaw
+          { strBody = body,
+            strWits = wits,
+            strAuxiliaryData = auxiliaryData
           }
         _
       )
   where
-    ShelleyTx b w a = mkShelleyTx $ TxRaw b w a
+    ShelleyTx b w a = mkShelleyTx $ ShelleyTxRaw b w a
 
 {-# COMPLETE ShelleyTx #-}
 
@@ -269,24 +261,24 @@ pattern ShelleyTx {body, wits, auxiliaryData} <-
 -- Serialisation
 --------------------------------------------------------------------------------
 
-encodeTxRaw :: EraTx era => TxRaw era -> Encode ('Closed 'Dense) (TxRaw era)
-encodeTxRaw TxRaw {trBody, trWits, trAuxiliaryData} =
-  Rec TxRaw
-    !> To trBody
-    !> To trWits
-    !> E (encodeNullMaybe toCBOR . strictMaybeToMaybe) trAuxiliaryData
+encodeShelleyTxRaw :: EraTx era => ShelleyTxRaw era -> Encode ('Closed 'Dense) (ShelleyTxRaw era)
+encodeShelleyTxRaw ShelleyTxRaw {strBody, strWits, strAuxiliaryData} =
+  Rec ShelleyTxRaw
+    !> To strBody
+    !> To strWits
+    !> E (encodeNullMaybe toCBOR . strictMaybeToMaybe) strAuxiliaryData
 
 instance
   ( Era era,
-    FromCBOR (Annotator (Core.TxBody era)),
+    FromCBOR (Annotator (TxBody era)),
     FromCBOR (Annotator (TxWits era)),
     FromCBOR (Annotator (TxAuxData era))
   ) =>
-  FromCBOR (Annotator (TxRaw era))
+  FromCBOR (Annotator (ShelleyTxRaw era))
   where
   fromCBOR =
     decode $
-      Ann (RecD TxRaw)
+      Ann (RecD ShelleyTxRaw)
         <*! From
         <*! From
         <*! D
@@ -294,7 +286,10 @@ instance
               <$> decodeNullMaybe fromCBOR
           )
 
-deriving via Mem TxRaw era instance EraTx era => FromCBOR (Annotator (Tx era))
+deriving via
+  Mem ShelleyTxRaw era
+  instance
+    EraTx era => FromCBOR (Annotator (ShelleyTx era))
 
 -- | Construct a Tx containing the explicit serialised bytes.
 --
@@ -306,12 +301,12 @@ deriving via Mem TxRaw era instance EraTx era => FromCBOR (Annotator (Tx era))
 --   The only intended use case for this is for segregated witness.
 unsafeConstructTxWithBytes ::
   Era era =>
-  Core.TxBody era ->
+  TxBody era ->
   TxWits era ->
   StrictMaybe (TxAuxData era) ->
   LBS.ByteString ->
-  Tx era
-unsafeConstructTxWithBytes b w a bytes = TxConstr (mkMemoBytes (TxRaw b w a) bytes)
+  ShelleyTx era
+unsafeConstructTxWithBytes b w a bytes = TxConstr (mkMemoBytes (ShelleyTxRaw b w a) bytes)
 
 --------------------------------------------------------------------------------
 -- Segregated witness
@@ -320,10 +315,10 @@ unsafeConstructTxWithBytes b w a bytes = TxConstr (mkMemoBytes (TxRaw b w a) byt
 segwitTx ::
   forall era.
   EraTx era =>
-  Annotator (Core.TxBody era) ->
+  Annotator (TxBody era) ->
   Annotator (TxWits era) ->
   Maybe (Annotator (TxAuxData era)) ->
-  Annotator (Tx era)
+  Annotator (ShelleyTx era)
 segwitTx
   bodyAnn
   witsAnn
@@ -379,7 +374,7 @@ evalNativeMultiSigScript (RequireMOf m msigs) vhks =
 validateNativeMultiSigScript ::
   EraTx era =>
   MultiSig era ->
-  Core.Tx era ->
+  Tx era ->
   Bool
 validateNativeMultiSigScript msig tx =
   evalNativeMultiSigScript msig (coerceKeyRole `Set.map` vhks)
@@ -389,7 +384,7 @@ validateNativeMultiSigScript msig tx =
 -- | Multi-signature script witness accessor function for Transactions
 txwitsScript ::
   EraTx era =>
-  Core.Tx era ->
+  Tx era ->
   Map (ScriptHash (EraCrypto era)) (Script era)
 txwitsScript tx = tx ^. witsTxL . scriptTxWitsL
 
@@ -405,25 +400,26 @@ extractKeyHashWitnessSet = foldr accum Set.empty
 -- | Minimum fee calculation
 shelleyMinFeeTx ::
   ( EraTx era,
-    HasField "_minfeeA" (Core.PParams era) Natural,
-    HasField "_minfeeB" (Core.PParams era) Natural
+    HasField "_minfeeA" (PParams era) Natural,
+    HasField "_minfeeB" (PParams era) Natural
   ) =>
-  Core.PParams era ->
-  Core.Tx era ->
+  PParams era ->
+  Tx era ->
   Coin
 shelleyMinFeeTx pp tx =
   Coin $
     fromIntegral (getField @"_minfeeA" pp)
-      * tx ^. sizeTxF
+      * tx
+        ^. sizeTxF
       + fromIntegral (getField @"_minfeeB" pp)
 
 minfee ::
   ( EraTx era,
-    HasField "_minfeeA" (Core.PParams era) Natural,
-    HasField "_minfeeB" (Core.PParams era) Natural
+    HasField "_minfeeA" (PParams era) Natural,
+    HasField "_minfeeB" (PParams era) Natural
   ) =>
-  Core.PParams era ->
-  Core.Tx era ->
+  PParams era ->
+  Tx era ->
   Coin
 minfee = shelleyMinFeeTx
 {-# DEPRECATED minfee "In favor of `getMinFeeTx`" #-}
@@ -431,7 +427,7 @@ minfee = shelleyMinFeeTx
 -- | Extract the witness hashes from the Transaction.
 witsFromTxWitnesses ::
   EraTx era =>
-  Core.Tx era ->
+  Tx era ->
   Set (KeyHash 'Witness (EraCrypto era))
 witsFromTxWitnesses tx =
   Set.map witVKeyHash (tx ^. witsTxL . addrTxWitsL)

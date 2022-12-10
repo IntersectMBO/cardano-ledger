@@ -18,7 +18,7 @@ import Cardano.Ledger.Mary.Scripts (Timelock, translateTimelock)
 import Cardano.Ledger.Mary.Tx ()
 import Cardano.Ledger.Mary.TxAuxData (AllegraTxAuxData (..))
 import Cardano.Ledger.Mary.Value (MaryValue (..))
-import Cardano.Ledger.Shelley.API hiding (Metadata, TxBody)
+import Cardano.Ledger.Shelley.API hiding (Metadata)
 import qualified Cardano.Ledger.Val as Val
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map

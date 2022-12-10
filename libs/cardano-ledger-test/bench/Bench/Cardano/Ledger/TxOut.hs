@@ -10,7 +10,7 @@ import Cardano.Crypto.Hash.Class
 import Cardano.Ledger.Address
 import Cardano.Ledger.Alonzo (Alonzo)
 import Cardano.Ledger.Alonzo.Data
-import Cardano.Ledger.Alonzo.TxBody hiding (TxOut)
+import Cardano.Ledger.Alonzo.TxBody
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (decodeFull, serialize)
 import Cardano.Ledger.Coin
