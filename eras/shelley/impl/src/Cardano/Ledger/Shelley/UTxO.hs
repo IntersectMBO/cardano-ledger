@@ -52,7 +52,7 @@ import Cardano.Ledger.Shelley.TxBody
   )
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO as UTxO
-import Cardano.Ledger.Val ((<+>), (<×>))
+import Cardano.Ledger.Val ((<+>))
 import qualified Cardano.Ledger.Val as Val
 import Data.Foldable (Foldable (fold), toList)
 import qualified Data.Map.Strict as Map

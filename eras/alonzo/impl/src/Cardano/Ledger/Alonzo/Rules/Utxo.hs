@@ -81,7 +81,7 @@ import Cardano.Ledger.Rules.ValidationMode
     runTestOnSignal,
   )
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (UTxOState))
-import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, UtxoEnv(..))
+import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, UtxoEnv (..))
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Tx (TxIn)
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), areAllAdaOnly, coinBalance, sumAllValue, txouts)

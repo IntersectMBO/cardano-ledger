@@ -46,8 +46,11 @@ import Cardano.Ledger.Keys
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (ShelleyUTXOW)
-import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), UTxOState, genesisState)
-import Cardano.Ledger.Shelley.TxAuxData (ShelleyTxAuxData)
+import Cardano.Ledger.Shelley.LedgerState
+  ( LedgerState (..),
+    UTxOState,
+    genesisState,
+  )
 import Cardano.Ledger.Shelley.PParams
   ( ShelleyPParams,
     ShelleyPParamsHKD (..),
@@ -63,6 +66,7 @@ import Cardano.Ledger.Shelley.Scripts
     pattern RequireSignature,
   )
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), TxId)
+import Cardano.Ledger.Shelley.TxAuxData (ShelleyTxAuxData)
 import Cardano.Ledger.Shelley.TxBody
   ( ShelleyTxBody (..),
     ShelleyTxOut (..),

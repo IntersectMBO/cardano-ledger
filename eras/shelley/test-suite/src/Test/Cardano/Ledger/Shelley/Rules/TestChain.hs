@@ -594,8 +594,8 @@ potsSumIncreaseWdrlsPerTx SourceSignalTarget {source = chainSt, signal = block} 
         } =
         property (hasFailedScripts tx)
           .||. (coinBalance u' <+> d' <+> f')
-          <-> (coinBalance u <+> d <+> f)
-          === fold (unWdrl (tx ^. bodyTxL . wdrlsTxBodyL))
+            <-> (coinBalance u <+> d <+> f)
+            === fold (unWdrl (tx ^. bodyTxL . wdrlsTxBodyL))
 
 -- | (Utxo + Deposits + Fees) increases by the reward delta
 potsSumIncreaseByRewardsPerTx ::
@@ -698,7 +698,7 @@ preserveBalance SourceSignalTarget {source = chainSt, signal = block} =
         created =
           coinBalance u'
             <+> txb
-            ^. feeTxBodyL
+              ^. feeTxBodyL
             <+> totalTxDeposits pp_ dpstate txb
         consumed_ =
           coinBalance u
@@ -741,7 +741,7 @@ preserveBalanceRestricted SourceSignalTarget {source = chainSt, signal = block} 
           outs =
             coinBalance (txouts @era txb)
               <> txb
-              ^. feeTxBodyL
+                ^. feeTxBodyL
               <> totalTxDeposits pp_ dpstate txb
 
 preserveOutputsTx ::
@@ -795,7 +795,7 @@ canRestrictUTxO SourceSignalTarget {source = chainSt, signal = block} =
           (unlines ["non-disjoint:", show uRestr, show irrelevantUTxO])
           (uRestr `Map.disjoint` irrelevantUTxO)
           .&&. uFull
-          === (uRestr `Map.union` irrelevantUTxO)
+            === (uRestr `Map.union` irrelevantUTxO)
 
 -- | Check that consumed inputs are eliminated from the resulting UTxO
 eliminateTxInputs ::

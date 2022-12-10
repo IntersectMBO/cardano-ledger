@@ -410,7 +410,7 @@ shelleyMinFeeTx pp tx =
   Coin $
     fromIntegral (getField @"_minfeeA" pp)
       * tx
-      ^. sizeTxF
+        ^. sizeTxF
       + fromIntegral (getField @"_minfeeB" pp)
 
 minfee ::
