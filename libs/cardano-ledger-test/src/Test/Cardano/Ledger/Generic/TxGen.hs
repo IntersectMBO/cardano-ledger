@@ -38,11 +38,9 @@ import Cardano.Ledger.Alonzo.TxWits
     TxDats (..),
   )
 import Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..))
-import Cardano.Ledger.Babbage.Rules ()
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), Datum (..))
 import Cardano.Ledger.BaseTypes (Network (..), mkTxIxPartial)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway.Rules ()
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys
   ( KeyHash,
@@ -1089,7 +1087,7 @@ applySTSByProof ::
   RuleContext 'Transition (EraRule "LEDGER" era) ->
   Either [PredicateFailure (EraRule "LEDGER" era)] (State (EraRule "LEDGER" era))
 -- TODO re-enable this once we have added all the new rules to Conway
---applySTSByProof (Conway _) trc = runShelleyBase $ applySTS trc
+-- applySTSByProof (Conway _) trc = runShelleyBase $ applySTS trc
 applySTSByProof (Conway _) _trc = undefined
 applySTSByProof (Babbage _) trc = runShelleyBase $ applySTS trc
 applySTSByProof (Alonzo _) trc = runShelleyBase $ applySTS trc

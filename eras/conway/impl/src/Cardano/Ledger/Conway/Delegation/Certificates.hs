@@ -17,7 +17,7 @@ import Cardano.Ledger.Binary
     encodeListLen,
     listLenInt,
   )
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert (..), DelegCert (..), Delegation (..), GenesisDelegCert (..), PoolCert (..))
 import Cardano.Ledger.Slot (EpochNo (..))
 import Control.DeepSeq (NFData)
@@ -35,8 +35,8 @@ instance NFData (ConwayDCert c)
 
 instance NoThunks (ConwayDCert c)
 
-instance CC.Crypto c => FromCBOR (ConwayDCert c) where
-  fromCBOR = decodeRecordSum "ConwayDCert c" $
+instance Crypto c => FromCBOR (ConwayDCert c) where
+  fromCBOR = decodeRecordSum "ConwayDCert" $
     \case
       0 -> do
         x <- fromCBOR
@@ -62,7 +62,7 @@ instance CC.Crypto c => FromCBOR (ConwayDCert c) where
         pure (4, ConwayDCertGenesis $ GenesisDelegCert a b c)
       k -> invalidKey k
 
-instance CC.Crypto c => ToCBOR (ConwayDCert c) where
+instance Crypto c => ToCBOR (ConwayDCert c) where
   toCBOR = \case
     -- DCertDeleg
     ConwayDCertDeleg (RegKey cred) ->

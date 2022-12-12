@@ -35,6 +35,7 @@ library
   import:             base, project-config
   exposed-modules:
     Cardano.Ledger.Conway.Genesis
+    Cardano.Ledger.Conway.Governance
     Cardano.Ledger.Conway.PParams
     Cardano.Ledger.Conway.Tx
     Cardano.Ledger.Conway.TxBody

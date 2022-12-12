@@ -81,9 +81,10 @@ import Cardano.Ledger.Alonzo.Tx (CostModel, ScriptPurpose (..), txdats')
 import Cardano.Ledger.Alonzo.TxBody
   ( AlonzoEraTxBody (..),
     AlonzoEraTxOut (..),
+    ShelleyEraTxBody (..),
     mintTxBodyL,
     vldtTxBodyL,
-    wdrlsTxBodyL, ShelleyEraTxBody (..),
+    wdrlsTxBodyL,
   )
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits, RdmrPtr, unTxDats)
 import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..), TxIx, certIxToInt, txIxToInt)

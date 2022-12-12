@@ -52,17 +52,12 @@ import Cardano.Ledger.Babbage.TxBody as BabbageTxBodyReExports
     MaryEraTxBody (..),
     ShelleyEraTxBody (..),
   )
-import Cardano.Ledger.Babbage.TxOut (BabbageTxOut, fromCborTxOutWithAddr)
 import Cardano.Ledger.BaseTypes (Network)
 import Cardano.Ledger.Binary
   ( Annotator,
     FromCBOR (..),
     Sized (..),
     ToCBOR (..),
-    decodeMap,
-    decodeSet,
-    decodeSized,
-    decodeStrictSeq,
     mkSized,
   )
 import Cardano.Ledger.Binary.Coders
@@ -79,11 +74,8 @@ import Cardano.Ledger.Binary.Coders
     (!>),
   )
 import Cardano.Ledger.Coin (Coin (..), CompactForm)
-import Cardano.Ledger.CompactAddress (fromCborBothAddr, fromCborRewardAcnt)
 import Cardano.Ledger.Conway.Core
   ( ConwayEraTxBody (..),
-    GovernanceActionInfo (..),
-    Vote,
   )
 import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert, transDCert)
 import Cardano.Ledger.Conway.Era (ConwayEra)
@@ -106,8 +98,9 @@ import Cardano.Ledger.MemoBytes
     Memoized (..),
     getMemoRawType,
     getMemoSafeHash,
+    getterMemoRawType,
     lensMemoRawType,
-    mkMemoized, getterMemoRawType,
+    mkMemoized,
   )
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
 import Cardano.Ledger.Shelley.TxBody (Wdrl (..))
@@ -123,6 +116,7 @@ import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Lens.Micro (to, (^.))
 import NoThunks.Class (NoThunks)
+import Cardano.Ledger.Conway.Governance (GovernanceActionInfo, Vote)
 
 instance Memoized ConwayTxBody where
   type RawType ConwayTxBody = ConwayTxBodyRaw
@@ -131,8 +125,8 @@ data ConwayTxBodyRaw era = ConwayTxBodyRaw
   { ctbrSpendInputs :: !(Set (TxIn (EraCrypto era))),
     ctbrCollateralInputs :: !(Set (TxIn (EraCrypto era))),
     ctbrReferenceInputs :: !(Set (TxIn (EraCrypto era))),
-    ctbrOutputs :: !(StrictSeq (Sized (BabbageTxOut era))),
-    ctbrCollateralReturn :: !(StrictMaybe (Sized (BabbageTxOut era))),
+    ctbrOutputs :: !(StrictSeq (Sized (TxOut era))),
+    ctbrCollateralReturn :: !(StrictMaybe (Sized (TxOut era))),
     ctbrTotalCollateral :: !(StrictMaybe Coin),
     ctbrCerts :: !(StrictSeq (ConwayDCert (EraCrypto era))),
     ctbrWdrls :: !(Wdrl (EraCrypto era)),
@@ -140,10 +134,6 @@ data ConwayTxBodyRaw era = ConwayTxBodyRaw
     ctbrVldt :: !ValidityInterval,
     ctbrReqSignerHashes :: !(Set (KeyHash 'Witness (EraCrypto era))),
     ctbrMint :: !(MultiAsset (EraCrypto era)),
-    -- The spec makes it clear that the mint field is a
-    -- Cardano.Ledger.Mary.Value.MaryValue, not a Value.
-    -- Operations on the TxBody in the BabbageEra depend upon this.
-    -- We now store only the MultiAsset part of a Mary.Value.
     ctbrScriptIntegrityHash :: !(StrictMaybe (ScriptIntegrityHash (EraCrypto era))),
     ctbrAuxDataHash :: !(StrictMaybe (AuxiliaryDataHash (EraCrypto era))),
     ctbrTxNetworkId :: !(StrictMaybe Network),
@@ -156,20 +146,31 @@ deriving instance
   ( Era era,
     Eq (Script era),
     Eq (CompactForm (Value era)),
-    Eq (PParamsUpdate era)
+    Eq (PParamsUpdate era),
+    Eq (TxOut era)
   ) =>
   Eq (ConwayTxBodyRaw era)
 
-instance NoThunks (PParamsUpdate era) => NoThunks (ConwayTxBodyRaw era)
+instance
+  ( NoThunks (PParamsUpdate era),
+    NoThunks (TxOut era)
+  ) =>
+  NoThunks (ConwayTxBodyRaw era)
 
-instance (Era era, NFData (PParamsUpdate era)) => NFData (ConwayTxBodyRaw era)
+instance
+  ( Era era,
+    NFData (PParamsUpdate era),
+    NFData (TxOut era)
+  ) =>
+  NFData (ConwayTxBodyRaw era)
 
 deriving instance
   ( Era era,
     Val (Value era),
     Show (Value era),
     Show (Script era),
-    Show (PParamsUpdate era)
+    Show (PParamsUpdate era),
+    Show (TxOut era)
   ) =>
   Show (ConwayTxBodyRaw era)
 
@@ -178,7 +179,8 @@ instance
     Val (Value era),
     DecodeNonNegative (Value era),
     FromCBOR (Annotator (Script era)),
-    FromCBOR (PParamsUpdate era)
+    FromCBOR (PParamsUpdate era),
+    FromCBOR (TxOut era)
   ) =>
   FromCBOR (ConwayTxBodyRaw era)
   where
@@ -191,54 +193,30 @@ instance
         requiredFields
     where
       bodyFields :: (Word -> Field (ConwayTxBodyRaw era))
-      bodyFields 0 =
-        field
-          (\x tx -> tx {ctbrSpendInputs = x})
-          (D (decodeSet fromCBOR))
-      bodyFields 13 =
-        field
-          (\x tx -> tx {ctbrCollateralInputs = x})
-          (D (decodeSet fromCBOR))
-      bodyFields 18 =
-        field
-          (\x tx -> tx {ctbrReferenceInputs = x})
-          (D (decodeSet fromCBOR))
-      bodyFields 1 =
-        field
-          (\x tx -> tx {ctbrOutputs = x})
-          (D (decodeStrictSeq (decodeSized (fromCborTxOutWithAddr fromCborBothAddr))))
-      bodyFields 16 =
-        ofield
-          (\x tx -> tx {ctbrCollateralReturn = x})
-          (D (decodeSized (fromCborTxOutWithAddr fromCborBothAddr)))
-      bodyFields 17 =
-        ofield
-          (\x tx -> tx {ctbrTotalCollateral = x})
-          From
+      bodyFields 0 = field (\x tx -> tx {ctbrSpendInputs = x}) From
+      bodyFields 13 = field (\x tx -> tx {ctbrCollateralInputs = x}) From
+      bodyFields 18 = field (\x tx -> tx {ctbrReferenceInputs = x}) From
+      bodyFields 1 = field (\x tx -> tx {ctbrOutputs = x}) From
+      bodyFields 16 = ofield (\x tx -> tx {ctbrCollateralReturn = x}) From
+      bodyFields 17 = ofield (\x tx -> tx {ctbrTotalCollateral = x}) From
       bodyFields 2 = field (\x tx -> tx {ctbrTxfee = x}) From
       bodyFields 3 =
         ofield
           (\x tx -> tx {ctbrVldt = (ctbrVldt tx) {invalidHereafter = x}})
           From
-      bodyFields 4 =
-        field
-          (\x tx -> tx {ctbrCerts = x})
-          (D (decodeStrictSeq fromCBOR))
-      bodyFields 5 =
-        field
-          (\x tx -> tx {ctbrWdrls = x})
-          (D (Wdrl <$> decodeMap fromCborRewardAcnt fromCBOR))
+      bodyFields 4 = field (\x tx -> tx {ctbrCerts = x}) From
+      bodyFields 5 = field (\x tx -> tx {ctbrWdrls = x}) From
       bodyFields 7 = ofield (\x tx -> tx {ctbrAuxDataHash = x}) From
       bodyFields 8 =
         ofield
           (\x tx -> tx {ctbrVldt = (ctbrVldt tx) {invalidBefore = x}})
           From
-      bodyFields 9 = field (\x tx -> tx {ctbrMint = x}) (D fromCBOR)
+      bodyFields 9 = field (\x tx -> tx {ctbrMint = x}) From
       bodyFields 11 = ofield (\x tx -> tx {ctbrScriptIntegrityHash = x}) From
-      bodyFields 14 = field (\x tx -> tx {ctbrReqSignerHashes = x}) (D (decodeSet fromCBOR))
+      bodyFields 14 = field (\x tx -> tx {ctbrReqSignerHashes = x}) From
       bodyFields 15 = ofield (\x tx -> tx {ctbrTxNetworkId = x}) From
-      bodyFields 19 = field (\x tx -> tx {ctbrGovActions = x}) (D (decodeStrictSeq fromCBOR))
-      bodyFields 20 = field (\x tx -> tx {ctbrVotes = x}) (D (decodeStrictSeq fromCBOR))
+      bodyFields 19 = field (\x tx -> tx {ctbrGovActions = x}) From
+      bodyFields 20 = field (\x tx -> tx {ctbrVotes = x}) From
       bodyFields n = field (\_ t -> t) (Invalid n)
       requiredFields =
         [ (0, "inputs"),
@@ -249,24 +227,36 @@ instance
 newtype ConwayTxBody era = TxBodyConstr (MemoBytes ConwayTxBodyRaw era)
   deriving (Generic, SafeToHash, ToCBOR)
 
-instance (Era era, NoThunks (PParamsUpdate era)) => NoThunks (ConwayTxBody era)
+instance
+  ( Era era,
+    NoThunks (PParamsUpdate era),
+    NoThunks (TxOut era)
+  ) =>
+  NoThunks (ConwayTxBody era)
 
 deriving instance
   ( Era era,
     Eq (Script era),
     Eq (CompactForm (Value era)),
-    Eq (PParamsUpdate era)
+    Eq (PParamsUpdate era),
+    Eq (TxOut era)
   ) =>
   Eq (ConwayTxBody era)
 
-deriving newtype instance (Era era, NFData (PParamsUpdate era)) => NFData (ConwayTxBody era)
+deriving newtype instance
+  ( Era era,
+    NFData (PParamsUpdate era),
+    NFData (TxOut era)
+  ) =>
+  NFData (ConwayTxBody era)
 
 deriving instance
   ( Era era,
     Val (Value era),
     Show (Value era),
     Show (Script era),
-    Show (PParamsUpdate era)
+    Show (PParamsUpdate era),
+    Show (TxOut era)
   ) =>
   Show (ConwayTxBody era)
 
@@ -280,7 +270,8 @@ instance
     Val (Value era),
     DecodeNonNegative (Value era),
     FromCBOR (PParamsUpdate era),
-    FromCBOR (Annotator (Script era))
+    FromCBOR (Annotator (Script era)),
+    FromCBOR (TxOut era)
   ) =>
   FromCBOR (Annotator (ConwayTxBodyRaw era))
   where
@@ -293,7 +284,8 @@ deriving via
       Val (Value era),
       DecodeNonNegative (Value era),
       FromCBOR (PParamsUpdate era),
-      FromCBOR (Annotator (Script era))
+      FromCBOR (Annotator (Script era)),
+      FromCBOR (TxOut era)
     ) =>
     FromCBOR (Annotator (ConwayTxBody era))
 
@@ -331,7 +323,10 @@ instance CC.Crypto c => EraTxBody (ConwayEra c) where
   inputsTxBodyL = lensMemoRawType ctbrSpendInputs (\txb x -> txb {ctbrSpendInputs = x})
   {-# INLINE inputsTxBodyL #-}
 
-  outputsTxBodyL = lensMemoRawType (fmap sizedValue . ctbrOutputs) (\txb x -> txb {ctbrOutputs = mkSized (eraProtVerLow @(ConwayEra c)) <$> x})
+  outputsTxBodyL =
+    lensMemoRawType
+      (fmap sizedValue . ctbrOutputs)
+      (\txb x -> txb {ctbrOutputs = mkSized (eraProtVerLow @(ConwayEra c)) <$> x})
   {-# INLINE outputsTxBodyL #-}
 
   feeTxBodyL = lensMemoRawType ctbrTxfee (\txb x -> txb {ctbrTxfee = x})
@@ -436,8 +431,8 @@ pattern ConwayTxBody ::
   Set (TxIn (EraCrypto era)) ->
   Set (TxIn (EraCrypto era)) ->
   Set (TxIn (EraCrypto era)) ->
-  StrictSeq (Sized (BabbageTxOut era)) ->
-  StrictMaybe (Sized (BabbageTxOut era)) ->
+  StrictSeq (Sized (TxOut era)) ->
+  StrictMaybe (Sized (TxOut era)) ->
   StrictMaybe Coin ->
   StrictSeq (ConwayDCert (EraCrypto era)) ->
   Wdrl (EraCrypto era) ->

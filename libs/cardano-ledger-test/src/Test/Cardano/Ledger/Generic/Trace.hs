@@ -506,7 +506,7 @@ forEachEpochTrace proof tracelen genSize f = do
   let newEpoch tr1 tr2 = nesEL (mcsNes tr1) /= nesEL (mcsNes tr2)
   trc <- case proof of
     -- TODO re-enable this once we have added all the new rules to Conway
-    --Conway _ -> genTrace proof tracelen genSize (initStableFields proof)
+    -- Conway _ -> genTrace proof tracelen genSize (initStableFields proof)
     Conway _ -> undefined
     Babbage _ -> genTrace proof tracelen genSize (initStableFields proof)
     Alonzo _ -> genTrace proof tracelen genSize (initStableFields proof)

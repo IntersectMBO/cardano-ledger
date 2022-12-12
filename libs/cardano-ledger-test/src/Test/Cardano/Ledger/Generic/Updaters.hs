@@ -28,6 +28,7 @@ import Cardano.Ledger.Babbage.TxBody as Babbage
     Datum (..),
   )
 import Cardano.Ledger.Coin (Coin (Coin, unCoin))
+import Cardano.Ledger.Conway.Core (ConwayEraTxBody (..))
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams)
 import qualified Cardano.Ledger.Shelley.PParams as Shelley (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Tx as Shelley
@@ -50,7 +51,6 @@ import Lens.Micro
 import Test.Cardano.Ledger.Alonzo.PlutusScripts (testingCostModelV1, testingCostModelV2)
 import Test.Cardano.Ledger.Generic.Fields
 import Test.Cardano.Ledger.Generic.Proof
-import Cardano.Ledger.Conway.Core (ConwayEraTxBody(..))
 
 -- ===========================================================================
 -- Upaters and the use of Policy to specify Merge Semantics and use of [t] as inputs.

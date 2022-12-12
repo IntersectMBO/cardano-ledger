@@ -33,10 +33,8 @@ import Cardano.Ledger.Shelley.Rules (ShelleyPpupPredFailure, ShelleyUtxowEvent (
 import Control.State.Transition.Extended (Embed (..), STS (..))
 
 instance
-  ( Era era,
-    EraTx era,
+  ( EraTx era,
     Value era ~ MaryValue (EraCrypto era),
-    TxOut era ~ BabbageTxOut era,
     State (EraRule "PPUP" era) ~ PPUPState era,
     PredicateFailure (EraRule "UTXOS" era) ~ AlonzoUtxosPredFailure era,
     PredicateFailure (EraRule "UTXO" era) ~ BabbageUtxoPredFailure era,

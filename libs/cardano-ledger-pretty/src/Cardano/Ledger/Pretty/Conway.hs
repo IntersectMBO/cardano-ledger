@@ -15,8 +15,17 @@ where
 
 import Cardano.Ledger.Babbage.TxBody (AllegraEraTxBody (..), AlonzoEraTxBody (..), BabbageEraTxBody (..), MaryEraTxBody (..), ShelleyEraTxBody (..))
 import Cardano.Ledger.Babbage.TxOut (BabbageTxOut (..))
-import Cardano.Ledger.Conway.Core (ConwayEraTxBody (..), GovernanceAction (..), GovernanceActionId (..), GovernanceActionInfo (..), GovernanceActionIx (..), Vote (..), VoteDecision (..), VoterRole (..))
+import Cardano.Ledger.Conway.Core (ConwayEraTxBody (..))
 import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert (..), transDCert)
+import Cardano.Ledger.Conway.Governance
+  ( GovernanceAction (..),
+    GovernanceActionId (..),
+    GovernanceActionInfo (..),
+    GovernanceActionIx (..),
+    Vote (..),
+    VoteDecision (..),
+    VoterRole (..),
+  )
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
 import Cardano.Ledger.Core (EraPParams (..), EraTxBody (..), EraTxOut (..), Value)
 import Cardano.Ledger.Pretty

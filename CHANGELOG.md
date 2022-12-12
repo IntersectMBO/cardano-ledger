@@ -42,18 +42,18 @@ in the naming of release branches.
   abstraction: `mkMemoized`, `getMemoSafeHash`, `getMemoRawType`, `zipMemoRawType`,
   `getMemoRawBytes` and `lensMemoRawType` #3165
 - Added upper protocol version bounds to `updateTxBodyL` and `certsTxBodyL` and
-  removed the corresponding fields from the Conway transaction body
-- Added `ConwayEraTxBody` class with new lenses
+  removed the corresponding fields from the Conway transaction body #3176
+- Added `ConwayEraTxBody` class with new lenses #3176
 - Added `ConwayDCert` data type which is similar to `DCert` but does not have
-  MIR certificates
-- Added CDDL files for Conway era
+  MIR certificates #3176
+- Added CDDL files for Conway era #3176
 - Added `Vote`, `VoterRole`, `VoteDecision`, `GovernanceActionInfo` and
-  `GovernanceAction` data types
+  `GovernanceAction` data types #3176
 - Added `ctbrVotes` and `ctbrGovActions` fields to `ConwayTxBodyRaw` and
-  corresponding fields to `ConwayTxBody`
+  corresponding fields to `ConwayTxBody` #3176
 - Added `ToCBOR` and `FromCBOR` instances to `ConwayTxBody` and all its
-  constituent data types
-- Added `ConwayUTXO` and `ConwayUTXOS` rules
+  constituent data types #3176
+- Added `ConwayUTXO` and `ConwayUTXOS` rules #3176
 
 
 ### Changed
