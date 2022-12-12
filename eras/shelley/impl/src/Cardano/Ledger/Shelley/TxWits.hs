@@ -60,17 +60,17 @@ import Cardano.Ledger.Core
     EraScript (Script, hashScript),
     EraTxWits (..),
     ScriptHash,
+    eraProtVerLow,
   )
-import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Ledger.Crypto as CC (Crypto, StandardCrypto)
+import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.HKD (HKD)
 import Cardano.Ledger.Keys (KeyRole (Witness))
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
 import Cardano.Ledger.Keys.WitVKey (WitVKey (..), witVKeyHash)
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Shelley.Metadata ()
 import Cardano.Ledger.Shelley.Scripts ()
+import Cardano.Ledger.Shelley.TxAuxData ()
 import Control.DeepSeq (NFData)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Foldable (fold)
@@ -170,8 +170,8 @@ scriptShelleyTxWitsL =
     (\w s -> w {scriptWits = s})
 {-# INLINEABLE scriptShelleyTxWitsL #-}
 
-instance CC.Crypto c => EraTxWits (ShelleyEra c) where
-  {-# SPECIALIZE instance EraTxWits (ShelleyEra CC.StandardCrypto) #-}
+instance Crypto c => EraTxWits (ShelleyEra c) where
+  {-# SPECIALIZE instance EraTxWits (ShelleyEra StandardCrypto) #-}
 
   type TxWits (ShelleyEra c) = ShelleyTxWits (ShelleyEra c)
 
@@ -217,7 +217,7 @@ pattern ShelleyTxWits {addrWits, scriptWits, bootWits} <-
                 encodeMapElement 2 toCBOR bootstrapWits
               ]
           n = fromIntegral $ length l
-          witsBytes = serializeEncoding (Core.eraProtVerLow @era) $ encodeMapLen n <> fold l
+          witsBytes = serializeEncoding (eraProtVerLow @era) $ encodeMapLen n <> fold l
        in ShelleyTxWitsConstr
             ( WitnessSet'
                 { addrWits' = awits,
@@ -238,7 +238,7 @@ instance SafeToHash (ShelleyTxWits era) where
 prettyWitnessSetParts ::
   ShelleyTxWits era ->
   ( Set (WitVKey 'Witness (EraCrypto era)),
-    Map (ScriptHash (EraCrypto era)) (Core.Script era),
+    Map (ScriptHash (EraCrypto era)) (Script era),
     Set (BootstrapWitness (EraCrypto era))
   )
 prettyWitnessSetParts (ShelleyTxWitsConstr (WitnessSet' a b c _)) = (a, b, c)
@@ -251,7 +251,7 @@ instance EraScript era => FromCBOR (Annotator (ShelleyTxWits era)) where
 newtype IgnoreSigOrd kr c = IgnoreSigOrd {unIgnoreSigOrd :: WitVKey kr c}
   deriving (Eq)
 
-instance (Typeable kr, CC.Crypto c) => Ord (IgnoreSigOrd kr c) where
+instance (Typeable kr, Crypto c) => Ord (IgnoreSigOrd kr c) where
   compare (IgnoreSigOrd w1) (IgnoreSigOrd w2) = compare (witVKeyHash w1) (witVKeyHash w2)
 
 decodeWits :: forall era s. EraScript era => Decoder s (Annotator (ShelleyTxWits era))

@@ -43,7 +43,7 @@ import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..))
 import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core hiding (TranslationError)
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
@@ -97,13 +97,13 @@ data CollectError c
   | BadTranslation !(TranslationError c)
   deriving (Eq, Show, Generic, NoThunks)
 
-instance (CC.Crypto c) => ToCBOR (CollectError c) where
+instance (Crypto c) => ToCBOR (CollectError c) where
   toCBOR (NoRedeemer x) = encode $ Sum NoRedeemer 0 !> To x
   toCBOR (NoWitness x) = encode $ Sum NoWitness 1 !> To x
   toCBOR (NoCostModel x) = encode $ Sum NoCostModel 2 !> To x
   toCBOR (BadTranslation x) = encode $ Sum BadTranslation 3 !> To x
 
-instance (CC.Crypto c) => FromCBOR (CollectError c) where
+instance (Crypto c) => FromCBOR (CollectError c) where
   fromCBOR = decode (Summands "CollectError" dec)
     where
       dec 0 = SumD NoRedeemer <! From

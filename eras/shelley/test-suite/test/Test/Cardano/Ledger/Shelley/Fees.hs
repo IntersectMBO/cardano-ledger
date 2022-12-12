@@ -49,11 +49,11 @@ import Cardano.Ledger.Shelley.API
     hashVerKeyVRF,
   )
 import qualified Cardano.Ledger.Shelley.API as API
-import qualified Cardano.Ledger.Shelley.Metadata as MD
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..), emptyPParams)
 import Cardano.Ledger.Shelley.Tx
   ( ShelleyTx (..),
   )
+import Cardano.Ledger.Shelley.TxAuxData
 import Cardano.Ledger.Shelley.TxBody
   ( PoolMetadata (..),
     StakePoolRelay (..),
@@ -390,8 +390,8 @@ txRetirePoolBytes16 = "83a5008182582003170a2e7597b7b7e3d84c05391d139a62b157e7878
 
 -- | Simple Transaction which consumes one UTxO and creates one UTxO
 -- | and has one witness
-md :: Era era => MD.ShelleyTxAuxData era
-md = MD.ShelleyTxAuxData $ Map.singleton 0 (MD.List [MD.I 5, MD.S "hello"])
+md :: Era era => ShelleyTxAuxData era
+md = ShelleyTxAuxData $ Map.singleton 0 (List [I 5, S "hello"])
 
 txbWithMD :: ShelleyTxBody Shelley
 txbWithMD =

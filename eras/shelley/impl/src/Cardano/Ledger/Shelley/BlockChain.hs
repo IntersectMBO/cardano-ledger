@@ -16,8 +16,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.BlockChain
-  ( TxSeq,
-    ShelleyTxSeq (ShelleyTxSeq, txSeqTxns', TxSeq'),
+  ( ShelleyTxSeq (ShelleyTxSeq, txSeqTxns', TxSeq'),
     constructMetadata,
     txSeqTxns,
     bbHash,
@@ -52,9 +51,8 @@ import Cardano.Ledger.Binary
     serializeEncoding',
     withSlice,
   )
-import Cardano.Ledger.Core hiding (TxSeq)
-import qualified Cardano.Ledger.Core as Core (TxSeq)
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Core
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (Hash, KeyHash, KeyRole (..))
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
@@ -85,16 +83,12 @@ data ShelleyTxSeq era = TxSeq'
   }
   deriving (Generic)
 
-instance CC.Crypto c => EraSegWits (ShelleyEra c) where
+instance Crypto c => EraSegWits (ShelleyEra c) where
   type TxSeq (ShelleyEra c) = ShelleyTxSeq (ShelleyEra c)
   fromTxSeq = txSeqTxns
   toTxSeq = ShelleyTxSeq
   hashTxSeq = bbHash
   numSegComponents = 3
-
-type TxSeq era = ShelleyTxSeq era
-
-{-# DEPRECATED TxSeq "Use `ShelleyTxSeq` instead" #-}
 
 deriving via
   AllowThunksIn
@@ -253,7 +247,7 @@ txSeqDecoder lax = do
 instance EraTx era => FromCBOR (Annotator (ShelleyTxSeq era)) where
   fromCBOR = txSeqDecoder False
 
-bBodySize :: forall era. EraSegWits era => ProtVer -> Core.TxSeq era -> Int
+bBodySize :: forall era. EraSegWits era => ProtVer -> TxSeq era -> Int
 bBodySize (ProtVer v _) = BS.length . serializeEncoding' v . toCBORGroup
 
 slotToNonce :: SlotNo -> Nonce

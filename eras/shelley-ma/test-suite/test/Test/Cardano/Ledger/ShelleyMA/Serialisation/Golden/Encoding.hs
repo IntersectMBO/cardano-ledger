@@ -27,7 +27,6 @@ import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), hashKey)
 import Cardano.Ledger.Mary (Mary)
 import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
-import qualified Cardano.Ledger.Shelley.Metadata as SMD
 import Cardano.Ledger.Shelley.PParams
   ( ShelleyPParamsHKD (..),
     ShelleyPParamsUpdate,
@@ -35,6 +34,7 @@ import Cardano.Ledger.Shelley.PParams
     pattern ProposedPPUpdates,
     pattern Update,
   )
+import qualified Cardano.Ledger.Shelley.TxAuxData as TxAuxData
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
     DelegCert (..),
@@ -189,7 +189,7 @@ metadataNoScriptsGoldenTest =
   checkEncodingCBORAnnotated
     (eraProtVerHigh @era)
     "metadata_no_scripts"
-    (AllegraTxAuxData @era (Map.singleton 17 (SMD.I 42)) StrictSeq.empty)
+    (AllegraTxAuxData @era (Map.singleton 17 (TxAuxData.I 42)) StrictSeq.empty)
     ( T
         ( TkListLen 2 -- structured metadata and auxiliary scripts
             . TkMapLen 1 -- metadata wrapper
@@ -206,7 +206,7 @@ metadataWithScriptsGoldenTest =
     (eraProtVerHigh @era)
     "metadata_with_scripts"
     ( AllegraTxAuxData @era
-        (Map.singleton 17 (SMD.I 42))
+        (Map.singleton 17 (TxAuxData.I 42))
         (StrictSeq.singleton policy1)
     )
     ( T

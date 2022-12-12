@@ -9,7 +9,7 @@ module Cardano.Ledger.Pretty.Mary where
 import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Allegra.TxAuxData
-import Cardano.Ledger.Allegra.TxBody hiding (TxBody)
+import Cardano.Ledger.Allegra.TxBody
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Mary.TxBody

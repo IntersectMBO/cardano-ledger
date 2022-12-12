@@ -17,19 +17,12 @@ module Cardano.Ledger.Babbage
     AlonzoTxAuxData,
     BabbagePParams,
     BabbagePParamsUpdate,
-
-    -- * Deprecated
-    Self,
-    TxOut,
-    TxBody,
-    Script,
-    AuxiliaryData,
   )
 where
 
 import Cardano.Ledger.Alonzo (reapplyAlonzoTx)
-import Cardano.Ledger.Alonzo.Data (AlonzoTxAuxData (..), AuxiliaryData)
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), Script)
+import Cardano.Ledger.Alonzo.Data (AlonzoTxAuxData (..))
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..))
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.Genesis (AlonzoGenesis, extendPPWithGenesis)
@@ -44,8 +37,6 @@ import Cardano.Ledger.Babbage.TxBody
   ( BabbageEraTxBody (..),
     BabbageTxBody,
     BabbageTxOut,
-    TxBody,
-    TxOut,
     dataHashTxOutL,
   )
 import Cardano.Ledger.Babbage.TxInfo (babbageTxInfo)
@@ -86,11 +77,3 @@ instance Crypto c => ExtendedUTxO (BabbageEra c) where
       referencedOuts = Map.elems $ Map.restrictKeys utxo (txBody ^. referenceInputsTxBodyL)
       outs = newOuts <> referencedOuts
   getDatum = getDatumBabbage
-
--- Self-Describing type synomyms
-
-type Self c = BabbageEra c
-
-{-# DEPRECATED Self "Use `BabbageEra` instead" #-}
-
--- =================================================

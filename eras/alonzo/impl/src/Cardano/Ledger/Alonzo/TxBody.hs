@@ -69,10 +69,6 @@ module Cardano.Ledger.Alonzo.TxBody
     ScriptIntegrityHash,
     getAlonzoTxOutEitherAddr,
     utxoEntrySize,
-
-    -- * Deprecated
-    TxOut,
-    TxBody,
   )
 where
 
@@ -99,9 +95,8 @@ import Cardano.Ledger.Binary
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible
-import Cardano.Ledger.Core hiding (TxBody, TxOut)
-import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Core
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary.Value (MaryValue (MaryValue), MultiAsset (..), policies, policyID)
 import Cardano.Ledger.MemoBytes
@@ -137,7 +132,7 @@ import Prelude hiding (lookup)
 data AlonzoTxBodyRaw era = AlonzoTxBodyRaw
   { atbrInputs :: !(Set (TxIn (EraCrypto era))),
     atbrCollateral :: !(Set (TxIn (EraCrypto era))),
-    atbrOutputs :: !(StrictSeq (Core.TxOut era)),
+    atbrOutputs :: !(StrictSeq (TxOut era)),
     atbrCerts :: !(StrictSeq (DCert (EraCrypto era))),
     atbrWdrls :: !(Wdrl (EraCrypto era)),
     atbrTxFee :: !Coin,
@@ -145,10 +140,6 @@ data AlonzoTxBodyRaw era = AlonzoTxBodyRaw
     atbrUpdate :: !(StrictMaybe (Update era)),
     atbrReqSignerHashes :: Set (KeyHash 'Witness (EraCrypto era)),
     atbrMint :: !(MultiAsset (EraCrypto era)),
-    -- The spec makes it clear that the mint field is a
-    -- Cardano.Ledger.Mary.Value.MaryValue, not a Cardano.Ledger.Core.Value.
-    -- Operations on the TxBody in the AlonzoEra depend upon this.
-    -- We now store only the MultiAsset part of a Mary.Value.
     atbrScriptIntegrityHash :: !(StrictMaybe (ScriptIntegrityHash (EraCrypto era))),
     atbrAuxDataHash :: !(StrictMaybe (AuxiliaryDataHash (EraCrypto era))),
     atbrTxNetworkId :: !(StrictMaybe Network)
@@ -156,15 +147,15 @@ data AlonzoTxBodyRaw era = AlonzoTxBodyRaw
   deriving (Generic, Typeable)
 
 deriving instance
-  (Era era, Eq (Core.TxOut era), Eq (PParamsUpdate era), Eq (Value era), Compactible (Value era)) =>
+  (Era era, Eq (TxOut era), Eq (PParamsUpdate era), Eq (Value era), Compactible (Value era)) =>
   Eq (AlonzoTxBodyRaw era)
 
-instance (Era era, NoThunks (Core.TxOut era), NoThunks (PParamsUpdate era)) => NoThunks (AlonzoTxBodyRaw era)
+instance (Era era, NoThunks (TxOut era), NoThunks (PParamsUpdate era)) => NoThunks (AlonzoTxBodyRaw era)
 
-instance (Era era, NFData (Core.TxOut era), NFData (PParamsUpdate era)) => NFData (AlonzoTxBodyRaw era)
+instance (Era era, NFData (TxOut era), NFData (PParamsUpdate era)) => NFData (AlonzoTxBodyRaw era)
 
 deriving instance
-  (Era era, Show (Core.TxOut era), Show (PParamsUpdate era), Show (Value era), Val (Value era)) =>
+  (Era era, Show (TxOut era), Show (PParamsUpdate era), Show (Value era), Val (Value era)) =>
   Show (AlonzoTxBodyRaw era)
 
 newtype AlonzoTxBody era = TxBodyConstr (MemoBytes AlonzoTxBodyRaw era)
@@ -174,12 +165,8 @@ newtype AlonzoTxBody era = TxBodyConstr (MemoBytes AlonzoTxBodyRaw era)
 instance Memoized AlonzoTxBody where
   type RawType AlonzoTxBody = AlonzoTxBodyRaw
 
-type TxBody era = AlonzoTxBody era
-
-{-# DEPRECATED TxBody "Use `AlonzoTxBody` instead" #-}
-
-instance CC.Crypto c => EraTxBody (AlonzoEra c) where
-  {-# SPECIALIZE instance EraTxBody (AlonzoEra CC.StandardCrypto) #-}
+instance Crypto c => EraTxBody (AlonzoEra c) where
+  {-# SPECIALIZE instance EraTxBody (AlonzoEra StandardCrypto) #-}
 
   type TxBody (AlonzoEra c) = AlonzoTxBody (AlonzoEra c)
 
@@ -205,8 +192,8 @@ instance CC.Crypto c => EraTxBody (AlonzoEra c) where
     to $ \txBody -> (txBody ^. inputsTxBodyL) `Set.union` (txBody ^. collateralInputsTxBodyL)
   {-# INLINEABLE allInputsTxBodyF #-}
 
-instance CC.Crypto c => ShelleyEraTxBody (AlonzoEra c) where
-  {-# SPECIALIZE instance ShelleyEraTxBody (AlonzoEra CC.StandardCrypto) #-}
+instance Crypto c => ShelleyEraTxBody (AlonzoEra c) where
+  {-# SPECIALIZE instance ShelleyEraTxBody (AlonzoEra StandardCrypto) #-}
 
   wdrlsTxBodyL =
     lensMemoRawType atbrWdrls (\txBodyRaw wdrls_ -> txBodyRaw {atbrWdrls = wdrls_})
@@ -222,15 +209,15 @@ instance CC.Crypto c => ShelleyEraTxBody (AlonzoEra c) where
     lensMemoRawType atbrCerts (\txBodyRaw certs_ -> txBodyRaw {atbrCerts = certs_})
   {-# INLINEABLE certsTxBodyL #-}
 
-instance CC.Crypto c => AllegraEraTxBody (AlonzoEra c) where
-  {-# SPECIALIZE instance AllegraEraTxBody (AlonzoEra CC.StandardCrypto) #-}
+instance Crypto c => AllegraEraTxBody (AlonzoEra c) where
+  {-# SPECIALIZE instance AllegraEraTxBody (AlonzoEra StandardCrypto) #-}
 
   vldtTxBodyL =
     lensMemoRawType atbrValidityInterval (\txBodyRaw vldt_ -> txBodyRaw {atbrValidityInterval = vldt_})
   {-# INLINEABLE vldtTxBodyL #-}
 
-instance CC.Crypto c => MaryEraTxBody (AlonzoEra c) where
-  {-# SPECIALIZE instance MaryEraTxBody (AlonzoEra CC.StandardCrypto) #-}
+instance Crypto c => MaryEraTxBody (AlonzoEra c) where
+  {-# SPECIALIZE instance MaryEraTxBody (AlonzoEra StandardCrypto) #-}
 
   mintTxBodyL =
     lensMemoRawType atbrMint (\txBodyRaw mint_ -> txBodyRaw {atbrMint = mint_})
@@ -242,8 +229,8 @@ instance CC.Crypto c => MaryEraTxBody (AlonzoEra c) where
   mintedTxBodyF = to (Set.map policyID . policies . atbrMint . getMemoRawType)
   {-# INLINEABLE mintedTxBodyF #-}
 
-instance CC.Crypto c => AlonzoEraTxBody (AlonzoEra c) where
-  {-# SPECIALIZE instance AlonzoEraTxBody (AlonzoEra CC.StandardCrypto) #-}
+instance Crypto c => AlonzoEraTxBody (AlonzoEra c) where
+  {-# SPECIALIZE instance AlonzoEraTxBody (AlonzoEra StandardCrypto) #-}
 
   collateralInputsTxBodyL =
     lensMemoRawType atbrCollateral (\txBodyRaw collateral_ -> txBodyRaw {atbrCollateral = collateral_})
@@ -266,26 +253,26 @@ instance CC.Crypto c => AlonzoEraTxBody (AlonzoEra c) where
   {-# INLINEABLE networkIdTxBodyL #-}
 
 deriving newtype instance
-  (Era era, Eq (Core.TxOut era), Eq (PParamsUpdate era), Eq (Value era), Compactible (Value era)) =>
+  (Era era, Eq (TxOut era), Eq (PParamsUpdate era), Eq (Value era), Compactible (Value era)) =>
   Eq (AlonzoTxBody era)
 
 deriving instance
-  (Era era, NoThunks (Core.TxOut era), NoThunks (PParamsUpdate era)) =>
+  (Era era, NoThunks (TxOut era), NoThunks (PParamsUpdate era)) =>
   NoThunks (AlonzoTxBody era)
 
 deriving instance
-  (Era era, NFData (Core.TxOut era), NFData (PParamsUpdate era)) =>
+  (Era era, NFData (TxOut era), NFData (PParamsUpdate era)) =>
   NFData (AlonzoTxBody era)
 
 deriving instance
-  (Era era, Show (Core.TxOut era), Show (PParamsUpdate era), Show (Value era), Val (Value era)) =>
+  (Era era, Show (TxOut era), Show (PParamsUpdate era), Show (Value era), Val (Value era)) =>
   Show (AlonzoTxBody era)
 
 deriving via
   (Mem AlonzoTxBodyRaw era)
   instance
     ( Era era,
-      FromCBOR (Core.TxOut era),
+      FromCBOR (TxOut era),
       FromCBOR (PParamsUpdate era),
       Show (Value era)
     ) =>
@@ -295,7 +282,7 @@ pattern AlonzoTxBody ::
   EraTxOut era =>
   Set (TxIn (EraCrypto era)) ->
   Set (TxIn (EraCrypto era)) ->
-  StrictSeq (Core.TxOut era) ->
+  StrictSeq (TxOut era) ->
   StrictSeq (DCert (EraCrypto era)) ->
   Wdrl (EraCrypto era) ->
   Coin ->
@@ -386,7 +373,7 @@ instance (c ~ EraCrypto era) => HashAnnotated (AlonzoTxBody era) EraIndependentT
 
 inputs' :: AlonzoTxBody era -> Set (TxIn (EraCrypto era))
 collateral' :: AlonzoTxBody era -> Set (TxIn (EraCrypto era))
-outputs' :: AlonzoTxBody era -> StrictSeq (Core.TxOut era)
+outputs' :: AlonzoTxBody era -> StrictSeq (TxOut era)
 certs' :: AlonzoTxBody era -> StrictSeq (DCert (EraCrypto era))
 txfee' :: AlonzoTxBody era -> Coin
 wdrls' :: AlonzoTxBody era -> Wdrl (EraCrypto era)
@@ -428,7 +415,7 @@ txnetworkid' = atbrTxNetworkId . getMemoRawType
 --------------------------------------------------------------------------------
 
 instance
-  (Era era, ToCBOR (Core.TxOut era), ToCBOR (PParamsUpdate era)) =>
+  (Era era, ToCBOR (TxOut era), ToCBOR (PParamsUpdate era)) =>
   ToCBOR (AlonzoTxBodyRaw era)
   where
   toCBOR
@@ -469,7 +456,7 @@ instance
 
 instance
   ( Era era,
-    FromCBOR (Core.TxOut era),
+    FromCBOR (TxOut era),
     FromCBOR (PParamsUpdate era),
     Show (Value era)
   ) =>
@@ -530,7 +517,7 @@ emptyAlonzoTxBodyRaw =
 
 instance
   ( Era era,
-    FromCBOR (Core.TxOut era),
+    FromCBOR (TxOut era),
     FromCBOR (PParamsUpdate era),
     Show (Value era)
   ) =>

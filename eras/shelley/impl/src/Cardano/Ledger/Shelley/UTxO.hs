@@ -24,7 +24,7 @@ module Cardano.Ledger.Shelley.UTxO
     getConsumedCoin,
     produced,
     txup,
-    module Core,
+    module UTxO,
   )
 where
 
@@ -51,8 +51,7 @@ import Cardano.Ledger.Shelley.TxBody
     pattern Delegation,
   )
 import Cardano.Ledger.TxIn (TxIn (..))
-import Cardano.Ledger.UTxO
-import qualified Cardano.Ledger.UTxO as Core
+import Cardano.Ledger.UTxO as UTxO
 import Cardano.Ledger.Val ((<+>))
 import qualified Cardano.Ledger.Val as Val
 import Data.Foldable (Foldable (fold), toList)
@@ -138,9 +137,7 @@ produced ::
 produced pp dpstate txBody =
   balance (txouts txBody)
     <+> Val.inject
-      ( txBody ^. feeTxBodyL
-          <+> totalTxDeposits pp dpstate txBody
-      )
+      (txBody ^. feeTxBodyL <+> totalTxDeposits pp dpstate txBody)
 
 -- | Compute the lovelace which are destroyed by the transaction
 getConsumedCoin ::

@@ -29,7 +29,6 @@ module Cardano.Ledger.Allegra.TxBody
         atbValidityInterval,
         atbWdrls
       ),
-    TxBody,
     AllegraEraTxBody (..),
     emptyAllegraTxBodyRaw,
     AllegraTxBodyRaw (..),
@@ -59,8 +58,7 @@ import Cardano.Ledger.Binary.Coders
   )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (Compactible (..))
-import Cardano.Ledger.Core hiding (TxBody)
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.MemoBytes
   ( Mem,
@@ -205,10 +203,6 @@ newtype AllegraTxBody e = TxBodyConstr (MemoBytes (AllegraTxBodyRaw ()) e)
 
 instance Memoized AllegraTxBody where
   type RawType AllegraTxBody = AllegraTxBodyRaw ()
-
-type TxBody era = AllegraTxBody era
-
-{-# DEPRECATED TxBody "Use `AllegraTxBody` instead" #-}
 
 deriving instance
   (Era era, Eq (PParamsUpdate era), Eq (Value era), Eq (CompactForm (Value era))) =>

@@ -15,8 +15,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.TxOut
-  ( TxOut,
-    ShelleyTxOut (ShelleyTxOut, TxOutCompact),
+  ( ShelleyTxOut (ShelleyTxOut, TxOutCompact),
 
     -- * Helpers
     addrEitherShelleyTxOutL,
@@ -38,11 +37,10 @@ import Cardano.Ledger.Binary
   )
 import Cardano.Ledger.CompactAddress (CompactAddr, compactAddr, decompactAddr)
 import Cardano.Ledger.Compactible (Compactible (CompactForm, fromCompact, toCompact))
-import Cardano.Ledger.Core hiding (TxBody, TxOut)
-import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential)
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto (Crypto (ADDRHASH), StandardCrypto)
 import Cardano.Ledger.Keys (KeyRole (..))
+import Cardano.Ledger.Shelley.Core (Era (EraCrypto), EraTxOut (..), Value)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (_minUTxOValue)
 import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (toExpr))
@@ -61,12 +59,8 @@ data ShelleyTxOut era = TxOutCompact
     txOutCompactValue :: !(CompactForm (Value era))
   }
 
-type TxOut era = ShelleyTxOut era
-
-{-# DEPRECATED TxOut "Use `ShelleyTxOut` instead" #-}
-
-instance CC.Crypto crypto => Core.EraTxOut (ShelleyEra crypto) where
-  {-# SPECIALIZE instance Core.EraTxOut (ShelleyEra CC.StandardCrypto) #-}
+instance Crypto crypto => EraTxOut (ShelleyEra crypto) where
+  {-# SPECIALIZE instance EraTxOut (ShelleyEra StandardCrypto) #-}
 
   type TxOut (ShelleyEra crypto) = ShelleyTxOut (ShelleyEra crypto)
 
@@ -125,7 +119,7 @@ instance NFData (ShelleyTxOut era) where
 deriving via InspectHeapNamed "TxOut" (ShelleyTxOut era) instance NoThunks (ShelleyTxOut era)
 
 pattern ShelleyTxOut ::
-  (HasCallStack, Core.EraTxOut era) =>
+  (HasCallStack, EraTxOut era) =>
   Addr (EraCrypto era) ->
   Value era ->
   ShelleyTxOut era
@@ -143,7 +137,7 @@ viewCompactTxOut :: (Era era, Compactible (Value era)) => ShelleyTxOut era -> (A
 viewCompactTxOut TxOutCompact {txOutCompactAddr, txOutCompactValue} =
   (decompactAddr txOutCompactAddr, fromCompact txOutCompactValue)
 
-instance (Era era, ToCBOR (CompactForm (Value era))) => ToCBOR (TxOut era) where
+instance (Era era, ToCBOR (CompactForm (Value era))) => ToCBOR (ShelleyTxOut era) where
   toCBOR (TxOutCompact addr coin) =
     encodeListLen 2
       <> toCBOR addr
@@ -151,7 +145,7 @@ instance (Era era, ToCBOR (CompactForm (Value era))) => ToCBOR (TxOut era) where
 
 instance
   (Era era, DecodeNonNegative (Value era), Compactible (Value era), Show (Value era)) =>
-  FromCBOR (TxOut era)
+  FromCBOR (ShelleyTxOut era)
   where
   fromCBOR = fromNotSharedCBOR
 
@@ -159,18 +153,22 @@ instance
 -- use the weakest constraint necessary
 instance
   (Era era, Show (Value era), DecodeNonNegative (Value era), Compactible (Value era)) =>
-  FromSharedCBOR (TxOut era)
+  FromSharedCBOR (ShelleyTxOut era)
   where
-  type Share (TxOut era) = Interns (Credential 'Staking (EraCrypto era))
+  type Share (ShelleyTxOut era) = Interns (Credential 'Staking (EraCrypto era))
   fromSharedCBOR _ =
-    decodeRecordNamed "TxOut" (const 2) $ do
+    decodeRecordNamed "ShelleyTxOut" (const 2) $ do
       cAddr <- fromCBOR
       TxOutCompact cAddr <$> decodeNonNegative
 
 -- a ShortByteString of the same length as the ADDRHASH
 -- used to calculate heapWords
-packedADDRHASH :: forall proxy era. (CC.Crypto (EraCrypto era)) => proxy era -> ShortByteString
-packedADDRHASH _ = pack (replicate (fromIntegral (1 + 2 * HS.sizeHash (Proxy :: Proxy (CC.ADDRHASH (EraCrypto era))))) (1 :: Word8))
+packedADDRHASH :: forall proxy era. (Crypto (EraCrypto era)) => proxy era -> ShortByteString
+packedADDRHASH _ =
+  pack $
+    replicate
+      (fromIntegral (1 + 2 * HS.sizeHash (Proxy :: Proxy (ADDRHASH (EraCrypto era)))))
+      (1 :: Word8)
 
 -- ============================================================
 

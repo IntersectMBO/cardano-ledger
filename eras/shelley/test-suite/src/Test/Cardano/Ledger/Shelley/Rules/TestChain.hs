@@ -95,7 +95,7 @@ import Cardano.Ledger.Shelley.Rules.Reports
     synopsisCoinMap,
     trim,
   )
-import Cardano.Ledger.Shelley.TxBody hiding (TxBody, TxOut)
+import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.TreeDiff (diffExpr, ediffEq)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (..), coinBalance, txins, txouts)
@@ -697,7 +697,8 @@ preserveBalance SourceSignalTarget {source = chainSt, signal = block} =
         txb = tx ^. bodyTxL
         created =
           coinBalance u'
-            <+> txb ^. feeTxBodyL
+            <+> txb
+              ^. feeTxBodyL
             <+> totalTxDeposits pp_ dpstate txb
         consumed_ =
           coinBalance u
@@ -739,7 +740,8 @@ preserveBalanceRestricted SourceSignalTarget {source = chainSt, signal = block} 
               <> fold (unWdrl (txb ^. wdrlsTxBodyL))
           outs =
             coinBalance (txouts @era txb)
-              <> txb ^. feeTxBodyL
+              <> txb
+                ^. feeTxBodyL
               <> totalTxDeposits pp_ dpstate txb
 
 preserveOutputsTx ::
@@ -792,7 +794,8 @@ canRestrictUTxO SourceSignalTarget {source = chainSt, signal = block} =
         counterexample
           (unlines ["non-disjoint:", show uRestr, show irrelevantUTxO])
           (uRestr `Map.disjoint` irrelevantUTxO)
-          .&&. uFull === (uRestr `Map.union` irrelevantUTxO)
+          .&&. uFull
+            === (uRestr `Map.union` irrelevantUTxO)
 
 -- | Check that consumed inputs are eliminated from the resulting UTxO
 eliminateTxInputs ::

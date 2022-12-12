@@ -97,7 +97,7 @@ import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core hiding (TxBody, TxOut)
 import qualified Cardano.Ledger.Core as Core (TxOut)
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto (Crypto (ADDRHASH), StandardCrypto)
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Val
   ( DecodeNonNegative (decodeNonNegative),
@@ -147,8 +147,8 @@ type TxOut era = BabbageTxOut era
 
 {-# DEPRECATED TxOut "Use `BabbageTxOut` instead" #-}
 
-instance CC.Crypto c => EraTxOut (BabbageEra c) where
-  {-# SPECIALIZE instance EraTxOut (BabbageEra CC.StandardCrypto) #-}
+instance Crypto c => EraTxOut (BabbageEra c) where
+  {-# SPECIALIZE instance EraTxOut (BabbageEra StandardCrypto) #-}
 
   type TxOut (BabbageEra c) = BabbageTxOut (BabbageEra c)
 
@@ -173,8 +173,8 @@ dataHashBabbageTxOutL =
     )
 {-# INLINEABLE dataHashBabbageTxOutL #-}
 
-instance CC.Crypto c => AlonzoEraTxOut (BabbageEra c) where
-  {-# SPECIALIZE instance AlonzoEraTxOut (BabbageEra CC.StandardCrypto) #-}
+instance Crypto c => AlonzoEraTxOut (BabbageEra c) where
+  {-# SPECIALIZE instance AlonzoEraTxOut (BabbageEra StandardCrypto) #-}
 
   dataHashTxOutL = dataHashBabbageTxOutL
   {-# INLINEABLE dataHashTxOutL #-}
@@ -210,8 +210,8 @@ referenceScriptBabbageTxOutL =
   lens getScriptBabbageTxOut (\(BabbageTxOut addr cv d _) s -> BabbageTxOut addr cv d s)
 {-# INLINEABLE referenceScriptBabbageTxOutL #-}
 
-instance CC.Crypto c => BabbageEraTxOut (BabbageEra c) where
-  {-# SPECIALIZE instance BabbageEraTxOut (BabbageEra CC.StandardCrypto) #-}
+instance Crypto c => BabbageEraTxOut (BabbageEra c) where
+  {-# SPECIALIZE instance BabbageEraTxOut (BabbageEra StandardCrypto) #-}
   dataTxOutL = dataBabbageTxOutL
   {-# INLINEABLE dataTxOutL #-}
 
@@ -589,7 +589,7 @@ babbageMinUTxOValue pp sizedTxOut =
     constantOverhead = 160
 
 getEitherAddrBabbageTxOut ::
-  HashAlgorithm (CC.ADDRHASH (EraCrypto era)) =>
+  HashAlgorithm (ADDRHASH (EraCrypto era)) =>
   BabbageTxOut era ->
   Either (Addr (EraCrypto era)) (CompactAddr (EraCrypto era))
 getEitherAddrBabbageTxOut = \case

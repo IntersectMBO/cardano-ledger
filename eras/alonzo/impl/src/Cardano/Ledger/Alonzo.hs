@@ -20,21 +20,10 @@ module Cardano.Ledger.Alonzo
     AlonzoPParams,
     AlonzoPParamsUpdate,
     reapplyAlonzoTx,
-
-    -- * Deprecated
-    Self,
-    Cardano.Ledger.Alonzo.TxBody.TxOut,
-    Value,
-    Cardano.Ledger.Alonzo.TxBody.TxBody,
-    Cardano.Ledger.Alonzo.Scripts.Script,
-    Cardano.Ledger.Alonzo.Data.AuxiliaryData,
-    Cardano.Ledger.Alonzo.PParams.PParams,
-    PParamsDelta,
   )
 where
 
 import Cardano.Ledger.Alonzo.Data (AlonzoTxAuxData)
-import qualified Cardano.Ledger.Alonzo.Data (AuxiliaryData)
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Genesis
 import Cardano.Ledger.Alonzo.PParams
@@ -42,14 +31,11 @@ import Cardano.Ledger.Alonzo.PParams
     AlonzoPParamsHKD (..),
     AlonzoPParamsUpdate,
   )
-import qualified Cardano.Ledger.Alonzo.PParams (PParams)
 import Cardano.Ledger.Alonzo.PlutusScriptApi (getDatumAlonzo)
 import Cardano.Ledger.Alonzo.Rules ()
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), Script)
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Alonzo.Translation ()
--- import Cardano.Ledger.Alonzo.Tx (alonzoInputHashes)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..), AlonzoTxBody, AlonzoTxOut)
-import qualified Cardano.Ledger.Alonzo.TxBody (TxBody, TxOut)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), alonzoTxInfo)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..))
 import Cardano.Ledger.Alonzo.UTxO ()
@@ -115,17 +101,3 @@ instance Crypto c => ExtendedUTxO (AlonzoEra c) where
           SJust dh <- [txOut ^. dataHashTxOutL]
       ]
   getDatum = getDatumAlonzo
-
--- Self-Describing type synomyms
-
-type Self c = AlonzoEra c
-
-{-# DEPRECATED Self "Use `AlonzoEra` instead" #-}
-
-type Value era = MaryValue (EraCrypto era)
-
-{-# DEPRECATED Value "Use `MaryValue` instead" #-}
-
-type PParamsDelta era = AlonzoPParamsUpdate era
-
-{-# DEPRECATED PParamsDelta "Use `AlonzoPParamsUpdate` instead" #-}

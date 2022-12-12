@@ -10,7 +10,7 @@ import Cardano.Ledger.Babbage (Babbage)
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure)
 import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.Metadata (ShelleyTxAuxData)
+import Cardano.Ledger.Shelley.TxAuxData (ShelleyTxAuxData)
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 import Test.Cardano.Ledger.Binary.RoundTrip

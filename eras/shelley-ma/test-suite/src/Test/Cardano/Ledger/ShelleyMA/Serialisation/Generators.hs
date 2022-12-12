@@ -40,7 +40,7 @@ import Data.Word (Word64)
 import Generic.Random (genericArbitraryU)
 import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
-import Test.Cardano.Ledger.Shelley.Generator.Metadata (genMetadata')
+import Test.Cardano.Ledger.Shelley.Generator.TxAuxData (genMetadata')
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.QuickCheck
   ( Arbitrary,

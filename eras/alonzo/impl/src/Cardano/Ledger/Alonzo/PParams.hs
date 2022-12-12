@@ -85,7 +85,7 @@ import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core hiding (PParams, PParamsUpdate)
 import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.HKD (HKD)
 import Cardano.Ledger.Orphans ()
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (ShelleyPParams))
@@ -182,7 +182,7 @@ type AlonzoPParams era = AlonzoPParamsHKD Identity era
 
 type AlonzoPParamsUpdate era = AlonzoPParamsHKD StrictMaybe era
 
-instance CC.Crypto c => EraPParams (AlonzoEra c) where
+instance Crypto c => EraPParams (AlonzoEra c) where
   type PParams (AlonzoEra c) = AlonzoPParams (AlonzoEra c)
   type PParamsUpdate (AlonzoEra c) = AlonzoPParamsUpdate (AlonzoEra c)
 

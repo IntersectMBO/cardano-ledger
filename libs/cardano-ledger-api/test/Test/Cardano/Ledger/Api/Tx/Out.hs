@@ -13,7 +13,7 @@ where
 import Cardano.Ledger.Alonzo.PParams hiding (PParams)
 import Cardano.Ledger.Api.Era
 import Cardano.Ledger.Api.Tx.Out
-import Cardano.Ledger.Babbage.PParams hiding (PParams)
+import Cardano.Ledger.Babbage.PParams
 import Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
 import Cardano.Ledger.Binary (serialize)
 import Cardano.Ledger.Coin

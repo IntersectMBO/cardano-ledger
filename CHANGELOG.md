@@ -45,7 +45,7 @@ in the naming of release branches.
 
 ### Changed
 
-
+- Renamed module `Cardano.Ledger.Shelley.Metadata` -> `Cardano.Ledger.Shelley.TxAuxData` #3205
 - Changed `FromCBOR` instance in `Babbage.TxOut` to fail pointer address deserialization starting with protocol version 9: #3174
 - Updated `Conway` low protocol version to 9 and `Babbage` high protocol version to 8: #3174
 - Fixed mismathed parenthesis in the `Show` instance for `Ptr`: #3184.
@@ -213,6 +213,8 @@ in the naming of release branches.
 
 ### Removed
 
+- Removed depracted type synonyms: `ValidatedTx`, `TxOut`, `TxBody`, `TxSeq`, `Script`,
+  `Value`, `PParamDelta`. #3205
 - Removed unused `deserialiseAddrStakeRef` function from `Address` module:  #3174
 - `MAClass` is gone: #3175
 - `ShelleyMAEra` type in favor of `AllegraEra` and `MaryEra`: #3175

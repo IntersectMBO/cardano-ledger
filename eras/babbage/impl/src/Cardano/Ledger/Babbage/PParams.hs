@@ -28,11 +28,6 @@ module Cardano.Ledger.Babbage.PParams
     encodeLangViews,
     retractPP,
     extendPP,
-
-    -- * Dperecated
-    PParams,
-    PParams',
-    PParamsUpdate,
   )
 where
 
@@ -88,18 +83,6 @@ import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
-
-type PParams era = BabbagePParams era
-
-{-# DEPRECATED PParams "Use `BabbagePParams` instead" #-}
-
-type PParams' f era = BabbagePParamsHKD f era
-
-{-# DEPRECATED PParams' "Use `BabbagePParamsHKD` instead" #-}
-
-type PParamsUpdate era = BabbagePParamsUpdate era
-
-{-# DEPRECATED PParamsUpdate "Use `BabbagePParamsUpdate` instead" #-}
 
 -- | Protocol parameters.
 -- Alonzo parameters without d and extraEntropy

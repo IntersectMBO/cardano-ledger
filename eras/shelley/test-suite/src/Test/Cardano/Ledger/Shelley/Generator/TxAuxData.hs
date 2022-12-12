@@ -1,6 +1,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 
-module Test.Cardano.Ledger.Shelley.Generator.Metadata
+module Test.Cardano.Ledger.Shelley.Generator.TxAuxData
   ( genMetadata,
     genMetadata',
   )
@@ -10,7 +10,7 @@ import Cardano.Ledger.BaseTypes
   ( StrictMaybe (..),
   )
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.Metadata
+import Cardano.Ledger.Shelley.TxAuxData
   ( Metadatum (..),
     ShelleyTxAuxData (..),
   )

@@ -40,7 +40,7 @@ import Cardano.Ledger.Binary
   )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Rules.ValidationMode
   ( Inject (..),
     InjectMaybe (..),
@@ -302,7 +302,7 @@ instance
 --------------------------------------------------------------------------------
 instance
   ( Typeable era,
-    CC.Crypto (EraCrypto era),
+    Crypto (EraCrypto era),
     ToCBOR (Value era),
     ToCBOR (TxOut era),
     ToCBOR (Shelley.UTxOState era),

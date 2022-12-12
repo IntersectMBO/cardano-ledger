@@ -81,8 +81,7 @@ import Cardano.Ledger.Binary
   )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (HASH)
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto (Crypto (HASH))
 import Cardano.Ledger.MemoBytes
   ( Mem,
     MemoBytes (..),
@@ -99,7 +98,7 @@ import Cardano.Ledger.SafeHash
     SafeToHash (..),
     hashAnnotated,
   )
-import Cardano.Ledger.Shelley.Metadata (Metadatum, validMetadatum)
+import Cardano.Ledger.Shelley.TxAuxData (Metadatum, validMetadatum)
 import qualified Codec.Serialise as Cborg (Serialise (..))
 import Control.DeepSeq (NFData, deepseq)
 import Data.ByteString.Lazy (fromStrict)
@@ -223,7 +222,7 @@ dataHashSize :: StrictMaybe (DataHash c) -> Integer
 dataHashSize SNothing = 0
 dataHashSize (SJust _) = 10
 
-instance (CC.Crypto c) => HeapWords (StrictMaybe (DataHash c)) where
+instance (Crypto c) => HeapWords (StrictMaybe (DataHash c)) where
   heapWords SNothing = heapWords0
   heapWords (SJust a) = heapWords1 a
 
@@ -396,13 +395,13 @@ type AuxiliaryData era = AlonzoTxAuxData era
 
 {-# DEPRECATED AuxiliaryData "Use `AlonzoTxAuxData` instead" #-}
 
-instance CC.Crypto c => EraTxAuxData (AlonzoEra c) where
+instance Crypto c => EraTxAuxData (AlonzoEra c) where
   type TxAuxData (AlonzoEra c) = AlonzoTxAuxData (AlonzoEra c)
   hashTxAuxData = hashAlonzoTxAuxData
   validateTxAuxData = validateAlonzoTxAuxData
 
 hashAlonzoTxAuxData ::
-  (HashAlgorithm (CC.HASH c), HashAnnotated x EraIndependentTxAuxData c) =>
+  (HashAlgorithm (HASH c), HashAnnotated x EraIndependentTxAuxData c) =>
   x ->
   AuxiliaryDataHash c
 hashAlonzoTxAuxData x = AuxiliaryDataHash (hashAnnotated x)

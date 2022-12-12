@@ -10,13 +10,17 @@ module Test.Cardano.Ledger.Alonzo.Serialisation.Tripping where
 
 import Cardano.Ledger.Alonzo (Alonzo)
 import Cardano.Ledger.Alonzo.Data (BinaryData, Data (..))
-import Cardano.Ledger.Alonzo.Rules (AlonzoUtxoPredFailure, AlonzoUtxosPredFailure, AlonzoUtxowPredFailure)
+import Cardano.Ledger.Alonzo.Rules
+  ( AlonzoUtxoPredFailure,
+    AlonzoUtxosPredFailure,
+    AlonzoUtxowPredFailure,
+  )
 import Cardano.Ledger.Alonzo.Scripts (CostModels, eqAlonzoScriptRaw)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits)
 import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (zipMemoRawType)
-import Cardano.Ledger.Shelley.Metadata (ShelleyTxAuxData)
+import Cardano.Ledger.Shelley.TxAuxData (ShelleyTxAuxData)
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Binary.Arbitrary ()

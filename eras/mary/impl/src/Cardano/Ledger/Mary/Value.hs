@@ -55,7 +55,7 @@ import Cardano.Ledger.Binary.Coders
   )
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), integerToWord64)
 import Cardano.Ledger.Compactible (Compactible (..))
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto (Crypto (ADDRHASH))
 import Cardano.Ledger.Shelley.Scripts (ScriptHash (..))
 import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (..), trimExprViaShow)
 import Cardano.Ledger.Val (DecodeNonNegative (..), Val (..))
@@ -129,7 +129,7 @@ newtype PolicyID c = PolicyID {policyID :: ScriptHash c}
 newtype MultiAsset c = MultiAsset (Map (PolicyID c) (Map AssetName Integer))
   deriving (Show, Generic)
 
-instance CC.Crypto c => Eq (MultiAsset c) where
+instance Crypto c => Eq (MultiAsset c) where
   (MultiAsset x) == (MultiAsset y) = pointWise (pointWise (==)) x y
 
 instance NFData (MultiAsset cypto) where
@@ -148,17 +148,17 @@ instance Group (MultiAsset c) where
   invert (MultiAsset m) =
     MultiAsset (canonicalMap (canonicalMap ((-1 :: Integer) *)) m)
 
-instance CC.Crypto c => FromCBOR (MultiAsset c) where
+instance Crypto c => FromCBOR (MultiAsset c) where
   fromCBOR = decodeMultiAssetMaps decodeIntegerBounded64
 
-instance CC.Crypto c => ToCBOR (MultiAsset c) where
+instance Crypto c => ToCBOR (MultiAsset c) where
   toCBOR = encodeMultiAssetMaps
 
 -- | The Value representing MultiAssets
 data MaryValue c = MaryValue !Integer !(MultiAsset c)
   deriving (Show, Generic)
 
-instance CC.Crypto c => Eq (MaryValue c) where
+instance Crypto c => Eq (MaryValue c) where
   x == y = pointwise (==) x y
 
 instance NFData (MaryValue c) where
@@ -184,7 +184,7 @@ instance Abelian (MaryValue c)
 -- ===================================================
 -- Make the Val instance of MaryValue
 
-instance CC.Crypto c => Val (MaryValue c) where
+instance Crypto c => Val (MaryValue c) where
   s <×> MaryValue c (MultiAsset m) =
     MaryValue
       (fromIntegral s * c)
@@ -262,7 +262,7 @@ roundupBytesToWords b = quot (b + wordLength - 1) wordLength
 -- Maybe better to make this distinction in the TxOut de/serialization
 
 decodeValue ::
-  CC.Crypto c =>
+  Crypto c =>
   Decoder s (MaryValue c)
 decodeValue = do
   tt <- peekTokenType
@@ -277,7 +277,7 @@ decodeValue = do
     _ -> fail $ "Value: expected array or int, got " ++ show tt
 
 decodeValuePair ::
-  CC.Crypto c =>
+  Crypto c =>
   (forall t. Decoder t Integer) ->
   Decoder s (MaryValue c)
 decodeValuePair decodeAmount =
@@ -287,13 +287,13 @@ decodeValuePair decodeAmount =
       <! D (decodeMultiAssetMaps decodeAmount)
 
 encodeMultiAssetMaps ::
-  CC.Crypto c =>
+  Crypto c =>
   MultiAsset c ->
   Encoding
 encodeMultiAssetMaps (MultiAsset m) = toCBOR m
 
 decodeMultiAssetMaps ::
-  CC.Crypto c =>
+  Crypto c =>
   Decoder s Integer ->
   Decoder s (MultiAsset c)
 decodeMultiAssetMaps decodeAmount =
@@ -303,7 +303,7 @@ decodeNonNegativeInteger :: Decoder s Integer
 decodeNonNegativeInteger = fromIntegral <$> decodeWord64
 
 decodeNonNegativeValue ::
-  CC.Crypto c =>
+  Crypto c =>
   Decoder s (MaryValue c)
 decodeNonNegativeValue = do
   tt <- peekTokenType
@@ -316,7 +316,7 @@ decodeNonNegativeValue = do
     _ -> fail $ "MaryValue: expected array or int, got " ++ show tt
 
 instance
-  CC.Crypto c =>
+  Crypto c =>
   ToCBOR (MaryValue c)
   where
   toCBOR (MaryValue c ma@(MultiAsset m)) =
@@ -329,13 +329,13 @@ instance
             !> To ma
 
 instance
-  CC.Crypto c =>
+  Crypto c =>
   FromCBOR (MaryValue c)
   where
   fromCBOR = decodeValue
 
 instance
-  CC.Crypto c =>
+  Crypto c =>
   DecodeNonNegative (MaryValue c)
   where
   decodeNonNegative = decodeNonNegativeValue
@@ -372,16 +372,16 @@ decodeIntegerBounded64 = do
 -- Compactible
 -- This is used in the TxOut which stores the (CompactForm MaryValue).
 
-instance CC.Crypto c => Compactible (MaryValue c) where
+instance Crypto c => Compactible (MaryValue c) where
   newtype CompactForm (MaryValue c) = CompactValue (CompactValue c)
     deriving (Eq, Typeable, Show, NoThunks, ToCBOR, FromCBOR, NFData)
   toCompact x = CompactValue <$> to x
   fromCompact (CompactValue x) = from x
 
-instance CC.Crypto c => ToCBOR (CompactValue c) where
+instance Crypto c => ToCBOR (CompactValue c) where
   toCBOR = toCBOR . from
 
-instance CC.Crypto c => FromCBOR (CompactValue c) where
+instance Crypto c => FromCBOR (CompactValue c) where
   fromCBOR = do
     v <- decodeNonNegativeValue
     case to v of
@@ -401,7 +401,7 @@ data CompactValue c
 instance NFData (CompactValue c) where
   rnf = rwhnf
 
-instance CC.Crypto c => Eq (CompactValue c) where
+instance Crypto c => Eq (CompactValue c) where
   a == b = from a == from b
 
 deriving via
@@ -516,7 +516,7 @@ The decoding strategy is
 
 to ::
   forall c.
-  (CC.Crypto c) =>
+  (Crypto c) =>
   MaryValue c ->
   -- The Nothing case of the return value corresponds to a quantity that is outside
   -- the bounds of a Word64. x < 0 or x > (2^64 - 1)
@@ -597,7 +597,7 @@ to v = do
     -- abcRegionSize is the combined size of regions A, B, and C
     abcRegionSize = numTriples * 12
 
-    pidSize = fromIntegral (Hash.sizeHash (Proxy :: Proxy (CC.ADDRHASH c)))
+    pidSize = fromIntegral (Hash.sizeHash (Proxy :: Proxy (ADDRHASH c)))
 
     -- pids is the collection of all distinct pids
     pids = Set.fromList $ (\(pid, _, _) -> pid) <$> triples
@@ -641,7 +641,7 @@ to v = do
 
 representationSize ::
   forall c.
-  CC.Crypto c =>
+  Crypto c =>
   [(PolicyID c, AssetName, Integer)] ->
   Int
 representationSize xs = abcRegionSize + pidBlockSize + anameBlockSize
@@ -650,14 +650,14 @@ representationSize xs = abcRegionSize + pidBlockSize + anameBlockSize
     abcRegionSize = len * 12
 
     numPids = Set.size . Set.fromList $ (\(pid, _, _) -> pid) <$> xs
-    pidSize = fromIntegral (Hash.sizeHash (Proxy :: Proxy (CC.ADDRHASH c)))
+    pidSize = fromIntegral (Hash.sizeHash (Proxy :: Proxy (ADDRHASH c)))
     pidBlockSize = numPids * pidSize
 
     assetNames = Set.fromList $ (\(_, an, _) -> an) <$> xs
     anameBlockSize =
       Semigroup.getSum $ foldMap' (Semigroup.Sum . SBS.length . assetName) assetNames
 
-from :: forall c. (CC.Crypto c) => CompactValue c -> MaryValue c
+from :: forall c. (Crypto c) => CompactValue c -> MaryValue c
 from (CompactValueAdaOnly (CompactCoin c)) = MaryValue (fromIntegral c) (MultiAsset Map.empty)
 from (CompactValueMultiAsset (CompactCoin c) numAssets rep) =
   valueFromList (fromIntegral c) triples
@@ -708,7 +708,7 @@ from (CompactValueMultiAsset (CompactCoin c) numAssets rep) =
               readShortByteString
                 rep
                 (fromIntegral p)
-                (fromIntegral $ Hash.sizeHash ([] :: [CC.ADDRHASH c])),
+                (fromIntegral $ Hash.sizeHash ([] :: [ADDRHASH c])),
         AssetName $ readShortByteString rep (fromIntegral a) (assetLen a),
         fromIntegral i
       )

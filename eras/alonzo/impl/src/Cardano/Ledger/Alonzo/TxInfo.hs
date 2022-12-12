@@ -111,7 +111,7 @@ import Cardano.Ledger.Credential
     Ptr (..),
     StakeReference (..),
   )
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash (..), hashKey)
 import Cardano.Ledger.Language (Language (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
@@ -167,12 +167,12 @@ data TxOutSource c
   | TxOutFromOutput !TxIx
   deriving (Eq, Show, Generic, NoThunks)
 
-instance CC.Crypto c => ToCBOR (TxOutSource c) where
+instance Crypto c => ToCBOR (TxOutSource c) where
   toCBOR = \case
     TxOutFromInput txIn -> encode $ Sum TxOutFromInput 0 !> To txIn
     TxOutFromOutput txIx -> encode $ Sum TxOutFromOutput 1 !> To txIx
 
-instance CC.Crypto c => FromCBOR (TxOutSource c) where
+instance Crypto c => FromCBOR (TxOutSource c) where
   fromCBOR = decode (Summands "TxOutSource" dec)
     where
       dec 0 = SumD TxOutFromInput <! From
@@ -190,7 +190,7 @@ data TranslationError c
   | TimeTranslationPastHorizon !Text
   deriving (Eq, Show, Generic, NoThunks)
 
-instance CC.Crypto c => ToCBOR (TranslationError c) where
+instance Crypto c => ToCBOR (TranslationError c) where
   toCBOR = \case
     ByronTxOutInContext txOutSource ->
       encode $ Sum ByronTxOutInContext 0 !> To txOutSource
@@ -209,7 +209,7 @@ instance CC.Crypto c => ToCBOR (TranslationError c) where
     TimeTranslationPastHorizon err ->
       encode $ Sum TimeTranslationPastHorizon 7 !> To err
 
-instance CC.Crypto c => FromCBOR (TranslationError c) where
+instance Crypto c => FromCBOR (TranslationError c) where
   fromCBOR = decode (Summands "TranslationError" dec)
     where
       dec 0 = SumD ByronTxOutInContext <! From
@@ -394,7 +394,7 @@ transWdrl (Wdrl mp) = Map.foldlWithKey' accum Map.empty mp
     accum ans (RewardAcnt _network cred) (Coin n) =
       Map.insert (PV1.StakingHash (transStakeCred cred)) n ans
 
-getWitVKeyHash :: (CC.Crypto c, Typeable kr) => WitVKey kr c -> PV1.PubKeyHash
+getWitVKeyHash :: (Crypto c, Typeable kr) => WitVKey kr c -> PV1.PubKeyHash
 getWitVKeyHash =
   PV1.PubKeyHash
     . PV1.toBuiltin

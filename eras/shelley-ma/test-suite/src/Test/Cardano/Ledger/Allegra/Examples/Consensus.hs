@@ -9,7 +9,7 @@ import Cardano.Ledger.Allegra
 import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Allegra.TxAuxData
-import Cardano.Ledger.Allegra.TxBody hiding (TxBody)
+import Cardano.Ledger.Allegra.TxBody
 import Cardano.Ledger.AuxiliaryData
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsUpdate, Update (..))

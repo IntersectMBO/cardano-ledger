@@ -111,7 +111,6 @@ import Cardano.Ledger.Shelley.LedgerState
     PulsingRewUpdate (Complete),
     RewardUpdate (..),
   )
-import qualified Cardano.Ledger.Shelley.Metadata as MD
 import Cardano.Ledger.Shelley.PParams
   ( ShelleyPParamsHKD (..),
     ShelleyPParamsUpdate,
@@ -122,6 +121,7 @@ import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Shelley.Rewards ()
 import Cardano.Ledger.Shelley.Scripts (pattern RequireSignature)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
+import qualified Cardano.Ledger.Shelley.TxAuxData as TxAuxData
 import Cardano.Ledger.Shelley.TxBody
   ( MIRPot (..),
     MIRTarget (..),
@@ -946,7 +946,7 @@ tests =
                   )
               )
               (EpochNo 0)
-          mdh = hashTxAuxData @C $ MD.ShelleyTxAuxData $ Map.singleton 13 (MD.I 17)
+          mdh = hashTxAuxData @C $ TxAuxData.ShelleyTxAuxData $ Map.singleton 13 (TxAuxData.I 17)
        in checkEncodingCBORAnnotated
             shelleyProtVer
             "txbody_full"
@@ -1026,7 +1026,7 @@ tests =
           s = Map.singleton (hashScript @C testScript) (testScript @C_Crypto)
           txwits :: ShelleyTxWits C
           txwits = mempty {addrWits = Set.singleton w, scriptWits = s}
-          md = (MD.ShelleyTxAuxData @C) $ Map.singleton 17 (MD.I 42)
+          md = (TxAuxData.ShelleyTxAuxData @C) $ Map.singleton 17 (TxAuxData.I 42)
        in checkEncodingCBORAnnotated
             shelleyProtVer
             "tx_full"
@@ -1186,7 +1186,7 @@ tests =
                 (hashScript @C testScript2, testScript2)
               ]
           tx4 = ShelleyTx txb4 mempty {scriptWits = ss} SNothing
-          tx5MD = MD.ShelleyTxAuxData @C $ Map.singleton 17 (MD.I 42)
+          tx5MD = TxAuxData.ShelleyTxAuxData @C $ Map.singleton 17 (TxAuxData.I 42)
           tx5 = ShelleyTx txb5 mempty {addrWits = ws, scriptWits = ss} (SJust tx5MD)
           txns = ShelleyTxSeq $ StrictSeq.fromList [tx1, tx2, tx3, tx4, tx5]
        in checkEncodingCBORAnnotated

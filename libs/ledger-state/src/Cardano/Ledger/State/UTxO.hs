@@ -13,9 +13,9 @@
 module Cardano.Ledger.State.UTxO where
 
 import Cardano.Ledger.Address
-import Cardano.Ledger.Alonzo hiding (TxOut)
+import Cardano.Ledger.Alonzo
 import Cardano.Ledger.Alonzo.Data
-import Cardano.Ledger.Alonzo.TxBody hiding (TxOut)
+import Cardano.Ledger.Alonzo.TxBody
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Core
@@ -23,7 +23,7 @@ import Cardano.Ledger.Credential
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Mary.Value
 import Cardano.Ledger.PoolDistr (individualPoolStakeVrf)
-import Cardano.Ledger.Shelley.API hiding (TxOut)
+import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PoolRank
 import Conduit

@@ -67,7 +67,7 @@ import Cardano.Ledger.Binary (ToCBOR)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash, KeyRole (Witness))
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Value
@@ -251,7 +251,7 @@ genAux constants = do
       (\(AllegraTxAuxData x y) -> mkAlonzoTxAuxData x (TimelockScript . translateTimelock <$> y))
       maybeAux
 
-instance CC.Crypto c => ScriptClass (AlonzoEra c) where
+instance Crypto c => ScriptClass (AlonzoEra c) where
   basescript proxy key = someLeaf proxy key
   isKey _ (TimelockScript x) = isKey (Proxy @(MaryEra c)) $ translateTimelock x
   isKey _ (PlutusScript _ _) = Nothing
@@ -500,7 +500,7 @@ storageCost extra pp x = (extra + encodedLen @era x) <×> Coin (fromIntegral (ge
 
 addRedeemMap ::
   forall c.
-  CC.Crypto c =>
+  Crypto c =>
   TxBody (AlonzoEra c) ->
   (Plutus.Data, Natural, Natural) ->
   ScriptPurpose c ->

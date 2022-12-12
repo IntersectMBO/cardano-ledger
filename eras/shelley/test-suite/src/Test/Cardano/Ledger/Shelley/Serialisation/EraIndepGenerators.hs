@@ -37,9 +37,8 @@ import Cardano.Ledger.Core
   )
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (Crypto, DSIGN)
-import Cardano.Ledger.Shelley.API hiding (SignedDSIGN, TxBody)
+import Cardano.Ledger.Shelley.API hiding (SignedDSIGN)
 import Cardano.Ledger.Shelley.LedgerState (FutureGenDeleg, StashedAVVMAddresses)
-import qualified Cardano.Ledger.Shelley.Metadata as MD
 import Cardano.Ledger.Shelley.PoolRank
   ( Likelihood (..),
     LogWeight (..),
@@ -162,28 +161,28 @@ maxMetadatumDepth = 2
 maxMetadatumListLens :: Int
 maxMetadatumListLens = 5
 
-sizedMetadatum :: Int -> Gen MD.Metadatum
+sizedMetadatum :: Int -> Gen Metadatum
 sizedMetadatum 0 =
   oneof
-    [ MD.I <$> arbitrary,
-      MD.B <$> arbitrary,
-      MD.S <$> (T.pack <$> arbitrary)
+    [ I <$> arbitrary,
+      B <$> arbitrary,
+      S <$> (T.pack <$> arbitrary)
     ]
 sizedMetadatum n =
   let xsGen = listOf (sizedMetadatum (n - 1))
    in oneof
-        [ MD.Map <$> (zip <$> resize maxMetadatumListLens xsGen <*> xsGen),
-          MD.List <$> resize maxMetadatumListLens xsGen,
-          MD.I <$> arbitrary,
-          MD.B <$> arbitrary,
-          MD.S <$> (T.pack <$> arbitrary)
+        [ Map <$> (zip <$> resize maxMetadatumListLens xsGen <*> xsGen),
+          List <$> resize maxMetadatumListLens xsGen,
+          I <$> arbitrary,
+          B <$> arbitrary,
+          S <$> (T.pack <$> arbitrary)
         ]
 
-instance Arbitrary MD.Metadatum where
+instance Arbitrary Metadatum where
   arbitrary = sizedMetadatum maxMetadatumDepth
 
-instance Era era => Arbitrary (MD.ShelleyTxAuxData era) where
-  arbitrary = MD.ShelleyTxAuxData <$> arbitrary
+instance Era era => Arbitrary (ShelleyTxAuxData era) where
+  arbitrary = ShelleyTxAuxData <$> arbitrary
 
 maxTxWits :: Int
 maxTxWits = 5
