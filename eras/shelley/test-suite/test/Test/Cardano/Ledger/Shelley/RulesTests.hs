@@ -60,7 +60,7 @@ import Test.Cardano.Ledger.Shelley.MultiSigExamples
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 -- EraIndepGenerators is neded for Arbitrary NewEpochState
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
--- Generators is neded for Arbitrary ShelleyPParams
+-- Generators is needed for Arbitrary ShelleyPParams
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase, slotFromEpoch)
 import Test.QuickCheck (Property, discard, (===))
 import Test.Tasty (TestTree, testGroup)
@@ -564,12 +564,11 @@ filterEmptyRewards (NewEpochState el bprev bcur es ru pd stash) =
         SJust . Complete $ rewardUpdate {rs = removeEmptyRewards (rs rewardUpdate)}
 
 setDepositsToObligation :: NewEpochState Shelley -> NewEpochState Shelley
-setDepositsToObligation (NewEpochState el bprev bcur (EpochState as ss ls ppp pp nm) ru pd stash) =
-  NewEpochState el bprev bcur (EpochState as ss ls' ppp pp nm) ru pd stash
+setDepositsToObligation nes = nes {nesEs = es {esLState = ls {lsUTxOState = utxoState}}}
   where
-    LedgerState (UTxOState utxo _deposited fees ppups stakeDistr) dpstate = ls
-    deposited = obligationDPState dpstate
-    ls' = LedgerState (UTxOState utxo deposited fees ppups stakeDistr) dpstate
+    es = nesEs nes
+    ls = esLState es
+    utxoState = (lsUTxOState ls) {utxosDeposited = obligationDPState $ lsDPState ls}
 
 -- | This property test checks the correctness of the TICKF transation.
 -- TICKF is used by the consensus layer to get a ledger view in a computationally
@@ -579,7 +578,7 @@ propTickfPerservesLedgerView :: NewEpochState Shelley -> Property
 propTickfPerservesLedgerView nes =
   let (EpochNo e) = nesEL nes
       slot = slotFromEpoch (EpochNo $ e + 1)
-      nes' = (setDepositsToObligation . filterEmptyRewards) nes
+      nes' = setDepositsToObligation (filterEmptyRewards nes)
       tickNes = runShelleyBase $ applySTSTest @(ShelleyTICK Shelley) (TRC ((), nes', slot))
       tickFNes = runShelleyBase $ applySTSTest @(ShelleyTICKF Shelley) (TRC ((), nes', slot))
    in fromMaybe discard $ do
