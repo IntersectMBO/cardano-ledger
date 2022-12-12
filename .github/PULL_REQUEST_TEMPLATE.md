@@ -9,6 +9,6 @@ to the issue.
 - [ ] Commit sequence broadly makes sense
 - [ ] Commits have useful messages
 - [ ] New tests are added if needed and existing tests are updated
-- [ ] Any changes are noted in the [changelog](../CHANGELOG.md)
+- [ ] Any changes are noted in the [changelog](https://github.com/input-output-hk/cardano-ledger/blob/master/CHANGELOG.md)
 - [ ] Code is formatted with ormolu (which can be run with `scripts/ormolise.sh`
 - [ ] Self-reviewed the diff
