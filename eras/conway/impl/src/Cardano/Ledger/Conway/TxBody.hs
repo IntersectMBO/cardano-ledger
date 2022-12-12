@@ -79,6 +79,7 @@ import Cardano.Ledger.Conway.Core
   )
 import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert, transDCert)
 import Cardano.Ledger.Conway.Era (ConwayEra)
+import Cardano.Ledger.Conway.Governance (GovernanceActionInfo, Vote)
 import Cardano.Ledger.Conway.PParams ()
 import Cardano.Ledger.Conway.Scripts ()
 import Cardano.Ledger.Conway.TxOut ()
@@ -116,7 +117,6 @@ import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Lens.Micro (to, (^.))
 import NoThunks.Class (NoThunks)
-import Cardano.Ledger.Conway.Governance (GovernanceActionInfo, Vote)
 
 instance Memoized ConwayTxBody where
   type RawType ConwayTxBody = ConwayTxBodyRaw

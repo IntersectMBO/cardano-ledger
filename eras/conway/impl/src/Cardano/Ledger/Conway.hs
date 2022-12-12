@@ -17,6 +17,7 @@ where
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..))
 import Cardano.Ledger.Babbage.Tx (babbageTxScripts, getDatumBabbage)
+import Cardano.Ledger.Babbage.TxBody (allSizedOutputsTxBodyF, referenceInputsTxBodyL)
 import Cardano.Ledger.Babbage.TxInfo (babbageTxInfo)
 import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Conway.Era (ConwayEra)
@@ -39,9 +40,9 @@ type Conway = ConwayEra StandardCrypto
 
 -- =====================================================
 
--- instance (Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyTx (ConwayEra c) where
+-- TODO instance (Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyTx (ConwayEra c) where
 
--- instance (Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyBlock (ConwayEra c)
+-- TODO instance (Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyBlock (ConwayEra c)
 
 instance Crypto c => API.CanStartFromGenesis (ConwayEra c) where
   type AdditionalGenesisConfig (ConwayEra c) = AlonzoGenesis

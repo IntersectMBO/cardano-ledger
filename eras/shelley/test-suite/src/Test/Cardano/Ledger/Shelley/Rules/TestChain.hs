@@ -184,7 +184,8 @@ adaIsPreserved ::
   forall era.
   ( EraGen era,
     State (EraRule "PPUP" era) ~ PPUPState era,
-    QC.HasTrace (CHAIN era) (GenEnv era)
+    QC.HasTrace (CHAIN era) (GenEnv era),
+    ProtVerAtMost era 8
   ) =>
   Property
 adaIsPreserved =
@@ -201,7 +202,8 @@ minimal ::
   forall era.
   ( EraGen era,
     QC.HasTrace (CHAIN era) (GenEnv era),
-    State (EraRule "PPUP" era) ~ PPUPState era
+    State (EraRule "PPUP" era) ~ PPUPState era,
+    ProtVerAtMost era 8
   ) =>
   TestTree
 minimal =
