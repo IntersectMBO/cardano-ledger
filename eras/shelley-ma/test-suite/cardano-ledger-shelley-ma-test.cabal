@@ -128,4 +128,4 @@ test-suite cardano-ledger-shelley-ma-test
       cardano-strict-containers,
       tasty-hunit,
       tasty-quickcheck,
-      tasty,
+      tasty

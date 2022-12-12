@@ -17,14 +17,12 @@
 
 module Cardano.Ledger.Shelley.UTxO
   ( ShelleyScriptsNeeded (..),
-    totalDeposits,
     scriptsNeeded,
     getShelleyScriptsNeeded,
     scriptCred,
     scriptStakeCred,
     getConsumedCoin,
     produced,
-    keyRefunds,
     txup,
     module Core,
   )
@@ -32,23 +30,20 @@ where
 
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
-import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
+import Cardano.Ledger.DPState (DPState)
 import Cardano.Ledger.Shelley.Delegation.Certificates
   ( DCert (..),
-    isDeRegKey,
-    isRegKey,
     requiresVKeyWitness,
   )
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..), Update)
+import Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits (keyTxRefunds, totalTxDeposits)
+import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.TxBody
-  ( PoolCert (..),
-    PoolParams (..),
-    ShelleyEraTxBody (..),
+  ( ShelleyEraTxBody (..),
     Wdrl (..),
     getRwdCred,
     pattern DeRegKey,
@@ -58,42 +53,13 @@ import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO
 import qualified Cardano.Ledger.UTxO as Core
-import Cardano.Ledger.Val ((<+>), (<×>))
+import Cardano.Ledger.Val ((<+>))
 import qualified Cardano.Ledger.Val as Val
 import Data.Foldable (Foldable (fold), toList)
 import qualified Data.Map.Strict as Map
-import qualified Data.Maybe as Maybe
 import qualified Data.Set as Set
 import GHC.Records (HasField (..))
 import Lens.Micro ((^.))
-
--- | Determine the total deposit amount needed.
--- The block may (legitimately) contain multiple registration certificates
--- for the same pool, where the first will be treated as a registration and
--- any subsequent ones as re-registration. As such, we must only take a
--- deposit for the first such registration.
---
--- Note that this is not an issue for key registrations since subsequent
--- registration certificates would be invalid.
-totalDeposits ::
-  ( HasField "_poolDeposit" pp Coin,
-    HasField "_keyDeposit" pp Coin
-  ) =>
-  pp ->
-  (KeyHash 'StakePool c -> Bool) ->
-  [DCert c] ->
-  Coin
-totalDeposits pp isNewPool certs =
-  (numKeys <×> getField @"_keyDeposit" pp)
-    <+> (numNewPools <×> getField @"_poolDeposit" pp)
-  where
-    numKeys = length $ filter isRegKey certs
-    pools = Set.fromList $ Maybe.mapMaybe getKeyHashFromRegPool certs
-    numNewPools = length $ Set.filter isNewPool pools
-
-getKeyHashFromRegPool :: DCert c -> Maybe (KeyHash 'StakePool c)
-getKeyHashFromRegPool (DCertPool (RegPool p)) = Just $ ppId p
-getKeyHashFromRegPool _ = Nothing
 
 txup :: (EraTx era, ShelleyEraTxBody era) => Tx era -> Maybe (Update era)
 txup tx = strictMaybeToMaybe (tx ^. bodyTxL . updateTxBodyL)
@@ -166,52 +132,40 @@ produced ::
     HasField "_poolDeposit" pp Coin
   ) =>
   pp ->
-  (KeyHash 'StakePool (EraCrypto era) -> Bool) ->
+  DPState (EraCrypto era) ->
   TxBody era ->
   Value era
-produced pp isNewPool txBody =
+produced pp dpstate txBody =
   balance (txouts txBody)
     <+> Val.inject
       ( txBody ^. feeTxBodyL
-          <+> totalDeposits pp isNewPool (toList $ txBody ^. certsTxBodyL)
+          <+> totalTxDeposits pp dpstate txBody
       )
 
 -- | Compute the lovelace which are destroyed by the transaction
 getConsumedCoin ::
   forall era pp.
-  ( ShelleyEraTxBody era,
-    HasField "_keyDeposit" pp Coin
-  ) =>
+  (ShelleyEraTxBody era, HasField "_keyDeposit" pp Coin) =>
   pp ->
+  DPState (EraCrypto era) ->
   UTxO era ->
   TxBody era ->
   Coin
-getConsumedCoin pp (UTxO u) txBody =
-  {- balance (txins tx ◁ u) + wbalance (txwdrls tx) + keyRefunds pp tx -}
+getConsumedCoin pp dpstate (UTxO u) txBody =
+  {- balance (txins tx ◁ u) + wbalance (txwdrls tx) + keyRefunds dpstate tx -}
   coinBalance (UTxO (Map.restrictKeys u (txBody ^. inputsTxBodyL)))
     <> refunds
     <> withdrawals
   where
-    refunds = keyRefunds pp txBody
+    refunds = keyTxRefunds pp dpstate txBody
     withdrawals = fold . unWdrl $ txBody ^. wdrlsTxBodyL
-
--- | Compute the key deregistration refunds in a transaction
-keyRefunds ::
-  ( HasField "_keyDeposit" pp Coin,
-    ShelleyEraTxBody era
-  ) =>
-  pp ->
-  TxBody era ->
-  Coin
-keyRefunds pp tx = length deregistrations <×> getField @"_keyDeposit" pp
-  where
-    deregistrations = filter isDeRegKey (toList $ tx ^. certsTxBodyL)
 
 newtype ShelleyScriptsNeeded era = ShelleyScriptsNeeded (Set.Set (ScriptHash (EraCrypto era)))
   deriving (Eq, Show)
 
 instance Crypto c => EraUTxO (ShelleyEra c) where
   type ScriptsNeeded (ShelleyEra c) = ShelleyScriptsNeeded (ShelleyEra c)
+
   getConsumedValue = getConsumedCoin
 
   getScriptsNeeded = getShelleyScriptsNeeded

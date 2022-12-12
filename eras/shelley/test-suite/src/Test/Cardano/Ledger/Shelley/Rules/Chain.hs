@@ -10,6 +10,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Shelley.Rules.Chain
   ( CHAIN,
@@ -84,9 +85,11 @@ import Cardano.Ledger.Shelley.Rules
     ShelleyTickPredFailure,
   )
 import Cardano.Ledger.Slot (EpochNo)
+import Cardano.Ledger.TreeDiff (ToExpr (toExpr), defaultExprViaShow)
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Protocol.TPraos.BHeader
   ( BHeader,
+    HashHeader,
     LastAppliedBlock (..),
     bhHash,
     bhbody,
@@ -342,7 +345,7 @@ chainTransition =
         let NewEpochState e1 _ _ _ _ _ _ = nes
             NewEpochState e2 _ bcur es _ _pd _ = nes'
         let EpochState account _ ls _ pp' _ = es
-        let LedgerState _ (DPState (DState _ _ genDelegs _) (PState _ _ _)) = ls
+        let LedgerState _ (DPState DState {dsGenDelegs = genDelegs} PState {}) = ls
         let ph = lastAppliedHash lab
             etaPH = prevHashToNonce ph
 
@@ -450,3 +453,16 @@ ppChainState (ChainState nes ocert epochnonce evolvenonce prevnonce candnonce la
 
 instance PP.CanPrettyPrintLedgerState era => PP.PrettyA (ChainState era) where
   prettyA = ppChainState
+
+instance
+  ( ToExpr (Core.PParams era),
+    ToExpr (Core.TxOut era),
+    ToExpr (State (Core.EraRule "PPUP" era)),
+    ToExpr (StashedAVVMAddresses era)
+  ) =>
+  ToExpr (ChainState era)
+
+instance ToExpr (HashHeader c) where
+  toExpr = defaultExprViaShow
+
+instance ToExpr (LastAppliedBlock c)

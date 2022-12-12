@@ -47,6 +47,8 @@ import Cardano.Ledger.Shelley.LedgerState
     dsFutureGenDelegs,
     dsGenDelegs,
     dsIRewards,
+    payKeyDeposit,
+    refundKeyDeposit,
     rewards,
   )
 import Cardano.Ledger.Shelley.TxBody
@@ -139,7 +141,8 @@ newtype ShelleyDelegEvent era = NewEpoch EpochNo
 
 instance
   ( Typeable era,
-    HasField "_protocolVersion" (PParams era) ProtVer
+    HasField "_protocolVersion" (PParams era) ProtVer,
+    HasField "_keyDeposit" (PParams era) Coin
   ) =>
   STS (ShelleyDELEG era)
   where
@@ -263,7 +266,8 @@ instance
 
 delegationTransition ::
   ( Typeable era,
-    HasField "_protocolVersion" (PParams era) ProtVer
+    HasField "_protocolVersion" (PParams era) ProtVer,
+    HasField "_keyDeposit" (PParams era) Coin
   ) =>
   TransitionRule (ShelleyDELEG era)
 delegationTransition = do
@@ -274,7 +278,7 @@ delegationTransition = do
       let u1 = dsUnified ds
           u2 = Rewards u1 UM.∪ (hk, mempty)
           u3 = Ptrs u2 UM.∪ (ptr, hk)
-      pure ds {dsUnified = u3}
+      pure (payKeyDeposit hk pp (ds {dsUnified = u3}))
     DCertDeleg (DeRegKey hk) -> do
       -- note that pattern match is used instead of cwitness, as in the spec
       eval (hk ∈ dom (rewards ds)) ?! StakeKeyNotRegisteredDELEG hk
@@ -285,7 +289,8 @@ delegationTransition = do
           u1 = Set.singleton hk UM.⋪ Rewards u0
           u2 = Set.singleton hk UM.⋪ Delegations u1
           u3 = Ptrs u2 UM.⋫ Set.singleton hk
-      pure ds {dsUnified = u3}
+          u4 = refundKeyDeposit hk (ds {dsUnified = u3})
+      pure u4
     DCertDeleg (Delegate (Delegation hk dpool)) -> do
       -- note that pattern match is used instead of cwitness and dpool, as in the spec
       eval (hk ∈ dom (rewards ds)) ?! StakeDelegationImpossibleDELEG hk
@@ -378,7 +383,8 @@ delegationTransition = do
 
 checkSlotNotTooLate ::
   ( Typeable era,
-    HasField "_protocolVersion" (PParams era) ProtVer
+    HasField "_protocolVersion" (PParams era) ProtVer,
+    HasField "_keyDeposit" (PParams era) Coin
   ) =>
   SlotNo ->
   Rule (ShelleyDELEG era) 'Transition ()

@@ -18,7 +18,7 @@ import qualified Test.Cardano.Ledger.Examples.AlonzoInvalidTxUTXOW as AlonzoInva
 import qualified Test.Cardano.Ledger.Examples.AlonzoValidTxUTXOW as AlonzoValidTxUTXOW (tests)
 import Test.Cardano.Ledger.Examples.BabbageFeatures (babbageFeatures)
 import Test.Cardano.Ledger.Examples.Consensus (genericConsensusTest)
-import Test.Cardano.Ledger.Generic.AggPropTests (aggTests)
+import Test.Cardano.Ledger.Generic.AggPropTests (aggTests, depositTests)
 import Test.Cardano.Ledger.Generic.Properties (genericProperties)
 import qualified Test.Cardano.Ledger.NoThunks as NoThunks
 import Test.Cardano.Ledger.Tickf (calcPoolDistOldEqualsNew)
@@ -35,7 +35,8 @@ tests = askOption $ \case
 
 mainTestTrees :: [TestTree]
 mainTestTrees =
-  [ calcPoolDistOldEqualsNew,
+  [ depositTests,
+    calcPoolDistOldEqualsNew,
     genericConsensusTest,
     baseTypesTests,
     Tools.tests,

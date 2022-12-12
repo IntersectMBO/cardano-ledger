@@ -27,12 +27,9 @@ import Cardano.Ledger.Pretty
     ppSlotNo,
   )
 import Cardano.Ledger.Shelley.LedgerState
-  ( DPState (..),
-    DState (..),
-    EpochState (..),
+  ( EpochState (..),
     LedgerState (..),
     NewEpochState (..),
-    PState (..),
     StashedAVVMAddresses,
   )
 import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate)
@@ -168,7 +165,6 @@ chainTransition = do
 
   let NewEpochState _ _ (BlocksMade current) epochState _ _ _ = nes'
       EpochState account _ ledgerState _ pparams _ = epochState
-      LedgerState _ (DPState (DState _ _ _genDelegs _) (PState _ _ _)) = ledgerState
 
   let newblocksmade = BlocksMade (Map.unionWith (+) current (Map.singleton issuer 1))
 

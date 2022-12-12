@@ -24,6 +24,8 @@ import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Data.UMap (Tag (..), Trip (..), UMap (..), UnifiedView (..), View (..))
 
 -- ====================================================
+-- Recall
+-- data UMap coin cred pool ptr = UnifiedMap !(Map cred (Trip coin ptr pool)) !(Map ptr cred)
 
 type UnifiedMap c = UMap Coin (Credential 'Staking c) (KeyHash 'StakePool c) Ptr
 

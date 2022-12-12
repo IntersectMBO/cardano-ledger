@@ -43,7 +43,7 @@ import qualified Cardano.Ledger.Crypto as CC (Crypto (HASH))
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Shelley.Era (ShelleyPOOL)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
-import Cardano.Ledger.Shelley.LedgerState (PState (..))
+import Cardano.Ledger.Shelley.LedgerState (PState (..), payPoolDeposit)
 import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
@@ -106,6 +106,7 @@ instance
   ( Era era,
     HasField "_minPoolCost" (PParams era) Coin,
     HasField "_eMax" (PParams era) EpochNo,
+    HasField "_poolDeposit" (PParams era) Coin,
     HasField "_protocolVersion" (PParams era) ProtVer
   ) =>
   STS (ShelleyPOOL era)
@@ -180,6 +181,7 @@ poolDelegationTransition ::
   forall era.
   ( Era era,
     HasField "_minPoolCost" (PParams era) Coin,
+    HasField "_poolDeposit" (PParams era) Coin,
     HasField "_eMax" (PParams era) EpochNo,
     HasField "_protocolVersion" (PParams era) ProtVer
   ) =>
@@ -215,11 +217,19 @@ poolDelegationTransition = do
           -- register new, Pool-Reg
           tellEvent $ RegisterPool hk
           pure $
-            ps
-              { psStakePoolParams = eval (psStakePoolParams ps ∪ singleton hk poolParam)
-              }
+            payPoolDeposit hk pp $
+              ps
+                { psStakePoolParams = eval (psStakePoolParams ps ∪ singleton hk poolParam)
+                }
         else do
           tellEvent $ ReregisterPool hk
+          -- hk is already registered, so we want to reregister it. That means adding it to the
+          -- Future pool params (if it is not there already), and overriding the range with the new 'poolParam',
+          -- if it is (using ⨃ ). We must also unretire it, if it has been schedule for retirement.
+          -- The deposit does not change. One pays the deposit just once. Only if it is fully retired
+          -- (i.e. it's deposit has been refunded, and it has been removed from the registered pools).
+          -- does it need to pay a new deposit (at the current deposit amount). But of course,
+          -- if that has happened, we cannot be in this branch of the if statement.
           pure $
             ps
               { psFutureStakePoolParams = eval (psFutureStakePoolParams ps ⨃ singleton hk poolParam),
@@ -238,6 +248,7 @@ poolDelegationTransition = do
         <= cepoch
         + maxEpoch
         ?! StakePoolRetirementWrongEpochPOOL cepoch e (cepoch + maxEpoch)
+      -- We just schedule it for retirement. When it is retired we refund the deposit (see POOLREAP)
       pure $ ps {psRetiring = eval (psRetiring ps ⨃ singleton hk (EpochNo e))}
     DCertDeleg _ -> do
       failBecause $ WrongCertificateTypePOOL 0

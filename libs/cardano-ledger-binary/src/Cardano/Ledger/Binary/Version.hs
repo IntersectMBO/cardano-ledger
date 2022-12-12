@@ -27,6 +27,7 @@ module Cardano.Ledger.Binary.Version
   )
 where
 
+import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (toExpr))
 import Control.DeepSeq (NFData)
 import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
@@ -102,3 +103,8 @@ byronProtVer = natVersion @1
 
 shelleyProtVer :: Version
 shelleyProtVer = natVersion @2
+
+-- ==================================
+
+instance ToExpr Version where
+  toExpr (Version n) = App "Version" [toExpr n]

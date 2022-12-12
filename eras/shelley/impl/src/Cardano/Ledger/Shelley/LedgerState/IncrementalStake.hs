@@ -196,7 +196,7 @@ incrementalStakeDistr incstake ds ps =
     (VMap.fromMap poolParams)
   where
     UnifiedMap tripmap ptrmap = dsUnified ds
-    PState poolParams _ _ = ps
+    poolParams = psStakePoolParams ps
     delegs_ = UM.viewToVMap (delegations ds)
     -- A credential is active, only if it is being delegated
     step1 = resolveActiveIncrementalPtrs (`VMap.member` delegs_) ptrmap incstake

@@ -33,10 +33,13 @@ import Cardano.Ledger.Binary (FromCBOR, ToCBOR)
 import Cardano.Ledger.Crypto (ADDRHASH)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.SafeHash (SafeHash)
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
 import Data.Aeson
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
+
+instance ToExpr (ScriptHash c)
 
 --   $eraIndep
 --

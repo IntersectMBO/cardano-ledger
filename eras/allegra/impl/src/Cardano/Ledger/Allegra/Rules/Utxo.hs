@@ -19,7 +19,7 @@ module Cardano.Ledger.Allegra.Rules.Utxo
   )
 where
 
-import Cardano.Ledger.Address (Addr)
+import Cardano.Ledger.Address (Addr, RewardAcnt)
 import Cardano.Ledger.Allegra.Era (AllegraUTXO)
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (ValidityInterval), inInterval)
 import Cardano.Ledger.Allegra.TxBody (AllegraEraTxBody (..))
@@ -47,14 +47,13 @@ import Cardano.Ledger.Rules.ValidationMode
     Test,
     runTest,
   )
-import Cardano.Ledger.Shelley.LedgerState (PPUPState)
+import Cardano.Ledger.Shelley.LedgerState (PPUPState, keyTxRefunds, totalTxDeposits)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..), Update)
 import Cardano.Ledger.Shelley.Rules (PpupEnv (..), ShelleyPPUP, ShelleyPpupPredFailure)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), TxIn)
-import Cardano.Ledger.Shelley.TxBody (RewardAcnt, ShelleyEraTxBody (..))
-import Cardano.Ledger.Shelley.UTxO (totalDeposits, txup)
+import Cardano.Ledger.Shelley.UTxO (txup)
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), txouts)
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (SlotNo)
@@ -136,7 +135,7 @@ instance
 newtype AllegraUtxoEvent era
   = UpdateEvent (Event (EraRule "PPUP" era))
 
--- | The UTxO transition rule for the Shelley-MA (Mary and Allegra) eras.
+-- | The UTxO transition rule for the Allegra era.
 utxoTransition ::
   forall era.
   ( EraTx era,
@@ -154,7 +153,7 @@ utxoTransition ::
   ) =>
   TransitionRule (AllegraUTXO era)
 utxoTransition = do
-  TRC (Shelley.UtxoEnv slot pp stakepools genDelegs, u, tx) <- judgmentContext
+  TRC (Shelley.UtxoEnv slot pp dpstate genDelegs, u, tx) <- judgmentContext
   let Shelley.UTxOState utxo _ _ ppup _ = u
   let txb = tx ^. bodyTxL
 
@@ -180,7 +179,7 @@ utxoTransition = do
   runTest $ Shelley.validateWrongNetworkWithdrawal netId txb
 
   {- consumed pp utxo txb = produced pp poolParams txb -}
-  runTest $ Shelley.validateValueNotConservedUTxO pp utxo stakepools txb
+  runTest $ Shelley.validateValueNotConservedUTxO pp utxo dpstate txb
 
   -- process Protocol Parameter Update Proposals
   ppup' <-
@@ -203,9 +202,9 @@ utxoTransition = do
   {- txsize tx ≤ maxTxSize pp -}
   runTest $ Shelley.validateMaxTxSizeUTxO pp tx
 
-  let refunded = Shelley.keyRefunds pp txb
-  let txCerts = toList $ txb ^. certsTxBodyL
-  let depositChange = totalDeposits pp (`Map.notMember` stakepools) txCerts Val.<-> refunded
+  let refunded = keyTxRefunds pp dpstate txb
+  let depositChange = totalTxDeposits pp dpstate txb Val.<-> refunded
+
   pure $! Shelley.updateUTxOState u txb depositChange ppup'
 
 -- | Ensure the transaction is within the validity window.

@@ -11,6 +11,7 @@
 -- Example demonstrating using the protocol parameter update system.
 module Test.Cardano.Ledger.Shelley.Examples.Updates
   ( updatesExample,
+    updates4,
   )
 where
 
@@ -200,7 +201,7 @@ expectedStEx1 :: forall c. (ExMock (EraCrypto (ShelleyEra c))) => ChainState (Sh
 expectedStEx1 =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx1 @c))
     . C.newLab blockEx1
-    . C.feesAndDeposits feeTx1 (Coin 0)
+    . C.feesAndDeposits ppEx feeTx1 [] []
     . C.newUTxO txbodyEx1
     . C.setCurrentProposals ppVotes1
     $ initStUpdates
@@ -274,7 +275,7 @@ expectedStEx2 :: forall c. (ExMock (EraCrypto (ShelleyEra c))) => ChainState (Sh
 expectedStEx2 =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx2 @c))
     . C.newLab blockEx2
-    . C.feesAndDeposits feeTx2 (Coin 0)
+    . C.feesAndDeposits ppEx feeTx2 [] []
     . C.newUTxO txbodyEx2
     . C.setCurrentProposals (collectVotes ppVoteA [0, 1, 3, 4, 5])
     $ expectedStEx1
@@ -366,7 +367,7 @@ expectedStEx3 :: forall c. (ExMock (EraCrypto (ShelleyEra c))) => ChainState (Sh
 expectedStEx3 =
   C.evolveNonceFrozen (getBlockNonce (blockEx3 @c))
     . C.newLab blockEx3
-    . C.feesAndDeposits feeTx3 (Coin 0)
+    . C.feesAndDeposits ppEx feeTx3 [] []
     . C.newUTxO txbodyEx3
     . C.pulserUpdate pulserEx3
     . C.setFutureProposals (collectVotes ppVoteB [1])

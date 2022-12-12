@@ -24,6 +24,7 @@ where
 import Cardano.HeapWords (HeapWords)
 import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Compactible
+import Cardano.Ledger.TreeDiff (ToExpr (toExpr))
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Group (Abelian, Group (..))
@@ -110,3 +111,12 @@ instance ToCBOR (CompactForm DeltaCoin) where
 
 instance FromCBOR (CompactForm DeltaCoin) where
   fromCBOR = CompactDeltaCoin <$> fromCBOR
+
+-- ================================
+
+instance ToExpr Coin
+
+instance ToExpr DeltaCoin
+
+instance ToExpr (CompactForm Coin) where
+  toExpr x = toExpr (fromCompact x)

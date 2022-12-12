@@ -27,6 +27,7 @@ module Cardano.Ledger.Mary.Value
     representationSize,
     showValue,
     valueFromList,
+    ToExpr (..),
   )
 where
 
@@ -56,6 +57,7 @@ import Cardano.Ledger.Coin (Coin (..), CompactForm (..), integerToWord64)
 import Cardano.Ledger.Compactible (Compactible (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Shelley.Scripts (ScriptHash (..))
+import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (..), trimExprViaShow)
 import Cardano.Ledger.Val (DecodeNonNegative (..), Val (..))
 import Control.DeepSeq (NFData (..), deepseq, rwhnf)
 import Control.Monad (forM_)
@@ -121,7 +123,7 @@ instance FromCBOR AssetName where
 
 -- | Policy ID
 newtype PolicyID c = PolicyID {policyID :: ScriptHash c}
-  deriving (Show, Eq, ToCBOR, FromCBOR, Ord, NoThunks, NFData)
+  deriving (Show, Eq, ToCBOR, FromCBOR, Ord, NoThunks, NFData, Generic)
 
 -- | The MultiAssets map
 newtype MultiAsset c = MultiAsset (Map (PolicyID c) (Map AssetName Integer))
@@ -849,3 +851,14 @@ flattenMultiAsset (MultiAsset m) =
     | (policyId, m2) <- assocs m,
       (aname, amount) <- assocs m2
   ]
+
+-- ==========================================
+
+instance ToExpr (MaryValue c)
+
+instance ToExpr (MultiAsset c)
+
+instance ToExpr (PolicyID c)
+
+instance ToExpr AssetName where
+  toExpr (AssetName sbs) = App "AssetName" [trimExprViaShow 10 sbs]

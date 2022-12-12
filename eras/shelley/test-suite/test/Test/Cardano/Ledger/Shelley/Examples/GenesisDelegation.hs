@@ -206,7 +206,7 @@ expectedStEx1 ::
 expectedStEx1 =
   C.evolveNonceUnfrozen (getBlockNonce @(ShelleyEra c) blockEx1)
     . C.newLab blockEx1
-    . C.feesAndDeposits feeTx1 (Coin 0)
+    . C.feesAndDeposits ppEx feeTx1 [] []
     . C.newUTxO txbodyEx1
     . C.setFutureGenDeleg newGenDeleg
     $ initStGenesisDeleg

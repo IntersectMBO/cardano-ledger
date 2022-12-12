@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -21,10 +22,11 @@ module Cardano.Ledger.Shelley.Rules.Ledger
     ShelleyLedgerEvent (..),
     Event,
     PredicateFailure,
+    epochFromSlot,
   )
 where
 
-import Cardano.Ledger.BaseTypes (ShelleyBase, TxIx, invalidKey)
+import Cardano.Ledger.BaseTypes (Globals, ShelleyBase, TxIx, epochInfoPure, invalidKey)
 import Cardano.Ledger.Binary
   ( FromCBOR (..),
     ToCBOR (..),
@@ -33,7 +35,6 @@ import Cardano.Ledger.Binary
   )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.EpochBoundary (obligation)
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley.Era (ShelleyLEDGER)
 import Cardano.Ledger.Shelley.LedgerState
@@ -43,7 +44,7 @@ import Cardano.Ledger.Shelley.LedgerState
     LedgerState (..),
     PState (..),
     UTxOState (..),
-    rewards,
+    obligationDPState,
   )
 import Cardano.Ledger.Shelley.Rules.Delegs
   ( DelegsEnv (..),
@@ -51,13 +52,16 @@ import Cardano.Ledger.Shelley.Rules.Delegs
     ShelleyDelegsEvent,
     ShelleyDelegsPredFailure,
   )
+import Cardano.Ledger.Shelley.Rules.Reports (showTxCerts, synopsisCoinMap)
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
 import Cardano.Ledger.Shelley.Rules.Utxow (ShelleyUTXOW, ShelleyUtxowPredFailure)
-import Cardano.Ledger.Shelley.TxBody (DCert, ShelleyEraTxBody (..))
-import Cardano.Ledger.Slot (SlotNo)
+import Cardano.Ledger.Shelley.TxBody (DCert (..), ShelleyEraTxBody (..))
+import Cardano.Ledger.Slot (EpochNo, SlotNo, epochInfoEpoch)
 import Control.DeepSeq (NFData (..))
+import Control.Monad.Reader (Reader)
+import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
-  ( Assertion (..),
+  ( Assertion (PostCondition),
     AssertionViolation (..),
     Embed (..),
     STS (..),
@@ -70,7 +74,7 @@ import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import GHC.Records (HasField)
+import GHC.Records (HasField (..))
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
@@ -147,9 +151,13 @@ instance
           pure (2, DelegsFailure a)
         k -> invalidKey k
 
+epochFromSlot :: SlotNo -> Reader Globals EpochNo
+epochFromSlot slot = do
+  ei <- asks epochInfoPure
+  epochInfoEpoch ei slot
+
 instance
   ( Show (PParams era),
-    Show (Tx era),
     Show (TxOut era),
     Show (State (EraRule "PPUP" era)),
     DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody),
@@ -178,23 +186,32 @@ instance
   initialRules = []
   transitionRules = [ledgerTransition]
 
-  renderAssertionViolation AssertionViolation {avSTS, avMsg, avCtx, avState} =
+  renderAssertionViolation AssertionViolation {avSTS, avMsg, avCtx = (TRC (LedgerEnv slot _ pp _, _, tx)), avState} =
     "AssertionViolation ("
       <> avSTS
       <> "): "
       <> avMsg
+      <> "\n CERTS\n"
+      <> showTxCerts (tx ^. bodyTxL)
+      <> "\n (slot,PParams) "
+      <> show (slot, pp)
       <> "\n"
-      <> show avCtx
+      <> seq (show avState) "avState"
+      <> "\n Deposits "
+      <> show (utxosDeposited <$> (lsUTxOState <$> avState))
+      <> "\n dsDeposits\n"
+      <> synopsisCoinMap (dsDeposits <$> (dpsDState <$> (lsDPState <$> avState)))
       <> "\n"
-      <> show avState
+      <> show (dsDeposits <$> (dpsDState <$> (lsDPState <$> avState)))
+      <> "\n psDeposits\n"
+      <> synopsisCoinMap (psDeposits <$> (dpsPState <$> (lsDPState <$> avState)))
 
   assertions =
     [ PostCondition
         "Deposit pot must equal obligation"
-        ( \(TRC (LedgerEnv {ledgerPp}, _, _))
-           (LedgerState utxoSt DPState {dpsDState, dpsPState}) ->
-              obligation ledgerPp (rewards dpsDState) (psStakePoolParams dpsPState) -- FIX ME
-                == utxosDeposited utxoSt
+        ( \(TRC (_, _, _))
+           (LedgerState utxoSt dpstate) ->
+              obligationDPState dpstate == utxosDeposited utxoSt
         )
     ]
 
@@ -214,7 +231,6 @@ ledgerTransition ::
   TransitionRule (ShelleyLEDGER era)
 ledgerTransition = do
   TRC (LedgerEnv slot txIx pp account, LedgerState utxoSt dpstate, tx) <- judgmentContext
-
   dpstate' <-
     trans @(EraRule "DELEGS" era) $
       TRC
@@ -222,15 +238,12 @@ ledgerTransition = do
           dpstate,
           StrictSeq.fromStrict $ tx ^. bodyTxL . certsTxBodyL
         )
-
-  let DPState dstate pstate = dpstate
-      genDelegs = dsGenDelegs dstate
-      stpools = psStakePoolParams pstate
+  let genDelegs = dsGenDelegs (dpsDState dpstate)
 
   utxoSt' <-
     trans @(EraRule "UTXOW" era) $
       TRC
-        ( UtxoEnv slot pp stpools genDelegs,
+        ( UtxoEnv slot pp dpstate genDelegs,
           utxoSt,
           tx
         )

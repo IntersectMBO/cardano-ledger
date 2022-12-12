@@ -86,6 +86,7 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley (nativeMultiSigTag)
+import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (..), defaultExprViaShow)
 import Control.DeepSeq (NFData (..), deepseq, rwhnf)
 import Control.Monad (when)
 import Control.Monad.Trans.Writer (WriterT (runWriterT))
@@ -436,3 +437,14 @@ eqAlonzoScriptRaw :: AlonzoScript era -> AlonzoScript era -> Bool
 eqAlonzoScriptRaw (TimelockScript t1) (TimelockScript t2) = eqTimelockRaw t1 t2
 eqAlonzoScriptRaw (PlutusScript l1 s1) (PlutusScript l2 s2) = l1 == l2 && s1 == s2
 eqAlonzoScriptRaw _ _ = False
+
+instance ToExpr CostModel where
+  toExpr (CostModel lang cmmap _) =
+    App "CostModel" [toExpr lang, toExpr cmmap, App "PV1.EvaluationContext" []]
+
+instance ToExpr CostModels
+
+instance ToExpr Prices
+
+instance ToExpr ExUnits where
+  toExpr (WrapExUnits (ExUnits' x y)) = App "ExUnits" [defaultExprViaShow x, defaultExprViaShow y]

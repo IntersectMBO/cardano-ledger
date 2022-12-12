@@ -70,6 +70,7 @@ import Cardano.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..))
 import Cardano.Ledger.Orphans ()
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
 import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
@@ -513,3 +514,13 @@ pvCanFollow :: BT.ProtVer -> StrictMaybe BT.ProtVer -> Bool
 pvCanFollow _ SNothing = True
 pvCanFollow (BT.ProtVer m n) (SJust (BT.ProtVer m' n')) =
   (succVersion m, 0) == (Just m', n') || (m, n + 1) == (m', n')
+
+-- ==============================================
+
+instance ToExpr (Core.PParamsUpdate era) => ToExpr (PPUPState era)
+
+instance ToExpr (Core.PParamsUpdate era) => ToExpr (ProposedPPUpdates era)
+
+instance ToExpr (ShelleyPParamsHKD StrictMaybe era)
+
+instance ToExpr (ShelleyPParamsHKD Identity era)

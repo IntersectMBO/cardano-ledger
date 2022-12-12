@@ -21,6 +21,7 @@ module Test.Cardano.Ledger.Shelley.PropertyTests
     -- Crypto era only
     propCompactAddrRoundTrip,
     propCompactSerializationAgree,
+    depositTests,
   )
 where
 
@@ -63,6 +64,7 @@ import Test.Cardano.Ledger.Shelley.Rules.TestChain
     adaPreservationChain,
     collisionFreeComplete,
     delegProperties,
+    depositTests,
     poolProperties,
     removedAfterPoolreap,
     stakeIncrTest,

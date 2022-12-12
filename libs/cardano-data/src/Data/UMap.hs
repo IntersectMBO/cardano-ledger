@@ -80,6 +80,7 @@ module Data.UMap
 where
 
 import Cardano.Ledger.Binary
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData (..))
 import Control.Monad.Trans.State.Strict (StateT (..))
 import Data.Foldable (Foldable (..))
@@ -802,3 +803,9 @@ unify rews dels ptrss = um3
     um1 = unView $ Map.foldlWithKey' (\um k v -> insert' k v um) (Rewards empty) rews
     um2 = unView $ Map.foldlWithKey' (\um k v -> insert' k v um) (Delegations um1) dels
     um3 = unView $ Map.foldlWithKey' (\um k v -> insert' k v um) (Ptrs um2) ptrss
+
+-- =====================================================
+
+instance (ToExpr a, ToExpr b, ToExpr c, ToExpr d) => ToExpr (UMap a b c d)
+
+instance (ToExpr a, ToExpr b, ToExpr c) => ToExpr (Trip a b c)

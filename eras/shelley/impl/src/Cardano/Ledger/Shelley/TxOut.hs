@@ -45,6 +45,7 @@ import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (_minUTxOValue)
+import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (toExpr))
 import Cardano.Ledger.Val (DecodeNonNegative (..))
 import Control.DeepSeq (NFData (rnf))
 import Data.ByteString.Short (ShortByteString, pack)
@@ -170,3 +171,8 @@ instance
 -- used to calculate heapWords
 packedADDRHASH :: forall proxy era. (CC.Crypto (EraCrypto era)) => proxy era -> ShortByteString
 packedADDRHASH _ = pack (replicate (fromIntegral (1 + 2 * HS.sizeHash (Proxy :: Proxy (CC.ADDRHASH (EraCrypto era))))) (1 :: Word8))
+
+-- ============================================================
+
+instance (EraTxOut era, ToExpr (Value era)) => ToExpr (ShelleyTxOut era) where
+  toExpr (ShelleyTxOut x y) = App "ShelleyTxOut" [toExpr x, toExpr y]

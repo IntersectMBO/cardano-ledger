@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -24,14 +25,15 @@ import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.EpochBoundary (obligation)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking))
 import Cardano.Ledger.Shelley.Era (ShelleyPOOLREAP)
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
+    DPState (..),
     DState (..),
     PState (..),
     UTxOState (..),
+    obligationDPState,
     rewards,
   )
 import Cardano.Ledger.Shelley.TxBody (RewardAcnt, getRwdCred, ppRewardAcnt)
@@ -51,6 +53,7 @@ import Data.Default.Class (Default, def)
 import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
+import qualified Data.Set as Set (member)
 import Data.Typeable (Typeable)
 import qualified Data.UMap as UM
 import GHC.Generics (Generic)
@@ -99,9 +102,8 @@ instance
   assertions =
     [ PostCondition
         "Deposit pot must equal obligation"
-        ( \(TRC (pp, _, _)) st ->
-            obligation pp (rewards $ prDState st) (psStakePoolParams $ prPState st)
-              == utxosDeposited (prUTxOSt st)
+        ( \(TRC (_, _, _)) st ->
+            obligationDPState (DPState (prDState st) (prPState st)) == utxosDeposited (prUTxOSt st)
         ),
       PostCondition
         "PoolReap may not create or remove reward accounts"
@@ -113,19 +115,20 @@ instance
 
 poolReapTransition ::
   forall era.
-  HasField "_poolDeposit" (PParams era) Coin =>
   TransitionRule (ShelleyPOOLREAP era)
 poolReapTransition = do
-  TRC (pp, PoolreapState us a ds ps, e) <- judgmentContext
+  TRC (_pp, PoolreapState us a ds ps, e) <- judgmentContext
 
-  let retired :: Set (KeyHash 'StakePool (EraCrypto era))
+  let -- The set of pools retiring this epoch
+      retired :: Set (KeyHash 'StakePool (EraCrypto era))
       retired = eval (dom (psRetiring ps ▷ setSingleton e))
-      pr :: Map.Map (KeyHash 'StakePool (EraCrypto era)) Coin
-      pr = Map.fromSet (const (getField @"_poolDeposit" pp)) retired
+      -- The Map of pools (retiring this epoch) to their deposits
+      retiringDeposits, remainingDeposits :: Map.Map (KeyHash 'StakePool (EraCrypto era)) Coin
+      (retiringDeposits, remainingDeposits) = Map.partitionWithKey (\k _ -> Set.member k retired) (psDeposits ps)
       rewardAcnts :: Map.Map (KeyHash 'StakePool (EraCrypto era)) (RewardAcnt (EraCrypto era))
       rewardAcnts = Map.map ppRewardAcnt $ eval (retired ◁ psStakePoolParams ps)
       rewardAcnts_ :: Map.Map (KeyHash 'StakePool (EraCrypto era)) (RewardAcnt (EraCrypto era), Coin)
-      rewardAcnts_ = Map.intersectionWith (,) rewardAcnts pr
+      rewardAcnts_ = Map.intersectionWith (,) rewardAcnts retiringDeposits
       rewardAcnts' :: Map.Map (RewardAcnt (EraCrypto era)) Coin
       rewardAcnts' =
         Map.fromListWith (<+>)
@@ -157,7 +160,6 @@ poolReapTransition = do
             unclaimedPools = unclaimedPools',
             epochNo = e
           }
-
   pure $
     PoolreapState
       us {utxosDeposited = utxosDeposited us <-> (unclaimed <+> refunded)}
@@ -170,5 +172,6 @@ poolReapTransition = do
       ps
         { psStakePoolParams = eval (retired ⋪ psStakePoolParams ps),
           psFutureStakePoolParams = eval (retired ⋪ psFutureStakePoolParams ps),
-          psRetiring = eval (retired ⋪ psRetiring ps)
+          psRetiring = eval (retired ⋪ psRetiring ps),
+          psDeposits = remainingDeposits
         }

@@ -138,9 +138,11 @@ pcMUtxo proof m = ppMap pcTxIn (pcTxOut proof) m
 data ModelNewEpochState era = ModelNewEpochState
   { -- PState fields
     mPoolParams :: !(Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era))),
+    mPoolDeposits :: !(Map (KeyHash 'StakePool (EraCrypto era)) Coin),
     -- DState state fields
     mRewards :: !(Map (Credential 'Staking (EraCrypto era)) Coin),
     mDelegations :: !(Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))),
+    mKeyDeposits :: !(Map (Credential 'Staking (EraCrypto era)) Coin),
     --  _fGenDelegs,  _genDelegs, and _irwd, are for
     --  changing the PParams and are abstracted away
 
@@ -210,10 +212,10 @@ instantaneousRewardsZero :: InstantaneousRewards c
 instantaneousRewardsZero = InstantaneousRewards Map.empty Map.empty mempty mempty
 
 dStateZero :: DState c
-dStateZero = DState UMap.empty Map.empty genDelegsZero instantaneousRewardsZero
+dStateZero = DState UMap.empty Map.empty genDelegsZero instantaneousRewardsZero Map.empty
 
 pStateZero :: PState c
-pStateZero = PState Map.empty Map.empty Map.empty
+pStateZero = PState Map.empty Map.empty Map.empty Map.empty
 
 dPStateZero :: DPState c
 dPStateZero = DPState dStateZero pStateZero
@@ -281,8 +283,10 @@ mNewEpochStateZero :: Reflect era => ModelNewEpochState era
 mNewEpochStateZero =
   ModelNewEpochState
     { mPoolParams = Map.empty,
+      mPoolDeposits = Map.empty,
       mRewards = Map.empty,
       mDelegations = Map.empty,
+      mKeyDeposits = Map.empty,
       mUTxO = Map.empty,
       mMutFee = Map.empty,
       mAccountState = accountStateZero,
@@ -320,9 +324,10 @@ instance EraCrypto era ~ c => Extract (DState c) era where
       Map.empty
       genDelegsZero
       instantaneousRewardsZero
+      (mKeyDeposits x)
 
 instance EraCrypto era ~ c => Extract (PState c) era where
-  extract x = PState (mPoolParams x) (mFPoolParams x) (mRetiring x)
+  extract x = PState (mPoolParams x) (mFPoolParams x) (mRetiring x) Map.empty
 
 instance EraCrypto era ~ c => Extract (DPState c) era where
   extract x = DPState (extract x) (extract x)
@@ -344,8 +349,8 @@ instance Reflect era => Extract (EpochState era) era where
       (mAccountState x)
       (mSnapshots x)
       (extract x)
-      (pParamsZero @era)
-      (pParamsZero @era)
+      (mPParams x)
+      (mPParams x)
       nonMyopicZero
 
 instance forall era. Reflect era => Extract (NewEpochState era) era where
@@ -363,8 +368,10 @@ abstract :: NewEpochState era -> ModelNewEpochState era
 abstract x =
   ModelNewEpochState
     { mPoolParams = (psStakePoolParams . dpsPState . lsDPState . esLState . nesEs) x,
+      mPoolDeposits = (psDeposits . dpsPState . lsDPState . esLState . nesEs) x,
       mRewards = (UMap.rewView . dsUnified . dpsDState . lsDPState . esLState . nesEs) x,
       mDelegations = (UMap.delView . dsUnified . dpsDState . lsDPState . esLState . nesEs) x,
+      mKeyDeposits = (dsDeposits . dpsDState . lsDPState . esLState . nesEs) x,
       mUTxO = (unUTxO . utxosUtxo . lsUTxOState . esLState . nesEs) x,
       mMutFee = Map.empty,
       mAccountState = (esAccountState . nesEs) x,
@@ -397,8 +404,10 @@ pcModelNewEpochState :: Reflect era => Proof era -> ModelNewEpochState era -> PD
 pcModelNewEpochState proof x =
   ppRecord "ModelNewEpochState" $
     [ ("poolparams", ppMap keyHashSummary pcPoolParams (mPoolParams x)),
+      ("pool deposits", ppMap keyHashSummary ppCoin (mPoolDeposits x)),
       ("rewards", ppMap credSummary ppCoin (mRewards x)),
       ("delegations", ppMap pcCredential pcKeyHash (mDelegations x)),
+      ("key deposits", ppMap credSummary ppCoin (mKeyDeposits x)),
       ("utxo", ppMap pcTxIn (pcTxOut proof) (mUTxO x)),
       ("mutFees", ppMap pcTxIn (pcTxOut proof) (mMutFee x)),
       ("account", ppAccountState (mAccountState x)),

@@ -469,13 +469,12 @@ utxoTransition ::
     HasField "_maxValSize" (PParams era) Natural,
     HasField "_maxTxSize" (PParams era) Natural,
     HasField "_maxTxExUnits" (PParams era) ExUnits,
-    HasField "_maxCollateralInputs" (PParams era) Natural,
     HasField "_collateralPercentage" (PParams era) Natural,
     Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   TransitionRule (AlonzoUTXO era)
 utxoTransition = do
-  TRC (Shelley.UtxoEnv slot pp stakepools _genDelegs, u, tx) <- judgmentContext
+  TRC (Shelley.UtxoEnv slot pp dpstate _genDelegs, u, tx) <- judgmentContext
   let Shelley.UTxOState utxo _deposits _fees _ppup _ = u
 
   {-   txb := txbody tx   -}
@@ -506,7 +505,7 @@ utxoTransition = do
   runTest $ Shelley.validateBadInputsUTxO utxo inputsAndCollateral
 
   {- consumed pp utxo txb = produced pp poolParams txb -}
-  runTest $ Shelley.validateValueNotConservedUTxO pp utxo stakepools txBody
+  runTest $ Shelley.validateValueNotConservedUTxO pp utxo dpstate txBody
 
   {- adaPolicy ∉ supp mint tx
      above check not needed because mint field of type MultiAsset cannot contain ada -}
@@ -539,7 +538,6 @@ utxoTransition = do
   runTest $ validateExUnitsTooBigUTxO pp tx
 
   {-   ‖collateral tx‖  ≤  maxCollInputs pp   -}
-  runTest $ validateTooManyCollateralInputs pp txBody
 
   trans @(EraRule "UTXOS" era) =<< coerce <$> judgmentContext
 

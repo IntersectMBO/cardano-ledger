@@ -1,28 +1,45 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Generic.AggPropTests where
 
 import qualified Cardano.Ledger.Alonzo.PParams as Alonzo (AlonzoPParamsHKD (..))
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..))
+import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.LedgerState
-  ( EpochState (..),
+  ( DPState (..),
+    DState (..),
+    EpochState (..),
     LedgerState (..),
     NewEpochState (..),
+    PState (..),
     UTxOState (..),
   )
 import qualified Cardano.Ledger.Shelley.PParams as Shelley (ShelleyPParamsHKD (..))
+import Cardano.Ledger.Shelley.Rules.Reports (synopsisCoinMap)
+import Cardano.Ledger.TreeDiff (diffExpr)
 import Cardano.Ledger.UTxO (UTxO (..))
+import Cardano.Ledger.Val ((<+>))
 import Control.State.Transition (STS (..))
-import Control.State.Transition.Trace (Trace (..), TraceOrder (..), firstAndLastState, traceSignals)
+import Control.State.Transition.Trace
+  ( SourceSignalTarget (..),
+    Trace (..),
+    TraceOrder (..),
+    firstAndLastState,
+    sourceSignalTargets,
+    traceSignals,
+  )
 import Control.State.Transition.Trace.Generator.QuickCheck (HasTrace (..))
 import Data.Default.Class (Default (def))
 import Data.List (foldl')
 import qualified Data.Map as Map
 import qualified Data.Set as Set
+import Data.UMap (View (Rewards), domain)
 import Test.Cardano.Ledger.Generic.Functions
   ( getBody,
     getCollateralInputs,
@@ -33,7 +50,7 @@ import Test.Cardano.Ledger.Generic.Functions
   )
 import Test.Cardano.Ledger.Generic.GenState (GenSize (..), initStableFields)
 import Test.Cardano.Ledger.Generic.MockChain (MOCKCHAIN, MockBlock (..), MockChainState (..))
-import Test.Cardano.Ledger.Generic.Proof (Evidence (..), Proof (..), Reflect (..))
+import Test.Cardano.Ledger.Generic.Proof (Evidence (..), Proof (..), Reflect (..), Some (..), preBabbage, unReflect)
 import Test.Cardano.Ledger.Generic.Trace (Gen1, genTrace)
 import Test.QuickCheck
 import Test.Tasty
@@ -105,3 +122,61 @@ forAllChainTrace p@(Allegra _) n propf =
   property $ propf <$> genTrace p n (def {blocksizeMax = 4, slotDelta = (6, 12)}) (initStableFields p)
 forAllChainTrace p@(Shelley _) n propf =
   property $ propf <$> genTrace p n (def {blocksizeMax = 4, slotDelta = (6, 12)}) (initStableFields p)
+
+-- ===========================================================
+
+-- | Check that the sum of dsDeposits and the psDepoits are equal to the utxosDeposits
+depositInvariant ::
+  SourceSignalTarget (MOCKCHAIN era) ->
+  Property
+depositInvariant SourceSignalTarget {source = mockChainSt} =
+  let LedgerState {lsUTxOState = utxost, lsDPState = DPState dstate pstate} = (esLState . nesEs . mcsNes) mockChainSt
+      allDeposits = utxosDeposited utxost
+      sumCoin m = Map.foldl' (<+>) (Coin 0) m
+      keyDeposits = sumCoin (dsDeposits dstate)
+      poolDeposits = sumCoin (psDeposits pstate)
+   in counterexample
+        ( unlines
+            [ "Deposit invariant fails",
+              "All deposits = " ++ show allDeposits,
+              "Key deposits = " ++ synopsisCoinMap (Just (dsDeposits dstate)),
+              "Pool deposits = " ++ synopsisCoinMap (Just (psDeposits pstate))
+            ]
+        )
+        (allDeposits === keyDeposits <+> poolDeposits)
+
+rewardDepositDomainInvariant ::
+  SourceSignalTarget (MOCKCHAIN era) ->
+  Property
+rewardDepositDomainInvariant SourceSignalTarget {source = mockChainSt} =
+  let LedgerState {lsDPState = DPState dstate _} = (esLState . nesEs . mcsNes) mockChainSt
+      rewardDomain = domain (Rewards (dsUnified dstate))
+      depositDomain = Map.keysSet (dsDeposits dstate)
+   in counterexample
+        ( unlines
+            [ "Reward-Deposit domain invariant fails",
+              diffExpr rewardDomain depositDomain
+            ]
+        )
+        (rewardDomain === depositDomain)
+
+itemPropToTraceProp :: (SourceSignalTarget (MOCKCHAIN era) -> Property) -> Trace (MOCKCHAIN era) -> Property
+itemPropToTraceProp f trace1 = conjoin (map f (sourceSignalTargets trace1))
+
+depositEra :: forall era. Reflect era => Proof era -> TestTree
+depositEra proof =
+  testGroup
+    (show proof)
+    [ testProperty "Deposits = KeyDeposits + PoolDeposits" (forAllChainTrace proof 10 (itemPropToTraceProp (depositInvariant @era))),
+      testProperty "Reward domain = Deposit domain" (forAllChainTrace proof 10 (itemPropToTraceProp (rewardDepositDomainInvariant @era)))
+    ]
+
+-- | Build a TestTree that tests 'f' at all the Eras listed in 'ps'
+testEras :: String -> [Some Proof] -> (forall era. Reflect era => Proof era -> TestTree) -> TestTree
+testEras message ps f = testGroup message (applyF ps)
+  where
+    applyF [] = []
+    applyF (Some e : more) = unReflect e f : applyF more
+
+depositTests :: TestTree
+depositTests = testEras "deposit invariants" preBabbage depositEra

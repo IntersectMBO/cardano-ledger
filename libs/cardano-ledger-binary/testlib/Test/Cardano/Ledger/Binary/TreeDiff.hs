@@ -7,28 +7,27 @@ module Test.Cardano.Ledger.Binary.TreeDiff
     HexBytes (..),
     showExpr,
     diffExpr,
-    expectExprEqual,
     hexByteStringExpr,
     showHexBytesGrouped,
+    expectExprEqual,
+    expectExprEqualWithMessage,
   )
 where
 
 import Cardano.Ledger.Binary
-import Control.Monad
+import Cardano.Ledger.TreeDiff (diffExpr)
+import Control.Monad (unless)
 import Data.Bifunctor (bimap)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Lazy as BSL
 import Data.TreeDiff
-import Test.Hspec
+import Test.Hspec (Expectation, HasCallStack, expectationFailure)
 
 --------------------------------------------------------------------------------
 --  Diffing and pretty showing CBOR
 --------------------------------------------------------------------------------
-
-diffExpr :: ToExpr a => a -> a -> String
-diffExpr x y = show (ansiWlEditExpr (ediff x y))
 
 showExpr :: ToExpr a => a -> String
 showExpr = show . ansiWlExpr . toExpr
@@ -42,14 +41,6 @@ instance Show HexBytes where
 
 instance ToExpr HexBytes where
   toExpr = App "HexBytes" . hexByteStringExpr . unHexBytes
-
--- | Check that two values are equal and if they are not raise an exception with the
--- `ToExpr` diff
-expectExprEqual :: (Eq a, ToExpr a) => a -> a -> Expectation
-expectExprEqual x y =
-  unless (x == y) $
-    expectationFailure
-      ("Expected for two values to be equal:\n" ++ diffExpr x y)
 
 newtype CBORBytes = CBORBytes {unCBORBytes :: BS.ByteString}
   deriving (Eq)
@@ -101,3 +92,14 @@ showHexBytesGrouped bs =
   ]
   where
     bs16 = Base16.encode bs
+
+-- | Check that two values are equal and if they are not raise an exception with the
+-- `ToExpr` diff
+expectExprEqual :: (Eq a, ToExpr a) => a -> a -> Expectation
+expectExprEqual x y = expectExprEqualWithMessage "Expected two values to be equal:" x y
+
+expectExprEqualWithMessage :: (ToExpr a, Eq a, HasCallStack) => [Char] -> a -> a -> Expectation
+expectExprEqualWithMessage message expected actual =
+  unless (actual == expected) (expectationFailure msg)
+  where
+    msg = (if null message then "" else message ++ "\n") ++ diffExpr expected actual

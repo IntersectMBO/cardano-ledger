@@ -27,7 +27,6 @@ import Cardano.Ledger.DPState
   ( DPState (..),
     DState (..),
     InstantaneousRewards (..),
-    PState (..),
   )
 import Cardano.Ledger.Keys
   ( GenDelegPair (..),
@@ -35,14 +34,11 @@ import Cardano.Ledger.Keys
     KeyHash (..),
     KeyRole (..),
   )
+import Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits (keyTxRefunds, totalTxDeposits)
 import Cardano.Ledger.Shelley.LedgerState.Types
 import Cardano.Ledger.Shelley.TxBody
   ( MIRPot (..),
     ShelleyEraTxBody (..),
-  )
-import Cardano.Ledger.Shelley.UTxO
-  ( keyRefunds,
-    totalDeposits,
   )
 import Cardano.Ledger.UTxO
   ( UTxO (..),
@@ -56,12 +52,11 @@ import Cardano.Ledger.UnifiedMap
 import Cardano.Ledger.Val ((<+>), (<->))
 import Control.State.Transition (STS (State))
 import Data.Default.Class (Default, def)
-import Data.Foldable (fold, toList)
+import Data.Foldable (fold)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import GHC.Records (HasField (..))
-import Lens.Micro
 import Lens.Micro.Extras (view)
 
 -- | This function returns the coin balance of a given pot, either the
@@ -83,7 +78,7 @@ getGKeys nes = Map.keysSet genDelegs
   where
     NewEpochState _ _ _ es _ _ _ = nes
     EpochState _ _ ls _ _ _ = es
-    LedgerState _ (DPState (DState _ _ (GenDelegs genDelegs) _) _) = ls
+    LedgerState _ (DPState (DState _ _ (GenDelegs genDelegs) _ _) _) = ls
 
 -- | Creates the ledger state for an empty ledger which
 --  contains the specified transaction outputs.
@@ -124,10 +119,8 @@ depositPoolChange ls pp txBody = (currentPool <+> txDeposits) <-> txRefunds
     -- to emphasize this point.
 
     currentPool = (utxosDeposited . lsUTxOState) ls
-    pools = psStakePoolParams . dpsPState . lsDPState $ ls
-    txDeposits =
-      totalDeposits pp (`Map.notMember` pools) (toList $ txBody ^. certsTxBodyL)
-    txRefunds = keyRefunds pp txBody
+    txDeposits = totalTxDeposits pp (lsDPState ls) txBody
+    txRefunds = keyTxRefunds pp (lsDPState ls) txBody
 
 reapRewards ::
   UnifiedMap c ->

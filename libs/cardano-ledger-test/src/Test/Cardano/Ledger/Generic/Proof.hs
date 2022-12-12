@@ -47,6 +47,7 @@ module Test.Cardano.Ledger.Generic.Proof
     ConwayEra,
     C_Crypto,
     specialize,
+    unReflect,
   )
 where
 
@@ -330,3 +331,22 @@ specialize proof action =
     Babbage _ -> action
     Conway _ -> action
 {-# NOINLINE specialize #-}
+
+-- =================================================
+
+-- | lift a function (Proof era -> a) that has a (Reflect era) constraint
+--   to one that does not. This is possible because every inhabited
+--   term of type (Proof era) packs a (Reflect era) instance.
+unReflect :: Proof era -> (Reflect era => Proof era -> a) -> a
+unReflect (Shelley Mock) f = f (Shelley Mock)
+unReflect (Shelley Standard) f = f (Shelley Standard)
+unReflect (Allegra Mock) f = f (Allegra Mock)
+unReflect (Allegra Standard) f = f (Allegra Standard)
+unReflect (Mary Mock) f = f (Mary Mock)
+unReflect (Mary Standard) f = f (Mary Standard)
+unReflect (Alonzo Mock) f = f (Alonzo Mock)
+unReflect (Alonzo Standard) f = f (Alonzo Standard)
+unReflect (Babbage Mock) f = f (Babbage Mock)
+unReflect (Babbage Standard) f = f (Babbage Standard)
+unReflect (Conway Mock) f = f (Conway Mock)
+unReflect (Conway Standard) f = f (Conway Standard)

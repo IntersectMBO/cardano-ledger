@@ -49,10 +49,17 @@ module Cardano.Ledger.Shelley.LedgerState
     minfee,
     produced,
     witsFromTxWitnesses,
-    propWits,
 
     -- * DelegationState
-    keyRefunds,
+    keyTxRefunds,
+    payKeyDeposit,
+    payPoolDeposit,
+    refundKeyDeposit,
+    refundPoolDeposit,
+    totalTxDeposits,
+    obligationDPState,
+    keyCertsRefunds,
+    totalCertsDeposits,
 
     -- * Epoch boundary
     incrementalStakeDistr,
@@ -88,15 +95,15 @@ import Cardano.Ledger.Keys (KeyHash, KeyRole (Witness))
 import Cardano.Ledger.Shelley.LedgerState.IncrementalStake
 import Cardano.Ledger.Shelley.LedgerState.NewEpochState
 import Cardano.Ledger.Shelley.LedgerState.PulsingReward
+import Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits
 import Cardano.Ledger.Shelley.LedgerState.Types
 import Cardano.Ledger.Shelley.PParams
   ( PPUPState (..),
     pvCanFollow,
   )
 import Cardano.Ledger.Shelley.RewardUpdate
-import Cardano.Ledger.Shelley.Rules.Utxow (propWits)
 import Cardano.Ledger.Shelley.Tx (minfee, witsFromTxWitnesses)
-import Cardano.Ledger.Shelley.UTxO (keyRefunds, produced)
+import Cardano.Ledger.Shelley.UTxO (produced)
 import Data.Default.Class (def)
 import Data.Set (Set)
 import qualified Data.Set as Set

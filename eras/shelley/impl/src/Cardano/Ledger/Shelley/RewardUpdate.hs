@@ -44,6 +44,7 @@ import Cardano.Ledger.Shelley.Rewards
   ( PoolRewardInfo (..),
     rewardOnePoolMember,
   )
+import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (toExpr))
 import Control.DeepSeq (NFData (..))
 import Data.Default.Class (def)
 import Data.Group (invert)
@@ -340,3 +341,9 @@ instance (CC.Crypto c) => FromCBOR (PulsingRewUpdate c) where
       decPS n = Invalid n
 
 instance NFData (PulsingRewUpdate c)
+
+-- ===============================================================
+
+-- | You really don't want to see what is inside this.
+instance ToExpr (PulsingRewUpdate c) where
+  toExpr _ = App "PulsingRewUpdate..." []

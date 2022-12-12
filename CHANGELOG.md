@@ -12,6 +12,13 @@ in the naming of release branches.
 
 ### Added
 
+- Add ToExpr (from tree-diff) instances for all types inside NewEpochState
+  - Add module Cardano.Ledger.TreeDiff in cardano-binary. Includes all needed operations, classes, and orphan instances
+- Add deposits (key deposits) to DState{dsDeposits} and (pool deposits) PState{psDeposits}
+  - Added property tests that test the new invariants that must hold
+    - utxosDeposits == sum (dsDeposited) + sum (psDeposited)
+    - dom rewards == dom dsDeposited
+- Add functions that computed deposits, obligation, and refunds that take DPState as input
 - Add `PlutusDebug` to `TransactionScriptFailure.ValidationFailedV{1|2}`: #3135
   - Also add a harmless dummy `Show` instance for `PlutusDebug` with a constant `"PlutusDebug Omitted"`
 - Create a `cardano-ledger-binary` package that does versioned serialization as a
@@ -44,6 +51,9 @@ in the naming of release branches.
 - Fixed mismathed parenthesis in the `Show` instance for `Ptr`: #3184.
 - Moved Cardano.Ledger.Shelley.LedgerState(DPState) to Cardano.Ledger(DPState) in Core
   - Since the old file was hidden, this will have no noticeable effects.
+- Changed the API function Cardano.Ledger.Shelley.API.Wallet(evaluateTransactionBalance) to take DPState as input. This can no lnger be computed without the DPState
+- Changed UtxoEnv by replacing pool info (Map (KeyHash 'StakePool c) (PoolParams c)) with DPState
+    to show differences in two NewEpochState's.
 - Split `cardano-ledger-shelley-ma` into `cardano-ledger-allegra` and `cardano-ledger-mary` #3175:
   - Moved `ShelleyMA.AuxiliaryData` -> `Allegra.TxAuxData`
   - Moved `ShelleyMA.Timelocks` -> `Allegra.Scripts`

@@ -16,6 +16,7 @@ module Test.Cardano.Ledger.Shelley.Examples.Combinators
   ( evolveNonceFrozen,
     evolveNonceUnfrozen,
     newLab,
+    feesAndKeyRefund,
     feesAndDeposits,
     newUTxO,
     newStakeCred,
@@ -97,7 +98,7 @@ import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates, ShelleyPParams, Shelle
 import Cardano.Ledger.Shelley.Rules (emptyInstantaneousRewards)
 import Cardano.Ledger.Shelley.TxBody (MIRPot (..), PoolParams (..), RewardAcnt (..))
 import Cardano.Ledger.UTxO (UTxO (..), txins, txouts)
-import Cardano.Ledger.Val ((<+>), (<->))
+import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import Cardano.Protocol.TPraos.BHeader
   ( BHBody (..),
     BHeader,
@@ -109,7 +110,7 @@ import Cardano.Protocol.TPraos.BHeader
   )
 import Cardano.Slotting.Slot (EpochNo, WithOrigin (..))
 import Control.State.Transition (STS (State))
-import Data.Foldable (fold)
+import Data.Foldable (fold, foldl')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -175,30 +176,72 @@ newLab b cs =
 
 -- | = Update Fees and Deposits
 --
--- Update the fee pot and deposit pot with the new fees
--- and the change to the deposit pot.
--- Note: do not use this function when crossing the epoch boundary,
+-- Update the fee pot and deposit pot with the new fees and deposits
+-- adjust the deposit tables in the DPState.
+-- Notes
+--   1) do not give this function duplicates in the 'stakes' or 'pools' inputs.
+--   2) do not use this function when crossing the epoch boundary,
 -- instead use 'newEpoch'.
 feesAndDeposits ::
   forall era.
+  ShelleyPParams era ->
   Coin ->
-  Coin ->
+  [Credential 'Staking (EraCrypto era)] ->
+  [PoolParams (EraCrypto era)] ->
   ChainState era ->
   ChainState era
-feesAndDeposits newFees depositChange cs = cs {chainNes = nes'}
+feesAndDeposits ppEx newFees stakes pools cs = cs {chainNes = nes'}
   where
     nes = chainNes cs
     es = nesEs nes
     ls = esLState es
+    DPState dstate pstate = lsDPState ls
     utxoSt = lsUTxOState ls
     utxoSt' =
       utxoSt
-        { utxosDeposited = (utxosDeposited utxoSt) <+> depositChange,
+        { utxosDeposited =
+            (utxosDeposited utxoSt)
+              <+> (length stakes <×> _keyDeposit ppEx)
+              <+> (newcount <×> _poolDeposit ppEx),
           utxosFees = (utxosFees utxoSt) <+> newFees
         }
-    ls' = ls {lsUTxOState = utxoSt'}
+    ls' = ls {lsUTxOState = utxoSt', lsDPState = dpstate'}
+    -- Count the number of new pools, because we don't take a deposit for existing pools
+    -- This strategy DOES NOT WORK if there are duplicate PoolParams in one call
+    newcount = foldl' accum 0 pools
+    accum n x = if Map.member (ppId x) (psDeposits pstate) then (n :: Integer) else n + 1
+    newDeposits = Map.fromList (map (\cred -> (cred, _keyDeposit ppEx)) stakes)
+    newPools = Map.fromList (map (\p -> (ppId p, _poolDeposit ppEx)) pools)
+    dpstate' =
+      DPState
+        dstate {dsDeposits = Map.unionWith (<+>) newDeposits (dsDeposits dstate)}
+        pstate {psDeposits = Map.unionWith (\old _new -> old) newPools (psDeposits pstate)}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}
+
+feesAndKeyRefund ::
+  forall era.
+  Coin ->
+  Credential 'Staking (EraCrypto era) ->
+  ChainState era ->
+  ChainState era
+feesAndKeyRefund newFees key cs = cs {chainNes = nes'}
+  where
+    nes = chainNes cs
+    es = nesEs nes
+    ls = esLState es
+    DPState dstate pstate = lsDPState ls
+    refund = Map.findWithDefault (Coin 0) key (dsDeposits dstate)
+    utxoSt = lsUTxOState ls
+    utxoSt' =
+      utxoSt
+        { utxosDeposited = (utxosDeposited utxoSt) <-> refund,
+          utxosFees = (utxosFees utxoSt) <+> newFees
+        }
+    ls' = ls {lsUTxOState = utxoSt', lsDPState = dpstate'}
+    es' = es {esLState = ls'}
+    nes' = nes {nesEs = es'}
+    dpstate' = DPState dstate {dsDeposits = Map.delete key (dsDeposits dstate)} pstate
 
 -- | = Update the UTxO
 --
@@ -422,7 +465,8 @@ reapPool pool cs = cs {chainNes = nes'}
     ps' =
       ps
         { psRetiring = Map.delete kh (psRetiring ps),
-          psStakePoolParams = Map.delete kh (psStakePoolParams ps)
+          psStakePoolParams = Map.delete kh (psStakePoolParams ps),
+          psDeposits = Map.delete kh (psDeposits ps)
         }
     pp = esPp es
     ds = dpsDState dps

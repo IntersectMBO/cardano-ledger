@@ -17,10 +17,11 @@ import Cardano.Ledger.Binary
     serializeEncoding',
   )
 import Cardano.Ledger.Core
+import Cardano.Ledger.TreeDiff (diffExpr)
 import Control.Monad
 import Control.Monad.Except (runExcept)
 import GHC.Stack
-import Test.Cardano.Ledger.Binary.TreeDiff
+import Test.Cardano.Ledger.Binary.TreeDiff (CBORBytes (..))
 import Test.Tasty.HUnit (Assertion, assertFailure)
 
 translateEraPartial ::

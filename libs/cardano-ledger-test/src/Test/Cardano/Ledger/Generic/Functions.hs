@@ -13,12 +13,11 @@ module Test.Cardano.Ledger.Generic.Functions where
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Data (binaryDataToData, hashData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.PParams (AlonzoPParams, AlonzoPParamsHKD (..))
+import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), collateral')
 import Cardano.Ledger.Alonzo.TxInfo (languages)
-import Cardano.Ledger.Babbage.PParams (BabbagePParams)
 import qualified Cardano.Ledger.Babbage.PParams as Babbage (BabbagePParamsHKD (..))
 import Cardano.Ledger.Babbage.Tx (refScripts)
 import Cardano.Ledger.Babbage.TxBody
@@ -38,8 +37,7 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential, StakeReference (..))
-import Cardano.Ledger.EpochBoundary (obligation)
-import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
+import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.AdaPots (AdaPots (..), totalAdaPotsES)
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
@@ -50,17 +48,15 @@ import Cardano.Ledger.Shelley.LedgerState
     NewEpochState (..),
     UTxOState (..),
   )
-import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..))
+import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Rewards (aggregateRewards)
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
     DelegCert (..),
     PoolCert (..),
-    PoolParams (..),
     ShelleyEraTxBody (..),
     ShelleyTxOut (..),
   )
-import Cardano.Ledger.Shelley.UTxO (totalDeposits)
 import Cardano.Ledger.Slot (EpochNo)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), coinBalance)
@@ -146,43 +142,20 @@ aggregateRewards' (Allegra _) = aggregateRewards
 aggregateRewards' (Shelley _) = aggregateRewards
 {-# NOINLINE aggregateRewards' #-}
 
-obligation' ::
-  forall era c.
-  (c ~ EraCrypto era) =>
-  Proof era ->
-  PParams era ->
-  Map (Credential 'Staking c) Coin ->
-  Map (KeyHash 'StakePool c) (PoolParams c) ->
-  Coin
-obligation' (Conway _) = obligation @c @(BabbagePParams era) @Map
-obligation' (Babbage _) = obligation @c @(BabbagePParams era) @Map
-obligation' (Alonzo _) = obligation @c @(AlonzoPParams era) @Map
-obligation' (Mary _) = obligation @c @(ShelleyPParams era) @Map
-obligation' (Allegra _) = obligation @c @(ShelleyPParams era) @Map
-obligation' (Shelley _) = obligation @c @(ShelleyPParams era) @Map
-{-# NOINLINE obligation' #-}
-
-totalDeposits' ::
-  forall era.
-  Proof era ->
-  PParams era ->
-  (KeyHash 'StakePool (EraCrypto era) -> Bool) ->
-  [DCert (EraCrypto era)] ->
-  Coin
-totalDeposits' (Conway _) pp = totalDeposits pp
-totalDeposits' (Babbage _) pp = totalDeposits pp
-totalDeposits' (Alonzo _) pp = totalDeposits pp
-totalDeposits' (Mary _) pp = totalDeposits pp
-totalDeposits' (Allegra _) pp = totalDeposits pp
-totalDeposits' (Shelley _) pp = totalDeposits pp
-{-# NOINLINE totalDeposits' #-}
-
 -- | Positive numbers are "deposits owed", negative amounts are "refunds gained"
-depositsAndRefunds :: Proof era -> PParams era -> [DCert (EraCrypto era)] -> Coin
-depositsAndRefunds proof pp certificates = List.foldl' accum (Coin 0) certificates
+depositsAndRefunds ::
+  Proof era ->
+  PParams era ->
+  [DCert (EraCrypto era)] ->
+  Map (Credential 'Staking (EraCrypto era)) Coin ->
+  Coin
+depositsAndRefunds proof pp certificates keydeposits = List.foldl' accum (Coin 0) certificates
   where
     accum ans (DCertDeleg (RegKey _)) = keydep <+> ans
-    accum ans (DCertDeleg (DeRegKey _)) = ans <-> keydep
+    accum ans (DCertDeleg (DeRegKey hk)) =
+      case Map.lookup hk keydeposits of
+        Nothing -> ans
+        Just c -> (ans <-> c)
     accum ans (DCertPool (RegPool _)) = pooldep <+> ans
     accum ans (DCertPool (RetirePool _ _)) = ans -- The pool reward is refunded at the end of the epoch
     accum ans _ = ans

@@ -17,7 +17,7 @@ import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.UTxO (UTxO)
 import Control.State.Transition.Extended hiding (Assertion)
-import Control.State.Transition.Trace (checkTrace, (.-), (.->))
+import Control.State.Transition.Trace (checkTrace, (.-), (.->>))
 import Data.Default.Class (def)
 import GHC.Stack
 import Lens.Micro
@@ -38,7 +38,7 @@ testMaryNoDelegLEDGER ::
   Assertion
 testMaryNoDelegLEDGER utxo tx env (Right expectedUTxO) = do
   checkTrace @(ShelleyLEDGER Mary) runShelleyBase env $
-    pure (LedgerState (smartUTxOState utxo (Coin 0) (Coin 0) def) def) .- tx .-> expectedSt'
+    pure (LedgerState (smartUTxOState utxo (Coin 0) (Coin 0) def) def) .- tx .->> expectedSt'
   where
     txFee = tx ^. bodyTxL . feeTxBodyL
     expectedSt' = LedgerState (smartUTxOState expectedUTxO (Coin 0) txFee def) def

@@ -44,6 +44,7 @@ import Cardano.Ledger.Keys
     KeyRole (..),
   )
 import Cardano.Ledger.Slot (SlotNo (..))
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
 import Data.Aeson
   ( FromJSON (..),
@@ -54,7 +55,6 @@ import Data.Aeson
     (.=),
   )
 import qualified Data.Aeson as Aeson
--- import Data.Bits (Bits (shiftL, shiftR, (.|.)))
 import Data.Foldable (asum)
 import Data.Typeable (Typeable)
 import Data.Word
@@ -248,3 +248,11 @@ instance Eq (GenesisCredential c) where
 
 instance CC.Crypto c => ToCBOR (GenesisCredential c) where
   toCBOR (GenesisCredential kh) = toCBOR kh
+
+-- ==================================
+
+instance ToExpr (Credential keyrole c)
+
+instance ToExpr (StakeReference c)
+
+instance ToExpr Ptr

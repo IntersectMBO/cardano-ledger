@@ -23,27 +23,9 @@ where
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.EpochBoundary (SnapShots, obligation)
+import Cardano.Ledger.EpochBoundary (SnapShots)
 import Cardano.Ledger.Shelley.Era (ShelleyEPOCH)
-import Cardano.Ledger.Shelley.LedgerState
-  ( EpochState,
-    LedgerState,
-    PState (..),
-    UTxOState (utxosDeposited, utxosPpups),
-    UpecState (..),
-    asReserves,
-    esAccountState,
-    esLState,
-    esNonMyopic,
-    esPp,
-    esPrevPp,
-    esSnapshots,
-    lsDPState,
-    lsUTxOState,
-    rewards,
-    pattern DPState,
-    pattern EpochState,
-  )
+import Cardano.Ledger.Shelley.LedgerState (EpochState, LedgerState, PState (..), UTxOState (utxosDeposited, utxosPpups), UpecState (..), asReserves, esAccountState, esLState, esNonMyopic, esPp, esPrevPp, esSnapshots, lsDPState, lsUTxOState, obligationDPState, pattern DPState, pattern EpochState)
 import Cardano.Ledger.Shelley.Rewards ()
 import Cardano.Ledger.Shelley.Rules.PoolReap
   ( ShelleyPOOLREAP,
@@ -97,6 +79,8 @@ data ShelleyEpochEvent era
 
 instance
   ( EraTxOut era,
+    HasField "_keyDeposit" (PParams era) Coin,
+    HasField "_poolDeposit" (PParams era) Coin,
     Embed (EraRule "SNAP" era) (ShelleyEPOCH era),
     Environment (EraRule "SNAP" era) ~ LedgerState era,
     State (EraRule "SNAP" era) ~ SnapShots (EraCrypto era),
@@ -110,9 +94,7 @@ instance
     State (EraRule "UPEC" era) ~ UpecState era,
     Signal (EraRule "UPEC" era) ~ (),
     Default (State (EraRule "PPUP" era)),
-    Default (PParams era),
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin
+    Default (PParams era)
   ) =>
   STS (ShelleyEPOCH era)
   where
@@ -144,9 +126,7 @@ epochTransition ::
     Embed (EraRule "UPEC" era) (ShelleyEPOCH era),
     Environment (EraRule "UPEC" era) ~ EpochState era,
     State (EraRule "UPEC" era) ~ UpecState era,
-    Signal (EraRule "UPEC" era) ~ (),
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin
+    Signal (EraRule "UPEC" era) ~ ()
   ) =>
   TransitionRule (ShelleyEPOCH era)
 epochTransition = do
@@ -168,7 +148,7 @@ epochTransition = do
   ss' <-
     trans @(EraRule "SNAP" era) $ TRC (ls, ss, ())
 
-  let PState pParams fPParams _ = pstate
+  let PState pParams fPParams _ _ = pstate
       ppp = eval (pParams ⨃ fPParams)
       pstate' =
         pstate
@@ -179,11 +159,12 @@ epochTransition = do
     trans @(EraRule "POOLREAP" era) $
       TRC (pp, PoolreapState utxoSt acnt dstate pstate', e)
 
-  let epochState' =
+  let adjustedDPstate = DPState dstate' pstate''
+      epochState' =
         EpochState
           acnt'
           ss'
-          (ls {lsUTxOState = utxoSt', lsDPState = DPState dstate' pstate''})
+          (ls {lsUTxOState = utxoSt', lsDPState = adjustedDPstate})
           pr
           pp
           nm
@@ -193,11 +174,15 @@ epochTransition = do
       TRC (epochState', UpecState pp (utxosPpups utxoSt'), ())
   let utxoSt'' = utxoSt' {utxosPpups = ppupSt'}
 
-  let Coin oblgCurr = obligation pp (rewards dstate') (psStakePoolParams pstate'')
-      Coin oblgNew = obligation pp' (rewards dstate') (psStakePoolParams pstate'')
+  let -- At the epoch boundary refunds are made, so we need to change what
+      -- the utxosDeposited field is. The other two places where deposits are
+      -- kept (dsDeposits of DState and psDeposits of PState) are adjusted by
+      -- the rules, So we can recompute the utxosDeposited field using adjustedDPState
+      -- since we have the invariant that: obligationDPState dpstate == utxosDeposited utxostate
+      Coin oblgNew = obligationDPState adjustedDPstate
       Coin reserves = asReserves acnt'
       utxoSt''' = utxoSt'' {utxosDeposited = Coin oblgNew}
-      acnt'' = acnt' {asReserves = Coin $ reserves + oblgCurr - oblgNew}
+      acnt'' = acnt' {asReserves = Coin reserves}
   pure $
     epochState'
       { esAccountState = acnt'',

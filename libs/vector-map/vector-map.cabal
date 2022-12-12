@@ -36,6 +36,7 @@ library
                      , deepseq
                      , nothunks
                      , primitive
+                     , tree-diff
                      , vector
                      , vector-algorithms
   hs-source-dirs:      src

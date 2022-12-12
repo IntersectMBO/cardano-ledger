@@ -38,6 +38,7 @@ library
                      , Control.State.Transition.Trace.Generator.QuickCheck
                      , Hedgehog.Extra.Manual
   build-depends:       deepseq
+                     , cardano-ledger-binary:{cardano-ledger-binary, testlib}
                      , hedgehog >= 1.0.4
                      , tasty-hunit
                      , microlens

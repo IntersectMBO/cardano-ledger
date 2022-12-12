@@ -7,6 +7,7 @@
 module Cardano.Ledger.Language where
 
 import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), decodeInt, invalidKey)
+import Cardano.Ledger.TreeDiff (ToExpr (..))
 import Control.DeepSeq (NFData (..))
 import Data.Ix (Ix)
 import GHC.Generics (Generic)
@@ -51,3 +52,5 @@ instance FromCBOR Language where
 
 nonNativeLanguages :: [Language]
 nonNativeLanguages = [minBound .. maxBound]
+
+instance ToExpr Language

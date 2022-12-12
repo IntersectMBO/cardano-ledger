@@ -30,7 +30,7 @@ import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..), emptyPParams)
 import Cardano.Ledger.Shelley.Rules (ShelleyDelegPredFailure (..))
 import Cardano.Ledger.Slot (SlotNo (..))
 import Control.State.Transition.Extended hiding (Assertion)
-import Control.State.Transition.Trace (checkTrace, (.-), (.->))
+import Control.State.Transition.Trace (checkTrace, (.-), (.->>))
 import Data.Default.Class (def)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -71,7 +71,7 @@ testMirTransfer ::
   Assertion
 testMirTransfer pv pot target ir acnt (Right expected) = do
   checkTrace @(ShelleyDELEG ShelleyTest) runShelleyBase (env pv acnt) $
-    (pure (def {dsIRewards = ir})) .- (DCertMir (MIRCert pot target)) .-> (def {dsIRewards = expected})
+    (pure (def {dsIRewards = ir})) .- (DCertMir (MIRCert pot target)) .->> (def {dsIRewards = expected})
 testMirTransfer pv pot target ir acnt predicateFailure@(Left _) = do
   let st =
         runShelleyBase $

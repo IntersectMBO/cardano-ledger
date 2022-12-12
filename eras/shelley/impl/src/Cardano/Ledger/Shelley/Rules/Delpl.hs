@@ -29,6 +29,7 @@ import Cardano.Ledger.Binary
     decodeRecordSum,
     encodeListLen,
   )
+import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Era (ShelleyDELPL)
 import Cardano.Ledger.Shelley.LedgerState
@@ -207,6 +208,7 @@ instance
 instance
   ( Era era,
     HasField "_protocolVersion" (PParams era) ProtVer,
+    HasField "_keyDeposit" (PParams era) Coin,
     PredicateFailure (EraRule "DELEG" era) ~ ShelleyDelegPredFailure era
   ) =>
   Embed (ShelleyDELEG era) (ShelleyDELPL era)

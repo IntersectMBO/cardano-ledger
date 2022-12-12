@@ -12,12 +12,11 @@ import Cardano.Ledger.Crypto
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.TxBody (MaryEraTxBody (..))
 import Cardano.Ledger.Mary.Value (MaryValue)
-import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
+import Cardano.Ledger.Shelley.LedgerState (DPState, keyTxRefunds)
 import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), Wdrl (..))
 import Cardano.Ledger.Shelley.UTxO
   ( ShelleyScriptsNeeded (..),
     getShelleyScriptsNeeded,
-    keyRefunds,
   )
 import Cardano.Ledger.UTxO
   ( EraUTxO (..),
@@ -28,7 +27,7 @@ import Cardano.Ledger.Val (inject)
 import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import GHC.Records (HasField)
+import GHC.Records (HasField (..))
 import Lens.Micro
 
 instance Crypto c => EraUTxO (MaryEra c) where
@@ -52,19 +51,20 @@ instance Crypto c => EraUTxO (MaryEra c) where
 getConsumedMaryValue ::
   ( MaryEraTxBody era,
     Value era ~ MaryValue (EraCrypto era),
-    HasField "_keyDeposit" (PParams era) Coin
+    HasField "_keyDeposit" pp Coin
   ) =>
-  PParams era ->
+  pp ->
+  DPState (EraCrypto era) ->
   UTxO era ->
   TxBody era ->
   MaryValue (EraCrypto era)
-getConsumedMaryValue pp (UTxO u) txBody = consumedValue <> txBody ^. mintValueTxBodyF
+getConsumedMaryValue pp dpstate (UTxO u) txBody = consumedValue <> txBody ^. mintValueTxBodyF
   where
     {- balance (txins tx ◁ u) + wbalance (txwdrls tx) + keyRefunds pp tx -}
     consumedValue =
       balance (UTxO (Map.restrictKeys u (txBody ^. inputsTxBodyL)))
         <> inject (refunds <> withdrawals)
-    refunds = keyRefunds pp txBody
+    refunds = keyTxRefunds pp dpstate txBody
     withdrawals = fold . unWdrl $ txBody ^. wdrlsTxBodyL
 
 -- | Computes the set of script hashes required to unlock the transaction inputs and the

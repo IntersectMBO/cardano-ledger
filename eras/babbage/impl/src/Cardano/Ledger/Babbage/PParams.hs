@@ -80,6 +80,7 @@ import Cardano.Ledger.HKD (HKD)
 import Cardano.Ledger.Orphans ()
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (ShelleyPParams))
 import Cardano.Ledger.Slot (EpochNo (..))
+import Cardano.Ledger.TreeDiff (ToExpr (..))
 import Control.DeepSeq (NFData)
 import Data.Default (Default (..))
 import Data.Functor.Identity (Identity (..))
@@ -492,3 +493,9 @@ extendPP
 -- code for the reward calculation.
 instance HasField "_d" (BabbagePParams era) UnitInterval where
   getField _ = minBound
+
+-- ======================================
+
+instance ToExpr (BabbagePParamsHKD StrictMaybe era)
+
+instance ToExpr (BabbagePParamsHKD Identity era)

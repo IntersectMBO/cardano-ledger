@@ -120,7 +120,6 @@ library
                 text,
                 time,
                 transformers,
-                tree-diff,
                 unliftio,
                 vector,
                 vector-map
@@ -199,6 +198,7 @@ test-suite cardano-ledger-shelley-test
                 tasty-hunit,
                 tasty-quickcheck,
                 time
+                
 
 
 benchmark mainbench

@@ -957,7 +957,9 @@ genAlonzoTxAndInfo proof slot = do
             AuxData' []
           ]
       fee = getMinFeeTx gePParams bogusTxForFeeCalc
-      deposits = depositsAndRefunds proof gePParams dcerts
+
+  keyDeposits <- gets (mKeyDeposits . gsModel)
+  let deposits = depositsAndRefunds proof gePParams dcerts keyDeposits
 
   -- 8. Crank up the amount in one of outputs to account for the fee and deposits. Note
   -- this is a hack that is not possible in a real life, but in the end it does produce

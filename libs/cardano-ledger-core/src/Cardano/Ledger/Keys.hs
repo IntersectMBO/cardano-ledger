@@ -88,6 +88,7 @@ import Cardano.Ledger.Binary
   )
 import Cardano.Ledger.Binary.Crypto
 import Cardano.Ledger.Crypto (ADDRHASH, Crypto, DSIGN, HASH, KES, VRF)
+import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (toExpr))
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey, (.:), (.=))
 import qualified Data.Aeson as Aeson
@@ -370,3 +371,12 @@ type CertifiedVRF c = VRF.CertifiedVRF (VRF c)
 type SignKeyVRF c = VRF.SignKeyVRF (VRF c)
 
 type VerKeyVRF c = VRF.VerKeyVRF (VRF c)
+
+-- ===============================================
+
+instance ToExpr (GenDelegs c)
+
+instance ToExpr (GenDelegPair c)
+
+instance ToExpr (KeyHash keyrole c) where
+  toExpr (KeyHash x) = App "KeyHash" [toExpr x]

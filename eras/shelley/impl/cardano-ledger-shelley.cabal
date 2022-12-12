@@ -67,12 +67,15 @@ library
     Cardano.Ledger.Shelley.TxBody
     Cardano.Ledger.Shelley.TxOut
     Cardano.Ledger.Shelley.UTxO
+    Cardano.Ledger.Shelley.Rules.Reports
+    Cardano.Ledger.Shelley.Internal
   other-modules:
     Cardano.Ledger.Shelley.Era
     Cardano.Ledger.Shelley.LedgerState.Types
     Cardano.Ledger.Shelley.LedgerState.IncrementalStake
     Cardano.Ledger.Shelley.LedgerState.NewEpochState
     Cardano.Ledger.Shelley.LedgerState.PulsingReward
+    Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits
     Cardano.Ledger.Shelley.Rules.Bbody
     Cardano.Ledger.Shelley.Rules.Deleg
     Cardano.Ledger.Shelley.Rules.Delegs

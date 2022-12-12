@@ -345,7 +345,7 @@ utxoTransition ::
   ) =>
   TransitionRule (BabbageUTXO era)
 utxoTransition = do
-  TRC (Shelley.UtxoEnv slot pp stakepools _genDelegs, u, tx) <- judgmentContext
+  TRC (Shelley.UtxoEnv slot pp dpstate _genDelegs, u, tx) <- judgmentContext
   let Shelley.UTxOState utxo _deposits _fees _ppup _ = u
 
   {-   txb := txbody tx   -}
@@ -372,7 +372,7 @@ utxoTransition = do
   runTest $ Shelley.validateBadInputsUTxO utxo allInputs
 
   {- consumed pp utxo txb = produced pp poolParams txb -}
-  runTest $ Shelley.validateValueNotConservedUTxO pp utxo stakepools txBody
+  runTest $ Shelley.validateValueNotConservedUTxO pp utxo dpstate txBody
 
   {-   adaID ∉ supp mint tx - check not needed because mint field of type MultiAsset
    cannot contain ada -}
