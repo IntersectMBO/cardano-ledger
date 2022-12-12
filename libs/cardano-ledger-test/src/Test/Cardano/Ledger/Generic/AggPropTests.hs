@@ -110,8 +110,10 @@ aggTests =
 -- We will add additional analogs (ledgerTraceFromBlock, poolTraceFromBlock) soon,
 -- and then redo the tests in that module in the Generic fashion
 forAllChainTrace :: (Testable prop, Reflect era) => Proof era -> Int -> (Trace (MOCKCHAIN era) -> prop) -> Property
-forAllChainTrace p@(Conway _) n propf =
-  property $ propf <$> genTrace p n (def {blocksizeMax = 4, slotDelta = (6, 12)}) (initStableFields p)
+-- TODO re-enable this once we have added all the new rules to Conway
+--forAllChainTrace p@(Conway _) n propf =
+  --property $ propf <$> genTrace p n (def {blocksizeMax = 4, slotDelta = (6, 12)}) (initStableFields p)
+forAllChainTrace (Conway _) _ _ = undefined
 forAllChainTrace p@(Babbage _) n propf =
   property $ propf <$> genTrace p n (def {blocksizeMax = 4, slotDelta = (6, 12)}) (initStableFields p)
 forAllChainTrace p@(Alonzo _) n propf =

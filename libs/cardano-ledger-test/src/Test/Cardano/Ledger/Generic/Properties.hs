@@ -278,7 +278,9 @@ incrementalStake :: GenSize -> TestTree
 incrementalStake genSize =
   testGroup
     "Incremental Stake invariant holds"
-    [ incrementStakeInvariant (Conway Mock) genSize,
+    [ 
+      -- TODO re-enable this once we have added all the new rules to Conway
+      --incrementStakeInvariant (Conway Mock) genSize,
       incrementStakeInvariant (Babbage Mock) genSize,
       incrementStakeInvariant (Alonzo Mock) genSize,
       incrementStakeInvariant (Mary Mock) genSize,
