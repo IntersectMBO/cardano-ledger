@@ -40,6 +40,7 @@ module Cardano.Ledger.Api.Tx
     -- * Alonzo and Babbage Era
     AlonzoTx,
     AlonzoEraTx (..),
+    setMinFeeTx,
   )
 where
 
@@ -47,5 +48,17 @@ import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), AlonzoTx)
 import Cardano.Ledger.Api.Tx.AuxData
 import Cardano.Ledger.Api.Tx.Body
 import Cardano.Ledger.Api.Tx.Wits
-import Cardano.Ledger.Core (EraTx (..))
+import Cardano.Ledger.Core (EraPParams (PParams), EraTx (..))
 import Cardano.Ledger.Shelley.Tx (ShelleyTx)
+import Lens.Micro ((&), (.~), (^.))
+
+-- Calcluate minfee and create new transaction until the minfee is same.
+
+setMinFeeTx :: EraTx era => PParams era -> Tx era -> Tx era
+setMinFeeTx pp tx =
+  let curMinFee = getMinFeeTx pp tx
+      curFee = tx ^. bodyTxL ^. feeTxBodyL
+      modifiedTx = tx & bodyTxL . feeTxBodyL .~ curMinFee
+   in if curFee == curMinFee
+        then tx
+        else setMinFeeTx pp modifiedTx

@@ -12,6 +12,7 @@ in the naming of release branches.
 
 ### Added
 
+- Add `setMinFeeTx` to  `Cardano.Ledger.Api.Tx`: #3201
 - Add ToExpr (from tree-diff) instances for all types inside NewEpochState
   - Add module Cardano.Ledger.TreeDiff in cardano-binary. Includes all needed operations, classes, and orphan instances
 - Add deposits (key deposits) to DState{dsDeposits} and (pool deposits) PState{psDeposits}
