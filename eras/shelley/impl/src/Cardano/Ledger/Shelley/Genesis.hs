@@ -5,18 +5,22 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.Genesis
   ( ShelleyGenesisStaking (..),
     ShelleyGenesis (..),
     ValidationErr (..),
+    NominalDiffTimeMicro (..),
     emptyGenesisStaking,
     sgActiveSlotCoeff,
     genesisUTxO,
@@ -24,6 +28,13 @@ module Cardano.Ledger.Shelley.Genesis
     validateGenesis,
     describeValidationErr,
     mkShelleyGlobals,
+    microsecondsToNominalDiffTimeMicro,
+    nominalDiffTimeMicroToMicroseconds,
+    nominalDiffTimeMicroToSeconds,
+    toNominalDiffTimeMicro,
+    toNominalDiffTimeMicroWithRounding,
+    fromNominalDiffTimeMicro,
+    secondsToNominalDiffTimeMicro,
   )
 where
 
@@ -47,8 +58,10 @@ import Cardano.Ledger.Binary
     FromCBOR (..),
     ToCBOR (..),
     cborError,
+    decodeInteger,
     decodeRational,
     decodeRecordNamed,
+    encodeInteger,
     encodeListLen,
     enforceDecoderVersion,
     enforceEncodingVersion,
@@ -70,14 +83,21 @@ import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart (SystemStart))
 import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
+import Data.Fixed (E6, Fixed (..), HasResolution (resolution), Micro, Pico)
 import qualified Data.ListMap as LM
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
 import Data.Proxy (Proxy (..))
+import Data.Ratio (numerator, (%))
 import Data.Text (Text)
 import qualified Data.Text as Text
-import Data.Time (NominalDiffTime, UTCTime (..))
+import Data.Time.Clock
+  ( NominalDiffTime,
+    UTCTime (..),
+    nominalDiffTimeToSeconds,
+    secondsToNominalDiffTime,
+  )
 import Data.Unit.Strict (forceElemsToWHNF)
 import Data.Word (Word32, Word64)
 import GHC.Generics (Generic)
@@ -129,6 +149,71 @@ emptyGenesisStaking =
       sgsStake = mempty
     }
 
+-- | Unlike @'NominalDiffTime'@ that supports @'Pico'@ precision, this type
+-- only supports @'Micro'@ precision.
+newtype NominalDiffTimeMicro = NominalDiffTimeMicro Micro
+  deriving (Show, Eq, Generic)
+  deriving anyclass (NoThunks)
+  deriving newtype (Ord, Num, Fractional, Real, ToJSON, FromJSON)
+
+deriving instance Generic Micro
+
+deriving anyclass instance NoThunks Micro
+
+instance ToCBOR NominalDiffTimeMicro where
+  toCBOR = encodeNominalDiffTimeMicro
+
+encodeNominalDiffTimeMicro :: NominalDiffTimeMicro -> Encoding
+encodeNominalDiffTimeMicro (NominalDiffTimeMicro micro) =
+  encodeInteger . toMicroseconds $ micro
+  where
+    toMicroseconds t =
+      numerator (toRational t * toRational (resolution $ Proxy @E6))
+
+instance FromCBOR NominalDiffTimeMicro where
+  fromCBOR = decodeNominalDiffTimeMicro
+
+decodeNominalDiffTimeMicro :: Decoder s NominalDiffTimeMicro
+decodeNominalDiffTimeMicro =
+  NominalDiffTimeMicro . fromRational . (% 1_000_000) <$> decodeInteger
+
+-- | There is no loss of resolution in this conversion
+microToPico :: Micro -> Pico
+microToPico micro = fromRational @Pico $ toRational micro
+
+-- | Loss of resolution occurs in this conversion
+picoToMicro :: Pico -> Micro
+picoToMicro pico = fromRational @Micro $ toRational pico
+
+fromNominalDiffTimeMicro :: NominalDiffTimeMicro -> NominalDiffTime
+fromNominalDiffTimeMicro =
+  secondsToNominalDiffTime . microToPico . nominalDiffTimeMicroToMicroseconds
+
+toNominalDiffTimeMicroWithRounding :: NominalDiffTime -> NominalDiffTimeMicro
+toNominalDiffTimeMicroWithRounding =
+  microsecondsToNominalDiffTimeMicro . picoToMicro . nominalDiffTimeToSeconds
+
+toNominalDiffTimeMicro :: NominalDiffTime -> Maybe NominalDiffTimeMicro
+toNominalDiffTimeMicro ndt
+  | roundedPicoseconds == picoseconds = Just ndtm
+  | otherwise = Nothing
+  where
+    ndtm@(NominalDiffTimeMicro microseconds) = toNominalDiffTimeMicroWithRounding ndt
+    picoseconds = nominalDiffTimeToSeconds ndt
+    roundedPicoseconds = microToPico microseconds
+
+microsecondsToNominalDiffTimeMicro :: Micro -> NominalDiffTimeMicro
+microsecondsToNominalDiffTimeMicro = NominalDiffTimeMicro
+
+secondsToNominalDiffTimeMicro :: Pico -> NominalDiffTimeMicro
+secondsToNominalDiffTimeMicro = NominalDiffTimeMicro . picoToMicro
+
+nominalDiffTimeMicroToMicroseconds :: NominalDiffTimeMicro -> Micro
+nominalDiffTimeMicroToMicroseconds (NominalDiffTimeMicro microseconds) = microseconds
+
+nominalDiffTimeMicroToSeconds :: NominalDiffTimeMicro -> Pico
+nominalDiffTimeMicroToSeconds (NominalDiffTimeMicro microseconds) = microToPico microseconds
+
 -- | Shelley genesis information
 --
 -- Note that this is needed only for a pure Shelley network, hence it being
@@ -144,7 +229,7 @@ data ShelleyGenesis era = ShelleyGenesis
     sgEpochLength :: !EpochSize,
     sgSlotsPerKESPeriod :: !Word64,
     sgMaxKESEvolutions :: !Word64,
-    sgSlotLength :: !NominalDiffTime,
+    sgSlotLength :: !NominalDiffTimeMicro,
     sgUpdateQuorum :: !Word64,
     sgMaxLovelaceSupply :: !Word64,
     sgProtocolParams :: !(ShelleyPParams era),

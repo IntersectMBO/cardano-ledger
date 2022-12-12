@@ -16,6 +16,7 @@ import Cardano.Ledger.Binary
   ( FromCBOR (..),
     ToCBOR (..),
     Version,
+    allVersions,
     fromNotSharedCBOR,
     shelleyProtVer,
   )
@@ -113,5 +114,12 @@ tests =
           roundTripExpectation @(ShelleyGenesis Mock.C) v cborTrip
       ]
       ++ map testsVersion [shelleyProtVer .. maxBound]
+      ++ map nominalDiffTimeMicroTest allVersions
   where
     v = shelleyProtVer
+
+nominalDiffTimeMicroTest :: Version -> TestTree
+nominalDiffTimeMicroTest version =
+  testGroup
+    ("Version: " ++ show version)
+    $ [testProperty "NominalDiffTimeMicro" $ roundTripExpectation @NominalDiffTimeMicro version cborTrip]

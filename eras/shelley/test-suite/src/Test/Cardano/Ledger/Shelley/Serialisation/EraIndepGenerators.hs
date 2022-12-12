@@ -153,6 +153,10 @@ instance (Era era, Mock (EraCrypto era)) => Arbitrary (Update era) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
+instance Arbitrary NominalDiffTimeMicro where
+  arbitrary = secondsToNominalDiffTimeMicro <$> arbitrary
+  shrink = fmap secondsToNominalDiffTimeMicro . shrink . nominalDiffTimeMicroToSeconds
+
 maxMetadatumDepth :: Int
 maxMetadatumDepth = 2
 

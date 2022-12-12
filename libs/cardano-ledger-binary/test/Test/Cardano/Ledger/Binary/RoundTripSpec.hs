@@ -42,7 +42,7 @@ import Cardano.Slotting.Slot (EpochNo, EpochSize, SlotNo, WithOrigin)
 import Cardano.Slotting.Time (SystemStart)
 import Codec.CBOR.ByteArray (ByteArray (..))
 import Codec.CBOR.ByteArray.Sliced (SlicedByteArray (..))
-import Data.Fixed (Fixed (..), Nano, Pico)
+import Data.Fixed (Nano, Pico)
 import Data.Foldable as F
 import Data.IP (IPv4, IPv6)
 import Data.Int
@@ -55,12 +55,7 @@ import qualified Data.Sequence as Seq
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Data.Tagged (Tagged (Tagged))
-import Data.Time.Clock
-  ( NominalDiffTime,
-    UTCTime (..),
-    nominalDiffTimeToSeconds,
-    secondsToNominalDiffTime,
-  )
+import Data.Time.Clock (UTCTime)
 import qualified Data.VMap as VMap
 import qualified Data.Vector as V
 import qualified Data.Vector.Primitive as VP
@@ -71,24 +66,6 @@ import Numeric.Natural
 import Test.Cardano.Ledger.Binary.Arbitrary ()
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Hspec
-import Test.QuickCheck
-
--- | We do not handle the full precision of NominalDiffTime.
-newtype NominalDiffTimeRounded = NominalDiffTimeRounded NominalDiffTime
-  deriving (Show, Eq, ToCBOR, FromCBOR)
-
-instance Arbitrary NominalDiffTimeRounded where
-  arbitrary = secondsToNominalDiffTimeRounded <$> arbitrary
-  shrink = fmap secondsToNominalDiffTimeRounded . shrink . nominalDiffTimeRoundedToSeconds
-
-secondsToNominalDiffTimeRounded :: Pico -> NominalDiffTimeRounded
-secondsToNominalDiffTimeRounded (MkFixed s) =
-  NominalDiffTimeRounded $
-    secondsToNominalDiffTime $
-      MkFixed (1_000_000 * (s `div` 1_000_000))
-
-nominalDiffTimeRoundedToSeconds :: NominalDiffTimeRounded -> Pico
-nominalDiffTimeRoundedToSeconds (NominalDiffTimeRounded ndt) = nominalDiffTimeToSeconds ndt
 
 spec :: Spec
 spec = do
@@ -114,7 +91,6 @@ spec = do
         roundTripSpec @Rational version cborTrip
         roundTripSpec @Nano version cborTrip
         roundTripSpec @Pico version cborTrip
-        roundTripSpec @NominalDiffTimeRounded version cborTrip
         roundTripSpec @UTCTime version cborTrip
         roundTripSpec @IPv4 version cborTrip
         roundTripSpec @IPv6 version cborTrip

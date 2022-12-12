@@ -70,7 +70,7 @@ import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Data.Tagged (Tagged (Tagged))
 import qualified Data.Text as T
-import Data.Time.Clock (NominalDiffTime, UTCTime (..))
+import Data.Time.Clock (UTCTime (..))
 import Data.Typeable (Proxy (..), Typeable, typeRep)
 import qualified Data.VMap as VMap
 import qualified Data.Vector as V
@@ -164,9 +164,6 @@ instance FromCBOR Nano where
 
 instance FromCBOR Pico where
   fromCBOR = MkFixed <$> fromCBOR
-
-instance FromCBOR NominalDiffTime where
-  fromCBOR = decodeNominalDiffTime
 
 instance FromCBOR Void where
   fromCBOR = cborError DecoderErrorVoid

@@ -27,7 +27,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.EpochBoundary (SnapShot (..), SnapShots (..))
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
-import Cardano.Ledger.Shelley.Genesis (ShelleyGenesis (..), mkShelleyGlobals)
+import Cardano.Ledger.Shelley.Genesis (ShelleyGenesis (..), fromNominalDiffTimeMicro, mkShelleyGlobals)
 import Cardano.Ledger.Shelley.LedgerState
   ( EpochState (..),
     FilteredRewards (..),
@@ -131,7 +131,7 @@ mkGlobals genesis pp =
     epochInfoE =
       fixedEpochInfo
         (sgEpochLength genesis)
-        (mkSlotLength $ sgSlotLength genesis)
+        (mkSlotLength . fromNominalDiffTimeMicro . sgSlotLength $ genesis)
 
 -- =========================================================
 -- We would like to benchmark things that are used in the STS system.

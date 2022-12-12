@@ -140,7 +140,7 @@ import Data.Tagged (Tagged (..))
 import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Text.Lazy.Builder (Builder)
-import Data.Time.Clock (NominalDiffTime, UTCTime (..))
+import Data.Time.Clock (UTCTime (..))
 import Data.Typeable (Proxy (..), TypeRep, Typeable, typeRep)
 import qualified Data.VMap as VMap
 import qualified Data.Vector as V
@@ -582,10 +582,6 @@ instance ToCBOR Nano where
 
 instance ToCBOR Pico where
   toCBOR (MkFixed picoseconds) = toCBOR picoseconds
-
--- | For backwards compatibility we round pico precision to micro
-instance ToCBOR NominalDiffTime where
-  toCBOR = encodeNominalDiffTime
 
 instance ToCBOR Natural where
   toCBOR = toCBOR . toInteger

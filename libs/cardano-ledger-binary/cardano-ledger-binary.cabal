@@ -151,7 +151,6 @@ test-suite tests
                    , hspec
                    , iproute
                    , primitive
-                   , QuickCheck
                    , tagged
                    , text
                    , testlib
