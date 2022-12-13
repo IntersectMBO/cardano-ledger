@@ -18,9 +18,9 @@ import Cardano.Slotting.Slot
 import Data.Proxy
 import qualified Data.Sequence.Strict as StrictSeq
 import Lens.Micro
+import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
 import Test.Cardano.Ledger.Shelley.Examples.Consensus
 import Test.Cardano.Ledger.Shelley.Orphans ()
-import Test.Cardano.Ledger.Shelley.Utils hiding (mkVRFKeyPair)
 
 -- | ShelleyLedgerExamples for Allegra era
 ledgerExamplesAllegra :: ShelleyLedgerExamples Allegra

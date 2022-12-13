@@ -24,7 +24,6 @@ module Test.Cardano.Ledger.Shelley.Utils
     mkGenKey,
     mkKESKeyPair,
     mkVRFKeyPair,
-    mkAddr,
     runShelleyBase,
     testGlobals,
     maxKESIterations,
@@ -69,7 +68,6 @@ import Cardano.Crypto.VRF
     genKeyVRF,
   )
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.Ledger.Address (Addr, pattern Addr)
 import Cardano.Ledger.BaseTypes
   ( Globals (..),
     Network (..),
@@ -83,13 +81,10 @@ import Cardano.Ledger.Binary (ToCBOR (..), hashWithEncoder, shelleyProtVer)
 import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Crypto (DSIGN)
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys
   ( KeyRole (..),
     VKey (..),
-    hashKey,
     updateKES,
   )
 import Cardano.Ledger.Shelley.API (ApplyBlock)
@@ -125,7 +120,7 @@ import Data.Functor.Identity (runIdentity)
 import Data.Time.Clock.POSIX
 import Data.Typeable (Proxy (Proxy))
 import Data.Word (Word64)
-import Test.Cardano.Ledger.Core.KeyPair (KeyPair, vKey, pattern KeyPair)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair, pattern KeyPair)
 import Test.Cardano.Ledger.Core.Utils (unsafeBoundRational)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.QuickCheck (Arbitrary (..), chooseAny)
@@ -244,16 +239,6 @@ mkKESKeyPair ::
 mkKESKeyPair seed =
   let sk = genKeyKES $ mkSeedFromWords seed
    in (sk, deriveVerKeyKES sk)
-
-mkAddr ::
-  CC.Crypto c =>
-  (KeyPair 'Payment c, KeyPair 'Staking c) ->
-  Addr c
-mkAddr (payKey, stakeKey) =
-  Addr
-    Testnet
-    (KeyHashObj . hashKey $ vKey payKey)
-    (StakeRefBase . KeyHashObj . hashKey $ vKey stakeKey)
 
 testGlobals :: Globals
 testGlobals =

@@ -53,11 +53,10 @@ import qualified Data.Set as Set
 import qualified PlutusTx as Plutus
 import qualified Test.Cardano.Ledger.Alonzo.Examples.Consensus as AlonzoLE
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
-import Test.Cardano.Ledger.Core.KeyPair (mkWitnessesVKey)
+import Test.Cardano.Ledger.Core.KeyPair (mkAddr, mkWitnessesVKey)
 import qualified Test.Cardano.Ledger.Mary.Examples.Consensus as MarySLE
 import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as SLE
 import Test.Cardano.Ledger.Shelley.Orphans ()
-import Test.Cardano.Ledger.Shelley.Utils (mkAddr)
 
 -- | ShelleyLedgerExamples for Babbage era
 ledgerExamplesBabbage :: SLE.ShelleyLedgerExamples Babbage

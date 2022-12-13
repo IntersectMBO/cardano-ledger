@@ -22,7 +22,7 @@ where
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Hash as CH
 import Cardano.Ledger.Address
-import Cardano.Ledger.BaseTypes (Network)
+import Cardano.Ledger.BaseTypes (Network (Testnet))
 import Cardano.Ledger.Core (EraIndependentTxBody)
 import Cardano.Ledger.Credential
   ( Credential (..),
@@ -74,10 +74,9 @@ instance HasKeyRole KeyPair
 
 mkAddr ::
   CC.Crypto c =>
-  Network ->
   (KeyPair 'Payment c, KeyPair 'Staking c) ->
   Addr c
-mkAddr n (payKey, stakeKey) = Addr n (mkCred payKey) (StakeRefBase $ mkCred stakeKey)
+mkAddr (payKey, stakeKey) = Addr Testnet (mkCred payKey) (StakeRefBase $ mkCred stakeKey)
 
 mkCred ::
   CC.Crypto c =>
