@@ -77,7 +77,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import GHC.Stack
 import qualified PlutusLedgerApi.V1 as PV1
-import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), makeWitnessVKey)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils
   ( AlonzoBased (..),
     alwaysSucceedsHash,
@@ -366,7 +366,7 @@ incorrectNetworkIDTx pf =
     pf
     [ Body incorrectNetworkIDTxBody,
       WitnessesI
-        [ AddrWits' [makeWitnessVKey (hashAnnotated incorrectNetworkIDTxBody) (someKeys pf)]
+        [ AddrWits' [mkWitnessVKey (hashAnnotated incorrectNetworkIDTxBody) (someKeys pf)]
         ]
     ]
   where
@@ -385,7 +385,7 @@ missingRequiredWitnessTx pf =
     pf
     [ Body missingRequiredWitnessTxBody,
       WitnessesI
-        [ AddrWits' [makeWitnessVKey (hashAnnotated missingRequiredWitnessTxBody) (someKeys pf)]
+        [ AddrWits' [mkWitnessVKey (hashAnnotated missingRequiredWitnessTxBody) (someKeys pf)]
         ]
     ]
   where
@@ -407,7 +407,7 @@ missingRedeemerTx pf =
     pf
     [ Body (missingRedeemerTxBody pf),
       WitnessesI
-        [ AddrWits' [makeWitnessVKey (hashAnnotated (missingRedeemerTxBody pf)) (someKeys pf)],
+        [ AddrWits' [mkWitnessVKey (hashAnnotated (missingRedeemerTxBody pf)) (someKeys pf)],
           ScriptWits' [always 3 pf],
           DataWits' [Data (PV1.I 123)]
         ]
@@ -433,7 +433,7 @@ wrongWppHashTx pf =
     pf
     [ Body (missingRedeemerTxBody pf),
       WitnessesI
-        [ AddrWits' [makeWitnessVKey (hashAnnotated (missingRedeemerTxBody pf)) (someKeys pf)],
+        [ AddrWits' [mkWitnessVKey (hashAnnotated (missingRedeemerTxBody pf)) (someKeys pf)],
           ScriptWits' [always 3 pf],
           DataWits' [Data (PV1.I 123)],
           RdmrWits wrongWpphashRedeemers
@@ -461,7 +461,7 @@ missing1phaseScriptWitnessTx pf =
       WitnessesI
         [ AddrWits' $
             map
-              (makeWitnessVKey . hashAnnotated . validatingManyScriptsBody $ pf)
+              (mkWitnessVKey . hashAnnotated . validatingManyScriptsBody $ pf)
               [someKeys pf, theKeyPair 1],
           ScriptWits'
             [ always 2 pf,
@@ -492,7 +492,7 @@ missing2phaseScriptWitnessTx pf =
       WitnessesI
         [ AddrWits' $
             map
-              (makeWitnessVKey . hashAnnotated . validatingManyScriptsBody $ pf)
+              (mkWitnessVKey . hashAnnotated . validatingManyScriptsBody $ pf)
               [someKeys pf, theKeyPair 1],
           ScriptWits'
             [ -- intentionally missing -> always 2 pf,
@@ -564,7 +564,7 @@ wrongRedeemerLabelTx pf =
     pf
     [ Body wrongRedeemerLabelTxBody,
       WitnessesI
-        [ AddrWits' [makeWitnessVKey (hashAnnotated wrongRedeemerLabelTxBody) (someKeys pf)],
+        [ AddrWits' [mkWitnessVKey (hashAnnotated wrongRedeemerLabelTxBody) (someKeys pf)],
           ScriptWits' [always 3 pf],
           DataWits' [Data (PV1.I 123)],
           RdmrWits misPurposedRedeemer
@@ -597,7 +597,7 @@ missingDatumTx pf =
     pf
     [ Body missingDatumTxBody,
       WitnessesI
-        [ AddrWits' [makeWitnessVKey (hashAnnotated missingDatumTxBody) (someKeys pf)],
+        [ AddrWits' [mkWitnessVKey (hashAnnotated missingDatumTxBody) (someKeys pf)],
           ScriptWits' [always 3 pf],
           RdmrWits redeemers
         ]
@@ -630,7 +630,7 @@ phase1FailureTx pf =
     [ Body (validatingManyScriptsBody pf),
       WitnessesI
         [ AddrWits'
-            [ makeWitnessVKey
+            [ mkWitnessVKey
                 (hashAnnotated $ validatingManyScriptsBody pf)
                 (someKeys pf)
             ],
@@ -659,7 +659,7 @@ validatingTx pf =
     pf
     [ Body (validatingBody pf),
       WitnessesI
-        [ AddrWits' [makeWitnessVKey (hashAnnotated (validatingBody pf)) (someKeys pf)],
+        [ AddrWits' [mkWitnessVKey (hashAnnotated (validatingBody pf)) (someKeys pf)],
           ScriptWits' [always 3 pf],
           DataWits' [Data (PV1.I 123)],
           RdmrWits validatingRedeemers
@@ -692,7 +692,7 @@ notValidatingTx pf =
     pf
     [ Body body,
       WitnessesI
-        [ AddrWits' [makeWitnessVKey (hashAnnotated body) (someKeys pf)],
+        [ AddrWits' [mkWitnessVKey (hashAnnotated body) (someKeys pf)],
           ScriptWits' [never 0 pf],
           DataWits' [Data (PV1.I 0)],
           RdmrWits redeemers
@@ -730,7 +730,7 @@ tooManyExUnitsTx pf =
     pf
     [ Body tooManyExUnitsTxBody,
       WitnessesI
-        [ AddrWits' [makeWitnessVKey (hashAnnotated tooManyExUnitsTxBody) (someKeys pf)],
+        [ AddrWits' [mkWitnessVKey (hashAnnotated tooManyExUnitsTxBody) (someKeys pf)],
           ScriptWits' [always 3 pf],
           DataWits' [Data (PV1.I 123)],
           RdmrWits redeemers
@@ -779,7 +779,7 @@ plutusOutputWithNoDataTx pf =
     pf
     [ Body plutusOutputWithNoDataTxBody,
       WitnessesI
-        [ AddrWits' [makeWitnessVKey (hashAnnotated plutusOutputWithNoDataTxBody) (someKeys pf)],
+        [ AddrWits' [mkWitnessVKey (hashAnnotated plutusOutputWithNoDataTxBody) (someKeys pf)],
           ScriptWits' [always 3 pf],
           RdmrWits redeemers
         ]
@@ -809,7 +809,7 @@ notOkSupplimentaryDatumTx pf =
     pf
     [ Body notOkSupplimentaryDatumTxBody,
       WitnessesI
-        [ AddrWits' [makeWitnessVKey (hashAnnotated notOkSupplimentaryDatumTxBody) (someKeys pf)],
+        [ AddrWits' [mkWitnessVKey (hashAnnotated notOkSupplimentaryDatumTxBody) (someKeys pf)],
           DataWits' [totallyIrrelevantDatum]
         ]
     ]
@@ -841,7 +841,7 @@ extraRedeemersTx pf =
     pf
     [ Body extraRedeemersBody,
       WitnessesI
-        [ AddrWits' [makeWitnessVKey (hashAnnotated extraRedeemersBody) (someKeys pf)],
+        [ AddrWits' [mkWitnessVKey (hashAnnotated extraRedeemersBody) (someKeys pf)],
           ScriptWits' [always 3 pf],
           DataWits' [Data (PV1.I 123)],
           RdmrWits extraRedeemersEx
@@ -873,7 +873,7 @@ multipleEqualCertsInvalidTx pf =
     pf
     [ Body multipleEqualCertsInvalidBody,
       WitnessesI
-        [ AddrWits' [makeWitnessVKey (hashAnnotated multipleEqualCertsInvalidBody) (someKeys pf)],
+        [ AddrWits' [mkWitnessVKey (hashAnnotated multipleEqualCertsInvalidBody) (someKeys pf)],
           ScriptWits' [always 2 pf],
           RdmrWits redeemers
         ]
@@ -912,7 +912,7 @@ noCostModelTx pf =
     pf
     [ Body noCostModelBody,
       WitnessesI
-        [ AddrWits' [makeWitnessVKey (hashAnnotated noCostModelBody) (someKeys pf)],
+        [ AddrWits' [mkWitnessVKey (hashAnnotated noCostModelBody) (someKeys pf)],
           ScriptWits' [alwaysAlt 3 pf],
           DataWits' [Data (PV1.I 123)],
           RdmrWits redeemers

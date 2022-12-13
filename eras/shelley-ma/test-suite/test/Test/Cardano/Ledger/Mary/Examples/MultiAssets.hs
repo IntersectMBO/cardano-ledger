@@ -47,7 +47,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import GHC.Exts (fromString)
 import Lens.Micro
-import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), makeWitnessesVKey)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessesVKey)
 import Test.Cardano.Ledger.Mary.Examples (testMaryNoDelegLEDGER)
 import qualified Test.Cardano.Ledger.Mary.Examples.Cast as Cast
 import Test.Tasty (TestTree, testGroup)
@@ -171,7 +171,7 @@ txSimpleEx1 =
   ShelleyTx
     txbodySimpleEx1
     mempty
-      { addrWits = makeWitnessesVKey (hashAnnotated txbodySimpleEx1) [asWitness Cast.alicePay],
+      { addrWits = mkWitnessesVKey (hashAnnotated txbodySimpleEx1) [asWitness Cast.alicePay],
         scriptWits = Map.fromList [(policyID purplePolicyId, purplePolicy)]
       }
     SNothing
@@ -221,7 +221,7 @@ txSimpleEx2 :: ShelleyTx Mary
 txSimpleEx2 =
   ShelleyTx
     txbodySimpleEx2
-    mempty {addrWits = makeWitnessesVKey (hashAnnotated txbodySimpleEx2) [asWitness Cast.alicePay]}
+    mempty {addrWits = mkWitnessesVKey (hashAnnotated txbodySimpleEx2) [asWitness Cast.alicePay]}
     SNothing
 
 expectedUTxOSimpleEx2 :: UTxO Mary
@@ -299,7 +299,7 @@ txTimeEx1 txbody =
   ShelleyTx
     txbody
     mempty
-      { addrWits = makeWitnessesVKey (hashAnnotated txbody) [asWitness Cast.alicePay],
+      { addrWits = mkWitnessesVKey (hashAnnotated txbody) [asWitness Cast.alicePay],
         scriptWits = Map.fromList [(policyID boundedTimePolicyId, boundedTimePolicy)]
       }
     SNothing
@@ -360,7 +360,7 @@ txTimeEx2 =
     txbodyTimeEx2
     mempty
       { addrWits =
-          makeWitnessesVKey (hashAnnotated txbodyTimeEx2) [asWitness Cast.alicePay]
+          mkWitnessesVKey (hashAnnotated txbodyTimeEx2) [asWitness Cast.alicePay]
       }
     SNothing
 
@@ -419,7 +419,7 @@ txSingWitEx1Valid =
     txbodySingWitEx1
     mempty
       { addrWits =
-          makeWitnessesVKey (hashAnnotated txbodySingWitEx1) [asWitness Cast.bobPay, asWitness Cast.alicePay],
+          mkWitnessesVKey (hashAnnotated txbodySingWitEx1) [asWitness Cast.bobPay, asWitness Cast.alicePay],
         scriptWits = Map.fromList [(policyID alicePolicyId, alicePolicy)]
       }
     SNothing
@@ -437,7 +437,7 @@ txSingWitEx1Invalid =
   ShelleyTx
     txbodySingWitEx1
     mempty
-      { addrWits = makeWitnessesVKey (hashAnnotated txbodySingWitEx1) [asWitness Cast.bobPay],
+      { addrWits = mkWitnessesVKey (hashAnnotated txbodySingWitEx1) [asWitness Cast.bobPay],
         scriptWits = Map.fromList [(policyID alicePolicyId, alicePolicy)]
       }
     SNothing
@@ -477,7 +477,7 @@ txNegEx1 =
   ShelleyTx
     txbodyNegEx1
     mempty
-      { addrWits = makeWitnessesVKey (hashAnnotated txbodyNegEx1) [asWitness Cast.alicePay],
+      { addrWits = mkWitnessesVKey (hashAnnotated txbodyNegEx1) [asWitness Cast.alicePay],
         scriptWits = Map.fromList [(policyID purplePolicyId, purplePolicy)]
       }
     SNothing
@@ -567,7 +567,7 @@ txBigValue =
   ShelleyTx
     txbodyWithBigValue
     mempty
-      { addrWits = makeWitnessesVKey (hashAnnotated txbodyWithBigValue) [asWitness Cast.alicePay],
+      { addrWits = mkWitnessesVKey (hashAnnotated txbodyWithBigValue) [asWitness Cast.alicePay],
         scriptWits = Map.fromList [(policyID purplePolicyId, purplePolicy)]
       }
     SNothing

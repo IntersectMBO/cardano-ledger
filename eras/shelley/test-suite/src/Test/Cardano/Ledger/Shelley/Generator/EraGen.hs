@@ -69,7 +69,7 @@ import GHC.Natural (Natural)
 import GHC.Records (HasField (..))
 import Lens.Micro
 import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
-import Test.Cardano.Ledger.Core.KeyPair (KeyPairs, toAddr)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPairs, mkAddr)
 import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core
   ( GenEnv (..),
@@ -305,11 +305,11 @@ genUtxo0 ge@(GenEnv _ _ c@Constants {minGenesisUTxOouts, maxGenesisUTxOouts}) = 
   outs <-
     (genEraTxOut @era ge)
       (genGenesisValue @era ge)
-      (fmap (toAddr Testnet) genesisKeys ++ fmap (scriptsToAddr' Testnet) genesisScripts)
+      (fmap (mkAddr Testnet) genesisKeys ++ fmap (scriptsmkAddr' Testnet) genesisScripts)
   return (genesisCoins genesisId outs)
   where
-    scriptsToAddr' :: Network -> (Script era, Script era) -> Addr (EraCrypto era)
-    scriptsToAddr' n (payScript, stakeScript) =
+    scriptsmkAddr' :: Network -> (Script era, Script era) -> Addr (EraCrypto era)
+    scriptsmkAddr' n (payScript, stakeScript) =
       Addr n (scriptToCred' payScript) (StakeRefBase $ scriptToCred' stakeScript)
 
     scriptToCred' :: Script era -> Credential kr (EraCrypto era)

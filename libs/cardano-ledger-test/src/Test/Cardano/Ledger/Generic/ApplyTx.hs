@@ -46,7 +46,7 @@ import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
-import Test.Cardano.Ledger.Core.KeyPair (makeWitnessVKey)
+import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils
   ( freeCostModelV1,
     initUTxO,
@@ -374,7 +374,7 @@ notValidatingTx pf =
     pf
     [ Body notValidatingBody,
       WitnessesI
-        [ AddrWits' [makeWitnessVKey (hashAnnotated notValidatingBody) (someKeys pf)],
+        [ AddrWits' [mkWitnessVKey (hashAnnotated notValidatingBody) (someKeys pf)],
           ScriptWits' [never 0 pf],
           DataWits' [Data (PV1.I 0)],
           RdmrWits redeemers

@@ -49,7 +49,7 @@ import qualified Data.Map.Strict as Map
 import Data.Text (Text)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import qualified PlutusLedgerApi.V1 as PV1
-import Test.Cardano.Ledger.Core.KeyPair (makeWitnessVKey)
+import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils
   ( freeCostModelV1,
     initUTxO,
@@ -133,7 +133,7 @@ validatingTx pf =
     pf
     [ Body validatingBody,
       WitnessesI
-        [ AddrWits' [makeWitnessVKey (hashAnnotated validatingBody) (someKeys pf)],
+        [ AddrWits' [mkWitnessVKey (hashAnnotated validatingBody) (someKeys pf)],
           ScriptWits' [always 3 pf],
           DataWits' [datum],
           RdmrWits redeemers

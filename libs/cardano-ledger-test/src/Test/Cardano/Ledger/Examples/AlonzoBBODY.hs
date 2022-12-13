@@ -93,7 +93,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified PlutusLedgerApi.V1 as PV1
-import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), makeWitnessVKey)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils
   ( alwaysFailsHash,
     alwaysSucceedsHash,
@@ -231,7 +231,7 @@ validatingTx pf =
     pf
     [ Body (validatingBody pf),
       WitnessesI
-        [ AddrWits' [makeWitnessVKey (hashAnnotated (validatingBody pf)) (someKeys pf)],
+        [ AddrWits' [mkWitnessVKey (hashAnnotated (validatingBody pf)) (someKeys pf)],
           ScriptWits' [always 3 pf],
           DataWits' [someDatum],
           RdmrWits validatingRedeemers
@@ -269,7 +269,7 @@ notValidatingTx pf =
     pf
     [ Body notValidatingBody,
       WitnessesI
-        [ AddrWits' [makeWitnessVKey (hashAnnotated notValidatingBody) (someKeys pf)],
+        [ AddrWits' [mkWitnessVKey (hashAnnotated notValidatingBody) (someKeys pf)],
           ScriptWits' [never 0 pf],
           DataWits' [anotherDatum],
           RdmrWits notValidatingRedeemers
@@ -307,7 +307,7 @@ validatingTxWithWithdrawal pf =
     pf
     [ Body (validatingBodyWithWithdrawal pf),
       WitnessesI
-        [ AddrWits' [makeWitnessVKey (hashAnnotated (validatingBodyWithWithdrawal pf)) (someKeys pf)],
+        [ AddrWits' [mkWitnessVKey (hashAnnotated (validatingBodyWithWithdrawal pf)) (someKeys pf)],
           ScriptWits' [always 2 pf],
           RdmrWits validatingWithWithdrawalRedeemers
         ]
@@ -351,7 +351,7 @@ notValidatingTxWithWithdrawal pf =
     pf
     [ Body notValidatingBodyWithWithdrawal,
       WitnessesI
-        [ AddrWits' [makeWitnessVKey (hashAnnotated notValidatingBodyWithWithdrawal) (someKeys pf)],
+        [ AddrWits' [mkWitnessVKey (hashAnnotated notValidatingBodyWithWithdrawal) (someKeys pf)],
           ScriptWits' [never 1 pf],
           RdmrWits notValidatingRedeemers
         ]
@@ -387,7 +387,7 @@ validatingTxWithCert pf =
     pf
     [ Body (validatingBodyWithCert pf),
       WitnessesI
-        [ AddrWits' [makeWitnessVKey (hashAnnotated (validatingBodyWithCert pf)) (someKeys pf)],
+        [ AddrWits' [mkWitnessVKey (hashAnnotated (validatingBodyWithCert pf)) (someKeys pf)],
           ScriptWits' [always 2 pf],
           RdmrWits validatingRedeemrsWithCert
         ]
@@ -426,7 +426,7 @@ notValidatingTxWithCert pf =
     pf
     [ Body notValidatingBodyWithCert,
       WitnessesI
-        [ AddrWits' [makeWitnessVKey (hashAnnotated notValidatingBodyWithCert) (someKeys pf)],
+        [ AddrWits' [mkWitnessVKey (hashAnnotated notValidatingBodyWithCert) (someKeys pf)],
           ScriptWits' [never 1 pf],
           RdmrWits notValidatingRedeemersWithCert
         ]
@@ -459,7 +459,7 @@ validatingTxWithMint pf =
     pf
     [ Body (validatingBodyWithMint pf),
       WitnessesI
-        [ AddrWits' [makeWitnessVKey (hashAnnotated (validatingBodyWithMint pf)) (someKeys pf)],
+        [ AddrWits' [mkWitnessVKey (hashAnnotated (validatingBodyWithMint pf)) (someKeys pf)],
           ScriptWits' [always 2 pf],
           RdmrWits validatingRedeemersWithMint
         ]
@@ -506,7 +506,7 @@ notValidatingTxWithMint pf =
     pf
     [ Body notValidatingBodyWithMint,
       WitnessesI
-        [ AddrWits' [makeWitnessVKey (hashAnnotated notValidatingBodyWithMint) (someKeys pf)],
+        [ AddrWits' [mkWitnessVKey (hashAnnotated notValidatingBodyWithMint) (someKeys pf)],
           ScriptWits' [never 1 pf],
           RdmrWits notValidatingRedeemersWithMint
         ]
@@ -540,7 +540,7 @@ poolMDHTooBigTx pf =
     pf
     [ Body poolMDHTooBigTxBody,
       WitnessesI
-        [ AddrWits' [makeWitnessVKey (hashAnnotated poolMDHTooBigTxBody) (someKeys pf)]
+        [ AddrWits' [mkWitnessVKey (hashAnnotated poolMDHTooBigTxBody) (someKeys pf)]
         ]
     ]
   where

@@ -85,7 +85,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Word (Word64)
 import GHC.Stack
-import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), makeWitnessesVKey, vKey)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessesVKey, vKey)
 import qualified Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes as Original
   ( C_Crypto,
   )
@@ -205,7 +205,7 @@ txSpendOneUTxO =
   ShelleyTx
     txbSpendOneUTxO
     mempty
-      { addrWits = makeWitnessesVKey (hashAnnotated txbSpendOneUTxO) [asWitness alicePay]
+      { addrWits = mkWitnessesVKey (hashAnnotated txbSpendOneUTxO) [asWitness alicePay]
       }
     SNothing
 
@@ -262,7 +262,7 @@ makeSimpleTx txbody keysAddr =
   ShelleyTx
     txbody
     mempty
-      { addrWits = makeWitnessesVKey (hashAnnotated txbody) keysAddr
+      { addrWits = mkWitnessesVKey (hashAnnotated txbody) keysAddr
       }
     SNothing
 

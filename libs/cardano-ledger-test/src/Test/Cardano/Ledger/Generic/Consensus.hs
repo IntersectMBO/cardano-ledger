@@ -93,7 +93,7 @@ import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import qualified Test.Cardano.Ledger.Babbage.Examples.Consensus as Old (ledgerExamplesBabbage)
 import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
 import qualified Test.Cardano.Ledger.Conway.Examples.Consensus as Old (ledgerExamplesConway)
-import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), makeWitnessesVKey)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessesVKey)
 import Test.Cardano.Ledger.Generic.Fields
   ( TxBodyField (..),
     TxField (..),
@@ -109,7 +109,7 @@ import Test.Cardano.Ledger.Shelley.Examples.Consensus
   )
 import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as Old (ledgerExamplesShelley)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as SLE
-import Test.Cardano.Ledger.Shelley.Generator.Core
+import Test.Cardano.Ledger.Shelley.Generator.Core hiding (mkAddr)
 import Test.Cardano.Ledger.Shelley.Orphans ()
 import Test.Cardano.Ledger.Shelley.Utils hiding (mkVRFKeyPair)
 
@@ -144,7 +144,7 @@ mkWitnesses ::
   KeyPairWits era ->
   Core.TxWits era
 mkWitnesses proof txBody keyPairWits =
-  genericWits proof [Just (AddrWits (makeWitnessesVKey (coerce (hashAnnotated txBody)) keyPairWits))]
+  genericWits proof [Just (AddrWits (mkWitnessesVKey (coerce (hashAnnotated txBody)) keyPairWits))]
 
 defaultLedgerExamples ::
   forall era.
@@ -527,7 +527,7 @@ exampleLedgerChainDepState seed =
 postAlonzoWits :: forall era. Reflect era => Proof era -> Core.TxBody era -> TxField era
 postAlonzoWits proof txBody =
   WitnessesI
-    [ AddrWits (makeWitnessesVKey (hashAnnotated txBody) [asWitness examplePayKey]),
+    [ AddrWits (mkWitnessesVKey (hashAnnotated txBody) [asWitness examplePayKey]),
       BootWits mempty,
       ScriptWits @era
         ( case proof of

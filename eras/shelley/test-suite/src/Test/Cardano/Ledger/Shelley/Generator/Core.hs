@@ -35,8 +35,8 @@ module Test.Cardano.Ledger.Shelley.Generator.Core
     genesisCoins,
     increasingProbabilityAt,
     pickStakeKey,
-    toAddr,
-    toCred,
+    mkAddr,
+    mkCred,
     unitIntervalToNatural,
     mkBlock,
     mkBlockHeader,
@@ -145,7 +145,7 @@ import Data.Word (Word64)
 import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
-import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), KeyPairs, toAddr, toCred, vKey)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), KeyPairs, mkAddr, mkCred, vKey)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (ExMock, Mock)
 import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.ScriptClass

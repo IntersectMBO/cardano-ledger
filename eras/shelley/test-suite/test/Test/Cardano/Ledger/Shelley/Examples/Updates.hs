@@ -63,7 +63,7 @@ import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
-import Test.Cardano.Ledger.Core.KeyPair (makeWitnessesVKey)
+import Test.Cardano.Ledger.Core.KeyPair (mkWitnessesVKey)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (ExMock)
 import Test.Cardano.Ledger.Shelley.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
@@ -172,7 +172,7 @@ txEx1 =
     txbodyEx1
     mempty
       { addrWits =
-          makeWitnessesVKey
+          mkWitnessesVKey
             (hashAnnotated $ txbodyEx1 @c)
             ( [asWitness Cast.alicePay]
                 <> [ asWitness . cold $ coreNodeIssuerKeys 0,
@@ -247,7 +247,7 @@ txEx2 =
     txbodyEx2
     mempty
       { addrWits =
-          makeWitnessesVKey
+          mkWitnessesVKey
             (hashAnnotated $ txbodyEx2 @c)
             ( [asWitness Cast.alicePay]
                 <> [ asWitness . cold $ coreNodeIssuerKeys 1,
@@ -340,7 +340,7 @@ txEx3 =
     txbodyEx3
     mempty
       { addrWits =
-          makeWitnessesVKey
+          mkWitnessesVKey
             (hashAnnotated $ txbodyEx3 @c)
             [asWitness Cast.alicePay, asWitness . cold $ coreNodeIssuerKeys 1]
       }

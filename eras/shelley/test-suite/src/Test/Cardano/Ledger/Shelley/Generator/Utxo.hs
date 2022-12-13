@@ -76,8 +76,8 @@ import Test.Cardano.Ledger.Core.KeyPair
   ( KeyPair,
     KeyPairs,
     makeWitnessesFromScriptKeys,
-    makeWitnessesVKey,
-    toCred,
+    mkCred,
+    mkWitnessesVKey,
   )
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes
   ( Mock,
@@ -644,7 +644,7 @@ mkTxWits
   txBodyHash =
     genEraTxWits @era
       (utxo, txbody, scriptinfo)
-      ( makeWitnessesVKey txBodyHash awits
+      ( mkWitnessesVKey txBodyHash awits
           `Set.union` makeWitnessesFromScriptKeys
             txBodyHash
             ( indexedPaymentKeysAsWitnesses
@@ -832,8 +832,8 @@ genRecipients len keys scripts = do
   recipientKeys <- ruffle n keys
   recipientScripts <- ruffle m scripts
 
-  let payKeys = toCred . fst <$> recipientKeys
-      stakeKeys = toCred . snd <$> recipientKeys
+  let payKeys = mkCred . fst <$> recipientKeys
+      stakeKeys = mkCred . snd <$> recipientKeys
       payScripts = scriptToCred' . fst <$> recipientScripts
       stakeScripts = scriptToCred' . snd <$> recipientScripts
 

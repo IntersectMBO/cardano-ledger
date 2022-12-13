@@ -37,7 +37,7 @@ import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Data.Functor.Identity (Identity)
 import Data.List (nub, sort)
 import Data.Set as Set (fromList, singleton)
-import Test.Cardano.Ledger.Core.KeyPair (makeWitnessVKey)
+import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
 import Test.Cardano.Ledger.Shelley.Address.Bootstrap
   ( bootstrapHashTest,
   )
@@ -78,8 +78,8 @@ propWitVKeys ::
   TQC.Property
 propWitVKeys seed h1 h2 =
   let kp = mkKeyPair' seed
-      w1 = makeWitnessVKey h1 kp
-      w2 = makeWitnessVKey h2 kp
+      w1 = mkWitnessVKey h1 kp
+      w2 = mkWitnessVKey h2 kp
    in conjoin
         [ sort [w1, w2] === sort [w2, w1],
           length (nub [w1, w2]) === length (Set.fromList [w1, w2]),

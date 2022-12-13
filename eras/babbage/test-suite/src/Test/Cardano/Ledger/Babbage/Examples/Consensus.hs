@@ -53,7 +53,7 @@ import qualified Data.Set as Set
 import qualified PlutusTx as Plutus
 import qualified Test.Cardano.Ledger.Alonzo.Examples.Consensus as AlonzoLE
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
-import Test.Cardano.Ledger.Core.KeyPair (makeWitnessesVKey)
+import Test.Cardano.Ledger.Core.KeyPair (mkWitnessesVKey)
 import qualified Test.Cardano.Ledger.Mary.Examples.Consensus as MarySLE
 import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as SLE
 import Test.Cardano.Ledger.Shelley.Orphans ()
@@ -158,7 +158,7 @@ exampleTx =
   ShelleyTx
     exampleTxBodyBabbage
     ( AlonzoTxWits
-        (makeWitnessesVKey (hashAnnotated exampleTxBodyBabbage) [asWitness SLE.examplePayKey]) -- vkey
+        (mkWitnessesVKey (hashAnnotated exampleTxBodyBabbage) [asWitness SLE.examplePayKey]) -- vkey
         mempty -- bootstrap
         ( Map.singleton
             (hashScript @Babbage $ alwaysSucceeds PlutusV1 3)

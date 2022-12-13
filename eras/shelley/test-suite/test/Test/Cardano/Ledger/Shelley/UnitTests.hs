@@ -104,7 +104,7 @@ import qualified Data.Set as Set
 import Data.Word (Word64)
 import GHC.Stack
 import Numeric.Natural (Natural)
-import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), makeWitnessVKey, makeWitnessesVKey, mkVKeyRwdAcnt, vKey)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkVKeyRwdAcnt, mkWitnessVKey, mkWitnessesVKey, vKey)
 import Test.Cardano.Ledger.Shelley.Address.Bootstrap
   ( testBootstrapNotSpending,
     testBootstrapSpending,
@@ -365,7 +365,7 @@ aliceGivesBobLovelace
           ttl
           SNothing
           SNothing
-      awits = makeWitnessesVKey (hashAnnotated txbody) signers
+      awits = mkWitnessesVKey (hashAnnotated txbody) signers
 
 utxoState :: UTxOState C
 utxoState =
@@ -457,7 +457,7 @@ testSpendNotOwnedUTxO =
           (SlotNo 100)
           SNothing
           SNothing
-      aliceWit = makeWitnessVKey (hashAnnotated txbody) alicePay
+      aliceWit = mkWitnessVKey (hashAnnotated txbody) alicePay
       tx = ShelleyTx @C txbody mempty {addrWits = Set.fromList [aliceWit]} SNothing
       txwits = Set.singleton (asWitness $ hashKey $ vKey bobPay)
    in testInvalidTx
@@ -488,7 +488,7 @@ testWitnessWrongUTxO =
           (SlotNo 101)
           SNothing
           SNothing
-      aliceWit = makeWitnessVKey (hashAnnotated tx2body) alicePay
+      aliceWit = mkWitnessVKey (hashAnnotated tx2body) alicePay
       tx = ShelleyTx @C txbody mempty {addrWits = Set.fromList [aliceWit]} SNothing
       txwits = Set.singleton (asWitness $ hashKey $ vKey bobPay)
    in testInvalidTx
@@ -513,7 +513,7 @@ testEmptyInputSet =
           (SlotNo 0)
           SNothing
           SNothing
-      txwits = mempty {addrWits = makeWitnessesVKey (hashAnnotated txb) [aliceStake]}
+      txwits = mempty {addrWits = mkWitnessesVKey (hashAnnotated txb) [aliceStake]}
       tx = ShelleyTx txb txwits SNothing
       dpState' = addReward dpState (getRwdCred $ mkVKeyRwdAcnt Testnet aliceStake) (Coin 2000)
    in testLEDGER
@@ -574,7 +574,7 @@ testInvalidWintess =
           SNothing
       txb' = txb {stbTTL = SlotNo 2}
       txwits :: Cardano.Ledger.Shelley.TxWits.ShelleyTxWits C
-      txwits = mempty {addrWits = makeWitnessesVKey (hashAnnotated txb') [alicePay]}
+      txwits = mempty {addrWits = mkWitnessesVKey (hashAnnotated txb') [alicePay]}
       tx = ShelleyTx @C txb txwits SNothing
       errs =
         [ UtxowFailure $
@@ -600,7 +600,7 @@ testWithdrawalNoWit =
           SNothing
           SNothing
       txwits :: ShelleyTxWits C
-      txwits = mempty {addrWits = Set.singleton $ makeWitnessVKey (hashAnnotated txb) alicePay}
+      txwits = mempty {addrWits = Set.singleton $ mkWitnessVKey (hashAnnotated txb) alicePay}
       tx = ShelleyTx @C txb txwits SNothing
       missing = Set.singleton (asWitness $ hashKey $ vKey bobStake)
       errs =
@@ -628,7 +628,7 @@ testWithdrawalWrongAmt =
       txwits =
         mempty
           { addrWits =
-              makeWitnessesVKey @C_Crypto
+              mkWitnessesVKey @C_Crypto
                 (hashAnnotated txb)
                 [asWitness alicePay, asWitness bobStake]
           }
@@ -721,7 +721,7 @@ testProducedOverMaxWord64 =
           (SlotNo 100)
           SNothing
           SNothing
-      txwits = mempty {addrWits = makeWitnessesVKey @C_Crypto (hashAnnotated txbody) [alicePay]}
+      txwits = mempty {addrWits = mkWitnessesVKey @C_Crypto (hashAnnotated txbody) [alicePay]}
       tx = ShelleyTx @C txbody txwits SNothing
       st =
         runShelleyBase $

@@ -73,7 +73,7 @@ import qualified Data.Set as Set
 import GHC.Stack
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
-import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), makeWitnessVKey)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils
   ( AlonzoBased (..),
     freeCostModelV1,
@@ -1025,8 +1025,8 @@ txFromTestCaseData
     let addrWits =
           fmap
             ( \case
-                KeyPairPayment p -> makeWitnessVKey (hashAnnotated (txBody testCaseData)) p
-                KeyPairWitness w -> makeWitnessVKey (hashAnnotated (txBody testCaseData)) w
+                KeyPairPayment p -> mkWitnessVKey (hashAnnotated (txBody testCaseData)) p
+                KeyPairWitness w -> mkWitnessVKey (hashAnnotated (txBody testCaseData)) w
             )
             (keysForAddrWits testCaseData)
         tx =

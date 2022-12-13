@@ -52,8 +52,8 @@ import Data.Word (Word64, Word8)
 import GHC.Records (HasField)
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
-import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), makeWitnessesVKey)
-import Test.Cardano.Ledger.Shelley.Generator.Core
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessesVKey)
+import Test.Cardano.Ledger.Shelley.Generator.Core hiding (mkAddr)
 import Test.Cardano.Ledger.Shelley.Orphans ()
 import Test.Cardano.Ledger.Shelley.Utils hiding (mkVRFKeyPair)
 
@@ -431,7 +431,7 @@ mkWitnessesPreAlonzo ::
 mkWitnessesPreAlonzo _ txBody keyPairWits =
   mempty
     { addrWits =
-        makeWitnessesVKey (coerce (hashAnnotated txBody)) keyPairWits
+        mkWitnessesVKey (coerce (hashAnnotated txBody)) keyPairWits
     }
 
 exampleCoin :: Coin

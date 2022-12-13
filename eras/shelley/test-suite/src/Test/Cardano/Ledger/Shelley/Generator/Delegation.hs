@@ -76,7 +76,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Core
     KeySpace (..),
     genInteger,
     genWord64,
-    toCred,
+    mkCred,
     tooLateInEpoch,
   )
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
@@ -183,7 +183,7 @@ genRegKeyCert
               (_payKey, stakeKey) <- QC.elements availableKeys
               pure $
                 Just
-                  ( DCertDeleg (RegKey (toCred stakeKey)),
+                  ( DCertDeleg (RegKey (mkCred stakeKey)),
                     NoCred
                   )
         ),
@@ -202,7 +202,7 @@ genRegKeyCert
     where
       scriptToCred' = ScriptHashObj . hashScript @era
       notRegistered k = UM.notMember k (rewards delegSt)
-      availableKeys = filter (notRegistered . toCred . snd) keys
+      availableKeys = filter (notRegistered . mkCred . snd) keys
       availableScripts = filter (notRegistered . scriptToCred' . snd) scripts
 
 -- | Generate a DeRegKey certificate along with the staking credential, which is
@@ -222,7 +222,7 @@ genDeRegKeyCert Constants {frequencyKeyCredDeReg, frequencyScriptCredDeReg} keys
           [] -> pure Nothing
           _ -> do
             (_payKey, stakeKey) <- QC.elements availableKeys
-            pure $ Just (DCertDeleg (DeRegKey (toCred stakeKey)), StakeCred stakeKey)
+            pure $ Just (DCertDeleg (DeRegKey (mkCred stakeKey)), StakeCred stakeKey)
       ),
       ( frequencyScriptCredDeReg,
         case availableScripts of
@@ -242,7 +242,7 @@ genDeRegKeyCert Constants {frequencyKeyCredDeReg, frequencyScriptCredDeReg} keys
     availableKeys =
       filter
         ( \(_, k) ->
-            let cred = toCred k
+            let cred = mkCred k
              in ((&&) <$> registered <*> zeroRewards) cred
         )
         keys
@@ -301,14 +301,14 @@ genDelegation
       scriptToCred' = ScriptHashObj . hashScript @era
       mkCert (_, delegatorKey) poolKey = Just (cert, StakeCred delegatorKey)
         where
-          cert = DCertDeleg (Delegate (Delegation (toCred delegatorKey) poolKey))
+          cert = DCertDeleg (Delegate (Delegation (mkCred delegatorKey) poolKey))
       mkCertFromScript (s, delegatorScript) poolKey =
         Just (scriptCert, ScriptCred (s, delegatorScript))
         where
           scriptCert =
             DCertDeleg (Delegate (Delegation (scriptToCred' delegatorScript) poolKey))
       registeredDelegate k = UM.member k (rewards (dpsDState dpState))
-      availableDelegates = filter (registeredDelegate . toCred . snd) keys
+      availableDelegates = filter (registeredDelegate . mkCred . snd) keys
       availableDelegatesScripts =
         filter (registeredDelegate . scriptToCred' . snd) scripts
       registeredPools = psStakePoolParams (dpsPState dpState)

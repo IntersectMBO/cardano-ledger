@@ -84,7 +84,7 @@ import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set (fromList)
 import Lens.Micro
-import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), makeWitnessesVKey)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessesVKey)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes
   ( Mock,
   )
@@ -186,7 +186,7 @@ makeTx txBody keyPairs msigs = ShelleyTx txBody txWits . maybeToStrictMaybe
   where
     txWits =
       mempty
-        { addrWits = makeWitnessesVKey (hashAnnotated txBody) keyPairs,
+        { addrWits = mkWitnessesVKey (hashAnnotated txBody) keyPairs,
           scriptWits = msigs
         }
 
