@@ -228,6 +228,7 @@ in the naming of release branches.
 - Moved thet `RewardType` and `Reward` types from the `Cardano.Ledger.Shelley.Reward` module in the
   `cardano-ledger-shelley` package into a new module `Cardano.Ledger.Reward`
   inside the `cardano-ledger-core` package. #3059
+- Added the tx hash to the `TotalDeposits` event and replaced the deposits by the deposits change #3212
 
 ### Removed
 

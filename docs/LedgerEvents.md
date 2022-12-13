@@ -94,11 +94,12 @@ It is related to the other rewards events by the property:
 RupdEvent - RestrainedRewards = Total
 ```
 
-### `TotalDeposits totalDeposits`
+### `TotalDeposits txHash depositChange`
 
 This event happens for every transaction, it contains the sum of all the deposits
 paid by the given transaction (both stake credential registration deposits and
-stake pool registration deposits).
+stake pool registration deposits) minus the sum of all refunds. It also contains
+the transaction hash.
 
 ### `RegisterPool poolID`
 This event happens for every new stake pool registration certificate.
