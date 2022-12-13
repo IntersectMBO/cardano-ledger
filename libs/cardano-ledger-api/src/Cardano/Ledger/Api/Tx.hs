@@ -54,7 +54,6 @@ import Lens.Micro ((&), (.~), (^.))
 
 -- | Calculate and update the fee in the transaction until it has the smallest possible value according to
 -- the settings in the protocol parameters.
-
 setMinFeeTx :: EraTx era => PParams era -> Tx era -> Tx era
 setMinFeeTx pp tx =
   let curMinFee = getMinFeeTx pp tx
