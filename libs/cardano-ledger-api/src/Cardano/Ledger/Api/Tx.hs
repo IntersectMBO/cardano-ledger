@@ -52,7 +52,8 @@ import Cardano.Ledger.Core (EraPParams (PParams), EraTx (..))
 import Cardano.Ledger.Shelley.Tx (ShelleyTx)
 import Lens.Micro ((&), (.~), (^.))
 
--- Calcluate minfee and create new transaction until the minfee is same.
+-- | Calculate and update the fee in the transaction until it has the smallest possible value according to
+-- the settings in the protocol parameters.
 
 setMinFeeTx :: EraTx era => PParams era -> Tx era -> Tx era
 setMinFeeTx pp tx =
