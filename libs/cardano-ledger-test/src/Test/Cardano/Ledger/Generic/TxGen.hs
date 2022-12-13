@@ -90,7 +90,7 @@ import GHC.Stack
 import Lens.Micro ((^.))
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
-import Test.Cardano.Ledger.Core.KeyPair (makeWitnessVKey)
+import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
 import Test.Cardano.Ledger.Generic.Fields hiding (Mint)
 import qualified Test.Cardano.Ledger.Generic.Fields as Generic (TxBodyField (Mint))
 import Test.Cardano.Ledger.Generic.Functions
@@ -239,7 +239,7 @@ mkWitVKey ::
   GenRS era (SafeHash (EraCrypto era) EraIndependentTxBody -> [WitnessesField era])
 mkWitVKey _ _mTag (KeyHashObj keyHash) = do
   keyPair <- lookupByKeyM "credential" (coerceKeyRole keyHash) gsKeys
-  pure $ \bodyHash -> [AddrWits' [makeWitnessVKey bodyHash keyPair]]
+  pure $ \bodyHash -> [AddrWits' [mkWitnessVKey bodyHash keyPair]]
 mkWitVKey era mTag (ScriptHashObj scriptHash) =
   lookupScript @era scriptHash mTag >>= \case
     Nothing ->

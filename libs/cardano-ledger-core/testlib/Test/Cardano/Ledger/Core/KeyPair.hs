@@ -8,12 +8,12 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Test.Cardano.Ledger.Core.KeyPair
-  ( toAddr,
-    toCred,
+  ( mkAddr,
+    mkCred,
     KeyPair (..),
     KeyPairs,
-    makeWitnessVKey,
-    makeWitnessesVKey,
+    mkWitnessVKey,
+    mkWitnessesVKey,
     makeWitnessesFromScriptKeys,
     mkVKeyRwdAcnt,
   )
@@ -72,21 +72,21 @@ instance Crypto c => NoThunks (KeyPair kd c)
 
 instance HasKeyRole KeyPair
 
-toAddr ::
+mkAddr ::
   CC.Crypto c =>
   Network ->
   (KeyPair 'Payment c, KeyPair 'Staking c) ->
   Addr c
-toAddr n (payKey, stakeKey) = Addr n (toCred payKey) (StakeRefBase $ toCred stakeKey)
+mkAddr n (payKey, stakeKey) = Addr n (mkCred payKey) (StakeRefBase $ mkCred stakeKey)
 
-toCred ::
+mkCred ::
   CC.Crypto c =>
   KeyPair kr c ->
   Credential kr c
-toCred k = KeyHashObj . hashKey $ vKey k
+mkCred k = KeyHashObj . hashKey $ vKey k
 
 -- | Create a witness for transaction
-makeWitnessVKey ::
+mkWitnessVKey ::
   forall c kr.
   ( Crypto c,
     DSignable c (CH.Hash (HASH c) EraIndependentTxBody)
@@ -94,11 +94,11 @@ makeWitnessVKey ::
   SafeHash c EraIndependentTxBody ->
   KeyPair kr c ->
   WitVKey 'Witness c
-makeWitnessVKey safe keys =
+mkWitnessVKey safe keys =
   WitVKey (asWitness $ vKey keys) (coerce $ signedDSIGN @c (sKey keys) (extractHash safe))
 
 -- | Create witnesses for transaction
-makeWitnessesVKey ::
+mkWitnessesVKey ::
   forall c kr.
   ( Crypto c,
     DSignable c (CH.Hash (HASH c) EraIndependentTxBody)
@@ -106,7 +106,7 @@ makeWitnessesVKey ::
   SafeHash c EraIndependentTxBody ->
   [KeyPair kr c] ->
   Set (WitVKey 'Witness c)
-makeWitnessesVKey safe xs = Set.fromList (fmap (makeWitnessVKey safe) xs)
+mkWitnessesVKey safe xs = Set.fromList (fmap (mkWitnessVKey safe) xs)
 
 -- | From a list of key pairs and a set of key hashes required for a multi-sig
 -- scripts, return the set of required keys.
@@ -118,7 +118,7 @@ makeWitnessesFromScriptKeys ::
   Set (WitVKey 'Witness c)
 makeWitnessesFromScriptKeys txbodyHash hashKeyMap scriptHashes =
   let witKeys = Map.restrictKeys hashKeyMap scriptHashes
-   in makeWitnessesVKey txbodyHash (Map.elems witKeys)
+   in mkWitnessesVKey txbodyHash (Map.elems witKeys)
 
 mkVKeyRwdAcnt ::
   CC.Crypto c =>

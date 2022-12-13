@@ -113,7 +113,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
-import Test.Cardano.Ledger.Core.KeyPair (makeWitnessesVKey)
+import Test.Cardano.Ledger.Core.KeyPair (mkWitnessesVKey)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, C_Crypto, ExMock)
 import Test.Cardano.Ledger.Shelley.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
@@ -236,7 +236,7 @@ txEx1 =
     txbodyEx1
     mempty
       { addrWits =
-          makeWitnessesVKey
+          mkWitnessesVKey
             (hashAnnotated $ txbodyEx1 @era)
             ( (asWitness <$> [Cast.alicePay])
                 <> (asWitness <$> [Cast.aliceStake, Cast.bobStake, Cast.carlStake])

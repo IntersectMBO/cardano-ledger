@@ -61,7 +61,7 @@ import Data.Default.Class (Default (..))
 import qualified Data.Map.Strict as Map
 import GHC.Stack
 import qualified PlutusLedgerApi.V1 as PV1
-import Test.Cardano.Ledger.Core.KeyPair (makeWitnessVKey)
+import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils
   ( alwaysFailsHash,
     alwaysSucceedsHash,
@@ -201,7 +201,7 @@ validatingTx pf =
     pf
     [ Body (validatingBody pf),
       WitnessesI
-        [ AddrWits' [makeWitnessVKey (hashAnnotated (validatingBody pf)) (someKeys pf)],
+        [ AddrWits' [mkWitnessVKey (hashAnnotated (validatingBody pf)) (someKeys pf)],
           ScriptWits' [always 3 pf],
           DataWits' [Data (PV1.I 123)],
           RdmrWits validatingRedeemers
@@ -252,7 +252,7 @@ notValidatingTx pf =
     pf
     [ Body body,
       WitnessesI
-        [ AddrWits' [makeWitnessVKey (hashAnnotated body) (someKeys pf)],
+        [ AddrWits' [mkWitnessVKey (hashAnnotated body) (someKeys pf)],
           ScriptWits' [never 0 pf],
           DataWits' [datumExample2],
           RdmrWits redeemers
@@ -300,7 +300,7 @@ validatingWithCertTx pf =
     pf
     [ Body (validatingWithCertBody pf),
       WitnessesI
-        [ AddrWits' [makeWitnessVKey (hashAnnotated (validatingWithCertBody pf)) (someKeys pf)],
+        [ AddrWits' [mkWitnessVKey (hashAnnotated (validatingWithCertBody pf)) (someKeys pf)],
           ScriptWits' [always 2 pf],
           RdmrWits validatingWithCertRedeemers
         ]
@@ -351,7 +351,7 @@ notValidatingWithCertTx pf =
     pf
     [ Body body,
       WitnessesI
-        [ AddrWits' [makeWitnessVKey (hashAnnotated body) (someKeys pf)],
+        [ AddrWits' [mkWitnessVKey (hashAnnotated body) (someKeys pf)],
           ScriptWits' [never 1 pf],
           RdmrWits redeemers
         ]
@@ -394,7 +394,7 @@ validatingWithWithdrawalTx pf =
     pf
     [ Body (validatingWithWithdrawalBody pf),
       WitnessesI
-        [ AddrWits' [makeWitnessVKey (hashAnnotated (validatingWithWithdrawalBody pf)) (someKeys pf)],
+        [ AddrWits' [mkWitnessVKey (hashAnnotated (validatingWithWithdrawalBody pf)) (someKeys pf)],
           ScriptWits' [always 2 pf],
           RdmrWits validatingWithWithdrawalRedeemers
         ]
@@ -450,7 +450,7 @@ notValidatingTxWithWithdrawal pf =
     pf
     [ Body body,
       WitnessesI
-        [ AddrWits' [makeWitnessVKey (hashAnnotated body) (someKeys pf)],
+        [ AddrWits' [mkWitnessVKey (hashAnnotated body) (someKeys pf)],
           ScriptWits' [never 1 pf],
           RdmrWits redeemers
         ]
@@ -499,7 +499,7 @@ validatingWithMintTx pf =
     pf
     [ Body (validatingWithMintBody pf),
       WitnessesI
-        [ AddrWits' [makeWitnessVKey (hashAnnotated (validatingWithMintBody pf)) (someKeys pf)],
+        [ AddrWits' [mkWitnessVKey (hashAnnotated (validatingWithMintBody pf)) (someKeys pf)],
           ScriptWits' [always 2 pf],
           RdmrWits validatingWithMintRedeemers
         ]
@@ -559,7 +559,7 @@ notValidatingWithMintTx pf =
     pf
     [ Body body,
       WitnessesI
-        [ AddrWits' [makeWitnessVKey (hashAnnotated body) (someKeys pf)],
+        [ AddrWits' [mkWitnessVKey (hashAnnotated body) (someKeys pf)],
           ScriptWits' [never 1 pf],
           RdmrWits redeemers
         ]
@@ -610,7 +610,7 @@ validatingManyScriptsTx pf =
       WitnessesI
         [ AddrWits' $
             map
-              (makeWitnessVKey . hashAnnotated . validatingManyScriptsBody $ pf)
+              (mkWitnessVKey . hashAnnotated . validatingManyScriptsBody $ pf)
               [someKeys pf, theKeyPair 1],
           ScriptWits'
             [ always 2 pf,
@@ -701,7 +701,7 @@ validatingSupplimentaryDatumTx pf =
     pf
     [ Body (validatingSupplimentaryDatumBody pf),
       WitnessesI
-        [ AddrWits' [makeWitnessVKey (hashAnnotated (validatingSupplimentaryDatumBody pf)) (someKeys pf)],
+        [ AddrWits' [mkWitnessVKey (hashAnnotated (validatingSupplimentaryDatumBody pf)) (someKeys pf)],
           DataWits' [Data (PV1.I 123)]
         ]
     ]
@@ -754,7 +754,7 @@ validatingMultipleEqualCertsTx pf =
     pf
     [ Body (validatingMultipleEqualCertsBody pf),
       WitnessesI
-        [ AddrWits' [makeWitnessVKey (hashAnnotated (validatingMultipleEqualCertsBody pf)) (someKeys pf)],
+        [ AddrWits' [mkWitnessVKey (hashAnnotated (validatingMultipleEqualCertsBody pf)) (someKeys pf)],
           ScriptWits' [always 2 pf],
           RdmrWits validatingMultipleEqualCertsRedeemers
         ]
@@ -814,7 +814,7 @@ validatingNonScriptOutWithDatumTx pf =
     pf
     [ Body (validatingNonScriptOutWithDatumTxBody pf),
       WitnessesI
-        [ AddrWits' [makeWitnessVKey (hashAnnotated (validatingNonScriptOutWithDatumTxBody pf)) (someKeys pf)]
+        [ AddrWits' [mkWitnessVKey (hashAnnotated (validatingNonScriptOutWithDatumTxBody pf)) (someKeys pf)]
         ]
     ]
 

@@ -102,7 +102,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import GHC.Exts (fromList)
 import GHC.Stack (HasCallStack)
-import Test.Cardano.Ledger.Core.KeyPair (makeWitnessesVKey)
+import Test.Cardano.Ledger.Core.KeyPair (mkWitnessesVKey)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (ExMock)
 import Test.Cardano.Ledger.Shelley.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
@@ -224,7 +224,7 @@ txEx1 =
     txbodyEx1
     mempty
       { addrWits =
-          makeWitnessesVKey
+          mkWitnessesVKey
             (hashAnnotated (txbodyEx1 @c))
             ( (asWitness <$> [Cast.alicePay, Cast.carlPay])
                 <> (asWitness <$> [Cast.aliceStake])
@@ -321,7 +321,7 @@ txEx2 =
     txbodyEx2
     mempty
       { addrWits =
-          makeWitnessesVKey
+          mkWitnessesVKey
             (hashAnnotated (txbodyEx2 @c))
             [ asWitness Cast.alicePay,
               asWitness Cast.aliceStake,
@@ -486,7 +486,7 @@ txEx4 =
     txbodyEx4
     mempty
       { addrWits =
-          makeWitnessesVKey
+          mkWitnessesVKey
             (hashAnnotated (txbodyEx4 @c))
             [asWitness Cast.alicePay, asWitness Cast.carlStake]
       }
@@ -874,7 +874,7 @@ txEx10 =
     txbodyEx10
     mempty
       { addrWits =
-          makeWitnessesVKey (hashAnnotated (txbodyEx10 @c)) [asWitness Cast.bobPay, asWitness Cast.bobStake]
+          mkWitnessesVKey (hashAnnotated (txbodyEx10 @c)) [asWitness Cast.bobPay, asWitness Cast.bobStake]
       }
     SNothing
 
@@ -939,7 +939,7 @@ txEx11 =
     txbodyEx11
     mempty
       { addrWits =
-          makeWitnessesVKey
+          mkWitnessesVKey
             (hashAnnotated (txbodyEx11 @c))
             ( [asWitness Cast.alicePay]
                 <> [asWitness $ cold Cast.alicePoolKeys]

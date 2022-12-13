@@ -30,7 +30,7 @@ import Cardano.Ledger.Shelley.API (evaluateTransactionFee)
 import Cardano.Ledger.Val (Val (inject))
 import qualified Data.Map.Strict as Map
 import qualified PlutusLedgerApi.V1 as PV1
-import Test.Cardano.Ledger.Core.KeyPair (makeWitnessVKey)
+import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils
   ( freeCostModelV1,
     mkGenesisTxIn,
@@ -83,7 +83,7 @@ testEvaluateTransactionFee =
         pf
         [ Body validatingBody,
           WitnessesI
-            [ AddrWits' [makeWitnessVKey (hashAnnotated validatingBody) (someKeys pf)],
+            [ AddrWits' [mkWitnessVKey (hashAnnotated validatingBody) (someKeys pf)],
               ScriptWits' [always 3 pf],
               DataWits' [Data (PV1.I 123)],
               RdmrWits redeemers

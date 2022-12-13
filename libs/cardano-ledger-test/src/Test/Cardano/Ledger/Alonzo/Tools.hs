@@ -46,7 +46,7 @@ import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Alonzo.PlutusScripts (testingCostModelV1)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
-import Test.Cardano.Ledger.Core.KeyPair (makeWitnessVKey)
+import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils
   ( initUTxO,
     mkGenesisTxIn,
@@ -222,7 +222,7 @@ exampleTx pf ptr =
     pf
     [ Body (validatingBody pf),
       WitnessesI
-        [ AddrWits' [makeWitnessVKey (hashAnnotated (validatingBody pf)) (someKeys pf)],
+        [ AddrWits' [mkWitnessVKey (hashAnnotated (validatingBody pf)) (someKeys pf)],
           ScriptWits' [always 3 pf],
           DataWits' [Data (PV1.I 123)],
           RdmrWits $

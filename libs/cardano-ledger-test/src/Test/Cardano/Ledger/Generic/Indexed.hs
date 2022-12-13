@@ -53,7 +53,7 @@ import Data.Proxy (Proxy (..))
 import qualified Data.Sequence.Strict as Seq (fromList)
 import Prettyprinter (reAnnotate, viaShow)
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
-import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), makeWitnessVKey)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessVKey)
 import Test.Cardano.Ledger.Generic.Proof
   ( AlonzoEra,
     BabbageEra,
@@ -158,7 +158,7 @@ theKeyHash :: CC.Crypto c => Int -> KeyHash kr c
 theKeyHash n = hashKey (theVKey n)
 
 theWitVKey :: (GoodCrypto c) => Int -> SafeHash c EraIndependentTxBody -> WitVKey 'Witness c
-theWitVKey n hash = makeWitnessVKey hash (theKeyPair n)
+theWitVKey n hash = mkWitnessVKey hash (theKeyPair n)
 
 theKeyHashObj :: CC.Crypto c => Int -> Credential kr c
 theKeyHashObj n = KeyHashObj . hashKey . vKey $ theKeyPair n

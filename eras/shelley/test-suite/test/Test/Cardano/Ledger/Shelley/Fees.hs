@@ -73,7 +73,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
 import Lens.Micro
-import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), makeWitnessesVKey, vKey)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessesVKey, vKey)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Utils
@@ -183,7 +183,7 @@ txSimpleUTxO =
     { body = txbSimpleUTxO,
       wits =
         mempty
-          { addrWits = makeWitnessesVKey (hashAnnotated txbSimpleUTxO) [alicePay]
+          { addrWits = mkWitnessesVKey (hashAnnotated txbSimpleUTxO) [alicePay]
           },
       auxiliaryData = SNothing
     }
@@ -224,7 +224,7 @@ txMutiUTxO =
       wits =
         mempty
           { addrWits =
-              makeWitnessesVKey
+              mkWitnessesVKey
                 (hashAnnotated txbMutiUTxO)
                 [ alicePay,
                   bobPay
@@ -256,7 +256,7 @@ txRegisterStake =
     { body = txbRegisterStake,
       wits =
         mempty
-          { addrWits = makeWitnessesVKey (hashAnnotated txbRegisterStake) [alicePay]
+          { addrWits = mkWitnessesVKey (hashAnnotated txbRegisterStake) [alicePay]
           },
       auxiliaryData = SNothing
     }
@@ -289,7 +289,7 @@ txDelegateStake =
       wits =
         mempty
           { addrWits =
-              makeWitnessesVKey
+              mkWitnessesVKey
                 (hashAnnotated txbDelegateStake)
                 [asWitness alicePay, asWitness bobStake]
           },
@@ -320,7 +320,7 @@ txDeregisterStake =
       wits =
         mempty
           { addrWits =
-              makeWitnessesVKey
+              mkWitnessesVKey
                 (hashAnnotated txbDeregisterStake)
                 [alicePay @(EraCrypto Shelley)]
           },
@@ -350,7 +350,7 @@ txRegisterPool =
     { body = txbRegisterPool,
       wits =
         mempty
-          { addrWits = makeWitnessesVKey (hashAnnotated txbRegisterPool) [alicePay]
+          { addrWits = mkWitnessesVKey (hashAnnotated txbRegisterPool) [alicePay]
           },
       auxiliaryData = SNothing
     }
@@ -378,7 +378,7 @@ txRetirePool =
     { body = txbRetirePool,
       wits =
         mempty
-          { addrWits = makeWitnessesVKey (hashAnnotated txbRetirePool) [alicePay]
+          { addrWits = mkWitnessesVKey (hashAnnotated txbRetirePool) [alicePay]
           },
       auxiliaryData = SNothing
     }
@@ -410,7 +410,7 @@ txWithMD =
     { body = txbWithMD,
       wits =
         mempty
-          { addrWits = makeWitnessesVKey (hashAnnotated txbWithMD) [alicePay]
+          { addrWits = mkWitnessesVKey (hashAnnotated txbWithMD) [alicePay]
           },
       auxiliaryData = SJust md
     }
@@ -448,7 +448,7 @@ txWithMultiSig =
       wits =
         mempty
           { addrWits =
-              makeWitnessesVKey
+              mkWitnessesVKey
                 (hashAnnotated txbWithMultiSig)
                 [alicePay, bobPay],
             scriptWits = Map.singleton (hashScript @Shelley msig) msig
@@ -480,7 +480,7 @@ txWithWithdrawal =
       wits =
         mempty
           { addrWits =
-              makeWitnessesVKey
+              mkWitnessesVKey
                 (hashAnnotated txbWithWithdrawal)
                 [asWitness alicePay, asWitness aliceStake]
           },

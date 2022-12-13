@@ -196,7 +196,7 @@ import Data.String (fromString)
 import Numeric.Natural (Natural)
 import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
 import Test.Cardano.Ledger.Binary.TreeDiff (CBORBytes (CBORBytes), diffExpr)
-import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), makeWitnessVKey, sKey, vKey)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessVKey, sKey, vKey)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, C_Crypto, ExMock, Mock)
 import Test.Cardano.Ledger.Shelley.Examples.Consensus as Ex (ledgerExamplesShelley, sleNewEpochState)
 import Test.Cardano.Ledger.Shelley.Generator.Core (PreAlonzo)
@@ -512,7 +512,7 @@ tests =
                 <> S a
                 <> S (Coin 2)
             ),
-      case makeWitnessVKey @C_Crypto (testTxbHash @C) testKey1 of
+      case mkWitnessVKey @C_Crypto (testTxbHash @C) testKey1 of
         w@(WitVKey vk _sig) ->
           checkEncodingCBORAnnotated
             shelleyProtVer
@@ -992,7 +992,7 @@ tests =
               SNothing
               SNothing
           txbh = (hashAnnotated txb)
-          w = makeWitnessVKey @C_Crypto txbh testKey1
+          w = mkWitnessVKey @C_Crypto txbh testKey1
        in checkEncodingCBORAnnotated
             shelleyProtVer
             "tx_min"
@@ -1021,7 +1021,7 @@ tests =
               SNothing
               SNothing
           txbh = hashAnnotated txb
-          w = makeWitnessVKey @C_Crypto txbh testKey1
+          w = mkWitnessVKey @C_Crypto txbh testKey1
           s = Map.singleton (hashScript @C testScript) (testScript @C_Crypto)
           txwits :: ShelleyTxWits C
           txwits = mempty {addrWits = Set.singleton w, scriptWits = s}
@@ -1166,8 +1166,8 @@ tests =
           txb3 = txb 502
           txb4 = txb 503
           txb5 = txb 504
-          w1 = makeWitnessVKey (hashAnnotated txb1) testKey1
-          w2 = makeWitnessVKey (hashAnnotated txb1) testKey2
+          w1 = mkWitnessVKey (hashAnnotated txb1) testKey1
+          w2 = mkWitnessVKey (hashAnnotated txb1) testKey2
           ws = Set.fromList [w1, w2]
           tx1 = ShelleyTx @C txb1 mempty {addrWits = Set.singleton w1} SNothing
           tx2 = ShelleyTx @C txb2 mempty {addrWits = ws} SNothing
