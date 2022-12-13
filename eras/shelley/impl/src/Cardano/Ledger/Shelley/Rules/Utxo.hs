@@ -58,6 +58,7 @@ import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (GenDelegs)
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest)
+import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyUTXO)
 import Cardano.Ledger.Shelley.LedgerState (DPState (..), keyTxRefunds, totalTxDeposits)
@@ -136,7 +137,7 @@ data UtxoEnv era
 deriving instance Show (PParams era) => Show (UtxoEnv era)
 
 data UtxoEvent era
-  = TotalDeposits Coin
+  = TotalDeposits (SafeHash (EraCrypto era) EraIndependentTxBody) Coin
   | UpdateEvent (Event (EraRule "PPUP" era))
 
 data ShelleyUtxoPredFailure era
@@ -429,8 +430,8 @@ utxoInductive = do
 
   let refunded = keyTxRefunds pp dpstate txb
   let totalDeposits' = totalTxDeposits pp dpstate txb
-  tellEvent $ TotalDeposits totalDeposits'
   let depositChange = totalDeposits' Val.<-> refunded
+  tellEvent $ TotalDeposits (hashAnnotated txb) depositChange
   pure $! updateUTxOState u txb depositChange ppup'
 
 -- | The ttl field marks the top of an open interval, so it must be strictly
