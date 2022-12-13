@@ -58,6 +58,7 @@ import Cardano.Ledger.Shelley.API
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState (availableAfterMIR, rewards)
 import Cardano.Ledger.Slot (EpochNo (EpochNo), SlotNo)
+import Cardano.Protocol.TPraos.Rules.Overlay (hashPoolStakeVRF)
 import Control.Monad (replicateM)
 import Control.SetAlgebra (dom, domain, eval, (∈), (∉))
 import Data.Foldable (fold)
@@ -385,7 +386,7 @@ genStakePool poolKeys skeys (Coin minPoolCost) =
           pps =
             PoolParams
               (hashKey . vKey . cold $ allPoolKeys)
-              (hashVerKeyVRF . snd . vrf $ allPoolKeys)
+              (hashPoolStakeVRF . snd . vrf $ allPoolKeys)
               pledge
               cost
               interval

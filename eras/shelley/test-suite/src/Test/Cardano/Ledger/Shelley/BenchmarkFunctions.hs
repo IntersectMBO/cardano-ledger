@@ -38,12 +38,11 @@ import Cardano.Ledger.Keys
     KeyHash,
     KeyPair (..),
     KeyRole (..),
-    VerKeyVRF,
     asWitness,
     hashKey,
-    hashVerKeyVRF,
     vKey,
   )
+import Cardano.Ledger.PoolDistr (PoolStakeVRF)
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Delegation.Certificates (DelegCert (..))
@@ -80,6 +79,7 @@ import Cardano.Ledger.TxIn (TxIn (..), mkTxInPartial)
 import Cardano.Ledger.UTxO (makeWitnessesVKey)
 import Cardano.Ledger.Val (Val (inject))
 import Cardano.Protocol.TPraos.API (PraosCrypto)
+import Cardano.Protocol.TPraos.Rules.Overlay (hashPoolStakeVRF)
 import Control.State.Transition.Extended (TRC (..), applySTS)
 import Data.Default.Class (def)
 import qualified Data.Map.Strict as Map
@@ -398,8 +398,8 @@ mkPoolKeyHash = hashKey . vKey
 firstStakePoolKeyHash :: KeyHash 'StakePool B_Crypto
 firstStakePoolKeyHash = mkPoolKeyHash firstStakePool
 
-vrfKeyHash :: Hash B_Crypto (VerKeyVRF B_Crypto)
-vrfKeyHash = hashVerKeyVRF . snd . mkVRFKeyPair $ RawSeed 0 0 0 0 0
+vrfKeyHash :: Hash B_Crypto PoolStakeVRF
+vrfKeyHash = hashPoolStakeVRF . snd . mkVRFKeyPair @(VRF B_Crypto) $ RawSeed 0 0 0 0 0
 
 mkPoolParameters :: KeyPair 'StakePool B_Crypto -> PoolParams B_Crypto
 mkPoolParameters keys =

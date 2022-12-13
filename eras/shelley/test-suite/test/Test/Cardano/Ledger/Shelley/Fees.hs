@@ -46,7 +46,6 @@ import Cardano.Ledger.Shelley.API
     ShelleyTxBody (..),
     ShelleyTxOut (..),
     TxIn (..),
-    hashVerKeyVRF,
   )
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..), emptyPParams)
@@ -67,6 +66,7 @@ import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (mkTxInPartial)
 import Cardano.Ledger.UTxO (makeWitnessesVKey)
 import qualified Cardano.Ledger.Val as Val
+import Cardano.Protocol.TPraos.Rules.Overlay (hashPoolStakeVRF)
 import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Char8 as BS (pack)
 import qualified Data.ByteString.Lazy as BSL
@@ -121,7 +121,7 @@ alicePoolParams :: forall c. Cr.Crypto c => PoolParams c
 alicePoolParams =
   PoolParams
     { ppId = alicePoolKH,
-      ppVrf = hashVerKeyVRF . snd $ aliceVRF @(Cr.VRF c),
+      ppVrf = hashPoolStakeVRF . snd $ aliceVRF @(Cr.VRF c),
       ppPledge = Coin 1,
       ppCost = Coin 5,
       ppMargin = unsafeBoundRational 0.1,

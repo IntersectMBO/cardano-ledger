@@ -33,7 +33,6 @@ import Cardano.Ledger.Keys
     KeyRole (..),
     asWitness,
     hashKey,
-    hashVerKeyVRF,
     vKey,
   )
 import Cardano.Ledger.SafeHash (hashAnnotated)
@@ -93,6 +92,7 @@ import Cardano.Ledger.Shelley.TxWits
 import Cardano.Ledger.UTxO (makeWitnessVKey, makeWitnessesVKey)
 import Cardano.Ledger.Val ((<+>), (<->))
 import Cardano.Protocol.TPraos.BHeader (checkLeaderValue)
+import Cardano.Protocol.TPraos.Rules.Overlay (hashPoolStakeVRF)
 import Control.State.Transition.Extended (PredicateFailure, TRC (..))
 import Control.State.Transition.Trace (checkTrace, (.-), (.->>))
 import qualified Data.ByteString.Char8 as BS (pack)
@@ -666,7 +666,7 @@ alicePoolParamsSmallCost :: PoolParams C_Crypto
 alicePoolParamsSmallCost =
   PoolParams
     { ppId = hashKey . vKey $ alicePoolColdKeys,
-      ppVrf = hashVerKeyVRF vkVrf,
+      ppVrf = hashPoolStakeVRF vkVrf,
       ppPledge = Coin 1,
       ppCost = Coin 5, -- Too Small!
       ppMargin = unsafeBoundRational 0.1,
@@ -681,7 +681,7 @@ alicePoolParamsSmallCost =
             }
     }
   where
-    (_skVrf, vkVrf) = mkVRFKeyPair (RawSeed 0 0 0 0 2)
+    (_skVrf, vkVrf) = mkVRFKeyPair @(VRF C_Crypto) (RawSeed 0 0 0 0 2)
 
 testPoolCostTooSmall :: Assertion
 testPoolCostTooSmall =

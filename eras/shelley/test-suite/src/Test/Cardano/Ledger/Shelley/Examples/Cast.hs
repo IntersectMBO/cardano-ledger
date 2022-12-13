@@ -56,10 +56,9 @@ import Cardano.Ledger.Keys
   ( Hash,
     KeyPair (..),
     KeyRole (..),
-    VerKeyVRF,
     hashKey,
-    hashVerKeyVRF,
   )
+import Cardano.Ledger.PoolDistr (PoolStakeVRF)
 import Cardano.Ledger.Shelley.TxBody
   ( PoolMetadata (..),
     PoolParams (..),
@@ -67,6 +66,7 @@ import Cardano.Ledger.Shelley.TxBody
   )
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
+import Cardano.Protocol.TPraos.Rules.Overlay (hashPoolStakeVRF)
 import qualified Data.ByteString.Char8 as BS (pack)
 import Data.Maybe (fromJust)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -127,7 +127,7 @@ alicePoolParams :: forall c. CC.Crypto c => PoolParams c
 alicePoolParams =
   PoolParams
     { ppId = (hashKey . vKey . cold) alicePoolKeys,
-      ppVrf = hashVerKeyVRF . snd $ vrf (alicePoolKeys @c),
+      ppVrf = hashPoolStakeVRF . snd $ vrf (alicePoolKeys @c),
       ppPledge = Coin 1,
       ppCost = Coin 5,
       ppMargin = unsafeBoundRational 0.1,
@@ -146,8 +146,8 @@ alicePoolParams =
 aliceVRFKeyHash ::
   forall c.
   CC.Crypto c =>
-  Hash c (VerKeyVRF c)
-aliceVRFKeyHash = hashVerKeyVRF (snd $ vrf (alicePoolKeys @c))
+  Hash c PoolStakeVRF
+aliceVRFKeyHash = hashPoolStakeVRF (snd $ vrf (alicePoolKeys @c))
 
 -- | Bob's payment key pair
 bobPay :: CC.Crypto c => KeyPair 'Payment c
@@ -185,7 +185,7 @@ bobPoolParams :: forall c. CC.Crypto c => PoolParams c
 bobPoolParams =
   PoolParams
     { ppId = (hashKey . vKey . cold) bobPoolKeys,
-      ppVrf = hashVerKeyVRF . snd $ vrf (bobPoolKeys @c),
+      ppVrf = hashPoolStakeVRF . snd $ vrf (bobPoolKeys @c),
       ppPledge = Coin 2,
       ppCost = Coin 1,
       ppMargin = unsafeBoundRational 0.1,
@@ -199,8 +199,8 @@ bobPoolParams =
 bobVRFKeyHash ::
   forall c.
   CC.Crypto c =>
-  Hash c (VerKeyVRF c)
-bobVRFKeyHash = hashVerKeyVRF (snd $ vrf (bobPoolKeys @c))
+  Hash c PoolStakeVRF
+bobVRFKeyHash = hashPoolStakeVRF (snd $ vrf (bobPoolKeys @c))
 
 -- Carl's payment key pair
 carlPay :: CC.Crypto c => KeyPair 'Payment c

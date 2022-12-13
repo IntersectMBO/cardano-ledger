@@ -19,13 +19,14 @@
 -- <https://hydra.iohk.io/job/Cardano/cardano-ledger/shelleyLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec formal specification>.
 module Cardano.Ledger.PoolDistr
   ( IndividualPoolStake (..),
+    PoolStakeVRF,
     PoolDistr (..),
   )
 where
 
 import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), decodeRecordNamed, encodeListLen)
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Keys (Hash, KeyHash, KeyRole (..), VerKeyVRF)
+import Cardano.Ledger.Keys (Hash, KeyHash, KeyRole (..))
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
 import Control.SetAlgebra (BaseRep (MapR), Embed (..), Exp (Base), HasExp (..))
@@ -48,10 +49,12 @@ import NoThunks.Class (NoThunks (..))
 -- delegated to a registered stake pool.
 data IndividualPoolStake c = IndividualPoolStake
   { individualPoolStake :: !Rational,
-    individualPoolStakeVrf :: !(Hash c (VerKeyVRF c))
+    individualPoolStakeVrf :: !(Hash c PoolStakeVRF)
   }
   deriving stock (Show, Eq, Generic)
   deriving anyclass (NFData, NoThunks)
+
+data PoolStakeVRF
 
 instance CC.Crypto c => ToCBOR (IndividualPoolStake c) where
   toCBOR (IndividualPoolStake stake vrf) =

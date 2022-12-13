@@ -48,7 +48,6 @@ import Cardano.Ledger.Keys
     KeyRole (..),
     coerceKeyRole,
     hashKey,
-    hashVerKeyVRF,
   )
 import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
 import Cardano.Ledger.Pretty.Babbage ()
@@ -85,6 +84,7 @@ import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (makeWitnessVKey)
 import Cardano.Ledger.Val (inject, (<+>))
+import Cardano.Protocol.TPraos.Rules.Overlay (hashPoolStakeVRF)
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.State.Transition.Extended hiding (Assertion)
 import qualified Data.ByteString as BS (replicate)
@@ -558,7 +558,7 @@ poolMDHTooBigTx pf =
         poolParams =
           PoolParams
             { ppId = coerceKeyRole . hashKey . vKey $ someKeys pf,
-              ppVrf = hashVerKeyVRF . snd . mkVRFKeyPair $ RawSeed 0 0 0 0 0,
+              ppVrf = hashPoolStakeVRF . snd . (mkVRFKeyPair @(CC.VRF (EraCrypto era))) $ RawSeed 0 0 0 0 0,
               ppPledge = Coin 0,
               ppCost = Coin 0,
               ppMargin = minBound,

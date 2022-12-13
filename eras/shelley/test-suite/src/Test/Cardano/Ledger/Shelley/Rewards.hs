@@ -119,6 +119,7 @@ import Cardano.Ledger.Shelley.Rules
 import Cardano.Ledger.Shelley.TxBody (RewardAcnt (..))
 import Cardano.Ledger.Slot (epochInfoSize)
 import Cardano.Ledger.Val (Val (..), invert, (<+>), (<->))
+import Cardano.Protocol.TPraos.Rules.Overlay (hashPoolStakeVRF)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.Monad (replicateM)
 import Control.Monad.Trans.Reader (asks, runReader)
@@ -284,7 +285,7 @@ genPoolInfo PoolSetUpArgs {poolPledge, poolCost, poolMargin, poolMembers} = do
       params =
         PoolParams
           { ppId = hashKey . vKey $ coldKey,
-            ppVrf = Crypto.hashVerKeyVRF . snd $ vrfKey,
+            ppVrf = hashPoolStakeVRF . snd $ vrfKey,
             ppPledge = pledge,
             ppCost = cost,
             ppMargin = margin,

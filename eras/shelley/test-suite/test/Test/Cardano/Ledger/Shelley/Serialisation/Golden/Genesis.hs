@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Ledger.Shelley.Serialisation.Golden.Genesis
@@ -21,13 +22,14 @@ import Cardano.Ledger.Binary
     serializeEncoding',
     shelleyProtVer,
   )
-import Cardano.Ledger.Crypto (HASH)
+import Cardano.Ledger.Crypto (HASH, VRF)
 import Cardano.Ledger.Era (EraCrypto (..))
-import Cardano.Ledger.Keys (hashKey, hashVerKeyVRF, vKey)
+import Cardano.Ledger.Keys (hashKey, vKey)
 import Cardano.Ledger.Shelley (Shelley)
 import qualified Cardano.Ledger.Shelley.API as L
 import Cardano.Ledger.Shelley.Genesis
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..), emptyPParams)
+import Cardano.Protocol.TPraos.Rules.Overlay (hashPoolStakeVRF)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.Monad
 import Data.Aeson hiding (Encoding)
@@ -257,7 +259,7 @@ exampleShelleyGenesis =
     poolParams =
       L.PoolParams
         { L.ppId = hashKey . snd $ mkKeyPair (RawSeed 1 0 0 0 1),
-          L.ppVrf = hashVerKeyVRF . snd $ mkVRFKeyPair (RawSeed 1 0 0 0 2),
+          L.ppVrf = hashPoolStakeVRF . snd $ (mkVRFKeyPair @(VRF (EraCrypto era))) (RawSeed 1 0 0 0 2),
           L.ppPledge = L.Coin 1,
           L.ppCost = L.Coin 5,
           L.ppMargin = unsafeBoundRational 0.25,

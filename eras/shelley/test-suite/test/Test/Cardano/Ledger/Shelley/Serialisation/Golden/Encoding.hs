@@ -87,7 +87,7 @@ import Cardano.Ledger.Keys
     signedKES,
     vKey,
   )
-import Cardano.Ledger.PoolDistr (PoolDistr (..))
+import Cardano.Ledger.PoolDistr (PoolDistr (PoolDistr), PoolStakeVRF)
 import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API
@@ -180,6 +180,7 @@ import Cardano.Protocol.TPraos.OCert
     OCertSignable (..),
     pattern OCert,
   )
+import Cardano.Protocol.TPraos.Rules.Overlay (hashPoolStakeVRF)
 import qualified Codec.CBOR.Encoding as CBOR (Encoding (..))
 import Control.Monad
 import Data.ByteString (ByteString)
@@ -250,6 +251,9 @@ testGKeyHash = (hashKey . vKey) testGKey
 
 testVRF :: CC.Crypto c => (SignKeyVRF c, VerKeyVRF c)
 testVRF = mkVRFKeyPair (RawSeed 0 0 0 0 5)
+
+testPoolStakeVRFKH :: forall c. CC.Crypto c => Hash c PoolStakeVRF
+testPoolStakeVRFKH = hashPoolStakeVRF $ snd (testVRF @c)
 
 testVRFKH :: forall c. CC.Crypto c => Hash c (VerKeyVRF c)
 testVRFKH = hashVerKeyVRF $ snd (testVRF @c)
@@ -604,7 +608,7 @@ tests =
                 ( RegPool
                     ( PoolParams
                         { ppId = hashKey . vKey $ testStakePoolKey,
-                          ppVrf = testVRFKH @C_Crypto,
+                          ppVrf = testPoolStakeVRFKH @C_Crypto,
                           ppPledge = poolPledge,
                           ppCost = poolCost,
                           ppMargin = poolMargin,
@@ -1290,7 +1294,7 @@ tests =
           params =
             PoolParams
               { ppId = hashKey $ vKey testStakePoolKey,
-                ppVrf = testVRFKH @C_Crypto,
+                ppVrf = testPoolStakeVRFKH @C_Crypto,
                 ppPledge = Coin 5,
                 ppCost = Coin 4,
                 ppMargin = unsafeBoundRational 0.7,
@@ -1336,7 +1340,7 @@ tests =
           params =
             PoolParams
               { ppId = hashKey $ vKey testStakePoolKey,
-                ppVrf = testVRFKH @C_Crypto,
+                ppVrf = testPoolStakeVRFKH @C_Crypto,
                 ppPledge = Coin 5,
                 ppCost = Coin 4,
                 ppMargin = unsafeBoundRational 0.7,

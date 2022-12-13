@@ -38,6 +38,7 @@ library
                     , cardano-ledger-core
                     , cardano-ledger-mary
                     , cardano-ledger-shelley
+                    , cardano-protocol-tpraos
                     , conduit
                     , containers
                     , vector-map

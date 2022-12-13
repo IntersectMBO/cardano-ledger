@@ -19,9 +19,13 @@ module Cardano.Protocol.TPraos.Rules.Overlay
     classifyOverlaySlot,
     lookupInOverlaySchedule,
     overlaySlots,
+    toPoolStakeVRF,
+    fromPoolStakeVRF,
+    hashPoolStakeVRF,
   )
 where
 
+import qualified Cardano.Crypto.Hash.Class as Hash (Hash, HashAlgorithm, castHash)
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BHeaderView (isOverlaySlot)
 import Cardano.Ledger.BaseTypes
@@ -60,6 +64,7 @@ import Cardano.Ledger.Keys
 import Cardano.Ledger.PoolDistr
   ( IndividualPoolStake (..),
     PoolDistr (..),
+    PoolStakeVRF,
   )
 import Cardano.Ledger.Slot (epochInfoEpoch, epochInfoFirst, (-*))
 import Cardano.Protocol.TPraos.BHeader
@@ -197,6 +202,18 @@ vrfChecks eta0 bhb = do
     vrfK = bheaderVrfVk bhb
     slot = bheaderSlotNo bhb
 
+toPoolStakeVRF :: Hash.Hash h (VRF.VerKeyVRF v) -> Hash.Hash h PoolStakeVRF
+toPoolStakeVRF = Hash.castHash
+
+fromPoolStakeVRF :: Hash.Hash h PoolStakeVRF -> Hash.Hash h (VRF.VerKeyVRF v)
+fromPoolStakeVRF = Hash.castHash
+
+hashPoolStakeVRF ::
+  (Hash.HashAlgorithm h, VRF.VRFAlgorithm v) =>
+  VRF.VerKeyVRF v ->
+  Hash.Hash h PoolStakeVRF
+hashPoolStakeVRF = toPoolStakeVRF . hashVerKeyVRF
+
 praosVrfChecks ::
   forall c.
   ( Crypto c,
@@ -212,9 +229,11 @@ praosVrfChecks eta0 (PoolDistr pd) f bhb = do
   case sigma' of
     Nothing -> throwError $ VRFKeyUnknown hk
     Just (IndividualPoolStake sigma vrfHK) -> do
+      let vrfHKfromHeader = hashVerKeyVRF vrfK
+          vrfHKregistered = fromPoolStakeVRF vrfHK
       unless
-        (vrfHK == hashVerKeyVRF vrfK)
-        (throwError $ VRFKeyWrongVRFKey hk vrfHK (hashVerKeyVRF vrfK))
+        (vrfHKregistered == vrfHKfromHeader)
+        (throwError $ VRFKeyWrongVRFKey hk vrfHKregistered vrfHKfromHeader)
       vrfChecks eta0 bhb
       unless
         (checkLeaderValue (VRF.certifiedOutput $ bheaderL bhb) sigma f)
