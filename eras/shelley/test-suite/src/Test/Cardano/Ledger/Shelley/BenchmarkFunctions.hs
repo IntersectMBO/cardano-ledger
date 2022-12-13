@@ -85,7 +85,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Word (Word64)
 import GHC.Stack
-import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessesVKey, vKey)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkWitnessesVKey, vKey)
 import qualified Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes as Original
   ( C_Crypto,
   )
@@ -96,7 +96,6 @@ import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Utils
   ( RawSeed (..),
-    mkAddr,
     mkKeyPair,
     mkKeyPair',
     mkVRFKeyPair,

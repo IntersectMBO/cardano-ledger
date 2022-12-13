@@ -109,7 +109,7 @@ import Test.Cardano.Ledger.Shelley.Examples.Consensus
   )
 import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as Old (ledgerExamplesShelley)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as SLE
-import Test.Cardano.Ledger.Shelley.Generator.Core hiding (mkAddr)
+import Test.Cardano.Ledger.Shelley.Generator.Core
 import Test.Cardano.Ledger.Shelley.Orphans ()
 import Test.Cardano.Ledger.Shelley.Utils hiding (mkVRFKeyPair)
 

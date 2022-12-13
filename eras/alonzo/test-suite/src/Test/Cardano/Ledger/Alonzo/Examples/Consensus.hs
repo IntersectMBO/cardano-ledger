@@ -52,11 +52,10 @@ import GHC.Stack (HasCallStack)
 import qualified PlutusTx as Plutus
 import Test.Cardano.Ledger.Alonzo.PlutusScripts (testingCostModelV1)
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
-import Test.Cardano.Ledger.Core.KeyPair (mkWitnessesVKey)
+import Test.Cardano.Ledger.Core.KeyPair (mkAddr, mkWitnessesVKey)
 import qualified Test.Cardano.Ledger.Mary.Examples.Consensus as SLE
 import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as SLE
 import Test.Cardano.Ledger.Shelley.Orphans ()
-import Test.Cardano.Ledger.Shelley.Utils (mkAddr)
 
 -- | ShelleyLedgerExamples for Alonzo era
 ledgerExamplesAlonzo :: SLE.ShelleyLedgerExamples Alonzo

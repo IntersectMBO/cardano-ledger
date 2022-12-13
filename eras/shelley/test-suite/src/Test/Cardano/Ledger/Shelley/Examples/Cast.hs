@@ -70,13 +70,12 @@ import qualified Data.ByteString.Char8 as BS (pack)
 import Data.Maybe (fromJust)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
-import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr)
 import Test.Cardano.Ledger.Shelley.Generator.Core
   ( AllIssuerKeys (..),
   )
 import Test.Cardano.Ledger.Shelley.Utils
   ( RawSeed (..),
-    mkAddr,
     mkKESKeyPair,
     mkKeyPair,
     mkVRFKeyPair,

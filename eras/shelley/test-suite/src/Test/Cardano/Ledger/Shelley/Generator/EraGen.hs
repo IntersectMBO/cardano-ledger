@@ -305,7 +305,7 @@ genUtxo0 ge@(GenEnv _ _ c@Constants {minGenesisUTxOouts, maxGenesisUTxOouts}) = 
   outs <-
     (genEraTxOut @era ge)
       (genGenesisValue @era ge)
-      (fmap (mkAddr Testnet) genesisKeys ++ fmap (scriptsmkAddr' Testnet) genesisScripts)
+      (fmap mkAddr genesisKeys ++ fmap (scriptsmkAddr' Testnet) genesisScripts)
   return (genesisCoins genesisId outs)
   where
     scriptsmkAddr' :: Network -> (Script era, Script era) -> Addr (EraCrypto era)

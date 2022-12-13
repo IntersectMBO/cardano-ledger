@@ -73,12 +73,11 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
 import Lens.Micro
-import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessesVKey, vKey)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkWitnessesVKey, vKey)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Utils
   ( RawSeed (..),
-    mkAddr,
     mkKeyPair,
     mkVRFKeyPair,
     unsafeBoundRational,
