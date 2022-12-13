@@ -92,7 +92,22 @@ treasury_withdrawals_action = $addr_keyhash => coin
 
 vote =
   [ governance_action_id : governance_action_id
+  , voter_role : voter_role
+  , voter_role_key_hash : $hash32
+  , metadata_url : url
+  , metadata_hash : $hash32
+  , decision : decision
   ]
+
+; constitutional committee - 0
+; DRep - 1
+; SPO - 2
+voter_role = uint
+
+; no - 0
+; yes - 1
+; abstain - 2
+decision = uint
 
 governance_action_id =
   [ transaction_id : $hash32

@@ -38,8 +38,8 @@ import Cardano.Ledger.Shelley.LedgerState (FutureGenDeleg (..), PulsingRewUpdate
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxBody
-  ( DCert (..),
-    GenesisDelegCert (..),
+  ( ConstitutionalDelegCert (..),
+    DCert (..),
     ShelleyTxBody (..),
     ShelleyTxOut (..),
     Wdrl (..),
@@ -133,7 +133,7 @@ txbodyEx1 =
     (StrictSeq.singleton $ ShelleyTxOut Cast.aliceAddr aliceCoinEx1)
     ( StrictSeq.fromList
         [ DCertGenesis
-            ( GenesisDelegCert
+            ( ConstitutionalDelegCert
                 (hashKey (coreNodeVK 0))
                 (hashKey (vKey newGenDelegate))
                 newGenesisVrfKH

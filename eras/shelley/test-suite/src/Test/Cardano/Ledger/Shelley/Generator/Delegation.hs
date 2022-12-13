@@ -31,6 +31,7 @@ import Cardano.Ledger.Keys
 import Cardano.Ledger.Shelley.API
   ( AccountState (..),
     Coin (..),
+    ConstitutionalDelegCert (..),
     Credential (..),
     DCert (..),
     DPState (..),
@@ -39,7 +40,6 @@ import Cardano.Ledger.Shelley.API
     Delegation (..),
     GenDelegPair (..),
     GenDelegs (..),
-    GenesisDelegCert (..),
     KeyHash,
     KeyPair,
     KeyPairs,
@@ -338,7 +338,7 @@ genGenesisDelegation coreNodes delegateKeys dpState =
     mkCert gkey key vrf =
       Just
         ( DCertGenesis
-            ( GenesisDelegCert
+            ( ConstitutionalDelegCert
                 (hashVKey gkey)
                 (hashVKey key)
                 (hashVerKeyVRF vrf)

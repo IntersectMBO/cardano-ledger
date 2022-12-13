@@ -1242,7 +1242,7 @@ pcDCert (DCertMir _) = ppString "MirCert"
 pcConwayDCert :: ConwayDCert c -> PDoc
 pcConwayDCert (ConwayDCertDeleg dc) = pcDelegCert dc
 pcConwayDCert (ConwayDCertPool poolc) = pcPoolCert poolc
-pcConwayDCert (ConwayDCertGenesis _) = ppString "GenesisCert"
+pcConwayDCert (ConwayDCertConstitutional _) = ppString "GenesisCert"
 
 instance c ~ EraCrypto era => PrettyC (DCert c) era where prettyC _ = pcDCert
 

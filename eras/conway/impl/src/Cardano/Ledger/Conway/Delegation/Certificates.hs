@@ -18,7 +18,7 @@ import Cardano.Ledger.Binary
     listLenInt,
   )
 import Cardano.Ledger.Crypto
-import Cardano.Ledger.Shelley.Delegation.Certificates (DCert (..), DelegCert (..), Delegation (..), GenesisDelegCert (..), PoolCert (..))
+import Cardano.Ledger.Shelley.Delegation.Certificates (ConstitutionalDelegCert (..), DCert (..), DelegCert (..), Delegation (..), PoolCert (..))
 import Cardano.Ledger.Slot (EpochNo (..))
 import Control.DeepSeq (NFData)
 import Data.Word (Word8)
@@ -28,7 +28,7 @@ import NoThunks.Class (NoThunks)
 data ConwayDCert c
   = ConwayDCertDeleg !(DelegCert c)
   | ConwayDCertPool !(PoolCert c)
-  | ConwayDCertGenesis !(GenesisDelegCert c)
+  | ConwayDCertConstitutional !(ConstitutionalDelegCert c)
   deriving (Show, Generic, Eq)
 
 instance NFData (ConwayDCert c)
@@ -59,7 +59,7 @@ instance Crypto c => FromCBOR (ConwayDCert c) where
         a <- fromCBOR
         b <- fromCBOR
         c <- fromCBOR
-        pure (4, ConwayDCertGenesis $ GenesisDelegCert a b c)
+        pure (4, ConwayDCertConstitutional $ ConstitutionalDelegCert a b c)
       k -> invalidKey k
 
 instance Crypto c => ToCBOR (ConwayDCert c) where
@@ -89,7 +89,7 @@ instance Crypto c => ToCBOR (ConwayDCert c) where
         <> toCBOR vk
         <> toCBOR epoch
     -- DCertGenesis
-    ConwayDCertGenesis (GenesisDelegCert gk kh vrf) ->
+    ConwayDCertConstitutional (ConstitutionalDelegCert gk kh vrf) ->
       encodeListLen 4
         <> toCBOR (5 :: Word8)
         <> toCBOR gk
@@ -99,4 +99,4 @@ instance Crypto c => ToCBOR (ConwayDCert c) where
 transDCert :: ConwayDCert c -> DCert c
 transDCert (ConwayDCertDeleg dc) = DCertDeleg dc
 transDCert (ConwayDCertPool pc) = DCertPool pc
-transDCert (ConwayDCertGenesis gdc) = DCertGenesis gdc
+transDCert (ConwayDCertConstitutional gdc) = DCertGenesis gdc

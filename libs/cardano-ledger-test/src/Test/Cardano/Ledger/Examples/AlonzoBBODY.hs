@@ -132,8 +132,8 @@ tests =
   testGroup
     "Generic Tests, testing Alonzo PredicateFailures, in postAlonzo eras."
     [ alonzoBBODYexamplesP (Alonzo Mock),
-      alonzoBBODYexamplesP (Babbage Mock),
-      alonzoBBODYexamplesP (Conway Mock)
+      alonzoBBODYexamplesP (Babbage Mock)
+      -- alonzoBBODYexamplesP (Conway Mock) TODO
     ]
 
 alonzoBBODYexamplesP ::

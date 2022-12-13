@@ -19,7 +19,7 @@ module Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
     DelegCert (..),
     Delegation (..),
-    GenesisDelegCert (..),
+    ConstitutionalDelegCert (..),
     MIRCert (..),
     MIRPot (..),
     MIRTarget (..),
@@ -104,10 +104,10 @@ import Cardano.Ledger.PoolParams
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Delegation.Certificates
-  ( DCert (..),
+  ( ConstitutionalDelegCert (..),
+    DCert (..),
     DelegCert (..),
     Delegation (..),
-    GenesisDelegCert (..),
     MIRCert (..),
     MIRPot (..),
     MIRTarget (..),
