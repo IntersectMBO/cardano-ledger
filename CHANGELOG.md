@@ -59,6 +59,7 @@ in the naming of release branches.
 
 ### Changed
 
+- Moved `KeyPair` type and related functions to a new `KeyPair` module in `cardano-ledger-core:testlib` #3210
 - Replace `NominalDiffTime` with a `newtype` wrapper `NominalDiffTimeMicro`. Remove use of `NominalDiffTime`, as we don't use its full precision. #3208
 - Switched `PlutusDebug` to use a `GADT` with `singletons` for better type-safety. #3167
   - Made `Plutus` imports uniform.
