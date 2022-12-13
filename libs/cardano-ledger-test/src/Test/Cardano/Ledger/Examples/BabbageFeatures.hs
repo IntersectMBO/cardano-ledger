@@ -1248,6 +1248,6 @@ babbageFeatures :: TestTree
 babbageFeatures =
   testGroup
     "Babbage Features"
-    [ genericBabbageFeatures (Babbage Mock),
-      genericBabbageFeatures (Conway Mock)
+    [ genericBabbageFeatures (Babbage Mock)
+    -- genericBabbageFeatures (Conway Mock) TODO
     ]

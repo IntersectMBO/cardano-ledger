@@ -143,10 +143,10 @@ import Cardano.Ledger.Shelley.Tx
   )
 import Cardano.Ledger.Shelley.TxAuxData (Metadatum (..), ShelleyTxAuxData (..))
 import Cardano.Ledger.Shelley.TxBody
-  ( DCert (..),
+  ( ConstitutionalDelegCert (..),
+    DCert (..),
     DelegCert (..),
     Delegation (..),
-    GenesisDelegCert (..),
     MIRCert (..),
     MIRPot (..),
     MIRTarget (..),
@@ -1088,8 +1088,8 @@ ppPoolCert :: PoolCert c -> PDoc
 ppPoolCert (RegPool x) = ppSexp "RegPool" [ppPoolParams x]
 ppPoolCert (RetirePool x y) = ppSexp "RetirePool" [ppKeyHash x, ppEpochNo y]
 
-ppGenesisDelegCert :: GenesisDelegCert c -> PDoc
-ppGenesisDelegCert (GenesisDelegCert a b1 c) = ppSexp "GenesisDelgCert" [ppKeyHash a, ppKeyHash b1, ppHash c]
+ppConstitutionalDelegCert :: ConstitutionalDelegCert c -> PDoc
+ppConstitutionalDelegCert (ConstitutionalDelegCert a b1 c) = ppSexp "GenesisDelgCert" [ppKeyHash a, ppKeyHash b1, ppHash c]
 
 ppMIRPot :: MIRPot -> PDoc
 ppMIRPot ReservesMIR = text "Reserves"
@@ -1105,7 +1105,7 @@ ppMIRCert (MIRCert pot vs) = ppSexp "MirCert" [ppMIRPot pot, ppMIRTarget vs]
 ppDCert :: DCert c -> PDoc
 ppDCert (DCertDeleg x) = ppSexp "DCertDeleg" [ppDelegCert x]
 ppDCert (DCertPool x) = ppSexp "DCertPool" [ppPoolCert x]
-ppDCert (DCertGenesis x) = ppSexp "DCertGenesis" [ppGenesisDelegCert x]
+ppDCert (DCertGenesis x) = ppSexp "DCertGenesis" [ppConstitutionalDelegCert x]
 ppDCert (DCertMir x) = ppSexp "DCertMir" [ppMIRCert x]
 
 ppTxBody ::
@@ -1165,8 +1165,8 @@ instance PrettyA (DelegCert c) where
 instance PrettyA (PoolCert c) where
   prettyA = ppPoolCert
 
-instance PrettyA (GenesisDelegCert c) where
-  prettyA = ppGenesisDelegCert
+instance PrettyA (ConstitutionalDelegCert c) where
+  prettyA = ppConstitutionalDelegCert
 
 instance PrettyA MIRPot where
   prettyA = ppMIRPot

@@ -129,7 +129,8 @@ testTxValidForLEDGER ::
   ( Reflect era,
     Signal (EraRule "LEDGER" era) ~ Tx era,
     State (EraRule "LEDGER" era) ~ LedgerState era,
-    PrettyA (PredicateFailure (EraRule "LEDGER" era))
+    PrettyA (PredicateFailure (EraRule "LEDGER" era)),
+    PrettyA (PParamsUpdate era)
   ) =>
   Proof era ->
   Box era ->
@@ -225,9 +226,10 @@ txPreserveAda genSize =
       testProperty "Alonzo ValidTx preserves ADA" $
         forAll (genTxAndLEDGERState (Alonzo Mock) genSize) (testTxValidForLEDGER (Alonzo Mock)),
       testProperty "Babbage ValidTx preserves ADA" $
-        forAll (genTxAndLEDGERState (Babbage Mock) genSize) (testTxValidForLEDGER (Babbage Mock)),
-      testProperty "Conway ValidTx preserves ADA" $
-        forAll (genTxAndLEDGERState (Conway Mock) genSize) (testTxValidForLEDGER (Conway Mock))
+        forAll (genTxAndLEDGERState (Babbage Mock) genSize) (testTxValidForLEDGER (Babbage Mock))
+        -- TODO
+        -- testProperty "Conway ValidTx preserves ADA" $
+        --  forAll (genTxAndLEDGERState (Conway Mock) genSize) (testTxValidForLEDGER (Conway Mock))
     ]
 
 -- | Ada is preserved over a trace of length 100
@@ -276,7 +278,8 @@ incrementalStake :: GenSize -> TestTree
 incrementalStake genSize =
   testGroup
     "Incremental Stake invariant holds"
-    [ incrementStakeInvariant (Conway Mock) genSize,
+    [ -- TODO re-enable this once we have added all the new rules to Conway
+      -- incrementStakeInvariant (Conway Mock) genSize,
       incrementStakeInvariant (Babbage Mock) genSize,
       incrementStakeInvariant (Alonzo Mock) genSize,
       incrementStakeInvariant (Mary Mock) genSize,
@@ -358,9 +361,10 @@ main8 = test 100 (Babbage Mock)
 test :: ReflectC (EraCrypto era) => Int -> Proof era -> IO ()
 test n proof = defaultMain $
   case proof of
-    Conway _ ->
-      testProperty "Conway ValidTx preserves ADA" $
-        withMaxSuccess n (forAll (genTxAndLEDGERState proof def) (testTxValidForLEDGER proof))
+    -- TODO
+    -- Conway _ ->
+    --  testProperty "Conway ValidTx preserves ADA" $
+    --    withMaxSuccess n (forAll (genTxAndLEDGERState proof def) (testTxValidForLEDGER proof))
     Babbage _ ->
       testProperty "Babbage ValidTx preserves ADA" $
         withMaxSuccess n (forAll (genTxAndLEDGERState proof def) (testTxValidForLEDGER proof))

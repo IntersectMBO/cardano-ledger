@@ -149,7 +149,8 @@ utxoTransition ::
     Signal (EraRule "PPUP" era) ~ Maybe (Update era),
     HasField "_keyDeposit" (PParams era) Coin,
     HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_maxTxSize" (PParams era) Natural
+    HasField "_maxTxSize" (PParams era) Natural,
+    ProtVerAtMost era 8
   ) =>
   TransitionRule (AllegraUTXO era)
 utxoTransition = do
@@ -272,7 +273,8 @@ instance
     Embed (EraRule "PPUP" era) (AllegraUTXO era),
     Environment (EraRule "PPUP" era) ~ PpupEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,
-    Signal (EraRule "PPUP" era) ~ Maybe (Update era)
+    Signal (EraRule "PPUP" era) ~ Maybe (Update era),
+    ProtVerAtMost era 8
   ) =>
   STS (AllegraUTXO era)
   where

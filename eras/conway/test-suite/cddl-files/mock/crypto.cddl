@@ -1,0 +1,16 @@
+$hash28 /= bytes .size 28
+$hash32 /= bytes .size 32
+
+$vkey /= bytes .size 8
+
+$vrf_vkey /= bytes .size 8
+$vrf_cert /= [bytes, bytes .size 10]
+natural = #6.2(bytes)
+
+$kes_vkey /= bytes .size 8
+$kes_signature /= bytes .size 32
+signkeyKES = bytes .size 16
+
+$signature /= bytes .size 16
+
+$nonce /= [ 0 // 1, bytes .size 32 ]

@@ -11,6 +11,8 @@ where
 
 import qualified Cardano.Ledger.Alonzo.PParams
 import qualified Cardano.Ledger.Babbage.PParams
+import Cardano.Ledger.Core (EraPParams (..))
+import Cardano.Ledger.Pretty (PrettyA)
 import qualified Cardano.Ledger.Shelley.PParams
 import Control.State.Transition.Extended (STS)
 import Data.Default.Class (def)
@@ -37,7 +39,8 @@ test =
 testThunks ::
   forall era.
   ( Reflect era,
-    STS (MOCKCHAIN era)
+    STS (MOCKCHAIN era),
+    PrettyA (PParamsUpdate era)
   ) =>
   Proof era ->
   Int ->

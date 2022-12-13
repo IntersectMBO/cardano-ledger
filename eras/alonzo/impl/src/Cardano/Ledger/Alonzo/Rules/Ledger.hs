@@ -95,7 +95,7 @@ ledgerTransition = do
           TRC
             ( DelegsEnv slot txIx pp tx account,
               dpstate,
-              StrictSeq.fromStrict $ txBody ^. certsTxBodyL
+              StrictSeq.fromStrict $ txBody ^. certsTxBodyG
             )
       else pure dpstate
 
@@ -125,7 +125,8 @@ instance
     State (EraRule "DELEGS" era) ~ DPState (EraCrypto era),
     Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era)),
     HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin
+    HasField "_poolDeposit" (PParams era) Coin,
+    ProtVerAtMost era 8
   ) =>
   STS (AlonzoLEDGER era)
   where

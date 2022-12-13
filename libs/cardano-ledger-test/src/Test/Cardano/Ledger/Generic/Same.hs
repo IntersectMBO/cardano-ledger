@@ -5,6 +5,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -27,6 +28,9 @@ import Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD)
 import Cardano.Ledger.Babbage.TxBody (BabbageEraTxBody, BabbageTxBody (..), BabbageTxOut (..))
 import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Block (Block (..))
+import Cardano.Ledger.Conway.Core (ConwayEraTxBody)
+import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
+import Cardano.Ledger.Core (EraTxOut (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era, EraCrypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (Genesis))
@@ -52,7 +56,7 @@ import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..), ShelleyTxOut, Wdrl (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..))
 import Cardano.Ledger.UTxO (UTxO (..))
-import Control.State.Transition.Extended (State)
+import Control.State.Transition.Extended (STS (..), State)
 import Data.Foldable (toList)
 import Data.Maybe.Strict (StrictMaybe)
 import Prettyprinter (Doc, indent, viaShow, vsep)
@@ -291,7 +295,11 @@ sameTxOut (Babbage _) x y = eqByShow x y
 sameTxOut (Conway _) x y = eqByShow x y
 {-# NOINLINE sameTxOut #-}
 
-sameLedgerFail :: Proof era -> ApplyTxError era -> ApplyTxError era -> Maybe PDoc
+sameLedgerFail ::
+  Proof era ->
+  ApplyTxError era ->
+  ApplyTxError era ->
+  Maybe PDoc
 sameLedgerFail (Shelley _) x y = eqByShow x y
 sameLedgerFail (Allegra _) x y = eqByShow x y
 sameLedgerFail (Mary _) x y = eqByShow x y
@@ -468,13 +476,46 @@ sameBabbageTxBody
       ("NetworkId", eqVia (ppStrictMaybe pcNetwork) n1 n2)
     ]
 
+sameConwayTxBody ::
+  ( TxOut era ~ BabbageTxOut era,
+    ConwayEraTxBody era,
+    PrettyA (Core.PParamsUpdate era),
+    Reflect era
+  ) =>
+  Proof era ->
+  ConwayTxBody era ->
+  ConwayTxBody era ->
+  [(String, Maybe PDoc)]
+sameConwayTxBody
+  proof
+  (ConwayTxBody i1 cl1 ri1 o1 cr1 tc1 c1 (Wdrl w1) f1 v1 r1 m1 s1 d1 n1 ga1 vs1)
+  (ConwayTxBody i2 cl2 ri2 o2 cr2 tc2 c2 (Wdrl w2) f2 v2 r2 m2 s2 d2 n2 ga2 vs2) =
+    [ ("SpendInputs", eqVia (ppSet pcTxIn) i1 i2),
+      ("ColInputs", eqVia (ppSet pcTxIn) cl1 cl2),
+      ("RefInputs", eqVia (ppSet pcTxIn) ri1 ri2),
+      ("Outputs", eqVia (ppList (pcTxOut proof . sizedValue) . toList) o1 o2),
+      ("ColReturn", eqVia (ppStrictMaybe (pcTxOut proof . sizedValue)) cr1 cr2),
+      ("TotalCol", eqVia (ppStrictMaybe pcCoin) tc1 tc2),
+      ("Certs", eqVia (ppList pcConwayDCert . toList) c1 c2),
+      ("WDRL", eqVia (ppMap pcRewardAcnt pcCoin) w1 w2),
+      ("Fee", eqVia pcCoin f1 f2),
+      ("ValidityInterval", eqVia ppValidityInterval v1 v2),
+      ("ReqSignerHashes", eqVia (ppSet pcKeyHash) r1 r2),
+      ("Mint", eqVia multiAssetSummary m1 m2),
+      ("ScriptIntegrityHash", eqVia (ppStrictMaybe (trim . ppSafeHash)) s1 s2),
+      ("AuxDataHash", eqVia (ppStrictMaybe (\(AuxiliaryDataHash h) -> trim (ppSafeHash h))) d1 d2),
+      ("NetworkId", eqVia (ppStrictMaybe pcNetwork) n1 n2),
+      ("GovernanceActions", eqVia (ppStrictSeq prettyA) ga1 ga2),
+      ("Votes", eqVia (ppStrictSeq prettyA) vs1 vs2)
+    ]
+
 sameTxBody :: Reflect era => Proof era -> Core.TxBody era -> Core.TxBody era -> [(String, Maybe PDoc)]
 sameTxBody proof@(Shelley _) x y = sameShelleyTxBody proof x y
 sameTxBody proof@(Allegra _) x y = sameAllegraTxBody proof x y
 sameTxBody proof@(Mary _) x y = sameMaryTxBody proof x y
 sameTxBody proof@(Alonzo _) x y = sameAlonzoTxBody proof x y
 sameTxBody proof@(Babbage _) x y = sameBabbageTxBody proof x y
-sameTxBody proof@(Conway _) x y = sameBabbageTxBody proof x y
+sameTxBody proof@(Conway _) x y = sameConwayTxBody proof x y
 
 -- =======================
 -- Comparing Tx for Sameness

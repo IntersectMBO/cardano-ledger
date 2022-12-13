@@ -268,7 +268,7 @@ instance Crypto c => Arbitrary (PoolCert c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Crypto c => Arbitrary (GenesisDelegCert c) where
+instance Crypto c => Arbitrary (ConstitutionalDelegCert c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 

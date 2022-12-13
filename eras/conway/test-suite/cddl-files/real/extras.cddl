@@ -1,0 +1,5 @@
+finite_set<a> = [* a ]
+
+unit_interval = #6.30([uint, uint])
+
+rational = #6.30([uint, uint])

@@ -1,4 +1,6 @@
 {-# LANGUAGE ConstrainedClassMethods #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -26,7 +28,7 @@ import Data.Map.Strict (Map)
 import Data.Maybe.Strict (StrictMaybe)
 import Data.Sequence.Strict (StrictSeq)
 import GHC.Generics (Generic)
-import Lens.Micro (Lens')
+import Lens.Micro (Lens', SimpleGetter)
 import NoThunks.Class (NoThunks)
 
 class EraTxBody era => ShelleyEraTxBody era where
@@ -34,9 +36,13 @@ class EraTxBody era => ShelleyEraTxBody era where
 
   ttlTxBodyL :: ExactEra ShelleyEra era => Lens' (TxBody era) SlotNo
 
-  updateTxBodyL :: Lens' (TxBody era) (StrictMaybe (Update era))
+  updateTxBodyL :: ProtVerAtMost era 8 => Lens' (TxBody era) (StrictMaybe (Update era))
 
-  certsTxBodyL :: Lens' (TxBody era) (StrictSeq (DCert (EraCrypto era)))
+  certsTxBodyL :: ProtVerAtMost era 8 => Lens' (TxBody era) (StrictSeq (DCert (EraCrypto era)))
+
+  certsTxBodyG :: SimpleGetter (TxBody era) (StrictSeq (DCert (EraCrypto era)))
+  default certsTxBodyG :: ProtVerAtMost era 8 => SimpleGetter (TxBody era) (StrictSeq (DCert (EraCrypto era)))
+  certsTxBodyG = certsTxBodyL
 
 newtype Wdrl c = Wdrl {unWdrl :: Map (RewardAcnt c) Coin}
   deriving (Show, Eq, Generic)

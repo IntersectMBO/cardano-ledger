@@ -172,7 +172,8 @@ instance
     State (EraRule "DELEGS" era) ~ DPState (EraCrypto era),
     Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era)),
     HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin
+    HasField "_poolDeposit" (PParams era) Coin,
+    ProtVerAtMost era 8
   ) =>
   STS (ShelleyLEDGER era)
   where
@@ -226,7 +227,8 @@ ledgerTransition ::
     Embed (EraRule "UTXOW" era) (ShelleyLEDGER era),
     Environment (EraRule "UTXOW" era) ~ UtxoEnv era,
     State (EraRule "UTXOW" era) ~ UTxOState era,
-    Signal (EraRule "UTXOW" era) ~ Tx era
+    Signal (EraRule "UTXOW" era) ~ Tx era,
+    ProtVerAtMost era 8
   ) =>
   TransitionRule (ShelleyLEDGER era)
 ledgerTransition = do

@@ -60,7 +60,7 @@ import qualified Data.Set as Set
 import GHC.Records (HasField (..))
 import Lens.Micro ((^.))
 
-txup :: (EraTx era, ShelleyEraTxBody era) => Tx era -> Maybe (Update era)
+txup :: (EraTx era, ShelleyEraTxBody era, ProtVerAtMost era 8) => Tx era -> Maybe (Update era)
 txup tx = strictMaybeToMaybe (tx ^. bodyTxL . updateTxBodyL)
 
 scriptStakeCred :: DCert c -> Maybe (ScriptHash c)
@@ -106,7 +106,7 @@ txinsScriptHashes txInps (UTxO u) = foldr add Set.empty txInps
 
 getShelleyScriptsNeeded ::
   forall era.
-  (ShelleyEraTxBody era) =>
+  ShelleyEraTxBody era =>
   UTxO era ->
   TxBody era ->
   ShelleyScriptsNeeded era
@@ -121,7 +121,7 @@ getShelleyScriptsNeeded u txBody =
   where
     withdrawals = Map.keys (unWdrl (txBody ^. wdrlsTxBodyL))
     scriptHashes = txinsScriptHashes (txBody ^. inputsTxBodyL) u
-    certificates = toList (txBody ^. certsTxBodyL)
+    certificates = toList (txBody ^. certsTxBodyG)
 
 -- | Compute the lovelace which are created by the transaction
 produced ::
@@ -142,7 +142,9 @@ produced pp dpstate txBody =
 -- | Compute the lovelace which are destroyed by the transaction
 getConsumedCoin ::
   forall era pp.
-  (ShelleyEraTxBody era, HasField "_keyDeposit" pp Coin) =>
+  ( ShelleyEraTxBody era,
+    HasField "_keyDeposit" pp Coin
+  ) =>
   pp ->
   DPState (EraCrypto era) ->
   UTxO era ->

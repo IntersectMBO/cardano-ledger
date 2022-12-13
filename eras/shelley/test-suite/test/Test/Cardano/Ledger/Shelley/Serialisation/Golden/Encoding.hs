@@ -96,9 +96,9 @@ import Cardano.Ledger.Shelley.API
   )
 import Cardano.Ledger.Shelley.BlockChain (ShelleyTxSeq (..), bbHash)
 import Cardano.Ledger.Shelley.Delegation.Certificates
-  ( pattern DeRegKey,
+  ( pattern ConstitutionalDelegCert,
+    pattern DeRegKey,
     pattern Delegate,
-    pattern GenesisDelegCert,
     pattern MIRCert,
     pattern RegKey,
     pattern RegPool,
@@ -659,7 +659,7 @@ tests =
         shelleyProtVer
         "genesis_delegation"
         ( DCertGenesis
-            ( GenesisDelegCert @C_Crypto
+            ( ConstitutionalDelegCert @C_Crypto
                 testGKeyHash
                 (hashKey . vKey $ testGenesisDelegateKey @C_Crypto)
                 (testVRFKH @C_Crypto)

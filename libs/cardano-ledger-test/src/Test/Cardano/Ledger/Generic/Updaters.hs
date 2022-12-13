@@ -28,6 +28,7 @@ import Cardano.Ledger.Babbage.TxBody as Babbage
     Datum (..),
   )
 import Cardano.Ledger.Coin (Coin (Coin, unCoin))
+import Cardano.Ledger.Conway.Core (ConwayEraTxBody (..))
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams)
 import qualified Cardano.Ledger.Shelley.PParams as Shelley (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Tx as Shelley
@@ -211,10 +212,8 @@ updateTxBody pf txBody dt =
       CollateralReturn collateralReturn -> txBody & collateralReturnTxBodyL .~ collateralReturn
       _ -> txBody
     Conway _ -> case dt of
-      Certs certs -> txBody & certsTxBodyL .~ certs
       Wdrls wdrls -> txBody & wdrlsTxBodyL .~ wdrls
       Vldt vldt -> txBody & vldtTxBodyL .~ vldt
-      Update update -> txBody & updateTxBodyL .~ update
       Mint mint -> txBody & mintTxBodyL .~ mint
       Collateral collateral -> txBody & collateralInputsTxBodyL .~ collateral
       ReqSignerHashes reqSignerHashes -> txBody & reqSignerHashesTxBodyL .~ reqSignerHashes
@@ -223,6 +222,7 @@ updateTxBody pf txBody dt =
       RefInputs refInputs -> txBody & referenceInputsTxBodyL .~ refInputs
       TotalCol totalCol -> txBody & totalCollateralTxBodyL .~ totalCol
       CollateralReturn collateralReturn -> txBody & collateralReturnTxBodyL .~ collateralReturn
+      ConwayCerts certs -> txBody & conwayCertsTxBodyL .~ certs
       _ -> txBody
 {-# NOINLINE updateTxBody #-}
 

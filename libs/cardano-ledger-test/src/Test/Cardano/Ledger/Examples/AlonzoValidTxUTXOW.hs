@@ -97,8 +97,8 @@ tests =
   testGroup
     "Generic Tests for valid transactions, testing Alonzo UTXOW PredicateFailures, in postAlonzo eras."
     [ alonzoUTXOWTests (Alonzo Mock),
-      alonzoUTXOWTests (Babbage Mock),
-      alonzoUTXOWTests (Conway Mock)
+      alonzoUTXOWTests (Babbage Mock)
+      -- alonzoUTXOWTests (Conway Mock) TODO
     ]
 
 alonzoUTXOWTests ::

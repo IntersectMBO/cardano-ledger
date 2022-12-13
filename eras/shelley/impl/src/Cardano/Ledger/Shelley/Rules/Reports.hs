@@ -67,7 +67,7 @@ showCerts :: [DCert c] -> String
 showCerts certs = unlines (map (("  " ++) . synopsisCert) certs)
 
 showTxCerts :: ShelleyEraTxBody era => Core.TxBody era -> String
-showTxCerts txb = showCerts (toList (txb ^. certsTxBodyL))
+showTxCerts txb = showCerts (toList (txb ^. certsTxBodyG))
 
 -- | Display a synopsis of a map to Coin
 synopsisCoinMap :: Maybe (Map.Map k Coin) -> String

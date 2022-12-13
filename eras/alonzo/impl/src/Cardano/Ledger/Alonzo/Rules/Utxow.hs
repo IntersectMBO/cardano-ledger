@@ -345,7 +345,8 @@ alonzoStyleWitness ::
     Embed (EraRule "UTXO" era) (AlonzoUTXOW era),
     Environment (EraRule "UTXO" era) ~ UtxoEnv era,
     State (EraRule "UTXO" era) ~ UTxOState era,
-    Signal (EraRule "UTXO" era) ~ Tx era
+    Signal (EraRule "UTXO" era) ~ Tx era,
+    ProtVerAtMost era 8
   ) =>
   TransitionRule (AlonzoUTXOW era)
 alonzoStyleWitness = do
@@ -428,7 +429,7 @@ alonzoStyleWitness = do
 --  required to authenticate collateral witnesses.
 witsVKeyNeeded ::
   forall era.
-  (EraTx era, AlonzoEraTxBody era) =>
+  (EraTx era, AlonzoEraTxBody era, ProtVerAtMost era 8) =>
   UTxO era ->
   Tx era ->
   GenDelegs (EraCrypto era) ->
@@ -463,7 +464,7 @@ witsVKeyNeeded utxo' tx genDelegs =
       where
         accum key _ ans = Set.union (extractKeyHashWitnessSet [getRwdCred key]) ans
     owners :: Set (KeyHash 'Witness (EraCrypto era))
-    owners = foldr' accum Set.empty (txBody ^. certsTxBodyL)
+    owners = foldr' accum Set.empty (txBody ^. certsTxBodyG)
       where
         accum (DCertPool (RegPool pool)) ans =
           Set.union
@@ -478,7 +479,7 @@ witsVKeyNeeded utxo' tx genDelegs =
     -- before the call to `cwitness`, so this error should never be reached.
 
     certAuthors :: Set (KeyHash 'Witness (EraCrypto era))
-    certAuthors = foldr' accum Set.empty (txBody ^. certsTxBodyL)
+    certAuthors = foldr' accum Set.empty (txBody ^. certsTxBodyG)
       where
         accum cert ans | requiresVKeyWitness cert = Set.union (cwitness cert) ans
         accum _cert ans = ans
@@ -514,7 +515,8 @@ instance
     Embed (EraRule "UTXO" era) (AlonzoUTXOW era),
     Environment (EraRule "UTXO" era) ~ UtxoEnv era,
     State (EraRule "UTXO" era) ~ UTxOState era,
-    Signal (EraRule "UTXO" era) ~ Tx era
+    Signal (EraRule "UTXO" era) ~ Tx era,
+    ProtVerAtMost era 8
   ) =>
   STS (AlonzoUTXOW era)
   where

@@ -301,7 +301,8 @@ transitionRulesUTXOW ::
     Signal (utxow era) ~ Tx era,
     PredicateFailure (utxow era) ~ ShelleyUtxowPredFailure era,
     STS (utxow era),
-    DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
+    DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody),
+    ProtVerAtMost era 8
   ) =>
   TransitionRule (utxow era)
 transitionRulesUTXOW = do
@@ -368,7 +369,8 @@ instance
     State (EraRule "UTXO" era) ~ UTxOState era,
     Signal (EraRule "UTXO" era) ~ Tx era,
     HasField "_protocolVersion" (PParams era) ProtVer,
-    DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
+    DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody),
+    ProtVerAtMost era 8
   ) =>
   STS (ShelleyUTXOW era)
   where
@@ -489,7 +491,8 @@ validateNeededWitnesses witsvkeyneeded genDelegs utxo tx witsKeyHashes =
 witsVKeyNeeded ::
   forall era.
   ( EraTx era,
-    ShelleyEraTxBody era
+    ShelleyEraTxBody era,
+    ProtVerAtMost era 8
   ) =>
   UTxO era ->
   Tx era ->
@@ -521,7 +524,7 @@ witsVKeyNeeded utxo' tx genDelegs =
       where
         accum key _ ans = Set.union (extractKeyHashWitnessSet [getRwdCred key]) ans
     owners :: Set (KeyHash 'Witness (EraCrypto era))
-    owners = foldr accum Set.empty (txBody ^. certsTxBodyL)
+    owners = foldr accum Set.empty (txBody ^. certsTxBodyG)
       where
         accum (DCertPool (RegPool pool)) ans =
           Set.union
@@ -536,7 +539,7 @@ witsVKeyNeeded utxo' tx genDelegs =
     -- before the call to `cwitness`, so this error should never be reached.
 
     certAuthors :: Set (KeyHash 'Witness (EraCrypto era))
-    certAuthors = foldr accum Set.empty (txBody ^. certsTxBodyL)
+    certAuthors = foldr accum Set.empty (txBody ^. certsTxBodyG)
       where
         accum cert ans | requiresVKeyWitness cert = Set.union (cwitness cert) ans
         accum _cert ans = ans
@@ -590,7 +593,7 @@ validateMIRInsufficientGenesisSigs (GenDelegs genMapping) coreNodeQuorum witsKey
         StrictSeq.forceToStrict
           . Seq.filter isInstantaneousRewards
           . StrictSeq.fromStrict
-          $ txBody ^. certsTxBodyL
+          $ txBody ^. certsTxBodyG
    in failureUnless
         (not (null mirCerts) ==> Set.size genSig >= fromIntegral coreNodeQuorum)
         $ MIRInsufficientGenesisSigsUTXOW genSig

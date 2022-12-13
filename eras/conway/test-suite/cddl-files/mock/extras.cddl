@@ -1,0 +1,45 @@
+set<a> = [a]
+  ; real set is [* a]
+
+unit_interval = #6.30([1, 2])
+  ; real unit_interval is: #6.30([uint, uint])
+  ; but this produces numbers outside the unit interval
+  ; and can also produce a zero in the denominator
+
+rational =  #6.30(
+   [ numerator   : 1
+   , denominator : 2
+   ])
+  ; real rational is: #6.30([uint, uint])
+  ; but this produces numbers outside the unit interval
+  ; and can also produce a zero in the denominator
+
+positive_interval = #6.30([1, 2])
+  ; fractional positive_interval is: #6.30([uint, uint])
+  ; but this can produce a zero in the denominator
+
+
+address =
+  h'001000000000000000000000000000000000000000000000000000000011000000000000000000000000000000000000000000000000000000' /
+  h'102000000000000000000000000000000000000000000000000000000022000000000000000000000000000000000000000000000000000000' /
+  h'203000000000000000000000000000000000000000000000000000000033000000000000000000000000000000000000000000000000000000' /
+  h'304000000000000000000000000000000000000000000000000000000044000000000000000000000000000000000000000000000000000000' /
+  h'405000000000000000000000000000000000000000000000000000000087680203' /
+  h'506000000000000000000000000000000000000000000000000000000087680203' /
+  h'6070000000000000000000000000000000000000000000000000000000' /
+  h'7080000000000000000000000000000000000000000000000000000000'
+
+reward_account =
+  h'E090000000000000000000000000000000000000000000000000000000' /
+  h'F0A0000000000000000000000000000000000000000000000000000000'
+
+bounded_bytes = bytes .size (0..64)
+  ; the real bounded_bytes does not have this limit. it instead has a different
+  ; limit which cannot be expressed in CDDL.
+  ; The limit is as follows:
+  ;  - bytes with a definite-length encoding are limited to size 0..64
+  ;  - for bytes with an indefinite-length CBOR encoding, each chunk is
+  ;    limited to size 0..64
+  ;  ( reminder: in CBOR, the indefinite-length encoding of bytestrings
+  ;    consists of a token #2.31 followed by a sequence of definite-length
+  ;    encoded bytestrings and a stop code )
