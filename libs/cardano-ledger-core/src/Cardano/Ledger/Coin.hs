@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UnboxedTuples #-}
 
@@ -22,7 +23,14 @@ module Cardano.Ledger.Coin
 where
 
 import Cardano.HeapWords (HeapWords)
-import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.Binary
+  ( FromCBOR (..),
+    ToCBOR (..),
+    decodeInteger,
+    decodeWord64,
+    ifDecoderVersionAtLeast,
+    natVersion,
+  )
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.TreeDiff (ToExpr (toExpr))
 import Control.DeepSeq (NFData)
@@ -51,7 +59,14 @@ newtype Coin = Coin {unCoin :: Integer}
     )
   deriving (Show) via Quiet Coin
   deriving (Semigroup, Monoid, Group, Abelian) via Sum Integer
-  deriving newtype (PartialOrd, FromCBOR, ToCBOR, HeapWords)
+  deriving newtype (PartialOrd, ToCBOR, HeapWords)
+
+instance FromCBOR Coin where
+  fromCBOR =
+    ifDecoderVersionAtLeast
+      (natVersion @9)
+      (Coin . fromIntegral <$> decodeWord64)
+      (Coin <$> decodeInteger)
 
 newtype DeltaCoin = DeltaCoin Integer
   deriving (Eq, Ord, Generic, Enum, NoThunks, NFData, FromCBOR, ToCBOR, HeapWords)
