@@ -21,16 +21,15 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Era
-import Cardano.Ledger.Keys
+import Cardano.Ledger.Keys hiding (KeyPair, vKey)
 import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.SafeHash
 import Cardano.Ledger.Shelley (Shelley)
-import Cardano.Ledger.Shelley.API
+import Cardano.Ledger.Shelley.API hiding (KeyPair, vKey)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Shelley.Rules
 import Cardano.Ledger.Shelley.TxWits
-import Cardano.Ledger.UTxO
 import Cardano.Protocol.TPraos.API
 import Cardano.Protocol.TPraos.BHeader
 import Cardano.Protocol.TPraos.OCert
@@ -53,6 +52,7 @@ import Data.Word (Word64, Word8)
 import GHC.Records (HasField)
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), makeWitnessesVKey)
 import Test.Cardano.Ledger.Shelley.Generator.Core
 import Test.Cardano.Ledger.Shelley.Orphans ()
 import Test.Cardano.Ledger.Shelley.Utils hiding (mkVRFKeyPair)

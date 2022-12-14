@@ -23,8 +23,7 @@ import Cardano.Ledger.Credential (Ptr (..))
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.EpochBoundary (emptySnapShot)
 import Cardano.Ledger.Keys
-  ( KeyPair (..),
-    KeyRole (..),
+  ( KeyRole (..),
     asWitness,
   )
 import Cardano.Ledger.SafeHash (hashAnnotated)
@@ -59,7 +58,7 @@ import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.Shelley.TxWits (addrWits)
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn (..))
-import Cardano.Ledger.UTxO (UTxO (..), makeWitnessesVKey)
+import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Protocol.TPraos.BHeader (BHeader, bhHash)
@@ -67,6 +66,7 @@ import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), makeWitnessesVKey)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (ExMock, Mock)
 import Test.Cardano.Ledger.Shelley.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast

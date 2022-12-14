@@ -64,7 +64,7 @@ import Cardano.Ledger.Conway.Governance (GovernanceActionInfo (..), Vote)
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
-import Cardano.Ledger.Keys (KeyHash, KeyPair (..), KeyRole (..), hashKey)
+import Cardano.Ledger.Keys (KeyHash, KeyRole (..), hashKey)
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness (..))
 import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
 import Cardano.Ledger.Mary.Value (MultiAsset (..))
@@ -82,6 +82,7 @@ import qualified Data.Sequence.Strict as SSeq (fromList)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Numeric.Natural (Natural)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Generic.Indexed (theKeyPair)
 import Test.Cardano.Ledger.Generic.Proof
 

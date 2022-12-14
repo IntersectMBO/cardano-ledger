@@ -121,6 +121,7 @@ library testlib
                      Test.Cardano.Ledger.Common
                      Test.Cardano.Ledger.Core.Address
                      Test.Cardano.Ledger.Core.Arbitrary
+                     Test.Cardano.Ledger.Core.KeyPair
                      Test.Cardano.Ledger.Core.Utils
   build-depends:     base,
                      binary,
@@ -129,10 +130,13 @@ library testlib
                      cardano-ledger-core,
                      cardano-ledger-binary:{cardano-ledger-binary, testlib},
                      cardano-ledger-byron-test,
+                     containers,
+                     deepseq,
                      generic-random,
                      genvalidity,
                      hspec,
                      hedgehog-quickcheck,
+                     nothunks,
                      primitive,
                      QuickCheck,
                      text,

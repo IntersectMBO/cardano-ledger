@@ -31,7 +31,6 @@ module Test.Cardano.Ledger.Shelley.Generator.EraGen
 where
 
 import qualified Cardano.Crypto.Hash as Hash
-import Cardano.Ledger.Address (toAddr)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (Network (..), ProtVer, ShelleyBase, StrictMaybe, UnitInterval)
 import Cardano.Ledger.Binary (ToCBOR (..), serializeEncoding', shelleyProtVer)
@@ -45,7 +44,6 @@ import Cardano.Ledger.Shelley.API
   ( Addr (Addr),
     Block (..),
     Credential (ScriptHashObj),
-    KeyPairs,
     LedgerEnv,
     LedgerState,
     ShelleyLedgersEnv,
@@ -71,6 +69,7 @@ import GHC.Natural (Natural)
 import GHC.Records (HasField (..))
 import Lens.Micro
 import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPairs, toAddr)
 import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core
   ( GenEnv (..),

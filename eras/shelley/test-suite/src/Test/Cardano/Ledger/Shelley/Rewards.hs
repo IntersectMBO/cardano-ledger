@@ -63,11 +63,9 @@ import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Era (Era, EraCrypto)
 import Cardano.Ledger.Keys
   ( KeyHash,
-    KeyPair (..),
     KeyRole (..),
     VKey (..),
     hashKey,
-    vKey,
   )
 import Cardano.Ledger.Pretty (PDoc, PrettyA (..), ppMap, ppReward, ppSet)
 import Cardano.Ledger.Shelley.API (NonMyopic, SnapShot (..), SnapShots (..))
@@ -140,6 +138,7 @@ import Data.Word (Word64)
 import GHC.Records (HasField, getField)
 import GHC.Stack
 import Numeric.Natural (Natural)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), vKey)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C)
 import Test.Cardano.Ledger.Shelley.Generator.Core (genCoin, genNatural)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()

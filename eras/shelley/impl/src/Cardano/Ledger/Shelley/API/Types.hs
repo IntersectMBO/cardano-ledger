@@ -50,7 +50,7 @@ import Cardano.Ledger.Keys as X
     Hash,
     KESignable,
     KeyHash (..),
-    KeyPair (..),
+    KeyPair (..), -- deprecated
     KeyRole (..),
     SignKeyDSIGN,
     SignKeyKES,
@@ -85,7 +85,7 @@ import Cardano.Ledger.Shelley.LedgerState as X
     EpochState (..),
     IncrementalStake (..),
     InstantaneousRewards (..),
-    KeyPairs,
+    KeyPairs, -- deprecated
     LedgerState (..),
     NewEpochState (..),
     PPUPState (..),

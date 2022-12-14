@@ -26,7 +26,6 @@ import Cardano.Ledger.Keys
   ( coerceKeyRole,
     hashKey,
     hashVerKeyVRF,
-    vKey,
   )
 import Cardano.Ledger.Shelley.API
   ( AccountState (..),
@@ -41,8 +40,6 @@ import Cardano.Ledger.Shelley.API
     GenDelegPair (..),
     GenDelegs (..),
     KeyHash,
-    KeyPair,
-    KeyPairs,
     KeyRole (..),
     MIRCert (..),
     MIRPot (..),
@@ -72,6 +69,7 @@ import Data.Set ((\\))
 import qualified Data.Set as Set
 import GHC.Records (HasField (..))
 import Numeric.Natural (Natural)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair, KeyPairs, vKey)
 import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core
   ( AllIssuerKeys (..),

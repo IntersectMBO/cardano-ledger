@@ -15,10 +15,7 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Ledger.Address
-  ( mkVKeyRwdAcnt,
-    mkRwdAcnt,
-    toAddr,
-    toCred,
+  ( mkRwdAcnt,
     serialiseAddr,
     deserialiseAddr,
     Addr (..),
@@ -90,7 +87,7 @@ import Cardano.Ledger.Credential
   )
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Hashes (ScriptHash (..))
-import Cardano.Ledger.Keys (KeyHash (..), KeyPair (..), KeyRole (..), hashKey)
+import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.TreeDiff (ToExpr (toExpr), defaultExprViaShow)
 import Cardano.Prelude (unsafeShortByteStringIndex)
@@ -124,32 +121,12 @@ import NoThunks.Class (NoThunks (..))
 import Numeric (showIntAtBase)
 import Quiet
 
-mkVKeyRwdAcnt ::
-  Crypto c =>
-  Network ->
-  KeyPair 'Staking c ->
-  RewardAcnt c
-mkVKeyRwdAcnt network keys = RewardAcnt network $ KeyHashObj (hashKey $ vKey keys)
-
 mkRwdAcnt ::
   Network ->
   Credential 'Staking c ->
   RewardAcnt c
 mkRwdAcnt network script@(ScriptHashObj _) = RewardAcnt network script
 mkRwdAcnt network key@(KeyHashObj _) = RewardAcnt network key
-
-toAddr ::
-  Crypto c =>
-  Network ->
-  (KeyPair 'Payment c, KeyPair 'Staking c) ->
-  Addr c
-toAddr n (payKey, stakeKey) = Addr n (toCred payKey) (StakeRefBase $ toCred stakeKey)
-
-toCred ::
-  Crypto c =>
-  KeyPair kr c ->
-  Credential kr c
-toCred k = KeyHashObj . hashKey $ vKey k
 
 -- | Serialise an address to the external format.
 serialiseAddr :: Addr c -> ByteString

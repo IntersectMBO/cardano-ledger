@@ -36,13 +36,11 @@ import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Keys
   ( Hash,
     KeyHash,
-    KeyPair (..),
     KeyRole (..),
     VerKeyVRF,
     asWitness,
     hashKey,
     hashVerKeyVRF,
-    vKey,
   )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -77,7 +75,6 @@ import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.Shelley.TxWits (addrWits)
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn (..), mkTxInPartial)
-import Cardano.Ledger.UTxO (makeWitnessesVKey)
 import Cardano.Ledger.Val (Val (inject))
 import Cardano.Protocol.TPraos.API (PraosCrypto)
 import Control.State.Transition.Extended (TRC (..), applySTS)
@@ -88,6 +85,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Word (Word64)
 import GHC.Stack
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), makeWitnessesVKey, vKey)
 import qualified Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes as Original
   ( C_Crypto,
   )

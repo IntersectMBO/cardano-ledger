@@ -24,9 +24,9 @@ where
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys
-  ( KeyPair (..),
-    KeyRole (..),
+  ( KeyRole (..),
   )
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkAddr, mkKeyPair)
 
 -- | Alice's payment key pair

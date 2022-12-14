@@ -19,7 +19,7 @@ import Cardano.Ledger.BaseTypes (UnitInterval)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (VRF)
 import Cardano.Ledger.Era (EraCrypto)
-import Cardano.Ledger.Shelley.API
+import Cardano.Ledger.Shelley.API hiding (vKey)
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Protocol.TPraos.API
 import Cardano.Protocol.TPraos.BHeader
@@ -45,6 +45,7 @@ import Data.Maybe (catMaybes, fromMaybe)
 import Data.Sequence (Seq)
 import qualified Data.Set as Set
 import GHC.Records (HasField (getField))
+import Test.Cardano.Ledger.Core.KeyPair (vKey)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes
   ( Mock,
   )

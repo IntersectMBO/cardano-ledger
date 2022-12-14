@@ -48,19 +48,18 @@ import Cardano.Ledger.Conway.Translation ()
 import Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.EpochBoundary
-import Cardano.Ledger.Keys
+import Cardano.Ledger.Keys hiding (KeyPair, vKey)
 import Cardano.Ledger.Mary.Translation ()
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.SafeHash
-import Cardano.Ledger.Shelley.API hiding (RequireAllOf, RequireAnyOf, RequireMOf, RequireSignature)
+import Cardano.Ledger.Shelley.API hiding (KeyPair, RequireAllOf, RequireAnyOf, RequireMOf, RequireSignature, vKey)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PParams
 import qualified Cardano.Ledger.Shelley.PParams as PParams (Update (..))
 import qualified Cardano.Ledger.Shelley.PParams as ShelleyPP
 import Cardano.Ledger.Shelley.Rules
 import Cardano.Ledger.TxIn (mkTxInPartial)
-import Cardano.Ledger.UTxO (makeWitnessesVKey)
 import Cardano.Ledger.Val (inject)
 import Cardano.Protocol.TPraos.API
 import Cardano.Protocol.TPraos.BHeader
@@ -94,6 +93,7 @@ import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import qualified Test.Cardano.Ledger.Babbage.Examples.Consensus as Old (ledgerExamplesBabbage)
 import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
 import qualified Test.Cardano.Ledger.Conway.Examples.Consensus as Old (ledgerExamplesConway)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), makeWitnessesVKey)
 import Test.Cardano.Ledger.Generic.Fields
   ( TxBodyField (..),
     TxField (..),

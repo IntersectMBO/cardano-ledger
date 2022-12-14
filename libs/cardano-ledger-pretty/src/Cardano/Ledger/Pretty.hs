@@ -85,12 +85,12 @@ import Cardano.Ledger.Keys
     GenDelegPair (..),
     GenDelegs (..),
     KeyHash (..),
-    KeyPair (..),
     KeyRole (Staking),
     VKey (..),
     VerKeyKES,
     hashKey,
   )
+-- import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness (..), ChainCode (..))
 import Cardano.Ledger.MemoBytes (MemoBytes (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
@@ -1590,10 +1590,6 @@ instance PrettyA DnsName where
 ppVKey :: Crypto c => VKey r c -> PDoc
 ppVKey vk@(VKey x) = vsep [reAnnotate (Width 5 :) (viaShow x), "hash = " <+> ppKeyHash (hashKey vk)]
 
-ppKeyPair :: Crypto c => KeyPair r c -> PDoc
-ppKeyPair (KeyPair x y) =
-  ppRecord "KeyPair" [("vKey", ppVKey x), ("sKey", reAnnotate (Width 5 :) (viaShow y))]
-
 ppKeyHash :: KeyHash x c -> PDoc
 ppKeyHash (KeyHash x) = ppSexp "KeyHash" [ppHash x]
 
@@ -1612,9 +1608,6 @@ ppGenDelegs (GenDelegs m) = ppSexp "GenDelegs" [ppMap ppKeyHash ppGenDelegPair m
 
 instance Crypto c => PrettyA (VKey r c) where
   prettyA = ppVKey
-
-instance Crypto c => PrettyA (KeyPair r c) where
-  prettyA = ppKeyPair
 
 instance PrettyA (KeyHash x c) where
   prettyA = ppKeyHash

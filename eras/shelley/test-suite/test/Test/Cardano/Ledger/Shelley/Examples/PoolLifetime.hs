@@ -89,7 +89,7 @@ import Cardano.Ledger.Slot
     SlotNo (..),
   )
 import Cardano.Ledger.TxIn (TxIn (..), mkTxInPartial)
-import Cardano.Ledger.UTxO (UTxO (..), makeWitnessesVKey)
+import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Protocol.TPraos.BHeader (BHeader, bhHash, hashHeaderToNonce)
@@ -102,6 +102,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import GHC.Exts (fromList)
 import GHC.Stack (HasCallStack)
+import Test.Cardano.Ledger.Core.KeyPair (makeWitnessesVKey)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (ExMock)
 import Test.Cardano.Ledger.Shelley.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast

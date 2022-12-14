@@ -16,6 +16,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Cardano.Ledger.Shelley.LedgerState.Types where
 
@@ -44,7 +45,7 @@ import Cardano.Ledger.EpochBoundary
   )
 import Cardano.Ledger.Keys
   ( KeyHash (..),
-    KeyPair,
+    KeyPair, -- deprecated
     KeyRole (..),
   )
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
@@ -73,8 +74,9 @@ import NoThunks.Class (NoThunks (..))
 
 -- ==================================
 
--- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
 type KeyPairs c = [(KeyPair 'Payment c, KeyPair 'Staking c)]
+
+{-# DEPRECATED KeyPairs "Use `Test.Cardano.Ledger.Core.KeyPair (KeyPairs)` instead" #-}
 
 type RewardAccounts c =
   Map (Credential 'Staking c) Coin

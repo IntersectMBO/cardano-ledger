@@ -48,7 +48,7 @@ library
     cardano-ledger-alonzo,
     cardano-ledger-alonzo-test,
     cardano-ledger-babbage,
-    cardano-ledger-core,
+    cardano-ledger-core:{cardano-ledger-core, testlib},
     cardano-ledger-shelley-ma-test,
     cardano-ledger-mary,
     cardano-slotting,

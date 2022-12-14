@@ -44,7 +44,6 @@ import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.Rules (ShelleyDelegsPredFailure (..), ShelleyLedgerPredFailure (..))
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.TxIn (mkTxInPartial)
-import Cardano.Ledger.UTxO (makeWitnessesVKey)
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import Data.Default.Class (def)
 import qualified Data.Map.Strict as Map
@@ -54,6 +53,7 @@ import qualified Data.Set as Set
 import qualified PlutusTx as Plutus
 import qualified Test.Cardano.Ledger.Alonzo.Examples.Consensus as AlonzoLE
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
+import Test.Cardano.Ledger.Core.KeyPair (makeWitnessesVKey)
 import qualified Test.Cardano.Ledger.Mary.Examples.Consensus as MarySLE
 import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as SLE
 import Test.Cardano.Ledger.Shelley.Orphans ()

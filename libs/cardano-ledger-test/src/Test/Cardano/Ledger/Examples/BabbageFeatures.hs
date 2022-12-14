@@ -52,7 +52,6 @@ import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys
   ( KeyHash,
-    KeyPair (..),
     KeyRole (..),
     hashKey,
   )
@@ -62,7 +61,6 @@ import Cardano.Ledger.Shelley.API (DCert (DCertDeleg), DelegCert (DeRegKey), Pro
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), smartUTxOState)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.TxIn (TxIn (..))
-import Cardano.Ledger.UTxO (makeWitnessVKey)
 import Cardano.Ledger.Val (inject)
 import Control.State.Transition.Extended hiding (Assertion)
 import qualified Data.ByteString as BS
@@ -75,6 +73,7 @@ import qualified Data.Set as Set
 import GHC.Stack
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), makeWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils
   ( AlonzoBased (..),
     freeCostModelV1,
