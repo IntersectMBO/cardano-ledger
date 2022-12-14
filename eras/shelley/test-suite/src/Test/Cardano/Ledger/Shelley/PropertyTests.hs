@@ -19,8 +19,6 @@ module Test.Cardano.Ledger.Shelley.PropertyTests
     onlyValidLedgerSignalsAreGenerated,
     onlyValidChainSignalsAreGenerated,
     -- Crypto era only
-    propCompactAddrRoundTrip,
-    propCompactSerializationAgree,
     depositTests,
   )
 where
@@ -42,13 +40,6 @@ import Data.List (nub, sort)
 import Data.Set as Set (fromList, singleton)
 import Test.Cardano.Ledger.Shelley.Address.Bootstrap
   ( bootstrapHashTest,
-  )
-import Test.Cardano.Ledger.Shelley.Address.CompactAddr
-  ( propCompactAddrRoundTrip,
-    propCompactSerializationAgree,
-    propDecompactErrors,
-    propDeserializeRewardAcntErrors,
-    propValidateNewDecompact,
   )
 import Test.Cardano.Ledger.Shelley.ByronTranslation (testGroupByronTranslation)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
@@ -113,17 +104,6 @@ minimalPropertyTests =
       TQC.testProperty "total amount of Ada is preserved (Chain)" (adaPreservationChain @era @ledger),
       TQC.testProperty "Only valid CHAIN STS signals are generated" (onlyValidChainSignalsAreGenerated @era),
       bootstrapHashTest,
-      testGroup
-        "Compact Address Tests"
-        [ TQC.testProperty "Compact address round trip" (propCompactAddrRoundTrip @(EraCrypto era)),
-          TQC.testProperty "Compact address binary representation" (propCompactSerializationAgree @(EraCrypto era)),
-          TQC.testProperty "Ensure Addr failures on incorrect binary data" $
-            propDecompactErrors @(EraCrypto era),
-          TQC.testProperty "Ensure RewardAcnt failures on incorrect binary data" $
-            propDeserializeRewardAcntErrors @(EraCrypto era),
-          TQC.testProperty "Decompacting an address is still valid" $
-            propValidateNewDecompact @(EraCrypto era)
-        ],
       TQC.testProperty "WitVKey does not brake containers due to invalid Ord" $
         propWitVKeys @(EraCrypto era)
     ]
@@ -197,12 +177,5 @@ propertyTests =
             (onlyValidChainSignalsAreGenerated @era)
         ],
       testGroupByronTranslation,
-      testGroupShelleyTranslation,
-      testGroup
-        "Compact Address Tests"
-        [ TQC.testProperty "Compact address round trip" (propCompactAddrRoundTrip @(EraCrypto era)),
-          TQC.testProperty "Compact address binary representation" (propCompactSerializationAgree @(EraCrypto era)),
-          TQC.testProperty "Ensure failures on incorrect binary data" $
-            propDecompactErrors @(EraCrypto era)
-        ]
+      testGroupShelleyTranslation
     ]

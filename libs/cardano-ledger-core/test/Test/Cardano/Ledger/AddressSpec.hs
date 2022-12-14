@@ -6,7 +6,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Test.Cardano.Ledger.Shelley.Address.CompactAddr where
+module Test.Cardano.Ledger.AddressSpec (spec) where
 
 import qualified Cardano.Crypto.Hash.Class as Hash
 import Cardano.Ledger.Address
@@ -19,7 +19,7 @@ import Cardano.Ledger.Address
 import Cardano.Ledger.Binary (Version, serialize')
 import qualified Cardano.Ledger.CompactAddress as CA
 import Cardano.Ledger.Credential
-import qualified Cardano.Ledger.Crypto as CC (Crypto (ADDRHASH))
+import Cardano.Ledger.Crypto (Crypto (ADDRHASH), StandardCrypto)
 import qualified Data.Binary.Put as B
 import Data.Bits
 import qualified Data.ByteString as BS
@@ -29,12 +29,10 @@ import Data.Either
 import Data.Maybe (isJust, isNothing)
 import Data.Proxy
 import Data.Word
-import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
-import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
-import Test.QuickCheck
-import Test.QuickCheck.Gen (chooseWord64)
+import Test.Cardano.Ledger.Common
+import Test.Cardano.Ledger.Core.Arbitrary ()
 
-propValidateNewDecompact :: forall c. CC.Crypto c => Addr c -> Property
+propValidateNewDecompact :: forall c. Crypto c => Addr c -> Property
 propValidateNewDecompact addr =
   let bs = serialiseAddr addr
       compact = SBS.toShort bs
@@ -42,7 +40,7 @@ propValidateNewDecompact addr =
       decompactedNew = CA.decodeAddrShort @c compact
    in isJust decompactedOld .&&. decompactedOld === decompactedNew
 
-propCompactAddrRoundTrip :: CC.Crypto c => Addr c -> Bool
+propCompactAddrRoundTrip :: Crypto c => Addr c -> Bool
 propCompactAddrRoundTrip addr =
   let compact = CA.compactAddr addr
       decompact = CA.decompactAddr compact
@@ -50,13 +48,13 @@ propCompactAddrRoundTrip addr =
 
 propCompactSerializationAgree :: Addr c -> Bool
 propCompactSerializationAgree addr =
-  let (CA.UnsafeCompactAddr sbs) = CA.compactAddr addr
+  let CA.UnsafeCompactAddr sbs = CA.compactAddr addr
    in sbs == SBS.toShort (serialiseAddr addr)
 
-propDecompactErrors :: forall c. CC.Crypto c => Addr c -> Gen Property
+propDecompactErrors :: forall c. Crypto c => Addr c -> Gen Property
 propDecompactErrors addr = do
   let (CA.UnsafeCompactAddr sbs) = CA.compactAddr addr
-      hashLen = fromIntegral $ Hash.sizeHash (Proxy :: Proxy (CC.ADDRHASH c))
+      hashLen = fromIntegral $ Hash.sizeHash (Proxy :: Proxy (ADDRHASH c))
       bs = SBS.fromShort sbs
       flipHeaderBit b =
         case BS.uncons bs of
@@ -77,10 +75,10 @@ propDecompactErrors addr = do
         let (prefix, suffix) = BS.splitAt (1 + hashLen) bs
             genBad32 =
               putVariableLengthWord64
-                <$> chooseWord64 (fromIntegral (maxBound :: Word32) + 1, maxBound)
+                <$> choose (fromIntegral (maxBound :: Word32) + 1, maxBound :: Word64)
             genBad16 =
               putVariableLengthWord64
-                <$> chooseWord64 (fromIntegral (maxBound :: Word16) + 1, maxBound)
+                <$> choose (fromIntegral (maxBound :: Word16) + 1, maxBound :: Word64)
             genGood32 =
               putVariableLengthWord64 . (fromIntegral :: Word32 -> Word64) <$> arbitrary
             genGood16 =
@@ -118,7 +116,7 @@ propDecompactErrors addr = do
     $ isLeft
     $ CA.decodeAddrEither @c badAddr
 
-propDeserializeRewardAcntErrors :: forall c. CC.Crypto c => Version -> RewardAcnt c -> Gen Property
+propDeserializeRewardAcntErrors :: forall c. Crypto c => Version -> RewardAcnt c -> Gen Property
 propDeserializeRewardAcntErrors v acnt = do
   let bs = serialize' v acnt
       flipHeaderBit b =
@@ -145,3 +143,17 @@ propDeserializeRewardAcntErrors v acnt = do
       ("Mingled address with " ++ mingler ++ " was parsed: " ++ show badAddr)
     $ isNothing
     $ CA.decodeRewardAcnt @c badAddr
+
+spec :: Spec
+spec = do
+  describe "CompactAddr" $ do
+    prop "compactAddr/decompactAddr round trip" $
+      propCompactAddrRoundTrip @StandardCrypto
+    prop "Compact address binary representation" $
+      propCompactSerializationAgree @StandardCrypto
+    prop "Ensure Addr failures on incorrect binary data" $
+      propDecompactErrors @StandardCrypto
+    prop "Ensure RewardAcnt failures on incorrect binary data" $
+      propDeserializeRewardAcntErrors @StandardCrypto
+    prop "Decompacting an address is still valid" $
+      propValidateNewDecompact @StandardCrypto

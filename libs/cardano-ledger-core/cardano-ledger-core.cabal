@@ -138,12 +138,15 @@ test-suite tests
   main-is:           Main.hs
   type:              exitcode-stdio-1.0
 
-  other-modules:     Test.Cardano.Ledger.BaseTypesSpec
+  other-modules:     Test.Cardano.Ledger.AddressSpec,
+                     Test.Cardano.Ledger.BaseTypesSpec,
 
   build-depends:     aeson,
+                     binary,
                      bytestring,
                      cardano-ledger-binary:{cardano-ledger-binary, testlib},
                      cardano-ledger-core:{cardano-ledger-core, testlib},
+                     cardano-crypto-class,
                      genvalidity,
                      genvalidity-scientific,
                      scientific,
