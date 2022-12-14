@@ -41,7 +41,6 @@ import Cardano.Ledger.Keys
   ( GenDelegs (..),
     HasKeyRole (coerceKeyRole),
     KeyHash (..),
-    KeyPair (..),
     KeyRole (..),
     VKey (..),
     hashKey,
@@ -104,6 +103,7 @@ import Data.Text (Text, pack)
 import Data.Typeable (Typeable)
 import qualified PlutusLedgerApi.V1 as PV1 (Data (..))
 import Prettyprinter (hsep, parens, viaShow, vsep)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Generic.Fields
   ( TxBodyField (..),
     TxField (..),

@@ -21,7 +21,6 @@ where
 import Cardano.Ledger.Address
   ( Addr (..),
     RewardAcnt (..),
-    toCred,
   )
 import Cardano.Ledger.BaseTypes
   ( Network (..),
@@ -33,7 +32,6 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Keys
   ( KeyHash,
-    KeyPair,
     KeyRole (..),
     asWitness,
   )
@@ -42,7 +40,6 @@ import Cardano.Ledger.Shelley.API (DCert)
 import Cardano.Ledger.Shelley.LedgerState
   ( DPState (..),
     DState (..),
-    KeyPairs,
     LedgerState (..),
     UTxOState (..),
     dpsDState,
@@ -55,8 +52,6 @@ import Cardano.Ledger.Shelley.TxBody (Wdrl (..))
 import qualified Cardano.Ledger.UMapCompact as UM
 import Cardano.Ledger.UTxO
   ( UTxO (..),
-    makeWitnessesFromScriptKeys,
-    makeWitnessesVKey,
     sumAllValue,
   )
 import Cardano.Ledger.Val (Val (..), sumVal, (<+>), (<->), (<×>))
@@ -77,6 +72,13 @@ import Debug.Trace (trace)
 import GHC.Records (HasField (..))
 import Lens.Micro
 import NoThunks.Class ()
+import Test.Cardano.Ledger.Core.KeyPair
+  ( KeyPair,
+    KeyPairs,
+    makeWitnessesFromScriptKeys,
+    makeWitnessesVKey,
+    toCred,
+  )
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes
   ( Mock,
   )

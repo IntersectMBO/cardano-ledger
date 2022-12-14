@@ -54,7 +54,6 @@ import Cardano.Ledger.Shelley.TxBody
     Wdrl (..),
   )
 import Cardano.Ledger.TxIn (TxIn (..))
-import Cardano.Ledger.UTxO (makeWitnessVKey)
 import Cardano.Ledger.Val (inject, (<+>))
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.State.Transition.Extended hiding (Assertion)
@@ -62,6 +61,7 @@ import Data.Default.Class (Default (..))
 import qualified Data.Map.Strict as Map
 import GHC.Stack
 import qualified PlutusLedgerApi.V1 as PV1
+import Test.Cardano.Ledger.Core.KeyPair (makeWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils
   ( alwaysFailsHash,
     alwaysSucceedsHash,

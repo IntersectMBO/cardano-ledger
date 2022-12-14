@@ -39,7 +39,6 @@ import Cardano.Ledger.Credential
 import Cardano.Ledger.Keys
   ( GenDelegs (..),
     KeyHash (..),
-    KeyPair,
     KeyRole (..),
     asWitness,
   )
@@ -75,7 +74,6 @@ import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.Shelley.TxWits (addrWits, scriptWits)
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn (..))
-import Cardano.Ledger.UTxO (makeWitnessesVKey)
 import qualified Cardano.Ledger.Val as Val
 import Control.State.Transition.Extended (PredicateFailure, TRC (..))
 import Data.Default.Class (Default (def))
@@ -86,6 +84,7 @@ import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set (fromList)
 import Lens.Micro
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), makeWitnessesVKey)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes
   ( Mock,
   )

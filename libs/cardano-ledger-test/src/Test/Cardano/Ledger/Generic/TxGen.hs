@@ -65,7 +65,7 @@ import qualified Cardano.Ledger.Shelley.Scripts as Shelley (MultiSig (..))
 import Cardano.Ledger.Shelley.TxBody (DCert (..), DelegCert (..), Delegation (..))
 import Cardano.Ledger.Slot (EpochNo (EpochNo))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
-import Cardano.Ledger.UTxO (UTxO (..), makeWitnessVKey)
+import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad (forM, replicateM)
@@ -90,6 +90,7 @@ import GHC.Stack
 import Lens.Micro ((^.))
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
+import Test.Cardano.Ledger.Core.KeyPair (makeWitnessVKey)
 import Test.Cardano.Ledger.Generic.Fields hiding (Mint)
 import qualified Test.Cardano.Ledger.Generic.Fields as Generic (TxBodyField (Mint))
 import Test.Cardano.Ledger.Generic.Functions

@@ -31,7 +31,7 @@ import Cardano.Ledger.Shelley.TxBody
     Wdrl (..),
   )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
-import Cardano.Ledger.UTxO (UTxO (..), makeWitnessVKey)
+import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val (Val (inject), (<+>), (<->))
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import Control.Iterate.Exp (dom, (∈))
@@ -46,6 +46,7 @@ import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
+import Test.Cardano.Ledger.Core.KeyPair (makeWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils
   ( freeCostModelV1,
     initUTxO,

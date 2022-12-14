@@ -45,7 +45,7 @@ library
     cardano-ledger-babbage-test,
     cardano-ledger-binary:{cardano-ledger-binary,testlib},
     cardano-ledger-conway,
-    cardano-ledger-core,
+    cardano-ledger-core:{cardano-ledger-core,testlib},
     cardano-ledger-allegra,
     cardano-ledger-mary,
     cardano-ledger-shelley-ma-test,

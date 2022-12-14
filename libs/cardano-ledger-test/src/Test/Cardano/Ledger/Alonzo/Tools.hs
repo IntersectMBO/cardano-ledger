@@ -28,7 +28,7 @@ import Cardano.Ledger.Keys (GenDelegs (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.LedgerState (IncrementalStake (..), UTxOState (..))
 import Cardano.Ledger.Shelley.Rules (UtxoEnv (..))
-import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), UTxO (..), makeWitnessVKey)
+import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), UTxO (..))
 import Cardano.Ledger.Val (Val (inject))
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..), SlotNo (..))
@@ -46,6 +46,7 @@ import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Alonzo.PlutusScripts (testingCostModelV1)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
+import Test.Cardano.Ledger.Core.KeyPair (makeWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils
   ( initUTxO,
     mkGenesisTxIn,

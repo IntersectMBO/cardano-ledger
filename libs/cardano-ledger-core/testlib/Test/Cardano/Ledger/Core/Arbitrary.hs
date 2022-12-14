@@ -60,7 +60,6 @@ import Cardano.Ledger.Keys
   ( GenDelegPair (..),
     GenDelegs (..),
     KeyHash (..),
-    KeyPair (..),
     VKey (..),
   )
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness (..), ChainCode (..))
@@ -86,6 +85,7 @@ import GHC.Stack
 import Generic.Random (genericArbitraryU)
 import qualified Test.Cardano.Chain.Common.Gen as Byron
 import Test.Cardano.Ledger.Binary.Arbitrary
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Core.Utils (unsafeBoundRational)
 import Test.QuickCheck
 import Test.QuickCheck.Hedgehog (hedgehog)

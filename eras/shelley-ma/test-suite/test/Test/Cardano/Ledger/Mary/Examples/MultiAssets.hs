@@ -18,7 +18,7 @@ import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Keys (KeyPair (..), asWitness, hashKey)
+import Cardano.Ledger.Keys (asWitness, hashKey)
 import Cardano.Ledger.Mary (Mary)
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Value
@@ -37,7 +37,7 @@ import Cardano.Ledger.Shelley.TxBody (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (addrWits, scriptWits)
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.TxIn (TxId, TxIn (..), mkTxInPartial)
-import Cardano.Ledger.UTxO (UTxO (..), makeWitnessesVKey)
+import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val
 import Control.Exception (ErrorCall (ErrorCall), evaluate, try)
@@ -47,6 +47,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import GHC.Exts (fromString)
 import Lens.Micro
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), makeWitnessesVKey)
 import Test.Cardano.Ledger.Mary.Examples (testMaryNoDelegLEDGER)
 import qualified Test.Cardano.Ledger.Mary.Examples.Cast as Cast
 import Test.Tasty (TestTree, testGroup)

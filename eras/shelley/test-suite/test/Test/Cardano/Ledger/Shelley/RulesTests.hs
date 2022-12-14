@@ -14,7 +14,7 @@ import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (hashScript)
 import Cardano.Ledger.Credential (pattern ScriptHashObj)
-import Cardano.Ledger.Keys (asWitness, hashKey, vKey)
+import Cardano.Ledger.Keys (asWitness, hashKey)
 import Cardano.Ledger.Shelley (Shelley)
 import Cardano.Ledger.Shelley.API (ShelleyTICK, ShelleyTICKF)
 import Cardano.Ledger.Shelley.LedgerState
@@ -35,6 +35,7 @@ import Data.Either (isRight)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import qualified Data.Set as Set
+import Test.Cardano.Ledger.Core.KeyPair (vKey)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, C_Crypto)
 import Test.Cardano.Ledger.Shelley.Examples (testCHAINExample)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast

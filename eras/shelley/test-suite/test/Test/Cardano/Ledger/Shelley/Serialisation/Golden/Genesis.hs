@@ -23,7 +23,7 @@ import Cardano.Ledger.Binary
   )
 import Cardano.Ledger.Crypto (HASH)
 import Cardano.Ledger.Era (EraCrypto (..))
-import Cardano.Ledger.Keys (hashKey, hashVerKeyVRF, vKey)
+import Cardano.Ledger.Keys (hashKey, hashVerKeyVRF)
 import Cardano.Ledger.Shelley (Shelley)
 import qualified Cardano.Ledger.Shelley.API as L
 import Cardano.Ledger.Shelley.Genesis
@@ -41,6 +41,7 @@ import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Paths_cardano_ledger_shelley_test (getDataFileName)
 import Test.Cardano.Ledger.Binary.TreeDiff (CBORBytes (CBORBytes), diffExpr)
+import Test.Cardano.Ledger.Core.KeyPair (vKey)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
 import Test.Cardano.Ledger.Shelley.Utils
   ( RawSeed (..),

@@ -71,7 +71,6 @@ import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys
   ( Hash,
     KeyHash (..),
-    KeyPair (..),
     KeyRole (..),
     SignKeyKES,
     SignKeyVRF,
@@ -83,10 +82,8 @@ import Cardano.Ledger.Keys
     encodeSignedKES,
     hashKey,
     hashVerKeyVRF,
-    sKey,
     signedDSIGN,
     signedKES,
-    vKey,
   )
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
@@ -154,7 +151,7 @@ import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits, addrWits, scriptWits)
 import Cardano.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxId, TxIn (..))
-import Cardano.Ledger.UTxO (UTxO (UTxO), makeWitnessVKey)
+import Cardano.Ledger.UTxO (UTxO (UTxO))
 import Cardano.Protocol.TPraos.BHeader
   ( BHBody (..),
     BHeader (..),
@@ -199,6 +196,7 @@ import Data.String (fromString)
 import Numeric.Natural (Natural)
 import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
 import Test.Cardano.Ledger.Binary.TreeDiff (CBORBytes (CBORBytes), diffExpr)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), makeWitnessVKey, sKey, vKey)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, C_Crypto, ExMock, Mock)
 import Test.Cardano.Ledger.Shelley.Examples.Consensus as Ex (ledgerExamplesShelley, sleNewEpochState)
 import Test.Cardano.Ledger.Shelley.Generator.Core (PreAlonzo)

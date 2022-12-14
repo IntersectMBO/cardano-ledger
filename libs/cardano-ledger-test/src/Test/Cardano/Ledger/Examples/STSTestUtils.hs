@@ -73,7 +73,6 @@ import Cardano.Ledger.Credential
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys
   ( GenDelegs (..),
-    KeyPair (..),
     KeyRole (..),
     hashKey,
   )
@@ -107,6 +106,7 @@ import GHC.Stack
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import PlutusPrelude (enumerate)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Generic.Fields
   ( TxOutField (..),
   )

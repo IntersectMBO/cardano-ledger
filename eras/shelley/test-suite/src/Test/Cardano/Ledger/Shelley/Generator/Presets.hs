@@ -25,7 +25,6 @@ import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys
   ( GenDelegPair (..),
     KeyHash,
-    KeyPair (..),
     KeyRole (..),
     coerceKeyRole,
     hashKey,
@@ -36,6 +35,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Shelley.Generator.Constants
   ( Constants (..),
     defaultConstants,

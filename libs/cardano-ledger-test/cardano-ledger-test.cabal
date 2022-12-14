@@ -80,7 +80,7 @@ library
     cardano-ledger-binary:{cardano-ledger-binary,testlib},
     cardano-ledger-conway,
     cardano-ledger-conway-test,
-    cardano-ledger-core,
+    cardano-ledger-core:{cardano-ledger-core,testlib},
     cardano-ledger-pretty,
     cardano-ledger-mary,
     cardano-ledger-shelley,

@@ -39,7 +39,6 @@ import Cardano.Ledger.Shelley.API
     ProtVer (..),
     UTxO (..),
   )
-import Cardano.Ledger.UTxO (makeWitnessVKey)
 import Cardano.Ledger.Val (inject)
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..))
@@ -50,6 +49,7 @@ import qualified Data.Map.Strict as Map
 import Data.Text (Text)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import qualified PlutusLedgerApi.V1 as PV1
+import Test.Cardano.Ledger.Core.KeyPair (makeWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils
   ( freeCostModelV1,
     initUTxO,

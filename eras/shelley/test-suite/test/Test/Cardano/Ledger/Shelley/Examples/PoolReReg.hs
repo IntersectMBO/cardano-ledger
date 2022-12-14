@@ -48,7 +48,7 @@ import Cardano.Ledger.Shelley.TxWits
   )
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn (..))
-import Cardano.Ledger.UTxO (UTxO (..), makeWitnessesVKey)
+import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Protocol.TPraos.BHeader (BHeader, bhHash)
@@ -58,6 +58,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
+import Test.Cardano.Ledger.Core.KeyPair (makeWitnessesVKey)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (ExMock)
 import Test.Cardano.Ledger.Shelley.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast

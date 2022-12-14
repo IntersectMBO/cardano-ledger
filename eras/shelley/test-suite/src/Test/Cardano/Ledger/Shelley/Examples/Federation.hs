@@ -24,14 +24,12 @@ import Cardano.Ledger.Era (Era, EraCrypto)
 import Cardano.Ledger.Keys
   ( GenDelegPair (..),
     KeyHash (..),
-    KeyPair (..),
     KeyRole (..),
     SignKeyDSIGN,
     VKey (..),
     coerceKeyRole,
     hashKey,
     hashVerKeyVRF,
-    vKey,
   )
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..))
 import Cardano.Ledger.Slot (SlotNo (..))
@@ -45,6 +43,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), vKey)
 import Test.Cardano.Ledger.Shelley.Generator.Core
   ( AllIssuerKeys (..),
   )

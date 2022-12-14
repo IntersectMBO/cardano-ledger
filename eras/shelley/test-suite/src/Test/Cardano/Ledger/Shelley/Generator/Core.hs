@@ -59,7 +59,7 @@ where
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Crypto.VRF (evalCertified)
-import Cardano.Ledger.Address (Addr (..), toAddr, toCred)
+import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes
   ( BoundedRational (..),
     Nonce (..),
@@ -86,7 +86,6 @@ import Cardano.Ledger.Keys
   ( HasKeyRole (coerceKeyRole),
     Hash,
     KeyHash,
-    KeyPair (..),
     KeyRole (..),
     SignKeyKES,
     SignKeyVRF,
@@ -97,11 +96,10 @@ import Cardano.Ledger.Keys
     hashKey,
     signedDSIGN,
     signedKES,
-    vKey,
   )
 import Cardano.Ledger.SafeHash (SafeHash, unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley.BlockChain (bBodySize)
-import Cardano.Ledger.Shelley.LedgerState (AccountState (..), KeyPairs)
+import Cardano.Ledger.Shelley.LedgerState (AccountState (..))
 import Cardano.Ledger.Shelley.Tx
   ( pattern TxIn,
   )
@@ -147,6 +145,7 @@ import Data.Word (Word64)
 import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), KeyPairs, toAddr, toCred, vKey)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (ExMock, Mock)
 import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.ScriptClass

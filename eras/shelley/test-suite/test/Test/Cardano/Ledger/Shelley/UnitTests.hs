@@ -17,7 +17,6 @@ import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Address
   ( Addr (..),
     getRwdCred,
-    mkVKeyRwdAcnt,
   )
 import Cardano.Ledger.BaseTypes hiding ((==>))
 import Cardano.Ledger.Binary (serialize')
@@ -29,12 +28,10 @@ import Cardano.Ledger.Credential
 import Cardano.Ledger.Crypto (DSIGN, HASH, VRF)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys
-  ( KeyPair (..),
-    KeyRole (..),
+  ( KeyRole (..),
     asWitness,
     hashKey,
     hashVerKeyVRF,
-    vKey,
   )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API
@@ -91,7 +88,6 @@ import Cardano.Ledger.Shelley.TxWits
     addrWits,
   )
 import qualified Cardano.Ledger.UMapCompact as UM
-import Cardano.Ledger.UTxO (makeWitnessVKey, makeWitnessesVKey)
 import Cardano.Ledger.Val ((<+>), (<->))
 import Cardano.Protocol.TPraos.BHeader (checkLeaderValue)
 import Control.State.Transition.Extended (PredicateFailure, TRC (..))
@@ -108,6 +104,7 @@ import qualified Data.Set as Set
 import Data.Word (Word64)
 import GHC.Stack
 import Numeric.Natural (Natural)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), makeWitnessVKey, makeWitnessesVKey, mkVKeyRwdAcnt, vKey)
 import Test.Cardano.Ledger.Shelley.Address.Bootstrap
   ( testBootstrapNotSpending,
     testBootstrapSpending,

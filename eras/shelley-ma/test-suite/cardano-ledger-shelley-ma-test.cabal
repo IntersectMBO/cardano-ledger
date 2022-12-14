@@ -109,7 +109,7 @@ test-suite cardano-ledger-shelley-ma-test
       bytestring,
       cardano-data,
       cardano-ledger-binary:{cardano-ledger-binary, testlib},
-      cardano-ledger-core,
+      cardano-ledger-core:{cardano-ledger-core, testlib},
       cardano-ledger-shelley-ma-test,
       cardano-ledger-allegra,
       cardano-ledger-mary,

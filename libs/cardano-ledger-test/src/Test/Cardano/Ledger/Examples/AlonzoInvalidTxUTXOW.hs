@@ -48,7 +48,6 @@ import Cardano.Ledger.Credential
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys
   ( KeyHash,
-    KeyPair (..),
     KeyRole (..),
     asWitness,
     hashKey,
@@ -69,7 +68,6 @@ import Cardano.Ledger.Shelley.TxBody
     RewardAcnt (..),
     Wdrl (..),
   )
-import Cardano.Ledger.UTxO (makeWitnessVKey)
 import Cardano.Ledger.Val (inject, (<+>))
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.State.Transition.Extended hiding (Assertion)
@@ -79,6 +77,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import GHC.Stack
 import qualified PlutusLedgerApi.V1 as PV1
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), makeWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils
   ( AlonzoBased (..),
     alwaysSucceedsHash,

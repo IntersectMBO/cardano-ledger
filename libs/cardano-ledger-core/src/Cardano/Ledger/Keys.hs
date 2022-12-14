@@ -25,7 +25,7 @@ module Cardano.Ledger.Keys
     -- * DSIGN
     DSignable,
     VKey (..),
-    KeyPair (..),
+    KeyPair (..), -- deprecated
     signedDSIGN,
     verifySignedDSIGN,
     hashSignature,
@@ -188,23 +188,11 @@ instance
   toCBOR (VKey vk) = encodeVerKeyDSIGN vk
   encodedSizeExpr _size proxy = encodedVerKeyDSIGNSizeExpr ((\(VKey k) -> k) <$> proxy)
 
--- | Pair of signing key and verification key, with a usage role.
 data KeyPair (kd :: KeyRole) c = KeyPair
   { vKey :: !(VKey kd c),
     sKey :: !(DSIGN.SignKeyDSIGN (DSIGN c))
   }
-  deriving (Generic, Show)
-
-instance
-  ( Crypto c,
-    NFData (DSIGN.VerKeyDSIGN (DSIGN c)),
-    NFData (DSIGN.SignKeyDSIGN (DSIGN c))
-  ) =>
-  NFData (KeyPair kd c)
-
-instance Crypto c => NoThunks (KeyPair kd c)
-
-instance HasKeyRole KeyPair
+{-# DEPRECATED KeyPair "Use `Test.Cardano.Ledger.Core.KeyPair (KeyPair)` instead" #-}
 
 -- | Produce a digital signature
 signedDSIGN ::

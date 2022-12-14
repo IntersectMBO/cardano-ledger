@@ -42,11 +42,9 @@ import Cardano.Ledger.Keys
   ( GenDelegPair (..),
     GenDelegs (..),
     KeyHash,
-    KeyPair,
     KeyRole (..),
     asWitness,
     hashKey,
-    vKey,
   )
 import Cardano.Ledger.Shelley.API
   ( ProposedPPUpdates,
@@ -74,6 +72,7 @@ import GHC.Records
 import GHC.Stack (HasCallStack)
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Binary.Arbitrary (genVersion)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair, vKey)
 import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core
   ( AllIssuerKeys (cold),

@@ -31,13 +31,13 @@ import Cardano.Ledger.SafeHash (SafeHash)
 import Cardano.Ledger.Shelley.API (LedgerState, PPUPState)
 import Cardano.Ledger.Shelley.Rules (LedgerEnv)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx)
-import Cardano.Ledger.UTxO (makeWitnessVKey)
 import Control.Monad.Trans.Reader (ReaderT)
 import Control.State.Transition
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Data.Functor.Identity (Identity)
 import Data.List (nub, sort)
 import Data.Set as Set (fromList, singleton)
+import Test.Cardano.Ledger.Core.KeyPair (makeWitnessVKey)
 import Test.Cardano.Ledger.Shelley.Address.Bootstrap
   ( bootstrapHashTest,
   )

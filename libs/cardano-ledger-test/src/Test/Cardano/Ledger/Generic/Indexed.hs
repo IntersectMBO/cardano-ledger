@@ -21,10 +21,10 @@ import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
+import Cardano.Ledger.Crypto (Crypto)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys
   ( KeyHash,
-    KeyPair (..),
     KeyRole (Witness),
     SignKeyDSIGN,
     VKey,
@@ -32,20 +32,28 @@ import Cardano.Ledger.Keys
   )
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), PolicyID (..))
 import qualified Cardano.Ledger.Mary.Value as Mary (MultiAsset (..))
-import Cardano.Ledger.Pretty (PrettyA (..), ppPair, ppString)
+import Cardano.Ledger.Pretty
+  ( PrettyA (..),
+    PrettyAnn (Width),
+    ppPair,
+    ppRecord,
+    ppString,
+    ppVKey,
+  )
 import Cardano.Ledger.Pretty.Alonzo ()
 import Cardano.Ledger.Pretty.Mary ()
 import Cardano.Ledger.SafeHash (SafeHash)
 import Cardano.Ledger.Shelley.Scripts (MultiSig)
 import qualified Cardano.Ledger.Shelley.Scripts as Multi
 import Cardano.Ledger.Shelley.TxBody (WitVKey (..))
-import Cardano.Ledger.UTxO (makeWitnessVKey)
 import Cardano.Slotting.Slot (SlotNo (..))
 import Data.ByteString.Short (ShortByteString, pack, unpack)
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
 import qualified Data.Sequence.Strict as Seq (fromList)
+import Prettyprinter (reAnnotate, viaShow)
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), makeWitnessVKey)
 import Test.Cardano.Ledger.Generic.Proof
   ( AlonzoEra,
     BabbageEra,
@@ -320,6 +328,10 @@ instance CC.Crypto c => Fixed (PublicSecret kr kr' c) where
 
 -- ===============================================================
 -- PrettyA instances
+
+instance Crypto c => PrettyA (KeyPair r c) where
+  prettyA (KeyPair x y) =
+    ppRecord "KeyPair" [("vKey", ppVKey x), ("sKey", reAnnotate (Width 5 :) (viaShow y))]
 
 instance (PrettyA x, PrettyA y) => PrettyA (x, y) where
   prettyA = ppPair prettyA prettyA

@@ -28,15 +28,11 @@ module Cardano.Ledger.UTxO
     sumAllValue,
     sumAllCoin,
     areAllAdaOnly,
-    makeWitnessVKey,
-    makeWitnessesVKey,
-    makeWitnessesFromScriptKeys,
     verifyWitVKey,
     getScriptHash,
   )
 where
 
-import qualified Cardano.Crypto.Hash as CH
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Binary
   ( FromCBOR (..),
@@ -50,20 +46,15 @@ import Cardano.Ledger.Coin (Coin, CompactForm (CompactCoin))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Crypto (Crypto, HASH)
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.DPState (DPState)
 import Cardano.Ledger.Keys
   ( DSignable,
     Hash,
-    KeyHash (..),
-    KeyPair (..),
     KeyRole (..),
-    asWitness,
-    signedDSIGN,
     verifySignedDSIGN,
   )
 import Cardano.Ledger.Keys.WitVKey
-import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.DeepSeq (NFData)
@@ -72,11 +63,9 @@ import Data.Coerce (coerce)
 import Data.Default.Class (Default)
 import Data.Foldable (foldMap', toList)
 import Data.Kind
-import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Monoid (Sum (..))
 import Data.Set (Set)
-import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
@@ -167,41 +156,6 @@ verifyWitVKey ::
   WitVKey kr c ->
   Bool
 verifyWitVKey txbodyHash (WitVKey vkey sig) = verifySignedDSIGN vkey txbodyHash (coerce sig)
-
--- | Create a witness for transaction
-makeWitnessVKey ::
-  forall c kr.
-  ( Crypto c,
-    DSignable c (CH.Hash (HASH c) EraIndependentTxBody)
-  ) =>
-  SafeHash c EraIndependentTxBody ->
-  KeyPair kr c ->
-  WitVKey 'Witness c
-makeWitnessVKey safe keys =
-  WitVKey (asWitness $ vKey keys) (coerce $ signedDSIGN @c (sKey keys) (extractHash safe))
-
--- | Create witnesses for transaction
-makeWitnessesVKey ::
-  forall c kr.
-  ( Crypto c,
-    DSignable c (CH.Hash (HASH c) EraIndependentTxBody)
-  ) =>
-  SafeHash c EraIndependentTxBody ->
-  [KeyPair kr c] ->
-  Set (WitVKey 'Witness c)
-makeWitnessesVKey safe xs = Set.fromList (fmap (makeWitnessVKey safe) xs)
-
--- | From a list of key pairs and a set of key hashes required for a multi-sig
--- scripts, return the set of required keys.
-makeWitnessesFromScriptKeys ::
-  (Crypto c, DSignable c (Hash c EraIndependentTxBody)) =>
-  SafeHash c EraIndependentTxBody ->
-  Map (KeyHash kr c) (KeyPair kr c) ->
-  Set (KeyHash kr c) ->
-  Set (WitVKey 'Witness c)
-makeWitnessesFromScriptKeys txbodyHash hashKeyMap scriptHashes =
-  let witKeys = Map.restrictKeys hashKeyMap scriptHashes
-   in makeWitnessesVKey txbodyHash (Map.elems witKeys)
 
 -- | Determine the total balance contained in the UTxO.
 balance :: EraTxOut era => UTxO era -> Value era

@@ -82,7 +82,6 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), StakeCredential)
 import Cardano.Ledger.Keys
   ( KeyHash (..),
-    KeyPair (..),
     KeyRole (..),
     coerceKeyRole,
     hashKey,
@@ -121,6 +120,7 @@ import GHC.Word (Word64)
 import Numeric.Natural
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Generic.Fields
 import Test.Cardano.Ledger.Generic.Functions
   ( alwaysFalse,

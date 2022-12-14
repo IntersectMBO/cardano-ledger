@@ -25,11 +25,9 @@ import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as Cr
 import Cardano.Ledger.Keys
   ( KeyHash,
-    KeyPair (..),
     KeyRole (..),
     asWitness,
     hashKey,
-    vKey,
   )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (Shelley)
@@ -65,7 +63,6 @@ import Cardano.Ledger.Shelley.TxWits
   )
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (mkTxInPartial)
-import Cardano.Ledger.UTxO (makeWitnessesVKey)
 import qualified Cardano.Ledger.Val as Val
 import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Char8 as BS (pack)
@@ -76,6 +73,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
 import Lens.Micro
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), makeWitnessesVKey, vKey)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Utils

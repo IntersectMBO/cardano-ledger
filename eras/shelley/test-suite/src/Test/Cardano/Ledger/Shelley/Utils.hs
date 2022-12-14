@@ -87,13 +87,10 @@ import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys
-  ( KeyPair,
-    KeyRole (..),
+  ( KeyRole (..),
     VKey (..),
     hashKey,
     updateKES,
-    vKey,
-    pattern KeyPair,
   )
 import Cardano.Ledger.Shelley.API (ApplyBlock)
 import Cardano.Ledger.Shelley.BlockChain (ShelleyTxSeq)
@@ -128,6 +125,7 @@ import Data.Functor.Identity (runIdentity)
 import Data.Time.Clock.POSIX
 import Data.Typeable (Proxy (Proxy))
 import Data.Word (Word64)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair, vKey, pattern KeyPair)
 import Test.Cardano.Ledger.Core.Utils (unsafeBoundRational)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.QuickCheck (Arbitrary (..), chooseAny)

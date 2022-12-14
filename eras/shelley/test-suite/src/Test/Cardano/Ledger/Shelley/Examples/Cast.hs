@@ -54,7 +54,6 @@ import Cardano.Ledger.Credential
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys
   ( Hash,
-    KeyPair (..),
     KeyRole (..),
     VerKeyVRF,
     hashKey,
@@ -71,6 +70,7 @@ import qualified Data.ByteString.Char8 as BS (pack)
 import Data.Maybe (fromJust)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core
   ( AllIssuerKeys (..),
   )

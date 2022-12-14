@@ -27,10 +27,10 @@ import Cardano.Ledger.Core (getMinFeeTx)
 import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API (evaluateTransactionFee)
-import Cardano.Ledger.UTxO (makeWitnessVKey)
 import Cardano.Ledger.Val (Val (inject))
 import qualified Data.Map.Strict as Map
 import qualified PlutusLedgerApi.V1 as PV1
+import Test.Cardano.Ledger.Core.KeyPair (makeWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils
   ( freeCostModelV1,
     mkGenesisTxIn,
