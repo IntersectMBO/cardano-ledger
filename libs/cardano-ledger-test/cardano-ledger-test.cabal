@@ -37,7 +37,6 @@ library
   other-modules:
   exposed-modules:
     Test.Cardano.Ledger.Alonzo.Tools
-    Test.Cardano.Ledger.BaseTypes
     Test.Cardano.Ledger.Examples.BabbageFeatures
     Test.Cardano.Ledger.Examples.AlonzoValidTxUTXOW
     Test.Cardano.Ledger.Examples.AlonzoInvalidTxUTXOW

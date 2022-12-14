@@ -78,7 +78,7 @@ import Cardano.Ledger.Credential
     Ptr (..),
     StakeReference (..),
   )
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Keys
   ( KeyHash (..),
@@ -114,7 +114,7 @@ import NoThunks.Class (NoThunks (..))
 import Quiet
 
 mkVKeyRwdAcnt ::
-  CC.Crypto c =>
+  Crypto c =>
   Network ->
   KeyPair 'Staking c ->
   RewardAcnt c
@@ -128,14 +128,14 @@ mkRwdAcnt network script@(ScriptHashObj _) = RewardAcnt network script
 mkRwdAcnt network key@(KeyHashObj _) = RewardAcnt network key
 
 toAddr ::
-  CC.Crypto c =>
+  Crypto c =>
   Network ->
   (KeyPair 'Payment c, KeyPair 'Staking c) ->
   Addr c
 toAddr n (payKey, stakeKey) = Addr n (toCred payKey) (StakeRefBase $ toCred stakeKey)
 
 toCred ::
-  CC.Crypto c =>
+  Crypto c =>
   KeyPair kr c ->
   Credential kr c
 toCred k = KeyHashObj . hashKey $ vKey k
@@ -146,7 +146,7 @@ serialiseAddr = BSL.toStrict . B.runPut . putAddr
 
 -- | Deserialise an address from the external format. This will fail if the
 -- input data is not in the right format (or if there is trailing data).
-deserialiseAddr :: CC.Crypto c => ByteString -> Maybe (Addr c)
+deserialiseAddr :: Crypto c => ByteString -> Maybe (Addr c)
 deserialiseAddr bs = case B.runGetOrFail getAddr (BSL.fromStrict bs) of
   Left (_remaining, _offset, _message) -> Nothing
   Right (remaining, _offset, result) ->
@@ -160,7 +160,7 @@ serialiseRewardAcnt = BSL.toStrict . B.runPut . putRewardAcnt
 
 -- | Deserialise an reward account from the external format. This will fail if the
 -- input data is not in the right format (or if there is trailing data).
-deserialiseRewardAcnt :: CC.Crypto c => ByteString -> Maybe (RewardAcnt c)
+deserialiseRewardAcnt :: Crypto c => ByteString -> Maybe (RewardAcnt c)
 deserialiseRewardAcnt bs = case B.runGetOrFail getRewardAcnt (BSL.fromStrict bs) of
   Left (_remaining, _offset, _message) -> Nothing
   Right (remaining, _offset, result) ->
@@ -193,14 +193,14 @@ data RewardAcnt c = RewardAcnt
   }
   deriving (Show, Eq, Generic, Ord, NFData, ToJSONKey, FromJSONKey)
 
-instance CC.Crypto c => ToJSON (RewardAcnt c) where
+instance Crypto c => ToJSON (RewardAcnt c) where
   toJSON ra =
     Aeson.object
       [ "network" .= getRwdNetwork ra,
         "credential" .= getRwdCred ra
       ]
 
-instance CC.Crypto c => FromJSON (RewardAcnt c) where
+instance Crypto c => FromJSON (RewardAcnt c) where
   parseJSON =
     Aeson.withObject "RewardAcnt" $ \obj ->
       RewardAcnt
@@ -212,19 +212,19 @@ instance NoThunks (RewardAcnt c)
 instance ToJSONKey (Addr c) where
   toJSONKey = Aeson.ToJSONKeyText (Aeson.fromText . addrToText) (Aeson.text . addrToText)
 
-instance CC.Crypto c => FromJSONKey (Addr c) where
+instance Crypto c => FromJSONKey (Addr c) where
   fromJSONKey = Aeson.FromJSONKeyTextParser parseAddr
 
 instance ToJSON (Addr c) where
   toJSON = toJSON . addrToText
 
-instance CC.Crypto c => FromJSON (Addr c) where
+instance Crypto c => FromJSON (Addr c) where
   parseJSON = Aeson.withText "address" parseAddr
 
 addrToText :: Addr c -> Text
 addrToText = Text.decodeLatin1 . B16.encode . serialiseAddr
 
-parseAddr :: CC.Crypto c => Text -> Aeson.Parser (Addr c)
+parseAddr :: Crypto c => Text -> Aeson.Parser (Addr c)
 parseAddr t = do
   bytes <- either badHex return (B16.decode (Text.encodeUtf8 t))
   maybe badFormat return (deserialiseAddr bytes)
@@ -277,7 +277,7 @@ putAddr (Addr network pc sr) =
           B.putWord8 header
           putCredential pc
 
-getAddr :: CC.Crypto c => Get (Addr c)
+getAddr :: Crypto c => Get (Addr c)
 getAddr = do
   header <- B.lookAhead B.getWord8
   if testBit header byron
@@ -303,7 +303,7 @@ putRewardAcnt (RewardAcnt network cred) = do
   B.putWord8 header
   putCredential cred
 
-getRewardAcnt :: CC.Crypto c => Get (RewardAcnt c)
+getRewardAcnt :: Crypto c => Get (RewardAcnt c)
 getRewardAcnt = do
   header <- B.getWord8
   let rewardAcntPrefix = 0xE0 -- 0b11100000 are always set for reward accounts
@@ -330,18 +330,18 @@ getHash = do
 putHash :: Hash.Hash h a -> Put
 putHash = B.putByteString . Hash.hashToBytes
 
-getPayCred :: CC.Crypto c => Word8 -> Get (PaymentCredential c)
+getPayCred :: Crypto c => Word8 -> Get (PaymentCredential c)
 getPayCred header = case testBit header payCredIsScript of
   True -> getScriptHash
   False -> getKeyHash
 
-getScriptHash :: CC.Crypto c => Get (Credential kr c)
+getScriptHash :: Crypto c => Get (Credential kr c)
 getScriptHash = ScriptHashObj . ScriptHash <$> getHash
 
-getKeyHash :: CC.Crypto c => Get (Credential kr c)
+getKeyHash :: Crypto c => Get (Credential kr c)
 getKeyHash = KeyHashObj . KeyHash <$> getHash
 
-getStakeReference :: CC.Crypto c => Word8 -> Get (StakeReference c)
+getStakeReference :: Crypto c => Word8 -> Get (StakeReference c)
 getStakeReference header = case testBit header notBaseAddr of
   True -> case testBit header isEnterpriseAddr of
     True -> pure StakeRefNull
@@ -443,16 +443,16 @@ decoderFromGet name get = do
     Left (_remaining, _offset, message) ->
       cborError (DecoderErrorCustom name $ fromString message)
 
-instance CC.Crypto c => ToCBOR (Addr c) where
+instance Crypto c => ToCBOR (Addr c) where
   toCBOR = toCBOR . B.runPut . putAddr
 
-instance CC.Crypto c => FromCBOR (Addr c) where
+instance Crypto c => FromCBOR (Addr c) where
   fromCBOR = decoderFromGet "Addr" getAddr
 
-instance CC.Crypto c => ToCBOR (RewardAcnt c) where
+instance Crypto c => ToCBOR (RewardAcnt c) where
   toCBOR = toCBOR . B.runPut . putRewardAcnt
 
-instance CC.Crypto c => FromCBOR (RewardAcnt c) where
+instance Crypto c => FromCBOR (RewardAcnt c) where
   fromCBOR = decoderFromGet "RewardAcnt" getRewardAcnt
 
 newtype BootstrapAddress c = BootstrapAddress
@@ -466,7 +466,7 @@ instance NoThunks (BootstrapAddress c)
 
 bootstrapKeyHash ::
   forall c.
-  CC.Crypto c =>
+  Crypto c =>
   -- TODO: enforce this constraint
   -- (HASH era ~ Hash.Blake2b_224) =>
   BootstrapAddress c ->

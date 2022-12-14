@@ -64,7 +64,7 @@ import Cardano.Ledger.Credential
     StakeReference (..),
   )
 import Cardano.Ledger.Crypto (ADDRHASH)
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Keys (KeyHash (..))
 import Cardano.Ledger.Slot (SlotNo (..))
@@ -92,21 +92,21 @@ import Numeric (showIntAtBase)
 newtype CompactAddr c = UnsafeCompactAddr ShortByteString
   deriving (Eq, Ord, NFData)
 
-instance CC.Crypto c => Show (CompactAddr c) where
+instance Crypto c => Show (CompactAddr c) where
   show c = show (decompactAddr c)
 
 compactAddr :: Addr c -> CompactAddr c
 compactAddr = UnsafeCompactAddr . SBS.toShort . serialiseAddr
 {-# INLINE compactAddr #-}
 
-decompactAddr :: forall c. CC.Crypto c => CompactAddr c -> Addr c
+decompactAddr :: forall c. Crypto c => CompactAddr c -> Addr c
 decompactAddr (UnsafeCompactAddr sbs) =
   case decodeAddrShort sbs of
     Just addr -> addr
     Nothing -> decompactAddrOld sbs
 {-# INLINE decompactAddr #-}
 
-decompactAddrOld :: CC.Crypto c => ShortByteString -> Addr c
+decompactAddrOld :: Crypto c => ShortByteString -> Addr c
 decompactAddrOld short = snd . unwrap "CompactAddr" $ runGetShort getShortAddr 0 short
   where
     -- The reason failure is impossible here is that the only way to call this code
@@ -120,20 +120,20 @@ decompactAddrOld short = snd . unwrap "CompactAddr" $ runGetShort getShortAddr 0
 -- Fast Address Serializer ---------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
-fromCborAddr :: forall c s. CC.Crypto c => Decoder s (Addr c)
+fromCborAddr :: forall c s. Crypto c => Decoder s (Addr c)
 fromCborAddr = do
   sbs <- fromCBOR
   decodeAddrShort @c sbs
 {-# INLINE fromCborAddr #-}
 
-fromCborBothAddr :: forall c s. CC.Crypto c => Decoder s (Addr c, CompactAddr c)
+fromCborBothAddr :: forall c s. Crypto c => Decoder s (Addr c, CompactAddr c)
 fromCborBothAddr = do
   sbs <- fromCBOR
   addr <- decodeAddrShort @c sbs
   pure (addr, UnsafeCompactAddr sbs)
 {-# INLINE fromCborBothAddr #-}
 
-fromCborCompactAddr :: forall c s. CC.Crypto c => Decoder s (CompactAddr c)
+fromCborCompactAddr :: forall c s. Crypto c => Decoder s (CompactAddr c)
 fromCborCompactAddr = do
   -- Ensure bytes can be decoded as Addr
   (_addr, cAddr) <- fromCborBothAddr
@@ -142,7 +142,7 @@ fromCborCompactAddr = do
 
 -- This is a fallback deserializer that preserves old behavior. It will almost never be
 -- invoked, that is why it is not inlined.
-fromCborAddrFallback :: CC.Crypto c => ShortByteString -> Decoder s (Addr c)
+fromCborAddrFallback :: Crypto c => ShortByteString -> Decoder s (Addr c)
 fromCborAddrFallback sbs =
   case B.runGetOrFail getAddr $ BSL.fromStrict $ SBS.fromShort sbs of
     Right (_remaining, _offset, value) -> pure value
@@ -150,7 +150,7 @@ fromCborAddrFallback sbs =
       cborError (DecoderErrorCustom "Addr" $ fromString message)
 {-# NOINLINE fromCborAddrFallback #-}
 
-fromCborCompactAddrOld :: forall s c. CC.Crypto c => Decoder s (CompactAddr c)
+fromCborCompactAddrOld :: forall s c. Crypto c => Decoder s (CompactAddr c)
 fromCborCompactAddrOld = do
   sbs <- fromCBOR
   UnsafeCompactAddr sbs <$ fromCborAddrFallback @c sbs
@@ -158,7 +158,7 @@ fromCborCompactAddrOld = do
 
 fromCborBackwardsBothAddr ::
   forall c s.
-  CC.Crypto c =>
+  Crypto c =>
   Decoder s (Addr c, CompactAddr c)
 fromCborBackwardsBothAddr = do
   sbs <- fromCBOR
@@ -248,7 +248,7 @@ instance MonadFail Fail where
 
 decodeAddrEither ::
   forall c.
-  CC.Crypto c =>
+  Crypto c =>
   BS.ByteString ->
   Either String (Addr c)
 decodeAddrEither sbs = runFail $ evalStateT (decodeAddrStateT sbs) 0
@@ -256,7 +256,7 @@ decodeAddrEither sbs = runFail $ evalStateT (decodeAddrStateT sbs) 0
 
 decodeAddrShortEither ::
   forall c.
-  CC.Crypto c =>
+  Crypto c =>
   ShortByteString ->
   Either String (Addr c)
 decodeAddrShortEither sbs = runFail $ evalStateT (decodeAddrStateT sbs) 0
@@ -264,7 +264,7 @@ decodeAddrShortEither sbs = runFail $ evalStateT (decodeAddrStateT sbs) 0
 
 decodeAddrShort ::
   forall c m.
-  (CC.Crypto c, MonadFail m) =>
+  (Crypto c, MonadFail m) =>
   ShortByteString ->
   m (Addr c)
 decodeAddrShort sbs = evalStateT (decodeAddrStateT sbs) 0
@@ -272,7 +272,7 @@ decodeAddrShort sbs = evalStateT (decodeAddrStateT sbs) 0
 
 decodeAddr ::
   forall c m.
-  (CC.Crypto c, MonadFail m) =>
+  (Crypto c, MonadFail m) =>
   BS.ByteString ->
   m (Addr c)
 decodeAddr sbs = evalStateT (decodeAddrStateT sbs) 0
@@ -312,7 +312,7 @@ decodeAddr sbs = evalStateT (decodeAddrStateT sbs) 0
 --                          `Not a Base Address
 -- @@@
 decodeAddrStateT ::
-  (CC.Crypto c, MonadFail m, AddressBuffer b) =>
+  (Crypto c, MonadFail m, AddressBuffer b) =>
   b ->
   StateT Int m (Addr c)
 decodeAddrStateT buf = do
@@ -365,7 +365,7 @@ decodeBootstrapAddress buf =
 {-# INLINE decodeBootstrapAddress #-}
 
 decodePaymentCredential ::
-  (CC.Crypto c, MonadFail m, AddressBuffer b) =>
+  (Crypto c, MonadFail m, AddressBuffer b) =>
   Header ->
   b ->
   StateT Int m (PaymentCredential c)
@@ -375,7 +375,7 @@ decodePaymentCredential header buf
 {-# INLINE decodePaymentCredential #-}
 
 decodeStakeReference ::
-  (CC.Crypto c, MonadFail m, AddressBuffer b) =>
+  (Crypto c, MonadFail m, AddressBuffer b) =>
   Header ->
   b ->
   StateT Int m (StakeReference c)
@@ -391,14 +391,14 @@ decodeStakeReference header buf
 {-# INLINE decodeStakeReference #-}
 
 decodeKeyHash ::
-  (CC.Crypto c, MonadFail m, AddressBuffer b) =>
+  (Crypto c, MonadFail m, AddressBuffer b) =>
   b ->
   StateT Int m (KeyHash kr c)
 decodeKeyHash buf = KeyHash <$> decodeHash buf
 {-# INLINE decodeKeyHash #-}
 
 decodeScriptHash ::
-  (CC.Crypto c, MonadFail m, AddressBuffer b) =>
+  (Crypto c, MonadFail m, AddressBuffer b) =>
   b ->
   StateT Int m (ScriptHash c)
 decodeScriptHash buf = ScriptHash <$> decodeHash buf
@@ -524,13 +524,13 @@ decodeVariableLengthWord32 name buf = do
 
 decodeRewardAcnt ::
   forall c b m.
-  (CC.Crypto c, AddressBuffer b, MonadFail m) =>
+  (Crypto c, AddressBuffer b, MonadFail m) =>
   b ->
   m (RewardAcnt c)
 decodeRewardAcnt buf = evalStateT (decodeRewardAccountT buf) 0
 {-# INLINE decodeRewardAcnt #-}
 
-fromCborRewardAcnt :: forall c s. CC.Crypto c => Decoder s (RewardAcnt c)
+fromCborRewardAcnt :: forall c s. Crypto c => Decoder s (RewardAcnt c)
 fromCborRewardAcnt = do
   sbs :: ShortByteString <- fromCBOR
   decodeRewardAcnt @c sbs
@@ -561,7 +561,7 @@ headerRewardAccountIsScript = (`testBit` 4)
 --                            `Account Credential is a Script
 -- @@@
 decodeRewardAccountT ::
-  (MonadFail m, CC.Crypto c, AddressBuffer b) =>
+  (MonadFail m, Crypto c, AddressBuffer b) =>
   b ->
   StateT Int m (RewardAcnt c)
 decodeRewardAccountT buf = do
@@ -585,7 +585,7 @@ decodeRewardAccountT buf = do
 
 -- | This lazy deserializer is kept around purely for benchmarking, so we can
 -- verify that new deserializer `decodeAddrStateT` is doing the work lazily.
-decompactAddrLazy :: forall c. CC.Crypto c => CompactAddr c -> Addr c
+decompactAddrLazy :: forall c. Crypto c => CompactAddr c -> Addr c
 decompactAddrLazy (UnsafeCompactAddr bytes) =
   if testBit header byron
     then AddrBootstrap $ run "byron address" 0 bytes getBootstrapAddress
@@ -621,10 +621,10 @@ decompactAddrLazy (UnsafeCompactAddr bytes) =
             then Just (offsetStop, ())
             else Nothing
 
-instance CC.Crypto c => ToCBOR (CompactAddr c) where
+instance Crypto c => ToCBOR (CompactAddr c) where
   toCBOR (UnsafeCompactAddr bytes) = toCBOR bytes
 
-instance CC.Crypto c => FromCBOR (CompactAddr c) where
+instance Crypto c => FromCBOR (CompactAddr c) where
   fromCBOR = do
     (_addr, cAddr) <- fromCborBackwardsBothAddr
     pure cAddr
@@ -646,7 +646,7 @@ instance Monad GetShort where
 instance Control.Monad.Fail.MonadFail GetShort where
   fail _ = GetShort $ \_ _ -> Nothing
 
-getShortAddr :: CC.Crypto c => GetShort (Addr c)
+getShortAddr :: Crypto c => GetShort (Addr c)
 getShortAddr = do
   header <- peekWord8
   if testBit header byron
@@ -726,13 +726,13 @@ getPtr =
     <*> (TxIx . fromIntegral <$> getVariableLengthWord64)
     <*> (CertIx . fromIntegral <$> getVariableLengthWord64)
 
-getKeyHash :: CC.Crypto c => GetShort (Credential kr c)
+getKeyHash :: Crypto c => GetShort (Credential kr c)
 getKeyHash = KeyHashObj . KeyHash <$> getHash
 
-getScriptHash :: CC.Crypto c => GetShort (Credential kr c)
+getScriptHash :: Crypto c => GetShort (Credential kr c)
 getScriptHash = ScriptHashObj . ScriptHash <$> getHash
 
-getStakeReference :: CC.Crypto c => Word8 -> GetShort (StakeReference c)
+getStakeReference :: Crypto c => Word8 -> GetShort (StakeReference c)
 getStakeReference header = case testBit header notBaseAddr of
   True -> case testBit header isEnterpriseAddr of
     True -> pure StakeRefNull
@@ -741,7 +741,7 @@ getStakeReference header = case testBit header notBaseAddr of
     True -> StakeRefBase <$> getScriptHash
     False -> StakeRefBase <$> getKeyHash
 
-getPayCred :: CC.Crypto c => Word8 -> GetShort (PaymentCredential c)
+getPayCred :: Crypto c => Word8 -> GetShort (PaymentCredential c)
 getPayCred header = case testBit header payCredIsScript of
   True -> getScriptHash
   False -> getKeyHash
