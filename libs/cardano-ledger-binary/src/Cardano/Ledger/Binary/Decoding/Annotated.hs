@@ -36,7 +36,7 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.Functor ((<&>))
 import qualified Data.Set as Set
-import qualified PlutusLedgerApi.V1 as Plutus
+import qualified PlutusLedgerApi.V1 as PV1
 
 -- | A decoder for a value paired with an annotation specifying the start and end
 -- of the consumed bytes.
@@ -84,5 +84,5 @@ decodeAnnSet dec = do
 -- Plutus
 --------------------------------------------------------------------------------
 
-instance FromCBOR (C.Annotator Plutus.Data) where
+instance FromCBOR (C.Annotator PV1.Data) where
   fromCBOR = pure <$> fromPlainDecoder Serialise.decode

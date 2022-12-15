@@ -1,6 +1,9 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -12,7 +15,7 @@ module Cardano.Ledger.Alonzo.Tools
 where
 
 import Cardano.Ledger.Alonzo.Data (Data, Datum (..), binaryDataToData, getPlutusData)
-import Cardano.Ledger.Alonzo.Language (Language (..))
+import Cardano.Ledger.Alonzo.Language (Language (..), SLanguage (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (knownToNotBe1Phase)
 import Cardano.Ledger.Alonzo.Scripts
   ( AlonzoScript (..),
@@ -24,7 +27,8 @@ import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, ScriptPurpose (..), rdptr)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..))
 import Cardano.Ledger.Alonzo.TxInfo
   ( ExtendedUTxO (txscripts),
-    PlutusDebug (..),
+    PlutusData (..),
+    PlutusDebugLang (..),
     TranslationError,
     VersionedTxInfo (..),
     exBudgetToExUnits,
@@ -55,6 +59,7 @@ import qualified Data.Set as Set
 import Data.Text (Text)
 import GHC.Records (HasField (..))
 import Lens.Micro
+import qualified PlutusLedgerApi.Common as Plutus
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 
@@ -71,10 +76,8 @@ data TransactionScriptFailure c
     MissingScript !RdmrPtr !(Map RdmrPtr (ScriptPurpose c, Maybe (ShortByteString, Language), ScriptHash c))
   | -- | Missing datum.
     MissingDatum !(DataHash c)
-  | -- | Plutus V1 evaluation error.
-    ValidationFailedV1 !PV1.EvaluationError ![Text] PlutusDebug
-  | -- | Plutus V2 evaluation error.
-    ValidationFailedV2 !PV2.EvaluationError ![Text] PlutusDebug
+  | -- | Plutus evaluation error, for any version
+    ValidationFailure ValidationFailed
   | -- | A redeemer points to a transaction input which is not
     --  present in the current UTxO.
     UnknownTxIn !(TxIn c)
@@ -86,7 +89,15 @@ data TransactionScriptFailure c
     IncompatibleBudget !PV1.ExBudget
   | -- | There was no cost model for a given version of Plutus in the ledger state
     NoCostModelInLedgerState !Language
-  deriving (Show, Eq)
+  deriving (Eq, Show)
+
+data ValidationFailed where
+  ValidationFailedV1 :: !Plutus.EvaluationError -> ![Text] -> PlutusDebugLang 'PlutusV1 -> ValidationFailed
+  ValidationFailedV2 :: !Plutus.EvaluationError -> ![Text] -> PlutusDebugLang 'PlutusV2 -> ValidationFailed
+
+deriving instance Eq (ValidationFailed)
+
+deriving instance Show (ValidationFailed)
 
 note :: e -> Maybe a -> Either e a
 note _ (Just x) = Right x
@@ -220,11 +231,11 @@ evaluateTransactionExecutionUnitsWithLogs pp tx utxo ei sysS costModels = do
       case interpreter lang (getEvaluationContext cm) maxBudget script pArgs of
         (logs, Left e) -> case lang of
           PlutusV1 ->
-            let debug = PlutusDebugV1 cm exunits script pArgs protVer
-             in Left $ ValidationFailedV1 e logs debug
+            let debug = PlutusDebugLang SPlutusV1 cm exunits script (PlutusData pArgs) protVer
+             in Left $ ValidationFailure $ ValidationFailedV1 e logs debug
           PlutusV2 ->
-            let debug = PlutusDebugV2 cm exunits script pArgs protVer
-             in Left $ ValidationFailedV2 e logs debug
+            let debug = PlutusDebugLang SPlutusV2 cm exunits script (PlutusData pArgs) protVer
+             in Left $ ValidationFailure $ ValidationFailedV2 e logs debug
         (logs, Right exBudget) -> note (IncompatibleBudget exBudget) $ (,) logs <$> exBudgetToExUnits exBudget
       where
         maxBudget = transExUnits . getField @"_maxTxExUnits" $ pparams

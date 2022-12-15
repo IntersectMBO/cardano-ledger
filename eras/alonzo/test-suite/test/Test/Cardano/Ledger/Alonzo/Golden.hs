@@ -48,7 +48,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Data.Sequence.Strict
 import GHC.Stack (HasCallStack)
-import PlutusLedgerApi.V1 (Data (..))
+import qualified PlutusLedgerApi.V1 as PV1 (Data (..))
 import Test.Cardano.Ledger.Alonzo.AlonzoEraGen (freeCostModel)
 import Test.Cardano.Ledger.Alonzo.Examples.Consensus (ledgerExamplesAlonzo)
 import Test.Cardano.Ledger.Alonzo.Serialisation.CDDL (readDataFile)
@@ -87,7 +87,7 @@ goldenUTxOEntryMinAda =
           ( AlonzoTxOut
               carlAddr
               (valueFromList 1407406 [(pid1, smallestName, 1)])
-              (SJust $ hashData @Alonzo (Data (List [])))
+              (SJust $ hashData @Alonzo (Data (PV1.List [])))
           )
           @?= Coin 1655136,
       testCase "one policy, one (smallest) name, no datum hash" $
@@ -139,7 +139,7 @@ goldenUTxOEntryMinAda =
                     (pid1, largestName 67, 1)
                   ]
               )
-              (SJust $ hashData @Alonzo (Data (Constr 0 [Constr 0 []])))
+              (SJust $ hashData @Alonzo (Data (PV1.Constr 0 [PV1.Constr 0 []])))
           )
           @?= Coin 2172366,
       testCase "two policies, one (smallest) name" $
@@ -155,7 +155,7 @@ goldenUTxOEntryMinAda =
           ( AlonzoTxOut
               aliceAddr
               (valueFromList 1592591 [(pid1, smallestName, 1), (pid2, smallestName, 1)])
-              (SJust $ hashData @Alonzo (Data (Constr 0 [])))
+              (SJust $ hashData @Alonzo (Data (PV1.Constr 0 [])))
           )
           @?= Coin 1827546,
       testCase "two policies, two (small) names" $

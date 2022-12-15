@@ -49,7 +49,7 @@ import Data.Either (fromRight)
 import qualified Data.Map.Strict as Map
 import Data.Text (Text)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
-import qualified PlutusLedgerApi.V1 as Plutus
+import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Examples.STSTestUtils
   ( freeCostModelV1,
     initUTxO,
@@ -115,10 +115,10 @@ collectTwoPhaseScriptInputsOutputOrdering =
 -- ============================== DATA ===============================
 
 datum :: Era era => Data era
-datum = Data (Plutus.I 123)
+datum = Data (PV1.I 123)
 
 redeemer :: Era era => Data era
-redeemer = Data (Plutus.I 42)
+redeemer = Data (PV1.I 42)
 
 validatingTx ::
   forall era.

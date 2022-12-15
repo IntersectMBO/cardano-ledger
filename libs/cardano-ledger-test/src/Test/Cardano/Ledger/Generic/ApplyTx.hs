@@ -45,7 +45,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
 import Lens.Micro
-import qualified PlutusLedgerApi.V1 as Plutus
+import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Examples.STSTestUtils
   ( freeCostModelV1,
     initUTxO,
@@ -375,7 +375,7 @@ notValidatingTx pf =
       WitnessesI
         [ AddrWits' [makeWitnessVKey (hashAnnotated notValidatingBody) (someKeys pf)],
           ScriptWits' [never 0 pf],
-          DataWits' [Data (Plutus.I 0)],
+          DataWits' [Data (PV1.I 0)],
           RdmrWits redeemers
         ]
     ]
@@ -387,13 +387,13 @@ notValidatingTx pf =
           Collateral' [mkGenesisTxIn 12],
           Outputs' [newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 2995)]],
           Txfee (Coin 5),
-          WppHash (newScriptIntegrityHash pf (pparams pf) [PlutusV1] redeemers (mkTxDats (Data (Plutus.I 0))))
+          WppHash (newScriptIntegrityHash pf (pparams pf) [PlutusV1] redeemers (mkTxDats (Data (PV1.I 0))))
         ]
     redeemers =
       Redeemers
         ( Map.fromList
             [ ( RdmrPtr Tag.Spend 0,
-                (Data (Plutus.I 1), ExUnits 5000 5000)
+                (Data (PV1.I 1), ExUnits 5000 5000)
               )
             ]
         )

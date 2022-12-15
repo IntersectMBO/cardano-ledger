@@ -154,7 +154,7 @@ import Formatting (bprint, build, shown, stext)
 import qualified Formatting.Buildable as B (Buildable (..))
 import GHC.TypeNats (KnownNat, type (*))
 import Numeric.Natural (Natural)
-import qualified PlutusLedgerApi.V1 as Plutus
+import qualified PlutusLedgerApi.V1 as PV1
 import Prelude hiding (encodeFloat, (.))
 
 #if MIN_VERSION_recursion_schemes(5,2,0)
@@ -1189,5 +1189,5 @@ instance ToCBOR BlockNo where
 -- Plutus
 --------------------------------------------------------------------------------
 
-instance ToCBOR Plutus.Data where
+instance ToCBOR PV1.Data where
   toCBOR = fromPlainEncoding . Serialise.encode

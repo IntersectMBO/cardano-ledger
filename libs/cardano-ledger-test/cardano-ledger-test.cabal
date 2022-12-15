@@ -100,8 +100,6 @@ library
     microlens,
     mtl,
     nothunks,
-    -- plutus-ledger-api:{plutus-ledger-api-testlib} ^>=1.1,
-    plutus-ledger-api,
     plutus-core,
     plutus-ledger-api ^>=1.1,
     prettyprinter,
