@@ -1,5 +1,6 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -152,6 +153,8 @@ instance (Era era, Mock (EraCrypto era)) => Arbitrary (ProposedPPUpdates era) wh
 instance (Era era, Mock (EraCrypto era)) => Arbitrary (Update era) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
+
+deriving newtype instance Arbitrary NominalDiffTimeMicro
 
 maxMetadatumDepth :: Int
 maxMetadatumDepth = 2

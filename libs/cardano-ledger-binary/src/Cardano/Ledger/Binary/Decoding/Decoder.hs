@@ -64,7 +64,6 @@ module Cardano.Ledger.Binary.Decoding.Decoder
 
     -- *** Time
     decodeUTCTime,
-    decodeNominalDiffTime,
 
     -- *** Network
     decodeIPv4,
@@ -242,7 +241,7 @@ import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import Data.Time.Calendar.OrdinalDate (fromOrdinalDate)
-import Data.Time.Clock (NominalDiffTime, UTCTime (..), picosecondsToDiffTime)
+import Data.Time.Clock (UTCTime (..), picosecondsToDiffTime)
 import qualified Data.VMap as VMap
 import qualified Data.Vector.Generic as VG
 import Data.Word (Word16, Word32, Word64, Word8)
@@ -869,10 +868,6 @@ decodeUTCTime =
         UTCTime
           (fromOrdinalDate year dayOfYear)
           (picosecondsToDiffTime timeOfDayPico)
-
--- | For backwards compatibility we round pico precision to micro
-decodeNominalDiffTime :: Decoder s NominalDiffTime
-decodeNominalDiffTime = fromRational . (% 1_000_000) <$> decodeInteger
 
 --------------------------------------------------------------------------------
 -- Network

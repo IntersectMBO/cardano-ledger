@@ -58,6 +58,7 @@ in the naming of release branches.
 
 ### Changed
 
+- Replace `NominalDiffTime` with a `newtype` wrapper `NominalDiffTimeMicro`. Remove use of `NominalDiffTime`, as we don't use its full precision. #3208
 - Switched `PlutusDebug` to use a `GADT` with `singletons` for better type-safety. #3167
   - Made `Plutus` imports uniform.
 - Renamed module `Cardano.Ledger.Shelley.Metadata` -> `Cardano.Ledger.Shelley.TxAuxData` #3205

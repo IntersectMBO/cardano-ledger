@@ -1,5 +1,6 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -123,7 +124,7 @@ import Data.ByteString.Short (ShortByteString(SBS))
 #else
 import Data.ByteString.Short.Internal (ShortByteString(SBS))
 #endif
-import Data.Fixed (Fixed (..), Nano, Pico)
+import Data.Fixed (Fixed (..))
 import Data.Foldable (toList)
 import Data.Functor.Foldable (cata, project)
 import Data.IP (IPv4, IPv6)
@@ -140,7 +141,7 @@ import Data.Tagged (Tagged (..))
 import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Text.Lazy.Builder (Builder)
-import Data.Time.Clock (NominalDiffTime, UTCTime (..))
+import Data.Time.Clock (UTCTime (..))
 import Data.Typeable (Proxy (..), TypeRep, Typeable, typeRep)
 import qualified Data.VMap as VMap
 import qualified Data.Vector as V
@@ -577,15 +578,7 @@ instance ToCBOR a => ToCBOR (Ratio a) where
   toCBOR = encodeRatio toCBOR
   encodedSizeExpr size _ = 1 + size (Proxy @a) + size (Proxy @a)
 
-instance ToCBOR Nano where
-  toCBOR (MkFixed nanoseconds) = toCBOR nanoseconds
-
-instance ToCBOR Pico where
-  toCBOR (MkFixed picoseconds) = toCBOR picoseconds
-
--- | For backwards compatibility we round pico precision to micro
-instance ToCBOR NominalDiffTime where
-  toCBOR = encodeNominalDiffTime
+deriving newtype instance Typeable p => ToCBOR (Fixed p)
 
 instance ToCBOR Natural where
   toCBOR = toCBOR . toInteger

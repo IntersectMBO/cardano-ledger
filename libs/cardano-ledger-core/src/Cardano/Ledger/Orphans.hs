@@ -1,4 +1,5 @@
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -20,6 +21,7 @@ import qualified Data.ByteString as Long (ByteString, empty)
 import qualified Data.ByteString.Lazy as Lazy (ByteString, empty)
 import qualified Data.ByteString.Short as Short (ShortByteString, empty, pack)
 import Data.Default.Class (Default (..))
+import Data.Fixed (Fixed (..))
 import Data.IP (IPv4, IPv6)
 import Data.Proxy
 import qualified Data.Sequence.Strict as SS
@@ -59,6 +61,10 @@ instance NoThunks WC.XSignature where
 
 instance SignableRepresentation (Hash.Hash a b) where
   getSignableRepresentation = Hash.hashToBytes
+
+-- | TODO: We should upstream instance
+-- HasResolution p => NoThunks (Fixed p) into the nothunks package.
+deriving newtype instance NoThunks (Fixed p)
 
 -- ===============================================
 -- Blank instance needed to compute Provenance
