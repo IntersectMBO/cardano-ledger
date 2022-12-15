@@ -55,7 +55,7 @@ import Cardano.Ledger.Keys (
 import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API (DCert (DCertDeleg), DelegCert (DeRegKey), ProtVer (..), UTxO (..))
-import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), smartUTxOState)
+import Cardano.Ledger.Shelley.LedgerState (PPUPState, UTxOState (..), smartUTxOState)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (inject)
@@ -1040,10 +1040,10 @@ testExpectSuccessValid ::
   forall era.
   ( State (EraRule "UTXOW" era) ~ UTxOState era
   , GoodCrypto (EraCrypto era)
-  , Default (State (EraRule "PPUP" era))
   , PostShelley era
   , EraTx era
   , BabbageEraTxBody era
+  , Default (PPUPState era)
   ) =>
   Proof era ->
   TestCaseData era ->
@@ -1085,10 +1085,10 @@ testExpectSuccessInvalid ::
   ( State (EraRule "UTXOW" era) ~ UTxOState era
   , TxBody era ~ BabbageTxBody era
   , GoodCrypto (EraCrypto era)
-  , Default (State (EraRule "PPUP" era))
   , PostShelley era
   , EraTx era
   , BabbageEraTxBody era
+  , Default (PPUPState era)
   ) =>
   Proof era ->
   TestCaseData era ->
@@ -1110,7 +1110,6 @@ testExpectFailure ::
   forall era.
   ( State (EraRule "UTXOW" era) ~ UTxOState era
   , GoodCrypto (EraCrypto era)
-  , Default (State (EraRule "PPUP" era))
   , PostShelley era
   , BabbageEraTxBody era
   , EraTx era
@@ -1136,9 +1135,9 @@ genericBabbageFeatures ::
   , TxBody era ~ BabbageTxBody era
   , GoodCrypto (EraCrypto era)
   , BabbageEraTxBody era
-  , Default (State (EraRule "PPUP" era))
   , PostShelley era
   , EraTx era
+  , Default (PPUPState era)
   ) =>
   Proof era ->
   TestTree

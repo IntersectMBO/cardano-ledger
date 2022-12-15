@@ -31,7 +31,6 @@ import Cardano.Ledger.Shelley.BlockChain (bBodySize, incrBlocks)
 import Cardano.Ledger.Shelley.Era (ShelleyBBODY)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState,
-  LedgerState,
  )
 import Cardano.Ledger.Shelley.Rules.Ledgers (ShelleyLedgersEnv (..))
 import Cardano.Ledger.Slot (epochInfoEpoch, epochInfoFirst)
@@ -53,11 +52,11 @@ import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
 data ShelleyBbodyState era
-  = BbodyState (LedgerState era) (BlocksMade (EraCrypto era))
+  = BbodyState (State (EraRule "LEDGERS" era)) (BlocksMade (EraCrypto era))
 
-deriving stock instance Show (LedgerState era) => Show (ShelleyBbodyState era)
+deriving stock instance Show (State (EraRule "LEDGERS" era)) => Show (ShelleyBbodyState era)
 
-deriving stock instance Eq (LedgerState era) => Eq (ShelleyBbodyState era)
+deriving stock instance Eq (State (EraRule "LEDGERS" era)) => Eq (ShelleyBbodyState era)
 
 data BbodyEnv era = BbodyEnv
   { bbodyPp :: PParams era
@@ -100,7 +99,6 @@ instance
   , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
   , Embed (EraRule "LEDGERS" era) (ShelleyBBODY era)
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
-  , State (EraRule "LEDGERS" era) ~ LedgerState era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
   ) =>
   STS (ShelleyBBODY era)
@@ -130,7 +128,6 @@ bbodyTransition ::
   , EraSegWits era
   , Embed (EraRule "LEDGERS" era) (ShelleyBBODY era)
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
-  , State (EraRule "LEDGERS" era) ~ LedgerState era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
   ) =>
   TransitionRule (ShelleyBBODY era)

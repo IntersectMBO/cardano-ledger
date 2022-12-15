@@ -62,6 +62,7 @@ import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash)
 import Cardano.Ledger.Mary.Value (MultiAsset)
+import Cardano.Ledger.Shelley.LedgerState (PPUPPredFailure)
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.TxBody (DCert)
 import Cardano.Ledger.TxIn (TxIn)
@@ -312,7 +313,7 @@ instance Arbitrary TagMismatchDescription where
     oneof [pure PassedUnexpectedly, FailedUnexpectedly <$> ((:|) <$> arbitrary <*> arbitrary)]
 
 instance
-  (Era era, Mock (EraCrypto era), Arbitrary (PredicateFailure (EraRule "PPUP" era))) =>
+  (Era era, Mock (EraCrypto era), Arbitrary (PPUPPredFailure era)) =>
   Arbitrary (AlonzoUtxosPredFailure era)
   where
   arbitrary =

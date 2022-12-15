@@ -34,6 +34,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
+import Cardano.Ledger.Conway.Governance (ConwayTallyState (..), GovernanceActionState (..))
 import Cardano.Ledger.Credential (Credential, StakeReference (..))
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.AdaPots (AdaPots (..), totalAdaPotsES)
@@ -45,6 +46,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   NewEpochState (..),
   PState (..),
+  ShelleyPPUPState,
   UTxOState (..),
  )
 import Cardano.Ledger.Shelley.TxBody (
@@ -59,7 +61,6 @@ import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), coinBalance)
 import Cardano.Ledger.Val (Val (inject, (<+>), (<->)))
 import Cardano.Slotting.EpochInfo.API (epochInfoSize)
 import Control.Monad.Reader (runReader)
-import Control.State.Transition.Extended (STS (State))
 import Data.Default.Class (Default (def))
 import qualified Data.Foldable as Fold (fold, toList)
 import qualified Data.List as List
@@ -198,7 +199,7 @@ getTxOutRefScript (Babbage _) (BabbageTxOut _ _ _ ms) = ms
 getTxOutRefScript _ _ = SNothing
 {-# NOINLINE getTxOutRefScript #-}
 
-emptyPPUPstate :: forall era. Proof era -> State (EraRule "PPUP" era)
+emptyPPUPstate :: forall era. Proof era -> ShelleyPPUPState era
 emptyPPUPstate (Conway _) = def
 emptyPPUPstate (Babbage _) = def
 emptyPPUPstate (Alonzo _) = def
@@ -407,8 +408,25 @@ instance TotalAda (PState era) where
 instance TotalAda (DPState era) where
   totalAda (DPState ds ps) = totalAda ds <> totalAda ps
 
+instance TotalAda (ShelleyTallyState era) where
+  totalAda _ = mempty
+
+instance TotalAda (ConwayTallyState era) where
+  -- TODO Might need a review once the specification is done
+  totalAda (ConwayTallyState x) = mconcat $ gasDeposit <$> Map.elems x
+
+tallyStateTotalAda :: forall era. Reflect era => TallyState era -> Coin
+tallyStateTotalAda = case reify @era of
+  Shelley _ -> totalAda
+  Mary _ -> totalAda
+  Allegra _ -> totalAda
+  Alonzo _ -> totalAda
+  Babbage _ -> totalAda
+  Conway _ -> totalAda
+
 instance Reflect era => TotalAda (LedgerState era) where
-  totalAda (LedgerState utxos dps) = totalAda utxos <+> totalAda dps
+  totalAda (LedgerState utxos dps tallyState) =
+    totalAda utxos <+> totalAda dps <+> tallyStateTotalAda tallyState
 
 instance Reflect era => TotalAda (EpochState era) where
   totalAda eps = totalAda (esLState eps) <+> totalAda (esAccountState eps)

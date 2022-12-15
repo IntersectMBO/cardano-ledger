@@ -34,6 +34,9 @@ import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (BlocksMade (..), Network (..), TxIx (..), txIxToInt)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert (..))
+import Cardano.Ledger.Conway.Governance (ConwayTallyState (..))
+import Cardano.Ledger.Conway.Rules (ConwayNewEpochPredFailure)
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
@@ -53,6 +56,7 @@ import qualified Cardano.Ledger.Pretty.Babbage as Babbage
 import Cardano.Ledger.Pretty.Conway (ppConwayTxBody)
 import Cardano.Ledger.Pretty.Mary
 import Cardano.Ledger.SafeHash (hashAnnotated)
+import Cardano.Ledger.Shelley.Core (EraTallyState (..))
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   DPState (..),
@@ -61,17 +65,23 @@ import Cardano.Ledger.Shelley.LedgerState (
   InstantaneousRewards (..),
   LedgerState (..),
   NewEpochState (..),
+  PPUPPredFailure,
+  PPUPState,
   PState (..),
   UTxOState (..),
  )
 import Cardano.Ledger.Shelley.Rules as Shelley (
   ShelleyBbodyPredFailure (..),
   ShelleyBbodyState (..),
+  ShelleyDelegPredFailure,
+  ShelleyDelegsPredFailure (..),
+  ShelleyDelplPredFailure (..),
   ShelleyEpochPredFailure (..),
   ShelleyLedgerPredFailure (..),
   ShelleyLedgersPredFailure (..),
   ShelleyNewEpochPredFailure (..),
   ShelleyNewppPredFailure (..),
+  ShelleyPoolPredFailure (..),
   ShelleyPpupPredFailure (..),
   ShelleyTickPredFailure (..),
   ShelleyUpecPredFailure (..),
@@ -100,6 +110,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text, pack)
 import Data.Typeable (Typeable)
+import Data.Void (absurd)
 import qualified PlutusLedgerApi.V1 as PV1 (Data (..))
 import Prettyprinter (hsep, parens, viaShow, vsep)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
@@ -409,11 +420,92 @@ instance
   where
   prettyA = ppUtxoPredicateFailure
 
+instance
+  PrettyA (PredicateFailure (EraRule "DELPL" era)) =>
+  PrettyA (ShelleyDelegsPredFailure era)
+  where
+  prettyA (DelegateeNotRegisteredDELEG x) =
+    ppRecord
+      "DelegateeNotRegisteredDELEG"
+      [("KeyHash", prettyA x)]
+  prettyA (WithdrawalsNotInRewardsDELEGS x) =
+    ppRecord
+      "WithdrawalsNotInRewardsDELEGS"
+      [("Missing Withdrawals", prettyA x)]
+  prettyA (DelplFailure x) = prettyA x
+
+instance
+  ( PrettyA (PredicateFailure (EraRule "POOL" era))
+  , PrettyA (PredicateFailure (EraRule "DELEG" era))
+  ) =>
+  PrettyA (ShelleyDelplPredFailure era)
+  where
+  prettyA (PoolFailure x) = prettyA x
+  prettyA (DelegFailure x) = prettyA x
+
+instance PrettyA (ShelleyPoolPredFailure era) where
+  prettyA (StakePoolNotRegisteredOnKeyPOOL kh) =
+    ppRecord
+      "StakePoolNotRegisteredOnKeyPOOL"
+      [ ("KeyHash", prettyA kh)
+      ]
+  prettyA
+    ( StakePoolRetirementWrongEpochPOOL
+        curEpoch
+        poolRetEpoch
+        firstTooFarEpoch
+      ) =
+      ppRecord
+        "StakePoolRetirementWrongEpochPOOL"
+        [ ("Current Epoch", prettyA curEpoch)
+        , ("Pool Retirement Epoch", prettyA poolRetEpoch)
+        , ("First Epoch Too Far", prettyA firstTooFarEpoch)
+        ]
+  prettyA (WrongCertificateTypePOOL disallowedCertificate) =
+    ppRecord
+      "WrongCertificateTypePOOL"
+      [("Disallowed Certificate", prettyA disallowedCertificate)]
+  prettyA
+    ( StakePoolCostTooLowPOOL
+        prcStakePoolCost
+        ppStakePoolCost
+      ) =
+      ppRecord
+        "StakePoolCostTooLowPOOL"
+        [ ("PRC Stake Pool Cost", prettyA prcStakePoolCost)
+        , ("PP Stake Pool Cost", prettyA ppStakePoolCost)
+        ]
+  prettyA
+    ( WrongNetworkPOOL
+        nwId
+        regCertNwId
+        stakePoolId
+      ) =
+      ppRecord
+        "WrongNetworkPOOL"
+        [ ("Network ID", prettyA nwId)
+        , ("Registration Certificate Network ID", prettyA regCertNwId)
+        , ("Stake Pool ID", prettyA stakePoolId)
+        ]
+  prettyA
+    ( PoolMedataHashTooBig
+        stakePoolId
+        metadataHashSize
+      ) =
+      ppRecord
+        "PoolMedataHashTooBig"
+        [ ("Stake Pool ID", prettyA stakePoolId)
+        , ("Metadata Hash Size", prettyA metadataHashSize)
+        ]
+
+instance PrettyA (ShelleyDelegPredFailure era) where
+  prettyA = ppString . show -- TODO
+
 -- =========================================
 -- Predicate Failure for Alonzo UTXOS
 
 ppUtxosPredicateFailure ::
-  PrettyA (PredicateFailure (EraRule "PPUP" era)) =>
+  PrettyA (PPUPPredFailure era) =>
   AlonzoUtxosPredFailure era ->
   PDoc
 ppUtxosPredicateFailure (ValidationTagMismatch isvalid tag) =
@@ -426,7 +518,7 @@ ppUtxosPredicateFailure (CollectErrors es) =
   ppRecord' mempty [("When collecting inputs for twophase scripts, these went wrong.", ppList ppCollectError es)]
 ppUtxosPredicateFailure (Alonzo.UpdateFailure p) = prettyA p
 
-instance PrettyA (PredicateFailure (EraRule "PPUP" era)) => PrettyA (AlonzoUtxosPredFailure era) where
+instance PrettyA (PPUPPredFailure era) => PrettyA (AlonzoUtxosPredFailure era) where
   prettyA = ppUtxosPredicateFailure
 
 ppCollectError :: CollectError c -> PDoc
@@ -459,7 +551,7 @@ instance PrettyA FailureDescription where
 ppUtxoPFShelley ::
   forall era.
   ( PrettyCore era
-  , PrettyA (PredicateFailure (EraRule "PPUP" era))
+  , PrettyA (PPUPPredFailure era)
   ) =>
   ShelleyUtxoPredFailure era ->
   PDoc
@@ -510,7 +602,7 @@ ppUtxoPFShelley (Shelley.OutputBootAddrAttrsTooBig xs) =
 
 instance
   ( PrettyCore era
-  , PrettyA (PredicateFailure (EraRule "PPUP" era))
+  , PrettyA (PPUPPredFailure era)
   ) =>
   PrettyA (ShelleyUtxoPredFailure era)
   where
@@ -545,7 +637,7 @@ instance PrettyA (ShelleyPpupPredFailure era) where
 ppUtxoPFMary ::
   forall era.
   ( PrettyCore era
-  , PrettyA (PredicateFailure (EraRule "PPUP" era))
+  , PrettyA (PPUPPredFailure era)
   ) =>
   AllegraUtxoPredFailure era ->
   PDoc
@@ -602,7 +694,7 @@ ppUtxoPFMary (Allegra.OutputTooBigUTxO outs) =
 
 instance
   ( PrettyCore era
-  , PrettyA (PredicateFailure (EraRule "PPUP" era))
+  , PrettyA (PPUPPredFailure era)
   ) =>
   PrettyA (AllegraUtxoPredFailure era)
   where
@@ -718,20 +810,19 @@ instance
 
 -- ===============
 ppTickPredicateFailure ::
-  ( ShelleyNewEpochPredFailure era ~ PredicateFailure (EraRule "NEWEPOCH" era)
-  , ShelleyEpochPredFailure era ~ PredicateFailure (EraRule "EPOCH" era)
-  , ShelleyUpecPredFailure era ~ PredicateFailure (EraRule "UPEC" era)
+  forall era.
+  ( Reflect era
   ) =>
   ShelleyTickPredFailure era ->
   PDoc
-ppTickPredicateFailure (NewEpochFailure x) = ppNewEpochPredicateFailure x
+ppTickPredicateFailure (NewEpochFailure x) = ppNewEpochPredicateFailure @era x
 ppTickPredicateFailure (RupdFailure _) =
   ppString "RupdPredicateFailure has no constructors"
 
 instance
   ( ShelleyNewEpochPredFailure era ~ PredicateFailure (EraRule "NEWEPOCH" era)
   , ShelleyEpochPredFailure era ~ PredicateFailure (EraRule "EPOCH" era)
-  , ShelleyUpecPredFailure era ~ PredicateFailure (EraRule "UPEC" era)
+  , Reflect era
   ) =>
   PrettyA (ShelleyTickPredFailure era)
   where
@@ -739,41 +830,76 @@ instance
 
 -- ===============
 ppNewEpochPredicateFailure ::
-  ( ShelleyEpochPredFailure era ~ PredicateFailure (EraRule "EPOCH" era)
-  , ShelleyUpecPredFailure era ~ PredicateFailure (EraRule "UPEC" era)
+  forall era.
+  ( Reflect era
+  ) =>
+  PredicateFailure (EraRule "NEWEPOCH" era) ->
+  PDoc
+ppNewEpochPredicateFailure x = case reify @era of
+  Shelley _ -> ppShelleyNewEpochPredicateFailure x
+  Allegra _ -> ppShelleyNewEpochPredicateFailure x
+  Mary _ -> ppShelleyNewEpochPredicateFailure x
+  Alonzo _ -> ppShelleyNewEpochPredicateFailure x
+  Babbage _ -> ppShelleyNewEpochPredicateFailure x
+  Conway _ -> ppConwayNewEpochPredicateFailure x
+
+ppShelleyNewEpochPredicateFailure ::
+  forall era.
+  ( PredicateFailure (EraRule "EPOCH" era) ~ ShelleyEpochPredFailure era
+  , Reflect era
   ) =>
   ShelleyNewEpochPredFailure era ->
   PDoc
-ppNewEpochPredicateFailure (EpochFailure x) = ppEpochPredicateFailure x
-ppNewEpochPredicateFailure (CorruptRewardUpdate x) =
+ppShelleyNewEpochPredicateFailure (EpochFailure x) = ppEpochPredicateFailure @era x
+ppShelleyNewEpochPredicateFailure (CorruptRewardUpdate x) =
   ppSexp "CorruptRewardUpdate" [ppRewardUpdate x]
-ppNewEpochPredicateFailure (MirFailure _) =
+ppShelleyNewEpochPredicateFailure (MirFailure _) =
   ppString "MirPredicateFailure has no constructors"
 
+ppConwayNewEpochPredicateFailure ::
+  forall era.
+  ( PredicateFailure (EraRule "EPOCH" era) ~ ShelleyEpochPredFailure era
+  , Reflect era
+  , PrettyA (PredicateFailure (EraRule "ENACTMENT" era))
+  ) =>
+  ConwayNewEpochPredFailure era ->
+  PDoc
+ppConwayNewEpochPredicateFailure (Conway.EpochFailure x) = ppEpochPredicateFailure @era x
+ppConwayNewEpochPredicateFailure (Conway.CorruptRewardUpdate x) =
+  ppSexp "CorruptRewardUpdate" [ppRewardUpdate x]
+ppConwayNewEpochPredicateFailure (Conway.EnactmentFailure x) = prettyA x
+
 instance
-  ( ShelleyNewEpochPredFailure era ~ PredicateFailure (EraRule "NEWEPOCH" era)
-  , ShelleyEpochPredFailure era ~ PredicateFailure (EraRule "EPOCH" era)
-  , ShelleyUpecPredFailure era ~ PredicateFailure (EraRule "UPEC" era)
+  ( Reflect era
+  , PredicateFailure (EraRule "EPOCH" era)
+      ~ ShelleyEpochPredFailure era
   ) =>
   PrettyA (ShelleyNewEpochPredFailure era)
   where
-  prettyA = ppNewEpochPredicateFailure
+  prettyA = ppShelleyNewEpochPredicateFailure
 
 -- ===============
 ppEpochPredicateFailure ::
-  ( ShelleyUpecPredFailure era ~ PredicateFailure (EraRule "UPEC" era)
-  ) =>
+  forall era.
+  Reflect era =>
   ShelleyEpochPredFailure era ->
   PDoc
 ppEpochPredicateFailure (PoolReapFailure _) =
   ppString "PoolreapPredicateFailure has no constructors"
 ppEpochPredicateFailure (SnapFailure _) =
   ppString "SnapPredicateFailure has no constructors"
-ppEpochPredicateFailure (UpecFailure x) = ppUpecPredicateFailure x
+ppEpochPredicateFailure (UpecFailure x) = case reify @era of
+  Shelley _ -> ppUpecPredicateFailure x
+  Mary _ -> ppUpecPredicateFailure x
+  Alonzo _ -> ppUpecPredicateFailure x
+  Allegra _ -> ppUpecPredicateFailure x
+  Babbage _ -> ppUpecPredicateFailure x
+  Conway _ -> absurd x
 
 instance
   ( ShelleyEpochPredFailure era ~ PredicateFailure (EraRule "EPOCH" era)
   , ShelleyUpecPredFailure era ~ PredicateFailure (EraRule "UPEC" era)
+  , Reflect era
   ) =>
   PrettyA (ShelleyEpochPredFailure era)
   where
@@ -805,7 +931,9 @@ instance PrettyA (ShelleyNewppPredFailure era) where prettyA = ppNewppPredicateF
 ppBbodyState ::
   ( PrettyA (TxOut era)
   , PrettyA (PParams era)
-  , PrettyA (State (EraRule "PPUP" era))
+  , PrettyA (PPUPState era)
+  , PrettyA (TallyState era)
+  , State (EraRule "LEDGERS" era) ~ LedgerState era
   ) =>
   ShelleyBbodyState era ->
   PDoc
@@ -819,7 +947,9 @@ ppBbodyState (BbodyState ls (BlocksMade mp)) =
 instance
   ( PrettyA (TxOut era)
   , PrettyA (PParams era)
-  , PrettyA (State (EraRule "PPUP" era))
+  , PrettyA (PPUPState era)
+  , PrettyA (TallyState era)
+  , State (EraRule "LEDGERS" era) ~ LedgerState era
   ) =>
   PrettyA (ShelleyBbodyState era)
   where
@@ -1352,12 +1482,31 @@ pcDPState _proof (DPState (DState {dsUnified = un}) (PState {psStakePoolParams =
 
 instance PrettyC (DPState era) era where prettyC = pcDPState
 
+instance PrettyC (ConwayTallyState era) era where
+  prettyC proof (ConwayTallyState x) = case proof of
+    Shelley _ -> ppMap prettyA prettyA x
+    Mary _ -> ppMap prettyA prettyA x
+    Allegra _ -> ppMap prettyA prettyA x
+    Alonzo _ -> ppMap prettyA prettyA x
+    Babbage _ -> ppMap prettyA prettyA x
+    Conway _ -> ppMap prettyA prettyA x
+
+pcTallyState :: Proof era -> TallyState era -> PDoc
+pcTallyState proof ts = case proof of
+  Shelley _ -> prettyA ts
+  Mary _ -> prettyA ts
+  Allegra _ -> prettyA ts
+  Alonzo _ -> prettyA ts
+  Babbage _ -> prettyA ts
+  Conway _ -> prettyC proof ts
+
 pcLedgerState :: Reflect era => Proof era -> LedgerState era -> PDoc
-pcLedgerState proof (LedgerState utstate dpstate) =
+pcLedgerState proof (LedgerState utstate dpstate tallyState) =
   ppRecord
     "LedgerState"
     [ ("UTxOState", pcUTxOState proof utstate)
     , ("DPState", pcDPState proof dpstate)
+    , ("TallyState", pcTallyState proof tallyState)
     ]
 
 instance Reflect era => PrettyC (LedgerState era) era where prettyC = pcLedgerState

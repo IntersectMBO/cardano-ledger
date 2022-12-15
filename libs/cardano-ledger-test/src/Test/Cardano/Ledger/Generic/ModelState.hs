@@ -41,6 +41,7 @@ module Test.Cardano.Ledger.Generic.ModelState where
 
 import Cardano.Ledger.BaseTypes (BlocksMade (..))
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway.Governance (ConwayTallyState (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.EpochBoundary (SnapShots, emptySnapShots)
@@ -65,6 +66,8 @@ import Cardano.Ledger.Pretty (
  )
 import Cardano.Ledger.Pretty.Alonzo ()
 import Cardano.Ledger.Pretty.Babbage ()
+import Cardano.Ledger.Shelley.API (ShelleyPPUPState (..))
+import Cardano.Ledger.Shelley.Core (EraTallyState (..), ShelleyTallyState (..))
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   DPState (..),
@@ -74,7 +77,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   InstantaneousRewards (..),
   LedgerState (..),
   NewEpochState (..),
-  PPUPState (..),
+  PPUPState,
   PState (..),
   StashedAVVMAddresses,
   UTxOState (..),
@@ -90,7 +93,6 @@ import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import qualified Cardano.Ledger.UMapCompact as UM
 import Cardano.Ledger.UTxO (UTxO (..))
 import Control.Monad.Trans ()
-import Control.State.Transition (STS (State))
 import Data.Default.Class (Default (def))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -168,7 +170,7 @@ data ModelNewEpochState era = ModelNewEpochState
   , mBprev :: !(Map (KeyHash 'StakePool (EraCrypto era)) Natural) --  Blocks made before current epoch, NO EFFECT until we model EpochBoundar
   , mBcur :: !(Map (KeyHash 'StakePool (EraCrypto era)) Natural)
   , mRu :: !(StrictMaybe (RewardUpdate (EraCrypto era))) -- Possible reward update
-
+  , mTallyState :: !(TallyState era)
   -- ^ Blocks made in current epoch
   }
 
@@ -228,13 +230,13 @@ proposedPPUpdatesZero = ProposedPPUpdates Map.empty
 nonMyopicZero :: NonMyopic c
 nonMyopicZero = NonMyopic Map.empty mempty
 
-pPUPStateZeroByProof :: Proof era -> State (Core.EraRule "PPUP" era)
-pPUPStateZeroByProof (Conway _) = PPUPState proposedPPUpdatesZero proposedPPUpdatesZero
-pPUPStateZeroByProof (Babbage _) = PPUPState proposedPPUpdatesZero proposedPPUpdatesZero
-pPUPStateZeroByProof (Alonzo _) = PPUPState proposedPPUpdatesZero proposedPPUpdatesZero
-pPUPStateZeroByProof (Mary _) = PPUPState proposedPPUpdatesZero proposedPPUpdatesZero
-pPUPStateZeroByProof (Allegra _) = PPUPState proposedPPUpdatesZero proposedPPUpdatesZero
-pPUPStateZeroByProof (Shelley _) = PPUPState proposedPPUpdatesZero proposedPPUpdatesZero
+ppupStateZeroByProof :: Proof era -> PPUPState era
+ppupStateZeroByProof (Conway _) = ()
+ppupStateZeroByProof (Babbage _) = ShelleyPPUPState proposedPPUpdatesZero proposedPPUpdatesZero
+ppupStateZeroByProof (Alonzo _) = ShelleyPPUPState proposedPPUpdatesZero proposedPPUpdatesZero
+ppupStateZeroByProof (Mary _) = ShelleyPPUPState proposedPPUpdatesZero proposedPPUpdatesZero
+ppupStateZeroByProof (Allegra _) = ShelleyPPUPState proposedPPUpdatesZero proposedPPUpdatesZero
+ppupStateZeroByProof (Shelley _) = ShelleyPPUPState proposedPPUpdatesZero proposedPPUpdatesZero
 
 pParamsZeroByProof :: Proof era -> Core.PParams era
 pParamsZeroByProof (Conway _) = def
@@ -244,17 +246,32 @@ pParamsZeroByProof (Mary _) = def
 pParamsZeroByProof (Allegra _) = def
 pParamsZeroByProof (Shelley _) = def
 
-pPUPStateZero :: forall era. Reflect era => State (Core.EraRule "PPUP" era)
-pPUPStateZero = pPUPStateZeroByProof @era (reify :: Proof era)
+ppupStateZero :: forall era. Reflect era => PPUPState era
+ppupStateZero = ppupStateZeroByProof @era (reify :: Proof era)
 
 uTxOStateZero :: forall era. Reflect era => UTxOState era
-uTxOStateZero = smartUTxOState utxoZero mempty mempty (pPUPStateZero @era)
+uTxOStateZero = smartUTxOState utxoZero mempty mempty (ppupStateZero @era)
 
 pParamsZero :: Reflect era => Core.PParams era
 pParamsZero = lift pParamsZeroByProof
 
-ledgerStateZero :: Reflect era => LedgerState era
-ledgerStateZero = LedgerState uTxOStateZero dPStateZero
+tallyStateZero :: forall era. Reflect era => TallyState era
+tallyStateZero = case reify @era of
+  Shelley _ -> shelleyTallyStateZero
+  Mary _ -> shelleyTallyStateZero
+  Allegra _ -> shelleyTallyStateZero
+  Alonzo _ -> shelleyTallyStateZero
+  Babbage _ -> shelleyTallyStateZero
+  Conway _ -> conwayTallyStateZero
+
+shelleyTallyStateZero :: ShelleyTallyState era
+shelleyTallyStateZero = NoTallyState
+
+conwayTallyStateZero :: ConwayTallyState era
+conwayTallyStateZero = ConwayTallyState mempty
+
+ledgerStateZero :: forall era. Reflect era => LedgerState era
+ledgerStateZero = LedgerState uTxOStateZero dPStateZero $ tallyStateZero @era
 
 epochStateZero :: Reflect era => EpochState era
 epochStateZero = EpochState accountStateZero emptySnapShots ledgerStateZero pParamsZero pParamsZero nonMyopicZero
@@ -303,6 +320,7 @@ mNewEpochStateZero =
     , mBprev = Map.empty
     , mBcur = Map.empty
     , mRu = SNothing
+    , mTallyState = emptyTallyState
     }
 
 testNES :: NewEpochState (BabbageEra Mock)
@@ -345,10 +363,10 @@ instance Reflect era => Extract (UTxOState era) era where
       (UTxO (mUTxO x))
       (mDeposited x)
       (mFees x)
-      (pPUPStateZero @era)
+      (ppupStateZero @era)
 
 instance Reflect era => Extract (LedgerState era) era where
-  extract x = LedgerState (extract x) (extract x)
+  extract x = LedgerState (extract x) (extract x) (mTallyState x)
 
 instance Reflect era => Extract (EpochState era) era where
   extract x =
@@ -398,7 +416,8 @@ abstract x =
     , mRu = case nesRu x of
         SNothing -> SNothing
         SJust pru -> SJust (complete pru)
-        -- SNothing -- There is no way to complete (nesRu x) to get a RewardUpdate
+    , -- SNothing -- There is no way to complete (nesRu x) to get a RewardUpdate
+      mTallyState = (lsTallyState . esLState . nesEs) x
     }
 
 complete :: PulsingRewUpdate c -> RewardUpdate c

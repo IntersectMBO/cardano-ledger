@@ -24,8 +24,8 @@ module Cardano.Ledger.Shelley.LedgerState (
   InstantaneousRewards (..),
   KeyPairs, -- deprecated
   LedgerState (..),
-  PPUPState (..),
   PState (..),
+  PPUPPredFailure,
   RewardAccounts,
   RewardUpdate (..),
   RewardSnapShot (..),
@@ -37,6 +37,8 @@ module Cardano.Ledger.Shelley.LedgerState (
   pvCanFollow,
   reapRewards,
   availableAfterMIR,
+  ShelleyPPUPState (..),
+  PPUPState,
 
   -- * Genesis State
   genesisState,
@@ -84,8 +86,7 @@ module Cardano.Ledger.Shelley.LedgerState (
   -- * Remove Bootstrap Redeem Addresses
   returnRedeemAddrsToReserves,
   updateNonMyopic,
-)
-where
+) where
 
 import Cardano.Ledger.DPState
 import Cardano.Ledger.Era (EraCrypto)
@@ -95,8 +96,11 @@ import Cardano.Ledger.Shelley.LedgerState.NewEpochState
 import Cardano.Ledger.Shelley.LedgerState.PulsingReward
 import Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits
 import Cardano.Ledger.Shelley.LedgerState.Types
-import Cardano.Ledger.Shelley.PParams (PPUPState (..), pvCanFollow)
+import Cardano.Ledger.Shelley.PParams (
+  pvCanFollow,
+ )
 import Cardano.Ledger.Shelley.RewardUpdate
+import Cardano.Ledger.Shelley.Rules.Ppup (PPUPPredFailure, PPUPState, ShelleyPPUPState (..))
 import Cardano.Ledger.Shelley.Tx (minfee, witsFromTxWitnesses)
 import Cardano.Ledger.Shelley.UTxO (produced)
 import Data.Default.Class (def)

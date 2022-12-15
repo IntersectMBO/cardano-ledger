@@ -35,8 +35,7 @@ module Cardano.Ledger.Babbage.TxOut (
   txOutData,
   txOutDataHash,
   txOutScript,
-)
-where
+) where
 
 import Cardano.Crypto.Hash (HashAlgorithm)
 import Cardano.Ledger.Address (

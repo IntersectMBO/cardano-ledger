@@ -28,8 +28,7 @@ module Cardano.Ledger.Alonzo.Rules.Utxo (
   validateTooManyCollateralInputs,
   validateWrongNetworkInTxBody,
   vKeyLocked,
-)
-where
+) where
 
 import Cardano.Ledger.Address (
   Addr (..),
@@ -83,7 +82,10 @@ import Cardano.Ledger.Rules.ValidationMode (
   runTest,
   runTestOnSignal,
  )
-import Cardano.Ledger.Shelley.LedgerState (UTxOState (UTxOState))
+import Cardano.Ledger.Shelley.LedgerState (
+  PPUPPredFailure,
+  UTxOState (UTxOState),
+ )
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, UtxoEnv (..))
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Tx (TxIn)
@@ -462,7 +464,7 @@ utxoTransition ::
   , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
   , State (EraRule "UTXOS" era) ~ UTxOState era
   , Signal (EraRule "UTXOS" era) ~ Tx era
-  , Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era))
+  , Inject (PPUPPredFailure era) (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   TransitionRule (AlonzoUTXO era)
 utxoTransition = do
@@ -545,7 +547,7 @@ instance
   , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
   , State (EraRule "UTXOS" era) ~ UTxOState era
   , Signal (EraRule "UTXOS" era) ~ Tx era
-  , Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era))
+  , Inject (PPUPPredFailure era) (PredicateFailure (EraRule "UTXOS" era))
   , ProtVerAtMost era 8
   ) =>
   STS (AlonzoUTXO era)
@@ -726,13 +728,13 @@ instance
   inject = UtxosFailure
 
 instance
-  Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era)) =>
+  Inject (PPUPPredFailure era) (PredicateFailure (EraRule "UTXOS" era)) =>
   Inject (AllegraUtxoPredFailure era) (AlonzoUtxoPredFailure era)
   where
   inject = utxoPredFailMaToAlonzo
 
 utxoPredFailMaToAlonzo ::
-  Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era)) =>
+  Inject (PPUPPredFailure era) (PredicateFailure (EraRule "UTXOS" era)) =>
   AllegraUtxoPredFailure era ->
   AlonzoUtxoPredFailure era
 utxoPredFailMaToAlonzo (Allegra.BadInputsUTxO x) = BadInputsUTxO x
@@ -752,13 +754,13 @@ utxoPredFailMaToAlonzo Allegra.TriesToForgeADA = TriesToForgeADA
 utxoPredFailMaToAlonzo (Allegra.OutputTooBigUTxO xs) = OutputTooBigUTxO (map (\x -> (0, 0, x)) xs)
 
 instance
-  Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era)) =>
+  Inject (PPUPPredFailure era) (PredicateFailure (EraRule "UTXOS" era)) =>
   Inject (ShelleyUtxoPredFailure era) (AlonzoUtxoPredFailure era)
   where
   inject = utxoPredFailShelleyToAlonzo
 
 utxoPredFailShelleyToAlonzo ::
-  Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era)) =>
+  Inject (PPUPPredFailure era) (PredicateFailure (EraRule "UTXOS" era)) =>
   ShelleyUtxoPredFailure era ->
   AlonzoUtxoPredFailure era
 utxoPredFailShelleyToAlonzo (Shelley.BadInputsUTxO ins) = BadInputsUTxO ins

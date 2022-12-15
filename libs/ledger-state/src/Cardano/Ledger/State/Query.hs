@@ -4,6 +4,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Ledger.State.Query where
@@ -13,6 +14,7 @@ import Cardano.Ledger.Binary
 import qualified Cardano.Ledger.Credential as Credential
 import qualified Cardano.Ledger.EpochBoundary as EpochBoundary
 import qualified Cardano.Ledger.Keys as Keys
+import Cardano.Ledger.Shelley.Core (EraTallyState (..))
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.State.Orphans
 import Cardano.Ledger.State.Schema
@@ -520,6 +522,7 @@ getLedgerState utxo LedgerState {..} dstate = do
             { Shelley.dpsDState = dstate
             , Shelley.dpsPState = ledgerStatePstateBin
             }
+      , Shelley.lsTallyState = emptyTallyState @CurrentEra
       }
 
 getDStateNoSharing ::

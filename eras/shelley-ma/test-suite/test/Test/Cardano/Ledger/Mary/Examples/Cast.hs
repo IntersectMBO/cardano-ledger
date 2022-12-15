@@ -18,8 +18,7 @@ module Test.Cardano.Ledger.Mary.Examples.Cast (
   dariaPay,
   dariaStake,
   dariaAddr,
-)
-where
+) where
 
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Crypto (StandardCrypto)

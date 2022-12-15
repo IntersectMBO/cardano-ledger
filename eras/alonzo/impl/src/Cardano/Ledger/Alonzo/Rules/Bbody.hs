@@ -17,8 +17,7 @@ module Cardano.Ledger.Alonzo.Rules.Bbody (
   AlonzoBbodyPredFailure (..),
   AlonzoBbodyEvent (..),
   bbodyTransition,
-)
-where
+) where
 
 import Cardano.Ledger.Alonzo.Era (AlonzoBBODY)
 import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams, ppMaxBlockExUnitsL)

@@ -28,7 +28,8 @@ import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.SafeHash (SafeHash)
-import Cardano.Ledger.Shelley.API (LedgerState, PPUPState)
+import Cardano.Ledger.Shelley.API (LedgerState, ShelleyPPUPState (..))
+import Cardano.Ledger.Shelley.LedgerState (PPUPState)
 import Cardano.Ledger.Shelley.Rules (LedgerEnv)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx)
 import Control.Monad.Trans.Reader (ReaderT)
@@ -93,8 +94,8 @@ minimalPropertyTests ::
   , TestingLedger era ledger
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv era)
-  , State (EraRule "PPUP" era) ~ PPUPState era
   , ProtVerAtMost era 8
+  , ShelleyPPUPState era ~ PPUPState era
   ) =>
   TestTree
 minimalPropertyTests =
@@ -117,13 +118,13 @@ propertyTests ::
   , QC.HasTrace ledger (GenEnv era)
   , Embed (EraRule "DELEGS" era) ledger
   , Embed (EraRule "UTXOW" era) ledger
-  , State (EraRule "PPUP" era) ~ PPUPState era
   , Environment ledger ~ LedgerEnv era
   , QC.BaseEnv ledger ~ Globals
   , BaseM ledger ~ ReaderT Globals Identity
   , State ledger ~ LedgerState era
   , Signal ledger ~ Tx era
   , ProtVerAtMost era 8
+  , ShelleyPPUPState era ~ PPUPState era
   ) =>
   TestTree
 propertyTests =

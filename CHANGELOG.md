@@ -58,7 +58,27 @@ in the naming of release branches.
   corresponding fields to `ConwayTxBody` #3176
 - Added `ToCBOR` and `FromCBOR` instances to `ConwayTxBody` and all its
   constituent data types #3176
-- Added `ConwayUTXO` and `ConwayUTXOS` rules #3176
+- Added `ConwayUTXOS` rule #3176
+- Added `PPUPStatePV` type family and `PPUPState` type synonym #3216
+- Added `PPUPPredFailurePV` type family and `PPUPPredFailure` type synonym #3216
+- Added `lsTallyState` field to `LedgerState` #3216
+- Added `EraTallyState` type class and implemented it for each era #3216
+- Added `updateTxBodyG` getter to EraTxBody #3216
+- Added new rules to the Conway era: #3216
+  - `TALLY` (new)
+  - `ENACTMENT` (new)
+  - `NEWEPOCH`
+  - `EPOCH`
+  - `LEDGER`
+- Added `ShelleyTallyState` and `ConwayTallyState` #3216
+- Added `ConwayEpochEvent` #3216
+- Added `ConwayLedgerPredFailure` #3216
+- Added `ConwayNewEpochPredFailure` #3216
+- Added `ConwayNewEpochEvent` #3216
+- Added new governance related data types to Conway: #3216
+  - `GovernanceActionState`
+  - `GovernanceProcedure`
+  - `TallyEnv`
 
 
 ### Changed
@@ -253,6 +273,15 @@ in the naming of release branches.
   `cardano-ledger-shelley` package into a new module `Cardano.Ledger.Reward`
   inside the `cardano-ledger-core` package. #3059
 - Added the tx hash to the `TotalDeposits` event and replaced the deposits by the deposits change #3212
+- Renamed the old `PPUPState` datatype to `ShelleyPPUPState` #3216
+- Renamed `UTxOState` to `ShelleyUTxOState` and prefixed the fields with 
+  `sutxos` #3216
+- Removed some references to specific rules in constraints: #3216
+  - Replaced `State (EraRule "PPUP" era)` with `PPUPState era`
+  - Replaced `PredicateFailure (EraRule "PPUP" era)` with `PPUPPredFailure era`
+  - Replaced `PredicateFailure (EraRule "UPEC" era)` with `UpecPredFailure era`
+- Changed the type of the first field of `ShelleyBbodyState` to  #3216
+  `State (EraRule "LEDGERS" era)`
 
 ### Removed
 

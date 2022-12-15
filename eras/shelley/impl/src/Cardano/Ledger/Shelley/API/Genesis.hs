@@ -1,6 +1,8 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -26,11 +28,16 @@ import Cardano.Ledger.Shelley.API.Types (
   genesisUTxO,
   word64ToCoin,
  )
-import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses, smartUTxOState)
+import Cardano.Ledger.Shelley.Core (EraTallyState (..))
+import Cardano.Ledger.Shelley.LedgerState (
+  PPUPState,
+  StashedAVVMAddresses,
+  smartUTxOState,
+ )
 import Cardano.Ledger.Shelley.PParams ()
 import Cardano.Ledger.UTxO (coinBalance)
 import Cardano.Ledger.Val (Val ((<->)))
-import Control.State.Transition (STS (State))
+import Control.State.Transition (STS (..))
 import Data.Default.Class (Default, def)
 import Data.Kind (Type)
 import qualified Data.Map.Strict as Map
@@ -38,8 +45,9 @@ import qualified Data.Map.Strict as Map
 -- | Indicates that this era may be bootstrapped from 'ShelleyGenesis'.
 class
   ( EraTxOut era
-  , Default (State (EraRule "PPUP" era))
   , Default (StashedAVVMAddresses era)
+  , Default (PPUPState era)
+  , EraTallyState era
   ) =>
   CanStartFromGenesis era
   where
@@ -88,6 +96,7 @@ initialStateFromGenesis sg ag =
         ( LedgerState
             (smartUTxOState initialUtxo (Coin 0) (Coin 0) def)
             (DPState (def {dsGenDelegs = GenDelegs genDelegs}) def)
+            emptyTallyState
         )
         (fromShelleyPParams ag pp)
         (fromShelleyPParams ag pp)

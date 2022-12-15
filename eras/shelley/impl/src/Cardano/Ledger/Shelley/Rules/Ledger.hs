@@ -37,6 +37,7 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
+import Cardano.Ledger.Shelley.Core (EraTallyState (..))
 import Cardano.Ledger.Shelley.Era (ShelleyLEDGER)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState,
@@ -170,6 +171,7 @@ instance
   , State (EraRule "DELEGS" era) ~ DPState (EraCrypto era)
   , Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era))
   , ProtVerAtMost era 8
+  , EraTallyState era
   ) =>
   STS (ShelleyLEDGER era)
   where
@@ -189,7 +191,7 @@ instance
     [ PostCondition
         "Deposit pot must equal obligation (ShelleyLedger)"
         ( \(TRC (_, _, _))
-           (LedgerState utxoSt dpstate) ->
+           (LedgerState utxoSt dpstate _) ->
               obligationDPState dpstate == utxosDeposited utxoSt
         )
     ]
@@ -207,10 +209,11 @@ ledgerTransition ::
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , ProtVerAtMost era 8
+  , EraTallyState era
   ) =>
   TransitionRule (ShelleyLEDGER era)
 ledgerTransition = do
-  TRC (LedgerEnv slot txIx pp account, LedgerState utxoSt dpstate, tx) <- judgmentContext
+  TRC (LedgerEnv slot txIx pp account, LedgerState utxoSt dpstate _, tx) <- judgmentContext
   dpstate' <-
     trans @(EraRule "DELEGS" era) $
       TRC
@@ -227,7 +230,7 @@ ledgerTransition = do
         , utxoSt
         , tx
         )
-  pure (LedgerState utxoSt' dpstate')
+  pure (LedgerState utxoSt' dpstate' emptyTallyState)
 
 instance
   ( Era era

@@ -35,6 +35,8 @@ import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), Datum (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Core
+import Cardano.Ledger.Conway.Rules (ConwayLedgerPredFailure (..))
+import Cardano.Ledger.Conway.Translation ()
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Keys hiding (KeyPair, vKey)
@@ -120,7 +122,7 @@ defaultLedgerExamples ::
   forall era.
   ( Reflect era
   , Default (StashedAVVMAddresses era)
-  , Default (State (EraRule "PPUP" era))
+  , Default (PPUPState era)
   ) =>
   Proof era ->
   Value era ->
@@ -141,7 +143,7 @@ defaultLedgerExamples proof value txBody auxData translationContext =
               Mary _ -> DelegsFailure $ DelegateeNotRegisteredDELEG @era (mkKeyHash 1)
               Alonzo _ -> DelegsFailure $ DelegateeNotRegisteredDELEG @era (mkKeyHash 1)
               Babbage _ -> DelegsFailure $ DelegateeNotRegisteredDELEG @era (mkKeyHash 1)
-              Conway _ -> DelegsFailure $ DelegateeNotRegisteredDELEG @era (mkKeyHash 1)
+              Conway _ -> ConwayDelegsFailure $ DelegateeNotRegisteredDELEG @era (mkKeyHash 1)
           ]
     , sleRewardsCredentials =
         Set.fromList
@@ -353,7 +355,7 @@ exampleNewEpochState ::
   forall era.
   ( Reflect era
   , Default (StashedAVVMAddresses era)
-  , Default (State (EraRule "PPUP" era))
+  , Default (PPUPState era)
   ) =>
   Proof era ->
   Value era ->
@@ -398,6 +400,7 @@ exampleNewEpochState proof spendvalue ppp pp =
                     , utxosStakeDistr = mempty
                     }
               , lsDPState = def
+              , lsTallyState = emptyTallyState
               }
         , esPrevPp = ppp
         , esPp = pp

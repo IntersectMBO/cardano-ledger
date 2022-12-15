@@ -19,10 +19,12 @@ import Cardano.Ledger.BaseTypes (Globals, TxIx, mkTxIxPartial)
 import Cardano.Ledger.Core (ProtVerAtMost)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (EraCrypto)
+import Cardano.Ledger.Shelley.Core (EraTallyState (..))
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   DPState,
   LedgerState (..),
+  PPUPState,
   UTxOState,
   genesisState,
  )
@@ -93,6 +95,7 @@ instance
   , State (Core.EraRule "DELEGS" era) ~ DPState (EraCrypto era)
   , Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era))
   , ProtVerAtMost era 8
+  , EraTallyState era
   ) =>
   TQC.HasTrace (ShelleyLEDGER era) (GenEnv era)
   where
@@ -120,8 +123,9 @@ instance
   , PredicateFailure (Core.EraRule "DELPL" era) ~ ShelleyDelplPredFailure era
   , Embed (Core.EraRule "DELEG" era) (ShelleyDELPL era)
   , Embed (Core.EraRule "LEDGER" era) (ShelleyLEDGERS era)
-  , Default (State (Core.EraRule "PPUP" era))
   , ProtVerAtMost era 8
+  , Default (PPUPState era)
+  , EraTallyState era
   ) =>
   TQC.HasTrace (ShelleyLEDGERS era) (GenEnv era)
   where
@@ -173,7 +177,10 @@ instance
 -- and (2) always return Right (since this function does not raise predicate failures).
 mkGenesisLedgerState ::
   forall a era ledger.
-  (EraGen era, Default (State (Core.EraRule "PPUP" era))) =>
+  ( EraGen era
+  , Default (PPUPState era)
+  , EraTallyState era
+  ) =>
   GenEnv era ->
   IRC ledger ->
   Gen (Either a (LedgerState era))

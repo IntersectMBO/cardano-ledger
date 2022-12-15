@@ -36,6 +36,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Block (Block (..), txid)
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway.Rules (ConwayLedgerPredFailure (..))
 import Cardano.Ledger.Core hiding (TranslationError)
 import Cardano.Ledger.Credential (
   Credential (..),
@@ -61,7 +62,9 @@ import Cardano.Ledger.Shelley.API (
   UTxO (..),
  )
 import Cardano.Ledger.Shelley.BlockChain (bBodySize)
+import Cardano.Ledger.Shelley.Core (EraTallyState (..))
 import Cardano.Ledger.Shelley.LedgerState (
+  PPUPState,
   smartUTxOState,
  )
 import Cardano.Ledger.Shelley.Rules (
@@ -85,7 +88,7 @@ import Cardano.Ledger.UMapCompact (View (RewardDeposits))
 import qualified Cardano.Ledger.UMapCompact as UM
 import Cardano.Ledger.Val (inject, (<+>), (<->))
 import Cardano.Slotting.Slot (SlotNo (..))
-import Control.State.Transition.Extended hiding (Assertion)
+import Control.State.Transition.Extended (STS (..))
 import qualified Data.ByteString as BS (replicate)
 import Data.Default.Class (Default (..))
 import qualified Data.Map.Strict as Map
@@ -138,10 +141,12 @@ alonzoBBODYexamplesP ::
   forall era.
   ( GoodCrypto (EraCrypto era)
   , HasTokens era
-  , Default (State (EraRule "PPUP" era))
   , PostShelley era
   , Value era ~ MaryValue (EraCrypto era)
   , EraSegWits era
+  , Default (PPUPState era)
+  , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , EraTallyState era
   ) =>
   Proof era ->
   TestTree
@@ -165,15 +170,17 @@ alonzoBBODYexamplesP proof =
     ]
 
 initialBBodyState ::
-  ( Default (State (EraRule "PPUP" era))
-  , EraTxOut era
+  ( EraTxOut era
   , PostShelley era
+  , Default (PPUPState era)
+  , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , EraTallyState era
   ) =>
   Proof era ->
   UTxO era ->
   ShelleyBbodyState era
 initialBBodyState pf utxo =
-  BbodyState (LedgerState initialUtxoSt dpstate) (BlocksMade mempty)
+  BbodyState (LedgerState initialUtxoSt dpstate emptyTallyState) (BlocksMade mempty)
   where
     initialUtxoSt = smartUTxOState utxo (UM.fromCompact successDeposit) (Coin 0) def
     dpstate =
@@ -585,9 +592,11 @@ testBBodyState ::
   ( GoodCrypto (EraCrypto era)
   , HasTokens era
   , PostShelley era
-  , Default (State (EraRule "PPUP" era))
   , EraTxBody era
   , Value era ~ MaryValue (EraCrypto era)
+  , Default (PPUPState era)
+  , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , EraTallyState era
   ) =>
   Proof era ->
   ShelleyBbodyState era
@@ -652,7 +661,9 @@ testBBodyState pf =
       example1UtxoSt = smartUTxOState utxo totalDeposits (Coin 40) def
       -- the default DPState 'def' means that the 'totalDeposits' must be 0
       totalDeposits = (Coin 0)
-   in BbodyState (LedgerState example1UtxoSt def) (BlocksMade $ Map.singleton poolID 1)
+   in BbodyState
+        (LedgerState example1UtxoSt def emptyTallyState)
+        (BlocksMade $ Map.singleton poolID 1)
 
 -- ============================== Helper functions ===============================
 
@@ -664,7 +675,7 @@ makeTooBig proof@(Babbage _) =
   ShelleyInAlonzoBbodyPredFailure . LedgersFailure . LedgerFailure . DelegsFailure . DelplFailure . PoolFailure $
     PoolMedataHashTooBig (coerceKeyRole . hashKey . vKey $ someKeys proof) (hashsize @Mock + 1)
 makeTooBig proof@(Conway _) =
-  ShelleyInAlonzoBbodyPredFailure . LedgersFailure . LedgerFailure . DelegsFailure . DelplFailure . PoolFailure $
+  ShelleyInAlonzoBbodyPredFailure . LedgersFailure . LedgerFailure . ConwayDelegsFailure . DelplFailure . PoolFailure $
     PoolMedataHashTooBig (coerceKeyRole . hashKey . vKey $ someKeys proof) (hashsize @Mock + 1)
 makeTooBig proof = error ("makeTooBig does not work in era " ++ show proof)
 

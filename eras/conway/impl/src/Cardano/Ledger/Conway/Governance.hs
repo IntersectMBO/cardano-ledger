@@ -10,13 +10,16 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Conway.Governance (
+  ConwayTallyState (..),
   GovernanceActionInfo (..),
   GovernanceAction (..),
+  GovernanceActionState (..),
   GovernanceActionIx (..),
   GovernanceActionId (..),
   Vote (..),
   VoterRole (..),
   VoteDecision (..),
+  makeGovAction,
 )
 where
 
@@ -40,6 +43,7 @@ import Cardano.Ledger.Shelley.TxBody (Url)
 import Cardano.Ledger.TxIn (TxId)
 import Control.DeepSeq (NFData)
 import Data.ByteString (ByteString)
+import Data.Default.Class (Default (..))
 import Data.Map.Strict (Map)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
@@ -114,7 +118,7 @@ instance EraPParams era => ToCBOR (GovernanceAction era) where
       enc (TreasuryWithdrawals ws) = Sum (toCBOR ws) 2
 
 newtype GovernanceActionIx = GovernanceActionIx Word64
-  deriving (Generic, Eq, Show)
+  deriving (Generic, Eq, Ord, Show, Num, Enum)
 
 instance NoThunks GovernanceActionIx
 
@@ -126,9 +130,9 @@ deriving newtype instance ToCBOR GovernanceActionIx
 
 data GovernanceActionId c = GovernanceActionId
   { gaidTxId :: !(TxId c)
-  , gaidGovActionIx :: !(GovernanceActionIx)
+  , gaidGovActionIx :: !GovernanceActionIx
   }
-  deriving (Generic, Eq, Show)
+  deriving (Generic, Eq, Ord, Show)
 
 instance Crypto c => FromCBOR (GovernanceActionId c) where
   fromCBOR =
@@ -193,7 +197,7 @@ data VoterRole
   = ConstitutionalCommittee
   | DRep
   | SPO
-  deriving (Generic, Eq, Show, Enum, Bounded)
+  deriving (Generic, Eq, Ord, Show, Enum, Bounded)
 
 instance FromCBOR VoterRole where
   fromCBOR = decodeEnumBounded
@@ -220,3 +224,40 @@ instance FromCBOR VoteDecision where
 
 instance ToCBOR VoteDecision where
   toCBOR = encodeEnum
+
+data GovernanceActionState era = GovernanceActionState
+  { gasVotes :: !(Map (VoterRole, KeyHash 'Voting (EraCrypto era)) (Vote era))
+  , gasDeposit :: !Coin
+  , gasReturnAddr :: !(KeyHash 'Staking (EraCrypto era))
+  , gasAction :: !(GovernanceAction era)
+  }
+  deriving (Generic)
+
+deriving instance EraPParams era => Eq (GovernanceActionState era)
+
+instance EraPParams era => NoThunks (GovernanceActionState era)
+
+deriving instance EraPParams era => Show (GovernanceActionState era)
+
+newtype ConwayTallyState era
+  = ConwayTallyState
+      (Map (GovernanceActionId (EraCrypto era)) (GovernanceActionState era))
+  deriving (Generic)
+
+deriving instance EraPParams era => Eq (ConwayTallyState era)
+
+deriving instance EraPParams era => Show (ConwayTallyState era)
+
+instance EraPParams era => NoThunks (ConwayTallyState era)
+
+instance Default (ConwayTallyState era) where
+  def = ConwayTallyState mempty
+
+makeGovAction :: GovernanceActionInfo era -> GovernanceActionState era
+makeGovAction GovernanceActionInfo {..} =
+  GovernanceActionState
+    { gasVotes = mempty
+    , gasDeposit = gaiDepositAmount
+    , gasReturnAddr = gaiRewardAddress
+    , gasAction = gaiAction
+    }

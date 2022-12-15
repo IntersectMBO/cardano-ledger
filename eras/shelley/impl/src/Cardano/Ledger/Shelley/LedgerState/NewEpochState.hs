@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Ledger.Shelley.LedgerState.NewEpochState (
   availableAfterMIR,
@@ -11,8 +12,7 @@ module Cardano.Ledger.Shelley.LedgerState.NewEpochState (
   reapRewards,
   updateNES,
   returnRedeemAddrsToReserves,
-)
-where
+) where
 
 import Cardano.Ledger.Address (isBootstrapRedeemer)
 import Cardano.Ledger.BaseTypes (
@@ -35,8 +35,10 @@ import Cardano.Ledger.Keys (
   KeyHash (..),
   KeyRole (..),
  )
+import Cardano.Ledger.Shelley.Core (EraTallyState (..))
 import Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits (keyTxRefunds, totalTxDeposits)
 import Cardano.Ledger.Shelley.LedgerState.Types
+import Cardano.Ledger.Shelley.Rules.Ppup (PPUPState)
 import Cardano.Ledger.Shelley.TxBody (
   MIRPot (..),
   ShelleyEraTxBody (..),
@@ -51,7 +53,6 @@ import Cardano.Ledger.UTxO (
   coinBalance,
  )
 import Cardano.Ledger.Val ((<+>), (<->))
-import Control.State.Transition (STS (State))
 import Data.Default.Class (Default, def)
 import Data.Foldable (fold)
 import Data.Map.Strict (Map)
@@ -78,12 +79,15 @@ getGKeys nes = Map.keysSet genDelegs
   where
     NewEpochState _ _ _ es _ _ _ = nes
     EpochState _ _ ls _ _ _ = es
-    LedgerState _ (DPState (DState {dsGenDelegs = (GenDelegs genDelegs)}) _) = ls
+    LedgerState _ (DPState (DState {dsGenDelegs = (GenDelegs genDelegs)}) _) _ = ls
 
 -- | Creates the ledger state for an empty ledger which
 --  contains the specified transaction outputs.
 genesisState ::
-  Default (State (EraRule "PPUP" era)) =>
+  forall era.
+  ( Default (PPUPState era)
+  , EraTallyState era
+  ) =>
   Map (KeyHash 'Genesis (EraCrypto era)) (GenDelegPair (EraCrypto era)) ->
   UTxO era ->
   LedgerState era
@@ -97,6 +101,7 @@ genesisState genDelegs0 utxo0 =
         (IStake mempty Map.empty)
     )
     (DPState dState def)
+    emptyTallyState
   where
     dState = def {dsGenDelegs = GenDelegs genDelegs0}
 

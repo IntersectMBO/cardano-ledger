@@ -95,10 +95,13 @@ deriving instance
   , Eq (PParamsUpdate era)
   , Eq (TxSeq era)
   , Eq (PredicateFailure (EraRule "LEDGER" era))
-  , Eq (State (EraRule "PPUP" era))
   , Eq (StashedAVVMAddresses era)
   , Eq (TranslationContext era)
-  , EraTx era
+  , Eq (PPUPState era)
+  , Eq (TallyState era)
+  , Eq (Tx era)
+  , Eq (TxOut era)
+  , Era era
   ) =>
   Eq (ShelleyLedgerExamples era)
 
@@ -107,8 +110,7 @@ deriving instance
 -------------------------------------------------------------------------------}
 
 type ShelleyBasedEra' era =
-  ( Default (State (EraRule "PPUP" era))
-  , PraosCrypto (EraCrypto era)
+  ( PraosCrypto (EraCrypto era)
   )
 
 defaultShelleyLedgerExamples ::
@@ -119,6 +121,8 @@ defaultShelleyLedgerExamples ::
   , PredicateFailure (EraRule "LEDGER" era) ~ ShelleyLedgerPredFailure era
   , Default (StashedAVVMAddresses era)
   , ProtVerAtMost era 4
+  , Default (PPUPState era)
+  , EraTallyState era
   ) =>
   (TxBody era -> KeyPairWits era -> TxWits era) ->
   (ShelleyTx era -> Tx era) ->
@@ -168,7 +172,7 @@ defaultShelleyLedgerExamples mkWitnesses mkAlonzoTx value txBody auxData transla
 
 exampleShelleyLedgerBlock ::
   forall era.
-  (EraSegWits era, ShelleyBasedEra' era) =>
+  (EraSegWits era, PraosCrypto (EraCrypto era)) =>
   Tx era ->
   Block (BHeader (EraCrypto era)) era
 exampleShelleyLedgerBlock tx = Block blockHeader blockBody
@@ -299,6 +303,8 @@ exampleNewEpochState ::
   ( EraTxOut era
   , ShelleyBasedEra' era
   , Default (StashedAVVMAddresses era)
+  , Default (PPUPState era)
+  , EraTallyState era
   ) =>
   Value era ->
   PParams era ->
@@ -342,6 +348,7 @@ exampleNewEpochState value ppp pp =
                     , utxosStakeDistr = mempty
                     }
               , lsDPState = def
+              , lsTallyState = emptyTallyState
               }
         , esPrevPp = ppp
         , esPp = pp

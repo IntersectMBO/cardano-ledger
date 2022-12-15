@@ -85,16 +85,17 @@ instance Crypto c => TranslateEra (MaryEra c) LedgerState where
       LedgerState
         { lsUTxOState = translateEra' ctxt $ lsUTxOState ls
         , lsDPState = lsDPState ls
+        , lsTallyState = coerce $ lsTallyState ls
         }
 
 instance Crypto c => TranslateEra (MaryEra c) ProposedPPUpdates where
   translateEra ctxt (ProposedPPUpdates ppup) =
     return $ ProposedPPUpdates $ Map.map (translateEra' ctxt) ppup
 
-instance Crypto c => TranslateEra (MaryEra c) PPUPState where
+instance Crypto c => TranslateEra (MaryEra c) ShelleyPPUPState where
   translateEra ctxt ps =
     return
-      PPUPState
+      ShelleyPPUPState
         { proposals = translateEra' ctxt $ proposals ps
         , futureProposals = translateEra' ctxt $ futureProposals ps
         }

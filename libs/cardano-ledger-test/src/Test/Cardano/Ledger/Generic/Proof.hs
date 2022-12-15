@@ -48,8 +48,7 @@ module Test.Cardano.Ledger.Generic.Proof (
   C_Crypto,
   specialize,
   unReflect,
-)
-where
+) where
 
 import Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Hash as CH
@@ -68,6 +67,7 @@ import qualified Cardano.Ledger.Crypto as CC (Crypto, DSIGN, HASH)
 import Cardano.Ledger.Keys (DSignable)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley.Core (EraTallyState)
 import Cardano.Protocol.TPraos.API (PraosCrypto)
 import Cardano.Protocol.TPraos.BHeader (BHBody)
 import Cardano.Protocol.TPraos.OCert
@@ -145,7 +145,13 @@ instance ReflectC StandardCrypto where
 instance ReflectC C_Crypto where
   evidence = Mock
 
-class (EraTx era, ReflectC (EraCrypto era)) => Reflect era where
+class
+  ( EraTallyState era
+  , EraTx era
+  , ReflectC (EraCrypto era)
+  ) =>
+  Reflect era
+  where
   reify :: Proof era
   lift :: forall a. (Proof era -> a) -> a
   lift f = f (reify @era)

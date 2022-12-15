@@ -79,10 +79,11 @@ import Cardano.Ledger.Shelley.LedgerState (
   InstantaneousRewards (..),
   LedgerState (..),
   NewEpochState (..),
-  PPUPState (..),
+  PPUPState,
   PState (..),
   PulsingRewUpdate (..),
   RewardUpdate (..),
+  ShelleyPPUPState (..),
   UTxOState (..),
   applyRUpd,
   delegations,
@@ -111,7 +112,6 @@ import Cardano.Protocol.TPraos.BHeader (
   prevHashToNonce,
  )
 import Cardano.Slotting.Slot (EpochNo, WithOrigin (..))
-import Control.State.Transition (STS (State))
 import Data.Foldable (fold, foldl')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -711,7 +711,7 @@ newEpoch b cs = cs'
 -- Set the current protocol parameter proposals.
 setCurrentProposals ::
   forall era.
-  State (EraRule "PPUP" era) ~ PPUPState era =>
+  PPUPState era ~ ShelleyPPUPState era =>
   ProposedPPUpdates era ->
   ChainState era ->
   ChainState era
@@ -733,7 +733,7 @@ setCurrentProposals ps cs = cs {chainNes = nes'}
 -- Set the future protocol parameter proposals.
 setFutureProposals ::
   forall era.
-  State (EraRule "PPUP" era) ~ PPUPState era =>
+  PPUPState era ~ ShelleyPPUPState era =>
   ProposedPPUpdates era ->
   ChainState era ->
   ChainState era

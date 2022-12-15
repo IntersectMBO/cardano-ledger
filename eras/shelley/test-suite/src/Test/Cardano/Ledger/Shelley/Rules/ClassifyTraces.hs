@@ -29,6 +29,7 @@ import Cardano.Ledger.Shelley.API (
   Delegation (..),
   ShelleyLEDGER,
  )
+import Cardano.Ledger.Shelley.Core (EraTallyState)
 import Cardano.Ledger.Shelley.Delegation.Certificates (
   isDeRegKey,
   isDelegation,
@@ -39,7 +40,7 @@ import Cardano.Ledger.Shelley.Delegation.Certificates (
   isRetirePool,
   isTreasuryMIRCert,
  )
-import Cardano.Ledger.Shelley.LedgerState (LedgerState)
+import Cardano.Ledger.Shelley.LedgerState (LedgerState, PPUPState)
 import Cardano.Ledger.Shelley.PParams (
   Update (..),
   pattern ProposedPPUpdates,
@@ -98,10 +99,10 @@ import Test.QuickCheck (
 relevantCasesAreCovered ::
   forall era.
   ( EraGen era
-  , Default (State (EraRule "PPUP" era))
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv era)
   , ProtVerAtMost era 8
+  , Default (PPUPState era)
   ) =>
   Property
 relevantCasesAreCovered = do
@@ -294,11 +295,12 @@ onlyValidLedgerSignalsAreGenerated ::
   forall era ledger.
   ( EraGen era
   , QC.HasTrace ledger (GenEnv era)
-  , Default (State (EraRule "PPUP" era))
   , QC.BaseEnv ledger ~ Globals
   , State ledger ~ LedgerState era
   , Show (Environment ledger)
   , Show (Signal ledger)
+  , Default (PPUPState era)
+  , EraTallyState era
   ) =>
   Property
 onlyValidLedgerSignalsAreGenerated =
@@ -321,7 +323,8 @@ propAbstractSizeBoundsBytes ::
   forall era.
   ( EraGen era
   , QC.HasTrace (ShelleyLEDGER era) (GenEnv era)
-  , Default (State (EraRule "PPUP" era))
+  , Default (PPUPState era)
+  , EraTallyState era
   ) =>
   Property
 propAbstractSizeBoundsBytes = property $ do
@@ -347,7 +350,8 @@ propAbstractSizeNotTooBig ::
   forall era.
   ( EraGen era
   , QC.HasTrace (ShelleyLEDGER era) (GenEnv era)
-  , Default (State (EraRule "PPUP" era))
+  , Default (PPUPState era)
+  , EraTallyState era
   ) =>
   Property
 propAbstractSizeNotTooBig = property $ do
@@ -377,8 +381,9 @@ propAbstractSizeNotTooBig = property $ do
 onlyValidChainSignalsAreGenerated ::
   forall era.
   ( EraGen era
-  , Default (State (EraRule "PPUP" era))
   , QC.HasTrace (CHAIN era) (GenEnv era)
+  , Default (PPUPState era)
+  , EraTallyState era
   ) =>
   Property
 onlyValidChainSignalsAreGenerated =

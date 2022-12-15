@@ -17,15 +17,13 @@ module Cardano.Ledger.Shelley.Rules.Upec (
   ShelleyUPEC,
   ShelleyUpecPredFailure (..),
   votedValue,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (Globals (..), ShelleyBase)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Era (ShelleyUPEC)
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState,
-  PPUPState (..),
   UTxOState (utxosPpups),
   UpecState (..),
   esLState,
@@ -35,7 +33,12 @@ import Cardano.Ledger.Shelley.LedgerState (
   pattern EpochState,
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
-import Cardano.Ledger.Shelley.Rules.Newpp (NewppEnv (..), ShelleyNEWPP, ShelleyNewppState (..))
+import Cardano.Ledger.Shelley.Rules.Newpp (
+  NewppEnv (..),
+  ShelleyNEWPP,
+  ShelleyNewppState (..),
+ )
+import Cardano.Ledger.Shelley.Rules.Ppup (PPUPState, ShelleyPPUPState (..))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition (
   Embed (..),
@@ -60,7 +63,7 @@ instance NoThunks (ShelleyUpecPredFailure era)
 instance
   ( EraPParams era
   , Default (PParams era)
-  , State (EraRule "PPUP" era) ~ PPUPState era
+  , PPUPState era ~ ShelleyPPUPState era
   ) =>
   STS (ShelleyUPEC era)
   where

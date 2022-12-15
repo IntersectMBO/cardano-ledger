@@ -34,7 +34,8 @@ import Cardano.Ledger.Shelley.API (
   LedgerState,
   applyTxsTransition,
  )
-import Cardano.Ledger.Shelley.LedgerState (DPState, UTxOState)
+import Cardano.Ledger.Shelley.Core (EraTallyState (..))
+import Cardano.Ledger.Shelley.LedgerState (DPState, PPUPState, UTxOState)
 import Control.DeepSeq (NFData (..))
 import Control.State.Transition (Environment, Signal, State)
 import Control.State.Transition.Trace.Generator.QuickCheck (BaseEnv, HasTrace)
@@ -76,11 +77,12 @@ benchWithGenState ::
   ( NFData a
   , EraGen era
   , HasTrace (EraRule "LEDGER" era) (GenEnv era)
-  , Default (State (EraRule "PPUP" era))
   , BaseEnv (EraRule "LEDGER" era) ~ Globals
   , Signal (EraRule "LEDGER" era) ~ Tx era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
+  , Default (PPUPState era)
+  , EraTallyState era
   ) =>
   Proxy era ->
   (ApplyTxEnv era -> IO a) ->
@@ -95,8 +97,10 @@ benchApplyTx ::
   , ApplyTx era
   , HasTrace (EraRule "LEDGER" era) (GenEnv era)
   , BaseEnv (EraRule "LEDGER" era) ~ Globals
-  , Default (State (EraRule "PPUP" era))
-  , NFData (State (EraRule "PPUP" era))
+  , Default (PPUPState era)
+  , NFData (PPUPState era)
+  , EraTallyState era
+  , NFData (TallyState era)
   ) =>
   Proxy era ->
   Benchmark
@@ -118,13 +122,14 @@ benchApplyTx px =
 deserialiseTxEra ::
   forall era.
   ( EraGen era
-  , Default (State (EraRule "PPUP" era))
   , BaseEnv (EraRule "LEDGER" era) ~ Globals
   , HasTrace (EraRule "LEDGER" era) (GenEnv era)
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , Signal (EraRule "LEDGER" era) ~ Tx era
   , NFData (Tx era)
+  , Default (PPUPState era)
+  , EraTallyState era
   ) =>
   Proxy era ->
   Benchmark

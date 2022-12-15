@@ -37,10 +37,8 @@ eraRoundTripProps ::
   , Arbitrary (Core.Value e)
   , Arbitrary (Core.Script e)
   , Arbitrary (ApplyTxError e)
-  , ToCBOR (PredicateFailure (Core.EraRule "DELEGS" e))
-  , FromCBOR (PredicateFailure (Core.EraRule "DELEGS" e))
-  , ToCBOR (PredicateFailure (Core.EraRule "UTXOW" e))
-  , FromCBOR (PredicateFailure (Core.EraRule "UTXOW" e))
+  , ToCBOR (PredicateFailure (Core.EraRule "LEDGER" e))
+  , FromCBOR (PredicateFailure (Core.EraRule "LEDGER" e))
   ) =>
   TestTree
 eraRoundTripProps =

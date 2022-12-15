@@ -149,3 +149,6 @@ cradle:
 
     - path: "libs/ledger-state"
       component: "lib:ledger-state"
+
+    - path: "libs/ledger-state/bench"
+      component: "ledger-state:bench:address"

@@ -19,7 +19,8 @@ module Cardano.Ledger.Shelley.PParams (
   emptyShelleyPParams,
   emptyShelleyPParamsUpdate,
   ShelleyPParams (..),
-  PPUPState (..),
+  emptyPParams,
+  HKD,
   PPUpdateEnv (..),
   ProposedPPUpdates (..),
   emptyPPPUpdates,
@@ -67,7 +68,6 @@ import Control.DeepSeq (NFData)
 import Control.Monad (unless)
 import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
-import Data.Default.Class (Default, def)
 import Data.Foldable (fold)
 import Data.Functor.Identity (Identity)
 import Data.List (nub)
@@ -425,45 +425,12 @@ updatePParams :: EraPParams era => PParams era -> PParamsUpdate era -> PParams e
 updatePParams = applyPPUpdates
 {-# DEPRECATED updatePParams "Use applyPPUpdates instead" #-}
 
-data PPUPState era = PPUPState
-  { proposals :: !(ProposedPPUpdates era)
-  , futureProposals :: !(ProposedPPUpdates era)
-  }
-  deriving (Generic)
-
-deriving instance Show (PParamsUpdate era) => Show (PPUPState era)
-
-deriving instance Eq (PParamsUpdate era) => Eq (PPUPState era)
-
-instance NFData (PParamsUpdate era) => NFData (PPUPState era)
-
-instance NoThunks (PParamsUpdate era) => NoThunks (PPUPState era)
-
-instance (Era era, ToCBOR (PParamsUpdate era)) => ToCBOR (PPUPState era) where
-  toCBOR (PPUPState ppup fppup) =
-    encodeListLen 2 <> toCBOR ppup <> toCBOR fppup
-
-instance
-  (Era era, FromCBOR (PParamsUpdate era)) =>
-  FromCBOR (PPUPState era)
-  where
-  fromCBOR =
-    decode $
-      RecD PPUPState
-        <! From
-        <! From
-
-instance Default (PPUPState era) where
-  def = PPUPState emptyPPPUpdates emptyPPPUpdates
-
 pvCanFollow :: BT.ProtVer -> StrictMaybe BT.ProtVer -> Bool
 pvCanFollow _ SNothing = True
 pvCanFollow (BT.ProtVer m n) (SJust (BT.ProtVer m' n')) =
   (succVersion m, 0) == (Just m', n') || (m, n + 1) == (m', n')
 
 -- ==============================================
-
-instance ToExpr (PParamsUpdate era) => ToExpr (PPUPState era)
 
 instance ToExpr (PParamsUpdate era) => ToExpr (ProposedPPUpdates era)
 

@@ -20,8 +20,7 @@ module Cardano.Ledger.Shelley.Rules.NewEpoch (
   updateRewards,
   calculatePoolDistr,
   calculatePoolDistr',
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (
   BlocksMade (BlocksMade),
@@ -35,6 +34,7 @@ import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Keys (KeyRole (Staking))
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.Shelley.AdaPots (AdaPots, totalAdaPotsES)
+import Cardano.Ledger.Shelley.Core (EraTallyState)
 import Cardano.Ledger.Shelley.Era (ShelleyNEWEPOCH)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rewards (sumRewards)
@@ -102,7 +102,9 @@ instance
   , Default (State (EraRule "PPUP" era))
   , Default (PParams era)
   , Default (StashedAVVMAddresses era)
+  , Default (PPUPState era)
   , EraPParams era
+  , EraTallyState era
   ) =>
   STS (ShelleyNEWEPOCH era)
   where
@@ -142,10 +144,12 @@ newEpochTransition ::
   , Environment (EraRule "EPOCH" era) ~ ()
   , State (EraRule "EPOCH" era) ~ EpochState era
   , Signal (EraRule "EPOCH" era) ~ EpochNo
-  , Default (State (EraRule "PPUP" era))
   , Default (PParams era)
+  , Default (PPUPState era)
   , Default (StashedAVVMAddresses era)
   , Event (EraRule "RUPD" era) ~ RupdEvent (EraCrypto era)
+  , EraTallyState era
+  , Default (State (EraRule "PPUP" era))
   ) =>
   TransitionRule (ShelleyNEWEPOCH era)
 newEpochTransition = do

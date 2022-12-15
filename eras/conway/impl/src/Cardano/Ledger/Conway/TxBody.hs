@@ -141,24 +141,22 @@ data ConwayTxBodyRaw era = ConwayTxBodyRaw
   }
   deriving (Generic, Typeable)
 
-deriving instance
-  (Eq (TxOut era), EraPParams era) =>
-  Eq (ConwayTxBodyRaw era)
+deriving instance (EraPParams era, Eq (TxOut era)) => Eq (ConwayTxBodyRaw era)
 
 instance
-  (NoThunks (TxOut era), EraPParams era) =>
+  (EraPParams era, NoThunks (TxOut era)) =>
   NoThunks (ConwayTxBodyRaw era)
 
 instance
-  (NFData (TxOut era), EraPParams era) =>
+  (EraPParams era, NFData (TxOut era)) =>
   NFData (ConwayTxBodyRaw era)
 
 deriving instance
-  (Show (TxOut era), EraPParams era) =>
+  (EraPParams era, Show (TxOut era)) =>
   Show (ConwayTxBodyRaw era)
 
 instance
-  (FromCBOR (TxOut era), EraPParams era) =>
+  (EraPParams era, FromCBOR (TxOut era)) =>
   FromCBOR (ConwayTxBodyRaw era)
   where
   fromCBOR =
@@ -205,20 +203,20 @@ instance
 newtype ConwayTxBody era = TxBodyConstr (MemoBytes ConwayTxBodyRaw era)
   deriving (Generic, SafeToHash, ToCBOR)
 
-instance
-  (NoThunks (TxOut era), EraPParams era) =>
+deriving instance
+  (EraPParams era, NoThunks (TxOut era)) =>
   NoThunks (ConwayTxBody era)
 
 deriving instance
-  (Eq (TxOut era), EraPParams era) =>
+  (EraPParams era, Eq (TxOut era)) =>
   Eq (ConwayTxBody era)
 
 deriving newtype instance
-  (NFData (TxOut era), EraPParams era) =>
+  (EraPParams era, NFData (TxOut era)) =>
   NFData (ConwayTxBody era)
 
 deriving instance
-  (Show (TxOut era), EraPParams era) =>
+  (EraPParams era, Show (TxOut era)) =>
   Show (ConwayTxBody era)
 
 type instance MemoHashIndex ConwayTxBodyRaw = EraIndependentTxBody
@@ -304,6 +302,8 @@ instance Crypto c => ShelleyEraTxBody (ConwayEra c) where
 
   updateTxBodyL = notSupportedInThisEraL
   {-# INLINE updateTxBodyL #-}
+
+  updateTxBodyG = to (const SNothing)
 
   certsTxBodyL = notSupportedInThisEraL
   {-# INLINE certsTxBodyL #-}

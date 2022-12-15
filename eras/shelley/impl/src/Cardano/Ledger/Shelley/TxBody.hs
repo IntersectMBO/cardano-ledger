@@ -61,8 +61,7 @@ module Cardano.Ledger.Shelley.TxBody (
   -- * Helpers
   addrEitherShelleyTxOutL,
   valueEitherShelleyTxOutL,
-)
-where
+) where
 
 import Cardano.Ledger.Address (RewardAcnt (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
@@ -167,8 +166,8 @@ deriving instance
 
 instance
   ( Era era
-  , FromCBOR (TxOut era)
   , FromCBOR (PParamsUpdate era)
+  , FromCBOR (TxOut era)
   ) =>
   FromCBOR (ShelleyTxBodyRaw era)
   where
@@ -183,8 +182,8 @@ instance
 
 instance
   ( Era era
-  , FromCBOR (TxOut era)
   , FromCBOR (PParamsUpdate era)
+  , FromCBOR (TxOut era)
   ) =>
   FromCBOR (Annotator (ShelleyTxBodyRaw era))
   where
@@ -200,8 +199,8 @@ instance
 --   changes only the field being deserialised.
 boxBody ::
   ( Era era
-  , FromCBOR (TxOut era)
   , FromCBOR (PParamsUpdate era)
+  , FromCBOR (TxOut era)
   ) =>
   Word ->
   Field (ShelleyTxBodyRaw era)

@@ -33,6 +33,7 @@ import Cardano.Ledger.Shelley.API (
 import qualified Cardano.Ledger.Shelley.API as API
 import qualified Cardano.Ledger.Shelley.Tx as LTX
 import qualified Cardano.Ledger.Shelley.TxBody as Shelley
+import Data.Coerce (coerce)
 import Data.Default.Class (def)
 import qualified Data.Map.Strict as Map
 
@@ -113,6 +114,7 @@ instance Crypto c => TranslateEra (AlonzoEra c) API.LedgerState where
       API.LedgerState
         { API.lsUTxOState = translateEra' ctxt $ API.lsUTxOState ls
         , API.lsDPState = API.lsDPState ls
+        , API.lsTallyState = coerce $ API.lsTallyState ls
         }
 
 instance Crypto c => TranslateEra (AlonzoEra c) API.UTxOState where
@@ -130,10 +132,10 @@ instance Crypto c => TranslateEra (AlonzoEra c) API.UTxO where
   translateEra _ctxt utxo =
     return $ API.UTxO $ translateTxOut `Map.map` API.unUTxO utxo
 
-instance Crypto c => TranslateEra (AlonzoEra c) API.PPUPState where
+instance Crypto c => TranslateEra (AlonzoEra c) API.ShelleyPPUPState where
   translateEra ctxt ps =
     return
-      API.PPUPState
+      API.ShelleyPPUPState
         { API.proposals = translateEra' ctxt $ API.proposals ps
         , API.futureProposals = translateEra' ctxt $ API.futureProposals ps
         }
