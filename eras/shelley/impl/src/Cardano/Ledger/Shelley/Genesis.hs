@@ -28,7 +28,6 @@ module Cardano.Ledger.Shelley.Genesis
     validateGenesis,
     describeValidationErr,
     mkShelleyGlobals,
-    microsecondsToNominalDiffTimeMicro,
     nominalDiffTimeMicroToMicroseconds,
     nominalDiffTimeMicroToSeconds,
     toNominalDiffTimeMicro,
@@ -167,7 +166,7 @@ fromNominalDiffTimeMicro =
 
 toNominalDiffTimeMicroWithRounding :: NominalDiffTime -> NominalDiffTimeMicro
 toNominalDiffTimeMicroWithRounding =
-  microsecondsToNominalDiffTimeMicro . picoToMicro . nominalDiffTimeToSeconds
+  secondsToNominalDiffTimeMicro . picoToMicro . nominalDiffTimeToSeconds
 
 toNominalDiffTimeMicro :: NominalDiffTime -> Maybe NominalDiffTimeMicro
 toNominalDiffTimeMicro ndt
@@ -176,11 +175,8 @@ toNominalDiffTimeMicro ndt
   where
     ndtm = toNominalDiffTimeMicroWithRounding ndt
 
-microsecondsToNominalDiffTimeMicro :: Micro -> NominalDiffTimeMicro
-microsecondsToNominalDiffTimeMicro = NominalDiffTimeMicro
-
-secondsToNominalDiffTimeMicro :: Pico -> NominalDiffTimeMicro
-secondsToNominalDiffTimeMicro = NominalDiffTimeMicro . picoToMicro
+secondsToNominalDiffTimeMicro :: Micro -> NominalDiffTimeMicro
+secondsToNominalDiffTimeMicro = NominalDiffTimeMicro
 
 nominalDiffTimeMicroToMicroseconds :: NominalDiffTimeMicro -> Micro
 nominalDiffTimeMicroToMicroseconds (NominalDiffTimeMicro microseconds) = microseconds

@@ -1,11 +1,8 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Orphans where
@@ -24,12 +21,11 @@ import qualified Data.ByteString as Long (ByteString, empty)
 import qualified Data.ByteString.Lazy as Lazy (ByteString, empty)
 import qualified Data.ByteString.Short as Short (ShortByteString, empty, pack)
 import Data.Default.Class (Default (..))
-import Data.Fixed (Fixed (..), Micro)
+import Data.Fixed (Fixed (..))
 import Data.IP (IPv4, IPv6)
 import Data.Proxy
 import qualified Data.Sequence.Strict as SS
 import qualified Data.Text as Text
-import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Text.Read (readEither)
 
@@ -68,9 +64,7 @@ instance SignableRepresentation (Hash.Hash a b) where
 
 -- | TODO: We should upstream instance
 -- HasResolution p => NoThunks (Fixed p) into the nothunks package.
-deriving anyclass instance NoThunks Micro
-
-deriving instance Generic Micro
+deriving newtype instance NoThunks (Fixed p)
 
 -- ===============================================
 -- Blank instance needed to compute Provenance
