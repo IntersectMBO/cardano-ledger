@@ -59,7 +59,6 @@ in the naming of release branches.
 ### Changed
 
 - Renamed module `Cardano.Ledger.Shelley.Metadata` -> `Cardano.Ledger.Shelley.TxAuxData` #3205
-- Changed `FromCBOR` instance in `Babbage.TxOut` to fail pointer address deserialization starting with protocol version 9: #3174
 - Updated `Conway` low protocol version to 9 and `Babbage` high protocol version to 8: #3174
 - Fixed mismathed parenthesis in the `Show` instance for `Ptr`: #3184.
 - Moved Cardano.Ledger.Shelley.LedgerState(DPState) to Cardano.Ledger(DPState) in Core
