@@ -15,12 +15,8 @@ where
 import Cardano.Ledger.Binary
   ( FromCBOR (..),
     ToCBOR (..),
-    Version,
-    allVersions,
     fromNotSharedCBOR,
-    shelleyProtVer,
   )
-import Cardano.Ledger.CompactAddress (fromCborAddr, fromCborRewardAcnt)
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API as Ledger
@@ -46,44 +42,35 @@ import Test.Tasty.QuickCheck (testProperty)
   Serialization Properties
 -------------------------------------------------------------------------------}
 
-testsVersion :: Version -> TestTree
-testsVersion v =
-  testGroup
-    ("Version: " ++ show v)
-    [ testProperty "Addr" $
-        roundTripExpectation @(Addr Mock.C_Crypto) v cborTrip,
-      testProperty "Addr (fromCborAddr)" $
-        roundTripExpectation @(Addr Mock.C_Crypto) v (mkTrip toCBOR fromCborAddr),
-      testProperty "RewardAcnt" $
-        roundTripExpectation @(RewardAcnt Mock.C_Crypto) v cborTrip,
-      testProperty "RewardAcnt (fromCborRewardAcnt)" $
-        roundTripExpectation @(RewardAcnt Mock.C_Crypto) v (mkTrip toCBOR fromCborRewardAcnt),
-      testProperty "Header" $
-        roundTripAnnExpectation @(TP.BHeader Mock.C_Crypto) v,
+testCoreTypes :: TestTree
+testCoreTypes =
+  testGroup "Core Types"
+    [ testProperty "Header" $
+        roundTripAnnExpectation @(TP.BHeader Mock.C_Crypto),
       testProperty "Block Header Hash" $
-        roundTripExpectation @(TP.HashHeader Mock.C_Crypto) v cborTrip,
+        roundTripExpectation @(TP.HashHeader Mock.C_Crypto) cborTrip,
       testProperty "Bootstrap Witness" $
-        roundTripAnnExpectation @(BootstrapWitness Mock.C_Crypto) v,
+        roundTripAnnExpectation @(BootstrapWitness Mock.C_Crypto),
       testProperty "TxId" $
-        roundTripExpectation @(TxId Mock.C_Crypto) v cborTrip,
+        roundTripExpectation @(TxId Mock.C_Crypto) cborTrip,
       testProperty "Protocol State" $
-        roundTripExpectation @(STS.PrtclState Mock.C_Crypto) v cborTrip,
+        roundTripExpectation @(STS.PrtclState Mock.C_Crypto) cborTrip,
       testProperty "SnapShots" $
-        roundTripExpectation @(SnapShots Mock.C_Crypto) v (mkTrip toCBOR fromNotSharedCBOR),
+        roundTripExpectation @(SnapShots Mock.C_Crypto) (mkTrip toCBOR fromNotSharedCBOR),
       testProperty "coin CompactCoin cbor" $
-        roundTripExpectation @Coin v (mkTrip (toCBOR . fromJust . toCompact) fromCBOR),
+        roundTripExpectation @Coin (mkTrip (toCBOR . fromJust . toCompact) fromCBOR),
       testProperty "coin cbor CompactCoin" $
-        roundTripExpectation @Coin v (mkTrip toCBOR (fromCompact <$> fromCBOR)),
+        roundTripExpectation @Coin (mkTrip toCBOR (fromCompact <$> fromCBOR)),
       testProperty "RewardUpdate" $
-        roundTripExpectation @(RewardUpdate Mock.C_Crypto) v cborTrip,
+        roundTripExpectation @(RewardUpdate Mock.C_Crypto) cborTrip,
       testProperty "RewardSnapShot" $
-        roundTripExpectation @(RewardSnapShot Mock.C_Crypto) v cborTrip,
+        roundTripExpectation @(RewardSnapShot Mock.C_Crypto) cborTrip,
       testProperty "RewardFreeVars" $
-        roundTripExpectation @(FreeVars Mock.C_Crypto) v cborTrip,
+        roundTripExpectation @(FreeVars Mock.C_Crypto) cborTrip,
       testProperty "RewardPulser" $
-        roundTripExpectation @(Pulser Mock.C_Crypto) v cborTrip,
+        roundTripExpectation @(Pulser Mock.C_Crypto) cborTrip,
       testProperty "PulsingRewUpdate" $
-        roundTripExpectation @(PulsingRewUpdate Mock.C_Crypto) v cborTrip
+        roundTripExpectation @(PulsingRewUpdate Mock.C_Crypto) cborTrip
     ]
 
 tests :: TestTree
@@ -91,35 +78,28 @@ tests =
   testGroup
     "Serialisation roundtrip Property Tests"
     $ [ testProperty "Block" $
-          roundTripAnnExpectation @(Block (TP.BHeader Mock.C_Crypto) Mock.C) v,
+          roundTripAnnExpectation @(Block (TP.BHeader Mock.C_Crypto) Mock.C),
         testProperty "TxBody" $
-          roundTripAnnExpectation @(ShelleyTxBody Mock.C) v,
+          roundTripAnnExpectation @(ShelleyTxBody Mock.C),
         testProperty "Tx" $
-          roundTripAnnExpectation @(ShelleyTx Mock.C) v,
+          roundTripAnnExpectation @(ShelleyTx Mock.C),
         testProperty "TxOut" $
-          roundTripExpectation @(ShelleyTxOut Mock.C) v cborTrip,
+          roundTripExpectation @(ShelleyTxOut Mock.C) cborTrip,
         testProperty "LEDGER Predicate Failures" $
-          roundTripExpectation @([STS.PredicateFailure (STS.ShelleyLEDGERS Mock.C)]) v cborTrip,
+          roundTripExpectation @([STS.PredicateFailure (STS.ShelleyLEDGERS Mock.C)]) cborTrip,
         testProperty "Ledger State" $
-          roundTripExpectation @(LedgerState Mock.C) v (mkTrip toCBOR fromNotSharedCBOR),
+          roundTripExpectation @(LedgerState Mock.C) (mkTrip toCBOR fromNotSharedCBOR),
         testProperty "Epoch State" $
-          roundTripExpectation @(EpochState Mock.C) v cborTrip,
+          roundTripExpectation @(EpochState Mock.C) cborTrip,
         testProperty "NewEpoch State" $
-          roundTripExpectation @(NewEpochState Mock.C) v cborTrip,
+          roundTripExpectation @(NewEpochState Mock.C) cborTrip,
         testProperty "MultiSig" $
-          roundTripAnnExpectation @(MultiSig (ShelleyEra Mock.C_Crypto)) v,
+          roundTripAnnExpectation @(MultiSig (ShelleyEra Mock.C_Crypto)),
         testProperty "TxAuxData" $
-          roundTripAnnExpectation @(ShelleyTxAuxData Mock.C) v,
+          roundTripAnnExpectation @(ShelleyTxAuxData Mock.C),
         testProperty "Shelley Genesis" $
-          roundTripExpectation @(ShelleyGenesis Mock.C) v cborTrip
+          roundTripExpectation @(ShelleyGenesis Mock.C) cborTrip,
+        testProperty "NominalDiffTimeMicro" $
+          roundTripExpectation @NominalDiffTimeMicro cborTrip,
+        testCoreTypes
       ]
-      ++ map testsVersion [shelleyProtVer .. maxBound]
-      ++ map nominalDiffTimeMicroTest allVersions
-  where
-    v = shelleyProtVer
-
-nominalDiffTimeMicroTest :: Version -> TestTree
-nominalDiffTimeMicroTest version =
-  testGroup
-    ("Version: " ++ show version)
-    $ [testProperty "NominalDiffTimeMicro" $ roundTripExpectation @NominalDiffTimeMicro version cborTrip]

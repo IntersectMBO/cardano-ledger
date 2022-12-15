@@ -24,30 +24,27 @@ tests =
   testGroup
     "Babbage CBOR round-trip"
     [ testProperty "babbage/Script" $
-        roundTripAnnExpectation @(Script Babbage) v,
+        roundTripAnnExpectation @(Script Babbage),
       testProperty "babbage/Metadata" $
-        roundTripAnnExpectation @(ShelleyTxAuxData Babbage) v,
+        roundTripAnnExpectation @(ShelleyTxAuxData Babbage),
       testProperty "babbage/TxOut" $
-        roundTripCborExpectation @(TxOut Babbage) v,
+        roundTripCborExpectation @(TxOut Babbage),
       testProperty "babbage/TxBody" $
-        roundTripAnnExpectation @(TxBody Babbage) v,
+        roundTripAnnExpectation @(TxBody Babbage),
       testProperty "babbage/CostModel" $
-        roundTripCborExpectation @CostModels v,
+        roundTripCborExpectation @CostModels,
       testProperty "babbage/PParams" $
-        roundTripCborExpectation @(PParams Babbage) v,
+        roundTripCborExpectation @(PParams Babbage),
       testProperty "babbage/PParamsUpdate" $
-        roundTripCborExpectation @(PParamsUpdate Babbage) v,
+        roundTripCborExpectation @(PParamsUpdate Babbage),
       testProperty "babbage/AuxiliaryData" $
-        roundTripAnnExpectation @(TxAuxData Babbage) v,
+        roundTripAnnExpectation @(TxAuxData Babbage),
       testProperty "Script" $
-        roundTripAnnExpectation @(Script Babbage) v,
+        roundTripAnnExpectation @(Script Babbage),
       testProperty "babbage/Tx" $
-        roundTripAnnExpectation @(Tx Babbage) v,
+        roundTripAnnExpectation @(Tx Babbage),
       testProperty "babbage/BabbageUtxoPredFailure" $
-        roundTripCborExpectation @(BabbageUtxoPredFailure Babbage) v,
+        roundTripCborExpectation @(BabbageUtxoPredFailure Babbage),
       testProperty "babbage/Block" $
-        roundTripAnnExpectation @(Block (BHeader StandardCrypto) Babbage) v
+        roundTripAnnExpectation @(Block (BHeader StandardCrypto) Babbage)
     ]
-  where
-    -- TODO iterate over all protocol versions of an era
-    v = eraProtVerHigh @Babbage

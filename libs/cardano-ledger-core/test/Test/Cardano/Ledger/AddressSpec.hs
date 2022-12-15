@@ -16,8 +16,8 @@ import Cardano.Ledger.Address
     putVariableLengthWord64,
     serialiseAddr,
   )
-import Cardano.Ledger.Binary (Version, serialize')
-import qualified Cardano.Ledger.CompactAddress as CA
+import Cardano.Ledger.Binary (Version, serialize', toCBOR)
+import Cardano.Ledger.CompactAddress as CA
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Crypto (Crypto (ADDRHASH), StandardCrypto)
 import qualified Data.Binary.Put as B
@@ -29,6 +29,7 @@ import Data.Either
 import Data.Maybe (isJust, isNothing)
 import Data.Proxy
 import Data.Word
+import Test.Cardano.Ledger.Binary.RoundTrip (cborTrip, mkTrip, roundTripExpectation)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
 
@@ -157,3 +158,13 @@ spec = do
       propDeserializeRewardAcntErrors @StandardCrypto
     prop "Decompacting an address is still valid" $
       propValidateNewDecompact @StandardCrypto
+  describe "Addr" $ do
+    prop "RoundTrip" $
+      roundTripExpectation @(Addr StandardCrypto) cborTrip
+    prop "RoundTrip (fromCborAddr)" $
+      roundTripExpectation @(Addr StandardCrypto) (mkTrip toCBOR fromCborAddr)
+  describe "RewardAcnt" $ do
+    prop "RewardAcnt" $
+      roundTripExpectation @(RewardAcnt StandardCrypto) cborTrip
+    prop "RewardAcnt (fromCborRewardAcnt)" $
+      roundTripExpectation @(RewardAcnt StandardCrypto) (mkTrip toCBOR fromCborRewardAcnt)

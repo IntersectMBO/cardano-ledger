@@ -88,8 +88,8 @@ boundedRationalTests badJSONValues = do
         forM_ badJSONValues $ \(testName, invalidInput) ->
           it testName $
             boundedFromJSON invalidInput `shouldSatisfy` isLeft
-    prop "CBOR roundtrip" $ \v -> forAll genValid $ \(br :: a) ->
-      roundTripCborExpectation v br
+    prop "CBOR roundtrip" $
+      forAll genValid $ \(br :: a) -> roundTripCborExpectation br
   where
     boundedFromJSON = eitherDecode :: ByteString -> Either String a
 
