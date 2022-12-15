@@ -58,10 +58,8 @@ import Cardano.Ledger.Binary
     FromCBOR (..),
     ToCBOR (..),
     cborError,
-    decodeInteger,
     decodeRational,
     decodeRecordNamed,
-    encodeInteger,
     encodeListLen,
     enforceDecoderVersion,
     enforceEncodingVersion,
@@ -83,13 +81,12 @@ import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart (SystemStart))
 import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
-import Data.Fixed (E6, Fixed (..), HasResolution (resolution), Micro, Pico)
+import Data.Fixed (Fixed (..), Micro, Pico)
 import qualified Data.ListMap as LM
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
 import Data.Proxy (Proxy (..))
-import Data.Ratio (numerator, (%))
 import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Time.Clock
@@ -154,28 +151,7 @@ emptyGenesisStaking =
 newtype NominalDiffTimeMicro = NominalDiffTimeMicro Micro
   deriving (Show, Eq, Generic)
   deriving anyclass (NoThunks)
-  deriving newtype (Ord, Num, Fractional, Real, ToJSON, FromJSON)
-
-deriving instance Generic Micro
-
-deriving anyclass instance NoThunks Micro
-
-instance ToCBOR NominalDiffTimeMicro where
-  toCBOR = encodeNominalDiffTimeMicro
-
-encodeNominalDiffTimeMicro :: NominalDiffTimeMicro -> Encoding
-encodeNominalDiffTimeMicro (NominalDiffTimeMicro micro) =
-  encodeInteger . toMicroseconds $ micro
-  where
-    toMicroseconds t =
-      numerator (toRational t * toRational (resolution $ Proxy @E6))
-
-instance FromCBOR NominalDiffTimeMicro where
-  fromCBOR = decodeNominalDiffTimeMicro
-
-decodeNominalDiffTimeMicro :: Decoder s NominalDiffTimeMicro
-decodeNominalDiffTimeMicro =
-  NominalDiffTimeMicro . fromRational . (% 1_000_000) <$> decodeInteger
+  deriving newtype (Ord, Num, Fractional, Real, ToJSON, FromJSON, ToCBOR, FromCBOR)
 
 -- | There is no loss of resolution in this conversion
 microToPico :: Micro -> Pico
@@ -195,12 +171,10 @@ toNominalDiffTimeMicroWithRounding =
 
 toNominalDiffTimeMicro :: NominalDiffTime -> Maybe NominalDiffTimeMicro
 toNominalDiffTimeMicro ndt
-  | roundedPicoseconds == picoseconds = Just ndtm
+  | fromNominalDiffTimeMicro ndtm == ndt = Just ndtm
   | otherwise = Nothing
   where
-    ndtm@(NominalDiffTimeMicro microseconds) = toNominalDiffTimeMicroWithRounding ndt
-    picoseconds = nominalDiffTimeToSeconds ndt
-    roundedPicoseconds = microToPico microseconds
+    ndtm = toNominalDiffTimeMicroWithRounding ndt
 
 microsecondsToNominalDiffTimeMicro :: Micro -> NominalDiffTimeMicro
 microsecondsToNominalDiffTimeMicro = NominalDiffTimeMicro

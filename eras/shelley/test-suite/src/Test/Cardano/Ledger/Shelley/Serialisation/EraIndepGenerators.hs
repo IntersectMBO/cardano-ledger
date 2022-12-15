@@ -1,5 +1,6 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -153,9 +154,7 @@ instance (Era era, Mock (EraCrypto era)) => Arbitrary (Update era) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Arbitrary NominalDiffTimeMicro where
-  arbitrary = secondsToNominalDiffTimeMicro <$> arbitrary
-  shrink = fmap secondsToNominalDiffTimeMicro . shrink . nominalDiffTimeMicroToSeconds
+deriving newtype instance Arbitrary NominalDiffTimeMicro
 
 maxMetadatumDepth :: Int
 maxMetadatumDepth = 2

@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -58,7 +59,7 @@ import Data.ByteString.Short (ShortByteString(SBS))
 #else
 import Data.ByteString.Short.Internal (ShortByteString(SBS))
 #endif
-import Data.Fixed (Fixed (..), Nano, Pico)
+import Data.Fixed (Fixed (..))
 import Data.IP (IPv4, IPv6)
 import Data.Int (Int16, Int32, Int64, Int8)
 import Data.List.NonEmpty (NonEmpty, nonEmpty)
@@ -159,11 +160,7 @@ instance FromCBOR Double where
 instance FromCBOR Rational where
   fromCBOR = decodeRational
 
-instance FromCBOR Nano where
-  fromCBOR = MkFixed <$> fromCBOR
-
-instance FromCBOR Pico where
-  fromCBOR = MkFixed <$> fromCBOR
+deriving newtype instance Typeable p => FromCBOR (Fixed p)
 
 instance FromCBOR Void where
   fromCBOR = cborError DecoderErrorVoid
