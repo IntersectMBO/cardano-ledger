@@ -12,7 +12,10 @@ where
 
 import qualified Cardano.Crypto.Hash.Class as Hash
 import Cardano.Ledger.Address
-  ( Word7 (..),
+  ( Addr (..),
+    BootstrapAddress (BootstrapAddress),
+    CompactAddr,
+    Word7 (..),
     byron,
     getAddr,
     isEnterpriseAddr,
@@ -20,16 +23,11 @@ import Cardano.Ledger.Address
     payCredIsScript,
     stakeCredIsScript,
     toWord7,
+    unCompactAddr,
     word7sToWord64,
   )
 import Cardano.Ledger.BaseTypes (CertIx (..), SlotNo (..), TxIx (..), word8ToNetwork)
 import Cardano.Ledger.Binary (byronProtVer, decodeFull')
-import Cardano.Ledger.CompactAddress
-  ( Addr (..),
-    BootstrapAddress (BootstrapAddress),
-    CompactAddr,
-    unCompactAddr,
-  )
 import Cardano.Ledger.Credential
   ( Credential (..),
     PaymentCredential,
@@ -185,7 +183,7 @@ getShortAddr = do
 -- | This is an old decompacter that didn't guard against random junk at the end.
 decompactAddrOld :: Crypto c => CompactAddr c -> Addr c
 decompactAddrOld cAddr =
-    snd . unwrap "CompactAddr" $ runGetShort getShortAddr 0 (unCompactAddr cAddr)
+  snd . unwrap "CompactAddr" $ runGetShort getShortAddr 0 (unCompactAddr cAddr)
   where
     -- The reason failure is impossible here is that the only way to call this code
     -- is using a CompactAddr, which can only be constructed using compactAddr.

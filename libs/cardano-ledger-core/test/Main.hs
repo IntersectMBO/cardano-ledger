@@ -1,7 +1,7 @@
 module Main where
 
-import qualified Test.Cardano.Ledger.BaseTypesSpec as BaseTypesSpec
 import qualified Test.Cardano.Ledger.AddressSpec as AddressSpec
+import qualified Test.Cardano.Ledger.BaseTypesSpec as BaseTypesSpec
 import Test.Cardano.Ledger.Common
 
 main :: IO ()

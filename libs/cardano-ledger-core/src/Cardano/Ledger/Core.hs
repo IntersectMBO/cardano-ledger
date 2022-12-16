@@ -85,7 +85,14 @@ module Cardano.Ledger.Core
 where
 
 import qualified Cardano.Crypto.Hash as Hash
-import Cardano.Ledger.Address (Addr (..), BootstrapAddress)
+import Cardano.Ledger.Address
+  ( Addr (..),
+    BootstrapAddress,
+    CompactAddr,
+    compactAddr,
+    decompactAddr,
+    isBootstrapCompactAddr,
+  )
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (ProtVer (..))
 import Cardano.Ledger.Binary
@@ -105,7 +112,6 @@ import Cardano.Ledger.Binary
     translateViaCBORAnnotator,
   )
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.CompactAddress (CompactAddr, compactAddr, decompactAddr, isBootstrapCompactAddr)
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Credential
 import qualified Cardano.Ledger.Crypto as CC

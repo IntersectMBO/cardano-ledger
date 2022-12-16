@@ -12,7 +12,6 @@ module Test.Cardano.Ledger.AddressSpec (spec) where
 import qualified Cardano.Crypto.Hash.Class as Hash
 import Cardano.Ledger.Address
 import Cardano.Ledger.Binary (Version, decodeFull', natVersion, serialize', toCBOR)
-import Cardano.Ledger.CompactAddress as CA
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Crypto (Crypto (ADDRHASH), StandardCrypto)
 import qualified Data.Binary.Put as B
@@ -89,23 +88,23 @@ propValidateNewDecompact :: forall c. Crypto c => Addr c -> Property
 propValidateNewDecompact addr =
   let sbs = SBS.toShort $ serialiseAddr addr
       decompactedOld = decodeAddrShortOld @c sbs
-      decompactedNew = CA.decodeAddrShort @c sbs
+      decompactedNew = decodeAddrShort @c sbs
    in isJust decompactedOld .&&. decompactedOld === decompactedNew
 
 propCompactAddrRoundTrip :: Crypto c => Addr c -> Property
 propCompactAddrRoundTrip addr =
-  let compact = CA.compactAddr addr
-      decompact = CA.decompactAddr compact
+  let compact = compactAddr addr
+      decompact = decompactAddr compact
    in addr === decompact
 
 propCompactSerializationAgree :: Addr c -> Property
 propCompactSerializationAgree addr =
-  let sbs = unCompactAddr $ CA.compactAddr addr
+  let sbs = unCompactAddr $ compactAddr addr
    in sbs === SBS.toShort (serialiseAddr addr)
 
 propDecompactErrors :: forall c. Crypto c => Addr c -> Gen Property
 propDecompactErrors addr = do
-  let sbs = unCompactAddr $ CA.compactAddr addr
+  let sbs = unCompactAddr $ compactAddr addr
       hashLen = fromIntegral $ Hash.sizeHash (Proxy :: Proxy (ADDRHASH c))
       bs = SBS.fromShort sbs
       flipHeaderBit b =
@@ -166,7 +165,7 @@ propDecompactErrors addr = do
     $ counterexample
       ("Mingled address with " ++ mingler ++ " was parsed: " ++ show badAddr)
     $ isLeft
-    $ CA.decodeAddrEither @c badAddr
+    $ decodeAddrEither @c badAddr
 
 propDeserializeRewardAcntErrors :: forall c. Crypto c => Version -> RewardAcnt c -> Gen Property
 propDeserializeRewardAcntErrors v acnt = do
@@ -194,4 +193,4 @@ propDeserializeRewardAcntErrors v acnt = do
     $ counterexample
       ("Mingled address with " ++ mingler ++ " was parsed: " ++ show badAddr)
     $ isNothing
-    $ CA.decodeRewardAcnt @c badAddr
+    $ decodeRewardAcnt @c badAddr

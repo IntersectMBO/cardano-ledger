@@ -80,5 +80,4 @@ tests =
         roundTripAnnExpectation @(Block (BHeader StandardCrypto) Alonzo)
     ]
   where
-
     skip _ = testProperty "Test skipped" True

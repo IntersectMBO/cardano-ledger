@@ -44,7 +44,8 @@ import Test.Tasty.QuickCheck (testProperty)
 
 testCoreTypes :: TestTree
 testCoreTypes =
-  testGroup "Core Types"
+  testGroup
+    "Core Types"
     [ testProperty "Header" $
         roundTripAnnExpectation @(TP.BHeader Mock.C_Crypto),
       testProperty "Block Header Hash" $

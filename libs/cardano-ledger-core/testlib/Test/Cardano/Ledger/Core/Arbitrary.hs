@@ -26,7 +26,6 @@ import Cardano.Crypto.DSIGN.Class
   )
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import Cardano.Ledger.Address
-import Cardano.Ledger.CompactAddress
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes
   ( ActiveSlotCoeff,

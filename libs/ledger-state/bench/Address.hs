@@ -8,7 +8,6 @@ import Cardano.Crypto.Hash
 import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary
-import Cardano.Ledger.CompactAddress
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys

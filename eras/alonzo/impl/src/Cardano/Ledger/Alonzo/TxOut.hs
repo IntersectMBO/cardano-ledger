@@ -35,7 +35,13 @@ module Cardano.Ledger.Alonzo.TxOut
 where
 
 import Cardano.Crypto.Hash
-import Cardano.Ledger.Address (Addr (..))
+import Cardano.Ledger.Address
+  ( Addr (..),
+    CompactAddr,
+    compactAddr,
+    decompactAddr,
+    fromCborBothAddr,
+  )
 import Cardano.Ledger.Alonzo.Data (Datum (..), dataHashSize)
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.PParams (_coinsPerUTxOWord)
@@ -59,12 +65,6 @@ import Cardano.Ledger.Binary
     interns,
   )
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.CompactAddress
-  ( CompactAddr,
-    compactAddr,
-    decompactAddr,
-    fromCborBothAddr,
-  )
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), PaymentCredential, StakeReference (..))

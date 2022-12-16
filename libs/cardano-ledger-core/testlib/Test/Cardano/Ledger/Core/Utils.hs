@@ -5,8 +5,8 @@ module Test.Cardano.Ledger.Core.Utils
 where
 
 import Cardano.Ledger.BaseTypes
-import Test.Cardano.Ledger.Common
 import Data.Maybe (fromMaybe)
+import Test.Cardano.Ledger.Common
 
 -- | Convert to a bounded rational type why throwing an error on failure
 unsafeBoundRational :: (HasCallStack, BoundedRational r) => Rational -> r

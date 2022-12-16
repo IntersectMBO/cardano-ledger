@@ -75,21 +75,11 @@ module Cardano.Ledger.Address
 where
 
 import qualified Cardano.Chain.Common as Byron
-import qualified Cardano.Chain.Common as Byron (CompactAddress, unsafeGetCompactAddress)
 import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.Hashing as Byron
-import Cardano.Ledger.Address
-  ( Addr (..),
-    BootstrapAddress (..),
-    RewardAcnt (..),
-    byron,
-    payCredIsScript,
-    serialiseAddr,
-  )
 import Cardano.Ledger.BaseTypes
   ( CertIx (..),
     Network (..),
-    SlotNo (SlotNo),
     TxIx (..),
     byronProtVer,
     natVersion,
@@ -101,7 +91,6 @@ import Cardano.Ledger.Binary
     DecoderError (..),
     FromCBOR (..),
     ToCBOR (..),
-    byronProtVer,
     cborError,
     decodeFull,
     decodeFull',
@@ -145,7 +134,7 @@ import Data.Proxy (Proxy (..))
 import Data.String (fromString)
 import Data.Text (Text)
 import qualified Data.Text.Encoding as Text
-import Data.Word (Word16, Word32, Word64, Word8)
+import Data.Word (Word16, Word32, Word64)
 import GHC.Generics (Generic)
 import GHC.Show (intToDigit)
 import GHC.Stack (HasCallStack)
@@ -245,9 +234,9 @@ instance Crypto c => FromJSON (RewardAcnt c) where
     Aeson.withObject "RewardAcnt" $ \obj ->
       RewardAcnt
         <$> obj
-        .: "network"
+          .: "network"
         <*> obj
-        .: "credential"
+          .: "credential"
 
 instance NoThunks (RewardAcnt c)
 
@@ -474,9 +463,9 @@ getVariableLengthWord64 :: Get Word64
 getVariableLengthWord64 = word7sToWord64 <$> getWord7s
 
 decoderFromGet :: Text -> Get a -> Decoder s a
-decoderFromGet name get = do
+decoderFromGet name get' = do
   bytes <- fromCBOR
-  case B.runGetOrFail get bytes of
+  case B.runGetOrFail get' bytes of
     Right (_remaining, _offset, value) -> pure value
     Left (_remaining, _offset, message) ->
       cborError (DecoderErrorCustom name $ fromString message)

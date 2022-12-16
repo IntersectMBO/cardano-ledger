@@ -107,6 +107,10 @@ module Cardano.Ledger.Babbage.TxBody
   )
 where
 
+import Cardano.Ledger.Address
+  ( fromCborBothAddr,
+    fromCborRewardAcnt,
+  )
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Data
   ( AuxiliaryDataHash (..),
@@ -141,10 +145,6 @@ import Cardano.Ledger.Binary
   )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.CompactAddress
-  ( fromCborBothAddr,
-    fromCborRewardAcnt,
-  )
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
