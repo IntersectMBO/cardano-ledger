@@ -183,8 +183,9 @@ getShortAddr = do
               ["Address with unknown network Id. (", show addrNetId, ")"]
 
 -- | This is an old decompacter that didn't guard against random junk at the end.
-decompactAddrOld :: Crypto c => ShortByteString -> Addr c
-decompactAddrOld short = snd . unwrap "CompactAddr" $ runGetShort getShortAddr 0 short
+decompactAddrOld :: Crypto c => CompactAddr c -> Addr c
+decompactAddrOld cAddr =
+    snd . unwrap "CompactAddr" $ runGetShort getShortAddr 0 (unCompactAddr cAddr)
   where
     -- The reason failure is impossible here is that the only way to call this code
     -- is using a CompactAddr, which can only be constructed using compactAddr.
