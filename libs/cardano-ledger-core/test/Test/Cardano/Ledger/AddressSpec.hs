@@ -20,13 +20,14 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Short as SBS
 import Data.Either
-import Data.Maybe (isJust, isNothing)
+import Data.Maybe (isNothing)
 import Data.Proxy
 import Data.Word
 import Test.Cardano.Ledger.Binary.RoundTrip (cborTrip, mkTrip, roundTripExpectation)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Address
 import Test.Cardano.Ledger.Core.Arbitrary ()
+import Test.Cardano.Ledger.Core.Utils (runFailError)
 
 spec :: Spec
 spec = do
@@ -39,8 +40,6 @@ spec = do
       propDecompactErrors @StandardCrypto
     prop "Ensure RewardAcnt failures on incorrect binary data" $
       propDeserializeRewardAcntErrors @StandardCrypto
-    prop "Decompacting an address is still valid" $
-      propValidateNewDecompact @StandardCrypto
     prop "RoundTrip" $
       roundTripExpectation @(CompactAddr StandardCrypto) cborTrip
     prop "Decompact addr with junk" $ propDecompactAddrWithJunk @StandardCrypto
@@ -50,6 +49,8 @@ spec = do
       roundTripExpectation @(Addr StandardCrypto) cborTrip
     prop "RoundTrip (fromCborAddr)" $
       roundTripExpectation @(Addr StandardCrypto) (mkTrip toCBOR fromCborAddr)
+    prop "Deserializing an address matches old implementation" $
+      propValidateNewDeserialize @StandardCrypto
   describe "RewardAcnt" $ do
     prop "RewardAcnt" $
       roundTripExpectation @(RewardAcnt StandardCrypto) cborTrip
@@ -84,12 +85,12 @@ propDecompactAddrWithJunk addr junk = do
     -- Ensure that garbage is gone
     decompactAddr cAddr `shouldBe` addr
 
-propValidateNewDecompact :: forall c. Crypto c => Addr c -> Property
-propValidateNewDecompact addr =
-  let sbs = SBS.toShort $ serialiseAddr addr
-      decompactedOld = decodeAddrShortOld @c sbs
-      decompactedNew = decodeAddrShort @c sbs
-   in isJust decompactedOld .&&. decompactedOld === decompactedNew
+propValidateNewDeserialize :: forall c. (HasCallStack, Crypto c) => Addr c -> Property
+propValidateNewDeserialize addr =
+  let bs = serialiseAddr addr
+      deserializedOld = runFailError $ deserialiseAddrOld @c bs
+      deserializedNew = runFailError $ decodeAddr @c bs
+   in deserializedNew === addr .&&. deserializedOld === deserializedNew
 
 propCompactAddrRoundTrip :: Crypto c => Addr c -> Property
 propCompactAddrRoundTrip addr =

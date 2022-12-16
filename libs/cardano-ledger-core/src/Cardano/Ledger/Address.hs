@@ -7,6 +7,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -28,20 +29,8 @@ module Cardano.Ledger.Address
     RewardAcnt (..),
     serialiseRewardAcnt,
     deserialiseRewardAcnt,
-    --  Bits
-    byron,
-    notBaseAddr,
-    isEnterpriseAddr,
-    stakeCredIsScript,
     -- internals exported for testing
-    getAddr,
-    getKeyHash,
     bootstrapKeyHash,
-    getPtr,
-    getRewardAcnt,
-    getScriptHash,
-    getVariableLengthWord64,
-    payCredIsScript,
     putAddr,
     putCredential,
     putPtr,
@@ -49,7 +38,6 @@ module Cardano.Ledger.Address
     putVariableLengthWord64,
     -- TODO: these should live somewhere else
     word64ToWord7s,
-    word7sToWord64,
     Word7 (..),
     toWord7,
 
@@ -71,6 +59,7 @@ module Cardano.Ledger.Address
     fromCborBackwardsBothAddr,
     decodeRewardAcnt,
     fromCborRewardAcnt,
+    Fail (..),
   )
 where
 
@@ -84,15 +73,11 @@ import Cardano.Ledger.BaseTypes
     byronProtVer,
     natVersion,
     networkToWord8,
-    word8ToNetwork,
   )
 import Cardano.Ledger.Binary
   ( Decoder,
-    DecoderError (..),
     FromCBOR (..),
     ToCBOR (..),
-    cborError,
-    decodeFull,
     decodeFull',
     ifDecoderVersionAtLeast,
     serialize,
@@ -117,24 +102,21 @@ import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Encoding as Aeson
 import qualified Data.Aeson.Key as Aeson (fromText)
 import qualified Data.Aeson.Types as Aeson
-import Data.Binary (Get, Put, Word8)
+import Data.Binary (Put)
 import qualified Data.Binary as B
-import qualified Data.Binary.Get as B
 import qualified Data.Binary.Put as B
-import Data.Bits (Bits (clearBit, shiftL, testBit, (.&.), (.|.)), setBit, shiftL, shiftR, testBit, (.&.), (.|.))
+import Data.Bits
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Lazy as BSL
 import Data.ByteString.Short as SBS (ShortByteString, fromShort, index, length, toShort)
-import qualified Data.ByteString.Unsafe as BS (unsafeDrop, unsafeIndex)
-import Data.Foldable (foldl')
+import qualified Data.ByteString.Unsafe as BS (unsafeDrop, unsafeIndex, unsafeTake)
 import Data.Maybe (fromMaybe)
 import Data.Proxy (Proxy (..))
-import Data.String (fromString)
 import Data.Text (Text)
 import qualified Data.Text.Encoding as Text
-import Data.Word (Word16, Word32, Word64)
+import Data.Word (Word16, Word32, Word64, Word8)
 import GHC.Generics (Generic)
 import GHC.Show (intToDigit)
 import GHC.Stack (HasCallStack)
@@ -176,12 +158,7 @@ serialiseAddr = BSL.toStrict . B.runPut . putAddr
 -- | Deserialise an address from the external format. This will fail if the
 -- input data is not in the right format (or if there is trailing data).
 deserialiseAddr :: Crypto c => ByteString -> Maybe (Addr c)
-deserialiseAddr bs = case B.runGetOrFail getAddr (BSL.fromStrict bs) of
-  Left (_remaining, _offset, _message) -> Nothing
-  Right (remaining, _offset, result) ->
-    if BSL.null remaining
-      then Just result
-      else Nothing
+deserialiseAddr = decodeAddr
 
 -- | Serialise a reward account to the external format.
 serialiseRewardAcnt :: RewardAcnt c -> ByteString
@@ -190,12 +167,7 @@ serialiseRewardAcnt = BSL.toStrict . B.runPut . putRewardAcnt
 -- | Deserialise an reward account from the external format. This will fail if the
 -- input data is not in the right format (or if there is trailing data).
 deserialiseRewardAcnt :: Crypto c => ByteString -> Maybe (RewardAcnt c)
-deserialiseRewardAcnt bs = case B.runGetOrFail getRewardAcnt (BSL.fromStrict bs) of
-  Left (_remaining, _offset, _message) -> Nothing
-  Right (remaining, _offset, result) ->
-    if BSL.null remaining
-      then Just result
-      else Nothing
+deserialiseRewardAcnt = decodeRewardAcnt
 
 -- | An address for UTxO.
 --
@@ -234,9 +206,9 @@ instance Crypto c => FromJSON (RewardAcnt c) where
     Aeson.withObject "RewardAcnt" $ \obj ->
       RewardAcnt
         <$> obj
-          .: "network"
+        .: "network"
         <*> obj
-          .: "credential"
+        .: "credential"
 
 instance NoThunks (RewardAcnt c)
 
@@ -278,9 +250,6 @@ stakeCredIsScript = 5
 payCredIsScript :: Int
 payCredIsScript = 4
 
-rewardCredIsScript :: Int
-rewardCredIsScript = 4
-
 putAddr :: Addr c -> Put
 putAddr (AddrBootstrap (BootstrapAddress byronAddr)) =
   B.putLazyByteString (serialize byronProtVer byronAddr)
@@ -308,21 +277,6 @@ putAddr (Addr network pc sr) =
           B.putWord8 header
           putCredential pc
 
-getAddr :: Crypto c => Get (Addr c)
-getAddr = do
-  header <- B.lookAhead B.getWord8
-  if testBit header byron
-    then getByron
-    else do
-      _ <- B.getWord8 -- read past the header byte
-      let addrNetId = header .&. 0x0F -- 0b00001111 is the mask for the network id
-      case word8ToNetwork addrNetId of
-        Just n -> Addr n <$> getPayCred header <*> getStakeReference header
-        Nothing ->
-          fail $
-            concat
-              ["Address with unknown network Id. (", show addrNetId, ")"]
-
 putRewardAcnt :: RewardAcnt c -> Put
 putRewardAcnt (RewardAcnt network cred) = do
   let setPayCredBit = case cred of
@@ -334,62 +288,12 @@ putRewardAcnt (RewardAcnt network cred) = do
   B.putWord8 header
   putCredential cred
 
-getRewardAcnt :: Crypto c => Get (RewardAcnt c)
-getRewardAcnt = do
-  header <- B.getWord8
-  let rewardAcntPrefix = 0xE0 -- 0b11100000 are always set for reward accounts
-      isRewardAcnt = (header .&. rewardAcntPrefix) == rewardAcntPrefix
-      netId = header .&. 0x0F -- 0b00001111 is the mask for the network id
-  case (word8ToNetwork netId, isRewardAcnt) of
-    (Nothing, _) ->
-      fail $ concat ["Reward account with unknown network Id. (", show netId, ")"]
-    (_, False) ->
-      fail $ concat ["Expected reward account. Got account with header: ", show header]
-    (Just network, True) -> do
-      cred <- case testBit header rewardCredIsScript of
-        True -> getScriptHash
-        False -> getKeyHash
-      pure $ RewardAcnt network cred
-
-getHash :: forall h a. Hash.HashAlgorithm h => Get (Hash.Hash h a)
-getHash = do
-  bytes <- B.getByteString . fromIntegral $ Hash.sizeHash ([] @h)
-  case Hash.hashFromBytes bytes of
-    Nothing -> fail "getHash: implausible hash length mismatch"
-    Just !h -> pure h
-
 putHash :: Hash.Hash h a -> Put
 putHash = B.putByteString . Hash.hashToBytes
-
-getPayCred :: Crypto c => Word8 -> Get (PaymentCredential c)
-getPayCred header = case testBit header payCredIsScript of
-  True -> getScriptHash
-  False -> getKeyHash
-
-getScriptHash :: Crypto c => Get (Credential kr c)
-getScriptHash = ScriptHashObj . ScriptHash <$> getHash
-
-getKeyHash :: Crypto c => Get (Credential kr c)
-getKeyHash = KeyHashObj . KeyHash <$> getHash
-
-getStakeReference :: Crypto c => Word8 -> Get (StakeReference c)
-getStakeReference header = case testBit header notBaseAddr of
-  True -> case testBit header isEnterpriseAddr of
-    True -> pure StakeRefNull
-    False -> StakeRefPtr <$> getPtr
-  False -> case testBit header stakeCredIsScript of
-    True -> StakeRefBase <$> getScriptHash
-    False -> StakeRefBase <$> getKeyHash
 
 putCredential :: Credential kr c -> Put
 putCredential (ScriptHashObj (ScriptHash h)) = putHash h
 putCredential (KeyHashObj (KeyHash h)) = putHash h
-
-getByron :: Get (Addr c)
-getByron =
-  decodeFull byronProtVer <$> B.getRemainingLazyByteString >>= \case
-    Left e -> fail (show e)
-    Right r -> pure $ AddrBootstrap $ BootstrapAddress r
 
 -- | The size of the extra attributes in a bootstrp (ie Byron) address. Used
 -- to help enforce that people do not post huge ones on the chain.
@@ -414,13 +318,6 @@ putPtr (Ptr slot (TxIx txIx) (CertIx certIx)) = do
   where
     putSlot (SlotNo n) = putVariableLengthWord64 n
 
-getPtr :: Get Ptr
-getPtr =
-  Ptr
-    <$> (SlotNo <$> getVariableLengthWord64)
-    <*> (TxIx . fromIntegral <$> getVariableLengthWord64)
-    <*> (CertIx . fromIntegral <$> getVariableLengthWord64)
-
 newtype Word7 = Word7 Word8
   deriving (Eq, Show)
 
@@ -431,16 +328,6 @@ putWord7s :: [Word7] -> Put
 putWord7s [] = pure ()
 putWord7s [Word7 x] = B.putWord8 x
 putWord7s (Word7 x : xs) = B.putWord8 (x .|. 0x80) >> putWord7s xs
-
-getWord7s :: Get [Word7]
-getWord7s = do
-  next <- B.getWord8
-  -- is the high bit set?
-  if testBit next 7
-    then -- if so, grab more words
-      (:) (toWord7 next) <$> getWord7s
-    else -- otherwise, this is the last one
-      pure [Word7 next]
 
 word64ToWord7s :: Word64 -> [Word7]
 word64ToWord7s = reverse . go
@@ -453,34 +340,17 @@ word64ToWord7s = reverse . go
 putVariableLengthWord64 :: Word64 -> Put
 putVariableLengthWord64 = putWord7s . word64ToWord7s
 
--- invariant: length [Word7] < 8
-word7sToWord64 :: [Word7] -> Word64
-word7sToWord64 = foldl' f 0
-  where
-    f n (Word7 r) = shiftL n 7 .|. fromIntegral r
-
-getVariableLengthWord64 :: Get Word64
-getVariableLengthWord64 = word7sToWord64 <$> getWord7s
-
-decoderFromGet :: Text -> Get a -> Decoder s a
-decoderFromGet name get' = do
-  bytes <- fromCBOR
-  case B.runGetOrFail get' bytes of
-    Right (_remaining, _offset, value) -> pure value
-    Left (_remaining, _offset, message) ->
-      cborError (DecoderErrorCustom name $ fromString message)
-
 instance Crypto c => ToCBOR (Addr c) where
   toCBOR = toCBOR . B.runPut . putAddr
 
 instance Crypto c => FromCBOR (Addr c) where
-  fromCBOR = decoderFromGet "Addr" getAddr
+  fromCBOR = fromCborAddr
 
 instance Crypto c => ToCBOR (RewardAcnt c) where
   toCBOR = toCBOR . B.runPut . putRewardAcnt
 
 instance Crypto c => FromCBOR (RewardAcnt c) where
-  fromCBOR = decoderFromGet "RewardAcnt" getRewardAcnt
+  fromCBOR = fromCborRewardAcnt
 
 newtype BootstrapAddress c = BootstrapAddress
   { unBootstrapAddress :: Byron.Address
@@ -615,9 +485,11 @@ instance AddressBuffer BS.ByteString where
   {-# INLINE bufUnsafeIndex #-}
   bufToByteString = id
   {-# INLINE bufToByteString #-}
+  bufGetHash :: forall h a. Hash.HashAlgorithm h => BS.ByteString -> Int -> Maybe (Hash.Hash h a)
   bufGetHash bs offset = do
-    guard (offset >= 0 && offset < BS.length bs)
-    Hash.hashFromBytes (BS.unsafeDrop offset bs)
+    let size = fromIntegral (Hash.sizeHash (Proxy :: Proxy h))
+    guard (offset >= 0 && offset + size <= BS.length bs)
+    Hash.hashFromBytes (BS.unsafeTake size (BS.unsafeDrop offset bs))
   {-# INLINE bufGetHash #-}
 
 -- | Address header byte truth table:
