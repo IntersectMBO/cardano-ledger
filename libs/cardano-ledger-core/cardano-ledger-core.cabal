@@ -119,17 +119,21 @@ library testlib
   hs-source-dirs:    testlib
   exposed-modules:
                      Test.Cardano.Ledger.Common
+                     Test.Cardano.Ledger.Core.Address
                      Test.Cardano.Ledger.Core.Arbitrary
                      Test.Cardano.Ledger.Core.Utils
   build-depends:     base,
+                     binary,
+                     bytestring,
                      cardano-crypto-class,
                      cardano-ledger-core,
-                     cardano-ledger-binary:{testlib},
+                     cardano-ledger-binary:{cardano-ledger-binary, testlib},
                      cardano-ledger-byron-test,
                      generic-random,
                      genvalidity,
                      hspec,
                      hedgehog-quickcheck,
+                     primitive,
                      QuickCheck,
                      text,
 test-suite tests

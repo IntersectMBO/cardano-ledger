@@ -94,7 +94,7 @@ import Cardano.Ledger.CompactAddress
   ( CompactAddr,
     compactAddr,
     decompactAddr,
-    fromCborBackwardsBothAddr,
+    fromCborBothAddr,
   )
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core hiding (TxBody, TxOut)
@@ -442,7 +442,7 @@ instance
   ) =>
   FromCBOR (BabbageTxOut era)
   where
-  fromCBOR = fromCborTxOutWithAddr fromCborBackwardsBothAddr
+  fromCBOR = fromCborTxOutWithAddr fromCborBothAddr
 
 instance
   ( Era era,
@@ -454,7 +454,7 @@ instance
   where
   type Share (BabbageTxOut era) = Interns (Credential 'Staking (EraCrypto era))
   fromSharedCBOR credsInterns =
-    internTxOut <$!> fromCborTxOutWithAddr fromCborBackwardsBothAddr
+    internTxOut <$!> fromCborTxOutWithAddr fromCborBothAddr
     where
       internTxOut = \case
         TxOut_AddrHash28_AdaOnly cred addr28Extra ada ->
@@ -477,7 +477,7 @@ fromCborTxOutWithAddr decAddr = do
       lenOrIndef <- decodeListLenOrIndef
       case lenOrIndef of
         Nothing -> do
-          (a, ca) <- fromCborBackwardsBothAddr
+          (a, ca) <- fromCborBothAddr
           v <- decodeNonNegative
           decodeBreakOr >>= \case
             True -> pure $ mkTxOut a ca v NoDatum SNothing
@@ -491,7 +491,7 @@ fromCborTxOutWithAddr decAddr = do
           v <- decodeNonNegative
           pure $ mkTxOut a ca v NoDatum SNothing
         Just 3 -> do
-          (a, ca) <- fromCborBackwardsBothAddr
+          (a, ca) <- fromCborBothAddr
           v <- decodeNonNegative
           dh <- fromCBOR
           pure $ mkTxOut a ca v (DatumHash dh) SNothing

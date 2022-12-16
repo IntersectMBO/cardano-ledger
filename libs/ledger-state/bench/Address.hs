@@ -19,6 +19,7 @@ import Data.Foldable (foldMap')
 import Data.Maybe (fromMaybe)
 import qualified Data.Text as T
 import Data.Unit.Strict
+import Test.Cardano.Ledger.Core.Address (decompactAddrLazy, fromCborCompactAddrOld)
 
 main :: IO ()
 main = do

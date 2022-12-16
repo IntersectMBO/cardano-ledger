@@ -26,6 +26,7 @@ import Cardano.Crypto.DSIGN.Class
   )
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import Cardano.Ledger.Address
+import Cardano.Ledger.CompactAddress
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes
   ( ActiveSlotCoeff,
@@ -336,6 +337,9 @@ instance Crypto c => Arbitrary (Addr c) where
         (2, AddrBootstrap <$> arbitrary)
       ]
   shrink = genericShrink
+
+instance Crypto c => Arbitrary (CompactAddr c) where
+  arbitrary = compactAddr <$> arbitrary
 
 instance Crypto c => Arbitrary (StakeReference c) where
   arbitrary =

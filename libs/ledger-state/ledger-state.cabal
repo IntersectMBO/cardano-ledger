@@ -130,7 +130,7 @@ benchmark address
     bytestring,
     cardano-ledger-binary,
     cardano-crypto-class,
-    cardano-ledger-core,
+    cardano-ledger-core:{cardano-ledger-core, testlib},
     criterion,
     deepseq,
     cardano-strict-containers,

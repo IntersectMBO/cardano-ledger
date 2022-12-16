@@ -204,8 +204,10 @@ instance Crypto c => FromJSON (RewardAcnt c) where
   parseJSON =
     Aeson.withObject "RewardAcnt" $ \obj ->
       RewardAcnt
-        <$> obj .: "network"
-        <*> obj .: "credential"
+        <$> obj
+        .: "network"
+        <*> obj
+        .: "credential"
 
 instance NoThunks (RewardAcnt c)
 
@@ -364,14 +366,10 @@ getByron =
 -- to help enforce that people do not post huge ones on the chain.
 bootstrapAddressAttrsSize :: BootstrapAddress c -> Int
 bootstrapAddressAttrsSize (BootstrapAddress addr) =
-  -- I'm sorry this code is formatted so weridly below.
-  -- It is to apease the capricious god Ormolu. A sacrifice is demanded!
-  maybe
-    0
-    (BS.length . Byron.getHDAddressPayload)
-    (Byron.aaVKDerivationPath (Byron.attrData attrs))
-    + Byron.unknownAttributesLength attrs
+  maybe 0 payloadLen derivationPath + Byron.unknownAttributesLength attrs
   where
+    payloadLen = BS.length . Byron.getHDAddressPayload
+    derivationPath = Byron.aaVKDerivationPath (Byron.attrData attrs)
     attrs = Byron.addrAttributes addr
 
 -- | Return True if a given address is a redeemer address from the Byron Era

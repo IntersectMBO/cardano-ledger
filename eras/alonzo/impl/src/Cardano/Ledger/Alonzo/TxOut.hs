@@ -63,7 +63,7 @@ import Cardano.Ledger.CompactAddress
   ( CompactAddr,
     compactAddr,
     decompactAddr,
-    fromCborBackwardsBothAddr,
+    fromCborBothAddr,
   )
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
@@ -363,7 +363,7 @@ instance
           txOut -> txOut
     internTxOut <$!> case lenOrIndef of
       Nothing -> do
-        (a, ca) <- fromCborBackwardsBothAddr
+        (a, ca) <- fromCborBothAddr
         cv <- decodeNonNegative
         decodeBreakOr >>= \case
           True -> pure $ mkTxOutCompact a ca cv SNothing
@@ -373,11 +373,11 @@ instance
               True -> pure $ mkTxOutCompact a ca cv (SJust dh)
               False -> cborError $ DecoderErrorCustom "txout" "Excess terms in txout"
       Just 2 -> do
-        (a, ca) <- fromCborBackwardsBothAddr
+        (a, ca) <- fromCborBothAddr
         cv <- decodeNonNegative
         pure $ mkTxOutCompact a ca cv SNothing
       Just 3 -> do
-        (a, ca) <- fromCborBackwardsBothAddr
+        (a, ca) <- fromCborBothAddr
         cv <- decodeNonNegative
         mkTxOutCompact a ca cv . SJust <$> fromCBOR
       Just _ -> cborError $ DecoderErrorCustom "txout" "wrong number of terms in txout"

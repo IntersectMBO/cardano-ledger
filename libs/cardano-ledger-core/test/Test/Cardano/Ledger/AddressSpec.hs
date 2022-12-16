@@ -10,9 +10,7 @@ module Test.Cardano.Ledger.AddressSpec (spec) where
 
 import qualified Cardano.Crypto.Hash.Class as Hash
 import Cardano.Ledger.Address
-  ( Addr (..),
-    RewardAcnt (..),
-    deserialiseAddr,
+  ( deserialiseAddr,
     putVariableLengthWord64,
     serialiseAddr,
   )
@@ -32,6 +30,35 @@ import Data.Word
 import Test.Cardano.Ledger.Binary.RoundTrip (cborTrip, mkTrip, roundTripExpectation)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
+import Test.Cardano.Ledger.Core.Address
+
+
+spec :: Spec
+spec = do
+  describe "CompactAddr" $ do
+    prop "compactAddr/decompactAddr round trip" $
+      propCompactAddrRoundTrip @StandardCrypto
+    prop "Compact address binary representation" $
+      propCompactSerializationAgree @StandardCrypto
+    prop "Ensure Addr failures on incorrect binary data" $
+      propDecompactErrors @StandardCrypto
+    prop "Ensure RewardAcnt failures on incorrect binary data" $
+      propDeserializeRewardAcntErrors @StandardCrypto
+    prop "Decompacting an address is still valid" $
+      propValidateNewDecompact @StandardCrypto
+    prop "RoundTrip" $
+      roundTripExpectation @(CompactAddr StandardCrypto) cborTrip
+  describe "Addr" $ do
+    prop "RoundTrip" $
+      roundTripExpectation @(Addr StandardCrypto) cborTrip
+    prop "RoundTrip (fromCborAddr)" $
+      roundTripExpectation @(Addr StandardCrypto) (mkTrip toCBOR fromCborAddr)
+  describe "RewardAcnt" $ do
+    prop "RewardAcnt" $
+      roundTripExpectation @(RewardAcnt StandardCrypto) cborTrip
+    prop "RewardAcnt (fromCborRewardAcnt)" $
+      roundTripExpectation @(RewardAcnt StandardCrypto) (mkTrip toCBOR fromCborRewardAcnt)
+
 
 propValidateNewDecompact :: forall c. Crypto c => Addr c -> Property
 propValidateNewDecompact addr =
@@ -41,16 +68,16 @@ propValidateNewDecompact addr =
       decompactedNew = CA.decodeAddrShort @c compact
    in isJust decompactedOld .&&. decompactedOld === decompactedNew
 
-propCompactAddrRoundTrip :: Crypto c => Addr c -> Bool
+propCompactAddrRoundTrip :: Crypto c => Addr c -> Property
 propCompactAddrRoundTrip addr =
   let compact = CA.compactAddr addr
       decompact = CA.decompactAddr compact
-   in addr == decompact
+   in addr === decompact
 
-propCompactSerializationAgree :: Addr c -> Bool
+propCompactSerializationAgree :: Addr c -> Property
 propCompactSerializationAgree addr =
   let CA.UnsafeCompactAddr sbs = CA.compactAddr addr
-   in sbs == SBS.toShort (serialiseAddr addr)
+   in sbs === SBS.toShort (serialiseAddr addr)
 
 propDecompactErrors :: forall c. Crypto c => Addr c -> Gen Property
 propDecompactErrors addr = do
@@ -145,26 +172,3 @@ propDeserializeRewardAcntErrors v acnt = do
     $ isNothing
     $ CA.decodeRewardAcnt @c badAddr
 
-spec :: Spec
-spec = do
-  describe "CompactAddr" $ do
-    prop "compactAddr/decompactAddr round trip" $
-      propCompactAddrRoundTrip @StandardCrypto
-    prop "Compact address binary representation" $
-      propCompactSerializationAgree @StandardCrypto
-    prop "Ensure Addr failures on incorrect binary data" $
-      propDecompactErrors @StandardCrypto
-    prop "Ensure RewardAcnt failures on incorrect binary data" $
-      propDeserializeRewardAcntErrors @StandardCrypto
-    prop "Decompacting an address is still valid" $
-      propValidateNewDecompact @StandardCrypto
-  describe "Addr" $ do
-    prop "RoundTrip" $
-      roundTripExpectation @(Addr StandardCrypto) cborTrip
-    prop "RoundTrip (fromCborAddr)" $
-      roundTripExpectation @(Addr StandardCrypto) (mkTrip toCBOR fromCborAddr)
-  describe "RewardAcnt" $ do
-    prop "RewardAcnt" $
-      roundTripExpectation @(RewardAcnt StandardCrypto) cborTrip
-    prop "RewardAcnt (fromCborRewardAcnt)" $
-      roundTripExpectation @(RewardAcnt StandardCrypto) (mkTrip toCBOR fromCborRewardAcnt)
