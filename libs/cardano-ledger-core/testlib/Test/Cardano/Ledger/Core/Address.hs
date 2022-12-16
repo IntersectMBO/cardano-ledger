@@ -4,8 +4,7 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Core.Address
-  ( fromCborCompactAddrOld,
-    decodeAddrShortOld,
+  ( decodeAddrShortOld,
     decompactAddrOld,
     decompactAddrOldLazy,
   )
@@ -24,16 +23,12 @@ import Cardano.Ledger.Address
     word7sToWord64,
   )
 import Cardano.Ledger.BaseTypes (CertIx (..), SlotNo (..), TxIx (..), word8ToNetwork)
-import Cardano.Ledger.Binary
-  ( Decoder,
-    FromCBOR (fromCBOR),
-    byronProtVer,
-    decodeFull',
-  )
+import Cardano.Ledger.Binary (byronProtVer, decodeFull')
 import Cardano.Ledger.CompactAddress
   ( Addr (..),
     BootstrapAddress (BootstrapAddress),
-    CompactAddr (..),
+    CompactAddr,
+    unCompactAddr,
   )
 import Cardano.Ledger.Credential
   ( Credential (..),
@@ -70,11 +65,6 @@ decodeAddrShortOld sbs =
     Right (_remaining, _offset, value) -> pure value
     Left (_remaining, _offset, message) ->
       fail $ "Old Addr decoder failed: " <> fromString message
-
-fromCborCompactAddrOld :: forall s c. Crypto c => Decoder s (CompactAddr c)
-fromCborCompactAddrOld = do
-  sbs <- fromCBOR
-  UnsafeCompactAddr sbs <$ decodeAddrShortOld @c sbs
 
 newtype GetShort a = GetShort {runGetShort :: Int -> ShortByteString -> Maybe (Int, a)}
   deriving (Functor)
@@ -205,11 +195,12 @@ decompactAddrOld short = snd . unwrap "CompactAddr" $ runGetShort getShortAddr 0
 -- | This lazy deserializer is kept around purely for benchmarking, so we can
 -- verify that new deserializer `decodeAddrStateT` is doing the work lazily.
 decompactAddrOldLazy :: forall c. Crypto c => CompactAddr c -> Addr c
-decompactAddrOldLazy (UnsafeCompactAddr bytes) =
+decompactAddrOldLazy cAddr =
   if testBit header byron
     then AddrBootstrap $ run "byron address" 0 bytes getBootstrapAddress
     else Addr addrNetId paycred stakecred
   where
+    bytes = unCompactAddr cAddr
     run :: forall a. Text -> Int -> ShortByteString -> GetShort a -> a
     run name i sbs g = snd . unwrap name $ runGetShort g i sbs
     -- The reason failure is impossible here is that the only way to call this code

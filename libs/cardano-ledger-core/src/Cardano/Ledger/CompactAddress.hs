@@ -15,9 +15,10 @@ module Cardano.Ledger.CompactAddress
   ( Addr (..),
     RewardAcnt (..),
     BootstrapAddress (..),
+    fromBoostrapCompactAddress,
     compactAddr,
     decompactAddr,
-    CompactAddr (..),
+    CompactAddr,
     unCompactAddr,
     isPayCredScriptCompactAddr,
     isBootstrapCompactAddr,
@@ -34,6 +35,7 @@ module Cardano.Ledger.CompactAddress
   )
 where
 
+import qualified Cardano.Chain.Common as Byron (CompactAddress, unsafeGetCompactAddress)
 import qualified Cardano.Crypto.Hash.Class as Hash
 import Cardano.Ledger.Address
   ( Addr (..),
@@ -590,3 +592,7 @@ isPayCredScriptCompactAddr (UnsafeCompactAddr bytes) =
 -- | Efficiently check whether compated adddress is a Byron address.
 isBootstrapCompactAddr :: CompactAddr c -> Bool
 isBootstrapCompactAddr (UnsafeCompactAddr bytes) = testBit (SBS.index bytes 0) byron
+
+-- | Convert Byron's comapct address into `CompactAddr`. This is just an efficient type cast.
+fromBoostrapCompactAddress :: Byron.CompactAddress -> CompactAddr c
+fromBoostrapCompactAddress = UnsafeCompactAddr . Byron.unsafeGetCompactAddress

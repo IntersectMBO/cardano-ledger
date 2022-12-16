@@ -127,7 +127,6 @@ benchmark address
   main-is:          Address.hs
   build-depends:
     base,
-    bytestring,
     cardano-ledger-binary,
     cardano-crypto-class,
     cardano-ledger-core:{cardano-ledger-core, testlib},

@@ -21,7 +21,7 @@ import qualified Cardano.Crypto.Hashing as Hashing
 import Cardano.Ledger.Address (isBootstrapRedeemer)
 import Cardano.Ledger.BaseTypes (BlocksMade (..), TxIx (..))
 import Cardano.Ledger.Coin (CompactForm (CompactCoin))
-import Cardano.Ledger.CompactAddress (CompactAddr (UnsafeCompactAddr))
+import Cardano.Ledger.CompactAddress (fromBoostrapCompactAddress)
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.EpochBoundary
@@ -63,7 +63,7 @@ hashFromShortBytesE sbs =
 translateCompactTxOutByronToShelley :: Byron.CompactTxOut -> ShelleyTxOut (ShelleyEra c)
 translateCompactTxOutByronToShelley (Byron.CompactTxOut compactAddr amount) =
   TxOutCompact
-    (UnsafeCompactAddr (Byron.unsafeGetCompactAddress compactAddr))
+    (fromBoostrapCompactAddress compactAddr)
     (CompactCoin (Byron.unsafeGetLovelace amount))
 
 translateCompactTxInByronToShelley ::

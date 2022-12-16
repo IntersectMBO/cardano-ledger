@@ -14,12 +14,11 @@ import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys
 import Control.DeepSeq (NFData, deepseq)
 import Criterion.Main
-import qualified Data.ByteString.Lazy as BSL
 import Data.Foldable (foldMap')
 import Data.Maybe (fromMaybe)
 import qualified Data.Text as T
 import Data.Unit.Strict
-import Test.Cardano.Ledger.Core.Address (decompactAddrOldLazy, fromCborCompactAddrOld)
+import Test.Cardano.Ledger.Core.Address (decompactAddrOldLazy)
 
 main :: IO ()
 main = do
@@ -48,12 +47,7 @@ main = do
       addrs mkStake = mkAddr mkStake <$> [1 .. count]
       partialDeserializeAddr :: ByteString -> Addr StandardCrypto
       partialDeserializeAddr =
-        either (error . show) id . decodeFullDecoder version "Addr" fromCborAddr . BSL.fromStrict
-      partialDeserializeCompactAddr :: ByteString -> CompactAddr StandardCrypto
-      partialDeserializeCompactAddr =
-        either (error . show) id
-          . decodeFullDecoder version "CompactAddr" fromCborCompactAddrOld
-          . BSL.fromStrict
+        either (error . show) id . decodeFullDecoder' version "Addr" fromCborAddr
       version = maxBound :: Version
   defaultMain
     [ bgroup
@@ -159,27 +153,6 @@ main = do
                 (serialize' version <$> addrs (StakeRefPtr . mkPtr))
                 (unsafeDeserialize' version)
                 partialDeserializeAddr
-            ],
-          bgroup
-            "fromCBOR-CompactAddr"
-            [ benchDecode
-                "StakeRefNull"
-                seqUnit
-                (serialize' version <$> addrs (const StakeRefNull))
-                partialDeserializeCompactAddr
-                (unsafeDeserialize' version),
-              benchDecode
-                "StakeRefBase"
-                seqUnit
-                (serialize' version <$> addrs stakeRefBase)
-                partialDeserializeCompactAddr
-                (unsafeDeserialize' version),
-              benchDecode
-                "StakeRefPtr"
-                seqUnit
-                (serialize' version <$> addrs (StakeRefPtr . mkPtr))
-                partialDeserializeCompactAddr
-                (unsafeDeserialize' version)
             ]
         ]
     ]
