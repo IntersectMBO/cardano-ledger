@@ -18,6 +18,7 @@ module Cardano.Ledger.CompactAddress
     compactAddr,
     decompactAddr,
     CompactAddr (..),
+    unCompactAddr,
     isPayCredScriptCompactAddr,
     isBootstrapCompactAddr,
     decodeAddr,
@@ -91,6 +92,10 @@ newtype CompactAddr c = UnsafeCompactAddr ShortByteString
 instance Crypto c => Show (CompactAddr c) where
   show c = show (decompactAddr c)
 
+-- | Unwrap the compact address and get to the address' binary representation.
+unCompactAddr :: CompactAddr c -> ShortByteString
+unCompactAddr (UnsafeCompactAddr sbs) = sbs
+
 compactAddr :: Addr c -> CompactAddr c
 compactAddr = UnsafeCompactAddr . SBS.toShort . serialiseAddr
 {-# INLINE compactAddr #-}
@@ -128,13 +133,19 @@ fromCborBothAddr = do
   sbs <- fromCBOR
   case decodeAddrShortEither sbs of
     Right addr -> pure (addr, UnsafeCompactAddr sbs)
-    -- Prior to Babbage era we did not check if binary blob representing an address was
-    -- fully consumed, so unfortunately we must preserve this behavior.
     Left err ->
-      ifDecoderVersionAtLeast
-        (natVersion @7)
-        (fail err)
-        ((,UnsafeCompactAddr sbs) <$> evalStateT (decodeAddrStateAllowLeftoverT sbs) 0)
+      ifDecoderVersionAtLeast (natVersion @7) (fail err) (decodeAddrDropSlack sbs)
+  where
+    -- Prior to Babbage era we did not check if a binary blob representing an address was
+    -- fully consumed, so unfortunately we must preserve this behavior. However,
+    -- decompacting of an address enforces that there are no bytes are left unconsumed,
+    -- therefore we need to drop the garbage after we successfully decod the malformed
+    -- address.
+    decodeAddrDropSlack sbs = flip evalStateT 0 $ do
+      addr <- decodeAddrStateAllowLeftoverT sbs
+      bytesConsumed <- get
+      let sbsCropped = SBS.toShort $ BS.take bytesConsumed $ SBS.fromShort sbs
+      pure (addr, UnsafeCompactAddr sbsCropped)
 {-# INLINE fromCborBothAddr #-}
 
 fromCborBackwardsBothAddr ::

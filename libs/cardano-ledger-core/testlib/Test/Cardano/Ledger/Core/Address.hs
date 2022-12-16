@@ -4,11 +4,10 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Core.Address
-  ( -- * Exported for benchmarking only
-    fromCborCompactAddrOld,
-    decompactAddrLazy,
-    getShortAddr,
+  ( fromCborCompactAddrOld,
+    decodeAddrShortOld,
     decompactAddrOld,
+    decompactAddrOldLazy,
   )
 where
 
@@ -27,10 +26,8 @@ import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes (CertIx (..), SlotNo (..), TxIx (..), word8ToNetwork)
 import Cardano.Ledger.Binary
   ( Decoder,
-    DecoderError (DecoderErrorCustom),
     FromCBOR (fromCBOR),
     byronProtVer,
-    cborError,
     decodeFull',
   )
 import Cardano.Ledger.CompactAddress
@@ -67,19 +64,17 @@ import Data.Word
 
 -- This is a fallback deserializer that preserves old behavior. It will almost never be
 -- invoked, that is why it is not inlined.
-fromCborAddrOld :: Crypto c => ShortByteString -> Decoder s (Addr c)
-fromCborAddrOld sbs =
+decodeAddrShortOld :: (Crypto c, MonadFail m) => ShortByteString -> m (Addr c)
+decodeAddrShortOld sbs =
   case B.runGetOrFail getAddr $ BSL.fromStrict $ SBS.fromShort sbs of
     Right (_remaining, _offset, value) -> pure value
     Left (_remaining, _offset, message) ->
-      cborError (DecoderErrorCustom "Addr" $ fromString message)
-{-# NOINLINE fromCborAddrOld #-}
+      fail $ "Old Addr decoder failed: " <> fromString message
 
 fromCborCompactAddrOld :: forall s c. Crypto c => Decoder s (CompactAddr c)
 fromCborCompactAddrOld = do
   sbs <- fromCBOR
-  UnsafeCompactAddr sbs <$ fromCborAddrOld @c sbs
-{-# INLINE fromCborCompactAddrOld #-}
+  UnsafeCompactAddr sbs <$ decodeAddrShortOld @c sbs
 
 newtype GetShort a = GetShort {runGetShort :: Int -> ShortByteString -> Maybe (Int, a)}
   deriving (Functor)
@@ -197,6 +192,7 @@ getShortAddr = do
             concat
               ["Address with unknown network Id. (", show addrNetId, ")"]
 
+-- | This is an old decompacter that didn't guard against random junk at the end.
 decompactAddrOld :: Crypto c => ShortByteString -> Addr c
 decompactAddrOld short = snd . unwrap "CompactAddr" $ runGetShort getShortAddr 0 short
   where
@@ -205,12 +201,11 @@ decompactAddrOld short = snd . unwrap "CompactAddr" $ runGetShort getShortAddr 0
     -- compactAddr serializes an Addr, so this is guaranteed to work.
     unwrap :: forall a. Text -> Maybe a -> a
     unwrap name = fromMaybe (error $ unpack $ "Impossible failure when decoding " <> name)
-{-# NOINLINE decompactAddrOld #-}
 
 -- | This lazy deserializer is kept around purely for benchmarking, so we can
 -- verify that new deserializer `decodeAddrStateT` is doing the work lazily.
-decompactAddrLazy :: forall c. Crypto c => CompactAddr c -> Addr c
-decompactAddrLazy (UnsafeCompactAddr bytes) =
+decompactAddrOldLazy :: forall c. Crypto c => CompactAddr c -> Addr c
+decompactAddrOldLazy (UnsafeCompactAddr bytes) =
   if testBit header byron
     then AddrBootstrap $ run "byron address" 0 bytes getBootstrapAddress
     else Addr addrNetId paycred stakecred
@@ -244,3 +239,4 @@ decompactAddrLazy (UnsafeCompactAddr bytes) =
        in if offsetStop <= SBS.length sbs
             then Just (offsetStop, ())
             else Nothing
+{-# INLINE decompactAddrOldLazy #-}

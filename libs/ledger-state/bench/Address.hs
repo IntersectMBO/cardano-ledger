@@ -19,7 +19,7 @@ import Data.Foldable (foldMap')
 import Data.Maybe (fromMaybe)
 import qualified Data.Text as T
 import Data.Unit.Strict
-import Test.Cardano.Ledger.Core.Address (decompactAddrLazy, fromCborCompactAddrOld)
+import Test.Cardano.Ledger.Core.Address (decompactAddrOldLazy, fromCborCompactAddrOld)
 
 main :: IO ()
 main = do
@@ -81,19 +81,19 @@ main = do
                     "StakeRefNull"
                     deepseqUnit
                     (compactAddr <$> addrs (const StakeRefNull))
-                    decompactAddrLazy
+                    decompactAddrOldLazy
                     decompactAddr,
                   benchDecode
                     "StakeRefBase"
                     deepseqUnit
                     (compactAddr <$> addrs stakeRefBase)
-                    decompactAddrLazy
+                    decompactAddrOldLazy
                     decompactAddr,
                   benchDecode
                     "StakeRefPtr"
                     deepseqUnit
                     (compactAddr <$> addrs (StakeRefPtr . mkPtr))
-                    decompactAddrLazy
+                    decompactAddrOldLazy
                     decompactAddr
                 ],
               bgroup
@@ -102,19 +102,19 @@ main = do
                     "StakeRefNull"
                     forcePaymentCred
                     (compactAddr <$> addrs (const StakeRefNull))
-                    decompactAddrLazy
+                    decompactAddrOldLazy
                     decompactAddr,
                   benchDecode
                     "StakeRefBase"
                     forcePaymentCred
                     (compactAddr <$> addrs stakeRefBase)
-                    decompactAddrLazy
+                    decompactAddrOldLazy
                     decompactAddr,
                   benchDecode
                     "StakeRefPtr"
                     forcePaymentCred
                     (compactAddr <$> addrs (StakeRefPtr . mkPtr))
-                    decompactAddrLazy
+                    decompactAddrOldLazy
                     decompactAddr
                 ],
               bgroup
@@ -123,19 +123,19 @@ main = do
                     "StakeRefNull"
                     forceStakingCred
                     (compactAddr <$> addrs (const StakeRefNull))
-                    decompactAddrLazy
+                    decompactAddrOldLazy
                     decompactAddr,
                   benchDecode
                     "StakeRefBase"
                     forceStakingCred
                     (compactAddr <$> addrs stakeRefBase)
-                    decompactAddrLazy
+                    decompactAddrOldLazy
                     decompactAddr,
                   benchDecode
                     "StakeRefPtr"
                     forceStakingCred
                     (compactAddr <$> addrs (StakeRefPtr . mkPtr))
-                    decompactAddrLazy
+                    decompactAddrOldLazy
                     decompactAddr
                 ]
             ],
