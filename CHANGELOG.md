@@ -230,6 +230,8 @@ in the naming of release branches.
 
 ### Removed
 
+- Deprecated `Cardano.Ledger.CompactAddress` module in favor of `Cardano.Ledger.Address`: #3218
+- Removed deprecated `Cardano.Ledger.Shelley.CompactAddr`: #3218
 - Removed depracted type synonyms: `ValidatedTx`, `TxOut`, `TxBody`, `TxSeq`, `Script`,
   `Value`, `PParamDelta`. #3205
 - Removed unused `deserialiseAddrStakeRef` function from `Address` module:  #3174

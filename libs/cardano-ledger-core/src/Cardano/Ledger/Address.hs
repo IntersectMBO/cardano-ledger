@@ -206,9 +206,9 @@ instance Crypto c => FromJSON (RewardAcnt c) where
     Aeson.withObject "RewardAcnt" $ \obj ->
       RewardAcnt
         <$> obj
-        .: "network"
+          .: "network"
         <*> obj
-        .: "credential"
+          .: "credential"
 
 instance NoThunks (RewardAcnt c)
 

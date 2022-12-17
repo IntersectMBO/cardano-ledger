@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
@@ -49,7 +50,8 @@ import Test.QuickCheck hiding (label)
 
 -- =====================================================================
 
--- | Tests the roundtrip property using QuickCheck generators fro all possible versions
+-- | Tests the roundtrip property using QuickCheck generators for all possible versions
+-- starting with `shelleyProtVer`.
 roundTripSpec ::
   forall t.
   (Show t, Eq t, Typeable t, Arbitrary t) =>
@@ -82,7 +84,8 @@ roundTripFailureExpectation version x =
       expectationFailure $
         "Should not have deserialized: " ++ showExpr (CBORBytes (serialize' version x))
 
--- | Verify that round triping through the binary form holds fro all possible versions
+-- | Verify that round triping through the binary form holds for all versions starting
+-- with `shelleyProtVer`.
 --
 -- In other words check that:
 --
@@ -94,7 +97,7 @@ roundTripExpectation ::
   t ->
   Expectation
 roundTripExpectation trip t =
-  forM_ [minBound .. maxBound] $ \version ->
+  forM_ [natVersion @2 .. maxBound] $ \version ->
     case roundTrip version trip t of
       Left err -> expectationFailure $ "Failed to deserialize encoded: " ++ show err
       Right tDecoded -> tDecoded `shouldBe` t
@@ -108,13 +111,13 @@ roundTripCborExpectation = roundTripExpectation (cborTrip @t)
 
 roundTripAnnExpectation ::
   (Show t, Eq t, ToCBOR t, FromCBOR (Annotator t), HasCallStack) =>
-  Version ->
   t ->
   Expectation
-roundTripAnnExpectation version t =
-  case roundTripAnn version t of
-    Left err -> expectationFailure $ "Failed to deserialize encoded: " ++ show err
-    Right tDecoded -> tDecoded `shouldBe` t
+roundTripAnnExpectation t =
+  forM_ [natVersion @2 .. maxBound] $ \version ->
+    case roundTripAnn version t of
+      Left err -> expectationFailure $ "Failed to deserialize encoded: " ++ show err
+      Right tDecoded -> tDecoded `shouldBe` t
 
 roundTripTwiddledProperty ::
   (Show t, Eq t, Twiddle t, FromCBOR t) => Version -> t -> Property

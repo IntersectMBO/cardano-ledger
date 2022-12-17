@@ -5,6 +5,9 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
+-- | This module contains previous implementations for Addr and CoompactAddr
+-- deserialization. This is used as an alternative implementation for testing and as a
+-- perforance reference for benchmarking.
 module Test.Cardano.Ledger.Core.Address
   ( deserialiseAddrOld,
     deserialiseRewardAcntOld,

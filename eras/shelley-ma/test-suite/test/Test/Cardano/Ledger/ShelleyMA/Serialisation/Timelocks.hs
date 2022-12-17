@@ -45,11 +45,10 @@ timelockTests :: TestTree
 timelockTests =
   testGroup
     "Timelock tests"
-    [ testCase "s1" $ roundTripAnnExpectation (eraProtVerHigh @Allegra) s1,
-      testCase "s2" $ roundTripAnnExpectation (eraProtVerHigh @Allegra) s2,
-      testCase "s3" $ roundTripAnnExpectation (eraProtVerHigh @Allegra) s3,
-      testProperty "roundtripTimelock" $
-        roundTripAnnExpectation @(Timelock Shelley) (eraProtVerHigh @Allegra),
+    [ testCase "s1" $ roundTripAnnExpectation s1,
+      testCase "s2" $ roundTripAnnExpectation s2,
+      testCase "s3" $ roundTripAnnExpectation s3,
+      testProperty "roundtripTimelock" $ roundTripAnnExpectation @(Timelock Shelley),
       testProperty "MultiSig deserialises as Timelock" $
         embedTripAnnExpectation @(MultiSig Shelley)
           @(Timelock Allegra)
