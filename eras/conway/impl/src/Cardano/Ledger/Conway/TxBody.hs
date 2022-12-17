@@ -192,7 +192,7 @@ instance
         bodyFields
         requiredFields
     where
-      bodyFields :: (Word -> Field (ConwayTxBodyRaw era))
+      bodyFields :: Word -> Field (ConwayTxBodyRaw era)
       bodyFields 0 = field (\x tx -> tx {ctbrSpendInputs = x}) From
       bodyFields 13 = field (\x tx -> tx {ctbrCollateralInputs = x}) From
       bodyFields 18 = field (\x tx -> tx {ctbrReferenceInputs = x}) From

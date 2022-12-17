@@ -57,10 +57,10 @@ spec = do
     prop "RewardAcnt (fromCborRewardAcnt)" $
       roundTripExpectation @(RewardAcnt StandardCrypto) (mkTrip toCBOR fromCborRewardAcnt)
 
-propSameAsOldDecompactAddr :: forall c. Crypto c => CompactAddr c -> Property
-propSameAsOldDecompactAddr cAddr =
-  (addr === decompactAddrOld @c cAddr)
-    .&&. (addr == decompactAddrOldLazy @c cAddr)
+propSameAsOldDecompactAddr :: forall c. Crypto c => CompactAddr c -> Expectation
+propSameAsOldDecompactAddr cAddr = do
+  addr `shouldBe` decompactAddrOld @c cAddr
+  addr `shouldBe` decompactAddrOldLazy @c cAddr
   where
     addr = decompactAddr @c cAddr
 
