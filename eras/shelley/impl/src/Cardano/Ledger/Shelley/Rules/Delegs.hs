@@ -61,7 +61,8 @@ import Cardano.Ledger.Shelley.TxBody
     Wdrl (..),
   )
 import Cardano.Ledger.Slot (SlotNo)
-import Cardano.Ledger.UnifiedMap (Trip (..), UMap (..), View (..), ViewMap)
+import Cardano.Ledger.UMapCompact (Trip (..), UMap (..), View (..), compactCoinOrError, fromCompact)
+import qualified Cardano.Ledger.UMapCompact as UM
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, (∈))
 import Control.State.Transition
@@ -80,7 +81,6 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Sequence (Seq (..))
 import Data.Typeable (Typeable)
-import qualified Data.UMap as UM
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
@@ -212,7 +212,7 @@ delegsTransition = do
           ( Map.differenceWith
               (\x y -> if x /= y then Just x else Nothing)
               wdrls_
-              (Map.mapKeys (mkRwdAcnt network) (UM.unUnify rewards'))
+              (Map.mapKeys (mkRwdAcnt network) (UM.rewView (dsUnified ds)))
           )
 
       let wdrls_' :: RewardAccounts (EraCrypto era)
@@ -223,7 +223,7 @@ delegsTransition = do
               )
               Map.empty
               wdrls_
-          unified' = rewards' UM.⨃ wdrls_'
+          unified' = rewards' UM.⨃ Map.map compactCoinOrError wdrls_'
       pure $ dpstate {dpsDState = ds {dsUnified = unified'}}
     gamma :|> c -> do
       dpstate' <-
@@ -249,16 +249,18 @@ delegsTransition = do
     -- than the latter into the right shape so we can call 'Map.isSubmapOf'.
     isSubmapOf ::
       Map (RewardAcnt (EraCrypto era)) Coin ->
-      ViewMap (EraCrypto era) (Credential 'Staking c) Coin ->
+      View (EraCrypto era) (Credential 'Staking c) (UM.CompactForm Coin) ->
       Bool
-    isSubmapOf wdrls_ (Rewards (UnifiedMap tripmap _)) = Map.isSubmapOfBy f withdrawalMap tripmap
+    isSubmapOf wdrls_ (Rewards (UMap tripmap _)) = Map.isSubmapOfBy f withdrawalMap tripmap
       where
+        withdrawalMap :: Map.Map (Credential 'Staking (EraCrypto era)) Coin
         withdrawalMap =
           Map.fromList
             [ (cred, coin)
               | (RewardAcnt _ cred, coin) <- Map.toList wdrls_
             ]
-        f coin1 (Triple (SJust coin2) _ _) = coin1 == coin2
+        f :: Coin -> Trip (EraCrypto era) -> Bool
+        f coin1 (Triple (SJust coin2) _ _) = coin1 == (fromCompact coin2)
         f _ _ = False
 
 instance

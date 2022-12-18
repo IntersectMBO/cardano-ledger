@@ -30,6 +30,7 @@ import Cardano.Ledger.Shelley.TxBody
     ShelleyTxOut (..),
   )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import qualified Cardano.Ledger.UMapCompact as UM
 import Cardano.Ledger.UTxO
   ( UTxO (..),
   )
@@ -41,7 +42,6 @@ import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import qualified Data.Sequence as Seq
-import qualified Data.UMap as UM
 import Data.Word (Word16)
 import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, C_Crypto)

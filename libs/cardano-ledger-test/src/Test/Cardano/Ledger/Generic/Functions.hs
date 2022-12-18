@@ -60,6 +60,7 @@ import Cardano.Ledger.Shelley.TxBody
   )
 import Cardano.Ledger.Slot (EpochNo)
 import Cardano.Ledger.TxIn (TxIn (..))
+import qualified Cardano.Ledger.UMapCompact as UM
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), coinBalance)
 import Cardano.Ledger.Val (Val (inject, (<+>), (<->)))
 import Cardano.Slotting.EpochInfo.API (epochInfoSize)
@@ -74,7 +75,6 @@ import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
-import qualified Data.UMap as UMap
 import GHC.Records (HasField (getField))
 import Lens.Micro
 import Numeric.Natural
@@ -443,10 +443,15 @@ instance Reflect era => TotalAda (UTxO era) where
       accum ans txOut = (txOut ^. coinTxOutL) <+> ans
 
 instance TotalAda (DState era) where
-  totalAda dstate = Fold.foldl' (<+>) mempty (UMap.Rewards (dsUnified dstate))
+  totalAda dstate = UM.fromCompact $ Fold.foldl' UM.addCompact mempty (UM.Rewards (dsUnified dstate))
+
+-- we deliberately do NOT add the dsDeposits, because they are accounted for by the utxosDeposits
 
 instance TotalAda (DPState era) where
   totalAda (DPState ds _) = totalAda ds
+
+-- we deliberately do NOT add anything from PState
+-- In particular the psDeposits, because they are accounted for by the utxosDeposits
 
 instance Reflect era => TotalAda (LedgerState era) where
   totalAda (LedgerState utxos dps) = totalAda utxos <+> totalAda dps

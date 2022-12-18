@@ -45,7 +45,7 @@ import Cardano.Ledger.Shelley.LedgerState
     lsDPState,
     rewards,
   )
-import Cardano.Ledger.Shelley.Rewards (aggregateRewards, sumRewards)
+import Cardano.Ledger.Shelley.Rewards (aggregateCompactRewards, sumRewards)
 import Cardano.Ledger.Shelley.Rules
   ( ShelleyEPOCH,
     ShelleyMIR,
@@ -56,6 +56,7 @@ import Cardano.Ledger.Shelley.Rules
     validatingTickTransitionFORECAST,
   )
 import Cardano.Ledger.Slot (EpochNo, SlotNo (..))
+import qualified Cardano.Ledger.UMapCompact as UM
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo)
 import Cardano.Slotting.Time (mkSlotLength)
@@ -68,7 +69,6 @@ import Data.Default.Class (Default (def))
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Text (pack)
-import qualified Data.UMap as UM
 import System.Environment (lookupEnv)
 import Test.Cardano.Ledger.Tickf (oldCalculatePoolDistr)
 
@@ -216,10 +216,10 @@ tickfRuleBench =
                         [ bench "filterAllRewards" $ nf (filterAllRewards (rs (getRewardUpdate nes))) (nesEs nes),
                           env
                             (pure (filterAllRewards (rs (getRewardUpdate nes)) (nesEs nes)))
-                            (bench "aggregateRewards" . whnf (aggregateRewards (esPp (nesEs nes))) . frRegistered),
+                            (bench "aggregateRewards" . whnf (aggregateCompactRewards (esPp (nesEs nes))) . frRegistered),
                           env
                             ( pure
-                                ( aggregateRewards
+                                ( aggregateCompactRewards
                                     (esPp (nesEs nes))
                                     ( frRegistered $
                                         filterAllRewards (rs (getRewardUpdate nes)) (nesEs nes)

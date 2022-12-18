@@ -83,6 +83,8 @@ import Cardano.Ledger.Shelley.TxBody
     Wdrl (..),
   )
 import Cardano.Ledger.TxIn (TxIn (..))
+import Cardano.Ledger.UMapCompact (View (Rewards))
+import qualified Cardano.Ledger.UMapCompact as UM
 import Cardano.Ledger.UTxO (makeWitnessVKey)
 import Cardano.Ledger.Val (inject, (<+>))
 import Cardano.Slotting.Slot (SlotNo (..))
@@ -92,8 +94,6 @@ import Data.Default.Class (Default (..))
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import qualified Data.Sequence.Strict as StrictSeq
-import Data.UMap (View (Rewards))
-import qualified Data.UMap as UM
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Examples.STSTestUtils
   ( alwaysFailsHash,
@@ -181,7 +181,7 @@ initialBBodyState pf utxo =
     dpstate =
       def
         { dpsDState =
-            def {dsUnified = UM.insert (scriptStakeCredSuceed pf) (Coin 1000) (Rewards UM.empty)}
+            def {dsUnified = UM.insert (scriptStakeCredSuceed pf) (UM.CompactCoin 1000) (Rewards UM.empty)}
         }
 
 testAlonzoBlock ::

@@ -70,9 +70,9 @@ library
     Cardano.Ledger.Serialization
     Cardano.Ledger.Slot
     Cardano.Ledger.TxIn
-    Cardano.Ledger.UnifiedMap
     Cardano.Ledger.UTxO
     Cardano.Ledger.Val
+    Cardano.Ledger.UMapCompact
 
   build-depends:
     aeson >= 2,

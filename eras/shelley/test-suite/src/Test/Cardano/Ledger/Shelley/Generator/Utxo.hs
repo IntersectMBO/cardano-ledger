@@ -52,6 +52,7 @@ import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (DelplEnv, LedgerEnv (..))
 import Cardano.Ledger.Shelley.Tx (TxIn (..))
 import Cardano.Ledger.Shelley.TxBody (Wdrl (..))
+import qualified Cardano.Ledger.UMapCompact as UM
 import Cardano.Ledger.UTxO
   ( UTxO (..),
     makeWitnessesFromScriptKeys,
@@ -71,7 +72,6 @@ import Data.Proxy (Proxy (..))
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
-import qualified Data.UMap as UM
 import qualified Data.Vector as V
 import Debug.Trace (trace)
 import GHC.Records (HasField (..))
@@ -169,7 +169,7 @@ genTx
           constants
           ksIndexedStakeScripts
           ksIndexedStakingKeys
-          ((UM.unUnify . rewards . dpsDState) dpState)
+          ((Map.map UM.fromCompact . UM.unUnify . rewards . dpsDState) dpState)
       (update, updateWits) <-
         genUpdate
           constants

@@ -40,8 +40,10 @@ import Cardano.Ledger.Shelley.LedgerState
     rewards,
     pattern EpochState,
   )
+import Cardano.Ledger.UMapCompact (compactCoinOrError)
+import qualified Cardano.Ledger.UMapCompact as UM
 import Cardano.Ledger.Val ((<->))
-import Control.SetAlgebra (dom, eval, (∪+), (◁))
+import Control.SetAlgebra (eval, (∪+))
 import Control.State.Transition
   ( Assertion (..),
     STS (..),
@@ -54,7 +56,6 @@ import Data.Default.Class (Default)
 import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
 import Data.Typeable (Typeable)
-import qualified Data.UMap as UM
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
@@ -109,8 +110,8 @@ mirTransition = do
       rewards' = rewards ds
       reserves = asReserves acnt
       treasury = asTreasury acnt
-      irwdR = eval $ dom rewards' ◁ iRReserves (dsIRewards ds) :: RewardAccounts (EraCrypto era)
-      irwdT = eval $ dom rewards' ◁ iRTreasury (dsIRewards ds) :: RewardAccounts (EraCrypto era)
+      irwdR = rewards' UM.◁ iRReserves (dsIRewards ds) :: RewardAccounts (EraCrypto era)
+      irwdT = rewards' UM.◁ iRTreasury (dsIRewards ds) :: RewardAccounts (EraCrypto era)
       totR = fold irwdR
       totT = fold irwdT
       availableReserves = reserves `addDeltaCoin` (deltaReserves . dsIRewards $ ds)
@@ -132,7 +133,7 @@ mirTransition = do
                 dpState
                   { dpsDState =
                       ds
-                        { dsUnified = rewards' UM.∪+ update,
+                        { dsUnified = rewards' UM.∪+ Map.map compactCoinOrError update,
                           dsIRewards = emptyInstantaneousRewards
                         }
                   }

@@ -58,7 +58,7 @@ import Cardano.Ledger.Shelley.Rewards
   )
 import qualified Cardano.Ledger.Shelley.Rules as STS
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..))
-import Cardano.Ledger.UnifiedMap (Trip (Triple), Triple, UMap (UnifiedMap), UnifiedMap)
+import Cardano.Ledger.UMapCompact (Trip (Triple), UMap (UMap))
 import Cardano.Protocol.TPraos.BHeader (BHeader, HashHeader)
 import qualified Cardano.Protocol.TPraos.BHeader as TP
 import qualified Cardano.Protocol.TPraos.OCert as TP
@@ -232,12 +232,12 @@ instance (Arbitrary k, Arbitrary v) => Arbitrary (LM.ListMap k v) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Crypto c => Arbitrary (Triple c) where
+instance Crypto c => Arbitrary (Trip c) where
   arbitrary = Triple <$> arbitrary <*> arbitrary <*> arbitrary
   shrink = genericShrink
 
-instance Crypto c => Arbitrary (UnifiedMap c) where
-  arbitrary = UnifiedMap <$> arbitrary <*> arbitrary
+instance Crypto c => Arbitrary (UMap c) where
+  arbitrary = UMap <$> arbitrary <*> arbitrary
   shrink = genericShrink
 
 instance Crypto c => Arbitrary (DState c) where

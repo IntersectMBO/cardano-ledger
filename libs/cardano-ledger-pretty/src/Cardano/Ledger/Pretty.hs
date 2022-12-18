@@ -172,8 +172,8 @@ import Cardano.Ledger.Slot
     SlotNo (..),
   )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import Cardano.Ledger.UMapCompact (Trip (Triple), UMap (..))
 import Cardano.Ledger.UTxO (UTxO (..))
-import Cardano.Ledger.UnifiedMap (Trip (Triple), Triple, UMap (..), UnifiedMap)
 import Cardano.Protocol.TPraos.BHeader
   ( BHBody (..),
     BHeader (BHeader),
@@ -417,19 +417,19 @@ class PrettyA t where
 -- =====================================================
 -- Data.UMap
 
-ppTrip :: Triple c -> PDoc
+ppTrip :: Trip c -> PDoc
 ppTrip (Triple mcoin set mpool) =
   ppSexp
     "Triple"
-    [ ppStrictMaybe ppCoin mcoin,
+    [ ppStrictMaybe ppCoin (fromCompact <$> mcoin),
       ppSet ppPtr set,
       ppStrictMaybe ppKeyHash mpool
     ]
 
-ppUnifiedMap :: UnifiedMap c -> PDoc
-ppUnifiedMap (UnifiedMap tripmap ptrmap) =
+ppUnifiedMap :: UMap c -> PDoc
+ppUnifiedMap (UMap tripmap ptrmap) =
   ppRecord
-    "UnifiedMap"
+    "UMap"
     [ ("combined", ppMap ppCredential ppTrip tripmap),
       ("ptrs", ppMap ppPtr ppCredential ptrmap)
     ]
