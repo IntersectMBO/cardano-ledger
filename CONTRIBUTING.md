@@ -76,7 +76,7 @@ We *can* use Cabal's `source-repository-package` mechanism to pull in un-release
 However, we should try and avoid this.
 In particular, we should not release our packages to CHaP while we depend on a `source-repository-package`.
 
-If we are stuck in a situation where we need a long-running fork of a package, we should release it to CHaP instead (see the https://github.com/input-output-hk/cardano-haskell-packages[CHaP README] for more).
+If we are stuck in a situation where we need a long-running fork of a package, we should release it to CHaP instead (see the [CHaP README](https://github.com/input-output-hk/cardano-haskell-packages) for more).
 
 If you do add a `source-repository-package`, you need to provide a `--sha256` comment in `cabal.project` so that Nix knows the hash of the content.
 

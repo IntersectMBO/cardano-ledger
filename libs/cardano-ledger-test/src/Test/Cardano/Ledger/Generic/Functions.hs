@@ -16,12 +16,13 @@ import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
-import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), collateral')
+import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody (..), AlonzoTxOut (..), collateral')
 import Cardano.Ledger.Alonzo.TxInfo (languages)
 import qualified Cardano.Ledger.Babbage.PParams as Babbage (BabbagePParamsHKD (..))
 import Cardano.Ledger.Babbage.Tx (refScripts)
 import Cardano.Ledger.Babbage.TxBody
-  ( BabbageTxOut (..),
+  ( BabbageEraTxBody (..),
+    BabbageTxOut (..),
     Datum (..),
     collateralInputs',
     collateralReturn',
@@ -59,6 +60,7 @@ import Cardano.Ledger.Shelley.TxBody
   )
 import Cardano.Ledger.Slot (EpochNo)
 import Cardano.Ledger.TxIn (TxIn (..))
+import qualified Cardano.Ledger.UMapCompact as UM
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), coinBalance)
 import Cardano.Ledger.Val (Val (inject, (<+>), (<->)))
 import Cardano.Slotting.EpochInfo.API (epochInfoSize)
@@ -73,7 +75,6 @@ import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
-import qualified Data.UMap as UMap
 import GHC.Records (HasField (getField))
 import Lens.Micro
 import Numeric.Natural
@@ -186,7 +187,7 @@ scriptWitsNeeded' :: Proof era -> MUtxo era -> TxBody era -> Set (ScriptHash (Er
 scriptWitsNeeded' (Conway _) utxo txBody = regularScripts `Set.difference` inlineScripts
   where
     theUtxo = UTxO utxo
-    inputs = spendInputs' txBody `Set.union` referenceInputs' txBody
+    inputs = txBody ^. inputsTxBodyL
     inlineScripts = keysSet $ refScripts inputs theUtxo
     regularScripts = getScriptsHashesNeeded (getScriptsNeeded theUtxo txBody)
 scriptWitsNeeded' (Babbage _) utxo txBody = regularScripts `Set.difference` inlineScripts
@@ -314,7 +315,7 @@ getBody :: EraTx era => Proof era -> Tx era -> TxBody era
 getBody _ tx = tx ^. bodyTxL
 
 getCollateralInputs :: Proof era -> TxBody era -> Set (TxIn (EraCrypto era))
-getCollateralInputs (Conway _) tx = collateralInputs' tx
+getCollateralInputs (Conway _) tx = tx ^. collateralInputsTxBodyL
 getCollateralInputs (Babbage _) tx = collateralInputs' tx
 getCollateralInputs (Alonzo _) tx = collateral' tx
 getCollateralInputs (Mary _) _ = Set.empty
@@ -323,7 +324,7 @@ getCollateralInputs (Shelley _) _ = Set.empty
 {-# NOINLINE getCollateralInputs #-}
 
 getCollateralOutputs :: Proof era -> TxBody era -> [TxOut era]
-getCollateralOutputs (Conway _) tx = case collateralReturn' tx of SNothing -> []; SJust x -> [x]
+getCollateralOutputs (Conway _) tx = case tx ^. collateralReturnTxBodyL of SNothing -> []; SJust x -> [x]
 getCollateralOutputs (Babbage _) tx = case collateralReturn' tx of SNothing -> []; SJust x -> [x]
 getCollateralOutputs (Alonzo _) _ = []
 getCollateralOutputs (Mary _) _ = []
@@ -377,7 +378,7 @@ alwaysFalse p@(Allegra _) _ n = never n p
 alwaysFalse p@(Shelley _) _ n = never n p
 {-# NOINLINE alwaysFalse #-}
 
-certs :: (ShelleyEraTxBody era, EraTx era) => Proof era -> Tx era -> [DCert (EraCrypto era)]
+certs :: (ShelleyEraTxBody era, EraTx era, ProtVerAtMost era 8) => Proof era -> Tx era -> [DCert (EraCrypto era)]
 certs _ tx = Fold.toList $ tx ^. bodyTxL . certsTxBodyL
 
 -- | Create an old style RewardUpdate to be used in tests, in any Era.
@@ -442,10 +443,15 @@ instance Reflect era => TotalAda (UTxO era) where
       accum ans txOut = (txOut ^. coinTxOutL) <+> ans
 
 instance TotalAda (DState era) where
-  totalAda dstate = Fold.foldl' (<+>) mempty (UMap.Rewards (dsUnified dstate))
+  totalAda dstate = UM.fromCompact $ Fold.foldl' UM.addCompact mempty (UM.Rewards (dsUnified dstate))
+
+-- we deliberately do NOT add the dsDeposits, because they are accounted for by the utxosDeposits
 
 instance TotalAda (DPState era) where
   totalAda (DPState ds _) = totalAda ds
+
+-- we deliberately do NOT add anything from PState
+-- In particular the psDeposits, because they are accounted for by the utxosDeposits
 
 instance Reflect era => TotalAda (LedgerState era) where
   totalAda (LedgerState utxos dps) = totalAda utxos <+> totalAda dps

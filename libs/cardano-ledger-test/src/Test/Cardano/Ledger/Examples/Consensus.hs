@@ -53,6 +53,6 @@ genericConsensusTest =
       testCase "Allegra" (oneTest (Allegra Standard)),
       testCase "Mary" (oneTest (Mary Standard)),
       testCase "Alonzo" (oneTest (Alonzo Standard)),
-      testCase "Babbage" (oneTest (Babbage Standard)),
-      testCase "Conway" (oneTest (Conway Standard))
+      testCase "Babbage" (oneTest (Babbage Standard))
+      -- testCase "Conway" (oneTest (Conway Standard)) TODO
     ]

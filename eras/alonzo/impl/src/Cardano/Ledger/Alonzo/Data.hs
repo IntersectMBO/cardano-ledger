@@ -17,7 +17,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
--- This is needed to make Plutus.Data instances
+-- This is needed to make PlutusLedgerApi.V1.Data instances
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Cardano.Ledger.Alonzo.Data
@@ -113,23 +113,21 @@ import Data.Typeable (Typeable)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
-import qualified PlutusLedgerApi.V1 as Plutus
+import qualified PlutusLedgerApi.V1 as PV1 -- NOTE PV1.Data === PV2.Data
 
 -- =====================================================================
--- Plutus.Data is the type that Plutus expects as data.
+-- PV1.Data is the type that Plutus expects as data. For both V1 and V2.
 -- It is imported from the Plutus package, but it needs a few additional
 -- instances to also work in the ledger.
-
--- TODO: Move to PlutusCore.Data module
-deriving instance NoThunks Plutus.Data
+deriving instance NoThunks PV1.Data
 
 -- ============================================================================
 -- the newtype Data is a wrapper around the type that Plutus expects as data.
 -- The newtype will memoize the serialized bytes.
 
--- | This is a wrapper with a phantom era for Plutus.Data, since we need
+-- | This is a wrapper with a phantom era for PV1.Data, since we need
 -- something with kind (* -> *) for MemoBytes
-newtype PlutusData era = PlutusData Plutus.Data
+newtype PlutusData era = PlutusData PV1.Data
   deriving newtype (Eq, Generic, Show, NFData, NoThunks, Cborg.Serialise)
 
 instance Typeable era => ToCBOR (PlutusData era) where
@@ -156,14 +154,14 @@ instance (EraCrypto era ~ c) => HashAnnotated (Data era) EraIndependentData c wh
 
 instance Typeable era => NoThunks (Data era)
 
-pattern Data :: Era era => Plutus.Data -> Data era
+pattern Data :: Era era => PV1.Data -> Data era
 pattern Data p <- (getMemoRawType -> PlutusData p)
   where
     Data p = mkMemoized $ PlutusData p
 
 {-# COMPLETE Data #-}
 
-getPlutusData :: Data era -> Plutus.Data
+getPlutusData :: Data era -> PV1.Data
 getPlutusData (getMemoRawType -> PlutusData d) = d
 
 -- | Inlined data must be stored in the most compact form because it contributes

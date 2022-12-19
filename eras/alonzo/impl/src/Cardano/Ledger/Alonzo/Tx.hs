@@ -77,6 +77,7 @@ where
 
 import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
+import Cardano.Ledger.Allegra.Core ()
 import Cardano.Ledger.Allegra.Tx (validateTimelock)
 import Cardano.Ledger.Alonzo.Data (Data, hashData)
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
@@ -437,7 +438,7 @@ rdptr txBody (Minting (PolicyID hash)) =
   RdmrPtr Mint <$> indexOf hash (txBody ^. mintedTxBodyF :: Set (ScriptHash (EraCrypto era)))
 rdptr txBody (Spending txin) = RdmrPtr Spend <$> indexOf txin (txBody ^. inputsTxBodyL)
 rdptr txBody (Rewarding racnt) = RdmrPtr Rewrd <$> indexOf racnt (unWdrl (txBody ^. wdrlsTxBodyL))
-rdptr txBody (Certifying d) = RdmrPtr Cert <$> indexOf d (txBody ^. certsTxBodyL)
+rdptr txBody (Certifying d) = RdmrPtr Cert <$> indexOf d (txBody ^. certsTxBodyG)
 
 rdptrInv ::
   forall era.
@@ -452,7 +453,7 @@ rdptrInv txBody (RdmrPtr Spend idx) =
 rdptrInv txBody (RdmrPtr Rewrd idx) =
   Rewarding <$> fromIndex idx (unWdrl (txBody ^. wdrlsTxBodyL))
 rdptrInv txBody (RdmrPtr Cert idx) =
-  Certifying <$> fromIndex idx (txBody ^. certsTxBodyL)
+  Certifying <$> fromIndex idx (txBody ^. certsTxBodyG)
 
 {-# DEPRECATED getMapFromValue "No longer used" #-}
 getMapFromValue :: MaryValue c -> Map.Map (PolicyID c) (Map.Map AssetName Integer)

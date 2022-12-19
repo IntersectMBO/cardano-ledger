@@ -20,6 +20,7 @@ import Cardano.Ledger.State.Transform
 import Cardano.Ledger.State.UTxO
 import Cardano.Ledger.State.Vector
 import qualified Cardano.Ledger.TxIn as TxIn
+import Cardano.Ledger.UMapCompact (delView, ptrView, rewView, unify)
 import qualified Cardano.Ledger.UTxO as Shelley
 import Conduit
 import Control.Foldl (Fold (..))
@@ -31,7 +32,6 @@ import Data.Functor
 import qualified Data.IntMap.Strict as IntMap
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
-import Data.UMap (delView, ptrView, rewView, unify)
 import qualified Data.VMap as VMap
 import qualified Data.Vector.Generic as VG
 import qualified Data.Vector.Generic.Mutable as VGM
@@ -358,6 +358,7 @@ getSnapShotsNoSharing (Entity epochStateId EpochState {epochStateSnapShotsFee}) 
   pure $
     EpochBoundary.SnapShots
       { ssStakeMark = mark,
+        ssStakeMarkPoolDistr = EpochBoundary.calculatePoolDistr mark,
         ssStakeSet = set,
         ssStakeGo = go,
         ssFee = epochStateSnapShotsFee
@@ -438,6 +439,7 @@ getSnapShotsWithSharing (Entity epochStateId EpochState {epochStateSnapShotsFee}
   pure $
     EpochBoundary.SnapShots
       { ssStakeMark = mark,
+        ssStakeMarkPoolDistr = EpochBoundary.calculatePoolDistr mark,
         ssStakeSet = set,
         ssStakeGo = go,
         ssFee = epochStateSnapShotsFee

@@ -42,7 +42,7 @@ import Data.Text (Text)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import GHC.Records (HasField)
 import Lens.Micro
-import qualified PlutusLedgerApi.V1 as Plutus
+import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Alonzo.PlutusScripts (testingCostModelV1)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
@@ -223,10 +223,10 @@ exampleTx pf ptr =
       WitnessesI
         [ AddrWits' [makeWitnessVKey (hashAnnotated (validatingBody pf)) (someKeys pf)],
           ScriptWits' [always 3 pf],
-          DataWits' [Data (Plutus.I 123)],
+          DataWits' [Data (PV1.I 123)],
           RdmrWits $
             Redeemers $
-              Map.singleton ptr (Data (Plutus.I 42), ExUnits 5000 5000)
+              Map.singleton ptr (Data (PV1.I 42), ExUnits 5000 5000)
         ]
     ]
 
@@ -238,12 +238,12 @@ validatingBody pf =
       Collateral' [mkGenesisTxIn 11],
       Outputs' [newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 4995)]],
       Txfee (Coin 5),
-      WppHash (newScriptIntegrityHash pf (pparams pf) [PlutusV1] redeemers (mkTxDats (Data (Plutus.I 123))))
+      WppHash (newScriptIntegrityHash pf (pparams pf) [PlutusV1] redeemers (mkTxDats (Data (PV1.I 123))))
     ]
   where
     redeemers =
       Redeemers $
-        Map.singleton (RdmrPtr Tag.Spend 0) (Data (Plutus.I 42), ExUnits 5000 5000)
+        Map.singleton (RdmrPtr Tag.Spend 0) (Data (PV1.I 42), ExUnits 5000 5000)
 
 exampleEpochInfo :: Monad m => EpochInfo m
 exampleEpochInfo = fixedEpochInfo (EpochSize 100) (mkSlotLength 1)

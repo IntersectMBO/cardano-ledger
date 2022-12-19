@@ -14,23 +14,20 @@ module Cardano.Ledger.Conway
   )
 where
 
-import Cardano.Ledger.Alonzo (reapplyAlonzoTx)
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..))
 import Cardano.Ledger.Babbage.Tx (babbageTxScripts, getDatumBabbage)
+import Cardano.Ledger.Babbage.TxBody (allSizedOutputsTxBodyF, referenceInputsTxBodyL)
 import Cardano.Ledger.Babbage.TxInfo (babbageTxInfo)
 import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Genesis (extendPPWithGenesis)
-import Cardano.Ledger.Conway.PParams (BabbagePParamsHKD (..))
+import Cardano.Ledger.Conway.Rules ()
 import Cardano.Ledger.Conway.Translation ()
 import Cardano.Ledger.Conway.Tx ()
-import Cardano.Ledger.Conway.TxBody (BabbageEraTxBody (..))
 import Cardano.Ledger.Conway.TxOut (AlonzoEraTxOut (..))
 import Cardano.Ledger.Conway.UTxO ()
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
-import Cardano.Ledger.Hashes (EraIndependentTxBody)
-import Cardano.Ledger.Keys (DSignable, Hash)
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.UTxO (UTxO (..))
 import Data.Foldable (toList)
@@ -43,10 +40,9 @@ type Conway = ConwayEra StandardCrypto
 
 -- =====================================================
 
-instance (Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyTx (ConwayEra c) where
-  reapplyTx = reapplyAlonzoTx
+-- TODO instance (Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyTx (ConwayEra c) where
 
-instance (Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyBlock (ConwayEra c)
+-- TODO instance (Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyBlock (ConwayEra c)
 
 instance Crypto c => API.CanStartFromGenesis (ConwayEra c) where
   type AdditionalGenesisConfig (ConwayEra c) = AlonzoGenesis

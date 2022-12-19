@@ -43,11 +43,7 @@ import Cardano.Ledger.BaseTypes (BlocksMade (..))
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.EpochBoundary
-  ( SnapShot (..),
-    SnapShots (..),
-    Stake (..),
-  )
+import Cardano.Ledger.EpochBoundary (SnapShots, emptySnapShots)
 import Cardano.Ledger.Era (Era (..))
 import Cardano.Ledger.Keys
   ( GenDelegs (..),
@@ -91,6 +87,7 @@ import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate (..), RewardUpdate 
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..))
 import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import qualified Cardano.Ledger.UMapCompact as UM
 import Cardano.Ledger.UTxO (UTxO (..))
 import Control.Monad.Trans ()
 import Control.State.Transition (STS (State))
@@ -100,8 +97,6 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Maybe as Maybe
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Text (Text)
-import qualified Data.UMap as UMap
-import qualified Data.VMap as VMap
 import GHC.Natural (Natural)
 import Test.Cardano.Ledger.Generic.PrettyCore
   ( PrettyC (..),
@@ -190,15 +185,6 @@ blocksMadeZero = BlocksMade Map.empty
 poolDistrZero :: PoolDistr c
 poolDistrZero = PoolDistr Map.empty
 
-stakeZero :: Stake c
-stakeZero = Stake VMap.empty
-
-snapShotZero :: SnapShot c
-snapShotZero = SnapShot stakeZero VMap.empty VMap.empty
-
-snapShotsZero :: SnapShots c
-snapShotsZero = SnapShots snapShotZero snapShotZero snapShotZero (Coin 0)
-
 accountStateZero :: AccountState
 accountStateZero = AccountState (Coin 0) (Coin 0)
 
@@ -212,10 +198,23 @@ instantaneousRewardsZero :: InstantaneousRewards c
 instantaneousRewardsZero = InstantaneousRewards Map.empty Map.empty mempty mempty
 
 dStateZero :: DState c
-dStateZero = DState UMap.empty Map.empty genDelegsZero instantaneousRewardsZero Map.empty
+dStateZero =
+  DState
+    { dsUnified = UM.empty,
+      dsFutureGenDelegs = Map.empty,
+      dsGenDelegs = genDelegsZero,
+      dsIRewards = instantaneousRewardsZero,
+      dsDeposits = Map.empty
+    }
 
 pStateZero :: PState c
-pStateZero = PState Map.empty Map.empty Map.empty Map.empty
+pStateZero =
+  PState
+    { psStakePoolParams = Map.empty,
+      psFutureStakePoolParams = Map.empty,
+      psRetiring = Map.empty,
+      psDeposits = Map.empty
+    }
 
 dPStateZero :: DPState c
 dPStateZero = DPState dStateZero pStateZero
@@ -258,7 +257,7 @@ ledgerStateZero :: Reflect era => LedgerState era
 ledgerStateZero = LedgerState uTxOStateZero dPStateZero
 
 epochStateZero :: Reflect era => EpochState era
-epochStateZero = EpochState accountStateZero snapShotsZero ledgerStateZero pParamsZero pParamsZero nonMyopicZero
+epochStateZero = EpochState accountStateZero emptySnapShots ledgerStateZero pParamsZero pParamsZero nonMyopicZero
 
 newEpochStateZero :: forall era. Reflect era => NewEpochState era
 newEpochStateZero =
@@ -299,7 +298,7 @@ mNewEpochStateZero =
       -- below here NO EFFECT until we model EpochBoundary
       mFPoolParams = Map.empty,
       mRetiring = Map.empty,
-      mSnapshots = snapShotsZero,
+      mSnapshots = emptySnapShots,
       mEL = EpochNo 0,
       mBprev = Map.empty,
       mBcur = Map.empty,
@@ -320,7 +319,7 @@ class Extract t era where
 instance EraCrypto era ~ c => Extract (DState c) era where
   extract x =
     DState
-      (UMap.unify (mRewards x) (mDelegations x) Map.empty)
+      (UM.unify (mRewards x) (mDelegations x) Map.empty)
       Map.empty
       genDelegsZero
       instantaneousRewardsZero
@@ -369,9 +368,9 @@ abstract x =
   ModelNewEpochState
     { mPoolParams = (psStakePoolParams . dpsPState . lsDPState . esLState . nesEs) x,
       mPoolDeposits = (psDeposits . dpsPState . lsDPState . esLState . nesEs) x,
-      mRewards = (UMap.rewView . dsUnified . dpsDState . lsDPState . esLState . nesEs) x,
-      mDelegations = (UMap.delView . dsUnified . dpsDState . lsDPState . esLState . nesEs) x,
       mKeyDeposits = (dsDeposits . dpsDState . lsDPState . esLState . nesEs) x,
+      mRewards = (UM.rewView . dsUnified . dpsDState . lsDPState . esLState . nesEs) x,
+      mDelegations = (UM.delView . dsUnified . dpsDState . lsDPState . esLState . nesEs) x,
       mUTxO = (unUTxO . utxosUtxo . lsUTxOState . esLState . nesEs) x,
       mMutFee = Map.empty,
       mAccountState = (esAccountState . nesEs) x,

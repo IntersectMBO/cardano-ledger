@@ -74,7 +74,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import GHC.Stack
 import Lens.Micro
-import qualified PlutusLedgerApi.V1 as Plutus
+import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Examples.STSTestUtils
   ( AlonzoBased (..),
     freeCostModelV1,
@@ -168,15 +168,15 @@ simpleScriptAddr :: forall era. (Scriptic era) => Proof era -> Addr (EraCrypto e
 simpleScriptAddr pf = scriptAddr pf (simpleScript pf)
 
 datumExampleEven :: Era era => Data era
-datumExampleEven = Data (Plutus.I 2)
+datumExampleEven = Data (PV1.I 2)
 
 datumExampleOdd :: Era era => Data era
-datumExampleOdd = Data (Plutus.I 3)
+datumExampleOdd = Data (PV1.I 3)
 
 validatingRedeemers :: Era era => Redeemers era
 validatingRedeemers =
   Redeemers $
-    Map.singleton (RdmrPtr Tag.Spend 0) (Data (Plutus.I 42), ExUnits 5000 5000)
+    Map.singleton (RdmrPtr Tag.Spend 0) (Data (PV1.I 42), ExUnits 5000 5000)
 
 -- We intentionally use a ByteString with length greater than 64 to serve as
 -- as reminder that our protection against contiguous data over 64 Bytes on
@@ -185,7 +185,7 @@ sixtyFiveBytes :: BS.ByteString
 sixtyFiveBytes = BS.pack [1 .. 65]
 
 datumExampleSixtyFiveBytes :: Era era => Data era
-datumExampleSixtyFiveBytes = Data (Plutus.B sixtyFiveBytes)
+datumExampleSixtyFiveBytes = Data (PV1.B sixtyFiveBytes)
 
 txDats :: Era era => TxDats era
 txDats = mkTxDats datumExampleSixtyFiveBytes
@@ -504,7 +504,7 @@ refInputWithDataHashWithWit pf =
 certRedeemers :: Era era => Redeemers era
 certRedeemers =
   Redeemers $
-    Map.singleton (RdmrPtr Tag.Cert 0) (Data (Plutus.I 42), ExUnits 5000 5000)
+    Map.singleton (RdmrPtr Tag.Cert 0) (Data (PV1.I 42), ExUnits 5000 5000)
 
 refscriptForDelegCert :: forall era. (Scriptic era, EraTxBody era) => Proof era -> TestCaseData era
 refscriptForDelegCert pf =
@@ -889,7 +889,7 @@ simpleScriptOutWithRefScriptUTxOState pf =
 -- ========================================================================================
 
 largeDatum :: Era era => Data era
-largeDatum = Data (Plutus.B . BS.pack $ replicate 1500 0)
+largeDatum = Data (PV1.B . BS.pack $ replicate 1500 0)
 
 largeOutput' :: forall era. (EraTxOut era) => Proof era -> TxOut era
 largeOutput' pf =
@@ -1248,6 +1248,6 @@ babbageFeatures :: TestTree
 babbageFeatures =
   testGroup
     "Babbage Features"
-    [ genericBabbageFeatures (Babbage Mock),
-      genericBabbageFeatures (Conway Mock)
+    [ genericBabbageFeatures (Babbage Mock)
+    -- genericBabbageFeatures (Conway Mock) TODO
     ]

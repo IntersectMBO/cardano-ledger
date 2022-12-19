@@ -15,7 +15,7 @@ module Cardano.Ledger.Shelley.Delegation.Certificates
     DCert (..),
     DelegCert (..),
     PoolCert (..),
-    GenesisDelegCert (..),
+    ConstitutionalDelegCert (..),
     MIRCert (..),
     MIRPot (..),
     MIRTarget (..),
@@ -92,8 +92,8 @@ data PoolCert c
   deriving (Show, Generic, Eq, NFData)
 
 -- | Genesis key delegation certificate
-data GenesisDelegCert c
-  = GenesisDelegCert
+data ConstitutionalDelegCert c
+  = ConstitutionalDelegCert
       !(KeyHash 'Genesis c)
       !(KeyHash 'GenesisDelegate c)
       !(Hash c (VerKeyVRF c))
@@ -170,7 +170,7 @@ instance
 data DCert c
   = DCertDeleg !(DelegCert c)
   | DCertPool !(PoolCert c)
-  | DCertGenesis !(GenesisDelegCert c)
+  | DCertGenesis !(ConstitutionalDelegCert c)
   | DCertMir !(MIRCert c)
   deriving (Show, Generic, Eq, NFData)
 
@@ -178,7 +178,7 @@ instance NoThunks (DelegCert c)
 
 instance NoThunks (PoolCert c)
 
-instance NoThunks (GenesisDelegCert c)
+instance NoThunks (ConstitutionalDelegCert c)
 
 instance NoThunks (MIRCert c)
 
@@ -216,7 +216,7 @@ instance
         <> toCBOR vk
         <> toCBOR epoch
     -- DCertGenesis
-    DCertGenesis (GenesisDelegCert gk kh vrf) ->
+    DCertGenesis (ConstitutionalDelegCert gk kh vrf) ->
       encodeListLen 4
         <> toCBOR (5 :: Word8)
         <> toCBOR gk
@@ -255,7 +255,7 @@ instance
         a <- fromCBOR
         b <- fromCBOR
         c <- fromCBOR
-        pure (4, DCertGenesis $ GenesisDelegCert a b c)
+        pure (4, DCertGenesis $ ConstitutionalDelegCert a b c)
       6 -> do
         x <- fromCBOR
         pure (2, DCertMir x)
@@ -271,8 +271,8 @@ poolCWitness :: PoolCert c -> Credential 'StakePool c
 poolCWitness (RegPool pool) = KeyHashObj $ ppId pool
 poolCWitness (RetirePool k _) = KeyHashObj k
 
-genesisCWitness :: GenesisDelegCert c -> KeyHash 'Genesis c
-genesisCWitness (GenesisDelegCert gk _ _) = gk
+genesisCWitness :: ConstitutionalDelegCert c -> KeyHash 'Genesis c
+genesisCWitness (ConstitutionalDelegCert gk _ _) = gk
 
 -- | Check for 'RegKey' constructor
 isRegKey :: DCert c -> Bool
@@ -291,7 +291,7 @@ isDelegation _ = False
 
 -- | Check for 'GenesisDelegate' constructor
 isGenesisDelegation :: DCert c -> Bool
-isGenesisDelegation (DCertGenesis GenesisDelegCert {}) = True
+isGenesisDelegation (DCertGenesis ConstitutionalDelegCert {}) = True
 isGenesisDelegation _ = False
 
 -- | Check for 'RegPool' constructor

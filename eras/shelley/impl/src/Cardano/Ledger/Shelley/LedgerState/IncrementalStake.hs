@@ -10,7 +10,7 @@
 --    adding Inputs and deleting consumed Outputs. Done in the Utxo rules.
 -- 2) Finalizing and aggregating by stake credential to create a Snapshot.
 --    done in the Snap rules.
--- 3) Applying the RewardUpdate, to the Rewards component of the UnifiedMap.
+-- 3) Applying the RewardUpdate, to the Rewards component of the UMap.
 --    done in the NewEpoch rules.
 
 module Cardano.Ledger.Shelley.LedgerState.IncrementalStake
@@ -54,26 +54,27 @@ import Cardano.Ledger.Keys
   )
 import Cardano.Ledger.Shelley.LedgerState.Types
 import Cardano.Ledger.Shelley.RewardUpdate (RewardUpdate (..))
-import Cardano.Ledger.Shelley.Rewards (aggregateRewards, filterRewards)
+import Cardano.Ledger.Shelley.Rewards (aggregateCompactRewards, aggregateRewards, filterRewards)
 import Cardano.Ledger.Shelley.TxBody
   ( Ptr (..),
   )
+import Cardano.Ledger.UMapCompact
+  ( Trip,
+    UMap (..),
+    compactCoinOrError,
+    member,
+  )
+import qualified Cardano.Ledger.UMapCompact as UM
 import Cardano.Ledger.UTxO
   ( UTxO (..),
   )
-import Cardano.Ledger.UnifiedMap
-  ( Triple,
-    UMap (..),
-  )
 import Control.DeepSeq (NFData (rnf), deepseq)
-import Control.SetAlgebra (dom, eval, (∈))
 import Control.State.Transition (STS (State))
 import Data.Foldable (fold)
 import Data.Group (invert)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
-import qualified Data.UMap as UM
 import qualified Data.VMap as VMap
 import GHC.Records (HasField (..))
 import Lens.Micro
@@ -159,10 +160,10 @@ smartUTxOState utxo c1 c2 st =
 -- =======================================================================
 
 -- | This computes a Snapshot using IncrementalStake (which is an
---   aggregate of the current UTxO) and UnifiedMap (which tracks Coin,
+--   aggregate of the current UTxO) and UMap (which tracks Coin,
 --   Delegations, and Ptrs simultaneously).  Note that logically:
 --   1) IncrementalStake = (credStake, ptrStake)
---   2) UnifiedMap = (rewards, activeDelegs, ptrmap :: Map ptr cred)
+--   2) UMap = (rewards, activeDelegs, ptrmap :: Map ptr cred)
 --
 --   Using this scheme the logic can do 3 things in one go, without touching the UTxO.
 --   1) Resolve Pointers
@@ -195,8 +196,8 @@ incrementalStakeDistr incstake ds ps =
     delegs_
     (VMap.fromMap poolParams)
   where
-    UnifiedMap tripmap ptrmap = dsUnified ds
-    poolParams = psStakePoolParams ps
+    UMap tripmap ptrmap = dsUnified ds
+    PState {psStakePoolParams = poolParams} = ps
     delegs_ = UM.viewToVMap (delegations ds)
     -- A credential is active, only if it is being delegated
     step1 = resolveActiveIncrementalPtrs (`VMap.member` delegs_) ptrmap incstake
@@ -225,34 +226,28 @@ resolveActiveIncrementalPtrs isActive ptrMap_ (IStake credStake ptrStake) =
             else ans
 
 -- | Aggregate active stake by merging two maps. The triple map from the
---   UnifiedMap, and the IncrementalStake Only keep the active stake. Active can
+--   UMap, and the IncrementalStake Only keep the active stake. Active can
 --   be determined if there is a (SJust deleg) in the Triple.  This is step2 =
 --   aggregate (dom activeDelegs ◁ rewards) step1
-aggregateActiveStake :: Ord k => Map k (Triple c) -> Map k Coin -> Map k Coin
+aggregateActiveStake :: Ord k => Map k (Trip c) -> Map k Coin -> Map k Coin
 aggregateActiveStake =
   Map.mergeWithKey
     -- How to merge the ranges of the two maps where they have a common key. Below
     -- 'coin1' and 'coin2' have the same key, '_k', and the stake is active if the delegation is SJust
-    (\_k trip coin2 -> (<> coin2) <$> UM.tripRewardActiveDelegation trip)
+    (\_k trip coin2 -> (<> coin2) <$> (fromCompact <$> UM.tripRewardActiveDelegation trip))
     -- what to do when a key appears just in 'tripmap', we only add the coin if the key is active
-    (Map.mapMaybe UM.tripRewardActiveDelegation)
+    (Map.mapMaybe (\trip -> fromCompact <$> UM.tripRewardActiveDelegation trip))
     -- what to do when a key is only in 'incremental', keep everything, because at
     -- the call site of aggregateActiveStake, the arg 'incremental' is filtered by
     -- 'resolveActiveIncrementalPtrs' which guarantees that only active stake is included.
     id
-
-compactCoinOrError :: Coin -> CompactForm Coin
-compactCoinOrError c =
-  case toCompact c of
-    Nothing -> error $ "Invalid ADA value in staking: " <> show c
-    Just compactCoin -> compactCoin
 
 -- =====================================================
 -- Part 3 Apply a reward update, in NewEpoch rule
 -- =====================================================
 
 -- | Apply a RewardUpdate to the EpochState. Does several things
---   1) Adds reward coins to Rewards component of the UnifiedMap field of the DState,
+--   1) Adds reward coins to Rewards component of the UMap field of the DState,
 --      for actively delegated Stake
 --   2) Adds to the Treasury of the AccountState for non-actively delegated stake
 --   3) Adds fees to the UTxOState
@@ -283,7 +278,7 @@ applyRUpdFiltered
       !epochStateAns = EpochState as' ss ls' pr pp nm'
       dState = dpsDState delegState
       filteredRewards@FilteredRewards {frRegistered, frTotalUnregistered} = filterAllRewards (rs ru) es
-      registeredAggregated = aggregateRewards pp frRegistered
+      registeredAggregated = aggregateCompactRewards pp frRegistered
       as' =
         as
           { asTreasury = addDeltaCoin (asTreasury as) (deltaT ru) <> frTotalUnregistered,
@@ -335,7 +330,7 @@ filterAllRewards rs' (EpochState _as _ss ls pr _pp _nm) =
     dState = dpsDState delegState
     (regRU, unregRU) =
       Map.partitionWithKey
-        (\k _ -> eval (k ∈ dom (rewards dState))) -- The rewards view of the unified map of DState
+        (\k _ -> member k (rewards dState)) -- The rewards view of the unified map of DState
         rs'
     totalUnregistered = fold $ aggregateRewards pr unregRU
     unregistered = Map.keysSet unregRU

@@ -102,7 +102,8 @@ minimalPropertyTests ::
     TestingLedger era ledger,
     ChainProperty era,
     QC.HasTrace (CHAIN era) (GenEnv era),
-    State (EraRule "PPUP" era) ~ PPUPState era
+    State (EraRule "PPUP" era) ~ PPUPState era,
+    ProtVerAtMost era 8
   ) =>
   TestTree
 minimalPropertyTests =
@@ -141,7 +142,8 @@ propertyTests ::
     QC.BaseEnv ledger ~ Globals,
     BaseM ledger ~ ReaderT Globals Identity,
     State ledger ~ LedgerState era,
-    Signal ledger ~ Tx era
+    Signal ledger ~ Tx era,
+    ProtVerAtMost era 8
   ) =>
   TestTree
 propertyTests =

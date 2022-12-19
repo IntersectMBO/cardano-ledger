@@ -59,14 +59,14 @@ import Cardano.Ledger.Slot
     SlotNo (..),
   )
 import Cardano.Ledger.TreeDiff (ToExpr)
-import Cardano.Ledger.UnifiedMap (UMap (UnifiedMap), UnifiedMap, View (Delegations, Rewards), ViewMap)
+import Cardano.Ledger.UMapCompact (CompactForm, UMap (UMap), View (Delegations, Rewards))
+import qualified Cardano.Ledger.UMapCompact as UM
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans
 import Data.Default.Class (Default (def))
 import Data.Foldable (foldl')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import qualified Data.UMap as UM
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import Lens.Micro (_1, _2)
@@ -119,7 +119,7 @@ data DState c = DState
   { -- | Unified Reward Maps. This contains the reward map (which is the source
     -- of truth regarding the registered stake credentials, the delegation map,
     -- and the stake credential pointer map.
-    dsUnified :: !(UnifiedMap c),
+    dsUnified :: !(UMap c),
     -- | Future genesis key delegations
     dsFutureGenDelegs :: !(Map (FutureGenDeleg c) (GenDelegPair c)),
     -- | Genesis key delegations
@@ -261,17 +261,17 @@ instance Default (PState c) where
   def =
     PState Map.empty Map.empty Map.empty Map.empty
 
-rewards :: DState c -> ViewMap c (Credential 'Staking c) Coin
+rewards :: DState c -> View c (Credential 'Staking c) (CompactForm Coin)
 rewards = Rewards . dsUnified
 
 delegations ::
   DState c ->
-  ViewMap c (Credential 'Staking c) (KeyHash 'StakePool c)
+  View c (Credential 'Staking c) (KeyHash 'StakePool c)
 delegations = Delegations . dsUnified
 
 -- | get the actual ptrs map, we don't need a view
 ptrsMap :: DState c -> Map Ptr (Credential 'Staking c)
-ptrsMap (DState {dsUnified = UnifiedMap _ ptrmap}) = ptrmap
+ptrsMap (DState {dsUnified = UMap _ ptrmap}) = ptrmap
 
 -- ==========================================================
 -- Functions that handle Deposits for stake credentials and key hashes.

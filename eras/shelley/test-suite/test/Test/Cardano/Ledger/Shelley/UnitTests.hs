@@ -89,6 +89,7 @@ import Cardano.Ledger.Shelley.TxWits
   ( ShelleyTxWits,
     addrWits,
   )
+import qualified Cardano.Ledger.UMapCompact as UM
 import Cardano.Ledger.UTxO (makeWitnessVKey, makeWitnessesVKey)
 import Cardano.Ledger.Val ((<+>), (<->))
 import Cardano.Protocol.TPraos.BHeader (checkLeaderValue)
@@ -104,7 +105,6 @@ import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
-import qualified Data.UMap as UM
 import Data.Word (Word64)
 import GHC.Stack
 import Numeric.Natural (Natural)
@@ -394,7 +394,7 @@ addReward :: DPState C_Crypto -> Credential 'Staking C_Crypto -> Coin -> DPState
 addReward dp ra c = dp {dpsDState = ds {dsUnified = rewards'}}
   where
     ds = dpsDState dp
-    rewards' = UM.insert ra c (rewards ds)
+    rewards' = UM.insert ra (UM.compactCoinOrError c) (rewards ds)
 
 ledgerEnv :: LedgerEnv C
 ledgerEnv = LedgerEnv (SlotNo 0) minBound pp (AccountState (Coin 0) (Coin 0))

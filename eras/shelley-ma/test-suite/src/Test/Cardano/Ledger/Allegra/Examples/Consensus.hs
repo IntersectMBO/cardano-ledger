@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -36,7 +37,8 @@ exampleAllegraTxBody ::
   forall era.
   ( AllegraEraTxBody era,
     ShelleyBasedEra' era,
-    PParamsUpdate era ~ ShelleyPParamsUpdate era
+    PParamsUpdate era ~ ShelleyPParamsUpdate era,
+    ProtVerAtMost era 8
   ) =>
   Value era ->
   TxBody era

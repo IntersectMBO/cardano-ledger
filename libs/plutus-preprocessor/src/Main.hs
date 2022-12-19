@@ -19,7 +19,7 @@ import Data.ByteString.Short (ShortByteString, pack, toShort, unpack)
 import Flat (flat)
 import Language.Haskell.TH
 import Language.Haskell.TH.Ppr
-import qualified PlutusLedgerApi.V1 as P
+import qualified PlutusLedgerApi.V1 as PV1
 import PlutusScripts
   ( evenRedeemerDecl,
     evenRedeemerDecl2Args,
@@ -89,52 +89,52 @@ $redeemerIs10Decl2Args
 
 guessTheNumberBytes :: ShortByteString
 guessTheNumberBytes =
-  P.serialiseCompiledCode
+  PV1.serialiseCompiledCode
     $$(P.compile [||guessTheNumber'3||])
 
 guess2args :: ShortByteString
 guess2args =
-  P.serialiseCompiledCode
+  PV1.serialiseCompiledCode
     $$(P.compile [||guessTheNumber'2||])
 
 evendataBytes :: ShortByteString
 evendataBytes =
-  P.serialiseCompiledCode
+  PV1.serialiseCompiledCode
     $$(P.compile [||evendata'||])
 
 evenRedeemerBytes :: ShortByteString
 evenRedeemerBytes =
-  P.serialiseCompiledCode
+  PV1.serialiseCompiledCode
     $$(P.compile [||evenRedeemer'||])
 
 odddataBytes :: ShortByteString
 odddataBytes =
-  P.serialiseCompiledCode
+  PV1.serialiseCompiledCode
     $$(P.compile [||odddata'||])
 
 oddRedeemerBytes :: ShortByteString
 oddRedeemerBytes =
-  P.serialiseCompiledCode
+  PV1.serialiseCompiledCode
     $$(P.compile [||oddRedeemer'||])
 
 sumsTo10Bytes :: ShortByteString
 sumsTo10Bytes =
-  P.serialiseCompiledCode
+  PV1.serialiseCompiledCode
     $$(P.compile [||sumsTo10'||])
 
 oddRedeemerBytes2Arg :: ShortByteString
 oddRedeemerBytes2Arg =
-  P.serialiseCompiledCode
+  PV1.serialiseCompiledCode
     $$(P.compile [||oddRedeemer2'||])
 
 evenRedeemerBytes2Args :: ShortByteString
 evenRedeemerBytes2Args =
-  P.serialiseCompiledCode
+  PV1.serialiseCompiledCode
     $$(P.compile [||evenRedeemer2'||])
 
 redeemerIs10Bytes2Args :: ShortByteString
 redeemerIs10Bytes2Args =
-  P.serialiseCompiledCode
+  PV1.serialiseCompiledCode
     $$(P.compile [||redeemerIs102'||])
 
 -- ========================================================================

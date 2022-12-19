@@ -1082,12 +1082,14 @@ testTx = do
 
 applySTSByProof ::
   forall era.
-  (GoodCrypto (EraCrypto era)) =>
+  (Era era, GoodCrypto (EraCrypto era)) =>
   Proof era ->
   RuleContext 'Transition (EraRule "LEDGER" era) ->
   Either [PredicateFailure (EraRule "LEDGER" era)] (State (EraRule "LEDGER" era))
-applySTSByProof (Conway _) _trc = runShelleyBase $ applySTS @(EraRule "LEDGER" (ConwayEra (EraCrypto era))) _trc
-applySTSByProof (Babbage _) _trc = runShelleyBase $ applySTS @(EraRule "LEDGER" (BabbageEra (EraCrypto era))) _trc
+-- TODO re-enable this once we have added all the new rules to Conway
+-- applySTSByProof (Conway _) trc = runShelleyBase $ applySTS trc
+applySTSByProof (Conway _) _trc = undefined
+applySTSByProof (Babbage _) trc = runShelleyBase $ applySTS trc
 applySTSByProof (Alonzo _) trc = runShelleyBase $ applySTS trc
 applySTSByProof (Mary _) trc = runShelleyBase $ applySTS trc
 applySTSByProof (Allegra _) trc = runShelleyBase $ applySTS trc

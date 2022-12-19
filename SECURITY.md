@@ -1,1 +1,1 @@
-See the security file in the [https://github.com/input-output-hk/cardano-engineering-handbook/blob/main/SECURITY.md](Cardano engineering handbook).
+See the security file in the [Cardano engineering handbook](https://github.com/input-output-hk/cardano-engineering-handbook/blob/main/SECURITY.md).

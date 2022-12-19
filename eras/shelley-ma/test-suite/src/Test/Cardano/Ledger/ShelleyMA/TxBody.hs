@@ -58,7 +58,7 @@ fieldTests =
     "getField tests"
     [ testCase "inputs" (assertEqual "inputs" (txM ^. inputsTxBodyL) empty),
       testCase "outputs" (assertEqual "outputs" (txM ^. outputsTxBodyL) StrictSeq.empty),
-      testCase "certs" (assertEqual "certs" (txM ^. certsTxBodyL) StrictSeq.empty),
+      testCase "certs" (assertEqual "certs" (txM ^. certsTxBodyG) StrictSeq.empty),
       testCase "wdrls" (assertEqual "wdrls" (txM ^. wdrlsTxBodyL) (Wdrl Map.empty)),
       testCase "txfree" (assertEqual "txfree" (txM ^. feeTxBodyL) (Coin 6)),
       testCase "vldt" $

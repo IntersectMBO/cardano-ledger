@@ -21,7 +21,6 @@ module Cardano.Ledger.Address
     BootstrapAddress (..),
     bootstrapAddressAttrsSize,
     isBootstrapRedeemer,
-    isPtrAddr,
     getNetwork,
     RewardAcnt (..),
     serialiseRewardAcnt,
@@ -379,10 +378,6 @@ bootstrapAddressAttrsSize (BootstrapAddress addr) =
 isBootstrapRedeemer :: BootstrapAddress c -> Bool
 isBootstrapRedeemer (BootstrapAddress (Byron.Address _ _ Byron.ATRedeem)) = True
 isBootstrapRedeemer _ = False
-
-isPtrAddr :: Addr era -> Bool
-isPtrAddr (Addr _ _ (StakeRefPtr _)) = True
-isPtrAddr _ = False
 
 putPtr :: Ptr -> Put
 putPtr (Ptr slot (TxIx txIx) (CertIx certIx)) = do

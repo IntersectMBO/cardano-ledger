@@ -143,10 +143,10 @@ import Cardano.Ledger.Shelley.Tx
   )
 import Cardano.Ledger.Shelley.TxAuxData (Metadatum (..), ShelleyTxAuxData (..))
 import Cardano.Ledger.Shelley.TxBody
-  ( DCert (..),
+  ( ConstitutionalDelegCert (..),
+    DCert (..),
     DelegCert (..),
     Delegation (..),
-    GenesisDelegCert (..),
     MIRCert (..),
     MIRPot (..),
     MIRTarget (..),
@@ -172,8 +172,8 @@ import Cardano.Ledger.Slot
     SlotNo (..),
   )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import Cardano.Ledger.UMapCompact (Trip (Triple), UMap (..))
 import Cardano.Ledger.UTxO (UTxO (..))
-import Cardano.Ledger.UnifiedMap (Trip (Triple), Triple, UMap (..), UnifiedMap)
 import Cardano.Protocol.TPraos.BHeader
   ( BHBody (..),
     BHeader (BHeader),
@@ -417,19 +417,19 @@ class PrettyA t where
 -- =====================================================
 -- Data.UMap
 
-ppTrip :: Triple c -> PDoc
+ppTrip :: Trip c -> PDoc
 ppTrip (Triple mcoin set mpool) =
   ppSexp
     "Triple"
-    [ ppStrictMaybe ppCoin mcoin,
+    [ ppStrictMaybe ppCoin (fromCompact <$> mcoin),
       ppSet ppPtr set,
       ppStrictMaybe ppKeyHash mpool
     ]
 
-ppUnifiedMap :: UnifiedMap c -> PDoc
-ppUnifiedMap (UnifiedMap tripmap ptrmap) =
+ppUnifiedMap :: UMap c -> PDoc
+ppUnifiedMap (UMap tripmap ptrmap) =
   ppRecord
-    "UnifiedMap"
+    "UMap"
     [ ("combined", ppMap ppCredential ppTrip tripmap),
       ("ptrs", ppMap ppPtr ppCredential ptrmap)
     ]
@@ -884,7 +884,7 @@ ppSnapShot (SnapShot st deleg params) =
     ]
 
 ppSnapShots :: SnapShots c -> PDoc
-ppSnapShots (SnapShots mark set go fees) =
+ppSnapShots (SnapShots mark _markPD set go fees) =
   ppRecord
     "SnapShots"
     [ ("pstakeMark", ppSnapShot mark),
@@ -1088,8 +1088,8 @@ ppPoolCert :: PoolCert c -> PDoc
 ppPoolCert (RegPool x) = ppSexp "RegPool" [ppPoolParams x]
 ppPoolCert (RetirePool x y) = ppSexp "RetirePool" [ppKeyHash x, ppEpochNo y]
 
-ppGenesisDelegCert :: GenesisDelegCert c -> PDoc
-ppGenesisDelegCert (GenesisDelegCert a b1 c) = ppSexp "GenesisDelgCert" [ppKeyHash a, ppKeyHash b1, ppHash c]
+ppConstitutionalDelegCert :: ConstitutionalDelegCert c -> PDoc
+ppConstitutionalDelegCert (ConstitutionalDelegCert a b1 c) = ppSexp "GenesisDelgCert" [ppKeyHash a, ppKeyHash b1, ppHash c]
 
 ppMIRPot :: MIRPot -> PDoc
 ppMIRPot ReservesMIR = text "Reserves"
@@ -1105,7 +1105,7 @@ ppMIRCert (MIRCert pot vs) = ppSexp "MirCert" [ppMIRPot pot, ppMIRTarget vs]
 ppDCert :: DCert c -> PDoc
 ppDCert (DCertDeleg x) = ppSexp "DCertDeleg" [ppDelegCert x]
 ppDCert (DCertPool x) = ppSexp "DCertPool" [ppPoolCert x]
-ppDCert (DCertGenesis x) = ppSexp "DCertGenesis" [ppGenesisDelegCert x]
+ppDCert (DCertGenesis x) = ppSexp "DCertGenesis" [ppConstitutionalDelegCert x]
 ppDCert (DCertMir x) = ppSexp "DCertMir" [ppMIRCert x]
 
 ppTxBody ::
@@ -1165,8 +1165,8 @@ instance PrettyA (DelegCert c) where
 instance PrettyA (PoolCert c) where
   prettyA = ppPoolCert
 
-instance PrettyA (GenesisDelegCert c) where
-  prettyA = ppGenesisDelegCert
+instance PrettyA (ConstitutionalDelegCert c) where
+  prettyA = ppConstitutionalDelegCert
 
 instance PrettyA MIRPot where
   prettyA = ppMIRPot

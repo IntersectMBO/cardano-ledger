@@ -145,7 +145,7 @@ import Data.Ratio (denominator, numerator, (%))
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Word (Word64)
 import Numeric.Natural (Natural)
-import qualified PlutusLedgerApi.V1 as Plutus
+import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (ExMock, Mock)
 import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
@@ -201,10 +201,10 @@ data TwoPhase3ArgInfo era = TwoPhase3ArgInfo
     -- | Its ScriptHash
     getHash3 :: ScriptHash (EraCrypto era),
     -- | A Data that will make it succeed
-    getData3 :: Plutus.Data,
+    getData3 :: PV1.Data,
     -- | A Redeemer that will make it succeed
     getRedeemer3 ::
-      ( Plutus.Data, -- The redeeming data
+      ( PV1.Data, -- The redeeming data
         Natural, -- The ExUnits memory count
         Natural -- The ExUnits steps count
       ),
@@ -218,7 +218,7 @@ data TwoPhase2ArgInfo era = TwoPhase2ArgInfo
     getHash2 :: ScriptHash (EraCrypto era),
     -- | A Redeemer that will make it succeed
     getRedeemer2 ::
-      ( Plutus.Data, -- The redeeming data
+      ( PV1.Data, -- The redeeming data
         Natural, -- The ExUnits memory count
         Natural -- The ExUnits steps count
       ),
@@ -691,7 +691,7 @@ genesisCoins genesisTxId outs =
 -- ==================================================================
 -- Operations on GenEnv that deal with ScriptSpace
 
-hashData :: forall era. Era era => Plutus.Data -> DataHash (EraCrypto era)
+hashData :: forall era. Era era => PV1.Data -> DataHash (EraCrypto era)
 hashData x = unsafeMakeSafeHash (Hash.castHash (Hash.hashWith (toStrict . serialise) x))
 
 {-

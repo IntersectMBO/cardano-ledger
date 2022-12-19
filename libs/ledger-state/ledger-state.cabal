@@ -31,7 +31,6 @@ common project-config
 library
   import:             project-config
   build-depends:      bytestring
-                    , cardano-data
                     , cardano-crypto-class
                     , cardano-ledger-alonzo
                     , cardano-ledger-binary

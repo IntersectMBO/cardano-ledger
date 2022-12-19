@@ -565,7 +565,8 @@ instance
     HasField "_maxCollateralInputs" (PParams era) Natural,
     HasField "_collateralPercentage" (PParams era) Natural,
     HasField "_prices" (PParams era) Prices,
-    Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era))
+    Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era)),
+    ProtVerAtMost era 8
   ) =>
   STS (AlonzoUTXO era)
   where

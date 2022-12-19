@@ -25,11 +25,12 @@ import Cardano.Ledger.Babbage.Rules (BabbageUtxowPredFailure (..))
 import Cardano.Ledger.Babbage.TxBody (certs')
 import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals)
 import Cardano.Ledger.Core
-import Cardano.Ledger.EpochBoundary (SnapShots (..))
+import Cardano.Ledger.EpochBoundary (SnapShots (..), calculatePoolDistr)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.Pretty
   ( PDoc,
+    PrettyA,
     ppInt,
     ppList,
     ppMap,
@@ -220,7 +221,7 @@ makeEpochState gstate ledgerstate =
 
 snaps :: EraTxOut era => LedgerState era -> SnapShots (EraCrypto era)
 snaps (LedgerState UTxOState {utxosUtxo = u, utxosFees = f} (DPState dstate pstate)) =
-  SnapShots snap snap snap f
+  SnapShots snap (calculatePoolDistr snap) snap snap f
   where
     snap = stakeDistr u dstate pstate
 
@@ -237,7 +238,7 @@ pcSmallUTxO proof u txs = ppMap pcTxIn (shortTxOut proof) m
 
 raiseMockError ::
   forall era.
-  (Reflect era) =>
+  (Reflect era, PrettyA (PParamsUpdate era)) =>
   Word64 ->
   SlotNo ->
   EpochState era ->
@@ -340,7 +341,7 @@ badScripts proof xs = Fold.foldl' (\s mcf -> Set.union s (getw proof mcf)) Set.e
         ) = set
     getw _ _ = Set.empty
 
-showBlock :: forall era. Reflect era => MUtxo era -> [Tx era] -> PDoc
+showBlock :: forall era. (Reflect era, PrettyA (PParamsUpdate era)) => MUtxo era -> [Tx era] -> PDoc
 showBlock u txs = ppList pppair (zip txs [0 ..])
   where
     pppair (tx, n) =
@@ -361,7 +362,7 @@ shortTxOut proof out = case txoutFields proof out of
     hsep ["Out", parens $ hsep ["Addr", pcCredential pay], pcCoin (out ^. coinTxOutL)]
   _ -> error "Bootstrap Address in shortTxOut"
 
-smartTxBody :: Reflect era => Proof era -> MUtxo era -> TxBody era -> PDoc
+smartTxBody :: (Reflect era, PrettyA (PParamsUpdate era)) => Proof era -> MUtxo era -> TxBody era -> PDoc
 smartTxBody proof u txbody = ppRecord "TxBody" pairs
   where
     fields = abstractTxBody proof txbody
@@ -392,7 +393,8 @@ data Gen1 era = Gen1 (Vector (StrictSeq (Tx era), SlotNo)) (GenState era)
 
 instance
   ( STS (MOCKCHAIN era),
-    Reflect era
+    Reflect era,
+    PrettyA (PParamsUpdate era)
   ) =>
   HasTrace (MOCKCHAIN era) (Gen1 era)
   where
@@ -503,7 +505,9 @@ forEachEpochTrace ::
 forEachEpochTrace proof tracelen genSize f = do
   let newEpoch tr1 tr2 = nesEL (mcsNes tr1) /= nesEL (mcsNes tr2)
   trc <- case proof of
-    Conway _ -> genTrace proof tracelen genSize (initStableFields proof)
+    -- TODO re-enable this once we have added all the new rules to Conway
+    -- Conway _ -> genTrace proof tracelen genSize (initStableFields proof)
+    Conway _ -> undefined
     Babbage _ -> genTrace proof tracelen genSize (initStableFields proof)
     Alonzo _ -> genTrace proof tracelen genSize (initStableFields proof)
     Allegra _ -> genTrace proof tracelen genSize (initStableFields proof)

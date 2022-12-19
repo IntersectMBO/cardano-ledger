@@ -43,9 +43,9 @@ import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules.Deleg (DelegEnv (..), ShelleyDELEG, ShelleyDelegPredFailure)
 import Cardano.Ledger.Shelley.Rules.Pool (PoolEnv (..), ShelleyPOOL, ShelleyPoolPredFailure)
 import Cardano.Ledger.Shelley.TxBody
-  ( DCert (..),
+  ( ConstitutionalDelegCert (..),
+    DCert (..),
     DelegCert (..),
-    GenesisDelegCert (..),
     PoolCert (..),
     Ptr,
   )
@@ -175,7 +175,7 @@ delplTransition = do
       ps <-
         trans @(EraRule "POOL" era) $ TRC (PoolEnv slot pp, dpsPState d, c)
       pure $ d {dpsPState = ps}
-    DCertGenesis GenesisDelegCert {} -> do
+    DCertGenesis ConstitutionalDelegCert {} -> do
       ds <-
         trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, dpsDState d, c)
       pure $ d {dpsDState = ds}

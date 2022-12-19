@@ -23,6 +23,7 @@ import Cardano.Ledger.Shelley.LedgerState
 import qualified Cardano.Ledger.Shelley.PParams as Shelley (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Rules.Reports (synopsisCoinMap)
 import Cardano.Ledger.TreeDiff (diffExpr)
+import Cardano.Ledger.UMapCompact (View (Rewards), domain)
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val ((<+>))
 import Control.State.Transition (STS (..))
@@ -39,7 +40,6 @@ import Data.Default.Class (Default (def))
 import Data.List (foldl')
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import Data.UMap (View (Rewards), domain)
 import Test.Cardano.Ledger.Generic.Functions
   ( getBody,
     getCollateralInputs,
@@ -110,8 +110,10 @@ aggTests =
 -- We will add additional analogs (ledgerTraceFromBlock, poolTraceFromBlock) soon,
 -- and then redo the tests in that module in the Generic fashion
 forAllChainTrace :: (Testable prop, Reflect era) => Proof era -> Int -> (Trace (MOCKCHAIN era) -> prop) -> Property
-forAllChainTrace p@(Conway _) n propf =
-  property $ propf <$> genTrace p n (def {blocksizeMax = 4, slotDelta = (6, 12)}) (initStableFields p)
+-- TODO re-enable this once we have added all the new rules to Conway
+-- forAllChainTrace p@(Conway _) n propf =
+-- property $ propf <$> genTrace p n (def {blocksizeMax = 4, slotDelta = (6, 12)}) (initStableFields p)
+forAllChainTrace (Conway _) _ _ = undefined
 forAllChainTrace p@(Babbage _) n propf =
   property $ propf <$> genTrace p n (def {blocksizeMax = 4, slotDelta = (6, 12)}) (initStableFields p)
 forAllChainTrace p@(Alonzo _) n propf =

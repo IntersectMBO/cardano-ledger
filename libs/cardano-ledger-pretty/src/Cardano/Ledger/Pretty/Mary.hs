@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -89,14 +90,15 @@ instance Era era => PrettyA (AllegraTxAuxData era) where
 allegraFields ::
   ( AllegraEraTxBody era,
     PrettyA (Value era),
-    PrettyA (PParamsUpdate era)
+    PrettyA (PParamsUpdate era),
+    ProtVerAtMost era 8
   ) =>
   TxBody era ->
   [(Text, PDoc)]
 allegraFields txBody =
   [ ("inputs", ppSet ppTxIn (txBody ^. inputsTxBodyL)),
     ("outputs", ppStrictSeq ppTxOut (txBody ^. outputsTxBodyL)),
-    ("certificates", ppStrictSeq ppDCert (txBody ^. certsTxBodyL)),
+    ("certificates", ppStrictSeq ppDCert (txBody ^. certsTxBodyG)),
     ("withdrawals", ppWdrl (txBody ^. wdrlsTxBodyL)),
     ("txfee", ppCoin (txBody ^. feeTxBodyL)),
     ("vldt", ppValidityInterval (txBody ^. vldtTxBodyL)),
@@ -109,7 +111,8 @@ instance
     PrettyA (Value era),
     PrettyA (PParamsUpdate era),
     TxOut era ~ ShelleyTxOut era,
-    TxBody era ~ AllegraTxBody era
+    TxBody era ~ AllegraTxBody era,
+    ProtVerAtMost era 8
   ) =>
   PrettyA (AllegraTxBody era)
   where
@@ -120,7 +123,8 @@ instance
     PrettyA (Value era),
     PrettyA (PParamsUpdate era),
     TxOut era ~ ShelleyTxOut era,
-    TxBody era ~ MaryTxBody era
+    TxBody era ~ MaryTxBody era,
+    ProtVerAtMost era 8
   ) =>
   PrettyA (MaryTxBody era)
   where

@@ -41,7 +41,6 @@ module Cardano.Ledger.Binary.Encoding.Encoder
 
     -- *** Time
     encodeUTCTime,
-    encodeNominalDiffTime,
 
     -- *** Network
     encodeIPv4,
@@ -97,19 +96,17 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import Data.ByteString.Builder (Builder)
 import qualified Data.ByteString.Lazy as BSL
-import Data.Fixed (E12, resolution)
 import Data.Foldable as F (foldMap', foldl')
 import Data.IP (IPv4, IPv6, toHostAddress, toHostAddress6)
 import Data.Int (Int16, Int32, Int64, Int8)
 import qualified Data.Map.Strict as Map
 import Data.Monoid (Sum (..))
-import Data.Proxy (Proxy (Proxy))
 import Data.Ratio (Ratio, denominator, numerator)
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 import Data.Text (Text)
 import Data.Time.Calendar.OrdinalDate (toOrdinalDate)
-import Data.Time.Clock (NominalDiffTime, UTCTime (..), diffTimeToPicoseconds)
+import Data.Time.Clock (UTCTime (..), diffTimeToPicoseconds)
 import qualified Data.VMap as VMap
 import qualified Data.Vector.Generic as VG
 import Data.Word (Word16, Word32, Word64, Word8)
@@ -517,12 +514,6 @@ encodeUTCTime (UTCTime day timeOfDay) =
   where
     (year, dayOfYear) = toOrdinalDate day
     timeOfDayPico = diffTimeToPicoseconds timeOfDay
-
-encodeNominalDiffTime :: NominalDiffTime -> Encoding
-encodeNominalDiffTime = encodeInteger . (`div` 1_000_000) . toPicoseconds
-  where
-    toPicoseconds t =
-      numerator (toRational t * toRational (resolution $ Proxy @E12))
 
 --------------------------------------------------------------------------------
 -- Network

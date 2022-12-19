@@ -19,8 +19,7 @@ import Cardano.Ledger.DPState (DPState (..), DState (..), PState (..))
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert (..), isRegKey)
 import Cardano.Ledger.Shelley.TxBody
   ( PoolParams (..),
-    ShelleyEraTxBody,
-    certsTxBodyL,
+    ShelleyEraTxBody (..),
     pattern DeRegKey,
     pattern RegKey,
     pattern RegPool,
@@ -73,7 +72,7 @@ totalTxDeposits ::
   DPState (EraCrypto era) ->
   TxBody era ->
   Coin
-totalTxDeposits pp dpstate txb = totalCertsDeposits pp dpstate (toList $ txb ^. certsTxBodyL)
+totalTxDeposits pp dpstate txb = totalCertsDeposits pp dpstate (toList $ txb ^. certsTxBodyG)
 
 -- | Compute the key deregistration refunds in a transaction
 keyCertsRefunds ::
@@ -102,4 +101,4 @@ keyTxRefunds ::
   DPState (EraCrypto era) ->
   TxBody era ->
   Coin
-keyTxRefunds pp dpstate tx = keyCertsRefunds pp dpstate (toList $ tx ^. certsTxBodyL)
+keyTxRefunds pp dpstate tx = keyCertsRefunds pp dpstate (toList $ tx ^. certsTxBodyG)

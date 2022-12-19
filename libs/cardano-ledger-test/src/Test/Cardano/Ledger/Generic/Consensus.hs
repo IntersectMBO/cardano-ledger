@@ -86,7 +86,7 @@ import Data.Word (Word64, Word8)
 import GHC.Records (HasField)
 import GHC.Stack (HasCallStack)
 import Numeric.Natural (Natural)
-import qualified PlutusLedgerApi.V1 as Plutus
+import qualified PlutusLedgerApi.V1 as PV1
 import qualified Test.Cardano.Ledger.Allegra.Examples.Consensus as Old (ledgerExamplesAllegra)
 import Test.Cardano.Ledger.Alonzo.EraMapping ()
 import qualified Test.Cardano.Ledger.Alonzo.Examples.Consensus as Old (ledgerExamplesAlonzo)
@@ -859,7 +859,7 @@ testShelleyGenesis =
       sgSlotsPerKESPeriod = slotsPerKESPeriod testGlobals,
       sgMaxKESEvolutions = maxKESEvo testGlobals,
       -- Not important
-      sgSlotLength = secondsToNominalDiffTime 2,
+      sgSlotLength = secondsToNominalDiffTimeMicro 2,
       sgUpdateQuorum = quorum testGlobals,
       sgMaxLovelaceSupply = maxLovelaceSupply testGlobals,
       sgProtocolParams = emptyPParams,
@@ -1023,10 +1023,10 @@ ledgerExamplesAlonzo =
     exampleAlonzoGenesis
 
 datumExample :: Era era => Data era
-datumExample = Data (Plutus.I 191)
+datumExample = Data (PV1.I 191)
 
 redeemerExample :: Era era => Data era
-redeemerExample = Data (Plutus.I 919)
+redeemerExample = Data (PV1.I 919)
 
 exampleAlonzoGenesis :: AlonzoGenesis
 exampleAlonzoGenesis =

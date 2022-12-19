@@ -47,7 +47,7 @@ import Cardano.Ledger.Alonzo.TxBody
   )
 import Cardano.Ledger.Alonzo.TxInfo
   ( ExtendedUTxO (..),
-    PlutusDebug,
+    PlutusDebug (..),
     ScriptFailure (..),
     ScriptResult (..),
   )
@@ -114,7 +114,8 @@ instance
     HasField "_protocolVersion" (PParams era) ProtVer,
     HasField "_keyDeposit" (PParams era) Coin,
     HasField "_poolDeposit" (PParams era) Coin,
-    ToCBOR (PredicateFailure (EraRule "PPUP" era)) -- Serializing the PredicateFailure
+    ToCBOR (PredicateFailure (EraRule "PPUP" era)), -- Serializing the PredicateFailure,
+    ProtVerAtMost era 8
   ) =>
   STS (AlonzoUTXOS era)
   where
@@ -156,7 +157,8 @@ utxosTransition ::
     HasField "_costmdls" (PParams era) CostModels,
     HasField "_keyDeposit" (PParams era) Coin,
     HasField "_poolDeposit" (PParams era) Coin,
-    ToCBOR (PredicateFailure (EraRule "PPUP" era)) -- Serializing the PredicateFailure
+    ToCBOR (PredicateFailure (EraRule "PPUP" era)), -- Serializing the PredicateFailure
+    ProtVerAtMost era 8
   ) =>
   TransitionRule (AlonzoUTXOS era)
 utxosTransition =
@@ -218,7 +220,8 @@ scriptsValidateTransition ::
     Embed (EraRule "PPUP" era) (AlonzoUTXOS era),
     HasField "_keyDeposit" (PParams era) Coin,
     HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_costmdls" (PParams era) CostModels
+    HasField "_costmdls" (PParams era) CostModels,
+    ProtVerAtMost era 8
   ) =>
   TransitionRule (AlonzoUTXOS era)
 scriptsValidateTransition = do

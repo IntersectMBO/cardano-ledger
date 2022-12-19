@@ -14,9 +14,7 @@ import Cardano.Ledger.Alonzo (Alonzo)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
 import Cardano.Ledger.Alonzo.TxInfo
-  ( PlutusDebugInfo (..),
-    ScriptFailure (..),
-    ScriptResult (Fails, Passes),
+  ( ScriptResult (Fails, Passes),
     runPLCScript,
   )
 import Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
@@ -27,7 +25,7 @@ import PlutusLedgerApi.Test.Examples
   ( alwaysFailingNAryFunction,
     alwaysSucceedingNAryFunction,
   )
-import qualified PlutusLedgerApi.V1 as P
+import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Alonzo.PlutusScripts (testingCostModelV1)
 import qualified Test.Cardano.Ledger.Alonzo.PlutusScripts as Generated
   ( evenRedeemer2,
@@ -42,24 +40,20 @@ import qualified Test.Cardano.Ledger.Alonzo.PlutusScripts as Generated
 import Test.Tasty
 import Test.Tasty.HUnit (Assertion, assertBool, testCase)
 
-deriving instance Show PlutusDebugInfo
-
-deriving instance Show ScriptFailure
-
 -- =============================================
 
 -- Tests running Plutus scripts directely
 
 data ShouldSucceed = ShouldSucceed | ShouldFail
 
-directPlutusTest :: ShouldSucceed -> ShortByteString -> [P.Data] -> Assertion
+directPlutusTest :: ShouldSucceed -> ShortByteString -> [PV1.Data] -> Assertion
 directPlutusTest expectation script ds =
   case (expectation, evalWithTightBudget script ds) of
     (ShouldSucceed, Left e) ->
       assertBool ("This script should have succeeded, but: " <> show e) False
     (ShouldSucceed, Right _) ->
       assertBool "" True
-    (ShouldFail, Left ((P.CekError _))) ->
+    (ShouldFail, Left ((PV1.CekError _))) ->
       assertBool "" True -- TODO rule out cost model failure
     (ShouldFail, Left e) ->
       assertBool ("Not the script failure we expected: " <> show e) False
@@ -67,11 +61,11 @@ directPlutusTest expectation script ds =
       assertBool "This script should have failed" False
   where
     -- Evaluate a script with sufficient budget to run it.
-    pv = P.ProtocolVersion 6 0
-    evalWithTightBudget :: ShortByteString -> [P.Data] -> Either P.EvaluationError P.ExBudget
+    pv = PV1.ProtocolVersion 6 0
+    evalWithTightBudget :: ShortByteString -> [PV1.Data] -> Either PV1.EvaluationError PV1.ExBudget
     evalWithTightBudget scr datums = do
-      budget <- snd $ P.evaluateScriptCounting pv P.Quiet evalCtxForTesting scr datums
-      snd $ P.evaluateScriptRestricting pv P.Verbose evalCtxForTesting budget scr datums
+      budget <- snd $ PV1.evaluateScriptCounting pv PV1.Quiet evalCtxForTesting scr datums
+      snd $ PV1.evaluateScriptRestricting pv PV1.Verbose evalCtxForTesting budget scr datums
 
 getRawPlutusScript :: String -> AlonzoScript () -> ShortByteString
 getRawPlutusScript name =
@@ -123,62 +117,62 @@ plutusScriptExamples =
         directPlutusTest
           ShouldSucceed
           guessTheNumber2
-          [P.I 3, P.I 3],
+          [PV1.I 3, PV1.I 3],
       testCase "guess the number, incorrect" $
         directPlutusTest
           ShouldFail
           guessTheNumber2
-          [P.I 3, P.I 4],
+          [PV1.I 3, PV1.I 4],
       testCase "guess the number with 3 args, correct" $
         directPlutusTest
           ShouldSucceed
           guessTheNumber3
-          [P.I 3, P.I 3, P.I 9],
+          [PV1.I 3, PV1.I 3, PV1.I 9],
       testCase "evendata with 3 args, correct" $
         directPlutusTest
           ShouldSucceed
           even3
-          [P.I 4, P.I 3, P.I 9],
+          [PV1.I 4, PV1.I 3, PV1.I 9],
       testCase "evendata with 3 args, incorrect" $
         directPlutusTest
           ShouldFail
           even3
-          [P.I 3, P.I 3, P.I 9],
+          [PV1.I 3, PV1.I 3, PV1.I 9],
       testCase "odd data with 3 args, correct" $
         directPlutusTest
           ShouldSucceed
           odd3
-          [P.I 3, P.I 3, P.I 9],
+          [PV1.I 3, PV1.I 3, PV1.I 9],
       testCase "odd data with 3 args, incorrect" $
         directPlutusTest
           ShouldFail
           odd3
-          [P.I 4, P.I 3, P.I 9],
+          [PV1.I 4, PV1.I 3, PV1.I 9],
       testCase "sumsTo10 with 3 args, correct" $
         directPlutusTest
           ShouldSucceed
           sum103
-          [P.I 3, P.I 7, P.I 9],
+          [PV1.I 3, PV1.I 7, PV1.I 9],
       testCase "sumsTo10 with 3 args, incorrect" $
         directPlutusTest
           ShouldFail
           sum103
-          [P.I 4, P.I 3, P.I 9],
+          [PV1.I 4, PV1.I 3, PV1.I 9],
       testCase "even redeemer with 2 args, correct" $
         directPlutusTest
           ShouldSucceed
           evenRed2
-          [P.I 12, P.I 9],
+          [PV1.I 12, PV1.I 9],
       testCase "odd redeemer with 2 args, correct" $
         directPlutusTest
           ShouldSucceed
           oddredeemer2
-          [P.I 11, P.I 9],
+          [PV1.I 11, PV1.I 9],
       testCase "redeemer is 10 with 2 args, correct" $
         directPlutusTest
           ShouldSucceed
           redeemer102
-          [P.I 10, P.I 10],
+          [PV1.I 10, PV1.I 10],
       explainTestTree
     ]
 
@@ -187,7 +181,7 @@ plutusScriptExamples =
 alonzo :: Proxy Alonzo
 alonzo = Proxy
 
-explainTest :: AlonzoScript Alonzo -> ShouldSucceed -> [P.Data] -> Assertion
+explainTest :: AlonzoScript Alonzo -> ShouldSucceed -> [PV1.Data] -> Assertion
 explainTest script@(PlutusScript _ bytes) mode ds =
   case ( mode,
          runPLCScript
@@ -211,18 +205,18 @@ explainTestTree =
     "explain failures tests"
     [ testCase
         "even data with 3 args, fails as expected"
-        (explainTest Generated.evendata3 ShouldFail [P.I 3, P.I 3, P.I 5]),
+        (explainTest Generated.evendata3 ShouldFail [PV1.I 3, PV1.I 3, PV1.I 5]),
       testCase
         "even data with 3 args, succeeds as expected"
-        (explainTest Generated.evendata3 ShouldSucceed [P.I 4, P.I 3, P.I 5]),
+        (explainTest Generated.evendata3 ShouldSucceed [PV1.I 4, PV1.I 3, PV1.I 5]),
       testCase
         "guess the number with 3 args, succeeds as expected"
         ( explainTest
             Generated.guessTheNumber3
             ShouldSucceed
-            [P.I 4, P.I 4, P.I 5]
+            [PV1.I 4, PV1.I 4, PV1.I 5]
         ),
       testCase
         "guess the number with 3 args, fails as expected"
-        (explainTest Generated.guessTheNumber3 ShouldFail [P.I 4, P.I 5, P.I 5])
+        (explainTest Generated.guessTheNumber3 ShouldFail [PV1.I 4, PV1.I 5, PV1.I 5])
     ]

@@ -81,6 +81,7 @@ import Cardano.Ledger.Shelley.TxBody
     getRwdCred,
   )
 import Cardano.Ledger.Slot (EpochSize (..))
+import qualified Cardano.Ledger.UMapCompact as UM
 import Cardano.Ledger.Val ((<->))
 import Data.Group (invert)
 import Data.Map.Strict (Map)
@@ -88,7 +89,6 @@ import qualified Data.Map.Strict as Map
 import Data.Pulse (Pulsable (..), completeM)
 import Data.Ratio ((%))
 import qualified Data.Set as Set
-import qualified Data.UMap as UM
 import qualified Data.VMap as VMap
 import Data.Word (Word64)
 import GHC.Records (HasField (..))

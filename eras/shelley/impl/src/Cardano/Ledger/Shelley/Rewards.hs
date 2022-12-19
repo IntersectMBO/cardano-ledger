@@ -20,6 +20,8 @@ module Cardano.Ledger.Shelley.Rewards
     aggregateRewards,
     filterRewards,
     sumRewards,
+    aggregateCompactRewards,
+    sumCompactRewards,
     rewardOnePoolMember,
     mkPoolRewardInfo,
   )
@@ -39,6 +41,7 @@ import Cardano.Ledger.Binary
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin
   ( Coin (..),
+    CompactForm,
     coinToRational,
     rationalToCoinViaFloor,
   )
@@ -51,6 +54,7 @@ import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.Delegation.PoolParams (poolSpec)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..))
+import Cardano.Ledger.UMapCompact (compactCoinOrError)
 import Cardano.Ledger.Val ((<->))
 import Control.DeepSeq (NFData)
 import Control.Monad (guard)
@@ -131,7 +135,8 @@ sumRewards protocolVersion rs = fold $ aggregateRewards protocolVersion rs
 
 -- | Filter the reward payments to those that will actually be delivered. This
 -- function exists since in Shelley, a stake credential earning rewards from
--- multiple sources would only receive one reward.
+-- multiple sources would only receive one reward. So some of the coins are ignored,
+-- because of this backward compatibility issue in early protocolVersions.
 filterRewards ::
   forall c pp.
   (HasField "_protocolVersion" pp ProtVer) =>
@@ -148,7 +153,7 @@ filterRewards pp rewards =
        in (Map.map (Set.singleton . fst) mp, Map.filter (not . Set.null) $ Map.map snd mp)
 
 -- | for each (Set (Reward c)) entry in the map, sum up the coin. In the ShelleyEra
---   some of the coins are ignored (because of backward compatibility)
+--   some of the coins are ignored (because of backward compatibility) see 'filterRewards'
 aggregateRewards ::
   forall c pp.
   (HasField "_protocolVersion" pp ProtVer) =>
@@ -157,6 +162,37 @@ aggregateRewards ::
   Map (Credential 'Staking c) Coin
 aggregateRewards pp rewards =
   Map.map (foldMap' rewardAmount) $ fst $ filterRewards pp rewards
+
+-- ================================================
+-- Compact Coin versions of sumRewards and aggregateCompactRewards
+
+sumCompactRewards ::
+  forall c pp.
+  (HasField "_protocolVersion" pp ProtVer) =>
+  pp ->
+  Map (Credential 'Staking c) (Set (Reward c)) ->
+  CompactForm Coin
+sumCompactRewards protocolVersion rs = fold $ aggregateCompactRewards protocolVersion rs
+
+-- | for each (Set (Reward c)) entry in the map, sum up the coin. In the ShelleyEra
+--   some of the coins are ignored (because of backward compatibility) see 'filterRewards'
+aggregateCompactRewards ::
+  forall c pp.
+  (HasField "_protocolVersion" pp ProtVer) =>
+  pp ->
+  Map (Credential 'Staking c) (Set (Reward c)) ->
+  Map (Credential 'Staking c) (CompactForm Coin)
+aggregateCompactRewards pp rewards =
+  Map.map (foldMap' (compactCoinOrError . rewardAmount)) $ fst $ filterRewards pp rewards
+
+-- We argue that the call to 'compactCoinOrError' will never return error.
+-- The Reward is stored in the LedgerState, and we know the sum of all Ada in the LedgerState cannot
+-- exceed (maxBound :: Word64), So if the sum cannot exceed it, neither can any component of the sum.
+-- We need a (CompactForm Coin) because the reward map is stored in the UMap, which stores rewards
+-- as (CompactForm Coin). And aggregateRewards is used to update that part of the UMap.
+-- See  Cardano.Ledger.Shelley.LedgerState.IncrementalStake(applyRUpdFiltered)
+
+-- =====================================================
 
 data LeaderOnlyReward c = LeaderOnlyReward
   { lRewardPool :: !(KeyHash 'StakePool c),

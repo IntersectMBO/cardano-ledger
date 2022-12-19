@@ -52,10 +52,10 @@ import Cardano.Ledger.Shelley.LedgerState
     rewards,
   )
 import Cardano.Ledger.Shelley.TxBody
-  ( DCert (..),
+  ( ConstitutionalDelegCert (..),
+    DCert (..),
     DelegCert (..),
     Delegation (..),
-    GenesisDelegCert (..),
     MIRCert (..),
     MIRPot (..),
     MIRTarget (..),
@@ -70,8 +70,10 @@ import Cardano.Ledger.Slot
     (*-),
     (+*),
   )
+import Cardano.Ledger.UMapCompact (View (..), fromCompact)
+import qualified Cardano.Ledger.UMapCompact as UM
 import Control.Monad.Trans.Reader (asks)
-import Control.SetAlgebra (dom, eval, range, singleton, (∈), (∉), (∪), (⨃))
+import Control.SetAlgebra (eval, range, singleton, (∉), (∪), (⨃))
 import Control.State.Transition
 import Data.Foldable (fold)
 import Data.Group (Group (..))
@@ -79,8 +81,6 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (isJust)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
-import Data.UMap (View (..))
-import qualified Data.UMap as UM
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import GHC.Records (HasField)
@@ -274,16 +274,18 @@ delegationTransition = do
   TRC (DelegEnv slot ptr acnt pp, ds, c) <- judgmentContext
   case c of
     DCertDeleg (RegKey hk) -> do
-      eval (hk ∉ dom (rewards ds)) ?! StakeKeyAlreadyRegisteredDELEG hk
+      -- (hk ∉ dom (rewards ds))
+      UM.notMember hk (rewards ds) ?! StakeKeyAlreadyRegisteredDELEG hk
       let u1 = dsUnified ds
           u2 = Rewards u1 UM.∪ (hk, mempty)
           u3 = Ptrs u2 UM.∪ (ptr, hk)
       pure (payKeyDeposit hk pp (ds {dsUnified = u3}))
     DCertDeleg (DeRegKey hk) -> do
       -- note that pattern match is used instead of cwitness, as in the spec
-      eval (hk ∈ dom (rewards ds)) ?! StakeKeyNotRegisteredDELEG hk
+      -- (hk ∈ dom (rewards ds))
+      UM.member hk (rewards ds) ?! StakeKeyNotRegisteredDELEG hk
       let rewardCoin = UM.lookup hk (rewards ds)
-      rewardCoin == Just mempty ?! StakeKeyNonZeroAccountBalanceDELEG rewardCoin
+      rewardCoin == Just mempty ?! StakeKeyNonZeroAccountBalanceDELEG (fromCompact <$> rewardCoin)
 
       let u0 = dsUnified ds
           u1 = Set.singleton hk UM.⋪ Rewards u0
@@ -293,10 +295,11 @@ delegationTransition = do
       pure u4
     DCertDeleg (Delegate (Delegation hk dpool)) -> do
       -- note that pattern match is used instead of cwitness and dpool, as in the spec
-      eval (hk ∈ dom (rewards ds)) ?! StakeDelegationImpossibleDELEG hk
+      -- (hk ∈ dom (rewards ds))
+      UM.member hk (rewards ds) ?! StakeDelegationImpossibleDELEG hk
 
       pure (ds {dsUnified = delegations ds UM.⨃ Map.singleton hk dpool})
-    DCertGenesis (GenesisDelegCert gkh vkh vrf) -> do
+    DCertGenesis (ConstitutionalDelegCert gkh vkh vrf) -> do
       sp <- liftSTS $ asks stabilityWindow
       -- note that pattern match is used instead of genesisDeleg, as in the spec
       let s' = slot +* Duration sp

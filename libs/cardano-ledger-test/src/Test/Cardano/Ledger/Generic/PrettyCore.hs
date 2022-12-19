@@ -33,6 +33,7 @@ import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (BlocksMade (..), Network (..), TxIx (..), txIxToInt)
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
@@ -50,6 +51,7 @@ import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.Pretty
 import Cardano.Ledger.Pretty.Alonzo
 import qualified Cardano.Ledger.Pretty.Babbage as Babbage
+import Cardano.Ledger.Pretty.Conway (ppConwayTxBody)
 import Cardano.Ledger.Pretty.Mary
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.LedgerState
@@ -89,8 +91,8 @@ import Cardano.Ledger.Shelley.TxBody
     WitVKey (..),
   )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import qualified Cardano.Ledger.UMapCompact as UM (UMap, View (..), delView, rewView, size)
 import Cardano.Ledger.UTxO (UTxO (..))
-import Cardano.Ledger.UnifiedMap (UnifiedMap)
 import qualified Cardano.Ledger.Val as Val
 import Control.State.Transition.Extended (STS (..))
 import Data.Foldable (toList)
@@ -100,8 +102,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text, pack)
 import Data.Typeable (Typeable)
-import qualified Data.UMap as UMap (View (..), delView, rewView, size)
-import qualified PlutusCore.Data as Plutus (Data (..))
+import qualified PlutusLedgerApi.V1 as PV1 (Data (..))
 import Prettyprinter (hsep, parens, viaShow, vsep)
 import Test.Cardano.Ledger.Generic.Fields
   ( TxBodyField (..),
@@ -166,7 +167,7 @@ instance CC.Crypto c => PrettyCore (BabbageEra c) where
 instance CC.Crypto c => PrettyCore (ConwayEra c) where
   prettyTx = Cardano.Ledger.Pretty.Alonzo.ppTx
   prettyScript = ppScript
-  prettyTxBody = Babbage.ppTxBody
+  prettyTxBody = ppConwayTxBody
   prettyWitnesses = ppTxWitness
   prettyValue = ppValue
   prettyTxOut = Babbage.ppTxOut
@@ -910,12 +911,12 @@ datumSummary (Datum b) = dataSummary (binaryDataToData b)
 dataSummary :: Era era => Cardano.Ledger.Alonzo.Data.Data era -> PDoc
 dataSummary (Data x) = plutusDataSummary x
 
-plutusDataSummary :: Plutus.Data -> PDoc
-plutusDataSummary (Plutus.Constr n ds) = (ppString (show n)) <> ppList plutusDataSummary ds
-plutusDataSummary (Plutus.Map ds) = ppString "Map" <> ppList (ppPair plutusDataSummary plutusDataSummary) ds
-plutusDataSummary (Plutus.List xs) = ppList plutusDataSummary xs
-plutusDataSummary (Plutus.I n) = ppInteger n
-plutusDataSummary (Plutus.B bs) = trim (ppLong bs)
+plutusDataSummary :: PV1.Data -> PDoc
+plutusDataSummary (PV1.Constr n ds) = (ppString (show n)) <> ppList plutusDataSummary ds
+plutusDataSummary (PV1.Map ds) = ppString "Map" <> ppList (ppPair plutusDataSummary plutusDataSummary) ds
+plutusDataSummary (PV1.List xs) = ppList plutusDataSummary xs
+plutusDataSummary (PV1.I n) = ppInteger n
+plutusDataSummary (PV1.B bs) = trim (ppLong bs)
 
 multiAssetSummary :: MultiAsset c -> PDoc
 multiAssetSummary (MultiAsset m) = ppString ("num tokens = " ++ show (Map.size m))
@@ -1025,13 +1026,13 @@ instantSummary (InstantaneousRewards reserves treasury dreserves dtreasury) =
       ("Reserves to treasury", ppDeltaCoin dtreasury)
     ]
 
-uMapSummary :: UnifiedMap c -> PDoc
+uMapSummary :: UM.UMap c -> PDoc
 uMapSummary umap =
   ppRecord
     "UMap"
-    [ ("Reward Map", ppInt (UMap.size (UMap.Rewards umap))),
-      ("Delegations Map", ppInt (UMap.size (UMap.Delegations umap))),
-      ("Ptrs Map", ppInt (UMap.size (UMap.Ptrs umap)))
+    [ ("Reward Map", ppInt (UM.size (UM.Rewards umap))),
+      ("Delegations Map", ppInt (UM.size (UM.Delegations umap))),
+      ("Ptrs Map", ppInt (UM.size (UM.Ptrs umap)))
     ]
 
 pStateSummary :: PState c -> PDoc
@@ -1126,15 +1127,15 @@ pcDatum (Datum b) = pcData (binaryDataToData b)
 instance Era era => PrettyC (Datum era) era where prettyC _ = pcDatum
 
 pcData :: forall era. Era era => Data era -> PDoc
-pcData d@(Data (Plutus.Constr n _)) =
+pcData d@(Data (PV1.Constr n _)) =
   ppSexp (pack ("Constr" ++ show n)) [ppString "Hash", trim $ ppSafeHash (hashData d)]
-pcData d@(Data (Plutus.Map _)) =
+pcData d@(Data (PV1.Map _)) =
   ppSexp "Map" [ppString "Hash", trim $ ppSafeHash (hashData d)]
-pcData d@(Data (Plutus.List _)) =
+pcData d@(Data (PV1.List _)) =
   ppSexp "List" [ppString "Hash", trim $ ppSafeHash (hashData d)]
-pcData d@(Data (Plutus.I n)) =
+pcData d@(Data (PV1.I n)) =
   ppSexp "I" [ppInteger n, ppString "Hash", trim $ ppSafeHash (hashData d)]
-pcData d@(Data (Plutus.B bytes)) =
+pcData d@(Data (PV1.B bytes)) =
   ppSexp "B" [trim (viaShow bytes), ppString "Hash", trim $ ppSafeHash (hashData d)]
 
 instance Era era => PrettyC (Data era) era where prettyC _ = pcData
@@ -1237,6 +1238,11 @@ pcDCert (DCertPool x) = pcPoolCert x
 pcDCert (DCertGenesis _) = ppString "GenesisCert"
 pcDCert (DCertMir _) = ppString "MirCert"
 
+pcConwayDCert :: ConwayDCert c -> PDoc
+pcConwayDCert (ConwayDCertDeleg dc) = pcDelegCert dc
+pcConwayDCert (ConwayDCertPool poolc) = pcPoolCert poolc
+pcConwayDCert (ConwayDCertConstitutional _) = ppString "GenesisCert"
+
 instance c ~ EraCrypto era => PrettyC (DCert c) era where prettyC _ = pcDCert
 
 pcRewardAcnt :: RewardAcnt c -> PDoc
@@ -1248,7 +1254,7 @@ pcExUnits :: ExUnits -> PDoc
 pcExUnits (ExUnits mem step) =
   ppSexp "ExUnits" [ppNatural mem, ppNatural step]
 
-pcTxBodyField :: Reflect era => Proof era -> TxBodyField era -> [(Text, PDoc)]
+pcTxBodyField :: (Reflect era, PrettyA (PParamsUpdate era)) => Proof era -> TxBodyField era -> [(Text, PDoc)]
 pcTxBodyField proof x = case x of
   Inputs s -> [("spend inputs", ppSet pcTxIn s)]
   Collateral s -> [("coll inputs", ppSet pcTxIn s)]
@@ -1273,8 +1279,11 @@ pcTxBodyField proof x = case x of
   AdHash (SJust (AuxiliaryDataHash h)) -> [("aux data hash", trim (ppSafeHash h))]
   Txnetworkid SNothing -> []
   Txnetworkid (SJust nid) -> [("network id", pcNetwork nid)]
+  GovernanceActions ga -> [("governance actions", ppStrictSeq prettyA ga)]
+  Votes vs -> [("votes", ppStrictSeq prettyA vs)]
+  ConwayCerts certs -> [("conway certs", ppStrictSeq prettyA certs)]
 
-pcTxField :: forall era. Reflect era => Proof era -> TxField era -> [(Text, PDoc)]
+pcTxField :: forall era. (Reflect era, PrettyA (PParamsUpdate era)) => Proof era -> TxField era -> [(Text, PDoc)]
 pcTxField proof x = case x of
   Body b -> [("txbody hash", ppSafeHash (hashAnnotated b)), ("body", pcTxBody proof b)]
   BodyI xs -> [("body", ppRecord "TxBody" (concat (map (pcTxBodyField proof) xs)))]
@@ -1309,13 +1318,13 @@ pcWitnesses proof wits = ppRecord "Witnesses" pairs
     fields = abstractWitnesses proof wits
     pairs = concat (map (pcWitnessesField proof) fields)
 
-pcTx :: Reflect era => Proof era -> Tx era -> PDoc
+pcTx :: (Reflect era, PrettyA (PParamsUpdate era)) => Proof era -> Tx era -> PDoc
 pcTx proof tx = ppRecord "Tx" pairs
   where
     fields = abstractTx proof tx
     pairs = concat (map (pcTxField proof) fields)
 
-pcTxBody :: Reflect era => Proof era -> TxBody era -> PDoc
+pcTxBody :: (Reflect era, PrettyA (PParamsUpdate era)) => Proof era -> TxBody era -> PDoc
 pcTxBody proof txbody = ppRecord "TxBody" pairs
   where
     fields = abstractTxBody proof txbody
@@ -1338,8 +1347,8 @@ pcDPState :: p -> DPState era -> PDoc
 pcDPState _proof (DPState (DState {dsUnified = un}) (PState {psStakePoolParams = pool})) =
   ppRecord
     "DPState summary"
-    [ ("rewards", ppMap pcCredential pcCoin (UMap.rewView un)),
-      ("delegations", ppMap pcCredential keyHashSummary (UMap.delView un)),
+    [ ("rewards", ppMap pcCredential pcCoin (UM.rewView un)),
+      ("delegations", ppMap pcCredential keyHashSummary (UM.delView un)),
       ("pool params", ppMap pcKeyHash pcPoolParams pool)
     ]
 

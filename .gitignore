@@ -58,3 +58,6 @@ specs/**/.ghc.environment.x86_64-linux-*
 
 ## python for generating the doc site's transitive dependencies
 .venv
+
+## Ignore vscode files
+.vscode/

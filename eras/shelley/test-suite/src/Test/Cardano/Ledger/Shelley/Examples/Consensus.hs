@@ -290,7 +290,7 @@ testShelleyGenesis =
       sgSlotsPerKESPeriod = slotsPerKESPeriod testGlobals,
       sgMaxKESEvolutions = maxKESEvo testGlobals,
       -- Not important
-      sgSlotLength = secondsToNominalDiffTime 2,
+      sgSlotLength = secondsToNominalDiffTimeMicro 2,
       sgUpdateQuorum = quorum testGlobals,
       sgMaxLovelaceSupply = maxLovelaceSupply testGlobals,
       sgProtocolParams = emptyPParams,

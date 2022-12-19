@@ -1,5 +1,6 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -16,8 +17,6 @@
 
 module Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators
   ( genCoherentBlock,
-    genNonPtrAddress,
-    genPtrAddress,
     MockGen,
     maxTxWits,
   )
@@ -59,7 +58,7 @@ import Cardano.Ledger.Shelley.Rewards
   )
 import qualified Cardano.Ledger.Shelley.Rules as STS
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..))
-import Cardano.Ledger.UnifiedMap (Trip (Triple), Triple, UMap (UnifiedMap), UnifiedMap)
+import Cardano.Ledger.UMapCompact (Trip (Triple), UMap (UMap))
 import Cardano.Protocol.TPraos.BHeader (BHeader, HashHeader)
 import qualified Cardano.Protocol.TPraos.BHeader as TP
 import qualified Cardano.Protocol.TPraos.OCert as TP
@@ -155,6 +154,8 @@ instance (Era era, Mock (EraCrypto era)) => Arbitrary (Update era) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
+deriving newtype instance Arbitrary NominalDiffTimeMicro
+
 maxMetadatumDepth :: Int
 maxMetadatumDepth = 2
 
@@ -186,14 +187,6 @@ instance Era era => Arbitrary (ShelleyTxAuxData era) where
 
 maxTxWits :: Int
 maxTxWits = 5
-
-genPtrAddress :: Crypto c => Gen (Addr c)
-genPtrAddress = Addr <$> arbitrary <*> arbitrary <*> (StakeRefPtr <$> arbitrary)
-
-genNonPtrAddress :: Crypto c => Gen (Addr c)
-genNonPtrAddress = oneof [AddrBootstrap <$> arbitrary, Addr <$> arbitrary <*> arbitrary <*> genNonPtrStakeRef]
-  where
-    genNonPtrStakeRef = oneof [StakeRefBase <$> arbitrary, pure StakeRefNull]
 
 instance
   (Core.EraTxOut era, Mock (EraCrypto era), Arbitrary (Core.Value era)) =>
@@ -239,12 +232,12 @@ instance (Arbitrary k, Arbitrary v) => Arbitrary (LM.ListMap k v) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Crypto c => Arbitrary (Triple c) where
+instance Crypto c => Arbitrary (Trip c) where
   arbitrary = Triple <$> arbitrary <*> arbitrary <*> arbitrary
   shrink = genericShrink
 
-instance Crypto c => Arbitrary (UnifiedMap c) where
-  arbitrary = UnifiedMap <$> arbitrary <*> arbitrary
+instance Crypto c => Arbitrary (UMap c) where
+  arbitrary = UMap <$> arbitrary <*> arbitrary
   shrink = genericShrink
 
 instance Crypto c => Arbitrary (DState c) where
@@ -268,7 +261,7 @@ instance Crypto c => Arbitrary (PoolCert c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Crypto c => Arbitrary (GenesisDelegCert c) where
+instance Crypto c => Arbitrary (ConstitutionalDelegCert c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -385,7 +378,12 @@ instance Crypto c => Arbitrary (SnapShot c) where
   shrink = genericShrink
 
 instance Crypto c => Arbitrary (SnapShots c) where
-  arbitrary = genericArbitraryU
+  arbitrary = do
+    mark <- arbitrary
+    set <- arbitrary
+    go <- arbitrary
+    fee <- arbitrary
+    pure $ SnapShots mark (calculatePoolDistr mark) set go fee
   shrink = genericShrink
 
 instance Arbitrary PerformanceEstimate where

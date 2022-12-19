@@ -40,7 +40,7 @@ module Cardano.Ledger.Babbage.TxOut
 where
 
 import Cardano.Crypto.Hash
-import Cardano.Ledger.Address (Addr (..), isPtrAddr)
+import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Data
   ( BinaryData,
     Data,
@@ -62,7 +62,11 @@ import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.PParams (_coinsPerUTxOByte)
 import Cardano.Ledger.Babbage.Scripts ()
-import Cardano.Ledger.BaseTypes (StrictMaybe (..), maybeToStrictMaybe, natVersion, strictMaybeToMaybe)
+import Cardano.Ledger.BaseTypes
+  ( StrictMaybe (..),
+    maybeToStrictMaybe,
+    strictMaybeToMaybe,
+  )
 import Cardano.Ledger.Binary
   ( Annotator (..),
     Decoder,
@@ -83,7 +87,6 @@ import Cardano.Ledger.Binary
     getDecoderVersion,
     interns,
     peekTokenType,
-    whenDecoderVersionAtLeast,
   )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
@@ -104,7 +107,7 @@ import Cardano.Ledger.Val
     Val (..),
   )
 import Control.DeepSeq (NFData (rnf), rwhnf)
-import Control.Monad (when, (<$!>))
+import Control.Monad ((<$!>))
 import qualified Data.ByteString.Lazy as LBS
 import Data.Maybe (fromMaybe)
 import qualified Data.Text as T
@@ -432,21 +435,14 @@ instance
 -- toCBOR (TxOutCompactRefScript addr cv d rs) = encodeTxOut addr cv d (SJust rs)
 
 instance
-  ( EraTxOut era,
-    Core.TxOut era ~ BabbageTxOut era,
-    FromCBOR (Annotator (Script era))
+  ( Era era,
+    Val (Value era),
+    FromCBOR (Annotator (Script era)),
+    DecodeNonNegative (Value era)
   ) =>
   FromCBOR (BabbageTxOut era)
   where
-  fromCBOR = do
-    txOut <- fromCborTxOutWithAddr fromCborBackwardsBothAddr
-    -- Prevent pointer addresses from being deserialized, starting with version 9.
-    -- This implementation is according to ADR #5
-    whenDecoderVersionAtLeast (natVersion @9) $ do
-      when
-        (isPtrAddr (txOut ^. addrTxOutL))
-        (fail "Pointer addresses not supported starting with version 9")
-    pure txOut
+  fromCBOR = fromCborTxOutWithAddr fromCborBackwardsBothAddr
 
 instance
   ( Era era,

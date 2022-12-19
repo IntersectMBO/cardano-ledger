@@ -43,7 +43,7 @@ import Cardano.Ledger.Block
     neededTxInsForBlock,
   )
 import Cardano.Ledger.Coin
-import Cardano.Ledger.Compactible (fromCompact, toCompact)
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (StakeRefBase, StakeRefPtr))
 import Cardano.Ledger.EpochBoundary (SnapShot (..), Stake (..))
@@ -63,7 +63,6 @@ import Cardano.Ledger.Shelley.LedgerState
     UTxOState (..),
     completeRupd,
     credMap,
-    delegations,
     deltaF,
     deltaR,
     deltaT,
@@ -98,8 +97,9 @@ import Cardano.Ledger.Shelley.Rules.Reports
 import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.TreeDiff (diffExpr, ediffEq)
 import Cardano.Ledger.TxIn (TxIn (..))
+import Cardano.Ledger.UMapCompact (sumCompactCoin)
+import qualified Cardano.Ledger.UMapCompact as UM
 import Cardano.Ledger.UTxO (UTxO (..), coinBalance, txins, txouts)
-import Cardano.Ledger.UnifiedMap (ViewMap)
 import Cardano.Ledger.Val ((<+>), (<->))
 import Cardano.Protocol.TPraos.API (GetLedgerView)
 import Cardano.Protocol.TPraos.BHeader
@@ -130,8 +130,6 @@ import qualified Data.Map.Strict as Map
 import Data.Proxy
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.UMap (View (Rewards), domain)
-import qualified Data.UMap as UM
 import qualified Data.VMap as VMap
 import Data.Word (Word64)
 import GHC.Records (HasField (..))
@@ -184,7 +182,8 @@ adaIsPreserved ::
   forall era.
   ( EraGen era,
     State (EraRule "PPUP" era) ~ PPUPState era,
-    QC.HasTrace (CHAIN era) (GenEnv era)
+    QC.HasTrace (CHAIN era) (GenEnv era),
+    ProtVerAtMost era 8
   ) =>
   Property
 adaIsPreserved =
@@ -201,7 +200,8 @@ minimal ::
   forall era.
   ( EraGen era,
     QC.HasTrace (CHAIN era) (GenEnv era),
-    State (EraRule "PPUP" era) ~ PPUPState era
+    State (EraRule "PPUP" era) ~ PPUPState era,
+    ProtVerAtMost era 8
   ) =>
   TestTree
 minimal =
@@ -333,7 +333,8 @@ adaPreservationChain ::
     TestingLedger era ledger,
     State (EraRule "PPUP" era) ~ PPUPState era,
     ChainProperty era,
-    QC.HasTrace (CHAIN era) (GenEnv era)
+    QC.HasTrace (CHAIN era) (GenEnv era),
+    ProtVerAtMost era 8
   ) =>
   Property
 adaPreservationChain =
@@ -378,7 +379,8 @@ checkPreservation ::
     ShelleyEraTxBody era,
     HasField "_keyDeposit" (PParams era) Coin,
     HasField "_poolDeposit" (PParams era) Coin,
-    State (EraRule "PPUP" era) ~ PPUPState era
+    State (EraRule "PPUP" era) ~ PPUPState era,
+    ProtVerAtMost era 8
   ) =>
   (SourceSignalTarget (CHAIN era), Int) ->
   Property
@@ -510,24 +512,8 @@ checkWithdrawlBound SourceSignalTarget {source, signal, target} =
   where
     rewardDelta :: Coin
     rewardDelta =
-      fold
-        ( rewards
-            . dpsDState
-            . lsDPState
-            . esLState
-            . nesEs
-            . chainNes
-            $ source
-        )
-        <-> fold
-          ( rewards
-              . dpsDState
-              . lsDPState
-              . esLState
-              . nesEs
-              . chainNes
-              $ target
-          )
+      fromCompact (sumCompactCoin (rewards . dpsDState . lsDPState . esLState . nesEs . chainNes $ source))
+        <-> fromCompact (sumCompactCoin (rewards . dpsDState . lsDPState . esLState . nesEs . chainNes $ target))
 
 -- | If we are not at an Epoch Boundary, then (Utxo + Deposits)
 -- increases by Withdrawals minus Fees (for all transactions in a block)
@@ -626,8 +612,8 @@ potsSumIncreaseByRewardsPerTx SourceSignalTarget {source = chainSt, signal = blo
         } =
         (coinBalance u' <+> d' <+> f')
           <-> (coinBalance u <+> d <+> f)
-          === fold (UM.unUnify (UM.Rewards umap1))
-          <-> fold (UM.unUnify (UM.Rewards umap2))
+          === UM.fromCompact (fold (UM.unUnify (UM.Rewards umap1)))
+          <-> UM.fromCompact (fold (UM.unUnify (UM.Rewards umap2)))
 
 -- | The Rewards pot decreases by the sum of withdrawals in a transaction
 potsRewardsDecreaseByWdrlsPerTx ::
@@ -644,7 +630,7 @@ potsRewardsDecreaseByWdrlsPerTx SourceSignalTarget {source = chainSt, signal = b
       map rewardsDecreaseByWdrls $
         sourceSignalTargets ledgerTr
   where
-    rewardsSum = fold . rewards . dpsDState
+    rewardsSum = UM.fromCompact . fold . rewards . dpsDState
     (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
     rewardsDecreaseByWdrls
       SourceSignalTarget
@@ -979,7 +965,7 @@ rewardDepositDomainInvariant ::
   Property
 rewardDepositDomainInvariant SourceSignalTarget {source = chainSt} =
   let LedgerState {lsDPState = DPState dstate _} = (esLState . nesEs . chainNes) chainSt
-      rewardDomain = domain (Rewards (dsUnified dstate))
+      rewardDomain = UM.domain (UM.Rewards (dsUnified dstate))
       depositDomain = Map.keysSet (dsDeposits dstate)
    in counterexample
         ( unlines
@@ -1042,7 +1028,8 @@ poolProperties ::
   ( EraGen era,
     Default (State (EraRule "PPUP" era)),
     ChainProperty era,
-    QC.HasTrace (CHAIN era) (GenEnv era)
+    QC.HasTrace (CHAIN era) (GenEnv era),
+    ProtVerAtMost era 8
   ) =>
   Property
 poolProperties =
@@ -1062,7 +1049,8 @@ poolRetirement ::
     ShelleyEraTxBody era,
     HasField "_eMax" (PParams era) EpochNo,
     HasField "_minPoolCost" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin
+    HasField "_poolDeposit" (PParams era) Coin,
+    ProtVerAtMost era 8
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -1083,7 +1071,8 @@ poolRegistration ::
     ShelleyEraTxBody era,
     HasField "_eMax" (PParams era) EpochNo,
     HasField "_minPoolCost" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin
+    HasField "_poolDeposit" (PParams era) Coin,
+    ProtVerAtMost era 8
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -1101,7 +1090,8 @@ poolStateIsInternallyConsistent ::
     ShelleyEraTxBody era,
     HasField "_eMax" (PParams era) EpochNo,
     HasField "_minPoolCost" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin
+    HasField "_poolDeposit" (PParams era) Coin,
+    ProtVerAtMost era 8
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -1122,7 +1112,8 @@ delegProperties ::
   ( EraGen era,
     Default (State (EraRule "PPUP" era)),
     QC.HasTrace (CHAIN era) (GenEnv era),
-    ChainProperty era
+    ChainProperty era,
+    ProtVerAtMost era 8
   ) =>
   Property
 delegProperties =
@@ -1202,7 +1193,8 @@ poolTraceFromBlock ::
     EraSegWits era,
     HasField "_eMax" (PParams era) EpochNo,
     HasField "_minPoolCost" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin
+    HasField "_poolDeposit" (PParams era) Coin,
+    ProtVerAtMost era 8
   ) =>
   ChainState era ->
   Block (BHeader (EraCrypto era)) era ->
@@ -1231,7 +1223,8 @@ delegTraceFromBlock ::
   ( ChainProperty era,
     ShelleyEraTxBody era,
     EraSegWits era,
-    HasField "_keyDeposit" (PParams era) Coin
+    HasField "_keyDeposit" (PParams era) Coin,
+    ProtVerAtMost era 8
   ) =>
   ChainState era ->
   Block (BHeader (EraCrypto era)) era ->
@@ -1458,22 +1451,20 @@ stakeDistr ::
   SnapShot (EraCrypto era)
 stakeDistr u ds ps =
   SnapShot
-    (Stake $ VMap.fromMap (compactCoinOrError <$> eval (dom activeDelegs ◁ stakeRelation)))
-    (VMap.fromMap (UM.unUnify delegs))
+    (Stake $ VMap.fromMap (UM.compactCoinOrError <$> eval (dom activeDelegs ◁ stakeRelation)))
+    (VMap.fromMap delegs)
     (VMap.fromMap poolParams)
   where
-    rewards' = rewards ds
-    delegs = delegations ds
+    rewards' :: Map.Map (Credential 'Staking (EraCrypto era)) Coin
+    rewards' = UM.rewView (dsUnified ds)
+    delegs :: Map.Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))
+    delegs = UM.delView (dsUnified ds)
     ptrs' = ptrsMap ds
     PState {psStakePoolParams = poolParams} = ps
     stakeRelation :: Map (Credential 'Staking (EraCrypto era)) Coin
-    stakeRelation = aggregateUtxoCoinByCredential ptrs' u (UM.unUnify rewards')
-    activeDelegs :: ViewMap (EraCrypto era) (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))
+    stakeRelation = aggregateUtxoCoinByCredential ptrs' u rewards'
+    activeDelegs :: Map.Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))
     activeDelegs = eval ((dom rewards' ◁ delegs) ▷ dom poolParams)
-    compactCoinOrError c =
-      case toCompact c of
-        Nothing -> error $ "Invalid ADA value in staking: " <> show c
-        Just compactCoin -> compactCoin
 
 -- | Sum up all the Coin for each staking Credential. This function has an
 --   incremental analog. See 'incrementalAggregateUtxoCoinByCredential'

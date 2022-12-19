@@ -1,7 +1,9 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -20,14 +22,15 @@ module Cardano.Ledger.Shelley.Rules.Tick
     PredicateFailure,
     adoptGenesisDelegs,
     ShelleyTICKF,
-    ShelleyTickfPredFailure (..),
+    ShelleyTickfPredFailure,
     validatingTickTransition,
+    validatingTickTransitionFORECAST,
   )
 where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..), epochInfoPure)
 import Cardano.Ledger.Core
-import Cardano.Ledger.EpochBoundary (SnapShots (ssStakeMark))
+import Cardano.Ledger.EpochBoundary (SnapShots (ssStakeMark, ssStakeMarkPoolDistr))
 import Cardano.Ledger.Keys (GenDelegs (..))
 import Cardano.Ledger.Shelley.Era (ShelleyTICK, ShelleyTICKF)
 import Cardano.Ledger.Shelley.LedgerState
@@ -37,7 +40,10 @@ import Cardano.Ledger.Shelley.LedgerState
     FutureGenDeleg (..),
     LedgerState (..),
     NewEpochState (..),
+    PPUPState (..),
     PulsingRewUpdate,
+    UTxOState (..),
+    UpecState (..),
   )
 import Cardano.Ledger.Shelley.Rules.NewEpoch
   ( ShelleyNEWEPOCH,
@@ -50,11 +56,13 @@ import Cardano.Ledger.Shelley.Rules.Rupd
     ShelleyRUPD,
     ShelleyRupdPredFailure,
   )
-import Cardano.Ledger.Slot (EpochNo, SlotNo, epochInfoEpoch)
+import Cardano.Ledger.Shelley.Rules.Upec (ShelleyUPEC, ShelleyUpecPredFailure)
+import Cardano.Ledger.Slot (EpochNo (unEpochNo), SlotNo, epochInfoEpoch)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (⨃))
 import Control.State.Transition
 import qualified Data.Map.Strict as Map
+import Data.Void (Void)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
@@ -167,6 +175,63 @@ validatingTickTransition nes slot = do
 
   pure $ nes' {nesEs = es''}
 
+-- | This is a limited version of 'validatingTickTransition' which is only suitable
+-- for the future ledger view.
+validatingTickTransitionFORECAST ::
+  forall tick era.
+  ( State (tick era) ~ NewEpochState era,
+    BaseM (tick era) ~ ShelleyBase,
+    State (EraRule "UPEC" era) ~ UpecState era,
+    Signal (EraRule "UPEC" era) ~ (),
+    Environment (EraRule "UPEC" era) ~ EpochState era,
+    Embed (EraRule "UPEC" era) (tick era),
+    STS (tick era)
+  ) =>
+  NewEpochState era ->
+  SlotNo ->
+  TransitionRule (tick era)
+validatingTickTransitionFORECAST nes slot = do
+  -- This whole function is a specialization of an inlined 'NEWEPOCH'.
+  --
+  -- The ledger view, 'LedgerView', is built entirely from the 'nesPd' and 'esPp' and
+  -- 'dsGenDelegs', so the correctness of 'validatingTickTransitionFORECAST' only
+  -- depends on getting these three fields correct.
+
+  epoch <- liftSTS $ do
+    ei <- asks epochInfoPure
+    epochInfoEpoch ei slot
+
+  let es = nesEs nes
+      ss = esSnapshots es
+
+  -- the relevant 'NEWEPOCH' logic
+  let pd' = ssStakeMarkPoolDistr ss
+
+  -- note that the genesis delegates are updated not only on the epoch boundary.
+  if unEpochNo epoch /= unEpochNo (nesEL nes) + 1
+    then pure $ nes {nesEs = adoptGenesisDelegs es slot}
+    else do
+      -- We can skip 'SNAP'; we already have the equivalent pd'.
+
+      -- We can skip 'MIR' and 'POOLREAP';
+      -- we don't need to do the checks:
+      -- if the checks would fail, then the node will fail in the 'TICK' rule
+      -- if it ever then node tries to validate blocks for which the
+      -- return value here was used to validate their headers.
+
+      let pp = esPp es
+          updates = utxosPpups . lsUTxOState . esLState $ es
+      UpecState pp' _ <-
+        trans @(EraRule "UPEC" era) $
+          TRC (es, UpecState pp updates, ())
+      let es' = (adoptGenesisDelegs es slot) {esPp = pp'}
+
+      pure $!
+        nes
+          { nesPd = pd',
+            nesEs = es'
+          }
+
 bheadTransition ::
   forall era.
   ( Embed (EraRule "NEWEPOCH" era) (ShelleyTICK era),
@@ -188,11 +253,13 @@ bheadTransition = do
 
   nes' <- validatingTickTransition @ShelleyTICK nes slot
 
-  -- Here we force the evaluation of the mark snapshot.
+  -- Here we force the evaluation of the mark snapshot
+  -- and the per-pool stake distribution.
   -- We do NOT force it in the TICKF and TICKN rule
   -- so that it can remain a thunk when the consensus
   -- layer computes the ledger view across the epoch boundary.
   let !_ = ssStakeMark . esSnapshots . nesEs $ nes'
+      !_ = ssStakeMarkPoolDistr . esSnapshots . nesEs $ nes'
 
   ru'' <-
     trans @(EraRule "RUPD" era) $
@@ -230,35 +297,37 @@ to tick the ledger state to a future slot.
 ------------------------------------------------------------------------------}
 
 newtype ShelleyTickfPredFailure era
-  = TickfNewEpochFailure (PredicateFailure (EraRule "NEWEPOCH" era)) -- Subtransition Failures
+  = TickfUpecFailure (PredicateFailure (EraRule "UPEC" era)) -- Subtransition Failures
   deriving (Generic)
 
 deriving stock instance
   ( Era era,
-    Show (PredicateFailure (EraRule "NEWEPOCH" era))
+    Show (PredicateFailure (EraRule "UPEC" era))
   ) =>
   Show (ShelleyTickfPredFailure era)
 
 deriving stock instance
   ( Era era,
-    Eq (PredicateFailure (EraRule "NEWEPOCH" era))
+    Eq (PredicateFailure (EraRule "UPEC" era))
   ) =>
   Eq (ShelleyTickfPredFailure era)
 
 instance
-  ( NoThunks (PredicateFailure (EraRule "NEWEPOCH" era))
+  ( NoThunks (PredicateFailure (EraRule "UPEC" era))
   ) =>
   NoThunks (ShelleyTickfPredFailure era)
 
 newtype ShelleyTickfEvent era
-  = TickfNewEpochEvent (Event (EraRule "NEWEPOCH" era)) -- Subtransition Events
+  = TickfUpecEvent (Event (EraRule "UPEC" era)) -- Subtransition Events
 
 instance
   ( Era era,
-    Embed (EraRule "NEWEPOCH" era) (ShelleyTICKF era),
-    Environment (EraRule "NEWEPOCH" era) ~ (),
-    State (EraRule "NEWEPOCH" era) ~ NewEpochState era,
-    Signal (EraRule "NEWEPOCH" era) ~ EpochNo
+    EraPParams era,
+    State (EraRule "PPUP" era) ~ PPUPState era,
+    Signal (EraRule "UPEC" era) ~ (),
+    State (EraRule "UPEC" era) ~ UpecState era,
+    Environment (EraRule "UPEC" era) ~ EpochState era,
+    Embed (EraRule "UPEC" era) (ShelleyTICKF era)
   ) =>
   STS (ShelleyTICKF era)
   where
@@ -277,15 +346,16 @@ instance
   transitionRules =
     [ do
         TRC ((), nes, slot) <- judgmentContext
-        validatingTickTransition nes slot
+        validatingTickTransitionFORECAST nes slot
     ]
 
 instance
-  ( STS (ShelleyNEWEPOCH era),
-    PredicateFailure (EraRule "NEWEPOCH" era) ~ ShelleyNewEpochPredFailure era,
-    Event (EraRule "NEWEPOCH" era) ~ ShelleyNewEpochEvent era
+  ( Era era,
+    STS (ShelleyUPEC era),
+    PredicateFailure (EraRule "UPEC" era) ~ ShelleyUpecPredFailure era,
+    Event (EraRule "UPEC" era) ~ Void
   ) =>
-  Embed (ShelleyNEWEPOCH era) (ShelleyTICKF era)
+  Embed (ShelleyUPEC era) (ShelleyTICKF era)
   where
-  wrapFailed = TickfNewEpochFailure
-  wrapEvent = TickfNewEpochEvent
+  wrapFailed = TickfUpecFailure
+  wrapEvent = TickfUpecEvent

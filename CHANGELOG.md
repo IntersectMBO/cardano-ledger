@@ -12,6 +12,7 @@ in the naming of release branches.
 
 ### Added
 
+- Add `setMinFeeTx` to  `Cardano.Ledger.Api.Tx`: #3201
 - Add ToExpr (from tree-diff) instances for all types inside NewEpochState
   - Add module Cardano.Ledger.TreeDiff in cardano-binary. Includes all needed operations, classes, and orphan instances
 - Add deposits (key deposits) to DState{dsDeposits} and (pool deposits) PState{psDeposits}
@@ -41,12 +42,28 @@ in the naming of release branches.
 - Addition of `Memoized` type class and helper functions that utilize this new
   abstraction: `mkMemoized`, `getMemoSafeHash`, `getMemoRawType`, `zipMemoRawType`,
   `getMemoRawBytes` and `lensMemoRawType` #3165
+- Added upper protocol version bounds to `updateTxBodyL` and `certsTxBodyL` and
+  removed the corresponding fields from the Conway transaction body #3176
+- Added `ConwayEraTxBody` class with new lenses #3176
+- Added `ConwayDCert` data type which is similar to `DCert` but does not have
+  MIR certificates #3176
+- Added CDDL files for Conway era #3176
+- Added `Vote`, `VoterRole`, `VoteDecision`, `GovernanceActionInfo` and
+  `GovernanceAction` data types #3176
+- Added `ctbrVotes` and `ctbrGovActions` fields to `ConwayTxBodyRaw` and
+  corresponding fields to `ConwayTxBody` #3176
+- Added `ToCBOR` and `FromCBOR` instances to `ConwayTxBody` and all its
+  constituent data types #3176
+- Added `ConwayUTXO` and `ConwayUTXOS` rules #3176
 
 
 ### Changed
 
+- Replace `NominalDiffTime` with a `newtype` wrapper `NominalDiffTimeMicro`. Remove use of `NominalDiffTime`, as we don't use its full precision. #3208
+- Switched `PlutusDebug` to use a `GADT` with `singletons` for better type-safety. #3167
+  - Made `Plutus` imports uniform.
+- Removed the module `Test.Cardano.Ledger.Generic.Types`. Functionality moved to `Test.Cardano.Ledger.Generic.Functions`
 - Renamed module `Cardano.Ledger.Shelley.Metadata` -> `Cardano.Ledger.Shelley.TxAuxData` #3205
-- Changed `FromCBOR` instance in `Babbage.TxOut` to fail pointer address deserialization starting with protocol version 9: #3174
 - Updated `Conway` low protocol version to 9 and `Babbage` high protocol version to 8: #3174
 - Fixed mismathed parenthesis in the `Show` instance for `Ptr`: #3184.
 - Moved Cardano.Ledger.Shelley.LedgerState(DPState) to Cardano.Ledger(DPState) in Core

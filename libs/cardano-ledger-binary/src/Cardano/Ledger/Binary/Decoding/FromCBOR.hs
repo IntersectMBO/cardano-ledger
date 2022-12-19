@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -58,7 +59,7 @@ import Data.ByteString.Short (ShortByteString(SBS))
 #else
 import Data.ByteString.Short.Internal (ShortByteString(SBS))
 #endif
-import Data.Fixed (Fixed (..), Nano, Pico)
+import Data.Fixed (Fixed (..))
 import Data.IP (IPv4, IPv6)
 import Data.Int (Int16, Int32, Int64, Int8)
 import Data.List.NonEmpty (NonEmpty, nonEmpty)
@@ -70,7 +71,7 @@ import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Data.Tagged (Tagged (Tagged))
 import qualified Data.Text as T
-import Data.Time.Clock (NominalDiffTime, UTCTime (..))
+import Data.Time.Clock (UTCTime (..))
 import Data.Typeable (Proxy (..), Typeable, typeRep)
 import qualified Data.VMap as VMap
 import qualified Data.Vector as V
@@ -81,6 +82,7 @@ import Data.Void (Void)
 import Data.Word (Word16, Word32, Word64, Word8)
 import GHC.TypeNats (KnownNat, type (*))
 import Numeric.Natural (Natural)
+import qualified PlutusLedgerApi.V1 as PV1
 import Prelude hiding (decodeFloat)
 
 class Typeable a => FromCBOR a where
@@ -158,14 +160,7 @@ instance FromCBOR Double where
 instance FromCBOR Rational where
   fromCBOR = decodeRational
 
-instance FromCBOR Nano where
-  fromCBOR = MkFixed <$> fromCBOR
-
-instance FromCBOR Pico where
-  fromCBOR = MkFixed <$> fromCBOR
-
-instance FromCBOR NominalDiffTime where
-  fromCBOR = decodeNominalDiffTime
+deriving newtype instance Typeable p => FromCBOR (Fixed p)
 
 instance FromCBOR Void where
   fromCBOR = cborError DecoderErrorVoid
@@ -605,4 +600,11 @@ deriving instance FromCBOR EpochSize
 deriving instance FromCBOR SystemStart
 
 instance FromCBOR BlockNo where
+  fromCBOR = fromPlainDecoder decode
+
+--------------------------------------------------------------------------------
+-- Plutus
+--------------------------------------------------------------------------------
+
+instance FromCBOR PV1.Data where
   fromCBOR = fromPlainDecoder decode
