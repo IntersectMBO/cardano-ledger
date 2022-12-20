@@ -87,7 +87,6 @@ import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Alonzo.CostModel (costModelParamsCount)
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Binary.Twiddle
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators (genMintValues)
@@ -139,8 +138,7 @@ instance (Era era) => Arbitrary (Redeemers era) where
   arbitrary = Redeemers <$> arbitrary
 
 instance
-  ( Mock (EraCrypto era)
-  , Arbitrary (Script era)
+  ( Arbitrary (Script era)
   , AlonzoScript era ~ Script era
   , EraScript era
   ) =>
@@ -171,7 +169,6 @@ genData = TxDats . keyBy hashData <$> arbitrary
 
 instance
   ( EraTxOut era
-  , Mock (EraCrypto era)
   , Arbitrary (Value era)
   ) =>
   Arbitrary (AlonzoTxOut era)
@@ -183,7 +180,7 @@ instance
       <*> arbitrary
 
 instance
-  (EraTxOut era, Arbitrary (TxOut era), Mock (EraCrypto era), Arbitrary (PParamsUpdate era)) =>
+  (EraTxOut era, Arbitrary (TxOut era)) =>
   Arbitrary (AlonzoTxBody era)
   where
   arbitrary =
@@ -218,7 +215,7 @@ instance
       <*> arbitrary
       <*> arbitrary
 
-instance (Era era, Mock (EraCrypto era)) => Arbitrary (AlonzoScript era) where
+instance Era era => Arbitrary (AlonzoScript era) where
   arbitrary = do
     lang <- arbitrary -- The language is not present in the Script serialization
     frequency
@@ -364,7 +361,7 @@ instance Arbitrary TagMismatchDescription where
     oneof [pure PassedUnexpectedly, FailedUnexpectedly <$> ((:|) <$> arbitrary <*> arbitrary)]
 
 instance
-  (Era era, Mock (EraCrypto era), Arbitrary (PPUPPredFailure era)) =>
+  (Era era, Arbitrary (PredicateFailure (EraRule "PPUP" era))) =>
   Arbitrary (AlonzoUtxosPredFailure era)
   where
   arbitrary =
@@ -375,7 +372,6 @@ instance
 
 instance
   ( EraTxOut era
-  , Mock (EraCrypto era)
   , Arbitrary (Value era)
   , Arbitrary (TxOut era)
   , Arbitrary (PredicateFailure (EraRule "UTXOS" era))
@@ -405,7 +401,6 @@ instance
 
 instance
   ( Era era
-  , Mock (EraCrypto era)
   , Arbitrary (PredicateFailure (EraRule "UTXO" era))
   ) =>
   Arbitrary (AlonzoUtxowPredFailure era)
@@ -418,7 +413,7 @@ instance
       , PPViewHashesDontMatch <$> arbitrary <*> arbitrary
       ]
 
-instance Mock c => Arbitrary (ScriptPurpose c) where
+instance Crypto c => Arbitrary (ScriptPurpose c) where
   arbitrary =
     oneof
       [ Minting <$> arbitrary
@@ -429,7 +424,6 @@ instance Mock c => Arbitrary (ScriptPurpose c) where
 
 instance
   ( AlonzoEraPParams era
-  , Mock (EraCrypto era)
   , Arbitrary (PParams era)
   ) =>
   Arbitrary (ScriptIntegrity era)
@@ -442,7 +436,7 @@ instance
       <*> (Set.singleton <$> (getLanguageView @era <$> arbitrary <*> arbitrary))
 
 instance
-  (Mock (EraCrypto era), Era era) =>
+  Era era =>
   Arbitrary (Datum era)
   where
   arbitrary =
