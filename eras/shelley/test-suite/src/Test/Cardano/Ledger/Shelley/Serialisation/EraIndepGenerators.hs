@@ -25,6 +25,8 @@ import Cardano.Ledger.BaseTypes (
   BlockNo (..),
   SlotNo (..),
  )
+import Cardano.Ledger.Coin (CompactForm (..))
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (Crypto, DSIGN)
 import Cardano.Ledger.Shelley.API hiding (SignedDSIGN)
 import Cardano.Ledger.Shelley.Core
@@ -89,17 +91,323 @@ instance Mock c => Arbitrary (BHeader c) where -- TODO: Move to TPraos
 instance Crypto c => Arbitrary (TP.HashHeader c) where -- TODO: Move to TPraos
   arbitrary = TP.HashHeader <$> arbitrary
 
-instance Arbitrary STS.TicknState where -- TODO: Move to TPraos or Shelley
+instance Era era => Arbitrary (ProposedPPUpdates era) where
+  arbitrary = ProposedPPUpdates <$> pure Map.empty
+
+instance Era era => Arbitrary (Update era) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Crypto c => Arbitrary (STS.PrtclState c) where -- TODO: Move to TPraos or Shelley
+deriving newtype instance Arbitrary NominalDiffTimeMicro
+
+maxMetadatumDepth :: Int
+maxMetadatumDepth = 2
+
+maxMetadatumListLens :: Int
+maxMetadatumListLens = 5
+
+sizedMetadatum :: Int -> Gen Metadatum
+sizedMetadatum 0 =
+  oneof
+    [ I <$> arbitrary
+    , B <$> arbitrary
+    , S <$> (T.pack <$> arbitrary)
+    ]
+sizedMetadatum n =
+  let xsGen = listOf (sizedMetadatum (n - 1))
+   in oneof
+        [ Map <$> (zip <$> resize maxMetadatumListLens xsGen <*> xsGen)
+        , List <$> resize maxMetadatumListLens xsGen
+        , I <$> arbitrary
+        , B <$> arbitrary
+        , S <$> (T.pack <$> arbitrary)
+        ]
+
+instance Arbitrary Metadatum where
+  arbitrary = sizedMetadatum maxMetadatumDepth
+
+instance Era era => Arbitrary (ShelleyTxAuxData era) where
+  arbitrary = ShelleyTxAuxData <$> arbitrary
+
+maxTxWits :: Int
+maxTxWits = 5
+
+instance
+  (Core.EraTxOut era, Arbitrary (Core.Value era)) =>
+  Arbitrary (ShelleyTxOut era)
+  where
+  arbitrary = ShelleyTxOut <$> arbitrary <*> arbitrary
+
+instance Arbitrary MIRPot where
+  arbitrary = genericArbitraryU
+
+instance Crypto c => Arbitrary (MIRTarget c) where
+  arbitrary =
+    oneof
+      [ StakeAddressesMIR <$> arbitrary
+      , SendToOppositePotMIR <$> arbitrary
+      ]
+
+instance Arbitrary STS.VotingPeriod where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
 instance Crypto c => Arbitrary (STS.OBftSlot c) where -- TODO: Move to TPraos or Shelley
   arbitrary = genericArbitraryU
   shrink = genericShrink
+
+instance Crypto c => Arbitrary (STS.PrtclState c) where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
+instance (Arbitrary k, Arbitrary v) => Arbitrary (LM.ListMap k v) where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
+instance Crypto c => Arbitrary (DelegCert c) where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
+instance Crypto c => Arbitrary (Delegation c) where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
+instance Crypto c => Arbitrary (PoolCert c) where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
+instance Crypto c => Arbitrary (ConstitutionalDelegCert c) where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
+instance Crypto c => Arbitrary (MIRCert c) where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
+instance Crypto c => Arbitrary (DCert c) where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
+
+instance Era era => Arbitrary (PPUPState era) where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
+instance Crypto c => Arbitrary (DPState c) where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
+instance
+  ( Core.EraTxOut era
+  , Arbitrary (Core.TxOut era)
+  , Arbitrary (State (Core.EraRule "PPUP" era))
+  ) =>
+  Arbitrary (UTxOState era)
+  where
+  arbitrary = genericArbitraryU
+  shrink = recursivelyShrink
+
+instance Crypto c => Arbitrary (IncrementalStake c) where
+  arbitrary = IStake <$> arbitrary <*> arbitrary
+  shrink = genericShrink
+
+-- The 'genericShrink' function returns first the immediate subterms of a
+-- value (in case it is a recursive data-type), and then shrinks the value
+-- itself. Since 'UTxOState' is not a recursive data-type, there are no
+-- subterms, and we can use `recursivelyShrink` directly. This is particularly
+-- important when abstracting away the different fields of the ledger state,
+-- since the generic subterms instances will overlap due to GHC not having
+-- enough context to infer if 'a' and 'b' are the same types (since in this
+-- case this will depend on the definition of 'era').
+--
+-- > instance OVERLAPPING_ GSubtermsIncl (K1 i a) a where
+-- > instance OVERLAPPING_ GSubtermsIncl (K1 i a) b where
+
+instance
+  ( Core.EraTxOut era
+  , Arbitrary (Core.TxOut era)
+  , Arbitrary (State (Core.EraRule "PPUP" era))
+  ) =>
+  Arbitrary (LedgerState era)
+  where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
+instance
+  ( EraTxOut era
+  , Mock (EraCrypto era)
+  , Arbitrary (TxOut era)
+  , Arbitrary (Value era)
+  , Arbitrary (PParams era)
+  , Arbitrary (State (EraRule "PPUP" era))
+  , Arbitrary (StashedAVVMAddresses era)
+  ) =>
+  Arbitrary (NewEpochState era)
+  where
+  arbitrary = genericArbitraryU
+
+instance
+  ( Core.EraTxOut era
+  , Arbitrary (Core.TxOut era)
+  , Arbitrary (Core.Value era)
+  , Arbitrary (Core.PParams era)
+  , Arbitrary (State (Core.EraRule "PPUP" era))
+  ) =>
+  Arbitrary (EpochState era)
+  where
+  arbitrary =
+    EpochState
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+
+instance Crypto c => Arbitrary (LeaderOnlyReward c) where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
+instance Crypto c => Arbitrary (RewardUpdate c) where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
+instance Crypto c => Arbitrary (STS.OBftSlot c) where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
+maxMultiSigDepth :: Int
+maxMultiSigDepth = 3
+
+maxMultiSigListLens :: Int
+maxMultiSigListLens = 5
+
+sizedMultiSig :: Era era => Int -> Gen (MultiSig era)
+sizedMultiSig 0 = RequireSignature <$> arbitrary
+sizedMultiSig n =
+  oneof
+    [ RequireSignature <$> arbitrary
+    , RequireAllOf <$> resize maxMultiSigListLens (listOf (sizedMultiSig (n - 1)))
+    , RequireAnyOf <$> resize maxMultiSigListLens (listOf (sizedMultiSig (n - 1)))
+    , RequireMOf <$> arbitrary <*> resize maxMultiSigListLens (listOf (sizedMultiSig (n - 1)))
+    ]
+
+instance Era era => Arbitrary (MultiSig era) where
+  arbitrary = sizedMultiSig maxMultiSigDepth
+
+instance
+  (Crypto c, Arbitrary (Core.PParams (ShelleyEra c))) =>
+  Arbitrary (ShelleyGenesis c)
+  where
+  arbitrary = do
+    sgSystemStart <- arbitrary
+    sgNetworkMagic <- arbitrary
+    sgNetworkId <- arbitrary
+    sgActiveSlotsCoeff <- arbitrary
+    sgSecurityParam <- arbitrary
+    sgEpochLength <- arbitrary
+    sgSlotsPerKESPeriod <- arbitrary
+    sgMaxKESEvolutions <- arbitrary
+    sgSlotLength <- (* 1000000) <$> arbitrary
+    sgUpdateQuorum <- arbitrary
+    sgMaxLovelaceSupply <- arbitrary
+    sgProtocolParams <- arbitrary
+    sgGenDelegs <- arbitrary
+    sgInitialFunds <- arbitrary
+    sgStaking <- arbitrary
+    pure ShelleyGenesis {..}
+
+instance Crypto c => Arbitrary (ShelleyGenesisStaking c) where
+  arbitrary = ShelleyGenesisStaking <$> arbitrary <*> arbitrary
+
+instance
+  ( EraScript era
+  , Arbitrary (Core.Script era)
+  ) =>
+  Arbitrary (ShelleyTxWits era)
+  where
+  arbitrary =
+    ShelleyTxWits
+      <$> arbitrary
+      <*> (mscriptsToWits <$> arbitrary)
+      <*> arbitrary
+    where
+      mscriptsToWits = Map.fromList . map (\s -> (hashScript @era s, s))
+
+instance Era era => Arbitrary (STS.ShelleyPpupPredFailure era) where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
+instance Era era => Arbitrary (STS.ShelleyPoolPredFailure era) where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
+instance
+  ( Era era
+  , Arbitrary (STS.PredicateFailure (Core.EraRule "POOL" era))
+  , Arbitrary (STS.PredicateFailure (Core.EraRule "DELEG" era))
+  ) =>
+  Arbitrary (STS.ShelleyDelplPredFailure era)
+  where
+  arbitrary = genericArbitraryU
+  shrink = recursivelyShrink
+
+instance
+  Era era =>
+  Arbitrary (STS.ShelleyDelegPredFailure era)
+  where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
+instance
+  ( Era era
+  , Arbitrary (STS.PredicateFailure (Core.EraRule "DELPL" era))
+  ) =>
+  Arbitrary (STS.ShelleyDelegsPredFailure era)
+  where
+  arbitrary = genericArbitraryU
+  shrink = recursivelyShrink
+
+instance
+  ( Era era
+  , Arbitrary (STS.PredicateFailure (EraRule "LEDGER" era))
+  ) =>
+  Arbitrary (STS.ShelleyLedgersPredFailure era)
+  where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
+instance
+  ( Era era
+  , Arbitrary (STS.PredicateFailure (EraRule "DELEGS" era))
+  , Arbitrary (STS.PredicateFailure (EraRule "UTXOW" era))
+  ) =>
+  Arbitrary (STS.ShelleyLedgerPredFailure era)
+  where
+  arbitrary = genericArbitraryU
+  shrink _ = []
+
+instance
+  ( Era era
+  , Arbitrary (STS.PredicateFailure (EraRule "UTXO" era))
+  ) =>
+  Arbitrary (STS.ShelleyUtxowPredFailure era)
+  where
+  arbitrary = genericArbitraryU
+  shrink _ = []
+
+genTx ::
+  ( EraTx era
+  , Arbitrary (TxBody era)
+  , Arbitrary (TxAuxData era)
+  , Arbitrary (TxWits era)
+  ) =>
+  Gen (ShelleyTx era)
+genTx =
+  ShelleyTx
+    <$> arbitrary
+    <*> resize maxTxWits arbitrary
+    <*> arbitrary
 
 genBlock ::
   forall era h.
@@ -160,3 +468,65 @@ instance
   Arbitrary (Block h era) -- TODO: Move to TPraos
   where
   arbitrary = genBlock
+
+instance
+  ( Era era
+  , Arbitrary (STS.PredicateFailure (EraRule "LEDGER" era))
+  ) =>
+  Arbitrary (ApplyTxError era)
+  where
+  arbitrary = ApplyTxError <$> arbitrary
+  shrink (ApplyTxError xs) = [ApplyTxError xs' | xs' <- shrink xs]
+
+instance (Mock c) => Arbitrary (PulsingRewUpdate c) where
+  arbitrary =
+    oneof
+      [ Complete <$> arbitrary
+      , Pulsing <$> arbitrary <*> arbitrary
+      ]
+
+instance
+  Crypto c =>
+  Arbitrary (RewardSnapShot c)
+  where
+  arbitrary =
+    RewardSnapShot
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+
+instance
+  Crypto c =>
+  Arbitrary (PoolRewardInfo c)
+  where
+  arbitrary =
+    PoolRewardInfo
+      <$> (StakeShare <$> arbitrary)
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+
+instance
+  Crypto c =>
+  Arbitrary (FreeVars c)
+  where
+  arbitrary =
+    FreeVars
+      <$> arbitrary {- addrsRew -}
+      <*> arbitrary {- totalStake -}
+      <*> arbitrary {- pp_mv -}
+      <*> arbitrary {- poolRewardInfo -}
+      <*> arbitrary {- delegations -}
+
+instance
+  Crypto c =>
+  Arbitrary (Pulser c)
+  where
+  arbitrary = RSLP <$> arbitrary <*> arbitrary <*> arbitrary <*> (RewardAns <$> arbitrary <*> arbitrary)
+

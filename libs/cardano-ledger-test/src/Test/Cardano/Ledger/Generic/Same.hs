@@ -228,7 +228,13 @@ sameWithDependency (SomeM labx actx x1 x2 : more) =
     [] -> sameWithDependency more
     ansx -> extendLabel (labx ++ " ") ansx ++ sameWithDependency more
 
-instance Reflect era => Same era (ShelleyLedgerExamples era) where
+instance
+  ( Eq (TranslationContext era)
+  , Show (TranslationContext era)
+  , Reflect era
+  ) =>
+  Same era (ShelleyLedgerExamples era)
+  where
   same proof x1 x2 = case (sleBlock x1, sleBlock x2) of
     (Block' h1 a1 _, Block' h2 a2 _) ->
       sameWithDependency
@@ -320,7 +326,14 @@ sameLedgerFail (Babbage _) x y = eqByShow x y
 sameLedgerFail (Conway _) x y = eqByShow x y
 {-# NOINLINE sameLedgerFail #-}
 
-sameTransCtx :: Proof era -> TranslationContext era -> TranslationContext era -> Maybe PDoc
+sameTransCtx ::
+  ( Eq (TranslationContext era)
+  , Show (TranslationContext era)
+  ) =>
+  Proof era ->
+  TranslationContext era ->
+  TranslationContext era ->
+  Maybe PDoc
 sameTransCtx (Shelley _) x y = eqByShow x y
 sameTransCtx (Allegra _) x y = eqByShow x y
 sameTransCtx (Mary _) x y = eqByShow x y
