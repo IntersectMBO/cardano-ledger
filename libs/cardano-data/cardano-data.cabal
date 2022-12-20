@@ -37,6 +37,7 @@ library
                      , Data.MapExtras
                      , Data.UMap
                      , Data.ListMap
+                     , Data.Universe
 
   build-depends:       aeson
                      , base >=4.11 && <5

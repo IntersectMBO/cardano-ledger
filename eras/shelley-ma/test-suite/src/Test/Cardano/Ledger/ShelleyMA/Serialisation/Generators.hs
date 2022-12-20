@@ -28,6 +28,7 @@ import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
 import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (..))
 import Cardano.Ledger.Binary (Annotator, FromCBOR, ToCBOR)
 import Cardano.Ledger.Core
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import qualified Cardano.Ledger.Mary.Value as ConcreteValue
@@ -39,7 +40,6 @@ import Data.Sequence.Strict (StrictSeq, fromList)
 import Data.Word (Word64)
 import Generic.Random (genericArbitraryU)
 import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Generator.TxAuxData (genMetadata')
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.QuickCheck (
@@ -100,7 +100,7 @@ instance
   forall era c.
   ( Era era
   , c ~ EraCrypto era
-  , Mock c
+  , Crypto c
   , FromCBOR (Annotator (Timelock era))
   , ToCBOR (Script era)
   , Arbitrary (Script era)
@@ -130,7 +130,7 @@ genScriptSeq = do
 
 instance
   ( Era era
-  , Mock (EraCrypto era)
+  , Crypto (EraCrypto era)
   , Arbitrary (Value era)
   , Arbitrary (TxOut era)
   , Arbitrary (PredicateFailure (EraRule "PPUP" era))
@@ -140,7 +140,7 @@ instance
   arbitrary = genericArbitraryU
 
 instance
-  (EraTxOut era, Mock (EraCrypto era), Arbitrary (TxOut era)) =>
+  (EraTxOut era, Crypto (EraCrypto era), Arbitrary (TxOut era)) =>
   Arbitrary (AllegraTxBody era)
   where
   arbitrary =
@@ -159,7 +159,7 @@ instance
 -------------------------------------------------------------------------------}
 
 instance
-  (EraTxOut era, Mock (EraCrypto era), Arbitrary (TxOut era)) =>
+  (EraTxOut era, Crypto (EraCrypto era), Arbitrary (TxOut era)) =>
   Arbitrary (MaryTxBody era)
   where
   arbitrary =
@@ -174,13 +174,13 @@ instance
       <*> arbitrary
       <*> genMintValues
 
-instance Mock c => Arbitrary (PolicyID c) where
+instance Crypto c => Arbitrary (PolicyID c) where
   arbitrary = PolicyID <$> arbitrary
 
-instance Mock c => Arbitrary (MultiAsset c) where
+instance Crypto c => Arbitrary (MultiAsset c) where
   arbitrary = MultiAsset <$> arbitrary
 
-instance Mock c => Arbitrary (MaryValue c) where
+instance Crypto c => Arbitrary (MaryValue c) where
   arbitrary = MaryValue <$> (fromIntegral <$> positives) <*> (multiAssetFromListBounded <$> triples)
     where
       triples = arbitrary :: Gen [(PolicyID c, AssetName, Word64)]
@@ -198,7 +198,7 @@ instance Mock c => Arbitrary (MaryValue c) where
 --
 -- - Fix the ADA value to 0
 -- - Allow both positive and negative quantities
-genMintValues :: forall c. Mock c => Gen (MultiAsset c)
+genMintValues :: forall c. Crypto c => Gen (MultiAsset c)
 genMintValues = multiAssetFromListBounded @Int64 <$> arbitrary
 
 -- | Variant on @multiAssetFromList@ that makes sure that generated values stay

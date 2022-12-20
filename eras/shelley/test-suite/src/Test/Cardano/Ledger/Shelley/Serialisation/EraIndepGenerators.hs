@@ -28,6 +28,7 @@ import Cardano.Ledger.BaseTypes (
   SlotNo (..),
  )
 import Cardano.Ledger.Coin (CompactForm (..))
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (Crypto, DSIGN)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API hiding (SignedDSIGN)
@@ -138,10 +139,10 @@ instance Mock c => Arbitrary (BHeader c) where
 instance Crypto c => Arbitrary (TP.HashHeader c) where
   arbitrary = TP.HashHeader <$> arbitrary
 
-instance (Era era, Mock (EraCrypto era)) => Arbitrary (ProposedPPUpdates era) where
+instance Era era => Arbitrary (ProposedPPUpdates era) where
   arbitrary = ProposedPPUpdates <$> pure Map.empty
 
-instance (Era era, Mock (EraCrypto era)) => Arbitrary (Update era) where
+instance Era era => Arbitrary (Update era) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -180,7 +181,7 @@ maxTxWits :: Int
 maxTxWits = 5
 
 instance
-  (EraTxOut era, Mock (EraCrypto era), Arbitrary (Value era)) =>
+  (Core.EraTxOut era, Arbitrary (Core.Value era)) =>
   Arbitrary (ShelleyTxOut era)
   where
   arbitrary = ShelleyTxOut <$> arbitrary <*> arbitrary
@@ -267,7 +268,7 @@ instance Crypto c => Arbitrary (DCert c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance (Era era, Mock (EraCrypto era)) => Arbitrary (PPUPState era) where
+instance Era era => Arbitrary (PPUPState era) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -276,10 +277,9 @@ instance Crypto c => Arbitrary (DPState c) where
   shrink = genericShrink
 
 instance
-  ( EraTxOut era
-  , Mock (EraCrypto era)
-  , Arbitrary (TxOut era)
-  , Arbitrary (State (EraRule "PPUP" era))
+  ( Core.EraTxOut era
+  , Arbitrary (Core.TxOut era)
+  , Arbitrary (State (Core.EraRule "PPUP" era))
   ) =>
   Arbitrary (UTxOState era)
   where
@@ -303,10 +303,9 @@ instance Crypto c => Arbitrary (IncrementalStake c) where
 -- > instance OVERLAPPING_ GSubtermsIncl (K1 i a) b where
 
 instance
-  ( EraTxOut era
-  , Mock (EraCrypto era)
-  , Arbitrary (TxOut era)
-  , Arbitrary (State (EraRule "PPUP" era))
+  ( Core.EraTxOut era
+  , Arbitrary (Core.TxOut era)
+  , Arbitrary (State (Core.EraRule "PPUP" era))
   ) =>
   Arbitrary (LedgerState era)
   where
@@ -327,12 +326,11 @@ instance
   arbitrary = genericArbitraryU
 
 instance
-  ( EraTxOut era
-  , Mock (EraCrypto era)
-  , Arbitrary (TxOut era)
-  , Arbitrary (Value era)
-  , Arbitrary (PParams era)
-  , Arbitrary (State (EraRule "PPUP" era))
+  ( Core.EraTxOut era
+  , Arbitrary (Core.TxOut era)
+  , Arbitrary (Core.Value era)
+  , Arbitrary (Core.PParams era)
+  , Arbitrary (State (Core.EraRule "PPUP" era))
   ) =>
   Arbitrary (EpochState era)
   where
@@ -428,7 +426,7 @@ instance Era era => Arbitrary (MultiSig era) where
   arbitrary = sizedMultiSig maxMultiSigDepth
 
 instance
-  (Mock c, Arbitrary (PParams (ShelleyEra c))) =>
+  (Crypto c, Arbitrary (Core.PParams (ShelleyEra c))) =>
   Arbitrary (ShelleyGenesis c)
   where
   arbitrary = do
@@ -453,9 +451,8 @@ instance Crypto c => Arbitrary (ShelleyGenesisStaking c) where
   arbitrary = ShelleyGenesisStaking <$> arbitrary <*> arbitrary
 
 instance
-  ( Mock (EraCrypto era)
-  , EraScript era
-  , Arbitrary (Script era)
+  ( EraScript era
+  , Arbitrary (Core.Script era)
   ) =>
   Arbitrary (ShelleyTxWits era)
   where
@@ -477,9 +474,8 @@ instance Era era => Arbitrary (STS.ShelleyPoolPredFailure era) where
 
 instance
   ( Era era
-  , Mock (EraCrypto era)
-  , Arbitrary (STS.PredicateFailure (EraRule "POOL" era))
-  , Arbitrary (STS.PredicateFailure (EraRule "DELEG" era))
+  , Arbitrary (STS.PredicateFailure (Core.EraRule "POOL" era))
+  , Arbitrary (STS.PredicateFailure (Core.EraRule "DELEG" era))
   ) =>
   Arbitrary (STS.ShelleyDelplPredFailure era)
   where
@@ -487,7 +483,7 @@ instance
   shrink = recursivelyShrink
 
 instance
-  (Era era, Mock (EraCrypto era)) =>
+  Era era =>
   Arbitrary (STS.ShelleyDelegPredFailure era)
   where
   arbitrary = genericArbitraryU
@@ -495,8 +491,7 @@ instance
 
 instance
   ( Era era
-  , Mock (EraCrypto era)
-  , Arbitrary (STS.PredicateFailure (EraRule "DELPL" era))
+  , Arbitrary (STS.PredicateFailure (Core.EraRule "DELPL" era))
   ) =>
   Arbitrary (STS.ShelleyDelegsPredFailure era)
   where
@@ -633,7 +628,7 @@ instance (Mock c) => Arbitrary (PulsingRewUpdate c) where
       ]
 
 instance
-  Mock c =>
+  Crypto c =>
   Arbitrary (RewardSnapShot c)
   where
   arbitrary =
@@ -648,7 +643,7 @@ instance
       <*> arbitrary
 
 instance
-  Mock c =>
+  Crypto c =>
   Arbitrary (PoolRewardInfo c)
   where
   arbitrary =
@@ -660,7 +655,7 @@ instance
       <*> arbitrary
 
 instance
-  Mock c =>
+  Crypto c =>
   Arbitrary (FreeVars c)
   where
   arbitrary =
@@ -672,7 +667,7 @@ instance
       <*> arbitrary {- delegations -}
 
 instance
-  Mock c =>
+  Crypto c =>
   Arbitrary (Pulser c)
   where
   arbitrary = RSLP <$> arbitrary <*> arbitrary <*> arbitrary <*> (RewardAns <$> arbitrary <*> arbitrary)

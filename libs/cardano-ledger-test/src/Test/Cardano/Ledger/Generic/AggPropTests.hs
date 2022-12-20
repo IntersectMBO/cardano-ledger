@@ -175,7 +175,7 @@ testEras :: String -> [Some Proof] -> (forall era. Reflect era => Proof era -> T
 testEras message ps f = testGroup message (applyF ps)
   where
     applyF [] = []
-    applyF (Some e : more) = unReflect e f : applyF more
+    applyF (Some e : more) = unReflect f e : applyF more
 
 depositTests :: TestTree
 depositTests = testEras "deposit invariants" preBabbage depositEra
