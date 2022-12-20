@@ -1,8 +1,10 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Ledger.Examples.Consensus (genericConsensusTest) where
 
+import Cardano.Ledger.Core (TranslationContext)
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Pretty (PDoc, ppString, text)
@@ -15,7 +17,14 @@ import Test.Tasty.HUnit (Assertion, assertBool, testCase)
 
 -- ===============================================================
 
-oneTest :: (Reflect era, EraCrypto era ~ StandardCrypto) => Proof era -> Assertion
+oneTest ::
+  ( Reflect era
+  , Eq (TranslationContext era)
+  , Show (TranslationContext era)
+  , EraCrypto era ~ StandardCrypto
+  ) =>
+  Proof era ->
+  Assertion
 oneTest proof = assertBool (displayResults results) (null results)
   where
     old = oldLedgerExamples proof
