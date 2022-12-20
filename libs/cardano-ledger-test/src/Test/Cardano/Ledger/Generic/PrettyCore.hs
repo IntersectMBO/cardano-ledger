@@ -1242,6 +1242,14 @@ pcValue (MaryValue n (MultiAsset m)) = ppSexp "Value" [ppInteger n, ppString ("n
 instance c ~ EraCrypto era => PrettyC (MaryValue c) era where
   prettyC _ = pcValue
 
+pcVal :: Proof era -> Value era -> PDoc
+pcVal (Shelley _) v = pcCoin v
+pcVal (Allegra _) v = pcCoin v
+pcVal (Mary _) v = pcValue v
+pcVal (Alonzo _) v = pcValue v
+pcVal (Babbage _) v = pcValue v
+pcVal (Conway _) v = pcValue v
+
 pcDatum :: Era era => Datum era -> PDoc
 pcDatum NoDatum = ppString "NoDatum"
 pcDatum (DatumHash h) = ppSexp "DHash" [trim (ppSafeHash h)]
