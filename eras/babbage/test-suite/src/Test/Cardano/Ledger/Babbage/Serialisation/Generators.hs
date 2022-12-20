@@ -29,7 +29,6 @@ import Data.Functor.Identity (Identity)
 import Data.Maybe (catMaybes)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Binary.Twiddle (Twiddle (..), emptyOrNothing, toTerm, twiddleStrictMaybe)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators (genMintValues)
 import Test.QuickCheck
@@ -39,7 +38,6 @@ instance (Era era, EncCBOR (f era), Arbitrary (f era)) => Arbitrary (Sized (f er
 
 instance
   ( EraTxOut era
-  , Mock (EraCrypto era)
   , Arbitrary (Value era)
   , Arbitrary (Script era)
   ) =>
@@ -53,8 +51,7 @@ instance
       <*> arbitrary
 
 instance
-  ( Mock (EraCrypto era)
-  , BabbageEraTxBody era
+  ( BabbageEraTxBody era
   , Arbitrary (Sized (TxOut era))
   , Arbitrary (TxOut era)
   , Arbitrary (Value era)
@@ -141,7 +138,6 @@ instance Arbitrary (BabbagePParams StrictMaybe era) where
 
 instance
   ( EraTxOut era
-  , Mock (EraCrypto era)
   , Arbitrary (Value era)
   , Arbitrary (TxOut era)
   , Arbitrary (PredicateFailure (EraRule "UTXOS" era))
@@ -156,7 +152,6 @@ instance
 
 instance
   ( Era era
-  , Mock (EraCrypto era)
   , Arbitrary (PredicateFailure (EraRule "UTXO" era))
   ) =>
   Arbitrary (BabbageUtxowPredFailure era)
