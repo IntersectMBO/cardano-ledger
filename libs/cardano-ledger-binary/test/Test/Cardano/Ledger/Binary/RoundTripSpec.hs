@@ -70,201 +70,196 @@ import Test.Hspec
 spec :: Spec
 spec = do
   describe "RoundTrip" $ do
-    forM_ allVersions $ \version ->
-      describe (show version) $ do
-        roundTripSpec @() version cborTrip
-        roundTripSpec @Bool version cborTrip
-        roundTripSpec @Integer version cborTrip
-        roundTripSpec @Natural version cborTrip
-        roundTripSpec @Word version cborTrip
-        roundTripSpec @Word8 version cborTrip
-        roundTripSpec @Word16 version cborTrip
-        roundTripSpec @Word32 version cborTrip
-        roundTripSpec @Word64 version cborTrip
-        roundTripSpec @Int version cborTrip
-        roundTripSpec @Int8 version cborTrip
-        roundTripSpec @Int16 version cborTrip
-        roundTripSpec @Int32 version cborTrip
-        roundTripSpec @Int64 version cborTrip
-        roundTripSpec @Float version cborTrip
-        roundTripSpec @Double version cborTrip
-        roundTripSpec @Rational version cborTrip
-        roundTripSpec @Nano version cborTrip
-        roundTripSpec @Pico version cborTrip
-        roundTripSpec @UTCTime version cborTrip
-        roundTripSpec @IPv4 version cborTrip
-        roundTripSpec @IPv6 version cborTrip
-        roundTripSpec @(Maybe Integer) version cborTrip
-        roundTripSpec @(StrictMaybe Integer) version cborTrip
-        roundTripSpec @[Integer] version cborTrip
-        roundTripSpec @(V.Vector Integer) version cborTrip
-        roundTripSpec @(VS.Vector Int16) version cborTrip
-        roundTripSpec @(VP.Vector Int) version cborTrip
-        roundTripSpec @(VU.Vector (Bool, Word)) version cborTrip
-        roundTripSpec @(Set.Set Int) version cborTrip
-        roundTripSpec @(Map.Map Integer Int) version cborTrip
-        roundTripSpec @(Seq.Seq Int) version cborTrip
-        roundTripSpec @(SSeq.StrictSeq Int) version cborTrip
-        roundTripSpec @(VMap.VMap VMap.VB VMap.VS Integer Int) version cborTrip
-        roundTripSpec @Prim.ByteArray version cborTrip
-        roundTripSpec @ByteArray version cborTrip
-        roundTripSpec @SlicedByteArray version cborTrip
-        let maybeNullTrip = mkTrip (encodeNullMaybe toCBOR) (decodeNullMaybe fromCBOR)
-        roundTripSpec @(Maybe Integer) version maybeNullTrip
-        describe "Slotting" $
+    roundTripSpec @() cborTrip
+    roundTripSpec @Bool cborTrip
+    roundTripSpec @Integer cborTrip
+    roundTripSpec @Natural cborTrip
+    roundTripSpec @Word cborTrip
+    roundTripSpec @Word8 cborTrip
+    roundTripSpec @Word16 cborTrip
+    roundTripSpec @Word32 cborTrip
+    roundTripSpec @Word64 cborTrip
+    roundTripSpec @Int cborTrip
+    roundTripSpec @Int8 cborTrip
+    roundTripSpec @Int16 cborTrip
+    roundTripSpec @Int32 cborTrip
+    roundTripSpec @Int64 cborTrip
+    roundTripSpec @Float cborTrip
+    roundTripSpec @Double cborTrip
+    roundTripSpec @Rational cborTrip
+    roundTripSpec @Nano cborTrip
+    roundTripSpec @Pico cborTrip
+    roundTripSpec @UTCTime cborTrip
+    roundTripSpec @IPv4 cborTrip
+    roundTripSpec @IPv6 cborTrip
+    roundTripSpec @(Maybe Integer) cborTrip
+    roundTripSpec @(StrictMaybe Integer) cborTrip
+    roundTripSpec @[Integer] cborTrip
+    roundTripSpec @(V.Vector Integer) cborTrip
+    roundTripSpec @(VS.Vector Int16) cborTrip
+    roundTripSpec @(VP.Vector Int) cborTrip
+    roundTripSpec @(VU.Vector (Bool, Word)) cborTrip
+    roundTripSpec @(Set.Set Int) cborTrip
+    roundTripSpec @(Map.Map Integer Int) cborTrip
+    roundTripSpec @(Seq.Seq Int) cborTrip
+    roundTripSpec @(SSeq.StrictSeq Int) cborTrip
+    roundTripSpec @(VMap.VMap VMap.VB VMap.VS Integer Int) cborTrip
+    roundTripSpec @Prim.ByteArray cborTrip
+    roundTripSpec @ByteArray cborTrip
+    roundTripSpec @SlicedByteArray cborTrip
+    let maybeNullTrip = mkTrip (encodeNullMaybe toCBOR) (decodeNullMaybe fromCBOR)
+    roundTripSpec @(Maybe Integer) maybeNullTrip
+    describe "Slotting" $
+      describe "Mock" $ do
+        roundTripSpec @BlockNo cborTrip
+        roundTripSpec @SlotNo cborTrip
+        roundTripSpec @(WithOrigin EpochNo) cborTrip
+        roundTripSpec @EpochSize cborTrip
+        roundTripSpec @SystemStart cborTrip
+    describe "Crypto" $ do
+      describe "DSIGN" $ do
+        describe "Ed25519" $ do
+          roundTripSpec @(SignKeyDSIGN Ed25519DSIGN) cborTrip
+          roundTripSpec @(VerKeyDSIGN Ed25519DSIGN) cborTrip
+          roundTripSpec @(SigDSIGN Ed25519DSIGN) cborTrip
+        describe "Ed448" $ do
+          roundTripSpec @(SignKeyDSIGN Ed448DSIGN) cborTrip
+          roundTripSpec @(VerKeyDSIGN Ed448DSIGN) cborTrip
+          roundTripSpec @(SigDSIGN Ed448DSIGN) cborTrip
+        describe "EcdsaSecp256k1" $ do
+          roundTripSpec @(SignKeyDSIGN EcdsaSecp256k1DSIGN) cborTrip
+          roundTripSpec @(VerKeyDSIGN EcdsaSecp256k1DSIGN) cborTrip
+          roundTripSpec @(SigDSIGN EcdsaSecp256k1DSIGN) cborTrip
+        describe "SchnorrSecp256k1" $ do
+          roundTripSpec @(SignKeyDSIGN SchnorrSecp256k1DSIGN) cborTrip
+          roundTripSpec @(VerKeyDSIGN SchnorrSecp256k1DSIGN) cborTrip
+          roundTripSpec @(SigDSIGN SchnorrSecp256k1DSIGN) cborTrip
+        describe "Mock" $ do
+          roundTripSpec @(SignKeyDSIGN MockDSIGN) cborTrip
+          roundTripSpec @(VerKeyDSIGN MockDSIGN) cborTrip
+          roundTripSpec @(SigDSIGN MockDSIGN) cborTrip
+      describe "VRF" $ do
+        describe "OutputVRF" $ do
+          roundTripSpec @(OutputVRF PraosVRF) cborTrip
+          roundTripSpec @(CertifiedVRF PraosVRF Bool) cborTrip
+        describe "Praos" $ do
+          roundTripSpec @(SignKeyVRF PraosVRF) cborTrip
+          roundTripSpec @(VerKeyVRF PraosVRF) cborTrip
+          roundTripSpec @(CertVRF PraosVRF) cborTrip
+        describe "Simple" $ do
+          roundTripSpec @(SignKeyVRF SimpleVRF) cborTrip
+          roundTripSpec @(VerKeyVRF SimpleVRF) cborTrip
+          roundTripSpec @(CertVRF SimpleVRF) cborTrip
+        describe "Mock" $ do
+          roundTripSpec @(SignKeyVRF MockVRF) cborTrip
+          roundTripSpec @(VerKeyVRF MockVRF) cborTrip
+          roundTripSpec @(CertVRF MockVRF) cborTrip
+      describe "KES" $ do
+        describe "CompactSingle" $ do
+          roundTripSpec @(SignKeyKES (CompactSingleKES Ed25519DSIGN)) cborTrip
+          roundTripSpec @(VerKeyKES (CompactSingleKES Ed25519DSIGN)) cborTrip
+          roundTripSpec @(SigKES (CompactSingleKES Ed25519DSIGN)) cborTrip
+        describe "CompactSum" $ do
+          roundTripSpec @(SignKeyKES (CompactSum0KES Ed25519DSIGN)) cborTrip
+          roundTripSpec @(VerKeyKES (CompactSum0KES Ed25519DSIGN)) cborTrip
+          roundTripSpec @(SigKES (CompactSum0KES Ed25519DSIGN)) cborTrip
+          roundTripSpec @(SignKeyKES (CompactSum1KES Ed25519DSIGN Blake2b_256)) cborTrip
+          roundTripSpec @(VerKeyKES (CompactSum1KES Ed25519DSIGN Blake2b_256)) cborTrip
+          roundTripSpec @(SigKES (CompactSum1KES Ed25519DSIGN Blake2b_256)) cborTrip
+          roundTripSpec @(SignKeyKES (CompactSum2KES Ed25519DSIGN Blake2b_256)) cborTrip
+          roundTripSpec @(VerKeyKES (CompactSum2KES Ed25519DSIGN Blake2b_256)) cborTrip
+          roundTripSpec @(SigKES (CompactSum2KES Ed25519DSIGN Blake2b_256)) cborTrip
+          roundTripSpec @(SignKeyKES (CompactSum3KES Ed25519DSIGN Blake2b_256)) cborTrip
+          roundTripSpec @(VerKeyKES (CompactSum3KES Ed25519DSIGN Blake2b_256)) cborTrip
+          roundTripSpec @(SigKES (CompactSum3KES Ed25519DSIGN Blake2b_256)) cborTrip
+          roundTripSpec @(SignKeyKES (CompactSum4KES Ed25519DSIGN Blake2b_256)) cborTrip
+          roundTripSpec @(VerKeyKES (CompactSum4KES Ed25519DSIGN Blake2b_256)) cborTrip
+          roundTripSpec @(SigKES (CompactSum4KES Ed25519DSIGN Blake2b_256)) cborTrip
+          roundTripSpec @(SignKeyKES (CompactSum5KES Ed25519DSIGN Blake2b_256)) cborTrip
+          roundTripSpec @(VerKeyKES (CompactSum5KES Ed25519DSIGN Blake2b_256)) cborTrip
+          roundTripSpec @(SigKES (CompactSum5KES Ed25519DSIGN Blake2b_256)) cborTrip
+          roundTripSpec @(SignKeyKES (CompactSum6KES Ed25519DSIGN Blake2b_256)) cborTrip
+          roundTripSpec @(VerKeyKES (CompactSum6KES Ed25519DSIGN Blake2b_256)) cborTrip
+          roundTripSpec @(SigKES (CompactSum6KES Ed25519DSIGN Blake2b_256)) cborTrip
+          roundTripSpec @(SignKeyKES (CompactSum7KES Ed25519DSIGN Blake2b_256)) cborTrip
+          roundTripSpec @(VerKeyKES (CompactSum7KES Ed25519DSIGN Blake2b_256)) cborTrip
+          roundTripSpec @(SigKES (CompactSum7KES Ed25519DSIGN Blake2b_256)) cborTrip
+        describe "Sum" $ do
+          roundTripSpec @(SignKeyKES (Sum0KES Ed25519DSIGN)) cborTrip
+          roundTripSpec @(VerKeyKES (Sum0KES Ed25519DSIGN)) cborTrip
+          roundTripSpec @(SigKES (Sum0KES Ed25519DSIGN)) cborTrip
+          roundTripSpec @(SignKeyKES (Sum1KES Ed25519DSIGN Blake2b_256)) cborTrip
+          roundTripSpec @(VerKeyKES (Sum1KES Ed25519DSIGN Blake2b_256)) cborTrip
+          roundTripSpec @(SigKES (Sum1KES Ed25519DSIGN Blake2b_256)) cborTrip
+          roundTripSpec @(SignKeyKES (Sum2KES Ed25519DSIGN Blake2b_256)) cborTrip
+          roundTripSpec @(VerKeyKES (Sum2KES Ed25519DSIGN Blake2b_256)) cborTrip
+          roundTripSpec @(SigKES (Sum2KES Ed25519DSIGN Blake2b_256)) cborTrip
+          roundTripSpec @(SignKeyKES (Sum3KES Ed25519DSIGN Blake2b_256)) cborTrip
+          roundTripSpec @(VerKeyKES (Sum3KES Ed25519DSIGN Blake2b_256)) cborTrip
+          roundTripSpec @(SigKES (Sum3KES Ed25519DSIGN Blake2b_256)) cborTrip
+          roundTripSpec @(SignKeyKES (Sum4KES Ed25519DSIGN Blake2b_256)) cborTrip
+          roundTripSpec @(VerKeyKES (Sum4KES Ed25519DSIGN Blake2b_256)) cborTrip
+          roundTripSpec @(SigKES (Sum4KES Ed25519DSIGN Blake2b_256)) cborTrip
+          roundTripSpec @(SignKeyKES (Sum5KES Ed25519DSIGN Blake2b_256)) cborTrip
+          roundTripSpec @(VerKeyKES (Sum5KES Ed25519DSIGN Blake2b_256)) cborTrip
+          roundTripSpec @(SigKES (Sum5KES Ed25519DSIGN Blake2b_256)) cborTrip
+          roundTripSpec @(SignKeyKES (Sum6KES Ed25519DSIGN Blake2b_256)) cborTrip
+          roundTripSpec @(VerKeyKES (Sum6KES Ed25519DSIGN Blake2b_256)) cborTrip
+          roundTripSpec @(SigKES (Sum6KES Ed25519DSIGN Blake2b_256)) cborTrip
+          roundTripSpec @(SignKeyKES (Sum7KES Ed25519DSIGN Blake2b_256)) cborTrip
+          roundTripSpec @(VerKeyKES (Sum7KES Ed25519DSIGN Blake2b_256)) cborTrip
+          roundTripSpec @(SigKES (Sum7KES Ed25519DSIGN Blake2b_256)) cborTrip
+        -- below we also test some tuple roundtripping as well as KES
+        describe "Simple" $ do
+          roundTripSpec
+            @( SignKeyKES (SimpleKES Ed25519DSIGN 1),
+               SignKeyKES (SimpleKES Ed25519DSIGN 2),
+               SignKeyKES (SimpleKES Ed25519DSIGN 3),
+               SignKeyKES (SimpleKES Ed25519DSIGN 4),
+               SignKeyKES (SimpleKES Ed25519DSIGN 5),
+               SignKeyKES (SimpleKES Ed25519DSIGN 6)
+             )
+            cborTrip
+          roundTripSpec
+            @(SignKeyKES (SimpleKES Ed25519DSIGN 7))
+            cborTrip
+          roundTripSpec
+            @( VerKeyKES (SimpleKES Ed25519DSIGN 1),
+               VerKeyKES (SimpleKES Ed25519DSIGN 2),
+               VerKeyKES (SimpleKES Ed25519DSIGN 3),
+               VerKeyKES (SimpleKES Ed25519DSIGN 4),
+               VerKeyKES (SimpleKES Ed25519DSIGN 5),
+               VerKeyKES (SimpleKES Ed25519DSIGN 6),
+               VerKeyKES (SimpleKES Ed25519DSIGN 7)
+             )
+            cborTrip
+          roundTripSpec
+            @( SigKES (SimpleKES Ed25519DSIGN 1),
+               SigKES (SimpleKES Ed25519DSIGN 2),
+               SigKES (SimpleKES Ed25519DSIGN 3),
+               SigKES (SimpleKES Ed25519DSIGN 4)
+             )
+            cborTrip
+          roundTripSpec
+            @( SigKES (SimpleKES Ed25519DSIGN 5),
+               SigKES (SimpleKES Ed25519DSIGN 6),
+               SigKES (SimpleKES Ed25519DSIGN 7)
+             )
+            cborTrip
           describe "Mock" $ do
-            roundTripSpec @BlockNo version cborTrip
-            roundTripSpec @SlotNo version cborTrip
-            roundTripSpec @(WithOrigin EpochNo) version cborTrip
-            roundTripSpec @EpochSize version cborTrip
-            roundTripSpec @SystemStart version cborTrip
-        describe "Crypto" $ do
-          describe "DSIGN" $ do
-            describe "Ed25519" $ do
-              roundTripSpec @(SignKeyDSIGN Ed25519DSIGN) version cborTrip
-              roundTripSpec @(VerKeyDSIGN Ed25519DSIGN) version cborTrip
-              roundTripSpec @(SigDSIGN Ed25519DSIGN) version cborTrip
-            describe "Ed448" $ do
-              roundTripSpec @(SignKeyDSIGN Ed448DSIGN) version cborTrip
-              roundTripSpec @(VerKeyDSIGN Ed448DSIGN) version cborTrip
-              roundTripSpec @(SigDSIGN Ed448DSIGN) version cborTrip
-            describe "EcdsaSecp256k1" $ do
-              roundTripSpec @(SignKeyDSIGN EcdsaSecp256k1DSIGN) version cborTrip
-              roundTripSpec @(VerKeyDSIGN EcdsaSecp256k1DSIGN) version cborTrip
-              roundTripSpec @(SigDSIGN EcdsaSecp256k1DSIGN) version cborTrip
-            describe "SchnorrSecp256k1" $ do
-              roundTripSpec @(SignKeyDSIGN SchnorrSecp256k1DSIGN) version cborTrip
-              roundTripSpec @(VerKeyDSIGN SchnorrSecp256k1DSIGN) version cborTrip
-              roundTripSpec @(SigDSIGN SchnorrSecp256k1DSIGN) version cborTrip
-            describe "Mock" $ do
-              roundTripSpec @(SignKeyDSIGN MockDSIGN) version cborTrip
-              roundTripSpec @(VerKeyDSIGN MockDSIGN) version cborTrip
-              roundTripSpec @(SigDSIGN MockDSIGN) version cborTrip
-          describe "VRF" $ do
-            describe "OutputVRF" $ do
-              roundTripSpec @(OutputVRF PraosVRF) version cborTrip
-              roundTripSpec @(CertifiedVRF PraosVRF Bool) version cborTrip
-            describe "Praos" $ do
-              roundTripSpec @(SignKeyVRF PraosVRF) version cborTrip
-              roundTripSpec @(VerKeyVRF PraosVRF) version cborTrip
-              roundTripSpec @(CertVRF PraosVRF) version cborTrip
-            describe "Simple" $ do
-              roundTripSpec @(SignKeyVRF SimpleVRF) version cborTrip
-              roundTripSpec @(VerKeyVRF SimpleVRF) version cborTrip
-              roundTripSpec @(CertVRF SimpleVRF) version cborTrip
-            describe "Mock" $ do
-              roundTripSpec @(SignKeyVRF MockVRF) version cborTrip
-              roundTripSpec @(VerKeyVRF MockVRF) version cborTrip
-              roundTripSpec @(CertVRF MockVRF) version cborTrip
-          describe "KES" $ do
-            describe "CompactSingle" $ do
-              roundTripSpec @(SignKeyKES (CompactSingleKES Ed25519DSIGN)) version cborTrip
-              roundTripSpec @(VerKeyKES (CompactSingleKES Ed25519DSIGN)) version cborTrip
-              roundTripSpec @(SigKES (CompactSingleKES Ed25519DSIGN)) version cborTrip
-            describe "CompactSum" $ do
-              roundTripSpec @(SignKeyKES (CompactSum0KES Ed25519DSIGN)) version cborTrip
-              roundTripSpec @(VerKeyKES (CompactSum0KES Ed25519DSIGN)) version cborTrip
-              roundTripSpec @(SigKES (CompactSum0KES Ed25519DSIGN)) version cborTrip
-              roundTripSpec @(SignKeyKES (CompactSum1KES Ed25519DSIGN Blake2b_256)) version cborTrip
-              roundTripSpec @(VerKeyKES (CompactSum1KES Ed25519DSIGN Blake2b_256)) version cborTrip
-              roundTripSpec @(SigKES (CompactSum1KES Ed25519DSIGN Blake2b_256)) version cborTrip
-              roundTripSpec @(SignKeyKES (CompactSum2KES Ed25519DSIGN Blake2b_256)) version cborTrip
-              roundTripSpec @(VerKeyKES (CompactSum2KES Ed25519DSIGN Blake2b_256)) version cborTrip
-              roundTripSpec @(SigKES (CompactSum2KES Ed25519DSIGN Blake2b_256)) version cborTrip
-              roundTripSpec @(SignKeyKES (CompactSum3KES Ed25519DSIGN Blake2b_256)) version cborTrip
-              roundTripSpec @(VerKeyKES (CompactSum3KES Ed25519DSIGN Blake2b_256)) version cborTrip
-              roundTripSpec @(SigKES (CompactSum3KES Ed25519DSIGN Blake2b_256)) version cborTrip
-              roundTripSpec @(SignKeyKES (CompactSum4KES Ed25519DSIGN Blake2b_256)) version cborTrip
-              roundTripSpec @(VerKeyKES (CompactSum4KES Ed25519DSIGN Blake2b_256)) version cborTrip
-              roundTripSpec @(SigKES (CompactSum4KES Ed25519DSIGN Blake2b_256)) version cborTrip
-              roundTripSpec @(SignKeyKES (CompactSum5KES Ed25519DSIGN Blake2b_256)) version cborTrip
-              roundTripSpec @(VerKeyKES (CompactSum5KES Ed25519DSIGN Blake2b_256)) version cborTrip
-              roundTripSpec @(SigKES (CompactSum5KES Ed25519DSIGN Blake2b_256)) version cborTrip
-              roundTripSpec @(SignKeyKES (CompactSum6KES Ed25519DSIGN Blake2b_256)) version cborTrip
-              roundTripSpec @(VerKeyKES (CompactSum6KES Ed25519DSIGN Blake2b_256)) version cborTrip
-              roundTripSpec @(SigKES (CompactSum6KES Ed25519DSIGN Blake2b_256)) version cborTrip
-              roundTripSpec @(SignKeyKES (CompactSum7KES Ed25519DSIGN Blake2b_256)) version cborTrip
-              roundTripSpec @(VerKeyKES (CompactSum7KES Ed25519DSIGN Blake2b_256)) version cborTrip
-              roundTripSpec @(SigKES (CompactSum7KES Ed25519DSIGN Blake2b_256)) version cborTrip
-            describe "Sum" $ do
-              roundTripSpec @(SignKeyKES (Sum0KES Ed25519DSIGN)) version cborTrip
-              roundTripSpec @(VerKeyKES (Sum0KES Ed25519DSIGN)) version cborTrip
-              roundTripSpec @(SigKES (Sum0KES Ed25519DSIGN)) version cborTrip
-              roundTripSpec @(SignKeyKES (Sum1KES Ed25519DSIGN Blake2b_256)) version cborTrip
-              roundTripSpec @(VerKeyKES (Sum1KES Ed25519DSIGN Blake2b_256)) version cborTrip
-              roundTripSpec @(SigKES (Sum1KES Ed25519DSIGN Blake2b_256)) version cborTrip
-              roundTripSpec @(SignKeyKES (Sum2KES Ed25519DSIGN Blake2b_256)) version cborTrip
-              roundTripSpec @(VerKeyKES (Sum2KES Ed25519DSIGN Blake2b_256)) version cborTrip
-              roundTripSpec @(SigKES (Sum2KES Ed25519DSIGN Blake2b_256)) version cborTrip
-              roundTripSpec @(SignKeyKES (Sum3KES Ed25519DSIGN Blake2b_256)) version cborTrip
-              roundTripSpec @(VerKeyKES (Sum3KES Ed25519DSIGN Blake2b_256)) version cborTrip
-              roundTripSpec @(SigKES (Sum3KES Ed25519DSIGN Blake2b_256)) version cborTrip
-              roundTripSpec @(SignKeyKES (Sum4KES Ed25519DSIGN Blake2b_256)) version cborTrip
-              roundTripSpec @(VerKeyKES (Sum4KES Ed25519DSIGN Blake2b_256)) version cborTrip
-              roundTripSpec @(SigKES (Sum4KES Ed25519DSIGN Blake2b_256)) version cborTrip
-              roundTripSpec @(SignKeyKES (Sum5KES Ed25519DSIGN Blake2b_256)) version cborTrip
-              roundTripSpec @(VerKeyKES (Sum5KES Ed25519DSIGN Blake2b_256)) version cborTrip
-              roundTripSpec @(SigKES (Sum5KES Ed25519DSIGN Blake2b_256)) version cborTrip
-              roundTripSpec @(SignKeyKES (Sum6KES Ed25519DSIGN Blake2b_256)) version cborTrip
-              roundTripSpec @(VerKeyKES (Sum6KES Ed25519DSIGN Blake2b_256)) version cborTrip
-              roundTripSpec @(SigKES (Sum6KES Ed25519DSIGN Blake2b_256)) version cborTrip
-              roundTripSpec @(SignKeyKES (Sum7KES Ed25519DSIGN Blake2b_256)) version cborTrip
-              roundTripSpec @(VerKeyKES (Sum7KES Ed25519DSIGN Blake2b_256)) version cborTrip
-              roundTripSpec @(SigKES (Sum7KES Ed25519DSIGN Blake2b_256)) version cborTrip
-            -- below we also test some tuple roundtripping as well as KES
-            describe "Simple" $ do
-              roundTripSpec
-                @( SignKeyKES (SimpleKES Ed25519DSIGN 1),
-                   SignKeyKES (SimpleKES Ed25519DSIGN 2),
-                   SignKeyKES (SimpleKES Ed25519DSIGN 3),
-                   SignKeyKES (SimpleKES Ed25519DSIGN 4),
-                   SignKeyKES (SimpleKES Ed25519DSIGN 5),
-                   SignKeyKES (SimpleKES Ed25519DSIGN 6)
-                 )
-                version
-                cborTrip
-              roundTripSpec @(SignKeyKES (SimpleKES Ed25519DSIGN 7)) version cborTrip
-              roundTripSpec
-                @( VerKeyKES (SimpleKES Ed25519DSIGN 1),
-                   VerKeyKES (SimpleKES Ed25519DSIGN 2),
-                   VerKeyKES (SimpleKES Ed25519DSIGN 3),
-                   VerKeyKES (SimpleKES Ed25519DSIGN 4),
-                   VerKeyKES (SimpleKES Ed25519DSIGN 5),
-                   VerKeyKES (SimpleKES Ed25519DSIGN 6),
-                   VerKeyKES (SimpleKES Ed25519DSIGN 7)
-                 )
-                version
-                cborTrip
-              roundTripSpec
-                @( SigKES (SimpleKES Ed25519DSIGN 1),
-                   SigKES (SimpleKES Ed25519DSIGN 2),
-                   SigKES (SimpleKES Ed25519DSIGN 3),
-                   SigKES (SimpleKES Ed25519DSIGN 4)
-                 )
-                version
-                cborTrip
-              roundTripSpec
-                @( SigKES (SimpleKES Ed25519DSIGN 5),
-                   SigKES (SimpleKES Ed25519DSIGN 6),
-                   SigKES (SimpleKES Ed25519DSIGN 7)
-                 )
-                version
-                cborTrip
-            describe "Mock" $ do
-              roundTripSpec @(SignKeyKES (MockKES 7)) version cborTrip
-              roundTripSpec @(VerKeyKES (MockKES 7)) version cborTrip
-              roundTripSpec @(SigKES (MockKES 7)) version cborTrip
-          describe "Hash" $ do
-            roundTripSpec
-              @( Hash Blake2b_224 (),
-                 Hash Blake2b_256 (),
-                 Hash SHA256 (),
-                 Hash SHA3_256 (),
-                 Hash Keccak256 (),
-                 Hash ShortHash ()
-               )
-              version
-              cborTrip
+            roundTripSpec @(SignKeyKES (MockKES 7)) cborTrip
+            roundTripSpec @(VerKeyKES (MockKES 7)) cborTrip
+            roundTripSpec @(SigKES (MockKES 7)) cborTrip
+        describe "Hash" $ do
+          roundTripSpec
+            @( Hash Blake2b_224 (),
+               Hash Blake2b_256 (),
+               Hash SHA256 (),
+               Hash SHA3_256 (),
+               Hash Keccak256 (),
+               Hash ShortHash ()
+             )
+            cborTrip
   describe "EmbedTrip" $ do
     forM_ [shelleyProtVer .. maxBound] $ \v ->
       describe (show v) $ do

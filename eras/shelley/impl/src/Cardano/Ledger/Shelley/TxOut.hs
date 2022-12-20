@@ -25,7 +25,7 @@ where
 
 import qualified Cardano.Crypto.Hash as HS
 import Cardano.HeapWords (HeapWords (..))
-import Cardano.Ledger.Address (Addr (..))
+import Cardano.Ledger.Address (Addr (..), CompactAddr, compactAddr, decompactAddr)
 import Cardano.Ledger.Binary
   ( FromCBOR (..),
     FromSharedCBOR (..),
@@ -35,7 +35,6 @@ import Cardano.Ledger.Binary
     encodeListLen,
     fromNotSharedCBOR,
   )
-import Cardano.Ledger.CompactAddress (CompactAddr, compactAddr, decompactAddr)
 import Cardano.Ledger.Compactible (Compactible (CompactForm, fromCompact, toCompact))
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto (ADDRHASH), StandardCrypto)

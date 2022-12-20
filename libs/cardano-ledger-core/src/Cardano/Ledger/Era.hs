@@ -16,8 +16,7 @@ module Cardano.Ledger.Era
   )
 where
 
-import Cardano.Ledger.Address (Addr, BootstrapAddress)
-import Cardano.Ledger.CompactAddress (CompactAddr)
+import Cardano.Ledger.Address (Addr, BootstrapAddress, CompactAddr)
 import Cardano.Ledger.Core
 import Cardano.Ledger.TxIn (TxIn)
 import Data.Set (Set)

@@ -46,7 +46,7 @@ module Cardano.Ledger.Shelley.API.Wallet
 where
 
 import Cardano.Crypto.DSIGN.Class (sizeSigDSIGN, sizeVerKeyDSIGN)
-import Cardano.Ledger.Address (Addr (..))
+import Cardano.Ledger.Address (Addr (..), compactAddr)
 import Cardano.Ledger.BaseTypes
   ( BlocksMade,
     Globals (..),
@@ -74,7 +74,6 @@ import Cardano.Ledger.Binary.Coders
   )
 import Cardano.Ledger.Binary.Crypto (decodeSignedDSIGN)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.CompactAddress (compactAddr)
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))

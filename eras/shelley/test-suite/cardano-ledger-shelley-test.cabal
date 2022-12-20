@@ -39,7 +39,6 @@ library
     Test.Cardano.Crypto.VRF.Fake
     Test.Cardano.Ledger.TerseTools
     Test.Cardano.Ledger.Shelley.Address.Bootstrap
-    Test.Cardano.Ledger.Shelley.Address.CompactAddr
     Test.Cardano.Ledger.Shelley.BenchmarkFunctions
     Test.Cardano.Ledger.Shelley.ByronTranslation
     Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes
@@ -81,7 +80,6 @@ library
   build-depends:
                 QuickCheck >= 2.13.2,
                 base16-bytestring >= 1,
-                binary,
                 bytestring,
                 cardano-crypto,
                 cardano-crypto-class,
@@ -198,7 +196,7 @@ test-suite cardano-ledger-shelley-test
                 tasty-hunit,
                 tasty-quickcheck,
                 time
-                
+
 
 
 benchmark mainbench

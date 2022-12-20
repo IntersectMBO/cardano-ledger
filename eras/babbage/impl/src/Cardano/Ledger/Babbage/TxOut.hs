@@ -35,12 +35,17 @@ module Cardano.Ledger.Babbage.TxOut
     txOutData,
     txOutDataHash,
     txOutScript,
-    fromCborTxOutWithAddr,
   )
 where
 
-import Cardano.Crypto.Hash
-import Cardano.Ledger.Address (Addr (..))
+import Cardano.Crypto.Hash (HashAlgorithm)
+import Cardano.Ledger.Address
+  ( Addr (..),
+    CompactAddr,
+    compactAddr,
+    decompactAddr,
+    fromCborBothAddr,
+  )
 import Cardano.Ledger.Alonzo.Data
   ( BinaryData,
     Data,
@@ -90,12 +95,6 @@ import Cardano.Ledger.Binary
   )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.CompactAddress
-  ( CompactAddr,
-    compactAddr,
-    decompactAddr,
-    fromCborBackwardsBothAddr,
-  )
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core hiding (TxBody, TxOut)
 import qualified Cardano.Ledger.Core as Core (TxOut)
@@ -442,7 +441,7 @@ instance
   ) =>
   FromCBOR (BabbageTxOut era)
   where
-  fromCBOR = fromCborTxOutWithAddr fromCborBackwardsBothAddr
+  fromCBOR = decodeBabbageTxOut
 
 instance
   ( Era era,
@@ -454,7 +453,7 @@ instance
   where
   type Share (BabbageTxOut era) = Interns (Credential 'Staking (EraCrypto era))
   fromSharedCBOR credsInterns =
-    internTxOut <$!> fromCborTxOutWithAddr fromCborBackwardsBothAddr
+    internTxOut <$!> decodeBabbageTxOut
     where
       internTxOut = \case
         TxOut_AddrHash28_AdaOnly cred addr28Extra ada ->
@@ -463,21 +462,20 @@ instance
           TxOut_AddrHash28_AdaOnly_DataHash32 (interns credsInterns cred) addr28Extra ada dataHash32
         txOut -> txOut
 
-fromCborTxOutWithAddr ::
+decodeBabbageTxOut ::
   (Era era, Val (Value era), FromCBOR (Annotator (Script era)), DecodeNonNegative (Value era)) =>
-  (forall s'. Decoder s' (Addr (EraCrypto era), CompactAddr (EraCrypto era))) ->
   Decoder s (BabbageTxOut era)
-fromCborTxOutWithAddr decAddr = do
+decodeBabbageTxOut = do
   peekTokenType >>= \case
-    TypeMapLenIndef -> decodeTxOut decAddr
-    TypeMapLen -> decodeTxOut decAddr
+    TypeMapLenIndef -> decodeTxOut fromCborBothAddr
+    TypeMapLen -> decodeTxOut fromCborBothAddr
     _ -> oldTxOut
   where
     oldTxOut = do
       lenOrIndef <- decodeListLenOrIndef
       case lenOrIndef of
         Nothing -> do
-          (a, ca) <- fromCborBackwardsBothAddr
+          (a, ca) <- fromCborBothAddr
           v <- decodeNonNegative
           decodeBreakOr >>= \case
             True -> pure $ mkTxOut a ca v NoDatum SNothing
@@ -487,11 +485,11 @@ fromCborTxOutWithAddr decAddr = do
                 True -> pure $ mkTxOut a ca v (DatumHash dh) SNothing
                 False -> cborError $ DecoderErrorCustom "txout" "Excess terms in txout"
         Just 2 -> do
-          (a, ca) <- decAddr
+          (a, ca) <- fromCborBothAddr
           v <- decodeNonNegative
           pure $ mkTxOut a ca v NoDatum SNothing
         Just 3 -> do
-          (a, ca) <- fromCborBackwardsBothAddr
+          (a, ca) <- fromCborBothAddr
           v <- decodeNonNegative
           dh <- fromCBOR
           pure $ mkTxOut a ca v (DatumHash dh) SNothing

@@ -10,7 +10,6 @@ import Cardano.Ledger.Address
 import Cardano.Ledger.Alonzo.PParams hiding (PParams)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary
-import Cardano.Ledger.CompactAddress
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.API.Mempool
 import Cardano.Ledger.Shelley.API.Wallet (getFilteredUTxO, getUTxO)

@@ -283,8 +283,7 @@ dualM :: Trip M M
 dualM = mkTrip (encode . baz) (decode decodeM)
 
 roundTripSpec :: (HasCallStack, Show t, Eq t, Typeable t) => String -> Trip t t -> t -> Spec
-roundTripSpec name trip val =
-  it name $ roundTripExpectation shelleyProtVer trip val
+roundTripSpec name trip val = it name $ roundTripExpectation trip val
 
 -- | Check that a value can be encoded using Coders and decoded using FromCBOR
 encodeSpec :: (HasCallStack, Show t, Eq t, FromCBOR t) => String -> Encode w t -> t -> Spec

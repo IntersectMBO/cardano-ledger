@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
@@ -35,7 +36,7 @@ module Test.Cardano.Ledger.Binary.RoundTrip
 where
 
 import Cardano.Ledger.Binary
-import Control.Monad (guard)
+import Control.Monad (forM_, guard)
 import Data.Bifunctor (first)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Proxy
@@ -49,15 +50,15 @@ import Test.QuickCheck hiding (label)
 
 -- =====================================================================
 
--- | Tests the roundtrip property using QuickCheck generators
+-- | Tests the roundtrip property using QuickCheck generators for all possible versions
+-- starting with `shelleyProtVer`.
 roundTripSpec ::
   forall t.
   (Show t, Eq t, Typeable t, Arbitrary t) =>
-  Version ->
   Trip t t ->
   Spec
-roundTripSpec version trip =
-  prop (show (typeRep $ Proxy @t)) $ roundTripExpectation version trip
+roundTripSpec trip =
+  prop (show (typeRep $ Proxy @t)) $ roundTripExpectation trip
 
 -- | Tests the embedtrip property using QuickCheck generators
 embedTripSpec ::
@@ -83,7 +84,8 @@ roundTripFailureExpectation version x =
       expectationFailure $
         "Should not have deserialized: " ++ showExpr (CBORBytes (serialize' version x))
 
--- | Verify that round triping through the binary form holds.
+-- | Verify that round triping through the binary form holds for all versions starting
+-- with `shelleyProtVer`.
 --
 -- In other words check that:
 --
@@ -91,32 +93,31 @@ roundTripFailureExpectation version x =
 -- > serialize version . deserialize version . serialize version === serialize version
 roundTripExpectation ::
   (Show t, Eq t, Typeable t, HasCallStack) =>
-  Version ->
   Trip t t ->
   t ->
   Expectation
-roundTripExpectation version trip t =
-  case roundTrip version trip t of
-    Left err -> expectationFailure $ "Failed to deserialize encoded: " ++ show err
-    Right tDecoded -> tDecoded `shouldBe` t
+roundTripExpectation trip t =
+  forM_ [natVersion @2 .. maxBound] $ \version ->
+    case roundTrip version trip t of
+      Left err -> expectationFailure $ "Failed to deserialize encoded: " ++ show err
+      Right tDecoded -> tDecoded `shouldBe` t
 
 roundTripCborExpectation ::
   forall t.
   (Show t, Eq t, ToCBOR t, FromCBOR t, HasCallStack) =>
-  Version ->
   t ->
   Expectation
-roundTripCborExpectation version = roundTripExpectation version (cborTrip @t)
+roundTripCborExpectation = roundTripExpectation (cborTrip @t)
 
 roundTripAnnExpectation ::
   (Show t, Eq t, ToCBOR t, FromCBOR (Annotator t), HasCallStack) =>
-  Version ->
   t ->
   Expectation
-roundTripAnnExpectation version t =
-  case roundTripAnn version t of
-    Left err -> expectationFailure $ "Failed to deserialize encoded: " ++ show err
-    Right tDecoded -> tDecoded `shouldBe` t
+roundTripAnnExpectation t =
+  forM_ [natVersion @2 .. maxBound] $ \version ->
+    case roundTripAnn version t of
+      Left err -> expectationFailure $ "Failed to deserialize encoded: " ++ show err
+      Right tDecoded -> tDecoded `shouldBe` t
 
 roundTripTwiddledProperty ::
   (Show t, Eq t, Twiddle t, FromCBOR t) => Version -> t -> Property

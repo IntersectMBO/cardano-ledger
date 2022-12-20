@@ -134,17 +134,10 @@ import Cardano.Ledger.Binary
     FromCBOR (..),
     Sized (..),
     ToCBOR (..),
-    decodeMap,
-    decodeSized,
-    decodeStrictSeq,
     mkSized,
   )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.CompactAddress
-  ( fromCborBothAddr,
-    fromCborRewardAcnt,
-  )
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
@@ -176,7 +169,6 @@ import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
-import Data.Word
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
@@ -732,34 +724,19 @@ instance
         requiredFields
     where
       bodyFields :: Word -> Field (BabbageTxBodyRaw era)
-      bodyFields 0 =
-        field (\x tx -> tx {btbrSpendInputs = x}) From
-      bodyFields 13 =
-        field (\x tx -> tx {btbrCollateralInputs = x}) From
-      bodyFields 18 =
-        field (\x tx -> tx {btbrReferenceInputs = x}) From
-      bodyFields 1 =
-        field
-          (\x tx -> tx {btbrOutputs = x})
-          (D (decodeStrictSeq (decodeSized (fromCborTxOutWithAddr fromCborBothAddr))))
-      bodyFields 16 =
-        ofield
-          (\x tx -> tx {btbrCollateralReturn = x})
-          (D (decodeSized (fromCborTxOutWithAddr fromCborBothAddr)))
-      bodyFields 17 =
-        ofield
-          (\x tx -> tx {btbrTotalCollateral = x})
-          From
+      bodyFields 0 = field (\x tx -> tx {btbrSpendInputs = x}) From
+      bodyFields 13 = field (\x tx -> tx {btbrCollateralInputs = x}) From
+      bodyFields 18 = field (\x tx -> tx {btbrReferenceInputs = x}) From
+      bodyFields 1 = field (\x tx -> tx {btbrOutputs = x}) From
+      bodyFields 16 = ofield (\x tx -> tx {btbrCollateralReturn = x}) From
+      bodyFields 17 = ofield (\x tx -> tx {btbrTotalCollateral = x}) From
       bodyFields 2 = field (\x tx -> tx {btbrTxFee = x}) From
       bodyFields 3 =
         ofield
           (\x tx -> tx {btbrValidityInterval = (btbrValidityInterval tx) {invalidHereafter = x}})
           From
       bodyFields 4 = field (\x tx -> tx {btbrCerts = x}) From
-      bodyFields 5 =
-        field
-          (\x tx -> tx {btbrWdrls = x})
-          (D (Wdrl <$> decodeMap fromCborRewardAcnt fromCBOR))
+      bodyFields 5 = field (\x tx -> tx {btbrWdrls = x}) From
       bodyFields 6 = ofield (\x tx -> tx {btbrUpdate = x}) From
       bodyFields 7 = ofield (\x tx -> tx {btbrAuxDataHash = x}) From
       bodyFields 8 =

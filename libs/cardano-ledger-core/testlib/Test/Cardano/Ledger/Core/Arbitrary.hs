@@ -337,6 +337,9 @@ instance Crypto c => Arbitrary (Addr c) where
       ]
   shrink = genericShrink
 
+instance Crypto c => Arbitrary (CompactAddr c) where
+  arbitrary = compactAddr <$> arbitrary
+
 instance Crypto c => Arbitrary (StakeReference c) where
   arbitrary =
     frequency

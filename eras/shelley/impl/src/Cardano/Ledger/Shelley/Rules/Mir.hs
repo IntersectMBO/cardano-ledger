@@ -114,8 +114,8 @@ mirTransition = do
       irwdT = rewards' UM.◁ iRTreasury (dsIRewards ds) :: RewardAccounts (EraCrypto era)
       totR = fold irwdR
       totT = fold irwdT
-      availableReserves = reserves `addDeltaCoin` (deltaReserves . dsIRewards $ ds)
-      availableTreasury = treasury `addDeltaCoin` (deltaTreasury . dsIRewards $ ds)
+      availableReserves = reserves `addDeltaCoin` deltaReserves (dsIRewards ds)
+      availableTreasury = treasury `addDeltaCoin` deltaTreasury (dsIRewards ds)
       update = eval (irwdR ∪+ irwdT) :: RewardAccounts (EraCrypto era)
 
   if totR <= availableReserves && totT <= availableTreasury

@@ -10,7 +10,6 @@ import Cardano.Ledger.Babbage (Babbage)
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure)
 import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.TxAuxData (ShelleyTxAuxData)
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 import Test.Cardano.Ledger.Binary.RoundTrip
@@ -24,30 +23,27 @@ tests =
   testGroup
     "Babbage CBOR round-trip"
     [ testProperty "babbage/Script" $
-        roundTripAnnExpectation @(Script Babbage) v,
+        roundTripAnnExpectation @(Script Babbage),
       testProperty "babbage/Metadata" $
-        roundTripAnnExpectation @(ShelleyTxAuxData Babbage) v,
+        roundTripAnnExpectation @(TxAuxData Babbage),
       testProperty "babbage/TxOut" $
-        roundTripCborExpectation @(TxOut Babbage) v,
+        roundTripCborExpectation @(TxOut Babbage),
       testProperty "babbage/TxBody" $
-        roundTripAnnExpectation @(TxBody Babbage) v,
+        roundTripAnnExpectation @(TxBody Babbage),
       testProperty "babbage/CostModel" $
-        roundTripCborExpectation @CostModels v,
+        roundTripCborExpectation @CostModels,
       testProperty "babbage/PParams" $
-        roundTripCborExpectation @(PParams Babbage) v,
+        roundTripCborExpectation @(PParams Babbage),
       testProperty "babbage/PParamsUpdate" $
-        roundTripCborExpectation @(PParamsUpdate Babbage) v,
+        roundTripCborExpectation @(PParamsUpdate Babbage),
       testProperty "babbage/AuxiliaryData" $
-        roundTripAnnExpectation @(TxAuxData Babbage) v,
+        roundTripAnnExpectation @(TxAuxData Babbage),
       testProperty "Script" $
-        roundTripAnnExpectation @(Script Babbage) v,
+        roundTripAnnExpectation @(Script Babbage),
       testProperty "babbage/Tx" $
-        roundTripAnnExpectation @(Tx Babbage) v,
+        roundTripAnnExpectation @(Tx Babbage),
       testProperty "babbage/BabbageUtxoPredFailure" $
-        roundTripCborExpectation @(BabbageUtxoPredFailure Babbage) v,
+        roundTripCborExpectation @(BabbageUtxoPredFailure Babbage),
       testProperty "babbage/Block" $
-        roundTripAnnExpectation @(Block (BHeader StandardCrypto) Babbage) v
+        roundTripAnnExpectation @(Block (BHeader StandardCrypto) Babbage)
     ]
-  where
-    -- TODO iterate over all protocol versions of an era
-    v = eraProtVerHigh @Babbage

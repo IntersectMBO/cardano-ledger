@@ -30,7 +30,13 @@ module Cardano.Ledger.Alonzo.Rules.Utxo
   )
 where
 
-import Cardano.Ledger.Address (Addr (..), RewardAcnt)
+import Cardano.Ledger.Address
+  ( Addr (..),
+    CompactAddr,
+    RewardAcnt,
+    isBootstrapCompactAddr,
+    isPayCredScriptCompactAddr,
+  )
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
@@ -65,11 +71,6 @@ import Cardano.Ledger.Binary.Coders
     (<!),
   )
 import Cardano.Ledger.Coin (Coin (unCoin), rationalToCoinViaCeiling)
-import Cardano.Ledger.CompactAddress
-  ( CompactAddr,
-    isBootstrapCompactAddr,
-    isPayCredScriptCompactAddr,
-  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (Crypto)

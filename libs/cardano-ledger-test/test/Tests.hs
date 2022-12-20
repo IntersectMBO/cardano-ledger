@@ -10,7 +10,6 @@ module Main where
 import Data.Default.Class (Default (def))
 import System.IO (hSetEncoding, stdout, utf8)
 import qualified Test.Cardano.Ledger.Alonzo.Tools as Tools
-import Test.Cardano.Ledger.BaseTypes (baseTypesTests)
 import qualified Test.Cardano.Ledger.Examples.AlonzoAPI as AlonzoAPI (tests)
 import qualified Test.Cardano.Ledger.Examples.AlonzoBBODY as AlonzoBBODY (tests)
 import qualified Test.Cardano.Ledger.Examples.AlonzoCollectInputs as AlonzoCollectInputs (tests)
@@ -38,7 +37,6 @@ mainTestTrees =
   [ depositTests,
     calcPoolDistOldEqualsNew,
     genericConsensusTest,
-    baseTypesTests,
     Tools.tests,
     testGroup
       "STS Tests"

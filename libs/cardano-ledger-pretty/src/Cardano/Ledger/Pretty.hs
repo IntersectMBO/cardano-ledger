@@ -22,7 +22,9 @@ import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Address
   ( Addr (..),
     BootstrapAddress (..),
+    CompactAddr,
     RewardAcnt (..),
+    decompactAddr,
   )
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes
@@ -49,7 +51,6 @@ import Cardano.Ledger.BaseTypes
   )
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
-import Cardano.Ledger.CompactAddress (CompactAddr (..), decompactAddr)
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core
   ( Era,

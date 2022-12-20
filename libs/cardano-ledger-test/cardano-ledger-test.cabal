@@ -37,7 +37,6 @@ library
   other-modules:
   exposed-modules:
     Test.Cardano.Ledger.Alonzo.Tools
-    Test.Cardano.Ledger.BaseTypes
     Test.Cardano.Ledger.Examples.BabbageFeatures
     Test.Cardano.Ledger.Examples.AlonzoValidTxUTXOW
     Test.Cardano.Ledger.Examples.AlonzoInvalidTxUTXOW
@@ -70,7 +69,6 @@ library
     Test.Cardano.Ledger.Tickf
   other-modules:
   build-depends:
-    aeson >= 2,
     array,
     bytestring,
     cardano-crypto-class,
@@ -93,8 +91,6 @@ library
     containers,
     vector-map,
     data-default-class,
-    genvalidity,
-    genvalidity-scientific,
     microlens,
     mtl,
     nothunks,
@@ -102,7 +98,6 @@ library
     plutus-ledger-api ^>=1.1,
     prettyprinter,
     QuickCheck,
-    scientific,
     small-steps,
     small-steps-test,
     set-algebra,

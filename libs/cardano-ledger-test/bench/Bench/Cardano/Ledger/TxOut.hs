@@ -14,7 +14,6 @@ import Cardano.Ledger.Alonzo.TxBody
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (decodeFull, serialize)
 import Cardano.Ledger.Coin
-import Cardano.Ledger.CompactAddress
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential

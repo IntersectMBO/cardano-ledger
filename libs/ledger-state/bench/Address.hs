@@ -8,17 +8,16 @@ import Cardano.Crypto.Hash
 import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary
-import Cardano.Ledger.CompactAddress
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys
 import Control.DeepSeq (NFData, deepseq)
 import Criterion.Main
-import qualified Data.ByteString.Lazy as BSL
 import Data.Foldable (foldMap')
 import Data.Maybe (fromMaybe)
 import qualified Data.Text as T
 import Data.Unit.Strict
+import Test.Cardano.Ledger.Core.Address (decompactAddrOldLazy)
 
 main :: IO ()
 main = do
@@ -47,12 +46,7 @@ main = do
       addrs mkStake = mkAddr mkStake <$> [1 .. count]
       partialDeserializeAddr :: ByteString -> Addr StandardCrypto
       partialDeserializeAddr =
-        either (error . show) id . decodeFullDecoder version "Addr" fromCborAddr . BSL.fromStrict
-      partialDeserializeCompactAddr :: ByteString -> CompactAddr StandardCrypto
-      partialDeserializeCompactAddr =
-        either (error . show) id
-          . decodeFullDecoder version "CompactAddr" fromCborCompactAddrOld
-          . BSL.fromStrict
+        either (error . show) id . decodeFullDecoder' version "Addr" fromCborAddr
       version = maxBound :: Version
   defaultMain
     [ bgroup
@@ -80,19 +74,19 @@ main = do
                     "StakeRefNull"
                     deepseqUnit
                     (compactAddr <$> addrs (const StakeRefNull))
-                    decompactAddrLazy
+                    decompactAddrOldLazy
                     decompactAddr,
                   benchDecode
                     "StakeRefBase"
                     deepseqUnit
                     (compactAddr <$> addrs stakeRefBase)
-                    decompactAddrLazy
+                    decompactAddrOldLazy
                     decompactAddr,
                   benchDecode
                     "StakeRefPtr"
                     deepseqUnit
                     (compactAddr <$> addrs (StakeRefPtr . mkPtr))
-                    decompactAddrLazy
+                    decompactAddrOldLazy
                     decompactAddr
                 ],
               bgroup
@@ -101,19 +95,19 @@ main = do
                     "StakeRefNull"
                     forcePaymentCred
                     (compactAddr <$> addrs (const StakeRefNull))
-                    decompactAddrLazy
+                    decompactAddrOldLazy
                     decompactAddr,
                   benchDecode
                     "StakeRefBase"
                     forcePaymentCred
                     (compactAddr <$> addrs stakeRefBase)
-                    decompactAddrLazy
+                    decompactAddrOldLazy
                     decompactAddr,
                   benchDecode
                     "StakeRefPtr"
                     forcePaymentCred
                     (compactAddr <$> addrs (StakeRefPtr . mkPtr))
-                    decompactAddrLazy
+                    decompactAddrOldLazy
                     decompactAddr
                 ],
               bgroup
@@ -122,19 +116,19 @@ main = do
                     "StakeRefNull"
                     forceStakingCred
                     (compactAddr <$> addrs (const StakeRefNull))
-                    decompactAddrLazy
+                    decompactAddrOldLazy
                     decompactAddr,
                   benchDecode
                     "StakeRefBase"
                     forceStakingCred
                     (compactAddr <$> addrs stakeRefBase)
-                    decompactAddrLazy
+                    decompactAddrOldLazy
                     decompactAddr,
                   benchDecode
                     "StakeRefPtr"
                     forceStakingCred
                     (compactAddr <$> addrs (StakeRefPtr . mkPtr))
-                    decompactAddrLazy
+                    decompactAddrOldLazy
                     decompactAddr
                 ]
             ],
@@ -158,27 +152,6 @@ main = do
                 (serialize' version <$> addrs (StakeRefPtr . mkPtr))
                 (unsafeDeserialize' version)
                 partialDeserializeAddr
-            ],
-          bgroup
-            "fromCBOR-CompactAddr"
-            [ benchDecode
-                "StakeRefNull"
-                seqUnit
-                (serialize' version <$> addrs (const StakeRefNull))
-                partialDeserializeCompactAddr
-                (unsafeDeserialize' version),
-              benchDecode
-                "StakeRefBase"
-                seqUnit
-                (serialize' version <$> addrs stakeRefBase)
-                partialDeserializeCompactAddr
-                (unsafeDeserialize' version),
-              benchDecode
-                "StakeRefPtr"
-                seqUnit
-                (serialize' version <$> addrs (StakeRefPtr . mkPtr))
-                partialDeserializeCompactAddr
-                (unsafeDeserialize' version)
             ]
         ]
     ]

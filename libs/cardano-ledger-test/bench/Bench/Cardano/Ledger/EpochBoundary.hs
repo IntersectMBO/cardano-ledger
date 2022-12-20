@@ -6,10 +6,9 @@
 module Bench.Cardano.Ledger.EpochBoundary where
 
 import Cardano.Crypto.DSIGN.Mock
-import Cardano.Ledger.Address (Addr (Addr))
+import Cardano.Ledger.Address (Addr (Addr), compactAddr)
 import Cardano.Ledger.BaseTypes (Network (Testnet))
 import Cardano.Ledger.Coin (Coin (Coin))
-import Cardano.Ledger.CompactAddress (compactAddr)
 import Cardano.Ledger.Compactible (Compactible (toCompact))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
