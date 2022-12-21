@@ -49,8 +49,7 @@ import Cardano.Ledger.Shelley.API
     RewardAcnt (..),
     ShelleyTxBody (..),
     ShelleyTxOut (..),
-    TxIn (..),
-    hashVerKeyVRF,
+    TxIn (..)
   )
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.LedgerState (minfee)
@@ -69,6 +68,7 @@ import Cardano.Ledger.Shelley.UTxO (makeWitnessesVKey)
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (mkTxInPartial)
 import qualified Cardano.Ledger.Val as Val
+import Cardano.Protocol.TPraos.Rules.Overlay (hashPoolStakeVRF)
 import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Char8 as BS (pack)
 import qualified Data.ByteString.Lazy as BSL
@@ -130,7 +130,7 @@ alicePoolParams :: forall crypto. Cr.Crypto crypto => PoolParams crypto
 alicePoolParams =
   PoolParams
     { _poolId = alicePoolKH,
-      _poolVrf = hashVerKeyVRF . snd $ aliceVRF @(Cr.VRF crypto),
+      _poolVrf = hashPoolStakeVRF . snd $ aliceVRF @(Cr.VRF crypto),
       _poolPledge = Coin 1,
       _poolCost = Coin 5,
       _poolMargin = unsafeBoundRational 0.1,

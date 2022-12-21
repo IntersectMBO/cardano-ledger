@@ -12,7 +12,6 @@ module Cardano.Ledger.Shelley.Bench.Rewards
   )
 where
 
-import Cardano.Crypto.VRF (hashVerKeyVRF)
 import Cardano.Ledger.Address
   ( Addr (..),
     mkRwdAcnt,
@@ -31,6 +30,7 @@ import qualified Cardano.Ledger.Shelley.LedgerState as LS
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..), ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
+import Cardano.Protocol.TPraos.Rules.Overlay (hashPoolStakeVRF)
 import Cardano.Slotting.EpochInfo
 import Cardano.Slotting.Slot (EpochNo)
 import Control.Monad.Reader (runReader, runReaderT)
@@ -140,7 +140,7 @@ genChainInEpoch epoch = do
                   let pp =
                         PoolParams
                           { _poolId = hk,
-                            _poolVrf = hashVerKeyVRF $ snd vrf,
+                            _poolVrf = hashPoolStakeVRF $ snd vrf,
                             _poolPledge = Coin 1,
                             _poolCost = Coin 1,
                             _poolMargin = minBound,

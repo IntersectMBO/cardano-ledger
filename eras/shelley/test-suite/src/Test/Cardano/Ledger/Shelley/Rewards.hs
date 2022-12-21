@@ -152,6 +152,7 @@ import Test.Cardano.Ledger.Shelley.Utils
     unsafeBoundRational,
   )
 import Test.Cardano.Ledger.TerseTools (Terse (..), tersemapdiffs)
+import Cardano.Protocol.TPraos.Rules.Overlay (hashPoolStakeVRF)
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.QuickCheck
   ( Gen,
@@ -283,7 +284,7 @@ genPoolInfo PoolSetUpArgs {poolPledge, poolCost, poolMargin, poolMembers} = do
       params =
         PoolParams
           { _poolId = hashKey . vKey $ coldKey,
-            _poolVrf = Crypto.hashVerKeyVRF . snd $ vrfKey,
+            _poolVrf = hashPoolStakeVRF . snd $ vrfKey,
             _poolPledge = pledge,
             _poolCost = cost,
             _poolMargin = margin,

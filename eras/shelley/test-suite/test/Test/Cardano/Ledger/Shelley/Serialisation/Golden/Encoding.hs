@@ -70,7 +70,7 @@ import Cardano.Ledger.Keys
     signedKES,
     vKey,
   )
-import Cardano.Ledger.PoolDistr (PoolDistr (..))
+import Cardano.Ledger.PoolDistr (PoolDistr (..), PoolStakeVRF)
 import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
 import Cardano.Ledger.Serialization
   ( FromCBORGroup (..),
@@ -173,6 +173,7 @@ import Cardano.Protocol.TPraos.OCert
     OCertSignable (..),
     pattern OCert,
   )
+import Cardano.Protocol.TPraos.Rules.Overlay (hashPoolStakeVRF)
 import Codec.CBOR.Encoding (Encoding (..), Tokens (..))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as B16
@@ -241,6 +242,9 @@ testGKeyHash = (hashKey . vKey) testGKey
 
 testVRF :: CC.Crypto crypto => (SignKeyVRF crypto, VerKeyVRF crypto)
 testVRF = mkVRFKeyPair (RawSeed 0 0 0 0 5)
+
+testPoolStakeVRFKH :: forall c. CC.Crypto c => Hash c PoolStakeVRF
+testPoolStakeVRFKH = hashPoolStakeVRF $ snd (testVRF @c)
 
 testVRFKH :: forall crypto. CC.Crypto crypto => Hash crypto (VerKeyVRF crypto)
 testVRFKH = hashVerKeyVRF $ snd (testVRF @crypto)
@@ -565,7 +569,7 @@ tests =
                 ( RegPool
                     ( PoolParams
                         { _poolId = hashKey . vKey $ testStakePoolKey,
-                          _poolVrf = testVRFKH @C_Crypto,
+                          _poolVrf = testPoolStakeVRFKH @C_Crypto,
                           _poolPledge = poolPledge,
                           _poolCost = poolCost,
                           _poolMargin = poolMargin,
@@ -1232,7 +1236,7 @@ tests =
           params =
             PoolParams
               { _poolId = hashKey $ vKey testStakePoolKey,
-                _poolVrf = testVRFKH @C_Crypto,
+                _poolVrf = testPoolStakeVRFKH @C_Crypto,
                 _poolPledge = Coin 5,
                 _poolCost = Coin 4,
                 _poolMargin = unsafeBoundRational 0.7,
@@ -1277,7 +1281,7 @@ tests =
           params =
             PoolParams
               { _poolId = hashKey $ vKey testStakePoolKey,
-                _poolVrf = testVRFKH @C_Crypto,
+                _poolVrf = testPoolStakeVRFKH @C_Crypto,
                 _poolPledge = Coin 5,
                 _poolCost = Coin 4,
                 _poolMargin = unsafeBoundRational 0.7,

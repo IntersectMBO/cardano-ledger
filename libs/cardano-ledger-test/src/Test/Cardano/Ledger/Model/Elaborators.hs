@@ -113,6 +113,7 @@ import qualified Cardano.Ledger.Shelley.TxBody as Shelley
 import qualified Cardano.Ledger.Shelley.UTxO as UTxO
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock)
 import qualified Cardano.Ledger.Val as Val
+import Cardano.Protocol.TPraos.Rules.Overlay (toPoolStakeVRF)
 import Cardano.Slotting.EpochInfo.API
   ( epochInfoEpoch,
     epochInfoFirst,
@@ -1453,7 +1454,7 @@ class
             (DCertPool . RegPool) $
               PoolParams
                 { _poolId = poolId,
-                  _poolVrf = poolVRF,
+                  _poolVrf = toPoolStakeVRF $ poolVRF,
                   _poolPledge = pledge,
                   _poolCost = cost,
                   _poolMargin = margin,

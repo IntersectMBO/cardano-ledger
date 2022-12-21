@@ -40,9 +40,9 @@ import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys
   ( Hash,
     KeyHash (..),
-    KeyRole (..),
-    VerKeyVRF,
+    KeyRole (..)
   )
+import Cardano.Ledger.PoolDistr (PoolStakeVRF)
 import Cardano.Ledger.Serialization
   ( CBORGroup (..),
     CborSeq (..),
@@ -210,7 +210,7 @@ instance FromCBOR StakePoolRelay where
 -- | A stake pool.
 data PoolParams crypto = PoolParams
   { _poolId :: !(KeyHash 'StakePool crypto),
-    _poolVrf :: !(Hash crypto (VerKeyVRF crypto)),
+    _poolVrf :: !(Hash crypto PoolStakeVRF),
     _poolPledge :: !Coin,
     _poolCost :: !Coin,
     _poolMargin :: !UnitInterval,

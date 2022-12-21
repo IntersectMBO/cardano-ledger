@@ -26,10 +26,12 @@ import Cardano.Ledger.Keys
     VKey (..),
     hashKey,
   )
+import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.Shelley.Genesis
 import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.Shelley.TxBody
+import Cardano.Protocol.TPraos.Rules.Overlay (toPoolStakeVRF)
 import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..))
 import Data.Fixed
 import Data.IP (IPv4, IPv6, fromHostAddress, fromHostAddress6)
@@ -101,7 +103,7 @@ genPoolParams :: forall crypto. CC.Crypto crypto => Gen (PoolParams crypto)
 genPoolParams =
   PoolParams
     <$> genKeyHash
-    <*> genVRFKeyHash @crypto
+    <*> genPoolStakeVRFKeyHash @crypto
     <*> genCoin
     <*> genCoin
     <*> genUnitInterval
@@ -244,6 +246,13 @@ genVRFKeyHash ::
   CC.Crypto crypto =>
   Gen (Hash crypto (VerKeyVRF (VRF crypto)))
 genVRFKeyHash = hashVerKeyVRF . snd <$> (genVRFKeyPair @crypto)
+
+genPoolStakeVRFKeyHash ::
+  forall crypto.
+  CC.Crypto crypto =>
+  Gen (Hash crypto PoolStakeVRF)
+genPoolStakeVRFKeyHash = toPoolStakeVRF <$> (genVRFKeyHash @crypto)
+
 
 genVRFKeyPair ::
   forall crypto.

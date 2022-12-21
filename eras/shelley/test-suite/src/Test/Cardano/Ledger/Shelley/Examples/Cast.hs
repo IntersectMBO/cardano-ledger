@@ -66,6 +66,7 @@ import Cardano.Ledger.Shelley.TxBody
     RewardAcnt (..),
   )
 import Cardano.Ledger.Slot (SlotNo (..))
+import Cardano.Protocol.TPraos.Rules.Overlay (hashPoolStakeVRF)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import qualified Data.ByteString.Char8 as BS (pack)
 import Data.Maybe (fromJust)
@@ -127,7 +128,7 @@ alicePoolParams :: forall crypto. CC.Crypto crypto => PoolParams crypto
 alicePoolParams =
   PoolParams
     { _poolId = (hashKey . vKey . cold) alicePoolKeys,
-      _poolVrf = hashVerKeyVRF . snd $ vrf (alicePoolKeys @crypto),
+      _poolVrf = hashPoolStakeVRF . snd $ vrf (alicePoolKeys @crypto),
       _poolPledge = Coin 1,
       _poolCost = Coin 5,
       _poolMargin = unsafeBoundRational 0.1,
@@ -185,7 +186,7 @@ bobPoolParams :: forall crypto. CC.Crypto crypto => PoolParams crypto
 bobPoolParams =
   PoolParams
     { _poolId = (hashKey . vKey . cold) bobPoolKeys,
-      _poolVrf = hashVerKeyVRF . snd $ vrf (bobPoolKeys @crypto),
+      _poolVrf = hashPoolStakeVRF . snd $ vrf (bobPoolKeys @crypto),
       _poolPledge = Coin 2,
       _poolCost = Coin 1,
       _poolMargin = unsafeBoundRational 0.1,

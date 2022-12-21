@@ -74,7 +74,6 @@ import Cardano.Ledger.Keys
     asWitness,
     coerceKeyRole,
     hashKey,
-    hashVerKeyVRF,
   )
 import Cardano.Ledger.Pretty
 import Cardano.Ledger.Pretty.Babbage ()
@@ -114,6 +113,7 @@ import Cardano.Ledger.Shelley.UTxO (makeWitnessVKey)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (inject, (<+>))
+import Cardano.Protocol.TPraos.Rules.Overlay (hashPoolStakeVRF)
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..), SlotNo (..))
 import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
@@ -1546,7 +1546,7 @@ poolMDHTooBigTxBody pf =
     poolParams =
       PoolParams
         { _poolId = coerceKeyRole . hashKey . vKey $ someKeys pf,
-          _poolVrf = hashVerKeyVRF . snd . mkVRFKeyPair $ RawSeed 0 0 0 0 0,
+          _poolVrf = hashPoolStakeVRF . snd . mkVRFKeyPair @(CC.VRF (Crypto era)) $ RawSeed 0 0 0 0 0,
           _poolPledge = Coin 0,
           _poolCost = Coin 0,
           _poolMargin = minBound,

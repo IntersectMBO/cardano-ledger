@@ -25,7 +25,7 @@ import Cardano.Binary
     encodeListLen,
   )
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Keys (Hash, KeyHash, KeyRole (..), VerKeyVRF)
+import Cardano.Ledger.Keys (Hash, KeyHash, KeyRole (..))
 import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Control.DeepSeq (NFData)
 import Control.SetAlgebra (BaseRep (MapR), Embed (..), Exp (Base), HasExp (..))
@@ -48,10 +48,12 @@ import NoThunks.Class (NoThunks (..))
 -- delegated to a registered stake pool.
 data IndividualPoolStake crypto = IndividualPoolStake
   { individualPoolStake :: !Rational,
-    individualPoolStakeVrf :: !(Hash crypto (VerKeyVRF crypto))
+    individualPoolStakeVrf :: !(Hash crypto PoolStakeVRF)
   }
   deriving stock (Show, Eq, Generic)
   deriving anyclass (NFData, NoThunks)
+
+data PoolStakeVRF
 
 instance CC.Crypto crypto => ToCBOR (IndividualPoolStake crypto) where
   toCBOR (IndividualPoolStake stake vrf) =

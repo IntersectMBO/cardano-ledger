@@ -36,6 +36,7 @@ import Cardano.Ledger.Shelley.UTxO
 import Cardano.Protocol.TPraos.API
 import Cardano.Protocol.TPraos.BHeader
 import Cardano.Protocol.TPraos.OCert
+import Cardano.Protocol.TPraos.Rules.Overlay (hashPoolStakeVRF)
 import Cardano.Protocol.TPraos.Rules.Prtcl
 import Cardano.Protocol.TPraos.Rules.Tickn
 import Cardano.Slotting.Block
@@ -242,7 +243,7 @@ examplePoolDistr =
       [ ( mkKeyHash 1,
           IndividualPoolStake
             1
-            (hashVerKeyVRF (snd (vrf (exampleKeys @c))))
+            (hashPoolStakeVRF (snd (vrf (exampleKeys @c))))
         )
       ]
 
@@ -553,7 +554,7 @@ examplePoolParams :: forall c. CC.Crypto c => PoolParams c
 examplePoolParams =
   PoolParams
     { _poolId = hashKey $ vKey $ cold poolKeys,
-      _poolVrf = hashVerKeyVRF $ snd $ vrf poolKeys,
+      _poolVrf = hashPoolStakeVRF $ snd $ vrf poolKeys,
       _poolPledge = Coin 1,
       _poolCost = Coin 5,
       _poolMargin = unsafeBoundRational 0.1,

@@ -25,6 +25,7 @@ import Cardano.Ledger.PoolDistr (individualPoolStakeVrf)
 import Cardano.Ledger.Shelley.API hiding (TxOut)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PoolRank
+import Cardano.Protocol.TPraos.Rules.Overlay (fromPoolStakeVRF)
 import Conduit
 import Control.Exception (throwIO)
 import Control.Foldl (Fold (..))
@@ -294,7 +295,7 @@ calcPoolDistrStats :: PoolDistr C -> PoolDistrStats
 calcPoolDistrStats (PoolDistr pd) =
   PoolDistrStats
     { pdsStakePoolKeyHash = statMapKeys pd,
-      pdsStakePoolStakeVrf = statFoldable (individualPoolStakeVrf <$> Map.elems pd)
+      pdsStakePoolStakeVrf = statFoldable (fromPoolStakeVRF . individualPoolStakeVrf <$> Map.elems pd)
     }
 
 data NewEpochStateStats = NewEpochStateStats

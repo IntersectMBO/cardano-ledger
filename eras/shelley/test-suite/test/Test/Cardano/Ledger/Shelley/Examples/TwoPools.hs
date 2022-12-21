@@ -103,6 +103,7 @@ import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Protocol.TPraos.BHeader (BHeader, bhHash, hashHeaderToNonce)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
+import Cardano.Protocol.TPraos.Rules.Overlay (toPoolStakeVRF)
 import Data.Default.Class (def)
 import Data.Group (invert)
 import Data.Map.Strict (Map)
@@ -499,10 +500,10 @@ pdEx5 =
   PoolDistr $
     Map.fromList
       [ ( hk $ Cast.alicePoolKeys @c,
-          IndividualPoolStake alicePoolStake (Cast.aliceVRFKeyHash @c)
+          IndividualPoolStake alicePoolStake (toPoolStakeVRF $ Cast.aliceVRFKeyHash @c)
         ),
         ( hk $ Cast.bobPoolKeys @c,
-          IndividualPoolStake bobPoolStake (Cast.bobVRFKeyHash @c)
+          IndividualPoolStake bobPoolStake (toPoolStakeVRF $ Cast.bobVRFKeyHash @c)
         )
       ]
 
