@@ -10,6 +10,12 @@ jobs:
   build:
     runs-on: ${{ matrix.os }}
 
+    env:
+      # current ref from: 27.02.2022
+      SECP256K1_REF: ac83be33d0956faf6b7f61a60ab524ef7d6a473a
+
+      SECP_CACHE_VERSION: 2022-12-24
+
     defaults:
       run:
         shell: bash
@@ -33,7 +39,7 @@ jobs:
         gem install cddl -v 0.8.15
         gem install cbor-diag
 
-    - name: Install libsodium (Linux)
+    - name: Install libsodium
       if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt-get update
@@ -41,22 +47,20 @@ jobs:
         sudo apt-get -y remove --purge software-properties-common
         sudo apt-get -y autoremove
 
-    - name: Install secp256k1 (Linux)
-      if: matrix.os == 'ubuntu-latest'
-      run: |
-        sudo apt-get -y install autoconf automake libtool
-        mkdir secp256k1-sources
-        cd secp256k1-sources
-        git clone https://github.com/bitcoin-core/secp256k1.git
-        cd secp256k1
-        git reset --hard $SECP256K1_REF
-        ./autogen.sh
-        ./configure --prefix=/usr --enable-module-schnorrsig --enable-experimental
-        make
-        make check
-        sudo make install
-        cd ../..
+    - uses: actions/cache@v3
+      name: "Cache secp256k1"
+      with:
+        path: secp256k1
+        key: cache-secp256k1-${{ runner.os }}-${{ env.SECP_CACHE_VERSION }}
+        restore-keys: cache-secp256k1-${{ runner.os }}-${{ env.SECP_CACHE_VERSION }}
 
+    - name: "Install secp256k1"
+      if: runner.os != 'Windows'
+      shell: bash
+      env:
+        CI_SECP_FLAGS: "--prefix=/usr/local"
+        CI_SECP_INSTALL_CMD: sudo
+      run: bash .github/workflows/build-secp256k1.bash
 
     - uses: haskell/actions/setup@v1
       id: setup-haskell
