@@ -12,19 +12,15 @@ import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Conway.Era (ConwayUTXOS)
 import Cardano.Ledger.Conway.PParams (BabbagePParamsUpdate)
-import Cardano.Ledger.Conway.TxOut (BabbageTxOut (..))
-import Cardano.Ledger.Core (Era (..), EraPParams (..), EraRule, EraScript (..), EraTxOut (..), Value)
-import Cardano.Ledger.Mary.Value (MaryValue (..))
+import Cardano.Ledger.Core (EraPParams (..), EraRule, EraTx (..), Script)
 import Cardano.Ledger.Rules.ValidationMode (Inject)
 import Cardano.Ledger.Shelley.LedgerState (PPUPState (..), UTxOState (..))
 import Cardano.Ledger.Shelley.Rules (ShelleyPpupPredFailure, UtxoEnv (..))
 import Control.State.Transition.Extended (STS (..))
 
 instance
-  ( EraScript era,
+  ( EraTx era,
     PredicateFailure (EraRule "PPUP" era) ~ ShelleyPpupPredFailure era,
-    TxOut era ~ BabbageTxOut era,
-    Value era ~ MaryValue (EraCrypto era),
     Script era ~ AlonzoScript era,
     State (EraRule "PPUP" era) ~ PPUPState era,
     PParamsUpdate era ~ BabbagePParamsUpdate era,

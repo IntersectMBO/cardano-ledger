@@ -36,7 +36,6 @@ import Cardano.Ledger.Babbage.TxBody
   ( AlonzoEraTxBody (..),
     BabbageEraTxBody (..),
     BabbageTxBody (..),
-    BabbageTxOut (..),
     Datum (..),
   )
 import Cardano.Ledger.BaseTypes
@@ -49,7 +48,7 @@ import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys
   ( KeyHash,
     KeyRole (..),
@@ -189,13 +188,13 @@ datumExampleSixtyFiveBytes = Data (PV1.B sixtyFiveBytes)
 txDats :: Era era => TxDats era
 txDats = mkTxDats datumExampleSixtyFiveBytes
 
-someTxIn :: (CH.HashAlgorithm (CC.HASH c), HasCallStack) => TxIn c
+someTxIn :: (CH.HashAlgorithm (HASH c), HasCallStack) => TxIn c
 someTxIn = mkGenesisTxIn 1
 
-anotherTxIn :: (CH.HashAlgorithm (CC.HASH c), HasCallStack) => TxIn c
+anotherTxIn :: (CH.HashAlgorithm (HASH c), HasCallStack) => TxIn c
 anotherTxIn = mkGenesisTxIn 2
 
-yetAnotherTxIn :: (CH.HashAlgorithm (CC.HASH c), HasCallStack) => TxIn c
+yetAnotherTxIn :: (CH.HashAlgorithm (HASH c), HasCallStack) => TxIn c
 yetAnotherTxIn = mkGenesisTxIn 3
 
 defaultPPs :: [PParamsField era]
@@ -1071,7 +1070,6 @@ testExpectSuccessValid
 newColReturn ::
   forall era.
   ( TxBody era ~ BabbageTxBody era,
-    TxOut era ~ BabbageTxOut era,
     BabbageEraTxBody era
   ) =>
   TxBody era ->
@@ -1088,7 +1086,6 @@ testExpectSuccessInvalid ::
   forall era.
   ( State (EraRule "UTXOW" era) ~ UTxOState era,
     TxBody era ~ BabbageTxBody era,
-    TxOut era ~ BabbageTxOut era,
     GoodCrypto (EraCrypto era),
     Default (State (EraRule "PPUP" era)),
     PostShelley era,
@@ -1139,7 +1136,6 @@ genericBabbageFeatures ::
     BabbageBased era (PredicateFailure (EraRule "UTXOW" era)),
     State (EraRule "UTXOW" era) ~ UTxOState era,
     TxBody era ~ BabbageTxBody era,
-    TxOut era ~ BabbageTxOut era,
     GoodCrypto (EraCrypto era),
     BabbageEraTxBody era,
     Default (State (EraRule "PPUP" era)),

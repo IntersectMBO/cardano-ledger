@@ -13,8 +13,13 @@ module Cardano.Ledger.Pretty.Conway
   )
 where
 
-import Cardano.Ledger.Babbage.TxBody (AllegraEraTxBody (..), AlonzoEraTxBody (..), BabbageEraTxBody (..), MaryEraTxBody (..), ShelleyEraTxBody (..))
-import Cardano.Ledger.Babbage.TxOut (BabbageTxOut (..))
+import Cardano.Ledger.Babbage.TxBody
+  ( AllegraEraTxBody (..),
+    AlonzoEraTxBody (..),
+    BabbageEraTxBody (..),
+    MaryEraTxBody (..),
+    ShelleyEraTxBody (..),
+  )
 import Cardano.Ledger.Conway.Core (ConwayEraTxBody (..))
 import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert (..), transDCert)
 import Cardano.Ledger.Conway.Governance
@@ -27,7 +32,7 @@ import Cardano.Ledger.Conway.Governance
     VoterRole (..),
   )
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
-import Cardano.Ledger.Core (EraPParams (..), EraTxBody (..), EraTxOut (..), Value)
+import Cardano.Ledger.Core (EraPParams (..), EraTxBody (..), Value)
 import Cardano.Ledger.Pretty
   ( PDoc,
     PrettyA (..),
@@ -55,8 +60,7 @@ import Cardano.Ledger.Pretty.Mary (ppMultiAsset, ppValidityInterval)
 import Lens.Micro ((^.))
 
 instance
-  ( TxOut era ~ BabbageTxOut era,
-    ConwayEraTxBody era,
+  ( ConwayEraTxBody era,
     PrettyA (Value era),
     TxBody era ~ ConwayTxBody era,
     PrettyA (PParamsUpdate era)
@@ -74,7 +78,6 @@ ppConwayTxBody ::
   forall era.
   ( ConwayEraTxBody era,
     PrettyA (Value era),
-    TxOut era ~ BabbageTxOut era,
     TxBody era ~ ConwayTxBody era,
     PrettyA (GovernanceActionInfo era)
   ) =>

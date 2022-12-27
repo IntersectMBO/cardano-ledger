@@ -51,6 +51,8 @@ instance
 instance
   ( Mock (EraCrypto era),
     BabbageEraTxBody era,
+    Arbitrary (Sized (TxOut era)),
+    Arbitrary (TxOut era),
     Arbitrary (Value era),
     Arbitrary (Script era)
   ) =>
@@ -182,6 +184,7 @@ instance
 
 instance
   ( Era era,
+    Twiddle (TxOut era),
     BabbageEraTxBody era
   ) =>
   Twiddle (BabbageTxBody era)
