@@ -75,7 +75,6 @@ import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
     ShelleyEraTxBody (..),
-    ShelleyTxOut (..),
     Wdrl (..),
   )
 import Cardano.Ledger.TxIn (TxIn (..))
@@ -91,7 +90,7 @@ import NoThunks.Class (NoThunks (..))
 
 data AllegraTxBodyRaw ma era = AllegraTxBodyRaw
   { atbrInputs :: !(Set (TxIn (EraCrypto era))),
-    atbrOutputs :: !(StrictSeq (ShelleyTxOut era)),
+    atbrOutputs :: !(StrictSeq (TxOut era)),
     atbrCerts :: !(StrictSeq (DCert (EraCrypto era))),
     atbrWdrls :: !(Wdrl (EraCrypto era)),
     atbrTxFee :: !Coin,
@@ -102,21 +101,21 @@ data AllegraTxBodyRaw ma era = AllegraTxBodyRaw
   }
 
 deriving instance
-  (Era era, NFData (Value era), NFData (PParamsUpdate era), NFData ma) =>
+  (Era era, NFData (TxOut era), NFData (PParamsUpdate era), NFData ma) =>
   NFData (AllegraTxBodyRaw ma era)
 
 deriving instance
-  (Era era, Eq (PParamsUpdate era), Eq (Value era), Eq (CompactForm (Value era)), Eq ma) =>
+  (Era era, Eq (PParamsUpdate era), Eq (TxOut era), Eq ma) =>
   Eq (AllegraTxBodyRaw ma era)
 
 deriving instance
-  (Era era, Compactible (Value era), Show (Value era), Show (PParamsUpdate era), Show ma) =>
+  (Era era, Show (TxOut era), Show (PParamsUpdate era), Show ma) =>
   Show (AllegraTxBodyRaw ma era)
 
 deriving instance Generic (AllegraTxBodyRaw ma era)
 
 deriving instance
-  (Era era, NoThunks (PParamsUpdate era), NoThunks (Value era), NoThunks ma) =>
+  (Era era, NoThunks (TxOut era), NoThunks (PParamsUpdate era), NoThunks ma) =>
   NoThunks (AllegraTxBodyRaw ma era)
 
 instance (FromCBOR ma, Monoid ma, AllegraEraTxBody era) => FromCBOR (AllegraTxBodyRaw ma era) where
@@ -205,21 +204,21 @@ instance Memoized AllegraTxBody where
   type RawType AllegraTxBody = AllegraTxBodyRaw ()
 
 deriving instance
-  (Era era, Eq (PParamsUpdate era), Eq (Value era), Eq (CompactForm (Value era))) =>
+  (Era era, Eq (PParamsUpdate era), Eq (TxOut era)) =>
   Eq (AllegraTxBody era)
 
 deriving instance
-  (Era era, Show (Value era), Compactible (Value era), Show (PParamsUpdate era)) =>
+  (Era era, Show (TxOut era), Compactible (Value era), Show (PParamsUpdate era)) =>
   Show (AllegraTxBody era)
 
 deriving instance Generic (AllegraTxBody era)
 
 deriving newtype instance
-  (Era era, NoThunks (Value era), NoThunks (PParamsUpdate era)) =>
+  (Era era, NoThunks (TxOut era), NoThunks (PParamsUpdate era)) =>
   NoThunks (AllegraTxBody era)
 
 deriving newtype instance
-  ( NFData (Value era),
+  ( NFData (TxOut era),
     NFData (PParamsUpdate era),
     Era era
   ) =>
@@ -241,7 +240,7 @@ instance (c ~ EraCrypto era, Era era) => HashAnnotated (AllegraTxBody era) EraIn
 pattern AllegraTxBody ::
   EraTxOut era =>
   Set (TxIn (EraCrypto era)) ->
-  StrictSeq (ShelleyTxOut era) ->
+  StrictSeq (TxOut era) ->
   StrictSeq (DCert (EraCrypto era)) ->
   Wdrl (EraCrypto era) ->
   Coin ->

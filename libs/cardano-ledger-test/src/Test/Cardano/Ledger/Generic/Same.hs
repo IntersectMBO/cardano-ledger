@@ -51,7 +51,7 @@ import Cardano.Ledger.Shelley.LedgerState
   )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), ShelleyPParamsHKD)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
-import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..), ShelleyTxOut, Wdrl (..))
+import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..), Wdrl (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..))
 import Cardano.Ledger.UTxO (UTxO (..))
 import Control.State.Transition.Extended (STS (..), State)
@@ -361,9 +361,7 @@ sameTxWits proof@(Conway _) x y = sameAlonzoTxWits proof x y
 -- Comparing TxBody for Sameness
 
 sameShelleyTxBody ::
-  ( Reflect era,
-    TxOut era ~ ShelleyTxOut era
-  ) =>
+  Reflect era =>
   Proof era ->
   ShelleyTxBody era ->
   ShelleyTxBody era ->
@@ -380,9 +378,7 @@ sameShelleyTxBody proof (ShelleyTxBody i1 o1 c1 (Wdrl w1) f1 s1 pu1 d1) (Shelley
   ]
 
 sameAllegraTxBody ::
-  ( Reflect era,
-    TxOut era ~ ShelleyTxOut era
-  ) =>
+  Reflect era =>
   Proof era ->
   AllegraTxBody era ->
   AllegraTxBody era ->
@@ -399,9 +395,7 @@ sameAllegraTxBody proof (AllegraTxBody i1 o1 c1 (Wdrl w1) f1 v1 pu1 d1) (Allegra
   ]
 
 sameMaryTxBody ::
-  ( Reflect era,
-    TxOut era ~ ShelleyTxOut era
-  ) =>
+  Reflect era =>
   Proof era ->
   MaryTxBody era ->
   MaryTxBody era ->

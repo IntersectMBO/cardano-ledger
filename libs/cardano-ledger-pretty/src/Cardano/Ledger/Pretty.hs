@@ -1072,12 +1072,12 @@ ppTxId (TxId x) = ppSexp "TxId" [ppSafeHash x]
 ppTxIn :: TxIn c -> PDoc
 ppTxIn (TxIn txid index) = ppSexp "TxIn" [ppTxId txid, pretty (txIxToInt index)]
 
-ppTxOut :: (EraTxOut era, PrettyA (Value era)) => TxOut era -> PDoc
-ppTxOut txOut =
+ppTxOut :: (EraTxOut era, PrettyA (Value era)) => ShelleyTxOut era -> PDoc
+ppTxOut (ShelleyTxOut addr val) =
   ppSexp
     "TxOut"
-    [ ppCompactAddr (txOut ^. compactAddrTxOutL),
-      ppCompactForm prettyA (txOut ^. compactValueTxOutL)
+    [ ppAddr addr,
+      prettyA val
     ]
 
 ppDelegCert :: DelegCert c -> PDoc
@@ -1110,7 +1110,7 @@ ppDCert (DCertGenesis x) = ppSexp "DCertGenesis" [ppConstitutionalDelegCert x]
 ppDCert (DCertMir x) = ppSexp "DCertMir" [ppMIRCert x]
 
 ppTxBody ::
-  (Era era, PrettyA (TxOut era), TxOut era ~ ShelleyTxOut era) =>
+  (Era era, PrettyA (TxOut era)) =>
   PrettyA (PParamsUpdate era) =>
   ShelleyTxBody era ->
   PDoc
@@ -1153,7 +1153,6 @@ instance PrettyA (TxIn c) where
 
 instance
   ( EraTxOut era,
-    TxOut era ~ ShelleyTxOut era,
     PrettyA (Value era)
   ) =>
   PrettyA (ShelleyTxOut era)
@@ -1179,7 +1178,7 @@ instance PrettyA (DCert c) where
   prettyA = ppDCert
 
 instance
-  (PrettyA (TxOut era), PrettyA (PParamsUpdate era), TxOut era ~ ShelleyTxOut era, Era era) =>
+  (PrettyA (TxOut era), PrettyA (PParamsUpdate era), Era era) =>
   PrettyA (ShelleyTxBody era)
   where
   prettyA = ppTxBody

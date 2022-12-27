@@ -31,7 +31,7 @@ import Test.QuickCheck
 -------------------------------------------------------------------------------}
 
 instance
-  (EraTxOut era, Mock (EraCrypto era), Arbitrary (Value era)) =>
+  (EraTxOut era, Mock (EraCrypto era), Arbitrary (TxOut era)) =>
   Arbitrary (ShelleyTxBody era)
   where
   arbitrary =

@@ -32,7 +32,7 @@ import Cardano.Ledger.Conway.Governance
     VoterRole (..),
   )
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
-import Cardano.Ledger.Core (EraPParams (..), EraTxBody (..), Value)
+import Cardano.Ledger.Core (EraPParams (..), EraTxBody (..), EraTxOut (..))
 import Cardano.Ledger.Pretty
   ( PDoc,
     PrettyA (..),
@@ -51,7 +51,6 @@ import Cardano.Ledger.Pretty
     ppStrictSeq,
     ppTxId,
     ppTxIn,
-    ppTxOut,
     ppUrl,
     ppWdrl,
     ppWord64,
@@ -61,7 +60,7 @@ import Lens.Micro ((^.))
 
 instance
   ( ConwayEraTxBody era,
-    PrettyA (Value era),
+    PrettyA (TxOut era),
     TxBody era ~ ConwayTxBody era,
     PrettyA (PParamsUpdate era)
   ) =>
@@ -77,7 +76,7 @@ ppConwayDCert (ConwayDCertConstitutional gdc) = ppSexp "ConwayDCertConstitutiona
 ppConwayTxBody ::
   forall era.
   ( ConwayEraTxBody era,
-    PrettyA (Value era),
+    PrettyA (TxOut era),
     TxBody era ~ ConwayTxBody era,
     PrettyA (GovernanceActionInfo era)
   ) =>
@@ -89,8 +88,8 @@ ppConwayTxBody txb =
     [ ("spending inputs", ppSet ppTxIn $ txb ^. inputsTxBodyL),
       ("collateral inputs", ppSet ppTxIn $ txb ^. collateralInputsTxBodyL),
       ("reference inputs", ppSet ppTxIn $ txb ^. referenceInputsTxBodyL),
-      ("outputs", ppStrictSeq (ppTxOut @era) (txb ^. outputsTxBodyL)),
-      ("collateral return", ppStrictMaybe (ppTxOut @era) (txb ^. collateralReturnTxBodyL)),
+      ("outputs", ppStrictSeq prettyA (txb ^. outputsTxBodyL)),
+      ("collateral return", ppStrictMaybe prettyA (txb ^. collateralReturnTxBodyL)),
       ("total collateral", ppStrictMaybe ppCoin $ txb ^. totalCollateralTxBodyL),
       ("certificates", ppStrictSeq ppConwayDCert $ txb ^. conwayCertsTxBodyL),
       ("withdrawals", ppWdrl $ txb ^. wdrlsTxBodyL),

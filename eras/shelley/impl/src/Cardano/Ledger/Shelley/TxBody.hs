@@ -85,7 +85,6 @@ import Cardano.Ledger.Binary.Coders
     (!>),
   )
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Compactible (Compactible (CompactForm))
 import Cardano.Ledger.Credential (Ptr (..))
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
@@ -122,7 +121,6 @@ import Cardano.Ledger.Shelley.TxOut
   )
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn)
-import Cardano.Ledger.Val (DecodeNonNegative (..))
 import Control.DeepSeq (NFData)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Map.Strict as Map
@@ -139,7 +137,7 @@ import NoThunks.Class (NoThunks (..))
 
 data ShelleyTxBodyRaw era = ShelleyTxBodyRaw
   { stbrInputs :: !(Set (TxIn (EraCrypto era))),
-    stbrOutputs :: !(StrictSeq (ShelleyTxOut era)),
+    stbrOutputs :: !(StrictSeq (TxOut era)),
     stbrCerts :: !(StrictSeq (DCert (EraCrypto era))),
     stbrWdrls :: !(Wdrl (EraCrypto era)),
     stbrTxFee :: !Coin,
@@ -149,24 +147,26 @@ data ShelleyTxBodyRaw era = ShelleyTxBodyRaw
   }
   deriving (Generic, Typeable)
 
-deriving instance NoThunks (PParamsUpdate era) => NoThunks (ShelleyTxBodyRaw era)
-
-deriving instance (Era era, NFData (PParamsUpdate era)) => NFData (ShelleyTxBodyRaw era)
+deriving instance
+  (NoThunks (TxOut era), NoThunks (PParamsUpdate era)) =>
+  NoThunks (ShelleyTxBodyRaw era)
 
 deriving instance
-  (Era era, Eq (PParamsUpdate era), Eq (CompactForm (Value era))) =>
+  (Era era, NFData (TxOut era), NFData (PParamsUpdate era)) =>
+  NFData (ShelleyTxBodyRaw era)
+
+deriving instance
+  (Era era, Eq (TxOut era), Eq (PParamsUpdate era)) =>
   Eq (ShelleyTxBodyRaw era)
 
 deriving instance
-  (Era era, Show (PParamsUpdate era), Compactible (Value era), Show (Value era)) =>
+  (Era era, Show (TxOut era), Show (PParamsUpdate era)) =>
   Show (ShelleyTxBodyRaw era)
 
 instance
   ( Era era,
-    FromCBOR (PParamsUpdate era),
-    DecodeNonNegative (Value era),
-    Compactible (Value era),
-    Show (Value era)
+    FromCBOR (TxOut era),
+    FromCBOR (PParamsUpdate era)
   ) =>
   FromCBOR (ShelleyTxBodyRaw era)
   where
@@ -181,10 +181,8 @@ instance
 
 instance
   ( Era era,
-    FromCBOR (PParamsUpdate era),
-    DecodeNonNegative (Value era),
-    Compactible (Value era),
-    Show (Value era)
+    FromCBOR (TxOut era),
+    FromCBOR (PParamsUpdate era)
   ) =>
   FromCBOR (Annotator (ShelleyTxBodyRaw era))
   where
@@ -200,10 +198,8 @@ instance
 --   changes only the field being deserialised.
 boxBody ::
   ( Era era,
-    FromCBOR (PParamsUpdate era),
-    DecodeNonNegative (Value era),
-    Compactible (Value era),
-    Show (Value era)
+    FromCBOR (TxOut era),
+    FromCBOR (PParamsUpdate era)
   ) =>
   Word ->
   Field (ShelleyTxBodyRaw era)
@@ -221,7 +217,7 @@ boxBody n = invalidField n
 --   serialisation. boxBody and txSparse should be Duals, visually inspect
 --   The key order looks strange but was choosen for backward compatibility.
 txSparse ::
-  (Era era, ToCBOR (PParamsUpdate era), ToCBOR (CompactForm (Value era))) =>
+  (Era era, ToCBOR (TxOut era), ToCBOR (PParamsUpdate era)) =>
   ShelleyTxBodyRaw era ->
   Encode ('Closed 'Sparse) (ShelleyTxBodyRaw era)
 txSparse (ShelleyTxBodyRaw input output cert wdrl fee ttl update hash) =
@@ -251,7 +247,7 @@ basicShelleyTxBodyRaw =
     }
 
 instance
-  (Era era, ToCBOR (PParamsUpdate era), ToCBOR (CompactForm (Value era))) =>
+  (Era era, ToCBOR (TxOut era), ToCBOR (PParamsUpdate era)) =>
   ToCBOR (ShelleyTxBodyRaw era)
   where
   toCBOR = encode . txSparse
@@ -312,14 +308,15 @@ instance Crypto c => ShelleyEraTxBody (ShelleyEra c) where
   {-# INLINEABLE certsTxBodyL #-}
 
 deriving newtype instance
-  (Era era, NoThunks (PParamsUpdate era)) => NoThunks (ShelleyTxBody era)
+  (Era era, NoThunks (TxOut era), NoThunks (PParamsUpdate era)) =>
+  NoThunks (ShelleyTxBody era)
 
 deriving newtype instance EraTxBody era => NFData (ShelleyTxBody era)
 
 deriving instance EraTxBody era => Show (ShelleyTxBody era)
 
 deriving instance
-  (Era era, Eq (PParamsUpdate era), Eq (CompactForm (Value era))) =>
+  (Era era, Eq (TxOut era), Eq (PParamsUpdate era)) =>
   Eq (ShelleyTxBody era)
 
 deriving via
@@ -331,7 +328,7 @@ deriving via
 pattern ShelleyTxBody ::
   EraTxOut era =>
   Set (TxIn (EraCrypto era)) ->
-  StrictSeq (ShelleyTxOut era) ->
+  StrictSeq (TxOut era) ->
   StrictSeq (DCert (EraCrypto era)) ->
   Wdrl (EraCrypto era) ->
   Coin ->

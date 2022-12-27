@@ -98,7 +98,7 @@ genTxBody ::
   AllegraEraTxBody era =>
   SlotNo ->
   Set.Set (TxIn (EraCrypto era)) ->
-  StrictSeq (ShelleyTxOut era) ->
+  StrictSeq (TxOut era) ->
   StrictSeq (DCert (EraCrypto era)) ->
   Wdrl (EraCrypto era) ->
   Coin ->
