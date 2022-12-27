@@ -40,7 +40,6 @@ import Cardano.Ledger.Allegra.TxBody
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.Binary (Annotator, FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Era (MaryEra)
@@ -57,8 +56,8 @@ import Cardano.Ledger.MemoBytes
     mkMemoized,
   )
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
+import Cardano.Ledger.Shelley.Delegation.Certificates (DCert)
 import Cardano.Ledger.Shelley.PParams (Update)
-import Cardano.Ledger.Shelley.TxBody (DCert (..), ShelleyTxOut (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.DeepSeq (NFData (..))
 import Data.Sequence.Strict (StrictSeq)
@@ -77,21 +76,21 @@ newtype MaryTxBody era = TxBodyConstr (MemoBytes MaryTxBodyRaw era)
 newtype MaryTxBodyRaw era = MaryTxBodyRaw (AllegraTxBodyRaw (MultiAsset (EraCrypto era)) era)
 
 deriving newtype instance
-  (Era era, NFData (Value era), NFData (PParamsUpdate era)) =>
+  (Era era, NFData (TxOut era), NFData (PParamsUpdate era)) =>
   NFData (MaryTxBodyRaw era)
 
 deriving newtype instance
-  (Era era, Eq (PParamsUpdate era), Eq (Value era), Eq (CompactForm (Value era))) =>
+  (Era era, Eq (TxOut era), Eq (PParamsUpdate era)) =>
   Eq (MaryTxBodyRaw era)
 
 deriving newtype instance
-  (Era era, Compactible (Value era), Show (Value era), Show (PParamsUpdate era)) =>
+  (Era era, Show (TxOut era), Show (PParamsUpdate era)) =>
   Show (MaryTxBodyRaw era)
 
 deriving instance Generic (MaryTxBodyRaw era)
 
 deriving newtype instance
-  (Era era, NoThunks (PParamsUpdate era), NoThunks (Value era)) =>
+  (Era era, NoThunks (TxOut era), NoThunks (PParamsUpdate era)) =>
   NoThunks (MaryTxBodyRaw era)
 
 deriving newtype instance AllegraEraTxBody era => FromCBOR (MaryTxBodyRaw era)
@@ -105,21 +104,21 @@ instance Memoized MaryTxBody where
   type RawType MaryTxBody = MaryTxBodyRaw
 
 deriving newtype instance
-  (Era era, Eq (PParamsUpdate era), Eq (Value era), Eq (CompactForm (Value era))) =>
+  (Era era, Eq (TxOut era), Eq (PParamsUpdate era)) =>
   Eq (MaryTxBody era)
 
 deriving newtype instance
-  (Era era, Show (Value era), Compactible (Value era), Show (PParamsUpdate era)) =>
+  (Era era, Show (TxOut era), Show (PParamsUpdate era)) =>
   Show (MaryTxBody era)
 
 deriving instance Generic (MaryTxBody era)
 
 deriving newtype instance
-  (Era era, NoThunks (Value era), NoThunks (PParamsUpdate era)) =>
+  (Era era, NoThunks (TxOut era), NoThunks (PParamsUpdate era)) =>
   NoThunks (MaryTxBody era)
 
 deriving newtype instance
-  ( NFData (Value era),
+  ( NFData (TxOut era),
     NFData (PParamsUpdate era),
     Era era
   ) =>
@@ -141,7 +140,7 @@ instance (c ~ EraCrypto era, Era era) => HashAnnotated (MaryTxBody era) EraIndep
 pattern MaryTxBody ::
   EraTxOut era =>
   Set.Set (TxIn (EraCrypto era)) ->
-  StrictSeq (ShelleyTxOut era) ->
+  StrictSeq (TxOut era) ->
   StrictSeq (DCert (EraCrypto era)) ->
   Wdrl (EraCrypto era) ->
   Coin ->

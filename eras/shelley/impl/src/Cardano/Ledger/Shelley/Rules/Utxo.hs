@@ -66,8 +66,6 @@ import Cardano.Ledger.Shelley.LedgerState.IncrementalStake
 import Cardano.Ledger.Shelley.LedgerState.Types (UTxOState (..))
 import Cardano.Ledger.Shelley.PParams
   ( PPUPState (..),
-    ShelleyPParams,
-    ShelleyPParamsHKD (..),
     Update,
   )
 import Cardano.Ledger.Shelley.Rules.Ppup
@@ -77,15 +75,10 @@ import Cardano.Ledger.Shelley.Rules.Ppup
     ShelleyPpupPredFailure,
   )
 import Cardano.Ledger.Shelley.Rules.Reports (showTxCerts)
-import Cardano.Ledger.Shelley.Tx
-  ( ShelleyTx (..),
-    ShelleyTxOut (..),
-    TxIn,
-  )
+import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), TxIn)
 import Cardano.Ledger.Shelley.TxBody
   ( RewardAcnt,
     ShelleyEraTxBody (..),
-    ShelleyTxBody,
     Wdrl (..),
   )
 import Cardano.Ledger.Shelley.UTxO (produced, txup)
@@ -299,12 +292,11 @@ instance
     EraUTxO era,
     ShelleyEraTxBody era,
     ExactEra ShelleyEra era,
-    TxOut era ~ ShelleyTxOut era,
-    TxBody era ~ ShelleyTxBody era,
-    PParams era ~ ShelleyPParams era,
     Tx era ~ ShelleyTx era,
-    Value era ~ Coin,
     Show (ShelleyTx era),
+    HasField "_keyDeposit" (PParams era) Coin,
+    HasField "_poolDeposit" (PParams era) Coin,
+    HasField "_maxTxSize" (PParams era) Natural,
     Embed (EraRule "PPUP" era) (ShelleyUTXO era),
     Environment (EraRule "PPUP" era) ~ PpupEnv era,
     State (EraRule "PPUP" era) ~ PPUPState era,
@@ -354,7 +346,7 @@ instance
         "Deposit pot must not be negative (post)"
         (\_ st' -> utxosDeposited st' >= mempty),
       let utxoBalance us = Val.inject (utxosDeposited us <> utxosFees us) <> balance (utxosUtxo us)
-          withdrawals :: ShelleyTxBody era -> Value era
+          withdrawals :: TxBody era -> Value era
           withdrawals txb = Val.inject $ foldl' (<>) mempty $ unWdrl $ txb ^. wdrlsTxBodyL
        in PostCondition
             "Should preserve value in the UTxO state"
@@ -369,7 +361,6 @@ utxoInductive ::
     EraUTxO era,
     ShelleyEraTxBody era,
     ExactEra ShelleyEra era,
-    TxOut era ~ ShelleyTxOut era,
     STS (utxo era),
     Embed (EraRule "PPUP" era) (utxo era),
     BaseM (utxo era) ~ ShelleyBase,

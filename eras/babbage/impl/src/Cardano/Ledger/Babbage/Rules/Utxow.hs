@@ -41,7 +41,6 @@ import Cardano.Ledger.Babbage.Tx (refScripts)
 import Cardano.Ledger.Babbage.TxBody
   ( BabbageEraTxBody (..),
     BabbageEraTxOut (..),
-    BabbageTxOut (..),
   )
 import Cardano.Ledger.BaseTypes (ProtVer, ShelleyBase, quorum, strictMaybeToMaybe)
 import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
@@ -229,8 +228,7 @@ validateScriptsWellFormed ::
   forall era.
   ( EraTx era,
     BabbageEraTxBody era,
-    Script era ~ AlonzoScript era,
-    TxOut era ~ BabbageTxOut era
+    Script era ~ AlonzoScript era
   ) =>
   PParams era ->
   Tx era ->
@@ -267,7 +265,6 @@ babbageUtxowTransition ::
     EraUTxO era,
     ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     Script era ~ AlonzoScript era,
-    TxOut era ~ BabbageTxOut era,
     STS (BabbageUTXOW era),
     BabbageEraTxBody era,
     HasField "_costmdls" (PParams era) CostModels,
@@ -368,7 +365,6 @@ instance
     EraUTxO era,
     ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     BabbageEraTxBody era,
-    TxOut era ~ BabbageTxOut era,
     HasField "_costmdls" (PParams era) CostModels,
     HasField "_protocolVersion" (PParams era) ProtVer,
     Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody),

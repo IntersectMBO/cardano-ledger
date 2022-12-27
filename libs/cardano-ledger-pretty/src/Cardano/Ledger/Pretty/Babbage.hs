@@ -222,23 +222,19 @@ ppDataHash x = ppSafeHash x
 instance PrettyA (DataHash era) where prettyA = ppDataHash
 
 ppTxBody ::
-  ( EraScript era,
-    PrettyA (Value era),
-    PrettyA (PParamsUpdate era),
-    PrettyA (Script era),
-    EraTxOut era
+  ( PrettyA (TxOut era),
+    PrettyA (PParamsUpdate era)
   ) =>
   BabbageTxBody era ->
   PDoc
 ppTxBody x =
-  -- (TxBody si ci ri o cr tc c w fee vi u rsh mnt sdh axh ni) =
   ppRecord
     "TxBody(Babbage)"
     [ ("spending inputs", ppSet ppTxIn (spendInputs' x)),
       ("collateral inputs", ppSet ppTxIn (collateralInputs' x)),
       ("reference inputs", ppSet ppTxIn (referenceInputs' x)),
-      ("outputs", ppStrictSeq ppTxOut (outputs' x)),
-      ("collateral return", ppStrictMaybe ppTxOut (collateralReturn' x)),
+      ("outputs", ppStrictSeq prettyA (outputs' x)),
+      ("collateral return", ppStrictMaybe prettyA (collateralReturn' x)),
       ("total collateral", ppStrictMaybe ppCoin (totalCollateral' x)),
       ("certificates", ppStrictSeq ppDCert (certs' x)),
       ("withdrawals", ppWdrl (wdrls' x)),
@@ -254,10 +250,8 @@ ppTxBody x =
 
 instance
   ( EraTxOut era,
-    EraScript era,
-    PrettyA (Value era),
-    PrettyA (PParamsUpdate era),
-    PrettyA (Script era)
+    PrettyA (TxOut era),
+    PrettyA (PParamsUpdate era)
   ) =>
   PrettyA (BabbageTxBody era)
   where

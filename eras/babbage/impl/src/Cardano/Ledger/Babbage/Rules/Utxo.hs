@@ -45,7 +45,6 @@ import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody (collateralInputsTxBodyL))
 import Cardano.Ledger.Alonzo.TxWits
   ( AlonzoEraTxWits (..),
-    AlonzoTxWits (..),
     nullRedeemers,
   )
 import Cardano.Ledger.Babbage.Collateral (collAdaBalance)
@@ -53,8 +52,6 @@ import Cardano.Ledger.Babbage.Era (BabbageUTXO)
 import Cardano.Ledger.Babbage.Rules.Utxos (BabbageUTXOS)
 import Cardano.Ledger.Babbage.TxBody
   ( BabbageEraTxBody (..),
-    BabbageTxBody (..),
-    BabbageTxOut,
   )
 import Cardano.Ledger.BaseTypes
   ( ProtVer (..),
@@ -274,9 +271,7 @@ validateCollateralEqBalance bal txcoll =
 
 -- > getValue txout ≥ inject ( serSize txout ∗ coinsPerUTxOByte pp )
 validateOutputTooSmallUTxO ::
-  ( EraTxOut era,
-    TxOut era ~ BabbageTxOut era
-  ) =>
+  EraTxOut era =>
   PParams era ->
   [Sized (TxOut era)] ->
   Test (BabbageUtxoPredFailure era)
@@ -326,8 +321,6 @@ utxoTransition ::
     BabbageEraTxBody era,
     AlonzoEraTxWits era,
     Tx era ~ AlonzoTx era,
-    TxBody era ~ BabbageTxBody era,
-    TxOut era ~ BabbageTxOut era,
     STS (BabbageUTXO era),
     HasField "_maxTxSize" (PParams era) Natural,
     HasField "_maxValSize" (PParams era) Natural,
@@ -421,9 +414,6 @@ instance
     BabbageEraTxBody era,
     AlonzoEraTxWits era,
     Tx era ~ AlonzoTx era,
-    TxOut era ~ BabbageTxOut era,
-    TxBody era ~ BabbageTxBody era,
-    TxWits era ~ AlonzoTxWits era,
     HasField "_maxCollateralInputs" (PParams era) Natural,
     HasField "_coinsPerUTxOByte" (PParams era) Coin,
     HasField "_collateralPercentage" (PParams era) Natural,

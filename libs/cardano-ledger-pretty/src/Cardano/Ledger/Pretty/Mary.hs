@@ -16,7 +16,6 @@ import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Mary.TxBody
 import Cardano.Ledger.Mary.Value
 import Cardano.Ledger.Pretty
-import Cardano.Ledger.Shelley.TxBody (ShelleyTxOut)
 import qualified Data.Map as Map
 import Data.Text (Text)
 import Lens.Micro
@@ -89,7 +88,7 @@ instance Era era => PrettyA (AllegraTxAuxData era) where
 
 allegraFields ::
   ( AllegraEraTxBody era,
-    PrettyA (Value era),
+    PrettyA (TxOut era),
     PrettyA (PParamsUpdate era),
     ProtVerAtMost era 8
   ) =>
@@ -97,7 +96,7 @@ allegraFields ::
   [(Text, PDoc)]
 allegraFields txBody =
   [ ("inputs", ppSet ppTxIn (txBody ^. inputsTxBodyL)),
-    ("outputs", ppStrictSeq ppTxOut (txBody ^. outputsTxBodyL)),
+    ("outputs", ppStrictSeq prettyA (txBody ^. outputsTxBodyL)),
     ("certificates", ppStrictSeq ppDCert (txBody ^. certsTxBodyG)),
     ("withdrawals", ppWdrl (txBody ^. wdrlsTxBodyL)),
     ("txfee", ppCoin (txBody ^. feeTxBodyL)),
@@ -108,9 +107,8 @@ allegraFields txBody =
 
 instance
   ( AllegraEraTxBody era,
-    PrettyA (Value era),
+    PrettyA (TxOut era),
     PrettyA (PParamsUpdate era),
-    TxOut era ~ ShelleyTxOut era,
     TxBody era ~ AllegraTxBody era,
     ProtVerAtMost era 8
   ) =>
@@ -120,9 +118,8 @@ instance
 
 instance
   ( MaryEraTxBody era,
-    PrettyA (Value era),
+    PrettyA (TxOut era),
     PrettyA (PParamsUpdate era),
-    TxOut era ~ ShelleyTxOut era,
     TxBody era ~ MaryTxBody era,
     ProtVerAtMost era 8
   ) =>

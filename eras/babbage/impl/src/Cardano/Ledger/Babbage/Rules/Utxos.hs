@@ -34,7 +34,6 @@ import Cardano.Ledger.Alonzo.Rules
   )
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript, CostModels)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO, ScriptResult (Fails, Passes))
-import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..))
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded)
 import Cardano.Ledger.Babbage.Collateral (collAdaBalance, collOuts)
 import Cardano.Ledger.Babbage.Era (BabbageUTXOS)
@@ -42,14 +41,19 @@ import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.Babbage.TxBody
   ( AlonzoEraTxBody (collateralInputsTxBodyL),
     BabbageEraTxBody,
-    BabbageTxOut,
     ShelleyEraTxBody (..),
   )
 import Cardano.Ledger.BaseTypes (ProtVer, ShelleyBase, epochInfo, strictMaybeToMaybe, systemStart)
 import Cardano.Ledger.Binary (ToCBOR (..))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.LedgerState (PPUPState (..), UTxOState (..), keyTxRefunds, totalTxDeposits, updateStakeDistribution)
+import Cardano.Ledger.Shelley.LedgerState
+  ( PPUPState (..),
+    UTxOState (..),
+    keyTxRefunds,
+    totalTxDeposits,
+    updateStakeDistribution,
+  )
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules
   ( PpupEnv (..),
@@ -79,9 +83,6 @@ instance
     EraUTxO era,
     ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     Tx era ~ AlonzoTx era,
-    TxOut era ~ BabbageTxOut era,
-    TxBody era ~ BabbageTxBody era,
-    TxWits era ~ AlonzoTxWits era,
     Script era ~ AlonzoScript era,
     HasField "_keyDeposit" (PParams era) Coin,
     HasField "_poolDeposit" (PParams era) Coin,
@@ -123,9 +124,6 @@ utxosTransition ::
     EraUTxO era,
     ScriptsNeeded era ~ AlonzoScriptsNeeded era,
     Tx era ~ AlonzoTx era,
-    TxOut era ~ BabbageTxOut era,
-    TxBody era ~ BabbageTxBody era,
-    TxWits era ~ AlonzoTxWits era,
     Script era ~ AlonzoScript era,
     HasField "_keyDeposit" (PParams era) Coin,
     HasField "_poolDeposit" (PParams era) Coin,
@@ -215,8 +213,6 @@ scriptsNo ::
     STS (BabbageUTXOS era),
     BabbageEraTxBody era,
     Tx era ~ AlonzoTx era,
-    TxOut era ~ BabbageTxOut era,
-    TxBody era ~ BabbageTxBody era,
     Script era ~ AlonzoScript era,
     HasField "_costmdls" (PParams era) CostModels
   ) =>

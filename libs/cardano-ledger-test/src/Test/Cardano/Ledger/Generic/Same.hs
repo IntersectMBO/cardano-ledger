@@ -25,14 +25,12 @@ import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD)
-import Cardano.Ledger.Babbage.TxBody (BabbageEraTxBody, BabbageTxBody (..), BabbageTxOut (..))
+import Cardano.Ledger.Babbage.TxBody (BabbageEraTxBody, BabbageTxBody (..))
 import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Conway.Core (ConwayEraTxBody)
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
-import Cardano.Ledger.Core (EraTxOut (..))
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Era, EraCrypto)
+import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (KeyHash, KeyRole (Genesis))
 import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
 import Cardano.Ledger.Pretty
@@ -53,7 +51,7 @@ import Cardano.Ledger.Shelley.LedgerState
   )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), ShelleyPParamsHKD)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
-import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..), ShelleyTxOut, Wdrl (..))
+import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..), Wdrl (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..))
 import Cardano.Ledger.UTxO (UTxO (..))
 import Control.State.Transition.Extended (STS (..), State)
@@ -142,7 +140,7 @@ sameUTxO (Babbage _) x y = eqByShow x y
 sameUTxO (Conway _) x y = eqByShow x y
 {-# NOINLINE sameUTxO #-}
 
-samePPUP :: Proof era -> State (Core.EraRule "PPUP" era) -> State (Core.EraRule "PPUP" era) -> Maybe PDoc
+samePPUP :: Proof era -> State (EraRule "PPUP" era) -> State (EraRule "PPUP" era) -> Maybe PDoc
 samePPUP (Shelley _) x y = eqByShow x y
 samePPUP (Allegra _) x y = eqByShow x y
 samePPUP (Mary _) x y = eqByShow x y
@@ -268,7 +266,7 @@ instance Same era (ShelleyResultExamples era) where
 -- We cannot make them Same instances because they are type families.
 -- We also can avoid all extra constraints by pattern matching against all current Proofs.
 
-samePParams :: Proof era -> Core.PParams era -> Core.PParams era -> Maybe PDoc
+samePParams :: Proof era -> PParams era -> PParams era -> Maybe PDoc
 samePParams (Shelley _) x y = eqByShow x y
 samePParams (Allegra _) x y = eqByShow x y
 samePParams (Mary _) x y = eqByShow x y
@@ -277,7 +275,7 @@ samePParams (Babbage _) x y = eqByShow x y
 samePParams (Conway _) x y = eqByShow x y
 {-# NOINLINE samePParams #-}
 
-samePParamsUpdate :: Proof era -> Core.PParamsUpdate era -> Core.PParamsUpdate era -> Maybe PDoc
+samePParamsUpdate :: Proof era -> PParamsUpdate era -> PParamsUpdate era -> Maybe PDoc
 samePParamsUpdate (Shelley _) x y = eqByShow x y
 samePParamsUpdate (Allegra _) x y = eqByShow x y
 samePParamsUpdate (Mary _) x y = eqByShow x y
@@ -286,7 +284,7 @@ samePParamsUpdate (Babbage _) x y = eqByShow x y
 samePParamsUpdate (Conway _) x y = eqByShow x y
 {-# NOINLINE samePParamsUpdate #-}
 
-sameTxOut :: Proof era -> Core.TxOut era -> Core.TxOut era -> Maybe PDoc
+sameTxOut :: Proof era -> TxOut era -> TxOut era -> Maybe PDoc
 sameTxOut (Shelley _) x y = eqByShow x y
 sameTxOut (Allegra _) x y = eqByShow x y
 sameTxOut (Mary _) x y = eqByShow x y
@@ -308,7 +306,7 @@ sameLedgerFail (Babbage _) x y = eqByShow x y
 sameLedgerFail (Conway _) x y = eqByShow x y
 {-# NOINLINE sameLedgerFail #-}
 
-sameTransCtx :: Proof era -> Core.TranslationContext era -> Core.TranslationContext era -> Maybe PDoc
+sameTransCtx :: Proof era -> TranslationContext era -> TranslationContext era -> Maybe PDoc
 sameTransCtx (Shelley _) x y = eqByShow x y
 sameTransCtx (Allegra _) x y = eqByShow x y
 sameTransCtx (Mary _) x y = eqByShow x y
@@ -335,7 +333,7 @@ sameShelleyTxWits proof (ShelleyTxWits vk1 sh1 boot1) (ShelleyTxWits vk2 sh2 boo
 
 sameAlonzoTxWits ::
   forall era.
-  (Reflect era, Core.Script era ~ AlonzoScript era) =>
+  (Reflect era, Script era ~ AlonzoScript era) =>
   Proof era ->
   AlonzoTxWits era ->
   AlonzoTxWits era ->
@@ -351,7 +349,7 @@ sameAlonzoTxWits
       ("RedeemerWits", eqVia (ppMap ppRdmrPtr (pcPair pcData pcExUnits)) r1 r2)
     ]
 
-sameTxWits :: Reflect era => Proof era -> Core.TxWits era -> Core.TxWits era -> [(String, Maybe PDoc)]
+sameTxWits :: Reflect era => Proof era -> TxWits era -> TxWits era -> [(String, Maybe PDoc)]
 sameTxWits proof@(Shelley _) x y = sameShelleyTxWits proof x y
 sameTxWits proof@(Allegra _) x y = sameShelleyTxWits proof x y
 sameTxWits proof@(Mary _) x y = sameShelleyTxWits proof x y
@@ -363,9 +361,7 @@ sameTxWits proof@(Conway _) x y = sameAlonzoTxWits proof x y
 -- Comparing TxBody for Sameness
 
 sameShelleyTxBody ::
-  ( Reflect era,
-    Core.TxOut era ~ ShelleyTxOut era
-  ) =>
+  Reflect era =>
   Proof era ->
   ShelleyTxBody era ->
   ShelleyTxBody era ->
@@ -382,9 +378,7 @@ sameShelleyTxBody proof (ShelleyTxBody i1 o1 c1 (Wdrl w1) f1 s1 pu1 d1) (Shelley
   ]
 
 sameAllegraTxBody ::
-  ( Reflect era,
-    Core.TxOut era ~ ShelleyTxOut era
-  ) =>
+  Reflect era =>
   Proof era ->
   AllegraTxBody era ->
   AllegraTxBody era ->
@@ -401,9 +395,7 @@ sameAllegraTxBody proof (AllegraTxBody i1 o1 c1 (Wdrl w1) f1 v1 pu1 d1) (Allegra
   ]
 
 sameMaryTxBody ::
-  ( Reflect era,
-    Core.TxOut era ~ ShelleyTxOut era
-  ) =>
+  Reflect era =>
   Proof era ->
   MaryTxBody era ->
   MaryTxBody era ->
@@ -447,8 +439,7 @@ sameAlonzoTxBody
 
 sameBabbageTxBody ::
   ( Reflect era,
-    BabbageEraTxBody era,
-    Core.TxOut era ~ BabbageTxOut era
+    BabbageEraTxBody era
   ) =>
   Proof era ->
   BabbageTxBody era ->
@@ -477,9 +468,8 @@ sameBabbageTxBody
     ]
 
 sameConwayTxBody ::
-  ( TxOut era ~ BabbageTxOut era,
-    ConwayEraTxBody era,
-    PrettyA (Core.PParamsUpdate era),
+  ( ConwayEraTxBody era,
+    PrettyA (PParamsUpdate era),
     Reflect era
   ) =>
   Proof era ->
@@ -509,7 +499,7 @@ sameConwayTxBody
       ("Votes", eqVia (ppStrictSeq prettyA) vs1 vs2)
     ]
 
-sameTxBody :: Reflect era => Proof era -> Core.TxBody era -> Core.TxBody era -> [(String, Maybe PDoc)]
+sameTxBody :: Reflect era => Proof era -> TxBody era -> TxBody era -> [(String, Maybe PDoc)]
 sameTxBody proof@(Shelley _) x y = sameShelleyTxBody proof x y
 sameTxBody proof@(Allegra _) x y = sameAllegraTxBody proof x y
 sameTxBody proof@(Mary _) x y = sameMaryTxBody proof x y
@@ -521,7 +511,7 @@ sameTxBody proof@(Conway _) x y = sameConwayTxBody proof x y
 -- Comparing Tx for Sameness
 
 sameShelleyTx ::
-  (Reflect era, Core.TxWits era ~ ShelleyTxWits era) =>
+  (Reflect era, TxWits era ~ ShelleyTxWits era) =>
   Proof era ->
   ShelleyTx era ->
   ShelleyTx era ->
@@ -534,8 +524,8 @@ sameShelleyTx proof (ShelleyTx b1 w1 aux1) (ShelleyTx b2 w2 aux2) =
 
 sameAlonzoTx ::
   ( Reflect era,
-    Core.Script era ~ AlonzoScript era,
-    Core.TxWits era ~ AlonzoTxWits era
+    Script era ~ AlonzoScript era,
+    TxWits era ~ AlonzoTxWits era
   ) =>
   Proof era ->
   AlonzoTx era ->
@@ -549,7 +539,7 @@ sameAlonzoTx proof (AlonzoTx b1 w1 v1 aux1) (AlonzoTx b2 w2 v2 aux2) =
        ]
 {-# NOINLINE sameAlonzoTx #-}
 
-sameTx :: Reflect era => Proof era -> Core.Tx era -> Core.Tx era -> [(String, Maybe PDoc)]
+sameTx :: Reflect era => Proof era -> Tx era -> Tx era -> [(String, Maybe PDoc)]
 sameTx proof@(Shelley _) x y = sameShelleyTx proof x y
 sameTx proof@(Allegra _) x y = sameShelleyTx proof x y
 sameTx proof@(Mary _) x y = sameShelleyTx proof x y
@@ -566,8 +556,8 @@ ints = [0 ..]
 
 sameShelleyTxSeq ::
   ( Reflect era,
-    Core.Tx era ~ ShelleyTx era,
-    SafeToHash (Core.TxWits era)
+    Tx era ~ ShelleyTx era,
+    SafeToHash (TxWits era)
   ) =>
   Proof era ->
   ShelleyTxSeq era ->
@@ -581,7 +571,7 @@ sameShelleyTxSeq proof (ShelleyTxSeq ss1) (ShelleyTxSeq ss2) =
 sameAlonzoTxSeq ::
   ( Reflect era,
     AlonzoEraTx era,
-    SafeToHash (Core.TxWits era)
+    SafeToHash (TxWits era)
   ) =>
   Proof era ->
   AlonzoTxSeq era ->
@@ -592,7 +582,7 @@ sameAlonzoTxSeq proof (AlonzoTxSeq ss1) (AlonzoTxSeq ss2) =
   where
     f n t1 t2 = SomeM (show n) (sameTx proof) t1 t2
 
-sameTxSeq :: Reflect era => Proof era -> Core.TxSeq era -> Core.TxSeq era -> [(String, Maybe PDoc)]
+sameTxSeq :: Reflect era => Proof era -> TxSeq era -> TxSeq era -> [(String, Maybe PDoc)]
 sameTxSeq proof@(Shelley _) x y = sameShelleyTxSeq proof x y
 sameTxSeq proof@(Allegra _) x y = sameShelleyTxSeq proof x y
 sameTxSeq proof@(Mary _) x y = sameShelleyTxSeq proof x y
