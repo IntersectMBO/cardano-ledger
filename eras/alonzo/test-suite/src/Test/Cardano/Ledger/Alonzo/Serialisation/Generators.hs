@@ -15,6 +15,7 @@ module Test.Cardano.Ledger.Alonzo.Serialisation.Generators where
 
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.Language
 import Cardano.Ledger.Alonzo.PParams (
   AlonzoPParams,
@@ -90,6 +91,7 @@ import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Binary.Twiddle
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
+import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators (genMintValues)
 import Test.QuickCheck
 
@@ -402,6 +404,18 @@ instance
       , DatumHash <$> arbitrary
       , Datum . dataToBinaryData <$> arbitrary
       ]
+
+instance Arbitrary AlonzoGenesis where
+  arbitrary =
+    AlonzoGenesis
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
 
 instance (Era era, Val (Value era), DecodeNonNegative (Value era)) => Twiddle (AlonzoTxOut era) where
   twiddle v = twiddle v . toTerm v

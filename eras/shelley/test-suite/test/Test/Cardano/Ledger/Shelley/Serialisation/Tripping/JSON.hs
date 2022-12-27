@@ -11,7 +11,6 @@ import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (GenDelegPair (..), KeyHash, KeyRole (Genesis))
-import Cardano.Ledger.Shelley (Shelley)
 import Cardano.Ledger.Shelley.API.Types (ShelleyGenesis)
 import Data.Aeson (FromJSON, ToJSON (toJSON), decode, encode, fromJSON)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
@@ -30,7 +29,7 @@ tests =
   testGroup
     "Shelley Genesis"
     [ testProperty "Genesis roundtrip" $
-        propRoundTripJSON @(ShelleyGenesis Shelley)
+        propRoundTripJSON @(ShelleyGenesis StandardCrypto)
     , testProperty "Coin roundtrip" $
         propRoundTripJSON @Coin
     , testProperty "Address roundtrip" $

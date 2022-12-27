@@ -34,7 +34,6 @@ import Cardano.Ledger.HKD (HKDFunctor (..))
 import Cardano.Ledger.Shelley.API (
   EpochState (..),
   NewEpochState (..),
-  ShelleyGenesis,
   StrictMaybe (..),
  )
 import qualified Cardano.Ledger.Shelley.API as API
@@ -75,27 +74,6 @@ instance
         , nesRu = nesRu nes
         , nesPd = nesPd nes
         , stashedAVVMAddresses = ()
-        }
-
-instance Crypto c => TranslateEra (BabbageEra c) ShelleyGenesis where
-  translateEra ctxt genesis =
-    pure
-      API.ShelleyGenesis
-        { API.sgSystemStart = API.sgSystemStart genesis
-        , API.sgNetworkMagic = API.sgNetworkMagic genesis
-        , API.sgNetworkId = API.sgNetworkId genesis
-        , API.sgActiveSlotsCoeff = API.sgActiveSlotsCoeff genesis
-        , API.sgSecurityParam = API.sgSecurityParam genesis
-        , API.sgEpochLength = API.sgEpochLength genesis
-        , API.sgSlotsPerKESPeriod = API.sgSlotsPerKESPeriod genesis
-        , API.sgMaxKESEvolutions = API.sgMaxKESEvolutions genesis
-        , API.sgSlotLength = API.sgSlotLength genesis
-        , API.sgUpdateQuorum = API.sgUpdateQuorum genesis
-        , API.sgMaxLovelaceSupply = API.sgMaxLovelaceSupply genesis
-        , API.sgProtocolParams = translateEra' ctxt (API.sgProtocolParams genesis)
-        , API.sgGenDelegs = API.sgGenDelegs genesis
-        , API.sgInitialFunds = API.sgInitialFunds genesis
-        , API.sgStaking = API.sgStaking genesis
         }
 
 newtype Tx era = Tx {unTx :: Core.Tx era}

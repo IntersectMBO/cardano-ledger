@@ -11,6 +11,7 @@ import Cardano.Ledger.Alonzo.PParams hiding (PParams)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Core
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Shelley.API.Mempool
 import Cardano.Ledger.Shelley.API.Wallet (getFilteredUTxO, getUTxO)
 import Cardano.Ledger.Shelley.Genesis (ShelleyGenesis (..), fromNominalDiffTimeMicro, mkShelleyGlobals)
@@ -212,7 +213,7 @@ validatedTx3 =
       \7120c2d3482751b14f06dd41d7ff023eeae6e63933b097c023c1ed19df6a061173c45aa\
       \54cceb568ff1886e2716e84e6260df5f6"
 
-mkGlobals :: ShelleyGenesis CurrentEra -> PParams CurrentEra -> Globals
+mkGlobals :: ShelleyGenesis StandardCrypto -> PParams CurrentEra -> Globals
 mkGlobals genesis pp =
   mkShelleyGlobals genesis epochInfoE majorPParamsVer
   where

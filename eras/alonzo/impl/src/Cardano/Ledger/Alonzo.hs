@@ -23,8 +23,8 @@ module Cardano.Ledger.Alonzo (
 )
 where
 
-import Cardano.Ledger.Alonzo.Era
-import Cardano.Ledger.Alonzo.Genesis
+import Cardano.Ledger.Alonzo.Era (AlonzoEra)
+import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
 import Cardano.Ledger.Alonzo.PParams (
   AlonzoPParams,
   AlonzoPParamsHKD (..),
@@ -33,7 +33,7 @@ import Cardano.Ledger.Alonzo.PParams (
 import Cardano.Ledger.Alonzo.PlutusScriptApi (getDatumAlonzo)
 import Cardano.Ledger.Alonzo.Rules ()
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
-import Cardano.Ledger.Alonzo.Translation ()
+import Cardano.Ledger.Alonzo.Translation (translatePParams)
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..), AlonzoTxBody, AlonzoTxOut)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), alonzoTxInfo)
@@ -89,7 +89,7 @@ instance (Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyBlock
 instance Crypto c => API.CanStartFromGenesis (AlonzoEra c) where
   type AdditionalGenesisConfig (AlonzoEra c) = AlonzoGenesis
 
-  initialState = API.initialStateFromGenesis extendPPWithGenesis
+  fromShelleyPParams ag = translatePParams ag . translateEra' () . translateEra' ()
 
 instance Crypto c => ExtendedUTxO (AlonzoEra c) where
   txInfo = alonzoTxInfo

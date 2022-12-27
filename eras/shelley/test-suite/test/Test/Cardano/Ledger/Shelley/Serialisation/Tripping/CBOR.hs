@@ -18,7 +18,8 @@ import Cardano.Ledger.Binary (
   fromNotSharedCBOR,
  )
 import Cardano.Ledger.Compactible (Compactible (..))
-import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Shelley (Shelley)
 import Cardano.Ledger.Shelley.API as Ledger
 import Cardano.Ledger.Shelley.RewardUpdate (
   FreeVars (..),
@@ -31,7 +32,6 @@ import qualified Cardano.Protocol.TPraos.BHeader as TP
 import qualified Cardano.Protocol.TPraos.Rules.Prtcl as STS (PrtclState)
 import Data.Maybe (fromJust)
 import Test.Cardano.Ledger.Binary.RoundTrip
-import qualified Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes as Mock
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
@@ -47,31 +47,31 @@ testCoreTypes =
   testGroup
     "Core Types"
     [ testProperty "Header" $
-        roundTripAnnExpectation @(TP.BHeader Mock.C_Crypto)
+        roundTripAnnExpectation @(TP.BHeader StandardCrypto)
     , testProperty "Block Header Hash" $
-        roundTripExpectation @(TP.HashHeader Mock.C_Crypto) cborTrip
+        roundTripExpectation @(TP.HashHeader StandardCrypto) cborTrip
     , testProperty "Bootstrap Witness" $
-        roundTripAnnExpectation @(BootstrapWitness Mock.C_Crypto)
+        roundTripAnnExpectation @(BootstrapWitness StandardCrypto)
     , testProperty "TxId" $
-        roundTripExpectation @(TxId Mock.C_Crypto) cborTrip
+        roundTripExpectation @(TxId StandardCrypto) cborTrip
     , testProperty "Protocol State" $
-        roundTripExpectation @(STS.PrtclState Mock.C_Crypto) cborTrip
+        roundTripExpectation @(STS.PrtclState StandardCrypto) cborTrip
     , testProperty "SnapShots" $
-        roundTripExpectation @(SnapShots Mock.C_Crypto) (mkTrip toCBOR fromNotSharedCBOR)
+        roundTripExpectation @(SnapShots StandardCrypto) (mkTrip toCBOR fromNotSharedCBOR)
     , testProperty "coin CompactCoin cbor" $
         roundTripExpectation @Coin (mkTrip (toCBOR . fromJust . toCompact) fromCBOR)
     , testProperty "coin cbor CompactCoin" $
         roundTripExpectation @Coin (mkTrip toCBOR (fromCompact <$> fromCBOR))
     , testProperty "RewardUpdate" $
-        roundTripExpectation @(RewardUpdate Mock.C_Crypto) cborTrip
+        roundTripExpectation @(RewardUpdate StandardCrypto) cborTrip
     , testProperty "RewardSnapShot" $
-        roundTripExpectation @(RewardSnapShot Mock.C_Crypto) cborTrip
+        roundTripExpectation @(RewardSnapShot StandardCrypto) cborTrip
     , testProperty "RewardFreeVars" $
-        roundTripExpectation @(FreeVars Mock.C_Crypto) cborTrip
+        roundTripExpectation @(FreeVars StandardCrypto) cborTrip
     , testProperty "RewardPulser" $
-        roundTripExpectation @(Pulser Mock.C_Crypto) cborTrip
+        roundTripExpectation @(Pulser StandardCrypto) cborTrip
     , testProperty "PulsingRewUpdate" $
-        roundTripExpectation @(PulsingRewUpdate Mock.C_Crypto) cborTrip
+        roundTripExpectation @(PulsingRewUpdate StandardCrypto) cborTrip
     ]
 
 tests :: TestTree
@@ -79,27 +79,27 @@ tests =
   testGroup
     "Serialisation roundtrip Property Tests"
     $ [ testProperty "Block" $
-          roundTripAnnExpectation @(Block (TP.BHeader Mock.C_Crypto) Mock.C)
+          roundTripAnnExpectation @(Block (TP.BHeader StandardCrypto) Shelley)
       , testProperty "TxBody" $
-          roundTripAnnExpectation @(ShelleyTxBody Mock.C)
+          roundTripAnnExpectation @(ShelleyTxBody Shelley)
       , testProperty "Tx" $
-          roundTripAnnExpectation @(ShelleyTx Mock.C)
+          roundTripAnnExpectation @(ShelleyTx Shelley)
       , testProperty "TxOut" $
-          roundTripExpectation @(ShelleyTxOut Mock.C) cborTrip
+          roundTripExpectation @(ShelleyTxOut Shelley) cborTrip
       , testProperty "LEDGER Predicate Failures" $
-          roundTripExpectation @([STS.PredicateFailure (STS.ShelleyLEDGERS Mock.C)]) cborTrip
+          roundTripExpectation @([STS.PredicateFailure (STS.ShelleyLEDGERS Shelley)]) cborTrip
       , testProperty "Ledger State" $
-          roundTripExpectation @(LedgerState Mock.C) (mkTrip toCBOR fromNotSharedCBOR)
+          roundTripExpectation @(LedgerState Shelley) (mkTrip toCBOR fromNotSharedCBOR)
       , testProperty "Epoch State" $
-          roundTripExpectation @(EpochState Mock.C) cborTrip
+          roundTripExpectation @(EpochState Shelley) cborTrip
       , testProperty "NewEpoch State" $
-          roundTripExpectation @(NewEpochState Mock.C) cborTrip
+          roundTripExpectation @(NewEpochState Shelley) cborTrip
       , testProperty "MultiSig" $
-          roundTripAnnExpectation @(MultiSig (ShelleyEra Mock.C_Crypto))
+          roundTripAnnExpectation @(MultiSig Shelley)
       , testProperty "TxAuxData" $
-          roundTripAnnExpectation @(ShelleyTxAuxData Mock.C)
+          roundTripAnnExpectation @(ShelleyTxAuxData Shelley)
       , testProperty "Shelley Genesis" $
-          roundTripExpectation @(ShelleyGenesis Mock.C) cborTrip
+          roundTripExpectation @(ShelleyGenesis StandardCrypto) cborTrip
       , testProperty "NominalDiffTimeMicro" $
           roundTripExpectation @NominalDiffTimeMicro cborTrip
       , testCoreTypes

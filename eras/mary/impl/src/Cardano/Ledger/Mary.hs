@@ -16,6 +16,7 @@ module Cardano.Ledger.Mary (
 )
 where
 
+import Cardano.Ledger.Core (translateEra')
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys (DSignable)
@@ -41,4 +42,4 @@ instance
   ApplyBlock (MaryEra c)
 
 instance Crypto c => CanStartFromGenesis (MaryEra c) where
-  initialState = initialStateFromGenesis const
+  fromShelleyPParams _ = translateEra' () . translateEra' ()

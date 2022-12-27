@@ -598,7 +598,7 @@ getLeaderSchedule globals ss cds poolHash key pp = Set.filter isLeader epochSlot
 -- way as 'translateToShelleyLedgerState'.
 mkInitialShelleyLedgerView ::
   forall c.
-  ShelleyGenesis (ShelleyEra c) ->
+  ShelleyGenesis c ->
   LedgerView c
 mkInitialShelleyLedgerView genesisShelley =
   let !ee = _extraEntropy . sgProtocolParams $ genesisShelley
