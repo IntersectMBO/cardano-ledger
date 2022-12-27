@@ -73,7 +73,7 @@ import Cardano.Ledger.Binary.Coders
     ofield,
     (!>),
   )
-import Cardano.Ledger.Coin (Coin (..), CompactForm)
+import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
   ( ConwayEraTxBody (..),
   )
@@ -84,7 +84,7 @@ import Cardano.Ledger.Conway.PParams ()
 import Cardano.Ledger.Conway.Scripts ()
 import Cardano.Ledger.Conway.TxOut ()
 import Cardano.Ledger.Core
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary.Value
   ( MaryValue (..),
@@ -106,7 +106,6 @@ import Cardano.Ledger.MemoBytes
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
 import Cardano.Ledger.Shelley.TxBody (Wdrl (..))
 import Cardano.Ledger.TxIn (TxIn (..))
-import Cardano.Ledger.Val (DecodeNonNegative, Val)
 import Control.DeepSeq
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Sequence.Strict (StrictSeq, (|>))
@@ -143,45 +142,23 @@ data ConwayTxBodyRaw era = ConwayTxBodyRaw
   deriving (Generic, Typeable)
 
 deriving instance
-  ( Era era,
-    Eq (Script era),
-    Eq (CompactForm (Value era)),
-    Eq (PParamsUpdate era),
-    Eq (TxOut era)
-  ) =>
+  (Era era, Eq (TxOut era), Eq (PParamsUpdate era)) =>
   Eq (ConwayTxBodyRaw era)
 
 instance
-  ( NoThunks (PParamsUpdate era),
-    NoThunks (TxOut era)
-  ) =>
+  (NoThunks (TxOut era), NoThunks (PParamsUpdate era)) =>
   NoThunks (ConwayTxBodyRaw era)
 
 instance
-  ( Era era,
-    NFData (PParamsUpdate era),
-    NFData (TxOut era)
-  ) =>
+  (Era era, NFData (TxOut era), NFData (PParamsUpdate era)) =>
   NFData (ConwayTxBodyRaw era)
 
 deriving instance
-  ( Era era,
-    Val (Value era),
-    Show (Value era),
-    Show (Script era),
-    Show (PParamsUpdate era),
-    Show (TxOut era)
-  ) =>
+  (Era era, Show (TxOut era), Show (PParamsUpdate era)) =>
   Show (ConwayTxBodyRaw era)
 
 instance
-  ( Era era,
-    Val (Value era),
-    DecodeNonNegative (Value era),
-    FromCBOR (Annotator (Script era)),
-    FromCBOR (PParamsUpdate era),
-    FromCBOR (TxOut era)
-  ) =>
+  (Era era, FromCBOR (TxOut era), FromCBOR (PParamsUpdate era)) =>
   FromCBOR (ConwayTxBodyRaw era)
   where
   fromCBOR =
@@ -228,36 +205,19 @@ newtype ConwayTxBody era = TxBodyConstr (MemoBytes ConwayTxBodyRaw era)
   deriving (Generic, SafeToHash, ToCBOR)
 
 instance
-  ( Era era,
-    NoThunks (PParamsUpdate era),
-    NoThunks (TxOut era)
-  ) =>
+  (Era era, NoThunks (TxOut era), NoThunks (PParamsUpdate era)) =>
   NoThunks (ConwayTxBody era)
 
 deriving instance
-  ( Era era,
-    Eq (Script era),
-    Eq (CompactForm (Value era)),
-    Eq (PParamsUpdate era),
-    Eq (TxOut era)
-  ) =>
+  (Era era, Eq (TxOut era), Eq (PParamsUpdate era)) =>
   Eq (ConwayTxBody era)
 
 deriving newtype instance
-  ( Era era,
-    NFData (PParamsUpdate era),
-    NFData (TxOut era)
-  ) =>
+  (Era era, NFData (TxOut era), NFData (PParamsUpdate era)) =>
   NFData (ConwayTxBody era)
 
 deriving instance
-  ( Era era,
-    Val (Value era),
-    Show (Value era),
-    Show (Script era),
-    Show (PParamsUpdate era),
-    Show (TxOut era)
-  ) =>
+  (Era era, Show (TxOut era), Show (PParamsUpdate era)) =>
   Show (ConwayTxBody era)
 
 type instance MemoHashIndex ConwayTxBodyRaw = EraIndependentTxBody
@@ -266,13 +226,7 @@ instance (c ~ EraCrypto era) => HashAnnotated (ConwayTxBody era) EraIndependentT
   hashAnnotated = getMemoSafeHash
 
 instance
-  ( Era era,
-    Val (Value era),
-    DecodeNonNegative (Value era),
-    FromCBOR (PParamsUpdate era),
-    FromCBOR (Annotator (Script era)),
-    FromCBOR (TxOut era)
-  ) =>
+  (Era era, FromCBOR (TxOut era), FromCBOR (PParamsUpdate era)) =>
   FromCBOR (Annotator (ConwayTxBodyRaw era))
   where
   fromCBOR = pure <$> fromCBOR
@@ -280,13 +234,7 @@ instance
 deriving via
   (Mem ConwayTxBodyRaw era)
   instance
-    ( Era era,
-      Val (Value era),
-      DecodeNonNegative (Value era),
-      FromCBOR (PParamsUpdate era),
-      FromCBOR (Annotator (Script era)),
-      FromCBOR (TxOut era)
-    ) =>
+    (Era era, FromCBOR (TxOut era), FromCBOR (PParamsUpdate era)) =>
     FromCBOR (Annotator (ConwayTxBody era))
 
 mkConwayTxBody :: ConwayEraTxBody era => ConwayTxBody era
@@ -313,8 +261,8 @@ basicConwayTxBodyRaw =
     mempty
     mempty
 
-instance CC.Crypto c => EraTxBody (ConwayEra c) where
-  {-# SPECIALIZE instance EraTxBody (ConwayEra CC.StandardCrypto) #-}
+instance Crypto c => EraTxBody (ConwayEra c) where
+  {-# SPECIALIZE instance EraTxBody (ConwayEra StandardCrypto) #-}
 
   type TxBody (ConwayEra c) = ConwayTxBody (ConwayEra c)
 
@@ -344,8 +292,8 @@ instance CC.Crypto c => EraTxBody (ConwayEra c) where
         ]
   {-# INLINE allInputsTxBodyF #-}
 
-instance CC.Crypto c => ShelleyEraTxBody (ConwayEra c) where
-  {-# SPECIALIZE instance ShelleyEraTxBody (ConwayEra CC.StandardCrypto) #-}
+instance Crypto c => ShelleyEraTxBody (ConwayEra c) where
+  {-# SPECIALIZE instance ShelleyEraTxBody (ConwayEra StandardCrypto) #-}
 
   wdrlsTxBodyL = lensMemoRawType ctbrWdrls (\txb x -> txb {ctbrWdrls = x})
   {-# INLINE wdrlsTxBodyL #-}
@@ -361,14 +309,14 @@ instance CC.Crypto c => ShelleyEraTxBody (ConwayEra c) where
 
   certsTxBodyG = getterMemoRawType (fmap transDCert . ctbrCerts)
 
-instance CC.Crypto c => AllegraEraTxBody (ConwayEra c) where
-  {-# SPECIALIZE instance AllegraEraTxBody (ConwayEra CC.StandardCrypto) #-}
+instance Crypto c => AllegraEraTxBody (ConwayEra c) where
+  {-# SPECIALIZE instance AllegraEraTxBody (ConwayEra StandardCrypto) #-}
 
   vldtTxBodyL = lensMemoRawType ctbrVldt (\txb x -> txb {ctbrVldt = x})
   {-# INLINE vldtTxBodyL #-}
 
-instance CC.Crypto c => MaryEraTxBody (ConwayEra c) where
-  {-# SPECIALIZE instance MaryEraTxBody (ConwayEra CC.StandardCrypto) #-}
+instance Crypto c => MaryEraTxBody (ConwayEra c) where
+  {-# SPECIALIZE instance MaryEraTxBody (ConwayEra StandardCrypto) #-}
 
   mintTxBodyL = lensMemoRawType ctbrMint (\txb x -> txb {ctbrMint = x})
   {-# INLINE mintTxBodyL #-}
@@ -378,8 +326,8 @@ instance CC.Crypto c => MaryEraTxBody (ConwayEra c) where
   mintedTxBodyF = to (\(TxBodyConstr (Memo txBodyRaw _)) -> Set.map policyID (policies (ctbrMint txBodyRaw)))
   {-# INLINE mintedTxBodyF #-}
 
-instance CC.Crypto c => AlonzoEraTxBody (ConwayEra c) where
-  {-# SPECIALIZE instance AlonzoEraTxBody (ConwayEra CC.StandardCrypto) #-}
+instance Crypto c => AlonzoEraTxBody (ConwayEra c) where
+  {-# SPECIALIZE instance AlonzoEraTxBody (ConwayEra StandardCrypto) #-}
 
   collateralInputsTxBodyL = lensMemoRawType ctbrCollateralInputs (\txb x -> txb {ctbrCollateralInputs = x})
   {-# INLINE collateralInputsTxBodyL #-}
@@ -393,8 +341,8 @@ instance CC.Crypto c => AlonzoEraTxBody (ConwayEra c) where
   networkIdTxBodyL = lensMemoRawType ctbrTxNetworkId (\txb x -> txb {ctbrTxNetworkId = x})
   {-# INLINE networkIdTxBodyL #-}
 
-instance CC.Crypto c => BabbageEraTxBody (ConwayEra c) where
-  {-# SPECIALIZE instance BabbageEraTxBody (ConwayEra CC.StandardCrypto) #-}
+instance Crypto c => BabbageEraTxBody (ConwayEra c) where
+  {-# SPECIALIZE instance BabbageEraTxBody (ConwayEra StandardCrypto) #-}
 
   sizedOutputsTxBodyL = lensMemoRawType ctbrOutputs (\txb x -> txb {ctbrOutputs = x})
   {-# INLINE sizedOutputsTxBodyL #-}
@@ -421,7 +369,7 @@ instance CC.Crypto c => BabbageEraTxBody (ConwayEra c) where
           SJust collTxOut -> txOuts |> collTxOut
   {-# INLINE allSizedOutputsTxBodyF #-}
 
-instance CC.Crypto c => ConwayEraTxBody (ConwayEra c) where
+instance Crypto c => ConwayEraTxBody (ConwayEra c) where
   govActionsTxBodyL = lensMemoRawType ctbrGovActions (\txb x -> txb {ctbrGovActions = x})
   votesTxBodyL = lensMemoRawType ctbrVotes (\txb x -> txb {ctbrVotes = x})
   conwayCertsTxBodyL = lensMemoRawType ctbrCerts (\txb x -> txb {ctbrCerts = x})
