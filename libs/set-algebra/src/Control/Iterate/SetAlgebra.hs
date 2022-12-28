@@ -8,45 +8,45 @@
 --   no rewrite rules for a specific expression, falls back to a less efficient generic algorithm.
 module Control.Iterate.SetAlgebra where
 
-import Control.Iterate.BaseTypes
-  ( BaseRep (..),
-    Basic (..),
-    Embed (..),
-    Iter (..),
-    Sett (..),
-    Single (..),
-    fromPairs,
-  )
+import Control.Iterate.BaseTypes (
+  BaseRep (..),
+  Basic (..),
+  Embed (..),
+  Iter (..),
+  Sett (..),
+  Single (..),
+  fromPairs,
+ )
 import Control.Iterate.Collect (Collect, front, one, rear, runCollect, when)
-import Control.Iterate.Exp
-  ( Exp (..),
-    Query (..),
-    -- semantic meaning functions for Query
+import Control.Iterate.Exp (
+  Exp (..),
+  Query (..),
+  -- semantic meaning functions for Query
 
-    andD,
-    andPD,
-    chainD,
-    -- Operations on Fun
+  andD,
+  andPD,
+  chainD,
+  -- Operations on Fun
 
-    constant,
-    first,
-    nEgate,
-    plus,
-    projD,
-    rngElem,
-    rngFst,
-    rngSnd,
-    second,
-  )
+  constant,
+  first,
+  nEgate,
+  plus,
+  projD,
+  rngElem,
+  rngFst,
+  rngSnd,
+  second,
+ )
 import qualified Data.Map.Strict as Map
-import Data.MapExtras
-  ( disjointMapSetFold,
-    intersectDomP,
-    intersectDomPLeft,
-    intersectMapSetFold,
-    keysEqual,
-    noKeys,
-  )
+import Data.MapExtras (
+  disjointMapSetFold,
+  intersectDomP,
+  intersectDomPLeft,
+  intersectMapSetFold,
+  keysEqual,
+  noKeys,
+ )
 import qualified Data.Set as Set
 import Data.UMap (Tag (..), View (..))
 import qualified Data.UMap as UM

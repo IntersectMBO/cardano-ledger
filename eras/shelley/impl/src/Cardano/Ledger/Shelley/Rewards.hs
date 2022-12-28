@@ -6,43 +6,43 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 
-module Cardano.Ledger.Shelley.Rewards
-  ( StakeShare (..),
-    PoolRewardInfo (..),
-    mkApparentPerformance,
-    RewardType (..),
-    Reward (..),
-    LeaderOnlyReward (..),
-    leaderRewardToGeneral,
-    leaderRew,
-    memberRew,
-    aggregateRewards,
-    filterRewards,
-    sumRewards,
-    aggregateCompactRewards,
-    sumCompactRewards,
-    rewardOnePoolMember,
-    mkPoolRewardInfo,
-  )
+module Cardano.Ledger.Shelley.Rewards (
+  StakeShare (..),
+  PoolRewardInfo (..),
+  mkApparentPerformance,
+  RewardType (..),
+  Reward (..),
+  LeaderOnlyReward (..),
+  leaderRewardToGeneral,
+  leaderRew,
+  memberRew,
+  aggregateRewards,
+  filterRewards,
+  sumRewards,
+  aggregateCompactRewards,
+  sumCompactRewards,
+  rewardOnePoolMember,
+  mkPoolRewardInfo,
+)
 where
 
-import Cardano.Ledger.BaseTypes
-  ( BlocksMade (..),
-    BoundedRational (..),
-    ProtVer,
-    UnitInterval,
-  )
-import Cardano.Ledger.Binary
-  ( FromCBOR (..),
-    ToCBOR (..),
-  )
+import Cardano.Ledger.BaseTypes (
+  BlocksMade (..),
+  BoundedRational (..),
+  ProtVer,
+  UnitInterval,
+ )
+import Cardano.Ledger.Binary (
+  FromCBOR (..),
+  ToCBOR (..),
+ )
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
-import Cardano.Ledger.Coin
-  ( Coin (..),
-    CompactForm,
-    coinToRational,
-    rationalToCoinViaFloor,
-  )
+import Cardano.Ledger.Coin (
+  Coin (..),
+  CompactForm,
+  coinToRational,
+  rationalToCoinViaFloor,
+ )
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core (EraCrypto, EraPParams (..), PParams (..), Reward (..), RewardType (..), ppA0L, ppNOptL)
 import Cardano.Ledger.Credential (Credential (..))
@@ -138,8 +138,8 @@ filterRewards ::
   forall c.
   ProtVer ->
   Map (Credential 'Staking c) (Set (Reward c)) ->
-  ( Map (Credential 'Staking c) (Set (Reward c)), -- delivered
-    Map (Credential 'Staking c) (Set (Reward c)) -- ignored in Shelley Era
+  ( Map (Credential 'Staking c) (Set (Reward c)) -- delivered
+  , Map (Credential 'Staking c) (Set (Reward c)) -- ignored in Shelley Era
   )
 filterRewards pv rewards =
   if HardForks.aggregatedRewards pv
@@ -186,8 +186,8 @@ aggregateCompactRewards pv rewards =
 -- =====================================================
 
 data LeaderOnlyReward c = LeaderOnlyReward
-  { lRewardPool :: !(KeyHash 'StakePool c),
-    lRewardAmount :: !Coin
+  { lRewardPool :: !(KeyHash 'StakePool c)
+  , lRewardAmount :: !Coin
   }
   deriving (Eq, Ord, Show, Generic)
 
@@ -207,16 +207,16 @@ leaderRewardToGeneral (LeaderOnlyReward poolId r) = Reward LeaderReward poolId r
 -- | Stake Pool specific information needed to compute the rewards
 -- for its members.
 data PoolRewardInfo c = PoolRewardInfo
-  { -- | The stake pool's stake divided by the total stake
-    poolRelativeStake :: !StakeShare,
-    -- | The maximum rewards available for the entire pool
-    poolPot :: !Coin,
-    -- | The stake pool parameters
-    poolPs :: !(PoolParams c),
-    -- | The number of blocks the stake pool produced
-    poolBlocks :: !Natural,
-    -- | The leader reward
-    poolLeaderReward :: !(LeaderOnlyReward c)
+  { poolRelativeStake :: !StakeShare
+  -- ^ The stake pool's stake divided by the total stake
+  , poolPot :: !Coin
+  -- ^ The maximum rewards available for the entire pool
+  , poolPs :: !(PoolParams c)
+  -- ^ The stake pool parameters
+  , poolBlocks :: !Natural
+  -- ^ The number of blocks the stake pool produced
+  , poolLeaderReward :: !(LeaderOnlyReward c)
+  -- ^ The leader reward
   }
   deriving (Show, Eq, Ord, Generic)
 
@@ -348,11 +348,11 @@ mkPoolRewardInfo
               (StakeShare sigma)
           rewardInfo =
             PoolRewardInfo
-              { poolRelativeStake = StakeShare sigma,
-                poolPot = poolR,
-                poolPs = pool,
-                poolBlocks = blocksN,
-                poolLeaderReward = LeaderOnlyReward (ppId pool) lreward
+              { poolRelativeStake = StakeShare sigma
+              , poolPot = poolR
+              , poolPs = pool
+              , poolBlocks = blocksN
+              , poolLeaderReward = LeaderOnlyReward (ppId pool) lreward
               }
        in Right $! rewardInfo
     where

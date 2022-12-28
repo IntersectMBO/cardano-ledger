@@ -7,32 +7,32 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Ledger.Shelley.AdaPots
-  ( AdaPots (..),
-    totalAdaES,
-    totalAdaPotsES,
-    Produced (..),
-    Consumed (..),
-    consumedTxBody,
-    producedTxBody,
-  )
+module Cardano.Ledger.Shelley.AdaPots (
+  AdaPots (..),
+  totalAdaES,
+  totalAdaPotsES,
+  Produced (..),
+  Consumed (..),
+  consumedTxBody,
+  producedTxBody,
+)
 where
 
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.LedgerState
-  ( AccountState (..),
-    DPState (..),
-    DState (..),
-    EpochState (..),
-    LedgerState (..),
-    PState (..),
-    UTxOState (..),
-    keyTxRefunds,
-    rewards,
-    totalTxDeposits,
-  )
+import Cardano.Ledger.Shelley.LedgerState (
+  AccountState (..),
+  DPState (..),
+  DState (..),
+  EpochState (..),
+  LedgerState (..),
+  PState (..),
+  UTxOState (..),
+  keyTxRefunds,
+  rewards,
+  totalTxDeposits,
+ )
 import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), unWdrl)
 import Cardano.Ledger.UTxO (UTxO (..), coinBalance, txouts)
 import Data.Foldable (fold)
@@ -40,14 +40,14 @@ import qualified Data.Map.Strict as Map
 import Lens.Micro ((^.))
 
 data AdaPots = AdaPots
-  { treasuryAdaPot :: Coin,
-    reservesAdaPot :: Coin,
-    rewardsAdaPot :: Coin,
-    utxoAdaPot :: Coin,
-    keyDepositAdaPot :: Coin,
-    poolDepositAdaPot :: Coin,
-    depositsAdaPot :: Coin,
-    feesAdaPot :: Coin
+  { treasuryAdaPot :: Coin
+  , reservesAdaPot :: Coin
+  , rewardsAdaPot :: Coin
+  , utxoAdaPot :: Coin
+  , keyDepositAdaPot :: Coin
+  , poolDepositAdaPot :: Coin
+  , depositsAdaPot :: Coin
+  , feesAdaPot :: Coin
   }
   deriving (Show, Eq)
 
@@ -58,14 +58,14 @@ totalAdaPotsES ::
   AdaPots
 totalAdaPotsES (EpochState (AccountState treasury_ reserves_) _ ls _ _ _) =
   AdaPots
-    { treasuryAdaPot = treasury_,
-      reservesAdaPot = reserves_,
-      rewardsAdaPot = rewards_,
-      utxoAdaPot = coins,
-      keyDepositAdaPot = keyDeposits_,
-      poolDepositAdaPot = poolDeposits_,
-      depositsAdaPot = deposits,
-      feesAdaPot = fees_
+    { treasuryAdaPot = treasury_
+    , reservesAdaPot = reserves_
+    , rewardsAdaPot = rewards_
+    , utxoAdaPot = coins
+    , keyDepositAdaPot = keyDeposits_
+    , poolDepositAdaPot = poolDeposits_
+    , depositsAdaPot = deposits
+    , feesAdaPot = fees_
     }
   where
     UTxOState u deposits fees_ _ _ = lsUTxOState ls
@@ -86,14 +86,14 @@ totalAdaES cs =
     <> feesAdaPot
   where
     AdaPots
-      { treasuryAdaPot,
-        reservesAdaPot,
-        rewardsAdaPot,
-        utxoAdaPot,
-        -- keyDepositAdaPot,  -- We don't count these two, as their
-        -- poolDepositAdaPot, -- sum is always depositsAdaPot
-        depositsAdaPot,
-        feesAdaPot
+      { treasuryAdaPot
+      , reservesAdaPot
+      , rewardsAdaPot
+      , utxoAdaPot
+      , -- keyDepositAdaPot,  -- We don't count these two, as their
+      -- poolDepositAdaPot, -- sum is always depositsAdaPot
+      depositsAdaPot
+      , feesAdaPot
       } = totalAdaPotsES cs
 
 -- =============================================

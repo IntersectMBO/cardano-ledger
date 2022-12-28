@@ -42,32 +42,32 @@ newtype TxId = TxId {getTxId :: Hash}
 --      * __TODO__ - is it okay to use list indices instead of implementing the Ix Type?
 data TxIn = TxIn TxId Natural
   deriving
-    ( Show,
-      Eq,
-      Ord,
-      Generic,
-      Hashable,
-      HasTypeReps,
-      Data,
-      Typeable,
-      NoThunks
+    ( Show
+    , Eq
+    , Ord
+    , Generic
+    , Hashable
+    , HasTypeReps
+    , Data
+    , Typeable
+    , NoThunks
     )
 
 -- | The output of a UTxO.
 data TxOut = TxOut
-  { addr :: Addr,
-    value :: Lovelace
+  { addr :: Addr
+  , value :: Lovelace
   }
   deriving
-    ( Show,
-      Eq,
-      Ord,
-      Generic,
-      Hashable,
-      HasTypeReps,
-      Data,
-      Typeable,
-      NoThunks
+    ( Show
+    , Eq
+    , Ord
+    , Generic
+    , Hashable
+    , HasTypeReps
+    , Data
+    , Typeable
+    , NoThunks
     )
 
 -- | The unspent transaction outputs.
@@ -95,19 +95,19 @@ fromTxOuts = UTxO . Map.fromList . fmap (\out -> (TxIn (mkId out) 0, out))
 
 -- | A raw transaction
 data TxBody = TxBody
-  { inputs :: [TxIn],
-    outputs :: [TxOut]
+  { inputs :: [TxIn]
+  , outputs :: [TxOut]
   }
   deriving
-    ( Eq,
-      Show,
-      Ord,
-      Generic,
-      Hashable,
-      HasTypeReps,
-      Data,
-      Typeable,
-      NoThunks
+    ( Eq
+    , Show
+    , Ord
+    , Generic
+    , Hashable
+    , HasTypeReps
+    , Data
+    , Typeable
+    , NoThunks
     )
 
 txid :: TxBody -> TxId
@@ -152,9 +152,9 @@ txsize = abstractSize costs
   where
     costs =
       Map.fromList
-        [ (typeOf (undefined :: TxIn), 1),
-          (typeOf (undefined :: TxOut), 1),
-          (typeOf (undefined :: Wit), 1)
+        [ (typeOf (undefined :: TxIn), 1)
+        , (typeOf (undefined :: TxOut), 1)
+        , (typeOf (undefined :: Wit), 1)
         ]
 
 ---------------------------------------------------------------------------------
@@ -164,31 +164,31 @@ txsize = abstractSize costs
 -- | Proof/Witness that a transaction is authorized by the given key holder.
 data Wit = Wit VKey (Sig TxBody)
   deriving
-    ( Show,
-      Eq,
-      Ord,
-      Generic,
-      Hashable,
-      HasTypeReps,
-      Data,
-      Typeable,
-      NoThunks
+    ( Show
+    , Eq
+    , Ord
+    , Generic
+    , Hashable
+    , HasTypeReps
+    , Data
+    , Typeable
+    , NoThunks
     )
 
 -- | A fully formed transaction.
 data Tx = Tx
-  { body :: TxBody,
-    witnesses :: [Wit]
+  { body :: TxBody
+  , witnesses :: [Wit]
   }
   deriving
-    ( Show,
-      Eq,
-      Generic,
-      Hashable,
-      HasTypeReps,
-      Data,
-      Typeable,
-      NoThunks
+    ( Show
+    , Eq
+    , Generic
+    , Hashable
+    , HasTypeReps
+    , Data
+    , Typeable
+    , NoThunks
     )
 
 instance HasHash [Tx] where
@@ -201,8 +201,8 @@ makeWitness keys tx = Wit (vKey keys) (sign (sKey keys) tx)
 makeTxWits :: UTxO -> TxBody -> Tx
 makeTxWits (UTxO utxo) tx =
   Tx
-    { body = tx,
-      witnesses = wits
+    { body = tx
+    , witnesses = wits
     }
   where
     getKey txin =

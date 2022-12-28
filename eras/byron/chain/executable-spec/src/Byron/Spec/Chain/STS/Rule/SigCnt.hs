@@ -32,9 +32,9 @@ data SigcntPredicateFailure
 instance STS SIGCNT where
   type
     Environment SIGCNT =
-      ( PParams,
-        Bimap VKeyGenesis VKey,
-        BlockCount -- Chain stability parameter
+      ( PParams
+      , Bimap VKeyGenesis VKey
+      , BlockCount -- Chain stability parameter
       )
 
   type State SIGCNT = Seq VKeyGenesis

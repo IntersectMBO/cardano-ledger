@@ -3,9 +3,9 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Cardano.Chain.Slotting.SlotCount
-  ( SlotCount (..),
-  )
+module Cardano.Chain.Slotting.SlotCount (
+  SlotCount (..),
+)
 where
 
 import Cardano.Ledger.Binary (FromCBOR, ToCBOR)

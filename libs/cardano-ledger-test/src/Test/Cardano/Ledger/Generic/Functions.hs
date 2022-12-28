@@ -20,44 +20,44 @@ import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody (..), AlonzoTxOut (..), col
 import Cardano.Ledger.Alonzo.TxInfo (languages)
 import qualified Cardano.Ledger.Babbage.PParams as Babbage (BabbagePParamsHKD (..))
 import Cardano.Ledger.Babbage.Tx (refScripts)
-import Cardano.Ledger.Babbage.TxBody
-  ( BabbageEraTxBody (..),
-    BabbageTxOut (..),
-    Datum (..),
-    collateralInputs',
-    collateralReturn',
-    referenceInputs',
-    spendInputs',
-  )
-import Cardano.Ledger.BaseTypes
-  ( BlocksMade (BlocksMade),
-    Globals (epochInfo),
-    ProtVer (..),
-    natVersion,
-  )
+import Cardano.Ledger.Babbage.TxBody (
+  BabbageEraTxBody (..),
+  BabbageTxOut (..),
+  Datum (..),
+  collateralInputs',
+  collateralReturn',
+  referenceInputs',
+  spendInputs',
+ )
+import Cardano.Ledger.BaseTypes (
+  BlocksMade (BlocksMade),
+  Globals (epochInfo),
+  ProtVer (..),
+  natVersion,
+ )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential, StakeReference (..))
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.AdaPots (AdaPots (..), totalAdaPotsES)
-import Cardano.Ledger.Shelley.LedgerState
-  ( AccountState (..),
-    DPState (..),
-    DState (..),
-    EpochState (..),
-    LedgerState (..),
-    NewEpochState (..),
-    UTxOState (..),
-  )
+import Cardano.Ledger.Shelley.LedgerState (
+  AccountState (..),
+  DPState (..),
+  DState (..),
+  EpochState (..),
+  LedgerState (..),
+  NewEpochState (..),
+  UTxOState (..),
+ )
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Rewards (aggregateRewards)
-import Cardano.Ledger.Shelley.TxBody
-  ( DCert (..),
-    DelegCert (..),
-    PoolCert (..),
-    ShelleyEraTxBody (..),
-    ShelleyTxOut (..),
-  )
+import Cardano.Ledger.Shelley.TxBody (
+  DCert (..),
+  DelegCert (..),
+  PoolCert (..),
+  ShelleyEraTxBody (..),
+  ShelleyTxOut (..),
+ )
 import Cardano.Ledger.Slot (EpochNo)
 import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Cardano.Ledger.UMapCompact as UM

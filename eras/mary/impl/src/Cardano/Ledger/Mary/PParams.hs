@@ -1,11 +1,12 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+
 module Cardano.Ledger.Mary.PParams () where
 
-import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
+import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Shelley.PParams
 import Lens.Micro
 

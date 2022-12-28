@@ -3,31 +3,31 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Cardano.Ledger.Api.Tx.Body
-  ( -- | Building and inspecting transaction outputs
-    module Cardano.Ledger.Api.Tx.Out,
-    -- | Working with Timelock scripts and Plutus scripts
-    module Cardano.Ledger.Api.Scripts,
-    EraTxBody (..),
+module Cardano.Ledger.Api.Tx.Body (
+  -- | Building and inspecting transaction outputs
+  module Cardano.Ledger.Api.Tx.Out,
+  -- | Working with Timelock scripts and Plutus scripts
+  module Cardano.Ledger.Api.Scripts,
+  EraTxBody (..),
 
-    -- * Shelley Era
-    ShelleyTxBody,
-    ShelleyEraTxBody (..),
+  -- * Shelley Era
+  ShelleyTxBody,
+  ShelleyEraTxBody (..),
 
-    -- * Allegra Era
-    AllegraEraTxBody (..),
+  -- * Allegra Era
+  AllegraEraTxBody (..),
 
-    -- * Mary Era
-    MaryEraTxBody (..),
+  -- * Mary Era
+  MaryEraTxBody (..),
 
-    -- * Alonzo Era
-    AlonzoTxBody,
-    AlonzoEraTxBody (..),
+  -- * Alonzo Era
+  AlonzoTxBody,
+  AlonzoEraTxBody (..),
 
-    -- * Babbage Era
-    BabbageTxBody,
-    BabbageEraTxBody (..),
-  )
+  -- * Babbage Era
+  BabbageTxBody,
+  BabbageEraTxBody (..),
+)
 where
 
 import Cardano.Ledger.Allegra.Core (AllegraEraTxBody (..))

@@ -15,12 +15,12 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState)
-import Cardano.Ledger.Shelley.Rules
-  ( ShelleyUtxowEvent (..),
-    ShelleyUtxowPredFailure (..),
-    UtxoEnv,
-    transitionRulesUTXOW,
-  )
+import Cardano.Ledger.Shelley.Rules (
+  ShelleyUtxowEvent (..),
+  ShelleyUtxowPredFailure (..),
+  UtxoEnv,
+  transitionRulesUTXOW,
+ )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody)
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits)
@@ -42,18 +42,18 @@ import Control.State.Transition.Extended
 
 instance
   forall era.
-  ( EraTx era,
-    EraUTxO era,
-    ShelleyEraTxBody era,
-    TxWits era ~ ShelleyTxWits era,
-    ScriptsNeeded era ~ ShelleyScriptsNeeded era,
-    -- Allow UTXOW to call UTXO
-    Embed (EraRule "UTXO" era) (AllegraUTXOW era),
-    Environment (EraRule "UTXO" era) ~ UtxoEnv era,
-    State (EraRule "UTXO" era) ~ UTxOState era,
-    Signal (EraRule "UTXO" era) ~ Tx era,
-    DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody),
-    ProtVerAtMost era 8
+  ( EraTx era
+  , EraUTxO era
+  , ShelleyEraTxBody era
+  , TxWits era ~ ShelleyTxWits era
+  , ScriptsNeeded era ~ ShelleyScriptsNeeded era
+  , -- Allow UTXOW to call UTXO
+    Embed (EraRule "UTXO" era) (AllegraUTXOW era)
+  , Environment (EraRule "UTXO" era) ~ UtxoEnv era
+  , State (EraRule "UTXO" era) ~ UTxOState era
+  , Signal (EraRule "UTXO" era) ~ Tx era
+  , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
+  , ProtVerAtMost era 8
   ) =>
   STS (AllegraUTXOW era)
   where
@@ -71,10 +71,10 @@ instance
   initialRules = []
 
 instance
-  ( Era era,
-    STS (AllegraUTXO era),
-    PredicateFailure (EraRule "UTXO" era) ~ AllegraUtxoPredFailure era,
-    Event (EraRule "UTXO" era) ~ Event (AllegraUTXO era)
+  ( Era era
+  , STS (AllegraUTXO era)
+  , PredicateFailure (EraRule "UTXO" era) ~ AllegraUtxoPredFailure era
+  , Event (EraRule "UTXO" era) ~ Event (AllegraUTXO era)
   ) =>
   Embed (AllegraUTXO era) (AllegraUTXOW era)
   where
@@ -82,10 +82,10 @@ instance
   wrapEvent = UtxoEvent
 
 instance
-  ( Era era,
-    STS (AllegraUTXOW era),
-    PredicateFailure (EraRule "UTXOW" era) ~ ShelleyUtxowPredFailure era,
-    Event (EraRule "UTXOW" era) ~ Event (AllegraUTXOW era)
+  ( Era era
+  , STS (AllegraUTXOW era)
+  , PredicateFailure (EraRule "UTXOW" era) ~ ShelleyUtxowPredFailure era
+  , Event (EraRule "UTXOW" era) ~ Event (AllegraUTXOW era)
   ) =>
   Embed (AllegraUTXOW era) (Shelley.ShelleyLEDGER era)
   where

@@ -1,8 +1,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Test.Cardano.Crypto.Random
-  ( tests,
-  )
+module Test.Cardano.Crypto.Random (
+  tests,
+)
 where
 
 import Cardano.Crypto.Random (deterministic, randomNumber)

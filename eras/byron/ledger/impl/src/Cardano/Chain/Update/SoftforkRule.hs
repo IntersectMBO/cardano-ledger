@@ -7,9 +7,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Chain.Update.SoftforkRule
-  ( SoftforkRule (..),
-  )
+module Cardano.Chain.Update.SoftforkRule (
+  SoftforkRule (..),
+)
 where
 
 import Cardano.Chain.Common (LovelacePortion)
@@ -31,12 +31,12 @@ import Text.JSON.Canonical (FromJSON (..), ToJSON (..), fromJSField, mkObject)
 --   total stake of issuers of blocks with some block version is greater than
 --   this portion, this block version becomes adopted.
 data SoftforkRule = SoftforkRule
-  { -- | Initial threshold (right after proposal is confirmed).
-    srInitThd :: !LovelacePortion,
-    -- | Minimal threshold (i. e. threshold can't become less than this one).
-    srMinThd :: !LovelacePortion,
-    -- | Theshold will be decreased by this value after each epoch.
-    srThdDecrement :: !LovelacePortion
+  { srInitThd :: !LovelacePortion
+  -- ^ Initial threshold (right after proposal is confirmed).
+  , srMinThd :: !LovelacePortion
+  -- ^ Minimal threshold (i. e. threshold can't become less than this one).
+  , srThdDecrement :: !LovelacePortion
+  -- ^ Theshold will be decreased by this value after each epoch.
   }
   deriving (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, NoThunks)
@@ -68,9 +68,9 @@ instance FromCBOR SoftforkRule where
 instance Monad m => ToJSON m SoftforkRule where
   toJSON sr =
     mkObject
-      [ ("initThd", toJSON $ srInitThd sr),
-        ("minThd", toJSON $ srMinThd sr),
-        ("thdDecrement", toJSON $ srThdDecrement sr)
+      [ ("initThd", toJSON $ srInitThd sr)
+      , ("minThd", toJSON $ srMinThd sr)
+      , ("thdDecrement", toJSON $ srThdDecrement sr)
       ]
 
 instance MonadError SchemaError m => FromJSON m SoftforkRule where

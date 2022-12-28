@@ -1,35 +1,35 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Test.Cardano.Chain.Update.Properties
-  ( tests,
-  )
+module Test.Cardano.Chain.Update.Properties (
+  tests,
+)
 where
 
-import Cardano.Chain.Update
-  ( ApplicationName (..),
-    ApplicationNameError (..),
-    SoftwareVersion (..),
-    SoftwareVersionError (..),
-    SystemTag (..),
-    SystemTagError (..),
-    applicationNameMaxLength,
-    checkApplicationName,
-    checkSoftwareVersion,
-    checkSystemTag,
-    systemTagMaxLength,
-  )
+import Cardano.Chain.Update (
+  ApplicationName (..),
+  ApplicationNameError (..),
+  SoftwareVersion (..),
+  SoftwareVersionError (..),
+  SystemTag (..),
+  SystemTagError (..),
+  applicationNameMaxLength,
+  checkApplicationName,
+  checkSoftwareVersion,
+  checkSystemTag,
+  systemTagMaxLength,
+ )
 import Cardano.Prelude
 import Data.Data (Constr, toConstr)
 import qualified Data.Text as T
 import Hedgehog (forAll, property)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
-import Test.Cardano.Chain.Update.Gen
-  ( genApplicationName,
-    genSoftwareVersion,
-    genSystemTag,
-  )
+import Test.Cardano.Chain.Update.Gen (
+  genApplicationName,
+  genSoftwareVersion,
+  genSystemTag,
+ )
 import Test.Cardano.Prelude
 import Test.Options (TSGroup, TSProperty, withTestsTS)
 

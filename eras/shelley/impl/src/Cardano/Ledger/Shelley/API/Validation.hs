@@ -12,15 +12,15 @@
 
 -- | Interface to the block validation and chain extension logic in the Shelley
 -- API.
-module Cardano.Ledger.Shelley.API.Validation
-  ( ApplyBlock (..),
-    applyBlock,
-    applyTick,
-    TickTransitionError (..),
-    BlockTransitionError (..),
-    chainChecks,
-    ShelleyEraCrypto,
-  )
+module Cardano.Ledger.Shelley.API.Validation (
+  ApplyBlock (..),
+  applyBlock,
+  applyTick,
+  TickTransitionError (..),
+  BlockTransitionError (..),
+  chainChecks,
+  ShelleyEraCrypto,
+)
 where
 
 import Cardano.Ledger.BHeaderView (BHeaderView)
@@ -50,17 +50,17 @@ import NoThunks.Class (NoThunks (..))
 -------------------------------------------------------------------------------}
 
 class
-  ( STS (EraRule "TICK" era),
-    BaseM (EraRule "TICK" era) ~ ShelleyBase,
-    Environment (EraRule "TICK" era) ~ (),
-    State (EraRule "TICK" era) ~ NewEpochState era,
-    Signal (EraRule "TICK" era) ~ SlotNo,
-    STS (EraRule "BBODY" era),
-    BaseM (EraRule "BBODY" era) ~ ShelleyBase,
-    Environment (EraRule "BBODY" era) ~ STS.BbodyEnv era,
-    State (EraRule "BBODY" era) ~ STS.ShelleyBbodyState era,
-    Signal (EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era,
-    ToCBORGroup (TxSeq era)
+  ( STS (EraRule "TICK" era)
+  , BaseM (EraRule "TICK" era) ~ ShelleyBase
+  , Environment (EraRule "TICK" era) ~ ()
+  , State (EraRule "TICK" era) ~ NewEpochState era
+  , Signal (EraRule "TICK" era) ~ SlotNo
+  , STS (EraRule "BBODY" era)
+  , BaseM (EraRule "BBODY" era) ~ ShelleyBase
+  , Environment (EraRule "BBODY" era) ~ STS.BbodyEnv era
+  , State (EraRule "BBODY" era) ~ STS.ShelleyBbodyState era
+  , Signal (EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era
+  , ToCBORGroup (TxSeq era)
   ) =>
   ApplyBlock era
   where
@@ -141,14 +141,14 @@ applyTick ::
 applyTick =
   applyTickOpts $
     ApplySTSOpts
-      { asoAssertions = globalAssertionPolicy,
-        asoValidation = ValidateAll,
-        asoEvents = EPDiscard
+      { asoAssertions = globalAssertionPolicy
+      , asoValidation = ValidateAll
+      , asoEvents = EPDiscard
       }
 
 applyBlock ::
-  ( ApplyBlock era,
-    MonadError (BlockTransitionError era) m
+  ( ApplyBlock era
+  , MonadError (BlockTransitionError era) m
   ) =>
   Globals ->
   NewEpochState era ->
@@ -157,21 +157,21 @@ applyBlock ::
 applyBlock =
   applyBlockOpts $
     ApplySTSOpts
-      { asoAssertions = globalAssertionPolicy,
-        asoValidation = ValidateAll,
-        asoEvents = EPDiscard
+      { asoAssertions = globalAssertionPolicy
+      , asoValidation = ValidateAll
+      , asoEvents = EPDiscard
       }
 
 type ShelleyEraCrypto c =
-  ( CC.Crypto c,
-    DSignable c (Hash c EraIndependentTxBody)
+  ( CC.Crypto c
+  , DSignable c (Hash c EraIndependentTxBody)
   )
 
 {-# DEPRECATED ShelleyEraCrypto "Constraint synonyms are being removed" #-}
 
 instance
-  ( CC.Crypto c,
-    DSignable c (Hash c EraIndependentTxBody)
+  ( CC.Crypto c
+  , DSignable c (Hash c EraIndependentTxBody)
   ) =>
   ApplyBlock (ShelleyEra c)
 
@@ -201,8 +201,8 @@ mkBbodyEnv
     { LedgerState.nesEs
     } =
     STS.BbodyEnv
-      { STS.bbodyPp = LedgerState.esPp nesEs,
-        STS.bbodyAccount = LedgerState.esAccountState nesEs
+      { STS.bbodyPp = LedgerState.esPp nesEs
+      , STS.bbodyAccount = LedgerState.esAccountState nesEs
       }
 
 updateNewEpochState ::

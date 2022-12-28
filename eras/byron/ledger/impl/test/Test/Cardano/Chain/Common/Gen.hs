@@ -2,62 +2,62 @@
 {-# LANGUAGE NumDecimals #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Test.Cardano.Chain.Common.Gen
-  ( genAddrAttributes,
-    genAddrAttributesWithNM,
-    genAddress,
-    genAddressWithNM,
-    genAddrType,
-    genAddrSpendingData,
-    genAttributes,
-    genBlockCount,
-    genCanonicalTxFeePolicy,
-    genChainDifficulty,
-    genCompactAddress,
-    genCustomLovelace,
-    genLovelace,
-    genLovelaceError,
-    genLovelaceWithRange,
-    genLovelacePortion,
-    genMerkleRoot,
-    genMerkleTree,
-    genNetworkMagic,
-    genScriptVersion,
-    genKeyHash,
-    genTxFeePolicy,
-    genTxSizeLinear,
-  )
+module Test.Cardano.Chain.Common.Gen (
+  genAddrAttributes,
+  genAddrAttributesWithNM,
+  genAddress,
+  genAddressWithNM,
+  genAddrType,
+  genAddrSpendingData,
+  genAttributes,
+  genBlockCount,
+  genCanonicalTxFeePolicy,
+  genChainDifficulty,
+  genCompactAddress,
+  genCustomLovelace,
+  genLovelace,
+  genLovelaceError,
+  genLovelaceWithRange,
+  genLovelacePortion,
+  genMerkleRoot,
+  genMerkleTree,
+  genNetworkMagic,
+  genScriptVersion,
+  genKeyHash,
+  genTxFeePolicy,
+  genTxSizeLinear,
+)
 where
 
-import Cardano.Chain.Common
-  ( AddrAttributes (..),
-    AddrSpendingData (..),
-    AddrType (..),
-    Address (..),
-    Attributes,
-    BlockCount (..),
-    ChainDifficulty (..),
-    CompactAddress,
-    HDAddressPayload (..),
-    KeyHash,
-    Lovelace,
-    LovelaceError (..),
-    LovelacePortion,
-    MerkleRoot (..),
-    MerkleTree,
-    NetworkMagic (..),
-    TxFeePolicy (..),
-    TxSizeLinear (..),
-    hashKey,
-    makeAddress,
-    maxLovelaceVal,
-    mkAttributes,
-    mkLovelace,
-    mkMerkleTree,
-    mtRoot,
-    rationalToLovelacePortion,
-    toCompactAddress,
-  )
+import Cardano.Chain.Common (
+  AddrAttributes (..),
+  AddrSpendingData (..),
+  AddrType (..),
+  Address (..),
+  Attributes,
+  BlockCount (..),
+  ChainDifficulty (..),
+  CompactAddress,
+  HDAddressPayload (..),
+  KeyHash,
+  Lovelace,
+  LovelaceError (..),
+  LovelacePortion,
+  MerkleRoot (..),
+  MerkleTree,
+  NetworkMagic (..),
+  TxFeePolicy (..),
+  TxSizeLinear (..),
+  hashKey,
+  makeAddress,
+  maxLovelaceVal,
+  mkAttributes,
+  mkLovelace,
+  mkMerkleTree,
+  mtRoot,
+  rationalToLovelacePortion,
+  toCompactAddress,
+ )
 import Cardano.Ledger.Binary (ToCBOR)
 import Cardano.Prelude
 import Formatting (build, sformat)
@@ -136,10 +136,10 @@ genLovelace = genLovelaceWithRange (Range.constant 0 maxLovelaceVal)
 genLovelaceError :: Gen LovelaceError
 genLovelaceError =
   Gen.choice
-    [ LovelaceOverflow <$> Gen.word64 overflowRange,
-      LovelaceTooLarge <$> Gen.integral tooLargeRange,
-      LovelaceTooSmall <$> Gen.integral tooSmallRange,
-      uncurry LovelaceUnderflow <$> genUnderflowErrorValues
+    [ LovelaceOverflow <$> Gen.word64 overflowRange
+    , LovelaceTooLarge <$> Gen.integral tooLargeRange
+    , LovelaceTooSmall <$> Gen.integral tooSmallRange
+    , uncurry LovelaceUnderflow <$> genUnderflowErrorValues
     ]
   where
     overflowRange :: Range Word64
@@ -182,8 +182,8 @@ genMerkleRoot genA = mtRoot <$> genMerkleTree genA
 genNetworkMagic :: Gen NetworkMagic
 genNetworkMagic =
   Gen.choice
-    [ pure NetworkMainOrStage,
-      NetworkTestnet <$> Gen.word32 Range.constantBounded
+    [ pure NetworkMainOrStage
+    , NetworkTestnet <$> Gen.word32 Range.constantBounded
     ]
 
 genScriptVersion :: Gen Word16

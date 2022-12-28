@@ -8,41 +8,41 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Protocol.TPraos.OCert
-  ( OCert (..),
-    OCertEnv (..),
-    OCertSignable (..),
-    ocertToSignable,
-    currentIssueNo,
-    KESPeriod (..),
-    slotsPerKESPeriod,
-    kesPeriod,
-  )
+module Cardano.Protocol.TPraos.OCert (
+  OCert (..),
+  OCertEnv (..),
+  OCertSignable (..),
+  ocertToSignable,
+  currentIssueNo,
+  KESPeriod (..),
+  slotsPerKESPeriod,
+  kesPeriod,
+)
 where
 
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation (..))
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Binary
-  ( CBORGroup (..),
-    FromCBOR (..),
-    FromCBORGroup (..),
-    ToCBOR (..),
-    ToCBORGroup (..),
-    encodedSigDSIGNSizeExpr,
-    encodedVerKeyKESSizeExpr,
-    runByteBuilder,
-  )
+import Cardano.Ledger.Binary (
+  CBORGroup (..),
+  FromCBOR (..),
+  FromCBORGroup (..),
+  ToCBOR (..),
+  ToCBORGroup (..),
+  encodedSigDSIGNSizeExpr,
+  encodedVerKeyKESSizeExpr,
+  runByteBuilder,
+ )
 import Cardano.Ledger.Binary.Crypto
 import Cardano.Ledger.Crypto (Crypto, KES)
-import Cardano.Ledger.Keys
-  ( KeyHash,
-    KeyRole (..),
-    SignedDSIGN,
-    VerKeyKES,
-    coerceKeyRole,
-  )
+import Cardano.Ledger.Keys (
+  KeyHash,
+  KeyRole (..),
+  SignedDSIGN,
+  VerKeyKES,
+  coerceKeyRole,
+ )
 import Control.Monad.Trans.Reader (asks)
 import qualified Data.ByteString.Builder as BS
 import qualified Data.ByteString.Builder.Extra as BS
@@ -58,8 +58,8 @@ import NoThunks.Class (NoThunks (..))
 import Quiet
 
 data OCertEnv c = OCertEnv
-  { ocertEnvStPools :: Set (KeyHash 'StakePool c),
-    ocertEnvGenDelegs :: Set (KeyHash 'GenesisDelegate c)
+  { ocertEnvStPools :: Set (KeyHash 'StakePool c)
+  , ocertEnvGenDelegs :: Set (KeyHash 'GenesisDelegate c)
   }
   deriving (Show, Eq)
 
@@ -80,14 +80,14 @@ newtype KESPeriod = KESPeriod {unKESPeriod :: Word}
   deriving (Show) via Quiet KESPeriod
 
 data OCert c = OCert
-  { -- | The operational hot key
-    ocertVkHot :: !(VerKeyKES c),
-    -- | counter
-    ocertN :: !Word64,
-    -- | Start of key evolving signature period
-    ocertKESPeriod :: !KESPeriod,
-    -- | Signature of block operational certificate content
-    ocertSigma :: !(SignedDSIGN c (OCertSignable c))
+  { ocertVkHot :: !(VerKeyKES c)
+  -- ^ The operational hot key
+  , ocertN :: !Word64
+  -- ^ counter
+  , ocertKESPeriod :: !KESPeriod
+  -- ^ Start of key evolving signature period
+  , ocertSigma :: !(SignedDSIGN c (OCertSignable c))
+  -- ^ Signature of block operational certificate content
   }
   deriving (Generic)
   deriving (ToCBOR) via (CBORGroup (OCert c))

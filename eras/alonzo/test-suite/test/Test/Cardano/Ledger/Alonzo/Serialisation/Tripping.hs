@@ -10,11 +10,11 @@ module Test.Cardano.Ledger.Alonzo.Serialisation.Tripping where
 
 import Cardano.Ledger.Alonzo (Alonzo)
 import Cardano.Ledger.Alonzo.Data (BinaryData, Data (..))
-import Cardano.Ledger.Alonzo.Rules
-  ( AlonzoUtxoPredFailure,
-    AlonzoUtxosPredFailure,
-    AlonzoUtxowPredFailure,
-  )
+import Cardano.Ledger.Alonzo.Rules (
+  AlonzoUtxoPredFailure,
+  AlonzoUtxosPredFailure,
+  AlonzoUtxowPredFailure,
+ )
 import Cardano.Ledger.Alonzo.Scripts (CostModels, eqAlonzoScriptRaw)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits)
 import Cardano.Ledger.Block (Block)
@@ -35,48 +35,48 @@ tests =
   testGroup
     "Alonzo CBOR round-trip"
     [ testProperty "alonzo/Script" $
-        roundTripAnnExpectation @(Script Alonzo),
-      skip $
+        roundTripAnnExpectation @(Script Alonzo)
+    , skip $
         testProperty "alonzo/Script twiddled" $
-          roundTripAnnTwiddledProperty @(Script Alonzo) eqAlonzoScriptRaw,
-      testProperty "alonzo/Data" $
-        roundTripAnnExpectation @(Data Alonzo),
-      skip $
+          roundTripAnnTwiddledProperty @(Script Alonzo) eqAlonzoScriptRaw
+    , testProperty "alonzo/Data" $
+        roundTripAnnExpectation @(Data Alonzo)
+    , skip $
         testProperty "alonzo/Data twiddled" $
-          roundTripAnnTwiddledProperty @(Data Alonzo) (zipMemoRawType (===)),
-      testProperty "alonzo/BinaryData" $
-        roundTripCborExpectation @(BinaryData Alonzo),
-      skip $
+          roundTripAnnTwiddledProperty @(Data Alonzo) (zipMemoRawType (===))
+    , testProperty "alonzo/BinaryData" $
+        roundTripCborExpectation @(BinaryData Alonzo)
+    , skip $
         testProperty "alonzo/BinaryData twiddled" $
-          roundTripTwiddledProperty @(BinaryData Alonzo),
-      testProperty "alonzo/TxAuxData" $
-        roundTripAnnExpectation @(ShelleyTxAuxData Alonzo),
-      testProperty "alonzo/AlonzoTxWits" $
-        roundTripAnnExpectation @(AlonzoTxWits Alonzo),
-      testProperty "alonzo/TxBody" $
-        roundTripAnnExpectation @(TxBody Alonzo),
-      skip $
+          roundTripTwiddledProperty @(BinaryData Alonzo)
+    , testProperty "alonzo/TxAuxData" $
+        roundTripAnnExpectation @(ShelleyTxAuxData Alonzo)
+    , testProperty "alonzo/AlonzoTxWits" $
+        roundTripAnnExpectation @(AlonzoTxWits Alonzo)
+    , testProperty "alonzo/TxBody" $
+        roundTripAnnExpectation @(TxBody Alonzo)
+    , skip $
         testProperty "alonzo/TxBody twiddled" $
-          roundTripAnnTwiddledProperty @(TxBody Alonzo) (zipMemoRawType (===)),
-      testProperty "alonzo/CostModels" $
-        roundTripCborExpectation @CostModels,
-      testProperty "alonzo/PParams" $
-        roundTripCborExpectation @(PParams Alonzo),
-      testProperty "alonzo/PParamsUpdate" $
-        roundTripCborExpectation @(PParamsUpdate Alonzo),
-      testProperty "alonzo/AuxiliaryData" $
-        roundTripAnnExpectation @(TxAuxData Alonzo),
-      testProperty "alonzo/AlonzoUtxowPredFailure" $
-        roundTripCborExpectation @(AlonzoUtxowPredFailure Alonzo),
-      testProperty "alonzo/AlonzoUtxoPredFailure" $
-        roundTripCborExpectation @(AlonzoUtxoPredFailure Alonzo),
-      testProperty "alonzo/AlonzoUtxosPredFailure" $
-        roundTripCborExpectation @(AlonzoUtxosPredFailure Alonzo),
-      testProperty "Script" $
-        roundTripAnnExpectation @(Script Alonzo),
-      testProperty "alonzo/Tx" $
-        roundTripAnnExpectation @(Tx Alonzo),
-      testProperty "alonzo/Block" $
+          roundTripAnnTwiddledProperty @(TxBody Alonzo) (zipMemoRawType (===))
+    , testProperty "alonzo/CostModels" $
+        roundTripCborExpectation @CostModels
+    , testProperty "alonzo/PParams" $
+        roundTripCborExpectation @(PParams Alonzo)
+    , testProperty "alonzo/PParamsUpdate" $
+        roundTripCborExpectation @(PParamsUpdate Alonzo)
+    , testProperty "alonzo/AuxiliaryData" $
+        roundTripAnnExpectation @(TxAuxData Alonzo)
+    , testProperty "alonzo/AlonzoUtxowPredFailure" $
+        roundTripCborExpectation @(AlonzoUtxowPredFailure Alonzo)
+    , testProperty "alonzo/AlonzoUtxoPredFailure" $
+        roundTripCborExpectation @(AlonzoUtxoPredFailure Alonzo)
+    , testProperty "alonzo/AlonzoUtxosPredFailure" $
+        roundTripCborExpectation @(AlonzoUtxosPredFailure Alonzo)
+    , testProperty "Script" $
+        roundTripAnnExpectation @(Script Alonzo)
+    , testProperty "alonzo/Tx" $
+        roundTripAnnExpectation @(Tx Alonzo)
+    , testProperty "alonzo/Block" $
         roundTripAnnExpectation @(Block (BHeader StandardCrypto) Alonzo)
     ]
   where

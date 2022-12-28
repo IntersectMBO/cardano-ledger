@@ -1,84 +1,84 @@
 {-# LANGUAGE PatternSynonyms #-}
 
-module Test.Cardano.Chain.Block.Gen
-  ( genBlockSignature,
-    genHeaderHash,
-    genHeader,
-    genBody,
-    genProof,
-    genToSign,
-    genBlock,
-    genBlockWithEpochSlots,
-    genBoundaryBlock,
-    genBoundaryHeader,
-    genABlockOrBoundaryHdr,
-  )
+module Test.Cardano.Chain.Block.Gen (
+  genBlockSignature,
+  genHeaderHash,
+  genHeader,
+  genBody,
+  genProof,
+  genToSign,
+  genBlock,
+  genBlockWithEpochSlots,
+  genBoundaryBlock,
+  genBoundaryHeader,
+  genABlockOrBoundaryHdr,
+)
 where
 
-import Cardano.Chain.Block
-  ( ABlockOrBoundaryHdr (..),
-    ABlockSignature (..),
-    ABoundaryBlock (..),
-    ABoundaryBody (..),
-    ABoundaryHeader (..),
-    AHeader,
-    Block,
-    BlockSignature,
-    Body,
-    Header,
-    HeaderHash,
-    Proof (..),
-    ToSign (..),
-    fromCBORABoundaryHeader,
-    fromCBORAHeader,
-    hashHeader,
-    mkABoundaryHeader,
-    mkBlockExplicit,
-    mkHeaderExplicit,
-    toCBORABoundaryHeader,
-    toCBORHeader,
-    pattern Body,
-  )
+import Cardano.Chain.Block (
+  ABlockOrBoundaryHdr (..),
+  ABlockSignature (..),
+  ABoundaryBlock (..),
+  ABoundaryBody (..),
+  ABoundaryHeader (..),
+  AHeader,
+  Block,
+  BlockSignature,
+  Body,
+  Header,
+  HeaderHash,
+  Proof (..),
+  ToSign (..),
+  fromCBORABoundaryHeader,
+  fromCBORAHeader,
+  hashHeader,
+  mkABoundaryHeader,
+  mkBlockExplicit,
+  mkHeaderExplicit,
+  toCBORABoundaryHeader,
+  toCBORHeader,
+  pattern Body,
+ )
 import Cardano.Chain.Byron.API (reAnnotateUsing)
 import Cardano.Chain.Delegation (signCertificate)
 import Cardano.Chain.Genesis (GenesisHash (..))
-import Cardano.Chain.Slotting
-  ( EpochNumber (..),
-    EpochSlots,
-    WithEpochSlots (WithEpochSlots),
-  )
+import Cardano.Chain.Slotting (
+  EpochNumber (..),
+  EpochSlots,
+  WithEpochSlots (WithEpochSlots),
+ )
 import Cardano.Chain.Ssc (SscPayload (..), SscProof (..))
-import Cardano.Crypto
-  ( ProtocolMagicId,
-    SignTag (SignBlock),
-    noPassSafeSigner,
-    safeToVerification,
-    sign,
-    toVerification,
-  )
+import Cardano.Crypto (
+  ProtocolMagicId,
+  SignTag (SignBlock),
+  noPassSafeSigner,
+  safeToVerification,
+  sign,
+  toVerification,
+ )
 import Cardano.Prelude
 import Data.Coerce (coerce)
 import Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
-import Test.Cardano.Chain.Common.Gen
-  ( genChainDifficulty,
-  )
+import Test.Cardano.Chain.Common.Gen (
+  genChainDifficulty,
+ )
 import qualified Test.Cardano.Chain.Delegation.Gen as Delegation
-import Test.Cardano.Chain.Slotting.Gen
-  ( genEpochAndSlotCount,
-    genEpochNumber,
-    genEpochSlots,
-    genSlotNumber,
-  )
+import Test.Cardano.Chain.Slotting.Gen (
+  genEpochAndSlotCount,
+  genEpochNumber,
+  genEpochSlots,
+  genSlotNumber,
+ )
 import Test.Cardano.Chain.UTxO.Gen (genTxPayload, genTxProof)
 import qualified Test.Cardano.Chain.Update.Gen as Update
-import Test.Cardano.Crypto.Gen
-  ( genAbstractHash,
-    genSafeSigner,
-    genSigningKey,
-    genTextHash,
-  )
+import Test.Cardano.Crypto.Gen (
+  genAbstractHash,
+  genSafeSigner,
+  genSigningKey,
+  genTextHash,
+ )
 
 genBlockSignature :: ProtocolMagicId -> EpochSlots -> Gen BlockSignature
 genBlockSignature pm epochSlots =
@@ -220,8 +220,8 @@ genBoundaryHeader = do
             then Left . GenesisHash . coerce <$> genTextHash
             else
               Gen.choice
-                [ Right <$> genHeaderHash,
-                  Left . GenesisHash . coerce <$> genTextHash
+                [ Right <$> genHeaderHash
+                , Left . GenesisHash . coerce <$> genTextHash
                 ]
         )
     <*> pure epoch
@@ -234,8 +234,8 @@ genABlockOrBoundaryHdr ::
   Gen (ABlockOrBoundaryHdr ByteString)
 genABlockOrBoundaryHdr pm es =
   Gen.choice
-    [ ABOBBlockHdr . reAnnotateHdr <$> genHeader pm es,
-      ABOBBoundaryHdr . reAnnotateBoundaryHdr <$> genBoundaryHeader
+    [ ABOBBlockHdr . reAnnotateHdr <$> genHeader pm es
+    , ABOBBoundaryHdr . reAnnotateBoundaryHdr <$> genBoundaryHeader
     ]
   where
     reAnnotateHdr :: AHeader () -> AHeader ByteString

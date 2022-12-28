@@ -5,31 +5,31 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Chain.Common.TxSizeLinear
-  ( TxSizeLinear (..),
-    txSizeLinearMinValue,
-    calculateTxSizeLinear,
-  )
+module Cardano.Chain.Common.TxSizeLinear (
+  TxSizeLinear (..),
+  txSizeLinearMinValue,
+  calculateTxSizeLinear,
+)
 where
 
-import Cardano.Chain.Common.Lovelace
-  ( Lovelace,
-    LovelaceError,
-    addLovelace,
-    integerToLovelace,
-    mkLovelace,
-    scaleLovelaceRationalUp,
-    unsafeGetLovelace,
-  )
-import Cardano.Ledger.Binary
-  ( Decoder,
-    DecoderError (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    encodeListLen,
-    enforceSize,
-    toCborError,
-  )
+import Cardano.Chain.Common.Lovelace (
+  Lovelace,
+  LovelaceError,
+  addLovelace,
+  integerToLovelace,
+  mkLovelace,
+  scaleLovelaceRationalUp,
+  unsafeGetLovelace,
+ )
+import Cardano.Ledger.Binary (
+  Decoder,
+  DecoderError (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  encodeListLen,
+  enforceSize,
+  toCborError,
+ )
 import Cardano.Prelude hiding (toCborError)
 import Data.Aeson (ToJSON)
 import Data.Fixed (Nano)

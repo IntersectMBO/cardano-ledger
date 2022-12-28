@@ -3,33 +3,33 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Cardano.Ledger.Binary.Encoding
-  ( -- * Running decoders
-    serialize,
-    serialize',
-    serializeBuilder,
-    serializeEncoding,
-    serializeEncoding',
+module Cardano.Ledger.Binary.Encoding (
+  -- * Running decoders
+  serialize,
+  serialize',
+  serializeBuilder,
+  serializeEncoding,
+  serializeEncoding',
 
-    -- ** Hash
-    hashWithEncoder,
-    hashToCBOR,
-    module Cardano.Ledger.Binary.Version,
-    module Cardano.Ledger.Binary.Encoding.Encoder,
-    module Cardano.Ledger.Binary.Encoding.ToCBOR,
+  -- ** Hash
+  hashWithEncoder,
+  hashToCBOR,
+  module Cardano.Ledger.Binary.Version,
+  module Cardano.Ledger.Binary.Encoding.Encoder,
+  module Cardano.Ledger.Binary.Encoding.ToCBOR,
 
-    -- * Nested CBOR-in-CBOR
-    encodeNestedCbor,
-    encodeNestedCborBytes,
-    nestedCborSizeExpr,
-    nestedCborBytesSizeExpr,
+  -- * Nested CBOR-in-CBOR
+  encodeNestedCbor,
+  encodeNestedCborBytes,
+  nestedCborSizeExpr,
+  nestedCborBytesSizeExpr,
 
-    -- * Tools
-    runByteBuilder,
+  -- * Tools
+  runByteBuilder,
 
-    -- * Deprecated
-    toCBORMaybe,
-  )
+  -- * Deprecated
+  toCBORMaybe,
+)
 where
 
 import qualified Cardano.Crypto.Hash.Class as C

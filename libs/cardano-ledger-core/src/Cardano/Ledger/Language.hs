@@ -19,19 +19,19 @@ module Cardano.Ledger.Language where
 import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), decodeInt, invalidKey)
 import Cardano.Ledger.TreeDiff (ToExpr (..))
 import Control.DeepSeq (NFData (..))
-import Data.Aeson
-  ( FromJSON (parseJSON),
-    FromJSONKey (fromJSONKey),
-    FromJSONKeyFunction (FromJSONKeyTextParser),
-    ToJSON (toJSON),
-    ToJSONKey (toJSONKey),
-    Value (String),
-    withText,
-  )
+import Data.Aeson (
+  FromJSON (parseJSON),
+  FromJSONKey (fromJSONKey),
+  FromJSONKeyFunction (FromJSONKeyTextParser),
+  ToJSON (toJSON),
+  ToJSONKey (toJSONKey),
+  Value (String),
+  withText,
+ )
 import Data.Aeson.Types (toJSONKeyText)
 import Data.Ix (Ix)
-import Data.Typeable (Typeable)
 import Data.Text (Text)
+import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 
@@ -142,7 +142,7 @@ toSLanguage :: forall (l :: Language) m. (IsLanguage l, MonadFail m) => Language
 toSLanguage lang
   | fromSLanguage thisLanguage == lang = pure thisLanguage
   | otherwise =
-    fail $ "Plutus language mismatch. Expected " ++ show thisLanguage ++ ", but got: " ++ show lang
+      fail $ "Plutus language mismatch. Expected " ++ show thisLanguage ++ ", but got: " ++ show lang
   where
     thisLanguage :: SLanguage l
     thisLanguage = isLanguage

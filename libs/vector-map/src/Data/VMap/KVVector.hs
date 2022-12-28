@@ -9,31 +9,31 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Data.VMap.KVVector
-  ( VG.Vector,
-    VGM.MVector,
-    KVVector (..),
-    KVMVector,
-    toMap,
-    fromMap,
-    fromAscList,
-    fromAscListN,
-    fromAscListWithKey,
-    fromAscListWithKeyN,
-    fromDistinctAscList,
-    fromDistinctAscListN,
-    fromList,
-    fromListN,
-    mapValsKVVector,
-    mapWithKeyKVVector,
-    memberKVVector,
-    lookupKVVector,
-    lookupDefaultKVVector,
-    sortAscKVMVector,
-    internKVVectorMaybe,
-    normalize,
-    normalizeM,
-  )
+module Data.VMap.KVVector (
+  VG.Vector,
+  VGM.MVector,
+  KVVector (..),
+  KVMVector,
+  toMap,
+  fromMap,
+  fromAscList,
+  fromAscListN,
+  fromAscListWithKey,
+  fromAscListWithKeyN,
+  fromDistinctAscList,
+  fromDistinctAscListN,
+  fromList,
+  fromListN,
+  mapValsKVVector,
+  mapWithKeyKVVector,
+  memberKVVector,
+  lookupKVVector,
+  lookupDefaultKVVector,
+  sortAscKVMVector,
+  internKVVectorMaybe,
+  normalize,
+  normalizeM,
+)
 where
 
 import Control.Applicative
@@ -183,8 +183,8 @@ mapWithKeyKVVector ::
   KVVector kv vv (k, b)
 mapWithKeyKVVector f KVVector {..} =
   KVVector
-    { keysVector = keysVector,
-      valsVector = VG.imap (\i -> f (keysVector VG.! i)) valsVector
+    { keysVector = keysVector
+    , valsVector = VG.imap (\i -> f (keysVector VG.! i)) valsVector
     }
 {-# INLINE mapWithKeyKVVector #-}
 
@@ -251,25 +251,25 @@ removeDuplicates ::
 removeDuplicates f mv
   | VGM.null mv = pure mv
   | otherwise = do
-    let n = VGM.length mv
-        goMoved lastIx prev@(pk, pv) curIx = do
-          VGM.write mv lastIx prev
-          if curIx < n
-            then do
-              cur@(ck, cv) <- VGM.read mv curIx
-              if ck == pk
-                then goMoved lastIx (ck, f ck cv pv) (curIx + 1)
-                else goMoved (lastIx + 1) cur (curIx + 1)
-            else pure $ VGM.slice 0 (lastIx + 1) mv
-        goUnmoved (pk, pv) curIx
-          | curIx < n = do
-            cur@(ck, cv) <- VGM.read mv curIx
-            if ck == pk
-              then goMoved (curIx - 1) (ck, f ck cv pv) (curIx + 1)
-              else goUnmoved cur (curIx + 1)
-          | otherwise = pure mv
-    x0 <- VGM.read mv 0
-    goUnmoved x0 1
+      let n = VGM.length mv
+          goMoved lastIx prev@(pk, pv) curIx = do
+            VGM.write mv lastIx prev
+            if curIx < n
+              then do
+                cur@(ck, cv) <- VGM.read mv curIx
+                if ck == pk
+                  then goMoved lastIx (ck, f ck cv pv) (curIx + 1)
+                  else goMoved (lastIx + 1) cur (curIx + 1)
+              else pure $ VGM.slice 0 (lastIx + 1) mv
+          goUnmoved (pk, pv) curIx
+            | curIx < n = do
+                cur@(ck, cv) <- VGM.read mv curIx
+                if ck == pk
+                  then goMoved (curIx - 1) (ck, f ck cv pv) (curIx + 1)
+                  else goUnmoved cur (curIx + 1)
+            | otherwise = pure mv
+      x0 <- VGM.read mv 0
+      goUnmoved x0 1
 {-# INLINE removeDuplicates #-}
 
 normalize ::
@@ -304,8 +304,8 @@ type family Value e :: Type where
   Value (k, v) = v
 
 data KVVector kv vv a = KVVector
-  { keysVector :: !(kv (Key a)),
-    valsVector :: !(vv (Value a))
+  { keysVector :: !(kv (Key a))
+  , valsVector :: !(vv (Value a))
   }
   deriving (Generic)
 
@@ -323,8 +323,8 @@ deriving instance (Eq (kv k), Eq (vv v)) => Eq (KVVector kv vv (k, v))
 deriving instance (Show (kv k), Show (vv v)) => Show (KVVector kv vv (k, v))
 
 data KVMVector kmv vmv s a = KVMVector
-  { _keysMVector :: !(kmv s (Key a)),
-    _valsMVector :: !(vmv s (Value a))
+  { _keysMVector :: !(kmv s (Key a))
+  , _valsMVector :: !(vmv s (Value a))
   }
 
 type instance VG.Mutable (KVVector kv vv) = KVMVector (VG.Mutable kv) (VG.Mutable vv)
@@ -406,12 +406,12 @@ instance (VGM.MVector kmv k, VGM.MVector vmv v) => VGM.MVector (KVMVector kmv vm
   basicClear (KVMVector kmv vmv) = VGM.basicClear kmv >> VGM.basicClear vmv
 
 instance
-  ( NoThunks (kv k),
-    NoThunks (vv v),
-    Typeable kv,
-    Typeable vv,
-    Typeable k,
-    Typeable v
+  ( NoThunks (kv k)
+  , NoThunks (vv v)
+  , Typeable kv
+  , Typeable vv
+  , Typeable k
+  , Typeable v
   ) =>
   NoThunks (KVVector kv vv (k, v))
   where

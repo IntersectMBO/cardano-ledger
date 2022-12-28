@@ -6,45 +6,45 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Chain.UTxO.TxWitness
-  ( TxWitness,
-    TxInWitness (..),
-    TxSigData (..),
-    TxSig,
-    recoverSigData,
-  )
+module Cardano.Chain.UTxO.TxWitness (
+  TxWitness,
+  TxInWitness (..),
+  TxSigData (..),
+  TxSig,
+  recoverSigData,
+)
 where
 
 import Cardano.Chain.Common (addressHash)
-import Cardano.Chain.Common.CBOR
-  ( decodeKnownCborDataItem,
-    encodeKnownCborDataItem,
-    knownCborDataItemSizeExpr,
-  )
+import Cardano.Chain.Common.CBOR (
+  decodeKnownCborDataItem,
+  encodeKnownCborDataItem,
+  knownCborDataItemSizeExpr,
+ )
 import Cardano.Chain.UTxO.Tx (Tx)
-import Cardano.Crypto
-  ( Hash,
-    RedeemSignature,
-    RedeemVerificationKey,
-    Signature,
-    VerificationKey,
-    hashDecoded,
-    shortHashF,
-  )
-import Cardano.Ledger.Binary
-  ( Annotated (..),
-    Case (..),
-    DecoderError (DecoderErrorUnknownTag),
-    FromCBOR (..),
-    ToCBOR (..),
-    byronProtVer,
-    cborError,
-    decodeListLen,
-    encodeListLen,
-    matchSize,
-    serialize',
-    szCases,
-  )
+import Cardano.Crypto (
+  Hash,
+  RedeemSignature,
+  RedeemVerificationKey,
+  Signature,
+  VerificationKey,
+  hashDecoded,
+  shortHashF,
+ )
+import Cardano.Ledger.Binary (
+  Annotated (..),
+  Case (..),
+  DecoderError (DecoderErrorUnknownTag),
+  FromCBOR (..),
+  ToCBOR (..),
+  byronProtVer,
+  cborError,
+  decodeListLen,
+  encodeListLen,
+  matchSize,
+  serialize',
+  szCases,
+ )
 import Cardano.Prelude hiding (cborError)
 import Data.Aeson (ToJSON)
 import Data.Vector (Vector)
@@ -100,8 +100,8 @@ instance ToCBOR TxInWitness where
       + szCases
         ( map
             (fmap knownCborDataItemSizeExpr)
-            [ Case "VKWitness" $ size $ Proxy @(VerificationKey, TxSig),
-              Case "RedeemWitness" $
+            [ Case "VKWitness" $ size $ Proxy @(VerificationKey, TxSig)
+            , Case "RedeemWitness" $
                 size $
                   Proxy @(RedeemVerificationKey, RedeemSignature TxSigData)
             ]

@@ -4,16 +4,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneKindSignatures #-}
 
-module Cardano.Crypto.Signing.Redeem.SigningKey
-  ( RedeemSigningKey (..),
-    redeemToVerification,
-  )
+module Cardano.Crypto.Signing.Redeem.SigningKey (
+  RedeemSigningKey (..),
+  redeemToVerification,
+)
 where
 
-import Cardano.Crypto.Signing.Redeem.VerificationKey
-  ( RedeemVerificationKey (..),
-    redeemVKB64F,
-  )
+import Cardano.Crypto.Signing.Redeem.VerificationKey (
+  RedeemVerificationKey (..),
+  redeemVKB64F,
+ )
 import Cardano.Ledger.Binary (FromCBOR, ToCBOR)
 import Cardano.Prelude
 import qualified Crypto.PubKey.Ed25519 as Ed25519

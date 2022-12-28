@@ -13,11 +13,11 @@
 {-# LANGUAGE TypeFamilies #-}
 
 -- | Auxiliary definitions to make working with the Byron ledger easier
-module Cardano.Chain.Byron.API.Validation
-  ( applyChainTick,
-    validateBlock,
-    validateBoundary,
-  )
+module Cardano.Chain.Byron.API.Validation (
+  applyChainTick,
+  validateBlock,
+  validateBoundary,
+)
 where
 
 import qualified Cardano.Chain.Block as CC
@@ -43,11 +43,11 @@ mkEpochEnvironment cfg cvs =
   CC.EpochEnvironment
     { CC.protocolMagic =
         reAnnotateMagicId $
-          Gen.configProtocolMagicId cfg,
-      CC.k = Gen.configK cfg,
-      CC.allowedDelegators = allowedDelegators cfg,
-      CC.delegationMap = delegationMap,
-      -- The 'currentEpoch' required by the epoch environment is the /old/
+          Gen.configProtocolMagicId cfg
+    , CC.k = Gen.configK cfg
+    , CC.allowedDelegators = allowedDelegators cfg
+    , CC.delegationMap = delegationMap
+    , -- The 'currentEpoch' required by the epoch environment is the /old/
       -- epoch (i.e., the one in the ledger state), so that we can verify that
       -- the new epoch indeed is after the old.
       CC.currentEpoch =
@@ -62,9 +62,9 @@ mkEpochEnvironment cfg cvs =
 mkBodyState :: CC.ChainValidationState -> CC.BodyState
 mkBodyState cvs =
   CC.BodyState
-    { CC.utxo = CC.cvsUtxo cvs,
-      CC.updateState = CC.cvsUpdateState cvs,
-      CC.delegationState = CC.cvsDelegationState cvs
+    { CC.utxo = CC.cvsUtxo cvs
+    , CC.updateState = CC.cvsUpdateState cvs
+    , CC.delegationState = CC.cvsDelegationState cvs
     }
 
 mkBodyEnvironment ::
@@ -74,12 +74,12 @@ mkBodyEnvironment ::
   CC.BodyEnvironment
 mkBodyEnvironment cfg params slotNo =
   CC.BodyEnvironment
-    { CC.protocolMagic = reAnnotateMagic $ Gen.configProtocolMagic cfg,
-      CC.utxoConfiguration = Gen.configUTxOConfiguration cfg,
-      CC.k = Gen.configK cfg,
-      CC.allowedDelegators = allowedDelegators cfg,
-      CC.protocolParameters = params,
-      -- The 'currentEpoch' for validating a block should be the /current/
+    { CC.protocolMagic = reAnnotateMagic $ Gen.configProtocolMagic cfg
+    , CC.utxoConfiguration = Gen.configUTxOConfiguration cfg
+    , CC.k = Gen.configK cfg
+    , CC.allowedDelegators = allowedDelegators cfg
+    , CC.protocolParameters = params
+    , -- The 'currentEpoch' for validating a block should be the /current/
       -- epoch (that is, the epoch of the block), /not/ the old epoch
       -- (from the ledger state). This is to make sure delegation certificates
       -- are for the /next/ epoch.
@@ -116,8 +116,8 @@ applyChainTick cfg slotNo cvs =
         CC.epochTransition
           (mkEpochEnvironment cfg cvs)
           (CC.cvsUpdateState cvs)
-          slotNo,
-      CC.cvsDelegationState =
+          slotNo
+    , CC.cvsDelegationState =
         D.Iface.tickDelegation
           currentEpoch
           slotNo
@@ -164,11 +164,11 @@ validateBlock cfg validationMode block blkHash cvs = do
   bodyState' <- validateBody validationMode block bodyEnv bodyState
   return
     cvs
-      { CC.cvsLastSlot = CC.blockSlot block,
-        CC.cvsPreviousHash = Right $! blkHash,
-        CC.cvsUtxo = CC.utxo bodyState',
-        CC.cvsUpdateState = CC.updateState bodyState',
-        CC.cvsDelegationState = CC.delegationState bodyState'
+      { CC.cvsLastSlot = CC.blockSlot block
+      , CC.cvsPreviousHash = Right $! blkHash
+      , CC.cvsUtxo = CC.utxo bodyState'
+      , CC.cvsUpdateState = CC.updateState bodyState'
+      , CC.cvsDelegationState = CC.delegationState bodyState'
       }
   where
     updState = CC.cvsUpdateState cvs

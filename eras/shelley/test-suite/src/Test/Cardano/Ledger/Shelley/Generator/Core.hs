@@ -11,126 +11,126 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Test.Cardano.Ledger.Shelley.Generator.Core
-  ( AllIssuerKeys (..),
-    GenEnv (..),
-    ScriptSpace (..),
-    TwoPhase3ArgInfo (..),
-    TwoPhase2ArgInfo (..),
-    ScriptInfo,
-    KeySpace (..),
-    pattern KeySpace,
-    NatNonce (..),
-    findPayKeyPairAddr,
-    findPayKeyPairCred,
-    findPayScriptFromCred,
-    findStakeScriptFromCred,
-    findPayScriptFromAddr,
-    genBool,
-    genCoinList,
-    genInteger,
-    genNatural,
-    genWord64,
-    genTxOut,
-    genesisCoins,
-    increasingProbabilityAt,
-    pickStakeKey,
-    mkAddr,
-    mkCred,
-    unitIntervalToNatural,
-    mkBlock,
-    mkBlockHeader,
-    mkBlockFakeVRF,
-    mkOCert,
-    getKESPeriodRenewalNo,
-    tooLateInEpoch,
-    RawSeed (..),
-    mkKeyPair,
-    mkKeyPairs,
-    mkGenKey,
-    genesisAccountState,
-    genCoin,
-    PreAlonzo,
-    hashData,
-    findPlutus,
-  )
+module Test.Cardano.Ledger.Shelley.Generator.Core (
+  AllIssuerKeys (..),
+  GenEnv (..),
+  ScriptSpace (..),
+  TwoPhase3ArgInfo (..),
+  TwoPhase2ArgInfo (..),
+  ScriptInfo,
+  KeySpace (..),
+  pattern KeySpace,
+  NatNonce (..),
+  findPayKeyPairAddr,
+  findPayKeyPairCred,
+  findPayScriptFromCred,
+  findStakeScriptFromCred,
+  findPayScriptFromAddr,
+  genBool,
+  genCoinList,
+  genInteger,
+  genNatural,
+  genWord64,
+  genTxOut,
+  genesisCoins,
+  increasingProbabilityAt,
+  pickStakeKey,
+  mkAddr,
+  mkCred,
+  unitIntervalToNatural,
+  mkBlock,
+  mkBlockHeader,
+  mkBlockFakeVRF,
+  mkOCert,
+  getKESPeriodRenewalNo,
+  tooLateInEpoch,
+  RawSeed (..),
+  mkKeyPair,
+  mkKeyPairs,
+  mkGenKey,
+  genesisAccountState,
+  genCoin,
+  PreAlonzo,
+  hashData,
+  findPlutus,
+)
 where
 
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Crypto.VRF (evalCertified)
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.BaseTypes
-  ( BoundedRational (..),
-    Nonce (..),
-    ProtVer (..),
-    StrictMaybe (..),
-    UnitInterval,
-    epochInfoPure,
-    stabilityWindow,
-  )
+import Cardano.Ledger.BaseTypes (
+  BoundedRational (..),
+  Nonce (..),
+  ProtVer (..),
+  StrictMaybe (..),
+  UnitInterval,
+  epochInfoPure,
+  stabilityWindow,
+ )
 import Cardano.Ledger.Binary (ToCBOR)
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core hiding (DataHash)
-import Cardano.Ledger.Credential
-  ( Credential (..),
-    pattern KeyHashObj,
-    pattern ScriptHashObj,
-    pattern StakeRefBase,
-    pattern StakeRefPtr,
-  )
+import Cardano.Ledger.Credential (
+  Credential (..),
+  pattern KeyHashObj,
+  pattern ScriptHashObj,
+  pattern StakeRefBase,
+  pattern StakeRefPtr,
+ )
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Keys
-  ( HasKeyRole (coerceKeyRole),
-    Hash,
-    KeyHash,
-    KeyRole (..),
-    SignKeyKES,
-    SignKeyVRF,
-    VKey,
-    VerKeyKES,
-    VerKeyVRF,
-    asWitness,
-    hashKey,
-    signedDSIGN,
-    signedKES,
-  )
+import Cardano.Ledger.Keys (
+  HasKeyRole (coerceKeyRole),
+  Hash,
+  KeyHash,
+  KeyRole (..),
+  SignKeyKES,
+  SignKeyVRF,
+  VKey,
+  VerKeyKES,
+  VerKeyVRF,
+  asWitness,
+  hashKey,
+  signedDSIGN,
+  signedKES,
+ )
 import Cardano.Ledger.SafeHash (SafeHash, unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley.BlockChain (bBodySize)
 import Cardano.Ledger.Shelley.LedgerState (AccountState (..))
-import Cardano.Ledger.Shelley.Tx
-  ( pattern TxIn,
-  )
+import Cardano.Ledger.Shelley.Tx (
+  pattern TxIn,
+ )
 import qualified Cardano.Ledger.Shelley.Tx as Ledger
-import Cardano.Ledger.Shelley.TxWits
-  ( ShelleyTxWits,
-  )
-import Cardano.Ledger.Slot
-  ( BlockNo (..),
-    Duration (..),
-    SlotNo (..),
-    epochInfoFirst,
-    (*-),
-  )
+import Cardano.Ledger.Shelley.TxWits (
+  ShelleyTxWits,
+ )
+import Cardano.Ledger.Slot (
+  BlockNo (..),
+  Duration (..),
+  SlotNo (..),
+  epochInfoFirst,
+  (*-),
+ )
 import Cardano.Ledger.UTxO (UTxO (UTxO))
-import Cardano.Protocol.TPraos.BHeader
-  ( BHeader,
-    HashHeader,
-    mkSeed,
-    seedEta,
-    seedL,
-    pattern BHBody,
-    pattern BHeader,
-    pattern BlockHash,
-  )
-import Cardano.Protocol.TPraos.OCert
-  ( KESPeriod (..),
-    OCert,
-    OCertSignable (..),
-    pattern OCert,
-  )
+import Cardano.Protocol.TPraos.BHeader (
+  BHeader,
+  HashHeader,
+  mkSeed,
+  seedEta,
+  seedL,
+  pattern BHBody,
+  pattern BHeader,
+  pattern BlockHash,
+ )
+import Cardano.Protocol.TPraos.OCert (
+  KESPeriod (..),
+  OCert,
+  OCertSignable (..),
+  pattern OCert,
+ )
 import Codec.Serialise (serialise)
 import Control.Monad (replicateM)
 import Control.Monad.Trans.Reader (asks)
@@ -148,80 +148,80 @@ import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), KeyPairs, mkAddr, mkCred, vKey)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (ExMock, Mock)
 import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
-import Test.Cardano.Ledger.Shelley.Generator.ScriptClass
-  ( ScriptClass,
-    exponential,
-    mkKeyPairs,
-    mkPayScriptHashMap,
-    mkStakeScriptHashMap,
-  )
+import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (
+  ScriptClass,
+  exponential,
+  mkKeyPairs,
+  mkPayScriptHashMap,
+  mkStakeScriptHashMap,
+ )
 import Test.Cardano.Ledger.Shelley.Orphans ()
-import Test.Cardano.Ledger.Shelley.Utils
-  ( GenesisKeyPair,
-    RawSeed (..),
-    epochFromSlotNo,
-    evolveKESUntil,
-    maxKESIterations,
-    maxLLSupply,
-    mkCertifiedVRF,
-    mkGenKey,
-    mkKeyPair,
-    runShelleyBase,
-  )
+import Test.Cardano.Ledger.Shelley.Utils (
+  GenesisKeyPair,
+  RawSeed (..),
+  epochFromSlotNo,
+  evolveKESUntil,
+  maxKESIterations,
+  maxLLSupply,
+  mkCertifiedVRF,
+  mkGenKey,
+  mkKeyPair,
+  runShelleyBase,
+ )
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 
 -- | For use in the Serialisation and Example Tests, which assume Shelley, Allegra, or Mary Eras.
 type PreAlonzo era =
-  ( TxWits era ~ ShelleyTxWits era,
-    ToCBOR (TxAuxData era)
+  ( TxWits era ~ ShelleyTxWits era
+  , ToCBOR (TxAuxData era)
   )
 
 -- =========================================
 
 data AllIssuerKeys v (r :: KeyRole) = AllIssuerKeys
-  { cold :: KeyPair r v,
-    vrf :: (SignKeyVRF v, VerKeyVRF v),
-    hot :: [(KESPeriod, (SignKeyKES v, VerKeyKES v))],
-    hk :: KeyHash r v
+  { cold :: KeyPair r v
+  , vrf :: (SignKeyVRF v, VerKeyVRF v)
+  , hot :: [(KESPeriod, (SignKeyKES v, VerKeyKES v))]
+  , hk :: KeyHash r v
   }
   deriving (Show)
 
 type DataHash c = SafeHash c EraIndependentData
 
 type ScriptInfo era =
-  ( Map (ScriptHash (EraCrypto era)) (TwoPhase3ArgInfo era),
-    Map (ScriptHash (EraCrypto era)) (TwoPhase2ArgInfo era)
+  ( Map (ScriptHash (EraCrypto era)) (TwoPhase3ArgInfo era)
+  , Map (ScriptHash (EraCrypto era)) (TwoPhase2ArgInfo era)
   )
 
 data TwoPhase3ArgInfo era = TwoPhase3ArgInfo
-  { -- | A Plutus Script
-    getScript3 :: Script era,
-    -- | Its ScriptHash
-    getHash3 :: ScriptHash (EraCrypto era),
-    -- | A Data that will make it succeed
-    getData3 :: PV1.Data,
-    -- | A Redeemer that will make it succeed
-    getRedeemer3 ::
-      ( PV1.Data, -- The redeeming data
-        Natural, -- The ExUnits memory count
-        Natural -- The ExUnits steps count
-      ),
-    getSucceeds3 :: Bool
+  { getScript3 :: Script era
+  -- ^ A Plutus Script
+  , getHash3 :: ScriptHash (EraCrypto era)
+  -- ^ Its ScriptHash
+  , getData3 :: PV1.Data
+  -- ^ A Data that will make it succeed
+  , getRedeemer3 ::
+      ( PV1.Data -- The redeeming data
+      , Natural -- The ExUnits memory count
+      , Natural -- The ExUnits steps count
+      )
+  -- ^ A Redeemer that will make it succeed
+  , getSucceeds3 :: Bool
   }
 
 data TwoPhase2ArgInfo era = TwoPhase2ArgInfo
-  { -- | A Plutus Script
-    getScript2 :: Script era,
-    -- | Its ScriptHash
-    getHash2 :: ScriptHash (EraCrypto era),
-    -- | A Redeemer that will make it succeed
-    getRedeemer2 ::
-      ( PV1.Data, -- The redeeming data
-        Natural, -- The ExUnits memory count
-        Natural -- The ExUnits steps count
-      ),
-    getSucceeds2 :: Bool
+  { getScript2 :: Script era
+  -- ^ A Plutus Script
+  , getHash2 :: ScriptHash (EraCrypto era)
+  -- ^ Its ScriptHash
+  , getRedeemer2 ::
+      ( PV1.Data -- The redeeming data
+      , Natural -- The ExUnits memory count
+      , Natural -- The ExUnits steps count
+      )
+  -- ^ A Redeemer that will make it succeed
+  , getSucceeds2 :: Bool
   }
 
 deriving instance Show (Script era) => Show (TwoPhase3ArgInfo era)
@@ -229,45 +229,45 @@ deriving instance Show (Script era) => Show (TwoPhase3ArgInfo era)
 deriving instance Show (Script era) => Show (TwoPhase2ArgInfo era)
 
 data ScriptSpace era = ScriptSpace
-  { -- | A list of Two Phase 3 Arg Scripts and their associated data we can use.
-    ssScripts3 :: [TwoPhase3ArgInfo era],
-    -- | A list of Two Phase 2 Arg Scripts and their associated data we can use.
-    ssScripts2 :: [TwoPhase2ArgInfo era],
-    ssHash3 :: Map (ScriptHash (EraCrypto era)) (TwoPhase3ArgInfo era),
-    ssHash2 :: Map (ScriptHash (EraCrypto era)) (TwoPhase2ArgInfo era)
+  { ssScripts3 :: [TwoPhase3ArgInfo era]
+  -- ^ A list of Two Phase 3 Arg Scripts and their associated data we can use.
+  , ssScripts2 :: [TwoPhase2ArgInfo era]
+  -- ^ A list of Two Phase 2 Arg Scripts and their associated data we can use.
+  , ssHash3 :: Map (ScriptHash (EraCrypto era)) (TwoPhase3ArgInfo era)
+  , ssHash2 :: Map (ScriptHash (EraCrypto era)) (TwoPhase2ArgInfo era)
   }
 
 deriving instance Show (Script era) => Show (ScriptSpace era)
 
 -- | Generator environment.
 data GenEnv era = GenEnv
-  { geKeySpace :: KeySpace era,
-    geScriptSpapce :: ScriptSpace era,
-    geConstants :: Constants
+  { geKeySpace :: KeySpace era
+  , geScriptSpapce :: ScriptSpace era
+  , geConstants :: Constants
   }
 
 -- | Collection of all keys which are required to generate a trace.
 --
 --   These are the _only_ keys which should be involved in the trace.
 data KeySpace era = KeySpace_
-  { ksCoreNodes :: [(GenesisKeyPair (EraCrypto era), AllIssuerKeys (EraCrypto era) 'GenesisDelegate)],
-    -- | Bag of keys to be used for future genesis delegates
-    ksGenesisDelegates :: [AllIssuerKeys (EraCrypto era) 'GenesisDelegate],
-    -- | Bag of keys to be used for future stake pools
-    ksStakePools :: [AllIssuerKeys (EraCrypto era) 'StakePool],
-    -- | Bag of keys to be used for future payment/staking addresses
-    ksKeyPairs :: KeyPairs (EraCrypto era),
-    ksMSigScripts :: [(Script era, Script era)],
-    -- | Index over the payment keys in 'ksKeyPairs'
-    ksIndexedPaymentKeys :: Map (KeyHash 'Payment (EraCrypto era)) (KeyPair 'Payment (EraCrypto era)),
-    -- | Index over the staking keys in 'ksKeyPairs'
-    ksIndexedStakingKeys :: Map (KeyHash 'Staking (EraCrypto era)) (KeyPair 'Staking (EraCrypto era)),
-    -- | Index over the cold key hashes in Genesis Delegates
-    ksIndexedGenDelegates :: Map (KeyHash 'GenesisDelegate (EraCrypto era)) (AllIssuerKeys (EraCrypto era) 'GenesisDelegate),
-    -- | Index over the pay script hashes in Script pairs
-    ksIndexedPayScripts :: Map (ScriptHash (EraCrypto era)) (Script era, Script era),
-    -- | Index over the stake script hashes in Script pairs
-    ksIndexedStakeScripts :: Map (ScriptHash (EraCrypto era)) (Script era, Script era)
+  { ksCoreNodes :: [(GenesisKeyPair (EraCrypto era), AllIssuerKeys (EraCrypto era) 'GenesisDelegate)]
+  , ksGenesisDelegates :: [AllIssuerKeys (EraCrypto era) 'GenesisDelegate]
+  -- ^ Bag of keys to be used for future genesis delegates
+  , ksStakePools :: [AllIssuerKeys (EraCrypto era) 'StakePool]
+  -- ^ Bag of keys to be used for future stake pools
+  , ksKeyPairs :: KeyPairs (EraCrypto era)
+  -- ^ Bag of keys to be used for future payment/staking addresses
+  , ksMSigScripts :: [(Script era, Script era)]
+  , ksIndexedPaymentKeys :: Map (KeyHash 'Payment (EraCrypto era)) (KeyPair 'Payment (EraCrypto era))
+  -- ^ Index over the payment keys in 'ksKeyPairs'
+  , ksIndexedStakingKeys :: Map (KeyHash 'Staking (EraCrypto era)) (KeyPair 'Staking (EraCrypto era))
+  -- ^ Index over the staking keys in 'ksKeyPairs'
+  , ksIndexedGenDelegates :: Map (KeyHash 'GenesisDelegate (EraCrypto era)) (AllIssuerKeys (EraCrypto era) 'GenesisDelegate)
+  -- ^ Index over the cold key hashes in Genesis Delegates
+  , ksIndexedPayScripts :: Map (ScriptHash (EraCrypto era)) (Script era, Script era)
+  -- ^ Index over the pay script hashes in Script pairs
+  , ksIndexedStakeScripts :: Map (ScriptHash (EraCrypto era)) (Script era, Script era)
+  -- ^ Index over the stake script hashes in Script pairs
   }
 
 deriving instance (Era era, Show (Script era)) => Show (KeySpace era)
@@ -288,25 +288,25 @@ pattern KeySpace
   ksKeyPairs
   ksMSigScripts <-
   KeySpace_
-    { ksCoreNodes,
-      ksGenesisDelegates,
-      ksStakePools,
-      ksKeyPairs,
-      ksMSigScripts
+    { ksCoreNodes
+    , ksGenesisDelegates
+    , ksStakePools
+    , ksKeyPairs
+    , ksMSigScripts
     }
   where
     KeySpace ksCoreNodes ksGenesisDelegates ksStakePools ksKeyPairs ksMSigScripts =
       KeySpace_
-        { ksCoreNodes,
-          ksGenesisDelegates,
-          ksStakePools,
-          ksKeyPairs,
-          ksIndexedPaymentKeys = mkPayKeyHashMap ksKeyPairs,
-          ksIndexedStakingKeys = mkStakeKeyHashMap ksKeyPairs,
-          ksIndexedGenDelegates = mkGenesisDelegatesHashMap ksCoreNodes ksGenesisDelegates,
-          ksIndexedPayScripts = mkPayScriptHashMap @era ksMSigScripts,
-          ksIndexedStakeScripts = mkStakeScriptHashMap @era ksMSigScripts,
-          ksMSigScripts
+        { ksCoreNodes
+        , ksGenesisDelegates
+        , ksStakePools
+        , ksKeyPairs
+        , ksIndexedPaymentKeys = mkPayKeyHashMap ksKeyPairs
+        , ksIndexedStakingKeys = mkStakeKeyHashMap ksKeyPairs
+        , ksIndexedGenDelegates = mkGenesisDelegatesHashMap ksCoreNodes ksGenesisDelegates
+        , ksIndexedPayScripts = mkPayScriptHashMap @era ksMSigScripts
+        , ksIndexedStakeScripts = mkStakeScriptHashMap @era ksMSigScripts
+        , ksMSigScripts
         }
 
 genCoin :: Integer -> Integer -> Gen Coin
@@ -467,9 +467,9 @@ increasingProbabilityAt ::
   Gen a
 increasingProbabilityAt gen (lower, upper) =
   QC.frequency
-    [ (5, pure lower),
-      (90, gen),
-      (5, pure upper)
+    [ (5, pure lower)
+    , (90, gen)
+    , (5, pure upper)
     ]
 
 -- | Try to map the unit interval to a natural number. We don't care whether
@@ -673,8 +673,8 @@ tooLateInEpoch s = runShelleyBase $ do
 genesisAccountState :: AccountState
 genesisAccountState =
   AccountState
-    { asTreasury = Coin 0,
-      asReserves = maxLLSupply
+    { asTreasury = Coin 0
+    , asReserves = maxLLSupply
     }
 
 -- | Creates the UTxO for a new ledger with the specified

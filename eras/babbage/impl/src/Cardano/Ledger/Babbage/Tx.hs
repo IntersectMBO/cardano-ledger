@@ -3,34 +3,34 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Babbage.Tx
-  ( AlonzoTx (..),
-    BabbageTxBody (..),
-    module X,
-    getDatumBabbage,
-    babbageTxScripts,
-    refScripts,
-  )
+module Cardano.Ledger.Babbage.Tx (
+  AlonzoTx (..),
+  BabbageTxBody (..),
+  module X,
+  getDatumBabbage,
+  babbageTxScripts,
+  refScripts,
+)
 where
 
 import Cardano.Ledger.Allegra.Tx (validateTimelock)
 import Cardano.Ledger.Alonzo.PlutusScriptApi (getSpendingTxIn)
 import Cardano.Ledger.Alonzo.Tx as X
-import Cardano.Ledger.Alonzo.TxSeq
-  ( AlonzoTxSeq (AlonzoTxSeq, txSeqTxns),
-    hashAlonzoTxSeq,
-  )
-import Cardano.Ledger.Alonzo.TxWits
-  ( AlonzoEraTxWits (..),
-    unTxDats,
-  )
+import Cardano.Ledger.Alonzo.TxSeq (
+  AlonzoTxSeq (AlonzoTxSeq, txSeqTxns),
+  hashAlonzoTxSeq,
+ )
+import Cardano.Ledger.Alonzo.TxWits (
+  AlonzoEraTxWits (..),
+  unTxDats,
+ )
 import Cardano.Ledger.Babbage.Era (BabbageEra)
-import Cardano.Ledger.Babbage.TxBody
-  ( BabbageEraTxBody (..),
-    BabbageEraTxOut (..),
-    BabbageTxBody (..),
-    dataHashTxOutL,
-  )
+import Cardano.Ledger.Babbage.TxBody (
+  BabbageEraTxBody (..),
+  BabbageEraTxOut (..),
+  BabbageTxBody (..),
+  dataHashTxOutL,
+ )
 import Cardano.Ledger.Babbage.TxWits ()
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC
@@ -84,8 +84,8 @@ instance CC.Crypto c => EraSegWits (BabbageEra c) where
 -- | Extract binary data either directly from the `Tx` as an "inline datum"
 -- or look it up in the witnesses by the hash.
 getDatumBabbage ::
-  ( AlonzoEraTx era,
-    BabbageEraTxOut era
+  ( AlonzoEraTx era
+  , BabbageEraTxOut era
   ) =>
   Tx era ->
   UTxO era ->
@@ -133,8 +133,8 @@ getDatumBabbage tx (UTxO m) sp = do
 
 babbageTxScripts ::
   forall era.
-  ( EraTx era,
-    BabbageEraTxBody era
+  ( EraTx era
+  , BabbageEraTxBody era
   ) =>
   UTxO era ->
   Tx era ->

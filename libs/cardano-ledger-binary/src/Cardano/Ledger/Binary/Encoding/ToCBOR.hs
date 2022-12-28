@@ -16,91 +16,91 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE NoStarIsType #-}
 
-module Cardano.Ledger.Binary.Encoding.ToCBOR
-  ( ToCBOR (..),
-    withWordSize,
-    PreEncoded (..),
+module Cardano.Ledger.Binary.Encoding.ToCBOR (
+  ToCBOR (..),
+  withWordSize,
+  PreEncoded (..),
 
-    -- * Size of expressions
-    Range (..),
-    szEval,
-    Size,
-    Case (..),
-    caseValue,
-    LengthOf (..),
-    SizeOverride (..),
-    isTodo,
-    szCases,
-    szLazy,
-    szGreedy,
-    szForce,
-    szWithCtx,
-    szSimplify,
-    apMono,
-    szBounds,
+  -- * Size of expressions
+  Range (..),
+  szEval,
+  Size,
+  Case (..),
+  caseValue,
+  LengthOf (..),
+  SizeOverride (..),
+  isTodo,
+  szCases,
+  szLazy,
+  szGreedy,
+  szForce,
+  szWithCtx,
+  szSimplify,
+  apMono,
+  szBounds,
 
-    -- ** Crypto
-    encodedVerKeyDSIGNSizeExpr,
-    encodedSignKeyDSIGNSizeExpr,
-    encodedSigDSIGNSizeExpr,
-    encodedVerKeyKESSizeExpr,
-    encodedSignKeyKESSizeExpr,
-    encodedSigKESSizeExpr,
-    encodedVerKeyVRFSizeExpr,
-    encodedSignKeyVRFSizeExpr,
-    encodedCertVRFSizeExpr,
-  )
+  -- ** Crypto
+  encodedVerKeyDSIGNSizeExpr,
+  encodedSignKeyDSIGNSizeExpr,
+  encodedSigDSIGNSizeExpr,
+  encodedVerKeyKESSizeExpr,
+  encodedSignKeyKESSizeExpr,
+  encodedSigKESSizeExpr,
+  encodedVerKeyVRFSizeExpr,
+  encodedSignKeyVRFSizeExpr,
+  encodedCertVRFSizeExpr,
+)
 where
 
-import Cardano.Crypto.DSIGN.Class
-  ( DSIGNAlgorithm,
-    SeedSizeDSIGN,
-    SigDSIGN,
-    SignKeyDSIGN,
-    VerKeyDSIGN,
-    sizeSigDSIGN,
-    sizeSignKeyDSIGN,
-    sizeVerKeyDSIGN,
-  )
+import Cardano.Crypto.DSIGN.Class (
+  DSIGNAlgorithm,
+  SeedSizeDSIGN,
+  SigDSIGN,
+  SignKeyDSIGN,
+  VerKeyDSIGN,
+  sizeSigDSIGN,
+  sizeSignKeyDSIGN,
+  sizeVerKeyDSIGN,
+ )
 import Cardano.Crypto.DSIGN.EcdsaSecp256k1 (EcdsaSecp256k1DSIGN)
 import Cardano.Crypto.DSIGN.Ed25519 (Ed25519DSIGN)
 import Cardano.Crypto.DSIGN.Ed448 (Ed448DSIGN)
 import Cardano.Crypto.DSIGN.Mock (MockDSIGN)
 import Cardano.Crypto.DSIGN.SchnorrSecp256k1 (SchnorrSecp256k1DSIGN)
-import Cardano.Crypto.Hash.Class
-  ( Hash (..),
-    HashAlgorithm,
-    hashToBytes,
-    sizeHash,
-  )
-import Cardano.Crypto.KES.Class
-  ( KESAlgorithm,
-    OptimizedKESAlgorithm,
-    SigKES,
-    SignKeyKES,
-    VerKeyKES,
-    sizeSigKES,
-    sizeSignKeyKES,
-    sizeVerKeyKES,
-  )
+import Cardano.Crypto.Hash.Class (
+  Hash (..),
+  HashAlgorithm,
+  hashToBytes,
+  sizeHash,
+ )
+import Cardano.Crypto.KES.Class (
+  KESAlgorithm,
+  OptimizedKESAlgorithm,
+  SigKES,
+  SignKeyKES,
+  VerKeyKES,
+  sizeSigKES,
+  sizeSignKeyKES,
+  sizeVerKeyKES,
+ )
 import Cardano.Crypto.KES.CompactSingle (CompactSingleKES)
 import Cardano.Crypto.KES.CompactSum (CompactSumKES)
 import Cardano.Crypto.KES.Mock (MockKES)
 import Cardano.Crypto.KES.Simple (SimpleKES)
 import Cardano.Crypto.KES.Single (SingleKES)
 import Cardano.Crypto.KES.Sum (SumKES)
-import Cardano.Crypto.VRF.Class
-  ( CertVRF,
-    CertifiedVRF (..),
-    OutputVRF (..),
-    SignKeyVRF,
-    VRFAlgorithm,
-    VerKeyVRF,
-    sizeCertVRF,
-    sizeOutputVRF,
-    sizeSignKeyVRF,
-    sizeVerKeyVRF,
-  )
+import Cardano.Crypto.VRF.Class (
+  CertVRF,
+  CertifiedVRF (..),
+  OutputVRF (..),
+  SignKeyVRF,
+  VRFAlgorithm,
+  VerKeyVRF,
+  sizeCertVRF,
+  sizeOutputVRF,
+  sizeSignKeyVRF,
+  sizeVerKeyVRF,
+ )
 import Cardano.Crypto.VRF.Mock (MockVRF)
 import qualified Cardano.Crypto.VRF.Praos as Praos
 import Cardano.Crypto.VRF.Simple (SimpleVRF)
@@ -297,8 +297,8 @@ instance B.Buildable t => B.Buildable (Case t) where
 
 -- | A range of values. Should satisfy the invariant @forall x. lo x <= hi x@.
 data Range b = Range
-  { lo :: b,
-    hi :: b
+  { lo :: b
+  , hi :: b
   }
 
 -- | The @Num@ instance for @Range@ uses interval arithmetic. Note that the
@@ -338,8 +338,8 @@ szEval doit = cata $ \case
   SgnF x -> signum x
   CasesF xs ->
     Range
-      { lo = minimum (map (lo . caseValue) xs),
-        hi = maximum (map (hi . caseValue) xs)
+      { lo = minimum (map (lo . caseValue) xs)
+      , hi = maximum (map (hi . caseValue) xs)
       }
   ValueF x -> Range {lo = x, hi = x}
   ApF _ f x -> Range {lo = f (lo x), hi = f (hi x)}
@@ -519,8 +519,8 @@ instance ToCBOR Integer where
 encodedSizeRange :: forall a. (Integral a, Bounded a) => Proxy a -> Size
 encodedSizeRange _ =
   szCases
-    [ mkCase "minBound" 0, -- min, in absolute value
-      mkCase "maxBound" maxBound
+    [ mkCase "minBound" 0 -- min, in absolute value
+    , mkCase "maxBound" maxBound
     ]
   where
     mkCase :: Text -> a -> Case Size

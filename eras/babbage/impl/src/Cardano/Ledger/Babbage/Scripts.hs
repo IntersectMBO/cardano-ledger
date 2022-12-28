@@ -10,19 +10,19 @@
 
 -- | Figure 3: Functions related to scripts
 --   Babbage Specification
-module Cardano.Ledger.Babbage.Scripts
-  ( AlonzoScript (..),
-    isPlutusScript,
-    babbageScriptPrefixTag,
-  )
+module Cardano.Ledger.Babbage.Scripts (
+  AlonzoScript (..),
+  isPlutusScript,
+  babbageScriptPrefixTag,
+)
 where
 
 import Cardano.Ledger.Allegra.Scripts (Timelock)
-import Cardano.Ledger.Alonzo.Data
-  ( AlonzoTxAuxData,
-    hashAlonzoTxAuxData,
-    validateAlonzoTxAuxData,
-  )
+import Cardano.Ledger.Alonzo.Data (
+  AlonzoTxAuxData,
+  hashAlonzoTxAuxData,
+  validateAlonzoTxAuxData,
+ )
 import Cardano.Ledger.Alonzo.Language
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Babbage.Era

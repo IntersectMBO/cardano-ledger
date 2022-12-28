@@ -6,14 +6,14 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Test.Cardano.Ledger.Shelley.Address.Bootstrap
-  ( genBootstrapAddress,
-    testBootstrapSpending,
-    testBootstrapNotSpending,
-    bootstrapHashTest,
-    genSignature,
-    aliceByronAddr,
-  )
+module Test.Cardano.Ledger.Shelley.Address.Bootstrap (
+  genBootstrapAddress,
+  testBootstrapSpending,
+  testBootstrapNotSpending,
+  bootstrapHashTest,
+  genSignature,
+  aliceByronAddr,
+)
 where
 
 import qualified Cardano.Chain.Common as Byron
@@ -21,49 +21,50 @@ import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.Signing as Byron
 import qualified Cardano.Crypto.Wallet as Byron
-import Cardano.Ledger.Address
-  ( Addr (..),
-    BootstrapAddress (..),
-    bootstrapKeyHash,
-  )
+import Cardano.Ledger.Address (
+  Addr (..),
+  BootstrapAddress (..),
+  bootstrapKeyHash,
+ )
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
 import Cardano.Ledger.Binary (byronProtVer, serialize')
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto (..))
-import Cardano.Ledger.Keys
-  ( GenDelegs (..),
-    KeyRole (..),
-    VKey (..),
-    coerceKeyRole,
-    hashKey,
-  )
+import Cardano.Ledger.Keys (
+  GenDelegs (..),
+  KeyRole (..),
+  VKey (..),
+  coerceKeyRole,
+  hashKey,
+ )
 import Cardano.Ledger.Keys.Bootstrap
 import Cardano.Ledger.PParams
 import Cardano.Ledger.SafeHash (extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (IncrementalStake (..), PPUPState (..), UTxOState (..))
+
 -- def instance for DPState
-import Cardano.Ledger.Shelley.PParams
-  ( ProposedPPUpdates (..),
-    ShelleyPParamsHKD (..),
-  )
-import Cardano.Ledger.Shelley.Rules
-  ( ShelleyUTXOW,
-    ShelleyUtxowPredFailure (..),
-    UtxoEnv (..),
-  )
-import Cardano.Ledger.Shelley.Tx
-  ( ShelleyTx (..),
-  )
-import Cardano.Ledger.Shelley.TxBody
-  ( ShelleyTxBody (..),
-    ShelleyTxOut (..),
-    Wdrl (..),
-  )
-import Cardano.Ledger.Shelley.TxWits
-  ( bootWits,
-  )
+import Cardano.Ledger.Shelley.PParams (
+  ProposedPPUpdates (..),
+  ShelleyPParamsHKD (..),
+ )
+import Cardano.Ledger.Shelley.Rules (
+  ShelleyUTXOW,
+  ShelleyUtxowPredFailure (..),
+  UtxoEnv (..),
+ )
+import Cardano.Ledger.Shelley.Tx (
+  ShelleyTx (..),
+ )
+import Cardano.Ledger.Shelley.TxBody (
+  ShelleyTxBody (..),
+  ShelleyTxOut (..),
+  Wdrl (..),
+ )
+import Cardano.Ledger.Shelley.TxWits (
+  bootWits,
+ )
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..), mkTxInPartial)
 import Cardano.Ledger.UTxO (UTxO (..))
@@ -100,10 +101,10 @@ bootstrapHashTest = testProperty "rebuild the 'addr root' using a bootstrap witn
         witness :: BootstrapWitness C_crypto
         witness =
           BootstrapWitness
-            { bwKey = shelleyVKey,
-              bwChainCode = chainCode,
-              bwSig = sig,
-              bwAttributes = serialize' byronProtVer $ Byron.addrAttributes byronAddr
+            { bwKey = shelleyVKey
+            , bwChainCode = chainCode
+            , bwSig = sig
+            , bwAttributes = serialize' byronProtVer $ Byron.addrAttributes byronAddr
             }
     pure $
       coerceKeyRole (bootstrapKeyHash @C_crypto addr)
@@ -139,11 +140,11 @@ utxo0 =
 utxoState0 :: UTxOState C
 utxoState0 =
   UTxOState
-    { utxosUtxo = utxo0,
-      utxosDeposited = Coin 0,
-      utxosFees = Coin 0,
-      utxosPpups = PPUPState (ProposedPPUpdates mempty) (ProposedPPUpdates mempty),
-      utxosStakeDistr = mempty
+    { utxosUtxo = utxo0
+    , utxosDeposited = Coin 0
+    , utxosFees = Coin 0
+    , utxosPpups = PPUPState (ProposedPPUpdates mempty) (ProposedPPUpdates mempty)
+    , utxosStakeDistr = mempty
     }
 
 tx :: ShelleyTx C
@@ -155,11 +156,11 @@ txBad = ShelleyTx txBody mempty {bootWits = Set.fromList [aliceBadWitness]} SNot
 utxoState1 :: UTxOState C
 utxoState1 =
   UTxOState
-    { utxosUtxo = UTxO $ Map.fromList [bobResult, aliceResult],
-      utxosDeposited = Coin 0,
-      utxosFees = Coin 10,
-      utxosPpups = PPUPState (ProposedPPUpdates mempty) (ProposedPPUpdates mempty),
-      utxosStakeDistr = IStake mempty mempty
+    { utxosUtxo = UTxO $ Map.fromList [bobResult, aliceResult]
+    , utxosDeposited = Coin 0
+    , utxosFees = Coin 10
+    , utxosPpups = PPUPState (ProposedPPUpdates mempty) (ProposedPPUpdates mempty)
+    , utxosStakeDistr = IStake mempty mempty
     }
   where
     txid = TxId $ hashAnnotated txBody
@@ -224,14 +225,14 @@ coinsToBob = Coin 1000
 txBody :: ShelleyTxBody C
 txBody =
   ShelleyTxBody
-    { stbInputs = Set.fromList [TxIn genesisId minBound],
-      stbOutputs = StrictSeq.fromList [ShelleyTxOut bobAddr coinsToBob, ShelleyTxOut aliceAddr change],
-      stbCerts = StrictSeq.fromList mempty,
-      stbWdrls = Wdrl Map.empty,
-      stbTxFee = fee,
-      stbTTL = SlotNo 10,
-      stbUpdate = SNothing,
-      stbMDHash = SNothing
+    { stbInputs = Set.fromList [TxIn genesisId minBound]
+    , stbOutputs = StrictSeq.fromList [ShelleyTxOut bobAddr coinsToBob, ShelleyTxOut aliceAddr change]
+    , stbCerts = StrictSeq.fromList mempty
+    , stbWdrls = Wdrl Map.empty
+    , stbTxFee = fee
+    , stbTTL = SlotNo 10
+    , stbUpdate = SNothing
+    , stbMDHash = SNothing
     }
   where
     change = (aliceInitCoin <-> coinsToBob) <-> fee

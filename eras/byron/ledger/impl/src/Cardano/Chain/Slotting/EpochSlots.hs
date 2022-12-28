@@ -2,11 +2,11 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Cardano.Chain.Slotting.EpochSlots
-  ( EpochSlots (..),
-    WithEpochSlots (..),
-    epochFirstSlot,
-  )
+module Cardano.Chain.Slotting.EpochSlots (
+  EpochSlots (..),
+  WithEpochSlots (..),
+  epochFirstSlot,
+)
 where
 
 import Cardano.Chain.Slotting.EpochNumber
@@ -31,8 +31,8 @@ instance FromCBOR EpochSlots where
 
 -- | Data with an accompanying slots per epoch context.
 data WithEpochSlots a = WithEpochSlots
-  { epochSlots :: EpochSlots,
-    unWithEpochSlots :: a
+  { epochSlots :: EpochSlots
+  , unWithEpochSlots :: a
   }
   deriving (Show, Eq)
 

@@ -1,17 +1,17 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Test.Cardano.Chain.Delegation.Certificate
-  ( tests,
-  )
+module Test.Cardano.Chain.Delegation.Certificate (
+  tests,
+)
 where
 
-import Cardano.Chain.Delegation
-  ( ACertificate (delegateVK),
-    Certificate,
-    isValid,
-    signCertificate,
-  )
+import Cardano.Chain.Delegation (
+  ACertificate (delegateVK),
+  Certificate,
+  isValid,
+  signCertificate,
+ )
 import Cardano.Ledger.Binary (byronProtVer, decodeFull, serialize, slice)
 import Cardano.Prelude
 import qualified Data.ByteString.Lazy as BSL

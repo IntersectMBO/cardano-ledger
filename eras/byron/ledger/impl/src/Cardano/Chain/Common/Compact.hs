@@ -4,12 +4,12 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Cardano.Chain.Common.Compact
-  ( CompactAddress,
-    toCompactAddress,
-    fromCompactAddress,
-    unsafeGetCompactAddress,
-  )
+module Cardano.Chain.Common.Compact (
+  CompactAddress,
+  toCompactAddress,
+  fromCompactAddress,
+  unsafeGetCompactAddress,
+)
 where
 
 import Cardano.Chain.Common.Address (Address (..))

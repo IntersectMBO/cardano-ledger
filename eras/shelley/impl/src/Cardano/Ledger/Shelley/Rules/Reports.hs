@@ -5,20 +5,20 @@
 
 -- | Tools for reporting things in readable manner. Used in Rules to implement
 --   STS 'renderAssertionViolation' methods, and in Tests.
-module Cardano.Ledger.Shelley.Rules.Reports
-  ( showCred,
-    showIR,
-    showKeyHash,
-    showListy,
-    showMap,
-    showWithdrawal,
-    showSafeHash,
-    synopsisCert,
-    synopsisCoinMap,
-    trim,
-    showTxCerts,
-    produceEqualsConsumed,
-  )
+module Cardano.Ledger.Shelley.Rules.Reports (
+  showCred,
+  showIR,
+  showKeyHash,
+  showListy,
+  showMap,
+  showWithdrawal,
+  showSafeHash,
+  synopsisCert,
+  synopsisCoinMap,
+  trim,
+  showTxCerts,
+  produceEqualsConsumed,
+)
 where
 
 import Cardano.Ledger.Coin (Coin)
@@ -28,10 +28,10 @@ import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Keys (KeyHash (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
-import Cardano.Ledger.Shelley.LedgerState
-  ( DPState (..),
-    InstantaneousRewards (..),
-  )
+import Cardano.Ledger.Shelley.LedgerState (
+  DPState (..),
+  InstantaneousRewards (..),
+ )
 import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.UTxO (UTxO (..))
 import Data.Foldable (fold, toList)
@@ -113,10 +113,10 @@ showWithdrawal (Wdrl m) = showMap (("   " ++) . showRewardAcct) show m
 showIR :: InstantaneousRewards c -> String
 showIR (InstantaneousRewards m n x y) =
   unlines
-    [ "IRReseves " ++ showMap (("   " ++) . trim 10 . showCred) show m,
-      "IRTreasury " ++ showMap (("   " ++) . trim 10 . showCred) show n,
-      "DeltaReserves " ++ show x,
-      "DeltaTreasury " ++ show y
+    [ "IRReseves " ++ showMap (("   " ++) . trim 10 . showCred) show m
+    , "IRTreasury " ++ showMap (("   " ++) . trim 10 . showCred) show n
+    , "DeltaReserves " ++ show x
+    , "DeltaTreasury " ++ show y
     ]
 
 showSafeHash :: SafeHash c i -> String

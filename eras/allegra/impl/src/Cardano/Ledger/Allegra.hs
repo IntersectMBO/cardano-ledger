@@ -4,10 +4,10 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Allegra
-  ( Allegra,
-    AllegraEra,
-  )
+module Cardano.Ledger.Allegra (
+  Allegra,
+  AllegraEra,
+)
 where
 
 import Cardano.Ledger.Allegra.Era (AllegraEra)
@@ -18,14 +18,14 @@ import Cardano.Ledger.Allegra.Translation ()
 import Cardano.Ledger.Allegra.Tx ()
 import Cardano.Ledger.Allegra.TxSeq ()
 import Cardano.Ledger.Allegra.UTxO ()
-import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Keys (Hash, DSignable)
-import Cardano.Ledger.Shelley.API
-  ( ApplyBlock,
-    ApplyTx,
-    CanStartFromGenesis (fromShelleyPParams)
-  )
+import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
+import Cardano.Ledger.Keys (DSignable, Hash)
+import Cardano.Ledger.Shelley.API (
+  ApplyBlock,
+  ApplyTx,
+  CanStartFromGenesis (fromShelleyPParams),
+ )
 
 type Allegra = AllegraEra StandardCrypto
 

@@ -8,18 +8,18 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Chain.Update.ProtocolParameters
-  ( ProtocolParameters (..),
-    upAdptThd,
-    isBootstrapEraPP,
-  )
+module Cardano.Chain.Update.ProtocolParameters (
+  ProtocolParameters (..),
+  upAdptThd,
+  isBootstrapEraPP,
+)
 where
 
-import Cardano.Chain.Common
-  ( LovelacePortion,
-    TxFeePolicy,
-    lovelacePortionToRational,
-  )
+import Cardano.Chain.Common (
+  LovelacePortion,
+  TxFeePolicy,
+  lovelacePortionToRational,
+ )
 import Cardano.Chain.Slotting (EpochNumber, SlotNumber (..), isBootstrapEra)
 import Cardano.Chain.Update.SoftforkRule
 import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
@@ -31,33 +31,33 @@ import Text.JSON.Canonical (FromJSON (..), ToJSON (..), fromJSField, mkObject)
 
 -- | Data which is associated with 'BlockVersion'
 data ProtocolParameters = ProtocolParameters
-  { ppScriptVersion :: !Word16,
-    -- | Milliseconds.
-    ppSlotDuration :: !Natural,
-    ppMaxBlockSize :: !Natural,
-    ppMaxHeaderSize :: !Natural,
-    ppMaxTxSize :: !Natural,
-    ppMaxProposalSize :: !Natural,
-    ppMpcThd :: !LovelacePortion,
-    ppHeavyDelThd :: !LovelacePortion,
-    ppUpdateVoteThd :: !LovelacePortion,
-    ppUpdateProposalThd :: !LovelacePortion,
-    -- | Time to live for a protocol update proposal. This used to be the number
-    -- of slots after which the system made a decision regarding an update
-    -- proposal confirmation, when a majority of votes was not reached in the
-    -- given number of slots. If there were more positive than negative votes the
-    -- proposal became confirmed, otherwise it was rejected. Since in the
-    -- Byron-Shelley bridge we do not have negative votes, and we aim at
-    -- simplifying the update mechanism, 'ppUpdateProposalTTL' is re-interpreted as
-    -- the number of slots a proposal has to gather a majority of votes. If a
-    -- majority of votes has not been reached before this period, then the
-    -- proposal is rejected.
-    --
-    -- -- TODO: it seems this should be a slot count.
-    ppUpdateProposalTTL :: !SlotNumber,
-    ppSoftforkRule :: !SoftforkRule,
-    ppTxFeePolicy :: !TxFeePolicy,
-    ppUnlockStakeEpoch :: !EpochNumber
+  { ppScriptVersion :: !Word16
+  , ppSlotDuration :: !Natural
+  -- ^ Milliseconds.
+  , ppMaxBlockSize :: !Natural
+  , ppMaxHeaderSize :: !Natural
+  , ppMaxTxSize :: !Natural
+  , ppMaxProposalSize :: !Natural
+  , ppMpcThd :: !LovelacePortion
+  , ppHeavyDelThd :: !LovelacePortion
+  , ppUpdateVoteThd :: !LovelacePortion
+  , ppUpdateProposalThd :: !LovelacePortion
+  , ppUpdateProposalTTL :: !SlotNumber
+  -- ^ Time to live for a protocol update proposal. This used to be the number
+  -- of slots after which the system made a decision regarding an update
+  -- proposal confirmation, when a majority of votes was not reached in the
+  -- given number of slots. If there were more positive than negative votes the
+  -- proposal became confirmed, otherwise it was rejected. Since in the
+  -- Byron-Shelley bridge we do not have negative votes, and we aim at
+  -- simplifying the update mechanism, 'ppUpdateProposalTTL' is re-interpreted as
+  -- the number of slots a proposal has to gather a majority of votes. If a
+  -- majority of votes has not been reached before this period, then the
+  -- proposal is rejected.
+  --
+  -- -- TODO: it seems this should be a slot count.
+  , ppSoftforkRule :: !SoftforkRule
+  , ppTxFeePolicy :: !TxFeePolicy
+  , ppUnlockStakeEpoch :: !EpochNumber
   }
   deriving (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, NoThunks)
@@ -117,20 +117,20 @@ instance B.Buildable ProtocolParameters where
 instance Monad m => ToJSON m ProtocolParameters where
   toJSON pp =
     mkObject
-      [ ("scriptVersion", toJSON $ ppScriptVersion pp),
-        ("slotDuration", toJSON $ ppSlotDuration pp),
-        ("maxBlockSize", toJSON $ ppMaxBlockSize pp),
-        ("maxHeaderSize", toJSON $ ppMaxHeaderSize pp),
-        ("maxTxSize", toJSON $ ppMaxTxSize pp),
-        ("maxProposalSize", toJSON $ ppMaxProposalSize pp),
-        ("mpcThd", toJSON $ ppMpcThd pp),
-        ("heavyDelThd", toJSON $ ppHeavyDelThd pp),
-        ("updateVoteThd", toJSON $ ppUpdateVoteThd pp),
-        ("updateProposalThd", toJSON $ ppUpdateProposalThd pp),
-        ("updateImplicit", toJSON $ ppUpdateProposalTTL pp),
-        ("softforkRule", toJSON $ ppSoftforkRule pp),
-        ("txFeePolicy", toJSON $ ppTxFeePolicy pp),
-        ("unlockStakeEpoch", toJSON $ ppUnlockStakeEpoch pp)
+      [ ("scriptVersion", toJSON $ ppScriptVersion pp)
+      , ("slotDuration", toJSON $ ppSlotDuration pp)
+      , ("maxBlockSize", toJSON $ ppMaxBlockSize pp)
+      , ("maxHeaderSize", toJSON $ ppMaxHeaderSize pp)
+      , ("maxTxSize", toJSON $ ppMaxTxSize pp)
+      , ("maxProposalSize", toJSON $ ppMaxProposalSize pp)
+      , ("mpcThd", toJSON $ ppMpcThd pp)
+      , ("heavyDelThd", toJSON $ ppHeavyDelThd pp)
+      , ("updateVoteThd", toJSON $ ppUpdateVoteThd pp)
+      , ("updateProposalThd", toJSON $ ppUpdateProposalThd pp)
+      , ("updateImplicit", toJSON $ ppUpdateProposalTTL pp)
+      , ("softforkRule", toJSON $ ppSoftforkRule pp)
+      , ("txFeePolicy", toJSON $ ppTxFeePolicy pp)
+      , ("unlockStakeEpoch", toJSON $ ppUnlockStakeEpoch pp)
       ]
 
 instance MonadError SchemaError m => FromJSON m ProtocolParameters where

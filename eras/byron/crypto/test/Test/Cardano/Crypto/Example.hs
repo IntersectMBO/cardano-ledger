@@ -1,34 +1,34 @@
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
-module Test.Cardano.Crypto.Example
-  ( exampleProtocolMagic0,
-    exampleProtocolMagic1,
-    exampleProtocolMagic2,
-    exampleProtocolMagic3,
-    exampleProtocolMagic4,
-    exampleProtocolMagicId0,
-    exampleVerificationKey,
-    exampleVerificationKeys,
-    exampleRedeemVerificationKey,
-    exampleSigningKey,
-    exampleSigningKeys,
-    exampleSafeSigner,
-    staticSafeSigners,
-  )
+module Test.Cardano.Crypto.Example (
+  exampleProtocolMagic0,
+  exampleProtocolMagic1,
+  exampleProtocolMagic2,
+  exampleProtocolMagic3,
+  exampleProtocolMagic4,
+  exampleProtocolMagicId0,
+  exampleVerificationKey,
+  exampleVerificationKeys,
+  exampleRedeemVerificationKey,
+  exampleSigningKey,
+  exampleSigningKeys,
+  exampleSafeSigner,
+  staticSafeSigners,
+)
 where
 
-import Cardano.Crypto
-  ( AProtocolMagic (..),
-    ProtocolMagic,
-    ProtocolMagicId (..),
-    RedeemVerificationKey,
-    RequiresNetworkMagic (..),
-    SafeSigner,
-    SigningKey (..),
-    VerificationKey (..),
-    noPassSafeSigner,
-    redeemDeterministicKeyGen,
-  )
+import Cardano.Crypto (
+  AProtocolMagic (..),
+  ProtocolMagic,
+  ProtocolMagicId (..),
+  RedeemVerificationKey,
+  RequiresNetworkMagic (..),
+  SafeSigner,
+  SigningKey (..),
+  VerificationKey (..),
+  noPassSafeSigner,
+  redeemDeterministicKeyGen,
+ )
 import qualified Cardano.Crypto.Wallet as CC
 import Cardano.Ledger.Binary (Annotated (..))
 import Cardano.Prelude

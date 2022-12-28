@@ -4,13 +4,13 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
-module Cardano.Ledger.Shelley.API.ByronTranslation
-  ( translateToShelleyLedgerState,
+module Cardano.Ledger.Shelley.API.ByronTranslation (
+  translateToShelleyLedgerState,
 
-    -- * Exported for testing purposes
-    translateCompactTxOutByronToShelley,
-    translateTxIdByronToShelley,
-  )
+  -- * Exported for testing purposes
+  translateCompactTxOutByronToShelley,
+  translateTxIdByronToShelley,
+)
 where
 
 import qualified Cardano.Chain.Block as Byron
@@ -84,9 +84,9 @@ translateUTxOByronToShelley (Byron.UTxO utxoByron) =
   UTxO $
     Map.fromList
       [ (txInShelley, txOutShelley)
-        | (txInByron, txOutByron) <- Map.toList utxoByron,
-          let txInShelley = translateCompactTxInByronToShelley txInByron
-              txOutShelley = translateCompactTxOutByronToShelley txOutByron
+      | (txInByron, txOutByron) <- Map.toList utxoByron
+      , let txInShelley = translateCompactTxInByronToShelley txInByron
+            txOutShelley = translateCompactTxOutByronToShelley txOutByron
       ]
 
 translateToShelleyLedgerState ::
@@ -98,13 +98,13 @@ translateToShelleyLedgerState ::
   NewEpochState (ShelleyEra c)
 translateToShelleyLedgerState genesisShelley epochNo cvs =
   NewEpochState
-    { nesEL = epochNo,
-      nesBprev = BlocksMade Map.empty,
-      nesBcur = BlocksMade Map.empty,
-      nesEs = epochState,
-      nesRu = SNothing,
-      nesPd = PoolDistr Map.empty,
-      -- At this point, we compute the stashed AVVM addresses, while we are able
+    { nesEL = epochNo
+    , nesBprev = BlocksMade Map.empty
+    , nesBcur = BlocksMade Map.empty
+    , nesEs = epochState
+    , nesRu = SNothing
+    , nesPd = PoolDistr Map.empty
+    , -- At this point, we compute the stashed AVVM addresses, while we are able
       -- to do a linear scan of the UTxO, and stash them away for use at the
       -- Shelley/Allegra boundary.
       stashedAVVMAddresses =
@@ -137,12 +137,12 @@ translateToShelleyLedgerState genesisShelley epochNo cvs =
     epochState :: EpochState (ShelleyEra c)
     epochState =
       EpochState
-        { esAccountState = AccountState (Coin 0) reserves,
-          esSnapshots = emptySnapShots,
-          esLState = ledgerState,
-          esPrevPp = pparams,
-          esPp = pparams,
-          esNonMyopic = def
+        { esAccountState = AccountState (Coin 0) reserves
+        , esSnapshots = emptySnapShots
+        , esLState = ledgerState
+        , esPrevPp = pparams
+        , esPp = pparams
+        , esNonMyopic = def
         }
 
     utxoByron :: Byron.UTxO
@@ -156,15 +156,15 @@ translateToShelleyLedgerState genesisShelley epochNo cvs =
       LedgerState
         { lsUTxOState =
             UTxOState
-              { utxosUtxo = utxoShelley,
-                utxosDeposited = Coin 0,
-                utxosFees = Coin 0,
-                utxosPpups = def,
-                utxosStakeDistr = IStake mempty Map.empty
-              },
-          lsDPState =
+              { utxosUtxo = utxoShelley
+              , utxosDeposited = Coin 0
+              , utxosFees = Coin 0
+              , utxosPpups = def
+              , utxosStakeDistr = IStake mempty Map.empty
+              }
+        , lsDPState =
             DPState
-              { dpsDState = def {dsGenDelegs = genDelegs},
-                dpsPState = def
+              { dpsDState = def {dsGenDelegs = genDelegs}
+              , dpsPState = def
               }
         }

@@ -14,30 +14,30 @@
 {-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 #endif
 
-module Cardano.Chain.Update.Proposal
-  ( -- * Proposal
-    AProposal (..),
-    Proposal,
-    UpId,
+module Cardano.Chain.Update.Proposal (
+  -- * Proposal
+  AProposal (..),
+  Proposal,
+  UpId,
 
-    -- * Proposal Constructors
-    unsafeProposal,
-    signProposal,
-    signatureForProposal,
+  -- * Proposal Constructors
+  unsafeProposal,
+  signProposal,
+  signatureForProposal,
 
-    -- * Proposal Accessors
-    body,
-    recoverUpId,
+  -- * Proposal Accessors
+  body,
+  recoverUpId,
 
-    -- * Proposal Formatting
-    formatMaybeProposal,
+  -- * Proposal Formatting
+  formatMaybeProposal,
 
-    -- * ProposalBody
-    ProposalBody (..),
+  -- * ProposalBody
+  ProposalBody (..),
 
-    -- * ProposalBody Binary Serialization
-    recoverProposalSignedBytes,
-  )
+  -- * ProposalBody Binary Serialization
+  recoverProposalSignedBytes,
+)
 where
 
 import Cardano.Chain.Common.Attributes (dropEmptyAttributes)
@@ -46,28 +46,28 @@ import Cardano.Chain.Update.ProtocolParametersUpdate (ProtocolParametersUpdate)
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
 import Cardano.Chain.Update.SoftwareVersion (SoftwareVersion)
 import Cardano.Chain.Update.SystemTag (SystemTag)
-import Cardano.Crypto
-  ( Hash,
-    ProtocolMagicId,
-    SafeSigner,
-    SignTag (SignUSProposal),
-    Signature,
-    VerificationKey,
-    hashDecoded,
-    safeSign,
-    safeToVerification,
-    serializeCborHash,
-  )
-import Cardano.Ledger.Binary
-  ( Annotated (..),
-    ByteSpan,
-    Decoded (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    annotatedDecoder,
-    encodeListLen,
-    enforceSize,
-  )
+import Cardano.Crypto (
+  Hash,
+  ProtocolMagicId,
+  SafeSigner,
+  SignTag (SignUSProposal),
+  Signature,
+  VerificationKey,
+  hashDecoded,
+  safeSign,
+  safeToVerification,
+  serializeCborHash,
+ )
+import Cardano.Ledger.Binary (
+  Annotated (..),
+  ByteSpan,
+  Decoded (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  annotatedDecoder,
+  encodeListLen,
+  enforceSize,
+ )
 import Cardano.Prelude
 import Data.Aeson (ToJSON)
 import qualified Data.Map.Strict as M
@@ -84,11 +84,11 @@ type UpId = Hash Proposal
 
 -- | Proposal for software update
 data AProposal a = AProposal
-  { aBody :: !(Annotated ProposalBody a),
-    -- | Who proposed this UP.
-    issuer :: !VerificationKey,
-    signature :: !(Signature ProposalBody),
-    annotation :: !a
+  { aBody :: !(Annotated ProposalBody a)
+  , issuer :: !VerificationKey
+  -- ^ Who proposed this UP.
+  , signature :: !(Signature ProposalBody)
+  , annotation :: !a
   }
   deriving (Eq, Show, Generic, Functor)
   deriving anyclass (NFData)
@@ -208,11 +208,11 @@ formatMaybeProposal = maybe "no proposal" B.build
 --------------------------------------------------------------------------------
 
 data ProposalBody = ProposalBody
-  { protocolVersion :: !ProtocolVersion,
-    protocolParametersUpdate :: !ProtocolParametersUpdate,
-    softwareVersion :: !SoftwareVersion,
-    -- | InstallerHash for each system which this update affects
-    metadata :: !(Map SystemTag InstallerHash)
+  { protocolVersion :: !ProtocolVersion
+  , protocolParametersUpdate :: !ProtocolParametersUpdate
+  , softwareVersion :: !SoftwareVersion
+  , metadata :: !(Map SystemTag InstallerHash)
+  -- ^ InstallerHash for each system which this update affects
   }
   deriving (Eq, Show, Generic)
   deriving anyclass (NFData)

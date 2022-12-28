@@ -46,20 +46,20 @@ import Test.Cardano.Ledger.Alonzo.PlutusScripts (testingCostModelV1)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
-import Test.Cardano.Ledger.Examples.STSTestUtils
-  ( initUTxO,
-    mkGenesisTxIn,
-    mkTxDats,
-    someAddr,
-    someKeys,
-  )
-import Test.Cardano.Ledger.Generic.Fields
-  ( PParamsField (..),
-    TxBodyField (..),
-    TxField (..),
-    TxOutField (..),
-    WitnessesField (..),
-  )
+import Test.Cardano.Ledger.Examples.STSTestUtils (
+  initUTxO,
+  mkGenesisTxIn,
+  mkTxDats,
+  someAddr,
+  someKeys,
+ )
+import Test.Cardano.Ledger.Generic.Fields (
+  PParamsField (..),
+  TxBodyField (..),
+  TxField (..),
+  TxOutField (..),
+  WitnessesField (..),
+ )
 import Test.Cardano.Ledger.Generic.Proof (Evidence (Mock), Proof (Alonzo, Babbage))
 import Test.Cardano.Ledger.Generic.Scriptic (PostShelley, Scriptic, always)
 import Test.Cardano.Ledger.Generic.Updaters
@@ -72,16 +72,16 @@ tests :: TestTree
 tests =
   testGroup
     "ExUnit tools"
-    [ testProperty "Plutus ExUnit translation round-trip" exUnitsTranslationRoundTrip,
-      testGroup
+    [ testProperty "Plutus ExUnit translation round-trip" exUnitsTranslationRoundTrip
+    , testGroup
         "Alonzo"
-        [ testCase "calculate ExUnits" (exampleExUnitCalc (Alonzo Mock)),
-          testCase "attempt calculate ExUnits with invalid tx" (exampleInvalidExUnitCalc (Alonzo Mock))
-        ],
-      testGroup
+        [ testCase "calculate ExUnits" (exampleExUnitCalc (Alonzo Mock))
+        , testCase "attempt calculate ExUnits with invalid tx" (exampleInvalidExUnitCalc (Alonzo Mock))
+        ]
+    , testGroup
         "Babbage"
-        [ testCase "calculate ExUnits" (exampleExUnitCalc (Babbage Mock)),
-          testCase "attempt calculate ExUnits with invalid tx" (exampleInvalidExUnitCalc (Babbage Mock))
+        [ testCase "calculate ExUnits" (exampleExUnitCalc (Babbage Mock))
+        , testCase "attempt calculate ExUnits with invalid tx" (exampleInvalidExUnitCalc (Babbage Mock))
         ]
     ]
 
@@ -90,14 +90,14 @@ exUnitsTranslationRoundTrip :: Gen Property
 exUnitsTranslationRoundTrip = do
   e <- arbitrary
   let result = exBudgetToExUnits (transExUnits e)
-  pure $
-    counterexample
+  pure
+    $ counterexample
       ( "Before: "
           <> show e
           <> "\n After: "
           <> show result
       )
-      $ result == Just e
+    $ result == Just e
 
 testSystemStart :: SystemStart
 testSystemStart = SystemStart $ posixSecondsToUTCTime 0
@@ -106,17 +106,17 @@ testSystemStart = SystemStart $ posixSecondsToUTCTime 0
 -- its ex units replaced by the output of evaluateTransactionExecutionUnits
 testExUnitCalculation ::
   forall era m.
-  ( MonadFail m,
-    BaseM (EraRule "UTXOS" era) ~ ShelleyBase,
-    State (EraRule "UTXOS" era) ~ UTxOState era,
-    Environment (EraRule "UTXOS" era) ~ UtxoEnv era,
-    Signal (EraRule "UTXOS" era) ~ Tx era,
-    AlonzoEraTx era,
-    ExtendedUTxO era,
-    STS (EraRule "UTXOS" era),
-    Script era ~ AlonzoScript era,
-    EraUTxO era,
-    ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  ( MonadFail m
+  , BaseM (EraRule "UTXOS" era) ~ ShelleyBase
+  , State (EraRule "UTXOS" era) ~ UTxOState era
+  , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
+  , Signal (EraRule "UTXOS" era) ~ Tx era
+  , AlonzoEraTx era
+  , ExtendedUTxO era
+  , STS (EraRule "UTXOS" era)
+  , Script era ~ AlonzoScript era
+  , EraUTxO era
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   ) =>
   Proof era ->
   Tx era ->
@@ -139,20 +139,20 @@ testExUnitCalculation proof tx utxoState ue ei ss costmdls err = do
 
 exampleExUnitCalc ::
   forall era.
-  ( BaseM (EraRule "UTXOS" era) ~ ShelleyBase,
-    State (EraRule "UTXOS" era) ~ UTxOState era,
-    Environment (EraRule "UTXOS" era) ~ UtxoEnv era,
-    Signable (CC.DSIGN (EraCrypto era)) (Crypto.Hash (CC.HASH (EraCrypto era)) EraIndependentTxBody),
-    Signal (EraRule "UTXOS" era) ~ Tx era,
-    ExtendedUTxO era,
-    HasField "_maxTxExUnits" (PParams era) ExUnits,
-    STS (EraRule "UTXOS" era),
-    AlonzoEraTx era,
-    PostShelley era,
-    EraUTxO era,
-    ScriptsNeeded era ~ AlonzoScriptsNeeded era,
-    Default (State (EraRule "PPUP" era)),
-    Script era ~ AlonzoScript era
+  ( BaseM (EraRule "UTXOS" era) ~ ShelleyBase
+  , State (EraRule "UTXOS" era) ~ UTxOState era
+  , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
+  , Signable (CC.DSIGN (EraCrypto era)) (Crypto.Hash (CC.HASH (EraCrypto era)) EraIndependentTxBody)
+  , Signal (EraRule "UTXOS" era) ~ Tx era
+  , ExtendedUTxO era
+  , HasField "_maxTxExUnits" (PParams era) ExUnits
+  , STS (EraRule "UTXOS" era)
+  , AlonzoEraTx era
+  , PostShelley era
+  , EraUTxO era
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , Default (State (EraRule "PPUP" era))
+  , Script era ~ AlonzoScript era
   ) =>
   Proof era ->
   IO ()
@@ -169,14 +169,14 @@ exampleExUnitCalc proof =
 
 exampleInvalidExUnitCalc ::
   forall era.
-  ( ExtendedUTxO era,
-    PostShelley era,
-    AlonzoEraTx era,
-    EraUTxO era,
-    ScriptsNeeded era ~ AlonzoScriptsNeeded era,
-    HasField "_maxTxExUnits" (PParams era) ExUnits,
-    Script era ~ AlonzoScript era,
-    Signable
+  ( ExtendedUTxO era
+  , PostShelley era
+  , AlonzoEraTx era
+  , EraUTxO era
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , HasField "_maxTxExUnits" (PParams era) ExUnits
+  , Script era ~ AlonzoScript era
+  , Signable
       (CC.DSIGN (EraCrypto era))
       (Crypto.Hash (CC.HASH (EraCrypto era)) EraIndependentTxBody)
   ) =>
@@ -208,9 +208,9 @@ exampleInvalidExUnitCalc proof = do
               ++ show failures
 
 exampleTx ::
-  ( Scriptic era,
-    EraTxBody era,
-    Signable (CC.DSIGN (EraCrypto era)) (Crypto.Hash (CC.HASH (EraCrypto era)) EraIndependentTxBody)
+  ( Scriptic era
+  , EraTxBody era
+  , Signable (CC.DSIGN (EraCrypto era)) (Crypto.Hash (CC.HASH (EraCrypto era)) EraIndependentTxBody)
   ) =>
   Proof era ->
   RdmrPtr ->
@@ -218,12 +218,12 @@ exampleTx ::
 exampleTx pf ptr =
   newTx
     pf
-    [ Body (validatingBody pf),
-      WitnessesI
-        [ AddrWits' [mkWitnessVKey (hashAnnotated (validatingBody pf)) (someKeys pf)],
-          ScriptWits' [always 3 pf],
-          DataWits' [Data (PV1.I 123)],
-          RdmrWits $
+    [ Body (validatingBody pf)
+    , WitnessesI
+        [ AddrWits' [mkWitnessVKey (hashAnnotated (validatingBody pf)) (someKeys pf)]
+        , ScriptWits' [always 3 pf]
+        , DataWits' [Data (PV1.I 123)]
+        , RdmrWits $
             Redeemers $
               Map.singleton ptr (Data (PV1.I 42), ExUnits 5000 5000)
         ]
@@ -233,11 +233,11 @@ validatingBody :: (Scriptic era, EraTxBody era) => Proof era -> TxBody era
 validatingBody pf =
   newTxBody
     pf
-    [ Inputs' [mkGenesisTxIn 1],
-      Collateral' [mkGenesisTxIn 11],
-      Outputs' [newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 4995)]],
-      Txfee (Coin 5),
-      WppHash (newScriptIntegrityHash pf (pparams pf) [PlutusV1] redeemers (mkTxDats (Data (PV1.I 123))))
+    [ Inputs' [mkGenesisTxIn 1]
+    , Collateral' [mkGenesisTxIn 11]
+    , Outputs' [newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 4995)]]
+    , Txfee (Coin 5)
+    , WppHash (newScriptIntegrityHash pf (pparams pf) [PlutusV1] redeemers (mkTxDats (Data (PV1.I 123))))
     ]
   where
     redeemers =
@@ -259,22 +259,22 @@ ustate ::
   UTxOState era
 ustate pf =
   UTxOState
-    { utxosUtxo = initUTxO pf,
-      utxosDeposited = Coin 0,
-      utxosFees = Coin 0,
-      utxosPpups = def,
-      utxosStakeDistr = IStake mempty mempty
+    { utxosUtxo = initUTxO pf
+    , utxosDeposited = Coin 0
+    , utxosFees = Coin 0
+    , utxosPpups = def
+    , utxosStakeDistr = IStake mempty mempty
     }
 
 updateTxExUnits ::
   forall era m.
-  ( MonadFail m,
-    AlonzoEraTx era,
-    ExtendedUTxO era,
-    EraUTxO era,
-    ScriptsNeeded era ~ AlonzoScriptsNeeded era,
-    HasField "_maxTxExUnits" (PParams era) ExUnits,
-    Script era ~ AlonzoScript era
+  ( MonadFail m
+  , AlonzoEraTx era
+  , ExtendedUTxO era
+  , EraUTxO era
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , HasField "_maxTxExUnits" (PParams era) ExUnits
+  , Script era ~ AlonzoScript era
   ) =>
   Proof era ->
   Tx era ->
@@ -316,9 +316,9 @@ pparams :: Proof era -> PParams era
 pparams proof =
   newPParams
     proof
-    [ Costmdls . CostModels $ Map.singleton PlutusV1 testingCostModelV1,
-      MaxValSize 1000000000,
-      MaxTxExUnits $ ExUnits 100000000 100000000,
-      MaxBlockExUnits $ ExUnits 100000000 100000000,
-      ProtocolVersion $ ProtVer (natVersion @5) 0
+    [ Costmdls . CostModels $ Map.singleton PlutusV1 testingCostModelV1
+    , MaxValSize 1000000000
+    , MaxTxExUnits $ ExUnits 100000000 100000000
+    , MaxBlockExUnits $ ExUnits 100000000 100000000
+    , ProtocolVersion $ ProtVer (natVersion @5) 0
     ]

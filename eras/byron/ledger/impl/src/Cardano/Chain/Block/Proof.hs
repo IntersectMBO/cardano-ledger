@@ -3,21 +3,21 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Cardano.Chain.Block.Proof
-  ( Proof (..),
-    ProofValidationError (..),
-    mkProof,
-    recoverProof,
-  )
+module Cardano.Chain.Block.Proof (
+  Proof (..),
+  ProofValidationError (..),
+  mkProof,
+  recoverProof,
+)
 where
 
-import Cardano.Chain.Block.Body
-  ( ABody (..),
-    Body,
-    bodyDlgPayload,
-    bodyTxPayload,
-    bodyUpdatePayload,
-  )
+import Cardano.Chain.Block.Body (
+  ABody (..),
+  Body,
+  bodyDlgPayload,
+  bodyTxPayload,
+  bodyUpdatePayload,
+ )
 import qualified Cardano.Chain.Delegation.Payload as Delegation
 import Cardano.Chain.Ssc (SscProof (..))
 import Cardano.Chain.UTxO.TxProof (TxProof, mkTxProof, recoverTxProof)
@@ -32,10 +32,10 @@ import NoThunks.Class (NoThunks (..))
 
 -- | Proof of everything contained in the payload
 data Proof = Proof
-  { proofUTxO :: !TxProof,
-    proofSsc :: !SscProof,
-    proofDelegation :: !(Hash Delegation.Payload),
-    proofUpdate :: !Update.Proof
+  { proofUTxO :: !TxProof
+  , proofSsc :: !SscProof
+  , proofDelegation :: !(Hash Delegation.Payload)
+  , proofUpdate :: !Update.Proof
   }
   deriving (Eq, Show, Generic, NFData, NoThunks)
 
@@ -74,20 +74,20 @@ instance FromCBOR Proof where
 mkProof :: Body -> Proof
 mkProof body =
   Proof
-    { proofUTxO = mkTxProof $ bodyTxPayload body,
-      proofSsc = SscProof,
-      proofDelegation = serializeCborHash $ bodyDlgPayload body,
-      proofUpdate = Update.mkProof $ bodyUpdatePayload body
+    { proofUTxO = mkTxProof $ bodyTxPayload body
+    , proofSsc = SscProof
+    , proofDelegation = serializeCborHash $ bodyDlgPayload body
+    , proofUpdate = Update.mkProof $ bodyUpdatePayload body
     }
 
 -- TODO: Should we be using this somewhere?
 recoverProof :: ABody ByteString -> Proof
 recoverProof body =
   Proof
-    { proofUTxO = recoverTxProof $ bodyTxPayload body,
-      proofSsc = SscProof,
-      proofDelegation = hashDecoded $ bodyDlgPayload body,
-      proofUpdate = Update.recoverProof $ bodyUpdatePayload body
+    { proofUTxO = recoverTxProof $ bodyTxPayload body
+    , proofSsc = SscProof
+    , proofDelegation = hashDecoded $ bodyDlgPayload body
+    , proofUpdate = Update.recoverProof $ bodyUpdatePayload body
     }
 
 -- | Error which can result from attempting to validate an invalid payload

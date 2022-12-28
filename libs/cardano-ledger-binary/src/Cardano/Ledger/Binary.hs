@@ -1,14 +1,14 @@
 {-# LANGUAGE FlexibleContexts #-}
 
-module Cardano.Ledger.Binary
-  ( module Cardano.Ledger.Binary.Decoding,
-    module Cardano.Ledger.Binary.Encoding,
-    module Cardano.Ledger.Binary.Group,
-    module Cardano.Ledger.Binary.Version,
-    Term (..),
-    C.DeserialiseFailure (..),
-    translateViaCBORAnnotator,
-  )
+module Cardano.Ledger.Binary (
+  module Cardano.Ledger.Binary.Decoding,
+  module Cardano.Ledger.Binary.Encoding,
+  module Cardano.Ledger.Binary.Group,
+  module Cardano.Ledger.Binary.Version,
+  Term (..),
+  C.DeserialiseFailure (..),
+  translateViaCBORAnnotator,
+)
 where
 
 import Cardano.Ledger.Binary.Decoding

@@ -1,69 +1,69 @@
-module Test.Cardano.Chain.UTxO.Gen
-  ( genCompactTxId,
-    genCompactTxIn,
-    genCompactTxOut,
-    genVKWitness,
-    genRedeemWitness,
-    genTx,
-    genTxAttributes,
-    genTxAux,
-    genTxHash,
-    genTxId,
-    genTxIn,
-    genTxInList,
-    genTxInWitness,
-    genTxOut,
-    genTxOutList,
-    genTxPayload,
-    genUTxOConfiguration,
-    genTxProof,
-    genTxSig,
-    genTxSigData,
-    genTxValidationError,
-    genTxWitness,
-    genUTxO,
-    genUTxOError,
-    genUTxOValidationError,
-  )
+module Test.Cardano.Chain.UTxO.Gen (
+  genCompactTxId,
+  genCompactTxIn,
+  genCompactTxOut,
+  genVKWitness,
+  genRedeemWitness,
+  genTx,
+  genTxAttributes,
+  genTxAux,
+  genTxHash,
+  genTxId,
+  genTxIn,
+  genTxInList,
+  genTxInWitness,
+  genTxOut,
+  genTxOutList,
+  genTxPayload,
+  genUTxOConfiguration,
+  genTxProof,
+  genTxSig,
+  genTxSigData,
+  genTxValidationError,
+  genTxWitness,
+  genUTxO,
+  genUTxOError,
+  genUTxOValidationError,
+)
 where
 
 import Cardano.Chain.Common (makeNetworkMagic, mkAttributes)
-import Cardano.Chain.UTxO
-  ( CompactTxId,
-    CompactTxIn,
-    CompactTxOut,
-    Tx (..),
-    TxAttributes,
-    TxAux,
-    TxId,
-    TxIn (..),
-    TxInWitness (..),
-    TxOut (..),
-    TxPayload,
-    TxProof (..),
-    TxSig,
-    TxSigData (..),
-    TxValidationError (..),
-    TxWitness,
-    UTxO,
-    UTxOConfiguration (..),
-    UTxOError (..),
-    UTxOValidationError (..),
-    fromList,
-    mkTxAux,
-    mkTxPayload,
-    mkUTxOConfiguration,
-    toCompactTxId,
-    toCompactTxIn,
-    toCompactTxOut,
-  )
-import Cardano.Crypto
-  ( Hash,
-    ProtocolMagicId,
-    decodeHash,
-    getProtocolMagicId,
-    sign,
-  )
+import Cardano.Chain.UTxO (
+  CompactTxId,
+  CompactTxIn,
+  CompactTxOut,
+  Tx (..),
+  TxAttributes,
+  TxAux,
+  TxId,
+  TxIn (..),
+  TxInWitness (..),
+  TxOut (..),
+  TxPayload,
+  TxProof (..),
+  TxSig,
+  TxSigData (..),
+  TxValidationError (..),
+  TxWitness,
+  UTxO,
+  UTxOConfiguration (..),
+  UTxOError (..),
+  UTxOValidationError (..),
+  fromList,
+  mkTxAux,
+  mkTxPayload,
+  mkUTxOConfiguration,
+  toCompactTxId,
+  toCompactTxIn,
+  toCompactTxOut,
+ )
+import Cardano.Crypto (
+  Hash,
+  ProtocolMagicId,
+  decodeHash,
+  getProtocolMagicId,
+  sign,
+ )
 import Cardano.Prelude
 import Data.ByteString.Base16 as B16
 import Data.Coerce (coerce)
@@ -71,23 +71,23 @@ import qualified Data.Vector as V
 import Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
-import Test.Cardano.Chain.Common.Gen
-  ( genAddress,
-    genLovelace,
-    genLovelaceError,
-    genMerkleRoot,
-    genNetworkMagic,
-  )
-import Test.Cardano.Crypto.Gen
-  ( genAbstractHash,
-    genProtocolMagic,
-    genRedeemSignature,
-    genRedeemVerificationKey,
-    genSignTag,
-    genSigningKey,
-    genTextHash,
-    genVerificationKey,
-  )
+import Test.Cardano.Chain.Common.Gen (
+  genAddress,
+  genLovelace,
+  genLovelaceError,
+  genMerkleRoot,
+  genNetworkMagic,
+ )
+import Test.Cardano.Crypto.Gen (
+  genAbstractHash,
+  genProtocolMagic,
+  genRedeemSignature,
+  genRedeemVerificationKey,
+  genSignTag,
+  genSigningKey,
+  genTextHash,
+  genVerificationKey,
+ )
 import Test.Cardano.Prelude
 
 genCompactTxId :: Gen CompactTxId
@@ -168,20 +168,20 @@ genTxValidationError = do
   Gen.choice
     [ TxValidationLovelaceError
         <$> Gen.text (Range.constant 0 1000) Gen.alphaNum
-        <*> genLovelaceError,
-      TxValidationFeeTooSmall <$> genTx <*> genLovelace <*> genLovelace,
-      TxValidationWitnessWrongSignature
+        <*> genLovelaceError
+    , TxValidationFeeTooSmall <$> genTx <*> genLovelace <*> genLovelace
+    , TxValidationWitnessWrongSignature
         <$> genTxInWitness pmi
         <*> pure pmi
-        <*> genTxSigData,
-      TxValidationWitnessWrongKey <$> genTxInWitness pmi <*> genAddress,
-      TxValidationMissingInput <$> genTxIn,
-      TxValidationNetworkMagicMismatch <$> genNetworkMagic <*> pure nm,
-      TxValidationTxTooLarge
+        <*> genTxSigData
+    , TxValidationWitnessWrongKey <$> genTxInWitness pmi <*> genAddress
+    , TxValidationMissingInput <$> genTxIn
+    , TxValidationNetworkMagicMismatch <$> genNetworkMagic <*> pure nm
+    , TxValidationTxTooLarge
         <$> Gen.integral (Range.constant 0 1000)
-        <*> Gen.integral (Range.constant 0 1000),
-      pure TxValidationUnknownAddressAttributes,
-      pure TxValidationUnknownAttributes
+        <*> Gen.integral (Range.constant 0 1000)
+    , pure TxValidationUnknownAddressAttributes
+    , pure TxValidationUnknownAttributes
     ]
 
 genTxInWitness :: ProtocolMagicId -> Gen TxInWitness
@@ -200,13 +200,13 @@ genUTxO = fromList <$> Gen.list (Range.constant 0 1000) genTxInTxOut
 genUTxOError :: Gen UTxOError
 genUTxOError =
   Gen.choice
-    [ UTxOMissingInput <$> genTxIn,
-      pure UTxOOverlappingUnion
+    [ UTxOMissingInput <$> genTxIn
+    , pure UTxOOverlappingUnion
     ]
 
 genUTxOValidationError :: Gen UTxOValidationError
 genUTxOValidationError =
   Gen.choice
-    [ UTxOValidationTxValidationError <$> genTxValidationError,
-      UTxOValidationUTxOError <$> genUTxOError
+    [ UTxOValidationTxValidationError <$> genTxValidationError
+    , UTxOValidationUTxOError <$> genUTxOError
     ]

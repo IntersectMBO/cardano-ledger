@@ -30,40 +30,40 @@ mainTests :: TestTree
 mainTests =
   testGroup
     "Alonzo tests"
-    [ fastPropertyTests, -- These are still pretty slow (it is just that a few are omitted)
-      Tripping.tests,
-      Translation.tests,
-      Canonical.tests,
-      CDDL.tests 5,
-      Golden.goldenUTxOEntryMinAda,
-      Golden.goldenSerialization,
-      Golden.goldenGenesisSerialization,
-      Golden.goldenMinFee,
-      Golden.goldenScriptIntegrity,
-      plutusScriptExamples,
-      txInfoTests
+    [ fastPropertyTests -- These are still pretty slow (it is just that a few are omitted)
+    , Tripping.tests
+    , Translation.tests
+    , Canonical.tests
+    , CDDL.tests 5
+    , Golden.goldenUTxOEntryMinAda
+    , Golden.goldenSerialization
+    , Golden.goldenGenesisSerialization
+    , Golden.goldenMinFee
+    , Golden.goldenScriptIntegrity
+    , plutusScriptExamples
+    , txInfoTests
     ]
 
 fastTests :: TestTree
 fastTests =
   testGroup
     "Alonzo tests"
-    [ Tripping.tests,
-      Translation.tests,
-      CDDL.tests 1,
-      Golden.goldenUTxOEntryMinAda,
-      Golden.goldenSerialization,
-      Golden.goldenScriptIntegrity,
-      plutusScriptExamples,
-      txInfoTests
+    [ Tripping.tests
+    , Translation.tests
+    , CDDL.tests 1
+    , Golden.goldenUTxOEntryMinAda
+    , Golden.goldenSerialization
+    , Golden.goldenScriptIntegrity
+    , plutusScriptExamples
+    , txInfoTests
     ]
 
 nightlyTests :: TestTree
 nightlyTests =
   testGroup
     "Alonzo tests"
-    [ alonzoPropertyTests, -- These are the full property tests
-      CDDL.tests 50
+    [ alonzoPropertyTests -- These are the full property tests
+    , CDDL.tests 50
     ]
 
 -- main entry point

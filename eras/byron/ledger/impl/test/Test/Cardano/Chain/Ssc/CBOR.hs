@@ -1,33 +1,33 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Test.Cardano.Chain.Ssc.CBOR
-  ( tests,
-  )
+module Test.Cardano.Chain.Ssc.CBOR (
+  tests,
+)
 where
 
-import Cardano.Chain.Ssc
-  ( SscPayload (..),
-    SscProof (..),
-    dropCommitment,
-    dropCommitmentsMap,
-    dropInnerSharesMap,
-    dropOpeningsMap,
-    dropSharesMap,
-    dropSignedCommitment,
-    dropSscPayload,
-    dropSscProof,
-    dropVssCertificate,
-    dropVssCertificatesMap,
-  )
+import Cardano.Chain.Ssc (
+  SscPayload (..),
+  SscProof (..),
+  dropCommitment,
+  dropCommitmentsMap,
+  dropInnerSharesMap,
+  dropOpeningsMap,
+  dropSharesMap,
+  dropSignedCommitment,
+  dropSscPayload,
+  dropSscProof,
+  dropVssCertificate,
+  dropVssCertificatesMap,
+ )
 import Cardano.Ledger.Binary (dropBytes)
 import Cardano.Prelude
 import GetDataFileName ((<:<))
 import Hedgehog (Group (..), Property)
-import Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip
-  ( deprecatedGoldenDecode,
-    roundTripsCBORShow,
-  )
+import Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip (
+  deprecatedGoldenDecode,
+  roundTripsCBORShow,
+ )
 import Test.Cardano.Prelude
 import Test.Options (concatGroups)
 

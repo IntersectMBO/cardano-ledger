@@ -7,39 +7,39 @@
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Binary.Vintage.Helpers
-  ( byronProtVer,
+module Test.Cardano.Ledger.Binary.Vintage.Helpers (
+  byronProtVer,
 
-    -- * Binary test helpers
-    U,
-    U24,
-    extensionProperty,
-    cborFlatTermValid,
+  -- * Binary test helpers
+  U,
+  U24,
+  extensionProperty,
+  cborFlatTermValid,
 
-    -- * Static size estimates
-    SizeTestConfig (..),
-    cfg,
-    scfg,
-    sizeTest,
-  )
+  -- * Static size estimates
+  SizeTestConfig (..),
+  cfg,
+  scfg,
+  sizeTest,
+)
 where
 
-import Cardano.Ledger.Binary
-  ( FromCBOR (..),
-    Range (..),
-    Size,
-    SizeOverride (..),
-    ToCBOR (..),
-    byronProtVer,
-    decodeListLenOf,
-    decodeNestedCborBytes,
-    encodeListLen,
-    encodeNestedCborBytes,
-    serialize,
-    szSimplify,
-    szWithCtx,
-    unsafeDeserialize,
-  )
+import Cardano.Ledger.Binary (
+  FromCBOR (..),
+  Range (..),
+  Size,
+  SizeOverride (..),
+  ToCBOR (..),
+  byronProtVer,
+  decodeListLenOf,
+  decodeNestedCborBytes,
+  encodeListLen,
+  encodeNestedCborBytes,
+  serialize,
+  szSimplify,
+  szWithCtx,
+  unsafeDeserialize,
+ )
 import Cardano.Ledger.Binary.FlatTerm (toFlatTerm, validFlatTerm)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
@@ -56,15 +56,15 @@ import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Binary.Arbitrary ()
 import Test.Hspec ()
 import Test.Hspec.QuickCheck ()
-import Test.QuickCheck
-  ( Arbitrary (arbitrary),
-    Gen,
-    Property,
-    choose,
-    forAll,
-    property,
-    (===),
-  )
+import Test.QuickCheck (
+  Arbitrary (arbitrary),
+  Gen,
+  Property,
+  choose,
+  forAll,
+  property,
+  (===),
+ )
 
 --------------------------------------------------------------------------------
 -- From/to tests
@@ -175,38 +175,38 @@ bshow = unpack . toLazyText . bprint build
 
 -- | Configuration for a single test case.
 data SizeTestConfig a = SizeTestConfig
-  { -- | Pretty-print values
-    debug :: a -> String,
-    -- | Generator
-    gen :: HH.Gen a,
-    -- | Must estimates be exact?
-    precise :: Bool,
-    -- | Additional size overrides
-    addlCtx :: M.Map TypeRep SizeOverride,
-    -- | Size overrides computed from a concrete instance.
-    computedCtx :: a -> M.Map TypeRep SizeOverride
+  { debug :: a -> String
+  -- ^ Pretty-print values
+  , gen :: HH.Gen a
+  -- ^ Generator
+  , precise :: Bool
+  -- ^ Must estimates be exact?
+  , addlCtx :: M.Map TypeRep SizeOverride
+  -- ^ Additional size overrides
+  , computedCtx :: a -> M.Map TypeRep SizeOverride
+  -- ^ Size overrides computed from a concrete instance.
   }
 
 -- | Default configuration, for @Buildable@ types.
 cfg :: Buildable a => SizeTestConfig a
 cfg =
   SizeTestConfig
-    { debug = bshow,
-      gen = HH.Gen.discard,
-      precise = False,
-      addlCtx = M.empty,
-      computedCtx = const M.empty
+    { debug = bshow
+    , gen = HH.Gen.discard
+    , precise = False
+    , addlCtx = M.empty
+    , computedCtx = const M.empty
     }
 
 -- | Default configuration, for @Show@able types.
 scfg :: Show a => SizeTestConfig a
 scfg =
   SizeTestConfig
-    { debug = show,
-      gen = HH.Gen.discard,
-      precise = False,
-      addlCtx = M.empty,
-      computedCtx = const M.empty
+    { debug = show
+    , gen = HH.Gen.discard
+    , precise = False
+    , addlCtx = M.empty
+    , computedCtx = const M.empty
     }
 
 -- | Create a test case from the given test configuration.
@@ -256,7 +256,7 @@ szVerify ctx x = case szSimplify (szWithCtx ctx (pure x)) of
   Left bounds -> BoundsAreSymbolic bounds
   Right range
     | lo range <= sz && sz <= hi range ->
-      if lo range == hi range then Exact else WithinBounds sz range
+        if lo range == hi range then Exact else WithinBounds sz range
   Right range -> OutOfBounds sz range
   where
     sz :: Natural

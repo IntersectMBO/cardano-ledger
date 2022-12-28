@@ -32,33 +32,33 @@ main = do
   defaultMain
     [ bgroup
         "fromList"
-        [ fromListBench "uniform" (randList std1),
-          fromListBench "prefixed" (prefixList std1),
-          fromListBench "sequential" (sequentialList std1)
-        ],
-      bgroup
+        [ fromListBench "uniform" (randList std1)
+        , fromListBench "prefixed" (prefixList std1)
+        , fromListBench "sequential" (sequentialList std1)
+        ]
+    , bgroup
         "toList"
-        [ toListBench "uniform" (randList std1),
-          toListBench "prefixed" (prefixList std1),
-          toListBench "sequential" (sequentialList std1)
-        ],
-      bgroup
+        [ toListBench "uniform" (randList std1)
+        , toListBench "prefixed" (prefixList std1)
+        , toListBench "sequential" (sequentialList std1)
+        ]
+    , bgroup
         "toMapThroughList"
-        [ toMapThroughListBench "uniform" (randList std1),
-          toMapThroughListBench "prefixed" (prefixList std1),
-          toMapThroughListBench "sequential" (sequentialList std1)
-        ],
-      bgroup
+        [ toMapThroughListBench "uniform" (randList std1)
+        , toMapThroughListBench "prefixed" (prefixList std1)
+        , toMapThroughListBench "sequential" (sequentialList std1)
+        ]
+    , bgroup
         "fromMap"
-        [ fromMapBench "uniform" (randList std1),
-          fromMapBench "prefixed" (prefixList std1),
-          fromMapBench "sequential" (sequentialList std1)
-        ],
-      bgroup
+        [ fromMapBench "uniform" (randList std1)
+        , fromMapBench "prefixed" (prefixList std1)
+        , fromMapBench "sequential" (sequentialList std1)
+        ]
+    , bgroup
         "foldlWithKey"
-        [ foldlWithKeyBench "uniform" (randList std1),
-          foldlWithKeyBench "prefixed" (prefixList std1),
-          foldlWithKeyBench "sequential" (sequentialList std1)
+        [ foldlWithKeyBench "uniform" (randList std1)
+        , foldlWithKeyBench "prefixed" (prefixList std1)
+        , foldlWithKeyBench "sequential" (sequentialList std1)
         ]
     ]
 
@@ -80,8 +80,8 @@ toMapThroughListBench name xs =
     [ bgroup
         "toMap"
         [ env (pure (Map.fromList xs)) $
-            bench "Map" . nf (Map.fromDistinctAscList . Map.toList),
-          env (pure (VMap.fromList xs :: VMap VB VP Key Int)) $
+            bench "Map" . nf (Map.fromDistinctAscList . Map.toList)
+        , env (pure (VMap.fromList xs :: VMap VB VP Key Int)) $
             bench "VMap" . nf VMap.toMap
         ]
     ]
@@ -92,20 +92,20 @@ toListBench name xs =
     name
     [ bgroup
         "toList"
-        [ env (pure (Map.fromList xs)) $ bench "Map" . nf Map.toList,
-          env (pure (VMap.fromList xs :: VMap VB VP Key Int)) $
+        [ env (pure (Map.fromList xs)) $ bench "Map" . nf Map.toList
+        , env (pure (VMap.fromList xs :: VMap VB VP Key Int)) $
             bench "VMap" . nf VMap.toList
-        ],
-      bgroup
+        ]
+    , bgroup
         "keys"
-        [ env (pure (Map.fromList xs)) $ bench "Map" . nf Map.keys,
-          env (pure (VMap.fromList xs :: VMap VB VP Key Int)) $
+        [ env (pure (Map.fromList xs)) $ bench "Map" . nf Map.keys
+        , env (pure (VMap.fromList xs :: VMap VB VP Key Int)) $
             bench "VMap" . nf VMap.keys
-        ],
-      bgroup
+        ]
+    , bgroup
         "elems"
-        [ env (pure (Map.fromList xs)) $ bench "Map" . nf Map.elems,
-          env (pure (VMap.fromList xs :: VMap VB VP Key Int)) $
+        [ env (pure (Map.fromList xs)) $ bench "Map" . nf Map.elems
+        , env (pure (VMap.fromList xs :: VMap VB VP Key Int)) $
             bench "VMap" . nf VMap.elems
         ]
     ]
@@ -115,8 +115,8 @@ fromListBench name xs =
   env (pure xs) $ \xsnf ->
     bgroup
       name
-      [ bench "Map" $ nf Map.fromList xsnf,
-        bench "VMap" $
+      [ bench "Map" $ nf Map.fromList xsnf
+      , bench "VMap" $
           nf (VMap.fromList :: [(Key, Int)] -> VMap VB VP Key Int) xsnf
       ]
 
@@ -125,7 +125,7 @@ foldlWithKeyBench name xs =
   bgroup
     name
     [ env (pure (Map.fromList xs)) $
-        bench "Map" . nf (Map.foldlWithKey (\a !_ -> (a +)) 0),
-      env (pure (VMap.fromList xs :: VMap VB VP Key Int)) $
+        bench "Map" . nf (Map.foldlWithKey (\a !_ -> (a +)) 0)
+    , env (pure (VMap.fromList xs :: VMap VB VP Key Int)) $
         bench "VMap" . nf (VMap.foldlWithKey (\a !_ -> (a +)) 0)
     ]

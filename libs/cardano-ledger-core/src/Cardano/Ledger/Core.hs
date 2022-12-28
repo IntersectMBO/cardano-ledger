@@ -21,72 +21,72 @@
 --
 -- It is intended for qualified import:
 -- > import qualified Cardano.Ledger.Core as Core
-module Cardano.Ledger.Core
-  ( -- * Era-changing types
-    EraTx (..),
-    EraTxOut (..),
-    bootAddrTxOutF,
-    coinTxOutL,
-    compactCoinTxOutL,
-    isAdaOnlyTxOutF,
-    EraTxBody (..),
-    EraTxAuxData (..),
-    EraTxWits (..),
-    EraScript (..),
-    Value,
-    EraPParams (..),
+module Cardano.Ledger.Core (
+  -- * Era-changing types
+  EraTx (..),
+  EraTxOut (..),
+  bootAddrTxOutF,
+  coinTxOutL,
+  compactCoinTxOutL,
+  isAdaOnlyTxOutF,
+  EraTxBody (..),
+  EraTxAuxData (..),
+  EraTxWits (..),
+  EraScript (..),
+  Value,
+  EraPParams (..),
 
-    -- * Era STS
-    EraRule,
-    Era (..),
-    -- $segWit
-    EraSegWits (..),
+  -- * Era STS
+  EraRule,
+  Era (..),
+  -- $segWit
+  EraSegWits (..),
 
-    -- * Phases
-    Phase (..),
-    PhaseRep (..),
-    SomeScript,
-    PhasedScript (..),
-    getPhase1,
-    getPhase2,
+  -- * Phases
+  Phase (..),
+  PhaseRep (..),
+  SomeScript,
+  PhasedScript (..),
+  getPhase1,
+  getPhase2,
 
-    -- * Rewards
-    RewardType (..),
-    Reward (..),
+  -- * Rewards
+  RewardType (..),
+  Reward (..),
 
-    -- * Re-exports
-    module Cardano.Ledger.Hashes,
-    module Cardano.Ledger.Core.Era,
-    module Cardano.Ledger.Core.PParams,
-    module Cardano.Ledger.Core.Translation,
+  -- * Re-exports
+  module Cardano.Ledger.Hashes,
+  module Cardano.Ledger.Core.Era,
+  module Cardano.Ledger.Core.PParams,
+  module Cardano.Ledger.Core.Translation,
 
-    -- * Deprecations
-    hashAuxiliaryData,
-    validateAuxiliaryData,
-  )
+  -- * Deprecations
+  hashAuxiliaryData,
+  validateAuxiliaryData,
+)
 where
 
 import qualified Cardano.Crypto.Hash as Hash
-import Cardano.Ledger.Address
-  ( Addr (..),
-    BootstrapAddress,
-    CompactAddr,
-    compactAddr,
-    decompactAddr,
-    isBootstrapCompactAddr,
-  )
+import Cardano.Ledger.Address (
+  Addr (..),
+  BootstrapAddress,
+  CompactAddr,
+  compactAddr,
+  decompactAddr,
+  isBootstrapCompactAddr,
+ )
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (ProtVer (..))
-import Cardano.Ledger.Binary
-  ( Annotator,
-    FromCBOR,
-    FromSharedCBOR (Share),
-    Interns,
-    Sized (sizedValue),
-    ToCBOR,
-    ToCBORGroup,
-    mkSized,
-  )
+import Cardano.Ledger.Binary (
+  Annotator,
+  FromCBOR,
+  FromSharedCBOR (Share),
+  Interns,
+  Sized (sizedValue),
+  ToCBOR,
+  ToCBORGroup,
+  mkSized,
+ )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core.Era
@@ -119,16 +119,16 @@ import NoThunks.Class (NoThunks)
 
 -- | A transaction.
 class
-  ( EraTxBody era,
-    EraTxWits era,
-    EraTxAuxData era,
-    EraPParams era,
-    -- NFData (Tx era), TODO: Add NFData constraints to Crypto class
-    NoThunks (Tx era),
-    FromCBOR (Annotator (Tx era)),
-    ToCBOR (Tx era),
-    Show (Tx era),
-    Eq (Tx era)
+  ( EraTxBody era
+  , EraTxWits era
+  , EraTxAuxData era
+  , EraPParams era
+  , -- NFData (Tx era), TODO: Add NFData constraints to Crypto class
+    NoThunks (Tx era)
+  , FromCBOR (Annotator (Tx era))
+  , ToCBOR (Tx era)
+  , Show (Tx era)
+  , Eq (Tx era)
   ) =>
   EraTx era
   where
@@ -149,15 +149,15 @@ class
   getMinFeeTx :: PParams era -> Tx era -> Coin
 
 class
-  ( EraTxOut era,
-    EraPParams era,
-    HashAnnotated (TxBody era) EraIndependentTxBody (EraCrypto era),
-    FromCBOR (Annotator (TxBody era)),
-    ToCBOR (TxBody era),
-    NoThunks (TxBody era),
-    NFData (TxBody era),
-    Show (TxBody era),
-    Eq (TxBody era)
+  ( EraTxOut era
+  , EraPParams era
+  , HashAnnotated (TxBody era) EraIndependentTxBody (EraCrypto era)
+  , FromCBOR (Annotator (TxBody era))
+  , ToCBOR (TxBody era)
+  , NoThunks (TxBody era)
+  , NFData (TxBody era)
+  , Show (TxBody era)
+  , Eq (TxBody era)
   ) =>
   EraTxBody era
   where
@@ -178,23 +178,23 @@ class
 
 -- | Abstract interface into specific fields of a `TxOut`
 class
-  ( DecodeNonNegative (Value era),
-    Compactible (Value era),
-    NFData (Value era),
-    Show (Value era),
-    Val (Value era),
-    Eq (Value era),
-    FromCBOR (Value era),
-    ToCBOR (Value era),
-    FromCBOR (TxOut era),
-    FromSharedCBOR (TxOut era),
-    Share (TxOut era) ~ Interns (Credential 'Staking (EraCrypto era)),
-    ToCBOR (TxOut era),
-    NoThunks (TxOut era),
-    NFData (TxOut era),
-    Show (TxOut era),
-    Eq (TxOut era),
-    EraPParams era
+  ( DecodeNonNegative (Value era)
+  , Compactible (Value era)
+  , NFData (Value era)
+  , Show (Value era)
+  , Val (Value era)
+  , Eq (Value era)
+  , FromCBOR (Value era)
+  , ToCBOR (Value era)
+  , FromCBOR (TxOut era)
+  , FromSharedCBOR (TxOut era)
+  , Share (TxOut era) ~ Interns (Credential 'Staking (EraCrypto era))
+  , ToCBOR (TxOut era)
+  , NoThunks (TxOut era)
+  , NFData (TxOut era)
+  , Show (TxOut era)
+  , Eq (TxOut era)
+  , EraPParams era
   ) =>
   EraTxOut era
   where
@@ -202,10 +202,10 @@ class
   type TxOut era = (r :: Type) | r -> era
 
   {-# MINIMAL
-    mkBasicTxOut,
-    valueEitherTxOutL,
-    addrEitherTxOutL,
-    (getMinCoinSizedTxOut | getMinCoinTxOut)
+    mkBasicTxOut
+    , valueEitherTxOutL
+    , addrEitherTxOutL
+    , (getMinCoinSizedTxOut | getMinCoinTxOut)
     #-}
 
   mkBasicTxOut :: Addr (EraCrypto era) -> Value era -> TxOut era
@@ -340,13 +340,13 @@ type family Value era :: Type
 
 -- | TxAuxData which may be attached to a transaction
 class
-  ( Era era,
-    Eq (TxAuxData era),
-    Show (TxAuxData era),
-    NoThunks (TxAuxData era),
-    ToCBOR (TxAuxData era),
-    FromCBOR (Annotator (TxAuxData era)),
-    HashAnnotated (TxAuxData era) EraIndependentTxAuxData (EraCrypto era)
+  ( Era era
+  , Eq (TxAuxData era)
+  , Show (TxAuxData era)
+  , NoThunks (TxAuxData era)
+  , ToCBOR (TxAuxData era)
+  , FromCBOR (Annotator (TxAuxData era))
+  , HashAnnotated (TxAuxData era) EraIndependentTxAuxData (EraCrypto era)
   ) =>
   EraTxAuxData era
   where
@@ -368,13 +368,13 @@ validateAuxiliaryData = validateTxAuxData
 
 -- | A collection of witnesses in a Tx
 class
-  ( EraScript era,
-    Eq (TxWits era),
-    Show (TxWits era),
-    Monoid (TxWits era),
-    NoThunks (TxWits era),
-    ToCBOR (TxWits era),
-    FromCBOR (Annotator (TxWits era))
+  ( EraScript era
+  , Eq (TxWits era)
+  , Show (TxWits era)
+  , Monoid (TxWits era)
+  , NoThunks (TxWits era)
+  , ToCBOR (TxWits era)
+  , FromCBOR (Annotator (TxWits era))
   ) =>
   EraTxWits era
   where
@@ -403,13 +403,13 @@ type family EraRule (k :: Symbol) era :: Type
 --   and the tag is included in the script hash for a script. The safeToHash
 --   constraint ensures that Scripts are never reserialised.
 class
-  ( Era era,
-    Show (Script era),
-    Eq (Script era),
-    ToCBOR (Script era),
-    FromCBOR (Annotator (Script era)),
-    NoThunks (Script era),
-    SafeToHash (Script era)
+  ( Era era
+  , Show (Script era)
+  , Eq (Script era)
+  , ToCBOR (Script era)
+  , FromCBOR (Annotator (Script era))
+  , NoThunks (Script era)
+  , SafeToHash (Script era)
   ) =>
   EraScript era
   where
@@ -456,11 +456,11 @@ class
 --   This class embodies an isomorphism between 'TxSeq era' and 'StrictSeq
 --   (Tx era)', witnessed by 'fromTxSeq' and 'toTxSeq'.
 class
-  ( EraTx era,
-    Eq (TxSeq era),
-    Show (TxSeq era),
-    ToCBORGroup (TxSeq era),
-    FromCBOR (Annotator (TxSeq era))
+  ( EraTx era
+  , Eq (TxSeq era)
+  , Show (TxSeq era)
+  , ToCBORGroup (TxSeq era)
+  , FromCBOR (Annotator (TxSeq era))
   ) =>
   EraSegWits era
   where

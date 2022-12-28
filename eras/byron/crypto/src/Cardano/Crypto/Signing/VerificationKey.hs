@@ -9,25 +9,25 @@
 {-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Crypto.Signing.VerificationKey
-  ( VerificationKey (..),
-    formatFullVerificationKey,
-    fullVerificationKeyF,
-    fullVerificationKeyHexF,
-    shortVerificationKeyHexF,
-    parseFullVerificationKey,
-  )
+module Cardano.Crypto.Signing.VerificationKey (
+  VerificationKey (..),
+  formatFullVerificationKey,
+  fullVerificationKeyF,
+  fullVerificationKeyHexF,
+  shortVerificationKeyHexF,
+  parseFullVerificationKey,
+)
 where
 
 import qualified Cardano.Crypto.Wallet as CC
-import Cardano.Ledger.Binary
-  ( Decoder,
-    Encoding,
-    FromCBOR (..),
-    ToCBOR (..),
-    decodeBytesCanonical,
-    toCborError,
-  )
+import Cardano.Ledger.Binary (
+  Decoder,
+  Encoding,
+  FromCBOR (..),
+  ToCBOR (..),
+  decodeBytesCanonical,
+  toCborError,
+ )
 import Cardano.Prelude hiding (toCborError)
 import Data.Aeson (FromJSON (..), ToJSON (..))
 import qualified Data.ByteString.Base64 as B64
@@ -36,16 +36,16 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import Data.Text.Lazy.Builder (Builder)
 import qualified Data.Text.Lazy.Builder as Builder
-import Formatting
-  ( Format,
-    bprint,
-    fitLeft,
-    formatToString,
-    later,
-    sformat,
-    stext,
-    (%.),
-  )
+import Formatting (
+  Format,
+  bprint,
+  fitLeft,
+  formatToString,
+  later,
+  sformat,
+  stext,
+  (%.),
+ )
 import Formatting.Buildable (Buildable (..))
 import NoThunks.Class (InspectHeap (..), NoThunks (..))
 import Text.JSON.Canonical (JSValue (..), toJSString)

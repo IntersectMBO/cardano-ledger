@@ -54,17 +54,17 @@ main = do
         [ bgroup "StakeRefNull" $
             [ env (pure (addrs (const StakeRefNull))) $
                 bench "old" . whnf (foldMap' (seqUnit . compactAddr))
-            ],
-          bgroup "StakeRefBase" $
+            ]
+        , bgroup "StakeRefBase" $
             [ env (pure (addrs stakeRefBase)) $
                 bench "old" . whnf (foldMap' (seqUnit . compactAddr))
-            ],
-          bgroup "StakeRefPtr" $
+            ]
+        , bgroup "StakeRefPtr" $
             [ env (pure (addrs (StakeRefPtr . mkPtr))) $
                 bench "old" . whnf (foldMap' (seqUnit . compactAddr))
             ]
-        ],
-      bgroup
+        ]
+    , bgroup
         "decode"
         [ bgroup
             "fromCompact"
@@ -75,78 +75,78 @@ main = do
                     deepseqUnit
                     (compactAddr <$> addrs (const StakeRefNull))
                     decompactAddrOldLazy
-                    decompactAddr,
-                  benchDecode
+                    decompactAddr
+                , benchDecode
                     "StakeRefBase"
                     deepseqUnit
                     (compactAddr <$> addrs stakeRefBase)
                     decompactAddrOldLazy
-                    decompactAddr,
-                  benchDecode
+                    decompactAddr
+                , benchDecode
                     "StakeRefPtr"
                     deepseqUnit
                     (compactAddr <$> addrs (StakeRefPtr . mkPtr))
                     decompactAddrOldLazy
                     decompactAddr
-                ],
-              bgroup
+                ]
+            , bgroup
                 "PaymentCredential"
                 [ benchDecode
                     "StakeRefNull"
                     forcePaymentCred
                     (compactAddr <$> addrs (const StakeRefNull))
                     decompactAddrOldLazy
-                    decompactAddr,
-                  benchDecode
+                    decompactAddr
+                , benchDecode
                     "StakeRefBase"
                     forcePaymentCred
                     (compactAddr <$> addrs stakeRefBase)
                     decompactAddrOldLazy
-                    decompactAddr,
-                  benchDecode
+                    decompactAddr
+                , benchDecode
                     "StakeRefPtr"
                     forcePaymentCred
                     (compactAddr <$> addrs (StakeRefPtr . mkPtr))
                     decompactAddrOldLazy
                     decompactAddr
-                ],
-              bgroup
+                ]
+            , bgroup
                 "StakingCredential"
                 [ benchDecode
                     "StakeRefNull"
                     forceStakingCred
                     (compactAddr <$> addrs (const StakeRefNull))
                     decompactAddrOldLazy
-                    decompactAddr,
-                  benchDecode
+                    decompactAddr
+                , benchDecode
                     "StakeRefBase"
                     forceStakingCred
                     (compactAddr <$> addrs stakeRefBase)
                     decompactAddrOldLazy
-                    decompactAddr,
-                  benchDecode
+                    decompactAddr
+                , benchDecode
                     "StakeRefPtr"
                     forceStakingCred
                     (compactAddr <$> addrs (StakeRefPtr . mkPtr))
                     decompactAddrOldLazy
                     decompactAddr
                 ]
-            ],
-          bgroup
+            ]
+        , bgroup
             "fromCBOR-Addr"
             [ benchDecode
                 "StakeRefNull"
                 forcePaymentCred
                 (serialize' version <$> addrs (const StakeRefNull))
                 (unsafeDeserialize' version)
-                partialDeserializeAddr,
-              benchDecode
+                partialDeserializeAddr
+            , benchDecode
                 "StakeRefBase"
                 forcePaymentCred
                 (serialize' version <$> addrs stakeRefBase)
                 (unsafeDeserialize' version)
-                partialDeserializeAddr,
-              benchDecode
+                partialDeserializeAddr
+            , benchDecode
                 "StakeRefPtr"
                 forcePaymentCred
                 (serialize' version <$> addrs (StakeRefPtr . mkPtr))
@@ -167,8 +167,8 @@ benchDecode ::
 benchDecode benchName forceResult as oldDecode newDecode =
   env (pure as) $ \cas ->
     bgroup benchName $
-      [ bench "old" $ whnf (foldMap' (forceResult . oldDecode)) cas,
-        bench "new" $ whnf (foldMap' (forceResult . newDecode)) cas
+      [ bench "old" $ whnf (foldMap' (forceResult . oldDecode)) cas
+      , bench "new" $ whnf (foldMap' (forceResult . newDecode)) cas
       ]
 
 deepseqUnit :: NFData a => a -> StrictUnit

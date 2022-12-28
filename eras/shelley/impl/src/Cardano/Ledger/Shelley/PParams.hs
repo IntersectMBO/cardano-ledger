@@ -15,44 +15,44 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | This module contains just the type of protocol parameters.
-module Cardano.Ledger.Shelley.PParams
-  ( emptyShelleyPParams,
-    emptyShelleyPParamsUpdate,
-    ShelleyPParams (..),
-    PPUPState (..),
-    PPUpdateEnv (..),
-    ProposedPPUpdates (..),
-    emptyPPPUpdates,
-    Update (..),
-    pvCanFollow,
+module Cardano.Ledger.Shelley.PParams (
+  emptyShelleyPParams,
+  emptyShelleyPParamsUpdate,
+  ShelleyPParams (..),
+  PPUPState (..),
+  PPUpdateEnv (..),
+  ProposedPPUpdates (..),
+  emptyPPPUpdates,
+  Update (..),
+  pvCanFollow,
 
-    -- * Deprecated
-    updatePParams,
-  )
+  -- * Deprecated
+  updatePParams,
+)
 where
 
-import Cardano.Ledger.BaseTypes
-  ( NonNegativeInterval,
-    Nonce (NeutralNonce),
-    StrictMaybe (..),
-    UnitInterval,
-    invalidKey,
-    strictMaybeToMaybe,
-    succVersion,
-  )
+import Cardano.Ledger.BaseTypes (
+  NonNegativeInterval,
+  Nonce (NeutralNonce),
+  StrictMaybe (..),
+  UnitInterval,
+  invalidKey,
+  strictMaybeToMaybe,
+  succVersion,
+ )
 import qualified Cardano.Ledger.BaseTypes as BT
-import Cardano.Ledger.Binary
-  ( FromCBOR (..),
-    FromCBORGroup (..),
-    ToCBOR (..),
-    ToCBORGroup (..),
-    decodeMapContents,
-    decodeRecordNamed,
-    decodeWord,
-    encodeListLen,
-    encodeMapLen,
-    encodeWord,
-  )
+import Cardano.Ledger.Binary (
+  FromCBOR (..),
+  FromCBORGroup (..),
+  ToCBOR (..),
+  ToCBORGroup (..),
+  decodeMapContents,
+  decodeRecordNamed,
+  decodeWord,
+  encodeListLen,
+  encodeMapLen,
+  encodeWord,
+ )
 import Cardano.Ledger.Binary.Coders (Decode (From, RecD), decode, (<!))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
@@ -84,40 +84,40 @@ import Numeric.Natural (Natural)
 
 -- | Protocol parameters.
 data ShelleyPParams f era = ShelleyPParams
-  { -- | The linear factor for the minimum fee calculation
-    sppMinFeeA :: !(HKD f Natural),
-    -- | The constant factor for the minimum fee calculation
-    sppMinFeeB :: !(HKD f Natural),
-    -- | Maximal block body size
-    sppMaxBBSize :: !(HKD f Natural),
-    -- | Maximal transaction size
-    sppMaxTxSize :: !(HKD f Natural),
-    -- | Maximal block header size
-    sppMaxBHSize :: !(HKD f Natural),
-    -- | The amount of a key registration deposit
-    sppKeyDeposit :: !(HKD f Coin),
-    -- | The amount of a pool registration deposit
-    sppPoolDeposit :: !(HKD f Coin),
-    -- | epoch bound on pool retirement
-    sppEMax :: !(HKD f EpochNo),
-    -- | Desired number of pools
-    sppNOpt :: !(HKD f Natural),
-    -- | Pool influence
-    sppA0 :: !(HKD f NonNegativeInterval),
-    -- | Monetary expansion
-    sppRho :: !(HKD f UnitInterval),
-    -- | Treasury expansion
-    sppTau :: !(HKD f UnitInterval),
-    -- | Decentralization parameter
-    sppD :: !(HKD f UnitInterval),
-    -- | Extra entropy
-    sppExtraEntropy :: !(HKD f Nonce),
-    -- | Protocol version
-    sppProtocolVersion :: !(HKD f BT.ProtVer),
-    -- | Minimum UTxO value
-    sppMinUTxOValue :: !(HKD f Coin),
-    -- | Minimum Stake Pool Cost
-    sppMinPoolCost :: !(HKD f Coin)
+  { sppMinFeeA :: !(HKD f Natural)
+  -- ^ The linear factor for the minimum fee calculation
+  , sppMinFeeB :: !(HKD f Natural)
+  -- ^ The constant factor for the minimum fee calculation
+  , sppMaxBBSize :: !(HKD f Natural)
+  -- ^ Maximal block body size
+  , sppMaxTxSize :: !(HKD f Natural)
+  -- ^ Maximal transaction size
+  , sppMaxBHSize :: !(HKD f Natural)
+  -- ^ Maximal block header size
+  , sppKeyDeposit :: !(HKD f Coin)
+  -- ^ The amount of a key registration deposit
+  , sppPoolDeposit :: !(HKD f Coin)
+  -- ^ The amount of a pool registration deposit
+  , sppEMax :: !(HKD f EpochNo)
+  -- ^ epoch bound on pool retirement
+  , sppNOpt :: !(HKD f Natural)
+  -- ^ Desired number of pools
+  , sppA0 :: !(HKD f NonNegativeInterval)
+  -- ^ Pool influence
+  , sppRho :: !(HKD f UnitInterval)
+  -- ^ Monetary expansion
+  , sppTau :: !(HKD f UnitInterval)
+  -- ^ Treasury expansion
+  , sppD :: !(HKD f UnitInterval)
+  -- ^ Decentralization parameter
+  , sppExtraEntropy :: !(HKD f Nonce)
+  -- ^ Extra entropy
+  , sppProtocolVersion :: !(HKD f BT.ProtVer)
+  -- ^ Protocol version
+  , sppMinUTxOValue :: !(HKD f Coin)
+  -- ^ Minimum UTxO value
+  , sppMinPoolCost :: !(HKD f Coin)
+  -- ^ Minimum Stake Pool Cost
   }
   deriving (Generic)
 
@@ -221,23 +221,23 @@ instance Era era => FromCBOR (ShelleyPParams Identity era) where
 instance ToJSON (ShelleyPParams Identity era) where
   toJSON pp =
     Aeson.object
-      [ "minFeeA" .= sppMinFeeA pp,
-        "minFeeB" .= sppMinFeeB pp,
-        "maxBlockBodySize" .= sppMaxBBSize pp,
-        "maxTxSize" .= sppMaxTxSize pp,
-        "maxBlockHeaderSize" .= sppMaxBHSize pp,
-        "keyDeposit" .= sppKeyDeposit pp,
-        "poolDeposit" .= sppPoolDeposit pp,
-        "eMax" .= sppEMax pp,
-        "nOpt" .= sppNOpt pp,
-        "a0" .= sppA0 pp,
-        "rho" .= sppRho pp,
-        "tau" .= sppTau pp,
-        "decentralisationParam" .= sppD pp,
-        "extraEntropy" .= sppExtraEntropy pp,
-        "protocolVersion" .= sppProtocolVersion pp,
-        "minUTxOValue" .= sppMinUTxOValue pp,
-        "minPoolCost" .= sppMinPoolCost pp
+      [ "minFeeA" .= sppMinFeeA pp
+      , "minFeeB" .= sppMinFeeB pp
+      , "maxBlockBodySize" .= sppMaxBBSize pp
+      , "maxTxSize" .= sppMaxTxSize pp
+      , "maxBlockHeaderSize" .= sppMaxBHSize pp
+      , "keyDeposit" .= sppKeyDeposit pp
+      , "poolDeposit" .= sppPoolDeposit pp
+      , "eMax" .= sppEMax pp
+      , "nOpt" .= sppNOpt pp
+      , "a0" .= sppA0 pp
+      , "rho" .= sppRho pp
+      , "tau" .= sppTau pp
+      , "decentralisationParam" .= sppD pp
+      , "extraEntropy" .= sppExtraEntropy pp
+      , "protocolVersion" .= sppProtocolVersion pp
+      , "minUTxOValue" .= sppMinUTxOValue pp
+      , "minPoolCost" .= sppMinPoolCost pp
       ]
 
 instance FromJSON (ShelleyPParams Identity era) where
@@ -245,84 +245,84 @@ instance FromJSON (ShelleyPParams Identity era) where
     Aeson.withObject "ShelleyPParams" $ \obj ->
       ShelleyPParams
         <$> obj
-        .: "minFeeA"
+          .: "minFeeA"
         <*> obj
-        .: "minFeeB"
+          .: "minFeeB"
         <*> obj
-        .: "maxBlockBodySize"
+          .: "maxBlockBodySize"
         <*> obj
-        .: "maxTxSize"
+          .: "maxTxSize"
         <*> obj
-        .: "maxBlockHeaderSize"
+          .: "maxBlockHeaderSize"
         <*> obj
-        .: "keyDeposit"
+          .: "keyDeposit"
         <*> obj
-        .: "poolDeposit"
+          .: "poolDeposit"
         <*> obj
-        .: "eMax"
+          .: "eMax"
         <*> obj
-        .: "nOpt"
+          .: "nOpt"
         <*> obj
-        .: "a0"
+          .: "a0"
         <*> obj
-        .: "rho"
+          .: "rho"
         <*> obj
-        .: "tau"
+          .: "tau"
         <*> obj
-        .: "decentralisationParam"
+          .: "decentralisationParam"
         <*> obj
-        .: "extraEntropy"
+          .: "extraEntropy"
         <*> obj
-        .: "protocolVersion"
+          .: "protocolVersion"
         <*> obj
-        .:? "minUTxOValue"
-        .!= mempty
+          .:? "minUTxOValue"
+          .!= mempty
         <*> obj
-        .:? "minPoolCost"
-        .!= mempty
+          .:? "minPoolCost"
+          .!= mempty
 
 emptyShelleyPParams :: forall era. Era era => ShelleyPParams Identity era
 emptyShelleyPParams =
   ShelleyPParams
-    { sppMinFeeA = 0,
-      sppMinFeeB = 0,
-      sppMaxBBSize = 0,
-      sppMaxTxSize = 2048,
-      sppMaxBHSize = 0,
-      sppKeyDeposit = Coin 0,
-      sppPoolDeposit = Coin 0,
-      sppEMax = EpochNo 0,
-      sppNOpt = 100,
-      sppA0 = minBound,
-      sppRho = minBound,
-      sppTau = minBound,
-      sppD = minBound,
-      sppExtraEntropy = NeutralNonce,
-      sppProtocolVersion = BT.ProtVer (eraProtVerLow @era) 0,
-      sppMinUTxOValue = mempty,
-      sppMinPoolCost = mempty
+    { sppMinFeeA = 0
+    , sppMinFeeB = 0
+    , sppMaxBBSize = 0
+    , sppMaxTxSize = 2048
+    , sppMaxBHSize = 0
+    , sppKeyDeposit = Coin 0
+    , sppPoolDeposit = Coin 0
+    , sppEMax = EpochNo 0
+    , sppNOpt = 100
+    , sppA0 = minBound
+    , sppRho = minBound
+    , sppTau = minBound
+    , sppD = minBound
+    , sppExtraEntropy = NeutralNonce
+    , sppProtocolVersion = BT.ProtVer (eraProtVerLow @era) 0
+    , sppMinUTxOValue = mempty
+    , sppMinPoolCost = mempty
     }
 
 emptyShelleyPParamsUpdate :: ShelleyPParams StrictMaybe era
 emptyShelleyPParamsUpdate =
   ShelleyPParams
-    { sppMinFeeA = SNothing,
-      sppMinFeeB = SNothing,
-      sppMaxBBSize = SNothing,
-      sppMaxTxSize = SNothing,
-      sppMaxBHSize = SNothing,
-      sppKeyDeposit = SNothing,
-      sppPoolDeposit = SNothing,
-      sppEMax = SNothing,
-      sppNOpt = SNothing,
-      sppA0 = SNothing,
-      sppRho = SNothing,
-      sppTau = SNothing,
-      sppD = SNothing,
-      sppExtraEntropy = SNothing,
-      sppProtocolVersion = SNothing,
-      sppMinUTxOValue = SNothing,
-      sppMinPoolCost = SNothing
+    { sppMinFeeA = SNothing
+    , sppMinFeeB = SNothing
+    , sppMaxBBSize = SNothing
+    , sppMaxTxSize = SNothing
+    , sppMaxBHSize = SNothing
+    , sppKeyDeposit = SNothing
+    , sppPoolDeposit = SNothing
+    , sppEMax = SNothing
+    , sppNOpt = SNothing
+    , sppA0 = SNothing
+    , sppRho = SNothing
+    , sppTau = SNothing
+    , sppD = SNothing
+    , sppExtraEntropy = SNothing
+    , sppProtocolVersion = SNothing
+    , sppMinUTxOValue = SNothing
+    , sppMinPoolCost = SNothing
     }
 
 -- | Update Proposal
@@ -358,23 +358,23 @@ instance Era era => ToCBOR (ShelleyPParams StrictMaybe era) where
     let l =
           mapMaybe
             strictMaybeToMaybe
-            [ encodeMapElement 0 toCBOR =<< sppMinFeeA ppup,
-              encodeMapElement 1 toCBOR =<< sppMinFeeB ppup,
-              encodeMapElement 2 toCBOR =<< sppMaxBBSize ppup,
-              encodeMapElement 3 toCBOR =<< sppMaxTxSize ppup,
-              encodeMapElement 4 toCBOR =<< sppMaxBHSize ppup,
-              encodeMapElement 5 toCBOR =<< sppKeyDeposit ppup,
-              encodeMapElement 6 toCBOR =<< sppPoolDeposit ppup,
-              encodeMapElement 7 toCBOR =<< sppEMax ppup,
-              encodeMapElement 8 toCBOR =<< sppNOpt ppup,
-              encodeMapElement 9 toCBOR =<< sppA0 ppup,
-              encodeMapElement 10 toCBOR =<< sppRho ppup,
-              encodeMapElement 11 toCBOR =<< sppTau ppup,
-              encodeMapElement 12 toCBOR =<< sppD ppup,
-              encodeMapElement 13 toCBOR =<< sppExtraEntropy ppup,
-              encodeMapElement 14 toCBOR =<< sppProtocolVersion ppup,
-              encodeMapElement 15 toCBOR =<< sppMinUTxOValue ppup,
-              encodeMapElement 16 toCBOR =<< sppMinPoolCost ppup
+            [ encodeMapElement 0 toCBOR =<< sppMinFeeA ppup
+            , encodeMapElement 1 toCBOR =<< sppMinFeeB ppup
+            , encodeMapElement 2 toCBOR =<< sppMaxBBSize ppup
+            , encodeMapElement 3 toCBOR =<< sppMaxTxSize ppup
+            , encodeMapElement 4 toCBOR =<< sppMaxBHSize ppup
+            , encodeMapElement 5 toCBOR =<< sppKeyDeposit ppup
+            , encodeMapElement 6 toCBOR =<< sppPoolDeposit ppup
+            , encodeMapElement 7 toCBOR =<< sppEMax ppup
+            , encodeMapElement 8 toCBOR =<< sppNOpt ppup
+            , encodeMapElement 9 toCBOR =<< sppA0 ppup
+            , encodeMapElement 10 toCBOR =<< sppRho ppup
+            , encodeMapElement 11 toCBOR =<< sppTau ppup
+            , encodeMapElement 12 toCBOR =<< sppD ppup
+            , encodeMapElement 13 toCBOR =<< sppExtraEntropy ppup
+            , encodeMapElement 14 toCBOR =<< sppProtocolVersion ppup
+            , encodeMapElement 15 toCBOR =<< sppMinUTxOValue ppup
+            , encodeMapElement 16 toCBOR =<< sppMinPoolCost ppup
             ]
         n = fromIntegral $ length l
      in encodeMapLen n <> fold l
@@ -443,8 +443,8 @@ updatePParams = applyPPUpdates
 {-# DEPRECATED updatePParams "Use applyPPUpdates instead" #-}
 
 data PPUPState era = PPUPState
-  { proposals :: !(ProposedPPUpdates era),
-    futureProposals :: !(ProposedPPUpdates era)
+  { proposals :: !(ProposedPPUpdates era)
+  , futureProposals :: !(ProposedPPUpdates era)
   }
   deriving (Generic)
 

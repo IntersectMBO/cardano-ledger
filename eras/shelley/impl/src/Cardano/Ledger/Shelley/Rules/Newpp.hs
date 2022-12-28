@@ -8,39 +8,39 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Shelley.Rules.Newpp
-  ( ShelleyNEWPP,
-    ShelleyNewppState (..),
-    NewppEnv (..),
-    ShelleyNewppPredFailure (..),
-    PredicateFailure,
-  )
+module Cardano.Ledger.Shelley.Rules.Newpp (
+  ShelleyNEWPP,
+  ShelleyNewppState (..),
+  NewppEnv (..),
+  ShelleyNewppPredFailure (..),
+  PredicateFailure,
+)
 where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Era (ShelleyNEWPP)
-import Cardano.Ledger.Shelley.LedgerState
-  ( DPState (..),
-    DState (..),
-    PState (..),
-    UTxOState (utxosDeposited),
-    obligationDPState,
-  )
-import Cardano.Ledger.Shelley.PParams
-  ( PPUPState (PPUPState, futureProposals),
-    ProposedPPUpdates (ProposedPPUpdates),
-    emptyPPPUpdates,
-    pvCanFollow,
-  )
-import Control.State.Transition
-  ( STS (..),
-    TRC (..),
-    TransitionRule,
-    judgmentContext,
-    (?!),
-  )
+import Cardano.Ledger.Shelley.LedgerState (
+  DPState (..),
+  DState (..),
+  PState (..),
+  UTxOState (utxosDeposited),
+  obligationDPState,
+ )
+import Cardano.Ledger.Shelley.PParams (
+  PPUPState (PPUPState, futureProposals),
+  ProposedPPUpdates (ProposedPPUpdates),
+  emptyPPPUpdates,
+  pvCanFollow,
+ )
+import Control.State.Transition (
+  STS (..),
+  TRC (..),
+  TransitionRule,
+  judgmentContext,
+  (?!),
+ )
 import Data.Default.Class (Default, def)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
@@ -77,9 +77,9 @@ instance Default (PParams era) => Default (ShelleyNewppState era) where
 newPpTransition :: forall era. EraPParams era => TransitionRule (ShelleyNEWPP era)
 newPpTransition = do
   TRC
-    ( NewppEnv dstate pstate utxoSt,
-      NewppState pp ppupSt,
-      ppNew
+    ( NewppEnv dstate pstate utxoSt
+      , NewppState pp ppupSt
+      , ppNew
       ) <-
     judgmentContext
 

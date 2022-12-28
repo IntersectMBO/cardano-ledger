@@ -3,10 +3,10 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Mary.Translation
-  ( maryTranslationTests,
-    maryEncodeDecodeTests,
-  )
+module Test.Cardano.Ledger.Mary.Translation (
+  maryTranslationTests,
+  maryEncodeDecodeTests,
+)
 where
 
 import Cardano.Ledger.Allegra (Allegra)
@@ -44,24 +44,24 @@ maryTranslationTests :: TestTree
 maryTranslationTests =
   testGroup
     "Mary translation binary compatibiliby tests"
-    [ testProperty "Tx compatibility" (test @S.ShelleyTx),
-      testProperty "ProposedPPUpdates compatibility" (test @S.ProposedPPUpdates),
-      testProperty "PPUPState compatibility" (test @S.PPUPState),
-      testProperty "TxOut compatibility" (test @S.ShelleyTxOut),
-      testProperty "UTxO compatibility" (test @S.UTxO),
-      testProperty "UTxOState compatibility" (test @S.UTxOState),
-      testProperty "LedgerState compatibility" (test @S.LedgerState),
-      testProperty "EpochState compatibility" (test @S.EpochState),
-      testProperty "ShelleyTxWits compatibility" (test @S.ShelleyTxWits),
-      testProperty "Update compatibility" (test @S.Update)
+    [ testProperty "Tx compatibility" (test @S.ShelleyTx)
+    , testProperty "ProposedPPUpdates compatibility" (test @S.ProposedPPUpdates)
+    , testProperty "PPUPState compatibility" (test @S.PPUPState)
+    , testProperty "TxOut compatibility" (test @S.ShelleyTxOut)
+    , testProperty "UTxO compatibility" (test @S.UTxO)
+    , testProperty "UTxOState compatibility" (test @S.UTxOState)
+    , testProperty "LedgerState compatibility" (test @S.LedgerState)
+    , testProperty "EpochState compatibility" (test @S.EpochState)
+    , testProperty "ShelleyTxWits compatibility" (test @S.ShelleyTxWits)
+    , testProperty "Update compatibility" (test @S.Update)
     ]
 
 test ::
   forall f.
-  ( ToCBOR (f Allegra),
-    ToCBOR (f Mary),
-    TranslateEra Mary f,
-    Show (TranslationError Mary f)
+  ( ToCBOR (f Allegra)
+  , ToCBOR (f Mary)
+  , TranslateEra Mary f
+  , Show (TranslationError Mary f)
   ) =>
   f Allegra ->
   Assertion

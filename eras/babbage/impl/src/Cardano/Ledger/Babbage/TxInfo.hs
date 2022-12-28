@@ -12,22 +12,22 @@ import Cardano.Ledger.Alonzo.Data (Datum (..), binaryDataToData, getPlutusData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.Tx (Data, rdptrInv)
-import Cardano.Ledger.Alonzo.TxInfo
-  ( TranslationError (..),
-    TxOutSource (..),
-    VersionedTxInfo (..),
-  )
+import Cardano.Ledger.Alonzo.TxInfo (
+  TranslationError (..),
+  TxOutSource (..),
+  VersionedTxInfo (..),
+ )
 import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), RdmrPtr, unRedeemers, unTxDats)
-import Cardano.Ledger.Babbage.TxBody
-  ( AllegraEraTxBody (..),
-    AlonzoEraTxBody (..),
-    AlonzoEraTxOut (..),
-    BabbageEraTxBody (..),
-    BabbageEraTxOut (..),
-    MaryEraTxBody (..),
-    ShelleyEraTxBody (..),
-  )
+import Cardano.Ledger.Babbage.TxBody (
+  AllegraEraTxBody (..),
+  AlonzoEraTxBody (..),
+  AlonzoEraTxOut (..),
+  BabbageEraTxBody (..),
+  BabbageEraTxOut (..),
+  MaryEraTxBody (..),
+  ShelleyEraTxBody (..),
+ )
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), isSJust)
 import Cardano.Ledger.Core hiding (TranslationError)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
@@ -62,8 +62,8 @@ transReferenceScript (SJust s) = Just . transScriptHash . hashScript @era $ s
 -- If the transaction contains any Byron addresses or Babbage features, return Left.
 txInfoOutV1 ::
   forall era.
-  ( BabbageEraTxOut era,
-    Value era ~ MaryValue (EraCrypto era)
+  ( BabbageEraTxOut era
+  , Value era ~ MaryValue (EraCrypto era)
   ) =>
   TxOutSource (EraCrypto era) ->
   TxOut era ->
@@ -87,8 +87,8 @@ txInfoOutV1 os txOut = do
 --   possible the address part is a Bootstrap Address, in that case return Left.
 txInfoOutV2 ::
   forall era.
-  ( BabbageEraTxOut era,
-    Value era ~ MaryValue (EraCrypto era)
+  ( BabbageEraTxOut era
+  , Value era ~ MaryValue (EraCrypto era)
   ) =>
   TxOutSource (EraCrypto era) ->
   TxOut era ->
@@ -116,8 +116,8 @@ txInfoOutV2 os txOut = do
 --   and return (Just translation). If does not exist in the UTxO, return Nothing.
 txInfoInV1 ::
   forall era.
-  ( BabbageEraTxOut era,
-    Value era ~ MaryValue (EraCrypto era)
+  ( BabbageEraTxOut era
+  , Value era ~ MaryValue (EraCrypto era)
   ) =>
   UTxO era ->
   TxIn (EraCrypto era) ->
@@ -133,8 +133,8 @@ txInfoInV1 (UTxO mp) txin =
 --   and return (Just translation). If does not exist in the UTxO, return Nothing.
 txInfoInV2 ::
   forall era.
-  ( BabbageEraTxOut era,
-    Value era ~ MaryValue (EraCrypto era)
+  ( BabbageEraTxOut era
+  , Value era ~ MaryValue (EraCrypto era)
   ) =>
   UTxO era ->
   TxIn (EraCrypto era) ->
@@ -161,10 +161,10 @@ transRedeemerPtr txb (ptr, (d, _)) =
 
 babbageTxInfo ::
   forall era.
-  ( EraTx era,
-    BabbageEraTxBody era,
-    Value era ~ MaryValue (EraCrypto era),
-    TxWits era ~ AlonzoTxWits era
+  ( EraTx era
+  , BabbageEraTxBody era
+  , Value era ~ MaryValue (EraCrypto era)
+  , TxWits era ~ AlonzoTxWits era
   ) =>
   PParams era ->
   Language ->
@@ -187,17 +187,17 @@ babbageTxInfo pp lang ei sysS utxo tx = do
           (foldr (:) [] outs)
       pure . TxInfoPV1 $
         PV1.TxInfo
-          { PV1.txInfoInputs = inputs,
-            PV1.txInfoOutputs = outputs,
-            PV1.txInfoFee = Alonzo.transValue (inject @(MaryValue (EraCrypto era)) fee),
-            PV1.txInfoMint = Alonzo.transMultiAsset multiAsset,
-            PV1.txInfoDCert = foldr (\c ans -> Alonzo.transDCert c : ans) [] (txBody ^. certsTxBodyG),
-            PV1.txInfoWdrl = Map.toList (Alonzo.transWdrl (txBody ^. wdrlsTxBodyL)),
-            PV1.txInfoValidRange = timeRange,
-            PV1.txInfoSignatories =
-              map Alonzo.transKeyHash (Set.toList (txBody ^. reqSignerHashesTxBodyL)),
-            PV1.txInfoData = map Alonzo.transDataPair datpairs,
-            PV1.txInfoId = PV1.TxId (Alonzo.transSafeHash (hashAnnotated txBody))
+          { PV1.txInfoInputs = inputs
+          , PV1.txInfoOutputs = outputs
+          , PV1.txInfoFee = Alonzo.transValue (inject @(MaryValue (EraCrypto era)) fee)
+          , PV1.txInfoMint = Alonzo.transMultiAsset multiAsset
+          , PV1.txInfoDCert = foldr (\c ans -> Alonzo.transDCert c : ans) [] (txBody ^. certsTxBodyG)
+          , PV1.txInfoWdrl = Map.toList (Alonzo.transWdrl (txBody ^. wdrlsTxBodyL))
+          , PV1.txInfoValidRange = timeRange
+          , PV1.txInfoSignatories =
+              map Alonzo.transKeyHash (Set.toList (txBody ^. reqSignerHashesTxBodyL))
+          , PV1.txInfoData = map Alonzo.transDataPair datpairs
+          , PV1.txInfoId = PV1.TxId (Alonzo.transSafeHash (hashAnnotated txBody))
           }
     PlutusV2 -> do
       inputs <- mapM (txInfoInV2 utxo) (Set.toList (txBody ^. inputsTxBodyL))
@@ -210,19 +210,19 @@ babbageTxInfo pp lang ei sysS utxo tx = do
       rdmrs' <- mapM (transRedeemerPtr txBody) rdmrs
       pure . TxInfoPV2 $
         PV2.TxInfo
-          { PV2.txInfoInputs = inputs,
-            PV2.txInfoOutputs = outputs,
-            PV2.txInfoReferenceInputs = refInputs,
-            PV2.txInfoFee = Alonzo.transValue (inject @(MaryValue (EraCrypto era)) fee),
-            PV2.txInfoMint = Alonzo.transMultiAsset multiAsset,
-            PV2.txInfoDCert = foldr (\c ans -> Alonzo.transDCert c : ans) [] (txBody ^. certsTxBodyG),
-            PV2.txInfoWdrl = PV2.fromList $ Map.toList (Alonzo.transWdrl (txBody ^. wdrlsTxBodyL)),
-            PV2.txInfoValidRange = timeRange,
-            PV2.txInfoSignatories =
-              map Alonzo.transKeyHash (Set.toList (txBody ^. reqSignerHashesTxBodyL)),
-            PV2.txInfoRedeemers = PV2.fromList rdmrs',
-            PV2.txInfoData = PV2.fromList $ map Alonzo.transDataPair datpairs,
-            PV2.txInfoId = PV2.TxId (Alonzo.transSafeHash (hashAnnotated txBody))
+          { PV2.txInfoInputs = inputs
+          , PV2.txInfoOutputs = outputs
+          , PV2.txInfoReferenceInputs = refInputs
+          , PV2.txInfoFee = Alonzo.transValue (inject @(MaryValue (EraCrypto era)) fee)
+          , PV2.txInfoMint = Alonzo.transMultiAsset multiAsset
+          , PV2.txInfoDCert = foldr (\c ans -> Alonzo.transDCert c : ans) [] (txBody ^. certsTxBodyG)
+          , PV2.txInfoWdrl = PV2.fromList $ Map.toList (Alonzo.transWdrl (txBody ^. wdrlsTxBodyL))
+          , PV2.txInfoValidRange = timeRange
+          , PV2.txInfoSignatories =
+              map Alonzo.transKeyHash (Set.toList (txBody ^. reqSignerHashesTxBodyL))
+          , PV2.txInfoRedeemers = PV2.fromList rdmrs'
+          , PV2.txInfoData = PV2.fromList $ map Alonzo.transDataPair datpairs
+          , PV2.txInfoId = PV2.TxId (Alonzo.transSafeHash (hashAnnotated txBody))
           }
   where
     txBody = tx ^. bodyTxL

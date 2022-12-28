@@ -7,19 +7,19 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-missed-specialisations #-}
 
-module Cardano.Chain.Genesis.AvvmBalances
-  ( GenesisAvvmBalances (..),
-  )
+module Cardano.Chain.Genesis.AvvmBalances (
+  GenesisAvvmBalances (..),
+)
 where
 
 import Cardano.Chain.Common (Lovelace)
 import Cardano.Crypto.Signing.Redeem (CompactRedeemVerificationKey)
-import Cardano.Ledger.Binary
-  ( FromCBOR (..),
-    ToCBOR (..),
-    encodeListLen,
-    enforceSize,
-  )
+import Cardano.Ledger.Binary (
+  FromCBOR (..),
+  ToCBOR (..),
+  encodeListLen,
+  enforceSize,
+ )
 import Cardano.Prelude
 import NoThunks.Class (NoThunks (..))
 import Text.JSON.Canonical (FromJSON (..), ToJSON (..))

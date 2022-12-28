@@ -1,8 +1,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Test.Cardano.Chain.Common.Attributes
-  ( tests,
-  )
+module Test.Cardano.Chain.Common.Attributes (
+  tests,
+)
 where
 
 import Cardano.Prelude

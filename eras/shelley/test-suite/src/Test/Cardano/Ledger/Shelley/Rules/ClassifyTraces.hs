@@ -8,63 +8,63 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces
-  ( onlyValidLedgerSignalsAreGenerated,
-    onlyValidChainSignalsAreGenerated,
-    relevantCasesAreCovered,
-    propAbstractSizeBoundsBytes,
-    propAbstractSizeNotTooBig,
-  )
+module Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces (
+  onlyValidLedgerSignalsAreGenerated,
+  onlyValidChainSignalsAreGenerated,
+  relevantCasesAreCovered,
+  propAbstractSizeBoundsBytes,
+  propAbstractSizeNotTooBig,
+)
 where
 
 import Cardano.Ledger.BaseTypes (Globals, StrictMaybe (..), epochInfoPure)
 import Cardano.Ledger.Binary (serialize')
 import Cardano.Ledger.Block (Block (..), bheader)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.API
-  ( Addr (..),
-    Credential (..),
-    DCert (..),
-    DelegCert (..),
-    Delegation (..),
-    ShelleyLEDGER,
-  )
-import Cardano.Ledger.Shelley.Delegation.Certificates
-  ( isDeRegKey,
-    isDelegation,
-    isGenesisDelegation,
-    isRegKey,
-    isRegPool,
-    isReservesMIRCert,
-    isRetirePool,
-    isTreasuryMIRCert,
-  )
+import Cardano.Ledger.Shelley.API (
+  Addr (..),
+  Credential (..),
+  DCert (..),
+  DelegCert (..),
+  Delegation (..),
+  ShelleyLEDGER,
+ )
+import Cardano.Ledger.Shelley.Delegation.Certificates (
+  isDeRegKey,
+  isDelegation,
+  isGenesisDelegation,
+  isRegKey,
+  isRegPool,
+  isReservesMIRCert,
+  isRetirePool,
+  isTreasuryMIRCert,
+ )
 import Cardano.Ledger.Shelley.LedgerState (LedgerState)
-import Cardano.Ledger.Shelley.PParams
-  ( Update (..),
-    pattern ProposedPPUpdates,
-    pattern Update,
-  )
+import Cardano.Ledger.Shelley.PParams (
+  Update (..),
+  pattern ProposedPPUpdates,
+  pattern Update,
+ )
 import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), Wdrl (..))
 import Cardano.Ledger.Slot (SlotNo (..), epochInfoSize)
-import Cardano.Protocol.TPraos.BHeader
-  ( BHeader,
-    bhbody,
-    bheaderSlotNo,
-  )
+import Cardano.Protocol.TPraos.BHeader (
+  BHeader,
+  bhbody,
+  bheaderSlotNo,
+ )
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.State.Transition (STS (State))
 import Control.State.Transition.Extended (Environment, Signal)
-import Control.State.Transition.Trace
-  ( Trace,
-    TraceOrder (OldestFirst),
-    traceSignals,
-  )
-import Control.State.Transition.Trace.Generator.QuickCheck
-  ( forAllTraceFromInitState,
-    onlyValidSignalsAreGeneratedFromInitState,
-    traceFromInitState,
-  )
+import Control.State.Transition.Trace (
+  Trace,
+  TraceOrder (OldestFirst),
+  traceSignals,
+ )
+import Control.State.Transition.Trace.Generator.QuickCheck (
+  forAllTraceFromInitState,
+  onlyValidSignalsAreGeneratedFromInitState,
+  traceFromInitState,
+ )
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import qualified Data.ByteString as BS
 import Data.Default.Class (Default)
@@ -83,25 +83,25 @@ import Test.Cardano.Ledger.Shelley.Generator.Trace.Chain (mkGenesisChainState)
 import Test.Cardano.Ledger.Shelley.Generator.Trace.Ledger (mkGenesisLedgerState)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN)
 import Test.Cardano.Ledger.Shelley.Utils
-import Test.QuickCheck
-  ( Property,
-    checkCoverage,
-    conjoin,
-    cover,
-    forAllBlind,
-    property,
-    withMaxSuccess,
-  )
+import Test.QuickCheck (
+  Property,
+  checkCoverage,
+  conjoin,
+  cover,
+  forAllBlind,
+  property,
+  withMaxSuccess,
+ )
 
 -- =================================================================
 
 relevantCasesAreCovered ::
   forall era.
-  ( EraGen era,
-    Default (State (EraRule "PPUP" era)),
-    ChainProperty era,
-    QC.HasTrace (CHAIN era) (GenEnv era),
-    ProtVerAtMost era 8
+  ( EraGen era
+  , Default (State (EraRule "PPUP" era))
+  , ChainProperty era
+  , QC.HasTrace (CHAIN era) (GenEnv era)
+  , ProtVerAtMost era 8
   ) =>
   Property
 relevantCasesAreCovered = do
@@ -117,10 +117,10 @@ relevantCasesAreCovered = do
 
 relevantCasesAreCoveredForTrace ::
   forall era.
-  ( ChainProperty era,
-    EraSegWits era,
-    ShelleyEraTxBody era,
-    ProtVerAtMost era 8
+  ( ChainProperty era
+  , EraSegWits era
+  , ShelleyEraTxBody era
+  , ProtVerAtMost era 8
   ) =>
   Trace (CHAIN era) ->
   Property
@@ -133,65 +133,80 @@ relevantCasesAreCoveredForTrace tr = do
       certs_ = concat certsByTx_
 
       classifications =
-        [ ( "there is at least 1 certificate for every 2 transactions",
-            length txs < 2 * length certs_,
-            60
-          ),
-          ( "there is at least 1 RegKey certificate for every 10 transactions",
-            length txs < 10 * length (filter isRegKey certs_),
-            60
-          ),
-          ( "there is at least 1 DeRegKey certificate for every 20 transactions",
-            length txs < 20 * length (filter isDeRegKey certs_),
-            60
-          ),
-          ( "there is at least 1 Delegation certificate for every 10 transactions",
-            length txs < 10 * length (filter isDelegation certs_),
-            60
-          ),
-          ( "there is at least 1 Genesis Delegation certificate for every 20 transactions",
-            length txs < 20 * length (filter isGenesisDelegation certs_),
-            60
-          ),
-          ( "there is at least 1 RetirePool certificate for every 10 transactions",
-            length txs < 10 * length (filter isRetirePool certs_),
-            60
-          ),
-          ( "there is at least 1 MIR certificate (spending Reserves) for every 60 transactions",
-            length txs < 60 * length (filter isReservesMIRCert certs_),
-            40
-          ),
-          ( "there is at least 1 MIR certificate (spending Treasury) for every 60 transactions",
-            length txs < 60 * length (filter isTreasuryMIRCert certs_),
-            40
-          ),
-          ( "there is at least 1 RegPool certificate for every 10 transactions",
-            length txs < 10 * length (filter isRegPool certs_),
-            60
-          ),
-          ( "at least 10% of transactions have script TxOuts",
-            0.1 < txScriptOutputsRatio (view outputsTxBodyL . view bodyTxL <$> txs),
-            20
-          ),
-          ( "at least 10% of `DCertDeleg` certificates have script credentials",
-            0.1 < scriptCredentialCertsRatio certs_,
-            60
-          ),
-          ( "at least 1 in 10 transactions have a reward withdrawal",
-            length txs < 10 * length (filter (hasWithdrawal @era) txs),
-            60
-          ),
-          ( "at least 1 in 20 transactions have non-trivial protocol param updates",
-            length txs < 20 * length (filter (hasPParamUpdate @era) txs),
-            60
-          ),
-          ( "at least 1 in 20 transactions have metadata",
-            length txs < 20 * length (filter (hasMetadata @era) txs),
-            60
-          ),
-          ( "at least 5 epochs in a trace, 20% of the time",
-            5 <= epochsInTrace bs,
-            20
+        [
+          ( "there is at least 1 certificate for every 2 transactions"
+          , length txs < 2 * length certs_
+          , 60
+          )
+        ,
+          ( "there is at least 1 RegKey certificate for every 10 transactions"
+          , length txs < 10 * length (filter isRegKey certs_)
+          , 60
+          )
+        ,
+          ( "there is at least 1 DeRegKey certificate for every 20 transactions"
+          , length txs < 20 * length (filter isDeRegKey certs_)
+          , 60
+          )
+        ,
+          ( "there is at least 1 Delegation certificate for every 10 transactions"
+          , length txs < 10 * length (filter isDelegation certs_)
+          , 60
+          )
+        ,
+          ( "there is at least 1 Genesis Delegation certificate for every 20 transactions"
+          , length txs < 20 * length (filter isGenesisDelegation certs_)
+          , 60
+          )
+        ,
+          ( "there is at least 1 RetirePool certificate for every 10 transactions"
+          , length txs < 10 * length (filter isRetirePool certs_)
+          , 60
+          )
+        ,
+          ( "there is at least 1 MIR certificate (spending Reserves) for every 60 transactions"
+          , length txs < 60 * length (filter isReservesMIRCert certs_)
+          , 40
+          )
+        ,
+          ( "there is at least 1 MIR certificate (spending Treasury) for every 60 transactions"
+          , length txs < 60 * length (filter isTreasuryMIRCert certs_)
+          , 40
+          )
+        ,
+          ( "there is at least 1 RegPool certificate for every 10 transactions"
+          , length txs < 10 * length (filter isRegPool certs_)
+          , 60
+          )
+        ,
+          ( "at least 10% of transactions have script TxOuts"
+          , 0.1 < txScriptOutputsRatio (view outputsTxBodyL . view bodyTxL <$> txs)
+          , 20
+          )
+        ,
+          ( "at least 10% of `DCertDeleg` certificates have script credentials"
+          , 0.1 < scriptCredentialCertsRatio certs_
+          , 60
+          )
+        ,
+          ( "at least 1 in 10 transactions have a reward withdrawal"
+          , length txs < 10 * length (filter (hasWithdrawal @era) txs)
+          , 60
+          )
+        ,
+          ( "at least 1 in 20 transactions have non-trivial protocol param updates"
+          , length txs < 20 * length (filter (hasPParamUpdate @era) txs)
+          , 60
+          )
+        ,
+          ( "at least 1 in 20 transactions have metadata"
+          , length txs < 20 * length (filter (hasMetadata @era) txs)
+          , 60
+          )
+        ,
+          ( "at least 5 epochs in a trace, 20% of the time"
+          , 5 <= epochsInTrace bs
+          , 20
           )
         ]
 
@@ -227,9 +242,9 @@ scriptCredentialCertsRatio certs =
 
 -- | Extract the certificates from the transactions
 certsByTx ::
-  ( ShelleyEraTxBody era,
-    EraTx era,
-    ProtVerAtMost era 8
+  ( ShelleyEraTxBody era
+  , EraTx era
+  , ProtVerAtMost era 8
   ) =>
   [Tx era] ->
   [[DCert (EraCrypto era)]]
@@ -277,13 +292,13 @@ hasMetadata tx = f (tx ^. bodyTxL . auxDataHashTxBodyL)
 
 onlyValidLedgerSignalsAreGenerated ::
   forall era ledger.
-  ( EraGen era,
-    QC.HasTrace ledger (GenEnv era),
-    Default (State (EraRule "PPUP" era)),
-    QC.BaseEnv ledger ~ Globals,
-    State ledger ~ LedgerState era,
-    Show (Environment ledger),
-    Show (Signal ledger)
+  ( EraGen era
+  , QC.HasTrace ledger (GenEnv era)
+  , Default (State (EraRule "PPUP" era))
+  , QC.BaseEnv ledger ~ Globals
+  , State ledger ~ LedgerState era
+  , Show (Environment ledger)
+  , Show (Signal ledger)
   ) =>
   Property
 onlyValidLedgerSignalsAreGenerated =
@@ -304,9 +319,9 @@ onlyValidLedgerSignalsAreGenerated =
 -- actually bounds the number of bytes in the serialized transaction.
 propAbstractSizeBoundsBytes ::
   forall era.
-  ( EraGen era,
-    QC.HasTrace (ShelleyLEDGER era) (GenEnv era),
-    Default (State (EraRule "PPUP" era))
+  ( EraGen era
+  , QC.HasTrace (ShelleyLEDGER era) (GenEnv era)
+  , Default (State (EraRule "PPUP" era))
   ) =>
   Property
 propAbstractSizeBoundsBytes = property $ do
@@ -330,9 +345,9 @@ propAbstractSizeBoundsBytes = property $ do
 -- is not off by an acceptable order of magnitude.
 propAbstractSizeNotTooBig ::
   forall era.
-  ( EraGen era,
-    QC.HasTrace (ShelleyLEDGER era) (GenEnv era),
-    Default (State (EraRule "PPUP" era))
+  ( EraGen era
+  , QC.HasTrace (ShelleyLEDGER era) (GenEnv era)
+  , Default (State (EraRule "PPUP" era))
   ) =>
   Property
 propAbstractSizeNotTooBig = property $ do
@@ -361,9 +376,9 @@ propAbstractSizeNotTooBig = property $ do
 
 onlyValidChainSignalsAreGenerated ::
   forall era.
-  ( EraGen era,
-    Default (State (EraRule "PPUP" era)),
-    QC.HasTrace (CHAIN era) (GenEnv era)
+  ( EraGen era
+  , Default (State (EraRule "PPUP" era))
+  , QC.HasTrace (CHAIN era) (GenEnv era)
   ) =>
   Property
 onlyValidChainSignalsAreGenerated =

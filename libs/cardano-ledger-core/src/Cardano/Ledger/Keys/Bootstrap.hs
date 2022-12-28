@@ -13,20 +13,20 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Ledger.Keys.Bootstrap
-  ( BootstrapWitness
-      ( BootstrapWitness,
-        bwKey,
-        bwSig,
-        bwChainCode,
-        bwAttributes
-      ),
-    ChainCode (..),
-    bootstrapWitKeyHash,
-    unpackByronVKey,
-    makeBootstrapWitness,
-    verifyBootstrapWit,
-  )
+module Cardano.Ledger.Keys.Bootstrap (
+  BootstrapWitness (
+    BootstrapWitness,
+    bwKey,
+    bwSig,
+    bwChainCode,
+    bwAttributes
+  ),
+  ChainCode (..),
+  bootstrapWitKeyHash,
+  unpackByronVKey,
+  makeBootstrapWitness,
+  verifyBootstrapWit,
+)
 where
 
 import qualified Cardano.Chain.Common as Byron
@@ -34,32 +34,32 @@ import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.Signing as Byron
 import qualified Cardano.Crypto.Wallet as WC
-import Cardano.Ledger.Binary
-  ( Annotator,
-    FromCBOR (..),
-    ToCBOR (..),
-    annotatorSlice,
-    byronProtVer,
-    decodeRecordNamed,
-    encodeListLen,
-    encodePreEncoded,
-    serialize',
-    serializeEncoding,
-  )
-import Cardano.Ledger.Binary.Crypto
-  ( decodeSignedDSIGN,
-    encodeSignedDSIGN,
-  )
+import Cardano.Ledger.Binary (
+  Annotator,
+  FromCBOR (..),
+  ToCBOR (..),
+  annotatorSlice,
+  byronProtVer,
+  decodeRecordNamed,
+  encodeListLen,
+  encodePreEncoded,
+  serialize',
+  serializeEncoding,
+ )
+import Cardano.Ledger.Binary.Crypto (
+  decodeSignedDSIGN,
+  encodeSignedDSIGN,
+ )
 import Cardano.Ledger.Crypto (ADDRHASH, DSIGN)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
-import Cardano.Ledger.Keys
-  ( Hash,
-    KeyHash (..),
-    KeyRole (..),
-    VKey (..),
-    verifySignedDSIGN,
-  )
+import Cardano.Ledger.Keys (
+  Hash,
+  KeyHash (..),
+  KeyRole (..),
+  VKey (..),
+  verifySignedDSIGN,
+ )
 import qualified Cardano.Ledger.Keys as Keys
 import Control.DeepSeq (NFData)
 import Data.ByteString (ByteString)
@@ -78,15 +78,15 @@ newtype ChainCode = ChainCode {unChainCode :: ByteString}
   deriving newtype (NoThunks, ToCBOR, FromCBOR, NFData)
 
 data BootstrapWitness c = BootstrapWitness'
-  { bwKey' :: !(VKey 'Witness c),
-    bwSig' ::
+  { bwKey' :: !(VKey 'Witness c)
+  , bwSig' ::
       !( Keys.SignedDSIGN
-           c
-           (Hash c EraIndependentTxBody)
-       ),
-    bwChainCode' :: !ChainCode,
-    bwAttributes' :: !ByteString,
-    bwBytes :: LBS.ByteString
+          c
+          (Hash c EraIndependentTxBody)
+       )
+  , bwChainCode' :: !ChainCode
+  , bwAttributes' :: !ByteString
+  , bwBytes :: LBS.ByteString
   }
   deriving (Generic)
 
@@ -95,9 +95,9 @@ deriving instance CC.Crypto c => Show (BootstrapWitness c)
 deriving instance CC.Crypto c => Eq (BootstrapWitness c)
 
 instance
-  ( CC.Crypto era,
-    NFData (DSIGN.VerKeyDSIGN (DSIGN era)),
-    NFData (DSIGN.SigDSIGN (DSIGN era))
+  ( CC.Crypto era
+  , NFData (DSIGN.VerKeyDSIGN (DSIGN era))
+  , NFData (DSIGN.SigDSIGN (DSIGN era))
   ) =>
   NFData (BootstrapWitness era)
 
@@ -194,8 +194,8 @@ unpackByronVKey
 
 verifyBootstrapWit ::
   forall c.
-  ( CC.Crypto c,
-    DSIGN.Signable (DSIGN c) (Hash c EraIndependentTxBody)
+  ( CC.Crypto c
+  , DSIGN.Signable (DSIGN c) (Hash c EraIndependentTxBody)
   ) =>
   Hash c EraIndependentTxBody ->
   BootstrapWitness c ->
@@ -213,8 +213,8 @@ coerceSignature sig =
 
 makeBootstrapWitness ::
   forall c.
-  ( DSIGN c ~ DSIGN.Ed25519DSIGN,
-    CC.Crypto c
+  ( DSIGN c ~ DSIGN.Ed25519DSIGN
+  , CC.Crypto c
   ) =>
   Hash c EraIndependentTxBody ->
   Byron.SigningKey ->

@@ -19,16 +19,16 @@ import Cardano.Crypto.Hash.SHA3_256 (SHA3_256)
 import Cardano.Crypto.Hash.Short (ShortHash)
 import Cardano.Crypto.KES.Class (SigKES, SignKeyKES, VerKeyKES)
 import Cardano.Crypto.KES.CompactSingle (CompactSingleKES)
-import Cardano.Crypto.KES.CompactSum
-  ( CompactSum0KES,
-    CompactSum1KES,
-    CompactSum2KES,
-    CompactSum3KES,
-    CompactSum4KES,
-    CompactSum5KES,
-    CompactSum6KES,
-    CompactSum7KES,
-  )
+import Cardano.Crypto.KES.CompactSum (
+  CompactSum0KES,
+  CompactSum1KES,
+  CompactSum2KES,
+  CompactSum3KES,
+  CompactSum4KES,
+  CompactSum5KES,
+  CompactSum6KES,
+  CompactSum7KES,
+ )
 import Cardano.Crypto.KES.Mock (MockKES)
 import Cardano.Crypto.KES.Simple (SimpleKES)
 import Cardano.Crypto.KES.Sum (Sum0KES, Sum1KES, Sum2KES, Sum3KES, Sum4KES, Sum5KES, Sum6KES, Sum7KES)
@@ -212,38 +212,38 @@ spec = do
         -- below we also test some tuple roundtripping as well as KES
         describe "Simple" $ do
           roundTripSpec
-            @( SignKeyKES (SimpleKES Ed25519DSIGN 1),
-               SignKeyKES (SimpleKES Ed25519DSIGN 2),
-               SignKeyKES (SimpleKES Ed25519DSIGN 3),
-               SignKeyKES (SimpleKES Ed25519DSIGN 4),
-               SignKeyKES (SimpleKES Ed25519DSIGN 5),
-               SignKeyKES (SimpleKES Ed25519DSIGN 6)
+            @( SignKeyKES (SimpleKES Ed25519DSIGN 1)
+             , SignKeyKES (SimpleKES Ed25519DSIGN 2)
+             , SignKeyKES (SimpleKES Ed25519DSIGN 3)
+             , SignKeyKES (SimpleKES Ed25519DSIGN 4)
+             , SignKeyKES (SimpleKES Ed25519DSIGN 5)
+             , SignKeyKES (SimpleKES Ed25519DSIGN 6)
              )
             cborTrip
           roundTripSpec
             @(SignKeyKES (SimpleKES Ed25519DSIGN 7))
             cborTrip
           roundTripSpec
-            @( VerKeyKES (SimpleKES Ed25519DSIGN 1),
-               VerKeyKES (SimpleKES Ed25519DSIGN 2),
-               VerKeyKES (SimpleKES Ed25519DSIGN 3),
-               VerKeyKES (SimpleKES Ed25519DSIGN 4),
-               VerKeyKES (SimpleKES Ed25519DSIGN 5),
-               VerKeyKES (SimpleKES Ed25519DSIGN 6),
-               VerKeyKES (SimpleKES Ed25519DSIGN 7)
+            @( VerKeyKES (SimpleKES Ed25519DSIGN 1)
+             , VerKeyKES (SimpleKES Ed25519DSIGN 2)
+             , VerKeyKES (SimpleKES Ed25519DSIGN 3)
+             , VerKeyKES (SimpleKES Ed25519DSIGN 4)
+             , VerKeyKES (SimpleKES Ed25519DSIGN 5)
+             , VerKeyKES (SimpleKES Ed25519DSIGN 6)
+             , VerKeyKES (SimpleKES Ed25519DSIGN 7)
              )
             cborTrip
           roundTripSpec
-            @( SigKES (SimpleKES Ed25519DSIGN 1),
-               SigKES (SimpleKES Ed25519DSIGN 2),
-               SigKES (SimpleKES Ed25519DSIGN 3),
-               SigKES (SimpleKES Ed25519DSIGN 4)
+            @( SigKES (SimpleKES Ed25519DSIGN 1)
+             , SigKES (SimpleKES Ed25519DSIGN 2)
+             , SigKES (SimpleKES Ed25519DSIGN 3)
+             , SigKES (SimpleKES Ed25519DSIGN 4)
              )
             cborTrip
           roundTripSpec
-            @( SigKES (SimpleKES Ed25519DSIGN 5),
-               SigKES (SimpleKES Ed25519DSIGN 6),
-               SigKES (SimpleKES Ed25519DSIGN 7)
+            @( SigKES (SimpleKES Ed25519DSIGN 5)
+             , SigKES (SimpleKES Ed25519DSIGN 6)
+             , SigKES (SimpleKES Ed25519DSIGN 7)
              )
             cborTrip
           describe "Mock" $ do
@@ -252,12 +252,12 @@ spec = do
             roundTripSpec @(SigKES (MockKES 7)) cborTrip
         describe "Hash" $ do
           roundTripSpec
-            @( Hash Blake2b_224 (),
-               Hash Blake2b_256 (),
-               Hash SHA256 (),
-               Hash SHA3_256 (),
-               Hash Keccak256 (),
-               Hash ShortHash ()
+            @( Hash Blake2b_224 ()
+             , Hash Blake2b_256 ()
+             , Hash SHA256 ()
+             , Hash SHA3_256 ()
+             , Hash Keccak256 ()
+             , Hash ShortHash ()
              )
             cborTrip
   describe "EmbedTrip" $ do

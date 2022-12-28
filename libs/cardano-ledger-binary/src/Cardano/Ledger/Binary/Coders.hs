@@ -20,10 +20,10 @@
 --
 -- Duality properties of @(Summands name decodeT)@ and @(SparseKeyed name (init::T) pick
 -- required)@ also exist but are harder to describe succinctly.
-module Cardano.Ledger.Binary.Coders
-  ( module Cardano.Ledger.Binary.Encoding.Coders,
-    module Cardano.Ledger.Binary.Decoding.Coders,
-  )
+module Cardano.Ledger.Binary.Coders (
+  module Cardano.Ledger.Binary.Encoding.Coders,
+  module Cardano.Ledger.Binary.Decoding.Coders,
+)
 where
 
 import Cardano.Ledger.Binary.Decoding.Coders

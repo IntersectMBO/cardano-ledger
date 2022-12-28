@@ -6,10 +6,10 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Test.Cardano.Ledger.ShelleyMA.Serialisation.Timelocks
-  ( timelockTests,
-    MultiSig,
-  )
+module Test.Cardano.Ledger.ShelleyMA.Serialisation.Timelocks (
+  timelockTests,
+  MultiSig,
+)
 where
 
 import Cardano.Ledger.Allegra (Allegra)
@@ -45,11 +45,11 @@ timelockTests :: TestTree
 timelockTests =
   testGroup
     "Timelock tests"
-    [ testCase "s1" $ roundTripAnnExpectation s1,
-      testCase "s2" $ roundTripAnnExpectation s2,
-      testCase "s3" $ roundTripAnnExpectation s3,
-      testProperty "roundtripTimelock" $ roundTripAnnExpectation @(Timelock Shelley),
-      testProperty "MultiSig deserialises as Timelock" $
+    [ testCase "s1" $ roundTripAnnExpectation s1
+    , testCase "s2" $ roundTripAnnExpectation s2
+    , testCase "s3" $ roundTripAnnExpectation s3
+    , testProperty "roundtripTimelock" $ roundTripAnnExpectation @(Timelock Shelley)
+    , testProperty "MultiSig deserialises as Timelock" $
         embedTripAnnExpectation @(MultiSig Shelley)
           @(Timelock Allegra)
           (eraProtVerHigh @Shelley)

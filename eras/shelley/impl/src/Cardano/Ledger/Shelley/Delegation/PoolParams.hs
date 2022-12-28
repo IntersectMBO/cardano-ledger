@@ -1,6 +1,6 @@
-module Cardano.Ledger.Shelley.Delegation.PoolParams
-  ( poolSpec,
-  )
+module Cardano.Ledger.Shelley.Delegation.PoolParams (
+  poolSpec,
+)
 where
 
 import Cardano.Ledger.BaseTypes (UnitInterval)

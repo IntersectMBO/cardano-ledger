@@ -1,6 +1,6 @@
-module Test.Cardano.Chain.Delegation.Example
-  ( exampleCertificates,
-  )
+module Test.Cardano.Chain.Delegation.Example (
+  exampleCertificates,
+)
 where
 
 import Cardano.Chain.Delegation (Certificate, signCertificate)

@@ -13,24 +13,24 @@
 -- storage size and does not have to be the same as the representation used
 -- when operating on the data. Conversion functions are to be used when
 -- inserting and retrieving values from the UTxO.
-module Cardano.Chain.UTxO.Compact
-  ( CompactTxIn (..),
-    toCompactTxIn,
-    fromCompactTxIn,
-    CompactTxId,
-    toCompactTxId,
-    fromCompactTxId,
-    CompactTxOut (..),
-    toCompactTxOut,
-    fromCompactTxOut,
-  )
+module Cardano.Chain.UTxO.Compact (
+  CompactTxIn (..),
+  toCompactTxIn,
+  fromCompactTxIn,
+  CompactTxId,
+  toCompactTxId,
+  fromCompactTxId,
+  CompactTxOut (..),
+  toCompactTxOut,
+  fromCompactTxOut,
+)
 where
 
-import Cardano.Chain.Common.Compact
-  ( CompactAddress,
-    fromCompactAddress,
-    toCompactAddress,
-  )
+import Cardano.Chain.Common.Compact (
+  CompactAddress,
+  fromCompactAddress,
+  toCompactAddress,
+ )
 import Cardano.Chain.Common.Lovelace (Lovelace)
 import Cardano.Chain.UTxO.Tx (TxId, TxIn (..), TxOut (..))
 import Cardano.Crypto.Hashing (hashToBytes, unsafeHashFromBytes)

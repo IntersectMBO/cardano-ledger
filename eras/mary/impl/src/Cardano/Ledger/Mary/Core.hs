@@ -1,9 +1,9 @@
 {-# LANGUAGE FlexibleContexts #-}
 
-module Cardano.Ledger.Mary.Core
-  ( MaryEraTxBody (..),
-    module Cardano.Ledger.Allegra.Core,
-  )
+module Cardano.Ledger.Mary.Core (
+  MaryEraTxBody (..),
+  module Cardano.Ledger.Allegra.Core,
+)
 where
 
 import Cardano.Ledger.Allegra.Core

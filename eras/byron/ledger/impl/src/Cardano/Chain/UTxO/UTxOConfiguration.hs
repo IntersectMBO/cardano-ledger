@@ -3,30 +3,30 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Chain.UTxO.UTxOConfiguration
-  ( UTxOConfiguration (..),
-    defaultUTxOConfiguration,
-    mkUTxOConfiguration,
-  )
+module Cardano.Chain.UTxO.UTxOConfiguration (
+  UTxOConfiguration (..),
+  defaultUTxOConfiguration,
+  mkUTxOConfiguration,
+)
 where
 
 import Cardano.Chain.Common.Address (Address)
 import Cardano.Chain.Common.Compact (CompactAddress, toCompactAddress)
-import Cardano.Ledger.Binary
-  ( FromCBOR (..),
-    ToCBOR (..),
-    encodeListLen,
-    enforceSize,
-  )
+import Cardano.Ledger.Binary (
+  FromCBOR (..),
+  ToCBOR (..),
+  encodeListLen,
+  enforceSize,
+ )
 import Cardano.Prelude
 import qualified Data.Set as Set
 import NoThunks.Class (NoThunks (..))
 
 -- | Additional configuration for ledger validation.
 data UTxOConfiguration = UTxOConfiguration
-  { -- | Set of source address which are asset-locked. Transactions which
-    -- use these addresses as transaction inputs will be deemed invalid.
-    tcAssetLockedSrcAddrs :: !(Set CompactAddress)
+  { tcAssetLockedSrcAddrs :: !(Set CompactAddress)
+  -- ^ Set of source address which are asset-locked. Transactions which
+  -- use these addresses as transaction inputs will be deemed invalid.
   }
   deriving (Eq, Show, Generic, NoThunks)
 

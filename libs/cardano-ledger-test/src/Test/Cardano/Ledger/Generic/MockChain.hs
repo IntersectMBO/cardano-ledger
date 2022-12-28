@@ -18,53 +18,53 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.Pretty
-  ( PDoc,
-    PrettyA (..),
-    ppInt,
-    ppKeyHash,
-    ppRecord,
-    ppSlotNo,
-  )
-import Cardano.Ledger.Shelley.LedgerState
-  ( EpochState (..),
-    LedgerState (..),
-    NewEpochState (..),
-    StashedAVVMAddresses,
-  )
+import Cardano.Ledger.Pretty (
+  PDoc,
+  PrettyA (..),
+  ppInt,
+  ppKeyHash,
+  ppRecord,
+  ppSlotNo,
+ )
+import Cardano.Ledger.Shelley.LedgerState (
+  EpochState (..),
+  LedgerState (..),
+  NewEpochState (..),
+  StashedAVVMAddresses,
+ )
 import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate)
-import Cardano.Ledger.Shelley.Rules
-  ( LedgerEnv,
-    RupdEnv,
-    ShelleyLEDGERS,
-    ShelleyLedgersEnv (..),
-    ShelleyLedgersEvent,
-    ShelleyLedgersPredFailure,
-    ShelleyTICK,
-    ShelleyTickEvent,
-    ShelleyTickPredFailure,
-  )
+import Cardano.Ledger.Shelley.Rules (
+  LedgerEnv,
+  RupdEnv,
+  ShelleyLEDGERS,
+  ShelleyLedgersEnv (..),
+  ShelleyLedgersEvent,
+  ShelleyLedgersPredFailure,
+  ShelleyTICK,
+  ShelleyTickEvent,
+  ShelleyTickPredFailure,
+ )
 import Cardano.Slotting.Slot (EpochNo, SlotNo)
-import Control.State.Transition
-  ( Embed (..),
-    STS (..),
-    TRC (..),
-    TransitionRule,
-    judgmentContext,
-    trans,
-    (?!),
-  )
+import Control.State.Transition (
+  Embed (..),
+  STS (..),
+  TRC (..),
+  TransitionRule,
+  judgmentContext,
+  trans,
+  (?!),
+ )
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe)
 import Data.Sequence.Strict (StrictSeq (..), fromStrict)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks, ThunkInfo, noThunks)
 import Test.Cardano.Ledger.Generic.Functions (TotalAda (..))
-import Test.Cardano.Ledger.Generic.PrettyCore
-  ( pcNewEpochState,
-    ppLedgersPredicateFailure,
-    ppTickPredicateFailure,
-  )
+import Test.Cardano.Ledger.Generic.PrettyCore (
+  pcNewEpochState,
+  ppLedgersPredicateFailure,
+  ppTickPredicateFailure,
+ )
 import Test.Cardano.Ledger.Generic.Proof (Proof (..), Reflect (reify))
 
 -- ================================================
@@ -85,23 +85,23 @@ data MockChainEvent era
   | MockChainFromLedgersEvent !(ShelleyLedgersEvent era)
 
 data MockBlock era = MockBlock
-  { mbIssuer :: !(KeyHash 'StakePool (EraCrypto era)),
-    mbSlot :: !SlotNo,
-    mbTrans :: !(StrictSeq (Core.Tx era))
+  { mbIssuer :: !(KeyHash 'StakePool (EraCrypto era))
+  , mbSlot :: !SlotNo
+  , mbTrans :: !(StrictSeq (Core.Tx era))
   }
 
 data MockChainState era = MockChainState
-  { mcsNes :: !(NewEpochState era),
-    mcsLastBlock :: !SlotNo,
-    mcsCount :: !Int -- Counts the blocks made
+  { mcsNes :: !(NewEpochState era)
+  , mcsLastBlock :: !SlotNo
+  , mcsCount :: !Int -- Counts the blocks made
   }
 
 deriving instance
-  ( CC.Crypto (EraCrypto era),
-    Eq (Core.TxOut era),
-    Eq (Core.PParams era),
-    Eq (State (Core.EraRule "PPUP" era)),
-    Eq (StashedAVVMAddresses era)
+  ( CC.Crypto (EraCrypto era)
+  , Eq (Core.TxOut era)
+  , Eq (Core.PParams era)
+  , Eq (State (Core.EraRule "PPUP" era))
+  , Eq (StashedAVVMAddresses era)
   ) =>
   Eq (MockChainState era)
 
@@ -122,16 +122,16 @@ instance (Era era, NoThunks (NewEpochState era)) => NoThunks (MockChainState era
 -- ======================================================================
 
 instance
-  ( Reflect era,
-    STS (ShelleyLEDGERS era),
-    STS (ShelleyTICK era),
-    State (Core.EraRule "TICK" era) ~ NewEpochState era,
-    Signal (Core.EraRule "TICK" era) ~ SlotNo,
-    Environment (Core.EraRule "TICK" era) ~ (),
-    Signal (Core.EraRule "LEDGER" era) ~ Core.Tx era,
-    Environment (Core.EraRule "LEDGER" era) ~ LedgerEnv era,
-    State (Core.EraRule "LEDGER" era) ~ LedgerState era,
-    Embed (Core.EraRule "TICK" era) (MOCKCHAIN era)
+  ( Reflect era
+  , STS (ShelleyLEDGERS era)
+  , STS (ShelleyTICK era)
+  , State (Core.EraRule "TICK" era) ~ NewEpochState era
+  , Signal (Core.EraRule "TICK" era) ~ SlotNo
+  , Environment (Core.EraRule "TICK" era) ~ ()
+  , Signal (Core.EraRule "LEDGER" era) ~ Core.Tx era
+  , Environment (Core.EraRule "LEDGER" era) ~ LedgerEnv era
+  , State (Core.EraRule "LEDGER" era) ~ LedgerState era
+  , Embed (Core.EraRule "TICK" era) (MOCKCHAIN era)
   ) =>
   STS (MOCKCHAIN era)
   where
@@ -146,14 +146,14 @@ instance
 
 chainTransition ::
   forall era.
-  ( STS (ShelleyLEDGERS era),
-    State (Core.EraRule "TICK" era) ~ NewEpochState era,
-    Signal (Core.EraRule "TICK" era) ~ SlotNo,
-    Environment (Core.EraRule "TICK" era) ~ (),
-    Signal (Core.EraRule "LEDGER" era) ~ Core.Tx era,
-    Environment (Core.EraRule "LEDGER" era) ~ LedgerEnv era,
-    State (Core.EraRule "LEDGER" era) ~ LedgerState era,
-    Embed (Core.EraRule "TICK" era) (MOCKCHAIN era)
+  ( STS (ShelleyLEDGERS era)
+  , State (Core.EraRule "TICK" era) ~ NewEpochState era
+  , Signal (Core.EraRule "TICK" era) ~ SlotNo
+  , Environment (Core.EraRule "TICK" era) ~ ()
+  , Signal (Core.EraRule "LEDGER" era) ~ Core.Tx era
+  , Environment (Core.EraRule "LEDGER" era) ~ LedgerEnv era
+  , State (Core.EraRule "LEDGER" era) ~ LedgerState era
+  , Embed (Core.EraRule "TICK" era) (MOCKCHAIN era)
   ) =>
   TransitionRule (MOCKCHAIN era)
 chainTransition = do
@@ -180,14 +180,14 @@ chainTransition = do
 -- Embed instances
 
 instance
-  ( STS (ShelleyTICK era),
-    Signal (Core.EraRule "RUPD" era) ~ SlotNo,
-    State (Core.EraRule "RUPD" era) ~ StrictMaybe (PulsingRewUpdate (EraCrypto era)),
-    Environment (Core.EraRule "RUPD" era) ~ RupdEnv era,
-    State (Core.EraRule "NEWEPOCH" era) ~ NewEpochState era,
-    Signal (Core.EraRule "NEWEPOCH" era) ~ EpochNo,
-    State (Core.EraRule "NEWEPOCH" era) ~ NewEpochState era,
-    Environment (Core.EraRule "NEWEPOCH" era) ~ ()
+  ( STS (ShelleyTICK era)
+  , Signal (Core.EraRule "RUPD" era) ~ SlotNo
+  , State (Core.EraRule "RUPD" era) ~ StrictMaybe (PulsingRewUpdate (EraCrypto era))
+  , Environment (Core.EraRule "RUPD" era) ~ RupdEnv era
+  , State (Core.EraRule "NEWEPOCH" era) ~ NewEpochState era
+  , Signal (Core.EraRule "NEWEPOCH" era) ~ EpochNo
+  , State (Core.EraRule "NEWEPOCH" era) ~ NewEpochState era
+  , Environment (Core.EraRule "NEWEPOCH" era) ~ ()
   ) =>
   Embed (ShelleyTICK era) (MOCKCHAIN era)
   where
@@ -195,10 +195,10 @@ instance
   wrapEvent = MockChainFromTickEvent
 
 instance
-  ( STS (ShelleyLEDGERS era),
-    State (Core.EraRule "LEDGER" era) ~ LedgerState era,
-    Environment (Core.EraRule "LEDGER" era) ~ LedgerEnv era,
-    Signal (Core.EraRule "LEDGER" era) ~ Core.Tx era
+  ( STS (ShelleyLEDGERS era)
+  , State (Core.EraRule "LEDGER" era) ~ LedgerState era
+  , Environment (Core.EraRule "LEDGER" era) ~ LedgerEnv era
+  , Signal (Core.EraRule "LEDGER" era) ~ Core.Tx era
   ) =>
   Embed (ShelleyLEDGERS era) (MOCKCHAIN era)
   where
@@ -226,9 +226,9 @@ ppMockChainState ::
 ppMockChainState (MockChainState nes sl count) =
   ppRecord
     "MockChainState"
-    [ ("NewEpochState", pcNewEpochState reify nes),
-      ("LastBlock", ppSlotNo sl),
-      ("Count", ppInt count)
+    [ ("NewEpochState", pcNewEpochState reify nes)
+    , ("LastBlock", ppSlotNo sl)
+    , ("Count", ppInt count)
     ]
 
 instance Reflect era => PrettyA (MockChainState era) where
@@ -238,9 +238,9 @@ ppMockBlock :: MockBlock era -> PDoc
 ppMockBlock (MockBlock iss sl txs) =
   ppRecord
     "MockBock"
-    [ ("Issuer", ppKeyHash iss),
-      ("Slot", ppSlotNo sl),
-      ("Transactions", ppInt (length txs))
+    [ ("Issuer", ppKeyHash iss)
+    , ("Slot", ppSlotNo sl)
+    , ("Transactions", ppInt (length txs))
     ]
 
 instance PrettyA (MockBlock era) where prettyA = ppMockBlock
@@ -259,8 +259,8 @@ ppMockChainFailure proof x = case proof of
     help (BlocksOutOfOrder lastslot cand) =
       ppRecord
         "BlocksOutOfOrder"
-        [ ("Last applied block", ppSlotNo lastslot),
-          ("Candidate block", ppSlotNo cand)
+        [ ("Last applied block", ppSlotNo lastslot)
+        , ("Candidate block", ppSlotNo cand)
         ]
 
 noThunksGen :: Proof era -> MockChainState era -> IO (Maybe ThunkInfo)

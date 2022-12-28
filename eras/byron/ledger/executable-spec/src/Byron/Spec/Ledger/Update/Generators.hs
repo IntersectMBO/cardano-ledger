@@ -4,19 +4,19 @@
 -- | Generators for the 'Ledger.Update' values.
 module Byron.Spec.Ledger.Update.Generators (pparamsGen) where
 
-import Byron.Spec.Ledger.Core
-  ( BlockCount (BlockCount),
-    SlotCount (SlotCount),
-    unBlockCount,
-    unSlotCount,
-  )
-import Byron.Spec.Ledger.Update
-  ( BkSgnCntT (..),
-    FactorA (..),
-    FactorB (..),
-    PParams (PParams),
-    UpAdptThd (..),
-  )
+import Byron.Spec.Ledger.Core (
+  BlockCount (BlockCount),
+  SlotCount (SlotCount),
+  unBlockCount,
+  unSlotCount,
+ )
+import Byron.Spec.Ledger.Update (
+  BkSgnCntT (..),
+  FactorA (..),
+  FactorB (..),
+  PParams (PParams),
+  UpAdptThd (..),
+ )
 import Data.Word (Word64)
 import Hedgehog
 import qualified Hedgehog.Gen as Gen

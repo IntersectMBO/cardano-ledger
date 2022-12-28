@@ -6,11 +6,11 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Test.Cardano.Ledger.Shelley.RulesTests
-  ( chainExamples,
-    multisigExamples,
-    testTickF,
-  )
+module Test.Cardano.Ledger.Shelley.RulesTests (
+  chainExamples,
+  multisigExamples,
+  testTickF,
+)
 where
 
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
@@ -20,13 +20,13 @@ import Cardano.Ledger.Credential (pattern ScriptHashObj)
 import Cardano.Ledger.Keys (asWitness, hashKey)
 import Cardano.Ledger.Shelley (Shelley)
 import Cardano.Ledger.Shelley.API (ShelleyTICK, ShelleyTICKF)
-import Cardano.Ledger.Shelley.LedgerState
-  ( EpochState (..),
-    LedgerState (..),
-    NewEpochState (..),
-    UTxOState (..),
-    obligationDPState,
-  )
+import Cardano.Ledger.Shelley.LedgerState (
+  EpochState (..),
+  LedgerState (..),
+  NewEpochState (..),
+  UTxOState (..),
+  obligationDPState,
+ )
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..)) -- _maxTxSize getField
 import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate (..), RewardUpdate (..))
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))
@@ -51,16 +51,16 @@ import Test.Cardano.Ledger.Shelley.Examples.PoolLifetime (poolLifetimeExample)
 import Test.Cardano.Ledger.Shelley.Examples.PoolReReg (poolReRegExample)
 import Test.Cardano.Ledger.Shelley.Examples.TwoPools (twoPoolsExample)
 import Test.Cardano.Ledger.Shelley.Examples.Updates (updatesExample)
-import Test.Cardano.Ledger.Shelley.MultiSigExamples
-  ( aliceAndBob,
-    aliceAndBobOrCarl,
-    aliceAndBobOrCarlAndDaria,
-    aliceAndBobOrCarlOrDaria,
-    aliceOnly,
-    aliceOrBob,
-    applyTxWithScript,
-    bobOnly,
-  )
+import Test.Cardano.Ledger.Shelley.MultiSigExamples (
+  aliceAndBob,
+  aliceAndBobOrCarl,
+  aliceAndBobOrCarlAndDaria,
+  aliceAndBobOrCarlOrDaria,
+  aliceOnly,
+  aliceOrBob,
+  applyTxWithScript,
+  bobOnly,
+ )
 import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, assertBool, testCase, (@?=))
@@ -70,47 +70,47 @@ chainExamples :: forall era. (ShelleyTest era) => TestTree
 chainExamples =
   testGroup
     "CHAIN examples"
-    [ testCase "empty block" $ testCHAINExample exEmptyBlock,
-      poolLifetimeExample,
-      twoPoolsExample @era,
-      poolReRegExample,
-      updatesExample,
-      genesisDelegExample,
-      mirExample,
-      testMIRTransfer,
-      testPoolNetworkId
+    [ testCase "empty block" $ testCHAINExample exEmptyBlock
+    , poolLifetimeExample
+    , twoPoolsExample @era
+    , poolReRegExample
+    , updatesExample
+    , genesisDelegExample
+    , mirExample
+    , testMIRTransfer
+    , testPoolNetworkId
     ]
 
 multisigExamples :: TestTree
 multisigExamples =
   testGroup
     "MultiSig Examples"
-    [ testCase "Alice uses SingleSig script" testAliceSignsAlone,
-      testCase "FAIL: Alice doesn't sign in multi-sig" testAliceDoesntSign,
-      testCase "Everybody signs in multi-sig" testEverybodySigns,
-      testCase "FAIL: Wrong script for correct signatures" testWrongScript,
-      testCase "Alice || Bob, Alice signs" testAliceOrBob,
-      testCase "Alice || Bob, Bob signs" testAliceOrBob',
-      testCase "Alice && Bob, both sign" testAliceAndBob,
-      testCase "FAIL: Alice && Bob, Alice signs" testAliceAndBob',
-      testCase "FAIL: Alice && Bob, Bob signs" testAliceAndBob'',
-      testCase "Alice && Bob || Carl, Alice && Bob sign" testAliceAndBobOrCarl,
-      testCase "Alice && Bob || Carl, Carl signs" testAliceAndBobOrCarl',
-      testCase "Alice && Bob || Carl && Daria, Alice && Bob sign" testAliceAndBobOrCarlAndDaria,
-      testCase "Alice && Bob || Carl && Daria, Carl && Daria sign" testAliceAndBobOrCarlAndDaria',
-      testCase "Alice && Bob || Carl || Daria, Alice && Bob sign" testAliceAndBobOrCarlOrDaria,
-      testCase "Alice && Bob || Carl || Daria, Carl signs" testAliceAndBobOrCarlOrDaria',
-      testCase "Alice && Bob || Carl || Daria, Daria signs" testAliceAndBobOrCarlOrDaria'',
-      testCase "two scripts: Alice Or Bob / alice And Bob Or Carl" testTwoScripts,
-      testCase "FAIL: two scripts: Alice Or Bob / alice And Bob Or Carl" testTwoScripts',
-      testCase "script and Key: Alice And Bob and alicePay" testScriptAndSKey,
-      testCase "FAIL: script and Key: Alice And Bob and alicePay" testScriptAndSKey',
-      testCase "script and Key: Alice Or Bob and alicePay, only Alice" testScriptAndSKey'',
-      testCase "script and Key: Alice And Bob Or Carl and alicePay, Alice and Carl sign" testScriptAndSKey''',
-      testCase "withdraw from script locked account, same script" testRwdAliceSignsAlone,
-      testCase "FAIL: withdraw from script locked account" testRwdAliceSignsAlone',
-      testCase "withdraw from script locked account, different script" testRwdAliceSignsAlone'',
-      testCase "FAIL: withdraw from script locked account, signed, missing script" testRwdAliceSignsAlone'''
+    [ testCase "Alice uses SingleSig script" testAliceSignsAlone
+    , testCase "FAIL: Alice doesn't sign in multi-sig" testAliceDoesntSign
+    , testCase "Everybody signs in multi-sig" testEverybodySigns
+    , testCase "FAIL: Wrong script for correct signatures" testWrongScript
+    , testCase "Alice || Bob, Alice signs" testAliceOrBob
+    , testCase "Alice || Bob, Bob signs" testAliceOrBob'
+    , testCase "Alice && Bob, both sign" testAliceAndBob
+    , testCase "FAIL: Alice && Bob, Alice signs" testAliceAndBob'
+    , testCase "FAIL: Alice && Bob, Bob signs" testAliceAndBob''
+    , testCase "Alice && Bob || Carl, Alice && Bob sign" testAliceAndBobOrCarl
+    , testCase "Alice && Bob || Carl, Carl signs" testAliceAndBobOrCarl'
+    , testCase "Alice && Bob || Carl && Daria, Alice && Bob sign" testAliceAndBobOrCarlAndDaria
+    , testCase "Alice && Bob || Carl && Daria, Carl && Daria sign" testAliceAndBobOrCarlAndDaria'
+    , testCase "Alice && Bob || Carl || Daria, Alice && Bob sign" testAliceAndBobOrCarlOrDaria
+    , testCase "Alice && Bob || Carl || Daria, Carl signs" testAliceAndBobOrCarlOrDaria'
+    , testCase "Alice && Bob || Carl || Daria, Daria signs" testAliceAndBobOrCarlOrDaria''
+    , testCase "two scripts: Alice Or Bob / alice And Bob Or Carl" testTwoScripts
+    , testCase "FAIL: two scripts: Alice Or Bob / alice And Bob Or Carl" testTwoScripts'
+    , testCase "script and Key: Alice And Bob and alicePay" testScriptAndSKey
+    , testCase "FAIL: script and Key: Alice And Bob and alicePay" testScriptAndSKey'
+    , testCase "script and Key: Alice Or Bob and alicePay, only Alice" testScriptAndSKey''
+    , testCase "script and Key: Alice And Bob Or Carl and alicePay, Alice and Carl sign" testScriptAndSKey'''
+    , testCase "withdraw from script locked account, same script" testRwdAliceSignsAlone
+    , testCase "FAIL: withdraw from script locked account" testRwdAliceSignsAlone'
+    , testCase "withdraw from script locked account, different script" testRwdAliceSignsAlone''
+    , testCase "FAIL: withdraw from script locked account, signed, missing script" testRwdAliceSignsAlone'''
     ]
 
 testAliceSignsAlone :: Assertion
@@ -151,10 +151,10 @@ testEverybodySigns =
         [aliceOnly]
         (Wdrl Map.empty)
         (Coin 0)
-        [ asWitness Cast.alicePay,
-          asWitness Cast.bobPay,
-          asWitness Cast.carlPay,
-          asWitness Cast.dariaPay
+        [ asWitness Cast.alicePay
+        , asWitness Cast.bobPay
+        , asWitness Cast.carlPay
+        , asWitness Cast.dariaPay
         ]
     s = "problem: " ++ show utxoSt'
 
@@ -354,11 +354,11 @@ testTwoScripts =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
-        [ (aliceOrBob, Coin 10000),
-          (aliceAndBobOrCarl, Coin 1000)
+        [ (aliceOrBob, Coin 10000)
+        , (aliceAndBobOrCarl, Coin 1000)
         ]
-        [ aliceOrBob,
-          aliceAndBobOrCarl
+        [ aliceOrBob
+        , aliceAndBobOrCarl
         ]
         (Wdrl Map.empty)
         (Coin 0)
@@ -376,11 +376,11 @@ testTwoScripts' =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
-        [ (aliceAndBob, Coin 10000),
-          (aliceAndBobOrCarl, Coin 1000)
+        [ (aliceAndBob, Coin 10000)
+        , (aliceAndBobOrCarl, Coin 1000)
         ]
-        [ aliceAndBob,
-          aliceAndBobOrCarl
+        [ aliceAndBob
+        , aliceAndBobOrCarl
         ]
         (Wdrl Map.empty)
         (Coin 0)

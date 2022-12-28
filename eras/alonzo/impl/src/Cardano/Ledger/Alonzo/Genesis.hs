@@ -13,20 +13,20 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module Cardano.Ledger.Alonzo.Genesis
-  ( AlonzoGenesis (AlonzoGenesis, ..),
-    fromShelleyAlonzoPParams,
+module Cardano.Ledger.Alonzo.Genesis (
+  AlonzoGenesis (AlonzoGenesis, ..),
+  fromShelleyAlonzoPParams,
 
-    -- * Deprecated
-    coinsPerUTxOWord,
-    costmdls,
-    prices,
-    maxTxExUnits,
-    maxBlockExUnits,
-    maxValSize,
-    collateralPercentage,
-    maxCollateralInputs,
-  )
+  -- * Deprecated
+  coinsPerUTxOWord,
+  costmdls,
+  prices,
+  maxTxExUnits,
+  maxBlockExUnits,
+  maxValSize,
+  collateralPercentage,
+  maxCollateralInputs,
+)
 where
 
 import Cardano.Ledger.Alonzo.Core (CoinPerWord (..), PParams, upgradePParams)
@@ -34,14 +34,14 @@ import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.PParams (UpgradeAlonzoPParams (..))
 import Cardano.Ledger.Alonzo.Scripts (CostModels (..), ExUnits (..), Prices (..))
 import Cardano.Ledger.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR))
-import Cardano.Ledger.Binary.Coders
-  ( Decode (From, RecD),
-    Encode (Rec, To),
-    decode,
-    encode,
-    (!>),
-    (<!),
-  )
+import Cardano.Ledger.Binary.Coders (
+  Decode (From, RecD),
+  Encode (Rec, To),
+  decode,
+  encode,
+  (!>),
+  (<!),
+ )
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Data.Aeson (FromJSON (..), ToJSON (..), object, (.:), (.=))
@@ -69,25 +69,25 @@ pattern AlonzoGenesis ::
   Natural ->
   AlonzoGenesis
 pattern AlonzoGenesis
-  { agCoinsPerUTxOWord,
-    agCostModels,
-    agPrices,
-    agMaxTxExUnits,
-    agMaxBlockExUnits,
-    agMaxValSize,
-    agCollateralPercentage,
-    agMaxCollateralInputs
+  { agCoinsPerUTxOWord
+  , agCostModels
+  , agPrices
+  , agMaxTxExUnits
+  , agMaxBlockExUnits
+  , agMaxValSize
+  , agCollateralPercentage
+  , agMaxCollateralInputs
   } <-
   ( unAlonzoGenesisWrapper ->
       UpgradeAlonzoPParams
-        { uappCoinsPerUTxOWord = agCoinsPerUTxOWord,
-          uappCostModels = agCostModels,
-          uappPrices = agPrices,
-          uappMaxTxExUnits = agMaxTxExUnits,
-          uappMaxBlockExUnits = agMaxBlockExUnits,
-          uappMaxValSize = agMaxValSize,
-          uappCollateralPercentage = agCollateralPercentage,
-          uappMaxCollateralInputs = agMaxCollateralInputs
+        { uappCoinsPerUTxOWord = agCoinsPerUTxOWord
+        , uappCostModels = agCostModels
+        , uappPrices = agPrices
+        , uappMaxTxExUnits = agMaxTxExUnits
+        , uappMaxBlockExUnits = agMaxBlockExUnits
+        , uappMaxValSize = agMaxValSize
+        , uappCollateralPercentage = agCollateralPercentage
+        , uappMaxCollateralInputs = agMaxCollateralInputs
         }
     )
   where
@@ -102,14 +102,14 @@ pattern AlonzoGenesis
       maxCollateralInputs_ =
         AlonzoGenesisWrapper $
           UpgradeAlonzoPParams
-            { uappCoinsPerUTxOWord = coinsPerUTxOWord_,
-              uappCostModels = costModels_,
-              uappPrices = prices_,
-              uappMaxTxExUnits = maxTxExUnits_,
-              uappMaxBlockExUnits = maxBlockExUnits_,
-              uappMaxValSize = maxValSize_,
-              uappCollateralPercentage = collateralPercentage_,
-              uappMaxCollateralInputs = maxCollateralInputs_
+            { uappCoinsPerUTxOWord = coinsPerUTxOWord_
+            , uappCostModels = costModels_
+            , uappPrices = prices_
+            , uappMaxTxExUnits = maxTxExUnits_
+            , uappMaxBlockExUnits = maxBlockExUnits_
+            , uappMaxValSize = maxValSize_
+            , uappCollateralPercentage = collateralPercentage_
+            , uappMaxCollateralInputs = maxCollateralInputs_
             }
 
 {-# COMPLETE AlonzoGenesis #-}
@@ -143,14 +143,14 @@ instance FromCBOR AlonzoGenesis where
 instance ToCBOR AlonzoGenesis where
   toCBOR
     AlonzoGenesis
-      { agCoinsPerUTxOWord,
-        agCostModels,
-        agPrices,
-        agMaxTxExUnits,
-        agMaxBlockExUnits,
-        agMaxValSize,
-        agCollateralPercentage,
-        agMaxCollateralInputs
+      { agCoinsPerUTxOWord
+      , agCostModels
+      , agPrices
+      , agMaxTxExUnits
+      , agMaxBlockExUnits
+      , agMaxValSize
+      , agCollateralPercentage
+      , agMaxCollateralInputs
       } =
       encode $
         Rec AlonzoGenesis
@@ -175,27 +175,27 @@ instance FromJSON AlonzoGenesis where
     agMaxCollateralInputs <- o .: "maxCollateralInputs"
     return
       AlonzoGenesis
-        { agCoinsPerUTxOWord,
-          agCostModels,
-          agPrices,
-          agMaxTxExUnits,
-          agMaxBlockExUnits,
-          agMaxValSize,
-          agCollateralPercentage,
-          agMaxCollateralInputs
+        { agCoinsPerUTxOWord
+        , agCostModels
+        , agPrices
+        , agMaxTxExUnits
+        , agMaxBlockExUnits
+        , agMaxValSize
+        , agCollateralPercentage
+        , agMaxCollateralInputs
         }
 
 instance ToJSON AlonzoGenesis where
   toJSON v =
     object
-      [ "lovelacePerUTxOWord" .= coinsPerUTxOWord v,
-        "costModels" .= costmdls v,
-        "executionPrices" .= prices v,
-        "maxTxExUnits" .= maxTxExUnits v,
-        "maxBlockExUnits" .= maxBlockExUnits v,
-        "maxValueSize" .= maxValSize v,
-        "collateralPercentage" .= collateralPercentage v,
-        "maxCollateralInputs" .= maxCollateralInputs v
+      [ "lovelacePerUTxOWord" .= coinsPerUTxOWord v
+      , "costModels" .= costmdls v
+      , "executionPrices" .= prices v
+      , "maxTxExUnits" .= maxTxExUnits v
+      , "maxBlockExUnits" .= maxBlockExUnits v
+      , "maxValueSize" .= maxValSize v
+      , "collateralPercentage" .= collateralPercentage v
+      , "maxCollateralInputs" .= maxCollateralInputs v
       ]
 
 coinsPerUTxOWord :: AlonzoGenesis -> CoinPerWord

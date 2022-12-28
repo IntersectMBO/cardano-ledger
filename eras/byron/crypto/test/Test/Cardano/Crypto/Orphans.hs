@@ -3,9 +3,9 @@
 
 module Test.Cardano.Crypto.Orphans () where
 
-import Cardano.Crypto
-  ( SigningKey (..),
-  )
+import Cardano.Crypto (
+  SigningKey (..),
+ )
 import Cardano.Crypto.Hashing (serializeCborHash)
 import Cardano.Prelude
 import qualified Crypto.PubKey.Ed25519 as Ed25519

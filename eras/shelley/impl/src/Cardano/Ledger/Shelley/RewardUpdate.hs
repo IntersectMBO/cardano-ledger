@@ -18,21 +18,21 @@
 module Cardano.Ledger.Shelley.RewardUpdate where
 
 import Cardano.Ledger.BaseTypes (ProtVer (..), ShelleyBase)
-import Cardano.Ledger.Binary
-  ( FromCBOR (..),
-    ToCBOR (..),
-    decodeRecordNamed,
-    encodeListLen,
-    fromNotSharedCBOR,
-  )
-import Cardano.Ledger.Binary.Coders
-  ( Decode (..),
-    Encode (..),
-    decode,
-    encode,
-    (!>),
-    (<!),
-  )
+import Cardano.Ledger.Binary (
+  FromCBOR (..),
+  ToCBOR (..),
+  decodeRecordNamed,
+  encodeListLen,
+  fromNotSharedCBOR,
+ )
+import Cardano.Ledger.Binary.Coders (
+  Decode (..),
+  Encode (..),
+  decode,
+  encode,
+  (!>),
+  (<!),
+ )
 import Cardano.Ledger.Coin (Coin (..), CompactForm, DeltaCoin (..))
 import Cardano.Ledger.Compactible (Compactible (fromCompact))
 import Cardano.Ledger.Core (Reward (..), RewardType (MemberReward))
@@ -40,10 +40,10 @@ import Cardano.Ledger.Credential (Credential (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.PoolRank (Likelihood, NonMyopic)
-import Cardano.Ledger.Shelley.Rewards
-  ( PoolRewardInfo (..),
-    rewardOnePoolMember,
-  )
+import Cardano.Ledger.Shelley.Rewards (
+  PoolRewardInfo (..),
+  rewardOnePoolMember,
+ )
 import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (toExpr))
 import Control.DeepSeq (NFData (..))
 import Data.Default.Class (def)
@@ -67,8 +67,8 @@ type RewardEvent c = (Map (Credential 'Staking c) (Set (Reward c)))
 -- | The result of reward calculation is a pair of aggregate Maps.
 --   One for the accumulated answer, and one for the answer since the last pulse
 data RewardAns c = RewardAns
-  { accumRewardAns :: !(Map (Credential 'Staking c) (Reward c)),
-    recentRewardAns :: !(RewardEvent c)
+  { accumRewardAns :: !(Map (Credential 'Staking c) (Reward c))
+  , recentRewardAns :: !(RewardEvent c)
   }
   deriving (Show, Eq, Generic)
   deriving (NFData)
@@ -89,11 +89,11 @@ type Pulser c = RewardPulser c ShelleyBase (RewardAns c)
 -- | The ultiate goal of a reward update computation.
 --     Aggregating rewards for each staking credential.
 data RewardUpdate c = RewardUpdate
-  { deltaT :: !DeltaCoin,
-    deltaR :: !DeltaCoin,
-    rs :: !(Map (Credential 'Staking c) (Set (Reward c))),
-    deltaF :: !DeltaCoin,
-    nonMyopic :: !(NonMyopic c)
+  { deltaT :: !DeltaCoin
+  , deltaR :: !DeltaCoin
+  , rs :: !(Map (Credential 'Staking c) (Set (Reward c)))
+  , deltaF :: !DeltaCoin
+  , nonMyopic :: !(NonMyopic c)
   }
   deriving (Show, Eq, Generic)
 
@@ -134,14 +134,14 @@ emptyRewardUpdate =
 
 -- | To complete the reward update, we need a snap shot of the EpochState particular to this computation
 data RewardSnapShot c = RewardSnapShot
-  { rewFees :: !Coin,
-    rewprotocolVersion :: !ProtVer,
-    rewNonMyopic :: !(NonMyopic c),
-    rewDeltaR1 :: !Coin, -- deltaR1
-    rewR :: !Coin, -- r
-    rewDeltaT1 :: !Coin, -- deltaT1
-    rewLikelihoods :: !(Map (KeyHash 'StakePool c) Likelihood),
-    rewLeaders :: !(Map (Credential 'Staking c) (Set (Reward c)))
+  { rewFees :: !Coin
+  , rewprotocolVersion :: !ProtVer
+  , rewNonMyopic :: !(NonMyopic c)
+  , rewDeltaR1 :: !Coin -- deltaR1
+  , rewR :: !Coin -- r
+  , rewDeltaT1 :: !Coin -- deltaT1
+  , rewLikelihoods :: !(Map (KeyHash 'StakePool c) Likelihood)
+  , rewLeaders :: !(Map (Credential 'Staking c) (Set (Reward c)))
   }
   deriving (Show, Eq, Generic)
 
@@ -183,11 +183,11 @@ instance CC.Crypto c => FromCBOR (RewardSnapShot c) where
 -- Pulsable function.
 
 data FreeVars c = FreeVars
-  { delegs :: !(VMap VB VB (Credential 'Staking c) (KeyHash 'StakePool c)),
-    addrsRew :: !(Set (Credential 'Staking c)),
-    totalStake :: !Integer,
-    pp_pv :: !ProtVer,
-    poolRewardInfo :: !(Map (KeyHash 'StakePool c) (PoolRewardInfo c))
+  { delegs :: !(VMap VB VB (Credential 'Staking c) (KeyHash 'StakePool c))
+  , addrsRew :: !(Set (Credential 'Staking c))
+  , totalStake :: !Integer
+  , pp_pv :: !ProtVer
+  , poolRewardInfo :: !(Map (KeyHash 'StakePool c) (PoolRewardInfo c))
   }
   deriving (Eq, Show, Generic)
   deriving (NoThunks)
@@ -197,11 +197,11 @@ instance NFData (FreeVars c)
 instance (CC.Crypto c) => ToCBOR (FreeVars c) where
   toCBOR
     FreeVars
-      { delegs,
-        addrsRew,
-        totalStake,
-        pp_pv,
-        poolRewardInfo
+      { delegs
+      , addrsRew
+      , totalStake
+      , pp_pv
+      , poolRewardInfo
       } =
       encode
         ( Rec FreeVars
@@ -234,11 +234,11 @@ rewardStakePoolMember ::
   RewardAns c
 rewardStakePoolMember
   FreeVars
-    { delegs,
-      addrsRew,
-      totalStake,
-      poolRewardInfo,
-      pp_pv
+    { delegs
+    , addrsRew
+    , totalStake
+    , poolRewardInfo
+    , pp_pv
     }
   inputanswer@(RewardAns accum recent)
   cred
@@ -296,10 +296,10 @@ instance Typeable c => NoThunks (Pulser c) where
   showTypeOf _ = "RewardPulser"
   wNoThunks ctxt (RSLP n free balance ans) =
     allNoThunks
-      [ noThunks ctxt n,
-        noThunks ctxt free,
-        noThunks ctxt balance,
-        noThunks ctxt ans
+      [ noThunks ctxt n
+      , noThunks ctxt free
+      , noThunks ctxt balance
+      , noThunks ctxt ans
       ]
 
 instance NFData (Pulser c) where

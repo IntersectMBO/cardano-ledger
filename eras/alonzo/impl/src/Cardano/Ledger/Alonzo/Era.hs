@@ -1,14 +1,14 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Ledger.Alonzo.Era
-  ( AlonzoEra,
-    AlonzoUTXO,
-    AlonzoUTXOS,
-    AlonzoUTXOW,
-    AlonzoBBODY,
-    AlonzoLEDGER,
-  )
+module Cardano.Ledger.Alonzo.Era (
+  AlonzoEra,
+  AlonzoUTXO,
+  AlonzoUTXOS,
+  AlonzoUTXOW,
+  AlonzoBBODY,
+  AlonzoLEDGER,
+)
 where
 
 import Cardano.Ledger.Core (Era (..), EraRule, Value)

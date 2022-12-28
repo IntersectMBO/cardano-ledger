@@ -11,14 +11,14 @@ import Options.Applicative as O
 import Weigh
 
 data Opts = Opts
-  { -- | Path to the CBOR encoded NewEpochState data type, which will be used to
-    -- benchmarking deserialization of NewEpochState
-    optsNewEpochStateBinaryFile :: Maybe FilePath,
-    -- | Path to the CBOR encoded EpochState data type that will be used for
-    -- benchmarking deserialization of EpochState
-    optsEpochStateBinaryFile :: Maybe FilePath,
-    -- | Path to Sqlite database file.
-    optsSqliteDbFile :: Maybe FilePath
+  { optsNewEpochStateBinaryFile :: Maybe FilePath
+  -- ^ Path to the CBOR encoded NewEpochState data type, which will be used to
+  -- benchmarking deserialization of NewEpochState
+  , optsEpochStateBinaryFile :: Maybe FilePath
+  -- ^ Path to the CBOR encoded EpochState data type that will be used for
+  -- benchmarking deserialization of EpochState
+  , optsSqliteDbFile :: Maybe FilePath
+  -- ^ Path to Sqlite database file.
   }
   deriving (Show)
 

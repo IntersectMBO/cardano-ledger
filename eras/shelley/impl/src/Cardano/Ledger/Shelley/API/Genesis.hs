@@ -11,21 +11,21 @@ import Cardano.Ledger.Core (Era (..), EraRule, EraTxOut, PParams)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.EpochBoundary (emptySnapShots)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.API.Types
-  ( AccountState (AccountState),
-    Coin (Coin),
-    DPState (DPState),
-    DState (dsGenDelegs),
-    EpochState (EpochState),
-    GenDelegs (GenDelegs),
-    LedgerState (LedgerState),
-    NewEpochState (NewEpochState),
-    PoolDistr (PoolDistr),
-    ShelleyGenesis (sgGenDelegs, sgMaxLovelaceSupply, sgProtocolParams),
-    StrictMaybe (SNothing),
-    genesisUTxO,
-    word64ToCoin,
-  )
+import Cardano.Ledger.Shelley.API.Types (
+  AccountState (AccountState),
+  Coin (Coin),
+  DPState (DPState),
+  DState (dsGenDelegs),
+  EpochState (EpochState),
+  GenDelegs (GenDelegs),
+  LedgerState (LedgerState),
+  NewEpochState (NewEpochState),
+  PoolDistr (PoolDistr),
+  ShelleyGenesis (sgGenDelegs, sgMaxLovelaceSupply, sgProtocolParams),
+  StrictMaybe (SNothing),
+  genesisUTxO,
+  word64ToCoin,
+ )
 import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses, smartUTxOState)
 import Cardano.Ledger.Shelley.PParams ()
 import Cardano.Ledger.UTxO (coinBalance)
@@ -37,9 +37,9 @@ import qualified Data.Map.Strict as Map
 
 -- | Indicates that this era may be bootstrapped from 'ShelleyGenesis'.
 class
-  ( EraTxOut era,
-    Default (State (EraRule "PPUP" era)),
-    Default (StashedAVVMAddresses era)
+  ( EraTxOut era
+  , Default (State (EraRule "PPUP" era))
+  , Default (StashedAVVMAddresses era)
   ) =>
   CanStartFromGenesis era
   where
@@ -62,8 +62,8 @@ class
   initialState = initialStateFromGenesis fromShelleyPParams
 
 instance
-  ( Crypto c,
-    Default (State (EraRule "PPUP" (ShelleyEra c)))
+  ( Crypto c
+  , Default (State (EraRule "PPUP" (ShelleyEra c)))
   ) =>
   CanStartFromGenesis (ShelleyEra c)
   where
@@ -72,9 +72,9 @@ instance
 -- | Helper function for constructing the initial state for any era
 initialStateFromGenesis ::
   forall era g.
-  ( EraTxOut era,
-    Default (State (EraRule "PPUP" era)),
-    Default (StashedAVVMAddresses era)
+  ( EraTxOut era
+  , Default (State (EraRule "PPUP" era))
+  , Default (StashedAVVMAddresses era)
   ) =>
   -- | Function to extend ShelleyPParams into PParams for the specific era
   (g -> PParams (ShelleyEra (EraCrypto era)) -> PParams era) ->

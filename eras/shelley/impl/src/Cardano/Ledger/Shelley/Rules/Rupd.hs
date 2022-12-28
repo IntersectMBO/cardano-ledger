@@ -7,66 +7,66 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Shelley.Rules.Rupd
-  ( ShelleyRUPD,
-    RupdEnv (..),
-    PredicateFailure,
-    ShelleyRupdPredFailure,
-    epochInfoRange,
-    PulsingRewUpdate (..),
-    startStep,
-    pulseStep,
-    completeStep,
-    lift,
-    Identity (..),
-    RupdEvent (..),
-  )
+module Cardano.Ledger.Shelley.Rules.Rupd (
+  ShelleyRUPD,
+  RupdEnv (..),
+  PredicateFailure,
+  ShelleyRupdPredFailure,
+  epochInfoRange,
+  PulsingRewUpdate (..),
+  startStep,
+  pulseStep,
+  completeStep,
+  lift,
+  Identity (..),
+  RupdEvent (..),
+)
 where
 
-import Cardano.Ledger.BaseTypes
-  ( BlocksMade,
-    ShelleyBase,
-    StrictMaybe (..),
-    activeSlotCoeff,
-    epochInfoPure,
-    maxLovelaceSupply,
-    randomnessStabilisationWindow,
-    securityParameter,
-  )
+import Cardano.Ledger.BaseTypes (
+  BlocksMade,
+  ShelleyBase,
+  StrictMaybe (..),
+  activeSlotCoeff,
+  epochInfoPure,
+  maxLovelaceSupply,
+  randomnessStabilisationWindow,
+  securityParameter,
+ )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyRole (Staking))
 import Cardano.Ledger.Shelley.Era (ShelleyRUPD)
-import Cardano.Ledger.Shelley.LedgerState
-  ( EpochState,
-    PulsingRewUpdate (..),
-    completeStep,
-    pulseStep,
-    startStep,
-  )
-import Cardano.Ledger.Slot
-  ( Duration (..),
-    EpochNo,
-    SlotNo,
-    epochInfoEpoch,
-    epochInfoFirst,
-    epochInfoSize,
-    (+*),
-  )
+import Cardano.Ledger.Shelley.LedgerState (
+  EpochState,
+  PulsingRewUpdate (..),
+  completeStep,
+  pulseStep,
+  startStep,
+ )
+import Cardano.Ledger.Slot (
+  Duration (..),
+  EpochNo,
+  SlotNo,
+  epochInfoEpoch,
+  epochInfoFirst,
+  epochInfoSize,
+  (+*),
+ )
 import Cardano.Slotting.EpochInfo.API (epochInfoRange)
 import Control.Monad.Identity (Identity (..))
 import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Reader (asks)
-import Control.State.Transition
-  ( Rule,
-    STS (..),
-    TRC (..),
-    TransitionRule,
-    judgmentContext,
-    liftSTS,
-    tellEvent,
-  )
+import Control.State.Transition (
+  Rule,
+  STS (..),
+  TRC (..),
+  TransitionRule,
+  judgmentContext,
+  liftSTS,
+  tellEvent,
+ )
 import Data.Functor ((<&>))
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
@@ -82,8 +82,8 @@ data ShelleyRupdPredFailure era -- No predicate failures
 instance NoThunks (ShelleyRupdPredFailure era)
 
 instance
-  ( Era era,
-    EraPParams era
+  ( Era era
+  , EraPParams era
   ) =>
   STS (ShelleyRUPD era)
   where

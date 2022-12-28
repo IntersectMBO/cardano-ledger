@@ -24,39 +24,39 @@ main = do
                 $ testPropertyNamed
                   "False (Hedgehog)"
                   "prop_Bounded"
-                  Sum.prop_Bounded,
-              testPropertyNamed
+                  Sum.prop_Bounded
+            , testPropertyNamed
                 "Only valid traces are generated"
                 "prop_onlyValidTracesAreGenerated"
-                Sum.prop_onlyValidTracesAreGenerated,
-              testPropertyNamed
+                Sum.prop_onlyValidTracesAreGenerated
+            , testPropertyNamed
                 "Classified"
                 "prop_Classified"
-                Sum.prop_Classified,
-              Tasty.QuickCheck.testProperty
+                Sum.prop_Classified
+            , Tasty.QuickCheck.testProperty
                 "Classified (QuickCheck)"
-                Sum.prop_qc_Classified,
-              expectFailBecause
+                Sum.prop_qc_Classified
+            , expectFailBecause
                 "it allows to inspect generated trace counterexamples (QuickCheck)"
                 $ Tasty.QuickCheck.testProperty
                   "False (QuickCheck)"
-                  Sum.prop_qc_Bounded,
-              Tasty.QuickCheck.testProperty
+                  Sum.prop_qc_Bounded
+            , Tasty.QuickCheck.testProperty
                 "Only valid traces are generated (QuickCheck)"
                 Sum.prop_qc_onlyValidSignalsAreGenerated
-            ],
-          testGroup
+            ]
+        , testGroup
             "CommitReveal"
             [ expectFailBecause
                 "we're inspecting generated counterexamples"
                 $ Tasty.QuickCheck.testProperty
                   "Unique Data (QuickCheck)"
-                  CommitReveal.prop_qc_UniqueData,
-              expectFailBecause
+                  CommitReveal.prop_qc_UniqueData
+            , expectFailBecause
                 "a counterexample of an invalid signal should be found"
                 $ Tasty.QuickCheck.testProperty
                   "Only valid signals are generated (QuickCheck)"
                   CommitReveal.prop_qc_OnlyValidSignals
-            ],
-          GSum.tests
+            ]
+        , GSum.tests
         ]

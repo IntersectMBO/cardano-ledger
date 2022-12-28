@@ -12,22 +12,22 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Shelley.Rules.NewEpoch
-  ( ShelleyNEWEPOCH,
-    ShelleyNewEpochPredFailure (..),
-    ShelleyNewEpochEvent (..),
-    PredicateFailure,
-    updateRewards,
-    calculatePoolDistr,
-    calculatePoolDistr',
-  )
+module Cardano.Ledger.Shelley.Rules.NewEpoch (
+  ShelleyNEWEPOCH,
+  ShelleyNewEpochPredFailure (..),
+  ShelleyNewEpochEvent (..),
+  PredicateFailure,
+  updateRewards,
+  calculatePoolDistr,
+  calculatePoolDistr',
+)
 where
 
-import Cardano.Ledger.BaseTypes
-  ( BlocksMade (BlocksMade),
-    ShelleyBase,
-    StrictMaybe (SJust, SNothing),
-  )
+import Cardano.Ledger.BaseTypes (
+  BlocksMade (BlocksMade),
+  ShelleyBase,
+  StrictMaybe (SJust, SNothing),
+ )
 import Cardano.Ledger.Coin (toDeltaCoin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
@@ -59,20 +59,20 @@ data ShelleyNewEpochPredFailure era
   deriving (Generic)
 
 deriving stock instance
-  ( Show (PredicateFailure (EraRule "EPOCH" era)),
-    Show (PredicateFailure (EraRule "MIR" era))
+  ( Show (PredicateFailure (EraRule "EPOCH" era))
+  , Show (PredicateFailure (EraRule "MIR" era))
   ) =>
   Show (ShelleyNewEpochPredFailure era)
 
 deriving stock instance
-  ( Eq (PredicateFailure (EraRule "EPOCH" era)),
-    Eq (PredicateFailure (EraRule "MIR" era))
+  ( Eq (PredicateFailure (EraRule "EPOCH" era))
+  , Eq (PredicateFailure (EraRule "MIR" era))
   ) =>
   Eq (ShelleyNewEpochPredFailure era)
 
 instance
-  ( NoThunks (PredicateFailure (EraRule "EPOCH" era)),
-    NoThunks (PredicateFailure (EraRule "MIR" era))
+  ( NoThunks (PredicateFailure (EraRule "EPOCH" era))
+  , NoThunks (PredicateFailure (EraRule "MIR" era))
   ) =>
   NoThunks (ShelleyNewEpochPredFailure era)
 
@@ -88,21 +88,21 @@ data ShelleyNewEpochEvent era
   | TotalAdaPotsEvent AdaPots
 
 instance
-  ( EraTxOut era,
-    Embed (EraRule "MIR" era) (ShelleyNEWEPOCH era),
-    Embed (EraRule "EPOCH" era) (ShelleyNEWEPOCH era),
-    Environment (EraRule "MIR" era) ~ (),
-    State (EraRule "MIR" era) ~ EpochState era,
-    Signal (EraRule "MIR" era) ~ (),
-    Event (EraRule "RUPD" era) ~ RupdEvent (EraCrypto era),
-    Environment (EraRule "EPOCH" era) ~ (),
-    State (EraRule "EPOCH" era) ~ EpochState era,
-    Signal (EraRule "EPOCH" era) ~ EpochNo,
-    Default (EpochState era),
-    Default (State (EraRule "PPUP" era)),
-    Default (PParams era),
-    Default (StashedAVVMAddresses era),
-    EraPParams era
+  ( EraTxOut era
+  , Embed (EraRule "MIR" era) (ShelleyNEWEPOCH era)
+  , Embed (EraRule "EPOCH" era) (ShelleyNEWEPOCH era)
+  , Environment (EraRule "MIR" era) ~ ()
+  , State (EraRule "MIR" era) ~ EpochState era
+  , Signal (EraRule "MIR" era) ~ ()
+  , Event (EraRule "RUPD" era) ~ RupdEvent (EraCrypto era)
+  , Environment (EraRule "EPOCH" era) ~ ()
+  , State (EraRule "EPOCH" era) ~ EpochState era
+  , Signal (EraRule "EPOCH" era) ~ EpochNo
+  , Default (EpochState era)
+  , Default (State (EraRule "PPUP" era))
+  , Default (PParams era)
+  , Default (StashedAVVMAddresses era)
+  , EraPParams era
   ) =>
   STS (ShelleyNEWEPOCH era)
   where
@@ -132,27 +132,27 @@ instance
 
 newEpochTransition ::
   forall era.
-  ( EraTxOut era,
-    Embed (EraRule "MIR" era) (ShelleyNEWEPOCH era),
-    Embed (EraRule "EPOCH" era) (ShelleyNEWEPOCH era),
-    -- Event (EraRule "RUPD" era) ~ RupdEvent (EraCrypto era),
-    Environment (EraRule "MIR" era) ~ (),
-    State (EraRule "MIR" era) ~ EpochState era,
-    Signal (EraRule "MIR" era) ~ (),
-    Environment (EraRule "EPOCH" era) ~ (),
-    State (EraRule "EPOCH" era) ~ EpochState era,
-    Signal (EraRule "EPOCH" era) ~ EpochNo,
-    Default (State (EraRule "PPUP" era)),
-    Default (PParams era),
-    Default (StashedAVVMAddresses era),
-    Event (EraRule "RUPD" era) ~ RupdEvent (EraCrypto era)
+  ( EraTxOut era
+  , Embed (EraRule "MIR" era) (ShelleyNEWEPOCH era)
+  , Embed (EraRule "EPOCH" era) (ShelleyNEWEPOCH era)
+  , -- Event (EraRule "RUPD" era) ~ RupdEvent (EraCrypto era),
+    Environment (EraRule "MIR" era) ~ ()
+  , State (EraRule "MIR" era) ~ EpochState era
+  , Signal (EraRule "MIR" era) ~ ()
+  , Environment (EraRule "EPOCH" era) ~ ()
+  , State (EraRule "EPOCH" era) ~ EpochState era
+  , Signal (EraRule "EPOCH" era) ~ EpochNo
+  , Default (State (EraRule "PPUP" era))
+  , Default (PParams era)
+  , Default (StashedAVVMAddresses era)
+  , Event (EraRule "RUPD" era) ~ RupdEvent (EraCrypto era)
   ) =>
   TransitionRule (ShelleyNEWEPOCH era)
 newEpochTransition = do
   TRC
-    ( _,
-      src@(NewEpochState (EpochNo eL) _ bcur es ru _pd _),
-      e@(EpochNo e_)
+    ( _
+      , src@(NewEpochState (EpochNo eL) _ bcur es ru _pd _)
+      , e@(EpochNo e_)
       ) <-
     judgmentContext
   if e_ /= eL + 1
@@ -189,12 +189,12 @@ newEpochTransition = do
       -- See ADR-7.
       pure $
         src
-          { nesEL = e,
-            nesBprev = bcur,
-            nesBcur = BlocksMade mempty,
-            nesEs = es''',
-            nesRu = SNothing,
-            nesPd = pd'
+          { nesEL = e
+          , nesBprev = bcur
+          , nesBcur = BlocksMade mempty
+          , nesEs = es'''
+          , nesRu = SNothing
+          , nesPd = pd'
           }
 
 -- | tell a RupdEvent as a DeltaRewardEvent only if the map is non-empty
@@ -206,9 +206,9 @@ tellReward (DeltaRewardEvent (RupdEvent _ m)) | Map.null m = pure ()
 tellReward x = tellEvent x
 
 instance
-  ( STS (ShelleyEPOCH era),
-    PredicateFailure (EraRule "EPOCH" era) ~ ShelleyEpochPredFailure era,
-    Event (EraRule "EPOCH" era) ~ ShelleyEpochEvent era
+  ( STS (ShelleyEPOCH era)
+  , PredicateFailure (EraRule "EPOCH" era) ~ ShelleyEpochPredFailure era
+  , Event (EraRule "EPOCH" era) ~ ShelleyEpochEvent era
   ) =>
   Embed (ShelleyEPOCH era) (ShelleyNEWEPOCH era)
   where
@@ -216,10 +216,10 @@ instance
   wrapEvent = EpochEvent
 
 instance
-  ( Era era,
-    Default (EpochState era),
-    PredicateFailure (EraRule "MIR" era) ~ ShelleyMirPredFailure era,
-    Event (EraRule "MIR" era) ~ ShelleyMirEvent era
+  ( Era era
+  , Default (EpochState era)
+  , PredicateFailure (EraRule "MIR" era) ~ ShelleyMirPredFailure era
+  , Event (EraRule "MIR" era) ~ ShelleyMirEvent era
   ) =>
   Embed (ShelleyMIR era) (ShelleyNEWEPOCH era)
   where

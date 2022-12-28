@@ -13,58 +13,58 @@
 -- 3) Applying the RewardUpdate, to the Rewards component of the UMap.
 --    done in the NewEpoch rules.
 
-module Cardano.Ledger.Shelley.LedgerState.IncrementalStake
-  ( updateStakeDistribution,
-    incrementalStakeDistr,
-    applyRUpd,
-    applyRUpdFiltered,
-    smartUTxOState,
-    filterAllRewards,
-    FilteredRewards (..),
-  )
+module Cardano.Ledger.Shelley.LedgerState.IncrementalStake (
+  updateStakeDistribution,
+  incrementalStakeDistr,
+  applyRUpd,
+  applyRUpdFiltered,
+  smartUTxOState,
+  filterAllRewards,
+  FilteredRewards (..),
+)
 where
 
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.Coin
-  ( Coin (..),
-    addDeltaCoin,
-  )
+import Cardano.Ledger.Coin (
+  Coin (..),
+  addDeltaCoin,
+ )
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential
-  ( Credential (..),
-    StakeReference (StakeRefBase, StakeRefPtr),
-  )
-import Cardano.Ledger.DPState
-  ( DPState (..),
-    DState (..),
-    PState (..),
-    delegations,
-    rewards,
-  )
-import Cardano.Ledger.EpochBoundary
-  ( SnapShot (..),
-    Stake (..),
-  )
-import Cardano.Ledger.Keys
-  ( KeyRole (..),
-  )
+import Cardano.Ledger.Credential (
+  Credential (..),
+  StakeReference (StakeRefBase, StakeRefPtr),
+ )
+import Cardano.Ledger.DPState (
+  DPState (..),
+  DState (..),
+  PState (..),
+  delegations,
+  rewards,
+ )
+import Cardano.Ledger.EpochBoundary (
+  SnapShot (..),
+  Stake (..),
+ )
+import Cardano.Ledger.Keys (
+  KeyRole (..),
+ )
 import Cardano.Ledger.Shelley.LedgerState.Types
 import Cardano.Ledger.Shelley.RewardUpdate (RewardUpdate (..))
 import Cardano.Ledger.Shelley.Rewards (aggregateCompactRewards, aggregateRewards, filterRewards)
-import Cardano.Ledger.Shelley.TxBody
-  ( Ptr (..),
-  )
-import Cardano.Ledger.UMapCompact
-  ( Trip,
-    UMap (..),
-    compactCoinOrError,
-    member,
-  )
+import Cardano.Ledger.Shelley.TxBody (
+  Ptr (..),
+ )
+import Cardano.Ledger.UMapCompact (
+  Trip,
+  UMap (..),
+  compactCoinOrError,
+  member,
+ )
 import qualified Cardano.Ledger.UMapCompact as UM
-import Cardano.Ledger.UTxO
-  ( UTxO (..),
-  )
+import Cardano.Ledger.UTxO (
+  UTxO (..),
+ )
 import Control.DeepSeq (NFData (rnf), deepseq)
 import Control.State.Transition (STS (State))
 import Data.Foldable (fold)
@@ -275,14 +275,14 @@ applyRUpdFiltered
       registeredAggregated = aggregateCompactRewards (pp ^. ppProtocolVersionL) frRegistered
       as' =
         as
-          { asTreasury = addDeltaCoin (asTreasury as) (deltaT ru) <> frTotalUnregistered,
-            asReserves = addDeltaCoin (asReserves as) (deltaR ru)
+          { asTreasury = addDeltaCoin (asTreasury as) (deltaT ru) <> frTotalUnregistered
+          , asReserves = addDeltaCoin (asReserves as) (deltaR ru)
           }
       ls' =
         ls
           { lsUTxOState =
-              utxoState_ {utxosFees = utxosFees utxoState_ `addDeltaCoin` deltaF ru},
-            lsDPState =
+              utxoState_ {utxosFees = utxosFees utxoState_ `addDeltaCoin` deltaF ru}
+          , lsDPState =
               delegState
                 { dpsDState =
                     dState
@@ -296,12 +296,12 @@ data FilteredRewards era = FilteredRewards
   { -- Only the first component is strict on purpose. The others are lazy because in most instances
     -- they are never used, so this keeps them from being evaluated.
 
-    -- | These are registered, but in the ShelleyEra they are ignored because of backward compatibility
-    --  in other Eras, this field will be the Map.empty
-    frRegistered :: !(Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era)))),
-    frShelleyIgnored :: Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))),
-    frUnregistered :: Set (Credential 'Staking (EraCrypto era)),
-    frTotalUnregistered :: Coin
+    frRegistered :: !(Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))))
+  -- ^ These are registered, but in the ShelleyEra they are ignored because of backward compatibility
+  --  in other Eras, this field will be the Map.empty
+  , frShelleyIgnored :: Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era)))
+  , frUnregistered :: Set (Credential 'Staking (EraCrypto era))
+  , frTotalUnregistered :: Coin
   }
 
 instance NFData (FilteredRewards era) where

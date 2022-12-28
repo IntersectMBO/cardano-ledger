@@ -12,9 +12,9 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE NoStarIsType #-}
 
-module Cardano.Ledger.Binary.Decoding.FromCBOR
-  ( FromCBOR (..),
-  )
+module Cardano.Ledger.Binary.Decoding.FromCBOR (
+  FromCBOR (..),
+)
 where
 
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm, SeedSizeDSIGN, SigDSIGN, SignKeyDSIGN, VerKeyDSIGN)
@@ -31,14 +31,14 @@ import Cardano.Crypto.KES.Mock (MockKES)
 import Cardano.Crypto.KES.Simple (SimpleKES)
 import Cardano.Crypto.KES.Single (SingleKES)
 import Cardano.Crypto.KES.Sum (SumKES)
-import Cardano.Crypto.VRF.Class
-  ( CertVRF,
-    CertifiedVRF (..),
-    OutputVRF (..),
-    SignKeyVRF,
-    VRFAlgorithm,
-    VerKeyVRF,
-  )
+import Cardano.Crypto.VRF.Class (
+  CertVRF,
+  CertifiedVRF (..),
+  OutputVRF (..),
+  SignKeyVRF,
+  VRFAlgorithm,
+  VerKeyVRF,
+ )
 import Cardano.Crypto.VRF.Mock (MockVRF)
 import qualified Cardano.Crypto.VRF.Praos as Praos
 import Cardano.Crypto.VRF.Simple (SimpleVRF)
@@ -266,13 +266,13 @@ instance
       <* dropCBOR (Proxy @f)
 
 instance
-  ( FromCBOR a,
-    FromCBOR b,
-    FromCBOR c,
-    FromCBOR d,
-    FromCBOR e,
-    FromCBOR f,
-    FromCBOR g
+  ( FromCBOR a
+  , FromCBOR b
+  , FromCBOR c
+  , FromCBOR d
+  , FromCBOR e
+  , FromCBOR f
+  , FromCBOR g
   ) =>
   FromCBOR (a, b, c, d, e, f, g)
   where
@@ -354,13 +354,13 @@ instance (Ord k, FromCBOR k, FromCBOR v) => FromCBOR (Map.Map k v) where
   fromCBOR = decodeMap fromCBOR fromCBOR
 
 instance
-  ( Ord k,
-    FromCBOR k,
-    FromCBOR a,
-    Typeable kv,
-    Typeable av,
-    VMap.Vector kv k,
-    VMap.Vector av a
+  ( Ord k
+  , FromCBOR k
+  , FromCBOR a
+  , Typeable kv
+  , Typeable av
+  , VMap.Vector kv k
+  , VMap.Vector av a
   ) =>
   FromCBOR (VMap.VMap kv av k a)
   where

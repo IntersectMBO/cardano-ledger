@@ -3,18 +3,18 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -fno-omit-interface-pragmas #-}
 
-module PlutusScripts
-  ( guessDecl,
-    guessDecl2args,
-    evendataDecl,
-    evenRedeemerDecl,
-    odddataDecl,
-    oddRedeemerDecl,
-    sumsTo10Decl,
-    evenRedeemerDecl2Args,
-    oddRedeemerDecl2Args,
-    redeemerIs10Decl2Args,
-  )
+module PlutusScripts (
+  guessDecl,
+  guessDecl2args,
+  evendataDecl,
+  evenRedeemerDecl,
+  odddataDecl,
+  oddRedeemerDecl,
+  sumsTo10Decl,
+  evenRedeemerDecl2Args,
+  oddRedeemerDecl2Args,
+  redeemerIs10Decl2Args,
+)
 where
 
 import Data.String (fromString)

@@ -21,14 +21,14 @@ import System.IO
 -- * constructing `EpochState` (in a new format) and writing it into the cbor
 -- * serialized file
 data Opts = Opts
-  { -- | Path to the CBOR encoded NewEpochState data type, which will be used to
-    -- load into sqlite database
-    optsNewEpochStateBinaryFile :: Maybe FilePath,
-    -- | Path to the CBOR encoded EpochState data type, which will have data
-    -- from sqlite database written into.
-    optsEpochStateBinaryFile :: Maybe FilePath,
-    -- | Path to Sqlite database file.
-    optsSqliteDbFile :: Maybe FilePath
+  { optsNewEpochStateBinaryFile :: Maybe FilePath
+  -- ^ Path to the CBOR encoded NewEpochState data type, which will be used to
+  -- load into sqlite database
+  , optsEpochStateBinaryFile :: Maybe FilePath
+  -- ^ Path to the CBOR encoded EpochState data type, which will have data
+  -- from sqlite database written into.
+  , optsSqliteDbFile :: Maybe FilePath
+  -- ^ Path to Sqlite database file.
   }
   deriving (Show)
 

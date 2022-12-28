@@ -1,6 +1,6 @@
-module Cardano.Crypto
-  ( module X,
-  )
+module Cardano.Crypto (
+  module X,
+)
 where
 
 import Cardano.Crypto.Hashing as X

@@ -14,27 +14,27 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Control.State.Transition.Trace.Generator.QuickCheck
-  ( HasTrace (BaseEnv, envGen, sigGen, shrinkSignal, interpretSTS),
-    traceFrom,
-    traceFromInitState,
-    trace,
-    shrinkTrace,
+module Control.State.Transition.Trace.Generator.QuickCheck (
+  HasTrace (BaseEnv, envGen, sigGen, shrinkSignal, interpretSTS),
+  traceFrom,
+  traceFromInitState,
+  trace,
+  shrinkTrace,
 
-    -- * Trace generator properties
-    forAllTrace,
-    forAllTraceFromInitState,
-    onlyValidSignalsAreGenerated,
-    onlyValidSignalsAreGeneratedFromInitState,
+  -- * Trace generator properties
+  forAllTrace,
+  forAllTraceFromInitState,
+  onlyValidSignalsAreGenerated,
+  onlyValidSignalsAreGeneratedFromInitState,
 
-    -- * Trace classification
-    traceLengthsAreClassified,
-    classifyTraceLength,
-    classifySize,
+  -- * Trace classification
+  traceLengthsAreClassified,
+  classifyTraceLength,
+  classifySize,
 
-    -- * Internal
-    mkIntervals,
-  )
+  -- * Internal
+  mkIntervals,
+)
 where
 
 import Control.State.Transition (Environment, IRC (IRC), STS, Signal, State, TRC (TRC))
@@ -108,8 +108,8 @@ traceFrom traceEnv maxTraceLength traceGenEnv env st0 = do
 -- | Generate a random trace.
 trace ::
   forall sts traceGenEnv.
-  ( HasTrace sts traceGenEnv,
-    Show (Environment sts)
+  ( HasTrace sts traceGenEnv
+  , Show (Environment sts)
   ) =>
   BaseEnv sts ->
   -- | Maximum trace length.
@@ -125,9 +125,9 @@ trace traceEnv maxTraceLength traceGenEnv =
 -- if no initial state is required by the STS.
 traceFromInitState ::
   forall sts traceGenEnv.
-  ( HasTrace sts traceGenEnv,
-    Show (Environment sts),
-    HasCallStack
+  ( HasTrace sts traceGenEnv
+  , Show (Environment sts)
+  , HasCallStack
   ) =>
   BaseEnv sts ->
   -- | Maximum trace length.
@@ -162,9 +162,9 @@ traceFromInitState baseEnv maxTraceLength traceGenEnv genSt0 = do
 -- Takes an optional generator for initial state of the STS.
 forAllTraceFromInitState ::
   forall sts traceGenEnv prop.
-  ( HasTrace sts traceGenEnv,
-    QuickCheck.Testable prop,
-    Show (Environment sts)
+  ( HasTrace sts traceGenEnv
+  , QuickCheck.Testable prop
+  , Show (Environment sts)
   ) =>
   BaseEnv sts ->
   -- | Maximum trace length.
@@ -183,9 +183,9 @@ forAllTraceFromInitState baseEnv maxTraceLength traceGenEnv genSt0 prop =
 -- | Check a property on the 'sts' traces.
 forAllTrace ::
   forall sts traceGenEnv prop.
-  ( HasTrace sts traceGenEnv,
-    QuickCheck.Testable prop,
-    Show (Environment sts)
+  ( HasTrace sts traceGenEnv
+  , QuickCheck.Testable prop
+  , Show (Environment sts)
   ) =>
   BaseEnv sts ->
   -- | Maximum trace length.
@@ -237,9 +237,9 @@ shrinkTrace baseEnv tr =
 -- | Property that asserts that only valid signals are generated.
 onlyValidSignalsAreGenerated ::
   forall sts traceGenEnv.
-  ( HasTrace sts traceGenEnv,
-    Show (Environment sts),
-    Show (Signal sts)
+  ( HasTrace sts traceGenEnv
+  , Show (Environment sts)
+  , Show (Signal sts)
   ) =>
   BaseEnv sts ->
   -- | Maximum trace length.
@@ -254,9 +254,9 @@ onlyValidSignalsAreGenerated baseEnv maxTraceLength traceGenEnv =
 -- Takes an optional generator for initial state of the STS.
 onlyValidSignalsAreGeneratedFromInitState ::
   forall sts traceGenEnv.
-  ( HasTrace sts traceGenEnv,
-    Show (Environment sts),
-    Show (Signal sts)
+  ( HasTrace sts traceGenEnv
+  , Show (Environment sts)
+  , Show (Signal sts)
   ) =>
   BaseEnv sts ->
   -- | Maximum trace length.
@@ -291,8 +291,8 @@ onlyValidSignalsAreGeneratedFromInitState baseEnv maxTraceLength traceGenEnv gen
 -- | Property that simply classifies the lengths of the generated traces.
 traceLengthsAreClassified ::
   forall sts traceGenEnv.
-  ( HasTrace sts traceGenEnv,
-    Show (Environment sts)
+  ( HasTrace sts traceGenEnv
+  , Show (Environment sts)
   ) =>
   BaseEnv sts ->
   -- | Maximum trace length that the signal generator of 's' can generate.
@@ -399,7 +399,7 @@ mkIntervals ::
   [(n, n)]
 mkIntervals low high step
   | 0 <= low && low <= high && 0 < step =
-    [(low + i * step, high `min` (low + (i + 1) * step)) | i <- [0 .. n - 1]]
+      [(low + i * step, high `min` (low + (i + 1) * step)) | i <- [0 .. n - 1]]
   | otherwise = []
   where
     highNorm = high - low

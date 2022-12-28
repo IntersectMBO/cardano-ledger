@@ -7,76 +7,76 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Test.Byron.Spec.Ledger.Update.Properties
-  ( upiregTracesAreClassified,
-    upiregRelevantTracesAreCovered,
-    onlyValidSignalsAreGenerated,
-    ublockTraceLengthsAreClassified,
-    ublockOnlyValidSignalsAreGenerated,
-    ublockRelevantTracesAreCovered,
-    ublockSampleTraceMetrics,
-  )
+module Test.Byron.Spec.Ledger.Update.Properties (
+  upiregTracesAreClassified,
+  upiregRelevantTracesAreCovered,
+  onlyValidSignalsAreGenerated,
+  ublockTraceLengthsAreClassified,
+  ublockOnlyValidSignalsAreGenerated,
+  ublockRelevantTracesAreCovered,
+  ublockSampleTraceMetrics,
+)
 where
 
-import Byron.Spec.Ledger.Core
-  ( BlockCount (BlockCount),
-    Slot (Slot),
-    SlotCount (SlotCount),
-    dom,
-    unBlockCount,
-  )
+import Byron.Spec.Ledger.Core (
+  BlockCount (BlockCount),
+  Slot (Slot),
+  SlotCount (SlotCount),
+  dom,
+  unBlockCount,
+ )
 import qualified Byron.Spec.Ledger.Core as Core
 import Byron.Spec.Ledger.GlobalParams (slotsPerEpoch)
-import Byron.Spec.Ledger.Update
-  ( PParams,
-    ProtVer,
-    UPIEND,
-    UPIEnv,
-    UPIREG,
-    UPIState,
-    UPIVOTES,
-    UProp,
-    Vote,
-    emptyUPIState,
-    protocolParameters,
-  )
+import Byron.Spec.Ledger.Update (
+  PParams,
+  ProtVer,
+  UPIEND,
+  UPIEnv,
+  UPIREG,
+  UPIState,
+  UPIVOTES,
+  UProp,
+  Vote,
+  emptyUPIState,
+  protocolParameters,
+ )
 import qualified Byron.Spec.Ledger.Update as Update
-import Control.State.Transition
-  ( Embed,
-    Environment,
-    IRC (IRC),
-    PredicateFailure,
-    STS,
-    Signal,
-    State,
-    TRC (TRC),
-    initialRules,
-    judgmentContext,
-    trans,
-    transitionRules,
-    wrapFailed,
-    (?!),
-  )
-import Control.State.Transition.Generator
-  ( HasTrace,
-    envGen,
-    randomTraceOfSize,
-    ratio,
-    sigGen,
-    trace,
-    traceLengthsAreClassified,
-    traceOfLength,
-  )
+import Control.State.Transition (
+  Embed,
+  Environment,
+  IRC (IRC),
+  PredicateFailure,
+  STS,
+  Signal,
+  State,
+  TRC (TRC),
+  initialRules,
+  judgmentContext,
+  trans,
+  transitionRules,
+  wrapFailed,
+  (?!),
+ )
+import Control.State.Transition.Generator (
+  HasTrace,
+  envGen,
+  randomTraceOfSize,
+  ratio,
+  sigGen,
+  trace,
+  traceLengthsAreClassified,
+  traceOfLength,
+ )
 import qualified Control.State.Transition.Generator as Transition.Generator
-import Control.State.Transition.Trace
-  ( Trace,
-    TraceOrder (OldestFirst),
-    traceLength,
-    traceSignals,
-    traceStates,
-    _traceEnv,
-    _traceInitState,
-  )
+import Control.State.Transition.Trace (
+  Trace,
+  TraceOrder (OldestFirst),
+  traceLength,
+  traceSignals,
+  traceStates,
+  _traceEnv,
+  _traceInitState,
+ )
 import qualified Data.Bimap as Bimap
 import Data.Data (Data, Typeable)
 import Data.Foldable (fold, traverse_)
@@ -326,18 +326,18 @@ data UBLOCK deriving (Data, Typeable)
 
 -- | An update block
 data UBlock = UBlock
-  { issuer :: Core.VKey,
-    blockVersion :: ProtVer,
-    slot :: Core.Slot,
-    optionalUpdateProposal :: Maybe UProp,
-    votes :: [Vote]
+  { issuer :: Core.VKey
+  , blockVersion :: ProtVer
+  , slot :: Core.Slot
+  , optionalUpdateProposal :: Maybe UProp
+  , votes :: [Vote]
   }
   deriving (Eq, Show)
 
 -- | Update block state
 data UBlockState = UBlockState
-  { upienv :: UPIEnv,
-    upistate :: UPIState
+  { upienv :: UPIEnv
+  , upistate :: UPIState
   }
   deriving (Eq, Show)
 
@@ -369,17 +369,17 @@ instance STS UBLOCK where
         -- epoch, which is about the same value we use in production.
         pure
           UBlockState
-            { upienv = env,
-              upistate =
-                ( (pv, pps {Update._upTtl = SlotCount $ slotsPerEpoch k `div` 2}),
-                  fads,
-                  avs,
-                  rpus,
-                  raus,
-                  cps,
-                  vts,
-                  bvs,
-                  pws
+            { upienv = env
+            , upistate =
+                ( (pv, pps {Update._upTtl = SlotCount $ slotsPerEpoch k `div` 2})
+                , fads
+                , avs
+                , rpus
+                , raus
+                , cps
+                , vts
+                , bvs
+                , pws
                 )
             }
     ]
@@ -400,8 +400,8 @@ instance STS UBLOCK where
           trans @UPIEND $ TRC (upienv, upistateAfterVoting, (blockVersion ublock, issuer ublock))
         pure
           UBlockState
-            { upienv = (slot ublock, dms, k, ngk),
-              upistate = upistateAfterEndorsement
+            { upienv = (slot ublock, dms, k, ngk)
+            , upistate = upistateAfterEndorsement
             }
     ]
 
@@ -450,8 +450,8 @@ instance HasTrace UBLOCK where
       nextSlotGen =
         incSlot
           <$> Gen.frequency
-            [ (5, Gen.integral (Range.constant 1 10)),
-              (1, Gen.integral (Range.linear 10 (unBlockCount k)))
+            [ (5, Gen.integral (Range.constant 1 10))
+            , (1, Gen.integral (Range.linear 10 (unBlockCount k)))
             ]
         where
           incSlot c = sn `Core.addSlot` Core.SlotCount c
@@ -597,32 +597,32 @@ ublockSampleTraceMetrics maxTraceSize = do
   traverse_
     print
     [ "k = "
-        ++ show k,
-      "genesis keys = "
-        ++ show numberOfGenesisKeys,
-      "trace length = "
-        ++ show (traceLength sample),
-      "proposals = "
-        ++ show (totalProposals sample),
-      "confirmed proposals = "
-        ++ show (confirmedProposals sample),
-      "scheduled proposals = "
-        ++ show (proposalsScheduledForAdoption sample),
-      "total number of votes = "
-        ++ show (numberOfVotes sample),
-      "blocks without votes = "
-        ++ show (numberOfBlocksWithoutVotes sample),
-      "votes for block proposal in same block = "
-        ++ show (numberOfVotesForBlockProposal sample),
-      "ratio of votes for block proposal in same block = "
-        ++ show (fromIntegral (numberOfVotesForBlockProposal sample) / totalProposals sample),
-      "proposals scheduled for adoption = "
-        ++ show (proposalsScheduledForAdoption sample),
-      "confirmed / total proposals = "
-        ++ show (confirmedProposals sample / totalProposals sample),
-      "scheduled / total proposals = "
-        ++ show (proposalsScheduledForAdoption sample / totalProposals sample),
-      "scheduled / confirmed proposals = "
+        ++ show k
+    , "genesis keys = "
+        ++ show numberOfGenesisKeys
+    , "trace length = "
+        ++ show (traceLength sample)
+    , "proposals = "
+        ++ show (totalProposals sample)
+    , "confirmed proposals = "
+        ++ show (confirmedProposals sample)
+    , "scheduled proposals = "
+        ++ show (proposalsScheduledForAdoption sample)
+    , "total number of votes = "
+        ++ show (numberOfVotes sample)
+    , "blocks without votes = "
+        ++ show (numberOfBlocksWithoutVotes sample)
+    , "votes for block proposal in same block = "
+        ++ show (numberOfVotesForBlockProposal sample)
+    , "ratio of votes for block proposal in same block = "
+        ++ show (fromIntegral (numberOfVotesForBlockProposal sample) / totalProposals sample)
+    , "proposals scheduled for adoption = "
+        ++ show (proposalsScheduledForAdoption sample)
+    , "confirmed / total proposals = "
+        ++ show (confirmedProposals sample / totalProposals sample)
+    , "scheduled / total proposals = "
+        ++ show (proposalsScheduledForAdoption sample / totalProposals sample)
+    , "scheduled / confirmed proposals = "
         ++ show (proposalsScheduledForAdoption sample / confirmedProposals sample)
     ]
 

@@ -7,13 +7,13 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Binary.Arbitrary
-  ( genVersion,
-    genByteArray,
-    genByteString,
-    genLazyByteString,
-    genShortByteString,
-  )
+module Test.Cardano.Ledger.Binary.Arbitrary (
+  genVersion,
+  genByteArray,
+  genByteString,
+  genLazyByteString,
+  genShortByteString,
+)
 where
 
 import Cardano.Crypto.DSIGN.Class hiding (Signable)

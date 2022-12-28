@@ -2,9 +2,9 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Test.Cardano.Chain.Common.Compact
-  ( tests,
-  )
+module Test.Cardano.Chain.Common.Compact (
+  tests,
+)
 where
 
 import Cardano.Chain.Common (fromCompactAddress, toCompactAddress)

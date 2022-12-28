@@ -11,17 +11,17 @@
 --
 -- Example demonstrating the adoption of of pool parameters
 -- when re-registratiing.
-module Test.Cardano.Ledger.Shelley.Examples.PoolReReg
-  ( poolReRegExample,
-  )
+module Test.Cardano.Ledger.Shelley.Examples.PoolReReg (
+  poolReRegExample,
+)
 where
 
-import Cardano.Ledger.BaseTypes
-  ( BlocksMade (..),
-    Globals (..),
-    Nonce,
-    StrictMaybe (..),
-  )
+import Cardano.Ledger.BaseTypes (
+  BlocksMade (..),
+  Globals (..),
+  Nonce,
+  StrictMaybe (..),
+ )
 import Cardano.Ledger.Block (Block, bheader, txid)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Crypto as Cr
@@ -31,20 +31,20 @@ import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (PulsingRewUpdate, emptyRewardUpdate)
-import Cardano.Ledger.Shelley.Tx
-  ( ShelleyTx (..),
-  )
-import Cardano.Ledger.Shelley.TxBody
-  ( DCert (..),
-    PoolCert (..),
-    PoolParams (..),
-    ShelleyTxBody (..),
-    ShelleyTxOut (..),
-    Wdrl (..),
-  )
-import Cardano.Ledger.Shelley.TxWits
-  ( addrWits,
-  )
+import Cardano.Ledger.Shelley.Tx (
+  ShelleyTx (..),
+ )
+import Cardano.Ledger.Shelley.TxBody (
+  DCert (..),
+  PoolCert (..),
+  PoolParams (..),
+  ShelleyTxBody (..),
+  ShelleyTxOut (..),
+  Wdrl (..),
+ )
+import Cardano.Ledger.Shelley.TxWits (
+  addrWits,
+ )
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (..))
@@ -63,20 +63,20 @@ import Test.Cardano.Ledger.Shelley.Examples (CHAINExample (..), testCHAINExample
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
 import qualified Test.Cardano.Ledger.Shelley.Examples.Combinators as C
 import Test.Cardano.Ledger.Shelley.Examples.Federation (coreNodeKeysBySchedule)
-import Test.Cardano.Ledger.Shelley.Examples.Init
-  ( initSt,
-    lastByronHeaderHash,
-    nonce0,
-    ppEx,
-  )
+import Test.Cardano.Ledger.Shelley.Examples.Init (
+  initSt,
+  lastByronHeaderHash,
+  nonce0,
+  ppEx,
+ )
 import Test.Cardano.Ledger.Shelley.Examples.PoolLifetime (makeCompletedPulser)
-import Test.Cardano.Ledger.Shelley.Generator.Core
-  ( AllIssuerKeys (..),
-    NatNonce (..),
-    genesisCoins,
-    mkBlockFakeVRF,
-    mkOCert,
-  )
+import Test.Cardano.Ledger.Shelley.Generator.Core (
+  AllIssuerKeys (..),
+  NatNonce (..),
+  genesisCoins,
+  mkBlockFakeVRF,
+  mkOCert,
+ )
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
@@ -321,8 +321,8 @@ poolReRegExample :: TestTree
 poolReRegExample =
   testGroup
     "pool rereg"
-    [ testCase "initial pool registration" $ testCHAINExample poolReReg1,
-      testCase "early epoch re-registration" $ testCHAINExample poolReReg2A,
-      testCase "late epoch re-registration" $ testCHAINExample poolReReg2B,
-      testCase "adopt new pool parameters" $ testCHAINExample poolReReg3
+    [ testCase "initial pool registration" $ testCHAINExample poolReReg1
+    , testCase "early epoch re-registration" $ testCHAINExample poolReReg2A
+    , testCase "late epoch re-registration" $ testCHAINExample poolReReg2B
+    , testCase "adopt new pool parameters" $ testCHAINExample poolReReg3
     ]

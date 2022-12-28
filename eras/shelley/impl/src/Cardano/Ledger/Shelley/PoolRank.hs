@@ -9,43 +9,43 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Ledger.Shelley.PoolRank
-  ( desirability,
-    PerformanceEstimate (..),
-    NonMyopic (..),
-    getTopRankedPools,
-    getTopRankedPoolsVMap,
-    nonMyopicStake,
-    nonMyopicMemberRew,
-    percentile',
-    Histogram (..),
-    LogWeight (..),
-    likelihood,
-    applyDecay,
-    Likelihood (..),
-    leaderProbability,
-  )
+module Cardano.Ledger.Shelley.PoolRank (
+  desirability,
+  PerformanceEstimate (..),
+  NonMyopic (..),
+  getTopRankedPools,
+  getTopRankedPoolsVMap,
+  nonMyopicStake,
+  nonMyopicMemberRew,
+  percentile',
+  Histogram (..),
+  LogWeight (..),
+  likelihood,
+  applyDecay,
+  Likelihood (..),
+  leaderProbability,
+)
 where
 
-import Cardano.Ledger.BaseTypes
-  ( ActiveSlotCoeff,
-    BoundedRational (..),
-    NonNegativeInterval,
-    UnitInterval,
-    activeSlotVal,
-  )
-import Cardano.Ledger.Binary
-  ( FromCBOR (fromCBOR),
-    FromSharedCBOR (Share, fromSharedPlusCBOR),
-    Interns,
-    ToCBOR (toCBOR),
-    decodeDouble,
-    decodeRecordNamedT,
-    encodeDouble,
-    encodeListLen,
-    fromSharedPlusLensCBOR,
-    toMemptyLens,
-  )
+import Cardano.Ledger.BaseTypes (
+  ActiveSlotCoeff,
+  BoundedRational (..),
+  NonNegativeInterval,
+  UnitInterval,
+  activeSlotVal,
+ )
+import Cardano.Ledger.Binary (
+  FromCBOR (fromCBOR),
+  FromSharedCBOR (Share, fromSharedPlusCBOR),
+  Interns,
+  ToCBOR (toCBOR),
+  decodeDouble,
+  decodeRecordNamedT,
+  encodeDouble,
+  encodeListLen,
+  fromSharedPlusLensCBOR,
+  toMemptyLens,
+ )
 import Cardano.Ledger.Coin (Coin (..), coinToRational)
 import Cardano.Ledger.Core (Era (..), EraPParams, PParams, ppA0L, ppNOptL)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
@@ -217,8 +217,8 @@ instance FromCBOR PerformanceEstimate where
   fromCBOR = PerformanceEstimate <$> decodeDouble
 
 data NonMyopic c = NonMyopic
-  { likelihoodsNM :: !(Map (KeyHash 'StakePool c) Likelihood),
-    rewardPotNM :: !Coin
+  { likelihoodsNM :: !(Map (KeyHash 'StakePool c) Likelihood)
+  , rewardPotNM :: !Coin
   }
   deriving (Show, Eq, Generic)
 
@@ -232,8 +232,8 @@ instance NFData (NonMyopic c)
 instance CC.Crypto c => ToCBOR (NonMyopic c) where
   toCBOR
     NonMyopic
-      { likelihoodsNM = aps,
-        rewardPotNM = rp
+      { likelihoodsNM = aps
+      , rewardPotNM = rp
       } =
       encodeListLen 2
         <> toCBOR aps
@@ -312,10 +312,10 @@ getTopRankedPoolsInternal rPot totalStake pp pdata =
       <$> take (fromIntegral $ pp ^. ppNOptL) (sortBy (flip compare `on` snd) rankings)
   where
     rankings =
-      [ ( hk,
-          desirability (pp ^. ppA0L, pp ^. ppNOptL) rPot pool ap totalStake
+      [ ( hk
+        , desirability (pp ^. ppA0L, pp ^. ppNOptL) rPot pool ap totalStake
         )
-        | (hk, (pool, ap)) <- pdata
+      | (hk, (pool, ap)) <- pdata
       ]
 
 -- | Compute the Non-Myopic Pool Stake

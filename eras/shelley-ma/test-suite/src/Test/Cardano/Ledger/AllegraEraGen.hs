@@ -11,22 +11,22 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Test.Cardano.Ledger.AllegraEraGen
-  ( -- export EraGen instance for AllegraEra and helpers shared with MaryEra
-    quantifyTL,
-    unQuantifyTL,
-    someLeaf,
-    genValidityInterval,
-  )
+module Test.Cardano.Ledger.AllegraEraGen (
+  -- export EraGen instance for AllegraEra and helpers shared with MaryEra
+  quantifyTL,
+  unQuantifyTL,
+  someLeaf,
+  genValidityInterval,
+)
 where
 
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.Scripts (Timelock (..))
-import Cardano.Ledger.Allegra.TxBody
-  ( AllegraTxBody (..),
-    ValidityInterval (ValidityInterval),
-  )
+import Cardano.Ledger.Allegra.TxBody (
+  AllegraTxBody (..),
+  ValidityInterval (ValidityInterval),
+ )
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (serializeEncoding', toCBOR)
@@ -51,10 +51,10 @@ import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv (..), genCoin)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..), MinGenTxout (..))
-import Test.Cardano.Ledger.Shelley.Generator.ScriptClass
-  ( Quantifier (..),
-    ScriptClass (..),
-  )
+import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (
+  Quantifier (..),
+  ScriptClass (..),
+ )
 import Test.Cardano.Ledger.Shelley.Generator.Update (genPParams, genShelleyPParamsUpdate)
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
 import Test.QuickCheck (Arbitrary, Gen, arbitrary, frequency)
@@ -116,8 +116,8 @@ genTxBody slot ins outs cert wdrl fee upd ad = do
         fee
         validityInterval
         upd
-        ad,
-      [] -- Allegra does not need any additional script witnesses
+        ad
+    , [] -- Allegra does not need any additional script witnesses
     )
 
 instance Mock c => MinGenTxout (AllegraEra c) where
@@ -149,8 +149,8 @@ genAuxiliaryData ::
   Gen (StrictMaybe (TxAuxData era))
 genAuxiliaryData Constants {frequencyTxWithMetadata} =
   frequency
-    [ (frequencyTxWithMetadata, SJust <$> arbitrary),
-      (100 - frequencyTxWithMetadata, pure SNothing)
+    [ (frequencyTxWithMetadata, SJust <$> arbitrary)
+    , (100 - frequencyTxWithMetadata, pure SNothing)
     ]
 
 -- | Generates a trivial validity interval that is valid for the current slot.

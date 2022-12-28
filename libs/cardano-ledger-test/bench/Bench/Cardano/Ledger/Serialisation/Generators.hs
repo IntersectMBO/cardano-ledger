@@ -1,7 +1,7 @@
 -- | Benchmarks for the serialisation generators
-module Bench.Cardano.Ledger.Serialisation.Generators
-  ( benchTxGeneration,
-  )
+module Bench.Cardano.Ledger.Serialisation.Generators (
+  benchTxGeneration,
+)
 where
 
 import Cardano.Ledger.Core
@@ -25,7 +25,7 @@ benchTxGeneration :: Benchmark
 benchTxGeneration =
   bgroup
     "txgen"
-    [ bench "genTxShelley" (whnfIO genTxShelley),
-      bench "genTxAllegra" (whnfIO genTxAllegra),
-      bench "genTxMary" (whnfIO genTxMary)
+    [ bench "genTxShelley" (whnfIO genTxShelley)
+    , bench "genTxAllegra" (whnfIO genTxAllegra)
+    , bench "genTxMary" (whnfIO genTxMary)
     ]

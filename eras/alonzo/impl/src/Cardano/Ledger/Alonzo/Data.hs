@@ -20,41 +20,41 @@
 -- This is needed to make PlutusLedgerApi.V1.Data instances
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Cardano.Ledger.Alonzo.Data
-  ( Data (Data),
-    DataHash,
-    hashData,
-    getPlutusData,
-    dataHashSize,
-    BinaryData,
-    hashBinaryData,
-    makeBinaryData,
-    binaryDataToData,
-    dataToBinaryData,
-    decodeBinaryData,
-    Datum (..),
-    datumDataHash,
+module Cardano.Ledger.Alonzo.Data (
+  Data (Data),
+  DataHash,
+  hashData,
+  getPlutusData,
+  dataHashSize,
+  BinaryData,
+  hashBinaryData,
+  makeBinaryData,
+  binaryDataToData,
+  dataToBinaryData,
+  decodeBinaryData,
+  Datum (..),
+  datumDataHash,
 
-    -- * AlonzoTxAuxData
-    AlonzoTxAuxData
-      ( AlonzoTxAuxData,
-        AlonzoTxAuxData',
-        atadMetadata,
-        atadTimelock,
-        atadPlutus,
-        atadMetadata',
-        atadTimelock',
-        atadPlutus'
-      ),
-    mkAlonzoTxAuxData,
-    AuxiliaryDataHash (..),
-    hashAlonzoTxAuxData,
-    validateAlonzoTxAuxData,
-    getAlonzoTxAuxDataScripts,
+  -- * AlonzoTxAuxData
+  AlonzoTxAuxData (
+    AlonzoTxAuxData,
+    AlonzoTxAuxData',
+    atadMetadata,
+    atadTimelock,
+    atadPlutus,
+    atadMetadata',
+    atadTimelock',
+    atadPlutus'
+  ),
+  mkAlonzoTxAuxData,
+  AuxiliaryDataHash (..),
+  hashAlonzoTxAuxData,
+  validateAlonzoTxAuxData,
+  getAlonzoTxAuxDataScripts,
 
-    -- * Deprecated
-    AuxiliaryData,
-  )
+  -- * Deprecated
+  AuxiliaryData,
+)
 where
 
 import Cardano.Crypto.Hash.Class (HashAlgorithm)
@@ -65,39 +65,39 @@ import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), BinaryPlutus (..), validScript)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..))
-import Cardano.Ledger.Binary
-  ( Annotator (..),
-    DecoderError (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    TokenType (..),
-    decodeFullAnnotator,
-    decodeNestedCborBytes,
-    decodeStrictSeq,
-    encodeTag,
-    fromPlainDecoder,
-    fromPlainEncoding,
-    peekTokenType,
-  )
+import Cardano.Ledger.Binary (
+  Annotator (..),
+  DecoderError (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  TokenType (..),
+  decodeFullAnnotator,
+  decodeNestedCborBytes,
+  decodeStrictSeq,
+  encodeTag,
+  fromPlainDecoder,
+  fromPlainEncoding,
+  peekTokenType,
+ )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto (HASH))
-import Cardano.Ledger.MemoBytes
-  ( Mem,
-    MemoBytes (..),
-    MemoHashIndex,
-    Memoized (RawType),
-    getMemoRawType,
-    getMemoSafeHash,
-    mkMemoBytes,
-    mkMemoized,
-    shortToLazy,
-  )
-import Cardano.Ledger.SafeHash
-  ( HashAnnotated,
-    SafeToHash (..),
-    hashAnnotated,
-  )
+import Cardano.Ledger.MemoBytes (
+  Mem,
+  MemoBytes (..),
+  MemoHashIndex,
+  Memoized (RawType),
+  getMemoRawType,
+  getMemoSafeHash,
+  mkMemoBytes,
+  mkMemoized,
+  shortToLazy,
+ )
+import Cardano.Ledger.SafeHash (
+  HashAnnotated,
+  SafeToHash (..),
+  hashAnnotated,
+ )
 import Cardano.Ledger.Shelley.TxAuxData (Metadatum, validMetadatum)
 import qualified Codec.Serialise as Cborg (Serialise (..))
 import Control.DeepSeq (NFData, deepseq)
@@ -259,9 +259,9 @@ datumDataHash = \case
 -- Version without serialized bytes
 
 data AlonzoTxAuxDataRaw era = AlonzoTxAuxDataRaw
-  { atadrMetadata :: !(Map Word64 Metadatum),
-    atadrTimelock :: !(StrictSeq (Timelock era)),
-    atadrPlutus :: !(Map Language (NE.NonEmpty BinaryPlutus))
+  { atadrMetadata :: !(Map Word64 Metadatum)
+  , atadrTimelock :: !(StrictSeq (Timelock era))
+  , atadrPlutus :: !(Map Language (NE.NonEmpty BinaryPlutus))
   }
   deriving (Generic)
 
@@ -312,10 +312,10 @@ mkAlonzoTxAuxData atadrMetadata allScripts =
     atadrPlutus =
       Map.fromList
         [ (lang, scripts)
-          | (lang, Just scripts) <-
-              [ (PlutusV1, NE.nonEmpty plutusV1Scripts),
-                (PlutusV2, NE.nonEmpty plutusV2Scripts)
-              ]
+        | (lang, Just scripts) <-
+            [ (PlutusV1, NE.nonEmpty plutusV1Scripts)
+            , (PlutusV2, NE.nonEmpty plutusV2Scripts)
+            ]
         ]
 
 getAlonzoTxAuxDataScripts :: Era era => AlonzoTxAuxData era -> StrictSeq (AlonzoScript era)
@@ -323,8 +323,8 @@ getAlonzoTxAuxDataScripts AlonzoTxAuxData' {atadTimelock' = timelocks, atadPlutu
   mconcat $
     (TimelockScript <$> timelocks)
       : [ PlutusScript lang . unBinaryPlutus <$> StrictSeq.fromList (NE.toList plutusScripts)
-          | lang <- [PlutusV1 ..],
-            Just plutusScripts <- [Map.lookup lang plutus]
+        | lang <- [PlutusV1 ..]
+        , Just plutusScripts <- [Map.lookup lang plutus]
         ]
 
 instance Era era => FromCBOR (Annotator (AlonzoTxAuxDataRaw era)) where

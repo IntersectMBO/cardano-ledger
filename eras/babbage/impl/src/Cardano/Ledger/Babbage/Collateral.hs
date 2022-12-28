@@ -6,11 +6,11 @@
 
 -- | Figure 2: Functions related to fees and collateral
 --   Babbage Specification
-module Cardano.Ledger.Babbage.Collateral
-  ( isTwoPhaseScriptAddress,
-    collAdaBalance,
-    collOuts,
-  )
+module Cardano.Ledger.Babbage.Collateral (
+  isTwoPhaseScriptAddress,
+  collAdaBalance,
+  collOuts,
+)
 where
 
 import Cardano.Ledger.Address (Addr (..))
@@ -42,8 +42,8 @@ isTwoPhaseScriptAddress tx utxo = isTwoPhaseScriptAddressFromMap (txscripts utxo
 
 collAdaBalance ::
   forall era.
-  ( BabbageEraTxBody era,
-    TxOut era ~ BabbageTxOut era
+  ( BabbageEraTxBody era
+  , TxOut era ~ BabbageTxOut era
   ) =>
   TxBody era ->
   Map.Map (TxIn (EraCrypto era)) (TxOut era) ->
@@ -56,8 +56,8 @@ collAdaBalance txBody utxoCollateral =
     colbal = coinBalance $ UTxO utxoCollateral
 
 collOuts ::
-  ( BabbageEraTxBody era,
-    TxOut era ~ BabbageTxOut era
+  ( BabbageEraTxBody era
+  , TxOut era ~ BabbageTxOut era
   ) =>
   TxBody era ->
   UTxO era

@@ -14,30 +14,30 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Alonzo.Rules.Utxo
-  ( AlonzoUTXO,
-    AlonzoUtxoPredFailure (..),
-    AlonzoUtxoEvent (..),
-    utxoPredFailMaToAlonzo,
-    utxoPredFailShelleyToAlonzo,
-    validateCollateralContainsNonADA,
-    validateExUnitsTooBigUTxO,
-    validateInsufficientCollateral,
-    validateOutsideForecast,
-    validateScriptsNotPaidUTxO,
-    validateTooManyCollateralInputs,
-    validateWrongNetworkInTxBody,
-    vKeyLocked,
-  )
+module Cardano.Ledger.Alonzo.Rules.Utxo (
+  AlonzoUTXO,
+  AlonzoUtxoPredFailure (..),
+  AlonzoUtxoEvent (..),
+  utxoPredFailMaToAlonzo,
+  utxoPredFailShelleyToAlonzo,
+  validateCollateralContainsNonADA,
+  validateExUnitsTooBigUTxO,
+  validateInsufficientCollateral,
+  validateOutsideForecast,
+  validateScriptsNotPaidUTxO,
+  validateTooManyCollateralInputs,
+  validateWrongNetworkInTxBody,
+  vKeyLocked,
+)
 where
 
-import Cardano.Ledger.Address
-  ( Addr (..),
-    CompactAddr,
-    RewardAcnt,
-    isBootstrapCompactAddr,
-    isPayCredScriptCompactAddr,
-  )
+import Cardano.Ledger.Address (
+  Addr (..),
+  CompactAddr,
+  RewardAcnt,
+  isBootstrapCompactAddr,
+  isPayCredScriptCompactAddr,
+ )
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
@@ -46,43 +46,43 @@ import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.Rules.Utxos (AlonzoUTXOS, AlonzoUtxosPredFailure)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), pointWiseExUnits)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), totExUnits)
-import Cardano.Ledger.Alonzo.TxBody
-  ( AllegraEraTxBody (..),
-    AlonzoEraTxBody (..),
-    AlonzoEraTxOut (..),
-    MaryEraTxBody (..),
-  )
+import Cardano.Ledger.Alonzo.TxBody (
+  AllegraEraTxBody (..),
+  AlonzoEraTxBody (..),
+  AlonzoEraTxOut (..),
+  MaryEraTxBody (..),
+ )
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), nullRedeemers)
-import Cardano.Ledger.BaseTypes
-  ( Network,
-    ProtVer (..),
-    ShelleyBase,
-    StrictMaybe (..),
-    epochInfo,
-    networkId,
-    systemStart,
-  )
+import Cardano.Ledger.BaseTypes (
+  Network,
+  ProtVer (..),
+  ShelleyBase,
+  StrictMaybe (..),
+  epochInfo,
+  networkId,
+  systemStart,
+ )
 import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), serialize)
-import Cardano.Ledger.Binary.Coders
-  ( Decode (..),
-    Encode (..),
-    Wrapped (Open),
-    decode,
-    encode,
-    (!>),
-    (<!),
-  )
+import Cardano.Ledger.Binary.Coders (
+  Decode (..),
+  Encode (..),
+  Wrapped (Open),
+  decode,
+  encode,
+  (!>),
+  (<!),
+ )
 import Cardano.Ledger.Coin (Coin (unCoin), rationalToCoinViaCeiling)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Rules.ValidationMode
-  ( Inject (..),
-    InjectMaybe (..),
-    Test,
-    runTest,
-    runTestOnSignal,
-  )
+import Cardano.Ledger.Rules.ValidationMode (
+  Inject (..),
+  InjectMaybe (..),
+  Test,
+  runTest,
+  runTestOnSignal,
+ )
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (UTxOState))
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, UtxoEnv (..))
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
@@ -196,27 +196,27 @@ data AlonzoUtxoPredFailure era
   deriving (Generic)
 
 deriving stock instance
-  ( Era era,
-    Show (Value era),
-    Show (TxOut era),
-    Show (TxBody era),
-    Show (PredicateFailure (EraRule "UTXOS" era))
+  ( Era era
+  , Show (Value era)
+  , Show (TxOut era)
+  , Show (TxBody era)
+  , Show (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   Show (AlonzoUtxoPredFailure era)
 
 deriving stock instance
-  ( Crypto (EraCrypto era),
-    Eq (Value era),
-    Eq (TxOut era),
-    Eq (PredicateFailure (EraRule "UTXOS" era))
+  ( Crypto (EraCrypto era)
+  , Eq (Value era)
+  , Eq (TxOut era)
+  , Eq (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   Eq (AlonzoUtxoPredFailure era)
 
 instance
-  ( NoThunks (Value era),
-    NoThunks (UTxO era),
-    NoThunks (PredicateFailure (EraRule "UTXOS" era)),
-    NoThunks (TxOut era)
+  ( NoThunks (Value era)
+  , NoThunks (UTxO era)
+  , NoThunks (PredicateFailure (EraRule "UTXOS" era))
+  , NoThunks (TxOut era)
   ) =>
   NoThunks (AlonzoUtxoPredFailure era)
 
@@ -267,15 +267,15 @@ feesOK pp tx (UTxO utxo) =
       minFee = getMinFeeTx pp tx
    in sequenceA_
         [ -- Part 1: minfee pp tx ≤ txfee txb
-          failureUnless (minFee <= theFee) (inject (FeeTooSmallUTxO @era minFee theFee)),
-          -- Part 2: (txrdmrs tx ≠ ∅ ⇒ validateCollateral)
+          failureUnless (minFee <= theFee) (inject (FeeTooSmallUTxO @era minFee theFee))
+        , -- Part 2: (txrdmrs tx ≠ ∅ ⇒ validateCollateral)
           unless (nullRedeemers (tx ^. witsTxL . rdmrsTxWitsL)) $
             validateCollateral pp txBody utxoCollateral
         ]
 
 validateCollateral ::
-  ( EraTxBody era,
-    AlonzoEraPParams era
+  ( EraTxBody era
+  , AlonzoEraPParams era
   ) =>
   PParams era ->
   TxBody era ->
@@ -284,12 +284,12 @@ validateCollateral ::
 validateCollateral pp txb utxoCollateral =
   sequenceA_
     [ -- Part 3: (∀(a,_,_) ∈ range (collateral txb ◁ utxo), a ∈ Addrvkey)
-      validateScriptsNotPaidUTxO utxoCollateral,
-      -- Part 4: balance ∗ 100 ≥ txfee txb ∗ (collateralPercent pp)
-      validateInsufficientCollateral pp txb bal,
-      -- Part 5: isAdaOnly balance
-      validateCollateralContainsNonADA utxoCollateral,
-      -- Part 6: (∀(a,_,_) ∈ range (collateral txb ◁ utxo), a ∈ Addrvkey)
+      validateScriptsNotPaidUTxO utxoCollateral
+    , -- Part 4: balance ∗ 100 ≥ txfee txb ∗ (collateralPercent pp)
+      validateInsufficientCollateral pp txb bal
+    , -- Part 5: isAdaOnly balance
+      validateCollateralContainsNonADA utxoCollateral
+    , -- Part 6: (∀(a,_,_) ∈ range (collateral txb ◁ utxo), a ∈ Addrvkey)
       failureIf (null utxoCollateral) NoCollateralInputs
     ]
   where
@@ -306,8 +306,8 @@ validateScriptsNotPaidUTxO utxoCollateral =
 
 -- > balance ∗ 100 ≥ txfee txb ∗ (collateralPercent pp)
 validateInsufficientCollateral ::
-  ( EraTxBody era,
-    AlonzoEraPParams era
+  ( EraTxBody era
+  , AlonzoEraPParams era
   ) =>
   PParams era ->
   TxBody era ->
@@ -337,9 +337,9 @@ validateCollateralContainsNonADA collateralTxOuts =
 -- > (_,i_f) := txvldt tx
 -- > ◇ ∉ { txrdmrs tx, i_f } ⇒ epochInfoSlotToUTCTime epochInfo systemTime i_f ≠ ◇
 validateOutsideForecast ::
-  ( MaryEraTxBody era,
-    AlonzoEraTxWits era,
-    EraTx era
+  ( MaryEraTxBody era
+  , AlonzoEraTxWits era
+  , EraTx era
   ) =>
   EpochInfo (Either a) ->
   -- | Current slot number
@@ -383,8 +383,8 @@ validateOutputTooSmallUTxO pp (UTxO outputs) =
 --
 -- > ∀ txout ∈ txouts txb, serSize (getValue txout) ≤ maxValSize pp
 validateOutputTooBigUTxO ::
-  ( EraTxOut era,
-    AlonzoEraPParams era
+  ( EraTxOut era
+  , AlonzoEraPParams era
   ) =>
   PParams era ->
   UTxO era ->
@@ -419,9 +419,9 @@ validateWrongNetworkInTxBody netId txBody =
 --
 -- > totExunits tx ≤ maxTxExUnits pp
 validateExUnitsTooBigUTxO ::
-  ( AlonzoEraTxWits era,
-    EraTx era,
-    AlonzoEraPParams era
+  ( AlonzoEraTxWits era
+  , EraTx era
+  , AlonzoEraPParams era
   ) =>
   PParams era ->
   Tx era ->
@@ -454,15 +454,15 @@ validateTooManyCollateralInputs pp txBody =
 -- | The UTxO transition rule for the Alonzo eras.
 utxoTransition ::
   forall era.
-  ( EraUTxO era,
-    AlonzoEraTx era,
-    STS (AlonzoUTXO era),
-    -- instructions for calling UTXOS from AlonzoUTXO
-    Embed (EraRule "UTXOS" era) (AlonzoUTXO era),
-    Environment (EraRule "UTXOS" era) ~ UtxoEnv era,
-    State (EraRule "UTXOS" era) ~ UTxOState era,
-    Signal (EraRule "UTXOS" era) ~ Tx era,
-    Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era))
+  ( EraUTxO era
+  , AlonzoEraTx era
+  , STS (AlonzoUTXO era)
+  , -- instructions for calling UTXOS from AlonzoUTXO
+    Embed (EraRule "UTXOS" era) (AlonzoUTXO era)
+  , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
+  , State (EraRule "UTXOS" era) ~ UTxOState era
+  , Signal (EraRule "UTXOS" era) ~ Tx era
+  , Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   TransitionRule (AlonzoUTXO era)
 utxoTransition = do
@@ -539,14 +539,14 @@ utxoTransition = do
 
 instance
   forall era.
-  ( EraUTxO era,
-    AlonzoEraTx era,
-    Embed (EraRule "UTXOS" era) (AlonzoUTXO era),
-    Environment (EraRule "UTXOS" era) ~ UtxoEnv era,
-    State (EraRule "UTXOS" era) ~ UTxOState era,
-    Signal (EraRule "UTXOS" era) ~ Tx era,
-    Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era)),
-    ProtVerAtMost era 8
+  ( EraUTxO era
+  , AlonzoEraTx era
+  , Embed (EraRule "UTXOS" era) (AlonzoUTXO era)
+  , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
+  , State (EraRule "UTXOS" era) ~ UTxOState era
+  , Signal (EraRule "UTXOS" era) ~ Tx era
+  , Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era))
+  , ProtVerAtMost era 8
   ) =>
   STS (AlonzoUTXO era)
   where
@@ -561,10 +561,10 @@ instance
   transitionRules = [utxoTransition]
 
 instance
-  ( Era era,
-    STS (AlonzoUTXOS era),
-    PredicateFailure (EraRule "UTXOS" era) ~ AlonzoUtxosPredFailure era,
-    Event (EraRule "UTXOS" era) ~ Event (AlonzoUTXOS era)
+  ( Era era
+  , STS (AlonzoUTXOS era)
+  , PredicateFailure (EraRule "UTXOS" era) ~ AlonzoUtxosPredFailure era
+  , Event (EraRule "UTXOS" era) ~ Event (AlonzoUTXOS era)
   ) =>
   Embed (AlonzoUTXOS era) (AlonzoUTXO era)
   where
@@ -576,10 +576,10 @@ instance
 --------------------------------------------------------------------------------
 
 instance
-  ( Era era,
-    ToCBOR (TxOut era),
-    ToCBOR (Value era),
-    ToCBOR (PredicateFailure (EraRule "UTXOS" era))
+  ( Era era
+  , ToCBOR (TxOut era)
+  , ToCBOR (Value era)
+  , ToCBOR (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   ToCBOR (AlonzoUtxoPredFailure era)
   where
@@ -587,10 +587,10 @@ instance
 
 encFail ::
   forall era.
-  ( Era era,
-    ToCBOR (TxOut era),
-    ToCBOR (Value era),
-    ToCBOR (PredicateFailure (EraRule "UTXOS" era))
+  ( Era era
+  , ToCBOR (TxOut era)
+  , ToCBOR (Value era)
+  , ToCBOR (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   AlonzoUtxoPredFailure era ->
   Encode 'Open (AlonzoUtxoPredFailure era)
@@ -638,10 +638,10 @@ encFail NoCollateralInputs =
   Sum NoCollateralInputs 20
 
 decFail ::
-  ( Era era,
-    FromCBOR (TxOut era),
-    FromCBOR (Value era),
-    FromCBOR (PredicateFailure (EraRule "UTXOS" era))
+  ( Era era
+  , FromCBOR (TxOut era)
+  , FromCBOR (Value era)
+  , FromCBOR (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   Word ->
   Decode 'Open (AlonzoUtxoPredFailure era)
@@ -674,10 +674,10 @@ decFail 20 = SumD NoCollateralInputs
 decFail n = Invalid n
 
 instance
-  ( Era era,
-    FromCBOR (TxOut era),
-    FromCBOR (Value era),
-    FromCBOR (PredicateFailure (EraRule "UTXOS" era))
+  ( Era era
+  , FromCBOR (TxOut era)
+  , FromCBOR (Value era)
+  , FromCBOR (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   FromCBOR (AlonzoUtxoPredFailure era)
   where

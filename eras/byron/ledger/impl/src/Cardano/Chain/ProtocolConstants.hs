@@ -1,12 +1,12 @@
 -- | Constants derived from security parameter
 --
 --   TODO: Find a better home for these
-module Cardano.Chain.ProtocolConstants
-  ( kSlotSecurityParam,
-    kUpdateStabilityParam,
-    kChainQualityThreshold,
-    kEpochSlots,
-  )
+module Cardano.Chain.ProtocolConstants (
+  kSlotSecurityParam,
+  kUpdateStabilityParam,
+  kChainQualityThreshold,
+  kEpochSlots,
+)
 where
 
 import Cardano.Chain.Common.BlockCount (BlockCount (..))

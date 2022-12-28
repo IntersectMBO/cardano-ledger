@@ -18,65 +18,65 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Conway.TxBody
-  ( ConwayTxBody
-      ( ConwayTxBody,
-        ctbSpendInputs,
-        ctbCollateralInputs,
-        ctbReferenceInputs,
-        ctbOutputs,
-        ctbCollateralReturn,
-        ctbTotalCollateral,
-        ctbCerts,
-        ctbWdrls,
-        ctbTxfee,
-        ctbVldt,
-        ctbReqSignerHashes,
-        ctbMint,
-        ctbScriptIntegrityHash,
-        ctbAdHash,
-        ctbTxNetworkId,
-        ctbGovActions,
-        ctbVotes
-      ),
-  )
+module Cardano.Ledger.Conway.TxBody (
+  ConwayTxBody (
+    ConwayTxBody,
+    ctbSpendInputs,
+    ctbCollateralInputs,
+    ctbReferenceInputs,
+    ctbOutputs,
+    ctbCollateralReturn,
+    ctbTotalCollateral,
+    ctbCerts,
+    ctbWdrls,
+    ctbTxfee,
+    ctbVldt,
+    ctbReqSignerHashes,
+    ctbMint,
+    ctbScriptIntegrityHash,
+    ctbAdHash,
+    ctbTxNetworkId,
+    ctbGovActions,
+    ctbVotes
+  ),
+)
 where
 
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash (..))
 import Cardano.Ledger.Babbage.Core (ScriptIntegrityHash)
-import Cardano.Ledger.Babbage.TxBody as BabbageTxBodyReExports
-  ( AllegraEraTxBody (..),
-    AlonzoEraTxBody (..),
-    BabbageEraTxBody (..),
-    MaryEraTxBody (..),
-    ShelleyEraTxBody (..),
-  )
+import Cardano.Ledger.Babbage.TxBody as BabbageTxBodyReExports (
+  AllegraEraTxBody (..),
+  AlonzoEraTxBody (..),
+  BabbageEraTxBody (..),
+  MaryEraTxBody (..),
+  ShelleyEraTxBody (..),
+ )
 import Cardano.Ledger.BaseTypes (Network)
-import Cardano.Ledger.Binary
-  ( Annotator,
-    FromCBOR (..),
-    Sized (..),
-    ToCBOR (..),
-    mkSized,
-  )
-import Cardano.Ledger.Binary.Coders
-  ( Decode (..),
-    Density (..),
-    Encode (..),
-    Field (..),
-    Wrapped (..),
-    decode,
-    encode,
-    encodeKeyedStrictMaybe,
-    field,
-    ofield,
-    (!>),
-  )
+import Cardano.Ledger.Binary (
+  Annotator,
+  FromCBOR (..),
+  Sized (..),
+  ToCBOR (..),
+  mkSized,
+ )
+import Cardano.Ledger.Binary.Coders (
+  Decode (..),
+  Density (..),
+  Encode (..),
+  Field (..),
+  Wrapped (..),
+  decode,
+  encode,
+  encodeKeyedStrictMaybe,
+  field,
+  ofield,
+  (!>),
+ )
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway.Core
-  ( ConwayEraTxBody (..),
-  )
+import Cardano.Ledger.Conway.Core (
+  ConwayEraTxBody (..),
+ )
 import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert, transDCert)
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance (GovernanceActionInfo, Vote)
@@ -86,23 +86,23 @@ import Cardano.Ledger.Conway.TxOut ()
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
-import Cardano.Ledger.Mary.Value
-  ( MaryValue (..),
-    MultiAsset (..),
-    PolicyID (..),
-    policies,
-  )
-import Cardano.Ledger.MemoBytes
-  ( Mem,
-    MemoBytes (..),
-    MemoHashIndex,
-    Memoized (..),
-    getMemoRawType,
-    getMemoSafeHash,
-    getterMemoRawType,
-    lensMemoRawType,
-    mkMemoized,
-  )
+import Cardano.Ledger.Mary.Value (
+  MaryValue (..),
+  MultiAsset (..),
+  PolicyID (..),
+  policies,
+ )
+import Cardano.Ledger.MemoBytes (
+  Mem,
+  MemoBytes (..),
+  MemoHashIndex,
+  Memoized (..),
+  getMemoRawType,
+  getMemoSafeHash,
+  getterMemoRawType,
+  lensMemoRawType,
+  mkMemoized,
+ )
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
 import Cardano.Ledger.Shelley.TxBody (Wdrl (..))
 import Cardano.Ledger.TxIn (TxIn (..))
@@ -121,23 +121,23 @@ instance Memoized ConwayTxBody where
   type RawType ConwayTxBody = ConwayTxBodyRaw
 
 data ConwayTxBodyRaw era = ConwayTxBodyRaw
-  { ctbrSpendInputs :: !(Set (TxIn (EraCrypto era))),
-    ctbrCollateralInputs :: !(Set (TxIn (EraCrypto era))),
-    ctbrReferenceInputs :: !(Set (TxIn (EraCrypto era))),
-    ctbrOutputs :: !(StrictSeq (Sized (TxOut era))),
-    ctbrCollateralReturn :: !(StrictMaybe (Sized (TxOut era))),
-    ctbrTotalCollateral :: !(StrictMaybe Coin),
-    ctbrCerts :: !(StrictSeq (ConwayDCert (EraCrypto era))),
-    ctbrWdrls :: !(Wdrl (EraCrypto era)),
-    ctbrTxfee :: !Coin,
-    ctbrVldt :: !ValidityInterval,
-    ctbrReqSignerHashes :: !(Set (KeyHash 'Witness (EraCrypto era))),
-    ctbrMint :: !(MultiAsset (EraCrypto era)),
-    ctbrScriptIntegrityHash :: !(StrictMaybe (ScriptIntegrityHash (EraCrypto era))),
-    ctbrAuxDataHash :: !(StrictMaybe (AuxiliaryDataHash (EraCrypto era))),
-    ctbrTxNetworkId :: !(StrictMaybe Network),
-    ctbrGovActions :: !(StrictSeq (GovernanceActionInfo era)),
-    ctbrVotes :: !(StrictSeq (Vote era))
+  { ctbrSpendInputs :: !(Set (TxIn (EraCrypto era)))
+  , ctbrCollateralInputs :: !(Set (TxIn (EraCrypto era)))
+  , ctbrReferenceInputs :: !(Set (TxIn (EraCrypto era)))
+  , ctbrOutputs :: !(StrictSeq (Sized (TxOut era)))
+  , ctbrCollateralReturn :: !(StrictMaybe (Sized (TxOut era)))
+  , ctbrTotalCollateral :: !(StrictMaybe Coin)
+  , ctbrCerts :: !(StrictSeq (ConwayDCert (EraCrypto era)))
+  , ctbrWdrls :: !(Wdrl (EraCrypto era))
+  , ctbrTxfee :: !Coin
+  , ctbrVldt :: !ValidityInterval
+  , ctbrReqSignerHashes :: !(Set (KeyHash 'Witness (EraCrypto era)))
+  , ctbrMint :: !(MultiAsset (EraCrypto era))
+  , ctbrScriptIntegrityHash :: !(StrictMaybe (ScriptIntegrityHash (EraCrypto era)))
+  , ctbrAuxDataHash :: !(StrictMaybe (AuxiliaryDataHash (EraCrypto era)))
+  , ctbrTxNetworkId :: !(StrictMaybe Network)
+  , ctbrGovActions :: !(StrictSeq (GovernanceActionInfo era))
+  , ctbrVotes :: !(StrictSeq (Vote era))
   }
   deriving (Generic, Typeable)
 
@@ -196,9 +196,9 @@ instance
       bodyFields 20 = field (\x tx -> tx {ctbrVotes = x}) From
       bodyFields n = field (\_ t -> t) (Invalid n)
       requiredFields =
-        [ (0, "inputs"),
-          (1, "outputs"),
-          (2, "fee")
+        [ (0, "inputs")
+        , (1, "outputs")
+        , (2, "fee")
         ]
 
 newtype ConwayTxBody era = TxBodyConstr (MemoBytes ConwayTxBodyRaw era)
@@ -286,9 +286,9 @@ instance Crypto c => EraTxBody (ConwayEra c) where
   allInputsTxBodyF =
     to $ \txBody ->
       Set.unions
-        [ txBody ^. inputsTxBodyL,
-          txBody ^. collateralInputsTxBodyL,
-          txBody ^. referenceInputsTxBodyL
+        [ txBody ^. inputsTxBodyL
+        , txBody ^. collateralInputsTxBodyL
+        , txBody ^. referenceInputsTxBodyL
         ]
   {-# INLINE allInputsTxBodyF #-}
 
@@ -395,43 +395,43 @@ pattern ConwayTxBody ::
   StrictSeq (Vote era) ->
   ConwayTxBody era
 pattern ConwayTxBody
-  { ctbSpendInputs,
-    ctbCollateralInputs,
-    ctbReferenceInputs,
-    ctbOutputs,
-    ctbCollateralReturn,
-    ctbTotalCollateral,
-    ctbCerts,
-    ctbWdrls,
-    ctbTxfee,
-    ctbVldt,
-    ctbReqSignerHashes,
-    ctbMint,
-    ctbScriptIntegrityHash,
-    ctbAdHash,
-    ctbTxNetworkId,
-    ctbGovActions,
-    ctbVotes
+  { ctbSpendInputs
+  , ctbCollateralInputs
+  , ctbReferenceInputs
+  , ctbOutputs
+  , ctbCollateralReturn
+  , ctbTotalCollateral
+  , ctbCerts
+  , ctbWdrls
+  , ctbTxfee
+  , ctbVldt
+  , ctbReqSignerHashes
+  , ctbMint
+  , ctbScriptIntegrityHash
+  , ctbAdHash
+  , ctbTxNetworkId
+  , ctbGovActions
+  , ctbVotes
   } <-
   ( getMemoRawType ->
       ConwayTxBodyRaw
-        { ctbrSpendInputs = ctbSpendInputs,
-          ctbrCollateralInputs = ctbCollateralInputs,
-          ctbrReferenceInputs = ctbReferenceInputs,
-          ctbrOutputs = ctbOutputs,
-          ctbrCollateralReturn = ctbCollateralReturn,
-          ctbrTotalCollateral = ctbTotalCollateral,
-          ctbrCerts = ctbCerts,
-          ctbrWdrls = ctbWdrls,
-          ctbrTxfee = ctbTxfee,
-          ctbrVldt = ctbVldt,
-          ctbrReqSignerHashes = ctbReqSignerHashes,
-          ctbrMint = ctbMint,
-          ctbrScriptIntegrityHash = ctbScriptIntegrityHash,
-          ctbrAuxDataHash = ctbAdHash,
-          ctbrTxNetworkId = ctbTxNetworkId,
-          ctbrGovActions = ctbGovActions,
-          ctbrVotes = ctbVotes
+        { ctbrSpendInputs = ctbSpendInputs
+        , ctbrCollateralInputs = ctbCollateralInputs
+        , ctbrReferenceInputs = ctbReferenceInputs
+        , ctbrOutputs = ctbOutputs
+        , ctbrCollateralReturn = ctbCollateralReturn
+        , ctbrTotalCollateral = ctbTotalCollateral
+        , ctbrCerts = ctbCerts
+        , ctbrWdrls = ctbWdrls
+        , ctbrTxfee = ctbTxfee
+        , ctbrVldt = ctbVldt
+        , ctbrReqSignerHashes = ctbReqSignerHashes
+        , ctbrMint = ctbMint
+        , ctbrScriptIntegrityHash = ctbScriptIntegrityHash
+        , ctbrAuxDataHash = ctbAdHash
+        , ctbrTxNetworkId = ctbTxNetworkId
+        , ctbrGovActions = ctbGovActions
+        , ctbrVotes = ctbVotes
         }
     )
   where

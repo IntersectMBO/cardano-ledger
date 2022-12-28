@@ -9,19 +9,19 @@
 -- Description : Protocol Parameter Update Example
 --
 -- Example demonstrating using the protocol parameter update system.
-module Test.Cardano.Ledger.Shelley.Examples.Updates
-  ( updatesExample,
-    updates4,
-  )
+module Test.Cardano.Ledger.Shelley.Examples.Updates (
+  updatesExample,
+  updates4,
+)
 where
 
-import Cardano.Ledger.BaseTypes
-  ( BlocksMade (..),
-    Nonce,
-    StrictMaybe (..),
-    mkNonceFromNumber,
-    (⭒),
-  )
+import Cardano.Ledger.BaseTypes (
+  BlocksMade (..),
+  Nonce,
+  StrictMaybe (..),
+  mkNonceFromNumber,
+  (⭒),
+ )
 import Cardano.Ledger.Block (Block, bheader, txid)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Crypto as Cr
@@ -33,22 +33,22 @@ import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (PulsingRewUpdate, emptyRewardUpdate)
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), ShelleyPParamsHKD (..), Update (..))
-import Cardano.Ledger.Shelley.Tx
-  ( ShelleyTx (..),
-  )
-import Cardano.Ledger.Shelley.TxBody
-  ( ShelleyTxBody (..),
-    ShelleyTxOut (..),
-    Wdrl (..),
-  )
-import Cardano.Ledger.Shelley.TxWits
-  ( addrWits,
-  )
-import Cardano.Ledger.Slot
-  ( BlockNo (..),
-    EpochNo (..),
-    SlotNo (..),
-  )
+import Cardano.Ledger.Shelley.Tx (
+  ShelleyTx (..),
+ )
+import Cardano.Ledger.Shelley.TxBody (
+  ShelleyTxBody (..),
+  ShelleyTxOut (..),
+  Wdrl (..),
+ )
+import Cardano.Ledger.Shelley.TxWits (
+  addrWits,
+ )
+import Cardano.Ledger.Slot (
+  BlockNo (..),
+  EpochNo (..),
+  SlotNo (..),
+ )
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val ((<+>), (<->))
@@ -64,25 +64,25 @@ import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (ExMock)
 import Test.Cardano.Ledger.Shelley.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
 import qualified Test.Cardano.Ledger.Shelley.Examples.Combinators as C
-import Test.Cardano.Ledger.Shelley.Examples.Federation
-  ( coreNodeIssuerKeys,
-    coreNodeKeysBySchedule,
-    coreNodeVK,
-  )
-import Test.Cardano.Ledger.Shelley.Examples.Init
-  ( initSt,
-    lastByronHeaderHash,
-    nonce0,
-    ppEx,
-  )
+import Test.Cardano.Ledger.Shelley.Examples.Federation (
+  coreNodeIssuerKeys,
+  coreNodeKeysBySchedule,
+  coreNodeVK,
+ )
+import Test.Cardano.Ledger.Shelley.Examples.Init (
+  initSt,
+  lastByronHeaderHash,
+  nonce0,
+  ppEx,
+ )
 import Test.Cardano.Ledger.Shelley.Examples.PoolLifetime (makeCompletedPulser)
-import Test.Cardano.Ledger.Shelley.Generator.Core
-  ( AllIssuerKeys (..),
-    NatNonce (..),
-    genesisCoins,
-    mkBlockFakeVRF,
-    mkOCert,
-  )
+import Test.Cardano.Ledger.Shelley.Generator.Core (
+  AllIssuerKeys (..),
+  NatNonce (..),
+  genesisCoins,
+  mkBlockFakeVRF,
+  mkOCert,
+ )
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
@@ -100,8 +100,8 @@ initUTxO :: Cr.Crypto c => UTxO (ShelleyEra c)
 initUTxO =
   genesisCoins
     genesisId
-    [ ShelleyTxOut Cast.aliceAddr (Val.inject aliceInitCoin),
-      ShelleyTxOut Cast.bobAddr (Val.inject bobInitCoin)
+    [ ShelleyTxOut Cast.aliceAddr (Val.inject aliceInitCoin)
+    , ShelleyTxOut Cast.bobAddr (Val.inject bobInitCoin)
     ]
 
 initStUpdates :: Cr.Crypto c => ChainState (ShelleyEra c)
@@ -115,23 +115,23 @@ ppVoteA :: PParamsUpdate (ShelleyEra c)
 ppVoteA =
   PParamsUpdate
     ShelleyPParams
-      { _minfeeA = SNothing,
-        _minfeeB = SNothing,
-        _maxBBSize = SNothing,
-        _maxTxSize = SNothing,
-        _maxBHSize = SNothing,
-        _keyDeposit = SNothing,
-        _poolDeposit = SJust $ Coin 200,
-        _eMax = SNothing,
-        _nOpt = SNothing,
-        _a0 = SNothing,
-        _rho = SNothing,
-        _tau = SNothing,
-        _d = SNothing,
-        _extraEntropy = SJust (mkNonceFromNumber 123),
-        _protocolVersion = SNothing,
-        _minUTxOValue = SNothing,
-        _minPoolCost = SNothing
+      { _minfeeA = SNothing
+      , _minfeeB = SNothing
+      , _maxBBSize = SNothing
+      , _maxTxSize = SNothing
+      , _maxBHSize = SNothing
+      , _keyDeposit = SNothing
+      , _poolDeposit = SJust $ Coin 200
+      , _eMax = SNothing
+      , _nOpt = SNothing
+      , _a0 = SNothing
+      , _rho = SNothing
+      , _tau = SNothing
+      , _d = SNothing
+      , _extraEntropy = SJust (mkNonceFromNumber 123)
+      , _protocolVersion = SNothing
+      , _minUTxOValue = SNothing
+      , _minPoolCost = SNothing
       }
 
 collectVotes ::
@@ -175,9 +175,9 @@ txEx1 =
           mkWitnessesVKey
             (hashAnnotated $ txbodyEx1 @c)
             ( [asWitness Cast.alicePay]
-                <> [ asWitness . cold $ coreNodeIssuerKeys 0,
-                     asWitness . cold $ coreNodeIssuerKeys 3,
-                     asWitness . cold $ coreNodeIssuerKeys 4
+                <> [ asWitness . cold $ coreNodeIssuerKeys 0
+                   , asWitness . cold $ coreNodeIssuerKeys 3
+                   , asWitness . cold $ coreNodeIssuerKeys 4
                    ]
             )
       }
@@ -250,8 +250,8 @@ txEx2 =
           mkWitnessesVKey
             (hashAnnotated $ txbodyEx2 @c)
             ( [asWitness Cast.alicePay]
-                <> [ asWitness . cold $ coreNodeIssuerKeys 1,
-                     asWitness . cold $ coreNodeIssuerKeys 5
+                <> [ asWitness . cold $ coreNodeIssuerKeys 1
+                   , asWitness . cold $ coreNodeIssuerKeys 5
                    ]
             )
       }
@@ -295,23 +295,23 @@ ppVoteB :: PParamsUpdate (ShelleyEra c)
 ppVoteB =
   PParamsUpdate
     ShelleyPParams
-      { _minfeeA = SNothing,
-        _minfeeB = SNothing,
-        _maxBBSize = SNothing,
-        _maxTxSize = SNothing,
-        _maxBHSize = SNothing,
-        _keyDeposit = SNothing,
-        _poolDeposit = SNothing,
-        _eMax = SNothing,
-        _nOpt = SNothing,
-        _a0 = SNothing,
-        _rho = SNothing,
-        _tau = SNothing,
-        _d = SNothing,
-        _extraEntropy = SNothing,
-        _protocolVersion = SNothing,
-        _minUTxOValue = SJust $ Coin 99,
-        _minPoolCost = SNothing
+      { _minfeeA = SNothing
+      , _minfeeB = SNothing
+      , _maxBBSize = SNothing
+      , _maxTxSize = SNothing
+      , _maxBHSize = SNothing
+      , _keyDeposit = SNothing
+      , _poolDeposit = SNothing
+      , _eMax = SNothing
+      , _nOpt = SNothing
+      , _a0 = SNothing
+      , _rho = SNothing
+      , _tau = SNothing
+      , _d = SNothing
+      , _extraEntropy = SNothing
+      , _protocolVersion = SNothing
+      , _minUTxOValue = SJust $ Coin 99
+      , _minPoolCost = SNothing
       }
 
 ppVotes3 :: Era (ShelleyEra c) => ProposedPPUpdates (ShelleyEra c)
@@ -436,8 +436,8 @@ updatesExample :: TestTree
 updatesExample =
   testGroup
     "protocol parameter updates"
-    [ testCase "get 3/7 votes for a pparam update" $ testCHAINExample updates1,
-      testCase "get 5/7 votes for a pparam update" $ testCHAINExample updates2,
-      testCase "votes for the next epoch" $ testCHAINExample updates3,
-      testCase "processes a pparam update" $ testCHAINExample updates4
+    [ testCase "get 3/7 votes for a pparam update" $ testCHAINExample updates1
+    , testCase "get 5/7 votes for a pparam update" $ testCHAINExample updates2
+    , testCase "votes for the next epoch" $ testCHAINExample updates3
+    , testCase "processes a pparam update" $ testCHAINExample updates4
     ]

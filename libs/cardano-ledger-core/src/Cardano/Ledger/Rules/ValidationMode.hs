@@ -9,26 +9,26 @@
 --   conditions specified in the rules. For example, when replaying a previously
 --   validated chain, we do not care about rerunning _any_ checks, only making
 --   the relevant changes to the ledger state.
-module Cardano.Ledger.Rules.ValidationMode
-  ( -- $static
-    lblStatic,
-    (?!#),
-    (?!#:),
-    failBecauseS,
-    applySTSNonStatic,
-    applySTSValidateSuchThat,
+module Cardano.Ledger.Rules.ValidationMode (
+  -- $static
+  lblStatic,
+  (?!#),
+  (?!#:),
+  failBecauseS,
+  applySTSNonStatic,
+  applySTSValidateSuchThat,
 
-    -- * Interface with validation-selective libarary
-    mapMaybeValidation,
+  -- * Interface with validation-selective libarary
+  mapMaybeValidation,
 
-    -- * Interface for independent Tests
-    Inject (..),
-    InjectMaybe (..),
-    Test,
-    runTest,
-    runTestMaybe,
-    runTestOnSignal,
-  )
+  -- * Interface for independent Tests
+  Inject (..),
+  InjectMaybe (..),
+  Test,
+  runTest,
+  runTestMaybe,
+  runTestOnSignal,
+)
 where
 
 import Control.State.Transition.Extended
@@ -49,9 +49,9 @@ applySTSValidateSuchThat cond =
   where
     opts =
       ApplySTSOpts
-        { asoAssertions = AssertionsOff,
-          asoValidation = ValidateSuchThat cond,
-          asoEvents = EPDiscard
+        { asoAssertions = AssertionsOff
+        , asoValidation = ValidateSuchThat cond
+        , asoEvents = EPDiscard
         }
 
 --------------------------------------------------------------------------------

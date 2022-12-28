@@ -29,15 +29,15 @@ sumStakeBenchmarks =
    in bgroup
         "sumAllStake"
         [ env (pure (Map.fromList stake)) $
-            bench "sum $ Map Word CompactCoin" . nf (Map.foldl' (\a (CompactCoin c) -> a + c) 0),
-          env (pure (VMap.fromList stake :: VMap VB VP Word (CompactForm Coin))) $
-            bench "sum $ VMap Word CompactCoin" . nf (VMap.foldl (\a (CompactCoin c) -> a + c) 0),
-          env (pure (Map.fromList stake)) $
-            bench "foldMap fromCompact $ Map Word CompactCoin" . nf (F.foldMap fromCompact),
-          env (pure (VMap.fromList stake :: VMap VB VP Word (CompactForm Coin))) $
-            bench "foldMap fromCompact $ VMap Word CompactCoin" . nf (VMap.foldMap fromCompact),
-          env (pure (Map.fromList (fmap fromCompact <$> stake))) $
-            bench "fold $ Map Word Coin" . nf F.fold,
-          env (pure (VMap.fromList (fmap fromCompact <$> stake) :: VMap VB VB Word Coin)) $
+            bench "sum $ Map Word CompactCoin" . nf (Map.foldl' (\a (CompactCoin c) -> a + c) 0)
+        , env (pure (VMap.fromList stake :: VMap VB VP Word (CompactForm Coin))) $
+            bench "sum $ VMap Word CompactCoin" . nf (VMap.foldl (\a (CompactCoin c) -> a + c) 0)
+        , env (pure (Map.fromList stake)) $
+            bench "foldMap fromCompact $ Map Word CompactCoin" . nf (F.foldMap fromCompact)
+        , env (pure (VMap.fromList stake :: VMap VB VP Word (CompactForm Coin))) $
+            bench "foldMap fromCompact $ VMap Word CompactCoin" . nf (VMap.foldMap fromCompact)
+        , env (pure (Map.fromList (fmap fromCompact <$> stake))) $
+            bench "fold $ Map Word Coin" . nf F.fold
+        , env (pure (VMap.fromList (fmap fromCompact <$> stake) :: VMap VB VB Word Coin)) $
             bench "fold $ VMap Word Coin" . nf VMap.fold
         ]

@@ -5,16 +5,16 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 
-module Cardano.Ledger.Core.Translation
-  ( PreviousEra,
-    TranslationContext,
-    TranslationError,
-    TranslateEra,
-    translateEra,
-    translateEraMaybe,
-    translateEra',
-    translateEraThroughCBOR,
-  )
+module Cardano.Ledger.Core.Translation (
+  PreviousEra,
+  TranslationContext,
+  TranslationError,
+  TranslateEra,
+  translateEra,
+  translateEraMaybe,
+  translateEra',
+  translateEraThroughCBOR,
+)
 where
 
 import Cardano.Ledger.Binary

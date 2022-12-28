@@ -11,122 +11,122 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Chain.Block.Header
-  ( -- * Header
-    Header,
-    AHeader (..),
+module Cardano.Chain.Block.Header (
+  -- * Header
+  Header,
+  AHeader (..),
 
-    -- * Header Constructors
-    mkHeader,
-    mkHeaderExplicit,
+  -- * Header Constructors
+  mkHeader,
+  mkHeaderExplicit,
 
-    -- * Header Accessors
-    headerProtocolMagicId,
-    headerPrevHash,
-    headerProof,
-    headerSlot,
-    headerIssuer,
-    headerLength,
-    headerDifficulty,
-    headerToSign,
+  -- * Header Accessors
+  headerProtocolMagicId,
+  headerPrevHash,
+  headerProof,
+  headerSlot,
+  headerIssuer,
+  headerLength,
+  headerDifficulty,
+  headerToSign,
 
-    -- * Header Binary Serialization
-    toCBORHeader,
-    toCBORHeaderSize,
-    toCBORHeaderToHash,
-    fromCBORAHeader,
-    fromCBORHeader,
-    fromCBORHeaderToHash,
-    wrapHeaderBytes,
-    toCBORBlockVersions,
-    toCBORBlockVersionsSize,
+  -- * Header Binary Serialization
+  toCBORHeader,
+  toCBORHeaderSize,
+  toCBORHeaderToHash,
+  fromCBORAHeader,
+  fromCBORHeader,
+  fromCBORHeaderToHash,
+  wrapHeaderBytes,
+  toCBORBlockVersions,
+  toCBORBlockVersionsSize,
 
-    -- * Header Formatting
-    renderHeader,
+  -- * Header Formatting
+  renderHeader,
 
-    -- * Boundary Header
-    ABoundaryHeader (..),
-    mkABoundaryHeader,
-    toCBORABoundaryHeader,
-    toCBORABoundaryHeaderSize,
-    fromCBORABoundaryHeader,
-    boundaryHeaderHashAnnotated,
-    wrapBoundaryBytes,
+  -- * Boundary Header
+  ABoundaryHeader (..),
+  mkABoundaryHeader,
+  toCBORABoundaryHeader,
+  toCBORABoundaryHeaderSize,
+  fromCBORABoundaryHeader,
+  boundaryHeaderHashAnnotated,
+  wrapBoundaryBytes,
 
-    -- * HeaderHash
-    HeaderHash,
-    headerHashF,
-    hashHeader,
-    headerHashAnnotated,
-    genesisHeaderHash,
+  -- * HeaderHash
+  HeaderHash,
+  headerHashF,
+  hashHeader,
+  headerHashAnnotated,
+  genesisHeaderHash,
 
-    -- * BlockSignature
-    BlockSignature,
-    ABlockSignature (..),
+  -- * BlockSignature
+  BlockSignature,
+  ABlockSignature (..),
 
-    -- * ToSign
-    ToSign (..),
-    recoverSignedBytes,
-  )
+  -- * ToSign
+  ToSign (..),
+  recoverSignedBytes,
+)
 where
 
 import Cardano.Chain.Block.Body (Body)
-import Cardano.Chain.Block.Boundary
-  ( dropBoundaryExtraHeaderDataRetainGenesisTag,
-    fromCBORBoundaryConsensusData,
-  )
+import Cardano.Chain.Block.Boundary (
+  dropBoundaryExtraHeaderDataRetainGenesisTag,
+  fromCBORBoundaryConsensusData,
+ )
 import Cardano.Chain.Block.Proof (Proof (..), mkProof)
 import Cardano.Chain.Common (ChainDifficulty (..), dropEmptyAttributes)
 import qualified Cardano.Chain.Delegation.Certificate as Delegation
 import Cardano.Chain.Genesis.Hash (GenesisHash (..))
-import Cardano.Chain.Slotting
-  ( EpochAndSlotCount (..),
-    EpochSlots,
-    SlotNumber (..),
-    WithEpochSlots (WithEpochSlots),
-    fromSlotNumber,
-    toSlotNumber,
-  )
+import Cardano.Chain.Slotting (
+  EpochAndSlotCount (..),
+  EpochSlots,
+  SlotNumber (..),
+  WithEpochSlots (WithEpochSlots),
+  fromSlotNumber,
+  toSlotNumber,
+ )
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
 import Cardano.Chain.Update.SoftwareVersion (SoftwareVersion)
-import Cardano.Crypto
-  ( Hash,
-    ProtocolMagicId (..),
-    SignTag (..),
-    Signature,
-    SigningKey,
-    VerificationKey,
-    hashDecoded,
-    hashHexF,
-    hashRaw,
-    serializeCborHash,
-    sign,
-    unsafeAbstractHash,
-  )
+import Cardano.Crypto (
+  Hash,
+  ProtocolMagicId (..),
+  SignTag (..),
+  Signature,
+  SigningKey,
+  VerificationKey,
+  hashDecoded,
+  hashHexF,
+  hashRaw,
+  serializeCborHash,
+  sign,
+  unsafeAbstractHash,
+ )
 import Cardano.Crypto.Raw (Raw)
-import Cardano.Ledger.Binary
-  ( Annotated (..),
-    ByteSpan,
-    Case (..),
-    Decoded (..),
-    Decoder,
-    DecoderError (..),
-    Encoding,
-    FromCBOR (..),
-    Size,
-    ToCBOR (..),
-    annotatedDecoder,
-    byronProtVer,
-    cborError,
-    dropBytes,
-    dropInt32,
-    encodeListLen,
-    enforceSize,
-    fromCBORAnnotated,
-    serializeEncoding,
-    szCases,
-    szGreedy,
-  )
+import Cardano.Ledger.Binary (
+  Annotated (..),
+  ByteSpan,
+  Case (..),
+  Decoded (..),
+  Decoder,
+  DecoderError (..),
+  Encoding,
+  FromCBOR (..),
+  Size,
+  ToCBOR (..),
+  annotatedDecoder,
+  byronProtVer,
+  cborError,
+  dropBytes,
+  dropInt32,
+  encodeListLen,
+  enforceSize,
+  fromCBORAnnotated,
+  serializeEncoding,
+  szCases,
+  szGreedy,
+ )
 import Cardano.Prelude hiding (cborError)
 import Data.Aeson (ToJSON)
 import qualified Data.ByteString as BS
@@ -144,27 +144,27 @@ import NoThunks.Class (NoThunks (..))
 type Header = AHeader ()
 
 data AHeader a = AHeader
-  { aHeaderProtocolMagicId :: !(Annotated ProtocolMagicId a),
-    -- | Pointer to the header of the previous block
-    aHeaderPrevHash :: !(Annotated HeaderHash a),
-    -- | The slot number this block was published for
-    aHeaderSlot :: !(Annotated SlotNumber a),
-    -- | The chain difficulty up to this block
-    aHeaderDifficulty :: !(Annotated ChainDifficulty a),
-    -- | The version of the protocol parameters this block is using
-    headerProtocolVersion :: !ProtocolVersion,
-    -- | The software version this block was published from
-    headerSoftwareVersion :: !SoftwareVersion,
-    -- | Proof of body
-    aHeaderProof :: !(Annotated Proof a),
-    -- | The genesis key that is delegating to publish this block
-    headerGenesisKey :: !VerificationKey,
-    -- | The signature of the block, which contains the delegation certificate
-    headerSignature :: !(ABlockSignature a),
-    -- | An annotation that captures the full header bytes
-    headerAnnotation :: !a,
-    -- | An annotation that captures the bytes from the deprecated ExtraHeaderData
-    headerExtraAnnotation :: !a
+  { aHeaderProtocolMagicId :: !(Annotated ProtocolMagicId a)
+  , aHeaderPrevHash :: !(Annotated HeaderHash a)
+  -- ^ Pointer to the header of the previous block
+  , aHeaderSlot :: !(Annotated SlotNumber a)
+  -- ^ The slot number this block was published for
+  , aHeaderDifficulty :: !(Annotated ChainDifficulty a)
+  -- ^ The chain difficulty up to this block
+  , headerProtocolVersion :: !ProtocolVersion
+  -- ^ The version of the protocol parameters this block is using
+  , headerSoftwareVersion :: !SoftwareVersion
+  -- ^ The software version this block was published from
+  , aHeaderProof :: !(Annotated Proof a)
+  -- ^ Proof of body
+  , headerGenesisKey :: !VerificationKey
+  -- ^ The genesis key that is delegating to publish this block
+  , headerSignature :: !(ABlockSignature a)
+  -- ^ The signature of the block, which contains the delegation certificate
+  , headerAnnotation :: !a
+  -- ^ An annotation that captures the full header bytes
+  , headerExtraAnnotation :: !a
+  -- ^ An annotation that captures the bytes from the deprecated ExtraHeaderData
   }
   deriving (Eq, Show, Generic, NFData, Functor, NoThunks)
 
@@ -298,10 +298,10 @@ toCBORHeader es h =
     <> toCBOR (headerPrevHash h)
     <> toCBOR (headerProof h)
     <> ( encodeListLen 4
-           <> toCBOR (fromSlotNumber es $ headerSlot h)
-           <> toCBOR (headerGenesisKey h)
-           <> toCBOR (headerDifficulty h)
-           <> toCBOR (headerSignature h)
+          <> toCBOR (fromSlotNumber es $ headerSlot h)
+          <> toCBOR (headerGenesisKey h)
+          <> toCBOR (headerDifficulty h)
+          <> toCBOR (headerSignature h)
        )
     <> toCBORBlockVersions (headerProtocolVersion h) (headerSoftwareVersion h)
 
@@ -348,11 +348,11 @@ fromCBORHeader epochSlots = void <$> fromCBORAHeader epochSlots
 fromCBORAHeader :: EpochSlots -> Decoder s (AHeader ByteSpan)
 fromCBORAHeader epochSlots = do
   Annotated
-    ( pm,
-      prevHash,
-      proof,
-      (slot, genesisKey, difficulty, sig),
-      Annotated (protocolVersion, softwareVersion) extraByteSpan
+    ( pm
+      , prevHash
+      , proof
+      , (slot, genesisKey, difficulty, sig)
+      , Annotated (protocolVersion, softwareVersion) extraByteSpan
       )
     byteSpan <-
     annotatedDecoder $ do
@@ -501,10 +501,10 @@ headerHashAnnotated = hashDecoded . fmap wrapHeaderBytes
 --------------------------------------------------------------------------------
 
 data ABoundaryHeader a = UnsafeABoundaryHeader
-  { boundaryPrevHash :: !(Either GenesisHash HeaderHash),
-    boundaryEpoch :: !Word64,
-    boundaryDifficulty :: !ChainDifficulty,
-    boundaryHeaderAnnotation :: !a
+  { boundaryPrevHash :: !(Either GenesisHash HeaderHash)
+  , boundaryEpoch :: !Word64
+  , boundaryDifficulty :: !ChainDifficulty
+  , boundaryHeaderAnnotation :: !a
   }
   deriving (Eq, Show, Functor, Generic, NoThunks)
 
@@ -545,22 +545,22 @@ toCBORABoundaryHeader pm hdr =
   encodeListLen 5
     <> toCBOR pm
     <> ( case boundaryPrevHash hdr of
-           Left gh -> toCBOR (genesisHeaderHash gh)
-           Right hh -> toCBOR hh
+          Left gh -> toCBOR (genesisHeaderHash gh)
+          Right hh -> toCBOR hh
        )
     -- Body proof
     -- The body is always an empty slot leader schedule, so we hash that.
     <> toCBOR (serializeCborHash ([] :: [()]))
     -- Consensus data
     <> ( encodeListLen 2
-           -- Epoch
-           <> toCBOR (boundaryEpoch hdr)
-           -- Chain difficulty
-           <> toCBOR (boundaryDifficulty hdr)
+          -- Epoch
+          <> toCBOR (boundaryEpoch hdr)
+          -- Chain difficulty
+          <> toCBOR (boundaryDifficulty hdr)
        )
     -- Extra data
     <> ( encodeListLen 1
-           <> toCBOR genesisTag
+          <> toCBOR genesisTag
        )
   where
     -- Genesis tag to indicate the presence of a genesis hash in a non-zero
@@ -578,8 +578,8 @@ toCBORABoundaryHeaderSize pm hdr =
       [ Case "GenesisHash" $
           szGreedy $
             pFromLeft $
-              boundaryPrevHash <$> hdr,
-        Case "HeaderHash" $
+              boundaryPrevHash <$> hdr
+      , Case "HeaderHash" $
           szGreedy $
             pFromRight $
               boundaryPrevHash <$> hdr
@@ -594,8 +594,8 @@ toCBORABoundaryHeaderSize pm hdr =
     -- Extra data
     + ( 1
           + szCases
-            [ Case "Genesis" 11,
-              Case "" 1
+            [ Case "Genesis" 11
+            , Case "" 1
             ]
       )
   where
@@ -641,8 +641,8 @@ type BlockSignature = ABlockSignature ()
 --   1. A delegation certificate from a genesis key to the block signer
 --   2. The actual signature over `ToSign`
 data ABlockSignature a = ABlockSignature
-  { delegationCertificate :: !(Delegation.ACertificate a),
-    signature :: !(Signature ToSign)
+  { delegationCertificate :: !(Delegation.ACertificate a)
+  , signature :: !(Signature ToSign)
   }
   deriving (Show, Eq, Generic, Functor)
   deriving anyclass (NFData, NoThunks)
@@ -697,26 +697,26 @@ recoverSignedBytes es h = Annotated (headerToSign es h) bytes
   where
     bytes =
       BS.concat
-        [ "\133",
-          -- This is the value of Codec.CBOR.Write.toLazyByteString (encodeListLen 5)
+        [ "\133"
+        , -- This is the value of Codec.CBOR.Write.toLazyByteString (encodeListLen 5)
           -- It is hard coded here because the signed bytes included it as an
           -- implementation artifact
-          (annotation . aHeaderPrevHash) h,
-          (annotation . aHeaderProof) h,
-          (annotation . aHeaderSlot) h,
-          (annotation . aHeaderDifficulty) h,
-          headerExtraAnnotation h
+          (annotation . aHeaderPrevHash) h
+        , (annotation . aHeaderProof) h
+        , (annotation . aHeaderSlot) h
+        , (annotation . aHeaderDifficulty) h
+        , headerExtraAnnotation h
         ]
 
 -- | Data to be signed in 'Block'
 data ToSign = ToSign
-  { -- | Hash of previous header in the chain
-    tsHeaderHash :: !HeaderHash,
-    tsBodyProof :: !Proof,
-    tsSlot :: !EpochAndSlotCount,
-    tsDifficulty :: !ChainDifficulty,
-    tsProtocolVersion :: !ProtocolVersion,
-    tsSoftwareVersion :: !SoftwareVersion
+  { tsHeaderHash :: !HeaderHash
+  -- ^ Hash of previous header in the chain
+  , tsBodyProof :: !Proof
+  , tsSlot :: !EpochAndSlotCount
+  , tsDifficulty :: !ChainDifficulty
+  , tsProtocolVersion :: !ProtocolVersion
+  , tsSoftwareVersion :: !SoftwareVersion
   }
   deriving (Eq, Show, Generic)
 

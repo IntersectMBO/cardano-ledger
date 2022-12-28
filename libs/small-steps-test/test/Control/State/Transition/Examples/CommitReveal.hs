@@ -15,18 +15,18 @@ module Control.State.Transition.Examples.CommitReveal where
 import Cardano.Crypto.Hash (Hash, HashAlgorithm)
 import Cardano.Crypto.Hash.Short (ShortHash)
 import Cardano.Ledger.Binary (ToCBOR (..), hashToCBOR)
-import Control.State.Transition
-  ( Environment,
-    PredicateFailure,
-    STS,
-    Signal,
-    State,
-    TRC (TRC),
-    initialRules,
-    judgmentContext,
-    transitionRules,
-    (?!),
-  )
+import Control.State.Transition (
+  Environment,
+  PredicateFailure,
+  STS,
+  Signal,
+  State,
+  TRC (TRC),
+  initialRules,
+  judgmentContext,
+  transitionRules,
+  (?!),
+ )
 import qualified Control.State.Transition.Trace as Trace
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as STS.Gen
 import Data.Kind (Type)
@@ -53,17 +53,17 @@ data CR hashAlgo (hashToDataMap :: Type -> Type -> Type) commitData
 
 -- | Commit-reveal transition system state.
 data CRSt hashAlgo hashToDataMap commitData = CRSt
-  { -- | Part of the state used to associate data to the hash that was committed.
-    --
-    -- This is used only by the generators, so 'hashToDataMap' will be
-    -- instantiated to a 'Map' in the generators, for testing purposes; and it
-    -- will be instantiated to 'NoOpMap' in an eventual implementation.
-    --
-    -- Here 'hashToData' is an example of a phantom variable, which wouldn't be
-    -- present in the formal specification, but it is needed in the executable
-    -- spec to be able to generate traces.
-    hashToData :: !(hashToDataMap (Hash hashAlgo Data) commitData),
-    committedHashes :: !(Set (Hash hashAlgo Data))
+  { hashToData :: !(hashToDataMap (Hash hashAlgo Data) commitData)
+  -- ^ Part of the state used to associate data to the hash that was committed.
+  --
+  -- This is used only by the generators, so 'hashToDataMap' will be
+  -- instantiated to a 'Map' in the generators, for testing purposes; and it
+  -- will be instantiated to 'NoOpMap' in an eventual implementation.
+  --
+  -- Here 'hashToData' is an example of a phantom variable, which wouldn't be
+  -- present in the formal specification, but it is needed in the executable
+  -- spec to be able to generate traces.
+  , committedHashes :: !(Set (Hash hashAlgo Data))
   }
 
 deriving instance
@@ -114,11 +114,11 @@ data CRPredicateFailure hashAlgo (hashToDataMap :: Type -> Type -> Type) commitD
   deriving (Eq, Show)
 
 instance
-  ( HashAlgorithm hashAlgo,
-    Typeable hashToDataMap,
-    Typeable commitData,
-    MapLike hashToDataMap (Hash hashAlgo Data) commitData,
-    Monoid (hashToDataMap (Hash hashAlgo Data) commitData)
+  ( HashAlgorithm hashAlgo
+  , Typeable hashToDataMap
+  , Typeable commitData
+  , MapLike hashToDataMap (Hash hashAlgo Data) commitData
+  , Monoid (hashToDataMap (Hash hashAlgo Data) commitData)
   ) =>
   STS (CR hashAlgo hashToDataMap commitData)
   where
@@ -137,10 +137,10 @@ instance
       CRPredicateFailure hashAlgo hashToDataMap commitData
 
   initialRules =
-    [ pure
-        $! CRSt
-          { hashToData = mempty,
-            committedHashes = Set.empty
+    [ pure $!
+        CRSt
+          { hashToData = mempty
+          , committedHashes = Set.empty
           }
     ]
 
@@ -150,22 +150,22 @@ instance
         case crSignal of
           Commit dataHash commitData -> do
             dataHash `Set.notMember` committedHashes ?! AlreadyComitted dataHash
-            pure
-              $! CRSt
-                { hashToData = insert dataHash commitData hashToData,
-                  committedHashes = Set.insert dataHash committedHashes
+            pure $!
+              CRSt
+                { hashToData = insert dataHash commitData hashToData
+                , committedHashes = Set.insert dataHash committedHashes
                 }
           Reveal someData -> do
             hashToCBOR minBound someData
               `Set.member` committedHashes
               ?! InvalidReveal someData
-            pure
-              $! CRSt
+            pure $!
+              CRSt
                 { hashToData =
                     delete
                       (hashToCBOR minBound someData)
-                      hashToData,
-                  committedHashes =
+                      hashToData
+                , committedHashes =
                     Set.delete
                       (hashToCBOR minBound someData)
                       committedHashes

@@ -12,27 +12,27 @@ import Byron.Spec.Ledger.Delegation
 import Byron.Spec.Ledger.GlobalParams (slotsPerEpoch)
 import Control.Arrow ((***))
 import Control.State.Transition
-import Control.State.Transition.Generator
-  ( TraceLength (Desired, Maximum),
-    classifyTraceLength,
-    traceSigGen,
-  )
+import Control.State.Transition.Generator (
+  TraceLength (Desired, Maximum),
+  classifyTraceLength,
+  traceSigGen,
+ )
 import qualified Control.State.Transition.Generator as Transition.Generator
 import Control.State.Transition.Trace
 import Data.Foldable (traverse_)
 import Data.List.Ordered (nubSortBy)
 import Data.Ord (Down (Down), comparing)
-import Hedgehog
-  ( MonadTest,
-    Property,
-    assert,
-    cover,
-    failure,
-    forAll,
-    property,
-    withTests,
-    (===),
-  )
+import Hedgehog (
+  MonadTest,
+  Property,
+  assert,
+  cover,
+  failure,
+  forAll,
+  property,
+  withTests,
+  (===),
+ )
 import Lens.Micro ((&), (^.), (^..), _1, _5)
 import Lens.Micro.Extras (view)
 

@@ -10,11 +10,11 @@ import qualified Cardano.Crypto.DSIGN as DSIGN
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Crypto (DSIGN)
 import Cardano.Ledger.Keys
-import Test.Cardano.Ledger.Shelley.Utils (Split (..))
 import Data.Functor.Identity (Identity)
 import Data.Maybe.Strict (StrictMaybe)
 import Data.TreeDiff.Class (ToExpr (..))
 import Generic.Random (genericArbitraryU)
+import Test.Cardano.Ledger.Shelley.Utils (Split (..))
 import Test.QuickCheck (Arbitrary (..))
 
 -- We need this here for the tests, but should not be in the actual library because

@@ -3,11 +3,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneKindSignatures #-}
 
-module Cardano.Crypto.Signing.Tag
-  ( SignTag (..),
-    signTag,
-    signTagDecoded,
-  )
+module Cardano.Crypto.Signing.Tag (
+  SignTag (..),
+  signTag,
+  signTagDecoded,
+)
 where
 
 import Cardano.Crypto.ProtocolMagic (ProtocolMagicId (..))

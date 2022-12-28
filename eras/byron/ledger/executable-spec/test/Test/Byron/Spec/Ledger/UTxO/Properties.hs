@@ -9,47 +9,47 @@ module Test.Byron.Spec.Ledger.UTxO.Properties where
 import Byron.Spec.Ledger.Core (Lovelace, dom, unLovelace, (∩), (∪), (⋪), (◁))
 import Byron.Spec.Ledger.STS.UTXO (UTxOState (UTxOState), pps, reserves, utxo)
 import Byron.Spec.Ledger.STS.UTXOW (UTXOW)
-import Byron.Spec.Ledger.UTxO
-  ( Tx (..),
-    TxBody (TxBody),
-    TxIn (TxIn),
-    TxOut (TxOut),
-    UTxO (UTxO),
-    balance,
-    body,
-    inputs,
-    outputs,
-    pcMinFee,
-    txins,
-    txouts,
-  )
+import Byron.Spec.Ledger.UTxO (
+  Tx (..),
+  TxBody (TxBody),
+  TxIn (TxIn),
+  TxOut (TxOut),
+  UTxO (UTxO),
+  balance,
+  body,
+  inputs,
+  outputs,
+  pcMinFee,
+  txins,
+  txouts,
+ )
 import Control.Arrow (second, (***))
 import Control.Monad (when)
 import Control.State.Transition.Generator (classifyTraceLength, trace, traceOfLength)
-import Control.State.Transition.Trace
-  ( Trace,
-    TraceOrder (OldestFirst),
-    firstAndLastState,
-    preStatesAndSignals,
-    traceEnv,
-    traceLength,
-    traceSignals,
-    _traceInitState,
-  )
+import Control.State.Transition.Trace (
+  Trace,
+  TraceOrder (OldestFirst),
+  firstAndLastState,
+  preStatesAndSignals,
+  traceEnv,
+  traceLength,
+  traceSignals,
+  _traceInitState,
+ )
 import Data.Foldable (foldl', traverse_)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set, empty, fromList, union)
-import Hedgehog
-  ( MonadTest,
-    Property,
-    classify,
-    cover,
-    forAll,
-    property,
-    success,
-    withTests,
-    (===),
-  )
+import Hedgehog (
+  MonadTest,
+  Property,
+  classify,
+  cover,
+  forAll,
+  property,
+  success,
+  withTests,
+  (===),
+ )
 import Lens.Micro ((&), (^.), _2)
 import Lens.Micro.Extras (view)
 
@@ -163,8 +163,8 @@ avgInputsOutputs txs =
   case length txs of
     0 -> (0, 0)
     n ->
-      ( nrInputs / (fromIntegral n),
-        nrOutputs / (fromIntegral n)
+      ( nrInputs / (fromIntegral n)
+      , nrOutputs / (fromIntegral n)
       )
   where
     nrInputs = fromIntegral $ sum (length . inputs <$> txs)

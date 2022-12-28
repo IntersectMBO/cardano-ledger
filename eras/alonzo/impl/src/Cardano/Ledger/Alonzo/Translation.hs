@@ -19,17 +19,17 @@ import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.Core (upgradePParams, upgradePParamsUpdate)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Era
-  ( TranslateEra (..),
-    TranslationContext,
-    translateEra',
-  )
+import Cardano.Ledger.Era (
+  TranslateEra (..),
+  TranslationContext,
+  translateEra',
+ )
 import Cardano.Ledger.Mary (MaryEra)
-import Cardano.Ledger.Shelley.API
-  ( EpochState (..),
-    NewEpochState (..),
-    StrictMaybe (..),
-  )
+import Cardano.Ledger.Shelley.API (
+  EpochState (..),
+  NewEpochState (..),
+  StrictMaybe (..),
+ )
 import qualified Cardano.Ledger.Shelley.API as API
 import qualified Cardano.Ledger.Shelley.Tx as LTX
 import qualified Cardano.Ledger.Shelley.TxBody as Shelley
@@ -57,13 +57,13 @@ instance Crypto c => TranslateEra (AlonzoEra c) NewEpochState where
   translateEra ctxt nes =
     return $
       NewEpochState
-        { nesEL = nesEL nes,
-          nesBprev = nesBprev nes,
-          nesBcur = nesBcur nes,
-          nesEs = translateEra' ctxt $ nesEs nes,
-          nesRu = nesRu nes,
-          nesPd = nesPd nes,
-          stashedAVVMAddresses = ()
+        { nesEL = nesEL nes
+        , nesBprev = nesBprev nes
+        , nesBcur = nesBcur nes
+        , nesEs = translateEra' ctxt $ nesEs nes
+        , nesRu = nesRu nes
+        , nesPd = nesPd nes
+        , stashedAVVMAddresses = ()
         }
 
 instance Crypto c => TranslateEra (AlonzoEra c) Core.PParams where
@@ -72,8 +72,8 @@ instance Crypto c => TranslateEra (AlonzoEra c) Core.PParams where
 newtype Tx era = Tx {unTx :: Core.Tx era}
 
 instance
-  ( Crypto c,
-    Core.Tx (AlonzoEra c) ~ AlonzoTx (AlonzoEra c)
+  ( Crypto c
+  , Core.Tx (AlonzoEra c) ~ AlonzoTx (AlonzoEra c)
   ) =>
   TranslateEra (AlonzoEra c) Tx
   where
@@ -99,31 +99,31 @@ instance Crypto c => TranslateEra (AlonzoEra c) EpochState where
   translateEra ctxt@(AlonzoGenesisWrapper upgradeArgs) es =
     return
       EpochState
-        { esAccountState = esAccountState es,
-          esSnapshots = esSnapshots es,
-          esLState = translateEra' ctxt $ esLState es,
-          esPrevPp = upgradePParams upgradeArgs $ esPrevPp es,
-          esPp = upgradePParams upgradeArgs $ esPp es,
-          esNonMyopic = esNonMyopic es
+        { esAccountState = esAccountState es
+        , esSnapshots = esSnapshots es
+        , esLState = translateEra' ctxt $ esLState es
+        , esPrevPp = upgradePParams upgradeArgs $ esPrevPp es
+        , esPp = upgradePParams upgradeArgs $ esPp es
+        , esNonMyopic = esNonMyopic es
         }
 
 instance Crypto c => TranslateEra (AlonzoEra c) API.LedgerState where
   translateEra ctxt ls =
     return
       API.LedgerState
-        { API.lsUTxOState = translateEra' ctxt $ API.lsUTxOState ls,
-          API.lsDPState = API.lsDPState ls
+        { API.lsUTxOState = translateEra' ctxt $ API.lsUTxOState ls
+        , API.lsDPState = API.lsDPState ls
         }
 
 instance Crypto c => TranslateEra (AlonzoEra c) API.UTxOState where
   translateEra ctxt us =
     return
       API.UTxOState
-        { API.utxosUtxo = translateEra' ctxt $ API.utxosUtxo us,
-          API.utxosDeposited = API.utxosDeposited us,
-          API.utxosFees = API.utxosFees us,
-          API.utxosPpups = translateEra' ctxt $ API.utxosPpups us,
-          API.utxosStakeDistr = API.utxosStakeDistr us
+        { API.utxosUtxo = translateEra' ctxt $ API.utxosUtxo us
+        , API.utxosDeposited = API.utxosDeposited us
+        , API.utxosFees = API.utxosFees us
+        , API.utxosPpups = translateEra' ctxt $ API.utxosPpups us
+        , API.utxosStakeDistr = API.utxosStakeDistr us
         }
 
 instance Crypto c => TranslateEra (AlonzoEra c) API.UTxO where
@@ -134,8 +134,8 @@ instance Crypto c => TranslateEra (AlonzoEra c) API.PPUPState where
   translateEra ctxt ps =
     return
       API.PPUPState
-        { API.proposals = translateEra' ctxt $ API.proposals ps,
-          API.futureProposals = translateEra' ctxt $ API.futureProposals ps
+        { API.proposals = translateEra' ctxt $ API.proposals ps
+        , API.futureProposals = translateEra' ctxt $ API.futureProposals ps
         }
 
 instance Crypto c => TranslateEra (AlonzoEra c) API.ProposedPPUpdates where

@@ -5,13 +5,13 @@
 module Test.Cardano.Ledger.Babbage.Examples.Consensus where
 
 import Cardano.Ledger.Allegra.Scripts (Timelock (..), ValidityInterval (..))
-import Cardano.Ledger.Alonzo.Data
-  ( AuxiliaryDataHash (..),
-    Data (..),
-    dataToBinaryData,
-    hashData,
-    mkAlonzoTxAuxData,
-  )
+import Cardano.Ledger.Alonzo.Data (
+  AuxiliaryDataHash (..),
+  Data (..),
+  dataToBinaryData,
+  hashData,
+  mkAlonzoTxAuxData,
+ )
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
@@ -30,17 +30,17 @@ import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Shelley.API
-  ( ApplyTxError (..),
-    Credential (..),
-    Network (..),
-    NewEpochState (..),
-    ProposedPPUpdates (..),
-    RewardAcnt (..),
-    TxId (..),
-    Update (..),
-    Wdrl (..),
-  )
+import Cardano.Ledger.Shelley.API (
+  ApplyTxError (..),
+  Credential (..),
+  Network (..),
+  NewEpochState (..),
+  ProposedPPUpdates (..),
+  RewardAcnt (..),
+  TxId (..),
+  Update (..),
+  Wdrl (..),
+ )
 import Cardano.Ledger.Shelley.Rules (ShelleyDelegsPredFailure (..), ShelleyLedgerPredFailure (..))
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.TxIn (mkTxInPartial)
@@ -62,33 +62,33 @@ import Test.Cardano.Ledger.Shelley.Orphans ()
 ledgerExamplesBabbage :: SLE.ShelleyLedgerExamples Babbage
 ledgerExamplesBabbage =
   SLE.ShelleyLedgerExamples
-    { SLE.sleBlock = SLE.exampleShelleyLedgerBlock exampleTransactionInBlock,
-      SLE.sleHashHeader = SLE.exampleHashHeader (Proxy @Babbage),
-      SLE.sleTx = exampleTransactionInBlock,
-      SLE.sleApplyTxError =
+    { SLE.sleBlock = SLE.exampleShelleyLedgerBlock exampleTransactionInBlock
+    , SLE.sleHashHeader = SLE.exampleHashHeader (Proxy @Babbage)
+    , SLE.sleTx = exampleTransactionInBlock
+    , SLE.sleApplyTxError =
         ApplyTxError $
           pure $
             DelegsFailure $
-              DelegateeNotRegisteredDELEG @Babbage (SLE.mkKeyHash 1),
-      SLE.sleRewardsCredentials =
+              DelegateeNotRegisteredDELEG @Babbage (SLE.mkKeyHash 1)
+    , SLE.sleRewardsCredentials =
         Set.fromList
-          [ Left (Coin 100),
-            Right (ScriptHashObj (SLE.mkScriptHash 1)),
-            Right (KeyHashObj (SLE.mkKeyHash 2))
-          ],
-      SLE.sleResultExamples = resultExamples,
-      SLE.sleNewEpochState = exampleBabbageNewEpochState,
-      SLE.sleChainDepState = SLE.exampleLedgerChainDepState 1,
-      SLE.sleTranslationContext = AlonzoLE.exampleAlonzoGenesis
+          [ Left (Coin 100)
+          , Right (ScriptHashObj (SLE.mkScriptHash 1))
+          , Right (KeyHashObj (SLE.mkKeyHash 2))
+          ]
+    , SLE.sleResultExamples = resultExamples
+    , SLE.sleNewEpochState = exampleBabbageNewEpochState
+    , SLE.sleChainDepState = SLE.exampleLedgerChainDepState 1
+    , SLE.sleTranslationContext = AlonzoLE.exampleAlonzoGenesis
     }
   where
     resultExamples =
       SLE.ShelleyResultExamples
-        { SLE.srePParams = def,
-          SLE.sreProposedPPUpdates = examplePPPU,
-          SLE.srePoolDistr = SLE.examplePoolDistr,
-          SLE.sreNonMyopicRewards = SLE.exampleNonMyopicRewards,
-          SLE.sreShelleyGenesis = SLE.testShelleyGenesis
+        { SLE.srePParams = def
+        , SLE.sreProposedPPUpdates = examplePPPU
+        , SLE.srePoolDistr = SLE.examplePoolDistr
+        , SLE.sreNonMyopicRewards = SLE.exampleNonMyopicRewards
+        , SLE.sreShelleyGenesis = SLE.testShelleyGenesis
         }
     examplePPPU =
       ProposedPPUpdates $

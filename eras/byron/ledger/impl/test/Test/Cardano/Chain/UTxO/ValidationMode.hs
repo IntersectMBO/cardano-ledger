@@ -2,9 +2,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Test.Cardano.Chain.UTxO.ValidationMode
-  ( tests,
-  )
+module Test.Cardano.Chain.UTxO.ValidationMode (
+  tests,
+)
 where
 
 import qualified Byron.Spec.Ledger.Core as Abstract
@@ -14,19 +14,19 @@ import qualified Byron.Spec.Ledger.UTxO.Generators as Abstract
 import qualified Byron.Spec.Ledger.Update as Abstract
 import qualified Byron.Spec.Ledger.Update.Generators as Abstract
 import Cardano.Chain.Block (BlockValidationMode (..))
-import Cardano.Chain.Common
-  ( TxFeePolicy (..),
-    calculateTxSizeLinear,
-    lovelaceToInteger,
-  )
-import Cardano.Chain.UTxO
-  ( ATxAux (..),
-    Environment (..),
-    TxId,
-    TxValidationError (..),
-    TxValidationMode (..),
-    UTxOValidationError (..),
-  )
+import Cardano.Chain.Common (
+  TxFeePolicy (..),
+  calculateTxSizeLinear,
+  lovelaceToInteger,
+ )
+import Cardano.Chain.UTxO (
+  ATxAux (..),
+  Environment (..),
+  TxId,
+  TxValidationError (..),
+  TxValidationMode (..),
+  UTxOValidationError (..),
+ )
 import qualified Cardano.Chain.UTxO as UTxO
 import Cardano.Chain.Update (ProtocolParameters (..))
 import Cardano.Chain.ValidationMode (ValidationMode (..))
@@ -176,9 +176,9 @@ genValidTxWits ppau txIdMap = do
     ppauUTxO
   where
     PParamsAddrsAndUTxO
-      { ppauPParams,
-        ppauAddrs,
-        ppauUTxO
+      { ppauPParams
+      , ppauAddrs
+      , ppauUTxO
       } = ppau
 
     pparams = elaboratePParams ppauPParams
@@ -186,9 +186,9 @@ genValidTxWits ppau txIdMap = do
 genValidationMode :: Gen TxValidationMode
 genValidationMode =
   Gen.element
-    [ TxValidation,
-      TxValidationNoCrypto,
-      NoTxValidation
+    [ TxValidation
+    , TxValidationNoCrypto
+    , NoTxValidation
     ]
 
 --------------------------------------------------------------------------------
@@ -196,9 +196,9 @@ genValidationMode =
 --------------------------------------------------------------------------------
 
 data PParamsAddrsAndUTxO = PParamsAddrsAndUTxO
-  { ppauPParams :: !Abstract.PParams,
-    ppauAddrs :: ![Abstract.Addr],
-    ppauUTxO :: !Abstract.UTxO
+  { ppauPParams :: !Abstract.PParams
+  , ppauAddrs :: ![Abstract.Addr]
+  , ppauUTxO :: !Abstract.UTxO
   }
   deriving (Show)
 

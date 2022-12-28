@@ -16,71 +16,71 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Ledger.Core.PParams
-  ( EraPParams (..),
-    PParams (..),
-    emptyPParams,
-    PParamsUpdate (..),
-    emptyPParamsUpdate,
+module Cardano.Ledger.Core.PParams (
+  EraPParams (..),
+  PParams (..),
+  emptyPParams,
+  PParamsUpdate (..),
+  emptyPParamsUpdate,
 
-    -- * PParams lens helpers
-    ppMinFeeAL,
-    ppMinFeeBL,
-    ppMaxBBSizeL,
-    ppMaxTxSizeL,
-    ppMaxBHSizeL,
-    ppKeyDepositL,
-    ppPoolDepositL,
-    ppEMaxL,
-    ppNOptL,
-    ppA0L,
-    ppRhoL,
-    ppTauL,
-    ppDL,
-    ppExtraEntropyL,
-    ppProtocolVersionL,
-    ppMinUTxOValueL,
-    ppMinPoolCostL,
+  -- * PParams lens helpers
+  ppMinFeeAL,
+  ppMinFeeBL,
+  ppMaxBBSizeL,
+  ppMaxTxSizeL,
+  ppMaxBHSizeL,
+  ppKeyDepositL,
+  ppPoolDepositL,
+  ppEMaxL,
+  ppNOptL,
+  ppA0L,
+  ppRhoL,
+  ppTauL,
+  ppDL,
+  ppExtraEntropyL,
+  ppProtocolVersionL,
+  ppMinUTxOValueL,
+  ppMinPoolCostL,
 
-    -- * PParamsUpdate lens helpers
-    ppuMinFeeAL,
-    ppuMinFeeBL,
-    ppuMaxBBSizeL,
-    ppuMaxTxSizeL,
-    ppuMaxBHSizeL,
-    ppuKeyDepositL,
-    ppuPoolDepositL,
-    ppuEMaxL,
-    ppuNOptL,
-    ppuA0L,
-    ppuRhoL,
-    ppuTauL,
-    ppuDL,
-    ppuExtraEntropyL,
-    ppuProtocolVersionL,
-    ppuMinUTxOValueL,
-    ppuMinPoolCostL,
+  -- * PParamsUpdate lens helpers
+  ppuMinFeeAL,
+  ppuMinFeeBL,
+  ppuMaxBBSizeL,
+  ppuMaxTxSizeL,
+  ppuMaxBHSizeL,
+  ppuKeyDepositL,
+  ppuPoolDepositL,
+  ppuEMaxL,
+  ppuNOptL,
+  ppuA0L,
+  ppuRhoL,
+  ppuTauL,
+  ppuDL,
+  ppuExtraEntropyL,
+  ppuProtocolVersionL,
+  ppuMinUTxOValueL,
+  ppuMinPoolCostL,
 
-    -- * Utility
-    ppLens,
-    ppuLens,
-    mapPParams,
-    mapPParamsUpdate,
-    upgradePParams,
-    downgradePParams,
-    upgradePParamsUpdate,
-    downgradePParamsUpdate,
-  )
+  -- * Utility
+  ppLens,
+  ppuLens,
+  mapPParams,
+  mapPParamsUpdate,
+  upgradePParams,
+  downgradePParams,
+  upgradePParamsUpdate,
+  downgradePParamsUpdate,
+)
 where
 
-import Cardano.Ledger.BaseTypes
-  ( EpochNo (..),
-    NonNegativeInterval,
-    Nonce (..),
-    ProtVer,
-    StrictMaybe (..),
-    UnitInterval,
-  )
+import Cardano.Ledger.BaseTypes (
+  EpochNo (..),
+  NonNegativeInterval,
+  Nonce (..),
+  ProtVer,
+  StrictMaybe (..),
+  UnitInterval,
+ )
 import Cardano.Ledger.Binary (FromCBOR, ToCBOR)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core.Era (Era (..), PreviousEra, ProtVerAtMost)
@@ -196,21 +196,21 @@ instance Updatable (K1 t x a) (K1 t (StrictMaybe x) u) where
     SNothing -> x'
 
 class
-  ( Era era,
-    Eq (PParamsHKD Identity era),
-    Ord (PParamsHKD Identity era),
-    Show (PParamsHKD Identity era),
-    NFData (PParamsHKD Identity era),
-    ToCBOR (PParamsHKD Identity era),
-    FromCBOR (PParamsHKD Identity era),
-    NoThunks (PParamsHKD Identity era),
-    Eq (PParamsHKD StrictMaybe era),
-    Ord (PParamsHKD StrictMaybe era),
-    Show (PParamsHKD StrictMaybe era),
-    NFData (PParamsHKD StrictMaybe era),
-    ToCBOR (PParamsHKD StrictMaybe era),
-    FromCBOR (PParamsHKD StrictMaybe era),
-    NoThunks (PParamsHKD StrictMaybe era)
+  ( Era era
+  , Eq (PParamsHKD Identity era)
+  , Ord (PParamsHKD Identity era)
+  , Show (PParamsHKD Identity era)
+  , NFData (PParamsHKD Identity era)
+  , ToCBOR (PParamsHKD Identity era)
+  , FromCBOR (PParamsHKD Identity era)
+  , NoThunks (PParamsHKD Identity era)
+  , Eq (PParamsHKD StrictMaybe era)
+  , Ord (PParamsHKD StrictMaybe era)
+  , Show (PParamsHKD StrictMaybe era)
+  , NFData (PParamsHKD StrictMaybe era)
+  , ToCBOR (PParamsHKD StrictMaybe era)
+  , FromCBOR (PParamsHKD StrictMaybe era)
+  , NoThunks (PParamsHKD StrictMaybe era)
   ) =>
   EraPParams era
   where
@@ -224,9 +224,9 @@ class
     PParams era
   default applyPPUpdates ::
     forall a u.
-    ( Generic (PParamsHKD Identity era),
-      Generic (PParamsHKD StrictMaybe era),
-      Updatable (Rep (PParamsHKD Identity era) a) (Rep (PParamsHKD StrictMaybe era) u)
+    ( Generic (PParamsHKD Identity era)
+    , Generic (PParamsHKD StrictMaybe era)
+    , Updatable (Rep (PParamsHKD Identity era) a) (Rep (PParamsHKD StrictMaybe era) u)
     ) =>
     PParams era ->
     PParamsUpdate era ->

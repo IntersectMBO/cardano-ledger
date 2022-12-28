@@ -1,9 +1,9 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Mary.Examples
-  ( testMaryNoDelegLEDGER,
-  )
+module Test.Cardano.Ledger.Mary.Examples (
+  testMaryNoDelegLEDGER,
+)
 where
 
 -- obtaining orphan STS (UTXOW (ShelleyMAEra ma c))

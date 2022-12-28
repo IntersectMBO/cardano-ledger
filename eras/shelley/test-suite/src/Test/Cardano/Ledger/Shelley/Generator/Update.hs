@@ -12,56 +12,57 @@
 {-# OPTIONS_GHC -fno-warn-unused-binds #-}
 {-# OPTIONS_GHC -fno-warn-unused-imports #-}
 
-module Test.Cardano.Ledger.Shelley.Generator.Update
-  ( genPParams,
-    genUpdate,
-    genShelleyPParamsUpdate,
-    genM,
-    genDecentralisationParam,
-  )
+module Test.Cardano.Ledger.Shelley.Generator.Update (
+  genPParams,
+  genUpdate,
+  genShelleyPParamsUpdate,
+  genM,
+  genDecentralisationParam,
+)
 where
 
-import Cardano.Ledger.BaseTypes
-  ( BoundedRational,
-    NonNegativeInterval,
-    Nonce (NeutralNonce),
-    ProtVer (..),
-    StrictMaybe (..),
-    UnitInterval,
-    Version,
-    getVersion64,
-    mkNonceFromNumber,
-    mkVersion,
-    mkVersion64,
-    succVersion,
-  )
+import Cardano.Ledger.BaseTypes (
+  BoundedRational,
+  NonNegativeInterval,
+  Nonce (NeutralNonce),
+  ProtVer (..),
+  StrictMaybe (..),
+  UnitInterval,
+  Version,
+  getVersion64,
+  mkNonceFromNumber,
+  mkVersion,
+  mkVersion64,
+  succVersion,
+ )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (EraCrypto)
-import Cardano.Ledger.Keys
-  ( GenDelegPair (..),
-    GenDelegs (..),
-    KeyHash,
-    KeyRole (..),
-    asWitness,
-    hashKey,
-  )
-import Cardano.Ledger.Shelley.API
-  ( ProposedPPUpdates,
-    Update,
-  )
-import Cardano.Ledger.Shelley.LedgerState
-  ( DPState (..),
-    DState (..),
-    UTxOState (..),
-  )
-import Cardano.Ledger.Shelley.PParams
-  ( ShelleyPParams,
-    ShelleyPParamsHKD (..),
-    ShelleyPParamsUpdate,
-    pattern ProposedPPUpdates,
-    pattern Update,
-  )
+import Cardano.Ledger.Keys (
+  GenDelegPair (..),
+  GenDelegs (..),
+  KeyHash,
+  KeyRole (..),
+  asWitness,
+  hashKey,
+ )
+import Cardano.Ledger.Shelley.API (
+  ProposedPPUpdates,
+  Update,
+ )
+import Cardano.Ledger.Shelley.LedgerState (
+  DPState (..),
+  DState (..),
+  UTxOState (..),
+ )
+import Cardano.Ledger.Shelley.PParams (
+  ShelleyPParams,
+  ShelleyPParamsHKD (..),
+  ShelleyPParamsUpdate,
+  pattern ProposedPPUpdates,
+  pattern Update,
+ )
 import Cardano.Ledger.Slot (EpochNo (EpochNo), SlotNo)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -70,28 +71,28 @@ import Data.Ratio (Ratio, (%))
 import Data.Word (Word64)
 import GHC.Records
 import GHC.Stack (HasCallStack)
+import Lens.Micro ((^.))
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Binary.Arbitrary (genVersion)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair, vKey)
 import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
-import Test.Cardano.Ledger.Shelley.Generator.Core
-  ( AllIssuerKeys (cold),
-    genInteger,
-    genNatural,
-    genWord64,
-    increasingProbabilityAt,
-    tooLateInEpoch,
-  )
+import Test.Cardano.Ledger.Shelley.Generator.Core (
+  AllIssuerKeys (cold),
+  genInteger,
+  genNatural,
+  genWord64,
+  increasingProbabilityAt,
+  tooLateInEpoch,
+ )
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
-import Test.Cardano.Ledger.Shelley.Utils
-  ( GenesisKeyPair,
-    epochFromSlotNo,
-    unsafeBoundRational, ShelleyTest
-  )
+import Test.Cardano.Ledger.Shelley.Utils (
+  GenesisKeyPair,
+  ShelleyTest,
+  epochFromSlotNo,
+  unsafeBoundRational,
+ )
 import Test.QuickCheck (Gen, choose, frequency)
 import qualified Test.QuickCheck as QC
-import qualified Cardano.Ledger.Core as Core
-import Lens.Micro ((^.))
 
 -- ====================================
 
@@ -104,22 +105,24 @@ genIntervalInThousands lower upper =
   unsafeBoundRational <$> genRationalInThousands lower upper
 
 genPParams :: ShelleyTest era => Constants -> Gen (PParams era)
-genPParams c@Constants {maxMinFeeA, maxMinFeeB, minMajorPV} = fmap Core.PParams $
-  mkPParams <$> genNatural 0 maxMinFeeA -- _minfeeA
-    <*> genNatural 0 maxMinFeeB -- _minfeeB
-    <*> szGen -- (maxBBSize, maxBHSize, maxTxSize)
-    <*> genKeyDeposit
-    <*> genPoolDeposit
-    <*> genEMax c
-    <*> genNOpt
-    <*> genA0
-    <*> genRho
-    <*> genTau
-    <*> genDecentralisationParam
-    <*> genExtraEntropy
-    <*> genProtocolVersion minMajorPV
-    <*> genMinUTxOValue
-    <*> genMinPoolCost
+genPParams c@Constants {maxMinFeeA, maxMinFeeB, minMajorPV} =
+  fmap Core.PParams $
+    mkPParams
+      <$> genNatural 0 maxMinFeeA -- _minfeeA
+      <*> genNatural 0 maxMinFeeB -- _minfeeB
+      <*> szGen -- (maxBBSize, maxBHSize, maxTxSize)
+      <*> genKeyDeposit
+      <*> genPoolDeposit
+      <*> genEMax c
+      <*> genNOpt
+      <*> genA0
+      <*> genRho
+      <*> genTau
+      <*> genDecentralisationParam
+      <*> genExtraEntropy
+      <*> genProtocolVersion minMajorPV
+      <*> genMinUTxOValue
+      <*> genMinPoolCost
   where
     szGen :: Gen (Natural, Natural, Natural)
     szGen = do
@@ -148,8 +151,8 @@ genPoolDeposit =
 genExtraEntropy :: HasCallStack => Gen Nonce
 genExtraEntropy =
   QC.frequency
-    [ (1, pure NeutralNonce),
-      (1, mkNonceFromNumber <$> genWord64 1 123)
+    [ (1, pure NeutralNonce)
+    , (1, mkNonceFromNumber <$> genWord64 1 123)
     ]
 
 -- Note: we keep the lower bound high enough so that we can more likely
@@ -246,26 +249,26 @@ genShelleyPParamsUpdate c@Constants {maxMinFeeA, maxMinFeeB} pp = do
   minPoolCost <- genM $ genMinPoolCost
   pure
     ( emptyPParamsUpdate
-      & ppuMinFeeAL .~ minFeeA
-      & ppuMinFeeBL .~ minFeeB
-      & ppuMaxBBSizeL .~ maxBBSize
-      -- ...
-      --     _maxBBSize = maxBBSize,
-      --     _maxTxSize = maxTxSize,
-      --     _maxBHSize = maxBHSize,
-      --     _keyDeposit = keyDeposit,
-      --     _poolDeposit = poolDeposit,
-      --     _eMax = eMax,
-      --     _nOpt = nopt,
-      --     _a0 = a0,
-      --     _rho = rho,
-      --     _tau = tau,
-      --     _d = d,
-      --     _extraEntropy = extraEntropy,
-      --     _protocolVersion = protocolVersion,
-      --     _minUTxOValue = minUTxOValue,
-      --     _minPoolCost = minPoolCost
-      --   }
+        & ppuMinFeeAL .~ minFeeA
+        & ppuMinFeeBL .~ minFeeB
+        & ppuMaxBBSizeL .~ maxBBSize
+        -- ...
+        --     _maxBBSize = maxBBSize,
+        --     _maxTxSize = maxTxSize,
+        --     _maxBHSize = maxBHSize,
+        --     _keyDeposit = keyDeposit,
+        --     _poolDeposit = poolDeposit,
+        --     _eMax = eMax,
+        --     _nOpt = nopt,
+        --     _a0 = a0,
+        --     _rho = rho,
+        --     _tau = tau,
+        --     _d = d,
+        --     _extraEntropy = extraEntropy,
+        --     _protocolVersion = protocolVersion,
+        --     _minUTxOValue = minUTxOValue,
+        --     _minPoolCost = minPoolCost
+        --   }
     )
 
 -- | Generate a proposal for protocol parameter updates for all the given genesis keys.
@@ -332,10 +335,12 @@ genUpdate
         else
           let wits = asWitness . cold <$> coreSigners
            in QC.frequency
-                [ ( frequencyTxUpdates,
-                    (,wits) <$> genUpdateForNodes c s e genesisKeys pp
-                  ),
-                  ( 100 - frequencyTxUpdates,
-                    pure (Nothing, [])
+                [
+                  ( frequencyTxUpdates
+                  , (,wits) <$> genUpdateForNodes c s e genesisKeys pp
+                  )
+                ,
+                  ( 100 - frequencyTxUpdates
+                  , pure (Nothing, [])
                   )
                 ]

@@ -17,16 +17,16 @@ import Cardano.Ledger.Alonzo.Data (Data (..))
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (..), collectTwoPhaseScriptInputs)
-import Cardano.Ledger.Alonzo.Scripts
-  ( AlonzoScript (..),
-    CostModel,
-    CostModels (..),
-    ExUnits (..),
-  )
+import Cardano.Ledger.Alonzo.Scripts (
+  AlonzoScript (..),
+  CostModel,
+  CostModels (..),
+  ExUnits (..),
+ )
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
-import Cardano.Ledger.Alonzo.Tx
-  ( ScriptPurpose (..),
-  )
+import Cardano.Ledger.Alonzo.Tx (
+  ScriptPurpose (..),
+ )
 import Cardano.Ledger.Alonzo.TxInfo (TranslationError, VersionedTxInfo, txInfo, valContext)
 import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..))
 import qualified Cardano.Ledger.Babbage.PParams as Babbage (BabbagePParamsHKD (..))
@@ -34,11 +34,11 @@ import Cardano.Ledger.BaseTypes (natVersion)
 import Cardano.Ledger.Core hiding (TranslationError)
 import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Shelley.API
-  ( Coin (..),
-    ProtVer (..),
-    UTxO (..),
-  )
+import Cardano.Ledger.Shelley.API (
+  Coin (..),
+  ProtVer (..),
+  UTxO (..),
+ )
 import Cardano.Ledger.Val (inject)
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..))
@@ -50,21 +50,21 @@ import Data.Text (Text)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
-import Test.Cardano.Ledger.Examples.STSTestUtils
-  ( freeCostModelV1,
-    initUTxO,
-    mkGenesisTxIn,
-    mkTxDats,
-    someAddr,
-    someKeys,
-  )
-import Test.Cardano.Ledger.Generic.Fields
-  ( PParamsField (..),
-    TxBodyField (..),
-    TxField (..),
-    TxOutField (..),
-    WitnessesField (..),
-  )
+import Test.Cardano.Ledger.Examples.STSTestUtils (
+  freeCostModelV1,
+  initUTxO,
+  mkGenesisTxIn,
+  mkTxDats,
+  someAddr,
+  someKeys,
+ )
+import Test.Cardano.Ledger.Generic.Fields (
+  PParamsField (..),
+  TxBodyField (..),
+  TxField (..),
+  TxOutField (..),
+  WitnessesField (..),
+ )
 import Test.Cardano.Ledger.Generic.PrettyCore ()
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Scriptic (Scriptic (..))
@@ -86,11 +86,12 @@ collectTwoPhaseScriptInputsOutputOrdering ::
 collectTwoPhaseScriptInputsOutputOrdering =
   collectInputs apf testEpochInfo testSystemStart (pp apf) (validatingTx apf) (initUTxO apf)
     @?= Right
-      [ ( sbs,
-          lang,
-          [datum, redeemer, context],
-          ExUnits 5000 5000,
-          freeCostModelV1
+      [
+        ( sbs
+        , lang
+        , [datum, redeemer, context]
+        , ExUnits 5000 5000
+        , freeCostModelV1
         )
       ]
   where
@@ -122,32 +123,32 @@ redeemer = Data (PV1.I 42)
 
 validatingTx ::
   forall era.
-  ( Scriptic era,
-    EraTx era,
-    GoodCrypto (EraCrypto era)
+  ( Scriptic era
+  , EraTx era
+  , GoodCrypto (EraCrypto era)
   ) =>
   Proof era ->
   Tx era
 validatingTx pf =
   newTx
     pf
-    [ Body validatingBody,
-      WitnessesI
-        [ AddrWits' [mkWitnessVKey (hashAnnotated validatingBody) (someKeys pf)],
-          ScriptWits' [always 3 pf],
-          DataWits' [datum],
-          RdmrWits redeemers
+    [ Body validatingBody
+    , WitnessesI
+        [ AddrWits' [mkWitnessVKey (hashAnnotated validatingBody) (someKeys pf)]
+        , ScriptWits' [always 3 pf]
+        , DataWits' [datum]
+        , RdmrWits redeemers
         ]
     ]
   where
     validatingBody =
       newTxBody
         pf
-        [ Inputs' [mkGenesisTxIn 1],
-          Collateral' [mkGenesisTxIn 11],
-          Outputs' [newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 4995)]],
-          Txfee (Coin 5),
-          WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] redeemers (mkTxDats datum))
+        [ Inputs' [mkGenesisTxIn 1]
+        , Collateral' [mkGenesisTxIn 11]
+        , Outputs' [newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 4995)]]
+        , Txfee (Coin 5)
+        , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] redeemers (mkTxDats datum))
         ]
     redeemers =
       Redeemers $
@@ -200,12 +201,12 @@ testSystemStart = SystemStart $ posixSecondsToUTCTime 0
 
 defaultPPs :: [PParamsField era]
 defaultPPs =
-  [ Costmdls . CostModels $ Map.singleton PlutusV1 freeCostModelV1,
-    MaxValSize 1000000000,
-    MaxTxExUnits $ ExUnits 1000000 1000000,
-    MaxBlockExUnits $ ExUnits 1000000 1000000,
-    ProtocolVersion $ ProtVer (natVersion @5) 0,
-    CollateralPercentage 100
+  [ Costmdls . CostModels $ Map.singleton PlutusV1 freeCostModelV1
+  , MaxValSize 1000000000
+  , MaxTxExUnits $ ExUnits 1000000 1000000
+  , MaxBlockExUnits $ ExUnits 1000000 1000000
+  , ProtocolVersion $ ProtVer (natVersion @5) 0
+  , CollateralPercentage 100
   ]
 
 pp :: Proof era -> PParams era

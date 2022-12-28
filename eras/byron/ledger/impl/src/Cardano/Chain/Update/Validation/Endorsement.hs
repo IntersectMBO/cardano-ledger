@@ -5,14 +5,14 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Cardano.Chain.Update.Validation.Endorsement
-  ( Environment (..),
-    State (..),
-    Endorsement (..),
-    CandidateProtocolUpdate (..),
-    register,
-    Error (..),
-  )
+module Cardano.Chain.Update.Validation.Endorsement (
+  Environment (..),
+  State (..),
+  Endorsement (..),
+  CandidateProtocolUpdate (..),
+  register,
+  Error (..),
+)
 where
 
 import Cardano.Chain.Common (BlockCount, KeyHash)
@@ -23,45 +23,45 @@ import Cardano.Chain.Update.Proposal (UpId)
 import Cardano.Chain.Update.ProtocolParameters (ProtocolParameters)
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
 import qualified Cardano.Chain.Update.Validation.Registration as Registration
-import Cardano.Ledger.Binary
-  ( DecoderError (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    cborError,
-    decodeWord8,
-    encodeListLen,
-    enforceSize,
-  )
+import Cardano.Ledger.Binary (
+  DecoderError (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  cborError,
+  decodeWord8,
+  encodeListLen,
+  enforceSize,
+ )
 import Cardano.Prelude hiding (State, cborError)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as Set
 import NoThunks.Class (NoThunks (..))
 
 data Environment = Environment
-  { -- | Chain stability parameter.
-    k :: !BlockCount,
-    currentSlot :: !SlotNumber,
-    adoptionThreshold :: !Int,
-    delegationMap :: !Delegation.Map,
-    confirmedProposals :: !(Map UpId SlotNumber),
-    registeredProtocolUpdateProposals :: !Registration.ProtocolUpdateProposals
+  { k :: !BlockCount
+  -- ^ Chain stability parameter.
+  , currentSlot :: !SlotNumber
+  , adoptionThreshold :: !Int
+  , delegationMap :: !Delegation.Map
+  , confirmedProposals :: !(Map UpId SlotNumber)
+  , registeredProtocolUpdateProposals :: !Registration.ProtocolUpdateProposals
   }
 
 data State = State
-  { candidateProtocolVersions :: ![CandidateProtocolUpdate],
-    registeredEndorsements :: !(Set Endorsement)
+  { candidateProtocolVersions :: ![CandidateProtocolUpdate]
+  , registeredEndorsements :: !(Set Endorsement)
   }
 
 data CandidateProtocolUpdate = CandidateProtocolUpdate
-  { -- | Slot at which this protocol version and parameters gathered enough
-    -- endorsements and became a candidate. This is used to check which
-    -- versions became candidates 2k slots before the end of an epoch (and only
-    -- those can be adopted at that epoch). Versions that became candidates
-    -- later than 2k slots before the end of an epoch can be adopted in
-    -- following epochs.
-    cpuSlot :: !SlotNumber,
-    cpuProtocolVersion :: !ProtocolVersion,
-    cpuProtocolParameters :: !ProtocolParameters
+  { cpuSlot :: !SlotNumber
+  -- ^ Slot at which this protocol version and parameters gathered enough
+  -- endorsements and became a candidate. This is used to check which
+  -- versions became candidates 2k slots before the end of an epoch (and only
+  -- those can be adopted at that epoch). Versions that became candidates
+  -- later than 2k slots before the end of an epoch can be adopted in
+  -- following epochs.
+  , cpuProtocolVersion :: !ProtocolVersion
+  , cpuProtocolParameters :: !ProtocolParameters
   }
   deriving (Eq, Show, Generic)
   deriving anyclass (NFData, NoThunks)
@@ -82,8 +82,8 @@ instance ToCBOR CandidateProtocolUpdate where
       <> toCBOR (cpuProtocolParameters cpu)
 
 data Endorsement = Endorsement
-  { endorsementProtocolVersion :: !ProtocolVersion,
-    endorsementKeyHash :: !KeyHash
+  { endorsementProtocolVersion :: !ProtocolVersion
+  , endorsementKeyHash :: !KeyHash
   }
   deriving (Eq, Show, Ord, Generic)
   deriving anyclass (NFData, NoThunks)
@@ -143,16 +143,16 @@ register env st endorsement =
             do
               let cpu =
                     CandidateProtocolUpdate
-                      { cpuSlot = currentSlot,
-                        cpuProtocolVersion = pv,
-                        cpuProtocolParameters = pps'
+                      { cpuSlot = currentSlot
+                      , cpuProtocolVersion = pv
+                      , cpuProtocolParameters = pps'
                       }
                   cpus' =
                     updateCandidateProtocolUpdates candidateProtocolVersions cpu
               pure $
                 State
-                  { candidateProtocolVersions = cpus',
-                    registeredEndorsements = registeredEndorsements'
+                  { candidateProtocolVersions = cpus'
+                  , registeredEndorsements = registeredEndorsements'
                   }
             else -- Just register the endorsement if we cannot adopt
               pure $ st {registeredEndorsements = registeredEndorsements'}
@@ -162,12 +162,12 @@ register env st endorsement =
     _ -> throwError $ MultipleProposalsForProtocolVersion pv
   where
     Environment
-      { k,
-        currentSlot,
-        adoptionThreshold,
-        delegationMap,
-        confirmedProposals,
-        registeredProtocolUpdateProposals
+      { k
+      , currentSlot
+      , adoptionThreshold
+      , delegationMap
+      , confirmedProposals
+      , registeredProtocolUpdateProposals
       } = env
 
     isConfirmedAndStable upId = upId `M.member` scps

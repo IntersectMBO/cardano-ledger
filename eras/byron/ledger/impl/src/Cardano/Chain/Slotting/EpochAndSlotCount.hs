@@ -8,24 +8,24 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Chain.Slotting.EpochAndSlotCount
-  ( EpochAndSlotCount (..),
-    toSlotNumber,
-    fromSlotNumber,
-    slotNumberEpoch,
-  )
+module Cardano.Chain.Slotting.EpochAndSlotCount (
+  EpochAndSlotCount (..),
+  toSlotNumber,
+  fromSlotNumber,
+  slotNumberEpoch,
+)
 where
 
 import Cardano.Chain.Slotting.EpochNumber (EpochNumber (..))
 import Cardano.Chain.Slotting.EpochSlots (EpochSlots (..))
 import Cardano.Chain.Slotting.SlotCount (SlotCount (..))
 import Cardano.Chain.Slotting.SlotNumber (SlotNumber (..))
-import Cardano.Ledger.Binary
-  ( FromCBOR (..),
-    ToCBOR (..),
-    encodeListLen,
-    enforceSize,
-  )
+import Cardano.Ledger.Binary (
+  FromCBOR (..),
+  ToCBOR (..),
+  encodeListLen,
+  enforceSize,
+ )
 import Cardano.Prelude
 import Formatting (bprint, ords)
 import qualified Formatting.Buildable as B
@@ -33,8 +33,8 @@ import qualified Formatting.Buildable as B
 -- | 'EpochAndSlotCount' identifies a slot by its 'EpochNumber' and the number of
 --   slots into the epoch that it sits
 data EpochAndSlotCount = EpochAndSlotCount
-  { epochNo :: !EpochNumber,
-    slotCount :: !SlotCount
+  { epochNo :: !EpochNumber
+  , slotCount :: !SlotCount
   }
   deriving (Show, Eq, Ord, Generic)
   deriving anyclass (NFData)
@@ -80,8 +80,8 @@ fromSlotNumber (EpochSlots n) (SlotNumber fsId)
           <> "passed to this function must be positive"
   | otherwise =
       EpochAndSlotCount
-        { epochNo = EpochNumber epoch,
-          slotCount = SlotCount slot
+        { epochNo = EpochNumber epoch
+        , slotCount = SlotCount slot
         }
   where
     (epoch, slot) = fsId `divMod` n

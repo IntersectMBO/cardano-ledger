@@ -1,26 +1,26 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Test.Cardano.Crypto.Hashing
-  ( tests,
-  )
+module Test.Cardano.Crypto.Hashing (
+  tests,
+)
 where
 
 import Cardano.Crypto (decodeAbstractHash, hashHexF, serializeCborHash)
 import Cardano.Ledger.Binary (ToCBOR)
 import Cardano.Prelude
 import Formatting (sformat)
-import Hedgehog
-  ( Gen,
-    Property,
-    checkParallel,
-    discover,
-    forAll,
-    property,
-    withTests,
-    (/==),
-    (===),
-  )
+import Hedgehog (
+  Gen,
+  Property,
+  checkParallel,
+  discover,
+  forAll,
+  property,
+  withTests,
+  (/==),
+  (===),
+ )
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 

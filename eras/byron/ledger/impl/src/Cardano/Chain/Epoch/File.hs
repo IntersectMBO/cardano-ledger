@@ -2,18 +2,18 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Cardano.Chain.Epoch.File
-  ( mainnetEpochSlots,
-    parseEpochFileWithBoundary,
-    parseEpochFilesWithBoundary,
-    ParseError (..),
-  )
+module Cardano.Chain.Epoch.File (
+  mainnetEpochSlots,
+  parseEpochFileWithBoundary,
+  parseEpochFilesWithBoundary,
+  ParseError (..),
+)
 where
 
-import Cardano.Chain.Block.Block
-  ( ABlockOrBoundary (..),
-    fromCBORABlockOrBoundary,
-  )
+import Cardano.Chain.Block.Block (
+  ABlockOrBoundary (..),
+  fromCBORABlockOrBoundary,
+ )
 import Cardano.Chain.Slotting (EpochSlots (..))
 import Cardano.Ledger.Binary (DecoderError, byronProtVer, decodeFullDecoder, slice)
 import Cardano.Prelude

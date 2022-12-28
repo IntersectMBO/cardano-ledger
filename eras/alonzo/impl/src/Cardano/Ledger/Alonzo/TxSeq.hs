@@ -15,29 +15,29 @@
 
 -- | TxSeq. This is effectively the block body, which consists of a sequence of
 -- transactions with segregated witness and metadata information.
-module Cardano.Ledger.Alonzo.TxSeq
-  ( AlonzoTxSeq (AlonzoTxSeq, txSeqTxns),
-    TxSeq,
-    hashTxSeq,
-    hashAlonzoTxSeq,
-  )
+module Cardano.Ledger.Alonzo.TxSeq (
+  AlonzoTxSeq (AlonzoTxSeq, txSeqTxns),
+  TxSeq,
+  hashTxSeq,
+  hashAlonzoTxSeq,
+)
 where
 
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..), alonzoSegwitTx)
-import Cardano.Ledger.Binary
-  ( Annotator,
-    FromCBOR (..),
-    ToCBORGroup (..),
-    encodeFoldableEncoder,
-    encodeFoldableMapEncoder,
-    encodePreEncoded,
-    encodedSizeExpr,
-    serializeEncoding,
-    toCBOR,
-    withSlice,
-  )
+import Cardano.Ledger.Binary (
+  Annotator,
+  FromCBOR (..),
+  ToCBORGroup (..),
+  encodeFoldableEncoder,
+  encodeFoldableMapEncoder,
+  encodePreEncoded,
+  encodedSizeExpr,
+  serializeEncoding,
+  toCBOR,
+  withSlice,
+ )
 import Cardano.Ledger.Core hiding (TxSeq, hashTxSeq)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto
@@ -71,17 +71,17 @@ import NoThunks.Class (AllowThunksIn (..), NoThunks)
 -- order to support segregated witnessing.
 
 data AlonzoTxSeq era = TxSeq'
-  { txSeqTxns :: !(StrictSeq (Tx era)),
-    -- | Bytes encoding @Seq ('AlonzoTxBody' era)@
-    txSeqBodyBytes :: BSL.ByteString,
-    -- | Bytes encoding @Seq ('TxWitness' era)@
-    txSeqWitsBytes :: BSL.ByteString,
-    -- | Bytes encoding a @Map Int ('AuxiliaryData')@. Missing indices have
-    -- 'SNothing' for metadata
-    txSeqMetadataBytes :: BSL.ByteString,
-    -- | Bytes representing a set of integers. These are the indices of
-    -- transactions with 'isValid' == False.
-    txSeqIsValidBytes :: BSL.ByteString
+  { txSeqTxns :: !(StrictSeq (Tx era))
+  , txSeqBodyBytes :: BSL.ByteString
+  -- ^ Bytes encoding @Seq ('AlonzoTxBody' era)@
+  , txSeqWitsBytes :: BSL.ByteString
+  -- ^ Bytes encoding @Seq ('TxWitness' era)@
+  , txSeqMetadataBytes :: BSL.ByteString
+  -- ^ Bytes encoding a @Map Int ('AuxiliaryData')@. Missing indices have
+  -- 'SNothing' for metadata
+  , txSeqIsValidBytes :: BSL.ByteString
+  -- ^ Bytes representing a set of integers. These are the indices of
+  -- transactions with 'isValid' == False.
   }
   deriving (Generic)
 
@@ -94,8 +94,8 @@ instance Crypto c => EraSegWits (AlonzoEra c) where
 
 pattern AlonzoTxSeq ::
   forall era.
-  ( AlonzoEraTx era,
-    SafeToHash (TxWits era)
+  ( AlonzoEraTx era
+  , SafeToHash (TxWits era)
   ) =>
   StrictSeq (Tx era) ->
   AlonzoTxSeq era
@@ -111,15 +111,15 @@ pattern AlonzoTxSeq xs <-
             where
               encodeIndexed metadata = toCBOR index <> encodePreEncoded metadata
        in TxSeq'
-            { txSeqTxns = txns,
-              txSeqBodyBytes =
-                serializeFoldablePreEncoded $ originalBytes . view bodyTxL <$> txns,
-              txSeqWitsBytes =
-                serializeFoldablePreEncoded $ originalBytes . view witsTxL <$> txns,
-              txSeqMetadataBytes =
+            { txSeqTxns = txns
+            , txSeqBodyBytes =
+                serializeFoldablePreEncoded $ originalBytes . view bodyTxL <$> txns
+            , txSeqWitsBytes =
+                serializeFoldablePreEncoded $ originalBytes . view witsTxL <$> txns
+            , txSeqMetadataBytes =
                 serializeEncoding version . encodeFoldableMapEncoder metaChunk $
-                  fmap originalBytes . view auxDataTxL <$> txns,
-              txSeqIsValidBytes =
+                  fmap originalBytes . view auxDataTxL <$> txns
+            , txSeqIsValidBytes =
                 serializeEncoding version $ toCBOR $ nonValidatingIndices txns
             }
 
@@ -131,10 +131,10 @@ type TxSeq era = AlonzoTxSeq era
 
 deriving via
   AllowThunksIn
-    '[ "txSeqBodyBytes",
-       "txSeqWitsBytes",
-       "txSeqMetadataBytes",
-       "txSeqIsValidBytes"
+    '[ "txSeqBodyBytes"
+     , "txSeqWitsBytes"
+     , "txSeqMetadataBytes"
+     , "txSeqIsValidBytes"
      ]
     (TxSeq era)
   instance
@@ -185,10 +185,10 @@ hashAlonzoTxSeq (TxSeq' _ bodies ws md vs) =
       BSL.toStrict $
         toLazyByteString $
           mconcat
-            [ hashPart bodies,
-              hashPart ws,
-              hashPart md,
-              hashPart vs
+            [ hashPart bodies
+            , hashPart ws
+            , hashPart md
+            , hashPart vs
             ]
   where
     hashStrict :: ByteString -> Hash (EraCrypto era) ByteString

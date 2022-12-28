@@ -1,18 +1,18 @@
 -- | Dummy values used in tests (replacing `configuration.yaml`)
-module Test.Cardano.Crypto.Dummy
-  ( annotatedProtocolMagicId,
-    aProtocolMagic,
-    protocolMagic,
-    protocolMagicId,
-  )
+module Test.Cardano.Crypto.Dummy (
+  annotatedProtocolMagicId,
+  aProtocolMagic,
+  protocolMagic,
+  protocolMagicId,
+)
 where
 
-import Cardano.Crypto
-  ( AProtocolMagic (..),
-    ProtocolMagic,
-    ProtocolMagicId (..),
-    RequiresNetworkMagic (..),
-  )
+import Cardano.Crypto (
+  AProtocolMagic (..),
+  ProtocolMagic,
+  ProtocolMagicId (..),
+  RequiresNetworkMagic (..),
+ )
 import Cardano.Ledger.Binary (Annotated (..), byronProtVer, serialize')
 import Cardano.Prelude
 

@@ -22,19 +22,19 @@ import Control.DeepSeq
 import Data.Map.Strict as Map
 
 data SnapShotM c = SnapShotM
-  { ssStake :: !(Map (Credential 'Staking c) (CompactForm Coin)),
-    ssDelegations :: !(Map (Credential 'Staking c) (KeyHash 'StakePool c)),
-    ssPoolParams :: !(Map (KeyHash 'StakePool c) (PoolParams c))
+  { ssStake :: !(Map (Credential 'Staking c) (CompactForm Coin))
+  , ssDelegations :: !(Map (Credential 'Staking c) (KeyHash 'StakePool c))
+  , ssPoolParams :: !(Map (KeyHash 'StakePool c) (PoolParams c))
   }
 
 instance NFData (SnapShotM C) where
   rnf (SnapShotM s d p) = s `deepseq` d `deepseq` rnf p
 
 data SnapShotsM c = SnapShotsM
-  { ssPstakeMark :: !(SnapShotM c),
-    ssPstakeSet :: !(SnapShotM c),
-    ssPstakeGo :: !(SnapShotM c),
-    ssFeeSS :: !Coin
+  { ssPstakeMark :: !(SnapShotM c)
+  , ssPstakeSet :: !(SnapShotM c)
+  , ssPstakeGo :: !(SnapShotM c)
+  , ssFeeSS :: !Coin
   }
 
 instance NFData (SnapShotsM C) where

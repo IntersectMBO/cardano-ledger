@@ -6,24 +6,24 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Cardano.Chain.Update.SoftwareVersion
-  ( SoftwareVersion (..),
-    SoftwareVersionError (..),
-    NumSoftwareVersion,
-    checkSoftwareVersion,
-  )
+module Cardano.Chain.Update.SoftwareVersion (
+  SoftwareVersion (..),
+  SoftwareVersionError (..),
+  NumSoftwareVersion,
+  checkSoftwareVersion,
+)
 where
 
 import Cardano.Chain.Update.ApplicationName
-import Cardano.Ledger.Binary
-  ( DecoderError (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    cborError,
-    decodeWord8,
-    encodeListLen,
-    enforceSize,
-  )
+import Cardano.Ledger.Binary (
+  DecoderError (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  cborError,
+  decodeWord8,
+  encodeListLen,
+  enforceSize,
+ )
 import Cardano.Prelude hiding (cborError)
 import Data.Aeson (ToJSON)
 import Data.Data (Data)
@@ -37,8 +37,8 @@ type NumSoftwareVersion = Word32
 
 -- | Software version
 data SoftwareVersion = SoftwareVersion
-  { svAppName :: !ApplicationName,
-    svNumber :: !NumSoftwareVersion
+  { svAppName :: !ApplicationName
+  , svNumber :: !NumSoftwareVersion
   }
   deriving (Eq, Generic, Ord)
   deriving anyclass (NFData, NoThunks)

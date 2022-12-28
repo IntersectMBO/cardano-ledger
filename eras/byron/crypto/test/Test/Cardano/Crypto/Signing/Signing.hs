@@ -5,23 +5,23 @@ module Test.Cardano.Crypto.Signing.Signing (tests) where
 import Cardano.Crypto.Signing (SignTag (..), sign, toVerification, verifySignature)
 import Cardano.Ledger.Binary (toCBOR)
 import Cardano.Prelude
-import Hedgehog
-  ( Gen,
-    Property,
-    assert,
-    checkParallel,
-    discover,
-    forAll,
-    property,
-  )
+import Hedgehog (
+  Gen,
+  Property,
+  assert,
+  checkParallel,
+  discover,
+  forAll,
+  property,
+ )
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 import qualified Test.Cardano.Crypto.Dummy as Dummy
-import Test.Cardano.Crypto.Gen
-  ( genKeypair,
-    genSigningKey,
-    genVerificationKey,
-  )
+import Test.Cardano.Crypto.Gen (
+  genKeypair,
+  genSigningKey,
+  genVerificationKey,
+ )
 
 --------------------------------------------------------------------------------
 -- Main Test Action

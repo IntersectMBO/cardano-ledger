@@ -7,49 +7,49 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Ledger.PoolParams
-  ( PoolParams (..),
-    PoolMetadata (..),
-    StakePoolRelay (..),
-    SizeOfPoolRelays (..),
-    SizeOfPoolOwners (..),
-  )
+module Cardano.Ledger.PoolParams (
+  PoolParams (..),
+  PoolMetadata (..),
+  StakePoolRelay (..),
+  SizeOfPoolRelays (..),
+  SizeOfPoolOwners (..),
+)
 where
 
 import Cardano.Ledger.Address (RewardAcnt (..))
-import Cardano.Ledger.BaseTypes
-  ( DnsName,
-    Port,
-    StrictMaybe (..),
-    UnitInterval,
-    Url,
-    invalidKey,
-    maybeToStrictMaybe,
-    strictMaybeToMaybe,
-  )
-import Cardano.Ledger.Binary
-  ( CBORGroup (..),
-    Case (..),
-    FromCBOR (fromCBOR),
-    FromCBORGroup (..),
-    Size,
-    ToCBOR (..),
-    ToCBORGroup (..),
-    decodeNullMaybe,
-    decodeRecordNamed,
-    decodeRecordSum,
-    encodeListLen,
-    encodeNullMaybe,
-    szCases,
-  )
+import Cardano.Ledger.BaseTypes (
+  DnsName,
+  Port,
+  StrictMaybe (..),
+  UnitInterval,
+  Url,
+  invalidKey,
+  maybeToStrictMaybe,
+  strictMaybeToMaybe,
+ )
+import Cardano.Ledger.Binary (
+  CBORGroup (..),
+  Case (..),
+  FromCBOR (fromCBOR),
+  FromCBORGroup (..),
+  Size,
+  ToCBOR (..),
+  ToCBORGroup (..),
+  decodeNullMaybe,
+  decodeRecordNamed,
+  decodeRecordSum,
+  encodeListLen,
+  encodeNullMaybe,
+  szCases,
+ )
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Keys
-  ( Hash,
-    KeyHash (..),
-    KeyRole (..),
-    VerKeyVRF,
-  )
+import Cardano.Ledger.Keys (
+  Hash,
+  KeyHash (..),
+  KeyRole (..),
+  VerKeyVRF,
+ )
 import Cardano.Ledger.Orphans ()
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData ())
@@ -72,8 +72,8 @@ import NoThunks.Class (NoThunks (..))
 -- ========================================================================
 
 data PoolMetadata = PoolMetadata
-  { pmUrl :: !Url,
-    pmHash :: !ByteString
+  { pmUrl :: !Url
+  , pmHash :: !ByteString
   }
   deriving (Eq, Ord, Generic, Show)
 
@@ -82,8 +82,8 @@ deriving instance NFData PoolMetadata
 instance ToJSON PoolMetadata where
   toJSON pmd =
     Aeson.object
-      [ "url" .= pmUrl pmd,
-        "hash" .= Text.decodeLatin1 (B16.encode (pmHash pmd))
+      [ "url" .= pmUrl pmd
+      , "hash" .= Text.decodeLatin1 (B16.encode (pmHash pmd))
       ]
 
 instance FromJSON PoolMetadata where
@@ -115,9 +115,9 @@ instance FromJSON StakePoolRelay where
   parseJSON =
     Aeson.withObject "Credential" $ \obj ->
       asum
-        [ explicitParseField parser1 obj "single host address",
-          explicitParseField parser2 obj "single host name",
-          explicitParseField parser3 obj "multi host name"
+        [ explicitParseField parser1 obj "single host address"
+        , explicitParseField parser2 obj "single host name"
+        , explicitParseField parser3 obj "multi host name"
         ]
     where
       parser1 = Aeson.withObject "SingleHostAddr" $ \obj ->
@@ -138,17 +138,17 @@ instance ToJSON StakePoolRelay where
     Aeson.object
       [ "single host address"
           .= Aeson.object
-            [ "port" .= port,
-              "IPv4" .= ipv4,
-              "IPv6" .= ipv6
+            [ "port" .= port
+            , "IPv4" .= ipv4
+            , "IPv6" .= ipv6
             ]
       ]
   toJSON (SingleHostName port dnsName) =
     Aeson.object
       [ "single host name"
           .= Aeson.object
-            [ "port" .= port,
-              "dnsName" .= dnsName
+            [ "port" .= port
+            , "dnsName" .= dnsName
             ]
       ]
   toJSON (MultiHostName dnsName) =
@@ -199,15 +199,15 @@ instance FromCBOR StakePoolRelay where
 
 -- | A stake pool.
 data PoolParams c = PoolParams
-  { ppId :: !(KeyHash 'StakePool c),
-    ppVrf :: !(Hash c (VerKeyVRF c)),
-    ppPledge :: !Coin,
-    ppCost :: !Coin,
-    ppMargin :: !UnitInterval,
-    ppRewardAcnt :: !(RewardAcnt c),
-    ppOwners :: !(Set (KeyHash 'Staking c)),
-    ppRelays :: !(StrictSeq StakePoolRelay),
-    ppMetadata :: !(StrictMaybe PoolMetadata)
+  { ppId :: !(KeyHash 'StakePool c)
+  , ppVrf :: !(Hash c (VerKeyVRF c))
+  , ppPledge :: !Coin
+  , ppCost :: !Coin
+  , ppMargin :: !UnitInterval
+  , ppRewardAcnt :: !(RewardAcnt c)
+  , ppOwners :: !(Set (KeyHash 'Staking c))
+  , ppRelays :: !(StrictSeq StakePoolRelay)
+  , ppMetadata :: !(StrictMaybe PoolMetadata)
   }
   deriving (Show, Generic, Eq, Ord)
   deriving (ToCBOR) via CBORGroup (PoolParams c)
@@ -220,15 +220,15 @@ deriving instance NFData (PoolParams c)
 instance CC.Crypto c => ToJSON (PoolParams c) where
   toJSON pp =
     Aeson.object
-      [ "publicKey" .= ppId pp, -- TODO publicKey is an unfortunate name, should be poolId
-        "vrf" .= ppVrf pp,
-        "pledge" .= ppPledge pp,
-        "cost" .= ppCost pp,
-        "margin" .= ppMargin pp,
-        "rewardAccount" .= ppRewardAcnt pp,
-        "owners" .= ppOwners pp,
-        "relays" .= ppRelays pp,
-        "metadata" .= ppMetadata pp
+      [ "publicKey" .= ppId pp -- TODO publicKey is an unfortunate name, should be poolId
+      , "vrf" .= ppVrf pp
+      , "pledge" .= ppPledge pp
+      , "cost" .= ppCost pp
+      , "margin" .= ppMargin pp
+      , "rewardAccount" .= ppRewardAcnt pp
+      , "owners" .= ppOwners pp
+      , "relays" .= ppRelays pp
+      , "metadata" .= ppMetadata pp
       ]
 
 instance CC.Crypto c => FromJSON (PoolParams c) where
@@ -296,8 +296,8 @@ instance
       + 2
       + relaySize * encodedSizeExpr size' (elementProxy (ppRelays <$> proxy))
       + szCases
-        [ Case "Nothing" 1,
-          Case "Just" $ encodedSizeExpr size' (elementProxy (ppMetadata <$> proxy))
+        [ Case "Nothing" 1
+        , Case "Just" $ encodedSizeExpr size' (elementProxy (ppMetadata <$> proxy))
         ]
     where
       poolSize, relaySize :: Size
@@ -325,15 +325,15 @@ instance
     md <- decodeNullMaybe fromCBOR
     pure $
       PoolParams
-        { ppId = hk,
-          ppVrf = vrf,
-          ppPledge = pledge,
-          ppCost = cost,
-          ppMargin = margin,
-          ppRewardAcnt = ra,
-          ppOwners = owners,
-          ppRelays = relays,
-          ppMetadata = maybeToStrictMaybe md
+        { ppId = hk
+        , ppVrf = vrf
+        , ppPledge = pledge
+        , ppCost = cost
+        , ppMargin = margin
+        , ppRewardAcnt = ra
+        , ppOwners = owners
+        , ppRelays = relays
+        , ppMetadata = maybeToStrictMaybe md
         }
 
 -- ============================================

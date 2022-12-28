@@ -11,59 +11,59 @@
 -- The cast of Characters for Shelley Ledger Examples
 -- (excluding the genesis/cord nodes,
 -- which are in Test.Cardano.Ledger.Shelley.Examples.Federation).
-module Test.Cardano.Ledger.Shelley.Examples.Cast
-  ( alicePay,
-    aliceStake,
-    alicePHK,
-    aliceSHK,
-    aliceAddr,
-    alicePtrAddr,
-    alicePoolKeys,
-    alicePoolParams,
-    aliceVRFKeyHash,
-    bobPay,
-    bobStake,
-    bobSHK,
-    bobAddr,
-    bobPoolKeys,
-    bobPoolParams,
-    bobVRFKeyHash,
-    carlPay,
-    carlStake,
-    carlSHK,
-    carlAddr,
-    dariaPay,
-    dariaStake,
-    dariaSHK,
-    dariaAddr,
-  )
+module Test.Cardano.Ledger.Shelley.Examples.Cast (
+  alicePay,
+  aliceStake,
+  alicePHK,
+  aliceSHK,
+  aliceAddr,
+  alicePtrAddr,
+  alicePoolKeys,
+  alicePoolParams,
+  aliceVRFKeyHash,
+  bobPay,
+  bobStake,
+  bobSHK,
+  bobAddr,
+  bobPoolKeys,
+  bobPoolParams,
+  bobVRFKeyHash,
+  carlPay,
+  carlStake,
+  carlSHK,
+  carlAddr,
+  dariaPay,
+  dariaStake,
+  dariaSHK,
+  dariaAddr,
+)
 where
 
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.BaseTypes
-  ( Network (..),
-    StrictMaybe (..),
-    textToUrl,
-  )
+import Cardano.Ledger.BaseTypes (
+  Network (..),
+  StrictMaybe (..),
+  textToUrl,
+ )
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Credential
-  ( Credential (..),
-    Ptr (..),
-    StakeReference (..),
-  )
+import Cardano.Ledger.Credential (
+  Credential (..),
+  Ptr (..),
+  StakeReference (..),
+ )
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Keys
-  ( Hash,
-    KeyRole (..),
-    VerKeyVRF,
-    hashKey,
-    hashVerKeyVRF,
-  )
-import Cardano.Ledger.Shelley.TxBody
-  ( PoolMetadata (..),
-    PoolParams (..),
-    RewardAcnt (..),
-  )
+import Cardano.Ledger.Keys (
+  Hash,
+  KeyRole (..),
+  VerKeyVRF,
+  hashKey,
+  hashVerKeyVRF,
+ )
+import Cardano.Ledger.Shelley.TxBody (
+  PoolMetadata (..),
+  PoolParams (..),
+  RewardAcnt (..),
+ )
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import qualified Data.ByteString.Char8 as BS (pack)
@@ -71,16 +71,16 @@ import Data.Maybe (fromJust)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr)
-import Test.Cardano.Ledger.Shelley.Generator.Core
-  ( AllIssuerKeys (..),
-  )
-import Test.Cardano.Ledger.Shelley.Utils
-  ( RawSeed (..),
-    mkKESKeyPair,
-    mkKeyPair,
-    mkVRFKeyPair,
-    unsafeBoundRational,
-  )
+import Test.Cardano.Ledger.Shelley.Generator.Core (
+  AllIssuerKeys (..),
+ )
+import Test.Cardano.Ledger.Shelley.Utils (
+  RawSeed (..),
+  mkKESKeyPair,
+  mkKeyPair,
+  mkVRFKeyPair,
+  unsafeBoundRational,
+ )
 
 -- | Alice's payment key pair
 alicePay :: CC.Crypto c => KeyPair 'Payment c
@@ -125,19 +125,19 @@ alicePtrAddr = Addr Testnet alicePHK (StakeRefPtr $ Ptr (SlotNo 10) minBound min
 alicePoolParams :: forall c. CC.Crypto c => PoolParams c
 alicePoolParams =
   PoolParams
-    { ppId = (hashKey . vKey . cold) alicePoolKeys,
-      ppVrf = hashVerKeyVRF . snd $ vrf (alicePoolKeys @c),
-      ppPledge = Coin 1,
-      ppCost = Coin 5,
-      ppMargin = unsafeBoundRational 0.1,
-      ppRewardAcnt = RewardAcnt Testnet aliceSHK,
-      ppOwners = Set.singleton $ (hashKey . vKey) aliceStake,
-      ppRelays = StrictSeq.empty,
-      ppMetadata =
+    { ppId = (hashKey . vKey . cold) alicePoolKeys
+    , ppVrf = hashVerKeyVRF . snd $ vrf (alicePoolKeys @c)
+    , ppPledge = Coin 1
+    , ppCost = Coin 5
+    , ppMargin = unsafeBoundRational 0.1
+    , ppRewardAcnt = RewardAcnt Testnet aliceSHK
+    , ppOwners = Set.singleton $ (hashKey . vKey) aliceStake
+    , ppRelays = StrictSeq.empty
+    , ppMetadata =
         SJust $
           PoolMetadata
-            { pmUrl = fromJust $ textToUrl "alice.pool",
-              pmHash = BS.pack "{}"
+            { pmUrl = fromJust $ textToUrl "alice.pool"
+            , pmHash = BS.pack "{}"
             }
     }
 
@@ -183,15 +183,15 @@ bobPoolKeys =
 bobPoolParams :: forall c. CC.Crypto c => PoolParams c
 bobPoolParams =
   PoolParams
-    { ppId = (hashKey . vKey . cold) bobPoolKeys,
-      ppVrf = hashVerKeyVRF . snd $ vrf (bobPoolKeys @c),
-      ppPledge = Coin 2,
-      ppCost = Coin 1,
-      ppMargin = unsafeBoundRational 0.1,
-      ppRewardAcnt = RewardAcnt Testnet bobSHK,
-      ppOwners = Set.singleton $ (hashKey . vKey) bobStake,
-      ppRelays = StrictSeq.empty,
-      ppMetadata = SNothing
+    { ppId = (hashKey . vKey . cold) bobPoolKeys
+    , ppVrf = hashVerKeyVRF . snd $ vrf (bobPoolKeys @c)
+    , ppPledge = Coin 2
+    , ppCost = Coin 1
+    , ppMargin = unsafeBoundRational 0.1
+    , ppRewardAcnt = RewardAcnt Testnet bobSHK
+    , ppOwners = Set.singleton $ (hashKey . vKey) bobStake
+    , ppRelays = StrictSeq.empty
+    , ppMetadata = SNothing
     }
 
 -- | Bob's VRF key hash

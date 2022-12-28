@@ -3,11 +3,11 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Binary.Random
-  ( QC (..),
-    mkDummyHash,
-    mkHashStdGen,
-  )
+module Test.Cardano.Ledger.Binary.Random (
+  QC (..),
+  mkDummyHash,
+  mkHashStdGen,
+)
 where
 
 import Cardano.Crypto.Hash.Class (Hash, HashAlgorithm, hashToBytesShort)
@@ -16,12 +16,12 @@ import Cardano.Ledger.Binary (ToCBOR (toCBOR), hashWithEncoder, shelleyProtVer)
 import Data.ByteString.Short.Internal (ShortByteString (SBS))
 import Data.Coerce (coerce)
 import Data.Primitive.ByteArray (ByteArray (ByteArray), indexByteArray)
-import System.Random.Stateful
-  ( StatefulGen (..),
-    StdGen,
-    mkStdGen,
-    runStateGen_,
-  )
+import System.Random.Stateful (
+  StatefulGen (..),
+  StdGen,
+  mkStdGen,
+  runStateGen_,
+ )
 import Test.QuickCheck.Gen (Gen (MkGen))
 
 -- | This is a pseudo random number generator used by QuickCheck and allows to use

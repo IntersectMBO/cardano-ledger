@@ -9,24 +9,25 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
-module Cardano.Ledger.Core.Era
-  ( -- * Era
-    Era (..),
-    ByronEra,
-    -- ** Protocol Version
-    AtMostEra,
-    AtLeastEra,
-    ExactEra,
-    ProtVerAtMost,
-    ProtVerAtLeast,
-    ProtVerInBounds,
-    atLeastEra,
-    atMostEra,
-    notSupportedInThisEra,
-    notSupportedInThisEraL,
-    eraProtVerLow,
-    eraProtVerHigh,
-  )
+module Cardano.Ledger.Core.Era (
+  -- * Era
+  Era (..),
+  ByronEra,
+
+  -- ** Protocol Version
+  AtMostEra,
+  AtLeastEra,
+  ExactEra,
+  ProtVerAtMost,
+  ProtVerAtLeast,
+  ProtVerInBounds,
+  atLeastEra,
+  atMostEra,
+  notSupportedInThisEra,
+  notSupportedInThisEraL,
+  eraProtVerLow,
+  eraProtVerHigh,
+)
 where
 
 import Cardano.Ledger.BaseTypes (MaxVersion, MinVersion, Version, natVersion)
@@ -42,15 +43,15 @@ import Lens.Micro
 --------------------------------------------------------------------------------
 
 class
-  ( Crypto (EraCrypto era),
-    Typeable era,
-    KnownNat (ProtVerLow era),
-    KnownNat (ProtVerHigh era),
-    ProtVerLow era <= ProtVerHigh era,
-    MinVersion <= ProtVerLow era,
-    ProtVerLow era <= MaxVersion,
-    MinVersion <= ProtVerHigh era,
-    ProtVerHigh era <= MaxVersion
+  ( Crypto (EraCrypto era)
+  , Typeable era
+  , KnownNat (ProtVerLow era)
+  , KnownNat (ProtVerHigh era)
+  , ProtVerLow era <= ProtVerHigh era
+  , MinVersion <= ProtVerLow era
+  , ProtVerLow era <= MaxVersion
+  , MinVersion <= ProtVerHigh era
+  , ProtVerHigh era <= MaxVersion
   ) =>
   Era era
   where

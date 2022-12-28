@@ -4,14 +4,14 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes
-  ( Mock,
-    ExMock,
-    C_Crypto,
-    C,
-    TestCrypto,
-    StandardCrypto,
-  )
+module Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (
+  Mock,
+  ExMock,
+  C_Crypto,
+  C,
+  TestCrypto,
+  StandardCrypto,
+)
 where
 
 import Cardano.Crypto.DSIGN (MockDSIGN, VerKeyDSIGN)
@@ -28,18 +28,18 @@ import Test.Cardano.Crypto.VRF.Fake (FakeVRF)
 
 -- | Mocking constraints used in generators
 type Mock c =
-  ( PraosCrypto c,
-    KES.Signable (KES c) ~ SignableRepresentation,
-    DSIGN.Signable (DSIGN c) ~ SignableRepresentation,
-    VRF.Signable (VRF c) Seed
+  ( PraosCrypto c
+  , KES.Signable (KES c) ~ SignableRepresentation
+  , DSIGN.Signable (DSIGN c) ~ SignableRepresentation
+  , VRF.Signable (VRF c) Seed
   )
 
 -- | Additional mocking constraints used in examples.
 type ExMock c =
-  ( Mock c,
-    Num (DSIGN.SignKeyDSIGN (DSIGN c)),
-    Num (VerKeyDSIGN (DSIGN c)),
-    VRF c ~ FakeVRF
+  ( Mock c
+  , Num (DSIGN.SignKeyDSIGN (DSIGN c))
+  , Num (VerKeyDSIGN (DSIGN c))
+  , VRF c ~ FakeVRF
   )
 
 type C = ShelleyEra C_Crypto

@@ -16,21 +16,21 @@ import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.API
-  ( EpochState (..),
-    LedgerState (..),
-    NewEpochState (..),
-    PPUPState (..),
-    ProposedPPUpdates (..),
-    ShelleyTx (..),
-    ShelleyTxOut (..),
-    UTxO (..),
-    UTxOState (..),
-    Update,
-  )
-import qualified Cardano.Ledger.Shelley.LedgerState as LS
-  ( returnRedeemAddrsToReserves,
-  )
+import Cardano.Ledger.Shelley.API (
+  EpochState (..),
+  LedgerState (..),
+  NewEpochState (..),
+  PPUPState (..),
+  ProposedPPUpdates (..),
+  ShelleyTx (..),
+  ShelleyTxOut (..),
+  UTxO (..),
+  UTxOState (..),
+  Update,
+ )
+import qualified Cardano.Ledger.Shelley.LedgerState as LS (
+  returnRedeemAddrsToReserves,
+ )
 import Cardano.Ledger.Shelley.PParams (Update (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits)
 import Data.Coerce (coerce)
@@ -63,13 +63,13 @@ instance Crypto c => TranslateEra (AllegraEra c) NewEpochState where
   translateEra ctxt nes =
     return $
       NewEpochState
-        { nesEL = nesEL nes,
-          nesBprev = nesBprev nes,
-          nesBcur = nesBcur nes,
-          nesEs = translateEra' ctxt $ LS.returnRedeemAddrsToReserves . nesEs $ nes,
-          nesRu = nesRu nes,
-          nesPd = nesPd nes,
-          -- At this point, the consensus layer has passed in our stashed AVVM
+        { nesEL = nesEL nes
+        , nesBprev = nesBprev nes
+        , nesBcur = nesBcur nes
+        , nesEs = translateEra' ctxt $ LS.returnRedeemAddrsToReserves . nesEs $ nes
+        , nesRu = nesRu nes
+        , nesPd = nesPd nes
+        , -- At this point, the consensus layer has passed in our stashed AVVM
           -- addresses as our UTxO, and we have deleted them above (with
           -- 'returnRedeemAddrsToReserves'), so we may safely discard this map.
           stashedAVVMAddresses = ()
@@ -95,8 +95,8 @@ instance Crypto c => TranslateEra (AllegraEra c) PPUPState where
   translateEra ctxt ps =
     return
       PPUPState
-        { proposals = translateEra' ctxt $ proposals ps,
-          futureProposals = translateEra' ctxt $ futureProposals ps
+        { proposals = translateEra' ctxt $ proposals ps
+        , futureProposals = translateEra' ctxt $ futureProposals ps
         }
 
 instance Crypto c => TranslateEra (AllegraEra c) ShelleyTxOut where
@@ -111,31 +111,31 @@ instance Crypto c => TranslateEra (AllegraEra c) UTxOState where
   translateEra ctxt us =
     return
       UTxOState
-        { utxosUtxo = translateEra' ctxt $ utxosUtxo us,
-          utxosDeposited = utxosDeposited us,
-          utxosFees = utxosFees us,
-          utxosPpups = translateEra' ctxt $ utxosPpups us,
-          utxosStakeDistr = utxosStakeDistr us
+        { utxosUtxo = translateEra' ctxt $ utxosUtxo us
+        , utxosDeposited = utxosDeposited us
+        , utxosFees = utxosFees us
+        , utxosPpups = translateEra' ctxt $ utxosPpups us
+        , utxosStakeDistr = utxosStakeDistr us
         }
 
 instance Crypto c => TranslateEra (AllegraEra c) LedgerState where
   translateEra ctxt ls =
     return
       LedgerState
-        { lsUTxOState = translateEra' ctxt $ lsUTxOState ls,
-          lsDPState = lsDPState ls
+        { lsUTxOState = translateEra' ctxt $ lsUTxOState ls
+        , lsDPState = lsDPState ls
         }
 
 instance Crypto c => TranslateEra (AllegraEra c) EpochState where
   translateEra ctxt es =
     return
       EpochState
-        { esAccountState = esAccountState es,
-          esSnapshots = esSnapshots es,
-          esLState = translateEra' ctxt $ esLState es,
-          esPrevPp = translateEra' ctxt $ esPrevPp es,
-          esPp = translateEra' ctxt $ esPp es,
-          esNonMyopic = esNonMyopic es
+        { esAccountState = esAccountState es
+        , esSnapshots = esSnapshots es
+        , esLState = translateEra' ctxt $ esLState es
+        , esPrevPp = translateEra' ctxt $ esPrevPp es
+        , esPp = translateEra' ctxt $ esPp es
+        , esNonMyopic = esNonMyopic es
         }
 
 instance Crypto c => TranslateEra (AllegraEra c) ShelleyTxWits where

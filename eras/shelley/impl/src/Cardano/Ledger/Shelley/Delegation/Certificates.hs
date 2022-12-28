@@ -10,54 +10,54 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Ledger.Shelley.Delegation.Certificates
-  ( Delegation (..),
-    DCert (..),
-    DelegCert (..),
-    PoolCert (..),
-    ConstitutionalDelegCert (..),
-    MIRCert (..),
-    MIRPot (..),
-    MIRTarget (..),
-    delegCWitness,
-    poolCWitness,
-    genesisCWitness,
-    isRegKey,
-    isDeRegKey,
-    isDelegation,
-    isGenesisDelegation,
-    isRegPool,
-    isRetirePool,
-    isInstantaneousRewards,
-    isReservesMIRCert,
-    isTreasuryMIRCert,
-    requiresVKeyWitness,
-  )
+module Cardano.Ledger.Shelley.Delegation.Certificates (
+  Delegation (..),
+  DCert (..),
+  DelegCert (..),
+  PoolCert (..),
+  ConstitutionalDelegCert (..),
+  MIRCert (..),
+  MIRPot (..),
+  MIRTarget (..),
+  delegCWitness,
+  poolCWitness,
+  genesisCWitness,
+  isRegKey,
+  isDeRegKey,
+  isDelegation,
+  isGenesisDelegation,
+  isRegPool,
+  isRetirePool,
+  isInstantaneousRewards,
+  isReservesMIRCert,
+  isTreasuryMIRCert,
+  requiresVKeyWitness,
+)
 where
 
 import Cardano.Ledger.BaseTypes (invalidKey)
-import Cardano.Ledger.Binary
-  ( FromCBOR (fromCBOR),
-    FromCBORGroup (..),
-    ToCBOR (..),
-    ToCBORGroup (..),
-    TokenType (TypeMapLen, TypeMapLen64, TypeMapLenIndef),
-    decodeRecordNamed,
-    decodeRecordSum,
-    decodeWord,
-    encodeListLen,
-    listLenInt,
-    peekTokenType,
-  )
+import Cardano.Ledger.Binary (
+  FromCBOR (fromCBOR),
+  FromCBORGroup (..),
+  ToCBOR (..),
+  ToCBORGroup (..),
+  TokenType (TypeMapLen, TypeMapLen64, TypeMapLenIndef),
+  decodeRecordNamed,
+  decodeRecordSum,
+  decodeWord,
+  encodeListLen,
+  listLenInt,
+  peekTokenType,
+ )
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
 import Cardano.Ledger.Credential (Credential (..), StakeCredential)
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Keys
-  ( Hash,
-    KeyHash (..),
-    KeyRole (..),
-    VerKeyVRF,
-  )
+import Cardano.Ledger.Keys (
+  Hash,
+  KeyHash (..),
+  KeyRole (..),
+  VerKeyVRF,
+ )
 import Cardano.Ledger.PoolParams
 import Cardano.Ledger.Slot (EpochNo (..))
 import Control.DeepSeq (NFData)
@@ -68,8 +68,8 @@ import NoThunks.Class (NoThunks (..))
 
 -- | The delegation of one stake key to another.
 data Delegation c = Delegation
-  { dDelegator :: !(StakeCredential c),
-    dDelegatee :: !(KeyHash 'StakePool c)
+  { dDelegator :: !(StakeCredential c)
+  , dDelegatee :: !(KeyHash 'StakePool c)
   }
   deriving (Eq, Generic, Show, NFData)
 
@@ -145,8 +145,8 @@ instance
 
 -- | Move instantaneous rewards certificate
 data MIRCert c = MIRCert
-  { mirPot :: MIRPot,
-    mirRewards :: MIRTarget c
+  { mirPot :: MIRPot
+  , mirRewards :: MIRTarget c
   }
   deriving (Show, Generic, Eq, NFData)
 

@@ -2,20 +2,20 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Cardano.Chain.Common.ChainDifficulty
-  ( ChainDifficulty (..),
-    dropChainDifficulty,
-  )
+module Cardano.Chain.Common.ChainDifficulty (
+  ChainDifficulty (..),
+  dropChainDifficulty,
+)
 where
 
-import Cardano.Ledger.Binary
-  ( Dropper,
-    FromCBOR (..),
-    ToCBOR (..),
-    dropWord64,
-    encodeListLen,
-    enforceSize,
-  )
+import Cardano.Ledger.Binary (
+  Dropper,
+  FromCBOR (..),
+  ToCBOR (..),
+  dropWord64,
+  encodeListLen,
+  enforceSize,
+ )
 import Cardano.Prelude
 import Data.Aeson (ToJSON)
 import Formatting.Buildable (Buildable)

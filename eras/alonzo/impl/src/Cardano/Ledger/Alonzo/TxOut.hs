@@ -16,69 +16,69 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Alonzo.TxOut
-  ( AlonzoTxOut (.., AlonzoTxOut, TxOutCompact, TxOutCompactDH),
-    AlonzoEraTxOut (..),
-    -- Constructors are not exported for safety:
-    Addr28Extra,
-    DataHash32,
-    getAdaOnly,
-    decodeDataHash32,
-    encodeDataHash32,
-    encodeAddress28,
-    decodeAddress28,
-    viewCompactTxOut,
-    viewTxOut,
-    getAlonzoTxOutEitherAddr,
-    utxoEntrySize,
-  )
+module Cardano.Ledger.Alonzo.TxOut (
+  AlonzoTxOut (.., AlonzoTxOut, TxOutCompact, TxOutCompactDH),
+  AlonzoEraTxOut (..),
+  -- Constructors are not exported for safety:
+  Addr28Extra,
+  DataHash32,
+  getAdaOnly,
+  decodeDataHash32,
+  encodeDataHash32,
+  encodeAddress28,
+  decodeAddress28,
+  viewCompactTxOut,
+  viewTxOut,
+  getAlonzoTxOutEitherAddr,
+  utxoEntrySize,
+)
 where
 
 import Cardano.Crypto.Hash
-import Cardano.Ledger.Address
-  ( Addr (..),
-    CompactAddr,
-    compactAddr,
-    decompactAddr,
-    fromCborBothAddr,
-  )
+import Cardano.Ledger.Address (
+  Addr (..),
+  CompactAddr,
+  compactAddr,
+  decompactAddr,
+  fromCborBothAddr,
+ )
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Data (Datum (..), dataHashSize)
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.PParams ()
 import Cardano.Ledger.Alonzo.Scripts ()
-import Cardano.Ledger.BaseTypes
-  ( Network (..),
-    StrictMaybe (..),
-    maybeToStrictMaybe,
-    strictMaybeToMaybe,
-  )
-import Cardano.Ledger.Binary
-  ( DecoderError (DecoderErrorCustom),
-    FromCBOR (fromCBOR),
-    FromSharedCBOR (Share, fromSharedCBOR),
-    Interns,
-    ToCBOR (toCBOR),
-    cborError,
-    decodeBreakOr,
-    decodeListLenOrIndef,
-    encodeListLen,
-    fromNotSharedCBOR,
-    interns,
-  )
+import Cardano.Ledger.BaseTypes (
+  Network (..),
+  StrictMaybe (..),
+  maybeToStrictMaybe,
+  strictMaybeToMaybe,
+ )
+import Cardano.Ledger.Binary (
+  DecoderError (DecoderErrorCustom),
+  FromCBOR (fromCBOR),
+  FromSharedCBOR (Share, fromSharedCBOR),
+  Interns,
+  ToCBOR (toCBOR),
+  cborError,
+  decodeBreakOr,
+  decodeListLenOrIndef,
+  encodeListLen,
+  fromNotSharedCBOR,
+  interns,
+ )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Credential (Credential (..), PaymentCredential, StakeReference (..))
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
-import Cardano.Ledger.SafeHash
-  ( extractHash,
-    unsafeMakeSafeHash,
-  )
-import Cardano.Ledger.Val
-  ( DecodeNonNegative (decodeNonNegative),
-    Val (..),
-  )
+import Cardano.Ledger.SafeHash (
+  extractHash,
+  unsafeMakeSafeHash,
+ )
+import Cardano.Ledger.Val (
+  DecodeNonNegative (decodeNonNegative),
+  Val (..),
+ )
 import Control.DeepSeq (NFData (..), rwhnf)
 import Control.Monad (guard, (<$!>))
 import Data.Aeson (ToJSON (..), object, (.=))
@@ -180,8 +180,8 @@ viewCompactTxOut txOut = case txOut of
         (compactAddr addr, injectCompact adaVal, SNothing)
     | otherwise -> error addressErrorMsg
   TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal dataHash32
-    | Just addr <- decodeAddress28 stakeRef addr28Extra,
-      Just dh <- decodeDataHash32 dataHash32 ->
+    | Just addr <- decodeAddress28 stakeRef addr28Extra
+    , Just dh <- decodeDataHash32 dataHash32 ->
         (compactAddr addr, injectCompact adaVal, SJust dh)
     | otherwise -> error addressErrorMsg
 
@@ -201,8 +201,8 @@ viewTxOut (TxOut_AddrHash28_AdaOnly stakeRef addr28Extra adaVal)
   | Just addr <- decodeAddress28 stakeRef addr28Extra =
       (addr, inject (fromCompact adaVal), SNothing)
 viewTxOut (TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal dataHash32)
-  | Just addr <- decodeAddress28 stakeRef addr28Extra,
-    Just dh <- decodeDataHash32 dataHash32 =
+  | Just addr <- decodeAddress28 stakeRef addr28Extra
+  , Just dh <- decodeDataHash32 dataHash32 =
       (addr, inject (fromCompact adaVal), SJust dh)
 viewTxOut TxOut_AddrHash28_AdaOnly {} = error addressErrorMsg
 viewTxOut TxOut_AddrHash28_AdaOnly_DataHash32 {} = error addressErrorMsg
@@ -274,15 +274,15 @@ pattern AlonzoTxOut addr vl dh <-
   (viewTxOut -> (addr, vl, dh))
   where
     AlonzoTxOut (Addr network paymentCred stakeRef) vl SNothing
-      | StakeRefBase stakeCred <- stakeRef,
-        Just adaCompact <- getAdaOnly (Proxy @era) vl,
-        Just (Refl, addr28Extra) <- encodeAddress28 network paymentCred =
+      | StakeRefBase stakeCred <- stakeRef
+      , Just adaCompact <- getAdaOnly (Proxy @era) vl
+      , Just (Refl, addr28Extra) <- encodeAddress28 network paymentCred =
           TxOut_AddrHash28_AdaOnly stakeCred addr28Extra adaCompact
     AlonzoTxOut (Addr network paymentCred stakeRef) vl (SJust dh)
-      | StakeRefBase stakeCred <- stakeRef,
-        Just adaCompact <- getAdaOnly (Proxy @era) vl,
-        Just (Refl, addr28Extra) <- encodeAddress28 network paymentCred,
-        Just (Refl, dataHash32) <- encodeDataHash32 dh =
+      | StakeRefBase stakeCred <- stakeRef
+      , Just adaCompact <- getAdaOnly (Proxy @era) vl
+      , Just (Refl, addr28Extra) <- encodeAddress28 network paymentCred
+      , Just (Refl, dataHash32) <- encodeDataHash32 dh =
           TxOut_AddrHash28_AdaOnly_DataHash32 stakeCred addr28Extra adaCompact dataHash32
     AlonzoTxOut addr vl mdh =
       let v = fromMaybe (error "Illegal value in txout") $ toCompact vl
@@ -394,9 +394,9 @@ instance
   where
   toJSON (AlonzoTxOut addr v dataHash) =
     object
-      [ "address" .= toJSON addr,
-        "value" .= toJSON v,
-        "datahash" .= case strictMaybeToMaybe dataHash of
+      [ "address" .= toJSON addr
+      , "value" .= toJSON v
+      , "datahash" .= case strictMaybeToMaybe dataHash of
           Nothing -> Aeson.Null
           Just dHash ->
             Aeson.String . hashToTextAsHex $

@@ -3,10 +3,10 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Allegra.Translation
-  ( allegraTranslationTests,
-    allegraEncodeDecodeTests,
-  )
+module Test.Cardano.Ledger.Allegra.Translation (
+  allegraTranslationTests,
+  allegraEncodeDecodeTests,
+)
 where
 
 import Cardano.Ledger.Allegra (Allegra)
@@ -39,25 +39,25 @@ allegraTranslationTests :: TestTree
 allegraTranslationTests =
   testGroup
     "Allegra translation binary compatibiliby tests"
-    [ testProperty "Tx compatibility" (testTranslation @S.ShelleyTx),
-      testProperty "ShelleyGenesis compatibility" (testTranslation @S.ShelleyGenesis),
-      testProperty "ProposedPPUpdates compatibility" (testTranslation @S.ProposedPPUpdates),
-      testProperty "PPUPState compatibility" (testTranslation @S.PPUPState),
-      testProperty "TxOut compatibility" (testTranslation @S.ShelleyTxOut),
-      testProperty "UTxO compatibility" (testTranslation @S.UTxO),
-      testProperty "UTxOState compatibility" (testTranslation @S.UTxOState),
-      testProperty "LedgerState compatibility" (testTranslation @S.LedgerState),
-      testProperty "EpochState compatibility" (testTranslation @S.EpochState),
-      testProperty "ShelleyTxWits compatibility" (testTranslation @S.ShelleyTxWits),
-      testProperty "Update compatibility" (testTranslation @S.Update)
+    [ testProperty "Tx compatibility" (testTranslation @S.ShelleyTx)
+    , testProperty "ShelleyGenesis compatibility" (testTranslation @S.ShelleyGenesis)
+    , testProperty "ProposedPPUpdates compatibility" (testTranslation @S.ProposedPPUpdates)
+    , testProperty "PPUPState compatibility" (testTranslation @S.PPUPState)
+    , testProperty "TxOut compatibility" (testTranslation @S.ShelleyTxOut)
+    , testProperty "UTxO compatibility" (testTranslation @S.UTxO)
+    , testProperty "UTxOState compatibility" (testTranslation @S.UTxOState)
+    , testProperty "LedgerState compatibility" (testTranslation @S.LedgerState)
+    , testProperty "EpochState compatibility" (testTranslation @S.EpochState)
+    , testProperty "ShelleyTxWits compatibility" (testTranslation @S.ShelleyTxWits)
+    , testProperty "Update compatibility" (testTranslation @S.Update)
     ]
 
 testTranslation ::
   forall f.
-  ( ToCBOR (f Allegra),
-    ToCBOR (f Shelley),
-    TranslateEra Allegra f,
-    Show (TranslationError Allegra f)
+  ( ToCBOR (f Allegra)
+  , ToCBOR (f Shelley)
+  , TranslateEra Allegra f
+  , Show (TranslationError Allegra f)
   ) =>
   f Shelley ->
   Assertion

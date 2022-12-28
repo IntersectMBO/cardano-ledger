@@ -7,75 +7,75 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Cardano.Ledger.Shelley.LedgerState.PulsingReward
-  ( startStep,
-    pulseStep,
-    completeStep,
-    createRUpd,
-    completeRupd,
-    circulation,
-    updateNonMyopic,
-    decayFactor,
-  )
+module Cardano.Ledger.Shelley.LedgerState.PulsingReward (
+  startStep,
+  pulseStep,
+  completeStep,
+  createRUpd,
+  completeRupd,
+  circulation,
+  updateNonMyopic,
+  decayFactor,
+)
 where
 
-import Cardano.Ledger.BaseTypes
-  ( ActiveSlotCoeff,
-    BlocksMade (..),
-    BoundedRational (..),
-    ShelleyBase,
-    activeSlotVal,
-  )
-import Cardano.Ledger.Coin
-  ( Coin (..),
-    DeltaCoin (..),
-    rationalToCoinViaFloor,
-    toDeltaCoin,
-  )
+import Cardano.Ledger.BaseTypes (
+  ActiveSlotCoeff,
+  BlocksMade (..),
+  BoundedRational (..),
+  ShelleyBase,
+  activeSlotVal,
+ )
+import Cardano.Ledger.Coin (
+  Coin (..),
+  DeltaCoin (..),
+  rationalToCoinViaFloor,
+  toDeltaCoin,
+ )
 import Cardano.Ledger.Core
-import Cardano.Ledger.DPState
-  ( DPState (..),
-    rewards,
-  )
-import Cardano.Ledger.EpochBoundary
-  ( SnapShot (..),
-    SnapShots (..),
-    Stake (..),
-    sumAllStake,
-    sumStakePerPool,
-  )
+import Cardano.Ledger.DPState (
+  DPState (..),
+  rewards,
+ )
+import Cardano.Ledger.EpochBoundary (
+  SnapShot (..),
+  SnapShots (..),
+  Stake (..),
+  sumAllStake,
+  sumStakePerPool,
+ )
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool))
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState.Types
-import Cardano.Ledger.Shelley.PoolRank
-  ( Likelihood (..),
-    NonMyopic (..),
-    applyDecay,
-    leaderProbability,
-    likelihood,
-  )
-import Cardano.Ledger.Shelley.RewardUpdate
-  ( FreeVars (..),
-    Pulser,
-    PulsingRewUpdate (..),
-    RewardAns (..),
-    RewardEvent,
-    RewardPulser (..),
-    RewardSnapShot (..),
-    RewardUpdate (..),
-  )
-import Cardano.Ledger.Shelley.Rewards
-  ( PoolRewardInfo (..),
-    StakeShare (..),
-    leaderRewardToGeneral,
-    mkPoolRewardInfo,
-    sumRewards,
-  )
-import Cardano.Ledger.Shelley.TxBody
-  ( PoolParams (..),
-    RewardAcnt (..),
-    getRwdCred,
-  )
+import Cardano.Ledger.Shelley.PoolRank (
+  Likelihood (..),
+  NonMyopic (..),
+  applyDecay,
+  leaderProbability,
+  likelihood,
+ )
+import Cardano.Ledger.Shelley.RewardUpdate (
+  FreeVars (..),
+  Pulser,
+  PulsingRewUpdate (..),
+  RewardAns (..),
+  RewardEvent,
+  RewardPulser (..),
+  RewardSnapShot (..),
+  RewardUpdate (..),
+ )
+import Cardano.Ledger.Shelley.Rewards (
+  PoolRewardInfo (..),
+  StakeShare (..),
+  leaderRewardToGeneral,
+  mkPoolRewardInfo,
+  sumRewards,
+ )
+import Cardano.Ledger.Shelley.TxBody (
+  PoolParams (..),
+  RewardAcnt (..),
+  getRwdCred,
+ )
 import Cardano.Ledger.Slot (EpochSize (..))
 import qualified Cardano.Ledger.UMapCompact as UM
 import Cardano.Ledger.Val ((<->))
@@ -202,14 +202,14 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
       -- once all the member rewards are complete.
       rewsnap =
         RewardSnapShot
-          { rewFees = ssFee ss,
-            rewprotocolVersion = pr ^. ppProtocolVersionL,
-            rewNonMyopic = nm,
-            rewDeltaR1 = deltaR1,
-            rewR = _R,
-            rewDeltaT1 = Coin deltaT1,
-            rewLikelihoods = newLikelihoods,
-            rewLeaders = Map.foldl' collectLRs mempty blockProducingPoolInfo
+          { rewFees = ssFee ss
+          , rewprotocolVersion = pr ^. ppProtocolVersionL
+          , rewNonMyopic = nm
+          , rewDeltaR1 = deltaR1
+          , rewR = _R
+          , rewDeltaT1 = Coin deltaT1
+          , rewLikelihoods = newLikelihoods
+          , rewLeaders = Map.foldl' collectLRs mempty blockProducingPoolInfo
           }
       -- The data in 'FreeVars' to supply individual stake pool members with
       -- the neccessary information to compute their individual rewards.
@@ -264,14 +264,14 @@ completeRupd (Complete x) = pure (x, mempty)
 completeRupd
   ( Pulsing
       RewardSnapShot
-        { rewDeltaR1 = deltaR1,
-          rewFees = feesSS,
-          rewR = oldr,
-          rewDeltaT1 = (Coin deltaT1),
-          rewNonMyopic = nm,
-          rewLikelihoods = newLikelihoods,
-          rewLeaders = lrewards,
-          rewprotocolVersion = protVer
+        { rewDeltaR1 = deltaR1
+        , rewFees = feesSS
+        , rewR = oldr
+        , rewDeltaT1 = (Coin deltaT1)
+        , rewNonMyopic = nm
+        , rewLikelihoods = newLikelihoods
+        , rewLeaders = lrewards
+        , rewprotocolVersion = protVer
         }
       pulser@(RSLP _size _free _source (RewardAns prev _now)) -- If prev is Map.empty, we have never pulsed.
     ) = do
@@ -288,13 +288,13 @@ completeRupd
             else events'
     pure
       ( RewardUpdate
-          { deltaT = DeltaCoin deltaT1,
-            deltaR = invert (toDeltaCoin deltaR1) <> toDeltaCoin deltaR2,
-            rs = rs'',
-            deltaF = invert (toDeltaCoin feesSS),
-            nonMyopic = updateNonMyopic nm oldr newLikelihoods
-          },
-        newevent
+          { deltaT = DeltaCoin deltaT1
+          , deltaR = invert (toDeltaCoin deltaR1) <> toDeltaCoin deltaR2
+          , rs = rs''
+          , deltaF = invert (toDeltaCoin feesSS)
+          , nonMyopic = updateNonMyopic nm oldr newLikelihoods
+          }
+      , newevent
       )
 
 -- | To create a reward update, run all 3 phases
@@ -333,8 +333,8 @@ updateNonMyopic ::
   NonMyopic c
 updateNonMyopic nm rPot_ newLikelihoods =
   nm
-    { likelihoodsNM = updatedLikelihoods,
-      rewardPotNM = rPot_
+    { likelihoodsNM = updatedLikelihoods
+    , rewardPotNM = rPot_
     }
   where
     history = likelihoodsNM nm

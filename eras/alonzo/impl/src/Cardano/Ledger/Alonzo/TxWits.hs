@@ -17,38 +17,38 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Alonzo.TxWits
-  ( RdmrPtr (..),
-    Redeemers
-      ( Redeemers,
-        Redeemers'
-      ),
-    unRedeemers,
-    nullRedeemers,
-    TxDats (TxDats, TxDats'),
-    AlonzoTxWits
-      ( AlonzoTxWits,
-        txwitsVKey,
-        txwitsBoot,
-        txscripts,
-        txdats,
-        txrdmrs,
-        AlonzoTxWits',
-        txwitsVKey',
-        txwitsBoot',
-        txscripts',
-        txdats',
-        txrdmrs'
-      ),
-    addrAlonzoTxWitsL,
-    bootAddrAlonzoTxWitsL,
-    scriptAlonzoTxWitsL,
-    datsAlonzoTxWitsL,
-    rdmrsAlonzoTxWitsL,
-    AlonzoEraTxWits (..),
-    unTxDats,
-    nullDats,
-  )
+module Cardano.Ledger.Alonzo.TxWits (
+  RdmrPtr (..),
+  Redeemers (
+    Redeemers,
+    Redeemers'
+  ),
+  unRedeemers,
+  nullRedeemers,
+  TxDats (TxDats, TxDats'),
+  AlonzoTxWits (
+    AlonzoTxWits,
+    txwitsVKey,
+    txwitsBoot,
+    txscripts,
+    txdats,
+    txrdmrs,
+    AlonzoTxWits',
+    txwitsVKey',
+    txwitsBoot',
+    txscripts',
+    txdats',
+    txrdmrs'
+  ),
+  addrAlonzoTxWitsL,
+  bootAddrAlonzoTxWitsL,
+  scriptAlonzoTxWitsL,
+  datsAlonzoTxWitsL,
+  rdmrsAlonzoTxWitsL,
+  AlonzoEraTxWits (..),
+  unTxDats,
+  nullDats,
+)
 where
 
 import Cardano.Crypto.DSIGN.Class (SigDSIGN, VerKeyDSIGN)
@@ -57,30 +57,30 @@ import Cardano.Ledger.Alonzo.Data (Data, hashData)
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..), Tag)
-import Cardano.Ledger.Binary
-  ( Annotator,
-    Decoder,
-    FromCBOR (..),
-    FromCBORGroup (..),
-    ToCBOR (..),
-    ToCBORGroup (..),
-    decodeList,
-    encodeFoldableEncoder,
-    encodeListLen,
-  )
+import Cardano.Ledger.Binary (
+  Annotator,
+  Decoder,
+  FromCBOR (..),
+  FromCBORGroup (..),
+  ToCBOR (..),
+  ToCBORGroup (..),
+  decodeList,
+  encodeFoldableEncoder,
+  encodeListLen,
+ )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto (DSIGN, HASH), StandardCrypto)
 import Cardano.Ledger.Keys (KeyRole (Witness))
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
-import Cardano.Ledger.MemoBytes
-  ( Mem,
-    MemoBytes,
-    Memoized (..),
-    getMemoRawType,
-    lensMemoRawType,
-    mkMemoized,
-  )
+import Cardano.Ledger.MemoBytes (
+  Mem,
+  MemoBytes,
+  Memoized (..),
+  getMemoRawType,
+  lensMemoRawType,
+  mkMemoized,
+ )
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.TxBody (WitVKey)
 import Control.DeepSeq (NFData)
@@ -196,22 +196,22 @@ nullRedeemers = Map.null . unRedeemers
 
 -- | Internal 'AlonzoTxWits' type, lacking serialised bytes.
 data AlonzoTxWitsRaw era = AlonzoTxWitsRaw
-  { atwrAddrTxWits :: !(Set (WitVKey 'Witness (EraCrypto era))),
-    atwrBootAddrTxWits :: !(Set (BootstrapWitness (EraCrypto era))),
-    atwrScriptTxWits :: !(Map (ScriptHash (EraCrypto era)) (Script era)),
-    atwrDatsTxWits :: !(TxDats era),
-    atwrRdmrsTxWits :: !(Redeemers era)
+  { atwrAddrTxWits :: !(Set (WitVKey 'Witness (EraCrypto era)))
+  , atwrBootAddrTxWits :: !(Set (BootstrapWitness (EraCrypto era)))
+  , atwrScriptTxWits :: !(Map (ScriptHash (EraCrypto era)) (Script era))
+  , atwrDatsTxWits :: !(TxDats era)
+  , atwrRdmrsTxWits :: !(Redeemers era)
   }
   deriving (Generic)
 
 instance
-  ( Era era,
-    Script era ~ AlonzoScript era,
-    c ~ EraCrypto era,
-    NFData (TxDats era),
-    NFData (Redeemers era),
-    NFData (SigDSIGN (DSIGN c)),
-    NFData (VerKeyDSIGN (DSIGN c))
+  ( Era era
+  , Script era ~ AlonzoScript era
+  , c ~ EraCrypto era
+  , NFData (TxDats era)
+  , NFData (Redeemers era)
+  , NFData (SigDSIGN (DSIGN c))
+  , NFData (VerKeyDSIGN (DSIGN c))
   ) =>
   NFData (AlonzoTxWitsRaw era)
 
@@ -233,13 +233,13 @@ instance (Era era, Script era ~ AlonzoScript era) => Monoid (AlonzoTxWits era) w
   mempty = AlonzoTxWits mempty mempty mempty mempty (Redeemers mempty)
 
 deriving instance
-  ( Era era,
-    Script era ~ AlonzoScript era,
-    c ~ EraCrypto era,
-    NFData (TxDats era),
-    NFData (Redeemers era),
-    NFData (SigDSIGN (DSIGN c)),
-    NFData (VerKeyDSIGN (DSIGN c))
+  ( Era era
+  , Script era ~ AlonzoScript era
+  , c ~ EraCrypto era
+  , NFData (TxDats era)
+  , NFData (Redeemers era)
+  , NFData (SigDSIGN (DSIGN c))
+  , NFData (VerKeyDSIGN (DSIGN c))
   ) =>
   NFData (AlonzoTxWits era)
 
@@ -301,8 +301,8 @@ deriving via
 -- AlonzoTxWits instances
 
 deriving stock instance
-  ( Era era,
-    Eq (Script era)
+  ( Era era
+  , Eq (Script era)
   ) =>
   Eq (AlonzoTxWitsRaw era)
 
@@ -313,8 +313,8 @@ deriving stock instance
 instance (Era era, NoThunks (Script era)) => NoThunks (AlonzoTxWitsRaw era)
 
 deriving newtype instance
-  ( Era era,
-    Eq (Script era)
+  ( Era era
+  , Eq (Script era)
   ) =>
   Eq (AlonzoTxWits era)
 
@@ -501,10 +501,10 @@ deriving via
     (Era era) => FromCBOR (Annotator (Redeemers era))
 
 instance
-  ( EraScript era,
-    ToCBOR (Data era),
-    EraScript era,
-    Script era ~ AlonzoScript era
+  ( EraScript era
+  , ToCBOR (Data era)
+  , EraScript era
+  , Script era ~ AlonzoScript era
   ) =>
   FromCBOR (Annotator (AlonzoTxWitsRaw era))
   where

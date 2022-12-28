@@ -1,8 +1,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Test.Cardano.Chain.Delegation.CBOR
-  ( tests,
-  )
+module Test.Cardano.Chain.Delegation.CBOR (
+  tests,
+)
 where
 
 import Cardano.Chain.Delegation (unsafePayload)
@@ -11,17 +11,17 @@ import Data.List ((!!))
 import GetDataFileName ((<:<))
 import Hedgehog (Property)
 import Test.Cardano.Chain.Delegation.Example (exampleCertificates)
-import Test.Cardano.Chain.Delegation.Gen
-  ( genCertificate,
-    genError,
-    genPayload,
-  )
+import Test.Cardano.Chain.Delegation.Gen (
+  genCertificate,
+  genError,
+  genPayload,
+ )
 import Test.Cardano.Crypto.Gen (feedPM)
-import Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip
-  ( goldenTestCBOR,
-    roundTripsCBORBuildable,
-    roundTripsCBORShow,
-  )
+import Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip (
+  goldenTestCBOR,
+  roundTripsCBORBuildable,
+  roundTripsCBORShow,
+ )
 import Test.Cardano.Prelude
 import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
 

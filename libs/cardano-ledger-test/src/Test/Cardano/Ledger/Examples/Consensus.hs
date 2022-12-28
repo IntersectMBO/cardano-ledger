@@ -38,21 +38,21 @@ oneTest proof = assertBool (displayResults results) (null results)
         f (_label, Nothing) = mempty
         f (label, Just doc) =
           vsep
-            [ text "======================",
-              ppString ("path to unequal parts = " ++ label),
-              text "------",
-              doc,
-              text " "
+            [ text "======================"
+            , ppString ("path to unequal parts = " ++ label)
+            , text "------"
+            , doc
+            , text " "
             ]
 
 genericConsensusTest :: TestTree
 genericConsensusTest =
   testGroup
     "Generic Consensus examples agree with non-generic ones."
-    [ testCase "Shelley" (oneTest (Shelley Standard)),
-      testCase "Allegra" (oneTest (Allegra Standard)),
-      testCase "Mary" (oneTest (Mary Standard)),
-      testCase "Alonzo" (oneTest (Alonzo Standard)),
-      testCase "Babbage" (oneTest (Babbage Standard))
-      -- testCase "Conway" (oneTest (Conway Standard)) TODO
+    [ testCase "Shelley" (oneTest (Shelley Standard))
+    , testCase "Allegra" (oneTest (Allegra Standard))
+    , testCase "Mary" (oneTest (Mary Standard))
+    , testCase "Alonzo" (oneTest (Alonzo Standard))
+    , testCase "Babbage" (oneTest (Babbage Standard))
+    -- testCase "Conway" (oneTest (Conway Standard)) TODO
     ]

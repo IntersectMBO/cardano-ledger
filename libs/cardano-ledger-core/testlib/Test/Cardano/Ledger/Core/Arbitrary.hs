@@ -15,63 +15,63 @@
 -- Workaroud a ghc bug:
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 #endif
-module Test.Cardano.Ledger.Core.Arbitrary
-  ( module Test.Cardano.Ledger.Binary.Arbitrary,
-  )
+module Test.Cardano.Ledger.Core.Arbitrary (
+  module Test.Cardano.Ledger.Binary.Arbitrary,
+)
 where
 
-import Cardano.Crypto.DSIGN.Class
-  ( DSIGNAlgorithm (deriveVerKeyDSIGN, genKeyDSIGN),
-    seedSizeDSIGN,
-  )
+import Cardano.Crypto.DSIGN.Class (
+  DSIGNAlgorithm (deriveVerKeyDSIGN, genKeyDSIGN),
+  seedSizeDSIGN,
+ )
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import Cardano.Ledger.Address
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
-import Cardano.Ledger.BaseTypes
-  ( ActiveSlotCoeff,
-    BlocksMade (..),
-    CertIx,
-    DnsName,
-    Network (..),
-    NonNegativeInterval,
-    Nonce (..),
-    Port (..),
-    PositiveInterval,
-    PositiveUnitInterval,
-    ProtVer (..),
-    SlotNo (..),
-    TxIx,
-    UnitInterval,
-    Url,
-    mkActiveSlotCoeff,
-    mkCertIxPartial,
-    mkNonceFromNumber,
-    mkTxIxPartial,
-    promoteRatio,
-    textToDns,
-    textToUrl,
-  )
+import Cardano.Ledger.BaseTypes (
+  ActiveSlotCoeff,
+  BlocksMade (..),
+  CertIx,
+  DnsName,
+  Network (..),
+  NonNegativeInterval,
+  Nonce (..),
+  Port (..),
+  PositiveInterval,
+  PositiveUnitInterval,
+  ProtVer (..),
+  SlotNo (..),
+  TxIx,
+  UnitInterval,
+  Url,
+  mkActiveSlotCoeff,
+  mkCertIxPartial,
+  mkNonceFromNumber,
+  mkTxIxPartial,
+  promoteRatio,
+  textToDns,
+  textToUrl,
+ )
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
 import Cardano.Ledger.Core (EraTxOut (TxOut))
 import Cardano.Ledger.Credential (Credential (..), Ptr (..), StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto (DSIGN))
 import Cardano.Ledger.Hashes (ScriptHash (..))
-import Cardano.Ledger.Keys
-  ( GenDelegPair (..),
-    GenDelegs (..),
-    KeyHash (..),
-    VKey (..),
-  )
+import Cardano.Ledger.Keys (
+  GenDelegPair (..),
+  GenDelegs (..),
+  KeyHash (..),
+  VKey (..),
+ )
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness (..), ChainCode (..))
 import Cardano.Ledger.Keys.WitVKey (WitVKey (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
-import Cardano.Ledger.PoolParams
-  ( PoolMetadata (..),
-    PoolParams (..),
-    SizeOfPoolOwners (..),
-    SizeOfPoolRelays (..),
-    StakePoolRelay (..),
-  )
+import Cardano.Ledger.PoolParams (
+  PoolMetadata (..),
+  PoolParams (..),
+  SizeOfPoolOwners (..),
+  SizeOfPoolRelays (..),
+  StakePoolRelay (..),
+ )
 import Cardano.Ledger.Rewards (Reward (..), RewardType (..))
 import Cardano.Ledger.SafeHash (SafeHash, unsafeMakeSafeHash)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
@@ -221,8 +221,8 @@ instance Arbitrary ProtVer where
 instance Arbitrary Nonce where
   arbitrary =
     oneof
-      [ return NeutralNonce,
-        mkNonceFromNumber <$> arbitrary
+      [ return NeutralNonce
+      , mkNonceFromNumber <$> arbitrary
       ]
 
 ------------------------------------------------------------------------------------------
@@ -248,8 +248,8 @@ instance Arbitrary Ptr where
 instance Crypto c => Arbitrary (Credential r c) where
   arbitrary =
     oneof
-      [ ScriptHashObj . ScriptHash <$> arbitrary,
-        KeyHashObj <$> arbitrary
+      [ ScriptHashObj . ScriptHash <$> arbitrary
+      , KeyHashObj <$> arbitrary
       ]
 
 ------------------------------------------------------------------------------------------
@@ -304,8 +304,8 @@ instance DSIGNAlgorithm (DSIGN c) => Arbitrary (KeyPair kd c) where
     let signKey = genKeyDSIGN seed
     pure $
       KeyPair
-        { vKey = VKey $ deriveVerKeyDSIGN signKey,
-          sKey = signKey
+        { vKey = VKey $ deriveVerKeyDSIGN signKey
+        , sKey = signKey
         }
 
 ------------------------------------------------------------------------------------------
@@ -332,8 +332,8 @@ instance Arbitrary (BootstrapAddress c) where
 instance Crypto c => Arbitrary (Addr c) where
   arbitrary =
     frequency
-      [ (8, Addr <$> arbitrary <*> arbitrary <*> arbitrary),
-        (2, AddrBootstrap <$> arbitrary)
+      [ (8, Addr <$> arbitrary <*> arbitrary <*> arbitrary)
+      , (2, AddrBootstrap <$> arbitrary)
       ]
   shrink = genericShrink
 
@@ -343,9 +343,9 @@ instance Crypto c => Arbitrary (CompactAddr c) where
 instance Crypto c => Arbitrary (StakeReference c) where
   arbitrary =
     frequency
-      [ (80, StakeRefBase <$> arbitrary),
-        (5, StakeRefPtr <$> arbitrary),
-        (15, pure StakeRefNull)
+      [ (80, StakeRefBase <$> arbitrary)
+      , (5, StakeRefPtr <$> arbitrary)
+      , (15, pure StakeRefNull)
       ]
   shrink = genericShrink
 

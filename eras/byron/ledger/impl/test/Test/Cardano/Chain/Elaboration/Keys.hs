@@ -1,25 +1,25 @@
-module Test.Cardano.Chain.Elaboration.Keys
-  ( elaborateKeyPair,
-    elaborateVKey,
-    elaborateVKeyGenesis,
-    elaborateVKeyGenesisHash,
+module Test.Cardano.Chain.Elaboration.Keys (
+  elaborateKeyPair,
+  elaborateVKey,
+  elaborateVKeyGenesis,
+  elaborateVKeyGenesisHash,
 
-    -- * Abstract verification-key elaboration functions
-    vKeyPair,
-    vKeyToSKey,
-    vKeyToSafeSigner,
-  )
+  -- * Abstract verification-key elaboration functions
+  vKeyPair,
+  vKeyToSKey,
+  vKeyToSafeSigner,
+)
 where
 
-import Byron.Spec.Ledger.Core
-  ( KeyPair,
-    Owner (Owner),
-    VKey (VKey),
-    VKeyGenesis (VKeyGenesis),
-    keyPair,
-    owner,
-    sKey,
-  )
+import Byron.Spec.Ledger.Core (
+  KeyPair,
+  Owner (Owner),
+  VKey (VKey),
+  VKeyGenesis (VKeyGenesis),
+  keyPair,
+  owner,
+  sKey,
+ )
 import Cardano.Chain.Common (KeyHash, hashKey)
 import Cardano.Crypto.Signing (SafeSigner, SigningKey, VerificationKey, deterministicKeyGen, noPassSafeSigner)
 import Cardano.Prelude

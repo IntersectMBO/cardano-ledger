@@ -4,21 +4,21 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Mary
-  ( Mary,
-    MaryEra,
-    ShelleyTx,
-    ShelleyTxOut,
-    MaryValue,
-    MaryTxBody,
-  )
+module Cardano.Ledger.Mary (
+  Mary,
+  MaryEra,
+  ShelleyTx,
+  ShelleyTxOut,
+  MaryValue,
+  MaryTxBody,
+)
 where
 
+import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Keys (DSignable)
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.PParams ()
-import Cardano.Ledger.Core
 import Cardano.Ledger.Mary.Scripts ()
 import Cardano.Ledger.Mary.Translation ()
 import Cardano.Ledger.Mary.TxAuxData ()

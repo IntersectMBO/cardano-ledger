@@ -1,6 +1,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+
 module Cardano.Ledger.Allegra.PParams () where
 
 import Cardano.Ledger.Allegra.Era (AllegraEra)

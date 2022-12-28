@@ -6,12 +6,12 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Alonzo.UTxO
-  ( AlonzoScriptsNeeded (..),
-    getAlonzoScriptsNeeded,
-    getAlonzoScriptsHashesNeeded,
-    getInputDataHashesTxBody,
-  )
+module Cardano.Ledger.Alonzo.UTxO (
+  AlonzoScriptsNeeded (..),
+  getAlonzoScriptsNeeded,
+  getAlonzoScriptsHashesNeeded,
+  getInputDataHashesTxBody,
+)
 where
 
 import Cardano.Ledger.Alonzo.Data (Datum (..))
@@ -27,11 +27,11 @@ import Cardano.Ledger.Shelley.Delegation.Certificates (DCert (..), DelegCert (..
 import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), Wdrl (..), getRwdCred)
 import Cardano.Ledger.Shelley.UTxO (scriptCred)
 import Cardano.Ledger.TxIn
-import Cardano.Ledger.UTxO
-  ( EraUTxO (..),
-    UTxO (..),
-    getScriptHash,
-  )
+import Cardano.Ledger.UTxO (
+  EraUTxO (..),
+  UTxO (..),
+  getScriptHash,
+ )
 import Control.SetAlgebra (eval, (◁))
 import Data.Foldable (foldl')
 import qualified Data.Map.Strict as Map
@@ -79,10 +79,10 @@ getInputDataHashesTxBody (UTxO mp) txBody hashScriptMap =
        in case txOut ^. datumTxOutF of
             NoDatum
               | isTwoPhaseScriptAddressFromMap hashScriptMap addr ->
-                (hashSet, Set.insert txIn inputSet)
+                  (hashSet, Set.insert txIn inputSet)
             DatumHash dataHash
               | isTwoPhaseScriptAddressFromMap hashScriptMap addr ->
-                (Set.insert dataHash hashSet, inputSet)
+                  (Set.insert dataHash hashSet, inputSet)
             -- Though it is somewhat odd to allow non-two-phase-scripts to include a datum,
             -- the Alonzo era already set the precedent with datum hashes, and several dapp
             -- developers see this as a helpful feature.

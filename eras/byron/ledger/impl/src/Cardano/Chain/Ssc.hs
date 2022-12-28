@@ -3,39 +3,39 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Cardano.Chain.Ssc
-  ( SscPayload (..),
-    dropSscPayload,
-    SscProof (..),
-    dropSscProof,
-    dropCommitmentsMap,
-    dropSignedCommitment,
-    dropCommitment,
-    dropOpeningsMap,
-    dropSharesMap,
-    dropInnerSharesMap,
-    dropVssCertificatesMap,
-    dropVssCertificate,
-  )
+module Cardano.Chain.Ssc (
+  SscPayload (..),
+  dropSscPayload,
+  SscProof (..),
+  dropSscProof,
+  dropCommitmentsMap,
+  dropSignedCommitment,
+  dropCommitment,
+  dropOpeningsMap,
+  dropSharesMap,
+  dropInnerSharesMap,
+  dropVssCertificatesMap,
+  dropVssCertificate,
+)
 where
 
-import Cardano.Ledger.Binary
-  ( DecoderError (..),
-    Dropper,
-    FromCBOR (..),
-    ToCBOR (..),
-    cborError,
-    decodeListLen,
-    dropBytes,
-    dropList,
-    dropMap,
-    dropSet,
-    dropTriple,
-    dropWord64,
-    encodeListLen,
-    enforceSize,
-    matchSize,
-  )
+import Cardano.Ledger.Binary (
+  DecoderError (..),
+  Dropper,
+  FromCBOR (..),
+  ToCBOR (..),
+  cborError,
+  decodeListLen,
+  dropBytes,
+  dropList,
+  dropMap,
+  dropSet,
+  dropTriple,
+  dropWord64,
+  encodeListLen,
+  enforceSize,
+  matchSize,
+ )
 import Cardano.Prelude hiding (cborError)
 import Data.Aeson (ToJSON)
 import qualified Data.ByteString as ByteString (pack)
@@ -107,38 +107,38 @@ instance ToCBOR SscProof where
       hashBytes :: ByteString
       hashBytes =
         ByteString.pack
-          [ 0xd3,
-            0x6a,
-            0x26,
-            0x19,
-            0xa6,
-            0x72,
-            0x49,
-            0x46,
-            0x04,
-            0xe1,
-            0x1b,
-            0xb4,
-            0x47,
-            0xcb,
-            0xcf,
-            0x52,
-            0x31,
-            0xe9,
-            0xf2,
-            0xba,
-            0x25,
-            0xc2,
-            0x16,
-            0x91,
-            0x77,
-            0xed,
-            0xc9,
-            0x41,
-            0xbd,
-            0x50,
-            0xad,
-            0x6c
+          [ 0xd3
+          , 0x6a
+          , 0x26
+          , 0x19
+          , 0xa6
+          , 0x72
+          , 0x49
+          , 0x46
+          , 0x04
+          , 0xe1
+          , 0x1b
+          , 0xb4
+          , 0x47
+          , 0xcb
+          , 0xcf
+          , 0x52
+          , 0x31
+          , 0xe9
+          , 0xf2
+          , 0xba
+          , 0x25
+          , 0xc2
+          , 0x16
+          , 0x91
+          , 0x77
+          , 0xed
+          , 0xc9
+          , 0x41
+          , 0xbd
+          , 0x50
+          , 0xad
+          , 0x6c
           ]
 
   encodedSizeExpr size _ =

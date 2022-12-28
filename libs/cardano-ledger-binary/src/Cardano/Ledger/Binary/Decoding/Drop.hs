@@ -6,18 +6,18 @@
 --   We use 'Dropper's when we don't care about the result of decoding, for
 --   example when we have deprecated some part of the serialised blockchain, but
 --   still need to decode old blocks.
-module Cardano.Ledger.Binary.Decoding.Drop
-  ( Dropper,
-    dropBytes,
-    dropInt32,
-    dropList,
-    dropMap,
-    dropSet,
-    dropTuple,
-    dropTriple,
-    dropWord8,
-    dropWord64,
-  )
+module Cardano.Ledger.Binary.Decoding.Drop (
+  Dropper,
+  dropBytes,
+  dropInt32,
+  dropList,
+  dropMap,
+  dropSet,
+  dropTuple,
+  dropTriple,
+  dropWord8,
+  dropWord64,
+)
 where
 
 import Cardano.Ledger.Binary.Decoding.Decoder

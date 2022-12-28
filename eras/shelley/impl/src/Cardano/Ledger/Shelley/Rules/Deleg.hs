@@ -9,67 +9,67 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Shelley.Rules.Deleg
-  ( ShelleyDELEG,
-    DelegEnv (..),
-    PredicateFailure,
-    ShelleyDelegPredFailure (..),
-  )
+module Cardano.Ledger.Shelley.Rules.Deleg (
+  ShelleyDELEG,
+  DelegEnv (..),
+  PredicateFailure,
+  ShelleyDelegPredFailure (..),
+)
 where
 
 import Cardano.Ledger.BaseTypes (Globals (..), ShelleyBase, epochInfoPure, invalidKey)
-import Cardano.Ledger.Binary
-  ( FromCBOR (..),
-    ToCBOR (..),
-    decodeRecordSum,
-    encodeListLen,
-  )
+import Cardano.Ledger.Binary (
+  FromCBOR (..),
+  ToCBOR (..),
+  decodeRecordSum,
+  encodeListLen,
+ )
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), addDeltaCoin, toDeltaCoin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Keys
-  ( GenDelegPair (..),
-    GenDelegs (..),
-    Hash,
-    KeyHash,
-    KeyRole (..),
-    VerKeyVRF,
-  )
+import Cardano.Ledger.Keys (
+  GenDelegPair (..),
+  GenDelegs (..),
+  Hash,
+  KeyHash,
+  KeyRole (..),
+  VerKeyVRF,
+ )
 import Cardano.Ledger.Shelley.Era (ShelleyDELEG)
 import Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
-import Cardano.Ledger.Shelley.LedgerState
-  ( AccountState (..),
-    DState (..),
-    FutureGenDeleg (..),
-    InstantaneousRewards (..),
-    availableAfterMIR,
-    delegations,
-    dsFutureGenDelegs,
-    dsGenDelegs,
-    dsIRewards,
-    payKeyDeposit,
-    refundKeyDeposit,
-    rewards,
-  )
-import Cardano.Ledger.Shelley.TxBody
-  ( ConstitutionalDelegCert (..),
-    DCert (..),
-    DelegCert (..),
-    Delegation (..),
-    MIRCert (..),
-    MIRPot (..),
-    MIRTarget (..),
-    Ptr,
-  )
-import Cardano.Ledger.Slot
-  ( Duration (..),
-    EpochNo (..),
-    SlotNo,
-    epochInfoEpoch,
-    epochInfoFirst,
-    (*-),
-    (+*),
-  )
+import Cardano.Ledger.Shelley.LedgerState (
+  AccountState (..),
+  DState (..),
+  FutureGenDeleg (..),
+  InstantaneousRewards (..),
+  availableAfterMIR,
+  delegations,
+  dsFutureGenDelegs,
+  dsGenDelegs,
+  dsIRewards,
+  payKeyDeposit,
+  refundKeyDeposit,
+  rewards,
+ )
+import Cardano.Ledger.Shelley.TxBody (
+  ConstitutionalDelegCert (..),
+  DCert (..),
+  DelegCert (..),
+  Delegation (..),
+  MIRCert (..),
+  MIRPot (..),
+  MIRTarget (..),
+  Ptr,
+ )
+import Cardano.Ledger.Slot (
+  Duration (..),
+  EpochNo (..),
+  SlotNo,
+  epochInfoEpoch,
+  epochInfoFirst,
+  (*-),
+  (+*),
+ )
 import Cardano.Ledger.UMapCompact (View (..), fromCompact)
 import qualified Cardano.Ledger.UMapCompact as UM
 import Control.Monad.Trans.Reader (asks)
@@ -87,10 +87,10 @@ import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
 data DelegEnv era = DelegEnv
-  { slotNo :: SlotNo,
-    ptr_ :: Ptr,
-    acnt_ :: AccountState,
-    ppDE :: PParams era -- The protocol parameters are only used for the HardFork mechanism
+  { slotNo :: SlotNo
+  , ptr_ :: Ptr
+  , acnt_ :: AccountState
+  , ppDE :: PParams era -- The protocol parameters are only used for the HardFork mechanism
   }
 
 deriving instance (Show (PParams era)) => Show (DelegEnv era)
@@ -354,8 +354,8 @@ delegationTransition = do
                     ds
                       { dsIRewards =
                           ir
-                            { deltaReserves = dr <> invert (toDeltaCoin coin),
-                              deltaTreasury = dt <> toDeltaCoin coin
+                            { deltaReserves = dr <> invert (toDeltaCoin coin)
+                            , deltaTreasury = dt <> toDeltaCoin coin
                             }
                       }
                 TreasuryMIR ->
@@ -363,8 +363,8 @@ delegationTransition = do
                     ds
                       { dsIRewards =
                           ir
-                            { deltaReserves = dr <> toDeltaCoin coin,
-                              deltaTreasury = dt <> invert (toDeltaCoin coin)
+                            { deltaReserves = dr <> toDeltaCoin coin
+                            , deltaTreasury = dt <> invert (toDeltaCoin coin)
                             }
                       }
             else do

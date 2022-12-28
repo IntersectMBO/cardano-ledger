@@ -6,21 +6,21 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Ledger.Allegra.Era
-  ( AllegraEra,
-    AllegraUTXO,
-    AllegraUTXOW,
-  )
+module Cardano.Ledger.Allegra.Era (
+  AllegraEra,
+  AllegraUTXO,
+  AllegraUTXOW,
+)
 where
 
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Core
-  ( Era (EraCrypto, ProtVerLow),
-    EraRule,
-    PreviousEra,
-    TranslationContext,
-    Value,
-  )
+import Cardano.Ledger.Core (
+  Era (EraCrypto, ProtVerLow),
+  EraRule,
+  PreviousEra,
+  TranslationContext,
+  Value,
+ )
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Rules
@@ -32,7 +32,6 @@ instance Crypto c => Era (AllegraEra c) where
   type PreviousEra (AllegraEra c) = ShelleyEra c
   type EraCrypto (AllegraEra c) = c
   type ProtVerLow (AllegraEra c) = 3
-
 
 --------------------------------------------------------------------------------
 -- Core instances

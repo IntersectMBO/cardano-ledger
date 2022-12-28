@@ -14,78 +14,78 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module Cardano.Ledger.BaseTypes
-  ( module Slotting,
-    ProtVer (..),
-    module Cardano.Ledger.Binary.Version,
-    FixedPoint,
-    (==>),
-    (⭒),
-    Network (..),
-    networkToWord8,
-    word8ToNetwork,
-    Nonce (..),
-    Seed (..),
-    UnitInterval,
-    PositiveUnitInterval,
-    PositiveInterval,
-    NonNegativeInterval,
-    BoundedRational (..),
-    fpPrecision,
-    promoteRatio,
-    invalidKey,
-    mkNonceFromOutputVRF,
-    mkNonceFromNumber,
-    Url,
-    urlToText,
-    textToUrl,
-    DnsName,
-    dnsToText,
-    textToDns,
-    Port (..),
-    ActiveSlotCoeff,
-    mkActiveSlotCoeff,
-    activeSlotVal,
-    activeSlotLog,
-    module Data.Maybe.Strict,
-    BlocksMade (..),
+module Cardano.Ledger.BaseTypes (
+  module Slotting,
+  ProtVer (..),
+  module Cardano.Ledger.Binary.Version,
+  FixedPoint,
+  (==>),
+  (⭒),
+  Network (..),
+  networkToWord8,
+  word8ToNetwork,
+  Nonce (..),
+  Seed (..),
+  UnitInterval,
+  PositiveUnitInterval,
+  PositiveInterval,
+  NonNegativeInterval,
+  BoundedRational (..),
+  fpPrecision,
+  promoteRatio,
+  invalidKey,
+  mkNonceFromOutputVRF,
+  mkNonceFromNumber,
+  Url,
+  urlToText,
+  textToUrl,
+  DnsName,
+  dnsToText,
+  textToDns,
+  Port (..),
+  ActiveSlotCoeff,
+  mkActiveSlotCoeff,
+  activeSlotVal,
+  activeSlotLog,
+  module Data.Maybe.Strict,
+  BlocksMade (..),
 
-    -- * Indices
-    TxIx (..),
-    txIxToInt,
-    txIxFromIntegral,
-    mkTxIxPartial,
-    CertIx (..),
-    certIxToInt,
-    certIxFromIntegral,
-    mkCertIxPartial,
+  -- * Indices
+  TxIx (..),
+  txIxToInt,
+  txIxFromIntegral,
+  mkTxIxPartial,
+  CertIx (..),
+  certIxToInt,
+  certIxFromIntegral,
+  mkCertIxPartial,
 
-    -- * STS Base
-    Globals (..),
-    epochInfoPure,
-    ShelleyBase,
-  )
+  -- * STS Base
+  Globals (..),
+  epochInfoPure,
+  ShelleyBase,
+)
 where
 
 import Cardano.Crypto.Hash
 import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.Ledger.Binary
-  ( CBORGroup (..),
-    Decoder,
-    DecoderError (..),
-    FromCBOR (fromCBOR),
-    FromCBORGroup (..),
-    ToCBOR (toCBOR),
-    ToCBORGroup (..),
-    cborError,
-    decodeRationalWithTag,
-    decodeRecordSum,
-    encodeListLen,
-    encodeRatioWithTag,
-    encodedSizeExpr,
-    invalidKey,
-  )
+import Cardano.Ledger.Binary (
+  CBORGroup (..),
+  Decoder,
+  DecoderError (..),
+  FromCBOR (fromCBOR),
+  FromCBORGroup (..),
+  ToCBOR (toCBOR),
+  ToCBORGroup (..),
+  cborError,
+  decodeRationalWithTag,
+  decodeRecordSum,
+  encodeListLen,
+  encodeRatioWithTag,
+  encodedSizeExpr,
+  invalidKey,
+ )
 import Cardano.Ledger.Binary.Version
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.NonIntegral (ln')
@@ -133,8 +133,8 @@ instance NoThunks ProtVer
 instance ToJSON ProtVer where
   toJSON (ProtVer major minor) =
     Aeson.object
-      [ "major" .= getVersion64 major,
-        "minor" .= minor
+      [ "major" .= getVersion64 major
+      , "minor" .= minor
       ]
 
 instance FromJSON ProtVer where
@@ -253,7 +253,7 @@ fromRatioBoundedRatio ::
 fromRatioBoundedRatio ratio
   | r < toRationalBoundedRatio lowerBound
       || r > toRationalBoundedRatio upperBound =
-    Nothing -- ensure valid range
+      Nothing -- ensure valid range
   | otherwise = Just $ BoundedRatio ratio
   where
     r = promoteRatio ratio
@@ -304,11 +304,11 @@ fromScientificBoundedRatioWord64 ::
 fromScientificBoundedRatioWord64 (normalize -> sci)
   | coeff < 0 = failWith "negative"
   | exp10 <= 0 = do
-    when (exp10 < -19) $ failWith "too precise"
-    fromRationalEither (coeff % (10 ^ negate exp10))
+      when (exp10 < -19) $ failWith "too precise"
+      fromRationalEither (coeff % (10 ^ negate exp10))
   | otherwise = do
-    when (19 < exp10) $ failWith "too big"
-    fromRationalEither (coeff * 10 ^ exp10 % 1)
+      when (19 < exp10) $ failWith "too big"
+      fromRationalEither (coeff * 10 ^ exp10 % 1)
   where
     coeff = coefficient sci
     exp10 = base10Exponent sci
@@ -322,15 +322,15 @@ newtype NonNegativeInterval
   = NonNegativeInterval (BoundedRatio NonNegativeInterval Word64)
   deriving (Ord, Eq, Generic)
   deriving newtype
-    ( Show,
-      Bounded,
-      BoundedRational,
-      ToCBOR,
-      FromCBOR,
-      ToJSON,
-      FromJSON,
-      NoThunks,
-      NFData
+    ( Show
+    , Bounded
+    , BoundedRational
+    , ToCBOR
+    , FromCBOR
+    , ToJSON
+    , FromJSON
+    , NoThunks
+    , NFData
     )
 
 instance Bounded (BoundedRatio NonNegativeInterval Word64) where
@@ -342,15 +342,15 @@ newtype PositiveInterval
   = PositiveInterval (BoundedRatio PositiveInterval Word64)
   deriving (Ord, Eq, Generic)
   deriving newtype
-    ( Show,
-      Bounded,
-      BoundedRational,
-      ToCBOR,
-      FromCBOR,
-      ToJSON,
-      FromJSON,
-      NoThunks,
-      NFData
+    ( Show
+    , Bounded
+    , BoundedRational
+    , ToCBOR
+    , FromCBOR
+    , ToJSON
+    , FromJSON
+    , NoThunks
+    , NFData
     )
 
 instance Bounded (BoundedRatio PositiveInterval Word64) where
@@ -366,15 +366,15 @@ newtype PositiveUnitInterval
   = PositiveUnitInterval (BoundedRatio PositiveUnitInterval Word64)
   deriving (Ord, Eq, Generic)
   deriving newtype
-    ( Show,
-      Bounded,
-      BoundedRational,
-      ToCBOR,
-      FromCBOR,
-      ToJSON,
-      FromJSON,
-      NoThunks,
-      NFData
+    ( Show
+    , Bounded
+    , BoundedRational
+    , ToCBOR
+    , FromCBOR
+    , ToJSON
+    , FromJSON
+    , NoThunks
+    , NFData
     )
 
 instance Bounded (BoundedRatio PositiveUnitInterval Word64) where
@@ -386,15 +386,15 @@ newtype UnitInterval
   = UnitInterval (BoundedRatio UnitInterval Word64)
   deriving (Ord, Eq, Generic)
   deriving newtype
-    ( Show,
-      Bounded,
-      BoundedRational,
-      ToCBOR,
-      FromCBOR,
-      ToJSON,
-      FromJSON,
-      NoThunks,
-      NFData
+    ( Show
+    , Bounded
+    , BoundedRational
+    , ToCBOR
+    , FromCBOR
+    , ToJSON
+    , FromJSON
+    , NoThunks
+    , NFData
     )
 
 instance Integral a => Bounded (BoundedRatio UnitInterval a) where
@@ -512,10 +512,10 @@ newtype Port = Port {portToWord16 :: Word16}
 --------------------------------------------------------------------------------
 
 data ActiveSlotCoeff = ActiveSlotCoeff
-  { unActiveSlotVal :: !PositiveUnitInterval,
-    unActiveSlotLog :: !Integer -- TODO mgudemann make this FixedPoint,
-    -- currently a problem because of
-    -- NoThunks instance for FixedPoint
+  { unActiveSlotVal :: !PositiveUnitInterval
+  , unActiveSlotLog :: !Integer -- TODO mgudemann make this FixedPoint,
+  -- currently a problem because of
+  -- NoThunks instance for FixedPoint
   }
   deriving (Eq, Ord, Show, Generic)
 
@@ -529,16 +529,16 @@ instance FromCBOR ActiveSlotCoeff where
 instance ToCBOR ActiveSlotCoeff where
   toCBOR
     ActiveSlotCoeff
-      { unActiveSlotVal = slotVal,
-        unActiveSlotLog = _logVal
+      { unActiveSlotVal = slotVal
+      , unActiveSlotLog = _logVal
       } =
       toCBOR slotVal
 
 mkActiveSlotCoeff :: PositiveUnitInterval -> ActiveSlotCoeff
 mkActiveSlotCoeff v =
   ActiveSlotCoeff
-    { unActiveSlotVal = v,
-      unActiveSlotLog =
+    { unActiveSlotVal = v
+    , unActiveSlotLog =
         if v == maxBound
           then -- If the active slot coefficient is equal to one,
           -- then nearly every stake pool can produce a block every slot.
@@ -561,34 +561,34 @@ activeSlotLog f = fromIntegral (unActiveSlotLog f) / fpPrecision
 --------------------------------------------------------------------------------
 
 data Globals = Globals
-  { epochInfo :: !(EpochInfo (Either Text)),
-    slotsPerKESPeriod :: !Word64,
-    -- | The window size in which our chosen chain growth property
-    --   guarantees at least k blocks. From the paper
-    --   "Ouroboros praos: An adaptively-secure, semi-synchronous proof-of-stake protocol".
-    --   The 'stabilityWindow' constant is used in a number of places; for example,
-    --   protocol updates must be submitted at least twice this many slots before an epoch boundary.
-    stabilityWindow :: !Word64,
-    -- | Number of slots before the end of the epoch at which we stop updating
-    --   the candidate nonce for the next epoch.
-    randomnessStabilisationWindow :: !Word64,
-    -- | Maximum number of blocks we are allowed to roll back
-    securityParameter :: !Word64,
-    -- | Maximum number of KES iterations
-    maxKESEvo :: !Word64,
-    -- | Quorum for update system votes and MIR certificates
-    quorum :: !Word64,
-    -- | All blocks invalid after this protocol version
-    maxMajorPV :: !Version,
-    -- | Maximum number of lovelace in the system
-    maxLovelaceSupply :: !Word64,
-    -- | Active Slot Coefficient, named f in
-    -- "Ouroboros Praos: An adaptively-secure, semi-synchronous proof-of-stake protocol"
-    activeSlotCoeff :: !ActiveSlotCoeff,
-    -- | The network ID
-    networkId :: !Network,
-    -- | System start time
-    systemStart :: !SystemStart
+  { epochInfo :: !(EpochInfo (Either Text))
+  , slotsPerKESPeriod :: !Word64
+  , stabilityWindow :: !Word64
+  -- ^ The window size in which our chosen chain growth property
+  --   guarantees at least k blocks. From the paper
+  --   "Ouroboros praos: An adaptively-secure, semi-synchronous proof-of-stake protocol".
+  --   The 'stabilityWindow' constant is used in a number of places; for example,
+  --   protocol updates must be submitted at least twice this many slots before an epoch boundary.
+  , randomnessStabilisationWindow :: !Word64
+  -- ^ Number of slots before the end of the epoch at which we stop updating
+  --   the candidate nonce for the next epoch.
+  , securityParameter :: !Word64
+  -- ^ Maximum number of blocks we are allowed to roll back
+  , maxKESEvo :: !Word64
+  -- ^ Maximum number of KES iterations
+  , quorum :: !Word64
+  -- ^ Quorum for update system votes and MIR certificates
+  , maxMajorPV :: !Version
+  -- ^ All blocks invalid after this protocol version
+  , maxLovelaceSupply :: !Word64
+  -- ^ Maximum number of lovelace in the system
+  , activeSlotCoeff :: !ActiveSlotCoeff
+  -- ^ Active Slot Coefficient, named f in
+  -- "Ouroboros Praos: An adaptively-secure, semi-synchronous proof-of-stake protocol"
+  , networkId :: !Network
+  -- ^ The network ID
+  , systemStart :: !SystemStart
+  -- ^ System start time
   }
   deriving (Show, Generic)
 

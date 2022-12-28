@@ -36,10 +36,10 @@ ledgerExamplesAllegra =
 
 exampleAllegraTxBody ::
   forall era.
-  ( AllegraEraTxBody era,
-    ShelleyBasedEra' era,
-    PParamsUpdate era ~ ShelleyPParamsUpdate era,
-    ProtVerAtMost era 8
+  ( AllegraEraTxBody era
+  , ShelleyBasedEra' era
+  , PParamsUpdate era ~ ShelleyPParamsUpdate era
+  , ProtVerAtMost era 8
   ) =>
   Value era ->
   TxBody era
@@ -66,15 +66,15 @@ exampleTimelock =
     StrictSeq.fromList
       [ RequireAllOf $
           StrictSeq.fromList
-            [ RequireTimeStart (SlotNo 0),
-              RequireTimeExpire (SlotNo 9)
-            ],
-        RequireAnyOf $
+            [ RequireTimeStart (SlotNo 0)
+            , RequireTimeExpire (SlotNo 9)
+            ]
+      , RequireAnyOf $
           StrictSeq.fromList
-            [ RequireSignature (mkKeyHash 0),
-              RequireSignature (mkKeyHash 1)
-            ],
-        RequireSignature (mkKeyHash 100)
+            [ RequireSignature (mkKeyHash 0)
+            , RequireSignature (mkKeyHash 1)
+            ]
+      , RequireSignature (mkKeyHash 100)
       ]
 
 exampleAllegraTxAuxData :: (Era era, Script era ~ Timelock era) => AllegraTxAuxData era

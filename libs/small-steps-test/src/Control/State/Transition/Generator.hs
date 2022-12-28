@@ -20,78 +20,78 @@
 --   - We start with some initial base state.
 --   - We generate a stream of signals. These might be influenced by some running state
 --   - We run each signal through
-module Control.State.Transition.Generator
-  ( HasTrace,
-    SignalGenerator,
-    BaseEnv,
-    interpretSTS,
-    envGen,
-    sigGen,
-    traceSigGen,
-    genTrace,
-    trace,
-    traceWithProfile,
-    traceOfLength,
-    traceOfLengthWithInitState,
-    traceSuchThat,
-    ofLengthAtLeast,
-    suchThatLastState,
-    nonTrivialTrace,
-    HasSizeInfo,
-    isTrivial,
-    sampleMaxTraceSize,
-    randomTrace,
-    randomTraceOfSize,
-    TraceLength (Maximum, Desired),
-    TraceProfile (TraceProfile, proportionOfValidSignals, failures),
-    proportionOfInvalidSignals,
+module Control.State.Transition.Generator (
+  HasTrace,
+  SignalGenerator,
+  BaseEnv,
+  interpretSTS,
+  envGen,
+  sigGen,
+  traceSigGen,
+  genTrace,
+  trace,
+  traceWithProfile,
+  traceOfLength,
+  traceOfLengthWithInitState,
+  traceSuchThat,
+  ofLengthAtLeast,
+  suchThatLastState,
+  nonTrivialTrace,
+  HasSizeInfo,
+  isTrivial,
+  sampleMaxTraceSize,
+  randomTrace,
+  randomTraceOfSize,
+  TraceLength (Maximum, Desired),
+  TraceProfile (TraceProfile, proportionOfValidSignals, failures),
+  proportionOfInvalidSignals,
 
-    -- * Invalid trace generation
-    invalidTrace,
+  -- * Invalid trace generation
+  invalidTrace,
 
-    -- * Trace classification
-    classifyTraceLength,
-    classifySize,
-    mkIntervals,
-    ratio,
+  -- * Trace classification
+  classifyTraceLength,
+  classifySize,
+  mkIntervals,
+  ratio,
 
-    -- * Trace properties
-    traceLengthsAreClassified,
-    onlyValidSignalsAreGenerated,
-    onlyValidSignalsAreGeneratedForTrace,
-    invalidSignalsAreGenerated,
+  -- * Trace properties
+  traceLengthsAreClassified,
+  onlyValidSignalsAreGenerated,
+  onlyValidSignalsAreGeneratedForTrace,
+  invalidSignalsAreGenerated,
 
-    -- * Helpers
-    coverFailures,
-  )
+  -- * Helpers
+  coverFailures,
+)
 where
 
 import Control.Arrow (second)
 import Control.Monad (forM, void)
 import Control.Monad.Trans.Maybe (MaybeT)
-import Control.State.Transition.Extended
-  ( BaseM,
-    Environment,
-    IRC (IRC),
-    PredicateFailure,
-    STS,
-    Signal,
-    State,
-    TRC (TRC),
-  )
+import Control.State.Transition.Extended (
+  BaseM,
+  Environment,
+  IRC (IRC),
+  PredicateFailure,
+  STS,
+  Signal,
+  State,
+  TRC (TRC),
+ )
 import qualified Control.State.Transition.Invalid.Trace as Invalid
-import Control.State.Transition.Trace
-  ( Trace,
-    TraceOrder (OldestFirst),
-    applySTSTest,
-    closure,
-    extractValues,
-    lastState,
-    mkTrace,
-    traceLength,
-    traceSignals,
-    _traceEnv,
-  )
+import Control.State.Transition.Trace (
+  Trace,
+  TraceOrder (OldestFirst),
+  applySTSTest,
+  closure,
+  extractValues,
+  lastState,
+  mkTrace,
+  traceLength,
+  traceSignals,
+  _traceEnv,
+ )
 import Data.Data (Constr, Data, toConstr)
 import Data.Either (isLeft)
 import Data.Foldable (traverse_)
@@ -101,19 +101,19 @@ import Data.Maybe (fromMaybe)
 import Data.String (fromString)
 import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
-import Hedgehog
-  ( Gen,
-    MonadTest,
-    Property,
-    PropertyT,
-    classify,
-    cover,
-    evalEither,
-    footnoteShow,
-    forAll,
-    property,
-    success,
-  )
+import Hedgehog (
+  Gen,
+  MonadTest,
+  Property,
+  PropertyT,
+  classify,
+  cover,
+  evalEither,
+  footnoteShow,
+  forAll,
+  property,
+  success,
+ )
 import Hedgehog.Extra.Manual (Manual)
 import qualified Hedgehog.Extra.Manual as Manual
 import qualified Hedgehog.Gen as Gen
@@ -183,11 +183,11 @@ type SignalGenerator s = Environment s -> State s -> Gen (Signal s)
 data TraceLength = Maximum Word64 | Desired Word64
 
 data TraceProfile s = TraceProfile
-  { -- | Proportion of valid signals to generate.
-    proportionOfValidSignals :: !Int,
-    -- | List of failure conditions to try generate when generating an invalid signal, and the
-    -- proportion of each failure.
-    failures :: ![(Int, SignalGenerator s)]
+  { proportionOfValidSignals :: !Int
+  -- ^ Proportion of valid signals to generate.
+  , failures :: ![(Int, SignalGenerator s)]
+  -- ^ List of failure conditions to try generate when generating an invalid signal, and the
+  -- proportion of each failure.
   }
 
 proportionOfInvalidSignals :: TraceProfile s -> Int
@@ -196,8 +196,8 @@ proportionOfInvalidSignals = sum . fmap fst . failures
 allValid :: TraceProfile s
 allValid =
   TraceProfile
-    { proportionOfValidSignals = 1,
-      failures = []
+    { proportionOfValidSignals = 1
+    , failures = []
     }
 
 -- | Generate a signal by combining the generators using @hedgehog@'s
@@ -327,9 +327,9 @@ genTraceWithProfile baseEnv ub profile env st0 aSigGen =
     -- of size @ub@. Hence we need to tweak the frequency of the trace lengths.
     n <-
       Gen.frequency
-        [ (5, pure 0),
-          (85, integral_ $ Range.linear 1 ub),
-          (5, pure ub)
+        [ (5, pure 0)
+        , (85, integral_ $ Range.linear 1 ub)
+        , (5, pure ub)
         ]
     genTraceOfLength baseEnv n profile env st0 aSigGen
 
@@ -363,15 +363,18 @@ genTraceOfLength baseEnv aTraceLength profile env st0 aSigGen =
       sigTree :: TreeT (MaybeT Identity) (Signal s) <-
         Manual.toManual $
           Gen.frequency
-            [ ( proportionOfValidSignals profile,
-                aSigGen env sti
-              ),
-              ( proportionOfInvalidSignals profile,
-                generateSignalWithFailureProportions @s (failures profile) env sti
+            [
+              ( proportionOfValidSignals profile
+              , aSigGen env sti
+              )
+            ,
+              ( proportionOfInvalidSignals profile
+              , generateSignalWithFailureProportions @s (failures profile) env sti
               )
             ]
-      let --  Take the root of the next-state signal tree.
-          mSig = treeValue $ runDiscardEffectT sigTree
+      let
+        --  Take the root of the next-state signal tree.
+        mSig = treeValue $ runDiscardEffectT sigTree
       case mSig of
         Nothing ->
           loop (d - 1) sti acc
@@ -425,11 +428,11 @@ invalidTrace baseEnv maxTraceLength failureProfile = do
       st = lastState tr
   iSig <- generateSignalWithFailureProportions @s failureProfile env st
   let est' = interpretSTS @s baseEnv $ applySTSTest @s $ TRC (env, st, iSig)
-  pure
-    $! Invalid.Trace
-      { Invalid.validPrefix = tr,
-        Invalid.signal = iSig,
-        Invalid.errorOrLastState = est'
+  pure $!
+    Invalid.Trace
+      { Invalid.validPrefix = tr
+      , Invalid.signal = iSig
+      , Invalid.errorOrLastState = est'
       }
 
 traceSuchThat ::
@@ -604,7 +607,7 @@ mkIntervals ::
   [(n, n)]
 mkIntervals low high step
   | 0 <= low && low <= high && 0 < step =
-    [(low + i * step, high `min` (low + (i + 1) * step)) | i <- [0 .. n - 1]]
+      [(low + i * step, high `min` (low + (i + 1) * step)) | i <- [0 .. n - 1]]
   | otherwise = []
   where
     highNorm = high - low
@@ -675,10 +678,10 @@ onlyValidSignalsAreGeneratedForTrace baseEnv traceGen = property $ do
 
 coverFailures ::
   forall m s a.
-  ( MonadTest m,
-    HasCallStack,
-    Data (PredicateFailure s),
-    Data a
+  ( MonadTest m
+  , HasCallStack
+  , Data (PredicateFailure s)
+  , Data a
   ) =>
   CoverPercentage ->
   -- | Target predicate failures

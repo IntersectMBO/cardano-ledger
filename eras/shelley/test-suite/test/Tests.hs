@@ -30,36 +30,36 @@ mainTests :: TestTree
 mainTests =
   testGroup
     "Ledger with Delegation"
-    [ depositTests @C,
-      minimalPropertyTests @C @(ShelleyLEDGER C),
-      rewardTests,
-      Serialisation.tests 5,
-      chainExamples @C,
-      multisigExamples,
-      testTickF,
-      unitTests,
-      prettyTest,
-      safeHashTest
+    [ depositTests @C
+    , minimalPropertyTests @C @(ShelleyLEDGER C)
+    , rewardTests
+    , Serialisation.tests 5
+    , chainExamples @C
+    , multisigExamples
+    , testTickF
+    , unitTests
+    , prettyTest
+    , safeHashTest
     ]
 
 nightlyTests :: TestTree
 nightlyTests =
   testGroup
     "Ledger with Delegation nightly"
-    [ propertyTests @C @(ShelleyLEDGER C),
-      Serialisation.tests 50
+    [ propertyTests @C @(ShelleyLEDGER C)
+    , Serialisation.tests 50
     ]
 
 fastTests :: TestTree
 fastTests =
   testGroup
     "Ledger with Delegation fast"
-    [ Serialisation.tests 1,
-      chainExamples @C,
-      multisigExamples,
-      unitTests,
-      prettyTest,
-      safeHashTest
+    [ Serialisation.tests 1
+    , chainExamples @C
+    , multisigExamples
+    , unitTests
+    , prettyTest
+    , safeHashTest
     ]
 
 main :: IO ()

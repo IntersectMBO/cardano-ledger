@@ -12,12 +12,12 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Alonzo.Rules.Bbody
-  ( AlonzoBBODY,
-    AlonzoBbodyPredFailure (..),
-    AlonzoBbodyEvent (..),
-    bbodyTransition,
-  )
+module Cardano.Ledger.Alonzo.Rules.Bbody (
+  AlonzoBBODY,
+  AlonzoBbodyPredFailure (..),
+  AlonzoBbodyEvent (..),
+  bbodyTransition,
+)
 where
 
 import Cardano.Ledger.Alonzo.Era (AlonzoBBODY)
@@ -27,34 +27,34 @@ import Cardano.Ledger.Alonzo.Tx (AlonzoTx, totExUnits)
 import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq, txSeqTxns)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
 import Cardano.Ledger.BHeaderView (BHeaderView (..), isOverlaySlot)
+import Cardano.Ledger.BaseTypes (ShelleyBase, epochInfoPure)
 import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.BaseTypes (ShelleyBase, epochInfoPure)
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Era as Era
 import Cardano.Ledger.Keys (DSignable, Hash, coerceKeyRole)
 import Cardano.Ledger.Shelley.BlockChain (bBodySize, incrBlocks)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState)
-import Cardano.Ledger.Shelley.Rules
-  ( BbodyEnv (..),
-    ShelleyBbodyEvent (..),
-    ShelleyBbodyPredFailure (..),
-    ShelleyBbodyState (..),
-    ShelleyLedgersEnv (..),
-  )
+import Cardano.Ledger.Shelley.Rules (
+  BbodyEnv (..),
+  ShelleyBbodyEvent (..),
+  ShelleyBbodyPredFailure (..),
+  ShelleyBbodyState (..),
+  ShelleyLedgersEnv (..),
+ )
 import Cardano.Ledger.Slot (epochInfoEpoch, epochInfoFirst)
 import Control.Monad.Trans.Reader (asks)
-import Control.State.Transition
-  ( Embed (..),
-    STS (..),
-    TRC (..),
-    TransitionRule,
-    judgmentContext,
-    liftSTS,
-    trans,
-    (?!),
-  )
+import Control.State.Transition (
+  Embed (..),
+  STS (..),
+  TRC (..),
+  TransitionRule,
+  judgmentContext,
+  liftSTS,
+  trans,
+  (?!),
+ )
 import Data.Kind (Type)
 import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -91,8 +91,8 @@ deriving anyclass instance
   NoThunks (AlonzoBbodyPredFailure era)
 
 instance
-  ( Typeable era,
-    ToCBOR (ShelleyBbodyPredFailure era)
+  ( Typeable era
+  , ToCBOR (ShelleyBbodyPredFailure era)
   ) =>
   ToCBOR (AlonzoBbodyPredFailure era)
   where
@@ -100,8 +100,8 @@ instance
   toCBOR (TooManyExUnits x y) = encode (Sum TooManyExUnits 1 !> To x !> To y)
 
 instance
-  ( Typeable era,
-    FromCBOR (ShelleyBbodyPredFailure era) -- TODO why is there no FromCBOR for (ShelleyBbodyPredFailure era)
+  ( Typeable era
+  , FromCBOR (ShelleyBbodyPredFailure era) -- TODO why is there no FromCBOR for (ShelleyBbodyPredFailure era)
   ) =>
   FromCBOR (AlonzoBbodyPredFailure era)
   where
@@ -117,33 +117,33 @@ instance
 bbodyTransition ::
   forall (someBBODY :: Type -> Type) era.
   ( -- Conditions that the Abstract someBBODY must meet
-    STS (someBBODY era),
-    Signal (someBBODY era) ~ Block (BHeaderView (EraCrypto era)) era,
-    PredicateFailure (someBBODY era) ~ AlonzoBbodyPredFailure era,
-    BaseM (someBBODY era) ~ ShelleyBase,
-    State (someBBODY era) ~ ShelleyBbodyState era,
-    Environment (someBBODY era) ~ BbodyEnv era,
-    -- Conditions to be an instance of STS
-    Embed (EraRule "LEDGERS" era) (someBBODY era),
-    Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era,
-    State (EraRule "LEDGERS" era) ~ LedgerState era,
-    Signal (EraRule "LEDGERS" era) ~ Seq (Tx era),
-    -- Conditions to define the rule in this Era
-    EraSegWits era,
-    AlonzoEraTxWits era,
-    Era.TxSeq era ~ AlonzoTxSeq era,
-    Tx era ~ AlonzoTx era,
-    AlonzoEraPParams era
+    STS (someBBODY era)
+  , Signal (someBBODY era) ~ Block (BHeaderView (EraCrypto era)) era
+  , PredicateFailure (someBBODY era) ~ AlonzoBbodyPredFailure era
+  , BaseM (someBBODY era) ~ ShelleyBase
+  , State (someBBODY era) ~ ShelleyBbodyState era
+  , Environment (someBBODY era) ~ BbodyEnv era
+  , -- Conditions to be an instance of STS
+    Embed (EraRule "LEDGERS" era) (someBBODY era)
+  , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
+  , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
+  , -- Conditions to define the rule in this Era
+    EraSegWits era
+  , AlonzoEraTxWits era
+  , Era.TxSeq era ~ AlonzoTxSeq era
+  , Tx era ~ AlonzoTx era
+  , AlonzoEraPParams era
   ) =>
   TransitionRule (someBBODY era)
 bbodyTransition =
   judgmentContext
     >>= \( TRC
-             ( BbodyEnv pp account,
-               BbodyState ls b,
-               UnserialisedBlock bh txsSeq
-               )
-           ) -> do
+            ( BbodyEnv pp account
+              , BbodyState ls b
+              , UnserialisedBlock bh txsSeq
+              )
+          ) -> do
         let txs = txSeqTxns txsSeq
             actualBodySize = bBodySize (pp ^. ppProtocolVersionL) txsSeq
             actualBodyHash = hashTxSeq @era txsSeq
@@ -195,17 +195,17 @@ bbodyTransition =
             )
 
 instance
-  ( DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody),
-    Embed (EraRule "LEDGERS" era) (AlonzoBBODY era),
-    Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era,
-    State (EraRule "LEDGERS" era) ~ LedgerState era,
-    Signal (EraRule "LEDGERS" era) ~ Seq (AlonzoTx era),
-    AlonzoEraTxWits era,
-    Tx era ~ AlonzoTx era,
-    Era.TxSeq era ~ AlonzoTxSeq era,
-    Tx era ~ AlonzoTx era,
-    EraSegWits era,
-    AlonzoEraPParams era
+  ( DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
+  , Embed (EraRule "LEDGERS" era) (AlonzoBBODY era)
+  , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
+  , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , Signal (EraRule "LEDGERS" era) ~ Seq (AlonzoTx era)
+  , AlonzoEraTxWits era
+  , Tx era ~ AlonzoTx era
+  , Era.TxSeq era ~ AlonzoTxSeq era
+  , Tx era ~ AlonzoTx era
+  , EraSegWits era
+  , AlonzoEraPParams era
   ) =>
   STS (AlonzoBBODY era)
   where
@@ -228,12 +228,12 @@ instance
   transitionRules = [bbodyTransition @AlonzoBBODY]
 
 instance
-  ( Era era,
-    BaseM ledgers ~ ShelleyBase,
-    ledgers ~ EraRule "LEDGERS" era,
-    STS ledgers,
-    DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody),
-    Era era
+  ( Era era
+  , BaseM ledgers ~ ShelleyBase
+  , ledgers ~ EraRule "LEDGERS" era
+  , STS ledgers
+  , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
+  , Era era
   ) =>
   Embed ledgers (AlonzoBBODY era)
   where

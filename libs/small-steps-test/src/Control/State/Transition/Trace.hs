@@ -18,39 +18,39 @@
 --
 -- This module also includes a minimal domain-specific-language to specify
 -- expectations on traces.
-module Control.State.Transition.Trace
-  ( SigState (..),
+module Control.State.Transition.Trace (
+  SigState (..),
 
-    -- * Trace checking
-    (.-),
-    (.->),
-    (.->>),
-    checkTrace,
+  -- * Trace checking
+  (.-),
+  (.->),
+  (.->>),
+  checkTrace,
 
-    -- * Trace
-    Trace (..),
-    TraceOrder (NewestFirst, OldestFirst),
-    mkTrace,
-    traceEnv,
-    traceInitState,
-    traceSignals,
-    traceStates,
-    preStatesAndSignals,
-    SourceSignalTarget (..),
-    sourceSignalTargets,
-    traceLength,
-    traceInit,
-    lastState,
-    lastSignal,
-    firstAndLastState,
-    closure,
+  -- * Trace
+  Trace (..),
+  TraceOrder (NewestFirst, OldestFirst),
+  mkTrace,
+  traceEnv,
+  traceInitState,
+  traceSignals,
+  traceStates,
+  preStatesAndSignals,
+  SourceSignalTarget (..),
+  sourceSignalTargets,
+  traceLength,
+  traceInit,
+  lastState,
+  lastSignal,
+  firstAndLastState,
+  closure,
 
-    -- * Miscellaneous utilities
-    extractValues,
-    applySTSTest,
-    getEvents,
-    splitTrace,
-  )
+  -- * Miscellaneous utilities
+  extractValues,
+  applySTSTest,
+  getEvents,
+  splitTrace,
+)
 where
 
 import Cardano.Ledger.TreeDiff (ToExpr)
@@ -92,29 +92,29 @@ deriving instance
   (Show (State s), Show (Signal s)) => (Show (SigState s))
 
 instance
-  ( NoThunks (State s),
-    NoThunks (Signal s)
+  ( NoThunks (State s)
+  , NoThunks (Signal s)
   ) =>
   (NoThunks (SigState s))
 
 -- | A successful trace of a transition system.
 data Trace s = Trace
-  { -- | Environment under which the trace was run.
-    _traceEnv :: !(Environment s),
-    -- | Initial state in the trace
-    _traceInitState :: !(State s),
-    -- | Signals and resulting states observed in the trace. New elements are
-    -- put in front of the list.
-    _traceTrans :: !(StrictSeq (SigState s))
+  { _traceEnv :: !(Environment s)
+  -- ^ Environment under which the trace was run.
+  , _traceInitState :: !(State s)
+  -- ^ Initial state in the trace
+  , _traceTrans :: !(StrictSeq (SigState s))
+  -- ^ Signals and resulting states observed in the trace. New elements are
+  -- put in front of the list.
   }
   deriving (Generic)
 
 makeLenses ''Trace
 
 deriving instance
-  ( NFData (Environment s),
-    NFData (State s),
-    NFData (SigState s)
+  ( NFData (Environment s)
+  , NFData (State s)
+  , NFData (SigState s)
   ) =>
   (NFData (Trace s))
 
@@ -125,9 +125,9 @@ deriving instance
   (Show (State s), Show (Signal s), Show (Environment s)) => (Show (Trace s))
 
 instance
-  ( NoThunks (Environment s),
-    NoThunks (State s),
-    NoThunks (Signal s)
+  ( NoThunks (Environment s)
+  , NoThunks (State s)
+  , NoThunks (Signal s)
   ) =>
   (NoThunks (Trace s))
 
@@ -400,10 +400,10 @@ closure env st0 sigs = mkTrace env st0 <$> loop st0 (reverse sigs) []
 -- function fails.
 (.-) ::
   forall m st sig err.
-  ( MonadIO m,
-    MonadReader (st -> sig -> Either err st) m,
-    Show err,
-    HasCallStack
+  ( MonadIO m
+  , MonadReader (st -> sig -> Either err st) m
+  , Show err
+  , HasCallStack
   ) =>
   m st ->
   sig ->
@@ -488,9 +488,9 @@ extractValues d =
     extractValue d1 = cast d1
 
 data SourceSignalTarget a = SourceSignalTarget
-  { source :: State a,
-    target :: State a,
-    signal :: Signal a
+  { source :: State a
+  , target :: State a
+  , signal :: Signal a
   }
 
 deriving instance (Eq (State a), Eq (Signal a)) => Eq (SourceSignalTarget a)
@@ -527,9 +527,9 @@ applySTSTest = applySTSOptsEither defaultOpts
   where
     defaultOpts =
       ApplySTSOpts
-        { asoAssertions = AssertionsAll,
-          asoValidation = ValidateAll,
-          asoEvents = EPDiscard
+        { asoAssertions = AssertionsAll
+        , asoValidation = ValidateAll
+        , asoEvents = EPDiscard
         }
 
 -- | Extract the Events from a trace, by re-applying the signal with
@@ -541,9 +541,9 @@ getEvents (Trace env s0 pairs) = mapM action (map make pairs2)
     make (state, sig) = (env, state, sig)
     defaultOpts =
       ApplySTSOpts
-        { asoAssertions = AssertionsOff,
-          asoValidation = ValidateNone,
-          asoEvents = EPReturn
+        { asoAssertions = AssertionsOff
+        , asoValidation = ValidateNone
+        , asoEvents = EPReturn
         }
     action :: (Environment sts, State sts, Signal sts) -> BaseM sts [Event sts]
     action x = do

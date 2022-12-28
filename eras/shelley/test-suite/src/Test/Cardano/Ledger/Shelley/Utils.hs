@@ -11,81 +11,81 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Test.Cardano.Ledger.Shelley.Utils
-  ( mkSeedFromWords,
-    mkCertifiedVRF,
-    epochFromSlotNo,
-    evolveKESUntil,
-    slotFromEpoch,
-    epochSize,
-    mkHash,
-    mkKeyPair,
-    mkKeyPair',
-    mkGenKey,
-    mkKESKeyPair,
-    mkVRFKeyPair,
-    runShelleyBase,
-    testGlobals,
-    maxKESIterations,
-    unsafeBoundRational,
-    slotsPerKESIteration,
-    testSTS,
-    maxLLSupply,
-    applySTSTest,
-    GenesisKeyPair,
-    getBlockNonce,
-    ShelleyTest,
-    ChainProperty,
-    RawSeed (..),
-  )
+module Test.Cardano.Ledger.Shelley.Utils (
+  mkSeedFromWords,
+  mkCertifiedVRF,
+  epochFromSlotNo,
+  evolveKESUntil,
+  slotFromEpoch,
+  epochSize,
+  mkHash,
+  mkKeyPair,
+  mkKeyPair',
+  mkGenKey,
+  mkKESKeyPair,
+  mkVRFKeyPair,
+  runShelleyBase,
+  testGlobals,
+  maxKESIterations,
+  unsafeBoundRational,
+  slotsPerKESIteration,
+  testSTS,
+  maxLLSupply,
+  applySTSTest,
+  GenesisKeyPair,
+  getBlockNonce,
+  ShelleyTest,
+  ChainProperty,
+  RawSeed (..),
+)
 where
 
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
-import Cardano.Crypto.Hash
-  ( Blake2b_256,
-    Hash,
-    HashAlgorithm,
-    hashToBytes,
-  )
-import Cardano.Crypto.KES
-  ( KESAlgorithm,
-    SignKeyKES,
-    VerKeyKES,
-    deriveVerKeyKES,
-    genKeyKES,
-  )
+import Cardano.Crypto.Hash (
+  Blake2b_256,
+  Hash,
+  HashAlgorithm,
+  hashToBytes,
+ )
+import Cardano.Crypto.KES (
+  KESAlgorithm,
+  SignKeyKES,
+  VerKeyKES,
+  deriveVerKeyKES,
+  genKeyKES,
+ )
 import Cardano.Crypto.KES.Class (ContextKES)
 import Cardano.Crypto.Seed (Seed, mkSeedFromBytes)
-import Cardano.Crypto.VRF
-  ( CertifiedVRF,
-    SignKeyVRF,
-    VRFAlgorithm (..),
-    VerKeyVRF,
-    certifiedOutput,
-    deriveVerKeyVRF,
-    evalCertified,
-    genKeyVRF,
-  )
+import Cardano.Crypto.VRF (
+  CertifiedVRF,
+  SignKeyVRF,
+  VRFAlgorithm (..),
+  VerKeyVRF,
+  certifiedOutput,
+  deriveVerKeyVRF,
+  evalCertified,
+  genKeyVRF,
+ )
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.Ledger.BaseTypes
-  ( Globals (..),
-    Network (..),
-    Nonce,
-    ShelleyBase,
-    epochInfoPure,
-    mkActiveSlotCoeff,
-    mkNonceFromOutputVRF,
-  )
+import Cardano.Ledger.BaseTypes (
+  Globals (..),
+  Network (..),
+  Nonce,
+  ShelleyBase,
+  epochInfoPure,
+  mkActiveSlotCoeff,
+  mkNonceFromOutputVRF,
+ )
 import Cardano.Ledger.Binary (ToCBOR (..), hashWithEncoder, shelleyProtVer)
 import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (DSIGN)
-import Cardano.Ledger.Keys
-  ( KeyRole (..),
-    VKey (..),
-    updateKES,
-  )
+import Cardano.Ledger.Keys (
+  KeyRole (..),
+  VKey (..),
+  updateKES,
+ )
 import Cardano.Ledger.Shelley.API (ApplyBlock)
 import Cardano.Ledger.Shelley.BlockChain (ShelleyTxSeq)
 import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses)
@@ -98,22 +98,22 @@ import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Protocol.TPraos.API (GetLedgerView)
 import Cardano.Protocol.TPraos.BHeader (BHBody (..), BHeader, bhbody)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
-import Cardano.Slotting.EpochInfo
-  ( epochInfoEpoch,
-    epochInfoFirst,
-    epochInfoSize,
-    fixedEpochInfo,
-  )
+import Cardano.Slotting.EpochInfo (
+  epochInfoEpoch,
+  epochInfoFirst,
+  epochInfoSize,
+  fixedEpochInfo,
+ )
 import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
 import Control.Monad.Reader.Class (asks)
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition.Extended hiding (Assertion)
-import Control.State.Transition.Trace
-  ( applySTSTest,
-    checkTrace,
-    (.-),
-    (.->>),
-  )
+import Control.State.Transition.Trace (
+  applySTSTest,
+  checkTrace,
+  (.-),
+  (.->>),
+ )
 import Data.Coerce (Coercible, coerce)
 import Data.Default.Class (Default)
 import Data.Functor.Identity (runIdentity)
@@ -124,30 +124,30 @@ import Test.Cardano.Ledger.Core.KeyPair (KeyPair, pattern KeyPair)
 import Test.Cardano.Ledger.Core.Utils (unsafeBoundRational)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.QuickCheck (Arbitrary (..), chooseAny)
-import Test.Tasty.HUnit
-  ( Assertion,
-    (@?=),
-  )
+import Test.Tasty.HUnit (
+  Assertion,
+  (@?=),
+ )
 
 type ChainProperty era =
-  ( Mock (EraCrypto era),
-    ApplyBlock era,
-    GetLedgerView era,
-    EraTx era
+  ( Mock (EraCrypto era)
+  , ApplyBlock era
+  , GetLedgerView era
+  , EraTx era
   )
 
 -- ================================================
 
 type ShelleyTest era =
-  ( EraTx era,
-    ShelleyEraTxBody era,
-    Tx era ~ ShelleyTx era,
-    TxSeq era ~ ShelleyTxSeq era,
-    TxOut era ~ ShelleyTxOut era,
-    TxWits era ~ ShelleyTxWits era,
-    Split (Value era),
-    Default (State (EraRule "PPUP" era)),
-    Default (StashedAVVMAddresses era)
+  ( EraTx era
+  , ShelleyEraTxBody era
+  , Tx era ~ ShelleyTx era
+  , TxSeq era ~ ShelleyTxSeq era
+  , TxOut era ~ ShelleyTxOut era
+  , TxWits era ~ ShelleyTxWits era
+  , Split (Value era)
+  , Default (State (EraRule "PPUP" era))
+  , Default (StashedAVVMAddresses era)
   )
 
 class Split v where
@@ -220,10 +220,10 @@ mkVRFKeyPair seed =
 
 -- | For testing purposes, create a VRF value
 mkCertifiedVRF ::
-  ( VRF.Signable v a,
-    VRFAlgorithm v,
-    ContextVRF v ~ (),
-    Coercible b (CertifiedVRF v a)
+  ( VRF.Signable v a
+  , VRFAlgorithm v
+  , ContextVRF v ~ ()
+  , Coercible b (CertifiedVRF v a)
   ) =>
   a ->
   SignKeyVRF v ->
@@ -243,18 +243,18 @@ mkKESKeyPair seed =
 testGlobals :: Globals
 testGlobals =
   Globals
-    { epochInfo = fixedEpochInfo (EpochSize 100) (mkSlotLength 1),
-      slotsPerKESPeriod = 20,
-      stabilityWindow = 33,
-      randomnessStabilisationWindow = 33,
-      securityParameter = 10,
-      maxKESEvo = 10,
-      quorum = 5,
-      maxMajorPV = maxBound,
-      maxLovelaceSupply = 45 * 1000 * 1000 * 1000 * 1000 * 1000,
-      activeSlotCoeff = mkActiveSlotCoeff . unsafeBoundRational $ 0.9,
-      networkId = Testnet,
-      systemStart = SystemStart $ posixSecondsToUTCTime 0
+    { epochInfo = fixedEpochInfo (EpochSize 100) (mkSlotLength 1)
+    , slotsPerKESPeriod = 20
+    , stabilityWindow = 33
+    , randomnessStabilisationWindow = 33
+    , securityParameter = 10
+    , maxKESEvo = 10
+    , quorum = 5
+    , maxMajorPV = maxBound
+    , maxLovelaceSupply = 45 * 1000 * 1000 * 1000 * 1000 * 1000
+    , activeSlotCoeff = mkActiveSlotCoeff . unsafeBoundRational $ 0.9
+    , networkId = Testnet
+    , systemStart = SystemStart $ posixSecondsToUTCTime 0
     }
 
 runShelleyBase :: ShelleyBase a -> a

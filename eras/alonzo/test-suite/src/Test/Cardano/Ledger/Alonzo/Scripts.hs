@@ -1,19 +1,19 @@
-module Test.Cardano.Ledger.Alonzo.Scripts
-  ( alwaysSucceeds,
-    alwaysFails,
-    saltFunction,
-  )
+module Test.Cardano.Ledger.Alonzo.Scripts (
+  alwaysSucceeds,
+  alwaysFails,
+  saltFunction,
+)
 where
 
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Data.ByteString.Short (ShortByteString)
 import Numeric.Natural (Natural)
-import qualified PlutusLedgerApi.Test.Examples as Plutus
-  ( alwaysFailingNAryFunction,
-    alwaysSucceedingNAryFunction,
-    saltFunction,
-  )
+import qualified PlutusLedgerApi.Test.Examples as Plutus (
+  alwaysFailingNAryFunction,
+  alwaysSucceedingNAryFunction,
+  saltFunction,
+ )
 
 alwaysSucceeds :: Language -> Natural -> AlonzoScript era
 alwaysSucceeds lang n = PlutusScript lang (Plutus.alwaysSucceedingNAryFunction n)

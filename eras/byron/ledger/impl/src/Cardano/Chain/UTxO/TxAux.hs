@@ -8,34 +8,34 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Chain.UTxO.TxAux
-  ( TxAux,
-    ATxAux (..),
-    mkTxAux,
-    annotateTxAux,
-    taTx,
-    taWitness,
-    txaF,
-  )
+module Cardano.Chain.UTxO.TxAux (
+  TxAux,
+  ATxAux (..),
+  mkTxAux,
+  annotateTxAux,
+  taTx,
+  taWitness,
+  txaF,
+)
 where
 
 import Cardano.Chain.UTxO.Tx (Tx)
 import Cardano.Chain.UTxO.TxWitness (TxWitness)
-import Cardano.Ledger.Binary
-  ( Annotated (..),
-    ByteSpan,
-    Decoded (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    annotatedDecoder,
-    byronProtVer,
-    encodeListLen,
-    enforceSize,
-    fromCBORAnnotated,
-    serialize,
-    slice,
-    unsafeDeserialize,
-  )
+import Cardano.Ledger.Binary (
+  Annotated (..),
+  ByteSpan,
+  Decoded (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  annotatedDecoder,
+  byronProtVer,
+  encodeListLen,
+  enforceSize,
+  fromCBORAnnotated,
+  serialize,
+  slice,
+  unsafeDeserialize,
+ )
 import Cardano.Prelude
 import Data.Aeson (ToJSON)
 import qualified Data.ByteString.Lazy as Lazy
@@ -55,9 +55,9 @@ annotateTxAux ta = Lazy.toStrict . slice bs <$> ta'
     ta' = unsafeDeserialize byronProtVer bs
 
 data ATxAux a = ATxAux
-  { aTaTx :: !(Annotated Tx a),
-    aTaWitness :: !(Annotated TxWitness a),
-    aTaAnnotation :: !a
+  { aTaTx :: !(Annotated Tx a)
+  , aTaWitness :: !(Annotated TxWitness a)
+  , aTaAnnotation :: !a
   }
   deriving (Generic, Show, Eq, Functor)
   deriving anyclass (NFData)

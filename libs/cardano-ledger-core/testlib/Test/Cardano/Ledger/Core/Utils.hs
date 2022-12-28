@@ -1,9 +1,9 @@
-module Test.Cardano.Ledger.Core.Utils
-  ( unsafeBoundRational,
-    epsilonMaybeEq,
-    Fail (..),
-    runFailError,
-  )
+module Test.Cardano.Ledger.Core.Utils (
+  unsafeBoundRational,
+  epsilonMaybeEq,
+  Fail (..),
+  runFailError,
+)
 where
 
 import Cardano.Ledger.Address (Fail (..))

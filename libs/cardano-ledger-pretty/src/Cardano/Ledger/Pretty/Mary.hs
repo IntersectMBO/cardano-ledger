@@ -69,8 +69,8 @@ ppValidityInterval :: ValidityInterval -> PDoc
 ppValidityInterval (ValidityInterval b a) =
   ppRecord
     "ValidityInterval"
-    [ ("invalidBefore", ppStrictMaybe ppSlotNo b),
-      ("invalidHereafter", ppStrictMaybe ppSlotNo a)
+    [ ("invalidBefore", ppStrictMaybe ppSlotNo b)
+    , ("invalidHereafter", ppStrictMaybe ppSlotNo a)
     ]
 
 instance PrettyA ValidityInterval where prettyA = ppValidityInterval
@@ -79,49 +79,49 @@ ppAuxiliaryData :: Era era => AllegraTxAuxData era -> PDoc
 ppAuxiliaryData (AllegraTxAuxData' m sp) =
   ppRecord
     "AllegraTxAuxData"
-    [ ("metadata", ppMap' (text "Metadata") ppWord64 ppMetadatum m),
-      ("auxiliaryscripts", ppStrictSeq prettyA sp)
+    [ ("metadata", ppMap' (text "Metadata") ppWord64 ppMetadatum m)
+    , ("auxiliaryscripts", ppStrictSeq prettyA sp)
     ]
 
 instance Era era => PrettyA (AllegraTxAuxData era) where
   prettyA = ppAuxiliaryData
 
 allegraFields ::
-  ( AllegraEraTxBody era,
-    PrettyA (TxOut era),
-    PrettyA (PParamsUpdate era),
-    ProtVerAtMost era 8
+  ( AllegraEraTxBody era
+  , PrettyA (TxOut era)
+  , PrettyA (PParamsUpdate era)
+  , ProtVerAtMost era 8
   ) =>
   TxBody era ->
   [(Text, PDoc)]
 allegraFields txBody =
-  [ ("inputs", ppSet ppTxIn (txBody ^. inputsTxBodyL)),
-    ("outputs", ppStrictSeq prettyA (txBody ^. outputsTxBodyL)),
-    ("certificates", ppStrictSeq ppDCert (txBody ^. certsTxBodyG)),
-    ("withdrawals", ppWdrl (txBody ^. wdrlsTxBodyL)),
-    ("txfee", ppCoin (txBody ^. feeTxBodyL)),
-    ("vldt", ppValidityInterval (txBody ^. vldtTxBodyL)),
-    ("update", ppStrictMaybe ppUpdate (txBody ^. updateTxBodyL)),
-    ("auxDataHash", ppStrictMaybe ppAuxiliaryDataHash (txBody ^. auxDataHashTxBodyL))
+  [ ("inputs", ppSet ppTxIn (txBody ^. inputsTxBodyL))
+  , ("outputs", ppStrictSeq prettyA (txBody ^. outputsTxBodyL))
+  , ("certificates", ppStrictSeq ppDCert (txBody ^. certsTxBodyG))
+  , ("withdrawals", ppWdrl (txBody ^. wdrlsTxBodyL))
+  , ("txfee", ppCoin (txBody ^. feeTxBodyL))
+  , ("vldt", ppValidityInterval (txBody ^. vldtTxBodyL))
+  , ("update", ppStrictMaybe ppUpdate (txBody ^. updateTxBodyL))
+  , ("auxDataHash", ppStrictMaybe ppAuxiliaryDataHash (txBody ^. auxDataHashTxBodyL))
   ]
 
 instance
-  ( AllegraEraTxBody era,
-    PrettyA (TxOut era),
-    PrettyA (PParamsUpdate era),
-    TxBody era ~ AllegraTxBody era,
-    ProtVerAtMost era 8
+  ( AllegraEraTxBody era
+  , PrettyA (TxOut era)
+  , PrettyA (PParamsUpdate era)
+  , TxBody era ~ AllegraTxBody era
+  , ProtVerAtMost era 8
   ) =>
   PrettyA (AllegraTxBody era)
   where
   prettyA txBody = ppRecord "AllegraTxBody" (allegraFields txBody)
 
 instance
-  ( MaryEraTxBody era,
-    PrettyA (TxOut era),
-    PrettyA (PParamsUpdate era),
-    TxBody era ~ MaryTxBody era,
-    ProtVerAtMost era 8
+  ( MaryEraTxBody era
+  , PrettyA (TxOut era)
+  , PrettyA (PParamsUpdate era)
+  , TxBody era ~ MaryTxBody era
+  , ProtVerAtMost era 8
   ) =>
   PrettyA (MaryTxBody era)
   where

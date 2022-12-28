@@ -7,11 +7,11 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Cardano.Ledger.Shelley.Core
-  ( ShelleyEraTxBody (..),
-    Wdrl (..),
-    module Cardano.Ledger.Core,
-  )
+module Cardano.Ledger.Shelley.Core (
+  ShelleyEraTxBody (..),
+  Wdrl (..),
+  module Cardano.Ledger.Core,
+)
 where
 
 import Cardano.Ledger.Address (RewardAcnt (..))
@@ -19,9 +19,9 @@ import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
+import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Slot (SlotNo (..))
 import Control.DeepSeq (NFData)
 import Data.Map.Strict (Map)

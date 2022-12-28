@@ -23,23 +23,23 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Keys
-  ( KeyHash,
-    KeyRole (Witness),
-    SignKeyDSIGN,
-    VKey,
-    hashKey,
-  )
+import Cardano.Ledger.Keys (
+  KeyHash,
+  KeyRole (Witness),
+  SignKeyDSIGN,
+  VKey,
+  hashKey,
+ )
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), PolicyID (..))
 import qualified Cardano.Ledger.Mary.Value as Mary (MultiAsset (..))
-import Cardano.Ledger.Pretty
-  ( PrettyA (..),
-    PrettyAnn (Width),
-    ppPair,
-    ppRecord,
-    ppString,
-    ppVKey,
-  )
+import Cardano.Ledger.Pretty (
+  PrettyA (..),
+  PrettyAnn (Width),
+  ppPair,
+  ppRecord,
+  ppString,
+  ppVKey,
+ )
 import Cardano.Ledger.Pretty.Alonzo ()
 import Cardano.Ledger.Pretty.Mary ()
 import Cardano.Ledger.SafeHash (SafeHash)
@@ -54,16 +54,16 @@ import qualified Data.Sequence.Strict as Seq (fromList)
 import Prettyprinter (reAnnotate, viaShow)
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessVKey)
-import Test.Cardano.Ledger.Generic.Proof
-  ( AlonzoEra,
-    BabbageEra,
-    ConwayEra,
-    Evidence (..),
-    GoodCrypto,
-    Mock,
-    Proof (..),
-    Reflect (..),
-  )
+import Test.Cardano.Ledger.Generic.Proof (
+  AlonzoEra,
+  BabbageEra,
+  ConwayEra,
+  Evidence (..),
+  GoodCrypto,
+  Mock,
+  Proof (..),
+  Reflect (..),
+ )
 import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair)
 
 -- ===========================================================================
@@ -184,8 +184,8 @@ instance Fixed SlotNo where
 
 multisigSimple :: forall era. Era era => Proof era -> [MultiSig era]
 multisigSimple _c =
-  [ Multi.RequireAnyOf mempty, -- always False
-    Multi.RequireAllOf mempty -- always True
+  [ Multi.RequireAnyOf mempty -- always False
+  , Multi.RequireAllOf mempty -- always True
   ]
 
 multisigFrom :: forall era. Era era => Proof era -> Int -> [MultiSig era]
@@ -195,10 +195,10 @@ multisigFrom _c n =
 
 multisigCompound :: forall era. Era era => Proof era -> Int -> [MultiSig era]
 multisigCompound c n =
-  [ Multi.RequireAnyOf (multisigFrom c n),
-    Multi.RequireAllOf (multisigFrom c n),
-    Multi.RequireMOf 1 (multisigFrom c n),
-    Multi.RequireMOf 2 (multisigFrom c n)
+  [ Multi.RequireAnyOf (multisigFrom c n)
+  , Multi.RequireAllOf (multisigFrom c n)
+  , Multi.RequireMOf 1 (multisigFrom c n)
+  , Multi.RequireMOf 2 (multisigFrom c n)
   ]
 
 somemultisigs :: Era era => Proof era -> [MultiSig era]
@@ -219,23 +219,23 @@ multisiglength = length (somemultisigs (Shelley Mock)) - 1
 
 timelockSimple :: forall era. Era era => Proof era -> [Timelock era]
 timelockSimple _c =
-  [ RequireAnyOf mempty, -- always False
-    RequireAllOf mempty -- always True
+  [ RequireAnyOf mempty -- always False
+  , RequireAllOf mempty -- always True
   ]
 
 timelockFrom :: forall era. Era era => Proof era -> Int -> [Timelock era]
 timelockFrom _c n =
-  [ RequireSignature (theKeyHash n),
-    RequireTimeExpire (unique @SlotNo n),
-    RequireTimeStart (unique @SlotNo n)
+  [ RequireSignature (theKeyHash n)
+  , RequireTimeExpire (unique @SlotNo n)
+  , RequireTimeStart (unique @SlotNo n)
   ]
 
 timelockCompound :: forall era. Era era => Proof era -> Int -> [Timelock era]
 timelockCompound c n =
-  [ RequireAnyOf (Seq.fromList (timelockFrom c n)),
-    RequireAllOf (Seq.fromList (timelockFrom c n)),
-    RequireMOf 1 (Seq.fromList (timelockFrom c n)),
-    RequireMOf 2 (Seq.fromList (timelockFrom c n))
+  [ RequireAnyOf (Seq.fromList (timelockFrom c n))
+  , RequireAllOf (Seq.fromList (timelockFrom c n))
+  , RequireMOf 1 (Seq.fromList (timelockFrom c n))
+  , RequireMOf 2 (Seq.fromList (timelockFrom c n))
   ]
 
 sometimelocks :: Era era => Proof era -> [Timelock era]
@@ -256,18 +256,18 @@ instance (Era era, Reflect era) => Fixed (Timelock era) where
 
 alonzoSimple :: forall era. [AlonzoScript era]
 alonzoSimple =
-  [ alwaysFails PlutusV1 1, -- always False
-    alwaysSucceeds PlutusV1 1 -- always True
+  [ alwaysFails PlutusV1 1 -- always False
+  , alwaysSucceeds PlutusV1 1 -- always True
   ]
 
 somealonzo :: Era era => Proof era -> [AlonzoScript era]
 somealonzo c =
   alonzoSimple
     ++ ( fmap
-           TimelockScript
-           ( concat [timelockFrom c i | i <- [1 .. 5]]
-               ++ concat [timelockCompound c i | i <- [1 .. 5]]
-           )
+          TimelockScript
+          ( concat [timelockFrom c i | i <- [1 .. 5]]
+              ++ concat [timelockCompound c i | i <- [1 .. 5]]
+          )
        )
 
 alonzolength :: Int

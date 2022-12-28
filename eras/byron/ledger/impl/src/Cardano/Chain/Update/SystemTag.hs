@@ -7,27 +7,27 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Cardano.Chain.Update.SystemTag
-  ( SystemTag (..),
-    SystemTagError (..),
-    checkSystemTag,
-    systemTagMaxLength,
-    osHelper,
-    archHelper,
-  )
+module Cardano.Chain.Update.SystemTag (
+  SystemTag (..),
+  SystemTagError (..),
+  checkSystemTag,
+  systemTagMaxLength,
+  osHelper,
+  archHelper,
+)
 where
 
-import Cardano.Ledger.Binary
-  ( Decoder,
-    DecoderError (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    cborError,
-    decodeListLen,
-    decodeWord8,
-    encodeListLen,
-    matchSize,
-  )
+import Cardano.Ledger.Binary (
+  Decoder,
+  DecoderError (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  cborError,
+  decodeListLen,
+  decodeWord8,
+  encodeListLen,
+  matchSize,
+ )
 import Cardano.Prelude hiding (cborError)
 import Data.Aeson (ToJSON, ToJSONKey)
 import Data.Data (Data)

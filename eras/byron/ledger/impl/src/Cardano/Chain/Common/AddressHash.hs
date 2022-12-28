@@ -1,8 +1,8 @@
-module Cardano.Chain.Common.AddressHash
-  ( AddressHash,
-    addressHash,
-    unsafeAddressHash,
-  )
+module Cardano.Chain.Common.AddressHash (
+  AddressHash,
+  addressHash,
+  unsafeAddressHash,
+)
 where
 
 import Cardano.Crypto.Hashing (AbstractHash, abstractHashFromDigest)

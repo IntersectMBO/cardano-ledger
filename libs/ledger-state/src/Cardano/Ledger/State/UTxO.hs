@@ -127,8 +127,8 @@ newtype Count = Count Int
   deriving (Eq, Ord, Enum, Real, Integral, Num, Pretty)
 
 data Stat k = Stat
-  { statUnique :: !(Set.Set k),
-    statCount :: !Count
+  { statUnique :: !(Set.Set k)
+  , statCount :: !Count
   }
 
 instance Ord k => Semigroup (Stat k) where
@@ -178,11 +178,11 @@ prettyRecord h content = h <> ":" <+> line <> indent 2 (vsep content)
 infixr 6 <:>
 
 data SnapShotStats = SnapShotStats
-  { sssStake :: !(Stat (Credential 'Staking C)),
-    sssDelegationCredential :: !(Stat (Credential 'Staking C)),
-    sssDelegationStakePool :: !(Stat (KeyHash 'StakePool C)),
-    sssPoolParams :: !(Stat (KeyHash 'StakePool C)),
-    sssPoolParamsStats :: !PoolParamsStats
+  { sssStake :: !(Stat (Credential 'Staking C))
+  , sssDelegationCredential :: !(Stat (Credential 'Staking C))
+  , sssDelegationStakePool :: !(Stat (KeyHash 'StakePool C))
+  , sssPoolParams :: !(Stat (KeyHash 'StakePool C))
+  , sssPoolParamsStats :: !PoolParamsStats
   }
 
 instance Semigroup SnapShotStats where
@@ -201,34 +201,34 @@ instance Pretty SnapShotStats where
   pretty SnapShotStats {..} =
     prettyRecord
       "SnapShot"
-      [ "Stake" <:> sssStake,
-        "DelegationCredential" <:> sssDelegationCredential,
-        "DelegationStakePool" <:> sssDelegationStakePool,
-        "PoolParams" <:> sssPoolParams,
-        pretty sssPoolParamsStats
+      [ "Stake" <:> sssStake
+      , "DelegationCredential" <:> sssDelegationCredential
+      , "DelegationStakePool" <:> sssDelegationStakePool
+      , "PoolParams" <:> sssPoolParams
+      , pretty sssPoolParamsStats
       ]
 
 instance AggregateStat SnapShotStats where
   aggregateStat SnapShotStats {..} =
     (aggregateStat sssPoolParamsStats)
-      { gsCredentialStaking = sssStake <> sssDelegationCredential,
-        gsKeyHashStakePool = sssDelegationStakePool <> sssPoolParams
+      { gsCredentialStaking = sssStake <> sssDelegationCredential
+      , gsKeyHashStakePool = sssDelegationStakePool <> sssPoolParams
       }
 
 countSnapShotStat :: SnapShot C -> SnapShotStats
 countSnapShotStat SnapShot {..} =
   SnapShotStats
-    { sssStake = statMapKeys (VMap.toMap (unStake ssStake)),
-      sssDelegationCredential = statMapKeys (VMap.toMap ssDelegations),
-      sssDelegationStakePool = statFoldable (VMap.toMap ssDelegations),
-      sssPoolParams = statMapKeys (VMap.toMap ssPoolParams),
-      sssPoolParamsStats = VMap.foldMap countPoolParamsStats ssPoolParams
+    { sssStake = statMapKeys (VMap.toMap (unStake ssStake))
+    , sssDelegationCredential = statMapKeys (VMap.toMap ssDelegations)
+    , sssDelegationStakePool = statFoldable (VMap.toMap ssDelegations)
+    , sssPoolParams = statMapKeys (VMap.toMap ssPoolParams)
+    , sssPoolParamsStats = VMap.foldMap countPoolParamsStats ssPoolParams
     }
 
 data PoolParamsStats = PoolParamsStats
-  { ppsPoolId :: !(Stat (KeyHash 'StakePool C)),
-    ppsRewardAcnt :: !(Stat (Credential 'Staking C)),
-    ppsOwners :: !(Stat (KeyHash 'Staking C))
+  { ppsPoolId :: !(Stat (KeyHash 'StakePool C))
+  , ppsRewardAcnt :: !(Stat (Credential 'Staking C))
+  , ppsOwners :: !(Stat (KeyHash 'Staking C))
   }
 
 instance Semigroup PoolParamsStats where
@@ -245,9 +245,9 @@ instance Pretty PoolParamsStats where
   pretty PoolParamsStats {..} =
     prettyRecord
       "PoolParamsStats"
-      [ "PoolId" <:> ppsPoolId,
-        "RewardAcnt" <:> ppsRewardAcnt,
-        "Owners" <:> ppsOwners
+      [ "PoolId" <:> ppsPoolId
+      , "RewardAcnt" <:> ppsRewardAcnt
+      , "Owners" <:> ppsOwners
       ]
 
 instance AggregateStat PoolParamsStats where
@@ -257,9 +257,9 @@ instance AggregateStat PoolParamsStats where
 countPoolParamsStats :: PoolParams C -> PoolParamsStats
 countPoolParamsStats PoolParams {..} =
   PoolParamsStats
-    { ppsPoolId = statSingleton ppId,
-      ppsRewardAcnt = statSingleton (getRwdCred ppRewardAcnt),
-      ppsOwners = statSet ppOwners
+    { ppsPoolId = statSingleton ppId
+    , ppsRewardAcnt = statSingleton (getRwdCred ppRewardAcnt)
+    , ppsOwners = statSet ppOwners
     }
 
 data RewardUpdateStats = RewardUpdateStats
@@ -272,76 +272,76 @@ instance AggregateStat RewardUpdateStats where
   aggregateStat RewardUpdateStats = mempty
 
 data PoolDistrStats = PoolDistrStats
-  { pdsStakePoolKeyHash :: !(Stat (KeyHash 'StakePool C)),
-    pdsStakePoolStakeVrf :: !(Stat (Hash C (VerKeyVRF C)))
+  { pdsStakePoolKeyHash :: !(Stat (KeyHash 'StakePool C))
+  , pdsStakePoolStakeVrf :: !(Stat (Hash C (VerKeyVRF C)))
   }
 
 instance Pretty PoolDistrStats where
   pretty PoolDistrStats {..} =
     prettyRecord
       "PoolDistrStats"
-      [ "StakePoolKeyHash" <:> pdsStakePoolKeyHash,
-        "StakePoolStakeVrf" <:> pdsStakePoolStakeVrf
+      [ "StakePoolKeyHash" <:> pdsStakePoolKeyHash
+      , "StakePoolStakeVrf" <:> pdsStakePoolStakeVrf
       ]
 
 instance AggregateStat PoolDistrStats where
   aggregateStat PoolDistrStats {..} =
     mempty
-      { gsKeyHashStakePool = pdsStakePoolKeyHash,
-        gsVerKeyVRF = pdsStakePoolStakeVrf
+      { gsKeyHashStakePool = pdsStakePoolKeyHash
+      , gsVerKeyVRF = pdsStakePoolStakeVrf
       }
 
 calcPoolDistrStats :: PoolDistr C -> PoolDistrStats
 calcPoolDistrStats (PoolDistr pd) =
   PoolDistrStats
-    { pdsStakePoolKeyHash = statMapKeys pd,
-      pdsStakePoolStakeVrf = statFoldable (individualPoolStakeVrf <$> Map.elems pd)
+    { pdsStakePoolKeyHash = statMapKeys pd
+    , pdsStakePoolStakeVrf = statFoldable (individualPoolStakeVrf <$> Map.elems pd)
     }
 
 data NewEpochStateStats = NewEpochStateStats
-  { nessPrevBlocksMade :: !(Stat (KeyHash 'StakePool C)),
-    nessCurBlocksMade :: !(Stat (KeyHash 'StakePool C)),
-    nessBlocksMade :: !(Stat (KeyHash 'StakePool C)),
-    nessEpochStateStats :: !EpochStateStats,
-    nessRewardUpdate :: !RewardUpdateStats,
-    nessPoolDistrStats :: !PoolDistrStats,
-    nessAggregateStats :: !AggregateStats
+  { nessPrevBlocksMade :: !(Stat (KeyHash 'StakePool C))
+  , nessCurBlocksMade :: !(Stat (KeyHash 'StakePool C))
+  , nessBlocksMade :: !(Stat (KeyHash 'StakePool C))
+  , nessEpochStateStats :: !EpochStateStats
+  , nessRewardUpdate :: !RewardUpdateStats
+  , nessPoolDistrStats :: !PoolDistrStats
+  , nessAggregateStats :: !AggregateStats
   }
 
 instance Pretty NewEpochStateStats where
   pretty NewEpochStateStats {..} =
     prettyRecord
       "NewEpochStateStats"
-      [ "PrevBlocksMade" <:> statCount nessPrevBlocksMade,
-        "CurBlocksMade" <:> statCount nessCurBlocksMade,
-        "BlocksMade" <:> nessBlocksMade,
-        pretty nessEpochStateStats,
-        pretty nessRewardUpdate <> "TODO",
-        pretty nessPoolDistrStats,
-        pretty nessAggregateStats
+      [ "PrevBlocksMade" <:> statCount nessPrevBlocksMade
+      , "CurBlocksMade" <:> statCount nessCurBlocksMade
+      , "BlocksMade" <:> nessBlocksMade
+      , pretty nessEpochStateStats
+      , pretty nessRewardUpdate <> "TODO"
+      , pretty nessPoolDistrStats
+      , pretty nessAggregateStats
       ]
 
 countNewEpochStateStats :: NewEpochState CurrentEra -> NewEpochStateStats
 countNewEpochStateStats NewEpochState {..} =
   let ness =
         NewEpochStateStats
-          { nessPrevBlocksMade = statMapKeys (unBlocksMade nesBprev),
-            nessCurBlocksMade = statMapKeys (unBlocksMade nesBcur),
-            nessBlocksMade = mempty,
-            nessEpochStateStats = countEpochStateStats nesEs,
-            nessRewardUpdate = RewardUpdateStats,
-            nessPoolDistrStats = calcPoolDistrStats nesPd,
-            nessAggregateStats = mempty
+          { nessPrevBlocksMade = statMapKeys (unBlocksMade nesBprev)
+          , nessCurBlocksMade = statMapKeys (unBlocksMade nesBcur)
+          , nessBlocksMade = mempty
+          , nessEpochStateStats = countEpochStateStats nesEs
+          , nessRewardUpdate = RewardUpdateStats
+          , nessPoolDistrStats = calcPoolDistrStats nesPd
+          , nessAggregateStats = mempty
           }
    in ness
-        { nessBlocksMade = nessPrevBlocksMade ness <> nessCurBlocksMade ness,
-          nessAggregateStats =
+        { nessBlocksMade = nessPrevBlocksMade ness <> nessCurBlocksMade ness
+        , nessAggregateStats =
             mconcat
-              [ aggregateStat (nessPrevBlocksMade ness),
-                aggregateStat (nessCurBlocksMade ness),
-                aggregateStat (nessRewardUpdate ness),
-                essAggregateStats (nessEpochStateStats ness),
-                aggregateStat (nessPoolDistrStats ness)
+              [ aggregateStat (nessPrevBlocksMade ness)
+              , aggregateStat (nessCurBlocksMade ness)
+              , aggregateStat (nessRewardUpdate ness)
+              , essAggregateStats (nessEpochStateStats ness)
+              , aggregateStat (nessPoolDistrStats ness)
               ]
         }
 
@@ -349,26 +349,26 @@ printNewEpochStateStats :: NewEpochStateStats -> IO ()
 printNewEpochStateStats = putStrLn . show . pretty
 
 data EpochStateStats = EpochStateStats
-  { essMarkSnapShotStats :: !SnapShotStats,
-    essSetSnapShotStats :: !SnapShotStats,
-    essGoSnapShotStats :: !SnapShotStats,
-    essSnapShotsStats :: !SnapShotStats,
-    essLedgerStateStats :: !LedgerStateStats,
-    essNonMyopic :: !(Stat (KeyHash 'StakePool C)),
-    essAggregateStats :: !AggregateStats
+  { essMarkSnapShotStats :: !SnapShotStats
+  , essSetSnapShotStats :: !SnapShotStats
+  , essGoSnapShotStats :: !SnapShotStats
+  , essSnapShotsStats :: !SnapShotStats
+  , essLedgerStateStats :: !LedgerStateStats
+  , essNonMyopic :: !(Stat (KeyHash 'StakePool C))
+  , essAggregateStats :: !AggregateStats
   }
 
 instance Pretty EpochStateStats where
   pretty EpochStateStats {..} =
     prettyRecord
       "EpochStateStats"
-      [ "mark" <:> statCount (sssStake essMarkSnapShotStats),
-        "set" <:> statCount (sssStake essSetSnapShotStats),
-        "go" <:> statCount (sssStake essGoSnapShotStats),
-        "mark+set+go =" <+> pretty essSnapShotsStats,
-        pretty essLedgerStateStats,
-        "NonMyopic" <:> essNonMyopic,
-        pretty essAggregateStats
+      [ "mark" <:> statCount (sssStake essMarkSnapShotStats)
+      , "set" <:> statCount (sssStake essSetSnapShotStats)
+      , "go" <:> statCount (sssStake essGoSnapShotStats)
+      , "mark+set+go =" <+> pretty essSnapShotsStats
+      , pretty essLedgerStateStats
+      , "NonMyopic" <:> essNonMyopic
+      , pretty essAggregateStats
       ]
 
 countEpochStateStats :: EpochState CurrentEra -> EpochStateStats
@@ -378,50 +378,50 @@ countEpochStateStats EpochState {..} =
       goSnap = countSnapShotStat (ssStakeGo esSnapshots)
       stats =
         EpochStateStats
-          { essMarkSnapShotStats = markSnap,
-            essSetSnapShotStats = setSnap,
-            essGoSnapShotStats = goSnap,
-            essSnapShotsStats = markSnap <> setSnap <> goSnap,
-            essLedgerStateStats = countLedgerStateStats esLState,
-            essNonMyopic = statMapKeys (likelihoodsNM esNonMyopic),
-            essAggregateStats = mempty
+          { essMarkSnapShotStats = markSnap
+          , essSetSnapShotStats = setSnap
+          , essGoSnapShotStats = goSnap
+          , essSnapShotsStats = markSnap <> setSnap <> goSnap
+          , essLedgerStateStats = countLedgerStateStats esLState
+          , essNonMyopic = statMapKeys (likelihoodsNM esNonMyopic)
+          , essAggregateStats = mempty
           }
    in stats
         { essAggregateStats =
             mconcat
-              [ aggregateStat (essSnapShotsStats stats),
-                aggregateStat (essLedgerStateStats stats),
-                aggregateStat (essNonMyopic stats)
+              [ aggregateStat (essSnapShotsStats stats)
+              , aggregateStat (essLedgerStateStats stats)
+              , aggregateStat (essNonMyopic stats)
               ]
         }
 
 data DStateStats = DStateStats
-  { dssCredentialStaking :: !(Stat (Credential 'Staking C)),
-    dssDelegations :: !(Stat (KeyHash 'StakePool C)),
-    dssKeyHashGenesis :: !(Stat (KeyHash 'Genesis C)),
-    dssKeyHashGenesisDelegate :: !(Stat (KeyHash 'GenesisDelegate C)),
-    dssHashVerKeyVRF :: !(Stat (Hash C (VerKeyVRF C)))
+  { dssCredentialStaking :: !(Stat (Credential 'Staking C))
+  , dssDelegations :: !(Stat (KeyHash 'StakePool C))
+  , dssKeyHashGenesis :: !(Stat (KeyHash 'Genesis C))
+  , dssKeyHashGenesisDelegate :: !(Stat (KeyHash 'GenesisDelegate C))
+  , dssHashVerKeyVRF :: !(Stat (Hash C (VerKeyVRF C)))
   }
 
 instance Pretty DStateStats where
   pretty DStateStats {..} =
     prettyRecord
       "DStateStats"
-      [ "CredentialStaking" <:> dssCredentialStaking,
-        "Delegations" <:> dssDelegations,
-        "KeyHashGenesis" <:> dssKeyHashGenesis,
-        "KeyHashGenesisDelegate" <:> dssKeyHashGenesisDelegate,
-        "HashVerKeyVRF" <:> dssHashVerKeyVRF
+      [ "CredentialStaking" <:> dssCredentialStaking
+      , "Delegations" <:> dssDelegations
+      , "KeyHashGenesis" <:> dssKeyHashGenesis
+      , "KeyHashGenesisDelegate" <:> dssKeyHashGenesisDelegate
+      , "HashVerKeyVRF" <:> dssHashVerKeyVRF
       ]
 
 instance AggregateStat DStateStats where
   aggregateStat DStateStats {..} =
     mempty
-      { gsCredentialStaking = dssCredentialStaking,
-        gsKeyHashStakePool = dssDelegations,
-        gsKeyHashGenesis = dssKeyHashGenesis,
-        gsKeyHashGenesisDelegate = dssKeyHashGenesisDelegate,
-        gsVerKeyVRF = dssHashVerKeyVRF
+      { gsCredentialStaking = dssCredentialStaking
+      , gsKeyHashStakePool = dssDelegations
+      , gsKeyHashGenesis = dssKeyHashGenesis
+      , gsKeyHashGenesisDelegate = dssKeyHashGenesisDelegate
+      , gsVerKeyVRF = dssHashVerKeyVRF
       }
 
 countDStateStats :: DState C -> DStateStats
@@ -430,32 +430,32 @@ countDStateStats DState {..} =
     { dssCredentialStaking =
         statMapKeys (rewView dsUnified)
           <> statMapKeys (delView dsUnified)
-          <> statSet (range (ptrView dsUnified)),
-      dssDelegations = statFoldable (delView dsUnified),
-      dssKeyHashGenesis =
+          <> statSet (range (ptrView dsUnified))
+    , dssDelegations = statFoldable (delView dsUnified)
+    , dssKeyHashGenesis =
         statFoldable (fGenDelegGenKeyHash <$> Map.keys dsFutureGenDelegs)
-          <> statMapKeys (unGenDelegs dsGenDelegs),
-      dssKeyHashGenesisDelegate =
+          <> statMapKeys (unGenDelegs dsGenDelegs)
+    , dssKeyHashGenesisDelegate =
         statFoldable (genDelegKeyHash <$> Map.elems dsFutureGenDelegs)
           <> statFoldable
-            (genDelegKeyHash <$> Map.elems (unGenDelegs dsGenDelegs)),
-      dssHashVerKeyVRF =
+            (genDelegKeyHash <$> Map.elems (unGenDelegs dsGenDelegs))
+    , dssHashVerKeyVRF =
         statFoldable (genDelegVrfHash <$> Map.elems dsFutureGenDelegs)
           <> statFoldable
             (genDelegVrfHash <$> Map.elems (unGenDelegs dsGenDelegs))
     }
 
 data PStateStats = PStateStats
-  { pssKeyHashStakePool :: !(Stat (KeyHash 'StakePool C)),
-    pssPoolParamsStats :: !PoolParamsStats
+  { pssKeyHashStakePool :: !(Stat (KeyHash 'StakePool C))
+  , pssPoolParamsStats :: !PoolParamsStats
   }
 
 instance Pretty PStateStats where
   pretty PStateStats {..} =
     prettyRecord
       "PStateStats"
-      [ "KeyHashStakePool" <:> pssKeyHashStakePool,
-        pretty pssPoolParamsStats
+      [ "KeyHashStakePool" <:> pssKeyHashStakePool
+      , pretty pssPoolParamsStats
       ]
 
 instance AggregateStat PStateStats where
@@ -468,45 +468,45 @@ countPStateStats PState {..} =
     { pssKeyHashStakePool =
         statMapKeys psStakePoolParams
           <> statMapKeys psFutureStakePoolParams
-          <> statMapKeys psRetiring,
-      pssPoolParamsStats =
+          <> statMapKeys psRetiring
+    , pssPoolParamsStats =
         foldMap countPoolParamsStats psStakePoolParams <> foldMap countPoolParamsStats psFutureStakePoolParams
     }
 
 data LedgerStateStats = LedgerStateStats
-  { lssUTxOStats :: !UTxOStats,
-    lssDStateStats :: !DStateStats,
-    lssPStateStats :: !PStateStats
+  { lssUTxOStats :: !UTxOStats
+  , lssDStateStats :: !DStateStats
+  , lssPStateStats :: !PStateStats
   }
 
 instance Pretty LedgerStateStats where
   pretty LedgerStateStats {..} =
     prettyRecord
       "LedgerStateStats"
-      [ pretty lssUTxOStats,
-        pretty lssDStateStats,
-        pretty lssPStateStats
+      [ pretty lssUTxOStats
+      , pretty lssDStateStats
+      , pretty lssPStateStats
       ]
 
 instance AggregateStat LedgerStateStats where
   aggregateStat LedgerStateStats {..} =
     mconcat
-      [ aggregateStat lssUTxOStats,
-        aggregateStat lssDStateStats,
-        aggregateStat lssPStateStats
+      [ aggregateStat lssUTxOStats
+      , aggregateStat lssDStateStats
+      , aggregateStat lssPStateStats
       ]
 
 countLedgerStateStats :: LedgerState CurrentEra -> LedgerStateStats
 countLedgerStateStats LedgerState {..} =
   LedgerStateStats
-    { lssUTxOStats = countUTxOStats (utxosUtxo lsUTxOState),
-      lssDStateStats = countDStateStats (dpsDState lsDPState),
-      lssPStateStats = countPStateStats (dpsPState lsDPState)
+    { lssUTxOStats = countUTxOStats (utxosUtxo lsUTxOState)
+    , lssDStateStats = countDStateStats (dpsDState lsDPState)
+    , lssPStateStats = countPStateStats (dpsPState lsDPState)
     }
 
 data TxInStats = TxInStats
-  { tisTxId :: !(Stat (TxId C)),
-    tisTxIx :: !(Stat TxIx)
+  { tisTxId :: !(Stat (TxId C))
+  , tisTxIx :: !(Stat TxIx)
   }
 
 instance Pretty TxInStats where
@@ -518,21 +518,21 @@ countTxInStats txIns =
   case unzip (fmap (\(TxIn txId txIx) -> (txId, txIx)) txIns) of
     (txIds, txIxs) ->
       TxInStats
-        { tisTxId = statFoldable txIds,
-          tisTxIx = statFoldable txIxs
+        { tisTxId = statFoldable txIds
+        , tisTxIx = statFoldable txIxs
         }
 
 data TxOutStats = TxOutStats
-  { tosBootstrap :: !(Stat (BootstrapAddress C)),
-    tosPaymentCredential :: !(Stat (Credential 'Payment C)),
-    tosStakingCredential :: !(Stat (Credential 'Staking C)),
-    tosStakingPtr :: !(Stat Ptr),
-    tosNetwork :: !(Stat Network),
-    tosValue :: !(Stat Integer),
-    tosPolicyId :: !(Stat (PolicyID C)),
-    tosAssetName :: !(Stat AssetName),
-    tosAssetValue :: !(Stat Integer),
-    tosDataHash :: !(Stat (DataHash C))
+  { tosBootstrap :: !(Stat (BootstrapAddress C))
+  , tosPaymentCredential :: !(Stat (Credential 'Payment C))
+  , tosStakingCredential :: !(Stat (Credential 'Staking C))
+  , tosStakingPtr :: !(Stat Ptr)
+  , tosNetwork :: !(Stat Network)
+  , tosValue :: !(Stat Integer)
+  , tosPolicyId :: !(Stat (PolicyID C))
+  , tosAssetName :: !(Stat AssetName)
+  , tosAssetValue :: !(Stat Integer)
+  , tosDataHash :: !(Stat (DataHash C))
   }
 
 instance Semigroup TxOutStats where
@@ -556,16 +556,16 @@ instance Pretty TxOutStats where
   pretty TxOutStats {..} =
     prettyRecord
       "TxOutStats"
-      [ "Bootstrap" <:> tosBootstrap,
-        "PaymentCredential" <:> tosPaymentCredential,
-        "StakingCredential" <:> tosStakingCredential,
-        "StakingPtr" <:> tosStakingPtr,
-        "Network" <:> tosNetwork,
-        "Value" <:> tosValue,
-        "PolicyId" <:> tosPolicyId,
-        "AssetName" <:> tosAssetName,
-        "AssetValue" <:> tosAssetValue,
-        "DataHash" <:> tosDataHash
+      [ "Bootstrap" <:> tosBootstrap
+      , "PaymentCredential" <:> tosPaymentCredential
+      , "StakingCredential" <:> tosStakingCredential
+      , "StakingPtr" <:> tosStakingPtr
+      , "Network" <:> tosNetwork
+      , "Value" <:> tosValue
+      , "PolicyId" <:> tosPolicyId
+      , "AssetName" <:> tosAssetName
+      , "AssetValue" <:> tosAssetValue
+      , "DataHash" <:> tosDataHash
       ]
 
 instance AggregateStat TxOutStats where
@@ -584,10 +584,10 @@ countTxOutStats = foldMap countTxOutStat
           !vmElems = Map.elems m
           !valueStat =
             dataStat
-              { tosValue = statSingleton v,
-                tosPolicyId = statMapKeys m,
-                tosAssetName = foldMap statMapKeys vmElems,
-                tosAssetValue = foldMap statFoldable vmElems
+              { tosValue = statSingleton v
+              , tosPolicyId = statMapKeys m
+              , tosAssetName = foldMap statMapKeys vmElems
+              , tosAssetValue = foldMap statFoldable vmElems
               }
           !networkStat = valueStat {tosNetwork = statSingleton (getNetwork addr)}
        in case addr of
@@ -604,8 +604,8 @@ countTxOutStats = foldMap countTxOutStat
                in stakeStat {tosPaymentCredential = statSingleton pc}
 
 data UTxOStats = UTxOStats
-  { usTxInStats :: !TxInStats,
-    usTxOutStats :: !TxOutStats
+  { usTxInStats :: !TxInStats
+  , usTxOutStats :: !TxOutStats
   }
 
 instance Pretty UTxOStats where
@@ -620,17 +620,17 @@ instance AggregateStat UTxOStats where
 countUTxOStats :: UTxO Alonzo -> UTxOStats
 countUTxOStats (UTxO m) =
   UTxOStats
-    { usTxInStats = countTxInStats (Map.keys m),
-      usTxOutStats = countTxOutStats (Map.elems m)
+    { usTxInStats = countTxInStats (Map.keys m)
+    , usTxOutStats = countTxOutStats (Map.elems m)
     }
 
 data AggregateStats = AggregateStats
-  { gsCredentialStaking :: !(Stat (Credential 'Staking C)),
-    gsKeyHashStakePool :: !(Stat (KeyHash 'StakePool C)),
-    gsKeyHashGenesis :: !(Stat (KeyHash 'Genesis C)),
-    gsKeyHashGenesisDelegate :: !(Stat (KeyHash 'GenesisDelegate C)),
-    gsVerKeyVRF :: !(Stat (Hash C (VerKeyVRF C))),
-    gsScriptHash :: !(Stat (ScriptHash C))
+  { gsCredentialStaking :: !(Stat (Credential 'Staking C))
+  , gsKeyHashStakePool :: !(Stat (KeyHash 'StakePool C))
+  , gsKeyHashGenesis :: !(Stat (KeyHash 'Genesis C))
+  , gsKeyHashGenesisDelegate :: !(Stat (KeyHash 'GenesisDelegate C))
+  , gsVerKeyVRF :: !(Stat (Hash C (VerKeyVRF C)))
+  , gsScriptHash :: !(Stat (ScriptHash C))
   }
 
 instance Semigroup AggregateStats where
@@ -650,9 +650,9 @@ instance Pretty AggregateStats where
   pretty AggregateStats {..} =
     prettyRecord
       "AggregateStats"
-      [ "StakingCredential" <:> gsCredentialStaking,
-        "KeyHashStakePool" <:> gsKeyHashStakePool,
-        "ScriptHash" <:> gsScriptHash
+      [ "StakingCredential" <:> gsCredentialStaking
+      , "KeyHashStakePool" <:> gsKeyHashStakePool
+      , "ScriptHash" <:> gsScriptHash
       ]
 
 class AggregateStat s where
@@ -671,28 +671,28 @@ instance AggregateStat (Stat (ScriptHash C)) where
 -- approach that works for the whole state
 
 data UTxOUniques = UTxOUniques
-  { paymentKeys :: !(Set.Set (KeyHash 'Payment C)),
-    paymentScripts :: !(Set.Set (ScriptHash C)),
-    stakeKeys :: !(Set.Set (KeyHash 'Staking C)),
-    stakeScripts :: !(Set.Set (ScriptHash C)),
-    stakePtrs :: !(Set.Set Ptr),
-    scripts :: !(Set.Set (ScriptHash C)),
-    txIds :: !(Set.Set (TxId C)),
-    txIxs :: !(Set.Set TxIx)
+  { paymentKeys :: !(Set.Set (KeyHash 'Payment C))
+  , paymentScripts :: !(Set.Set (ScriptHash C))
+  , stakeKeys :: !(Set.Set (KeyHash 'Staking C))
+  , stakeScripts :: !(Set.Set (ScriptHash C))
+  , stakePtrs :: !(Set.Set Ptr)
+  , scripts :: !(Set.Set (ScriptHash C))
+  , txIds :: !(Set.Set (TxId C))
+  , txIxs :: !(Set.Set TxIx)
   }
 
 emptyUniques :: UTxOUniques
 emptyUniques = UTxOUniques mempty mempty mempty mempty mempty mempty mempty mempty
 
 data UTxOStats' = UTxOStats'
-  { statsTotalTxOuts :: !Int,
-    statsByronTxOuts :: !Int,
-    statsTotalPaymentKeys :: !Int,
-    statsTotalPaymentScripts :: !Int,
-    statsTotalStakeKeys :: !Int,
-    statsTotalStakeScripts :: !Int,
-    statsTotalStakePtrs :: !Int,
-    stateTotalStakeNulls :: !Int
+  { statsTotalTxOuts :: !Int
+  , statsByronTxOuts :: !Int
+  , statsTotalPaymentKeys :: !Int
+  , statsTotalPaymentScripts :: !Int
+  , statsTotalStakeKeys :: !Int
+  , statsTotalStakeScripts :: !Int
+  , statsTotalStakePtrs :: !Int
+  , stateTotalStakeNulls :: !Int
   }
   deriving (Show)
 
@@ -717,59 +717,59 @@ collectStats = do
               StakeRefNull ->
                 (su, ss {stateTotalStakeNulls = stateTotalStakeNulls + 1})
               StakeRefPtr ptr ->
-                ( su {stakePtrs = Set.insert ptr stakePtrs},
-                  ss {statsTotalStakePtrs = statsTotalStakePtrs + 1}
+                ( su {stakePtrs = Set.insert ptr stakePtrs}
+                , ss {statsTotalStakePtrs = statsTotalStakePtrs + 1}
                 )
               StakeRefBase a
                 | KeyHashObj kh <- a ->
-                  ( su {stakeKeys = Set.insert kh stakeKeys},
-                    ss {statsTotalStakeKeys = statsTotalStakeKeys + 1}
-                  )
+                    ( su {stakeKeys = Set.insert kh stakeKeys}
+                    , ss {statsTotalStakeKeys = statsTotalStakeKeys + 1}
+                    )
                 | ScriptHashObj sh <- a ->
-                  ( su {stakeScripts = Set.insert sh stakeScripts},
-                    ss {statsTotalStakeScripts = statsTotalStakeScripts + 1}
-                  )
+                    ( su {stakeScripts = Set.insert sh stakeScripts}
+                    , ss {statsTotalStakeScripts = statsTotalStakeScripts + 1}
+                    )
        in case addr of
             AddrBootstrap _ ->
               (u', s' {statsByronTxOuts = statsByronTxOuts + 1})
             Addr _ni pc sr
               | KeyHashObj kh <- pc ->
-                updateStakingStats
-                  sr
-                  ( u' {paymentKeys = Set.insert kh paymentKeys},
-                    s' {statsTotalPaymentKeys = statsTotalPaymentKeys + 1}
-                  )
+                  updateStakingStats
+                    sr
+                    ( u' {paymentKeys = Set.insert kh paymentKeys}
+                    , s' {statsTotalPaymentKeys = statsTotalPaymentKeys + 1}
+                    )
               | ScriptHashObj kh <- pc ->
-                updateStakingStats
-                  sr
-                  ( u' {paymentScripts = Set.insert kh paymentScripts},
-                    s' {statsTotalPaymentScripts = statsTotalPaymentScripts + 1}
-                  )
+                  updateStakingStats
+                    sr
+                    ( u' {paymentScripts = Set.insert kh paymentScripts}
+                    , s' {statsTotalPaymentScripts = statsTotalPaymentScripts + 1}
+                    )
 
 reportStats :: UTxOUniques -> UTxOStats' -> IO ()
 reportStats UTxOUniques {..} UTxOStats' {..} = do
   let showPercent x y
         | y == 0 = "0"
         | otherwise =
-          case ((1000 * x) `div` y) `quotRem` 10 of
-            (q, r) ->
-              show x <> ", " <> show q <> "." <> show r <> "% of total"
+            case ((1000 * x) `div` y) `quotRem` 10 of
+              (q, r) ->
+                show x <> ", " <> show q <> "." <> show r <> "% of total"
   putStrLn $
     unlines
-      [ "Total TxOuts = " <> show statsTotalTxOuts,
-        "Byron TxOuts = " <> showPercent statsByronTxOuts statsTotalTxOuts,
-        "Unique TxIds = " <> showPercent (Set.size txIds) statsTotalTxOuts,
-        "Unique TxIxs = " <> showPercent (Set.size txIxs) statsTotalTxOuts,
-        "Shelley Total Payment Keys = " <> show statsTotalPaymentKeys,
-        "Shelley Unique Payment Keys = " <> showPercent (Set.size paymentKeys) statsTotalPaymentKeys,
-        "Shelley Total Payment Scripts = " <> show statsTotalPaymentScripts,
-        "Shelley Unique Payment Scripts = "
-          <> showPercent (Set.size paymentScripts) statsTotalPaymentScripts,
-        "Shelley Total Stake Keys = " <> show statsTotalStakeKeys,
-        "Shelley Unique Stake Keys = " <> showPercent (Set.size stakeKeys) statsTotalStakeKeys,
-        "Shelley Total Stake Scripts = " <> show statsTotalStakeScripts,
-        "Shelley Unique Stake Scripts = "
-          <> showPercent (Set.size stakeScripts) statsTotalStakeScripts,
-        "Shelley Total Stake Ptrs = " <> show statsTotalStakePtrs,
-        "Shelley Unique Stake Ptrs = " <> showPercent (Set.size stakePtrs) statsTotalStakePtrs
+      [ "Total TxOuts = " <> show statsTotalTxOuts
+      , "Byron TxOuts = " <> showPercent statsByronTxOuts statsTotalTxOuts
+      , "Unique TxIds = " <> showPercent (Set.size txIds) statsTotalTxOuts
+      , "Unique TxIxs = " <> showPercent (Set.size txIxs) statsTotalTxOuts
+      , "Shelley Total Payment Keys = " <> show statsTotalPaymentKeys
+      , "Shelley Unique Payment Keys = " <> showPercent (Set.size paymentKeys) statsTotalPaymentKeys
+      , "Shelley Total Payment Scripts = " <> show statsTotalPaymentScripts
+      , "Shelley Unique Payment Scripts = "
+          <> showPercent (Set.size paymentScripts) statsTotalPaymentScripts
+      , "Shelley Total Stake Keys = " <> show statsTotalStakeKeys
+      , "Shelley Unique Stake Keys = " <> showPercent (Set.size stakeKeys) statsTotalStakeKeys
+      , "Shelley Total Stake Scripts = " <> show statsTotalStakeScripts
+      , "Shelley Unique Stake Scripts = "
+          <> showPercent (Set.size stakeScripts) statsTotalStakeScripts
+      , "Shelley Total Stake Ptrs = " <> show statsTotalStakePtrs
+      , "Shelley Unique Stake Ptrs = " <> showPercent (Set.size stakePtrs) statsTotalStakePtrs
       ]

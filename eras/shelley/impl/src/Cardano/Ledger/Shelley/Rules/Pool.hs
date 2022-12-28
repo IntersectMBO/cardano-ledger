@@ -12,30 +12,30 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Shelley.Rules.Pool
-  ( ShelleyPOOL,
-    PoolEvent (..),
-    PoolEnv (..),
-    PredicateFailure,
-    ShelleyPoolPredFailure (..),
-  )
+module Cardano.Ledger.Shelley.Rules.Pool (
+  ShelleyPOOL,
+  PoolEvent (..),
+  PoolEnv (..),
+  PredicateFailure,
+  ShelleyPoolPredFailure (..),
+)
 where
 
 import Cardano.Crypto.Hash.Class (sizeHash)
-import Cardano.Ledger.BaseTypes
-  ( Globals (..),
-    Network,
-    ShelleyBase,
-    epochInfoPure,
-    invalidKey,
-    networkId,
-  )
-import Cardano.Ledger.Binary
-  ( FromCBOR (..),
-    ToCBOR (..),
-    decodeRecordSum,
-    encodeListLen,
-  )
+import Cardano.Ledger.BaseTypes (
+  Globals (..),
+  Network,
+  ShelleyBase,
+  epochInfoPure,
+  invalidKey,
+  networkId,
+ )
+import Cardano.Ledger.Binary (
+  FromCBOR (..),
+  ToCBOR (..),
+  decodeRecordSum,
+  encodeListLen,
+ )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto (HASH))
@@ -44,27 +44,27 @@ import Cardano.Ledger.Shelley.Era (ShelleyPOOL)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState (PState (..), payPoolDeposit)
 import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks
-import Cardano.Ledger.Shelley.TxBody
-  ( DCert (..),
-    PoolCert (..),
-    PoolMetadata (..),
-    PoolParams (..),
-    getRwdNetwork,
-  )
+import Cardano.Ledger.Shelley.TxBody (
+  DCert (..),
+  PoolCert (..),
+  PoolMetadata (..),
+  PoolParams (..),
+  getRwdNetwork,
+ )
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo, epochInfoEpoch)
 import Control.Monad (forM_, when)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, setSingleton, singleton, (∈), (∉), (∪), (⋪), (⨃))
-import Control.State.Transition
-  ( STS (..),
-    TRC (..),
-    TransitionRule,
-    failBecause,
-    judgmentContext,
-    liftSTS,
-    tellEvent,
-    (?!),
-  )
+import Control.State.Transition (
+  STS (..),
+  TRC (..),
+  TransitionRule,
+  failBecause,
+  judgmentContext,
+  liftSTS,
+  tellEvent,
+  (?!),
+ )
 import qualified Data.ByteString as BS
 import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
@@ -210,8 +210,8 @@ poolDelegationTransition = do
           -- if that has happened, we cannot be in this branch of the if statement.
           pure $
             ps
-              { psFutureStakePoolParams = eval (psFutureStakePoolParams ps ⨃ singleton hk poolParam),
-                psRetiring = eval (setSingleton hk ⋪ psRetiring ps)
+              { psFutureStakePoolParams = eval (psFutureStakePoolParams ps ⨃ singleton hk poolParam)
+              , psRetiring = eval (setSingleton hk ⋪ psRetiring ps)
               }
     DCertPool (RetirePool hk (EpochNo e)) -> do
       -- note that pattern match is used instead of cwitness, as in the spec

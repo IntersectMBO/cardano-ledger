@@ -10,13 +10,13 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Ledger.Chain
-  ( -- | Chain Checks
-    ChainChecksPParams (..),
-    ChainPredicateFailure (..),
-    pparamsToChainChecksPParams,
-    chainChecks,
-  )
+module Cardano.Ledger.Chain (
+  -- | Chain Checks
+  ChainChecksPParams (..),
+  ChainPredicateFailure (..),
+  pparamsToChainChecksPParams,
+  chainChecks,
+)
 where
 
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
@@ -30,9 +30,9 @@ import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 
 data ChainChecksPParams = ChainChecksPParams
-  { ccMaxBHSize :: Natural,
-    ccMaxBBSize :: Natural,
-    ccProtocolVersion :: ProtVer
+  { ccMaxBHSize :: Natural
+  , ccMaxBBSize :: Natural
+  , ccProtocolVersion :: ProtVer
   }
   deriving (Show, Eq, Generic, NoThunks)
 
@@ -42,9 +42,9 @@ pparamsToChainChecksPParams ::
   ChainChecksPParams
 pparamsToChainChecksPParams pp =
   ChainChecksPParams
-    { ccMaxBHSize = pp ^. ppMaxBHSizeL,
-      ccMaxBBSize = pp ^. ppMaxBBSizeL,
-      ccProtocolVersion = pp ^. ppProtocolVersionL
+    { ccMaxBHSize = pp ^. ppMaxBHSizeL
+    , ccMaxBBSize = pp ^. ppMaxBBSizeL
+    , ccProtocolVersion = pp ^. ppProtocolVersionL
     }
 
 data ChainPredicateFailure

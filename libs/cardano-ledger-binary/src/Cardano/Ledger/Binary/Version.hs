@@ -8,23 +8,23 @@
 {-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 
-module Cardano.Ledger.Binary.Version
-  ( -- * Versioning
-    Version,
-    MinVersion,
-    MaxVersion,
-    natVersion,
-    natVersionProxy,
-    succVersion,
-    mkVersion,
-    mkVersion64,
-    getVersion64,
-    allVersions,
+module Cardano.Ledger.Binary.Version (
+  -- * Versioning
+  Version,
+  MinVersion,
+  MaxVersion,
+  natVersion,
+  natVersionProxy,
+  succVersion,
+  mkVersion,
+  mkVersion64,
+  getVersion64,
+  allVersions,
 
-    -- ** Concrete era versions
-    byronProtVer,
-    shelleyProtVer,
-  )
+  -- ** Concrete era versions
+  byronProtVer,
+  shelleyProtVer,
+)
 where
 
 import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (toExpr))
@@ -75,14 +75,14 @@ mkVersion64 v
   | minVersion <= v && v <= maxVersion =
       pure (Version (fromIntegral v))
   | otherwise =
-    fail $
-      "Unsupported decoder version: "
-        ++ show v
-        ++ ". Expected value in bounds: ["
-        ++ show minVersion
-        ++ ", "
-        ++ show maxVersion
-        ++ "]"
+      fail $
+        "Unsupported decoder version: "
+          ++ show v
+          ++ ". Expected value in bounds: ["
+          ++ show minVersion
+          ++ ", "
+          ++ show maxVersion
+          ++ "]"
   where
     Version minVersion = minBound
     Version maxVersion = maxBound

@@ -14,80 +14,80 @@ module Test.Cardano.Ledger.Shelley.UnitTests (unitTests) where
 import Cardano.Crypto.DSIGN.Class (SignKeyDSIGN, VerKeyDSIGN)
 import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.Ledger.Address
-  ( Addr (..),
-    getRwdCred,
-  )
+import Cardano.Ledger.Address (
+  Addr (..),
+  getRwdCred,
+ )
 import Cardano.Ledger.BaseTypes hiding ((==>))
 import Cardano.Ledger.Binary (serialize')
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core (PParams (..), emptyPParams, ppEMaxL, ppKeyDepositL, ppMaxTxSizeL, ppMinFeeAL, ppMinFeeBL, ppMinPoolCostL, ppMinUTxOValueL, ppPoolDepositL)
-import Cardano.Ledger.Credential
-  ( Credential (..),
-    StakeReference (..),
-  )
+import Cardano.Ledger.Credential (
+  Credential (..),
+  StakeReference (..),
+ )
 import Cardano.Ledger.Crypto (DSIGN, HASH, VRF)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Keys
-  ( KeyRole (..),
-    asWitness,
-    hashKey,
-    hashVerKeyVRF,
-  )
+import Cardano.Ledger.Keys (
+  KeyRole (..),
+  asWitness,
+  hashKey,
+  hashVerKeyVRF,
+ )
 import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Shelley.API
-  ( DCert (..),
-    LedgerEnv (..),
-    ShelleyLEDGER,
-  )
+import Cardano.Ledger.Shelley.API (
+  DCert (..),
+  LedgerEnv (..),
+  ShelleyLEDGER,
+ )
 import Cardano.Ledger.Shelley.Delegation.Certificates (pattern RegPool)
-import Cardano.Ledger.Shelley.LedgerState
-  ( AccountState (..),
-    DPState (..),
-    IncrementalStake (..),
-    LedgerState (..),
-    UTxOState (..),
-    dpsDState,
-    dsUnified,
-    rewards,
-  )
+import Cardano.Ledger.Shelley.LedgerState (
+  AccountState (..),
+  DPState (..),
+  IncrementalStake (..),
+  LedgerState (..),
+  UTxOState (..),
+  dpsDState,
+  dsUnified,
+  rewards,
+ )
 import Cardano.Ledger.Shelley.PParams hiding (emptyPParams)
-import Cardano.Ledger.Shelley.Rules
-  ( ShelleyDelegsPredFailure (..),
-    ShelleyDelplPredFailure (..),
-    ShelleyLedgerPredFailure (..),
-    ShelleyPoolPredFailure (..),
-    ShelleyUtxoPredFailure (..),
-    ShelleyUtxowPredFailure (..),
-  )
-import Cardano.Ledger.Shelley.Tx
-  ( ShelleyTx (..),
-    ShelleyTxBody (..),
-    ShelleyTxOut (..),
-    TxIn (..),
-    stbTTL,
-  )
-import Cardano.Ledger.Shelley.TxBody
-  ( PoolMetadata (..),
-    PoolParams (..),
-    Wdrl (..),
-    pmHash,
-    pmUrl,
-    ppCost,
-    ppId,
-    ppMargin,
-    ppMetadata,
-    ppOwners,
-    ppPledge,
-    ppRelays,
-    ppRewardAcnt,
-    ppVrf,
-    pattern RewardAcnt,
-  )
-import Cardano.Ledger.Shelley.TxWits
-  ( ShelleyTxWits,
-    addrWits,
-  )
+import Cardano.Ledger.Shelley.Rules (
+  ShelleyDelegsPredFailure (..),
+  ShelleyDelplPredFailure (..),
+  ShelleyLedgerPredFailure (..),
+  ShelleyPoolPredFailure (..),
+  ShelleyUtxoPredFailure (..),
+  ShelleyUtxowPredFailure (..),
+ )
+import Cardano.Ledger.Shelley.Tx (
+  ShelleyTx (..),
+  ShelleyTxBody (..),
+  ShelleyTxOut (..),
+  TxIn (..),
+  stbTTL,
+ )
+import Cardano.Ledger.Shelley.TxBody (
+  PoolMetadata (..),
+  PoolParams (..),
+  Wdrl (..),
+  pmHash,
+  pmUrl,
+  ppCost,
+  ppId,
+  ppMargin,
+  ppMetadata,
+  ppOwners,
+  ppPledge,
+  ppRelays,
+  ppRewardAcnt,
+  ppVrf,
+  pattern RewardAcnt,
+ )
+import Cardano.Ledger.Shelley.TxWits (
+  ShelleyTxWits,
+  addrWits,
+ )
 import qualified Cardano.Ledger.UMapCompact as UM
 import Cardano.Ledger.Val ((<+>), (<->))
 import Cardano.Protocol.TPraos.BHeader (checkLeaderValue)
@@ -107,15 +107,15 @@ import GHC.Stack
 import Lens.Micro
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkVKeyRwdAcnt, mkWitnessVKey, mkWitnessesVKey, vKey)
-import Test.Cardano.Ledger.Shelley.Address.Bootstrap
-  ( testBootstrapNotSpending,
-    testBootstrapSpending,
-  )
+import Test.Cardano.Ledger.Shelley.Address.Bootstrap (
+  testBootstrapNotSpending,
+  testBootstrapSpending,
+ )
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, C_Crypto)
 import Test.Cardano.Ledger.Shelley.Fees (sizeTests)
-import Test.Cardano.Ledger.Shelley.Generator.Core
-  ( genesisCoins,
-  )
+import Test.Cardano.Ledger.Shelley.Generator.Core (
+  genesisCoins,
+ )
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Orphans ()
@@ -129,8 +129,8 @@ import Test.Tasty.QuickCheck
 
 -- | - This constraint says we can coerce Numbers into a signable keys
 type NumKey c =
-  ( Num (SignKeyDSIGN (DSIGN c)),
-    Num (VerKeyDSIGN (DSIGN c))
+  ( Num (SignKeyDSIGN (DSIGN c))
+  , Num (VerKeyDSIGN (DSIGN c))
   )
 
 alicePay :: NumKey c => KeyPair 'Payment c
@@ -196,8 +196,8 @@ instance Arbitrary VRFNatVal where
   arbitrary =
     VRFNatVal . fromIntegral
       <$> choose @Integer
-        ( 0,
-          2
+        ( 0
+        , 2
             ^ ( 8
                   * VRF.sizeOutputVRF
                     (Proxy @(VRF C_Crypto))
@@ -234,27 +234,27 @@ testCheckLeaderVal =
     "Test checkLeaderVal calculation"
     [ testProperty "With a stake of 0, cannot lead" $
         \(VRFNatVal n) (ASC f) ->
-          checkLeaderValue @v (VRF.mkTestOutputVRF n) 0 f == False,
-      testProperty "With a maximal VRF, cannot lead" $
+          checkLeaderValue @v (VRF.mkTestOutputVRF n) 0 f == False
+    , testProperty "With a maximal VRF, cannot lead" $
         \(ASC f) (StakeProportion r) ->
           checkLeaderValue @v
             (VRF.mkTestOutputVRF maxVRFVal)
             r
             f
-            == False,
-      testProperty "checkLeaderVal succeeds iff l < 1 - (1-f)^r" $
+            == False
+    , testProperty "checkLeaderVal succeeds iff l < 1 - (1-f)^r" $
         \(VRFNatVal n) (ASC f) (StakeProportion r) ->
-          r > 0
-            ==> let ascVal :: Double
-                    ascVal = fromRational . unboundRational $ activeSlotVal f
-                 in checkLeaderValue @v
-                      (VRF.mkTestOutputVRF n)
-                      r
-                      f
-                      === ( (realToFrac n / realToFrac (maxVRFVal + 1))
-                              < (1 - (1 - ascVal) ** fromRational r)
-                          ),
-      -- Suppose that our VRF value V is drawn uniformly from [0, maxVRFVal).
+          r > 0 ==>
+            let ascVal :: Double
+                ascVal = fromRational . unboundRational $ activeSlotVal f
+             in checkLeaderValue @v
+                  (VRF.mkTestOutputVRF n)
+                  r
+                  f
+                  === ( (realToFrac n / realToFrac (maxVRFVal + 1))
+                          < (1 - (1 - ascVal) ** fromRational r)
+                      )
+    , -- Suppose that our VRF value V is drawn uniformly from [0, maxVRFVal).
       -- The leader check verifies that fromNat V < 1 - (1-f)^r, where fromNat
       -- is an appropriate mapping into the unit interval giving fromNat V ~
       -- U(0,1). Then the probability X of being selected leader, given that VRF
@@ -271,41 +271,41 @@ testCheckLeaderVal =
       --
       testProperty "We are elected as leader proportional to our stake" $
         \(ASC f) (StakeProportion r) ->
-          r > 0
-            ==> let ascVal :: Double
-                    ascVal = fromRational . unboundRational $ activeSlotVal f
-                    numTrials = 2000
-                    -- 4 standard deviations
-                    δ = 4 * sqrt (realToFrac numTrials * p * (1 - p))
-                    p = 1 - (1 - ascVal) ** fromRational r
-                    mean = realToFrac numTrials * p
-                    maxVRFValInt :: Integer
-                    maxVRFValInt = fromIntegral maxVRFVal
-                    lb = floor (mean - δ)
-                    ub = ceiling (mean + δ)
-                 in do
-                      vrfVals <- Gen.vectorOf numTrials (Gen.choose (0, maxVRFValInt))
-                      let s =
-                            length . filter id $
-                              ( \v ->
-                                  checkLeaderValue @v
-                                    (VRF.mkTestOutputVRF $ fromIntegral v)
-                                    r
-                                    f
-                              )
-                                <$> vrfVals
-                      pure
-                        . counterexample
-                          ( show lb
-                              ++ " /< "
-                              ++ show s
-                              ++ " /< "
-                              ++ show ub
-                              ++ " (p="
-                              ++ show p
-                              ++ ")"
+          r > 0 ==>
+            let ascVal :: Double
+                ascVal = fromRational . unboundRational $ activeSlotVal f
+                numTrials = 2000
+                -- 4 standard deviations
+                δ = 4 * sqrt (realToFrac numTrials * p * (1 - p))
+                p = 1 - (1 - ascVal) ** fromRational r
+                mean = realToFrac numTrials * p
+                maxVRFValInt :: Integer
+                maxVRFValInt = fromIntegral maxVRFVal
+                lb = floor (mean - δ)
+                ub = ceiling (mean + δ)
+             in do
+                  vrfVals <- Gen.vectorOf numTrials (Gen.choose (0, maxVRFValInt))
+                  let s =
+                        length . filter id $
+                          ( \v ->
+                              checkLeaderValue @v
+                                (VRF.mkTestOutputVRF $ fromIntegral v)
+                                r
+                                f
                           )
-                        $ s > lb && s < ub
+                            <$> vrfVals
+                  pure
+                    . counterexample
+                      ( show lb
+                          ++ " /< "
+                          ++ show s
+                          ++ " /< "
+                          ++ show ub
+                          ++ " (p="
+                          ++ show p
+                          ++ ")"
+                      )
+                    $ s > lb && s < ub
     ]
   where
     maxVRFVal :: Natural
@@ -328,27 +328,27 @@ aliceInitCoin :: Coin
 aliceInitCoin = Coin 10000
 
 data AliceToBob = AliceToBob
-  { input :: TxIn C_Crypto,
-    toBob :: Coin,
-    fee :: Coin,
-    deposits :: Coin,
-    refunds :: Coin,
-    certs :: [DCert C_Crypto],
-    ttl :: SlotNo,
-    signers :: [KeyPair 'Witness C_Crypto]
+  { input :: TxIn C_Crypto
+  , toBob :: Coin
+  , fee :: Coin
+  , deposits :: Coin
+  , refunds :: Coin
+  , certs :: [DCert C_Crypto]
+  , ttl :: SlotNo
+  , signers :: [KeyPair 'Witness C_Crypto]
   }
 
 aliceGivesBobLovelace :: AliceToBob -> ShelleyTx C
 aliceGivesBobLovelace
   AliceToBob
-    { input,
-      toBob,
-      fee,
-      deposits,
-      refunds,
-      certs,
-      ttl,
-      signers
+    { input
+    , toBob
+    , fee
+    , deposits
+    , refunds
+    , certs
+    , ttl
+    , signers
     } = ShelleyTx txbody mempty {addrWits = awits} SNothing
     where
       aliceCoin = aliceInitCoin <+> refunds <-> (toBob <+> fee <+> deposits)
@@ -356,8 +356,8 @@ aliceGivesBobLovelace
         ShelleyTxBody
           (Set.singleton input)
           ( StrictSeq.fromList
-              [ ShelleyTxOut aliceAddr aliceCoin,
-                ShelleyTxOut bobAddr toBob
+              [ ShelleyTxOut aliceAddr aliceCoin
+              , ShelleyTxOut bobAddr toBob
               ]
           )
           (StrictSeq.fromList certs)
@@ -373,8 +373,8 @@ utxoState =
   UTxOState
     ( genesisCoins
         genesisId
-        [ ShelleyTxOut aliceAddr aliceInitCoin,
-          ShelleyTxOut bobAddr (Coin 1000)
+        [ ShelleyTxOut aliceAddr aliceInitCoin
+        , ShelleyTxOut bobAddr (Coin 1000)
         ]
     )
     (Coin 0)
@@ -407,20 +407,20 @@ testInvalidTx errs tx =
 testSpendNonexistentInput :: Assertion
 testSpendNonexistentInput =
   testInvalidTx
-    [ UtxowFailure (UtxoFailure (ValueNotConservedUTxO (Coin 0) (Coin 10000))),
-      UtxowFailure (UtxoFailure $ BadInputsUTxO (Set.singleton $ mkGenesisTxIn 42))
+    [ UtxowFailure (UtxoFailure (ValueNotConservedUTxO (Coin 0) (Coin 10000)))
+    , UtxowFailure (UtxoFailure $ BadInputsUTxO (Set.singleton $ mkGenesisTxIn 42))
     ]
-    $ aliceGivesBobLovelace $
-      AliceToBob
-        { input = mkGenesisTxIn 42, -- Non Existent
-          toBob = Coin 3000,
-          fee = Coin 1500,
-          deposits = Coin 0,
-          refunds = Coin 0,
-          certs = [],
-          ttl = SlotNo 100,
-          signers = [asWitness alicePay]
-        }
+    $ aliceGivesBobLovelace
+    $ AliceToBob
+      { input = mkGenesisTxIn 42 -- Non Existent
+      , toBob = Coin 3000
+      , fee = Coin 1500
+      , deposits = Coin 0
+      , refunds = Coin 0
+      , certs = []
+      , ttl = SlotNo 100
+      , signers = [asWitness alicePay]
+      }
 
 testWitnessNotIncluded :: Assertion
 testWitnessNotIncluded =
@@ -428,8 +428,8 @@ testWitnessNotIncluded =
         ShelleyTxBody @C
           (Set.fromList [TxIn genesisId minBound])
           ( StrictSeq.fromList
-              [ ShelleyTxOut aliceAddr (Coin 6404),
-                ShelleyTxOut bobAddr (Coin 3000)
+              [ ShelleyTxOut aliceAddr (Coin 6404)
+              , ShelleyTxOut bobAddr (Coin 3000)
               ]
           )
           Empty
@@ -495,8 +495,8 @@ testWitnessWrongUTxO =
    in testInvalidTx
         [ UtxowFailure $
             InvalidWitnessesUTXOW
-              [asWitness $ vKey alicePay],
-          UtxowFailure $
+              [asWitness $ vKey alicePay]
+        , UtxowFailure $
             MissingVKeyWitnessesUTXOW txwits
         ]
         tx
@@ -529,14 +529,14 @@ testFeeTooSmall =
     [UtxowFailure (UtxoFailure (FeeTooSmallUTxO (Coin 205) (Coin 1)))]
     $ aliceGivesBobLovelace
       AliceToBob
-        { input = TxIn genesisId minBound,
-          toBob = Coin 3000,
-          fee = Coin 1,
-          deposits = Coin 0,
-          refunds = Coin 0,
-          certs = [],
-          ttl = SlotNo 100,
-          signers = [asWitness alicePay]
+        { input = TxIn genesisId minBound
+        , toBob = Coin 3000
+        , fee = Coin 1
+        , deposits = Coin 0
+        , refunds = Coin 0
+        , certs = []
+        , ttl = SlotNo 100
+        , signers = [asWitness alicePay]
         }
 
 testExpiredTx :: Assertion
@@ -545,14 +545,14 @@ testExpiredTx =
       tx =
         aliceGivesBobLovelace $
           AliceToBob
-            { input = TxIn genesisId minBound,
-              toBob = Coin 3000,
-              fee = Coin 600,
-              deposits = Coin 0,
-              refunds = Coin 0,
-              certs = [],
-              ttl = SlotNo 0,
-              signers = [asWitness alicePay]
+            { input = TxIn genesisId minBound
+            , toBob = Coin 3000
+            , fee = Coin 600
+            , deposits = Coin 0
+            , refunds = Coin 0
+            , certs = []
+            , ttl = SlotNo 0
+            , signers = [asWitness alicePay]
             }
       ledgerEnv' = LedgerEnv (SlotNo 1) minBound pp (AccountState (Coin 0) (Coin 0))
    in testLEDGER ledgerState tx ledgerEnv' (Left errs)
@@ -563,8 +563,8 @@ testInvalidWintess =
         ShelleyTxBody @C
           (Set.fromList [TxIn genesisId minBound])
           ( StrictSeq.fromList
-              [ ShelleyTxOut aliceAddr (Coin 6000),
-                ShelleyTxOut bobAddr (Coin 3000)
+              [ ShelleyTxOut aliceAddr (Coin 6000)
+              , ShelleyTxOut bobAddr (Coin 3000)
               ]
           )
           Empty
@@ -590,8 +590,8 @@ testWithdrawalNoWit =
         ShelleyTxBody @C
           (Set.fromList [TxIn genesisId minBound])
           ( StrictSeq.fromList
-              [ ShelleyTxOut aliceAddr (Coin 6000),
-                ShelleyTxOut bobAddr (Coin 3010)
+              [ ShelleyTxOut aliceAddr (Coin 6000)
+              , ShelleyTxOut bobAddr (Coin 3010)
               ]
           )
           Empty
@@ -616,8 +616,8 @@ testWithdrawalWrongAmt =
         ShelleyTxBody @C
           (Set.fromList [TxIn genesisId minBound])
           ( StrictSeq.fromList
-              [ ShelleyTxOut aliceAddr (Coin 6000),
-                ShelleyTxOut bobAddr (Coin 3011)
+              [ ShelleyTxOut aliceAddr (Coin 6000)
+              , ShelleyTxOut bobAddr (Coin 3011)
               ]
           )
           Empty
@@ -643,17 +643,17 @@ testOutputTooSmall :: Assertion
 testOutputTooSmall =
   testInvalidTx
     [UtxowFailure (UtxoFailure $ OutputTooSmallUTxO [ShelleyTxOut bobAddr (Coin 1)])]
-    $ aliceGivesBobLovelace $
-      AliceToBob
-        { input = TxIn genesisId minBound,
-          toBob = Coin 1, -- Too Small
-          fee = Coin 997,
-          deposits = Coin 0,
-          refunds = Coin 0,
-          certs = [],
-          ttl = SlotNo 0,
-          signers = [asWitness alicePay]
-        }
+    $ aliceGivesBobLovelace
+    $ AliceToBob
+      { input = TxIn genesisId minBound
+      , toBob = Coin 1 -- Too Small
+      , fee = Coin 997
+      , deposits = Coin 0
+      , refunds = Coin 0
+      , certs = []
+      , ttl = SlotNo 0
+      , signers = [asWitness alicePay]
+      }
 
 alicePoolColdKeys :: KeyPair 'StakePool C_Crypto
 alicePoolColdKeys = KeyPair vk sk
@@ -663,19 +663,19 @@ alicePoolColdKeys = KeyPair vk sk
 alicePoolParamsSmallCost :: PoolParams C_Crypto
 alicePoolParamsSmallCost =
   PoolParams
-    { ppId = hashKey . vKey $ alicePoolColdKeys,
-      ppVrf = hashVerKeyVRF vkVrf,
-      ppPledge = Coin 1,
-      ppCost = Coin 5, -- Too Small!
-      ppMargin = unsafeBoundRational 0.1,
-      ppRewardAcnt = RewardAcnt Testnet (KeyHashObj . hashKey . vKey $ aliceStake),
-      ppOwners = Set.singleton $ (hashKey . vKey) aliceStake,
-      ppRelays = StrictSeq.empty,
-      ppMetadata =
+    { ppId = hashKey . vKey $ alicePoolColdKeys
+    , ppVrf = hashVerKeyVRF vkVrf
+    , ppPledge = Coin 1
+    , ppCost = Coin 5 -- Too Small!
+    , ppMargin = unsafeBoundRational 0.1
+    , ppRewardAcnt = RewardAcnt Testnet (KeyHashObj . hashKey . vKey $ aliceStake)
+    , ppOwners = Set.singleton $ (hashKey . vKey) aliceStake
+    , ppRelays = StrictSeq.empty
+    , ppMetadata =
         SJust $
           PoolMetadata
-            { pmUrl = fromJust $ textToUrl "alice.pool",
-              pmHash = BS.pack "{}"
+            { pmUrl = fromJust $ textToUrl "alice.pool"
+            , pmHash = BS.pack "{}"
             }
     }
   where
@@ -692,22 +692,22 @@ testPoolCostTooSmall =
             )
         )
     ]
-    $ aliceGivesBobLovelace $
-      AliceToBob
-        { input = TxIn genesisId minBound,
-          toBob = Coin 100,
-          fee = Coin 997,
-          deposits = Coin 250,
-          refunds = Coin 0,
-          certs = [DCertPool $ RegPool alicePoolParamsSmallCost],
-          ttl = SlotNo 0,
-          signers =
-            ( [ asWitness alicePay,
-                asWitness aliceStake,
-                asWitness alicePoolColdKeys
-              ]
-            )
-        }
+    $ aliceGivesBobLovelace
+    $ AliceToBob
+      { input = TxIn genesisId minBound
+      , toBob = Coin 100
+      , fee = Coin 997
+      , deposits = Coin 250
+      , refunds = Coin 0
+      , certs = [DCertPool $ RegPool alicePoolParamsSmallCost]
+      , ttl = SlotNo 0
+      , signers =
+          ( [ asWitness alicePay
+            , asWitness aliceStake
+            , asWitness alicePoolColdKeys
+            ]
+          )
+      }
 
 testProducedOverMaxWord64 :: Assertion
 testProducedOverMaxWord64 =
@@ -734,36 +734,36 @@ testsInvalidLedger :: TestTree
 testsInvalidLedger =
   testGroup
     "Tests with invalid transactions in ledger"
-    [ testCase "Invalid Ledger - Alice tries to spend a nonexistent input" testSpendNonexistentInput,
-      testCase "Invalid Ledger - Alice does not include a witness" testWitnessNotIncluded,
-      testCase "Invalid Ledger - Alice tries to spend Bob's UTxO" testSpendNotOwnedUTxO,
-      testCase "Invalid Ledger - Alice provides witness of wrong UTxO" testWitnessWrongUTxO,
-      testCase "Invalid Ledger - Alice's transaction does not consume input" testEmptyInputSet,
-      testCase "Invalid Ledger - Alice's fee is too small" testFeeTooSmall,
-      testCase "Invalid Ledger - Alice's transaction has expired" testExpiredTx,
-      testCase "Invalid Ledger - Invalid witnesses" testInvalidWintess,
-      testCase "Invalid Ledger - No withdrawal witness" testWithdrawalNoWit,
-      testCase "Invalid Ledger - Incorrect withdrawal amount" testWithdrawalWrongAmt,
-      testCase "Invalid Ledger - OutputTooSmall" testOutputTooSmall,
-      testCase "Invalid Ledger - PoolCostTooSmall" testPoolCostTooSmall,
-      testCase "Invalid Ledger - ProducedOverMaxWord64" testProducedOverMaxWord64
+    [ testCase "Invalid Ledger - Alice tries to spend a nonexistent input" testSpendNonexistentInput
+    , testCase "Invalid Ledger - Alice does not include a witness" testWitnessNotIncluded
+    , testCase "Invalid Ledger - Alice tries to spend Bob's UTxO" testSpendNotOwnedUTxO
+    , testCase "Invalid Ledger - Alice provides witness of wrong UTxO" testWitnessWrongUTxO
+    , testCase "Invalid Ledger - Alice's transaction does not consume input" testEmptyInputSet
+    , testCase "Invalid Ledger - Alice's fee is too small" testFeeTooSmall
+    , testCase "Invalid Ledger - Alice's transaction has expired" testExpiredTx
+    , testCase "Invalid Ledger - Invalid witnesses" testInvalidWintess
+    , testCase "Invalid Ledger - No withdrawal witness" testWithdrawalNoWit
+    , testCase "Invalid Ledger - Incorrect withdrawal amount" testWithdrawalWrongAmt
+    , testCase "Invalid Ledger - OutputTooSmall" testOutputTooSmall
+    , testCase "Invalid Ledger - PoolCostTooSmall" testPoolCostTooSmall
+    , testCase "Invalid Ledger - ProducedOverMaxWord64" testProducedOverMaxWord64
     ]
 
 testBootstrap :: TestTree
 testBootstrap =
   testGroup
     "bootstrap witnesses"
-    [ testCase "spend from a bootstrap address" testBootstrapSpending,
-      testCase "don't spend from a bootstrap address" testBootstrapNotSpending
+    [ testCase "spend from a bootstrap address" testBootstrapSpending
+    , testCase "don't spend from a bootstrap address" testBootstrapNotSpending
     ]
 
 unitTests :: TestTree
 unitTests =
   testGroup
     "Unit Tests"
-    [ testsInvalidLedger,
-      testsPParams,
-      sizeTests,
-      testCheckLeaderVal,
-      testBootstrap
+    [ testsInvalidLedger
+    , testsPParams
+    , sizeTests
+    , testCheckLeaderVal
+    , testBootstrap
     ]

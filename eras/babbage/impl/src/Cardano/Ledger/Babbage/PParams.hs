@@ -18,60 +18,60 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | This module contains the type of protocol parameters and EraPParams instance
-module Cardano.Ledger.Babbage.PParams
-  ( BabbagePParams (..),
-    emptyBabbagePParams,
-    emptyBabbagePParamsUpdate,
-    getLanguageView,
-    LangDepView (..),
-    encodeLangViews,
-    coinsPerUTxOWordToCoinsPerUTxOByte,
-    coinsPerUTxOByteToCoinsPerUTxOWord,
-  )
+module Cardano.Ledger.Babbage.PParams (
+  BabbagePParams (..),
+  emptyBabbagePParams,
+  emptyBabbagePParamsUpdate,
+  getLanguageView,
+  LangDepView (..),
+  encodeLangViews,
+  coinsPerUTxOWordToCoinsPerUTxOByte,
+  coinsPerUTxOByteToCoinsPerUTxOWord,
+)
 where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.PParams
-  ( AlonzoPParams (..),
-    LangDepView (..),
-    OrdExUnits (..),
-    encodeLangViews,
-    getLanguageView,
-  )
-import Cardano.Ledger.Alonzo.Scripts
-  ( CostModels (..),
-    ExUnits (..),
-    Prices (..),
-  )
+import Cardano.Ledger.Alonzo.PParams (
+  AlonzoPParams (..),
+  LangDepView (..),
+  OrdExUnits (..),
+  encodeLangViews,
+  getLanguageView,
+ )
+import Cardano.Ledger.Alonzo.Scripts (
+  CostModels (..),
+  ExUnits (..),
+  Prices (..),
+ )
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra)
-import Cardano.Ledger.BaseTypes
-  ( NonNegativeInterval,
-    Nonce,
-    ProtVer (..),
-    StrictMaybe (..),
-    UnitInterval,
-    isSNothing,
-  )
-import Cardano.Ledger.Binary
-  ( Encoding,
-    FromCBOR (..),
-    FromCBORGroup (..),
-    ToCBOR (..),
-    ToCBORGroup (..),
-  )
-import Cardano.Ledger.Binary.Coders
-  ( Decode (..),
-    Density (..),
-    Encode (..),
-    Field (..),
-    Wrapped (..),
-    decode,
-    encode,
-    field,
-    (!>),
-    (<!),
-  )
+import Cardano.Ledger.BaseTypes (
+  NonNegativeInterval,
+  Nonce,
+  ProtVer (..),
+  StrictMaybe (..),
+  UnitInterval,
+  isSNothing,
+ )
+import Cardano.Ledger.Binary (
+  Encoding,
+  FromCBOR (..),
+  FromCBORGroup (..),
+  ToCBOR (..),
+  ToCBORGroup (..),
+ )
+import Cardano.Ledger.Binary.Coders (
+  Decode (..),
+  Density (..),
+  Encode (..),
+  Field (..),
+  Wrapped (..),
+  decode,
+  encode,
+  field,
+  (!>),
+  (<!),
+ )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.HKD (HKD, HKDFunctor (..))
@@ -89,52 +89,52 @@ import Numeric.Natural (Natural)
 -- | Babbage Protocol parameters. Ways in which parameters have changed from Alonzo: lack
 -- of @d@, @extraEntropy@ and replacement of @coinsPerUTxOWord@ with @coinsPerUTxOByte@
 data BabbagePParams f era = BabbagePParams
-  { -- | The linear factor for the minimum fee calculation
-    bppMinFeeA :: !(HKD f Natural),
-    -- | The constant factor for the minimum fee calculation
-    bppMinFeeB :: !(HKD f Natural),
-    -- | Maximal block body size
-    bppMaxBBSize :: !(HKD f Natural),
-    -- | Maximal transaction size
-    bppMaxTxSize :: !(HKD f Natural),
-    -- | Maximal block header size
-    bppMaxBHSize :: !(HKD f Natural),
-    -- | The amount of a key registration deposit
-    bppKeyDeposit :: !(HKD f Coin),
-    -- | The amount of a pool registration deposit
-    bppPoolDeposit :: !(HKD f Coin),
-    -- | Maximum number of epochs in the future a pool retirement is allowed to
-    -- be scheduled for.
-    bppEMax :: !(HKD f EpochNo),
-    -- | Desired number of pools
-    bppNOpt :: !(HKD f Natural),
-    -- | Pool influence
-    bppA0 :: !(HKD f NonNegativeInterval),
-    -- | Monetary expansion
-    bppRho :: !(HKD f UnitInterval),
-    -- | Treasury expansion
-    bppTau :: !(HKD f UnitInterval),
-    -- | Protocol version
-    bppProtocolVersion :: !(HKD f ProtVer),
-    -- | Minimum Stake Pool Cost
-    bppMinPoolCost :: !(HKD f Coin),
-    -- | Cost in lovelace per byte of UTxO storage (instead of bppCoinsPerUTxOByte)
-    bppCoinsPerUTxOByte :: !(HKD f CoinPerByte),
-    -- | Cost models for non-native script languages
-    bppCostModels :: !(HKD f CostModels),
-    -- | Prices of execution units (for non-native script languages)
-    bppPrices :: !(HKD f Prices),
-    -- | Max total script execution resources units allowed per tx
-    bppMaxTxExUnits :: !(HKD f OrdExUnits),
-    -- | Max total script execution resources units allowed per block
-    bppMaxBlockExUnits :: !(HKD f OrdExUnits),
-    -- | Max size of a Value in an output
-    bppMaxValSize :: !(HKD f Natural),
-    -- | Percentage of the txfee which must be provided as collateral when
-    -- including non-native scripts.
-    bppCollateralPercentage :: !(HKD f Natural),
-    -- | Maximum number of collateral inputs allowed in a transaction
-    bppMaxCollateralInputs :: !(HKD f Natural)
+  { bppMinFeeA :: !(HKD f Natural)
+  -- ^ The linear factor for the minimum fee calculation
+  , bppMinFeeB :: !(HKD f Natural)
+  -- ^ The constant factor for the minimum fee calculation
+  , bppMaxBBSize :: !(HKD f Natural)
+  -- ^ Maximal block body size
+  , bppMaxTxSize :: !(HKD f Natural)
+  -- ^ Maximal transaction size
+  , bppMaxBHSize :: !(HKD f Natural)
+  -- ^ Maximal block header size
+  , bppKeyDeposit :: !(HKD f Coin)
+  -- ^ The amount of a key registration deposit
+  , bppPoolDeposit :: !(HKD f Coin)
+  -- ^ The amount of a pool registration deposit
+  , bppEMax :: !(HKD f EpochNo)
+  -- ^ Maximum number of epochs in the future a pool retirement is allowed to
+  -- be scheduled for.
+  , bppNOpt :: !(HKD f Natural)
+  -- ^ Desired number of pools
+  , bppA0 :: !(HKD f NonNegativeInterval)
+  -- ^ Pool influence
+  , bppRho :: !(HKD f UnitInterval)
+  -- ^ Monetary expansion
+  , bppTau :: !(HKD f UnitInterval)
+  -- ^ Treasury expansion
+  , bppProtocolVersion :: !(HKD f ProtVer)
+  -- ^ Protocol version
+  , bppMinPoolCost :: !(HKD f Coin)
+  -- ^ Minimum Stake Pool Cost
+  , bppCoinsPerUTxOByte :: !(HKD f CoinPerByte)
+  -- ^ Cost in lovelace per byte of UTxO storage (instead of bppCoinsPerUTxOByte)
+  , bppCostModels :: !(HKD f CostModels)
+  -- ^ Cost models for non-native script languages
+  , bppPrices :: !(HKD f Prices)
+  -- ^ Prices of execution units (for non-native script languages)
+  , bppMaxTxExUnits :: !(HKD f OrdExUnits)
+  -- ^ Max total script execution resources units allowed per tx
+  , bppMaxBlockExUnits :: !(HKD f OrdExUnits)
+  -- ^ Max total script execution resources units allowed per block
+  , bppMaxValSize :: !(HKD f Natural)
+  -- ^ Max size of a Value in an output
+  , bppCollateralPercentage :: !(HKD f Natural)
+  -- ^ Percentage of the txfee which must be provided as collateral when
+  -- including non-native scripts.
+  , bppMaxCollateralInputs :: !(HKD f Natural)
+  -- ^ Maximum number of collateral inputs allowed in a transaction
   }
   deriving (Generic)
 
@@ -159,8 +159,8 @@ instance NoThunks (BabbagePParams StrictMaybe era)
 instance NFData (BabbagePParams StrictMaybe era)
 
 data DowngradeBabbagePParams f = DowngradeBabbagePParams
-  { dbppD :: !(HKD f UnitInterval),
-    dbppExtraEntropy :: !(HKD f Nonce)
+  { dbppD :: !(HKD f UnitInterval)
+  , dbppExtraEntropy :: !(HKD f Nonce)
   }
 
 instance Crypto c => EraPParams (BabbageEra c) where
@@ -274,55 +274,55 @@ instance Era era => FromCBOR (BabbagePParams Identity era) where
 emptyBabbagePParams :: forall era. Era era => BabbagePParams Identity era
 emptyBabbagePParams =
   BabbagePParams
-    { bppMinFeeA = 0,
-      bppMinFeeB = 0,
-      bppMaxBBSize = 0,
-      bppMaxTxSize = 2048,
-      bppMaxBHSize = 0,
-      bppKeyDeposit = Coin 0,
-      bppPoolDeposit = Coin 0,
-      bppEMax = EpochNo 0,
-      bppNOpt = 100,
-      bppA0 = minBound,
-      bppRho = minBound,
-      bppTau = minBound,
-      bppProtocolVersion = ProtVer (eraProtVerLow @era) 0,
-      bppMinPoolCost = mempty,
-      bppCoinsPerUTxOByte = CoinPerByte $ Coin 0,
-      bppCostModels = CostModels mempty,
-      bppPrices = Prices minBound minBound,
-      bppMaxTxExUnits = OrdExUnits $ ExUnits 0 0,
-      bppMaxBlockExUnits = OrdExUnits $ ExUnits 0 0,
-      bppMaxValSize = 0,
-      bppCollateralPercentage = 150,
-      bppMaxCollateralInputs = 5
+    { bppMinFeeA = 0
+    , bppMinFeeB = 0
+    , bppMaxBBSize = 0
+    , bppMaxTxSize = 2048
+    , bppMaxBHSize = 0
+    , bppKeyDeposit = Coin 0
+    , bppPoolDeposit = Coin 0
+    , bppEMax = EpochNo 0
+    , bppNOpt = 100
+    , bppA0 = minBound
+    , bppRho = minBound
+    , bppTau = minBound
+    , bppProtocolVersion = ProtVer (eraProtVerLow @era) 0
+    , bppMinPoolCost = mempty
+    , bppCoinsPerUTxOByte = CoinPerByte $ Coin 0
+    , bppCostModels = CostModels mempty
+    , bppPrices = Prices minBound minBound
+    , bppMaxTxExUnits = OrdExUnits $ ExUnits 0 0
+    , bppMaxBlockExUnits = OrdExUnits $ ExUnits 0 0
+    , bppMaxValSize = 0
+    , bppCollateralPercentage = 150
+    , bppMaxCollateralInputs = 5
     }
 
 emptyBabbagePParamsUpdate :: BabbagePParams StrictMaybe era
 emptyBabbagePParamsUpdate =
   BabbagePParams
-    { bppMinFeeA = SNothing,
-      bppMinFeeB = SNothing,
-      bppMaxBBSize = SNothing,
-      bppMaxTxSize = SNothing,
-      bppMaxBHSize = SNothing,
-      bppKeyDeposit = SNothing,
-      bppPoolDeposit = SNothing,
-      bppEMax = SNothing,
-      bppNOpt = SNothing,
-      bppA0 = SNothing,
-      bppRho = SNothing,
-      bppTau = SNothing,
-      bppProtocolVersion = SNothing,
-      bppMinPoolCost = SNothing,
-      bppCoinsPerUTxOByte = SNothing,
-      bppCostModels = SNothing,
-      bppPrices = SNothing,
-      bppMaxTxExUnits = SNothing,
-      bppMaxBlockExUnits = SNothing,
-      bppMaxValSize = SNothing,
-      bppCollateralPercentage = SNothing,
-      bppMaxCollateralInputs = SNothing
+    { bppMinFeeA = SNothing
+    , bppMinFeeB = SNothing
+    , bppMaxBBSize = SNothing
+    , bppMaxTxSize = SNothing
+    , bppMaxBHSize = SNothing
+    , bppKeyDeposit = SNothing
+    , bppPoolDeposit = SNothing
+    , bppEMax = SNothing
+    , bppNOpt = SNothing
+    , bppA0 = SNothing
+    , bppRho = SNothing
+    , bppTau = SNothing
+    , bppProtocolVersion = SNothing
+    , bppMinPoolCost = SNothing
+    , bppCoinsPerUTxOByte = SNothing
+    , bppCostModels = SNothing
+    , bppPrices = SNothing
+    , bppMaxTxExUnits = SNothing
+    , bppMaxBlockExUnits = SNothing
+    , bppMaxValSize = SNothing
+    , bppCollateralPercentage = SNothing
+    , bppMaxCollateralInputs = SNothing
     }
 
 -- =======================================================
@@ -412,30 +412,30 @@ downgradeBabbagePParams ::
   PParamsHKD f (AlonzoEra c)
 downgradeBabbagePParams DowngradeBabbagePParams {..} BabbagePParams {..} =
   AlonzoPParams
-    { appMinFeeA = bppMinFeeA,
-      appMinFeeB = bppMinFeeB,
-      appMaxBBSize = bppMaxBBSize,
-      appMaxTxSize = bppMaxTxSize,
-      appMaxBHSize = bppMaxBHSize,
-      appKeyDeposit = bppKeyDeposit,
-      appPoolDeposit = bppPoolDeposit,
-      appEMax = bppEMax,
-      appNOpt = bppNOpt,
-      appA0 = bppA0,
-      appRho = bppRho,
-      appTau = bppTau,
-      appD = dbppD,
-      appExtraEntropy = dbppExtraEntropy,
-      appProtocolVersion = bppProtocolVersion,
-      appMinPoolCost = bppMinPoolCost,
-      appCoinsPerUTxOWord = hkdMap (Proxy @f) coinsPerUTxOByteToCoinsPerUTxOWord bppCoinsPerUTxOByte,
-      appCostModels = bppCostModels,
-      appPrices = bppPrices,
-      appMaxTxExUnits = bppMaxTxExUnits,
-      appMaxBlockExUnits = bppMaxBlockExUnits,
-      appMaxValSize = bppMaxValSize,
-      appCollateralPercentage = bppCollateralPercentage,
-      appMaxCollateralInputs = bppMaxCollateralInputs
+    { appMinFeeA = bppMinFeeA
+    , appMinFeeB = bppMinFeeB
+    , appMaxBBSize = bppMaxBBSize
+    , appMaxTxSize = bppMaxTxSize
+    , appMaxBHSize = bppMaxBHSize
+    , appKeyDeposit = bppKeyDeposit
+    , appPoolDeposit = bppPoolDeposit
+    , appEMax = bppEMax
+    , appNOpt = bppNOpt
+    , appA0 = bppA0
+    , appRho = bppRho
+    , appTau = bppTau
+    , appD = dbppD
+    , appExtraEntropy = dbppExtraEntropy
+    , appProtocolVersion = bppProtocolVersion
+    , appMinPoolCost = bppMinPoolCost
+    , appCoinsPerUTxOWord = hkdMap (Proxy @f) coinsPerUTxOByteToCoinsPerUTxOWord bppCoinsPerUTxOByte
+    , appCostModels = bppCostModels
+    , appPrices = bppPrices
+    , appMaxTxExUnits = bppMaxTxExUnits
+    , appMaxBlockExUnits = bppMaxBlockExUnits
+    , appMaxValSize = bppMaxValSize
+    , appCollateralPercentage = bppCollateralPercentage
+    , appMaxCollateralInputs = bppMaxCollateralInputs
     }
 
 -- | A word is 8 bytes, so to convert from coinsPerUTxOWord to coinsPerUTxOByte, rounding down.

@@ -1,37 +1,37 @@
-module Test.Cardano.Chain.Genesis.Gen
-  ( genCanonicalGenesisData,
-    genCanonicalGenesisDelegation,
-    genGenesisData,
-    genGenesisHash,
-    genConfig,
-    genFakeAvvmOptions,
-    genGenesisAvvmBalances,
-    genGenesisDelegation,
-    genGenesisInitializer,
-    genGenesisNonAvvmBalances,
-    genGenesisSpec,
-    genGenesisKeyHashes,
-    genSignatureEpochNumber,
-    genTestnetBalanceOptions,
-  )
+module Test.Cardano.Chain.Genesis.Gen (
+  genCanonicalGenesisData,
+  genCanonicalGenesisDelegation,
+  genGenesisData,
+  genGenesisHash,
+  genConfig,
+  genFakeAvvmOptions,
+  genGenesisAvvmBalances,
+  genGenesisDelegation,
+  genGenesisInitializer,
+  genGenesisNonAvvmBalances,
+  genGenesisSpec,
+  genGenesisKeyHashes,
+  genSignatureEpochNumber,
+  genTestnetBalanceOptions,
+)
 where
 
 import Cardano.Chain.Common (BlockCount (..))
-import Cardano.Chain.Genesis
-  ( Config (..),
-    FakeAvvmOptions (..),
-    GenesisAvvmBalances (..),
-    GenesisData (..),
-    GenesisDelegation (..),
-    GenesisHash (..),
-    GenesisInitializer (..),
-    GenesisKeyHashes (..),
-    GenesisNonAvvmBalances (..),
-    GenesisSpec (..),
-    TestnetBalanceOptions (..),
-    mkGenesisDelegation,
-    mkGenesisSpec,
-  )
+import Cardano.Chain.Genesis (
+  Config (..),
+  FakeAvvmOptions (..),
+  GenesisAvvmBalances (..),
+  GenesisData (..),
+  GenesisDelegation (..),
+  GenesisHash (..),
+  GenesisInitializer (..),
+  GenesisKeyHashes (..),
+  GenesisNonAvvmBalances (..),
+  GenesisSpec (..),
+  TestnetBalanceOptions (..),
+  mkGenesisDelegation,
+  mkGenesisSpec,
+ )
 import Cardano.Chain.Slotting (EpochNumber)
 import Cardano.Crypto (ProtocolMagicId, Signature (..))
 import qualified Cardano.Crypto.Wallet as CC
@@ -44,28 +44,28 @@ import Formatting (build, sformat)
 import Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
-import Test.Cardano.Chain.Common.Gen
-  ( genAddress,
-    genBlockCount,
-    genKeyHash,
-    genLovelace,
-  )
-import Test.Cardano.Chain.Delegation.Gen
-  ( genCanonicalCertificateDistinctList,
-    genCertificateDistinctList,
-  )
+import Test.Cardano.Chain.Common.Gen (
+  genAddress,
+  genBlockCount,
+  genKeyHash,
+  genLovelace,
+ )
+import Test.Cardano.Chain.Delegation.Gen (
+  genCanonicalCertificateDistinctList,
+  genCertificateDistinctList,
+ )
 import Test.Cardano.Chain.UTxO.Gen (genUTxOConfiguration)
-import Test.Cardano.Chain.Update.Gen
-  ( genCanonicalProtocolParameters,
-    genProtocolParameters,
-  )
-import Test.Cardano.Crypto.Gen
-  ( genCompactRedeemVerificationKey,
-    genProtocolMagic,
-    genProtocolMagicId,
-    genRequiresNetworkMagic,
-    genTextHash,
-  )
+import Test.Cardano.Chain.Update.Gen (
+  genCanonicalProtocolParameters,
+  genProtocolParameters,
+ )
+import Test.Cardano.Crypto.Gen (
+  genCompactRedeemVerificationKey,
+  genProtocolMagic,
+  genProtocolMagicId,
+  genRequiresNetworkMagic,
+  genTextHash,
+ )
 
 genConfig :: ProtocolMagicId -> Gen Config
 genConfig pm =

@@ -1,34 +1,34 @@
-module Cardano.Ledger.Api.Era
-  ( -- * Eras
+module Cardano.Ledger.Api.Era (
+  -- * Eras
 
-    -- ** Shelley
-    Shelley,
-    ShelleyEra,
+  -- ** Shelley
+  Shelley,
+  ShelleyEra,
 
-    -- ** Allegra
-    Allegra,
-    AllegraEra,
+  -- ** Allegra
+  Allegra,
+  AllegraEra,
 
-    -- ** Mary
-    Mary,
-    MaryEra,
+  -- ** Mary
+  Mary,
+  MaryEra,
 
-    -- ** Alonzo
-    Alonzo,
-    AlonzoEra,
+  -- ** Alonzo
+  Alonzo,
+  AlonzoEra,
 
-    -- ** Babbage
-    Babbage,
-    BabbageEra,
+  -- ** Babbage
+  Babbage,
+  BabbageEra,
 
-    -- ** Conway
-    Conway,
-    ConwayEra,
+  -- ** Conway
+  Conway,
+  ConwayEra,
 
-    -- * Crypto
-    StandardCrypto,
-    Crypto (..),
-  )
+  -- * Crypto
+  StandardCrypto,
+  Crypto (..),
+)
 where
 
 import Cardano.Ledger.Allegra (Allegra, AllegraEra)

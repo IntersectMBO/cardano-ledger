@@ -3,28 +3,28 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Cardano.Chain.UTxO.TxProof
-  ( TxProof (..),
-    mkTxProof,
-    recoverTxProof,
-  )
+module Cardano.Chain.UTxO.TxProof (
+  TxProof (..),
+  mkTxProof,
+  recoverTxProof,
+)
 where
 
-import Cardano.Chain.Common.Merkle
-  ( MerkleRoot,
-    mkMerkleTree,
-    mkMerkleTreeDecoded,
-    mtRoot,
-  )
+import Cardano.Chain.Common.Merkle (
+  MerkleRoot,
+  mkMerkleTree,
+  mkMerkleTreeDecoded,
+  mtRoot,
+ )
 import Cardano.Chain.UTxO.Tx (Tx)
-import Cardano.Chain.UTxO.TxPayload
-  ( ATxPayload,
-    TxPayload,
-    recoverHashedBytes,
-    txpAnnotatedTxs,
-    txpTxs,
-    txpWitnesses,
-  )
+import Cardano.Chain.UTxO.TxPayload (
+  ATxPayload,
+  TxPayload,
+  recoverHashedBytes,
+  txpAnnotatedTxs,
+  txpTxs,
+  txpWitnesses,
+ )
 import Cardano.Chain.UTxO.TxWitness (TxWitness)
 import Cardano.Crypto (Hash, hashDecoded, serializeCborHash)
 import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
@@ -35,9 +35,9 @@ import qualified Formatting.Buildable as B
 import NoThunks.Class (NoThunks (..))
 
 data TxProof = TxProof
-  { txpNumber :: !Word32,
-    txpRoot :: !(MerkleRoot Tx),
-    txpWitnessesHash :: !(Hash [TxWitness])
+  { txpNumber :: !Word32
+  , txpRoot :: !(MerkleRoot Tx)
+  , txpWitnessesHash :: !(Hash [TxWitness])
   }
   deriving (Show, Eq, Generic, NoThunks)
   deriving anyclass (NFData)
@@ -77,15 +77,15 @@ instance FromCBOR TxProof where
 mkTxProof :: TxPayload -> TxProof
 mkTxProof payload =
   TxProof
-    { txpNumber = fromIntegral (length $ txpTxs payload),
-      txpRoot = mtRoot (mkMerkleTree $ txpTxs payload),
-      txpWitnessesHash = serializeCborHash $ txpWitnesses payload
+    { txpNumber = fromIntegral (length $ txpTxs payload)
+    , txpRoot = mtRoot (mkMerkleTree $ txpTxs payload)
+    , txpWitnessesHash = serializeCborHash $ txpWitnesses payload
     }
 
 recoverTxProof :: ATxPayload ByteString -> TxProof
 recoverTxProof payload =
   TxProof
-    { txpNumber = fromIntegral (length $ txpTxs payload),
-      txpRoot = mtRoot (mkMerkleTreeDecoded $ txpAnnotatedTxs payload),
-      txpWitnessesHash = hashDecoded $ recoverHashedBytes payload
+    { txpNumber = fromIntegral (length $ txpTxs payload)
+    , txpRoot = mtRoot (mkMerkleTreeDecoded $ txpAnnotatedTxs payload)
+    , txpWitnessesHash = hashDecoded $ recoverHashedBytes payload
     }

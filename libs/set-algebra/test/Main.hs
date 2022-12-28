@@ -10,8 +10,8 @@ tests :: TestTree
 tests =
   testGroup
     "set-algebra"
-    [ setAlgTest,
-      relationTests
+    [ setAlgTest
+    , relationTests
     ]
 
 main :: IO ()

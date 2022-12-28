@@ -17,49 +17,49 @@ import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Data (AlonzoTxAuxData (..), Data (..), mkAlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.PParams
-  ( AlonzoPParams,
-    AlonzoPParamsHKD (..),
-    extendPP,
-    getLanguageView,
-    retractPP,
-  )
+import Cardano.Ledger.Alonzo.PParams (
+  AlonzoPParams,
+  AlonzoPParamsHKD (..),
+  extendPP,
+  getLanguageView,
+  retractPP,
+ )
 import Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo (language)
 import Cardano.Ledger.Alonzo.Rules (vKeyLocked)
-import Cardano.Ledger.Alonzo.Scripts as Alonzo
-  ( AlonzoScript (..),
-    CostModel,
-    CostModels (..),
-    ExUnits (..),
-    Prices (..),
-    isPlutusScript,
-    mkCostModel,
-    pointWiseExUnits,
-    txscriptfee,
-  )
-import Cardano.Ledger.Alonzo.Tx
-  ( AlonzoEraTx (..),
-    AlonzoTx (..),
-    IsValid (..),
-    ScriptPurpose (..),
-    hashScriptIntegrity,
-    rdptr,
-    totExUnits,
-  )
-import Cardano.Ledger.Alonzo.TxBody
-  ( AlonzoEraTxBody (..),
-    AlonzoTxBody (..),
-    AlonzoTxOut (..),
-    inputs',
-    utxoEntrySize,
-  )
-import Cardano.Ledger.Alonzo.TxWits
-  ( AlonzoEraTxWits (..),
-    AlonzoTxWits (..),
-    RdmrPtr (..),
-    Redeemers (..),
-    TxDats (..),
-  )
+import Cardano.Ledger.Alonzo.Scripts as Alonzo (
+  AlonzoScript (..),
+  CostModel,
+  CostModels (..),
+  ExUnits (..),
+  Prices (..),
+  isPlutusScript,
+  mkCostModel,
+  pointWiseExUnits,
+  txscriptfee,
+ )
+import Cardano.Ledger.Alonzo.Tx (
+  AlonzoEraTx (..),
+  AlonzoTx (..),
+  IsValid (..),
+  ScriptPurpose (..),
+  hashScriptIntegrity,
+  rdptr,
+  totExUnits,
+ )
+import Cardano.Ledger.Alonzo.TxBody (
+  AlonzoEraTxBody (..),
+  AlonzoTxBody (..),
+  AlonzoTxOut (..),
+  inputs',
+  utxoEntrySize,
+ )
+import Cardano.Ledger.Alonzo.TxWits (
+  AlonzoEraTxWits (..),
+  AlonzoTxWits (..),
+  RdmrPtr (..),
+  Redeemers (..),
+  TxDats (..),
+ )
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes
@@ -70,24 +70,24 @@ import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash, KeyRole (Witness))
 import Cardano.Ledger.Mary (MaryEra)
-import Cardano.Ledger.Mary.Value
-  ( AssetName (..),
-    MultiAsset (..),
-    PolicyID (..),
-    multiAssetFromList,
-    policies,
-  )
+import Cardano.Ledger.Mary.Value (
+  AssetName (..),
+  MultiAsset (..),
+  PolicyID (..),
+  multiAssetFromList,
+  policies,
+ )
 import Cardano.Ledger.Pretty.Alonzo ()
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl)
 import Cardano.Ledger.TxIn (TxIn)
-import Cardano.Ledger.UTxO
-  ( EraUTxO (..),
-    UTxO (..),
-    coinBalance,
-    getScriptsHashesNeeded,
-    getScriptsNeeded,
-  )
+import Cardano.Ledger.UTxO (
+  EraUTxO (..),
+  UTxO (..),
+  coinBalance,
+  getScriptsHashesNeeded,
+  getScriptsNeeded,
+ )
 import Cardano.Ledger.Val (Val (isAdaOnly, (<+>), (<×>)))
 import Control.Monad (replicateM)
 import Data.Either (fromRight)
@@ -108,29 +108,29 @@ import qualified PlutusTx as P (Data (..))
 import qualified PlutusTx as Plutus
 import System.Random
 import Test.Cardano.Ledger.AllegraEraGen (genValidityInterval)
-import Test.Cardano.Ledger.Alonzo.PlutusScripts
-  ( evenRedeemer2,
-    evendata3,
-    guessTheNumber3,
-    oddRedeemer2,
-    odddata3,
-    redeemerIs102,
-    sumsTo103,
-  )
+import Test.Cardano.Ledger.Alonzo.PlutusScripts (
+  evenRedeemer2,
+  evendata3,
+  guessTheNumber3,
+  oddRedeemer2,
+  odddata3,
+  redeemerIs102,
+  sumsTo103,
+ )
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Binary.Random
 import Test.Cardano.Ledger.MaryEraGen (addTokens, genMint, maryGenesisValue, policyIndex)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
-import Test.Cardano.Ledger.Shelley.Generator.Core
-  ( GenEnv (..),
-    ScriptInfo,
-    TwoPhase2ArgInfo (..),
-    TwoPhase3ArgInfo (..),
-    findPlutus,
-    genNatural,
-    hashData,
-  )
+import Test.Cardano.Ledger.Shelley.Generator.Core (
+  GenEnv (..),
+  ScriptInfo,
+  TwoPhase2ArgInfo (..),
+  TwoPhase3ArgInfo (..),
+  findPlutus,
+  genNatural,
+  hashData,
+ )
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..), MinGenTxout (..))
 import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (Quantifier (..), ScriptClass (..))
 import Test.Cardano.Ledger.Shelley.Generator.Update (genM, genShelleyPParamsUpdate)
@@ -152,12 +152,12 @@ phase2scripts3Arg =
       (hashScript @(AlonzoEra c) (alwaysSucceeds PlutusV1 3))
       (P.I 1)
       (P.I 1, bigMem, bigStep)
-      True,
-    TwoPhase3ArgInfo guessTheNumber3 (hashScript @(AlonzoEra c) guessTheNumber3) (P.I 9) (P.I 9, bigMem, bigStep) True,
-    TwoPhase3ArgInfo evendata3 (hashScript @(AlonzoEra c) evendata3) (P.I 8) (P.I 8, bigMem, bigStep) True,
-    TwoPhase3ArgInfo odddata3 (hashScript @(AlonzoEra c) odddata3) (P.I 9) (P.I 9, bigMem, bigStep) True,
-    TwoPhase3ArgInfo sumsTo103 (hashScript @(AlonzoEra c) sumsTo103) (P.I 1) (P.I 9, bigMem, bigStep) True,
-    TwoPhase3ArgInfo
+      True
+  , TwoPhase3ArgInfo guessTheNumber3 (hashScript @(AlonzoEra c) guessTheNumber3) (P.I 9) (P.I 9, bigMem, bigStep) True
+  , TwoPhase3ArgInfo evendata3 (hashScript @(AlonzoEra c) evendata3) (P.I 8) (P.I 8, bigMem, bigStep) True
+  , TwoPhase3ArgInfo odddata3 (hashScript @(AlonzoEra c) odddata3) (P.I 9) (P.I 9, bigMem, bigStep) True
+  , TwoPhase3ArgInfo sumsTo103 (hashScript @(AlonzoEra c) sumsTo103) (P.I 1) (P.I 9, bigMem, bigStep) True
+  , TwoPhase3ArgInfo
       (alwaysFails PlutusV1 3)
       (hashScript @(AlonzoEra c) (alwaysFails PlutusV1 3))
       (P.I 1)
@@ -171,11 +171,11 @@ phase2scripts2Arg =
       (alwaysSucceeds PlutusV1 2)
       (hashScript @(AlonzoEra c) (alwaysSucceeds PlutusV1 2))
       (P.I 1, bigMem, bigStep)
-      True,
-    TwoPhase2ArgInfo oddRedeemer2 (hashScript @(AlonzoEra c) oddRedeemer2) (P.I 13, bigMem, bigStep) True,
-    TwoPhase2ArgInfo evenRedeemer2 (hashScript @(AlonzoEra c) evenRedeemer2) (P.I 14, bigMem, bigStep) True,
-    TwoPhase2ArgInfo redeemerIs102 (hashScript @(AlonzoEra c) redeemerIs102) (P.I 10, bigMem, bigStep) True,
-    TwoPhase2ArgInfo (alwaysFails PlutusV1 2) (hashScript @(AlonzoEra c) (alwaysFails PlutusV1 2)) (P.I 1, bigMem, bigStep) False
+      True
+  , TwoPhase2ArgInfo oddRedeemer2 (hashScript @(AlonzoEra c) oddRedeemer2) (P.I 13, bigMem, bigStep) True
+  , TwoPhase2ArgInfo evenRedeemer2 (hashScript @(AlonzoEra c) evenRedeemer2) (P.I 14, bigMem, bigStep) True
+  , TwoPhase2ArgInfo redeemerIs102 (hashScript @(AlonzoEra c) redeemerIs102) (P.I 10, bigMem, bigStep) True
+  , TwoPhase2ArgInfo (alwaysFails PlutusV1 2) (hashScript @(AlonzoEra c) (alwaysFails PlutusV1 2)) (P.I 1, bigMem, bigStep) False
   ]
 
 phase2scripts3ArgSucceeds :: forall c. Mock c => AlonzoScript (AlonzoEra c) -> Bool
@@ -225,21 +225,21 @@ genPlutusData = resize 5 (sized gendata)
   where
     gendata n
       | n > 0 =
-        oneof
-          [ Plutus.I <$> arbitrary,
-            Plutus.B <$> arbitrary,
-            Plutus.Map <$> listOf (genPair (gendata (n `div` 2)) (gendata (n `div` 2))),
-            Plutus.Constr <$> arbitrary <*> listOf (gendata (n `div` 2)),
-            Plutus.List <$> listOf (gendata (n `div` 2))
-          ]
+          oneof
+            [ Plutus.I <$> arbitrary
+            , Plutus.B <$> arbitrary
+            , Plutus.Map <$> listOf (genPair (gendata (n `div` 2)) (gendata (n `div` 2)))
+            , Plutus.Constr <$> arbitrary <*> listOf (gendata (n `div` 2))
+            , Plutus.List <$> listOf (gendata (n `div` 2))
+            ]
     gendata _ = oneof [Plutus.I <$> arbitrary, Plutus.B <$> arbitrary]
 
 genSet :: Ord a => Gen a -> Gen (Set a)
 genSet gen =
   frequency
-    [ (1, pure Set.empty),
-      (2, Set.fromList <$> sequence [gen]),
-      (1, Set.fromList <$> sequence [gen, gen])
+    [ (1, pure Set.empty)
+    , (2, Set.fromList <$> sequence [gen])
+    , (1, Set.fromList <$> sequence [gen, gen])
     ]
 
 genAux :: forall c. Mock c => Constants -> Gen (StrictMaybe (AlonzoTxAuxData (AlonzoEra c)))
@@ -310,8 +310,8 @@ genAlonzoTxBody _genenv utxo pparams currentslot input txOuts certs wdrls fee up
         -- as Remdeemers are added it is recomputed in updateEraTxBody
         (hashScriptIntegrity @(AlonzoEra c) Set.empty (Redeemers Map.empty) (TxDats Map.empty))
         auxDHash
-        netid,
-      List.map TimelockScript scriptsFromPolicies <> plutusScripts
+        netid
+    , List.map TimelockScript scriptsFromPolicies <> plutusScripts
     )
 
 genSlotAfter :: SlotNo -> Gen SlotNo
@@ -385,11 +385,11 @@ instance Mock c => EraGen (AlonzoEra c) where
       langViews = Set.map (getLanguageView pp) langs
       new =
         txb
-          { atbInputs = atbInputs txb <> txin,
-            atbCollateral = atbCollateral txb <> Set.filter (okAsCollateral utxo) txin, -- In Alonzo, extra inputs also are added to collateral
-            atbTxFee = coinx,
-            atbOutputs = atbOutputs txb :|> txout,
-            -- The witnesses may have changed, recompute the scriptIntegrityHash.
+          { atbInputs = atbInputs txb <> txin
+          , atbCollateral = atbCollateral txb <> Set.filter (okAsCollateral utxo) txin -- In Alonzo, extra inputs also are added to collateral
+          , atbTxFee = coinx
+          , atbOutputs = atbOutputs txb :|> txout
+          , -- The witnesses may have changed, recompute the scriptIntegrityHash.
             atbScriptIntegrityHash =
               hashScriptIntegrity
                 langViews
@@ -573,16 +573,18 @@ someLeaf ::
   KeyHash 'Witness (EraCrypto era) ->
   AlonzoScript era
 someLeaf _proxy keyHash =
-  let -- We use KeyHash as a source of entropy for initialization of an StdGen for
-      -- generating slot and mode
-      (s, g) = uniformR (0, 199) $ mkHashStdGen keyHash
-      slot = SlotNo s
-      (mode, _) = uniformR (0 :: Int, 2) g -- mode==0 is a time leaf,  mode 1 or 2 is a signature leaf
-   in case mode of
-        0 ->
-          TimelockScript $
-            (RequireAnyOf . Seq.fromList) [RequireTimeStart slot, RequireTimeExpire slot]
-        _ -> TimelockScript $ RequireSignature keyHash
+  let
+    -- We use KeyHash as a source of entropy for initialization of an StdGen for
+    -- generating slot and mode
+    (s, g) = uniformR (0, 199) $ mkHashStdGen keyHash
+    slot = SlotNo s
+    (mode, _) = uniformR (0 :: Int, 2) g -- mode==0 is a time leaf,  mode 1 or 2 is a signature leaf
+   in
+    case mode of
+      0 ->
+        TimelockScript $
+          (RequireAnyOf . Seq.fromList) [RequireTimeStart slot, RequireTimeExpire slot]
+      _ -> TimelockScript $ RequireSignature keyHash
 
 -- | given the "txscripts" field of the TxWits, compute the set of languages used in a transaction
 langsUsed ::

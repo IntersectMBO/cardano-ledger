@@ -13,9 +13,9 @@ import Hedgehog.Internal.Property (CoverPercentage)
 
 coverDelegFailures ::
   forall m a.
-  ( MonadTest m,
-    HasCallStack,
-    Data a
+  ( MonadTest m
+  , HasCallStack
+  , Data a
   ) =>
   CoverPercentage ->
   a ->
@@ -23,10 +23,10 @@ coverDelegFailures ::
 coverDelegFailures coverPercentage =
   Generator.coverFailures @_ @SDELEG
     coverPercentage
-    [ EpochInThePast (EpochDiff 0 0), -- The value here is ignored, only the constructor is compared
-      EpochPastNextEpoch (EpochDiff 0 0), -- The value here is ignored, only the constructor is compared
-      IsAlreadyScheduled,
-      IsNotGenesisKey,
-      HasAlreadyDelegated,
-      DoesNotVerify
+    [ EpochInThePast (EpochDiff 0 0) -- The value here is ignored, only the constructor is compared
+    , EpochPastNextEpoch (EpochDiff 0 0) -- The value here is ignored, only the constructor is compared
+    , IsAlreadyScheduled
+    , IsNotGenesisKey
+    , HasAlreadyDelegated
+    , DoesNotVerify
     ]

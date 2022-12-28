@@ -7,16 +7,16 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Test.Cardano.Ledger.Core.KeyPair
-  ( mkAddr,
-    mkCred,
-    KeyPair (..),
-    KeyPairs,
-    mkWitnessVKey,
-    mkWitnessesVKey,
-    makeWitnessesFromScriptKeys,
-    mkVKeyRwdAcnt,
-  )
+module Test.Cardano.Ledger.Core.KeyPair (
+  mkAddr,
+  mkCred,
+  KeyPair (..),
+  KeyPairs,
+  mkWitnessVKey,
+  mkWitnessesVKey,
+  makeWitnessesFromScriptKeys,
+  mkVKeyRwdAcnt,
+)
 where
 
 import qualified Cardano.Crypto.DSIGN as DSIGN
@@ -24,23 +24,23 @@ import qualified Cardano.Crypto.Hash as CH
 import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes (Network (Testnet))
 import Cardano.Ledger.Core (EraIndependentTxBody)
-import Cardano.Ledger.Credential
-  ( Credential (..),
-    StakeReference (..),
-  )
+import Cardano.Ledger.Credential (
+  Credential (..),
+  StakeReference (..),
+ )
 import Cardano.Ledger.Crypto (Crypto, DSIGN, HASH)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Keys
-  ( DSignable,
-    HasKeyRole,
-    Hash,
-    KeyHash (..),
-    KeyRole (..),
-    VKey,
-    asWitness,
-    hashKey,
-    signedDSIGN,
-  )
+import Cardano.Ledger.Keys (
+  DSignable,
+  HasKeyRole,
+  Hash,
+  KeyHash (..),
+  KeyRole (..),
+  VKey,
+  asWitness,
+  hashKey,
+  signedDSIGN,
+ )
 import Cardano.Ledger.Keys.WitVKey
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Control.DeepSeq (NFData)
@@ -53,8 +53,8 @@ import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
 data KeyPair (kd :: KeyRole) c = KeyPair
-  { vKey :: !(VKey kd c),
-    sKey :: !(DSIGN.SignKeyDSIGN (DSIGN c))
+  { vKey :: !(VKey kd c)
+  , sKey :: !(DSIGN.SignKeyDSIGN (DSIGN c))
   }
   deriving (Generic, Show)
 
@@ -62,9 +62,9 @@ data KeyPair (kd :: KeyRole) c = KeyPair
 type KeyPairs c = [(KeyPair 'Payment c, KeyPair 'Staking c)]
 
 instance
-  ( Crypto c,
-    NFData (DSIGN.VerKeyDSIGN (DSIGN c)),
-    NFData (DSIGN.SignKeyDSIGN (DSIGN c))
+  ( Crypto c
+  , NFData (DSIGN.VerKeyDSIGN (DSIGN c))
+  , NFData (DSIGN.SignKeyDSIGN (DSIGN c))
   ) =>
   NFData (KeyPair kd c)
 
@@ -87,8 +87,8 @@ mkCred k = KeyHashObj . hashKey $ vKey k
 -- | Create a witness for transaction
 mkWitnessVKey ::
   forall c kr.
-  ( Crypto c,
-    DSignable c (CH.Hash (HASH c) EraIndependentTxBody)
+  ( Crypto c
+  , DSignable c (CH.Hash (HASH c) EraIndependentTxBody)
   ) =>
   SafeHash c EraIndependentTxBody ->
   KeyPair kr c ->
@@ -99,8 +99,8 @@ mkWitnessVKey safe keys =
 -- | Create witnesses for transaction
 mkWitnessesVKey ::
   forall c kr.
-  ( Crypto c,
-    DSignable c (CH.Hash (HASH c) EraIndependentTxBody)
+  ( Crypto c
+  , DSignable c (CH.Hash (HASH c) EraIndependentTxBody)
   ) =>
   SafeHash c EraIndependentTxBody ->
   [KeyPair kr c] ->

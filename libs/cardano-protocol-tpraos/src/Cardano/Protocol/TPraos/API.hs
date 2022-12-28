@@ -21,23 +21,23 @@
 --
 -- In particular, this code supports extracting the components of the ledger
 -- state needed for protocol execution, both now and in a 2k-slot window.
-module Cardano.Protocol.TPraos.API
-  ( PraosCrypto,
-    GetLedgerView (..),
-    LedgerView (..),
-    mkInitialShelleyLedgerView,
-    FutureLedgerViewError (..),
-    -- $chainstate
-    ChainDepState (..),
-    ChainTransitionError (..),
-    tickChainDepState,
-    updateChainDepState,
-    reupdateChainDepState,
-    initialChainDepState,
-    -- Leader Schedule
-    checkLeaderValue,
-    getLeaderSchedule,
-  )
+module Cardano.Protocol.TPraos.API (
+  PraosCrypto,
+  GetLedgerView (..),
+  LedgerView (..),
+  mkInitialShelleyLedgerView,
+  FutureLedgerViewError (..),
+  -- $chainstate
+  ChainDepState (..),
+  ChainTransitionError (..),
+  tickChainDepState,
+  updateChainDepState,
+  reupdateChainDepState,
+  initialChainDepState,
+  -- Leader Schedule
+  checkLeaderValue,
+  getLeaderSchedule,
+)
 where
 
 import qualified Cardano.Crypto.VRF as VRF
@@ -45,53 +45,53 @@ import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.BHeaderView (isOverlaySlot)
 import Cardano.Ledger.Babbage (BabbageEra)
-import Cardano.Ledger.BaseTypes
-  ( Globals (..),
-    Nonce (NeutralNonce),
-    Seed,
-    ShelleyBase,
-    UnitInterval,
-    epochInfoPure,
-  )
+import Cardano.Ledger.BaseTypes (
+  Globals (..),
+  Nonce (NeutralNonce),
+  Seed,
+  ShelleyBase,
+  UnitInterval,
+  epochInfoPure,
+ )
 import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), decodeRecordNamed, encodeListLen)
 import Cardano.Ledger.Chain (ChainChecksPParams, pparamsToChainChecksPParams)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto, StandardCrypto, VRF)
-import Cardano.Ledger.Keys
-  ( DSignable,
-    GenDelegPair (..),
-    GenDelegs (..),
-    KESignable,
-    KeyHash,
-    KeyRole (..),
-    SignKeyVRF,
-    VRFSignable,
-    coerceKeyRole,
-  )
+import Cardano.Ledger.Keys (
+  DSignable,
+  GenDelegPair (..),
+  GenDelegs (..),
+  KESignable,
+  KeyHash,
+  KeyRole (..),
+  SignKeyVRF,
+  VRFSignable,
+  coerceKeyRole,
+ )
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.PoolDistr (PoolDistr (..), individualPoolStake)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Genesis (ShelleyGenesis (..))
-import Cardano.Ledger.Shelley.LedgerState
-  ( EpochState (..),
-    NewEpochState (..),
-    dpsDState,
-    dsGenDelegs,
-    lsDPState,
-  )
+import Cardano.Ledger.Shelley.LedgerState (
+  EpochState (..),
+  NewEpochState (..),
+  dpsDState,
+  dsGenDelegs,
+  lsDPState,
+ )
 import Cardano.Ledger.Shelley.Rules (ShelleyTickfPredFailure)
 import Cardano.Ledger.Slot (SlotNo)
-import Cardano.Protocol.TPraos.BHeader
-  ( BHBody,
-    BHeader,
-    bhbody,
-    bheaderPrev,
-    checkLeaderValue,
-    mkSeed,
-    prevHashToNonce,
-    seedL,
-  )
+import Cardano.Protocol.TPraos.BHeader (
+  BHBody,
+  BHeader,
+  bhbody,
+  bheaderPrev,
+  checkLeaderValue,
+  mkSeed,
+  prevHashToNonce,
+  seedL,
+ )
 import Cardano.Protocol.TPraos.OCert (OCertSignable)
 import qualified Cardano.Protocol.TPraos.Rules.Prtcl as STS.Prtcl
 import Cardano.Protocol.TPraos.Rules.Tickn as STS.Tickn
@@ -100,16 +100,16 @@ import Control.Arrow (left, right)
 import Control.Lens ((^.))
 import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
-import Control.State.Transition.Extended
-  ( BaseM,
-    Environment,
-    STS,
-    Signal,
-    State,
-    TRC (..),
-    applySTS,
-    reapplySTS,
-  )
+import Control.State.Transition.Extended (
+  BaseM,
+  Environment,
+  STS,
+  Signal,
+  State,
+  TRC (..),
+  applySTS,
+  reapplySTS,
+ )
 import Data.Either (fromRight)
 import Data.Functor.Identity (runIdentity)
 import Data.Map.Strict (Map)
@@ -122,26 +122,26 @@ import NoThunks.Class (NoThunks (..))
 -- =======================================================
 
 class
-  ( CC.Crypto c,
-    DSignable c (OCertSignable c),
-    KESignable c (BHBody c),
-    VRFSignable c Seed
+  ( CC.Crypto c
+  , DSignable c (OCertSignable c)
+  , KESignable c (BHBody c)
+  , VRFSignable c Seed
   ) =>
   PraosCrypto c
 
 instance PraosCrypto CC.StandardCrypto
 
 class
-  ( Eq (ChainTransitionError (EraCrypto era)),
-    Show (ChainTransitionError (EraCrypto era)),
-    Show (LedgerView (EraCrypto era)),
-    Show (FutureLedgerViewError era),
-    STS (EraRule "TICKF" era),
-    BaseM (EraRule "TICKF" era) ~ ShelleyBase,
-    Environment (EraRule "TICKF" era) ~ (),
-    State (EraRule "TICKF" era) ~ NewEpochState era,
-    Signal (EraRule "TICKF" era) ~ SlotNo,
-    PredicateFailure (EraRule "TICKF" era) ~ ShelleyTickfPredFailure era
+  ( Eq (ChainTransitionError (EraCrypto era))
+  , Show (ChainTransitionError (EraCrypto era))
+  , Show (LedgerView (EraCrypto era))
+  , Show (FutureLedgerViewError era)
+  , STS (EraRule "TICKF" era)
+  , BaseM (EraRule "TICKF" era) ~ ShelleyBase
+  , Environment (EraRule "TICKF" era) ~ ()
+  , State (EraRule "TICKF" era) ~ NewEpochState era
+  , Signal (EraRule "TICKF" era) ~ SlotNo
+  , PredicateFailure (EraRule "TICKF" era) ~ ShelleyTickfPredFailure era
   ) =>
   GetLedgerView era
   where
@@ -162,9 +162,9 @@ class
     SlotNo ->
     m (LedgerView (EraCrypto era))
   default futureLedgerView ::
-    ( MonadError (FutureLedgerViewError era) m,
-      EraPParams era,
-      ProtVerAtMost era 6
+    ( MonadError (FutureLedgerViewError era) m
+    , EraPParams era
+    , ProtVerAtMost era 6
     ) =>
     Globals ->
     NewEpochState era ->
@@ -186,15 +186,15 @@ instance CC.Crypto c => GetLedgerView (BabbageEra c) where
   currentLedgerView
     NewEpochState {nesPd = pd, nesEs = es} =
       LedgerView
-        { lvD = esPp es ^. ppDG,
-          lvExtraEntropy = error "Extra entropy is not set in the Babbage era",
-          lvPoolDistr = pd,
-          lvGenDelegs =
+        { lvD = esPp es ^. ppDG
+        , lvExtraEntropy = error "Extra entropy is not set in the Babbage era"
+        , lvPoolDistr = pd
+        , lvGenDelegs =
             dsGenDelegs
               . dpsDState
               . lsDPState
-              $ esLState es,
-          lvChainChecks = pparamsToChainChecksPParams . esPp $ es
+              $ esLState es
+        , lvChainChecks = pparamsToChainChecksPParams . esPp $ es
         }
 
   futureLedgerView globals ss slot =
@@ -214,15 +214,15 @@ instance CC.Crypto c => GetLedgerView (ConwayEra c) where
   currentLedgerView
     NewEpochState {nesPd = pd, nesEs = es} =
       LedgerView
-        { lvD = esPp es ^. ppDG,
-          lvExtraEntropy = error "Extra entropy is not set in the Conway era",
-          lvPoolDistr = pd,
-          lvGenDelegs =
+        { lvD = esPp es ^. ppDG
+        , lvExtraEntropy = error "Extra entropy is not set in the Conway era"
+        , lvPoolDistr = pd
+        , lvGenDelegs =
             dsGenDelegs
               . dpsDState
               . lsDPState
-              $ esLState es,
-          lvChainChecks = pparamsToChainChecksPParams . esPp $ es
+              $ esLState es
+        , lvChainChecks = pparamsToChainChecksPParams . esPp $ es
         }
 
   futureLedgerView globals ss slot =
@@ -238,16 +238,16 @@ instance CC.Crypto c => GetLedgerView (ConwayEra c) where
 
 -- | Data required by the Transitional Praos protocol from the Shelley ledger.
 data LedgerView c = LedgerView
-  { lvD :: UnitInterval,
-    -- Note that this field is not present in Babbage, but we require this view
+  { lvD :: UnitInterval
+  , -- Note that this field is not present in Babbage, but we require this view
     -- in order to construct the Babbage ledger view. We allow this to be lazy
     -- so that we may set it to an error. Note that `LedgerView` is never
     -- serialised, so this should not be forced except as a result of a
     -- programmer error.
-    lvExtraEntropy :: ~Nonce,
-    lvPoolDistr :: PoolDistr c,
-    lvGenDelegs :: GenDelegs c,
-    lvChainChecks :: ChainChecksPParams
+    lvExtraEntropy :: ~Nonce
+  , lvPoolDistr :: PoolDistr c
+  , lvGenDelegs :: GenDelegs c
+  , lvChainChecks :: ChainChecksPParams
   }
   deriving (Eq, Show, Generic)
 
@@ -263,9 +263,9 @@ mkPrtclEnv ::
   STS.Prtcl.PrtclEnv c
 mkPrtclEnv
   LedgerView
-    { lvD,
-      lvPoolDistr,
-      lvGenDelegs
+    { lvD
+    , lvPoolDistr
+    , lvGenDelegs
     } =
     STS.Prtcl.PrtclEnv
       lvD
@@ -278,20 +278,20 @@ view ::
   LedgerView (EraCrypto era)
 view
   NewEpochState
-    { nesPd = pd,
-      nesEs = es
+    { nesPd = pd
+    , nesEs = es
     } =
     let !ee = esPp es ^. ppExtraEntropyL
      in LedgerView
-          { lvD = esPp es ^. ppDG,
-            lvExtraEntropy = ee,
-            lvPoolDistr = pd,
-            lvGenDelegs =
+          { lvD = esPp es ^. ppDG
+          , lvExtraEntropy = ee
+          , lvPoolDistr = pd
+          , lvGenDelegs =
               dsGenDelegs
                 . dpsDState
                 . lsDPState
-                $ esLState es,
-            lvChainChecks = pparamsToChainChecksPParams . esPp $ es
+                $ esLState es
+          , lvChainChecks = pparamsToChainChecksPParams . esPp $ es
           }
 
 -- $timetravel
@@ -340,15 +340,15 @@ deriving stock instance
 --   appropriate to that slot.
 futureView ::
   forall era m.
-  ( MonadError (FutureLedgerViewError era) m,
-    STS (EraRule "TICKF" era),
-    BaseM (EraRule "TICKF" era) ~ ShelleyBase,
-    Environment (EraRule "TICKF" era) ~ (),
-    State (EraRule "TICKF" era) ~ NewEpochState era,
-    Signal (EraRule "TICKF" era) ~ SlotNo,
-    PredicateFailure (EraRule "TICKF" era) ~ ShelleyTickfPredFailure era,
-    EraPParams era,
-    ProtVerAtMost era 6
+  ( MonadError (FutureLedgerViewError era) m
+  , STS (EraRule "TICKF" era)
+  , BaseM (EraRule "TICKF" era) ~ ShelleyBase
+  , Environment (EraRule "TICKF" era) ~ ()
+  , State (EraRule "TICKF" era) ~ NewEpochState era
+  , Signal (EraRule "TICKF" era) ~ SlotNo
+  , PredicateFailure (EraRule "TICKF" era) ~ ShelleyTickfPredFailure era
+  , EraPParams era
+  , ProtVerAtMost era 6
   ) =>
   Globals ->
   NewEpochState era ->
@@ -372,10 +372,10 @@ futureView globals ss slot =
 -- The chain state is an amalgam of the protocol state and the ticked nonce.
 
 data ChainDepState c = ChainDepState
-  { csProtocol :: !(STS.Prtcl.PrtclState c),
-    csTickn :: !STS.Tickn.TicknState,
-    -- | Nonce constructed from the hash of the last applied block header.
-    csLabNonce :: !Nonce
+  { csProtocol :: !(STS.Prtcl.PrtclState c)
+  , csTickn :: !STS.Tickn.TicknState
+  , csLabNonce :: !Nonce
+  -- ^ Nonce constructed from the hash of the last applied block header.
   }
   deriving (Eq, Show, Generic)
 
@@ -391,12 +391,12 @@ initialChainDepState initNonce genDelegs =
         STS.Prtcl.PrtclState
           ocertIssueNos
           initNonce
-          initNonce,
-      csTickn =
+          initNonce
+    , csTickn =
         STS.Tickn.TicknState
           initNonce
-          NeutralNonce,
-      csLabNonce =
+          NeutralNonce
+    , csLabNonce =
         NeutralNonce
     }
   where
@@ -423,15 +423,15 @@ instance CC.Crypto c => FromCBOR (ChainDepState c) where
 instance CC.Crypto c => ToCBOR (ChainDepState c) where
   toCBOR
     ChainDepState
-      { csProtocol,
-        csTickn,
-        csLabNonce
+      { csProtocol
+      , csTickn
+      , csLabNonce
       } =
       mconcat
-        [ encodeListLen 3,
-          toCBOR csProtocol,
-          toCBOR csTickn,
-          toCBOR csLabNonce
+        [ encodeListLen 3
+        , toCBOR csProtocol
+        , toCBOR csTickn
+        , toCBOR csLabNonce
         ]
 
 newtype ChainTransitionError c
@@ -468,9 +468,9 @@ tickChainDepState
             ( STS.Tickn.TicknEnv
                 lvExtraEntropy
                 candidateNonce
-                csLabNonce,
-              csTickn,
-              isNewEpoch
+                csLabNonce
+            , csTickn
+            , isNewEpoch
             )
 
 -- | Update the chain state based upon a new block header.
@@ -478,8 +478,8 @@ tickChainDepState
 --   This also updates the last applied block hash.
 updateChainDepState ::
   forall c m.
-  ( PraosCrypto c,
-    MonadError (ChainTransitionError c) m
+  ( PraosCrypto c
+  , MonadError (ChainTransitionError c) m
   ) =>
   Globals ->
   LedgerView c ->
@@ -495,8 +495,8 @@ updateChainDepState
       . right
         ( \newPrtclState ->
             cs
-              { csProtocol = newPrtclState,
-                csLabNonce = prevHashToNonce (bheaderPrev . bhbody $ bh)
+              { csProtocol = newPrtclState
+              , csLabNonce = prevHashToNonce (bheaderPrev . bhbody $ bh)
               }
         )
       . left ChainTransitionError
@@ -506,9 +506,9 @@ updateChainDepState
         flip runReader globals
           . applySTS @(STS.Prtcl.PRTCL c)
           $ TRC
-            ( mkPrtclEnv lv epochNonce,
-              csProtocol,
-              bh
+            ( mkPrtclEnv lv epochNonce
+            , csProtocol
+            , bh
             )
       epochNonce = STS.Tickn.ticknStateEpochNonce csTickn
 
@@ -531,17 +531,17 @@ reupdateChainDepState
   bh
   cs@ChainDepState {csProtocol, csTickn} =
     cs
-      { csProtocol = res,
-        csLabNonce = prevHashToNonce (bheaderPrev . bhbody $ bh)
+      { csProtocol = res
+      , csLabNonce = prevHashToNonce (bheaderPrev . bhbody $ bh)
       }
     where
       res =
         flip runReader globals
           . reapplySTS @(STS.Prtcl.PRTCL c)
           $ TRC
-            ( mkPrtclEnv lv epochNonce,
-              csProtocol,
-              bh
+            ( mkPrtclEnv lv epochNonce
+            , csProtocol
+            , bh
             )
       epochNonce = STS.Tickn.ticknStateEpochNonce csTickn
 
@@ -550,11 +550,11 @@ reupdateChainDepState
 --   Given a private VRF key, returns the set of slots in which this node is
 --   eligible to lead.
 getLeaderSchedule ::
-  ( Era era,
-    VRF.Signable
+  ( Era era
+  , VRF.Signable
       (CC.VRF (EraCrypto era))
-      Seed,
-    EraPParams era
+      Seed
+  , EraPParams era
   ) =>
   Globals ->
   NewEpochState era ->
@@ -588,9 +588,9 @@ mkInitialShelleyLedgerView ::
 mkInitialShelleyLedgerView genesisShelley =
   let !ee = sgProtocolParams genesisShelley ^. ppExtraEntropyL
    in LedgerView
-        { lvD = sgProtocolParams genesisShelley ^. ppDG,
-          lvExtraEntropy = ee,
-          lvPoolDistr = PoolDistr Map.empty,
-          lvGenDelegs = GenDelegs $ sgGenDelegs genesisShelley,
-          lvChainChecks = pparamsToChainChecksPParams . sgProtocolParams $ genesisShelley
+        { lvD = sgProtocolParams genesisShelley ^. ppDG
+        , lvExtraEntropy = ee
+        , lvPoolDistr = PoolDistr Map.empty
+        , lvGenDelegs = GenDelegs $ sgGenDelegs genesisShelley
+        , lvChainChecks = pparamsToChainChecksPParams . sgProtocolParams $ genesisShelley
         }

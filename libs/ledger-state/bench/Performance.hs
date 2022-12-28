@@ -66,37 +66,37 @@ main = do
         bgroup
           "reapplyTx"
           [ env (pure validatedTx1) $
-              bench "Tx1" . whnf (reapplyTx' mempoolEnv mempoolState),
-            env (pure validatedTx2) $
-              bench "Tx2" . whnf (reapplyTx' mempoolEnv mempoolState),
-            env (pure validatedTx3) $
-              bench "Tx3" . whnf (reapplyTx' mempoolEnv mempoolState),
-            env
+              bench "Tx1" . whnf (reapplyTx' mempoolEnv mempoolState)
+          , env (pure validatedTx2) $
+              bench "Tx2" . whnf (reapplyTx' mempoolEnv mempoolState)
+          , env (pure validatedTx3) $
+              bench "Tx3" . whnf (reapplyTx' mempoolEnv mempoolState)
+          , env
               (pure [validatedTx1, validatedTx2, validatedTx3])
               $ bench "Tx1+Tx2+Tx3" . whnf (F.foldl' (reapplyTx' mempoolEnv) mempoolState)
-          ],
-      env (pure (mkMempoolEnv es slotNo, toMempoolState es)) $ \ ~(mempoolEnv, mempoolState) ->
+          ]
+    , env (pure (mkMempoolEnv es slotNo, toMempoolState es)) $ \ ~(mempoolEnv, mempoolState) ->
         bgroup
           "applyTx"
           [ env (pure (extractTx validatedTx1)) $
-              bench "Tx1" . whnf (applyTx' mempoolEnv mempoolState),
-            env (pure (extractTx validatedTx2)) $
-              bench "Tx2" . whnf (applyTx' mempoolEnv mempoolState),
-            env (pure (extractTx validatedTx3)) $
+              bench "Tx1" . whnf (applyTx' mempoolEnv mempoolState)
+          , env (pure (extractTx validatedTx2)) $
+              bench "Tx2" . whnf (applyTx' mempoolEnv mempoolState)
+          , env (pure (extractTx validatedTx3)) $
               bench "Tx3" . whnf (applyTx' mempoolEnv mempoolState)
-          ],
-      env (pure (getUTxO es)) $ \utxo ->
+          ]
+    , env (pure (getUTxO es)) $ \utxo ->
         bgroup
           "UTxO"
-          [ bench "balance" $ nf balance utxo,
-            bench "coinBalance" $ nf coinBalance utxo,
-            -- We need to filter out all multi-assets to prevent `areAllAdaOnly`
+          [ bench "balance" $ nf balance utxo
+          , bench "coinBalance" $ nf coinBalance utxo
+          , -- We need to filter out all multi-assets to prevent `areAllAdaOnly`
             -- from short circuiting and producing results that are way better
             -- than the worst case
             env (pure $ Map.filter (\txOut -> isAdaOnly (txOut ^. valueTxOutL)) $ unUTxO utxo) $
               bench "areAllAdaOnly" . nf areAllAdaOnly
-          ],
-      env (pure es) $ \newEpochState ->
+          ]
+    , env (pure es) $ \newEpochState ->
         let utxo = getUTxO es
             (_, minTxOut) = Map.findMin $ unUTxO utxo
             (_, maxTxOut) = Map.findMax $ unUTxO utxo
@@ -105,16 +105,16 @@ main = do
          in bgroup
               "MinMaxTxId"
               [ env (pure setAddr) $
-                  bench "getFilteredNewUTxO" . nf (getFilteredUTxO newEpochState),
-                env (pure setAddr) $
+                  bench "getFilteredNewUTxO" . nf (getFilteredUTxO newEpochState)
+              , env (pure setAddr) $
                   bench "getFilteredOldUTxO" . nf (getFilteredOldUTxO newEpochState)
-              ],
-      bgroup
+              ]
+    , bgroup
         "DeleteTxOuts"
-        [ extractKeysBench (unUTxO (getUTxO es)) largeKeysNum largeKeys,
-          extractKeysBench (unUTxO (getUTxO es)) 9 (Set.take 9 largeKeys),
-          extractKeysBench (unUTxO (getUTxO es)) 5 (Set.take 5 largeKeys),
-          extractKeysBench (unUTxO (getUTxO es)) 2 (Set.take 2 largeKeys)
+        [ extractKeysBench (unUTxO (getUTxO es)) largeKeysNum largeKeys
+        , extractKeysBench (unUTxO (getUTxO es)) 9 (Set.take 9 largeKeys)
+        , extractKeysBench (unUTxO (getUTxO es)) 5 (Set.take 5 largeKeys)
+        , extractKeysBench (unUTxO (getUTxO es)) 2 (Set.take 2 largeKeys)
         ]
     ]
 
@@ -128,10 +128,10 @@ extractKeysBench utxo n ks =
   bgroup
     (show n)
     [ env (pure utxo) $ \m ->
-        bench "extractKeys" $ whnf (seqTuple . extractKeys m) ks,
-      env (pure utxo) $ \m ->
-        bench "extractKeysSmallSet" $ whnf (seqTuple . extractKeysSmallSet m) ks,
-      env (pure utxo) $ \m ->
+        bench "extractKeys" $ whnf (seqTuple . extractKeys m) ks
+    , env (pure utxo) $ \m ->
+        bench "extractKeysSmallSet" $ whnf (seqTuple . extractKeysSmallSet m) ks
+    , env (pure utxo) $ \m ->
         bench "extractKeysNaive" $ whnf (seqTuple . extractKeysNaive m) ks
     ]
 
@@ -140,10 +140,10 @@ selectRandomMapKeys :: (Monad m, Ord k) => Int -> StdGen -> Map k v -> m (Set k)
 selectRandomMapKeys n gen m = runStateGenT_ gen $ \g ->
   let go !ixs !ks
         | Set.size ixs < n = do
-          ix <- uniformRM (0, Map.size m - 1) g
-          if ix `Set.member` ixs
-            then go ixs ks
-            else go (Set.insert ix ixs) (Set.insert (fst $ Map.elemAt ix m) ks)
+            ix <- uniformRM (0, Map.size m - 1) g
+            if ix `Set.member` ixs
+              then go ixs ks
+              else go (Set.insert ix ixs) (Set.insert (fst $ Map.elemAt ix m) ks)
         | otherwise = pure ks
    in go Set.empty Set.empty
 

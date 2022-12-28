@@ -9,9 +9,9 @@
 -- Description : Genesis Delegation Example
 --
 -- Example demonstrating Genesis Delegation
-module Test.Cardano.Ledger.Shelley.Examples.GenesisDelegation
-  ( genesisDelegExample,
-  )
+module Test.Cardano.Ledger.Shelley.Examples.GenesisDelegation (
+  genesisDelegExample,
+)
 where
 
 import Cardano.Crypto.DSIGN.Class (Signable)
@@ -24,24 +24,24 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as Cr
 import qualified Cardano.Ledger.Crypto as CryptoClass
-import Cardano.Ledger.Keys
-  ( GenDelegPair (..),
-    KeyRole (..),
-    asWitness,
-    hashKey,
-    hashVerKeyVRF,
-  )
+import Cardano.Ledger.Keys (
+  GenDelegPair (..),
+  KeyRole (..),
+  asWitness,
+  hashKey,
+  hashVerKeyVRF,
+ )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (FutureGenDeleg (..), PulsingRewUpdate)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
-import Cardano.Ledger.Shelley.TxBody
-  ( ConstitutionalDelegCert (..),
-    DCert (..),
-    ShelleyTxBody (..),
-    ShelleyTxOut (..),
-    Wdrl (..),
-  )
+import Cardano.Ledger.Shelley.TxBody (
+  ConstitutionalDelegCert (..),
+  DCert (..),
+  ShelleyTxBody (..),
+  ShelleyTxOut (..),
+  Wdrl (..),
+ )
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits, addrWits)
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn (..))
@@ -58,34 +58,34 @@ import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (ExMock)
 import Test.Cardano.Ledger.Shelley.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
 import qualified Test.Cardano.Ledger.Shelley.Examples.Combinators as C
-import Test.Cardano.Ledger.Shelley.Examples.Federation
-  ( coreNodeKeysBySchedule,
-    coreNodeSK,
-    coreNodeVK,
-  )
-import Test.Cardano.Ledger.Shelley.Examples.Init
-  ( initSt,
-    lastByronHeaderHash,
-    nonce0,
-    ppEx,
-  )
+import Test.Cardano.Ledger.Shelley.Examples.Federation (
+  coreNodeKeysBySchedule,
+  coreNodeSK,
+  coreNodeVK,
+ )
+import Test.Cardano.Ledger.Shelley.Examples.Init (
+  initSt,
+  lastByronHeaderHash,
+  nonce0,
+  ppEx,
+ )
 import Test.Cardano.Ledger.Shelley.Examples.PoolLifetime (makePulser')
-import Test.Cardano.Ledger.Shelley.Generator.Core
-  ( NatNonce (..),
-    genesisCoins,
-    mkBlockFakeVRF,
-    mkOCert,
-  )
+import Test.Cardano.Ledger.Shelley.Generator.Core (
+  NatNonce (..),
+  genesisCoins,
+  mkBlockFakeVRF,
+  mkOCert,
+ )
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
-import Test.Cardano.Ledger.Shelley.Utils
-  ( RawSeed (..),
-    ShelleyTest,
-    getBlockNonce,
-    mkKeyPair,
-    mkVRFKeyPair,
-  )
+import Test.Cardano.Ledger.Shelley.Utils (
+  RawSeed (..),
+  ShelleyTest,
+  getBlockNonce,
+  mkKeyPair,
+  mkVRFKeyPair,
+ )
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
 
@@ -93,8 +93,8 @@ initUTxO :: (ShelleyTest era) => UTxO era
 initUTxO =
   genesisCoins
     genesisId
-    [ ShelleyTxOut Cast.aliceAddr aliceInitCoin,
-      ShelleyTxOut Cast.bobAddr bobInitCoin
+    [ ShelleyTxOut Cast.aliceAddr aliceInitCoin
+    , ShelleyTxOut Cast.bobAddr bobInitCoin
     ]
   where
     aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
@@ -150,8 +150,8 @@ txbodyEx1 =
 
 txEx1 ::
   forall c.
-  ( CryptoClass.Crypto c,
-    Signable (CryptoClass.DSIGN c) (Hash.Hash (CryptoClass.HASH c) EraIndependentTxBody)
+  ( CryptoClass.Crypto c
+  , Signable (CryptoClass.DSIGN c) (Hash.Hash (CryptoClass.HASH c) EraIndependentTxBody)
   ) =>
   ShelleyTx (ShelleyEra c)
 txEx1 = ShelleyTx txbodyEx1 txwits SNothing
@@ -164,9 +164,9 @@ txEx1 = ShelleyTx txbodyEx1 txwits SNothing
               (hashAnnotated (txbodyEx1 @c))
               ( [asWitness Cast.alicePay]
                   <> [ asWitness $
-                         KeyPair @'Genesis @c
-                           (coreNodeVK 0)
-                           (coreNodeSK @c 0)
+                        KeyPair @'Genesis @c
+                          (coreNodeVK 0)
+                          (coreNodeSK @c 0)
                      ]
               )
         }
@@ -194,8 +194,8 @@ newGenDeleg ::
   CryptoClass.Crypto c =>
   (FutureGenDeleg c, GenDelegPair c)
 newGenDeleg =
-  ( FutureGenDeleg (SlotNo 43) (hashKey $ coreNodeVK 0),
-    GenDelegPair (hashKey . vKey $ newGenDelegate) newGenesisVrfKH
+  ( FutureGenDeleg (SlotNo 43) (hashKey $ coreNodeVK 0)
+  , GenDelegPair (hashKey . vKey $ newGenDelegate) newGenesisVrfKH
   )
 
 expectedStEx1 ::
@@ -270,6 +270,6 @@ genesisDelegExample :: TestTree
 genesisDelegExample =
   testGroup
     "genesis delegation"
-    [ testCase "stage genesis key delegation" $ testCHAINExample genesisDelegation1,
-      testCase "adopt genesis key delegation" $ testCHAINExample genesisDelegation2
+    [ testCase "stage genesis key delegation" $ testCHAINExample genesisDelegation1
+    , testCase "adopt genesis key delegation" $ testCHAINExample genesisDelegation2
     ]

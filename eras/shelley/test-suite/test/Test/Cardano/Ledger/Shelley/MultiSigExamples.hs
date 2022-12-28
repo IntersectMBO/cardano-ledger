@@ -5,67 +5,67 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Test.Cardano.Ledger.Shelley.MultiSigExamples
-  ( applyTxWithScript,
-    aliceOnly,
-    bobOnly,
-    aliceAndBob,
-    aliceOrBob,
-    aliceAndBobOrCarl,
-    aliceAndBobOrCarlAndDaria,
-    aliceAndBobOrCarlOrDaria,
-  )
+module Test.Cardano.Ledger.Shelley.MultiSigExamples (
+  applyTxWithScript,
+  aliceOnly,
+  bobOnly,
+  aliceAndBob,
+  aliceOrBob,
+  aliceAndBobOrCarl,
+  aliceAndBobOrCarlAndDaria,
+  aliceAndBobOrCarlOrDaria,
+)
 where
 
 import qualified Cardano.Crypto.Hash as Hash
-import Cardano.Ledger.Address
-  ( Addr,
-    pattern Addr,
-  )
-import Cardano.Ledger.BaseTypes
-  ( Network (..),
-    StrictMaybe (..),
-    maybeToStrictMaybe,
-    mkTxIxPartial,
-  )
+import Cardano.Ledger.Address (
+  Addr,
+  pattern Addr,
+ )
+import Cardano.Ledger.BaseTypes (
+  Network (..),
+  StrictMaybe (..),
+  maybeToStrictMaybe,
+  mkTxIxPartial,
+ )
 import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential
-  ( pattern KeyHashObj,
-    pattern ScriptHashObj,
-    pattern StakeRefBase,
-  )
-import Cardano.Ledger.Keys
-  ( GenDelegs (..),
-    KeyHash (..),
-    KeyRole (..),
-    asWitness,
-  )
+import Cardano.Ledger.Credential (
+  pattern KeyHashObj,
+  pattern ScriptHashObj,
+  pattern StakeRefBase,
+ )
+import Cardano.Ledger.Keys (
+  GenDelegs (..),
+  KeyHash (..),
+  KeyRole (..),
+  asWitness,
+ )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (ShelleyUTXOW)
-import Cardano.Ledger.Shelley.LedgerState
-  ( LedgerState (..),
-    UTxOState,
-    genesisState,
-  )
+import Cardano.Ledger.Shelley.LedgerState (
+  LedgerState (..),
+  UTxOState,
+  genesisState,
+ )
 import Cardano.Ledger.Shelley.Metadata (ShelleyTxAuxData)
 import Cardano.Ledger.Shelley.Rules (UtxoEnv (..))
-import Cardano.Ledger.Shelley.Scripts
-  ( MultiSig,
-    pattern RequireAllOf,
-    pattern RequireAnyOf,
-    pattern RequireMOf,
-    pattern RequireSignature,
-  )
+import Cardano.Ledger.Shelley.Scripts (
+  MultiSig,
+  pattern RequireAllOf,
+  pattern RequireAnyOf,
+  pattern RequireMOf,
+  pattern RequireSignature,
+ )
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), TxId)
 import Cardano.Ledger.Shelley.TxAuxData (ShelleyTxAuxData)
-import Cardano.Ledger.Shelley.TxBody
-  ( ShelleyTxBody (..),
-    ShelleyTxOut (..),
-    Wdrl (..),
-  )
+import Cardano.Ledger.Shelley.TxBody (
+  ShelleyTxBody (..),
+  ShelleyTxOut (..),
+  Wdrl (..),
+ )
 import Cardano.Ledger.Shelley.TxWits (addrWits, scriptWits)
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn (..))
@@ -80,13 +80,13 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set (fromList)
 import Lens.Micro
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessesVKey)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes
-  ( Mock,
-  )
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (
+  Mock,
+ )
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
-import Test.Cardano.Ledger.Shelley.Generator.Core
-  ( genesisCoins,
-  )
+import Test.Cardano.Ledger.Shelley.Generator.Core (
+  genesisCoins,
+ )
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Utils
@@ -128,16 +128,16 @@ aliceAndBobOrCarl = RequireMOf 1 [aliceAndBob, singleKeyOnly Cast.carlAddr]
 aliceAndBobOrCarlAndDaria :: Era era => MultiSig era
 aliceAndBobOrCarlAndDaria =
   RequireAnyOf
-    [ aliceAndBob,
-      RequireAllOf [singleKeyOnly Cast.carlAddr, singleKeyOnly Cast.dariaAddr]
+    [ aliceAndBob
+    , RequireAllOf [singleKeyOnly Cast.carlAddr, singleKeyOnly Cast.dariaAddr]
     ]
 
 aliceAndBobOrCarlOrDaria :: Era era => MultiSig era
 aliceAndBobOrCarlOrDaria =
   RequireMOf
     1
-    [ aliceAndBob,
-      RequireAnyOf [singleKeyOnly Cast.carlAddr, singleKeyOnly Cast.dariaAddr]
+    [ aliceAndBob
+    , RequireAnyOf [singleKeyOnly Cast.carlAddr, singleKeyOnly Cast.dariaAddr]
     ]
 
 initTxBody :: ShelleyTest era => [(Addr (EraCrypto era), Value era)] -> ShelleyTxBody era
@@ -181,8 +181,8 @@ makeTx txBody keyPairs msigs = ShelleyTx txBody txWits . maybeToStrictMaybe
   where
     txWits =
       mempty
-        { addrWits = mkWitnessesVKey (hashAnnotated txBody) keyPairs,
-          scriptWits = msigs
+        { addrWits = mkWitnessesVKey (hashAnnotated txBody) keyPairs
+        , scriptWits = msigs
         }
 
 aliceInitCoin :: Coin
@@ -198,8 +198,8 @@ genesis = genesisState genDelegs0 utxo0
     utxo0 =
       genesisCoins @era
         genesisId
-        [ ShelleyTxOut Cast.aliceAddr (Val.inject aliceInitCoin),
-          ShelleyTxOut Cast.bobAddr (Val.inject bobInitCoin)
+        [ ShelleyTxOut Cast.aliceAddr (Val.inject aliceInitCoin)
+        , ShelleyTxOut Cast.bobAddr (Val.inject bobInitCoin)
         ]
 
 initPParams :: ShelleyTest era => PParams era
@@ -216,8 +216,8 @@ initialUTxOState ::
   (Mock c) =>
   Coin ->
   [(MultiSig (ShelleyEra c), Coin)] ->
-  ( TxId c,
-    Either
+  ( TxId c
+  , Either
       [PredicateFailure (ShelleyUTXOW (ShelleyEra c))]
       (UTxOState (ShelleyEra c))
   )
@@ -229,8 +229,8 @@ initialUTxOState aliceKeep msigs =
                 ( Addr
                     Testnet
                     (ScriptHashObj $ hashScript @(ShelleyEra c) msig)
-                    (StakeRefBase $ ScriptHashObj $ hashScript @(ShelleyEra c) msig),
-                  era
+                    (StakeRefBase $ ScriptHashObj $ hashScript @(ShelleyEra c) msig)
+                , era
                 )
             )
             msigs
@@ -240,17 +240,17 @@ initialUTxOState aliceKeep msigs =
               (asWitness <$> [Cast.alicePay, Cast.bobPay])
               Map.empty
               Nothing
-       in ( txid $ tx ^. bodyTxL,
-            runShelleyBase $
+       in ( txid $ tx ^. bodyTxL
+          , runShelleyBase $
               applySTSTest @(ShelleyUTXOW (ShelleyEra c))
                 ( TRC
                     ( UtxoEnv
                         (SlotNo 0)
                         initPParams
                         def
-                        (GenDelegs Map.empty),
-                      lsUTxOState genesis,
-                      tx
+                        (GenDelegs Map.empty)
+                    , lsUTxOState genesis
+                    , tx
                     )
                 )
           )
@@ -284,8 +284,8 @@ applyTxWithScript lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
         wdrl
     inputs' =
       [ TxIn txId (mkTxIxPartial (toInteger n))
-        | n <-
-            [0 .. length lockScripts - if Val.pointwise (>) aliceKeep mempty then 0 else 1]
+      | n <-
+          [0 .. length lockScripts - if Val.pointwise (>) aliceKeep mempty then 0 else 1]
       ]
     -- alice? + scripts
     tx =
@@ -302,8 +302,8 @@ applyTxWithScript lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
                   (SlotNo 0)
                   initPParams
                   def
-                  (GenDelegs Map.empty),
-                utxoSt,
-                tx
+                  (GenDelegs Map.empty)
+              , utxoSt
+              , tx
               )
           )

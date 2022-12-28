@@ -7,9 +7,9 @@
 -- Description : Multi-Assets Examples
 --
 -- Examples demonstrating the use of multi-assets.
-module Test.Cardano.Ledger.Mary.Examples.MultiAssets
-  ( multiAssetsExample,
-  )
+module Test.Cardano.Ledger.Mary.Examples.MultiAssets (
+  multiAssetsExample,
+)
 where
 
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure (..))
@@ -21,12 +21,12 @@ import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (asWitness, hashKey)
 import Cardano.Ledger.Mary (Mary)
 import Cardano.Ledger.Mary.Core
-import Cardano.Ledger.Mary.Value
-  ( AssetName (..),
-    MaryValue (..),
-    MultiAsset (..),
-    PolicyID (..),
-  )
+import Cardano.Ledger.Mary.Value (
+  AssetName (..),
+  MaryValue (..),
+  MultiAsset (..),
+  PolicyID (..),
+ )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API (LedgerEnv (..), ShelleyLEDGER)
 import Cardano.Ledger.Shelley.LedgerState (AccountState (..))
@@ -76,17 +76,17 @@ initUTxO :: UTxO Mary
 initUTxO =
   UTxO $
     Map.fromList
-      [ (mkTxInPartial bootstrapTxId 0, ShelleyTxOut Cast.aliceAddr (Val.inject aliceInitCoin)),
-        (mkTxInPartial bootstrapTxId 1, ShelleyTxOut Cast.bobAddr (Val.inject bobInitCoin))
+      [ (mkTxInPartial bootstrapTxId 0, ShelleyTxOut Cast.aliceAddr (Val.inject aliceInitCoin))
+      , (mkTxInPartial bootstrapTxId 1, ShelleyTxOut Cast.bobAddr (Val.inject bobInitCoin))
       ]
 
 pp :: ShelleyPParams Mary
 pp =
   emptyPParams
-    { _minfeeA = 0,
-      _minfeeB = 1,
-      _maxTxSize = 16384,
-      _minUTxOValue = Coin 100
+    { _minfeeA = 0
+    , _minfeeB = 1
+    , _maxTxSize = 16384
+    , _minUTxOValue = Coin 100
     }
 
 ledgerEnv :: SlotNo -> LedgerEnv Mary
@@ -171,8 +171,8 @@ txSimpleEx1 =
   ShelleyTx
     txbodySimpleEx1
     mempty
-      { addrWits = mkWitnessesVKey (hashAnnotated txbodySimpleEx1) [asWitness Cast.alicePay],
-        scriptWits = Map.fromList [(policyID purplePolicyId, purplePolicy)]
+      { addrWits = mkWitnessesVKey (hashAnnotated txbodySimpleEx1) [asWitness Cast.alicePay]
+      , scriptWits = Map.fromList [(policyID purplePolicyId, purplePolicy)]
       }
     SNothing
 
@@ -180,8 +180,8 @@ expectedUTxOSimpleEx1 :: UTxO Mary
 expectedUTxOSimpleEx1 =
   UTxO $
     Map.fromList
-      [ (mkTxInPartial (txid txbodySimpleEx1) 0, ShelleyTxOut Cast.aliceAddr tokensSimpleEx1),
-        (mkTxInPartial bootstrapTxId 1, ShelleyTxOut Cast.bobAddr (Val.inject bobInitCoin))
+      [ (mkTxInPartial (txid txbodySimpleEx1) 0, ShelleyTxOut Cast.aliceAddr tokensSimpleEx1)
+      , (mkTxInPartial bootstrapTxId 1, ShelleyTxOut Cast.bobAddr (Val.inject bobInitCoin))
       ]
 
 ----------------------------
@@ -211,8 +211,8 @@ txbodySimpleEx2 :: TxBody Mary
 txbodySimpleEx2 =
   makeMaryTxBody
     [mkTxInPartial (txid txbodySimpleEx1) 0]
-    [ ShelleyTxOut Cast.aliceAddr aliceTokensSimpleEx2,
-      ShelleyTxOut Cast.bobAddr bobTokensSimpleEx2
+    [ ShelleyTxOut Cast.aliceAddr aliceTokensSimpleEx2
+    , ShelleyTxOut Cast.bobAddr bobTokensSimpleEx2
     ]
     unboundedInterval
     mempty
@@ -228,9 +228,9 @@ expectedUTxOSimpleEx2 :: UTxO Mary
 expectedUTxOSimpleEx2 =
   UTxO $
     Map.fromList
-      [ (mkTxInPartial (txid txbodySimpleEx2) 0, ShelleyTxOut Cast.aliceAddr aliceTokensSimpleEx2),
-        (mkTxInPartial (txid txbodySimpleEx2) 1, ShelleyTxOut Cast.bobAddr bobTokensSimpleEx2),
-        (mkTxInPartial bootstrapTxId 1, ShelleyTxOut Cast.bobAddr (Val.inject bobInitCoin))
+      [ (mkTxInPartial (txid txbodySimpleEx2) 0, ShelleyTxOut Cast.aliceAddr aliceTokensSimpleEx2)
+      , (mkTxInPartial (txid txbodySimpleEx2) 1, ShelleyTxOut Cast.bobAddr bobTokensSimpleEx2)
+      , (mkTxInPartial bootstrapTxId 1, ShelleyTxOut Cast.bobAddr (Val.inject bobInitCoin))
       ]
 
 ------------------------------------------------------------
@@ -256,8 +256,8 @@ boundedTimePolicy :: Timelock Mary
 boundedTimePolicy =
   RequireAllOf
     ( StrictSeq.fromList
-        [ RequireTimeStart startInterval,
-          RequireTimeExpire stopInterval
+        [ RequireTimeStart startInterval
+        , RequireTimeExpire stopInterval
         ]
     )
 
@@ -299,8 +299,8 @@ txTimeEx1 txbody =
   ShelleyTx
     txbody
     mempty
-      { addrWits = mkWitnessesVKey (hashAnnotated txbody) [asWitness Cast.alicePay],
-        scriptWits = Map.fromList [(policyID boundedTimePolicyId, boundedTimePolicy)]
+      { addrWits = mkWitnessesVKey (hashAnnotated txbody) [asWitness Cast.alicePay]
+      , scriptWits = Map.fromList [(policyID boundedTimePolicyId, boundedTimePolicy)]
       }
     SNothing
 
@@ -323,8 +323,8 @@ expectedUTxOTimeEx1 :: UTxO Mary
 expectedUTxOTimeEx1 =
   UTxO $
     Map.fromList
-      [ (mkTxInPartial (txid txbodyTimeEx1Valid) 0, ShelleyTxOut Cast.aliceAddr tokensTimeEx1),
-        (mkTxInPartial bootstrapTxId 1, ShelleyTxOut Cast.bobAddr (Val.inject bobInitCoin))
+      [ (mkTxInPartial (txid txbodyTimeEx1Valid) 0, ShelleyTxOut Cast.aliceAddr tokensTimeEx1)
+      , (mkTxInPartial bootstrapTxId 1, ShelleyTxOut Cast.bobAddr (Val.inject bobInitCoin))
       ]
 
 ----------------------------------------
@@ -348,8 +348,8 @@ txbodyTimeEx2 :: TxBody Mary
 txbodyTimeEx2 =
   makeMaryTxBody
     [mkTxInPartial (txid txbodyTimeEx1Valid) 0]
-    [ ShelleyTxOut Cast.aliceAddr (Val.inject aliceCoinsTimeEx2),
-      ShelleyTxOut Cast.bobAddr bobTokensTimeEx2
+    [ ShelleyTxOut Cast.aliceAddr (Val.inject aliceCoinsTimeEx2)
+    , ShelleyTxOut Cast.bobAddr bobTokensTimeEx2
     ]
     unboundedInterval
     mempty
@@ -368,9 +368,9 @@ expectedUTxOTimeEx2 :: UTxO Mary
 expectedUTxOTimeEx2 =
   UTxO $
     Map.fromList
-      [ (mkTxInPartial (txid txbodyTimeEx2) 0, ShelleyTxOut Cast.aliceAddr (Val.inject aliceCoinsTimeEx2)),
-        (mkTxInPartial (txid txbodyTimeEx2) 1, ShelleyTxOut Cast.bobAddr bobTokensTimeEx2),
-        (mkTxInPartial bootstrapTxId 1, ShelleyTxOut Cast.bobAddr (Val.inject bobInitCoin))
+      [ (mkTxInPartial (txid txbodyTimeEx2) 0, ShelleyTxOut Cast.aliceAddr (Val.inject aliceCoinsTimeEx2))
+      , (mkTxInPartial (txid txbodyTimeEx2) 1, ShelleyTxOut Cast.bobAddr bobTokensTimeEx2)
+      , (mkTxInPartial bootstrapTxId 1, ShelleyTxOut Cast.bobAddr (Val.inject bobInitCoin))
       ]
 
 --------------------------------------------------------------
@@ -419,8 +419,8 @@ txSingWitEx1Valid =
     txbodySingWitEx1
     mempty
       { addrWits =
-          mkWitnessesVKey (hashAnnotated txbodySingWitEx1) [asWitness Cast.bobPay, asWitness Cast.alicePay],
-        scriptWits = Map.fromList [(policyID alicePolicyId, alicePolicy)]
+          mkWitnessesVKey (hashAnnotated txbodySingWitEx1) [asWitness Cast.bobPay, asWitness Cast.alicePay]
+      , scriptWits = Map.fromList [(policyID alicePolicyId, alicePolicy)]
       }
     SNothing
 
@@ -428,8 +428,8 @@ expectedUTxOSingWitEx1 :: UTxO Mary
 expectedUTxOSingWitEx1 =
   UTxO $
     Map.fromList
-      [ (mkTxInPartial (txid txbodySingWitEx1) 0, ShelleyTxOut Cast.bobAddr tokensSingWitEx1),
-        (mkTxInPartial bootstrapTxId 0, ShelleyTxOut Cast.aliceAddr (Val.inject aliceInitCoin))
+      [ (mkTxInPartial (txid txbodySingWitEx1) 0, ShelleyTxOut Cast.bobAddr tokensSingWitEx1)
+      , (mkTxInPartial bootstrapTxId 0, ShelleyTxOut Cast.aliceAddr (Val.inject aliceInitCoin))
       ]
 
 txSingWitEx1Invalid :: ShelleyTx Mary
@@ -437,8 +437,8 @@ txSingWitEx1Invalid =
   ShelleyTx
     txbodySingWitEx1
     mempty
-      { addrWits = mkWitnessesVKey (hashAnnotated txbodySingWitEx1) [asWitness Cast.bobPay],
-        scriptWits = Map.fromList [(policyID alicePolicyId, alicePolicy)]
+      { addrWits = mkWitnessesVKey (hashAnnotated txbodySingWitEx1) [asWitness Cast.bobPay]
+      , scriptWits = Map.fromList [(policyID alicePolicyId, alicePolicy)]
       }
     SNothing
 
@@ -477,8 +477,8 @@ txNegEx1 =
   ShelleyTx
     txbodyNegEx1
     mempty
-      { addrWits = mkWitnessesVKey (hashAnnotated txbodyNegEx1) [asWitness Cast.alicePay],
-        scriptWits = Map.fromList [(policyID purplePolicyId, purplePolicy)]
+      { addrWits = mkWitnessesVKey (hashAnnotated txbodyNegEx1) [asWitness Cast.alicePay]
+      , scriptWits = Map.fromList [(policyID purplePolicyId, purplePolicy)]
       }
     SNothing
 
@@ -489,9 +489,9 @@ expectedUTxONegEx1 :: UTxO Mary
 expectedUTxONegEx1 =
   UTxO $
     Map.fromList
-      [ (mkTxInPartial (txid txbodyNegEx1) 0, ShelleyTxOut Cast.aliceAddr aliceTokensNegEx1),
-        (mkTxInPartial bootstrapTxId 1, ShelleyTxOut Cast.bobAddr (Val.inject bobInitCoin)),
-        (mkTxInPartial (txid txbodySimpleEx2) 1, ShelleyTxOut Cast.bobAddr bobTokensSimpleEx2)
+      [ (mkTxInPartial (txid txbodyNegEx1) 0, ShelleyTxOut Cast.aliceAddr aliceTokensNegEx1)
+      , (mkTxInPartial bootstrapTxId 1, ShelleyTxOut Cast.bobAddr (Val.inject bobInitCoin))
+      , (mkTxInPartial (txid txbodySimpleEx2) 1, ShelleyTxOut Cast.bobAddr bobTokensSimpleEx2)
       ]
 
 --
@@ -567,8 +567,8 @@ txBigValue =
   ShelleyTx
     txbodyWithBigValue
     mempty
-      { addrWits = mkWitnessesVKey (hashAnnotated txbodyWithBigValue) [asWitness Cast.alicePay],
-        scriptWits = Map.fromList [(policyID purplePolicyId, purplePolicy)]
+      { addrWits = mkWitnessesVKey (hashAnnotated txbodyWithBigValue) [asWitness Cast.alicePay]
+      , scriptWits = Map.fromList [(policyID purplePolicyId, purplePolicy)]
       }
     SNothing
 
@@ -587,79 +587,79 @@ multiAssetsExample =
               initUTxO
               txSimpleEx1
               (ledgerEnv $ SlotNo 0)
-              (Right expectedUTxOSimpleEx1),
-          testCase "transfer" $
+              (Right expectedUTxOSimpleEx1)
+        , testCase "transfer" $
             testMaryNoDelegLEDGER
               expectedUTxOSimpleEx1
               txSimpleEx2
               (ledgerEnv $ SlotNo 1)
               (Right expectedUTxOSimpleEx2)
-        ],
-      testGroup
+        ]
+    , testGroup
         "bounded time interval"
         [ testCase "minting, valid" $
             testMaryNoDelegLEDGER
               initUTxO
               txTimeEx1Valid
               (ledgerEnv startInterval)
-              (Right expectedUTxOTimeEx1),
-          testCase "minting, invalid LHS too small" $
+              (Right expectedUTxOTimeEx1)
+        , testCase "minting, invalid LHS too small" $
             testMaryNoDelegLEDGER
               initUTxO
               txTimeEx1InvalidLHSfixed
               (ledgerEnv startInterval)
-              (policyFailure boundedTimePolicyId),
-          testCase "minting, invalid LHS unspecified" $
+              (policyFailure boundedTimePolicyId)
+        , testCase "minting, invalid LHS unspecified" $
             testMaryNoDelegLEDGER
               initUTxO
               txTimeEx1InvalidLHSopen
               (ledgerEnv startInterval)
-              (policyFailure boundedTimePolicyId),
-          testCase "minting, invalid RHS too big" $
+              (policyFailure boundedTimePolicyId)
+        , testCase "minting, invalid RHS too big" $
             testMaryNoDelegLEDGER
               initUTxO
               txTimeEx1InvalidRHSfixed
               (ledgerEnv startInterval)
-              (policyFailure boundedTimePolicyId),
-          testCase "minting, invalid RHS unspecified" $
+              (policyFailure boundedTimePolicyId)
+        , testCase "minting, invalid RHS unspecified" $
             testMaryNoDelegLEDGER
               initUTxO
               txTimeEx1InvalidRHSopen
               (ledgerEnv startInterval)
-              (policyFailure boundedTimePolicyId),
-          testCase "transfer, after minting period" $
+              (policyFailure boundedTimePolicyId)
+        , testCase "transfer, after minting period" $
             testMaryNoDelegLEDGER
               expectedUTxOTimeEx1
               txTimeEx2
               (ledgerEnv afterStop)
               (Right expectedUTxOTimeEx2)
-        ],
-      testGroup
+        ]
+    , testGroup
         "single key"
         [ testCase "minting, valid" $
             testMaryNoDelegLEDGER
               initUTxO
               txSingWitEx1Valid
               (ledgerEnv $ SlotNo 0)
-              (Right expectedUTxOSingWitEx1),
-          testCase "minting, invalid no mint signature" $
+              (Right expectedUTxOSingWitEx1)
+        , testCase "minting, invalid no mint signature" $
             testMaryNoDelegLEDGER
               initUTxO
               txSingWitEx1Invalid
               (ledgerEnv $ SlotNo 0)
               (policyFailure alicePolicyId)
-        ],
-      testGroup
+        ]
+    , testGroup
         "negative minting"
         [ testCase "remove assets" $
             testMaryNoDelegLEDGER
               initialUTxONegEx1
               txNegEx1
               (ledgerEnv $ SlotNo 3)
-              (Right expectedUTxONegEx1),
-          testCase "no negative outputs" testNegEx2
-        ],
-      testCase "value too big" $
+              (Right expectedUTxONegEx1)
+        , testCase "no negative outputs" testNegEx2
+        ]
+    , testCase "value too big" $
         testMaryNoDelegLEDGER
           initUTxO
           txBigValue

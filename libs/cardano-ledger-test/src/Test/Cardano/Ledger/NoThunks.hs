@@ -4,9 +4,9 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 
-module Test.Cardano.Ledger.NoThunks
-  ( test,
-  )
+module Test.Cardano.Ledger.NoThunks (
+  test,
+)
 where
 
 import qualified Cardano.Ledger.Alonzo.PParams
@@ -27,20 +27,20 @@ test :: TestTree
 test =
   testGroup
     "There are no unexpected thunks in MockChainState"
-    [ f $ Babbage Mock,
-      f $ Alonzo Mock,
-      f $ Allegra Mock,
-      f $ Mary Mock,
-      f $ Shelley Mock
+    [ f $ Babbage Mock
+    , f $ Alonzo Mock
+    , f $ Allegra Mock
+    , f $ Mary Mock
+    , f $ Shelley Mock
     ]
   where
     f proof = testThunks proof 100 def
 
 testThunks ::
   forall era.
-  ( Reflect era,
-    STS (MOCKCHAIN era),
-    PrettyA (PParamsUpdate era)
+  ( Reflect era
+  , STS (MOCKCHAIN era)
+  , PrettyA (PParamsUpdate era)
   ) =>
   Proof era ->
   Int ->

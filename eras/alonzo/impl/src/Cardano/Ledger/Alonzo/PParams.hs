@@ -19,101 +19,101 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | This module contains just the type of protocol parameters.
-module Cardano.Ledger.Alonzo.PParams
-  ( -- * Era Agnostic
-    AlonzoEraPParams,
-    ppCoinsPerUTxOWordL,
-    ppCostModelsL,
-    ppPricesL,
-    ppMaxTxExUnitsL,
-    ppMaxBlockExUnitsL,
-    ppMaxValSizeL,
-    ppCollateralPercentageL,
-    ppMaxCollateralInputsL,
-    ppuCoinsPerUTxOWordL,
-    ppuCostModelsL,
-    ppuPricesL,
-    ppuMaxTxExUnitsL,
-    ppuMaxBlockExUnitsL,
-    ppuMaxValSizeL,
-    ppuCollateralPercentageL,
-    ppuMaxCollateralInputsL,
+module Cardano.Ledger.Alonzo.PParams (
+  -- * Era Agnostic
+  AlonzoEraPParams,
+  ppCoinsPerUTxOWordL,
+  ppCostModelsL,
+  ppPricesL,
+  ppMaxTxExUnitsL,
+  ppMaxBlockExUnitsL,
+  ppMaxValSizeL,
+  ppCollateralPercentageL,
+  ppMaxCollateralInputsL,
+  ppuCoinsPerUTxOWordL,
+  ppuCostModelsL,
+  ppuPricesL,
+  ppuMaxTxExUnitsL,
+  ppuMaxBlockExUnitsL,
+  ppuMaxValSizeL,
+  ppuCollateralPercentageL,
+  ppuMaxCollateralInputsL,
 
-    -- * Alonzo specific
-    AlonzoPParams (..),
-    UpgradeAlonzoPParams (..),
-    DowngradeAlonzoPParams (..),
-    emptyAlonzoPParams,
-    emptyAlonzoPParamsUpdate,
-    upgradeAlonzoPParams,
-    downgradeAlonzoPParams,
-    getLanguageView,
-    LangDepView (..),
-    encodeLangViews,
-    OrdExUnits(..),
-  )
+  -- * Alonzo specific
+  AlonzoPParams (..),
+  UpgradeAlonzoPParams (..),
+  DowngradeAlonzoPParams (..),
+  emptyAlonzoPParams,
+  emptyAlonzoPParamsUpdate,
+  upgradeAlonzoPParams,
+  downgradeAlonzoPParams,
+  getLanguageView,
+  LangDepView (..),
+  encodeLangViews,
+  OrdExUnits (..),
+)
 where
 
-import Data.Default.Class (Default(def))
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
-import Cardano.Ledger.Alonzo.Scripts
-  ( CostModel,
-    CostModels (..),
-    ExUnits (..),
-    Prices (..),
-    getCostModelLanguage,
-    getCostModelParams,
-    zipSemiExUnits,
-  )
+import Cardano.Ledger.Alonzo.Scripts (
+  CostModel,
+  CostModels (..),
+  ExUnits (..),
+  Prices (..),
+  getCostModelLanguage,
+  getCostModelParams,
+  zipSemiExUnits,
+ )
 import Cardano.Ledger.BaseTypes (EpochNo (..), NonNegativeInterval, Nonce (NeutralNonce), StrictMaybe (..), UnitInterval, isSNothing)
 import qualified Cardano.Ledger.BaseTypes as BT (ProtVer (..))
-import Cardano.Ledger.Binary
-  ( Encoding,
-    FromCBOR (..),
-    FromCBORGroup (..),
-    ToCBOR (..),
-    ToCBORGroup (..),
-    encodeFoldableAsDefLenList,
-    encodeFoldableAsIndefLenList,
-    encodeMapLen,
-    encodeNull,
-    encodePreEncoded,
-    serialize',
-    serializeEncoding',
-  )
-import Cardano.Ledger.Binary.Coders
-  ( Decode (..),
-    Density (..),
-    Encode (..),
-    Field (..),
-    Wrapped (..),
-    decode,
-    encode,
-    field,
-    (!>),
-    (<!),
-  )
+import Cardano.Ledger.Binary (
+  Encoding,
+  FromCBOR (..),
+  FromCBORGroup (..),
+  ToCBOR (..),
+  ToCBORGroup (..),
+  encodeFoldableAsDefLenList,
+  encodeFoldableAsIndefLenList,
+  encodeMapLen,
+  encodeNull,
+  encodePreEncoded,
+  serialize',
+  serializeEncoding',
+ )
+import Cardano.Ledger.Binary.Coders (
+  Decode (..),
+  Density (..),
+  Encode (..),
+  Field (..),
+  Wrapped (..),
+  decode,
+  encode,
+  field,
+  (!>),
+  (<!),
+ )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.HKD (HKD, HKDFunctor (..))
+import Cardano.Ledger.Language (Language (..))
 import Cardano.Ledger.Orphans ()
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams (..))
-import Cardano.Ledger.Language (Language (..))
 import Cardano.Ledger.TreeDiff (ToExpr (..))
 import Control.DeepSeq (NFData)
-import Data.Aeson as Aeson
-  ( FromJSON (parseJSON),
-    KeyValue ((.=)),
-    ToJSON (toJSON),
-    object,
-    withObject,
-    (.!=),
-    (.:),
-  )
+import Data.Aeson as Aeson (
+  FromJSON (parseJSON),
+  KeyValue ((.=)),
+  ToJSON (toJSON),
+  object,
+  withObject,
+  (.!=),
+  (.:),
+ )
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import Data.Coerce (coerce)
+import Data.Default.Class (Default (def))
 import Data.Function (on)
 import Data.Functor.Identity (Identity (..))
 import Data.List (sortBy)
@@ -129,60 +129,60 @@ import Numeric.Natural (Natural)
 -- | Protocol parameters.
 -- Shelley parameters + additional ones
 data AlonzoPParams f era = AlonzoPParams
-  { -- | The linear factor for the minimum fee calculation
-    appMinFeeA :: !(HKD f Natural),
-    -- | The constant factor for the minimum fee calculation
-    appMinFeeB :: !(HKD f Natural),
-    -- | Maximal block body size
-    appMaxBBSize :: !(HKD f Natural),
-    -- | Maximal transaction size
-    appMaxTxSize :: !(HKD f Natural),
-    -- | Maximal block header size
-    appMaxBHSize :: !(HKD f Natural),
-    -- | The amount of a key registration deposit
-    appKeyDeposit :: !(HKD f Coin),
-    -- | The amount of a pool registration deposit
-    appPoolDeposit :: !(HKD f Coin),
-    -- | Maximum number of epochs in the future a pool retirement is allowed to
-    -- be scheduled for.
-    appEMax :: !(HKD f EpochNo),
-    -- | Desired number of pools
-    appNOpt :: !(HKD f Natural),
-    -- | Pool influence
-    appA0 :: !(HKD f NonNegativeInterval),
-    -- | Monetary expansion
-    appRho :: !(HKD f UnitInterval),
-    -- | Treasury expansion
-    appTau :: !(HKD f UnitInterval),
-    -- | Decentralization parameter. Note that the scale is inverted here - a
-    -- value of 0 indicates full decentralisation, where 1 indicates full
-    -- federalisation.
-    appD :: !(HKD f UnitInterval),
-    -- | Extra entropy
-    appExtraEntropy :: !(HKD f Nonce),
-    -- | Protocol version
-    appProtocolVersion :: !(HKD f BT.ProtVer),
-    -- | Minimum Stake Pool Cost
-    appMinPoolCost :: !(HKD f Coin),
-    -- new/updated for alonzo
+  { appMinFeeA :: !(HKD f Natural)
+  -- ^ The linear factor for the minimum fee calculation
+  , appMinFeeB :: !(HKD f Natural)
+  -- ^ The constant factor for the minimum fee calculation
+  , appMaxBBSize :: !(HKD f Natural)
+  -- ^ Maximal block body size
+  , appMaxTxSize :: !(HKD f Natural)
+  -- ^ Maximal transaction size
+  , appMaxBHSize :: !(HKD f Natural)
+  -- ^ Maximal block header size
+  , appKeyDeposit :: !(HKD f Coin)
+  -- ^ The amount of a key registration deposit
+  , appPoolDeposit :: !(HKD f Coin)
+  -- ^ The amount of a pool registration deposit
+  , appEMax :: !(HKD f EpochNo)
+  -- ^ Maximum number of epochs in the future a pool retirement is allowed to
+  -- be scheduled for.
+  , appNOpt :: !(HKD f Natural)
+  -- ^ Desired number of pools
+  , appA0 :: !(HKD f NonNegativeInterval)
+  -- ^ Pool influence
+  , appRho :: !(HKD f UnitInterval)
+  -- ^ Monetary expansion
+  , appTau :: !(HKD f UnitInterval)
+  -- ^ Treasury expansion
+  , appD :: !(HKD f UnitInterval)
+  -- ^ Decentralization parameter. Note that the scale is inverted here - a
+  -- value of 0 indicates full decentralisation, where 1 indicates full
+  -- federalisation.
+  , appExtraEntropy :: !(HKD f Nonce)
+  -- ^ Extra entropy
+  , appProtocolVersion :: !(HKD f BT.ProtVer)
+  -- ^ Protocol version
+  , appMinPoolCost :: !(HKD f Coin)
+  -- ^ Minimum Stake Pool Cost
+  , -- new/updated for alonzo
 
-    -- | Cost in lovelace per word (8 bytes) of UTxO storage (instead of appMinUTxOValue)
-    appCoinsPerUTxOWord :: !(HKD f CoinPerWord),
-    -- | Cost models for non-native script languages
-    appCostModels :: !(HKD f CostModels),
-    -- | Prices of execution units (for non-native script languages)
-    appPrices :: !(HKD f Prices),
-    -- | Max total script execution resources units allowed per tx
-    appMaxTxExUnits :: !(HKD f OrdExUnits),
-    -- | Max total script execution resources units allowed per block
-    appMaxBlockExUnits :: !(HKD f OrdExUnits),
-    -- | Max size of a Value in an output
-    appMaxValSize :: !(HKD f Natural),
-    -- | Percentage of the txfee which must be provided as collateral when
-    -- including non-native scripts.
-    appCollateralPercentage :: !(HKD f Natural),
-    -- | Maximum number of collateral inputs allowed in a transaction
-    appMaxCollateralInputs :: !(HKD f Natural)
+    appCoinsPerUTxOWord :: !(HKD f CoinPerWord)
+  -- ^ Cost in lovelace per word (8 bytes) of UTxO storage (instead of appMinUTxOValue)
+  , appCostModels :: !(HKD f CostModels)
+  -- ^ Cost models for non-native script languages
+  , appPrices :: !(HKD f Prices)
+  -- ^ Prices of execution units (for non-native script languages)
+  , appMaxTxExUnits :: !(HKD f OrdExUnits)
+  -- ^ Max total script execution resources units allowed per tx
+  , appMaxBlockExUnits :: !(HKD f OrdExUnits)
+  -- ^ Max total script execution resources units allowed per block
+  , appMaxValSize :: !(HKD f Natural)
+  -- ^ Max size of a Value in an output
+  , appCollateralPercentage :: !(HKD f Natural)
+  -- ^ Percentage of the txfee which must be provided as collateral when
+  -- including non-native scripts.
+  , appMaxCollateralInputs :: !(HKD f Natural)
+  -- ^ Maximum number of collateral inputs allowed in a transaction
   }
   deriving (Generic)
 
@@ -256,30 +256,30 @@ instance Crypto c => AlonzoEraPParams (AlonzoEra c) where
 instance Era era => ToCBOR (AlonzoPParams Identity era) where
   toCBOR
     AlonzoPParams
-      { appMinFeeA,
-        appMinFeeB,
-        appMaxBBSize,
-        appMaxTxSize,
-        appMaxBHSize,
-        appKeyDeposit,
-        appPoolDeposit,
-        appEMax,
-        appNOpt,
-        appA0,
-        appRho,
-        appTau,
-        appD,
-        appExtraEntropy,
-        appProtocolVersion,
-        appMinPoolCost,
-        appCoinsPerUTxOWord,
-        appCostModels,
-        appPrices,
-        appMaxTxExUnits,
-        appMaxBlockExUnits,
-        appMaxValSize,
-        appCollateralPercentage,
-        appMaxCollateralInputs
+      { appMinFeeA
+      , appMinFeeB
+      , appMaxBBSize
+      , appMaxTxSize
+      , appMaxBHSize
+      , appKeyDeposit
+      , appPoolDeposit
+      , appEMax
+      , appNOpt
+      , appA0
+      , appRho
+      , appTau
+      , appD
+      , appExtraEntropy
+      , appProtocolVersion
+      , appMinPoolCost
+      , appCoinsPerUTxOWord
+      , appCostModels
+      , appPrices
+      , appMaxTxExUnits
+      , appMaxBlockExUnits
+      , appMaxValSize
+      , appCollateralPercentage
+      , appMaxCollateralInputs
       } =
       encode $
         Rec (AlonzoPParams @Identity)
@@ -342,30 +342,30 @@ instance Era era => FromCBOR (AlonzoPParams Identity era) where
 instance ToJSON (AlonzoPParams Identity era) where
   toJSON AlonzoPParams {..} =
     Aeson.object
-      [ "minFeeA" .= appMinFeeA,
-        "minFeeB" .= appMinFeeB,
-        "maxBlockBodySize" .= appMaxBBSize,
-        "maxTxSize" .= appMaxTxSize,
-        "maxBlockHeaderSize" .= appMaxBHSize,
-        "keyDeposit" .= appKeyDeposit,
-        "poolDeposit" .= appPoolDeposit,
-        "eMax" .= appEMax,
-        "nOpt" .= appNOpt,
-        "a0" .= appA0,
-        "rho" .= appRho,
-        "tau" .= appTau,
-        "decentralisationParam" .= appD,
-        "extraEntropy" .= appExtraEntropy,
-        "protocolVersion" .= appProtocolVersion,
-        "minPoolCost" .= appMinPoolCost,
-        "lovelacePerUTxOWord" .= appCoinsPerUTxOWord,
-        "costmdls" .= appCostModels,
-        "prices" .= appPrices,
-        "maxTxExUnits" .= appMaxTxExUnits,
-        "maxBlockExUnits" .= appMaxBlockExUnits,
-        "maxValSize" .= appMaxValSize,
-        "collateralPercentage" .= appCollateralPercentage,
-        "maxCollateralInputs " .= appMaxCollateralInputs
+      [ "minFeeA" .= appMinFeeA
+      , "minFeeB" .= appMinFeeB
+      , "maxBlockBodySize" .= appMaxBBSize
+      , "maxTxSize" .= appMaxTxSize
+      , "maxBlockHeaderSize" .= appMaxBHSize
+      , "keyDeposit" .= appKeyDeposit
+      , "poolDeposit" .= appPoolDeposit
+      , "eMax" .= appEMax
+      , "nOpt" .= appNOpt
+      , "a0" .= appA0
+      , "rho" .= appRho
+      , "tau" .= appTau
+      , "decentralisationParam" .= appD
+      , "extraEntropy" .= appExtraEntropy
+      , "protocolVersion" .= appProtocolVersion
+      , "minPoolCost" .= appMinPoolCost
+      , "lovelacePerUTxOWord" .= appCoinsPerUTxOWord
+      , "costmdls" .= appCostModels
+      , "prices" .= appPrices
+      , "maxTxExUnits" .= appMaxTxExUnits
+      , "maxBlockExUnits" .= appMaxBlockExUnits
+      , "maxValSize" .= appMaxValSize
+      , "collateralPercentage" .= appCollateralPercentage
+      , "maxCollateralInputs " .= appMaxCollateralInputs
       ]
 
 instance FromJSON (AlonzoPParams Identity era) where
@@ -373,54 +373,54 @@ instance FromJSON (AlonzoPParams Identity era) where
     Aeson.withObject "PParams" $ \obj ->
       AlonzoPParams
         <$> obj
-        .: "minFeeA"
+          .: "minFeeA"
         <*> obj
-        .: "minFeeB"
+          .: "minFeeB"
         <*> obj
-        .: "maxBlockBodySize"
+          .: "maxBlockBodySize"
         <*> obj
-        .: "maxTxSize"
+          .: "maxTxSize"
         <*> obj
-        .: "maxBlockHeaderSize"
+          .: "maxBlockHeaderSize"
         <*> obj
-        .: "keyDeposit"
+          .: "keyDeposit"
         <*> obj
-        .: "poolDeposit"
+          .: "poolDeposit"
         <*> obj
-        .: "eMax"
+          .: "eMax"
         <*> obj
-        .: "nOpt"
+          .: "nOpt"
         <*> obj
-        .: "a0"
+          .: "a0"
         <*> obj
-        .: "rho"
+          .: "rho"
         <*> obj
-        .: "tau"
+          .: "tau"
         <*> obj
-        .: "decentralisationParam"
+          .: "decentralisationParam"
         <*> obj
-        .: "extraEntropy"
+          .: "extraEntropy"
         <*> obj
-        .: "protocolVersion"
+          .: "protocolVersion"
         <*> obj
-        .: "minPoolCost"
-        .!= mempty
+          .: "minPoolCost"
+          .!= mempty
         <*> obj
-        .: "lovelacePerUTxOWord"
+          .: "lovelacePerUTxOWord"
         <*> obj
-        .: "costmdls"
+          .: "costmdls"
         <*> obj
-        .: "prices"
+          .: "prices"
         <*> obj
-        .: "maxTxExUnits"
+          .: "maxTxExUnits"
         <*> obj
-        .: "maxBlockExUnits"
+          .: "maxBlockExUnits"
         <*> obj
-        .: "maxValSize"
+          .: "maxValSize"
         <*> obj
-        .: "collateralPercentage"
+          .: "collateralPercentage"
         <*> obj
-        .: "maxCollateralInputs"
+          .: "maxCollateralInputs"
 
 -- | This is a helper type that allows us to define an `Ord` instance for executions units
 -- without affecting the `ExUnits` type. This is needed in order to derive an `Ord` instance`
@@ -435,14 +435,14 @@ instance Ord OrdExUnits where
 
 -- | Parameters that were added in Alonzo
 data UpgradeAlonzoPParams f = UpgradeAlonzoPParams
-  { uappCoinsPerUTxOWord :: !(HKD f CoinPerWord),
-    uappCostModels :: !(HKD f CostModels),
-    uappPrices :: !(HKD f Prices),
-    uappMaxTxExUnits :: !(HKD f ExUnits),
-    uappMaxBlockExUnits :: !(HKD f ExUnits),
-    uappMaxValSize :: !(HKD f Natural),
-    uappCollateralPercentage :: !(HKD f Natural),
-    uappMaxCollateralInputs :: !(HKD f Natural)
+  { uappCoinsPerUTxOWord :: !(HKD f CoinPerWord)
+  , uappCostModels :: !(HKD f CostModels)
+  , uappPrices :: !(HKD f Prices)
+  , uappMaxTxExUnits :: !(HKD f ExUnits)
+  , uappMaxBlockExUnits :: !(HKD f ExUnits)
+  , uappMaxValSize :: !(HKD f Natural)
+  , uappCollateralPercentage :: !(HKD f Natural)
+  , uappMaxCollateralInputs :: !(HKD f Natural)
   }
   deriving (Generic)
 
@@ -457,14 +457,14 @@ instance NFData (UpgradeAlonzoPParams Identity)
 instance Default (UpgradeAlonzoPParams StrictMaybe) where
   def =
     UpgradeAlonzoPParams
-      { uappCoinsPerUTxOWord = SNothing,
-        uappCostModels = SNothing,
-        uappPrices = SNothing,
-        uappMaxTxExUnits = SNothing,
-        uappMaxBlockExUnits = SNothing,
-        uappMaxValSize = SNothing,
-        uappCollateralPercentage = SNothing,
-        uappMaxCollateralInputs = SNothing
+      { uappCoinsPerUTxOWord = SNothing
+      , uappCostModels = SNothing
+      , uappPrices = SNothing
+      , uappMaxTxExUnits = SNothing
+      , uappMaxBlockExUnits = SNothing
+      , uappMaxValSize = SNothing
+      , uappCollateralPercentage = SNothing
+      , uappMaxCollateralInputs = SNothing
       }
 
 -- | Parameters that were removed in Alonzo
@@ -485,61 +485,61 @@ instance NFData (DowngradeAlonzoPParams Identity)
 emptyAlonzoPParams :: forall era. Era era => AlonzoPParams Identity era
 emptyAlonzoPParams =
   AlonzoPParams
-    { appMinFeeA = 0,
-      appMinFeeB = 0,
-      appMaxBBSize = 0,
-      appMaxTxSize = 2048,
-      appMaxBHSize = 0,
-      appKeyDeposit = Coin 0,
-      appPoolDeposit = Coin 0,
-      appEMax = EpochNo 0,
-      appNOpt = 100,
-      appA0 = minBound,
-      appRho = minBound,
-      appTau = minBound,
-      appD = minBound,
-      appExtraEntropy = NeutralNonce,
-      appProtocolVersion = BT.ProtVer (eraProtVerLow @era) 0,
-      appMinPoolCost = mempty,
-      -- new/updated for alonzo
-      appCoinsPerUTxOWord = CoinPerWord (Coin 0),
-      appCostModels = CostModels mempty,
-      appPrices = Prices minBound minBound,
-      appMaxTxExUnits = OrdExUnits $ ExUnits 0 0,
-      appMaxBlockExUnits = OrdExUnits $ ExUnits 0 0,
-      appMaxValSize = 0,
-      appCollateralPercentage = 150,
-      appMaxCollateralInputs = 5
+    { appMinFeeA = 0
+    , appMinFeeB = 0
+    , appMaxBBSize = 0
+    , appMaxTxSize = 2048
+    , appMaxBHSize = 0
+    , appKeyDeposit = Coin 0
+    , appPoolDeposit = Coin 0
+    , appEMax = EpochNo 0
+    , appNOpt = 100
+    , appA0 = minBound
+    , appRho = minBound
+    , appTau = minBound
+    , appD = minBound
+    , appExtraEntropy = NeutralNonce
+    , appProtocolVersion = BT.ProtVer (eraProtVerLow @era) 0
+    , appMinPoolCost = mempty
+    , -- new/updated for alonzo
+      appCoinsPerUTxOWord = CoinPerWord (Coin 0)
+    , appCostModels = CostModels mempty
+    , appPrices = Prices minBound minBound
+    , appMaxTxExUnits = OrdExUnits $ ExUnits 0 0
+    , appMaxBlockExUnits = OrdExUnits $ ExUnits 0 0
+    , appMaxValSize = 0
+    , appCollateralPercentage = 150
+    , appMaxCollateralInputs = 5
     }
 
 emptyAlonzoPParamsUpdate :: AlonzoPParams StrictMaybe era
 emptyAlonzoPParamsUpdate =
   AlonzoPParams
-    { appMinFeeA = SNothing,
-      appMinFeeB = SNothing,
-      appMaxBBSize = SNothing,
-      appMaxTxSize = SNothing,
-      appMaxBHSize = SNothing,
-      appKeyDeposit = SNothing,
-      appPoolDeposit = SNothing,
-      appEMax = SNothing,
-      appNOpt = SNothing,
-      appA0 = SNothing,
-      appRho = SNothing,
-      appTau = SNothing,
-      appD = SNothing,
-      appExtraEntropy = SNothing,
-      appProtocolVersion = SNothing,
-      appMinPoolCost = SNothing,
-      -- new/updated for alonzo
-      appCoinsPerUTxOWord = SNothing,
-      appCostModels = SNothing,
-      appPrices = SNothing,
-      appMaxTxExUnits = SNothing,
-      appMaxBlockExUnits = SNothing,
-      appMaxValSize = SNothing,
-      appCollateralPercentage = SNothing,
-      appMaxCollateralInputs = SNothing
+    { appMinFeeA = SNothing
+    , appMinFeeB = SNothing
+    , appMaxBBSize = SNothing
+    , appMaxTxSize = SNothing
+    , appMaxBHSize = SNothing
+    , appKeyDeposit = SNothing
+    , appPoolDeposit = SNothing
+    , appEMax = SNothing
+    , appNOpt = SNothing
+    , appA0 = SNothing
+    , appRho = SNothing
+    , appTau = SNothing
+    , appD = SNothing
+    , appExtraEntropy = SNothing
+    , appProtocolVersion = SNothing
+    , appMinPoolCost = SNothing
+    , -- new/updated for alonzo
+      appCoinsPerUTxOWord = SNothing
+    , appCostModels = SNothing
+    , appPrices = SNothing
+    , appMaxTxExUnits = SNothing
+    , appMaxBlockExUnits = SNothing
+    , appMaxValSize = SNothing
+    , appCollateralPercentage = SNothing
+    , appMaxCollateralInputs = SNothing
     }
 
 -- =======================================================
@@ -683,57 +683,56 @@ upgradeAlonzoPParams ::
   AlonzoPParams f era2
 upgradeAlonzoPParams UpgradeAlonzoPParams {..} ShelleyPParams {..} =
   AlonzoPParams
-    { appMinFeeA = sppMinFeeA,
-      appMinFeeB = sppMinFeeB,
-      appMaxBBSize = sppMaxBBSize,
-      appMaxTxSize = sppMaxTxSize,
-      appMaxBHSize = sppMaxBHSize,
-      appKeyDeposit = sppKeyDeposit,
-      appPoolDeposit = sppPoolDeposit,
-      appEMax = sppEMax,
-      appNOpt = sppNOpt,
-      appA0 = sppA0,
-      appRho = sppRho,
-      appTau = sppTau,
-      appD = sppD,
-      appExtraEntropy = sppExtraEntropy,
-      appProtocolVersion = sppProtocolVersion,
-      appMinPoolCost = sppMinPoolCost,
-      -- new in alonzo
-      appCoinsPerUTxOWord = uappCoinsPerUTxOWord,
-      appCostModels = uappCostModels,
-      appPrices = uappPrices,
-      appMaxTxExUnits = hkdMap (Proxy @f) OrdExUnits uappMaxTxExUnits,
-      appMaxBlockExUnits = hkdMap (Proxy @f) OrdExUnits uappMaxBlockExUnits,
-      appMaxValSize = uappMaxValSize,
-      appCollateralPercentage = uappCollateralPercentage,
-      appMaxCollateralInputs = uappMaxCollateralInputs
+    { appMinFeeA = sppMinFeeA
+    , appMinFeeB = sppMinFeeB
+    , appMaxBBSize = sppMaxBBSize
+    , appMaxTxSize = sppMaxTxSize
+    , appMaxBHSize = sppMaxBHSize
+    , appKeyDeposit = sppKeyDeposit
+    , appPoolDeposit = sppPoolDeposit
+    , appEMax = sppEMax
+    , appNOpt = sppNOpt
+    , appA0 = sppA0
+    , appRho = sppRho
+    , appTau = sppTau
+    , appD = sppD
+    , appExtraEntropy = sppExtraEntropy
+    , appProtocolVersion = sppProtocolVersion
+    , appMinPoolCost = sppMinPoolCost
+    , -- new in alonzo
+      appCoinsPerUTxOWord = uappCoinsPerUTxOWord
+    , appCostModels = uappCostModels
+    , appPrices = uappPrices
+    , appMaxTxExUnits = hkdMap (Proxy @f) OrdExUnits uappMaxTxExUnits
+    , appMaxBlockExUnits = hkdMap (Proxy @f) OrdExUnits uappMaxBlockExUnits
+    , appMaxValSize = uappMaxValSize
+    , appCollateralPercentage = uappCollateralPercentage
+    , appMaxCollateralInputs = uappMaxCollateralInputs
     }
 
 -- | Turn an AlonzoPParams into a ShelleyParams
 downgradeAlonzoPParams :: DowngradeAlonzoPParams f -> AlonzoPParams f era2 -> ShelleyPParams f era1
 downgradeAlonzoPParams DowngradeAlonzoPParams {dappMinUTxOValue} AlonzoPParams {..} =
   ShelleyPParams
-    { sppMinFeeA = appMinFeeA,
-      sppMinFeeB = appMinFeeB,
-      sppMaxBBSize = appMaxBBSize,
-      sppMaxTxSize = appMaxTxSize,
-      sppMaxBHSize = appMaxBHSize,
-      sppKeyDeposit = appKeyDeposit,
-      sppPoolDeposit = appPoolDeposit,
-      sppEMax = appEMax,
-      sppNOpt = appNOpt,
-      sppA0 = appA0,
-      sppRho = appRho,
-      sppTau = appTau,
-      sppD = appD,
-      sppExtraEntropy = appExtraEntropy,
-      sppProtocolVersion = appProtocolVersion,
-      sppMinUTxOValue = dappMinUTxOValue, -- <- parameter that was dropped in Alonzo
-      sppMinPoolCost = appMinPoolCost
+    { sppMinFeeA = appMinFeeA
+    , sppMinFeeB = appMinFeeB
+    , sppMaxBBSize = appMaxBBSize
+    , sppMaxTxSize = appMaxTxSize
+    , sppMaxBHSize = appMaxBHSize
+    , sppKeyDeposit = appKeyDeposit
+    , sppPoolDeposit = appPoolDeposit
+    , sppEMax = appEMax
+    , sppNOpt = appNOpt
+    , sppA0 = appA0
+    , sppRho = appRho
+    , sppTau = appTau
+    , sppD = appD
+    , sppExtraEntropy = appExtraEntropy
+    , sppProtocolVersion = appProtocolVersion
+    , sppMinUTxOValue = dappMinUTxOValue -- <- parameter that was dropped in Alonzo
+    , sppMinPoolCost = appMinPoolCost
     }
 
 instance ToExpr (AlonzoPParams StrictMaybe era)
 
 instance ToExpr (AlonzoPParams Identity era)
-

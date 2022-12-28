@@ -13,15 +13,15 @@ import Cardano.Ledger.Mary.TxBody (MaryEraTxBody (..))
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Shelley.LedgerState (DPState, keyTxRefunds)
 import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), Wdrl (..))
-import Cardano.Ledger.Shelley.UTxO
-  ( ShelleyScriptsNeeded (..),
-    getShelleyScriptsNeeded,
-  )
-import Cardano.Ledger.UTxO
-  ( EraUTxO (..),
-    UTxO (UTxO),
-    balance,
-  )
+import Cardano.Ledger.Shelley.UTxO (
+  ShelleyScriptsNeeded (..),
+  getShelleyScriptsNeeded,
+ )
+import Cardano.Ledger.UTxO (
+  EraUTxO (..),
+  UTxO (UTxO),
+  balance,
+ )
 import Cardano.Ledger.Val (inject)
 import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map

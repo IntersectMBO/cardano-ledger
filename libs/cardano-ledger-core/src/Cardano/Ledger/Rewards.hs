@@ -7,19 +7,19 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Ledger.Rewards
-  ( RewardType (..),
-    Reward (..),
-  )
+module Cardano.Ledger.Rewards (
+  RewardType (..),
+  Reward (..),
+)
 where
 
 import Cardano.Ledger.BaseTypes (invalidKey)
-import Cardano.Ledger.Binary
-  ( FromCBOR (..),
-    ToCBOR (..),
-    decodeWord,
-    encodeWord,
-  )
+import Cardano.Ledger.Binary (
+  FromCBOR (..),
+  ToCBOR (..),
+  decodeWord,
+  encodeWord,
+ )
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Crypto (Crypto)
@@ -65,9 +65,9 @@ instance FromCBOR RewardType where
 --
 -- * the number of Lovelace in the reward
 data Reward c = Reward
-  { rewardType :: RewardType,
-    rewardPool :: KeyHash 'StakePool c,
-    rewardAmount :: Coin
+  { rewardType :: RewardType
+  , rewardPool :: KeyHash 'StakePool c
+  , rewardAmount :: Coin
   }
   deriving (Eq, Show, Generic)
 

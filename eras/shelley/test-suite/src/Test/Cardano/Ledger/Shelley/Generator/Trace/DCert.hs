@@ -11,10 +11,10 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Test.Cardano.Ledger.Shelley.Generator.Trace.DCert
-  ( CERTS,
-    genDCerts,
-  )
+module Test.Cardano.Ledger.Shelley.Generator.Trace.DCert (
+  CERTS,
+  genDCerts,
+)
 where
 
 import Cardano.Ledger.BaseTypes (CertIx, Globals, ShelleyBase, TxIx)
@@ -23,36 +23,36 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era, EraCrypto)
 import Cardano.Ledger.Keys (HasKeyRole (coerceKeyRole), asWitness)
 import Cardano.Ledger.PParams
-import Cardano.Ledger.Shelley.API
-  ( AccountState,
-    DelplEnv (..),
-    KeyRole (..),
-    Ptr (..),
-    ShelleyDELPL,
-  )
+import Cardano.Ledger.Shelley.API (
+  AccountState,
+  DelplEnv (..),
+  KeyRole (..),
+  Ptr (..),
+  ShelleyDELPL,
+ )
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert (..))
 import Cardano.Ledger.Shelley.LedgerState (DPState (..), keyCertsRefunds, totalCertsDeposits)
 import Cardano.Ledger.Shelley.Rules (ShelleyDelplEvent, ShelleyDelplPredFailure)
 import Cardano.Ledger.Slot (SlotNo (..))
 import Control.Monad.Trans.Reader (runReaderT)
-import Control.State.Transition
-  ( BaseM,
-    Embed,
-    Environment,
-    Event,
-    PredicateFailure,
-    STS,
-    Signal,
-    State,
-    TRC (..),
-    TransitionRule,
-    initialRules,
-    judgmentContext,
-    trans,
-    transitionRules,
-    wrapEvent,
-    wrapFailed,
-  )
+import Control.State.Transition (
+  BaseM,
+  Embed,
+  Environment,
+  Event,
+  PredicateFailure,
+  STS,
+  Signal,
+  State,
+  TRC (..),
+  TransitionRule,
+  initialRules,
+  judgmentContext,
+  trans,
+  transitionRules,
+  wrapEvent,
+  wrapFailed,
+ )
 import Control.State.Transition.Trace (TraceOrder (OldestFirst), lastState, traceSignals)
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Data.Functor.Identity (runIdentity)
@@ -96,11 +96,11 @@ deriving stock instance
   Show (CertsPredicateFailure era)
 
 instance
-  ( Era era,
-    Embed (Core.EraRule "DELPL" era) (CERTS era),
-    Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
-    State (Core.EraRule "DELPL" era) ~ DPState (EraCrypto era),
-    Signal (Core.EraRule "DELPL" era) ~ DCert (EraCrypto era)
+  ( Era era
+  , Embed (Core.EraRule "DELPL" era) (CERTS era)
+  , Environment (Core.EraRule "DELPL" era) ~ DelplEnv era
+  , State (Core.EraRule "DELPL" era) ~ DPState (EraCrypto era)
+  , Signal (Core.EraRule "DELPL" era) ~ DCert (EraCrypto era)
   ) =>
   STS (CERTS era)
   where
@@ -117,17 +117,17 @@ instance
 
 certsTransition ::
   forall era.
-  ( Embed (Core.EraRule "DELPL" era) (CERTS era),
-    Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
-    State (Core.EraRule "DELPL" era) ~ DPState (EraCrypto era),
-    Signal (Core.EraRule "DELPL" era) ~ DCert (EraCrypto era)
+  ( Embed (Core.EraRule "DELPL" era) (CERTS era)
+  , Environment (Core.EraRule "DELPL" era) ~ DelplEnv era
+  , State (Core.EraRule "DELPL" era) ~ DPState (EraCrypto era)
+  , Signal (Core.EraRule "DELPL" era) ~ DCert (EraCrypto era)
   ) =>
   TransitionRule (CERTS era)
 certsTransition = do
   TRC
-    ( (slot, txIx, pp, acnt),
-      (dpState, nextCertIx),
-      c
+    ( (slot, txIx, pp, acnt)
+      , (dpState, nextCertIx)
+      , c
       ) <-
     judgmentContext
 
@@ -143,10 +143,10 @@ certsTransition = do
       pure (dpState, nextCertIx)
 
 instance
-  ( Era era,
-    STS (ShelleyDELPL era),
-    PredicateFailure (Core.EraRule "DELPL" era) ~ ShelleyDelplPredFailure era,
-    Event (Core.EraRule "DELPL" era) ~ ShelleyDelplEvent era
+  ( Era era
+  , STS (ShelleyDELPL era)
+  , PredicateFailure (Core.EraRule "DELPL" era) ~ ShelleyDelplPredFailure era
+  , Event (Core.EraRule "DELPL" era) ~ ShelleyDelplEvent era
   ) =>
   Embed (ShelleyDELPL era) (CERTS era)
   where
@@ -154,12 +154,12 @@ instance
   wrapEvent = CertsEvent
 
 instance
-  ( EraGen era,
-    Embed (Core.EraRule "DELPL" era) (CERTS era),
-    Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
-    State (Core.EraRule "DELPL" era) ~ DPState (EraCrypto era),
-    Signal (Core.EraRule "DELPL" era) ~ DCert (EraCrypto era),
-    ShelleyTest era
+  ( EraGen era
+  , Embed (Core.EraRule "DELPL" era) (CERTS era)
+  , Environment (Core.EraRule "DELPL" era) ~ DelplEnv era
+  , State (Core.EraRule "DELPL" era) ~ DPState (EraCrypto era)
+  , Signal (Core.EraRule "DELPL" era) ~ DCert (EraCrypto era)
+  , ShelleyTest era
   ) =>
   QC.HasTrace (CERTS era) (GenEnv era)
   where
@@ -190,12 +190,12 @@ instance
 -- deposits and refunds required.
 genDCerts ::
   forall era.
-  ( EraGen era,
-    Embed (Core.EraRule "DELPL" era) (CERTS era),
-    Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
-    State (Core.EraRule "DELPL" era) ~ DPState (EraCrypto era),
-    Signal (Core.EraRule "DELPL" era) ~ DCert (EraCrypto era),
-    ShelleyTest era
+  ( EraGen era
+  , Embed (Core.EraRule "DELPL" era) (CERTS era)
+  , Environment (Core.EraRule "DELPL" era) ~ DelplEnv era
+  , State (Core.EraRule "DELPL" era) ~ DPState (EraCrypto era)
+  , Signal (Core.EraRule "DELPL" era) ~ DCert (EraCrypto era)
+  , ShelleyTest era
   ) =>
   GenEnv era ->
   Core.PParams era ->
@@ -204,18 +204,18 @@ genDCerts ::
   TxIx ->
   AccountState ->
   Gen
-    ( StrictSeq (DCert (EraCrypto era)),
-      Coin,
-      Coin,
-      DPState (EraCrypto era),
-      ([KeyPair 'Witness (EraCrypto era)], [(Core.Script era, Core.Script era)])
+    ( StrictSeq (DCert (EraCrypto era))
+    , Coin
+    , Coin
+    , DPState (EraCrypto era)
+    , ([KeyPair 'Witness (EraCrypto era)], [(Core.Script era, Core.Script era)])
     )
 genDCerts
   ge@( GenEnv
-         KeySpace_ {ksIndexedStakingKeys}
-         _scriptspace
-         Constants {maxCertsPerTx}
-       )
+        KeySpace_ {ksIndexedStakingKeys}
+        _scriptspace
+        Constants {maxCertsPerTx}
+      )
   pparams
   dpState
   slot
@@ -234,12 +234,13 @@ genDCerts
         keyCreds' = concat (keyCreds : map scriptWitnesses scriptCreds)
         refunds = keyCertsRefunds pparams dpState certs
     pure
-      ( StrictSeq.fromList certs,
-        totalCertsDeposits pparams dpState certs,
-        refunds,
-        lastState_,
-        ( concat (keyCredAsWitness <$> keyCreds'),
-          extractScriptCred <$> scriptCreds
+      ( StrictSeq.fromList certs
+      , totalCertsDeposits pparams dpState certs
+      , refunds
+      , lastState_
+      ,
+        ( concat (keyCredAsWitness <$> keyCreds')
+        , extractScriptCred <$> scriptCreds
         )
       )
     where

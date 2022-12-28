@@ -9,16 +9,16 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Alonzo
-  ( Alonzo,
-    AlonzoEra,
-    AlonzoTxOut,
-    MaryValue,
-    AlonzoTxBody,
-    AlonzoScript,
-    AlonzoTxAuxData,
-    reapplyAlonzoTx,
-  )
+module Cardano.Ledger.Alonzo (
+  Alonzo,
+  AlonzoEra,
+  AlonzoTxOut,
+  MaryValue,
+  AlonzoTxBody,
+  AlonzoScript,
+  AlonzoTxAuxData,
+  reapplyAlonzoTx,
+)
 where
 
 import Cardano.Ledger.Alonzo.Data (AlonzoTxAuxData)
@@ -92,7 +92,7 @@ instance Crypto c => ExtendedUTxO (AlonzoEra c) where
   getAllowedSupplimentalDataHashes txBody _ =
     Set.fromList
       [ dh
-        | txOut <- toList $ txBody ^. outputsTxBodyL,
-          SJust dh <- [txOut ^. dataHashTxOutL]
+      | txOut <- toList $ txBody ^. outputsTxBodyL
+      , SJust dh <- [txOut ^. dataHashTxOutL]
       ]
   getDatum = getDatumAlonzo

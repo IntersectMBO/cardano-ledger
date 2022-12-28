@@ -6,28 +6,28 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Shelley.RewardProvenance
-  ( RewardProvenance (..),
-    RewardProvenancePool (..),
-    Desirability (..),
-  )
+module Cardano.Ledger.Shelley.RewardProvenance (
+  RewardProvenance (..),
+  RewardProvenancePool (..),
+  Desirability (..),
+)
 where
 
 import Cardano.Ledger.BaseTypes (BlocksMade (..))
-import Cardano.Ledger.Binary
-  ( FromCBOR (fromCBOR),
-    ToCBOR (toCBOR),
-    decodeDouble,
-    encodeDouble,
-  )
-import Cardano.Ledger.Binary.Coders
-  ( Decode (..),
-    Encode (..),
-    decode,
-    encode,
-    (!>),
-    (<!),
-  )
+import Cardano.Ledger.Binary (
+  FromCBOR (fromCBOR),
+  ToCBOR (toCBOR),
+  decodeDouble,
+  encodeDouble,
+ )
+import Cardano.Ledger.Binary.Coders (
+  Decode (..),
+  Encode (..),
+  decode,
+  encode,
+  (!>),
+  (<!),
+ )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..))
 import qualified Cardano.Ledger.Crypto as CC
@@ -49,30 +49,30 @@ import Numeric.Natural (Natural)
 
 -- | Provenance for an individual stake pool's reward calculation.
 data RewardProvenancePool c = RewardProvenancePool
-  { -- | The number of blocks the pool produced.
-    poolBlocksP :: !Natural,
-    -- | The stake pool's stake share (portion of the total stake).
-    sigmaP :: !Rational,
-    -- | The stake pool's active stake share (portion of the active stake).
-    sigmaAP :: !Rational,
-    -- | The number of Lovelace owned by the stake pool owners.
-    -- If this value is not at least as large as the 'pledgeRatioP',
-    -- the stake pool will not earn any rewards for the given epoch.
-    ownerStakeP :: !Coin,
-    -- | The stake pool's registered parameters.
-    poolParamsP :: !(PoolParams c),
-    -- | The stake pool's pledge.
-    pledgeRatioP :: !Rational,
-    -- | The maximum number of Lovelace this stake pool can earn.
-    maxPP :: !Coin,
-    -- | The stake pool's apparent performance.
-    -- See Section 5.5.2 of the
-    --  <https://hydra.iohk.io/job/Cardano/cardano-ledger/delegationDesignSpec/latest/download-by-type/doc-pdf/delegation_design_spec Design Specification>.
-    appPerfP :: !Rational,
-    -- | The total Lovelace earned by the stake pool.
-    poolRP :: !Coin,
-    -- | The total Lovelace earned by the stake pool leader.
-    lRewardP :: !Coin
+  { poolBlocksP :: !Natural
+  -- ^ The number of blocks the pool produced.
+  , sigmaP :: !Rational
+  -- ^ The stake pool's stake share (portion of the total stake).
+  , sigmaAP :: !Rational
+  -- ^ The stake pool's active stake share (portion of the active stake).
+  , ownerStakeP :: !Coin
+  -- ^ The number of Lovelace owned by the stake pool owners.
+  -- If this value is not at least as large as the 'pledgeRatioP',
+  -- the stake pool will not earn any rewards for the given epoch.
+  , poolParamsP :: !(PoolParams c)
+  -- ^ The stake pool's registered parameters.
+  , pledgeRatioP :: !Rational
+  -- ^ The stake pool's pledge.
+  , maxPP :: !Coin
+  -- ^ The maximum number of Lovelace this stake pool can earn.
+  , appPerfP :: !Rational
+  -- ^ The stake pool's apparent performance.
+  -- See Section 5.5.2 of the
+  --  <https://hydra.iohk.io/job/Cardano/cardano-ledger/delegationDesignSpec/latest/download-by-type/doc-pdf/delegation_design_spec Design Specification>.
+  , poolRP :: !Coin
+  -- ^ The total Lovelace earned by the stake pool.
+  , lRewardP :: !Coin
+  -- ^ The total Lovelace earned by the stake pool leader.
   }
   deriving (Eq, Generic)
 
@@ -92,8 +92,8 @@ instance CC.Crypto c => Default (RewardProvenancePool c) where
 -- Additionally, the hit rate estimation described in the
 -- <https://hydra.iohk.io/job/Cardano/cardano-ledger/specs.pool-ranking/latest/download-by-type/doc-pdf/pool-ranking stake pool ranking document> is included.
 data Desirability = Desirability
-  { desirabilityScore :: !Double,
-    hitRateEstimate :: !Double
+  { desirabilityScore :: !Double
+  , hitRateEstimate :: !Double
   }
   deriving (Eq, Show, Generic)
 
@@ -114,50 +114,50 @@ instance NFData Desirability
 --  See also Section 5 of the
 --  <https://hydra.iohk.io/job/Cardano/cardano-ledger/delegationDesignSpec/latest/download-by-type/doc-pdf/delegation_design_spec Design Specification>.
 data RewardProvenance c = RewardProvenance
-  { -- | The number of slots per epoch.
-    spe :: !Word64,
-    -- | A map from pool ID (the key hash of the stake pool operator's
-    -- verification key) to the number of blocks made in the given epoch.
-    blocks :: !(BlocksMade c),
-    -- | The maximum Lovelace supply. On mainnet, this value is equal to
-    -- 45 * 10^15 (45 billion ADA).
-    maxLL :: !Coin,
-    -- | The maximum amount of Lovelace which can be removed from the reserves
-    -- to be given out as rewards for the given epoch.
-    deltaR1 :: !Coin,
-    -- | The difference between the total Lovelace that could have been
-    -- distributed as rewards this epoch (which is 'r') and what was actually distributed.
-    deltaR2 :: !Coin,
-    -- | The total Lovelace available for rewards for the given epoch,
-    -- equal to 'rPot' less 'deltaT1'.
-    r :: !Coin,
-    -- | The maximum Lovelace supply ('maxLL') less the current value of the reserves.
-    totalStake :: !Coin,
-    -- | The total number of blocks produced during the given epoch.
-    blocksCount :: !Integer,
-    -- | The decentralization parameter.
-    d :: !Rational,
-    -- | The number of blocks expected to be produced during the given epoch.
-    expBlocks :: !Integer,
-    -- | The ratio of the number of blocks actually made versus the number
-    -- of blocks that were expected.
-    eta :: !Rational,
-    -- | The reward pot for the given epoch, equal to 'deltaR1' plus the fee pot.
-    rPot :: !Coin,
-    -- | The amount of Lovelace taken from the treasury for the given epoch.
-    deltaT1 :: !Coin,
-    -- | The amount of Lovelace that is delegated during the given epoch.
-    activeStake :: !Coin,
-    -- | Individual stake pool provenance.
-    pools ::
+  { spe :: !Word64
+  -- ^ The number of slots per epoch.
+  , blocks :: !(BlocksMade c)
+  -- ^ A map from pool ID (the key hash of the stake pool operator's
+  -- verification key) to the number of blocks made in the given epoch.
+  , maxLL :: !Coin
+  -- ^ The maximum Lovelace supply. On mainnet, this value is equal to
+  -- 45 * 10^15 (45 billion ADA).
+  , deltaR1 :: !Coin
+  -- ^ The maximum amount of Lovelace which can be removed from the reserves
+  -- to be given out as rewards for the given epoch.
+  , deltaR2 :: !Coin
+  -- ^ The difference between the total Lovelace that could have been
+  -- distributed as rewards this epoch (which is 'r') and what was actually distributed.
+  , r :: !Coin
+  -- ^ The total Lovelace available for rewards for the given epoch,
+  -- equal to 'rPot' less 'deltaT1'.
+  , totalStake :: !Coin
+  -- ^ The maximum Lovelace supply ('maxLL') less the current value of the reserves.
+  , blocksCount :: !Integer
+  -- ^ The total number of blocks produced during the given epoch.
+  , d :: !Rational
+  -- ^ The decentralization parameter.
+  , expBlocks :: !Integer
+  -- ^ The number of blocks expected to be produced during the given epoch.
+  , eta :: !Rational
+  -- ^ The ratio of the number of blocks actually made versus the number
+  -- of blocks that were expected.
+  , rPot :: !Coin
+  -- ^ The reward pot for the given epoch, equal to 'deltaR1' plus the fee pot.
+  , deltaT1 :: !Coin
+  -- ^ The amount of Lovelace taken from the treasury for the given epoch.
+  , activeStake :: !Coin
+  -- ^ The amount of Lovelace that is delegated during the given epoch.
+  , pools ::
       !( Map
-           (KeyHash 'StakePool c)
-           (RewardProvenancePool c)
-       ),
-    -- | A map from pool ID to the desirability score.
-    -- See the <https://hydra.iohk.io/job/Cardano/cardano-ledger/specs.pool-ranking/latest/download-by-type/doc-pdf/pool-ranking stake pool ranking document>.
-    desirabilities ::
+          (KeyHash 'StakePool c)
+          (RewardProvenancePool c)
+       )
+  -- ^ Individual stake pool provenance.
+  , desirabilities ::
       !(Map (KeyHash 'StakePool c) Desirability)
+  -- ^ A map from pool ID to the desirability score.
+  -- See the <https://hydra.iohk.io/job/Cardano/cardano-ledger/specs.pool-ranking/latest/download-by-type/doc-pdf/pool-ranking stake pool ranking document>.
   }
   deriving (Eq, Generic)
 
@@ -216,16 +216,16 @@ instance Show (RewardProvenancePool c) where
     "RewardProvenancePool\n"
       ++ mylines
         3
-        [ "poolBlocks = " ++ show (poolBlocksP t),
-          "sigma = " ++ show (sigmaP t),
-          "sigmaA = " ++ show (sigmaAP t),
-          "ownerStake = " ++ show (ownerStakeP t),
-          "poolParams = " ++ showPoolParams (poolParamsP t),
-          "pledgeRatio = " ++ show (pledgeRatioP t),
-          "maxP = " ++ show (maxPP t),
-          "appPerf = " ++ show (appPerfP t),
-          "poolR = " ++ show (poolRP t),
-          "lReward = " ++ show (lRewardP t)
+        [ "poolBlocks = " ++ show (poolBlocksP t)
+        , "sigma = " ++ show (sigmaP t)
+        , "sigmaA = " ++ show (sigmaAP t)
+        , "ownerStake = " ++ show (ownerStakeP t)
+        , "poolParams = " ++ showPoolParams (poolParamsP t)
+        , "pledgeRatio = " ++ show (pledgeRatioP t)
+        , "maxP = " ++ show (maxPP t)
+        , "appPerf = " ++ show (appPerfP t)
+        , "poolR = " ++ show (poolRP t)
+        , "lReward = " ++ show (lRewardP t)
         ]
 
 showPoolParams :: PoolParams c -> String
@@ -233,15 +233,15 @@ showPoolParams x =
   "PoolParams\n"
     ++ mylines
       6
-      [ "poolId = " ++ show (ppId x),
-        "poolVrf = " ++ show (ppVrf x),
-        "poolPledge = " ++ show (ppPledge x),
-        "poolCost = " ++ show (ppCost x),
-        "poolMargin = " ++ show (ppMargin x),
-        "poolRAcnt = " ++ show (ppRewardAcnt x),
-        "poolOwners = " ++ show (ppOwners x),
-        "poolRelays = " ++ show (ppRelays x),
-        "poolMD = " ++ show (ppMetadata x)
+      [ "poolId = " ++ show (ppId x)
+      , "poolVrf = " ++ show (ppVrf x)
+      , "poolPledge = " ++ show (ppPledge x)
+      , "poolCost = " ++ show (ppCost x)
+      , "poolMargin = " ++ show (ppMargin x)
+      , "poolRAcnt = " ++ show (ppRewardAcnt x)
+      , "poolOwners = " ++ show (ppOwners x)
+      , "poolRelays = " ++ show (ppRelays x)
+      , "poolMD = " ++ show (ppMetadata x)
       ]
 
 instance Show (RewardProvenance c) where
@@ -249,22 +249,22 @@ instance Show (RewardProvenance c) where
     "RewardProvenance\n"
       ++ mylines
         3
-        [ "spe = " ++ show (spe t),
-          "blocks = " ++ show (blocks t),
-          "maxLL = " ++ show (maxLL t),
-          "deltaR1 = " ++ show (deltaR1 t),
-          "deltaR2 = " ++ show (deltaR2 t),
-          "r = " ++ show (r t),
-          "totalStake = " ++ show (totalStake t),
-          "blocksCount = " ++ show (blocksCount t),
-          "d = " ++ show (d t),
-          "expBlocks = " ++ show (expBlocks t),
-          "eta = " ++ show (eta t),
-          "rPot = " ++ show (rPot t),
-          "deltaT1 = " ++ show (deltaT1 t),
-          "activeStake = " ++ show (activeStake t),
-          "pools = " ++ show (pools t),
-          "desirabilities = " ++ show (desirabilities t)
+        [ "spe = " ++ show (spe t)
+        , "blocks = " ++ show (blocks t)
+        , "maxLL = " ++ show (maxLL t)
+        , "deltaR1 = " ++ show (deltaR1 t)
+        , "deltaR2 = " ++ show (deltaR2 t)
+        , "r = " ++ show (r t)
+        , "totalStake = " ++ show (totalStake t)
+        , "blocksCount = " ++ show (blocksCount t)
+        , "d = " ++ show (d t)
+        , "expBlocks = " ++ show (expBlocks t)
+        , "eta = " ++ show (eta t)
+        , "rPot = " ++ show (rPot t)
+        , "deltaT1 = " ++ show (deltaT1 t)
+        , "activeStake = " ++ show (activeStake t)
+        , "pools = " ++ show (pools t)
+        , "desirabilities = " ++ show (desirabilities t)
         ]
 
 -- =======================================================

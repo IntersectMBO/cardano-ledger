@@ -2,10 +2,10 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Ledger.Shelley.SoftForks
-  ( validMetadata,
-    restrictPoolMetadataHash,
-  )
+module Cardano.Ledger.Shelley.SoftForks (
+  validMetadata,
+  restrictPoolMetadataHash,
+)
 where
 
 import Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)

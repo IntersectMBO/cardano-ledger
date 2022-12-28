@@ -2,22 +2,22 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 
-module Cardano.Chain.Delegation.Map
-  ( Map (..),
+module Cardano.Chain.Delegation.Map (
+  Map (..),
 
-    -- * Query
-    memberR,
-    notMemberR,
-    pairMember,
-    lookupR,
+  -- * Query
+  memberR,
+  notMemberR,
+  pairMember,
+  lookupR,
 
-    -- * Update
-    insert,
+  -- * Update
+  insert,
 
-    -- * Conversion/traversal
-    fromList,
-    keysSet,
-  )
+  -- * Conversion/traversal
+  fromList,
+  keysSet,
+)
 where
 
 import Cardano.Chain.Common.KeyHash (KeyHash)

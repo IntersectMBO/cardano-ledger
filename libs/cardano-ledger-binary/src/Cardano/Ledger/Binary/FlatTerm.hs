@@ -1,12 +1,12 @@
 {-# LANGUAGE RankNTypes #-}
 
-module Cardano.Ledger.Binary.FlatTerm
-  ( C.FlatTerm,
-    C.TermToken (..),
-    toFlatTerm,
-    fromFlatTerm,
-    C.validFlatTerm,
-  )
+module Cardano.Ledger.Binary.FlatTerm (
+  C.FlatTerm,
+  C.TermToken (..),
+  toFlatTerm,
+  fromFlatTerm,
+  C.validFlatTerm,
+)
 where
 
 import Cardano.Ledger.Binary.Decoding

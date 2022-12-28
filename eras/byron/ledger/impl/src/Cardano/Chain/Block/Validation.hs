@@ -9,114 +9,114 @@
 {-# LANGUAGE NumDecimals #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Cardano.Chain.Block.Validation
-  ( UPI.adoptedProtocolParameters,
-    updateBody,
-    updateChainBlockOrBoundary,
-    updateChainBoundary,
-    epochTransition,
-    headerIsValid,
-    validateHeaderMatchesBody,
-    updateBlock,
-    BodyState (..),
-    BodyEnvironment (..),
-    EpochEnvironment (..),
-    ChainValidationState (..),
-    initialChainValidationState,
-    ChainValidationError (..),
+module Cardano.Chain.Block.Validation (
+  UPI.adoptedProtocolParameters,
+  updateBody,
+  updateChainBlockOrBoundary,
+  updateChainBoundary,
+  epochTransition,
+  headerIsValid,
+  validateHeaderMatchesBody,
+  updateBlock,
+  BodyState (..),
+  BodyEnvironment (..),
+  EpochEnvironment (..),
+  ChainValidationState (..),
+  initialChainValidationState,
+  ChainValidationError (..),
 
-    -- * UTxO
-    HeapSize (..),
-    UTxOSize (..),
-    calcUTxOSize,
-    foldUTxO,
-    foldUTxOBlock,
-  )
+  -- * UTxO
+  HeapSize (..),
+  UTxOSize (..),
+  calcUTxOSize,
+  foldUTxO,
+  foldUTxOBlock,
+)
 where
 
-import Cardano.Chain.Block.Block
-  ( ABlock (..),
-    ABlockOrBoundary (..),
-    ABoundaryBlock (..),
-    blockAProtocolMagicId,
-    blockDlgPayload,
-    blockHashAnnotated,
-    blockHeader,
-    blockIssuer,
-    blockLength,
-    blockProtocolMagicId,
-    blockProtocolVersion,
-    blockSlot,
-    blockTxPayload,
-    blockUpdatePayload,
-  )
+import Cardano.Chain.Block.Block (
+  ABlock (..),
+  ABlockOrBoundary (..),
+  ABoundaryBlock (..),
+  blockAProtocolMagicId,
+  blockDlgPayload,
+  blockHashAnnotated,
+  blockHeader,
+  blockIssuer,
+  blockLength,
+  blockProtocolMagicId,
+  blockProtocolVersion,
+  blockSlot,
+  blockTxPayload,
+  blockUpdatePayload,
+ )
 import Cardano.Chain.Block.Body (ABody (..))
-import Cardano.Chain.Block.Header
-  ( ABoundaryHeader (..),
-    AHeader (..),
-    BlockSignature,
-    HeaderHash,
-    headerLength,
-    headerProof,
-    wrapBoundaryBytes,
-  )
+import Cardano.Chain.Block.Header (
+  ABoundaryHeader (..),
+  AHeader (..),
+  BlockSignature,
+  HeaderHash,
+  headerLength,
+  headerProof,
+  wrapBoundaryBytes,
+ )
 import Cardano.Chain.Block.Proof (Proof (..), ProofValidationError (..))
-import Cardano.Chain.Common
-  ( BlockCount (..),
-    KeyHash,
-    hashKey,
-  )
+import Cardano.Chain.Common (
+  BlockCount (..),
+  KeyHash,
+  hashKey,
+ )
 import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Delegation.Validation.Interface as DI
 import qualified Cardano.Chain.Delegation.Validation.Scheduling as Scheduling
 import Cardano.Chain.Epoch.File (ParseError, mainnetEpochSlots)
-import Cardano.Chain.Genesis as Genesis
-  ( Config (..),
-    GenesisHash,
-    GenesisKeyHashes (..),
-    configEpochSlots,
-    configGenesisKeyHashes,
-    configHeavyDelegation,
-    configK,
-    configProtocolMagicId,
-  )
+import Cardano.Chain.Genesis as Genesis (
+  Config (..),
+  GenesisHash,
+  GenesisKeyHashes (..),
+  configEpochSlots,
+  configGenesisKeyHashes,
+  configHeavyDelegation,
+  configK,
+  configProtocolMagicId,
+ )
 import Cardano.Chain.ProtocolConstants (kEpochSlots)
-import Cardano.Chain.Slotting
-  ( EpochAndSlotCount (..),
-    EpochNumber (..),
-    SlotNumber (..),
-    fromSlotNumber,
-    slotNumberEpoch,
-  )
+import Cardano.Chain.Slotting (
+  EpochAndSlotCount (..),
+  EpochNumber (..),
+  SlotNumber (..),
+  fromSlotNumber,
+  slotNumberEpoch,
+ )
 import Cardano.Chain.UTxO (ATxPayload (..), UTxO (..), genesisUtxo, recoverTxProof)
 import Cardano.Chain.UTxO.UTxOConfiguration (UTxOConfiguration)
 import qualified Cardano.Chain.UTxO.Validation as UTxO
 import qualified Cardano.Chain.Update as Update
 import Cardano.Chain.Update.Validation.Endorsement (Endorsement (..))
 import qualified Cardano.Chain.Update.Validation.Interface as UPI
-import Cardano.Chain.ValidationMode
-  ( ValidationMode,
-    orThrowErrorInBlockValidationMode,
-    whenBlockValidation,
-    wrapErrorWithValidationMode,
-  )
-import Cardano.Crypto
-  ( AProtocolMagic (..),
-    ProtocolMagicId,
-    VerificationKey,
-    hashDecoded,
-    hashRaw,
-  )
+import Cardano.Chain.ValidationMode (
+  ValidationMode,
+  orThrowErrorInBlockValidationMode,
+  whenBlockValidation,
+  wrapErrorWithValidationMode,
+ )
+import Cardano.Crypto (
+  AProtocolMagic (..),
+  ProtocolMagicId,
+  VerificationKey,
+  hashDecoded,
+  hashRaw,
+ )
 import Cardano.HeapWords (HeapWords (..))
-import Cardano.Ledger.Binary
-  ( Annotated (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    byronProtVer,
-    encodeListLen,
-    enforceSize,
-    serialize',
-  )
+import Cardano.Ledger.Binary (
+  Annotated (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  byronProtVer,
+  encodeListLen,
+  enforceSize,
+  serialize',
+ )
 import Cardano.Prelude
 import Control.Monad.Trans.Resource (ResIO)
 import qualified Data.ByteString.Lazy as BSL
@@ -133,13 +133,13 @@ import qualified Streaming.Prelude as S
 --------------------------------------------------------------------------------
 
 data ChainValidationState = ChainValidationState
-  { cvsLastSlot :: !SlotNumber,
-    -- | GenesisHash for the previous hash of the zeroth boundary block and
-    --   HeaderHash for all others.
-    cvsPreviousHash :: !(Either GenesisHash HeaderHash),
-    cvsUtxo :: !UTxO,
-    cvsUpdateState :: !UPI.State,
-    cvsDelegationState :: !DI.State
+  { cvsLastSlot :: !SlotNumber
+  , cvsPreviousHash :: !(Either GenesisHash HeaderHash)
+  -- ^ GenesisHash for the previous hash of the zeroth boundary block and
+  --   HeaderHash for all others.
+  , cvsUtxo :: !UTxO
+  , cvsUpdateState :: !UPI.State
+  , cvsDelegationState :: !DI.State
   }
   deriving (Eq, Show, Generic, NFData, NoThunks)
 
@@ -173,23 +173,23 @@ initialChainValidationState config = do
   delegationState <- DI.initialState delegationEnv genesisDelegation
   pure $
     ChainValidationState
-      { cvsLastSlot = 0,
-        -- Ensure that we don't allow the internal value of this 'Left' to be
+      { cvsLastSlot = 0
+      , -- Ensure that we don't allow the internal value of this 'Left' to be
         -- lazy as we want to ensure that the 'ChainValidationState' is always
         -- in normal form.
-        cvsPreviousHash = Left $! configGenesisHash config,
-        cvsUtxo = genesisUtxo config,
-        cvsUpdateState = UPI.initialState config,
-        cvsDelegationState = delegationState
+        cvsPreviousHash = Left $! configGenesisHash config
+      , cvsUtxo = genesisUtxo config
+      , cvsUpdateState = UPI.initialState config
+      , cvsDelegationState = delegationState
       }
   where
     delegationEnv =
       DI.Environment
-        { DI.protocolMagic = Annotated pm (serialize' byronProtVer pm),
-          DI.allowedDelegators = unGenesisKeyHashes $ configGenesisKeyHashes config,
-          DI.k = configK config,
-          DI.currentEpoch = EpochNumber 0,
-          DI.currentSlot = SlotNumber 0
+        { DI.protocolMagic = Annotated pm (serialize' byronProtVer pm)
+        , DI.allowedDelegators = unGenesisKeyHashes $ configGenesisKeyHashes config
+        , DI.k = configK config
+        , DI.currentEpoch = EpochNumber 0
+        , DI.currentSlot = SlotNumber 0
         }
 
     pm = configProtocolMagicId config
@@ -326,23 +326,23 @@ validateBlockProofs b =
   validateHeaderMatchesBody blockHeader blockBody
   where
     ABlock
-      { blockHeader,
-        blockBody
+      { blockHeader
+      , blockBody
       } = b
 
 data BodyEnvironment = BodyEnvironment
-  { protocolMagic :: !(AProtocolMagic ByteString),
-    utxoConfiguration :: !UTxOConfiguration,
-    k :: !BlockCount,
-    allowedDelegators :: !(Set KeyHash),
-    protocolParameters :: !Update.ProtocolParameters,
-    currentEpoch :: !EpochNumber
+  { protocolMagic :: !(AProtocolMagic ByteString)
+  , utxoConfiguration :: !UTxOConfiguration
+  , k :: !BlockCount
+  , allowedDelegators :: !(Set KeyHash)
+  , protocolParameters :: !Update.ProtocolParameters
+  , currentEpoch :: !EpochNumber
   }
 
 data BodyState = BodyState
-  { utxo :: !UTxO,
-    updateState :: !UPI.State,
-    delegationState :: !DI.State
+  { utxo :: !UTxO
+  , updateState :: !UPI.State
+  , delegationState :: !DI.State
   }
 
 -- | This is an implementation of the BBODY rule as per the chain specification.
@@ -383,17 +383,17 @@ updateBody env bs b = do
 
   pure $
     BodyState
-      { utxo = utxo',
-        updateState = updateState',
-        delegationState = delegationState'
+      { utxo = utxo'
+      , updateState = updateState'
+      , delegationState = delegationState'
       }
   where
     BodyEnvironment
-      { protocolMagic,
-        k,
-        allowedDelegators,
-        utxoConfiguration,
-        currentEpoch
+      { protocolMagic
+      , k
+      , allowedDelegators
+      , utxoConfiguration
+      , currentEpoch
       } = env
 
     BodyState {utxo, updateState, delegationState} = bs
@@ -409,27 +409,27 @@ updateBody env bs b = do
 
     delegationEnv =
       DI.Environment
-        { DI.protocolMagic = getAProtocolMagicId protocolMagic,
-          DI.allowedDelegators = allowedDelegators,
-          DI.k = k,
-          DI.currentEpoch = currentEpoch,
-          DI.currentSlot = currentSlot
+        { DI.protocolMagic = getAProtocolMagicId protocolMagic
+        , DI.allowedDelegators = allowedDelegators
+        , DI.k = k
+        , DI.currentEpoch = currentEpoch
+        , DI.currentSlot = currentSlot
         }
 
     utxoEnv =
       UTxO.Environment
-        { UTxO.protocolMagic = protocolMagic,
-          UTxO.protocolParameters = UPI.adoptedProtocolParameters updateState,
-          UTxO.utxoConfiguration = utxoConfiguration
+        { UTxO.protocolMagic = protocolMagic
+        , UTxO.protocolParameters = UPI.adoptedProtocolParameters updateState
+        , UTxO.utxoConfiguration = utxoConfiguration
         }
 
     updateEnv =
       UPI.Environment
-        { UPI.protocolMagic = getAProtocolMagicId protocolMagic,
-          UPI.k = k,
-          UPI.currentSlot = currentSlot,
-          UPI.numGenKeys = toNumGenKeys $ Set.size allowedDelegators,
-          UPI.delegationMap = DI.delegationMap delegationState
+        { UPI.protocolMagic = getAProtocolMagicId protocolMagic
+        , UPI.k = k
+        , UPI.currentSlot = currentSlot
+        , UPI.numGenKeys = toNumGenKeys $ Set.size allowedDelegators
+        , UPI.delegationMap = DI.delegationMap delegationState
         }
     updateSignal = UPI.Signal updateProposal updateVotes updateEndorsement
 
@@ -459,11 +459,11 @@ headerIsValid updateState h =
     maxHeaderSize = Update.ppMaxHeaderSize $ UPI.adoptedProtocolParameters updateState
 
 data EpochEnvironment = EpochEnvironment
-  { protocolMagic :: !(Annotated ProtocolMagicId ByteString),
-    k :: !BlockCount,
-    allowedDelegators :: !(Set KeyHash),
-    delegationMap :: !Delegation.Map,
-    currentEpoch :: !EpochNumber
+  { protocolMagic :: !(Annotated ProtocolMagicId ByteString)
+  , k :: !BlockCount
+  , allowedDelegators :: !(Set KeyHash)
+  , delegationMap :: !Delegation.Map
+  , currentEpoch :: !EpochNumber
   }
 
 -- | Perform epoch transition if we have moved across the epoch boundary
@@ -488,11 +488,11 @@ epochTransition env st slot =
 
     updateEnv =
       UPI.Environment
-        { UPI.protocolMagic = protocolMagic,
-          UPI.k = k,
-          UPI.currentSlot = slot,
-          UPI.numGenKeys = toNumGenKeys $ Set.size allowedDelegators,
-          UPI.delegationMap = delegationMap
+        { UPI.protocolMagic = protocolMagic
+        , UPI.k = k
+        , UPI.currentSlot = slot
+        , UPI.numGenKeys = toNumGenKeys $ Set.size allowedDelegators
+        , UPI.delegationMap = delegationMap
         }
 
 -- | This represents the CHAIN rule. It is intended more for use in tests than
@@ -526,39 +526,39 @@ updateBlock config cvs b = do
           { protocolMagic =
               AProtocolMagic
                 (blockAProtocolMagicId b)
-                (configReqNetMagic config),
-            k = configK config,
-            allowedDelegators,
-            protocolParameters = UPI.adoptedProtocolParameters updateState',
-            utxoConfiguration = Genesis.configUTxOConfiguration config,
-            currentEpoch = slotNumberEpoch (configEpochSlots config) (blockSlot b)
+                (configReqNetMagic config)
+          , k = configK config
+          , allowedDelegators
+          , protocolParameters = UPI.adoptedProtocolParameters updateState'
+          , utxoConfiguration = Genesis.configUTxOConfiguration config
+          , currentEpoch = slotNumberEpoch (configEpochSlots config) (blockSlot b)
           }
 
       bs =
         BodyState
-          { utxo = cvsUtxo cvs,
-            updateState = updateState',
-            delegationState = cvsDelegationState cvs
+          { utxo = cvsUtxo cvs
+          , updateState = updateState'
+          , delegationState = cvsDelegationState cvs
           }
 
   BodyState {utxo, updateState, delegationState} <- updateBody bodyEnv bs b
 
   pure $
     cvs
-      { cvsLastSlot = blockSlot b,
-        cvsPreviousHash = Right $! blockHashAnnotated b,
-        cvsUtxo = utxo,
-        cvsUpdateState = updateState,
-        cvsDelegationState = delegationState
+      { cvsLastSlot = blockSlot b
+      , cvsPreviousHash = Right $! blockHashAnnotated b
+      , cvsUtxo = utxo
+      , cvsUpdateState = updateState
+      , cvsDelegationState = delegationState
       }
   where
     epochEnv =
       EpochEnvironment
-        { protocolMagic = blockAProtocolMagicId b,
-          k = configK config,
-          allowedDelegators,
-          delegationMap,
-          currentEpoch = slotNumberEpoch (configEpochSlots config) (cvsLastSlot cvs)
+        { protocolMagic = blockAProtocolMagicId b
+        , k = configK config
+        , allowedDelegators
+        , delegationMap
+        , currentEpoch = slotNumberEpoch (configEpochSlots config) (cvsLastSlot cvs)
         }
 
     allowedDelegators :: Set KeyHash
@@ -614,6 +614,6 @@ newtype UTxOSize = UTxOSize {unUTxOSize :: Int}
 
 calcUTxOSize :: UTxO -> (HeapSize UTxO, UTxOSize)
 calcUTxOSize utxo =
-  ( HeapSize . heapWords $ unUTxO utxo,
-    UTxOSize . M.size $ unUTxO utxo
+  ( HeapSize . heapWords $ unUTxO utxo
+  , UTxOSize . M.size $ unUTxO utxo
   )

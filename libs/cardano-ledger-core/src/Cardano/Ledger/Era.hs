@@ -1,18 +1,18 @@
 -- | Support for multiple (Shelley-based) eras in the ledger.
-module Cardano.Ledger.Era
-  ( Era (..),
-    getTxOutAddr,
-    getTxOutCompactAddr,
-    getTxOutEitherAddr,
-    getTxOutBootstrapAddress,
-    getAllTxInputs,
-    TranslationContext,
-    TranslateEra (..),
-    translateEra',
-    translateEraMaybe,
-    -- $segWit
-    EraSegWits (..),
-  )
+module Cardano.Ledger.Era (
+  Era (..),
+  getTxOutAddr,
+  getTxOutCompactAddr,
+  getTxOutEitherAddr,
+  getTxOutBootstrapAddress,
+  getAllTxInputs,
+  TranslationContext,
+  TranslateEra (..),
+  translateEra',
+  translateEraMaybe,
+  -- $segWit
+  EraSegWits (..),
+)
 where
 
 import Cardano.Ledger.Address (Addr, BootstrapAddress, CompactAddr)

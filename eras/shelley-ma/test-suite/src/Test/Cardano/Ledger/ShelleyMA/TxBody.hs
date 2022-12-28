@@ -8,9 +8,9 @@
 
 -- =========================
 
-module Test.Cardano.Ledger.ShelleyMA.TxBody
-  ( txBodyTest,
-  )
+module Test.Cardano.Ledger.ShelleyMA.TxBody (
+  txBodyTest,
+)
 where
 
 import Cardano.Ledger.Allegra.Scripts (Timelock (..), ValidityInterval (..))
@@ -56,23 +56,23 @@ fieldTests :: TestTree
 fieldTests =
   testGroup
     "getField tests"
-    [ testCase "inputs" (assertEqual "inputs" (txM ^. inputsTxBodyL) empty),
-      testCase "outputs" (assertEqual "outputs" (txM ^. outputsTxBodyL) StrictSeq.empty),
-      testCase "certs" (assertEqual "certs" (txM ^. certsTxBodyG) StrictSeq.empty),
-      testCase "wdrls" (assertEqual "wdrls" (txM ^. wdrlsTxBodyL) (Wdrl Map.empty)),
-      testCase "txfree" (assertEqual "txfree" (txM ^. feeTxBodyL) (Coin 6)),
-      testCase "vldt" $
+    [ testCase "inputs" (assertEqual "inputs" (txM ^. inputsTxBodyL) empty)
+    , testCase "outputs" (assertEqual "outputs" (txM ^. outputsTxBodyL) StrictSeq.empty)
+    , testCase "certs" (assertEqual "certs" (txM ^. certsTxBodyG) StrictSeq.empty)
+    , testCase "wdrls" (assertEqual "wdrls" (txM ^. wdrlsTxBodyL) (Wdrl Map.empty))
+    , testCase "txfree" (assertEqual "txfree" (txM ^. feeTxBodyL) (Coin 6))
+    , testCase "vldt" $
         assertEqual "vldt" (txM ^. vldtTxBodyL) $
-          ValidityInterval (SJust (SlotNo 3)) (SJust (SlotNo 42)),
-      testCase "update" (assertEqual "update" (txM ^. updateTxBodyL) SNothing),
-      testCase "adHash" (assertEqual "adHash" (txM ^. auxDataHashTxBodyL) SNothing),
-      testCase "mint" (assertEqual "mint" (txM ^. mintTxBodyL) testMint)
+          ValidityInterval (SJust (SlotNo 3)) (SJust (SlotNo 42))
+    , testCase "update" (assertEqual "update" (txM ^. updateTxBodyL) SNothing)
+    , testCase "adHash" (assertEqual "adHash" (txM ^. auxDataHashTxBodyL) SNothing)
+    , testCase "mint" (assertEqual "mint" (txM ^. mintTxBodyL) testMint)
     ]
 
 txBodyTest :: TestTree
 txBodyTest =
   testGroup
     "TxBody"
-    [ fieldTests,
-      testCase "length" (assertEqual "length" 57 (Short.length (getMemoRawBytes txM)))
+    [ fieldTests
+    , testCase "length" (assertEqual "length" 57 (Short.length (getMemoRawBytes txM)))
     ]

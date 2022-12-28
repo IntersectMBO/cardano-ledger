@@ -15,42 +15,42 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Shelley.Rules.Ledger
-  ( ShelleyLEDGER,
-    LedgerEnv (..),
-    ShelleyLedgerPredFailure (..),
-    ShelleyLedgerEvent (..),
-    Event,
-    PredicateFailure,
-    epochFromSlot,
-  )
+module Cardano.Ledger.Shelley.Rules.Ledger (
+  ShelleyLEDGER,
+  LedgerEnv (..),
+  ShelleyLedgerPredFailure (..),
+  ShelleyLedgerEvent (..),
+  Event,
+  PredicateFailure,
+  epochFromSlot,
+)
 where
 
 import Cardano.Ledger.BaseTypes (Globals, ShelleyBase, TxIx, epochInfoPure, invalidKey)
-import Cardano.Ledger.Binary
-  ( FromCBOR (..),
-    ToCBOR (..),
-    decodeRecordSum,
-    encodeListLen,
-  )
+import Cardano.Ledger.Binary (
+  FromCBOR (..),
+  ToCBOR (..),
+  decodeRecordSum,
+  encodeListLen,
+ )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley.Era (ShelleyLEDGER)
-import Cardano.Ledger.Shelley.LedgerState
-  ( AccountState,
-    DPState (..),
-    DState (..),
-    LedgerState (..),
-    PState (..),
-    UTxOState (..),
-    obligationDPState,
-  )
-import Cardano.Ledger.Shelley.Rules.Delegs
-  ( DelegsEnv (..),
-    ShelleyDELEGS,
-    ShelleyDelegsEvent,
-    ShelleyDelegsPredFailure,
-  )
+import Cardano.Ledger.Shelley.LedgerState (
+  AccountState,
+  DPState (..),
+  DState (..),
+  LedgerState (..),
+  PState (..),
+  UTxOState (..),
+  obligationDPState,
+ )
+import Cardano.Ledger.Shelley.Rules.Delegs (
+  DelegsEnv (..),
+  ShelleyDELEGS,
+  ShelleyDelegsEvent,
+  ShelleyDelegsPredFailure,
+ )
 import Cardano.Ledger.Shelley.Rules.Reports (showTxCerts, synopsisCoinMap)
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
 import Cardano.Ledger.Shelley.Rules.Utxow (ShelleyUTXOW, ShelleyUtxowPredFailure)
@@ -59,16 +59,16 @@ import Cardano.Ledger.Slot (EpochNo, SlotNo, epochInfoEpoch)
 import Control.DeepSeq (NFData (..))
 import Control.Monad.Reader (Reader)
 import Control.Monad.Trans.Reader (asks)
-import Control.State.Transition
-  ( Assertion (PostCondition),
-    AssertionViolation (..),
-    Embed (..),
-    STS (..),
-    TRC (..),
-    TransitionRule,
-    judgmentContext,
-    trans,
-  )
+import Control.State.Transition (
+  Assertion (PostCondition),
+  AssertionViolation (..),
+  Embed (..),
+  STS (..),
+  TRC (..),
+  TransitionRule,
+  judgmentContext,
+  trans,
+ )
 import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Word (Word8)
@@ -79,10 +79,10 @@ import NoThunks.Class (NoThunks (..))
 -- ========================================================
 
 data LedgerEnv era = LedgerEnv
-  { ledgerSlotNo :: !SlotNo,
-    ledgerIx :: !TxIx,
-    ledgerPp :: !(PParams era),
-    ledgerAccount :: !AccountState
+  { ledgerSlotNo :: !SlotNo
+  , ledgerIx :: !TxIx
+  , ledgerPp :: !(PParams era)
+  , ledgerAccount :: !AccountState
   }
 
 deriving instance Show (PParams era) => Show (LedgerEnv era)
@@ -100,30 +100,30 @@ data ShelleyLedgerEvent era
   | DelegsEvent (Event (EraRule "DELEGS" era))
 
 deriving stock instance
-  ( Show (PredicateFailure (EraRule "DELEGS" era)),
-    Show (PredicateFailure (EraRule "UTXOW" era)),
-    Era era
+  ( Show (PredicateFailure (EraRule "DELEGS" era))
+  , Show (PredicateFailure (EraRule "UTXOW" era))
+  , Era era
   ) =>
   Show (ShelleyLedgerPredFailure era)
 
 deriving stock instance
-  ( Eq (PredicateFailure (EraRule "DELEGS" era)),
-    Eq (PredicateFailure (EraRule "UTXOW" era)),
-    Era era
+  ( Eq (PredicateFailure (EraRule "DELEGS" era))
+  , Eq (PredicateFailure (EraRule "UTXOW" era))
+  , Era era
   ) =>
   Eq (ShelleyLedgerPredFailure era)
 
 instance
-  ( NoThunks (PredicateFailure (EraRule "DELEGS" era)),
-    NoThunks (PredicateFailure (EraRule "UTXOW" era)),
-    Era era
+  ( NoThunks (PredicateFailure (EraRule "DELEGS" era))
+  , NoThunks (PredicateFailure (EraRule "UTXOW" era))
+  , Era era
   ) =>
   NoThunks (ShelleyLedgerPredFailure era)
 
 instance
-  ( ToCBOR (PredicateFailure (EraRule "DELEGS" era)),
-    ToCBOR (PredicateFailure (EraRule "UTXOW" era)),
-    Era era
+  ( ToCBOR (PredicateFailure (EraRule "DELEGS" era))
+  , ToCBOR (PredicateFailure (EraRule "UTXOW" era))
+  , Era era
   ) =>
   ToCBOR (ShelleyLedgerPredFailure era)
   where
@@ -132,9 +132,9 @@ instance
     (DelegsFailure a) -> encodeListLen 2 <> toCBOR (1 :: Word8) <> toCBOR a
 
 instance
-  ( FromCBOR (PredicateFailure (EraRule "DELEGS" era)),
-    FromCBOR (PredicateFailure (EraRule "UTXOW" era)),
-    Era era
+  ( FromCBOR (PredicateFailure (EraRule "DELEGS" era))
+  , FromCBOR (PredicateFailure (EraRule "UTXOW" era))
+  , Era era
   ) =>
   FromCBOR (ShelleyLedgerPredFailure era)
   where
@@ -155,21 +155,21 @@ epochFromSlot slot = do
   epochInfoEpoch ei slot
 
 instance
-  ( Show (PParams era),
-    Show (TxOut era),
-    Show (State (EraRule "PPUP" era)),
-    DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody),
-    EraTx era,
-    ShelleyEraTxBody era,
-    Embed (EraRule "DELEGS" era) (ShelleyLEDGER era),
-    Embed (EraRule "UTXOW" era) (ShelleyLEDGER era),
-    Environment (EraRule "UTXOW" era) ~ UtxoEnv era,
-    State (EraRule "UTXOW" era) ~ UTxOState era,
-    Signal (EraRule "UTXOW" era) ~ Tx era,
-    Environment (EraRule "DELEGS" era) ~ DelegsEnv era,
-    State (EraRule "DELEGS" era) ~ DPState (EraCrypto era),
-    Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era)),
-    ProtVerAtMost era 8
+  ( Show (PParams era)
+  , Show (TxOut era)
+  , Show (State (EraRule "PPUP" era))
+  , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
+  , EraTx era
+  , ShelleyEraTxBody era
+  , Embed (EraRule "DELEGS" era) (ShelleyLEDGER era)
+  , Embed (EraRule "UTXOW" era) (ShelleyLEDGER era)
+  , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
+  , State (EraRule "UTXOW" era) ~ UTxOState era
+  , Signal (EraRule "UTXOW" era) ~ Tx era
+  , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
+  , State (EraRule "DELEGS" era) ~ DPState (EraCrypto era)
+  , Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era))
+  , ProtVerAtMost era 8
   ) =>
   STS (ShelleyLEDGER era)
   where
@@ -214,17 +214,17 @@ instance
 
 ledgerTransition ::
   forall era.
-  ( EraTx era,
-    ShelleyEraTxBody era,
-    Embed (EraRule "DELEGS" era) (ShelleyLEDGER era),
-    Environment (EraRule "DELEGS" era) ~ DelegsEnv era,
-    State (EraRule "DELEGS" era) ~ DPState (EraCrypto era),
-    Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era)),
-    Embed (EraRule "UTXOW" era) (ShelleyLEDGER era),
-    Environment (EraRule "UTXOW" era) ~ UtxoEnv era,
-    State (EraRule "UTXOW" era) ~ UTxOState era,
-    Signal (EraRule "UTXOW" era) ~ Tx era,
-    ProtVerAtMost era 8
+  ( EraTx era
+  , ShelleyEraTxBody era
+  , Embed (EraRule "DELEGS" era) (ShelleyLEDGER era)
+  , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
+  , State (EraRule "DELEGS" era) ~ DPState (EraCrypto era)
+  , Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era))
+  , Embed (EraRule "UTXOW" era) (ShelleyLEDGER era)
+  , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
+  , State (EraRule "UTXOW" era) ~ UTxOState era
+  , Signal (EraRule "UTXOW" era) ~ Tx era
+  , ProtVerAtMost era 8
   ) =>
   TransitionRule (ShelleyLEDGER era)
 ledgerTransition = do
@@ -232,26 +232,26 @@ ledgerTransition = do
   dpstate' <-
     trans @(EraRule "DELEGS" era) $
       TRC
-        ( DelegsEnv slot txIx pp tx account,
-          dpstate,
-          StrictSeq.fromStrict $ tx ^. bodyTxL . certsTxBodyL
+        ( DelegsEnv slot txIx pp tx account
+        , dpstate
+        , StrictSeq.fromStrict $ tx ^. bodyTxL . certsTxBodyL
         )
   let genDelegs = dsGenDelegs (dpsDState dpstate)
 
   utxoSt' <-
     trans @(EraRule "UTXOW" era) $
       TRC
-        ( UtxoEnv slot pp dpstate genDelegs,
-          utxoSt,
-          tx
+        ( UtxoEnv slot pp dpstate genDelegs
+        , utxoSt
+        , tx
         )
   pure (LedgerState utxoSt' dpstate')
 
 instance
-  ( Era era,
-    STS (ShelleyDELEGS era),
-    PredicateFailure (EraRule "DELEGS" era) ~ ShelleyDelegsPredFailure era,
-    Event (EraRule "DELEGS" era) ~ ShelleyDelegsEvent era
+  ( Era era
+  , STS (ShelleyDELEGS era)
+  , PredicateFailure (EraRule "DELEGS" era) ~ ShelleyDelegsPredFailure era
+  , Event (EraRule "DELEGS" era) ~ ShelleyDelegsEvent era
   ) =>
   Embed (ShelleyDELEGS era) (ShelleyLEDGER era)
   where
@@ -259,10 +259,10 @@ instance
   wrapEvent = DelegsEvent
 
 instance
-  ( Era era,
-    STS (ShelleyUTXOW era),
-    PredicateFailure (EraRule "UTXOW" era) ~ ShelleyUtxowPredFailure era,
-    Event (EraRule "UTXOW" era) ~ Event (ShelleyUTXOW era)
+  ( Era era
+  , STS (ShelleyUTXOW era)
+  , PredicateFailure (EraRule "UTXOW" era) ~ ShelleyUtxowPredFailure era
+  , Event (EraRule "UTXOW" era) ~ Event (ShelleyUTXOW era)
   ) =>
   Embed (ShelleyUTXOW era) (ShelleyLEDGER era)
   where

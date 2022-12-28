@@ -9,11 +9,11 @@ module Cardano.Ledger.Allegra.UTxO () where
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.TxBody ()
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Shelley.UTxO
-  ( ShelleyScriptsNeeded (..),
-    getConsumedCoin,
-    getShelleyScriptsNeeded,
-  )
+import Cardano.Ledger.Shelley.UTxO (
+  ShelleyScriptsNeeded (..),
+  getConsumedCoin,
+  getShelleyScriptsNeeded,
+ )
 import Cardano.Ledger.UTxO (EraUTxO (..))
 
 instance Crypto c => EraUTxO (AllegraEra c) where

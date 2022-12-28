@@ -17,23 +17,23 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Mary.TxBody
-  ( MaryTxBody
-      ( MaryTxBody,
-        mtbAuxDataHash,
-        mtbCerts,
-        mtbInputs,
-        mtbOutputs,
-        mtbTxFee,
-        mtbUpdate,
-        mtbValidityInterval,
-        mtbWdrls,
-        mtbMint
-      ),
-    MaryEraTxBody (..),
-    StrictMaybe (..),
-    ValidityInterval (..),
-  )
+module Cardano.Ledger.Mary.TxBody (
+  MaryTxBody (
+    MaryTxBody,
+    mtbAuxDataHash,
+    mtbCerts,
+    mtbInputs,
+    mtbOutputs,
+    mtbTxFee,
+    mtbUpdate,
+    mtbValidityInterval,
+    mtbWdrls,
+    mtbMint
+  ),
+  MaryEraTxBody (..),
+  StrictMaybe (..),
+  ValidityInterval (..),
+)
 where
 
 import Cardano.Ledger.Allegra.TxBody
@@ -45,16 +45,16 @@ import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.TxOut ()
 import Cardano.Ledger.Mary.Value
-import Cardano.Ledger.MemoBytes
-  ( Mem,
-    MemoBytes (Memo),
-    MemoHashIndex,
-    Memoized (RawType),
-    getMemoRawType,
-    getMemoSafeHash,
-    lensMemoRawType,
-    mkMemoized,
-  )
+import Cardano.Ledger.MemoBytes (
+  Mem,
+  MemoBytes (Memo),
+  MemoHashIndex,
+  Memoized (RawType),
+  getMemoRawType,
+  getMemoSafeHash,
+  lensMemoRawType,
+  mkMemoized,
+ )
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert)
 import Cardano.Ledger.Shelley.PParams (Update)
@@ -118,9 +118,9 @@ deriving newtype instance
   NoThunks (MaryTxBody era)
 
 deriving newtype instance
-  ( NFData (TxOut era),
-    NFData (PParamsUpdate era),
-    Era era
+  ( NFData (TxOut era)
+  , NFData (PParamsUpdate era)
+  , Era era
   ) =>
   NFData (MaryTxBody era)
 
@@ -150,28 +150,28 @@ pattern MaryTxBody ::
   MultiAsset (EraCrypto era) ->
   MaryTxBody era
 pattern MaryTxBody
-  { mtbInputs,
-    mtbOutputs,
-    mtbCerts,
-    mtbWdrls,
-    mtbTxFee,
-    mtbValidityInterval,
-    mtbUpdate,
-    mtbAuxDataHash,
-    mtbMint
+  { mtbInputs
+  , mtbOutputs
+  , mtbCerts
+  , mtbWdrls
+  , mtbTxFee
+  , mtbValidityInterval
+  , mtbUpdate
+  , mtbAuxDataHash
+  , mtbMint
   } <-
   ( getMemoRawType ->
       MaryTxBodyRaw
         ( AllegraTxBodyRaw
-            { atbrInputs = mtbInputs,
-              atbrOutputs = mtbOutputs,
-              atbrCerts = mtbCerts,
-              atbrWdrls = mtbWdrls,
-              atbrTxFee = mtbTxFee,
-              atbrValidityInterval = mtbValidityInterval,
-              atbrUpdate = mtbUpdate,
-              atbrAuxDataHash = mtbAuxDataHash,
-              atbrMint = mtbMint
+            { atbrInputs = mtbInputs
+            , atbrOutputs = mtbOutputs
+            , atbrCerts = mtbCerts
+            , atbrWdrls = mtbWdrls
+            , atbrTxFee = mtbTxFee
+            , atbrValidityInterval = mtbValidityInterval
+            , atbrUpdate = mtbUpdate
+            , atbrAuxDataHash = mtbAuxDataHash
+            , atbrMint = mtbMint
             }
           )
     )
@@ -189,15 +189,15 @@ pattern MaryTxBody
         mkMemoized $
           MaryTxBodyRaw $
             AllegraTxBodyRaw
-              { atbrInputs = inputs,
-                atbrOutputs = outputs,
-                atbrCerts = certs,
-                atbrWdrls = wdrls,
-                atbrTxFee = txFee,
-                atbrValidityInterval = validityInterval,
-                atbrUpdate = update,
-                atbrAuxDataHash = auxDataHash,
-                atbrMint = mint
+              { atbrInputs = inputs
+              , atbrOutputs = outputs
+              , atbrCerts = certs
+              , atbrWdrls = wdrls
+              , atbrTxFee = txFee
+              , atbrValidityInterval = validityInterval
+              , atbrUpdate = update
+              , atbrAuxDataHash = auxDataHash
+              , atbrMint = mint
               }
 
 {-# COMPLETE MaryTxBody #-}

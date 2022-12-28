@@ -13,33 +13,33 @@
 --   Map with integer 1-byte keys, arbitrary-type polymorph values. Needed
 --   primarily for partial serialization. Values are either parsed and put to
 --   some constructor or left as unparsed.
-module Cardano.Chain.Common.Attributes
-  ( UnparsedFields (..),
-    Attributes (..),
-    attributesAreKnown,
-    unknownAttributesLength,
-    toCBORAttributes,
-    fromCBORAttributes,
-    mkAttributes,
-    dropAttributes,
-    dropEmptyAttributes,
-  )
+module Cardano.Chain.Common.Attributes (
+  UnparsedFields (..),
+  Attributes (..),
+  attributesAreKnown,
+  unknownAttributesLength,
+  toCBORAttributes,
+  fromCBORAttributes,
+  mkAttributes,
+  dropAttributes,
+  dropEmptyAttributes,
+)
 where
 
 import Cardano.HeapWords (HeapWords (..), heapWords2)
-import Cardano.Ledger.Binary
-  ( Decoder,
-    DecoderError (..),
-    Dropper,
-    Encoding,
-    FromCBOR (..),
-    ToCBOR (..),
-    cborError,
-    decodeMapLen,
-    dropBytes,
-    dropMap,
-    dropWord8,
-  )
+import Cardano.Ledger.Binary (
+  Decoder,
+  DecoderError (..),
+  Dropper,
+  Encoding,
+  FromCBOR (..),
+  ToCBOR (..),
+  cborError,
+  decodeMapLen,
+  dropBytes,
+  dropMap,
+  dropWord8,
+ )
 import Cardano.Prelude hiding (cborError)
 import Data.Aeson (ToJSON (..))
 import qualified Data.ByteString.Lazy as LBS
@@ -75,10 +75,10 @@ mkAttributes dat = Attributes dat (UnparsedFields M.empty)
 -- | Convenient wrapper for the datatype to represent it (in binary format) as
 --   k-v map
 data Attributes h = Attributes
-  { -- | Data, containing known keys (deserialized)
-    attrData :: !h,
-    -- | Remaining, unparsed fields
-    attrRemain :: !UnparsedFields
+  { attrData :: !h
+  -- ^ Data, containing known keys (deserialized)
+  , attrRemain :: !UnparsedFields
+  -- ^ Remaining, unparsed fields
   }
   deriving (Eq, Ord, Generic, NoThunks)
   deriving anyclass (NFData)
@@ -217,8 +217,8 @@ fromCBORAttributes initval updater = do
         Nothing -> attr
         Just newData ->
           Attributes
-            { attrData = newData,
-              attrRemain =
+            { attrData = newData
+            , attrRemain =
                 UnparsedFields
                   . M.delete k
                   . fromUnparsedFields

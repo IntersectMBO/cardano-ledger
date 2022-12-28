@@ -4,32 +4,33 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Test.Cardano.Ledger.Shelley.Serialisation.GoldenUtils
-  ( checkEncoding,
-    checkEncodingCBOR,
-    checkEncodingCBORAnnotated,
-    ToTokens (..),
-  )
+module Test.Cardano.Ledger.Shelley.Serialisation.GoldenUtils (
+  checkEncoding,
+  checkEncodingCBOR,
+  checkEncodingCBORAnnotated,
+  ToTokens (..),
+)
 where
 
-import Cardano.Ledger.Binary
-  ( Annotator,
-    DecoderError,
-    Encoding,
-    FromCBOR (..),
-    ToCBOR (..),
-    ToCBORGroup (..),
-    Tokens (..),
-    Version,
-    decodeFullAnnotator,
-    decodeFullDecoder,
-    decodeTerm,
-    fromPlainEncoding,
-    serialize,
-    serialize',
-    serializeEncoding,
-    toCBOR,
-  )
+import Cardano.Ledger.Binary (
+  Annotator,
+  DecoderError,
+  Encoding,
+  FromCBOR (..),
+  ToCBOR (..),
+  ToCBORGroup (..),
+  Tokens (..),
+  Version,
+  decodeFullAnnotator,
+  decodeFullDecoder,
+  decodeTerm,
+  fromPlainEncoding,
+  serialize,
+  serialize',
+  serializeEncoding,
+  toCBOR,
+ )
+
 -- ToExpr (CBOR.Term) instance
 import Cardano.Ledger.TreeDiff (diffExpr)
 import qualified Codec.CBOR.Encoding as CBOR (Encoding (..))
@@ -70,8 +71,8 @@ checkEncoding v encode decode name x t =
       actualTerms <- getTerms "actual" actualBinary
       assertFailure $
         unlines
-          [ "Serialization did not match: ",
-            diffExpr expectedTerms actualTerms
+          [ "Serialization did not match: "
+          , diffExpr expectedTerms actualTerms
           ]
     roundTrip v encode decode x
   where

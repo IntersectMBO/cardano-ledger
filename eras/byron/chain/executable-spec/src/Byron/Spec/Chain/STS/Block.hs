@@ -29,23 +29,24 @@ import Lens.Micro.TH (makeLenses)
 import Numeric.Natural (Natural)
 
 data BlockHeader = BlockHeader
-  { -- | Hash of the previous block header, or 'genesisHash' in case of
-    -- the first block in a chain.
-    _bhPrevHash :: !Hash,
-    -- | Absolute slot for which the block was generated.
-    _bhSlot :: !Slot,
-    -- | Block issuer.
-    _bhIssuer :: !VKey,
-    -- | Part of the block header which must be signed.
-    _bhSig :: !(Sig Hash),
-    -- | UTxO hash
-    _bhUtxoHash :: !Hash,
-    -- | Delegation hash
-    _bhDlgHash :: !Hash,
-    -- | Update payload hash
-    _bhUpdHash :: !Hash
+  { _bhPrevHash :: !Hash
+  -- ^ Hash of the previous block header, or 'genesisHash' in case of
+  -- the first block in a chain.
+  , _bhSlot :: !Slot
+  -- ^ Absolute slot for which the block was generated.
+  , _bhIssuer :: !VKey
+  -- ^ Block issuer.
+  , _bhSig :: !(Sig Hash)
+  -- ^ Part of the block header which must be signed.
+  , _bhUtxoHash :: !Hash
+  -- ^ UTxO hash
+  , _bhDlgHash :: !Hash
+  -- ^ Delegation hash
+  , _bhUpdHash :: !Hash
+  -- ^ Update payload hash
   }
   deriving (Eq, Generic, Show, Data, Typeable)
+
 -- TODO: BlockVersion – the protocol (block) version that created the block
 -- TODO: SoftwareVersion – the software version that created the block
 
@@ -64,16 +65,16 @@ instance HasTypeReps BlockHeader where
         <> typeReps (x ^. bhSig :: Sig Hash)
 
 data BlockBody = BlockBody
-  { -- | Delegation certificates
-    _bDCerts :: ![DCert],
-    -- | UTxO payload
-    _bUtxo :: ![Tx],
-    -- | Update proposal payload
-    _bUpdProp :: !(Maybe UProp),
-    -- | Update votes payload
-    _bUpdVotes :: ![Vote],
-    -- | Protocol version
-    _bProtVer :: !ProtVer
+  { _bDCerts :: ![DCert]
+  -- ^ Delegation certificates
+  , _bUtxo :: ![Tx]
+  -- ^ UTxO payload
+  , _bUpdProp :: !(Maybe UProp)
+  -- ^ Update proposal payload
+  , _bUpdVotes :: ![Vote]
+  -- ^ Update votes payload
+  , _bProtVer :: !ProtVer
+  -- ^ Protocol version
   }
   deriving (Generic, Show, Data, Typeable)
 
@@ -84,8 +85,8 @@ instance HasTypeReps BlockBody
 -- | A block in the chain. The specification only models regular blocks since
 -- epoch boundary blocks will be largely ignored in the Byron-Shelley bridge.
 data Block = Block
-  { _bHeader :: BlockHeader,
-    _bBody :: BlockBody
+  { _bHeader :: BlockHeader
+  , _bBody :: BlockBody
   }
   deriving (Generic, Show, Data, Typeable)
 
@@ -126,24 +127,24 @@ mkBlock
         where
           unsignedHeader =
             BlockHeader
-              { _bhPrevHash = prevHash,
-                _bhSlot = currentSlot,
-                _bhIssuer = issuer,
-                _bhSig = dummySig,
-                _bhUtxoHash = (hash utxoTransactions),
-                _bhDlgHash = (hash delegationCerts),
-                _bhUpdHash = (hash (maybeUpdateProposal, updateProposalVotes))
+              { _bhPrevHash = prevHash
+              , _bhSlot = currentSlot
+              , _bhIssuer = issuer
+              , _bhSig = dummySig
+              , _bhUtxoHash = (hash utxoTransactions)
+              , _bhDlgHash = (hash delegationCerts)
+              , _bhUpdHash = (hash (maybeUpdateProposal, updateProposalVotes))
               }
             where
               dummySig = Sig genesisHash (owner issuer)
 
       body =
         BlockBody
-          { _bProtVer = version,
-            _bDCerts = delegationCerts,
-            _bUpdProp = maybeUpdateProposal,
-            _bUpdVotes = updateProposalVotes,
-            _bUtxo = utxoTransactions
+          { _bProtVer = version
+          , _bDCerts = delegationCerts
+          , _bUpdProp = maybeUpdateProposal
+          , _bUpdVotes = updateProposalVotes
+          , _bUtxo = utxoTransactions
           }
 
 -- | Dummy genesis hash.
@@ -173,15 +174,15 @@ bBodySize = fromIntegral . abstractSize costs
   where
     costs =
       Map.fromList
-        [ (typeOf (undefined :: Maybe UProp), 1),
-          (typeOf (undefined :: STag), 1),
-          (typeOf (undefined :: ProtVer), 1),
-          (typeOf (undefined :: DCert), 1),
-          (typeOf (undefined :: Vote), 1),
-          (typeOf (undefined :: Tx), 1),
-          (typeOf (undefined :: Wit), 1),
-          (typeOf (undefined :: TxIn), 1),
-          (typeOf (undefined :: TxOut), 1)
+        [ (typeOf (undefined :: Maybe UProp), 1)
+        , (typeOf (undefined :: STag), 1)
+        , (typeOf (undefined :: ProtVer), 1)
+        , (typeOf (undefined :: DCert), 1)
+        , (typeOf (undefined :: Vote), 1)
+        , (typeOf (undefined :: Tx), 1)
+        , (typeOf (undefined :: Wit), 1)
+        , (typeOf (undefined :: TxIn), 1)
+        , (typeOf (undefined :: TxOut), 1)
         ]
 
 -- | Compute the abstract size (in words) that a block header occupies.
@@ -190,10 +191,10 @@ bHeaderSize = fromIntegral . abstractSize costs
   where
     costs =
       Map.fromList
-        [ (typeOf (undefined :: Hash), 1),
-          (typeOf (undefined :: Slot), 1),
-          (typeOf (undefined :: VKey), 1),
-          (typeOf (undefined :: Sig Hash), 1)
+        [ (typeOf (undefined :: Hash), 1)
+        , (typeOf (undefined :: Slot), 1)
+        , (typeOf (undefined :: VKey), 1)
+        , (typeOf (undefined :: Sig Hash), 1)
         ]
 
 -- | Computes the hash of a header.
@@ -241,16 +242,16 @@ updateBody block bodyUpdate =
 --------------------------------------------------------------------------------
 
 data BlockStats = BlockStats
-  { -- | Number of regular transactions
-    blockStatsUtxo :: Word,
-    -- | Number of delegation certificates
-    blockStatsDCerts :: Word,
-    -- | Number of update votes
-    blockStatsUpdVotes :: Word,
-    -- | Number of update proposals
-    --
-    -- For a single block this will be 0 or 1.
-    blockStatsUpdProp :: Word
+  { blockStatsUtxo :: Word
+  -- ^ Number of regular transactions
+  , blockStatsDCerts :: Word
+  -- ^ Number of delegation certificates
+  , blockStatsUpdVotes :: Word
+  -- ^ Number of update votes
+  , blockStatsUpdProp :: Word
+  -- ^ Number of update proposals
+  --
+  -- For a single block this will be 0 or 1.
   }
   deriving (Show)
 
@@ -265,10 +266,10 @@ data BlockStats = BlockStats
 blockStats :: Block -> BlockStats
 blockStats (Block _header body) =
   BlockStats
-    { blockStatsUtxo = fromIntegral . length $ _bUtxo body,
-      blockStatsDCerts = fromIntegral . length $ _bDCerts body,
-      blockStatsUpdVotes = fromIntegral . length $ _bUpdVotes body,
-      blockStatsUpdProp = maybe 0 (const 1) $ _bUpdProp body
+    { blockStatsUtxo = fromIntegral . length $ _bUtxo body
+    , blockStatsDCerts = fromIntegral . length $ _bDCerts body
+    , blockStatsUpdVotes = fromIntegral . length $ _bUpdVotes body
+    , blockStatsUpdProp = maybe 0 (const 1) $ _bUpdProp body
     }
 
 -- | Block stats for an entire chain
@@ -288,34 +289,34 @@ chainBlockStats (b : bs) = Just $ go b b b 1 bs
       [BlockStats] ->
       (BlockStats, BlockStats, BlockStats)
     go !sMin !sMax !sSum !cnt [] =
-      ( sMin,
-        sMax,
-        BlockStats
-          { blockStatsUtxo = blockStatsUtxo sSum `div` cnt,
-            blockStatsDCerts = blockStatsDCerts sSum `div` cnt,
-            blockStatsUpdVotes = blockStatsUpdVotes sSum `div` cnt,
-            blockStatsUpdProp = blockStatsUpdProp sSum `div` cnt
+      ( sMin
+      , sMax
+      , BlockStats
+          { blockStatsUtxo = blockStatsUtxo sSum `div` cnt
+          , blockStatsDCerts = blockStatsDCerts sSum `div` cnt
+          , blockStatsUpdVotes = blockStatsUpdVotes sSum `div` cnt
+          , blockStatsUpdProp = blockStatsUpdProp sSum `div` cnt
           }
       )
     go !sMin !sMax !sSum !cnt (b' : bs') =
       go
         BlockStats
-          { blockStatsUtxo = (min `on` blockStatsUtxo) sMin b',
-            blockStatsDCerts = (min `on` blockStatsDCerts) sMin b',
-            blockStatsUpdVotes = (min `on` blockStatsUpdVotes) sMin b',
-            blockStatsUpdProp = (min `on` blockStatsUpdProp) sMin b'
+          { blockStatsUtxo = (min `on` blockStatsUtxo) sMin b'
+          , blockStatsDCerts = (min `on` blockStatsDCerts) sMin b'
+          , blockStatsUpdVotes = (min `on` blockStatsUpdVotes) sMin b'
+          , blockStatsUpdProp = (min `on` blockStatsUpdProp) sMin b'
           }
         BlockStats
-          { blockStatsUtxo = (max `on` blockStatsUtxo) sMax b',
-            blockStatsDCerts = (max `on` blockStatsDCerts) sMax b',
-            blockStatsUpdVotes = (max `on` blockStatsUpdVotes) sMax b',
-            blockStatsUpdProp = (max `on` blockStatsUpdProp) sMax b'
+          { blockStatsUtxo = (max `on` blockStatsUtxo) sMax b'
+          , blockStatsDCerts = (max `on` blockStatsDCerts) sMax b'
+          , blockStatsUpdVotes = (max `on` blockStatsUpdVotes) sMax b'
+          , blockStatsUpdProp = (max `on` blockStatsUpdProp) sMax b'
           }
         BlockStats
-          { blockStatsUtxo = ((+) `on` blockStatsUtxo) sSum b',
-            blockStatsDCerts = ((+) `on` blockStatsDCerts) sSum b',
-            blockStatsUpdVotes = ((+) `on` blockStatsUpdVotes) sSum b',
-            blockStatsUpdProp = ((+) `on` blockStatsUpdProp) sSum b'
+          { blockStatsUtxo = ((+) `on` blockStatsUtxo) sSum b'
+          , blockStatsDCerts = ((+) `on` blockStatsDCerts) sSum b'
+          , blockStatsUpdVotes = ((+) `on` blockStatsUpdVotes) sSum b'
+          , blockStatsUpdProp = ((+) `on` blockStatsUpdProp) sSum b'
           }
         (cnt + 1)
         bs'
