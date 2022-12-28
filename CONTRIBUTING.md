@@ -253,8 +253,8 @@ and error may be required to make substantive changes!
 
 ### Code formatting
 
-We use [`ormolu`](https://github.com/tweag/ormolu/) for formatting.
-There is a script [here](https://github.com/input-output-hk/cardano-ledger/blob/master/scripts/ormolise.sh)
+We use [`fourmolu`](https://github.com/fourmolu/fourmolu) for formatting.
+There is a script [here](https://github.com/input-output-hk/cardano-ledger/blob/master/scripts/fourmolize.sh)
 which uses nix to format the appropriate directories.
 
 ### Compiler warnings

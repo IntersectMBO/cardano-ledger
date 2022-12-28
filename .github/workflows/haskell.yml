@@ -105,7 +105,7 @@ jobs:
         export CARDANO_MAINNET_MIRROR="$(pwd)/cardano-mainnet-mirror/epochs"
         cabal test all
 
-  ormolu:
+  fourmolu:
     runs-on: ubuntu-latest
 
     defaults:
@@ -118,13 +118,12 @@ jobs:
     steps:
     - uses: actions/checkout@v1
 
-    - name: Install ormolu
+    - name: Install fourmolu
       run: |
         mkdir -p "$HOME/.local/bin"
-        curl -sL https://github.com/tweag/ormolu/releases/download/0.5.0.1/ormolu-Linux.zip -o /tmp/ormolu.zip
-        unzip /tmp/ormolu.zip -d "$HOME/.local/bin/"
-        chmod a+x "$HOME/.local/bin/ormolu"
+        curl -sL https://github.com/fourmolu/fourmolu/releases/download/v0.10.1.0/fourmolu-0.10.1.0-linux-x86_64 -o "$HOME/.local/bin/fourmolu"
+        chmod a+x "$HOME/.local/bin/fourmolu"
         echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-    - name: Run ormolu
-      run: ./scripts/ormolise.sh
+    - name: Run fourmolu
+      run: ./scripts/fourmolize.sh
