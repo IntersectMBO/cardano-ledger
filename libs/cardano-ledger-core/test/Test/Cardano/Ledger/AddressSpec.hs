@@ -24,7 +24,7 @@ import Data.Maybe (isNothing)
 import Data.Proxy
 import Data.Word
 import Test.Cardano.Ledger.Binary.RoundTrip (cborTrip, mkTrip, roundTripExpectation)
-import Test.Cardano.Ledger.Common
+import Test.Cardano.Ledger.Common hiding ((.&.))
 import Test.Cardano.Ledger.Core.Address
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Core.Utils (runFailError)
@@ -144,7 +144,11 @@ propDecompactErrors addr = do
                   serializeSuffix [genGood32, genBad16, genGood16],
                   serializeSuffix [genGood32, genGood16, genBad16],
                   serializeSuffix [genGood32, genGood16, genGood16, genGood16],
-                  (\x -> BS.singleton (x .|. 0b10000000) <> suffix) <$> arbitrary
+                  -- We need to reset the first bit, to indicate that no more bytes do
+                  -- follow. This is similar to (except the original suffix is retained):
+                  --
+                  -- serializeSuffix [genGood8, genGood32, genGood16, genGood16]
+                  (\x -> BS.singleton (x .&. 0b01111111) <> suffix) <$> arbitrary
                 ]
             pure ("Mingle Ptr", prefix <> newSuffix)
           Addr _ _ StakeRefNull {} -> do
