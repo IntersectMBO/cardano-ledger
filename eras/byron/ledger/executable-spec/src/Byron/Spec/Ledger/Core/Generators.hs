@@ -1,25 +1,25 @@
 -- | Generators for the 'Ledger.Core' values.
-module Byron.Spec.Ledger.Core.Generators
-  ( vkGen,
-    vkgenesisGen,
-    addrGen,
-    slotGen,
-    epochGen,
-    blockCountGen,
-    k,
-    kForNumberOfEpochs,
-  )
+module Byron.Spec.Ledger.Core.Generators (
+  vkGen,
+  vkgenesisGen,
+  addrGen,
+  slotGen,
+  epochGen,
+  blockCountGen,
+  k,
+  kForNumberOfEpochs,
+)
 where
 
-import Byron.Spec.Ledger.Core
-  ( Addr (Addr),
-    BlockCount (BlockCount),
-    Epoch (Epoch),
-    Owner (Owner),
-    Slot (Slot),
-    VKey (VKey),
-    VKeyGenesis (VKeyGenesis),
-  )
+import Byron.Spec.Ledger.Core (
+  Addr (Addr),
+  BlockCount (BlockCount),
+  Epoch (Epoch),
+  Owner (Owner),
+  Slot (Slot),
+  VKey (VKey),
+  VKeyGenesis (VKeyGenesis),
+ )
 import Byron.Spec.Ledger.GlobalParams (slotsPerEpochToK)
 import Data.Word (Word64)
 import Hedgehog (Gen)
@@ -64,8 +64,8 @@ k chainLength maxNumberOfEpochs =
     numberOfEpochsGen :: Gen Word64
     numberOfEpochsGen =
       Gen.frequency
-        [ (9, Gen.integral $ Range.linear 1 (maxNumberOfEpochs `max` 1)),
-          (1, pure 1)
+        [ (9, Gen.integral $ Range.linear 1 (maxNumberOfEpochs `max` 1))
+        , (1, pure 1)
         ]
 
 -- | Given a chain length, determine the @k@ value that will split the chain length into the desired

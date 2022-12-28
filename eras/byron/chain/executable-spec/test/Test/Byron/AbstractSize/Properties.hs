@@ -45,13 +45,13 @@ aTxId = TxId (hash aTx)
 aHeader :: BlockHeader
 aHeader =
   BlockHeader
-    { _bhPrevHash = undefined :: Hash,
-      _bhSlot = undefined :: Slot,
-      _bhIssuer = undefined :: VKey,
-      _bhSig = undefined :: Sig Hash,
-      _bhUtxoHash = undefined :: Hash,
-      _bhDlgHash = undefined :: Hash,
-      _bhUpdHash = undefined :: Hash
+    { _bhPrevHash = undefined :: Hash
+    , _bhSlot = undefined :: Slot
+    , _bhIssuer = undefined :: VKey
+    , _bhSig = undefined :: Sig Hash
+    , _bhUtxoHash = undefined :: Hash
+    , _bhDlgHash = undefined :: Hash
+    , _bhUpdHash = undefined :: Hash
     }
 
 aTxWits :: Tx
@@ -64,23 +64,23 @@ aTxWits =
 aBody :: BlockBody
 aBody =
   BlockBody
-    { _bDCerts = [],
-      _bUtxo = [aTxWits, aTxWits],
-      _bUpdProp = Nothing,
-      _bUpdVotes = [],
-      _bProtVer =
+    { _bDCerts = []
+    , _bUtxo = [aTxWits, aTxWits]
+    , _bUpdProp = Nothing
+    , _bUpdVotes = []
+    , _bProtVer =
         ProtVer
-          { _pvMaj = 0,
-            _pvMin = 1,
-            _pvAlt = 1
+          { _pvMaj = 0
+          , _pvMin = 1
+          , _pvAlt = 1
           }
     }
 
 aBlock :: Block
 aBlock =
   Block
-    { _bHeader = aHeader,
-      _bBody = aBody
+    { _bHeader = aHeader
+    , _bBody = aBody
     }
 
 -- | A BlockHeader term has fixed typeReps
@@ -88,17 +88,17 @@ exampleTypeRepsBlockHeader :: Assertion
 exampleTypeRepsBlockHeader =
   typeReps aHeader
     @?= Seq.fromList
-      [ typeOf (undefined :: BlockHeader),
-        typeOf (undefined :: Hash),
-        typeOf (undefined :: Hash),
-        typeOf (undefined :: Hash),
-        typeOf (undefined :: Hash),
-        typeOf (undefined :: Slot),
-        typeOf (undefined :: Word64),
-        typeOf (undefined :: VKey),
-        typeOf (undefined :: Owner),
-        typeOf (undefined :: Natural),
-        typeOf (undefined :: Sig Hash)
+      [ typeOf (undefined :: BlockHeader)
+      , typeOf (undefined :: Hash)
+      , typeOf (undefined :: Hash)
+      , typeOf (undefined :: Hash)
+      , typeOf (undefined :: Hash)
+      , typeOf (undefined :: Slot)
+      , typeOf (undefined :: Word64)
+      , typeOf (undefined :: VKey)
+      , typeOf (undefined :: Owner)
+      , typeOf (undefined :: Natural)
+      , typeOf (undefined :: Sig Hash)
       ]
 
 -- | A BlockBody has variable typeReps, depending on the collections
@@ -109,19 +109,19 @@ exampleTypeRepsBlockBody :: Assertion
 exampleTypeRepsBlockBody =
   typeReps aBody
     @?= Seq.fromList
-      [ typeOf (undefined :: BlockBody),
-        typeOf (undefined :: [DCert]),
-        typeOf (undefined :: [Tx])
+      [ typeOf (undefined :: BlockBody)
+      , typeOf (undefined :: [DCert])
+      , typeOf (undefined :: [Tx])
       ]
       >< typeReps aTxWits
       >< typeReps aTxWits
       >< Seq.fromList
-        [ typeOf (undefined :: Maybe UProp),
-          typeOf (undefined :: [Vote]),
-          typeOf (undefined :: ProtVer),
-          typeOf (undefined :: Natural),
-          typeOf (undefined :: Natural),
-          typeOf (undefined :: Natural)
+        [ typeOf (undefined :: Maybe UProp)
+        , typeOf (undefined :: [Vote])
+        , typeOf (undefined :: ProtVer)
+        , typeOf (undefined :: Natural)
+        , typeOf (undefined :: Natural)
+        , typeOf (undefined :: Natural)
         ]
 
 -- | The typeReps for a 'Block' is a combination of typeReps for
@@ -178,8 +178,8 @@ testAbstractSize :: TestTree
 testAbstractSize =
   testGroup
     "Test abstractSize"
-    [ testCase "AbstractSize - example - BlockHeader" exampleTypeRepsBlockHeader,
-      testCase "AbstractSize - example - BlockBody" exampleTypeRepsBlockBody,
-      testCase "AbstractSize - example - Block" exampleTypeRepsBlock,
-      testProperty "AbstractSize - Block/Header/Body" propBlockAbstractSize
+    [ testCase "AbstractSize - example - BlockHeader" exampleTypeRepsBlockHeader
+    , testCase "AbstractSize - example - BlockBody" exampleTypeRepsBlockBody
+    , testCase "AbstractSize - example - Block" exampleTypeRepsBlock
+    , testProperty "AbstractSize - Block/Header/Body" propBlockAbstractSize
     ]

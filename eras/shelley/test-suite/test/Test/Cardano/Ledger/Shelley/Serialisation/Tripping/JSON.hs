@@ -2,9 +2,9 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Shelley.Serialisation.Tripping.JSON
-  ( tests,
-  )
+module Test.Cardano.Ledger.Shelley.Serialisation.Tripping.JSON (
+  tests,
+)
 where
 
 import Cardano.Ledger.Address (Addr)
@@ -30,13 +30,13 @@ tests =
   testGroup
     "Shelley Genesis"
     [ testProperty "Genesis roundtrip" $
-        propRoundTripJSON @(ShelleyGenesis Shelley),
-      testProperty "Coin roundtrip" $
-        propRoundTripJSON @Coin,
-      testProperty "Address roundtrip" $
-        propRoundTripJSON @(Addr StandardCrypto),
-      testProperty "Genesis KeyHash " $
-        propRoundTripJSON @(KeyHash 'Genesis StandardCrypto),
-      testProperty "GenDelegPair roundtrip" $
+        propRoundTripJSON @(ShelleyGenesis Shelley)
+    , testProperty "Coin roundtrip" $
+        propRoundTripJSON @Coin
+    , testProperty "Address roundtrip" $
+        propRoundTripJSON @(Addr StandardCrypto)
+    , testProperty "Genesis KeyHash " $
+        propRoundTripJSON @(KeyHash 'Genesis StandardCrypto)
+    , testProperty "GenDelegPair roundtrip" $
         propRoundTripJSON @(GenDelegPair StandardCrypto)
     ]

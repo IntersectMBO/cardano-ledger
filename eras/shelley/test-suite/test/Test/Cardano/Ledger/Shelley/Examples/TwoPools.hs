@@ -14,90 +14,90 @@
 -- Example demonstrating a particular delegation scenario involving
 -- two pools. Both pools select a reward account which is *not*
 -- a pool owner, and which delegates to one of the pools.
-module Test.Cardano.Ledger.Shelley.Examples.TwoPools
-  ( twoPoolsExample,
-    twoPoolsExampleExtended,
-  )
+module Test.Cardano.Ledger.Shelley.Examples.TwoPools (
+  twoPoolsExample,
+  twoPoolsExampleExtended,
+)
 where
 
-import Cardano.Ledger.BaseTypes
-  ( BlocksMade (..),
-    BoundedRational (..),
-    Globals (..),
-    Network (..),
-    Nonce,
-    ProtVer (..),
-    StrictMaybe (..),
-    activeSlotVal,
-    mkCertIxPartial,
-    natVersion,
-    (⭒),
-  )
+import Cardano.Ledger.BaseTypes (
+  BlocksMade (..),
+  BoundedRational (..),
+  Globals (..),
+  Network (..),
+  Nonce,
+  ProtVer (..),
+  StrictMaybe (..),
+  activeSlotVal,
+  mkCertIxPartial,
+  natVersion,
+  (⭒),
+ )
 import Cardano.Ledger.Binary (ToCBOR)
 import Cardano.Ledger.Block (Block, bheader)
-import Cardano.Ledger.Coin
-  ( Coin (..),
-    DeltaCoin (..),
-    rationalToCoinViaFloor,
-    toDeltaCoin,
-  )
+import Cardano.Ledger.Coin (
+  Coin (..),
+  DeltaCoin (..),
+  rationalToCoinViaFloor,
+  toDeltaCoin,
+ )
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential, Ptr (..))
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import qualified Cardano.Ledger.EpochBoundary as EB
 import Cardano.Ledger.Era (EraCrypto (..))
 import Cardano.Ledger.Keys (KeyRole (..), asWitness, coerceKeyRole)
-import Cardano.Ledger.PoolDistr
-  ( IndividualPoolStake (..),
-    PoolDistr (..),
-  )
+import Cardano.Ledger.PoolDistr (
+  IndividualPoolStake (..),
+  PoolDistr (..),
+ )
 import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Shelley.LedgerState
-  ( PulsingRewUpdate (..),
-    RewardUpdate (..),
-    completeStep,
-    emptyRewardUpdate,
-  )
-import Cardano.Ledger.Shelley.PParams
-  ( ShelleyPParams,
-    ShelleyPParamsHKD (..),
-  )
-import Cardano.Ledger.Shelley.PoolRank
-  ( Likelihood (..),
-    NonMyopic (..),
-    leaderProbability,
-    likelihood,
-  )
-import Cardano.Ledger.Shelley.Rewards
-  ( StakeShare (..),
-    aggregateRewards,
-    leaderRew,
-    memberRew,
-    mkApparentPerformance,
-    sumRewards,
-  )
-import Cardano.Ledger.Shelley.Tx
-  ( ShelleyTx (..),
-  )
-import Cardano.Ledger.Shelley.TxBody
-  ( DCert (..),
-    DelegCert (..),
-    Delegation (..),
-    PoolCert (..),
-    PoolParams (..),
-    RewardAcnt (..),
-    ShelleyTxBody (..),
-    ShelleyTxOut (..),
-    Wdrl (..),
-  )
-import Cardano.Ledger.Shelley.TxWits
-  ( addrWits,
-  )
-import Cardano.Ledger.Slot
-  ( BlockNo (..),
-    EpochNo (..),
-    SlotNo (..),
-  )
+import Cardano.Ledger.Shelley.LedgerState (
+  PulsingRewUpdate (..),
+  RewardUpdate (..),
+  completeStep,
+  emptyRewardUpdate,
+ )
+import Cardano.Ledger.Shelley.PParams (
+  ShelleyPParams,
+  ShelleyPParamsHKD (..),
+ )
+import Cardano.Ledger.Shelley.PoolRank (
+  Likelihood (..),
+  NonMyopic (..),
+  leaderProbability,
+  likelihood,
+ )
+import Cardano.Ledger.Shelley.Rewards (
+  StakeShare (..),
+  aggregateRewards,
+  leaderRew,
+  memberRew,
+  mkApparentPerformance,
+  sumRewards,
+ )
+import Cardano.Ledger.Shelley.Tx (
+  ShelleyTx (..),
+ )
+import Cardano.Ledger.Shelley.TxBody (
+  DCert (..),
+  DelegCert (..),
+  Delegation (..),
+  PoolCert (..),
+  PoolParams (..),
+  RewardAcnt (..),
+  ShelleyTxBody (..),
+  ShelleyTxOut (..),
+  Wdrl (..),
+ )
+import Cardano.Ledger.Shelley.TxWits (
+  addrWits,
+ )
+import Cardano.Ledger.Slot (
+  BlockNo (..),
+  EpochNo (..),
+  SlotNo (..),
+ )
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
@@ -118,49 +118,49 @@ import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, C_Crypto, ExMock)
 import Test.Cardano.Ledger.Shelley.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
 import qualified Test.Cardano.Ledger.Shelley.Examples.Combinators as C
-import Test.Cardano.Ledger.Shelley.Examples.Federation
-  ( coreNodeKeysBySchedule,
-  )
-import Test.Cardano.Ledger.Shelley.Examples.Init
-  ( initSt,
-    lastByronHeaderHash,
-    nonce0,
-    ppEx,
-  )
+import Test.Cardano.Ledger.Shelley.Examples.Federation (
+  coreNodeKeysBySchedule,
+ )
+import Test.Cardano.Ledger.Shelley.Examples.Init (
+  initSt,
+  lastByronHeaderHash,
+  nonce0,
+  ppEx,
+ )
 import Test.Cardano.Ledger.Shelley.Examples.PoolLifetime (makeCompletedPulser, mkStake)
-import Test.Cardano.Ledger.Shelley.Generator.Core
-  ( AllIssuerKeys (..),
-    NatNonce (..),
-    PreAlonzo,
-    genesisCoins,
-    mkBlockFakeVRF,
-    mkOCert,
-  )
+import Test.Cardano.Ledger.Shelley.Generator.Core (
+  AllIssuerKeys (..),
+  NatNonce (..),
+  PreAlonzo,
+  genesisCoins,
+  mkBlockFakeVRF,
+  mkOCert,
+ )
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
-import Test.Cardano.Ledger.Shelley.Utils
-  ( ShelleyTest,
-    epochSize,
-    getBlockNonce,
-    maxLLSupply,
-    runShelleyBase,
-    testGlobals,
-  )
+import Test.Cardano.Ledger.Shelley.Utils (
+  ShelleyTest,
+  epochSize,
+  getBlockNonce,
+  maxLLSupply,
+  runShelleyBase,
+  testGlobals,
+ )
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 
 -- | Type local to this module expressing the various constraints assumed
 -- amongst all tests in this module.
 type TwoPoolsConstraints era =
-  ( ShelleyTest era,
-    ExMock (EraCrypto era),
-    Core.TxBody era ~ ShelleyTxBody era,
-    Core.Tx era ~ ShelleyTx era,
-    Core.PParams era ~ ShelleyPParams era,
-    PreAlonzo era,
-    Core.EraSegWits era,
-    ToCBOR (Core.Script era)
+  ( ShelleyTest era
+  , ExMock (EraCrypto era)
+  , Core.TxBody era ~ ShelleyTxBody era
+  , Core.Tx era ~ ShelleyTx era
+  , Core.PParams era ~ ShelleyPParams era
+  , PreAlonzo era
+  , Core.EraSegWits era
+  , ToCBOR (Core.Script era)
   )
 
 aliceInitCoin :: Coin
@@ -176,9 +176,9 @@ initUTxO :: TwoPoolsConstraints era => UTxO era
 initUTxO =
   genesisCoins
     genesisId
-    [ ShelleyTxOut Cast.aliceAddr (Val.inject aliceInitCoin),
-      ShelleyTxOut Cast.bobAddr (Val.inject bobInitCoin),
-      ShelleyTxOut Cast.carlAddr (Val.inject carlInitCoin)
+    [ ShelleyTxOut Cast.aliceAddr (Val.inject aliceInitCoin)
+    , ShelleyTxOut Cast.bobAddr (Val.inject bobInitCoin)
+    , ShelleyTxOut Cast.carlAddr (Val.inject carlInitCoin)
     ]
 
 initStTwoPools :: forall era. TwoPoolsConstraints era => ChainState era
@@ -210,14 +210,14 @@ txbodyEx1 =
     (Set.fromList [TxIn genesisId minBound])
     (StrictSeq.fromList [ShelleyTxOut Cast.aliceAddr (Val.inject aliceCoinEx1)])
     ( StrictSeq.fromList
-        [ DCertDeleg (RegKey Cast.aliceSHK),
-          DCertDeleg (RegKey Cast.bobSHK),
-          DCertDeleg (RegKey Cast.carlSHK),
-          DCertPool (RegPool alicePoolParams'),
-          DCertPool (RegPool bobPoolParams'),
-          DCertDeleg (Delegate $ Delegation Cast.aliceSHK (hk Cast.alicePoolKeys)),
-          DCertDeleg (Delegate $ Delegation Cast.bobSHK (hk Cast.bobPoolKeys)),
-          DCertDeleg (Delegate $ Delegation Cast.carlSHK (hk Cast.alicePoolKeys))
+        [ DCertDeleg (RegKey Cast.aliceSHK)
+        , DCertDeleg (RegKey Cast.bobSHK)
+        , DCertDeleg (RegKey Cast.carlSHK)
+        , DCertPool (RegPool alicePoolParams')
+        , DCertPool (RegPool bobPoolParams')
+        , DCertDeleg (Delegate $ Delegation Cast.aliceSHK (hk Cast.alicePoolKeys))
+        , DCertDeleg (Delegate $ Delegation Cast.bobSHK (hk Cast.bobPoolKeys))
+        , DCertDeleg (Delegate $ Delegation Cast.carlSHK (hk Cast.alicePoolKeys))
         ]
     )
     (Wdrl Map.empty)
@@ -247,8 +247,8 @@ txEx1 =
 
 blockEx1 ::
   forall era.
-  ( HasCallStack,
-    TwoPoolsConstraints era
+  ( HasCallStack
+  , TwoPoolsConstraints era
   ) =>
   Block (BHeader (EraCrypto era)) era
 blockEx1 =
@@ -375,18 +375,18 @@ snapEx3 =
   EB.SnapShot
     { EB.ssStake =
         mkStake
-          [ (Cast.aliceSHK, aliceCoinEx1),
-            (Cast.bobSHK, bobInitCoin),
-            (Cast.carlSHK, carlInitCoin)
-          ],
-      EB.ssDelegations =
-        [ (Cast.aliceSHK, hk Cast.alicePoolKeys),
-          (Cast.bobSHK, hk Cast.bobPoolKeys),
-          (Cast.carlSHK, hk Cast.alicePoolKeys)
-        ],
-      EB.ssPoolParams =
-        [ (hk Cast.alicePoolKeys, alicePoolParams'),
-          (hk Cast.bobPoolKeys, bobPoolParams')
+          [ (Cast.aliceSHK, aliceCoinEx1)
+          , (Cast.bobSHK, bobInitCoin)
+          , (Cast.carlSHK, carlInitCoin)
+          ]
+    , EB.ssDelegations =
+        [ (Cast.aliceSHK, hk Cast.alicePoolKeys)
+        , (Cast.bobSHK, hk Cast.bobPoolKeys)
+        , (Cast.carlSHK, hk Cast.alicePoolKeys)
+        ]
+    , EB.ssPoolParams =
+        [ (hk Cast.alicePoolKeys, alicePoolParams')
+        , (hk Cast.bobPoolKeys, bobPoolParams')
         ]
     }
 
@@ -439,11 +439,11 @@ deltaREx4 = Coin 3
 rewardUpdateEx4 :: forall c. RewardUpdate c
 rewardUpdateEx4 =
   RewardUpdate
-    { deltaT = DeltaCoin 0,
-      deltaR = toDeltaCoin deltaREx4, -- No rewards paid out, fees go to reserves
-      rs = Map.empty,
-      deltaF = invert $ toDeltaCoin feeTx1,
-      nonMyopic = def {rewardPotNM = feeTx1}
+    { deltaT = DeltaCoin 0
+    , deltaR = toDeltaCoin deltaREx4 -- No rewards paid out, fees go to reserves
+    , rs = Map.empty
+    , deltaF = invert $ toDeltaCoin feeTx1
+    , nonMyopic = def {rewardPotNM = feeTx1}
     }
 
 expectedStEx4 ::
@@ -500,11 +500,13 @@ pdEx5 :: forall c. CryptoClass.Crypto c => PoolDistr c
 pdEx5 =
   PoolDistr $
     Map.fromList
-      [ ( hk $ Cast.alicePoolKeys @c,
-          IndividualPoolStake alicePoolStake (Cast.aliceVRFKeyHash @c)
-        ),
-        ( hk $ Cast.bobPoolKeys @c,
-          IndividualPoolStake bobPoolStake (Cast.bobVRFKeyHash @c)
+      [
+        ( hk $ Cast.alicePoolKeys @c
+        , IndividualPoolStake alicePoolStake (Cast.aliceVRFKeyHash @c)
+        )
+      ,
+        ( hk $ Cast.bobPoolKeys @c
+        , IndividualPoolStake bobPoolStake (Cast.bobVRFKeyHash @c)
         )
       ]
 
@@ -750,8 +752,8 @@ nonMyopicEx9 :: forall c. ExMock c => NonMyopic c
 nonMyopicEx9 =
   NonMyopic
     ( Map.fromList
-        [ (hk Cast.alicePoolKeys, alicePerfEx9),
-          (hk Cast.bobPoolKeys, bobPerfEx9)
+        [ (hk Cast.alicePoolKeys, alicePerfEx9)
+        , (hk Cast.bobPoolKeys, bobPerfEx9)
         ]
     )
     bigR
@@ -764,11 +766,11 @@ rewardUpdateEx9 ::
   RewardUpdate (EraCrypto era)
 rewardUpdateEx9 pp rewards =
   RewardUpdate
-    { deltaT = DeltaCoin deltaTEx9,
-      deltaR = invert (toDeltaCoin deltaR1Ex9) <> toDeltaCoin deltaR2Ex9,
-      rs = rewards,
-      deltaF = DeltaCoin 0,
-      nonMyopic = nonMyopicEx9
+    { deltaT = DeltaCoin deltaTEx9
+    , deltaR = invert (toDeltaCoin deltaR1Ex9) <> toDeltaCoin deltaR2Ex9
+    , rs = rewards
+    , deltaF = DeltaCoin 0
+    , nonMyopic = nonMyopicEx9
     }
   where
     deltaR2Ex9 = bigR <-> (sumRewards pp rewards)
@@ -815,9 +817,9 @@ twoPools9 = CHAINExample expectedStEx8 blockEx9 (Right $ expectedStEx9 ppEx)
 carlsRewards :: forall c. ExMock c => Set (Core.Reward c)
 carlsRewards =
   Set.fromList
-    [ Core.Reward Core.MemberReward (hk Cast.alicePoolKeys) (carlMemberRewardsFromAlice @c),
-      Core.Reward Core.LeaderReward (hk Cast.alicePoolKeys) (carlLeaderRewardsFromAlice @c),
-      Core.Reward Core.LeaderReward (hk Cast.bobPoolKeys) (carlLeaderRewardsFromBob @c)
+    [ Core.Reward Core.MemberReward (hk Cast.alicePoolKeys) (carlMemberRewardsFromAlice @c)
+    , Core.Reward Core.LeaderReward (hk Cast.alicePoolKeys) (carlLeaderRewardsFromAlice @c)
+    , Core.Reward Core.LeaderReward (hk Cast.bobPoolKeys) (carlLeaderRewardsFromBob @c)
     ]
 
 rsEx9Agg :: forall c. ExMock c => Map (Credential 'Staking c) (Set (Core.Reward c))
@@ -856,18 +858,18 @@ twoPoolsExample :: TestTree
 twoPoolsExample =
   testGroup
     "two pools"
-    [ testCase "create non-aggregated pulser" $ testCHAINExample twoPools9,
-      testCase "non-aggregated pulser is correct" $
+    [ testCase "create non-aggregated pulser" $ testCHAINExample twoPools9
+    , testCase "non-aggregated pulser is correct" $
         ( (Complete (rewardUpdateEx9 @C ppEx rsEx9Agg))
             @?= (fst . runShelleyBase . completeStep $ pulserEx9 @C ppEx)
-        ),
-      testCase "aggregated pulser is correct" $
+        )
+    , testCase "aggregated pulser is correct" $
         ( (Complete (rewardUpdateEx9 @C ppProtVer3 rsEx9Agg))
             @?= (fst . runShelleyBase . completeStep $ pulserEx9 @C ppProtVer3)
-        ),
-      testCase "create aggregated pulser" $ testCHAINExample twoPools9Agg,
-      testCase "create legacy aggregatedRewards" testAggregateRewardsLegacy,
-      testCase "create new aggregatedRewards" testAggregateRewardsNew
+        )
+    , testCase "create aggregated pulser" $ testCHAINExample twoPools9Agg
+    , testCase "create legacy aggregatedRewards" testAggregateRewardsLegacy
+    , testCase "create new aggregatedRewards" testAggregateRewardsNew
     ]
 
 -- This test group tests each block individually, which is really only
@@ -876,14 +878,14 @@ twoPoolsExampleExtended :: TestTree
 twoPoolsExampleExtended =
   testGroup
     "two pools extended"
-    [ testCase "initial registrations" $ testCHAINExample twoPools1,
-      testCase "delegate stake and create reward update" $ testCHAINExample twoPools2,
-      testCase "new epoch changes" $ testCHAINExample twoPools3,
-      testCase "second reward update" $ testCHAINExample twoPools4,
-      testCase "nonempty pool distr" $ testCHAINExample twoPools5,
-      testCase "alice produces a block" $ testCHAINExample twoPools6,
-      testCase "bob produces a block" $ testCHAINExample twoPools7,
-      testCase "prelude to the first nontrivial rewards" $ testCHAINExample twoPools8,
-      testCase "create non-aggregated rewards" $ testCHAINExample twoPools9,
-      testCase "create aggregated rewards" $ testCHAINExample twoPools9Agg
+    [ testCase "initial registrations" $ testCHAINExample twoPools1
+    , testCase "delegate stake and create reward update" $ testCHAINExample twoPools2
+    , testCase "new epoch changes" $ testCHAINExample twoPools3
+    , testCase "second reward update" $ testCHAINExample twoPools4
+    , testCase "nonempty pool distr" $ testCHAINExample twoPools5
+    , testCase "alice produces a block" $ testCHAINExample twoPools6
+    , testCase "bob produces a block" $ testCHAINExample twoPools7
+    , testCase "prelude to the first nontrivial rewards" $ testCHAINExample twoPools8
+    , testCase "create non-aggregated rewards" $ testCHAINExample twoPools9
+    , testCase "create aggregated rewards" $ testCHAINExample twoPools9Agg
     ]

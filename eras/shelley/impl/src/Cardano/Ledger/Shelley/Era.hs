@@ -1,29 +1,29 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Ledger.Shelley.Era
-  ( ShelleyEra,
-    ShelleyBBODY,
-    ShelleyDELEG,
-    ShelleyDELEGS,
-    ShelleyDELPL,
-    ShelleyEPOCH,
-    ShelleyLEDGER,
-    ShelleyLEDGERS,
-    ShelleyMIR,
-    ShelleyNEWEPOCH,
-    ShelleyNEWPP,
-    ShelleyPOOL,
-    ShelleyPOOLREAP,
-    ShelleyPPUP,
-    ShelleyRUPD,
-    ShelleySNAP,
-    ShelleyTICK,
-    ShelleyTICKF,
-    ShelleyUPEC,
-    ShelleyUTXO,
-    ShelleyUTXOW,
-  )
+module Cardano.Ledger.Shelley.Era (
+  ShelleyEra,
+  ShelleyBBODY,
+  ShelleyDELEG,
+  ShelleyDELEGS,
+  ShelleyDELPL,
+  ShelleyEPOCH,
+  ShelleyLEDGER,
+  ShelleyLEDGERS,
+  ShelleyMIR,
+  ShelleyNEWEPOCH,
+  ShelleyNEWPP,
+  ShelleyPOOL,
+  ShelleyPOOLREAP,
+  ShelleyPPUP,
+  ShelleyRUPD,
+  ShelleySNAP,
+  ShelleyTICK,
+  ShelleyTICKF,
+  ShelleyUPEC,
+  ShelleyUTXO,
+  ShelleyUTXOW,
+)
 where
 
 import Cardano.Ledger.Coin (Coin)

@@ -5,30 +5,30 @@
 -- TODO: remove once Annotator migrated here
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Binary.Decoding.Annotated
-  ( C.Annotated (..),
-    C.ByteSpan (..),
-    C.Decoded (..),
-    C.annotationBytes,
-    annotatedDecoder,
-    C.slice,
-    fromCBORAnnotated,
-    reAnnotate,
-    C.Annotator (..),
-    annotatorSlice,
-    withSlice,
-    C.FullByteString (..),
-    decodeAnnSet,
-  )
+module Cardano.Ledger.Binary.Decoding.Annotated (
+  C.Annotated (..),
+  C.ByteSpan (..),
+  C.Decoded (..),
+  C.annotationBytes,
+  annotatedDecoder,
+  C.slice,
+  fromCBORAnnotated,
+  reAnnotate,
+  C.Annotator (..),
+  annotatorSlice,
+  withSlice,
+  C.FullByteString (..),
+  decodeAnnSet,
+)
 where
 
 import qualified Cardano.Binary as C
-import Cardano.Ledger.Binary.Decoding.Decoder
-  ( Decoder,
-    decodeList,
-    decodeWithByteSpan,
-    fromPlainDecoder,
-  )
+import Cardano.Ledger.Binary.Decoding.Decoder (
+  Decoder,
+  decodeList,
+  decodeWithByteSpan,
+  fromPlainDecoder,
+ )
 import Cardano.Ledger.Binary.Decoding.FromCBOR (FromCBOR (..))
 import Cardano.Ledger.Binary.Encoding (ToCBOR, Version, serialize')
 import qualified Codec.Serialise as Serialise (decode)

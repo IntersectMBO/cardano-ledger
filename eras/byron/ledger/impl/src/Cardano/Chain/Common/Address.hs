@@ -10,104 +10,104 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | Functionality related to 'Address' data type and related types.
-module Cardano.Chain.Common.Address
-  ( Address (..),
-    Address' (..),
+module Cardano.Chain.Common.Address (
+  Address (..),
+  Address' (..),
 
-    -- * Formatting
-    addressF,
-    addressDetailedF,
-    fromCBORTextAddress,
+  -- * Formatting
+  addressF,
+  addressDetailedF,
+  fromCBORTextAddress,
 
-    -- * Spending data checks
-    checkAddrSpendingData,
-    checkVerKeyAddress,
-    checkRedeemAddress,
+  -- * Spending data checks
+  checkAddrSpendingData,
+  checkVerKeyAddress,
+  checkRedeemAddress,
 
-    -- * Encoding/Decoding
-    addrToBase58,
-    toCBORAddr,
-    toCBORAddrCRC32,
-    decodeAddressBase58,
-    encodeAddressBase58,
+  -- * Encoding/Decoding
+  addrToBase58,
+  toCBORAddr,
+  toCBORAddrCRC32,
+  decodeAddressBase58,
+  encodeAddressBase58,
 
-    -- * Utilities
-    addrAttributesUnwrapped,
-    addrNetworkMagic,
+  -- * Utilities
+  addrAttributesUnwrapped,
+  addrNetworkMagic,
 
-    -- * Pattern-matching helpers
-    isRedeemAddress,
+  -- * Pattern-matching helpers
+  isRedeemAddress,
 
-    -- * Construction
-    makeAddress,
-    makeVerKeyAddress,
-    makeVerKeyHdwAddress,
-    makeRedeemAddress,
-  )
+  -- * Construction
+  makeAddress,
+  makeVerKeyAddress,
+  makeVerKeyHdwAddress,
+  makeRedeemAddress,
+)
 where
 
-import Cardano.Chain.Common.AddrAttributes
-  ( AddrAttributes (..),
-    HDAddressPayload,
-  )
-import Cardano.Chain.Common.AddrSpendingData
-  ( AddrSpendingData (..),
-    AddrType (..),
-    addrSpendingDataToType,
-  )
+import Cardano.Chain.Common.AddrAttributes (
+  AddrAttributes (..),
+  HDAddressPayload,
+ )
+import Cardano.Chain.Common.AddrSpendingData (
+  AddrSpendingData (..),
+  AddrType (..),
+  addrSpendingDataToType,
+ )
 import Cardano.Chain.Common.AddressHash (AddressHash, addressHash)
 import Cardano.Chain.Common.Attributes (Attributes (..), mkAttributes)
-import Cardano.Chain.Common.CBOR
-  ( decodeCrcProtected,
-    encodeCrcProtected,
-    encodedCrcProtectedSizeExpr,
-  )
+import Cardano.Chain.Common.CBOR (
+  decodeCrcProtected,
+  encodeCrcProtected,
+  encodedCrcProtectedSizeExpr,
+ )
 import Cardano.Chain.Common.NetworkMagic (NetworkMagic (..))
 import Cardano.Crypto.Hashing (hashHexF)
-import Cardano.Crypto.Signing
-  ( RedeemVerificationKey,
-    VerificationKey,
-  )
+import Cardano.Crypto.Signing (
+  RedeemVerificationKey,
+  VerificationKey,
+ )
 import Cardano.HeapWords (HeapWords (..), heapWords3)
-import Cardano.Ledger.Binary
-  ( DecoderError (..),
-    Encoding,
-    FromCBOR (..),
-    ToCBOR (..),
-    byronProtVer,
-    decodeFull',
-    decodeListLenCanonical,
-    matchSize,
-    serialize',
-  )
+import Cardano.Ledger.Binary (
+  DecoderError (..),
+  Encoding,
+  FromCBOR (..),
+  ToCBOR (..),
+  byronProtVer,
+  decodeFull',
+  decodeListLenCanonical,
+  matchSize,
+  serialize',
+ )
 import Cardano.Prelude
 import qualified Data.Aeson as Aeson
-import Data.ByteString.Base58
-  ( Alphabet (..),
-    bitcoinAlphabet,
-    decodeBase58,
-    encodeBase58,
-  )
+import Data.ByteString.Base58 (
+  Alphabet (..),
+  bitcoinAlphabet,
+  decodeBase58,
+  encodeBase58,
+ )
 import Data.Text.Encoding (decodeLatin1)
 import Data.Text.Internal.Builder (Builder)
-import Formatting
-  ( Format,
-    bprint,
-    build,
-    builder,
-    formatToString,
-    later,
-  )
+import Formatting (
+  Format,
+  bprint,
+  build,
+  builder,
+  formatToString,
+  later,
+ )
 import qualified Formatting.Buildable as B
 import NoThunks.Class (NoThunks (..))
-import Text.JSON.Canonical
-  ( FromJSON (..),
-    FromObjectKey (..),
-    JSValue (..),
-    ToJSON (..),
-    ToObjectKey (..),
-    toJSString,
-  )
+import Text.JSON.Canonical (
+  FromJSON (..),
+  FromObjectKey (..),
+  JSValue (..),
+  ToJSON (..),
+  ToObjectKey (..),
+  toJSString,
+ )
 
 -- | Hash of this data is stored in 'Address'. This type exists mostly
 --   for internal usage.
@@ -128,14 +128,14 @@ instance FromCBOR Address' where
 
 -- | 'Address' is where you can send Lovelace
 data Address = Address
-  { -- | Root of imaginary pseudo Merkle tree stored in this address.
-    addrRoot :: !(AddressHash Address'),
-    -- | Attributes associated with this address.
-    addrAttributes :: !(Attributes AddrAttributes),
-    -- | The type of this address. Should correspond to
-    -- 'AddrSpendingData', but it can't be checked statically, because
-    -- spending data is hashed.
-    addrType :: !AddrType
+  { addrRoot :: !(AddressHash Address')
+  -- ^ Root of imaginary pseudo Merkle tree stored in this address.
+  , addrAttributes :: !(Attributes AddrAttributes)
+  -- ^ Attributes associated with this address.
+  , addrType :: !AddrType
+  -- ^ The type of this address. Should correspond to
+  -- 'AddrSpendingData', but it can't be checked statically, because
+  -- spending data is hashed.
   }
   deriving (Eq, Ord, Generic, Show)
   deriving anyclass (NFData, NoThunks)
@@ -159,9 +159,9 @@ instance FromCBOR Address where
     (root, attributes, addrType') <- decodeCrcProtected
     pure $
       Address
-        { addrRoot = root,
-          addrAttributes = attributes,
-          addrType = addrType'
+        { addrRoot = root
+        , addrAttributes = attributes
+        , addrType = addrType'
         }
 
 instance B.Buildable [Address] where
@@ -245,9 +245,9 @@ encodeAddressBase58 = decodeLatin1 . addrToBase58
 makeAddress :: AddrSpendingData -> AddrAttributes -> Address
 makeAddress spendingData attributesUnwrapped =
   Address
-    { addrRoot = addressHash address',
-      addrAttributes = attributes,
-      addrType = addrType'
+    { addrRoot = addressHash address'
+    , addrAttributes = attributes
+    , addrType = addrType'
     }
   where
     addrType' = addrSpendingDataToType spendingData
@@ -273,8 +273,8 @@ makeVerKeyAddressImpl nm path key = makeAddress spendingData attrs
     spendingData = VerKeyASD key
     attrs =
       AddrAttributes
-        { aaVKDerivationPath = path,
-          aaNetworkMagic = nm
+        { aaVKDerivationPath = path
+        , aaNetworkMagic = nm
         }
 
 -- | A function for making an address from 'RedeemVerificationKey'
@@ -284,8 +284,8 @@ makeRedeemAddress nm key = makeAddress spendingData attrs
     spendingData = RedeemASD key
     attrs =
       AddrAttributes
-        { aaVKDerivationPath = Nothing,
-          aaNetworkMagic = nm
+        { aaVKDerivationPath = Nothing
+        , aaNetworkMagic = nm
         }
 
 --------------------------------------------------------------------------------

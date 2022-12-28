@@ -14,33 +14,33 @@
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Ledger.UTxO
-  ( -- * Primitives
-    UTxO (..),
-    EraUTxO (..),
+module Cardano.Ledger.UTxO (
+  -- * Primitives
+  UTxO (..),
+  EraUTxO (..),
 
-    -- * Functions
-    txins,
-    txinLookup,
-    txouts,
-    balance,
-    coinBalance,
-    sumAllValue,
-    sumAllCoin,
-    areAllAdaOnly,
-    verifyWitVKey,
-    getScriptHash,
-  )
+  -- * Functions
+  txins,
+  txinLookup,
+  txouts,
+  balance,
+  coinBalance,
+  sumAllValue,
+  sumAllCoin,
+  areAllAdaOnly,
+  verifyWitVKey,
+  getScriptHash,
+)
 where
 
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.Binary
-  ( FromCBOR (..),
-    FromSharedCBOR (Share, fromSharedCBOR),
-    Interns,
-    ToCBOR (..),
-    decodeMapNoDuplicates,
-  )
+import Cardano.Ledger.Binary (
+  FromCBOR (..),
+  FromSharedCBOR (Share, fromSharedCBOR),
+  Interns,
+  ToCBOR (..),
+  decodeMapNoDuplicates,
+ )
 import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Coin (Coin, CompactForm (CompactCoin))
 import Cardano.Ledger.Compactible (Compactible (..))
@@ -48,12 +48,12 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.DPState (DPState)
-import Cardano.Ledger.Keys
-  ( DSignable,
-    Hash,
-    KeyRole (..),
-    verifySignedDSIGN,
-  )
+import Cardano.Ledger.Keys (
+  DSignable,
+  Hash,
+  KeyRole (..),
+  verifySignedDSIGN,
+ )
 import Cardano.Ledger.Keys.WitVKey
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.TxIn (TxIn (..))
@@ -91,9 +91,9 @@ deriving newtype instance Crypto (EraCrypto era) => Monoid (UTxO era)
 deriving newtype instance (Era era, ToCBOR (TxOut era)) => ToCBOR (UTxO era)
 
 instance
-  ( Crypto (EraCrypto era),
-    FromSharedCBOR (TxOut era),
-    Share (TxOut era) ~ Interns (Credential 'Staking (EraCrypto era))
+  ( Crypto (EraCrypto era)
+  , FromSharedCBOR (TxOut era)
+  , Share (TxOut era) ~ Interns (Credential 'Staking (EraCrypto era))
   ) =>
   FromSharedCBOR (UTxO era)
   where
@@ -104,8 +104,8 @@ instance
     UTxO <$!> decodeMapNoDuplicates fromCBOR (fromSharedCBOR credsInterns)
 
 instance
-  ( FromCBOR (TxOut era),
-    Era era
+  ( FromCBOR (TxOut era)
+  , Era era
   ) =>
   FromCBOR (UTxO era)
   where
@@ -134,7 +134,7 @@ txouts txBody =
   UTxO $
     Map.fromList
       [ (TxIn transId idx, out)
-        | (out, idx) <- zip (toList $ txBody ^. outputsTxBodyL) [minBound ..]
+      | (out, idx) <- zip (toList $ txBody ^. outputsTxBodyL) [minBound ..]
       ]
   where
     transId = txid txBody
@@ -148,9 +148,9 @@ txinLookup txin (UTxO utxo') = Map.lookup txin utxo'
 
 -- | Verify a transaction body witness
 verifyWitVKey ::
-  ( Typeable kr,
-    Crypto c,
-    DSignable c (Hash c EraIndependentTxBody)
+  ( Typeable kr
+  , Crypto c
+  , DSignable c (Hash c EraIndependentTxBody)
   ) =>
   Hash c EraIndependentTxBody ->
   WitVKey kr c ->

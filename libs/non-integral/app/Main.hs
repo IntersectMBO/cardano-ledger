@@ -40,9 +40,9 @@ doTestsFromStdin = do
           ++ show (1 - ((1 - f) *** b))
           ++ " "
           ++ ( case res of
-                 BELOW acc n -> (show acc) ++ " LT " ++ show n
-                 ABOVE acc n -> (show acc) ++ " GT " ++ show n
-                 MaxReached _ -> "error"
+                BELOW acc n -> (show acc) ++ " LT " ++ show n
+                ABOVE acc n -> (show acc) ++ " GT " ++ show n
+                MaxReached _ -> "error"
              )
       doTestsFromStdin
 

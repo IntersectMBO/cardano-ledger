@@ -1,30 +1,30 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 -- | Boundary blocks have been deprecated, but we keep functions to decode them
-module Cardano.Chain.Block.Boundary
-  ( fromCBORBoundaryConsensusData,
-    dropBoundaryExtraHeaderData,
-    dropBoundaryExtraHeaderDataRetainGenesisTag,
-    dropBoundaryBody,
-    dropBoundaryExtraBodyData,
-  )
+module Cardano.Chain.Block.Boundary (
+  fromCBORBoundaryConsensusData,
+  dropBoundaryExtraHeaderData,
+  dropBoundaryExtraHeaderDataRetainGenesisTag,
+  dropBoundaryBody,
+  dropBoundaryExtraBodyData,
+)
 where
 
-import Cardano.Chain.Common
-  ( ChainDifficulty,
-    attrData,
-    dropAttributes,
-    fromCBORAttributes,
-  )
-import Cardano.Ledger.Binary
-  ( Decoder,
-    Dropper,
-    decodeWord64,
-    dropBytes,
-    dropList,
-    enforceSize,
-    fromCBOR,
-  )
+import Cardano.Chain.Common (
+  ChainDifficulty,
+  attrData,
+  dropAttributes,
+  fromCBORAttributes,
+ )
+import Cardano.Ledger.Binary (
+  Decoder,
+  Dropper,
+  decodeWord64,
+  dropBytes,
+  dropList,
+  enforceSize,
+  fromCBOR,
+ )
 import Cardano.Prelude
 
 --------------------------------------------------------------------------------

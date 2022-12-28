@@ -7,10 +7,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Chain.Slotting.EpochNumber
-  ( EpochNumber (..),
-    isBootstrapEra,
-  )
+module Cardano.Chain.Slotting.EpochNumber (
+  EpochNumber (..),
+  isBootstrapEra,
+)
 where
 
 import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
@@ -28,19 +28,19 @@ newtype EpochNumber = EpochNumber
   { getEpochNumber :: Word64
   }
   deriving
-    ( Show,
-      Data,
-      Eq,
-      Ord,
-      Num,
-      Enum,
-      Ix,
-      Integral,
-      Real,
-      Generic,
-      Bounded,
-      NFData,
-      NoThunks
+    ( Show
+    , Data
+    , Eq
+    , Ord
+    , Num
+    , Enum
+    , Ix
+    , Integral
+    , Real
+    , Generic
+    , Bounded
+    , NFData
+    , NoThunks
     )
 
 instance Buildable EpochNumber where

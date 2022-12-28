@@ -15,21 +15,21 @@ module Byron.Spec.Ledger.STS.UTXOWS where
 import Byron.Spec.Ledger.STS.UTXO (UTxOEnv, UTxOState)
 import Byron.Spec.Ledger.STS.UTXOW (UTXOW)
 import Byron.Spec.Ledger.UTxO (Tx)
-import Control.State.Transition
-  ( Embed,
-    Environment,
-    IRC (IRC),
-    PredicateFailure,
-    STS,
-    Signal,
-    State,
-    TRC (TRC),
-    initialRules,
-    judgmentContext,
-    trans,
-    transitionRules,
-    wrapFailed,
-  )
+import Control.State.Transition (
+  Embed,
+  Environment,
+  IRC (IRC),
+  PredicateFailure,
+  STS,
+  Signal,
+  State,
+  TRC (TRC),
+  initialRules,
+  judgmentContext,
+  trans,
+  transitionRules,
+  wrapFailed,
+ )
 import Control.State.Transition.Generator (HasTrace, envGen, genTrace, sigGen)
 import Control.State.Transition.Trace (TraceOrder (OldestFirst), traceSignals)
 import Data.Data (Data, Typeable)

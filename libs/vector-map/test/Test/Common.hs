@@ -1,12 +1,12 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Test.Common
-  ( testLawsGroup,
-    testPropertyN,
-    withMaxTimesSuccess,
-    module X,
-  )
+module Test.Common (
+  testLawsGroup,
+  testPropertyN,
+  withMaxTimesSuccess,
+  module X,
+)
 where
 
 import Control.Applicative

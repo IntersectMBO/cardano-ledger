@@ -5,14 +5,14 @@
 --   Including orphan instances from external types.
 --   So anyplace this module is imported to get access to the
 --   ToExpr class, one also gets the orphan instances.
-module Cardano.Ledger.TreeDiff
-  ( Expr (App, Rec, Lst),
-    ToExpr (listToExpr, toExpr),
-    defaultExprViaShow,
-    trimExprViaShow,
-    diffExpr,
-    ediffEq,
-  )
+module Cardano.Ledger.TreeDiff (
+  Expr (App, Rec, Lst),
+  ToExpr (listToExpr, toExpr),
+  defaultExprViaShow,
+  trimExprViaShow,
+  diffExpr,
+  ediffEq,
+)
 where
 
 import qualified Cardano.Crypto.Hash as Hash

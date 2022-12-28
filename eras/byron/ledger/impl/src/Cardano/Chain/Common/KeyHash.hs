@@ -4,10 +4,10 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Chain.Common.KeyHash
-  ( KeyHash (..),
-    hashKey,
-  )
+module Cardano.Chain.Common.KeyHash (
+  KeyHash (..),
+  hashKey,
+)
 where
 
 import Cardano.Chain.Common.AddressHash
@@ -19,27 +19,27 @@ import Cardano.Prelude
 import Formatting (formatToString)
 import Formatting.Buildable (Buildable)
 import NoThunks.Class (NoThunks (..))
-import Text.JSON.Canonical
-  ( FromObjectKey (..),
-    JSValue (..),
-    ToObjectKey (..),
-    toJSString,
-  )
+import Text.JSON.Canonical (
+  FromObjectKey (..),
+  JSValue (..),
+  ToObjectKey (..),
+  toJSString,
+ )
 
 -- | A 'KeyHash' refers to a 'VerificationKey'
 newtype KeyHash = KeyHash
   { unKeyHash :: AddressHash VerificationKey
   }
   deriving
-    ( Eq,
-      Ord,
-      Show,
-      NFData,
-      Buildable,
-      FromCBOR,
-      ToCBOR,
-      HeapWords,
-      NoThunks
+    ( Eq
+    , Ord
+    , Show
+    , NFData
+    , Buildable
+    , FromCBOR
+    , ToCBOR
+    , HeapWords
+    , NoThunks
     )
 
 instance Monad m => ToObjectKey m KeyHash where

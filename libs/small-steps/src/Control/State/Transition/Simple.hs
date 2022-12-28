@@ -2,11 +2,11 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 -- | Simple state transition system over the Identity monad.
-module Control.State.Transition.Simple
-  ( applySTSIndifferently,
-    applySTS,
-    module Extended,
-  )
+module Control.State.Transition.Simple (
+  applySTSIndifferently,
+  applySTS,
+  module Extended,
+)
 where
 
 import Control.Monad.Identity (Identity (..))

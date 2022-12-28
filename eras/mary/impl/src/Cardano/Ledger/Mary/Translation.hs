@@ -51,13 +51,13 @@ instance Crypto c => TranslateEra (MaryEra c) NewEpochState where
   translateEra ctxt nes =
     return $
       NewEpochState
-        { nesEL = nesEL nes,
-          nesBprev = nesBprev nes,
-          nesBcur = nesBcur nes,
-          nesEs = translateEra' ctxt $ nesEs nes,
-          nesRu = nesRu nes,
-          nesPd = nesPd nes,
-          stashedAVVMAddresses = ()
+        { nesEL = nesEL nes
+        , nesBprev = nesBprev nes
+        , nesBcur = nesBcur nes
+        , nesEs = translateEra' ctxt $ nesEs nes
+        , nesRu = nesRu nes
+        , nesPd = nesPd nes
+        , stashedAVVMAddresses = ()
         }
 
 instance Crypto c => TranslateEra (MaryEra c) ShelleyTx where
@@ -70,21 +70,21 @@ instance Crypto c => TranslateEra (MaryEra c) ShelleyGenesis where
   translateEra ctxt genesis =
     return
       ShelleyGenesis
-        { sgSystemStart = sgSystemStart genesis,
-          sgNetworkMagic = sgNetworkMagic genesis,
-          sgNetworkId = sgNetworkId genesis,
-          sgActiveSlotsCoeff = sgActiveSlotsCoeff genesis,
-          sgSecurityParam = sgSecurityParam genesis,
-          sgEpochLength = sgEpochLength genesis,
-          sgSlotsPerKESPeriod = sgSlotsPerKESPeriod genesis,
-          sgMaxKESEvolutions = sgMaxKESEvolutions genesis,
-          sgSlotLength = sgSlotLength genesis,
-          sgUpdateQuorum = sgUpdateQuorum genesis,
-          sgMaxLovelaceSupply = sgMaxLovelaceSupply genesis,
-          sgProtocolParams = translateEra' ctxt (sgProtocolParams genesis),
-          sgGenDelegs = sgGenDelegs genesis,
-          sgInitialFunds = sgInitialFunds genesis,
-          sgStaking = sgStaking genesis
+        { sgSystemStart = sgSystemStart genesis
+        , sgNetworkMagic = sgNetworkMagic genesis
+        , sgNetworkId = sgNetworkId genesis
+        , sgActiveSlotsCoeff = sgActiveSlotsCoeff genesis
+        , sgSecurityParam = sgSecurityParam genesis
+        , sgEpochLength = sgEpochLength genesis
+        , sgSlotsPerKESPeriod = sgSlotsPerKESPeriod genesis
+        , sgMaxKESEvolutions = sgMaxKESEvolutions genesis
+        , sgSlotLength = sgSlotLength genesis
+        , sgUpdateQuorum = sgUpdateQuorum genesis
+        , sgMaxLovelaceSupply = sgMaxLovelaceSupply genesis
+        , sgProtocolParams = translateEra' ctxt (sgProtocolParams genesis)
+        , sgGenDelegs = sgGenDelegs genesis
+        , sgInitialFunds = sgInitialFunds genesis
+        , sgStaking = sgStaking genesis
         }
 
 --------------------------------------------------------------------------------
@@ -97,20 +97,20 @@ instance Crypto c => TranslateEra (MaryEra c) EpochState where
   translateEra ctxt es =
     return
       EpochState
-        { esAccountState = esAccountState es,
-          esSnapshots = esSnapshots es,
-          esLState = translateEra' ctxt $ esLState es,
-          esPrevPp = translateEra' ctxt $ esPrevPp es,
-          esPp = translateEra' ctxt $ esPp es,
-          esNonMyopic = esNonMyopic es
+        { esAccountState = esAccountState es
+        , esSnapshots = esSnapshots es
+        , esLState = translateEra' ctxt $ esLState es
+        , esPrevPp = translateEra' ctxt $ esPrevPp es
+        , esPp = translateEra' ctxt $ esPp es
+        , esNonMyopic = esNonMyopic es
         }
 
 instance Crypto c => TranslateEra (MaryEra c) LedgerState where
   translateEra ctxt ls =
     return
       LedgerState
-        { lsUTxOState = translateEra' ctxt $ lsUTxOState ls,
-          lsDPState = lsDPState ls
+        { lsUTxOState = translateEra' ctxt $ lsUTxOState ls
+        , lsDPState = lsDPState ls
         }
 
 instance Crypto c => TranslateEra (MaryEra c) ProposedPPUpdates where
@@ -121,19 +121,19 @@ instance Crypto c => TranslateEra (MaryEra c) PPUPState where
   translateEra ctxt ps =
     return
       PPUPState
-        { proposals = translateEra' ctxt $ proposals ps,
-          futureProposals = translateEra' ctxt $ futureProposals ps
+        { proposals = translateEra' ctxt $ proposals ps
+        , futureProposals = translateEra' ctxt $ futureProposals ps
         }
 
 instance Crypto c => TranslateEra (MaryEra c) UTxOState where
   translateEra ctxt us =
     return
       UTxOState
-        { utxosUtxo = translateEra' ctxt $ utxosUtxo us,
-          utxosDeposited = utxosDeposited us,
-          utxosFees = utxosFees us,
-          utxosPpups = translateEra' ctxt $ utxosPpups us,
-          utxosStakeDistr = utxosStakeDistr us
+        { utxosUtxo = translateEra' ctxt $ utxosUtxo us
+        , utxosDeposited = utxosDeposited us
+        , utxosFees = utxosFees us
+        , utxosPpups = translateEra' ctxt $ utxosPpups us
+        , utxosStakeDistr = utxosStakeDistr us
         }
 
 instance Crypto c => TranslateEra (MaryEra c) ShelleyTxOut where

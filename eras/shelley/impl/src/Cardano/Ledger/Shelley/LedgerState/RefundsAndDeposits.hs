@@ -5,25 +5,25 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits
-  ( totalTxDeposits,
-    totalCertsDeposits,
-    keyTxRefunds,
-    keyCertsRefunds,
-  )
+module Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits (
+  totalTxDeposits,
+  totalCertsDeposits,
+  keyTxRefunds,
+  keyCertsRefunds,
+)
 where
 
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (EraCrypto, TxBody)
 import Cardano.Ledger.DPState (DPState (..), DState (..), PState (..))
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert (..), isRegKey)
-import Cardano.Ledger.Shelley.TxBody
-  ( PoolParams (..),
-    ShelleyEraTxBody (..),
-    pattern DeRegKey,
-    pattern RegKey,
-    pattern RegPool,
-  )
+import Cardano.Ledger.Shelley.TxBody (
+  PoolParams (..),
+  ShelleyEraTxBody (..),
+  pattern DeRegKey,
+  pattern RegKey,
+  pattern RegPool,
+ )
 import Cardano.Ledger.Val ((<+>), (<×>))
 import Data.Foldable (foldl', toList)
 import qualified Data.Map.Strict as Map
@@ -43,8 +43,8 @@ import Lens.Micro ((^.))
 -- registration certificates would be invalid.
 totalCertsDeposits ::
   forall c pp.
-  ( HasField "_poolDeposit" pp Coin,
-    HasField "_keyDeposit" pp Coin
+  ( HasField "_poolDeposit" pp Coin
+  , HasField "_keyDeposit" pp Coin
   ) =>
   pp ->
   DPState c ->
@@ -64,9 +64,9 @@ totalCertsDeposits pp dpstate certs =
 
 totalTxDeposits ::
   forall era pp.
-  ( HasField "_poolDeposit" pp Coin,
-    HasField "_keyDeposit" pp Coin,
-    ShelleyEraTxBody era
+  ( HasField "_poolDeposit" pp Coin
+  , HasField "_keyDeposit" pp Coin
+  , ShelleyEraTxBody era
   ) =>
   pp ->
   DPState (EraCrypto era) ->

@@ -3,13 +3,13 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Protocol.TPraos.Rules.Updn
-  ( UPDN,
-    UpdnEnv (..),
-    UpdnState (..),
-    PredicateFailure,
-    UpdnPredicateFailure,
-  )
+module Cardano.Protocol.TPraos.Rules.Updn (
+  UPDN,
+  UpdnEnv (..),
+  UpdnState (..),
+  PredicateFailure,
+  UpdnPredicateFailure,
+)
 where
 
 import Cardano.Ledger.BaseTypes

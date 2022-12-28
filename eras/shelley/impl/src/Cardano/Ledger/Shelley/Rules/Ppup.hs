@@ -10,48 +10,48 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Shelley.Rules.Ppup
-  ( ShelleyPPUP,
-    PpupEnv (..),
-    ShelleyPpupPredFailure (..),
-    PpupEvent (..),
-    PredicateFailure,
-    VotingPeriod (..),
-  )
+module Cardano.Ledger.Shelley.Rules.Ppup (
+  ShelleyPPUP,
+  PpupEnv (..),
+  ShelleyPpupPredFailure (..),
+  PpupEvent (..),
+  PredicateFailure,
+  VotingPeriod (..),
+)
 where
 
-import Cardano.Ledger.BaseTypes
-  ( Globals (stabilityWindow),
-    ProtVer,
-    ShelleyBase,
-    StrictMaybe (SJust),
-    epochInfoPure,
-    invalidKey,
-  )
-import Cardano.Ledger.Binary
-  ( FromCBOR (..),
-    ToCBOR (..),
-    decodeRecordSum,
-    decodeWord,
-    encodeListLen,
-  )
+import Cardano.Ledger.BaseTypes (
+  Globals (stabilityWindow),
+  ProtVer,
+  ShelleyBase,
+  StrictMaybe (SJust),
+  epochInfoPure,
+  invalidKey,
+ )
+import Cardano.Ledger.Binary (
+  FromCBOR (..),
+  ToCBOR (..),
+  decodeRecordSum,
+  decodeWord,
+  encodeListLen,
+ )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (GenDelegs (GenDelegs), KeyHash, KeyRole (Genesis))
 import Cardano.Ledger.Shelley.Era (ShelleyPPUP)
-import Cardano.Ledger.Shelley.PParams
-  ( PPUPState (..),
-    ProposedPPUpdates (ProposedPPUpdates),
-    Update (..),
-    pvCanFollow,
-  )
-import Cardano.Ledger.Slot
-  ( Duration (Duration),
-    EpochNo (EpochNo),
-    SlotNo,
-    epochInfoEpoch,
-    epochInfoFirst,
-    (*-),
-  )
+import Cardano.Ledger.Shelley.PParams (
+  PPUPState (..),
+  ProposedPPUpdates (ProposedPPUpdates),
+  Update (..),
+  pvCanFollow,
+ )
+import Cardano.Ledger.Slot (
+  Duration (Duration),
+  EpochNo (EpochNo),
+  SlotNo,
+  epochInfoEpoch,
+  epochInfoFirst,
+  (*-),
+ )
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, (⊆), (⨃))
 import Control.State.Transition
@@ -112,9 +112,9 @@ instance NoThunks (ShelleyPpupPredFailure era)
 newtype PpupEvent era = NewEpoch EpochNo
 
 instance
-  ( Typeable era,
-    HasField "_protocolVersion" (PParams era) ProtVer,
-    HasField "_protocolVersion" (PParamsUpdate era) (StrictMaybe ProtVer)
+  ( Typeable era
+  , HasField "_protocolVersion" (PParams era) ProtVer
+  , HasField "_protocolVersion" (PParamsUpdate era) (StrictMaybe ProtVer)
   ) =>
   STS (ShelleyPPUP era)
   where
@@ -164,16 +164,16 @@ instance
       k -> invalidKey k
 
 ppupTransitionNonEmpty ::
-  ( Typeable era,
-    HasField "_protocolVersion" (PParams era) ProtVer,
-    HasField "_protocolVersion" (PParamsUpdate era) (StrictMaybe ProtVer)
+  ( Typeable era
+  , HasField "_protocolVersion" (PParams era) ProtVer
+  , HasField "_protocolVersion" (PParamsUpdate era) (StrictMaybe ProtVer)
   ) =>
   TransitionRule (ShelleyPPUP era)
 ppupTransitionNonEmpty = do
   TRC
-    ( PPUPEnv slot pp (GenDelegs _genDelegs),
-      PPUPState (ProposedPPUpdates pupS) (ProposedPPUpdates fpupS),
-      up
+    ( PPUPEnv slot pp (GenDelegs _genDelegs)
+      , PPUPState (ProposedPPUpdates pupS) (ProposedPPUpdates fpupS)
+      , up
       ) <-
     judgmentContext
 

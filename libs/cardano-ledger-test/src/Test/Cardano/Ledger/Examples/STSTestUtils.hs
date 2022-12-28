@@ -11,28 +11,28 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Test.Cardano.Ledger.Examples.STSTestUtils
-  ( AlonzoBased (..),
-    freeCostModelV1,
-    freeCostModelV2,
-    initUTxO,
-    mkGenesisTxIn,
-    mkTxDats,
-    someAddr,
-    someKeys,
-    someScriptAddr,
-    testBBODY,
-    testUTXOW,
-    testUTXOWsubset,
-    testUTXOspecialCase,
-    trustMeP,
-    keyBy,
-    alwaysFailsHash,
-    alwaysSucceedsHash,
-    timelockScript,
-    timelockHash,
-    timelockStakeCred,
-  )
+module Test.Cardano.Ledger.Examples.STSTestUtils (
+  AlonzoBased (..),
+  freeCostModelV1,
+  freeCostModelV2,
+  initUTxO,
+  mkGenesisTxIn,
+  mkTxDats,
+  someAddr,
+  someKeys,
+  someScriptAddr,
+  testBBODY,
+  testUTXOW,
+  testUTXOWsubset,
+  testUTXOspecialCase,
+  trustMeP,
+  keyBy,
+  alwaysFailsHash,
+  alwaysSucceedsHash,
+  timelockScript,
+  timelockHash,
+  timelockStakeCred,
+)
 where
 
 import qualified Cardano.Crypto.Hash as CH
@@ -40,57 +40,57 @@ import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Data (Data (..), hashData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
-import Cardano.Ledger.Alonzo.Rules
-  ( AlonzoBBODY,
-    AlonzoUtxoPredFailure (..),
-    AlonzoUtxosPredFailure (..),
-    AlonzoUtxowPredFailure (..),
-  )
-import Cardano.Ledger.Alonzo.Scripts
-  ( CostModel,
-    mkCostModel,
-  )
-import Cardano.Ledger.Alonzo.Tx
-  ( AlonzoTx (..),
-    IsValid (..),
-  )
+import Cardano.Ledger.Alonzo.Rules (
+  AlonzoBBODY,
+  AlonzoUtxoPredFailure (..),
+  AlonzoUtxosPredFailure (..),
+  AlonzoUtxowPredFailure (..),
+ )
+import Cardano.Ledger.Alonzo.Scripts (
+  CostModel,
+  mkCostModel,
+ )
+import Cardano.Ledger.Alonzo.Tx (
+  AlonzoTx (..),
+  IsValid (..),
+ )
 import Cardano.Ledger.Alonzo.TxWits (TxDats (..))
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import qualified Cardano.Ledger.Babbage.PParams as Babbage (BabbagePParamsHKD (..))
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..))
 import Cardano.Ledger.Babbage.Rules as Babbage (BabbageUtxowPredFailure (..))
-import Cardano.Ledger.BaseTypes
-  ( Network (..),
-    mkTxIxPartial,
-  )
+import Cardano.Ledger.BaseTypes (
+  Network (..),
+  mkTxIxPartial,
+ )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core hiding (TranslationError)
-import Cardano.Ledger.Credential
-  ( Credential (..),
-    StakeCredential,
-    StakeReference (..),
-  )
+import Cardano.Ledger.Credential (
+  Credential (..),
+  StakeCredential,
+  StakeReference (..),
+ )
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Keys
-  ( GenDelegs (..),
-    KeyRole (..),
-    hashKey,
-  )
+import Cardano.Ledger.Keys (
+  GenDelegs (..),
+  KeyRole (..),
+  hashKey,
+ )
 import Cardano.Ledger.Pretty
 import Cardano.Ledger.Pretty.Babbage ()
-import Cardano.Ledger.Shelley.API
-  ( Block (..),
-    UTxO (..),
-  )
-import Cardano.Ledger.Shelley.LedgerState
-  ( smartUTxOState,
-  )
+import Cardano.Ledger.Shelley.API (
+  Block (..),
+  UTxO (..),
+ )
+import Cardano.Ledger.Shelley.LedgerState (
+  smartUTxOState,
+ )
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
-import Cardano.Ledger.Shelley.Rules
-  ( BbodyEnv (..),
-    ShelleyBbodyState,
-    UtxoEnv (..),
-  )
+import Cardano.Ledger.Shelley.Rules (
+  BbodyEnv (..),
+  ShelleyBbodyState,
+  UtxoEnv (..),
+ )
 import Cardano.Ledger.Shelley.Rules as Shelley (ShelleyUtxowPredFailure (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (inject)
@@ -107,18 +107,18 @@ import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import PlutusPrelude (enumerate)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
-import Test.Cardano.Ledger.Generic.Fields
-  ( TxOutField (..),
-  )
+import Test.Cardano.Ledger.Generic.Fields (
+  TxOutField (..),
+ )
 import Test.Cardano.Ledger.Generic.PrettyCore ()
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Scriptic (PostShelley, Scriptic (..), after, matchkey)
 import Test.Cardano.Ledger.Generic.Updaters
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
-import Test.Cardano.Ledger.Shelley.Utils
-  ( RawSeed (..),
-    mkKeyPair,
-  )
+import Test.Cardano.Ledger.Shelley.Utils (
+  RawSeed (..),
+  mkKeyPair,
+ )
 import Test.Tasty.HUnit (Assertion, assertFailure, (@?=))
 
 -- =================================================================
@@ -193,30 +193,30 @@ initUTxO :: forall era. (EraTxOut era, PostShelley era) => Proof era -> UTxO era
 initUTxO pf =
   UTxO $
     Map.fromList $
-      [ (mkGenesisTxIn 1, alwaysSucceedsOutput),
-        (mkGenesisTxIn 2, alwaysFailsOutput)
+      [ (mkGenesisTxIn 1, alwaysSucceedsOutput)
+      , (mkGenesisTxIn 2, alwaysFailsOutput)
       ]
         ++ map (\i -> (mkGenesisTxIn i, someOutput)) [3 .. 8]
         ++ map (\i -> (mkGenesisTxIn i, collateralOutput)) [11 .. 18]
-        ++ [ (mkGenesisTxIn 100, timelockOut),
-             (mkGenesisTxIn 101, unspendableOut),
-             (mkGenesisTxIn 102, alwaysSucceedsOutputV2),
-             (mkGenesisTxIn 103, nonScriptOutWithDatum)
+        ++ [ (mkGenesisTxIn 100, timelockOut)
+           , (mkGenesisTxIn 101, unspendableOut)
+           , (mkGenesisTxIn 102, alwaysSucceedsOutputV2)
+           , (mkGenesisTxIn 103, nonScriptOutWithDatum)
            ]
   where
     alwaysSucceedsOutput =
       newTxOut
         pf
-        [ Address (someScriptAddr (always 3 pf) pf),
-          Amount (inject $ Coin 5000),
-          DHash' [hashData $ datumExample1 @era]
+        [ Address (someScriptAddr (always 3 pf) pf)
+        , Amount (inject $ Coin 5000)
+        , DHash' [hashData $ datumExample1 @era]
         ]
     alwaysFailsOutput =
       newTxOut
         pf
-        [ Address (someScriptAddr (never 0 pf) pf),
-          Amount (inject $ Coin 3000),
-          DHash' [hashData $ datumExample2 @era]
+        [ Address (someScriptAddr (never 0 pf) pf)
+        , Amount (inject $ Coin 3000)
+        , DHash' [hashData $ datumExample2 @era]
         ]
     someOutput = newTxOut pf [Address $ someAddr pf, Amount (inject $ Coin 1000)]
     collateralOutput = newTxOut pf [Address $ someAddr pf, Amount (inject $ Coin 5)]
@@ -232,22 +232,22 @@ initUTxO pf =
     unspendableOut =
       newTxOut
         pf
-        [ Address (someScriptAddr (always 3 pf) pf),
-          Amount (inject $ Coin 5000)
+        [ Address (someScriptAddr (always 3 pf) pf)
+        , Amount (inject $ Coin 5000)
         ]
     alwaysSucceedsOutputV2 =
       newTxOut
         pf
-        [ Address (someScriptAddr (alwaysAlt 3 pf) pf),
-          Amount (inject $ Coin 5000),
-          DHash' [hashData $ datumExample1 @era]
+        [ Address (someScriptAddr (alwaysAlt 3 pf) pf)
+        , Amount (inject $ Coin 5000)
+        , DHash' [hashData $ datumExample1 @era]
         ]
     nonScriptOutWithDatum =
       newTxOut
         pf
-        [ Address (someAddr pf),
-          Amount (inject $ Coin 1221),
-          DHash' [hashData $ datumExample1 @era]
+        [ Address (someAddr pf)
+        , Amount (inject $ Coin 1221)
+        , DHash' [hashData $ datumExample1 @era]
         ]
 
 datumExample1 :: Era era => Data era
@@ -329,11 +329,11 @@ testBBODY wit@(BBODY proof) initialSt block expected pparams =
 
 testUTXOW ::
   forall era.
-  ( GoodCrypto (EraCrypto era),
-    Default (State (EraRule "PPUP" era)),
-    PostShelley era,
-    EraTx era,
-    HasCallStack
+  ( GoodCrypto (EraCrypto era)
+  , Default (State (EraRule "PPUP" era))
+  , PostShelley era
+  , EraTx era
+  , HasCallStack
   ) =>
   WitRule "UTXOW" era ->
   UTxO era ->
@@ -348,14 +348,14 @@ testUTXOW wit@(UTXOW (Babbage _)) utxo p tx = testUTXOWwith wit (genericCont (sh
 testUTXOW wit@(UTXOW (Conway _)) utxo p tx = testUTXOWwith wit (genericCont (show tx)) utxo p tx
 testUTXOW (UTXOW other) _ _ _ = error ("Cannot use testUTXOW in era " ++ show other)
 
-testUTXOWsubset,
-  testUTXOspecialCase ::
+testUTXOWsubset
+  , testUTXOspecialCase ::
     forall era.
-    ( GoodCrypto (EraCrypto era),
-      Default (State (EraRule "PPUP" era)),
-      PostShelley era,
-      EraTx era,
-      HasCallStack
+    ( GoodCrypto (EraCrypto era)
+    , Default (State (EraRule "PPUP" era))
+    , PostShelley era
+    , EraTx era
+    , HasCallStack
     ) =>
     WitRule "UTXOW" era ->
     UTxO era ->
@@ -391,9 +391,9 @@ type Result era = Either [PredicateFailure (EraRule "UTXOW" era)] (State (EraRul
 
 testUTXOWwith ::
   forall era.
-  ( GoodCrypto (EraCrypto era),
-    Default (State (EraRule "PPUP" era)),
-    EraTx era
+  ( GoodCrypto (EraCrypto era)
+  , Default (State (EraRule "PPUP" era))
+  , EraTx era
   ) =>
   WitRule "UTXOW" era ->
   (Result era -> Result era -> Assertion) ->
@@ -417,11 +417,11 @@ testUTXOWwith wit@(UTXOW proof) cont utxo pparams tx expected =
 
 -- | A small example of what a continuation for 'runSTS' might look like
 genericCont ::
-  ( Eq x,
-    PrettyA x,
-    Eq y,
-    PrettyA y,
-    HasCallStack
+  ( Eq x
+  , PrettyA x
+  , Eq y
+  , PrettyA y
+  , HasCallStack
   ) =>
   String ->
   Either [x] y ->
@@ -448,12 +448,12 @@ genericCont cause expected computed =
     passedWith x = "But passed with:\n" ++ show (prettyA x)
 
 subsetCont ::
-  ( Eq x,
-    Show x,
-    PrettyA x,
-    Eq y,
-    Show y,
-    PrettyA y
+  ( Eq x
+  , Show x
+  , PrettyA x
+  , Eq y
+  , Show y
+  , PrettyA y
   ) =>
   Either [x] y ->
   Either [x] y ->
@@ -478,11 +478,11 @@ subsetCont expected computed =
           ++ show (prettyA x)
 
 specialCont ::
-  ( Eq (PredicateFailure (EraRule "UTXOW" era)),
-    Eq a,
-    Show (PredicateFailure (EraRule "UTXOW" era)),
-    Show a,
-    HasCallStack
+  ( Eq (PredicateFailure (EraRule "UTXOW" era))
+  , Eq a
+  , Show (PredicateFailure (EraRule "UTXOW" era))
+  , Show a
+  , HasCallStack
   ) =>
   Proof era ->
   Either [PredicateFailure (EraRule "UTXOW" era)] a ->

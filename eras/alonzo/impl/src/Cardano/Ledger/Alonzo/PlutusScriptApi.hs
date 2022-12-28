@@ -9,19 +9,19 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Ledger.Alonzo.PlutusScriptApi
-  ( -- Figure 8
-    getSpendingTxIn,
-    getDatumAlonzo,
-    evalScripts,
-    -- Figure 12
-    scriptsNeeded,
-    scriptsNeededFromBody,
-    language,
-    CollectError (..),
-    collectTwoPhaseScriptInputs,
-    knownToNotBe1Phase,
-  )
+module Cardano.Ledger.Alonzo.PlutusScriptApi (
+  -- Figure 8
+  getSpendingTxIn,
+  getDatumAlonzo,
+  evalScripts,
+  -- Figure 12
+  scriptsNeeded,
+  scriptsNeededFromBody,
+  language,
+  CollectError (..),
+  collectTwoPhaseScriptInputs,
+  knownToNotBe1Phase,
+)
 where
 
 import Cardano.Ledger.Alonzo.Core (MaryEraTxBody (..))
@@ -30,13 +30,13 @@ import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), CostModel, CostModels (..), ExUnits (..))
 import Cardano.Ledger.Alonzo.Tx (Data, ScriptPurpose (..), indexedRdmrs, txdats')
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..))
-import Cardano.Ledger.Alonzo.TxInfo
-  ( ExtendedUTxO (..),
-    ScriptResult (..),
-    TranslationError (..),
-    runPLCScript,
-    valContext,
-  )
+import Cardano.Ledger.Alonzo.TxInfo (
+  ExtendedUTxO (..),
+  ScriptResult (..),
+  TranslationError (..),
+  runPLCScript,
+  valContext,
+ )
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), AlonzoTxWits, unTxDats)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..))
@@ -136,14 +136,14 @@ knownToNotBe1Phase scriptsAvailable (sp, sh) = do
 --     if that is not the case, a PredicateFailure is raised in the Utxos rule.
 collectTwoPhaseScriptInputs ::
   forall era.
-  ( EraTx era,
-    MaryEraTxBody era,
-    AlonzoEraTxWits era,
-    EraUTxO era,
-    ScriptsNeeded era ~ AlonzoScriptsNeeded era,
-    ExtendedUTxO era,
-    Script era ~ AlonzoScript era,
-    HasField "_costmdls" (PParams era) CostModels
+  ( EraTx era
+  , MaryEraTxBody era
+  , AlonzoEraTxWits era
+  , EraUTxO era
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , ExtendedUTxO era
+  , Script era ~ AlonzoScript era
+  , HasField "_costmdls" (PParams era) CostModels
   ) =>
   EpochInfo (Either Text) ->
   SystemStart ->
@@ -217,15 +217,15 @@ evalScripts pv tx ((pscript, lang, ds, units, cost) : rest) =
   let beginMsg =
         intercalate
           ","
-          [ "[LEDGER][PLUTUS_SCRIPT]",
-            "BEGIN"
+          [ "[LEDGER][PLUTUS_SCRIPT]"
+          , "BEGIN"
           ]
       !res = traceEvent beginMsg $ runPLCScript (Proxy @era) pv lang cost pscript units (map getPlutusData ds)
       endMsg =
         intercalate
           ","
-          [ "[LEDGER][PLUTUS_SCRIPT]",
-            "END"
+          [ "[LEDGER][PLUTUS_SCRIPT]"
+          , "END"
           ]
    in traceEvent endMsg res <> evalScripts pv tx rest
 
@@ -234,9 +234,9 @@ evalScripts pv tx ((pscript, lang, ds, units, cost) : rest) =
 -- THE SPEC CALLS FOR A SET, BUT THAT NEEDS A BUNCH OF ORD INSTANCES (DCert)
 -- See additional comments about 'scriptsNeededFromBody' below.
 scriptsNeeded ::
-  ( EraTx era,
-    EraUTxO era,
-    ScriptsNeeded era ~ [(ScriptPurpose (EraCrypto era), ScriptHash (EraCrypto era))]
+  ( EraTx era
+  , EraUTxO era
+  , ScriptsNeeded era ~ [(ScriptPurpose (EraCrypto era), ScriptHash (EraCrypto era))]
   ) =>
   UTxO era ->
   Tx era ->
@@ -246,8 +246,8 @@ scriptsNeeded utxo tx = scriptsNeededFromBody utxo (tx ^. bodyTxL)
 
 scriptsNeededFromBody ::
   forall era.
-  ( EraUTxO era,
-    ScriptsNeeded era ~ [(ScriptPurpose (EraCrypto era), ScriptHash (EraCrypto era))]
+  ( EraUTxO era
+  , ScriptsNeeded era ~ [(ScriptPurpose (EraCrypto era), ScriptHash (EraCrypto era))]
   ) =>
   UTxO era ->
   TxBody era ->

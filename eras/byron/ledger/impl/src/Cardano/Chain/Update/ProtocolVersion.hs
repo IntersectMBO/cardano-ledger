@@ -3,9 +3,9 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Cardano.Chain.Update.ProtocolVersion
-  ( ProtocolVersion (..),
-  )
+module Cardano.Chain.Update.ProtocolVersion (
+  ProtocolVersion (..),
+)
 where
 
 import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
@@ -18,9 +18,9 @@ import qualified Prelude
 
 -- | Communication protocol version
 data ProtocolVersion = ProtocolVersion
-  { pvMajor :: !Word16,
-    pvMinor :: !Word16,
-    pvAlt :: !Word8
+  { pvMajor :: !Word16
+  , pvMinor :: !Word16
+  , pvAlt :: !Word8
   }
   deriving (Eq, Generic, Ord)
   deriving anyclass (NFData, NoThunks)

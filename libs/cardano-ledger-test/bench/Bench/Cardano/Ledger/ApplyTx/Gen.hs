@@ -10,22 +10,22 @@ module Bench.Cardano.Ledger.ApplyTx.Gen (generateApplyTxEnvForEra, ApplyTxEnv (.
 
 import Cardano.Ledger.Core (EraRule)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Shelley.API
-  ( AccountState (..),
-    Coin (..),
-    Globals,
-    LedgerEnv (..),
-    MempoolEnv,
-  )
+import Cardano.Ledger.Shelley.API (
+  AccountState (..),
+  Coin (..),
+  Globals,
+  LedgerEnv (..),
+  MempoolEnv,
+ )
 import Cardano.Ledger.Shelley.LedgerState (LedgerState)
 import Cardano.Ledger.Slot (SlotNo (SlotNo))
 import Control.DeepSeq (NFData (..))
 import Control.State.Transition (Environment, Signal, State)
-import Control.State.Transition.Trace
-  ( SourceSignalTarget (signal, source),
-    Trace (..),
-    sourceSignalTargets,
-  )
+import Control.State.Transition.Trace (
+  SourceSignalTarget (signal, source),
+  Trace (..),
+  sourceSignalTargets,
+ )
 import Control.State.Transition.Trace.Generator.QuickCheck (HasTrace (BaseEnv), traceFromInitState)
 import Data.Default.Class (Default)
 import Data.Proxy (Proxy)
@@ -45,17 +45,17 @@ import Test.QuickCheck.Random (mkQCGen)
 applyTxMempoolEnv :: Core.PParams era -> MempoolEnv era
 applyTxMempoolEnv pp =
   LedgerEnv
-    { ledgerSlotNo = SlotNo 0,
-      ledgerIx = minBound,
-      ledgerPp = pp,
-      ledgerAccount = AccountState (Coin 45000000000) (Coin 45000000000)
+    { ledgerSlotNo = SlotNo 0
+    , ledgerIx = minBound
+    , ledgerPp = pp
+    , ledgerAccount = AccountState (Coin 45000000000) (Coin 45000000000)
     }
 
 data ApplyTxEnv era = ApplyTxEnv
-  { ateGlobals :: !Globals,
-    ateMempoolEnv :: !(MempoolEnv era),
-    ateState :: !(LedgerState era),
-    ateTx :: !(Core.Tx era)
+  { ateGlobals :: !Globals
+  , ateMempoolEnv :: !(MempoolEnv era)
+  , ateState :: !(LedgerState era)
+  , ateTx :: !(Core.Tx era)
   }
   deriving (Generic)
 
@@ -65,13 +65,13 @@ instance NFData (ApplyTxEnv era) where
 -- | Generate a ledger state and transaction in a given era, given a seed.
 generateApplyTxEnvForEra ::
   forall era.
-  ( EraGen era,
-    Default (State (EraRule "PPUP" era)),
-    HasTrace (EraRule "LEDGER" era) (GenEnv era),
-    BaseEnv (EraRule "LEDGER" era) ~ Globals,
-    Signal (EraRule "LEDGER" era) ~ Core.Tx era,
-    Environment (EraRule "LEDGER" era) ~ LedgerEnv era,
-    State (EraRule "LEDGER" era) ~ LedgerState era
+  ( EraGen era
+  , Default (State (EraRule "PPUP" era))
+  , HasTrace (EraRule "LEDGER" era) (GenEnv era)
+  , BaseEnv (EraRule "LEDGER" era) ~ Globals
+  , Signal (EraRule "LEDGER" era) ~ Core.Tx era
+  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , State (EraRule "LEDGER" era) ~ LedgerState era
   ) =>
   Proxy era ->
   Int ->
@@ -89,8 +89,8 @@ generateApplyTxEnvForEra eraProxy seed =
       tr = unGen traceGen qcSeed 30
       sst = last $ sourceSignalTargets tr
    in ApplyTxEnv
-        { ateGlobals = testGlobals,
-          ateMempoolEnv = applyTxMempoolEnv (ledgerPp (_traceEnv tr)),
-          ateState = source sst,
-          ateTx = signal sst
+        { ateGlobals = testGlobals
+        , ateMempoolEnv = applyTxMempoolEnv (ledgerPp (_traceEnv tr))
+        , ateState = source sst
+        , ateTx = signal sst
         }

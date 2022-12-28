@@ -16,39 +16,39 @@ module Byron.Spec.Ledger.STS.UTXOW where
 
 import Byron.Spec.Ledger.Core (Addr (Addr), VKey, mkAddr, verify)
 import Byron.Spec.Ledger.STS.UTXO
-import Byron.Spec.Ledger.UTxO
-  ( Tx (..),
-    TxIn,
-    TxOut (TxOut),
-    UTxO (UTxO),
-    Wit (Wit),
-    fromTxOuts,
-    inputs,
-    pcMinFee,
-  )
+import Byron.Spec.Ledger.UTxO (
+  Tx (..),
+  TxIn,
+  TxOut (TxOut),
+  UTxO (UTxO),
+  Wit (Wit),
+  fromTxOuts,
+  inputs,
+  pcMinFee,
+ )
 import qualified Byron.Spec.Ledger.UTxO.Generators as UTxOGen
 import qualified Byron.Spec.Ledger.Update.Generators as UpdateGen
-import Control.State.Transition
-  ( Embed,
-    Environment,
-    IRC (IRC),
-    STS (..),
-    Signal,
-    State,
-    TRC (TRC),
-    initialRules,
-    judgmentContext,
-    trans,
-    transitionRules,
-    wrapFailed,
-    (?!),
-  )
-import Control.State.Transition.Generator
-  ( HasTrace,
-    coverFailures,
-    envGen,
-    sigGen,
-  )
+import Control.State.Transition (
+  Embed,
+  Environment,
+  IRC (IRC),
+  STS (..),
+  Signal,
+  State,
+  TRC (TRC),
+  initialRules,
+  judgmentContext,
+  trans,
+  transitionRules,
+  wrapFailed,
+  (?!),
+ )
+import Control.State.Transition.Generator (
+  HasTrace,
+  coverFailures,
+  envGen,
+  sigGen,
+ )
 import Data.Data (Data, Typeable)
 import qualified Data.Map as Map
 import GHC.Generics (Generic)
@@ -130,9 +130,9 @@ instance HasTrace UTXOW where
 -- | Check that all the relevant predicate failures are covered.
 coverUtxoFailure ::
   forall m a.
-  ( MonadTest m,
-    HasCallStack,
-    Data a
+  ( MonadTest m
+  , HasCallStack
+  , Data a
   ) =>
   -- | Minimum percentage that each failure must occur.
   CoverPercentage ->
@@ -148,8 +148,8 @@ coverUtxoFailure coverPercentage someData = do
 
   coverFailures @_ @UTXO
     coverPercentage
-    [ FeeTooLow,
-      InputsNotInUTxO
+    [ FeeTooLow
+    , InputsNotInUTxO
     ]
     someData
 

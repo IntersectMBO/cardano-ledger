@@ -1,22 +1,22 @@
 {-# LANGUAGE FlexibleContexts #-}
 
-module Cardano.Chain.ValidationMode
-  ( ValidationMode (..),
-    fromBlockValidationMode,
-    orThrowErrorInBlockValidationMode,
-    askBlockValidationMode,
-    askTxValidationMode,
-    whenBlockValidation,
-    whenTxValidation,
-    unlessNoTxValidation,
-    wrapErrorWithValidationMode,
-  )
+module Cardano.Chain.ValidationMode (
+  ValidationMode (..),
+  fromBlockValidationMode,
+  orThrowErrorInBlockValidationMode,
+  askBlockValidationMode,
+  askTxValidationMode,
+  whenBlockValidation,
+  whenTxValidation,
+  unlessNoTxValidation,
+  wrapErrorWithValidationMode,
+)
 where
 
-import Cardano.Chain.Block.ValidationMode
-  ( BlockValidationMode (..),
-    toTxValidationMode,
-  )
+import Cardano.Chain.Block.ValidationMode (
+  BlockValidationMode (..),
+  toTxValidationMode,
+ )
 import Cardano.Chain.UTxO.ValidationMode (TxValidationMode (..))
 import Cardano.Prelude
 
@@ -25,8 +25,8 @@ import Cardano.Prelude
 --------------------------------------------------------------------------------
 
 data ValidationMode = ValidationMode
-  { blockValidationMode :: !BlockValidationMode,
-    txValidationMode :: !TxValidationMode
+  { blockValidationMode :: !BlockValidationMode
+  , txValidationMode :: !TxValidationMode
   }
   deriving (Show)
 
@@ -36,8 +36,8 @@ data ValidationMode = ValidationMode
 fromBlockValidationMode :: BlockValidationMode -> ValidationMode
 fromBlockValidationMode bvm =
   ValidationMode
-    { blockValidationMode = bvm,
-      txValidationMode = toTxValidationMode bvm
+    { blockValidationMode = bvm
+    , txValidationMode = toTxValidationMode bvm
     }
 
 orThrowErrorInBlockValidationMode ::

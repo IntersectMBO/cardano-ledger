@@ -13,62 +13,62 @@
 -- | Strategy for Generic Tests
 --   Make the GenState include a Mode of the NewEpochState, modify
 --   the ModelNewEpochState to reflect what we generated.
-module Test.Cardano.Ledger.Generic.GenState
-  ( GenEnv (..),
-    GenRS,
-    GenState (..),
-    GenSize (..),
-    elementsT, -- TODO move to a utilities module
-    frequencyT, -- TODO move to a utilities module
-    positiveSingleDigitInt,
-    nonNegativeSingleDigitInt,
-    genSetElem,
-    genMapElem,
-    genMapElemWhere,
-    genRewardVal,
-    genPositiveVal,
-    genGenState,
-    genValidityInterval,
-    getBlocksizeMax,
-    getCertificateMax,
-    getOldUtxoPercent,
-    getRefInputsMax,
-    getReserves,
-    getSlot,
-    getSlotDelta,
-    getSpendInputsMax,
-    getTreasury,
-    getUtxoChoicesMax,
-    getUtxoElem,
-    getUtxoTest,
-    getCollInputsMax,
-    getNewPoolTest,
-    viewGenState,
-    initialLedgerState,
-    modifyModel,
-    runGenRS,
-    ioGenRS,
-    small,
-    genDatumWithHash,
-    genKeyHash,
-    genScript,
-    genFreshKeyHash,
-    genCredential,
-    genFreshCredential,
-    genFreshRegCred,
-    genPool,
-    genPoolParams,
-    genRewards,
-    genNewPool,
-    genRetirementHash,
-    initStableFields,
-    modifyGenStateInitialUtxo,
-    modifyGenStateInitialRewards,
-    modifyModelCount,
-    modifyModelIndex,
-    modifyModelUTxO,
-    modifyModelMutFee,
-  )
+module Test.Cardano.Ledger.Generic.GenState (
+  GenEnv (..),
+  GenRS,
+  GenState (..),
+  GenSize (..),
+  elementsT, -- TODO move to a utilities module
+  frequencyT, -- TODO move to a utilities module
+  positiveSingleDigitInt,
+  nonNegativeSingleDigitInt,
+  genSetElem,
+  genMapElem,
+  genMapElemWhere,
+  genRewardVal,
+  genPositiveVal,
+  genGenState,
+  genValidityInterval,
+  getBlocksizeMax,
+  getCertificateMax,
+  getOldUtxoPercent,
+  getRefInputsMax,
+  getReserves,
+  getSlot,
+  getSlotDelta,
+  getSpendInputsMax,
+  getTreasury,
+  getUtxoChoicesMax,
+  getUtxoElem,
+  getUtxoTest,
+  getCollInputsMax,
+  getNewPoolTest,
+  viewGenState,
+  initialLedgerState,
+  modifyModel,
+  runGenRS,
+  ioGenRS,
+  small,
+  genDatumWithHash,
+  genKeyHash,
+  genScript,
+  genFreshKeyHash,
+  genCredential,
+  genFreshCredential,
+  genFreshRegCred,
+  genPool,
+  genPoolParams,
+  genRewards,
+  genNewPool,
+  genRetirementHash,
+  initStableFields,
+  modifyGenStateInitialUtxo,
+  modifyGenStateInitialRewards,
+  modifyModelCount,
+  modifyModelIndex,
+  modifyModelUTxO,
+  modifyModelMutFee,
+)
 where
 
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
@@ -80,24 +80,24 @@ import Cardano.Ledger.BaseTypes (Network (Testnet))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), StakeCredential)
-import Cardano.Ledger.Keys
-  ( KeyHash (..),
-    KeyRole (..),
-    coerceKeyRole,
-    hashKey,
-  )
+import Cardano.Ledger.Keys (
+  KeyHash (..),
+  KeyRole (..),
+  coerceKeyRole,
+  hashKey,
+ )
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
 import Cardano.Ledger.Pretty (PDoc, ppInt, ppMap, ppRecord, ppSet, ppString)
 import Cardano.Ledger.Pretty.Mary (ppValidityInterval)
-import Cardano.Ledger.Shelley.LedgerState
-  ( DPState (..),
-    DState (..),
-    LedgerState (..),
-    PState (..),
-    RewardAccounts,
-    obligationDPState,
-    smartUTxOState,
-  )
+import Cardano.Ledger.Shelley.LedgerState (
+  DPState (..),
+  DState (..),
+  LedgerState (..),
+  PState (..),
+  RewardAccounts,
+  obligationDPState,
+  smartUTxOState,
+ )
 import qualified Cardano.Ledger.Shelley.Scripts as Shelley (MultiSig (..))
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..))
 import Cardano.Ledger.TxIn (TxId, TxIn (..))
@@ -122,93 +122,93 @@ import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Generic.Fields
-import Test.Cardano.Ledger.Generic.Functions
-  ( alwaysFalse,
-    alwaysTrue,
-    keyPoolDeposits,
-    primaryLanguage,
-    protocolVersion,
-    txoutFields,
-  )
-import Test.Cardano.Ledger.Generic.ModelState
-  ( ModelNewEpochState (..),
-    genDelegsZero,
-    instantaneousRewardsZero,
-    mKeyDeposits,
-    mNewEpochStateZero,
-    mPoolDeposits,
-    pPUPStateZero,
-    pcModelNewEpochState,
-  )
-import Test.Cardano.Ledger.Generic.PrettyCore
-  ( PrettyC (..),
-    pcCoin,
-    pcCredential,
-    pcIndividualPoolStake,
-    pcKeyHash,
-    pcPoolParams,
-    pcTxIn,
-    pcTxOut,
-  )
+import Test.Cardano.Ledger.Generic.Functions (
+  alwaysFalse,
+  alwaysTrue,
+  keyPoolDeposits,
+  primaryLanguage,
+  protocolVersion,
+  txoutFields,
+ )
+import Test.Cardano.Ledger.Generic.ModelState (
+  ModelNewEpochState (..),
+  genDelegsZero,
+  instantaneousRewardsZero,
+  mKeyDeposits,
+  mNewEpochStateZero,
+  mPoolDeposits,
+  pPUPStateZero,
+  pcModelNewEpochState,
+ )
+import Test.Cardano.Ledger.Generic.PrettyCore (
+  PrettyC (..),
+  pcCoin,
+  pcCredential,
+  pcIndividualPoolStake,
+  pcKeyHash,
+  pcPoolParams,
+  pcTxIn,
+  pcTxOut,
+ )
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.Updaters (defaultCostModels, newPParams)
-import Test.Tasty.QuickCheck
-  ( Gen,
-    Positive (..),
-    arbitrary,
-    choose,
-    chooseInt,
-    elements,
-    frequency,
-    generate,
-  )
+import Test.Tasty.QuickCheck (
+  Gen,
+  Positive (..),
+  arbitrary,
+  choose,
+  chooseInt,
+  elements,
+  frequency,
+  generate,
+ )
 
 -- =================================================
 
 -- | Constants that determine how big a GenState is generated.
 data GenSize = GenSize
-  { treasury :: !Integer,
-    reserves :: !Integer,
-    startSlot :: !Word64,
-    slotDelta :: !(Word64, Word64),
-    blocksizeMax :: !Integer,
-    collInputsMax :: !Natural,
-    spendInputsMax :: !Int,
-    refInputsMax :: !Int,
-    utxoChoicesMax :: !Int,
-    certificateMax :: !Int,
-    withdrawalMax :: !Int,
-    oldUtxoPercent :: !Int, -- between 0-100, 10 means pick an old UTxO 10% of the time
-    maxStablePools :: !Int
+  { treasury :: !Integer
+  , reserves :: !Integer
+  , startSlot :: !Word64
+  , slotDelta :: !(Word64, Word64)
+  , blocksizeMax :: !Integer
+  , collInputsMax :: !Natural
+  , spendInputsMax :: !Int
+  , refInputsMax :: !Int
+  , utxoChoicesMax :: !Int
+  , certificateMax :: !Int
+  , withdrawalMax :: !Int
+  , oldUtxoPercent :: !Int -- between 0-100, 10 means pick an old UTxO 10% of the time
+  , maxStablePools :: !Int
   }
   deriving (Show)
 
 data GenEnv era = GenEnv
-  { gePParams :: !(PParams era),
-    geSize :: !GenSize
+  { gePParams :: !(PParams era)
+  , geSize :: !GenSize
   }
 
 data GenState era = GenState
-  { gsValidityInterval :: !ValidityInterval,
-    gsKeys :: !(Map (KeyHash 'Witness (EraCrypto era)) (KeyPair 'Witness (EraCrypto era))),
-    gsScripts :: !(Map (ScriptHash (EraCrypto era)) (Script era)),
-    gsPlutusScripts :: !(Map (ScriptHash (EraCrypto era), Tag) (IsValid, Script era)),
-    gsDatums :: !(Map (DataHash (EraCrypto era)) (Data era)),
-    gsVI :: !(Map ValidityInterval (Set (ScriptHash (EraCrypto era)))),
-    gsModel :: !(ModelNewEpochState era),
-    gsInitialUtxo :: !(Map (TxIn (EraCrypto era)) (TxOut era)),
-    gsInitialRewards :: !(Map (Credential 'Staking (EraCrypto era)) Coin),
-    gsInitialDelegations :: !(Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))),
-    gsInitialPoolParams :: !(Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era))),
-    gsInitialPoolDistr :: !(Map (KeyHash 'StakePool (EraCrypto era)) (IndividualPoolStake (EraCrypto era))),
-    -- Stable fields are stable from initialization to the end of the generation process
-    gsStablePools :: !(Set (KeyHash 'StakePool (EraCrypto era))),
-    gsStableDelegators :: !(Set (StakeCredential (EraCrypto era))),
-    gsAvoidCred :: !(Set (Credential 'Staking (EraCrypto era))),
-    gsAvoidKey :: !(Set (KeyHash 'StakePool (EraCrypto era))),
-    gsProof :: !(Proof era),
-    gsGenEnv :: !(GenEnv era),
-    gsSeedIdx :: !Int
+  { gsValidityInterval :: !ValidityInterval
+  , gsKeys :: !(Map (KeyHash 'Witness (EraCrypto era)) (KeyPair 'Witness (EraCrypto era)))
+  , gsScripts :: !(Map (ScriptHash (EraCrypto era)) (Script era))
+  , gsPlutusScripts :: !(Map (ScriptHash (EraCrypto era), Tag) (IsValid, Script era))
+  , gsDatums :: !(Map (DataHash (EraCrypto era)) (Data era))
+  , gsVI :: !(Map ValidityInterval (Set (ScriptHash (EraCrypto era))))
+  , gsModel :: !(ModelNewEpochState era)
+  , gsInitialUtxo :: !(Map (TxIn (EraCrypto era)) (TxOut era))
+  , gsInitialRewards :: !(Map (Credential 'Staking (EraCrypto era)) Coin)
+  , gsInitialDelegations :: !(Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era)))
+  , gsInitialPoolParams :: !(Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
+  , gsInitialPoolDistr :: !(Map (KeyHash 'StakePool (EraCrypto era)) (IndividualPoolStake (EraCrypto era)))
+  , -- Stable fields are stable from initialization to the end of the generation process
+    gsStablePools :: !(Set (KeyHash 'StakePool (EraCrypto era)))
+  , gsStableDelegators :: !(Set (StakeCredential (EraCrypto era)))
+  , gsAvoidCred :: !(Set (Credential 'Staking (EraCrypto era)))
+  , gsAvoidKey :: !(Set (KeyHash 'StakePool (EraCrypto era)))
+  , gsProof :: !(Proof era)
+  , gsGenEnv :: !(GenEnv era)
+  , gsSeedIdx :: !Int
   }
 
 emptyGenState :: Reflect era => Proof era -> GenEnv era -> GenState era
@@ -238,37 +238,37 @@ emptyGenState proof genv =
 instance Default GenSize where
   def =
     GenSize
-      { treasury = 1000000,
-        reserves = 1000000,
-        startSlot = 0,
-        slotDelta = (3, 7),
-        blocksizeMax = 10,
-        collInputsMax = 5,
-        oldUtxoPercent = 15,
-        spendInputsMax = 10,
-        refInputsMax = 6,
-        utxoChoicesMax = 30,
-        certificateMax = 10,
-        withdrawalMax = 10,
-        maxStablePools = 5
+      { treasury = 1000000
+      , reserves = 1000000
+      , startSlot = 0
+      , slotDelta = (3, 7)
+      , blocksizeMax = 10
+      , collInputsMax = 5
+      , oldUtxoPercent = 15
+      , spendInputsMax = 10
+      , refInputsMax = 6
+      , utxoChoicesMax = 30
+      , certificateMax = 10
+      , withdrawalMax = 10
+      , maxStablePools = 5
       }
 
 small :: GenSize
 small =
   GenSize
-    { treasury = 1000000,
-      reserves = 1000000,
-      startSlot = 0,
-      slotDelta = (2, 5),
-      blocksizeMax = 3,
-      collInputsMax = 2,
-      oldUtxoPercent = 5,
-      spendInputsMax = 3,
-      refInputsMax = 1,
-      utxoChoicesMax = 12,
-      certificateMax = 2,
-      withdrawalMax = 2,
-      maxStablePools = 4
+    { treasury = 1000000
+    , reserves = 1000000
+    , startSlot = 0
+    , slotDelta = (2, 5)
+    , blocksizeMax = 3
+    , collInputsMax = 2
+    , oldUtxoPercent = 5
+    , spendInputsMax = 3
+    , refInputsMax = 1
+    , utxoChoicesMax = 12
+    , certificateMax = 2
+    , withdrawalMax = 2
+    , maxStablePools = 4
     }
 
 -- =====================================================================
@@ -612,23 +612,23 @@ genGenEnv proof gsize = do
   let pp =
         newPParams
           proof
-          [ MinfeeA minfeeA,
-            MinfeeB minfeeB,
-            defaultCostModels proof,
-            MaxValSize 1000,
-            MaxTxSize $ fromIntegral (maxBound :: Int),
-            MaxTxExUnits maxTxExUnits,
-            MaxCollateralInputs maxCollateralInputs,
-            CollateralPercentage collateralPercentage,
-            ProtocolVersion $ protocolVersion proof,
-            PoolDeposit $ Coin 5,
-            KeyDeposit $ Coin 2,
-            EMax 5
+          [ MinfeeA minfeeA
+          , MinfeeB minfeeB
+          , defaultCostModels proof
+          , MaxValSize 1000
+          , MaxTxSize $ fromIntegral (maxBound :: Int)
+          , MaxTxExUnits maxTxExUnits
+          , MaxCollateralInputs maxCollateralInputs
+          , CollateralPercentage collateralPercentage
+          , ProtocolVersion $ protocolVersion proof
+          , PoolDeposit $ Coin 5
+          , KeyDeposit $ Coin 2
+          , EMax 5
           ]
   pure $
     GenEnv
-      { gePParams = pp,
-        geSize = gsize
+      { gePParams = pp
+      , geSize = gsize
       }
 
 genGenState :: Reflect era => Proof era -> GenSize -> Gen (GenState era)
@@ -655,23 +655,23 @@ pcGenState :: forall era. Reflect era => Proof era -> GenState era -> PDoc
 pcGenState proof gs =
   ppRecord
     "GenState Summary"
-    [ ("ValidityInterval", ppValidityInterval (gsValidityInterval gs)),
-      ("Keymap", ppInt (Map.size (gsKeys gs))),
-      ("Scriptmap", ppInt (Map.size (gsScripts gs))),
-      ("PlutusScripts", ppInt (Map.size (gsPlutusScripts gs))),
-      ("Datums", ppInt (Map.size (gsDatums gs))),
-      ("VI-ScriptMap", ppInt (Map.size (gsVI gs))),
-      ("Model", pcModelNewEpochState @era proof (gsModel gs)),
-      ("Initial Utxo", ppMap pcTxIn (pcTxOut @era proof) (gsInitialUtxo gs)),
-      ("Initial Rewards", ppMap pcCredential pcCoin (gsInitialRewards gs)),
-      ("Initial Delegations", ppMap pcCredential pcKeyHash (gsInitialDelegations gs)),
-      ("Initial PoolParams", ppMap pcKeyHash pcPoolParams (gsInitialPoolParams gs)),
-      ("Initial PoolDistr", ppMap pcKeyHash pcIndividualPoolStake (gsInitialPoolDistr gs)),
-      ("Stable PoolParams", ppSet pcKeyHash (gsStablePools gs)),
-      ("Stable Delegators", ppSet pcCredential (gsStableDelegators gs)),
-      ("Previous RegKey", ppSet pcCredential (gsAvoidCred gs)),
-      ("GenEnv", ppString "GenEnv ..."),
-      ("Proof", ppString (show (gsProof gs)))
+    [ ("ValidityInterval", ppValidityInterval (gsValidityInterval gs))
+    , ("Keymap", ppInt (Map.size (gsKeys gs)))
+    , ("Scriptmap", ppInt (Map.size (gsScripts gs)))
+    , ("PlutusScripts", ppInt (Map.size (gsPlutusScripts gs)))
+    , ("Datums", ppInt (Map.size (gsDatums gs)))
+    , ("VI-ScriptMap", ppInt (Map.size (gsVI gs)))
+    , ("Model", pcModelNewEpochState @era proof (gsModel gs))
+    , ("Initial Utxo", ppMap pcTxIn (pcTxOut @era proof) (gsInitialUtxo gs))
+    , ("Initial Rewards", ppMap pcCredential pcCoin (gsInitialRewards gs))
+    , ("Initial Delegations", ppMap pcCredential pcKeyHash (gsInitialDelegations gs))
+    , ("Initial PoolParams", ppMap pcKeyHash pcPoolParams (gsInitialPoolParams gs))
+    , ("Initial PoolDistr", ppMap pcKeyHash pcIndividualPoolStake (gsInitialPoolDistr gs))
+    , ("Stable PoolParams", ppSet pcKeyHash (gsStablePools gs))
+    , ("Stable Delegators", ppSet pcCredential (gsStableDelegators gs))
+    , ("Previous RegKey", ppSet pcCredential (gsAvoidCred gs))
+    , ("GenEnv", ppString "GenEnv ...")
+    , ("Proof", ppString (show (gsProof gs)))
     ]
 
 -- | Helper function for development and debugging in ghci
@@ -767,11 +767,11 @@ genTimelockScript proof = do
       nonRecTimelocks :: [GenRS era (Timelock era)]
       nonRecTimelocks =
         [ r
-          | SJust r <-
-              [ requireTimeStart <$> mBefore,
-                requireTimeExpire <$> mAfter,
-                SJust requireSignature
-              ]
+        | SJust r <-
+            [ requireTimeStart <$> mBefore
+            , requireTimeExpire <$> mAfter
+            , SJust requireSignature
+            ]
         ]
       requireSignature = RequireSignature <$> genKeyHash
       requireAllOf k = do
@@ -891,10 +891,10 @@ genPlutusScript proof tag = do
 genCredential :: forall era kr. Reflect era => Tag -> GenRS era (Credential kr (EraCrypto era))
 genCredential tag =
   frequencyT
-    [ (35, KeyHashObj <$> genKeyHash'),
-      (35, ScriptHashObj <$> genScript'),
-      (10, pickExistingKeyHash),
-      (20, pickExistingScript)
+    [ (35, KeyHashObj <$> genKeyHash')
+    , (35, ScriptHashObj <$> genScript')
+    , (10, pickExistingKeyHash)
+    , (20, pickExistingScript)
     ]
   where
     genKeyHash' = do

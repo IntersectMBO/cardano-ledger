@@ -1,7 +1,7 @@
-module Cardano.Ledger.Shelley.StabilityWindow
-  ( computeStabilityWindow,
-    computeRandomnessStabilisationWindow,
-  )
+module Cardano.Ledger.Shelley.StabilityWindow (
+  computeStabilityWindow,
+  computeRandomnessStabilisationWindow,
+)
 where
 
 import Cardano.Ledger.BaseTypes

@@ -18,50 +18,50 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Shelley.Tx
-  ( -- * Transaction
-    ShelleyTx
-      ( ShelleyTx,
-        body,
-        wits,
-        auxiliaryData
-      ),
-    bodyShelleyTxL,
-    witsShelleyTxL,
-    auxDataShelleyTxL,
-    sizeShelleyTxF,
-    segwitTx,
-    mkBasicShelleyTx,
-    txwitsScript,
-    extractKeyHashWitnessSet,
-    evalNativeMultiSigScript,
-    hashMultiSigScript,
-    nativeMultiSigTag,
-    validateNativeMultiSigScript,
-    minfee,
-    shelleyMinFeeTx,
-    witsFromTxWitnesses,
+module Cardano.Ledger.Shelley.Tx (
+  -- * Transaction
+  ShelleyTx (
+    ShelleyTx,
+    body,
+    wits,
+    auxiliaryData
+  ),
+  bodyShelleyTxL,
+  witsShelleyTxL,
+  auxDataShelleyTxL,
+  sizeShelleyTxF,
+  segwitTx,
+  mkBasicShelleyTx,
+  txwitsScript,
+  extractKeyHashWitnessSet,
+  evalNativeMultiSigScript,
+  hashMultiSigScript,
+  nativeMultiSigTag,
+  validateNativeMultiSigScript,
+  minfee,
+  shelleyMinFeeTx,
+  witsFromTxWitnesses,
 
-    -- * Re-exports
-    ShelleyTxBody (..),
-    ShelleyTxOut (..),
-    TxIn (..),
-    TxId (..),
-  )
+  -- * Re-exports
+  ShelleyTxBody (..),
+  ShelleyTxOut (..),
+  TxIn (..),
+  TxId (..),
+)
 where
 
-import Cardano.Ledger.Binary
-  ( Annotator (..),
-    FromCBOR (fromCBOR),
-    ToCBOR (toCBOR),
-    decodeNullMaybe,
-    encodeListLen,
-    encodeNull,
-    encodeNullMaybe,
-    runAnnotator,
-    serialize,
-    serializeEncoding,
-  )
+import Cardano.Ledger.Binary (
+  Annotator (..),
+  FromCBOR (fromCBOR),
+  ToCBOR (toCBOR),
+  decodeNullMaybe,
+  encodeListLen,
+  encodeNull,
+  encodeNullMaybe,
+  runAnnotator,
+  serialize,
+  serializeEncoding,
+ )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (Coin))
 import Cardano.Ledger.Credential (Credential (..))
@@ -83,11 +83,11 @@ import Control.DeepSeq (NFData)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Short as SBS
 import Data.Map.Strict (Map)
-import Data.Maybe.Strict
-  ( StrictMaybe (..),
-    maybeToStrictMaybe,
-    strictMaybeToMaybe,
-  )
+import Data.Maybe.Strict (
+  StrictMaybe (..),
+  maybeToStrictMaybe,
+  strictMaybeToMaybe,
+ )
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
@@ -100,40 +100,40 @@ import Numeric.Natural (Natural)
 -- ========================================================
 
 data ShelleyTxRaw era = ShelleyTxRaw
-  { strBody :: !(TxBody era),
-    strWits :: !(TxWits era),
-    strAuxiliaryData :: !(StrictMaybe (TxAuxData era))
+  { strBody :: !(TxBody era)
+  , strWits :: !(TxWits era)
+  , strAuxiliaryData :: !(StrictMaybe (TxAuxData era))
   }
   deriving (Generic, Typeable)
 
 instance
-  ( NFData (TxBody era),
-    NFData (TxWits era),
-    NFData (TxAuxData era)
+  ( NFData (TxBody era)
+  , NFData (TxWits era)
+  , NFData (TxAuxData era)
   ) =>
   NFData (ShelleyTxRaw era)
 
 deriving instance
-  ( Era era,
-    Eq (TxBody era),
-    Eq (TxWits era),
-    Eq (TxAuxData era)
+  ( Era era
+  , Eq (TxBody era)
+  , Eq (TxWits era)
+  , Eq (TxAuxData era)
   ) =>
   Eq (ShelleyTxRaw era)
 
 deriving instance
-  ( Era era,
-    Show (TxBody era),
-    Show (TxWits era),
-    Show (TxAuxData era)
+  ( Era era
+  , Show (TxBody era)
+  , Show (TxWits era)
+  , Show (TxAuxData era)
   ) =>
   Show (ShelleyTxRaw era)
 
 instance
-  ( Era era,
-    NoThunks (TxAuxData era),
-    NoThunks (TxBody era),
-    NoThunks (TxWits era)
+  ( Era era
+  , NoThunks (TxAuxData era)
+  , NoThunks (TxBody era)
+  , NoThunks (TxWits era)
   ) =>
   NoThunks (ShelleyTxRaw era)
 
@@ -180,9 +180,9 @@ mkBasicShelleyTx :: EraTx era => TxBody era -> ShelleyTx era
 mkBasicShelleyTx txBody =
   mkShelleyTx $
     ShelleyTxRaw
-      { strBody = txBody,
-        strWits = mkBasicTxWits,
-        strAuxiliaryData = SNothing
+      { strBody = txBody
+      , strWits = mkBasicTxWits
+      , strAuxiliaryData = SNothing
       }
 
 instance Crypto c => EraTx (ShelleyEra c) where
@@ -210,17 +210,17 @@ instance Crypto c => EraTx (ShelleyEra c) where
   getMinFeeTx = shelleyMinFeeTx
 
 deriving newtype instance
-  ( NFData (TxBody era),
-    NFData (TxWits era),
-    NFData (TxAuxData era)
+  ( NFData (TxBody era)
+  , NFData (TxWits era)
+  , NFData (TxAuxData era)
   ) =>
   NFData (ShelleyTx era)
 
 deriving newtype instance
-  ( Era era,
-    Eq (TxBody era),
-    Eq (TxWits era),
-    Eq (TxAuxData era)
+  ( Era era
+  , Eq (TxBody era)
+  , Eq (TxWits era)
+  , Eq (TxAuxData era)
   ) =>
   Eq (ShelleyTx era)
 
@@ -229,10 +229,10 @@ deriving newtype instance
   Show (ShelleyTx era)
 
 deriving newtype instance
-  ( Era era,
-    NoThunks (TxAuxData era),
-    NoThunks (TxBody era),
-    NoThunks (TxWits era)
+  ( Era era
+  , NoThunks (TxAuxData era)
+  , NoThunks (TxBody era)
+  , NoThunks (TxWits era)
   ) =>
   NoThunks (ShelleyTx era)
 
@@ -246,9 +246,9 @@ pattern ShelleyTx {body, wits, auxiliaryData} <-
   TxConstr
     ( Memo
         ShelleyTxRaw
-          { strBody = body,
-            strWits = wits,
-            strAuxiliaryData = auxiliaryData
+          { strBody = body
+          , strWits = wits
+          , strAuxiliaryData = auxiliaryData
           }
         _
       )
@@ -269,10 +269,10 @@ encodeShelleyTxRaw ShelleyTxRaw {strBody, strWits, strAuxiliaryData} =
     !> E (encodeNullMaybe toCBOR . strictMaybeToMaybe) strAuxiliaryData
 
 instance
-  ( Era era,
-    FromCBOR (Annotator (TxBody era)),
-    FromCBOR (Annotator (TxWits era)),
-    FromCBOR (Annotator (TxAuxData era))
+  ( Era era
+  , FromCBOR (Annotator (TxBody era))
+  , FromCBOR (Annotator (TxWits era))
+  , FromCBOR (Annotator (TxAuxData era))
   ) =>
   FromCBOR (Annotator (ShelleyTxRaw era))
   where
@@ -346,8 +346,8 @@ segwitTx
 -- | Hashes native multi-signature script.
 hashMultiSigScript ::
   forall era.
-  ( EraScript era,
-    Script era ~ MultiSig (EraCrypto era)
+  ( EraScript era
+  , Script era ~ MultiSig (EraCrypto era)
   ) =>
   MultiSig (EraCrypto era) ->
   ScriptHash (EraCrypto era)
@@ -399,9 +399,9 @@ extractKeyHashWitnessSet = foldr accum Set.empty
 
 -- | Minimum fee calculation
 shelleyMinFeeTx ::
-  ( EraTx era,
-    HasField "_minfeeA" (PParams era) Natural,
-    HasField "_minfeeB" (PParams era) Natural
+  ( EraTx era
+  , HasField "_minfeeA" (PParams era) Natural
+  , HasField "_minfeeB" (PParams era) Natural
   ) =>
   PParams era ->
   Tx era ->
@@ -414,9 +414,9 @@ shelleyMinFeeTx pp tx =
       + fromIntegral (getField @"_minfeeB" pp)
 
 minfee ::
-  ( EraTx era,
-    HasField "_minfeeA" (PParams era) Natural,
-    HasField "_minfeeB" (PParams era) Natural
+  ( EraTx era
+  , HasField "_minfeeA" (PParams era) Natural
+  , HasField "_minfeeB" (PParams era) Natural
   ) =>
   PParams era ->
   Tx era ->

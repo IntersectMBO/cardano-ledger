@@ -5,11 +5,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Chain.Update.ProtocolParametersUpdate
-  ( ProtocolParametersUpdate (..),
-    isEmpty,
-    apply,
-  )
+module Cardano.Chain.Update.ProtocolParametersUpdate (
+  ProtocolParametersUpdate (..),
+  isEmpty,
+  apply,
+)
 where
 
 import Cardano.Chain.Common (LovelacePortion, TxFeePolicy)
@@ -25,20 +25,20 @@ import qualified Formatting.Buildable as B
 
 -- | Data which represents modifications of block (aka protocol) version
 data ProtocolParametersUpdate = ProtocolParametersUpdate
-  { ppuScriptVersion :: !(Maybe Word16),
-    ppuSlotDuration :: !(Maybe Natural),
-    ppuMaxBlockSize :: !(Maybe Natural),
-    ppuMaxHeaderSize :: !(Maybe Natural),
-    ppuMaxTxSize :: !(Maybe Natural),
-    ppuMaxProposalSize :: !(Maybe Natural),
-    ppuMpcThd :: !(Maybe LovelacePortion),
-    ppuHeavyDelThd :: !(Maybe LovelacePortion),
-    ppuUpdateVoteThd :: !(Maybe LovelacePortion),
-    ppuUpdateProposalThd :: !(Maybe LovelacePortion),
-    ppuUpdateProposalTTL :: !(Maybe SlotNumber),
-    ppuSoftforkRule :: !(Maybe SoftforkRule),
-    ppuTxFeePolicy :: !(Maybe TxFeePolicy),
-    ppuUnlockStakeEpoch :: !(Maybe EpochNumber)
+  { ppuScriptVersion :: !(Maybe Word16)
+  , ppuSlotDuration :: !(Maybe Natural)
+  , ppuMaxBlockSize :: !(Maybe Natural)
+  , ppuMaxHeaderSize :: !(Maybe Natural)
+  , ppuMaxTxSize :: !(Maybe Natural)
+  , ppuMaxProposalSize :: !(Maybe Natural)
+  , ppuMpcThd :: !(Maybe LovelacePortion)
+  , ppuHeavyDelThd :: !(Maybe LovelacePortion)
+  , ppuUpdateVoteThd :: !(Maybe LovelacePortion)
+  , ppuUpdateProposalThd :: !(Maybe LovelacePortion)
+  , ppuUpdateProposalTTL :: !(Maybe SlotNumber)
+  , ppuSoftforkRule :: !(Maybe SoftforkRule)
+  , ppuTxFeePolicy :: !(Maybe TxFeePolicy)
+  , ppuUnlockStakeEpoch :: !(Maybe EpochNumber)
   }
   deriving (Show, Eq, Ord, Generic)
   deriving anyclass (NFData)
@@ -140,20 +140,20 @@ instance FromCBOR ProtocolParametersUpdate where
 empty :: ProtocolParametersUpdate
 empty =
   ProtocolParametersUpdate
-    { ppuScriptVersion = Nothing,
-      ppuSlotDuration = Nothing,
-      ppuMaxBlockSize = Nothing,
-      ppuMaxHeaderSize = Nothing,
-      ppuMaxTxSize = Nothing,
-      ppuMaxProposalSize = Nothing,
-      ppuMpcThd = Nothing,
-      ppuHeavyDelThd = Nothing,
-      ppuUpdateVoteThd = Nothing,
-      ppuUpdateProposalThd = Nothing,
-      ppuUpdateProposalTTL = Nothing,
-      ppuSoftforkRule = Nothing,
-      ppuTxFeePolicy = Nothing,
-      ppuUnlockStakeEpoch = Nothing
+    { ppuScriptVersion = Nothing
+    , ppuSlotDuration = Nothing
+    , ppuMaxBlockSize = Nothing
+    , ppuMaxHeaderSize = Nothing
+    , ppuMaxTxSize = Nothing
+    , ppuMaxProposalSize = Nothing
+    , ppuMpcThd = Nothing
+    , ppuHeavyDelThd = Nothing
+    , ppuUpdateVoteThd = Nothing
+    , ppuUpdateProposalThd = Nothing
+    , ppuUpdateProposalTTL = Nothing
+    , ppuSoftforkRule = Nothing
+    , ppuTxFeePolicy = Nothing
+    , ppuUnlockStakeEpoch = Nothing
     }
 
 isEmpty :: ProtocolParametersUpdate -> Bool
@@ -163,26 +163,26 @@ isEmpty = (== empty)
 apply :: ProtocolParametersUpdate -> ProtocolParameters -> ProtocolParameters
 apply ppu pp =
   ProtocolParameters
-    { ppScriptVersion = fromMaybe (ppScriptVersion pp) (ppuScriptVersion ppu),
-      ppSlotDuration = fromMaybe (ppSlotDuration pp) (ppuSlotDuration ppu),
-      ppMaxBlockSize = fromMaybe (ppMaxBlockSize pp) (ppuMaxBlockSize ppu),
-      ppMaxHeaderSize = fromMaybe (ppMaxHeaderSize pp) (ppuMaxHeaderSize ppu),
-      ppMaxTxSize = fromMaybe (ppMaxTxSize pp) (ppuMaxTxSize ppu),
-      ppMaxProposalSize =
+    { ppScriptVersion = fromMaybe (ppScriptVersion pp) (ppuScriptVersion ppu)
+    , ppSlotDuration = fromMaybe (ppSlotDuration pp) (ppuSlotDuration ppu)
+    , ppMaxBlockSize = fromMaybe (ppMaxBlockSize pp) (ppuMaxBlockSize ppu)
+    , ppMaxHeaderSize = fromMaybe (ppMaxHeaderSize pp) (ppuMaxHeaderSize ppu)
+    , ppMaxTxSize = fromMaybe (ppMaxTxSize pp) (ppuMaxTxSize ppu)
+    , ppMaxProposalSize =
         fromMaybe
           (ppMaxProposalSize pp)
-          (ppuMaxProposalSize ppu),
-      ppMpcThd = fromMaybe (ppMpcThd pp) (ppuMpcThd ppu),
-      ppHeavyDelThd = fromMaybe (ppHeavyDelThd pp) (ppuHeavyDelThd ppu),
-      ppUpdateVoteThd = fromMaybe (ppUpdateVoteThd pp) (ppuUpdateVoteThd ppu),
-      ppUpdateProposalThd =
+          (ppuMaxProposalSize ppu)
+    , ppMpcThd = fromMaybe (ppMpcThd pp) (ppuMpcThd ppu)
+    , ppHeavyDelThd = fromMaybe (ppHeavyDelThd pp) (ppuHeavyDelThd ppu)
+    , ppUpdateVoteThd = fromMaybe (ppUpdateVoteThd pp) (ppuUpdateVoteThd ppu)
+    , ppUpdateProposalThd =
         fromMaybe
           (ppUpdateProposalThd pp)
-          (ppuUpdateProposalThd ppu),
-      ppUpdateProposalTTL = fromMaybe (ppUpdateProposalTTL pp) (ppuUpdateProposalTTL ppu),
-      ppSoftforkRule = fromMaybe (ppSoftforkRule pp) (ppuSoftforkRule ppu),
-      ppTxFeePolicy = fromMaybe (ppTxFeePolicy pp) (ppuTxFeePolicy ppu),
-      ppUnlockStakeEpoch =
+          (ppuUpdateProposalThd ppu)
+    , ppUpdateProposalTTL = fromMaybe (ppUpdateProposalTTL pp) (ppuUpdateProposalTTL ppu)
+    , ppSoftforkRule = fromMaybe (ppSoftforkRule pp) (ppuSoftforkRule ppu)
+    , ppTxFeePolicy = fromMaybe (ppTxFeePolicy pp) (ppuTxFeePolicy ppu)
+    , ppUnlockStakeEpoch =
         fromMaybe
           (ppUnlockStakeEpoch pp)
           (ppuUnlockStakeEpoch ppu)

@@ -11,15 +11,15 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Crypto.Signing.Redeem.VerificationKey
-  ( RedeemVerificationKey (..),
-    redeemVKB64F,
-    redeemVKB64UrlF,
-    redeemVKB64ShortF,
-    fromAvvmVK,
-    fromVerificationKeyToByteString,
-    redeemVKBuild,
-  )
+module Cardano.Crypto.Signing.Redeem.VerificationKey (
+  RedeemVerificationKey (..),
+  redeemVKB64F,
+  redeemVKB64UrlF,
+  redeemVKB64ShortF,
+  fromAvvmVK,
+  fromVerificationKeyToByteString,
+  redeemVKBuild,
+)
 where
 
 import Cardano.Crypto.Orphans ()
@@ -27,12 +27,12 @@ import Cardano.Ledger.Binary (FromCBOR, ToCBOR)
 import Cardano.Prelude
 import Crypto.Error (CryptoFailable (..))
 import qualified Crypto.PubKey.Ed25519 as Ed25519
-import Data.Aeson
-  ( FromJSONKey (..),
-    FromJSONKeyFunction (..),
-    ToJSONKey (..),
-    ToJSONKeyFunction (..),
-  )
+import Data.Aeson (
+  FromJSONKey (..),
+  FromJSONKeyFunction (..),
+  ToJSONKey (..),
+  ToJSONKeyFunction (..),
+ )
 import qualified Data.Aeson.Encoding.Internal as A (key)
 import qualified Data.Aeson.Key as A
 import Data.Aeson.TH (defaultOptions, deriveJSON)
@@ -43,25 +43,25 @@ import qualified Data.ByteString.Base64.URL as B64URL
 import qualified Data.ByteString.Char8 as Char8
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
-import Formatting
-  ( Format,
-    bprint,
-    build,
-    fitLeft,
-    formatToString,
-    later,
-    sformat,
-    stext,
-    (%.),
-  )
+import Formatting (
+  Format,
+  bprint,
+  build,
+  fitLeft,
+  formatToString,
+  later,
+  sformat,
+  stext,
+  (%.),
+ )
 import qualified Formatting.Buildable as B
 import NoThunks.Class (InspectHeap (..), NoThunks (..))
-import Text.JSON.Canonical
-  ( FromObjectKey (..),
-    JSValue (..),
-    ToObjectKey (..),
-    toJSString,
-  )
+import Text.JSON.Canonical (
+  FromObjectKey (..),
+  JSValue (..),
+  ToObjectKey (..),
+  toJSString,
+ )
 
 -- | Wrapper around 'Ed25519.PublicKey'.
 type RedeemVerificationKey :: Type

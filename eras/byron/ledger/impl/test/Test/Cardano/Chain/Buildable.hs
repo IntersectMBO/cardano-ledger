@@ -1,22 +1,22 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Test.Cardano.Chain.Buildable
-  ( tests,
-  )
+module Test.Cardano.Chain.Buildable (
+  tests,
+)
 where
 
-import Cardano.Chain.Common
-  ( Attributes (Attributes),
-    UnparsedFields (UnparsedFields),
-  )
+import Cardano.Chain.Common (
+  Attributes (Attributes),
+  UnparsedFields (UnparsedFields),
+ )
 import Cardano.Prelude
 import Formatting (Buildable, build, sformat)
 import Hedgehog (PropertyT, eval, property)
-import Test.Cardano.Chain.Block.Gen
-  ( genBlockSignature,
-    genBlockWithEpochSlots,
-    genHeader,
-  )
+import Test.Cardano.Chain.Block.Gen (
+  genBlockSignature,
+  genBlockWithEpochSlots,
+  genHeader,
+ )
 import qualified Test.Cardano.Chain.Block.Gen as Block
 import qualified Test.Cardano.Chain.Common.Gen as Common
 import qualified Test.Cardano.Chain.Delegation.Gen as Delegation

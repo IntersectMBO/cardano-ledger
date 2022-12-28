@@ -4,9 +4,9 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Test.Cardano.Chain.Block.Size
-  ( tests,
-  )
+module Test.Cardano.Chain.Block.Size (
+  tests,
+)
 where
 
 import Cardano.Chain.Block

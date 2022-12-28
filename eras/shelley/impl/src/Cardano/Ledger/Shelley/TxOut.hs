@@ -14,27 +14,27 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Shelley.TxOut
-  ( ShelleyTxOut (ShelleyTxOut, TxOutCompact),
+module Cardano.Ledger.Shelley.TxOut (
+  ShelleyTxOut (ShelleyTxOut, TxOutCompact),
 
-    -- * Helpers
-    addrEitherShelleyTxOutL,
-    valueEitherShelleyTxOutL,
-  )
+  -- * Helpers
+  addrEitherShelleyTxOutL,
+  valueEitherShelleyTxOutL,
+)
 where
 
 import qualified Cardano.Crypto.Hash as HS
 import Cardano.HeapWords (HeapWords (..))
 import Cardano.Ledger.Address (Addr (..), CompactAddr, compactAddr, decompactAddr)
-import Cardano.Ledger.Binary
-  ( FromCBOR (..),
-    FromSharedCBOR (..),
-    Interns (..),
-    ToCBOR (..),
-    decodeRecordNamed,
-    encodeListLen,
-    fromNotSharedCBOR,
-  )
+import Cardano.Ledger.Binary (
+  FromCBOR (..),
+  FromSharedCBOR (..),
+  Interns (..),
+  ToCBOR (..),
+  decodeRecordNamed,
+  encodeListLen,
+  fromNotSharedCBOR,
+ )
 import Cardano.Ledger.Compactible (Compactible (CompactForm, fromCompact, toCompact))
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto (ADDRHASH), StandardCrypto)
@@ -54,8 +54,8 @@ import Lens.Micro
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 
 data ShelleyTxOut era = TxOutCompact
-  { txOutCompactAddr :: {-# UNPACK #-} !(CompactAddr (EraCrypto era)),
-    txOutCompactValue :: !(CompactForm (Value era))
+  { txOutCompactAddr :: {-# UNPACK #-} !(CompactAddr (EraCrypto era))
+  , txOutCompactValue :: !(CompactForm (Value era))
   }
 
 instance Crypto crypto => EraTxOut (ShelleyEra crypto) where

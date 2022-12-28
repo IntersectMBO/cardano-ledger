@@ -8,9 +8,9 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-missed-specialisations #-}
 
-module Cardano.Chain.Genesis.KeyHashes
-  ( GenesisKeyHashes (..),
-  )
+module Cardano.Chain.Genesis.KeyHashes (
+  GenesisKeyHashes (..),
+)
 where
 
 import Cardano.Chain.Common (KeyHash)

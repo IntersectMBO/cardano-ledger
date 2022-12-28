@@ -1,25 +1,25 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Test.Cardano.Crypto.Signing.Safe
-  ( tests,
-  )
+module Test.Cardano.Crypto.Signing.Safe (
+  tests,
+)
 where
 
-import Cardano.Crypto.Signing
-  ( noPassSafeSigner,
-    safeToVerification,
-    toVerification,
-  )
+import Cardano.Crypto.Signing (
+  noPassSafeSigner,
+  safeToVerification,
+  toVerification,
+ )
 import Cardano.Prelude
-import Hedgehog
-  ( Property,
-    checkParallel,
-    discover,
-    forAll,
-    property,
-    (===),
-  )
+import Hedgehog (
+  Property,
+  checkParallel,
+  discover,
+  forAll,
+  property,
+  (===),
+ )
 import Test.Cardano.Crypto.Gen (genSigningKey)
 
 --------------------------------------------------------------------------------

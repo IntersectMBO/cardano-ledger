@@ -15,14 +15,14 @@ import Test.Cardano.Prelude
 main :: IO ()
 main =
   runTests
-    [ Test.Cardano.Crypto.CBOR.tests,
-      Test.Cardano.Crypto.Hashing.tests,
-      Test.Cardano.Crypto.Json.tests,
-      Test.Cardano.Crypto.Keys.tests,
-      Test.Cardano.Crypto.Limits.tests,
-      Test.Cardano.Crypto.Random.tests,
-      Test.Cardano.Crypto.Signing.Redeem.tests,
-      Test.Cardano.Crypto.Signing.Redeem.Compact.tests,
-      Test.Cardano.Crypto.Signing.Safe.tests,
-      Test.Cardano.Crypto.Signing.Signing.tests
+    [ Test.Cardano.Crypto.CBOR.tests
+    , Test.Cardano.Crypto.Hashing.tests
+    , Test.Cardano.Crypto.Json.tests
+    , Test.Cardano.Crypto.Keys.tests
+    , Test.Cardano.Crypto.Limits.tests
+    , Test.Cardano.Crypto.Random.tests
+    , Test.Cardano.Crypto.Signing.Redeem.tests
+    , Test.Cardano.Crypto.Signing.Redeem.Compact.tests
+    , Test.Cardano.Crypto.Signing.Safe.tests
+    , Test.Cardano.Crypto.Signing.Signing.tests
     ]

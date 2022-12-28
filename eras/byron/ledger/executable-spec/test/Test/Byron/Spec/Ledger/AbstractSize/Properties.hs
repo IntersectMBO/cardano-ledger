@@ -66,9 +66,9 @@ exampleTypeRepsTx =
           <| typeReps in0
           >< typeReps in1
           >< ( Seq.fromList
-                 [ typeOf (undefined :: [TxOut]),
-                   typeOf (undefined :: [Wit])
-                 ]
+                [ typeOf (undefined :: [TxOut])
+                , typeOf (undefined :: [Wit])
+                ]
              )
 
 --------------------------------------------------------------------------------
@@ -158,7 +158,7 @@ testTxHasTypeReps :: TestTree
 testTxHasTypeReps =
   testGroup
     "Test HasTypeReps instances"
-    [ testCase "AbstractSize - example - TxIn" exampleTypeRepsTxIn,
-      testCase "AbstractSize - example - Tx" exampleTypeRepsTx,
-      testProperty "AbstractSize and HasTypeReps - Tx*" propTxAbstractSize
+    [ testCase "AbstractSize - example - TxIn" exampleTypeRepsTxIn
+    , testCase "AbstractSize - example - Tx" exampleTypeRepsTx
+    , testProperty "AbstractSize and HasTypeReps - Tx*" propTxAbstractSize
     ]

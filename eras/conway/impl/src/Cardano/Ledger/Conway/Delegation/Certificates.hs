@@ -1,22 +1,22 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE LambdaCase #-}
 
-module Cardano.Ledger.Conway.Delegation.Certificates
-  ( ConwayDCert (..),
-    transDCert,
-  )
+module Cardano.Ledger.Conway.Delegation.Certificates (
+  ConwayDCert (..),
+  transDCert,
+)
 where
 
 import Cardano.Ledger.BaseTypes (invalidKey)
-import Cardano.Ledger.Binary
-  ( FromCBOR (..),
-    FromCBORGroup (..),
-    ToCBOR (..),
-    ToCBORGroup (..),
-    decodeRecordSum,
-    encodeListLen,
-    listLenInt,
-  )
+import Cardano.Ledger.Binary (
+  FromCBOR (..),
+  FromCBORGroup (..),
+  ToCBOR (..),
+  ToCBORGroup (..),
+  decodeRecordSum,
+  encodeListLen,
+  listLenInt,
+ )
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Shelley.Delegation.Certificates (ConstitutionalDelegCert (..), DCert (..), DelegCert (..), Delegation (..), PoolCert (..))
 import Cardano.Ledger.Slot (EpochNo (..))

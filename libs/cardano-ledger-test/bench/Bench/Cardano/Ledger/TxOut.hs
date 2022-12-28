@@ -55,21 +55,21 @@ benchTxOut =
         "TxOut"
         [ bgroup
             "construct"
-            [ constructTxOutAlonzoBench count "ValueDataHash" addr value (SJust dataHash32),
-              constructTxOutAlonzoBench count "AdaOnlyDataHash" addr ada (SJust dataHash32),
-              constructTxOutAlonzoBench count "AdaOnly" addr ada SNothing
-            ],
-          bgroup
+            [ constructTxOutAlonzoBench count "ValueDataHash" addr value (SJust dataHash32)
+            , constructTxOutAlonzoBench count "AdaOnlyDataHash" addr ada (SJust dataHash32)
+            , constructTxOutAlonzoBench count "AdaOnly" addr ada SNothing
+            ]
+        , bgroup
             "access"
-            [ accessTxOutAlonzoBench count "ValueDataHash" txOutAddr,
-              accessTxOutAlonzoBench count "AdaOnlyDataHash" txOutAddrAdaOnlyDataHash,
-              accessTxOutAlonzoBench count "AdaOnly" txOutAddrAdaOnly
-            ],
-          bgroup
+            [ accessTxOutAlonzoBench count "ValueDataHash" txOutAddr
+            , accessTxOutAlonzoBench count "AdaOnlyDataHash" txOutAddrAdaOnlyDataHash
+            , accessTxOutAlonzoBench count "AdaOnly" txOutAddrAdaOnly
+            ]
+        , bgroup
             "serialize"
-            [ serializeTxOutAlonzoBench count "ValueDataHash" txOutAddr,
-              serializeTxOutAlonzoBench count "AdaOnlyDataHash" txOutAddrAdaOnlyDataHash,
-              serializeTxOutAlonzoBench count "AdaOnly" txOutAddrAdaOnly
+            [ serializeTxOutAlonzoBench count "ValueDataHash" txOutAddr
+            , serializeTxOutAlonzoBench count "AdaOnlyDataHash" txOutAddrAdaOnlyDataHash
+            , serializeTxOutAlonzoBench count "AdaOnly" txOutAddrAdaOnly
             ]
         ]
 
@@ -85,8 +85,8 @@ constructTxOutAlonzoBench count name mkAddr value !mdh =
     bgroup
       name
       [ env (pure (mkAddr <$> [1 .. count])) $
-          bench "TxOut" . nf (map (\addr -> AlonzoTxOut addr value mdh :: TxOut Alonzo)),
-        env (pure (compactAddr . mkAddr <$> [1 .. count])) $
+          bench "TxOut" . nf (map (\addr -> AlonzoTxOut addr value mdh :: TxOut Alonzo))
+      , env (pure (compactAddr . mkAddr <$> [1 .. count])) $
           bench "TxOutCompact" . nf (map (\caddr -> mkTxOutCompact caddr cvalue :: TxOut Alonzo))
       ]
   where
@@ -104,8 +104,8 @@ accessTxOutAlonzoBench count name mkTxOuts =
     name
     [ env (pure (mkTxOuts <$> [1 .. count])) $ \txOuts ->
         bench "TxOut" $
-          nf (map (\(AlonzoTxOut addr vl dh) -> addr `deepseq` vl `deepseq` dh)) txOuts,
-      env (pure (mkTxOuts <$> [1 .. count])) $ \txOuts ->
+          nf (map (\(AlonzoTxOut addr vl dh) -> addr `deepseq` vl `deepseq` dh)) txOuts
+    , env (pure (mkTxOuts <$> [1 .. count])) $ \txOuts ->
         bench "TxOutCompact" $
           nf
             ( map
@@ -114,15 +114,15 @@ accessTxOutAlonzoBench count name mkTxOuts =
                     TxOutCompactDH addr vl dh -> addr `deepseq` dh `deepseq` vl
                 )
             )
-            txOuts,
-      env (pure (mkTxOuts <$> [1 .. count])) $ \txOuts ->
+            txOuts
+    , env (pure (mkTxOuts <$> [1 .. count])) $ \txOuts ->
         bench "addrTxOutL" $
-          nf (map (^. addrTxOutL)) txOuts,
-      env (pure (mkTxOuts <$> [1 .. count])) $ \txOuts ->
-        bench "valueTxOutL" $ nf (map (^. valueTxOutL)) txOuts,
-      env (pure (mkTxOuts <$> [1 .. count])) $ \txOuts ->
-        bench "coin . valueTxOutL" $ nf (map (coin . (^. valueTxOutL))) txOuts,
-      env (pure (mkTxOuts <$> [1 .. count])) $ \txOuts ->
+          nf (map (^. addrTxOutL)) txOuts
+    , env (pure (mkTxOuts <$> [1 .. count])) $ \txOuts ->
+        bench "valueTxOutL" $ nf (map (^. valueTxOutL)) txOuts
+    , env (pure (mkTxOuts <$> [1 .. count])) $ \txOuts ->
+        bench "coin . valueTxOutL" $ nf (map (coin . (^. valueTxOutL))) txOuts
+    , env (pure (mkTxOuts <$> [1 .. count])) $ \txOuts ->
         bench "coinTxOutL" $ nf (map (^. coinTxOutL)) txOuts
     ]
 
@@ -130,8 +130,8 @@ serializeTxOutAlonzoBench :: Int -> String -> (Int -> TxOut Alonzo) -> Benchmark
 serializeTxOutAlonzoBench count name mkTxOuts =
   bgroup
     name
-    [ env (pure (mkTxOuts <$> [1 .. count])) $ bench "ToCBOR" . nf (map (serialize v)),
-      env (pure (serialize v . mkTxOuts <$> [1 .. count])) $
+    [ env (pure (mkTxOuts <$> [1 .. count])) $ bench "ToCBOR" . nf (map (serialize v))
+    , env (pure (serialize v . mkTxOuts <$> [1 .. count])) $
         bench "FromCBOR" . nf (map (either (error . show) (id @(TxOut Alonzo)) . decodeFull v))
     ]
   where

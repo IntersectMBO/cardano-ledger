@@ -23,23 +23,23 @@ import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.Babbage.Core
 import qualified Cardano.Ledger.Babbage.PParams as Babbage (BabbagePParamsHKD (..))
-import Cardano.Ledger.Babbage.TxBody as Babbage
-  ( BabbageTxOut (..),
-    Datum (..),
-  )
+import Cardano.Ledger.Babbage.TxBody as Babbage (
+  BabbageTxOut (..),
+  Datum (..),
+ )
 import Cardano.Ledger.Coin (Coin (Coin, unCoin))
 import Cardano.Ledger.Conway.Core (ConwayEraTxBody (..))
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams)
 import qualified Cardano.Ledger.Shelley.PParams as Shelley (ShelleyPParamsHKD (..))
-import Cardano.Ledger.Shelley.Tx as Shelley
-  ( ShelleyTx (..),
-  )
+import Cardano.Ledger.Shelley.Tx as Shelley (
+  ShelleyTx (..),
+ )
 import Cardano.Ledger.Shelley.TxBody as Shelley (ShelleyTxOut (..))
-import Cardano.Ledger.Shelley.TxWits as Shelley
-  ( addrWits,
-    bootWits,
-    scriptWits,
-  )
+import Cardano.Ledger.Shelley.TxWits as Shelley (
+  addrWits,
+  bootWits,
+  scriptWits,
+ )
 import Cardano.Ledger.Val ((<×>))
 import qualified Data.List as List
 import Data.Map (Map)
@@ -471,13 +471,13 @@ defaultCostModels (Mary _) = Costmdls (CostModels mempty)
 defaultCostModels (Alonzo _) = Costmdls . CostModels $ Map.singleton PlutusV1 testingCostModelV1
 defaultCostModels (Babbage _) =
   Costmdls . CostModels . Map.fromList $
-    [ (PlutusV1, testingCostModelV1),
-      (PlutusV2, testingCostModelV2)
+    [ (PlutusV1, testingCostModelV1)
+    , (PlutusV2, testingCostModelV2)
     ]
 defaultCostModels (Conway _) =
   Costmdls . CostModels . Map.fromList $
-    [ (PlutusV1, testingCostModelV1),
-      (PlutusV2, testingCostModelV2)
+    [ (PlutusV1, testingCostModelV1)
+    , (PlutusV2, testingCostModelV2)
     ]
 
 languages :: Proof era -> [Language]

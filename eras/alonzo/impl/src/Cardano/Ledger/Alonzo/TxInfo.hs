@@ -12,59 +12,59 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Ledger.Alonzo.TxInfo
-  ( TxOutSource (..),
-    TranslationError (..),
-    transProtocolVersion,
-    validScript,
-    transDataHash,
-    transDataHash',
-    transKeyHash,
-    transSafeHash,
-    transHash,
-    txInfoId,
-    transStakeCred,
-    transStakeReference,
-    transCred,
-    transAddr,
-    transTxOutAddr,
-    slotToPOSIXTime,
-    transVITime,
-    txInfoIn',
-    txInfoIn,
-    txInfoOut,
-    transPolicyID,
-    transAssetName,
-    transMultiAsset,
-    transValue,
-    transDCert,
-    transWdrl,
-    getWitVKeyHash,
-    transDataPair,
-    transExUnits,
-    exBudgetToExUnits,
-    transScriptPurpose,
-    VersionedTxInfo (..),
-    ExtendedUTxO (..),
-    alonzoTxInfo,
-    valContext,
-    ScriptFailure (..),
-    ScriptResult (..),
-    scriptPass,
-    scriptFail,
-    PlutusDebugLang (..),
-    PlutusDebug (..),
-    PlutusData (..),
-    PlutusError (..),
-    PlutusDebugInfo (..),
-    debugPlutus,
-    runPLCScript,
-    explainPlutusFailure,
-    languages,
-    -- DEPRECATED
-    validPlutusdata,
-    getTxOutDatum,
-  )
+module Cardano.Ledger.Alonzo.TxInfo (
+  TxOutSource (..),
+  TranslationError (..),
+  transProtocolVersion,
+  validScript,
+  transDataHash,
+  transDataHash',
+  transKeyHash,
+  transSafeHash,
+  transHash,
+  txInfoId,
+  transStakeCred,
+  transStakeReference,
+  transCred,
+  transAddr,
+  transTxOutAddr,
+  slotToPOSIXTime,
+  transVITime,
+  txInfoIn',
+  txInfoIn,
+  txInfoOut,
+  transPolicyID,
+  transAssetName,
+  transMultiAsset,
+  transValue,
+  transDCert,
+  transWdrl,
+  getWitVKeyHash,
+  transDataPair,
+  transExUnits,
+  exBudgetToExUnits,
+  transScriptPurpose,
+  VersionedTxInfo (..),
+  ExtendedUTxO (..),
+  alonzoTxInfo,
+  valContext,
+  ScriptFailure (..),
+  ScriptResult (..),
+  scriptPass,
+  scriptFail,
+  PlutusDebugLang (..),
+  PlutusDebug (..),
+  PlutusData (..),
+  PlutusError (..),
+  PlutusDebugInfo (..),
+  debugPlutus,
+  runPLCScript,
+  explainPlutusFailure,
+  languages,
+  -- DEPRECATED
+  validPlutusdata,
+  getTxOutDatum,
+)
 where
 
 -- =============================================
@@ -73,64 +73,64 @@ import Cardano.Crypto.Hash.Class (Hash, hashToBytes)
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Data (Data (..), Datum, getPlutusData)
-import Cardano.Ledger.Alonzo.Scripts
-  ( AlonzoScript (..),
-    ExUnits (..),
-    decodeCostModel,
-    encodeCostModel,
-    getEvaluationContext,
-    transProtocolVersion,
-    validScript,
-  )
+import Cardano.Ledger.Alonzo.Scripts (
+  AlonzoScript (..),
+  ExUnits (..),
+  decodeCostModel,
+  encodeCostModel,
+  getEvaluationContext,
+  transProtocolVersion,
+  validScript,
+ )
 import Cardano.Ledger.Alonzo.Tx (CostModel, ScriptPurpose (..), txdats')
-import Cardano.Ledger.Alonzo.TxBody
-  ( AlonzoEraTxBody (..),
-    AlonzoEraTxOut (..),
-    ShelleyEraTxBody (..),
-    mintTxBodyL,
-    vldtTxBodyL,
-    wdrlsTxBodyL,
-  )
+import Cardano.Ledger.Alonzo.TxBody (
+  AlonzoEraTxBody (..),
+  AlonzoEraTxOut (..),
+  ShelleyEraTxBody (..),
+  mintTxBodyL,
+  vldtTxBodyL,
+  wdrlsTxBodyL,
+ )
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits, RdmrPtr, unTxDats)
 import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..), TxIx, certIxToInt, txIxToInt)
-import Cardano.Ledger.Binary
-  ( DecoderError (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    Version,
-    decodeFull',
-  )
-import Cardano.Ledger.Binary.Coders
-  ( Decode (..),
-    Encode (..),
-    decode,
-    encode,
-    (!>),
-    (<!),
-  )
+import Cardano.Ledger.Binary (
+  DecoderError (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  Version,
+  decodeFull',
+ )
+import Cardano.Ledger.Binary.Coders (
+  Decode (..),
+  Encode (..),
+  decode,
+  encode,
+  (!>),
+  (<!),
+ )
 import Cardano.Ledger.Binary.Decoding (decodeRecordSum)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core as Core hiding (TranslationError)
-import Cardano.Ledger.Credential
-  ( Credential (KeyHashObj, ScriptHashObj),
-    Ptr (..),
-    StakeReference (..),
-  )
+import Cardano.Ledger.Credential (
+  Credential (KeyHashObj, ScriptHashObj),
+  Ptr (..),
+  StakeReference (..),
+ )
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash (..), hashKey)
 import Cardano.Ledger.Language (IsLanguage (..), Language (..), SLanguage (..), fromSLanguage)
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
-import Cardano.Ledger.Shelley.TxBody
-  ( DCert (..),
-    DelegCert (..),
-    Delegation (..),
-    PoolCert (..),
-    PoolParams (..),
-    Wdrl (..),
-    WitVKey (..),
-  )
+import Cardano.Ledger.Shelley.TxBody (
+  DCert (..),
+  DelegCert (..),
+  Delegation (..),
+  PoolCert (..),
+  PoolParams (..),
+  Wdrl (..),
+  WitVKey (..),
+ )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val (Val (..))
@@ -478,10 +478,10 @@ getTxOutDatum txOut = txOut ^. datumTxOutF
 
 alonzoTxInfo ::
   forall era.
-  ( EraTx era,
-    AlonzoEraTxBody era,
-    Value era ~ MaryValue (EraCrypto era),
-    TxWits era ~ AlonzoTxWits era
+  ( EraTx era
+  , AlonzoEraTxBody era
+  , Value era ~ MaryValue (EraCrypto era)
+  , TxWits era ~ AlonzoTxWits era
   ) =>
   PParams era ->
   Language ->
@@ -502,16 +502,16 @@ alonzoTxInfo pp lang ei sysS utxo tx = do
     PlutusV1 ->
       Right . TxInfoPV1 $
         PV1.TxInfo
-          { PV1.txInfoInputs = mapMaybe (uncurry txInfoIn) txIns,
-            PV1.txInfoOutputs = mapMaybe txInfoOut (foldr (:) [] txOuts),
-            PV1.txInfoFee = transValue (inject @(MaryValue (EraCrypto era)) fee),
-            PV1.txInfoMint = transMultiAsset (txBody ^. mintTxBodyL),
-            PV1.txInfoDCert = foldr (\c ans -> transDCert c : ans) [] (txBody ^. certsTxBodyG),
-            PV1.txInfoWdrl = Map.toList (transWdrl (txBody ^. wdrlsTxBodyL)),
-            PV1.txInfoValidRange = timeRange,
-            PV1.txInfoSignatories = map transKeyHash (Set.toList (txBody ^. reqSignerHashesTxBodyL)),
-            PV1.txInfoData = map transDataPair datpairs,
-            PV1.txInfoId = PV1.TxId (transSafeHash (hashAnnotated txBody))
+          { PV1.txInfoInputs = mapMaybe (uncurry txInfoIn) txIns
+          , PV1.txInfoOutputs = mapMaybe txInfoOut (foldr (:) [] txOuts)
+          , PV1.txInfoFee = transValue (inject @(MaryValue (EraCrypto era)) fee)
+          , PV1.txInfoMint = transMultiAsset (txBody ^. mintTxBodyL)
+          , PV1.txInfoDCert = foldr (\c ans -> transDCert c : ans) [] (txBody ^. certsTxBodyG)
+          , PV1.txInfoWdrl = Map.toList (transWdrl (txBody ^. wdrlsTxBodyL))
+          , PV1.txInfoValidRange = timeRange
+          , PV1.txInfoSignatories = map transKeyHash (Set.toList (txBody ^. reqSignerHashesTxBodyL))
+          , PV1.txInfoData = map transDataPair datpairs
+          , PV1.txInfoId = PV1.TxId (transSafeHash (hashAnnotated txBody))
           }
     _ -> Left $ LanguageNotSupported lang
   where
@@ -569,12 +569,12 @@ instance FromCBOR PlutusData where
 
 data PlutusDebugLang (l :: Language) where
   PlutusDebugLang ::
-    { pdSLanguage :: SLanguage l,
-      pdCostModel :: CostModel,
-      pdExUnits :: ExUnits,
-      pdSBS :: SBS.ShortByteString,
-      pdPlutusData :: PlutusData,
-      pdProtVer :: ProtVer
+    { pdSLanguage :: SLanguage l
+    , pdCostModel :: CostModel
+    , pdExUnits :: ExUnits
+    , pdSBS :: SBS.ShortByteString
+    , pdPlutusData :: PlutusData
+    , pdProtVer :: ProtVer
     } ->
     PlutusDebugLang l
 
@@ -768,52 +768,52 @@ explainPlutusFailure _proxy pv lang scriptbytestring e ds cm eu =
               PlutusV1 ->
                 case PV1.fromData info of
                   Nothing ->
-                    [ "The data is: " ++ show dat,
-                      "The redeemer is: " ++ show redeemer,
-                      "The third data argument, does not translate to a V1 script context\n" ++ show info
+                    [ "The data is: " ++ show dat
+                    , "The redeemer is: " ++ show redeemer
+                    , "The third data argument, does not translate to a V1 script context\n" ++ show info
                     ]
                   Just info2 ->
-                    [ "The data is: " ++ show dat,
-                      "The redeemer is: " ++ show redeemer,
-                      "The script context is:\n" ++ show (pretty (info2 :: PV1.ScriptContext))
+                    [ "The data is: " ++ show dat
+                    , "The redeemer is: " ++ show redeemer
+                    , "The script context is:\n" ++ show (pretty (info2 :: PV1.ScriptContext))
                     ]
               PlutusV2 ->
                 case PV2.fromData info of
                   Nothing ->
-                    [ "The data is: " ++ show dat,
-                      "The redeemer is: " ++ show redeemer,
-                      "The third data argument, does not translate to a V2 script context\n" ++ show info
+                    [ "The data is: " ++ show dat
+                    , "The redeemer is: " ++ show redeemer
+                    , "The third data argument, does not translate to a V2 script context\n" ++ show info
                     ]
                   Just info2 ->
-                    [ "The data is: " ++ show dat,
-                      "The redeemer is: " ++ show redeemer,
-                      "The script context is:\n" ++ show (pretty (info2 :: PV2.ScriptContext))
+                    [ "The data is: " ++ show dat
+                    , "The redeemer is: " ++ show redeemer
+                    , "The script context is:\n" ++ show (pretty (info2 :: PV2.ScriptContext))
                     ]
           [redeemer, info] ->
             case lang of
               PlutusV1 ->
                 case PV1.fromData info of
                   Nothing ->
-                    [ "The redeemer is: " ++ show redeemer,
-                      "The second data argument, does not translate to a V1 script context\n" ++ show info
+                    [ "The redeemer is: " ++ show redeemer
+                    , "The second data argument, does not translate to a V1 script context\n" ++ show info
                     ]
                   Just info2 ->
-                    [ "The redeemer is: " ++ show redeemer,
-                      "The script context is:\n" ++ show (pretty (info2 :: PV1.ScriptContext))
+                    [ "The redeemer is: " ++ show redeemer
+                    , "The script context is:\n" ++ show (pretty (info2 :: PV1.ScriptContext))
                     ]
               PlutusV2 ->
                 case PV2.fromData info of
                   Nothing ->
-                    [ "The redeemer is: " ++ show redeemer,
-                      "The second data argument, does not translate to a V2 script context\n" ++ show info
+                    [ "The redeemer is: " ++ show redeemer
+                    , "The second data argument, does not translate to a V2 script context\n" ++ show info
                     ]
                   Just info2 ->
-                    [ "The redeemer is: " ++ show redeemer,
-                      "The script context is:\n" ++ show (pretty (info2 :: PV2.ScriptContext))
+                    [ "The redeemer is: " ++ show redeemer
+                    , "The script context is:\n" ++ show (pretty (info2 :: PV2.ScriptContext))
                     ]
           _ ->
-            [ "Received an unexpected number of Data",
-              "The data was:\n" ++ show ds
+            [ "Received an unexpected number of Data"
+            , "The data was:\n" ++ show ds
             ]
       line = pack . unlines $ firstLine : plutusError : pvLine : dataLines
 
@@ -834,8 +834,8 @@ validPlutusdata (PV1.B bs) = BS.length bs <= 64
 -- | Compute the Set of Languages in an era, where 'AlonzoScripts' are used
 languages ::
   forall era.
-  ( ExtendedUTxO era,
-    Script era ~ AlonzoScript era
+  ( ExtendedUTxO era
+  , Script era ~ AlonzoScript era
   ) =>
   Tx era ->
   UTxO era ->

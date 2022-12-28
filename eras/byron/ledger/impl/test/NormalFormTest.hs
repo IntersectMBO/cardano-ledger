@@ -10,9 +10,9 @@
 -- from accurately determining whether a given expression is in normal form. As a
 -- result, we have another CI job which will build and run this test executable
 -- without @hpc@.
-module Main
-  ( main,
-  )
+module Main (
+  main,
+)
 where
 
 import Cardano.Prelude

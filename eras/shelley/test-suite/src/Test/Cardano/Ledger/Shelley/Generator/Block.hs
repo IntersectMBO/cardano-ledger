@@ -7,11 +7,11 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Test.Cardano.Ledger.Shelley.Generator.Block
-  ( genBlock,
-    genBlockWithTxGen,
-    tickChainState,
-  )
+module Test.Cardano.Ledger.Shelley.Generator.Block (
+  genBlock,
+  genBlockWithTxGen,
+  tickChainState,
+)
 where
 
 import qualified Cardano.Crypto.VRF as VRF
@@ -22,13 +22,13 @@ import Cardano.Ledger.Era (EraCrypto)
 import Cardano.Ledger.Shelley.API hiding (vKey)
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Protocol.TPraos.API
-import Cardano.Protocol.TPraos.BHeader
-  ( BHeader (..),
-    LastAppliedBlock (..),
-    hashHeaderToNonce,
-    mkSeed,
-    seedL,
-  )
+import Cardano.Protocol.TPraos.BHeader (
+  BHeader (..),
+  LastAppliedBlock (..),
+  hashHeaderToNonce,
+  mkSeed,
+  seedL,
+ )
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..), OCertEnv (..), currentIssueNo, kesPeriod)
 import Cardano.Protocol.TPraos.Rules.Overlay (OBftSlot (..), lookupInOverlaySchedule)
 import Cardano.Protocol.TPraos.Rules.Prtcl (PrtclState (..))
@@ -46,27 +46,27 @@ import Data.Sequence (Seq)
 import qualified Data.Set as Set
 import GHC.Records (HasField (getField))
 import Test.Cardano.Ledger.Core.KeyPair (vKey)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes
-  ( Mock,
-  )
-import Test.Cardano.Ledger.Shelley.Generator.Core
-  ( AllIssuerKeys (..),
-    GenEnv (..),
-    KeySpace (..),
-    getKESPeriodRenewalNo,
-    mkBlock,
-    mkOCert,
-  )
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (
+  Mock,
+ )
+import Test.Cardano.Ledger.Shelley.Generator.Core (
+  AllIssuerKeys (..),
+  GenEnv (..),
+  KeySpace (..),
+  getKESPeriodRenewalNo,
+  mkBlock,
+  mkOCert,
+ )
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..), MinLEDGER_STS)
 import Test.Cardano.Ledger.Shelley.Generator.Trace.Ledger ()
 import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
-import Test.Cardano.Ledger.Shelley.Utils
-  ( epochFromSlotNo,
-    maxKESIterations,
-    runShelleyBase,
-    slotFromEpoch,
-    testGlobals,
-  )
+import Test.Cardano.Ledger.Shelley.Utils (
+  epochFromSlotNo,
+  maxKESIterations,
+  runShelleyBase,
+  slotFromEpoch,
+  testGlobals,
+ )
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC (choose)
 
@@ -83,12 +83,12 @@ type TxGen era =
 -- | Generate a valid block.
 genBlock ::
   forall era.
-  ( MinLEDGER_STS era,
-    ApplyBlock era,
-    Mock (EraCrypto era),
-    GetLedgerView era,
-    QC.HasTrace (Core.EraRule "LEDGERS" era) (GenEnv era),
-    EraGen era
+  ( MinLEDGER_STS era
+  , ApplyBlock era
+  , Mock (EraCrypto era)
+  , GetLedgerView era
+  , QC.HasTrace (Core.EraRule "LEDGERS" era) (GenEnv era)
+  , EraGen era
   ) =>
   GenEnv era ->
   ChainState era ->
@@ -103,10 +103,10 @@ genBlock ge = genBlockWithTxGen genTxs ge
 
 genBlockWithTxGen ::
   forall era.
-  ( Mock (EraCrypto era),
-    GetLedgerView era,
-    ApplyBlock era,
-    EraGen era
+  ( Mock (EraCrypto era)
+  , GetLedgerView era
+  , ApplyBlock era
+  , EraGen era
   ) =>
   TxGen era ->
   GenEnv era ->
@@ -171,10 +171,10 @@ genBlockWithTxGen
 
 selectNextSlotWithLeader ::
   forall era.
-  ( Mock (EraCrypto era),
-    EraGen era,
-    GetLedgerView era,
-    ApplyBlock era
+  ( Mock (EraCrypto era)
+  , EraGen era
+  , GetLedgerView era
+  , ApplyBlock era
   ) =>
   GenEnv era ->
   ChainState era ->
@@ -256,19 +256,19 @@ tickChainState ::
 tickChainState
   slotNo
   ChainState
-    { chainNes,
-      chainOCertIssue,
-      chainEpochNonce,
-      chainEvolvingNonce,
-      chainCandidateNonce,
-      chainPrevEpochNonce,
-      chainLastAppliedBlock
+    { chainNes
+    , chainOCertIssue
+    , chainEpochNonce
+    , chainEvolvingNonce
+    , chainCandidateNonce
+    , chainPrevEpochNonce
+    , chainLastAppliedBlock
     } =
     let cds =
           ChainDepState
-            { csProtocol = PrtclState chainOCertIssue chainEvolvingNonce chainCandidateNonce,
-              csTickn = TicknState chainEpochNonce chainPrevEpochNonce,
-              csLabNonce = case chainLastAppliedBlock of
+            { csProtocol = PrtclState chainOCertIssue chainEvolvingNonce chainCandidateNonce
+            , csTickn = TicknState chainEpochNonce chainPrevEpochNonce
+            , csLabNonce = case chainLastAppliedBlock of
                 Origin -> NeutralNonce
                 At (LastAppliedBlock {labHash}) -> hashHeaderToNonce labHash
             }
@@ -279,11 +279,11 @@ tickChainState
         PrtclState ocertIssue evNonce candNonce = csProtocol
         nes' = applyTick testGlobals chainNes slotNo
      in ChainState
-          { chainNes = nes',
-            chainOCertIssue = ocertIssue,
-            chainEpochNonce = ticknStateEpochNonce csTickn,
-            chainEvolvingNonce = evNonce,
-            chainCandidateNonce = candNonce,
-            chainPrevEpochNonce = ticknStatePrevHashNonce csTickn,
-            chainLastAppliedBlock = chainLastAppliedBlock
+          { chainNes = nes'
+          , chainOCertIssue = ocertIssue
+          , chainEpochNonce = ticknStateEpochNonce csTickn
+          , chainEvolvingNonce = evNonce
+          , chainCandidateNonce = candNonce
+          , chainPrevEpochNonce = ticknStatePrevHashNonce csTickn
+          , chainLastAppliedBlock = chainLastAppliedBlock
           }

@@ -10,10 +10,10 @@ import Data.Ratio ((%))
 import Hedgehog (Property, Range, checkParallel)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
-import Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip
-  ( roundTripsCBORBuildable,
-    roundTripsCBORShow,
-  )
+import Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip (
+  roundTripsCBORBuildable,
+  roundTripsCBORShow,
+ )
 import Test.Cardano.Prelude (discoverRoundTrip, eachOf)
 
 tests :: IO Bool

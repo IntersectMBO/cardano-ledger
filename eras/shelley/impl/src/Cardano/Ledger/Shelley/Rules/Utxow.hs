@@ -15,111 +15,111 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Shelley.Rules.Utxow
-  ( ShelleyUTXOW,
-    ShelleyUtxowPredFailure (..),
-    ShelleyUtxowEvent (..),
-    PredicateFailure,
-    transitionRulesUTXOW,
+module Cardano.Ledger.Shelley.Rules.Utxow (
+  ShelleyUTXOW,
+  ShelleyUtxowPredFailure (..),
+  ShelleyUtxowEvent (..),
+  PredicateFailure,
+  transitionRulesUTXOW,
 
-    -- * Individual validation steps
-    validateFailedScripts,
-    validateMissingScripts,
-    validateVerifiedWits,
-    validateMetadata,
-    validateMIRInsufficientGenesisSigs,
-    validateNeededWitnesses,
-    propWits,
-  )
+  -- * Individual validation steps
+  validateFailedScripts,
+  validateMissingScripts,
+  validateVerifiedWits,
+  validateMetadata,
+  validateMIRInsufficientGenesisSigs,
+  validateNeededWitnesses,
+  propWits,
+)
 where
 
 import Cardano.Ledger.Address (Addr (..), bootstrapKeyHash)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
-import Cardano.Ledger.BaseTypes
-  ( ProtVer,
-    ShelleyBase,
-    StrictMaybe (..),
-    invalidKey,
-    quorum,
-    strictMaybeToMaybe,
-    (==>),
-  )
+import Cardano.Ledger.BaseTypes (
+  ProtVer,
+  ShelleyBase,
+  StrictMaybe (..),
+  invalidKey,
+  quorum,
+  strictMaybeToMaybe,
+  (==>),
+ )
 import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), decodeRecordSum, encodeListLen)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Keys
-  ( DSignable,
-    GenDelegPair (..),
-    GenDelegs (..),
-    Hash,
-    KeyHash,
-    KeyRole (..),
-    VKey,
-    asWitness,
-  )
+import Cardano.Ledger.Keys (
+  DSignable,
+  GenDelegPair (..),
+  GenDelegs (..),
+  Hash,
+  KeyHash,
+  KeyRole (..),
+  VKey,
+  asWitness,
+ )
 import Cardano.Ledger.Keys.Bootstrap (bwKey, verifyBootstrapWit)
-import Cardano.Ledger.Rules.ValidationMode
-  ( Inject (..),
-    Test,
-    runTest,
-    runTestOnSignal,
-  )
+import Cardano.Ledger.Rules.ValidationMode (
+  Inject (..),
+  Test,
+  runTest,
+  runTestOnSignal,
+ )
 import Cardano.Ledger.SafeHash (extractHash, hashAnnotated)
-import Cardano.Ledger.Shelley.Delegation.Certificates
-  ( delegCWitness,
-    genesisCWitness,
-    isInstantaneousRewards,
-    poolCWitness,
-    requiresVKeyWitness,
-  )
+import Cardano.Ledger.Shelley.Delegation.Certificates (
+  delegCWitness,
+  genesisCWitness,
+  isInstantaneousRewards,
+  poolCWitness,
+  requiresVKeyWitness,
+ )
 import Cardano.Ledger.Shelley.Era (ShelleyUTXOW)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState.Types (UTxOState (..))
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (ProposedPPUpdates), Update (Update))
-import Cardano.Ledger.Shelley.Rules.Utxo
-  ( ShelleyUTXO,
-    ShelleyUtxoPredFailure,
-    UtxoEnv (..),
-    UtxoEvent,
-  )
+import Cardano.Ledger.Shelley.Rules.Utxo (
+  ShelleyUTXO,
+  ShelleyUtxoPredFailure,
+  UtxoEnv (..),
+  UtxoEvent,
+ )
 import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks
-import Cardano.Ledger.Shelley.Tx
-  ( ShelleyTx,
-    extractKeyHashWitnessSet,
-    witsFromTxWitnesses,
-  )
-import Cardano.Ledger.Shelley.TxBody
-  ( DCert (..),
-    PoolCert (..),
-    PoolParams (..),
-    ShelleyEraTxBody (..),
-    WitVKey (..),
-    getRwdCred,
-    unWdrl,
-  )
+import Cardano.Ledger.Shelley.Tx (
+  ShelleyTx,
+  extractKeyHashWitnessSet,
+  witsFromTxWitnesses,
+ )
+import Cardano.Ledger.Shelley.TxBody (
+  DCert (..),
+  PoolCert (..),
+  PoolParams (..),
+  ShelleyEraTxBody (..),
+  WitVKey (..),
+  getRwdCred,
+  unWdrl,
+ )
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded (..))
-import Cardano.Ledger.UTxO
-  ( EraUTxO (..),
-    UTxO,
-    txinLookup,
-    verifyWitVKey,
-  )
+import Cardano.Ledger.UTxO (
+  EraUTxO (..),
+  UTxO,
+  txinLookup,
+  verifyWitVKey,
+ )
 import Control.Monad (when)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (∩), (◁))
-import Control.State.Transition
-  ( Embed,
-    IRC (..),
-    InitialRule,
-    STS (..),
-    TRC (..),
-    TransitionRule,
-    judgmentContext,
-    liftSTS,
-    trans,
-    wrapEvent,
-    wrapFailed,
-  )
+import Control.State.Transition (
+  Embed,
+  IRC (..),
+  InitialRule,
+  STS (..),
+  TRC (..),
+  TransitionRule,
+  judgmentContext,
+  liftSTS,
+  trans,
+  wrapEvent,
+  wrapFailed,
+ )
 import Data.Foldable (sequenceA_)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq (filter)
@@ -165,28 +165,28 @@ newtype ShelleyUtxowEvent era
   = UtxoEvent (Event (EraRule "UTXO" era))
 
 instance
-  ( NoThunks (PredicateFailure (EraRule "UTXO" era)),
-    Era era
+  ( NoThunks (PredicateFailure (EraRule "UTXO" era))
+  , Era era
   ) =>
   NoThunks (ShelleyUtxowPredFailure era)
 
 deriving stock instance
-  ( Eq (PredicateFailure (EraRule "UTXO" era)),
-    Era era
+  ( Eq (PredicateFailure (EraRule "UTXO" era))
+  , Era era
   ) =>
   Eq (ShelleyUtxowPredFailure era)
 
 deriving stock instance
-  ( Show (PredicateFailure (EraRule "UTXO" era)),
-    Era era
+  ( Show (PredicateFailure (EraRule "UTXO" era))
+  , Era era
   ) =>
   Show (ShelleyUtxowPredFailure era)
 
 instance
-  ( Era era,
-    Typeable (Script era),
-    Typeable (TxAuxData era),
-    ToCBOR (PredicateFailure (EraRule "UTXO" era))
+  ( Era era
+  , Typeable (Script era)
+  , Typeable (TxAuxData era)
+  , ToCBOR (PredicateFailure (EraRule "UTXO" era))
   ) =>
   ToCBOR (ShelleyUtxowPredFailure era)
   where
@@ -225,10 +225,10 @@ instance
         <> toCBOR ss
 
 instance
-  ( Era era,
-    FromCBOR (PredicateFailure (EraRule "UTXO" era)),
-    Typeable (Script era),
-    Typeable (TxAuxData era)
+  ( Era era
+  , FromCBOR (PredicateFailure (EraRule "UTXO" era))
+  , Typeable (Script era)
+  , Typeable (TxAuxData era)
   ) =>
   FromCBOR (ShelleyUtxowPredFailure era)
   where
@@ -273,9 +273,9 @@ instance
 
 initialLedgerStateUTXOW ::
   forall era.
-  ( Embed (EraRule "UTXO" era) (ShelleyUTXOW era),
-    Environment (EraRule "UTXO" era) ~ UtxoEnv era,
-    State (EraRule "UTXO" era) ~ UTxOState era
+  ( Embed (EraRule "UTXO" era) (ShelleyUTXOW era)
+  , Environment (EraRule "UTXO" era) ~ UtxoEnv era
+  , State (EraRule "UTXO" era) ~ UTxOState era
   ) =>
   InitialRule (ShelleyUTXOW era)
 initialLedgerStateUTXOW = do
@@ -287,22 +287,22 @@ initialLedgerStateUTXOW = do
 --   the PredicateFailure (type family) of the context of where it is called.
 transitionRulesUTXOW ::
   forall era utxow.
-  ( EraTx era,
-    EraUTxO era,
-    ShelleyEraTxBody era,
-    ScriptsNeeded era ~ ShelleyScriptsNeeded era,
-    BaseM (utxow era) ~ ShelleyBase,
-    Embed (EraRule "UTXO" era) (utxow era),
-    Environment (EraRule "UTXO" era) ~ UtxoEnv era,
-    State (EraRule "UTXO" era) ~ UTxOState era,
-    Signal (EraRule "UTXO" era) ~ Tx era,
-    Environment (utxow era) ~ UtxoEnv era,
-    State (utxow era) ~ UTxOState era,
-    Signal (utxow era) ~ Tx era,
-    PredicateFailure (utxow era) ~ ShelleyUtxowPredFailure era,
-    STS (utxow era),
-    DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody),
-    ProtVerAtMost era 8
+  ( EraTx era
+  , EraUTxO era
+  , ShelleyEraTxBody era
+  , ScriptsNeeded era ~ ShelleyScriptsNeeded era
+  , BaseM (utxow era) ~ ShelleyBase
+  , Embed (EraRule "UTXO" era) (utxow era)
+  , Environment (EraRule "UTXO" era) ~ UtxoEnv era
+  , State (EraRule "UTXO" era) ~ UTxOState era
+  , Signal (EraRule "UTXO" era) ~ Tx era
+  , Environment (utxow era) ~ UtxoEnv era
+  , State (utxow era) ~ UTxOState era
+  , Signal (utxow era) ~ Tx era
+  , PredicateFailure (utxow era) ~ ShelleyUtxowPredFailure era
+  , STS (utxow era)
+  , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
+  , ProtVerAtMost era 8
   ) =>
   TransitionRule (utxow era)
 transitionRulesUTXOW = do
@@ -345,10 +345,10 @@ transitionRulesUTXOW = do
     TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)
 
 instance
-  ( Era era,
-    STS (ShelleyUTXO era),
-    PredicateFailure (EraRule "UTXO" era) ~ ShelleyUtxoPredFailure era,
-    Event (EraRule "UTXO" era) ~ UtxoEvent era
+  ( Era era
+  , STS (ShelleyUTXO era)
+  , PredicateFailure (EraRule "UTXO" era) ~ ShelleyUtxoPredFailure era
+  , Event (EraRule "UTXO" era) ~ UtxoEvent era
   ) =>
   Embed (ShelleyUTXO era) (ShelleyUTXOW era)
   where
@@ -356,21 +356,21 @@ instance
   wrapEvent = UtxoEvent
 
 instance
-  ( EraTx era,
-    EraUTxO era,
-    ShelleyEraTxBody era,
-    Tx era ~ ShelleyTx era,
-    ScriptsNeeded era ~ ShelleyScriptsNeeded era,
-    DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody),
-    HasField "_protocolVersion" (PParams era) ProtVer,
-    -- Allow UTXOW to call UTXO
-    Embed (EraRule "UTXO" era) (ShelleyUTXOW era),
-    Environment (EraRule "UTXO" era) ~ UtxoEnv era,
-    State (EraRule "UTXO" era) ~ UTxOState era,
-    Signal (EraRule "UTXO" era) ~ Tx era,
-    HasField "_protocolVersion" (PParams era) ProtVer,
-    DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody),
-    ProtVerAtMost era 8
+  ( EraTx era
+  , EraUTxO era
+  , ShelleyEraTxBody era
+  , Tx era ~ ShelleyTx era
+  , ScriptsNeeded era ~ ShelleyScriptsNeeded era
+  , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
+  , HasField "_protocolVersion" (PParams era) ProtVer
+  , -- Allow UTXOW to call UTXO
+    Embed (EraRule "UTXO" era) (ShelleyUTXOW era)
+  , Environment (EraRule "UTXO" era) ~ UtxoEnv era
+  , State (EraRule "UTXO" era) ~ UTxOState era
+  , Signal (EraRule "UTXO" era) ~ Tx era
+  , HasField "_protocolVersion" (PParams era) ProtVer
+  , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
+  , ProtVerAtMost era 8
   ) =>
   STS (ShelleyUTXOW era)
   where
@@ -413,8 +413,8 @@ validateMissingScripts pp (ShelleyScriptsNeeded sNeeded) sReceived =
     then
       sequenceA_
         [ failureUnless (sNeeded `Set.isSubsetOf` sReceived) $
-            MissingScriptWitnessesUTXOW (sNeeded `Set.difference` sReceived),
-          failureUnless (sReceived `Set.isSubsetOf` sNeeded) $
+            MissingScriptWitnessesUTXOW (sNeeded `Set.difference` sReceived)
+        , failureUnless (sReceived `Set.isSubsetOf` sNeeded) $
             ExtraneousScriptWitnessesUTXOW (sReceived `Set.difference` sNeeded)
         ]
     else
@@ -425,8 +425,8 @@ validateMissingScripts pp (ShelleyScriptsNeeded sNeeded) sReceived =
 --  transaction are correct.
 validateVerifiedWits ::
   forall era.
-  ( EraTx era,
-    DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
+  ( EraTx era
+  , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
   ) =>
   Tx era ->
   Test (ShelleyUtxowPredFailure era)
@@ -490,9 +490,9 @@ validateNeededWitnesses witsvkeyneeded genDelegs utxo tx witsKeyHashes =
 --  certificate authors, and withdrawal reward accounts.
 witsVKeyNeeded ::
   forall era.
-  ( EraTx era,
-    ShelleyEraTxBody era,
-    ProtVerAtMost era 8
+  ( EraTx era
+  , ShelleyEraTxBody era
+  , ProtVerAtMost era 8
   ) =>
   UTxO era ->
   Tx era ->
@@ -564,8 +564,8 @@ validateMetadata pp tx =
         (SJust mdh, SJust md') ->
           sequenceA_
             [ failureUnless (hashTxAuxData md' == mdh) $
-                ConflictingMetadataHash mdh (hashTxAuxData md'),
-              -- check metadata value sizes
+                ConflictingMetadataHash mdh (hashTxAuxData md')
+            , -- check metadata value sizes
               when (SoftForks.validMetadata pp) $
                 failureUnless (validateTxAuxData pv md') InvalidMetadata
             ]
@@ -575,8 +575,8 @@ validateMetadata pp tx =
 -- genSig := { hashKey gkey | gkey ∈ dom(genDelegs)} ∩ witsKeyHashes
 -- { c ∈ txcerts txb ∩ DCert_mir} ≠ ∅  ⇒ |genSig| ≥ Quorum
 validateMIRInsufficientGenesisSigs ::
-  ( EraTx era,
-    ShelleyEraTxBody era
+  ( EraTx era
+  , ShelleyEraTxBody era
   ) =>
   GenDelegs (EraCrypto era) ->
   Word64 ->

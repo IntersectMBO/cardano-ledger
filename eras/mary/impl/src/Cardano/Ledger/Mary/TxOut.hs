@@ -9,11 +9,11 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Shelley.PParams (_minUTxOValue)
-import Cardano.Ledger.Shelley.TxBody
-  ( ShelleyTxOut (..),
-    addrEitherShelleyTxOutL,
-    valueEitherShelleyTxOutL,
-  )
+import Cardano.Ledger.Shelley.TxBody (
+  ShelleyTxOut (..),
+  addrEitherShelleyTxOutL,
+  valueEitherShelleyTxOutL,
+ )
 import Cardano.Ledger.Val (Val (isAdaOnly, size))
 import Lens.Micro ((^.))
 

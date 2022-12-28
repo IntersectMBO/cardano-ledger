@@ -10,9 +10,9 @@
 -- Description : MIR Example
 --
 -- Example demonstrating the Move Instantaneous Rewards mechanism
-module Test.Cardano.Ledger.Shelley.Examples.Mir
-  ( mirExample,
-  )
+module Test.Cardano.Ledger.Shelley.Examples.Mir (
+  mirExample,
+)
 where
 
 import Cardano.Ledger.BaseTypes (Nonce, StrictMaybe (..), mkCertIxPartial)
@@ -22,39 +22,39 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Ptr (..))
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.EpochBoundary (emptySnapShot)
-import Cardano.Ledger.Keys
-  ( KeyRole (..),
-    asWitness,
-  )
+import Cardano.Ledger.Keys (
+  KeyRole (..),
+  asWitness,
+ )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Delegation.Certificates (DelegCert (..), MIRCert (..))
-import Cardano.Ledger.Shelley.LedgerState
-  ( AccountState (..),
-    EpochState (..),
-    NewEpochState (..),
-    PulsingRewUpdate,
-    emptyRewardUpdate,
-  )
+import Cardano.Ledger.Shelley.LedgerState (
+  AccountState (..),
+  EpochState (..),
+  NewEpochState (..),
+  PulsingRewUpdate,
+  emptyRewardUpdate,
+ )
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..))
-import Cardano.Ledger.Shelley.Rules
-  ( ShelleyBbodyPredFailure (..),
-    ShelleyDelegPredFailure (..),
-    ShelleyDelegsPredFailure (..),
-    ShelleyDelplPredFailure (..),
-    ShelleyLedgerPredFailure (..),
-    ShelleyLedgersPredFailure (..),
-    ShelleyUtxowPredFailure (..),
-  )
+import Cardano.Ledger.Shelley.Rules (
+  ShelleyBbodyPredFailure (..),
+  ShelleyDelegPredFailure (..),
+  ShelleyDelegsPredFailure (..),
+  ShelleyDelplPredFailure (..),
+  ShelleyLedgerPredFailure (..),
+  ShelleyLedgersPredFailure (..),
+  ShelleyUtxowPredFailure (..),
+ )
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
-import Cardano.Ledger.Shelley.TxBody
-  ( DCert (..),
-    MIRPot (..),
-    MIRTarget (..),
-    ShelleyTxBody (..),
-    ShelleyTxOut (..),
-    Wdrl (..),
-  )
+import Cardano.Ledger.Shelley.TxBody (
+  DCert (..),
+  MIRPot (..),
+  MIRTarget (..),
+  ShelleyTxBody (..),
+  ShelleyTxOut (..),
+  Wdrl (..),
+ )
 import Cardano.Ledger.Shelley.TxWits (addrWits)
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn (..))
@@ -71,24 +71,24 @@ import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (ExMock, Mock)
 import Test.Cardano.Ledger.Shelley.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
 import qualified Test.Cardano.Ledger.Shelley.Examples.Combinators as C
-import Test.Cardano.Ledger.Shelley.Examples.Federation
-  ( coreNodeIssuerKeys,
-    coreNodeKeysBySchedule,
-  )
-import Test.Cardano.Ledger.Shelley.Examples.Init
-  ( initSt,
-    lastByronHeaderHash,
-    nonce0,
-    ppEx,
-  )
+import Test.Cardano.Ledger.Shelley.Examples.Federation (
+  coreNodeIssuerKeys,
+  coreNodeKeysBySchedule,
+ )
+import Test.Cardano.Ledger.Shelley.Examples.Init (
+  initSt,
+  lastByronHeaderHash,
+  nonce0,
+  ppEx,
+ )
 import Test.Cardano.Ledger.Shelley.Examples.PoolLifetime (makePulser')
-import Test.Cardano.Ledger.Shelley.Generator.Core
-  ( AllIssuerKeys (..),
-    NatNonce (..),
-    genesisCoins,
-    mkBlockFakeVRF,
-    mkOCert,
-  )
+import Test.Cardano.Ledger.Shelley.Generator.Core (
+  AllIssuerKeys (..),
+  NatNonce (..),
+  genesisCoins,
+  mkBlockFakeVRF,
+  mkOCert,
+ )
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..), TestChainPredicateFailure (..))
@@ -100,8 +100,8 @@ initUTxO :: (ShelleyTest era) => UTxO era
 initUTxO =
   genesisCoins
     genesisId
-    [ ShelleyTxOut Cast.aliceAddr aliceInitCoin,
-      ShelleyTxOut Cast.bobAddr bobInitCoin
+    [ ShelleyTxOut Cast.aliceAddr aliceInitCoin
+    , ShelleyTxOut Cast.bobAddr bobInitCoin
     ]
   where
     aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
@@ -114,8 +114,8 @@ initStMIR treasury = cs {chainNes = (chainNes cs) {nesEs = es'}}
     as = esAccountState . nesEs . chainNes $ cs
     as' =
       as
-        { asTreasury = asTreasury as <+> treasury,
-          asReserves = asReserves as <-> treasury
+        { asTreasury = asTreasury as <+> treasury
+        , asReserves = asReserves as <-> treasury
         }
     es' = (nesEs $ chainNes cs) {esAccountState = as'}
 
@@ -138,8 +138,8 @@ txbodyEx1 pot =
     (Set.fromList [TxIn genesisId minBound])
     (StrictSeq.singleton $ ShelleyTxOut Cast.aliceAddr aliceCoinEx1)
     ( StrictSeq.fromList
-        [ DCertMir (MIRCert pot ir),
-          DCertDeleg (RegKey Cast.aliceSHK)
+        [ DCertMir (MIRCert pot ir)
+        , DCertDeleg (RegKey Cast.aliceSHK)
         ]
     )
     (Wdrl Map.empty)
@@ -406,20 +406,20 @@ mirExample :: TestTree
 mirExample =
   testGroup
     "move inst rewards"
-    [ testCase "create MIR cert - reserves" $ testCHAINExample (mir1 ReservesMIR),
-      testCase "create MIR cert - treasury" $ testCHAINExample (mir1 TreasuryMIR),
-      testCase "insufficient MIR witnesses, reserves" $
-        testCHAINExample (mirFailWits ReservesMIR),
-      testCase "insufficient MIR witnesses, treasury" $
-        testCHAINExample (mirFailWits TreasuryMIR),
-      testCase "insufficient MIR funds, reserves" $
-        testCHAINExample (mirFailFunds ReservesMIR (Coin 34000000000000000) (Coin 100) (Coin 0)),
-      testCase "insufficient MIR funds, treasury" $
-        testCHAINExample (mirFailFunds TreasuryMIR (Coin 99) (Coin 100) (Coin 99)),
-      testCase "end of epoch after MIR - reserves" $
-        testCHAINExample (mir2 ReservesMIR),
-      testCase "end of epoch after MIR - treasury" $
-        testCHAINExample (mir2 TreasuryMIR),
-      testCase "apply MIR - reserves" $ testCHAINExample (mir3 ReservesMIR),
-      testCase "apply MIR - treasury" $ testCHAINExample (mir3 TreasuryMIR)
+    [ testCase "create MIR cert - reserves" $ testCHAINExample (mir1 ReservesMIR)
+    , testCase "create MIR cert - treasury" $ testCHAINExample (mir1 TreasuryMIR)
+    , testCase "insufficient MIR witnesses, reserves" $
+        testCHAINExample (mirFailWits ReservesMIR)
+    , testCase "insufficient MIR witnesses, treasury" $
+        testCHAINExample (mirFailWits TreasuryMIR)
+    , testCase "insufficient MIR funds, reserves" $
+        testCHAINExample (mirFailFunds ReservesMIR (Coin 34000000000000000) (Coin 100) (Coin 0))
+    , testCase "insufficient MIR funds, treasury" $
+        testCHAINExample (mirFailFunds TreasuryMIR (Coin 99) (Coin 100) (Coin 99))
+    , testCase "end of epoch after MIR - reserves" $
+        testCHAINExample (mir2 ReservesMIR)
+    , testCase "end of epoch after MIR - treasury" $
+        testCHAINExample (mir2 TreasuryMIR)
+    , testCase "apply MIR - reserves" $ testCHAINExample (mir3 ReservesMIR)
+    , testCase "apply MIR - treasury" $ testCHAINExample (mir3 TreasuryMIR)
     ]

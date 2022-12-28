@@ -7,12 +7,12 @@ import Data.Proxy (Proxy (..))
 import Test.Tasty (TestTree, defaultMainWithIngredients, includingOptions)
 import Test.Tasty.Ingredients (Ingredient (..), composeReporters)
 import Test.Tasty.Ingredients.Basic (consoleTestReporter, listingTests)
-import Test.Tasty.Options
-  ( IsOption (..),
-    OptionDescription (..),
-    lookupOption,
-    safeRead,
-  )
+import Test.Tasty.Options (
+  IsOption (..),
+  OptionDescription (..),
+  lookupOption,
+  safeRead,
+ )
 
 data TestScenario
   = ContinuousIntegration
@@ -36,9 +36,9 @@ logScenario = TestReporter [] $ \options _ -> Just $ \_ -> do
 mainWithTestScenario :: TestTree -> IO ()
 mainWithTestScenario =
   defaultMainWithIngredients
-    [ includingOptions [Option (Proxy @TestScenario)],
-      listingTests,
-      composeReporters logScenario consoleTestReporter
+    [ includingOptions [Option (Proxy @TestScenario)]
+    , listingTests
+    , composeReporters logScenario consoleTestReporter
     ]
 
 helpText :: [Char]

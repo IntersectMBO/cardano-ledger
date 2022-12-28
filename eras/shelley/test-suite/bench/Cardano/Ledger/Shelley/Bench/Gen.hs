@@ -3,30 +3,31 @@
 {-# LANGUAGE TypeFamilies #-}
 
 -- | Benchmarks for Shelley test generators.
-module Cardano.Ledger.Shelley.Bench.Gen
-  ( genTriple,
-    genBlock,
-    genChainState,
-  )
+module Cardano.Ledger.Shelley.Bench.Gen (
+  genTriple,
+  genBlock,
+  genChainState,
+)
 where
 
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (EraCrypto)
+
 -- Use Another constraint, so this works in all Eras
 
-import Cardano.Ledger.Shelley.API
-  ( ApplyBlock,
-    Block,
-    DCert,
-    DPState,
-    DelplEnv,
-    ShelleyLEDGERS,
-    ShelleyTx,
-  )
-import Cardano.Ledger.Shelley.LedgerState
-  ( EpochState (..),
-    NewEpochState (..),
-  )
+import Cardano.Ledger.Shelley.API (
+  ApplyBlock,
+  Block,
+  DCert,
+  DPState,
+  DelplEnv,
+  ShelleyLEDGERS,
+  ShelleyTx,
+ )
+import Cardano.Ledger.Shelley.LedgerState (
+  EpochState (..),
+  NewEpochState (..),
+ )
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams)
 import Cardano.Protocol.TPraos.API (GetLedgerView)
 import Cardano.Protocol.TPraos.BHeader (BHeader)
@@ -38,13 +39,13 @@ import Data.Proxy
 import Test.Cardano.Ledger.Shelley.BenchmarkFunctions (ledgerEnv)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import qualified Test.Cardano.Ledger.Shelley.Generator.Block as GenBlock
-import Test.Cardano.Ledger.Shelley.Generator.Constants
-  ( Constants
-      ( maxGenesisUTxOouts,
-        maxMinFeeA,
-        minGenesisUTxOouts
-      ),
-  )
+import Test.Cardano.Ledger.Shelley.Generator.Constants (
+  Constants (
+    maxGenesisUTxOouts,
+    maxMinFeeA,
+    minGenesisUTxOouts
+  ),
+ )
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv (..), ScriptSpace (..))
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen, MinLEDGER_STS)
 import Test.Cardano.Ledger.Shelley.Generator.Presets (genEnv)
@@ -60,8 +61,8 @@ import Test.QuickCheck (generate)
 
 -- | Generate a genesis chain state given a UTxO size
 genChainState ::
-  ( ShelleyTest era,
-    EraGen era
+  ( ShelleyTest era
+  , EraGen era
   ) =>
   Int ->
   GenEnv era ->
@@ -69,9 +70,9 @@ genChainState ::
 genChainState n ge =
   let cs =
         (geConstants ge)
-          { minGenesisUTxOouts = n,
-            maxGenesisUTxOouts = n,
-            -- We are using real crypto types here, which can be larger than
+          { minGenesisUTxOouts = n
+          , maxGenesisUTxOouts = n
+          , -- We are using real crypto types here, which can be larger than
             -- those expected by the mock fee calculations. Since this is
             -- unimportant for now, we set the A part of the fee to 0
             maxMinFeeA = 0
@@ -84,14 +85,14 @@ genChainState n ge =
 
 -- | Benchmark generating a block given a chain state.
 genBlock ::
-  ( Mock (EraCrypto era),
-    ShelleyTest era,
-    EraGen era,
-    MinLEDGER_STS era,
-    GetLedgerView era,
-    Core.EraRule "LEDGERS" era ~ ShelleyLEDGERS era,
-    QC.HasTrace (ShelleyLEDGERS era) (GenEnv era),
-    ApplyBlock era
+  ( Mock (EraCrypto era)
+  , ShelleyTest era
+  , EraGen era
+  , MinLEDGER_STS era
+  , GetLedgerView era
+  , Core.EraRule "LEDGERS" era ~ ShelleyLEDGERS era
+  , QC.HasTrace (ShelleyLEDGERS era) (GenEnv era)
+  , ApplyBlock era
   ) =>
   GenEnv era ->
   ChainState era ->
@@ -107,14 +108,14 @@ genBlock ge cs = generate $ GenBlock.genBlock ge cs
 -- 5) get a Transaction (Tx) from GenEnv and ChainState
 
 genTriple ::
-  ( EraGen era,
-    Core.PParams era ~ ShelleyPParams era,
-    Mock (EraCrypto era),
-    Embed (Core.EraRule "DELPL" era) (CERTS era),
-    Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
-    State (Core.EraRule "DELPL" era) ~ DPState (EraCrypto era),
-    Signal (Core.EraRule "DELPL" era) ~ DCert (EraCrypto era),
-    ShelleyTest era
+  ( EraGen era
+  , Core.PParams era ~ ShelleyPParams era
+  , Mock (EraCrypto era)
+  , Embed (Core.EraRule "DELPL" era) (CERTS era)
+  , Environment (Core.EraRule "DELPL" era) ~ DelplEnv era
+  , State (Core.EraRule "DELPL" era) ~ DPState (EraCrypto era)
+  , Signal (Core.EraRule "DELPL" era) ~ DCert (EraCrypto era)
+  , ShelleyTest era
   ) =>
   Proxy era ->
   Int ->

@@ -6,38 +6,38 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module Test.Cardano.Ledger.Generic.Fields
-  ( TxField (.., AuxData', Valid'),
-    TxBodyField
-      ( ..,
-        Inputs',
-        Collateral',
-        RefInputs',
-        Outputs',
-        Certs',
-        CollateralReturn',
-        Update',
-        ReqSignerHashes',
-        WppHash',
-        AdHash',
-        Txnetworkid'
-      ),
-    WitnessesField (.., AddrWits', BootWits', ScriptWits', DataWits'),
-    PParamsField (..),
-    TxOutField (.., DHash', RefScript'),
-    initVI,
-    initWdrl,
-    initialTxBody,
-    initialWitnesses,
-    initialTx,
-    initialTxOut,
-    initialPParams,
-    valid,
-    abstractTx,
-    abstractTxBody,
-    abstractTxOut,
-    abstractWitnesses,
-  )
+module Test.Cardano.Ledger.Generic.Fields (
+  TxField (.., AuxData', Valid'),
+  TxBodyField (
+    ..,
+    Inputs',
+    Collateral',
+    RefInputs',
+    Outputs',
+    Certs',
+    CollateralReturn',
+    Update',
+    ReqSignerHashes',
+    WppHash',
+    AdHash',
+    Txnetworkid'
+  ),
+  WitnessesField (.., AddrWits', BootWits', ScriptWits', DataWits'),
+  PParamsField (..),
+  TxOutField (.., DHash', RefScript'),
+  initVI,
+  initWdrl,
+  initialTxBody,
+  initialWitnesses,
+  initialTx,
+  initialTxOut,
+  initialPParams,
+  valid,
+  abstractTx,
+  abstractTxBody,
+  abstractTxOut,
+  abstractWitnesses,
+)
 where
 
 import Cardano.Ledger.Address (Addr (..))
@@ -49,14 +49,14 @@ import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..), ScriptIntegrityHas
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (..), AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..), BabbageTxOut (..), Datum (..))
-import Cardano.Ledger.BaseTypes
-  ( Network (..),
-    NonNegativeInterval,
-    Nonce,
-    ProtVer (..),
-    StrictMaybe (..),
-    UnitInterval,
-  )
+import Cardano.Ledger.BaseTypes (
+  Network (..),
+  NonNegativeInterval,
+  Nonce,
+  ProtVer (..),
+  StrictMaybe (..),
+  UnitInterval,
+ )
 import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert, transDCert)
@@ -309,56 +309,56 @@ abstractTx (Allegra _) (ShelleyTx txBody wit auxdata) =
 
 abstractTxBody :: Proof era -> TxBody era -> [TxBodyField era]
 abstractTxBody (Alonzo _) (AlonzoTxBody inp col out cert wdrl fee vldt up req mnt sih adh net) =
-  [ Inputs inp,
-    Collateral col,
-    Outputs out,
-    Certs cert,
-    Wdrls wdrl,
-    Txfee fee,
-    Vldt vldt,
-    Update up,
-    ReqSignerHashes req,
-    Mint mnt,
-    WppHash sih,
-    AdHash adh,
-    Txnetworkid net
+  [ Inputs inp
+  , Collateral col
+  , Outputs out
+  , Certs cert
+  , Wdrls wdrl
+  , Txfee fee
+  , Vldt vldt
+  , Update up
+  , ReqSignerHashes req
+  , Mint mnt
+  , WppHash sih
+  , AdHash adh
+  , Txnetworkid net
   ]
 abstractTxBody (Conway _) (ConwayTxBody inp col ref out colret totcol cert wdrl fee vldt req mnt sih adh net ga votes) =
-  [ Inputs inp,
-    Collateral col,
-    RefInputs ref,
-    Outputs (sizedValue <$> out),
-    CollateralReturn (sizedValue <$> colret),
-    TotalCol totcol,
-    Certs $ transDCert <$> cert,
-    Wdrls wdrl,
-    Txfee fee,
-    Vldt vldt,
-    ReqSignerHashes req,
-    Mint mnt,
-    WppHash sih,
-    AdHash adh,
-    Txnetworkid net,
-    GovernanceActions ga,
-    Votes votes
+  [ Inputs inp
+  , Collateral col
+  , RefInputs ref
+  , Outputs (sizedValue <$> out)
+  , CollateralReturn (sizedValue <$> colret)
+  , TotalCol totcol
+  , Certs $ transDCert <$> cert
+  , Wdrls wdrl
+  , Txfee fee
+  , Vldt vldt
+  , ReqSignerHashes req
+  , Mint mnt
+  , WppHash sih
+  , AdHash adh
+  , Txnetworkid net
+  , GovernanceActions ga
+  , Votes votes
   ]
 abstractTxBody (Babbage _) (BabbageTxBody inp col ref out colret totcol cert wdrl fee vldt up req mnt sih adh net) =
-  [ Inputs inp,
-    Collateral col,
-    RefInputs ref,
-    Outputs (sizedValue <$> out),
-    CollateralReturn (sizedValue <$> colret),
-    TotalCol totcol,
-    Certs cert,
-    Wdrls wdrl,
-    Txfee fee,
-    Vldt vldt,
-    Update up,
-    ReqSignerHashes req,
-    Mint mnt,
-    WppHash sih,
-    AdHash adh,
-    Txnetworkid net
+  [ Inputs inp
+  , Collateral col
+  , RefInputs ref
+  , Outputs (sizedValue <$> out)
+  , CollateralReturn (sizedValue <$> colret)
+  , TotalCol totcol
+  , Certs cert
+  , Wdrls wdrl
+  , Txfee fee
+  , Vldt vldt
+  , Update up
+  , ReqSignerHashes req
+  , Mint mnt
+  , WppHash sih
+  , AdHash adh
+  , Txnetworkid net
   ]
 abstractTxBody (Shelley _) (ShelleyTxBody inp out cert wdrl fee ttlslot up adh) =
   [Inputs inp, Outputs out, Certs cert, Wdrls wdrl, Txfee fee, TTL ttlslot, Update up, AdHash adh]

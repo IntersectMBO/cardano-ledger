@@ -3,41 +3,41 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Chain.MempoolPayload.CBOR
-  ( tests,
-  )
+module Test.Cardano.Chain.MempoolPayload.CBOR (
+  tests,
+)
 where
 
-import Cardano.Ledger.Binary
-  ( ByteSpan,
-    Decoder,
-    FromCBOR (..),
-    ToCBOR,
-    byronProtVer,
-    decodeFull,
-    decodeFullDecoder,
-    fromCBOR,
-    serialize,
-    slice,
-    toCBOR,
-  )
+import Cardano.Ledger.Binary (
+  ByteSpan,
+  Decoder,
+  FromCBOR (..),
+  ToCBOR,
+  byronProtVer,
+  decodeFull,
+  decodeFullDecoder,
+  fromCBOR,
+  serialize,
+  slice,
+  toCBOR,
+ )
 import Cardano.Prelude
 import qualified Data.ByteString.Lazy as LBS
 import GetDataFileName ((<:<))
 import Hedgehog (Property, tripping)
-import Test.Cardano.Chain.MempoolPayload.Example
-  ( exampleMempoolPayload,
-    exampleMempoolPayload1,
-    exampleMempoolPayload2,
-    exampleMempoolPayload3,
-  )
+import Test.Cardano.Chain.MempoolPayload.Example (
+  exampleMempoolPayload,
+  exampleMempoolPayload1,
+  exampleMempoolPayload2,
+  exampleMempoolPayload3,
+ )
 import Test.Cardano.Chain.MempoolPayload.Gen (genMempoolPayload)
 import Test.Cardano.Crypto.Gen (feedPM)
-import Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip
-  ( goldenTestCBOR,
-    goldenTestCBORExplicit,
-    roundTripsCBORShow,
-  )
+import Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip (
+  goldenTestCBOR,
+  goldenTestCBORExplicit,
+  roundTripsCBORShow,
+ )
 import Test.Cardano.Prelude
 import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
 
@@ -67,14 +67,14 @@ fillInByteString a =
 -- from scratch.
 filledInGoldenTestCBOR ::
   forall f.
-  ( FromCBOR (f ()),
-    ToCBOR (f ()),
-    FromCBOR (f ByteSpan),
-    ToCBOR (f ByteString),
-    Functor f,
-    Eq (f ()),
-    Show (f ()),
-    HasCallStack
+  ( FromCBOR (f ())
+  , ToCBOR (f ())
+  , FromCBOR (f ByteSpan)
+  , ToCBOR (f ByteString)
+  , Functor f
+  , Eq (f ())
+  , Show (f ())
+  , HasCallStack
   ) =>
   f () ->
   FilePath ->

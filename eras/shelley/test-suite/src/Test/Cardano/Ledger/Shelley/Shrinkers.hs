@@ -70,7 +70,7 @@ shrinkTxBody (ShelleyTxBody is os@((:<|) (ShelleyTxOut a vs) _) cs ws tf tl tu m
   -- Shrink outputs, add the differing balance of the original and new outputs
   -- to the fees in order to preserve the invariant
   [ ShelleyTxBody is (mvExtraTksnToOut1 os') cs ws (tf <+> extraCoin os') tl tu md
-    | os' <- toList $ shrinkStrictSeq shrinkTxOut os
+  | os' <- toList $ shrinkStrictSeq shrinkTxOut os
   ]
   where
     -- [ TxBody is os cs' ws tf tl tu | cs' <- shrinkSeq shrinkDCert cs ] ++

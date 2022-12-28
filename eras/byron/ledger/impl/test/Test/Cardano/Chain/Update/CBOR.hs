@@ -1,9 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Test.Cardano.Chain.Update.CBOR
-  ( tests,
-  )
+module Test.Cardano.Chain.Update.CBOR (
+  tests,
+)
 where
 
 import Cardano.Chain.Common (rationalToLovelacePortion)
@@ -13,43 +13,43 @@ import Cardano.Crypto.Raw (Raw (..))
 import Cardano.Prelude
 import GetDataFileName ((<:<))
 import Hedgehog (Property)
-import Test.Cardano.Chain.Update.Example
-  ( exampleInstallerHash,
-    examplePayload,
-    exampleProof,
-    exampleProposal,
-    exampleProposalBody,
-    exampleProtocolParameters,
-    exampleProtocolParametersUpdate,
-    exampleProtocolVersion,
-    exampleSoftwareVersion,
-    exampleSystemTag,
-    exampleUpId,
-    exampleVote,
-  )
-import Test.Cardano.Chain.Update.Gen
-  ( genApplicationName,
-    genInstallerHash,
-    genPayload,
-    genProof,
-    genProposal,
-    genProposalBody,
-    genProtocolParameters,
-    genProtocolParametersUpdate,
-    genProtocolVersion,
-    genSoftforkRule,
-    genSoftwareVersion,
-    genSystemTag,
-    genUpId,
-    genUpsData,
-    genVote,
-  )
+import Test.Cardano.Chain.Update.Example (
+  exampleInstallerHash,
+  examplePayload,
+  exampleProof,
+  exampleProposal,
+  exampleProposalBody,
+  exampleProtocolParameters,
+  exampleProtocolParametersUpdate,
+  exampleProtocolVersion,
+  exampleSoftwareVersion,
+  exampleSystemTag,
+  exampleUpId,
+  exampleVote,
+ )
+import Test.Cardano.Chain.Update.Gen (
+  genApplicationName,
+  genInstallerHash,
+  genPayload,
+  genProof,
+  genProposal,
+  genProposalBody,
+  genProtocolParameters,
+  genProtocolParametersUpdate,
+  genProtocolVersion,
+  genSoftforkRule,
+  genSoftwareVersion,
+  genSystemTag,
+  genUpId,
+  genUpsData,
+  genVote,
+ )
 import Test.Cardano.Crypto.Gen (feedPM, genHashRaw)
-import Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip
-  ( goldenTestCBOR,
-    roundTripsCBORBuildable,
-    roundTripsCBORShow,
-  )
+import Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip (
+  goldenTestCBOR,
+  roundTripsCBORBuildable,
+  roundTripsCBORShow,
+ )
 import Test.Cardano.Prelude
 import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
 

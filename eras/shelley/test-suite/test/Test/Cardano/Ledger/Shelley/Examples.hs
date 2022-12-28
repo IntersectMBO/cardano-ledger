@@ -1,9 +1,9 @@
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Shelley.Examples
-  ( CHAINExample (..),
-    testCHAINExample,
-  )
+module Test.Cardano.Ledger.Shelley.Examples (
+  CHAINExample (..),
+  testCHAINExample,
+)
 where
 
 import Cardano.Ledger.Block (Block)
@@ -20,12 +20,12 @@ import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, maxLLSupply, runShelleyB
 import Test.Tasty.HUnit (Assertion, (@?=))
 
 data CHAINExample h era = CHAINExample
-  { -- | State to start testing with
-    startState :: ChainState era,
-    -- | Block to run chain state transition system on
-    newBlock :: Block h era,
-    -- | type of fatal error, if failure expected and final chain state if success expected
-    intendedResult :: Either [PredicateFailure (CHAIN era)] (ChainState era)
+  { startState :: ChainState era
+  -- ^ State to start testing with
+  , newBlock :: Block h era
+  -- ^ Block to run chain state transition system on
+  , intendedResult :: Either [PredicateFailure (CHAIN era)] (ChainState era)
+  -- ^ type of fatal error, if failure expected and final chain state if success expected
   }
 
 -- | Runs example, applies chain state transition system rule (STS),

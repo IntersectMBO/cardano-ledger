@@ -14,11 +14,11 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators
-  ( sizedTimelock,
-    maxTimelockDepth,
-    genMintValues,
-  )
+module Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators (
+  sizedTimelock,
+  maxTimelockDepth,
+  genMintValues,
+)
 where
 
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
@@ -42,17 +42,17 @@ import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Generator.TxAuxData (genMetadata')
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
-import Test.QuickCheck
-  ( Arbitrary,
-    arbitrary,
-    choose,
-    genericShrink,
-    listOf,
-    oneof,
-    resize,
-    shrink,
-    vectorOf,
-  )
+import Test.QuickCheck (
+  Arbitrary,
+  arbitrary,
+  choose,
+  genericShrink,
+  listOf,
+  oneof,
+  resize,
+  shrink,
+  vectorOf,
+ )
 import Test.Tasty.QuickCheck (Gen)
 
 {-------------------------------------------------------------------------------
@@ -74,36 +74,36 @@ sizedTimelock ::
 sizedTimelock 0 = MA.RequireSignature . KeyHash . mkDummyHash <$> (arbitrary :: Gen Int)
 sizedTimelock n =
   oneof
-    [ MA.RequireSignature . KeyHash . mkDummyHash <$> (arbitrary :: Gen Int),
-      MA.RequireAllOf
+    [ MA.RequireSignature . KeyHash . mkDummyHash <$> (arbitrary :: Gen Int)
+    , MA.RequireAllOf
         <$> ( fromList
                 <$> resize
                   maxTimelockListLens
                   (listOf (sizedTimelock (n - 1)))
-            ),
-      MA.RequireAnyOf
+            )
+    , MA.RequireAnyOf
         <$> ( fromList
                 <$> resize
                   maxTimelockListLens
                   (listOf (sizedTimelock (n - 1)))
-            ),
-      do
+            )
+    , do
         subs <- resize maxTimelockListLens (listOf (sizedTimelock (n - 1)))
         let i = length subs
-        MA.RequireMOf <$> choose (0, i) <*> pure (fromList subs),
-      RequireTimeStart <$> arbitrary,
-      RequireTimeExpire <$> arbitrary
+        MA.RequireMOf <$> choose (0, i) <*> pure (fromList subs)
+    , RequireTimeStart <$> arbitrary
+    , RequireTimeExpire <$> arbitrary
     ]
 
 -- TODO Generate metadata with script preimages
 instance
   forall era c.
-  ( Era era,
-    c ~ EraCrypto era,
-    Mock c,
-    FromCBOR (Annotator (Timelock era)),
-    ToCBOR (Script era),
-    Arbitrary (Script era)
+  ( Era era
+  , c ~ EraCrypto era
+  , Mock c
+  , FromCBOR (Annotator (Timelock era))
+  , ToCBOR (Script era)
+  , Arbitrary (Script era)
   ) =>
   Arbitrary (AllegraTxAuxData era)
   where
@@ -129,11 +129,11 @@ genScriptSeq = do
   pure (fromList l)
 
 instance
-  ( Era era,
-    Mock (EraCrypto era),
-    Arbitrary (Value era),
-    Arbitrary (TxOut era),
-    Arbitrary (PredicateFailure (EraRule "PPUP" era))
+  ( Era era
+  , Mock (EraCrypto era)
+  , Arbitrary (Value era)
+  , Arbitrary (TxOut era)
+  , Arbitrary (PredicateFailure (EraRule "PPUP" era))
   ) =>
   Arbitrary (AllegraUtxoPredFailure era)
   where
@@ -189,8 +189,8 @@ instance Mock c => Arbitrary (MaryValue c) where
   shrink (MaryValue ada assets) =
     concat
       [ -- Shrink the ADA value
-        flip MaryValue assets <$> shrink ada,
-        -- Shrink the non-ADA assets by reducing the list length
+        flip MaryValue assets <$> shrink ada
+      , -- Shrink the non-ADA assets by reducing the list length
         MaryValue ada <$> shrink assets
       ]
 

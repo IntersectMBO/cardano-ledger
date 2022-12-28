@@ -9,27 +9,27 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Conway.TxOut
-  ( module BabbageTxOutReExports,
-  )
+module Cardano.Ledger.Conway.TxOut (
+  module BabbageTxOutReExports,
+)
 where
 
 import Cardano.Ledger.Alonzo.Data (Datum (NoDatum))
-import Cardano.Ledger.Babbage.TxBody
-  ( addrEitherBabbageTxOutL,
-    babbageMinUTxOValue,
-    dataBabbageTxOutL,
-    dataHashBabbageTxOutL,
-    datumBabbageTxOutL,
-    getDatumBabbageTxOut,
-    referenceScriptBabbageTxOutL,
-    valueEitherBabbageTxOutL,
-  )
-import Cardano.Ledger.Babbage.TxBody as BabbageTxOutReExports
-  ( AlonzoEraTxOut (..),
-    BabbageEraTxOut (..),
-    BabbageTxOut (..),
-  )
+import Cardano.Ledger.Babbage.TxBody (
+  addrEitherBabbageTxOutL,
+  babbageMinUTxOValue,
+  dataBabbageTxOutL,
+  dataHashBabbageTxOutL,
+  datumBabbageTxOutL,
+  getDatumBabbageTxOut,
+  referenceScriptBabbageTxOutL,
+  valueEitherBabbageTxOutL,
+ )
+import Cardano.Ledger.Babbage.TxBody as BabbageTxOutReExports (
+  AlonzoEraTxOut (..),
+  BabbageEraTxOut (..),
+  BabbageTxOut (..),
+ )
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.PParams (BabbagePParamsHKD (..))
 import Cardano.Ledger.Conway.Scripts ()

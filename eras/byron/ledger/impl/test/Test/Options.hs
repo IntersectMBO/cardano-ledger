@@ -3,20 +3,20 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Options
-  ( TestScenario (..),
-    mainWithTestScenario,
-    scenarioScaled,
-    scenarioScaleDefault,
-    eachOfTS,
-    withTestsTS,
-    TSProperty,
-    TSGroup,
-    concatGroups,
-    concatTSGroups,
-    tsGroupToTree,
-    ShouldAssertNF (..),
-  )
+module Test.Options (
+  TestScenario (..),
+  mainWithTestScenario,
+  scenarioScaled,
+  scenarioScaleDefault,
+  eachOfTS,
+  withTestsTS,
+  TSProperty,
+  TSGroup,
+  concatGroups,
+  concatTSGroups,
+  tsGroupToTree,
+  ShouldAssertNF (..),
+)
 where
 
 import Cardano.Prelude
@@ -27,23 +27,23 @@ import Cardano.Prelude
 import Hedgehog (Gen, Group (..), Property, PropertyT, TestLimit, withTests)
 import Hedgehog.Internal.Property (GroupName (..), PropertyName (..))
 import Test.Cardano.Prelude
-import Test.Tasty
-  ( TestName,
-    TestTree,
-    askOption,
-    defaultMainWithIngredients,
-    includingOptions,
-    testGroup,
-  )
+import Test.Tasty (
+  TestName,
+  TestTree,
+  askOption,
+  defaultMainWithIngredients,
+  includingOptions,
+  testGroup,
+ )
 import Test.Tasty.Hedgehog hiding (testProperty)
 import Test.Tasty.Ingredients (Ingredient (..), composeReporters)
 import Test.Tasty.Ingredients.Basic (consoleTestReporter, listingTests)
-import Test.Tasty.Options
-  ( IsOption (..),
-    OptionDescription (..),
-    lookupOption,
-    safeRead,
-  )
+import Test.Tasty.Options (
+  IsOption (..),
+  OptionDescription (..),
+  lookupOption,
+  safeRead,
+ )
 
 -- | testProperty has been deprecated. We make our own version here.
 testProperty :: TestName -> Property -> TestTree
@@ -74,9 +74,9 @@ logScenario = TestReporter [] $ \options _ -> Just $ \_ -> do
 mainWithTestScenario :: TestTree -> IO ()
 mainWithTestScenario =
   defaultMainWithIngredients
-    [ includingOptions [Option (Proxy @TestScenario)],
-      listingTests,
-      composeReporters logScenario consoleTestReporter
+    [ includingOptions [Option (Proxy @TestScenario)]
+    , listingTests
+    , composeReporters logScenario consoleTestReporter
     ]
 
 helpText :: [Char]

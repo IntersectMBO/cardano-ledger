@@ -21,66 +21,66 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | Small step state transition systems.
-module Control.State.Transition.Extended
-  ( RuleType (..),
-    RuleTypeRep,
-    RuleContext,
-    IRC (..),
-    TRC (..),
-    Rule,
-    TransitionRule,
-    InitialRule,
-    Assertion (..),
-    AssertionViolation (..),
-    AssertionException (..),
-    STS (..),
-    STUB,
-    Embed (..),
-    (?!),
-    (?!:),
-    validate,
-    validateTrans,
-    validateTransLabeled,
-    Label,
-    SingEP (..),
-    EventPolicy (..),
-    EventReturnType,
-    labeled,
-    labeledPred,
-    labeledPredE,
-    ifFailureFree,
-    whenFailureFree,
-    failBecause,
-    judgmentContext,
-    trans,
-    liftSTS,
-    tellEvent,
-    tellEvents,
-    EventReturnTypeRep,
-    mapEventReturn,
+module Control.State.Transition.Extended (
+  RuleType (..),
+  RuleTypeRep,
+  RuleContext,
+  IRC (..),
+  TRC (..),
+  Rule,
+  TransitionRule,
+  InitialRule,
+  Assertion (..),
+  AssertionViolation (..),
+  AssertionException (..),
+  STS (..),
+  STUB,
+  Embed (..),
+  (?!),
+  (?!:),
+  validate,
+  validateTrans,
+  validateTransLabeled,
+  Label,
+  SingEP (..),
+  EventPolicy (..),
+  EventReturnType,
+  labeled,
+  labeledPred,
+  labeledPredE,
+  ifFailureFree,
+  whenFailureFree,
+  failBecause,
+  judgmentContext,
+  trans,
+  liftSTS,
+  tellEvent,
+  tellEvents,
+  EventReturnTypeRep,
+  mapEventReturn,
 
-    -- * Apply STS
-    AssertionPolicy (..),
-    ValidationPolicy (..),
-    ApplySTSOpts (..),
-    applySTSOpts,
-    applySTSOptsEither,
-    applySTS,
-    applySTSIndifferently,
-    reapplySTS,
-    globalAssertionPolicy,
+  -- * Apply STS
+  AssertionPolicy (..),
+  ValidationPolicy (..),
+  ApplySTSOpts (..),
+  applySTSOpts,
+  applySTSOptsEither,
+  applySTS,
+  applySTSIndifferently,
+  reapplySTS,
+  globalAssertionPolicy,
 
-    -- * Exported to allow running rules independently
-    applySTSInternal,
-    applyRuleInternal,
-    RuleInterpreter,
-    STSInterpreter,
-    runRule,
+  -- * Exported to allow running rules independently
+  applySTSInternal,
+  applyRuleInternal,
+  RuleInterpreter,
+  STSInterpreter,
+  runRule,
 
-    -- * Random thing
-    Threshold (..),
-    sfor_,
-  )
+  -- * Random thing
+  Threshold (..),
+  sfor_,
+)
 where
 
 import Control.Exception (Exception (..), throw)
@@ -140,9 +140,9 @@ newtype IRC sts = IRC (Environment sts)
 newtype TRC sts = TRC (Environment sts, State sts, Signal sts)
 
 deriving instance
-  ( Show (Environment sts),
-    Show (State sts),
-    Show (Signal sts)
+  ( Show (Environment sts)
+  , Show (State sts)
+  , Show (Signal sts)
   ) =>
   Show (TRC sts)
 
@@ -172,10 +172,10 @@ data Assertion sts
     PostCondition String (TRC sts -> State sts -> Bool)
 
 data AssertionViolation sts = AssertionViolation
-  { avSTS :: String,
-    avMsg :: String,
-    avCtx :: TRC sts,
-    avState :: Maybe (State sts)
+  { avSTS :: String
+  , avMsg :: String
+  , avCtx :: TRC sts
+  , avState :: Maybe (State sts)
   }
 
 instance STS sts => Show (AssertionViolation sts) where
@@ -191,10 +191,10 @@ instance Exception AssertionException
 
 -- | State transition system.
 class
-  ( Eq (PredicateFailure a),
-    Show (PredicateFailure a),
-    Monad (BaseM a),
-    Typeable a
+  ( Eq (PredicateFailure a)
+  , Show (PredicateFailure a)
+  , Monad (BaseM a)
+  , Typeable a
   ) =>
   STS a
   where
@@ -452,14 +452,14 @@ data ValidationPolicy
   | ValidateSuchThat ([Label] -> Bool)
 
 data ApplySTSOpts ep = ApplySTSOpts
-  { -- | Enable assertions during STS processing.
-    --   If this option is enabled, STS processing will terminate on violation
-    --   of an assertion.
-    asoAssertions :: AssertionPolicy,
-    -- | Validation policy
-    asoValidation :: ValidationPolicy,
-    -- | Event policy
-    asoEvents :: SingEP ep
+  { asoAssertions :: AssertionPolicy
+  -- ^ Enable assertions during STS processing.
+  --   If this option is enabled, STS processing will terminate on violation
+  --   of an assertion.
+  , asoValidation :: ValidationPolicy
+  -- ^ Validation policy
+  , asoEvents :: SingEP ep
+  -- ^ Event policy
   }
 
 type STSInterpreter ep =
@@ -520,9 +520,9 @@ applySTS = applySTSOptsEither defaultOpts
   where
     defaultOpts =
       ApplySTSOpts
-        { asoAssertions = globalAssertionPolicy,
-          asoValidation = ValidateAll,
-          asoEvents = EPDiscard
+        { asoAssertions = globalAssertionPolicy
+        , asoValidation = ValidateAll
+        , asoEvents = EPDiscard
         }
 
 globalAssertionPolicy :: AssertionPolicy
@@ -547,9 +547,9 @@ reapplySTS ctx = applySTSOpts defaultOpts ctx <&> fst
   where
     defaultOpts =
       ApplySTSOpts
-        { asoAssertions = AssertionsOff,
-          asoValidation = ValidateNone,
-          asoEvents = EPDiscard
+        { asoAssertions = AssertionsOff
+        , asoValidation = ValidateNone
+        , asoEvents = EPDiscard
         }
 
 applySTSIndifferently ::
@@ -560,9 +560,9 @@ applySTSIndifferently ::
 applySTSIndifferently =
   applySTSOpts
     ApplySTSOpts
-      { asoAssertions = AssertionsAll,
-        asoValidation = ValidateAll,
-        asoEvents = EPDiscard
+      { asoAssertions = AssertionsAll
+      , asoValidation = ValidateAll
+      , asoEvents = EPDiscard
       }
 
 -- | Apply a rule even if its predicates fail.
@@ -672,10 +672,10 @@ applySTSInternal ep ap goRule ctx =
             | not (cond jc) ->
                 let assertion =
                       AssertionViolation
-                        { avSTS = show $ typeRep assertion,
-                          avMsg = msg,
-                          avCtx = jc,
-                          avState = Nothing
+                        { avSTS = show $ typeRep assertion
+                        , avMsg = msg
+                        , avCtx = jc
+                        , avState = Nothing
                         }
                  in throwE assertion
           _ -> pure ()
@@ -692,10 +692,10 @@ applySTSInternal ep ap goRule ctx =
                     | not (cond jc st) ->
                         let assertion =
                               AssertionViolation
-                                { avSTS = show $ typeRep assertion,
-                                  avMsg = msg,
-                                  avCtx = jc,
-                                  avState = Just st
+                                { avSTS = show $ typeRep assertion
+                                , avMsg = msg
+                                , avCtx = jc
+                                , avState = Just st
                                 }
                          in throwE assertion
                   _ -> pure ()
@@ -727,14 +727,14 @@ newtype Threshold a = Threshold a
 data STUB (e :: Type) (st :: Type) (si :: Type) (f :: Type) (m :: Type -> Type)
 
 instance
-  ( Eq f,
-    Monad m,
-    Show f,
-    Typeable e,
-    Typeable f,
-    Typeable si,
-    Typeable st,
-    Typeable m
+  ( Eq f
+  , Monad m
+  , Show f
+  , Typeable e
+  , Typeable f
+  , Typeable si
+  , Typeable st
+  , Typeable m
   ) =>
   STS (STUB e st si f m)
   where

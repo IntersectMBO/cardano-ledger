@@ -5,57 +5,57 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
-module Test.Cardano.Chain.Block.CBOR
-  ( tests,
-    exampleBlockSignature,
-    exampleBody,
-    exampleHeader,
-    exampleProof,
-    exampleToSign,
-  )
+module Test.Cardano.Chain.Block.CBOR (
+  tests,
+  exampleBlockSignature,
+  exampleBody,
+  exampleHeader,
+  exampleProof,
+  exampleToSign,
+)
 where
 
-import Cardano.Chain.Block
-  ( ABlockSignature (..),
-    ABoundaryBlock (boundaryBlockLength),
-    Block,
-    BlockSignature,
-    Body,
-    Header,
-    HeaderHash,
-    Proof (..),
-    ToSign (..),
-    dropBoundaryBody,
-    fromCBORABOBBlock,
-    fromCBORABoundaryBlock,
-    fromCBORABoundaryHeader,
-    fromCBORBoundaryConsensusData,
-    fromCBORHeader,
-    fromCBORHeaderToHash,
-    mkHeaderExplicit,
-    toCBORABOBBlock,
-    toCBORABoundaryBlock,
-    toCBORHeader,
-    toCBORHeaderToHash,
-    pattern Body,
-  )
+import Cardano.Chain.Block (
+  ABlockSignature (..),
+  ABoundaryBlock (boundaryBlockLength),
+  Block,
+  BlockSignature,
+  Body,
+  Header,
+  HeaderHash,
+  Proof (..),
+  ToSign (..),
+  dropBoundaryBody,
+  fromCBORABOBBlock,
+  fromCBORABoundaryBlock,
+  fromCBORABoundaryHeader,
+  fromCBORBoundaryConsensusData,
+  fromCBORHeader,
+  fromCBORHeaderToHash,
+  mkHeaderExplicit,
+  toCBORABOBBlock,
+  toCBORABoundaryBlock,
+  toCBORHeader,
+  toCBORHeaderToHash,
+  pattern Body,
+ )
 import qualified Cardano.Chain.Delegation as Delegation
-import Cardano.Chain.Slotting
-  ( EpochNumber (..),
-    EpochSlots (EpochSlots),
-    WithEpochSlots (WithEpochSlots),
-    unWithEpochSlots,
-  )
+import Cardano.Chain.Slotting (
+  EpochNumber (..),
+  EpochSlots (EpochSlots),
+  WithEpochSlots (WithEpochSlots),
+  unWithEpochSlots,
+ )
 import Cardano.Chain.Ssc (SscPayload (..), SscProof (..))
-import Cardano.Crypto
-  ( ProtocolMagicId (..),
-    SignTag (..),
-    abstractHash,
-    noPassSafeSigner,
-    serializeCborHash,
-    sign,
-    toVerification,
-  )
+import Cardano.Crypto (
+  ProtocolMagicId (..),
+  SignTag (..),
+  abstractHash,
+  noPassSafeSigner,
+  serializeCborHash,
+  sign,
+  toVerification,
+ )
 import Cardano.Ledger.Binary (byronProtVer, decodeFullDecoder, dropBytes, serializeEncoding)
 import Cardano.Prelude
 import Data.Coerce (coerce)
@@ -72,13 +72,13 @@ import Test.Cardano.Chain.UTxO.Example (exampleTxPayload, exampleTxProof)
 import qualified Test.Cardano.Chain.Update.Example as Update
 import Test.Cardano.Crypto.Example (exampleSigningKeys)
 import Test.Cardano.Crypto.Gen (feedPM)
-import Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip
-  ( deprecatedGoldenDecode,
-    goldenTestCBOR,
-    goldenTestCBORExplicit,
-    roundTripsCBORBuildable,
-    roundTripsCBORShow,
-  )
+import Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip (
+  deprecatedGoldenDecode,
+  goldenTestCBOR,
+  goldenTestCBORExplicit,
+  roundTripsCBORBuildable,
+  roundTripsCBORShow,
+ )
 import Test.Cardano.Prelude
 import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
 

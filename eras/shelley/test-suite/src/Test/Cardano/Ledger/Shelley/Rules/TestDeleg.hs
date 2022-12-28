@@ -8,13 +8,13 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
-module Test.Cardano.Ledger.Shelley.Rules.TestDeleg
-  ( keyRegistration,
-    keyDeRegistration,
-    keyDelegation,
-    rewardsSumInvariant,
-    checkInstantaneousRewards,
-  )
+module Test.Cardano.Ledger.Shelley.Rules.TestDeleg (
+  keyRegistration,
+  keyDeRegistration,
+  keyDelegation,
+  rewardsSumInvariant,
+  checkInstantaneousRewards,
+)
 where
 
 import Cardano.Ledger.BaseTypes (ProtVer)
@@ -22,33 +22,33 @@ import Cardano.Ledger.Coin (addDeltaCoin)
 import qualified Cardano.Ledger.Core as Core (PParams)
 import Cardano.Ledger.Shelley.API (ShelleyDELEG)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
-import Cardano.Ledger.Shelley.LedgerState
-  ( DState (..),
-    InstantaneousRewards (..),
-    delegations,
-    rewards,
-  )
+import Cardano.Ledger.Shelley.LedgerState (
+  DState (..),
+  InstantaneousRewards (..),
+  delegations,
+  rewards,
+ )
 import Cardano.Ledger.Shelley.Rules (DelegEnv (..))
-import Cardano.Ledger.Shelley.TxBody
-  ( MIRPot (..),
-    MIRTarget (..),
-    pattern DCertDeleg,
-    pattern DCertMir,
-    pattern DeRegKey,
-    pattern Delegate,
-    pattern Delegation,
-    pattern MIRCert,
-    pattern RegKey,
-  )
+import Cardano.Ledger.Shelley.TxBody (
+  MIRPot (..),
+  MIRTarget (..),
+  pattern DCertDeleg,
+  pattern DCertMir,
+  pattern DeRegKey,
+  pattern Delegate,
+  pattern Delegation,
+  pattern MIRCert,
+  pattern RegKey,
+ )
 import qualified Cardano.Ledger.UMapCompact as UM
 import Control.SetAlgebra (eval, rng, (∈))
-import Control.State.Transition.Trace
-  ( SourceSignalTarget,
-    signal,
-    source,
-    target,
-    pattern SourceSignalTarget,
-  )
+import Control.State.Transition.Trace (
+  SourceSignalTarget,
+  signal,
+  source,
+  target,
+  pattern SourceSignalTarget,
+ )
 import Data.Foldable (fold)
 import Data.List (foldl')
 import qualified Data.Map.Strict as Map (difference, filter, keysSet, (\\))
@@ -60,14 +60,14 @@ import Test.QuickCheck (Property, conjoin, counterexample, property)
 keyRegistration :: SourceSignalTarget (ShelleyDELEG era) -> Property
 keyRegistration
   SourceSignalTarget
-    { signal = (DCertDeleg (RegKey hk)),
-      target = targetSt
+    { signal = (DCertDeleg (RegKey hk))
+    , target = targetSt
     } =
     conjoin
       [ counterexample
           "a newly registered key should have a reward account"
-          ((UM.member hk (rewards targetSt)) :: Bool),
-        counterexample
+          ((UM.member hk (rewards targetSt)) :: Bool)
+      , counterexample
           "a newly registered key should have a reward account with 0 balance"
           (UM.lookup hk (rewards targetSt) == Just mempty)
       ]
@@ -77,14 +77,14 @@ keyRegistration _ = property ()
 keyDeRegistration :: SourceSignalTarget (ShelleyDELEG era) -> Property
 keyDeRegistration
   SourceSignalTarget
-    { signal = (DCertDeleg (DeRegKey hk)),
-      target = targetSt
+    { signal = (DCertDeleg (DeRegKey hk))
+    , target = targetSt
     } =
     conjoin
       [ counterexample
           "a deregistered stake key should no longer be in the rewards mapping"
-          ((UM.notMember hk (rewards targetSt)) :: Bool),
-        counterexample
+          ((UM.notMember hk (rewards targetSt)) :: Bool)
+      , counterexample
           "a deregistered stake key should no longer be in the delegations mapping"
           ((UM.notMember hk (delegations targetSt)) :: Bool)
       ]
@@ -94,18 +94,18 @@ keyDeRegistration _ = property ()
 keyDelegation :: SourceSignalTarget (ShelleyDELEG era) -> Property
 keyDelegation
   SourceSignalTarget
-    { signal = (DCertDeleg (Delegate (Delegation from to))),
-      target = targetSt
+    { signal = (DCertDeleg (Delegate (Delegation from to)))
+    , target = targetSt
     } =
     let fromImage = eval (rng (Set.singleton from `UM.domRestrictedView` delegations targetSt))
      in conjoin
           [ counterexample
               "a delegated key should have a reward account"
-              ((UM.member from (rewards targetSt)) :: Bool),
-            counterexample
+              ((UM.member from (rewards targetSt)) :: Bool)
+          , counterexample
               "a registered stake credential should be delegated"
-              ((eval (to ∈ fromImage)) :: Bool),
-            counterexample
+              ((eval (to ∈ fromImage)) :: Bool)
+          , counterexample
               "a registered stake credential should be uniquely delegated"
               (Set.size fromImage == 1)
           ]
@@ -122,11 +122,11 @@ rewardsSumInvariant
      in conjoin
           [ counterexample
               "sum of rewards should not change"
-              (rewardsSum sourceRewards == rewardsSum targetRewards),
-            counterexample
+              (rewardsSum sourceRewards == rewardsSum targetRewards)
+          , counterexample
               "dropped elements have a zero reward balance"
-              (null (Map.filter (/= UM.CompactCoin 0) $ sourceRewards `Map.difference` targetRewards)),
-            counterexample
+              (null (Map.filter (/= UM.CompactCoin 0) $ sourceRewards `Map.difference` targetRewards))
+          , counterexample
               "added elements have a zero reward balance"
               (null (Map.filter (/= UM.CompactCoin 0) $ targetRewards `Map.difference` sourceRewards))
           ]
@@ -144,8 +144,8 @@ checkInstantaneousRewards
         conjoin
           [ counterexample
               "a ReservesMIR certificate should add all entries to the `irwd` mapping"
-              (Map.keysSet irwd `Set.isSubsetOf` Map.keysSet (iRReserves $ dsIRewards target)),
-            counterexample
+              (Map.keysSet irwd `Set.isSubsetOf` Map.keysSet (iRReserves $ dsIRewards target))
+          , counterexample
               "a ReservesMIR certificate should add the total value to the `irwd` map, overwriting any existing entries"
               ( if (HardForks.allowMIRTransfer . ppDE $ denv)
                   then -- In the Alonzo era, repeated fields are added
@@ -166,8 +166,8 @@ checkInstantaneousRewards
         conjoin
           [ counterexample
               "a TreasuryMIR certificate should add all entries to the `irwd` mapping"
-              (Map.keysSet irwd `Set.isSubsetOf` Map.keysSet (iRTreasury $ dsIRewards target)),
-            counterexample
+              (Map.keysSet irwd `Set.isSubsetOf` Map.keysSet (iRTreasury $ dsIRewards target))
+          , counterexample
               "a TreasuryMIR certificate should add* the total value to the `irwd` map"
               ( if (HardForks.allowMIRTransfer . ppDE $ denv)
                   then -- In the Alonzo era, repeated fields are added

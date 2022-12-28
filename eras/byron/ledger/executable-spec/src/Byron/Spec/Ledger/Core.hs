@@ -112,8 +112,8 @@ mkVkGenesisSet ngk = Set.fromAscList $ mkVKeyGenesis <$> [0 .. (fromIntegral ngk
 
 -- | Key Pair.
 data KeyPair = KeyPair
-  { sKey :: SKey,
-    vKey :: VKey
+  { sKey :: SKey
+  , vKey :: VKey
   }
   deriving (Eq, Ord, Show, Generic, NoThunks)
 

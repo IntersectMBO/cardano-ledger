@@ -1,18 +1,18 @@
-module Test.Cardano.Chain.Slotting.Example
-  ( exampleEpochNumber,
-    exampleEpochAndSlotCount,
-    exampleSlotNumber,
-  )
+module Test.Cardano.Chain.Slotting.Example (
+  exampleEpochNumber,
+  exampleEpochAndSlotCount,
+  exampleSlotNumber,
+)
 where
 
-import Cardano.Chain.Slotting
-  ( EpochAndSlotCount (..),
-    EpochNumber (..),
-    EpochSlots (..),
-    SlotCount (..),
-    SlotNumber,
-    toSlotNumber,
-  )
+import Cardano.Chain.Slotting (
+  EpochAndSlotCount (..),
+  EpochNumber (..),
+  EpochSlots (..),
+  SlotCount (..),
+  SlotNumber,
+  toSlotNumber,
+ )
 
 exampleEpochNumber :: EpochNumber
 exampleEpochNumber = EpochNumber 14

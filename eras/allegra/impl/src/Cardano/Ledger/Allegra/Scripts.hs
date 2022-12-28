@@ -17,58 +17,58 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Allegra.Scripts
-  ( Timelock
-      ( RequireSignature,
-        RequireAllOf,
-        RequireAnyOf,
-        RequireMOf,
-        RequireTimeExpire,
-        RequireTimeStart
-      ),
-    pattern TimelockConstr,
-    inInterval,
-    showTimelock,
-    evalTimelock,
-    eqTimelockRaw,
-    ValidityInterval (..),
-    encodeVI,
-    decodeVI,
-    -- translate,
-    translateTimelock,
-  )
+module Cardano.Ledger.Allegra.Scripts (
+  Timelock (
+    RequireSignature,
+    RequireAllOf,
+    RequireAnyOf,
+    RequireMOf,
+    RequireTimeExpire,
+    RequireTimeStart
+  ),
+  pattern TimelockConstr,
+  inInterval,
+  showTimelock,
+  evalTimelock,
+  eqTimelockRaw,
+  ValidityInterval (..),
+  encodeVI,
+  decodeVI,
+  -- translate,
+  translateTimelock,
+)
 where
 
 import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
-import Cardano.Ledger.Binary
-  ( Annotator (..),
-    FromCBOR (fromCBOR),
-    ToCBOR (toCBOR),
-  )
-import Cardano.Ledger.Binary.Coders
-  ( Decode (..),
-    Density (..),
-    Encode (..),
-    Wrapped (..),
-    decode,
-    encode,
-    (!>),
-    (<!),
-    (<*!),
-  )
+import Cardano.Ledger.Binary (
+  Annotator (..),
+  FromCBOR (fromCBOR),
+  ToCBOR (toCBOR),
+ )
+import Cardano.Ledger.Binary.Coders (
+  Decode (..),
+  Density (..),
+  Encode (..),
+  Wrapped (..),
+  decode,
+  encode,
+  (!>),
+  (<!),
+  (<*!),
+ )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto, HASH)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (Witness))
-import Cardano.Ledger.MemoBytes
-  ( Mem,
-    MemoBytes (Memo),
-    Memoized (..),
-    getMemoRawType,
-    mkMemoBytes,
-    mkMemoized,
-  )
+import Cardano.Ledger.MemoBytes (
+  Mem,
+  MemoBytes (Memo),
+  Memoized (..),
+  getMemoRawType,
+  mkMemoBytes,
+  mkMemoized,
+ )
 import Cardano.Ledger.SafeHash (SafeToHash)
 import Cardano.Ledger.Shelley.Scripts (nativeMultiSigTag)
 import Cardano.Slotting.Slot (SlotNo (..))
@@ -83,8 +83,8 @@ import NoThunks.Class (NoThunks (..))
 -- | ValidityInterval is a half open interval. Closed on the bottom, open on the top.
 --   A SNothing on the bottom is negative infinity, and a SNothing on the top is positive infinity
 data ValidityInterval = ValidityInterval
-  { invalidBefore :: !(StrictMaybe SlotNo),
-    invalidHereafter :: !(StrictMaybe SlotNo)
+  { invalidBefore :: !(StrictMaybe SlotNo)
+  , invalidHereafter :: !(StrictMaybe SlotNo)
   }
   deriving (Ord, Eq, Generic, Show, NoThunks, NFData)
 
@@ -121,9 +121,9 @@ deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (TimelockRaw era)
 -- as the cryptos for both eras are the same.
 translateTimelock ::
   forall era1 era2.
-  ( Era era1,
-    Era era2,
-    EraCrypto era1 ~ EraCrypto era2
+  ( Era era1
+  , Era era2
+  , EraCrypto era1 ~ EraCrypto era2
   ) =>
   Timelock era1 ->
   Timelock era2
@@ -227,12 +227,12 @@ pattern RequireTimeStart mslot <- (getMemoRawType -> TimeStart mslot)
     RequireTimeStart mslot = mkMemoized (TimeStart mslot)
 
 {-# COMPLETE
-  RequireSignature,
-  RequireAllOf,
-  RequireAnyOf,
-  RequireMOf,
-  RequireTimeExpire,
-  RequireTimeStart
+  RequireSignature
+  , RequireAllOf
+  , RequireAnyOf
+  , RequireMOf
+  , RequireTimeExpire
+  , RequireTimeStart
   #-}
 
 -- =================================================================

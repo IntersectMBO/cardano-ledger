@@ -11,13 +11,13 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Ledger.Chain
-  ( -- | Chain Checks
-    ChainChecksPParams (..),
-    ChainPredicateFailure (..),
-    pparamsToChainChecksPParams,
-    chainChecks,
-  )
+module Cardano.Ledger.Chain (
+  -- | Chain Checks
+  ChainChecksPParams (..),
+  ChainPredicateFailure (..),
+  pparamsToChainChecksPParams,
+  chainChecks,
+)
 where
 
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
@@ -30,24 +30,24 @@ import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 
 data ChainChecksPParams = ChainChecksPParams
-  { ccMaxBHSize :: Natural,
-    ccMaxBBSize :: Natural,
-    ccProtocolVersion :: ProtVer
+  { ccMaxBHSize :: Natural
+  , ccMaxBBSize :: Natural
+  , ccProtocolVersion :: ProtVer
   }
   deriving (Show, Eq, Generic, NoThunks)
 
 pparamsToChainChecksPParams ::
-  ( HasField "_maxBHSize" pp Natural,
-    HasField "_maxBBSize" pp Natural,
-    HasField "_protocolVersion" pp ProtVer
+  ( HasField "_maxBHSize" pp Natural
+  , HasField "_maxBBSize" pp Natural
+  , HasField "_protocolVersion" pp ProtVer
   ) =>
   pp ->
   ChainChecksPParams
 pparamsToChainChecksPParams pp =
   ChainChecksPParams
-    { ccMaxBHSize = getField @"_maxBHSize" pp,
-      ccMaxBBSize = getField @"_maxBBSize" pp,
-      ccProtocolVersion = getField @"_protocolVersion" pp
+    { ccMaxBHSize = getField @"_maxBHSize" pp
+    , ccMaxBBSize = getField @"_maxBBSize" pp
+    , ccProtocolVersion = getField @"_protocolVersion" pp
     }
 
 data ChainPredicateFailure

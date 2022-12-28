@@ -21,41 +21,41 @@
 --   original bytes is to use the type 'MemoBytes', although there are
 --   a few types that store their original bytes in other ways. In order to encourage the use of 'MemoBytes'
 --   newtypes defined as a 'MemoBytes' get the to derive 'SafeToHash' instances for free.
-module Cardano.Ledger.SafeHash
-  ( -- * SafeHash and SafeToHash
+module Cardano.Ledger.SafeHash (
+  -- * SafeHash and SafeToHash
 
-    --
-    -- $SAFE
-    SafeHash,
-    SafeToHash (..),
+  --
+  -- $SAFE
+  SafeHash,
+  SafeToHash (..),
 
-    -- * Creating SafeHash
+  -- * Creating SafeHash
 
-    --
-    -- $MAKE
-    HashAnnotated,
-    hashAnnotated,
-    HashWithCrypto (..),
-    unsafeMakeSafeHash,
+  --
+  -- $MAKE
+  HashAnnotated,
+  hashAnnotated,
+  HashWithCrypto (..),
+  unsafeMakeSafeHash,
 
-    -- * Other operations
+  -- * Other operations
 
-    --
-    -- $OTHER
-    castSafeHash,
-    extractHash,
-    indexProxy,
+  --
+  -- $OTHER
+  castSafeHash,
+  extractHash,
+  indexProxy,
 
-    -- * Safe hashing aggregates
+  -- * Safe hashing aggregates
 
-    --
-    -- $AGG
-    Safe (..),
-    hashSafeList,
+  --
+  -- $AGG
+  Safe (..),
+  hashSafeList,
 
-    -- * Deprecated
-    HasAlgorithm,
-  )
+  -- * Deprecated
+  HasAlgorithm,
+)
 where
 
 import qualified Cardano.Crypto.Hash as Hash

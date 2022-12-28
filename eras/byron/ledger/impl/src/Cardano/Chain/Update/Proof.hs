@@ -1,8 +1,8 @@
-module Cardano.Chain.Update.Proof
-  ( Proof,
-    mkProof,
-    recoverProof,
-  )
+module Cardano.Chain.Update.Proof (
+  Proof,
+  mkProof,
+  recoverProof,
+)
 where
 
 import Cardano.Chain.Update.Payload (APayload (..), Payload)

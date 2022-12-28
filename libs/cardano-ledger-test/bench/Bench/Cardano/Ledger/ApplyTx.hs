@@ -19,22 +19,22 @@ import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
 import Cardano.Ledger.Alonzo.Rules ()
-import Cardano.Ledger.Binary
-  ( FromCBOR (fromCBOR),
-    decodeFullAnnotator,
-    fromNotSharedCBOR,
-    serialize,
-  )
+import Cardano.Ledger.Binary (
+  FromCBOR (fromCBOR),
+  decodeFullAnnotator,
+  fromNotSharedCBOR,
+  serialize,
+ )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.API
-  ( ApplyTx,
-    Globals,
-    LedgerEnv,
-    LedgerState,
-    applyTxsTransition,
-  )
+import Cardano.Ledger.Shelley.API (
+  ApplyTx,
+  Globals,
+  LedgerEnv,
+  LedgerState,
+  applyTxsTransition,
+ )
 import Cardano.Ledger.Shelley.LedgerState (DPState, UTxOState)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Control.DeepSeq (NFData (..))
@@ -75,14 +75,14 @@ benchmarkSeed :: Int
 benchmarkSeed = 24601
 
 benchWithGenState ::
-  ( NFData a,
-    EraGen era,
-    HasTrace (EraRule "LEDGER" era) (GenEnv era),
-    Default (State (EraRule "PPUP" era)),
-    BaseEnv (EraRule "LEDGER" era) ~ Globals,
-    Signal (EraRule "LEDGER" era) ~ Tx era,
-    Environment (EraRule "LEDGER" era) ~ LedgerEnv era,
-    State (EraRule "LEDGER" era) ~ LedgerState era
+  ( NFData a
+  , EraGen era
+  , HasTrace (EraRule "LEDGER" era) (GenEnv era)
+  , Default (State (EraRule "PPUP" era))
+  , BaseEnv (EraRule "LEDGER" era) ~ Globals
+  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , State (EraRule "LEDGER" era) ~ LedgerState era
   ) =>
   Proxy era ->
   (ApplyTxEnv era -> IO a) ->
@@ -93,12 +93,12 @@ benchWithGenState px prepEnv mkBench =
 
 benchApplyTx ::
   forall era.
-  ( EraGen era,
-    ApplyTx era,
-    HasTrace (EraRule "LEDGER" era) (GenEnv era),
-    BaseEnv (EraRule "LEDGER" era) ~ Globals,
-    Default (State (EraRule "PPUP" era)),
-    NFData (State (EraRule "PPUP" era))
+  ( EraGen era
+  , ApplyTx era
+  , HasTrace (EraRule "LEDGER" era) (GenEnv era)
+  , BaseEnv (EraRule "LEDGER" era) ~ Globals
+  , Default (State (EraRule "PPUP" era))
+  , NFData (State (EraRule "PPUP" era))
   ) =>
   Proxy era ->
   Benchmark
@@ -119,14 +119,14 @@ benchApplyTx px =
 -- era.
 deserialiseTxEra ::
   forall era.
-  ( EraGen era,
-    Default (State (EraRule "PPUP" era)),
-    BaseEnv (EraRule "LEDGER" era) ~ Globals,
-    HasTrace (EraRule "LEDGER" era) (GenEnv era),
-    State (EraRule "LEDGER" era) ~ LedgerState era,
-    Environment (EraRule "LEDGER" era) ~ LedgerEnv era,
-    Signal (EraRule "LEDGER" era) ~ Tx era,
-    NFData (Tx era)
+  ( EraGen era
+  , Default (State (EraRule "PPUP" era))
+  , BaseEnv (EraRule "LEDGER" era) ~ Globals
+  , HasTrace (EraRule "LEDGER" era) (GenEnv era)
+  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , NFData (Tx era)
   ) =>
   Proxy era ->
   Benchmark
@@ -146,17 +146,17 @@ applyTxBenchmarks =
     "applyTxBenchmarks"
     [ bgroup
         "ApplyTxInEra"
-        [ benchApplyTx (Proxy @ShelleyBench),
-          benchApplyTx (Proxy @AllegraBench),
-          benchApplyTx (Proxy @MaryBench),
-          benchApplyTx (Proxy @AlonzoBench)
-        ],
-      bgroup
+        [ benchApplyTx (Proxy @ShelleyBench)
+        , benchApplyTx (Proxy @AllegraBench)
+        , benchApplyTx (Proxy @MaryBench)
+        , benchApplyTx (Proxy @AlonzoBench)
+        ]
+    , bgroup
         "Deserialise Shelley Tx"
-        [ deserialiseTxEra (Proxy @ShelleyBench),
-          deserialiseTxEra (Proxy @AllegraBench),
-          deserialiseTxEra (Proxy @MaryBench),
-          deserialiseTxEra (Proxy @AlonzoBench)
+        [ deserialiseTxEra (Proxy @ShelleyBench)
+        , deserialiseTxEra (Proxy @AllegraBench)
+        , deserialiseTxEra (Proxy @MaryBench)
+        , deserialiseTxEra (Proxy @AlonzoBench)
         ]
     ]
 

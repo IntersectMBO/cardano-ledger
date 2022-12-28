@@ -7,24 +7,24 @@ module Test.Cardano.Ledger.Alonzo.Serialisation.Canonical (tests) where
 import Cardano.Ledger.Alonzo (Alonzo, AlonzoEra)
 import Cardano.Ledger.Alonzo.Language (Language)
 import Cardano.Ledger.Alonzo.PParams hiding (PParams)
-import Cardano.Ledger.Binary
-  ( Annotator (..),
-    Decoder,
-    TokenType (..),
-    decodeBool,
-    decodeBytesCanonical,
-    decodeDoubleCanonical,
-    decodeFullAnnotator,
-    decodeIntegerCanonical,
-    decodeListLenCanonical,
-    decodeMapLenCanonical,
-    decodeNull,
-    decodeSimpleCanonical,
-    decodeStringCanonical,
-    peekTokenType,
-    serializeEncoding,
-    withSlice,
-  )
+import Cardano.Ledger.Binary (
+  Annotator (..),
+  Decoder,
+  TokenType (..),
+  decodeBool,
+  decodeBytesCanonical,
+  decodeDoubleCanonical,
+  decodeFullAnnotator,
+  decodeIntegerCanonical,
+  decodeListLenCanonical,
+  decodeMapLenCanonical,
+  decodeNull,
+  decodeSimpleCanonical,
+  decodeStringCanonical,
+  peekTokenType,
+  serializeEncoding,
+  withSlice,
+ )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
 import Control.Monad (replicateM, unless, void)

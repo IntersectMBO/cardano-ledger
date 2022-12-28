@@ -2,13 +2,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Chain.Elaboration.Update
-  ( elaboratePParams,
-    elaborateProtocolVersion,
-    elaborateSoftwareVersion,
-    elaborateUpdateProposal,
-    elaborateVote,
-  )
+module Test.Cardano.Chain.Elaboration.Update (
+  elaboratePParams,
+  elaborateProtocolVersion,
+  elaborateSoftwareVersion,
+  elaborateUpdateProposal,
+  elaborateVote,
+)
 where
 
 import Byron.Spec.Ledger.Core (unSlotCount)
@@ -32,35 +32,35 @@ import Test.Cardano.Chain.Genesis.Dummy (dummyProtocolParameters)
 elaboratePParams :: Abstract.PParams -> Concrete.ProtocolParameters
 elaboratePParams pps =
   Concrete.ProtocolParameters
-    { Concrete.ppScriptVersion = fromIntegral $ Abstract._scriptVersion pps,
-      Concrete.ppSlotDuration = Concrete.ppSlotDuration dummyProtocolParameters,
-      Concrete.ppMaxBlockSize = 4096 * Abstract._maxBkSz pps,
-      Concrete.ppMaxHeaderSize = 95 * Abstract._maxHdrSz pps,
-      Concrete.ppMaxTxSize = 4096 * Abstract._maxTxSz pps,
-      Concrete.ppMaxProposalSize = 4096 * Abstract._maxPropSz pps,
-      Concrete.ppMpcThd = Concrete.rationalToLovelacePortion 0,
-      Concrete.ppHeavyDelThd = Concrete.rationalToLovelacePortion 0,
-      Concrete.ppUpdateVoteThd = Concrete.rationalToLovelacePortion 0,
-      Concrete.ppUpdateProposalThd = Concrete.rationalToLovelacePortion 0,
-      Concrete.ppUpdateProposalTTL =
+    { Concrete.ppScriptVersion = fromIntegral $ Abstract._scriptVersion pps
+    , Concrete.ppSlotDuration = Concrete.ppSlotDuration dummyProtocolParameters
+    , Concrete.ppMaxBlockSize = 4096 * Abstract._maxBkSz pps
+    , Concrete.ppMaxHeaderSize = 95 * Abstract._maxHdrSz pps
+    , Concrete.ppMaxTxSize = 4096 * Abstract._maxTxSz pps
+    , Concrete.ppMaxProposalSize = 4096 * Abstract._maxPropSz pps
+    , Concrete.ppMpcThd = Concrete.rationalToLovelacePortion 0
+    , Concrete.ppHeavyDelThd = Concrete.rationalToLovelacePortion 0
+    , Concrete.ppUpdateVoteThd = Concrete.rationalToLovelacePortion 0
+    , Concrete.ppUpdateProposalThd = Concrete.rationalToLovelacePortion 0
+    , Concrete.ppUpdateProposalTTL =
         Concrete.SlotNumber $
           unSlotCount $
-            Abstract._upTtl pps,
-      Concrete.ppSoftforkRule =
+            Abstract._upTtl pps
+    , Concrete.ppSoftforkRule =
         Concrete.SoftforkRule
-          { Concrete.srInitThd = Concrete.rationalToLovelacePortion 0,
-            -- See 'upAdptThd' in 'module Cardano.Chain.Update.ProtocolParameters'
+          { Concrete.srInitThd = Concrete.rationalToLovelacePortion 0
+          , -- See 'upAdptThd' in 'module Cardano.Chain.Update.ProtocolParameters'
             Concrete.srMinThd =
               Concrete.rationalToLovelacePortion $
                 realToFrac $
-                  Abstract._upAdptThd pps,
-            Concrete.srThdDecrement = Concrete.rationalToLovelacePortion 0
-          },
-      Concrete.ppTxFeePolicy =
+                  Abstract._upAdptThd pps
+          , Concrete.srThdDecrement = Concrete.rationalToLovelacePortion 0
+          }
+    , Concrete.ppTxFeePolicy =
         elaborateFeePolicy
           (Abstract._factorA pps)
-          (Abstract._factorB pps),
-      Concrete.ppUnlockStakeEpoch = Concrete.EpochNumber maxBound
+          (Abstract._factorB pps)
+    , Concrete.ppUnlockStakeEpoch = Concrete.EpochNumber maxBound
     }
 
 elaborateFeePolicy ::
@@ -139,20 +139,20 @@ elaborateProposalBody = elaborateUpSD . Abstract.getUpSigData
 
 elaborateUpSD :: Abstract.UpSD -> Concrete.ProposalBody
 elaborateUpSD
-  ( protocolVersion,
-    protocolParameters,
-    softwareVersion,
-    systemTags,
-    _metadata
+  ( protocolVersion
+    , protocolParameters
+    , softwareVersion
+    , systemTags
+    , _metadata
     ) =
     Proposal.ProposalBody
       { Proposal.protocolVersion =
-          elaborateProtocolVersion protocolVersion,
-        Proposal.protocolParametersUpdate =
-          justifyProtocolParameters $ elaboratePParams protocolParameters,
-        Proposal.softwareVersion =
-          elaborateSoftwareVersion softwareVersion,
-        Proposal.metadata =
+          elaborateProtocolVersion protocolVersion
+      , Proposal.protocolParametersUpdate =
+          justifyProtocolParameters $ elaboratePParams protocolParameters
+      , Proposal.softwareVersion =
+          elaborateSoftwareVersion softwareVersion
+      , Proposal.metadata =
           Map.fromList $ zip concreteSystemTags concreteSystemHashes
       }
     where
@@ -170,20 +170,20 @@ justifyProtocolParameters ::
   Concrete.ProtocolParametersUpdate
 justifyProtocolParameters parameters =
   Concrete.ProtocolParametersUpdate
-    { Concrete.ppuScriptVersion = Just $ Concrete.ppScriptVersion parameters,
-      Concrete.ppuSlotDuration = Just $ Concrete.ppSlotDuration parameters,
-      Concrete.ppuMaxBlockSize = Just $ Concrete.ppMaxBlockSize parameters,
-      Concrete.ppuMaxHeaderSize = Just $ Concrete.ppMaxHeaderSize parameters,
-      Concrete.ppuMaxTxSize = Just $ Concrete.ppMaxTxSize parameters,
-      Concrete.ppuMaxProposalSize = Just $ Concrete.ppMaxProposalSize parameters,
-      Concrete.ppuMpcThd = Just $ Concrete.ppMpcThd parameters,
-      Concrete.ppuHeavyDelThd = Just $ Concrete.ppHeavyDelThd parameters,
-      Concrete.ppuUpdateVoteThd = Just $ Concrete.ppUpdateVoteThd parameters,
-      Concrete.ppuUpdateProposalThd = Just $ Concrete.ppUpdateProposalThd parameters,
-      Concrete.ppuUpdateProposalTTL = Just $ Concrete.ppUpdateProposalTTL parameters,
-      Concrete.ppuSoftforkRule = Just $ Concrete.ppSoftforkRule parameters,
-      Concrete.ppuTxFeePolicy = Just $ Concrete.ppTxFeePolicy parameters,
-      Concrete.ppuUnlockStakeEpoch = Just $ Concrete.ppUnlockStakeEpoch parameters
+    { Concrete.ppuScriptVersion = Just $ Concrete.ppScriptVersion parameters
+    , Concrete.ppuSlotDuration = Just $ Concrete.ppSlotDuration parameters
+    , Concrete.ppuMaxBlockSize = Just $ Concrete.ppMaxBlockSize parameters
+    , Concrete.ppuMaxHeaderSize = Just $ Concrete.ppMaxHeaderSize parameters
+    , Concrete.ppuMaxTxSize = Just $ Concrete.ppMaxTxSize parameters
+    , Concrete.ppuMaxProposalSize = Just $ Concrete.ppMaxProposalSize parameters
+    , Concrete.ppuMpcThd = Just $ Concrete.ppMpcThd parameters
+    , Concrete.ppuHeavyDelThd = Just $ Concrete.ppHeavyDelThd parameters
+    , Concrete.ppuUpdateVoteThd = Just $ Concrete.ppUpdateVoteThd parameters
+    , Concrete.ppuUpdateProposalThd = Just $ Concrete.ppUpdateProposalThd parameters
+    , Concrete.ppuUpdateProposalTTL = Just $ Concrete.ppUpdateProposalTTL parameters
+    , Concrete.ppuSoftforkRule = Just $ Concrete.ppSoftforkRule parameters
+    , Concrete.ppuTxFeePolicy = Just $ Concrete.ppTxFeePolicy parameters
+    , Concrete.ppuUnlockStakeEpoch = Just $ Concrete.ppUnlockStakeEpoch parameters
     }
 
 elaborateSystemTag :: Abstract.STag -> Concrete.SystemTag

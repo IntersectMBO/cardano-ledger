@@ -9,84 +9,84 @@
 -- This module implements the operation rules for treating UTxO transactions ('Tx')
 -- as state transformations on a ledger state ('LedgerState'),
 -- as specified in /A Simplified Formal Specification of a UTxO Ledger/.
-module Cardano.Ledger.Shelley.LedgerState
-  ( AccountState (..),
-    DPState (..),
-    DState (..),
-    emptyDState,
-    rewards,
-    delegations,
-    ptrsMap,
-    EpochState (..),
-    UpecState (..),
-    PulsingRewUpdate (..),
-    FutureGenDeleg (..),
-    InstantaneousRewards (..),
-    KeyPairs, -- deprecated
-    LedgerState (..),
-    PPUPState (..),
-    PState (..),
-    RewardAccounts,
-    RewardUpdate (..),
-    RewardSnapShot (..),
-    UTxOState (..),
-    smartUTxOState,
-    IncrementalStake (..),
-    depositPoolChange,
-    emptyRewardUpdate,
-    pvCanFollow,
-    reapRewards,
-    availableAfterMIR,
+module Cardano.Ledger.Shelley.LedgerState (
+  AccountState (..),
+  DPState (..),
+  DState (..),
+  emptyDState,
+  rewards,
+  delegations,
+  ptrsMap,
+  EpochState (..),
+  UpecState (..),
+  PulsingRewUpdate (..),
+  FutureGenDeleg (..),
+  InstantaneousRewards (..),
+  KeyPairs, -- deprecated
+  LedgerState (..),
+  PPUPState (..),
+  PState (..),
+  RewardAccounts,
+  RewardUpdate (..),
+  RewardSnapShot (..),
+  UTxOState (..),
+  smartUTxOState,
+  IncrementalStake (..),
+  depositPoolChange,
+  emptyRewardUpdate,
+  pvCanFollow,
+  reapRewards,
+  availableAfterMIR,
 
-    -- * Genesis State
-    genesisState,
+  -- * Genesis State
+  genesisState,
 
-    -- * Validation
-    WitHashes,
-    unWitHashes,
-    nullWitHashes,
-    diffWitHashes,
-    minfee,
-    produced,
-    witsFromTxWitnesses,
+  -- * Validation
+  WitHashes,
+  unWitHashes,
+  nullWitHashes,
+  diffWitHashes,
+  minfee,
+  produced,
+  witsFromTxWitnesses,
 
-    -- * DelegationState
-    keyTxRefunds,
-    payKeyDeposit,
-    payPoolDeposit,
-    refundKeyDeposit,
-    refundPoolDeposit,
-    totalTxDeposits,
-    obligationDPState,
-    keyCertsRefunds,
-    totalCertsDeposits,
+  -- * DelegationState
+  keyTxRefunds,
+  payKeyDeposit,
+  payPoolDeposit,
+  refundKeyDeposit,
+  refundPoolDeposit,
+  totalTxDeposits,
+  obligationDPState,
+  keyCertsRefunds,
+  totalCertsDeposits,
 
-    -- * Epoch boundary
-    incrementalStakeDistr,
-    updateStakeDistribution,
-    applyRUpd,
-    applyRUpdFiltered,
-    filterAllRewards,
-    FilteredRewards (..),
-    createRUpd,
-    completeRupd,
-    startStep,
-    pulseStep,
-    completeStep,
-    NewEpochState (NewEpochState, nesEL, nesEs, nesRu, nesPd, nesBprev, nesBcur),
-    StashedAVVMAddresses,
-    stashedAVVMAddresses,
-    getGKeys,
-    updateNES,
-    circulation,
+  -- * Epoch boundary
+  incrementalStakeDistr,
+  updateStakeDistribution,
+  applyRUpd,
+  applyRUpdFiltered,
+  filterAllRewards,
+  FilteredRewards (..),
+  createRUpd,
+  completeRupd,
+  startStep,
+  pulseStep,
+  completeStep,
+  NewEpochState (NewEpochState, nesEL, nesEs, nesRu, nesPd, nesBprev, nesBcur),
+  StashedAVVMAddresses,
+  stashedAVVMAddresses,
+  getGKeys,
+  updateNES,
+  circulation,
 
-    -- * Decay
-    decayFactor,
+  -- * Decay
+  decayFactor,
 
-    -- * Remove Bootstrap Redeem Addresses
-    returnRedeemAddrsToReserves,
-    updateNonMyopic,
-  )
+  -- * Remove Bootstrap Redeem Addresses
+  returnRedeemAddrsToReserves,
+  updateNonMyopic,
+)
 where
 
 import Cardano.Ledger.DPState
@@ -97,10 +97,10 @@ import Cardano.Ledger.Shelley.LedgerState.NewEpochState
 import Cardano.Ledger.Shelley.LedgerState.PulsingReward
 import Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits
 import Cardano.Ledger.Shelley.LedgerState.Types
-import Cardano.Ledger.Shelley.PParams
-  ( PPUPState (..),
-    pvCanFollow,
-  )
+import Cardano.Ledger.Shelley.PParams (
+  PPUPState (..),
+  pvCanFollow,
+ )
 import Cardano.Ledger.Shelley.RewardUpdate
 import Cardano.Ledger.Shelley.Tx (minfee, witsFromTxWitnesses)
 import Cardano.Ledger.Shelley.UTxO (produced)

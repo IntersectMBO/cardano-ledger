@@ -14,53 +14,53 @@
 (ProvM meta m a) one gets the underlying computation of type (m a). Switches
 control whether the metadata is computed or not.
 -}
-module Control.Provenance
-  ( ProvM (..),
+module Control.Provenance (
+  ProvM (..),
 
-    -- * Basic Provenance Monad Transformer
-    PObject,
+  -- * Basic Provenance Monad Transformer
+  PObject,
 
-    -- * Dynamically typed Provenance objects
-    Provenance,
+  -- * Dynamically typed Provenance objects
+  Provenance,
 
-    -- * Type constraint on data stored in PObject
-    Prov,
+  -- * Type constraint on data stored in PObject
+  Prov,
 
-    -- * ProvM instantiated (Map Text PObject)
-    BlackBox,
+  -- * ProvM instantiated (Map Text PObject)
+  BlackBox,
 
-    -- * Abstraction barrier to isolate the provenence type from the result type.
+  -- * Abstraction barrier to isolate the provenence type from the result type.
 
-    -- * Operations in ProvM
-    lift,
-    putM,
-    getM,
-    modifyM,
-    modifyWithBlackBox,
-    runProv,
-    runWithProv,
-    runOtherProv,
-    liftProv,
-    dump,
+  -- * Operations in ProvM
+  lift,
+  putM,
+  getM,
+  modifyM,
+  modifyWithBlackBox,
+  runProv,
+  runWithProv,
+  runOtherProv,
+  liftProv,
+  dump,
 
-    -- * Operations in Prov instantiation
-    store,
-    push,
-    pull,
-    update,
-    updateWithBlackBox,
-    pushOtherProv,
-    runWithProvM,
-    runProvM,
+  -- * Operations in Prov instantiation
+  store,
+  push,
+  pull,
+  update,
+  updateWithBlackBox,
+  pushOtherProv,
+  runWithProvM,
+  runProvM,
 
-    -- * Operation on PObject
-    find,
-    observe,
+  -- * Operation on PObject
+  find,
+  observe,
 
-    -- * For testing invariants
-    preservesNothing,
-    preservesJust,
-  )
+  -- * For testing invariants
+  preservesNothing,
+  preservesJust,
+)
 where
 
 import Control.Monad.State.Strict (MonadState (..), MonadTrans (..), StateT (..))

@@ -10,42 +10,42 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Chain.Common.TxFeePolicy
-  ( TxFeePolicy (..),
-  )
+module Cardano.Chain.Common.TxFeePolicy (
+  TxFeePolicy (..),
+)
 where
 
-import Cardano.Chain.Common.CBOR
-  ( decodeKnownCborDataItem,
-    encodeKnownCborDataItem,
-  )
-import Cardano.Chain.Common.Lovelace
-  ( Lovelace,
-    LovelaceError,
-    lovelaceToInteger,
-    mkLovelace,
-  )
+import Cardano.Chain.Common.CBOR (
+  decodeKnownCborDataItem,
+  encodeKnownCborDataItem,
+ )
+import Cardano.Chain.Common.Lovelace (
+  Lovelace,
+  LovelaceError,
+  lovelaceToInteger,
+  mkLovelace,
+ )
 import Cardano.Chain.Common.TxSizeLinear (TxSizeLinear (..))
-import Cardano.Ledger.Binary
-  ( DecoderError (DecoderErrorUnknownTag),
-    FromCBOR (..),
-    ToCBOR (..),
-    cborError,
-    encodeListLen,
-    enforceSize,
-  )
+import Cardano.Ledger.Binary (
+  DecoderError (DecoderErrorUnknownTag),
+  FromCBOR (..),
+  ToCBOR (..),
+  cborError,
+  encodeListLen,
+  enforceSize,
+ )
 import Cardano.Prelude hiding (cborError)
 import qualified Data.Aeson as Aeson
 import Formatting (bprint, build, formatToString)
 import qualified Formatting.Buildable as B
 import NoThunks.Class (NoThunks (..))
-import Text.JSON.Canonical
-  ( FromJSON (..),
-    ToJSON (..),
-    expected,
-    fromJSField,
-    mkObject,
-  )
+import Text.JSON.Canonical (
+  FromJSON (..),
+  ToJSON (..),
+  expected,
+  fromJSField,
+  mkObject,
+ )
 
 -- | Transaction fee policy represents a formula to compute the minimal allowed
 --   Fee for a transaction. Transactions with lesser fees won't be accepted. The
@@ -93,8 +93,8 @@ instance Monad m => ToJSON m TxFeePolicy where
   -- We multiply by 1e9 to keep compatibility with 'Nano' coefficients
   toJSON (TxFeePolicyTxSizeLinear (TxSizeLinear summand multiplier)) =
     mkObject
-      [ ("summand", toJSON $ 1e9 * lovelaceToInteger summand),
-        ("multiplier", toJSON (floor $ 1e9 * multiplier :: Integer))
+      [ ("summand", toJSON $ 1e9 * lovelaceToInteger summand)
+      , ("multiplier", toJSON (floor $ 1e9 * multiplier :: Integer))
       ]
 
 instance MonadError SchemaError m => FromJSON m TxFeePolicy where

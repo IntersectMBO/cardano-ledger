@@ -17,167 +17,167 @@ import qualified Cardano.Crypto.Hash as Monomorphic
 import Cardano.Crypto.KES (SignedKES)
 import Cardano.Crypto.VRF (CertifiedVRF)
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.BaseTypes
-  ( BlocksMade (..),
-    BoundedRational (..),
-    Network (..),
-    Nonce (..),
-    ProtVer (..),
-    StrictMaybe (..),
-    UnitInterval,
-    mkNonceFromNumber,
-    mkTxIxPartial,
-    textToDns,
-    textToUrl,
-  )
-import Cardano.Ledger.Binary
-  ( Annotator,
-    Decoder,
-    DecoderError,
-    FromCBOR (..),
-    FromCBORGroup (..),
-    ToCBOR (..),
-    ToCBORGroup (..),
-    Tokens (..),
-    byronProtVer,
-    decodeFullAnnotator,
-    decodeFullDecoder,
-    decodeMapTraverse,
-    fromNotSharedCBOR,
-    hashWithEncoder,
-    ipv4ToBytes,
-    serialize',
-    shelleyProtVer,
-    toCBOR,
-    toPlainEncoding,
-  )
-import Cardano.Ledger.Binary.Crypto
-  ( encodeSignedDSIGN,
-    encodeVerKeyDSIGN,
-  )
+import Cardano.Ledger.BaseTypes (
+  BlocksMade (..),
+  BoundedRational (..),
+  Network (..),
+  Nonce (..),
+  ProtVer (..),
+  StrictMaybe (..),
+  UnitInterval,
+  mkNonceFromNumber,
+  mkTxIxPartial,
+  textToDns,
+  textToUrl,
+ )
+import Cardano.Ledger.Binary (
+  Annotator,
+  Decoder,
+  DecoderError,
+  FromCBOR (..),
+  FromCBORGroup (..),
+  ToCBOR (..),
+  ToCBORGroup (..),
+  Tokens (..),
+  byronProtVer,
+  decodeFullAnnotator,
+  decodeFullDecoder,
+  decodeMapTraverse,
+  fromNotSharedCBOR,
+  hashWithEncoder,
+  ipv4ToBytes,
+  serialize',
+  shelleyProtVer,
+  toCBOR,
+  toPlainEncoding,
+ )
+import Cardano.Ledger.Binary.Crypto (
+  encodeSignedDSIGN,
+  encodeVerKeyDSIGN,
+ )
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
 import Cardano.Ledger.Core (EraTx, Tx, hashScript, hashTxAuxData)
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.EpochBoundary
-  ( SnapShot (..),
-    SnapShots (..),
-    Stake (..),
-    calculatePoolDistr,
-  )
+import Cardano.Ledger.EpochBoundary (
+  SnapShot (..),
+  SnapShots (..),
+  Stake (..),
+  calculatePoolDistr,
+ )
 import Cardano.Ledger.Era (EraCrypto (..))
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
-import Cardano.Ledger.Keys
-  ( Hash,
-    KeyHash (..),
-    KeyRole (..),
-    SignKeyKES,
-    SignKeyVRF,
-    SignedDSIGN,
-    VKey (..),
-    VerKeyKES,
-    VerKeyVRF,
-    asWitness,
-    encodeSignedKES,
-    hashKey,
-    hashVerKeyVRF,
-    signedDSIGN,
-    signedKES,
-  )
+import Cardano.Ledger.Keys (
+  Hash,
+  KeyHash (..),
+  KeyRole (..),
+  SignKeyKES,
+  SignKeyVRF,
+  SignedDSIGN,
+  VKey (..),
+  VerKeyKES,
+  VerKeyVRF,
+  asWitness,
+  encodeSignedKES,
+  hashKey,
+  hashVerKeyVRF,
+  signedDSIGN,
+  signedKES,
+ )
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.API
-  ( MultiSig,
-    ScriptHash,
-  )
+import Cardano.Ledger.Shelley.API (
+  MultiSig,
+  ScriptHash,
+ )
 import Cardano.Ledger.Shelley.BlockChain (ShelleyTxSeq (..), bbHash)
-import Cardano.Ledger.Shelley.Delegation.Certificates
-  ( pattern ConstitutionalDelegCert,
-    pattern DeRegKey,
-    pattern Delegate,
-    pattern MIRCert,
-    pattern RegKey,
-    pattern RegPool,
-    pattern RetirePool,
-  )
-import Cardano.Ledger.Shelley.LedgerState
-  ( AccountState (..),
-    EpochState (..),
-    NewEpochState (..),
-    PulsingRewUpdate (Complete),
-    RewardUpdate (..),
-  )
-import Cardano.Ledger.Shelley.PParams
-  ( ShelleyPParamsHKD (..),
-    ShelleyPParamsUpdate,
-    emptyPParams,
-    pattern ProposedPPUpdates,
-    pattern Update,
-  )
+import Cardano.Ledger.Shelley.Delegation.Certificates (
+  pattern ConstitutionalDelegCert,
+  pattern DeRegKey,
+  pattern Delegate,
+  pattern MIRCert,
+  pattern RegKey,
+  pattern RegPool,
+  pattern RetirePool,
+ )
+import Cardano.Ledger.Shelley.LedgerState (
+  AccountState (..),
+  EpochState (..),
+  NewEpochState (..),
+  PulsingRewUpdate (Complete),
+  RewardUpdate (..),
+ )
+import Cardano.Ledger.Shelley.PParams (
+  ShelleyPParamsHKD (..),
+  ShelleyPParamsUpdate,
+  emptyPParams,
+  pattern ProposedPPUpdates,
+  pattern Update,
+ )
 import Cardano.Ledger.Shelley.Rewards ()
 import Cardano.Ledger.Shelley.Scripts (pattern RequireSignature)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import qualified Cardano.Ledger.Shelley.TxAuxData as TxAuxData
-import Cardano.Ledger.Shelley.TxBody
-  ( MIRPot (..),
-    MIRTarget (..),
-    PoolMetadata (..),
-    ShelleyTxBody (..),
-    ShelleyTxOut (..),
-    StakePoolRelay (..),
-    Wdrl (..),
-    WitVKey (..),
-    pmHash,
-    pmUrl,
-    ppCost,
-    ppId,
-    ppMargin,
-    ppMetadata,
-    ppOwners,
-    ppPledge,
-    ppRelays,
-    ppRewardAcnt,
-    ppVrf,
-    pattern DCertDeleg,
-    pattern DCertGenesis,
-    pattern DCertMir,
-    pattern DCertPool,
-    pattern Delegation,
-    pattern PoolParams,
-    pattern RewardAcnt,
-  )
+import Cardano.Ledger.Shelley.TxBody (
+  MIRPot (..),
+  MIRTarget (..),
+  PoolMetadata (..),
+  ShelleyTxBody (..),
+  ShelleyTxOut (..),
+  StakePoolRelay (..),
+  Wdrl (..),
+  WitVKey (..),
+  pmHash,
+  pmUrl,
+  ppCost,
+  ppId,
+  ppMargin,
+  ppMetadata,
+  ppOwners,
+  ppPledge,
+  ppRelays,
+  ppRewardAcnt,
+  ppVrf,
+  pattern DCertDeleg,
+  pattern DCertGenesis,
+  pattern DCertMir,
+  pattern DCertPool,
+  pattern Delegation,
+  pattern PoolParams,
+  pattern RewardAcnt,
+ )
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits, addrWits, scriptWits)
 import Cardano.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxId, TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (UTxO))
-import Cardano.Protocol.TPraos.BHeader
-  ( BHBody (..),
-    BHeader (..),
-    HashHeader (..),
-    PrevHash (..),
-    bhash,
-    bheaderBlockNo,
-    bheaderEta,
-    bheaderL,
-    bheaderOCert,
-    bheaderPrev,
-    bheaderSlotNo,
-    bheaderVk,
-    bheaderVrfVk,
-    bprotver,
-    bsize,
-    mkSeed,
-    seedEta,
-    seedL,
-  )
-import Cardano.Protocol.TPraos.OCert
-  ( KESPeriod (..),
-    OCert,
-    OCertSignable (..),
-    pattern OCert,
-  )
+import Cardano.Protocol.TPraos.BHeader (
+  BHBody (..),
+  BHeader (..),
+  HashHeader (..),
+  PrevHash (..),
+  bhash,
+  bheaderBlockNo,
+  bheaderEta,
+  bheaderL,
+  bheaderOCert,
+  bheaderPrev,
+  bheaderSlotNo,
+  bheaderVk,
+  bheaderVrfVk,
+  bprotver,
+  bsize,
+  mkSeed,
+  seedEta,
+  seedL,
+ )
+import Cardano.Protocol.TPraos.OCert (
+  KESPeriod (..),
+  OCert,
+  OCertSignable (..),
+  pattern OCert,
+ )
 import qualified Codec.CBOR.Encoding as CBOR (Encoding (..))
 import Control.Monad
 import Data.ByteString (ByteString)
@@ -201,12 +201,12 @@ import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, C_Crypto, ExMock, Moc
 import Test.Cardano.Ledger.Shelley.Examples.Consensus as Ex (ledgerExamplesShelley, sleNewEpochState)
 import Test.Cardano.Ledger.Shelley.Generator.Core (PreAlonzo)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
-import Test.Cardano.Ledger.Shelley.Serialisation.GoldenUtils
-  ( ToTokens (..),
-    checkEncoding,
-    checkEncodingCBOR,
-    checkEncodingCBORAnnotated,
-  )
+import Test.Cardano.Ledger.Shelley.Serialisation.GoldenUtils (
+  ToTokens (..),
+  checkEncoding,
+  checkEncodingCBOR,
+  checkEncodingCBORAnnotated,
+ )
 import Test.Cardano.Ledger.Shelley.Utils
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase)
@@ -373,37 +373,37 @@ testHeaderHash =
 
 testBHB ::
   forall era c.
-  ( EraTx era,
-    PreAlonzo era,
-    ExMock c,
-    c ~ EraCrypto era,
-    Tx era ~ ShelleyTx era
+  ( EraTx era
+  , PreAlonzo era
+  , ExMock c
+  , c ~ EraCrypto era
+  , Tx era ~ ShelleyTx era
   ) =>
   BHBody c
 testBHB =
   BHBody
-    { bheaderBlockNo = BlockNo 44,
-      bheaderSlotNo = SlotNo 33,
-      bheaderPrev = BlockHash testHeaderHash,
-      bheaderVk = vKey testBlockIssuerKey,
-      bheaderVrfVk = snd $ testVRF @c,
-      bheaderEta =
+    { bheaderBlockNo = BlockNo 44
+    , bheaderSlotNo = SlotNo 33
+    , bheaderPrev = BlockHash testHeaderHash
+    , bheaderVk = vKey testBlockIssuerKey
+    , bheaderVrfVk = snd $ testVRF @c
+    , bheaderEta =
         mkCertifiedVRF
           ( WithResult
               (mkSeed seedEta (SlotNo 33) (mkNonceFromNumber 0))
               1
           )
-          (fst $ testVRF @c),
-      bheaderL =
+          (fst $ testVRF @c)
+    , bheaderL =
         mkCertifiedVRF
           ( WithResult
               (mkSeed seedL (SlotNo 33) (mkNonceFromNumber 0))
               1
           )
-          (fst $ testVRF @c),
-      bsize = 0,
-      bhash = bbHash @era $ ShelleyTxSeq @era StrictSeq.empty,
-      bheaderOCert =
+          (fst $ testVRF @c)
+    , bsize = 0
+    , bhash = bbHash @era $ ShelleyTxSeq @era StrictSeq.empty
+    , bheaderOCert =
         OCert
           (snd $ testKESKeys @c)
           0
@@ -411,16 +411,16 @@ testBHB =
           ( signedDSIGN @c
               (sKey $ testKey1 @c)
               (OCertSignable (snd $ testKESKeys @c) 0 (KESPeriod 0))
-          ),
-      bprotver = ProtVer minBound 0
+          )
+    , bprotver = ProtVer minBound 0
     }
 
 testBHBSigTokens ::
   forall era.
-  ( EraTx era,
-    PreAlonzo era,
-    ExMock (EraCrypto era),
-    Tx era ~ ShelleyTx era
+  ( EraTx era
+  , PreAlonzo era
+  , ExMock (EraCrypto era)
+  , Tx era ~ ShelleyTx era
   ) =>
   Tokens ->
   Tokens
@@ -442,68 +442,68 @@ tests =
         byronProtVer
         "list (Byron)"
         ([1] :: [Integer])
-        (T (TkListBegin . TkInteger 1 . TkBreak)),
-      checkEncodingCBOR
+        (T (TkListBegin . TkInteger 1 . TkBreak))
+    , checkEncodingCBOR
         shelleyProtVer
         "list (Shelley)"
         ([1] :: [Integer])
-        (T (TkListLen 1 . TkInteger 1)),
-      checkEncodingCBOR
+        (T (TkListLen 1 . TkInteger 1))
+    , checkEncodingCBOR
         byronProtVer
         "set (Byron)"
         (Set.singleton (1 :: Integer))
-        (T (TkTag 258 . TkListLen 1 . TkInteger 1)),
-      checkEncodingCBOR
+        (T (TkTag 258 . TkListLen 1 . TkInteger 1))
+    , checkEncodingCBOR
         shelleyProtVer
         "set (Shelley)"
         (Set.singleton (1 :: Integer))
-        (T (TkListLen 1 . TkInteger 1)),
-      checkEncodingCBOR
+        (T (TkListLen 1 . TkInteger 1))
+    , checkEncodingCBOR
         shelleyProtVer
         "map"
         (Map.singleton (1 :: Integer) (1 :: Integer))
-        (T (TkMapLen 1 . TkInteger 1 . TkInteger 1)),
-      checkEncodingCBOR
+        (T (TkMapLen 1 . TkInteger 1 . TkInteger 1))
+    , checkEncodingCBOR
         shelleyProtVer
         "coin"
         (Coin 30)
-        (T (TkWord64 30)),
-      checkEncodingCBOR
+        (T (TkWord64 30))
+    , checkEncodingCBOR
         shelleyProtVer
         "rational"
         (unsafeBoundRational (1 % 2) :: UnitInterval)
-        (T (TkTag 30 . TkListLen 2 . TkWord64 1 . TkWord64 2)),
-      checkEncodingCBOR
+        (T (TkTag 30 . TkListLen 2 . TkWord64 1 . TkWord64 2))
+    , checkEncodingCBOR
         shelleyProtVer
         "slot"
         (SlotNo 7)
-        (T (TkWord64 7)),
-      checkEncodingCBOR
+        (T (TkWord64 7))
+    , checkEncodingCBOR
         shelleyProtVer
         "neutral_nonce"
         NeutralNonce
-        (T (TkListLen 1 . TkWord 0)),
-      checkEncodingCBOR
+        (T (TkListLen 1 . TkWord 0))
+    , checkEncodingCBOR
         shelleyProtVer
         "nonce"
         (mkNonceFromNumber 99)
-        (T (TkListLen 2 . TkWord 1 . TkBytes (getRawNonce $ mkNonceFromNumber 99))),
-      checkEncodingCBOR
+        (T (TkListLen 2 . TkWord 1 . TkBytes (getRawNonce $ mkNonceFromNumber 99)))
+    , checkEncodingCBOR
         shelleyProtVer
         "key_hash"
         (testKeyHash1 @C_Crypto)
-        (T (TkBytes (getRawKeyHash (testKeyHash1 @C_Crypto)))),
-      checkEncodingCBOR
+        (T (TkBytes (getRawKeyHash (testKeyHash1 @C_Crypto))))
+    , checkEncodingCBOR
         shelleyProtVer
         "credential_key_hash"
         (testPayCred @C_Crypto)
-        (T (TkListLen 2 . TkWord 0) <> S (testKeyHash1 @C_Crypto)),
-      checkEncodingCBOR
+        (T (TkListLen 2 . TkWord 0) <> S (testKeyHash1 @C_Crypto))
+    , checkEncodingCBOR
         shelleyProtVer
         "txin"
         (TxIn @C_Crypto genesisId minBound)
-        (T (TkListLen 2) <> S (genesisId :: TxId C_Crypto) <> T (TkWord64 0)),
-      let a = Addr Testnet testPayCred StakeRefNull
+        (T (TkListLen 2) <> S (genesisId :: TxId C_Crypto) <> T (TkWord64 0))
+    , let a = Addr Testnet testPayCred StakeRefNull
        in checkEncodingCBOR
             shelleyProtVer
             "txout"
@@ -511,8 +511,8 @@ tests =
             ( T (TkListLen 2)
                 <> S a
                 <> S (Coin 2)
-            ),
-      case mkWitnessVKey @C_Crypto (testTxbHash @C) testKey1 of
+            )
+    , case mkWitnessVKey @C_Crypto (testTxbHash @C) testKey1 of
         w@(WitVKey vk _sig) ->
           checkEncodingCBORAnnotated
             shelleyProtVer
@@ -521,8 +521,8 @@ tests =
             ( T (TkListLen 2)
                 <> S vk -- vkey
                 <> T (testKey1SigToken @C) -- signature
-            ),
-      checkEncoding
+            )
+    , checkEncoding
         shelleyProtVer
         toCBOR
         deserializeMultiSigMap
@@ -531,8 +531,8 @@ tests =
         ( T (TkMapLen 1)
             <> S (hashScript @C testScript)
             <> S (testScript @C_Crypto)
-        ),
-      -- checkEncodingCBOR "withdrawal_key"
+        )
+    , -- checkEncodingCBOR "withdrawal_key"
       let r = RewardAcnt Testnet (testStakeCred @C_Crypto)
        in checkEncodingCBOR
             shelleyProtVer
@@ -541,8 +541,8 @@ tests =
             ( (T $ TkMapLen 1)
                 <> S r
                 <> S (Coin 123)
-            ),
-      -- checkEncodingCBOR "withdrawal_script"
+            )
+    , -- checkEncodingCBOR "withdrawal_script"
       --
       let r = RewardAcnt Testnet (ScriptHashObj (testScriptHash @C_Crypto))
        in checkEncodingCBOR
@@ -552,24 +552,24 @@ tests =
             ( (T $ TkMapLen 1)
                 <> S r
                 <> S (Coin 123)
-            ),
-      checkEncodingCBOR
+            )
+    , checkEncodingCBOR
         shelleyProtVer
         "register_stake_reference"
         (DCertDeleg (RegKey (testStakeCred @C_Crypto)))
         ( T (TkListLen 2)
             <> T (TkWord 0) -- Reg cert
             <> S (testStakeCred @C_Crypto) -- keyhash
-        ),
-      checkEncodingCBOR
+        )
+    , checkEncodingCBOR
         shelleyProtVer
         "deregister_stake_reference"
         (DCertDeleg (DeRegKey (testStakeCred @C_Crypto)))
         ( T (TkListLen 2)
             <> T (TkWord 1) -- DeReg cert
             <> S (testStakeCred @C_Crypto) -- keyhash
-        ),
-      checkEncodingCBOR
+        )
+    , checkEncodingCBOR
         shelleyProtVer
         "stake_delegation"
         (DCertDeleg (Delegate (Delegation (testStakeCred @C_Crypto) (hashKey . vKey $ testStakePoolKey))))
@@ -579,8 +579,8 @@ tests =
             )
             <> S (testStakeCred @C_Crypto)
             <> S (hashKey . vKey $ testStakePoolKey @C_Crypto)
-        ),
-      -- checkEncodingCBOR "register-pool"
+        )
+    , -- checkEncodingCBOR "register-pool"
       let poolOwner = testKeyHash2 @C_Crypto
           poolMargin = unsafeBoundRational 0.7
           poolRAcnt = RewardAcnt Testnet (testStakeCred @C_Crypto)
@@ -592,9 +592,9 @@ tests =
           ipv4Bytes = ipv4ToBytes . toIPv4 $ [127, 0, 0, 1]
           poolRelays =
             StrictSeq.fromList
-              [ SingleHostAddr SNothing (SJust ipv4) SNothing,
-                SingleHostName (SJust 42) $ Maybe.fromJust $ textToDns "singlehost.relay.com",
-                MultiHostName $ Maybe.fromJust $ textToDns "multihost.relay.com"
+              [ SingleHostAddr SNothing (SJust ipv4) SNothing
+              , SingleHostName (SJust 42) $ Maybe.fromJust $ textToDns "singlehost.relay.com"
+              , MultiHostName $ Maybe.fromJust $ textToDns "multihost.relay.com"
               ]
        in checkEncodingCBOR
             shelleyProtVer
@@ -602,19 +602,19 @@ tests =
             ( DCertPool
                 ( RegPool
                     ( PoolParams
-                        { ppId = hashKey . vKey $ testStakePoolKey,
-                          ppVrf = testVRFKH @C_Crypto,
-                          ppPledge = poolPledge,
-                          ppCost = poolCost,
-                          ppMargin = poolMargin,
-                          ppRewardAcnt = poolRAcnt,
-                          ppOwners = Set.singleton poolOwner,
-                          ppRelays = poolRelays,
-                          ppMetadata =
+                        { ppId = hashKey . vKey $ testStakePoolKey
+                        , ppVrf = testVRFKH @C_Crypto
+                        , ppPledge = poolPledge
+                        , ppCost = poolCost
+                        , ppMargin = poolMargin
+                        , ppRewardAcnt = poolRAcnt
+                        , ppOwners = Set.singleton poolOwner
+                        , ppRelays = poolRelays
+                        , ppMetadata =
                             SJust $
                               PoolMetadata
-                                { pmUrl = Maybe.fromJust $ textToUrl poolUrl,
-                                  pmHash = poolMDHash
+                                { pmUrl = Maybe.fromJust $ textToUrl poolUrl
+                                , pmHash = poolMDHash
                                 }
                         }
                     )
@@ -637,8 +637,8 @@ tests =
                 <> T (TkListLen 2) -- metadata present
                 <> S poolUrl -- metadata url
                 <> S poolMDHash -- metadata hash
-            ),
-      checkEncodingCBOR
+            )
+    , checkEncodingCBOR
         shelleyProtVer
         "retire_pool"
         ( DCertPool
@@ -653,8 +653,8 @@ tests =
             )
             <> S (hashKey . vKey $ testStakePoolKey @C_Crypto) -- key hash
             <> S (EpochNo 1729) -- epoch
-        ),
-      checkEncodingCBOR
+        )
+    , checkEncodingCBOR
         shelleyProtVer
         "genesis_delegation"
         ( DCertGenesis
@@ -671,8 +671,8 @@ tests =
             <> S (testGKeyHash @C_Crypto) -- delegator credential
             <> S (hashKey . vKey $ testGenesisDelegateKey @C_Crypto) -- delegatee key hash
             <> S (testVRFKH @C_Crypto) -- delegatee vrf key hash
-        ),
-      -- checkEncodingCBOR "mir"
+        )
+    , -- checkEncodingCBOR "mir"
       let rws = StakeAddressesMIR $ Map.singleton (testStakeCred @C_Crypto) (DeltaCoin 77)
        in checkEncodingCBOR
             shelleyProtVer
@@ -685,33 +685,33 @@ tests =
                     . TkWord 0 -- take from the reserves
                 )
                 <> S rws
-            ),
-      checkEncodingCBOR
+            )
+    , checkEncodingCBOR
         shelleyProtVer
         "pparams_update_key_deposit_only"
         ( ShelleyPParams
-            { _minfeeA = SNothing,
-              _minfeeB = SNothing,
-              _maxBBSize = SNothing,
-              _maxTxSize = SNothing,
-              _maxBHSize = SNothing,
-              _keyDeposit = SJust (Coin 5),
-              _poolDeposit = SNothing,
-              _eMax = SNothing,
-              _nOpt = SNothing,
-              _a0 = SNothing,
-              _rho = SNothing,
-              _tau = SNothing,
-              _d = SNothing,
-              _extraEntropy = SNothing,
-              _protocolVersion = SNothing,
-              _minUTxOValue = SNothing,
-              _minPoolCost = SNothing
+            { _minfeeA = SNothing
+            , _minfeeB = SNothing
+            , _maxBBSize = SNothing
+            , _maxTxSize = SNothing
+            , _maxBHSize = SNothing
+            , _keyDeposit = SJust (Coin 5)
+            , _poolDeposit = SNothing
+            , _eMax = SNothing
+            , _nOpt = SNothing
+            , _a0 = SNothing
+            , _rho = SNothing
+            , _tau = SNothing
+            , _d = SNothing
+            , _extraEntropy = SNothing
+            , _protocolVersion = SNothing
+            , _minUTxOValue = SNothing
+            , _minPoolCost = SNothing
             } ::
             ShelleyPParamsUpdate C
         )
-        ((T $ TkMapLen 1 . TkWord 5) <> S (Coin 5)),
-      -- checkEncodingCBOR "pparams_update_all"
+        ((T $ TkMapLen 1 . TkWord 5) <> S (Coin 5))
+    , -- checkEncodingCBOR "pparams_update_all"
       let minfeea = 0
           minfeeb = 1
           maxbbsize = 2
@@ -733,23 +733,23 @@ tests =
             shelleyProtVer
             "pparams_update_all"
             ( ShelleyPParams
-                { _minfeeA = SJust minfeea,
-                  _minfeeB = SJust minfeeb,
-                  _maxBBSize = SJust maxbbsize,
-                  _maxTxSize = SJust maxtxsize,
-                  _maxBHSize = SJust maxbhsize,
-                  _keyDeposit = SJust keydeposit,
-                  _poolDeposit = SJust pooldeposit,
-                  _eMax = SJust emax,
-                  _nOpt = SJust nopt,
-                  _a0 = SJust a0,
-                  _rho = SJust rho,
-                  _tau = SJust tau,
-                  _d = SJust d,
-                  _extraEntropy = SJust extraEntropy,
-                  _protocolVersion = SJust protocolVersion,
-                  _minUTxOValue = SJust minUTxOValue,
-                  _minPoolCost = SJust minPoolCost
+                { _minfeeA = SJust minfeea
+                , _minfeeB = SJust minfeeb
+                , _maxBBSize = SJust maxbbsize
+                , _maxTxSize = SJust maxtxsize
+                , _maxBHSize = SJust maxbhsize
+                , _keyDeposit = SJust keydeposit
+                , _poolDeposit = SJust pooldeposit
+                , _eMax = SJust emax
+                , _nOpt = SJust nopt
+                , _a0 = SJust a0
+                , _rho = SJust rho
+                , _tau = SJust tau
+                , _d = SJust d
+                , _extraEntropy = SJust extraEntropy
+                , _protocolVersion = SJust protocolVersion
+                , _minUTxOValue = SJust minUTxOValue
+                , _minPoolCost = SJust minPoolCost
                 } ::
                 ShelleyPParamsUpdate C
             )
@@ -788,30 +788,30 @@ tests =
                 <> S minUTxOValue
                 <> (T $ TkWord 16)
                 <> S minPoolCost
-            ),
-      -- checkEncodingCBOR "full_update"
+            )
+    , -- checkEncodingCBOR "full_update"
       let ppup =
             ProposedPPUpdates @C
               ( Map.singleton
                   (testGKeyHash @C_Crypto)
                   ( ShelleyPParams
-                      { _minfeeA = SNothing,
-                        _minfeeB = SNothing,
-                        _maxBBSize = SNothing,
-                        _maxTxSize = SNothing,
-                        _maxBHSize = SNothing,
-                        _keyDeposit = SNothing,
-                        _poolDeposit = SNothing,
-                        _eMax = SNothing,
-                        _nOpt = SJust 100,
-                        _a0 = SNothing,
-                        _rho = SNothing,
-                        _tau = SNothing,
-                        _d = SNothing,
-                        _extraEntropy = SNothing,
-                        _protocolVersion = SNothing,
-                        _minUTxOValue = SNothing,
-                        _minPoolCost = SNothing
+                      { _minfeeA = SNothing
+                      , _minfeeB = SNothing
+                      , _maxBBSize = SNothing
+                      , _maxTxSize = SNothing
+                      , _maxBHSize = SNothing
+                      , _keyDeposit = SNothing
+                      , _poolDeposit = SNothing
+                      , _eMax = SNothing
+                      , _nOpt = SJust 100
+                      , _a0 = SNothing
+                      , _rho = SNothing
+                      , _tau = SNothing
+                      , _d = SNothing
+                      , _extraEntropy = SNothing
+                      , _protocolVersion = SNothing
+                      , _minUTxOValue = SNothing
+                      , _minPoolCost = SNothing
                       }
                   )
               )
@@ -823,8 +823,8 @@ tests =
             ( T (TkListLen 2)
                 <> S ppup
                 <> S e
-            ),
-      -- checkEncodingCBOR "minimal_txn_body"
+            )
+    , -- checkEncodingCBOR "minimal_txn_body"
       let tout = ShelleyTxOut @C testAddrE (Coin 2)
        in checkEncodingCBORAnnotated
             shelleyProtVer
@@ -850,8 +850,8 @@ tests =
                 <> T (TkWord64 9)
                 <> T (TkWord 3) -- Tx TTL
                 <> T (TkWord64 500)
-            ),
-      -- checkEncodingCBOR "transaction_mixed"
+            )
+    , -- checkEncodingCBOR "transaction_mixed"
       let tout = ShelleyTxOut @C testAddrE (Coin 2)
           ra = RewardAcnt Testnet (KeyHashObj testKeyHash2)
           ras = Map.singleton ra (Coin 123)
@@ -861,23 +861,23 @@ tests =
                   ( Map.singleton
                       testGKeyHash
                       ( ShelleyPParams
-                          { _minfeeA = SNothing,
-                            _minfeeB = SNothing,
-                            _maxBBSize = SNothing,
-                            _maxTxSize = SNothing,
-                            _maxBHSize = SNothing,
-                            _keyDeposit = SNothing,
-                            _poolDeposit = SNothing,
-                            _eMax = SNothing,
-                            _nOpt = SJust 100,
-                            _a0 = SNothing,
-                            _rho = SNothing,
-                            _tau = SNothing,
-                            _d = SNothing,
-                            _extraEntropy = SNothing,
-                            _protocolVersion = SNothing,
-                            _minUTxOValue = SNothing,
-                            _minPoolCost = SNothing
+                          { _minfeeA = SNothing
+                          , _minfeeB = SNothing
+                          , _maxBBSize = SNothing
+                          , _maxTxSize = SNothing
+                          , _maxBHSize = SNothing
+                          , _keyDeposit = SNothing
+                          , _poolDeposit = SNothing
+                          , _eMax = SNothing
+                          , _nOpt = SJust 100
+                          , _a0 = SNothing
+                          , _rho = SNothing
+                          , _tau = SNothing
+                          , _d = SNothing
+                          , _extraEntropy = SNothing
+                          , _protocolVersion = SNothing
+                          , _minUTxOValue = SNothing
+                          , _minPoolCost = SNothing
                           }
                       )
                   )
@@ -911,8 +911,8 @@ tests =
                 <> S ras
                 <> T (TkWord 6) -- Tx Update
                 <> S up
-            ),
-      -- checkEncodingCBOR "full_txn_body"
+            )
+    , -- checkEncodingCBOR "full_txn_body"
       let tout = ShelleyTxOut @C testAddrE (Coin 2)
           reg = DCertDeleg (RegKey (testStakeCred @C_Crypto))
           ra = RewardAcnt Testnet (KeyHashObj testKeyHash2)
@@ -923,23 +923,23 @@ tests =
                   ( Map.singleton
                       testGKeyHash
                       ( ShelleyPParams
-                          { _minfeeA = SNothing,
-                            _minfeeB = SNothing,
-                            _maxBBSize = SNothing,
-                            _maxTxSize = SNothing,
-                            _maxBHSize = SNothing,
-                            _keyDeposit = SNothing,
-                            _poolDeposit = SNothing,
-                            _eMax = SNothing,
-                            _nOpt = SJust 100,
-                            _a0 = SNothing,
-                            _rho = SNothing,
-                            _tau = SNothing,
-                            _d = SNothing,
-                            _extraEntropy = SNothing,
-                            _protocolVersion = SNothing,
-                            _minUTxOValue = SNothing,
-                            _minPoolCost = SNothing
+                          { _minfeeA = SNothing
+                          , _minfeeB = SNothing
+                          , _maxBBSize = SNothing
+                          , _maxTxSize = SNothing
+                          , _maxBHSize = SNothing
+                          , _keyDeposit = SNothing
+                          , _poolDeposit = SNothing
+                          , _eMax = SNothing
+                          , _nOpt = SJust 100
+                          , _a0 = SNothing
+                          , _rho = SNothing
+                          , _tau = SNothing
+                          , _d = SNothing
+                          , _extraEntropy = SNothing
+                          , _protocolVersion = SNothing
+                          , _minUTxOValue = SNothing
+                          , _minPoolCost = SNothing
                           }
                       )
                   )
@@ -979,8 +979,8 @@ tests =
                 <> S up
                 <> T (TkWord 7) -- Tx Metadata
                 <> S mdh
-            ),
-      -- checkEncodingCBOR "minimal_txn"
+            )
+    , -- checkEncodingCBOR "minimal_txn"
       let txb =
             ShelleyTxBody @C
               (Set.fromList [TxIn genesisId (mkTxIxPartial 1)])
@@ -1008,8 +1008,8 @@ tests =
                 <> T (TkListLen 1)
                 <> S w
                 <> T TkNull
-            ),
-      -- checkEncodingCBOR "full_txn"
+            )
+    , -- checkEncodingCBOR "full_txn"
       let txb =
             ShelleyTxBody @C
               (Set.fromList [genesisTxIn1])
@@ -1040,8 +1040,8 @@ tests =
                 <> T (TkListLen 1)
                 <> S (testScript @C_Crypto)
                 <> S md
-            ),
-      -- checkEncodingCBOR "block_header_body"
+            )
+    , -- checkEncodingCBOR "block_header_body"
       let prevhash = BlockHash testHeaderHash
           vrfVkey = snd $ testVRF @C_Crypto
           slot = SlotNo 33
@@ -1075,17 +1075,17 @@ tests =
             shelleyProtVer
             "block_header_body"
             ( BHBody
-                { bheaderBlockNo = blockNo,
-                  bheaderSlotNo = slot,
-                  bheaderPrev = prevhash,
-                  bheaderVk = vKey testBlockIssuerKey,
-                  bheaderVrfVk = vrfVkey,
-                  bheaderEta = nonceProof,
-                  bheaderL = leaderProof,
-                  bsize = size,
-                  bhash = bbhash,
-                  bheaderOCert = ocert,
-                  bprotver = protover
+                { bheaderBlockNo = blockNo
+                , bheaderSlotNo = slot
+                , bheaderPrev = prevhash
+                , bheaderVk = vKey testBlockIssuerKey
+                , bheaderVrfVk = vrfVkey
+                , bheaderEta = nonceProof
+                , bheaderL = leaderProof
+                , bsize = size
+                , bhash = bbhash
+                , bheaderOCert = ocert
+                , bprotver = protover
                 }
             )
             ( T (TkListLen $ 9 + 4 + 2)
@@ -1100,8 +1100,8 @@ tests =
                 <> S bbhash
                 <> G ocert -- 5
                 <> G protover -- 3
-            ),
-      -- checkEncodingCBOR "operational_cert"
+            )
+    , -- checkEncodingCBOR "operational_cert"
       let vkHot = snd $ testKESKeys @C_Crypto
           counter = 0
           kesperiod = KESPeriod 0
@@ -1121,8 +1121,8 @@ tests =
                 <> S counter
                 <> S kesperiod
                 <> T (testOpCertSigTokens @C_Crypto)
-            ),
-      -- checkEncodingCBOR "block_header"
+            )
+    , -- checkEncodingCBOR "block_header"
       let sig :: (SignedKES (CC.KES C_Crypto) (BHBody C_Crypto))
           sig = signedKES () 0 (testBHB @C) (fst $ testKESKeys @C_Crypto)
        in checkEncodingCBORAnnotated
@@ -1132,8 +1132,8 @@ tests =
             ( (T $ TkListLen 2)
                 <> S (testBHB @C)
                 <> T (testBHBSigTokens @C)
-            ),
-      -- checkEncodingCBOR "empty_block"
+            )
+    , -- checkEncodingCBOR "empty_block"
       let sig :: (SignedKES (CC.KES C_Crypto) (BHBody C_Crypto))
           sig = signedKES () 0 (testBHB @C) (fst $ testKESKeys @C_Crypto)
           bh = BHeader (testBHB @C) sig
@@ -1145,8 +1145,8 @@ tests =
             ( (T $ TkListLen 4)
                 <> S bh
                 <> T (TkListLen 0 . TkListLen 0 . TkMapLen 0)
-            ),
-      -- checkEncodingCBOR "rich_block"
+            )
+    , -- checkEncodingCBOR "rich_block"
       let sig :: (SignedKES (CC.KES C_Crypto) (BHBody C_Crypto))
           sig = signedKES () 0 (testBHB @C) (fst $ testKESKeys @C_Crypto)
           bh = BHeader (testBHB @C) sig
@@ -1181,8 +1181,8 @@ tests =
               SNothing
           ss =
             Map.fromList
-              [ (hashScript @C testScript, testScript),
-                (hashScript @C testScript2, testScript2)
+              [ (hashScript @C testScript, testScript)
+              , (hashScript @C testScript2, testScript2)
               ]
           tx4 = ShelleyTx txb4 mempty {scriptWits = ss} SNothing
           tx5MD = TxAuxData.ShelleyTxAuxData @C $ Map.singleton 17 (TxAuxData.I 42)
@@ -1238,13 +1238,13 @@ tests =
                 <> T (TkMapLen 1)
                 <> T (TkInt 4)
                 <> S tx5MD
-            ),
-      checkEncodingCBOR
+            )
+    , checkEncodingCBOR
         shelleyProtVer
         "epoch"
         (EpochNo 13)
-        (T (TkWord64 13)),
-      let n = (17 :: Natural)
+        (T (TkWord64 13))
+    , let n = (17 :: Natural)
           bs = Map.singleton (hashKey . vKey $ testStakePoolKey @C_Crypto) n
        in checkEncodingCBOR
             shelleyProtVer
@@ -1253,16 +1253,16 @@ tests =
             ( T (TkMapLen 1)
                 <> S (hashKey . vKey $ testStakePoolKey @C_Crypto)
                 <> S n
-            ),
-      checkEncodingCBOR
+            )
+    , checkEncodingCBOR
         shelleyProtVer
         "account_state"
         (AccountState (Coin 1) (Coin 2))
         ( T (TkListLen 2)
             <> S (Coin 1)
             <> S (Coin 2)
-        ),
-      let stk = [(testStakeCred @C_Crypto, CompactCoin 13)]
+        )
+    , let stk = [(testStakeCred @C_Crypto, CompactCoin 13)]
        in checkEncodingCBOR
             shelleyProtVer
             "stake"
@@ -1270,8 +1270,8 @@ tests =
             ( T (TkMapLen 1)
                 <> S (testStakeCred @C_Crypto)
                 <> S (Coin 13)
-            ),
-      let mark =
+            )
+    , let mark =
             SnapShot
               (Stake [(testStakeCred @C_Crypto, CompactCoin 11)])
               [(testStakeCred @C_Crypto, hashKey $ vKey testStakePoolKey)]
@@ -1288,19 +1288,19 @@ tests =
               ps
           params =
             PoolParams
-              { ppId = hashKey $ vKey testStakePoolKey,
-                ppVrf = testVRFKH @C_Crypto,
-                ppPledge = Coin 5,
-                ppCost = Coin 4,
-                ppMargin = unsafeBoundRational 0.7,
-                ppRewardAcnt = RewardAcnt Testnet (testStakeCred @C_Crypto),
-                ppOwners = Set.singleton testKeyHash2,
-                ppRelays = StrictSeq.empty,
-                ppMetadata =
+              { ppId = hashKey $ vKey testStakePoolKey
+              , ppVrf = testVRFKH @C_Crypto
+              , ppPledge = Coin 5
+              , ppCost = Coin 4
+              , ppMargin = unsafeBoundRational 0.7
+              , ppRewardAcnt = RewardAcnt Testnet (testStakeCred @C_Crypto)
+              , ppOwners = Set.singleton testKeyHash2
+              , ppRelays = StrictSeq.empty
+              , ppMetadata =
                   SJust $
                     PoolMetadata
-                      { pmUrl = Maybe.fromJust $ textToUrl "web.site",
-                        pmHash = BS.pack "{}"
+                      { pmUrl = Maybe.fromJust $ textToUrl "web.site"
+                      , pmHash = BS.pack "{}"
                       }
               }
           ps = [(hashKey $ vKey testStakePoolKey, params)]
@@ -1314,8 +1314,8 @@ tests =
                 <> S set
                 <> S go
                 <> S fs
-            ),
-      let e = EpochNo 0
+            )
+    , let e = EpochNo 0
           ac = AccountState (Coin 100) (Coin 100)
           mark =
             SnapShot
@@ -1334,19 +1334,19 @@ tests =
               ps
           params =
             PoolParams
-              { ppId = hashKey $ vKey testStakePoolKey,
-                ppVrf = testVRFKH @C_Crypto,
-                ppPledge = Coin 5,
-                ppCost = Coin 4,
-                ppMargin = unsafeBoundRational 0.7,
-                ppRewardAcnt = RewardAcnt Testnet (testStakeCred @C_Crypto),
-                ppOwners = Set.singleton testKeyHash2,
-                ppRelays = StrictSeq.empty,
-                ppMetadata =
+              { ppId = hashKey $ vKey testStakePoolKey
+              , ppVrf = testVRFKH @C_Crypto
+              , ppPledge = Coin 5
+              , ppCost = Coin 4
+              , ppMargin = unsafeBoundRational 0.7
+              , ppRewardAcnt = RewardAcnt Testnet (testStakeCred @C_Crypto)
+              , ppOwners = Set.singleton testKeyHash2
+              , ppRelays = StrictSeq.empty
+              , ppMetadata =
                   SJust $
                     PoolMetadata
-                      { pmUrl = Maybe.fromJust $ textToUrl "web.site",
-                        pmHash = BS.pack "{}"
+                      { pmUrl = Maybe.fromJust $ textToUrl "web.site"
+                      , pmHash = BS.pack "{}"
                       }
               }
           ps = [(hashKey $ vKey testStakePoolKey, params)]
@@ -1360,11 +1360,11 @@ tests =
           ru =
             ( Complete $
                 RewardUpdate
-                  { deltaT = DeltaCoin 100,
-                    deltaR = DeltaCoin (-200),
-                    rs = Map.empty,
-                    deltaF = DeltaCoin (-10),
-                    nonMyopic = nm
+                  { deltaT = DeltaCoin 100
+                  , deltaR = DeltaCoin (-200)
+                  , rs = Map.empty
+                  , deltaF = DeltaCoin (-10)
+                  , nonMyopic = nm
                   }
             )
           pd = PoolDistr @C_Crypto Map.empty
@@ -1389,8 +1389,8 @@ tests =
                 <> S (SJust ru)
                 <> S pd
                 <> S (UTxO @(ShelleyEra C_Crypto) mempty)
-            ),
-      let actual =
+            )
+    , let actual =
             serialize' shelleyProtVer $
               Ex.sleNewEpochState Ex.ledgerExamplesShelley
           expected = either error id $ B16.decode expectedHex
@@ -1412,9 +1412,9 @@ tests =
             unless (actual == expected) $
               assertFailure $
                 unlines
-                  [ "Expected: " ++ show expectedHex,
-                    "Actual: " ++ show actualHex,
-                    diffExpr (CBORBytes expected) (CBORBytes actual)
+                  [ "Expected: " ++ show expectedHex
+                  , "Actual: " ++ show actualHex
+                  , diffExpr (CBORBytes expected) (CBORBytes actual)
                   ]
     ]
   where

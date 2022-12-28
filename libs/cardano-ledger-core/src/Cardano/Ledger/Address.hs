@@ -14,77 +14,77 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Ledger.Address
-  ( mkRwdAcnt,
-    serialiseAddr,
-    deserialiseAddr,
-    Addr (..),
-    BootstrapAddress (..),
-    bootstrapAddressAttrsSize,
-    isBootstrapRedeemer,
-    getNetwork,
-    RewardAcnt (..),
-    serialiseRewardAcnt,
-    deserialiseRewardAcnt,
-    -- internals exported for testing
-    bootstrapKeyHash,
-    putAddr,
-    putCredential,
-    putPtr,
-    putRewardAcnt,
-    putVariableLengthWord64,
-    -- TODO: these should live somewhere else
-    word64ToWord7s,
-    Word7 (..),
-    toWord7,
+module Cardano.Ledger.Address (
+  mkRwdAcnt,
+  serialiseAddr,
+  deserialiseAddr,
+  Addr (..),
+  BootstrapAddress (..),
+  bootstrapAddressAttrsSize,
+  isBootstrapRedeemer,
+  getNetwork,
+  RewardAcnt (..),
+  serialiseRewardAcnt,
+  deserialiseRewardAcnt,
+  -- internals exported for testing
+  bootstrapKeyHash,
+  putAddr,
+  putCredential,
+  putPtr,
+  putRewardAcnt,
+  putVariableLengthWord64,
+  -- TODO: these should live somewhere else
+  word64ToWord7s,
+  Word7 (..),
+  toWord7,
 
-    -- * Compact Address
-    fromBoostrapCompactAddress,
-    compactAddr,
-    decompactAddr,
-    CompactAddr,
-    unCompactAddr,
-    isPayCredScriptCompactAddr,
-    isBootstrapCompactAddr,
-    decodeAddr,
-    decodeAddrShort,
-    decodeAddrEither,
-    decodeAddrShortEither,
-    fromCborAddr,
-    fromCborBothAddr,
-    fromCborCompactAddr,
-    fromCborBackwardsBothAddr,
-    decodeRewardAcnt,
-    fromCborRewardAcnt,
-    Fail (..),
-  )
+  -- * Compact Address
+  fromBoostrapCompactAddress,
+  compactAddr,
+  decompactAddr,
+  CompactAddr,
+  unCompactAddr,
+  isPayCredScriptCompactAddr,
+  isBootstrapCompactAddr,
+  decodeAddr,
+  decodeAddrShort,
+  decodeAddrEither,
+  decodeAddrShortEither,
+  fromCborAddr,
+  fromCborBothAddr,
+  fromCborCompactAddr,
+  fromCborBackwardsBothAddr,
+  decodeRewardAcnt,
+  fromCborRewardAcnt,
+  Fail (..),
+)
 where
 
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.Hashing as Byron
-import Cardano.Ledger.BaseTypes
-  ( CertIx (..),
-    Network (..),
-    TxIx (..),
-    byronProtVer,
-    natVersion,
-    networkToWord8,
-  )
-import Cardano.Ledger.Binary
-  ( Decoder,
-    FromCBOR (..),
-    ToCBOR (..),
-    decodeFull',
-    ifDecoderVersionAtLeast,
-    serialize,
-  )
-import Cardano.Ledger.Credential
-  ( Credential (..),
-    PaymentCredential,
-    Ptr (..),
-    StakeReference (..),
-  )
+import Cardano.Ledger.BaseTypes (
+  CertIx (..),
+  Network (..),
+  TxIx (..),
+  byronProtVer,
+  natVersion,
+  networkToWord8,
+ )
+import Cardano.Ledger.Binary (
+  Decoder,
+  FromCBOR (..),
+  ToCBOR (..),
+  decodeFull',
+  ifDecoderVersionAtLeast,
+  serialize,
+ )
+import Cardano.Ledger.Credential (
+  Credential (..),
+  PaymentCredential,
+  Ptr (..),
+  StakeReference (..),
+ )
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
@@ -166,16 +166,16 @@ instance NoThunks (Addr c)
 
 -- | An account based address for rewards
 data RewardAcnt c = RewardAcnt
-  { getRwdNetwork :: !Network,
-    getRwdCred :: !(Credential 'Staking c)
+  { getRwdNetwork :: !Network
+  , getRwdCred :: !(Credential 'Staking c)
   }
   deriving (Show, Eq, Generic, Ord, NFData, ToJSONKey, FromJSONKey)
 
 instance Crypto c => ToJSON (RewardAcnt c) where
   toJSON ra =
     Aeson.object
-      [ "network" .= getRwdNetwork ra,
-        "credential" .= getRwdCred ra
+      [ "network" .= getRwdNetwork ra
+      , "credential" .= getRwdCred ra
       ]
 
 instance Crypto c => FromJSON (RewardAcnt c) where

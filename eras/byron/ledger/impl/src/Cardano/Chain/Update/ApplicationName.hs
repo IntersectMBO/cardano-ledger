@@ -5,27 +5,27 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Cardano.Chain.Update.ApplicationName
-  ( ApplicationName (..),
-    applicationNameMaxLength,
-    ApplicationNameError (..),
-    checkApplicationName,
-  )
+module Cardano.Chain.Update.ApplicationName (
+  ApplicationName (..),
+  applicationNameMaxLength,
+  ApplicationNameError (..),
+  checkApplicationName,
+)
 where
 
-import Cardano.Ledger.Binary
-  ( Case (..),
-    Decoder,
-    DecoderError (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    cborError,
-    decodeListLen,
-    decodeWord8,
-    encodeListLen,
-    matchSize,
-    szCases,
-  )
+import Cardano.Ledger.Binary (
+  Case (..),
+  Decoder,
+  DecoderError (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  cborError,
+  decodeListLen,
+  decodeWord8,
+  encodeListLen,
+  matchSize,
+  szCases,
+ )
 import Cardano.Prelude hiding (cborError)
 import Data.Aeson (ToJSON)
 import Data.Data (Data)
@@ -44,8 +44,8 @@ instance ToCBOR ApplicationName where
   encodedSizeExpr _ _ =
     1
       + szCases
-        [ Case "minBound" 0,
-          Case "maxBound" (fromInteger applicationNameMaxLength)
+        [ Case "minBound" 0
+        , Case "maxBound" (fromInteger applicationNameMaxLength)
         ]
 
 instance FromCBOR ApplicationName where

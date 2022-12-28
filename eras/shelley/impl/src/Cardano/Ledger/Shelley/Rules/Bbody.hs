@@ -11,15 +11,15 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Shelley.Rules.Bbody
-  ( ShelleyBBODY,
-    ShelleyBbodyState (..),
-    BbodyEnv (..),
-    ShelleyBbodyPredFailure (..),
-    ShelleyBbodyEvent (..),
-    PredicateFailure,
-    State,
-  )
+module Cardano.Ledger.Shelley.Rules.Bbody (
+  ShelleyBBODY,
+  ShelleyBbodyState (..),
+  BbodyEnv (..),
+  ShelleyBbodyPredFailure (..),
+  ShelleyBbodyEvent (..),
+  PredicateFailure,
+  State,
+)
 where
 
 import Cardano.Ledger.BHeaderView (BHeaderView (..), isOverlaySlot)
@@ -29,23 +29,23 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (DSignable, Hash, coerceKeyRole)
 import Cardano.Ledger.Shelley.BlockChain (bBodySize, incrBlocks)
 import Cardano.Ledger.Shelley.Era (ShelleyBBODY)
-import Cardano.Ledger.Shelley.LedgerState
-  ( AccountState,
-    LedgerState,
-  )
+import Cardano.Ledger.Shelley.LedgerState (
+  AccountState,
+  LedgerState,
+ )
 import Cardano.Ledger.Shelley.Rules.Ledgers (ShelleyLedgersEnv (..))
 import Cardano.Ledger.Slot (epochInfoEpoch, epochInfoFirst)
 import Control.Monad.Trans.Reader (asks)
-import Control.State.Transition
-  ( Embed (..),
-    STS (..),
-    TRC (..),
-    TransitionRule,
-    judgmentContext,
-    liftSTS,
-    trans,
-    (?!),
-  )
+import Control.State.Transition (
+  Embed (..),
+  STS (..),
+  TRC (..),
+  TransitionRule,
+  judgmentContext,
+  liftSTS,
+  trans,
+  (?!),
+ )
 import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Generics (Generic)
@@ -60,8 +60,8 @@ deriving stock instance Show (LedgerState era) => Show (ShelleyBbodyState era)
 deriving stock instance Eq (LedgerState era) => Eq (ShelleyBbodyState era)
 
 data BbodyEnv era = BbodyEnv
-  { bbodyPp :: PParams era,
-    bbodyAccount :: AccountState
+  { bbodyPp :: PParams era
+  , bbodyAccount :: AccountState
   }
 
 data ShelleyBbodyPredFailure era
@@ -78,31 +78,31 @@ newtype ShelleyBbodyEvent era
   = LedgersEvent (Event (EraRule "LEDGERS" era))
 
 deriving stock instance
-  ( Era era,
-    Show (PredicateFailure (EraRule "LEDGERS" era))
+  ( Era era
+  , Show (PredicateFailure (EraRule "LEDGERS" era))
   ) =>
   Show (ShelleyBbodyPredFailure era)
 
 deriving stock instance
-  ( Era era,
-    Eq (PredicateFailure (EraRule "LEDGERS" era))
+  ( Era era
+  , Eq (PredicateFailure (EraRule "LEDGERS" era))
   ) =>
   Eq (ShelleyBbodyPredFailure era)
 
 instance
-  ( Era era,
-    NoThunks (PredicateFailure (EraRule "LEDGERS" era))
+  ( Era era
+  , NoThunks (PredicateFailure (EraRule "LEDGERS" era))
   ) =>
   NoThunks (ShelleyBbodyPredFailure era)
 
 instance
-  ( EraSegWits era,
-    DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody),
-    Embed (EraRule "LEDGERS" era) (ShelleyBBODY era),
-    Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era,
-    State (EraRule "LEDGERS" era) ~ LedgerState era,
-    Signal (EraRule "LEDGERS" era) ~ Seq (Tx era),
-    HasField "_d" (PParams era) UnitInterval
+  ( EraSegWits era
+  , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
+  , Embed (EraRule "LEDGERS" era) (ShelleyBBODY era)
+  , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
+  , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
+  , HasField "_d" (PParams era) UnitInterval
   ) =>
   STS (ShelleyBBODY era)
   where
@@ -127,23 +127,23 @@ instance
 
 bbodyTransition ::
   forall era.
-  ( STS (ShelleyBBODY era),
-    EraSegWits era,
-    Embed (EraRule "LEDGERS" era) (ShelleyBBODY era),
-    Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era,
-    State (EraRule "LEDGERS" era) ~ LedgerState era,
-    Signal (EraRule "LEDGERS" era) ~ Seq (Tx era),
-    HasField "_d" (PParams era) UnitInterval
+  ( STS (ShelleyBBODY era)
+  , EraSegWits era
+  , Embed (EraRule "LEDGERS" era) (ShelleyBBODY era)
+  , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
+  , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
+  , HasField "_d" (PParams era) UnitInterval
   ) =>
   TransitionRule (ShelleyBBODY era)
 bbodyTransition =
   judgmentContext
     >>= \( TRC
-             ( BbodyEnv pp account,
-               BbodyState ls b,
-               UnserialisedBlock bhview txsSeq
-               )
-           ) -> do
+            ( BbodyEnv pp account
+              , BbodyState ls b
+              , UnserialisedBlock bhview txsSeq
+              )
+          ) -> do
         let txs = fromTxSeq @era txsSeq
             actualBodySize = bBodySize @era (getField @"_protocolVersion" pp) txsSeq
             actualBodyHash = hashTxSeq @era txsSeq
@@ -174,12 +174,12 @@ bbodyTransition =
 
 instance
   forall era ledgers.
-  ( Era era,
-    BaseM ledgers ~ ShelleyBase,
-    ledgers ~ EraRule "LEDGERS" era,
-    STS ledgers,
-    DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody),
-    Era era
+  ( Era era
+  , BaseM ledgers ~ ShelleyBase
+  , ledgers ~ EraRule "LEDGERS" era
+  , STS ledgers
+  , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
+  , Era era
   ) =>
   Embed ledgers (ShelleyBBODY era)
   where

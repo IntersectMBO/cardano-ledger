@@ -1,20 +1,20 @@
-module Test.Cardano.Chain.Delegation.Gen
-  ( genCanonicalCertificate,
-    genCertificate,
-    genCanonicalCertificateDistinctList,
-    genCertificateDistinctList,
-    genError,
-    genPayload,
-  )
+module Test.Cardano.Chain.Delegation.Gen (
+  genCanonicalCertificate,
+  genCertificate,
+  genCanonicalCertificateDistinctList,
+  genCertificateDistinctList,
+  genError,
+  genPayload,
+)
 where
 
-import Cardano.Chain.Delegation
-  ( ACertificate (delegateVK, issuerVK),
-    Certificate,
-    Payload,
-    signCertificate,
-    unsafePayload,
-  )
+import Cardano.Chain.Delegation (
+  ACertificate (delegateVK, issuerVK),
+  Certificate,
+  Payload,
+  signCertificate,
+  unsafePayload,
+ )
 import Cardano.Chain.Delegation.Validation.Scheduling (Error (..))
 import Cardano.Chain.Slotting (EpochNumber (..))
 import Cardano.Crypto (ProtocolMagicId)
@@ -65,11 +65,11 @@ genCertificateDistinctList pm =
 genError :: Gen Error
 genError =
   Gen.choice
-    [ pure InvalidCertificate,
-      MultipleDelegationsForEpoch <$> genEpochNumber <*> genKeyHash,
-      MultipleDelegationsForSlot <$> genSlotNumber <*> genKeyHash,
-      NonGenesisDelegator <$> genKeyHash,
-      WrongEpoch <$> genEpochNumber <*> genEpochNumber
+    [ pure InvalidCertificate
+    , MultipleDelegationsForEpoch <$> genEpochNumber <*> genKeyHash
+    , MultipleDelegationsForSlot <$> genSlotNumber <*> genKeyHash
+    , NonGenesisDelegator <$> genKeyHash
+    , WrongEpoch <$> genEpochNumber <*> genEpochNumber
     ]
 
 genPayload :: ProtocolMagicId -> Gen Payload

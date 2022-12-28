@@ -15,37 +15,37 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Shelley.Scripts
-  ( MultiSig
-      ( RequireAllOf,
-        RequireAnyOf,
-        RequireSignature,
-        RequireMOf
-      ),
-    ScriptHash (..),
-    nativeMultiSigTag,
-  )
+module Cardano.Ledger.Shelley.Scripts (
+  MultiSig (
+    RequireAllOf,
+    RequireAnyOf,
+    RequireSignature,
+    RequireMOf
+  ),
+  ScriptHash (..),
+  nativeMultiSigTag,
+)
 where
 
 import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.BaseTypes (invalidKey)
-import Cardano.Ledger.Binary
-  ( Annotator (..),
-    FromCBOR (fromCBOR),
-    ToCBOR,
-    decodeRecordSum,
-  )
+import Cardano.Ledger.Binary (
+  Annotator (..),
+  FromCBOR (fromCBOR),
+  ToCBOR,
+  decodeRecordSum,
+ )
 import Cardano.Ledger.Binary.Coders (Encode (..), (!>))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (HASH)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (Witness))
-import Cardano.Ledger.MemoBytes
-  ( Mem,
-    MemoBytes,
-    memoBytes,
-    pattern Memo,
-  )
+import Cardano.Ledger.MemoBytes (
+  Mem,
+  MemoBytes,
+  memoBytes,
+  pattern Memo,
+ )
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Era
 import Control.DeepSeq (NFData)

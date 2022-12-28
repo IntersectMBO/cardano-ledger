@@ -8,154 +8,154 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Chain.Block.Block
-  ( -- * Block
-    Block,
-    ABlock (..),
+module Cardano.Chain.Block.Block (
+  -- * Block
+  Block,
+  ABlock (..),
 
-    -- * Block Constructors
-    mkBlock,
-    mkBlockExplicit,
+  -- * Block Constructors
+  mkBlock,
+  mkBlockExplicit,
 
-    -- * Block Accessors
-    blockHash,
-    blockHashAnnotated,
-    blockAProtocolMagicId,
-    blockProtocolMagicId,
-    blockPrevHash,
-    blockProof,
-    blockSlot,
-    blockGenesisKey,
-    blockIssuer,
-    blockDifficulty,
-    blockToSign,
-    blockSignature,
-    blockProtocolVersion,
-    blockSoftwareVersion,
-    blockTxPayload,
-    blockSscPayload,
-    blockDlgPayload,
-    blockUpdatePayload,
-    blockLength,
+  -- * Block Accessors
+  blockHash,
+  blockHashAnnotated,
+  blockAProtocolMagicId,
+  blockProtocolMagicId,
+  blockPrevHash,
+  blockProof,
+  blockSlot,
+  blockGenesisKey,
+  blockIssuer,
+  blockDifficulty,
+  blockToSign,
+  blockSignature,
+  blockProtocolVersion,
+  blockSoftwareVersion,
+  blockTxPayload,
+  blockSscPayload,
+  blockDlgPayload,
+  blockUpdatePayload,
+  blockLength,
 
-    -- * Block Binary Serialization
-    toCBORBlock,
-    fromCBORABlock,
+  -- * Block Binary Serialization
+  toCBORBlock,
+  fromCBORABlock,
 
-    -- * Block Formatting
-    renderBlock,
+  -- * Block Formatting
+  renderBlock,
 
-    -- * ABlockOrBoundary
-    ABlockOrBoundary (..),
-    toCBORABOBBlock,
-    fromCBORABOBBlock,
-    fromCBORABlockOrBoundary,
-    toCBORABlockOrBoundary,
+  -- * ABlockOrBoundary
+  ABlockOrBoundary (..),
+  toCBORABOBBlock,
+  fromCBORABOBBlock,
+  fromCBORABlockOrBoundary,
+  toCBORABlockOrBoundary,
 
-    -- * ABoundaryBlock
-    ABoundaryBlock (..),
-    boundaryHashAnnotated,
-    fromCBORABoundaryBlock,
-    toCBORABoundaryBlock,
-    toCBORABOBBoundary,
-    boundaryBlockSlot,
-    ABoundaryBody (..),
+  -- * ABoundaryBlock
+  ABoundaryBlock (..),
+  boundaryHashAnnotated,
+  fromCBORABoundaryBlock,
+  toCBORABoundaryBlock,
+  toCBORABOBBoundary,
+  boundaryBlockSlot,
+  ABoundaryBody (..),
 
-    -- * ABlockOrBoundaryHdr
-    ABlockOrBoundaryHdr (..),
-    aBlockOrBoundaryHdr,
-    fromCBORABlockOrBoundaryHdr,
-    toCBORABlockOrBoundaryHdr,
-    toCBORABlockOrBoundaryHdrSize,
-    abobHdrFromBlock,
-    abobHdrSlotNo,
-    abobHdrChainDifficulty,
-    abobHdrHash,
-    abobHdrPrevHash,
-  )
+  -- * ABlockOrBoundaryHdr
+  ABlockOrBoundaryHdr (..),
+  aBlockOrBoundaryHdr,
+  fromCBORABlockOrBoundaryHdr,
+  toCBORABlockOrBoundaryHdr,
+  toCBORABlockOrBoundaryHdrSize,
+  abobHdrFromBlock,
+  abobHdrSlotNo,
+  abobHdrChainDifficulty,
+  abobHdrHash,
+  abobHdrPrevHash,
+)
 where
 
 -- TODO `contramap` should be in `Cardano.Prelude`
 
-import Cardano.Chain.Block.Body
-  ( ABody,
-    Body,
-    bodyDlgPayload,
-    bodySscPayload,
-    bodyTxPayload,
-    bodyTxs,
-    bodyUpdatePayload,
-  )
-import Cardano.Chain.Block.Boundary
-  ( dropBoundaryBody,
-    dropBoundaryExtraBodyData,
-  )
-import Cardano.Chain.Block.Header
-  ( ABlockSignature,
-    ABoundaryHeader (..),
-    AHeader (..),
-    Header,
-    HeaderHash,
-    ToSign,
-    boundaryHeaderHashAnnotated,
-    fromCBORABoundaryHeader,
-    fromCBORAHeader,
-    genesisHeaderHash,
-    hashHeader,
-    headerDifficulty,
-    headerGenesisKey,
-    headerHashAnnotated,
-    headerIssuer,
-    headerPrevHash,
-    headerProof,
-    headerProtocolMagicId,
-    headerProtocolVersion,
-    headerSignature,
-    headerSlot,
-    headerSoftwareVersion,
-    headerToSign,
-    mkHeaderExplicit,
-    toCBORABoundaryHeader,
-    toCBORABoundaryHeaderSize,
-    toCBORHeader,
-    toCBORHeaderSize,
-  )
+import Cardano.Chain.Block.Body (
+  ABody,
+  Body,
+  bodyDlgPayload,
+  bodySscPayload,
+  bodyTxPayload,
+  bodyTxs,
+  bodyUpdatePayload,
+ )
+import Cardano.Chain.Block.Boundary (
+  dropBoundaryBody,
+  dropBoundaryExtraBodyData,
+ )
+import Cardano.Chain.Block.Header (
+  ABlockSignature,
+  ABoundaryHeader (..),
+  AHeader (..),
+  Header,
+  HeaderHash,
+  ToSign,
+  boundaryHeaderHashAnnotated,
+  fromCBORABoundaryHeader,
+  fromCBORAHeader,
+  genesisHeaderHash,
+  hashHeader,
+  headerDifficulty,
+  headerGenesisKey,
+  headerHashAnnotated,
+  headerIssuer,
+  headerPrevHash,
+  headerProof,
+  headerProtocolMagicId,
+  headerProtocolVersion,
+  headerSignature,
+  headerSlot,
+  headerSoftwareVersion,
+  headerToSign,
+  mkHeaderExplicit,
+  toCBORABoundaryHeader,
+  toCBORABoundaryHeaderSize,
+  toCBORHeader,
+  toCBORHeaderSize,
+ )
 import Cardano.Chain.Block.Proof (Proof (..))
 import Cardano.Chain.Common (ChainDifficulty (..), dropEmptyAttributes)
 import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Genesis.Hash (GenesisHash (..))
-import Cardano.Chain.Slotting
-  ( EpochSlots (..),
-    SlotNumber (..),
-    WithEpochSlots (WithEpochSlots),
-  )
+import Cardano.Chain.Slotting (
+  EpochSlots (..),
+  SlotNumber (..),
+  WithEpochSlots (WithEpochSlots),
+ )
 import Cardano.Chain.Ssc (SscPayload)
 import Cardano.Chain.UTxO.TxPayload (ATxPayload)
 import qualified Cardano.Chain.Update.Payload as Update
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
 import Cardano.Chain.Update.SoftwareVersion (SoftwareVersion)
 import Cardano.Crypto (ProtocolMagicId, SigningKey, VerificationKey)
-import Cardano.Ledger.Binary
-  ( Annotated (..),
-    ByteSpan (..),
-    Case (..),
-    Decoded (..),
-    Decoder,
-    DecoderError (..),
-    Encoding,
-    FromCBOR (..),
-    Size,
-    ToCBOR (..),
-    annotatedDecoder,
-    cborError,
-    encodeBreak,
-    encodeListLen,
-    encodeListLenIndef,
-    encodePreEncoded,
-    encodeWord,
-    enforceSize,
-    szCases,
-  )
+import Cardano.Ledger.Binary (
+  Annotated (..),
+  ByteSpan (..),
+  Case (..),
+  Decoded (..),
+  Decoder,
+  DecoderError (..),
+  Encoding,
+  FromCBOR (..),
+  Size,
+  ToCBOR (..),
+  annotatedDecoder,
+  cborError,
+  encodeBreak,
+  encodeListLen,
+  encodeListLenIndef,
+  encodePreEncoded,
+  encodeWord,
+  enforceSize,
+  szCases,
+ )
 import Cardano.Prelude hiding (cborError)
 import Control.Monad.Fail (fail)
 import Control.Tracer (contramap)
@@ -173,9 +173,9 @@ import NoThunks.Class (NoThunks (..))
 type Block = ABlock ()
 
 data ABlock a = ABlock
-  { blockHeader :: AHeader a,
-    blockBody :: ABody a,
-    blockAnnotation :: a
+  { blockHeader :: AHeader a
+  , blockBody :: ABody a
+  , blockAnnotation :: a
   }
   deriving (Eq, Show, Generic, NFData, Functor)
 
@@ -456,17 +456,17 @@ toCBORABoundaryBody :: ABoundaryBody a -> Encoding
 toCBORABoundaryBody _ =
   (encodeListLenIndef <> encodeBreak)
     <> ( encodeListLen 1
-           <> toCBOR (mempty :: Map Word8 LByteString)
+          <> toCBOR (mempty :: Map Word8 LByteString)
        )
 
 -- | For a boundary block, we keep the header, body, and an annotation for
 -- the whole thing (commonly the bytes from which it was decoded).
 data ABoundaryBlock a = ABoundaryBlock
-  { -- | Needed for validation.
-    boundaryBlockLength :: !Int64,
-    boundaryHeader :: !(ABoundaryHeader a),
-    boundaryBody :: !(ABoundaryBody a),
-    boundaryAnnotation :: !a
+  { boundaryBlockLength :: !Int64
+  -- ^ Needed for validation.
+  , boundaryHeader :: !(ABoundaryHeader a)
+  , boundaryBody :: !(ABoundaryBody a)
+  , boundaryAnnotation :: !a
   }
   deriving (Eq, Generic, Show, Functor)
 
@@ -492,10 +492,10 @@ fromCBORABoundaryBlock = do
     pure (hdr, bod)
   pure $
     ABoundaryBlock
-      { boundaryBlockLength = end - start,
-        boundaryHeader = hdr,
-        boundaryBody = bod,
-        boundaryAnnotation = bytespan
+      { boundaryBlockLength = end - start
+      , boundaryHeader = hdr
+      , boundaryBody = bod
+      , boundaryAnnotation = bytespan
       }
 
 -- | See note on `toCBORABoundaryHeader`. This as well does not necessarily
@@ -582,8 +582,8 @@ toCBORABlockOrBoundaryHdrSize :: Proxy (ABlockOrBoundaryHdr a) -> Size
 toCBORABlockOrBoundaryHdrSize hdr =
   2 -- @encodeListLen 2@ followed by @encodeWord 0@ or @encodeWord 1@.
     + szCases
-      [ Case "ABOBBoundaryHdr" $ toCBORABoundaryHeaderSize Proxy (ABOBBoundaryHdr `contramap` hdr),
-        Case "ABOBBlockHdr" $ toCBORHeaderSize Proxy (ABOBBlockHdr `contramap` hdr)
+      [ Case "ABOBBoundaryHdr" $ toCBORABoundaryHeaderSize Proxy (ABOBBoundaryHdr `contramap` hdr)
+      , Case "ABOBBlockHdr" $ toCBORHeaderSize Proxy (ABOBBlockHdr `contramap` hdr)
       ]
 
 -- | The analogue of 'Data.Either.either'

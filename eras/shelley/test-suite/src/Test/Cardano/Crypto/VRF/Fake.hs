@@ -11,35 +11,35 @@
 
 -- | Fake implementation of VRF, where the random value isn't random but given
 -- by the creator.
-module Test.Cardano.Crypto.VRF.Fake
-  ( FakeVRF,
-    VerKeyVRF (..),
-    SignKeyVRF (..),
-    WithResult (..),
-  )
+module Test.Cardano.Crypto.VRF.Fake (
+  FakeVRF,
+  VerKeyVRF (..),
+  SignKeyVRF (..),
+  WithResult (..),
+)
 where
 
 import Cardano.Crypto.Hash
 import Cardano.Crypto.Seed (runMonadRandomWithSeed)
 import Cardano.Crypto.Util
-import Cardano.Crypto.VRF.Class hiding
-  ( decodeCertVRF,
-    decodeSignKeyVRF,
-    decodeVerKeyVRF,
-    encodeCertVRF,
-    encodeSignKeyVRF,
-    encodeVerKeyVRF,
-  )
+import Cardano.Crypto.VRF.Class hiding (
+  decodeCertVRF,
+  decodeSignKeyVRF,
+  decodeVerKeyVRF,
+  encodeCertVRF,
+  encodeSignKeyVRF,
+  encodeVerKeyVRF,
+ )
 import Cardano.Ledger.BaseTypes (Seed, shelleyProtVer)
 import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), hashWithEncoder)
-import Cardano.Ledger.Binary.Crypto
-  ( decodeCertVRF,
-    decodeSignKeyVRF,
-    decodeVerKeyVRF,
-    encodeCertVRF,
-    encodeSignKeyVRF,
-    encodeVerKeyVRF,
-  )
+import Cardano.Ledger.Binary.Crypto (
+  decodeCertVRF,
+  decodeSignKeyVRF,
+  decodeVerKeyVRF,
+  encodeCertVRF,
+  encodeSignKeyVRF,
+  encodeVerKeyVRF,
+ )
 import Data.Bits
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Builder as BS
@@ -121,23 +121,23 @@ instance VRFAlgorithm FakeVRF where
     writeBinaryWord64 k <> writeBinaryWord16 s
 
   rawDeserialiseVerKeyVRF bs
-    | [kb] <- splitsAt [8] bs,
-      let k = readBinaryWord64 kb =
+    | [kb] <- splitsAt [8] bs
+    , let k = readBinaryWord64 kb =
         Just $! VerKeyFakeVRF k
     | otherwise =
         Nothing
 
   rawDeserialiseSignKeyVRF bs
-    | [kb] <- splitsAt [8] bs,
-      let k = readBinaryWord64 kb =
+    | [kb] <- splitsAt [8] bs
+    , let k = readBinaryWord64 kb =
         Just $! SignKeyFakeVRF k
     | otherwise =
         Nothing
 
   rawDeserialiseCertVRF bs
-    | [kb, smb] <- splitsAt [8, 2] bs,
-      let k = readBinaryWord64 kb,
-      let s = readBinaryWord16 smb =
+    | [kb, smb] <- splitsAt [8, 2] bs
+    , let k = readBinaryWord64 kb
+    , let s = readBinaryWord16 smb =
         Just $! CertFakeVRF k s
     | otherwise =
         Nothing

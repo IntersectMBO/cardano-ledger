@@ -10,10 +10,10 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
-module Test.Cardano.Ledger.Shelley.Generator.Delegation
-  ( genDCert,
-    CertCred (..),
-  )
+module Test.Cardano.Ledger.Shelley.Generator.Delegation (
+  genDCert,
+  CertCred (..),
+)
 where
 
 import Cardano.Ledger.Address (mkRwdAcnt)
@@ -22,36 +22,36 @@ import Cardano.Ledger.Coin (DeltaCoin (..), toDeltaCoin)
 import Cardano.Ledger.Core (Era, EraCrypto, EraScript (..))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Keys
-  ( coerceKeyRole,
-    hashKey,
-    hashVerKeyVRF,
-  )
-import Cardano.Ledger.Shelley.API
-  ( AccountState (..),
-    Coin (..),
-    ConstitutionalDelegCert (..),
-    Credential (..),
-    DCert (..),
-    DPState (..),
-    DState (..),
-    DelegCert (..),
-    Delegation (..),
-    GenDelegPair (..),
-    GenDelegs (..),
-    KeyHash,
-    KeyRole (..),
-    MIRCert (..),
-    MIRPot (..),
-    MIRTarget (..),
-    Network (..),
-    PState (..),
-    PoolCert (..),
-    PoolParams (..),
-    RewardAcnt (..),
-    StrictMaybe (..),
-    VKey,
-  )
+import Cardano.Ledger.Keys (
+  coerceKeyRole,
+  hashKey,
+  hashVerKeyVRF,
+ )
+import Cardano.Ledger.Shelley.API (
+  AccountState (..),
+  Coin (..),
+  ConstitutionalDelegCert (..),
+  Credential (..),
+  DCert (..),
+  DPState (..),
+  DState (..),
+  DelegCert (..),
+  Delegation (..),
+  GenDelegPair (..),
+  GenDelegs (..),
+  KeyHash,
+  KeyRole (..),
+  MIRCert (..),
+  MIRPot (..),
+  MIRTarget (..),
+  Network (..),
+  PState (..),
+  PoolCert (..),
+  PoolParams (..),
+  RewardAcnt (..),
+  StrictMaybe (..),
+  VKey,
+ )
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState (availableAfterMIR, rewards)
 import Cardano.Ledger.Slot (EpochNo (EpochNo), SlotNo)
@@ -71,14 +71,14 @@ import GHC.Records (HasField (..))
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair, KeyPairs, vKey)
 import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
-import Test.Cardano.Ledger.Shelley.Generator.Core
-  ( AllIssuerKeys (..),
-    KeySpace (..),
-    genInteger,
-    genWord64,
-    mkCred,
-    tooLateInEpoch,
-  )
+import Test.Cardano.Ledger.Shelley.Generator.Core (
+  AllIssuerKeys (..),
+  KeySpace (..),
+  genInteger,
+  genWord64,
+  mkCred,
+  tooLateInEpoch,
+ )
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
 import Test.Cardano.Ledger.Shelley.Utils
 import Test.QuickCheck (Gen)
@@ -118,38 +118,40 @@ genDCert ::
   Gen (Maybe (DCert (EraCrypto era), CertCred era))
 genDCert
   c@( Constants
-        { frequencyRegKeyCert,
-          frequencyRegPoolCert,
-          frequencyDelegationCert,
-          frequencyGenesisDelegationCert,
-          frequencyDeRegKeyCert,
-          frequencyRetirePoolCert,
-          frequencyMIRCert
+        { frequencyRegKeyCert
+        , frequencyRegPoolCert
+        , frequencyDelegationCert
+        , frequencyGenesisDelegationCert
+        , frequencyDeRegKeyCert
+        , frequencyRetirePoolCert
+        , frequencyMIRCert
         }
       )
   KeySpace_
-    { ksCoreNodes,
-      ksKeyPairs,
-      ksMSigScripts,
-      ksStakePools,
-      ksGenesisDelegates,
-      ksIndexedGenDelegates
+    { ksCoreNodes
+    , ksKeyPairs
+    , ksMSigScripts
+    , ksStakePools
+    , ksGenesisDelegates
+    , ksIndexedGenDelegates
     }
   pparams
   accountState
   dpState
   slot =
     QC.frequency
-      [ (frequencyRegKeyCert, genRegKeyCert c ksKeyPairs ksMSigScripts dState),
-        (frequencyRegPoolCert, genRegPool ksStakePools ksKeyPairs (getField @"_minPoolCost" pparams)),
-        (frequencyDelegationCert, genDelegation c ksKeyPairs ksMSigScripts dpState),
-        ( frequencyGenesisDelegationCert,
-          genGenesisDelegation ksCoreNodes ksGenesisDelegates dpState
-        ),
-        (frequencyDeRegKeyCert, genDeRegKeyCert c ksKeyPairs ksMSigScripts dState),
-        (frequencyRetirePoolCert, genRetirePool pparams ksStakePools pState slot),
-        ( frequencyMIRCert,
-          genInstantaneousRewards
+      [ (frequencyRegKeyCert, genRegKeyCert c ksKeyPairs ksMSigScripts dState)
+      , (frequencyRegPoolCert, genRegPool ksStakePools ksKeyPairs (getField @"_minPoolCost" pparams))
+      , (frequencyDelegationCert, genDelegation c ksKeyPairs ksMSigScripts dpState)
+      ,
+        ( frequencyGenesisDelegationCert
+        , genGenesisDelegation ksCoreNodes ksGenesisDelegates dpState
+        )
+      , (frequencyDeRegKeyCert, genDeRegKeyCert c ksKeyPairs ksMSigScripts dState)
+      , (frequencyRetirePoolCert, genRetirePool pparams ksStakePools pState slot)
+      ,
+        ( frequencyMIRCert
+        , genInstantaneousRewards
             slot
             ksIndexedGenDelegates
             pparams
@@ -176,26 +178,28 @@ genRegKeyCert
   scripts
   delegSt =
     QC.frequency
-      [ ( frequencyKeyCredReg,
-          case availableKeys of
+      [
+        ( frequencyKeyCredReg
+        , case availableKeys of
             [] -> pure Nothing
             _ -> do
               (_payKey, stakeKey) <- QC.elements availableKeys
               pure $
                 Just
-                  ( DCertDeleg (RegKey (mkCred stakeKey)),
-                    NoCred
+                  ( DCertDeleg (RegKey (mkCred stakeKey))
+                  , NoCred
                   )
-        ),
-        ( frequencyScriptCredReg,
-          case availableScripts of
+        )
+      ,
+        ( frequencyScriptCredReg
+        , case availableScripts of
             [] -> pure Nothing
             _ -> do
               (_, stakeScript) <- QC.elements availableScripts
               pure $
                 Just
-                  ( DCertDeleg (RegKey (scriptToCred' stakeScript)),
-                    NoCred
+                  ( DCertDeleg (RegKey (scriptToCred' stakeScript))
+                  , NoCred
                   )
         )
       ]
@@ -217,22 +221,24 @@ genDeRegKeyCert ::
   Gen (Maybe (DCert (EraCrypto era), CertCred era))
 genDeRegKeyCert Constants {frequencyKeyCredDeReg, frequencyScriptCredDeReg} keys scripts dState =
   QC.frequency
-    [ ( frequencyKeyCredDeReg,
-        case availableKeys of
+    [
+      ( frequencyKeyCredDeReg
+      , case availableKeys of
           [] -> pure Nothing
           _ -> do
             (_payKey, stakeKey) <- QC.elements availableKeys
             pure $ Just (DCertDeleg (DeRegKey (mkCred stakeKey)), StakeCred stakeKey)
-      ),
-      ( frequencyScriptCredDeReg,
-        case availableScripts of
+      )
+    ,
+      ( frequencyScriptCredDeReg
+      , case availableScripts of
           [] -> pure Nothing
           _ -> do
             scriptPair@(_, stakeScript) <- QC.elements availableScripts
             pure $
               Just
-                ( DCertDeleg (DeRegKey (scriptToCred' stakeScript)),
-                  ScriptCred scriptPair
+                ( DCertDeleg (DeRegKey (scriptToCred' stakeScript))
+                , ScriptCred scriptPair
                 )
       )
     ]
@@ -280,16 +286,18 @@ genDelegation
       then pure Nothing
       else
         QC.frequency
-          [ ( frequencyKeyCredDelegation,
-              if null availableDelegates
+          [
+            ( frequencyKeyCredDelegation
+            , if null availableDelegates
                 then pure Nothing
                 else
                   mkCert
                     <$> QC.elements availableDelegates
                     <*> QC.elements availablePools
-            ),
-            ( frequencyScriptCredDelegation,
-              if null availableDelegatesScripts
+            )
+          ,
+            ( frequencyScriptCredDelegation
+            , if null availableDelegatesScripts
                 then pure Nothing
                 else
                   mkCertFromScript
@@ -341,8 +349,8 @@ genGenesisDelegation coreNodes delegateKeys dpState =
                 (hashVKey gkey)
                 (hashVKey key)
                 (hashVerKeyVRF vrf)
-            ),
-          CoreKeyCred [gkey]
+            )
+        , CoreKeyCred [gkey]
         )
     (GenDelegs genDelegs_) = dsGenDelegs $ dpsDState dpState
     genesisDelegator k = eval (k ∈ dom genDelegs_)
@@ -369,8 +377,8 @@ genStakePool poolKeys skeys (Coin minPoolCost) =
     <$> QC.elements poolKeys
     <*> ( Coin -- pledge
             <$> QC.frequency
-              [ (1, genInteger 1 100),
-                (5, pure 0)
+              [ (1, genInteger 1 100)
+              , (5, pure 0)
               ]
         )
     <*> (Coin <$> genInteger minPoolCost (minPoolCost + 50)) -- cost
@@ -425,8 +433,8 @@ genRetirePool _pp poolKeys pState slot =
     else
       ( \keyHash epoch ->
           Just
-            ( DCertPool (RetirePool keyHash epoch),
-              PoolCred (cold $ lookupHash keyHash)
+            ( DCertPool (RetirePool keyHash epoch)
+            , PoolCred (cold $ lookupHash keyHash)
             )
       )
         <$> QC.elements retireable
@@ -494,8 +502,8 @@ genInstantaneousRewardsAccounts s genesisDelegatesByHash pparams accountState de
       then Nothing
       else
         Just
-          ( DCertMir (MIRCert pot (StakeAddressesMIR credCoinMap)),
-            DelegateCred (cold <$> coreSigners)
+          ( DCertMir (MIRCert pot (StakeAddressesMIR credCoinMap))
+          , DelegateCred (cold <$> coreSigners)
           )
 
 -- | Generate an InstantaneousRewards Transfer
@@ -532,14 +540,14 @@ genInstantaneousRewardsTransfer s genesisDelegatesByHash pparams accountState de
       then Nothing
       else
         Just
-          ( DCertMir (MIRCert pot (SendToOppositePotMIR $ Coin amount)),
-            DelegateCred (cold <$> coreSigners)
+          ( DCertMir (MIRCert pot (SendToOppositePotMIR $ Coin amount))
+          , DelegateCred (cold <$> coreSigners)
           )
 
 genInstantaneousRewards ::
-  ( Era era,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "_d" (Core.PParams era) UnitInterval
+  ( Era era
+  , HasField "_protocolVersion" (Core.PParams era) ProtVer
+  , HasField "_d" (Core.PParams era) UnitInterval
   ) =>
   SlotNo ->
   -- | Index over the cold key hashes of all possible Genesis Delegates
@@ -557,8 +565,8 @@ genInstantaneousRewards slot genesisDelegatesByHash pparams accountState delegSt
             genesisDelegatesByHash
             pparams
             accountState
-            delegSt,
-          genInstantaneousRewardsTransfer
+            delegSt
+        , genInstantaneousRewardsTransfer
             slot
             genesisDelegatesByHash
             pparams

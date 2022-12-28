@@ -7,27 +7,27 @@ module Byron.Spec.Chain.STS.Rule.Bupi where
 
 import Byron.Spec.Ledger.Core (VKey)
 import Byron.Spec.Ledger.Update (ProtVer, UPIEND, UPIEnv, UPIREG, UPIState, UPIVOTES, UProp, Vote)
-import Control.State.Transition
-  ( Embed,
-    Environment,
-    PredicateFailure,
-    STS,
-    Signal,
-    State,
-    TRC (TRC),
-    TransitionRule,
-    initialRules,
-    judgmentContext,
-    trans,
-    transitionRules,
-    wrapFailed,
-  )
+import Control.State.Transition (
+  Embed,
+  Environment,
+  PredicateFailure,
+  STS,
+  Signal,
+  State,
+  TRC (TRC),
+  TransitionRule,
+  initialRules,
+  judgmentContext,
+  trans,
+  transitionRules,
+  wrapFailed,
+ )
 import Data.Data (Data, Typeable)
 
 type UpdatePayload =
-  ( Maybe UProp,
-    [Vote],
-    (ProtVer, VKey)
+  ( Maybe UProp
+  , [Vote]
+  , (ProtVer, VKey)
   )
 
 data BUPI deriving (Data, Typeable)

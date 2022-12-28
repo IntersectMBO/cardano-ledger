@@ -4,18 +4,18 @@
 {-# LANGUAGE TypeApplications #-}
 
 -- TODO: Move to cardano-ledger-core:test-lib
-module Test.Cardano.Ledger.TranslationTools
-  ( translateEraPartial,
-    translateEraEncoding,
-    translateEraToCBOR,
-  )
+module Test.Cardano.Ledger.TranslationTools (
+  translateEraPartial,
+  translateEraEncoding,
+  translateEraToCBOR,
+)
 where
 
-import Cardano.Ledger.Binary
-  ( Encoding,
-    ToCBOR (..),
-    serializeEncoding',
-  )
+import Cardano.Ledger.Binary (
+  Encoding,
+  ToCBOR (..),
+  serializeEncoding',
+ )
 import Cardano.Ledger.Core
 import Cardano.Ledger.TreeDiff (diffExpr)
 import Control.Monad
@@ -39,9 +39,9 @@ translateEraPartial tc fe =
 -- does not change the result
 translateEraEncoding ::
   forall era f.
-  ( HasCallStack,
-    TranslateEra era f,
-    Show (TranslationError era f)
+  ( HasCallStack
+  , TranslateEra era f
+  , Show (TranslationError era f)
   ) =>
   TranslationContext era ->
   (f era -> Encoding) ->
@@ -61,11 +61,11 @@ translateEraEncoding tc encodeThisEra encodePreviousEra x =
 -- does not change the result
 translateEraToCBOR ::
   forall proxy era f.
-  ( HasCallStack,
-    TranslateEra era f,
-    ToCBOR (f era),
-    ToCBOR (f (PreviousEra era)),
-    Show (TranslationError era f)
+  ( HasCallStack
+  , TranslateEra era f
+  , ToCBOR (f era)
+  , ToCBOR (f (PreviousEra era))
+  , Show (TranslationError era f)
   ) =>
   proxy era ->
   TranslationContext era ->

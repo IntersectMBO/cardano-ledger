@@ -8,24 +8,24 @@
 -- same, and we can refer to the hash of, say, a transaction, without knowing
 -- the actual transaction type. As such, we define a number of these hashes
 -- here.
-module Cardano.Ledger.Hashes
-  ( -- * Era-independent hash type identifiers.
-    -- $eraIndep
-    EraIndependentTxBody,
-    EraIndependentBlockHeader,
-    EraIndependentBlockBody,
-    EraIndependentMetadata,
-    EraIndependentScript,
-    EraIndependentData,
-    EraIndependentScriptData,
-    EraIndependentTxAuxData,
-    EraIndependentPParamView,
-    EraIndependentScriptIntegrity,
+module Cardano.Ledger.Hashes (
+  -- * Era-independent hash type identifiers.
+  -- $eraIndep
+  EraIndependentTxBody,
+  EraIndependentBlockHeader,
+  EraIndependentBlockBody,
+  EraIndependentMetadata,
+  EraIndependentScript,
+  EraIndependentData,
+  EraIndependentScriptData,
+  EraIndependentTxAuxData,
+  EraIndependentPParamView,
+  EraIndependentScriptIntegrity,
 
-    -- * Script hashes
-    ScriptHash (..),
-    DataHash,
-  )
+  -- * Script hashes
+  ScriptHash (..),
+  DataHash,
+)
 where
 
 import qualified Cardano.Crypto.Hash as Hash

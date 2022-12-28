@@ -1,6 +1,6 @@
-module Cardano.Chain.Common
-  ( module X,
-  )
+module Cardano.Chain.Common (
+  module X,
+)
 where
 
 import Cardano.Chain.Common.AddrAttributes as X

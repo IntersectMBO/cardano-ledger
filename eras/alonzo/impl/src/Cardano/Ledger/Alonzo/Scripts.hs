@@ -17,62 +17,62 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Alonzo.Scripts
-  ( Tag (..),
-    BinaryPlutus (..),
-    AlonzoScript (TimelockScript, PlutusScript),
-    Script,
-    txscriptfee,
-    isPlutusScript,
-    pointWiseExUnits,
-    validScript,
-    transProtocolVersion,
-    eqAlonzoScriptRaw,
+module Cardano.Ledger.Alonzo.Scripts (
+  Tag (..),
+  BinaryPlutus (..),
+  AlonzoScript (TimelockScript, PlutusScript),
+  Script,
+  txscriptfee,
+  isPlutusScript,
+  pointWiseExUnits,
+  validScript,
+  transProtocolVersion,
+  eqAlonzoScriptRaw,
 
-    -- * Cost Model
-    CostModel,
-    mkCostModel,
-    encodeCostModel,
-    getCostModelLanguage,
-    getCostModelParams,
-    getEvaluationContext,
-    ExUnits (ExUnits, exUnitsMem, exUnitsSteps, ..),
-    ExUnits',
-    Prices (..),
-    decodeCostModelMap,
-    decodeCostModel,
-    CostModels (..),
-    PV1.CostModelApplyError (..),
-  )
+  -- * Cost Model
+  CostModel,
+  mkCostModel,
+  encodeCostModel,
+  getCostModelLanguage,
+  getCostModelParams,
+  getEvaluationContext,
+  ExUnits (ExUnits, exUnitsMem, exUnitsSteps, ..),
+  ExUnits',
+  Prices (..),
+  decodeCostModelMap,
+  decodeCostModel,
+  CostModels (..),
+  PV1.CostModelApplyError (..),
+)
 where
 
 import Cardano.Ledger.Allegra.Scripts (Timelock, eqTimelockRaw)
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.BaseTypes (BoundedRational (unboundRational), NonNegativeInterval, ProtVer (..))
-import Cardano.Ledger.Binary
-  ( Annotator,
-    Decoder,
-    DecoderError (..),
-    Encoding,
-    FromCBOR (fromCBOR),
-    ToCBOR (toCBOR),
-    cborError,
-    decodeMapByKey,
-    encodeFoldableAsDefLenList,
-    encodeMap,
-    getVersion64,
-  )
-import Cardano.Ledger.Binary.Coders
-  ( Decode (Ann, D, From, Invalid, RecD, SumD, Summands),
-    Encode (Rec, Sum, To),
-    Wrapped (Open),
-    decode,
-    encode,
-    (!>),
-    (<!),
-    (<*!),
-  )
+import Cardano.Ledger.Binary (
+  Annotator,
+  Decoder,
+  DecoderError (..),
+  Encoding,
+  FromCBOR (fromCBOR),
+  ToCBOR (toCBOR),
+  cborError,
+  decodeMapByKey,
+  encodeFoldableAsDefLenList,
+  encodeMap,
+  getVersion64,
+ )
+import Cardano.Ledger.Binary.Coders (
+  Decode (Ann, D, From, Invalid, RecD, SumD, Summands),
+  Encode (Rec, Sum, To),
+  Wrapped (Open),
+  decode,
+  encode,
+  (!>),
+  (<!),
+  (<*!),
+ )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
@@ -94,14 +94,14 @@ import GHC.Generics (Generic)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import Numeric.Natural (Natural)
 import PlutusCore.Evaluation.Machine.CostModelInterface (CostModelApplyWarn)
-import qualified PlutusLedgerApi.V1 as PV1
-  ( CostModelApplyError (..),
-    EvaluationContext,
-    ProtocolVersion (ProtocolVersion),
-    ScriptDecodeError,
-    assertScriptWellFormed,
-    mkEvaluationContext,
-  )
+import qualified PlutusLedgerApi.V1 as PV1 (
+  CostModelApplyError (..),
+  EvaluationContext,
+  ProtocolVersion (ProtocolVersion),
+  ScriptDecodeError,
+  assertScriptWellFormed,
+  mkEvaluationContext,
+ )
 import qualified PlutusLedgerApi.V2 as PV2 (assertScriptWellFormed, mkEvaluationContext)
 
 -- | Marker indicating the part of a transaction for which this script is acting
@@ -184,8 +184,8 @@ instance Crypto c => EraScript (AlonzoEra c) where
 -- a 'BoundedMeasure' instance, which itself is needed for the alonzo instance of
 -- 'TxLimits' (in consensus).
 data ExUnits' a = ExUnits'
-  { exUnitsMem' :: !a,
-    exUnitsSteps' :: !a
+  { exUnitsMem' :: !a
+  , exUnitsSteps' :: !a
   }
   deriving (Eq, Generic, Show, Functor)
   -- It is deliberate that there is no Ord instance, use `pointWiseExUnits` instead.
@@ -239,9 +239,9 @@ pointWiseExUnits oper (ExUnits m1 s1) (ExUnits m2 s2) = (m1 `oper` m2) && (s1 `o
 -- this type uses the smart constructor `mkCostModel`
 -- to hide the evaluation context.
 data CostModel = CostModel
-  { cmLanguage :: !Language,
-    cmMap :: [Integer],
-    cmEvalCtx :: !PV1.EvaluationContext
+  { cmLanguage :: !Language
+  , cmMap :: [Integer]
+  , cmEvalCtx :: !PV1.EvaluationContext
   }
   deriving (Generic)
 
@@ -317,8 +317,8 @@ encodeCostModel = encodeFoldableAsDefLenList toCBOR . getCostModelParams
 
 -- | Prices per execution unit
 data Prices = Prices
-  { prMem :: !NonNegativeInterval,
-    prSteps :: !NonNegativeInterval
+  { prMem :: !NonNegativeInterval
+  , prSteps :: !NonNegativeInterval
   }
   deriving (Eq, Generic, Show, Ord)
 

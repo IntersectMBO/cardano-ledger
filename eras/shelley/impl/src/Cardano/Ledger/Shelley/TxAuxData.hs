@@ -14,56 +14,56 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Shelley.TxAuxData
-  ( Metadatum (..),
-    ShelleyTxAuxData (ShelleyTxAuxData),
-    hashShelleyTxAuxData,
-    validMetadatum,
+module Cardano.Ledger.Shelley.TxAuxData (
+  Metadatum (..),
+  ShelleyTxAuxData (ShelleyTxAuxData),
+  hashShelleyTxAuxData,
+  validMetadatum,
 
-    -- * Deprecations
-    Metadata,
-  )
+  -- * Deprecations
+  Metadata,
+)
 where
 
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
-import Cardano.Ledger.Binary
-  ( Annotator (..),
-    Decoder,
-    DecoderError (..),
-    Encoding,
-    FromCBOR (fromCBOR),
-    ToCBOR (toCBOR),
-    TokenType (..),
-    cborError,
-    decodeBreakOr,
-    decodeBytes,
-    decodeBytesIndef,
-    decodeInteger,
-    decodeListLen,
-    decodeListLenIndef,
-    decodeMapLen,
-    decodeMapLenIndef,
-    decodeString,
-    decodeStringIndef,
-    encodeBytes,
-    encodeInteger,
-    encodeListLen,
-    encodeMapLen,
-    encodePreEncoded,
-    encodeString,
-    peekTokenType,
-    serializeEncoding,
-    withSlice,
-  )
+import Cardano.Ledger.Binary (
+  Annotator (..),
+  Decoder,
+  DecoderError (..),
+  Encoding,
+  FromCBOR (fromCBOR),
+  ToCBOR (toCBOR),
+  TokenType (..),
+  cborError,
+  decodeBreakOr,
+  decodeBytes,
+  decodeBytesIndef,
+  decodeInteger,
+  decodeListLen,
+  decodeListLenIndef,
+  decodeMapLen,
+  decodeMapLenIndef,
+  decodeString,
+  decodeStringIndef,
+  encodeBytes,
+  encodeInteger,
+  encodeListLen,
+  encodeMapLen,
+  encodePreEncoded,
+  encodeString,
+  peekTokenType,
+  serializeEncoding,
+  withSlice,
+ )
 import Cardano.Ledger.Core (Era (..), EraTxAuxData (..), eraProtVerLow)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Hashes (EraIndependentTxAuxData)
-import Cardano.Ledger.SafeHash
-  ( HashAnnotated,
-    SafeHash,
-    SafeToHash (..),
-    hashAnnotated,
-  )
+import Cardano.Ledger.SafeHash (
+  HashAnnotated,
+  SafeHash,
+  SafeToHash (..),
+  hashAnnotated,
+ )
 import Cardano.Ledger.Shelley.Era
 import Control.DeepSeq (NFData (rnf), deepseq)
 import Data.ByteString (ByteString)
@@ -97,8 +97,8 @@ instance NFData Metadatum where
     S _ -> ()
 
 data ShelleyTxAuxData era = ShelleyTxAuxData'
-  { mdMap :: Map Word64 Metadatum,
-    mdBytes :: LBS.ByteString
+  { mdMap :: Map Word64 Metadatum
+  , mdBytes :: LBS.ByteString
   }
   deriving (Eq, Show, Ord, Generic)
   deriving (NoThunks) via AllowThunksIn '["mdBytes"] (ShelleyTxAuxData era)
@@ -181,13 +181,13 @@ encodeMetadatum (List xs) =
   encodeListLen (fromIntegral (length xs))
     <> mconcat
       [ encodeMetadatum x
-        | x <- xs
+      | x <- xs
       ]
 encodeMetadatum (Map kvs) =
   encodeMapLen (fromIntegral (length kvs))
     <> mconcat
       [ encodeMetadatum k <> encodeMetadatum v
-        | (k, v) <- kvs
+      | (k, v) <- kvs
       ]
 
 -- | Decode a transaction matadatum value from its CBOR representation.

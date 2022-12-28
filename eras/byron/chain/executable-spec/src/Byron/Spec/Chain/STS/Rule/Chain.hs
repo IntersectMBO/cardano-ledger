@@ -61,26 +61,26 @@ data ChainPredicateFailure
 instance STS CHAIN where
   type
     Environment CHAIN =
-      ( Slot, -- Current slot
-        UTxO,
-        -- Components needed to be able to bootstrap the traces generator. They are
+      ( Slot -- Current slot
+      , UTxO
+      , -- Components needed to be able to bootstrap the traces generator. They are
         -- not part of the formal spec. These might be removed once we have decided
         -- on how do we want to model initial states.
-        Set VKeyGenesis, -- Allowed delegators. Needed by the initial delegation rules. The number of
+        Set VKeyGenesis -- Allowed delegators. Needed by the initial delegation rules. The number of
         -- genesis keys is the size of this set.
-        PParams, -- Needed to bootstrap this part of the chain state,
-        -- which is used in the delegation rules
-        BlockCount -- Chain stability parameter
+      , PParams -- Needed to bootstrap this part of the chain state,
+      -- which is used in the delegation rules
+      , BlockCount -- Chain stability parameter
       )
 
   type
     State CHAIN =
-      ( Slot,
-        Seq VKeyGenesis,
-        Hash,
-        UTxOState,
-        DIState,
-        UPIState
+      ( Slot
+      , Seq VKeyGenesis
+      , Hash
+      , UTxOState
+      , DIState
+      , UPIState
       )
 
   type Signal CHAIN = Block
@@ -96,32 +96,32 @@ instance STS CHAIN where
             -- the formal spec includes initial rules for update we can use
             -- them here.
             upiState0 =
-              ( (ProtVer 0 0 0, pps'),
-                [],
-                Map.empty,
-                Map.empty,
-                Map.empty,
-                Map.empty,
-                Set.empty,
-                Set.empty,
-                Map.empty
+              ( (ProtVer 0 0 0, pps')
+              , []
+              , Map.empty
+              , Map.empty
+              , Map.empty
+              , Map.empty
+              , Set.empty
+              , Set.empty
+              , Map.empty
               )
         utxoSt0 <- trans @UTXOWS $ IRC UTxOEnv {utxo0 = utxo0', pps = pps'}
         let dsEnv =
               DSEnv
-                { _dSEnvAllowedDelegators = ads,
-                  _dSEnvEpoch = sEpoch s0 k,
-                  _dSEnvSlot = s0,
-                  _dSEnvK = k
+                { _dSEnvAllowedDelegators = ads
+                , _dSEnvEpoch = sEpoch s0 k
+                , _dSEnvSlot = s0
+                , _dSEnvK = k
                 }
         ds <- trans @DELEG $ IRC dsEnv
         pure $!
-          ( s0,
-            [],
-            genesisHash,
-            utxoSt0,
-            ds,
-            upiState0
+          ( s0
+          , []
+          , genesisHash
+          , utxoSt0
+          , ds
+          , upiState0
           )
     ]
 
@@ -151,14 +151,15 @@ instance STS CHAIN where
         (utxoSt', ds', us'') <-
           trans @BBODY $
             TRC
-              ( ( ppsUs',
-                  sEpoch (bSlot b) k,
-                  utxoGenesis,
-                  fromIntegral (Set.size ads),
-                  k
-                ),
-                (utxoSt, ds, us'),
-                b
+              (
+                ( ppsUs'
+                , sEpoch (bSlot b) k
+                , utxoGenesis
+                , fromIntegral (Set.size ads)
+                , k
+                )
+              , (utxoSt, ds, us')
+              , b
               )
         (h', sgs') <-
           trans @PBFT $ TRC ((ppsUs', dm, sLast, sNow, k), (h, sgs), b ^. bHeader)
@@ -261,18 +262,18 @@ sigGenChain
       let (us', _) =
             applySTSIndifferently @EPOCH $
               TRC
-                ( (sEpoch (Slot s) k, k),
-                  us,
-                  nextSlot
+                ( (sEpoch (Slot s) k, k)
+                , us
+                , nextSlot
                 )
 
           pps' = protocolParameters us'
 
           upienv =
-            ( Slot s,
-              _dIStateDelegationMap ds,
-              k,
-              toNumberOfGenesisKeys $ Set.size ads
+            ( Slot s
+            , _dIStateDelegationMap ds
+            , k
+            , toNumberOfGenesisKeys $ Set.size ads
             )
 
           -- TODO: we might need to make the number of genesis keys a newtype, and
@@ -300,14 +301,15 @@ sigGenChain
             -- NOTE: We arbitrarily chose to generate delegation payload in 30% of
             -- the cases. We could make this configurable.
             Gen.frequency
-              [ (7, pure []),
-                ( 3,
-                  let dsEnv =
+              [ (7, pure [])
+              ,
+                ( 3
+                , let dsEnv =
                         DSEnv
-                          { _dSEnvAllowedDelegators = ads,
-                            _dSEnvEpoch = sEpoch nextSlot k,
-                            _dSEnvSlot = nextSlot,
-                            _dSEnvK = k
+                          { _dSEnvAllowedDelegators = ads
+                          , _dSEnvEpoch = sEpoch nextSlot k
+                          , _dSEnvSlot = nextSlot
+                          , _dSEnvK = k
                           }
                    in dcertsGen dsEnv ds
                 )
@@ -341,9 +343,9 @@ sigGenChain
 
 coverInvalidBlockProofs ::
   forall m a.
-  ( MonadTest m,
-    HasCallStack,
-    Data a
+  ( MonadTest m
+  , HasCallStack
+  , Data a
   ) =>
   -- | Minimum percentage that each failure must occur.
   CoverPercentage ->
@@ -353,9 +355,9 @@ coverInvalidBlockProofs ::
 coverInvalidBlockProofs coverPercentage =
   coverFailures @_ @BBODY
     coverPercentage
-    [ InvalidDelegationHash,
-      InvalidUpdateProposalHash,
-      InvalidUtxoHash
+    [ InvalidDelegationHash
+    , InvalidUpdateProposalHash
+    , InvalidUtxoHash
     ]
 
 --------------------------------------------------------------------------------

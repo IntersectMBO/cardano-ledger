@@ -12,50 +12,50 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Ledger.Binary.Decoding.Coders
-  ( -- * Creating decoders.
+module Cardano.Ledger.Binary.Decoding.Coders (
+  -- * Creating decoders.
 
-    --
-    -- $Decoders
-    Decode (..),
-    (<!),
-    (<*!),
-    (<?),
-    decode,
-    decodeSparse,
+  --
+  -- $Decoders
+  Decode (..),
+  (<!),
+  (<*!),
+  (<?),
+  decode,
+  decodeSparse,
 
-    -- * Index types for well-formed Coders.
+  -- * Index types for well-formed Coders.
 
-    --
-    -- $Indexes
-    Density (..),
-    Wrapped (..),
-    Field (..),
-    ofield,
-    invalidField,
-    field,
-    fieldA,
-    fieldAA,
+  --
+  -- $Indexes
+  Density (..),
+  Wrapped (..),
+  Field (..),
+  ofield,
+  invalidField,
+  field,
+  fieldA,
+  fieldAA,
 
-    -- * Using Duals .
-    decodeDual,
+  -- * Using Duals .
+  decodeDual,
 
-    -- * Containers, Combinators
+  -- * Containers, Combinators
 
-    --
-    -- $Combinators
-    listDecodeA,
-    mapDecodeA,
-    setDecodeA,
+  --
+  -- $Combinators
+  listDecodeA,
+  mapDecodeA,
+  setDecodeA,
 
-    -- * Low level (Encoding/Decoder) utility functions
-    decodeRecordNamed,
-    decodeRecordNamedT,
-    decodeRecordSum,
-    invalidKey,
-    unusedRequiredKeys,
-    duplicateKey,
-  )
+  -- * Low level (Encoding/Decoder) utility functions
+  decodeRecordNamed,
+  decodeRecordNamedT,
+  decodeRecordSum,
+  invalidKey,
+  unusedRequiredKeys,
+  duplicateKey,
+)
 where
 
 import qualified Cardano.Binary as C

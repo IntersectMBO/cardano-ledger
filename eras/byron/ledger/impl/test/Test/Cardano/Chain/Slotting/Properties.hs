@@ -1,26 +1,26 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Test.Cardano.Chain.Slotting.Properties
-  ( tests,
-  )
+module Test.Cardano.Chain.Slotting.Properties (
+  tests,
+)
 where
 
-import Cardano.Chain.Slotting
-  ( SlotCount (..),
-    SlotNumber (..),
-    addSlotCount,
-    fromSlotNumber,
-    toSlotNumber,
-  )
+import Cardano.Chain.Slotting (
+  SlotCount (..),
+  SlotNumber (..),
+  addSlotCount,
+  fromSlotNumber,
+  toSlotNumber,
+ )
 import Cardano.Prelude
 import Hedgehog (forAll, property, success, (===))
-import Test.Cardano.Chain.Slotting.Gen
-  ( genConsistentEpochAndSlotCountEpochSlots,
-    genEpochAndSlotCount,
-    genEpochSlots,
-    genSlotCount,
-    genSlotNumber,
-  )
+import Test.Cardano.Chain.Slotting.Gen (
+  genConsistentEpochAndSlotCountEpochSlots,
+  genEpochAndSlotCount,
+  genEpochSlots,
+  genSlotCount,
+  genSlotNumber,
+ )
 import Test.Cardano.Prelude
 import Test.Options (TSGroup, TSProperty, withTestsTS)
 

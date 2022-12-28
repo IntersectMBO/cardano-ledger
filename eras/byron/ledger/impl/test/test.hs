@@ -1,6 +1,6 @@
-module Main
-  ( main,
-  )
+module Main (
+  main,
+)
 where
 
 import Cardano.Prelude
@@ -41,33 +41,33 @@ main =
   mainWithTestScenario $
     testGroup "Cardano Ledger Tests" $
       tsGroupToTree
-        <$> [ Test.Cardano.Chain.Block.CBOR.tests,
-              Test.Cardano.Chain.Block.Model.tests,
-              Test.Cardano.Chain.Block.Size.tests,
-              Test.Cardano.Chain.Block.Validation.tests NoAssertNF,
-              Test.Cardano.Chain.Block.ValidationMode.tests,
-              Test.Cardano.Chain.Buildable.tests,
-              Test.Cardano.Chain.Common.Address.tests,
-              Test.Cardano.Chain.Common.Attributes.tests,
-              Test.Cardano.Chain.Common.CBOR.tests,
-              Test.Cardano.Chain.Common.Compact.tests,
-              Test.Cardano.Chain.Common.Lovelace.tests,
-              Test.Cardano.Chain.Delegation.CBOR.tests,
-              const Test.Cardano.Chain.Delegation.Certificate.tests,
-              const Test.Cardano.Chain.Delegation.Model.tests,
-              const Test.Cardano.Chain.Epoch.File.tests,
-              Test.Cardano.Chain.Elaboration.Delegation.tests,
-              Test.Cardano.Chain.Genesis.CBOR.tests,
-              Test.Cardano.Chain.Genesis.Json.tests,
-              Test.Cardano.Chain.MempoolPayload.CBOR.tests,
-              Test.Cardano.Chain.Slotting.CBOR.tests,
-              Test.Cardano.Chain.Slotting.Properties.tests,
-              const Test.Cardano.Chain.Ssc.CBOR.tests,
-              Test.Cardano.Chain.UTxO.CBOR.tests,
-              Test.Cardano.Chain.UTxO.Compact.tests,
-              Test.Cardano.Chain.UTxO.Model.tests,
-              Test.Cardano.Chain.UTxO.ValidationMode.tests,
-              Test.Cardano.Chain.Update.CBOR.tests,
-              Test.Cardano.Chain.Update.Properties.tests,
-              Test.Cardano.Chain.Byron.API.tests
+        <$> [ Test.Cardano.Chain.Block.CBOR.tests
+            , Test.Cardano.Chain.Block.Model.tests
+            , Test.Cardano.Chain.Block.Size.tests
+            , Test.Cardano.Chain.Block.Validation.tests NoAssertNF
+            , Test.Cardano.Chain.Block.ValidationMode.tests
+            , Test.Cardano.Chain.Buildable.tests
+            , Test.Cardano.Chain.Common.Address.tests
+            , Test.Cardano.Chain.Common.Attributes.tests
+            , Test.Cardano.Chain.Common.CBOR.tests
+            , Test.Cardano.Chain.Common.Compact.tests
+            , Test.Cardano.Chain.Common.Lovelace.tests
+            , Test.Cardano.Chain.Delegation.CBOR.tests
+            , const Test.Cardano.Chain.Delegation.Certificate.tests
+            , const Test.Cardano.Chain.Delegation.Model.tests
+            , const Test.Cardano.Chain.Epoch.File.tests
+            , Test.Cardano.Chain.Elaboration.Delegation.tests
+            , Test.Cardano.Chain.Genesis.CBOR.tests
+            , Test.Cardano.Chain.Genesis.Json.tests
+            , Test.Cardano.Chain.MempoolPayload.CBOR.tests
+            , Test.Cardano.Chain.Slotting.CBOR.tests
+            , Test.Cardano.Chain.Slotting.Properties.tests
+            , const Test.Cardano.Chain.Ssc.CBOR.tests
+            , Test.Cardano.Chain.UTxO.CBOR.tests
+            , Test.Cardano.Chain.UTxO.Compact.tests
+            , Test.Cardano.Chain.UTxO.Model.tests
+            , Test.Cardano.Chain.UTxO.ValidationMode.tests
+            , Test.Cardano.Chain.Update.CBOR.tests
+            , Test.Cardano.Chain.Update.Properties.tests
+            , Test.Cardano.Chain.Byron.API.tests
             ]

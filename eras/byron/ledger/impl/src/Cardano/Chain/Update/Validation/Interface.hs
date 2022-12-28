@@ -6,27 +6,27 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 -- | Blockchain interface validation rules.
-module Cardano.Chain.Update.Validation.Interface
-  ( -- * Environment
-    Environment (..),
+module Cardano.Chain.Update.Validation.Interface (
+  -- * Environment
+  Environment (..),
 
-    -- * State
-    State (..),
-    initialState,
+  -- * State
+  State (..),
+  initialState,
 
-    -- * Signal
-    Signal (..),
+  -- * Signal
+  Signal (..),
 
-    -- * Error
-    Error (..),
+  -- * Error
+  Error (..),
 
-    -- * Interface functions
-    registerUpdate,
-    registerProposal,
-    registerVote,
-    registerEndorsement,
-    registerEpoch,
-  )
+  -- * Interface functions
+  registerUpdate,
+  registerProposal,
+  registerVote,
+  registerEndorsement,
+  registerEpoch,
+)
 where
 
 import Cardano.Chain.Common.BlockCount (BlockCount)
@@ -34,52 +34,52 @@ import Cardano.Chain.Common.KeyHash (KeyHash)
 import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Genesis as Genesis
 import Cardano.Chain.ProtocolConstants (kEpochSlots)
-import Cardano.Chain.Slotting
-  ( EpochNumber,
-    SlotCount (SlotCount),
-    SlotNumber,
-    addSlotCount,
-    epochFirstSlot,
-    unSlotNumber,
-  )
+import Cardano.Chain.Slotting (
+  EpochNumber,
+  SlotCount (SlotCount),
+  SlotNumber,
+  addSlotCount,
+  epochFirstSlot,
+  unSlotNumber,
+ )
 import Cardano.Chain.Update.Proposal (AProposal, UpId, recoverUpId)
-import Cardano.Chain.Update.ProtocolParameters
-  ( ProtocolParameters,
-    ppUpdateProposalTTL,
-    upAdptThd,
-  )
+import Cardano.Chain.Update.ProtocolParameters (
+  ProtocolParameters,
+  ppUpdateProposalTTL,
+  upAdptThd,
+ )
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion (..))
-import Cardano.Chain.Update.SoftwareVersion
-  ( svAppName,
-    svNumber,
-  )
-import Cardano.Chain.Update.Validation.Endorsement
-  ( CandidateProtocolUpdate,
-    Endorsement,
-    endorsementProtocolVersion,
-  )
+import Cardano.Chain.Update.SoftwareVersion (
+  svAppName,
+  svNumber,
+ )
+import Cardano.Chain.Update.Validation.Endorsement (
+  CandidateProtocolUpdate,
+  Endorsement,
+  endorsementProtocolVersion,
+ )
 import qualified Cardano.Chain.Update.Validation.Endorsement as Endorsement
-import Cardano.Chain.Update.Validation.Interface.ProtocolVersionBump
-  ( tryBumpVersion,
-  )
+import Cardano.Chain.Update.Validation.Interface.ProtocolVersionBump (
+  tryBumpVersion,
+ )
 import qualified Cardano.Chain.Update.Validation.Interface.ProtocolVersionBump as PVBump
 import qualified Cardano.Chain.Update.Validation.Registration as Registration
 import qualified Cardano.Chain.Update.Validation.Voting as Voting
 import Cardano.Chain.Update.Vote (AVote)
 import Cardano.Crypto (ProtocolMagicId)
-import Cardano.Ledger.Binary
-  ( Annotated,
-    Decoder,
-    DecoderError (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    cborError,
-    decodeListLen,
-    decodeWord8,
-    encodeListLen,
-    enforceSize,
-    matchSize,
-  )
+import Cardano.Ledger.Binary (
+  Annotated,
+  Decoder,
+  DecoderError (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  cborError,
+  decodeListLen,
+  decodeWord8,
+  encodeListLen,
+  enforceSize,
+  matchSize,
+ )
 import Cardano.Prelude hiding (State, cborError)
 import qualified Data.Map.Strict as M
 import Data.Set (union)
@@ -87,43 +87,43 @@ import qualified Data.Set as S
 import NoThunks.Class (NoThunks (..))
 
 data Environment = Environment
-  { protocolMagic :: !(Annotated ProtocolMagicId ByteString),
-    -- | TODO: this is the chain security parameter, a.k.a. @stableAfter@, it is not part
-    -- of our protocol parameters, so it seems that we need to pass it in the
-    -- environment. However we need to double-check this with others.
-    k :: !BlockCount,
-    currentSlot :: !SlotNumber,
-    -- | Number of genesis keys. This is used to calculate the proportion of
-    -- genesis keys that need to endorse a new protocol version for it to be
-    -- considered for adoption. See
-    -- @Cardano.Chain.Update.Validation.Endorsement.Environment@.
-    numGenKeys :: !Word8,
-    delegationMap :: !Delegation.Map
+  { protocolMagic :: !(Annotated ProtocolMagicId ByteString)
+  , k :: !BlockCount
+  -- ^ TODO: this is the chain security parameter, a.k.a. @stableAfter@, it is not part
+  -- of our protocol parameters, so it seems that we need to pass it in the
+  -- environment. However we need to double-check this with others.
+  , currentSlot :: !SlotNumber
+  , numGenKeys :: !Word8
+  -- ^ Number of genesis keys. This is used to calculate the proportion of
+  -- genesis keys that need to endorse a new protocol version for it to be
+  -- considered for adoption. See
+  -- @Cardano.Chain.Update.Validation.Endorsement.Environment@.
+  , delegationMap :: !Delegation.Map
   }
 
 -- | Update interface state.
 data State = State
-  { -- | Current epoch
-    currentEpoch :: !EpochNumber,
-    adoptedProtocolVersion :: !ProtocolVersion,
-    -- | Adopted protocol parameters
-    adoptedProtocolParameters :: !ProtocolParameters,
-    -- | Candidate protocol versions
-    candidateProtocolUpdates :: ![CandidateProtocolUpdate],
-    -- | Current application versions
-    appVersions :: !Registration.ApplicationVersions,
-    -- | Registered protocol update proposals
-    registeredProtocolUpdateProposals :: !Registration.ProtocolUpdateProposals,
-    -- | Registered software update proposals
-    registeredSoftwareUpdateProposals :: !Registration.SoftwareUpdateProposals,
-    -- | Confirmed update proposals
-    confirmedProposals :: !(Map UpId SlotNumber),
-    -- | Update proposals votes
-    proposalVotes :: !(Map UpId (Set KeyHash)),
-    -- | Update proposals endorsements
-    registeredEndorsements :: !(Set Endorsement),
-    -- | Slot at which an update proposal was registered
-    proposalRegistrationSlot :: !(Map UpId SlotNumber)
+  { currentEpoch :: !EpochNumber
+  -- ^ Current epoch
+  , adoptedProtocolVersion :: !ProtocolVersion
+  , adoptedProtocolParameters :: !ProtocolParameters
+  -- ^ Adopted protocol parameters
+  , candidateProtocolUpdates :: ![CandidateProtocolUpdate]
+  -- ^ Candidate protocol versions
+  , appVersions :: !Registration.ApplicationVersions
+  -- ^ Current application versions
+  , registeredProtocolUpdateProposals :: !Registration.ProtocolUpdateProposals
+  -- ^ Registered protocol update proposals
+  , registeredSoftwareUpdateProposals :: !Registration.SoftwareUpdateProposals
+  -- ^ Registered software update proposals
+  , confirmedProposals :: !(Map UpId SlotNumber)
+  -- ^ Confirmed update proposals
+  , proposalVotes :: !(Map UpId (Set KeyHash))
+  -- ^ Update proposals votes
+  , registeredEndorsements :: !(Set Endorsement)
+  -- ^ Update proposals endorsements
+  , proposalRegistrationSlot :: !(Map UpId SlotNumber)
+  -- ^ Slot at which an update proposal was registered
   }
   deriving (Eq, Show, Generic)
   deriving anyclass (NFData, NoThunks)
@@ -200,26 +200,26 @@ instance FromCBOR Error where
 
 -- | Signal combining signals from various rules
 data Signal = Signal
-  { proposal :: !(Maybe (AProposal ByteString)),
-    votes :: ![AVote ByteString],
-    endorsement :: !Endorsement
+  { proposal :: !(Maybe (AProposal ByteString))
+  , votes :: ![AVote ByteString]
+  , endorsement :: !Endorsement
   }
 
 -- | Initial update interface state
 initialState :: Genesis.Config -> State
 initialState config =
   State
-    { currentEpoch = 0,
-      adoptedProtocolVersion = ProtocolVersion 0 0 0,
-      adoptedProtocolParameters = Genesis.configProtocolParameters config,
-      candidateProtocolUpdates = [],
-      appVersions = mempty,
-      registeredProtocolUpdateProposals = mempty,
-      registeredSoftwareUpdateProposals = mempty,
-      confirmedProposals = mempty,
-      proposalVotes = mempty,
-      registeredEndorsements = mempty,
-      proposalRegistrationSlot = mempty
+    { currentEpoch = 0
+    , adoptedProtocolVersion = ProtocolVersion 0 0 0
+    , adoptedProtocolParameters = Genesis.configProtocolParameters config
+    , candidateProtocolUpdates = []
+    , appVersions = mempty
+    , registeredProtocolUpdateProposals = mempty
+    , registeredSoftwareUpdateProposals = mempty
+    , confirmedProposals = mempty
+    , proposalVotes = mempty
+    , registeredEndorsements = mempty
+    , proposalRegistrationSlot = mempty
     }
 
 -- | Group together the other registration rules in a single rule
@@ -254,25 +254,25 @@ registerProposal env st proposal = do
       `wrapError` Registration
   pure $!
     st
-      { registeredProtocolUpdateProposals = registeredProtocolUpdateProposals',
-        registeredSoftwareUpdateProposals = registeredSoftwareUpdateProposals',
-        proposalRegistrationSlot =
+      { registeredProtocolUpdateProposals = registeredProtocolUpdateProposals'
+      , registeredSoftwareUpdateProposals = registeredSoftwareUpdateProposals'
+      , proposalRegistrationSlot =
           M.insert (recoverUpId proposal) currentSlot proposalRegistrationSlot
       }
   where
     Environment
-      { protocolMagic,
-        currentSlot,
-        delegationMap
+      { protocolMagic
+      , currentSlot
+      , delegationMap
       } = env
 
     State
-      { adoptedProtocolVersion,
-        adoptedProtocolParameters,
-        appVersions,
-        registeredProtocolUpdateProposals,
-        registeredSoftwareUpdateProposals,
-        proposalRegistrationSlot
+      { adoptedProtocolVersion
+      , adoptedProtocolParameters
+      , appVersions
+      , registeredProtocolUpdateProposals
+      , registeredSoftwareUpdateProposals
+      , proposalRegistrationSlot
       } = st
 
     subEnv =
@@ -310,9 +310,9 @@ registerVotes env st votes = do
         } = env
 
       State
-        { confirmedProposals,
-          appVersions,
-          registeredSoftwareUpdateProposals
+        { confirmedProposals
+        , appVersions
+        , registeredSoftwareUpdateProposals
         } = st'
 
       confirmedApplicationUpdates =
@@ -322,17 +322,17 @@ registerVotes env st votes = do
       appVersions' =
         M.fromList $
           [ (svAppName sv, av)
-            | (pid, sup) <- M.toList registeredSoftwareUpdateProposals,
-              pid `elem` M.keys confirmedApplicationUpdates,
-              let Registration.SoftwareUpdateProposal sv metadata = sup
-                  av = Registration.ApplicationVersion (svNumber sv) currentSlot metadata
+          | (pid, sup) <- M.toList registeredSoftwareUpdateProposals
+          , pid `elem` M.keys confirmedApplicationUpdates
+          , let Registration.SoftwareUpdateProposal sv metadata = sup
+                av = Registration.ApplicationVersion (svNumber sv) currentSlot metadata
           ]
   pure $
     st' -- Note that it's important that the new application versions are passed
     -- as the first argument of @M.union@, since the values in this first
     -- argument overwrite the values in the second.
-      { appVersions = M.union appVersions' appVersions,
-        -- TODO: consider using the `Relation` instances from `cardano-ledger` (see `Ledger.Core`)
+      { appVersions = M.union appVersions' appVersions
+      , -- TODO: consider using the `Relation` instances from `cardano-ledger` (see `Ledger.Core`)
         registeredSoftwareUpdateProposals =
           M.withoutKeys
             registeredSoftwareUpdateProposals
@@ -354,22 +354,22 @@ registerVote env st vote = do
       `wrapError` Voting
   pure $!
     st
-      { confirmedProposals = confirmedProposals',
-        proposalVotes = proposalVotes'
+      { confirmedProposals = confirmedProposals'
+      , proposalVotes = proposalVotes'
       }
   where
     Environment
-      { protocolMagic,
-        currentSlot,
-        numGenKeys,
-        delegationMap
+      { protocolMagic
+      , currentSlot
+      , numGenKeys
+      , delegationMap
       } = env
 
     State
-      { adoptedProtocolParameters,
-        proposalRegistrationSlot,
-        proposalVotes,
-        confirmedProposals
+      { adoptedProtocolParameters
+      , proposalRegistrationSlot
+      , proposalVotes
+      , confirmedProposals
       } = st
 
     rups = M.keysSet proposalRegistrationSlot
@@ -417,15 +417,15 @@ registerEndorsement env st endorsement = do
 
   pure $!
     st
-      { candidateProtocolUpdates = forceElemsToWHNF candidateProtocolUpdates',
-        registeredProtocolUpdateProposals = registeredProtocolUpdateProposals',
-        registeredSoftwareUpdateProposals =
-          M.restrictKeys registeredSoftwareUpdateProposals pidsKeep,
-        proposalVotes =
-          M.restrictKeys proposalVotes pidsKeep,
-        registeredEndorsements =
-          S.filter ((`S.member` vsKeep) . endorsementProtocolVersion) registeredEndorsements',
-        proposalRegistrationSlot =
+      { candidateProtocolUpdates = forceElemsToWHNF candidateProtocolUpdates'
+      , registeredProtocolUpdateProposals = registeredProtocolUpdateProposals'
+      , registeredSoftwareUpdateProposals =
+          M.restrictKeys registeredSoftwareUpdateProposals pidsKeep
+      , proposalVotes =
+          M.restrictKeys proposalVotes pidsKeep
+      , registeredEndorsements =
+          S.filter ((`S.member` vsKeep) . endorsementProtocolVersion) registeredEndorsements'
+      , proposalRegistrationSlot =
           M.restrictKeys proposalRegistrationSlot pidsKeep
       }
   where
@@ -439,21 +439,21 @@ registerEndorsement env st endorsement = do
         registeredProtocolUpdateProposals
 
     Environment
-      { k,
-        currentSlot,
-        numGenKeys,
-        delegationMap
+      { k
+      , currentSlot
+      , numGenKeys
+      , delegationMap
       } = env
 
     State
-      { adoptedProtocolParameters,
-        confirmedProposals,
-        registeredProtocolUpdateProposals,
-        registeredSoftwareUpdateProposals,
-        candidateProtocolUpdates,
-        proposalVotes,
-        registeredEndorsements,
-        proposalRegistrationSlot
+      { adoptedProtocolParameters
+      , confirmedProposals
+      , registeredProtocolUpdateProposals
+      , registeredSoftwareUpdateProposals
+      , candidateProtocolUpdates
+      , proposalVotes
+      , registeredEndorsements
+      , proposalRegistrationSlot
       } = st
 
     subSt =
@@ -492,15 +492,15 @@ registerEpoch env st lastSeenEpoch = do
     -- variables.
 
       st
-        { adoptedProtocolVersion = adoptedProtocolVersion',
-          adoptedProtocolParameters = nextProtocolParameters',
-          candidateProtocolUpdates = [],
-          registeredProtocolUpdateProposals = M.empty,
-          registeredSoftwareUpdateProposals = M.empty,
-          confirmedProposals = M.empty,
-          proposalVotes = M.empty,
-          registeredEndorsements = S.empty,
-          proposalRegistrationSlot = M.empty
+        { adoptedProtocolVersion = adoptedProtocolVersion'
+        , adoptedProtocolParameters = nextProtocolParameters'
+        , candidateProtocolUpdates = []
+        , registeredProtocolUpdateProposals = M.empty
+        , registeredSoftwareUpdateProposals = M.empty
+        , confirmedProposals = M.empty
+        , proposalVotes = M.empty
+        , registeredEndorsements = S.empty
+        , proposalRegistrationSlot = M.empty
         }
   where
     subEnv = PVBump.Environment k firstSlotOfLastSeenEpoch candidateProtocolUpdates
@@ -517,7 +517,7 @@ registerEpoch env st lastSeenEpoch = do
       } = env
 
     State
-      { adoptedProtocolVersion,
-        adoptedProtocolParameters,
-        candidateProtocolUpdates
+      { adoptedProtocolVersion
+      , adoptedProtocolParameters
+      , candidateProtocolUpdates
       } = st

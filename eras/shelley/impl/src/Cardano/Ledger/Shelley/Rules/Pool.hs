@@ -12,31 +12,31 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Shelley.Rules.Pool
-  ( ShelleyPOOL,
-    PoolEvent (..),
-    PoolEnv (..),
-    PredicateFailure,
-    ShelleyPoolPredFailure (..),
-  )
+module Cardano.Ledger.Shelley.Rules.Pool (
+  ShelleyPOOL,
+  PoolEvent (..),
+  PoolEnv (..),
+  PredicateFailure,
+  ShelleyPoolPredFailure (..),
+)
 where
 
 import Cardano.Crypto.Hash.Class (sizeHash)
-import Cardano.Ledger.BaseTypes
-  ( Globals (..),
-    Network,
-    ProtVer,
-    ShelleyBase,
-    epochInfoPure,
-    invalidKey,
-    networkId,
-  )
-import Cardano.Ledger.Binary
-  ( FromCBOR (..),
-    ToCBOR (..),
-    decodeRecordSum,
-    encodeListLen,
-  )
+import Cardano.Ledger.BaseTypes (
+  Globals (..),
+  Network,
+  ProtVer,
+  ShelleyBase,
+  epochInfoPure,
+  invalidKey,
+  networkId,
+ )
+import Cardano.Ledger.Binary (
+  FromCBOR (..),
+  ToCBOR (..),
+  decodeRecordSum,
+  encodeListLen,
+ )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto (HASH))
@@ -45,27 +45,27 @@ import Cardano.Ledger.Shelley.Era (ShelleyPOOL)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState (PState (..), payPoolDeposit)
 import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks
-import Cardano.Ledger.Shelley.TxBody
-  ( DCert (..),
-    PoolCert (..),
-    PoolMetadata (..),
-    PoolParams (..),
-    getRwdNetwork,
-  )
+import Cardano.Ledger.Shelley.TxBody (
+  DCert (..),
+  PoolCert (..),
+  PoolMetadata (..),
+  PoolParams (..),
+  getRwdNetwork,
+ )
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo, epochInfoEpoch)
 import Control.Monad (forM_, when)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, setSingleton, singleton, (∈), (∉), (∪), (⋪), (⨃))
-import Control.State.Transition
-  ( STS (..),
-    TRC (..),
-    TransitionRule,
-    failBecause,
-    judgmentContext,
-    liftSTS,
-    tellEvent,
-    (?!),
-  )
+import Control.State.Transition (
+  STS (..),
+  TRC (..),
+  TransitionRule,
+  failBecause,
+  judgmentContext,
+  liftSTS,
+  tellEvent,
+  (?!),
+ )
 import qualified Data.ByteString as BS
 import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
@@ -103,11 +103,11 @@ data ShelleyPoolPredFailure era
 instance NoThunks (ShelleyPoolPredFailure era)
 
 instance
-  ( Era era,
-    HasField "_minPoolCost" (PParams era) Coin,
-    HasField "_eMax" (PParams era) EpochNo,
-    HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_protocolVersion" (PParams era) ProtVer
+  ( Era era
+  , HasField "_minPoolCost" (PParams era) Coin
+  , HasField "_eMax" (PParams era) EpochNo
+  , HasField "_poolDeposit" (PParams era) Coin
+  , HasField "_protocolVersion" (PParams era) ProtVer
   ) =>
   STS (ShelleyPOOL era)
   where
@@ -179,11 +179,11 @@ instance
 
 poolDelegationTransition ::
   forall era.
-  ( Era era,
-    HasField "_minPoolCost" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_eMax" (PParams era) EpochNo,
-    HasField "_protocolVersion" (PParams era) ProtVer
+  ( Era era
+  , HasField "_minPoolCost" (PParams era) Coin
+  , HasField "_poolDeposit" (PParams era) Coin
+  , HasField "_eMax" (PParams era) EpochNo
+  , HasField "_protocolVersion" (PParams era) ProtVer
   ) =>
   TransitionRule (ShelleyPOOL era)
 poolDelegationTransition = do
@@ -232,8 +232,8 @@ poolDelegationTransition = do
           -- if that has happened, we cannot be in this branch of the if statement.
           pure $
             ps
-              { psFutureStakePoolParams = eval (psFutureStakePoolParams ps ⨃ singleton hk poolParam),
-                psRetiring = eval (setSingleton hk ⋪ psRetiring ps)
+              { psFutureStakePoolParams = eval (psFutureStakePoolParams ps ⨃ singleton hk poolParam)
+              , psRetiring = eval (setSingleton hk ⋪ psRetiring ps)
               }
     DCertPool (RetirePool hk (EpochNo e)) -> do
       -- note that pattern match is used instead of cwitness, as in the spec

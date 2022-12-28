@@ -11,30 +11,30 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
-module Cardano.Protocol.TPraos.BHeader
-  ( HashHeader (..),
-    PrevHash (..),
-    BHeader (BHeader),
-    BHBody (..),
-    LastAppliedBlock (..),
-    BoundedNatural (bvValue, bvMaxValue),
-    assertBoundedNatural,
-    lastAppliedHash,
-    issuerIDfromBHBody,
-    checkLeaderValue,
-    checkLeaderNatValue,
-    bhHash,
-    hashHeaderToNonce,
-    prevHashToNonce,
-    bHeaderSize,
-    bhbody,
-    hBbsize,
-    seedEta,
-    seedL,
-    mkSeed,
-    bnonce,
-    makeHeaderView,
-  )
+module Cardano.Protocol.TPraos.BHeader (
+  HashHeader (..),
+  PrevHash (..),
+  BHeader (BHeader),
+  BHBody (..),
+  LastAppliedBlock (..),
+  BoundedNatural (bvValue, bvMaxValue),
+  assertBoundedNatural,
+  lastAppliedHash,
+  issuerIDfromBHBody,
+  checkLeaderValue,
+  checkLeaderNatValue,
+  bhHash,
+  hashHeaderToNonce,
+  prevHashToNonce,
+  bHeaderSize,
+  bhbody,
+  hBbsize,
+  seedEta,
+  seedL,
+  mkSeed,
+  bnonce,
+  makeHeaderView,
+)
 where
 
 import qualified Cardano.Crypto.Hash.Class as Hash
@@ -42,61 +42,61 @@ import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
-import Cardano.Ledger.BaseTypes
-  ( ActiveSlotCoeff,
-    FixedPoint,
-    Nonce (..),
-    ProtVer (..),
-    Seed (..),
-    activeSlotLog,
-    activeSlotVal,
-    mkNonceFromNumber,
-    mkNonceFromOutputVRF,
-  )
-import Cardano.Ledger.Binary
-  ( Annotator (..),
-    Case (..),
-    FromCBOR (fromCBOR),
-    FromCBORGroup (..),
-    ToCBOR (..),
-    ToCBORGroup (..),
-    TokenType (TypeNull),
-    annotatorSlice,
-    decodeNull,
-    decodeRecordNamed,
-    encodeListLen,
-    encodeNull,
-    encodePreEncoded,
-    encodedSigKESSizeExpr,
-    encodedVerKeyVRFSizeExpr,
-    hashToCBOR,
-    listLenInt,
-    peekTokenType,
-    runByteBuilder,
-    serialize',
-    serializeEncoding,
-    szCases,
-    withWordSize,
-  )
+import Cardano.Ledger.BaseTypes (
+  ActiveSlotCoeff,
+  FixedPoint,
+  Nonce (..),
+  ProtVer (..),
+  Seed (..),
+  activeSlotLog,
+  activeSlotVal,
+  mkNonceFromNumber,
+  mkNonceFromOutputVRF,
+ )
+import Cardano.Ledger.Binary (
+  Annotator (..),
+  Case (..),
+  FromCBOR (fromCBOR),
+  FromCBORGroup (..),
+  ToCBOR (..),
+  ToCBORGroup (..),
+  TokenType (TypeNull),
+  annotatorSlice,
+  decodeNull,
+  decodeRecordNamed,
+  encodeListLen,
+  encodeNull,
+  encodePreEncoded,
+  encodedSigKESSizeExpr,
+  encodedVerKeyVRFSizeExpr,
+  hashToCBOR,
+  listLenInt,
+  peekTokenType,
+  runByteBuilder,
+  serialize',
+  serializeEncoding,
+  szCases,
+  withWordSize,
+ )
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Hashes
-  ( EraIndependentBlockBody,
-    EraIndependentBlockHeader,
-  )
-import Cardano.Ledger.Keys
-  ( CertifiedVRF,
-    Hash,
-    KeyHash,
-    KeyRole (..),
-    SignedKES,
-    VKey,
-    VerKeyVRF,
-    decodeSignedKES,
-    decodeVerKeyVRF,
-    encodeSignedKES,
-    encodeVerKeyVRF,
-    hashKey,
-  )
+import Cardano.Ledger.Hashes (
+  EraIndependentBlockBody,
+  EraIndependentBlockHeader,
+ )
+import Cardano.Ledger.Keys (
+  CertifiedVRF,
+  Hash,
+  KeyHash,
+  KeyRole (..),
+  SignedKES,
+  VKey,
+  VerKeyVRF,
+  decodeSignedKES,
+  decodeVerKeyVRF,
+  encodeSignedKES,
+  encodeVerKeyVRF,
+  hashKey,
+ )
 import Cardano.Ledger.NonIntegral (CompareResult (..), taylorExpCmp)
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Cardano.Protocol.TPraos.OCert (OCert (..))
@@ -133,8 +133,8 @@ instance
   toCBOR (BlockHash h) = toCBOR h
   encodedSizeExpr size _ =
     szCases
-      [ Case "GenesisHash" 1,
-        Case "BlockHash" (encodedSizeExpr size p)
+      [ Case "GenesisHash" 1
+      , Case "BlockHash" (encodedSizeExpr size p)
       ]
     where
       p = Proxy :: Proxy (HashHeader c)
@@ -153,28 +153,28 @@ instance
 deriving newtype instance CC.Crypto c => FromCBOR (HashHeader c)
 
 data BHBody c = BHBody
-  { -- | block number
-    bheaderBlockNo :: !BlockNo,
-    -- | block slot
-    bheaderSlotNo :: !SlotNo,
-    -- | Hash of the previous block header
-    bheaderPrev :: !(PrevHash c),
-    -- | verification key of block issuer
-    bheaderVk :: !(VKey 'BlockIssuer c),
-    -- | VRF verification key for block issuer
-    bheaderVrfVk :: !(VerKeyVRF c),
-    -- | block nonce
-    bheaderEta :: !(CertifiedVRF c Nonce),
-    -- | leader election value
-    bheaderL :: !(CertifiedVRF c Natural),
-    -- | Size of the block body
-    bsize :: !Natural,
-    -- | Hash of block body
-    bhash :: !(Hash c EraIndependentBlockBody),
-    -- | operational certificate
-    bheaderOCert :: !(OCert c),
-    -- | protocol version
-    bprotver :: !ProtVer
+  { bheaderBlockNo :: !BlockNo
+  -- ^ block number
+  , bheaderSlotNo :: !SlotNo
+  -- ^ block slot
+  , bheaderPrev :: !(PrevHash c)
+  -- ^ Hash of the previous block header
+  , bheaderVk :: !(VKey 'BlockIssuer c)
+  -- ^ verification key of block issuer
+  , bheaderVrfVk :: !(VerKeyVRF c)
+  -- ^ VRF verification key for block issuer
+  , bheaderEta :: !(CertifiedVRF c Nonce)
+  -- ^ block nonce
+  , bheaderL :: !(CertifiedVRF c Natural)
+  -- ^ leader election value
+  , bsize :: !Natural
+  -- ^ Size of the block body
+  , bhash :: !(Hash c EraIndependentBlockBody)
+  -- ^ Hash of block body
+  , bheaderOCert :: !(OCert c)
+  -- ^ operational certificate
+  , bprotver :: !ProtVer
+  -- ^ protocol version
   }
   deriving (Generic)
 
@@ -250,25 +250,25 @@ instance
     bprotver <- fromCBORGroup
     pure $
       BHBody
-        { bheaderBlockNo,
-          bheaderSlotNo,
-          bheaderPrev,
-          bheaderVk,
-          bheaderVrfVk,
-          bheaderEta,
-          bheaderL,
-          bsize,
-          bhash,
-          bheaderOCert,
-          bprotver
+        { bheaderBlockNo
+        , bheaderSlotNo
+        , bheaderPrev
+        , bheaderVk
+        , bheaderVrfVk
+        , bheaderEta
+        , bheaderL
+        , bsize
+        , bhash
+        , bheaderOCert
+        , bprotver
         }
     where
       bhBodySize body = 9 + listLenInt (bheaderOCert body) + listLenInt (bprotver body)
 
 data BHeader c = BHeader'
-  { bHeaderBody' :: !(BHBody c),
-    bHeaderSig' :: !(SignedKES c (BHBody c)),
-    bHeaderBytes :: !BSL.ByteString
+  { bHeaderBody' :: !(BHBody c)
+  , bHeaderSig' :: !(SignedKES c (BHBody c))
+  , bHeaderBytes :: !BSL.ByteString
   }
   deriving (Generic)
 
@@ -373,8 +373,8 @@ hBbsize = bsize
 -- | Natural value with some additional bound. It must always be the base that
 -- 'bvValue <= bvMaxValue'. The creator is responsible for checking this value.
 data BoundedNatural = UnsafeBoundedNatural
-  { bvMaxValue :: Natural,
-    bvValue :: Natural
+  { bvMaxValue :: Natural
+  , bvValue :: Natural
   }
 
 -- | Assert that a natural is bounded by a certain value. Throws an error when
@@ -481,14 +481,14 @@ mkSeed ucNonce (SlotNo slot) eNonce =
     . runByteBuilder (8 + 32)
     $ BS.word64BE slot
       <> ( case eNonce of
-             NeutralNonce -> mempty
-             Nonce h -> BS.byteStringCopy (Hash.hashToBytes h)
+            NeutralNonce -> mempty
+            Nonce h -> BS.byteStringCopy (Hash.hashToBytes h)
          )
 
 data LastAppliedBlock c = LastAppliedBlock
-  { labBlockNo :: !BlockNo,
-    labSlotNo :: !SlotNo,
-    labHash :: !(HashHeader c)
+  { labBlockNo :: !BlockNo
+  , labSlotNo :: !SlotNo
+  , labHash :: !(HashHeader c)
   }
   deriving (Show, Eq, Generic)
 

@@ -38,9 +38,9 @@ mainTests :: TestTree
 mainTests =
   testGroup
     "ShelleyMA Ledger Tests"
-    [ allegraTests,
-      maryTests,
-      testGroup
+    [ allegraTests
+    , maryTests
+    , testGroup
         "Mixed MA Ledger Tests"
         [ Serialisation.tests
         ]
@@ -50,19 +50,19 @@ allegraTests :: TestTree
 allegraTests =
   testGroup
     "Allegra Ledger Tests"
-    [ allegraTranslationTests,
-      minimalPropertyTests @Allegra @(ShelleyLEDGER Allegra),
-      testScriptPostTranslation
+    [ allegraTranslationTests
+    , minimalPropertyTests @Allegra @(ShelleyLEDGER Allegra)
+    , testScriptPostTranslation
     ]
 
 maryTests :: TestTree
 maryTests =
   testGroup
     "Mary Ledger Tests"
-    [ maryTranslationTests,
-      valTests,
-      multiAssetsExample,
-      goldenScaledMinDeposit
+    [ maryTranslationTests
+    , valTests
+    , multiAssetsExample
+    , goldenScaledMinDeposit
     ]
 
 nightlyTests :: TestTree
@@ -72,8 +72,8 @@ nightlyTests =
     [ testGroup
         "Allegra Ledger - nightly"
         [ propertyTests @Allegra @(ShelleyLEDGER Allegra)
-        ],
-      testGroup
+        ]
+    , testGroup
         "Mary Ledger - nightly"
         [ propertyTests @Mary @(ShelleyLEDGER Mary)
         ]

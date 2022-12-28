@@ -1,9 +1,9 @@
 {-# LANGUAGE CPP #-}
 
-module GetDataFileName
-  ( withTestFileProperty,
-    (<:<),
-  )
+module GetDataFileName (
+  withTestFileProperty,
+  (<:<),
+)
 where
 
 import Control.Monad.IO.Class

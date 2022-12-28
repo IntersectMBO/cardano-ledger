@@ -3,11 +3,11 @@
 {-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Crypto.Signing.Safe.PassPhrase
-  ( PassPhrase (..),
-    emptyPassphrase,
-    passphraseLength,
-  )
+module Cardano.Crypto.Signing.Safe.PassPhrase (
+  PassPhrase (..),
+  emptyPassphrase,
+  passphraseLength,
+)
 where
 
 import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), toCborError)

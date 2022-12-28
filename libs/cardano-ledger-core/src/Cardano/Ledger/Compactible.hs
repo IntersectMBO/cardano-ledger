@@ -3,10 +3,10 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Ledger.Compactible
-  ( -- * Compactible
-    Compactible (..),
-  )
+module Cardano.Ledger.Compactible (
+  -- * Compactible
+  Compactible (..),
+)
 where
 
 import Cardano.Ledger.Binary.Encoding (ToCBOR)
@@ -22,9 +22,9 @@ import Data.Kind (Type)
 -- one should make instances of the 'Compactible' class for them.
 --------------------------------------------------------------------------------
 class
-  ( Show (CompactForm a),
-    Eq (CompactForm a),
-    ToCBOR (CompactForm a)
+  ( Show (CompactForm a)
+  , Eq (CompactForm a)
+  , ToCBOR (CompactForm a)
   ) =>
   Compactible a
   where

@@ -2,13 +2,13 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Chain.Byron.API
-  ( genApplyMempoolPayloadErr,
-    ts_mempoolValidation,
-    ts_roundTripApplyMempoolPayloadErrCompat,
-    ts_scheduledDelegations,
-    tests,
-  )
+module Test.Cardano.Chain.Byron.API (
+  genApplyMempoolPayloadErr,
+  ts_mempoolValidation,
+  ts_roundTripApplyMempoolPayloadErrCompat,
+  ts_scheduledDelegations,
+  tests,
+)
 where
 
 import qualified Byron.Spec.Chain.STS.Block as STS
@@ -20,22 +20,22 @@ import qualified Byron.Spec.Ledger.Delegation as Spec
 import qualified Byron.Spec.Ledger.STS.UTXO as STS
 import qualified Byron.Spec.Ledger.STS.UTXOW as STS
 import qualified Byron.Spec.Ledger.Update as Spec
-import Cardano.Chain.Block
-  ( BlockValidationMode (..),
-    ChainValidationError (..),
-    ChainValidationState (..),
-    HeaderHash,
-    initialChainValidationState,
-  )
-import Cardano.Chain.Byron.API
-  ( ApplyMempoolPayloadErr (..),
-    applyChainTick,
-    applyMempoolPayload,
-    getDelegationMap,
-    previewDelegationMap,
-    reAnnotateUsing,
-    validateBlock,
-  )
+import Cardano.Chain.Block (
+  BlockValidationMode (..),
+  ChainValidationError (..),
+  ChainValidationState (..),
+  HeaderHash,
+  initialChainValidationState,
+ )
+import Cardano.Chain.Byron.API (
+  ApplyMempoolPayloadErr (..),
+  applyChainTick,
+  applyMempoolPayload,
+  getDelegationMap,
+  previewDelegationMap,
+  reAnnotateUsing,
+  validateBlock,
+ )
 import Cardano.Chain.Genesis (configSlotSecurityParam)
 import qualified Cardano.Chain.Genesis as Genesis
 import Cardano.Chain.MempoolPayload (AMempoolPayload (..), MempoolPayload)
@@ -57,17 +57,17 @@ import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 import Test.Cardano.Chain.Block.Model (elaborateAndUpdate, elaborateBlock)
 import qualified Test.Cardano.Chain.Delegation.Gen as Dlg
-import Test.Cardano.Chain.Elaboration.Block
-  ( AbstractToConcreteIdMaps (..),
-    abEnvToCfg,
-  )
+import Test.Cardano.Chain.Elaboration.Block (
+  AbstractToConcreteIdMaps (..),
+  abEnvToCfg,
+ )
 import Test.Cardano.Chain.Elaboration.Delegation (elaborateDCert)
 import Test.Cardano.Chain.Elaboration.Update (elaborateUpdateProposal, elaborateVote)
 import Test.Cardano.Chain.UTxO.Gen (genUTxOValidationError)
-import Test.Cardano.Chain.UTxO.Model
-  ( elaborateInitialUTxO,
-    elaborateTxWitsBSWithMap,
-  )
+import Test.Cardano.Chain.UTxO.Model (
+  elaborateInitialUTxO,
+  elaborateTxWitsBSWithMap,
+ )
 import qualified Test.Cardano.Chain.Update.Gen as UpdateIface
 import Test.Cardano.Crypto.Gen (feedPM)
 import Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip (roundTripsCBORShow)
@@ -77,10 +77,10 @@ tests :: TSGroup
 tests scenario =
   Group
     "Test.Cardano.Chain.Byron.API"
-    [ ("ts_chainTick", ts_chainTick scenario),
-      ("ts_roundTripApplyMempoolPayloadErrCompat", ts_roundTripApplyMempoolPayloadErrCompat scenario),
-      ("ts_scheduledDelegations", ts_scheduledDelegations scenario),
-      ("ts_mempoolValidation", ts_mempoolValidation scenario)
+    [ ("ts_chainTick", ts_chainTick scenario)
+    , ("ts_roundTripApplyMempoolPayloadErrCompat", ts_roundTripApplyMempoolPayloadErrCompat scenario)
+    , ("ts_scheduledDelegations", ts_scheduledDelegations scenario)
+    , ("ts_mempoolValidation", ts_mempoolValidation scenario)
     ]
 
 ts_roundTripApplyMempoolPayloadErrCompat :: TSProperty
@@ -93,10 +93,10 @@ ts_roundTripApplyMempoolPayloadErrCompat =
 genApplyMempoolPayloadErr :: ProtocolMagicId -> Gen ApplyMempoolPayloadErr
 genApplyMempoolPayloadErr pm =
   Gen.choice
-    [ MempoolTxErr <$> genUTxOValidationError,
-      MempoolDlgErr <$> Dlg.genError,
-      MempoolUpdateProposalErr <$> UpdateIface.genError pm,
-      MempoolUpdateVoteErr <$> UpdateIface.genError pm
+    [ MempoolTxErr <$> genUTxOValidationError
+    , MempoolDlgErr <$> Dlg.genError
+    , MempoolUpdateProposalErr <$> UpdateIface.genError pm
+    , MempoolUpdateVoteErr <$> UpdateIface.genError pm
     ]
 
 setupChainValidationState ::
@@ -167,20 +167,20 @@ ts_mempoolValidation = withTestsTS 100 . property $ do
 
   let dsEnv =
         Spec.DSEnv
-          { Spec._dSEnvAllowedDelegators = Set.fromList . toList $ allowedDelegators,
-            Spec._dSEnvEpoch = STS.sEpoch nextSlot blockCount,
-            Spec._dSEnvSlot = nextSlot,
-            Spec._dSEnvK = blockCount
+          { Spec._dSEnvAllowedDelegators = Set.fromList . toList $ allowedDelegators
+          , Spec._dSEnvEpoch = STS.sEpoch nextSlot blockCount
+          , Spec._dSEnvSlot = nextSlot
+          , Spec._dSEnvK = blockCount
           }
   dcert <- forAll $ head <$> Spec.dcertsGen dsEnv diState
   let mempoolDCert = addAnnotation . MempoolDlg . elaborateDCert pm <$> dcert
 
   let upiEnv :: Spec.UPIEnv
       upiEnv =
-        ( nextSlot,
-          Spec._dIStateDelegationMap diState,
-          blockCount,
-          fromIntegral $ length allowedDelegators
+        ( nextSlot
+        , Spec._dIStateDelegationMap diState
+        , blockCount
+        , fromIntegral $ length allowedDelegators
         )
   (uProp, vote) <- forAll $ fmap (take 1) <$> Spec.updateProposalAndVotesGen upiEnv upiState
 
@@ -202,9 +202,9 @@ ts_mempoolValidation = withTestsTS 100 . property $ do
   issuerKey <-
     let env :: STS.Environment STS.SIGCNT
         env =
-          ( pparams,
-            Spec._dIStateDelegationMap diState,
-            blockCount
+          ( pparams
+          , Spec._dIStateDelegationMap diState
+          , blockCount
           )
      in forAll $ STS.issuer env allowedDelegators
   aBlockVersion <- forAll $ Spec.protocolVersionEndorsementGen upiEnv upiState

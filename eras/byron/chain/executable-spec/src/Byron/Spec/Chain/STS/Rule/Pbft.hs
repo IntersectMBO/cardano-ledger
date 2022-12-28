@@ -28,11 +28,11 @@ data PbftPredicateFailure
 instance STS PBFT where
   type
     Environment PBFT =
-      ( PParams,
-        Bimap VKeyGenesis VKey,
-        Slot,
-        Slot,
-        BlockCount -- Chain stability parameter
+      ( PParams
+      , Bimap VKeyGenesis VKey
+      , Slot
+      , Slot
+      , BlockCount -- Chain stability parameter
       )
 
   type State PBFT = (Hash, Seq VKeyGenesis)

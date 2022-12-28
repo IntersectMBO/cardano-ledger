@@ -19,95 +19,95 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Alonzo.TxBody
-  ( AlonzoTxOut (..),
-    AlonzoEraTxOut (..),
-    -- Constructors are not exported for safety:
-    Addr28Extra,
-    DataHash32,
-    AlonzoTxBody
-      ( AlonzoTxBody,
-        atbInputs,
-        atbCollateral,
-        atbOutputs,
-        atbCerts,
-        atbWdrls,
-        atbTxFee,
-        atbValidityInterval,
-        atbUpdate,
-        atbReqSignerHashes,
-        atbMint,
-        atbScriptIntegrityHash,
-        atbAuxDataHash,
-        atbTxNetworkId
-      ),
-    AlonzoEraTxBody (..),
-    ShelleyEraTxBody (..),
-    AllegraEraTxBody (..),
-    MaryEraTxBody (..),
-    inputs',
-    collateral',
-    outputs',
-    certs',
-    wdrls',
-    txfee',
-    vldt',
-    update',
-    reqSignerHashes',
-    mint',
-    scriptIntegrityHash',
-    adHash',
-    txnetworkid',
-    getAdaOnly,
-    decodeDataHash32,
-    encodeDataHash32,
-    encodeAddress28,
-    decodeAddress28,
-    viewCompactTxOut,
-    viewTxOut,
-    EraIndependentScriptIntegrity,
-    ScriptIntegrityHash,
-    getAlonzoTxOutEitherAddr,
-    utxoEntrySize,
-  )
+module Cardano.Ledger.Alonzo.TxBody (
+  AlonzoTxOut (..),
+  AlonzoEraTxOut (..),
+  -- Constructors are not exported for safety:
+  Addr28Extra,
+  DataHash32,
+  AlonzoTxBody (
+    AlonzoTxBody,
+    atbInputs,
+    atbCollateral,
+    atbOutputs,
+    atbCerts,
+    atbWdrls,
+    atbTxFee,
+    atbValidityInterval,
+    atbUpdate,
+    atbReqSignerHashes,
+    atbMint,
+    atbScriptIntegrityHash,
+    atbAuxDataHash,
+    atbTxNetworkId
+  ),
+  AlonzoEraTxBody (..),
+  ShelleyEraTxBody (..),
+  AllegraEraTxBody (..),
+  MaryEraTxBody (..),
+  inputs',
+  collateral',
+  outputs',
+  certs',
+  wdrls',
+  txfee',
+  vldt',
+  update',
+  reqSignerHashes',
+  mint',
+  scriptIntegrityHash',
+  adHash',
+  txnetworkid',
+  getAdaOnly,
+  decodeDataHash32,
+  encodeDataHash32,
+  encodeAddress28,
+  decodeAddress28,
+  viewCompactTxOut,
+  viewTxOut,
+  EraIndependentScriptIntegrity,
+  ScriptIntegrityHash,
+  getAlonzoTxOutEitherAddr,
+  utxoEntrySize,
+)
 where
 
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
-import Cardano.Ledger.Alonzo.Core
-  ( AllegraEraTxBody (..),
-    AlonzoEraTxBody (..),
-    MaryEraTxBody (..),
-    ScriptIntegrityHash,
-  )
+import Cardano.Ledger.Alonzo.Core (
+  AllegraEraTxBody (..),
+  AlonzoEraTxBody (..),
+  MaryEraTxBody (..),
+  ScriptIntegrityHash,
+ )
 import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash (..))
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Scripts ()
 import Cardano.Ledger.Alonzo.TxOut
-import Cardano.Ledger.BaseTypes
-  ( Network (..),
-    StrictMaybe (..),
-  )
-import Cardano.Ledger.Binary
-  ( Annotator,
-    FromCBOR (..),
-    ToCBOR (..),
-  )
+import Cardano.Ledger.BaseTypes (
+  Network (..),
+  StrictMaybe (..),
+ )
+import Cardano.Ledger.Binary (
+  Annotator,
+  FromCBOR (..),
+  ToCBOR (..),
+ )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary.Value (MaryValue (MaryValue), MultiAsset (..), policies, policyID)
-import Cardano.Ledger.MemoBytes
-  ( Mem,
-    MemoBytes,
-    MemoHashIndex,
-    Memoized (..),
-    getMemoRawType,
-    getMemoSafeHash,
-    lensMemoRawType,
-    mkMemoized,
-  )
+import Cardano.Ledger.MemoBytes (
+  Mem,
+  MemoBytes,
+  MemoHashIndex,
+  Memoized (..),
+  getMemoRawType,
+  getMemoSafeHash,
+  lensMemoRawType,
+  mkMemoized,
+ )
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert)
 import Cardano.Ledger.Shelley.PParams (Update)
@@ -128,19 +128,19 @@ import Prelude hiding (lookup)
 -- ======================================
 
 data AlonzoTxBodyRaw era = AlonzoTxBodyRaw
-  { atbrInputs :: !(Set (TxIn (EraCrypto era))),
-    atbrCollateral :: !(Set (TxIn (EraCrypto era))),
-    atbrOutputs :: !(StrictSeq (TxOut era)),
-    atbrCerts :: !(StrictSeq (DCert (EraCrypto era))),
-    atbrWdrls :: !(Wdrl (EraCrypto era)),
-    atbrTxFee :: !Coin,
-    atbrValidityInterval :: !ValidityInterval,
-    atbrUpdate :: !(StrictMaybe (Update era)),
-    atbrReqSignerHashes :: Set (KeyHash 'Witness (EraCrypto era)),
-    atbrMint :: !(MultiAsset (EraCrypto era)),
-    atbrScriptIntegrityHash :: !(StrictMaybe (ScriptIntegrityHash (EraCrypto era))),
-    atbrAuxDataHash :: !(StrictMaybe (AuxiliaryDataHash (EraCrypto era))),
-    atbrTxNetworkId :: !(StrictMaybe Network)
+  { atbrInputs :: !(Set (TxIn (EraCrypto era)))
+  , atbrCollateral :: !(Set (TxIn (EraCrypto era)))
+  , atbrOutputs :: !(StrictSeq (TxOut era))
+  , atbrCerts :: !(StrictSeq (DCert (EraCrypto era)))
+  , atbrWdrls :: !(Wdrl (EraCrypto era))
+  , atbrTxFee :: !Coin
+  , atbrValidityInterval :: !ValidityInterval
+  , atbrUpdate :: !(StrictMaybe (Update era))
+  , atbrReqSignerHashes :: Set (KeyHash 'Witness (EraCrypto era))
+  , atbrMint :: !(MultiAsset (EraCrypto era))
+  , atbrScriptIntegrityHash :: !(StrictMaybe (ScriptIntegrityHash (EraCrypto era)))
+  , atbrAuxDataHash :: !(StrictMaybe (AuxiliaryDataHash (EraCrypto era)))
+  , atbrTxNetworkId :: !(StrictMaybe Network)
   }
   deriving (Generic, Typeable)
 
@@ -289,35 +289,35 @@ pattern AlonzoTxBody ::
   StrictMaybe Network ->
   AlonzoTxBody era
 pattern AlonzoTxBody
-  { atbInputs,
-    atbCollateral,
-    atbOutputs,
-    atbCerts,
-    atbWdrls,
-    atbTxFee,
-    atbValidityInterval,
-    atbUpdate,
-    atbReqSignerHashes,
-    atbMint,
-    atbScriptIntegrityHash,
-    atbAuxDataHash,
-    atbTxNetworkId
+  { atbInputs
+  , atbCollateral
+  , atbOutputs
+  , atbCerts
+  , atbWdrls
+  , atbTxFee
+  , atbValidityInterval
+  , atbUpdate
+  , atbReqSignerHashes
+  , atbMint
+  , atbScriptIntegrityHash
+  , atbAuxDataHash
+  , atbTxNetworkId
   } <-
   ( getMemoRawType ->
       AlonzoTxBodyRaw
-        { atbrInputs = atbInputs,
-          atbrCollateral = atbCollateral,
-          atbrOutputs = atbOutputs,
-          atbrCerts = atbCerts,
-          atbrWdrls = atbWdrls,
-          atbrTxFee = atbTxFee,
-          atbrValidityInterval = atbValidityInterval,
-          atbrUpdate = atbUpdate,
-          atbrReqSignerHashes = atbReqSignerHashes,
-          atbrMint = atbMint,
-          atbrScriptIntegrityHash = atbScriptIntegrityHash,
-          atbrAuxDataHash = atbAuxDataHash,
-          atbrTxNetworkId = atbTxNetworkId
+        { atbrInputs = atbInputs
+        , atbrCollateral = atbCollateral
+        , atbrOutputs = atbOutputs
+        , atbrCerts = atbCerts
+        , atbrWdrls = atbWdrls
+        , atbrTxFee = atbTxFee
+        , atbrValidityInterval = atbValidityInterval
+        , atbrUpdate = atbUpdate
+        , atbrReqSignerHashes = atbReqSignerHashes
+        , atbrMint = atbMint
+        , atbrScriptIntegrityHash = atbScriptIntegrityHash
+        , atbrAuxDataHash = atbAuxDataHash
+        , atbrTxNetworkId = atbTxNetworkId
         }
     )
   where
@@ -337,19 +337,19 @@ pattern AlonzoTxBody
       txNetworkId =
         mkMemoized $
           AlonzoTxBodyRaw
-            { atbrInputs = inputs,
-              atbrCollateral = collateral,
-              atbrOutputs = outputs,
-              atbrCerts = certs,
-              atbrWdrls = wdrls,
-              atbrTxFee = txFee,
-              atbrValidityInterval = validityInterval,
-              atbrUpdate = update,
-              atbrReqSignerHashes = reqSignerHashes,
-              atbrMint = mint,
-              atbrScriptIntegrityHash = scriptIntegrityHash,
-              atbrAuxDataHash = auxDataHash,
-              atbrTxNetworkId = txNetworkId
+            { atbrInputs = inputs
+            , atbrCollateral = collateral
+            , atbrOutputs = outputs
+            , atbrCerts = certs
+            , atbrWdrls = wdrls
+            , atbrTxFee = txFee
+            , atbrValidityInterval = validityInterval
+            , atbrUpdate = update
+            , atbrReqSignerHashes = reqSignerHashes
+            , atbrMint = mint
+            , atbrScriptIntegrityHash = scriptIntegrityHash
+            , atbrAuxDataHash = auxDataHash
+            , atbrTxNetworkId = txNetworkId
             }
 
 {-# COMPLETE AlonzoTxBody #-}
@@ -414,19 +414,19 @@ instance
   where
   toCBOR
     AlonzoTxBodyRaw
-      { atbrInputs,
-        atbrCollateral,
-        atbrOutputs,
-        atbrCerts,
-        atbrWdrls,
-        atbrTxFee,
-        atbrValidityInterval = ValidityInterval bot top,
-        atbrUpdate,
-        atbrReqSignerHashes,
-        atbrMint,
-        atbrScriptIntegrityHash,
-        atbrAuxDataHash,
-        atbrTxNetworkId
+      { atbrInputs
+      , atbrCollateral
+      , atbrOutputs
+      , atbrCerts
+      , atbrWdrls
+      , atbrTxFee
+      , atbrValidityInterval = ValidityInterval bot top
+      , atbrUpdate
+      , atbrReqSignerHashes
+      , atbrMint
+      , atbrScriptIntegrityHash
+      , atbrAuxDataHash
+      , atbrTxNetworkId
       } =
       encode $
         Keyed
@@ -483,9 +483,9 @@ instance
       bodyFields 15 = ofield (\x tx -> tx {atbrTxNetworkId = x}) From
       bodyFields n = field (\_ t -> t) (Invalid n)
       requiredFields =
-        [ (0, "inputs"),
-          (1, "outputs"),
-          (2, "fee")
+        [ (0, "inputs")
+        , (1, "outputs")
+        , (2, "fee")
         ]
 
 emptyAlonzoTxBodyRaw :: AlonzoTxBodyRaw era

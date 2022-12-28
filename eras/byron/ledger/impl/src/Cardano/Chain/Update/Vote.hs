@@ -9,59 +9,59 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Chain.Update.Vote
-  ( -- * Vote
-    AVote (..),
-    Vote,
-    VoteId,
+module Cardano.Chain.Update.Vote (
+  -- * Vote
+  AVote (..),
+  Vote,
+  VoteId,
 
-    -- * Vote Constructors
-    mkVote,
-    signVote,
-    signatureForVote,
-    unsafeVote,
+  -- * Vote Constructors
+  mkVote,
+  signVote,
+  signatureForVote,
+  unsafeVote,
 
-    -- * Vote Accessors
-    proposalId,
-    recoverVoteId,
+  -- * Vote Accessors
+  proposalId,
+  recoverVoteId,
 
-    -- * Vote Binary Serialization
-    recoverSignedBytes,
+  -- * Vote Binary Serialization
+  recoverSignedBytes,
 
-    -- * Vote Formatting
-    formatVoteShort,
-    shortVoteF,
-  )
+  -- * Vote Formatting
+  formatVoteShort,
+  shortVoteF,
+)
 where
 
 import Cardano.Chain.Common (addressHash)
 import Cardano.Chain.Update.Proposal (Proposal, UpId)
-import Cardano.Crypto
-  ( Hash,
-    ProtocolMagicId,
-    SafeSigner,
-    SignTag (SignUSVote),
-    Signature,
-    SigningKey,
-    VerificationKey,
-    hashDecoded,
-    safeSign,
-    safeToVerification,
-    shortHashF,
-    sign,
-    toVerification,
-  )
-import Cardano.Ledger.Binary
-  ( Annotated (Annotated, unAnnotated),
-    ByteSpan,
-    Decoded (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    annotatedDecoder,
-    encodeListLen,
-    enforceSize,
-    fromCBORAnnotated,
-  )
+import Cardano.Crypto (
+  Hash,
+  ProtocolMagicId,
+  SafeSigner,
+  SignTag (SignUSVote),
+  Signature,
+  SigningKey,
+  VerificationKey,
+  hashDecoded,
+  safeSign,
+  safeToVerification,
+  shortHashF,
+  sign,
+  toVerification,
+ )
+import Cardano.Ledger.Binary (
+  Annotated (Annotated, unAnnotated),
+  ByteSpan,
+  Decoded (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  annotatedDecoder,
+  encodeListLen,
+  enforceSize,
+  fromCBORAnnotated,
+ )
 import qualified Cardano.Ledger.Binary as Binary (annotation)
 import Cardano.Prelude
 import Data.Aeson (ToJSON)
@@ -82,13 +82,13 @@ type Vote = AVote ()
 --
 --   Invariant: The signature is valid.
 data AVote a = UnsafeVote
-  { -- | Verification key casting the vote
-    voterVK :: !VerificationKey,
-    -- | Proposal to which this vote applies
-    aProposalId :: !(Annotated UpId a),
-    -- | Signature of (Update proposal, Approval/rejection bit)
-    signature :: !(Signature (UpId, Bool)),
-    annotation :: !a
+  { voterVK :: !VerificationKey
+  -- ^ Verification key casting the vote
+  , aProposalId :: !(Annotated UpId a)
+  -- ^ Proposal to which this vote applies
+  , signature :: !(Signature (UpId, Bool))
+  -- ^ Signature of (Update proposal, Approval/rejection bit)
+  , annotation :: !a
   }
   deriving (Eq, Show, Generic, Functor)
   deriving anyclass (NFData)
@@ -204,13 +204,13 @@ recoverSignedBytes :: AVote ByteString -> Annotated (UpId, Bool) ByteString
 recoverSignedBytes v =
   let bytes =
         mconcat
-          [ "\130",
-            -- The byte above is part of the signed payload, but is not part of the
+          [ "\130"
+          , -- The byte above is part of the signed payload, but is not part of the
             -- transmitted payload
-            Binary.annotation $ aProposalId v,
-            "\245"
-            -- The byte above is the canonical encoding of @True@, which we hardcode,
-            -- because we removed the possibility of negative voting
+            Binary.annotation $ aProposalId v
+          , "\245"
+          -- The byte above is the canonical encoding of @True@, which we hardcode,
+          -- because we removed the possibility of negative voting
           ]
    in Annotated (proposalId v, True) bytes
 

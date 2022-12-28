@@ -8,33 +8,33 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Chain.Update.Payload
-  ( APayload (..),
-    Payload,
-    payload,
-  )
+module Cardano.Chain.Update.Payload (
+  APayload (..),
+  Payload,
+  payload,
+)
 where
 
-import Cardano.Chain.Update.Proposal
-  ( AProposal,
-    Proposal,
-    formatMaybeProposal,
-  )
-import Cardano.Chain.Update.Vote
-  ( AVote,
-    Vote,
-    formatVoteShort,
-  )
-import Cardano.Ledger.Binary
-  ( Annotated (..),
-    ByteSpan,
-    Decoded (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    annotatedDecoder,
-    encodeListLen,
-    enforceSize,
-  )
+import Cardano.Chain.Update.Proposal (
+  AProposal,
+  Proposal,
+  formatMaybeProposal,
+ )
+import Cardano.Chain.Update.Vote (
+  AVote,
+  Vote,
+  formatVoteShort,
+ )
+import Cardano.Ledger.Binary (
+  Annotated (..),
+  ByteSpan,
+  Decoded (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  annotatedDecoder,
+  encodeListLen,
+  enforceSize,
+ )
 import Cardano.Prelude
 import Data.Aeson (ToJSON)
 import Formatting (bprint)
@@ -42,9 +42,9 @@ import qualified Formatting.Buildable as B
 
 -- | Update System payload
 data APayload a = APayload
-  { payloadProposal :: !(Maybe (AProposal a)),
-    payloadVotes :: ![AVote a],
-    payloadAnnotation :: a
+  { payloadProposal :: !(Maybe (AProposal a))
+  , payloadVotes :: ![AVote a]
+  , payloadAnnotation :: a
   }
   deriving (Eq, Show, Generic, Functor)
   deriving anyclass (NFData)

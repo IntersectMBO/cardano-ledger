@@ -12,25 +12,25 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Test.Cardano.Ledger.Shelley.Generator.ScriptClass
-  ( ScriptClass (..),
-    Quantifier (..),
-    exponential,
-    anyOf,
-    allOf,
-    mOf,
-    keyPairs,
-    mkPayScriptHashMap,
-    mkStakeScriptHashMap,
-    mkScriptsFromKeyPair,
-    mkKeyPairs,
-    mkScripts,
-    mkScriptCombinations,
-    combinedScripts,
-    baseScripts,
-    scriptKeyCombinations,
-    scriptKeyCombination,
-  )
+module Test.Cardano.Ledger.Shelley.Generator.ScriptClass (
+  ScriptClass (..),
+  Quantifier (..),
+  exponential,
+  anyOf,
+  allOf,
+  mOf,
+  keyPairs,
+  mkPayScriptHashMap,
+  mkStakeScriptHashMap,
+  mkScriptsFromKeyPair,
+  mkKeyPairs,
+  mkScripts,
+  mkScriptCombinations,
+  combinedScripts,
+  baseScripts,
+  scriptKeyCombinations,
+  scriptKeyCombination,
+)
 where
 
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
@@ -47,9 +47,9 @@ import Data.Proxy
 import Data.Tuple (swap)
 import Data.Word (Word64)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), KeyPairs, vKey)
-import Test.Cardano.Ledger.Shelley.Generator.Constants
-  ( Constants (..),
-  )
+import Test.Cardano.Ledger.Shelley.Generator.Constants (
+  Constants (..),
+ )
 import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair)
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
@@ -192,20 +192,20 @@ mkScriptCombinations msigs =
 
             pure
               [ (pay, stake)
-                | pay <-
-                    [ anyOf (Proxy @era) [k1, k3, k5],
-                      allOf (Proxy @era) [k1, k3, k5],
-                      mOf (Proxy @era) 1 [k1, k3, k5],
-                      mOf (Proxy @era) 2 [k1, k3, k5],
-                      mOf (Proxy @era) 3 [k1, k3, k5]
-                    ],
-                  stake <-
-                    [ anyOf (Proxy @era) [k2, k4, k6],
-                      allOf (Proxy @era) [k2, k4, k6],
-                      mOf (Proxy @era) 1 [k2, k4, k6],
-                      mOf (Proxy @era) 2 [k2, k4, k6],
-                      mOf (Proxy @era) 3 [k2, k4, k6]
-                    ]
+              | pay <-
+                  [ anyOf (Proxy @era) [k1, k3, k5]
+                  , allOf (Proxy @era) [k1, k3, k5]
+                  , mOf (Proxy @era) 1 [k1, k3, k5]
+                  , mOf (Proxy @era) 2 [k1, k3, k5]
+                  , mOf (Proxy @era) 3 [k1, k3, k5]
+                  ]
+              , stake <-
+                  [ anyOf (Proxy @era) [k2, k4, k6]
+                  , allOf (Proxy @era) [k2, k4, k6]
+                  , mOf (Proxy @era) 1 [k2, k4, k6]
+                  , mOf (Proxy @era) 2 [k2, k4, k6]
+                  , mOf (Proxy @era) 3 [k2, k4, k6]
+                  ]
               ]
       ) ::
         [(Core.Script era, Core.Script era)]

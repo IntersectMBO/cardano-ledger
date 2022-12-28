@@ -8,16 +8,16 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Babbage
-  ( Babbage,
-    BabbageEra,
-    BabbageTxOut,
-    BabbageTxBody,
-    AlonzoScript,
-    AlonzoTxAuxData,
-    BabbagePParams,
-    BabbagePParamsUpdate,
-  )
+module Cardano.Ledger.Babbage (
+  Babbage,
+  BabbageEra,
+  BabbageTxOut,
+  BabbageTxBody,
+  AlonzoScript,
+  AlonzoTxAuxData,
+  BabbagePParams,
+  BabbagePParamsUpdate,
+)
 where
 
 import Cardano.Ledger.Alonzo (reapplyAlonzoTx)
@@ -29,16 +29,16 @@ import Cardano.Ledger.Babbage.Genesis (AlonzoGenesis, extendPPWithGenesis)
 import Cardano.Ledger.Babbage.PParams (BabbagePParams, BabbagePParamsHKD (..), BabbagePParamsUpdate)
 import Cardano.Ledger.Babbage.Rules ()
 import Cardano.Ledger.Babbage.Translation ()
-import Cardano.Ledger.Babbage.Tx
-  ( babbageTxScripts,
-    getDatumBabbage,
-  )
-import Cardano.Ledger.Babbage.TxBody
-  ( BabbageEraTxBody (..),
-    BabbageTxBody,
-    BabbageTxOut,
-    dataHashTxOutL,
-  )
+import Cardano.Ledger.Babbage.Tx (
+  babbageTxScripts,
+  getDatumBabbage,
+ )
+import Cardano.Ledger.Babbage.TxBody (
+  BabbageEraTxBody (..),
+  BabbageTxBody,
+  BabbageTxOut,
+  dataHashTxOutL,
+ )
 import Cardano.Ledger.Babbage.TxInfo (babbageTxInfo)
 import Cardano.Ledger.Babbage.UTxO ()
 import Cardano.Ledger.Binary (sizedValue)

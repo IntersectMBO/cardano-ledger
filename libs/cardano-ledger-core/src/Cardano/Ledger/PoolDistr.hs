@@ -17,10 +17,10 @@
 -- determined by Ouroboros (Praos and Genesis), our consensus mechanism.
 -- See Section 16, "Leader Value Calculation", of the
 -- <https://hydra.iohk.io/job/Cardano/cardano-ledger/shelleyLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec formal specification>.
-module Cardano.Ledger.PoolDistr
-  ( IndividualPoolStake (..),
-    PoolDistr (..),
-  )
+module Cardano.Ledger.PoolDistr (
+  IndividualPoolStake (..),
+  PoolDistr (..),
+)
 where
 
 import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), decodeRecordNamed, encodeListLen)
@@ -47,8 +47,8 @@ import NoThunks.Class (NoThunks (..))
 -- in the network. Stake is active if it is both registered and
 -- delegated to a registered stake pool.
 data IndividualPoolStake c = IndividualPoolStake
-  { individualPoolStake :: !Rational,
-    individualPoolStakeVrf :: !(Hash c (VerKeyVRF c))
+  { individualPoolStake :: !Rational
+  , individualPoolStakeVrf :: !(Hash c (VerKeyVRF c))
   }
   deriving stock (Show, Eq, Generic)
   deriving anyclass (NFData, NoThunks)
@@ -56,9 +56,9 @@ data IndividualPoolStake c = IndividualPoolStake
 instance CC.Crypto c => ToCBOR (IndividualPoolStake c) where
   toCBOR (IndividualPoolStake stake vrf) =
     mconcat
-      [ encodeListLen 2,
-        toCBOR stake,
-        toCBOR vrf
+      [ encodeListLen 2
+      , toCBOR stake
+      , toCBOR vrf
       ]
 
 instance CC.Crypto c => FromCBOR (IndividualPoolStake c) where

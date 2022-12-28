@@ -1,34 +1,34 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Test.Cardano.Crypto.Signing.Redeem
-  ( tests,
-  )
+module Test.Cardano.Crypto.Signing.Redeem (
+  tests,
+)
 where
 
 import Cardano.Crypto.Signing (SignTag (..))
-import Cardano.Crypto.Signing.Redeem
-  ( redeemSign,
-    redeemToVerification,
-    verifyRedeemSig,
-  )
+import Cardano.Crypto.Signing.Redeem (
+  redeemSign,
+  redeemToVerification,
+  verifyRedeemSig,
+ )
 import Cardano.Prelude
-import Hedgehog
-  ( Gen,
-    Property,
-    assert,
-    checkParallel,
-    discover,
-    forAll,
-    property,
-  )
+import Hedgehog (
+  Gen,
+  Property,
+  assert,
+  checkParallel,
+  discover,
+  forAll,
+  property,
+ )
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 import qualified Test.Cardano.Crypto.Dummy as Dummy
-import Test.Cardano.Crypto.Gen
-  ( genRedeemKeypair,
-    genRedeemSigningKey,
-    genRedeemVerificationKey,
-  )
+import Test.Cardano.Crypto.Gen (
+  genRedeemKeypair,
+  genRedeemSigningKey,
+  genRedeemVerificationKey,
+ )
 
 --------------------------------------------------------------------------------
 -- Main Test Action

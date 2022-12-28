@@ -8,36 +8,36 @@
 {-# LANGUAGE TypeFamilies #-}
 
 -- | UTXO transition system
-module Byron.Spec.Ledger.STS.UTXO
-  ( UTXO,
-    UTxOEnv (UTxOEnv),
-    UTxOState (UTxOState),
-    UtxoPredicateFailure (..),
-    PredicateFailure,
-    utxo,
-    utxo0,
-    pps,
-    reserves,
-  )
+module Byron.Spec.Ledger.STS.UTXO (
+  UTXO,
+  UTxOEnv (UTxOEnv),
+  UTxOState (UTxOState),
+  UtxoPredicateFailure (..),
+  PredicateFailure,
+  utxo,
+  utxo0,
+  pps,
+  reserves,
+)
 where
 
 import Byron.Spec.Ledger.Core (Lovelace, dom, range, (∪), (⊆), (⋪), (◁))
 import Byron.Spec.Ledger.GlobalParams (lovelaceCap)
 import Byron.Spec.Ledger.UTxO (Tx, UTxO, balance, body, pcMinFee, txins, txouts, unUTxO, value)
 import Byron.Spec.Ledger.Update (PParams)
-import Control.State.Transition
-  ( Environment,
-    IRC (IRC),
-    PredicateFailure,
-    STS,
-    Signal,
-    State,
-    TRC (TRC),
-    initialRules,
-    judgmentContext,
-    transitionRules,
-    (?!),
-  )
+import Control.State.Transition (
+  Environment,
+  IRC (IRC),
+  PredicateFailure,
+  STS,
+  Signal,
+  State,
+  TRC (TRC),
+  initialRules,
+  judgmentContext,
+  transitionRules,
+  (?!),
+ )
 import Data.Data (Data, Typeable)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
@@ -46,14 +46,14 @@ import NoThunks.Class (NoThunks (..))
 data UTXO deriving (Data, Typeable)
 
 data UTxOEnv = UTxOEnv
-  { utxo0 :: UTxO,
-    pps :: PParams
+  { utxo0 :: UTxO
+  , pps :: PParams
   }
   deriving (Eq, Show, Generic, NoThunks)
 
 data UTxOState = UTxOState
-  { utxo :: UTxO,
-    reserves :: Lovelace
+  { utxo :: UTxO
+  , reserves :: Lovelace
   }
   deriving (Eq, Show, Generic, NoThunks)
 
@@ -80,16 +80,16 @@ instance STS UTXO where
         IRC UTxOEnv {utxo0} <- judgmentContext
         return $
           UTxOState
-            { utxo = utxo0,
-              reserves = lovelaceCap - balance utxo0
+            { utxo = utxo0
+            , reserves = lovelaceCap - balance utxo0
             }
     ]
   transitionRules =
     [ do
         TRC
-          ( UTxOEnv _ pps,
-            UTxOState {utxo, reserves},
-            tx
+          ( UTxOEnv _ pps
+            , UTxOState {utxo, reserves}
+            , tx
             ) <-
           judgmentContext
 
@@ -111,7 +111,7 @@ instance STS UTXO where
 
         return $
           UTxOState
-            { utxo = (ins ⋪ utxo) ∪ outs,
-              reserves = reserves + fee
+            { utxo = (ins ⋪ utxo) ∪ outs
+            , reserves = reserves + fee
             }
     ]

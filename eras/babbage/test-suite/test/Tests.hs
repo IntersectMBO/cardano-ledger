@@ -21,18 +21,18 @@ mainTests :: TestTree
 mainTests =
   testGroup
     "Babbage tests"
-    [ Tripping.tests,
-      txInfoTests,
-      CDDL.tests 5
+    [ Tripping.tests
+    , txInfoTests
+    , CDDL.tests 5
     ]
 
 fastTests :: TestTree
 fastTests =
   testGroup
     "Babbage tests"
-    [ Tripping.tests,
-      txInfoTests,
-      CDDL.tests 1
+    [ Tripping.tests
+    , txInfoTests
+    , CDDL.tests 1
     ]
 
 nightlyTests :: TestTree

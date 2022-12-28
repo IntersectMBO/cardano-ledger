@@ -19,47 +19,47 @@
 -- considered redundant. TODO: investigate this.
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
-module Cardano.Chain.Common.Lovelace
-  ( -- * Lovelace
-    Lovelace,
-    LovelaceError (..),
-    maxLovelaceVal,
+module Cardano.Chain.Common.Lovelace (
+  -- * Lovelace
+  Lovelace,
+  LovelaceError (..),
+  maxLovelaceVal,
 
-    -- * Constructors
-    mkLovelace,
-    mkKnownLovelace,
+  -- * Constructors
+  mkLovelace,
+  mkKnownLovelace,
 
-    -- * Formatting
-    lovelaceF,
+  -- * Formatting
+  lovelaceF,
 
-    -- * Conversions
-    unsafeGetLovelace,
-    lovelaceToInteger,
-    integerToLovelace,
+  -- * Conversions
+  unsafeGetLovelace,
+  lovelaceToInteger,
+  integerToLovelace,
 
-    -- * Arithmetic operations
-    sumLovelace,
-    addLovelace,
-    subLovelace,
-    scaleLovelace,
-    scaleLovelaceRational,
-    scaleLovelaceRationalUp,
-    divLovelace,
-    modLovelace,
-  )
+  -- * Arithmetic operations
+  sumLovelace,
+  addLovelace,
+  subLovelace,
+  scaleLovelace,
+  scaleLovelaceRational,
+  scaleLovelaceRationalUp,
+  divLovelace,
+  modLovelace,
+)
 where
 
-import Cardano.Ledger.Binary
-  ( DecoderError (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    cborError,
-    decodeListLen,
-    decodeWord8,
-    encodeListLen,
-    matchSize,
-    toCborError,
-  )
+import Cardano.Ledger.Binary (
+  DecoderError (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  cborError,
+  decodeListLen,
+  decodeWord8,
+  encodeListLen,
+  matchSize,
+  toCborError,
+ )
 import Cardano.Prelude hiding (cborError, toCborError)
 import Data.Aeson (ToJSON)
 import Data.Data (Data)
@@ -68,11 +68,11 @@ import qualified Formatting.Buildable as B
 import GHC.TypeLits (type (<=))
 import NoThunks.Class (NoThunks (..))
 import Quiet
-import qualified Text.JSON.Canonical as Canonical
-  ( FromJSON (..),
-    ReportSchemaErrors,
-    ToJSON (..),
-  )
+import qualified Text.JSON.Canonical as Canonical (
+  FromJSON (..),
+  ReportSchemaErrors,
+  ToJSON (..),
+ )
 
 -- | Lovelace is the least possible unit of currency
 newtype Lovelace = Lovelace

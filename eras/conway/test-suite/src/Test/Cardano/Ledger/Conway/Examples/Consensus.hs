@@ -11,13 +11,13 @@
 module Test.Cardano.Ledger.Conway.Examples.Consensus where
 
 import Cardano.Ledger.Allegra.Scripts (Timelock (..), ValidityInterval (..))
-import Cardano.Ledger.Alonzo.Data
-  ( AuxiliaryDataHash (..),
-    Data (..),
-    dataToBinaryData,
-    hashData,
-    mkAlonzoTxAuxData,
-  )
+import Cardano.Ledger.Alonzo.Data (
+  AuxiliaryDataHash (..),
+  Data (..),
+  dataToBinaryData,
+  hashData,
+  mkAlonzoTxAuxData,
+ )
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
@@ -42,21 +42,21 @@ import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (GenDelegs (..), asWitness)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Shelley.API
-  ( ApplyTxError (..),
-    DelegCert (..),
-    Network (..),
-    NewEpochState (..),
-    PoolCert (..),
-    ProposedPPUpdates (..),
-    RewardAcnt (..),
-    TxId (..),
-    Wdrl (..),
-  )
-import Cardano.Ledger.Shelley.Rules
-  ( ShelleyDelegsPredFailure (..),
-    ShelleyLedgerPredFailure (DelegsFailure),
-  )
+import Cardano.Ledger.Shelley.API (
+  ApplyTxError (..),
+  DelegCert (..),
+  Network (..),
+  NewEpochState (..),
+  PoolCert (..),
+  ProposedPPUpdates (..),
+  RewardAcnt (..),
+  TxId (..),
+  Wdrl (..),
+ )
+import Cardano.Ledger.Shelley.Rules (
+  ShelleyDelegsPredFailure (..),
+  ShelleyLedgerPredFailure (DelegsFailure),
+ )
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.TxIn (mkTxInPartial)
 import Cardano.Slotting.Slot (SlotNo (..))
@@ -80,33 +80,33 @@ import Test.Cardano.Ledger.Shelley.Orphans ()
 ledgerExamplesConway :: SLE.ShelleyLedgerExamples Conway
 ledgerExamplesConway =
   SLE.ShelleyLedgerExamples
-    { SLE.sleBlock = SLE.exampleShelleyLedgerBlock exampleTransactionInBlock,
-      SLE.sleHashHeader = SLE.exampleHashHeader (Proxy @Conway),
-      SLE.sleTx = exampleTransactionInBlock,
-      SLE.sleApplyTxError =
+    { SLE.sleBlock = SLE.exampleShelleyLedgerBlock exampleTransactionInBlock
+    , SLE.sleHashHeader = SLE.exampleHashHeader (Proxy @Conway)
+    , SLE.sleTx = exampleTransactionInBlock
+    , SLE.sleApplyTxError =
         ApplyTxError $
           pure $
             DelegsFailure $
-              DelegateeNotRegisteredDELEG @Conway (SLE.mkKeyHash 1),
-      SLE.sleRewardsCredentials =
+              DelegateeNotRegisteredDELEG @Conway (SLE.mkKeyHash 1)
+    , SLE.sleRewardsCredentials =
         Set.fromList
-          [ Left (Coin 100),
-            Right (ScriptHashObj (SLE.mkScriptHash 1)),
-            Right (KeyHashObj (SLE.mkKeyHash 2))
-          ],
-      SLE.sleResultExamples = resultExamples,
-      SLE.sleNewEpochState = exampleConwayNewEpochState,
-      SLE.sleChainDepState = SLE.exampleLedgerChainDepState 1,
-      SLE.sleTranslationContext = exampleConwayGenesis
+          [ Left (Coin 100)
+          , Right (ScriptHashObj (SLE.mkScriptHash 1))
+          , Right (KeyHashObj (SLE.mkKeyHash 2))
+          ]
+    , SLE.sleResultExamples = resultExamples
+    , SLE.sleNewEpochState = exampleConwayNewEpochState
+    , SLE.sleChainDepState = SLE.exampleLedgerChainDepState 1
+    , SLE.sleTranslationContext = exampleConwayGenesis
     }
   where
     resultExamples =
       SLE.ShelleyResultExamples
-        { SLE.srePParams = def,
-          SLE.sreProposedPPUpdates = examplePPPU,
-          SLE.srePoolDistr = SLE.examplePoolDistr,
-          SLE.sreNonMyopicRewards = SLE.exampleNonMyopicRewards,
-          SLE.sreShelleyGenesis = SLE.testShelleyGenesis
+        { SLE.srePParams = def
+        , SLE.sreProposedPPUpdates = examplePPPU
+        , SLE.srePoolDistr = SLE.examplePoolDistr
+        , SLE.sreNonMyopicRewards = SLE.exampleNonMyopicRewards
+        , SLE.sreShelleyGenesis = SLE.testShelleyGenesis
         }
     examplePPPU =
       ProposedPPUpdates $
@@ -125,8 +125,8 @@ collateralOutput =
 exampleConwayCerts :: CC.Crypto c => StrictSeq (ConwayDCert c)
 exampleConwayCerts =
   StrictSeq.fromList
-    [ ConwayDCertDeleg (RegKey (keyToCredential exampleStakeKey)),
-      ConwayDCertPool (RegPool examplePoolParams)
+    [ ConwayDCertDeleg (RegKey (keyToCredential exampleStakeKey))
+    , ConwayDCertPool (RegPool examplePoolParams)
     ]
 
 exampleTxBodyConway :: TxBody Conway

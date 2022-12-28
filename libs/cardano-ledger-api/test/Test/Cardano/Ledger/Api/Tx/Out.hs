@@ -5,9 +5,9 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Api.Tx.Out
-  ( txOutTests,
-  )
+module Test.Cardano.Ledger.Api.Tx.Out (
+  txOutTests,
+)
 where
 
 import Cardano.Ledger.Alonzo.PParams hiding (PParams)
@@ -30,11 +30,11 @@ import Test.Tasty.QuickCheck
 
 propSetShelleyMinTxOut ::
   forall era.
-  ( EraTxOut era,
-    Arbitrary (PParams era),
-    Arbitrary (TxOut era),
-    AtMostEra MaryEra era,
-    HasField "_minUTxOValue" (PParams era) Coin
+  ( EraTxOut era
+  , Arbitrary (PParams era)
+  , Arbitrary (TxOut era)
+  , AtMostEra MaryEra era
+  , HasField "_minUTxOValue" (PParams era) Coin
   ) =>
   TestTree
 propSetShelleyMinTxOut = testProperty "setShelleyMinTxOut" prop
@@ -65,11 +65,11 @@ propSetAlonzoMinTxOut = testProperty "setAlonzoMinTxOut" prop
 
 propSetBabbageMinTxOut ::
   forall era.
-  ( EraTxOut era,
-    Arbitrary (PParams era),
-    Arbitrary (TxOut era),
-    AtLeastEra BabbageEra era,
-    HasField "_coinsPerUTxOByte" (PParams era) Coin
+  ( EraTxOut era
+  , Arbitrary (PParams era)
+  , Arbitrary (TxOut era)
+  , AtLeastEra BabbageEra era
+  , HasField "_coinsPerUTxOByte" (PParams era) Coin
   ) =>
   TestTree
 propSetBabbageMinTxOut = testProperty "setBabbageMinTxOut" prop
@@ -87,10 +87,10 @@ txOutTests :: TestTree
 txOutTests =
   testGroup
     "TxOut"
-    [ testGroup "ShelleyEra" [propSetShelleyMinTxOut @Shelley],
-      testGroup "AllegraEra" [propSetShelleyMinTxOut @Allegra],
-      testGroup "MaryEra" [propSetShelleyMinTxOut @Mary],
-      testGroup "AlonzoEra" [propSetAlonzoMinTxOut],
-      testGroup "BabbageEra" [propSetBabbageMinTxOut @Babbage],
-      testGroup "ConwayEra" [propSetBabbageMinTxOut @Conway]
+    [ testGroup "ShelleyEra" [propSetShelleyMinTxOut @Shelley]
+    , testGroup "AllegraEra" [propSetShelleyMinTxOut @Allegra]
+    , testGroup "MaryEra" [propSetShelleyMinTxOut @Mary]
+    , testGroup "AlonzoEra" [propSetAlonzoMinTxOut]
+    , testGroup "BabbageEra" [propSetBabbageMinTxOut @Babbage]
+    , testGroup "ConwayEra" [propSetBabbageMinTxOut @Conway]
     ]

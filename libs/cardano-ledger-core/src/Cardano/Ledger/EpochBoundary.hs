@@ -19,40 +19,40 @@
 -- Description : Functions and definitions for rules at epoch boundary.
 --
 -- This modules implements the necessary functions for the changes that can happen at epoch boundaries.
-module Cardano.Ledger.EpochBoundary
-  ( Stake (..),
-    sumAllStake,
-    sumStakePerPool,
-    SnapShot (..),
-    SnapShots (..),
-    emptySnapShot,
-    emptySnapShots,
-    poolStake,
-    maxPool,
-    maxPool',
-    calculatePoolDistr,
-    calculatePoolDistr',
-    calculatePoolStake,
-  )
+module Cardano.Ledger.EpochBoundary (
+  Stake (..),
+  sumAllStake,
+  sumStakePerPool,
+  SnapShot (..),
+  SnapShots (..),
+  emptySnapShot,
+  emptySnapShots,
+  poolStake,
+  maxPool,
+  maxPool',
+  calculatePoolDistr,
+  calculatePoolDistr',
+  calculatePoolStake,
+)
 where
 
 import Cardano.Ledger.BaseTypes (BoundedRational (..), NonNegativeInterval)
-import Cardano.Ledger.Binary
-  ( FromCBOR (fromCBOR),
-    FromSharedCBOR (..),
-    Interns,
-    ToCBOR (toCBOR),
-    decodeRecordNamedT,
-    encodeListLen,
-    fromSharedPlusLensCBOR,
-    toMemptyLens,
-  )
-import Cardano.Ledger.Coin
-  ( Coin (..),
-    CompactForm (..),
-    coinToRational,
-    rationalToCoinViaFloor,
-  )
+import Cardano.Ledger.Binary (
+  FromCBOR (fromCBOR),
+  FromSharedCBOR (..),
+  Interns,
+  ToCBOR (toCBOR),
+  decodeRecordNamedT,
+  encodeListLen,
+  fromSharedPlusLensCBOR,
+  toMemptyLens,
+ )
+import Cardano.Ledger.Coin (
+  Coin (..),
+  CompactForm (..),
+  coinToRational,
+  rationalToCoinViaFloor,
+ )
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Credential (Credential)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
@@ -150,9 +150,9 @@ maxPool pc r sigma pR = maxPool' a0 nOpt r sigma pR
 
 -- | Snapshot of the stake distribution.
 data SnapShot c = SnapShot
-  { ssStake :: !(Stake c),
-    ssDelegations :: !(VMap VB VB (Credential 'Staking c) (KeyHash 'StakePool c)),
-    ssPoolParams :: !(VMap VB VB (KeyHash 'StakePool c) (PoolParams c))
+  { ssStake :: !(Stake c)
+  , ssDelegations :: !(VMap VB VB (Credential 'Staking c) (KeyHash 'StakePool c))
+  , ssPoolParams :: !(VMap VB VB (KeyHash 'StakePool c) (PoolParams c))
   }
   deriving (Show, Eq, Generic)
 
@@ -166,9 +166,9 @@ instance
   where
   toCBOR
     SnapShot
-      { ssStake = s,
-        ssDelegations = d,
-        ssPoolParams = p
+      { ssStake = s
+      , ssDelegations = d
+      , ssPoolParams = p
       } =
       encodeListLen 3
         <> toCBOR s
@@ -192,11 +192,11 @@ instance CC.Crypto c => FromSharedCBOR (SnapShot c) where
 -- when we know that they are stable (so that we do not compute them if we do not have to).
 -- See more info in the [Optimize TICKF ADR](https://github.com/input-output-hk/cardano-ledger/blob/master/docs/adr/2022-12-12_007-optimize-ledger-view.md)
 data SnapShots c = SnapShots
-  { ssStakeMark :: SnapShot c, -- Lazy on purpose
-    ssStakeMarkPoolDistr :: PoolDistr c, -- Lazy on purpose
-    ssStakeSet :: !(SnapShot c),
-    ssStakeGo :: !(SnapShot c),
-    ssFee :: !Coin
+  { ssStakeMark :: SnapShot c -- Lazy on purpose
+  , ssStakeMarkPoolDistr :: PoolDistr c -- Lazy on purpose
+  , ssStakeSet :: !(SnapShot c)
+  , ssStakeGo :: !(SnapShot c)
+  , ssFee :: !Coin
   }
   deriving (Show, Eq, Generic)
   deriving (NoThunks) via AllowThunksIn '["ssStakeMark", "ssStakeMarkPoolDistr"] (SnapShots c)

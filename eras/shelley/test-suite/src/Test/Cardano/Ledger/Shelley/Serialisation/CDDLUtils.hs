@@ -6,29 +6,29 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Shelley.Serialisation.CDDLUtils
-  ( cddlTest,
-    cddlAnnotatorTest,
-    cddlGroupTest,
-    cddlTestCommon,
-  )
+module Test.Cardano.Ledger.Shelley.Serialisation.CDDLUtils (
+  cddlTest,
+  cddlAnnotatorTest,
+  cddlGroupTest,
+  cddlTestCommon,
+)
 where
 
-import Cardano.Ledger.Binary
-  ( Annotator,
-    DecoderError,
-    FromCBOR (..),
-    FromCBORGroup (..),
-    ToCBOR (..),
-    ToCBORGroup (..),
-    Version,
-    decodeFullAnnotator,
-    decodeFullDecoder,
-    encodeListLen,
-    groupRecord,
-    serialize,
-    serializeEncoding,
-  )
+import Cardano.Ledger.Binary (
+  Annotator,
+  DecoderError,
+  FromCBOR (..),
+  FromCBORGroup (..),
+  ToCBOR (..),
+  ToCBORGroup (..),
+  Version,
+  decodeFullAnnotator,
+  decodeFullDecoder,
+  encodeListLen,
+  groupRecord,
+  serialize,
+  serializeEncoding,
+ )
 import Codec.CBOR.Read (deserialiseFromBytes)
 import Codec.CBOR.Term (decodeTerm)
 import Control.Exception hiding (throwIO)
@@ -121,11 +121,11 @@ cddlTestCommon serializer decoder n cddlData = do
         Left e ->
           assertFailure $
             unlines
-              [ "Failed to deserialize",
-                "Error: " <> show e,
-                "Generated diag: " <> Char8.unpack exampleDiag,
-                "Generated base16: " <> Char8.unpack (Base16.encode exampleBytes),
-                "terms: " <> case deserialiseFromBytes decodeTerm exampleBytes of
+              [ "Failed to deserialize"
+              , "Error: " <> show e
+              , "Generated diag: " <> Char8.unpack exampleDiag
+              , "Generated base16: " <> Char8.unpack (Base16.encode exampleBytes)
+              , "terms: " <> case deserialiseFromBytes decodeTerm exampleBytes of
                   Left e' -> show e'
                   Right (_, terms) -> show terms
               ]
@@ -135,11 +135,11 @@ cddlTestCommon serializer decoder n cddlData = do
         False ->
           assertFailure $
             unlines
-              [ "Serialized data did not conform to the spec",
-                "Generated diag: " <> Char8.unpack exampleDiag,
-                "Generated base16: " <> Char8.unpack (Base16.encode exampleBytes),
-                "Decoded value: " <> show decoded,
-                "Reencoded base16: " <> Char8.unpack (Base16.encode reencoded)
+              [ "Serialized data did not conform to the spec"
+              , "Generated diag: " <> Char8.unpack exampleDiag
+              , "Generated base16: " <> Char8.unpack (Base16.encode exampleBytes)
+              , "Decoded value: " <> show decoded
+              , "Reencoded base16: " <> Char8.unpack (Base16.encode reencoded)
               ]
 
 data StdErr = StdErr String BSL.ByteString
@@ -147,8 +147,8 @@ data StdErr = StdErr String BSL.ByteString
 instance Show StdErr where
   show (StdErr message stdErr) =
     unlines
-      [ message,
-        Char8.unpack stdErr
+      [ message
+      , Char8.unpack stdErr
       ]
 
 instance Exception StdErr

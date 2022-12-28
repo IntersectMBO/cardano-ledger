@@ -1,8 +1,8 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Cardano.Crypto.Raw
-  ( Raw (..),
-  )
+module Cardano.Crypto.Raw (
+  Raw (..),
+)
 where
 
 import Cardano.Ledger.Binary (FromCBOR, ToCBOR)

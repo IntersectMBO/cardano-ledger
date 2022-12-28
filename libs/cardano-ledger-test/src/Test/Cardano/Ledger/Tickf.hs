@@ -50,10 +50,10 @@ oldCalculatePoolDistr includeHash (SnapShot stake delegs poolParams) =
       sd =
         Map.fromListWith (+) $
           [ (d, c % nonZeroTotal)
-            | (hk, compactCoin) <- VMap.toAscList (unStake stake),
-              let Coin c = fromCompact compactCoin,
-              Just d <- [VMap.lookup hk delegs],
-              includeHash d
+          | (hk, compactCoin) <- VMap.toAscList (unStake stake)
+          , let Coin c = fromCompact compactCoin
+          , Just d <- [VMap.lookup hk delegs]
+          , includeHash d
           ]
    in PoolDistr $
         Map.intersectionWith

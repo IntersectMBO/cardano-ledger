@@ -17,11 +17,11 @@ import qualified Cardano.Ledger.Shelley.Rules as STS
 import Generic.Random (genericArbitraryU)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
-import Test.QuickCheck
-  ( Arbitrary,
-    arbitrary,
-    shrink,
-  )
+import Test.QuickCheck (
+  Arbitrary,
+  arbitrary,
+  shrink,
+ )
 
 {-------------------------------------------------------------------------------
   ShelleyEra Generators
@@ -46,11 +46,11 @@ instance
       <*> arbitrary
 
 instance
-  ( Era era,
-    Mock (EraCrypto era),
-    Arbitrary (Value era),
-    Arbitrary (TxOut era),
-    Arbitrary (STS.PredicateFailure (EraRule "PPUP" era))
+  ( Era era
+  , Mock (EraCrypto era)
+  , Arbitrary (Value era)
+  , Arbitrary (TxOut era)
+  , Arbitrary (STS.PredicateFailure (EraRule "PPUP" era))
   ) =>
   Arbitrary (STS.ShelleyUtxoPredFailure era)
   where

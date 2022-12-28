@@ -8,9 +8,9 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Allegra.Tx
-  ( validateTimelock,
-  )
+module Cardano.Ledger.Allegra.Tx (
+  validateTimelock,
+)
 where
 
 import Cardano.Ledger.Allegra.Era (AllegraEra)
@@ -22,15 +22,15 @@ import Cardano.Ledger.Core (EraTx (..), EraTxWits (..), PhasedScript (..))
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
-import Cardano.Ledger.Shelley.Tx
-  ( ShelleyTx,
-    auxDataShelleyTxL,
-    bodyShelleyTxL,
-    mkBasicShelleyTx,
-    shelleyMinFeeTx,
-    sizeShelleyTxF,
-    witsShelleyTxL,
-  )
+import Cardano.Ledger.Shelley.Tx (
+  ShelleyTx,
+  auxDataShelleyTxL,
+  bodyShelleyTxL,
+  mkBasicShelleyTx,
+  shelleyMinFeeTx,
+  sizeShelleyTxF,
+  witsShelleyTxL,
+ )
 import qualified Data.Set as Set (map)
 import Lens.Micro ((^.))
 

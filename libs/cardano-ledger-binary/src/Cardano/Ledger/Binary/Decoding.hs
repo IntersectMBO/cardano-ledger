@@ -4,37 +4,37 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Ledger.Binary.Decoding
-  ( -- * Running decoders
-    decodeFull,
-    decodeFull',
-    decodeFullDecoder,
-    decodeFullDecoder',
-    decodeFullAnnotator,
-    decodeFullAnnotatedBytes,
-    module Cardano.Ledger.Binary.Version,
-    module Cardano.Ledger.Binary.Decoding.FromCBOR,
-    module Cardano.Ledger.Binary.Decoding.Sharing,
-    module Cardano.Ledger.Binary.Decoding.Decoder,
-    module Cardano.Ledger.Binary.Decoding.Annotated,
-    module Cardano.Ledger.Binary.Decoding.Sized,
-    module Cardano.Ledger.Binary.Decoding.Drop,
+module Cardano.Ledger.Binary.Decoding (
+  -- * Running decoders
+  decodeFull,
+  decodeFull',
+  decodeFullDecoder,
+  decodeFullDecoder',
+  decodeFullAnnotator,
+  decodeFullAnnotatedBytes,
+  module Cardano.Ledger.Binary.Version,
+  module Cardano.Ledger.Binary.Decoding.FromCBOR,
+  module Cardano.Ledger.Binary.Decoding.Sharing,
+  module Cardano.Ledger.Binary.Decoding.Decoder,
+  module Cardano.Ledger.Binary.Decoding.Annotated,
+  module Cardano.Ledger.Binary.Decoding.Sized,
+  module Cardano.Ledger.Binary.Decoding.Drop,
 
-    -- * Nested CBOR in CBOR
-    decodeNestedCbor,
-    decodeNestedCborBytes,
+  -- * Nested CBOR in CBOR
+  decodeNestedCbor,
+  decodeNestedCborBytes,
 
-    -- * Unsafe deserialization
-    unsafeDeserialize,
-    unsafeDeserialize',
+  -- * Unsafe deserialization
+  unsafeDeserialize,
+  unsafeDeserialize',
 
-    -- * Helpers
-    toStrictByteString,
+  -- * Helpers
+  toStrictByteString,
 
-    -- * Deprecated
-    decodeAnnotator,
-    fromCBORMaybe,
-  )
+  -- * Deprecated
+  decodeAnnotator,
+  fromCBORMaybe,
+)
 where
 
 import Cardano.Ledger.Binary.Decoding.Annotated

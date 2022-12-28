@@ -1,6 +1,6 @@
-module Cardano.Chain.Slotting
-  ( module X,
-  )
+module Cardano.Chain.Slotting (
+  module X,
+)
 where
 
 import Cardano.Chain.Slotting.EpochAndSlotCount as X

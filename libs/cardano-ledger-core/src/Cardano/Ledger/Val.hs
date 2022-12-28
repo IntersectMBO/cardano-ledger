@@ -7,14 +7,14 @@
 
 -- | This module defines a generalised notion of a "value" - that is, something
 -- with which we may quantify a transaction output.
-module Cardano.Ledger.Val
-  ( Val (..),
-    scale,
-    invert,
-    sumVal,
-    adaOnly,
-    DecodeNonNegative (..),
-  )
+module Cardano.Ledger.Val (
+  Val (..),
+  scale,
+  invert,
+  sumVal,
+  adaOnly,
+  DecodeNonNegative (..),
+)
 where
 
 import Cardano.Ledger.Binary (Decoder, decodeWord64)
@@ -25,9 +25,9 @@ import Data.Foldable (foldl')
 import Data.Group (Abelian)
 
 class
-  ( Compactible t,
-    Abelian t,
-    Eq t
+  ( Compactible t
+  , Abelian t
+  , Eq t
   ) =>
   Val t
   where

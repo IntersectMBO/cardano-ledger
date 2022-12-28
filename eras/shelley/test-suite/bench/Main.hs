@@ -7,15 +7,15 @@
 module Main where
 
 import BenchUTxOAggregate (expr, genTestCase)
-import BenchValidation
-  ( applyBlock,
-    benchValidate,
-    benchreValidate,
-    genUpdateInputs,
-    updateAndTickChain,
-    updateChain,
-    validateInput,
-  )
+import BenchValidation (
+  applyBlock,
+  benchValidate,
+  benchreValidate,
+  genUpdateInputs,
+  updateAndTickChain,
+  updateChain,
+  validateInput,
+ )
 import Cardano.Crypto.DSIGN
 import Cardano.Crypto.Hash
 import Cardano.Crypto.KES
@@ -25,20 +25,20 @@ import qualified Cardano.Ledger.Crypto as CryptoClass
 import qualified Cardano.Ledger.EpochBoundary as EB
 import Cardano.Ledger.Era (EraCrypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.Bench.Gen
-  ( genBlock,
-    genTriple,
-  )
+import Cardano.Ledger.Shelley.Bench.Gen (
+  genBlock,
+  genTriple,
+ )
 import Cardano.Ledger.Shelley.Bench.Rewards (createRUpd, createRUpdWithProv, genChainInEpoch)
-import Cardano.Ledger.Shelley.LedgerState
-  ( DPState (..),
-    DState (..),
-    LedgerState (..),
-    PState (..),
-    UTxOState (..),
-    incrementalStakeDistr,
-    updateStakeDistribution,
-  )
+import Cardano.Ledger.Shelley.LedgerState (
+  DPState (..),
+  DState (..),
+  LedgerState (..),
+  PState (..),
+  UTxOState (..),
+  incrementalStakeDistr,
+  updateStakeDistribution,
+ )
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.PoolRank (likelihood)
 import Cardano.Ledger.UTxO (UTxO)
@@ -47,36 +47,36 @@ import Cardano.Slotting.Slot (EpochSize (..))
 import Control.DeepSeq (NFData)
 import Control.Iterate.SetAlgebra (compile, compute, run)
 import Control.SetAlgebra (dom, keysEqual, (▷), (◁))
-import Criterion.Main
-  ( Benchmark,
-    bench,
-    bgroup,
-    defaultMain,
-    env,
-    nf,
-    nfIO,
-    whnf,
-    whnfIO,
-  )
+import Criterion.Main (
+  Benchmark,
+  bench,
+  bgroup,
+  defaultMain,
+  env,
+  nf,
+  nfIO,
+  whnf,
+  whnfIO,
+ )
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
-import Test.Cardano.Ledger.Shelley.BenchmarkFunctions
-  ( initUTxO,
-    ledgerDeRegisterStakeKeys,
-    ledgerDelegateManyKeysOnePool,
-    ledgerReRegisterStakePools,
-    ledgerRegisterStakeKeys,
-    ledgerRegisterStakePools,
-    ledgerRetireStakePools,
-    ledgerRewardWithdrawals,
-    ledgerSpendOneGivenUTxO,
-    ledgerSpendOneUTxO,
-    ledgerStateWithNkeysMpools,
-    ledgerStateWithNregisteredKeys,
-    ledgerStateWithNregisteredPools,
-  )
+import Test.Cardano.Ledger.Shelley.BenchmarkFunctions (
+  initUTxO,
+  ledgerDeRegisterStakeKeys,
+  ledgerDelegateManyKeysOnePool,
+  ledgerReRegisterStakePools,
+  ledgerRegisterStakeKeys,
+  ledgerRegisterStakePools,
+  ledgerRetireStakePools,
+  ledgerRewardWithdrawals,
+  ledgerSpendOneGivenUTxO,
+  ledgerSpendOneUTxO,
+  ledgerStateWithNkeysMpools,
+  ledgerStateWithNregisteredKeys,
+  ledgerStateWithNregisteredPools,
+ )
 import Test.Cardano.Ledger.Shelley.Rules.TestChain (stakeDistr)
 import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest, testGlobals)
 import Test.QuickCheck (arbitrary)
@@ -130,7 +130,7 @@ eqf name f n = bgroup (name ++ " " ++ show n) (map runat [n, n * 10, n * 100, n 
         ( return $
             Map.fromList
               [ (k, k)
-                | k <- [1 .. m]
+              | k <- [1 .. m]
               ]
         )
         (\state -> bench (show m) (whnf (f state) state))
@@ -139,8 +139,8 @@ mainEq :: IO ()
 mainEq =
   defaultMain $
     [ bgroup "KeysEqual tests" $
-        [ eqf "keysEqual" keysEqual (100 :: Int),
-          eqf
+        [ eqf "keysEqual" keysEqual (100 :: Int)
+        , eqf
             "keys x == keys y"
             (\x y -> Map.keys x == Map.keys y)
             (100 :: Int)
@@ -222,9 +222,9 @@ epochAt x =
   env (QC.generate (genTestCase x n)) $ \ ~arg@(dstate, pstate, utxo) ->
     bgroup
       ("UTxO=" ++ show x ++ ",  address=" ++ show n)
-      [ bench "stakeDistr" (nf action2m arg),
-        bench "incrementalStakeDistr" (nf action2im arg),
-        env (pure (updateStakeDistribution mempty mempty utxo)) $ \incStake ->
+      [ bench "stakeDistr" (nf action2m arg)
+      , bench "incrementalStakeDistr" (nf action2im arg)
+      , env (pure (updateStakeDistribution mempty mempty utxo)) $ \incStake ->
           bench "incrementalStakeDistr (no update)" $
             nf (incrementalStakeDistr incStake dstate) pstate
       ]
@@ -252,9 +252,9 @@ validGroup :: Benchmark
 validGroup =
   bgroup
     "validation"
-    [ runAtUTxOSize 1000,
-      runAtUTxOSize 100000,
-      runAtUTxOSize 1000000
+    [ runAtUTxOSize 1000
+    , runAtUTxOSize 100000
+    , runAtUTxOSize 1000000
     ]
   where
     runAtUTxOSize n =
@@ -263,14 +263,14 @@ validGroup =
         [ env (validateInput @BenchEra n) $ \arg ->
             bgroup
               "block"
-              [ bench "applyBlockTransition" (nfIO $ benchValidate arg),
-                bench "reapplyBlockTransition" (nf benchreValidate arg)
-              ],
-          env (genUpdateInputs @BenchEra n) $ \arg ->
+              [ bench "applyBlockTransition" (nfIO $ benchValidate arg)
+              , bench "reapplyBlockTransition" (nf benchreValidate arg)
+              ]
+        , env (genUpdateInputs @BenchEra n) $ \arg ->
             bgroup
               "protocol"
-              [ bench "updateChainDepState" (nf updateChain arg),
-                bench
+              [ bench "updateChainDepState" (nf updateChain arg)
+              , bench
                   "updateAndTickChainDepState"
                   (nf updateAndTickChain arg)
               ]
@@ -301,8 +301,8 @@ drrAt x =
     \arg ->
       bgroup
         ("size=" ++ show x)
-        [ bench "compute" (whnf alg1 arg),
-          bench "run . compile" (whnf alg2 arg)
+        [ bench "compute" (whnf alg1 arg)
+        , bench "run . compile" (whnf alg2 arg)
         ]
 
 alg1 :: (Map Int Int, Map Int Char, Map Char Char) -> Map Int Char
@@ -387,98 +387,98 @@ main = do
             (1, 5000)
             [(1, 50), (1, 500), (1, 5000)]
             ledgerStateWithNregisteredKeys
-            ledgerDeRegisterStakeKeys,
-          varyInput
+            ledgerDeRegisterStakeKeys
+        , varyInput
             "register key"
             (20001, 25001)
             [(1, 50), (1, 500), (1, 5000)]
             ledgerStateWithNregisteredKeys
-            ledgerRegisterStakeKeys,
-          varyInput
+            ledgerRegisterStakeKeys
+        , varyInput
             "withdrawal"
             (1, 5000)
             [(1, 50), (1, 500), (1, 5000)]
             ledgerStateWithNregisteredKeys
-            ledgerRewardWithdrawals,
-          varyInput
+            ledgerRewardWithdrawals
+        , varyInput
             "register pool"
             (1, 5000)
             [(1, 50), (1, 500), (1, 5000)]
             ledgerStateWithNregisteredPools
-            ledgerRegisterStakePools,
-          varyInput
+            ledgerRegisterStakePools
+        , varyInput
             "reregister pool"
             (1, 5000)
             [(1, 50), (1, 500), (1, 5000)]
             ledgerStateWithNregisteredPools
-            ledgerReRegisterStakePools,
-          varyInput
+            ledgerReRegisterStakePools
+        , varyInput
             "retire pool"
             (1, 5000)
             [(1, 50), (1, 500), (1, 5000)]
             ledgerStateWithNregisteredPools
-            ledgerRetireStakePools,
-          varyInput
+            ledgerRetireStakePools
+        , varyInput
             "manyKeysOnePool"
             (5000, 5000)
             [(1, 50), (1, 500), (1, 5000)]
             ledgerStateWithNkeysMpools
             ledgerDelegateManyKeysOnePool
-        ],
-      bgroup "vary initial state" $
+        ]
+    , bgroup "vary initial state" $
         [ varyState
             "spendOne"
             1
             [50, 500, 5000]
             (\_m n -> initUTxO (fromIntegral n))
-            (\_m _ -> ledgerSpendOneGivenUTxO),
-          varyState
+            (\_m _ -> ledgerSpendOneGivenUTxO)
+        , varyState
             "register key"
             5001
             [50, 500, 5000]
             ledgerStateWithNregisteredKeys
-            ledgerRegisterStakeKeys,
-          varyState
+            ledgerRegisterStakeKeys
+        , varyState
             "deregister key"
             50
             [50, 500, 5000]
             ledgerStateWithNregisteredKeys
-            ledgerDeRegisterStakeKeys,
-          varyState
+            ledgerDeRegisterStakeKeys
+        , varyState
             "withdrawal"
             50
             [50, 500, 5000]
             ledgerStateWithNregisteredKeys
-            ledgerRewardWithdrawals,
-          varyState
+            ledgerRewardWithdrawals
+        , varyState
             "register pool"
             5001
             [50, 500, 5000]
             ledgerStateWithNregisteredPools
-            ledgerRegisterStakePools,
-          varyState
+            ledgerRegisterStakePools
+        , varyState
             "reregister pool"
             5001
             [50, 500, 5000]
             ledgerStateWithNregisteredPools
-            ledgerReRegisterStakePools,
-          varyState
+            ledgerReRegisterStakePools
+        , varyState
             "retire pool"
             50
             [50, 500, 5000]
             ledgerStateWithNregisteredPools
-            ledgerRetireStakePools,
-          varyDelegState
+            ledgerRetireStakePools
+        , varyDelegState
             "manyKeysOnePool"
             50
             [50, 500, 5000]
             ledgerStateWithNkeysMpools
             ledgerDelegateManyKeysOnePool
-        ],
-      profileEpochBoundary,
-      bgroup "domain-range restict" $ drrAt <$> [10000, 100000, 1000000],
-      validGroup,
-      -- Benchmarks for the various generators
+        ]
+    , profileEpochBoundary
+    , bgroup "domain-range restict" $ drrAt <$> [10000, 100000, 1000000]
+    , validGroup
+    , -- Benchmarks for the various generators
       bgroup
         "gen"
         [ env
@@ -488,23 +488,23 @@ main = do
                   "block"
                   [ bench "genBlock" $ whnfIO $ genBlock genenv cs
                   ]
-            ),
-          bgroup
+            )
+        , bgroup
             "genTx"
             [ bench "1000" $ whnfIO $ genTxfun genenv
             ]
-        ],
-      bgroup "rewards" $
+        ]
+    , bgroup "rewards" $
         [ env
             (generate $ genChainInEpoch 5)
             ( \cs ->
                 bench "createRUpd" $ whnf (createRUpd testGlobals) cs
-            ),
-          env
+            )
+        , env
             (generate $ genChainInEpoch 5)
             ( \cs ->
                 bench "createRUpdWithProvenance" $ whnf (createRUpdWithProv testGlobals) cs
-            ),
-          bench "likelihood" $ whnf (likelihood 1234 0.1) (EpochSize 10000)
+            )
+        , bench "likelihood" $ whnf (likelihood 1234 0.1) (EpochSize 10000)
         ]
     ]

@@ -1,6 +1,6 @@
-module Cardano.Chain.UTxO.GenesisUTxO
-  ( genesisUtxo,
-  )
+module Cardano.Chain.UTxO.GenesisUTxO (
+  genesisUtxo,
+)
 where
 
 import Cardano.Chain.Common (Address, Lovelace, makeRedeemAddress)

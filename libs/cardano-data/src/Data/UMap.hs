@@ -15,68 +15,68 @@
 --   and a fourth one in the inverse direction.
 --   The advantage of using 'UMap' is that 'UMap' stores all the information compactly, by exploiting the
 --   the large amount of sharing in the 2 maps.
-module Data.UMap
-  ( -- * Constructing 'UMap'
-    -- $UMAP
-    Trip (Triple),
-    tripReward,
-    tripRewardActiveDelegation,
-    tripDelegation,
-    UMap (..),
-    umInvariant,
+module Data.UMap (
+  -- * Constructing 'UMap'
+  -- $UMAP
+  Trip (Triple),
+  tripReward,
+  tripRewardActiveDelegation,
+  tripDelegation,
+  UMap (..),
+  umInvariant,
 
-    -- * View and its components
-    -- $VIEW
-    View (..),
-    unView,
-    unUnify,
-    viewToVMap,
-    rewView,
-    delView,
-    ptrView,
-    domRestrictedView,
-    zero,
-    zeroMaybe,
+  -- * View and its components
+  -- $VIEW
+  View (..),
+  unView,
+  unUnify,
+  viewToVMap,
+  rewView,
+  delView,
+  ptrView,
+  domRestrictedView,
+  zero,
+  zeroMaybe,
 
-    -- * Operations to implement the 'Iter' class
-    -- $ITER
-    mapNext,
-    mapLub,
-    next,
-    leastUpperBound,
+  -- * Operations to implement the 'Iter' class
+  -- $ITER
+  mapNext,
+  mapLub,
+  next,
+  leastUpperBound,
 
-    -- * Set and Map operations on Views
-    -- $VIEWOPS
-    empty,
-    delete,
-    delete',
-    insertWith,
-    insertWith',
-    insert,
-    insert',
-    lookup,
-    isNull,
-    domain,
-    range,
-    (∪),
-    (⨃),
-    (∪+),
-    (⋪),
-    (⋫),
-    member,
-    notMember,
-    domRestrict,
+  -- * Set and Map operations on Views
+  -- $VIEWOPS
+  empty,
+  delete,
+  delete',
+  insertWith,
+  insertWith',
+  insert,
+  insert',
+  lookup,
+  isNull,
+  domain,
+  range,
+  (∪),
+  (⨃),
+  (∪+),
+  (⋪),
+  (⋫),
+  member,
+  notMember,
+  domRestrict,
 
-    -- * Runtime evidence of a View
-    -- $Tag
-    Tag (..),
-    UnifiedView (..),
-    --  * Derived functions
-    --  $DFUNS
-    findWithDefault,
-    size,
-    unify,
-  )
+  -- * Runtime evidence of a View
+  -- $Tag
+  Tag (..),
+  UnifiedView (..),
+  --  * Derived functions
+  --  $DFUNS
+  findWithDefault,
+  size,
+  unify,
+)
 where
 
 import Cardano.Ledger.Binary
@@ -575,9 +575,9 @@ range (Ptrs (UnifiedMap _tripmap ptrmap)) =
 
 -- | Union with left preference, so if k, already exists, do nothing, if it doesn't exist insert it.
 (∪) ::
-  ( Ord cr,
-    Monoid coin,
-    Ord ptr
+  ( Ord cr
+  , Monoid coin
+  , Ord ptr
   ) =>
   View coin cr pool ptr k v ->
   (k, v) ->
@@ -590,9 +590,9 @@ view ∪ (k, v) = insertWith (\old _new -> old) k v view
 
 -- | Union with right preference, so if 'k', already exists, then its value is overwritten with 'v'
 (⨃) ::
-  ( Ord cr,
-    Monoid coin,
-    Ord ptr
+  ( Ord cr
+  , Monoid coin
+  , Ord ptr
   ) =>
   View coin cr pool ptr k v ->
   Map k v ->
@@ -607,8 +607,8 @@ view ⨃ mp = unView $ Map.foldlWithKey' accum view mp
 -- evalUnified  (Rewards u0 ∪+ refunds)
 
 (∪+) ::
-  ( Ord cred,
-    Monoid coin
+  ( Ord cred
+  , Monoid coin
   ) =>
   View coin cred pool ptr k coin ->
   Map k coin ->

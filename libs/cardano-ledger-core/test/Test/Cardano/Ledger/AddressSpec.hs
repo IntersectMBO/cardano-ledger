@@ -140,11 +140,11 @@ propDecompactErrors addr = do
           Addr _ _ StakeRefPtr {} -> do
             newSuffix <-
               oneof
-                [ serializeSuffix [genBad32, genGood16, genGood16],
-                  serializeSuffix [genGood32, genBad16, genGood16],
-                  serializeSuffix [genGood32, genGood16, genBad16],
-                  serializeSuffix [genGood32, genGood16, genGood16, genGood16],
-                  -- We need to reset the first bit, to indicate that no more bytes do
+                [ serializeSuffix [genBad32, genGood16, genGood16]
+                , serializeSuffix [genGood32, genBad16, genGood16]
+                , serializeSuffix [genGood32, genGood16, genBad16]
+                , serializeSuffix [genGood32, genGood16, genGood16, genGood16]
+                , -- We need to reset the first bit, to indicate that no more bytes do
                   -- follow. This is similar to (except the original suffix is retained):
                   --
                   -- serializeSuffix [genGood8, genGood32, genGood16, genGood16]
@@ -161,10 +161,10 @@ propDecompactErrors addr = do
           AddrBootstrap {} -> pure ("Bogus Bootstrap", BS.singleton 0b10000000 <> bs)
   (mingler, badAddr) <-
     oneof
-      [ mingleHeader,
-        mingleAddLength,
-        mingleDropLength,
-        mingleStaking
+      [ mingleHeader
+      , mingleAddLength
+      , mingleDropLength
+      , mingleStaking
       ]
   pure
     $ counterexample
@@ -190,9 +190,9 @@ propDeserializeRewardAcntErrors v acnt = do
         pure ("Drop Length", BS.take (BS.length bs - n) bs)
   (mingler, badAddr) <-
     oneof
-      [ mingleHeader,
-        mingleAddLength,
-        mingleDropLength
+      [ mingleHeader
+      , mingleAddLength
+      , mingleDropLength
       ]
   pure
     $ counterexample

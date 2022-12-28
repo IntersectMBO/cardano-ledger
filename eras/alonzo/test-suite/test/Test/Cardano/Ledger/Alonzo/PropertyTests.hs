@@ -37,25 +37,25 @@ import Test.Cardano.Ledger.Alonzo.EraMapping ()
 import Test.Cardano.Ledger.Alonzo.Trace ()
 import Test.Cardano.Ledger.EraBuffet (TestCrypto)
 import qualified Test.Cardano.Ledger.Shelley.PropertyTests as Shelley
-import Test.Cardano.Ledger.Shelley.Rules.Chain
-  ( CHAIN,
-    ChainEvent (..),
-    ChainState (..),
-    TestChainPredicateFailure (..),
-  )
-import Test.Cardano.Ledger.Shelley.Rules.TestChain
-  ( forAllChainTrace,
-    incrementalStakeProp,
-    ledgerTraceFromBlock,
-  )
-import Test.QuickCheck
-  ( Property,
-    conjoin,
-    counterexample,
-    withMaxSuccess,
-    (.&&.),
-    (===),
-  )
+import Test.Cardano.Ledger.Shelley.Rules.Chain (
+  CHAIN,
+  ChainEvent (..),
+  ChainState (..),
+  TestChainPredicateFailure (..),
+ )
+import Test.Cardano.Ledger.Shelley.Rules.TestChain (
+  forAllChainTrace,
+  incrementalStakeProp,
+  ledgerTraceFromBlock,
+ )
+import Test.QuickCheck (
+  Property,
+  conjoin,
+  counterexample,
+  withMaxSuccess,
+  (.&&.),
+  (===),
+ )
 import Test.Tasty
 import qualified Test.Tasty.QuickCheck as TQC
 
@@ -84,9 +84,9 @@ alonzoSpecificProps SourceSignalTarget {source = chainSt, signal = block} =
     alonzoSpecificPropsLEDGER :: SourceSignalTarget (AlonzoLEDGER A) -> Property
     alonzoSpecificPropsLEDGER
       SourceSignalTarget
-        { source = LedgerState UTxOState {utxosUtxo = UTxO u, utxosDeposited = dp, utxosFees = f} ds,
-          signal = tx,
-          target = LedgerState UTxOState {utxosUtxo = UTxO u', utxosDeposited = dp', utxosFees = f'} ds'
+        { source = LedgerState UTxOState {utxosUtxo = UTxO u, utxosDeposited = dp, utxosFees = f} ds
+        , signal = tx
+        , target = LedgerState UTxOState {utxosUtxo = UTxO u', utxosDeposited = dp', utxosFees = f'} ds'
         } =
         let isValid' = tx ^. isValidTxL
             noNewUTxO = u' `Map.isSubmapOf` u
@@ -115,46 +115,46 @@ alonzoSpecificProps SourceSignalTarget {source = chainSt, signal = block} =
               Passes _ -> True
          in counterexample
               ( mconcat
-                  [ "\nHas plutus scripts: ",
-                    show hasPlutus,
-                    "\nIs valid: ",
-                    show isValid',
-                    "\nAt least one UTxO is consumed: ",
-                    show utxoConsumed,
-                    "\nNon trivial execution units: ",
-                    show nonTrivialExU,
-                    "\nReceived the expected plutus scripts: ",
-                    show expectedPScripts,
-                    "\nPlutus scripts all evaluate to true: ",
-                    show allPlutusTrue,
-                    "\nNo new UTxO: ",
-                    show noNewUTxO,
-                    "\nThe collateral amount was added to the fees: ",
-                    show collateralInFees,
-                    "\nThe deposit pot is unchanged: ",
-                    show (dp == dp'),
-                    "\nThe delegation state is unchanged: ",
-                    show (ds == ds')
+                  [ "\nHas plutus scripts: "
+                  , show hasPlutus
+                  , "\nIs valid: "
+                  , show isValid'
+                  , "\nAt least one UTxO is consumed: "
+                  , show utxoConsumed
+                  , "\nNon trivial execution units: "
+                  , show nonTrivialExU
+                  , "\nReceived the expected plutus scripts: "
+                  , show expectedPScripts
+                  , "\nPlutus scripts all evaluate to true: "
+                  , show allPlutusTrue
+                  , "\nNo new UTxO: "
+                  , show noNewUTxO
+                  , "\nThe collateral amount was added to the fees: "
+                  , show collateralInFees
+                  , "\nThe deposit pot is unchanged: "
+                  , show (dp == dp')
+                  , "\nThe delegation state is unchanged: "
+                  , show (ds == ds')
                   ]
               )
               ( counterexample "At least one UTxO is consumed" utxoConsumed
                   .&&. ( case (hasPlutus, isValid') of
-                           (NoPlutus, IsValid True) -> totEU === ExUnits 0 0
-                           (NoPlutus, IsValid False) -> counterexample "No Plutus scripts, but isValid == False" False
-                           (HasPlutus, IsValid True) ->
-                             conjoin
-                               [ counterexample "Non trivial execution units" nonTrivialExU,
-                                 counterexample "Received the expected plutus scripts" expectedPScripts,
-                                 counterexample "Plutus scripts all evaluate to true" allPlutusTrue
-                               ]
-                           (HasPlutus, IsValid False) ->
-                             conjoin
-                               [ counterexample "No new UTxO" noNewUTxO,
-                                 counterexample "The collateral amount was added to the fees" collateralInFees,
-                                 dp === dp',
-                                 ds === ds',
-                                 counterexample "No failing Plutus scripts" $ not allPlutusTrue
-                               ]
+                          (NoPlutus, IsValid True) -> totEU === ExUnits 0 0
+                          (NoPlutus, IsValid False) -> counterexample "No Plutus scripts, but isValid == False" False
+                          (HasPlutus, IsValid True) ->
+                            conjoin
+                              [ counterexample "Non trivial execution units" nonTrivialExU
+                              , counterexample "Received the expected plutus scripts" expectedPScripts
+                              , counterexample "Plutus scripts all evaluate to true" allPlutusTrue
+                              ]
+                          (HasPlutus, IsValid False) ->
+                            conjoin
+                              [ counterexample "No new UTxO" noNewUTxO
+                              , counterexample "The collateral amount was added to the fees" collateralInFees
+                              , dp === dp'
+                              , ds === ds'
+                              , counterexample "No failing Plutus scripts" $ not allPlutusTrue
+                              ]
                        )
               )
 
@@ -172,9 +172,9 @@ alonzoPropertyTests :: TestTree
 alonzoPropertyTests =
   testGroup
     "Alonzo property tests"
-    [ Shelley.propertyTests @A @(AlonzoLEDGER A),
-      propertyTests,
-      TQC.testProperty
+    [ Shelley.propertyTests @A @(AlonzoLEDGER A)
+    , propertyTests
+    , TQC.testProperty
         "Incremental stake distribution at epoch boundaries agrees"
         (incrementalStakeProp (Proxy :: Proxy A))
     ]

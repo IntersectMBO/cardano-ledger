@@ -15,63 +15,63 @@
 --   and a fourth one in the inverse direction.
 --   The advantage of using 'UMap' is that 'UMap' stores all the information compactly, by exploiting the
 --   the large amount of sharing in the 2 maps.
-module Cardano.Ledger.UMapCompact
-  ( -- * Constructing 'UMap'
-    -- $UMAP
-    Trip (Triple),
-    tripReward,
-    tripRewardActiveDelegation,
-    tripDelegation,
-    UMap (..),
-    umInvariant,
+module Cardano.Ledger.UMapCompact (
+  -- * Constructing 'UMap'
+  -- $UMAP
+  Trip (Triple),
+  tripReward,
+  tripRewardActiveDelegation,
+  tripDelegation,
+  UMap (..),
+  umInvariant,
 
-    -- * View and its components
-    -- $VIEW
-    View (..),
-    unView,
-    unUnify,
-    viewToVMap,
-    rewView,
-    delView,
-    ptrView,
-    domRestrictedView,
-    zero,
-    zeroMaybe,
-    CompactForm (CompactCoin),
-    toCompact,
-    fromCompact,
-    addCompact,
-    sumCompactCoin,
-    compactCoinOrError,
+  -- * View and its components
+  -- $VIEW
+  View (..),
+  unView,
+  unUnify,
+  viewToVMap,
+  rewView,
+  delView,
+  ptrView,
+  domRestrictedView,
+  zero,
+  zeroMaybe,
+  CompactForm (CompactCoin),
+  toCompact,
+  fromCompact,
+  addCompact,
+  sumCompactCoin,
+  compactCoinOrError,
 
-    -- * Set and Map operations on Views
-    -- $VIEWOPS
-    empty,
-    delete,
-    delete',
-    insertWith,
-    insertWith',
-    insert,
-    insert',
-    lookup,
-    isNull,
-    domain,
-    range,
-    (∪),
-    (⨃),
-    (∪+),
-    (⋪),
-    (⋫),
-    (◁),
-    member,
-    notMember,
-    domRestrict,
-    --  * Derived functions
-    --  $DFUNS
-    findWithDefault,
-    size,
-    unify,
-  )
+  -- * Set and Map operations on Views
+  -- $VIEWOPS
+  empty,
+  delete,
+  delete',
+  insertWith,
+  insertWith',
+  insert,
+  insert',
+  lookup,
+  isNull,
+  domain,
+  range,
+  (∪),
+  (⨃),
+  (∪+),
+  (⋪),
+  (⋫),
+  (◁),
+  member,
+  notMember,
+  domRestrict,
+  --  * Derived functions
+  --  $DFUNS
+  findWithDefault,
+  size,
+  unify,
+)
 where
 
 import Cardano.Ledger.Binary

@@ -4,85 +4,85 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Chain.Common.CBOR
-  ( tests,
-  )
+module Test.Cardano.Chain.Common.CBOR (
+  tests,
+)
 where
 
-import Cardano.Chain.Common
-  ( AddrAttributes (..),
-    AddrSpendingData (..),
-    AddrType (..),
-    Attributes (..),
-    BlockCount (..),
-    ChainDifficulty (..),
-    TxFeePolicy (..),
-    TxSizeLinear (..),
-    decodeAddressBase58,
-    decodeCrcProtected,
-    encodeAddressBase58,
-    encodeCrcProtected,
-    isRedeemAddress,
-    mkAttributes,
-    mkKnownLovelace,
-    mkMerkleTree,
-    mtRoot,
-    rationalToLovelacePortion,
-  )
-import Cardano.Crypto
-  ( Hash,
-    abstractHash,
-    redeemDeterministicKeyGen,
-  )
+import Cardano.Chain.Common (
+  AddrAttributes (..),
+  AddrSpendingData (..),
+  AddrType (..),
+  Attributes (..),
+  BlockCount (..),
+  ChainDifficulty (..),
+  TxFeePolicy (..),
+  TxSizeLinear (..),
+  decodeAddressBase58,
+  decodeCrcProtected,
+  encodeAddressBase58,
+  encodeCrcProtected,
+  isRedeemAddress,
+  mkAttributes,
+  mkKnownLovelace,
+  mkMerkleTree,
+  mtRoot,
+  rationalToLovelacePortion,
+ )
+import Cardano.Crypto (
+  Hash,
+  abstractHash,
+  redeemDeterministicKeyGen,
+ )
 import Cardano.Crypto.Raw (Raw (..))
-import Cardano.Ledger.Binary
-  ( Case (..),
-    SizeOverride (..),
-    ToCBOR,
-    byronProtVer,
-    decodeFullDecoder,
-    serializeEncoding,
-    szCases,
-  )
+import Cardano.Ledger.Binary (
+  Case (..),
+  SizeOverride (..),
+  ToCBOR,
+  byronProtVer,
+  decodeFullDecoder,
+  serializeEncoding,
+  szCases,
+ )
 import Cardano.Prelude hiding (check)
 import qualified Data.Map as M
 import GetDataFileName ((<:<))
 import Hedgehog (Gen, Property, cover, forAll, property, (===))
 import qualified Hedgehog as H
-import Test.Cardano.Chain.Common.Example
-  ( exampleAddrSpendingData_VerKey,
-    exampleAddress,
-    exampleAddress1,
-    exampleAddress2,
-    exampleAddress3,
-    exampleAddress4,
-    exampleKeyHash,
-  )
-import Test.Cardano.Chain.Common.Gen
-  ( genAddrAttributes,
-    genAddrSpendingData,
-    genAddrType,
-    genAddress,
-    genAttributes,
-    genBlockCount,
-    genChainDifficulty,
-    genKeyHash,
-    genLovelace,
-    genLovelaceError,
-    genLovelacePortion,
-    genMerkleRoot,
-    genMerkleTree,
-    genTxFeePolicy,
-    genTxSizeLinear,
-  )
+import Test.Cardano.Chain.Common.Example (
+  exampleAddrSpendingData_VerKey,
+  exampleAddress,
+  exampleAddress1,
+  exampleAddress2,
+  exampleAddress3,
+  exampleAddress4,
+  exampleKeyHash,
+ )
+import Test.Cardano.Chain.Common.Gen (
+  genAddrAttributes,
+  genAddrSpendingData,
+  genAddrType,
+  genAddress,
+  genAttributes,
+  genBlockCount,
+  genChainDifficulty,
+  genKeyHash,
+  genLovelace,
+  genLovelaceError,
+  genLovelacePortion,
+  genMerkleRoot,
+  genMerkleTree,
+  genTxFeePolicy,
+  genTxSizeLinear,
+ )
 import Test.Cardano.Crypto.CBOR (getBytes)
 import Test.Cardano.Crypto.Gen (genHashRaw)
 import Test.Cardano.Ledger.Binary.Vintage.Helpers (SizeTestConfig (..), scfg, sizeTest)
-import Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip
-  ( goldenTestCBOR,
-    roundTripsCBORBuildable,
-    roundTripsCBORShow,
-  )
+import Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip (
+  goldenTestCBOR,
+  roundTripsCBORBuildable,
+  roundTripsCBORShow,
+ )
 import Test.Cardano.Prelude
 import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
 
@@ -312,51 +312,56 @@ sizeEstimates =
 
       -- Explicit bounds for types, based on the generators from Gen.
       attrUnitSize =
-        ( typeRep (Proxy @(Attributes ())),
-          SizeConstant 1
+        ( typeRep (Proxy @(Attributes ()))
+        , SizeConstant 1
         )
       attrAddrSize =
-        ( typeRep (Proxy @(Attributes AddrAttributes)),
-          SizeConstant (szCases [Case "min" 1, Case "max" 1024])
+        ( typeRep (Proxy @(Attributes AddrAttributes))
+        , SizeConstant (szCases [Case "min" 1, Case "max" 1024])
         )
    in H.Group
         "Encoded size bounds for core types."
-        [ ("Lovelace", check genLovelace),
-          ("BlockCount", check genBlockCount),
-          ( "Attributes ()",
-            sizeTest $
+        [ ("Lovelace", check genLovelace)
+        , ("BlockCount", check genBlockCount)
+        ,
+          ( "Attributes ()"
+          , sizeTest $
               scfg
-                { gen = genAttributes (pure ()),
-                  addlCtx = M.fromList [attrUnitSize]
+                { gen = genAttributes (pure ())
+                , addlCtx = M.fromList [attrUnitSize]
                 }
-          ),
-          ( "Attributes AddrAttributes",
-            sizeTest $
+          )
+        ,
+          ( "Attributes AddrAttributes"
+          , sizeTest $
               scfg
-                { gen = genAttributes genAddrAttributes,
-                  addlCtx = M.fromList [attrAddrSize]
+                { gen = genAttributes genAddrAttributes
+                , addlCtx = M.fromList [attrAddrSize]
                 }
-          ),
-          ( "Address",
-            sizeTest $
+          )
+        ,
+          ( "Address"
+          , sizeTest $
               scfg
-                { gen = genAddress,
-                  addlCtx = M.fromList [attrAddrSize]
+                { gen = genAddress
+                , addlCtx = M.fromList [attrAddrSize]
                 }
-          ),
-          ( "AddrSpendingData",
-            sizeTest $
+          )
+        ,
+          ( "AddrSpendingData"
+          , sizeTest $
               scfg
-                { gen = genAddrSpendingData,
-                  addlCtx =
+                { gen = genAddrSpendingData
+                , addlCtx =
                     M.fromList
-                      [ ( typeRep (Proxy @AddrSpendingData),
-                          SelectCases ["VerKeyASD", "RedeemASD"]
+                      [
+                        ( typeRep (Proxy @AddrSpendingData)
+                        , SelectCases ["VerKeyASD", "RedeemASD"]
                         )
                       ]
                 }
-          ),
-          ("AddrType", check genAddrType)
+          )
+        , ("AddrType", check genAddrType)
         ]
 
 --------------------------------------------------------------------------------

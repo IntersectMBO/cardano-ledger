@@ -5,13 +5,13 @@
 {-# LANGUAGE TypeOperators #-}
 
 -- | An approach to computing the abstract size of data using 'TypeRep'.
-module Data.AbstractSize
-  ( HasTypeReps,
-    typeReps,
-    abstractSize,
-    AccountingMap,
-    Size,
-  )
+module Data.AbstractSize (
+  HasTypeReps,
+  typeReps,
+  abstractSize,
+  AccountingMap,
+  Size,
+)
 where
 
 import Cardano.Crypto.DSIGN.Class (SignedDSIGN (SignedDSIGN), VerKeyDSIGN)
@@ -27,16 +27,16 @@ import qualified Data.Sequence as Seq
 import Data.Set (Set)
 import Data.Typeable (TypeRep, Typeable, typeOf)
 import Data.Word (Word16, Word32, Word64, Word8)
-import GHC.Generics
-  ( Generic,
-    K1 (K1),
-    M1 (M1),
-    Rep,
-    U1 (U1),
-    from,
-    (:*:) ((:*:)),
-    (:+:) (L1, R1),
-  )
+import GHC.Generics (
+  Generic,
+  K1 (K1),
+  M1 (M1),
+  Rep,
+  U1 (U1),
+  from,
+  (:*:) ((:*:)),
+  (:+:) (L1, R1),
+ )
 import GHC.Natural (Natural)
 
 -- | @abstractSize m a@ computes the abstract size of @a@, using the accounting
@@ -114,9 +114,9 @@ type AccountingMap = Map TypeRep Size
 class HasTypeReps a where
   typeReps :: a -> Seq TypeRep
   default typeReps ::
-    ( Generic a,
-      GHasTypeReps (Rep a),
-      Typeable a
+    ( Generic a
+    , GHasTypeReps (Rep a)
+    , Typeable a
     ) =>
     a ->
     Seq TypeRep
@@ -164,10 +164,10 @@ instance (Typeable a, HasTypeReps a) => HasTypeReps (Set a) where
   typeReps xs = typeOf xs <| foldMap typeReps xs
 
 instance
-  ( Typeable a,
-    Typeable b,
-    HasTypeReps a,
-    HasTypeReps b
+  ( Typeable a
+  , Typeable b
+  , HasTypeReps a
+  , HasTypeReps b
   ) =>
   HasTypeReps (a, b)
   where

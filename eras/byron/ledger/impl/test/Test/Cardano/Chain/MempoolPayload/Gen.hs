@@ -1,6 +1,6 @@
-module Test.Cardano.Chain.MempoolPayload.Gen
-  ( genMempoolPayload,
-  )
+module Test.Cardano.Chain.MempoolPayload.Gen (
+  genMempoolPayload,
+)
 where
 
 import Cardano.Chain.MempoolPayload (AMempoolPayload (..), MempoolPayload)
@@ -15,8 +15,8 @@ import Test.Cardano.Chain.Update.Gen as Update (genProposal, genVote)
 genMempoolPayload :: ProtocolMagicId -> Gen MempoolPayload
 genMempoolPayload pmi =
   Gen.choice
-    [ MempoolTx <$> genTxAux pmi,
-      MempoolDlg <$> Delegation.genCertificate pmi,
-      MempoolUpdateProposal <$> Update.genProposal pmi,
-      MempoolUpdateVote <$> Update.genVote pmi
+    [ MempoolTx <$> genTxAux pmi
+    , MempoolDlg <$> Delegation.genCertificate pmi
+    , MempoolUpdateProposal <$> Update.genProposal pmi
+    , MempoolUpdateVote <$> Update.genVote pmi
     ]

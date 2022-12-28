@@ -9,28 +9,28 @@ import Cardano.Ledger.Address (Addr (..), compactAddr)
 import Cardano.Ledger.BaseTypes (mkTxIxPartial)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (toCompact)
-import Cardano.Ledger.Credential
-  ( Credential (..),
-    Ptr (..),
-    StakeReference (..),
-  )
+import Cardano.Ledger.Credential (
+  Credential (..),
+  Ptr (..),
+  StakeReference (..),
+ )
 import Cardano.Ledger.Keys (GenDelegs (..), KeyHash (..), KeyRole (..))
 import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
-import Cardano.Ledger.Shelley.LedgerState
-  ( DState (..),
-    InstantaneousRewards (..),
-    PState (..),
-  )
+import Cardano.Ledger.Shelley.LedgerState (
+  DState (..),
+  InstantaneousRewards (..),
+  PState (..),
+ )
 import Cardano.Ledger.Shelley.Scripts ()
-import Cardano.Ledger.Shelley.TxBody
-  ( PoolParams (..),
-    ShelleyTxOut (..),
-  )
+import Cardano.Ledger.Shelley.TxBody (
+  PoolParams (..),
+  ShelleyTxOut (..),
+ )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import qualified Cardano.Ledger.UMapCompact as UM
-import Cardano.Ledger.UTxO
-  ( UTxO (..),
-  )
+import Cardano.Ledger.UTxO (
+  UTxO (..),
+ )
 import qualified Cardano.Ledger.Val as Val
 import Control.Iterate.SetAlgebra (compile, compute, run)
 import Control.Monad (replicateM)
@@ -93,8 +93,8 @@ makeStatePair rewards' delegs ptrs' poolParams =
       Map.empty
       (GenDelegs Map.empty)
       (InstantaneousRewards Map.empty Map.empty mempty mempty)
-      Map.empty,
-    PState poolParams Map.empty Map.empty Map.empty
+      Map.empty
+  , PState poolParams Map.empty Map.empty Map.empty
   )
 
 -- ====================================================================================

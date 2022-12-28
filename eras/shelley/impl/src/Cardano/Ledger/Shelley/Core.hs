@@ -7,11 +7,11 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Cardano.Ledger.Shelley.Core
-  ( ShelleyEraTxBody (..),
-    Wdrl (..),
-    module Cardano.Ledger.Core,
-  )
+module Cardano.Ledger.Shelley.Core (
+  ShelleyEraTxBody (..),
+  Wdrl (..),
+  module Cardano.Ledger.Core,
+)
 where
 
 import Cardano.Ledger.Address (RewardAcnt (..))

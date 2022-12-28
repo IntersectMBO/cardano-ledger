@@ -8,10 +8,10 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Conway
-  ( Conway,
-    ConwayEra,
-  )
+module Cardano.Ledger.Conway (
+  Conway,
+  ConwayEra,
+)
 where
 
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)

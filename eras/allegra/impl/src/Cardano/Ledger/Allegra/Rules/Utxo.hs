@@ -12,41 +12,41 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Allegra.Rules.Utxo
-  ( AllegraUTXO,
-    AllegraUtxoPredFailure (..),
-    validateOutsideValidityIntervalUTxO,
-  )
+module Cardano.Ledger.Allegra.Rules.Utxo (
+  AllegraUTXO,
+  AllegraUtxoPredFailure (..),
+  validateOutsideValidityIntervalUTxO,
+)
 where
 
 import Cardano.Ledger.Address (Addr, RewardAcnt)
 import Cardano.Ledger.Allegra.Era (AllegraUTXO)
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (ValidityInterval), inInterval)
 import Cardano.Ledger.Allegra.TxBody (AllegraEraTxBody (..))
-import Cardano.Ledger.BaseTypes
-  ( Network,
-    ProtVer (pvMajor),
-    ShelleyBase,
-    StrictMaybe (..),
-    networkId,
-  )
-import Cardano.Ledger.Binary
-  ( FromCBOR (..),
-    ToCBOR (..),
-    decodeRecordSum,
-    encodeListLen,
-    invalidKey,
-    serialize,
-  )
+import Cardano.Ledger.BaseTypes (
+  Network,
+  ProtVer (pvMajor),
+  ShelleyBase,
+  StrictMaybe (..),
+  networkId,
+ )
+import Cardano.Ledger.Binary (
+  FromCBOR (..),
+  ToCBOR (..),
+  decodeRecordSum,
+  encodeListLen,
+  invalidKey,
+  serialize,
+ )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Rules.ValidationMode
-  ( Inject (..),
-    InjectMaybe (..),
-    Test,
-    runTest,
-  )
+import Cardano.Ledger.Rules.ValidationMode (
+  Inject (..),
+  InjectMaybe (..),
+  Test,
+  runTest,
+ )
 import Cardano.Ledger.Shelley.LedgerState (PPUPState, keyTxRefunds, totalTxDeposits)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..), Update)
@@ -109,26 +109,26 @@ data AllegraUtxoPredFailure era
   deriving (Generic)
 
 deriving stock instance
-  ( Show (TxOut era),
-    Show (Value era),
-    Show (Shelley.UTxOState era),
-    Show (PredicateFailure (EraRule "PPUP" era))
+  ( Show (TxOut era)
+  , Show (Value era)
+  , Show (Shelley.UTxOState era)
+  , Show (PredicateFailure (EraRule "PPUP" era))
   ) =>
   Show (AllegraUtxoPredFailure era)
 
 deriving stock instance
-  ( Eq (TxOut era),
-    Eq (Value era),
-    Eq (Shelley.UTxOState era),
-    Eq (PredicateFailure (EraRule "PPUP" era))
+  ( Eq (TxOut era)
+  , Eq (Value era)
+  , Eq (Shelley.UTxOState era)
+  , Eq (PredicateFailure (EraRule "PPUP" era))
   ) =>
   Eq (AllegraUtxoPredFailure era)
 
 instance
-  ( NoThunks (TxOut era),
-    NoThunks (Value era),
-    NoThunks (Shelley.UTxOState era),
-    NoThunks (PredicateFailure (EraRule "PPUP" era))
+  ( NoThunks (TxOut era)
+  , NoThunks (Value era)
+  , NoThunks (Shelley.UTxOState era)
+  , NoThunks (PredicateFailure (EraRule "PPUP" era))
   ) =>
   NoThunks (AllegraUtxoPredFailure era)
 
@@ -138,19 +138,19 @@ newtype AllegraUtxoEvent era
 -- | The UTxO transition rule for the Allegra era.
 utxoTransition ::
   forall era.
-  ( EraTx era,
-    EraUTxO era,
-    AllegraEraTxBody era,
-    STS (AllegraUTXO era),
-    Tx era ~ ShelleyTx era,
-    Embed (EraRule "PPUP" era) (AllegraUTXO era),
-    Environment (EraRule "PPUP" era) ~ PpupEnv era,
-    State (EraRule "PPUP" era) ~ PPUPState era,
-    Signal (EraRule "PPUP" era) ~ Maybe (Update era),
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_maxTxSize" (PParams era) Natural,
-    ProtVerAtMost era 8
+  ( EraTx era
+  , EraUTxO era
+  , AllegraEraTxBody era
+  , STS (AllegraUTXO era)
+  , Tx era ~ ShelleyTx era
+  , Embed (EraRule "PPUP" era) (AllegraUTXO era)
+  , Environment (EraRule "PPUP" era) ~ PpupEnv era
+  , State (EraRule "PPUP" era) ~ PPUPState era
+  , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
+  , HasField "_keyDeposit" (PParams era) Coin
+  , HasField "_poolDeposit" (PParams era) Coin
+  , HasField "_maxTxSize" (PParams era) Natural
+  , ProtVerAtMost era 8
   ) =>
   TransitionRule (AllegraUTXO era)
 utxoTransition = do
@@ -265,16 +265,16 @@ validateOutputTooSmallUTxO pp (UTxO outputs) =
 --------------------------------------------------------------------------------
 instance
   forall era.
-  ( EraTx era,
-    EraUTxO era,
-    AllegraEraTxBody era,
-    PParams era ~ ShelleyPParams era,
-    Tx era ~ ShelleyTx era,
-    Embed (EraRule "PPUP" era) (AllegraUTXO era),
-    Environment (EraRule "PPUP" era) ~ PpupEnv era,
-    State (EraRule "PPUP" era) ~ PPUPState era,
-    Signal (EraRule "PPUP" era) ~ Maybe (Update era),
-    ProtVerAtMost era 8
+  ( EraTx era
+  , EraUTxO era
+  , AllegraEraTxBody era
+  , PParams era ~ ShelleyPParams era
+  , Tx era ~ ShelleyTx era
+  , Embed (EraRule "PPUP" era) (AllegraUTXO era)
+  , Environment (EraRule "PPUP" era) ~ PpupEnv era
+  , State (EraRule "PPUP" era) ~ PPUPState era
+  , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
+  , ProtVerAtMost era 8
   ) =>
   STS (AllegraUTXO era)
   where
@@ -289,10 +289,10 @@ instance
   transitionRules = [utxoTransition]
 
 instance
-  ( Era era,
-    STS (ShelleyPPUP era),
-    PredicateFailure (EraRule "PPUP" era) ~ ShelleyPpupPredFailure era,
-    Event (EraRule "PPUP" era) ~ Event (ShelleyPPUP era)
+  ( Era era
+  , STS (ShelleyPPUP era)
+  , PredicateFailure (EraRule "PPUP" era) ~ ShelleyPpupPredFailure era
+  , Event (EraRule "PPUP" era) ~ Event (ShelleyPPUP era)
   ) =>
   Embed (ShelleyPPUP era) (AllegraUTXO era)
   where
@@ -303,12 +303,12 @@ instance
 -- Serialisation
 --------------------------------------------------------------------------------
 instance
-  ( Typeable era,
-    Crypto (EraCrypto era),
-    ToCBOR (Value era),
-    ToCBOR (TxOut era),
-    ToCBOR (Shelley.UTxOState era),
-    ToCBOR (PredicateFailure (EraRule "PPUP" era))
+  ( Typeable era
+  , Crypto (EraCrypto era)
+  , ToCBOR (Value era)
+  , ToCBOR (TxOut era)
+  , ToCBOR (Shelley.UTxOState era)
+  , ToCBOR (PredicateFailure (EraRule "PPUP" era))
   ) =>
   ToCBOR (AllegraUtxoPredFailure era)
   where
@@ -365,8 +365,8 @@ instance
         <> toCBOR outs
 
 instance
-  ( EraTxOut era,
-    FromCBOR (PredicateFailure (EraRule "PPUP" era))
+  ( EraTxOut era
+  , FromCBOR (PredicateFailure (EraRule "PPUP" era))
   ) =>
   FromCBOR (AllegraUtxoPredFailure era)
   where

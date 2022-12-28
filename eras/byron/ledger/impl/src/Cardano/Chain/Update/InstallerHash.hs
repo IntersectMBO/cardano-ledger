@@ -3,20 +3,20 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Cardano.Chain.Update.InstallerHash
-  ( InstallerHash (..),
-  )
+module Cardano.Chain.Update.InstallerHash (
+  InstallerHash (..),
+)
 where
 
 import Cardano.Crypto (Hash, hashRaw)
 import Cardano.Crypto.Raw (Raw)
-import Cardano.Ledger.Binary
-  ( FromCBOR (..),
-    ToCBOR (..),
-    dropBytes,
-    encodeListLen,
-    enforceSize,
-  )
+import Cardano.Ledger.Binary (
+  FromCBOR (..),
+  ToCBOR (..),
+  dropBytes,
+  encodeListLen,
+  enforceSize,
+ )
 import Cardano.Prelude
 import Data.Aeson (ToJSON)
 import Formatting (bprint, build)

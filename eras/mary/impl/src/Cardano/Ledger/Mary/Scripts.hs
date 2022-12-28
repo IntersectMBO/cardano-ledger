@@ -17,9 +17,9 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Mary.Scripts
-  ( module Cardano.Ledger.Allegra.Scripts,
-  )
+module Cardano.Ledger.Mary.Scripts (
+  module Cardano.Ledger.Allegra.Scripts,
+)
 where
 
 import Cardano.Ledger.Allegra.Scripts

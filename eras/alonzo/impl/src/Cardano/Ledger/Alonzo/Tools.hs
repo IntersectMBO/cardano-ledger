@@ -7,42 +7,42 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Ledger.Alonzo.Tools
-  ( evaluateTransactionExecutionUnits,
-    evaluateTransactionExecutionUnitsWithLogs,
-    TransactionScriptFailure (..),
-  )
+module Cardano.Ledger.Alonzo.Tools (
+  evaluateTransactionExecutionUnits,
+  evaluateTransactionExecutionUnitsWithLogs,
+  TransactionScriptFailure (..),
+)
 where
 
 import Cardano.Ledger.Alonzo.Data (Data, Datum (..), binaryDataToData, getPlutusData)
 import Cardano.Ledger.Alonzo.Language (Language (..), SLanguage (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (knownToNotBe1Phase)
-import Cardano.Ledger.Alonzo.Scripts
-  ( AlonzoScript (..),
-    CostModel,
-    ExUnits (..),
-    getEvaluationContext,
-  )
+import Cardano.Ledger.Alonzo.Scripts (
+  AlonzoScript (..),
+  CostModel,
+  ExUnits (..),
+  getEvaluationContext,
+ )
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, ScriptPurpose (..), rdptr)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..))
-import Cardano.Ledger.Alonzo.TxInfo
-  ( ExtendedUTxO (txscripts),
-    PlutusData (..),
-    PlutusDebugLang (..),
-    TranslationError,
-    VersionedTxInfo (..),
-    exBudgetToExUnits,
-    transExUnits,
-    transProtocolVersion,
-    txInfo,
-    valContext,
-  )
-import Cardano.Ledger.Alonzo.TxWits
-  ( AlonzoEraTxWits (..),
-    RdmrPtr (..),
-    unRedeemers,
-    unTxDats,
-  )
+import Cardano.Ledger.Alonzo.TxInfo (
+  ExtendedUTxO (txscripts),
+  PlutusData (..),
+  PlutusDebugLang (..),
+  TranslationError,
+  VersionedTxInfo (..),
+  exBudgetToExUnits,
+  transExUnits,
+  transProtocolVersion,
+  txInfo,
+  valContext,
+ )
+import Cardano.Ledger.Alonzo.TxWits (
+  AlonzoEraTxWits (..),
+  RdmrPtr (..),
+  unRedeemers,
+  unTxDats,
+ )
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Core hiding (TranslationError)
@@ -114,12 +114,12 @@ type RedeemerReportWithLogs c = Map RdmrPtr (Either (TransactionScriptFailure c)
 --  The results of 'evaluateTransactionExecutionUnits' are intended to replace them.
 evaluateTransactionExecutionUnits ::
   forall era.
-  ( AlonzoEraTx era,
-    ExtendedUTxO era,
-    EraUTxO era,
-    ScriptsNeeded era ~ AlonzoScriptsNeeded era,
-    HasField "_maxTxExUnits" (PParams era) ExUnits,
-    Script era ~ AlonzoScript era
+  ( AlonzoEraTx era
+  , ExtendedUTxO era
+  , EraUTxO era
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , HasField "_maxTxExUnits" (PParams era) ExUnits
+  , Script era ~ AlonzoScript era
   ) =>
   PParams era ->
   -- | The transaction.
@@ -147,12 +147,12 @@ evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels =
 --  The results of 'evaluateTransactionExecutionUnitsWithLogs' are intended to replace them.
 evaluateTransactionExecutionUnitsWithLogs ::
   forall era.
-  ( AlonzoEraTx era,
-    ExtendedUTxO era,
-    EraUTxO era,
-    ScriptsNeeded era ~ AlonzoScriptsNeeded era,
-    HasField "_maxTxExUnits" (PParams era) ExUnits,
-    Script era ~ AlonzoScript era
+  ( AlonzoEraTx era
+  , ExtendedUTxO era
+  , EraUTxO era
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , HasField "_maxTxExUnits" (PParams era) ExUnits
+  , Script era ~ AlonzoScript era
   ) =>
   PParams era ->
   -- | The transaction.

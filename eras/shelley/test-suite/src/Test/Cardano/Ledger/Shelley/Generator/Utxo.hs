@@ -9,51 +9,51 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Test.Cardano.Ledger.Shelley.Generator.Utxo
-  ( genTx,
-    Delta (..),
-    encodedLen,
-    myDiscard,
-    pickRandomFromMap,
-  )
+module Test.Cardano.Ledger.Shelley.Generator.Utxo (
+  genTx,
+  Delta (..),
+  encodedLen,
+  myDiscard,
+  pickRandomFromMap,
+)
 where
 
-import Cardano.Ledger.Address
-  ( Addr (..),
-    RewardAcnt (..),
-  )
-import Cardano.Ledger.BaseTypes
-  ( Network (..),
-    maybeToStrictMaybe,
-  )
+import Cardano.Ledger.Address (
+  Addr (..),
+  RewardAcnt (..),
+ )
+import Cardano.Ledger.BaseTypes (
+  Network (..),
+  maybeToStrictMaybe,
+ )
 import Cardano.Ledger.Binary (ToCBOR, serialize)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
-import Cardano.Ledger.Keys
-  ( KeyHash,
-    KeyRole (..),
-    asWitness,
-  )
+import Cardano.Ledger.Keys (
+  KeyHash,
+  KeyRole (..),
+  asWitness,
+ )
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.API (DCert)
-import Cardano.Ledger.Shelley.LedgerState
-  ( DPState (..),
-    DState (..),
-    LedgerState (..),
-    UTxOState (..),
-    dpsDState,
-    ptrsMap,
-    rewards,
-  )
+import Cardano.Ledger.Shelley.LedgerState (
+  DPState (..),
+  DState (..),
+  LedgerState (..),
+  UTxOState (..),
+  dpsDState,
+  ptrsMap,
+  rewards,
+ )
 import Cardano.Ledger.Shelley.Rules (DelplEnv, LedgerEnv (..))
 import Cardano.Ledger.Shelley.Tx (TxIn (..))
 import Cardano.Ledger.Shelley.TxBody (Wdrl (..))
 import qualified Cardano.Ledger.UMapCompact as UM
-import Cardano.Ledger.UTxO
-  ( UTxO (..),
-    sumAllValue,
-  )
+import Cardano.Ledger.UTxO (
+  UTxO (..),
+  sumAllValue,
+ )
 import Cardano.Ledger.Val (Val (..), sumVal, (<+>), (<->), (<×>))
 import Control.Monad (when)
 import Control.State.Transition
@@ -72,27 +72,27 @@ import Debug.Trace (trace)
 import GHC.Records (HasField (..))
 import Lens.Micro
 import NoThunks.Class ()
-import Test.Cardano.Ledger.Core.KeyPair
-  ( KeyPair,
-    KeyPairs,
-    makeWitnessesFromScriptKeys,
-    mkCred,
-    mkWitnessesVKey,
-  )
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes
-  ( Mock,
-  )
+import Test.Cardano.Ledger.Core.KeyPair (
+  KeyPair,
+  KeyPairs,
+  makeWitnessesFromScriptKeys,
+  mkCred,
+  mkWitnessesVKey,
+ )
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (
+  Mock,
+ )
 import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..), defaultConstants)
-import Test.Cardano.Ledger.Shelley.Generator.Core
-  ( GenEnv (..),
-    KeySpace (..),
-    ScriptInfo,
-    ScriptSpace (..),
-    findPayKeyPairAddr,
-    findPayKeyPairCred,
-    findPayScriptFromAddr,
-    findStakeScriptFromCred,
-  )
+import Test.Cardano.Ledger.Shelley.Generator.Core (
+  GenEnv (..),
+  KeySpace (..),
+  ScriptInfo,
+  ScriptSpace (..),
+  findPayKeyPairAddr,
+  findPayKeyPairCred,
+  findPayScriptFromAddr,
+  findStakeScriptFromCred,
+ )
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
 import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (scriptKeyCombination)
 import Test.Cardano.Ledger.Shelley.Generator.Trace.DCert (CERTS, genDCerts)
@@ -127,12 +127,12 @@ myDiscard message = trace ("\nDiscarded trace: " ++ message) discard
 
 genTx ::
   forall era.
-  ( EraGen era,
-    Mock (EraCrypto era),
-    Embed (EraRule "DELPL" era) (CERTS era),
-    Environment (EraRule "DELPL" era) ~ DelplEnv era,
-    State (EraRule "DELPL" era) ~ DPState (EraCrypto era),
-    Signal (EraRule "DELPL" era) ~ DCert (EraCrypto era)
+  ( EraGen era
+  , Mock (EraCrypto era)
+  , Embed (EraRule "DELPL" era) (CERTS era)
+  , Environment (EraRule "DELPL" era) ~ DelplEnv era
+  , State (EraRule "DELPL" era) ~ DPState (EraCrypto era)
+  , Signal (EraRule "DELPL" era) ~ DCert (EraCrypto era)
   ) =>
   GenEnv era ->
   LedgerEnv era ->
@@ -140,19 +140,19 @@ genTx ::
   Gen (Tx era)
 genTx
   ge@( GenEnv
-         keySpace@KeySpace_
-           { ksKeyPairs,
-             ksCoreNodes,
-             ksMSigScripts,
-             ksIndexedGenDelegates,
-             ksIndexedPaymentKeys,
-             ksIndexedStakingKeys,
-             ksIndexedPayScripts,
-             ksIndexedStakeScripts
-           }
-         scriptspace
-         constants
-       )
+        keySpace@KeySpace_
+          { ksKeyPairs
+          , ksCoreNodes
+          , ksMSigScripts
+          , ksIndexedGenDelegates
+          , ksIndexedPaymentKeys
+          , ksIndexedStakingKeys
+          , ksIndexedPayScripts
+          , ksIndexedStakeScripts
+          }
+        scriptspace
+        constants
+      )
   (LedgerEnv slot txIx pparams reserves)
   (LedgerState utxoSt@(UTxOState utxo _ _ _ _) dpState) =
     do
@@ -272,12 +272,12 @@ genTx
 -- | Collect additional inputs (and witnesses and keys and scripts) to make
 -- the transaction balance.
 data Delta era = Delta
-  { dfees :: Coin,
-    extraInputs :: Set.Set (TxIn (EraCrypto era)),
-    extraWitnesses :: TxWits era,
-    change :: TxOut era,
-    deltaVKeys :: [KeyPair 'Witness (EraCrypto era)],
-    deltaScripts :: [(Script era, Script era)]
+  { dfees :: Coin
+  , extraInputs :: Set.Set (TxIn (EraCrypto era))
+  , extraWitnesses :: TxWits era
+  , change :: TxOut era
+  , deltaVKeys :: [KeyPair 'Witness (EraCrypto era)]
+  , deltaScripts :: [(Script era, Script era)]
   }
 
 instance Show (Delta era) where
@@ -288,8 +288,8 @@ instance Show (Delta era) where
 --  actually need to compare all the fields, because if the extraInputs has not
 --  changed then the Scripts and keys will not have changed.
 instance
-  ( EraTxOut era,
-    Eq (TxWits era)
+  ( EraTxOut era
+  , Eq (TxWits era)
   ) =>
   Eq (Delta era)
   where
@@ -303,8 +303,8 @@ instance
 
 deltaZero ::
   forall era.
-  ( EraTxOut era,
-    Monoid (TxWits era)
+  ( EraTxOut era
+  , Monoid (TxWits era)
   ) =>
   Coin ->
   Coin ->
@@ -340,9 +340,9 @@ genNextDelta
   utxo
   pparams
   KeySpace_
-    { ksIndexedStakingKeys,
-      ksIndexedPaymentKeys,
-      ksIndexedPayScripts
+    { ksIndexedStakingKeys
+    , ksIndexedPaymentKeys
+    , ksIndexedPayScripts
     }
   tx
   _count -- the counter of the fix loop
@@ -352,14 +352,14 @@ genNextDelta
         -- increase when we add the delta to the tx?
         draftSize =
           sum
-            [ 1100 :: Integer, -- safety net in case the coin or a list prefix rolls over into a
+            [ 1100 :: Integer -- safety net in case the coin or a list prefix rolls over into a
             -- larger encoding, or some other fudge factor occurs. Sometimes we need extra buffer
             -- when minting tokens. 1100 has been empirically determined to make non-failing Txs
-              encodedLen @era (max dfees (Coin 0)) - 1,
-              (foldr (\a b -> b + encodedLen @era a) 0 extraInputs) * 2,
-              --  inputs end up in collateral as well, so we ^ multiply by 2
-              encodedLen @era change,
-              encodedLen @era extraWitnesses
+            , encodedLen @era (max dfees (Coin 0)) - 1
+            , (foldr (\a b -> b + encodedLen @era a) 0 extraInputs) * 2
+            , --  inputs end up in collateral as well, so we ^ multiply by 2
+              encodedLen @era change
+            , encodedLen @era extraWitnesses
             ]
         deltaScriptCost = foldr accum (Coin 0) extraScripts
           where
@@ -377,8 +377,8 @@ genNextDelta
               then
                 pure $
                   delta
-                    { dfees = totalFee,
-                      change =
+                    { dfees = totalFee
+                    , change =
                         deltaChange
                           (<-> inject remainingFee)
                           change
@@ -422,11 +422,11 @@ genNextDelta
                         (hashAnnotated txBody)
                 pure $
                   delta
-                    { extraWitnesses = extraWitnesses <> newWits,
-                      extraInputs = extraInputs <> Set.fromList inputs,
-                      change = deltaChange (<+> value) change, -- <+> is plus of the Val class
-                      deltaVKeys = vkeyPairs <> deltaVKeys delta,
-                      deltaScripts = msigPairs <> deltaScripts delta
+                    { extraWitnesses = extraWitnesses <> newWits
+                    , extraInputs = extraInputs <> Set.fromList inputs
+                    , change = deltaChange (<+> value) change -- <+> is plus of the Val class
+                    , deltaVKeys = vkeyPairs <> deltaVKeys delta
+                    , deltaScripts = msigPairs <> deltaScripts delta
                     }
     where
       deltaChange ::
@@ -443,8 +443,8 @@ genNextDelta
 
 genNextDeltaTilFixPoint ::
   forall era.
-  ( EraGen era,
-    Mock (EraCrypto era)
+  ( EraGen era
+  , Mock (EraCrypto era)
   ) =>
   ScriptInfo era ->
   Coin ->
@@ -467,8 +467,8 @@ genNextDeltaTilFixPoint scriptinfo initialfee keys scripts utxo pparams keySpace
 
 applyDelta ::
   forall era.
-  ( EraGen era,
-    Mock (EraCrypto era)
+  ( EraGen era
+  , Mock (EraCrypto era)
   ) =>
   UTxO era ->
   ScriptInfo era ->
@@ -676,16 +676,16 @@ mkTxWits
 -- TODO need right splitting of v!
 calcOutputsFromBalance ::
   forall era.
-  ( EraTxOut era,
-    Split (Value era)
+  ( EraTxOut era
+  , Split (Value era)
   ) =>
   Value era ->
   [Addr (EraCrypto era)] ->
   Coin ->
   (Coin, StrictSeq (TxOut era))
 calcOutputsFromBalance balance_ addrs fee =
-  ( fee <+> splitCoinRem,
-    StrictSeq.fromList $ zipWith mkBasicTxOut addrs amountPerOutput
+  ( fee <+> splitCoinRem
+  , StrictSeq.fromList $ zipWith mkBasicTxOut addrs amountPerOutput
   )
   where
     -- split the available balance into equal portions (one for each address),
@@ -712,18 +712,18 @@ genInputs ::
   Map (ScriptHash (EraCrypto era)) (Script era, Script era) ->
   UTxO era ->
   Gen
-    ( [TxIn (EraCrypto era)],
-      Value era,
-      ([KeyPair 'Witness (EraCrypto era)], [(Script era, Script era)])
+    ( [TxIn (EraCrypto era)]
+    , Value era
+    , ([KeyPair 'Witness (EraCrypto era)], [(Script era, Script era)])
     )
 genInputs (minNumGenInputs, maxNumGenInputs) keyHashMap payScriptMap (UTxO utxo) = do
   numInputs <- QC.choose (minNumGenInputs, maxNumGenInputs)
   selectedUtxo <- pickRandomFromMap numInputs utxo
   let (inputs, witnesses) = unzip (fmap witnessedInput <$> selectedUtxo)
   return
-    ( inputs,
-      sumAllValue @era (snd <$> selectedUtxo),
-      Either.partitionEithers witnesses
+    ( inputs
+    , sumAllValue @era (snd <$> selectedUtxo)
+    , Either.partitionEithers witnesses
     )
   where
     witnessedInput output =
@@ -742,29 +742,32 @@ genWithdrawals ::
   Map (KeyHash 'Staking (EraCrypto era)) (KeyPair 'Staking (EraCrypto era)) ->
   Map (Credential 'Staking (EraCrypto era)) Coin ->
   Gen
-    ( [(RewardAcnt (EraCrypto era), Coin)],
-      ([KeyPair 'Witness (EraCrypto era)], [(Script era, Script era)])
+    ( [(RewardAcnt (EraCrypto era), Coin)]
+    , ([KeyPair 'Witness (EraCrypto era)], [(Script era, Script era)])
     )
 genWithdrawals
   Constants
-    { frequencyNoWithdrawals,
-      frequencyAFewWithdrawals,
-      frequencyPotentiallyManyWithdrawals,
-      maxAFewWithdrawals
+    { frequencyNoWithdrawals
+    , frequencyAFewWithdrawals
+    , frequencyPotentiallyManyWithdrawals
+    , maxAFewWithdrawals
     }
   ksIndexedStakeScripts
   ksIndexedStakingKeys
   wdrls = do
     (a, b) <-
       QC.frequency
-        [ ( frequencyNoWithdrawals,
-            pure ([], ([], []))
-          ),
-          ( frequencyAFewWithdrawals,
-            genWrdls (take maxAFewWithdrawals . Map.toList $ wdrls)
-          ),
-          ( frequencyPotentiallyManyWithdrawals,
-            genWrdls (Map.toList wdrls)
+        [
+          ( frequencyNoWithdrawals
+          , pure ([], ([], []))
+          )
+        ,
+          ( frequencyAFewWithdrawals
+          , genWrdls (take maxAFewWithdrawals . Map.toList $ wdrls)
+          )
+        ,
+          ( frequencyPotentiallyManyWithdrawals
+          , genWrdls (Map.toList wdrls)
           )
         ]
     pure (a, b)

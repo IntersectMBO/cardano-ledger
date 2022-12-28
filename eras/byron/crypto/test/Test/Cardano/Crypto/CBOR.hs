@@ -5,27 +5,27 @@
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Crypto.CBOR
-  ( constantByteString,
-    getBytes,
-    tests,
-  )
+module Test.Cardano.Crypto.CBOR (
+  constantByteString,
+  getBytes,
+  tests,
+)
 where
 
-import Cardano.Crypto
-  ( AbstractHash,
-    PassPhrase,
-    ProtocolMagicId (..),
-    RedeemSignature,
-    SignTag (SignForTestingOnly),
-    Signature,
-    SigningKey (..),
-    VerificationKey (..),
-    redeemDeterministicKeyGen,
-    redeemSign,
-    serializeCborHash,
-    sign,
-  )
+import Cardano.Crypto (
+  AbstractHash,
+  PassPhrase,
+  ProtocolMagicId (..),
+  RedeemSignature,
+  SignTag (SignForTestingOnly),
+  Signature,
+  SigningKey (..),
+  VerificationKey (..),
+  redeemDeterministicKeyGen,
+  redeemSign,
+  serializeCborHash,
+  sign,
+ )
 import Cardano.Crypto.Wallet (xprv, xpub)
 import Cardano.Ledger.Binary (Dropper, ToCBOR, dropBytes, dropList, enforceSize)
 import Cardano.Prelude
@@ -37,12 +37,12 @@ import Hedgehog (Gen, Property)
 import qualified Hedgehog as H
 import Test.Cardano.Crypto.Gen
 import Test.Cardano.Ledger.Binary.Vintage.Helpers (SizeTestConfig (..), scfg, sizeTest)
-import Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip
-  ( deprecatedGoldenDecode,
-    goldenTestCBOR,
-    roundTripsCBORBuildable,
-    roundTripsCBORShow,
-  )
+import Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip (
+  deprecatedGoldenDecode,
+  goldenTestCBOR,
+  roundTripsCBORBuildable,
+  roundTripsCBORShow,
+ )
 import Test.Cardano.Prelude
 
 --------------------------------------------------------------------------------
@@ -272,31 +272,37 @@ sizeEstimates =
       testPrecise g = sizeTest $ scfg {gen = g, precise = True}
    in H.Group
         "Encoded size bounds for crypto types."
-        [ ("VerificationKey", testPrecise genVerificationKey),
-          ( "AbstractHash Blake2b_224 VerificationKey",
-            testPrecise @(AbstractHash Blake2b_224 VerificationKey) $
+        [ ("VerificationKey", testPrecise genVerificationKey)
+        ,
+          ( "AbstractHash Blake2b_224 VerificationKey"
+          , testPrecise @(AbstractHash Blake2b_224 VerificationKey) $
               genAbstractHash genVerificationKey
-          ),
-          ( "AbstractHash Blake2b_256 VerificationKey",
-            testPrecise @(AbstractHash Blake2b_256 VerificationKey) $
+          )
+        ,
+          ( "AbstractHash Blake2b_256 VerificationKey"
+          , testPrecise @(AbstractHash Blake2b_256 VerificationKey) $
               genAbstractHash genVerificationKey
-          ),
-          ( "AbstractHash Blake2b_384 VerificationKey",
-            testPrecise @(AbstractHash Blake2b_384 VerificationKey) $
+          )
+        ,
+          ( "AbstractHash Blake2b_384 VerificationKey"
+          , testPrecise @(AbstractHash Blake2b_384 VerificationKey) $
               genAbstractHash genVerificationKey
-          ),
-          ( "AbstractHash Blake2b_512 VerificationKey",
-            testPrecise @(AbstractHash Blake2b_512 VerificationKey) $
+          )
+        ,
+          ( "AbstractHash Blake2b_512 VerificationKey"
+          , testPrecise @(AbstractHash Blake2b_512 VerificationKey) $
               genAbstractHash genVerificationKey
-          ),
-          ( "AbstractHash SHA1 VerificationKey",
-            testPrecise @(AbstractHash SHA1 VerificationKey) $
+          )
+        ,
+          ( "AbstractHash SHA1 VerificationKey"
+          , testPrecise @(AbstractHash SHA1 VerificationKey) $
               genAbstractHash genVerificationKey
-          ),
-          ("RedeemVerificationKey", testPrecise genRedeemVerificationKey),
-          ("RedeemSigningKey", testPrecise genRedeemSigningKey),
-          ( "RedeemSignature VerificationKey",
-            testPrecise (genRedeemSignature (ProtocolMagicId 0) genVerificationKey)
+          )
+        , ("RedeemVerificationKey", testPrecise genRedeemVerificationKey)
+        , ("RedeemSigningKey", testPrecise genRedeemSigningKey)
+        ,
+          ( "RedeemSignature VerificationKey"
+          , testPrecise (genRedeemSignature (ProtocolMagicId 0) genVerificationKey)
           )
         ]
 
@@ -306,7 +312,7 @@ tests :: IO Bool
 tests =
   and
     <$> sequence
-      [ H.checkSequential $$discoverGolden,
-        H.checkParallel $$discoverRoundTrip,
-        H.checkParallel sizeEstimates
+      [ H.checkSequential $$discoverGolden
+      , H.checkParallel $$discoverRoundTrip
+      , H.checkParallel sizeEstimates
       ]

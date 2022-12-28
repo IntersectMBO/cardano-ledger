@@ -34,21 +34,21 @@ tests = askOption $ \case
 
 mainTestTrees :: [TestTree]
 mainTestTrees =
-  [ depositTests,
-    calcPoolDistOldEqualsNew,
-    genericConsensusTest,
-    Tools.tests,
-    testGroup
+  [ depositTests
+  , calcPoolDistOldEqualsNew
+  , genericConsensusTest
+  , Tools.tests
+  , testGroup
       "STS Tests"
-      [ babbageFeatures,
-        AlonzoValidTxUTXOW.tests,
-        AlonzoInvalidTxUTXOW.tests,
-        AlonzoBBODY.tests,
-        AlonzoAPI.tests,
-        AlonzoCollectInputs.tests
-      ],
-    genericProperties def,
-    aggTests
+      [ babbageFeatures
+      , AlonzoValidTxUTXOW.tests
+      , AlonzoInvalidTxUTXOW.tests
+      , AlonzoBBODY.tests
+      , AlonzoAPI.tests
+      , AlonzoCollectInputs.tests
+      ]
+  , genericProperties def
+  , aggTests
   ]
 
 nightlyTestTrees :: [TestTree]

@@ -1,8 +1,8 @@
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Allegra.ScriptTranslation
-  ( testScriptPostTranslation,
-  )
+module Test.Cardano.Ledger.Allegra.ScriptTranslation (
+  testScriptPostTranslation,
+)
 where
 
 import Cardano.Ledger.Allegra (Allegra)

@@ -67,12 +67,12 @@ instance Arbitrary Coin where arbitrary = genCoin
 genAction :: Gen Action
 genAction =
   oneof
-    [ Insert Rew <$> genCred <*> genCoin,
-      Insert Del <$> genCred <*> genPool,
-      Insert Ptr <$> genPtr <*> genCred,
-      Delete Rew <$> genCred,
-      Delete Del <$> genCred,
-      Delete Ptr <$> genPtr
+    [ Insert Rew <$> genCred <*> genCoin
+    , Insert Del <$> genCred <*> genPool
+    , Insert Ptr <$> genPtr <*> genCred
+    , Delete Rew <$> genCred
+    , Delete Del <$> genCred
+    , Delete Ptr <$> genPtr
     ]
 
 instance Arbitrary Action where
@@ -371,10 +371,10 @@ domRestrictPtr :: [Action] -> Map Ptr Cred -> Bool
 domRestrictPtr acts m =
   Map.intersection m (runPtr acts)
     == ( domRestrict
-           ( Ptrs
-               (runActions acts)
-           )
-           m
+          ( Ptrs
+              (runActions acts)
+          )
+          m
        )
 
 -- ===============================
@@ -413,55 +413,55 @@ alltests :: TestTree
 alltests =
   testGroup
     "UMap tests"
-    [ testProperty "invariant empty" (\x y -> invariant x y empty),
-      testPropertyN 1000 "invariant Actions" (\x y xs -> invariant x y (runActions xs)),
-      testPropertyN 1000 "bisimulation Reward map" bisimulateRew,
-      testPropertyN 1000 "bisimulation Delegation map" bisimulateDel,
-      testPropertyN 1000 "bisimulation Ptr map" bisimulatePtr,
-      testPropertyN 1000 "next iterates over Rewards" iterRew,
-      testPropertyN 1000 "next iterates over Delegtions" iterDel,
-      testPropertyN 1000 "next iterates over Ptrs" iterPtr,
-      testPropertyN 1000 "leastUpperBound Rewards" lubRew,
-      testPropertyN 1000 "leastUpperBound Delegations" lubDel,
-      testPropertyN 1000 "leastUpperBound Ptrs" lubPtr,
-      testPropertyN 1000 "delete Rewards" delRew,
-      testPropertyN 1000 "delete Delegations" delDel,
-      testPropertyN 1000 "delete Ptrs" delPtr,
-      testPropertyN 1000 "insertWith (<>) Rewards" insertRew,
-      testPropertyN 1000 "insertWith (\\ old new -> new) Delegations" insertDel,
-      testPropertyN 1000 "insertWith (\\ old new -> old) Ptrs" insertPtr,
-      testPropertyN 1000 "lookup Rewards" lookRew,
-      testPropertyN 1000 "lookup Delegations" lookDel,
-      testPropertyN 1000 "lookup Ptrs" lookPtr,
-      testPropertyN 1000 "null Rewards" nullRew,
-      testPropertyN 1000 "null Delegations" nullDel,
-      testPropertyN 1000 "null Ptrs" nullPtr,
-      testPropertyN 1000 "domain  Rewards" domRew,
-      testPropertyN 1000 "domain Delegations" domDel,
-      testPropertyN 1000 "domain Ptrs" domPtr,
-      testPropertyN 1000 "range  Rewards" rngRew,
-      testPropertyN 1000 "range Delegations" rngDel,
-      testPropertyN 1000 "range Ptrs" rngPtr,
-      testPropertyN 1000 "left biased (x  ∪ (k,v)) Rewards" uLeftRew,
-      testPropertyN 1000 "left biased (x  ∪ (k,v)) Delegations" uLeftDel,
-      testPropertyN 1000 "left biased (x  ∪ (k,v)) Ptrs" uLeftPtr,
-      testPropertyN 1000 "right biased (x ⨃ y) Rewards" uRightRew,
-      testPropertyN 1000 "right biased (x ⨃ y) Delegations" uRightDel,
-      testPropertyN 1000 "right biased (x ⨃ y) Ptrs" uRightPtr,
-      testPropertyN 1000 "monoidal sum (x  ∪+ y) Ptrs" uSumRew,
-      testPropertyN 1000 "domain exclude (x ⋪ y) Rewards" domExRew,
-      testPropertyN 1000 "domain exclude (x ⋪ y) Delegations" domExDel,
-      testPropertyN 1000 "domain exclude (x ⋪ y) Ptrs" domExPtr,
-      testPropertyN 1000 "range exclude (x  ⋫ y) Rewards" rngExRew,
-      testPropertyN 1000 "range exclude (x  ⋫ y) Delegations" rngExDel,
-      testPropertyN 1000 "range exclude (x  ⋫ y) Ptrs" rngExPtr,
-      testPropertyN 1000 "member Rewards" memberRew,
-      testPropertyN 1000 "member Delegations" memberDel,
-      testPropertyN 1000 "member Ptrs" memberPtr,
-      testPropertyN 1000 "domain restrict Rewards" domRestrictRew,
-      testPropertyN 1000 "domain restrict Delegations" domRestrictDel,
-      testPropertyN 1000 "domain restrict Ptrs" domRestrictPtr,
-      testPropertyN 1000 "unify unUnify roundtrip" unifyRoundTrip1,
-      testPropertyN 1000 "unUnify unify roundtrip" unifyRoundTrip2,
-      testPropertyN 1000 "size is accurate" sizeUMap
+    [ testProperty "invariant empty" (\x y -> invariant x y empty)
+    , testPropertyN 1000 "invariant Actions" (\x y xs -> invariant x y (runActions xs))
+    , testPropertyN 1000 "bisimulation Reward map" bisimulateRew
+    , testPropertyN 1000 "bisimulation Delegation map" bisimulateDel
+    , testPropertyN 1000 "bisimulation Ptr map" bisimulatePtr
+    , testPropertyN 1000 "next iterates over Rewards" iterRew
+    , testPropertyN 1000 "next iterates over Delegtions" iterDel
+    , testPropertyN 1000 "next iterates over Ptrs" iterPtr
+    , testPropertyN 1000 "leastUpperBound Rewards" lubRew
+    , testPropertyN 1000 "leastUpperBound Delegations" lubDel
+    , testPropertyN 1000 "leastUpperBound Ptrs" lubPtr
+    , testPropertyN 1000 "delete Rewards" delRew
+    , testPropertyN 1000 "delete Delegations" delDel
+    , testPropertyN 1000 "delete Ptrs" delPtr
+    , testPropertyN 1000 "insertWith (<>) Rewards" insertRew
+    , testPropertyN 1000 "insertWith (\\ old new -> new) Delegations" insertDel
+    , testPropertyN 1000 "insertWith (\\ old new -> old) Ptrs" insertPtr
+    , testPropertyN 1000 "lookup Rewards" lookRew
+    , testPropertyN 1000 "lookup Delegations" lookDel
+    , testPropertyN 1000 "lookup Ptrs" lookPtr
+    , testPropertyN 1000 "null Rewards" nullRew
+    , testPropertyN 1000 "null Delegations" nullDel
+    , testPropertyN 1000 "null Ptrs" nullPtr
+    , testPropertyN 1000 "domain  Rewards" domRew
+    , testPropertyN 1000 "domain Delegations" domDel
+    , testPropertyN 1000 "domain Ptrs" domPtr
+    , testPropertyN 1000 "range  Rewards" rngRew
+    , testPropertyN 1000 "range Delegations" rngDel
+    , testPropertyN 1000 "range Ptrs" rngPtr
+    , testPropertyN 1000 "left biased (x  ∪ (k,v)) Rewards" uLeftRew
+    , testPropertyN 1000 "left biased (x  ∪ (k,v)) Delegations" uLeftDel
+    , testPropertyN 1000 "left biased (x  ∪ (k,v)) Ptrs" uLeftPtr
+    , testPropertyN 1000 "right biased (x ⨃ y) Rewards" uRightRew
+    , testPropertyN 1000 "right biased (x ⨃ y) Delegations" uRightDel
+    , testPropertyN 1000 "right biased (x ⨃ y) Ptrs" uRightPtr
+    , testPropertyN 1000 "monoidal sum (x  ∪+ y) Ptrs" uSumRew
+    , testPropertyN 1000 "domain exclude (x ⋪ y) Rewards" domExRew
+    , testPropertyN 1000 "domain exclude (x ⋪ y) Delegations" domExDel
+    , testPropertyN 1000 "domain exclude (x ⋪ y) Ptrs" domExPtr
+    , testPropertyN 1000 "range exclude (x  ⋫ y) Rewards" rngExRew
+    , testPropertyN 1000 "range exclude (x  ⋫ y) Delegations" rngExDel
+    , testPropertyN 1000 "range exclude (x  ⋫ y) Ptrs" rngExPtr
+    , testPropertyN 1000 "member Rewards" memberRew
+    , testPropertyN 1000 "member Delegations" memberDel
+    , testPropertyN 1000 "member Ptrs" memberPtr
+    , testPropertyN 1000 "domain restrict Rewards" domRestrictRew
+    , testPropertyN 1000 "domain restrict Delegations" domRestrictDel
+    , testPropertyN 1000 "domain restrict Ptrs" domRestrictPtr
+    , testPropertyN 1000 "unify unUnify roundtrip" unifyRoundTrip1
+    , testPropertyN 1000 "unUnify unify roundtrip" unifyRoundTrip2
+    , testPropertyN 1000 "size is accurate" sizeUMap
     ]

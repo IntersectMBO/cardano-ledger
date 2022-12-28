@@ -9,14 +9,14 @@
 
 module Test.Cardano.Ledger.Shelley.LaxBlock where
 
-import Cardano.Ledger.Binary
-  ( Annotator (..),
-    Decoder,
-    FromCBOR (fromCBOR),
-    ToCBOR (..),
-    annotatorSlice,
-    decodeRecordNamed,
-  )
+import Cardano.Ledger.Binary (
+  Annotator (..),
+  Decoder,
+  FromCBOR (fromCBOR),
+  ToCBOR (..),
+  annotatorSlice,
+  decodeRecordNamed,
+ )
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Core (Era, EraSegWits (TxSeq), EraTx)
 import Cardano.Ledger.Shelley.BlockChain (ShelleyTxSeq, txSeqDecoder)
@@ -28,12 +28,13 @@ import Data.Typeable (Typeable)
 newtype LaxBlock h era = LaxBlock (Block h era)
 
 blockDecoder ::
-  ( EraTx era,
-    TxSeq era ~ ShelleyTxSeq era,
-    FromCBOR (Annotator h)
+  ( EraTx era
+  , TxSeq era ~ ShelleyTxSeq era
+  , FromCBOR (Annotator h)
   ) =>
   Bool ->
-  forall s. Decoder s (Annotator (Block h era))
+  forall s.
+  Decoder s (Annotator (Block h era))
 blockDecoder lax = annotatorSlice $
   decodeRecordNamed "Block" (const 4) $ do
     header <- fromCBOR
@@ -46,10 +47,10 @@ instance (EraTx era, Typeable h) => ToCBOR (LaxBlock h era) where
 deriving stock instance (Era era, Show (TxSeq era), Show h) => Show (LaxBlock h era)
 
 instance
-  ( EraTx era,
-    Typeable h,
-    TxSeq era ~ ShelleyTxSeq era,
-    FromCBOR (Annotator h)
+  ( EraTx era
+  , Typeable h
+  , TxSeq era ~ ShelleyTxSeq era
+  , FromCBOR (Annotator h)
   ) =>
   FromCBOR (Annotator (LaxBlock h era))
   where

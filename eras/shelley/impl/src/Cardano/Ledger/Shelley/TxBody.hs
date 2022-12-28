@@ -15,110 +15,110 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Shelley.TxBody
-  ( DCert (..),
-    DelegCert (..),
-    Delegation (..),
-    ConstitutionalDelegCert (..),
-    MIRCert (..),
-    MIRPot (..),
-    MIRTarget (..),
-    PoolCert (..),
-    PoolMetadata (..),
-    PoolParams (..),
-    Ptr (..),
-    RewardAcnt (..),
-    StakePoolRelay (..),
-    ShelleyTxBody
-      ( ShelleyTxBody,
-        TxBodyConstr,
-        stbInputs,
-        stbOutputs,
-        stbCerts,
-        stbWdrls,
-        stbTxFee,
-        stbTTL,
-        stbUpdate,
-        stbMDHash
-      ),
-    ShelleyEraTxBody (..),
-    ShelleyTxBodyRaw (..),
-    EraIndependentTxBody,
-    TxOut,
-    ShelleyTxOut (ShelleyTxOut, TxOutCompact),
-    Url,
-    Wdrl (..),
-    --
-    module Cardano.Ledger.Keys.WitVKey,
-    witKeyHash,
-    wvkBytes,
-    --
-    SizeOfPoolOwners (..),
-    SizeOfPoolRelays (..),
+module Cardano.Ledger.Shelley.TxBody (
+  DCert (..),
+  DelegCert (..),
+  Delegation (..),
+  ConstitutionalDelegCert (..),
+  MIRCert (..),
+  MIRPot (..),
+  MIRTarget (..),
+  PoolCert (..),
+  PoolMetadata (..),
+  PoolParams (..),
+  Ptr (..),
+  RewardAcnt (..),
+  StakePoolRelay (..),
+  ShelleyTxBody (
+    ShelleyTxBody,
+    TxBodyConstr,
+    stbInputs,
+    stbOutputs,
+    stbCerts,
+    stbWdrls,
+    stbTxFee,
+    stbTTL,
+    stbUpdate,
+    stbMDHash
+  ),
+  ShelleyEraTxBody (..),
+  ShelleyTxBodyRaw (..),
+  EraIndependentTxBody,
+  TxOut,
+  ShelleyTxOut (ShelleyTxOut, TxOutCompact),
+  Url,
+  Wdrl (..),
+  --
+  module Cardano.Ledger.Keys.WitVKey,
+  witKeyHash,
+  wvkBytes,
+  --
+  SizeOfPoolOwners (..),
+  SizeOfPoolRelays (..),
 
-    -- * Helpers
-    addrEitherShelleyTxOutL,
-    valueEitherShelleyTxOutL,
-  )
+  -- * Helpers
+  addrEitherShelleyTxOutL,
+  valueEitherShelleyTxOutL,
+)
 where
 
 import Cardano.Ledger.Address (RewardAcnt (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), Url)
-import Cardano.Ledger.Binary
-  ( Annotator (..),
-    FromCBOR (fromCBOR),
-    ToCBOR (..),
-  )
-import Cardano.Ledger.Binary.Coders
-  ( Decode (..),
-    Density (..),
-    Encode (..),
-    Field,
-    Wrapped (..),
-    decode,
-    encode,
-    encodeKeyedStrictMaybe,
-    field,
-    invalidField,
-    ofield,
-    (!>),
-  )
+import Cardano.Ledger.Binary (
+  Annotator (..),
+  FromCBOR (fromCBOR),
+  ToCBOR (..),
+ )
+import Cardano.Ledger.Binary.Coders (
+  Decode (..),
+  Density (..),
+  Encode (..),
+  Field,
+  Wrapped (..),
+  decode,
+  encode,
+  encodeKeyedStrictMaybe,
+  field,
+  invalidField,
+  ofield,
+  (!>),
+ )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Ptr (..))
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Keys.WitVKey
-import Cardano.Ledger.MemoBytes
-  ( Mem,
-    MemoBytes,
-    MemoHashIndex,
-    Memoized (..),
-    getMemoRawType,
-    getMemoSafeHash,
-    lensMemoRawType,
-    mkMemoized,
-  )
+import Cardano.Ledger.MemoBytes (
+  Mem,
+  MemoBytes,
+  MemoHashIndex,
+  Memoized (..),
+  getMemoRawType,
+  getMemoSafeHash,
+  lensMemoRawType,
+  mkMemoized,
+ )
 import Cardano.Ledger.PoolParams
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Delegation.Certificates
-  ( ConstitutionalDelegCert (..),
-    DCert (..),
-    DelegCert (..),
-    Delegation (..),
-    MIRCert (..),
-    MIRPot (..),
-    MIRTarget (..),
-    PoolCert (..),
-  )
+import Cardano.Ledger.Shelley.Delegation.Certificates (
+  ConstitutionalDelegCert (..),
+  DCert (..),
+  DelegCert (..),
+  Delegation (..),
+  MIRCert (..),
+  MIRPot (..),
+  MIRTarget (..),
+  PoolCert (..),
+ )
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (Update)
-import Cardano.Ledger.Shelley.TxOut
-  ( ShelleyTxOut (..),
-    addrEitherShelleyTxOutL,
-    valueEitherShelleyTxOutL,
-  )
+import Cardano.Ledger.Shelley.TxOut (
+  ShelleyTxOut (..),
+  addrEitherShelleyTxOutL,
+  valueEitherShelleyTxOutL,
+ )
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
@@ -136,14 +136,14 @@ import NoThunks.Class (NoThunks (..))
 -- The underlying type for TxBody
 
 data ShelleyTxBodyRaw era = ShelleyTxBodyRaw
-  { stbrInputs :: !(Set (TxIn (EraCrypto era))),
-    stbrOutputs :: !(StrictSeq (TxOut era)),
-    stbrCerts :: !(StrictSeq (DCert (EraCrypto era))),
-    stbrWdrls :: !(Wdrl (EraCrypto era)),
-    stbrTxFee :: !Coin,
-    stbrTTL :: !SlotNo,
-    stbrUpdate :: !(StrictMaybe (Update era)),
-    stbrMDHash :: !(StrictMaybe (AuxiliaryDataHash (EraCrypto era)))
+  { stbrInputs :: !(Set (TxIn (EraCrypto era)))
+  , stbrOutputs :: !(StrictSeq (TxOut era))
+  , stbrCerts :: !(StrictSeq (DCert (EraCrypto era)))
+  , stbrWdrls :: !(Wdrl (EraCrypto era))
+  , stbrTxFee :: !Coin
+  , stbrTTL :: !SlotNo
+  , stbrUpdate :: !(StrictMaybe (Update era))
+  , stbrMDHash :: !(StrictMaybe (AuxiliaryDataHash (EraCrypto era)))
   }
   deriving (Generic, Typeable)
 
@@ -164,9 +164,9 @@ deriving instance
   Show (ShelleyTxBodyRaw era)
 
 instance
-  ( Era era,
-    FromCBOR (TxOut era),
-    FromCBOR (PParamsUpdate era)
+  ( Era era
+  , FromCBOR (TxOut era)
+  , FromCBOR (PParamsUpdate era)
   ) =>
   FromCBOR (ShelleyTxBodyRaw era)
   where
@@ -180,9 +180,9 @@ instance
       )
 
 instance
-  ( Era era,
-    FromCBOR (TxOut era),
-    FromCBOR (PParamsUpdate era)
+  ( Era era
+  , FromCBOR (TxOut era)
+  , FromCBOR (PParamsUpdate era)
   ) =>
   FromCBOR (Annotator (ShelleyTxBodyRaw era))
   where
@@ -197,9 +197,9 @@ instance
 --   Wrap it in a Field which pairs it with its update function which
 --   changes only the field being deserialised.
 boxBody ::
-  ( Era era,
-    FromCBOR (TxOut era),
-    FromCBOR (PParamsUpdate era)
+  ( Era era
+  , FromCBOR (TxOut era)
+  , FromCBOR (PParamsUpdate era)
   ) =>
   Word ->
   Field (ShelleyTxBodyRaw era)
@@ -236,14 +236,14 @@ txSparse (ShelleyTxBodyRaw input output cert wdrl fee ttl update hash) =
 basicShelleyTxBodyRaw :: ShelleyTxBodyRaw era
 basicShelleyTxBodyRaw =
   ShelleyTxBodyRaw
-    { stbrInputs = Set.empty,
-      stbrOutputs = StrictSeq.empty,
-      stbrTxFee = Coin 0,
-      stbrTTL = SlotNo 0,
-      stbrCerts = StrictSeq.empty,
-      stbrWdrls = Wdrl Map.empty,
-      stbrUpdate = SNothing,
-      stbrMDHash = SNothing
+    { stbrInputs = Set.empty
+    , stbrOutputs = StrictSeq.empty
+    , stbrTxFee = Coin 0
+    , stbrTTL = SlotNo 0
+    , stbrCerts = StrictSeq.empty
+    , stbrWdrls = Wdrl Map.empty
+    , stbrUpdate = SNothing
+    , stbrMDHash = SNothing
     }
 
 instance
@@ -337,25 +337,25 @@ pattern ShelleyTxBody ::
   StrictMaybe (AuxiliaryDataHash (EraCrypto era)) ->
   ShelleyTxBody era
 pattern ShelleyTxBody
-  { stbInputs,
-    stbOutputs,
-    stbCerts,
-    stbWdrls,
-    stbTxFee,
-    stbTTL,
-    stbUpdate,
-    stbMDHash
+  { stbInputs
+  , stbOutputs
+  , stbCerts
+  , stbWdrls
+  , stbTxFee
+  , stbTTL
+  , stbUpdate
+  , stbMDHash
   } <-
   ( getMemoRawType ->
       ShelleyTxBodyRaw
-        { stbrInputs = stbInputs,
-          stbrOutputs = stbOutputs,
-          stbrCerts = stbCerts,
-          stbrWdrls = stbWdrls,
-          stbrTxFee = stbTxFee,
-          stbrTTL = stbTTL,
-          stbrUpdate = stbUpdate,
-          stbrMDHash = stbMDHash
+        { stbrInputs = stbInputs
+        , stbrOutputs = stbOutputs
+        , stbrCerts = stbCerts
+        , stbrWdrls = stbWdrls
+        , stbrTxFee = stbTxFee
+        , stbrTTL = stbTTL
+        , stbrUpdate = stbUpdate
+        , stbrMDHash = stbMDHash
         }
     )
   where
@@ -370,14 +370,14 @@ pattern ShelleyTxBody
       mDHash =
         mkMemoized $
           ShelleyTxBodyRaw
-            { stbrInputs = inputs,
-              stbrOutputs = outputs,
-              stbrCerts = certs,
-              stbrWdrls = wdrls,
-              stbrTxFee = txFee,
-              stbrTTL = ttl,
-              stbrUpdate = update,
-              stbrMDHash = mDHash
+            { stbrInputs = inputs
+            , stbrOutputs = outputs
+            , stbrCerts = certs
+            , stbrWdrls = wdrls
+            , stbrTxFee = txFee
+            , stbrTTL = ttl
+            , stbrUpdate = update
+            , stbrMDHash = mDHash
             }
 
 {-# COMPLETE ShelleyTxBody #-}

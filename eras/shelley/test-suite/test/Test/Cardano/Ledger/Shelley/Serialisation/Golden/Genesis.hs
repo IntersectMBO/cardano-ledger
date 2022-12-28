@@ -4,23 +4,23 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Test.Cardano.Ledger.Shelley.Serialisation.Golden.Genesis
-  ( tests,
+module Test.Cardano.Ledger.Shelley.Serialisation.Golden.Genesis (
+  tests,
 
-    -- * Individual properties
-    golden_json_ShelleyGenesis,
-    golden_cbor_ShelleyGenesis,
-  )
+  -- * Individual properties
+  golden_json_ShelleyGenesis,
+  golden_cbor_ShelleyGenesis,
+)
 where
 
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.BaseTypes (textToDns, textToUrl)
-import Cardano.Ledger.Binary
-  ( ToCBOR (..),
-    Tokens (..),
-    serializeEncoding',
-    shelleyProtVer,
-  )
+import Cardano.Ledger.Binary (
+  ToCBOR (..),
+  Tokens (..),
+  serializeEncoding',
+  shelleyProtVer,
+ )
 import Cardano.Ledger.Crypto (HASH)
 import Cardano.Ledger.Era (EraCrypto (..))
 import Cardano.Ledger.Keys (hashKey, hashVerKeyVRF)
@@ -43,12 +43,12 @@ import Paths_cardano_ledger_shelley_test (getDataFileName)
 import Test.Cardano.Ledger.Binary.TreeDiff (CBORBytes (CBORBytes), diffExpr)
 import Test.Cardano.Ledger.Core.KeyPair (vKey)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
-import Test.Cardano.Ledger.Shelley.Utils
-  ( RawSeed (..),
-    mkKeyPair,
-    mkVRFKeyPair,
-    unsafeBoundRational,
-  )
+import Test.Cardano.Ledger.Shelley.Utils (
+  RawSeed (..),
+  mkKeyPair,
+  mkVRFKeyPair,
+  unsafeBoundRational,
+ )
 import Test.Tasty
 import Test.Tasty.HUnit (Assertion, assertFailure, testCase, (@?=))
 
@@ -187,8 +187,8 @@ tests :: TestTree
 tests =
   testGroup
     "Shelley Genesis golden tests"
-    [ testCase "ShelleyGenesis JSON golden test" golden_json_ShelleyGenesis,
-      testCase "ShelleyGenesis CBOR golden test" golden_cbor_ShelleyGenesis
+    [ testCase "ShelleyGenesis JSON golden test" golden_json_ShelleyGenesis
+    , testCase "ShelleyGenesis CBOR golden test" golden_cbor_ShelleyGenesis
     ]
 
 exampleShelleyGenesis ::
@@ -197,26 +197,26 @@ exampleShelleyGenesis ::
   ShelleyGenesis era
 exampleShelleyGenesis =
   ShelleyGenesis
-    { sgSystemStart = posixSecondsToUTCTime $ realToFrac (1234566789 :: Integer),
-      sgNetworkMagic = 4036000900,
-      sgNetworkId = L.Testnet,
-      sgActiveSlotsCoeff = unsafeBoundRational 0.259,
-      sgSecurityParam = 120842,
-      sgEpochLength = EpochSize 1215,
-      sgSlotsPerKESPeriod = 8541,
-      sgMaxKESEvolutions = 28899,
-      sgSlotLength = 8,
-      sgUpdateQuorum = 16991,
-      sgMaxLovelaceSupply = 71,
-      sgProtocolParams =
+    { sgSystemStart = posixSecondsToUTCTime $ realToFrac (1234566789 :: Integer)
+    , sgNetworkMagic = 4036000900
+    , sgNetworkId = L.Testnet
+    , sgActiveSlotsCoeff = unsafeBoundRational 0.259
+    , sgSecurityParam = 120842
+    , sgEpochLength = EpochSize 1215
+    , sgSlotsPerKESPeriod = 8541
+    , sgMaxKESEvolutions = 28899
+    , sgSlotLength = 8
+    , sgUpdateQuorum = 16991
+    , sgMaxLovelaceSupply = 71
+    , sgProtocolParams =
         emptyPParams
-          { _d = unsafeBoundRational $ realToFrac (1.9e-2 :: Scientific),
-            _maxBBSize = 239857,
-            _maxBHSize = 217569
-          },
-      sgGenDelegs = Map.fromList [(genesisVerKeyHash, genDelegPair)],
-      sgInitialFunds = LM.ListMap [(initialFundedAddress, initialFunds)],
-      sgStaking = staking
+          { _d = unsafeBoundRational $ realToFrac (1.9e-2 :: Scientific)
+          , _maxBBSize = 239857
+          , _maxBHSize = 217569
+          }
+    , sgGenDelegs = Map.fromList [(genesisVerKeyHash, genDelegPair)]
+    , sgInitialFunds = LM.ListMap [(initialFundedAddress, initialFunds)]
+    , sgStaking = staking
     }
   where
     -- hash of the genesis verification key
@@ -250,26 +250,26 @@ exampleShelleyGenesis =
         [ L.SingleHostAddr
             (L.SJust $ L.Port 1234)
             (L.SJust $ read "0.0.0.0")
-            (L.SJust $ read "2001:db8:a::123"),
-          L.SingleHostName L.SNothing (fromJust $ textToDns "cool.domain.com"),
-          L.MultiHostName (fromJust $ textToDns "cool.domain.com")
+            (L.SJust $ read "2001:db8:a::123")
+        , L.SingleHostName L.SNothing (fromJust $ textToDns "cool.domain.com")
+        , L.MultiHostName (fromJust $ textToDns "cool.domain.com")
         ]
     poolParams :: L.PoolParams (EraCrypto era)
     poolParams =
       L.PoolParams
-        { L.ppId = hashKey . snd $ mkKeyPair (RawSeed 1 0 0 0 1),
-          L.ppVrf = hashVerKeyVRF . snd $ mkVRFKeyPair (RawSeed 1 0 0 0 2),
-          L.ppPledge = L.Coin 1,
-          L.ppCost = L.Coin 5,
-          L.ppMargin = unsafeBoundRational 0.25,
-          L.ppRewardAcnt = L.RewardAcnt L.Testnet Cast.aliceSHK,
-          L.ppOwners = Set.singleton $ (hashKey . vKey) Cast.aliceStake,
-          L.ppRelays = relays,
-          L.ppMetadata =
+        { L.ppId = hashKey . snd $ mkKeyPair (RawSeed 1 0 0 0 1)
+        , L.ppVrf = hashVerKeyVRF . snd $ mkVRFKeyPair (RawSeed 1 0 0 0 2)
+        , L.ppPledge = L.Coin 1
+        , L.ppCost = L.Coin 5
+        , L.ppMargin = unsafeBoundRational 0.25
+        , L.ppRewardAcnt = L.RewardAcnt L.Testnet Cast.aliceSHK
+        , L.ppOwners = Set.singleton $ (hashKey . vKey) Cast.aliceStake
+        , L.ppRelays = relays
+        , L.ppMetadata =
             L.SJust $
               L.PoolMetadata
-                { L.pmUrl = fromJust $ textToUrl "best.pool.com",
-                  L.pmHash = BS.pack "100ab{}100ab{}"
+                { L.pmUrl = fromJust $ textToUrl "best.pool.com"
+                , L.pmHash = BS.pack "100ab{}100ab{}"
                 }
         }
     staking =
@@ -277,11 +277,12 @@ exampleShelleyGenesis =
         { sgsPools =
             LM.ListMap
               [ (L.KeyHash "f583a45e4947c102091b96170ef50ef0cf8edb62666193a2163247bb", poolParams)
-              ],
-          sgsStake =
+              ]
+        , sgsStake =
             LM.ListMap
-              [ ( L.KeyHash "83a192dec0e8da2188e520d0c536a69a747cf173a3df16a6daa94d86",
-                  L.KeyHash "649eda82bf644d34a6925f24ea4c4c36d27e51de1b44ef47e3560be7"
+              [
+                ( L.KeyHash "83a192dec0e8da2188e520d0c536a69a747cf173a3df16a6daa94d86"
+                , L.KeyHash "649eda82bf644d34a6925f24ea4c4c36d27e51de1b44ef47e3560be7"
                 )
               ]
         }

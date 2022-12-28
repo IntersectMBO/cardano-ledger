@@ -13,15 +13,15 @@ import Data.Kind (Type)
 import Data.Typeable (Typeable)
 
 class
-  ( HashAlgorithm (HASH c),
-    HashAlgorithm (ADDRHASH c),
-    DSIGNAlgorithm (DSIGN c),
-    KESAlgorithm (KES c),
-    VRFAlgorithm (VRF c),
-    ContextDSIGN (DSIGN c) ~ (),
-    ContextKES (KES c) ~ (),
-    ContextVRF (VRF c) ~ (),
-    Typeable c
+  ( HashAlgorithm (HASH c)
+  , HashAlgorithm (ADDRHASH c)
+  , DSIGNAlgorithm (DSIGN c)
+  , KESAlgorithm (KES c)
+  , VRFAlgorithm (VRF c)
+  , ContextDSIGN (DSIGN c) ~ ()
+  , ContextKES (KES c) ~ ()
+  , ContextVRF (VRF c) ~ ()
+  , Typeable c
   ) =>
   Crypto c
   where

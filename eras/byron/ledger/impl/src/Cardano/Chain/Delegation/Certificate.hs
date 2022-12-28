@@ -11,66 +11,66 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Chain.Delegation.Certificate
-  ( -- * Certificate
-    Certificate,
-    ACertificate (..),
-    CertificateId,
+module Cardano.Chain.Delegation.Certificate (
+  -- * Certificate
+  Certificate,
+  ACertificate (..),
+  CertificateId,
 
-    -- * Certificate Constructors
-    signCertificate,
-    unsafeCertificate,
+  -- * Certificate Constructors
+  signCertificate,
+  unsafeCertificate,
 
-    -- * Certificate Accessor
-    epoch,
-    recoverCertificateId,
+  -- * Certificate Accessor
+  epoch,
+  recoverCertificateId,
 
-    -- * Certificate Predicate
-    isValid,
-  )
+  -- * Certificate Predicate
+  isValid,
+)
 where
 
 import Cardano.Chain.Slotting (EpochNumber)
-import Cardano.Crypto
-  ( Hash,
-    ProtocolMagicId,
-    SafeSigner,
-    SignTag (SignCertificate),
-    Signature,
-    VerificationKey (unVerificationKey),
-    hashDecoded,
-    safeSign,
-    safeToVerification,
-    verifySignatureDecoded,
-  )
+import Cardano.Crypto (
+  Hash,
+  ProtocolMagicId,
+  SafeSigner,
+  SignTag (SignCertificate),
+  Signature,
+  VerificationKey (unVerificationKey),
+  hashDecoded,
+  safeSign,
+  safeToVerification,
+  verifySignatureDecoded,
+ )
 import qualified Cardano.Crypto.Wallet as CC
-import Cardano.Ledger.Binary
-  ( Annotated (Annotated, unAnnotated),
-    ByteSpan,
-    Decoded (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    annotatedDecoder,
-    byronProtVer,
-    encodeListLen,
-    enforceSize,
-    fromCBORAnnotated,
-    serialize',
-  )
+import Cardano.Ledger.Binary (
+  Annotated (Annotated, unAnnotated),
+  ByteSpan,
+  Decoded (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  annotatedDecoder,
+  byronProtVer,
+  encodeListLen,
+  enforceSize,
+  fromCBORAnnotated,
+  serialize',
+ )
 import Cardano.Prelude
 import qualified Data.Aeson as Aeson
 import Data.Coerce (coerce)
 import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 import NoThunks.Class (NoThunks (..))
-import Text.JSON.Canonical
-  ( FromJSON (..),
-    Int54,
-    JSValue (..),
-    ToJSON (..),
-    fromJSField,
-    mkObject,
-  )
+import Text.JSON.Canonical (
+  FromJSON (..),
+  Int54,
+  JSValue (..),
+  ToJSON (..),
+  fromJSField,
+  mkObject,
+ )
 
 --------------------------------------------------------------------------------
 -- Certificate
@@ -88,15 +88,15 @@ type Certificate = ACertificate ()
 --   that 'EpochNumber' must correspond to the current or next 'EpochNumber' at
 --   the time of publishing
 data ACertificate a = UnsafeACertificate
-  { -- | The epoch from which the delegation is valid
-    aEpoch :: !(Annotated EpochNumber a),
-    -- | The issuer of the certificate, who delegates their right to sign blocks
-    issuerVK :: !VerificationKey,
-    -- | The delegate, who gains the right to sign blocks
-    delegateVK :: !VerificationKey,
-    -- | The signature that proves the certificate was issued by @issuerVK@
-    signature :: !(Signature EpochNumber),
-    annotation :: !a
+  { aEpoch :: !(Annotated EpochNumber a)
+  -- ^ The epoch from which the delegation is valid
+  , issuerVK :: !VerificationKey
+  -- ^ The issuer of the certificate, who delegates their right to sign blocks
+  , delegateVK :: !VerificationKey
+  -- ^ The delegate, who gains the right to sign blocks
+  , signature :: !(Signature EpochNumber)
+  -- ^ The signature that proves the certificate was issued by @issuerVK@
+  , annotation :: !a
   }
   deriving (Eq, Ord, Show, Generic, Functor)
   deriving anyclass (NFData, NoThunks)
@@ -117,19 +117,19 @@ signCertificate ::
   Certificate
 signCertificate protocolMagicId delegateVK epochNumber safeSigner =
   UnsafeACertificate
-    { aEpoch = Annotated epochNumber (),
-      issuerVK = safeToVerification safeSigner,
-      delegateVK = delegateVK,
-      signature = coerce sig,
-      annotation = ()
+    { aEpoch = Annotated epochNumber ()
+    , issuerVK = safeToVerification safeSigner
+    , delegateVK = delegateVK
+    , signature = coerce sig
+    , annotation = ()
     }
   where
     sig =
       safeSign protocolMagicId SignCertificate safeSigner $
         mconcat
-          [ "00",
-            CC.unXPub (unVerificationKey delegateVK),
-            serialize' byronProtVer epochNumber
+          [ "00"
+          , CC.unXPub (unVerificationKey delegateVK)
+          , serialize' byronProtVer epochNumber
           ]
 
 -- | Create a certificate using the provided signature.
@@ -237,10 +237,10 @@ instance Monad m => ToJSON m Certificate where
   toJSON cert =
     mkObject
       -- omega is encoded as a number, because in genesis we always set it to 0
-      [ ("omega", pure (JSNum . fromIntegral $ epoch cert)),
-        ("issuerPk", toJSON $ issuerVK cert),
-        ("delegatePk", toJSON $ delegateVK cert),
-        ("cert", toJSON $ signature cert)
+      [ ("omega", pure (JSNum . fromIntegral $ epoch cert))
+      , ("issuerPk", toJSON $ issuerVK cert)
+      , ("delegatePk", toJSON $ delegateVK cert)
+      , ("cert", toJSON $ signature cert)
       ]
 
 instance MonadError SchemaError m => FromJSON m Certificate where

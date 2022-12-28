@@ -19,14 +19,14 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (GenDelegs (..))
 import Cardano.Ledger.Pretty (PrettyA (..), ppList)
-import Cardano.Ledger.Shelley.LedgerState
-  ( AccountState (..),
-    EpochState (..),
-    LedgerState (..),
-    NewEpochState (..),
-    UTxOState (..),
-    updateStakeDistribution,
-  )
+import Cardano.Ledger.Shelley.LedgerState (
+  AccountState (..),
+  EpochState (..),
+  LedgerState (..),
+  NewEpochState (..),
+  UTxOState (..),
+  updateStakeDistribution,
+ )
 import qualified Cardano.Ledger.Shelley.PParams as Shelley (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), UtxoEnv (..))
 import Cardano.Ledger.UTxO (UTxO (..))
@@ -43,31 +43,31 @@ import Test.Cardano.Ledger.Binary.Arbitrary ()
 import Test.Cardano.Ledger.Binary.Twiddle (Twiddle, twiddleInvariantProp)
 import Test.Cardano.Ledger.Generic.Fields (abstractTx, abstractTxBody, abstractTxOut, abstractWitnesses)
 import Test.Cardano.Ledger.Generic.Functions (TotalAda (totalAda), isValid')
-import Test.Cardano.Ledger.Generic.GenState
-  ( GenEnv (..),
-    GenRS,
-    GenSize (..),
-    GenState (..),
-    blocksizeMax,
-    initStableFields,
-    modifyModel,
-    runGenRS,
-  )
+import Test.Cardano.Ledger.Generic.GenState (
+  GenEnv (..),
+  GenRS,
+  GenSize (..),
+  GenState (..),
+  blocksizeMax,
+  initStableFields,
+  modifyModel,
+  runGenRS,
+ )
 import Test.Cardano.Ledger.Generic.MockChain (MOCKCHAIN, MockChainState (..))
 import Test.Cardano.Ledger.Generic.ModelState
 import Test.Cardano.Ledger.Generic.PrettyCore (PrettyC (..), pcLedgerState, pcTx)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.Trace (Gen1, forEachEpochTrace, testTraces, traceProp)
-import Test.Cardano.Ledger.Generic.TxGen
-  ( Box (..),
-    applySTSByProof,
-    assembleWits,
-    coreTx,
-    coreTxBody,
-    coreTxOut,
-    genAlonzoTx,
-    genUTxO,
-  )
+import Test.Cardano.Ledger.Generic.TxGen (
+  Box (..),
+  applySTSByProof,
+  assembleWits,
+  coreTx,
+  coreTxBody,
+  coreTxOut,
+  genAlonzoTx,
+  genUTxO,
+ )
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (StandardCrypto)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.QuickCheck
@@ -99,10 +99,10 @@ genTxAndUTXOState proof@(Shelley _) gsize = do
 
 genTxAndLEDGERState ::
   forall era.
-  ( Reflect era,
-    Signal (EraRule "LEDGER" era) ~ Tx era,
-    State (EraRule "LEDGER" era) ~ LedgerState era,
-    Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  ( Reflect era
+  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   ) =>
   Proof era ->
   GenSize ->
@@ -126,11 +126,11 @@ genTxAndLEDGERState proof sizes = do
 -- Now a test
 
 testTxValidForLEDGER ::
-  ( Reflect era,
-    Signal (EraRule "LEDGER" era) ~ Tx era,
-    State (EraRule "LEDGER" era) ~ LedgerState era,
-    PrettyA (PredicateFailure (EraRule "LEDGER" era)),
-    PrettyA (PParamsUpdate era)
+  ( Reflect era
+  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , PrettyA (PredicateFailure (EraRule "LEDGER" era))
+  , PrettyA (PParamsUpdate era)
   ) =>
   Proof era ->
   Box era ->
@@ -180,35 +180,35 @@ coreTypesRoundTrip =
     "Core types make generic roundtrips"
     [ testGroup
         "TxWits roundtrip"
-        [ testProperty "Babbage era" $ txWitRoundTrip (Babbage Mock),
-          testProperty "Alonzo era" $ txWitRoundTrip (Alonzo Mock),
-          testProperty "Mary era" $ txWitRoundTrip (Mary Mock),
-          testProperty "Allegra era" $ txWitRoundTrip (Allegra Mock),
-          testProperty "Shelley era" $ txWitRoundTrip (Shelley Mock)
-        ],
-      testGroup
+        [ testProperty "Babbage era" $ txWitRoundTrip (Babbage Mock)
+        , testProperty "Alonzo era" $ txWitRoundTrip (Alonzo Mock)
+        , testProperty "Mary era" $ txWitRoundTrip (Mary Mock)
+        , testProperty "Allegra era" $ txWitRoundTrip (Allegra Mock)
+        , testProperty "Shelley era" $ txWitRoundTrip (Shelley Mock)
+        ]
+    , testGroup
         "TxBody roundtrips"
-        [ testProperty "Babbage era" $ txBodyRoundTrip (Babbage Mock),
-          testProperty "Alonzo era" $ txBodyRoundTrip (Alonzo Mock),
-          testProperty "Mary era" $ txBodyRoundTrip (Mary Mock),
-          testProperty "Allegra era" $ txBodyRoundTrip (Allegra Mock),
-          testProperty "Shelley era" $ txBodyRoundTrip (Shelley Mock)
-        ],
-      testGroup
+        [ testProperty "Babbage era" $ txBodyRoundTrip (Babbage Mock)
+        , testProperty "Alonzo era" $ txBodyRoundTrip (Alonzo Mock)
+        , testProperty "Mary era" $ txBodyRoundTrip (Mary Mock)
+        , testProperty "Allegra era" $ txBodyRoundTrip (Allegra Mock)
+        , testProperty "Shelley era" $ txBodyRoundTrip (Shelley Mock)
+        ]
+    , testGroup
         "TxOut roundtrips"
-        [ testProperty "Babbage era" $ txOutRoundTrip (Babbage Mock),
-          testProperty "Alonzo era" $ txOutRoundTrip (Alonzo Mock),
-          testProperty "Mary era" $ txOutRoundTrip (Mary Mock),
-          testProperty "Allegra era" $ txOutRoundTrip (Allegra Mock),
-          testProperty "Shelley era" $ txOutRoundTrip (Shelley Mock)
-        ],
-      testGroup
+        [ testProperty "Babbage era" $ txOutRoundTrip (Babbage Mock)
+        , testProperty "Alonzo era" $ txOutRoundTrip (Alonzo Mock)
+        , testProperty "Mary era" $ txOutRoundTrip (Mary Mock)
+        , testProperty "Allegra era" $ txOutRoundTrip (Allegra Mock)
+        , testProperty "Shelley era" $ txOutRoundTrip (Shelley Mock)
+        ]
+    , testGroup
         "Tx roundtrips"
-        [ testProperty "Babbage era" $ txRoundTrip (Babbage Mock),
-          testProperty "Alonzo era" $ txRoundTrip (Alonzo Mock),
-          testProperty "Mary era" $ txRoundTrip (Mary Mock),
-          testProperty "Allegra era" $ txRoundTrip (Allegra Mock),
-          testProperty "Shelley era" $ txRoundTrip (Shelley Mock)
+        [ testProperty "Babbage era" $ txRoundTrip (Babbage Mock)
+        , testProperty "Alonzo era" $ txRoundTrip (Alonzo Mock)
+        , testProperty "Mary era" $ txRoundTrip (Mary Mock)
+        , testProperty "Allegra era" $ txRoundTrip (Allegra Mock)
+        , testProperty "Shelley era" $ txRoundTrip (Shelley Mock)
         ]
     ]
 
@@ -218,14 +218,14 @@ txPreserveAda genSize =
   testGroup
     "Individual Tx's preserve Ada"
     [ testProperty "Shelley Tx preserves ADA" $
-        forAll (genTxAndLEDGERState (Shelley Mock) genSize) (testTxValidForLEDGER (Shelley Mock)),
-      testProperty "Allegra Tx preserves ADA" $
-        forAll (genTxAndLEDGERState (Allegra Mock) genSize) (testTxValidForLEDGER (Allegra Mock)),
-      testProperty "Mary Tx preserves ADA" $
-        forAll (genTxAndLEDGERState (Mary Mock) genSize) (testTxValidForLEDGER (Mary Mock)),
-      testProperty "Alonzo ValidTx preserves ADA" $
-        forAll (genTxAndLEDGERState (Alonzo Mock) genSize) (testTxValidForLEDGER (Alonzo Mock)),
-      testProperty "Babbage ValidTx preserves ADA" $
+        forAll (genTxAndLEDGERState (Shelley Mock) genSize) (testTxValidForLEDGER (Shelley Mock))
+    , testProperty "Allegra Tx preserves ADA" $
+        forAll (genTxAndLEDGERState (Allegra Mock) genSize) (testTxValidForLEDGER (Allegra Mock))
+    , testProperty "Mary Tx preserves ADA" $
+        forAll (genTxAndLEDGERState (Mary Mock) genSize) (testTxValidForLEDGER (Mary Mock))
+    , testProperty "Alonzo ValidTx preserves ADA" $
+        forAll (genTxAndLEDGERState (Alonzo Mock) genSize) (testTxValidForLEDGER (Alonzo Mock))
+    , testProperty "Babbage ValidTx preserves ADA" $
         forAll (genTxAndLEDGERState (Babbage Mock) genSize) (testTxValidForLEDGER (Babbage Mock))
         -- TODO
         -- testProperty "Conway ValidTx preserves ADA" $
@@ -234,8 +234,8 @@ txPreserveAda genSize =
 
 -- | Ada is preserved over a trace of length 100
 adaIsPreserved ::
-  ( Reflect era,
-    HasTrace (MOCKCHAIN era) (Gen1 era)
+  ( Reflect era
+  , HasTrace (MOCKCHAIN era) (Gen1 era)
   ) =>
   Proof era ->
   Int ->
@@ -253,11 +253,11 @@ tracePreserveAda :: Int -> GenSize -> TestTree
 tracePreserveAda numTx gensize =
   testGroup
     ("Total Ada is preserved over traces of length " ++ show numTx)
-    [ adaIsPreservedBabbage numTx gensize,
-      adaIsPreserved (Alonzo Mock) numTx gensize,
-      adaIsPreserved (Mary Mock) numTx gensize,
-      adaIsPreserved (Allegra Mock) numTx gensize,
-      adaIsPreserved (Shelley Mock) numTx gensize
+    [ adaIsPreservedBabbage numTx gensize
+    , adaIsPreserved (Alonzo Mock) numTx gensize
+    , adaIsPreserved (Mary Mock) numTx gensize
+    , adaIsPreserved (Allegra Mock) numTx gensize
+    , adaIsPreserved (Shelley Mock) numTx gensize
     ]
 
 adaIsPreservedBabbage :: Int -> GenSize -> TestTree
@@ -280,35 +280,35 @@ incrementalStake genSize =
     "Incremental Stake invariant holds"
     [ -- TODO re-enable this once we have added all the new rules to Conway
       -- incrementStakeInvariant (Conway Mock) genSize,
-      incrementStakeInvariant (Babbage Mock) genSize,
-      incrementStakeInvariant (Alonzo Mock) genSize,
-      incrementStakeInvariant (Mary Mock) genSize,
-      incrementStakeInvariant (Allegra Mock) genSize,
-      incrementStakeInvariant (Shelley Mock) genSize
+      incrementStakeInvariant (Babbage Mock) genSize
+    , incrementStakeInvariant (Alonzo Mock) genSize
+    , incrementStakeInvariant (Mary Mock) genSize
+    , incrementStakeInvariant (Allegra Mock) genSize
+    , incrementStakeInvariant (Shelley Mock) genSize
     ]
 
 genericProperties :: GenSize -> TestTree
 genericProperties genSize =
   testGroup
     "Generic Property tests"
-    [ coreTypesRoundTrip,
-      txPreserveAda genSize,
-      tracePreserveAda 45 genSize,
-      incrementalStake genSize,
-      testTraces 45,
-      epochPreserveAda genSize,
-      twiddleInvariantHoldsEras
+    [ coreTypesRoundTrip
+    , txPreserveAda genSize
+    , tracePreserveAda 45 genSize
+    , incrementalStake genSize
+    , testTraces 45
+    , epochPreserveAda genSize
+    , twiddleInvariantHoldsEras
     ]
 
 epochPreserveAda :: GenSize -> TestTree
 epochPreserveAda genSize =
   testGroup
     "Ada is preserved in each epoch"
-    [ adaIsPreservedInEachEpoch (Babbage Mock) genSize,
-      adaIsPreservedInEachEpoch (Alonzo Mock) genSize,
-      adaIsPreservedInEachEpoch (Mary Mock) genSize,
-      adaIsPreservedInEachEpoch (Allegra Mock) genSize,
-      adaIsPreservedInEachEpoch (Shelley Mock) genSize
+    [ adaIsPreservedInEachEpoch (Babbage Mock) genSize
+    , adaIsPreservedInEachEpoch (Alonzo Mock) genSize
+    , adaIsPreservedInEachEpoch (Mary Mock) genSize
+    , adaIsPreservedInEachEpoch (Allegra Mock) genSize
+    , adaIsPreservedInEachEpoch (Shelley Mock) genSize
     ]
 
 adaIsPreservedInEachEpoch ::
@@ -330,9 +330,9 @@ adaIsPreservedInEachEpoch proof genSize =
 
 twiddleInvariantHolds ::
   forall a.
-  ( Arbitrary a,
-    Show a,
-    Twiddle a
+  ( Arbitrary a
+  , Show a
+  , Twiddle a
   ) =>
   String ->
   TestTree
@@ -343,8 +343,8 @@ twiddleInvariantHoldsEras :: TestTree
 twiddleInvariantHoldsEras =
   testGroup
     "Twiddle invariant holds for TxBody"
-    [ twiddleInvariantHolds @(AlonzoTxBody (AlonzoEra StandardCrypto)) "Alonzo",
-      twiddleInvariantHolds @(BabbageTxBody (BabbageEra StandardCrypto)) "Babbage"
+    [ twiddleInvariantHolds @(AlonzoTxBody (AlonzoEra StandardCrypto)) "Alonzo"
+    , twiddleInvariantHolds @(BabbageTxBody (BabbageEra StandardCrypto)) "Babbage"
     ]
 
 -- ==============================================================

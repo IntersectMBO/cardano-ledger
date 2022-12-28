@@ -2,50 +2,50 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Chain.Update.Example
-  ( exampleApplicationName,
-    exampleProtocolVersion,
-    exampleProtocolParameters,
-    exampleProtocolParametersUpdate,
-    exampleSoftwareVersion,
-    exampleSystemTag,
-    exampleInstallerHash,
-    examplePayload,
-    exampleProof,
-    exampleProposal,
-    exampleProposalBody,
-    exampleUpId,
-    exampleVote,
-  )
+module Test.Cardano.Chain.Update.Example (
+  exampleApplicationName,
+  exampleProtocolVersion,
+  exampleProtocolParameters,
+  exampleProtocolParametersUpdate,
+  exampleSoftwareVersion,
+  exampleSystemTag,
+  exampleInstallerHash,
+  examplePayload,
+  exampleProof,
+  exampleProposal,
+  exampleProposalBody,
+  exampleUpId,
+  exampleVote,
+)
 where
 
-import Cardano.Chain.Common
-  ( TxFeePolicy (..),
-    TxSizeLinear (..),
-    mkKnownLovelace,
-    rationalToLovelacePortion,
-  )
+import Cardano.Chain.Common (
+  TxFeePolicy (..),
+  TxSizeLinear (..),
+  mkKnownLovelace,
+  rationalToLovelacePortion,
+ )
 import Cardano.Chain.Slotting (EpochNumber (..), SlotNumber (..))
-import Cardano.Chain.Update
-  ( ApplicationName (..),
-    InstallerHash (..),
-    Payload,
-    Proof,
-    Proposal,
-    ProposalBody (..),
-    ProtocolParameters (..),
-    ProtocolParametersUpdate (..),
-    ProtocolVersion (..),
-    SoftforkRule (..),
-    SoftwareVersion (..),
-    SystemTag (..),
-    UpId,
-    Vote,
-    mkProof,
-    payload,
-    signProposal,
-    signVote,
-  )
+import Cardano.Chain.Update (
+  ApplicationName (..),
+  InstallerHash (..),
+  Payload,
+  Proof,
+  Proposal,
+  ProposalBody (..),
+  ProtocolParameters (..),
+  ProtocolParametersUpdate (..),
+  ProtocolVersion (..),
+  SoftforkRule (..),
+  SoftwareVersion (..),
+  SystemTag (..),
+  UpId,
+  Vote,
+  mkProof,
+  payload,
+  signProposal,
+  signVote,
+ )
 import Cardano.Crypto (ProtocolMagicId (..), serializeCborHash)
 import Cardano.Crypto.Raw (Raw (..))
 import Cardano.Prelude

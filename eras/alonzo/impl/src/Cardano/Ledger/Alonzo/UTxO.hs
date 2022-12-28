@@ -6,12 +6,12 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Alonzo.UTxO
-  ( AlonzoScriptsNeeded (..),
-    getAlonzoScriptsNeeded,
-    getAlonzoScriptsHashesNeeded,
-    getInputDataHashesTxBody,
-  )
+module Cardano.Ledger.Alonzo.UTxO (
+  AlonzoScriptsNeeded (..),
+  getAlonzoScriptsNeeded,
+  getAlonzoScriptsHashesNeeded,
+  getInputDataHashesTxBody,
+)
 where
 
 import Cardano.Ledger.Alonzo.Data (Datum (..))
@@ -27,11 +27,11 @@ import Cardano.Ledger.Shelley.Delegation.Certificates (DCert (..), DelegCert (..
 import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), Wdrl (..), getRwdCred)
 import Cardano.Ledger.Shelley.UTxO (scriptCred)
 import Cardano.Ledger.TxIn
-import Cardano.Ledger.UTxO
-  ( EraUTxO (..),
-    UTxO (..),
-    getScriptHash,
-  )
+import Cardano.Ledger.UTxO (
+  EraUTxO (..),
+  UTxO (..),
+  getScriptHash,
+ )
 import Control.SetAlgebra (eval, (◁))
 import Data.Foldable (foldl')
 import qualified Data.Map.Strict as Map

@@ -1,13 +1,13 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE RankNTypes #-}
 
-module Cardano.Ledger.Binary.Decoding.Sized
-  ( Sized (..),
-    mkSized,
-    decodeSized,
-    sizedDecoder,
-    toSizedL,
-  )
+module Cardano.Ledger.Binary.Decoding.Sized (
+  Sized (..),
+  mkSized,
+  decodeSized,
+  sizedDecoder,
+  toSizedL,
+)
 where
 
 import Cardano.Ledger.Binary.Decoding.Annotated (Annotated (..), ByteSpan (..), annotatedDecoder)
@@ -28,10 +28,10 @@ import NoThunks.Class (NoThunks)
 --
 -- Use `mkSized` to construct such value.
 data Sized a = Sized
-  { sizedValue :: !a,
-    -- | Overhead in bytes. The field is lazy on purpose, because it might not
-    -- be needed, but it can be expensive to compute.
-    sizedSize :: Int64
+  { sizedValue :: !a
+  , sizedSize :: Int64
+  -- ^ Overhead in bytes. The field is lazy on purpose, because it might not
+  -- be needed, but it can be expensive to compute.
   }
   deriving (Eq, Show, Generic)
 
@@ -48,8 +48,8 @@ instance NFData a => NFData (Sized a) where
 mkSized :: ToCBOR a => Version -> a -> Sized a
 mkSized version a =
   Sized
-    { sizedValue = a,
-      sizedSize = BSL.length (serialize version a)
+    { sizedValue = a
+    , sizedSize = BSL.length (serialize version a)
     }
 
 decodeSized :: Decoder s a -> Decoder s (Sized a)

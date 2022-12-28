@@ -24,19 +24,19 @@ import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Era
-  ( PreviousEra,
-    TranslateEra (..),
-    TranslationContext,
-    translateEra',
-  )
+import Cardano.Ledger.Era (
+  PreviousEra,
+  TranslateEra (..),
+  TranslationContext,
+  translateEra',
+ )
 import Cardano.Ledger.HKD (HKDFunctor (..))
-import Cardano.Ledger.Shelley.API
-  ( EpochState (..),
-    NewEpochState (..),
-    ShelleyGenesis,
-    StrictMaybe (..),
-  )
+import Cardano.Ledger.Shelley.API (
+  EpochState (..),
+  NewEpochState (..),
+  ShelleyGenesis,
+  StrictMaybe (..),
+ )
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD)
 import qualified Data.Map.Strict as Map
@@ -68,41 +68,41 @@ instance
   translateEra ctxt nes =
     pure $
       NewEpochState
-        { nesEL = nesEL nes,
-          nesBprev = nesBprev nes,
-          nesBcur = nesBcur nes,
-          nesEs = translateEra' ctxt $ nesEs nes,
-          nesRu = nesRu nes,
-          nesPd = nesPd nes,
-          stashedAVVMAddresses = ()
+        { nesEL = nesEL nes
+        , nesBprev = nesBprev nes
+        , nesBcur = nesBcur nes
+        , nesEs = translateEra' ctxt $ nesEs nes
+        , nesRu = nesRu nes
+        , nesPd = nesPd nes
+        , stashedAVVMAddresses = ()
         }
 
 instance Crypto c => TranslateEra (BabbageEra c) ShelleyGenesis where
   translateEra ctxt genesis =
     pure
       API.ShelleyGenesis
-        { API.sgSystemStart = API.sgSystemStart genesis,
-          API.sgNetworkMagic = API.sgNetworkMagic genesis,
-          API.sgNetworkId = API.sgNetworkId genesis,
-          API.sgActiveSlotsCoeff = API.sgActiveSlotsCoeff genesis,
-          API.sgSecurityParam = API.sgSecurityParam genesis,
-          API.sgEpochLength = API.sgEpochLength genesis,
-          API.sgSlotsPerKESPeriod = API.sgSlotsPerKESPeriod genesis,
-          API.sgMaxKESEvolutions = API.sgMaxKESEvolutions genesis,
-          API.sgSlotLength = API.sgSlotLength genesis,
-          API.sgUpdateQuorum = API.sgUpdateQuorum genesis,
-          API.sgMaxLovelaceSupply = API.sgMaxLovelaceSupply genesis,
-          API.sgProtocolParams = translateEra' ctxt (API.sgProtocolParams genesis),
-          API.sgGenDelegs = API.sgGenDelegs genesis,
-          API.sgInitialFunds = API.sgInitialFunds genesis,
-          API.sgStaking = API.sgStaking genesis
+        { API.sgSystemStart = API.sgSystemStart genesis
+        , API.sgNetworkMagic = API.sgNetworkMagic genesis
+        , API.sgNetworkId = API.sgNetworkId genesis
+        , API.sgActiveSlotsCoeff = API.sgActiveSlotsCoeff genesis
+        , API.sgSecurityParam = API.sgSecurityParam genesis
+        , API.sgEpochLength = API.sgEpochLength genesis
+        , API.sgSlotsPerKESPeriod = API.sgSlotsPerKESPeriod genesis
+        , API.sgMaxKESEvolutions = API.sgMaxKESEvolutions genesis
+        , API.sgSlotLength = API.sgSlotLength genesis
+        , API.sgUpdateQuorum = API.sgUpdateQuorum genesis
+        , API.sgMaxLovelaceSupply = API.sgMaxLovelaceSupply genesis
+        , API.sgProtocolParams = translateEra' ctxt (API.sgProtocolParams genesis)
+        , API.sgGenDelegs = API.sgGenDelegs genesis
+        , API.sgInitialFunds = API.sgInitialFunds genesis
+        , API.sgStaking = API.sgStaking genesis
         }
 
 newtype Tx era = Tx {unTx :: Core.Tx era}
 
 instance
-  ( Crypto c,
-    Core.Tx (BabbageEra c) ~ AlonzoTx (BabbageEra c)
+  ( Crypto c
+  , Core.Tx (BabbageEra c) ~ AlonzoTx (BabbageEra c)
   ) =>
   TranslateEra (BabbageEra c) Tx
   where
@@ -129,31 +129,31 @@ instance Crypto c => TranslateEra (BabbageEra c) EpochState where
   translateEra ctxt es =
     pure
       EpochState
-        { esAccountState = esAccountState es,
-          esSnapshots = esSnapshots es,
-          esLState = translateEra' ctxt $ esLState es,
-          esPrevPp = translatePParams $ esPrevPp es,
-          esPp = translatePParams $ esPp es,
-          esNonMyopic = esNonMyopic es
+        { esAccountState = esAccountState es
+        , esSnapshots = esSnapshots es
+        , esLState = translateEra' ctxt $ esLState es
+        , esPrevPp = translatePParams $ esPrevPp es
+        , esPp = translatePParams $ esPp es
+        , esNonMyopic = esNonMyopic es
         }
 
 instance Crypto c => TranslateEra (BabbageEra c) API.LedgerState where
   translateEra ctxt ls =
     pure
       API.LedgerState
-        { API.lsUTxOState = translateEra' ctxt $ API.lsUTxOState ls,
-          API.lsDPState = API.lsDPState ls
+        { API.lsUTxOState = translateEra' ctxt $ API.lsUTxOState ls
+        , API.lsDPState = API.lsDPState ls
         }
 
 instance Crypto c => TranslateEra (BabbageEra c) API.UTxOState where
   translateEra ctxt us =
     pure
       API.UTxOState
-        { API.utxosUtxo = translateEra' ctxt $ API.utxosUtxo us,
-          API.utxosDeposited = API.utxosDeposited us,
-          API.utxosFees = API.utxosFees us,
-          API.utxosPpups = translateEra' ctxt $ API.utxosPpups us,
-          API.utxosStakeDistr = API.utxosStakeDistr us
+        { API.utxosUtxo = translateEra' ctxt $ API.utxosUtxo us
+        , API.utxosDeposited = API.utxosDeposited us
+        , API.utxosFees = API.utxosFees us
+        , API.utxosPpups = translateEra' ctxt $ API.utxosPpups us
+        , API.utxosStakeDistr = API.utxosStakeDistr us
         }
 
 instance Crypto c => TranslateEra (BabbageEra c) API.UTxO where
@@ -164,8 +164,8 @@ instance Crypto c => TranslateEra (BabbageEra c) API.PPUPState where
   translateEra ctxt ps =
     pure
       API.PPUPState
-        { API.proposals = translateEra' ctxt $ API.proposals ps,
-          API.futureProposals = translateEra' ctxt $ API.futureProposals ps
+        { API.proposals = translateEra' ctxt $ API.proposals ps
+        , API.futureProposals = translateEra' ctxt $ API.futureProposals ps
         }
 
 instance Crypto c => TranslateEra (BabbageEra c) API.ProposedPPUpdates where

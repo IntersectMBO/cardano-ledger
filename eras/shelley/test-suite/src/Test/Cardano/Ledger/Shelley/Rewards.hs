@@ -14,38 +14,38 @@
 -- a required set of properties. It works only in the Shelley Era. It could be
 -- generalized, and then moved to the Generator/Trace/ directory which computes
 -- property tests in all eras.
-module Test.Cardano.Ledger.Shelley.Rewards
-  ( rewardTests,
-    C,
-    defaultMain,
-    newEpochProp,
-    newEpochEventsProp,
-    ppAgg,
-    RewardUpdateOld (..),
-    createRUpdOld,
-    createRUpdOld_,
-  )
+module Test.Cardano.Ledger.Shelley.Rewards (
+  rewardTests,
+  C,
+  defaultMain,
+  newEpochProp,
+  newEpochEventsProp,
+  ppAgg,
+  RewardUpdateOld (..),
+  createRUpdOld,
+  createRUpdOld_,
+)
 where
 
 import qualified Cardano.Crypto.DSIGN as Crypto
 import Cardano.Crypto.Hash (Blake2b_256, hashToBytes)
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import qualified Cardano.Crypto.VRF as Crypto
-import Cardano.Ledger.BaseTypes
-  ( ActiveSlotCoeff,
-    BlocksMade (..),
-    BoundedRational (..),
-    Globals (..),
-    Network (..),
-    NonNegativeInterval,
-    ProtVer (..),
-    ShelleyBase,
-    StrictMaybe (..),
-    UnitInterval,
-    activeSlotVal,
-    epochInfoPure,
-    mkActiveSlotCoeff,
-  )
+import Cardano.Ledger.BaseTypes (
+  ActiveSlotCoeff,
+  BlocksMade (..),
+  BoundedRational (..),
+  Globals (..),
+  Network (..),
+  NonNegativeInterval,
+  ProtVer (..),
+  ShelleyBase,
+  StrictMaybe (..),
+  UnitInterval,
+  activeSlotVal,
+  epochInfoPure,
+  mkActiveSlotCoeff,
+ )
 import Cardano.Ledger.Binary (hashWithEncoder, natVersion, shelleyProtVer, toCBOR)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), rationalToCoinViaFloor, toDeltaCoin)
 import Cardano.Ledger.Compactible
@@ -53,67 +53,67 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (VRF)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.EpochBoundary
-  ( Stake (..),
-    maxPool,
-    poolStake,
-    sumAllStake,
-    sumStakePerPool,
-  )
+import Cardano.Ledger.EpochBoundary (
+  Stake (..),
+  maxPool,
+  poolStake,
+  sumAllStake,
+  sumStakePerPool,
+ )
 import Cardano.Ledger.Era (Era, EraCrypto)
-import Cardano.Ledger.Keys
-  ( KeyHash,
-    KeyRole (..),
-    VKey (..),
-    hashKey,
-  )
+import Cardano.Ledger.Keys (
+  KeyHash,
+  KeyRole (..),
+  VKey (..),
+  hashKey,
+ )
 import Cardano.Ledger.Pretty (PDoc, PrettyA (..), ppMap, ppReward, ppSet)
 import Cardano.Ledger.Shelley.API (NonMyopic, SnapShot (..), SnapShots (..))
 import Cardano.Ledger.Shelley.API.Types (PoolParams (..))
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
-import Cardano.Ledger.Shelley.LedgerState
-  ( AccountState (..),
-    DPState (..),
-    EpochState (..),
-    FilteredRewards (..),
-    LedgerState (..),
-    NewEpochState (..),
-    RewardUpdate (..),
-    circulation,
-    completeRupd,
-    createRUpd,
-    filterAllRewards,
-    lsDPState,
-    rewards,
-    updateNonMyopic,
-  )
-import Cardano.Ledger.Shelley.PParams
-  ( ShelleyPParams,
-    ShelleyPParamsHKD (..),
-    emptyPParams,
-  )
+import Cardano.Ledger.Shelley.LedgerState (
+  AccountState (..),
+  DPState (..),
+  EpochState (..),
+  FilteredRewards (..),
+  LedgerState (..),
+  NewEpochState (..),
+  RewardUpdate (..),
+  circulation,
+  completeRupd,
+  createRUpd,
+  filterAllRewards,
+  lsDPState,
+  rewards,
+  updateNonMyopic,
+ )
+import Cardano.Ledger.Shelley.PParams (
+  ShelleyPParams,
+  ShelleyPParamsHKD (..),
+  emptyPParams,
+ )
 import Cardano.Ledger.Shelley.PoolRank (Likelihood, leaderProbability, likelihood)
-import Cardano.Ledger.Shelley.RewardUpdate
-  ( FreeVars (..),
-    Pulser,
-    RewardAns (..),
-    RewardEvent,
-    RewardPulser (RSLP),
-  )
-import Cardano.Ledger.Shelley.Rewards
-  ( StakeShare (..),
-    aggregateRewards,
-    leaderRew,
-    memberRew,
-    mkApparentPerformance,
-    mkPoolRewardInfo,
-  )
-import Cardano.Ledger.Shelley.Rules
-  ( PulsingRewUpdate (..),
-    RupdEvent (RupdEvent),
-    ShelleyNewEpochEvent (DeltaRewardEvent, TotalRewardEvent),
-    ShelleyTickEvent (TickNewEpochEvent, TickRupdEvent),
-  )
+import Cardano.Ledger.Shelley.RewardUpdate (
+  FreeVars (..),
+  Pulser,
+  RewardAns (..),
+  RewardEvent,
+  RewardPulser (RSLP),
+ )
+import Cardano.Ledger.Shelley.Rewards (
+  StakeShare (..),
+  aggregateRewards,
+  leaderRew,
+  memberRew,
+  mkApparentPerformance,
+  mkPoolRewardInfo,
+ )
+import Cardano.Ledger.Shelley.Rules (
+  PulsingRewUpdate (..),
+  RupdEvent (RupdEvent),
+  ShelleyNewEpochEvent (DeltaRewardEvent, TotalRewardEvent),
+  ShelleyTickEvent (TickNewEpochEvent, TickRupdEvent),
+ )
 import Cardano.Ledger.Shelley.TxBody (RewardAcnt (..))
 import Cardano.Ledger.Slot (epochInfoSize)
 import qualified Cardano.Ledger.UMapCompact as UM
@@ -146,25 +146,25 @@ import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainEvent (..), ChainState (..)
 import Test.Cardano.Ledger.Shelley.Rules.TestChain (forAllChainTrace, forEachEpochTrace)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
-import Test.Cardano.Ledger.Shelley.Utils
-  ( runShelleyBase,
-    testGlobals,
-    unsafeBoundRational,
-  )
+import Test.Cardano.Ledger.Shelley.Utils (
+  runShelleyBase,
+  testGlobals,
+  unsafeBoundRational,
+ )
 import Test.Cardano.Ledger.TerseTools (Terse (..), tersemapdiffs)
 import Test.Tasty (TestTree, defaultMain, testGroup)
-import Test.Tasty.QuickCheck
-  ( Gen,
-    Property,
-    arbitrary,
-    choose,
-    counterexample,
-    elements,
-    property,
-    testProperty,
-    withMaxSuccess,
-    (===),
-  )
+import Test.Tasty.QuickCheck (
+  Gen,
+  Property,
+  arbitrary,
+  choose,
+  counterexample,
+  elements,
+  property,
+  testProperty,
+  withMaxSuccess,
+  (===),
+ )
 
 -- ========================================================================
 -- Bounds and Constants --
@@ -223,28 +223,28 @@ vrfKeyPair seed = (sk, vk)
           hashWithEncoder @Blake2b_256 shelleyProtVer toCBOR seed
 
 data PoolSetUpArgs c f = PoolSetUpArgs
-  { poolPledge :: f Coin,
-    poolCost :: f Coin,
-    poolMargin :: f UnitInterval,
-    poolMembers :: f (Map (Credential 'Staking c) Coin)
+  { poolPledge :: f Coin
+  , poolCost :: f Coin
+  , poolMargin :: f UnitInterval
+  , poolMembers :: f (Map (Credential 'Staking c) Coin)
   }
 
 emptySetupArgs :: PoolSetUpArgs c Maybe
 emptySetupArgs =
   PoolSetUpArgs
-    { poolPledge = Nothing,
-      poolCost = Nothing,
-      poolMargin = Nothing,
-      poolMembers = Nothing
+    { poolPledge = Nothing
+    , poolCost = Nothing
+    , poolMargin = Nothing
+    , poolMembers = Nothing
     }
 
 data PoolInfo c = PoolInfo
-  { params :: PoolParams c,
-    coldKey :: KeyPair 'StakePool c,
-    ownerKey :: KeyPair 'Staking c,
-    ownerStake :: Coin,
-    rewardKey :: KeyPair 'Staking c,
-    members :: Map (Credential 'Staking c) Coin
+  { params :: PoolParams c
+  , coldKey :: KeyPair 'StakePool c
+  , ownerKey :: KeyPair 'Staking c
+  , ownerStake :: Coin
+  , rewardKey :: KeyPair 'Staking c
+  , members :: Map (Credential 'Staking c) Coin
   }
 
 -- Generators --
@@ -282,15 +282,15 @@ genPoolInfo PoolSetUpArgs {poolPledge, poolCost, poolMargin, poolMembers} = do
   let members = Map.insert (KeyHashObj . hashKey . vKey $ ownerKey) ownerStake members'
       params =
         PoolParams
-          { ppId = hashKey . vKey $ coldKey,
-            ppVrf = Crypto.hashVerKeyVRF . snd $ vrfKey,
-            ppPledge = pledge,
-            ppCost = cost,
-            ppMargin = margin,
-            ppRewardAcnt = RewardAcnt Testnet . KeyHashObj . hashKey . vKey $ rewardKey,
-            ppOwners = Set.fromList [hashKey $ vKey ownerKey],
-            ppRelays = StrictSeq.empty,
-            ppMetadata = SNothing
+          { ppId = hashKey . vKey $ coldKey
+          , ppVrf = Crypto.hashVerKeyVRF . snd $ vrfKey
+          , ppPledge = pledge
+          , ppCost = cost
+          , ppMargin = margin
+          , ppRewardAcnt = RewardAcnt Testnet . KeyHashObj . hashKey . vKey $ rewardKey
+          , ppOwners = Set.fromList [hashKey $ vKey ownerKey]
+          , ppRelays = StrictSeq.empty
+          , ppMetadata = SNothing
           }
   pure $ PoolInfo {params, coldKey, ownerKey, ownerStake, rewardKey, members}
 
@@ -354,24 +354,24 @@ rewardsBoundedByPot _ = property $ do
   pure $
     counterexample
       ( mconcat
-          [ "pp\n",
-            show pp,
-            "\nrewardPot\n",
-            show rewardPot,
-            "\nrewardAcnts\n",
-            show rewardAcnts,
-            "\npoolParams\n",
-            show poolParams,
-            "\nstake\n",
-            show stake,
-            "\ndelegs\n",
-            show delegs,
-            "\ntotalLovelace\n",
-            show totalLovelace,
-            "\nasc\n",
-            show asc,
-            "\nslotsPerEpoch\n",
-            show slotsPerEpoch
+          [ "pp\n"
+          , show pp
+          , "\nrewardPot\n"
+          , show rewardPot
+          , "\nrewardAcnts\n"
+          , show rewardAcnts
+          , "\npoolParams\n"
+          , show poolParams
+          , "\nstake\n"
+          , show stake
+          , "\ndelegs\n"
+          , show delegs
+          , "\ntotalLovelace\n"
+          , show totalLovelace
+          , "\nasc\n"
+          , show asc
+          , "\nslotsPerEpoch\n"
+          , show slotsPerEpoch
           ]
       )
       (fold (fmap Core.rewardAmount rs) < rewardPot)
@@ -381,10 +381,10 @@ rewardsBoundedByPot _ = property $ do
 -- change the result of reward calculation. we reproduce the old style functions here.
 
 rewardOnePool ::
-  ( HasField "_d" (Core.PParams era) UnitInterval,
-    HasField "_a0" (Core.PParams era) NonNegativeInterval,
-    HasField "_nOpt" (Core.PParams era) Natural,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer
+  ( HasField "_d" (Core.PParams era) UnitInterval
+  , HasField "_a0" (Core.PParams era) NonNegativeInterval
+  , HasField "_nOpt" (Core.PParams era) Natural
+  , HasField "_protocolVersion" (Core.PParams era) ProtVer
   ) =>
   Core.PParams era ->
   Coin ->
@@ -426,15 +426,15 @@ rewardOnePool
       tot = fromIntegral totalStake
       mRewards =
         Map.fromList
-          [ ( hk,
-              memberRew
+          [ ( hk
+            , memberRew
                 poolR
                 pool
                 (StakeShare (unCoin (fromCompact c) % tot))
                 (StakeShare sigma)
             )
-            | (hk, c) <- VMap.toAscList stake,
-              notPoolOwner hk
+          | (hk, c) <- VMap.toAscList stake
+          , notPoolOwner hk
           ]
       notPoolOwner (KeyHashObj hk) = hk `Set.notMember` ppOwners pool
       notPoolOwner (ScriptHashObj _) = True
@@ -458,10 +458,10 @@ rewardOnePool
 
 rewardOld ::
   forall era.
-  ( HasField "_d" (Core.PParams era) UnitInterval,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "_a0" (Core.PParams era) NonNegativeInterval,
-    HasField "_nOpt" (Core.PParams era) Natural
+  ( HasField "_d" (Core.PParams era) UnitInterval
+  , HasField "_protocolVersion" (Core.PParams era) ProtVer
+  , HasField "_a0" (Core.PParams era) NonNegativeInterval
+  , HasField "_nOpt" (Core.PParams era) Natural
   ) =>
   Core.PParams era ->
   BlocksMade (EraCrypto era) ->
@@ -475,8 +475,8 @@ rewardOld ::
   EpochSize ->
   ( Map
       (Credential 'Staking (EraCrypto era))
-      Coin,
-    Map (KeyHash 'StakePool (EraCrypto era)) Likelihood
+      Coin
+  , Map (KeyHash 'StakePool (EraCrypto era)) Likelihood
   )
 rewardOld
   pp
@@ -529,22 +529,22 @@ rewardOld
       hs = Map.fromList $ fmap (\(hk, _, l) -> (hk, l)) results
 
 data RewardUpdateOld c = RewardUpdateOld
-  { deltaTOld :: !DeltaCoin,
-    deltaROld :: !DeltaCoin,
-    rsOld :: !(Map (Credential 'Staking c) Coin),
-    deltaFOld :: !DeltaCoin,
-    nonMyopicOld :: !(NonMyopic c)
+  { deltaTOld :: !DeltaCoin
+  , deltaROld :: !DeltaCoin
+  , rsOld :: !(Map (Credential 'Staking c) Coin)
+  , deltaFOld :: !DeltaCoin
+  , nonMyopicOld :: !(NonMyopic c)
   }
   deriving (Show, Eq)
 
 createRUpdOld ::
   forall era.
-  ( HasField "_d" (Core.PParams era) UnitInterval,
-    HasField "_rho" (Core.PParams era) UnitInterval,
-    HasField "_tau" (Core.PParams era) UnitInterval,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "_a0" (Core.PParams era) NonNegativeInterval,
-    HasField "_nOpt" (Core.PParams era) Natural
+  ( HasField "_d" (Core.PParams era) UnitInterval
+  , HasField "_rho" (Core.PParams era) UnitInterval
+  , HasField "_tau" (Core.PParams era) UnitInterval
+  , HasField "_protocolVersion" (Core.PParams era) ProtVer
+  , HasField "_a0" (Core.PParams era) NonNegativeInterval
+  , HasField "_nOpt" (Core.PParams era) Natural
   ) =>
   EpochSize ->
   BlocksMade (EraCrypto era) ->
@@ -561,12 +561,12 @@ createRUpdOld slotsPerEpoch b es@(EpochState acnt ss ls pr _ nm) maxSupply =
 
 createRUpdOld_ ::
   forall era.
-  ( HasField "_d" (Core.PParams era) UnitInterval,
-    HasField "_rho" (Core.PParams era) UnitInterval,
-    HasField "_tau" (Core.PParams era) UnitInterval,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "_a0" (Core.PParams era) NonNegativeInterval,
-    HasField "_nOpt" (Core.PParams era) Natural
+  ( HasField "_d" (Core.PParams era) UnitInterval
+  , HasField "_rho" (Core.PParams era) UnitInterval
+  , HasField "_tau" (Core.PParams era) UnitInterval
+  , HasField "_protocolVersion" (Core.PParams era) ProtVer
+  , HasField "_a0" (Core.PParams era) NonNegativeInterval
+  , HasField "_nOpt" (Core.PParams era) Natural
   ) =>
   EpochSize ->
   BlocksMade (EraCrypto era) ->
@@ -614,11 +614,11 @@ createRUpdOld_ slotsPerEpoch b@(BlocksMade b') ss (Coin reserves) pr totalStake 
       blocksMade = fromIntegral $ Map.foldr (+) 0 b' :: Integer
   pure $
     RewardUpdateOld
-      { deltaTOld = DeltaCoin deltaT1,
-        deltaROld = invert (toDeltaCoin deltaR1) <> toDeltaCoin deltaR2,
-        rsOld = rs_,
-        deltaFOld = invert (toDeltaCoin $ ssFee ss),
-        nonMyopicOld = updateNonMyopic nm _R newLikelihoods
+      { deltaTOld = DeltaCoin deltaT1
+      , deltaROld = invert (toDeltaCoin deltaR1) <> toDeltaCoin deltaR2
+      , rsOld = rs_
+      , deltaFOld = invert (toDeltaCoin $ ssFee ss)
+      , nonMyopicOld = updateNonMyopic nm _R newLikelihoods
       }
 
 overrideProtocolVersionUsedInRewardCalc ::
@@ -634,8 +634,8 @@ overrideProtocolVersionUsedInRewardCalc pv es =
 
 oldEqualsNew ::
   forall era.
-  ( era ~ C,
-    Core.PParams era ~ ShelleyPParams era
+  ( era ~ C
+  , Core.PParams era ~ ShelleyPParams era
   ) =>
   ProtVer ->
   NewEpochState era ->
@@ -664,8 +664,8 @@ oldEqualsNew pv newepochstate =
 
 oldEqualsNewOn ::
   forall era.
-  ( era ~ C,
-    Core.PParams era ~ ShelleyPParams era
+  ( era ~ C
+  , Core.PParams era ~ ShelleyPParams era
   ) =>
   ProtVer ->
   NewEpochState era ->
@@ -742,8 +742,8 @@ eventsMirrorRewards events nes = same eventRew compRew
       case nesRu nes of
         SNothing -> (total, aggFilteredEvent)
         SJust pulser ->
-          ( Map.unionWith Set.union (rs completed) total,
-            Map.unionWith Set.union lastevent aggevent
+          ( Map.unionWith Set.union (rs completed) total
+          , Map.unionWith Set.union lastevent aggevent
           )
           where
             (completed, lastevent) = complete pulser
@@ -816,11 +816,11 @@ reward
       pp_pv = _protocolVersion pp
       free =
         FreeVars
-          { addrsRew,
-            totalStake,
-            pp_pv,
-            poolRewardInfo,
-            delegs
+          { addrsRew
+          , totalStake
+          , pp_pv
+          , poolRewardInfo
+          , delegs
           }
       pulser :: Pulser (EraCrypto era)
       pulser = RSLP 2 free (unStake stake) (RewardAns Map.empty Map.empty)
@@ -837,13 +837,13 @@ rewardTests =
   testGroup
     "Reward Tests"
     [ testProperty "Sum of rewards is bounded by reward pot" $
-        withMaxSuccess numberOfTests (rewardsBoundedByPot (Proxy @C)),
-      testProperty "compare with reference impl, no provenance, v3" $
-        newEpochProp chainlen (oldEqualsNew @C (ProtVer (natVersion @3) 0)),
-      testProperty "compare with reference impl, no provenance, v7" $
-        newEpochProp chainlen (oldEqualsNew @C (ProtVer (natVersion @7) 0)),
-      testProperty "compare with reference impl, with provenance" $
-        newEpochProp chainlen (oldEqualsNewOn @C (ProtVer (natVersion @3) 0)),
-      testProperty "delta events mirror reward updates" $
+        withMaxSuccess numberOfTests (rewardsBoundedByPot (Proxy @C))
+    , testProperty "compare with reference impl, no provenance, v3" $
+        newEpochProp chainlen (oldEqualsNew @C (ProtVer (natVersion @3) 0))
+    , testProperty "compare with reference impl, no provenance, v7" $
+        newEpochProp chainlen (oldEqualsNew @C (ProtVer (natVersion @7) 0))
+    , testProperty "compare with reference impl, with provenance" $
+        newEpochProp chainlen (oldEqualsNewOn @C (ProtVer (natVersion @3) 0))
+    , testProperty "delta events mirror reward updates" $
         newEpochEventsProp chainlen eventsMirrorRewards
     ]

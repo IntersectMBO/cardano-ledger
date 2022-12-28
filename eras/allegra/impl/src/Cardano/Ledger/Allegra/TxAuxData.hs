@@ -15,12 +15,12 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Allegra.TxAuxData
-  ( AllegraTxAuxData (AllegraTxAuxData, AllegraTxAuxData', ..),
+module Cardano.Ledger.Allegra.TxAuxData (
+  AllegraTxAuxData (AllegraTxAuxData, AllegraTxAuxData', ..),
 
-    -- * Deprecations
-    AuxiliaryData,
-  )
+  -- * Deprecations
+  AuxiliaryData,
+)
 where
 
 import Cardano.Crypto.Hash (HashAlgorithm)
@@ -29,35 +29,35 @@ import Cardano.Ledger.Allegra.Scripts (Timelock)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Binary (Annotator (..), FromCBOR (..), ToCBOR (..), peekTokenType)
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.Core
-  ( Era (..),
-    EraTxAuxData (hashTxAuxData, validateTxAuxData),
-    Script,
-  )
+import Cardano.Ledger.Core (
+  Era (..),
+  EraTxAuxData (hashTxAuxData, validateTxAuxData),
+  Script,
+ )
 import qualified Cardano.Ledger.Core as Core (TxAuxData)
 import Cardano.Ledger.Crypto (Crypto (HASH))
 import Cardano.Ledger.Hashes (EraIndependentTxAuxData)
-import Cardano.Ledger.MemoBytes
-  ( Mem,
-    MemoBytes,
-    MemoHashIndex,
-    Memoized (RawType),
-    getMemoRawType,
-    getMemoSafeHash,
-    mkMemoized,
-  )
+import Cardano.Ledger.MemoBytes (
+  Mem,
+  MemoBytes,
+  MemoHashIndex,
+  Memoized (RawType),
+  getMemoRawType,
+  getMemoSafeHash,
+  mkMemoized,
+ )
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash, hashAnnotated)
 import Cardano.Ledger.Shelley.TxAuxData (Metadatum, validMetadatum)
-import Codec.CBOR.Decoding
-  ( TokenType
-      ( TypeListLen,
-        TypeListLen64,
-        TypeListLenIndef,
-        TypeMapLen,
-        TypeMapLen64,
-        TypeMapLenIndef
-      ),
-  )
+import Codec.CBOR.Decoding (
+  TokenType (
+    TypeListLen,
+    TypeListLen64,
+    TypeListLenIndef,
+    TypeMapLen,
+    TypeMapLen64,
+    TypeMapLenIndef
+  ),
+ )
 import Control.DeepSeq (NFData, deepseq)
 import Data.Map.Strict (Map)
 import Data.Sequence.Strict (StrictSeq)
@@ -70,13 +70,13 @@ import NoThunks.Class (NoThunks)
 
 -- | Raw, un-memoised metadata type
 data AllegraTxAuxDataRaw era = AllegraTxAuxDataRaw
-  { -- | Structured transaction metadata
-    atadrMetadata :: !(Map Word64 Metadatum),
-    -- | Pre-images of script hashes found within the TxBody, but which are not
-    -- required as witnesses. Examples include:
-    -- - Token policy IDs appearing in transaction outputs
-    -- - Pool reward account registrations
-    atadrTimelock :: !(StrictSeq (Timelock era))
+  { atadrMetadata :: !(Map Word64 Metadatum)
+  -- ^ Structured transaction metadata
+  , atadrTimelock :: !(StrictSeq (Timelock era))
+  -- ^ Pre-images of script hashes found within the TxBody, but which are not
+  -- required as witnesses. Examples include:
+  -- - Token policy IDs appearing in transaction outputs
+  -- - Pool reward account registrations
   }
   deriving (Generic, Eq)
 

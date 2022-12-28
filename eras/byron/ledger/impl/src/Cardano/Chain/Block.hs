@@ -1,6 +1,6 @@
-module Cardano.Chain.Block
-  ( module X,
-  )
+module Cardano.Chain.Block (
+  module X,
+)
 where
 
 import Cardano.Chain.Block.Block as X

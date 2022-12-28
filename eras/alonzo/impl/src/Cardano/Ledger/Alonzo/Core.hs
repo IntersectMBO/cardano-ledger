@@ -1,10 +1,10 @@
 {-# LANGUAGE DataKinds #-}
 
-module Cardano.Ledger.Alonzo.Core
-  ( AlonzoEraTxBody (..),
-    ScriptIntegrityHash,
-    module Cardano.Ledger.Mary.Core,
-  )
+module Cardano.Ledger.Alonzo.Core (
+  AlonzoEraTxBody (..),
+  ScriptIntegrityHash,
+  module Cardano.Ledger.Mary.Core,
+)
 where
 
 import Cardano.Ledger.Alonzo.TxOut (AlonzoEraTxOut)

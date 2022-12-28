@@ -4,12 +4,12 @@
 {-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Crypto.Signing.SigningKey
-  ( SigningKey (..),
-    toVerification,
-    toCBORXPrv,
-    fromCBORXPrv,
-  )
+module Cardano.Crypto.Signing.SigningKey (
+  SigningKey (..),
+  toVerification,
+  toCBORXPrv,
+  fromCBORXPrv,
+)
 where
 
 import Cardano.Crypto.Signing.VerificationKey (VerificationKey (..), shortVerificationKeyHexF)

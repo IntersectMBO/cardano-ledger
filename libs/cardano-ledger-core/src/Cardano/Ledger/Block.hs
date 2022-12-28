@@ -14,26 +14,26 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Ledger.Block
-  ( Block (Block, Block', UnserialisedBlock, UnsafeUnserialisedBlock),
-    bheader,
-    bbody,
-    neededTxInsForBlock,
-    txid,
-  )
+module Cardano.Ledger.Block (
+  Block (Block, Block', UnserialisedBlock, UnsafeUnserialisedBlock),
+  bheader,
+  bbody,
+  neededTxInsForBlock,
+  txid,
+)
 where
 
-import Cardano.Ledger.Binary
-  ( Annotator (..),
-    FromCBOR (fromCBOR),
-    ToCBOR (..),
-    ToCBORGroup (..),
-    annotatorSlice,
-    decodeRecordNamed,
-    encodeListLen,
-    encodePreEncoded,
-    serializeEncoding,
-  )
+import Cardano.Ledger.Binary (
+  Annotator (..),
+  FromCBOR (fromCBOR),
+  ToCBOR (..),
+  ToCBORGroup (..),
+  annotatorSlice,
+  decodeRecordNamed,
+  encodeListLen,
+  encodePreEncoded,
+  serializeEncoding,
+ )
 import Cardano.Ledger.Core
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
@@ -59,17 +59,17 @@ deriving stock instance
   Eq (Block h era)
 
 deriving anyclass instance
-  ( Era era,
-    NoThunks (TxSeq era),
-    NoThunks h
+  ( Era era
+  , NoThunks (TxSeq era)
+  , NoThunks h
   ) =>
   NoThunks (Block h era)
 
 pattern Block ::
   forall era h.
-  ( Era era,
-    ToCBORGroup (TxSeq era),
-    ToCBOR h
+  ( Era era
+  , ToCBORGroup (TxSeq era)
+  , ToCBOR h
   ) =>
   h ->
   TxSeq era ->
@@ -118,9 +118,9 @@ instance (EraTx era, Typeable h) => ToCBOR (Block h era) where
 
 instance
   forall h era.
-  ( EraSegWits era,
-    FromCBOR (Annotator h),
-    Typeable h
+  ( EraSegWits era
+  , FromCBOR (Annotator h)
+  , Typeable h
   ) =>
   FromCBOR (Annotator (Block h era))
   where

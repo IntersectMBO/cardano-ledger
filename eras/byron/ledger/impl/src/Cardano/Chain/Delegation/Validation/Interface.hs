@@ -5,17 +5,17 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections #-}
 
-module Cardano.Chain.Delegation.Validation.Interface
-  ( -- * Blockchain Interface
-    Environment (..),
-    State (..),
-    activateDelegations,
-    delegates,
-    delegationMap,
-    initialState,
-    tickDelegation,
-    updateDelegation,
-  )
+module Cardano.Chain.Delegation.Validation.Interface (
+  -- * Blockchain Interface
+  Environment (..),
+  State (..),
+  activateDelegations,
+  delegates,
+  delegationMap,
+  initialState,
+  tickDelegation,
+  updateDelegation,
+)
 where
 
 import Cardano.Chain.Common (BlockCount (..), KeyHash, hashKey)
@@ -24,20 +24,20 @@ import Cardano.Chain.Delegation.Certificate (ACertificate, Certificate)
 import qualified Cardano.Chain.Delegation.Validation.Activation as Activation
 import qualified Cardano.Chain.Delegation.Validation.Scheduling as Scheduling
 import Cardano.Chain.Genesis (GenesisDelegation (..))
-import Cardano.Chain.Slotting
-  ( EpochNumber,
-    SlotNumber (..),
-  )
+import Cardano.Chain.Slotting (
+  EpochNumber,
+  SlotNumber (..),
+ )
 import Cardano.Crypto (ProtocolMagicId, VerificationKey)
-import Cardano.Ledger.Binary
-  ( Annotated (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    byronProtVer,
-    encodeListLen,
-    enforceSize,
-    serialize',
-  )
+import Cardano.Ledger.Binary (
+  Annotated (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  byronProtVer,
+  encodeListLen,
+  enforceSize,
+  serialize',
+ )
 import Cardano.Prelude hiding (State)
 import qualified Data.Map.Strict as M
 import qualified Data.Sequence as Seq
@@ -49,18 +49,18 @@ import NoThunks.Class (NoThunks (..))
 --------------------------------------------------------------------------------
 
 data Environment = Environment
-  { protocolMagic :: !(Annotated ProtocolMagicId ByteString),
-    allowedDelegators :: !(Set KeyHash),
-    k :: !BlockCount,
-    currentEpoch :: !EpochNumber,
-    currentSlot :: !SlotNumber
+  { protocolMagic :: !(Annotated ProtocolMagicId ByteString)
+  , allowedDelegators :: !(Set KeyHash)
+  , k :: !BlockCount
+  , currentEpoch :: !EpochNumber
+  , currentSlot :: !SlotNumber
   }
   deriving (Eq, Show, Generic, NFData)
 
 -- | State shared between the blockchain and the ledger
 data State = State
-  { schedulingState :: !Scheduling.State,
-    activationState :: !Activation.State
+  { schedulingState :: !Scheduling.State
+  , activationState :: !Activation.State
   }
   deriving (Eq, Show, Generic, NFData, NoThunks)
 
@@ -99,15 +99,15 @@ initialState env genesisDelegation = updateDelegation env' is certificates
       State
         { schedulingState =
             Scheduling.State
-              { Scheduling.scheduledDelegations = mempty,
-                Scheduling.keyEpochDelegations = mempty
-              },
-          activationState =
+              { Scheduling.scheduledDelegations = mempty
+              , Scheduling.keyEpochDelegations = mempty
+              }
+        , activationState =
             Activation.State
               { Activation.delegationMap =
                   Delegation.fromList $
-                    zip (toList allowedDelegators) (toList allowedDelegators),
-                Activation.delegationSlots =
+                    zip (toList allowedDelegators) (toList allowedDelegators)
+              , Activation.delegationSlots =
                   M.fromList $
                     (,SlotNumber 0)
                       <$> toList allowedDelegators
@@ -123,8 +123,8 @@ initialState env genesisDelegation = updateDelegation env' is certificates
         { Delegation.aEpoch =
             Annotated
               (Delegation.epoch c)
-              (serialize' byronProtVer $ Delegation.epoch c),
-          Delegation.annotation = serialize' byronProtVer c
+              (serialize' byronProtVer $ Delegation.epoch c)
+        , Delegation.annotation = serialize' byronProtVer c
         }
 
 -- | Check whether a delegation is valid in the 'State'
@@ -161,11 +161,11 @@ updateDelegation env is certificates = do
 
     schedulingEnv =
       Scheduling.Environment
-        { Scheduling.protocolMagic = protocolMagic,
-          Scheduling.allowedDelegators = allowedDelegators,
-          Scheduling.currentEpoch = currentEpoch,
-          Scheduling.currentSlot = currentSlot,
-          Scheduling.k = k
+        { Scheduling.protocolMagic = protocolMagic
+        , Scheduling.allowedDelegators = allowedDelegators
+        , Scheduling.currentEpoch = currentEpoch
+        , Scheduling.currentSlot = currentSlot
+        , Scheduling.k = k
         }
 
 -- | Perform delegation update without adding certificates
@@ -200,8 +200,8 @@ pruneScheduledDelegations currentEpoch currentSlot ss =
         { Scheduling.scheduledDelegations =
             Seq.filter
               ((currentSlot + 1 <=) . Scheduling.sdSlot)
-              delegations,
-          Scheduling.keyEpochDelegations =
+              delegations
+        , Scheduling.keyEpochDelegations =
             Set.filter
               ((>= currentEpoch) . fst)
               keyEpochs

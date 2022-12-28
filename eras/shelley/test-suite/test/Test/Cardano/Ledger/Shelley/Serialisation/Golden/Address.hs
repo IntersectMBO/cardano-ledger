@@ -14,16 +14,16 @@ import Cardano.Crypto.Hash (HashAlgorithm (..), hashFromBytes, hashFromTextAsHex
 import Cardano.Crypto.Hash.Blake2b (Blake2b_224)
 import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes (Network (..), mkCertIxPartial, mkTxIxPartial)
-import Cardano.Ledger.Credential
-  ( Credential (..),
-    Ptr (..),
-    StakeReference (..),
-  )
+import Cardano.Ledger.Credential (
+  Credential (..),
+  Ptr (..),
+  StakeReference (..),
+ )
 import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Keys
-  ( KeyRole (..),
-    pattern KeyHash,
-  )
+import Cardano.Ledger.Keys (
+  KeyRole (..),
+  pattern KeyHash,
+ )
 import Cardano.Ledger.Shelley.Scripts (pattern ScriptHash)
 import Cardano.Ledger.Slot (SlotNo (..))
 import qualified Data.Binary as B
@@ -47,8 +47,8 @@ tests :: TestTree
 tests =
   T.testGroup
     "Address golden tests"
-    [ goldenTests_MockCrypto,
-      goldenTests_ShelleyCrypto
+    [ goldenTests_MockCrypto
+    , goldenTests_ShelleyCrypto
     ]
 
 {------------------------------------------------------------------------------
@@ -59,55 +59,55 @@ goldenTests_MockCrypto :: TestTree
 goldenTests_MockCrypto =
   T.testGroup
     "MockCrypto golden tests"
-    [ golden "keyHash" putCredential keyHash keyHashHex,
-      golden "scriptHash" putCredential scriptHash scriptHashHex,
-      golden "ptr" putPtr ptr ptrHex,
-      golden
+    [ golden "keyHash" putCredential keyHash keyHashHex
+    , golden "scriptHash" putCredential scriptHash scriptHashHex
+    , golden "ptr" putPtr ptr ptrHex
+    , golden
         "addrBaseKK"
         putAddr
         (Addr Testnet keyHash (StakeRefBase keyHash))
-        ("00" <> keyHashHex <> keyHashHex),
-      golden
+        ("00" <> keyHashHex <> keyHashHex)
+    , golden
         "addrBaseSK"
         putAddr
         (Addr Testnet scriptHash (StakeRefBase keyHash))
-        ("10" <> scriptHashHex <> keyHashHex),
-      golden
+        ("10" <> scriptHashHex <> keyHashHex)
+    , golden
         "addrBaseKS"
         putAddr
         (Addr Testnet keyHash (StakeRefBase scriptHash))
-        ("20" <> keyHashHex <> scriptHashHex),
-      golden
+        ("20" <> keyHashHex <> scriptHashHex)
+    , golden
         "addrBaseSS"
         putAddr
         (Addr Testnet scriptHash (StakeRefBase scriptHash))
-        ("30" <> scriptHashHex <> scriptHashHex),
-      golden
+        ("30" <> scriptHashHex <> scriptHashHex)
+    , golden
         "addrPtrK"
         putAddr
         (Addr Testnet keyHash (StakeRefPtr ptr))
-        ("40" <> keyHashHex <> ptrHex),
-      golden
+        ("40" <> keyHashHex <> ptrHex)
+    , golden
         "addrPtrS"
         putAddr
         (Addr Testnet scriptHash (StakeRefPtr ptr))
-        ("50" <> scriptHashHex <> ptrHex),
-      golden
+        ("50" <> scriptHashHex <> ptrHex)
+    , golden
         "addrEnterpriseK"
         putAddr
         (Addr Testnet keyHash StakeRefNull)
-        ("60" <> keyHashHex),
-      golden
+        ("60" <> keyHashHex)
+    , golden
         "addrEnterpriseS"
         putAddr
         (Addr Testnet scriptHash StakeRefNull)
-        ("70" <> scriptHashHex),
-      golden
+        ("70" <> scriptHashHex)
+    , golden
         "rewardAcntK"
         putRewardAcnt
         (RewardAcnt Testnet keyHash)
-        ("e0" <> keyHashHex),
-      golden
+        ("e0" <> keyHashHex)
+    , golden
         "rewardAcntS"
         putRewardAcnt
         (RewardAcnt Testnet scriptHash)
@@ -143,57 +143,57 @@ goldenTests_ShelleyCrypto =
         "addrEnterpriseK for network id = 0"
         putAddr
         (Addr Testnet paymentKey StakeRefNull)
-        "608a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d4",
-      golden
+        "608a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d4"
+    , golden
         "addrBaseKK for network id = 0"
         putAddr
         (Addr Testnet paymentKey (StakeRefBase stakeKey))
-        "008a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d408b2d658668c2e341ee5bda4477b63c5aca7ec7ae4e3d196163556a4",
-      golden
+        "008a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d408b2d658668c2e341ee5bda4477b63c5aca7ec7ae4e3d196163556a4"
+    , golden
         "addrPtrK for network id = 0"
         putAddr
         (Addr Testnet paymentKey (StakeRefPtr ptr))
-        "408a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d481000203",
-      golden
+        "408a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d481000203"
+    , golden
         "addrEnterpriseK for network id = 1"
         putAddr
         (Addr Mainnet paymentKey StakeRefNull)
-        "618a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d4",
-      golden
+        "618a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d4"
+    , golden
         "addrBaseKK for network id = 1"
         putAddr
         (Addr Mainnet paymentKey (StakeRefBase stakeKey))
-        "018a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d408b2d658668c2e341ee5bda4477b63c5aca7ec7ae4e3d196163556a4",
-      golden
+        "018a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d408b2d658668c2e341ee5bda4477b63c5aca7ec7ae4e3d196163556a4"
+    , golden
         "addrPtrK for network id = 1"
         putAddr
         (Addr Mainnet paymentKey (StakeRefPtr ptr))
-        "418a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d481000203",
-      golden
+        "418a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d481000203"
+    , golden
         "rewardAcntK"
         putRewardAcnt
         (RewardAcnt Testnet stakeKey)
-        "e008b2d658668c2e341ee5bda4477b63c5aca7ec7ae4e3d196163556a4",
-      golden
+        "e008b2d658668c2e341ee5bda4477b63c5aca7ec7ae4e3d196163556a4"
+    , golden
         "bootstrapAddr for network id = 1"
         putAddr
         ( AddrBootstrap . BootstrapAddress $
             Byron.Address
-              { Byron.addrRoot = read "4bf3c2ee56bfef278d65f7388c46efa12a1069698e474f77adf0cf6a",
-                Byron.addrAttributes =
+              { Byron.addrRoot = read "4bf3c2ee56bfef278d65f7388c46efa12a1069698e474f77adf0cf6a"
+              , Byron.addrAttributes =
                   Byron.Attributes
                     { Byron.attrData =
                         Byron.AddrAttributes
-                          { Byron.aaVKDerivationPath = Nothing,
-                            Byron.aaNetworkMagic = Byron.NetworkMainOrStage
-                          },
-                      Byron.attrRemain = Byron.UnparsedFields mempty
-                    },
-                Byron.addrType = Byron.ATVerKey
+                          { Byron.aaVKDerivationPath = Nothing
+                          , Byron.aaNetworkMagic = Byron.NetworkMainOrStage
+                          }
+                    , Byron.attrRemain = Byron.UnparsedFields mempty
+                    }
+              , Byron.addrType = Byron.ATVerKey
               }
         )
-        "82d818582183581c4bf3c2ee56bfef278d65f7388c46efa12a1069698e474f77adf0cf6aa0001ab4aad9a5",
-      T.testCase "fail on extraneous bytes" $
+        "82d818582183581c4bf3c2ee56bfef278d65f7388c46efa12a1069698e474f77adf0cf6aa0001ab4aad9a5"
+    , T.testCase "fail on extraneous bytes" $
         case deserialiseAddr @StandardCrypto addressWithExtraneousBytes of
           Nothing -> pure ()
           Just _a -> error "This should have failed"

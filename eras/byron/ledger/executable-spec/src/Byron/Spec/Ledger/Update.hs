@@ -18,45 +18,45 @@
 -- This is for the Hashable Set instance
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Byron.Spec.Ledger.Update
-  ( module Byron.Spec.Ledger.Update,
-    PredicateFailure (),
-  )
+module Byron.Spec.Ledger.Update (
+  module Byron.Spec.Ledger.Update,
+  PredicateFailure (),
+)
 where
 
-import Byron.Spec.Ledger.Core
-  ( BlockCount (..),
-    HasHash,
-    Owner (Owner),
-    Relation (..),
-    Slot,
-    SlotCount (..),
-    VKey (VKey),
-    VKeyGenesis (VKeyGenesis),
-    dom,
-    hash,
-    (*.),
-    (-.),
-    (∈),
-    (∉),
-    (⋪),
-    (▷),
-    (▷<=),
-    (▷>=),
-    (◁),
-    (⨃),
-  )
+import Byron.Spec.Ledger.Core (
+  BlockCount (..),
+  HasHash,
+  Owner (Owner),
+  Relation (..),
+  Slot,
+  SlotCount (..),
+  VKey (VKey),
+  VKeyGenesis (VKeyGenesis),
+  dom,
+  hash,
+  (*.),
+  (-.),
+  (∈),
+  (∉),
+  (⋪),
+  (▷),
+  (▷<=),
+  (▷>=),
+  (◁),
+  (⨃),
+ )
 import qualified Byron.Spec.Ledger.Core as Core
 import qualified Byron.Spec.Ledger.Core.Generators as CoreGen
 import Byron.Spec.Ledger.Core.Omniscient (skey)
 import qualified Byron.Spec.Ledger.GlobalParams as GP
 import Control.Arrow (second, (&&&))
 import Control.State.Transition
-import Control.State.Transition.Generator
-  ( HasTrace,
-    envGen,
-    sigGen,
-  )
+import Control.State.Transition.Generator (
+  HasTrace,
+  envGen,
+  sigGen,
+ )
 import Data.AbstractSize (HasTypeReps)
 import Data.Bimap (Bimap, empty, lookupR)
 import qualified Data.Bimap as Bimap
@@ -109,33 +109,33 @@ newtype BkSgnCntT = BkSgnCntT Double
 
 -- | Protocol parameters.
 data PParams = PParams -- TODO: this should be a module of @byron-spec-ledger@.
-  { -- | Maximum (abstract) block size in words
-    _maxBkSz :: !Natural,
-    -- | Maximum (abstract) block header size in words
-    _maxHdrSz :: !Natural,
-    -- | Maximum (abstract) transaction size in words
-    _maxTxSz :: !Natural,
-    -- | Maximum (abstract) update proposal size in words
-    _maxPropSz :: !Natural,
-    -- | Fraction [0, 1] of the blocks that can be signed by any given key in a
-    -- window of lenght '_bkSgnCntW'. This value will be typically between 1/5
-    -- and 1/4
-    _bkSgnCntT :: !BkSgnCntT,
-    -- | Number of slots in an epoch.
-    -- TODO: this should be removed since the number of slots per epoch should remain constant.
-    _bkSlotsPerEpoch :: !Core.SlotCount,
-    -- | Update proposal TTL in slots
-    _upTtl :: !Core.SlotCount,
-    -- | Script version
-    _scriptVersion :: !Natural,
-    -- | Update adoption threshold: a proportion of block issuers that have to
-    -- endorse a given version to become candidate for adoption
-    _upAdptThd :: !UpAdptThd,
-    -- | Minimum fees per transaction
-    _factorA :: !FactorA, -- TODO: these should have type 'Word64', like in `cardano-ledger`.
+  { _maxBkSz :: !Natural
+  -- ^ Maximum (abstract) block size in words
+  , _maxHdrSz :: !Natural
+  -- ^ Maximum (abstract) block header size in words
+  , _maxTxSz :: !Natural
+  -- ^ Maximum (abstract) transaction size in words
+  , _maxPropSz :: !Natural
+  -- ^ Maximum (abstract) update proposal size in words
+  , _bkSgnCntT :: !BkSgnCntT
+  -- ^ Fraction [0, 1] of the blocks that can be signed by any given key in a
+  -- window of lenght '_bkSgnCntW'. This value will be typically between 1/5
+  -- and 1/4
+  , _bkSlotsPerEpoch :: !Core.SlotCount
+  -- ^ Number of slots in an epoch.
+  -- TODO: this should be removed since the number of slots per epoch should remain constant.
+  , _upTtl :: !Core.SlotCount
+  -- ^ Update proposal TTL in slots
+  , _scriptVersion :: !Natural
+  -- ^ Script version
+  , _upAdptThd :: !UpAdptThd
+  -- ^ Update adoption threshold: a proportion of block issuers that have to
+  -- endorse a given version to become candidate for adoption
+  , _factorA :: !FactorA -- TODO: these should have type 'Word64', like in `cardano-ledger`.
 
-    -- | Additional fees per transaction size
-    _factorB :: !FactorB
+  -- ^ Minimum fees per transaction
+  , _factorB :: !FactorB
+  -- ^ Additional fees per transaction size
   }
   deriving (Eq, Generic, Ord, Show, Hashable, Data, Typeable, NoThunks)
 
@@ -150,9 +150,9 @@ newtype UpId = UpId Int
 
 -- | Protocol version
 data ProtVer = ProtVer
-  { _pvMaj :: Natural,
-    _pvMin :: Natural,
-    _pvAlt :: Natural
+  { _pvMaj :: Natural
+  , _pvMin :: Natural
+  , _pvAlt :: Natural
   }
   deriving (Eq, Generic, Ord, Show, Hashable, Data, Typeable, NoThunks)
 
@@ -174,8 +174,8 @@ newtype ApVer = ApVer Natural
 instance HasTypeReps ApVer
 
 data SwVer = SwVer
-  { _svName :: ApName,
-    _svVer :: ApVer
+  { _svName :: ApName
+  , _svVer :: ApVer
   }
   deriving (Eq, Generic, Show, Hashable, Data, Typeable, NoThunks)
 
@@ -185,11 +185,11 @@ instance HasTypeReps SwVer
 
 -- | Part of the update proposal which must be signed
 type UpSD =
-  ( ProtVer,
-    PParams,
-    SwVer,
-    Set STag,
-    Metadata
+  ( ProtVer
+  , PParams
+  , SwVer
+  , Set STag
+  , Metadata
   )
 
 -- | System tag, this represents a target operating system for the update (e.g.
@@ -202,16 +202,16 @@ data Metadata = Metadata
 
 -- | Update proposal
 data UProp = UProp
-  { _upId :: UpId,
-    _upIssuer :: Core.VKey,
-    _upParams :: PParams,
-    _upPV :: ProtVer,
-    _upSwVer :: SwVer,
-    _upSig :: Core.Sig UpSD,
-    -- | System tags involved in the update proposal.
-    _upSTags :: Set STag,
-    -- | Metadata required for performing software updates.
-    _upMdt :: Metadata
+  { _upId :: UpId
+  , _upIssuer :: Core.VKey
+  , _upParams :: PParams
+  , _upPV :: ProtVer
+  , _upSwVer :: SwVer
+  , _upSig :: Core.Sig UpSD
+  , _upSTags :: Set STag
+  -- ^ System tags involved in the update proposal.
+  , _upMdt :: Metadata
+  -- ^ Metadata required for performing software updates.
   }
   deriving (Eq, Generic, Show, Hashable, Data, Typeable, NoThunks)
 
@@ -254,14 +254,14 @@ mkUProp aUpId issuer pv pps sv stags mdt = uprop
   where
     uprop =
       UProp
-        { _upId = aUpId,
-          _upIssuer = issuer,
-          _upParams = pps,
-          _upPV = pv,
-          _upSwVer = sv,
-          _upSig = Core.sign (skey issuer) (uprop ^. upSigData),
-          _upSTags = stags,
-          _upMdt = mdt
+        { _upId = aUpId
+        , _upIssuer = issuer
+        , _upParams = pps
+        , _upPV = pv
+        , _upSwVer = sv
+        , _upSig = Core.sign (skey issuer) (uprop ^. upSigData)
+        , _upSTags = stags
+        , _upMdt = mdt
         }
 
 instance HasTypeReps (ProtVer, PParams, SwVer, Set STag, Metadata)
@@ -336,12 +336,12 @@ checkUpdateConstraints ::
 checkUpdateConstraints pps prop =
   catMaybes
     [ (prop ^. upParams . maxBkSz <=? 2 * pps ^. maxBkSz)
-        `orError` BlockSizeTooLarge,
-      (prop ^. upParams . maxTxSz + 1 <=? prop ^. upParams . maxBkSz)
-        `orError` TransactionSizeTooLarge,
-      (pps ^. scriptVersion <=? prop ^. upParams . scriptVersion)
-        `orError` ScriptVersionTooSmall,
-      (prop ^. upParams . scriptVersion <=? pps ^. scriptVersion + 1)
+        `orError` BlockSizeTooLarge
+    , (prop ^. upParams . maxTxSz + 1 <=? prop ^. upParams . maxBkSz)
+        `orError` TransactionSizeTooLarge
+    , (pps ^. scriptVersion <=? prop ^. upParams . scriptVersion)
+        `orError` ScriptVersionTooSmall
+    , (prop ^. upParams . scriptVersion <=? pps ^. scriptVersion + 1)
         `orError` ScriptVersionTooLarge
     ]
 
@@ -434,8 +434,8 @@ data UppvvPredicateFailure
 instance STS UPPVV where
   type
     Environment UPPVV =
-      ( ProtVer,
-        PParams
+      ( ProtVer
+      , PParams
       )
   type State UPPVV = Map UpId (ProtVer, PParams)
   type Signal UPPVV = UProp
@@ -469,15 +469,15 @@ data UpvPredicateFailure
 instance STS UPV where
   type
     Environment UPV =
-      ( ProtVer,
-        PParams,
-        Map ApName (ApVer, Core.Slot, Metadata)
+      ( ProtVer
+      , PParams
+      , Map ApName (ApVer, Core.Slot, Metadata)
       )
 
   type
     State UPV =
-      ( Map UpId (ProtVer, PParams),
-        Map UpId (ApName, ApVer, Metadata)
+      ( Map UpId (ProtVer, PParams)
+      , Map UpId (ApName, ApVer, Metadata)
       )
 
   type Signal UPV = UProp
@@ -487,31 +487,31 @@ instance STS UPV where
   transitionRules =
     [ do
         TRC
-          ( (pv, pps, avs),
-            (rpus, raus),
-            up
+          ( (pv, pps, avs)
+            , (rpus, raus)
+            , up
             ) <-
           judgmentContext
         rpus' <- trans @UPPVV $ TRC ((pv, pps), rpus, up)
         let SwVer an av = up ^. upSwVer
         inMap an av (swVer <$> avs) ?! AVChangedInPVUpdate an av (Map.lookup an avs)
-        pure $! (rpus', raus),
-      do
+        pure $! (rpus', raus)
+    , do
         TRC
-          ( (pv, pps, avs),
-            (rpus, raus),
-            up
+          ( (pv, pps, avs)
+            , (rpus, raus)
+            , up
             ) <-
           judgmentContext
         pv == up ^. upPV ?! PVChangedInSVUpdate
         up ^. upParams == pps ?! ParamsChangedInSVUpdate
         raus' <- trans @UPSVV $ TRC (avs, raus, up)
-        pure $! (rpus, raus'),
-      do
+        pure $! (rpus, raus')
+    , do
         TRC
-          ( (pv, pps, avs),
-            (rpus, raus),
-            up
+          ( (pv, pps, avs)
+            , (rpus, raus)
+            , up
             ) <-
           judgmentContext
         rpus' <- trans @UPPVV $ TRC ((pv, pps), rpus, up)
@@ -539,15 +539,15 @@ data UpregPredicateFailure
 instance STS UPREG where
   type
     Environment UPREG =
-      ( ProtVer,
-        PParams,
-        Map ApName (ApVer, Core.Slot, Metadata),
-        Bimap Core.VKeyGenesis Core.VKey
+      ( ProtVer
+      , PParams
+      , Map ApName (ApVer, Core.Slot, Metadata)
+      , Bimap Core.VKeyGenesis Core.VKey
       )
   type
     State UPREG =
-      ( Map UpId (ProtVer, PParams),
-        Map UpId (ApName, ApVer, Metadata)
+      ( Map UpId (ProtVer, PParams)
+      , Map UpId (ApName, ApVer, Metadata)
       )
   type Signal UPREG = UProp
   type PredicateFailure UPREG = UpregPredicateFailure
@@ -556,9 +556,9 @@ instance STS UPREG where
   transitionRules =
     [ do
         TRC
-          ( (pv, pps, avs, dms),
-            (rpus, raus),
-            up
+          ( (pv, pps, avs, dms)
+            , (rpus, raus)
+            , up
             ) <-
           judgmentContext
         (rpus', raus') <- trans @UPV $ TRC ((pv, pps, avs), (rpus, raus), up)
@@ -576,9 +576,9 @@ instance Embed UPV UPREG where
 ------------------------------------------------------------------------
 
 data Vote = Vote
-  { _vCaster :: Core.VKey,
-    _vPropId :: UpId,
-    _vSig :: Core.Sig UpId
+  { _vCaster :: Core.VKey
+  , _vPropId :: UpId
+  , _vSig :: Core.Sig UpId
   }
   deriving (Eq, Generic, Show, Hashable, Data, Typeable, NoThunks)
 
@@ -589,9 +589,9 @@ instance HasTypeReps Vote
 mkVote :: Core.VKey -> UpId -> Vote
 mkVote caster proposalId =
   Vote
-    { _vCaster = caster,
-      _vPropId = proposalId,
-      _vSig = Core.sign (skey caster) proposalId
+    { _vCaster = caster
+    , _vPropId = proposalId
+    , _vSig = Core.sign (skey caster) proposalId
     }
 
 instance HasHash (Maybe Byron.Spec.Ledger.Update.UProp, [Byron.Spec.Ledger.Update.Vote]) where
@@ -610,8 +610,8 @@ data AddvotePredicateFailure
 instance STS ADDVOTE where
   type
     Environment ADDVOTE =
-      ( Set UpId,
-        Bimap Core.VKeyGenesis Core.VKey
+      ( Set UpId
+      , Bimap Core.VKeyGenesis Core.VKey
       )
   type State ADDVOTE = Set (UpId, Core.VKeyGenesis)
   type Signal ADDVOTE = Vote
@@ -621,9 +621,9 @@ instance STS ADDVOTE where
   transitionRules =
     [ do
         TRC
-          ( (rups, dms),
-            vts,
-            vote
+          ( (rups, dms)
+            , vts
+            , vote
             ) <-
           judgmentContext
         let pid = vote ^. vPropId
@@ -654,15 +654,15 @@ data UpvotePredicateFailure
 instance STS UPVOTE where
   type
     Environment UPVOTE =
-      ( Core.Slot,
-        Word8,
-        Set UpId,
-        Bimap Core.VKeyGenesis Core.VKey
+      ( Core.Slot
+      , Word8
+      , Set UpId
+      , Bimap Core.VKeyGenesis Core.VKey
       )
   type
     State UPVOTE =
-      ( Map UpId Core.Slot,
-        Set (UpId, Core.VKeyGenesis)
+      ( Map UpId Core.Slot
+      , Set (UpId, Core.VKeyGenesis)
       )
   type Signal UPVOTE = Vote
   type PredicateFailure UPVOTE = UpvotePredicateFailure
@@ -671,23 +671,23 @@ instance STS UPVOTE where
   transitionRules =
     [ do
         TRC
-          ( (_, t, rups, dms),
-            (cps, vts),
-            vote
+          ( (_, t, rups, dms)
+            , (cps, vts)
+            , vote
             ) <-
           judgmentContext
         vts' <- trans @ADDVOTE $ TRC ((rups, dms), vts, vote)
         let pid = vote ^. vPropId
         size ([pid] ◁ vts') < t || pid ∈ dom cps ?! S_HigherThanThdAndNotAlreadyConfirmed
         pure $!
-          ( cps,
-            vts'
-          ),
-      do
+          ( cps
+          , vts'
+          )
+    , do
         TRC
-          ( (sn, t, rups, dms),
-            (cps, vts),
-            vote
+          ( (sn, t, rups, dms)
+            , (cps, vts)
+            , vote
             ) <-
           judgmentContext
         vts' <- trans @ADDVOTE $ TRC ((rups, dms), vts, vote)
@@ -695,8 +695,8 @@ instance STS UPVOTE where
         t <= size ([pid] ◁ vts') ?! S_CfmThdNotReached
         pid ∉ dom cps ?! S_AlreadyConfirmed
         pure $!
-          ( cps ⨃ [(pid, sn)],
-            vts'
+          ( cps ⨃ [(pid, sn)]
+          , vts'
           )
     ]
 
@@ -722,9 +722,9 @@ instance STS FADS where
   transitionRules =
     [ do
         TRC
-          ( (),
-            fads,
-            (sn, (bv, ppsc))
+          ( ()
+            , fads
+            , (sn, (bv, ppsc))
             ) <-
           judgmentContext
         return $ case fads of
@@ -760,20 +760,20 @@ data UpendPredicateFailure
 instance STS UPEND where
   type
     Environment UPEND =
-      ( Core.Slot, -- Current slot number
-        Natural, -- Adoption threshold
-        Bimap VKeyGenesis VKey, -- Delegation map
-        Map UpId Core.Slot, -- Confirmed proposals
-        Map UpId (ProtVer, PParams), -- Registered update proposals
-        BlockCount -- Chain stability parameter. This
-        -- is deemed to be a global
-        -- constant that we temporarily put
-        -- there.
+      ( Core.Slot -- Current slot number
+      , Natural -- Adoption threshold
+      , Bimap VKeyGenesis VKey -- Delegation map
+      , Map UpId Core.Slot -- Confirmed proposals
+      , Map UpId (ProtVer, PParams) -- Registered update proposals
+      , BlockCount -- Chain stability parameter. This
+      -- is deemed to be a global
+      -- constant that we temporarily put
+      -- there.
       )
   type
     State UPEND =
-      ( [(Core.Slot, (ProtVer, PParams))],
-        Set (ProtVer, Core.VKeyGenesis)
+      ( [(Core.Slot, (ProtVer, PParams))]
+      , Set (ProtVer, Core.VKeyGenesis)
       )
   type Signal UPEND = (ProtVer, Core.VKey)
   type PredicateFailure UPEND = UpendPredicateFailure
@@ -782,9 +782,9 @@ instance STS UPEND where
   transitionRules =
     [ do
         TRC
-          ( (sn, _t, _dms, cps, rpus, k),
-            (fads, bvs),
-            (bv, _vk)
+          ( (sn, _t, _dms, cps, rpus, k)
+            , (fads, bvs)
+            , (bv, _vk)
             ) <-
           judgmentContext
         case findKey ((== bv) . fst) rpus of
@@ -802,12 +802,12 @@ instance STS UPEND where
             -- failure if the condition of the '!?' operator is not met. Since
             -- even on failure we _need_ to return a state, the case above also
             -- returns the state unchanged in this case.
-            pure $! (fads, bvs),
-      do
+            pure $! (fads, bvs)
+    , do
         TRC
-          ( (sn, t, dms, cps, rpus, k),
-            (fads, bvs),
-            (bv, vk)
+          ( (sn, t, dms, cps, rpus, k)
+            , (fads, bvs)
+            , (bv, vk)
             ) <-
           judgmentContext
         case lookupR vk dms of
@@ -823,12 +823,12 @@ instance STS UPEND where
                 pure $! (fads, bvs')
               Nothing -> do
                 False ?! S_TryNextRule
-                pure $! (fads, bvs'),
-      do
+                pure $! (fads, bvs')
+    , do
         TRC
-          ( (sn, t, dms, cps, rpus, k),
-            (fads, bvs),
-            (bv, vk)
+          ( (sn, t, dms, cps, rpus, k)
+            , (fads, bvs)
+            , (bv, vk)
             ) <-
           judgmentContext
         case lookupR vk dms of
@@ -858,14 +858,14 @@ instance Embed FADS UPEND where
 -- | The update interface environment is shared amongst various rules, so
 --   we define it as an alias here.
 type UPIEnv =
-  ( Core.Slot,
-    Bimap Core.VKeyGenesis Core.VKey,
-    BlockCount, -- This is a global constant in the formal
-    -- specification, which we put in this environment so
-    -- that we can test with different values of it.
-    Word8 -- Number of genesis keys, @ngk@. Also a global constant in the
-    -- formal specification which is placed here so that we can test
-    -- with different values.
+  ( Core.Slot
+  , Bimap Core.VKeyGenesis Core.VKey
+  , BlockCount -- This is a global constant in the formal
+  -- specification, which we put in this environment so
+  -- that we can test with different values of it.
+  , Word8 -- Number of genesis keys, @ngk@. Also a global constant in the
+  -- formal specification which is placed here so that we can test
+  -- with different values.
   )
 
 delegationMap :: UPIEnv -> Bimap Core.VKeyGenesis Core.VKey
@@ -874,15 +874,15 @@ delegationMap (_, dms, _, _) = dms
 -- | The update interface state is shared amongst various rules, so we define it
 -- as an alias here.
 type UPIState =
-  ( (ProtVer, PParams), -- (pv, pps)
-    [(Core.Slot, (ProtVer, PParams))], -- fads
-    Map ApName (ApVer, Core.Slot, Metadata), -- avs
-    Map UpId (ProtVer, PParams), -- rpus
-    Map UpId (ApName, ApVer, Metadata), -- raus
-    Map UpId Core.Slot, -- cps
-    Set (UpId, Core.VKeyGenesis), -- vts
-    Set (ProtVer, Core.VKeyGenesis), -- bvs
-    Map UpId Core.Slot -- pws
+  ( (ProtVer, PParams) -- (pv, pps)
+  , [(Core.Slot, (ProtVer, PParams))] -- fads
+  , Map ApName (ApVer, Core.Slot, Metadata) -- avs
+  , Map UpId (ProtVer, PParams) -- rpus
+  , Map UpId (ApName, ApVer, Metadata) -- raus
+  , Map UpId Core.Slot -- cps
+  , Set (UpId, Core.VKeyGenesis) -- vts
+  , Set (ProtVer, Core.VKeyGenesis) -- bvs
+  , Map UpId Core.Slot -- pws
   )
 
 fstUPIState :: UPIState -> (ProtVer, PParams)
@@ -896,36 +896,36 @@ trdUPIState (_, _, t, _, _, _, _, _, _) = t
 
 emptyUPIState :: UPIState
 emptyUPIState =
-  ( ( ProtVer 0 0 0,
-      initialPParams
-    ),
-    [],
-    Map.empty,
-    Map.empty,
-    Map.empty,
-    Map.empty,
-    Set.empty,
-    Set.empty,
-    Map.empty
+  (
+    ( ProtVer 0 0 0
+    , initialPParams
+    )
+  , []
+  , Map.empty
+  , Map.empty
+  , Map.empty
+  , Map.empty
+  , Set.empty
+  , Set.empty
+  , Map.empty
   )
 
 initialPParams :: PParams
 initialPParams =
   PParams -- TODO: choose more sensible default values
-    { _maxBkSz = 10000, -- max sizes chosen as non-zero to allow progress
-      _maxHdrSz = 1000,
-      _maxTxSz = 500,
-      _maxPropSz = 10,
-      _bkSgnCntT = 0.22, -- As defined in the spec.
-      _bkSlotsPerEpoch = 10, -- TODO: we need to remove this, since this should
-      -- be a constant. Also the name slots-per-epoch is
-      -- wrong.
-      _upTtl = 10, -- The proposal time to live needs to be related to @k@ (or the number
-      -- of slots in an epoch). We pick an arbitrary value here.
-      _scriptVersion = 0,
-      _upAdptThd = 0.6, -- Value currently used in mainet
-
-      -- To determine the factors @A@ and @B@ used in the calculation of the
+    { _maxBkSz = 10000 -- max sizes chosen as non-zero to allow progress
+    , _maxHdrSz = 1000
+    , _maxTxSz = 500
+    , _maxPropSz = 10
+    , _bkSgnCntT = 0.22 -- As defined in the spec.
+    , _bkSlotsPerEpoch = 10 -- TODO: we need to remove this, since this should
+    -- be a constant. Also the name slots-per-epoch is
+    -- wrong.
+    , _upTtl = 10 -- The proposal time to live needs to be related to @k@ (or the number
+    -- of slots in an epoch). We pick an arbitrary value here.
+    , _scriptVersion = 0
+    , _upAdptThd = 0.6 -- Value currently used in mainet
+    , -- To determine the factors @A@ and @B@ used in the calculation of the
       -- transaction fees we need to know the constant @C@ that we use to bound
       -- the size of a transaction.
       --
@@ -961,8 +961,8 @@ initialPParams =
       -- For now we choose small numbers here so that we do not need a high UTxO
       -- balance when generating the initial UTxO (see @module
       -- Byron.Spec.Ledger.UTxO.Generators@).
-      _factorA = FactorA 1, -- In mainet this value is set to 155381000000000 (A_C in the derivation above)
-      _factorB = FactorB (10 * fromIntegral GP.c) -- In mainet this value is set to 43946000000
+      _factorA = FactorA 1 -- In mainet this value is set to 155381000000000 (A_C in the derivation above)
+    , _factorB = FactorB (10 * fromIntegral GP.c) -- In mainet this value is set to 43946000000
     }
 
 protocolVersion :: UPIState -> ProtVer
@@ -1003,32 +1003,32 @@ instance STS UPIREG where
   transitionRules =
     [ do
         TRC
-          ( (sn, dms, _k, _ngk),
-            ( (pv, pps),
-              fads,
-              avs,
-              rpus,
-              raus,
-              cps,
-              vts,
-              bvs,
-              pws
-              ),
-            up
+          ( (sn, dms, _k, _ngk)
+            , ( (pv, pps)
+                , fads
+                , avs
+                , rpus
+                , raus
+                , cps
+                , vts
+                , bvs
+                , pws
+                )
+            , up
             ) <-
           judgmentContext
         (rpus', raus') <- trans @UPREG $ TRC ((pv, pps, avs, dms), (rpus, raus), up)
         let pws' = pws ⨃ [(up ^. upId, sn)]
         pure $!
-          ( (pv, pps),
-            fads,
-            avs,
-            rpus',
-            raus',
-            cps,
-            vts,
-            bvs,
-            pws'
+          ( (pv, pps)
+          , fads
+          , avs
+          , rpus'
+          , raus'
+          , cps
+          , vts
+          , bvs
+          , pws'
           )
     ]
 
@@ -1053,11 +1053,12 @@ instance HasTrace UPIREG where
           -- in which the protocol parameters change. Software only updates do
           -- not offer as many possible variations as protocol parameter updates
           -- do.
-          (10, generateUpdateProposalWith vk pps pv sv'),
-          -- Do not change the software version (unless there are no software
+          (10, generateUpdateProposalWith vk pps pv sv')
+        , -- Do not change the software version (unless there are no software
           -- versions in @avs@).
-          ( 45,
-            do
+
+          ( 45
+          , do
               -- Pick a current software version (if available)
               let makeSoftwareVersion (apName, (apVersion, _, _)) = SwVer apName apVersion
                   avsList = Map.toList avs
@@ -1067,8 +1068,8 @@ instance HasTrace UPIREG where
                   else makeSoftwareVersion <$> Gen.element avsList
 
               generateUpdateProposalWith vk pps' pv' currentSoftwareVersion
-          ),
-          -- Change protocol and software version.
+          )
+        , -- Change protocol and software version.
           (45, generateUpdateProposalWith vk pps' pv' sv')
         ]
     where
@@ -1098,8 +1099,8 @@ instance HasTrace UPIREG where
       pvGen =
         nextAltVersion
           <$> Gen.element
-            [ (_pvMaj pv + 1, 0),
-              (_pvMaj pv, _pvMin pv + 1)
+            [ (_pvMaj pv + 1, 0)
+            , (_pvMaj pv, _pvMin pv + 1)
             ]
         where
           -- Get the next alternate version, alt, so that @(maj, min, alt)@
@@ -1262,17 +1263,17 @@ ppsUpdateFrom pps = do
     <*> nextFactorB
   where
     PParams
-      { _maxBkSz,
-        _maxHdrSz,
-        _maxTxSz,
-        _maxPropSz,
-        _bkSgnCntT,
-        _bkSlotsPerEpoch,
-        _upTtl,
-        _scriptVersion,
-        _upAdptThd,
-        _factorA,
-        _factorB
+      { _maxBkSz
+      , _maxHdrSz
+      , _maxTxSz
+      , _maxPropSz
+      , _bkSgnCntT
+      , _bkSlotsPerEpoch
+      , _upTtl
+      , _scriptVersion
+      , _upAdptThd
+      , _factorA
+      , _factorB
       } = pps
 
     FactorA fA = _factorA
@@ -1367,9 +1368,9 @@ increasingProbabilityAt ::
   Gen a
 increasingProbabilityAt gen (lower, upper) =
   Gen.frequency
-    [ (5, pure lower),
-      (90, gen),
-      (5, pure upper)
+    [ (5, pure lower)
+    , (90, gen)
+    , (5, pure upper)
     ]
 
 -- | Generate a random update proposal id, by picking a large number so that the
@@ -1399,44 +1400,46 @@ instance STS UPIVOTE where
   transitionRules =
     [ do
         TRC
-          ( (sn, dms, _k, ngk),
-            ( (pv, pps),
-              fads,
-              avs,
-              rpus,
-              raus,
-              cps,
-              vts,
-              bvs,
-              pws
-              ),
-            v
+          ( (sn, dms, _k, ngk)
+            , ( (pv, pps)
+                , fads
+                , avs
+                , rpus
+                , raus
+                , cps
+                , vts
+                , bvs
+                , pws
+                )
+            , v
             ) <-
           judgmentContext
         let q = pps ^. upAdptThd
         (cps', vts') <-
           trans @UPVOTE $
             TRC
-              ( ( sn,
-                  floor $ q * fromIntegral ngk,
-                  dom pws,
-                  dms
-                ),
-                ( cps,
-                  vts
-                ),
-                v
+              (
+                ( sn
+                , floor $ q * fromIntegral ngk
+                , dom pws
+                , dms
+                )
+              ,
+                ( cps
+                , vts
+                )
+              , v
               )
         pure $!
-          ( (pv, pps),
-            fads,
-            avs,
-            rpus,
-            raus,
-            cps',
-            vts',
-            bvs,
-            pws
+          ( (pv, pps)
+          , fads
+          , avs
+          , rpus
+          , raus
+          , cps'
+          , vts'
+          , bvs
+          , pws
           )
     ]
 
@@ -1492,15 +1495,15 @@ instance STS UPIVOTES where
         -- Check which proposals are confirmed and stable, and update the
         -- application versions map.
         let (sn, _dms, _k, _ngk) = env
-            ( (pv, pps),
-              fads,
-              avs,
-              rpus,
-              raus,
-              cps,
-              vts,
-              bvs,
-              pws
+            ( (pv, pps)
+              , fads
+              , avs
+              , rpus
+              , raus
+              , cps
+              , vts
+              , bvs
+              , pws
               ) = us'
             -- Ideally we could bump application versions for those proposals that
             -- are stable, i.e. in:
@@ -1513,18 +1516,18 @@ instance STS UPIVOTES where
             cfmRaus = (dom cps) ◁ raus
             avsNew =
               [ (an, (av, sn, m))
-                | (an, av, m) <- toList cfmRaus
+              | (an, av, m) <- toList cfmRaus
               ]
         pure $!
-          ( (pv, pps),
-            fads,
-            avs ⨃ avsNew,
-            rpus,
-            (dom cps) ⋪ raus,
-            cps,
-            vts,
-            bvs,
-            pws
+          ( (pv, pps)
+          , fads
+          , avs ⨃ avsNew
+          , rpus
+          , (dom cps) ⋪ raus
+          , cps
+          , vts
+          , bvs
+          , pws
           )
     ]
 
@@ -1637,18 +1640,18 @@ instance STS UPIEND where
   transitionRules =
     [ do
         TRC
-          ( (sn, dms, k, ngk),
-            ( (pv, pps),
-              fads,
-              avs,
-              rpus,
-              raus,
-              cps,
-              vts,
-              bvs,
-              pws
-              ),
-            (bv, vk)
+          ( (sn, dms, k, ngk)
+            , ( (pv, pps)
+                , fads
+                , avs
+                , rpus
+                , raus
+                , cps
+                , vts
+                , bvs
+                , pws
+                )
+            , (bv, vk)
             ) <-
           judgmentContext
         let t = floor $ pps ^. upAdptThd * fromIntegral ngk
@@ -1658,15 +1661,15 @@ instance STS UPIEND where
             vskeep = dom (range rpus')
             rpus' = pidskeep ◁ rpus
         return
-          ( (pv, pps),
-            fads',
-            avs,
-            rpus',
-            pidskeep ◁ raus,
-            cps,
-            pidskeep ◁ vts,
-            vskeep ◁ bvs',
-            pidskeep ◁ pws
+          ( (pv, pps)
+          , fads'
+          , avs
+          , rpus'
+          , pidskeep ◁ raus
+          , cps
+          , pidskeep ◁ vts
+          , vskeep ◁ bvs'
+          , pidskeep ◁ pws
           )
     ]
 
@@ -1704,12 +1707,12 @@ data PvbumpPredicateFailure = NoPVBUMPFailure
 instance STS PVBUMP where
   type
     Environment PVBUMP =
-      ( Core.Slot,
-        [(Core.Slot, (ProtVer, PParams))],
-        BlockCount -- Chain stability parameter; this is a global
-        -- constant in the formal specification, which we put
-        -- in this environment so that we can test with
-        -- different values of it.
+      ( Core.Slot
+      , [(Core.Slot, (ProtVer, PParams))]
+      , BlockCount -- Chain stability parameter; this is a global
+      -- constant in the formal specification, which we put
+      -- in this environment so that we can test with
+      -- different values of it.
       )
   type
     State PVBUMP =
@@ -1738,11 +1741,11 @@ data UpiecPredicateFailure
 instance STS UPIEC where
   type
     Environment UPIEC =
-      ( Core.Epoch,
-        BlockCount -- Chain stability parameter; this is a global
-        -- constant in the formal specification, which we put
-        -- in this environment so that we can test with
-        -- different values of it.
+      ( Core.Epoch
+      , BlockCount -- Chain stability parameter; this is a global
+      -- constant in the formal specification, which we put
+      -- in this environment so that we can test with
+      -- different values of it.
       )
   type State UPIEC = UPIState
   type Signal UPIEC = ()
@@ -1761,19 +1764,19 @@ instance STS UPIEC where
           if pv == pv'
             then us
             else
-              ( (pv', pps') :: (ProtVer, PParams),
-                [] :: [(Core.Slot, (ProtVer, PParams))],
-                trdUPIState us :: Map ApName (ApVer, Core.Slot, Metadata),
-                Map.empty :: Map UpId (ProtVer, PParams),
-                -- Note that we delete the registered application proposals from the
+              ( (pv', pps') :: (ProtVer, PParams)
+              , [] :: [(Core.Slot, (ProtVer, PParams))]
+              , trdUPIState us :: Map ApName (ApVer, Core.Slot, Metadata)
+              , Map.empty :: Map UpId (ProtVer, PParams)
+              , -- Note that we delete the registered application proposals from the
                 -- state on epoch change, since adopting these depends on the @cps@
                 -- and @pws@ sets, which are deleted as well. So it doesn't seem
                 -- sensible to keep @raus@ around.
-                Map.empty :: Map UpId (ApName, ApVer, Metadata),
-                Map.empty :: Map UpId Core.Slot,
-                Set.empty :: Set (UpId, Core.VKeyGenesis),
-                Set.empty :: Set (ProtVer, Core.VKeyGenesis),
-                Map.empty :: Map UpId Core.Slot
+                Map.empty :: Map UpId (ApName, ApVer, Metadata)
+              , Map.empty :: Map UpId Core.Slot
+              , Set.empty :: Set (UpId, Core.VKeyGenesis)
+              , Set.empty :: Set (ProtVer, Core.VKeyGenesis)
+              , Map.empty :: Map UpId Core.Slot
               )
     ]
 
@@ -1796,8 +1799,8 @@ updateProposalAndVotesGen upienv upistate = do
     then generateUpdateProposalAndVotes
     else
       Gen.frequency
-        [ (5, generateOnlyVotes),
-          (1, generateUpdateProposalAndVotes)
+        [ (5, generateOnlyVotes)
+        , (1, generateUpdateProposalAndVotes)
         ]
   where
     generateOnlyVotes = (Nothing,) <$> sigGen @UPIVOTES upienv upistate

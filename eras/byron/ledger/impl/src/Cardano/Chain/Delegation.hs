@@ -1,6 +1,6 @@
-module Cardano.Chain.Delegation
-  ( module X,
-  )
+module Cardano.Chain.Delegation (
+  module X,
+)
 where
 
 import Cardano.Chain.Delegation.Certificate as X

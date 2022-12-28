@@ -20,19 +20,19 @@ import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Mary.TxBody (MaryTxBody (MaryTxBody))
 import Cardano.Ledger.Mary.TxOut (scaledMinDeposit)
-import Cardano.Ledger.Mary.Value
-  ( AssetName (..),
-    MaryValue (..),
-    MultiAsset,
-    PolicyID (..),
-    multiAssetFromList,
-    policies,
-  )
+import Cardano.Ledger.Mary.Value (
+  AssetName (..),
+  MaryValue (..),
+  MultiAsset,
+  PolicyID (..),
+  multiAssetFromList,
+  policies,
+ )
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..), Update)
-import Cardano.Ledger.Shelley.Tx
-  ( ShelleyTxOut (..),
-    TxIn,
-  )
+import Cardano.Ledger.Shelley.Tx (
+  ShelleyTxOut (..),
+  TxIn,
+ )
 import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl)
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (ShelleyTxWits))
 import Cardano.Ledger.Val ((<+>))
@@ -48,21 +48,21 @@ import qualified Data.Set as Set
 import GHC.Exts (fromString)
 import GHC.Records (HasField (getField))
 import Lens.Micro
-import Test.Cardano.Ledger.AllegraEraGen
-  ( genValidityInterval,
-    quantifyTL,
-    someLeaf,
-    unQuantifyTL,
-  )
+import Test.Cardano.Ledger.AllegraEraGen (
+  genValidityInterval,
+  quantifyTL,
+  someLeaf,
+  unQuantifyTL,
+ )
 import Test.Cardano.Ledger.EraBuffet (MaryEra)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv (..), genInteger)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..), MinGenTxout (..))
-import Test.Cardano.Ledger.Shelley.Generator.ScriptClass
-  ( ScriptClass (..),
-    exponential,
-  )
+import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (
+  ScriptClass (..),
+  exponential,
+ )
 import Test.Cardano.Ledger.Shelley.Generator.Update (genPParams, genShelleyPParamsUpdate)
 import Test.Cardano.Ledger.Shelley.Utils (Split (..))
 import Test.QuickCheck (Gen, arbitrary, frequency)
@@ -105,8 +105,8 @@ genAuxiliaryData ::
   Gen (StrictMaybe (TxAuxData (MaryEra c)))
 genAuxiliaryData Constants {frequencyTxWithMetadata} =
   frequency
-    [ (frequencyTxWithMetadata, SJust <$> arbitrary),
-      (100 - frequencyTxWithMetadata, pure SNothing)
+    [ (frequencyTxWithMetadata, SJust <$> arbitrary)
+    , (100 - frequencyTxWithMetadata, pure SNothing)
     ]
 
 -- | Carefully crafted to apply in any Era where Value is MaryValue
@@ -220,9 +220,9 @@ genYellow = do
 policyIndex :: Era era => Map (PolicyID (EraCrypto era)) (Timelock era)
 policyIndex =
   Map.fromList
-    [ (redCoinId, redCoins),
-      (blueCoinId, blueCoins),
-      (yellowCoinId, yellowCoins)
+    [ (redCoinId, redCoins)
+    , (blueCoinId, blueCoins)
+    , (yellowCoinId, yellowCoins)
     ]
 
 --------------------------------------------------------
@@ -262,8 +262,8 @@ genMint = do
 -- to meet the minUTxO requirment, if such an output exists.
 addTokens ::
   forall era.
-  ( EraGen era,
-    Value era ~ MaryValue (EraCrypto era)
+  ( EraGen era
+  , Value era ~ MaryValue (EraCrypto era)
   ) =>
   Proxy era ->
   StrictSeq (TxOut era) -> -- This is an accumuating parameter
@@ -281,10 +281,10 @@ addTokens _proxy _ _ _ StrictSeq.Empty = Nothing
 -- | This function is only good in the Mary Era
 genTxBody ::
   forall era.
-  ( EraGen era,
-    Value era ~ MaryValue (EraCrypto era),
-    PParams era ~ ShelleyPParams era,
-    TxOut era ~ ShelleyTxOut era
+  ( EraGen era
+  , Value era ~ MaryValue (EraCrypto era)
+  , PParams era ~ ShelleyPParams era
+  , TxOut era ~ ShelleyTxOut era
   ) =>
   ShelleyPParams era ->
   SlotNo ->
@@ -316,8 +316,8 @@ genTxBody pparams slot ins outs cert wdrl fee upd meta = do
         validityInterval
         upd
         meta
-        mint',
-      ps -- These additional scripts are for the minting policies.
+        mint'
+    , ps -- These additional scripts are for the minting policies.
     )
 
 instance Split (MaryValue era) where
@@ -325,8 +325,8 @@ instance Split (MaryValue era) where
   vsplit (MaryValue n mp) m
     | m <= 0 = error "must split coins into positive parts"
     | otherwise =
-        ( take (fromIntegral m) (MaryValue (n `div` m) mp : repeat (MaryValue (n `div` m) mempty)),
-          Coin (n `rem` m)
+        ( take (fromIntegral m) (MaryValue (n `div` m) mp : repeat (MaryValue (n `div` m) mempty))
+        , Coin (n `rem` m)
         )
 
 instance Mock c => MinGenTxout (MaryEra c) where

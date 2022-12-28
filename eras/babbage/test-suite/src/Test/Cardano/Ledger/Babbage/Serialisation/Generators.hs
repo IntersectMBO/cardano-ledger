@@ -34,10 +34,10 @@ instance (Era era, ToCBOR (f era), Arbitrary (f era)) => Arbitrary (Sized (f era
   arbitrary = mkSized (eraProtVerHigh @era) <$> arbitrary
 
 instance
-  ( EraTxOut era,
-    Mock (EraCrypto era),
-    Arbitrary (Value era),
-    Arbitrary (Script era)
+  ( EraTxOut era
+  , Mock (EraCrypto era)
+  , Arbitrary (Value era)
+  , Arbitrary (Script era)
   ) =>
   Arbitrary (BabbageTxOut era)
   where
@@ -49,12 +49,12 @@ instance
       <*> arbitrary
 
 instance
-  ( Mock (EraCrypto era),
-    BabbageEraTxBody era,
-    Arbitrary (Sized (TxOut era)),
-    Arbitrary (TxOut era),
-    Arbitrary (Value era),
-    Arbitrary (Script era)
+  ( Mock (EraCrypto era)
+  , BabbageEraTxBody era
+  , Arbitrary (Sized (TxOut era))
+  , Arbitrary (TxOut era)
+  , Arbitrary (Value era)
+  , Arbitrary (Script era)
   ) =>
   Arbitrary (BabbageTxBody era)
   where
@@ -133,38 +133,38 @@ instance Arbitrary (BabbagePParamsUpdate era) where
       <*> arbitrary
 
 instance
-  ( EraTxOut era,
-    Mock (EraCrypto era),
-    Arbitrary (Value era),
-    Arbitrary (TxOut era),
-    Arbitrary (PredicateFailure (EraRule "UTXOS" era))
+  ( EraTxOut era
+  , Mock (EraCrypto era)
+  , Arbitrary (Value era)
+  , Arbitrary (TxOut era)
+  , Arbitrary (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   Arbitrary (BabbageUtxoPredFailure era)
   where
   arbitrary =
     oneof
-      [ AlonzoInBabbageUtxoPredFailure <$> arbitrary,
-        IncorrectTotalCollateralField <$> arbitrary <*> arbitrary
+      [ AlonzoInBabbageUtxoPredFailure <$> arbitrary
+      , IncorrectTotalCollateralField <$> arbitrary <*> arbitrary
       ]
 
 instance
-  ( Era era,
-    Mock (EraCrypto era),
-    Arbitrary (PredicateFailure (EraRule "UTXO" era))
+  ( Era era
+  , Mock (EraCrypto era)
+  , Arbitrary (PredicateFailure (EraRule "UTXO" era))
   ) =>
   Arbitrary (BabbageUtxowPredFailure era)
   where
   arbitrary =
     oneof
-      [ AlonzoInBabbageUtxowPredFailure <$> arbitrary,
-        UtxoFailure <$> arbitrary,
-        MalformedScriptWitnesses <$> arbitrary,
-        MalformedReferenceScripts <$> arbitrary
+      [ AlonzoInBabbageUtxowPredFailure <$> arbitrary
+      , UtxoFailure <$> arbitrary
+      , MalformedScriptWitnesses <$> arbitrary
+      , MalformedReferenceScripts <$> arbitrary
       ]
 
 instance
-  ( Era era,
-    ToCBOR (PParamsUpdate era)
+  ( Era era
+  , ToCBOR (PParamsUpdate era)
   ) =>
   Twiddle (Update era)
   where
@@ -173,19 +173,19 @@ instance
 instance Twiddle a => Twiddle (Sized a)
 
 instance
-  ( Era era,
-    Val (Value era),
-    ToCBOR (Value era),
-    ToCBOR (Script era)
+  ( Era era
+  , Val (Value era)
+  , ToCBOR (Value era)
+  , ToCBOR (Script era)
   ) =>
   Twiddle (BabbageTxOut era)
   where
   twiddle v = twiddle v . toTerm v
 
 instance
-  ( Era era,
-    Twiddle (TxOut era),
-    BabbageEraTxBody era
+  ( Era era
+  , Twiddle (TxOut era)
+  , BabbageEraTxBody era
   ) =>
   Twiddle (BabbageTxBody era)
   where
@@ -211,25 +211,25 @@ instance
     referenceInputs <- emptyOrNothing v $ btbReferenceInputs txBody
     mp <- elements [TMap, TMapI]
     let fields =
-          [ (TInt 0, inputs'),
-            (TInt 1, outputs'),
-            (TInt 2, fee')
+          [ (TInt 0, inputs')
+          , (TInt 1, outputs')
+          , (TInt 2, fee')
           ]
             <> catMaybes
-              [ (TInt 3,) <$> ttl',
-                (TInt 4,) <$> cert',
-                (TInt 5,) <$> Just wdrls',
-                (TInt 6,) <$> update',
-                (TInt 7,) <$> auxDataHash',
-                (TInt 8,) <$> validityStart',
-                (TInt 9,) <$> Just mint',
-                (TInt 11,) <$> scriptDataHash',
-                (TInt 13,) <$> collateral',
-                (TInt 14,) <$> requiredSigners',
-                (TInt 15,) <$> networkId',
-                (TInt 16,) <$> collateralReturn,
-                (TInt 17,) <$> totalCollateral,
-                (TInt 18,) <$> referenceInputs
+              [ (TInt 3,) <$> ttl'
+              , (TInt 4,) <$> cert'
+              , (TInt 5,) <$> Just wdrls'
+              , (TInt 6,) <$> update'
+              , (TInt 7,) <$> auxDataHash'
+              , (TInt 8,) <$> validityStart'
+              , (TInt 9,) <$> Just mint'
+              , (TInt 11,) <$> scriptDataHash'
+              , (TInt 13,) <$> collateral'
+              , (TInt 14,) <$> requiredSigners'
+              , (TInt 15,) <$> networkId'
+              , (TInt 16,) <$> collateralReturn
+              , (TInt 17,) <$> totalCollateral
+              , (TInt 18,) <$> referenceInputs
               ]
     fields' <- shuffle fields
     pure $ mp fields'

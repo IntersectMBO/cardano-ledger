@@ -9,34 +9,34 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Crypto.Signing.Redeem.Compact
-  ( CompactRedeemVerificationKey (..),
-    fromCompactRedeemVerificationKey,
-    toCompactRedeemVerificationKey,
-  )
+module Cardano.Crypto.Signing.Redeem.Compact (
+  CompactRedeemVerificationKey (..),
+  fromCompactRedeemVerificationKey,
+  toCompactRedeemVerificationKey,
+)
 where
 
-import Cardano.Crypto.Signing.Redeem.VerificationKey
-  ( RedeemVerificationKey (..),
-    fromAvvmVK,
-    fromVerificationKeyToByteString,
-    redeemVKB64UrlF,
-    redeemVKBuild,
-  )
-import Cardano.Ledger.Binary
-  ( FromCBOR (..),
-    ToCBOR (..),
-    encodeListLen,
-    enforceSize,
-  )
+import Cardano.Crypto.Signing.Redeem.VerificationKey (
+  RedeemVerificationKey (..),
+  fromAvvmVK,
+  fromVerificationKeyToByteString,
+  redeemVKB64UrlF,
+  redeemVKBuild,
+ )
+import Cardano.Ledger.Binary (
+  FromCBOR (..),
+  ToCBOR (..),
+  encodeListLen,
+  enforceSize,
+ )
 import Cardano.Prelude
-import Data.Aeson
-  ( FromJSON (..),
-    FromJSONKey (..),
-    ToJSON (..),
-    ToJSONKey (..),
-    ToJSONKeyFunction (..),
-  )
+import Data.Aeson (
+  FromJSON (..),
+  FromJSONKey (..),
+  ToJSON (..),
+  ToJSONKey (..),
+  ToJSONKeyFunction (..),
+ )
 import qualified Data.Aeson.Encoding.Internal as A
 import qualified Data.Aeson.Key as A
 import Data.Binary.Get (Get, getWord64le, runGet)
@@ -44,12 +44,12 @@ import Data.Binary.Put (Put, putWord64le, runPut)
 import qualified Data.ByteString.Lazy as BSL (fromStrict, toStrict)
 import Formatting (build, formatToString, sformat)
 import NoThunks.Class (InspectHeap (..), NoThunks (..))
-import Text.JSON.Canonical
-  ( FromObjectKey (..),
-    JSValue (..),
-    ToObjectKey (..),
-    toJSString,
-  )
+import Text.JSON.Canonical (
+  FromObjectKey (..),
+  JSValue (..),
+  ToObjectKey (..),
+  toJSString,
+ )
 
 type CompactRedeemVerificationKey :: Type
 data CompactRedeemVerificationKey
@@ -65,11 +65,11 @@ data CompactRedeemVerificationKey
 instance ToCBOR CompactRedeemVerificationKey where
   toCBOR (CompactRedeemVerificationKey a b c d) =
     mconcat
-      [ encodeListLen 4,
-        toCBOR @Word64 a,
-        toCBOR @Word64 b,
-        toCBOR @Word64 c,
-        toCBOR @Word64 d
+      [ encodeListLen 4
+      , toCBOR @Word64 a
+      , toCBOR @Word64 b
+      , toCBOR @Word64 c
+      , toCBOR @Word64 d
       ]
 
 instance FromCBOR CompactRedeemVerificationKey where

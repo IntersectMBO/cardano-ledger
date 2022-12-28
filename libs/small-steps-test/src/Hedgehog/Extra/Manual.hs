@@ -5,22 +5,22 @@
 --
 -- This module provides functions to convert hedgehog 'Gen's to and from a
 -- 'Manual' generators, and functions to manipulate these manual generators.
-module Hedgehog.Extra.Manual
-  ( Manual (Manual),
-    unManual,
-    toManual,
-    fromManual,
-    dontShrink,
+module Hedgehog.Extra.Manual (
+  Manual (Manual),
+  unManual,
+  toManual,
+  fromManual,
+  dontShrink,
 
-    -- * Combinators
-    sized,
-    replicate,
-    interleave,
+  -- * Combinators
+  sized,
+  replicate,
+  interleave,
 
-    -- * Auxiliary
-    wrapTreeT,
-    unwrapTreeT,
-  )
+  -- * Auxiliary
+  wrapTreeT,
+  unwrapTreeT,
+)
 where
 
 import Control.Monad (ap, liftM)
@@ -82,12 +82,12 @@ interleave' ts =
   NodeT (map nodeValue ts) $
     concat
       [ [ wrapTreeT . Just $ interleave' ts'
-          | chunkSize <- chunkSizes,
-            ts' <- removes chunkSize ts
-        ],
-        [ wrapTreeT . Just $ interleave' (xs ++ [y'] ++ zs)
-          | (xs, y, zs) <- splits ts,
-            y' <- mapMaybe unwrapTreeT (nodeChildren y)
+        | chunkSize <- chunkSizes
+        , ts' <- removes chunkSize ts
+        ]
+      , [ wrapTreeT . Just $ interleave' (xs ++ [y'] ++ zs)
+        | (xs, y, zs) <- splits ts
+        , y' <- mapMaybe unwrapTreeT (nodeChildren y)
         ]
       ]
   where

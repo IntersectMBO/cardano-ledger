@@ -5,8 +5,8 @@ import Cardano.Ledger.Shelley.API
 import Cardano.Protocol.TPraos.API
 
 class
-  ( ApplyBlock era,
-    ApplyTx era,
-    GetLedgerView era
+  ( ApplyBlock era
+  , ApplyTx era
+  , GetLedgerView era
   ) =>
   TestableEra era

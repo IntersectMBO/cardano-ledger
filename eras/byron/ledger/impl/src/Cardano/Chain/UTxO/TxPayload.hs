@@ -7,16 +7,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Chain.UTxO.TxPayload
-  ( TxPayload,
-    ATxPayload (..),
-    mkTxPayload,
-    recoverHashedBytes,
-    txpAnnotatedTxs,
-    txpTxs,
-    txpWitnesses,
-    unTxPayload,
-  )
+module Cardano.Chain.UTxO.TxPayload (
+  TxPayload,
+  ATxPayload (..),
+  mkTxPayload,
+  recoverHashedBytes,
+  txpAnnotatedTxs,
+  txpTxs,
+  txpWitnesses,
+  unTxPayload,
+)
 where
 
 import Cardano.Chain.UTxO.Tx (Tx)

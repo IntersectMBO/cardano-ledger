@@ -3,59 +3,59 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 -- | CBOR encoding utilities needed for the Byron transaction format
-module Cardano.Chain.Common.CBOR
-  ( -- * CBOR in CBOR
+module Cardano.Chain.Common.CBOR (
+  -- * CBOR in CBOR
 
-    -- | These utilities are is used in the Byron-era chain encodings in cases
-    -- where there are extensible parts of the encoding. In thse cases we have to
-    -- be able to handle unknown extensions and thus decode values where we do
-    -- not know the concrete type.
-    --
-    -- To solve this, the serialised representation uses nested CBOR-in-CBOR
-    -- <https://tools.ietf.org/html/rfc7049#section-2.4.4.1>. The nesting means
-    -- that the size is known without having to decode the body in those cases
-    -- where we cannot decode the body.
-    --
-    -- The functions in this module handle the encoding and decoding for the
-    -- cases of the known and unknown types.
-    encodeKnownCborDataItem,
-    encodeUnknownCborDataItem,
-    knownCborDataItemSizeExpr,
-    unknownCborDataItemSizeExpr,
-    decodeKnownCborDataItem,
-    decodeUnknownCborDataItem,
+  -- | These utilities are is used in the Byron-era chain encodings in cases
+  -- where there are extensible parts of the encoding. In thse cases we have to
+  -- be able to handle unknown extensions and thus decode values where we do
+  -- not know the concrete type.
+  --
+  -- To solve this, the serialised representation uses nested CBOR-in-CBOR
+  -- <https://tools.ietf.org/html/rfc7049#section-2.4.4.1>. The nesting means
+  -- that the size is known without having to decode the body in those cases
+  -- where we cannot decode the body.
+  --
+  -- The functions in this module handle the encoding and decoding for the
+  -- cases of the known and unknown types.
+  encodeKnownCborDataItem,
+  encodeUnknownCborDataItem,
+  knownCborDataItemSizeExpr,
+  unknownCborDataItemSizeExpr,
+  decodeKnownCborDataItem,
+  decodeUnknownCborDataItem,
 
-    -- * Cyclic redundancy check
+  -- * Cyclic redundancy check
 
-    -- | The Byron era address format includes a CRC to help resist accidental
-    -- corruption. These functions deal with encoding and decoding the format
-    -- that is used.
-    encodeCrcProtected,
-    encodedCrcProtectedSizeExpr,
-    decodeCrcProtected,
-  )
+  -- | The Byron era address format includes a CRC to help resist accidental
+  -- corruption. These functions deal with encoding and decoding the format
+  -- that is used.
+  encodeCrcProtected,
+  encodedCrcProtectedSizeExpr,
+  decodeCrcProtected,
+)
 where
 
-import Cardano.Ledger.Binary
-  ( Decoder,
-    Encoding,
-    FromCBOR (..),
-    Size,
-    ToCBOR (..),
-    byronProtVer,
-    cborError,
-    decodeFull',
-    decodeNestedCbor,
-    decodeNestedCborBytes,
-    encodeListLen,
-    encodeNestedCbor,
-    encodeNestedCborBytes,
-    enforceSize,
-    nestedCborBytesSizeExpr,
-    nestedCborSizeExpr,
-    serialize,
-    toCborError,
-  )
+import Cardano.Ledger.Binary (
+  Decoder,
+  Encoding,
+  FromCBOR (..),
+  Size,
+  ToCBOR (..),
+  byronProtVer,
+  cborError,
+  decodeFull',
+  decodeNestedCbor,
+  decodeNestedCborBytes,
+  encodeListLen,
+  encodeNestedCbor,
+  encodeNestedCborBytes,
+  enforceSize,
+  nestedCborBytesSizeExpr,
+  nestedCborSizeExpr,
+  serialize,
+  toCborError,
+ )
 import Cardano.Prelude hiding (cborError, toCborError)
 import Data.Digest.CRC32 (CRC32 (..))
 import Formatting (Format, sformat, shown)

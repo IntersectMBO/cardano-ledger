@@ -8,56 +8,56 @@
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -fno-warn-missed-specialisations #-}
 
-module Cardano.Chain.UTxO.UTxO
-  ( UTxO (..),
-    UTxOError (..),
-    empty,
-    fromList,
-    fromBalances,
-    fromTxOut,
-    toList,
-    member,
-    lookup,
-    lookupCompact,
-    lookupAddress,
-    union,
-    concat,
-    balance,
-    (<|),
-    (</|),
-    txOutputUTxO,
-    isRedeemUTxO,
-  )
+module Cardano.Chain.UTxO.UTxO (
+  UTxO (..),
+  UTxOError (..),
+  empty,
+  fromList,
+  fromBalances,
+  fromTxOut,
+  toList,
+  member,
+  lookup,
+  lookupCompact,
+  lookupAddress,
+  union,
+  concat,
+  balance,
+  (<|),
+  (</|),
+  txOutputUTxO,
+  isRedeemUTxO,
+)
 where
 
-import Cardano.Chain.Common
-  ( Address,
-    Lovelace,
-    LovelaceError,
-    isRedeemAddress,
-    sumLovelace,
-  )
-import Cardano.Chain.UTxO.Compact
-  ( CompactTxIn,
-    CompactTxOut,
-    fromCompactTxIn,
-    fromCompactTxOut,
-    toCompactTxIn,
-    toCompactTxOut,
-  )
+import Cardano.Chain.Common (
+  Address,
+  Lovelace,
+  LovelaceError,
+  isRedeemAddress,
+  sumLovelace,
+ )
+import Cardano.Chain.UTxO.Compact (
+  CompactTxIn,
+  CompactTxOut,
+  fromCompactTxIn,
+  fromCompactTxOut,
+  toCompactTxIn,
+  toCompactTxOut,
+ )
 import Cardano.Chain.UTxO.Tx (Tx (..), TxId, TxIn (..), TxOut (..))
 import Cardano.Crypto (serializeCborHash)
 import Cardano.HeapWords (HeapWords)
-import Cardano.Ledger.Binary
-  ( DecoderError (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    cborError,
-    decodeListLen,
-    decodeWord8,
-    encodeListLen,
-    matchSize,
-  )
+import Cardano.Ledger.Binary (
+  DecoderError (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  cborError,
+  decodeListLen,
+  decodeWord8,
+  encodeListLen,
+  matchSize,
+ )
 import Cardano.Prelude hiding (cborError, concat, empty, toList)
 import Data.Coerce
 import qualified Data.List.NonEmpty as NE
@@ -163,7 +163,7 @@ txOutputUTxO tx =
   UTxO $
     M.fromList
       [ (toCompactTxIn (TxInUtxo (txId tx) ix), (toCompactTxOut txOut))
-        | (ix, txOut) <- indexedOutputs
+      | (ix, txOut) <- indexedOutputs
       ]
   where
     indexedOutputs :: [(Word16, TxOut)]

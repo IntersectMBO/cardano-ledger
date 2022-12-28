@@ -4,27 +4,27 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Chain.MempoolPayload
-  ( MempoolPayload,
-    AMempoolPayload (..),
-  )
+module Cardano.Chain.MempoolPayload (
+  MempoolPayload,
+  AMempoolPayload (..),
+)
 where
 
 import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.UTxO (ATxAux)
 import qualified Cardano.Chain.Update as Update
-import Cardano.Ledger.Binary
-  ( ByteSpan,
-    DecoderError (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    cborError,
-    decodeWord8,
-    encodeListLen,
-    encodePreEncoded,
-    enforceSize,
-    recoverBytes,
-  )
+import Cardano.Ledger.Binary (
+  ByteSpan,
+  DecoderError (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  cborError,
+  decodeWord8,
+  encodeListLen,
+  encodePreEncoded,
+  enforceSize,
+  recoverBytes,
+ )
 import Cardano.Prelude hiding (cborError)
 
 -- | A payload which can be submitted into or between mempools via the

@@ -15,47 +15,47 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators
-  ( genCoherentBlock,
-    MockGen,
-    maxTxWits,
-  )
+module Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators (
+  genCoherentBlock,
+  MockGen,
+  maxTxWits,
+)
 where
 
 import Cardano.Crypto.DSIGN.Mock (VerKeyDSIGN (..))
-import Cardano.Ledger.BaseTypes
-  ( BlockNo (..),
-    SlotNo (..),
-  )
+import Cardano.Ledger.BaseTypes (
+  BlockNo (..),
+  SlotNo (..),
+ )
 import Cardano.Ledger.Coin (CompactForm (..))
-import Cardano.Ledger.Core
-  ( Era,
-    EraCrypto,
-    EraScript (..),
-    EraSegWits (..),
-  )
+import Cardano.Ledger.Core (
+  Era,
+  EraCrypto,
+  EraScript (..),
+  EraSegWits (..),
+ )
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (Crypto, DSIGN)
 import Cardano.Ledger.Shelley.API hiding (SignedDSIGN)
 import Cardano.Ledger.Shelley.LedgerState (FutureGenDeleg, StashedAVVMAddresses)
-import Cardano.Ledger.Shelley.PoolRank
-  ( Likelihood (..),
-    LogWeight (..),
-    PerformanceEstimate (..),
-  )
-import Cardano.Ledger.Shelley.RewardUpdate
-  ( FreeVars (..),
-    Pulser,
-    PulsingRewUpdate (..),
-    RewardAns (..),
-    RewardPulser (..),
-    RewardSnapShot (..),
-  )
-import Cardano.Ledger.Shelley.Rewards
-  ( LeaderOnlyReward (..),
-    PoolRewardInfo (..),
-    StakeShare (..),
-  )
+import Cardano.Ledger.Shelley.PoolRank (
+  Likelihood (..),
+  LogWeight (..),
+  PerformanceEstimate (..),
+ )
+import Cardano.Ledger.Shelley.RewardUpdate (
+  FreeVars (..),
+  Pulser,
+  PulsingRewUpdate (..),
+  RewardAns (..),
+  RewardPulser (..),
+  RewardSnapShot (..),
+ )
+import Cardano.Ledger.Shelley.Rewards (
+  LeaderOnlyReward (..),
+  PoolRewardInfo (..),
+  StakeShare (..),
+ )
 import qualified Cardano.Ledger.Shelley.Rules as STS
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..))
 import Cardano.Ledger.UMapCompact (Trip (Triple), UMap (UMap))
@@ -75,29 +75,29 @@ import Generic.Random (genericArbitraryU)
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Generator.Constants (defaultConstants)
-import Test.Cardano.Ledger.Shelley.Generator.Core
-  ( mkBlock,
-    mkBlockHeader,
-    mkOCert,
-  )
+import Test.Cardano.Ledger.Shelley.Generator.Core (
+  mkBlock,
+  mkBlockHeader,
+  mkOCert,
+ )
 import Test.Cardano.Ledger.Shelley.Generator.Presets (coreNodeKeys)
-import Test.QuickCheck
-  ( Arbitrary,
-    Gen,
-    arbitrary,
-    choose,
-    chooseBoundedIntegral,
-    chooseInt,
-    elements,
-    frequency,
-    genericShrink,
-    listOf,
-    oneof,
-    recursivelyShrink,
-    resize,
-    shrink,
-    vectorOf,
-  )
+import Test.QuickCheck (
+  Arbitrary,
+  Gen,
+  arbitrary,
+  choose,
+  chooseBoundedIntegral,
+  chooseInt,
+  elements,
+  frequency,
+  genericShrink,
+  listOf,
+  oneof,
+  recursivelyShrink,
+  resize,
+  shrink,
+  vectorOf,
+ )
 
 -- =======================================================
 
@@ -109,8 +109,8 @@ import Test.QuickCheck
 -------------------------------------------------------------------------------}
 
 type MockGen era =
-  ( Mock (EraCrypto era),
-    Arbitrary (VerKeyDSIGN (DSIGN (EraCrypto era)))
+  ( Mock (EraCrypto era)
+  , Arbitrary (VerKeyDSIGN (DSIGN (EraCrypto era)))
   )
 
 instance Mock c => Arbitrary (BHeader c) where
@@ -165,18 +165,18 @@ maxMetadatumListLens = 5
 sizedMetadatum :: Int -> Gen Metadatum
 sizedMetadatum 0 =
   oneof
-    [ I <$> arbitrary,
-      B <$> arbitrary,
-      S <$> (T.pack <$> arbitrary)
+    [ I <$> arbitrary
+    , B <$> arbitrary
+    , S <$> (T.pack <$> arbitrary)
     ]
 sizedMetadatum n =
   let xsGen = listOf (sizedMetadatum (n - 1))
    in oneof
-        [ Map <$> (zip <$> resize maxMetadatumListLens xsGen <*> xsGen),
-          List <$> resize maxMetadatumListLens xsGen,
-          I <$> arbitrary,
-          B <$> arbitrary,
-          S <$> (T.pack <$> arbitrary)
+        [ Map <$> (zip <$> resize maxMetadatumListLens xsGen <*> xsGen)
+        , List <$> resize maxMetadatumListLens xsGen
+        , I <$> arbitrary
+        , B <$> arbitrary
+        , S <$> (T.pack <$> arbitrary)
         ]
 
 instance Arbitrary Metadatum where
@@ -200,8 +200,8 @@ instance Arbitrary MIRPot where
 instance Crypto c => Arbitrary (MIRTarget c) where
   arbitrary =
     oneof
-      [ StakeAddressesMIR <$> arbitrary,
-        SendToOppositePotMIR <$> arbitrary
+      [ StakeAddressesMIR <$> arbitrary
+      , SendToOppositePotMIR <$> arbitrary
       ]
 
 instance Arbitrary STS.VotingPeriod where
@@ -282,10 +282,10 @@ instance Crypto c => Arbitrary (DPState c) where
   shrink = genericShrink
 
 instance
-  ( Core.EraTxOut era,
-    Mock (EraCrypto era),
-    Arbitrary (Core.TxOut era),
-    Arbitrary (State (Core.EraRule "PPUP" era))
+  ( Core.EraTxOut era
+  , Mock (EraCrypto era)
+  , Arbitrary (Core.TxOut era)
+  , Arbitrary (State (Core.EraRule "PPUP" era))
   ) =>
   Arbitrary (UTxOState era)
   where
@@ -309,10 +309,10 @@ instance Crypto c => Arbitrary (IncrementalStake c) where
 -- > instance OVERLAPPING_ GSubtermsIncl (K1 i a) b where
 
 instance
-  ( Core.EraTxOut era,
-    Mock (EraCrypto era),
-    Arbitrary (Core.TxOut era),
-    Arbitrary (State (Core.EraRule "PPUP" era))
+  ( Core.EraTxOut era
+  , Mock (EraCrypto era)
+  , Arbitrary (Core.TxOut era)
+  , Arbitrary (State (Core.EraRule "PPUP" era))
   ) =>
   Arbitrary (LedgerState era)
   where
@@ -320,25 +320,25 @@ instance
   shrink = genericShrink
 
 instance
-  ( Core.EraTxOut era,
-    Mock (EraCrypto era),
-    Arbitrary (Core.TxOut era),
-    Arbitrary (Core.Value era),
-    Arbitrary (Core.PParams era),
-    Arbitrary (State (Core.EraRule "PPUP" era)),
-    Arbitrary (StashedAVVMAddresses era)
+  ( Core.EraTxOut era
+  , Mock (EraCrypto era)
+  , Arbitrary (Core.TxOut era)
+  , Arbitrary (Core.Value era)
+  , Arbitrary (Core.PParams era)
+  , Arbitrary (State (Core.EraRule "PPUP" era))
+  , Arbitrary (StashedAVVMAddresses era)
   ) =>
   Arbitrary (NewEpochState era)
   where
   arbitrary = genericArbitraryU
 
 instance
-  ( Core.EraTxOut era,
-    Mock (EraCrypto era),
-    Arbitrary (Core.TxOut era),
-    Arbitrary (Core.Value era),
-    Arbitrary (Core.PParams era),
-    Arbitrary (State (Core.EraRule "PPUP" era))
+  ( Core.EraTxOut era
+  , Mock (EraCrypto era)
+  , Arbitrary (Core.TxOut era)
+  , Arbitrary (Core.Value era)
+  , Arbitrary (Core.PParams era)
+  , Arbitrary (State (Core.EraRule "PPUP" era))
   ) =>
   Arbitrary (EpochState era)
   where
@@ -400,9 +400,9 @@ instance Crypto c => Arbitrary (Stake c) where
       genWord64 :: Int -> Gen Word64
       genWord64 n =
         frequency
-          [ (3, chooseBoundedIntegral (1, 100)),
-            (2, chooseBoundedIntegral (101, 10000)),
-            (1, chooseBoundedIntegral (1, maxBound `div` (fromIntegral n)))
+          [ (3, chooseBoundedIntegral (1, 100))
+          , (2, chooseBoundedIntegral (101, 10000))
+          , (1, chooseBoundedIntegral (1, maxBound `div` (fromIntegral n)))
           ]
       theMap = do
         n <- frequency [(3, chooseInt (1, 20)), (2, chooseInt (21, 150)), (1, chooseInt (151, 1000))]
@@ -424,10 +424,10 @@ sizedMultiSig :: Era era => Int -> Gen (MultiSig era)
 sizedMultiSig 0 = RequireSignature <$> arbitrary
 sizedMultiSig n =
   oneof
-    [ RequireSignature <$> arbitrary,
-      RequireAllOf <$> resize maxMultiSigListLens (listOf (sizedMultiSig (n - 1))),
-      RequireAnyOf <$> resize maxMultiSigListLens (listOf (sizedMultiSig (n - 1))),
-      RequireMOf <$> arbitrary <*> resize maxMultiSigListLens (listOf (sizedMultiSig (n - 1)))
+    [ RequireSignature <$> arbitrary
+    , RequireAllOf <$> resize maxMultiSigListLens (listOf (sizedMultiSig (n - 1)))
+    , RequireAnyOf <$> resize maxMultiSigListLens (listOf (sizedMultiSig (n - 1)))
+    , RequireMOf <$> arbitrary <*> resize maxMultiSigListLens (listOf (sizedMultiSig (n - 1)))
     ]
 
 instance Era era => Arbitrary (MultiSig era) where
@@ -459,9 +459,9 @@ instance Crypto c => Arbitrary (ShelleyGenesisStaking c) where
   arbitrary = ShelleyGenesisStaking <$> arbitrary <*> arbitrary
 
 instance
-  ( Mock (EraCrypto era),
-    EraScript era,
-    Arbitrary (Core.Script era)
+  ( Mock (EraCrypto era)
+  , EraScript era
+  , Arbitrary (Core.Script era)
   ) =>
   Arbitrary (ShelleyTxWits era)
   where
@@ -482,10 +482,10 @@ instance Era era => Arbitrary (STS.ShelleyPoolPredFailure era) where
   shrink = genericShrink
 
 instance
-  ( Era era,
-    Mock (EraCrypto era),
-    Arbitrary (STS.PredicateFailure (Core.EraRule "POOL" era)),
-    Arbitrary (STS.PredicateFailure (Core.EraRule "DELEG" era))
+  ( Era era
+  , Mock (EraCrypto era)
+  , Arbitrary (STS.PredicateFailure (Core.EraRule "POOL" era))
+  , Arbitrary (STS.PredicateFailure (Core.EraRule "DELEG" era))
   ) =>
   Arbitrary (STS.ShelleyDelplPredFailure era)
   where
@@ -500,9 +500,9 @@ instance
   shrink = genericShrink
 
 instance
-  ( Era era,
-    Mock (EraCrypto era),
-    Arbitrary (STS.PredicateFailure (Core.EraRule "DELPL" era))
+  ( Era era
+  , Mock (EraCrypto era)
+  , Arbitrary (STS.PredicateFailure (Core.EraRule "DELPL" era))
   ) =>
   Arbitrary (STS.ShelleyDelegsPredFailure era)
   where
@@ -510,8 +510,8 @@ instance
   shrink = recursivelyShrink
 
 instance
-  ( Era era,
-    Arbitrary (STS.PredicateFailure (Core.EraRule "LEDGER" era))
+  ( Era era
+  , Arbitrary (STS.PredicateFailure (Core.EraRule "LEDGER" era))
   ) =>
   Arbitrary (STS.ShelleyLedgersPredFailure era)
   where
@@ -519,9 +519,9 @@ instance
   shrink = genericShrink
 
 instance
-  ( Era era,
-    Arbitrary (STS.PredicateFailure (Core.EraRule "DELEGS" era)),
-    Arbitrary (STS.PredicateFailure (Core.EraRule "UTXOW" era))
+  ( Era era
+  , Arbitrary (STS.PredicateFailure (Core.EraRule "DELEGS" era))
+  , Arbitrary (STS.PredicateFailure (Core.EraRule "UTXOW" era))
   ) =>
   Arbitrary (STS.ShelleyLedgerPredFailure era)
   where
@@ -529,8 +529,8 @@ instance
   shrink _ = []
 
 instance
-  ( Era era,
-    Arbitrary (STS.PredicateFailure (Core.EraRule "UTXO" era))
+  ( Era era
+  , Arbitrary (STS.PredicateFailure (Core.EraRule "UTXO" era))
   ) =>
   Arbitrary (STS.ShelleyUtxowPredFailure era)
   where
@@ -538,10 +538,10 @@ instance
   shrink _ = []
 
 genTx ::
-  ( Core.EraTx era,
-    Arbitrary (Core.TxBody era),
-    Arbitrary (Core.TxAuxData era),
-    Arbitrary (Core.TxWits era)
+  ( Core.EraTx era
+  , Arbitrary (Core.TxBody era)
+  , Arbitrary (Core.TxAuxData era)
+  , Arbitrary (Core.TxWits era)
   ) =>
   Gen (ShelleyTx era)
 genTx =
@@ -552,10 +552,10 @@ genTx =
 
 genBlock ::
   forall era h.
-  ( EraSegWits era,
-    Mock (EraCrypto era),
-    Arbitrary (Core.Tx era),
-    h ~ BHeader (EraCrypto era)
+  ( EraSegWits era
+  , Mock (EraCrypto era)
+  , Arbitrary (Core.Tx era)
+  , h ~ BHeader (EraCrypto era)
   ) =>
   Gen (Block h era)
 genBlock = Block <$> arbitrary <*> (toTxSeq @era <$> arbitrary)
@@ -570,10 +570,10 @@ genBlock = Block <$> arbitrary <*> (toTxSeq @era <$> arbitrary)
 -- This generator uses 'mkBlock' provide more coherent blocks.
 genCoherentBlock ::
   forall era h.
-  ( Mock (EraCrypto era),
-    EraSegWits era,
-    Arbitrary (Core.Tx era),
-    h ~ BHeader (EraCrypto era)
+  ( Mock (EraCrypto era)
+  , EraSegWits era
+  , Arbitrary (Core.Tx era)
+  , h ~ BHeader (EraCrypto era)
   ) =>
   Gen (Block h era)
 genCoherentBlock = do
@@ -600,31 +600,31 @@ genCoherentBlock = do
       ocert
 
 instance
-  ( Core.EraTx era,
-    Arbitrary (Core.TxBody era),
-    Arbitrary (Core.Value era),
-    Arbitrary (Core.TxAuxData era),
-    Arbitrary (Core.Script era),
-    Arbitrary (Core.TxWits era)
+  ( Core.EraTx era
+  , Arbitrary (Core.TxBody era)
+  , Arbitrary (Core.Value era)
+  , Arbitrary (Core.TxAuxData era)
+  , Arbitrary (Core.Script era)
+  , Arbitrary (Core.TxWits era)
   ) =>
   Arbitrary (ShelleyTx era)
   where
   arbitrary = genTx
 
 instance
-  ( Core.EraTxBody era,
-    EraSegWits era,
-    Mock (EraCrypto era),
-    Arbitrary (Core.Tx era),
-    h ~ BHeader (EraCrypto era)
+  ( Core.EraTxBody era
+  , EraSegWits era
+  , Mock (EraCrypto era)
+  , Arbitrary (Core.Tx era)
+  , h ~ BHeader (EraCrypto era)
   ) =>
   Arbitrary (Block h era)
   where
   arbitrary = genBlock
 
 instance
-  ( Era era,
-    Arbitrary (STS.PredicateFailure (Core.EraRule "LEDGER" era))
+  ( Era era
+  , Arbitrary (STS.PredicateFailure (Core.EraRule "LEDGER" era))
   ) =>
   Arbitrary (ApplyTxError era)
   where
@@ -634,8 +634,8 @@ instance
 instance (Mock c) => Arbitrary (PulsingRewUpdate c) where
   arbitrary =
     oneof
-      [ Complete <$> arbitrary,
-        Pulsing <$> arbitrary <*> arbitrary
+      [ Complete <$> arbitrary
+      , Pulsing <$> arbitrary <*> arbitrary
       ]
 
 instance

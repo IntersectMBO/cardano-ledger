@@ -18,145 +18,145 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Babbage.TxBody
-  ( BabbageTxOut
-      ( BabbageTxOut,
-        TxOutCompact,
-        TxOutCompactDH,
-        TxOutCompactDatum,
-        TxOutCompactRefScript
-      ),
-    AlonzoEraTxOut (..),
-    BabbageEraTxOut (..),
-    addrEitherBabbageTxOutL,
-    valueEitherBabbageTxOutL,
-    dataHashBabbageTxOutL,
-    dataBabbageTxOutL,
-    datumBabbageTxOutL,
-    referenceScriptBabbageTxOutL,
-    allSizedOutputsBabbageTxBodyF,
-    getDatumBabbageTxOut,
-    babbageMinUTxOValue,
-    BabbageTxBody
-      ( BabbageTxBody,
-        btbInputs,
-        btbCollateral,
-        btbReferenceInputs,
-        btbOutputs,
-        btbCollateralReturn,
-        btbTotalCollateral,
-        btbCerts,
-        btbWdrls,
-        btbTxFee,
-        btbValidityInterval,
-        btbUpdate,
-        btbReqSignerHashes,
-        btbMint,
-        btbScriptIntegrityHash,
-        btbAuxDataHash,
-        btbTxNetworkId
-      ),
-    mkBabbageTxBody,
-    inputsBabbageTxBodyL,
-    outputsBabbageTxBodyL,
-    feeBabbageTxBodyL,
-    auxDataHashBabbageTxBodyL,
-    allInputsBabbageTxBodyF,
-    mintedBabbageTxBodyF,
-    mintValueBabbageTxBodyF,
-    wdrlsBabbbageTxBodyL,
-    notSupportedInThisEraL,
-    updateBabbageTxBodyL,
-    certsBabbageTxBodyL,
-    vldtBabbageTxBodyL,
-    mintBabbageTxBodyL,
-    collateralInputsBabbageTxBodyL,
-    reqSignerHashesBabbageTxBodyL,
-    scriptIntegrityHashBabbageTxBodyL,
-    networkIdBabbageTxBodyL,
-    sizedOutputsBabbageTxBodyL,
-    referenceInputsBabbageTxBodyL,
-    totalCollateralBabbageTxBodyL,
-    collateralReturnBabbageTxBodyL,
-    sizedCollateralReturnBabbageTxBodyL,
-    BabbageEraTxBody (..),
-    module AlonzoTxBodyReExports,
-    Datum (..),
-    spendInputs',
-    collateralInputs',
-    referenceInputs',
-    outputs',
-    collateralReturn',
-    totalCollateral',
-    certs',
-    wdrls',
-    txfee',
-    vldt',
-    update',
-    reqSignerHashes',
-    mint',
-    scriptIntegrityHash',
-    adHash',
-    txnetworkid',
-    getEitherAddrBabbageTxOut,
-    EraIndependentScriptIntegrity,
-    ScriptIntegrityHash,
-    txOutData,
-    txOutDataHash,
-    txOutScript,
-  )
+module Cardano.Ledger.Babbage.TxBody (
+  BabbageTxOut (
+    BabbageTxOut,
+    TxOutCompact,
+    TxOutCompactDH,
+    TxOutCompactDatum,
+    TxOutCompactRefScript
+  ),
+  AlonzoEraTxOut (..),
+  BabbageEraTxOut (..),
+  addrEitherBabbageTxOutL,
+  valueEitherBabbageTxOutL,
+  dataHashBabbageTxOutL,
+  dataBabbageTxOutL,
+  datumBabbageTxOutL,
+  referenceScriptBabbageTxOutL,
+  allSizedOutputsBabbageTxBodyF,
+  getDatumBabbageTxOut,
+  babbageMinUTxOValue,
+  BabbageTxBody (
+    BabbageTxBody,
+    btbInputs,
+    btbCollateral,
+    btbReferenceInputs,
+    btbOutputs,
+    btbCollateralReturn,
+    btbTotalCollateral,
+    btbCerts,
+    btbWdrls,
+    btbTxFee,
+    btbValidityInterval,
+    btbUpdate,
+    btbReqSignerHashes,
+    btbMint,
+    btbScriptIntegrityHash,
+    btbAuxDataHash,
+    btbTxNetworkId
+  ),
+  mkBabbageTxBody,
+  inputsBabbageTxBodyL,
+  outputsBabbageTxBodyL,
+  feeBabbageTxBodyL,
+  auxDataHashBabbageTxBodyL,
+  allInputsBabbageTxBodyF,
+  mintedBabbageTxBodyF,
+  mintValueBabbageTxBodyF,
+  wdrlsBabbbageTxBodyL,
+  notSupportedInThisEraL,
+  updateBabbageTxBodyL,
+  certsBabbageTxBodyL,
+  vldtBabbageTxBodyL,
+  mintBabbageTxBodyL,
+  collateralInputsBabbageTxBodyL,
+  reqSignerHashesBabbageTxBodyL,
+  scriptIntegrityHashBabbageTxBodyL,
+  networkIdBabbageTxBodyL,
+  sizedOutputsBabbageTxBodyL,
+  referenceInputsBabbageTxBodyL,
+  totalCollateralBabbageTxBodyL,
+  collateralReturnBabbageTxBodyL,
+  sizedCollateralReturnBabbageTxBodyL,
+  BabbageEraTxBody (..),
+  module AlonzoTxBodyReExports,
+  Datum (..),
+  spendInputs',
+  collateralInputs',
+  referenceInputs',
+  outputs',
+  collateralReturn',
+  totalCollateral',
+  certs',
+  wdrls',
+  txfee',
+  vldt',
+  update',
+  reqSignerHashes',
+  mint',
+  scriptIntegrityHash',
+  adHash',
+  txnetworkid',
+  getEitherAddrBabbageTxOut,
+  EraIndependentScriptIntegrity,
+  ScriptIntegrityHash,
+  txOutData,
+  txOutDataHash,
+  txOutScript,
+)
 where
 
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
-import Cardano.Ledger.Alonzo.Data
-  ( AuxiliaryDataHash (..),
-    Datum (..),
-  )
-import Cardano.Ledger.Alonzo.TxBody
-  ( AlonzoEraTxOut (..),
-  )
-import Cardano.Ledger.Alonzo.TxBody as AlonzoTxBodyReExports
-  ( AllegraEraTxBody (..),
-    AlonzoEraTxBody (..),
-    MaryEraTxBody (..),
-    ShelleyEraTxBody (..),
-  )
+import Cardano.Ledger.Alonzo.Data (
+  AuxiliaryDataHash (..),
+  Datum (..),
+ )
+import Cardano.Ledger.Alonzo.TxBody (
+  AlonzoEraTxOut (..),
+ )
+import Cardano.Ledger.Alonzo.TxBody as AlonzoTxBodyReExports (
+  AllegraEraTxBody (..),
+  AlonzoEraTxBody (..),
+  MaryEraTxBody (..),
+  ShelleyEraTxBody (..),
+ )
 import Cardano.Ledger.Babbage.Core (BabbageEraTxBody (..))
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.Scripts ()
 import Cardano.Ledger.Babbage.TxOut hiding (TxOut)
-import Cardano.Ledger.BaseTypes
-  ( Network (..),
-    StrictMaybe (..),
-  )
-import Cardano.Ledger.Binary
-  ( Annotator (..),
-    FromCBOR (..),
-    Sized (..),
-    ToCBOR (..),
-    mkSized,
-  )
+import Cardano.Ledger.BaseTypes (
+  Network (..),
+  StrictMaybe (..),
+ )
+import Cardano.Ledger.Binary (
+  Annotator (..),
+  FromCBOR (..),
+  Sized (..),
+  ToCBOR (..),
+  mkSized,
+ )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary.Value (MaryValue (MaryValue), MultiAsset, policies, policyID)
-import Cardano.Ledger.MemoBytes
-  ( Mem,
-    MemoBytes,
-    MemoHashIndex,
-    Memoized (..),
-    getMemoRawType,
-    getMemoSafeHash,
-    lensMemoRawType,
-    mkMemoized,
-  )
-import Cardano.Ledger.SafeHash
-  ( HashAnnotated (..),
-    SafeHash,
-    SafeToHash,
-  )
+import Cardano.Ledger.MemoBytes (
+  Mem,
+  MemoBytes,
+  MemoHashIndex,
+  Memoized (..),
+  getMemoRawType,
+  getMemoSafeHash,
+  lensMemoRawType,
+  mkMemoized,
+ )
+import Cardano.Ledger.SafeHash (
+  HashAnnotated (..),
+  SafeHash,
+  SafeToHash,
+ )
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert)
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.TxBody (Wdrl (Wdrl), unWdrl)
@@ -177,26 +177,26 @@ import Prelude hiding (lookup)
 type ScriptIntegrityHash c = SafeHash c EraIndependentScriptIntegrity
 
 data BabbageTxBodyRaw era = BabbageTxBodyRaw
-  { btbrSpendInputs :: !(Set (TxIn (EraCrypto era))),
-    btbrCollateralInputs :: !(Set (TxIn (EraCrypto era))),
-    btbrReferenceInputs :: !(Set (TxIn (EraCrypto era))),
-    btbrOutputs :: !(StrictSeq (Sized (TxOut era))),
-    btbrCollateralReturn :: !(StrictMaybe (Sized (TxOut era))),
-    btbrTotalCollateral :: !(StrictMaybe Coin),
-    btbrCerts :: !(StrictSeq (DCert (EraCrypto era))),
-    btbrWdrls :: !(Wdrl (EraCrypto era)),
-    btbrTxFee :: !Coin,
-    btbrValidityInterval :: !ValidityInterval,
-    btbrUpdate :: !(StrictMaybe (Update era)),
-    btbrReqSignerHashes :: !(Set (KeyHash 'Witness (EraCrypto era))),
-    btbrMint :: !(MultiAsset (EraCrypto era)),
-    -- The spec makes it clear that the mint field is a
+  { btbrSpendInputs :: !(Set (TxIn (EraCrypto era)))
+  , btbrCollateralInputs :: !(Set (TxIn (EraCrypto era)))
+  , btbrReferenceInputs :: !(Set (TxIn (EraCrypto era)))
+  , btbrOutputs :: !(StrictSeq (Sized (TxOut era)))
+  , btbrCollateralReturn :: !(StrictMaybe (Sized (TxOut era)))
+  , btbrTotalCollateral :: !(StrictMaybe Coin)
+  , btbrCerts :: !(StrictSeq (DCert (EraCrypto era)))
+  , btbrWdrls :: !(Wdrl (EraCrypto era))
+  , btbrTxFee :: !Coin
+  , btbrValidityInterval :: !ValidityInterval
+  , btbrUpdate :: !(StrictMaybe (Update era))
+  , btbrReqSignerHashes :: !(Set (KeyHash 'Witness (EraCrypto era)))
+  , btbrMint :: !(MultiAsset (EraCrypto era))
+  , -- The spec makes it clear that the mint field is a
     -- Cardano.Ledger.Mary.Value.MaryValue, not a Value.
     -- Operations on the TxBody in the BabbageEra depend upon this.
     -- We now store only the MultiAsset part of a Mary.Value.
-    btbrScriptIntegrityHash :: !(StrictMaybe (ScriptIntegrityHash (EraCrypto era))),
-    btbrAuxDataHash :: !(StrictMaybe (AuxiliaryDataHash (EraCrypto era))),
-    btbrTxNetworkId :: !(StrictMaybe Network)
+    btbrScriptIntegrityHash :: !(StrictMaybe (ScriptIntegrityHash (EraCrypto era)))
+  , btbrAuxDataHash :: !(StrictMaybe (AuxiliaryDataHash (EraCrypto era)))
+  , btbrTxNetworkId :: !(StrictMaybe Network)
   }
   deriving (Generic, Typeable)
 
@@ -512,41 +512,41 @@ pattern BabbageTxBody ::
   StrictMaybe Network ->
   BabbageTxBody era
 pattern BabbageTxBody
-  { btbInputs,
-    btbCollateral,
-    btbReferenceInputs,
-    btbOutputs,
-    btbCollateralReturn,
-    btbTotalCollateral,
-    btbCerts,
-    btbWdrls,
-    btbTxFee,
-    btbValidityInterval,
-    btbUpdate,
-    btbReqSignerHashes,
-    btbMint,
-    btbScriptIntegrityHash,
-    btbAuxDataHash,
-    btbTxNetworkId
+  { btbInputs
+  , btbCollateral
+  , btbReferenceInputs
+  , btbOutputs
+  , btbCollateralReturn
+  , btbTotalCollateral
+  , btbCerts
+  , btbWdrls
+  , btbTxFee
+  , btbValidityInterval
+  , btbUpdate
+  , btbReqSignerHashes
+  , btbMint
+  , btbScriptIntegrityHash
+  , btbAuxDataHash
+  , btbTxNetworkId
   } <-
   ( getMemoRawType ->
       BabbageTxBodyRaw
-        { btbrSpendInputs = btbInputs,
-          btbrCollateralInputs = btbCollateral,
-          btbrReferenceInputs = btbReferenceInputs,
-          btbrOutputs = btbOutputs,
-          btbrCollateralReturn = btbCollateralReturn,
-          btbrTotalCollateral = btbTotalCollateral,
-          btbrCerts = btbCerts,
-          btbrWdrls = btbWdrls,
-          btbrTxFee = btbTxFee,
-          btbrValidityInterval = btbValidityInterval,
-          btbrUpdate = btbUpdate,
-          btbrReqSignerHashes = btbReqSignerHashes,
-          btbrMint = btbMint,
-          btbrScriptIntegrityHash = btbScriptIntegrityHash,
-          btbrAuxDataHash = btbAuxDataHash,
-          btbrTxNetworkId = btbTxNetworkId
+        { btbrSpendInputs = btbInputs
+        , btbrCollateralInputs = btbCollateral
+        , btbrReferenceInputs = btbReferenceInputs
+        , btbrOutputs = btbOutputs
+        , btbrCollateralReturn = btbCollateralReturn
+        , btbrTotalCollateral = btbTotalCollateral
+        , btbrCerts = btbCerts
+        , btbrWdrls = btbWdrls
+        , btbrTxFee = btbTxFee
+        , btbrValidityInterval = btbValidityInterval
+        , btbrUpdate = btbUpdate
+        , btbrReqSignerHashes = btbReqSignerHashes
+        , btbrMint = btbMint
+        , btbrScriptIntegrityHash = btbScriptIntegrityHash
+        , btbrAuxDataHash = btbAuxDataHash
+        , btbrTxNetworkId = btbTxNetworkId
         }
     )
   where
@@ -569,22 +569,22 @@ pattern BabbageTxBody
       txNetworkId =
         mkMemoized $
           BabbageTxBodyRaw
-            { btbrSpendInputs = inputs,
-              btbrCollateralInputs = collateral,
-              btbrReferenceInputs = referenceInputs,
-              btbrOutputs = outputs,
-              btbrCollateralReturn = collateralReturn,
-              btbrTotalCollateral = totalCollateral,
-              btbrCerts = certs,
-              btbrWdrls = wdrls,
-              btbrTxFee = txFee,
-              btbrValidityInterval = validityInterval,
-              btbrUpdate = update,
-              btbrReqSignerHashes = reqSignerHashes,
-              btbrMint = mint,
-              btbrScriptIntegrityHash = scriptIntegrityHash,
-              btbrAuxDataHash = auxDataHash,
-              btbrTxNetworkId = txNetworkId
+            { btbrSpendInputs = inputs
+            , btbrCollateralInputs = collateral
+            , btbrReferenceInputs = referenceInputs
+            , btbrOutputs = outputs
+            , btbrCollateralReturn = collateralReturn
+            , btbrTotalCollateral = totalCollateral
+            , btbrCerts = certs
+            , btbrWdrls = wdrls
+            , btbrTxFee = txFee
+            , btbrValidityInterval = validityInterval
+            , btbrUpdate = update
+            , btbrReqSignerHashes = reqSignerHashes
+            , btbrMint = mint
+            , btbrScriptIntegrityHash = scriptIntegrityHash
+            , btbrAuxDataHash = auxDataHash
+            , btbrTxNetworkId = txNetworkId
             }
 
 {-# COMPLETE BabbageTxBody #-}
@@ -660,22 +660,22 @@ instance
   where
   toCBOR
     BabbageTxBodyRaw
-      { btbrSpendInputs,
-        btbrCollateralInputs,
-        btbrReferenceInputs,
-        btbrOutputs,
-        btbrCollateralReturn,
-        btbrTotalCollateral,
-        btbrCerts,
-        btbrWdrls,
-        btbrTxFee,
-        btbrValidityInterval = ValidityInterval bot top,
-        btbrUpdate,
-        btbrReqSignerHashes,
-        btbrMint,
-        btbrScriptIntegrityHash,
-        btbrAuxDataHash,
-        btbrTxNetworkId
+      { btbrSpendInputs
+      , btbrCollateralInputs
+      , btbrReferenceInputs
+      , btbrOutputs
+      , btbrCollateralReturn
+      , btbrTotalCollateral
+      , btbrCerts
+      , btbrWdrls
+      , btbrTxFee
+      , btbrValidityInterval = ValidityInterval bot top
+      , btbrUpdate
+      , btbrReqSignerHashes
+      , btbrMint
+      , btbrScriptIntegrityHash
+      , btbrAuxDataHash
+      , btbrTxNetworkId
       } =
       encode $
         Keyed
@@ -738,9 +738,9 @@ instance
       bodyFields 15 = ofield (\x tx -> tx {btbrTxNetworkId = x}) From
       bodyFields n = field (\_ t -> t) (Invalid n)
       requiredFields =
-        [ (0, "inputs"),
-          (1, "outputs"),
-          (2, "fee")
+        [ (0, "inputs")
+        , (1, "outputs")
+        , (2, "fee")
         ]
 
 basicBabbageTxBodyRaw :: BabbageTxBodyRaw era

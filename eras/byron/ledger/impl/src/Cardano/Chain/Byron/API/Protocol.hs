@@ -1,6 +1,6 @@
-module Cardano.Chain.Byron.API.Protocol
-  ( previewDelegationMap,
-  )
+module Cardano.Chain.Byron.API.Protocol (
+  previewDelegationMap,
+)
 where
 
 import qualified Cardano.Chain.Block as CC
