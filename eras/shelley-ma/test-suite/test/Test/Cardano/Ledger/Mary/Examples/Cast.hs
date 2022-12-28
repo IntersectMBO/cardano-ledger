@@ -5,27 +5,27 @@
 -- Description : Cast of characters for Mary ledger examples
 --
 -- The cast of Characters for Mary Ledger Examples
-module Test.Cardano.Ledger.Mary.Examples.Cast
-  ( alicePay,
-    aliceStake,
-    aliceAddr,
-    bobPay,
-    bobStake,
-    bobAddr,
-    carlPay,
-    carlStake,
-    carlAddr,
-    dariaPay,
-    dariaStake,
-    dariaAddr,
-  )
+module Test.Cardano.Ledger.Mary.Examples.Cast (
+  alicePay,
+  aliceStake,
+  aliceAddr,
+  bobPay,
+  bobStake,
+  bobAddr,
+  carlPay,
+  carlStake,
+  carlAddr,
+  dariaPay,
+  dariaStake,
+  dariaAddr,
+)
 where
 
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Keys
-  ( KeyRole (..),
-  )
+import Cardano.Ledger.Keys (
+  KeyRole (..),
+ )
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr)
 import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair)
 

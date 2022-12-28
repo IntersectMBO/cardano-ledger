@@ -4,39 +4,39 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Cardano.Chain.Delegation.Validation.Scheduling
-  ( -- * Scheduling
-    Environment (..),
-    State (..),
-    Error (..),
-    ScheduledDelegation (..),
-    scheduleCertificate,
-  )
+module Cardano.Chain.Delegation.Validation.Scheduling (
+  -- * Scheduling
+  Environment (..),
+  State (..),
+  Error (..),
+  ScheduledDelegation (..),
+  scheduleCertificate,
+)
 where
 
 import Cardano.Chain.Common (BlockCount, KeyHash, hashKey)
 import Cardano.Chain.Delegation.Certificate (ACertificate)
 import qualified Cardano.Chain.Delegation.Certificate as Certificate
 import Cardano.Chain.ProtocolConstants (kSlotSecurityParam)
-import Cardano.Chain.Slotting
-  ( EpochNumber,
-    SlotNumber (..),
-    addSlotCount,
-  )
+import Cardano.Chain.Slotting (
+  EpochNumber,
+  SlotNumber (..),
+  addSlotCount,
+ )
 import Cardano.Crypto (ProtocolMagicId)
-import Cardano.Ledger.Binary
-  ( Annotated (..),
-    Decoder,
-    DecoderError (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    cborError,
-    decodeListLen,
-    decodeWord8,
-    encodeListLen,
-    enforceSize,
-    matchSize,
-  )
+import Cardano.Ledger.Binary (
+  Annotated (..),
+  Decoder,
+  DecoderError (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  cborError,
+  decodeListLen,
+  decodeWord8,
+  encodeListLen,
+  enforceSize,
+  matchSize,
+ )
 import Cardano.Prelude hiding (State, cborError)
 import Data.Sequence ((|>))
 import qualified Data.Sequence as Seq
@@ -48,17 +48,17 @@ import NoThunks.Class (NoThunks (..))
 --------------------------------------------------------------------------------
 
 data Environment = Environment
-  { protocolMagic :: !(Annotated ProtocolMagicId ByteString),
-    allowedDelegators :: !(Set KeyHash),
-    currentEpoch :: !EpochNumber,
-    currentSlot :: !SlotNumber,
-    k :: !BlockCount
+  { protocolMagic :: !(Annotated ProtocolMagicId ByteString)
+  , allowedDelegators :: !(Set KeyHash)
+  , currentEpoch :: !EpochNumber
+  , currentSlot :: !SlotNumber
+  , k :: !BlockCount
   }
   deriving (Eq, Show, Generic, NFData)
 
 data State = State
-  { scheduledDelegations :: !(Seq ScheduledDelegation),
-    keyEpochDelegations :: !(Set (EpochNumber, KeyHash))
+  { scheduledDelegations :: !(Seq ScheduledDelegation)
+  , keyEpochDelegations :: !(Set (EpochNumber, KeyHash))
   }
   deriving (Eq, Show, Generic, NFData, NoThunks)
 
@@ -76,9 +76,9 @@ instance ToCBOR State where
       <> toCBOR (keyEpochDelegations s)
 
 data ScheduledDelegation = ScheduledDelegation
-  { sdSlot :: !SlotNumber,
-    sdDelegator :: !KeyHash,
-    sdDelegate :: !KeyHash
+  { sdSlot :: !SlotNumber
+  , sdDelegator :: !KeyHash
+  , sdDelegate :: !KeyHash
   }
   deriving (Eq, Show, Generic, NFData, NoThunks)
 
@@ -187,8 +187,8 @@ scheduleCertificate env st cert = do
   -- Schedule the new delegation and register the epoch/delegator pair
   pure $
     State
-      { scheduledDelegations = scheduledDelegations |> delegation,
-        keyEpochDelegations =
+      { scheduledDelegations = scheduledDelegations |> delegation
+      , keyEpochDelegations =
           Set.insert
             (delegationEpoch, delegatorHash)
             keyEpochDelegations

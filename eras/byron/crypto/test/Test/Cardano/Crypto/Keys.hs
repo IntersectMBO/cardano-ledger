@@ -1,20 +1,20 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Test.Cardano.Crypto.Keys
-  ( tests,
-  )
+module Test.Cardano.Crypto.Keys (
+  tests,
+)
 where
 
-import Cardano.Crypto.Signing
-  ( deterministicKeyGen,
-    fullVerificationKeyF,
-    parseFullVerificationKey,
-    redeemDeterministicKeyGen,
-    redeemToVerification,
-    safeDeterministicKeyGen,
-    toVerification,
-  )
+import Cardano.Crypto.Signing (
+  deterministicKeyGen,
+  fullVerificationKeyF,
+  parseFullVerificationKey,
+  redeemDeterministicKeyGen,
+  redeemToVerification,
+  safeDeterministicKeyGen,
+  toVerification,
+ )
 import Cardano.Prelude
 import Formatting (sformat)
 import Hedgehog

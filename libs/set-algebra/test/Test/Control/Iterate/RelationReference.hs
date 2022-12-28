@@ -149,18 +149,18 @@ relationTests :: TestTree
 relationTests =
   testGroup
     "RelationTests - check conformance with the original implementation"
-    [ propUnary @M "dom" SA.dom dom,
-      propUnary @M "range" SA.rng range,
-      propBinary @_ @M "∈" (\k m -> k SA.∈ range m) (∈),
-      propBinary @_ @M "∉" (\k m -> k SA.∉ range m) (∉),
-      propBinary @_ @M "haskey" (\k m -> k SA.∈ dom m) haskey,
-      propBinary @_ @M "◁" (SA.◁) (◁),
-      propBinary @_ @M "⋪" (SA.⋪) (⋪),
-      propBinary @M "▷" (SA.▷) (▷),
-      propBinary @M "⋫" (SA.⋫) (⋫),
-      propBinary @M "∪" (SA.∪) (∪),
-      propBinary @M "⨃" (SA.⨃) (⨃),
-      propBinary @M "∪+" (SA.∪+) (∪+),
-      propBinary @M @M "⊆" (\m1 m2 -> SA.rng m1 SA.⊆ SA.rng m2) (⊆),
-      propBinary @(Set Int) "∩" (SA.∩) (∩)
+    [ propUnary @M "dom" SA.dom dom
+    , propUnary @M "range" SA.rng range
+    , propBinary @_ @M "∈" (\k m -> k SA.∈ range m) (∈)
+    , propBinary @_ @M "∉" (\k m -> k SA.∉ range m) (∉)
+    , propBinary @_ @M "haskey" (\k m -> k SA.∈ dom m) haskey
+    , propBinary @_ @M "◁" (SA.◁) (◁)
+    , propBinary @_ @M "⋪" (SA.⋪) (⋪)
+    , propBinary @M "▷" (SA.▷) (▷)
+    , propBinary @M "⋫" (SA.⋫) (⋫)
+    , propBinary @M "∪" (SA.∪) (∪)
+    , propBinary @M "⨃" (SA.⨃) (⨃)
+    , propBinary @M "∪+" (SA.∪+) (∪+)
+    , propBinary @M @M "⊆" (\m1 m2 -> SA.rng m1 SA.⊆ SA.rng m2) (⊆)
+    , propBinary @(Set Int) "∩" (SA.∩) (∩)
     ]

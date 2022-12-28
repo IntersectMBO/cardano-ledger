@@ -3,31 +3,31 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Cardano.Chain.Epoch.Validation
-  ( EpochError (..),
-    validateEpochFile,
-    validateEpochFiles,
-  )
+module Cardano.Chain.Epoch.Validation (
+  EpochError (..),
+  validateEpochFile,
+  validateEpochFiles,
+)
 where
 
-import Cardano.Chain.Block
-  ( ABlockOrBoundary (..),
-    ChainValidationError,
-    ChainValidationState (..),
-    blockSlot,
-    updateChainBlockOrBoundary,
-  )
-import Cardano.Chain.Epoch.File
-  ( ParseError,
-    mainnetEpochSlots,
-    parseEpochFileWithBoundary,
-    parseEpochFilesWithBoundary,
-  )
+import Cardano.Chain.Block (
+  ABlockOrBoundary (..),
+  ChainValidationError,
+  ChainValidationState (..),
+  blockSlot,
+  updateChainBlockOrBoundary,
+ )
+import Cardano.Chain.Epoch.File (
+  ParseError,
+  mainnetEpochSlots,
+  parseEpochFileWithBoundary,
+  parseEpochFilesWithBoundary,
+ )
 import qualified Cardano.Chain.Genesis as Genesis
-import Cardano.Chain.Slotting
-  ( EpochAndSlotCount,
-    fromSlotNumber,
-  )
+import Cardano.Chain.Slotting (
+  EpochAndSlotCount,
+  fromSlotNumber,
+ )
 import Cardano.Chain.ValidationMode (ValidationMode)
 import Cardano.Prelude hiding (trace)
 import Control.Monad.Trans.Resource (ResIO, runResourceT)

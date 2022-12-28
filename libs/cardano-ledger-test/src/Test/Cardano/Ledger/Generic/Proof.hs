@@ -12,43 +12,43 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 
-module Test.Cardano.Ledger.Generic.Proof
-  ( Mock,
-    Standard,
-    Evidence (..),
-    Proof (..),
-    getCrypto,
-    GoodCrypto,
-    ReflectC (..),
-    Reflect (..),
-    Some (..),
-    Ranked (..),
-    WitRule (..),
-    ruleProof,
-    runSTS,
-    goSTS,
-    preShelley,
-    preAllegra,
-    preMary,
-    preAlonzo,
-    preBabbage,
-    preConway,
-    postShelley,
-    postAllegra,
-    postMary,
-    postAlonzo,
-    postBabbage,
-    postConway,
-    ShelleyEra,
-    AllegraEra,
-    MaryEra,
-    AlonzoEra,
-    BabbageEra,
-    ConwayEra,
-    C_Crypto,
-    specialize,
-    unReflect,
-  )
+module Test.Cardano.Ledger.Generic.Proof (
+  Mock,
+  Standard,
+  Evidence (..),
+  Proof (..),
+  getCrypto,
+  GoodCrypto,
+  ReflectC (..),
+  Reflect (..),
+  Some (..),
+  Ranked (..),
+  WitRule (..),
+  ruleProof,
+  runSTS,
+  goSTS,
+  preShelley,
+  preAllegra,
+  preMary,
+  preAlonzo,
+  preBabbage,
+  preConway,
+  postShelley,
+  postAllegra,
+  postMary,
+  postAlonzo,
+  postBabbage,
+  postConway,
+  ShelleyEra,
+  AllegraEra,
+  MaryEra,
+  AlonzoEra,
+  BabbageEra,
+  ConwayEra,
+  C_Crypto,
+  specialize,
+  unReflect,
+)
 where
 
 import Cardano.Crypto.DSIGN as DSIGN
@@ -122,16 +122,16 @@ getCrypto (Conway c) = c
 -- Reflection over Crypto and Era
 
 type GoodCrypto c =
-  ( CC.Crypto c,
-    DSignable c (CH.Hash (CC.HASH c) EraIndependentTxBody),
-    DSIGNAlgorithm (CC.DSIGN c),
-    DSIGN.Signable (CC.DSIGN c) (OCertSignable c),
-    VRF.Signable (VRF c) Base.Seed,
-    KES.Signable (KES c) (BHBody c),
-    ContextKES (KES c) ~ (),
-    ContextVRF (VRF c) ~ (),
-    CH.HashAlgorithm (CC.HASH c),
-    PraosCrypto c
+  ( CC.Crypto c
+  , DSignable c (CH.Hash (CC.HASH c) EraIndependentTxBody)
+  , DSIGNAlgorithm (CC.DSIGN c)
+  , DSIGN.Signable (CC.DSIGN c) (OCertSignable c)
+  , VRF.Signable (VRF c) Base.Seed
+  , KES.Signable (KES c) (BHBody c)
+  , ContextKES (KES c) ~ ()
+  , ContextVRF (VRF c) ~ ()
+  , CH.HashAlgorithm (CC.HASH c)
+  , PraosCrypto c
   )
 
 class (GoodCrypto c) => ReflectC c where
@@ -207,8 +207,8 @@ ruleProof (MOCKCHAIN p) = p
 
 runSTS ::
   forall s e ans.
-  ( BaseM (EraRule s e) ~ ShelleyBase,
-    STS (EraRule s e)
+  ( BaseM (EraRule s e) ~ ShelleyBase
+  , STS (EraRule s e)
   ) =>
   WitRule s e ->
   TRC (EraRule s e) ->
@@ -237,11 +237,11 @@ runSTS (MOCKCHAIN _proof) x cont = cont (runShelleyBase (applySTSTest x))
 --   it will tell you what type 'env' 'state' and 'sig' are for Babbage
 goSTS ::
   forall s e ans env state sig.
-  ( BaseM (EraRule s e) ~ ShelleyBase,
-    STS (EraRule s e),
-    env ~ Environment (EraRule s e),
-    state ~ State (EraRule s e),
-    sig ~ Signal (EraRule s e)
+  ( BaseM (EraRule s e) ~ ShelleyBase
+  , STS (EraRule s e)
+  , env ~ Environment (EraRule s e)
+  , state ~ State (EraRule s e)
+  , sig ~ Signal (EraRule s e)
   ) =>
   WitRule s e ->
   env ->
@@ -290,12 +290,12 @@ preConway = [Some (Conway Mock), Some (Babbage Mock), Some (Alonzo Mock), Some (
 
 postShelley, postAllegra, postMary, postAlonzo, postBabbage, postConway :: [Some Proof]
 postShelley =
-  [ Some (Conway Mock),
-    Some (Babbage Mock),
-    Some (Alonzo Mock),
-    Some (Mary Mock),
-    Some (Allegra Mock),
-    Some (Shelley Mock)
+  [ Some (Conway Mock)
+  , Some (Babbage Mock)
+  , Some (Alonzo Mock)
+  , Some (Mary Mock)
+  , Some (Allegra Mock)
+  , Some (Shelley Mock)
   ]
 postAllegra = [Some (Conway Mock), Some (Babbage Mock), Some (Alonzo Mock), Some (Mary Mock), Some (Allegra Mock)]
 postMary = [Some (Conway Mock), Some (Babbage Mock), Some (Alonzo Mock), Some (Mary Mock)]
@@ -312,12 +312,12 @@ postConway = [Some (Conway Mock)]
 -- not percolate upwards, past the call site of 'action'
 specialize ::
   forall constraint era t.
-  ( constraint (ShelleyEra (EraCrypto era)),
-    constraint (AllegraEra (EraCrypto era)),
-    constraint (MaryEra (EraCrypto era)),
-    constraint (AlonzoEra (EraCrypto era)),
-    constraint (BabbageEra (EraCrypto era)),
-    constraint (ConwayEra (EraCrypto era))
+  ( constraint (ShelleyEra (EraCrypto era))
+  , constraint (AllegraEra (EraCrypto era))
+  , constraint (MaryEra (EraCrypto era))
+  , constraint (AlonzoEra (EraCrypto era))
+  , constraint (BabbageEra (EraCrypto era))
+  , constraint (ConwayEra (EraCrypto era))
   ) =>
   Proof era ->
   (constraint era => t) ->

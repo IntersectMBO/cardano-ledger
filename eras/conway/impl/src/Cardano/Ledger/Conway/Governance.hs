@@ -9,28 +9,28 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Ledger.Conway.Governance
-  ( GovernanceActionInfo (..),
-    GovernanceAction (..),
-    GovernanceActionIx (..),
-    GovernanceActionId (..),
-    Vote (..),
-    VoterRole (..),
-    VoteDecision (..),
-  )
+module Cardano.Ledger.Conway.Governance (
+  GovernanceActionInfo (..),
+  GovernanceAction (..),
+  GovernanceActionIx (..),
+  GovernanceActionId (..),
+  Vote (..),
+  VoterRole (..),
+  VoteDecision (..),
+)
 where
 
 import Cardano.Ledger.Babbage.Core (Era (..))
 import Cardano.Ledger.BaseTypes (ProtVer (..))
 import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
-import Cardano.Ledger.Binary.Coders
-  ( Decode (..),
-    Encode (..),
-    decode,
-    encode,
-    (!>),
-    (<!),
-  )
+import Cardano.Ledger.Binary.Coders (
+  Decode (..),
+  Encode (..),
+  decode,
+  encode,
+  (!>),
+  (<!),
+ )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (EraPParams (..))
 import Cardano.Ledger.Credential (Credential)
@@ -47,11 +47,11 @@ import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 
 data GovernanceActionInfo era = GovernanceActionInfo
-  { gaiDepositAmount :: !Coin,
-    gaiRewardAddress :: !(KeyHash 'Staking (EraCrypto era)),
-    gaiMetadataURL :: !Url,
-    gaiMetadataHash :: !(SafeHash (EraCrypto era) ByteString),
-    gaiAction :: !(GovernanceAction era)
+  { gaiDepositAmount :: !Coin
+  , gaiRewardAddress :: !(KeyHash 'Staking (EraCrypto era))
+  , gaiMetadataURL :: !Url
+  , gaiMetadataHash :: !(SafeHash (EraCrypto era) ByteString)
+  , gaiAction :: !(GovernanceAction era)
   }
   deriving (Generic)
 
@@ -64,8 +64,8 @@ instance NoThunks (PParamsUpdate era) => NoThunks (GovernanceActionInfo era)
 instance NFData (PParamsUpdate era) => NFData (GovernanceActionInfo era)
 
 instance
-  ( Era era,
-    FromCBOR (PParamsUpdate era)
+  ( Era era
+  , FromCBOR (PParamsUpdate era)
   ) =>
   FromCBOR (GovernanceActionInfo era)
   where
@@ -79,8 +79,8 @@ instance
         <! From
 
 instance
-  ( Era era,
-    ToCBOR (PParamsUpdate era)
+  ( Era era
+  , ToCBOR (PParamsUpdate era)
   ) =>
   ToCBOR (GovernanceActionInfo era)
   where
@@ -108,8 +108,8 @@ instance NoThunks (PParamsUpdate era) => NoThunks (GovernanceAction era)
 instance NFData (PParamsUpdate era) => NFData (GovernanceAction era)
 
 instance
-  ( Era era,
-    FromCBOR (PParamsUpdate era)
+  ( Era era
+  , FromCBOR (PParamsUpdate era)
   ) =>
   FromCBOR (GovernanceAction era)
   where
@@ -123,8 +123,8 @@ instance
       dec k = Invalid k
 
 instance
-  ( Era era,
-    ToCBOR (PParamsUpdate era)
+  ( Era era
+  , ToCBOR (PParamsUpdate era)
   ) =>
   ToCBOR (GovernanceAction era)
   where
@@ -146,8 +146,8 @@ deriving newtype instance FromCBOR GovernanceActionIx
 deriving newtype instance ToCBOR GovernanceActionIx
 
 data GovernanceActionId c = GovernanceActionId
-  { gaidTxId :: !(TxId c),
-    gaidGovActionIx :: !(GovernanceActionIx)
+  { gaidTxId :: !(TxId c)
+  , gaidGovActionIx :: !(GovernanceActionIx)
   }
   deriving (Generic, Eq, Show)
 
@@ -163,12 +163,12 @@ instance NoThunks (GovernanceActionId c)
 instance Crypto c => NFData (GovernanceActionId c)
 
 data Vote era = Vote
-  { voteGovActionId :: !(GovernanceActionId (EraCrypto era)),
-    voteRole :: !VoterRole,
-    voteRoleKeyHash :: !(KeyHash 'Voting (EraCrypto era)),
-    voteMetadataURL :: !Url,
-    voteMetadataHash :: !(SafeHash (EraCrypto era) ByteString),
-    voteDecision :: !VoteDecision
+  { voteGovActionId :: !(GovernanceActionId (EraCrypto era))
+  , voteRole :: !VoterRole
+  , voteRoleKeyHash :: !(KeyHash 'Voting (EraCrypto era))
+  , voteMetadataURL :: !Url
+  , voteMetadataHash :: !(SafeHash (EraCrypto era) ByteString)
+  , voteDecision :: !VoteDecision
   }
   deriving (Generic, Eq, Show)
 
@@ -177,8 +177,8 @@ instance NoThunks (Vote era)
 instance Crypto (EraCrypto era) => NFData (Vote era)
 
 instance
-  ( Era era,
-    Crypto (EraCrypto era)
+  ( Era era
+  , Crypto (EraCrypto era)
   ) =>
   FromCBOR (Vote era)
   where

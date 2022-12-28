@@ -16,54 +16,54 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Shelley.Genesis
-  ( ShelleyGenesisStaking (..),
-    ShelleyGenesis (..),
-    ValidationErr (..),
-    NominalDiffTimeMicro (..),
-    emptyGenesisStaking,
-    sgActiveSlotCoeff,
-    genesisUTxO,
-    initialFundsPseudoTxIn,
-    validateGenesis,
-    describeValidationErr,
-    mkShelleyGlobals,
-    nominalDiffTimeMicroToMicroseconds,
-    nominalDiffTimeMicroToSeconds,
-    toNominalDiffTimeMicro,
-    toNominalDiffTimeMicroWithRounding,
-    fromNominalDiffTimeMicro,
-    secondsToNominalDiffTimeMicro,
-  )
+module Cardano.Ledger.Shelley.Genesis (
+  ShelleyGenesisStaking (..),
+  ShelleyGenesis (..),
+  ValidationErr (..),
+  NominalDiffTimeMicro (..),
+  emptyGenesisStaking,
+  sgActiveSlotCoeff,
+  genesisUTxO,
+  initialFundsPseudoTxIn,
+  validateGenesis,
+  describeValidationErr,
+  mkShelleyGlobals,
+  nominalDiffTimeMicroToMicroseconds,
+  nominalDiffTimeMicroToSeconds,
+  toNominalDiffTimeMicro,
+  toNominalDiffTimeMicroWithRounding,
+  fromNominalDiffTimeMicro,
+  secondsToNominalDiffTimeMicro,
+)
 where
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import Cardano.Crypto.KES.Class (totalPeriodsKES)
 import Cardano.Ledger.Address
-import Cardano.Ledger.BaseTypes
-  ( ActiveSlotCoeff,
-    BoundedRational (boundRational, unboundRational),
-    EpochSize (..),
-    Globals (..),
-    Network,
-    PositiveUnitInterval,
-    Version,
-    mkActiveSlotCoeff,
-  )
-import Cardano.Ledger.Binary
-  ( Decoder,
-    DecoderError (..),
-    Encoding,
-    FromCBOR (..),
-    ToCBOR (..),
-    cborError,
-    decodeRational,
-    decodeRecordNamed,
-    encodeListLen,
-    enforceDecoderVersion,
-    enforceEncodingVersion,
-    shelleyProtVer,
-  )
+import Cardano.Ledger.BaseTypes (
+  ActiveSlotCoeff,
+  BoundedRational (boundRational, unboundRational),
+  EpochSize (..),
+  Globals (..),
+  Network,
+  PositiveUnitInterval,
+  Version,
+  mkActiveSlotCoeff,
+ )
+import Cardano.Ledger.Binary (
+  Decoder,
+  DecoderError (..),
+  Encoding,
+  FromCBOR (..),
+  ToCBOR (..),
+  cborError,
+  decodeRational,
+  decodeRecordNamed,
+  encodeListLen,
+  enforceDecoderVersion,
+  enforceEncodingVersion,
+  shelleyProtVer,
+ )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (HASH, KES)
@@ -88,12 +88,12 @@ import Data.Maybe (catMaybes)
 import Data.Proxy (Proxy (..))
 import Data.Text (Text)
 import qualified Data.Text as Text
-import Data.Time.Clock
-  ( NominalDiffTime,
-    UTCTime (..),
-    nominalDiffTimeToSeconds,
-    secondsToNominalDiffTime,
-  )
+import Data.Time.Clock (
+  NominalDiffTime,
+  UTCTime (..),
+  nominalDiffTimeToSeconds,
+  secondsToNominalDiffTime,
+ )
 import Data.Unit.Strict (forceElemsToWHNF)
 import Data.Word (Word32, Word64)
 import GHC.Generics (Generic)
@@ -108,19 +108,19 @@ import NoThunks.Class (NoThunks (..))
 -- For simplicity, pools defined in the genesis staking do not pay deposits for
 -- their registration.
 data ShelleyGenesisStaking c = ShelleyGenesisStaking
-  { -- | Pools to register
-    --
-    --   The key in this map is the hash of the public key of the _pool_. This
-    --   need not correspond to any payment or staking key, but must correspond
-    --   to the cold key held by 'TPraosIsCoreNode'.
-    sgsPools :: LM.ListMap (KeyHash 'StakePool c) (PoolParams c),
-    -- | Stake-holding key hash credentials and the pools to delegate that stake
-    -- to. We require the raw staking key hash in order to:
-    --
-    -- - Avoid pointer addresses, which would be tricky when there's no slot or
-    --   transaction to point to.
-    -- - Avoid script credentials.
-    sgsStake :: LM.ListMap (KeyHash 'Staking c) (KeyHash 'StakePool c)
+  { sgsPools :: LM.ListMap (KeyHash 'StakePool c) (PoolParams c)
+  -- ^ Pools to register
+  --
+  --   The key in this map is the hash of the public key of the _pool_. This
+  --   need not correspond to any payment or staking key, but must correspond
+  --   to the cold key held by 'TPraosIsCoreNode'.
+  , sgsStake :: LM.ListMap (KeyHash 'Staking c) (KeyHash 'StakePool c)
+  -- ^ Stake-holding key hash credentials and the pools to delegate that stake
+  -- to. We require the raw staking key hash in order to:
+  --
+  -- - Avoid pointer addresses, which would be tricky when there's no slot or
+  --   transaction to point to.
+  -- - Avoid script credentials.
   }
   deriving stock (Eq, Show, Generic)
 
@@ -141,8 +141,8 @@ instance CC.Crypto c => FromCBOR (ShelleyGenesisStaking c) where
 emptyGenesisStaking :: ShelleyGenesisStaking c
 emptyGenesisStaking =
   ShelleyGenesisStaking
-    { sgsPools = mempty,
-      sgsStake = mempty
+    { sgsPools = mempty
+    , sgsStake = mempty
     }
 
 -- | Unlike @'NominalDiffTime'@ that supports @'Pico'@ precision, this type
@@ -191,21 +191,21 @@ nominalDiffTimeMicroToSeconds (NominalDiffTimeMicro microseconds) = microToPico 
 -- transition naturally from Byron, and thus will never have its own genesis
 -- information.
 data ShelleyGenesis era = ShelleyGenesis
-  { sgSystemStart :: !UTCTime,
-    sgNetworkMagic :: !Word32,
-    sgNetworkId :: !Network,
-    sgActiveSlotsCoeff :: !PositiveUnitInterval,
-    sgSecurityParam :: !Word64,
-    sgEpochLength :: !EpochSize,
-    sgSlotsPerKESPeriod :: !Word64,
-    sgMaxKESEvolutions :: !Word64,
-    sgSlotLength :: !NominalDiffTimeMicro,
-    sgUpdateQuorum :: !Word64,
-    sgMaxLovelaceSupply :: !Word64,
-    sgProtocolParams :: !(ShelleyPParams era),
-    sgGenDelegs :: !(Map (KeyHash 'Genesis (EraCrypto era)) (GenDelegPair (EraCrypto era))),
-    sgInitialFunds :: LM.ListMap (Addr (EraCrypto era)) Coin,
-    sgStaking :: ShelleyGenesisStaking (EraCrypto era)
+  { sgSystemStart :: !UTCTime
+  , sgNetworkMagic :: !Word32
+  , sgNetworkId :: !Network
+  , sgActiveSlotsCoeff :: !PositiveUnitInterval
+  , sgSecurityParam :: !Word64
+  , sgEpochLength :: !EpochSize
+  , sgSlotsPerKESPeriod :: !Word64
+  , sgMaxKESEvolutions :: !Word64
+  , sgSlotLength :: !NominalDiffTimeMicro
+  , sgUpdateQuorum :: !Word64
+  , sgMaxLovelaceSupply :: !Word64
+  , sgProtocolParams :: !(ShelleyPParams era)
+  , sgGenDelegs :: !(Map (KeyHash 'Genesis (EraCrypto era)) (GenDelegPair (EraCrypto era)))
+  , sgInitialFunds :: LM.ListMap (Addr (EraCrypto era)) Coin
+  , sgStaking :: ShelleyGenesisStaking (EraCrypto era)
   }
   deriving stock (Eq, Show, Generic)
 
@@ -224,39 +224,39 @@ toShelleyGenesisPairs ::
   [a]
 toShelleyGenesisPairs
   ShelleyGenesis
-    { sgSystemStart,
-      sgNetworkMagic,
-      sgNetworkId,
-      sgActiveSlotsCoeff,
-      sgSecurityParam,
-      sgEpochLength,
-      sgSlotsPerKESPeriod,
-      sgMaxKESEvolutions,
-      sgSlotLength,
-      sgUpdateQuorum,
-      sgMaxLovelaceSupply,
-      sgProtocolParams,
-      sgGenDelegs,
-      sgInitialFunds,
-      sgStaking
+    { sgSystemStart
+    , sgNetworkMagic
+    , sgNetworkId
+    , sgActiveSlotsCoeff
+    , sgSecurityParam
+    , sgEpochLength
+    , sgSlotsPerKESPeriod
+    , sgMaxKESEvolutions
+    , sgSlotLength
+    , sgUpdateQuorum
+    , sgMaxLovelaceSupply
+    , sgProtocolParams
+    , sgGenDelegs
+    , sgInitialFunds
+    , sgStaking
     } =
     let !strictSgInitialFunds = sgInitialFunds
         !strictSgStaking = sgStaking
-     in [ "systemStart" .= sgSystemStart,
-          "networkMagic" .= sgNetworkMagic,
-          "networkId" .= sgNetworkId,
-          "activeSlotsCoeff" .= sgActiveSlotsCoeff,
-          "securityParam" .= sgSecurityParam,
-          "epochLength" .= sgEpochLength,
-          "slotsPerKESPeriod" .= sgSlotsPerKESPeriod,
-          "maxKESEvolutions" .= sgMaxKESEvolutions,
-          "slotLength" .= sgSlotLength,
-          "updateQuorum" .= sgUpdateQuorum,
-          "maxLovelaceSupply" .= sgMaxLovelaceSupply,
-          "protocolParams" .= sgProtocolParams,
-          "genDelegs" .= sgGenDelegs,
-          "initialFunds" .= strictSgInitialFunds,
-          "staking" .= strictSgStaking
+     in [ "systemStart" .= sgSystemStart
+        , "networkMagic" .= sgNetworkMagic
+        , "networkId" .= sgNetworkId
+        , "activeSlotsCoeff" .= sgActiveSlotsCoeff
+        , "securityParam" .= sgSecurityParam
+        , "epochLength" .= sgEpochLength
+        , "slotsPerKESPeriod" .= sgSlotsPerKESPeriod
+        , "maxKESEvolutions" .= sgMaxKESEvolutions
+        , "slotLength" .= sgSlotLength
+        , "updateQuorum" .= sgUpdateQuorum
+        , "maxLovelaceSupply" .= sgMaxLovelaceSupply
+        , "protocolParams" .= sgProtocolParams
+        , "genDelegs" .= sgGenDelegs
+        , "initialFunds" .= strictSgInitialFunds
+        , "staking" .= strictSgStaking
         ]
 
 instance Era era => FromJSON (ShelleyGenesis era) where
@@ -293,8 +293,8 @@ toShelleyGenesisStakingPairs ::
   ShelleyGenesisStaking c ->
   [a]
 toShelleyGenesisStakingPairs ShelleyGenesisStaking {sgsPools, sgsStake} =
-  [ "pools" .= sgsPools,
-    "stake" .= sgsStake
+  [ "pools" .= sgsPools
+  , "stake" .= sgsStake
   ]
 
 instance CC.Crypto c => FromJSON (ShelleyGenesisStaking c) where
@@ -307,21 +307,21 @@ instance CC.Crypto c => FromJSON (ShelleyGenesisStaking c) where
 instance Era era => ToCBOR (ShelleyGenesis era) where
   toCBOR
     ShelleyGenesis
-      { sgSystemStart,
-        sgNetworkMagic,
-        sgNetworkId,
-        sgActiveSlotsCoeff,
-        sgSecurityParam,
-        sgEpochLength,
-        sgSlotsPerKESPeriod,
-        sgMaxKESEvolutions,
-        sgSlotLength,
-        sgUpdateQuorum,
-        sgMaxLovelaceSupply,
-        sgProtocolParams,
-        sgGenDelegs,
-        sgInitialFunds,
-        sgStaking
+      { sgSystemStart
+      , sgNetworkMagic
+      , sgNetworkId
+      , sgActiveSlotsCoeff
+      , sgSecurityParam
+      , sgEpochLength
+      , sgSlotsPerKESPeriod
+      , sgMaxKESEvolutions
+      , sgSlotLength
+      , sgUpdateQuorum
+      , sgMaxLovelaceSupply
+      , sgProtocolParams
+      , sgGenDelegs
+      , sgInitialFunds
+      , sgStaking
       } =
       encodeListLen 15
         <> toCBOR sgSystemStart
@@ -405,9 +405,9 @@ genesisUTxO genesis =
   UTxO $
     Map.fromList
       [ (txIn, txOut)
-        | (addr, amount) <- LM.unListMap (sgInitialFunds genesis),
-          let txIn = initialFundsPseudoTxIn addr
-              txOut = mkBasicTxOut addr (Val.inject amount)
+      | (addr, amount) <- LM.unListMap (sgInitialFunds genesis)
+      , let txIn = initialFundsPseudoTxIn addr
+            txOut = mkBasicTxOut addr (Val.inject amount)
       ]
 
 -- | Compute the 'TxIn' of the initial UTxO pseudo-transaction corresponding
@@ -445,35 +445,35 @@ data ValidationErr
 describeValidationErr :: ValidationErr -> Text
 describeValidationErr (EpochNotLongEnough es secParam asc minEpochSize) =
   mconcat
-    [ "Epoch length is too low. Your epoch length of ",
-      Text.pack (show es),
-      " does not meet the minimum epoch length of ",
-      Text.pack (show minEpochSize),
-      " required by your choice of parameters for k and f: ",
-      Text.pack (show secParam),
-      " and ",
-      Text.pack (show asc),
-      ". Epochs should be at least 10k/f slots long."
+    [ "Epoch length is too low. Your epoch length of "
+    , Text.pack (show es)
+    , " does not meet the minimum epoch length of "
+    , Text.pack (show minEpochSize)
+    , " required by your choice of parameters for k and f: "
+    , Text.pack (show secParam)
+    , " and "
+    , Text.pack (show asc)
+    , ". Epochs should be at least 10k/f slots long."
     ]
 describeValidationErr (MaxKESEvolutionsUnsupported reqKES supportedKES) =
   mconcat
-    [ "You have specified a 'maxKESEvolutions' higher",
-      " than that supported by the underlying algorithm.",
-      " You requested ",
-      Text.pack (show reqKES),
-      " but the algorithm supports a maximum of ",
-      Text.pack (show supportedKES)
+    [ "You have specified a 'maxKESEvolutions' higher"
+    , " than that supported by the underlying algorithm."
+    , " You requested "
+    , Text.pack (show reqKES)
+    , " but the algorithm supports a maximum of "
+    , Text.pack (show supportedKES)
     ]
 describeValidationErr (QuorumTooSmall q maxTooSmal nodes) =
   mconcat
-    [ "You have specified an 'updateQuorum' which is",
-      " too small compared to the number of genesis nodes.",
-      " You requested ",
-      Text.pack (show q),
-      ", but given ",
-      Text.pack (show nodes),
-      " genesis nodes 'updateQuorum' must be greater than ",
-      Text.pack (show maxTooSmal)
+    [ "You have specified an 'updateQuorum' which is"
+    , " too small compared to the number of genesis nodes."
+    , " You requested "
+    , Text.pack (show q)
+    , ", but given "
+    , Text.pack (show nodes)
+    , " genesis nodes 'updateQuorum' must be greater than "
+    , Text.pack (show maxTooSmal)
     ]
 
 -- | Do some basic sanity checking on the Shelley genesis file.
@@ -484,21 +484,21 @@ validateGenesis ::
   Either [ValidationErr] ()
 validateGenesis
   ShelleyGenesis
-    { sgEpochLength,
-      sgActiveSlotsCoeff,
-      sgMaxKESEvolutions,
-      sgSecurityParam,
-      sgUpdateQuorum,
-      sgGenDelegs
+    { sgEpochLength
+    , sgActiveSlotsCoeff
+    , sgMaxKESEvolutions
+    , sgSecurityParam
+    , sgUpdateQuorum
+    , sgGenDelegs
     } =
     case catMaybes errors of
       [] -> Right ()
       xs -> Left xs
     where
       errors =
-        [ checkEpochLength,
-          checkKesEvolutions,
-          checkQuorumSize
+        [ checkEpochLength
+        , checkKesEvolutions
+        , checkQuorumSize
         ]
       checkEpochLength =
         let activeSlotsCoeff = unboundRational sgActiveSlotsCoeff
@@ -542,18 +542,18 @@ mkShelleyGlobals ::
   Globals
 mkShelleyGlobals genesis epochInfoAc maxMajorPV =
   Globals
-    { activeSlotCoeff = sgActiveSlotCoeff genesis,
-      epochInfo = epochInfoAc,
-      maxKESEvo = sgMaxKESEvolutions genesis,
-      maxLovelaceSupply = sgMaxLovelaceSupply genesis,
-      maxMajorPV = maxMajorPV,
-      networkId = sgNetworkId genesis,
-      quorum = sgUpdateQuorum genesis,
-      randomnessStabilisationWindow,
-      securityParameter = k,
-      slotsPerKESPeriod = sgSlotsPerKESPeriod genesis,
-      stabilityWindow,
-      systemStart
+    { activeSlotCoeff = sgActiveSlotCoeff genesis
+    , epochInfo = epochInfoAc
+    , maxKESEvo = sgMaxKESEvolutions genesis
+    , maxLovelaceSupply = sgMaxLovelaceSupply genesis
+    , maxMajorPV = maxMajorPV
+    , networkId = sgNetworkId genesis
+    , quorum = sgUpdateQuorum genesis
+    , randomnessStabilisationWindow
+    , securityParameter = k
+    , slotsPerKESPeriod = sgSlotsPerKESPeriod genesis
+    , stabilityWindow
+    , systemStart
     }
   where
     systemStart = SystemStart $ sgSystemStart genesis

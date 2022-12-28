@@ -4,24 +4,24 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Test.Cardano.Ledger.Shelley.BenchmarkFunctions
-  ( ledgerSpendOneUTxO,
-    ledgerSpendOneGivenUTxO,
-    initUTxO, -- How to precompute env for the UTxO transactions
-    ledgerEnv,
-    ledgerRegisterStakeKeys,
-    ledgerDeRegisterStakeKeys,
-    ledgerRewardWithdrawals,
-    ledgerStateWithNregisteredKeys, -- How to precompute env for the StakeKey transactions
-    ledgerRegisterStakePools,
-    ledgerReRegisterStakePools,
-    ledgerRetireStakePools,
-    ledgerStateWithNregisteredPools, -- How to precompute env for the Stake Pool transactions
-    ledgerDelegateManyKeysOnePool,
-    ledgerStateWithNkeysMpools, -- How to precompute env for the Stake Delegation transactions
-    B, -- Era instance for Benchmarking
-    B_Crypto, -- Crypto instance for Benchmarking
-  )
+module Test.Cardano.Ledger.Shelley.BenchmarkFunctions (
+  ledgerSpendOneUTxO,
+  ledgerSpendOneGivenUTxO,
+  initUTxO, -- How to precompute env for the UTxO transactions
+  ledgerEnv,
+  ledgerRegisterStakeKeys,
+  ledgerDeRegisterStakeKeys,
+  ledgerRewardWithdrawals,
+  ledgerStateWithNregisteredKeys, -- How to precompute env for the StakeKey transactions
+  ledgerRegisterStakePools,
+  ledgerReRegisterStakePools,
+  ledgerRetireStakePools,
+  ledgerStateWithNregisteredPools, -- How to precompute env for the Stake Pool transactions
+  ledgerDelegateManyKeysOnePool,
+  ledgerStateWithNkeysMpools, -- How to precompute env for the Stake Delegation transactions
+  B, -- Era instance for Benchmarking
+  B_Crypto, -- Crypto instance for Benchmarking
+)
 where
 
 -- Cypto and Era stuff
@@ -33,45 +33,45 @@ import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (Crypto (..))
-import Cardano.Ledger.Keys
-  ( Hash,
-    KeyHash,
-    KeyRole (..),
-    VerKeyVRF,
-    asWitness,
-    hashKey,
-    hashVerKeyVRF,
-  )
+import Cardano.Ledger.Keys (
+  Hash,
+  KeyHash,
+  KeyRole (..),
+  VerKeyVRF,
+  asWitness,
+  hashKey,
+  hashVerKeyVRF,
+ )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Delegation.Certificates (DelegCert (..))
-import Cardano.Ledger.Shelley.LedgerState
-  ( AccountState (..),
-    LedgerState (..),
-    UTxOState (..),
-  )
+import Cardano.Ledger.Shelley.LedgerState (
+  AccountState (..),
+  LedgerState (..),
+  UTxOState (..),
+ )
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..), emptyPParams)
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), ShelleyLEDGER)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
-import Cardano.Ledger.Shelley.TxBody
-  ( DCert (..),
-    Delegation (..),
-    PoolCert (..),
-    PoolParams (..),
-    RewardAcnt (..),
-    ShelleyTxBody (..),
-    ShelleyTxOut (..),
-    Wdrl (..),
-    ppCost,
-    ppId,
-    ppMargin,
-    ppMetadata,
-    ppOwners,
-    ppPledge,
-    ppRelays,
-    ppRewardAcnt,
-    ppVrf,
-  )
+import Cardano.Ledger.Shelley.TxBody (
+  DCert (..),
+  Delegation (..),
+  PoolCert (..),
+  PoolParams (..),
+  RewardAcnt (..),
+  ShelleyTxBody (..),
+  ShelleyTxOut (..),
+  Wdrl (..),
+  ppCost,
+  ppId,
+  ppMargin,
+  ppMetadata,
+  ppOwners,
+  ppPledge,
+  ppRelays,
+  ppRewardAcnt,
+  ppVrf,
+ )
 import Cardano.Ledger.Shelley.TxWits (addrWits)
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn (..), mkTxInPartial)
@@ -86,22 +86,22 @@ import qualified Data.Set as Set
 import Data.Word (Word64)
 import GHC.Stack
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkWitnessesVKey, vKey)
-import qualified Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes as Original
-  ( C_Crypto,
-  )
-import Test.Cardano.Ledger.Shelley.Generator.Core
-  ( genesisCoins,
-  )
+import qualified Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes as Original (
+  C_Crypto,
+ )
+import Test.Cardano.Ledger.Shelley.Generator.Core (
+  genesisCoins,
+ )
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
-import Test.Cardano.Ledger.Shelley.Utils
-  ( RawSeed (..),
-    mkKeyPair,
-    mkKeyPair',
-    mkVRFKeyPair,
-    runShelleyBase,
-    unsafeBoundRational,
-  )
+import Test.Cardano.Ledger.Shelley.Utils (
+  RawSeed (..),
+  mkKeyPair,
+  mkKeyPair',
+  mkVRFKeyPair,
+  runShelleyBase,
+  unsafeBoundRational,
+ )
 
 -- ===============================================
 -- A special Era to run the Benchmarks in
@@ -155,18 +155,18 @@ initUTxO n =
 ppsBench :: ShelleyPParams era
 ppsBench =
   emptyPParams
-    { _maxBBSize = 50000,
-      _d = unsafeBoundRational 0.5,
-      _eMax = EpochNo 10000,
-      _keyDeposit = Coin 0,
-      _maxBHSize = 10000,
-      _maxTxSize = 1000000000,
-      _minfeeA = 0,
-      _minfeeB = 0,
-      _minUTxOValue = Coin 10,
-      _poolDeposit = Coin 0,
-      _rho = unsafeBoundRational 0.0021,
-      _tau = unsafeBoundRational 0.2
+    { _maxBBSize = 50000
+    , _d = unsafeBoundRational 0.5
+    , _eMax = EpochNo 10000
+    , _keyDeposit = Coin 0
+    , _maxBHSize = 10000
+    , _maxTxSize = 1000000000
+    , _minfeeA = 0
+    , _minfeeB = 0
+    , _minUTxOValue = Coin 10
+    , _poolDeposit = Coin 0
+    , _rho = unsafeBoundRational 0.0021
+    , _tau = unsafeBoundRational 0.2
     }
 
 ledgerEnv :: (Core.PParams era ~ ShelleyPParams era) => LedgerEnv era
@@ -188,8 +188,8 @@ txbSpendOneUTxO =
   ShelleyTxBody
     (Set.fromList [TxIn genesisId minBound])
     ( StrictSeq.fromList
-        [ ShelleyTxOut aliceAddr (inject $ Coin 10),
-          ShelleyTxOut aliceAddr (inject $ Coin 89)
+        [ ShelleyTxOut aliceAddr (inject $ Coin 10)
+        , ShelleyTxOut aliceAddr (inject $ Coin 89)
         ]
     )
     StrictSeq.empty
@@ -401,15 +401,15 @@ vrfKeyHash = hashVerKeyVRF . snd . mkVRFKeyPair $ RawSeed 0 0 0 0 0
 mkPoolParameters :: KeyPair 'StakePool B_Crypto -> PoolParams B_Crypto
 mkPoolParameters keys =
   PoolParams
-    { ppId = (hashKey . vKey) keys,
-      ppVrf = vrfKeyHash,
-      ppPledge = Coin 0,
-      ppCost = Coin 0,
-      ppMargin = unsafeBoundRational 0,
-      ppRewardAcnt = RewardAcnt Testnet firstStakeKeyCred,
-      ppOwners = Set.singleton $ (hashKey . vKey) stakeKeyOne,
-      ppRelays = StrictSeq.empty,
-      ppMetadata = SNothing
+    { ppId = (hashKey . vKey) keys
+    , ppVrf = vrfKeyHash
+    , ppPledge = Coin 0
+    , ppCost = Coin 0
+    , ppMargin = unsafeBoundRational 0
+    , ppRewardAcnt = RewardAcnt Testnet firstStakeKeyCred
+    , ppOwners = Set.singleton $ (hashKey . vKey) stakeKeyOne
+    , ppRelays = StrictSeq.empty
+    , ppMetadata = SNothing
     }
 
 -- Create stake pool registration certs

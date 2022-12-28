@@ -17,19 +17,19 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (DSIGN, KES)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.API
-  ( Coin (..),
-    DCert,
-    Update,
-  )
+import Cardano.Ledger.Shelley.API (
+  Coin (..),
+  DCert,
+  Update,
+ )
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Scripts (MultiSig (..))
 import Cardano.Ledger.Shelley.Tx (TxIn (..))
-import Cardano.Ledger.Shelley.TxBody
-  ( ShelleyTxBody (ShelleyTxBody, stbInputs, stbOutputs, stbTxFee),
-    ShelleyTxOut (..),
-    Wdrl (..),
-  )
+import Cardano.Ledger.Shelley.TxBody (
+  ShelleyTxBody (ShelleyTxBody, stbInputs, stbOutputs, stbTxFee),
+  ShelleyTxOut (..),
+  Wdrl (..),
+ )
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (ShelleyTxWits))
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.Val ((<+>))
@@ -39,16 +39,16 @@ import Data.Sequence.Strict (StrictSeq ((:|>)))
 import Data.Set (Set)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
-import Test.Cardano.Ledger.Shelley.Generator.Core
-  ( GenEnv (..),
-    genCoin,
-    genNatural,
-  )
+import Test.Cardano.Ledger.Shelley.Generator.Core (
+  GenEnv (..),
+  genCoin,
+  genNatural,
+ )
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..), MinGenTxout (..))
-import Test.Cardano.Ledger.Shelley.Generator.ScriptClass
-  ( Quantifier (..),
-    ScriptClass (..),
-  )
+import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (
+  Quantifier (..),
+  ScriptClass (..),
+ )
 import Test.Cardano.Ledger.Shelley.Generator.Trace.Chain ()
 import Test.Cardano.Ledger.Shelley.Generator.TxAuxData (genMetadata)
 import Test.Cardano.Ledger.Shelley.Generator.Update (genPParams, genShelleyPParamsUpdate)
@@ -60,9 +60,9 @@ import Test.QuickCheck (Gen)
  -----------------------------------------------------------------------------}
 
 instance
-  ( PraosCrypto c,
-    DSIGN.Signable (DSIGN c) ~ SignableRepresentation,
-    KES.Signable (KES c) ~ SignableRepresentation
+  ( PraosCrypto c
+  , DSIGN.Signable (DSIGN c) ~ SignableRepresentation
+  , KES.Signable (KES c) ~ SignableRepresentation
   ) =>
   EraGen (ShelleyEra c)
   where
@@ -78,9 +78,9 @@ instance
 
   updateEraTxBody _utxo _pp _wits body' fee ins out =
     body'
-      { stbTxFee = fee,
-        stbInputs = stbInputs body' <> ins,
-        stbOutputs = stbOutputs body' :|> out
+      { stbTxFee = fee
+      , stbInputs = stbInputs body' <> ins
+      , stbOutputs = stbOutputs body' :|> out
       }
   genEraPParamsUpdate = genShelleyPParamsUpdate
   genEraPParams = genPParams
@@ -127,8 +127,8 @@ genTxBody _pparams slot inputs outputs certs wdrls fee update adHash = do
         fee
         ttl
         update
-        adHash,
-      [] -- Shelley does not need any additional script witnesses
+        adHash
+    , [] -- Shelley does not need any additional script witnesses
     )
 
 genTimeToLive :: SlotNo -> Gen SlotNo

@@ -4,12 +4,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 
-module Cardano.Chain.Byron.API.Mempool
-  ( ApplyMempoolPayloadErr (..),
-    applyMempoolPayload,
-    mempoolPayloadRecoverBytes,
-    mempoolPayloadReencode,
-  )
+module Cardano.Chain.Byron.API.Mempool (
+  ApplyMempoolPayloadErr (..),
+  applyMempoolPayload,
+  mempoolPayloadRecoverBytes,
+  mempoolPayloadReencode,
+)
 where
 
 import qualified Cardano.Chain.Block as CC
@@ -123,9 +123,9 @@ mkUtxoEnvironment ::
   Utxo.Environment
 mkUtxoEnvironment cfg cvs =
   Utxo.Environment
-    { Utxo.protocolMagic = protocolMagic,
-      Utxo.protocolParameters = U.Iface.adoptedProtocolParameters updateState,
-      Utxo.utxoConfiguration = Gen.configUTxOConfiguration cfg
+    { Utxo.protocolMagic = protocolMagic
+    , Utxo.protocolParameters = U.Iface.adoptedProtocolParameters updateState
+    , Utxo.utxoConfiguration = Gen.configUTxOConfiguration cfg
     }
   where
     protocolMagic = reAnnotateMagic (Gen.configProtocolMagic cfg)
@@ -137,14 +137,14 @@ mkDelegationEnvironment ::
   D.Iface.Environment
 mkDelegationEnvironment cfg currentSlot =
   D.Iface.Environment
-    { D.Iface.protocolMagic = getAProtocolMagicId protocolMagic,
-      D.Iface.allowedDelegators = allowedDelegators cfg,
-      D.Iface.k = k,
-      -- The @currentSlot@/@currentEpoch@ for checking a delegation certificate
+    { D.Iface.protocolMagic = getAProtocolMagicId protocolMagic
+    , D.Iface.allowedDelegators = allowedDelegators cfg
+    , D.Iface.k = k
+    , -- The @currentSlot@/@currentEpoch@ for checking a delegation certificate
       -- must be that of the block in which the delegation certificate is/will
       -- be included.
-      D.Iface.currentEpoch = currentEpoch,
-      D.Iface.currentSlot = currentSlot
+      D.Iface.currentEpoch = currentEpoch
+    , D.Iface.currentSlot = currentSlot
     }
   where
     k = Gen.configK cfg
@@ -158,11 +158,11 @@ mkUpdateEnvironment ::
   U.Iface.Environment
 mkUpdateEnvironment cfg currentSlot delegationMap =
   U.Iface.Environment
-    { U.Iface.protocolMagic = getAProtocolMagicId protocolMagic,
-      U.Iface.k = k,
-      U.Iface.currentSlot = currentSlot,
-      U.Iface.numGenKeys = numGenKeys,
-      U.Iface.delegationMap = delegationMap
+    { U.Iface.protocolMagic = getAProtocolMagicId protocolMagic
+    , U.Iface.k = k
+    , U.Iface.currentSlot = currentSlot
+    , U.Iface.numGenKeys = numGenKeys
+    , U.Iface.delegationMap = delegationMap
     }
   where
     k = Gen.configK cfg

@@ -13,17 +13,17 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Test.Cardano.Ledger.Generic.TxGen
-  ( genAlonzoTx,
-    Box (..),
-    applySTSByProof,
-    assembleWits,
-    coreTx,
-    coreTxBody,
-    coreTxOut,
-    genUTxO,
-    testTx,
-  )
+module Test.Cardano.Ledger.Generic.TxGen (
+  genAlonzoTx,
+  Box (..),
+  applySTSByProof,
+  assembleWits,
+  coreTx,
+  coreTxBody,
+  coreTxOut,
+  genUTxO,
+  testTx,
+)
 where
 
 import Cardano.Ledger.Allegra.Scripts (Timelock (..), ValidityInterval (..))
@@ -32,33 +32,33 @@ import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
 import Cardano.Ledger.Alonzo.Scripts hiding (Script)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
-import Cardano.Ledger.Alonzo.TxWits
-  ( RdmrPtr (..),
-    Redeemers (..),
-    TxDats (..),
-  )
+import Cardano.Ledger.Alonzo.TxWits (
+  RdmrPtr (..),
+  Redeemers (..),
+  TxDats (..),
+ )
 import Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), Datum (..))
 import Cardano.Ledger.BaseTypes (Network (..), mkTxIxPartial)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Keys
-  ( KeyHash,
-    KeyRole (..),
-    coerceKeyRole,
-  )
+import Cardano.Ledger.Keys (
+  KeyHash,
+  KeyRole (..),
+  coerceKeyRole,
+ )
 import Cardano.Ledger.Pretty (PrettyA (..), ppRecord)
 import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
-import Cardano.Ledger.Shelley.API
-  ( Addr (..),
-    Credential (..),
-    PoolCert (RegPool, RetirePool),
-    PoolParams (..),
-    RewardAcnt (..),
-    StakeReference (..),
-    Wdrl (..),
-  )
+import Cardano.Ledger.Shelley.API (
+  Addr (..),
+  Credential (..),
+  PoolCert (RegPool, RetirePool),
+  PoolParams (..),
+  RewardAcnt (..),
+  StakeReference (..),
+  Wdrl (..),
+ )
 import Cardano.Ledger.Shelley.LedgerState (RewardAccounts)
 import qualified Cardano.Ledger.Shelley.PParams as Shelley (ShelleyPParamsHKD (..))
 import qualified Cardano.Ledger.Shelley.Scripts as Shelley (MultiSig (..))
@@ -94,44 +94,44 @@ import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
 import Test.Cardano.Ledger.Generic.Fields hiding (Mint)
 import qualified Test.Cardano.Ledger.Generic.Fields as Generic (TxBodyField (Mint))
 import Test.Cardano.Ledger.Generic.Functions
-import Test.Cardano.Ledger.Generic.GenState
-  ( GenEnv (..),
-    GenRS,
-    GenState (..),
-    elementsT,
-    frequencyT,
-    genCredential,
-    genDatumWithHash,
-    genFreshRegCred,
-    genKeyHash,
-    genNewPool,
-    genPool,
-    genPositiveVal,
-    genRetirementHash,
-    genRewards,
-    genScript,
-    genValidityInterval,
-    getCertificateMax,
-    getOldUtxoPercent,
-    getRefInputsMax,
-    getSpendInputsMax,
-    getUtxoChoicesMax,
-    getUtxoElem,
-    getUtxoTest,
-    modifyGenStateInitialRewards,
-    modifyGenStateInitialUtxo,
-    modifyModelCount,
-    modifyModelIndex,
-    modifyModelMutFee,
-    modifyModelUTxO,
-    runGenRS,
-  )
-import Test.Cardano.Ledger.Generic.ModelState
-  ( MUtxo,
-    ModelNewEpochState (..),
-    UtxoEntry,
-    pcModelNewEpochState,
-  )
+import Test.Cardano.Ledger.Generic.GenState (
+  GenEnv (..),
+  GenRS,
+  GenState (..),
+  elementsT,
+  frequencyT,
+  genCredential,
+  genDatumWithHash,
+  genFreshRegCred,
+  genKeyHash,
+  genNewPool,
+  genPool,
+  genPositiveVal,
+  genRetirementHash,
+  genRewards,
+  genScript,
+  genValidityInterval,
+  getCertificateMax,
+  getOldUtxoPercent,
+  getRefInputsMax,
+  getSpendInputsMax,
+  getUtxoChoicesMax,
+  getUtxoElem,
+  getUtxoTest,
+  modifyGenStateInitialRewards,
+  modifyGenStateInitialUtxo,
+  modifyModelCount,
+  modifyModelIndex,
+  modifyModelMutFee,
+  modifyModelUTxO,
+  runGenRS,
+ )
+import Test.Cardano.Ledger.Generic.ModelState (
+  MUtxo,
+  ModelNewEpochState (..),
+  UtxoEntry,
+  pcModelNewEpochState,
+ )
 import Test.Cardano.Ledger.Generic.PrettyCore (pcTx)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.Updaters hiding (first)
@@ -358,8 +358,8 @@ redeemerWitnessMaker ::
 redeemerWitnessMaker tag listWithCred =
   let creds =
         [ (ix, genDat, cred)
-          | (ix, mCred) <- zip [0 ..] listWithCred,
-            Just (genDat, cred) <- [mCred]
+        | (ix, mCred) <- zip [0 ..] listWithCred
+        , Just (genDat, cred) <- [mCred]
         ]
       allValid = IsValid . getAll . foldMap (\(IsValid v) -> All v)
    in fmap (first allValid . unzip . catMaybes) $
@@ -401,8 +401,8 @@ genDatum = snd <$> genDatumWithHash
 genBabbageDatum :: forall era. Era era => GenRS era (Datum era)
 genBabbageDatum =
   frequencyT
-    [ (1, (DatumHash . fst) <$> genDatumWithHash),
-      (4, (Datum . dataToBinaryData . snd) <$> genDatumWithHash)
+    [ (1, (DatumHash . fst) <$> genDatumWithHash)
+    , (4, (Datum . dataToBinaryData . snd) <$> genDatumWithHash)
     ]
 
 genRefScript :: Reflect era => Proof era -> GenRS era (StrictMaybe (Script era))
@@ -505,10 +505,10 @@ genSpendReferenceInputs ::
   Map (TxIn (EraCrypto era)) (TxOut era) ->
   GenRS
     era
-    ( UtxoEntry era, -- The fee key, used to pay the fee.
-      Map (TxIn (EraCrypto era)) (TxOut era),
-      Map (TxIn (EraCrypto era)) (TxOut era),
-      Map (TxIn (EraCrypto era)) (TxOut era)
+    ( UtxoEntry era -- The fee key, used to pay the fee.
+    , Map (TxIn (EraCrypto era)) (TxOut era)
+    , Map (TxIn (EraCrypto era)) (TxOut era)
+    , Map (TxIn (EraCrypto era)) (TxOut era)
     )
 genSpendReferenceInputs newUTxO = do
   let pairs = Map.toList newUTxO
@@ -560,14 +560,14 @@ genDCert proof slot = do
     elementsT
       [ DCertDeleg
           <$> frequencyT
-            [ (75, RegKey <$> genRegKey),
-              (25, DeRegKey <$> genDeRegKey),
-              (50, Delegate <$> genDelegation)
-            ],
-        DCertPool
+            [ (75, RegKey <$> genRegKey)
+            , (25, DeRegKey <$> genDeRegKey)
+            , (50, Delegate <$> genDelegation)
+            ]
+      , DCertPool
           <$> frequencyT
-            [ (75, RegPool <$> genFreshPool),
-              (25, RetirePool <$> genRetirementHash <*> genEpoch)
+            [ (75, RegPool <$> genFreshPool)
+            , (25, RetirePool <$> genRetirementHash <*> genEpoch)
             ]
       ]
   return res
@@ -633,8 +633,8 @@ genDCerts proof slot = do
                       -- so if it is not there, we put it there, otherwise we may
                       -- never generate a valid delegation.
 
-                        ( DCertDeleg (RegKey delegCred) : dcs,
-                          Map.insert delegCred (Coin 99) regCreds
+                        ( DCertDeleg (RegKey delegCred) : dcs
+                        , Map.insert delegCred (Coin 99) regCreds
                         )
                in insertIfNotPresent dcs' regCreds' (Just delegKey)
                     <$> lookupPlutusScript delegCred Cert
@@ -652,9 +652,9 @@ genDCerts proof slot = do
   n <- lift $ choose (0, maxcert)
   reward <- gets (mRewards . gsModel)
   let initSets ::
-        ( [DCert (EraCrypto era)],
-          Set (ScriptHash (EraCrypto era), Maybe (KeyHash 'StakePool (EraCrypto era))),
-          Map (Credential 'Staking (EraCrypto era)) Coin
+        ( [DCert (EraCrypto era)]
+        , Set (ScriptHash (EraCrypto era), Maybe (KeyHash 'StakePool (EraCrypto era)))
+        , Map (Credential 'Staking (EraCrypto era)) Coin
         )
       initSets = ([], Set.empty, reward)
   (dcs, _, _) <- F.foldlM genUniqueScript initSets [1 :: Int .. n]
@@ -810,10 +810,10 @@ genAlonzoTxAndInfo ::
   SlotNo ->
   GenRS
     era
-    ( UTxO era,
-      Tx era,
-      UtxoEntry era, -- The fee key
-      Maybe (UtxoEntry era) -- from oldUtxO
+    ( UTxO era
+    , Tx era
+    , UtxoEntry era -- The fee key
+    , Maybe (UtxoEntry era) -- from oldUtxO
     )
 genAlonzoTxAndInfo proof slot = do
   GenEnv {gePParams} <- gets gsGenEnv
@@ -826,10 +826,10 @@ genAlonzoTxAndInfo proof slot = do
   -- 2. Generate UTxO for spending and reference inputs
   --    Note the spending inputs and the reference inputs may overlap.
   --    feeKey is one of the inputs from the spending inputs, safe to pay the fee with.
-  ( feepair@(feeKey, _), -- One of the spending inputs, to be used to pay the fee
-    toSpendNoCollateral, -- All of the spending inputs
-    refInputsUtxo, -- All the reference inputs
-    utxoNoCollateral -- Union of all the above
+  ( feepair@(feeKey, _) -- One of the spending inputs, to be used to pay the fee
+    , toSpendNoCollateral -- All of the spending inputs
+    , refInputsUtxo -- All the reference inputs
+    , utxoNoCollateral -- Union of all the above
     ) <-
     genSpendReferenceInputs utxoChoices
 
@@ -846,11 +846,11 @@ genAlonzoTxAndInfo proof slot = do
     redeemerWitnessMaker
       Spend
       [ (\dh cred -> (lookupByKeyM "datum" dh gsDatums, cred))
-          <$> mDatumHash
-          <*> Just credential
-        | (_, coretxout) <- Map.toAscList toSpendNoCollateral,
-          let (credentials, mDatumHash) = txoutEvidence proof coretxout,
-          credential <- credentials
+        <$> mDatumHash
+        <*> Just credential
+      | (_, coretxout) <- Map.toAscList toSpendNoCollateral
+      , let (credentials, mDatumHash) = txoutEvidence proof coretxout
+      , credential <- credentials
       ]
 
   -- generate Withdrawals before DCerts, as Rewards are populated in the Model here,
@@ -893,7 +893,7 @@ genAlonzoTxAndInfo proof slot = do
   let bogusCollateralTxIns =
         Set.fromList
           [ TxIn bogusCollateralTxId (mkTxIxPartial (fromIntegral i))
-            | i <- [maxBound, maxBound - 1 .. maxBound - fromIntegral maxCollateralCount - 1] :: [Word16]
+          | i <- [maxBound, maxBound - 1 .. maxBound - fromIntegral maxCollateralCount - 1] :: [Word16]
           ]
   collateralAddresses <- replicateM maxCollateralCount genNoScriptRecipient
   bogusCollateralKeyWitsMakers <- forM collateralAddresses $ \a ->
@@ -921,24 +921,24 @@ genAlonzoTxAndInfo proof slot = do
       txBodyNoFee =
         coreTxBody
           proof
-          [ Inputs inputSet,
-            Collateral bogusCollateralTxIns,
-            RefInputs (Map.keysSet refInputsUtxo),
-            TotalCol bogusTotalCol,
-            Outputs' outputList,
-            CollateralReturn bogusCollReturn,
-            Certs' dcerts,
-            Wdrls wdrls,
-            Txfee maxCoin,
-            if Some proof >= Some (Allegra Mock)
+          [ Inputs inputSet
+          , Collateral bogusCollateralTxIns
+          , RefInputs (Map.keysSet refInputsUtxo)
+          , TotalCol bogusTotalCol
+          , Outputs' outputList
+          , CollateralReturn bogusCollReturn
+          , Certs' dcerts
+          , Wdrls wdrls
+          , Txfee maxCoin
+          , if Some proof >= Some (Allegra Mock)
               then Vldt validityInterval
-              else TTL (timeToLive validityInterval),
-            Update' [],
-            ReqSignerHashes' [],
-            Generic.Mint mempty,
-            WppHash bogusIntegrityHash,
-            AdHash' [],
-            Txnetworkid networkId
+              else TTL (timeToLive validityInterval)
+          , Update' []
+          , ReqSignerHashes' []
+          , Generic.Mint mempty
+          , WppHash bogusIntegrityHash
+          , AdHash' []
+          , Txnetworkid networkId
           ]
       txBodyNoFeeHash = hashAnnotated txBodyNoFee
       witsMakers :: [SafeHash (EraCrypto era) EraIndependentTxBody -> [WitnessesField era]]
@@ -952,10 +952,10 @@ genAlonzoTxAndInfo proof slot = do
       bogusTxForFeeCalc =
         coreTx
           proof
-          [ Body txBodyNoFee,
-            TxWits (assembleWits proof noFeeWits),
-            Valid isValid,
-            AuxData' []
+          [ Body txBodyNoFee
+          , TxWits (assembleWits proof noFeeWits)
+          , Valid isValid
+          , AuxData' []
           ]
       fee = getMinFeeTx gePParams bogusTxForFeeCalc
 
@@ -990,11 +990,11 @@ genAlonzoTxAndInfo proof slot = do
         overrideTxBody
           proof
           txBodyNoFee
-          [ Txfee fee,
-            Collateral (Map.keysSet collMap),
-            CollateralReturn (updateCollReturn bogusCollReturn excessColCoin),
-            TotalCol (updateTotalColl bogusTotalCol balance),
-            WppHash mIntegrityHash
+          [ Txfee fee
+          , Collateral (Map.keysSet collMap)
+          , CollateralReturn (updateCollReturn bogusCollReturn excessColCoin)
+          , TotalCol (updateTotalColl bogusTotalCol balance)
+          , WppHash mIntegrityHash
           ]
       txBodyHash = hashAnnotated txBody
       neededScripts = scriptWitsNeeded' proof utxo txBody
@@ -1005,10 +1005,10 @@ genAlonzoTxAndInfo proof slot = do
       validTx =
         coreTx
           proof
-          [ Body txBody,
-            TxWits (assembleWits proof wits),
-            Valid isValid,
-            AuxData' []
+          [ Body txBody
+          , TxWits (assembleWits proof wits)
+          , Valid isValid
+          , AuxData' []
           ]
   count <- gets (mCount . gsModel)
   modifyGenStateInitialRewards (\x -> Map.union x newRewards)
@@ -1049,11 +1049,11 @@ mkTxdats fields = TxDats (List.foldl' accum Map.empty fields)
 data Box era = Box (Proof era) (TRC (EraRule "LEDGER" era)) (GenState era)
 
 instance
-  ( Era era,
-    PrettyA (State (EraRule "LEDGER" era)),
-    PrettyA (Script era),
-    PrettyA (Signal (EraRule "LEDGER" era)),
-    Signal (EraRule "LEDGER" era) ~ Tx era
+  ( Era era
+  , PrettyA (State (EraRule "LEDGER" era))
+  , PrettyA (Script era)
+  , PrettyA (Signal (EraRule "LEDGER" era))
+  , Signal (EraRule "LEDGER" era) ~ Tx era
   ) =>
   Show (Box era)
   where

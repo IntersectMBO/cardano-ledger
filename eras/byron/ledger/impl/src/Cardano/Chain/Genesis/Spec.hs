@@ -2,10 +2,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Cardano.Chain.Genesis.Spec
-  ( GenesisSpec (..),
-    mkGenesisSpec,
-  )
+module Cardano.Chain.Genesis.Spec (
+  GenesisSpec (..),
+  mkGenesisSpec,
+)
 where
 
 import Cardano.Chain.Common (BlockCount)
@@ -20,19 +20,19 @@ import qualified Data.Map.Strict as M
 
 -- | Specification how to generate full 'GenesisData'
 data GenesisSpec = UnsafeGenesisSpec
-  { -- | Genesis data describes avvm utxo
-    gsAvvmDistr :: !GenesisAvvmBalances,
-    -- | Genesis state of heavyweight delegation. Will be concatenated with
-    --   delegation genesis keyHashes if 'tiUseHeavyDlg' is 'True'
-    gsHeavyDelegation :: !GenesisDelegation,
-    -- | Genesis 'ProtocolParameters'
-    gsProtocolParameters :: !ProtocolParameters,
-    -- | The security parameter of the Ouroboros protocol
-    gsK :: !BlockCount,
-    -- | The magic number unique to any instance of Cardano
-    gsProtocolMagic :: !ProtocolMagic,
-    -- | Other data which depend on genesis type
-    gsInitializer :: !GenesisInitializer
+  { gsAvvmDistr :: !GenesisAvvmBalances
+  -- ^ Genesis data describes avvm utxo
+  , gsHeavyDelegation :: !GenesisDelegation
+  -- ^ Genesis state of heavyweight delegation. Will be concatenated with
+  --   delegation genesis keyHashes if 'tiUseHeavyDlg' is 'True'
+  , gsProtocolParameters :: !ProtocolParameters
+  -- ^ Genesis 'ProtocolParameters'
+  , gsK :: !BlockCount
+  -- ^ The security parameter of the Ouroboros protocol
+  , gsProtocolMagic :: !ProtocolMagic
+  -- ^ The magic number unique to any instance of Cardano
+  , gsInitializer :: !GenesisInitializer
+  -- ^ Other data which depend on genesis type
   }
   deriving (Eq, Show, Generic)
 

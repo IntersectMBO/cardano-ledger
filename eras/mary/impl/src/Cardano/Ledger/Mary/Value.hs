@@ -11,48 +11,48 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Ledger.Mary.Value
-  ( PolicyID (..),
-    AssetName (..),
-    MaryValue (..),
-    MultiAsset (..),
-    flattenMultiAsset,
-    insert,
-    insertMultiAsset,
-    lookup,
-    lookupMultiAsset,
-    multiAssetFromList,
-    policies,
-    prune,
-    representationSize,
-    showValue,
-    valueFromList,
-    ToExpr (..),
-  )
+module Cardano.Ledger.Mary.Value (
+  PolicyID (..),
+  AssetName (..),
+  MaryValue (..),
+  MultiAsset (..),
+  flattenMultiAsset,
+  insert,
+  insertMultiAsset,
+  lookup,
+  lookupMultiAsset,
+  multiAssetFromList,
+  policies,
+  prune,
+  representationSize,
+  showValue,
+  valueFromList,
+  ToExpr (..),
+)
 where
 
 import qualified Cardano.Crypto.Hash.Class as Hash
-import Cardano.Ledger.Binary
-  ( Decoder,
-    DecoderError (..),
-    Encoding,
-    FromCBOR (..),
-    ToCBOR (..),
-    TokenType (..),
-    cborError,
-    decodeInteger,
-    decodeMap,
-    decodeWord64,
-    peekTokenType,
-  )
-import Cardano.Ledger.Binary.Coders
-  ( Decode (..),
-    Encode (..),
-    decode,
-    encode,
-    (!>),
-    (<!),
-  )
+import Cardano.Ledger.Binary (
+  Decoder,
+  DecoderError (..),
+  Encoding,
+  FromCBOR (..),
+  ToCBOR (..),
+  TokenType (..),
+  cborError,
+  decodeInteger,
+  decodeMap,
+  decodeWord64,
+  peekTokenType,
+ )
+import Cardano.Ledger.Binary.Coders (
+  Decode (..),
+  Encode (..),
+  decode,
+  encode,
+  (!>),
+  (<!),
+ )
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), integerToWord64)
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Crypto (Crypto (ADDRHASH))
@@ -66,20 +66,20 @@ import qualified Data.ByteString.Base16 as BS16
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Short as SBS
 import Data.ByteString.Short.Internal (ShortByteString (SBS))
-import Data.CanonicalMaps
-  ( canonicalMap,
-    canonicalMapUnion,
-    pointWise,
-  )
+import Data.CanonicalMaps (
+  canonicalMap,
+  canonicalMapUnion,
+  pointWise,
+ )
 import Data.Foldable (foldMap')
 import Data.Group (Abelian, Group (..))
 import Data.Int (Int64)
 import Data.List (sortOn)
-import Data.Map.Internal
-  ( Map (..),
-    link,
-    link2,
-  )
+import Data.Map.Internal (
+  Map (..),
+  link,
+  link2,
+ )
 import Data.Map.Strict (assocs)
 import qualified Data.Map.Strict as Map
 import Data.Map.Strict.Internal (splitLookup)
@@ -99,11 +99,11 @@ import Prelude hiding (lookup)
 -- | Asset Name
 newtype AssetName = AssetName {assetName :: SBS.ShortByteString}
   deriving newtype
-    ( Eq,
-      ToCBOR,
-      Ord,
-      NoThunks,
-      NFData
+    ( Eq
+    , ToCBOR
+    , Ord
+    , NoThunks
+    , NFData
     )
 
 instance Show AssetName where
@@ -357,12 +357,12 @@ decodeIntegerBounded64 = do
     else
       fail $
         concat
-          [ "overflow when decoding mint field. min value: ",
-            show minval,
-            " max value: ",
-            show maxval,
-            " got: ",
-            show x
+          [ "overflow when decoding mint field. min value: "
+          , show minval
+          , " max value: "
+          , show maxval
+          , " got: "
+          , show x
           ]
   where
     maxval = fromIntegral (maxBound :: Int64)
@@ -708,9 +708,9 @@ from (CompactValueMultiAsset (CompactCoin c) numAssets rep) =
               readShortByteString
                 rep
                 (fromIntegral p)
-                (fromIntegral $ Hash.sizeHash ([] :: [ADDRHASH c])),
-        AssetName $ readShortByteString rep (fromIntegral a) (assetLen a),
-        fromIntegral i
+                (fromIntegral $ Hash.sizeHash ([] :: [ADDRHASH c]))
+      , AssetName $ readShortByteString rep (fromIntegral a) (assetLen a)
+      , fromIntegral i
       )
 
 -- | Strip out duplicates
@@ -848,8 +848,8 @@ gettriples (MaryValue c ma) = (c, flattenMultiAsset ma)
 flattenMultiAsset :: MultiAsset c -> [(PolicyID c, AssetName, Integer)]
 flattenMultiAsset (MultiAsset m) =
   [ (policyId, aname, amount)
-    | (policyId, m2) <- assocs m,
-      (aname, amount) <- assocs m2
+  | (policyId, m2) <- assocs m
+  , (aname, amount) <- assocs m2
   ]
 
 -- ==========================================

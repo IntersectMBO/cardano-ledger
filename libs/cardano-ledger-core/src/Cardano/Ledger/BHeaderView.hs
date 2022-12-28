@@ -19,17 +19,17 @@ import Numeric.Natural (Natural)
 -- 'BHeaderView' provide 'BBODY' all the data that it needs from the
 -- block headers.
 data BHeaderView c = BHeaderView
-  { -- | The block issuer. In the TPraos protocol, this can be a
-    --  Genesis delegate, everywhere else it is the stake pool ID.
-    bhviewID :: KeyHash 'BlockIssuer c,
-    -- | The purported size (in bytes) of the block body.
-    bhviewBSize :: Natural,
-    -- | The purported size (in bytes) of the block header.
-    bhviewHSize :: Int,
-    -- | The purported hash of the block body.
-    bhviewBHash :: Hash c EraIndependentBlockBody,
-    -- | The slot for which this block was submitted to the chain.
-    bhviewSlot :: SlotNo
+  { bhviewID :: KeyHash 'BlockIssuer c
+  -- ^ The block issuer. In the TPraos protocol, this can be a
+  --  Genesis delegate, everywhere else it is the stake pool ID.
+  , bhviewBSize :: Natural
+  -- ^ The purported size (in bytes) of the block body.
+  , bhviewHSize :: Int
+  -- ^ The purported size (in bytes) of the block header.
+  , bhviewBHash :: Hash c EraIndependentBlockBody
+  -- ^ The purported hash of the block body.
+  , bhviewSlot :: SlotNo
+  -- ^ The slot for which this block was submitted to the chain.
   }
 
 -- | Determine if the given slot is reserved for the overlay schedule.

@@ -3,42 +3,42 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Chain.Genesis.Example
-  ( exampleGenesisAvvmBalances,
-    exampleGenesisData0,
-    exampleGenesisDelegation,
-    exampleGenesisInitializer,
-    exampleGenesisSpec,
-  )
+module Test.Cardano.Chain.Genesis.Example (
+  exampleGenesisAvvmBalances,
+  exampleGenesisData0,
+  exampleGenesisDelegation,
+  exampleGenesisInitializer,
+  exampleGenesisSpec,
+)
 where
 
-import Cardano.Chain.Common
-  ( BlockCount (..),
-    hashKey,
-    mkKnownLovelace,
-  )
+import Cardano.Chain.Common (
+  BlockCount (..),
+  hashKey,
+  mkKnownLovelace,
+ )
 import Cardano.Chain.Delegation (unsafeCertificate)
-import Cardano.Chain.Genesis
-  ( FakeAvvmOptions (..),
-    GenesisAvvmBalances (..),
-    GenesisData (..),
-    GenesisDelegation (..),
-    GenesisInitializer (..),
-    GenesisKeyHashes (..),
-    GenesisNonAvvmBalances (..),
-    GenesisSpec (..),
-    TestnetBalanceOptions (..),
-  )
+import Cardano.Chain.Genesis (
+  FakeAvvmOptions (..),
+  GenesisAvvmBalances (..),
+  GenesisData (..),
+  GenesisDelegation (..),
+  GenesisInitializer (..),
+  GenesisKeyHashes (..),
+  GenesisNonAvvmBalances (..),
+  GenesisSpec (..),
+  TestnetBalanceOptions (..),
+ )
 import Cardano.Chain.Slotting (EpochNumber (..))
-import Cardano.Crypto
-  ( AProtocolMagic (..),
-    CompactRedeemVerificationKey,
-    ProtocolMagicId (..),
-    RequiresNetworkMagic (..),
-    Signature (..),
-    redeemDeterministicKeyGen,
-    toCompactRedeemVerificationKey,
-  )
+import Cardano.Crypto (
+  AProtocolMagic (..),
+  CompactRedeemVerificationKey,
+  ProtocolMagicId (..),
+  RequiresNetworkMagic (..),
+  Signature (..),
+  redeemDeterministicKeyGen,
+  toCompactRedeemVerificationKey,
+ )
 import Cardano.Crypto.Signing (VerificationKey (..))
 import qualified Cardano.Crypto.Wallet as CC
 import Cardano.Ledger.Binary (Annotated (..))
@@ -48,11 +48,11 @@ import qualified Data.Map.Strict as M
 import Data.Maybe (fromJust)
 import qualified Data.Set as Set
 import Data.Time (Day (..), UTCTime (..), secondsToDiffTime)
-import Test.Cardano.Chain.Common.Example
-  ( exampleAddress,
-    exampleAddress1,
-    exampleKeyHash,
-  )
+import Test.Cardano.Chain.Common.Example (
+  exampleAddress,
+  exampleAddress1,
+  exampleKeyHash,
+ )
 import Test.Cardano.Chain.Update.Example (exampleProtocolParameters)
 import Test.Cardano.Crypto.CBOR (getBytes)
 import Test.Cardano.Crypto.Example (exampleProtocolMagicId0)
@@ -74,8 +74,8 @@ exampleGenesisAvvmBalances :: GenesisAvvmBalances
 exampleGenesisAvvmBalances =
   GenesisAvvmBalances $
     M.fromList
-      [ (exampleCompactRVK' (0, 32), mkKnownLovelace @36524597913081152),
-        (exampleCompactRVK' (32, 32), mkKnownLovelace @37343863242999412)
+      [ (exampleCompactRVK' (0, 32), mkKnownLovelace @36524597913081152)
+      , (exampleCompactRVK' (32, 32), mkKnownLovelace @37343863242999412)
       ]
   where
     exampleCompactRVK' :: (Int, Int) -> CompactRedeemVerificationKey
@@ -86,28 +86,29 @@ exampleGenesisAvvmBalances =
 exampleGenesisData0 :: GenesisData
 exampleGenesisData0 =
   GenesisData
-    { gdGenesisKeyHashes = exampleGenesisKeyHashes,
-      gdHeavyDelegation = exampleGenesisDelegation,
-      gdStartTime = exampleUTCTime0,
-      gdNonAvvmBalances = exampleGenesisNonAvvmBalances0,
-      gdProtocolParameters = exampleProtocolParameters,
-      gdK = exampleBlockCount,
-      gdProtocolMagicId = exampleProtocolMagicId0,
-      gdAvvmDistr = exampleGenesisAvvmBalances
+    { gdGenesisKeyHashes = exampleGenesisKeyHashes
+    , gdHeavyDelegation = exampleGenesisDelegation
+    , gdStartTime = exampleUTCTime0
+    , gdNonAvvmBalances = exampleGenesisNonAvvmBalances0
+    , gdProtocolParameters = exampleProtocolParameters
+    , gdK = exampleBlockCount
+    , gdProtocolMagicId = exampleProtocolMagicId0
+    , gdAvvmDistr = exampleGenesisAvvmBalances
     }
 
 exampleGenesisDelegation :: GenesisDelegation
 exampleGenesisDelegation =
   UnsafeGenesisDelegation
     ( M.fromList
-        [ ( hashKey issueVerKey,
-            unsafeCertificate
+        [
+          ( hashKey issueVerKey
+          , unsafeCertificate
               (EpochNumber 68300481033)
               issueVerKey
               ( VerificationKey
                   ( CC.XPub
-                      { CC.xpubPublicKey = pskDelVerKey,
-                        CC.xpubChaincode = pskDelChainCode
+                      { CC.xpubPublicKey = pskDelVerKey
+                      , CC.xpubChaincode = pskDelChainCode
                       }
                   )
               )
@@ -155,18 +156,18 @@ exampleGenesisInitializer =
   GenesisInitializer
     { giTestBalance =
         TestnetBalanceOptions
-          { tboPoors = 2448641325904532856,
-            tboRichmen = 14071205313513960321,
-            tboTotalBalance = mkKnownLovelace @10953275486128625,
-            tboRichmenShare = 0.366832547637728 :: Rational
-          },
-      giFakeAvvmBalance =
+          { tboPoors = 2448641325904532856
+          , tboRichmen = 14071205313513960321
+          , tboTotalBalance = mkKnownLovelace @10953275486128625
+          , tboRichmenShare = 0.366832547637728 :: Rational
+          }
+    , giFakeAvvmBalance =
         FakeAvvmOptions
-          { faoCount = 17853231730478779264,
-            faoOneBalance = mkKnownLovelace @15087947214890024
-          },
-      giAvvmBalanceFactor = 0.366832547637728 :: Rational,
-      giUseHeavyDlg = False
+          { faoCount = 17853231730478779264
+          , faoOneBalance = mkKnownLovelace @15087947214890024
+          }
+    , giAvvmBalanceFactor = 0.366832547637728 :: Rational
+    , giUseHeavyDlg = False
     }
 
 exampleGenesisNonAvvmBalances0 :: GenesisNonAvvmBalances

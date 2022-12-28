@@ -9,22 +9,22 @@
 -- | Merkle tree implementation.
 --
 -- See <https://tools.ietf.org/html/rfc6962>.
-module Cardano.Chain.Common.Merkle
-  ( -- * MerkleRoot
-    MerkleRoot (..),
+module Cardano.Chain.Common.Merkle (
+  -- * MerkleRoot
+  MerkleRoot (..),
 
-    -- * MerkleTree
-    MerkleTree (..),
-    mtRoot,
-    mkMerkleTree,
-    mkMerkleTreeDecoded,
+  -- * MerkleTree
+  MerkleTree (..),
+  mtRoot,
+  mkMerkleTree,
+  mkMerkleTreeDecoded,
 
-    -- * MerkleNode
-    MerkleNode (..),
-    mkBranch,
-    mkLeaf,
-    mkLeafDecoded,
-  )
+  -- * MerkleNode
+  MerkleNode (..),
+  mkBranch,
+  mkLeaf,
+  mkLeafDecoded,
+)
 where
 
 -- Cardano.Prelude has its own Rube Goldberg variant of 'Foldable' which we do not
@@ -36,13 +36,13 @@ where
 
 import Cardano.Crypto (Hash, hashDecoded, hashRaw, hashToBytes)
 import Cardano.Crypto.Raw (Raw)
-import Cardano.Ledger.Binary
-  ( Annotated (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    byronProtVer,
-    serializeBuilder,
-  )
+import Cardano.Ledger.Binary (
+  Annotated (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  byronProtVer,
+  serializeBuilder,
+ )
 import Cardano.Prelude
 import Data.Aeson (ToJSON)
 import Data.ByteString.Builder (Builder, byteString, word8)
@@ -60,8 +60,8 @@ import qualified Prelude
 
 -- | Data type for root of Merkle tree
 newtype MerkleRoot a = MerkleRoot
-  { -- | returns root 'Hash' of Merkle Tree
-    getMerkleRoot :: Hash Raw
+  { getMerkleRoot :: Hash Raw
+  -- ^ returns root 'Hash' of Merkle Tree
   }
   deriving (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, NoThunks)

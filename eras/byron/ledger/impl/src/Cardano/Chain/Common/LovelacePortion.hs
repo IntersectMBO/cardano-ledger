@@ -8,11 +8,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Chain.Common.LovelacePortion
-  ( LovelacePortion,
-    rationalToLovelacePortion,
-    lovelacePortionToRational,
-  )
+module Cardano.Chain.Common.LovelacePortion (
+  LovelacePortion,
+  rationalToLovelacePortion,
+  lovelacePortionToRational,
+)
 where
 
 import Cardano.HeapWords (HeapWords)
@@ -82,8 +82,8 @@ instance MonadError SchemaError m => FromJSON m LovelacePortion where
     when (nominator > lovelacePortionDenominator) $
       throwError
         SchemaError
-          { seExpected = "LovelacePortion integer in bounds [0..1e15]",
-            seActual = Just (sformat build nominator)
+          { seExpected = "LovelacePortion integer in bounds [0..1e15]"
+          , seActual = Just (sformat build nominator)
           }
     pure (LovelacePortion nominator)
 

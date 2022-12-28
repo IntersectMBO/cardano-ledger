@@ -4,28 +4,28 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Chain.Common.NetworkMagic
-  ( NetworkMagic (..),
-    makeNetworkMagic,
-  )
+module Cardano.Chain.Common.NetworkMagic (
+  NetworkMagic (..),
+  makeNetworkMagic,
+)
 where
 
-import Cardano.Crypto.ProtocolMagic
-  ( AProtocolMagic (..),
-    RequiresNetworkMagic (..),
-    getProtocolMagic,
-  )
+import Cardano.Crypto.ProtocolMagic (
+  AProtocolMagic (..),
+  RequiresNetworkMagic (..),
+  getProtocolMagic,
+ )
 import Cardano.HeapWords (HeapWords (..))
-import Cardano.Ledger.Binary
-  ( DecoderError (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    cborError,
-    decodeListLen,
-    decodeWord8,
-    encodeListLen,
-    matchSize,
-  )
+import Cardano.Ledger.Binary (
+  DecoderError (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  cborError,
+  decodeListLen,
+  decodeWord8,
+  encodeListLen,
+  matchSize,
+ )
 import Cardano.Prelude hiding (cborError, (%))
 import Data.Aeson (ToJSON)
 import Formatting (bprint, build, (%))

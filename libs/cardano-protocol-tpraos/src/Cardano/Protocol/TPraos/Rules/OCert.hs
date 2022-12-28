@@ -5,12 +5,12 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Protocol.TPraos.Rules.OCert
-  ( OCERT,
-    PredicateFailure,
-    OCertEnv (..),
-    OcertPredicateFailure (..),
-  )
+module Cardano.Protocol.TPraos.Rules.OCert (
+  OCERT,
+  PredicateFailure,
+  OCertEnv (..),
+  OcertPredicateFailure (..),
+)
 where
 
 import Cardano.Ledger.BaseTypes
@@ -55,9 +55,9 @@ data OcertPredicateFailure c
 instance NoThunks (OcertPredicateFailure c)
 
 instance
-  ( Crypto c,
-    DSignable c (OCertSignable c),
-    KESignable c (BHBody c)
+  ( Crypto c
+  , DSignable c (OCertSignable c)
+  , KESignable c (BHBody c)
   ) =>
   STS (OCERT c)
   where
@@ -75,9 +75,9 @@ instance
   transitionRules = [ocertTransition]
 
 ocertTransition ::
-  ( Crypto c,
-    DSignable c (OCertSignable c),
-    KESignable c (BHBody c)
+  ( Crypto c
+  , DSignable c (OCertSignable c)
+  , KESignable c (BHBody c)
   ) =>
   TransitionRule (OCERT c)
 ocertTransition =

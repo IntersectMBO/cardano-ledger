@@ -13,39 +13,39 @@
 --
 -- The rules of this module determine how the update subsystem of the ledger
 -- handles the epoch transitions.
-module Cardano.Ledger.Shelley.Rules.Upec
-  ( ShelleyUPEC,
-    ShelleyUpecPredFailure (..),
-    votedValue,
-  )
+module Cardano.Ledger.Shelley.Rules.Upec (
+  ShelleyUPEC,
+  ShelleyUpecPredFailure (..),
+  votedValue,
+)
 where
 
 import Cardano.Ledger.BaseTypes (Globals (..), ProtVer, ShelleyBase, StrictMaybe)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Era (ShelleyUPEC)
-import Cardano.Ledger.Shelley.LedgerState
-  ( EpochState,
-    PPUPState (..),
-    UTxOState (utxosPpups),
-    UpecState (..),
-    esLState,
-    lsDPState,
-    lsUTxOState,
-    pattern DPState,
-    pattern EpochState,
-  )
+import Cardano.Ledger.Shelley.LedgerState (
+  EpochState,
+  PPUPState (..),
+  UTxOState (utxosPpups),
+  UpecState (..),
+  esLState,
+  lsDPState,
+  lsUTxOState,
+  pattern DPState,
+  pattern EpochState,
+ )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
 import Cardano.Ledger.Shelley.Rules.Newpp (NewppEnv (..), ShelleyNEWPP, ShelleyNewppState (..))
 import Control.Monad.Trans.Reader (asks)
-import Control.State.Transition
-  ( Embed (..),
-    STS (..),
-    TRC (..),
-    judgmentContext,
-    liftSTS,
-    trans,
-  )
+import Control.State.Transition (
+  Embed (..),
+  STS (..),
+  TRC (..),
+  judgmentContext,
+  liftSTS,
+  trans,
+ )
 import Data.Default.Class (Default)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -61,16 +61,16 @@ newtype ShelleyUpecPredFailure era
 instance NoThunks (ShelleyUpecPredFailure era)
 
 instance
-  ( EraPParams era,
-    Default (PParams era),
-    State (EraRule "PPUP" era) ~ PPUPState era,
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_maxBBSize" (PParams era) Natural,
-    HasField "_maxTxSize" (PParams era) Natural,
-    HasField "_maxBHSize" (PParams era) Natural,
-    HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_protocolVersion" (PParams era) ProtVer,
-    HasField "_protocolVersion" (PParamsUpdate era) (StrictMaybe ProtVer)
+  ( EraPParams era
+  , Default (PParams era)
+  , State (EraRule "PPUP" era) ~ PPUPState era
+  , HasField "_keyDeposit" (PParams era) Coin
+  , HasField "_maxBBSize" (PParams era) Natural
+  , HasField "_maxTxSize" (PParams era) Natural
+  , HasField "_maxBHSize" (PParams era) Natural
+  , HasField "_poolDeposit" (PParams era) Coin
+  , HasField "_protocolVersion" (PParams era) ProtVer
+  , HasField "_protocolVersion" (PParamsUpdate era) (StrictMaybe ProtVer)
   ) =>
   STS (ShelleyUPEC era)
   where
@@ -85,9 +85,9 @@ instance
         TRC
           ( EpochState
               { esLState = ls
-              },
-            UpecState pp ppupSt,
-            _
+              }
+            , UpecState pp ppupSt
+            , _
             ) <-
           judgmentContext
 

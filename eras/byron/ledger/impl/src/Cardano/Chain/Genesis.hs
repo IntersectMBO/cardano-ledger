@@ -1,6 +1,6 @@
-module Cardano.Chain.Genesis
-  ( module X,
-  )
+module Cardano.Chain.Genesis (
+  module X,
+)
 where
 
 import Cardano.Chain.Genesis.AvvmBalances as X

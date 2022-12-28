@@ -1,22 +1,22 @@
 {-# LANGUAGE BangPatterns #-}
 
-module Data.CanonicalMaps
-  ( CanonicalZero (..),
-    canonicalInsert,
-    canonicalMapUnion,
-    canonicalMap,
-    pointWise,
-    Map.Map,
-  )
+module Data.CanonicalMaps (
+  CanonicalZero (..),
+  canonicalInsert,
+  canonicalMapUnion,
+  canonicalMap,
+  pointWise,
+  Map.Map,
+)
 where
 
-import Data.Map.Internal
-  ( Map (..),
-    balanceL,
-    balanceR,
-    link,
-    link2,
-  )
+import Data.Map.Internal (
+  Map (..),
+  balanceL,
+  balanceR,
+  link,
+  link2,
+ )
 import qualified Data.Map.Strict as Map
 import Data.Map.Strict.Internal (singleton, splitLookup)
 

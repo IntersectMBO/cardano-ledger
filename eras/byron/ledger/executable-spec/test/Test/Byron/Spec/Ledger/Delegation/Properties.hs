@@ -9,92 +9,92 @@
 
 -- | Properties of the delegation traces induced by the transition systems
 -- associated with this aspect of the ledger.
-module Test.Byron.Spec.Ledger.Delegation.Properties
-  ( dcertsAreTriggered,
-    rejectDupSchedDelegs,
-    tracesAreClassified,
-    dblockTracesAreClassified,
-    relevantCasesAreCovered,
-    onlyValidSignalsAreGenerated,
-  )
+module Test.Byron.Spec.Ledger.Delegation.Properties (
+  dcertsAreTriggered,
+  rejectDupSchedDelegs,
+  tracesAreClassified,
+  dblockTracesAreClassified,
+  relevantCasesAreCovered,
+  onlyValidSignalsAreGenerated,
+)
 where
 
-import Byron.Spec.Ledger.Core
-  ( Epoch (Epoch),
-    Sig (Sig),
-    Slot,
-    SlotCount (SlotCount),
-    VKey,
-    VKeyGenesis,
-    addSlot,
-    mkVKeyGenesis,
-    owner,
-    unSlot,
-    unSlotCount,
-  )
+import Byron.Spec.Ledger.Core (
+  Epoch (Epoch),
+  Sig (Sig),
+  Slot,
+  SlotCount (SlotCount),
+  VKey,
+  VKeyGenesis,
+  addSlot,
+  mkVKeyGenesis,
+  owner,
+  unSlot,
+  unSlotCount,
+ )
 import Byron.Spec.Ledger.Core.Generators (epochGen, slotGen, vkGen)
 import qualified Byron.Spec.Ledger.Core.Generators as CoreGen
 import Byron.Spec.Ledger.Delegation
 import Byron.Spec.Ledger.GlobalParams (slotsPerEpoch)
 import Control.Arrow (first, (***))
-import Control.State.Transition
-  ( Embed,
-    Environment,
-    IRC (IRC),
-    PredicateFailure,
-    STS,
-    Signal,
-    State,
-    TRC (TRC),
-    applySTS,
-    initialRules,
-    judgmentContext,
-    trans,
-    transitionRules,
-    wrapFailed,
-    (?!),
-  )
-import Control.State.Transition.Generator
-  ( HasSizeInfo,
-    HasTrace,
-    classifySize,
-    classifyTraceLength,
-    envGen,
-    isTrivial,
-    nonTrivialTrace,
-    sigGen,
-    suchThatLastState,
-    trace,
-    traceLengthsAreClassified,
-  )
+import Control.State.Transition (
+  Embed,
+  Environment,
+  IRC (IRC),
+  PredicateFailure,
+  STS,
+  Signal,
+  State,
+  TRC (TRC),
+  applySTS,
+  initialRules,
+  judgmentContext,
+  trans,
+  transitionRules,
+  wrapFailed,
+  (?!),
+ )
+import Control.State.Transition.Generator (
+  HasSizeInfo,
+  HasTrace,
+  classifySize,
+  classifyTraceLength,
+  envGen,
+  isTrivial,
+  nonTrivialTrace,
+  sigGen,
+  suchThatLastState,
+  trace,
+  traceLengthsAreClassified,
+ )
 import qualified Control.State.Transition.Generator as Transition.Generator
-import Control.State.Transition.Trace
-  ( Trace,
-    TraceOrder (OldestFirst),
-    lastState,
-    preStatesAndSignals,
-    traceEnv,
-    traceLength,
-    traceSignals,
-  )
+import Control.State.Transition.Trace (
+  Trace,
+  TraceOrder (OldestFirst),
+  lastState,
+  preStatesAndSignals,
+  traceEnv,
+  traceLength,
+  traceSignals,
+ )
 import Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
 import Data.Data (Data, Typeable)
 import Data.List (foldl')
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import Hedgehog
-  ( Gen,
-    MonadTest,
-    Property,
-    assert,
-    cover,
-    forAll,
-    property,
-    success,
-    withTests,
-    (===),
-  )
+import Hedgehog (
+  Gen,
+  MonadTest,
+  Property,
+  assert,
+  cover,
+  forAll,
+  property,
+  success,
+  withTests,
+  (===),
+ )
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 import Lens.Micro (to, (&), (.~), (^.))
@@ -109,26 +109,26 @@ import Lens.Micro.TH (makeLenses)
 initADelegsState :: DState
 initADelegsState =
   DState
-    { _dStateDelegationMap = Bimap.empty,
-      _dStateLastDelegation = Map.empty
+    { _dStateDelegationMap = Bimap.empty
+    , _dStateLastDelegation = Map.empty
     }
 
 -- | Initial state for the ADELEG and ADELEGS systems
 initSDelegsState :: DSState
 initSDelegsState =
   DSState
-    { _dSStateScheduledDelegations = [],
-      _dSStateKeyEpochDelegations = Set.empty
+    { _dSStateScheduledDelegations = []
+    , _dSStateKeyEpochDelegations = Set.empty
     }
 
 -- | Initial state for the DELEG system
 initialDIState :: DIState
 initialDIState =
   DIState
-    { _dIStateDelegationMap = _dStateDelegationMap initADelegsState,
-      _dIStateLastDelegation = _dStateLastDelegation initADelegsState,
-      _dIStateScheduledDelegations = initSDelegsState ^. scheduledDelegations,
-      _dIStateKeyEpochDelegations = _dSStateKeyEpochDelegations initSDelegsState
+    { _dIStateDelegationMap = _dStateDelegationMap initADelegsState
+    , _dIStateLastDelegation = _dStateLastDelegation initADelegsState
+    , _dIStateScheduledDelegations = initSDelegsState ^. scheduledDelegations
+    , _dIStateKeyEpochDelegations = _dSStateKeyEpochDelegations initSDelegsState
     }
 
 -- | Delegation blocks. Simple blockchain to test delegation.
@@ -136,8 +136,8 @@ data DBLOCK deriving (Data, Typeable)
 
 -- | A delegation block.
 data DBlock = DBlock
-  { _blockSlot :: Slot,
-    _blockCerts :: [DCert]
+  { _blockSlot :: Slot
+  , _blockCerts :: [DCert]
   }
   deriving (Show, Eq)
 
@@ -175,8 +175,8 @@ instance STS DBLOCK where
         return
           ( env
               & slot .~ nextSlot
-              & epoch .~ nextEpoch,
-            stNext
+              & epoch .~ nextEpoch
+          , stNext
           )
     ]
 
@@ -280,8 +280,8 @@ nextSlotGen :: DSEnv -> Gen Slot
 nextSlotGen env =
   incSlot
     <$> Gen.frequency
-      [ (1, Gen.integral (Range.constant 1 10)),
-        (2, pure $! slotsPerEpoch (_dSEnvK env))
+      [ (1, Gen.integral (Range.constant 1 10))
+      , (2, pure $! slotsPerEpoch (_dSEnvK env))
       ]
   where
     incSlot c = (env ^. slot) `addSlot` SlotCount c

@@ -4,9 +4,9 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Chain.Common.Address
-  ( tests,
-  )
+module Test.Cardano.Chain.Common.Address (
+  tests,
+)
 where
 
 import Cardano.Chain.Common (addrNetworkMagic, isRedeemAddress)

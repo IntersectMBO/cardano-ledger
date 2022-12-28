@@ -10,19 +10,19 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | This module contains the type of protocol parameters and EraPParams instance
-module Cardano.Ledger.Conway.PParams
-  ( BabbagePParamsHKD (..),
-    BabbagePParams,
-    emptyPParams,
-    BabbagePParamsUpdate,
-    emptyPParamsUpdate,
-    updatePParams,
-    getLanguageView,
-    LangDepView (..),
-    encodeLangViews,
-    retractPP,
-    extendPP,
-  )
+module Cardano.Ledger.Conway.PParams (
+  BabbagePParamsHKD (..),
+  BabbagePParams,
+  emptyPParams,
+  BabbagePParamsUpdate,
+  emptyPParamsUpdate,
+  updatePParams,
+  getLanguageView,
+  LangDepView (..),
+  encodeLangViews,
+  retractPP,
+  extendPP,
+)
 where
 
 import Cardano.Ledger.Babbage.PParams

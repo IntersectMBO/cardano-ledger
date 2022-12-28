@@ -3,14 +3,14 @@
 
 module Cardano.Crypto.Orphans () where
 
-import Cardano.Ledger.Binary
-  ( FromCBOR (..),
-    Size,
-    ToCBOR (..),
-    encodeBytes,
-    toCborError,
-    withWordSize,
-  )
+import Cardano.Ledger.Binary (
+  FromCBOR (..),
+  Size,
+  ToCBOR (..),
+  encodeBytes,
+  toCborError,
+  withWordSize,
+ )
 import Cardano.Prelude hiding (toCborError)
 import Crypto.Error (CryptoFailable (..))
 import qualified Crypto.PubKey.Ed25519 as Ed25519

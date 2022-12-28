@@ -128,21 +128,21 @@ txInfoTests =
     [ testGroup
         "Plutus V1"
         [ testCase "silently ignore byron txout" $
-            silentlyIgnore (txEx shelleyInput byronOutput),
-          testCase "silently ignore byron txin" $
+            silentlyIgnore (txEx shelleyInput byronOutput)
+        , testCase "silently ignore byron txin" $
             silentlyIgnore (txEx byronInput shelleyOutput)
-        ],
-      testGroup
+        ]
+    , testGroup
         "Plutus V2"
         [ testCase "translation error for V2 in Alonzo" $
             expectTranslationError
               PlutusV2
               (txEx shelleyInput shelleyOutput)
               (LanguageNotSupported PlutusV2)
-        ],
-      testGroup
+        ]
+    , testGroup
         "transVITime"
-        [ testCase "validity interval's upper bound is close when protocol < 9" transVITimeUpperBoundIsClosed,
-          testCase "validity interval's upper bound is open when protocol >= 9" transVITimeUpperBoundIsOpen
+        [ testCase "validity interval's upper bound is close when protocol < 9" transVITimeUpperBoundIsClosed
+        , testCase "validity interval's upper bound is open when protocol >= 9" transVITimeUpperBoundIsOpen
         ]
     ]

@@ -15,52 +15,52 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Alonzo.Rules.Utxos
-  ( AlonzoUTXOS,
-    AlonzoUtxosPredFailure (..),
-    lbl2Phase,
-    TagMismatchDescription (..),
-    validBegin,
-    validEnd,
-    invalidBegin,
-    invalidEnd,
-    AlonzoUtxosEvent (..),
-    when2Phase,
-    FailureDescription (..),
-    scriptFailuresToPredicateFailure,
-    scriptFailuresToPlutusDebug,
-  )
+module Cardano.Ledger.Alonzo.Rules.Utxos (
+  AlonzoUTXOS,
+  AlonzoUtxosPredFailure (..),
+  lbl2Phase,
+  TagMismatchDescription (..),
+  validBegin,
+  validEnd,
+  invalidBegin,
+  invalidEnd,
+  AlonzoUtxosEvent (..),
+  when2Phase,
+  FailureDescription (..),
+  scriptFailuresToPredicateFailure,
+  scriptFailuresToPlutusDebug,
+)
 where
 
 import Cardano.Ledger.Alonzo.Era (AlonzoUTXOS)
-import Cardano.Ledger.Alonzo.PlutusScriptApi
-  ( CollectError (..),
-    collectTwoPhaseScriptInputs,
-    evalScripts,
-  )
+import Cardano.Ledger.Alonzo.PlutusScriptApi (
+  CollectError (..),
+  collectTwoPhaseScriptInputs,
+  evalScripts,
+ )
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript, CostModels)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
-import Cardano.Ledger.Alonzo.TxBody
-  ( AlonzoEraTxBody (..),
-    MaryEraTxBody (..),
-    ShelleyEraTxBody (..),
-  )
-import Cardano.Ledger.Alonzo.TxInfo
-  ( ExtendedUTxO (..),
-    PlutusDebug (..),
-    ScriptFailure (..),
-    ScriptResult (..),
-  )
+import Cardano.Ledger.Alonzo.TxBody (
+  AlonzoEraTxBody (..),
+  MaryEraTxBody (..),
+  ShelleyEraTxBody (..),
+ )
+import Cardano.Ledger.Alonzo.TxInfo (
+  ExtendedUTxO (..),
+  PlutusDebug (..),
+  ScriptFailure (..),
+  ScriptResult (..),
+ )
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded)
-import Cardano.Ledger.BaseTypes
-  ( Globals,
-    ProtVer (..),
-    ShelleyBase,
-    epochInfo,
-    strictMaybeToMaybe,
-    systemStart,
-  )
+import Cardano.Ledger.BaseTypes (
+  Globals,
+  ProtVer (..),
+  ShelleyBase,
+  epochInfo,
+  strictMaybeToMaybe,
+  systemStart,
+ )
 import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), serialize')
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin
@@ -69,13 +69,13 @@ import Cardano.Ledger.Rules.ValidationMode (Inject (..), lblStatic)
 import Cardano.Ledger.Shelley.LedgerState (PPUPState (..), UTxOState (..), keyTxRefunds, totalTxDeposits, updateStakeDistribution)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.PParams (Update)
-import Cardano.Ledger.Shelley.Rules
-  ( PpupEnv (..),
-    ShelleyPPUP,
-    ShelleyPpupPredFailure,
-    UtxoEnv (..),
-    updateUTxOState,
-  )
+import Cardano.Ledger.Shelley.Rules (
+  PpupEnv (..),
+  ShelleyPPUP,
+  ShelleyPpupPredFailure,
+  UtxoEnv (..),
+  updateUTxOState,
+ )
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), coinBalance)
 import Cardano.Ledger.Val ((<->))
 import Cardano.Slotting.EpochInfo.Extend (unsafeLinearExtendEpochInfo)
@@ -101,21 +101,21 @@ import NoThunks.Class (NoThunks)
 
 instance
   forall era.
-  ( AlonzoEraTx era,
-    ExtendedUTxO era,
-    EraUTxO era,
-    ScriptsNeeded era ~ AlonzoScriptsNeeded era,
-    Script era ~ AlonzoScript era,
-    Embed (EraRule "PPUP" era) (AlonzoUTXOS era),
-    Environment (EraRule "PPUP" era) ~ PpupEnv era,
-    State (EraRule "PPUP" era) ~ PPUPState era,
-    Signal (EraRule "PPUP" era) ~ Maybe (Update era),
-    HasField "_costmdls" (PParams era) CostModels,
-    HasField "_protocolVersion" (PParams era) ProtVer,
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin,
-    ToCBOR (PredicateFailure (EraRule "PPUP" era)), -- Serializing the PredicateFailure,
-    ProtVerAtMost era 8
+  ( AlonzoEraTx era
+  , ExtendedUTxO era
+  , EraUTxO era
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , Script era ~ AlonzoScript era
+  , Embed (EraRule "PPUP" era) (AlonzoUTXOS era)
+  , Environment (EraRule "PPUP" era) ~ PpupEnv era
+  , State (EraRule "PPUP" era) ~ PPUPState era
+  , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
+  , HasField "_costmdls" (PParams era) CostModels
+  , HasField "_protocolVersion" (PParams era) ProtVer
+  , HasField "_keyDeposit" (PParams era) Coin
+  , HasField "_poolDeposit" (PParams era) Coin
+  , ToCBOR (PredicateFailure (EraRule "PPUP" era)) -- Serializing the PredicateFailure,
+  , ProtVerAtMost era 8
   ) =>
   STS (AlonzoUTXOS era)
   where
@@ -133,10 +133,10 @@ data AlonzoUtxosEvent era
   | FailedPlutusScriptsEvent (NonEmpty PlutusDebug)
 
 instance
-  ( Era era,
-    STS (ShelleyPPUP era),
-    PredicateFailure (EraRule "PPUP" era) ~ ShelleyPpupPredFailure era,
-    Event (EraRule "PPUP" era) ~ Event (ShelleyPPUP era)
+  ( Era era
+  , STS (ShelleyPPUP era)
+  , PredicateFailure (EraRule "PPUP" era) ~ ShelleyPpupPredFailure era
+  , Event (EraRule "PPUP" era) ~ Event (ShelleyPPUP era)
   ) =>
   Embed (ShelleyPPUP era) (AlonzoUTXOS era)
   where
@@ -145,20 +145,20 @@ instance
 
 utxosTransition ::
   forall era.
-  ( ExtendedUTxO era,
-    AlonzoEraTx era,
-    EraUTxO era,
-    ScriptsNeeded era ~ AlonzoScriptsNeeded era,
-    Script era ~ AlonzoScript era,
-    Environment (EraRule "PPUP" era) ~ PpupEnv era,
-    State (EraRule "PPUP" era) ~ PPUPState era,
-    Signal (EraRule "PPUP" era) ~ Maybe (Update era),
-    Embed (EraRule "PPUP" era) (AlonzoUTXOS era),
-    HasField "_costmdls" (PParams era) CostModels,
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin,
-    ToCBOR (PredicateFailure (EraRule "PPUP" era)), -- Serializing the PredicateFailure
-    ProtVerAtMost era 8
+  ( ExtendedUTxO era
+  , AlonzoEraTx era
+  , EraUTxO era
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , Script era ~ AlonzoScript era
+  , Environment (EraRule "PPUP" era) ~ PpupEnv era
+  , State (EraRule "PPUP" era) ~ PPUPState era
+  , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
+  , Embed (EraRule "PPUP" era) (AlonzoUTXOS era)
+  , HasField "_costmdls" (PParams era) CostModels
+  , HasField "_keyDeposit" (PParams era) Coin
+  , HasField "_poolDeposit" (PParams era) Coin
+  , ToCBOR (PredicateFailure (EraRule "PPUP" era)) -- Serializing the PredicateFailure
+  , ProtVerAtMost era 8
   ) =>
   TransitionRule (AlonzoUTXOS era)
 utxosTransition =
@@ -170,18 +170,18 @@ utxosTransition =
 -- ===================================================================
 
 scriptsTransition ::
-  ( STS sts,
-    Monad m,
-    EraTx era,
-    Script era ~ AlonzoScript era,
-    MaryEraTxBody era,
-    AlonzoEraTxWits era,
-    ExtendedUTxO era,
-    EraUTxO era,
-    ScriptsNeeded era ~ AlonzoScriptsNeeded era,
-    HasField "_costmdls" (PParams era) CostModels,
-    BaseM sts ~ ReaderT Globals m,
-    PredicateFailure sts ~ AlonzoUtxosPredFailure era
+  ( STS sts
+  , Monad m
+  , EraTx era
+  , Script era ~ AlonzoScript era
+  , MaryEraTxBody era
+  , AlonzoEraTxWits era
+  , ExtendedUTxO era
+  , EraUTxO era
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , HasField "_costmdls" (PParams era) CostModels
+  , BaseM sts ~ ReaderT Globals m
+  , PredicateFailure sts ~ AlonzoUtxosPredFailure era
   ) =>
   SlotNo ->
   PParams era ->
@@ -196,8 +196,8 @@ scriptsTransition slot pp tx utxo action = do
     Right sLst ->
       when2Phase $ action $ evalScripts (getField @"_protocolVersion" pp) tx sLst
     Left info
-      | alonzoFailures <- filter isNotBadTranslation info,
-        not (null alonzoFailures) ->
+      | alonzoFailures <- filter isNotBadTranslation info
+      , not (null alonzoFailures) ->
           failBecause (CollectErrors alonzoFailures)
       | otherwise -> pure ()
   where
@@ -208,20 +208,20 @@ scriptsTransition slot pp tx utxo action = do
 
 scriptsValidateTransition ::
   forall era.
-  ( AlonzoEraTx era,
-    ExtendedUTxO era,
-    EraUTxO era,
-    ScriptsNeeded era ~ AlonzoScriptsNeeded era,
-    STS (AlonzoUTXOS era),
-    Script era ~ AlonzoScript era,
-    Environment (EraRule "PPUP" era) ~ PpupEnv era,
-    State (EraRule "PPUP" era) ~ PPUPState era,
-    Signal (EraRule "PPUP" era) ~ Maybe (Update era),
-    Embed (EraRule "PPUP" era) (AlonzoUTXOS era),
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_costmdls" (PParams era) CostModels,
-    ProtVerAtMost era 8
+  ( AlonzoEraTx era
+  , ExtendedUTxO era
+  , EraUTxO era
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , STS (AlonzoUTXOS era)
+  , Script era ~ AlonzoScript era
+  , Environment (EraRule "PPUP" era) ~ PpupEnv era
+  , State (EraRule "PPUP" era) ~ PPUPState era
+  , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
+  , Embed (EraRule "PPUP" era) (AlonzoUTXOS era)
+  , HasField "_keyDeposit" (PParams era) Coin
+  , HasField "_poolDeposit" (PParams era) Coin
+  , HasField "_costmdls" (PParams era) CostModels
+  , ProtVerAtMost era 8
   ) =>
   TransitionRule (AlonzoUTXOS era)
 scriptsValidateTransition = do
@@ -253,13 +253,13 @@ scriptsValidateTransition = do
 
 scriptsNotValidateTransition ::
   forall era.
-  ( AlonzoEraTx era,
-    ExtendedUTxO era,
-    EraUTxO era,
-    ScriptsNeeded era ~ AlonzoScriptsNeeded era,
-    STS (AlonzoUTXOS era),
-    Script era ~ AlonzoScript era,
-    HasField "_costmdls" (PParams era) CostModels
+  ( AlonzoEraTx era
+  , ExtendedUTxO era
+  , EraUTxO era
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , STS (AlonzoUTXOS era)
+  , Script era ~ AlonzoScript era
+  , HasField "_costmdls" (PParams era) CostModels
   ) =>
   TransitionRule (AlonzoUTXOS era)
 scriptsNotValidateTransition = do
@@ -283,9 +283,9 @@ scriptsNotValidateTransition = do
       !(utxoKeep, utxoDel) = extractKeys (unUTxO utxo) (txBody ^. collateralInputsTxBodyL)
   pure $!
     us
-      { utxosUtxo = UTxO utxoKeep,
-        utxosFees = fees <> coinBalance (UTxO utxoDel),
-        utxosStakeDistr = updateStakeDistribution (utxosStakeDistr us) (UTxO utxoDel) mempty
+      { utxosUtxo = UTxO utxoKeep
+      , utxosFees = fees <> coinBalance (UTxO utxoDel)
+      , utxosStakeDistr = updateStakeDistribution (utxosStakeDistr us) (UTxO utxoDel) mempty
       }
 
 -- =======================================
@@ -360,9 +360,9 @@ data AlonzoUtxosPredFailure era
     (Generic)
 
 instance
-  ( Era era,
-    ToCBOR (PredicateFailure (EraRule "PPUP" era)),
-    Show (TxOut era)
+  ( Era era
+  , ToCBOR (PredicateFailure (EraRule "PPUP" era))
+  , Show (TxOut era)
   ) =>
   ToCBOR (AlonzoUtxosPredFailure era)
   where
@@ -372,8 +372,8 @@ instance
   toCBOR (UpdateFailure pf) = encode (Sum (UpdateFailure @era) 2 !> To pf)
 
 instance
-  ( Era era,
-    FromCBOR (PredicateFailure (EraRule "PPUP" era))
+  ( Era era
+  , FromCBOR (PredicateFailure (EraRule "PPUP" era))
   ) =>
   FromCBOR (AlonzoUtxosPredFailure era)
   where
@@ -385,14 +385,14 @@ instance
       dec n = Invalid n
 
 deriving stock instance
-  ( Show (Shelley.UTxOState era),
-    Show (PredicateFailure (EraRule "PPUP" era))
+  ( Show (Shelley.UTxOState era)
+  , Show (PredicateFailure (EraRule "PPUP" era))
   ) =>
   Show (AlonzoUtxosPredFailure era)
 
 instance
-  ( Eq (Shelley.UTxOState era),
-    Eq (PredicateFailure (EraRule "PPUP" era))
+  ( Eq (Shelley.UTxOState era)
+  , Eq (PredicateFailure (EraRule "PPUP" era))
   ) =>
   Eq (AlonzoUtxosPredFailure era)
   where
@@ -402,8 +402,8 @@ instance
   _ == _ = False
 
 instance
-  ( NoThunks (Shelley.UTxOState era),
-    NoThunks (PredicateFailure (EraRule "PPUP" era))
+  ( NoThunks (Shelley.UTxOState era)
+  , NoThunks (PredicateFailure (EraRule "PPUP" era))
   ) =>
   NoThunks (AlonzoUtxosPredFailure era)
 

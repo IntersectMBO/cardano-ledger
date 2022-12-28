@@ -8,45 +8,45 @@
 -- Description : Core Nodes for Shelley ledger examples
 --
 -- The genesis/core nodes for Shelley Ledger Examples.
-module Test.Cardano.Ledger.Shelley.Examples.Federation
-  ( numCoreNodes,
-    coreNodeSK,
-    coreNodeVK,
-    coreNodeIssuerKeys,
-    coreNodeKeysBySchedule,
-    genDelegs,
-  )
+module Test.Cardano.Ledger.Shelley.Examples.Federation (
+  numCoreNodes,
+  coreNodeSK,
+  coreNodeVK,
+  coreNodeIssuerKeys,
+  coreNodeKeysBySchedule,
+  genDelegs,
+)
 where
 
 import Cardano.Ledger.BaseTypes (Globals (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Era, EraCrypto)
-import Cardano.Ledger.Keys
-  ( GenDelegPair (..),
-    KeyHash (..),
-    KeyRole (..),
-    SignKeyDSIGN,
-    VKey (..),
-    coerceKeyRole,
-    hashKey,
-    hashVerKeyVRF,
-  )
+import Cardano.Ledger.Keys (
+  GenDelegPair (..),
+  KeyHash (..),
+  KeyRole (..),
+  SignKeyDSIGN,
+  VKey (..),
+  coerceKeyRole,
+  hashKey,
+  hashVerKeyVRF,
+ )
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..))
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
-import Cardano.Protocol.TPraos.Rules.Overlay
-  ( OBftSlot (..),
-    lookupInOverlaySchedule,
-  )
+import Cardano.Protocol.TPraos.Rules.Overlay (
+  OBftSlot (..),
+  lookupInOverlaySchedule,
+ )
 import qualified Data.List
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), vKey)
-import Test.Cardano.Ledger.Shelley.Generator.Core
-  ( AllIssuerKeys (..),
-  )
+import Test.Cardano.Ledger.Shelley.Generator.Core (
+  AllIssuerKeys (..),
+ )
 import Test.Cardano.Ledger.Shelley.Utils
 
 -- | Number of Core Node
@@ -69,13 +69,13 @@ mkAllCoreNodeKeys w =
 coreNodes ::
   forall c.
   CC.Crypto c =>
-  [ ( (SignKeyDSIGN c, VKey 'Genesis c),
-      AllIssuerKeys c 'GenesisDelegate
+  [ ( (SignKeyDSIGN c, VKey 'Genesis c)
+    , AllIssuerKeys c 'GenesisDelegate
     )
   ]
 coreNodes =
   [ (mkGenKey (RawSeed x 0 0 0 0), mkAllCoreNodeKeys x)
-    | x <- [101 .. 100 + numCoreNodes]
+  | x <- [101 .. 100 + numCoreNodes]
   ]
 
 -- === Signing (Secret) Keys
@@ -141,11 +141,11 @@ genDelegs ::
   Map (KeyHash 'Genesis c) (GenDelegPair c)
 genDelegs =
   Map.fromList
-    [ ( hashKey $ snd gkey,
-        ( GenDelegPair
+    [ ( hashKey $ snd gkey
+      , ( GenDelegPair
             (coerceKeyRole . hashKey . vKey $ cold pkeys)
             (hashVerKeyVRF . snd . vrf $ pkeys)
         )
       )
-      | (gkey, pkeys) <- coreNodes
+    | (gkey, pkeys) <- coreNodes
     ]

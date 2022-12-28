@@ -10,23 +10,23 @@
 {-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Crypto.ProtocolMagic
-  ( ProtocolMagicId (..),
-    ProtocolMagic,
-    AProtocolMagic (..),
-    RequiresNetworkMagic (..),
-    getProtocolMagic,
-    getProtocolMagicId,
-  )
+module Cardano.Crypto.ProtocolMagic (
+  ProtocolMagicId (..),
+  ProtocolMagic,
+  AProtocolMagic (..),
+  RequiresNetworkMagic (..),
+  getProtocolMagic,
+  getProtocolMagicId,
+)
 where
 
-import Cardano.Ledger.Binary
-  ( Annotated (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    decodeTag,
-    encodeTag,
-  )
+import Cardano.Ledger.Binary (
+  Annotated (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  decodeTag,
+  encodeTag,
+ )
 import Cardano.Prelude
 import Control.Monad.Fail (fail)
 import Data.Aeson ((.:), (.=))
@@ -43,8 +43,8 @@ import Text.JSON.Canonical (FromJSON (..), JSValue (..), ToJSON (..), expected)
 -- Addresses (which now must be aware of `NetworkMagic`).
 type AProtocolMagic :: Type -> Type
 data AProtocolMagic a = AProtocolMagic
-  { getAProtocolMagicId :: !(Annotated ProtocolMagicId a),
-    getRequiresNetworkMagic :: !RequiresNetworkMagic
+  { getAProtocolMagicId :: !(Annotated ProtocolMagicId a)
+  , getRequiresNetworkMagic :: !RequiresNetworkMagic
   }
   deriving (Eq, Show, Generic, NFData, NoThunks)
 

@@ -8,12 +8,12 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Chain.Genesis.Data
-  ( GenesisData (..),
-    GenesisDataError (..),
-    mainnetProtocolMagicId,
-    readGenesisData,
-  )
+module Cardano.Chain.Genesis.Data (
+  GenesisData (..),
+  GenesisDataError (..),
+  mainnetProtocolMagicId,
+  readGenesisData,
+)
 where
 
 import Cardano.Chain.Common (BlockCount (..))
@@ -23,10 +23,10 @@ import Cardano.Chain.Genesis.Hash (GenesisHash (..))
 import Cardano.Chain.Genesis.KeyHashes (GenesisKeyHashes)
 import Cardano.Chain.Genesis.NonAvvmBalances (GenesisNonAvvmBalances)
 import Cardano.Chain.Update.ProtocolParameters (ProtocolParameters)
-import Cardano.Crypto
-  ( ProtocolMagicId (..),
-    hashRaw,
-  )
+import Cardano.Crypto (
+  ProtocolMagicId (..),
+  hashRaw,
+ )
 import Cardano.Ledger.Binary
 import Cardano.Prelude
 import qualified Data.ByteString as BS
@@ -36,50 +36,51 @@ import Data.Time (UTCTime)
 import Formatting (bprint, build, stext)
 import qualified Formatting.Buildable as B
 import NoThunks.Class (NoThunks (..))
-import Text.JSON.Canonical
-  ( FromJSON (..),
-    Int54,
-    JSValue (..),
-    ToJSON (..),
-    expected,
-    fromJSField,
-    fromJSObject,
-    mkObject,
-    parseCanonicalJSON,
-    renderCanonicalJSON,
-  )
+import Text.JSON.Canonical (
+  FromJSON (..),
+  Int54,
+  JSValue (..),
+  ToJSON (..),
+  expected,
+  fromJSField,
+  fromJSObject,
+  mkObject,
+  parseCanonicalJSON,
+  renderCanonicalJSON,
+ )
 
 -- | Genesis data contains all data which determines consensus rules. It must be
 --   same for all nodes. It's used to initialize global state, slotting, etc.
 data GenesisData = GenesisData
-  { gdGenesisKeyHashes :: !GenesisKeyHashes,
-    gdHeavyDelegation :: !GenesisDelegation,
-    gdStartTime :: !UTCTime,
-    gdNonAvvmBalances :: !GenesisNonAvvmBalances,
-    gdProtocolParameters :: !ProtocolParameters,
-    gdK :: !BlockCount,
-    gdProtocolMagicId :: !ProtocolMagicId,
-    gdAvvmDistr :: !GenesisAvvmBalances
+  { gdGenesisKeyHashes :: !GenesisKeyHashes
+  , gdHeavyDelegation :: !GenesisDelegation
+  , gdStartTime :: !UTCTime
+  , gdNonAvvmBalances :: !GenesisNonAvvmBalances
+  , gdProtocolParameters :: !ProtocolParameters
+  , gdK :: !BlockCount
+  , gdProtocolMagicId :: !ProtocolMagicId
+  , gdAvvmDistr :: !GenesisAvvmBalances
   }
   deriving (Show, Eq, Generic, NoThunks)
 
 instance Monad m => ToJSON m GenesisData where
   toJSON gd =
     mkObject
-      [ ("bootStakeholders", toJSON $ gdGenesisKeyHashes gd),
-        ("heavyDelegation", toJSON $ gdHeavyDelegation gd),
-        ("startTime", toJSON $ gdStartTime gd),
-        ("nonAvvmBalances", toJSON $ gdNonAvvmBalances gd),
-        ("blockVersionData", toJSON $ gdProtocolParameters gd),
-        --  The above is called blockVersionData for backwards compatibility with
+      [ ("bootStakeholders", toJSON $ gdGenesisKeyHashes gd)
+      , ("heavyDelegation", toJSON $ gdHeavyDelegation gd)
+      , ("startTime", toJSON $ gdStartTime gd)
+      , ("nonAvvmBalances", toJSON $ gdNonAvvmBalances gd)
+      , ("blockVersionData", toJSON $ gdProtocolParameters gd)
+      , --  The above is called blockVersionData for backwards compatibility with
         --  mainnet genesis block
-        ( "protocolConsts",
-          mkObject
-            [ ("k", pure . JSNum . fromIntegral . unBlockCount $ gdK gd),
-              ("protocolMagic", toJSON $ gdProtocolMagicId gd)
+
+        ( "protocolConsts"
+        , mkObject
+            [ ("k", pure . JSNum . fromIntegral . unBlockCount $ gdK gd)
+            , ("protocolMagic", toJSON $ gdProtocolMagicId gd)
             ]
-        ),
-        ("avvmDistr", toJSON $ gdAvvmDistr gd)
+        )
+      , ("avvmDistr", toJSON $ gdAvvmDistr gd)
       ]
 
 instance MonadError SchemaError m => FromJSON m GenesisData where
@@ -131,15 +132,15 @@ instance ToCBOR GenesisData where
         gdAvvmDistr_
       ) =
       mconcat
-        [ encodeListLen 8,
-          toCBOR @GenesisKeyHashes gdGenesisKeyHashes_,
-          toCBOR @GenesisDelegation gdHeavyDelegation_,
-          toCBOR {- @UTCTime -} gdStartTime_,
-          toCBOR @GenesisNonAvvmBalances gdNonAvvmBalances_,
-          toCBOR @ProtocolParameters gdProtocolParameters_,
-          toCBOR @BlockCount gdK_,
-          toCBOR @ProtocolMagicId gdProtocolMagicId_,
-          toCBOR @GenesisAvvmBalances gdAvvmDistr_
+        [ encodeListLen 8
+        , toCBOR @GenesisKeyHashes gdGenesisKeyHashes_
+        , toCBOR @GenesisDelegation gdHeavyDelegation_
+        , toCBOR {- @UTCTime -} gdStartTime_
+        , toCBOR @GenesisNonAvvmBalances gdNonAvvmBalances_
+        , toCBOR @ProtocolParameters gdProtocolParameters_
+        , toCBOR @BlockCount gdK_
+        , toCBOR @ProtocolMagicId gdProtocolMagicId_
+        , toCBOR @GenesisAvvmBalances gdAvvmDistr_
         ]
 
 instance FromCBOR GenesisData where

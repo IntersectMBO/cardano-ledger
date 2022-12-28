@@ -5,35 +5,35 @@
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
-module Test.Cardano.Chain.UTxO.Model
-  ( tests,
-    elaborateAndUpdate,
-    elaborateInitialUTxO,
-    elaborateTxWitnesses,
-    elaborateTxWitsBSWithMap,
-  )
+module Test.Cardano.Chain.UTxO.Model (
+  tests,
+  elaborateAndUpdate,
+  elaborateInitialUTxO,
+  elaborateTxWitnesses,
+  elaborateTxWitsBSWithMap,
+)
 where
 
 import qualified Byron.Spec.Ledger.STS.UTXO as Abstract
 import Byron.Spec.Ledger.STS.UTXOW (UTXOW)
 import qualified Byron.Spec.Ledger.UTxO as Abstract
 import Cardano.Chain.Block (BlockValidationMode (BlockValidation))
-import Cardano.Chain.UTxO
-  ( TxValidationMode (TxValidation),
-    updateUTxOTxWitness,
-  )
+import Cardano.Chain.UTxO (
+  TxValidationMode (TxValidation),
+  updateUTxOTxWitness,
+ )
 import qualified Cardano.Chain.UTxO as Concrete
 import qualified Cardano.Chain.UTxO.UTxO as Concrete.UTxO
 import Cardano.Chain.ValidationMode (ValidationMode (..))
 import Cardano.Crypto (hashDecoded, serializeCborHash)
 import Cardano.Prelude hiding (trace, traceM, traceShow)
 import Control.State.Transition.Generator (classifyTraceLength, trace)
-import Control.State.Transition.Trace
-  ( Trace,
-    TraceOrder (OldestFirst),
-    traceEnv,
-    traceSignals,
-  )
+import Control.State.Transition.Trace (
+  Trace,
+  TraceOrder (OldestFirst),
+  traceEnv,
+  traceSignals,
+ )
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as M
 import Hedgehog (MonadTest, evalEither, forAll, property)
@@ -114,8 +114,8 @@ elaborateAndUpdate abstractEnv (utxo, txIdMap) abstractTxWits =
 
     vMode =
       ValidationMode
-        { blockValidationMode = BlockValidation,
-          txValidationMode = TxValidation
+        { blockValidationMode = BlockValidation
+        , txValidationMode = TxValidation
         }
 
 elaborateTxWitnesses ::

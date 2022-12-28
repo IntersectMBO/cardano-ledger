@@ -10,21 +10,21 @@
 --
 --   This is an implementation of the rules defined in the Byron ledger
 --   specification
-module Cardano.Chain.Update.Validation.Registration
-  ( Error (..),
-    Environment (..),
-    State (..),
-    ApplicationVersion (..),
-    ApplicationVersions,
-    Metadata,
-    ProtocolUpdateProposal (..),
-    ProtocolUpdateProposals,
-    SoftwareUpdateProposal (..),
-    SoftwareUpdateProposals,
-    registerProposal,
-    TooLarge (..),
-    Adopted (..),
-  )
+module Cardano.Chain.Update.Validation.Registration (
+  Error (..),
+  Environment (..),
+  State (..),
+  ApplicationVersion (..),
+  ApplicationVersions,
+  Metadata,
+  ProtocolUpdateProposal (..),
+  ProtocolUpdateProposals,
+  SoftwareUpdateProposal (..),
+  SoftwareUpdateProposals,
+  registerProposal,
+  TooLarge (..),
+  Adopted (..),
+)
 where
 
 import Cardano.Chain.Common (KeyHash, hashKey)
@@ -32,70 +32,70 @@ import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Slotting (SlotNumber (SlotNumber))
 import Cardano.Chain.Update.ApplicationName (ApplicationName)
 import Cardano.Chain.Update.InstallerHash (InstallerHash)
-import Cardano.Chain.Update.Proposal
-  ( AProposal (..),
-    ProposalBody (..),
-    UpId,
-    protocolParametersUpdate,
-    protocolVersion,
-    recoverProposalSignedBytes,
-    recoverUpId,
-    softwareVersion,
-  )
+import Cardano.Chain.Update.Proposal (
+  AProposal (..),
+  ProposalBody (..),
+  UpId,
+  protocolParametersUpdate,
+  protocolVersion,
+  recoverProposalSignedBytes,
+  recoverUpId,
+  softwareVersion,
+ )
 import qualified Cardano.Chain.Update.Proposal as Proposal
-import Cardano.Chain.Update.ProtocolParameters
-  ( ProtocolParameters,
-    ppMaxBlockSize,
-    ppMaxProposalSize,
-    ppMaxTxSize,
-    ppScriptVersion,
-  )
+import Cardano.Chain.Update.ProtocolParameters (
+  ProtocolParameters,
+  ppMaxBlockSize,
+  ppMaxProposalSize,
+  ppMaxTxSize,
+  ppScriptVersion,
+ )
 import qualified Cardano.Chain.Update.ProtocolParametersUpdate as PPU
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion (ProtocolVersion))
-import Cardano.Chain.Update.SoftwareVersion
-  ( NumSoftwareVersion,
-    SoftwareVersion (SoftwareVersion),
-    SoftwareVersionError,
-    checkSoftwareVersion,
-    svAppName,
-  )
+import Cardano.Chain.Update.SoftwareVersion (
+  NumSoftwareVersion,
+  SoftwareVersion (SoftwareVersion),
+  SoftwareVersionError,
+  checkSoftwareVersion,
+  svAppName,
+ )
 import Cardano.Chain.Update.SystemTag (SystemTag, SystemTagError, checkSystemTag)
-import Cardano.Crypto
-  ( ProtocolMagicId (..),
-    SignTag (SignUSProposal),
-    verifySignatureDecoded,
-  )
-import Cardano.Ledger.Binary
-  ( Annotated (unAnnotated),
-    Decoder,
-    DecoderError (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    cborError,
-    decodeListLen,
-    decodeWord8,
-    encodeListLen,
-    enforceSize,
-    matchSize,
-  )
+import Cardano.Crypto (
+  ProtocolMagicId (..),
+  SignTag (SignUSProposal),
+  verifySignatureDecoded,
+ )
+import Cardano.Ledger.Binary (
+  Annotated (unAnnotated),
+  Decoder,
+  DecoderError (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  cborError,
+  decodeListLen,
+  decodeWord8,
+  encodeListLen,
+  enforceSize,
+  matchSize,
+ )
 import Cardano.Prelude hiding (State, cborError)
 import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as M
 import NoThunks.Class (NoThunks (..))
 
 data Environment = Environment
-  { protocolMagic :: !(Annotated ProtocolMagicId ByteString),
-    currentSlot :: !SlotNumber,
-    adoptedProtocolVersion :: !ProtocolVersion,
-    adoptedProtocolParameters :: !ProtocolParameters,
-    appVersions :: !ApplicationVersions,
-    delegationMap :: !Delegation.Map
+  { protocolMagic :: !(Annotated ProtocolMagicId ByteString)
+  , currentSlot :: !SlotNumber
+  , adoptedProtocolVersion :: !ProtocolVersion
+  , adoptedProtocolParameters :: !ProtocolParameters
+  , appVersions :: !ApplicationVersions
+  , delegationMap :: !Delegation.Map
   }
 
 data ApplicationVersion = ApplicationVersion
-  { avNumSoftwareVersion :: !NumSoftwareVersion,
-    avSlotNumber :: !SlotNumber,
-    avMetadata :: !Metadata
+  { avNumSoftwareVersion :: !NumSoftwareVersion
+  , avSlotNumber :: !SlotNumber
+  , avMetadata :: !Metadata
   }
   deriving (Eq, Show, Generic)
   deriving anyclass (NFData, NoThunks)
@@ -119,13 +119,13 @@ type Metadata = Map SystemTag InstallerHash
 -- | State keeps track of registered protocol and software update
 --   proposals
 data State = State
-  { rsProtocolUpdateProposals :: !ProtocolUpdateProposals,
-    rsSoftwareUpdateProposals :: !SoftwareUpdateProposals
+  { rsProtocolUpdateProposals :: !ProtocolUpdateProposals
+  , rsSoftwareUpdateProposals :: !SoftwareUpdateProposals
   }
 
 data ProtocolUpdateProposal = ProtocolUpdateProposal
-  { pupProtocolVersion :: !ProtocolVersion,
-    pupProtocolParameters :: !ProtocolParameters
+  { pupProtocolVersion :: !ProtocolVersion
+  , pupProtocolParameters :: !ProtocolParameters
   }
   deriving (Eq, Show, Generic)
   deriving anyclass (NFData, NoThunks)
@@ -144,8 +144,8 @@ instance ToCBOR ProtocolUpdateProposal where
 type ProtocolUpdateProposals = Map UpId ProtocolUpdateProposal
 
 data SoftwareUpdateProposal = SoftwareUpdateProposal
-  { supSoftwareVersion :: !SoftwareVersion,
-    supSoftwareMetadata :: !Metadata
+  { supSoftwareVersion :: !SoftwareVersion
+  , supSoftwareMetadata :: !Metadata
   }
   deriving (Eq, Show, Generic)
   deriving anyclass (NFData, NoThunks)
@@ -266,8 +266,8 @@ instance FromCBOR Error where
       _ -> cborError $ DecoderErrorUnknownTag "Registration.Error" tag
 
 data TooLarge n = TooLarge
-  { tlActual :: n,
-    tlMaxBound :: n
+  { tlActual :: n
+  , tlMaxBound :: n
   }
   deriving (Eq, Show)
 
@@ -319,8 +319,8 @@ registerProposal env rs proposal = do
     proposerId = hashKey issuer
 
     Environment
-      { protocolMagic,
-        delegationMap
+      { protocolMagic
+      , delegationMap
       } = env
 
 -- | Register the individual components of an update proposal
@@ -352,9 +352,9 @@ registerProposalComponents env rs proposal = do
   pure $ State registeredPUPs' registeredSUPs'
   where
     ProposalBody
-      { protocolVersion,
-        protocolParametersUpdate = ppu,
-        softwareVersion
+      { protocolVersion
+      , protocolParametersUpdate = ppu
+      , softwareVersion
       } = Proposal.body proposal
 
     SoftwareVersion appName appVersion = softwareVersion
@@ -367,11 +367,11 @@ registerProposalComponents env rs proposal = do
       not $ protocolVersion == adoptedPV && PPU.apply ppu adoptedPP == adoptedPP
 
     Environment
-      { protocolMagic,
-        currentSlot,
-        adoptedProtocolVersion = adoptedPV,
-        adoptedProtocolParameters = adoptedPP,
-        appVersions
+      { protocolMagic
+      , currentSlot
+      , adoptedProtocolVersion = adoptedPV
+      , adoptedProtocolParameters = adoptedPP
+      , appVersions
       } = env
 
     State registeredPUPs registeredSUPs = rs
@@ -402,7 +402,7 @@ registerProposalComponents env rs proposal = do
     nullUpdateExemptions =
       unAnnotated protocolMagic == ProtocolMagicId 633343913 -- staging
         && ( currentSlot == SlotNumber 969188 -- in epoch 44
-               || currentSlot == SlotNumber 1915231 -- in epoch 88
+              || currentSlot == SlotNumber 1915231 -- in epoch 88
            )
 
 -- | Validate a protocol update

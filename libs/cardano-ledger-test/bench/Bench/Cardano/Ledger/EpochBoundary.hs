@@ -11,19 +11,19 @@ import Cardano.Ledger.BaseTypes (Network (Testnet))
 import Cardano.Ledger.Coin (Coin (Coin))
 import Cardano.Ledger.Compactible (Compactible (toCompact))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential
-  ( Credential (KeyHashObj),
-    PaymentCredential,
-    Ptr (..),
-    StakeCredential,
-    StakeReference (StakeRefBase, StakeRefNull, StakeRefPtr),
-  )
+import Cardano.Ledger.Credential (
+  Credential (KeyHashObj),
+  PaymentCredential,
+  Ptr (..),
+  StakeCredential,
+  StakeReference (StakeRefBase, StakeRefNull, StakeRefPtr),
+ )
 import Cardano.Ledger.Keys (VKey (..), hashKey)
 import Cardano.Ledger.Mary (MaryEra)
-import Cardano.Ledger.SafeHash
-  ( SafeToHash (makeHashWithExplicitProxys),
-    castSafeHash,
-  )
+import Cardano.Ledger.SafeHash (
+  SafeToHash (makeHashWithExplicitProxys),
+  castSafeHash,
+ )
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxOut (..))
 import Cardano.Ledger.Slot (SlotNo (SlotNo))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
@@ -69,9 +69,9 @@ txOutUnstaked =
 txOutsFromCreds :: [StakeCredential TestCrypto] -> [TxOut TestEra]
 txOutsFromCreds creds =
   [ TxOutCompact
-      (compactAddr $ Addr Testnet payCred (StakeRefBase cred))
-      coinVal
-    | cred <- creds
+    (compactAddr $ Addr Testnet payCred (StakeRefBase cred))
+    coinVal
+  | cred <- creds
   ]
   where
     coinVal = fromJust . toCompact . Val.inject $ Coin 100
@@ -79,9 +79,9 @@ txOutsFromCreds creds =
 txOutsFromPtrs :: [Ptr] -> [TxOut TestEra]
 txOutsFromPtrs ptrs =
   [ TxOutCompact
-      (compactAddr $ Addr Testnet payCred (StakeRefPtr ptr))
-      coinVal
-    | ptr <- ptrs
+    (compactAddr $ Addr Testnet payCred (StakeRefPtr ptr))
+    coinVal
+  | ptr <- ptrs
   ]
   where
     coinVal = fromJust . toCompact . Val.inject $ Coin 200
@@ -97,7 +97,7 @@ stakePtrs :: [StakeCredential c] -> Map Ptr (StakeCredential c)
 stakePtrs creds =
   Map.fromList
     [ (Ptr (SlotNo i) minBound minBound, cred)
-      | (i, cred) <- zip [0 ..] creds
+    | (i, cred) <- zip [0 ..] creds
     ]
 
 -- | Create a UTxO set containing 'noUnstaked' unstaked TxOuts, 'noBase'
@@ -127,8 +127,8 @@ utxo noUnstaked noBase ptrMap dupFactor =
     cycleTimes n xs = xs ++ cycleTimes (n - 1) xs
 
 data AggTestSetup = AggTestSetup
-  { atsPtrMap :: !(Map Ptr (StakeCredential TestCrypto)),
-    atsUTxO :: !(UTxO TestEra)
+  { atsPtrMap :: !(Map Ptr (StakeCredential TestCrypto))
+  , atsUTxO :: !(UTxO TestEra)
   }
 
 instance NFData AggTestSetup where
@@ -171,36 +171,36 @@ aggregateUtxoBench =
     "aggregateUtxoCoinByCredential"
     [ bgroup
         "duplication"
-        [ env (pure $ sizedAggTestSetup 0 1000 0 1) $ bench "1000/0" . nf go,
-          env (pure $ sizedAggTestSetup 0 10 0 100) $ bench "10/0 * 100" . nf go,
-          env (pure $ sizedAggTestSetup 0 100 0 10) $ bench "100/0 * 10" . nf go
-        ],
-      bgroup
+        [ env (pure $ sizedAggTestSetup 0 1000 0 1) $ bench "1000/0" . nf go
+        , env (pure $ sizedAggTestSetup 0 10 0 100) $ bench "10/0 * 100" . nf go
+        , env (pure $ sizedAggTestSetup 0 100 0 10) $ bench "100/0 * 10" . nf go
+        ]
+    , bgroup
         "ptr"
-        [ env (pure $ sizedAggTestSetup 0 1000 0 1) $ bench "1000/0" . nf go,
-          env (pure $ sizedAggTestSetup 0 500 500 1) $ bench "500/500" . nf go
-        ],
-      bgroup
+        [ env (pure $ sizedAggTestSetup 0 1000 0 1) $ bench "1000/0" . nf go
+        , env (pure $ sizedAggTestSetup 0 500 500 1) $ bench "500/500" . nf go
+        ]
+    , bgroup
         "utxo"
-        [ env (pure $ sizedAggTestSetup 0 1000 0 1) $ bench "0 1000/0" . nf go,
-          env (pure $ sizedAggTestSetup 1000 1000 0 1) $ bench "1000 1000/0" . nf go,
-          env (pure $ sizedAggTestSetup 10000 1000 0 1) $ bench "10000 1000/0" . nf go,
-          env (pure $ sizedAggTestSetup 100000 1000 0 1) $ bench "100000 1000/0" . nf go,
-          env (pure $ sizedAggTestSetup 1000000 1000 0 1) $ bench "1000000 1000/0" . nf go
-        ],
-      bgroup
+        [ env (pure $ sizedAggTestSetup 0 1000 0 1) $ bench "0 1000/0" . nf go
+        , env (pure $ sizedAggTestSetup 1000 1000 0 1) $ bench "1000 1000/0" . nf go
+        , env (pure $ sizedAggTestSetup 10000 1000 0 1) $ bench "10000 1000/0" . nf go
+        , env (pure $ sizedAggTestSetup 100000 1000 0 1) $ bench "100000 1000/0" . nf go
+        , env (pure $ sizedAggTestSetup 1000000 1000 0 1) $ bench "1000000 1000/0" . nf go
+        ]
+    , bgroup
         "size"
-        [ env (pure $ sizedAggTestSetup 0 100 0 1) $ bench "100/0" . nf go,
-          env (pure $ sizedAggTestSetup 0 1000 0 1) $ bench "1000/0" . nf go,
-          env (pure $ sizedAggTestSetup 0 10000 0 1) $ bench "10000/0" . nf go,
-          env (pure $ sizedAggTestSetup 0 100000 0 1) $ bench "100000/0" . nf go,
-          env (pure $ sizedAggTestSetup 0 1000000 0 1) $ bench "1000000/0" . nf go
-        ],
-      bgroup
+        [ env (pure $ sizedAggTestSetup 0 100 0 1) $ bench "100/0" . nf go
+        , env (pure $ sizedAggTestSetup 0 1000 0 1) $ bench "1000/0" . nf go
+        , env (pure $ sizedAggTestSetup 0 10000 0 1) $ bench "10000/0" . nf go
+        , env (pure $ sizedAggTestSetup 0 100000 0 1) $ bench "100000/0" . nf go
+        , env (pure $ sizedAggTestSetup 0 1000000 0 1) $ bench "1000000/0" . nf go
+        ]
+    , bgroup
         "mainnet"
-        [ env (pure $ sizedAggTestSetup 4000000 100000 0 5) $ bench "current" . nf go,
-          env (pure $ sizedAggTestSetup 4000000 500000 0 1) $ bench "current no dup" . nf go,
-          env (pure $ sizedAggTestSetup 8000000 200000 0 5) $ bench "2x" . nf go
+        [ env (pure $ sizedAggTestSetup 4000000 100000 0 5) $ bench "current" . nf go
+        , env (pure $ sizedAggTestSetup 4000000 500000 0 1) $ bench "current no dup" . nf go
+        , env (pure $ sizedAggTestSetup 8000000 200000 0 5) $ bench "2x" . nf go
         ]
     ]
   where

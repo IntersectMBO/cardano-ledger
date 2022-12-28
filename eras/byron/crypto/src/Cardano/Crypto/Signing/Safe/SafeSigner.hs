@@ -1,8 +1,8 @@
-module Cardano.Crypto.Signing.Safe.SafeSigner
-  ( SafeSigner (..),
-    noPassSafeSigner,
-    safeToVerification,
-  )
+module Cardano.Crypto.Signing.Safe.SafeSigner (
+  SafeSigner (..),
+  noPassSafeSigner,
+  safeToVerification,
+)
 where
 
 import Cardano.Crypto.Signing.Safe.PassPhrase (PassPhrase, emptyPassphrase)

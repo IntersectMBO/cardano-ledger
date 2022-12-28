@@ -40,10 +40,10 @@ import Database.Persist.Sqlite
 -- Populate database
 
 insertGetKey ::
-  ( MonadIO m,
-    PersistUniqueWrite backend,
-    PersistRecordBackend record backend,
-    AtLeastOneUniqueKey record
+  ( MonadIO m
+  , PersistUniqueWrite backend
+  , PersistRecordBackend record backend
+  , AtLeastOneUniqueKey record
   ) =>
   record ->
   ReaderT backend m (Key record)
@@ -56,9 +56,9 @@ insertUTxOState ::
 insertUTxOState Shelley.UTxOState {..} = do
   insert $
     UtxoState
-      { utxoStateDeposited = utxosDeposited,
-        utxoStateFees = utxosFees,
-        utxoStatePpups = utxosPpups
+      { utxoStateDeposited = utxosDeposited
+      , utxoStateFees = utxosFees
+      , utxoStatePpups = utxosPpups
       }
 
 insertUTxO ::
@@ -75,16 +75,16 @@ insertUTxO utxo stateKey = do
       txsKey <-
         insert $
           Txs
-            { txsInIx = txIx,
-              txsInId = txId,
-              txsOut = out,
-              txsStakeCredential = Nothing
+            { txsInIx = txIx
+            , txsInId = txId
+            , txsOut = out
+            , txsStakeCredential = Nothing
             }
       insert_ $
         UtxoEntry
-          { utxoEntryTxId = txKey,
-            utxoEntryTxsId = txsKey,
-            utxoEntryStateId = stateKey
+          { utxoEntryTxId = txKey
+          , utxoEntryTxsId = txsKey
+          , utxoEntryStateId = stateKey
           }
 
 insertDState :: MonadIO m => Shelley.DState C -> ReaderT SqlBackend m DStateId
@@ -118,10 +118,10 @@ insertLedgerState epochStateKey Shelley.LedgerState {..} = do
   dstateKey <- insertDState $ Shelley.dpsDState lsDPState
   insert_
     LedgerState
-      { ledgerStateUtxoId = stateKey,
-        ledgerStateDstateId = dstateKey,
-        ledgerStatePstateBin = Shelley.dpsPState lsDPState,
-        ledgerStateEpochStateId = epochStateKey
+      { ledgerStateUtxoId = stateKey
+      , ledgerStateDstateId = dstateKey
+      , ledgerStatePstateBin = Shelley.dpsPState lsDPState
+      , ledgerStateEpochStateId = epochStateKey
       }
 
 insertSnapShot ::
@@ -151,9 +151,9 @@ insertSnapShots ::
 insertSnapShots epochStateKey EpochBoundary.SnapShots {..} = do
   mapM_
     (uncurry (insertSnapShot epochStateKey))
-    [ (SnapShotMark, ssStakeMark),
-      (SnapShotSet, ssStakeSet),
-      (SnapShotGo, ssStakeGo)
+    [ (SnapShotMark, ssStakeMark)
+    , (SnapShotSet, ssStakeSet)
+    , (SnapShotGo, ssStakeGo)
     ]
 
 insertEpochState ::
@@ -162,12 +162,12 @@ insertEpochState Shelley.EpochState {..} = do
   epochStateKey <-
     insert
       EpochState
-        { epochStateTreasury = Shelley.asTreasury esAccountState,
-          epochStateReserves = Shelley.asReserves esAccountState,
-          epochStatePrevPp = esPrevPp,
-          epochStatePp = esPp,
-          epochStateNonMyopic = esNonMyopic,
-          epochStateSnapShotsFee = EpochBoundary.ssFee esSnapshots
+        { epochStateTreasury = Shelley.asTreasury esAccountState
+        , epochStateReserves = Shelley.asReserves esAccountState
+        , epochStatePrevPp = esPrevPp
+        , epochStatePp = esPp
+        , epochStateNonMyopic = esNonMyopic
+        , epochStateSnapShotsFee = EpochBoundary.ssFee esSnapshots
         }
   insertSnapShots epochStateKey esSnapshots
   insertLedgerState epochStateKey esLState
@@ -177,12 +177,12 @@ insertEpochState Shelley.EpochState {..} = do
 -- Into vector
 
 selectVMap ::
-  ( Ord k,
-    PersistEntity record,
-    PersistEntityBackend record ~ SqlBackend,
-    VMap.Vector kv k,
-    VMap.Vector vv v,
-    MonadResource m
+  ( Ord k
+  , PersistEntity record
+  , PersistEntityBackend record ~ SqlBackend
+  , VMap.Vector kv k
+  , VMap.Vector vv v
+  , MonadResource m
   ) =>
   [Filter record] ->
   (record -> ReaderT SqlBackend m (k, v)) ->
@@ -225,9 +225,9 @@ getSnapShotNoSharingM epochStateId snapShotType = do
       pure (Keys.coerceKeyRole keyHash, snapShotPoolParams)
   pure
     SnapShotM
-      { ssStake = stake,
-        ssDelegations = delegations,
-        ssPoolParams = poolParams
+      { ssStake = stake
+      , ssDelegations = delegations
+      , ssPoolParams = poolParams
       }
 {-# INLINEABLE getSnapShotNoSharingM #-}
 
@@ -271,9 +271,9 @@ getSnapShotWithSharingM otherSnapShots epochStateId snapShotType = do
       pure (internOtherDelegations credential, internPoolParams keyHash)
   pure
     SnapShotM
-      { ssStake = stake,
-        ssDelegations = delegations,
-        ssPoolParams = poolParams
+      { ssStake = stake
+      , ssDelegations = delegations
+      , ssPoolParams = poolParams
       }
 {-# INLINEABLE getSnapShotWithSharingM #-}
 
@@ -287,20 +287,20 @@ getSnapShotsWithSharingM (Entity epochStateId EpochState {epochStateSnapShotsFee
   go <- getSnapShotWithSharingM [mark, set] epochStateId SnapShotGo
   pure $
     SnapShotsM
-      { ssPstakeMark = mark,
-        ssPstakeSet = set,
-        ssPstakeGo = go,
-        ssFeeSS = epochStateSnapShotsFee
+      { ssPstakeMark = mark
+      , ssPstakeSet = set
+      , ssPstakeGo = go
+      , ssFeeSS = epochStateSnapShotsFee
       }
 {-# INLINEABLE getSnapShotsWithSharingM #-}
 
 -- Into a Map structure
 
 selectMap ::
-  ( MonadResource m,
-    Ord k,
-    PersistEntity record,
-    PersistEntityBackend record ~ SqlBackend
+  ( MonadResource m
+  , Ord k
+  , PersistEntity record
+  , PersistEntityBackend record ~ SqlBackend
   ) =>
   [Filter record] ->
   (record -> ReaderT SqlBackend m (k, a)) ->
@@ -341,9 +341,9 @@ getSnapShotNoSharing epochStateId snapShotType = do
       pure (Keys.coerceKeyRole keyHash, snapShotPoolParams)
   pure
     EpochBoundary.SnapShot
-      { ssStake = EpochBoundary.Stake stake,
-        ssDelegations = delegations,
-        ssPoolParams = poolParams
+      { ssStake = EpochBoundary.Stake stake
+      , ssDelegations = delegations
+      , ssPoolParams = poolParams
       }
 {-# INLINEABLE getSnapShotNoSharing #-}
 
@@ -357,11 +357,11 @@ getSnapShotsNoSharing (Entity epochStateId EpochState {epochStateSnapShotsFee}) 
   go <- getSnapShotNoSharing epochStateId SnapShotGo
   pure $
     EpochBoundary.SnapShots
-      { ssStakeMark = mark,
-        ssStakeMarkPoolDistr = EpochBoundary.calculatePoolDistr mark,
-        ssStakeSet = set,
-        ssStakeGo = go,
-        ssFee = epochStateSnapShotsFee
+      { ssStakeMark = mark
+      , ssStakeMarkPoolDistr = EpochBoundary.calculatePoolDistr mark
+      , ssStakeSet = set
+      , ssStakeGo = go
+      , ssFee = epochStateSnapShotsFee
       }
 {-# INLINEABLE getSnapShotsNoSharing #-}
 
@@ -375,10 +375,10 @@ getSnapShotsNoSharingM (Entity epochStateId EpochState {epochStateSnapShotsFee})
   go <- getSnapShotNoSharingM epochStateId SnapShotGo
   pure $
     SnapShotsM
-      { ssPstakeMark = mark,
-        ssPstakeSet = set,
-        ssPstakeGo = go,
-        ssFeeSS = epochStateSnapShotsFee
+      { ssPstakeMark = mark
+      , ssPstakeSet = set
+      , ssPstakeGo = go
+      , ssFeeSS = epochStateSnapShotsFee
       }
 {-# INLINEABLE getSnapShotsNoSharingM #-}
 
@@ -422,9 +422,9 @@ getSnapShotWithSharing otherSnapShots epochStateId snapShotType = do
       pure (internOtherDelegations credential, internPoolParams keyHash)
   pure
     EpochBoundary.SnapShot
-      { ssStake = EpochBoundary.Stake stake,
-        ssDelegations = delegations,
-        ssPoolParams = poolParams
+      { ssStake = EpochBoundary.Stake stake
+      , ssDelegations = delegations
+      , ssPoolParams = poolParams
       }
 {-# INLINEABLE getSnapShotWithSharing #-}
 
@@ -438,11 +438,11 @@ getSnapShotsWithSharing (Entity epochStateId EpochState {epochStateSnapShotsFee}
   go <- getSnapShotWithSharing [mark, set] epochStateId SnapShotGo
   pure $
     EpochBoundary.SnapShots
-      { ssStakeMark = mark,
-        ssStakeMarkPoolDistr = EpochBoundary.calculatePoolDistr mark,
-        ssStakeSet = set,
-        ssStakeGo = go,
-        ssFee = epochStateSnapShotsFee
+      { ssStakeMark = mark
+      , ssStakeMarkPoolDistr = EpochBoundary.calculatePoolDistr mark
+      , ssStakeSet = set
+      , ssStakeGo = go
+      , ssFee = epochStateSnapShotsFee
       }
 {-# INLINEABLE getSnapShotsWithSharing #-}
 
@@ -513,11 +513,11 @@ getLedgerState utxo LedgerState {..} dstate = do
   pure
     Shelley.LedgerState
       { Shelley.lsUTxOState =
-          Shelley.smartUTxOState utxo utxoStateDeposited utxoStateFees utxoStatePpups, -- Maintain invariant
-        Shelley.lsDPState =
+          Shelley.smartUTxOState utxo utxoStateDeposited utxoStateFees utxoStatePpups -- Maintain invariant
+      , Shelley.lsDPState =
           Shelley.DPState
-            { Shelley.dpsDState = dstate,
-              Shelley.dpsPState = ledgerStatePstateBin
+            { Shelley.dpsDState = dstate
+            , Shelley.dpsPState = ledgerStatePstateBin
             }
       }
 
@@ -558,17 +558,17 @@ getDStateNoSharing dstateId = do
         pure (Keys.coerceKeyRole credential, iRTreasuryCoin)
   pure
     Shelley.DState
-      { dsUnified = unify rewards delegations ptrs,
-        dsFutureGenDelegs = unEnc dStateFGenDelegs,
-        dsGenDelegs = dStateGenDelegs,
-        dsIRewards =
+      { dsUnified = unify rewards delegations ptrs
+      , dsFutureGenDelegs = unEnc dStateFGenDelegs
+      , dsGenDelegs = dStateGenDelegs
+      , dsIRewards =
           Shelley.InstantaneousRewards
-            { iRReserves = iRReserves,
-              iRTreasury = iRTreasury,
-              deltaReserves = dStateIrDeltaReserves,
-              deltaTreasury = dStateIrDeltaTreasury
-            },
-        dsDeposits = Map.empty -- FIXME, HELP ME FIX THIS
+            { iRReserves = iRReserves
+            , iRTreasury = iRTreasury
+            , deltaReserves = dStateIrDeltaReserves
+            , deltaTreasury = dStateIrDeltaTreasury
+            }
+      , dsDeposits = Map.empty -- FIXME, HELP ME FIX THIS
       }
 
 getDStateWithSharing ::
@@ -612,17 +612,17 @@ getDStateWithSharing dstateId = do
         pure (cred, iRTreasuryCoin)
   pure
     Shelley.DState
-      { dsUnified = unify rewards delegations ptrs,
-        dsFutureGenDelegs = unEnc dStateFGenDelegs,
-        dsGenDelegs = dStateGenDelegs,
-        dsIRewards =
+      { dsUnified = unify rewards delegations ptrs
+      , dsFutureGenDelegs = unEnc dStateFGenDelegs
+      , dsGenDelegs = dStateGenDelegs
+      , dsIRewards =
           Shelley.InstantaneousRewards
-            { iRReserves = iRReserves,
-              iRTreasury = iRTreasury,
-              deltaReserves = dStateIrDeltaReserves,
-              deltaTreasury = dStateIrDeltaTreasury
-            },
-        dsDeposits = Map.empty -- FIXME, HELP ME FIX THIS TOO
+            { iRReserves = iRReserves
+            , iRTreasury = iRTreasury
+            , deltaReserves = dStateIrDeltaReserves
+            , deltaTreasury = dStateIrDeltaTreasury
+            }
+      , dsDeposits = Map.empty -- FIXME, HELP ME FIX THIS TOO
       }
 
 loadDStateNoSharing :: MonadUnliftIO m => T.Text -> m (Shelley.DState C)
@@ -654,8 +654,8 @@ loadLedgerStateDStateTxIxSharing ::
   MonadUnliftIO m =>
   T.Text ->
   m
-    ( Shelley.LedgerState CurrentEra,
-      IntMap.IntMap (Map.Map (TxIn.TxId C) (AlonzoTxOut CurrentEra))
+    ( Shelley.LedgerState CurrentEra
+    , IntMap.IntMap (Map.Map (TxIn.TxId C) (AlonzoTxOut CurrentEra))
     )
 loadLedgerStateDStateTxIxSharing fp =
   runSqlite fp $ do
@@ -714,14 +714,14 @@ loadEpochState fp = runSqlite fp $ do
     Shelley.EpochState
       { esAccountState =
           Shelley.AccountState
-            { asTreasury = epochStateTreasury,
-              asReserves = epochStateReserves
-            },
-        esLState = ledgerState,
-        esSnapshots = snapshots,
-        esPrevPp = epochStatePrevPp,
-        esPp = epochStatePp,
-        esNonMyopic = epochStateNonMyopic
+            { asTreasury = epochStateTreasury
+            , asReserves = epochStateReserves
+            }
+      , esLState = ledgerState
+      , esSnapshots = snapshots
+      , esPrevPp = epochStatePrevPp
+      , esPp = epochStatePp
+      , esNonMyopic = epochStateNonMyopic
       }
 
 loadEpochStateWithSharing :: MonadUnliftIO m => T.Text -> m (Shelley.EpochState CurrentEra)
@@ -733,14 +733,14 @@ loadEpochStateWithSharing fp = runSqlite fp $ do
     Shelley.EpochState
       { esAccountState =
           Shelley.AccountState
-            { asTreasury = epochStateTreasury,
-              asReserves = epochStateReserves
-            },
-        esLState = ledgerState,
-        esSnapshots = snapshots,
-        esPrevPp = epochStatePrevPp,
-        esPp = epochStatePp,
-        esNonMyopic = epochStateNonMyopic
+            { asTreasury = epochStateTreasury
+            , asReserves = epochStateReserves
+            }
+      , esLState = ledgerState
+      , esSnapshots = snapshots
+      , esPrevPp = epochStatePrevPp
+      , esPp = epochStatePp
+      , esNonMyopic = epochStateNonMyopic
       }
 
 loadSnapShotsNoSharing ::

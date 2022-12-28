@@ -28,37 +28,37 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.EpochBoundary (SnapShots (..), calculatePoolDistr)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
-import Cardano.Ledger.Pretty
-  ( PDoc,
-    PrettyA,
-    ppInt,
-    ppList,
-    ppMap,
-    ppRecord,
-    ppSafeHash,
-    ppSet,
-    ppSlotNo,
-    ppString,
-    ppWord64,
-  )
+import Cardano.Ledger.Pretty (
+  PDoc,
+  PrettyA,
+  ppInt,
+  ppList,
+  ppMap,
+  ppRecord,
+  ppSafeHash,
+  ppSet,
+  ppSlotNo,
+  ppString,
+  ppWord64,
+ )
 import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Shelley.LedgerState
-  ( AccountState (..),
-    DPState (..),
-    DState (dsDeposits),
-    EpochState (..),
-    LedgerState (..),
-    NewEpochState (..),
-    PState (..),
-    StashedAVVMAddresses,
-    UTxOState (..),
-  )
+import Cardano.Ledger.Shelley.LedgerState (
+  AccountState (..),
+  DPState (..),
+  DState (dsDeposits),
+  EpochState (..),
+  LedgerState (..),
+  NewEpochState (..),
+  PState (..),
+  StashedAVVMAddresses,
+  UTxOState (..),
+ )
 import qualified Cardano.Ledger.Shelley.PParams as Shelley (ShelleyPParamsHKD (..))
-import Cardano.Ledger.Shelley.Rules
-  ( ShelleyLedgerPredFailure (..),
-    ShelleyLedgersPredFailure (..),
-    ShelleyUtxowPredFailure (ScriptWitnessNotValidatingUTXOW),
-  )
+import Cardano.Ledger.Shelley.Rules (
+  ShelleyLedgerPredFailure (..),
+  ShelleyLedgersPredFailure (..),
+  ShelleyUtxowPredFailure (ScriptWitnessNotValidatingUTXOW),
+ )
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import Control.Monad (forM)
@@ -87,46 +87,46 @@ import Prettyprinter (hsep, parens, vsep)
 import System.IO.Unsafe (unsafePerformIO)
 import Test.Cardano.Ledger.Generic.ApplyTx (applyTx)
 import Test.Cardano.Ledger.Generic.Fields (TxBodyField (..), abstractTxBody)
-import Test.Cardano.Ledger.Generic.Functions
-  ( adaPots,
-    allInputs,
-    getBody,
-    getScriptWits,
-    getWitnesses,
-    isValid',
-    totalAda,
-    txoutFields,
-  )
-import Test.Cardano.Ledger.Generic.GenState
-  ( GenEnv (..),
-    GenRS,
-    GenSize (..),
-    GenState (..),
-    getBlocksizeMax,
-    getReserves,
-    getSlot,
-    getSlotDelta,
-    getTreasury,
-    gsModel,
-    initStableFields,
-    initialLedgerState,
-    modifyModel,
-    runGenRS,
-  )
+import Test.Cardano.Ledger.Generic.Functions (
+  adaPots,
+  allInputs,
+  getBody,
+  getScriptWits,
+  getWitnesses,
+  isValid',
+  totalAda,
+  txoutFields,
+ )
+import Test.Cardano.Ledger.Generic.GenState (
+  GenEnv (..),
+  GenRS,
+  GenSize (..),
+  GenState (..),
+  getBlocksizeMax,
+  getReserves,
+  getSlot,
+  getSlotDelta,
+  getTreasury,
+  gsModel,
+  initStableFields,
+  initialLedgerState,
+  modifyModel,
+  runGenRS,
+ )
 import Test.Cardano.Ledger.Generic.MockChain
 import Test.Cardano.Ledger.Generic.ModelState (MUtxo, stashedAVVMAddressesZero)
-import Test.Cardano.Ledger.Generic.PrettyCore
-  ( pcCoin,
-    pcCredential,
-    pcDCert,
-    pcKeyHash,
-    pcPoolParams,
-    pcScript,
-    pcScriptHash,
-    pcTxBodyField,
-    pcTxIn,
-    scriptSummary,
-  )
+import Test.Cardano.Ledger.Generic.PrettyCore (
+  pcCoin,
+  pcCredential,
+  pcDCert,
+  pcKeyHash,
+  pcPoolParams,
+  pcScript,
+  pcScriptHash,
+  pcTxBodyField,
+  pcTxIn,
+  scriptSummary,
+ )
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.TxGen (genAlonzoTx)
 import Test.Cardano.Ledger.Shelley.Rules.TestChain (stakeDistr)
@@ -199,24 +199,24 @@ initialMockChainState proof gstate =
     ledgerstate = initialLedgerState gstate
     newepochstate =
       NewEpochState
-        { nesEL = EpochNo 0,
-          nesBprev = BlocksMade Map.empty,
-          nesBcur = BlocksMade Map.empty,
-          nesEs = makeEpochState gstate ledgerstate,
-          nesRu = SNothing,
-          nesPd = PoolDistr (gsInitialPoolDistr gstate),
-          stashedAVVMAddresses = stashedAVVMAddressesZero proof
+        { nesEL = EpochNo 0
+        , nesBprev = BlocksMade Map.empty
+        , nesBcur = BlocksMade Map.empty
+        , nesEs = makeEpochState gstate ledgerstate
+        , nesRu = SNothing
+        , nesPd = PoolDistr (gsInitialPoolDistr gstate)
+        , stashedAVVMAddresses = stashedAVVMAddressesZero proof
         }
 
 makeEpochState :: Reflect era => GenState era -> LedgerState era -> EpochState era
 makeEpochState gstate ledgerstate =
   EpochState
-    { esAccountState = AccountState (getTreasury gstate) (getReserves gstate),
-      esSnapshots = snaps ledgerstate,
-      esLState = ledgerstate,
-      esPrevPp = gePParams (gsGenEnv gstate),
-      esPp = gePParams (gsGenEnv gstate),
-      esNonMyopic = def
+    { esAccountState = AccountState (getTreasury gstate) (getReserves gstate)
+    , esSnapshots = snaps ledgerstate
+    , esLState = ledgerstate
+    , esPrevPp = gePParams (gsGenEnv gstate)
+    , esPp = gePParams (gsGenEnv gstate)
+    , esNonMyopic = def
     }
 
 snaps :: EraTxOut era => LedgerState era -> SnapShots (EraCrypto era)
@@ -253,13 +253,13 @@ raiseMockError slot (SlotNo next) epochstate pdfs txs GenState {..} =
       _keydeposits = (dsDeposits . dpsDState . lsDPState . esLState) epochstate
    in show $
         vsep
-          [ ppString "===================================",
-            ppString "UTxO\n" <> pcSmallUTxO reify utxo txs,
-            ppString "===================================",
-            ppString "Stable Pools\n" <> ppSet pcKeyHash gsStablePools,
-            ppString "===================================",
-            ppString "Stable Delegators\n" <> ppSet pcCredential gsStableDelegators,
-            -- You never know what is NEEDED to debug a failure, and what is a DISTRACTION
+          [ ppString "==================================="
+          , ppString "UTxO\n" <> pcSmallUTxO reify utxo txs
+          , ppString "==================================="
+          , ppString "Stable Pools\n" <> ppSet pcKeyHash gsStablePools
+          , ppString "==================================="
+          , ppString "Stable Delegators\n" <> ppSet pcCredential gsStableDelegators
+          , -- You never know what is NEEDED to debug a failure, and what is a DISTRACTION
             -- These things certainly fall in that category. I leave them commented out so if
             -- they are not a distraction in the current error, they are easy to turn back on.
             -- ppString "===================================",
@@ -272,25 +272,25 @@ raiseMockError slot (SlotNo next) epochstate pdfs txs GenState {..} =
             -- ppString "Initial Pool Params\n" <> ppMap pcKeyHash pcPoolParams gsInitialPoolParams,
             -- ppString "===================================",
             -- ppString "Initial Rewards\n" <> ppMap pcCredential pcCoin gsInitialRewards,
-            ppString "===================================",
-            showBlock utxo txs,
-            ppString "===================================",
-            ppString (show (adaPots reify epochstate)),
-            ppString "===================================",
-            ppList (ppMockChainFailure reify) pdfs,
-            ppString "===================================",
-            ppString "Last Slot " <> ppWord64 slot,
-            ppString "Current Slot " <> ppWord64 next,
-            ppString "===================================",
-            ppString "Script TxWits\n"
+            ppString "==================================="
+          , showBlock utxo txs
+          , ppString "==================================="
+          , ppString (show (adaPots reify epochstate))
+          , ppString "==================================="
+          , ppList (ppMockChainFailure reify) pdfs
+          , ppString "==================================="
+          , ppString "Last Slot " <> ppWord64 slot
+          , ppString "Current Slot " <> ppWord64 next
+          , ppString "==================================="
+          , ppString "Script TxWits\n"
               <> ppMap
                 pcScriptHash
                 (scriptSummary @era reify)
-                (Map.restrictKeys gsScripts (badScripts reify pdfs)),
-            -- ppString "===================================",
+                (Map.restrictKeys gsScripts (badScripts reify pdfs))
+          , -- ppString "===================================",
             -- ppString "Real Pool Params\n" <> ppMap pcKeyHash pcPoolParams poolParams,
-            ppString "=====================================",
-            ppString ("Protocol Parameters\n" ++ show (esPp epochstate))
+            ppString "====================================="
+          , ppString ("Protocol Parameters\n" ++ show (esPp epochstate))
           ]
 
 badScripts :: Proof era -> [MockChainFailure era] -> Set.Set (ScriptHash (EraCrypto era))
@@ -347,13 +347,13 @@ showBlock u txs = ppList pppair (zip txs [0 ..])
     pppair (tx, n) =
       let body = getBody reify tx
        in vsep
-            [ ppString "\n###########",
-              ppInt n,
-              ppSafeHash (hashAnnotated body),
-              smartTxBody reify u body,
-              ppString (show (isValid' reify tx)),
-              ppMap pcScriptHash (pcScript @era reify) (getScriptWits reify (getWitnesses reify tx)),
-              ppString "\n"
+            [ ppString "\n###########"
+            , ppInt n
+            , ppSafeHash (hashAnnotated body)
+            , smartTxBody reify u body
+            , ppString (show (isValid' reify tx))
+            , ppMap pcScriptHash (pcScript @era reify) (getScriptWits reify (getWitnesses reify tx))
+            , ppString "\n"
             ]
 
 shortTxOut :: EraTxOut era => Proof era -> TxOut era -> PDoc
@@ -372,9 +372,9 @@ smartTxBody proof u txbody = ppRecord "TxBody" pairs
     help x = pcTxBodyField proof x
     pcIn x =
       hsep
-        [ pcTxIn x,
-          " -> ",
-          case Map.lookup x u of Just out -> shortTxOut proof out; Nothing -> "?"
+        [ pcTxIn x
+        , " -> "
+        , case Map.lookup x u of Just out -> shortTxOut proof out; Nothing -> "?"
         ]
 
 -- =====================================================================
@@ -392,9 +392,9 @@ instance STS (MOCKCHAIN era)
 data Gen1 era = Gen1 (Vector (StrictSeq (Tx era), SlotNo)) (GenState era)
 
 instance
-  ( STS (MOCKCHAIN era),
-    Reflect era,
-    PrettyA (PParamsUpdate era)
+  ( STS (MOCKCHAIN era)
+  , Reflect era
+  , PrettyA (PParamsUpdate era)
   ) =>
   HasTrace (MOCKCHAIN era) (Gen1 era)
   where
@@ -460,8 +460,8 @@ chooseIssuer epochnum lastSlot count (PoolDistr m) = mapProportion epochnum last
 
 genTrace ::
   forall era.
-  ( Reflect era,
-    HasTrace (MOCKCHAIN era) (Gen1 era)
+  ( Reflect era
+  , HasTrace (MOCKCHAIN era) (Gen1 era)
   ) =>
   Proof era ->
   Int ->
@@ -480,8 +480,8 @@ genTrace proof numTxInTrace gsize initialize = do
 
 traceProp ::
   forall era prop.
-  ( Reflect era,
-    HasTrace (MOCKCHAIN era) (Gen1 era)
+  ( Reflect era
+  , HasTrace (MOCKCHAIN era) (Gen1 era)
   ) =>
   Proof era ->
   Int ->
@@ -494,8 +494,8 @@ traceProp proof numTxInTrace gsize f = do
 
 forEachEpochTrace ::
   forall era prop.
-  ( Testable prop,
-    Reflect era
+  ( Testable prop
+  , Reflect era
   ) =>
   Proof era ->
   Int ->
@@ -524,9 +524,9 @@ forEachEpochTrace proof tracelen genSize f = do
 -- Takes an optional generator for initial state of the STS.
 forAllTraceFromInitState ::
   forall sts traceGenEnv prop.
-  ( HasTrace sts traceGenEnv,
-    Testable prop,
-    Show (Environment sts)
+  ( HasTrace sts traceGenEnv
+  , Testable prop
+  , Show (Environment sts)
   ) =>
   BaseEnv sts ->
   -- | Maximum trace length.
@@ -546,10 +546,10 @@ forAllTraceFromInitState baseEnv maxTraceLength traceGenEnv genSt0 =
 
 chainTest ::
   forall era.
-  ( Reflect era,
-    HasTrace (MOCKCHAIN era) (Gen1 era),
-    Eq (State (EraRule "PPUP" era)),
-    Eq (StashedAVVMAddresses era)
+  ( Reflect era
+  , HasTrace (MOCKCHAIN era) (Gen1 era)
+  , Eq (State (EraRule "PPUP" era))
+  , Eq (StashedAVVMAddresses era)
   ) =>
   Proof era ->
   Int ->
@@ -574,18 +574,18 @@ testTraces :: Int -> TestTree
 testTraces n =
   testGroup
     "MockChainTrace"
-    [ chainTest (Babbage Mock) n def,
-      chainTest (Alonzo Mock) n def,
-      chainTest (Mary Mock) n def,
-      chainTest (Allegra Mock) n def,
-      multiEpochTest (Babbage Mock) 225 def,
-      multiEpochTest (Shelley Mock) 225 def
+    [ chainTest (Babbage Mock) n def
+    , chainTest (Alonzo Mock) n def
+    , chainTest (Mary Mock) n def
+    , chainTest (Allegra Mock) n def
+    , multiEpochTest (Babbage Mock) 225 def
+    , multiEpochTest (Shelley Mock) 225 def
     ]
 
 -- | Show that Ada is preserved across multiple Epochs
 multiEpochTest ::
-  ( Reflect era,
-    HasTrace (MOCKCHAIN era) (Gen1 era)
+  ( Reflect era
+  , HasTrace (MOCKCHAIN era) (Gen1 era)
   ) =>
   Proof era ->
   Int ->
@@ -627,8 +627,8 @@ main3 = showVector pretty
     pretty :: Proof era -> [Tx era] -> SlotNo -> PDoc
     pretty (Babbage Mock) xs slot =
       vsep
-        [ ppSlotNo slot,
-          vsep (map (ppList pcDCert . Fold.toList . certs' . body) xs)
+        [ ppSlotNo slot
+        , vsep (map (ppList pcDCert . Fold.toList . certs' . body) xs)
         ]
     pretty p _ _ = ppString ("main3 does not work in era " ++ show p)
 

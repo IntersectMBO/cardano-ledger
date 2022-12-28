@@ -13,70 +13,70 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | Hashing capabilities.
-module Cardano.Crypto.Hashing
-  ( -- * 'AbstractHash' type supporting different hash algorithms
-    AbstractHash,
-    HashAlgorithm,
+module Cardano.Crypto.Hashing (
+  -- * 'AbstractHash' type supporting different hash algorithms
+  AbstractHash,
+  HashAlgorithm,
 
-    -- ** Hashing
-    abstractHash,
-    unsafeAbstractHash,
+  -- ** Hashing
+  abstractHash,
+  unsafeAbstractHash,
 
-    -- ** Conversion
-    abstractHashFromDigest,
-    abstractHashFromBytes,
-    unsafeAbstractHashFromBytes,
-    abstractHashToBytes,
-    unsafeAbstractHashFromShort,
-    abstractHashToShort,
+  -- ** Conversion
+  abstractHashFromDigest,
+  abstractHashFromBytes,
+  unsafeAbstractHashFromBytes,
+  abstractHashToBytes,
+  unsafeAbstractHashFromShort,
+  abstractHashToShort,
 
-    -- ** Parsing and printing
-    decodeAbstractHash,
+  -- ** Parsing and printing
+  decodeAbstractHash,
 
-    -- * Standard 'Hash' type using Blake2b 256
-    Hash,
+  -- * Standard 'Hash' type using Blake2b 256
+  Hash,
 
-    -- ** Hashing
-    hash,
-    hashDecoded,
-    hashRaw,
-    serializeCborHash,
+  -- ** Hashing
+  hash,
+  hashDecoded,
+  hashRaw,
+  serializeCborHash,
 
-    -- ** Conversion
-    hashFromBytes,
-    unsafeHashFromBytes,
-    hashToBytes,
+  -- ** Conversion
+  hashFromBytes,
+  unsafeHashFromBytes,
+  hashToBytes,
 
-    -- ** Parsing and printing
-    decodeHash,
-    hashHexF,
-    mediumHashF,
-    shortHashF,
-  )
+  -- ** Parsing and printing
+  decodeHash,
+  hashHexF,
+  mediumHashF,
+  shortHashF,
+)
 where
 
 import Cardano.Crypto.Raw (Raw (..))
 import Cardano.HeapWords
-import Cardano.Ledger.Binary
-  ( Decoded (..),
-    DecoderError (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    byronProtVer,
-    cborError,
-    serialize,
-    withWordSize,
-  )
+import Cardano.Ledger.Binary (
+  Decoded (..),
+  DecoderError (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  byronProtVer,
+  cborError,
+  serialize,
+  withWordSize,
+ )
 import Cardano.Prelude hiding (cborError)
 import Crypto.Hash (Blake2b_256, Digest, HashAlgorithm, hashDigestSize)
 import qualified Crypto.Hash as Hash
-import Data.Aeson
-  ( FromJSON (..),
-    FromJSONKey (..),
-    FromJSONKeyFunction (..),
-    ToJSON (..),
-    ToJSONKey (..),
-  )
+import Data.Aeson (
+  FromJSON (..),
+  FromJSONKey (..),
+  FromJSONKeyFunction (..),
+  ToJSON (..),
+  ToJSONKey (..),
+ )
 import Data.Aeson.Types (toJSONKeyText)
 import qualified Data.ByteArray as ByteArray
 import qualified Data.ByteArray.Encoding as ByteArray

@@ -12,88 +12,88 @@
 -- A collection of combinators for manipulating Chain State.
 -- The idea is to provide a clear way of describing the
 -- changes to the chain state when a block is processed.
-module Test.Cardano.Ledger.Shelley.Examples.Combinators
-  ( evolveNonceFrozen,
-    evolveNonceUnfrozen,
-    newLab,
-    feesAndKeyRefund,
-    feesAndDeposits,
-    newUTxO,
-    newStakeCred,
-    deregStakeCred,
-    delegation,
-    newPool,
-    reregPool,
-    updatePoolParams,
-    stageRetirement,
-    reapPool,
-    mir,
-    applyMIR,
-    rewardUpdate,
-    pulserUpdate,
-    applyRewardUpdate,
-    setPoolDistr,
-    setOCertCounter,
-    newSnapshot,
-    incrBlockCount,
-    newEpoch,
-    setCurrentProposals,
-    setFutureProposals,
-    setPParams,
-    setPrevPParams,
-    setFutureGenDeleg,
-    adoptFutureGenDeleg,
-    UsesPP,
-  )
+module Test.Cardano.Ledger.Shelley.Examples.Combinators (
+  evolveNonceFrozen,
+  evolveNonceUnfrozen,
+  newLab,
+  feesAndKeyRefund,
+  feesAndDeposits,
+  newUTxO,
+  newStakeCred,
+  deregStakeCred,
+  delegation,
+  newPool,
+  reregPool,
+  updatePoolParams,
+  stageRetirement,
+  reapPool,
+  mir,
+  applyMIR,
+  rewardUpdate,
+  pulserUpdate,
+  applyRewardUpdate,
+  setPoolDistr,
+  setOCertCounter,
+  newSnapshot,
+  incrBlockCount,
+  newEpoch,
+  setCurrentProposals,
+  setFutureProposals,
+  setPParams,
+  setPrevPParams,
+  setFutureGenDeleg,
+  adoptFutureGenDeleg,
+  UsesPP,
+)
 where
 
-import Cardano.Ledger.BaseTypes
-  ( BlocksMade (..),
-    NonNegativeInterval,
-    Nonce (..),
-    ProtVer,
-    StrictMaybe (..),
-    UnitInterval,
-    (⭒),
-  )
-import Cardano.Ledger.Block
-  ( Block (..),
-    bheader,
-  )
+import Cardano.Ledger.BaseTypes (
+  BlocksMade (..),
+  NonNegativeInterval,
+  Nonce (..),
+  ProtVer,
+  StrictMaybe (..),
+  UnitInterval,
+  (⭒),
+ )
+import Cardano.Ledger.Block (
+  Block (..),
+  bheader,
+ )
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Credential
-  ( Credential (..),
-    Ptr,
-  )
+import Cardano.Ledger.Credential (
+  Credential (..),
+  Ptr,
+ )
 import Cardano.Ledger.EpochBoundary (SnapShot, SnapShots (..), calculatePoolDistr)
 import Cardano.Ledger.Era (Era, EraCrypto)
-import Cardano.Ledger.Keys
-  ( GenDelegPair,
-    GenDelegs (..),
-    KeyHash,
-    KeyRole (..),
-  )
+import Cardano.Ledger.Keys (
+  GenDelegPair,
+  GenDelegs (..),
+  KeyHash,
+  KeyRole (..),
+ )
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
-import Cardano.Ledger.Shelley.LedgerState
-  ( AccountState (..),
-    DPState (..),
-    DState (..),
-    EpochState (..),
-    FutureGenDeleg (..),
-    InstantaneousRewards (..),
-    LedgerState (..),
-    NewEpochState (..),
-    PPUPState (..),
-    PState (..),
-    PulsingRewUpdate (..),
-    RewardUpdate (..),
-    UTxOState (..),
-    applyRUpd,
-    delegations,
-    rewards,
-    updateStakeDistribution,
-  )
+import Cardano.Ledger.Shelley.LedgerState (
+  AccountState (..),
+  DPState (..),
+  DState (..),
+  EpochState (..),
+  FutureGenDeleg (..),
+  InstantaneousRewards (..),
+  LedgerState (..),
+  NewEpochState (..),
+  PPUPState (..),
+  PState (..),
+  PulsingRewUpdate (..),
+  RewardUpdate (..),
+  UTxOState (..),
+  applyRUpd,
+  delegations,
+  rewards,
+  updateStakeDistribution,
+ )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates, ShelleyPParams, ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Rules (emptyInstantaneousRewards)
 import Cardano.Ledger.Shelley.TxBody (MIRPot (..), PoolParams (..), RewardAcnt (..))
@@ -101,15 +101,15 @@ import Cardano.Ledger.UMapCompact (View (Delegations, Ptrs, Rewards), unView)
 import qualified Cardano.Ledger.UMapCompact as UM
 import Cardano.Ledger.UTxO (UTxO (..), txins, txouts)
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
-import Cardano.Protocol.TPraos.BHeader
-  ( BHBody (..),
-    BHeader,
-    LastAppliedBlock (..),
-    bhHash,
-    bhbody,
-    lastAppliedHash,
-    prevHashToNonce,
-  )
+import Cardano.Protocol.TPraos.BHeader (
+  BHBody (..),
+  BHeader,
+  LastAppliedBlock (..),
+  bhHash,
+  bhbody,
+  lastAppliedHash,
+  prevHashToNonce,
+ )
 import Cardano.Slotting.Slot (EpochNo, WithOrigin (..))
 import Control.State.Transition (STS (State))
 import Data.Foldable (fold, foldl')
@@ -125,12 +125,12 @@ import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo, getBlockNonce)
 -- ==================================================
 
 type UsesPP era =
-  ( HasField "_d" (Core.PParams era) UnitInterval,
-    HasField "_tau" (Core.PParams era) UnitInterval,
-    HasField "_a0" (Core.PParams era) NonNegativeInterval,
-    HasField "_rho" (Core.PParams era) UnitInterval,
-    HasField "_nOpt" (Core.PParams era) Natural,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer
+  ( HasField "_d" (Core.PParams era) UnitInterval
+  , HasField "_tau" (Core.PParams era) UnitInterval
+  , HasField "_a0" (Core.PParams era) NonNegativeInterval
+  , HasField "_rho" (Core.PParams era) UnitInterval
+  , HasField "_nOpt" (Core.PParams era) Natural
+  , HasField "_protocolVersion" (Core.PParams era) ProtVer
   )
 
 -- ======================================================
@@ -151,8 +151,8 @@ evolveNonceFrozen n cs = cs {chainEvolvingNonce = chainEvolvingNonce cs ⭒ n}
 evolveNonceUnfrozen :: forall era. Nonce -> ChainState era -> ChainState era
 evolveNonceUnfrozen n cs =
   cs
-    { chainCandidateNonce = chainCandidateNonce cs ⭒ n,
-      chainEvolvingNonce = chainEvolvingNonce cs ⭒ n
+    { chainCandidateNonce = chainCandidateNonce cs ⭒ n
+    , chainEvolvingNonce = chainEvolvingNonce cs ⭒ n
     }
 
 -- | = New 'LastAppliedBlock' (*NOT* on epoch boundaries)
@@ -202,8 +202,8 @@ feesAndDeposits ppEx newFees stakes pools cs = cs {chainNes = nes'}
         { utxosDeposited =
             (utxosDeposited utxoSt)
               <+> (length stakes <×> _keyDeposit ppEx)
-              <+> (newcount <×> _poolDeposit ppEx),
-          utxosFees = (utxosFees utxoSt) <+> newFees
+              <+> (newcount <×> _poolDeposit ppEx)
+        , utxosFees = (utxosFees utxoSt) <+> newFees
         }
     ls' = ls {lsUTxOState = utxoSt', lsDPState = dpstate'}
     -- Count the number of new pools, because we don't take a deposit for existing pools
@@ -235,8 +235,8 @@ feesAndKeyRefund newFees key cs = cs {chainNes = nes'}
     utxoSt = lsUTxOState ls
     utxoSt' =
       utxoSt
-        { utxosDeposited = (utxosDeposited utxoSt) <-> refund,
-          utxosFees = (utxosFees utxoSt) <+> newFees
+        { utxosDeposited = (utxosDeposited utxoSt) <-> refund
+        , utxosFees = (utxosFees utxoSt) <+> newFees
         }
     ls' = ls {lsUTxOState = utxoSt', lsDPState = dpstate'}
     es' = es {esLState = ls'}
@@ -415,8 +415,8 @@ updatePoolParams pool cs = cs {chainNes = nes'}
     ps = dpsPState dps
     ps' =
       ps
-        { psStakePoolParams = Map.insert (ppId pool) pool (psStakePoolParams ps),
-          psFutureStakePoolParams = Map.delete (ppId pool) (psStakePoolParams ps)
+        { psStakePoolParams = Map.insert (ppId pool) pool (psStakePoolParams ps)
+        , psFutureStakePoolParams = Map.delete (ppId pool) (psStakePoolParams ps)
         }
     dps' = dps {dpsPState = ps'}
     ls' = ls {lsDPState = dps'}
@@ -464,9 +464,9 @@ reapPool pool cs = cs {chainNes = nes'}
     ps = dpsPState dps
     ps' =
       ps
-        { psRetiring = Map.delete kh (psRetiring ps),
-          psStakePoolParams = Map.delete kh (psStakePoolParams ps),
-          psDeposits = Map.delete kh (psDeposits ps)
+        { psRetiring = Map.delete kh (psRetiring ps)
+        , psStakePoolParams = Map.delete kh (psStakePoolParams ps)
+        , psDeposits = Map.delete kh (psDeposits ps)
         }
     pp = esPp es
     ds = dpsDState dps
@@ -505,10 +505,10 @@ mir cred pot amnt cs = cs {chainNes = nes'}
     dps = lsDPState ls
     ds = dpsDState dps
     InstantaneousRewards
-      { iRReserves = ir,
-        iRTreasury = it,
-        deltaReserves = dr,
-        deltaTreasury = dt
+      { iRReserves = ir
+      , iRTreasury = it
+      , deltaReserves = dr
+      , deltaTreasury = dt
       } = dsIRewards ds
     irwd' = case pot of
       ReservesMIR -> InstantaneousRewards (Map.insert cred amnt ir) it dr dt
@@ -538,8 +538,8 @@ applyMIR pot newrewards cs = cs {chainNes = nes'}
     ds = dpsDState dps
     ds' =
       ds
-        { dsUnified = rewards ds UM.∪+ Map.map UM.compactCoinOrError newrewards,
-          dsIRewards = emptyInstantaneousRewards
+        { dsUnified = rewards ds UM.∪+ Map.map UM.compactCoinOrError newrewards
+        , dsIRewards = emptyInstantaneousRewards
         }
     dps' = dps {dpsDState = ds'}
     ls' = ls {lsDPState = dps'}
@@ -604,16 +604,16 @@ newSnapshot snap fee cs = cs {chainNes = nes'}
     nes = chainNes cs
     es = nesEs nes
     SnapShots
-      { ssStakeMark = ssMark,
-        ssStakeSet = ssSet
+      { ssStakeMark = ssMark
+      , ssStakeSet = ssSet
       } = esSnapshots es
     snaps =
       SnapShots
-        { ssStakeMark = snap,
-          ssStakeMarkPoolDistr = calculatePoolDistr snap,
-          ssStakeSet = ssMark,
-          ssStakeGo = ssSet,
-          ssFee = fee
+        { ssStakeMark = snap
+        , ssStakeMarkPoolDistr = calculatePoolDistr snap
+        , ssStakeSet = ssMark
+        , ssStakeGo = ssSet
+        , ssFee = fee
         }
     es' = es {esSnapshots = snaps}
     nes' = nes {nesEs = es'}
@@ -675,11 +675,11 @@ newEpoch ::
 newEpoch b cs = cs'
   where
     ChainState
-      { chainNes = nes,
-        chainEvolvingNonce = evNonce,
-        chainCandidateNonce = cNonce,
-        chainPrevEpochNonce = pNonce,
-        chainLastAppliedBlock = lab
+      { chainNes = nes
+      , chainEvolvingNonce = evNonce
+      , chainCandidateNonce = cNonce
+      , chainPrevEpochNonce = pNonce
+      , chainLastAppliedBlock = lab
       } = cs
     bh = bheader b
     bn = bheaderBlockNo . bhbody $ bh
@@ -688,19 +688,19 @@ newEpoch b cs = cs'
     e = epochFromSlotNo . bheaderSlotNo . bhbody . bheader $ b
     nes' =
       nes
-        { nesEL = e,
-          nesBprev = nesBcur nes,
-          nesBcur = BlocksMade Map.empty
+        { nesEL = e
+        , nesBprev = nesBcur nes
+        , nesBcur = BlocksMade Map.empty
         }
     n = getBlockNonce b
     cs' =
       cs
-        { chainNes = nes',
-          chainEpochNonce = cNonce ⭒ pNonce ⭒ _extraEntropy pp,
-          chainEvolvingNonce = evNonce ⭒ n,
-          chainCandidateNonce = evNonce ⭒ n,
-          chainPrevEpochNonce = prevHashToNonce . lastAppliedHash $ lab,
-          chainLastAppliedBlock = At $ LastAppliedBlock bn sn (bhHash bh)
+        { chainNes = nes'
+        , chainEpochNonce = cNonce ⭒ pNonce ⭒ _extraEntropy pp
+        , chainEvolvingNonce = evNonce ⭒ n
+        , chainCandidateNonce = evNonce ⭒ n
+        , chainPrevEpochNonce = prevHashToNonce . lastAppliedHash $ lab
+        , chainLastAppliedBlock = At $ LastAppliedBlock bn sn (bhHash bh)
         }
 
 -- | = Set Current Proposals
@@ -814,8 +814,8 @@ adoptFutureGenDeleg (fg, gd) cs = cs {chainNes = nes'}
     gds = GenDelegs $ (Map.insert (fGenDelegGenKeyHash fg) gd (unGenDelegs (dsGenDelegs ds)))
     ds' =
       ds
-        { dsFutureGenDelegs = Map.delete fg (dsFutureGenDelegs ds),
-          dsGenDelegs = gds
+        { dsFutureGenDelegs = Map.delete fg (dsFutureGenDelegs ds)
+        , dsGenDelegs = gds
         }
     dps' = dps {dpsDState = ds'}
     ls' = ls {lsDPState = dps'}

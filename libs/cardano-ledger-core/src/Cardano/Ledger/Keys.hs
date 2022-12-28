@@ -17,75 +17,75 @@
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
-module Cardano.Ledger.Keys
-  ( KeyRole (..),
-    HasKeyRole (..),
-    asWitness,
+module Cardano.Ledger.Keys (
+  KeyRole (..),
+  HasKeyRole (..),
+  asWitness,
 
-    -- * DSIGN
-    DSignable,
-    VKey (..),
-    KeyPair (..), -- deprecated
-    signedDSIGN,
-    verifySignedDSIGN,
-    hashSignature,
+  -- * DSIGN
+  DSignable,
+  VKey (..),
+  KeyPair (..), -- deprecated
+  signedDSIGN,
+  verifySignedDSIGN,
+  hashSignature,
 
-    -- * Key hashes
-    KeyHash (..),
-    hashKey,
+  -- * Key hashes
+  KeyHash (..),
+  hashKey,
 
-    -- * Genesis delegations
-    GenDelegPair (..),
-    GenDelegs (..),
-    GKeys (..),
+  -- * Genesis delegations
+  GenDelegPair (..),
+  GenDelegs (..),
+  GKeys (..),
 
-    -- * KES
-    KESignable,
+  -- * KES
+  KESignable,
 
-    -- * VRF
-    VRFSignable,
+  -- * VRF
+  VRFSignable,
 
-    -- * Re-exports from cardano-crypto-class
-    decodeSignedDSIGN,
-    encodeSignedDSIGN,
-    Hash.hashWithSerialiser,
-    decodeSignedKES,
-    decodeVerKeyKES,
-    encodeSignedKES,
-    encodeVerKeyKES,
-    KES.signedKES,
-    KES.updateKES,
-    KES.verifyKES,
-    KES.verifySignedKES,
-    decodeVerKeyVRF,
-    encodeVerKeyVRF,
-    VRF.hashVerKeyVRF,
-    VRF.verifyVRF,
+  -- * Re-exports from cardano-crypto-class
+  decodeSignedDSIGN,
+  encodeSignedDSIGN,
+  Hash.hashWithSerialiser,
+  decodeSignedKES,
+  decodeVerKeyKES,
+  encodeSignedKES,
+  encodeVerKeyKES,
+  KES.signedKES,
+  KES.updateKES,
+  KES.verifyKES,
+  KES.verifySignedKES,
+  decodeVerKeyVRF,
+  encodeVerKeyVRF,
+  VRF.hashVerKeyVRF,
+  VRF.verifyVRF,
 
-    -- * Re-parametrised types over `crypto`
-    CertifiedVRF,
-    Hash,
-    SignedDSIGN,
-    SignKeyDSIGN,
-    SignedKES,
-    SignKeyKES,
-    SignKeyVRF,
-    VerKeyKES,
-    VerKeyVRF,
-  )
+  -- * Re-parametrised types over `crypto`
+  CertifiedVRF,
+  Hash,
+  SignedDSIGN,
+  SignKeyDSIGN,
+  SignedKES,
+  SignKeyKES,
+  SignKeyVRF,
+  VerKeyKES,
+  VerKeyVRF,
+)
 where
 
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.KES as KES
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.Ledger.Binary
-  ( FromCBOR (..),
-    ToCBOR (..),
-    decodeRecordNamed,
-    encodeListLen,
-    encodedVerKeyDSIGNSizeExpr,
-  )
+import Cardano.Ledger.Binary (
+  FromCBOR (..),
+  ToCBOR (..),
+  decodeRecordNamed,
+  encodeListLen,
+  encodedVerKeyDSIGNSizeExpr,
+ )
 import Cardano.Ledger.Binary.Crypto
 import Cardano.Ledger.Crypto (ADDRHASH, Crypto, DSIGN, HASH, KES, VRF)
 import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (toExpr))
@@ -189,8 +189,8 @@ instance
   encodedSizeExpr _size proxy = encodedVerKeyDSIGNSizeExpr ((\(VKey k) -> k) <$> proxy)
 
 data KeyPair (kd :: KeyRole) c = KeyPair
-  { vKey :: !(VKey kd c),
-    sKey :: !(DSIGN.SignKeyDSIGN (DSIGN c))
+  { vKey :: !(VKey kd c)
+  , sKey :: !(DSIGN.SignKeyDSIGN (DSIGN c))
   }
 {-# DEPRECATED KeyPair "Use `Test.Cardano.Ledger.Core.KeyPair (KeyPair)` instead" #-}
 
@@ -282,8 +282,8 @@ type VRFSignable c = VRF.Signable (VRF c)
 --------------------------------------------------------------------------------
 
 data GenDelegPair c = GenDelegPair
-  { genDelegKeyHash :: !(KeyHash 'GenesisDelegate c),
-    genDelegVrfHash :: !(Hash c (VerKeyVRF c))
+  { genDelegKeyHash :: !(KeyHash 'GenesisDelegate c)
+  , genDelegVrfHash :: !(Hash c (VerKeyVRF c))
   }
   deriving (Show, Eq, Ord, Generic)
 
@@ -305,8 +305,8 @@ instance Crypto c => FromCBOR (GenDelegPair c) where
 instance Crypto c => ToJSON (GenDelegPair c) where
   toJSON (GenDelegPair d v) =
     Aeson.object
-      [ "delegate" .= d,
-        "vrf" .= v
+      [ "delegate" .= d
+      , "vrf" .= v
       ]
 
 instance Crypto c => FromJSON (GenDelegPair c) where

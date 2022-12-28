@@ -4,59 +4,60 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
 
-module Test.Cardano.Chain.Block.Validation
-  ( tests,
-  )
+module Test.Cardano.Chain.Block.Validation (
+  tests,
+)
 where
 
-import Cardano.Chain.Block
-  ( ABlockOrBoundary (..),
-    BlockValidationMode (BlockValidation),
-    ChainValidationError,
-    ChainValidationState (..),
-    blockSlot,
-    initialChainValidationState,
-    updateBlock,
-    updateChainBoundary,
-  )
+import Cardano.Chain.Block (
+  ABlockOrBoundary (..),
+  BlockValidationMode (BlockValidation),
+  ChainValidationError,
+  ChainValidationState (..),
+  blockSlot,
+  initialChainValidationState,
+  updateBlock,
+  updateChainBoundary,
+ )
 import Cardano.Chain.Epoch.File (ParseError, parseEpochFilesWithBoundary)
 import Cardano.Chain.Genesis as Genesis (Config (..), configEpochSlots)
 import Cardano.Chain.Slotting (SlotNumber)
 import Cardano.Chain.ValidationMode (fromBlockValidationMode)
 import Cardano.Prelude
 import Control.Monad.Trans.Resource (ResIO, runResourceT)
-import Hedgehog
-  ( Group (..),
-    annotate,
-    assert,
-    discover,
-    evalEither,
-    property,
-    withTests,
-  )
+import Hedgehog (
+  Group (..),
+  annotate,
+  assert,
+  discover,
+  evalEither,
+  property,
+  withTests,
+ )
 import Streaming (Of (..), Stream, hoist)
 import qualified Streaming.Prelude as S
 import System.Environment (lookupEnv)
 import Test.Cardano.Chain.Config (readMainetCfg)
 import Test.Cardano.Mirror (mainnetEpochFiles)
-import Test.Options
-  ( ShouldAssertNF (..),
-    TSGroup,
-    TSProperty,
-    TestScenario (..),
-    concatTSGroups,
-  )
+import Test.Options (
+  ShouldAssertNF (..),
+  TSGroup,
+  TSProperty,
+  TestScenario (..),
+  concatTSGroups,
+ )
 
 -- | These tests perform chain validation over mainnet epoch files
 tests :: ShouldAssertNF -> TSGroup
 tests shouldAssertNF =
   concatTSGroups
-    [ const $$discover,
-      \scenario ->
+    [ const $$discover
+    , \scenario ->
         Group
           "Test.Cardano.Chain.Block.Validation"
-          [ ( "ts_prop_mainnetEpochsValid",
-              ts_prop_mainnetEpochsValid shouldAssertNF scenario
+          [
+            ( "ts_prop_mainnetEpochsValid"
+            , ts_prop_mainnetEpochsValid shouldAssertNF scenario
             )
           ]
     ]

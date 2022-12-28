@@ -1,13 +1,13 @@
-module Cardano.Ledger.NonIntegral
-  ( (***),
-    exp',
-    ln',
-    findE,
-    splitLn,
-    scaleExp,
-    CompareResult (..),
-    taylorExpCmp,
-  )
+module Cardano.Ledger.NonIntegral (
+  (***),
+  exp',
+  ln',
+  findE,
+  splitLn,
+  scaleExp,
+  CompareResult (..),
+  taylorExpCmp,
+)
 where
 
 data CompareResult a

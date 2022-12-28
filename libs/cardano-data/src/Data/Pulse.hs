@@ -14,26 +14,26 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module Data.Pulse
-  ( -- * The class that defines operations on pulsers.
-    Pulsable (..),
+module Data.Pulse (
+  -- * The class that defines operations on pulsers.
+  Pulsable (..),
 
-    -- * Two reusable types that have Pulsable instances
-    PulseMapM (..),
-    PulseListM (..),
+  -- * Two reusable types that have Pulsable instances
+  PulseMapM (..),
+  PulseListM (..),
 
-    -- * Virtual versions of PulseMapM and PulseListM specialized to be non-monadic.
-    PulseMap,
-    PulseList,
-    pulseList,
-    pulseMap,
-    pulse,
-    complete,
+  -- * Virtual versions of PulseMapM and PulseListM specialized to be non-monadic.
+  PulseMap,
+  PulseList,
+  pulseList,
+  pulseMap,
+  pulse,
+  complete,
 
-    -- * Monadic folds designed to be used inside pulsers.
-    foldlM',
-    foldlWithKeyM',
-  )
+  -- * Monadic folds designed to be used inside pulsers.
+  foldlM',
+  foldlWithKeyM',
+)
 where
 
 import Control.Monad.Identity (Identity (..))

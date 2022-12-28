@@ -11,15 +11,15 @@ import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.LedgerState
-  ( DPState (..),
-    DState (..),
-    EpochState (..),
-    LedgerState (..),
-    NewEpochState (..),
-    PState (..),
-    UTxOState (..),
-  )
+import Cardano.Ledger.Shelley.LedgerState (
+  DPState (..),
+  DState (..),
+  EpochState (..),
+  LedgerState (..),
+  NewEpochState (..),
+  PState (..),
+  UTxOState (..),
+ )
 import qualified Cardano.Ledger.Shelley.PParams as Shelley (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Rules.Reports (synopsisCoinMap)
 import Cardano.Ledger.TreeDiff (diffExpr)
@@ -27,27 +27,27 @@ import Cardano.Ledger.UMapCompact (View (Rewards), domain)
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val ((<+>))
 import Control.State.Transition (STS (..))
-import Control.State.Transition.Trace
-  ( SourceSignalTarget (..),
-    Trace (..),
-    TraceOrder (..),
-    firstAndLastState,
-    sourceSignalTargets,
-    traceSignals,
-  )
+import Control.State.Transition.Trace (
+  SourceSignalTarget (..),
+  Trace (..),
+  TraceOrder (..),
+  firstAndLastState,
+  sourceSignalTargets,
+  traceSignals,
+ )
 import Control.State.Transition.Trace.Generator.QuickCheck (HasTrace (..))
 import Data.Default.Class (Default (def))
 import Data.List (foldl')
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import Test.Cardano.Ledger.Generic.Functions
-  ( getBody,
-    getCollateralInputs,
-    getCollateralOutputs,
-    getInputs,
-    getOutputs,
-    isValid',
-  )
+import Test.Cardano.Ledger.Generic.Functions (
+  getBody,
+  getCollateralInputs,
+  getCollateralOutputs,
+  getInputs,
+  getOutputs,
+  isValid',
+ )
 import Test.Cardano.Ledger.Generic.GenState (GenSize (..), initStableFields)
 import Test.Cardano.Ledger.Generic.MockChain (MOCKCHAIN, MockBlock (..), MockChainState (..))
 import Test.Cardano.Ledger.Generic.Proof (Evidence (..), Proof (..), Reflect (..), Some (..), preBabbage, unReflect)
@@ -86,8 +86,8 @@ consistentUtxoSizeProp proof trace = aggProp agg0 aggregate makeprop trace
 
 aggUTxO ::
   forall era.
-  ( HasTrace (MOCKCHAIN era) (Gen1 era),
-    Reflect era
+  ( HasTrace (MOCKCHAIN era) (Gen1 era)
+  , Reflect era
   ) =>
   Proof era ->
   Gen Property
@@ -99,9 +99,9 @@ aggTests :: TestTree
 aggTests =
   testGroup
     "tests, aggregating Tx's over a Trace."
-    [ testProperty "UTxO size in Babbage" (aggUTxO (Babbage Mock)),
-      testProperty "UTxO size in Alonzo" (aggUTxO (Alonzo Mock)),
-      testProperty "UTxO size in Mary" (aggUTxO (Mary Mock))
+    [ testProperty "UTxO size in Babbage" (aggUTxO (Babbage Mock))
+    , testProperty "UTxO size in Alonzo" (aggUTxO (Alonzo Mock))
+    , testProperty "UTxO size in Mary" (aggUTxO (Mary Mock))
     ]
 
 -- ===============================================================
@@ -139,10 +139,10 @@ depositInvariant SourceSignalTarget {source = mockChainSt} =
       poolDeposits = sumCoin (psDeposits pstate)
    in counterexample
         ( unlines
-            [ "Deposit invariant fails",
-              "All deposits = " ++ show allDeposits,
-              "Key deposits = " ++ synopsisCoinMap (Just (dsDeposits dstate)),
-              "Pool deposits = " ++ synopsisCoinMap (Just (psDeposits pstate))
+            [ "Deposit invariant fails"
+            , "All deposits = " ++ show allDeposits
+            , "Key deposits = " ++ synopsisCoinMap (Just (dsDeposits dstate))
+            , "Pool deposits = " ++ synopsisCoinMap (Just (psDeposits pstate))
             ]
         )
         (allDeposits === keyDeposits <+> poolDeposits)
@@ -156,8 +156,8 @@ rewardDepositDomainInvariant SourceSignalTarget {source = mockChainSt} =
       depositDomain = Map.keysSet (dsDeposits dstate)
    in counterexample
         ( unlines
-            [ "Reward-Deposit domain invariant fails",
-              diffExpr rewardDomain depositDomain
+            [ "Reward-Deposit domain invariant fails"
+            , diffExpr rewardDomain depositDomain
             ]
         )
         (rewardDomain === depositDomain)
@@ -169,8 +169,8 @@ depositEra :: forall era. Reflect era => Proof era -> TestTree
 depositEra proof =
   testGroup
     (show proof)
-    [ testProperty "Deposits = KeyDeposits + PoolDeposits" (forAllChainTrace proof 10 (itemPropToTraceProp (depositInvariant @era))),
-      testProperty "Reward domain = Deposit domain" (forAllChainTrace proof 10 (itemPropToTraceProp (rewardDepositDomainInvariant @era)))
+    [ testProperty "Deposits = KeyDeposits + PoolDeposits" (forAllChainTrace proof 10 (itemPropToTraceProp (depositInvariant @era)))
+    , testProperty "Reward domain = Deposit domain" (forAllChainTrace proof 10 (itemPropToTraceProp (rewardDepositDomainInvariant @era)))
     ]
 
 -- | Build a TestTree that tests 'f' at all the Eras listed in 'ps'

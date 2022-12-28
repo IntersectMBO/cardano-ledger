@@ -8,29 +8,29 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UnboxedTuples #-}
 
-module Cardano.Ledger.Coin
-  ( Coin (..),
-    CompactForm (..),
-    DeltaCoin (..),
-    word64ToCoin,
-    coinToRational,
-    rationalToCoinViaFloor,
-    rationalToCoinViaCeiling,
-    addDeltaCoin,
-    toDeltaCoin,
-    integerToWord64,
-  )
+module Cardano.Ledger.Coin (
+  Coin (..),
+  CompactForm (..),
+  DeltaCoin (..),
+  word64ToCoin,
+  coinToRational,
+  rationalToCoinViaFloor,
+  rationalToCoinViaCeiling,
+  addDeltaCoin,
+  toDeltaCoin,
+  integerToWord64,
+)
 where
 
 import Cardano.HeapWords (HeapWords)
-import Cardano.Ledger.Binary
-  ( FromCBOR (..),
-    ToCBOR (..),
-    decodeInteger,
-    decodeWord64,
-    ifDecoderVersionAtLeast,
-    natVersion,
-  )
+import Cardano.Ledger.Binary (
+  FromCBOR (..),
+  ToCBOR (..),
+  decodeInteger,
+  decodeWord64,
+  ifDecoderVersionAtLeast,
+  natVersion,
+ )
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.TreeDiff (ToExpr (toExpr))
 import Control.DeepSeq (NFData)
@@ -48,14 +48,14 @@ import Quiet
 -- | The amount of value held by a transaction output.
 newtype Coin = Coin {unCoin :: Integer}
   deriving
-    ( Eq,
-      Ord,
-      Enum,
-      NoThunks,
-      Generic,
-      ToJSON,
-      FromJSON,
-      NFData
+    ( Eq
+    , Ord
+    , Enum
+    , NoThunks
+    , Generic
+    , ToJSON
+    , FromJSON
+    , NFData
     )
   deriving (Show) via Quiet Coin
   deriving (Semigroup, Monoid, Group, Abelian) via Sum Integer

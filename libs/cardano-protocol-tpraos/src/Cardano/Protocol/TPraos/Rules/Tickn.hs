@@ -4,13 +4,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Protocol.TPraos.Rules.Tickn
-  ( TICKN,
-    TicknEnv (..),
-    TicknState (..),
-    TicknPredicateFailure,
-    PredicateFailure,
-  )
+module Cardano.Protocol.TPraos.Rules.Tickn (
+  TICKN,
+  TicknEnv (..),
+  TicknState (..),
+  TicknPredicateFailure,
+  PredicateFailure,
+)
 where
 
 import Cardano.Ledger.BaseTypes
@@ -22,15 +22,15 @@ import NoThunks.Class (NoThunks (..))
 data TICKN
 
 data TicknEnv = TicknEnv
-  { ticknEnvExtraEntropy :: Nonce,
-    ticknEnvCandidateNonce :: Nonce,
-    -- | Hash of the last header of the previous epoch as a nonce.
-    ticknEnvHashHeaderNonce :: Nonce
+  { ticknEnvExtraEntropy :: Nonce
+  , ticknEnvCandidateNonce :: Nonce
+  , ticknEnvHashHeaderNonce :: Nonce
+  -- ^ Hash of the last header of the previous epoch as a nonce.
   }
 
 data TicknState = TicknState
-  { ticknStateEpochNonce :: !Nonce,
-    ticknStatePrevHashNonce :: !Nonce
+  { ticknStateEpochNonce :: !Nonce
+  , ticknStatePrevHashNonce :: !Nonce
   }
   deriving (Show, Eq, Generic)
 
@@ -53,9 +53,9 @@ instance ToCBOR TicknState where
         ηc
       ) =
       mconcat
-        [ encodeListLen 2,
-          toCBOR ηv,
-          toCBOR ηc
+        [ encodeListLen 2
+        , toCBOR ηv
+        , toCBOR ηc
         ]
 
 data TicknPredicateFailure -- No predicate failures
@@ -88,7 +88,7 @@ tickTransition = do
     if newEpoch
       then
         TicknState
-          { ticknStateEpochNonce = ηc ⭒ ηh ⭒ extraEntropy,
-            ticknStatePrevHashNonce = ηph
+          { ticknStateEpochNonce = ηc ⭒ ηh ⭒ extraEntropy
+          , ticknStatePrevHashNonce = ηph
           }
       else st

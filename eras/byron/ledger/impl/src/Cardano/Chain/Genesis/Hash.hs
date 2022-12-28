@@ -3,9 +3,9 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
-module Cardano.Chain.Genesis.Hash
-  ( GenesisHash (..),
-  )
+module Cardano.Chain.Genesis.Hash (
+  GenesisHash (..),
+)
 where
 
 import Cardano.Crypto.Hashing (Hash)

@@ -2,40 +2,40 @@
 {-# LANGUAGE TypeApplications #-}
 
 -- | Examples of the application of the delegation rules.
-module Test.Byron.Spec.Ledger.Delegation.Examples
-  ( deleg,
-  )
+module Test.Byron.Spec.Ledger.Delegation.Examples (
+  deleg,
+)
 where
 
-import Byron.Spec.Ledger.Core
-  ( BlockCount (BlockCount),
-    Epoch (Epoch),
-    Owner (Owner),
-    Sig (Sig),
-    Slot (Slot),
-    VKey (VKey),
-    VKeyGenesis (VKeyGenesis),
-    owner,
-  )
-import Byron.Spec.Ledger.Delegation
-  ( ADELEG,
-    ADELEGS,
-    DCert (DCert),
-    DELEG,
-    DIState (DIState),
-    DSEnv (DSEnv),
-    DSState (DSState),
-    DState (DState),
-    SDELEG,
-    _dIStateDelegationMap,
-    _dIStateKeyEpochDelegations,
-    _dIStateLastDelegation,
-    _dIStateScheduledDelegations,
-    _dSEnvAllowedDelegators,
-    _dSEnvEpoch,
-    _dSEnvK,
-    _dSEnvSlot,
-  )
+import Byron.Spec.Ledger.Core (
+  BlockCount (BlockCount),
+  Epoch (Epoch),
+  Owner (Owner),
+  Sig (Sig),
+  Slot (Slot),
+  VKey (VKey),
+  VKeyGenesis (VKeyGenesis),
+  owner,
+ )
+import Byron.Spec.Ledger.Delegation (
+  ADELEG,
+  ADELEGS,
+  DCert (DCert),
+  DELEG,
+  DIState (DIState),
+  DSEnv (DSEnv),
+  DSState (DSState),
+  DState (DState),
+  SDELEG,
+  _dIStateDelegationMap,
+  _dIStateKeyEpochDelegations,
+  _dIStateLastDelegation,
+  _dIStateScheduledDelegations,
+  _dSEnvAllowedDelegators,
+  _dSEnvEpoch,
+  _dSEnvK,
+  _dSEnvSlot,
+ )
 import Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import Data.Functor.Identity (runIdentity)
 import Data.Set (Set, fromList)
@@ -69,8 +69,8 @@ deleg =
               .- (s 3, (gk 2, k 12))
               .-> DState
                 [(gk 0, k 10), (gk 1, k 11), (gk 2, k 12)]
-                [(gk 0, s 0), (gk 1, s 1), (gk 2, s 3)],
-        testCase "Example 1" $
+                [(gk 0, s 0), (gk 1, s 1), (gk 2, s 3)]
+      , testCase "Example 1" $
           checkTrace @ADELEG runIdentity genKeys $
             pure (DState [] [])
               .- (s 0, (gk 0, k 2))
@@ -82,8 +82,8 @@ deleg =
               .- (s 1, (gk 1, k 2))
               .-> DState
                 [(gk 0, k 2)]
-                [(gk 0, s 0)],
-        testCase "Example 2" $
+                [(gk 0, s 0)]
+      , testCase "Example 2" $
           checkTrace @ADELEG runIdentity genKeys $
             pure (DState [] [])
               .- (s 6, (gk 1, k 2))
@@ -102,21 +102,21 @@ deleg =
               .-> DState
                 [(gk 1, k 0)]
                 [(gk 1, s 16)]
-      ],
-    testGroup
+      ]
+  , testGroup
       "Multiple Activations"
       [ testCase "Example 0" $
           checkTrace @ADELEGS runIdentity genKeys $
             pure (DState [] [])
-              .- [ (s 4, (gk 1, k 0)),
-                   (s 5, (gk 2, k 0)),
-                   (s 5, (gk 1, k 1))
+              .- [ (s 4, (gk 1, k 0))
+                 , (s 5, (gk 2, k 0))
+                 , (s 5, (gk 1, k 1))
                  ]
               .-> DState
                 [(gk 1, k 1)]
                 [(gk 1, s 5)]
-      ],
-    testGroup
+      ]
+  , testGroup
       "Scheduling"
       [ testCase "Example 0" $
           checkTrace @SDELEG runIdentity (DSEnv [gk 0, gk 1, gk 2] (e 8) (s 2) (bk 2160)) $
@@ -133,52 +133,61 @@ deleg =
               .-> DSState
                 [(s 4322, (gk 0, k 10)), (s 4322, (gk 1, k 11)), (s 4322, (gk 2, k 10))]
                 [(e 8, gk 0), (e 8, gk 1), (e 8, gk 2)]
-      ],
-    testGroup
+      ]
+  , testGroup
       "Interface"
       [ testCase "Non-injective scheduled delegations are ignored." $
           let env =
                 DSEnv
-                  { _dSEnvAllowedDelegators = [gk 0, gk 1],
-                    _dSEnvEpoch = e 0,
-                    _dSEnvSlot = s 21,
-                    _dSEnvK = bk 5
+                  { _dSEnvAllowedDelegators = [gk 0, gk 1]
+                  , _dSEnvEpoch = e 0
+                  , _dSEnvSlot = s 21
+                  , _dSEnvK = bk 5
                   }
               st =
                 DIState
                   { _dIStateDelegationMap =
-                      [ ( gk 0,
-                          k 0
-                        ),
-                        ( gk 1,
-                          k 1
+                      [
+                        ( gk 0
+                        , k 0
                         )
-                      ],
-                    _dIStateLastDelegation =
-                      [ ( gk 0,
-                          s 15
-                        ),
-                        ( gk 1,
-                          s 0
+                      ,
+                        ( gk 1
+                        , k 1
                         )
-                      ],
-                    _dIStateScheduledDelegations =
-                      [ ( s 21,
-                          ( gk 1,
-                            k 0
+                      ]
+                  , _dIStateLastDelegation =
+                      [
+                        ( gk 0
+                        , s 15
+                        )
+                      ,
+                        ( gk 1
+                        , s 0
+                        )
+                      ]
+                  , _dIStateScheduledDelegations =
+                      [
+                        ( s 21
+                        ,
+                          ( gk 1
+                          , k 0
                           )
                         )
-                      ],
-                    _dIStateKeyEpochDelegations =
+                      ]
+                  , _dIStateKeyEpochDelegations =
                       fromList
-                        [ ( e 0,
-                            gk 0
-                          ),
-                          ( e 0,
-                            gk 1
-                          ),
-                          ( e 1,
-                            gk 0
+                        [
+                          ( e 0
+                          , gk 0
+                          )
+                        ,
+                          ( e 0
+                          , gk 1
+                          )
+                        ,
+                          ( e 1
+                          , gk 0
                           )
                         ]
                   }

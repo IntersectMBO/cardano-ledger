@@ -6,14 +6,14 @@
 module Test.Cardano.Ledger.ValueFromList where
 
 import qualified Cardano.Ledger.Crypto as C
-import Cardano.Ledger.Mary.Value as Mary
-  ( AssetName,
-    MaryValue (..),
-    MultiAsset (..),
-    PolicyID (..),
-    insertMultiAsset,
-    multiAssetFromList,
-  )
+import Cardano.Ledger.Mary.Value as Mary (
+  AssetName,
+  MaryValue (..),
+  MultiAsset (..),
+  PolicyID (..),
+  insertMultiAsset,
+  multiAssetFromList,
+ )
 import Cardano.Ledger.Val as Val
 import Data.Map.Strict as Map
 
@@ -33,6 +33,6 @@ instance C.Crypto c => ValueFromList (MaryValue c) c where
     where
       triples =
         [ (policyId, aname, amount)
-          | (policyId, m2) <- Map.toList m1,
-            (aname, amount) <- Map.toList m2
+        | (policyId, m2) <- Map.toList m1
+        , (aname, amount) <- Map.toList m2
         ]

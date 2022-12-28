@@ -5,24 +5,24 @@
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Ledger.Shelley.Bench.Rewards
-  ( createRUpd,
-    createRUpdWithProv,
-    genChainInEpoch,
-  )
+module Cardano.Ledger.Shelley.Bench.Rewards (
+  createRUpd,
+  createRUpdWithProv,
+  genChainInEpoch,
+)
 where
 
 import Cardano.Crypto.VRF (hashVerKeyVRF)
-import Cardano.Ledger.Address
-  ( Addr (..),
-    mkRwdAcnt,
-  )
-import Cardano.Ledger.BaseTypes
-  ( Globals (activeSlotCoeff, securityParameter),
-    Network (Testnet),
-    StrictMaybe (..),
-    epochInfoPure,
-  )
+import Cardano.Ledger.Address (
+  Addr (..),
+  mkRwdAcnt,
+ )
+import Cardano.Ledger.BaseTypes (
+  Globals (activeSlotCoeff, securityParameter),
+  Network (Testnet),
+  StrictMaybe (..),
+  epochInfoPure,
+ )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (Staking))
@@ -45,23 +45,23 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Shelley.BenchmarkFunctions (B, B_Crypto)
 import Test.Cardano.Ledger.Shelley.Generator.Block (genBlockWithTxGen)
-import Test.Cardano.Ledger.Shelley.Generator.Constants
-  ( maxGenesisUTxOouts,
-    minGenesisUTxOouts,
-  )
-import Test.Cardano.Ledger.Shelley.Generator.Core
-  ( AllIssuerKeys (..),
-    GenEnv (..),
-    ScriptSpace (..),
-    geConstants,
-    geKeySpace,
-    ksStakePools,
-  )
+import Test.Cardano.Ledger.Shelley.Generator.Constants (
+  maxGenesisUTxOouts,
+  minGenesisUTxOouts,
+ )
+import Test.Cardano.Ledger.Shelley.Generator.Core (
+  AllIssuerKeys (..),
+  GenEnv (..),
+  ScriptSpace (..),
+  geConstants,
+  geKeySpace,
+  ksStakePools,
+ )
 import Test.Cardano.Ledger.Shelley.Generator.Presets (genEnv)
-import Test.Cardano.Ledger.Shelley.Generator.Trace.Chain
-  ( mkGenesisChainState,
-    registerGenesisStaking,
-  )
+import Test.Cardano.Ledger.Shelley.Generator.Trace.Chain (
+  mkGenesisChainState,
+  registerGenesisStaking,
+ )
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState, chainNes, totalAda)
 import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
 import Test.QuickCheck (Gen)
@@ -127,8 +127,8 @@ genChainInEpoch epoch = do
     -- Small UTxO set; we just want enough to stake to pools
     cs =
       (geConstants ge)
-        { minGenesisUTxOouts = 5000,
-          maxGenesisUTxOouts = 5000
+        { minGenesisUTxOouts = 5000
+        , maxGenesisUTxOouts = 5000
         }
     ks = geKeySpace ge
     genEmptyBlock = genBlockWithTxGen @B (\_ _ _ _ -> pure mempty) ge
@@ -137,25 +137,25 @@ genChainInEpoch epoch = do
         { sgsPools =
             LM.ListMap
               [ (hk, pp)
-                | (AllIssuerKeys {vrf, hk}, (owner : _)) <- stakeMap,
-                  let pp =
-                        PoolParams
-                          { ppId = hk,
-                            ppVrf = hashVerKeyVRF $ snd vrf,
-                            ppPledge = Coin 1,
-                            ppCost = Coin 1,
-                            ppMargin = minBound,
-                            ppRewardAcnt = mkRwdAcnt Testnet $ KeyHashObj owner,
-                            ppOwners = Set.singleton owner,
-                            ppRelays = StrictSeq.empty,
-                            ppMetadata = SNothing
-                          }
-              ],
-          sgsStake =
+              | (AllIssuerKeys {vrf, hk}, (owner : _)) <- stakeMap
+              , let pp =
+                      PoolParams
+                        { ppId = hk
+                        , ppVrf = hashVerKeyVRF $ snd vrf
+                        , ppPledge = Coin 1
+                        , ppCost = Coin 1
+                        , ppMargin = minBound
+                        , ppRewardAcnt = mkRwdAcnt Testnet $ KeyHashObj owner
+                        , ppOwners = Set.singleton owner
+                        , ppRelays = StrictSeq.empty
+                        , ppMetadata = SNothing
+                        }
+              ]
+        , sgsStake =
             LM.ListMap
               [ (dlg, hk)
-                | (AllIssuerKeys {hk}, dlgs) <- stakeMap,
-                  dlg <- dlgs
+              | (AllIssuerKeys {hk}, dlgs) <- stakeMap
+              , dlg <- dlgs
               ]
         }
     stakePools = ksStakePools ks

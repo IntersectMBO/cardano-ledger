@@ -9,49 +9,49 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Shelley.Rules.Mir
-  ( ShelleyMIR,
-    PredicateFailure,
-    ShelleyMirPredFailure,
-    ShelleyMirEvent (..),
-    emptyInstantaneousRewards,
-  )
+module Cardano.Ledger.Shelley.Rules.Mir (
+  ShelleyMIR,
+  PredicateFailure,
+  ShelleyMirPredFailure,
+  ShelleyMirEvent (..),
+  emptyInstantaneousRewards,
+)
 where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin, addDeltaCoin)
 import Cardano.Ledger.Era (EraCrypto)
 import Cardano.Ledger.Shelley.Era (ShelleyMIR)
-import Cardano.Ledger.Shelley.LedgerState
-  ( AccountState (..),
-    EpochState,
-    InstantaneousRewards (..),
-    RewardAccounts,
-    dpsDState,
-    dsIRewards,
-    dsUnified,
-    esAccountState,
-    esLState,
-    esNonMyopic,
-    esPp,
-    esPrevPp,
-    esSnapshots,
-    lsDPState,
-    rewards,
-    pattern EpochState,
-  )
+import Cardano.Ledger.Shelley.LedgerState (
+  AccountState (..),
+  EpochState,
+  InstantaneousRewards (..),
+  RewardAccounts,
+  dpsDState,
+  dsIRewards,
+  dsUnified,
+  esAccountState,
+  esLState,
+  esNonMyopic,
+  esPp,
+  esPrevPp,
+  esSnapshots,
+  lsDPState,
+  rewards,
+  pattern EpochState,
+ )
 import Cardano.Ledger.UMapCompact (compactCoinOrError)
 import qualified Cardano.Ledger.UMapCompact as UM
 import Cardano.Ledger.Val ((<->))
 import Control.SetAlgebra (eval, (∪+))
-import Control.State.Transition
-  ( Assertion (..),
-    STS (..),
-    TRC (..),
-    TransitionRule,
-    judgmentContext,
-    tellEvent,
-  )
+import Control.State.Transition (
+  Assertion (..),
+  STS (..),
+  TRC (..),
+  TransitionRule,
+  judgmentContext,
+  tellEvent,
+ )
 import Data.Default.Class (Default)
 import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
@@ -93,16 +93,16 @@ instance (Typeable era, Default (EpochState era)) => STS (ShelleyMIR era) where
 mirTransition :: forall era. TransitionRule (ShelleyMIR era)
 mirTransition = do
   TRC
-    ( _,
-      EpochState
-        { esAccountState = acnt,
-          esSnapshots = ss,
-          esLState = ls,
-          esPrevPp = pr,
-          esPp = pp,
-          esNonMyopic = nm
-        },
-      ()
+    ( _
+      , EpochState
+          { esAccountState = acnt
+          , esSnapshots = ss
+          , esLState = ls
+          , esPrevPp = pr
+          , esPp = pp
+          , esNonMyopic = nm
+          }
+      , ()
       ) <-
     judgmentContext
   let dpState = lsDPState ls
@@ -124,8 +124,8 @@ mirTransition = do
       pure $
         EpochState
           acnt
-            { asReserves = availableReserves <-> totR,
-              asTreasury = availableTreasury <-> totT
+            { asReserves = availableReserves <-> totR
+            , asTreasury = availableTreasury <-> totT
             }
           ss
           ls
@@ -133,8 +133,8 @@ mirTransition = do
                 dpState
                   { dpsDState =
                       ds
-                        { dsUnified = rewards' UM.∪+ Map.map compactCoinOrError update,
-                          dsIRewards = emptyInstantaneousRewards
+                        { dsUnified = rewards' UM.∪+ Map.map compactCoinOrError update
+                        , dsIRewards = emptyInstantaneousRewards
                         }
                   }
             }

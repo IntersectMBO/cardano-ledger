@@ -9,12 +9,12 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Shelley.Rules.Snap
-  ( ShelleySNAP,
-    PredicateFailure,
-    ShelleySnapPredFailure,
-    SnapEvent (..),
-  )
+module Cardano.Ledger.Shelley.Rules.Snap (
+  ShelleySNAP,
+  PredicateFailure,
+  ShelleySnapPredFailure,
+  SnapEvent (..),
+)
 where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
@@ -22,29 +22,29 @@ import Cardano.Ledger.Coin (Coin, CompactForm)
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core (EraTxOut)
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.EpochBoundary
-  ( SnapShot (ssDelegations, ssStake),
-    SnapShots (..),
-    Stake (unStake),
-    calculatePoolDistr,
-    emptySnapShots,
-  )
+import Cardano.Ledger.EpochBoundary (
+  SnapShot (ssDelegations, ssStake),
+  SnapShots (..),
+  Stake (unStake),
+  calculatePoolDistr,
+  emptySnapShots,
+ )
 import Cardano.Ledger.Era (EraCrypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking))
 import Cardano.Ledger.Shelley.Era (ShelleySNAP)
-import Cardano.Ledger.Shelley.LedgerState
-  ( DPState (..),
-    LedgerState (..),
-    UTxOState (..),
-    incrementalStakeDistr,
-  )
-import Control.State.Transition
-  ( STS (..),
-    TRC (..),
-    TransitionRule,
-    judgmentContext,
-    tellEvent,
-  )
+import Cardano.Ledger.Shelley.LedgerState (
+  DPState (..),
+  LedgerState (..),
+  UTxOState (..),
+  incrementalStakeDistr,
+ )
+import Control.State.Transition (
+  STS (..),
+  TRC (..),
+  TransitionRule,
+  judgmentContext,
+  tellEvent,
+ )
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.VMap as VMap
@@ -105,10 +105,10 @@ snapTransition = do
 
   pure $
     SnapShots
-      { ssStakeMark = istakeSnap,
-        ssStakeMarkPoolDistr = calculatePoolDistr istakeSnap,
-        -- ssStakeMarkPoolDistr exists for performance reasons, see ADR-7
-        ssStakeSet = ssStakeMark s,
-        ssStakeGo = ssStakeSet s,
-        ssFee = fees
+      { ssStakeMark = istakeSnap
+      , ssStakeMarkPoolDistr = calculatePoolDistr istakeSnap
+      , -- ssStakeMarkPoolDistr exists for performance reasons, see ADR-7
+        ssStakeSet = ssStakeMark s
+      , ssStakeGo = ssStakeSet s
+      , ssFee = fees
       }

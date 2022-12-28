@@ -2,10 +2,10 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Cardano.Ledger.Conway.Genesis
-  ( ConwayGenesis (..),
-    extendPPWithGenesis,
-  )
+module Cardano.Ledger.Conway.Genesis (
+  ConwayGenesis (..),
+  extendPPWithGenesis,
+)
 where
 
 import Cardano.Ledger.Babbage.Genesis (extendPPWithGenesis)

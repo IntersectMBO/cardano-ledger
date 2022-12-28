@@ -9,66 +9,66 @@
 --
 --   This is an implementation of the rules defined in the Byron ledger
 --   specification
-module Cardano.Chain.Update.Validation.Voting
-  ( Environment (..),
-    RegistrationEnvironment (..),
-    State (..),
-    Error (..),
-    registerVoteWithConfirmation,
-  )
+module Cardano.Chain.Update.Validation.Voting (
+  Environment (..),
+  RegistrationEnvironment (..),
+  State (..),
+  Error (..),
+  registerVoteWithConfirmation,
+)
 where
 
 import Cardano.Chain.Common (KeyHash, hashKey)
 import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Slotting (SlotNumber)
 import Cardano.Chain.Update.Proposal (UpId)
-import Cardano.Chain.Update.Vote
-  ( AVote (..),
-    proposalId,
-    recoverSignedBytes,
-  )
-import Cardano.Crypto
-  ( ProtocolMagicId,
-    SignTag (SignUSVote),
-    verifySignatureDecoded,
-  )
-import Cardano.Ledger.Binary
-  ( Annotated,
-    Decoder,
-    DecoderError (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    cborError,
-    decodeListLen,
-    decodeWord8,
-    encodeListLen,
-    matchSize,
-  )
+import Cardano.Chain.Update.Vote (
+  AVote (..),
+  proposalId,
+  recoverSignedBytes,
+ )
+import Cardano.Crypto (
+  ProtocolMagicId,
+  SignTag (SignUSVote),
+  verifySignatureDecoded,
+ )
+import Cardano.Ledger.Binary (
+  Annotated,
+  Decoder,
+  DecoderError (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  cborError,
+  decodeListLen,
+  decodeWord8,
+  encodeListLen,
+  matchSize,
+ )
 import Cardano.Prelude hiding (State, cborError)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as Set
 
 -- | Environment used to register votes and confirm proposals
 data Environment = Environment
-  { veCurrentSlot :: SlotNumber,
-    veConfirmationThreshold :: Int,
-    veVotingRegistrationEnvironment :: RegistrationEnvironment
+  { veCurrentSlot :: SlotNumber
+  , veConfirmationThreshold :: Int
+  , veVotingRegistrationEnvironment :: RegistrationEnvironment
   }
   deriving (Eq, Show, Generic)
   deriving anyclass (NFData)
 
 -- | Environment required to validate and register a vote
 data RegistrationEnvironment = RegistrationEnvironment
-  { vreRegisteredUpdateProposal :: !(Set UpId),
-    vreDelegationMap :: !Delegation.Map
+  { vreRegisteredUpdateProposal :: !(Set UpId)
+  , vreDelegationMap :: !Delegation.Map
   }
   deriving (Eq, Show, Generic)
   deriving anyclass (NFData)
 
 -- | State keeps track of registered votes and confirmed proposals
 data State = State
-  { vsVotes :: !RegisteredVotes,
-    vsConfirmedProposals :: !(Map UpId SlotNumber)
+  { vsVotes :: !RegisteredVotes
+  , vsConfirmedProposals :: !(Map UpId SlotNumber)
   }
 
 type RegisteredVotes = Map UpId (Set KeyHash)
@@ -134,8 +134,8 @@ registerVoteWithConfirmation pm votingEnv vs vote = do
   -- Return the new state with additional vote and maybe confirmation
   pure $
     State
-      { vsVotes = votes',
-        vsConfirmedProposals = confirmedProposals'
+      { vsVotes = votes'
+      , vsConfirmedProposals = confirmedProposals'
       }
   where
     Environment slot threshold voteRegEnv = votingEnv

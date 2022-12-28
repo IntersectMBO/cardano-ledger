@@ -1,7 +1,7 @@
-module Cardano.Ledger.Babbage.Core
-  ( BabbageEraTxBody (..),
-    module Cardano.Ledger.Alonzo.Core,
-  )
+module Cardano.Ledger.Babbage.Core (
+  BabbageEraTxBody (..),
+  module Cardano.Ledger.Alonzo.Core,
+)
 where
 
 import Cardano.Ledger.Alonzo.Core

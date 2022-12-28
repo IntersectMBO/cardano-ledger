@@ -6,11 +6,11 @@
 
 -- | Figure 2: Functions related to fees and collateral
 --   Babbage Specification
-module Cardano.Ledger.Babbage.Collateral
-  ( isTwoPhaseScriptAddress,
-    collAdaBalance,
-    collOuts,
-  )
+module Cardano.Ledger.Babbage.Collateral (
+  isTwoPhaseScriptAddress,
+  collAdaBalance,
+  collOuts,
+)
 where
 
 import Cardano.Ledger.Address (Addr (..))

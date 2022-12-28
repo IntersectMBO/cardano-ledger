@@ -10,29 +10,29 @@
 {-# LANGUAGE TypeApplications #-}
 
 -- | Defines reusable abstractions for testing RoundTrip properties of CBOR instances
-module Test.Cardano.Ledger.Binary.RoundTrip
-  ( roundTripSpec,
-    roundTripFailureExpectation,
-    roundTripExpectation,
-    roundTripCborExpectation,
-    roundTripAnnExpectation,
-    embedTripSpec,
-    embedTripExpectation,
-    embedTripAnnExpectation,
-    roundTripTwiddledProperty,
-    roundTripAnnTwiddledProperty,
-    RoundTripFailure (..),
-    Trip (..),
-    mkTrip,
-    cborTrip,
-    roundTrip,
-    roundTripTwiddled,
-    roundTripAnn,
-    roundTripAnnTwiddled,
-    embedTrip,
-    embedTripAnn,
-    embedTripLabel,
-  )
+module Test.Cardano.Ledger.Binary.RoundTrip (
+  roundTripSpec,
+  roundTripFailureExpectation,
+  roundTripExpectation,
+  roundTripCborExpectation,
+  roundTripAnnExpectation,
+  embedTripSpec,
+  embedTripExpectation,
+  embedTripAnnExpectation,
+  roundTripTwiddledProperty,
+  roundTripAnnTwiddledProperty,
+  RoundTripFailure (..),
+  Trip (..),
+  mkTrip,
+  cborTrip,
+  roundTrip,
+  roundTripTwiddled,
+  roundTripAnn,
+  roundTripAnnTwiddled,
+  embedTrip,
+  embedTripAnn,
+  embedTripLabel,
+)
 where
 
 import Cardano.Ledger.Binary
@@ -176,39 +176,39 @@ embedTripAnnExpectation encVersion decVersion f a =
 -- =====================================================================
 
 data RoundTripFailure = RoundTripFailure
-  { -- | Version that was used during encoding
-    rtfEncoderVersion :: Version,
-    -- | Version that was used during decoding
-    rtfDecoderVersion :: Version,
-    -- | Produced encoding
-    rtfEncoding :: Encoding,
-    -- | Serialized encoding using the version in this failure
-    rtfEncodedBytes :: BSL.ByteString,
-    -- | Re-serialized bytes, if there was a mismatch between the binary form and th
-    -- reserialization of the data type.
-    rtfReEncodedBytes :: Maybe (BSL.ByteString),
-    -- | Error received while decoding the produced bytes and dropping the value. Normally
-    -- it will be `Nothing`, unless the error produced did not match the
-    -- `rtfDecoderError`, in which case it will be `Just` the error.
-    rtfDropperError :: Maybe DecoderError,
-    -- | Error received while decoding the produced bytes. It is possible for a dropper to
-    -- produce an error, while decoder going through successfully, which constitues a test
-    -- failure. In such a case this field will be `Nothing`, however `rtfDropperError`
-    -- will be set to `Just`. Whenever both `rtfDropperError` and `rtfDecoderError` are
-    -- `Nothing` it means that the decoding went though just fine, but there was a
-    -- mismatch in the binary format, i.e. reserialization produced a mismatched result,
-    -- in which case `rtfReEncodedBytes` will be set to `Just`
-    rtfDecoderError :: Maybe DecoderError
+  { rtfEncoderVersion :: Version
+  -- ^ Version that was used during encoding
+  , rtfDecoderVersion :: Version
+  -- ^ Version that was used during decoding
+  , rtfEncoding :: Encoding
+  -- ^ Produced encoding
+  , rtfEncodedBytes :: BSL.ByteString
+  -- ^ Serialized encoding using the version in this failure
+  , rtfReEncodedBytes :: Maybe (BSL.ByteString)
+  -- ^ Re-serialized bytes, if there was a mismatch between the binary form and th
+  -- reserialization of the data type.
+  , rtfDropperError :: Maybe DecoderError
+  -- ^ Error received while decoding the produced bytes and dropping the value. Normally
+  -- it will be `Nothing`, unless the error produced did not match the
+  -- `rtfDecoderError`, in which case it will be `Just` the error.
+  , rtfDecoderError :: Maybe DecoderError
+  -- ^ Error received while decoding the produced bytes. It is possible for a dropper to
+  -- produce an error, while decoder going through successfully, which constitues a test
+  -- failure. In such a case this field will be `Nothing`, however `rtfDropperError`
+  -- will be set to `Just`. Whenever both `rtfDropperError` and `rtfDecoderError` are
+  -- `Nothing` it means that the decoding went though just fine, but there was a
+  -- mismatch in the binary format, i.e. reserialization produced a mismatched result,
+  -- in which case `rtfReEncodedBytes` will be set to `Just`
   }
 
 instance Show RoundTripFailure where
   show RoundTripFailure {..} =
     unlines $
-      [ "Encoder Version: " ++ show rtfEncoderVersion,
-        "Decoder Version: " ++ show rtfDecoderVersion,
-        showMaybeDecoderError "Decoder" rtfDecoderError,
-        showMaybeDecoderError "Dropper" rtfDropperError,
-        prettyTerm
+      [ "Encoder Version: " ++ show rtfEncoderVersion
+      , "Decoder Version: " ++ show rtfDecoderVersion
+      , showMaybeDecoderError "Decoder" rtfDecoderError
+      , showMaybeDecoderError "Dropper" rtfDropperError
+      , prettyTerm
       ]
         ++ showHexBytesGrouped bytes
     where
@@ -225,9 +225,9 @@ instance Show RoundTripFailure where
 -- another. In this module this is called an embed. When a source and target type is the
 -- exact same one then it would be a dual and is expected to round trip.
 data Trip a b = Trip
-  { tripEncoder :: a -> Encoding,
-    tripDecoder :: forall s. Decoder s b,
-    tripDropper :: forall s. Decoder s ()
+  { tripEncoder :: a -> Encoding
+  , tripDecoder :: forall s. Decoder s b
+  , tripDropper :: forall s. Decoder s ()
   }
 
 cborTrip :: forall a b. (ToCBOR a, FromCBOR b) => Trip a b

@@ -11,9 +11,9 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Ledger.Conway.Core
-  ( ConwayEraTxBody (..),
-  )
+module Cardano.Ledger.Conway.Core (
+  ConwayEraTxBody (..),
+)
 where
 
 import Cardano.Ledger.Babbage.Core (BabbageEraTxBody, Era (..), EraTxBody (..))

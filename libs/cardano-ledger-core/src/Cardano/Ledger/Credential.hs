@@ -9,51 +9,51 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module Cardano.Ledger.Credential
-  ( Credential (KeyHashObj, ScriptHashObj),
-    GenesisCredential (..),
-    PaymentCredential,
-    Ptr (Ptr),
-    ptrSlotNo,
-    ptrTxIx,
-    ptrCertIx,
-    StakeCredential,
-    StakeReference (..),
-  )
+module Cardano.Ledger.Credential (
+  Credential (KeyHashObj, ScriptHashObj),
+  GenesisCredential (..),
+  PaymentCredential,
+  Ptr (Ptr),
+  ptrSlotNo,
+  ptrTxIx,
+  ptrCertIx,
+  StakeCredential,
+  StakeReference (..),
+)
 where
 
-import Cardano.Ledger.BaseTypes
-  ( CertIx (..),
-    TxIx (..),
-    invalidKey,
-  )
-import Cardano.Ledger.Binary
-  ( CBORGroup (..),
-    FromCBOR (..),
-    FromCBORGroup (..),
-    ToCBOR (..),
-    ToCBORGroup (..),
-    decodeRecordSum,
-    encodeListLen,
-  )
+import Cardano.Ledger.BaseTypes (
+  CertIx (..),
+  TxIx (..),
+  invalidKey,
+ )
+import Cardano.Ledger.Binary (
+  CBORGroup (..),
+  FromCBOR (..),
+  FromCBORGroup (..),
+  ToCBOR (..),
+  ToCBORGroup (..),
+  decodeRecordSum,
+  encodeListLen,
+ )
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Hashes (ScriptHash)
-import Cardano.Ledger.Keys
-  ( HasKeyRole (..),
-    KeyHash,
-    KeyRole (..),
-  )
+import Cardano.Ledger.Keys (
+  HasKeyRole (..),
+  KeyHash,
+  KeyRole (..),
+ )
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
-import Data.Aeson
-  ( FromJSON (..),
-    FromJSONKey,
-    ToJSON (..),
-    ToJSONKey,
-    (.:),
-    (.=),
-  )
+import Data.Aeson (
+  FromJSON (..),
+  FromJSONKey,
+  ToJSON (..),
+  ToJSONKey,
+  (.:),
+  (.=),
+ )
 import qualified Data.Aeson as Aeson
 import Data.Foldable (asum)
 import Data.Typeable (Typeable)

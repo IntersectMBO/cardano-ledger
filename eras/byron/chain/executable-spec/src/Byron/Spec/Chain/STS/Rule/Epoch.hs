@@ -34,11 +34,11 @@ data EpochPredicateFailure
 instance STS EPOCH where
   type
     Environment EPOCH =
-      ( Epoch,
-        BlockCount -- Chain stability paramter; this is a global
-        -- constant in the formal specification, which we put
-        -- in this environment so that we can test with
-        -- different values of it.
+      ( Epoch
+      , BlockCount -- Chain stability paramter; this is a global
+      -- constant in the formal specification, which we put
+      -- in this environment so that we can test with
+      -- different values of it.
       )
   type State EPOCH = UPIState
   type Signal EPOCH = Slot

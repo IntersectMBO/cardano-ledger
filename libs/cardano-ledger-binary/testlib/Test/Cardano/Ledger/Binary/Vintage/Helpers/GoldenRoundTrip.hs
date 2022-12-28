@@ -4,30 +4,30 @@
 {-# LANGUAGE TypeApplications #-}
 
 -- | Golden and round-trip testing of 'FromCBOR' and 'ToCBOR' instances
-module Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip
-  ( goldenTestCBOR,
-    goldenTestCBORExplicit,
-    goldenTestExplicit,
-    roundTripsCBORShow,
-    roundTripsCBORBuildable,
-    compareHexDump,
-    deprecatedGoldenDecode,
-  )
+module Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip (
+  goldenTestCBOR,
+  goldenTestCBORExplicit,
+  goldenTestExplicit,
+  roundTripsCBORShow,
+  roundTripsCBORBuildable,
+  compareHexDump,
+  deprecatedGoldenDecode,
+)
 where
 
-import Cardano.Ledger.Binary
-  ( Decoder,
-    DecoderError,
-    Encoding,
-    FromCBOR (..),
-    ToCBOR (..),
-    Version,
-    decodeFull,
-    decodeFullDecoder,
-    natVersion,
-    serialize,
-    serializeEncoding,
-  )
+import Cardano.Ledger.Binary (
+  Decoder,
+  DecoderError,
+  Encoding,
+  FromCBOR (..),
+  ToCBOR (..),
+  Version,
+  decodeFull,
+  decodeFullDecoder,
+  natVersion,
+  serialize,
+  serializeEncoding,
+ )
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as BS
@@ -35,29 +35,29 @@ import Data.Proxy (Proxy (Proxy))
 import Data.Text (Text)
 import Formatting.Buildable (Buildable (..))
 import GHC.Stack (HasCallStack, withFrozenCallStack)
-import Hedgehog
-  ( MonadTest,
-    Property,
-    eval,
-    property,
-    success,
-    tripping,
-    withTests,
-    (===),
-  )
+import Hedgehog (
+  MonadTest,
+  Property,
+  eval,
+  property,
+  success,
+  tripping,
+  withTests,
+  (===),
+ )
 import Hedgehog.Internal.Property (failWith)
-import Hedgehog.Internal.Show
-  ( LineDiff,
-    lineDiff,
-    mkValue,
-    renderLineDiff,
-    showPretty,
-  )
-import Test.Cardano.Prelude
-  ( decodeBase16,
-    encodeWithIndex,
-    trippingBuildable,
-  )
+import Hedgehog.Internal.Show (
+  LineDiff,
+  lineDiff,
+  mkValue,
+  renderLineDiff,
+  showPretty,
+ )
+import Test.Cardano.Prelude (
+  decodeBase16,
+  encodeWithIndex,
+  trippingBuildable,
+ )
 import Text.Show.Pretty (Value (..))
 
 byronProtVer :: Version

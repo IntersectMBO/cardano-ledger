@@ -7,13 +7,13 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Chain.Block.Body
-  ( Body,
-    pattern Body,
-    ABody (..),
-    bodyTxs,
-    bodyWitnesses,
-  )
+module Cardano.Chain.Block.Body (
+  Body,
+  pattern Body,
+  ABody (..),
+  bodyTxs,
+  bodyWitnesses,
+)
 where
 
 import qualified Cardano.Chain.Delegation.Payload as Delegation
@@ -22,13 +22,13 @@ import Cardano.Chain.UTxO.Tx (Tx)
 import Cardano.Chain.UTxO.TxPayload (ATxPayload, TxPayload, txpTxs, txpWitnesses)
 import Cardano.Chain.UTxO.TxWitness (TxWitness)
 import qualified Cardano.Chain.Update.Payload as Update
-import Cardano.Ledger.Binary
-  ( ByteSpan,
-    FromCBOR (..),
-    ToCBOR (..),
-    encodeListLen,
-    enforceSize,
-  )
+import Cardano.Ledger.Binary (
+  ByteSpan,
+  FromCBOR (..),
+  ToCBOR (..),
+  encodeListLen,
+  enforceSize,
+ )
 import Cardano.Prelude
 import Data.Aeson (ToJSON)
 
@@ -41,14 +41,14 @@ pattern Body tx ssc dlg upd = ABody tx ssc dlg upd
 
 -- | 'Body' consists of payloads of all block components
 data ABody a = ABody
-  { -- | UTxO payload
-    bodyTxPayload :: !(ATxPayload a),
-    -- | Ssc payload
-    bodySscPayload :: !SscPayload,
-    -- | Heavyweight delegation payload (no-ttl certificates)
-    bodyDlgPayload :: !(Delegation.APayload a),
-    -- | Additional update information for the update system
-    bodyUpdatePayload :: !(Update.APayload a)
+  { bodyTxPayload :: !(ATxPayload a)
+  -- ^ UTxO payload
+  , bodySscPayload :: !SscPayload
+  -- ^ Ssc payload
+  , bodyDlgPayload :: !(Delegation.APayload a)
+  -- ^ Heavyweight delegation payload (no-ttl certificates)
+  , bodyUpdatePayload :: !(Update.APayload a)
+  -- ^ Additional update information for the update system
   }
   deriving (Eq, Show, Generic, Functor, NFData)
 

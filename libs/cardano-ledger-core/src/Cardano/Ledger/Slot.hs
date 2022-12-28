@@ -3,21 +3,21 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Cardano.Ledger.Slot
-  ( SlotNo (..),
-    Duration (..),
-    (-*),
-    (+*),
-    (*-),
-    EpochNo (..),
-    EpochSize (..),
-    EpochInfo,
-    -- Block number
-    BlockNo (..),
-    epochInfoEpoch,
-    epochInfoFirst,
-    epochInfoSize,
-  )
+module Cardano.Ledger.Slot (
+  SlotNo (..),
+  Duration (..),
+  (-*),
+  (+*),
+  (*-),
+  EpochNo (..),
+  EpochSize (..),
+  EpochInfo,
+  -- Block number
+  BlockNo (..),
+  epochInfoEpoch,
+  epochInfoFirst,
+  epochInfoSize,
+)
 where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)

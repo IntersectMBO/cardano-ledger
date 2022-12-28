@@ -23,56 +23,56 @@
 --     The most recent version of the document can be found here:
 --       https://hydra.iohk.io/job/Cardano/cardano-ledger/specs.alonzo-ledger/latest/download-by-type/doc-pdf/alonzo-changes
 --     The functions can be found in Figures in that document, and sections of this code refer to those figures.
-module Cardano.Ledger.Alonzo.Tx
-  ( -- Figure 1
-    CostModel,
-    getLanguageView,
-    -- Figure 2
-    Data,
-    DataHash,
-    IsValid (..),
-    hashData,
-    nonNativeLanguages,
-    hashScriptIntegrity,
-    getCoin,
-    EraIndependentScriptIntegrity,
-    ScriptIntegrity (ScriptIntegrity),
-    ScriptIntegrityHash,
-    -- Figure 3
-    AlonzoTx (AlonzoTx, body, wits, isValid, auxiliaryData),
-    AlonzoEraTx (..),
-    mkBasicAlonzoTx,
-    bodyAlonzoTxL,
-    witsAlonzoTxL,
-    auxDataAlonzoTxL,
-    sizeAlonzoTxF,
-    isValidAlonzoTxL,
-    txdats',
-    txscripts',
-    txrdmrs,
-    TxBody,
-    AlonzoTxBody (..),
-    -- Figure 4
-    totExUnits,
-    isTwoPhaseScriptAddress,
-    alonzoMinFeeTx,
-    minfee,
-    --  Figure 5
-    Indexable (..), -- indexOf
-    ScriptPurpose (..),
-    isTwoPhaseScriptAddressFromMap,
-    Shelley.txouts,
-    indexedRdmrs,
-    rdptr,
-    -- Figure 6
-    rdptrInv,
-    getMapFromValue,
-    -- Segwit
-    alonzoSegwitTx,
-    -- Other
-    toCBORForSizeComputation,
-    toCBORForMempoolSubmission,
-  )
+module Cardano.Ledger.Alonzo.Tx (
+  -- Figure 1
+  CostModel,
+  getLanguageView,
+  -- Figure 2
+  Data,
+  DataHash,
+  IsValid (..),
+  hashData,
+  nonNativeLanguages,
+  hashScriptIntegrity,
+  getCoin,
+  EraIndependentScriptIntegrity,
+  ScriptIntegrity (ScriptIntegrity),
+  ScriptIntegrityHash,
+  -- Figure 3
+  AlonzoTx (AlonzoTx, body, wits, isValid, auxiliaryData),
+  AlonzoEraTx (..),
+  mkBasicAlonzoTx,
+  bodyAlonzoTxL,
+  witsAlonzoTxL,
+  auxDataAlonzoTxL,
+  sizeAlonzoTxF,
+  isValidAlonzoTxL,
+  txdats',
+  txscripts',
+  txrdmrs,
+  TxBody,
+  AlonzoTxBody (..),
+  -- Figure 4
+  totExUnits,
+  isTwoPhaseScriptAddress,
+  alonzoMinFeeTx,
+  minfee,
+  --  Figure 5
+  Indexable (..), -- indexOf
+  ScriptPurpose (..),
+  isTwoPhaseScriptAddressFromMap,
+  Shelley.txouts,
+  indexedRdmrs,
+  rdptr,
+  -- Figure 6
+  rdptrInv,
+  getMapFromValue,
+  -- Segwit
+  alonzoSegwitTx,
+  -- Other
+  toCBORForSizeComputation,
+  toCBORForMempoolSubmission,
+)
 where
 
 import Cardano.Crypto.Hash.Class (HashAlgorithm)
@@ -81,47 +81,47 @@ import Cardano.Ledger.Allegra.Core ()
 import Cardano.Ledger.Allegra.Tx (validateTimelock)
 import Cardano.Ledger.Alonzo.Data (Data, hashData)
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
-import Cardano.Ledger.Alonzo.PParams
-  ( AlonzoPParamsHKD (..),
-    LangDepView (..),
-    encodeLangViews,
-    getLanguageView,
-  )
-import Cardano.Ledger.Alonzo.Scripts
-  ( CostModel,
-    ExUnits (..),
-    Prices,
-    Tag (..),
-    txscriptfee,
-  )
-import Cardano.Ledger.Alonzo.TxBody
-  ( AlonzoEraTxBody (..),
-    AlonzoTxBody (..),
-    MaryEraTxBody (..),
-    ScriptIntegrityHash,
-  )
-import Cardano.Ledger.Alonzo.TxWits
-  ( AlonzoEraTxWits (..),
-    AlonzoTxWits (..),
-    RdmrPtr (..),
-    Redeemers (..),
-    TxDats (..),
-    nullDats,
-    nullRedeemers,
-    txrdmrs,
-    unRedeemers,
-  )
-import Cardano.Ledger.Binary
-  ( Annotator (..),
-    Encoding,
-    FromCBOR (..),
-    ToCBOR (toCBOR),
-    decodeNullMaybe,
-    encodeListLen,
-    encodeNullMaybe,
-    serializeEncoding,
-    serializeEncoding',
-  )
+import Cardano.Ledger.Alonzo.PParams (
+  AlonzoPParamsHKD (..),
+  LangDepView (..),
+  encodeLangViews,
+  getLanguageView,
+ )
+import Cardano.Ledger.Alonzo.Scripts (
+  CostModel,
+  ExUnits (..),
+  Prices,
+  Tag (..),
+  txscriptfee,
+ )
+import Cardano.Ledger.Alonzo.TxBody (
+  AlonzoEraTxBody (..),
+  AlonzoTxBody (..),
+  MaryEraTxBody (..),
+  ScriptIntegrityHash,
+ )
+import Cardano.Ledger.Alonzo.TxWits (
+  AlonzoEraTxWits (..),
+  AlonzoTxWits (..),
+  RdmrPtr (..),
+  Redeemers (..),
+  TxDats (..),
+  nullDats,
+  nullRedeemers,
+  txrdmrs,
+  unRedeemers,
+ )
+import Cardano.Ledger.Binary (
+  Annotator (..),
+  Encoding,
+  FromCBOR (..),
+  ToCBOR (toCBOR),
+  decodeNullMaybe,
+  encodeListLen,
+  encodeNullMaybe,
+  serializeEncoding,
+  serializeEncoding',
+ )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
@@ -137,11 +137,11 @@ import Cardano.Ledger.Val (Val ((<+>), (<×>)))
 import Control.DeepSeq (NFData (..))
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Map.Strict as Map
-import Data.Maybe.Strict
-  ( StrictMaybe (..),
-    maybeToStrictMaybe,
-    strictMaybeToMaybe,
-  )
+import Data.Maybe.Strict (
+  StrictMaybe (..),
+  maybeToStrictMaybe,
+  strictMaybeToMaybe,
+ )
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
@@ -163,10 +163,10 @@ newtype IsValid = IsValid Bool
   deriving newtype (NoThunks, NFData)
 
 data AlonzoTx era = AlonzoTx
-  { body :: !(TxBody era),
-    wits :: !(TxWits era),
-    isValid :: !IsValid,
-    auxiliaryData :: !(StrictMaybe (TxAuxData era))
+  { body :: !(TxBody era)
+  , wits :: !(TxWits era)
+  , isValid :: !IsValid
+  , auxiliaryData :: !(StrictMaybe (TxAuxData era))
   }
   deriving (Generic)
 
@@ -243,18 +243,18 @@ deriving instance
   Show (AlonzoTx era)
 
 instance
-  ( Era era,
-    NoThunks (TxWits era),
-    NoThunks (TxAuxData era),
-    NoThunks (TxBody era)
+  ( Era era
+  , NoThunks (TxWits era)
+  , NoThunks (TxAuxData era)
+  , NoThunks (TxBody era)
   ) =>
   NoThunks (AlonzoTx era)
 
 instance
-  ( Era era,
-    NFData (TxWits era),
-    NFData (TxAuxData era),
-    NFData (TxBody era)
+  ( Era era
+  , NFData (TxWits era)
+  , NFData (TxAuxData era)
+  , NFData (TxBody era)
   ) =>
   NFData (AlonzoTx era)
 
@@ -320,9 +320,9 @@ isTwoPhaseScriptAddress tx =
 -- The individual components all store their bytes; the only work we do in this
 -- function is concatenating
 toCBORForSizeComputation ::
-  ( ToCBOR (TxBody era),
-    ToCBOR (TxWits era),
-    ToCBOR (TxAuxData era)
+  ( ToCBOR (TxBody era)
+  , ToCBOR (TxWits era)
+  , ToCBOR (TxAuxData era)
   ) =>
   AlonzoTx era ->
   Encoding
@@ -333,11 +333,11 @@ toCBORForSizeComputation AlonzoTx {body, wits, auxiliaryData} =
     <> encodeNullMaybe toCBOR (strictMaybeToMaybe auxiliaryData)
 
 alonzoMinFeeTx ::
-  ( EraTx era,
-    AlonzoEraTxWits era,
-    HasField "_minfeeA" (PParams era) Natural,
-    HasField "_minfeeB" (PParams era) Natural,
-    HasField "_prices" (PParams era) Prices
+  ( EraTx era
+  , AlonzoEraTxWits era
+  , HasField "_minfeeA" (PParams era) Natural
+  , HasField "_minfeeB" (PParams era) Natural
+  , HasField "_prices" (PParams era) Prices
   ) =>
   PParams era ->
   Tx era ->
@@ -352,11 +352,11 @@ alonzoMinFeeTx pp tx =
     allExunits = totExUnits tx
 
 minfee ::
-  ( EraTx era,
-    AlonzoEraTxWits era,
-    HasField "_minfeeA" (PParams era) Natural,
-    HasField "_minfeeB" (PParams era) Natural,
-    HasField "_prices" (PParams era) Prices
+  ( EraTx era
+  , AlonzoEraTxWits era
+  , HasField "_minfeeA" (PParams era) Natural
+  , HasField "_minfeeB" (PParams era) Natural
+  , HasField "_prices" (PParams era) Prices
   ) =>
   PParams era ->
   Tx era ->
@@ -517,9 +517,9 @@ alonzoSegwitTx txBodyAnn txWitsAnn isValid auxDataAnn = Annotator $ \bytes ->
 -- computing the transaction size (which omits the `IsValid` field for
 -- compatibility with Mary - see 'toCBORForSizeComputation').
 toCBORForMempoolSubmission ::
-  ( ToCBOR (TxBody era),
-    ToCBOR (TxWits era),
-    ToCBOR (TxAuxData era)
+  ( ToCBOR (TxBody era)
+  , ToCBOR (TxWits era)
+  , ToCBOR (TxAuxData era)
   ) =>
   AlonzoTx era ->
   Encoding
@@ -533,20 +533,20 @@ toCBORForMempoolSubmission
         !> E (encodeNullMaybe toCBOR . strictMaybeToMaybe) auxiliaryData
 
 instance
-  ( Era era,
-    ToCBOR (TxBody era),
-    ToCBOR (TxAuxData era),
-    ToCBOR (TxWits era)
+  ( Era era
+  , ToCBOR (TxBody era)
+  , ToCBOR (TxAuxData era)
+  , ToCBOR (TxWits era)
   ) =>
   ToCBOR (AlonzoTx era)
   where
   toCBOR = toCBORForMempoolSubmission
 
 instance
-  ( Typeable era,
-    FromCBOR (Annotator (TxBody era)),
-    FromCBOR (Annotator (TxWits era)),
-    FromCBOR (Annotator (TxAuxData era))
+  ( Typeable era
+  , FromCBOR (Annotator (TxBody era))
+  , FromCBOR (Annotator (TxWits era))
+  , FromCBOR (Annotator (TxAuxData era))
   ) =>
   FromCBOR (Annotator (AlonzoTx era))
   where

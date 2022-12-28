@@ -6,22 +6,22 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Ledger.Allegra.Era
-  ( AllegraEra,
-    AllegraUTXO,
-    AllegraUTXOW,
-  )
+module Cardano.Ledger.Allegra.Era (
+  AllegraEra,
+  AllegraUTXO,
+  AllegraUTXOW,
+)
 where
 
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core (Era (EraCrypto, ProtVerLow), EraPParams (..), EraRule, Value)
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Shelley.PParams
-  ( ShelleyPParams,
-    ShelleyPParamsHKD (..),
-    ShelleyPParamsUpdate,
-    updatePParams,
-  )
+import Cardano.Ledger.Shelley.PParams (
+  ShelleyPParams,
+  ShelleyPParamsHKD (..),
+  ShelleyPParamsUpdate,
+  updatePParams,
+ )
 import Cardano.Ledger.Shelley.Rules
 
 -- | The Allegra era

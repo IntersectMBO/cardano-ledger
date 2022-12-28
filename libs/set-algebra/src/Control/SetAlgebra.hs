@@ -48,101 +48,101 @@
 -- Basically, if the compiler can infer concrete type for the operands of [operators](Control-SetAlgebra.html#setoperators#) then
 -- all the class instances are automatically solved. If you get an error involving a class, then it is most
 -- probably the case that the type of the operands cannot be properly inferred.
-module Control.SetAlgebra
-  ( -- * In addition to 'Data.Map.Map' and 'Data.Set.Set', types interpretable as maps and sets.
-    -- $MapAndSetTypes
-    List,
-    Single (..),
+module Control.SetAlgebra (
+  -- * In addition to 'Data.Map.Map' and 'Data.Set.Set', types interpretable as maps and sets.
+  -- $MapAndSetTypes
+  List,
+  Single (..),
 
-    -- * Classes supporting abstract constructors of Set Algebra Expressions. These show up in the types of overloaded functions.
-    -- $ClassesForSetAlgebra
-    Basic (..),
-    Iter (..),
-    HasExp (..),
-    Embed (..),
+  -- * Classes supporting abstract constructors of Set Algebra Expressions. These show up in the types of overloaded functions.
+  -- $ClassesForSetAlgebra
+  Basic (..),
+  Iter (..),
+  HasExp (..),
+  Embed (..),
 
-    -- * Types implementing a deep embedding of set algebra expressions
-    -- $Deep
-    BaseRep (..),
-    Exp (Base),
-    -- Evaluate an abstract Set Algebra Expression to the Set (Map) it represents.
-    eval,
+  -- * Types implementing a deep embedding of set algebra expressions
+  -- $Deep
+  BaseRep (..),
+  Exp (Base),
+  -- Evaluate an abstract Set Algebra Expression to the Set (Map) it represents.
+  eval,
 
-    -- * Operators to build maps and sets,  useable as Set Algebra Expressions
-    -- $setoperators
-    dom,
-    rng,
-    dexclude,
-    drestrict,
-    rexclude,
-    rrestrict,
-    unionleft,
-    unionright,
-    unionplus,
-    singleton,
-    setSingleton,
-    intersect,
-    subset,
-    keyeq,
-    (◁),
-    (⋪),
-    (▷),
-    (⋫),
-    (∈),
-    (∉),
-    (∪),
-    (⨃),
-    (∪+),
-    (∩),
-    (⊆),
-    (≍),
-    (<|),
-    (|>),
-    (➖),
-    keysEqual,
-    setdiff,
+  -- * Operators to build maps and sets,  useable as Set Algebra Expressions
+  -- $setoperators
+  dom,
+  rng,
+  dexclude,
+  drestrict,
+  rexclude,
+  rrestrict,
+  unionleft,
+  unionright,
+  unionplus,
+  singleton,
+  setSingleton,
+  intersect,
+  subset,
+  keyeq,
+  (◁),
+  (⋪),
+  (▷),
+  (⋫),
+  (∈),
+  (∉),
+  (∪),
+  (⨃),
+  (∪+),
+  (∩),
+  (⊆),
+  (≍),
+  (<|),
+  (|>),
+  (➖),
+  keysEqual,
+  setdiff,
 
-    -- * Miscellaneous operators, including smart constructors for 'List', whose constructors are hidden.
-    -- $Misc
-    materialize,
-    fromList,
-  )
+  -- * Miscellaneous operators, including smart constructors for 'List', whose constructors are hidden.
+  -- $Misc
+  materialize,
+  fromList,
+)
 where
 
 import Control.Iterate.BaseTypes (BaseRep (..), Basic (..), Embed (..), Iter (..), List, Single (..))
-import Control.Iterate.Exp
-  ( Exp (..),
-    HasExp (..),
-    dexclude,
-    dom,
-    drestrict,
-    intersect,
-    keyeq,
-    rexclude,
-    rng,
-    rrestrict,
-    setSingleton,
-    setdiff,
-    singleton,
-    subset,
-    unionleft,
-    unionplus,
-    unionright,
-    (<|),
-    (|>),
-    (∈),
-    (∉),
-    (∩),
-    (∪),
-    (∪+),
-    (≍),
-    (⊆),
-    (⋪),
-    (⋫),
-    (▷),
-    (◁),
-    (➖),
-    (⨃),
-  )
+import Control.Iterate.Exp (
+  Exp (..),
+  HasExp (..),
+  dexclude,
+  dom,
+  drestrict,
+  intersect,
+  keyeq,
+  rexclude,
+  rng,
+  rrestrict,
+  setSingleton,
+  setdiff,
+  singleton,
+  subset,
+  unionleft,
+  unionplus,
+  unionright,
+  (<|),
+  (|>),
+  (∈),
+  (∉),
+  (∩),
+  (∪),
+  (∪+),
+  (≍),
+  (⊆),
+  (⋪),
+  (⋫),
+  (▷),
+  (◁),
+  (➖),
+  (⨃),
+ )
 import Control.Iterate.SetAlgebra
 import Data.MapExtras (keysEqual)

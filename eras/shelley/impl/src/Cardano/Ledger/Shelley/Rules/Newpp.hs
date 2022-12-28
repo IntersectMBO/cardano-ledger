@@ -8,39 +8,39 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Shelley.Rules.Newpp
-  ( ShelleyNEWPP,
-    ShelleyNewppState (..),
-    NewppEnv (..),
-    ShelleyNewppPredFailure (..),
-    PredicateFailure,
-  )
+module Cardano.Ledger.Shelley.Rules.Newpp (
+  ShelleyNEWPP,
+  ShelleyNewppState (..),
+  NewppEnv (..),
+  ShelleyNewppPredFailure (..),
+  PredicateFailure,
+)
 where
 
 import Cardano.Ledger.BaseTypes (ProtVer, ShelleyBase, StrictMaybe)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Era (ShelleyNEWPP)
-import Cardano.Ledger.Shelley.LedgerState
-  ( DPState (..),
-    DState (..),
-    PPUPState (..),
-    PState (..),
-    UTxOState (utxosDeposited),
-    obligationDPState,
-    pvCanFollow,
-  )
-import Cardano.Ledger.Shelley.PParams
-  ( ProposedPPUpdates (..),
-    emptyPPPUpdates,
-  )
-import Control.State.Transition
-  ( STS (..),
-    TRC (..),
-    TransitionRule,
-    judgmentContext,
-    (?!),
-  )
+import Cardano.Ledger.Shelley.LedgerState (
+  DPState (..),
+  DState (..),
+  PPUPState (..),
+  PState (..),
+  UTxOState (utxosDeposited),
+  obligationDPState,
+  pvCanFollow,
+ )
+import Cardano.Ledger.Shelley.PParams (
+  ProposedPPUpdates (..),
+  emptyPPPUpdates,
+ )
+import Control.State.Transition (
+  STS (..),
+  TRC (..),
+  TransitionRule,
+  judgmentContext,
+  (?!),
+ )
 import Data.Default.Class (Default, def)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
@@ -66,13 +66,13 @@ data ShelleyNewppPredFailure era
 instance NoThunks (ShelleyNewppPredFailure era)
 
 instance
-  ( Default (PParams era),
-    HasField "_protocolVersion" (PParams era) ProtVer,
-    HasField "_maxTxSize" (PParams era) Natural,
-    HasField "_maxBHSize" (PParams era) Natural,
-    HasField "_maxBBSize" (PParams era) Natural,
-    HasField "_protocolVersion" (PParamsUpdate era) (StrictMaybe ProtVer),
-    Typeable era
+  ( Default (PParams era)
+  , HasField "_protocolVersion" (PParams era) ProtVer
+  , HasField "_maxTxSize" (PParams era) Natural
+  , HasField "_maxBHSize" (PParams era) Natural
+  , HasField "_maxBBSize" (PParams era) Natural
+  , HasField "_protocolVersion" (PParamsUpdate era) (StrictMaybe ProtVer)
+  , Typeable era
   ) =>
   STS (ShelleyNEWPP era)
   where
@@ -88,18 +88,18 @@ instance Default (PParams era) => Default (ShelleyNewppState era) where
 
 newPpTransition ::
   forall era.
-  ( HasField "_protocolVersion" (PParams era) ProtVer,
-    HasField "_maxTxSize" (PParams era) Natural,
-    HasField "_maxBHSize" (PParams era) Natural,
-    HasField "_maxBBSize" (PParams era) Natural,
-    HasField "_protocolVersion" (PParamsUpdate era) (StrictMaybe ProtVer)
+  ( HasField "_protocolVersion" (PParams era) ProtVer
+  , HasField "_maxTxSize" (PParams era) Natural
+  , HasField "_maxBHSize" (PParams era) Natural
+  , HasField "_maxBBSize" (PParams era) Natural
+  , HasField "_protocolVersion" (PParamsUpdate era) (StrictMaybe ProtVer)
   ) =>
   TransitionRule (ShelleyNEWPP era)
 newPpTransition = do
   TRC
-    ( NewppEnv dstate pstate utxoSt,
-      NewppState pp ppupSt,
-      ppNew
+    ( NewppEnv dstate pstate utxoSt
+      , NewppState pp ppupSt
+      , ppNew
       ) <-
     judgmentContext
 
@@ -120,8 +120,8 @@ newPpTransition = do
 -- and making the future proposals become the new proposals,
 -- provided the new proposals can follow (otherwise reset them).
 updatePpup ::
-  ( HasField "_protocolVersion" (PParams era) ProtVer,
-    HasField "_protocolVersion" (PParamsUpdate era) (StrictMaybe ProtVer)
+  ( HasField "_protocolVersion" (PParams era) ProtVer
+  , HasField "_protocolVersion" (PParamsUpdate era) (StrictMaybe ProtVer)
   ) =>
   PPUPState era ->
   PParams era ->

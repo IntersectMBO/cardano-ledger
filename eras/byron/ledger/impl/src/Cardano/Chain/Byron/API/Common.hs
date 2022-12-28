@@ -6,25 +6,25 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Chain.Byron.API.Common
-  ( -- * Extract info from genesis config
-    allowedDelegators,
+module Cardano.Chain.Byron.API.Common (
+  -- * Extract info from genesis config
+  allowedDelegators,
 
-    -- * Extract info from chain state
-    getDelegationMap,
-    getProtocolParams,
-    getMaxBlockSize,
+  -- * Extract info from chain state
+  getDelegationMap,
+  getProtocolParams,
+  getMaxBlockSize,
 
-    -- * Annotations
-    reAnnotateBlock,
-    reAnnotateBoundary,
-    reAnnotateMagic,
-    reAnnotateMagicId,
-    reAnnotateUsing,
+  -- * Annotations
+  reAnnotateBlock,
+  reAnnotateBoundary,
+  reAnnotateMagic,
+  reAnnotateMagicId,
+  reAnnotateUsing,
 
-    -- * Headers
-    abobMatchesBody,
-  )
+  -- * Headers
+  abobMatchesBody,
+)
 where
 
 import qualified Cardano.Chain.Block as CC
@@ -126,9 +126,9 @@ reAnnotateUsing encoder decoder =
       panic $
         T.intercalate
           ": "
-          [ "annotateBoundary",
-            "serialization roundtrip failure",
-            show err
+          [ "annotateBoundary"
+          , "serialization roundtrip failure"
+          , show err
           ]
 
 {-------------------------------------------------------------------------------

@@ -1,19 +1,19 @@
 {-# LANGUAGE NamedFieldPuns #-}
 
-module Test.Cardano.Ledger.Shelley.Generator.TxAuxData
-  ( genMetadata,
-    genMetadata',
-  )
+module Test.Cardano.Ledger.Shelley.Generator.TxAuxData (
+  genMetadata,
+  genMetadata',
+)
 where
 
-import Cardano.Ledger.BaseTypes
-  ( StrictMaybe (..),
-  )
+import Cardano.Ledger.BaseTypes (
+  StrictMaybe (..),
+ )
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.TxAuxData
-  ( Metadatum (..),
-    ShelleyTxAuxData (..),
-  )
+import Cardano.Ledger.Shelley.TxAuxData (
+  Metadatum (..),
+  ShelleyTxAuxData (..),
+ )
 import Control.Exception (assert)
 import qualified Data.ByteString.Char8 as BS (length, pack)
 import qualified Data.Map.Strict as Map
@@ -36,8 +36,8 @@ metadataMaxSize = 3
 genMetadata :: Era era => Constants -> Gen (StrictMaybe (ShelleyTxAuxData era))
 genMetadata (Constants {frequencyTxWithMetadata}) =
   QC.frequency
-    [ (frequencyTxWithMetadata, SJust <$> genMetadata'),
-      (100 - frequencyTxWithMetadata, pure SNothing)
+    [ (frequencyTxWithMetadata, SJust <$> genMetadata')
+    , (100 - frequencyTxWithMetadata, pure SNothing)
     ]
 
 -- | Generate Metadata (and compute hash) of size up to 'metadataMaxSize'
@@ -53,11 +53,11 @@ genMetadatum = do
   (,)
     <$> QC.arbitrary
     <*> ( QC.oneof
-            [ genDatumInt,
-              genDatumString,
-              genDatumBytestring,
-              genMetadatumList,
-              genMetadatumMap
+            [ genDatumInt
+            , genDatumString
+            , genDatumBytestring
+            , genMetadatumList
+            , genMetadatumMap
             ]
         )
 
@@ -65,9 +65,9 @@ genDatumInt :: Gen Metadatum
 genDatumInt =
   I
     <$> QC.frequency
-      [ (8, QC.choose (minVal, maxVal)),
-        (1, pure minVal),
-        (1, pure maxVal)
+      [ (8, QC.choose (minVal, maxVal))
+      , (1, pure minVal)
+      , (1, pure maxVal)
       ]
   where
     minVal, maxVal :: Integer
@@ -94,8 +94,8 @@ genUtf8StringOfSize n = do
     2 -> QC.choose ('\x00080', '\x0007ff')
     3 ->
       QC.oneof
-        [ QC.choose ('\x00800', '\x00d7ff'),
-          -- skipping UTF-16 surrogates d800--dfff
+        [ QC.choose ('\x00800', '\x00d7ff')
+        , -- skipping UTF-16 surrogates d800--dfff
           QC.choose ('\x0e000', '\x00ffff')
         ]
     _ -> QC.choose ('\x10000', '\x10ffff')
@@ -127,8 +127,8 @@ vectorOfMetadatumSimple = do
   QC.vectorOf
     n
     ( QC.oneof
-        [ genDatumInt,
-          genDatumString,
-          genDatumBytestring
+        [ genDatumInt
+        , genDatumString
+        , genDatumBytestring
         ]
     )

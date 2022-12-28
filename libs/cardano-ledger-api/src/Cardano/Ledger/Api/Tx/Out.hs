@@ -29,23 +29,23 @@
 --         txOut ^. addrTxOutL == addr && txOut ^. valueTxOutL == val
 -- :}
 -- +++ OK, passed 100 tests.
-module Cardano.Ledger.Api.Tx.Out
-  ( module Cardano.Ledger.Api.Scripts.Data,
-    EraTxOut (..),
+module Cardano.Ledger.Api.Tx.Out (
+  module Cardano.Ledger.Api.Scripts.Data,
+  EraTxOut (..),
 
-    -- * Shelley, Allegra and Mary Era
-    ShelleyTxOut,
+  -- * Shelley, Allegra and Mary Era
+  ShelleyTxOut,
 
-    -- * Alonzo Era
-    AlonzoTxOut,
-    AlonzoEraTxOut (..),
+  -- * Alonzo Era
+  AlonzoTxOut,
+  AlonzoEraTxOut (..),
 
-    -- * Babbage Era
-    BabbageTxOut,
-    BabbageEraTxOut (..),
-    setMinCoinTxOut,
-    setMinCoinSizedTxOut,
-  )
+  -- * Babbage Era
+  BabbageTxOut,
+  BabbageEraTxOut (..),
+  setMinCoinTxOut,
+  setMinCoinSizedTxOut,
+)
 where
 
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..), AlonzoTxOut)

@@ -4,11 +4,11 @@
 
 -- | Wrapper over AES. `encode` and `decode` use AES256 CTR mode with IV = 0.
 --   Decryption functions are used in wallet. Encryption is not used anywhere.
-module Cardano.Crypto.Encryption
-  ( AesKey (..),
-    aesEncrypt,
-    aesDecrypt,
-  )
+module Cardano.Crypto.Encryption (
+  AesKey (..),
+  aesEncrypt,
+  aesDecrypt,
+)
 where
 
 import Cardano.Prelude hiding (init)

@@ -10,184 +10,185 @@
 
 module Cardano.Ledger.Pretty where
 
-import Cardano.Chain.Common
-  ( AddrAttributes (..),
-    Address (..),
-    Attributes (..),
-    HDAddressPayload (..),
-    NetworkMagic (..),
-    UnparsedFields (..),
-  )
+import Cardano.Chain.Common (
+  AddrAttributes (..),
+  Address (..),
+  Attributes (..),
+  HDAddressPayload (..),
+  NetworkMagic (..),
+  UnparsedFields (..),
+ )
 import qualified Cardano.Crypto.Hash as Hash
-import Cardano.Ledger.Address
-  ( Addr (..),
-    BootstrapAddress (..),
-    CompactAddr,
-    RewardAcnt (..),
-    decompactAddr,
-  )
+import Cardano.Ledger.Address (
+  Addr (..),
+  BootstrapAddress (..),
+  CompactAddr,
+  RewardAcnt (..),
+  decompactAddr,
+ )
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
-import Cardano.Ledger.BaseTypes
-  ( ActiveSlotCoeff,
-    BlocksMade (..),
-    BoundedRational (..),
-    DnsName,
-    FixedPoint,
-    Globals (..),
-    Network (..),
-    Nonce (..),
-    Port (..),
-    ProtVer (..),
-    StrictMaybe (..),
-    UnitInterval,
-    Url (..),
-    Version,
-    activeSlotLog,
-    activeSlotVal,
-    certIxToInt,
-    dnsToText,
-    getVersion64,
-    txIxToInt,
-  )
+import Cardano.Ledger.BaseTypes (
+  ActiveSlotCoeff,
+  BlocksMade (..),
+  BoundedRational (..),
+  DnsName,
+  FixedPoint,
+  Globals (..),
+  Network (..),
+  Nonce (..),
+  Port (..),
+  ProtVer (..),
+  StrictMaybe (..),
+  UnitInterval,
+  Url (..),
+  Version,
+  activeSlotLog,
+  activeSlotVal,
+  certIxToInt,
+  dnsToText,
+  getVersion64,
+  txIxToInt,
+ )
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Compactible (Compactible (..))
-import Cardano.Ledger.Core
-  ( Era,
-    EraPParams (..),
-    EraRule,
-    EraScript (..),
-    EraTx (..),
-    EraTxAuxData (..),
-    EraTxBody (..),
-    EraTxOut (..),
-    EraTxWits (..),
-    Reward (..),
-    RewardType (..),
-    ScriptHash (..),
-    Value,
-  )
-import Cardano.Ledger.Credential
-  ( Credential (KeyHashObj, ScriptHashObj),
-    GenesisCredential (..),
-    Ptr (..),
-    StakeReference (..),
-  )
+import Cardano.Ledger.Core (
+  Era,
+  EraPParams (..),
+  EraRule,
+  EraScript (..),
+  EraTx (..),
+  EraTxAuxData (..),
+  EraTxBody (..),
+  EraTxOut (..),
+  EraTxWits (..),
+  Reward (..),
+  RewardType (..),
+  ScriptHash (..),
+  Value,
+ )
+import Cardano.Ledger.Credential (
+  Credential (KeyHashObj, ScriptHashObj),
+  GenesisCredential (..),
+  Ptr (..),
+  StakeReference (..),
+ )
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.EpochBoundary
-  ( SnapShot (..),
-    SnapShots (..),
-    Stake (..),
-  )
+import Cardano.Ledger.EpochBoundary (
+  SnapShot (..),
+  SnapShots (..),
+  Stake (..),
+ )
 import qualified Cardano.Ledger.Era as Era (TxSeq)
-import Cardano.Ledger.Keys
-  ( GKeys (..),
-    GenDelegPair (..),
-    GenDelegs (..),
-    KeyHash (..),
-    KeyRole (Staking),
-    VKey (..),
-    VerKeyKES,
-    hashKey,
-  )
+import Cardano.Ledger.Keys (
+  GKeys (..),
+  GenDelegPair (..),
+  GenDelegs (..),
+  KeyHash (..),
+  KeyRole (Staking),
+  VKey (..),
+  VerKeyKES,
+  hashKey,
+ )
+
 -- import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness (..), ChainCode (..))
 import Cardano.Ledger.MemoBytes (MemoBytes (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
-import Cardano.Ledger.Shelley.LedgerState
-  ( AccountState (..),
-    DPState (..),
-    DState (..),
-    EpochState (..),
-    FutureGenDeleg (..),
-    IncrementalStake (..),
-    InstantaneousRewards (..),
-    LedgerState (..),
-    NewEpochState (..),
-    PPUPState (..),
-    PState (..),
-    UTxOState (..),
-  )
-import Cardano.Ledger.Shelley.PParams
-  ( PPUpdateEnv (..),
-    ProposedPPUpdates (..),
-    ShelleyPParams,
-    ShelleyPParamsHKD (..),
-    ShelleyPParamsUpdate,
-    Update (..),
-  )
-import Cardano.Ledger.Shelley.PoolRank
-  ( Histogram (..),
-    Likelihood (..),
-    LogWeight (..),
-    NonMyopic (..),
-    PerformanceEstimate (..),
-  )
-import Cardano.Ledger.Shelley.RewardUpdate
-  ( FreeVars (..),
-    Pulser,
-    PulsingRewUpdate (..),
-    RewardAns (..),
-    RewardPulser (..),
-    RewardSnapShot (..),
-    RewardUpdate (..),
-  )
-import Cardano.Ledger.Shelley.Rewards
-  ( LeaderOnlyReward (..),
-    PoolRewardInfo (..),
-    StakeShare (..),
-  )
+import Cardano.Ledger.Shelley.LedgerState (
+  AccountState (..),
+  DPState (..),
+  DState (..),
+  EpochState (..),
+  FutureGenDeleg (..),
+  IncrementalStake (..),
+  InstantaneousRewards (..),
+  LedgerState (..),
+  NewEpochState (..),
+  PPUPState (..),
+  PState (..),
+  UTxOState (..),
+ )
+import Cardano.Ledger.Shelley.PParams (
+  PPUpdateEnv (..),
+  ProposedPPUpdates (..),
+  ShelleyPParams,
+  ShelleyPParamsHKD (..),
+  ShelleyPParamsUpdate,
+  Update (..),
+ )
+import Cardano.Ledger.Shelley.PoolRank (
+  Histogram (..),
+  Likelihood (..),
+  LogWeight (..),
+  NonMyopic (..),
+  PerformanceEstimate (..),
+ )
+import Cardano.Ledger.Shelley.RewardUpdate (
+  FreeVars (..),
+  Pulser,
+  PulsingRewUpdate (..),
+  RewardAns (..),
+  RewardPulser (..),
+  RewardSnapShot (..),
+  RewardUpdate (..),
+ )
+import Cardano.Ledger.Shelley.Rewards (
+  LeaderOnlyReward (..),
+  PoolRewardInfo (..),
+  StakeShare (..),
+ )
 import Cardano.Ledger.Shelley.Scripts (MultiSig (..))
-import Cardano.Ledger.Shelley.Tx
-  ( ShelleyTx (..),
-  )
+import Cardano.Ledger.Shelley.Tx (
+  ShelleyTx (..),
+ )
 import Cardano.Ledger.Shelley.TxAuxData (Metadatum (..), ShelleyTxAuxData (..))
-import Cardano.Ledger.Shelley.TxBody
-  ( ConstitutionalDelegCert (..),
-    DCert (..),
-    DelegCert (..),
-    Delegation (..),
-    MIRCert (..),
-    MIRPot (..),
-    MIRTarget (..),
-    PoolCert (..),
-    PoolMetadata (..),
-    PoolParams (..),
-    ShelleyTxBody (..),
-    ShelleyTxBodyRaw (..),
-    ShelleyTxOut (..),
-    StakePoolRelay (..),
-    Wdrl (..),
-    WitVKey (..),
-  )
-import Cardano.Ledger.Shelley.TxWits
-  ( ShelleyTxWits,
-    prettyWitnessSetParts,
-  )
-import Cardano.Ledger.Slot
-  ( BlockNo (..),
-    Duration (..),
-    EpochNo (..),
-    EpochSize (..),
-    SlotNo (..),
-  )
+import Cardano.Ledger.Shelley.TxBody (
+  ConstitutionalDelegCert (..),
+  DCert (..),
+  DelegCert (..),
+  Delegation (..),
+  MIRCert (..),
+  MIRPot (..),
+  MIRTarget (..),
+  PoolCert (..),
+  PoolMetadata (..),
+  PoolParams (..),
+  ShelleyTxBody (..),
+  ShelleyTxBodyRaw (..),
+  ShelleyTxOut (..),
+  StakePoolRelay (..),
+  Wdrl (..),
+  WitVKey (..),
+ )
+import Cardano.Ledger.Shelley.TxWits (
+  ShelleyTxWits,
+  prettyWitnessSetParts,
+ )
+import Cardano.Ledger.Slot (
+  BlockNo (..),
+  Duration (..),
+  EpochNo (..),
+  EpochSize (..),
+  SlotNo (..),
+ )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMapCompact (Trip (Triple), UMap (..))
 import Cardano.Ledger.UTxO (UTxO (..))
-import Cardano.Protocol.TPraos.BHeader
-  ( BHBody (..),
-    BHeader (BHeader),
-    HashHeader (..),
-    LastAppliedBlock (..),
-    PrevHash (..),
-  )
-import Cardano.Protocol.TPraos.OCert
-  ( KESPeriod (..),
-    OCert (..),
-    OCertEnv (..),
-    OCertSignable (..),
-  )
+import Cardano.Protocol.TPraos.BHeader (
+  BHBody (..),
+  BHeader (BHeader),
+  HashHeader (..),
+  LastAppliedBlock (..),
+  PrevHash (..),
+ )
+import Cardano.Protocol.TPraos.OCert (
+  KESPeriod (..),
+  OCert (..),
+  OCertEnv (..),
+  OCertSignable (..),
+ )
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Cardano.Slotting.Time (SystemStart (SystemStart))
 import Codec.Binary.Bech32
@@ -422,17 +423,17 @@ ppTrip :: Trip c -> PDoc
 ppTrip (Triple mcoin set mpool) =
   ppSexp
     "Triple"
-    [ ppStrictMaybe ppCoin (fromCompact <$> mcoin),
-      ppSet ppPtr set,
-      ppStrictMaybe ppKeyHash mpool
+    [ ppStrictMaybe ppCoin (fromCompact <$> mcoin)
+    , ppSet ppPtr set
+    , ppStrictMaybe ppKeyHash mpool
     ]
 
 ppUnifiedMap :: UMap c -> PDoc
 ppUnifiedMap (UMap tripmap ptrmap) =
   ppRecord
     "UMap"
-    [ ("combined", ppMap ppCredential ppTrip tripmap),
-      ("ptrs", ppMap ppPtr ppCredential ptrmap)
+    [ ("combined", ppMap ppCredential ppTrip tripmap)
+    , ("ptrs", ppMap ppPtr ppCredential ptrmap)
     ]
 
 -- ======================================================
@@ -441,9 +442,9 @@ ppLastAppliedBlock :: LastAppliedBlock c -> PDoc
 ppLastAppliedBlock (LastAppliedBlock blkNo slotNo hh) =
   ppRecord
     "LastAppliedBlock"
-    [ ("blockNo", ppBlockNo blkNo),
-      ("slotNo", ppSlotNo slotNo),
-      ("hash", ppHashHeader hh)
+    [ ("blockNo", ppBlockNo blkNo)
+    , ("slotNo", ppSlotNo slotNo)
+    , ("hash", ppHashHeader hh)
     ]
 
 ppHashHeader :: HashHeader c -> PDoc
@@ -466,17 +467,17 @@ ppBHBody :: Crypto c => BHBody c -> PDoc
 ppBHBody (BHBody bn sn prev vk vrfvk eta l size hash ocert protver) =
   ppRecord
     "BHBody"
-    [ ("BlockNo", ppBlockNo bn),
-      ("SlotNo", ppSlotNo sn),
-      ("Prev", ppPrevHash prev),
-      ("VKey", ppVKey vk),
-      ("VerKeyVRF", viaShow vrfvk), -- The next 3 are type families
-      ("Eta", viaShow eta),
-      ("L", viaShow l),
-      ("size", ppNatural size),
-      ("Hash", ppHash hash),
-      ("OCert", ppOCert ocert),
-      ("ProtVersion", ppProtVer protver)
+    [ ("BlockNo", ppBlockNo bn)
+    , ("SlotNo", ppSlotNo sn)
+    , ("Prev", ppPrevHash prev)
+    , ("VKey", ppVKey vk)
+    , ("VerKeyVRF", viaShow vrfvk) -- The next 3 are type families
+    , ("Eta", viaShow eta)
+    , ("L", viaShow l)
+    , ("size", ppNatural size)
+    , ("Hash", ppHash hash)
+    , ("OCert", ppOCert ocert)
+    , ("ProtVersion", ppProtVer protver)
     ]
 
 ppPrevHash :: PrevHash c -> PDoc
@@ -487,16 +488,16 @@ ppBHeader :: Crypto c => BHeader c -> PDoc
 ppBHeader (BHeader bh sig) =
   ppRecord
     "BHeader"
-    [ ("Body", ppBHBody bh),
-      ("Sig", viaShow sig)
+    [ ("Body", ppBHBody bh)
+    , ("Sig", viaShow sig)
     ]
 
 ppBlock :: (PrettyA (Era.TxSeq era), PrettyA (h)) => Block h era -> PDoc
 ppBlock (UnserialisedBlock bh seqx) =
   ppRecord
     "Block"
-    [ ("Header", prettyA bh),
-      ("TxSeq", prettyA seqx)
+    [ ("Header", prettyA bh)
+    , ("TxSeq", prettyA seqx)
     ]
 
 instance Crypto c => PrettyA (BHBody c) where
@@ -521,8 +522,8 @@ ppIndividualPoolStake :: IndividualPoolStake c -> PDoc
 ppIndividualPoolStake (IndividualPoolStake r1 h) =
   ppRecord
     "IndividualPoolStake"
-    [ ("stake", ppRational r1),
-      ("stakeVrf", ppHash h)
+    [ ("stake", ppRational r1)
+    , ("stakeVrf", ppHash h)
     ]
 
 instance PrettyA (PoolDistr c) where
@@ -538,47 +539,47 @@ ppRewardUpdate :: RewardUpdate c -> PDoc
 ppRewardUpdate (RewardUpdate dt dr rss df nonmyop) =
   ppRecord
     "RewardUpdate"
-    [ ("deltaT", ppDeltaCoin dt),
-      ("deltaR", ppDeltaCoin dr),
-      ("rs", ppMap' mempty ppCredential (ppSet ppReward) rss),
-      ("deltaF", ppDeltaCoin df),
-      ("nonMyopic", ppNonMyopic nonmyop)
+    [ ("deltaT", ppDeltaCoin dt)
+    , ("deltaR", ppDeltaCoin dr)
+    , ("rs", ppMap' mempty ppCredential (ppSet ppReward) rss)
+    , ("deltaF", ppDeltaCoin df)
+    , ("nonMyopic", ppNonMyopic nonmyop)
     ]
 
 ppRewardSnapShot :: RewardSnapShot c -> PDoc
 ppRewardSnapShot (RewardSnapShot fee ver non deltaR1 rR deltaT1 ls lrews) =
   ppRecord
     "RewardSnapShot"
-    [ ("fees", ppCoin fee),
-      ("version", ppProtVer ver),
-      ("nonmyopic", ppNonMyopic non),
-      ("deltaR1", ppCoin deltaR1),
-      ("R", ppCoin rR),
-      ("deltaT1", ppCoin deltaT1),
-      ("likelihoods", ppMap ppKeyHash ppLikelihood ls),
-      ("leaderRewards", ppMap ppCredential (ppSet ppReward) lrews)
+    [ ("fees", ppCoin fee)
+    , ("version", ppProtVer ver)
+    , ("nonmyopic", ppNonMyopic non)
+    , ("deltaR1", ppCoin deltaR1)
+    , ("R", ppCoin rR)
+    , ("deltaT1", ppCoin deltaT1)
+    , ("likelihoods", ppMap ppKeyHash ppLikelihood ls)
+    , ("leaderRewards", ppMap ppCredential (ppSet ppReward) lrews)
     ]
 
 ppPoolRewardInfo :: PoolRewardInfo c -> PDoc
 ppPoolRewardInfo (PoolRewardInfo relStake pot params blocks lreward) =
   ppRecord
     "PoolRewardInfo"
-    [ ("poolRelativeStake", ppStakeShare relStake),
-      ("poolPot", ppCoin pot),
-      ("poolPs", ppPoolParams params),
-      ("poolBlocks", ppNatural blocks),
-      ("leaderReward", ppLeaderOnlyReward lreward)
+    [ ("poolRelativeStake", ppStakeShare relStake)
+    , ("poolPot", ppCoin pot)
+    , ("poolPs", ppPoolParams params)
+    , ("poolBlocks", ppNatural blocks)
+    , ("leaderReward", ppLeaderOnlyReward lreward)
     ]
 
 ppFreeVars :: FreeVars c -> PDoc
 ppFreeVars (FreeVars ds addrs total pv pri) =
   ppRecord
     "FreeVars"
-    [ ("delegs", ppVMap ppCredential ppKeyHash ds),
-      ("addrsRew", ppSet ppCredential addrs),
-      ("totalStake", ppInteger total),
-      ("pv", ppProtVer pv),
-      ("poolRewardInfo", ppMap ppKeyHash ppPoolRewardInfo pri)
+    [ ("delegs", ppVMap ppCredential ppKeyHash ds)
+    , ("addrsRew", ppSet ppCredential addrs)
+    , ("totalStake", ppInteger total)
+    , ("pv", ppProtVer pv)
+    , ("poolRewardInfo", ppMap ppKeyHash ppPoolRewardInfo pri)
     ]
 
 ppAns :: RewardAns c -> PDoc
@@ -589,10 +590,10 @@ ppRewardPulser :: Pulser c -> PDoc
 ppRewardPulser (RSLP n free items ans) =
   ppSexp
     "RewardPulser"
-    [ ppInt n,
-      ppFreeVars free,
-      ppVMap ppCredential (ppCompactForm ppCoin) items,
-      ppAns ans
+    [ ppInt n
+    , ppFreeVars free
+    , ppVMap ppCredential (ppCompactForm ppCoin) items
+    , ppAns ans
     ]
 
 ppPulsingRewUpdate :: PulsingRewUpdate c -> PDoc
@@ -621,17 +622,17 @@ instance PrettyA (RewardUpdate c) where
 
 -- | Constraints needed to ensure that the ledger state can be pretty printed.
 type CanPrettyPrintLedgerState era =
-  ( PrettyA (TxOut era),
-    PrettyA (PParams era),
-    PrettyA (State (EraRule "PPUP" era))
+  ( PrettyA (TxOut era)
+  , PrettyA (PParams era)
+  , PrettyA (State (EraRule "PPUP" era))
   )
 
 ppAccountState :: AccountState -> PDoc
 ppAccountState (AccountState tr re) =
   ppRecord
     "AccountState"
-    [ ("treasury", ppCoin tr),
-      ("reserves", ppCoin re)
+    [ ("treasury", ppCoin tr)
+    , ("reserves", ppCoin re)
     ]
 
 ppDPState :: DPState c -> PDoc
@@ -641,47 +642,47 @@ ppDState :: DState c -> PDoc
 ppDState (DState unified future gen irwd deposits) =
   ppRecord
     "DState"
-    [ ("unifiedMap", ppUnifiedMap unified),
-      ("futuregendelegs", ppMap ppFutureGenDeleg ppGenDelegPair future),
-      ("gendelegs", ppGenDelegs gen),
-      ("instantaeousrewards", ppInstantaneousRewards irwd),
-      ("deposits", ppMap ppCredential ppCoin deposits)
+    [ ("unifiedMap", ppUnifiedMap unified)
+    , ("futuregendelegs", ppMap ppFutureGenDeleg ppGenDelegPair future)
+    , ("gendelegs", ppGenDelegs gen)
+    , ("instantaeousrewards", ppInstantaneousRewards irwd)
+    , ("deposits", ppMap ppCredential ppCoin deposits)
     ]
 
 ppFutureGenDeleg :: FutureGenDeleg c -> PDoc
 ppFutureGenDeleg (FutureGenDeleg sl kh) =
   ppRecord
     "FutureGenDeleg"
-    [ ("delegSlot", ppSlotNo sl),
-      ("keyhash", ppKeyHash kh)
+    [ ("delegSlot", ppSlotNo sl)
+    , ("keyhash", ppKeyHash kh)
     ]
 
 ppInstantaneousRewards :: InstantaneousRewards c -> PDoc
 ppInstantaneousRewards (InstantaneousRewards res treas dR dT) =
   ppRecord
     "InstantaneousRewards"
-    [ ("reserves", ppMap' mempty ppCredential ppCoin res),
-      ("treasury", ppMap' mempty ppCredential ppCoin treas),
-      ("deltaReserves", ppDeltaCoin dR),
-      ("deltaTreasury", ppDeltaCoin dT)
+    [ ("reserves", ppMap' mempty ppCredential ppCoin res)
+    , ("treasury", ppMap' mempty ppCredential ppCoin treas)
+    , ("deltaReserves", ppDeltaCoin dR)
+    , ("deltaTreasury", ppDeltaCoin dT)
     ]
 
 ppPPUPState :: PrettyA (PParamsUpdate era) => PPUPState era -> PDoc
 ppPPUPState (PPUPState p fp) =
   ppRecord
     "Proposed PPUPState"
-    [ ("proposals", ppProposedPPUpdates p),
-      ("futureProposals", ppProposedPPUpdates fp)
+    [ ("proposals", ppProposedPPUpdates p)
+    , ("futureProposals", ppProposedPPUpdates fp)
     ]
 
 ppPState :: PState c -> PDoc
 ppPState (PState par fpar ret deposits) =
   ppRecord
     "PState"
-    [ ("poolparams", ppMap' mempty ppKeyHash ppPoolParams par),
-      ("futurepoolparams", ppMap' mempty ppKeyHash ppPoolParams fpar),
-      ("retiring", ppMap' mempty ppKeyHash ppEpochNo ret),
-      ("deposits", ppMap ppKeyHash ppCoin deposits)
+    [ ("poolparams", ppMap' mempty ppKeyHash ppPoolParams par)
+    , ("futurepoolparams", ppMap' mempty ppKeyHash ppPoolParams fpar)
+    , ("retiring", ppMap' mempty ppKeyHash ppEpochNo ret)
+    , ("deposits", ppMap ppKeyHash ppCoin deposits)
     ]
 
 ppRewardAccounts :: Map.Map (Credential 'Staking c) Coin -> PDoc
@@ -695,25 +696,25 @@ ppReward :: Reward c -> PDoc
 ppReward (Reward rt pool amt) =
   ppRecord
     "Reward"
-    [ ("rewardType", ppRewardType rt),
-      ("poolId", ppKeyHash pool),
-      ("rewardAmount", ppCoin amt)
+    [ ("rewardType", ppRewardType rt)
+    , ("poolId", ppKeyHash pool)
+    , ("rewardAmount", ppCoin amt)
     ]
 
 ppLeaderOnlyReward :: LeaderOnlyReward c -> PDoc
 ppLeaderOnlyReward (LeaderOnlyReward pool amt) =
   ppRecord
     "LeaderOnlyReward"
-    [ ("poolId", ppKeyHash pool),
-      ("rewardAmount", ppCoin amt)
+    [ ("poolId", ppKeyHash pool)
+    , ("rewardAmount", ppCoin amt)
     ]
 
 ppIncrementalStake :: IncrementalStake c -> PDoc
 ppIncrementalStake (IStake st dangle) =
   ppRecord
     "IncrementalStake"
-    [ ("credMap", ppMap ppCredential ppCoin st),
-      ("ptrMap", ppMap ppPtr ppCoin dangle)
+    [ ("credMap", ppMap ppCredential ppCoin st)
+    , ("ptrMap", ppMap ppPtr ppCoin dangle)
     ]
 
 ppUTxOState ::
@@ -723,35 +724,35 @@ ppUTxOState ::
 ppUTxOState (UTxOState u dep fee ppup sd) =
   ppRecord
     "UTxOState"
-    [ ("utxo", ppUTxO u),
-      ("deposited", ppCoin dep),
-      ("fees", ppCoin fee),
-      ("ppups", prettyA ppup),
-      ("stakeDistro", ppIncrementalStake sd)
+    [ ("utxo", ppUTxO u)
+    , ("deposited", ppCoin dep)
+    , ("fees", ppCoin fee)
+    , ("ppups", prettyA ppup)
+    , ("stakeDistro", ppIncrementalStake sd)
     ]
 
 ppEpochState :: CanPrettyPrintLedgerState era => EpochState era -> PDoc
 ppEpochState (EpochState acnt snap ls prev pp non) =
   ppRecord
     "EpochState"
-    [ ("accountState", ppAccountState acnt),
-      ("snapShots", ppSnapShots snap),
-      ("ledgerState", ppLedgerState ls),
-      ("prevPParams", prettyA prev),
-      ("currentPParams", prettyA pp),
-      ("nonMyopic", ppNonMyopic non)
+    [ ("accountState", ppAccountState acnt)
+    , ("snapShots", ppSnapShots snap)
+    , ("ledgerState", ppLedgerState ls)
+    , ("prevPParams", prettyA prev)
+    , ("currentPParams", prettyA pp)
+    , ("nonMyopic", ppNonMyopic non)
     ]
 
 ppNewEpochState :: CanPrettyPrintLedgerState era => NewEpochState era -> PDoc
 ppNewEpochState (NewEpochState enum prevB curB es rewup pool _) =
   ppRecord
     "NewEpochState"
-    [ ("epochnum", ppEpochNo enum),
-      ("prevBlock", ppBlocksMade prevB),
-      ("currBlock", ppBlocksMade curB),
-      ("epochState", ppEpochState es),
-      ("rewUpdate", ppStrictMaybe ppPulsingRewUpdate rewup),
-      ("poolDist", ppPoolDistr pool)
+    [ ("epochnum", ppEpochNo enum)
+    , ("prevBlock", ppBlocksMade prevB)
+    , ("currBlock", ppBlocksMade curB)
+    , ("epochState", ppEpochState es)
+    , ("rewUpdate", ppStrictMaybe ppPulsingRewUpdate rewup)
+    , ("poolDist", ppPoolDistr pool)
     ]
 
 ppLedgerState ::
@@ -761,8 +762,8 @@ ppLedgerState ::
 ppLedgerState (LedgerState u d) =
   ppRecord
     "LedgerState"
-    [ ("utxoState", ppUTxOState u),
-      ("delegationState", ppDPState d)
+    [ ("utxoState", ppUTxOState u)
+    , ("delegationState", ppDPState d)
     ]
 
 instance PrettyA AccountState where
@@ -775,16 +776,16 @@ instance PrettyA (DState c) where
   prettyA = ppDState
 
 instance
-  ( Era era,
-    CanPrettyPrintLedgerState era
+  ( Era era
+  , CanPrettyPrintLedgerState era
   ) =>
   PrettyA (EpochState era)
   where
   prettyA = ppEpochState
 
 instance
-  ( Era era,
-    CanPrettyPrintLedgerState era
+  ( Era era
+  , CanPrettyPrintLedgerState era
   ) =>
   PrettyA (NewEpochState era)
   where
@@ -797,8 +798,8 @@ instance PrettyA (InstantaneousRewards c) where
   prettyA = ppInstantaneousRewards
 
 instance
-  ( Era era,
-    CanPrettyPrintLedgerState era
+  ( Era era
+  , CanPrettyPrintLedgerState era
   ) =>
   PrettyA (LedgerState era)
   where
@@ -814,8 +815,8 @@ instance PrettyA (PState c) where
   prettyA = ppPState
 
 instance
-  ( Era era,
-    CanPrettyPrintLedgerState era
+  ( Era era
+  , CanPrettyPrintLedgerState era
   ) =>
   PrettyA (UTxOState era)
   where
@@ -834,8 +835,8 @@ ppNonMyopic :: NonMyopic c -> PDoc
 ppNonMyopic (NonMyopic m c) =
   ppRecord
     "NonMyopic"
-    [ ("likelihood", ppMap' "" ppKeyHash ppLikelihood m),
-      ("rewardPot", ppCoin c)
+    [ ("likelihood", ppMap' "" ppKeyHash ppLikelihood m)
+    , ("rewardPot", ppCoin c)
     ]
 
 ppStakeShare :: StakeShare -> PDoc
@@ -879,19 +880,19 @@ ppSnapShot :: SnapShot c -> PDoc
 ppSnapShot (SnapShot st deleg params) =
   ppRecord
     "SnapShot"
-    [ ("stake", ppStake st),
-      ("delegations", ppVMap ppCredential ppKeyHash deleg),
-      ("poolParams", ppVMap ppKeyHash ppPoolParams params)
+    [ ("stake", ppStake st)
+    , ("delegations", ppVMap ppCredential ppKeyHash deleg)
+    , ("poolParams", ppVMap ppKeyHash ppPoolParams params)
     ]
 
 ppSnapShots :: SnapShots c -> PDoc
 ppSnapShots (SnapShots mark _markPD set go fees) =
   ppRecord
     "SnapShots"
-    [ ("pstakeMark", ppSnapShot mark),
-      ("pstakeSet", ppSnapShot set),
-      ("pstakeGo", ppSnapShot go),
-      ("fee", ppCoin fees)
+    [ ("pstakeMark", ppSnapShot mark)
+    , ("pstakeSet", ppSnapShot set)
+    , ("pstakeGo", ppSnapShot go)
+    , ("fee", ppCoin fees)
     ]
 
 instance PrettyA (Stake c) where
@@ -952,29 +953,29 @@ instance Era era => PrettyA (ShelleyTxAuxData era) where
 -- Cardano.Ledger.Shelley.Tx
 
 ppTx ::
-  ( PrettyA (TxBody era),
-    PrettyA (TxAuxData era),
-    PrettyA (TxWits era),
-    EraTx era
+  ( PrettyA (TxBody era)
+  , PrettyA (TxAuxData era)
+  , PrettyA (TxWits era)
+  , EraTx era
   ) =>
   Tx era ->
   PDoc
 ppTx tx =
   ppRecord
     "Tx"
-    [ ("body", prettyA $ tx ^. bodyTxL),
-      ("witnessSet", prettyA $ tx ^. witsTxL),
-      ("metadata", ppStrictMaybe prettyA $ tx ^. auxDataTxL)
+    [ ("body", prettyA $ tx ^. bodyTxL)
+    , ("witnessSet", prettyA $ tx ^. witsTxL)
+    , ("metadata", ppStrictMaybe prettyA $ tx ^. auxDataTxL)
     ]
 
 ppBootstrapWitness :: Crypto c => BootstrapWitness c -> PDoc
 ppBootstrapWitness (BootstrapWitness key sig (ChainCode code) attr) =
   ppRecord
     "BootstrapWitness"
-    [ ("key", ppVKey key),
-      ("signature", ppSignedDSIGN sig),
-      ("chaincode", ppLong code),
-      ("attributes", ppLong attr)
+    [ ("key", ppVKey key)
+    , ("signature", ppSignedDSIGN sig)
+    , ("chaincode", ppLong code)
+    , ("attributes", ppLong attr)
     ]
 
 ppWitnessSetHKD :: (Era era, PrettyA (Script era)) => ShelleyTxWits era -> PDoc
@@ -982,17 +983,17 @@ ppWitnessSetHKD x =
   let (addr, scr, boot) = prettyWitnessSetParts x
    in ppRecord
         "ShelleyTxWits"
-        [ ("addrWits", ppSet ppWitVKey addr),
-          ("scriptWits", ppMap ppScriptHash prettyA scr),
-          ("bootWits", ppSet ppBootstrapWitness boot)
+        [ ("addrWits", ppSet ppWitVKey addr)
+        , ("scriptWits", ppMap ppScriptHash prettyA scr)
+        , ("bootWits", ppSet ppBootstrapWitness boot)
         ]
 
 instance
-  ( PrettyA (TxBody era),
-    PrettyA (TxAuxData era),
-    PrettyA (TxWits era),
-    EraTx era,
-    Tx era ~ ShelleyTx era
+  ( PrettyA (TxBody era)
+  , PrettyA (TxAuxData era)
+  , PrettyA (TxWits era)
+  , EraTx era
+  , Tx era ~ ShelleyTx era
   ) =>
   PrettyA (ShelleyTx era)
   where
@@ -1039,8 +1040,8 @@ ppPoolMetadata :: PoolMetadata -> PDoc
 ppPoolMetadata (PoolMetadata url hsh) =
   ppRecord
     "PoolMetadata"
-    [ ("url", ppUrl url),
-      ("hash", text "#" <> reAnnotate (Width 5 :) (ppLong hsh))
+    [ ("url", ppUrl url)
+    , ("hash", text "#" <> reAnnotate (Width 5 :) (ppLong hsh))
     ]
 
 ppStakePoolRelay :: StakePoolRelay -> PDoc
@@ -1052,15 +1053,15 @@ ppPoolParams :: PoolParams c -> PDoc
 ppPoolParams (PoolParams idx vrf pledge cost margin acnt owners relays md) =
   ppRecord
     "PoolParams"
-    [ ("Id", ppKeyHash idx),
-      ("Vrf", ppHash vrf),
-      ("Pledge", ppCoin pledge),
-      ("Cost", ppCoin cost),
-      ("Margin", ppUnitInterval margin),
-      ("RAcnt", ppRewardAcnt' acnt),
-      ("Owners", ppSet ppKeyHash owners),
-      ("Relays", ppStrictSeq ppStakePoolRelay relays),
-      ("Metadata", ppStrictMaybe ppPoolMetadata md)
+    [ ("Id", ppKeyHash idx)
+    , ("Vrf", ppHash vrf)
+    , ("Pledge", ppCoin pledge)
+    , ("Cost", ppCoin cost)
+    , ("Margin", ppUnitInterval margin)
+    , ("RAcnt", ppRewardAcnt' acnt)
+    , ("Owners", ppSet ppKeyHash owners)
+    , ("Relays", ppStrictSeq ppStakePoolRelay relays)
+    , ("Metadata", ppStrictMaybe ppPoolMetadata md)
     ]
 
 ppWdrl :: Wdrl c -> PDoc
@@ -1076,8 +1077,8 @@ ppTxOut :: (EraTxOut era, PrettyA (Value era)) => ShelleyTxOut era -> PDoc
 ppTxOut (ShelleyTxOut addr val) =
   ppSexp
     "TxOut"
-    [ ppAddr addr,
-      prettyA val
+    [ ppAddr addr
+    , prettyA val
     ]
 
 ppDelegCert :: DelegCert c -> PDoc
@@ -1117,14 +1118,14 @@ ppTxBody ::
 ppTxBody (TxBodyConstr (Memo (ShelleyTxBodyRaw ins outs cs wdrls fee ttl upd mdh) _)) =
   ppRecord
     "TxBody"
-    [ ("inputs", ppSet ppTxIn ins),
-      ("outputs", ppStrictSeq prettyA outs),
-      ("cert", ppStrictSeq ppDCert cs),
-      ("wdrls", ppWdrl wdrls),
-      ("fee", ppCoin fee),
-      ("timetolive", ppSlotNo ttl),
-      ("update", ppStrictMaybe ppUpdate upd),
-      ("metadatahash", ppStrictMaybe ppAuxiliaryDataHash mdh)
+    [ ("inputs", ppSet ppTxIn ins)
+    , ("outputs", ppStrictSeq prettyA outs)
+    , ("cert", ppStrictSeq ppDCert cs)
+    , ("wdrls", ppWdrl wdrls)
+    , ("fee", ppCoin fee)
+    , ("timetolive", ppSlotNo ttl)
+    , ("update", ppStrictMaybe ppUpdate upd)
+    , ("metadatahash", ppStrictMaybe ppAuxiliaryDataHash mdh)
     ]
 
 ppWitVKey :: (Typeable kr, Crypto c) => WitVKey kr c -> PDoc
@@ -1152,8 +1153,8 @@ instance PrettyA (TxIn c) where
   prettyA = ppTxIn
 
 instance
-  ( EraTxOut era,
-    PrettyA (Value era)
+  ( EraTxOut era
+  , PrettyA (Value era)
   ) =>
   PrettyA (ShelleyTxOut era)
   where
@@ -1225,46 +1226,46 @@ ppPParams :: ShelleyPParams era -> PDoc
 ppPParams (ShelleyPParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau d ex pv mutxo mpool) =
   ppRecord
     "PParams"
-    [ ("minfeeA", ppNatural feeA),
-      ("minfeeB", ppNatural feeB),
-      ("maxBBSize", ppNatural mbb),
-      ("maxTxSize", ppNatural mtx),
-      ("maxBHSize", ppNatural mbh),
-      ("keyDeposit", ppCoin kd),
-      ("poolDeposit", ppCoin pd),
-      ("eMax", ppEpochNo em),
-      ("nOpt", ppNatural no),
-      ("a0", ppRational $ unboundRational a0),
-      ("rho", ppUnitInterval rho),
-      ("tau", ppUnitInterval tau),
-      ("d", ppUnitInterval d),
-      ("extraEntropy", ppNonce ex),
-      ("protocolVersion", ppProtVer pv),
-      ("minUTxOValue", ppCoin mutxo),
-      ("minPoolCost", ppCoin mpool)
+    [ ("minfeeA", ppNatural feeA)
+    , ("minfeeB", ppNatural feeB)
+    , ("maxBBSize", ppNatural mbb)
+    , ("maxTxSize", ppNatural mtx)
+    , ("maxBHSize", ppNatural mbh)
+    , ("keyDeposit", ppCoin kd)
+    , ("poolDeposit", ppCoin pd)
+    , ("eMax", ppEpochNo em)
+    , ("nOpt", ppNatural no)
+    , ("a0", ppRational $ unboundRational a0)
+    , ("rho", ppUnitInterval rho)
+    , ("tau", ppUnitInterval tau)
+    , ("d", ppUnitInterval d)
+    , ("extraEntropy", ppNonce ex)
+    , ("protocolVersion", ppProtVer pv)
+    , ("minUTxOValue", ppCoin mutxo)
+    , ("minPoolCost", ppCoin mpool)
     ]
 
 ppPParamsUpdate :: ShelleyPParamsUpdate era -> PDoc
 ppPParamsUpdate (ShelleyPParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau d ex pv mutxo mpool) =
   ppRecord
     "PParams"
-    [ ("minfeeA", lift ppNatural feeA),
-      ("minfeeB", lift ppNatural feeB),
-      ("maxBBSize", lift ppNatural mbb),
-      ("maxTxSize", lift ppNatural mtx),
-      ("maxBHSize", lift ppNatural mbh),
-      ("keyDeposit", lift ppCoin kd),
-      ("poolDeposit", lift ppCoin pd),
-      ("eMax", lift ppEpochNo em),
-      ("nOpt", lift ppNatural no),
-      ("a0", lift (ppRational . unboundRational) a0),
-      ("rho", lift ppUnitInterval rho),
-      ("tau", lift ppUnitInterval tau),
-      ("d", lift ppUnitInterval d),
-      ("extraEntropy", lift ppNonce ex),
-      ("protocolVersion", lift ppProtVer pv),
-      ("minUTxOValue", lift ppCoin mutxo),
-      ("minPoolCost", lift ppCoin mpool)
+    [ ("minfeeA", lift ppNatural feeA)
+    , ("minfeeB", lift ppNatural feeB)
+    , ("maxBBSize", lift ppNatural mbb)
+    , ("maxTxSize", lift ppNatural mtx)
+    , ("maxBHSize", lift ppNatural mbh)
+    , ("keyDeposit", lift ppCoin kd)
+    , ("poolDeposit", lift ppCoin pd)
+    , ("eMax", lift ppEpochNo em)
+    , ("nOpt", lift ppNatural no)
+    , ("a0", lift (ppRational . unboundRational) a0)
+    , ("rho", lift ppUnitInterval rho)
+    , ("tau", lift ppUnitInterval tau)
+    , ("d", lift ppUnitInterval d)
+    , ("extraEntropy", lift ppNonce ex)
+    , ("protocolVersion", lift ppProtVer pv)
+    , ("minUTxOValue", lift ppCoin mutxo)
+    , ("minPoolCost", lift ppCoin mpool)
     ]
   where
     lift pp x = ppStrictMaybe pp x
@@ -1320,11 +1321,11 @@ ppBootstrapAddress :: BootstrapAddress c -> PDoc
 ppBootstrapAddress (BootstrapAddress (Address root (Attributes (AddrAttributes path magic) y) typ)) =
   ppRecord
     "BootstrapAddress"
-    [ ("root", viaShow root), -- Cardano.Crypto.Hashing.AbstractHash
-      ("derivationpath", ppMaybe ppHDAddressPayload path),
-      ("networkmagic", ppNetworkMagic magic),
-      ("remain", ppUnparsedFields y),
-      ("type", viaShow typ) -- Cardano.Chain.Common.AddrSpendingData.AddrType
+    [ ("root", viaShow root) -- Cardano.Crypto.Hashing.AbstractHash
+    , ("derivationpath", ppMaybe ppHDAddressPayload path)
+    , ("networkmagic", ppNetworkMagic magic)
+    , ("remain", ppUnparsedFields y)
+    , ("type", viaShow typ) -- Cardano.Chain.Common.AddrSpendingData.AddrType
     ]
 
 ppNetworkMagic :: NetworkMagic -> PDoc
@@ -1454,18 +1455,18 @@ ppOCertEnv :: OCertEnv c -> PDoc
 ppOCertEnv (OCertEnv ps ds) =
   ppRecord
     "OCertEnv"
-    [ ("ocertEnvStPools", ppSet ppKeyHash ps),
-      ("ocertEnvGenDelegs", ppSet ppKeyHash ds)
+    [ ("ocertEnvStPools", ppSet ppKeyHash ps)
+    , ("ocertEnvGenDelegs", ppSet ppKeyHash ds)
     ]
 
 ppOCert :: forall c. Crypto c => OCert c -> PDoc
 ppOCert (OCert vk n per sig) =
   ppRecord
     "OCert"
-    [ ("ocertVkKot", ppVerKeyKES (Proxy @c) vk),
-      ("ocertN", pretty n),
-      ("ocertKESPeriod", ppKESPeriod per),
-      ("ocertSigma", ppSignedDSIGN sig)
+    [ ("ocertVkKot", ppVerKeyKES (Proxy @c) vk)
+    , ("ocertN", pretty n)
+    , ("ocertKESPeriod", ppKESPeriod per)
+    , ("ocertSigma", ppSignedDSIGN sig)
     ]
 
 ppOCertSignable :: forall c. Crypto c => OCertSignable c -> PDoc
@@ -1507,8 +1508,8 @@ ppActiveSlotCoeff :: ActiveSlotCoeff -> PDoc
 ppActiveSlotCoeff x =
   ppRecord
     "ActiveSlotCoeff"
-    [ ("activeSlotVal", viaShow (activeSlotVal x)),
-      ("ActiveSlotLog", ppFixedPoint (activeSlotLog x))
+    [ ("activeSlotVal", viaShow (activeSlotVal x))
+    , ("ActiveSlotLog", ppFixedPoint (activeSlotLog x))
     ]
 
 ppGlobals :: Globals -> PDoc
@@ -1529,18 +1530,18 @@ ppGlobals
     ) =
     ppRecord
       "Globals"
-      [ ("epochInfo", text "?"),
-        ("slotsPerKESPeriod", pretty slot),
-        ("stabilityWindow", pretty stab),
-        ("randomnessStabilisationWindow", pretty ran),
-        ("securityParameter", pretty sec),
-        ("maxKESEvo", pretty maxkes),
-        ("quorum", pretty quor),
-        ("maxMajorPV", prettyA maxmaj),
-        ("maxLovelaceSupply", pretty maxlove),
-        ("activeSlotCoeff", ppActiveSlotCoeff active),
-        ("networkId", ppNetwork net),
-        ("systemStart", ppSystemStart start)
+      [ ("epochInfo", text "?")
+      , ("slotsPerKESPeriod", pretty slot)
+      , ("stabilityWindow", pretty stab)
+      , ("randomnessStabilisationWindow", pretty ran)
+      , ("securityParameter", pretty sec)
+      , ("maxKESEvo", pretty maxkes)
+      , ("quorum", pretty quor)
+      , ("maxMajorPV", prettyA maxmaj)
+      , ("maxLovelaceSupply", pretty maxlove)
+      , ("activeSlotCoeff", ppActiveSlotCoeff active)
+      , ("networkId", ppNetwork net)
+      , ("systemStart", ppSystemStart start)
       ]
 
 ppNetwork :: Network -> PDoc

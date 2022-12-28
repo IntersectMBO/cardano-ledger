@@ -13,20 +13,20 @@
 --
 --    > ((dom stkcred) ◁ deleg) ▷ (dom stpool)) ==>
 --    > intersectDomP (\ k v -> Map.member v stpool) stkcred deleg
-module Data.MapExtras
-  ( StrictTriple (..),
-    extract,
-    noKeys,
-    keysEqual,
-    splitMemberMap,
-    splitMemberSet,
-    intersectDomP,
-    intersectDomPLeft,
-    intersectMapSetFold,
-    disjointMapSetFold,
-    extractKeys,
-    extractKeysSmallSet,
-  )
+module Data.MapExtras (
+  StrictTriple (..),
+  extract,
+  noKeys,
+  keysEqual,
+  splitMemberMap,
+  splitMemberSet,
+  intersectDomP,
+  intersectDomPLeft,
+  intersectMapSetFold,
+  disjointMapSetFold,
+  extractKeys,
+  extractKeysSmallSet,
+)
 where
 
 import Data.Map.Internal (Map (..), balanceL, balanceR, glue, link, link2)

@@ -12,114 +12,114 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Shelley.Rules.Chain
-  ( CHAIN,
-    ChainState (..),
-    TestChainPredicateFailure (..),
-    ChainEvent (..),
-    PredicateFailure,
-    AdaPots (..),
-    initialShelleyState,
-    totalAda,
-    totalAdaPots,
-  )
+module Test.Cardano.Ledger.Shelley.Rules.Chain (
+  CHAIN,
+  ChainState (..),
+  TestChainPredicateFailure (..),
+  ChainEvent (..),
+  PredicateFailure,
+  AdaPots (..),
+  initialShelleyState,
+  totalAda,
+  totalAdaPots,
+)
 where
 
 import Cardano.Ledger.BHeaderView (BHeaderView)
-import Cardano.Ledger.BaseTypes
-  ( BlocksMade (..),
-    Globals (..),
-    Nonce (..),
-    ProtVer (..),
-    ShelleyBase,
-    StrictMaybe (..),
-    UnitInterval,
-  )
+import Cardano.Ledger.BaseTypes (
+  BlocksMade (..),
+  Globals (..),
+  Nonce (..),
+  ProtVer (..),
+  ShelleyBase,
+  StrictMaybe (..),
+  UnitInterval,
+ )
 import Cardano.Ledger.Binary (ToCBORGroup)
 import Cardano.Ledger.Block (Block (..))
-import Cardano.Ledger.Chain
-  ( ChainPredicateFailure (..),
-    chainChecks,
-    pparamsToChainChecksPParams,
-  )
+import Cardano.Ledger.Chain (
+  ChainPredicateFailure (..),
+  chainChecks,
+  pparamsToChainChecksPParams,
+ )
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.EpochBoundary (emptySnapShots)
 import Cardano.Ledger.Era (Era, EraCrypto)
 import qualified Cardano.Ledger.Era as Era
-import Cardano.Ledger.Keys
-  ( GenDelegPair (..),
-    GenDelegs (..),
-    KeyHash,
-    KeyRole (..),
-    coerceKeyRole,
-  )
+import Cardano.Ledger.Keys (
+  GenDelegPair (..),
+  GenDelegs (..),
+  KeyHash,
+  KeyRole (..),
+  coerceKeyRole,
+ )
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import qualified Cardano.Ledger.Pretty as PP
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.AdaPots
-  ( AdaPots (..),
-    totalAdaES,
-    totalAdaPotsES,
-  )
-import Cardano.Ledger.Shelley.LedgerState
-  ( AccountState (..),
-    DPState (..),
-    DState (..),
-    EpochState (..),
-    LedgerState (..),
-    NewEpochState (..),
-    PState (..),
-    StashedAVVMAddresses,
-    dsGenDelegs,
-    smartUTxOState,
-    updateNES,
-  )
-import Cardano.Ledger.Shelley.Rules
-  ( BbodyEnv (..),
-    ShelleyBBODY,
-    ShelleyBbodyPredFailure,
-    ShelleyBbodyState (..),
-    ShelleyTICK,
-    ShelleyTickEvent,
-    ShelleyTickPredFailure,
-  )
+import Cardano.Ledger.Shelley.AdaPots (
+  AdaPots (..),
+  totalAdaES,
+  totalAdaPotsES,
+ )
+import Cardano.Ledger.Shelley.LedgerState (
+  AccountState (..),
+  DPState (..),
+  DState (..),
+  EpochState (..),
+  LedgerState (..),
+  NewEpochState (..),
+  PState (..),
+  StashedAVVMAddresses,
+  dsGenDelegs,
+  smartUTxOState,
+  updateNES,
+ )
+import Cardano.Ledger.Shelley.Rules (
+  BbodyEnv (..),
+  ShelleyBBODY,
+  ShelleyBbodyPredFailure,
+  ShelleyBbodyState (..),
+  ShelleyTICK,
+  ShelleyTickEvent,
+  ShelleyTickPredFailure,
+ )
 import Cardano.Ledger.Slot (EpochNo)
 import Cardano.Ledger.TreeDiff (ToExpr (toExpr), defaultExprViaShow)
 import Cardano.Ledger.UTxO (UTxO (..))
-import Cardano.Protocol.TPraos.BHeader
-  ( BHeader,
-    HashHeader,
-    LastAppliedBlock (..),
-    bhHash,
-    bhbody,
-    bheaderBlockNo,
-    bheaderSlotNo,
-    lastAppliedHash,
-    makeHeaderView,
-    prevHashToNonce,
-  )
-import Cardano.Protocol.TPraos.Rules.Prtcl
-  ( PRTCL,
-    PrtclEnv (..),
-    PrtclState (..),
-    PrtlSeqFailure,
-    prtlSeqChecks,
-  )
+import Cardano.Protocol.TPraos.BHeader (
+  BHeader,
+  HashHeader,
+  LastAppliedBlock (..),
+  bhHash,
+  bhbody,
+  bheaderBlockNo,
+  bheaderSlotNo,
+  lastAppliedHash,
+  makeHeaderView,
+  prevHashToNonce,
+ )
+import Cardano.Protocol.TPraos.Rules.Prtcl (
+  PRTCL,
+  PrtclEnv (..),
+  PrtclState (..),
+  PrtlSeqFailure,
+  prtlSeqChecks,
+ )
 import Cardano.Protocol.TPraos.Rules.Tickn
 import Cardano.Slotting.Slot (SlotNo, WithOrigin (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
-import Control.State.Transition
-  ( Embed (..),
-    STS (..),
-    TRC (..),
-    TransitionRule,
-    failBecause,
-    judgmentContext,
-    liftSTS,
-    trans,
-  )
+import Control.State.Transition (
+  Embed (..),
+  STS (..),
+  TRC (..),
+  TransitionRule,
+  failBecause,
+  judgmentContext,
+  liftSTS,
+  trans,
+ )
 import Data.Default.Class (Default, def)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -135,13 +135,13 @@ type instance Core.EraRule "TICKN" (ShelleyEra c) = TICKN
 data CHAIN era
 
 data ChainState era = ChainState
-  { chainNes :: NewEpochState era,
-    chainOCertIssue :: Map.Map (KeyHash 'BlockIssuer (EraCrypto era)) Word64,
-    chainEpochNonce :: Nonce,
-    chainEvolvingNonce :: Nonce,
-    chainCandidateNonce :: Nonce,
-    chainPrevEpochNonce :: Nonce,
-    chainLastAppliedBlock :: WithOrigin (LastAppliedBlock (EraCrypto era))
+  { chainNes :: NewEpochState era
+  , chainOCertIssue :: Map.Map (KeyHash 'BlockIssuer (EraCrypto era)) Word64
+  , chainEpochNonce :: Nonce
+  , chainEvolvingNonce :: Nonce
+  , chainCandidateNonce :: Nonce
+  , chainPrevEpochNonce :: Nonce
+  , chainLastAppliedBlock :: WithOrigin (LastAppliedBlock (EraCrypto era))
   }
   deriving (Generic)
 
@@ -167,34 +167,34 @@ data ChainEvent era
   | PrtclEvent !(Event (PRTCL (EraCrypto era)))
 
 deriving stock instance
-  ( Era era,
-    Show (PredicateFailure (Core.EraRule "BBODY" era)),
-    Show (PredicateFailure (Core.EraRule "TICK" era)),
-    Show (PredicateFailure (Core.EraRule "TICKN" era))
+  ( Era era
+  , Show (PredicateFailure (Core.EraRule "BBODY" era))
+  , Show (PredicateFailure (Core.EraRule "TICK" era))
+  , Show (PredicateFailure (Core.EraRule "TICKN" era))
   ) =>
   Show (TestChainPredicateFailure era)
 
 deriving stock instance
-  ( Era era,
-    Eq (PredicateFailure (Core.EraRule "BBODY" era)),
-    Eq (PredicateFailure (Core.EraRule "TICK" era)),
-    Eq (PredicateFailure (Core.EraRule "TICKN" era))
+  ( Era era
+  , Eq (PredicateFailure (Core.EraRule "BBODY" era))
+  , Eq (PredicateFailure (Core.EraRule "TICK" era))
+  , Eq (PredicateFailure (Core.EraRule "TICKN" era))
   ) =>
   Eq (TestChainPredicateFailure era)
 
 instance
-  ( Era era,
-    NoThunks (PredicateFailure (Core.EraRule "BBODY" era)),
-    NoThunks (PredicateFailure (Core.EraRule "TICK" era)),
-    NoThunks (PredicateFailure (Core.EraRule "TICKN" era))
+  ( Era era
+  , NoThunks (PredicateFailure (Core.EraRule "BBODY" era))
+  , NoThunks (PredicateFailure (Core.EraRule "TICK" era))
+  , NoThunks (PredicateFailure (Core.EraRule "TICKN" era))
   ) =>
   NoThunks (TestChainPredicateFailure era)
 
 -- | Creates a valid initial chain state
 initialShelleyState ::
-  ( Core.EraTxOut era,
-    Default (State (Core.EraRule "PPUP" era)),
-    Default (StashedAVVMAddresses era)
+  ( Core.EraTxOut era
+  , Default (State (Core.EraRule "PPUP" era))
+  , Default (StashedAVVMAddresses era)
   ) =>
   WithOrigin (LastAppliedBlock (EraCrypto era)) ->
   EpochNo ->
@@ -245,26 +245,26 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
         )
 
 instance
-  ( Era era,
-    Embed (Core.EraRule "BBODY" era) (CHAIN era),
-    Environment (Core.EraRule "BBODY" era) ~ BbodyEnv era,
-    State (Core.EraRule "BBODY" era) ~ ShelleyBbodyState era,
-    Signal (Core.EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era,
-    Embed (Core.EraRule "TICKN" era) (CHAIN era),
-    Environment (Core.EraRule "TICKN" era) ~ TicknEnv,
-    State (Core.EraRule "TICKN" era) ~ TicknState,
-    Signal (Core.EraRule "TICKN" era) ~ Bool,
-    Embed (Core.EraRule "TICK" era) (CHAIN era),
-    Environment (Core.EraRule "TICK" era) ~ (),
-    State (Core.EraRule "TICK" era) ~ NewEpochState era,
-    Signal (Core.EraRule "TICK" era) ~ SlotNo,
-    Embed (PRTCL (EraCrypto era)) (CHAIN era),
-    HasField "_maxBHSize" (Core.PParams era) Natural,
-    HasField "_maxBBSize" (Core.PParams era) Natural,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "_extraEntropy" (Core.PParams era) Nonce,
-    HasField "_d" (Core.PParams era) UnitInterval,
-    ToCBORGroup (Era.TxSeq era)
+  ( Era era
+  , Embed (Core.EraRule "BBODY" era) (CHAIN era)
+  , Environment (Core.EraRule "BBODY" era) ~ BbodyEnv era
+  , State (Core.EraRule "BBODY" era) ~ ShelleyBbodyState era
+  , Signal (Core.EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era
+  , Embed (Core.EraRule "TICKN" era) (CHAIN era)
+  , Environment (Core.EraRule "TICKN" era) ~ TicknEnv
+  , State (Core.EraRule "TICKN" era) ~ TicknState
+  , Signal (Core.EraRule "TICKN" era) ~ Bool
+  , Embed (Core.EraRule "TICK" era) (CHAIN era)
+  , Environment (Core.EraRule "TICK" era) ~ ()
+  , State (Core.EraRule "TICK" era) ~ NewEpochState era
+  , Signal (Core.EraRule "TICK" era) ~ SlotNo
+  , Embed (PRTCL (EraCrypto era)) (CHAIN era)
+  , HasField "_maxBHSize" (Core.PParams era) Natural
+  , HasField "_maxBBSize" (Core.PParams era) Natural
+  , HasField "_protocolVersion" (Core.PParams era) ProtVer
+  , HasField "_extraEntropy" (Core.PParams era) Nonce
+  , HasField "_d" (Core.PParams era) UnitInterval
+  , ToCBORGroup (Era.TxSeq era)
   ) =>
   STS (CHAIN era)
   where
@@ -287,44 +287,44 @@ instance
 
 chainTransition ::
   forall era.
-  ( Era era,
-    STS (CHAIN era),
-    Embed (Core.EraRule "BBODY" era) (CHAIN era),
-    Environment (Core.EraRule "BBODY" era) ~ BbodyEnv era,
-    State (Core.EraRule "BBODY" era) ~ ShelleyBbodyState era,
-    Signal (Core.EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era,
-    Embed (Core.EraRule "TICKN" era) (CHAIN era),
-    Environment (Core.EraRule "TICKN" era) ~ TicknEnv,
-    State (Core.EraRule "TICKN" era) ~ TicknState,
-    Signal (Core.EraRule "TICKN" era) ~ Bool,
-    Embed (Core.EraRule "TICK" era) (CHAIN era),
-    Environment (Core.EraRule "TICK" era) ~ (),
-    State (Core.EraRule "TICK" era) ~ NewEpochState era,
-    Signal (Core.EraRule "TICK" era) ~ SlotNo,
-    Embed (PRTCL (EraCrypto era)) (CHAIN era),
-    HasField "_maxBHSize" (Core.PParams era) Natural,
-    HasField "_maxBBSize" (Core.PParams era) Natural,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "_extraEntropy" (Core.PParams era) Nonce,
-    HasField "_d" (Core.PParams era) UnitInterval,
-    ToCBORGroup (Era.TxSeq era)
+  ( Era era
+  , STS (CHAIN era)
+  , Embed (Core.EraRule "BBODY" era) (CHAIN era)
+  , Environment (Core.EraRule "BBODY" era) ~ BbodyEnv era
+  , State (Core.EraRule "BBODY" era) ~ ShelleyBbodyState era
+  , Signal (Core.EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era
+  , Embed (Core.EraRule "TICKN" era) (CHAIN era)
+  , Environment (Core.EraRule "TICKN" era) ~ TicknEnv
+  , State (Core.EraRule "TICKN" era) ~ TicknState
+  , Signal (Core.EraRule "TICKN" era) ~ Bool
+  , Embed (Core.EraRule "TICK" era) (CHAIN era)
+  , Environment (Core.EraRule "TICK" era) ~ ()
+  , State (Core.EraRule "TICK" era) ~ NewEpochState era
+  , Signal (Core.EraRule "TICK" era) ~ SlotNo
+  , Embed (PRTCL (EraCrypto era)) (CHAIN era)
+  , HasField "_maxBHSize" (Core.PParams era) Natural
+  , HasField "_maxBBSize" (Core.PParams era) Natural
+  , HasField "_protocolVersion" (Core.PParams era) ProtVer
+  , HasField "_extraEntropy" (Core.PParams era) Nonce
+  , HasField "_d" (Core.PParams era) UnitInterval
+  , ToCBORGroup (Era.TxSeq era)
   ) =>
   TransitionRule (CHAIN era)
 chainTransition =
   judgmentContext
     >>= \( TRC
-             ( _,
-               ChainState
-                 nes
-                 cs
-                 eta0
-                 etaV
-                 etaC
-                 etaH
-                 lab,
-               Block bh txs
-               )
-           ) -> do
+            ( _
+              , ChainState
+                  nes
+                  cs
+                  eta0
+                  etaV
+                  etaC
+                  etaH
+                  lab
+              , Block bh txs
+              )
+          ) -> do
         case prtlSeqChecks lab bh of
           Right () -> pure ()
           Left e -> failBecause $ PrtclSeqFailure e
@@ -352,17 +352,17 @@ chainTransition =
         TicknState eta0' etaH' <-
           trans @(Core.EraRule "TICKN" era) $
             TRC
-              ( TicknEnv (getField @"_extraEntropy" pp') etaC etaPH,
-                TicknState eta0 etaH,
-                e1 /= e2
+              ( TicknEnv (getField @"_extraEntropy" pp') etaC etaPH
+              , TicknState eta0 etaH
+              , e1 /= e2
               )
 
         PrtclState cs' etaV' etaC' <-
           trans @(PRTCL (EraCrypto era)) $
             TRC
-              ( PrtclEnv (getField @"_d" pp') _pd genDelegs eta0',
-                PrtclState cs etaV etaC,
-                bh
+              ( PrtclEnv (getField @"_d" pp') _pd genDelegs eta0'
+              , PrtclState cs etaV etaC
+              , bh
               )
 
         let thouShaltNot = error "A block with a header view should never be hashed"
@@ -382,11 +382,11 @@ chainTransition =
         pure $ ChainState nes'' cs' eta0' etaV' etaC' etaH' lab'
 
 instance
-  ( Era era,
-    Era era,
-    STS (ShelleyBBODY era),
-    PredicateFailure (Core.EraRule "BBODY" era) ~ ShelleyBbodyPredFailure era,
-    Event (Core.EraRule "BBODY" era) ~ Event (ShelleyBBODY era)
+  ( Era era
+  , Era era
+  , STS (ShelleyBBODY era)
+  , PredicateFailure (Core.EraRule "BBODY" era) ~ ShelleyBbodyPredFailure era
+  , Event (Core.EraRule "BBODY" era) ~ Event (ShelleyBBODY era)
   ) =>
   Embed (ShelleyBBODY era) (CHAIN era)
   where
@@ -394,10 +394,10 @@ instance
   wrapEvent = BbodyEvent
 
 instance
-  ( Era era,
-    Era era,
-    PredicateFailure (Core.EraRule "TICKN" era) ~ TicknPredicateFailure,
-    Event (Core.EraRule "TICKN" era) ~ Void
+  ( Era era
+  , Era era
+  , PredicateFailure (Core.EraRule "TICKN" era) ~ TicknPredicateFailure
+  , Event (Core.EraRule "TICKN" era) ~ Void
   ) =>
   Embed TICKN (CHAIN era)
   where
@@ -405,11 +405,11 @@ instance
   wrapEvent = TicknEvent
 
 instance
-  ( Era era,
-    Era era,
-    STS (ShelleyTICK era),
-    PredicateFailure (Core.EraRule "TICK" era) ~ ShelleyTickPredFailure era,
-    Event (Core.EraRule "TICK" era) ~ ShelleyTickEvent era
+  ( Era era
+  , Era era
+  , STS (ShelleyTICK era)
+  , PredicateFailure (Core.EraRule "TICK" era) ~ ShelleyTickPredFailure era
+  , Event (Core.EraRule "TICK" era) ~ ShelleyTickEvent era
   ) =>
   Embed (ShelleyTICK era) (CHAIN era)
   where
@@ -417,10 +417,10 @@ instance
   wrapEvent = TickEvent
 
 instance
-  ( Era era,
-    c ~ EraCrypto era,
-    Era era,
-    STS (PRTCL c)
+  ( Era era
+  , c ~ EraCrypto era
+  , Era era
+  , STS (PRTCL c)
   ) =>
   Embed (PRTCL c) (CHAIN era)
   where
@@ -442,23 +442,23 @@ ppChainState :: PP.CanPrettyPrintLedgerState era => ChainState era -> PP.PDoc
 ppChainState (ChainState nes ocert epochnonce evolvenonce prevnonce candnonce lastab) =
   PP.ppRecord
     "ChainState"
-    [ ("newepoch", PP.ppNewEpochState nes),
-      ("ocerts", PP.ppMap PP.ppKeyHash PP.ppWord64 ocert),
-      ("epochNonce", PP.ppNonce epochnonce),
-      ("evolvingNonce", PP.ppNonce evolvenonce),
-      ("candidateNonce", PP.ppNonce prevnonce),
-      ("prevepochNonce", PP.ppNonce candnonce),
-      ("lastApplidBlock", PP.ppWithOrigin PP.ppLastAppliedBlock lastab)
+    [ ("newepoch", PP.ppNewEpochState nes)
+    , ("ocerts", PP.ppMap PP.ppKeyHash PP.ppWord64 ocert)
+    , ("epochNonce", PP.ppNonce epochnonce)
+    , ("evolvingNonce", PP.ppNonce evolvenonce)
+    , ("candidateNonce", PP.ppNonce prevnonce)
+    , ("prevepochNonce", PP.ppNonce candnonce)
+    , ("lastApplidBlock", PP.ppWithOrigin PP.ppLastAppliedBlock lastab)
     ]
 
 instance PP.CanPrettyPrintLedgerState era => PP.PrettyA (ChainState era) where
   prettyA = ppChainState
 
 instance
-  ( ToExpr (Core.PParams era),
-    ToExpr (Core.TxOut era),
-    ToExpr (State (Core.EraRule "PPUP" era)),
-    ToExpr (StashedAVVMAddresses era)
+  ( ToExpr (Core.PParams era)
+  , ToExpr (Core.TxOut era)
+  , ToExpr (State (Core.EraRule "PPUP" era))
+  , ToExpr (StashedAVVMAddresses era)
   ) =>
   ToExpr (ChainState era)
 

@@ -4,12 +4,12 @@
 
 module Test.Cardano.Ledger.Rational where
 
-import Cardano.Ledger.BaseTypes
-  ( BoundedRational,
-    NonNegativeInterval,
-    UnitInterval,
-    boundRational,
-  )
+import Cardano.Ledger.BaseTypes (
+  BoundedRational,
+  NonNegativeInterval,
+  UnitInterval,
+  boundRational,
+ )
 import Data.Proxy (Proxy (..))
 import qualified Data.Ratio
 import Data.Typeable (Typeable, typeRep)

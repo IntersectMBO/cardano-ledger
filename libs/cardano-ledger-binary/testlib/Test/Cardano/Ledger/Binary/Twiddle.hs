@@ -10,29 +10,29 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Test.Cardano.Ledger.Binary.Twiddle
-  ( Twiddler (..),
-    Twiddle (..),
-    encodingToTerm,
-    toTwiddler,
-    toTerm,
-    twiddleInvariantProp,
-    emptyOrNothing,
-    twiddleStrictMaybe,
-  )
+module Test.Cardano.Ledger.Binary.Twiddle (
+  Twiddler (..),
+  Twiddle (..),
+  encodingToTerm,
+  toTwiddler,
+  toTerm,
+  twiddleInvariantProp,
+  emptyOrNothing,
+  twiddleStrictMaybe,
+)
 where
 
-import Cardano.Ledger.Binary
-  ( Encoding,
-    FromCBOR (..),
-    Term (..),
-    ToCBOR (..),
-    Version,
-    decodeFull,
-    encodeTerm,
-    getDecoderVersion,
-    serialize,
-  )
+import Cardano.Ledger.Binary (
+  Encoding,
+  FromCBOR (..),
+  Term (..),
+  ToCBOR (..),
+  Version,
+  decodeFull,
+  encodeTerm,
+  getDecoderVersion,
+  serialize,
+ )
 import Data.Bitraversable (bimapM)
 import Data.ByteString (ByteString)
 import Data.ByteString.Lazy (fromStrict, toStrict)
@@ -53,9 +53,9 @@ import Test.Cardano.Ledger.Binary.Arbitrary ()
 import Test.QuickCheck (Arbitrary (..), Gen, Property, elements, oneof, shuffle, (===))
 
 data Twiddler a = Twiddler
-  { twiddlerVersion :: !Version,
-    twiddlerType :: !a,
-    twiddlerTerm :: Term
+  { twiddlerVersion :: !Version
+  , twiddlerType :: !a
+  , twiddlerTerm :: Term
   }
 
 gTwiddleTList :: forall a p. (Generic a, TwiddleL (Rep a p)) => Version -> a -> Gen Term
@@ -232,10 +232,10 @@ twiddleInvariantProp version x = do
 -- `Just`. These values can then be easily concatenated with `catMaybes`.
 emptyOrNothing ::
   forall t b.
-  ( Foldable t,
-    Twiddle (t Void),
-    Monoid (t Void),
-    Twiddle (t b)
+  ( Foldable t
+  , Twiddle (t Void)
+  , Monoid (t Void)
+  , Twiddle (t b)
   ) =>
   Version ->
   t b ->
@@ -244,8 +244,8 @@ emptyOrNothing v x =
   if null x
     then
       oneof
-        [ Just <$> twiddle @(t Void) v mempty,
-          pure Nothing
+        [ Just <$> twiddle @(t Void) v mempty
+        , pure Nothing
         ]
     else Just <$> twiddle v x
 

@@ -4,13 +4,13 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
-module Test.Cardano.Chain.Elaboration.UTxO
-  ( elaborateUTxOEnv,
-    elaborateUTxO,
-    elaborateTxBody,
-    elaborateTxBS,
-    elaborateTxOut,
-  )
+module Test.Cardano.Chain.Elaboration.UTxO (
+  elaborateUTxOEnv,
+  elaborateUTxO,
+  elaborateTxBody,
+  elaborateTxBS,
+  elaborateTxOut,
+)
 where
 
 import qualified Byron.Spec.Ledger.Core as Abstract
@@ -36,16 +36,16 @@ import qualified Test.Cardano.Crypto.Dummy as Dummy
 elaborateUTxOEnv :: Abstract.UTxOEnv -> Concrete.UTxO.Environment
 elaborateUTxOEnv _abstractEnv =
   Concrete.UTxO.Environment
-    { Concrete.UTxO.protocolMagic = Dummy.aProtocolMagic,
-      Concrete.UTxO.protocolParameters =
+    { Concrete.UTxO.protocolMagic = Dummy.aProtocolMagic
+    , Concrete.UTxO.protocolParameters =
         dummyProtocolParameters
           { Concrete.ppTxFeePolicy =
               Concrete.TxFeePolicyTxSizeLinear $
                 Concrete.TxSizeLinear
                   (Concrete.mkKnownLovelace @0)
                   0
-          },
-      Concrete.UTxO.utxoConfiguration = Concrete.defaultUTxOConfiguration
+          }
+    , Concrete.UTxO.utxoConfiguration = Concrete.defaultUTxOConfiguration
     }
 
 elaborateUTxO ::
@@ -93,9 +93,9 @@ elaborateTx elaborateTxId (Abstract.Tx tx witnesses) =
 elaborateTxBody :: (Abstract.TxId -> Concrete.TxId) -> Abstract.TxBody -> Concrete.Tx
 elaborateTxBody elaborateTxId (Abstract.TxBody inputs outputs) =
   Concrete.UnsafeTx
-    { Concrete.txInputs = elaborateTxIns elaborateTxId inputs,
-      Concrete.txOutputs = elaborateTxOuts outputs,
-      Concrete.txAttributes = Concrete.mkAttributes ()
+    { Concrete.txInputs = elaborateTxIns elaborateTxId inputs
+    , Concrete.txOutputs = elaborateTxOuts outputs
+    , Concrete.txAttributes = Concrete.mkAttributes ()
     }
 
 elaborateWitnesses :: Concrete.Tx -> [Abstract.Wit] -> Concrete.TxWitness
@@ -141,8 +141,8 @@ elaborateTxOut abstractTxOut =
     { Concrete.txOutAddress =
         Concrete.makeVerKeyAddress
           (Concrete.makeNetworkMagic Dummy.protocolMagic)
-          (elaborateVKey abstractVK),
-      Concrete.txOutValue = lovelaceValue
+          (elaborateVKey abstractVK)
+    , Concrete.txOutValue = lovelaceValue
     }
   where
     Abstract.TxOut (Abstract.Addr abstractVK) (Abstract.Lovelace value) =

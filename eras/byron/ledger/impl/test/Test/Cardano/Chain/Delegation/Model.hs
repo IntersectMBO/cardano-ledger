@@ -5,9 +5,9 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Chain.Delegation.Model
-  ( tests,
-  )
+module Test.Cardano.Chain.Delegation.Model (
+  tests,
+)
 where
 
 import Byron.Spec.Ledger.Delegation (DELEG, SDELEG)
@@ -57,8 +57,8 @@ prop_commandSDELEG = withTests 25 . property $ do
 --------------------------------------------------------------------------------
 
 data StateSDELEG (v :: Type -> Type) = StateSDELEG
-  { abstractState :: Abstract.DSState,
-    lastAbstractResult :: Either [STS.PredicateFailure SDELEG] (STS.State SDELEG)
+  { abstractState :: Abstract.DSState
+  , lastAbstractResult :: Either [STS.PredicateFailure SDELEG] (STS.State SDELEG)
   }
 
 initialState :: StateSDELEG v
@@ -131,8 +131,8 @@ commandSDELEG concreteRef abstractEnv = Command gen execute callbacks
       [ Update $ \StateSDELEG {abstractState} (SignalSDELEG cert) _ ->
           let result =
                 STS.applySTS @SDELEG (STS.TRC (abstractEnv, abstractState, cert))
-           in StateSDELEG (fromRight abstractState result) (left Prelude.id result),
-        Ensure $ \_ StateSDELEG {lastAbstractResult} _ result -> do
+           in StateSDELEG (fromRight abstractState result) (left Prelude.id result)
+      , Ensure $ \_ StateSDELEG {lastAbstractResult} _ result -> do
           annotateShow lastAbstractResult
           annotateShow result
           isRight lastAbstractResult === isRight result

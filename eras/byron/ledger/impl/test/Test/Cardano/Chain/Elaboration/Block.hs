@@ -8,37 +8,37 @@
 -- | This module provides functionality for translating abstract blocks into
 -- concrete blocks. The abstract blocks are generated according the small-step
 -- rules for the blockchain (also called the blockchain specification).
-module Test.Cardano.Chain.Elaboration.Block
-  ( abEnvToCfg,
-    elaborate,
-    elaborateBS,
-    rcDCert,
-    AbstractToConcreteIdMaps
-      ( AbstractToConcreteIdMaps,
-        proposalIds,
-        transactionIds
-      ),
-  )
+module Test.Cardano.Chain.Elaboration.Block (
+  abEnvToCfg,
+  elaborate,
+  elaborateBS,
+  rcDCert,
+  AbstractToConcreteIdMaps (
+    AbstractToConcreteIdMaps,
+    proposalIds,
+    transactionIds
+  ),
+)
 where
 
 import qualified Byron.Spec.Chain.STS.Block as Abstract
 import Byron.Spec.Chain.STS.Rule.Chain (CHAIN, disL)
 import qualified Byron.Spec.Chain.STS.Rule.Epoch as Abstract
 import qualified Byron.Spec.Ledger.Core as Abstract
-import Byron.Spec.Ledger.Delegation
-  ( DCert,
-    delegationMap,
-    delegatorOf,
-    mkDCert,
-  )
+import Byron.Spec.Ledger.Delegation (
+  DCert,
+  delegationMap,
+  delegatorOf,
+  mkDCert,
+ )
 import qualified Byron.Spec.Ledger.UTxO as Abstract
 import qualified Byron.Spec.Ledger.Update as Abstract.Update
 import qualified Cardano.Chain.Block as Concrete
-import Cardano.Chain.Common
-  ( BlockCount (BlockCount),
-    ChainDifficulty (ChainDifficulty),
-    hashKey,
-  )
+import Cardano.Chain.Common (
+  BlockCount (BlockCount),
+  ChainDifficulty (ChainDifficulty),
+  hashKey,
+ )
 import qualified Cardano.Chain.Common as Common
 import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Genesis as Genesis
@@ -61,24 +61,24 @@ import qualified Data.Set as Set
 import Data.Time (Day (ModifiedJulianDay), UTCTime (UTCTime))
 import Lens.Micro (to, (^.), (^..))
 import Test.Cardano.Chain.Elaboration.Delegation (elaborateDCert)
-import Test.Cardano.Chain.Elaboration.Keys
-  ( elaborateVKeyGenesis,
-    vKeyPair,
-    vKeyToSKey,
-  )
-import Test.Cardano.Chain.Elaboration.Update
-  ( elaboratePParams,
-    elaborateProtocolVersion,
-    elaborateSoftwareVersion,
-    elaborateUpdateProposal,
-    elaborateVote,
-  )
+import Test.Cardano.Chain.Elaboration.Keys (
+  elaborateVKeyGenesis,
+  vKeyPair,
+  vKeyToSKey,
+ )
+import Test.Cardano.Chain.Elaboration.Update (
+  elaboratePParams,
+  elaborateProtocolVersion,
+  elaborateSoftwareVersion,
+  elaborateUpdateProposal,
+  elaborateVote,
+ )
 import Test.Cardano.Chain.UTxO.Model (elaborateTxWitnesses)
 import qualified Test.Cardano.Crypto.Dummy as Dummy
 
 data AbstractToConcreteIdMaps = AbstractToConcreteIdMaps
-  { transactionIds :: !(Map Abstract.TxId UTxO.TxId),
-    proposalIds :: !(Map Abstract.Update.UpId Update.UpId)
+  { transactionIds :: !(Map Abstract.TxId UTxO.TxId)
+  , proposalIds :: !(Map Abstract.Update.UpId Update.UpId)
   }
   deriving (Eq, Show, Generic)
   deriving (Semigroup) via GenericSemigroup AbstractToConcreteIdMaps
@@ -94,13 +94,13 @@ elaborate ::
   (Concrete.Block, AbstractToConcreteIdMaps)
 elaborate abstractToConcreteIdMaps config dCert st abstractBlock =
   ( Concrete.ABlock
-      { Concrete.blockHeader = recomputeHashes bh0,
-        Concrete.blockBody = bb0,
-        Concrete.blockAnnotation = ()
-      },
-    AbstractToConcreteIdMaps
-      { transactionIds = txIdMap',
-        proposalIds = proposalsIdMap'
+      { Concrete.blockHeader = recomputeHashes bh0
+      , Concrete.blockBody = bb0
+      , Concrete.blockAnnotation = ()
+      }
+  , AbstractToConcreteIdMaps
+      { transactionIds = txIdMap'
+      , proposalIds = proposalsIdMap'
       }
   )
   where
@@ -139,10 +139,10 @@ elaborate abstractToConcreteIdMaps config dCert st abstractBlock =
 
     bb0 =
       Concrete.ABody
-        { Concrete.bodyTxPayload = UTxO.ATxPayload txPayload,
-          Concrete.bodySscPayload = Ssc.SscPayload,
-          Concrete.bodyDlgPayload = Delegation.UnsafeAPayload dcerts (),
-          Concrete.bodyUpdatePayload = updatePayload
+        { Concrete.bodyTxPayload = UTxO.ATxPayload txPayload
+        , Concrete.bodySscPayload = Ssc.SscPayload
+        , Concrete.bodyDlgPayload = Delegation.UnsafeAPayload dcerts ()
+        , Concrete.bodyUpdatePayload = updatePayload
         }
 
     dcerts =
@@ -191,9 +191,9 @@ elaborate abstractToConcreteIdMaps config dCert st abstractBlock =
         alteredHdrProof :: Concrete.Proof
         alteredHdrProof =
           originalHeaderProof
-            { Concrete.proofDelegation = possiblyAlteredDelegationProof,
-              Concrete.proofUpdate = possiblyAlteredUpdateProof,
-              Concrete.proofUTxO = possiblyAlteredUTxOProof
+            { Concrete.proofDelegation = possiblyAlteredDelegationProof
+            , Concrete.proofUpdate = possiblyAlteredUpdateProof
+            , Concrete.proofUTxO = possiblyAlteredUTxOProof
             }
           where
             originalHeaderProof :: Concrete.Proof
@@ -292,24 +292,24 @@ rcDCert vk k ast@(slot, _, _, _, _, _) =
 abEnvToCfg :: Transition.Environment CHAIN -> Genesis.Config
 abEnvToCfg (_currentSlot, _genesisUtxo, allowedDelegators, protocolParams, stableAfter) =
   Genesis.Config
-    { Genesis.configGenesisData = genesisData,
-      Genesis.configGenesisHash = genesisHash,
-      Genesis.configReqNetMagic = rnm,
-      Genesis.configUTxOConfiguration = UTxO.defaultUTxOConfiguration
+    { Genesis.configGenesisData = genesisData
+    , Genesis.configGenesisHash = genesisHash
+    , Genesis.configReqNetMagic = rnm
+    , Genesis.configUTxOConfiguration = UTxO.defaultUTxOConfiguration
     }
   where
     rnm = getRequiresNetworkMagic Dummy.aProtocolMagic
 
     genesisData =
       Genesis.GenesisData
-        { Genesis.gdGenesisKeyHashes = Genesis.GenesisKeyHashes genesisKeyHashes,
-          Genesis.gdHeavyDelegation = Genesis.UnsafeGenesisDelegation [], -- We don't need initial heavyweight delegation.
-          Genesis.gdStartTime = UTCTime (ModifiedJulianDay 0) 0,
-          Genesis.gdNonAvvmBalances = Genesis.GenesisNonAvvmBalances [],
-          Genesis.gdProtocolParameters = gPps,
-          Genesis.gdK = BlockCount $ Abstract.unBlockCount stableAfter,
-          Genesis.gdProtocolMagicId = Dummy.protocolMagicId,
-          Genesis.gdAvvmDistr = Genesis.GenesisAvvmBalances []
+        { Genesis.gdGenesisKeyHashes = Genesis.GenesisKeyHashes genesisKeyHashes
+        , Genesis.gdHeavyDelegation = Genesis.UnsafeGenesisDelegation [] -- We don't need initial heavyweight delegation.
+        , Genesis.gdStartTime = UTCTime (ModifiedJulianDay 0) 0
+        , Genesis.gdNonAvvmBalances = Genesis.GenesisNonAvvmBalances []
+        , Genesis.gdProtocolParameters = gPps
+        , Genesis.gdK = BlockCount $ Abstract.unBlockCount stableAfter
+        , Genesis.gdProtocolMagicId = Dummy.protocolMagicId
+        , Genesis.gdAvvmDistr = Genesis.GenesisAvvmBalances []
         }
 
     -- We shouldn't need to use 'coerce' after

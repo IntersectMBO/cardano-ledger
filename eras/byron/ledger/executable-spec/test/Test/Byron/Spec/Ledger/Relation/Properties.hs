@@ -91,12 +91,12 @@ propDomainExclusionAndSetDifference s r =
 --  is the same as excluding 'dom r1 ∪ s' from the domain of just r2
 --  (since 'dom r1 ⋪ r1' gives an empty relation)
 propDomainExclusionAndUnion ::
-  ( MonadTest m,
-    Relation r,
-    Eq r,
-    Show r,
-    Ord (Domain r),
-    Ord (Range r)
+  ( MonadTest m
+  , Relation r
+  , Eq r
+  , Show r
+  , Ord (Domain r)
+  , Ord (Range r)
   ) =>
   Set (Domain r) ->
   r ->
@@ -172,83 +172,83 @@ testRelation =
         "Relation - Set"
         [ testProperty
             "DomainRestrictionAndIntersection"
-            (propRelation genIntS genSet propDomainRestrictionAndIntersection),
-          testProperty
+            (propRelation genIntS genSet propDomainRestrictionAndIntersection)
+        , testProperty
             "DomainRestrictionAndIntersectionB"
-            (propRelation genIntS genSet propDomainRestrictionAndIntersectionB),
-          testProperty
+            (propRelation genIntS genSet propDomainRestrictionAndIntersectionB)
+        , testProperty
             "DomainExclusionAndSetDifference"
-            (propRelation genIntS genSet propDomainExclusionAndSetDifference),
-          testProperty
+            (propRelation genIntS genSet propDomainExclusionAndSetDifference)
+        , testProperty
             "RangeRestrictionAndIntersection"
-            (propRelation genIntS genSet propRangeRestrictionAndIntersection),
-          testProperty
+            (propRelation genIntS genSet propRangeRestrictionAndIntersection)
+        , testProperty
             "RangeRestrictionAndIntersectionB"
             (propRelation genIntS genSet propRangeRestrictionAndIntersectionB)
-        ],
-      testGroup
+        ]
+    , testGroup
         "Relation - Map"
         [ testProperty
             "DomainRestrictionAndIntersection"
-            (propRelation genIntS genMap propDomainRestrictionAndIntersection),
-          testProperty
+            (propRelation genIntS genMap propDomainRestrictionAndIntersection)
+        , testProperty
             "DomainRestrictionAndIntersectionB"
-            (propRelation genIntS genMap propDomainRestrictionAndIntersectionB),
-          testProperty
+            (propRelation genIntS genMap propDomainRestrictionAndIntersectionB)
+        , testProperty
             "DomainExclusionAndSetDifference"
-            (propRelation genIntS genMap propDomainExclusionAndSetDifference),
-          testProperty
+            (propRelation genIntS genMap propDomainExclusionAndSetDifference)
+        , testProperty
             "RangeRestrictionAndIntersection"
-            (propRelation genIntS genMap propRangeRestrictionAndIntersection),
-          testProperty
+            (propRelation genIntS genMap propRangeRestrictionAndIntersection)
+        , testProperty
             "RangeRestrictionAndIntersectionB"
             (propRelation genIntS genMap propRangeRestrictionAndIntersectionB)
-        ],
-      testGroup
+        ]
+    , testGroup
         "Relation - Bimap"
         [ testProperty
             "DomainRestrictionAndIntersection"
-            (propRelation genIntS genBimap propDomainRestrictionAndIntersection),
-          testProperty
+            (propRelation genIntS genBimap propDomainRestrictionAndIntersection)
+        , testProperty
             "DomainRestrictionAndIntersectionB"
-            (propRelation genIntS genBimap propDomainRestrictionAndIntersectionB),
-          testProperty
+            (propRelation genIntS genBimap propDomainRestrictionAndIntersectionB)
+        , testProperty
             "DomainExclusionAndSetDifference"
-            (propRelation genIntS genBimap propDomainExclusionAndSetDifference),
-          testProperty
+            (propRelation genIntS genBimap propDomainExclusionAndSetDifference)
+        , testProperty
             "RangeRestrictionAndIntersection"
-            (propRelation genIntS genBimap propRangeRestrictionAndIntersection),
-          testProperty
+            (propRelation genIntS genBimap propRangeRestrictionAndIntersection)
+        , testProperty
             "RangeRestrictionAndIntersectionB"
             (propRelation genIntS genBimap propRangeRestrictionAndIntersectionB)
-        ],
-      testGroup
+        ]
+    , testGroup
         "Relation - Pairs list"
         [ testProperty
             "DomainRestrictionAndIntersection"
-            (propRelation genIntS genPairsList propDomainRestrictionAndIntersection),
-          testProperty
+            (propRelation genIntS genPairsList propDomainRestrictionAndIntersection)
+        , testProperty
             "DomainRestrictionAndIntersectionB"
-            (propRelation genIntS genPairsList propDomainRestrictionAndIntersectionB),
-          testProperty
+            (propRelation genIntS genPairsList propDomainRestrictionAndIntersectionB)
+        , testProperty
             "DomainExclusionAndSetDifference"
-            (propRelation genIntS genPairsList propDomainExclusionAndSetDifference),
-          testProperty
+            (propRelation genIntS genPairsList propDomainExclusionAndSetDifference)
+        , testProperty
             "RangeRestrictionAndIntersection"
-            (propRelation genIntS genPairsList propRangeRestrictionAndIntersection),
-          testProperty
+            (propRelation genIntS genPairsList propRangeRestrictionAndIntersection)
+        , testProperty
             "RangeRestrictionAndIntersectionB"
             (propRelation genIntS genPairsList propRangeRestrictionAndIntersectionB)
-        ],
-      testGroup
+        ]
+    , testGroup
         "Relations"
         [ testProperty
             "Set instance"
-            (propRelations genIntS genSet propDomainExclusionAndUnion),
-          testProperty
+            (propRelations genIntS genSet propDomainExclusionAndUnion)
+        , testProperty
             "Map instance"
-            (propRelations genIntS genMap propDomainExclusionAndUnion),
-          testProperty
+            (propRelations genIntS genMap propDomainExclusionAndUnion)
+        , testProperty
             "Bimap instance"
             (propRelations genIntS genBimap propDomainExclusionAndUnion)
         ]

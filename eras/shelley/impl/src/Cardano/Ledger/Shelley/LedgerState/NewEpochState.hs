@@ -3,52 +3,52 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Cardano.Ledger.Shelley.LedgerState.NewEpochState
-  ( availableAfterMIR,
-    getGKeys,
-    genesisState,
-    depositPoolChange,
-    reapRewards,
-    updateNES,
-    returnRedeemAddrsToReserves,
-  )
+module Cardano.Ledger.Shelley.LedgerState.NewEpochState (
+  availableAfterMIR,
+  getGKeys,
+  genesisState,
+  depositPoolChange,
+  reapRewards,
+  updateNES,
+  returnRedeemAddrsToReserves,
+)
 where
 
 import Cardano.Ledger.Address (isBootstrapRedeemer)
-import Cardano.Ledger.BaseTypes
-  ( BlocksMade (..),
-  )
-import Cardano.Ledger.Coin
-  ( Coin (..),
-    CompactForm (CompactCoin),
-    addDeltaCoin,
-  )
+import Cardano.Ledger.BaseTypes (
+  BlocksMade (..),
+ )
+import Cardano.Ledger.Coin (
+  Coin (..),
+  CompactForm (CompactCoin),
+  addDeltaCoin,
+ )
 import Cardano.Ledger.Core
-import Cardano.Ledger.DPState
-  ( DPState (..),
-    DState (..),
-    InstantaneousRewards (..),
-  )
-import Cardano.Ledger.Keys
-  ( GenDelegPair (..),
-    GenDelegs (..),
-    KeyHash (..),
-    KeyRole (..),
-  )
+import Cardano.Ledger.DPState (
+  DPState (..),
+  DState (..),
+  InstantaneousRewards (..),
+ )
+import Cardano.Ledger.Keys (
+  GenDelegPair (..),
+  GenDelegs (..),
+  KeyHash (..),
+  KeyRole (..),
+ )
 import Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits (keyTxRefunds, totalTxDeposits)
 import Cardano.Ledger.Shelley.LedgerState.Types
-import Cardano.Ledger.Shelley.TxBody
-  ( MIRPot (..),
-    ShelleyEraTxBody (..),
-  )
-import Cardano.Ledger.UMapCompact
-  ( Trip (..),
-    UMap (..),
-  )
-import Cardano.Ledger.UTxO
-  ( UTxO (..),
-    coinBalance,
-  )
+import Cardano.Ledger.Shelley.TxBody (
+  MIRPot (..),
+  ShelleyEraTxBody (..),
+ )
+import Cardano.Ledger.UMapCompact (
+  Trip (..),
+  UMap (..),
+ )
+import Cardano.Ledger.UTxO (
+  UTxO (..),
+  coinBalance,
+ )
 import Cardano.Ledger.Val ((<+>), (<->))
 import Control.State.Transition (STS (State))
 import Data.Default.Class (Default, def)
@@ -104,9 +104,9 @@ genesisState genDelegs0 utxo0 =
 
 -- | Calculate the change to the deposit pool for a given transaction.
 depositPoolChange ::
-  ( HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin,
-    ShelleyEraTxBody era
+  ( HasField "_keyDeposit" (PParams era) Coin
+  , HasField "_poolDeposit" (PParams era) Coin
+  , ShelleyEraTxBody era
   ) =>
   LedgerState era ->
   PParams era ->
@@ -146,19 +146,19 @@ updateNES ::
   NewEpochState era
 updateNES
   oldNes@( NewEpochState
-             _eL
-             _bprev
-             _
-             (EpochState acnt ss _ pr pp nm)
-             _ru
-             _pd
-             _avvm
-           )
+            _eL
+            _bprev
+            _
+            (EpochState acnt ss _ pr pp nm)
+            _ru
+            _pd
+            _avvm
+          )
   bcur
   ls =
     oldNes
-      { nesBcur = bcur,
-        nesEs = EpochState acnt ss ls pr pp nm
+      { nesBcur = bcur
+      , nesEs = EpochState acnt ss ls pr pp nm
       }
 
 returnRedeemAddrsToReserves ::

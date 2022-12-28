@@ -10,67 +10,67 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Protocol.TPraos.Rules.Overlay
-  ( OVERLAY,
-    PredicateFailure,
-    OverlayEnv (..),
-    OverlayPredicateFailure (..),
-    OBftSlot (..),
-    classifyOverlaySlot,
-    lookupInOverlaySchedule,
-    overlaySlots,
-  )
+module Cardano.Protocol.TPraos.Rules.Overlay (
+  OVERLAY,
+  PredicateFailure,
+  OverlayEnv (..),
+  OverlayPredicateFailure (..),
+  OBftSlot (..),
+  classifyOverlaySlot,
+  lookupInOverlaySchedule,
+  overlaySlots,
+)
 where
 
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BHeaderView (isOverlaySlot)
-import Cardano.Ledger.BaseTypes
-  ( ActiveSlotCoeff,
-    BoundedRational (..),
-    Nonce,
-    Seed,
-    ShelleyBase,
-    UnitInterval,
-    activeSlotCoeff,
-    activeSlotVal,
-    epochInfoPure,
-  )
-import Cardano.Ledger.Binary
-  ( FromCBOR (..),
-    ToCBOR (..),
-    TokenType (TypeNull),
-    decodeNull,
-    encodeNull,
-    peekTokenType,
-  )
+import Cardano.Ledger.BaseTypes (
+  ActiveSlotCoeff,
+  BoundedRational (..),
+  Nonce,
+  Seed,
+  ShelleyBase,
+  UnitInterval,
+  activeSlotCoeff,
+  activeSlotVal,
+  epochInfoPure,
+ )
+import Cardano.Ledger.Binary (
+  FromCBOR (..),
+  ToCBOR (..),
+  TokenType (TypeNull),
+  decodeNull,
+  encodeNull,
+  peekTokenType,
+ )
 import Cardano.Ledger.Crypto
-import Cardano.Ledger.Keys
-  ( DSignable,
-    GenDelegPair (..),
-    GenDelegs (..),
-    Hash,
-    KESignable,
-    KeyHash (..),
-    KeyRole (..),
-    VerKeyVRF,
-    coerceKeyRole,
-    hashKey,
-    hashVerKeyVRF,
-  )
-import Cardano.Ledger.PoolDistr
-  ( IndividualPoolStake (..),
-    PoolDistr (..),
-  )
+import Cardano.Ledger.Keys (
+  DSignable,
+  GenDelegPair (..),
+  GenDelegs (..),
+  Hash,
+  KESignable,
+  KeyHash (..),
+  KeyRole (..),
+  VerKeyVRF,
+  coerceKeyRole,
+  hashKey,
+  hashVerKeyVRF,
+ )
+import Cardano.Ledger.PoolDistr (
+  IndividualPoolStake (..),
+  PoolDistr (..),
+ )
 import Cardano.Ledger.Slot (epochInfoEpoch, epochInfoFirst, (-*))
-import Cardano.Protocol.TPraos.BHeader
-  ( BHBody (..),
-    BHeader (BHeader),
-    checkLeaderValue,
-    issuerIDfromBHBody,
-    mkSeed,
-    seedEta,
-    seedL,
-  )
+import Cardano.Protocol.TPraos.BHeader (
+  BHBody (..),
+  BHeader (BHeader),
+  checkLeaderValue,
+  issuerIDfromBHBody,
+  mkSeed,
+  seedEta,
+  seedL,
+ )
 import Cardano.Protocol.TPraos.OCert (OCertSignable)
 import Cardano.Protocol.TPraos.Rules.OCert (OCERT, OCertEnv (..))
 import Cardano.Slotting.Slot
@@ -137,10 +137,10 @@ data OverlayPredicateFailure c
   deriving (Generic)
 
 instance
-  ( Crypto c,
-    DSignable c (OCertSignable c),
-    KESignable c (BHBody c),
-    VRF.Signable (VRF c) Seed
+  ( Crypto c
+  , DSignable c (OCertSignable c)
+  , KESignable c (BHBody c)
+  , VRF.Signable (VRF c) Seed
   ) =>
   STS (OVERLAY c)
   where
@@ -170,8 +170,8 @@ deriving instance
 
 vrfChecks ::
   forall c.
-  ( Crypto c,
-    VRF.Signable (VRF c) Seed
+  ( Crypto c
+  , VRF.Signable (VRF c) Seed
   ) =>
   Nonce ->
   BHBody c ->
@@ -199,8 +199,8 @@ vrfChecks eta0 bhb = do
 
 praosVrfChecks ::
   forall c.
-  ( Crypto c,
-    VRF.Signable (VRF c) Seed
+  ( Crypto c
+  , VRF.Signable (VRF c) Seed
   ) =>
   Nonce ->
   PoolDistr c ->
@@ -225,8 +225,8 @@ praosVrfChecks eta0 (PoolDistr pd) f bhb = do
 
 pbftVrfChecks ::
   forall c.
-  ( Crypto c,
-    VRF.Signable (VRF c) Seed
+  ( Crypto c
+  , VRF.Signable (VRF c) Seed
   ) =>
   Hash c (VerKeyVRF c) ->
   Nonce ->
@@ -244,20 +244,20 @@ pbftVrfChecks vrfHK eta0 bhb = do
 
 overlayTransition ::
   forall c.
-  ( Crypto c,
-    DSignable c (OCertSignable c),
-    KESignable c (BHBody c),
-    VRF.Signable (VRF c) Seed
+  ( Crypto c
+  , DSignable c (OCertSignable c)
+  , KESignable c (BHBody c)
+  , VRF.Signable (VRF c) Seed
   ) =>
   TransitionRule (OVERLAY c)
 overlayTransition =
   judgmentContext
     >>= \( TRC
-             ( OverlayEnv dval pd (GenDelegs genDelegs) eta0,
-               cs,
-               bh@(BHeader bhb _)
-               )
-           ) -> do
+            ( OverlayEnv dval pd (GenDelegs genDelegs) eta0
+              , cs
+              , bh@(BHeader bhb _)
+              )
+          ) -> do
         let vk = bheaderVk bhb
             vkh = hashKey vk
             slot = bheaderSlotNo bhb
@@ -284,8 +284,8 @@ overlayTransition =
 
         let oce =
               OCertEnv
-                { ocertEnvStPools = eval (dom pd),
-                  ocertEnvGenDelegs = Set.map genDelegKeyHash $ range genDelegs
+                { ocertEnvStPools = eval (dom pd)
+                , ocertEnvGenDelegs = Set.map genDelegKeyHash $ range genDelegs
                 }
 
         trans @(OCERT c) $ TRC (oce, cs, bh)
@@ -295,10 +295,10 @@ instance
   NoThunks (OverlayPredicateFailure c)
 
 instance
-  ( Crypto c,
-    DSignable c (OCertSignable c),
-    KESignable c (BHBody c),
-    VRF.Signable (VRF c) Seed
+  ( Crypto c
+  , DSignable c (OCertSignable c)
+  , KESignable c (BHBody c)
+  , VRF.Signable (VRF c) Seed
   ) =>
   Embed (OCERT c) (OVERLAY c)
   where

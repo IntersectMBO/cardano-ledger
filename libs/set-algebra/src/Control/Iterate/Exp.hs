@@ -14,15 +14,15 @@
 --      a low-level compiled form of Exp
 module Control.Iterate.Exp where
 
-import Control.Iterate.BaseTypes
-  ( BaseRep (..),
-    Basic (..),
-    Iter (..),
-    List (..),
-    Sett (..),
-    Single (..),
-    fromPairs,
-  )
+import Control.Iterate.BaseTypes (
+  BaseRep (..),
+  Basic (..),
+  Iter (..),
+  List (..),
+  Sett (..),
+  Single (..),
+  fromPairs,
+ )
 import Control.Iterate.Collect (Collect (..), hasElem, none, one)
 import Data.List (sortBy)
 import Data.Map.Strict (Map)
@@ -123,9 +123,9 @@ instance (Ord k) => HasExp (Single k v) (Single k v) where
 type OrdAll coin cred pool ptr k = (Ord k, Ord coin, Ord cred, Ord ptr, Ord pool)
 
 instance
-  ( UnifiedView coin cred pool ptr k v,
-    OrdAll coin cred pool ptr k,
-    Monoid coin
+  ( UnifiedView coin cred pool ptr k v
+  , OrdAll coin cred pool ptr k
+  , Monoid coin
   ) =>
   HasExp
     (View coin cred pool ptr k v)

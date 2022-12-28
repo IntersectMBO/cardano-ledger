@@ -1,9 +1,9 @@
 {-# LANGUAGE NamedFieldPuns #-}
 
-module Cardano.Ledger.Babbage.Genesis
-  ( AlonzoGenesis (..),
-    extendPPWithGenesis,
-  )
+module Cardano.Ledger.Babbage.Genesis (
+  AlonzoGenesis (..),
+  extendPPWithGenesis,
+)
 where
 
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
@@ -18,14 +18,14 @@ extendPPWithGenesis ::
 extendPPWithGenesis
   pp
   AlonzoGenesis
-    { coinsPerUTxOWord,
-      costmdls,
-      prices,
-      maxTxExUnits,
-      maxBlockExUnits,
-      maxValSize,
-      collateralPercentage,
-      maxCollateralInputs
+    { coinsPerUTxOWord
+    , costmdls
+    , prices
+    , maxTxExUnits
+    , maxBlockExUnits
+    , maxValSize
+    , collateralPercentage
+    , maxCollateralInputs
     } =
     extendPP
       pp

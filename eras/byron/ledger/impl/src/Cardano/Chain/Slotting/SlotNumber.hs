@@ -7,12 +7,12 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Chain.Slotting.SlotNumber
-  ( SlotNumber (..),
-    addSlotCount,
-    -- deprecated
-    subSlotCount,
-  )
+module Cardano.Chain.Slotting.SlotNumber (
+  SlotNumber (..),
+  addSlotCount,
+  -- deprecated
+  subSlotCount,
+)
 where
 
 import Cardano.Chain.Slotting.SlotCount (SlotCount (..))

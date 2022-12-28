@@ -4,10 +4,10 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Allegra
-  ( Allegra,
-    AllegraEra,
-  )
+module Cardano.Ledger.Allegra (
+  Allegra,
+  AllegraEra,
+)
 where
 
 import Cardano.Ledger.Allegra.Era (AllegraEra)

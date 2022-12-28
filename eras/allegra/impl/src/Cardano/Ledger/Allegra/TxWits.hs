@@ -14,12 +14,12 @@ import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.TxAuxData ()
 import Cardano.Ledger.Core (EraTxWits (..))
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
-import Cardano.Ledger.Shelley.TxWits
-  ( ShelleyTxWits,
-    addrShelleyTxWitsL,
-    bootAddrShelleyTxWitsL,
-    scriptShelleyTxWitsL,
-  )
+import Cardano.Ledger.Shelley.TxWits (
+  ShelleyTxWits,
+  addrShelleyTxWitsL,
+  bootAddrShelleyTxWitsL,
+  scriptShelleyTxWitsL,
+ )
 
 instance Crypto c => EraTxWits (AllegraEra c) where
   {-# SPECIALIZE instance EraTxWits (AllegraEra StandardCrypto) #-}

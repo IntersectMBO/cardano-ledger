@@ -13,65 +13,65 @@
 -- FIXME: use better names for record names
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 
-module Cardano.Ledger.Shelley.API.Wallet
-  ( -- * UTxOs
-    getUTxO,
-    getUTxOSubset,
-    getFilteredUTxO,
+module Cardano.Ledger.Shelley.API.Wallet (
+  -- * UTxOs
+  getUTxO,
+  getUTxOSubset,
+  getFilteredUTxO,
 
-    -- * Stake Pools
-    getPools,
-    getPoolParameters,
-    getTotalStake,
-    poolsByTotalStakeFraction,
-    RewardInfoPool (..),
-    RewardParams (..),
-    getRewardInfoPools,
-    getRewardProvenance,
-    getNonMyopicMemberRewards,
+  -- * Stake Pools
+  getPools,
+  getPoolParameters,
+  getTotalStake,
+  poolsByTotalStakeFraction,
+  RewardInfoPool (..),
+  RewardParams (..),
+  getRewardInfoPools,
+  getRewardProvenance,
+  getNonMyopicMemberRewards,
 
-    -- * Transaction helpers
-    addKeyWitnesses,
-    evaluateMinFee,
-    evaluateTransactionFee,
-    evaluateTransactionBalance,
-    evaluateMinLovelaceOutput,
-    addShelleyKeyWitnesses,
+  -- * Transaction helpers
+  addKeyWitnesses,
+  evaluateMinFee,
+  evaluateTransactionFee,
+  evaluateTransactionBalance,
+  evaluateMinLovelaceOutput,
+  addShelleyKeyWitnesses,
 
-    -- * Ada pots
-    AdaPots (..),
-    totalAdaES,
-    totalAdaPotsES,
-  )
+  -- * Ada pots
+  AdaPots (..),
+  totalAdaES,
+  totalAdaPotsES,
+)
 where
 
 import Cardano.Crypto.DSIGN.Class (sizeSigDSIGN, sizeVerKeyDSIGN)
 import Cardano.Ledger.Address (Addr (..), compactAddr)
-import Cardano.Ledger.BaseTypes
-  ( BlocksMade,
-    Globals (..),
-    NonNegativeInterval,
-    ProtVer,
-    UnitInterval,
-    epochInfoPure,
-  )
-import Cardano.Ledger.Binary
-  ( FromCBOR (..),
-    ToCBOR (..),
-    decodeDouble,
-    decodeFull,
-    decodeFullDecoder,
-    encodeDouble,
-    serialize,
-  )
-import Cardano.Ledger.Binary.Coders
-  ( Decode (..),
-    Encode (..),
-    decode,
-    encode,
-    (!>),
-    (<!),
-  )
+import Cardano.Ledger.BaseTypes (
+  BlocksMade,
+  Globals (..),
+  NonNegativeInterval,
+  ProtVer,
+  UnitInterval,
+  epochInfoPure,
+ )
+import Cardano.Ledger.Binary (
+  FromCBOR (..),
+  ToCBOR (..),
+  decodeDouble,
+  decodeFull,
+  decodeFullDecoder,
+  encodeDouble,
+  serialize,
+ )
+import Cardano.Ledger.Binary.Coders (
+  Decode (..),
+  Encode (..),
+  decode,
+  encode,
+  (!>),
+  (<!),
+ )
 import Cardano.Ledger.Binary.Crypto (decodeSignedDSIGN)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (fromCompact)
@@ -80,35 +80,35 @@ import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.EpochBoundary as EB
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.PoolDistr
-  ( IndividualPoolStake (..),
-    PoolDistr (..),
-  )
-import Cardano.Ledger.Shelley.AdaPots
-  ( AdaPots (..),
-    totalAdaES,
-    totalAdaPotsES,
-  )
-import Cardano.Ledger.Shelley.LedgerState
-  ( DPState (..),
-    EpochState (..),
-    LedgerState (..),
-    NewEpochState (..),
-    PState (..),
-    RewardUpdate,
-    UTxOState (..),
-    circulation,
-    createRUpd,
-    incrementalStakeDistr,
-    produced,
-  )
-import Cardano.Ledger.Shelley.PoolRank
-  ( NonMyopic (..),
-    PerformanceEstimate (..),
-    getTopRankedPoolsVMap,
-    nonMyopicMemberRew,
-    percentile',
-  )
+import Cardano.Ledger.PoolDistr (
+  IndividualPoolStake (..),
+  PoolDistr (..),
+ )
+import Cardano.Ledger.Shelley.AdaPots (
+  AdaPots (..),
+  totalAdaES,
+  totalAdaPotsES,
+ )
+import Cardano.Ledger.Shelley.LedgerState (
+  DPState (..),
+  EpochState (..),
+  LedgerState (..),
+  NewEpochState (..),
+  PState (..),
+  RewardUpdate,
+  UTxOState (..),
+  circulation,
+  createRUpd,
+  incrementalStakeDistr,
+  produced,
+ )
+import Cardano.Ledger.Shelley.PoolRank (
+  NonMyopic (..),
+  PerformanceEstimate (..),
+  getTopRankedPoolsVMap,
+  nonMyopicMemberRew,
+  percentile',
+ )
 import Cardano.Ledger.Shelley.RewardProvenance (RewardProvenance)
 import Cardano.Ledger.Shelley.Rewards (StakeShare (..))
 import Cardano.Ledger.Shelley.Rules.NewEpoch (calculatePoolDistr)
@@ -240,8 +240,8 @@ getTotalStake globals ss =
 --
 -- This is not based on any snapshot, but uses the current ledger state.
 getNonMyopicMemberRewards ::
-  ( HasField "_a0" (PParams era) NonNegativeInterval,
-    HasField "_nOpt" (PParams era) Natural
+  ( HasField "_a0" (PParams era) NonNegativeInterval
+  , HasField "_nOpt" (PParams era) Natural
   ) =>
   Globals ->
   NewEpochState era ->
@@ -264,13 +264,14 @@ getNonMyopicMemberRewards globals ss creds =
     EB.SnapShot stake delegs poolParams = currentSnapshot ss
     poolData =
       Map.fromDistinctAscList
-        [ ( k,
-            ( percentile' (histLookup k),
-              p,
-              toShare . EB.sumAllStake $ EB.poolStake k delegs stake
+        [ ( k
+          ,
+            ( percentile' (histLookup k)
+            , p
+            , toShare . EB.sumAllStake $ EB.poolStake k delegs stake
             )
           )
-          | (k, p) <- VMap.toAscList poolParams
+        | (k, p) <- VMap.toAscList poolParams
         ]
     histLookup k = Map.findWithDefault mempty k ls
     topPools =
@@ -312,20 +313,20 @@ currentSnapshot ss =
 
 -- | Information about a stake pool
 data RewardInfoPool = RewardInfoPool
-  { -- | Absolute stake delegated to this pool
-    stake :: Coin,
-    -- | Pledge of pool owner(s)
-    ownerPledge :: Coin,
-    -- | Absolute stake delegated by pool owner(s)
-    ownerStake :: Coin,
-    -- | Pool cost
-    cost :: Coin,
-    -- | Pool margin
-    margin :: UnitInterval,
-    -- | Number of blocks produced divided by expected number of blocks.
-    -- Can be larger than @1.0@ for pool that gets lucky.
-    -- (If some pools get unlucky, some pools must get lucky.)
-    performanceEstimate :: Double
+  { stake :: Coin
+  -- ^ Absolute stake delegated to this pool
+  , ownerPledge :: Coin
+  -- ^ Pledge of pool owner(s)
+  , ownerStake :: Coin
+  -- ^ Absolute stake delegated by pool owner(s)
+  , cost :: Coin
+  -- ^ Pool cost
+  , margin :: UnitInterval
+  -- ^ Pool margin
+  , performanceEstimate :: Double
+  -- ^ Number of blocks produced divided by expected number of blocks.
+  -- Can be larger than @1.0@ for pool that gets lucky.
+  -- (If some pools get unlucky, some pools must get lucky.)
   }
   deriving (Eq, Show, Generic)
 
@@ -339,14 +340,14 @@ deriving instance ToJSON RewardInfoPool
 
 -- | Global information that influences stake pool rewards
 data RewardParams = RewardParams
-  { -- | Desired number of stake pools
-    nOpt :: Natural,
-    -- | Influence of the pool owner's pledge on rewards
-    a0 :: NonNegativeInterval,
-    -- | Total rewards available for the given epoch
-    rPot :: Coin,
-    -- | Maximum lovelace supply minus treasury
-    totalStake :: Coin
+  { nOpt :: Natural
+  -- ^ Desired number of stake pools
+  , a0 :: NonNegativeInterval
+  -- ^ Influence of the pool owner's pledge on rewards
+  , rPot :: Coin
+  -- ^ Total rewards available for the given epoch
+  , totalStake :: Coin
+  -- ^ Maximum lovelace supply minus treasury
   }
   deriving (Eq, Show, Generic)
 
@@ -368,8 +369,8 @@ deriving instance ToJSON RewardParams
 -- Also included are global information such as
 -- the total stake or protocol parameters.
 getRewardInfoPools ::
-  ( HasField "_a0" (PParams era) NonNegativeInterval,
-    HasField "_nOpt" (PParams era) Natural
+  ( HasField "_a0" (PParams era) NonNegativeInterval
+  , HasField "_nOpt" (PParams era) Natural
   ) =>
   Globals ->
   NewEpochState era ->
@@ -380,8 +381,8 @@ getRewardInfoPools globals ss =
     es = nesEs ss
     pp = esPp es
     NonMyopic
-      { likelihoodsNM = ls,
-        rewardPotNM = rPot
+      { likelihoodsNM = ls
+      , rewardPotNM = rPot
       } = esNonMyopic es
     histLookup key = Map.findWithDefault mempty key ls
 
@@ -389,19 +390,19 @@ getRewardInfoPools globals ss =
 
     mkRewardParams =
       RewardParams
-        { a0 = getField @"_a0" pp,
-          nOpt = getField @"_nOpt" pp,
-          totalStake = getTotalStake globals ss,
-          rPot = rPot
+        { a0 = getField @"_a0" pp
+        , nOpt = getField @"_nOpt" pp
+        , totalStake = getTotalStake globals ss
+        , rPot = rPot
         }
     mkRewardInfoPool key poolp =
       RewardInfoPool
-        { stake = pstake,
-          ownerStake = ostake,
-          ownerPledge = ppPledge poolp,
-          margin = ppMargin poolp,
-          cost = ppCost poolp,
-          performanceEstimate =
+        { stake = pstake
+        , ownerStake = ostake
+        , ownerPledge = ppPledge poolp
+        , margin = ppMargin poolp
+        , cost = ppCost poolp
+        , performanceEstimate =
             unPerformanceEstimate $ percentile' $ histLookup key
         }
       where
@@ -420,12 +421,12 @@ getRewardInfoPools globals ss =
 -- on stake pool rewards.
 getRewardProvenance ::
   forall era.
-  ( HasField "_a0" (PParams era) NonNegativeInterval,
-    HasField "_d" (PParams era) UnitInterval,
-    HasField "_nOpt" (PParams era) Natural,
-    HasField "_protocolVersion" (PParams era) ProtVer,
-    HasField "_rho" (PParams era) UnitInterval,
-    HasField "_tau" (PParams era) UnitInterval
+  ( HasField "_a0" (PParams era) NonNegativeInterval
+  , HasField "_d" (PParams era) UnitInterval
+  , HasField "_nOpt" (PParams era) Natural
+  , HasField "_protocolVersion" (PParams era) ProtVer
+  , HasField "_rho" (PParams era) UnitInterval
+  , HasField "_tau" (PParams era) UnitInterval
   ) =>
   Globals ->
   NewEpochState era ->
@@ -433,8 +434,8 @@ getRewardProvenance ::
 getRewardProvenance globals newepochstate =
   ( runReader
       (createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc secparam)
-      globals,
-    def
+      globals
+  , def
   )
   where
     epochstate = nesEs newepochstate
@@ -505,10 +506,10 @@ evaluateTransactionFee pp tx numKeyWits = getMinFeeTx pp tx'
 -- a transaction and the number of lovelace being produced.
 -- This value will be zero for a valid transaction.
 evaluateTransactionBalance ::
-  ( EraUTxO era,
-    ShelleyEraTxBody era,
-    HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_keyDeposit" (PParams era) Coin
+  ( EraUTxO era
+  , ShelleyEraTxBody era
+  , HasField "_poolDeposit" (PParams era) Coin
+  , HasField "_keyDeposit" (PParams era) Coin
   ) =>
   -- | Current protocol parameters
   PParams era ->

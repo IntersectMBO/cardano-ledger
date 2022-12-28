@@ -4,9 +4,9 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Crypto.Limits
-  ( tests,
-  )
+module Test.Cardano.Crypto.Limits (
+  tests,
+)
 where
 
 import Cardano.Crypto (AbstractHash, Signature (..), VerificationKey)
@@ -19,12 +19,12 @@ import qualified Data.ByteString as BS
 import Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
-import Test.Cardano.Crypto.Gen
-  ( feedPM,
-    genAbstractHash,
-    genSignature,
-    genVerificationKey,
-  )
+import Test.Cardano.Crypto.Gen (
+  feedPM,
+  genAbstractHash,
+  genSignature,
+  genVerificationKey,
+ )
 import Test.Cardano.Prelude
 
 --------------------------------------------------------------------------------

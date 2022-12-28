@@ -13,69 +13,69 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Shelley.Rules.Delegs
-  ( ShelleyDELEGS,
-    DelegsEnv (..),
-    ShelleyDelegsPredFailure (..),
-    ShelleyDelegsEvent (..),
-    PredicateFailure,
-  )
+module Cardano.Ledger.Shelley.Rules.Delegs (
+  ShelleyDELEGS,
+  DelegsEnv (..),
+  ShelleyDelegsPredFailure (..),
+  ShelleyDelegsEvent (..),
+  PredicateFailure,
+)
 where
 
 import Cardano.Ledger.Address (mkRwdAcnt)
-import Cardano.Ledger.BaseTypes
-  ( ShelleyBase,
-    TxIx,
-    invalidKey,
-    mkCertIxPartial,
-    networkId,
-  )
-import Cardano.Ledger.Binary
-  ( FromCBOR (..),
-    ToCBOR (..),
-    decodeRecordSum,
-    encodeListLen,
-  )
+import Cardano.Ledger.BaseTypes (
+  ShelleyBase,
+  TxIx,
+  invalidKey,
+  mkCertIxPartial,
+  networkId,
+ )
+import Cardano.Ledger.Binary (
+  FromCBOR (..),
+  ToCBOR (..),
+  decodeRecordSum,
+  encodeListLen,
+ )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.Era (ShelleyDELEGS)
-import Cardano.Ledger.Shelley.LedgerState
-  ( AccountState,
-    DPState (..),
-    RewardAccounts,
-    dpsDState,
-    dsUnified,
-    psStakePoolParams,
-    rewards,
-  )
+import Cardano.Ledger.Shelley.LedgerState (
+  AccountState,
+  DPState (..),
+  RewardAccounts,
+  dpsDState,
+  dsUnified,
+  psStakePoolParams,
+  rewards,
+ )
 import Cardano.Ledger.Shelley.Rules.Delpl (DelplEnv (..), ShelleyDELPL, ShelleyDelplEvent, ShelleyDelplPredFailure)
-import Cardano.Ledger.Shelley.TxBody
-  ( DCert (..),
-    DelegCert (..),
-    Delegation (..),
-    Ptr (..),
-    RewardAcnt (..),
-    ShelleyEraTxBody (..),
-    Wdrl (..),
-  )
+import Cardano.Ledger.Shelley.TxBody (
+  DCert (..),
+  DelegCert (..),
+  Delegation (..),
+  Ptr (..),
+  RewardAcnt (..),
+  ShelleyEraTxBody (..),
+  Wdrl (..),
+ )
 import Cardano.Ledger.Slot (SlotNo)
 import Cardano.Ledger.UMapCompact (Trip (..), UMap (..), View (..), compactCoinOrError, fromCompact)
 import qualified Cardano.Ledger.UMapCompact as UM
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, (∈))
-import Control.State.Transition
-  ( Embed (..),
-    STS (..),
-    TRC (..),
-    TransitionRule,
-    judgmentContext,
-    liftSTS,
-    trans,
-    (?!),
-    (?!:),
-  )
+import Control.State.Transition (
+  Embed (..),
+  STS (..),
+  TRC (..),
+  TransitionRule,
+  judgmentContext,
+  liftSTS,
+  trans,
+  (?!),
+  (?!:),
+ )
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
@@ -87,16 +87,16 @@ import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
 data DelegsEnv era = DelegsEnv
-  { delegsSlotNo :: !SlotNo,
-    delegsIx :: !TxIx,
-    delegspp :: !(PParams era),
-    delegsTx :: !(Tx era),
-    delegsAccount :: !AccountState
+  { delegsSlotNo :: !SlotNo
+  , delegsIx :: !TxIx
+  , delegspp :: !(PParams era)
+  , delegsTx :: !(Tx era)
+  , delegsAccount :: !AccountState
   }
 
 deriving stock instance
-  ( Show (Tx era),
-    Show (PParams era)
+  ( Show (Tx era)
+  , Show (PParams era)
   ) =>
   Show (DelegsEnv era)
 
@@ -121,12 +121,12 @@ deriving stock instance
   Eq (ShelleyDelegsPredFailure era)
 
 instance
-  ( EraTx era,
-    ShelleyEraTxBody era,
-    Embed (EraRule "DELPL" era) (ShelleyDELEGS era),
-    Environment (EraRule "DELPL" era) ~ DelplEnv era,
-    State (EraRule "DELPL" era) ~ DPState (EraCrypto era),
-    Signal (EraRule "DELPL" era) ~ DCert (EraCrypto era)
+  ( EraTx era
+  , ShelleyEraTxBody era
+  , Embed (EraRule "DELPL" era) (ShelleyDELEGS era)
+  , Environment (EraRule "DELPL" era) ~ DelplEnv era
+  , State (EraRule "DELPL" era) ~ DPState (EraCrypto era)
+  , Signal (EraRule "DELPL" era) ~ DCert (EraCrypto era)
   ) =>
   STS (ShelleyDELEGS era)
   where
@@ -147,9 +147,9 @@ instance
   NoThunks (ShelleyDelegsPredFailure era)
 
 instance
-  ( Era era,
-    Typeable (Script era),
-    ToCBOR (PredicateFailure (EraRule "DELPL" era))
+  ( Era era
+  , Typeable (Script era)
+  , ToCBOR (PredicateFailure (EraRule "DELPL" era))
   ) =>
   ToCBOR (ShelleyDelegsPredFailure era)
   where
@@ -168,9 +168,9 @@ instance
         <> toCBOR a
 
 instance
-  ( Era era,
-    FromCBOR (PredicateFailure (EraRule "DELPL" era)),
-    Typeable (Script era)
+  ( Era era
+  , FromCBOR (PredicateFailure (EraRule "DELPL" era))
+  , Typeable (Script era)
   ) =>
   FromCBOR (ShelleyDelegsPredFailure era)
   where
@@ -190,12 +190,12 @@ instance
 
 delegsTransition ::
   forall era.
-  ( EraTx era,
-    ShelleyEraTxBody era,
-    Embed (EraRule "DELPL" era) (ShelleyDELEGS era),
-    Environment (EraRule "DELPL" era) ~ DelplEnv era,
-    State (EraRule "DELPL" era) ~ DPState (EraCrypto era),
-    Signal (EraRule "DELPL" era) ~ DCert (EraCrypto era)
+  ( EraTx era
+  , ShelleyEraTxBody era
+  , Embed (EraRule "DELPL" era) (ShelleyDELEGS era)
+  , Environment (EraRule "DELPL" era) ~ DelplEnv era
+  , State (EraRule "DELPL" era) ~ DPState (EraCrypto era)
+  , Signal (EraRule "DELPL" era) ~ DCert (EraCrypto era)
   ) =>
   TransitionRule (ShelleyDELEGS era)
 delegsTransition = do
@@ -257,17 +257,17 @@ delegsTransition = do
         withdrawalMap =
           Map.fromList
             [ (cred, coin)
-              | (RewardAcnt _ cred, coin) <- Map.toList wdrls_
+            | (RewardAcnt _ cred, coin) <- Map.toList wdrls_
             ]
         f :: Coin -> Trip (EraCrypto era) -> Bool
         f coin1 (Triple (SJust coin2) _ _) = coin1 == (fromCompact coin2)
         f _ _ = False
 
 instance
-  ( Era era,
-    STS (ShelleyDELPL era),
-    PredicateFailure (EraRule "DELPL" era) ~ ShelleyDelplPredFailure era,
-    Event (EraRule "DELPL" era) ~ ShelleyDelplEvent era
+  ( Era era
+  , STS (ShelleyDELPL era)
+  , PredicateFailure (EraRule "DELPL" era) ~ ShelleyDelplPredFailure era
+  , Event (EraRule "DELPL" era) ~ ShelleyDelplEvent era
   ) =>
   Embed (ShelleyDELPL era) (ShelleyDELEGS era)
   where

@@ -1,9 +1,9 @@
 {-# LANGUAGE FlexibleContexts #-}
 
-module Cardano.Ledger.Allegra.Core
-  ( AllegraEraTxBody (..),
-    module Cardano.Ledger.Shelley.Core,
-  )
+module Cardano.Ledger.Allegra.Core (
+  AllegraEraTxBody (..),
+  module Cardano.Ledger.Shelley.Core,
+)
 where
 
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))

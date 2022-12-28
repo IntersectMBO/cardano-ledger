@@ -23,42 +23,42 @@
 --   This way all the instances for @Foo (`Eq`, `Show`, `ToCBOR`, `FromCBOR`, `NoThunks`, Generic`)@
 --   can be derived for free. MemoBytes plays an important role in the 'SafeToHash' class
 --   introduced in the module 'Cardano.Ledger.SafeHash'
-module Cardano.Ledger.MemoBytes
-  ( MemoBytes (Memo),
-    MemoHashIndex,
-    Mem,
-    mkMemoBytes,
-    getMemoBytesType,
-    getMemoBytesHash,
-    memoBytes,
-    shorten,
-    showMemo,
-    printMemo,
-    shortToLazy,
-    contentsEq,
+module Cardano.Ledger.MemoBytes (
+  MemoBytes (Memo),
+  MemoHashIndex,
+  Mem,
+  mkMemoBytes,
+  getMemoBytesType,
+  getMemoBytesHash,
+  memoBytes,
+  shorten,
+  showMemo,
+  printMemo,
+  shortToLazy,
+  contentsEq,
 
-    -- * Memoized
-    Memoized (RawType),
-    mkMemoized,
-    getMemoSafeHash,
-    getMemoRawType,
-    zipMemoRawType,
-    getMemoRawBytes,
-    lensMemoRawType,
-    getterMemoRawType,
-  )
+  -- * Memoized
+  Memoized (RawType),
+  mkMemoized,
+  getMemoSafeHash,
+  getMemoRawType,
+  zipMemoRawType,
+  getMemoRawBytes,
+  lensMemoRawType,
+  getterMemoRawType,
+)
 where
 
 import Cardano.Crypto.Hash (HashAlgorithm (hashAlgorithmName))
-import Cardano.Ledger.Binary
-  ( Annotator (..),
-    FromCBOR (fromCBOR),
-    ToCBOR (toCBOR),
-    encodePreEncoded,
-    serialize,
-    serializeEncoding,
-    withSlice,
-  )
+import Cardano.Ledger.Binary (
+  Annotator (..),
+  FromCBOR (fromCBOR),
+  ToCBOR (toCBOR),
+  encodePreEncoded,
+  serialize,
+  serializeEncoding,
+  withSlice,
+ )
 import Cardano.Ledger.Binary.Coders (Encode, encode, runE)
 import Cardano.Ledger.Core (Era (EraCrypto), eraProtVerLow)
 import Cardano.Ledger.Crypto (HASH)
@@ -84,9 +84,9 @@ import Prelude hiding (span)
 --   from the serialization of a type, and ToCBOR instances do not have unique
 --   serializations.
 data MemoBytes t era = Memo'
-  { mbRawType :: !(t era),
-    mbBytes :: ShortByteString,
-    mbHash :: SafeHash (EraCrypto era) (MemoHashIndex t)
+  { mbRawType :: !(t era)
+  , mbBytes :: ShortByteString
+  , mbHash :: SafeHash (EraCrypto era) (MemoHashIndex t)
   }
   deriving (NoThunks) via AllowThunksIn '["mbBytes"] (MemoBytes t era)
 
@@ -108,9 +108,9 @@ instance (Typeable t, Typeable era) => ToCBOR (MemoBytes t era) where
   toCBOR (Memo' _ bytes _hash) = encodePreEncoded (fromShort bytes)
 
 instance
-  ( Typeable t,
-    FromCBOR (Annotator (t era)),
-    Era era
+  ( Typeable t
+  , FromCBOR (Annotator (t era))
+  , Era era
   ) =>
   FromCBOR (Annotator (MemoBytes t era))
   where

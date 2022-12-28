@@ -4,17 +4,17 @@
 -- |
 -- Module      : Test.Cardano.Ledger.Mary.Golden
 -- Description : Golden Tests for the Mary era
-module Test.Cardano.Ledger.Mary.Golden
-  ( goldenScaledMinDeposit,
-    pid1,
-    pid2,
-    pid3,
-    smallName,
-    smallestName,
-    realName,
-    minUTxO,
-    largestName,
-  )
+module Test.Cardano.Ledger.Mary.Golden (
+  goldenScaledMinDeposit,
+  pid1,
+  pid2,
+  pid3,
+  smallName,
+  smallestName,
+  realName,
+  minUTxO,
+  largestName,
+)
 where
 
 import Cardano.Ledger.Allegra.Scripts (Timelock (..))
@@ -88,8 +88,8 @@ goldenScaledMinDeposit =
                 Map.singleton pid1 (Map.fromList [(smallestName, 1)])
           )
           minUTxO
-          @?= Coin 1407406,
-      testCase "one policy, one (small) name" $
+          @?= Coin 1407406
+    , testCase "one policy, one (small) name" $
         scaledMinDeposit
           ( MaryValue 1444443 $
               MultiAsset $
@@ -98,8 +98,8 @@ goldenScaledMinDeposit =
                   (Map.fromList [(smallName 1, 1)])
           )
           minUTxO
-          @?= Coin 1444443,
-      testCase "one policy, one (real) name" $
+          @?= Coin 1444443
+    , testCase "one policy, one (real) name" $
         scaledMinDeposit
           ( MaryValue 1444443 $
               MultiAsset $
@@ -108,23 +108,23 @@ goldenScaledMinDeposit =
                   (Map.fromList [(realName, 1)])
           )
           minUTxO
-          @?= Coin 1481480,
-      testCase "one policy, three (small) name" $
+          @?= Coin 1481480
+    , testCase "one policy, three (small) name" $
         scaledMinDeposit
           ( MaryValue 1555554 $
               MultiAsset $
                 Map.singleton
                   pid1
                   ( Map.fromList
-                      [ (smallName 1, 1),
-                        (smallName 2, 1),
-                        (smallName 3, 1)
+                      [ (smallName 1, 1)
+                      , (smallName 2, 1)
+                      , (smallName 3, 1)
                       ]
                   )
           )
           minUTxO
-          @?= Coin 1555554,
-      testCase "one policy, one (largest) name" $
+          @?= Coin 1555554
+    , testCase "one policy, one (largest) name" $
         scaledMinDeposit
           ( MaryValue 1555554 $
               MultiAsset $
@@ -133,65 +133,72 @@ goldenScaledMinDeposit =
                   (Map.fromList [(largestName 65, 1)])
           )
           minUTxO
-          @?= Coin 1555554,
-      testCase "one policy, three (largest) name" $
+          @?= Coin 1555554
+    , testCase "one policy, three (largest) name" $
         scaledMinDeposit
           ( MaryValue 1962961 $
               MultiAsset $
                 Map.singleton
                   pid1
                   ( Map.fromList
-                      [ (largestName 65, 1),
-                        (largestName 66, 1),
-                        (largestName 67, 1)
+                      [ (largestName 65, 1)
+                      , (largestName 66, 1)
+                      , (largestName 67, 1)
                       ]
                   )
           )
           minUTxO
-          @?= Coin 1962961,
-      testCase "two policies, one (smallest) name" $
+          @?= Coin 1962961
+    , testCase "two policies, one (smallest) name" $
         scaledMinDeposit
           ( MaryValue 1592591 $
               MultiAsset $
                 Map.fromList
-                  [ ( pid1,
-                      Map.fromList [(smallestName, 1)]
-                    ),
-                    ( pid2,
-                      Map.fromList [(smallestName, 1)]
+                  [
+                    ( pid1
+                    , Map.fromList [(smallestName, 1)]
+                    )
+                  ,
+                    ( pid2
+                    , Map.fromList [(smallestName, 1)]
                     )
                   ]
           )
           minUTxO
-          @?= Coin 1592591,
-      testCase "two policies, two (small) names" $
+          @?= Coin 1592591
+    , testCase "two policies, two (small) names" $
         scaledMinDeposit
           ( MaryValue 1629628 $
               MultiAsset $
                 Map.fromList
-                  [ ( pid1,
-                      Map.fromList [(smallName 1, 1)]
-                    ),
-                    ( pid2,
-                      Map.fromList [(smallName 2, 1)]
+                  [
+                    ( pid1
+                    , Map.fromList [(smallName 1, 1)]
+                    )
+                  ,
+                    ( pid2
+                    , Map.fromList [(smallName 2, 1)]
                     )
                   ]
           )
           minUTxO
-          @?= Coin 1629628,
-      testCase "three policies, ninety-six (small) names" $
+          @?= Coin 1629628
+    , testCase "three policies, ninety-six (small) names" $
         scaledMinDeposit
           ( MaryValue 7407400 $
               MultiAsset $
                 Map.fromList
-                  [ ( pid1,
-                      Map.fromList $ map ((,1) . smallName) [32 .. 63]
-                    ),
-                    ( pid2,
-                      Map.fromList $ map ((,1) . smallName) [64 .. 95]
-                    ),
-                    ( pid3,
-                      Map.fromList $ map ((,1) . smallName) [96 .. 127]
+                  [
+                    ( pid1
+                    , Map.fromList $ map ((,1) . smallName) [32 .. 63]
+                    )
+                  ,
+                    ( pid2
+                    , Map.fromList $ map ((,1) . smallName) [64 .. 95]
+                    )
+                  ,
+                    ( pid3
+                    , Map.fromList $ map ((,1) . smallName) [96 .. 127]
                     )
                   ]
           )

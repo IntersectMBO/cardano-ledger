@@ -4,39 +4,39 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Chain.UTxO.Tx
-  ( Tx (..),
-    txF,
-    TxId,
-    TxAttributes,
-    TxIn (..),
-    TxOut (..),
-  )
+module Cardano.Chain.UTxO.Tx (
+  Tx (..),
+  txF,
+  TxId,
+  TxAttributes,
+  TxIn (..),
+  TxOut (..),
+)
 where
 
-import Cardano.Chain.Common
-  ( Address (..),
-    Lovelace,
-    lovelaceF,
-  )
+import Cardano.Chain.Common (
+  Address (..),
+  Lovelace,
+  lovelaceF,
+ )
 import Cardano.Chain.Common.Attributes (Attributes, attributesAreKnown)
-import Cardano.Chain.Common.CBOR
-  ( decodeKnownCborDataItem,
-    encodeKnownCborDataItem,
-    knownCborDataItemSizeExpr,
-  )
+import Cardano.Chain.Common.CBOR (
+  decodeKnownCborDataItem,
+  encodeKnownCborDataItem,
+  knownCborDataItemSizeExpr,
+ )
 import Cardano.Crypto (Hash, serializeCborHash, shortHashF)
 import Cardano.HeapWords (HeapWords (..))
-import Cardano.Ledger.Binary
-  ( Case (..),
-    DecoderError (DecoderErrorUnknownTag),
-    FromCBOR (..),
-    ToCBOR (..),
-    cborError,
-    encodeListLen,
-    enforceSize,
-    szCases,
-  )
+import Cardano.Ledger.Binary (
+  Case (..),
+  DecoderError (DecoderErrorUnknownTag),
+  FromCBOR (..),
+  ToCBOR (..),
+  cborError,
+  encodeListLen,
+  enforceSize,
+  szCases,
+ )
 import Cardano.Prelude hiding (cborError)
 import Data.Aeson (ToJSON)
 import Formatting (Format, bprint, build, builder, int)
@@ -50,12 +50,12 @@ import qualified Formatting.Buildable as B
 --
 --   NB: transaction witnesses are stored separately
 data Tx = UnsafeTx
-  { -- | Inputs of transaction.
-    txInputs :: !(NonEmpty TxIn),
-    -- | Outputs of transaction.
-    txOutputs :: !(NonEmpty TxOut),
-    -- | Attributes of transaction
-    txAttributes :: !TxAttributes
+  { txInputs :: !(NonEmpty TxIn)
+  -- ^ Inputs of transaction.
+  , txOutputs :: !(NonEmpty TxOut)
+  -- ^ Outputs of transaction.
+  , txAttributes :: !TxAttributes
+  -- ^ Attributes of transaction
   }
   deriving (Eq, Ord, Generic, Show)
   deriving anyclass (NFData)
@@ -172,8 +172,8 @@ instance HeapWords TxIn where
 
 -- | Transaction output
 data TxOut = TxOut
-  { txOutAddress :: !Address,
-    txOutValue :: !Lovelace
+  { txOutAddress :: !Address
+  , txOutValue :: !Lovelace
   }
   deriving (Eq, Ord, Generic, Show)
   deriving anyclass (NFData)

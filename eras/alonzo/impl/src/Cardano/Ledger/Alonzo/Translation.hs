@@ -18,19 +18,19 @@ import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.Binary (DecoderError)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Era
-  ( PreviousEra,
-    TranslateEra (..),
-    TranslationContext,
-    translateEra',
-  )
+import Cardano.Ledger.Era (
+  PreviousEra,
+  TranslateEra (..),
+  TranslationContext,
+  translateEra',
+ )
 import Cardano.Ledger.Mary (MaryEra)
-import Cardano.Ledger.Shelley.API
-  ( EpochState (..),
-    NewEpochState (..),
-    ShelleyGenesis,
-    StrictMaybe (..),
-  )
+import Cardano.Ledger.Shelley.API (
+  EpochState (..),
+  NewEpochState (..),
+  ShelleyGenesis,
+  StrictMaybe (..),
+ )
 import qualified Cardano.Ledger.Shelley.API as API
 import qualified Cardano.Ledger.Shelley.PParams as Shelley
 import qualified Cardano.Ledger.Shelley.Tx as LTX
@@ -60,41 +60,41 @@ instance Crypto c => TranslateEra (AlonzoEra c) NewEpochState where
   translateEra ctxt nes =
     return $
       NewEpochState
-        { nesEL = nesEL nes,
-          nesBprev = nesBprev nes,
-          nesBcur = nesBcur nes,
-          nesEs = translateEra' ctxt $ nesEs nes,
-          nesRu = nesRu nes,
-          nesPd = nesPd nes,
-          stashedAVVMAddresses = ()
+        { nesEL = nesEL nes
+        , nesBprev = nesBprev nes
+        , nesBcur = nesBcur nes
+        , nesEs = translateEra' ctxt $ nesEs nes
+        , nesRu = nesRu nes
+        , nesPd = nesPd nes
+        , stashedAVVMAddresses = ()
         }
 
 instance Crypto c => TranslateEra (AlonzoEra c) ShelleyGenesis where
   translateEra ctxt genesis =
     return
       API.ShelleyGenesis
-        { API.sgSystemStart = API.sgSystemStart genesis,
-          API.sgNetworkMagic = API.sgNetworkMagic genesis,
-          API.sgNetworkId = API.sgNetworkId genesis,
-          API.sgActiveSlotsCoeff = API.sgActiveSlotsCoeff genesis,
-          API.sgSecurityParam = API.sgSecurityParam genesis,
-          API.sgEpochLength = API.sgEpochLength genesis,
-          API.sgSlotsPerKESPeriod = API.sgSlotsPerKESPeriod genesis,
-          API.sgMaxKESEvolutions = API.sgMaxKESEvolutions genesis,
-          API.sgSlotLength = API.sgSlotLength genesis,
-          API.sgUpdateQuorum = API.sgUpdateQuorum genesis,
-          API.sgMaxLovelaceSupply = API.sgMaxLovelaceSupply genesis,
-          API.sgProtocolParams = translateEra' ctxt (API.sgProtocolParams genesis),
-          API.sgGenDelegs = API.sgGenDelegs genesis,
-          API.sgInitialFunds = API.sgInitialFunds genesis,
-          API.sgStaking = API.sgStaking genesis
+        { API.sgSystemStart = API.sgSystemStart genesis
+        , API.sgNetworkMagic = API.sgNetworkMagic genesis
+        , API.sgNetworkId = API.sgNetworkId genesis
+        , API.sgActiveSlotsCoeff = API.sgActiveSlotsCoeff genesis
+        , API.sgSecurityParam = API.sgSecurityParam genesis
+        , API.sgEpochLength = API.sgEpochLength genesis
+        , API.sgSlotsPerKESPeriod = API.sgSlotsPerKESPeriod genesis
+        , API.sgMaxKESEvolutions = API.sgMaxKESEvolutions genesis
+        , API.sgSlotLength = API.sgSlotLength genesis
+        , API.sgUpdateQuorum = API.sgUpdateQuorum genesis
+        , API.sgMaxLovelaceSupply = API.sgMaxLovelaceSupply genesis
+        , API.sgProtocolParams = translateEra' ctxt (API.sgProtocolParams genesis)
+        , API.sgGenDelegs = API.sgGenDelegs genesis
+        , API.sgInitialFunds = API.sgInitialFunds genesis
+        , API.sgStaking = API.sgStaking genesis
         }
 
 newtype Tx era = Tx {unTx :: Core.Tx era}
 
 instance
-  ( Crypto c,
-    Core.Tx (AlonzoEra c) ~ AlonzoTx (AlonzoEra c)
+  ( Crypto c
+  , Core.Tx (AlonzoEra c) ~ AlonzoTx (AlonzoEra c)
   ) =>
   TranslateEra (AlonzoEra c) Tx
   where
@@ -122,31 +122,31 @@ instance Crypto c => TranslateEra (AlonzoEra c) EpochState where
   translateEra ctxt es =
     return
       EpochState
-        { esAccountState = esAccountState es,
-          esSnapshots = esSnapshots es,
-          esLState = translateEra' ctxt $ esLState es,
-          esPrevPp = translatePParams ctxt $ esPrevPp es,
-          esPp = translatePParams ctxt $ esPp es,
-          esNonMyopic = esNonMyopic es
+        { esAccountState = esAccountState es
+        , esSnapshots = esSnapshots es
+        , esLState = translateEra' ctxt $ esLState es
+        , esPrevPp = translatePParams ctxt $ esPrevPp es
+        , esPp = translatePParams ctxt $ esPp es
+        , esNonMyopic = esNonMyopic es
         }
 
 instance Crypto c => TranslateEra (AlonzoEra c) API.LedgerState where
   translateEra ctxt ls =
     return
       API.LedgerState
-        { API.lsUTxOState = translateEra' ctxt $ API.lsUTxOState ls,
-          API.lsDPState = API.lsDPState ls
+        { API.lsUTxOState = translateEra' ctxt $ API.lsUTxOState ls
+        , API.lsDPState = API.lsDPState ls
         }
 
 instance Crypto c => TranslateEra (AlonzoEra c) API.UTxOState where
   translateEra ctxt us =
     return
       API.UTxOState
-        { API.utxosUtxo = translateEra' ctxt $ API.utxosUtxo us,
-          API.utxosDeposited = API.utxosDeposited us,
-          API.utxosFees = API.utxosFees us,
-          API.utxosPpups = translateEra' ctxt $ API.utxosPpups us,
-          API.utxosStakeDistr = API.utxosStakeDistr us
+        { API.utxosUtxo = translateEra' ctxt $ API.utxosUtxo us
+        , API.utxosDeposited = API.utxosDeposited us
+        , API.utxosFees = API.utxosFees us
+        , API.utxosPpups = translateEra' ctxt $ API.utxosPpups us
+        , API.utxosStakeDistr = API.utxosStakeDistr us
         }
 
 instance Crypto c => TranslateEra (AlonzoEra c) API.UTxO where
@@ -157,8 +157,8 @@ instance Crypto c => TranslateEra (AlonzoEra c) API.PPUPState where
   translateEra ctxt ps =
     return
       API.PPUPState
-        { API.proposals = translateEra' ctxt $ API.proposals ps,
-          API.futureProposals = translateEra' ctxt $ API.futureProposals ps
+        { API.proposals = translateEra' ctxt $ API.proposals ps
+        , API.futureProposals = translateEra' ctxt $ API.futureProposals ps
         }
 
 instance Crypto c => TranslateEra (AlonzoEra c) API.ProposedPPUpdates where

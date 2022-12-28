@@ -56,16 +56,16 @@ tests :: TestTree
 tests =
   testGroup
     "STS.Extended"
-    [ testCase "Sum" $ withSum @=? Right 55,
-      testCase "Product" $ withProduct @=? Right 3628800,
-      testCase "Sum/Lazy Events" $ withLazyEventsSum @=? Right 55,
-      testGroup
+    [ testCase "Sum" $ withSum @=? Right 55
+    , testCase "Product" $ withProduct @=? Right 3628800
+    , testCase "Sum/Lazy Events" $ withLazyEventsSum @=? Right 55
+    , testGroup
         "Sum/Validate"
         [ testCase "Filtered" $
-            withLblSum (ValidateSuchThat ("testLabel" `notElem`)) @=? Left [NoFailure],
-          testCase "Unfiltered" $
-            withLblSum (ValidateSuchThat (const True)) @=? Left [NoFailure, NoFailure],
-          testCase "None" $
+            withLblSum (ValidateSuchThat ("testLabel" `notElem`)) @=? Left [NoFailure]
+        , testCase "Unfiltered" $
+            withLblSum (ValidateSuchThat (const True)) @=? Left [NoFailure, NoFailure]
+        , testCase "None" $
             withLblSum ValidateNone @=? Right 56
         ]
     ]
@@ -79,9 +79,9 @@ tests =
       where
         lblOpts =
           ApplySTSOpts
-            { asoAssertions = AssertionsOff,
-              asoValidation = vp,
-              asoEvents = EPReturn
+            { asoAssertions = AssertionsOff
+            , asoValidation = vp
+            , asoEvents = EPReturn
             }
 
     withProduct = runReader (applySTS @GSUM ctx) (Ops (foldl' (*) 1))
@@ -91,7 +91,7 @@ tests =
       where
         evtOpts =
           ApplySTSOpts
-            { asoAssertions = AssertionsOff,
-              asoValidation = ValidateAll,
-              asoEvents = EPReturn
+            { asoAssertions = AssertionsOff
+            , asoValidation = ValidateAll
+            , asoEvents = EPReturn
             }

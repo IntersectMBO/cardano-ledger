@@ -1,79 +1,79 @@
-module Test.Cardano.Crypto.Gen
-  ( -- * Protocol Magic Generator
-    genProtocolMagic,
-    genProtocolMagicId,
-    genRequiresNetworkMagic,
+module Test.Cardano.Crypto.Gen (
+  -- * Protocol Magic Generator
+  genProtocolMagic,
+  genProtocolMagicId,
+  genRequiresNetworkMagic,
 
-    -- * Sign Tag Generator
-    genSignTag,
+  -- * Sign Tag Generator
+  genSignTag,
 
-    -- * Key Generators
-    genKeypair,
-    genVerificationKey,
-    genSigningKey,
+  -- * Key Generators
+  genKeypair,
+  genVerificationKey,
+  genSigningKey,
 
-    -- * Redeem Key Generators
-    genRedeemKeypair,
-    genRedeemVerificationKey,
-    genCompactRedeemVerificationKey,
-    genRedeemSigningKey,
+  -- * Redeem Key Generators
+  genRedeemKeypair,
+  genRedeemVerificationKey,
+  genCompactRedeemVerificationKey,
+  genRedeemSigningKey,
 
-    -- * Signature Generators
-    genSignature,
-    genSignatureEncoded,
-    genRedeemSignature,
+  -- * Signature Generators
+  genSignature,
+  genSignatureEncoded,
+  genRedeemSignature,
 
-    -- * Hash Generators
-    genAbstractHash,
+  -- * Hash Generators
+  genAbstractHash,
 
-    -- * SafeSigner Generators
-    genSafeSigner,
+  -- * SafeSigner Generators
+  genSafeSigner,
 
-    -- * PassPhrase Generators
-    genPassPhrase,
+  -- * PassPhrase Generators
+  genPassPhrase,
 
-    -- * Helper Generators
-    genHashRaw,
-    genTextHash,
-    feedPM,
-  )
+  -- * Helper Generators
+  genHashRaw,
+  genTextHash,
+  feedPM,
+)
 where
 
 import Cardano.Crypto (PassPhrase)
-import Cardano.Crypto.Hashing
-  ( AbstractHash,
-    Hash,
-    HashAlgorithm,
-    abstractHash,
-    serializeCborHash,
-  )
-import Cardano.Crypto.ProtocolMagic
-  ( AProtocolMagic (..),
-    ProtocolMagic,
-    ProtocolMagicId (..),
-    RequiresNetworkMagic (..),
-  )
+import Cardano.Crypto.Hashing (
+  AbstractHash,
+  Hash,
+  HashAlgorithm,
+  abstractHash,
+  serializeCborHash,
+ )
+import Cardano.Crypto.ProtocolMagic (
+  AProtocolMagic (..),
+  ProtocolMagic,
+  ProtocolMagicId (..),
+  RequiresNetworkMagic (..),
+ )
 import Cardano.Crypto.Raw (Raw (..))
-import Cardano.Crypto.Signing
-  ( SafeSigner (..),
-    SignTag (..),
-    Signature,
-    SigningKey,
-    VerificationKey,
-    deterministicKeyGen,
-    emptyPassphrase,
-    sign,
-    signRaw,
-  )
-import Cardano.Crypto.Signing.Redeem
-  ( CompactRedeemVerificationKey,
-    RedeemSignature,
-    RedeemSigningKey,
-    RedeemVerificationKey,
-    redeemDeterministicKeyGen,
-    redeemSign,
-    toCompactRedeemVerificationKey,
-  )
+import Cardano.Crypto.Signing (
+  SafeSigner (..),
+  SignTag (..),
+  Signature,
+  SigningKey,
+  VerificationKey,
+  deterministicKeyGen,
+  emptyPassphrase,
+  sign,
+  signRaw,
+ )
+import Cardano.Crypto.Signing.Redeem (
+  CompactRedeemVerificationKey,
+  RedeemSignature,
+  RedeemSigningKey,
+  RedeemVerificationKey,
+  redeemDeterministicKeyGen,
+  redeemSign,
+  toCompactRedeemVerificationKey,
+ )
 import Cardano.Ledger.Binary (Annotated (..), ToCBOR)
 import Cardano.Prelude
 import qualified Data.ByteArray as ByteArray
@@ -113,15 +113,15 @@ genRequiresNetworkMagic = Gen.element [RequiresNoMagic, RequiresMagic]
 genSignTag :: Gen SignTag
 genSignTag =
   Gen.choice
-    [ pure SignForTestingOnly,
-      pure SignTx,
-      pure SignRedeemTx,
-      pure SignVssCert,
-      pure SignUSProposal,
-      pure SignCommitment,
-      pure SignUSVote,
-      SignBlock <$> genVerificationKey,
-      pure SignCertificate
+    [ pure SignForTestingOnly
+    , pure SignTx
+    , pure SignRedeemTx
+    , pure SignVssCert
+    , pure SignUSProposal
+    , pure SignCommitment
+    , pure SignUSVote
+    , SignBlock <$> genVerificationKey
+    , pure SignCertificate
     ]
 
 --------------------------------------------------------------------------------

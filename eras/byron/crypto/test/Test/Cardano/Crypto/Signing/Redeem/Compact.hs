@@ -1,14 +1,14 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Test.Cardano.Crypto.Signing.Redeem.Compact
-  ( tests,
-  )
+module Test.Cardano.Crypto.Signing.Redeem.Compact (
+  tests,
+)
 where
 
-import Cardano.Crypto.Signing.Redeem
-  ( fromCompactRedeemVerificationKey,
-    toCompactRedeemVerificationKey,
-  )
+import Cardano.Crypto.Signing.Redeem (
+  fromCompactRedeemVerificationKey,
+  toCompactRedeemVerificationKey,
+ )
 import Cardano.Prelude
 import Hedgehog (MonadTest, Property, checkParallel, tripping)
 import Test.Cardano.Crypto.Gen (genRedeemVerificationKey)

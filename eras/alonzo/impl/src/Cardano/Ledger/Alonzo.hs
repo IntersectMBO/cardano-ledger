@@ -9,28 +9,28 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Alonzo
-  ( Alonzo,
-    AlonzoEra,
-    AlonzoTxOut,
-    MaryValue,
-    AlonzoTxBody,
-    AlonzoScript,
-    AlonzoTxAuxData,
-    AlonzoPParams,
-    AlonzoPParamsUpdate,
-    reapplyAlonzoTx,
-  )
+module Cardano.Ledger.Alonzo (
+  Alonzo,
+  AlonzoEra,
+  AlonzoTxOut,
+  MaryValue,
+  AlonzoTxBody,
+  AlonzoScript,
+  AlonzoTxAuxData,
+  AlonzoPParams,
+  AlonzoPParamsUpdate,
+  reapplyAlonzoTx,
+)
 where
 
 import Cardano.Ledger.Alonzo.Data (AlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Genesis
-import Cardano.Ledger.Alonzo.PParams
-  ( AlonzoPParams,
-    AlonzoPParamsHKD (..),
-    AlonzoPParamsUpdate,
-  )
+import Cardano.Ledger.Alonzo.PParams (
+  AlonzoPParams,
+  AlonzoPParamsHKD (..),
+  AlonzoPParamsUpdate,
+ )
 import Cardano.Ledger.Alonzo.PlutusScriptApi (getDatumAlonzo)
 import Cardano.Ledger.Alonzo.Rules ()
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
@@ -97,7 +97,7 @@ instance Crypto c => ExtendedUTxO (AlonzoEra c) where
   getAllowedSupplimentalDataHashes txBody _ =
     Set.fromList
       [ dh
-        | txOut <- toList $ txBody ^. outputsTxBodyL,
-          SJust dh <- [txOut ^. dataHashTxOutL]
+      | txOut <- toList $ txBody ^. outputsTxBodyL
+      , SJust dh <- [txOut ^. dataHashTxOutL]
       ]
   getDatum = getDatumAlonzo

@@ -13,86 +13,86 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Babbage.TxOut
-  ( BabbageTxOut
-      ( BabbageTxOut,
-        TxOutCompact,
-        TxOutCompactDH,
-        TxOutCompactDatum,
-        TxOutCompactRefScript
-      ),
-    BabbageEraTxOut (..),
-    TxOut,
-    addrEitherBabbageTxOutL,
-    valueEitherBabbageTxOutL,
-    dataHashBabbageTxOutL,
-    dataBabbageTxOutL,
-    datumBabbageTxOutL,
-    referenceScriptBabbageTxOutL,
-    getDatumBabbageTxOut,
-    babbageMinUTxOValue,
-    getEitherAddrBabbageTxOut,
-    txOutData,
-    txOutDataHash,
-    txOutScript,
-  )
+module Cardano.Ledger.Babbage.TxOut (
+  BabbageTxOut (
+    BabbageTxOut,
+    TxOutCompact,
+    TxOutCompactDH,
+    TxOutCompactDatum,
+    TxOutCompactRefScript
+  ),
+  BabbageEraTxOut (..),
+  TxOut,
+  addrEitherBabbageTxOutL,
+  valueEitherBabbageTxOutL,
+  dataHashBabbageTxOutL,
+  dataBabbageTxOutL,
+  datumBabbageTxOutL,
+  referenceScriptBabbageTxOutL,
+  getDatumBabbageTxOut,
+  babbageMinUTxOValue,
+  getEitherAddrBabbageTxOut,
+  txOutData,
+  txOutDataHash,
+  txOutScript,
+)
 where
 
 import Cardano.Crypto.Hash (HashAlgorithm)
-import Cardano.Ledger.Address
-  ( Addr (..),
-    CompactAddr,
-    compactAddr,
-    decompactAddr,
-    fromCborBothAddr,
-  )
-import Cardano.Ledger.Alonzo.Data
-  ( BinaryData,
-    Data,
-    Datum (..),
-    binaryDataToData,
-    dataToBinaryData,
-  )
-import Cardano.Ledger.Alonzo.TxBody
-  ( Addr28Extra,
-    AlonzoEraTxOut (..),
-    DataHash32,
-    decodeAddress28,
-    decodeDataHash32,
-    encodeAddress28,
-    encodeDataHash32,
-    getAdaOnly,
-  )
+import Cardano.Ledger.Address (
+  Addr (..),
+  CompactAddr,
+  compactAddr,
+  decompactAddr,
+  fromCborBothAddr,
+ )
+import Cardano.Ledger.Alonzo.Data (
+  BinaryData,
+  Data,
+  Datum (..),
+  binaryDataToData,
+  dataToBinaryData,
+ )
+import Cardano.Ledger.Alonzo.TxBody (
+  Addr28Extra,
+  AlonzoEraTxOut (..),
+  DataHash32,
+  decodeAddress28,
+  decodeDataHash32,
+  encodeAddress28,
+  encodeDataHash32,
+  getAdaOnly,
+ )
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.PParams (_coinsPerUTxOByte)
 import Cardano.Ledger.Babbage.Scripts ()
-import Cardano.Ledger.BaseTypes
-  ( StrictMaybe (..),
-    maybeToStrictMaybe,
-    strictMaybeToMaybe,
-  )
-import Cardano.Ledger.Binary
-  ( Annotator (..),
-    Decoder,
-    DecoderError (..),
-    Encoding,
-    FromCBOR (..),
-    FromSharedCBOR (..),
-    Interns,
-    Sized (..),
-    ToCBOR (..),
-    TokenType (..),
-    cborError,
-    decodeBreakOr,
-    decodeFullAnnotator,
-    decodeListLenOrIndef,
-    decodeNestedCborBytes,
-    encodeNestedCbor,
-    getDecoderVersion,
-    interns,
-    peekTokenType,
-  )
+import Cardano.Ledger.BaseTypes (
+  StrictMaybe (..),
+  maybeToStrictMaybe,
+  strictMaybeToMaybe,
+ )
+import Cardano.Ledger.Binary (
+  Annotator (..),
+  Decoder,
+  DecoderError (..),
+  Encoding,
+  FromCBOR (..),
+  FromSharedCBOR (..),
+  Interns,
+  Sized (..),
+  ToCBOR (..),
+  TokenType (..),
+  cborError,
+  decodeBreakOr,
+  decodeFullAnnotator,
+  decodeListLenOrIndef,
+  decodeNestedCborBytes,
+  encodeNestedCbor,
+  getDecoderVersion,
+  interns,
+  peekTokenType,
+ )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible
@@ -101,10 +101,10 @@ import qualified Cardano.Ledger.Core as Core (TxOut)
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto (ADDRHASH), StandardCrypto)
 import Cardano.Ledger.Keys (KeyRole (..))
-import Cardano.Ledger.Val
-  ( DecodeNonNegative (decodeNonNegative),
-    Val (..),
-  )
+import Cardano.Ledger.Val (
+  DecodeNonNegative (decodeNonNegative),
+  Val (..),
+ )
 import Control.DeepSeq (NFData (rnf), rwhnf)
 import Control.Monad ((<$!>))
 import qualified Data.ByteString.Lazy as LBS
@@ -353,17 +353,17 @@ mkTxOut ::
   StrictMaybe (Script era) ->
   BabbageTxOut era
 mkTxOut addr _cAddr vl NoDatum SNothing
-  | Just adaCompact <- getAdaOnly (Proxy @era) vl,
-    Addr network paymentCred stakeRef <- addr,
-    StakeRefBase stakeCred <- stakeRef,
-    Just (Refl, addr28Extra) <- encodeAddress28 network paymentCred =
+  | Just adaCompact <- getAdaOnly (Proxy @era) vl
+  , Addr network paymentCred stakeRef <- addr
+  , StakeRefBase stakeCred <- stakeRef
+  , Just (Refl, addr28Extra) <- encodeAddress28 network paymentCred =
       TxOut_AddrHash28_AdaOnly stakeCred addr28Extra adaCompact
 mkTxOut addr _cAddr vl (DatumHash dh) SNothing
-  | Just adaCompact <- getAdaOnly (Proxy @era) vl,
-    Addr network paymentCred stakeRef <- addr,
-    StakeRefBase stakeCred <- stakeRef,
-    Just (Refl, addr28Extra) <- encodeAddress28 network paymentCred,
-    Just (Refl, dataHash32) <- encodeDataHash32 dh =
+  | Just adaCompact <- getAdaOnly (Proxy @era) vl
+  , Addr network paymentCred stakeRef <- addr
+  , StakeRefBase stakeCred <- stakeRef
+  , Just (Refl, addr28Extra) <- encodeAddress28 network paymentCred
+  , Just (Refl, dataHash32) <- encodeDataHash32 dh =
       TxOut_AddrHash28_AdaOnly_DataHash32 stakeCred addr28Extra adaCompact dataHash32
 mkTxOut _addr cAddr vl d rs =
   let cVal = fromMaybe (error "Illegal value in txout") $ toCompact vl
@@ -434,20 +434,20 @@ instance
 -- toCBOR (TxOutCompactRefScript addr cv d rs) = encodeTxOut addr cv d (SJust rs)
 
 instance
-  ( Era era,
-    Val (Value era),
-    FromCBOR (Annotator (Script era)),
-    DecodeNonNegative (Value era)
+  ( Era era
+  , Val (Value era)
+  , FromCBOR (Annotator (Script era))
+  , DecodeNonNegative (Value era)
   ) =>
   FromCBOR (BabbageTxOut era)
   where
   fromCBOR = decodeBabbageTxOut
 
 instance
-  ( Era era,
-    Val (Value era),
-    FromCBOR (Annotator (Script era)),
-    DecodeNonNegative (Value era)
+  ( Era era
+  , Val (Value era)
+  , FromCBOR (Annotator (Script era))
+  , DecodeNonNegative (Value era)
   ) =>
   FromSharedCBOR (BabbageTxOut era)
   where
@@ -513,10 +513,10 @@ encodeTxOut addr val datum script =
       !> encodeKeyedStrictMaybeWith 3 encodeNestedCbor script
 
 data DecodingTxOut era = DecodingTxOut
-  { decodingTxOutAddr :: !(StrictMaybe (Addr (EraCrypto era), CompactAddr (EraCrypto era))),
-    decodingTxOutVal :: !(Value era),
-    decodingTxOutDatum :: !(Datum era),
-    decodingTxOutScript :: !(StrictMaybe (Script era))
+  { decodingTxOutAddr :: !(StrictMaybe (Addr (EraCrypto era), CompactAddr (EraCrypto era)))
+  , decodingTxOutVal :: !(Value era)
+  , decodingTxOutDatum :: !(Datum era)
+  , decodingTxOutScript :: !(StrictMaybe (Script era))
   }
 
 {-# INLINE decodeTxOut #-}
@@ -553,8 +553,8 @@ decodeTxOut decAddr = do
         (D $ decodeCIC "Script")
     bodyFields n = field (\_ t -> t) (Invalid n)
     requiredFields =
-      [ (0, "addr"),
-        (1, "val")
+      [ (0, "addr")
+      , (1, "val")
       ]
 
 babbageMinUTxOValue ::

@@ -12,12 +12,12 @@ import Cardano.Ledger.Allegra.Rules (AllegraUTXO, AllegraUTXOW)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary.Value (MaryValue)
-import Cardano.Ledger.Shelley.PParams
-  ( ShelleyPParams,
-    ShelleyPParamsHKD (..),
-    ShelleyPParamsUpdate,
-    updatePParams,
-  )
+import Cardano.Ledger.Shelley.PParams (
+  ShelleyPParams,
+  ShelleyPParamsHKD (..),
+  ShelleyPParamsUpdate,
+  updatePParams,
+ )
 import Cardano.Ledger.Shelley.Rules
 
 data MaryEra era

@@ -12,14 +12,14 @@ import Data.Bitraversable (bitraverse)
 import qualified Data.Map.Strict as M
 import Hedgehog (Gen, Property, Range, assert, forAll, property, (===))
 import qualified Hedgehog.Gen as Gen
-import Hedgehog.Internal.Gen
-  ( atLeast,
-    ensure,
-    mapGenT,
-    runDiscardEffectT,
-    toTree,
-    toTreeMaybeT,
-  )
+import Hedgehog.Internal.Gen (
+  atLeast,
+  ensure,
+  mapGenT,
+  runDiscardEffectT,
+  toTree,
+  toTreeMaybeT,
+ )
 import Hedgehog.Internal.Tree (NodeT (..), TreeT (..), treeValue)
 import qualified Hedgehog.Internal.Tree as Tree
 import qualified Hedgehog.Range as Range

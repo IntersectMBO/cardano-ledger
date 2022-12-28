@@ -1,19 +1,19 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Test.Cardano.Chain.UTxO.Compact
-  ( tests,
-  )
+module Test.Cardano.Chain.UTxO.Compact (
+  tests,
+)
 where
 
-import Cardano.Chain.UTxO
-  ( fromCompactTxId,
-    fromCompactTxIn,
-    fromCompactTxOut,
-    toCompactTxId,
-    toCompactTxIn,
-    toCompactTxOut,
-  )
+import Cardano.Chain.UTxO (
+  fromCompactTxId,
+  fromCompactTxIn,
+  fromCompactTxOut,
+  toCompactTxId,
+  toCompactTxIn,
+  toCompactTxOut,
+ )
 import Cardano.HeapWords (HeapWords (..))
 import Cardano.Prelude
 import Hedgehog (MonadTest, assert, forAll, property, tripping)

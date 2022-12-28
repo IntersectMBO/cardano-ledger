@@ -13,21 +13,21 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 -- | Infrastructure for generating STS Traces over any Era
-module Test.Cardano.Ledger.Shelley.Generator.EraGen
-  ( genUtxo0,
-    genesisId,
-    EraGen (..),
-    MinLEDGER_STS,
-    MinCHAIN_STS,
-    MinUTXO_STS,
-    MinGenTxout (..),
-    Label (..),
-    Sets (..),
-    someKeyPairs,
-    allScripts,
-    mkDummyHash,
-    randomByHash,
-  )
+module Test.Cardano.Ledger.Shelley.Generator.EraGen (
+  genUtxo0,
+  genesisId,
+  EraGen (..),
+  MinLEDGER_STS,
+  MinCHAIN_STS,
+  MinUTXO_STS,
+  MinGenTxout (..),
+  Label (..),
+  Sets (..),
+  someKeyPairs,
+  allScripts,
+  mkDummyHash,
+  randomByHash,
+)
 where
 
 import qualified Cardano.Crypto.Hash as Hash
@@ -40,15 +40,15 @@ import qualified Cardano.Ledger.Crypto as CC (Crypto, HASH)
 import Cardano.Ledger.Keys (KeyRole (Witness))
 import Cardano.Ledger.Pretty (PrettyA (..))
 import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
-import Cardano.Ledger.Shelley.API
-  ( Addr (Addr),
-    Block (..),
-    Credential (ScriptHashObj),
-    LedgerEnv,
-    LedgerState,
-    ShelleyLedgersEnv,
-    StakeReference (StakeRefBase),
-  )
+import Cardano.Ledger.Shelley.API (
+  Addr (Addr),
+  Block (..),
+  Credential (ScriptHashObj),
+  LedgerEnv,
+  LedgerState,
+  ShelleyLedgersEnv,
+  StakeReference (StakeRefBase),
+ )
 import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses, UTxOState (..))
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules (UtxoEnv)
@@ -71,19 +71,19 @@ import Lens.Micro
 import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPairs, mkAddr)
 import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
-import Test.Cardano.Ledger.Shelley.Generator.Core
-  ( GenEnv (..),
-    ScriptInfo,
-    TwoPhase2ArgInfo (..),
-    TwoPhase3ArgInfo (..),
-    genesisCoins,
-  )
-import Test.Cardano.Ledger.Shelley.Generator.ScriptClass
-  ( ScriptClass,
-    baseScripts,
-    combinedScripts,
-    keyPairs,
-  )
+import Test.Cardano.Ledger.Shelley.Generator.Core (
+  GenEnv (..),
+  ScriptInfo,
+  TwoPhase2ArgInfo (..),
+  TwoPhase3ArgInfo (..),
+  genesisCoins,
+ )
+import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (
+  ScriptClass,
+  baseScripts,
+  combinedScripts,
+  keyPairs,
+ )
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState)
 import Test.Cardano.Ledger.Shelley.Utils (Split (..))
 import Test.QuickCheck (Gen, choose, shuffle)
@@ -120,51 +120,51 @@ import Test.QuickCheck (Gen, choose, shuffle)
 
 -- | Minimal requirements on the LEDGER and LEDGERS instances
 type MinLEDGER_STS era =
-  ( Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era,
-    BaseM (EraRule "LEDGER" era) ~ ShelleyBase,
-    Signal (EraRule "LEDGER" era) ~ Tx era,
-    State (EraRule "LEDGER" era) ~ LedgerState era,
-    Environment (EraRule "LEDGER" era) ~ LedgerEnv era,
-    BaseM (EraRule "LEDGERS" era) ~ ShelleyBase,
-    State (EraRule "LEDGERS" era) ~ LedgerState era,
-    Signal (EraRule "LEDGERS" era) ~ Seq (Tx era),
-    STS (EraRule "LEDGER" era)
+  ( Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
+  , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
+  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , BaseM (EraRule "LEDGERS" era) ~ ShelleyBase
+  , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
+  , STS (EraRule "LEDGER" era)
   )
 
 -- | Minimal requirements on the CHAIN instances
 type MinCHAIN_STS era =
-  ( STS (CHAIN era),
-    BaseM (CHAIN era) ~ ShelleyBase,
-    Environment (CHAIN era) ~ (),
-    State (CHAIN era) ~ ChainState era,
-    Signal (CHAIN era) ~ Block (BHeader (EraCrypto era)) era
+  ( STS (CHAIN era)
+  , BaseM (CHAIN era) ~ ShelleyBase
+  , Environment (CHAIN era) ~ ()
+  , State (CHAIN era) ~ ChainState era
+  , Signal (CHAIN era) ~ Block (BHeader (EraCrypto era)) era
   )
 
 -- | Minimal requirements on the UTxO instances
 type MinUTXO_STS era =
-  ( STS (EraRule "UTXOW" era),
-    BaseM (EraRule "UTXOW" era) ~ ShelleyBase,
-    State (EraRule "UTXOW" era) ~ UTxOState era,
-    Environment (EraRule "UTXOW" era) ~ UtxoEnv era,
-    Signal (EraRule "UTXOW" era) ~ Tx era,
-    State (EraRule "UTXO" era) ~ UTxOState era,
-    Environment (EraRule "UTXO" era) ~ UtxoEnv era,
-    Signal (EraRule "UTXO" era) ~ Tx era
+  ( STS (EraRule "UTXOW" era)
+  , BaseM (EraRule "UTXOW" era) ~ ShelleyBase
+  , State (EraRule "UTXOW" era) ~ UTxOState era
+  , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
+  , Signal (EraRule "UTXOW" era) ~ Tx era
+  , State (EraRule "UTXO" era) ~ UTxOState era
+  , Environment (EraRule "UTXO" era) ~ UtxoEnv era
+  , Signal (EraRule "UTXO" era) ~ Tx era
   )
 
 -- | Minimal requirements on PParams to generate random stuff
 type MinGenPParams era =
-  ( EraPParams era,
-    Default (PParams era),
-    HasField "_minPoolCost" (PParams era) Coin,
-    HasField "_protocolVersion" (PParams era) ProtVer,
-    HasField "_eMax" (PParams era) EpochNo,
-    HasField "_d" (PParams era) UnitInterval,
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin,
-    HasField "_minfeeA" (PParams era) Natural,
-    HasField "_minUTxOValue" (PParams era) Coin,
-    HasField "_minfeeB" (PParams era) Natural
+  ( EraPParams era
+  , Default (PParams era)
+  , HasField "_minPoolCost" (PParams era) Coin
+  , HasField "_protocolVersion" (PParams era) ProtVer
+  , HasField "_eMax" (PParams era) EpochNo
+  , HasField "_d" (PParams era) UnitInterval
+  , HasField "_keyDeposit" (PParams era) Coin
+  , HasField "_poolDeposit" (PParams era) Coin
+  , HasField "_minfeeA" (PParams era) Natural
+  , HasField "_minUTxOValue" (PParams era) Coin
+  , HasField "_minfeeB" (PParams era) Natural
   )
 
 class Show (TxOut era) => MinGenTxout era where
@@ -177,17 +177,17 @@ class Show (TxOut era) => MinGenTxout era where
 -- ======================================================================================
 
 class
-  ( EraSegWits era,
-    ShelleyEraTxBody era,
-    Split (Value era),
-    ScriptClass era,
-    MinGenPParams era,
-    MinGenTxout era,
-    PrettyA (Tx era),
-    PrettyA (TxBody era),
-    PrettyA (TxWits era),
-    PrettyA (Value era),
-    Default (StashedAVVMAddresses era)
+  ( EraSegWits era
+  , ShelleyEraTxBody era
+  , Split (Value era)
+  , ScriptClass era
+  , MinGenPParams era
+  , MinGenTxout era
+  , PrettyA (Tx era)
+  , PrettyA (TxBody era)
+  , PrettyA (TxWits era)
+  , PrettyA (Value era)
+  , Default (StashedAVVMAddresses era)
   ) =>
   EraGen era
   where

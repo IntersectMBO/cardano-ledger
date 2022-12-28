@@ -6,12 +6,12 @@ module Test.Cardano.Ledger.Alonzo.Examples.Consensus where
 
 import Cardano.Ledger.Allegra.Scripts (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.Alonzo (Alonzo)
-import Cardano.Ledger.Alonzo.Data
-  ( AuxiliaryDataHash (..),
-    Data (..),
-    hashData,
-    mkAlonzoTxAuxData,
-  )
+import Cardano.Ledger.Alonzo.Data (
+  AuxiliaryDataHash (..),
+  Data (..),
+  hashData,
+  mkAlonzoTxAuxData,
+ )
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..), emptyPParams, emptyPParamsUpdate)
@@ -28,17 +28,17 @@ import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Shelley.API
-  ( ApplyTxError (..),
-    Credential (..),
-    Network (..),
-    NewEpochState (..),
-    ProposedPPUpdates (..),
-    RewardAcnt (..),
-    TxId (..),
-    Update (..),
-    Wdrl (..),
-  )
+import Cardano.Ledger.Shelley.API (
+  ApplyTxError (..),
+  Credential (..),
+  Network (..),
+  NewEpochState (..),
+  ProposedPPUpdates (..),
+  RewardAcnt (..),
+  TxId (..),
+  Update (..),
+  Wdrl (..),
+ )
 import Cardano.Ledger.Shelley.Rules (ShelleyDelegsPredFailure (..), ShelleyLedgerPredFailure (..))
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.TxIn (mkTxInPartial)
@@ -61,33 +61,33 @@ import Test.Cardano.Ledger.Shelley.Orphans ()
 ledgerExamplesAlonzo :: SLE.ShelleyLedgerExamples Alonzo
 ledgerExamplesAlonzo =
   SLE.ShelleyLedgerExamples
-    { SLE.sleBlock = SLE.exampleShelleyLedgerBlock exampleTransactionInBlock,
-      SLE.sleHashHeader = SLE.exampleHashHeader (Proxy @Alonzo),
-      SLE.sleTx = exampleTransactionInBlock,
-      SLE.sleApplyTxError =
+    { SLE.sleBlock = SLE.exampleShelleyLedgerBlock exampleTransactionInBlock
+    , SLE.sleHashHeader = SLE.exampleHashHeader (Proxy @Alonzo)
+    , SLE.sleTx = exampleTransactionInBlock
+    , SLE.sleApplyTxError =
         ApplyTxError $
           pure $
             DelegsFailure $
-              DelegateeNotRegisteredDELEG @Alonzo (SLE.mkKeyHash 1),
-      SLE.sleRewardsCredentials =
+              DelegateeNotRegisteredDELEG @Alonzo (SLE.mkKeyHash 1)
+    , SLE.sleRewardsCredentials =
         Set.fromList
-          [ Left (Coin 100),
-            Right (ScriptHashObj (SLE.mkScriptHash 1)),
-            Right (KeyHashObj (SLE.mkKeyHash 2))
-          ],
-      SLE.sleResultExamples = resultExamples,
-      SLE.sleNewEpochState = exampleAlonzoNewEpochState,
-      SLE.sleChainDepState = SLE.exampleLedgerChainDepState 1,
-      SLE.sleTranslationContext = exampleAlonzoGenesis
+          [ Left (Coin 100)
+          , Right (ScriptHashObj (SLE.mkScriptHash 1))
+          , Right (KeyHashObj (SLE.mkKeyHash 2))
+          ]
+    , SLE.sleResultExamples = resultExamples
+    , SLE.sleNewEpochState = exampleAlonzoNewEpochState
+    , SLE.sleChainDepState = SLE.exampleLedgerChainDepState 1
+    , SLE.sleTranslationContext = exampleAlonzoGenesis
     }
   where
     resultExamples =
       SLE.ShelleyResultExamples
-        { SLE.srePParams = def,
-          SLE.sreProposedPPUpdates = examplePPPU,
-          SLE.srePoolDistr = SLE.examplePoolDistr,
-          SLE.sreNonMyopicRewards = SLE.exampleNonMyopicRewards,
-          SLE.sreShelleyGenesis = SLE.testShelleyGenesis
+        { SLE.srePParams = def
+        , SLE.sreProposedPPUpdates = examplePPPU
+        , SLE.srePoolDistr = SLE.examplePoolDistr
+        , SLE.sreNonMyopicRewards = SLE.exampleNonMyopicRewards
+        , SLE.sreShelleyGenesis = SLE.testShelleyGenesis
         }
     examplePPPU =
       ProposedPPUpdates $
@@ -175,14 +175,14 @@ exampleAlonzoNewEpochState =
 exampleAlonzoGenesis :: AlonzoGenesis
 exampleAlonzoGenesis =
   AlonzoGenesis
-    { coinsPerUTxOWord = Coin 1,
-      costmdls = CostModels $ Map.fromList [(PlutusV1, testingCostModelV1)],
-      prices = Prices (boundRational' 90) (boundRational' 91),
-      maxTxExUnits = ExUnits 123 123,
-      maxBlockExUnits = ExUnits 223 223,
-      maxValSize = 1234,
-      collateralPercentage = 20,
-      maxCollateralInputs = 30
+    { coinsPerUTxOWord = Coin 1
+    , costmdls = CostModels $ Map.fromList [(PlutusV1, testingCostModelV1)]
+    , prices = Prices (boundRational' 90) (boundRational' 91)
+    , maxTxExUnits = ExUnits 123 123
+    , maxBlockExUnits = ExUnits 223 223
+    , maxValSize = 1234
+    , collateralPercentage = 20
+    , maxCollateralInputs = 30
     }
   where
     boundRational' :: HasCallStack => Rational -> NonNegativeInterval

@@ -29,33 +29,33 @@ tests :: IO Bool
 tests = checkParallel $$(discover)
 
 data TestStruct = TestStruct
-  { tsUnit :: (),
-    tsBool :: !Bool,
-    tsInteger :: !Integer,
-    tsWord :: !Word,
-    tsWord8 :: !Word8,
-    tsWord16 :: !Word16,
-    tsWord32 :: !Word32,
-    tsWord64 :: !Word64,
-    tsInt :: !Int,
-    tsFloat :: !Float,
-    tsInt32 :: !Int32,
-    tsInt64 :: !Int64,
-    tsTupleBoolBool :: !(Bool, Bool),
-    tsTupleBoolBoolBool :: !(Bool, Bool, Bool),
-    tsTupleBoolBoolBoolBool :: !(Bool, Bool, Bool, Bool),
-    tsByteString :: !BS.ByteString,
-    tsText :: !Text,
-    tsListBool :: ![Bool],
-    tsEitherBoolBool :: !(Either Bool Bool),
-    tsNonEmptyBool :: !(NonEmpty Bool),
-    tsMaybeBool :: !(Maybe Bool),
-    tsMapBoolBool :: !(Map Bool Bool),
-    tsSetBool :: !(Set Bool),
-    tsVectorBool :: !(V.Vector Bool),
-    tsLByteString :: BS.Lazy.ByteString,
-    tsSByteString :: BS.Short.ShortByteString,
-    tsUTCTime :: Time.UTCTime
+  { tsUnit :: ()
+  , tsBool :: !Bool
+  , tsInteger :: !Integer
+  , tsWord :: !Word
+  , tsWord8 :: !Word8
+  , tsWord16 :: !Word16
+  , tsWord32 :: !Word32
+  , tsWord64 :: !Word64
+  , tsInt :: !Int
+  , tsFloat :: !Float
+  , tsInt32 :: !Int32
+  , tsInt64 :: !Int64
+  , tsTupleBoolBool :: !(Bool, Bool)
+  , tsTupleBoolBoolBool :: !(Bool, Bool, Bool)
+  , tsTupleBoolBoolBoolBool :: !(Bool, Bool, Bool, Bool)
+  , tsByteString :: !BS.ByteString
+  , tsText :: !Text
+  , tsListBool :: ![Bool]
+  , tsEitherBoolBool :: !(Either Bool Bool)
+  , tsNonEmptyBool :: !(NonEmpty Bool)
+  , tsMaybeBool :: !(Maybe Bool)
+  , tsMapBoolBool :: !(Map Bool Bool)
+  , tsSetBool :: !(Set Bool)
+  , tsVectorBool :: !(V.Vector Bool)
+  , tsLByteString :: BS.Lazy.ByteString
+  , tsSByteString :: BS.Short.ShortByteString
+  , tsUTCTime :: Time.UTCTime
   }
   deriving (Show, Eq)
 

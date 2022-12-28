@@ -1,8 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Test.Cardano.Chain.Config
-  ( readMainetCfg,
-  )
+module Test.Cardano.Chain.Config (
+  readMainetCfg,
+)
 where
 
 import qualified Cardano.Chain.Genesis as Genesis

@@ -5,33 +5,33 @@
 -- |
 -- Module      : Test.Cardano.Ledger.Alonzo.Golden
 -- Description : Golden Tests for the Alonzo era
-module Test.Cardano.Ledger.Alonzo.Golden
-  ( goldenUTxOEntryMinAda,
-    goldenSerialization,
-    goldenMinFee,
-    goldenScriptIntegrity,
-    goldenGenesisSerialization,
-  )
+module Test.Cardano.Ledger.Alonzo.Golden (
+  goldenUTxOEntryMinAda,
+  goldenSerialization,
+  goldenMinFee,
+  goldenScriptIntegrity,
+  goldenGenesisSerialization,
+)
 where
 
 import Cardano.Ledger.Alonzo (Alonzo)
 import Cardano.Ledger.Alonzo.Data (Data (..), hashData)
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.PParams
-  ( AlonzoPParams,
-    AlonzoPParamsHKD (..),
-    LangDepView (..),
-    emptyPParams,
-    getLanguageView,
-  )
-import Cardano.Ledger.Alonzo.Scripts
-  ( CostModel,
-    CostModels (..),
-    ExUnits (..),
-    Prices (..),
-    mkCostModel,
-  )
+import Cardano.Ledger.Alonzo.PParams (
+  AlonzoPParams,
+  AlonzoPParamsHKD (..),
+  LangDepView (..),
+  emptyPParams,
+  getLanguageView,
+ )
+import Cardano.Ledger.Alonzo.Scripts (
+  CostModel,
+  CostModels (..),
+  ExUnits (..),
+  Prices (..),
+  mkCostModel,
+ )
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), utxoEntrySize)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), boundRational)
 import Cardano.Ledger.Binary (decodeFullAnnotator, fromCBOR, serialize)
@@ -53,15 +53,15 @@ import Test.Cardano.Ledger.Alonzo.AlonzoEraGen (freeCostModel)
 import Test.Cardano.Ledger.Alonzo.Examples.Consensus (ledgerExamplesAlonzo)
 import Test.Cardano.Ledger.Alonzo.Serialisation.CDDL (readDataFile)
 import Test.Cardano.Ledger.EraBuffet (StandardCrypto)
-import Test.Cardano.Ledger.Mary.Golden
-  ( largestName,
-    minUTxO,
-    pid1,
-    pid2,
-    pid3,
-    smallName,
-    smallestName,
-  )
+import Test.Cardano.Ledger.Mary.Golden (
+  largestName,
+  minUTxO,
+  pid1,
+  pid2,
+  pid3,
+  smallName,
+  smallestName,
+ )
 import Test.Cardano.Ledger.Shelley.Examples.Cast (aliceAddr, bobAddr, carlAddr)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as SLE
 import Test.Tasty (TestTree, testGroup)
@@ -89,84 +89,84 @@ goldenUTxOEntryMinAda =
               (valueFromList 1407406 [(pid1, smallestName, 1)])
               (SJust $ hashData @Alonzo (Data (PV1.List [])))
           )
-          @?= Coin 1655136,
-      testCase "one policy, one (smallest) name, no datum hash" $
+          @?= Coin 1655136
+    , testCase "one policy, one (smallest) name, no datum hash" $
         calcMinUTxO
           ( AlonzoTxOut
               bobAddr
               (valueFromList 1407406 [(pid1, smallestName, 1)])
               SNothing
           )
-          @?= Coin 1310316,
-      testCase "one policy, one (small) name" $
+          @?= Coin 1310316
+    , testCase "one policy, one (small) name" $
         calcMinUTxO
           ( AlonzoTxOut
               aliceAddr
               (valueFromList 1444443 [(pid1, smallName 1, 1)])
               SNothing
           )
-          @?= Coin 1344798,
-      testCase "one policy, three (small) names" $
+          @?= Coin 1344798
+    , testCase "one policy, three (small) names" $
         calcMinUTxO
           ( AlonzoTxOut
               aliceAddr
               ( valueFromList
                   1555554
-                  [ (pid1, smallName 1, 1),
-                    (pid1, smallName 2, 1),
-                    (pid1, smallName 3, 1)
+                  [ (pid1, smallName 1, 1)
+                  , (pid1, smallName 2, 1)
+                  , (pid1, smallName 3, 1)
                   ]
               )
               SNothing
           )
-          @?= Coin 1448244,
-      testCase "one policy, one (largest) name" $
+          @?= Coin 1448244
+    , testCase "one policy, one (largest) name" $
         calcMinUTxO
           ( AlonzoTxOut
               carlAddr
               (valueFromList 1555554 [(pid1, largestName 65, 1)])
               SNothing
           )
-          @?= Coin 1448244,
-      testCase "one policy, three (largest) name, with hash" $
+          @?= Coin 1448244
+    , testCase "one policy, three (largest) name, with hash" $
         calcMinUTxO
           ( AlonzoTxOut
               carlAddr
               ( valueFromList
                   1962961
-                  [ (pid1, largestName 65, 1),
-                    (pid1, largestName 66, 1),
-                    (pid1, largestName 67, 1)
+                  [ (pid1, largestName 65, 1)
+                  , (pid1, largestName 66, 1)
+                  , (pid1, largestName 67, 1)
                   ]
               )
               (SJust $ hashData @Alonzo (Data (PV1.Constr 0 [PV1.Constr 0 []])))
           )
-          @?= Coin 2172366,
-      testCase "two policies, one (smallest) name" $
+          @?= Coin 2172366
+    , testCase "two policies, one (smallest) name" $
         calcMinUTxO
           ( AlonzoTxOut
               aliceAddr
               (valueFromList 1592591 [(pid1, smallestName, 1), (pid2, smallestName, 1)])
               SNothing
           )
-          @?= Coin 1482726,
-      testCase "two policies, one (smallest) name, with hash" $
+          @?= Coin 1482726
+    , testCase "two policies, one (smallest) name, with hash" $
         calcMinUTxO
           ( AlonzoTxOut
               aliceAddr
               (valueFromList 1592591 [(pid1, smallestName, 1), (pid2, smallestName, 1)])
               (SJust $ hashData @Alonzo (Data (PV1.Constr 0 [])))
           )
-          @?= Coin 1827546,
-      testCase "two policies, two (small) names" $
+          @?= Coin 1827546
+    , testCase "two policies, two (small) names" $
         calcMinUTxO
           ( AlonzoTxOut
               bobAddr
               (valueFromList 1629628 [(pid1, smallName 1, 1), (pid2, smallName 2, 1)])
               SNothing
           )
-          @?= Coin 1517208,
-      testCase "three policies, ninety-six (small) names" $
+          @?= Coin 1517208
+    , testCase "three policies, ninety-six (small) names" $
         calcMinUTxO
           ( AlonzoTxOut
               aliceAddr
@@ -175,8 +175,8 @@ goldenUTxOEntryMinAda =
               )
               SNothing
           )
-          @?= Coin 6896400,
-      testCase "utxo entry size of ada-only" $
+          @?= Coin 6896400
+    , testCase "utxo entry size of ada-only" $
         -- This value, 29, is helpful for comparing the alonzo protocol parameter utxoCostPerWord
         -- with the old parameter minUTxOValue.
         -- If we wish to keep the ada-only, no datum hash, minimum value nearly the same,
@@ -190,8 +190,8 @@ goldenSerialization =
     "golden tests - serialization"
     [ testCase "Alonzo Block" $ do
         expected <- readDataFile "golden/block.cbor"
-        serialize (eraProtVerHigh @Alonzo) (SLE.sleBlock ledgerExamplesAlonzo) @?= expected,
-      testCase "Alonzo Tx" $ do
+        serialize (eraProtVerHigh @Alonzo) (SLE.sleBlock ledgerExamplesAlonzo) @?= expected
+    , testCase "Alonzo Tx" $ do
         expected <- readDataFile "golden/tx.cbor"
         serialize (eraProtVerHigh @Alonzo) (SLE.sleTx ledgerExamplesAlonzo) @?= expected
     ]
@@ -299,21 +299,21 @@ goldenScriptIntegrity :: TestTree
 goldenScriptIntegrity =
   testGroup
     "golden tests - script integrity hash"
-    [ testCase "PlutusV1" $ testScriptIntegritpHash exPP PlutusV1 exampleLangDepViewPV1,
-      testCase "PlutusV2" $ testScriptIntegritpHash exPP PlutusV2 exampleLangDepViewPV2
+    [ testCase "PlutusV1" $ testScriptIntegritpHash exPP PlutusV1 exampleLangDepViewPV1
+    , testCase "PlutusV2" $ testScriptIntegritpHash exPP PlutusV2 exampleLangDepViewPV2
     ]
 
 expectedGenesis :: AlonzoGenesis
 expectedGenesis =
   AlonzoGenesis
-    { coinsPerUTxOWord = Coin 34482,
-      prices = Prices (fromJust $ boundRational 0.0577) (fromJust $ boundRational 0.0000721),
-      costmdls = CostModels $ Map.fromList [(PlutusV1, expectedCostModel), (PlutusV2, expectedCostModelV2)],
-      maxTxExUnits = ExUnits 10000000 10000000000,
-      maxBlockExUnits = ExUnits 50000000 40000000000,
-      maxValSize = 5000,
-      collateralPercentage = 150,
-      maxCollateralInputs = 3
+    { coinsPerUTxOWord = Coin 34482
+    , prices = Prices (fromJust $ boundRational 0.0577) (fromJust $ boundRational 0.0000721)
+    , costmdls = CostModels $ Map.fromList [(PlutusV1, expectedCostModel), (PlutusV2, expectedCostModelV2)]
+    , maxTxExUnits = ExUnits 10000000 10000000000
+    , maxBlockExUnits = ExUnits 50000000 40000000000
+    , maxValSize = 5000
+    , collateralPercentage = 150
+    , maxCollateralInputs = 3
     }
 
 expectedCostModel :: CostModel
@@ -330,170 +330,170 @@ expectedCostModelV2 =
 
 expectedPParams :: [Integer]
 expectedPParams =
-  [ 197209,
-    0,
-    1,
-    1,
-    396231,
-    621,
-    0,
-    1,
-    150000,
-    1000,
-    0,
-    1,
-    150000,
-    32,
-    2477736,
-    29175,
-    4,
-    29773,
-    100,
-    29773,
-    100,
-    29773,
-    100,
-    29773,
-    100,
-    29773,
-    100,
-    29773,
-    100,
-    100,
-    100,
-    29773,
-    100,
-    150000,
-    32,
-    150000,
-    32,
-    150000,
-    32,
-    150000,
-    1000,
-    0,
-    1,
-    150000,
-    32,
-    150000,
-    1000,
-    0,
-    8,
-    148000,
-    425507,
-    118,
-    0,
-    1,
-    1,
-    150000,
-    1000,
-    0,
-    8,
-    150000,
-    112536,
-    247,
-    1,
-    150000,
-    10000,
-    1,
-    136542,
-    1326,
-    1,
-    1000,
-    150000,
-    1000,
-    1,
-    150000,
-    32,
-    150000,
-    32,
-    150000,
-    32,
-    1,
-    1,
-    150000,
-    1,
-    150000,
-    4,
-    103599,
-    248,
-    1,
-    103599,
-    248,
-    1,
-    145276,
-    1366,
-    1,
-    179690,
-    497,
-    1,
-    150000,
-    32,
-    150000,
-    32,
-    150000,
-    32,
-    150000,
-    32,
-    150000,
-    32,
-    150000,
-    32,
-    148000,
-    425507,
-    118,
-    0,
-    1,
-    1,
-    61516,
-    11218,
-    0,
-    1,
-    150000,
-    32,
-    148000,
-    425507,
-    118,
-    0,
-    1,
-    1,
-    148000,
-    425507,
-    118,
-    0,
-    1,
-    1,
-    2477736,
-    29175,
-    4,
-    0,
-    82363,
-    4,
-    150000,
-    5000,
-    0,
-    1,
-    150000,
-    32,
-    197209,
-    0,
-    1,
-    1,
-    150000,
-    32,
-    150000,
-    32,
-    150000,
-    32,
-    150000,
-    32,
-    150000,
-    32,
-    150000,
-    32,
-    150000,
-    32,
-    3345831,
-    1,
-    1
+  [ 197209
+  , 0
+  , 1
+  , 1
+  , 396231
+  , 621
+  , 0
+  , 1
+  , 150000
+  , 1000
+  , 0
+  , 1
+  , 150000
+  , 32
+  , 2477736
+  , 29175
+  , 4
+  , 29773
+  , 100
+  , 29773
+  , 100
+  , 29773
+  , 100
+  , 29773
+  , 100
+  , 29773
+  , 100
+  , 29773
+  , 100
+  , 100
+  , 100
+  , 29773
+  , 100
+  , 150000
+  , 32
+  , 150000
+  , 32
+  , 150000
+  , 32
+  , 150000
+  , 1000
+  , 0
+  , 1
+  , 150000
+  , 32
+  , 150000
+  , 1000
+  , 0
+  , 8
+  , 148000
+  , 425507
+  , 118
+  , 0
+  , 1
+  , 1
+  , 150000
+  , 1000
+  , 0
+  , 8
+  , 150000
+  , 112536
+  , 247
+  , 1
+  , 150000
+  , 10000
+  , 1
+  , 136542
+  , 1326
+  , 1
+  , 1000
+  , 150000
+  , 1000
+  , 1
+  , 150000
+  , 32
+  , 150000
+  , 32
+  , 150000
+  , 32
+  , 1
+  , 1
+  , 150000
+  , 1
+  , 150000
+  , 4
+  , 103599
+  , 248
+  , 1
+  , 103599
+  , 248
+  , 1
+  , 145276
+  , 1366
+  , 1
+  , 179690
+  , 497
+  , 1
+  , 150000
+  , 32
+  , 150000
+  , 32
+  , 150000
+  , 32
+  , 150000
+  , 32
+  , 150000
+  , 32
+  , 150000
+  , 32
+  , 148000
+  , 425507
+  , 118
+  , 0
+  , 1
+  , 1
+  , 61516
+  , 11218
+  , 0
+  , 1
+  , 150000
+  , 32
+  , 148000
+  , 425507
+  , 118
+  , 0
+  , 1
+  , 1
+  , 148000
+  , 425507
+  , 118
+  , 0
+  , 1
+  , 1
+  , 2477736
+  , 29175
+  , 4
+  , 0
+  , 82363
+  , 4
+  , 150000
+  , 5000
+  , 0
+  , 1
+  , 150000
+  , 32
+  , 197209
+  , 0
+  , 1
+  , 1
+  , 150000
+  , 32
+  , 150000
+  , 32
+  , 150000
+  , 32
+  , 150000
+  , 32
+  , 150000
+  , 32
+  , 150000
+  , 32
+  , 150000
+  , 32
+  , 3345831
+  , 1
+  , 1
   ]

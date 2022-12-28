@@ -5,26 +5,26 @@
 {-# LANGUAGE TypeApplications #-}
 
 -- | Secure generation of random numbers and 'ByteString's
-module Cardano.Crypto.Random
-  ( SecureRandom (..),
-    deterministic,
-    randomNumber,
-    randomNumberInRange,
-  )
+module Cardano.Crypto.Random (
+  SecureRandom (..),
+  deterministic,
+  randomNumber,
+  randomNumberInRange,
+)
 where
 
 import Cardano.Prelude
 import Crypto.Number.Basic (numBytes)
 import Crypto.Number.Serialize (os2ip)
-import Crypto.Random
-  ( ChaChaDRG,
-    MonadPseudoRandom,
-    MonadRandom,
-    drgNewSeed,
-    getRandomBytes,
-    seedFromInteger,
-    withDRG,
-  )
+import Crypto.Random (
+  ChaChaDRG,
+  MonadPseudoRandom,
+  MonadRandom,
+  drgNewSeed,
+  getRandomBytes,
+  seedFromInteger,
+  withDRG,
+ )
 import Crypto.Random.Entropy (getEntropy)
 
 -- | You can use 'runSecureRandom' on any 'MonadRandom' computation to

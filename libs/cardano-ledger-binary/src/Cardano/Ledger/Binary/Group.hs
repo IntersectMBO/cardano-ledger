@@ -1,13 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 
-module Cardano.Ledger.Binary.Group
-  ( CBORGroup (..),
-    groupRecord,
-    ToCBORGroup (..),
-    listLenInt,
-    FromCBORGroup (..),
-  )
+module Cardano.Ledger.Binary.Group (
+  CBORGroup (..),
+  groupRecord,
+  ToCBORGroup (..),
+  listLenInt,
+  FromCBORGroup (..),
+)
 where
 
 import Cardano.Ledger.Binary.Decoding

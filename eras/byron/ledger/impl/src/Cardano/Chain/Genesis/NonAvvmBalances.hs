@@ -10,27 +10,27 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-missed-specialisations #-}
 
-module Cardano.Chain.Genesis.NonAvvmBalances
-  ( GenesisNonAvvmBalances (..),
-    convertNonAvvmDataToBalances,
-  )
+module Cardano.Chain.Genesis.NonAvvmBalances (
+  GenesisNonAvvmBalances (..),
+  convertNonAvvmDataToBalances,
+)
 where
 
-import Cardano.Chain.Common
-  ( Address,
-    Lovelace,
-    LovelaceError,
-    addLovelace,
-    decodeAddressBase58,
-    integerToLovelace,
-  )
-import Cardano.Ledger.Binary
-  ( DecoderError,
-    FromCBOR (..),
-    ToCBOR (..),
-    encodeListLen,
-    enforceSize,
-  )
+import Cardano.Chain.Common (
+  Address,
+  Lovelace,
+  LovelaceError,
+  addLovelace,
+  decodeAddressBase58,
+  integerToLovelace,
+ )
+import Cardano.Ledger.Binary (
+  DecoderError,
+  FromCBOR (..),
+  ToCBOR (..),
+  encodeListLen,
+  enforceSize,
+ )
 import Cardano.Prelude
 import qualified Data.Map.Strict as M
 import Formatting (bprint, build)

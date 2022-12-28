@@ -8,32 +8,32 @@
 -- | This module contains previous implementations for Addr and CoompactAddr
 -- deserialization. This is used as an alternative implementation for testing and as a
 -- perforance reference for benchmarking.
-module Test.Cardano.Ledger.Core.Address
-  ( deserialiseAddrOld,
-    deserialiseRewardAcntOld,
-    decompactAddrOld,
-    decompactAddrOldLazy,
-  )
+module Test.Cardano.Ledger.Core.Address (
+  deserialiseAddrOld,
+  deserialiseRewardAcntOld,
+  decompactAddrOld,
+  decompactAddrOldLazy,
+)
 where
 
 import qualified Cardano.Crypto.Hash.Class as Hash
-import Cardano.Ledger.Address
-  ( Addr (..),
-    BootstrapAddress (BootstrapAddress),
-    CompactAddr,
-    RewardAcnt (..),
-    Word7 (..),
-    toWord7,
-    unCompactAddr,
-  )
+import Cardano.Ledger.Address (
+  Addr (..),
+  BootstrapAddress (BootstrapAddress),
+  CompactAddr,
+  RewardAcnt (..),
+  Word7 (..),
+  toWord7,
+  unCompactAddr,
+ )
 import Cardano.Ledger.BaseTypes (CertIx (..), SlotNo (..), TxIx (..), word8ToNetwork)
 import Cardano.Ledger.Binary (byronProtVer, decodeFull, decodeFull')
-import Cardano.Ledger.Credential
-  ( Credential (..),
-    PaymentCredential,
-    Ptr (..),
-    StakeReference (..),
-  )
+import Cardano.Ledger.Credential (
+  Credential (..),
+  PaymentCredential,
+  Ptr (..),
+  StakeReference (..),
+ )
 import Cardano.Ledger.Crypto (ADDRHASH, Crypto)
 import Cardano.Ledger.Hashes (ScriptHash (ScriptHash))
 import Cardano.Ledger.Keys (KeyHash (..))

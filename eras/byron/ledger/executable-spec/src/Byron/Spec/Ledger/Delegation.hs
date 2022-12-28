@@ -11,141 +11,141 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Byron.Spec.Ledger.Delegation
-  ( -- * Delegation scheduling
-    SDELEG,
-    SDELEGS,
-    DSState (DSState),
-    _dSStateScheduledDelegations,
-    _dSStateKeyEpochDelegations,
-    DCert (DCert),
-    delegator,
-    delegate,
-    depoch,
-    dwho,
-    mkDCert,
-    signature,
+module Byron.Spec.Ledger.Delegation (
+  -- * Delegation scheduling
+  SDELEG,
+  SDELEGS,
+  DSState (DSState),
+  _dSStateScheduledDelegations,
+  _dSStateKeyEpochDelegations,
+  DCert (DCert),
+  delegator,
+  delegate,
+  depoch,
+  dwho,
+  mkDCert,
+  signature,
 
-    -- * Delegation activation
-    ADELEG,
-    ADELEGS,
-    DSEnv
-      ( DSEnv,
-        _dSEnvAllowedDelegators,
-        _dSEnvEpoch,
-        _dSEnvSlot,
-        _dSEnvK
-      ),
-    allowedDelegators,
-    DState
-      ( DState,
-        _dStateDelegationMap,
-        _dStateLastDelegation
-      ),
+  -- * Delegation activation
+  ADELEG,
+  ADELEGS,
+  DSEnv (
+    DSEnv,
+    _dSEnvAllowedDelegators,
+    _dSEnvEpoch,
+    _dSEnvSlot,
+    _dSEnvK
+  ),
+  allowedDelegators,
+  DState (
+    DState,
+    _dStateDelegationMap,
+    _dStateLastDelegation
+  ),
 
-    -- * Delegation interface
-    DELEG,
-    DIEnv,
-    DIState (DIState),
-    _dIStateDelegationMap,
-    _dIStateLastDelegation,
-    _dIStateScheduledDelegations,
-    _dIStateKeyEpochDelegations,
-    liveAfter,
-    EpochDiff (..),
+  -- * Delegation interface
+  DELEG,
+  DIEnv,
+  DIState (DIState),
+  _dIStateDelegationMap,
+  _dIStateLastDelegation,
+  _dIStateScheduledDelegations,
+  _dIStateKeyEpochDelegations,
+  liveAfter,
+  EpochDiff (..),
 
-    -- * State lens fields
-    slot,
-    epoch,
-    delegationMap,
+  -- * State lens fields
+  slot,
+  epoch,
+  delegationMap,
 
-    -- * State lens type classes
-    HasScheduledDelegations,
-    scheduledDelegations,
-    dmsL,
+  -- * State lens type classes
+  HasScheduledDelegations,
+  scheduledDelegations,
+  dmsL,
 
-    -- * Generators
-    dcertGen,
-    dcertsGen,
-    initialEnvFromGenesisKeys,
-    randomDCertGen,
+  -- * Generators
+  dcertGen,
+  dcertsGen,
+  initialEnvFromGenesisKeys,
+  randomDCertGen,
 
-    -- * Functions on delegation state
-    delegatorOf,
+  -- * Functions on delegation state
+  delegatorOf,
 
-    -- * Support Functions for delegation properties
-    delegatorDelegate,
-    emptyDelegationPayloadRatio,
-    thisEpochDelegationsRatio,
-    nextEpochDelegationsRatio,
-    selfDelegationsRatio,
-    multipleDelegationsRatio,
-    maxDelegationsTo,
-    changedDelegationsRatio,
-    maxChangedDelegations,
-    repeatedDelegationsRatio,
-    maxRepeatedDelegations,
-    maxCertsPerBlock,
+  -- * Support Functions for delegation properties
+  delegatorDelegate,
+  emptyDelegationPayloadRatio,
+  thisEpochDelegationsRatio,
+  nextEpochDelegationsRatio,
+  selfDelegationsRatio,
+  multipleDelegationsRatio,
+  maxDelegationsTo,
+  changedDelegationsRatio,
+  maxChangedDelegations,
+  repeatedDelegationsRatio,
+  maxRepeatedDelegations,
+  maxCertsPerBlock,
 
-    -- * Predicate failures
-    AdelegPredicateFailure (..),
-    AdelegsPredicateFailure (..),
-    SdelegPredicateFailure (..),
-    SdelegsPredicateFailure (..),
-    MsdelegPredicateFailure (..),
-    DelegPredicateFailure (..),
-  )
+  -- * Predicate failures
+  AdelegPredicateFailure (..),
+  AdelegsPredicateFailure (..),
+  SdelegPredicateFailure (..),
+  SdelegsPredicateFailure (..),
+  MsdelegPredicateFailure (..),
+  DelegPredicateFailure (..),
+)
 where
 
-import Byron.Spec.Ledger.Core
-  ( BlockCount,
-    Epoch (Epoch),
-    HasHash,
-    Hash (Hash),
-    Owner (Owner),
-    Sig,
-    Slot (Slot),
-    SlotCount (SlotCount),
-    VKey (VKey),
-    VKeyGenesis (VKeyGenesis),
-    addSlot,
-    hash,
-    mkVkGenesisSet,
-    owner,
-    range,
-    unBlockCount,
-    unVKeyGenesis,
-    verify,
-    (∈),
-    (∉),
-    (⨃),
-  )
+import Byron.Spec.Ledger.Core (
+  BlockCount,
+  Epoch (Epoch),
+  HasHash,
+  Hash (Hash),
+  Owner (Owner),
+  Sig,
+  Slot (Slot),
+  SlotCount (SlotCount),
+  VKey (VKey),
+  VKeyGenesis (VKeyGenesis),
+  addSlot,
+  hash,
+  mkVkGenesisSet,
+  owner,
+  range,
+  unBlockCount,
+  unVKeyGenesis,
+  verify,
+  (∈),
+  (∉),
+  (⨃),
+ )
 import Byron.Spec.Ledger.Core.Generators (epochGen, slotGen)
 import qualified Byron.Spec.Ledger.Core.Generators as CoreGen
 import Byron.Spec.Ledger.Core.Omniscient (signWithGenesisKey)
 import Control.Arrow ((&&&))
-import Control.State.Transition
-  ( Embed,
-    Environment,
-    IRC (IRC),
-    PredicateFailure,
-    STS,
-    Signal,
-    State,
-    TRC (TRC),
-    initialRules,
-    judgmentContext,
-    trans,
-    transitionRules,
-    wrapFailed,
-    (?!),
-  )
-import Control.State.Transition.Generator
-  ( HasTrace,
-    envGen,
-    genTrace,
-    sigGen,
-  )
+import Control.State.Transition (
+  Embed,
+  Environment,
+  IRC (IRC),
+  PredicateFailure,
+  STS,
+  Signal,
+  State,
+  TRC (TRC),
+  initialRules,
+  judgmentContext,
+  trans,
+  transitionRules,
+  wrapFailed,
+  (?!),
+ )
+import Control.State.Transition.Generator (
+  HasTrace,
+  envGen,
+  genTrace,
+  sigGen,
+ )
 import Control.State.Transition.Trace (TraceOrder (OldestFirst), traceSignals)
 import Data.AbstractSize
 import Data.Bimap (Bimap, (!>))
@@ -175,14 +175,14 @@ import NoThunks.Class (NoThunks (..), allNoThunks, noThunksInKeysAndValues)
 
 -- | A delegation certificate.
 data DCert = DCert
-  { -- | Key that delegates
-    delegator :: VKeyGenesis,
-    -- | Key that the delegator is delegating to
-    delegate :: VKey,
-    -- | Certificate epoch
-    depoch :: Epoch,
-    -- | Witness for the delegation certificate
-    signature :: Sig (VKey, Epoch)
+  { delegator :: VKeyGenesis
+  -- ^ Key that delegates
+  , delegate :: VKey
+  -- ^ Key that the delegator is delegating to
+  , depoch :: Epoch
+  -- ^ Certificate epoch
+  , signature :: Sig (VKey, Epoch)
+  -- ^ Witness for the delegation certificate
   }
   deriving (Show, Eq, Ord, Generic, Hashable, Data, Typeable, NoThunks)
 
@@ -199,10 +199,10 @@ mkDCert ::
   DCert
 mkDCert vkg s vkd e =
   DCert
-    { delegator = vkg,
-      delegate = vkd,
-      depoch = e,
-      signature = s
+    { delegator = vkg
+    , delegate = vkd
+    , depoch = e
+    , signature = s
     }
 
 -- | Who is delegating to whom.
@@ -219,14 +219,14 @@ dbody = delegate &&& depoch
 
 -- | Delegation scheduling environment
 data DSEnv = DSEnv
-  { -- | Set of allowed delegators
-    _dSEnvAllowedDelegators :: Set VKeyGenesis,
-    -- | Current epoch
-    _dSEnvEpoch :: Epoch,
-    -- | Current slot
-    _dSEnvSlot :: Slot,
-    -- | Chain stability parameter
-    _dSEnvK :: BlockCount
+  { _dSEnvAllowedDelegators :: Set VKeyGenesis
+  -- ^ Set of allowed delegators
+  , _dSEnvEpoch :: Epoch
+  -- ^ Current epoch
+  , _dSEnvSlot :: Slot
+  -- ^ Current slot
+  , _dSEnvK :: BlockCount
+  -- ^ Chain stability parameter
   }
   deriving (Show, Eq, Generic, NoThunks)
 
@@ -234,8 +234,8 @@ makeFields ''DSEnv
 
 -- | Delegation scheduling state
 data DSState = DSState
-  { _dSStateScheduledDelegations :: [(Slot, (VKeyGenesis, VKey))],
-    _dSStateKeyEpochDelegations :: Set (Epoch, VKeyGenesis)
+  { _dSStateScheduledDelegations :: [(Slot, (VKeyGenesis, VKey))]
+  , _dSStateKeyEpochDelegations :: Set (Epoch, VKeyGenesis)
   }
   deriving (Show, Eq, Generic, NoThunks)
 
@@ -243,17 +243,17 @@ makeFields ''DSState
 
 -- | Delegation state
 data DState = DState
-  { _dStateDelegationMap :: Bimap VKeyGenesis VKey,
-    -- | When was the last time each genesis key delegated.
-    _dStateLastDelegation :: Map VKeyGenesis Slot
+  { _dStateDelegationMap :: Bimap VKeyGenesis VKey
+  , _dStateLastDelegation :: Map VKeyGenesis Slot
+  -- ^ When was the last time each genesis key delegated.
   }
   deriving (Eq, Show, Generic)
 
 instance NoThunks DState where
   wNoThunks ctxt (DState dmap lastDeleg) =
     allNoThunks
-      [ noThunksInKeysAndValues ctxt $ Bimap.toList dmap,
-        noThunksInKeysAndValues ctxt $ Map.toList lastDeleg
+      [ noThunksInKeysAndValues ctxt $ Bimap.toList dmap
+      , noThunksInKeysAndValues ctxt $ Map.toList lastDeleg
       ]
 
 makeFields ''DState
@@ -265,10 +265,10 @@ delegatorOf = flip Bimap.lookupR
 type DIEnv = DSEnv
 
 data DIState = DIState
-  { _dIStateDelegationMap :: Bimap VKeyGenesis VKey,
-    _dIStateLastDelegation :: Map VKeyGenesis Slot,
-    _dIStateScheduledDelegations :: [(Slot, (VKeyGenesis, VKey))],
-    _dIStateKeyEpochDelegations :: Set (Epoch, VKeyGenesis)
+  { _dIStateDelegationMap :: Bimap VKeyGenesis VKey
+  , _dIStateLastDelegation :: Map VKeyGenesis Slot
+  , _dIStateScheduledDelegations :: [(Slot, (VKeyGenesis, VKey))]
+  , _dIStateKeyEpochDelegations :: Set (Epoch, VKeyGenesis)
   }
   deriving (Show, Eq, Generic)
 
@@ -277,10 +277,10 @@ makeFields ''DIState
 instance NoThunks DIState where
   wNoThunks ctxt (DIState dmap lastDeleg sds sked) =
     allNoThunks
-      [ noThunksInKeysAndValues ctxt $ Bimap.toList dmap,
-        noThunksInKeysAndValues ctxt $ Map.toList lastDeleg,
-        wNoThunks ctxt sds,
-        wNoThunks ctxt sked
+      [ noThunksInKeysAndValues ctxt $ Bimap.toList dmap
+      , noThunksInKeysAndValues ctxt $ Map.toList lastDeleg
+      , wNoThunks ctxt sds
+      , wNoThunks ctxt sked
       ]
 
 dmsL ::
@@ -347,8 +347,8 @@ instance STS SDELEG where
   initialRules =
     [ return
         DSState
-          { _dSStateScheduledDelegations = [],
-            _dSStateKeyEpochDelegations = Set.empty
+          { _dSStateScheduledDelegations = []
+          , _dSStateKeyEpochDelegations = Set.empty
           }
     ]
   transitionRules =
@@ -369,8 +369,8 @@ instance STS SDELEG where
           ^. to depoch
           ?! EpochInThePast
             EpochDiff
-              { currentEpoch = env ^. epoch,
-                certEpoch = cert ^. to depoch
+              { currentEpoch = env ^. epoch
+              , certEpoch = cert ^. to depoch
               }
         cert
           ^. to depoch
@@ -379,14 +379,15 @@ instance STS SDELEG where
           + 1
           ?! EpochPastNextEpoch
             EpochDiff
-              { currentEpoch = env ^. epoch,
-                certEpoch = cert ^. to depoch
+              { currentEpoch = env ^. epoch
+              , certEpoch = cert ^. to depoch
               }
         return $
           st
             & scheduledDelegations
-              <>~ [ ( (env ^. slot) `addSlot` d,
-                      cert ^. to dwho
+              <>~ [
+                    ( (env ^. slot) `addSlot` d
+                    , cert ^. to dwho
                     )
                   ]
             & keyEpochDelegations %~ Set.insert (epochDelegator cert)
@@ -439,20 +440,20 @@ instance STS ADELEG where
           DState
             { _dStateDelegationMap =
                 Bimap.fromList $
-                  map (\vkg@(VKeyGenesis key) -> (vkg, key)) (Set.toList env),
-              _dStateLastDelegation = Map.fromSet (const (Slot 0)) env
+                  map (\vkg@(VKeyGenesis key) -> (vkg, key)) (Set.toList env)
+            , _dStateLastDelegation = Map.fromSet (const (Slot 0)) env
             }
     ]
 
   transitionRules =
     [ do
         TRC
-          ( _env,
-            DState
-              { _dStateDelegationMap = dms,
-                _dStateLastDelegation = dws
-              },
-            (s, (vks, vkd))
+          ( _env
+            , DState
+                { _dStateDelegationMap = dms
+                , _dStateLastDelegation = dws
+                }
+            , (s, (vks, vkd))
             ) <-
           judgmentContext
         vkd ∉ range dms ?! S_AlreadyADelegateOf vkd (dms !> vkd)
@@ -462,17 +463,17 @@ instance STS ADELEG where
           Just sp -> sp < s ?! S_BeforeExistingDelegation
         return $!
           DState
-            { _dStateDelegationMap = dms ⨃ [(vks, vkd)],
-              _dStateLastDelegation = dws ⨃ [(vks, s)]
-            },
-      do
+            { _dStateDelegationMap = dms ⨃ [(vks, vkd)]
+            , _dStateLastDelegation = dws ⨃ [(vks, s)]
+            }
+    , do
         TRC
-          ( _env,
-            st@DState
-              { _dStateDelegationMap = dms,
-                _dStateLastDelegation = dws
-              },
-            (s, (vks, vkd))
+          ( _env
+            , st@DState
+                { _dStateDelegationMap = dms
+                , _dStateLastDelegation = dws
+                }
+            , (s, (vks, vkd))
             ) <-
           judgmentContext
         if vkd ∈ range dms
@@ -576,10 +577,10 @@ instance STS DELEG where
         initSDelegsState <- trans @SDELEGS $ IRC env
         pure $!
           DIState
-            { _dIStateDelegationMap = initADelegsState ^. delegationMap,
-              _dIStateLastDelegation = initADelegsState ^. lastDelegation,
-              _dIStateScheduledDelegations = initSDelegsState ^. scheduledDelegations,
-              _dIStateKeyEpochDelegations = initSDelegsState ^. keyEpochDelegations
+            { _dIStateDelegationMap = initADelegsState ^. delegationMap
+            , _dIStateLastDelegation = initADelegsState ^. lastDelegation
+            , _dIStateScheduledDelegations = initSDelegsState ^. scheduledDelegations
+            , _dIStateKeyEpochDelegations = initSDelegsState ^. keyEpochDelegations
             }
     ]
   transitionRules =
@@ -647,8 +648,8 @@ dcertsGen env st =
     n = env ^. allowedDelegators . to length . to fromIntegral
     subSt =
       DSState
-        { _dSStateScheduledDelegations = _dIStateScheduledDelegations st,
-          _dSStateKeyEpochDelegations = _dIStateKeyEpochDelegations st
+        { _dSStateScheduledDelegations = _dIStateScheduledDelegations st
+        , _dSStateKeyEpochDelegations = _dIStateKeyEpochDelegations st
         }
 
 -- | Generate a random delegation certificate, which has a high probability of failing since

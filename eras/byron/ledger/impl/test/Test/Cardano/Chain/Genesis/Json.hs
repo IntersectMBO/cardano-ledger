@@ -2,9 +2,9 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Test.Cardano.Chain.Genesis.Json
-  ( tests,
-  )
+module Test.Cardano.Chain.Genesis.Json (
+  tests,
+)
 where
 
 import Cardano.Prelude
@@ -12,16 +12,16 @@ import GetDataFileName ((<:<))
 import Hedgehog (Property)
 import Test.Cardano.Chain.Delegation.Gen (genCanonicalCertificate)
 import Test.Cardano.Chain.Genesis.Example (exampleGenesisData0)
-import Test.Cardano.Chain.Genesis.Gen
-  ( genCanonicalGenesisData,
-    genCanonicalGenesisDelegation,
-    genGenesisAvvmBalances,
-    genGenesisKeyHashes,
-    genGenesisNonAvvmBalances,
-  )
-import Test.Cardano.Chain.Update.Gen
-  ( genCanonicalProtocolParameters,
-  )
+import Test.Cardano.Chain.Genesis.Gen (
+  genCanonicalGenesisData,
+  genCanonicalGenesisDelegation,
+  genGenesisAvvmBalances,
+  genGenesisKeyHashes,
+  genGenesisNonAvvmBalances,
+ )
+import Test.Cardano.Chain.Update.Gen (
+  genCanonicalProtocolParameters,
+ )
 import Test.Cardano.Crypto.Gen (feedPM)
 import Test.Cardano.Prelude
 import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)

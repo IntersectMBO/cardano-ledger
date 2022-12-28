@@ -10,18 +10,18 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-missed-specialisations #-}
 
-module Cardano.Chain.Genesis.Delegation
-  ( GenesisDelegation (..),
-    GenesisDelegationError,
-    mkGenesisDelegation,
-  )
+module Cardano.Chain.Genesis.Delegation (
+  GenesisDelegation (..),
+  GenesisDelegationError,
+  mkGenesisDelegation,
+)
 where
 
 import Cardano.Chain.Common (KeyHash, hashKey)
-import Cardano.Chain.Delegation.Certificate
-  ( ACertificate (delegateVK, issuerVK),
-    Certificate,
-  )
+import Cardano.Chain.Delegation.Certificate (
+  ACertificate (delegateVK, issuerVK),
+  Certificate,
+ )
 import Cardano.Ledger.Binary
 import Cardano.Prelude
 import Data.List (nub)

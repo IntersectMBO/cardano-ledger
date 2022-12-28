@@ -1,18 +1,18 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Test.Cardano.Crypto.Json
-  ( tests,
-  )
+module Test.Cardano.Crypto.Json (
+  tests,
+)
 where
 
 import Cardano.Prelude
 import GetDataFileName ((<:<))
 import Hedgehog (Property)
 import qualified Hedgehog as H
-import Test.Cardano.Crypto.Example
-  ( exampleProtocolMagic3,
-    exampleProtocolMagic4,
-  )
+import Test.Cardano.Crypto.Example (
+  exampleProtocolMagic3,
+  exampleProtocolMagic4,
+ )
 import Test.Cardano.Prelude
 
 --------------------------------------------------------------------------------

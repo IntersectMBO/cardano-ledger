@@ -13,11 +13,11 @@ tests :: TestTree
 tests =
   testGroup
     "Serialisation tests"
-    [ allegraEncodeDecodeTests,
-      maryEncodeDecodeTests,
-      txBodyTest,
-      timelockTests,
-      cddlTests 10,
-      goldenEncodingTests,
-      allEraRoundtripTests
+    [ allegraEncodeDecodeTests
+    , maryEncodeDecodeTests
+    , txBodyTest
+    , timelockTests
+    , cddlTests 10
+    , goldenEncodingTests
+    , allEraRoundtripTests
     ]

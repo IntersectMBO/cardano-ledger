@@ -6,12 +6,12 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Ledger.AuxiliaryData
-  ( AuxiliaryDataHash (..),
+module Cardano.Ledger.AuxiliaryData (
+  AuxiliaryDataHash (..),
 
-    -- * Deprecations
-    ValidateAuxiliaryData,
-  )
+  -- * Deprecations
+  ValidateAuxiliaryData,
+)
 where
 
 import Cardano.Ledger.Binary (FromCBOR, ToCBOR)

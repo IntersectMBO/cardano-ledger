@@ -8,9 +8,9 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Alonzo.Translation
-  ( tests,
-  )
+module Test.Cardano.Ledger.Alonzo.Translation (
+  tests,
+)
 where
 
 import Cardano.Ledger.Alonzo (Alonzo)
@@ -37,8 +37,8 @@ tests :: TestTree
 tests =
   testGroup
     "Translation"
-    [ alonzoTranslationTests,
-      alonzoEncodeDecodeTests
+    [ alonzoTranslationTests
+    , alonzoEncodeDecodeTests
     ]
 
 alonzoEncodeDecodeTests :: TestTree
@@ -49,13 +49,13 @@ alonzoEncodeDecodeTests =
         embedTripAnnExpectation @(TxAuxData Mary) @(TxAuxData Alonzo)
           (eraProtVerLow @Mary)
           (eraProtVerLow @Alonzo)
-          (\_ _ -> pure ()),
-      testProperty "decoding txbody" $
+          (\_ _ -> pure ())
+    , testProperty "decoding txbody" $
         embedTripAnnExpectation @(TxBody Mary) @(TxBody Alonzo)
           (eraProtVerLow @Mary)
           (eraProtVerLow @Alonzo)
-          (\_ _ -> pure ()),
-      testProperty "decoding witnesses" $
+          (\_ _ -> pure ())
+    , testProperty "decoding witnesses" $
         embedTripAnnExpectation @(TxWits Mary) @(TxWits Alonzo)
           (eraProtVerLow @Mary)
           (eraProtVerLow @Alonzo)
@@ -66,12 +66,12 @@ alonzoTranslationTests :: TestTree
 alonzoTranslationTests =
   testGroup
     "Alonzo translation binary compatibiliby tests"
-    [ testProperty "Tx compatibility" testTx,
-      testProperty "ProposedPPUpdates compatibility" (test @API.ProposedPPUpdates),
-      testProperty "PPUPState compatibility" (test @API.PPUPState),
-      testProperty "UTxO compatibility" (test @API.UTxO),
-      testProperty "UTxOState compatibility" (test @API.UTxOState),
-      testProperty "LedgerState compatibility" (test @API.LedgerState)
+    [ testProperty "Tx compatibility" testTx
+    , testProperty "ProposedPPUpdates compatibility" (test @API.ProposedPPUpdates)
+    , testProperty "PPUPState compatibility" (test @API.PPUPState)
+    , testProperty "UTxO compatibility" (test @API.UTxO)
+    , testProperty "UTxOState compatibility" (test @API.UTxOState)
+    , testProperty "LedgerState compatibility" (test @API.LedgerState)
     ]
 
 deriving newtype instance
@@ -91,10 +91,10 @@ dummyAlonzoGenesis = error "Undefined AlonzoGenesis"
 
 test ::
   forall f.
-  ( ToCBOR (f Mary),
-    ToCBOR (f Alonzo),
-    TranslateEra Alonzo f,
-    Show (TranslationError Alonzo f)
+  ( ToCBOR (f Mary)
+  , ToCBOR (f Alonzo)
+  , TranslateEra Alonzo f
+  , Show (TranslationError Alonzo f)
   ) =>
   f Mary ->
   Assertion

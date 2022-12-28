@@ -8,9 +8,9 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Mary.Tx
-  ( validateTimelock,
-  )
+module Cardano.Ledger.Mary.Tx (
+  validateTimelock,
+)
 where
 
 import Cardano.Ledger.Allegra.Tx (validateTimelock)
@@ -21,15 +21,15 @@ import Cardano.Ledger.Mary.TxAuxData ()
 import Cardano.Ledger.Mary.TxBody ()
 import Cardano.Ledger.Mary.TxWits ()
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
-import Cardano.Ledger.Shelley.Tx
-  ( ShelleyTx,
-    auxDataShelleyTxL,
-    bodyShelleyTxL,
-    mkBasicShelleyTx,
-    shelleyMinFeeTx,
-    sizeShelleyTxF,
-    witsShelleyTxL,
-  )
+import Cardano.Ledger.Shelley.Tx (
+  ShelleyTx,
+  auxDataShelleyTxL,
+  bodyShelleyTxL,
+  mkBasicShelleyTx,
+  shelleyMinFeeTx,
+  sizeShelleyTxF,
+  witsShelleyTxL,
+ )
 
 -- ========================================
 

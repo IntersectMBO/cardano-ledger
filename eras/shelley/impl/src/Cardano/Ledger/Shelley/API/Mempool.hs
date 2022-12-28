@@ -12,39 +12,39 @@
 
 -- | Interface to the Shelley ledger for the purposes of managing a Shelley
 -- mempool.
-module Cardano.Ledger.Shelley.API.Mempool
-  ( ApplyTx (..),
-    ApplyTxError (..),
-    Validated,
-    extractTx,
-    coerceValidated,
-    translateValidated,
+module Cardano.Ledger.Shelley.API.Mempool (
+  ApplyTx (..),
+  ApplyTxError (..),
+  Validated,
+  extractTx,
+  coerceValidated,
+  translateValidated,
 
-    -- * Exports for testing
-    MempoolEnv,
-    MempoolState,
-    applyTxsTransition,
-    unsafeMakeValidated,
+  -- * Exports for testing
+  MempoolEnv,
+  MempoolState,
+  applyTxsTransition,
+  unsafeMakeValidated,
 
-    -- * Exports for compatibility
-    applyTxs,
-    mkMempoolEnv,
-    mkMempoolState,
-    overNewEpochState,
-  )
+  -- * Exports for compatibility
+  applyTxs,
+  mkMempoolEnv,
+  mkMempoolState,
+  overNewEpochState,
+)
 where
 
 import Cardano.Ledger.BaseTypes (Globals, ShelleyBase)
 import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
-import Cardano.Ledger.Core
-  ( Era,
-    EraIndependentTxBody,
-    EraRule,
-    EraTx (Tx),
-    PreviousEra,
-    TranslateEra (..),
-    TranslationContext,
-  )
+import Cardano.Ledger.Core (
+  Era,
+  EraIndependentTxBody,
+  EraRule,
+  EraTx (Tx),
+  PreviousEra,
+  TranslateEra (..),
+  TranslationContext,
+ )
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -59,16 +59,16 @@ import Control.Arrow (ArrowChoice (right), left)
 import Control.DeepSeq (NFData)
 import Control.Monad.Except (Except, MonadError, foldM, liftEither)
 import Control.Monad.Trans.Reader (runReader)
-import Control.State.Transition.Extended
-  ( BaseM,
-    Environment,
-    PredicateFailure,
-    STS,
-    Signal,
-    State,
-    TRC (..),
-    applySTS,
-  )
+import Control.State.Transition.Extended (
+  BaseM,
+  Environment,
+  PredicateFailure,
+  STS,
+  Signal,
+  State,
+  TRC (..),
+  applySTS,
+ )
 import Data.Coerce (Coercible, coerce)
 import Data.Functor ((<&>))
 import Data.Sequence (Seq)
@@ -104,16 +104,16 @@ translateValidated ::
 translateValidated ctx (Validated tx) = Validated <$> translateEra @era ctx tx
 
 class
-  ( EraTx era,
-    Eq (ApplyTxError era),
-    Show (ApplyTxError era),
-    Typeable (ApplyTxError era),
-    STS (EraRule "LEDGER" era),
-    BaseM (EraRule "LEDGER" era) ~ ShelleyBase,
-    Environment (EraRule "LEDGER" era) ~ LedgerEnv era,
-    State (EraRule "LEDGER" era) ~ MempoolState era,
-    Signal (EraRule "LEDGER" era) ~ Tx era,
-    PredicateFailure (EraRule "LEDGER" era) ~ ShelleyLedgerPredFailure era
+  ( EraTx era
+  , Eq (ApplyTxError era)
+  , Show (ApplyTxError era)
+  , Typeable (ApplyTxError era)
+  , STS (EraRule "LEDGER" era)
+  , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
+  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , State (EraRule "LEDGER" era) ~ MempoolState era
+  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , PredicateFailure (EraRule "LEDGER" era) ~ ShelleyLedgerPredFailure era
   ) =>
   ApplyTx era
   where
@@ -168,8 +168,8 @@ class
           $ res
 
 instance
-  ( CC.Crypto c,
-    DSignable c (Hash c EraIndependentTxBody)
+  ( CC.Crypto c
+  , DSignable c (Hash c EraIndependentTxBody)
   ) =>
   ApplyTx (ShelleyEra c)
 
@@ -200,10 +200,10 @@ mkMempoolEnv
     }
   slot =
     Ledger.LedgerEnv
-      { Ledger.ledgerSlotNo = slot,
-        Ledger.ledgerIx = minBound,
-        Ledger.ledgerPp = LedgerState.esPp nesEs,
-        Ledger.ledgerAccount = LedgerState.esAccountState nesEs
+      { Ledger.ledgerSlotNo = slot
+      , Ledger.ledgerIx = minBound
+      , Ledger.ledgerPp = LedgerState.esPp nesEs
+      , Ledger.ledgerAccount = LedgerState.esAccountState nesEs
       }
 
 -- | Construct a mempool state from the wider ledger state.
@@ -225,16 +225,16 @@ deriving stock instance
   Show (ApplyTxError era)
 
 instance
-  ( Era era,
-    ToCBOR (PredicateFailure (EraRule "LEDGER" era))
+  ( Era era
+  , ToCBOR (PredicateFailure (EraRule "LEDGER" era))
   ) =>
   ToCBOR (ApplyTxError era)
   where
   toCBOR (ApplyTxError es) = toCBOR es
 
 instance
-  ( Era era,
-    FromCBOR (PredicateFailure (EraRule "LEDGER" era))
+  ( Era era
+  , FromCBOR (PredicateFailure (EraRule "LEDGER" era))
   ) =>
   FromCBOR (ApplyTxError era)
   where
@@ -259,8 +259,8 @@ applyTxs
 
 applyTxsTransition ::
   forall era m.
-  ( ApplyTx era,
-    MonadError (ApplyTxError era) m
+  ( ApplyTx era
+  , MonadError (ApplyTxError era) m
   ) =>
   Globals ->
   MempoolEnv era ->

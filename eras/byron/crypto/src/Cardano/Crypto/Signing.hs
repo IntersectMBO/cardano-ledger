@@ -1,6 +1,6 @@
-module Cardano.Crypto.Signing
-  ( module X,
-  )
+module Cardano.Crypto.Signing (
+  module X,
+)
 where
 
 import Cardano.Crypto.Signing.KeyGen as X

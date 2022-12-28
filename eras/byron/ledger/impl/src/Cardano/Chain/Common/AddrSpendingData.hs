@@ -5,27 +5,27 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Chain.Common.AddrSpendingData
-  ( AddrSpendingData (..),
-    AddrType (..),
-    addrSpendingDataToType,
-  )
+module Cardano.Chain.Common.AddrSpendingData (
+  AddrSpendingData (..),
+  AddrType (..),
+  addrSpendingDataToType,
+)
 where
 
 import Cardano.Crypto.Signing (RedeemVerificationKey, VerificationKey)
 import Cardano.HeapWords
-import Cardano.Ledger.Binary
-  ( Case (..),
-    DecoderError (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    cborError,
-    decodeListLenCanonical,
-    decodeWord8Canonical,
-    encodeListLen,
-    matchSize,
-    szCases,
-  )
+import Cardano.Ledger.Binary (
+  Case (..),
+  DecoderError (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  cborError,
+  decodeListLenCanonical,
+  decodeWord8Canonical,
+  encodeListLen,
+  matchSize,
+  szCases,
+ )
 import Cardano.Prelude hiding (cborError)
 import Data.Aeson (ToJSON)
 import Formatting (bprint, build)
@@ -58,8 +58,8 @@ instance ToCBOR AddrSpendingData where
 
   encodedSizeExpr size _ =
     szCases
-      [ Case "VerKeyASD" $ size $ Proxy @(Word8, VerificationKey),
-        Case "RedeemASD" $ size $ Proxy @(Word8, RedeemVerificationKey)
+      [ Case "VerKeyASD" $ size $ Proxy @(Word8, VerificationKey)
+      , Case "RedeemASD" $ size $ Proxy @(Word8, RedeemVerificationKey)
       ]
 
 instance FromCBOR AddrSpendingData where

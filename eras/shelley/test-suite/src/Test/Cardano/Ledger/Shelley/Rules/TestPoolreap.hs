@@ -7,16 +7,16 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
-module Test.Cardano.Ledger.Shelley.Rules.TestPoolreap
-  ( removedAfterPoolreap,
-  )
+module Test.Cardano.Ledger.Shelley.Rules.TestPoolreap (
+  removedAfterPoolreap,
+)
 where
 
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool))
-import Cardano.Ledger.Shelley.LedgerState
-  ( PState (..),
-    psStakePoolParams,
-  )
+import Cardano.Ledger.Shelley.LedgerState (
+  PState (..),
+  psStakePoolParams,
+ )
 import Cardano.Ledger.Slot (EpochNo (..))
 import Control.SetAlgebra (dom, eval, setSingleton, (∩), (⊆), (▷))
 import qualified Data.Set as Set (Set, null)

@@ -1,6 +1,6 @@
-module Cardano.Chain.Update
-  ( module X,
-  )
+module Cardano.Chain.Update (
+  module X,
+)
 where
 
 import Cardano.Chain.Update.ApplicationName as X

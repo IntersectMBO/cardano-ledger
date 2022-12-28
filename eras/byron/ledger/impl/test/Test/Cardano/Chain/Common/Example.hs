@@ -1,39 +1,39 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
-module Test.Cardano.Chain.Common.Example
-  ( exampleAddress,
-    exampleAddress1,
-    exampleAddress2,
-    exampleAddress3,
-    exampleAddress4,
-    exampleAttributes,
-    exampleAddrSpendingData_VerKey,
-    exampleChainDifficulty,
-    exampleKeyHash,
-  )
+module Test.Cardano.Chain.Common.Example (
+  exampleAddress,
+  exampleAddress1,
+  exampleAddress2,
+  exampleAddress3,
+  exampleAddress4,
+  exampleAttributes,
+  exampleAddrSpendingData_VerKey,
+  exampleChainDifficulty,
+  exampleKeyHash,
+)
 where
 
-import Cardano.Chain.Common
-  ( AddrAttributes (..),
-    AddrSpendingData (..),
-    Address,
-    Attributes,
-    ChainDifficulty (..),
-    HDAddressPayload (..),
-    KeyHash,
-    NetworkMagic (..),
-    hashKey,
-    makeAddress,
-    mkAttributes,
-  )
+import Cardano.Chain.Common (
+  AddrAttributes (..),
+  AddrSpendingData (..),
+  Address,
+  Attributes,
+  ChainDifficulty (..),
+  HDAddressPayload (..),
+  KeyHash,
+  NetworkMagic (..),
+  hashKey,
+  makeAddress,
+  mkAttributes,
+ )
 import Cardano.Prelude
 import Test.Cardano.Crypto.CBOR (getBytes)
-import Test.Cardano.Crypto.Example
-  ( exampleRedeemVerificationKey,
-    exampleVerificationKey,
-    exampleVerificationKeys,
-  )
+import Test.Cardano.Crypto.Example (
+  exampleRedeemVerificationKey,
+  exampleVerificationKey,
+  exampleVerificationKeys,
+ )
 
 exampleAttributes :: Attributes ()
 exampleAttributes = mkAttributes ()

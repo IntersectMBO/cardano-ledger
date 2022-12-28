@@ -21,15 +21,15 @@ import Test.Cardano.Ledger.Core.Utils (epsilonMaybeEq)
 
 boundedRationalTests ::
   forall a.
-  ( BoundedRational a,
-    ToJSON a,
-    FromJSON a,
-    ToCBOR a,
-    FromCBOR a,
-    Arbitrary a,
-    GenValid a,
-    Show a,
-    Ord a
+  ( BoundedRational a
+  , ToJSON a
+  , FromJSON a
+  , ToCBOR a
+  , FromCBOR a
+  , Arbitrary a
+  , GenValid a
+  , Show a
+  , Ord a
   ) =>
   [(String, ByteString)] ->
   Spec
@@ -50,10 +50,10 @@ boundedRationalTests badJSONValues = do
             Nothing -> property True
             Just (br :: a) ->
               conjoin
-                [ minBound <= br,
-                  br <= maxBound,
-                  unboundRational (minBound :: a) <= r,
-                  r <= unboundRational (maxBound :: a)
+                [ minBound <= br
+                , br <= maxBound
+                , unboundRational (minBound :: a) <= r
+                , r <= unboundRational (maxBound :: a)
                 ]
     describe "JSON" $ do
       prop "ToJSON/FromJSON roundtrip up to an epsilon" $

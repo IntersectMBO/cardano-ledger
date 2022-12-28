@@ -20,44 +20,44 @@ module Test.Cardano.Ledger.Shelley.Generator.Trace.Chain where
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.BaseTypes (UnitInterval)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era
-  ( Era,
-    EraCrypto,
-  )
+import Cardano.Ledger.Era (
+  Era,
+  EraCrypto,
+ )
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.LedgerState (incrementalStakeDistr)
-import Cardano.Ledger.Shelley.Rules
-  ( BbodyEnv,
-    ShelleyBbodyState,
-  )
-import Cardano.Ledger.Slot
-  ( BlockNo (..),
-    EpochNo (..),
-    SlotNo (..),
-  )
+import Cardano.Ledger.Shelley.Rules (
+  BbodyEnv,
+  ShelleyBbodyState,
+ )
+import Cardano.Ledger.Slot (
+  BlockNo (..),
+  EpochNo (..),
+  SlotNo (..),
+ )
 import qualified Cardano.Ledger.UMapCompact as UM
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Protocol.TPraos.API
-import Cardano.Protocol.TPraos.BHeader
-  ( HashHeader (..),
-    LastAppliedBlock (..),
-    hashHeaderToNonce,
-  )
-import Cardano.Protocol.TPraos.Rules.Tickn
-  ( TicknEnv,
-    TicknState,
-  )
+import Cardano.Protocol.TPraos.BHeader (
+  HashHeader (..),
+  LastAppliedBlock (..),
+  hashHeaderToNonce,
+ )
+import Cardano.Protocol.TPraos.Rules.Tickn (
+  TicknEnv,
+  TicknState,
+ )
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition
-import Control.State.Transition.Trace.Generator.QuickCheck
-  ( BaseEnv,
-    HasTrace,
-    envGen,
-    interpretSTS,
-    sigGen,
-  )
+import Control.State.Transition.Trace.Generator.QuickCheck (
+  BaseEnv,
+  HasTrace,
+  envGen,
+  interpretSTS,
+  sigGen,
+ )
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Data.Default.Class (Default)
 import Data.Functor.Identity (runIdentity)
@@ -70,23 +70,23 @@ import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Generator.Block (genBlock)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv (..))
-import Test.Cardano.Ledger.Shelley.Generator.EraGen
-  ( EraGen (..),
-    MinCHAIN_STS,
-    MinLEDGER_STS,
-    genUtxo0,
-  )
+import Test.Cardano.Ledger.Shelley.Generator.EraGen (
+  EraGen (..),
+  MinCHAIN_STS,
+  MinLEDGER_STS,
+  genUtxo0,
+ )
 import Test.Cardano.Ledger.Shelley.Generator.Presets (genesisDelegs0)
-import Test.Cardano.Ledger.Shelley.Rules.Chain
-  ( CHAIN,
-    ChainState (..),
-    initialShelleyState,
-  )
+import Test.Cardano.Ledger.Shelley.Rules.Chain (
+  CHAIN,
+  ChainState (..),
+  initialShelleyState,
+ )
 import qualified Test.Cardano.Ledger.Shelley.Rules.Chain as STS (ChainState (ChainState))
-import Test.Cardano.Ledger.Shelley.Utils
-  ( maxLLSupply,
-    mkHash,
-  )
+import Test.Cardano.Ledger.Shelley.Utils (
+  maxLLSupply,
+  mkHash,
+ )
 import Test.QuickCheck (Gen)
 
 -- ======================================================
@@ -94,27 +94,27 @@ import Test.QuickCheck (Gen)
 -- The CHAIN STS at the root of the STS allows for generating blocks of transactions
 -- with meaningful delegation certificates, protocol and application updates, withdrawals etc.
 instance
-  ( EraGen era,
-    Core.EraSegWits era,
-    Mock (EraCrypto era),
-    ApplyBlock era,
-    GetLedgerView era,
-    MinLEDGER_STS era,
-    MinCHAIN_STS era,
-    Embed (Core.EraRule "BBODY" era) (CHAIN era),
-    Environment (Core.EraRule "BBODY" era) ~ BbodyEnv era,
-    State (Core.EraRule "BBODY" era) ~ ShelleyBbodyState era,
-    Signal (Core.EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era,
-    Embed (Core.EraRule "TICKN" era) (CHAIN era),
-    Environment (Core.EraRule "TICKN" era) ~ TicknEnv,
-    State (Core.EraRule "TICKN" era) ~ TicknState,
-    Signal (Core.EraRule "TICKN" era) ~ Bool,
-    Embed (Core.EraRule "TICK" era) (CHAIN era),
-    Environment (Core.EraRule "TICK" era) ~ (),
-    State (Core.EraRule "TICK" era) ~ NewEpochState era,
-    Signal (Core.EraRule "TICK" era) ~ SlotNo,
-    HasField "_d" (Core.PParams era) UnitInterval,
-    QC.HasTrace (Core.EraRule "LEDGERS" era) (GenEnv era)
+  ( EraGen era
+  , Core.EraSegWits era
+  , Mock (EraCrypto era)
+  , ApplyBlock era
+  , GetLedgerView era
+  , MinLEDGER_STS era
+  , MinCHAIN_STS era
+  , Embed (Core.EraRule "BBODY" era) (CHAIN era)
+  , Environment (Core.EraRule "BBODY" era) ~ BbodyEnv era
+  , State (Core.EraRule "BBODY" era) ~ ShelleyBbodyState era
+  , Signal (Core.EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era
+  , Embed (Core.EraRule "TICKN" era) (CHAIN era)
+  , Environment (Core.EraRule "TICKN" era) ~ TicknEnv
+  , State (Core.EraRule "TICKN" era) ~ TicknState
+  , Signal (Core.EraRule "TICKN" era) ~ Bool
+  , Embed (Core.EraRule "TICK" era) (CHAIN era)
+  , Environment (Core.EraRule "TICK" era) ~ ()
+  , State (Core.EraRule "TICK" era) ~ NewEpochState era
+  , Signal (Core.EraRule "TICK" era) ~ SlotNo
+  , HasField "_d" (Core.PParams era) UnitInterval
+  , QC.HasTrace (Core.EraRule "LEDGERS" era) (GenEnv era)
   ) =>
   HasTrace (CHAIN era) (GenEnv era)
   where
@@ -214,16 +214,16 @@ registerGenesisStaking
 
       newChainNes =
         oldChainNes
-          { nesEs = newEpochState,
-            nesPd = newPoolDistr
+          { nesEs = newEpochState
+          , nesPd = newPoolDistr
           }
       newEpochState =
         oldEpochState
-          { esLState = newLedgerState,
-            esSnapshots =
+          { esLState = newLedgerState
+          , esSnapshots =
               (esSnapshots oldEpochState)
-                { ssStakeMark = initSnapShot,
-                  ssStakeMarkPoolDistr = newPoolDistr
+                { ssStakeMark = initSnapShot
+                , ssStakeMarkPoolDistr = newPoolDistr
                 }
           }
       newLedgerState =
@@ -232,8 +232,8 @@ registerGenesisStaking
           }
       newDPState =
         oldDPState
-          { dpsDState = newDState,
-            dpsPState = newPState
+          { dpsDState = newDState
+          , dpsPState = newPState
           }
       -- New delegation state. Since we're using base addresses, we only care
       -- about updating the 'ssDelegations' field.

@@ -10,54 +10,54 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Ledger.DPState
-  ( DPState (..),
-    DState (..),
-    PState (..),
-    InstantaneousRewards (..),
-    FutureGenDeleg (..),
-    rewards,
-    delegations,
-    ptrsMap,
-    payKeyDeposit,
-    payPoolDeposit,
-    refundKeyDeposit,
-    refundPoolDeposit,
-    obligationDPState,
-  )
+module Cardano.Ledger.DPState (
+  DPState (..),
+  DState (..),
+  PState (..),
+  InstantaneousRewards (..),
+  FutureGenDeleg (..),
+  rewards,
+  delegations,
+  ptrsMap,
+  payKeyDeposit,
+  payPoolDeposit,
+  refundKeyDeposit,
+  refundPoolDeposit,
+  obligationDPState,
+)
 where
 
-import Cardano.Ledger.Binary
-  ( FromCBOR (..),
-    FromSharedCBOR (..),
-    Interns,
-    ToCBOR (..),
-    decodeRecordNamed,
-    decodeRecordNamedT,
-    encodeListLen,
-    fromNotSharedCBOR,
-    fromSharedPlusCBOR,
-    fromSharedPlusLensCBOR,
-    toMemptyLens,
-  )
-import Cardano.Ledger.Coin
-  ( Coin (..),
-    DeltaCoin (..),
-  )
+import Cardano.Ledger.Binary (
+  FromCBOR (..),
+  FromSharedCBOR (..),
+  Interns,
+  ToCBOR (..),
+  decodeRecordNamed,
+  decodeRecordNamedT,
+  encodeListLen,
+  fromNotSharedCBOR,
+  fromSharedPlusCBOR,
+  fromSharedPlusLensCBOR,
+  toMemptyLens,
+ )
+import Cardano.Ledger.Coin (
+  Coin (..),
+  DeltaCoin (..),
+ )
 import Cardano.Ledger.Core (EraCrypto, PParams)
 import Cardano.Ledger.Credential (Credential (..), Ptr)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Keys
-  ( GenDelegPair (..),
-    GenDelegs (..),
-    KeyHash (..),
-    KeyRole (..),
-  )
+import Cardano.Ledger.Keys (
+  GenDelegPair (..),
+  GenDelegs (..),
+  KeyHash (..),
+  KeyRole (..),
+ )
 import Cardano.Ledger.PoolParams (PoolParams)
-import Cardano.Ledger.Slot
-  ( EpochNo (..),
-    SlotNo (..),
-  )
+import Cardano.Ledger.Slot (
+  EpochNo (..),
+  SlotNo (..),
+ )
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.UMapCompact (CompactForm, UMap (UMap), View (Delegations, Rewards))
 import qualified Cardano.Ledger.UMapCompact as UM
@@ -75,8 +75,8 @@ import NoThunks.Class (NoThunks (..))
 -- ======================================
 
 data FutureGenDeleg c = FutureGenDeleg
-  { fGenDelegSlot :: !SlotNo,
-    fGenDelegGenKeyHash :: !(KeyHash 'Genesis c)
+  { fGenDelegSlot :: !SlotNo
+  , fGenDelegGenKeyHash :: !(KeyHash 'Genesis c)
   }
   deriving (Show, Eq, Ord, Generic)
 
@@ -102,10 +102,10 @@ instance CC.Crypto c => FromCBOR (FutureGenDeleg c) where
 -- NOTE that the following property should always hold:
 --   deltaReserves + deltaTreasury = 0
 data InstantaneousRewards c = InstantaneousRewards
-  { iRReserves :: !(Map (Credential 'Staking c) Coin),
-    iRTreasury :: !(Map (Credential 'Staking c) Coin),
-    deltaReserves :: !DeltaCoin,
-    deltaTreasury :: !DeltaCoin
+  { iRReserves :: !(Map (Credential 'Staking c) Coin)
+  , iRTreasury :: !(Map (Credential 'Staking c) Coin)
+  , deltaReserves :: !DeltaCoin
+  , deltaTreasury :: !DeltaCoin
   }
   deriving (Show, Eq, Generic)
 
@@ -116,18 +116,18 @@ instance NFData (InstantaneousRewards c)
 -- | The state used by the DELEG rule, which roughly tracks stake
 -- delegation and some governance features.
 data DState c = DState
-  { -- | Unified Reward Maps. This contains the reward map (which is the source
-    -- of truth regarding the registered stake credentials, the delegation map,
-    -- and the stake credential pointer map.
-    dsUnified :: !(UMap c),
-    -- | Future genesis key delegations
-    dsFutureGenDelegs :: !(Map (FutureGenDeleg c) (GenDelegPair c)),
-    -- | Genesis key delegations
-    dsGenDelegs :: !(GenDelegs c),
-    -- | Instantaneous Rewards
-    dsIRewards :: !(InstantaneousRewards c),
-    -- | The Deposit map for staking credentials
-    dsDeposits :: !(Map (Credential 'Staking c) Coin)
+  { dsUnified :: !(UMap c)
+  -- ^ Unified Reward Maps. This contains the reward map (which is the source
+  -- of truth regarding the registered stake credentials, the delegation map,
+  -- and the stake credential pointer map.
+  , dsFutureGenDelegs :: !(Map (FutureGenDeleg c) (GenDelegPair c))
+  -- ^ Future genesis key delegations
+  , dsGenDelegs :: !(GenDelegs c)
+  -- ^ Genesis key delegations
+  , dsIRewards :: !(InstantaneousRewards c)
+  -- ^ Instantaneous Rewards
+  , dsDeposits :: !(Map (Credential 'Staking c) Coin)
+  -- ^ The Deposit map for staking credentials
   }
   deriving (Show, Eq, Generic)
 
@@ -159,18 +159,18 @@ instance (CC.Crypto c, FromSharedCBOR (InstantaneousRewards c)) => FromSharedCBO
 
 -- | The state used by the POOL rule, which tracks stake pool information.
 data PState c = PState
-  { -- | The stake pool parameters.
-    psStakePoolParams :: !(Map (KeyHash 'StakePool c) (PoolParams c)),
-    -- | The future stake pool parameters.
-    -- Changes to existing stake pool parameters are staged in order
-    -- to give delegators time to react to changes.
-    -- See section 11.2, "Example Illustration of the Reward Cycle",
-    -- of the Shelley Ledger Specification for a sequence diagram.
-    psFutureStakePoolParams :: !(Map (KeyHash 'StakePool c) (PoolParams c)),
-    -- | A map of retiring stake pools to the epoch when they retire.
-    psRetiring :: !(Map (KeyHash 'StakePool c) EpochNo),
-    -- | A map of the deposits for each pool
-    psDeposits :: !(Map (KeyHash 'StakePool c) Coin)
+  { psStakePoolParams :: !(Map (KeyHash 'StakePool c) (PoolParams c))
+  -- ^ The stake pool parameters.
+  , psFutureStakePoolParams :: !(Map (KeyHash 'StakePool c) (PoolParams c))
+  -- ^ The future stake pool parameters.
+  -- Changes to existing stake pool parameters are staged in order
+  -- to give delegators time to react to changes.
+  -- See section 11.2, "Example Illustration of the Reward Cycle",
+  -- of the Shelley Ledger Specification for a sequence diagram.
+  , psRetiring :: !(Map (KeyHash 'StakePool c) EpochNo)
+  -- ^ A map of retiring stake pools to the epoch when they retire.
+  , psDeposits :: !(Map (KeyHash 'StakePool c) Coin)
+  -- ^ A map of the deposits for each pool
   }
   deriving (Show, Eq, Generic)
 
@@ -199,8 +199,8 @@ instance (CC.Crypto c, FromSharedCBOR (PState c)) => FromCBOR (PState c) where
 -- | The state associated with the DELPL rule, which combines the DELEG rule
 -- and the POOL rule.
 data DPState c = DPState
-  { dpsDState :: !(DState c),
-    dpsPState :: !(PState c)
+  { dpsDState :: !(DState c)
+  , dpsPState :: !(PState c)
   }
   deriving (Show, Eq, Generic)
 
@@ -234,8 +234,8 @@ instance
 instance CC.Crypto c => FromSharedCBOR (DPState c) where
   type
     Share (DPState c) =
-      ( Interns (Credential 'Staking c),
-        Interns (KeyHash 'StakePool c)
+      ( Interns (Credential 'Staking c)
+      , Interns (KeyHash 'StakePool c)
       )
   fromSharedPlusCBOR = decodeRecordNamedT "DPState" (const 2) $ do
     dpsPState <- fromSharedPlusLensCBOR _2

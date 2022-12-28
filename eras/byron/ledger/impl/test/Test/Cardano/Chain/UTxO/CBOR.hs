@@ -2,21 +2,21 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Chain.UTxO.CBOR
-  ( tests,
-  )
+module Test.Cardano.Chain.UTxO.CBOR (
+  tests,
+)
 where
 
 import Cardano.Chain.Common (AddrAttributes (..), Attributes (..), mkAttributes)
-import Cardano.Chain.UTxO
-  ( Tx (..),
-    TxIn (..),
-    TxInWitness (..),
-    TxOut (..),
-    TxSigData (..),
-    taTx,
-    taWitness,
-  )
+import Cardano.Chain.UTxO (
+  Tx (..),
+  TxIn (..),
+  TxInWitness (..),
+  TxOut (..),
+  TxSigData (..),
+  taTx,
+  taWitness,
+ )
 import Cardano.Crypto (ProtocolMagicId (..), SignTag (..), Signature, sign)
 import Cardano.Ledger.Binary (Case (..), LengthOf, SizeOverride (..), ToCBOR, szCases)
 import Cardano.Prelude
@@ -25,54 +25,54 @@ import Data.Vector (Vector)
 import GetDataFileName ((<:<))
 import Hedgehog (Gen, Property)
 import qualified Hedgehog as H
-import Test.Cardano.Chain.UTxO.Example
-  ( exampleHashTx,
-    exampleRedeemSignature,
-    exampleTxId,
-    exampleTxInList,
-    exampleTxInUtxo,
-    exampleTxOut,
-    exampleTxOut1,
-    exampleTxOutList,
-    exampleTxPayload1,
-    exampleTxProof,
-    exampleTxSig,
-    exampleTxSigData,
-    exampleTxWitness,
-  )
-import Test.Cardano.Chain.UTxO.Gen
-  ( genTx,
-    genTxAttributes,
-    genTxAux,
-    genTxHash,
-    genTxId,
-    genTxIn,
-    genTxInList,
-    genTxInWitness,
-    genTxOut,
-    genTxOutList,
-    genTxPayload,
-    genTxProof,
-    genTxSig,
-    genTxSigData,
-    genTxValidationError,
-    genTxWitness,
-    genUTxOConfiguration,
-    genUTxOError,
-    genUTxOValidationError,
-  )
-import Test.Cardano.Crypto.Example
-  ( exampleRedeemVerificationKey,
-    exampleSigningKey,
-    exampleVerificationKey,
-  )
+import Test.Cardano.Chain.UTxO.Example (
+  exampleHashTx,
+  exampleRedeemSignature,
+  exampleTxId,
+  exampleTxInList,
+  exampleTxInUtxo,
+  exampleTxOut,
+  exampleTxOut1,
+  exampleTxOutList,
+  exampleTxPayload1,
+  exampleTxProof,
+  exampleTxSig,
+  exampleTxSigData,
+  exampleTxWitness,
+ )
+import Test.Cardano.Chain.UTxO.Gen (
+  genTx,
+  genTxAttributes,
+  genTxAux,
+  genTxHash,
+  genTxId,
+  genTxIn,
+  genTxInList,
+  genTxInWitness,
+  genTxOut,
+  genTxOutList,
+  genTxPayload,
+  genTxProof,
+  genTxSig,
+  genTxSigData,
+  genTxValidationError,
+  genTxWitness,
+  genUTxOConfiguration,
+  genUTxOError,
+  genUTxOValidationError,
+ )
+import Test.Cardano.Crypto.Example (
+  exampleRedeemVerificationKey,
+  exampleSigningKey,
+  exampleVerificationKey,
+ )
 import Test.Cardano.Crypto.Gen (feedPM)
 import Test.Cardano.Ledger.Binary.Vintage.Helpers (SizeTestConfig (..), scfg, sizeTest)
-import Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip
-  ( goldenTestCBOR,
-    roundTripsCBORBuildable,
-    roundTripsCBORShow,
-  )
+import Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip (
+  goldenTestCBOR,
+  roundTripsCBORBuildable,
+  roundTripsCBORShow,
+ )
 import Test.Cardano.Prelude
 import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
 
@@ -301,60 +301,70 @@ sizeEstimates =
       -- Explicit bounds for types, based on the generators from Gen.
       attrUnitSize = (typeRep (Proxy @(Attributes ())), SizeConstant 1)
       attrAddrSize =
-        ( typeRep (Proxy @(Attributes AddrAttributes)),
-          SizeConstant (szCases [Case "min" 1, Case "max" 1024])
+        ( typeRep (Proxy @(Attributes AddrAttributes))
+        , SizeConstant (szCases [Case "min" 1, Case "max" 1024])
         )
       txSigSize = (typeRep (Proxy @(Signature TxSigData)), SizeConstant 66)
    in H.Group
         "Encoded size bounds for core types."
-        [ ("TxId", sizeTestGen genTxId),
-          ( "Tx",
-            sizeTest $
+        [ ("TxId", sizeTestGen genTxId)
+        ,
+          ( "Tx"
+          , sizeTest $
               scfg
-                { gen = genTx,
-                  addlCtx = M.fromList [attrUnitSize, attrAddrSize],
-                  computedCtx = \tx ->
+                { gen = genTx
+                , addlCtx = M.fromList [attrUnitSize, attrAddrSize]
+                , computedCtx = \tx ->
                     M.fromList
-                      [ ( typeRep (Proxy @(LengthOf [TxIn])),
-                          SizeConstant (fromIntegral $ length $ txInputs tx)
-                        ),
-                        ( typeRep (Proxy @(LengthOf [TxOut])),
-                          SizeConstant (fromIntegral $ length $ txOutputs tx)
+                      [
+                        ( typeRep (Proxy @(LengthOf [TxIn]))
+                        , SizeConstant (fromIntegral $ length $ txInputs tx)
+                        )
+                      ,
+                        ( typeRep (Proxy @(LengthOf [TxOut]))
+                        , SizeConstant (fromIntegral $ length $ txOutputs tx)
                         )
                       ]
                 }
-          ),
-          ("TxIn", sizeTestGen genTxIn),
-          ( "TxOut",
-            sizeTest $
+          )
+        , ("TxIn", sizeTestGen genTxIn)
+        ,
+          ( "TxOut"
+          , sizeTest $
               scfg {gen = genTxOut, addlCtx = M.fromList [attrAddrSize]}
-          ),
-          ( "TxAux",
-            sizeTest $
+          )
+        ,
+          ( "TxAux"
+          , sizeTest $
               scfg
-                { gen = genTxAux pm,
-                  addlCtx = M.fromList [attrUnitSize, attrAddrSize, txSigSize],
-                  computedCtx = \ta ->
+                { gen = genTxAux pm
+                , addlCtx = M.fromList [attrUnitSize, attrAddrSize, txSigSize]
+                , computedCtx = \ta ->
                     M.fromList
-                      [ ( typeRep (Proxy @(LengthOf [TxIn])),
-                          SizeConstant (fromIntegral $ length $ txInputs $ taTx ta)
-                        ),
-                        ( typeRep (Proxy @(LengthOf (Vector TxInWitness))),
-                          SizeConstant (fromIntegral $ length $ taWitness ta)
-                        ),
-                        ( typeRep (Proxy @(LengthOf [TxOut])),
-                          SizeConstant (fromIntegral $ length $ txOutputs $ taTx ta)
+                      [
+                        ( typeRep (Proxy @(LengthOf [TxIn]))
+                        , SizeConstant (fromIntegral $ length $ txInputs $ taTx ta)
+                        )
+                      ,
+                        ( typeRep (Proxy @(LengthOf (Vector TxInWitness)))
+                        , SizeConstant (fromIntegral $ length $ taWitness ta)
+                        )
+                      ,
+                        ( typeRep (Proxy @(LengthOf [TxOut]))
+                        , SizeConstant (fromIntegral $ length $ txOutputs $ taTx ta)
                         )
                       ]
                 }
-          ),
-          ( "TxInWitness",
-            sizeTest $
+          )
+        ,
+          ( "TxInWitness"
+          , sizeTest $
               scfg {gen = genTxInWitness pm, addlCtx = M.fromList [txSigSize]}
-          ),
-          ("TxSigData", sizeTestGen genTxSigData),
-          ( "Signature TxSigData",
-            sizeTest $
+          )
+        , ("TxSigData", sizeTestGen genTxSigData)
+        ,
+          ( "Signature TxSigData"
+          , sizeTest $
               scfg {gen = genTxSig pm, addlCtx = M.fromList [txSigSize]}
           )
         ]

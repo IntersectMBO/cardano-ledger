@@ -10,51 +10,51 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Protocol.TPraos.Rules.Prtcl
-  ( PRTCL,
-    State,
-    PrtclEnv (..),
-    PrtclState (..),
-    PrtclPredicateFailure (..),
-    PredicateFailure,
-    PrtlSeqFailure (..),
-    prtlSeqChecks,
-  )
+module Cardano.Protocol.TPraos.Rules.Prtcl (
+  PRTCL,
+  State,
+  PrtclEnv (..),
+  PrtclState (..),
+  PrtclPredicateFailure (..),
+  PredicateFailure,
+  PrtlSeqFailure (..),
+  prtlSeqChecks,
+)
 where
 
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.Ledger.BaseTypes
-  ( Nonce,
-    Seed,
-    ShelleyBase,
-    UnitInterval,
-  )
-import Cardano.Ledger.Binary
-  ( FromCBOR (fromCBOR),
-    ToCBOR (toCBOR),
-    decodeRecordNamed,
-    encodeListLen,
-  )
+import Cardano.Ledger.BaseTypes (
+  Nonce,
+  Seed,
+  ShelleyBase,
+  UnitInterval,
+ )
+import Cardano.Ledger.Binary (
+  FromCBOR (fromCBOR),
+  ToCBOR (toCBOR),
+  decodeRecordNamed,
+  encodeListLen,
+ )
 import Cardano.Ledger.Crypto (Crypto, VRF)
-import Cardano.Ledger.Keys
-  ( DSignable,
-    GenDelegs (..),
-    KESignable,
-    KeyHash,
-    KeyRole (..),
-    VRFSignable,
-  )
+import Cardano.Ledger.Keys (
+  DSignable,
+  GenDelegs (..),
+  KESignable,
+  KeyHash,
+  KeyRole (..),
+  VRFSignable,
+ )
 import Cardano.Ledger.PoolDistr (PoolDistr)
 import Cardano.Ledger.Slot (BlockNo, SlotNo)
-import Cardano.Protocol.TPraos.BHeader
-  ( BHBody (..),
-    BHeader (..),
-    LastAppliedBlock (..),
-    PrevHash,
-    bhbody,
-    bnonce,
-    lastAppliedHash,
-  )
+import Cardano.Protocol.TPraos.BHeader (
+  BHBody (..),
+  BHeader (..),
+  LastAppliedBlock (..),
+  PrevHash,
+  bhbody,
+  bnonce,
+  lastAppliedHash,
+ )
 import Cardano.Protocol.TPraos.OCert (OCertSignable)
 import Cardano.Protocol.TPraos.Rules.Overlay (OVERLAY, OverlayEnv (..))
 import Cardano.Protocol.TPraos.Rules.Updn (UPDN, UpdnEnv (..), UpdnState (..))
@@ -83,10 +83,10 @@ data PrtclState c
 instance Crypto c => ToCBOR (PrtclState c) where
   toCBOR (PrtclState m n1 n2) =
     mconcat
-      [ encodeListLen 3,
-        toCBOR m,
-        toCBOR n1,
-        toCBOR n2
+      [ encodeListLen 3
+      , toCBOR m
+      , toCBOR n1
+      , toCBOR n2
       ]
 
 instance Crypto c => FromCBOR (PrtclState c) where
@@ -130,10 +130,10 @@ deriving instance
   Eq (PrtclPredicateFailure c)
 
 instance
-  ( Crypto c,
-    DSignable c (OCertSignable c),
-    KESignable c (BHBody c),
-    VRFSignable c Seed
+  ( Crypto c
+  , DSignable c (OCertSignable c)
+  , KESignable c (BHBody c)
+  , VRFSignable c Seed
   ) =>
   STS (PRTCL c)
   where
@@ -159,17 +159,17 @@ instance
 
 prtclTransition ::
   forall c.
-  ( Crypto c,
-    DSignable c (OCertSignable c),
-    KESignable c (BHBody c),
-    VRFSignable c Seed
+  ( Crypto c
+  , DSignable c (OCertSignable c)
+  , KESignable c (BHBody c)
+  , VRFSignable c Seed
   ) =>
   TransitionRule (PRTCL c)
 prtclTransition = do
   TRC
-    ( PrtclEnv dval pd dms eta0,
-      PrtclState cs etaV etaC,
-      bh
+    ( PrtclEnv dval pd dms eta0
+      , PrtclState cs etaV etaC
+      , bh
       ) <-
     judgmentContext
   let bhb = bhbody bh
@@ -179,9 +179,9 @@ prtclTransition = do
   UpdnState etaV' etaC' <-
     trans @(UPDN c) $
       TRC
-        ( UpdnEnv eta,
-          UpdnState etaV etaC,
-          slot
+        ( UpdnEnv eta
+        , UpdnState etaV etaC
+        , slot
         )
   cs' <-
     trans @(OVERLAY c) $
@@ -196,10 +196,10 @@ prtclTransition = do
 instance (Crypto c) => NoThunks (PrtclPredicateFailure c)
 
 instance
-  ( Crypto c,
-    DSignable c (OCertSignable c),
-    KESignable c (BHBody c),
-    VRFSignable c Seed
+  ( Crypto c
+  , DSignable c (OCertSignable c)
+  , KESignable c (BHBody c)
+  , VRFSignable c Seed
   ) =>
   Embed (OVERLAY c) (PRTCL c)
   where
@@ -207,10 +207,10 @@ instance
   wrapEvent = NoEvent
 
 instance
-  ( Crypto c,
-    DSignable c (OCertSignable c),
-    KESignable c (BHBody c),
-    VRFSignable c Seed
+  ( Crypto c
+  , DSignable c (OCertSignable c)
+  , KESignable c (BHBody c)
+  , VRFSignable c Seed
   ) =>
   Embed (UPDN c) (PRTCL c)
   where

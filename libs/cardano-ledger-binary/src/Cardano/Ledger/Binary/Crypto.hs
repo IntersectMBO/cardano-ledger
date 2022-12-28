@@ -1,34 +1,34 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Cardano.Ledger.Binary.Crypto
-  ( -- * DSIGN
-    encodeVerKeyDSIGN,
-    decodeVerKeyDSIGN,
-    encodeSignKeyDSIGN,
-    decodeSignKeyDSIGN,
-    encodeSigDSIGN,
-    decodeSigDSIGN,
-    encodeSignedDSIGN,
-    decodeSignedDSIGN,
+module Cardano.Ledger.Binary.Crypto (
+  -- * DSIGN
+  encodeVerKeyDSIGN,
+  decodeVerKeyDSIGN,
+  encodeSignKeyDSIGN,
+  decodeSignKeyDSIGN,
+  encodeSigDSIGN,
+  decodeSigDSIGN,
+  encodeSignedDSIGN,
+  decodeSignedDSIGN,
 
-    -- * KES
-    encodeVerKeyKES,
-    decodeVerKeyKES,
-    encodeSignKeyKES,
-    decodeSignKeyKES,
-    encodeSigKES,
-    decodeSigKES,
-    encodeSignedKES,
-    decodeSignedKES,
+  -- * KES
+  encodeVerKeyKES,
+  decodeVerKeyKES,
+  encodeSignKeyKES,
+  decodeSignKeyKES,
+  encodeSigKES,
+  decodeSigKES,
+  encodeSignedKES,
+  decodeSignedKES,
 
-    -- * VRF
-    encodeVerKeyVRF,
-    decodeVerKeyVRF,
-    encodeSignKeyVRF,
-    decodeSignKeyVRF,
-    encodeCertVRF,
-    decodeCertVRF,
-  )
+  -- * VRF
+  encodeVerKeyVRF,
+  decodeVerKeyVRF,
+  encodeSignKeyVRF,
+  decodeSignKeyVRF,
+  encodeCertVRF,
+  decodeCertVRF,
+)
 where
 
 import qualified Cardano.Crypto.DSIGN.Class as C

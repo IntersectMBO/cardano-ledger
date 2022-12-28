@@ -1,7 +1,7 @@
-module Cardano.Crypto.Signing.Safe.KeyGen
-  ( safeDeterministicKeyGen,
-    safeKeyGen,
-  )
+module Cardano.Crypto.Signing.Safe.KeyGen (
+  safeDeterministicKeyGen,
+  safeKeyGen,
+)
 where
 
 import Cardano.Crypto.Signing.Safe.PassPhrase (PassPhrase (..))

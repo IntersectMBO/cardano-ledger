@@ -8,12 +8,12 @@ import Cardano.Ledger.Alonzo.Data (Data (..), dataToBinaryData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams ()
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
-import Cardano.Ledger.Alonzo.TxInfo
-  ( TranslationError (..),
-    TxOutSource (..),
-    VersionedTxInfo (..),
-    txInfo,
-  )
+import Cardano.Ledger.Alonzo.TxInfo (
+  TranslationError (..),
+  TxOutSource (..),
+  VersionedTxInfo (..),
+  txInfo,
+ )
 import Cardano.Ledger.Babbage (Babbage)
 import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..), BabbageTxOut (..), Datum (..))
 import Cardano.Ledger.Babbage.TxInfo (txInfoInV2, txInfoOutV2)
@@ -97,31 +97,31 @@ utxo :: UTxO Babbage
 utxo =
   UTxO $
     Map.fromList
-      [ (byronInput, byronOutput),
-        (shelleyInput, shelleyOutput),
-        (inputWithInlineDatum, inlineDatumOutput),
-        (inputWithRefScript, refScriptOutput)
+      [ (byronInput, byronOutput)
+      , (shelleyInput, shelleyOutput)
+      , (inputWithInlineDatum, inlineDatumOutput)
+      , (inputWithRefScript, refScriptOutput)
       ]
 
 txb :: TxIn StandardCrypto -> Maybe (TxIn StandardCrypto) -> TxOut Babbage -> TxBody Babbage
 txb i mRefInp o =
   BabbageTxBody
-    { btbInputs = Set.singleton i,
-      btbCollateral = mempty,
-      btbReferenceInputs = maybe mempty Set.singleton mRefInp,
-      btbOutputs = StrictSeq.singleton (mkSized (eraProtVerHigh @Babbage) o),
-      btbCollateralReturn = SNothing,
-      btbTotalCollateral = SNothing,
-      btbCerts = mempty,
-      btbWdrls = Wdrl mempty,
-      btbTxFee = Coin 2,
-      btbValidityInterval = ValidityInterval SNothing SNothing,
-      btbUpdate = SNothing,
-      btbReqSignerHashes = mempty,
-      btbMint = mempty,
-      btbScriptIntegrityHash = SNothing,
-      btbAuxDataHash = SNothing,
-      btbTxNetworkId = SNothing
+    { btbInputs = Set.singleton i
+    , btbCollateral = mempty
+    , btbReferenceInputs = maybe mempty Set.singleton mRefInp
+    , btbOutputs = StrictSeq.singleton (mkSized (eraProtVerHigh @Babbage) o)
+    , btbCollateralReturn = SNothing
+    , btbTotalCollateral = SNothing
+    , btbCerts = mempty
+    , btbWdrls = Wdrl mempty
+    , btbTxFee = Coin 2
+    , btbValidityInterval = ValidityInterval SNothing SNothing
+    , btbUpdate = SNothing
+    , btbReqSignerHashes = mempty
+    , btbMint = mempty
+    , btbScriptIntegrityHash = SNothing
+    , btbAuxDataHash = SNothing
+    , btbTxNetworkId = SNothing
     }
 
 txBare :: TxIn StandardCrypto -> TxOut Babbage -> AlonzoTx Babbage
@@ -197,67 +197,67 @@ txInfoTests =
         [ testCase "translation error on byron txout" $
             expectV1TranslationError
               (txBare shelleyInput byronOutput)
-              (ByronTxOutInContext (TxOutFromOutput minBound)),
-          testCase "translation error on byron txin" $
+              (ByronTxOutInContext (TxOutFromOutput minBound))
+        , testCase "translation error on byron txin" $
             expectV1TranslationError
               (txBare byronInput shelleyOutput)
-              (ByronTxOutInContext (TxOutFromInput byronInput)),
-          testCase "translation error on unknown txin (logic error)" $
+              (ByronTxOutInContext (TxOutFromInput byronInput))
+        , testCase "translation error on unknown txin (logic error)" $
             expectV1TranslationError
               (txBare unknownInput shelleyOutput)
-              (TranslationLogicMissingInput unknownInput),
-          testCase "translation error on reference input" $
+              (TranslationLogicMissingInput unknownInput)
+        , testCase "translation error on reference input" $
             expectV1TranslationError
               (txRefInput shelleyInput)
-              (ReferenceInputsNotSupported (Set.singleton shelleyInput)),
-          testCase "translation error on inline datum in input" $
+              (ReferenceInputsNotSupported (Set.singleton shelleyInput))
+        , testCase "translation error on inline datum in input" $
             expectV1TranslationError
               (txBare inputWithInlineDatum shelleyOutput)
-              (InlineDatumsNotSupported (TxOutFromInput inputWithInlineDatum)),
-          testCase "translation error on inline datum in output" $
+              (InlineDatumsNotSupported (TxOutFromInput inputWithInlineDatum))
+        , testCase "translation error on inline datum in output" $
             expectV1TranslationError
               (txBare shelleyInput inlineDatumOutput)
-              (InlineDatumsNotSupported (TxOutFromOutput minBound)),
-          testCase "translation error on reference script in input" $
+              (InlineDatumsNotSupported (TxOutFromOutput minBound))
+        , testCase "translation error on reference script in input" $
             expectV1TranslationError
               (txBare inputWithRefScript shelleyOutput)
-              (ReferenceScriptsNotSupported (TxOutFromInput inputWithRefScript)),
-          testCase "translation error on reference script in output" $
+              (ReferenceScriptsNotSupported (TxOutFromInput inputWithRefScript))
+        , testCase "translation error on reference script in output" $
             expectV1TranslationError
               (txBare shelleyInput refScriptOutput)
               (ReferenceScriptsNotSupported (TxOutFromOutput minBound))
-        ],
-      testGroup
+        ]
+    , testGroup
         "Plutus V2"
         [ testCase "translation error on byron txout" $
             expectV2TranslationError
               (txBare shelleyInput byronOutput)
-              (ByronTxOutInContext (TxOutFromOutput minBound)),
-          testCase "translation error on byron txin" $
+              (ByronTxOutInContext (TxOutFromOutput minBound))
+        , testCase "translation error on byron txin" $
             expectV2TranslationError
               (txBare byronInput shelleyOutput)
-              (ByronTxOutInContext (TxOutFromInput byronInput)),
-          testCase "translation error on unknown txin (logic error)" $
+              (ByronTxOutInContext (TxOutFromInput byronInput))
+        , testCase "translation error on unknown txin (logic error)" $
             expectV2TranslationError
               (txBare unknownInput shelleyOutput)
-              (TranslationLogicMissingInput unknownInput),
-          testCase "use reference input in Babbage" $
+              (TranslationLogicMissingInput unknownInput)
+        , testCase "use reference input in Babbage" $
             successfulV2Translation
               (txRefInput shelleyInput)
-              hasReferenceInput,
-          testCase "use inline datum in input" $
+              hasReferenceInput
+        , testCase "use inline datum in input" $
             successfulV2Translation
               (txBare inputWithInlineDatum shelleyOutput)
-              (expectOneInput translatedInputEx1),
-          testCase "use inline datum in output" $
+              (expectOneInput translatedInputEx1)
+        , testCase "use inline datum in output" $
             successfulV2Translation
               (txBare shelleyInput inlineDatumOutput)
-              (expectOneOutput translatedOutputEx1),
-          testCase "use reference script in input" $
+              (expectOneOutput translatedOutputEx1)
+        , testCase "use reference script in input" $
             successfulV2Translation
               (txBare inputWithRefScript shelleyOutput)
-              (expectOneInput translatedInputEx2),
-          testCase "use reference script in output" $
+              (expectOneInput translatedInputEx2)
+        , testCase "use reference script in output" $
             successfulV2Translation
               (txBare shelleyInput refScriptOutput)
               (expectOneOutput translatedOutputEx2)

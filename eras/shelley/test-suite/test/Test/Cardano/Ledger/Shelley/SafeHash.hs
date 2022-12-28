@@ -9,10 +9,12 @@
 module Test.Cardano.Ledger.Shelley.SafeHash (safeHashTest) where
 
 import Cardano.Ledger.SafeHash
+
 -- ByteString imports
 
 import Data.ByteString (ByteString)
 import Data.ByteString.Short (ShortByteString, toShort)
+
 -- Testing imports
 
 import Data.Proxy
@@ -75,6 +77,6 @@ safeHashTest :: TestTree
 safeHashTest =
   testGroup
     "SafeHash"
-    [ testGroup "StandardCrypto" [test1, test2],
-      testGroup "TestCrypto" [test3, test4]
+    [ testGroup "StandardCrypto" [test1, test2]
+    , testGroup "TestCrypto" [test3, test4]
     ]

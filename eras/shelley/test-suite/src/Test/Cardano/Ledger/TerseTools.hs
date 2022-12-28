@@ -7,11 +7,11 @@ module Test.Cardano.Ledger.TerseTools where
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Credential
-  ( Credential (..),
-    Ptr (..),
-    StakeReference (..),
-  )
+import Cardano.Ledger.Credential (
+  Credential (..),
+  Ptr (..),
+  StakeReference (..),
+ )
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Era)
 import Cardano.Ledger.Hashes (ScriptHash (..))

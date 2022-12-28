@@ -18,116 +18,116 @@
 --
 -- 2. feed the generated sequence of concrete blocks to the block validation
 --    function, and check that it passes the validation.
-module Test.Cardano.Chain.Block.Model
-  ( tests,
-    elaborateAndUpdate,
-    passConcreteValidation,
-    elaborateBlock,
-  )
+module Test.Cardano.Chain.Block.Model (
+  tests,
+  elaborateAndUpdate,
+  passConcreteValidation,
+  elaborateBlock,
+)
 where
 
 import Byron.Spec.Chain.STS.Block (BlockStats (..))
 import qualified Byron.Spec.Chain.STS.Block as Abstract
 import Byron.Spec.Chain.STS.Rule.BBody
-import Byron.Spec.Chain.STS.Rule.Chain
-  ( CHAIN,
-    isHeaderSizeTooBigFailure,
-  )
+import Byron.Spec.Chain.STS.Rule.Chain (
+  CHAIN,
+  isHeaderSizeTooBigFailure,
+ )
 import qualified Byron.Spec.Ledger.Core as AbstractCore
-import Byron.Spec.Ledger.Delegation
-  ( _dIStateDelegationMap,
-  )
-import Byron.Spec.Ledger.Update
-  ( PParams,
-    UPIEnv,
-    UPIState,
-    _maxBkSz,
-    _maxHdrSz,
-  )
-import Cardano.Chain.Block
-  ( ABlock,
-    BlockValidationMode (..),
-    ChainValidationError
-      ( ChainValidationBlockTooLarge,
-        ChainValidationHeaderTooLarge
-      ),
-    ChainValidationState (cvsUtxo),
-    blockHeader,
-    blockLength,
-    cvsUpdateState,
-    headerLength,
-    initialChainValidationState,
-    updateBlock,
-  )
+import Byron.Spec.Ledger.Delegation (
+  _dIStateDelegationMap,
+ )
+import Byron.Spec.Ledger.Update (
+  PParams,
+  UPIEnv,
+  UPIState,
+  _maxBkSz,
+  _maxHdrSz,
+ )
+import Cardano.Chain.Block (
+  ABlock,
+  BlockValidationMode (..),
+  ChainValidationError (
+    ChainValidationBlockTooLarge,
+    ChainValidationHeaderTooLarge
+  ),
+  ChainValidationState (cvsUtxo),
+  blockHeader,
+  blockLength,
+  cvsUpdateState,
+  headerLength,
+  initialChainValidationState,
+  updateBlock,
+ )
 import Cardano.Chain.Common (unBlockCount)
 import qualified Cardano.Chain.Genesis as Genesis
-import Cardano.Chain.Update
-  ( ProtocolParameters,
-    ppMaxBlockSize,
-    ppMaxHeaderSize,
-  )
+import Cardano.Chain.Update (
+  ProtocolParameters,
+  ppMaxBlockSize,
+  ppMaxHeaderSize,
+ )
 import Cardano.Chain.Update.Validation.Interface (adoptedProtocolParameters)
-import Cardano.Chain.ValidationMode
-  ( ValidationMode,
-    fromBlockValidationMode,
-  )
+import Cardano.Chain.ValidationMode (
+  ValidationMode,
+  fromBlockValidationMode,
+ )
 import Cardano.Prelude hiding (State, state, trace)
-import Control.State.Transition
-  ( Environment,
-    PredicateFailure,
-    Signal,
-    State,
-    TRC (TRC),
-    applySTS,
-  )
-import Control.State.Transition.Generator
-  ( SignalGenerator,
-    classifyTraceLength,
-    invalidTrace,
-    ofLengthAtLeast,
-    trace,
-  )
+import Control.State.Transition (
+  Environment,
+  PredicateFailure,
+  Signal,
+  State,
+  TRC (TRC),
+  applySTS,
+ )
+import Control.State.Transition.Generator (
+  SignalGenerator,
+  classifyTraceLength,
+  invalidTrace,
+  ofLengthAtLeast,
+  trace,
+ )
 import qualified Control.State.Transition.Invalid.Trace as Invalid.Trace
-import Control.State.Transition.Trace
-  ( Trace,
-    TraceOrder (NewestFirst, OldestFirst),
-    extractValues,
-    lastSignal,
-    lastState,
-    preStatesAndSignals,
-    traceEnv,
-    traceInit,
-    traceSignals,
-    _traceEnv,
-  )
+import Control.State.Transition.Trace (
+  Trace,
+  TraceOrder (NewestFirst, OldestFirst),
+  extractValues,
+  lastSignal,
+  lastState,
+  preStatesAndSignals,
+  traceEnv,
+  traceInit,
+  traceSignals,
+  _traceEnv,
+ )
 import qualified Data.Set as Set
 import Data.String (fromString)
-import Hedgehog
-  ( Gen,
-    MonadTest,
-    PropertyT,
-    TestLimit,
-    assert,
-    collect,
-    cover,
-    evalEither,
-    failure,
-    footnote,
-    forAll,
-    label,
-    property,
-    success,
-  )
+import Hedgehog (
+  Gen,
+  MonadTest,
+  PropertyT,
+  TestLimit,
+  assert,
+  collect,
+  cover,
+  evalEither,
+  failure,
+  footnote,
+  forAll,
+  label,
+  property,
+  success,
+ )
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 import Lens.Micro ((^.))
-import Test.Cardano.Chain.Elaboration.Block
-  ( AbstractToConcreteIdMaps,
-    abEnvToCfg,
-    elaborateBS,
-    rcDCert,
-    transactionIds,
-  )
+import Test.Cardano.Chain.Elaboration.Block (
+  AbstractToConcreteIdMaps,
+  abEnvToCfg,
+  elaborateBS,
+  rcDCert,
+  transactionIds,
+ )
 import Test.Cardano.Chain.Elaboration.Keys (elaborateVKeyGenesisHash)
 import Test.Cardano.Chain.UTxO.Model (elaborateInitialUTxO)
 import Test.Cardano.Prelude
@@ -344,13 +344,13 @@ mkUpiSt (_slot, _sgs, _h, _utxoSt, _delegSt, upiSt) = upiSt
 -- | Output resulting from elaborating and validating an abstract trace with
 -- the concrete validators.
 data ValidationOutput = ValidationOutput
-  { -- | Elaborated configuration. This configuration results from elaborating
-    -- the trace initial environment.
-    elaboratedConfig :: !Genesis.Config,
-    result ::
+  { elaboratedConfig :: !Genesis.Config
+  -- ^ Elaborated configuration. This configuration results from elaborating
+  -- the trace initial environment.
+  , result ::
       !( Either
-           ChainValidationError
-           (ChainValidationState, AbstractToConcreteIdMaps)
+          ChainValidationError
+          (ChainValidationState, AbstractToConcreteIdMaps)
        )
   }
 
@@ -360,8 +360,8 @@ applyTrace ::
   ValidationOutput
 applyTrace tr =
   ValidationOutput
-    { elaboratedConfig = config,
-      result =
+    { elaboratedConfig = config
+    , result =
         foldM (elaborateAndUpdate config) (initialState, initialAbstractToConcreteIdMaps) $
           preStatesAndSignals OldestFirst tr
     }
@@ -375,11 +375,11 @@ applyTrace tr =
 
     config = abEnvToCfg abstractEnv
 
-    abstractEnv@( _currentSlot,
-                  abstractInitialUTxO,
-                  _allowedDelegators,
-                  _protocolParams,
-                  _stableAfter
+    abstractEnv@( _currentSlot
+                  , abstractInitialUTxO
+                  , _allowedDelegators
+                  , _protocolParams
+                  , _stableAfter
                   ) = tr ^. traceEnv
 
     (initialUTxO, txIdMap) = elaborateInitialUTxO abstractInitialUTxO
@@ -510,15 +510,15 @@ invalidSizesAreRejected
           genAlteredUpdateState ((pv, pps), fads, avs, rpus, raus, cps, vts, bvs, pws) = do
             newMaxSize <- Gen.integral (Range.constant 0 maxSize)
             pure $!
-              ( (pv, pps `setAbstractParamTo` newMaxSize),
-                fads,
-                avs,
-                rpus,
-                raus,
-                cps,
-                vts,
-                bvs,
-                pws
+              ( (pv, pps `setAbstractParamTo` newMaxSize)
+              , fads
+              , avs
+              , rpus
+              , raus
+              , cps
+              , vts
+              , bvs
+              , pws
               )
 
       genConcreteAlteredState ::

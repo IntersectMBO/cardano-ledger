@@ -4,10 +4,10 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | This module contains just the type of protocol parameters.
-module Cardano.Ledger.HKD
-  ( HKD,
-    HKDFunctor (..),
-  )
+module Cardano.Ledger.HKD (
+  HKD,
+  HKDFunctor (..),
+)
 where
 
 import Data.Functor.Identity (Identity)

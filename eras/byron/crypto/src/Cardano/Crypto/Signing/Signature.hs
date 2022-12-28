@@ -7,50 +7,50 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Cardano.Crypto.Signing.Signature
-  ( -- * Signature
-    Signature (..),
-    toCBORXSignature,
-    fromCBORXSignature,
-    fullSignatureHexF,
-    parseFullSignature,
+module Cardano.Crypto.Signing.Signature (
+  -- * Signature
+  Signature (..),
+  toCBORXSignature,
+  fromCBORXSignature,
+  fullSignatureHexF,
+  parseFullSignature,
 
-    -- * Signing
-    sign,
-    signEncoded,
-    signRaw,
-    safeSign,
-    safeSignRaw,
+  -- * Signing
+  sign,
+  signEncoded,
+  signRaw,
+  safeSign,
+  safeSignRaw,
 
-    -- * Verification
-    verifySignature,
-    verifySignatureDecoded,
-    verifySignatureRaw,
-  )
+  -- * Verification
+  verifySignature,
+  verifySignatureDecoded,
+  verifySignatureRaw,
+)
 where
 
 import Cardano.Crypto.ProtocolMagic (ProtocolMagicId)
 import Cardano.Crypto.Raw (Raw (..))
-import Cardano.Crypto.Signing.Safe
-  ( PassPhrase (..),
-    SafeSigner (..),
-  )
+import Cardano.Crypto.Signing.Safe (
+  PassPhrase (..),
+  SafeSigner (..),
+ )
 import Cardano.Crypto.Signing.SigningKey (SigningKey (..))
 import Cardano.Crypto.Signing.Tag (SignTag (..), signTag, signTagDecoded)
 import Cardano.Crypto.Signing.VerificationKey (VerificationKey (..))
 import qualified Cardano.Crypto.Wallet as CC
-import Cardano.Ledger.Binary
-  ( Annotated (..),
-    Decoded (..),
-    Decoder,
-    Encoding,
-    FromCBOR (..),
-    ToCBOR (..),
-    byronProtVer,
-    serialize',
-    serializeEncoding,
-    toCborError,
-  )
+import Cardano.Ledger.Binary (
+  Annotated (..),
+  Decoded (..),
+  Decoder,
+  Encoding,
+  FromCBOR (..),
+  ToCBOR (..),
+  byronProtVer,
+  serialize',
+  serializeEncoding,
+  toCborError,
+ )
 import Cardano.Prelude hiding (toCborError)
 import Data.Aeson (FromJSON (..), ToJSON (..))
 import Data.ByteArray (ScrubbedBytes)

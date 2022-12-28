@@ -9,42 +9,42 @@
 -- Description : Initial State for Shelley ledger examples
 --
 -- The initial state for Shelley Ledger Examples.
-module Test.Cardano.Ledger.Shelley.Examples.Init
-  ( ppEx,
-    initSt,
-    nonce0,
-    lastByronHeaderHash,
-  )
+module Test.Cardano.Ledger.Shelley.Examples.Init (
+  ppEx,
+  initSt,
+  nonce0,
+  lastByronHeaderHash,
+)
 where
 
 import Cardano.Ledger.BaseTypes (Nonce (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Shelley.PParams
-  ( ShelleyPParams,
-    ShelleyPParamsHKD (..),
-    emptyPParams,
-  )
-import Cardano.Ledger.Slot
-  ( BlockNo (..),
-    EpochNo (..),
-    SlotNo (..),
-  )
+import Cardano.Ledger.Shelley.PParams (
+  ShelleyPParams,
+  ShelleyPParamsHKD (..),
+  emptyPParams,
+ )
+import Cardano.Ledger.Slot (
+  BlockNo (..),
+  EpochNo (..),
+  SlotNo (..),
+ )
 import Cardano.Ledger.UTxO (UTxO (..), balance)
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
-import Cardano.Protocol.TPraos.BHeader
-  ( HashHeader (..),
-    LastAppliedBlock (..),
-    hashHeaderToNonce,
-  )
+import Cardano.Protocol.TPraos.BHeader (
+  HashHeader (..),
+  LastAppliedBlock (..),
+  hashHeaderToNonce,
+ )
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Test.Cardano.Ledger.Shelley.Examples.Federation (genDelegs)
-import Test.Cardano.Ledger.Shelley.Rules.Chain
-  ( ChainState (..),
-    initialShelleyState,
-  )
+import Test.Cardano.Ledger.Shelley.Rules.Chain (
+  ChainState (..),
+  initialShelleyState,
+ )
 import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest, maxLLSupply, mkHash, unsafeBoundRational)
 
 -- === Initial Protocol Parameters
@@ -66,16 +66,16 @@ import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest, maxLLSupply, mkHash, unsa
 ppEx :: ShelleyPParams era
 ppEx =
   emptyPParams
-    { _maxBBSize = 50000,
-      _maxBHSize = 10000,
-      _maxTxSize = 10000,
-      _eMax = EpochNo 10000,
-      _keyDeposit = Coin 7,
-      _poolDeposit = Coin 250,
-      _d = unsafeBoundRational 0.5,
-      _tau = unsafeBoundRational 0.2,
-      _rho = unsafeBoundRational 0.0021,
-      _minUTxOValue = Coin 100
+    { _maxBBSize = 50000
+    , _maxBHSize = 10000
+    , _maxTxSize = 10000
+    , _eMax = EpochNo 10000
+    , _keyDeposit = Coin 7
+    , _poolDeposit = Coin 250
+    , _d = unsafeBoundRational 0.5
+    , _tau = unsafeBoundRational 0.2
+    , _rho = unsafeBoundRational 0.0021
+    , _minUTxOValue = Coin 100
     }
 
 -- | === The hash of the last Bryon Header

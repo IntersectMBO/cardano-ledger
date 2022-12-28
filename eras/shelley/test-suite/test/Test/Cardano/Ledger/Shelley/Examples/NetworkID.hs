@@ -1,23 +1,23 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Shelley.Examples.NetworkID
-  ( testPoolNetworkId,
-  )
+module Test.Cardano.Ledger.Shelley.Examples.NetworkID (
+  testPoolNetworkId,
+)
 where
 
 import Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.API
-  ( DCert (..),
-    Network (..),
-    PoolCert (..),
-    PoolEnv (..),
-    PoolParams (..),
-    RewardAcnt (..),
-    ShelleyPOOL,
-    ShelleyPParamsHKD (..),
-  )
+import Cardano.Ledger.Shelley.API (
+  DCert (..),
+  Network (..),
+  PoolCert (..),
+  PoolEnv (..),
+  PoolParams (..),
+  RewardAcnt (..),
+  ShelleyPOOL,
+  ShelleyPParamsHKD (..),
+ )
 import Cardano.Ledger.Slot (SlotNo (..))
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.Default.Class (def)
@@ -74,18 +74,18 @@ testPoolNetworkId =
         testPoolNetworkID
           shelleyPV
           mismatchingNetworkIDPoolParams
-          ExpectSuccess,
-      testCase "Incorrect Network ID is NOT allowed in Alonzo" $
+          ExpectSuccess
+    , testCase "Incorrect Network ID is NOT allowed in Alonzo" $
         testPoolNetworkID
           alonzoPV
           mismatchingNetworkIDPoolParams
-          ExpectFailure,
-      testCase "Correct Network ID is allowed pre-Alonzo" $
+          ExpectFailure
+    , testCase "Correct Network ID is allowed pre-Alonzo" $
         testPoolNetworkID
           shelleyPV
           matchingNetworkIDPoolParams
-          ExpectSuccess,
-      testCase "Correct Network ID is allowed in Alonzo" $
+          ExpectSuccess
+    , testCase "Correct Network ID is allowed in Alonzo" $
         testPoolNetworkID
           alonzoPV
           matchingNetworkIDPoolParams

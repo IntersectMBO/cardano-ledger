@@ -17,9 +17,9 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API
-import qualified Cardano.Ledger.Shelley.LedgerState as LS
-  ( returnRedeemAddrsToReserves,
-  )
+import qualified Cardano.Ledger.Shelley.LedgerState as LS (
+  returnRedeemAddrsToReserves,
+ )
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map
 
@@ -58,13 +58,13 @@ instance Crypto c => TranslateEra (AllegraEra c) NewEpochState where
   translateEra ctxt nes =
     return $
       NewEpochState
-        { nesEL = nesEL nes,
-          nesBprev = nesBprev nes,
-          nesBcur = nesBcur nes,
-          nesEs = translateEra' ctxt $ LS.returnRedeemAddrsToReserves . nesEs $ nes,
-          nesRu = nesRu nes,
-          nesPd = nesPd nes,
-          -- At this point, the consensus layer has passed in our stashed AVVM
+        { nesEL = nesEL nes
+        , nesBprev = nesBprev nes
+        , nesBcur = nesBcur nes
+        , nesEs = translateEra' ctxt $ LS.returnRedeemAddrsToReserves . nesEs $ nes
+        , nesRu = nesRu nes
+        , nesPd = nesPd nes
+        , -- At this point, the consensus layer has passed in our stashed AVVM
           -- addresses as our UTxO, and we have deleted them above (with
           -- 'returnRedeemAddrsToReserves'), so we may safely discard this map.
           stashedAVVMAddresses = ()
@@ -78,21 +78,21 @@ instance Crypto c => TranslateEra (AllegraEra c) ShelleyGenesis where
   translateEra ctxt genesis =
     return
       ShelleyGenesis
-        { sgSystemStart = sgSystemStart genesis,
-          sgNetworkMagic = sgNetworkMagic genesis,
-          sgNetworkId = sgNetworkId genesis,
-          sgActiveSlotsCoeff = sgActiveSlotsCoeff genesis,
-          sgSecurityParam = sgSecurityParam genesis,
-          sgEpochLength = sgEpochLength genesis,
-          sgSlotsPerKESPeriod = sgSlotsPerKESPeriod genesis,
-          sgMaxKESEvolutions = sgMaxKESEvolutions genesis,
-          sgSlotLength = sgSlotLength genesis,
-          sgUpdateQuorum = sgUpdateQuorum genesis,
-          sgMaxLovelaceSupply = sgMaxLovelaceSupply genesis,
-          sgProtocolParams = translateEra' ctxt (sgProtocolParams genesis),
-          sgGenDelegs = sgGenDelegs genesis,
-          sgInitialFunds = sgInitialFunds genesis,
-          sgStaking = sgStaking genesis
+        { sgSystemStart = sgSystemStart genesis
+        , sgNetworkMagic = sgNetworkMagic genesis
+        , sgNetworkId = sgNetworkId genesis
+        , sgActiveSlotsCoeff = sgActiveSlotsCoeff genesis
+        , sgSecurityParam = sgSecurityParam genesis
+        , sgEpochLength = sgEpochLength genesis
+        , sgSlotsPerKESPeriod = sgSlotsPerKESPeriod genesis
+        , sgMaxKESEvolutions = sgMaxKESEvolutions genesis
+        , sgSlotLength = sgSlotLength genesis
+        , sgUpdateQuorum = sgUpdateQuorum genesis
+        , sgMaxLovelaceSupply = sgMaxLovelaceSupply genesis
+        , sgProtocolParams = translateEra' ctxt (sgProtocolParams genesis)
+        , sgGenDelegs = sgGenDelegs genesis
+        , sgInitialFunds = sgInitialFunds genesis
+        , sgStaking = sgStaking genesis
         }
 
 --------------------------------------------------------------------------------
@@ -103,23 +103,23 @@ instance Crypto c => TranslateEra (AllegraEra c) (ShelleyPParamsHKD f) where
   translateEra _ pp =
     return $
       ShelleyPParams
-        { _minfeeA = _minfeeA pp,
-          _minfeeB = _minfeeB pp,
-          _maxBBSize = _maxBBSize pp,
-          _maxTxSize = _maxTxSize pp,
-          _maxBHSize = _maxBHSize pp,
-          _keyDeposit = _keyDeposit pp,
-          _poolDeposit = _poolDeposit pp,
-          _eMax = _eMax pp,
-          _nOpt = _nOpt pp,
-          _a0 = _a0 pp,
-          _rho = _rho pp,
-          _tau = _tau pp,
-          _d = _d pp,
-          _extraEntropy = _extraEntropy pp,
-          _protocolVersion = _protocolVersion pp,
-          _minUTxOValue = _minUTxOValue pp,
-          _minPoolCost = _minPoolCost pp
+        { _minfeeA = _minfeeA pp
+        , _minfeeB = _minfeeB pp
+        , _maxBBSize = _maxBBSize pp
+        , _maxTxSize = _maxTxSize pp
+        , _maxBHSize = _maxBHSize pp
+        , _keyDeposit = _keyDeposit pp
+        , _poolDeposit = _poolDeposit pp
+        , _eMax = _eMax pp
+        , _nOpt = _nOpt pp
+        , _a0 = _a0 pp
+        , _rho = _rho pp
+        , _tau = _tau pp
+        , _d = _d pp
+        , _extraEntropy = _extraEntropy pp
+        , _protocolVersion = _protocolVersion pp
+        , _minUTxOValue = _minUTxOValue pp
+        , _minPoolCost = _minPoolCost pp
         }
 
 instance Crypto c => TranslateEra (AllegraEra c) ProposedPPUpdates where
@@ -130,8 +130,8 @@ instance Crypto c => TranslateEra (AllegraEra c) PPUPState where
   translateEra ctxt ps =
     return
       PPUPState
-        { proposals = translateEra' ctxt $ proposals ps,
-          futureProposals = translateEra' ctxt $ futureProposals ps
+        { proposals = translateEra' ctxt $ proposals ps
+        , futureProposals = translateEra' ctxt $ futureProposals ps
         }
 
 instance Crypto c => TranslateEra (AllegraEra c) ShelleyTxOut where
@@ -146,31 +146,31 @@ instance Crypto c => TranslateEra (AllegraEra c) UTxOState where
   translateEra ctxt us =
     return
       UTxOState
-        { utxosUtxo = translateEra' ctxt $ utxosUtxo us,
-          utxosDeposited = utxosDeposited us,
-          utxosFees = utxosFees us,
-          utxosPpups = translateEra' ctxt $ utxosPpups us,
-          utxosStakeDistr = utxosStakeDistr us
+        { utxosUtxo = translateEra' ctxt $ utxosUtxo us
+        , utxosDeposited = utxosDeposited us
+        , utxosFees = utxosFees us
+        , utxosPpups = translateEra' ctxt $ utxosPpups us
+        , utxosStakeDistr = utxosStakeDistr us
         }
 
 instance Crypto c => TranslateEra (AllegraEra c) LedgerState where
   translateEra ctxt ls =
     return
       LedgerState
-        { lsUTxOState = translateEra' ctxt $ lsUTxOState ls,
-          lsDPState = lsDPState ls
+        { lsUTxOState = translateEra' ctxt $ lsUTxOState ls
+        , lsDPState = lsDPState ls
         }
 
 instance Crypto c => TranslateEra (AllegraEra c) EpochState where
   translateEra ctxt es =
     return
       EpochState
-        { esAccountState = esAccountState es,
-          esSnapshots = esSnapshots es,
-          esLState = translateEra' ctxt $ esLState es,
-          esPrevPp = translateEra' ctxt $ esPrevPp es,
-          esPp = translateEra' ctxt $ esPp es,
-          esNonMyopic = esNonMyopic es
+        { esAccountState = esAccountState es
+        , esSnapshots = esSnapshots es
+        , esLState = translateEra' ctxt $ esLState es
+        , esPrevPp = translateEra' ctxt $ esPrevPp es
+        , esPp = translateEra' ctxt $ esPp es
+        , esNonMyopic = esNonMyopic es
         }
 
 instance Crypto c => TranslateEra (AllegraEra c) ShelleyTxWits where

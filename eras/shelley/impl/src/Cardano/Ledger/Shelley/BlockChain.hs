@@ -15,42 +15,42 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Shelley.BlockChain
-  ( ShelleyTxSeq (ShelleyTxSeq, txSeqTxns', TxSeq'),
-    constructMetadata,
-    txSeqTxns,
-    bbHash,
-    bBodySize,
-    slotToNonce,
-    --
-    incrBlocks,
-    coreAuxDataBytes,
-    txSeqDecoder,
-  )
+module Cardano.Ledger.Shelley.BlockChain (
+  ShelleyTxSeq (ShelleyTxSeq, txSeqTxns', TxSeq'),
+  constructMetadata,
+  txSeqTxns,
+  bbHash,
+  bBodySize,
+  slotToNonce,
+  --
+  incrBlocks,
+  coreAuxDataBytes,
+  txSeqDecoder,
+)
 where
 
 import qualified Cardano.Crypto.Hash.Class as Hash
-import Cardano.Ledger.BaseTypes
-  ( BlocksMade (..),
-    Nonce (..),
-    ProtVer (..),
-    StrictMaybe (..),
-    mkNonceFromNumber,
-    strictMaybeToMaybe,
-  )
-import Cardano.Ledger.Binary
-  ( Annotator (..),
-    Decoder,
-    FromCBOR (fromCBOR),
-    ToCBOR (..),
-    ToCBORGroup (..),
-    encodeFoldableEncoder,
-    encodeFoldableMapEncoder,
-    encodePreEncoded,
-    serializeEncoding,
-    serializeEncoding',
-    withSlice,
-  )
+import Cardano.Ledger.BaseTypes (
+  BlocksMade (..),
+  Nonce (..),
+  ProtVer (..),
+  StrictMaybe (..),
+  mkNonceFromNumber,
+  strictMaybeToMaybe,
+ )
+import Cardano.Ledger.Binary (
+  Annotator (..),
+  Decoder,
+  FromCBOR (fromCBOR),
+  ToCBOR (..),
+  ToCBORGroup (..),
+  encodeFoldableEncoder,
+  encodeFoldableMapEncoder,
+  encodePreEncoded,
+  serializeEncoding,
+  serializeEncoding',
+  withSlice,
+ )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (Hash, KeyHash, KeyRole (..))
@@ -75,11 +75,11 @@ import Lens.Micro ((^.))
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 
 data ShelleyTxSeq era = TxSeq'
-  { txSeqTxns' :: !(StrictSeq (ShelleyTx era)),
-    txSeqBodyBytes :: BSL.ByteString,
-    txSeqWitsBytes :: BSL.ByteString,
-    txSeqMetadataBytes :: BSL.ByteString
-    -- bytes representing a (Map index metadata). Missing indices have SNothing for metadata
+  { txSeqTxns' :: !(StrictSeq (ShelleyTx era))
+  , txSeqBodyBytes :: BSL.ByteString
+  , txSeqWitsBytes :: BSL.ByteString
+  , txSeqMetadataBytes :: BSL.ByteString
+  -- bytes representing a (Map index metadata). Missing indices have SNothing for metadata
   }
   deriving (Generic)
 
@@ -92,9 +92,9 @@ instance Crypto c => EraSegWits (ShelleyEra c) where
 
 deriving via
   AllowThunksIn
-    '[ "txSeqBodyBytes",
-       "txSeqWitsBytes",
-       "txSeqMetadataBytes"
+    '[ "txSeqBodyBytes"
+     , "txSeqWitsBytes"
+     , "txSeqMetadataBytes"
      ]
     (ShelleyTxSeq era)
   instance
@@ -128,9 +128,9 @@ coreAuxDataBytes tx = originalBytes <$> tx ^. auxDataTxL
 -- | Constuct a TxSeq (with all it bytes) from just Tx's
 pattern ShelleyTxSeq ::
   forall era.
-  ( EraTx era,
-    Tx era ~ ShelleyTx era,
-    SafeToHash (TxWits era)
+  ( EraTx era
+  , Tx era ~ ShelleyTx era
+  , SafeToHash (TxWits era)
   ) =>
   StrictSeq (Tx era) ->
   ShelleyTxSeq era
@@ -146,12 +146,12 @@ pattern ShelleyTxSeq xs <-
             where
               encodePair metadata = toCBOR index <> encodePreEncoded metadata
        in TxSeq'
-            { txSeqTxns' = txns,
-              -- bytes encoding Seq(TxBody era)
-              txSeqBodyBytes = serializeFoldable $ coreBodyBytes @era <$> txns,
-              -- bytes encoding Seq(TxWits era)
-              txSeqWitsBytes = serializeFoldable $ coreWitnessBytes @era <$> txns,
-              -- bytes encoding a (Map Int (TxAuxData))
+            { txSeqTxns' = txns
+            , -- bytes encoding Seq(TxBody era)
+              txSeqBodyBytes = serializeFoldable $ coreBodyBytes @era <$> txns
+            , -- bytes encoding Seq(TxWits era)
+              txSeqWitsBytes = serializeFoldable $ coreWitnessBytes @era <$> txns
+            , -- bytes encoding a (Map Int (TxAuxData))
               txSeqMetadataBytes =
                 serializeEncoding version . encodeFoldableMapEncoder metaChunk $
                   coreAuxDataBytes @era <$> txns
@@ -213,7 +213,8 @@ txSeqDecoder ::
   forall era.
   EraTx era =>
   Bool ->
-  forall s. Decoder s (Annotator (ShelleyTxSeq era))
+  forall s.
+  Decoder s (Annotator (ShelleyTxSeq era))
 txSeqDecoder lax = do
   (bodies, bodiesAnn) <- withSlice fromCBOR
   (wits, witsAnn) <- withSlice fromCBOR

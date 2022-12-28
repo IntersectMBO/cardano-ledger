@@ -1,8 +1,8 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Test.Cardano.Mirror
-  ( mainnetEpochFiles,
-  )
+module Test.Cardano.Mirror (
+  mainnetEpochFiles,
+)
 where
 
 import Cardano.Prelude

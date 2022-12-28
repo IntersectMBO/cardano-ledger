@@ -39,16 +39,16 @@ import Cardano.Ledger.Pretty.Mary (ppValidityInterval)
 import Cardano.Ledger.SafeHash (SafeToHash)
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTxError)
 import Cardano.Ledger.Shelley.BlockChain (ShelleyTxSeq (..))
-import Cardano.Ledger.Shelley.LedgerState
-  ( DPState (..),
-    DState (..),
-    EpochState (..),
-    LedgerState (..),
-    NewEpochState (..),
-    PState (..),
-    StashedAVVMAddresses,
-    UTxOState (..),
-  )
+import Cardano.Ledger.Shelley.LedgerState (
+  DPState (..),
+  DState (..),
+  EpochState (..),
+  LedgerState (..),
+  NewEpochState (..),
+  PState (..),
+  StashedAVVMAddresses,
+  UTxOState (..),
+ )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), ShelleyPParamsHKD)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..), Wdrl (..))
@@ -60,10 +60,10 @@ import Data.Maybe.Strict (StrictMaybe)
 import Prettyprinter (Doc, indent, viaShow, vsep)
 import Test.Cardano.Ledger.Generic.PrettyCore
 import Test.Cardano.Ledger.Generic.Proof
-import Test.Cardano.Ledger.Shelley.Examples.Consensus
-  ( ShelleyLedgerExamples (..),
-    ShelleyResultExamples (..),
-  )
+import Test.Cardano.Ledger.Shelley.Examples.Consensus (
+  ShelleyLedgerExamples (..),
+  ShelleyResultExamples (..),
+ )
 import Test.Cardano.Ledger.TerseTools
 
 -- ===========================
@@ -116,19 +116,19 @@ instance (EraCrypto era ~ c) => Same era (DPState c) where
 
 instance (EraCrypto era ~ c) => Same era (PState c) where
   same _proof (PState pp1 fpp1 ret1 d1) (PState pp2 fpp2 ret2 d2) =
-    [ ("PoolParams", eqByShow pp1 pp2),
-      ("FuturePoolParams", eqByShow fpp1 fpp2),
-      ("Retiring", eqByShow ret1 ret2),
-      ("Deposits", eqByShow d1 d2)
+    [ ("PoolParams", eqByShow pp1 pp2)
+    , ("FuturePoolParams", eqByShow fpp1 fpp2)
+    , ("Retiring", eqByShow ret1 ret2)
+    , ("Deposits", eqByShow d1 d2)
     ]
 
 instance (EraCrypto era ~ c) => Same era (DState c) where
   same _proof (DState u1 fgd1 gd1 ir1 d1) (DState u2 fgd2 gd2 ir2 d2) =
-    [ ("Unified", eqByShow u1 u2),
-      ("FutureGenDelegs", eqByShow fgd1 fgd2),
-      ("GenDelegs", eqByShow gd1 gd2),
-      ("InstantaneousRewards", eqByShow ir1 ir2),
-      ("Deposits", eqByShow d1 d2)
+    [ ("Unified", eqByShow u1 u2)
+    , ("FutureGenDelegs", eqByShow fgd1 fgd2)
+    , ("GenDelegs", eqByShow gd1 gd2)
+    , ("InstantaneousRewards", eqByShow ir1 ir2)
+    , ("Deposits", eqByShow d1 d2)
     ]
 
 sameUTxO :: Proof era -> UTxO era -> UTxO era -> Maybe PDoc
@@ -151,11 +151,11 @@ samePPUP (Conway _) x y = eqByShow x y
 
 instance (Era era) => Same era (UTxOState era) where
   same proof u1 u2 =
-    [ ("UTxO", sameUTxO proof (utxosUtxo u1) (utxosUtxo u2)),
-      ("Deposited", eqByShow (utxosDeposited u1) (utxosDeposited u2)),
-      ("Fees", eqByShow (utxosFees u1) (utxosFees u2)),
-      ("PPUpdates", samePPUP proof (utxosPpups u1) (utxosPpups u2)),
-      ("StakeDistr", eqByShow (utxosStakeDistr u1) (utxosStakeDistr u2))
+    [ ("UTxO", sameUTxO proof (utxosUtxo u1) (utxosUtxo u2))
+    , ("Deposited", eqByShow (utxosDeposited u1) (utxosDeposited u2))
+    , ("Fees", eqByShow (utxosFees u1) (utxosFees u2))
+    , ("PPUpdates", samePPUP proof (utxosPpups u1) (utxosPpups u2))
+    , ("StakeDistr", eqByShow (utxosStakeDistr u1) (utxosStakeDistr u2))
     ]
 
 instance (Era era) => Same era (LedgerState era) where
@@ -165,11 +165,11 @@ instance (Era era) => Same era (LedgerState era) where
 
 instance (Era era) => Same era (EpochState era) where
   same proof e1 e2 =
-    [ ("AccountState", eqByShow (esAccountState e1) (esAccountState e2)),
-      ("SnapShots", eqByShow (esSnapshots e1) (esSnapshots e2)),
-      ("PrevPP", samePParams proof (esPrevPp e1) (esPrevPp e2)),
-      ("CurPP", samePParams proof (esPp e1) (esPp e2)),
-      ("NonMyopic", eqByShow (esNonMyopic e1) (esNonMyopic e2))
+    [ ("AccountState", eqByShow (esAccountState e1) (esAccountState e2))
+    , ("SnapShots", eqByShow (esSnapshots e1) (esSnapshots e2))
+    , ("PrevPP", samePParams proof (esPrevPp e1) (esPrevPp e2))
+    , ("CurPP", samePParams proof (esPp e1) (esPp e2))
+    , ("NonMyopic", eqByShow (esNonMyopic e1) (esNonMyopic e2))
     ]
       ++ extendLabel "LedgerState " (same proof (esLState e1) (esLState e2))
 
@@ -190,12 +190,12 @@ instance
   Same era (NewEpochState era)
   where
   same proof n1 n2 =
-    [ ("nesEL", eqByShow (nesEL n1) (nesEL n2)),
-      ("nesBprev", eqByShow (nesBprev n1) (nesBprev n2)),
-      ("nesBcur", eqByShow (nesBcur n1) (nesBcur n2)),
-      ("nesRU", eqByShow (nesRu n1) (nesRu n2)),
-      ("nesPd", eqByShow (nesPd n1) (nesPd n2)),
-      ("nesStashAVVM", sameStashedAVVMAddresses proof (stashedAVVMAddresses n1) (stashedAVVMAddresses n2))
+    [ ("nesEL", eqByShow (nesEL n1) (nesEL n2))
+    , ("nesBprev", eqByShow (nesBprev n1) (nesBprev n2))
+    , ("nesBcur", eqByShow (nesBcur n1) (nesBcur n2))
+    , ("nesRU", eqByShow (nesRu n1) (nesRu n2))
+    , ("nesPd", eqByShow (nesPd n1) (nesPd n2))
+    , ("nesStashAVVM", sameStashedAVVMAddresses proof (stashedAVVMAddresses n1) (stashedAVVMAddresses n2))
     ]
       ++ extendLabel "EpochState " (same proof (nesEs n1) (nesEs n2))
 
@@ -220,39 +220,41 @@ instance Reflect era => Same era (ShelleyLedgerExamples era) where
   same proof x1 x2 = case (sleBlock x1, sleBlock x2) of
     (Block' h1 a1 _, Block' h2 a2 _) ->
       sameWithDependency
-        [ SomeM "Tx" (sameTx proof) (sleTx x1) (sleTx x2),
-          SomeM "TxSeq" (sameTxSeq proof) a1 a2
+        [ SomeM "Tx" (sameTx proof) (sleTx x1) (sleTx x2)
+        , SomeM "TxSeq" (sameTxSeq proof) a1 a2
         ]
-        ++ [ ("BlockHeader", if h1 == h2 then Nothing else Just ("UnequalBlockHeader")),
-             ( "HashHeader",
-               if (sleHashHeader x1) == (sleHashHeader x2)
-                 then Nothing
-                 else Just ("UnequalHashHeader")
-             ),
-             ("ApplyTxError", sameLedgerFail proof (sleApplyTxError x1) (sleApplyTxError x2)),
-             ("RewardsCredentials", eqByShow (sleRewardsCredentials x1) (sleRewardsCredentials x2))
+        ++ [ ("BlockHeader", if h1 == h2 then Nothing else Just ("UnequalBlockHeader"))
+           ,
+             ( "HashHeader"
+             , if (sleHashHeader x1) == (sleHashHeader x2)
+                then Nothing
+                else Just ("UnequalHashHeader")
+             )
+           , ("ApplyTxError", sameLedgerFail proof (sleApplyTxError x1) (sleApplyTxError x2))
+           , ("RewardsCredentials", eqByShow (sleRewardsCredentials x1) (sleRewardsCredentials x2))
            ]
         ++ extendLabel "Result " (same proof (sleResultExamples x1) (sleResultExamples x2))
         ++ extendLabel "NewEpochState " (same proof (sleNewEpochState x1) (sleNewEpochState x2))
-        ++ [ ("ChainDepState", eqByShow (sleChainDepState x1) (sleChainDepState x2)),
-             ("TranslationContext", sameTransCtx proof (sleTranslationContext x1) (sleTranslationContext x2))
+        ++ [ ("ChainDepState", eqByShow (sleChainDepState x1) (sleChainDepState x2))
+           , ("TranslationContext", sameTransCtx proof (sleTranslationContext x1) (sleTranslationContext x2))
            ]
 
 instance Same era (ShelleyResultExamples era) where
   same proof r1 r2 =
-    [ ("PParams", samePParams proof (srePParams r1) (srePParams r2)),
-      ( "ProposedPPUpdates",
-        case proof of
+    [ ("PParams", samePParams proof (srePParams r1) (srePParams r2))
+    ,
+      ( "ProposedPPUpdates"
+      , case proof of
           Shelley _ -> sameProposedPPUpdates (sreProposedPPUpdates r1) (sreProposedPPUpdates r2)
           Allegra _ -> sameProposedPPUpdates (sreProposedPPUpdates r1) (sreProposedPPUpdates r2)
           Mary _ -> sameProposedPPUpdates (sreProposedPPUpdates r1) (sreProposedPPUpdates r2)
           Alonzo _ -> sameProposedPPUpdates (sreProposedPPUpdates r1) (sreProposedPPUpdates r2)
           Babbage _ -> sameProposedPPUpdates (sreProposedPPUpdates r1) (sreProposedPPUpdates r2)
           Conway _ -> sameProposedPPUpdates (sreProposedPPUpdates r1) (sreProposedPPUpdates r2)
-      ),
-      ("poolDistr", eqByShow (srePoolDistr r1) (srePoolDistr r2)),
-      ("NonMyopicRewards", eqByShow (sreNonMyopicRewards r1) (sreNonMyopicRewards r2)),
-      ("ShelleyGenesis", eqByShow (sreShelleyGenesis r1) (sreShelleyGenesis r2))
+      )
+    , ("poolDistr", eqByShow (srePoolDistr r1) (srePoolDistr r2))
+    , ("NonMyopicRewards", eqByShow (sreNonMyopicRewards r1) (sreNonMyopicRewards r2))
+    , ("ShelleyGenesis", eqByShow (sreShelleyGenesis r1) (sreShelleyGenesis r2))
     ]
     where
       getmap (ProposedPPUpdates x) = x
@@ -326,9 +328,9 @@ sameShelleyTxWits ::
   ShelleyTxWits era ->
   [(String, Maybe PDoc)]
 sameShelleyTxWits proof (ShelleyTxWits vk1 sh1 boot1) (ShelleyTxWits vk2 sh2 boot2) =
-  [ ("VKeyWits", eqVia (ppSet (pcWitVKey @era)) vk1 vk2),
-    ("ScriptWits", eqVia (ppMap pcScriptHash (pcScript proof)) sh1 sh2),
-    ("BootWits", eqVia (\_ -> ppString "BOOTWITS") boot1 boot2)
+  [ ("VKeyWits", eqVia (ppSet (pcWitVKey @era)) vk1 vk2)
+  , ("ScriptWits", eqVia (ppMap pcScriptHash (pcScript proof)) sh1 sh2)
+  , ("BootWits", eqVia (\_ -> ppString "BOOTWITS") boot1 boot2)
   ]
 
 sameAlonzoTxWits ::
@@ -342,11 +344,11 @@ sameAlonzoTxWits
   proof
   (AlonzoTxWits vk1 boot1 sh1 (TxDats d1) (Redeemers r1))
   (AlonzoTxWits vk2 boot2 sh2 (TxDats d2) (Redeemers r2)) =
-    [ ("VKeyWits", eqVia (ppSet (pcWitVKey @era)) vk1 vk2),
-      ("BootWits", eqVia (\_ -> ppString "BOOTWITS") boot1 boot2),
-      ("ScriptWits", eqVia (ppMap pcScriptHash (pcScript proof)) sh1 sh2),
-      ("DataWits", eqVia (ppMap pcDataHash pcData) d1 d2),
-      ("RedeemerWits", eqVia (ppMap ppRdmrPtr (pcPair pcData pcExUnits)) r1 r2)
+    [ ("VKeyWits", eqVia (ppSet (pcWitVKey @era)) vk1 vk2)
+    , ("BootWits", eqVia (\_ -> ppString "BOOTWITS") boot1 boot2)
+    , ("ScriptWits", eqVia (ppMap pcScriptHash (pcScript proof)) sh1 sh2)
+    , ("DataWits", eqVia (ppMap pcDataHash pcData) d1 d2)
+    , ("RedeemerWits", eqVia (ppMap ppRdmrPtr (pcPair pcData pcExUnits)) r1 r2)
     ]
 
 sameTxWits :: Reflect era => Proof era -> TxWits era -> TxWits era -> [(String, Maybe PDoc)]
@@ -367,14 +369,14 @@ sameShelleyTxBody ::
   ShelleyTxBody era ->
   [(String, Maybe PDoc)]
 sameShelleyTxBody proof (ShelleyTxBody i1 o1 c1 (Wdrl w1) f1 s1 pu1 d1) (ShelleyTxBody i2 o2 c2 (Wdrl w2) f2 s2 pu2 d2) =
-  [ ("Inputs", eqVia (ppSet pcTxIn) i1 i2),
-    ("Outputs", eqVia (ppList (pcTxOut proof) . toList) o1 o2),
-    ("DCert", eqVia (ppList pcDCert . toList) c1 c2),
-    ("WDRL", eqVia (ppMap pcRewardAcnt pcCoin) w1 w2),
-    ("Fee", eqVia pcCoin f1 f2),
-    ("TimeToLive", eqVia ppSlotNo s1 s2),
-    ("PPupdate", eqVia (\_ -> ppString "Update") pu1 pu2),
-    ("AuxDataHash", eqVia (ppStrictMaybe (\(AuxiliaryDataHash h) -> trim (ppSafeHash h))) d1 d2)
+  [ ("Inputs", eqVia (ppSet pcTxIn) i1 i2)
+  , ("Outputs", eqVia (ppList (pcTxOut proof) . toList) o1 o2)
+  , ("DCert", eqVia (ppList pcDCert . toList) c1 c2)
+  , ("WDRL", eqVia (ppMap pcRewardAcnt pcCoin) w1 w2)
+  , ("Fee", eqVia pcCoin f1 f2)
+  , ("TimeToLive", eqVia ppSlotNo s1 s2)
+  , ("PPupdate", eqVia (\_ -> ppString "Update") pu1 pu2)
+  , ("AuxDataHash", eqVia (ppStrictMaybe (\(AuxiliaryDataHash h) -> trim (ppSafeHash h))) d1 d2)
   ]
 
 sameAllegraTxBody ::
@@ -384,14 +386,14 @@ sameAllegraTxBody ::
   AllegraTxBody era ->
   [(String, Maybe PDoc)]
 sameAllegraTxBody proof (AllegraTxBody i1 o1 c1 (Wdrl w1) f1 v1 pu1 d1) (AllegraTxBody i2 o2 c2 (Wdrl w2) f2 v2 pu2 d2) =
-  [ ("Inputs", eqVia (ppSet pcTxIn) i1 i2),
-    ("Outputs", eqVia (ppList (pcTxOut proof) . toList) o1 o2),
-    ("DCert", eqVia (ppList pcDCert . toList) c1 c2),
-    ("WDRL", eqVia (ppMap pcRewardAcnt pcCoin) w1 w2),
-    ("Fee", eqVia pcCoin f1 f2),
-    ("ValidityInterval", eqVia ppValidityInterval v1 v2),
-    ("PPupdate", eqVia (\_ -> ppString "Update") pu1 pu2),
-    ("AuxDataHash", eqVia (ppStrictMaybe (\(AuxiliaryDataHash h) -> trim (ppSafeHash h))) d1 d2)
+  [ ("Inputs", eqVia (ppSet pcTxIn) i1 i2)
+  , ("Outputs", eqVia (ppList (pcTxOut proof) . toList) o1 o2)
+  , ("DCert", eqVia (ppList pcDCert . toList) c1 c2)
+  , ("WDRL", eqVia (ppMap pcRewardAcnt pcCoin) w1 w2)
+  , ("Fee", eqVia pcCoin f1 f2)
+  , ("ValidityInterval", eqVia ppValidityInterval v1 v2)
+  , ("PPupdate", eqVia (\_ -> ppString "Update") pu1 pu2)
+  , ("AuxDataHash", eqVia (ppStrictMaybe (\(AuxiliaryDataHash h) -> trim (ppSafeHash h))) d1 d2)
   ]
 
 sameMaryTxBody ::
@@ -401,15 +403,15 @@ sameMaryTxBody ::
   MaryTxBody era ->
   [(String, Maybe PDoc)]
 sameMaryTxBody proof (MaryTxBody i1 o1 c1 (Wdrl w1) f1 v1 pu1 d1 m1) (MaryTxBody i2 o2 c2 (Wdrl w2) f2 v2 pu2 d2 m2) =
-  [ ("Inputs", eqVia (ppSet pcTxIn) i1 i2),
-    ("Outputs", eqVia (ppList (pcTxOut proof) . toList) o1 o2),
-    ("DCert", eqVia (ppList pcDCert . toList) c1 c2),
-    ("WDRL", eqVia (ppMap pcRewardAcnt pcCoin) w1 w2),
-    ("Fee", eqVia pcCoin f1 f2),
-    ("ValidityInterval", eqVia ppValidityInterval v1 v2),
-    ("PPupdate", eqVia (\_ -> ppString "Update") pu1 pu2),
-    ("AuxDataHash", eqVia (ppStrictMaybe (\(AuxiliaryDataHash h) -> trim (ppSafeHash h))) d1 d2),
-    ("Mint", eqVia multiAssetSummary m1 m2)
+  [ ("Inputs", eqVia (ppSet pcTxIn) i1 i2)
+  , ("Outputs", eqVia (ppList (pcTxOut proof) . toList) o1 o2)
+  , ("DCert", eqVia (ppList pcDCert . toList) c1 c2)
+  , ("WDRL", eqVia (ppMap pcRewardAcnt pcCoin) w1 w2)
+  , ("Fee", eqVia pcCoin f1 f2)
+  , ("ValidityInterval", eqVia ppValidityInterval v1 v2)
+  , ("PPupdate", eqVia (\_ -> ppString "Update") pu1 pu2)
+  , ("AuxDataHash", eqVia (ppStrictMaybe (\(AuxiliaryDataHash h) -> trim (ppSafeHash h))) d1 d2)
+  , ("Mint", eqVia multiAssetSummary m1 m2)
   ]
 
 sameAlonzoTxBody ::
@@ -422,24 +424,24 @@ sameAlonzoTxBody
   proof
   (AlonzoTxBody i1 cl1 o1 c1 (Wdrl w1) f1 v1 pu1 r1 m1 s1 d1 n1)
   (AlonzoTxBody i2 cl2 o2 c2 (Wdrl w2) f2 v2 pu2 r2 m2 s2 d2 n2) =
-    [ ("Inputs", eqVia (ppSet pcTxIn) i1 i2),
-      ("Collateral", eqVia (ppSet pcTxIn) cl1 cl2),
-      ("Outputs", eqVia (ppList (pcTxOut proof) . toList) o1 o2),
-      ("Certs", eqVia (ppList pcDCert . toList) c1 c2),
-      ("WDRL", eqVia (ppMap pcRewardAcnt pcCoin) w1 w2),
-      ("Fee", eqVia pcCoin f1 f2),
-      ("ValidityInterval", eqVia ppValidityInterval v1 v2),
-      ("PPupdate", eqVia (\_ -> ppString "Update") pu1 pu2),
-      ("ReqSignerHashes", eqVia (ppSet pcKeyHash) r1 r2),
-      ("Mint", eqVia multiAssetSummary m1 m2),
-      ("ScriptIntegrityHash", eqVia (ppStrictMaybe (trim . ppSafeHash)) s1 s2),
-      ("AuxDataHash", eqVia (ppStrictMaybe (\(AuxiliaryDataHash h) -> trim (ppSafeHash h))) d1 d2),
-      ("NetworkId", eqVia (ppStrictMaybe pcNetwork) n1 n2)
+    [ ("Inputs", eqVia (ppSet pcTxIn) i1 i2)
+    , ("Collateral", eqVia (ppSet pcTxIn) cl1 cl2)
+    , ("Outputs", eqVia (ppList (pcTxOut proof) . toList) o1 o2)
+    , ("Certs", eqVia (ppList pcDCert . toList) c1 c2)
+    , ("WDRL", eqVia (ppMap pcRewardAcnt pcCoin) w1 w2)
+    , ("Fee", eqVia pcCoin f1 f2)
+    , ("ValidityInterval", eqVia ppValidityInterval v1 v2)
+    , ("PPupdate", eqVia (\_ -> ppString "Update") pu1 pu2)
+    , ("ReqSignerHashes", eqVia (ppSet pcKeyHash) r1 r2)
+    , ("Mint", eqVia multiAssetSummary m1 m2)
+    , ("ScriptIntegrityHash", eqVia (ppStrictMaybe (trim . ppSafeHash)) s1 s2)
+    , ("AuxDataHash", eqVia (ppStrictMaybe (\(AuxiliaryDataHash h) -> trim (ppSafeHash h))) d1 d2)
+    , ("NetworkId", eqVia (ppStrictMaybe pcNetwork) n1 n2)
     ]
 
 sameBabbageTxBody ::
-  ( Reflect era,
-    BabbageEraTxBody era
+  ( Reflect era
+  , BabbageEraTxBody era
   ) =>
   Proof era ->
   BabbageTxBody era ->
@@ -449,28 +451,28 @@ sameBabbageTxBody
   proof
   (BabbageTxBody i1 cl1 ri1 o1 cr1 tc1 c1 (Wdrl w1) f1 v1 pu1 r1 m1 s1 d1 n1)
   (BabbageTxBody i2 cl2 ri2 o2 cr2 tc2 c2 (Wdrl w2) f2 v2 pu2 r2 m2 s2 d2 n2) =
-    [ ("SpendInputs", eqVia (ppSet pcTxIn) i1 i2),
-      ("ColInputs", eqVia (ppSet pcTxIn) cl1 cl2),
-      ("RefInputs", eqVia (ppSet pcTxIn) ri1 ri2),
-      ("Outputs", eqVia (ppList (pcTxOut proof . sizedValue) . toList) o1 o2),
-      ("ColReturn", eqVia (ppStrictMaybe (pcTxOut proof . sizedValue)) cr1 cr2),
-      ("TotalCol", eqVia (ppStrictMaybe pcCoin) tc1 tc2),
-      ("Certs", eqVia (ppList pcDCert . toList) c1 c2),
-      ("WDRL", eqVia (ppMap pcRewardAcnt pcCoin) w1 w2),
-      ("Fee", eqVia pcCoin f1 f2),
-      ("ValidityInterval", eqVia ppValidityInterval v1 v2),
-      ("PPupdate", eqVia (\_ -> ppString "Update") pu1 pu2),
-      ("ReqSignerHashes", eqVia (ppSet pcKeyHash) r1 r2),
-      ("Mint", eqVia multiAssetSummary m1 m2),
-      ("ScriptIntegrityHash", eqVia (ppStrictMaybe (trim . ppSafeHash)) s1 s2),
-      ("AuxDataHash", eqVia (ppStrictMaybe (\(AuxiliaryDataHash h) -> trim (ppSafeHash h))) d1 d2),
-      ("NetworkId", eqVia (ppStrictMaybe pcNetwork) n1 n2)
+    [ ("SpendInputs", eqVia (ppSet pcTxIn) i1 i2)
+    , ("ColInputs", eqVia (ppSet pcTxIn) cl1 cl2)
+    , ("RefInputs", eqVia (ppSet pcTxIn) ri1 ri2)
+    , ("Outputs", eqVia (ppList (pcTxOut proof . sizedValue) . toList) o1 o2)
+    , ("ColReturn", eqVia (ppStrictMaybe (pcTxOut proof . sizedValue)) cr1 cr2)
+    , ("TotalCol", eqVia (ppStrictMaybe pcCoin) tc1 tc2)
+    , ("Certs", eqVia (ppList pcDCert . toList) c1 c2)
+    , ("WDRL", eqVia (ppMap pcRewardAcnt pcCoin) w1 w2)
+    , ("Fee", eqVia pcCoin f1 f2)
+    , ("ValidityInterval", eqVia ppValidityInterval v1 v2)
+    , ("PPupdate", eqVia (\_ -> ppString "Update") pu1 pu2)
+    , ("ReqSignerHashes", eqVia (ppSet pcKeyHash) r1 r2)
+    , ("Mint", eqVia multiAssetSummary m1 m2)
+    , ("ScriptIntegrityHash", eqVia (ppStrictMaybe (trim . ppSafeHash)) s1 s2)
+    , ("AuxDataHash", eqVia (ppStrictMaybe (\(AuxiliaryDataHash h) -> trim (ppSafeHash h))) d1 d2)
+    , ("NetworkId", eqVia (ppStrictMaybe pcNetwork) n1 n2)
     ]
 
 sameConwayTxBody ::
-  ( ConwayEraTxBody era,
-    PrettyA (PParamsUpdate era),
-    Reflect era
+  ( ConwayEraTxBody era
+  , PrettyA (PParamsUpdate era)
+  , Reflect era
   ) =>
   Proof era ->
   ConwayTxBody era ->
@@ -480,23 +482,23 @@ sameConwayTxBody
   proof
   (ConwayTxBody i1 cl1 ri1 o1 cr1 tc1 c1 (Wdrl w1) f1 v1 r1 m1 s1 d1 n1 ga1 vs1)
   (ConwayTxBody i2 cl2 ri2 o2 cr2 tc2 c2 (Wdrl w2) f2 v2 r2 m2 s2 d2 n2 ga2 vs2) =
-    [ ("SpendInputs", eqVia (ppSet pcTxIn) i1 i2),
-      ("ColInputs", eqVia (ppSet pcTxIn) cl1 cl2),
-      ("RefInputs", eqVia (ppSet pcTxIn) ri1 ri2),
-      ("Outputs", eqVia (ppList (pcTxOut proof . sizedValue) . toList) o1 o2),
-      ("ColReturn", eqVia (ppStrictMaybe (pcTxOut proof . sizedValue)) cr1 cr2),
-      ("TotalCol", eqVia (ppStrictMaybe pcCoin) tc1 tc2),
-      ("Certs", eqVia (ppList pcConwayDCert . toList) c1 c2),
-      ("WDRL", eqVia (ppMap pcRewardAcnt pcCoin) w1 w2),
-      ("Fee", eqVia pcCoin f1 f2),
-      ("ValidityInterval", eqVia ppValidityInterval v1 v2),
-      ("ReqSignerHashes", eqVia (ppSet pcKeyHash) r1 r2),
-      ("Mint", eqVia multiAssetSummary m1 m2),
-      ("ScriptIntegrityHash", eqVia (ppStrictMaybe (trim . ppSafeHash)) s1 s2),
-      ("AuxDataHash", eqVia (ppStrictMaybe (\(AuxiliaryDataHash h) -> trim (ppSafeHash h))) d1 d2),
-      ("NetworkId", eqVia (ppStrictMaybe pcNetwork) n1 n2),
-      ("GovernanceActions", eqVia (ppStrictSeq prettyA) ga1 ga2),
-      ("Votes", eqVia (ppStrictSeq prettyA) vs1 vs2)
+    [ ("SpendInputs", eqVia (ppSet pcTxIn) i1 i2)
+    , ("ColInputs", eqVia (ppSet pcTxIn) cl1 cl2)
+    , ("RefInputs", eqVia (ppSet pcTxIn) ri1 ri2)
+    , ("Outputs", eqVia (ppList (pcTxOut proof . sizedValue) . toList) o1 o2)
+    , ("ColReturn", eqVia (ppStrictMaybe (pcTxOut proof . sizedValue)) cr1 cr2)
+    , ("TotalCol", eqVia (ppStrictMaybe pcCoin) tc1 tc2)
+    , ("Certs", eqVia (ppList pcConwayDCert . toList) c1 c2)
+    , ("WDRL", eqVia (ppMap pcRewardAcnt pcCoin) w1 w2)
+    , ("Fee", eqVia pcCoin f1 f2)
+    , ("ValidityInterval", eqVia ppValidityInterval v1 v2)
+    , ("ReqSignerHashes", eqVia (ppSet pcKeyHash) r1 r2)
+    , ("Mint", eqVia multiAssetSummary m1 m2)
+    , ("ScriptIntegrityHash", eqVia (ppStrictMaybe (trim . ppSafeHash)) s1 s2)
+    , ("AuxDataHash", eqVia (ppStrictMaybe (\(AuxiliaryDataHash h) -> trim (ppSafeHash h))) d1 d2)
+    , ("NetworkId", eqVia (ppStrictMaybe pcNetwork) n1 n2)
+    , ("GovernanceActions", eqVia (ppStrictSeq prettyA) ga1 ga2)
+    , ("Votes", eqVia (ppStrictSeq prettyA) vs1 vs2)
     ]
 
 sameTxBody :: Reflect era => Proof era -> TxBody era -> TxBody era -> [(String, Maybe PDoc)]
@@ -523,9 +525,9 @@ sameShelleyTx proof (ShelleyTx b1 w1 aux1) (ShelleyTx b2 w2 aux2) =
        ]
 
 sameAlonzoTx ::
-  ( Reflect era,
-    Script era ~ AlonzoScript era,
-    TxWits era ~ AlonzoTxWits era
+  ( Reflect era
+  , Script era ~ AlonzoScript era
+  , TxWits era ~ AlonzoTxWits era
   ) =>
   Proof era ->
   AlonzoTx era ->
@@ -534,8 +536,8 @@ sameAlonzoTx ::
 sameAlonzoTx proof (AlonzoTx b1 w1 v1 aux1) (AlonzoTx b2 w2 v2 aux2) =
   extendLabel "TxBody " (sameTxBody proof b1 b2)
     ++ extendLabel "TxWits " (sameAlonzoTxWits proof w1 w2)
-    ++ [ ("AuxData", eqByShow aux1 aux2),
-         ("IsValid", eqByShow v1 v2)
+    ++ [ ("AuxData", eqByShow aux1 aux2)
+       , ("IsValid", eqByShow v1 v2)
        ]
 {-# NOINLINE sameAlonzoTx #-}
 
@@ -555,9 +557,9 @@ ints :: [Int]
 ints = [0 ..]
 
 sameShelleyTxSeq ::
-  ( Reflect era,
-    Tx era ~ ShelleyTx era,
-    SafeToHash (TxWits era)
+  ( Reflect era
+  , Tx era ~ ShelleyTx era
+  , SafeToHash (TxWits era)
   ) =>
   Proof era ->
   ShelleyTxSeq era ->
@@ -569,9 +571,9 @@ sameShelleyTxSeq proof (ShelleyTxSeq ss1) (ShelleyTxSeq ss2) =
     f n t1 t2 = SomeM (show n) (sameTx proof) t1 t2
 
 sameAlonzoTxSeq ::
-  ( Reflect era,
-    AlonzoEraTx era,
-    SafeToHash (TxWits era)
+  ( Reflect era
+  , AlonzoEraTx era
+  , SafeToHash (TxWits era)
   ) =>
   Proof era ->
   AlonzoTxSeq era ->

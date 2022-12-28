@@ -8,22 +8,22 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Chain.Delegation.Payload
-  ( APayload (..),
-    Payload,
-    unsafePayload,
-  )
+module Cardano.Chain.Delegation.Payload (
+  APayload (..),
+  Payload,
+  unsafePayload,
+)
 where
 
 import qualified Cardano.Chain.Delegation.Certificate as Delegation
-import Cardano.Ledger.Binary
-  ( Annotated (..),
-    ByteSpan,
-    Decoded (..),
-    FromCBOR (..),
-    ToCBOR (..),
-    annotatedDecoder,
-  )
+import Cardano.Ledger.Binary (
+  Annotated (..),
+  ByteSpan,
+  Decoded (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  annotatedDecoder,
+ )
 import Cardano.Prelude
 import Data.Aeson (ToJSON)
 import Formatting (bprint, int)
@@ -31,8 +31,8 @@ import Formatting.Buildable (Buildable (..))
 
 -- | The delegation 'Payload' contains a list of delegation 'Certificate's
 data APayload a = UnsafeAPayload
-  { getPayload :: [Delegation.ACertificate a],
-    getAnnotation :: a
+  { getPayload :: [Delegation.ACertificate a]
+  , getAnnotation :: a
   }
   deriving (Show, Eq, Generic, Functor)
   deriving anyclass (NFData)

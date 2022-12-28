@@ -9,19 +9,19 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Ledger.Binary.Decoding.Sharing
-  ( FromSharedCBOR (..),
-    Interns (..),
-    Intern (..),
-    fromSharedLensCBOR,
-    fromSharedPlusLensCBOR,
-    fromNotSharedCBOR,
-    interns,
-    internsFromMap,
-    internsFromVMap,
-    toMemptyLens,
-    fromShareCBORfunctor,
-  )
+module Cardano.Ledger.Binary.Decoding.Sharing (
+  FromSharedCBOR (..),
+  Interns (..),
+  Intern (..),
+  fromSharedLensCBOR,
+  fromSharedPlusLensCBOR,
+  fromNotSharedCBOR,
+  interns,
+  internsFromMap,
+  internsFromVMap,
+  toMemptyLens,
+  fromShareCBORfunctor,
+)
 where
 
 import Cardano.Ledger.Binary.Decoding.Decoder
@@ -48,14 +48,14 @@ import Lens.Micro
 -- wrapper. In order to create an `Intern` see the `internsFromMap` or
 -- `internsFromVMap` functions.
 data Intern a = Intern
-  { -- | Function that will do the interning. If value is not available then
-    -- `Nothing` is returned.
-    internMaybe :: a -> Maybe a,
-    -- | Used for sorting. Normally set to the size of the underlying data
-    -- structure. Keeping interns sorted with respect to how many elements
-    -- is in the underlying data structure in theory gives a better chance of
-    -- successful intern hit sooner rather than later.
-    internWeight :: !Int
+  { internMaybe :: a -> Maybe a
+  -- ^ Function that will do the interning. If value is not available then
+  -- `Nothing` is returned.
+  , internWeight :: !Int
+  -- ^ Used for sorting. Normally set to the size of the underlying data
+  -- structure. Keeping interns sorted with respect to how many elements
+  -- is in the underlying data structure in theory gives a better chance of
+  -- successful intern hit sooner rather than later.
   }
 
 newtype Interns a = Interns [Intern a]
@@ -83,8 +83,8 @@ internsFromMap m =
                     LT -> go l
                     GT -> go r
                     EQ -> Just kx
-             in go m,
-          internWeight = Map.size m
+             in go m
+        , internWeight = Map.size m
         }
     ]
 
@@ -92,8 +92,8 @@ internsFromVMap :: Ord k => VMap VB kv k a -> Interns k
 internsFromVMap m =
   Interns
     [ Intern
-        { internMaybe = \k -> VMap.internMaybe k m,
-          internWeight = VMap.size m
+        { internMaybe = \k -> VMap.internMaybe k m
+        , internWeight = VMap.size m
         }
     ]
 

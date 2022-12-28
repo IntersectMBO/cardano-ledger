@@ -27,21 +27,21 @@
 --         tx ^. bodyTxL . outputsTxBodyL == StrictSeq.singleton txOut
 -- :}
 -- +++ OK, passed 100 tests.
-module Cardano.Ledger.Api.Tx
-  ( -- | Building and inspecting transaction bodies
-    module Cardano.Ledger.Api.Tx.Body,
-    module Cardano.Ledger.Api.Tx.AuxData,
-    module Cardano.Ledger.Api.Tx.Wits,
-    EraTx (..),
+module Cardano.Ledger.Api.Tx (
+  -- | Building and inspecting transaction bodies
+  module Cardano.Ledger.Api.Tx.Body,
+  module Cardano.Ledger.Api.Tx.AuxData,
+  module Cardano.Ledger.Api.Tx.Wits,
+  EraTx (..),
 
-    -- * Shelley, Allegra and Mary Era
-    ShelleyTx,
+  -- * Shelley, Allegra and Mary Era
+  ShelleyTx,
 
-    -- * Alonzo and Babbage Era
-    AlonzoTx,
-    AlonzoEraTx (..),
-    setMinFeeTx,
-  )
+  -- * Alonzo and Babbage Era
+  AlonzoTx,
+  AlonzoEraTx (..),
+  setMinFeeTx,
+)
 where
 
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), AlonzoTx)

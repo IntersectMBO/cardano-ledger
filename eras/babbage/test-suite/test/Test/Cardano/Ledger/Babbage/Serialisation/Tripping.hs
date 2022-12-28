@@ -23,27 +23,27 @@ tests =
   testGroup
     "Babbage CBOR round-trip"
     [ testProperty "babbage/Script" $
-        roundTripAnnExpectation @(Script Babbage),
-      testProperty "babbage/Metadata" $
-        roundTripAnnExpectation @(TxAuxData Babbage),
-      testProperty "babbage/TxOut" $
-        roundTripCborExpectation @(TxOut Babbage),
-      testProperty "babbage/TxBody" $
-        roundTripAnnExpectation @(TxBody Babbage),
-      testProperty "babbage/CostModel" $
-        roundTripCborExpectation @CostModels,
-      testProperty "babbage/PParams" $
-        roundTripCborExpectation @(PParams Babbage),
-      testProperty "babbage/PParamsUpdate" $
-        roundTripCborExpectation @(PParamsUpdate Babbage),
-      testProperty "babbage/AuxiliaryData" $
-        roundTripAnnExpectation @(TxAuxData Babbage),
-      testProperty "Script" $
-        roundTripAnnExpectation @(Script Babbage),
-      testProperty "babbage/Tx" $
-        roundTripAnnExpectation @(Tx Babbage),
-      testProperty "babbage/BabbageUtxoPredFailure" $
-        roundTripCborExpectation @(BabbageUtxoPredFailure Babbage),
-      testProperty "babbage/Block" $
+        roundTripAnnExpectation @(Script Babbage)
+    , testProperty "babbage/Metadata" $
+        roundTripAnnExpectation @(TxAuxData Babbage)
+    , testProperty "babbage/TxOut" $
+        roundTripCborExpectation @(TxOut Babbage)
+    , testProperty "babbage/TxBody" $
+        roundTripAnnExpectation @(TxBody Babbage)
+    , testProperty "babbage/CostModel" $
+        roundTripCborExpectation @CostModels
+    , testProperty "babbage/PParams" $
+        roundTripCborExpectation @(PParams Babbage)
+    , testProperty "babbage/PParamsUpdate" $
+        roundTripCborExpectation @(PParamsUpdate Babbage)
+    , testProperty "babbage/AuxiliaryData" $
+        roundTripAnnExpectation @(TxAuxData Babbage)
+    , testProperty "Script" $
+        roundTripAnnExpectation @(Script Babbage)
+    , testProperty "babbage/Tx" $
+        roundTripAnnExpectation @(Tx Babbage)
+    , testProperty "babbage/BabbageUtxoPredFailure" $
+        roundTripCborExpectation @(BabbageUtxoPredFailure Babbage)
+    , testProperty "babbage/Block" $
         roundTripAnnExpectation @(Block (BHeader StandardCrypto) Babbage)
     ]

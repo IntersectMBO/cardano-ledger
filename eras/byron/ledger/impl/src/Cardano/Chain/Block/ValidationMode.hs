@@ -1,9 +1,9 @@
 {-# LANGUAGE FlexibleContexts #-}
 
-module Cardano.Chain.Block.ValidationMode
-  ( BlockValidationMode (..),
-    toTxValidationMode,
-  )
+module Cardano.Chain.Block.ValidationMode (
+  BlockValidationMode (..),
+  toTxValidationMode,
+)
 where
 
 import Cardano.Chain.UTxO.ValidationMode (TxValidationMode (..))

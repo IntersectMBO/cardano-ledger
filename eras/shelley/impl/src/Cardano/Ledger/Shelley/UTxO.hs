@@ -15,17 +15,17 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Shelley.UTxO
-  ( ShelleyScriptsNeeded (..),
-    scriptsNeeded,
-    getShelleyScriptsNeeded,
-    scriptCred,
-    scriptStakeCred,
-    getConsumedCoin,
-    produced,
-    txup,
-    module UTxO,
-  )
+module Cardano.Ledger.Shelley.UTxO (
+  ShelleyScriptsNeeded (..),
+  scriptsNeeded,
+  getShelleyScriptsNeeded,
+  scriptCred,
+  scriptStakeCred,
+  getConsumedCoin,
+  produced,
+  txup,
+  module UTxO,
+)
 where
 
 import Cardano.Ledger.Address (Addr (..))
@@ -35,21 +35,21 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.DPState (DPState)
-import Cardano.Ledger.Shelley.Delegation.Certificates
-  ( DCert (..),
-    requiresVKeyWitness,
-  )
+import Cardano.Ledger.Shelley.Delegation.Certificates (
+  DCert (..),
+  requiresVKeyWitness,
+ )
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits (keyTxRefunds, totalTxDeposits)
 import Cardano.Ledger.Shelley.PParams (Update)
-import Cardano.Ledger.Shelley.TxBody
-  ( ShelleyEraTxBody (..),
-    Wdrl (..),
-    getRwdCred,
-    pattern DeRegKey,
-    pattern Delegate,
-    pattern Delegation,
-  )
+import Cardano.Ledger.Shelley.TxBody (
+  ShelleyEraTxBody (..),
+  Wdrl (..),
+  getRwdCred,
+  pattern DeRegKey,
+  pattern Delegate,
+  pattern Delegation,
+ )
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO as UTxO
 import Cardano.Ledger.Val ((<+>))
@@ -126,9 +126,9 @@ getShelleyScriptsNeeded u txBody =
 -- | Compute the lovelace which are created by the transaction
 produced ::
   forall era pp.
-  ( ShelleyEraTxBody era,
-    HasField "_keyDeposit" pp Coin,
-    HasField "_poolDeposit" pp Coin
+  ( ShelleyEraTxBody era
+  , HasField "_keyDeposit" pp Coin
+  , HasField "_poolDeposit" pp Coin
   ) =>
   pp ->
   DPState (EraCrypto era) ->
@@ -142,8 +142,8 @@ produced pp dpstate txBody =
 -- | Compute the lovelace which are destroyed by the transaction
 getConsumedCoin ::
   forall era pp.
-  ( ShelleyEraTxBody era,
-    HasField "_keyDeposit" pp Coin
+  ( ShelleyEraTxBody era
+  , HasField "_keyDeposit" pp Coin
   ) =>
   pp ->
   DPState (EraCrypto era) ->

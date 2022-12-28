@@ -9,40 +9,40 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Ledger.Keys.WitVKey
-  ( WitVKey (WitVKey),
-    witVKeyBytes,
-    witVKeyHash,
-  )
+module Cardano.Ledger.Keys.WitVKey (
+  WitVKey (WitVKey),
+  witVKeyBytes,
+  witVKeyHash,
+)
 where
 
-import Cardano.Ledger.Binary
-  ( Annotator (..),
-    FromCBOR (fromCBOR),
-    ToCBOR (..),
-    annotatorSlice,
-    decodeRecordNamed,
-    encodeListLen,
-    encodePreEncoded,
-    serializeEncoding,
-    shelleyProtVer,
-  )
-import Cardano.Ledger.Binary.Crypto
-  ( decodeSignedDSIGN,
-    encodeSignedDSIGN,
-  )
+import Cardano.Ledger.Binary (
+  Annotator (..),
+  FromCBOR (fromCBOR),
+  ToCBOR (..),
+  annotatorSlice,
+  decodeRecordNamed,
+  encodeListLen,
+  encodePreEncoded,
+  serializeEncoding,
+  shelleyProtVer,
+ )
+import Cardano.Ledger.Binary.Crypto (
+  decodeSignedDSIGN,
+  encodeSignedDSIGN,
+ )
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
-import Cardano.Ledger.Keys
-  ( Hash,
-    KeyHash (..),
-    KeyRole (..),
-    SignedDSIGN,
-    VKey,
-    asWitness,
-    hashKey,
-    hashSignature,
-  )
+import Cardano.Ledger.Keys (
+  Hash,
+  KeyHash (..),
+  KeyRole (..),
+  SignedDSIGN,
+  VKey,
+  asWitness,
+  hashKey,
+  hashSignature,
+ )
 import Control.DeepSeq
 import qualified Data.ByteString.Lazy as BSL
 import Data.Ord (comparing)
@@ -52,12 +52,12 @@ import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 
 -- | Proof/Witness that a transaction is authorized by the given key holder.
 data WitVKey kr c = WitVKeyInternal
-  { wvkKey :: !(VKey kr c),
-    wvkSig :: !(SignedDSIGN c (Hash c EraIndependentTxBody)),
-    -- | Hash of the witness vkey. We store this here to avoid repeated hashing
-    --   when used in ordering.
-    wvkKeyHash :: KeyHash 'Witness c,
-    wvkBytes :: BSL.ByteString
+  { wvkKey :: !(VKey kr c)
+  , wvkSig :: !(SignedDSIGN c (Hash c EraIndependentTxBody))
+  , wvkKeyHash :: KeyHash 'Witness c
+  -- ^ Hash of the witness vkey. We store this here to avoid repeated hashing
+  --   when used in ordering.
+  , wvkBytes :: BSL.ByteString
   }
   deriving (Generic)
 

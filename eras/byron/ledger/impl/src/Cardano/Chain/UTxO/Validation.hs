@@ -6,79 +6,79 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Chain.UTxO.Validation
-  ( validateTx,
-    validateTxAux,
-    updateUTxO,
-    updateUTxOTxWitness,
-    updateUTxOTx,
-    TxValidationError (..),
-    Environment (..),
-    UTxOValidationError (..),
-  )
+module Cardano.Chain.UTxO.Validation (
+  validateTx,
+  validateTxAux,
+  updateUTxO,
+  updateUTxOTxWitness,
+  updateUTxOTx,
+  TxValidationError (..),
+  Environment (..),
+  UTxOValidationError (..),
+)
 where
 
-import Cardano.Chain.Common
-  ( Address (..),
-    Lovelace,
-    LovelaceError,
-    NetworkMagic,
-    TxFeePolicy (..),
-    addrNetworkMagic,
-    calculateTxSizeLinear,
-    checkRedeemAddress,
-    checkVerKeyAddress,
-    makeNetworkMagic,
-    mkKnownLovelace,
-    subLovelace,
-    unknownAttributesLength,
-  )
+import Cardano.Chain.Common (
+  Address (..),
+  Lovelace,
+  LovelaceError,
+  NetworkMagic,
+  TxFeePolicy (..),
+  addrNetworkMagic,
+  calculateTxSizeLinear,
+  checkRedeemAddress,
+  checkVerKeyAddress,
+  makeNetworkMagic,
+  mkKnownLovelace,
+  subLovelace,
+  unknownAttributesLength,
+ )
 import Cardano.Chain.UTxO.Compact (CompactTxOut (..), toCompactTxIn)
 import Cardano.Chain.UTxO.Tx (Tx (..), TxIn, TxOut (..))
 import Cardano.Chain.UTxO.TxAux (ATxAux (..), aTaTx, taWitness)
-import Cardano.Chain.UTxO.TxWitness
-  ( TxInWitness (..),
-    TxSigData (..),
-    recoverSigData,
-  )
-import Cardano.Chain.UTxO.UTxO
-  ( UTxO,
-    UTxOError,
-    balance,
-    isRedeemUTxO,
-    txOutputUTxO,
-    (</|),
-    (<|),
-  )
+import Cardano.Chain.UTxO.TxWitness (
+  TxInWitness (..),
+  TxSigData (..),
+  recoverSigData,
+ )
+import Cardano.Chain.UTxO.UTxO (
+  UTxO,
+  UTxOError,
+  balance,
+  isRedeemUTxO,
+  txOutputUTxO,
+  (</|),
+  (<|),
+ )
 import qualified Cardano.Chain.UTxO.UTxO as UTxO
 import Cardano.Chain.UTxO.UTxOConfiguration
 import Cardano.Chain.Update (ProtocolParameters (..))
-import Cardano.Chain.ValidationMode
-  ( ValidationMode,
-    unlessNoTxValidation,
-    whenTxValidation,
-    wrapErrorWithValidationMode,
-  )
-import Cardano.Crypto
-  ( AProtocolMagic (..),
-    ProtocolMagicId,
-    SignTag (..),
-    verifyRedeemSigDecoded,
-    verifySignatureDecoded,
-  )
-import Cardano.Ledger.Binary
-  ( Annotated (..),
-    Decoder,
-    DecoderError (DecoderErrorUnknownTag),
-    FromCBOR (..),
-    ToCBOR (..),
-    cborError,
-    decodeListLen,
-    decodeWord8,
-    encodeListLen,
-    enforceSize,
-    matchSize,
-  )
+import Cardano.Chain.ValidationMode (
+  ValidationMode,
+  unlessNoTxValidation,
+  whenTxValidation,
+  wrapErrorWithValidationMode,
+ )
+import Cardano.Crypto (
+  AProtocolMagic (..),
+  ProtocolMagicId,
+  SignTag (..),
+  verifyRedeemSigDecoded,
+  verifySignatureDecoded,
+ )
+import Cardano.Ledger.Binary (
+  Annotated (..),
+  Decoder,
+  DecoderError (DecoderErrorUnknownTag),
+  FromCBOR (..),
+  ToCBOR (..),
+  cborError,
+  decodeListLen,
+  decodeWord8,
+  encodeListLen,
+  enforceSize,
+  matchSize,
+ )
 import Cardano.Prelude hiding (cborError)
 import qualified Data.ByteString as BS
 import qualified Data.List.NonEmpty as NE
@@ -258,12 +258,12 @@ validateTxIn ::
   TxIn ->
   m ()
 validateTxIn UTxOConfiguration {tcAssetLockedSrcAddrs} utxo txIn
-  | S.null tcAssetLockedSrcAddrs,
-    txIn `UTxO.member` utxo =
+  | S.null tcAssetLockedSrcAddrs
+  , txIn `UTxO.member` utxo =
       pure ()
-  | Just txOut <- UTxO.lookupCompact (toCompactTxIn txIn) utxo,
-    let (CompactTxOut txOutAddr _) = txOut,
-    txOutAddr `S.notMember` tcAssetLockedSrcAddrs =
+  | Just txOut <- UTxO.lookupCompact (toCompactTxIn txIn) utxo
+  , let (CompactTxOut txOutAddr _) = txOut
+  , txOutAddr `S.notMember` tcAssetLockedSrcAddrs =
       pure ()
   | otherwise =
       throwError $ TxValidationMissingInput txIn
@@ -314,9 +314,9 @@ validateWitness pmi sigData addr witness = case witness of
       `orThrowError` TxValidationWitnessWrongKey witness addr
 
 data Environment = Environment
-  { protocolMagic :: !(AProtocolMagic ByteString),
-    protocolParameters :: !ProtocolParameters,
-    utxoConfiguration :: !UTxOConfiguration
+  { protocolMagic :: !(AProtocolMagic ByteString)
+  , protocolParameters :: !ProtocolParameters
+  , utxoConfiguration :: !UTxOConfiguration
   }
   deriving (Eq, Show)
 

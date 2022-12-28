@@ -2,16 +2,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Binary.TreeDiff
-  ( CBORBytes (..),
-    HexBytes (..),
-    showExpr,
-    diffExpr,
-    hexByteStringExpr,
-    showHexBytesGrouped,
-    expectExprEqual,
-    expectExprEqualWithMessage,
-  )
+module Test.Cardano.Ledger.Binary.TreeDiff (
+  CBORBytes (..),
+  HexBytes (..),
+  showExpr,
+  diffExpr,
+  hexByteStringExpr,
+  showHexBytesGrouped,
+  expectExprEqual,
+  expectExprEqualWithMessage,
+)
 where
 
 import Cardano.Ledger.Binary
@@ -79,8 +79,8 @@ instance ToExpr Term where
 
 hexByteStringExpr :: BS.ByteString -> [Expr]
 hexByteStringExpr bs =
-  [ toExpr (BS.length bs),
-    Lst (map toExpr $ showHexBytesGrouped bs)
+  [ toExpr (BS.length bs)
+  , Lst (map toExpr $ showHexBytesGrouped bs)
   ]
 
 -- | Show a ByteString as hex groups of 8bytes each. This is a slightly more
@@ -88,7 +88,7 @@ hexByteStringExpr bs =
 showHexBytesGrouped :: BS.ByteString -> [String]
 showHexBytesGrouped bs =
   [ "0x" <> BS8.unpack (BS.take 16 $ BS.drop i bs16)
-    | i <- [0, 16 .. BS.length bs16 - 1]
+  | i <- [0, 16 .. BS.length bs16 - 1]
   ]
   where
     bs16 = Base16.encode bs

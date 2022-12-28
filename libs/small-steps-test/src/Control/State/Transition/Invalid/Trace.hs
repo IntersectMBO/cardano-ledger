@@ -16,35 +16,35 @@ import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
 data Trace s = Trace
-  { validPrefix :: !(Trace.Trace s),
-    -- | Last signal in the trace. This might cause a predicate failure, but it
-    -- isn't guaranteed to do so, since invalid trace generation is
-    -- probabilistic.
-    signal :: !(Signal s),
-    errorOrLastState :: !(Either [PredicateFailure s] (State s))
+  { validPrefix :: !(Trace.Trace s)
+  , signal :: !(Signal s)
+  -- ^ Last signal in the trace. This might cause a predicate failure, but it
+  -- isn't guaranteed to do so, since invalid trace generation is
+  -- probabilistic.
+  , errorOrLastState :: !(Either [PredicateFailure s] (State s))
   }
   deriving (Generic)
 
 deriving instance
-  ( Eq (Environment s),
-    Eq (State s),
-    Eq (Signal s),
-    Eq (PredicateFailure s)
+  ( Eq (Environment s)
+  , Eq (State s)
+  , Eq (Signal s)
+  , Eq (PredicateFailure s)
   ) =>
   (Eq (Trace s))
 
 deriving instance
-  ( Show (Environment s),
-    Show (State s),
-    Show (Signal s),
-    Show (PredicateFailure s)
+  ( Show (Environment s)
+  , Show (State s)
+  , Show (Signal s)
+  , Show (PredicateFailure s)
   ) =>
   (Show (Trace s))
 
 instance
-  ( NoThunks (Environment s),
-    NoThunks (State s),
-    NoThunks (Signal s),
-    NoThunks (PredicateFailure s)
+  ( NoThunks (Environment s)
+  , NoThunks (State s)
+  , NoThunks (Signal s)
+  , NoThunks (PredicateFailure s)
   ) =>
   (NoThunks (Trace s))

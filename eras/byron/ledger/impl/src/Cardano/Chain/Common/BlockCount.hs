@@ -1,9 +1,9 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Cardano.Chain.Common.BlockCount
-  ( BlockCount (..),
-  )
+module Cardano.Chain.Common.BlockCount (
+  BlockCount (..),
+)
 where
 
 import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))

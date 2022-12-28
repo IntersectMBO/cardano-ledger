@@ -33,41 +33,41 @@
 --
 -- Duality properties of @(Summands name decodeT)@ and @(SparseKeyed name (init::T) pick required)@ also exist
 -- but are harder to describe succinctly.
-module Cardano.Ledger.Binary.Encoding.Coders
-  ( -- * Creating encoders.
+module Cardano.Ledger.Binary.Encoding.Coders (
+  -- * Creating encoders.
 
-    --
-    -- $Encoders
-    Encode (..),
-    (!>),
-    encode,
+  --
+  -- $Encoders
+  Encode (..),
+  (!>),
+  encode,
 
-    -- * Index types for well-formed Coders.
+  -- * Index types for well-formed Coders.
 
-    --
-    -- $Indexes
-    runE, -- Used in testing
-    encodeDual,
+  --
+  -- $Indexes
+  runE, -- Used in testing
+  encodeDual,
 
-    -- * Containers, Combinators, Annotators
+  -- * Containers, Combinators, Annotators
 
-    --
-    -- $Combinators
-    encodeKeyedStrictMaybeWith,
-    encodeKeyedStrictMaybe,
-  )
+  --
+  -- $Combinators
+  encodeKeyedStrictMaybeWith,
+  encodeKeyedStrictMaybe,
+)
 where
 
 import Cardano.Ledger.Binary.Decoding.Coders (Density (Dense, Sparse), Wrapped (..))
 import Cardano.Ledger.Binary.Decoding.Decoder (Decoder)
 import Cardano.Ledger.Binary.Decoding.FromCBOR (FromCBOR (..))
-import Cardano.Ledger.Binary.Encoding.Encoder
-  ( Encoding,
-    encodeListLen,
-    encodeMapLen,
-    encodeTag,
-    encodeWord,
-  )
+import Cardano.Ledger.Binary.Encoding.Encoder (
+  Encoding,
+  encodeListLen,
+  encodeMapLen,
+  encodeTag,
+  encodeWord,
+ )
 import Cardano.Ledger.Binary.Encoding.ToCBOR (ToCBOR (toCBOR))
 import Data.Maybe.Strict (StrictMaybe (SJust, SNothing))
 

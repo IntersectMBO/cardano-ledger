@@ -4,15 +4,15 @@
 -- data we use in the specifications.
 module Byron.Spec.Ledger.Core.Omniscient where
 
-import Byron.Spec.Ledger.Core
-  ( SKey (SKey),
-    Sig (Sig),
-    VKey (VKey),
-    VKeyGenesis,
-    owner,
-    sign,
-    unVKeyGenesis,
-  )
+import Byron.Spec.Ledger.Core (
+  SKey (SKey),
+  Sig (Sig),
+  VKey (VKey),
+  VKeyGenesis,
+  owner,
+  sign,
+  unVKeyGenesis,
+ )
 
 -- | Extract the verifying key of a signature. This is useful when elaborating
 -- an abstract signature into a concrete one.

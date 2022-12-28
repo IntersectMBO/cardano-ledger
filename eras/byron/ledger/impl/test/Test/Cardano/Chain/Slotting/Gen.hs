@@ -1,25 +1,25 @@
 {-# LANGUAGE TupleSections #-}
 
-module Test.Cardano.Chain.Slotting.Gen
-  ( genEpochNumber,
-    genSlotNumber,
-    genEpochSlots,
-    genWithEpochSlots,
-    genSlotCount,
-    genEpochAndSlotCount,
-    genConsistentEpochAndSlotCountEpochSlots,
-    feedPMEpochSlots,
-  )
+module Test.Cardano.Chain.Slotting.Gen (
+  genEpochNumber,
+  genSlotNumber,
+  genEpochSlots,
+  genWithEpochSlots,
+  genSlotCount,
+  genEpochAndSlotCount,
+  genConsistentEpochAndSlotCountEpochSlots,
+  feedPMEpochSlots,
+)
 where
 
-import Cardano.Chain.Slotting
-  ( EpochAndSlotCount (..),
-    EpochNumber (..),
-    EpochSlots (..),
-    SlotCount (..),
-    SlotNumber (..),
-    WithEpochSlots (WithEpochSlots),
-  )
+import Cardano.Chain.Slotting (
+  EpochAndSlotCount (..),
+  EpochNumber (..),
+  EpochSlots (..),
+  SlotCount (..),
+  SlotNumber (..),
+  WithEpochSlots (WithEpochSlots),
+ )
 import Cardano.Crypto (ProtocolMagicId)
 import Cardano.Prelude
 import Hedgehog

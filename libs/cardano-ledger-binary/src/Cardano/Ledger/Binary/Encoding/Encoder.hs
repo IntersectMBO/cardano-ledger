@@ -5,84 +5,84 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Ledger.Binary.Encoding.Encoder
-  ( -- * Decoders
-    Encoding,
-    toBuilder,
-    C.Tokens (..),
-    toPlainEncoding,
-    fromPlainEncoding,
-    fromPlainEncodingWithVersion,
-    withCurrentEncodingVersion,
-    enforceEncodingVersion,
+module Cardano.Ledger.Binary.Encoding.Encoder (
+  -- * Decoders
+  Encoding,
+  toBuilder,
+  C.Tokens (..),
+  toPlainEncoding,
+  fromPlainEncoding,
+  fromPlainEncodingWithVersion,
+  withCurrentEncodingVersion,
+  enforceEncodingVersion,
 
-    -- ** Custom
-    encodeVersion,
-    encodeMaybe,
-    encodeNullMaybe,
-    encodePair,
-    encodeTuple,
-    encodeRatio,
-    encodeRatioWithTag,
+  -- ** Custom
+  encodeVersion,
+  encodeMaybe,
+  encodeNullMaybe,
+  encodePair,
+  encodeTuple,
+  encodeRatio,
+  encodeRatioWithTag,
 
-    -- *** Containers
-    encodeList,
-    encodeSeq,
-    encodeSet,
-    encodeMap,
-    encodeVMap,
-    encodeVector,
+  -- *** Containers
+  encodeList,
+  encodeSeq,
+  encodeSet,
+  encodeMap,
+  encodeVMap,
+  encodeVector,
 
-    -- **** Helpers
-    encodeFoldableEncoder,
-    encodeFoldableAsDefLenList,
-    encodeFoldableAsIndefLenList,
-    encodeFoldableMapEncoder,
+  -- **** Helpers
+  encodeFoldableEncoder,
+  encodeFoldableAsDefLenList,
+  encodeFoldableAsIndefLenList,
+  encodeFoldableMapEncoder,
 
-    -- *** Time
-    encodeUTCTime,
+  -- *** Time
+  encodeUTCTime,
 
-    -- *** Network
-    encodeIPv4,
-    ipv4ToBytes,
-    encodeIPv6,
-    ipv6ToBytes,
+  -- *** Network
+  encodeIPv4,
+  ipv4ToBytes,
+  encodeIPv6,
+  ipv6ToBytes,
 
-    -- ** Original
-    encodeWord,
-    encodeWord8,
-    encodeWord16,
-    encodeWord32,
-    encodeWord64,
-    encodeInt,
-    encodeInt8,
-    encodeInt16,
-    encodeInt32,
-    encodeInt64,
-    encodeInteger,
-    encodeBytes,
-    encodeBytesIndef,
-    encodeByteArray,
-    encodeString,
-    encodeStringIndef,
-    encodeUtf8ByteArray,
-    encodeListLen,
-    encodeListLenIndef,
-    encodeMapLen,
-    encodeMapLenIndef,
-    encodeBreak,
-    encodeTag,
-    encodeTag64,
-    encodeBool,
-    encodeUndef,
-    encodeNull,
-    encodeSimple,
-    encodeFloat16,
-    encodeFloat,
-    encodeDouble,
-    encodePreEncoded,
-    encodeTerm,
-  )
+  -- ** Original
+  encodeWord,
+  encodeWord8,
+  encodeWord16,
+  encodeWord32,
+  encodeWord64,
+  encodeInt,
+  encodeInt8,
+  encodeInt16,
+  encodeInt32,
+  encodeInt64,
+  encodeInteger,
+  encodeBytes,
+  encodeBytesIndef,
+  encodeByteArray,
+  encodeString,
+  encodeStringIndef,
+  encodeUtf8ByteArray,
+  encodeListLen,
+  encodeListLenIndef,
+  encodeMapLen,
+  encodeMapLenIndef,
+  encodeBreak,
+  encodeTag,
+  encodeTag64,
+  encodeBool,
+  encodeUndef,
+  encodeNull,
+  encodeSimple,
+  encodeFloat16,
+  encodeFloat,
+  encodeDouble,
+  encodePreEncoded,
+  encodeTerm,
+)
 where
 
 import qualified Cardano.Binary as C

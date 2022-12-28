@@ -19,12 +19,12 @@ import Cardano.Ledger.Shelley.Rules (ShelleyPpupPredFailure, UtxoEnv (..))
 import Control.State.Transition.Extended (STS (..))
 
 instance
-  ( EraTx era,
-    PredicateFailure (EraRule "PPUP" era) ~ ShelleyPpupPredFailure era,
-    Script era ~ AlonzoScript era,
-    State (EraRule "PPUP" era) ~ PPUPState era,
-    PParamsUpdate era ~ BabbagePParamsUpdate era,
-    Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era))
+  ( EraTx era
+  , PredicateFailure (EraRule "PPUP" era) ~ ShelleyPpupPredFailure era
+  , Script era ~ AlonzoScript era
+  , State (EraRule "PPUP" era) ~ PPUPState era
+  , PParamsUpdate era ~ BabbagePParamsUpdate era
+  , Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   STS (ConwayUTXOS era)
   where

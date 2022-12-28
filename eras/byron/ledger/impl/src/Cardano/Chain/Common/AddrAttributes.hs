@@ -5,31 +5,31 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Cardano.Chain.Common.AddrAttributes
-  ( AddrAttributes (..),
-    HDAddressPayload (..),
-  )
+module Cardano.Chain.Common.AddrAttributes (
+  AddrAttributes (..),
+  HDAddressPayload (..),
+)
 where
 
-import Cardano.Chain.Common.Attributes
-  ( Attributes (..),
-    fromCBORAttributes,
-    toCBORAttributes,
-  )
+import Cardano.Chain.Common.Attributes (
+  Attributes (..),
+  fromCBORAttributes,
+  toCBORAttributes,
+ )
 import Cardano.Chain.Common.NetworkMagic (NetworkMagic (..))
 import Cardano.HeapWords (HeapWords (..))
-import Cardano.Ledger.Binary
-  ( Decoder,
-    FromCBOR (..),
-    ToCBOR (..),
-    byronProtVer,
-    decodeBytesCanonical,
-    decodeFull,
-    decodeFullDecoder,
-    decodeWord32Canonical,
-    serialize,
-    toCborError,
-  )
+import Cardano.Ledger.Binary (
+  Decoder,
+  FromCBOR (..),
+  ToCBOR (..),
+  byronProtVer,
+  decodeBytesCanonical,
+  decodeFull,
+  decodeFullDecoder,
+  decodeWord32Canonical,
+  serialize,
+  toCborError,
+ )
 import Cardano.Prelude hiding (toCborError)
 import Data.Aeson (ToJSON (..), object, (.=))
 import qualified Data.ByteString.Char8 as Char8
@@ -42,8 +42,8 @@ import NoThunks.Class (NoThunks (..))
 -- to be put into 'Attributes' data type to make it extensible with
 -- softfork.
 data AddrAttributes = AddrAttributes
-  { aaVKDerivationPath :: !(Maybe HDAddressPayload),
-    aaNetworkMagic :: !NetworkMagic
+  { aaVKDerivationPath :: !(Maybe HDAddressPayload)
+  , aaNetworkMagic :: !NetworkMagic
   }
   deriving (Eq, Ord, Show, Generic, NFData, NoThunks)
 
@@ -114,8 +114,8 @@ instance FromCBOR (Attributes AddrAttributes) where
     where
       initValue =
         AddrAttributes
-          { aaVKDerivationPath = Nothing,
-            aaNetworkMagic = NetworkMainOrStage
+          { aaVKDerivationPath = Nothing
+          , aaNetworkMagic = NetworkMainOrStage
           }
 
       go ::

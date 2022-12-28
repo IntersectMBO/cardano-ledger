@@ -10,8 +10,8 @@ tests :: TestTree
 tests =
   testGroup
     "cardano-data"
-    [ mapExtrasTests,
-      alltests
+    [ mapExtrasTests
+    , alltests
     ]
 
 main :: IO ()

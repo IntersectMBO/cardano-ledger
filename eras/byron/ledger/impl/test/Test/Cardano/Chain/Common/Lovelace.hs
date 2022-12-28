@@ -4,22 +4,22 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Chain.Common.Lovelace
-  ( tests,
-  )
+module Test.Cardano.Chain.Common.Lovelace (
+  tests,
+)
 where
 
-import Cardano.Chain.Common
-  ( LovelaceError (..),
-    addLovelace,
-    integerToLovelace,
-    maxLovelaceVal,
-    mkKnownLovelace,
-    mkLovelace,
-    scaleLovelace,
-    subLovelace,
-    unsafeGetLovelace,
-  )
+import Cardano.Chain.Common (
+  LovelaceError (..),
+  addLovelace,
+  integerToLovelace,
+  maxLovelaceVal,
+  mkKnownLovelace,
+  mkLovelace,
+  scaleLovelace,
+  subLovelace,
+  unsafeGetLovelace,
+ )
 import Cardano.Prelude
 import Data.Data (Constr, toConstr)
 import Formatting (build, sformat)

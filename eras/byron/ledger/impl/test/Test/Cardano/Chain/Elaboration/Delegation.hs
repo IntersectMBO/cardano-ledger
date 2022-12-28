@@ -1,22 +1,22 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Test.Cardano.Chain.Elaboration.Delegation
-  ( elaborateDCert,
-    elaborateDCertAnnotated,
-    elaborateDSEnv,
-    tests,
-  )
+module Test.Cardano.Chain.Elaboration.Delegation (
+  elaborateDCert,
+  elaborateDCertAnnotated,
+  elaborateDSEnv,
+  tests,
+)
 where
 
-import Byron.Spec.Ledger.Core
-  ( BlockCount (..),
-    Epoch (..),
-    Owner (..),
-    Slot (..),
-    VKey (..),
-    VKeyGenesis (..),
-  )
+import Byron.Spec.Ledger.Core (
+  BlockCount (..),
+  Epoch (..),
+  Owner (..),
+  Slot (..),
+  VKey (..),
+  VKeyGenesis (..),
+ )
 import Byron.Spec.Ledger.Delegation (DCert (..), DSEnv (..), dcertGen, delegate, delegator)
 import Cardano.Chain.Common (hashKey)
 import qualified Cardano.Chain.Common as Concrete
@@ -32,11 +32,11 @@ import Cardano.Prelude
 import qualified Data.Set as Set
 import Hedgehog (assert, cover, forAll, property, success)
 import Test.Cardano.Chain.Config (readMainetCfg)
-import Test.Cardano.Chain.Elaboration.Keys
-  ( elaborateKeyPair,
-    elaborateVKeyGenesis,
-    vKeyPair,
-  )
+import Test.Cardano.Chain.Elaboration.Keys (
+  elaborateKeyPair,
+  elaborateVKeyGenesis,
+  vKeyPair,
+ )
 import qualified Test.Cardano.Crypto.Dummy as Dummy
 import Test.Cardano.Prelude
 import Test.Options (TSGroup, TSProperty, withTestsTS)
@@ -77,10 +77,10 @@ ts_prop_elaboratedCertsValid =
         { _dSEnvAllowedDelegators =
             Set.fromList
               . fmap (VKeyGenesis . VKey . Owner)
-              $ [0 .. 6],
-          _dSEnvEpoch = Epoch 0,
-          _dSEnvSlot = Slot 0,
-          _dSEnvK = BlockCount 2160
+              $ [0 .. 6]
+        , _dSEnvEpoch = Epoch 0
+        , _dSEnvSlot = Slot 0
+        , _dSEnvK = BlockCount 2160
         }
 
 elaborateDCert :: ProtocolMagicId -> DCert -> Concrete.Certificate
@@ -107,8 +107,8 @@ elaborateDCertAnnotated pm = annotateDCert . elaborateDCert pm
     annotateDCert :: Concrete.Certificate -> Concrete.ACertificate ByteString
     annotateDCert cert =
       cert
-        { Concrete.Certificate.aEpoch = Annotated omega (serialize' byronProtVer omega),
-          Concrete.Certificate.annotation = serialize' byronProtVer cert
+        { Concrete.Certificate.aEpoch = Annotated omega (serialize' byronProtVer omega)
+        , Concrete.Certificate.annotation = serialize' byronProtVer cert
         }
       where
         omega = Concrete.Certificate.epoch cert
@@ -116,15 +116,15 @@ elaborateDCertAnnotated pm = annotateDCert . elaborateDCert pm
 elaborateDSEnv :: DSEnv -> Scheduling.Environment
 elaborateDSEnv abstractEnv =
   Scheduling.Environment
-    { Scheduling.protocolMagic = Dummy.annotatedProtocolMagicId,
-      Scheduling.allowedDelegators =
+    { Scheduling.protocolMagic = Dummy.annotatedProtocolMagicId
+    , Scheduling.allowedDelegators =
         Set.fromList $
           hashKey
             . elaborateVKeyGenesis
-            <$> Set.toList genesisKeys,
-      Scheduling.currentEpoch = fromIntegral e,
-      Scheduling.currentSlot = Concrete.SlotNumber s,
-      Scheduling.k = Concrete.BlockCount k
+            <$> Set.toList genesisKeys
+    , Scheduling.currentEpoch = fromIntegral e
+    , Scheduling.currentSlot = Concrete.SlotNumber s
+    , Scheduling.k = Concrete.BlockCount k
     }
   where
     DSEnv genesisKeys (Epoch e) (Slot s) (BlockCount k) = abstractEnv

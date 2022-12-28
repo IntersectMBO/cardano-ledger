@@ -15,12 +15,12 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Ledger.TxIn
-  ( TxId (..),
-    TxIn (TxIn),
-    mkTxInPartial,
-    TxIx,
-  )
+module Cardano.Ledger.TxIn (
+  TxId (..),
+  TxIn (TxIn),
+  mkTxInPartial,
+  TxIx,
+)
 where
 
 import Cardano.HeapWords (HeapWords (..))

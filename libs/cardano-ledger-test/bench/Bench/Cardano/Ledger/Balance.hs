@@ -42,29 +42,29 @@ balanceBenchmarks =
         [ bgroup
             "sumAllValue"
             [ env (pure (snd <$> utxo)) $
-                bench "[Coin]" . nf sumAllValueList,
-              env (pure (Map.fromList utxo)) $
+                bench "[Coin]" . nf sumAllValueList
+            , env (pure (Map.fromList utxo)) $
                 bench "Map TxIn Coin" . nf sumAllValueMap
-            ],
-          bgroup
+            ]
+        , bgroup
             "foldMap"
             [ env (pure (snd <$> utxo)) $
-                bench "[Coin]" . nf foldMapList,
-              env (pure (Map.fromList utxo)) $
+                bench "[Coin]" . nf foldMapList
+            , env (pure (Map.fromList utxo)) $
                 bench "Map TxIn Coin" . nf foldMapMap
-            ],
-          bgroup
+            ]
+        , bgroup
             "foldMap'"
             [ env (pure (snd <$> utxo)) $
-                bench "[Coin]" . nf foldMap'List,
-              env (pure (Map.fromList utxo)) $
+                bench "[Coin]" . nf foldMap'List
+            , env (pure (Map.fromList utxo)) $
                 bench "Map TxIn Coin" . nf foldMap'Map
-            ],
-          bgroup
+            ]
+        , bgroup
             "foldl'"
             [ env (pure (snd <$> utxo)) $
-                bench "[Coin]" . nf foldl'List,
-              env (pure (Map.fromList utxo)) $
+                bench "[Coin]" . nf foldl'List
+            , env (pure (Map.fromList utxo)) $
                 bench "Map TxIn Coin" . nf foldl'Map
             ]
         ]

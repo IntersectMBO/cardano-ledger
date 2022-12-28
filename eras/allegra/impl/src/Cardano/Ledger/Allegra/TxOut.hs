@@ -8,11 +8,11 @@ import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Shelley.PParams (_minUTxOValue)
-import Cardano.Ledger.Shelley.TxBody
-  ( ShelleyTxOut (..),
-    addrEitherShelleyTxOutL,
-    valueEitherShelleyTxOutL,
-  )
+import Cardano.Ledger.Shelley.TxBody (
+  ShelleyTxOut (..),
+  addrEitherShelleyTxOutL,
+  valueEitherShelleyTxOutL,
+ )
 
 instance Crypto c => EraTxOut (AllegraEra c) where
   {-# SPECIALIZE instance EraTxOut (AllegraEra StandardCrypto) #-}

@@ -15,9 +15,9 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Mary.TxAuxData
-  ( module Cardano.Ledger.Allegra.TxAuxData,
-  )
+module Cardano.Ledger.Mary.TxAuxData (
+  module Cardano.Ledger.Allegra.TxAuxData,
+)
 where
 
 import Cardano.Ledger.Allegra.TxAuxData

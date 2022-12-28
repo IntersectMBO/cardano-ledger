@@ -1,8 +1,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Test.Cardano.Chain.Epoch.File
-  ( tests,
-  )
+module Test.Cardano.Chain.Epoch.File (
+  tests,
+)
 where
 
 import Cardano.Chain.Epoch.File (ParseError, mainnetEpochSlots, parseEpochFilesWithBoundary)

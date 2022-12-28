@@ -1,11 +1,11 @@
 -- | Ledger global parameters.
-module Byron.Spec.Ledger.GlobalParams
-  ( epochFirstSlot,
-    lovelaceCap,
-    slotsPerEpoch,
-    slotsPerEpochToK,
-    c,
-  )
+module Byron.Spec.Ledger.GlobalParams (
+  epochFirstSlot,
+  lovelaceCap,
+  slotsPerEpoch,
+  slotsPerEpochToK,
+  c,
+)
 where
 
 import Byron.Spec.Ledger.Core (BlockCount (BlockCount), Epoch (..), Slot (..), lovelaceCap)

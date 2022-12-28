@@ -21,15 +21,15 @@ import Cardano.Ledger.Coin (Coin (..), addDeltaCoin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.API (Credential, KeyRole (Staking))
-import Cardano.Ledger.Shelley.TxBody
-  ( DCert (..),
-    DelegCert (..),
-    Delegation (..),
-    PoolCert (..),
-    PoolParams (..),
-    RewardAcnt (..),
-    Wdrl (..),
-  )
+import Cardano.Ledger.Shelley.TxBody (
+  DCert (..),
+  DelegCert (..),
+  Delegation (..),
+  PoolCert (..),
+  PoolParams (..),
+  RewardAcnt (..),
+  Wdrl (..),
+ )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val (Val (inject), (<+>), (<->))
@@ -47,38 +47,38 @@ import GHC.Stack (HasCallStack)
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
-import Test.Cardano.Ledger.Examples.STSTestUtils
-  ( freeCostModelV1,
-    initUTxO,
-    mkGenesisTxIn,
-    mkTxDats,
-    someAddr,
-    someKeys,
-  )
-import Test.Cardano.Ledger.Generic.Fields
-  ( PParamsField (..),
-    TxBodyField (..),
-    TxField (..),
-    TxOutField (..),
-    WitnessesField (..),
-    abstractTx,
-    abstractTxBody,
-  )
-import Test.Cardano.Ledger.Generic.Functions
-  ( aggregateRewards',
-    createRUpdNonPulsing',
-    getBody,
-    getOutputs,
-    keyPoolDeposits,
-    ppProtocolVersion,
-    txInBalance,
-  )
-import Test.Cardano.Ledger.Generic.ModelState
-  ( Model,
-    ModelNewEpochState (..),
-    mNewEpochStateZero,
-    pcModelNewEpochState,
-  )
+import Test.Cardano.Ledger.Examples.STSTestUtils (
+  freeCostModelV1,
+  initUTxO,
+  mkGenesisTxIn,
+  mkTxDats,
+  someAddr,
+  someKeys,
+ )
+import Test.Cardano.Ledger.Generic.Fields (
+  PParamsField (..),
+  TxBodyField (..),
+  TxField (..),
+  TxOutField (..),
+  WitnessesField (..),
+  abstractTx,
+  abstractTxBody,
+ )
+import Test.Cardano.Ledger.Generic.Functions (
+  aggregateRewards',
+  createRUpdNonPulsing',
+  getBody,
+  getOutputs,
+  keyPoolDeposits,
+  ppProtocolVersion,
+  txInBalance,
+ )
+import Test.Cardano.Ledger.Generic.ModelState (
+  Model,
+  ModelNewEpochState (..),
+  mNewEpochStateZero,
+  pcModelNewEpochState,
+ )
 import Test.Cardano.Ledger.Generic.PrettyCore (pcCredential, pcTx)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.Scriptic (Scriptic (never))
@@ -90,14 +90,14 @@ import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo)
 
 defaultPPs :: [PParamsField era]
 defaultPPs =
-  [ Costmdls . CostModels $ Map.singleton PlutusV1 freeCostModelV1,
-    MaxValSize 1000000000,
-    MaxTxExUnits $ ExUnits 1000000 1000000,
-    MaxBlockExUnits $ ExUnits 1000000 1000000,
-    ProtocolVersion $ ProtVer (natVersion @5) 0,
-    KeyDeposit (Coin 2),
-    PoolDeposit (Coin 5),
-    CollateralPercentage 100
+  [ Costmdls . CostModels $ Map.singleton PlutusV1 freeCostModelV1
+  , MaxValSize 1000000000
+  , MaxTxExUnits $ ExUnits 1000000 1000000
+  , MaxBlockExUnits $ ExUnits 1000000 1000000
+  , ProtocolVersion $ ProtVer (natVersion @5) 0
+  , KeyDeposit (Coin 2)
+  , PoolDeposit (Coin 5)
+  , CollateralPercentage 100
   ]
 
 pparams :: Proof era -> PParams era
@@ -168,9 +168,9 @@ applyCert :: Proof era -> Model era -> DCert (EraCrypto era) -> Model era
 applyCert proof model dcert = case dcert of
   (DCertDeleg (RegKey x)) ->
     model
-      { mRewards = Map.insert x (Coin 0) (mRewards model),
-        mKeyDeposits = Map.insert x keydeposit (mKeyDeposits model),
-        mDeposited = mDeposited model <+> keydeposit
+      { mRewards = Map.insert x (Coin 0) (mRewards model)
+      , mKeyDeposits = Map.insert x keydeposit (mKeyDeposits model)
+      , mDeposited = mDeposited model <+> keydeposit
       }
     where
       pp = mPParams model
@@ -179,9 +179,9 @@ applyCert proof model dcert = case dcert of
     Nothing -> error ("DeRegKey not in rewards: " <> show (pcCredential x))
     Just (Coin 0) ->
       model
-        { mRewards = Map.delete x (mRewards model),
-          mKeyDeposits = Map.delete x (mKeyDeposits model),
-          mDeposited = mDeposited model <-> keydeposit
+        { mRewards = Map.delete x (mRewards model)
+        , mKeyDeposits = Map.delete x (mKeyDeposits model)
+        , mDeposited = mDeposited model <-> keydeposit
         }
       where
         keydeposit = case Map.lookup x (mKeyDeposits model) of
@@ -192,12 +192,12 @@ applyCert proof model dcert = case dcert of
     model {mDelegations = Map.insert cred hash (mDelegations model)}
   (DCertPool (RegPool poolparams)) ->
     model
-      { mPoolParams = Map.insert hk poolparams (mPoolParams model),
-        mDeposited =
+      { mPoolParams = Map.insert hk poolparams (mPoolParams model)
+      , mDeposited =
           if Map.member hk (mPoolDeposits model)
             then mDeposited model
-            else mDeposited model <+> pooldeposit,
-        mPoolDeposits -- Only add if it isn't already there
+            else mDeposited model <+> pooldeposit
+      , mPoolDeposits -- Only add if it isn't already there
         =
           case Map.lookup hk (mPoolDeposits model) of
             Just _ -> mPoolDeposits model
@@ -209,8 +209,8 @@ applyCert proof model dcert = case dcert of
       (_, pooldeposit) = keyPoolDeposits proof pp
   (DCertPool (RetirePool keyhash epoch)) ->
     model
-      { mRetiring = Map.insert keyhash epoch (mRetiring model),
-        mDeposited = mDeposited model <-> pooldeposit
+      { mRetiring = Map.insert keyhash epoch (mRetiring model)
+      , mDeposited = mDeposited model <-> pooldeposit
       }
     where
       pp = mPParams model
@@ -223,10 +223,10 @@ applyCert proof model dcert = case dcert of
 -- Process and use Collateral to pay fees
 
 data CollInfo era = CollInfo
-  { ciBal :: Coin, -- Balance of all the collateral inputs
-    ciRet :: Coin, -- Coin amount of the collateral return output
-    ciDelset :: Set (TxIn (EraCrypto era)), -- The set of inputs to delete from the UTxO
-    ciAddmap :: Map (TxIn (EraCrypto era)) (TxOut era) -- Things to Add to the UTxO
+  { ciBal :: Coin -- Balance of all the collateral inputs
+  , ciRet :: Coin -- Coin amount of the collateral return output
+  , ciDelset :: Set (TxIn (EraCrypto era)) -- The set of inputs to delete from the UTxO
+  , ciAddmap :: Map (TxIn (EraCrypto era)) (TxOut era) -- Things to Add to the UTxO
   }
 
 emptyCollInfo :: CollInfo era
@@ -248,23 +248,23 @@ collInfo count firstTxIx model info field = case field of
       Nothing -> error ("Output not found phase2: " ++ show (count, mIndex model))
       Just (TxId hash) ->
         info
-          { ciRet = txout ^. coinTxOutL,
-            ciAddmap = newstuff
+          { ciRet = txout ^. coinTxOutL
+          , ciAddmap = newstuff
           }
         where
           newstuff = additions hash firstTxIx [txout]
   Collateral inputs ->
     info
-      { ciDelset = inputs,
-        ciBal = txInBalance inputs (mUTxO model)
+      { ciDelset = inputs
+      , ciBal = txInBalance inputs (mUTxO model)
       }
   _ -> info
 
 updateInfo :: CollInfo era -> Model era -> Model era
 updateInfo info m =
   m
-    { mUTxO = Map.union (ciAddmap info) (Map.withoutKeys (mUTxO m) (ciDelset info)),
-      mFees = mFees m <+> ciBal info <-> ciRet info
+    { mUTxO = Map.union (ciAddmap info) (Map.withoutKeys (mUTxO m) (ciDelset info))
+    , mFees = mFees m <+> ciBal info <-> ciRet info
     }
 
 applyTxFail :: Reflect era => Proof era -> Int -> TxIx -> Model era -> TxField era -> Model era
@@ -290,7 +290,7 @@ additions ::
 additions bodyhash firstTxIx outputs =
   Map.fromList
     [ (TxIn (TxId bodyhash) idx, out)
-      | (out, idx) <- zip outputs [firstTxIx ..]
+    | (out, idx) <- zip outputs [firstTxIx ..]
     ]
 
 -- | This is a template of how we might create unit tests that run both the real STS rules
@@ -305,10 +305,10 @@ go = do
       doc = pcTx proof tx
       model1 =
         (mNewEpochStateZero @(BabbageEra Mock))
-          { mUTxO = Map.restrictKeys (unUTxO (initUTxO proof)) allinputs,
-            mCount = 0,
-            mFees = Coin 10,
-            mIndex = Map.singleton 0 (TxId (hashAnnotated txbody))
+          { mUTxO = Map.restrictKeys (unUTxO (initUTxO proof)) allinputs
+          , mCount = 0
+          , mFees = Coin 10
+          , mIndex = Map.singleton 0 (TxId (hashAnnotated txbody))
           }
       model2 = applyTx proof 0 (SlotNo 0) model1 tx
   print (pcModelNewEpochState proof model1)
@@ -319,8 +319,8 @@ filterRewards ::
   Proof era ->
   PParams era ->
   Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))) ->
-  ( Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))),
-    Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era)))
+  ( Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era)))
+  , Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era)))
   )
 filterRewards proof pp rewards =
   if pvMajor (ppProtocolVersion proof pp) > natVersion @2
@@ -333,10 +333,10 @@ filterAllRewards ::
   Proof era ->
   Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))) ->
   Model era ->
-  ( Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))),
-    Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))),
-    Set (Credential 'Staking (EraCrypto era)),
-    Coin
+  ( Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era)))
+  , Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era)))
+  , Set (Credential 'Staking (EraCrypto era))
+  , Coin
   )
 filterAllRewards proof rs' m =
   (registered, eraIgnored, unregistered, totalUnregistered)
@@ -358,43 +358,44 @@ applyRUpd ::
   Model era
 applyRUpd ru m =
   m
-    { mFees = mFees m `addDeltaCoin` deltaFOld @(EraCrypto era) ru,
-      mRewards = Map.unionWith (<>) (mRewards m) (rsOld ru)
+    { mFees = mFees m `addDeltaCoin` deltaFOld @(EraCrypto era) ru
+    , mRewards = Map.unionWith (<>) (mRewards m) (rsOld ru)
     }
 
 notValidatingTx ::
-  ( Scriptic era,
-    EraTx era,
-    GoodCrypto (EraCrypto era)
+  ( Scriptic era
+  , EraTx era
+  , GoodCrypto (EraCrypto era)
   ) =>
   Proof era ->
   Tx era
 notValidatingTx pf =
   newTx
     pf
-    [ Body notValidatingBody,
-      WitnessesI
-        [ AddrWits' [mkWitnessVKey (hashAnnotated notValidatingBody) (someKeys pf)],
-          ScriptWits' [never 0 pf],
-          DataWits' [Data (PV1.I 0)],
-          RdmrWits redeemers
+    [ Body notValidatingBody
+    , WitnessesI
+        [ AddrWits' [mkWitnessVKey (hashAnnotated notValidatingBody) (someKeys pf)]
+        , ScriptWits' [never 0 pf]
+        , DataWits' [Data (PV1.I 0)]
+        , RdmrWits redeemers
         ]
     ]
   where
     notValidatingBody =
       newTxBody
         pf
-        [ Inputs' [mkGenesisTxIn 2],
-          Collateral' [mkGenesisTxIn 12],
-          Outputs' [newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 2995)]],
-          Txfee (Coin 5),
-          WppHash (newScriptIntegrityHash pf (pparams pf) [PlutusV1] redeemers (mkTxDats (Data (PV1.I 0))))
+        [ Inputs' [mkGenesisTxIn 2]
+        , Collateral' [mkGenesisTxIn 12]
+        , Outputs' [newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 2995)]]
+        , Txfee (Coin 5)
+        , WppHash (newScriptIntegrityHash pf (pparams pf) [PlutusV1] redeemers (mkTxDats (Data (PV1.I 0))))
         ]
     redeemers =
       Redeemers
         ( Map.fromList
-            [ ( RdmrPtr Tag.Spend 0,
-                (Data (PV1.I 1), ExUnits 5000 5000)
+            [
+              ( RdmrPtr Tag.Spend 0
+              , (Data (PV1.I 1), ExUnits 5000 5000)
               )
             ]
         )

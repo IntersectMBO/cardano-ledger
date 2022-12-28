@@ -6,61 +6,61 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Test.Cardano.Ledger.Shelley.Fees
-  ( sizeTests,
-  )
+module Test.Cardano.Ledger.Shelley.Fees (
+  sizeTests,
+)
 where
 
 import Cardano.Crypto.VRF (VRFAlgorithm)
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.Ledger.BaseTypes
-  ( Network (..),
-    StrictMaybe (..),
-    textToDns,
-    textToUrl,
-  )
+import Cardano.Ledger.BaseTypes (
+  Network (..),
+  StrictMaybe (..),
+  textToDns,
+  textToUrl,
+ )
 import Cardano.Ledger.Binary (serialize, shelleyProtVer)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as Cr
-import Cardano.Ledger.Keys
-  ( KeyHash,
-    KeyRole (..),
-    asWitness,
-    hashKey,
-  )
+import Cardano.Ledger.Keys (
+  KeyHash,
+  KeyRole (..),
+  asWitness,
+  hashKey,
+ )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (Shelley)
-import Cardano.Ledger.Shelley.API
-  ( Addr,
-    Credential (..),
-    DCert (..),
-    DelegCert (..),
-    Delegation (..),
-    MultiSig (..),
-    PoolCert (..),
-    PoolParams (..),
-    RewardAcnt (..),
-    ShelleyTxBody (..),
-    ShelleyTxOut (..),
-    TxIn (..),
-    hashVerKeyVRF,
-  )
+import Cardano.Ledger.Shelley.API (
+  Addr,
+  Credential (..),
+  DCert (..),
+  DelegCert (..),
+  Delegation (..),
+  MultiSig (..),
+  PoolCert (..),
+  PoolParams (..),
+  RewardAcnt (..),
+  ShelleyTxBody (..),
+  ShelleyTxOut (..),
+  TxIn (..),
+  hashVerKeyVRF,
+ )
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..), emptyPParams)
-import Cardano.Ledger.Shelley.Tx
-  ( ShelleyTx (..),
-  )
+import Cardano.Ledger.Shelley.Tx (
+  ShelleyTx (..),
+ )
 import Cardano.Ledger.Shelley.TxAuxData
-import Cardano.Ledger.Shelley.TxBody
-  ( PoolMetadata (..),
-    StakePoolRelay (..),
-    Wdrl (..),
-  )
-import Cardano.Ledger.Shelley.TxWits
-  ( addrWits,
-    scriptWits,
-  )
+import Cardano.Ledger.Shelley.TxBody (
+  PoolMetadata (..),
+  StakePoolRelay (..),
+  Wdrl (..),
+ )
+import Cardano.Ledger.Shelley.TxWits (
+  addrWits,
+  scriptWits,
+ )
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (mkTxInPartial)
 import qualified Cardano.Ledger.Val as Val
@@ -76,12 +76,12 @@ import Lens.Micro
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkWitnessesVKey, vKey)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
-import Test.Cardano.Ledger.Shelley.Utils
-  ( RawSeed (..),
-    mkKeyPair,
-    mkVRFKeyPair,
-    unsafeBoundRational,
-  )
+import Test.Cardano.Ledger.Shelley.Utils (
+  RawSeed (..),
+  mkKeyPair,
+  mkVRFKeyPair,
+  unsafeBoundRational,
+ )
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 
@@ -117,23 +117,23 @@ aliceVRF = mkVRFKeyPair (RawSeed 0 0 0 0 3)
 alicePoolParams :: forall c. Cr.Crypto c => PoolParams c
 alicePoolParams =
   PoolParams
-    { ppId = alicePoolKH,
-      ppVrf = hashVerKeyVRF . snd $ aliceVRF @(Cr.VRF c),
-      ppPledge = Coin 1,
-      ppCost = Coin 5,
-      ppMargin = unsafeBoundRational 0.1,
-      ppRewardAcnt = RewardAcnt Testnet aliceSHK,
-      ppOwners = Set.singleton $ (hashKey . vKey) aliceStake,
-      ppRelays =
+    { ppId = alicePoolKH
+    , ppVrf = hashVerKeyVRF . snd $ aliceVRF @(Cr.VRF c)
+    , ppPledge = Coin 1
+    , ppCost = Coin 5
+    , ppMargin = unsafeBoundRational 0.1
+    , ppRewardAcnt = RewardAcnt Testnet aliceSHK
+    , ppOwners = Set.singleton $ (hashKey . vKey) aliceStake
+    , ppRelays =
         StrictSeq.singleton $
           SingleHostName SNothing $
             fromJust $
-              textToDns "relay.io",
-      ppMetadata =
+              textToDns "relay.io"
+    , ppMetadata =
         SJust $
           PoolMetadata
-            { pmUrl = fromJust $ textToUrl "alice.pool",
-              pmHash = BS.pack "{}"
+            { pmUrl = fromJust $ textToUrl "alice.pool"
+            , pmHash = BS.pack "{}"
             }
     }
 
@@ -166,25 +166,25 @@ carlPay = KeyPair vk sk
 txbSimpleUTxO :: ShelleyTxBody Shelley
 txbSimpleUTxO =
   ShelleyTxBody
-    { stbInputs = Set.fromList [TxIn genesisId minBound],
-      stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)],
-      stbCerts = StrictSeq.empty,
-      stbWdrls = Wdrl Map.empty,
-      stbTxFee = Coin 94,
-      stbTTL = SlotNo 10,
-      stbUpdate = SNothing,
-      stbMDHash = SNothing
+    { stbInputs = Set.fromList [TxIn genesisId minBound]
+    , stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)]
+    , stbCerts = StrictSeq.empty
+    , stbWdrls = Wdrl Map.empty
+    , stbTxFee = Coin 94
+    , stbTTL = SlotNo 10
+    , stbUpdate = SNothing
+    , stbMDHash = SNothing
     }
 
 txSimpleUTxO :: ShelleyTx Shelley
 txSimpleUTxO =
   ShelleyTx
-    { body = txbSimpleUTxO,
-      wits =
+    { body = txbSimpleUTxO
+    , wits =
         mempty
           { addrWits = mkWitnessesVKey (hashAnnotated txbSimpleUTxO) [alicePay]
-          },
-      auxiliaryData = SNothing
+          }
+    , auxiliaryData = SNothing
     }
 
 txSimpleUTxOBytes16 :: BSL.ByteString
@@ -197,39 +197,39 @@ txbMutiUTxO =
   ShelleyTxBody
     { stbInputs =
         Set.fromList
-          [ mkTxInPartial genesisId 0,
-            mkTxInPartial genesisId 1
-          ],
-      stbOutputs =
+          [ mkTxInPartial genesisId 0
+          , mkTxInPartial genesisId 1
+          ]
+    , stbOutputs =
         StrictSeq.fromList
-          [ ShelleyTxOut aliceAddr (Val.inject $ Coin 10),
-            ShelleyTxOut aliceAddr (Val.inject $ Coin 20),
-            ShelleyTxOut aliceAddr (Val.inject $ Coin 30),
-            ShelleyTxOut bobAddr (Val.inject $ Coin 40),
-            ShelleyTxOut bobAddr (Val.inject $ Coin 50)
-          ],
-      stbCerts = StrictSeq.empty,
-      stbWdrls = Wdrl Map.empty,
-      stbTxFee = Coin 199,
-      stbTTL = SlotNo 10,
-      stbUpdate = SNothing,
-      stbMDHash = SNothing
+          [ ShelleyTxOut aliceAddr (Val.inject $ Coin 10)
+          , ShelleyTxOut aliceAddr (Val.inject $ Coin 20)
+          , ShelleyTxOut aliceAddr (Val.inject $ Coin 30)
+          , ShelleyTxOut bobAddr (Val.inject $ Coin 40)
+          , ShelleyTxOut bobAddr (Val.inject $ Coin 50)
+          ]
+    , stbCerts = StrictSeq.empty
+    , stbWdrls = Wdrl Map.empty
+    , stbTxFee = Coin 199
+    , stbTTL = SlotNo 10
+    , stbUpdate = SNothing
+    , stbMDHash = SNothing
     }
 
 txMutiUTxO :: ShelleyTx Shelley
 txMutiUTxO =
   ShelleyTx
-    { body = txbMutiUTxO,
-      wits =
+    { body = txbMutiUTxO
+    , wits =
         mempty
           { addrWits =
               mkWitnessesVKey
                 (hashAnnotated txbMutiUTxO)
-                [ alicePay,
-                  bobPay
+                [ alicePay
+                , bobPay
                 ]
-          },
-      auxiliaryData = SNothing
+          }
+    , auxiliaryData = SNothing
     }
 
 txMutiUTxOBytes16 :: BSL.ByteString
@@ -239,25 +239,25 @@ txMutiUTxOBytes16 = "83a4008282582003170a2e7597b7b7e3d84c05391d139a62b157e78786d
 txbRegisterStake :: ShelleyTxBody Shelley
 txbRegisterStake =
   ShelleyTxBody
-    { stbInputs = Set.fromList [TxIn genesisId minBound],
-      stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)],
-      stbCerts = StrictSeq.fromList [DCertDeleg (RegKey aliceSHK)],
-      stbWdrls = Wdrl Map.empty,
-      stbTxFee = Coin 94,
-      stbTTL = SlotNo 10,
-      stbUpdate = SNothing,
-      stbMDHash = SNothing
+    { stbInputs = Set.fromList [TxIn genesisId minBound]
+    , stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)]
+    , stbCerts = StrictSeq.fromList [DCertDeleg (RegKey aliceSHK)]
+    , stbWdrls = Wdrl Map.empty
+    , stbTxFee = Coin 94
+    , stbTTL = SlotNo 10
+    , stbUpdate = SNothing
+    , stbMDHash = SNothing
     }
 
 txRegisterStake :: ShelleyTx Shelley
 txRegisterStake =
   ShelleyTx
-    { body = txbRegisterStake,
-      wits =
+    { body = txbRegisterStake
+    , wits =
         mempty
           { addrWits = mkWitnessesVKey (hashAnnotated txbRegisterStake) [alicePay]
-          },
-      auxiliaryData = SNothing
+          }
+    , auxiliaryData = SNothing
     }
 
 txRegisterStakeBytes16 :: BSL.ByteString
@@ -267,32 +267,32 @@ txRegisterStakeBytes16 = "83a5008182582003170a2e7597b7b7e3d84c05391d139a62b157e7
 txbDelegateStake :: ShelleyTxBody Shelley
 txbDelegateStake =
   ShelleyTxBody
-    { stbInputs = Set.fromList [TxIn genesisId minBound],
-      stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)],
-      stbCerts =
+    { stbInputs = Set.fromList [TxIn genesisId minBound]
+    , stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)]
+    , stbCerts =
         StrictSeq.fromList
           [ DCertDeleg
               (Delegate $ Delegation bobSHK alicePoolKH)
-          ],
-      stbWdrls = Wdrl Map.empty,
-      stbTxFee = Coin 94,
-      stbTTL = SlotNo 10,
-      stbUpdate = SNothing,
-      stbMDHash = SNothing
+          ]
+    , stbWdrls = Wdrl Map.empty
+    , stbTxFee = Coin 94
+    , stbTTL = SlotNo 10
+    , stbUpdate = SNothing
+    , stbMDHash = SNothing
     }
 
 txDelegateStake :: ShelleyTx Shelley
 txDelegateStake =
   ShelleyTx
-    { body = txbDelegateStake,
-      wits =
+    { body = txbDelegateStake
+    , wits =
         mempty
           { addrWits =
               mkWitnessesVKey
                 (hashAnnotated txbDelegateStake)
                 [asWitness alicePay, asWitness bobStake]
-          },
-      auxiliaryData = SNothing
+          }
+    , auxiliaryData = SNothing
     }
 
 txDelegateStakeBytes16 :: BSL.ByteString
@@ -302,28 +302,28 @@ txDelegateStakeBytes16 = "83a5008182582003170a2e7597b7b7e3d84c05391d139a62b157e7
 txbDeregisterStake :: ShelleyTxBody Shelley
 txbDeregisterStake =
   ShelleyTxBody
-    { stbInputs = Set.fromList [TxIn genesisId minBound],
-      stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)],
-      stbCerts = StrictSeq.fromList [DCertDeleg (DeRegKey aliceSHK)],
-      stbWdrls = Wdrl Map.empty,
-      stbTxFee = Coin 94,
-      stbTTL = SlotNo 10,
-      stbUpdate = SNothing,
-      stbMDHash = SNothing
+    { stbInputs = Set.fromList [TxIn genesisId minBound]
+    , stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)]
+    , stbCerts = StrictSeq.fromList [DCertDeleg (DeRegKey aliceSHK)]
+    , stbWdrls = Wdrl Map.empty
+    , stbTxFee = Coin 94
+    , stbTTL = SlotNo 10
+    , stbUpdate = SNothing
+    , stbMDHash = SNothing
     }
 
 txDeregisterStake :: ShelleyTx Shelley
 txDeregisterStake =
   ShelleyTx
-    { body = txbDeregisterStake,
-      wits =
+    { body = txbDeregisterStake
+    , wits =
         mempty
           { addrWits =
               mkWitnessesVKey
                 (hashAnnotated txbDeregisterStake)
                 [alicePay @(EraCrypto Shelley)]
-          },
-      auxiliaryData = SNothing
+          }
+    , auxiliaryData = SNothing
     }
 
 txDeregisterStakeBytes16 :: BSL.ByteString
@@ -333,25 +333,25 @@ txDeregisterStakeBytes16 = "83a5008182582003170a2e7597b7b7e3d84c05391d139a62b157
 txbRegisterPool :: ShelleyTxBody Shelley
 txbRegisterPool =
   ShelleyTxBody
-    { stbInputs = Set.fromList [TxIn genesisId minBound],
-      stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)],
-      stbCerts = StrictSeq.fromList [DCertPool (RegPool alicePoolParams)],
-      stbWdrls = Wdrl Map.empty,
-      stbTxFee = Coin 94,
-      stbTTL = SlotNo 10,
-      stbUpdate = SNothing,
-      stbMDHash = SNothing
+    { stbInputs = Set.fromList [TxIn genesisId minBound]
+    , stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)]
+    , stbCerts = StrictSeq.fromList [DCertPool (RegPool alicePoolParams)]
+    , stbWdrls = Wdrl Map.empty
+    , stbTxFee = Coin 94
+    , stbTTL = SlotNo 10
+    , stbUpdate = SNothing
+    , stbMDHash = SNothing
     }
 
 txRegisterPool :: ShelleyTx Shelley
 txRegisterPool =
   ShelleyTx
-    { body = txbRegisterPool,
-      wits =
+    { body = txbRegisterPool
+    , wits =
         mempty
           { addrWits = mkWitnessesVKey (hashAnnotated txbRegisterPool) [alicePay]
-          },
-      auxiliaryData = SNothing
+          }
+    , auxiliaryData = SNothing
     }
 
 txRegisterPoolBytes16 :: BSL.ByteString
@@ -361,25 +361,25 @@ txRegisterPoolBytes16 = "83a5008182582003170a2e7597b7b7e3d84c05391d139a62b157e78
 txbRetirePool :: ShelleyTxBody Shelley
 txbRetirePool =
   ShelleyTxBody
-    { stbInputs = Set.fromList [TxIn genesisId minBound],
-      stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)],
-      stbCerts = StrictSeq.fromList [DCertPool (RetirePool alicePoolKH (EpochNo 5))],
-      stbWdrls = Wdrl Map.empty,
-      stbTxFee = Coin 94,
-      stbTTL = SlotNo 10,
-      stbUpdate = SNothing,
-      stbMDHash = SNothing
+    { stbInputs = Set.fromList [TxIn genesisId minBound]
+    , stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)]
+    , stbCerts = StrictSeq.fromList [DCertPool (RetirePool alicePoolKH (EpochNo 5))]
+    , stbWdrls = Wdrl Map.empty
+    , stbTxFee = Coin 94
+    , stbTTL = SlotNo 10
+    , stbUpdate = SNothing
+    , stbMDHash = SNothing
     }
 
 txRetirePool :: ShelleyTx Shelley
 txRetirePool =
   ShelleyTx
-    { body = txbRetirePool,
-      wits =
+    { body = txbRetirePool
+    , wits =
         mempty
           { addrWits = mkWitnessesVKey (hashAnnotated txbRetirePool) [alicePay]
-          },
-      auxiliaryData = SNothing
+          }
+    , auxiliaryData = SNothing
     }
 
 txRetirePoolBytes16 :: BSL.ByteString
@@ -393,25 +393,25 @@ md = ShelleyTxAuxData $ Map.singleton 0 (List [I 5, S "hello"])
 txbWithMD :: ShelleyTxBody Shelley
 txbWithMD =
   ShelleyTxBody
-    { stbInputs = Set.fromList [TxIn genesisId minBound],
-      stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)],
-      stbCerts = StrictSeq.empty,
-      stbWdrls = Wdrl Map.empty,
-      stbTxFee = Coin 94,
-      stbTTL = SlotNo 10,
-      stbUpdate = SNothing,
-      stbMDHash = SJust $ hashTxAuxData @Shelley md
+    { stbInputs = Set.fromList [TxIn genesisId minBound]
+    , stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)]
+    , stbCerts = StrictSeq.empty
+    , stbWdrls = Wdrl Map.empty
+    , stbTxFee = Coin 94
+    , stbTTL = SlotNo 10
+    , stbUpdate = SNothing
+    , stbMDHash = SJust $ hashTxAuxData @Shelley md
     }
 
 txWithMD :: ShelleyTx Shelley
 txWithMD =
   ShelleyTx
-    { body = txbWithMD,
-      wits =
+    { body = txbWithMD
+    , wits =
         mempty
           { addrWits = mkWitnessesVKey (hashAnnotated txbWithMD) [alicePay]
-          },
-      auxiliaryData = SJust md
+          }
+    , auxiliaryData = SJust md
     }
 
 txWithMDBytes16 :: BSL.ByteString
@@ -422,37 +422,37 @@ msig :: forall era. Era era => MultiSig era
 msig =
   RequireMOf
     2
-    [ (RequireSignature . asWitness . hashKey . vKey) alicePay,
-      (RequireSignature . asWitness . hashKey . vKey) bobPay,
-      (RequireSignature . asWitness . hashKey . vKey) carlPay
+    [ (RequireSignature . asWitness . hashKey . vKey) alicePay
+    , (RequireSignature . asWitness . hashKey . vKey) bobPay
+    , (RequireSignature . asWitness . hashKey . vKey) carlPay
     ]
 
 txbWithMultiSig :: ShelleyTxBody Shelley
 txbWithMultiSig =
   ShelleyTxBody
-    { stbInputs = Set.fromList [TxIn genesisId minBound], -- acting as if this is multi-sig
-      stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)],
-      stbCerts = StrictSeq.empty,
-      stbWdrls = Wdrl Map.empty,
-      stbTxFee = Coin 94,
-      stbTTL = SlotNo 10,
-      stbUpdate = SNothing,
-      stbMDHash = SNothing
+    { stbInputs = Set.fromList [TxIn genesisId minBound] -- acting as if this is multi-sig
+    , stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)]
+    , stbCerts = StrictSeq.empty
+    , stbWdrls = Wdrl Map.empty
+    , stbTxFee = Coin 94
+    , stbTTL = SlotNo 10
+    , stbUpdate = SNothing
+    , stbMDHash = SNothing
     }
 
 txWithMultiSig :: ShelleyTx Shelley
 txWithMultiSig =
   ShelleyTx
-    { body = txbWithMultiSig,
-      wits =
+    { body = txbWithMultiSig
+    , wits =
         mempty
           { addrWits =
               mkWitnessesVKey
                 (hashAnnotated txbWithMultiSig)
-                [alicePay, bobPay],
-            scriptWits = Map.singleton (hashScript @Shelley msig) msig
-          },
-      auxiliaryData = SNothing
+                [alicePay, bobPay]
+          , scriptWits = Map.singleton (hashScript @Shelley msig) msig
+          }
+    , auxiliaryData = SNothing
     }
 
 txWithMultiSigBytes16 :: BSL.ByteString
@@ -462,28 +462,28 @@ txWithMultiSigBytes16 = "83a4008182582003170a2e7597b7b7e3d84c05391d139a62b157e78
 txbWithWithdrawal :: ShelleyTxBody Shelley
 txbWithWithdrawal =
   ShelleyTxBody
-    { stbInputs = Set.fromList [TxIn genesisId minBound],
-      stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)],
-      stbCerts = StrictSeq.empty,
-      stbWdrls = Wdrl $ Map.singleton (RewardAcnt Testnet aliceSHK) (Val.inject $ Coin 100),
-      stbTxFee = Coin 94,
-      stbTTL = SlotNo 10,
-      stbUpdate = SNothing,
-      stbMDHash = SNothing
+    { stbInputs = Set.fromList [TxIn genesisId minBound]
+    , stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)]
+    , stbCerts = StrictSeq.empty
+    , stbWdrls = Wdrl $ Map.singleton (RewardAcnt Testnet aliceSHK) (Val.inject $ Coin 100)
+    , stbTxFee = Coin 94
+    , stbTTL = SlotNo 10
+    , stbUpdate = SNothing
+    , stbMDHash = SNothing
     }
 
 txWithWithdrawal :: ShelleyTx Shelley
 txWithWithdrawal =
   ShelleyTx
-    { body = txbWithWithdrawal,
-      wits =
+    { body = txbWithWithdrawal
+    , wits =
         mempty
           { addrWits =
               mkWitnessesVKey
                 (hashAnnotated txbWithWithdrawal)
                 [asWitness alicePay, asWitness aliceStake]
-          },
-      auxiliaryData = SNothing
+          }
+    , auxiliaryData = SNothing
     }
 
 txWithWithdrawalBytes16 :: BSL.ByteString
@@ -503,9 +503,9 @@ testEvaluateTransactionFee =
 
     txSimpleUTxONoWit =
       ShelleyTx
-        { body = txbSimpleUTxO,
-          wits = mempty,
-          auxiliaryData = SNothing
+        { body = txbSimpleUTxO
+        , wits = mempty
+        , auxiliaryData = SNothing
         }
 
 -- NOTE the txsize function takes into account which actual crypto parameter is in use.
@@ -519,15 +519,15 @@ sizeTests :: TestTree
 sizeTests =
   testGroup
     "Fee Tests"
-    [ testCase "simple utxo" $ sizeTest txSimpleUTxOBytes16 txSimpleUTxO,
-      testCase "multiple utxo" $ sizeTest txMutiUTxOBytes16 txMutiUTxO,
-      testCase "register stake key" $ sizeTest txRegisterStakeBytes16 txRegisterStake,
-      testCase "delegate stake key" $ sizeTest txDelegateStakeBytes16 txDelegateStake,
-      testCase "deregister stake key" $ sizeTest txDeregisterStakeBytes16 txDeregisterStake,
-      testCase "register stake pool" $ sizeTest txRegisterPoolBytes16 txRegisterPool,
-      testCase "retire stake pool" $ sizeTest txRetirePoolBytes16 txRetirePool,
-      testCase "auxiliaryData" $ sizeTest txWithMDBytes16 txWithMD,
-      testCase "multisig" $ sizeTest txWithMultiSigBytes16 txWithMultiSig,
-      testCase "reward withdrawal" $ sizeTest txWithWithdrawalBytes16 txWithWithdrawal,
-      testCase "evaluate transaction fee" testEvaluateTransactionFee
+    [ testCase "simple utxo" $ sizeTest txSimpleUTxOBytes16 txSimpleUTxO
+    , testCase "multiple utxo" $ sizeTest txMutiUTxOBytes16 txMutiUTxO
+    , testCase "register stake key" $ sizeTest txRegisterStakeBytes16 txRegisterStake
+    , testCase "delegate stake key" $ sizeTest txDelegateStakeBytes16 txDelegateStake
+    , testCase "deregister stake key" $ sizeTest txDeregisterStakeBytes16 txDeregisterStake
+    , testCase "register stake pool" $ sizeTest txRegisterPoolBytes16 txRegisterPool
+    , testCase "retire stake pool" $ sizeTest txRetirePoolBytes16 txRetirePool
+    , testCase "auxiliaryData" $ sizeTest txWithMDBytes16 txWithMD
+    , testCase "multisig" $ sizeTest txWithMultiSigBytes16 txWithMultiSig
+    , testCase "reward withdrawal" $ sizeTest txWithWithdrawalBytes16 txWithWithdrawal
+    , testCase "evaluate transaction fee" testEvaluateTransactionFee
     ]

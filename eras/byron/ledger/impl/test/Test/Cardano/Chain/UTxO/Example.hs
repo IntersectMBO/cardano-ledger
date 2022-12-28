@@ -3,60 +3,60 @@
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
-module Test.Cardano.Chain.UTxO.Example
-  ( exampleTxAux,
-    exampleTxAux1,
-    exampleTxId,
-    exampleTxInList,
-    exampleTxInUtxo,
-    exampleTxPayload,
-    exampleTxPayload1,
-    exampleTxProof,
-    exampleTxOut,
-    exampleTxOut1,
-    exampleTxOutList,
-    exampleTxSig,
-    exampleTxSigData,
-    exampleTxWitness,
-    exampleRedeemSignature,
-    exampleHashTx,
-  )
+module Test.Cardano.Chain.UTxO.Example (
+  exampleTxAux,
+  exampleTxAux1,
+  exampleTxId,
+  exampleTxInList,
+  exampleTxInUtxo,
+  exampleTxPayload,
+  exampleTxPayload1,
+  exampleTxProof,
+  exampleTxOut,
+  exampleTxOut1,
+  exampleTxOutList,
+  exampleTxSig,
+  exampleTxSigData,
+  exampleTxWitness,
+  exampleRedeemSignature,
+  exampleHashTx,
+)
 where
 
-import Cardano.Chain.Common
-  ( NetworkMagic (..),
-    makeVerKeyAddress,
-    mkAttributes,
-    mkKnownLovelace,
-    mkMerkleTree,
-    mtRoot,
-  )
-import Cardano.Chain.UTxO
-  ( Tx (..),
-    TxAux,
-    TxId,
-    TxIn (..),
-    TxInWitness (..),
-    TxOut (..),
-    TxPayload,
-    TxProof (..),
-    TxSig,
-    TxSigData (..),
-    TxWitness,
-    mkTxAux,
-    mkTxPayload,
-  )
-import Cardano.Crypto
-  ( Hash,
-    ProtocolMagicId (..),
-    RedeemSignature,
-    SignTag (..),
-    VerificationKey (..),
-    redeemDeterministicKeyGen,
-    redeemSign,
-    serializeCborHash,
-    sign,
-  )
+import Cardano.Chain.Common (
+  NetworkMagic (..),
+  makeVerKeyAddress,
+  mkAttributes,
+  mkKnownLovelace,
+  mkMerkleTree,
+  mtRoot,
+ )
+import Cardano.Chain.UTxO (
+  Tx (..),
+  TxAux,
+  TxId,
+  TxIn (..),
+  TxInWitness (..),
+  TxOut (..),
+  TxPayload,
+  TxProof (..),
+  TxSig,
+  TxSigData (..),
+  TxWitness,
+  mkTxAux,
+  mkTxPayload,
+ )
+import Cardano.Crypto (
+  Hash,
+  ProtocolMagicId (..),
+  RedeemSignature,
+  SignTag (..),
+  VerificationKey (..),
+  redeemDeterministicKeyGen,
+  redeemSign,
+  serializeCborHash,
+  sign,
+ )
 import qualified Cardano.Crypto.Wallet as CC
 import Cardano.Prelude
 import Data.Coerce (coerce)
