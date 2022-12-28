@@ -5,7 +5,7 @@
     <img alt="CEH" src="https://img.shields.io/badge/policy-Cardano%20Engineering%20Handbook-informational?style=for-the-badge" />
   </a>
   <a href="https://github.com/input-output-hk/cardano-ledger/actions/workflows/haskell.yml">
-    <img alt="GitHub Workflow Status (master)" src="https://img.shields.io/github/workflow/status/input-output-hk/cardano-ledger/Haskell%20CI/master.svg?style=for-the-badge" />
+    <img alt="GitHub Workflow Status (master)" src="https://img.shields.io/github/actions/workflow/status/input-output-hk/cardano-ledger/haskell.yml?branch=master&style=for-the-badge" />
   </a>
 </p>
 
