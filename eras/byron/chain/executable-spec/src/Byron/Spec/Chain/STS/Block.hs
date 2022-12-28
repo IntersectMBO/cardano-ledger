@@ -44,10 +44,10 @@ data BlockHeader = BlockHeader
     _bhDlgHash :: !Hash,
     -- | Update payload hash
     _bhUpdHash :: !Hash
-    -- TODO: BlockVersion – the protocol (block) version that created the block
-    -- TODO: SoftwareVersion – the software version that created the block
   }
   deriving (Eq, Generic, Show, Data, Typeable)
+-- TODO: BlockVersion – the protocol (block) version that created the block
+-- TODO: SoftwareVersion – the software version that created the block
 
 makeLenses ''BlockHeader
 
