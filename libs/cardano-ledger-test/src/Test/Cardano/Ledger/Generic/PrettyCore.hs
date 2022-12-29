@@ -15,7 +15,6 @@ module Test.Cardano.Ledger.Generic.PrettyCore where
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Allegra.Rules as Allegra (AllegraUtxoPredFailure (..))
 import Cardano.Ledger.Allegra.Scripts (Timelock (..))
-import Cardano.Ledger.Alonzo.Data (Data (..), Datum (..), binaryDataToData, hashData)
 import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (..))
 import Cardano.Ledger.Alonzo.Rules as Alonzo (
   AlonzoBbodyPredFailure (..),
@@ -26,6 +25,7 @@ import Cardano.Ledger.Alonzo.Rules as Alonzo (
   TagMismatchDescription (..),
  )
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
+import Cardano.Ledger.Alonzo.Scripts.Data (Data (..), Datum (..), binaryDataToData, hashData)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..), ScriptPurpose (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..), unTxDats)
@@ -908,7 +908,7 @@ datumSummary NoDatum = ppString "NoDatum"
 datumSummary (DatumHash h) = ppSexp "DHash" [trim (ppSafeHash h)]
 datumSummary (Datum b) = dataSummary (binaryDataToData b)
 
-dataSummary :: Era era => Cardano.Ledger.Alonzo.Data.Data era -> PDoc
+dataSummary :: Era era => Data era -> PDoc
 dataSummary (Data x) = plutusDataSummary x
 
 plutusDataSummary :: PV1.Data -> PDoc

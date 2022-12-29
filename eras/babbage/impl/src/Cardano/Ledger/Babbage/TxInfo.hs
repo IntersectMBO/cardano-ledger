@@ -8,9 +8,9 @@
 module Cardano.Ledger.Babbage.TxInfo where
 
 import Cardano.Crypto.Hash.Class (hashToBytes)
-import Cardano.Ledger.Alonzo.Data (Datum (..), binaryDataToData, getPlutusData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
+import Cardano.Ledger.Alonzo.Scripts.Data (Datum (..), binaryDataToData, getPlutusData)
 import Cardano.Ledger.Alonzo.Tx (Data, rdptrInv)
 import Cardano.Ledger.Alonzo.TxInfo (
   TranslationError (..),

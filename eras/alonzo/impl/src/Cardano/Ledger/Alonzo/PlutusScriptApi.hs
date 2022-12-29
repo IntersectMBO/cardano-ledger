@@ -25,9 +25,9 @@ module Cardano.Ledger.Alonzo.PlutusScriptApi (
 where
 
 import Cardano.Ledger.Alonzo.Core (MaryEraTxBody (..))
-import Cardano.Ledger.Alonzo.Data (getPlutusData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), CostModel, CostModels (..), ExUnits (..))
+import Cardano.Ledger.Alonzo.Scripts.Data (getPlutusData)
 import Cardano.Ledger.Alonzo.Tx (Data, ScriptPurpose (..), indexedRdmrs, txdats')
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..))
 import Cardano.Ledger.Alonzo.TxInfo (

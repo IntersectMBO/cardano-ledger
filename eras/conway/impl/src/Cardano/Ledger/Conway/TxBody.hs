@@ -43,7 +43,7 @@ module Cardano.Ledger.Conway.TxBody (
 where
 
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
-import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash (..))
+import Cardano.Ledger.Alonzo.TxAuxData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Babbage.Core (ScriptIntegrityHash)
 import Cardano.Ledger.Babbage.TxBody as BabbageTxBodyReExports (
   AllegraEraTxBody (..),

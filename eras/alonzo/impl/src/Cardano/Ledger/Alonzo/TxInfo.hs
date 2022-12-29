@@ -72,7 +72,6 @@ where
 import Cardano.Crypto.Hash.Class (Hash, hashToBytes)
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
-import Cardano.Ledger.Alonzo.Data (Data (..), Datum, getPlutusData)
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoScript (..),
   ExUnits (..),
@@ -82,6 +81,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   transProtocolVersion,
   validScript,
  )
+import Cardano.Ledger.Alonzo.Scripts.Data (Data (..), Datum, getPlutusData)
 import Cardano.Ledger.Alonzo.Tx (CostModel, ScriptPurpose (..), txdats')
 import Cardano.Ledger.Alonzo.TxBody (
   AlonzoEraTxBody (..),

@@ -10,8 +10,8 @@
 
 module Cardano.Ledger.Pretty.Babbage where
 
-import Cardano.Ledger.Alonzo.Data (BinaryData, binaryDataToData)
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxoPredFailure, AlonzoUtxowPredFailure)
+import Cardano.Ledger.Alonzo.Scripts.Data (BinaryData, binaryDataToData)
 import Cardano.Ledger.Babbage.PParams (BabbagePParams, BabbagePParamsHKD (..), BabbagePParamsUpdate)
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..), BabbageUtxowPredFailure (..))
 import Cardano.Ledger.Babbage.TxBody (

@@ -14,7 +14,6 @@ module Cardano.Ledger.Alonzo.Tools (
 )
 where
 
-import Cardano.Ledger.Alonzo.Data (Data, Datum (..), binaryDataToData, getPlutusData)
 import Cardano.Ledger.Alonzo.Language (Language (..), SLanguage (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (knownToNotBe1Phase)
 import Cardano.Ledger.Alonzo.Scripts (
@@ -23,6 +22,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   ExUnits (..),
   getEvaluationContext,
  )
+import Cardano.Ledger.Alonzo.Scripts.Data (Data, Datum (..), binaryDataToData, getPlutusData)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, ScriptPurpose (..), rdptr)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..))
 import Cardano.Ledger.Alonzo.TxInfo (

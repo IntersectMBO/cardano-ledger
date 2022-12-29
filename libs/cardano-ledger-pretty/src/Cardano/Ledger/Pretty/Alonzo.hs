@@ -10,11 +10,6 @@
 
 module Cardano.Ledger.Pretty.Alonzo where
 
-import Cardano.Ledger.Alonzo.Data (
-  AlonzoTxAuxData (AlonzoTxAuxData, atadMetadata),
-  Data (..),
-  getAlonzoTxAuxDataScripts,
- )
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (
   AlonzoPParams,
@@ -31,11 +26,16 @@ import Cardano.Ledger.Alonzo.Scripts (
   getCostModelLanguage,
   getCostModelParams,
  )
+import Cardano.Ledger.Alonzo.Scripts.Data (Data (..))
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoEraTx,
   AlonzoTx (AlonzoTx),
   AlonzoTxBody (AlonzoTxBody),
   IsValid (..),
+ )
+import Cardano.Ledger.Alonzo.TxAuxData (
+  AlonzoTxAuxData (AlonzoTxAuxData, atadMetadata),
+  getAlonzoTxAuxDataScripts,
  )
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody, AlonzoTxOut (AlonzoTxOut))
 import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq (AlonzoTxSeq))

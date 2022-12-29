@@ -7,8 +7,8 @@ module Test.Cardano.Ledger.Babbage.Serialisation.CDDL (
 where
 
 import Cardano.Ledger.Allegra.Scripts
-import Cardano.Ledger.Alonzo.Data (Data)
 import Cardano.Ledger.Alonzo.Scripts (CostModels)
+import Cardano.Ledger.Alonzo.Scripts.Data (Data)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers)
 import Cardano.Ledger.Babbage (Babbage)
 import Cardano.Ledger.Babbage.TxBody (Datum)

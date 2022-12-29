@@ -13,7 +13,6 @@
 
 module Test.Cardano.Ledger.Examples.AlonzoCollectInputs (tests) where
 
-import Cardano.Ledger.Alonzo.Data (Data (..))
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (..), collectTwoPhaseScriptInputs)
@@ -24,6 +23,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   ExUnits (..),
  )
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
+import Cardano.Ledger.Alonzo.Scripts.Data (Data (..))
 import Cardano.Ledger.Alonzo.Tx (
   ScriptPurpose (..),
  )

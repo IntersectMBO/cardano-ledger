@@ -15,7 +15,6 @@ module Test.Cardano.Ledger.Alonzo.Golden (
 where
 
 import Cardano.Ledger.Alonzo (Alonzo)
-import Cardano.Ledger.Alonzo.Data (Data (..), hashData)
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (
@@ -32,6 +31,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   Prices (..),
   mkCostModel,
  )
+import Cardano.Ledger.Alonzo.Scripts.Data (Data (..), hashData)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), utxoEntrySize)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), boundRational)
 import Cardano.Ledger.Binary (decodeFullAnnotator, fromCBOR, serialize)

@@ -44,9 +44,11 @@ library
     Cardano.Ledger.Alonzo.PParams
     Cardano.Ledger.Alonzo.Rules
     Cardano.Ledger.Alonzo.Scripts
+    Cardano.Ledger.Alonzo.Scripts.Data
     Cardano.Ledger.Alonzo.Tools
     Cardano.Ledger.Alonzo.Translation
     Cardano.Ledger.Alonzo.Tx
+    Cardano.Ledger.Alonzo.TxAuxData
     Cardano.Ledger.Alonzo.TxBody
     Cardano.Ledger.Alonzo.TxOut
     Cardano.Ledger.Alonzo.TxInfo

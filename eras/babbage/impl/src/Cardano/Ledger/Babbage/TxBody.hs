@@ -108,10 +108,8 @@ module Cardano.Ledger.Babbage.TxBody (
 where
 
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
-import Cardano.Ledger.Alonzo.Data (
-  AuxiliaryDataHash (..),
-  Datum (..),
- )
+import Cardano.Ledger.Alonzo.Scripts.Data (Datum (..))
+import Cardano.Ledger.Alonzo.TxAuxData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Alonzo.TxBody (
   AlonzoEraTxOut (..),
  )

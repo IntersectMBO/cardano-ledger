@@ -14,7 +14,6 @@
 module Test.Cardano.Ledger.Examples.AlonzoInvalidTxUTXOW (tests) where
 
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
-import Cardano.Ledger.Alonzo.Data (Data (..), hashData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (..))
 import Cardano.Ledger.Alonzo.Rules (
@@ -29,6 +28,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   ExUnits (..),
  )
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
+import Cardano.Ledger.Alonzo.Scripts.Data (Data (..), hashData)
 import Cardano.Ledger.Alonzo.Tx (
   IsValid (..),
   ScriptPurpose (..),

@@ -14,7 +14,7 @@ module Cardano.Ledger.State.UTxO where
 
 import Cardano.Ledger.Address
 import Cardano.Ledger.Alonzo
-import Cardano.Ledger.Alonzo.Data
+import Cardano.Ledger.Alonzo.Scripts.Data
 import Cardano.Ledger.Alonzo.TxBody
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary

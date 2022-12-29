@@ -79,9 +79,9 @@ import Cardano.Ledger.Alonzo.Core (
   MaryEraTxBody (..),
   ScriptIntegrityHash,
  )
-import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash (..))
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Scripts ()
+import Cardano.Ledger.Alonzo.TxAuxData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Alonzo.TxOut
 import Cardano.Ledger.BaseTypes (
   Network (..),

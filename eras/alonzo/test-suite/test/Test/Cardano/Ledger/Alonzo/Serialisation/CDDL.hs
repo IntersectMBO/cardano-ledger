@@ -9,7 +9,7 @@ where
 
 import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Alonzo (Alonzo)
-import Cardano.Ledger.Alonzo.Data (Data)
+import Cardano.Ledger.Alonzo.Scripts.Data (Data)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits, Redeemers)
 import Cardano.Ledger.Core
 import qualified Data.ByteString.Lazy as BSL

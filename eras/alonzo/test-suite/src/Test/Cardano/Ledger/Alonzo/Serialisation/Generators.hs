@@ -15,15 +15,6 @@ module Test.Cardano.Ledger.Alonzo.Serialisation.Generators where
 
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.Data (
-  AlonzoTxAuxData (..),
-  AuxiliaryDataHash,
-  BinaryData,
-  Data (..),
-  Datum (..),
-  dataToBinaryData,
-  mkAlonzoTxAuxData,
- )
 import Cardano.Ledger.Alonzo.Language
 import Cardano.Ledger.Alonzo.PParams (
   AlonzoPParams,
@@ -47,6 +38,12 @@ import Cardano.Ledger.Alonzo.Scripts (
   Tag (..),
   mkCostModel,
  )
+import Cardano.Ledger.Alonzo.Scripts.Data (
+  BinaryData,
+  Data (..),
+  Datum (..),
+  dataToBinaryData,
+ )
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoTx (AlonzoTx),
   AlonzoTxBody (..),
@@ -54,6 +51,11 @@ import Cardano.Ledger.Alonzo.Tx (
   ScriptIntegrity (..),
   ScriptPurpose (..),
   hashData,
+ )
+import Cardano.Ledger.Alonzo.TxAuxData (
+  AlonzoTxAuxData (..),
+  AuxiliaryDataHash,
+  mkAlonzoTxAuxData,
  )
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), ScriptIntegrityHash)
 import Cardano.Ledger.Alonzo.TxWits
