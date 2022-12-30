@@ -72,10 +72,25 @@ propDecompactAddrWithJunk ::
   Expectation
 propDecompactAddrWithJunk addr junk = do
   -- Add garbage to the end of serializaed non-Byron address
-  let bs = case addr of
-        AddrBootstrap _ -> serialiseAddr addr
-        _ -> serialiseAddr addr <> junk
-  -- Check this behavior all the way through Alonzo
+  bs <- case addr of
+    AddrBootstrap _ -> pure $ serialiseAddr addr
+    _ -> do
+      let bs = serialiseAddr addr <> junk
+      -- ensure we fail decoding of compact addresses with junk at the end
+      when (BS.length junk > 0) $ do
+        forM_ [natVersion @7 .. maxBound] $ \version -> do
+          let cbor = serialize' version bs
+          forM_ (decodeFull' version cbor) $ \(cAddr :: CompactAddr c) ->
+            expectationFailure $
+              unlines
+                [ "Decoding with version: " ++ show version
+                , "unexpectedly was able to parse an address with junk at the end: "
+                , show cbor
+                , "as: "
+                , show cAddr
+                ]
+      pure bs
+  -- Ensure we drop off the junk at the end all the way through Alonzo
   forM_ [minBound .. natVersion @6] $ \version -> do
     -- Encode with garbage
     let cbor = serialize' version bs
