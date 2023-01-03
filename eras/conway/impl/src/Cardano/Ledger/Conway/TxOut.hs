@@ -14,7 +14,7 @@ module Cardano.Ledger.Conway.TxOut (
 )
 where
 
-import Cardano.Ledger.Alonzo.Data (Datum (NoDatum))
+import Cardano.Ledger.Alonzo.Scripts.Data (Datum (NoDatum))
 import Cardano.Ledger.Babbage.TxBody (
   addrEitherBabbageTxOutL,
   babbageMinUTxOValue,

@@ -15,7 +15,6 @@ module Test.Cardano.Ledger.Examples.AlonzoBBODY (tests) where
 
 import Cardano.Crypto.Hash.Class (sizeHash)
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.Alonzo.Data (Data (..), hashData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoBbodyPredFailure (..),
@@ -25,6 +24,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   ExUnits (..),
  )
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
+import Cardano.Ledger.Alonzo.Scripts.Data (Data (..), hashData)
 import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..))
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.BaseTypes (

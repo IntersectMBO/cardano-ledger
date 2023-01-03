@@ -23,7 +23,6 @@ module Cardano.Ledger.Alonzo (
 )
 where
 
-import Cardano.Ledger.Alonzo.Data (AlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Genesis
 import Cardano.Ledger.Alonzo.PParams (
@@ -35,6 +34,7 @@ import Cardano.Ledger.Alonzo.PlutusScriptApi (getDatumAlonzo)
 import Cardano.Ledger.Alonzo.Rules ()
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Alonzo.Translation ()
+import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..), AlonzoTxBody, AlonzoTxOut)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), alonzoTxInfo)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..))

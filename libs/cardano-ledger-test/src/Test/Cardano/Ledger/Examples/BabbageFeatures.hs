@@ -16,7 +16,6 @@ module Test.Cardano.Ledger.Examples.BabbageFeatures where
 
 import qualified Cardano.Crypto.Hash as CH
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.Alonzo.Data (Data (..), dataToBinaryData, hashData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (BadTranslation))
 import Cardano.Ledger.Alonzo.Rules (
@@ -25,6 +24,7 @@ import Cardano.Ledger.Alonzo.Rules (
  )
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (PlutusScript), CostModels (..), ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
+import Cardano.Ledger.Alonzo.Scripts.Data (Data (..), dataToBinaryData, hashData)
 import Cardano.Ledger.Alonzo.TxInfo (
   TranslationError (InlineDatumsNotSupported, ReferenceInputsNotSupported, ReferenceScriptsNotSupported),
   TxOutSource (TxOutFromInput, TxOutFromOutput),

@@ -47,7 +47,7 @@ module Cardano.Ledger.Alonzo.Scripts (
 where
 
 import Cardano.Ledger.Allegra.Scripts (Timelock, eqTimelockRaw)
-import Cardano.Ledger.Alonzo.Era
+import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.BaseTypes (BoundedRational (unboundRational), NonNegativeInterval, ProtVer (..))
 import Cardano.Ledger.Binary (

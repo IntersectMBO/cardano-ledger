@@ -9,13 +9,13 @@
 module Test.Cardano.Ledger.Alonzo.Serialisation.Tripping where
 
 import Cardano.Ledger.Alonzo (Alonzo)
-import Cardano.Ledger.Alonzo.Data (BinaryData, Data (..))
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoPredFailure,
   AlonzoUtxosPredFailure,
   AlonzoUtxowPredFailure,
  )
 import Cardano.Ledger.Alonzo.Scripts (CostModels, eqAlonzoScriptRaw)
+import Cardano.Ledger.Alonzo.Scripts.Data (BinaryData, Data (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits)
 import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Core

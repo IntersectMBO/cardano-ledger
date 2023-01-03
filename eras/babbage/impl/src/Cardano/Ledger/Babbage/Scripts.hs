@@ -18,13 +18,13 @@ module Cardano.Ledger.Babbage.Scripts (
 where
 
 import Cardano.Ledger.Allegra.Scripts (Timelock)
-import Cardano.Ledger.Alonzo.Data (
+import Cardano.Ledger.Alonzo.Language
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
+import Cardano.Ledger.Alonzo.TxAuxData (
   AlonzoTxAuxData,
   hashAlonzoTxAuxData,
   validateAlonzoTxAuxData,
  )
-import Cardano.Ledger.Alonzo.Language
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Babbage.Era
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC

@@ -6,19 +6,15 @@ module Test.Cardano.Ledger.Alonzo.Examples.Consensus where
 
 import Cardano.Ledger.Allegra.Scripts (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.Alonzo (Alonzo)
-import Cardano.Ledger.Alonzo.Data (
-  AuxiliaryDataHash (..),
-  Data (..),
-  hashData,
-  mkAlonzoTxAuxData,
- )
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..), emptyPParams, emptyPParamsUpdate)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), CostModels (..), ExUnits (..), Prices (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
+import Cardano.Ledger.Alonzo.Scripts.Data (Data (..), hashData)
 import Cardano.Ledger.Alonzo.Translation ()
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
+import Cardano.Ledger.Alonzo.TxAuxData (AuxiliaryDataHash (..), mkAlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (..), AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), RdmrPtr (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.BaseTypes (NonNegativeInterval, StrictMaybe (..), boundRational)

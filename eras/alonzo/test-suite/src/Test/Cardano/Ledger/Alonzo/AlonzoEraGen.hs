@@ -15,7 +15,6 @@ import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Allegra.Scripts (Timelock (..), translateTimelock)
 import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.Data (AlonzoTxAuxData (..), Data (..), mkAlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (
   AlonzoPParams,
@@ -37,6 +36,7 @@ import Cardano.Ledger.Alonzo.Scripts as Alonzo (
   pointWiseExUnits,
   txscriptfee,
  )
+import Cardano.Ledger.Alonzo.Scripts.Data (Data (..))
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoEraTx (..),
   AlonzoTx (..),
@@ -46,6 +46,7 @@ import Cardano.Ledger.Alonzo.Tx (
   rdptr,
   totExUnits,
  )
+import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData (..), mkAlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.TxBody (
   AlonzoEraTxBody (..),
   AlonzoTxBody (..),

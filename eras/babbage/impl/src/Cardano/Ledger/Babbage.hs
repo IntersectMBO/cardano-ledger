@@ -21,8 +21,8 @@ module Cardano.Ledger.Babbage (
 where
 
 import Cardano.Ledger.Alonzo (reapplyAlonzoTx)
-import Cardano.Ledger.Alonzo.Data (AlonzoTxAuxData (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
+import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData (..))
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..))
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.Genesis (AlonzoGenesis, extendPPWithGenesis)

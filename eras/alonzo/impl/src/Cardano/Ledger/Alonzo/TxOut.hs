@@ -42,10 +42,10 @@ import Cardano.Ledger.Address (
   decompactAddr,
   fromCborBothAddr,
  )
-import Cardano.Ledger.Alonzo.Data (Datum (..), dataHashSize)
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.PParams (_coinsPerUTxOWord)
 import Cardano.Ledger.Alonzo.Scripts ()
+import Cardano.Ledger.Alonzo.Scripts.Data (Datum (..), dataHashSize)
 import Cardano.Ledger.BaseTypes (
   Network (..),
   StrictMaybe (..),

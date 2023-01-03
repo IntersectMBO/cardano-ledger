@@ -27,9 +27,9 @@ module Test.Cardano.Ledger.Generic.TxGen (
 where
 
 import Cardano.Ledger.Allegra.Scripts (Timelock (..), ValidityInterval (..))
-import Cardano.Ledger.Alonzo.Data (Data, dataToBinaryData, hashData)
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
 import Cardano.Ledger.Alonzo.Scripts hiding (Script)
+import Cardano.Ledger.Alonzo.Scripts.Data (Data, dataToBinaryData, hashData)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits (

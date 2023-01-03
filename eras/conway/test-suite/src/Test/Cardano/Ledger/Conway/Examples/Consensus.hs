@@ -11,17 +11,19 @@
 module Test.Cardano.Ledger.Conway.Examples.Consensus where
 
 import Cardano.Ledger.Allegra.Scripts (Timelock (..), ValidityInterval (..))
-import Cardano.Ledger.Alonzo.Data (
-  AuxiliaryDataHash (..),
-  Data (..),
-  dataToBinaryData,
-  hashData,
-  mkAlonzoTxAuxData,
- )
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
+import Cardano.Ledger.Alonzo.Scripts.Data (
+  Data (..),
+  dataToBinaryData,
+  hashData,
+ )
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
+import Cardano.Ledger.Alonzo.TxAuxData (
+  AuxiliaryDataHash (..),
+  mkAlonzoTxAuxData,
+ )
 import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), Datum (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))

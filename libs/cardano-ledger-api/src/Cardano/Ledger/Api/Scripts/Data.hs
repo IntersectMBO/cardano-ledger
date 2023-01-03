@@ -6,5 +6,5 @@ module Cardano.Ledger.Api.Scripts.Data (
 )
 where
 
-import Cardano.Ledger.Alonzo.Data (Data (Data), hashData)
+import Cardano.Ledger.Alonzo.Scripts.Data (Data (Data), hashData)
 import Cardano.Ledger.Hashes (ScriptHash)

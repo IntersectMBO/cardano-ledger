@@ -21,19 +21,14 @@ import Cardano.Crypto.Seed as Seed
 import Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Allegra.Scripts (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
-import Cardano.Ledger.Alonzo.Data (
-  AlonzoTxAuxData (..),
-  Data (..),
-  dataToBinaryData,
-  hashData,
-  mkAlonzoTxAuxData,
- )
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.Language (Language (PlutusV1, PlutusV2))
 import qualified Cardano.Ledger.Alonzo.PParams as AlonzoPP
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), CostModels (..), ExUnits (..), Prices (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
+import Cardano.Ledger.Alonzo.Scripts.Data (Data (..), dataToBinaryData, hashData)
 import Cardano.Ledger.Alonzo.Translation ()
+import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData (..), mkAlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.AuxiliaryData
@@ -109,7 +104,7 @@ import Test.Cardano.Ledger.Shelley.Examples.Consensus (
  )
 import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as Old (ledgerExamplesShelley)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as SLE
-import Test.Cardano.Ledger.Shelley.Generator.Core
+import Test.Cardano.Ledger.Shelley.Generator.Core hiding (hashData)
 import Test.Cardano.Ledger.Shelley.Orphans ()
 import Test.Cardano.Ledger.Shelley.Utils hiding (mkVRFKeyPair)
 
@@ -550,7 +545,7 @@ postAlonzoWits proof txBody =
     , DataWits
         ( TxDats @era $
             Map.singleton
-              (Cardano.Ledger.Alonzo.Data.hashData @era datumExample)
+              (hashData @era datumExample)
               datumExample
         )
     , RdmrWits

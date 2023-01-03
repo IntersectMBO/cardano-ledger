@@ -46,7 +46,7 @@ import Cardano.Ledger.Address (
   decompactAddr,
   fromCborBothAddr,
  )
-import Cardano.Ledger.Alonzo.Data (
+import Cardano.Ledger.Alonzo.Scripts.Data (
   BinaryData,
   Data,
   Datum (..),
