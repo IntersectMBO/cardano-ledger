@@ -57,7 +57,6 @@ transaction_body =
   , ? 3 : uint                        ; time to live
   , ? 4 : [* certificate]
   , ? 5 : withdrawals
-  , ? 6 : update
   , ? 7 : auxiliary_data_hash
   , ? 8 : uint                        ; validity interval start
   , ? 9 : mint
@@ -88,29 +87,29 @@ parameter_change_action = protocol_param_update
 
 hard_fork_initiation_action = protocol_version
 
-treasury_withdrawals_action = $addr_keyhash => coin
+treasury_withdrawals_action = { $addr_keyhash => coin }
 
 vote =
   [ governance_action_id : governance_action_id
-  , voter_role : voter_role
-  , voter_role_key_hash : $hash32
-  , metadata_url : url
-  , metadata_hash : $hash32
-  , decision : decision
+  , voter_role           : voter_role
+  , voter_role_key_hash  : $addr_keyhash
+  , metadata_url         : url
+  , metadata_hash        : $hash32
+  , decision             : decision
   ]
 
 ; constitutional committee - 0
 ; DRep - 1
 ; SPO - 2
-voter_role = uint
+voter_role = 0 .. 2
 
 ; no - 0
 ; yes - 1
 ; abstain - 2
-decision = uint
+decision = 0 .. 2
 
 governance_action_id =
-  [ transaction_id : $hash32
+  [ transaction_id          : $hash32
   , governance_action_index : uint
   ]
 
@@ -225,7 +224,6 @@ certificate =
   // pool_registration
   // pool_retirement
   // genesis_key_delegation
-  // move_instantaneous_rewards_cert
   ]
 
 stake_registration = (0, stake_credential)
@@ -234,7 +232,6 @@ stake_delegation = (2, stake_credential, pool_keyhash)
 pool_registration = (3, pool_params)
 pool_retirement = (4, pool_keyhash, epoch)
 genesis_key_delegation = (5, genesishash, genesis_delegate_hash, vrf_keyhash)
-move_instantaneous_rewards_cert = (6, move_instantaneous_reward)
 
 move_instantaneous_reward = [ 0 / 1, { * stake_credential => delta_coin } / coin ]
 ; The first field determines where the funds are drawn from.

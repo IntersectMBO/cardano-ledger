@@ -24,6 +24,7 @@ module Cardano.Ledger.Binary.Encoding.Encoder (
   encodeTuple,
   encodeRatio,
   encodeRatioWithTag,
+  encodeEnum,
 
   -- *** Containers
   encodeList,
@@ -291,6 +292,9 @@ encodeRatioWithTag encodeNumeric r =
     <> encodeListLen 2
     <> encodeNumeric (numerator r)
     <> encodeNumeric (denominator r)
+
+encodeEnum :: Enum a => a -> Encoding
+encodeEnum = encodeInt . fromEnum
 
 --------------------------------------------------------------------------------
 -- Containers

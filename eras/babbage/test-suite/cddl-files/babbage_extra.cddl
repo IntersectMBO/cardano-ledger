@@ -1,4 +1,4 @@
-; These are definitions which are being overwritten n a mock cddl file for
+; These are definitions which are being overwritten in a mock cddl file for
 ; use in tests
 
 set = [* a]

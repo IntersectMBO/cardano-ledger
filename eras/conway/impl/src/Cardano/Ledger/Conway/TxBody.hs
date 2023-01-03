@@ -195,6 +195,7 @@ instance
       bodyFields 19 = field (\x tx -> tx {ctbrGovActions = x}) From
       bodyFields 20 = field (\x tx -> tx {ctbrVotes = x}) From
       bodyFields n = field (\_ t -> t) (Invalid n)
+      requiredFields :: [(Word, String)]
       requiredFields =
         [ (0, "inputs")
         , (1, "outputs")
