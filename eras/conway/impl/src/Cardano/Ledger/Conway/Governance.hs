@@ -22,7 +22,7 @@ where
 
 import Cardano.Ledger.Babbage.Core (Era (..))
 import Cardano.Ledger.BaseTypes (ProtVer (..))
-import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), decodeEnumBounded, encodeEnum)
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
   Encode (..),
@@ -214,25 +214,13 @@ data VoterRole
   = ConstitutionalCommittee
   | DRep
   | SPO
-  deriving (Generic, Eq, Show, Enum)
+  deriving (Generic, Eq, Show, Enum, Bounded)
 
 instance FromCBOR VoterRole where
-  fromCBOR =
-    decode $
-      Summands "VoterRole" dec
-    where
-      dec 0 = SumD ConstitutionalCommittee
-      dec 1 = SumD DRep
-      dec 2 = SumD SPO
-      dec k = Invalid k
+  fromCBOR = decodeEnumBounded
 
 instance ToCBOR VoterRole where
-  toCBOR x =
-    encode $
-      Sum x $ case x of
-        ConstitutionalCommittee -> 0
-        DRep -> 1
-        SPO -> 2
+  toCBOR = encodeEnum
 
 instance NoThunks VoterRole
 
@@ -242,26 +230,14 @@ data VoteDecision
   = No
   | Yes
   | Abstain
-  deriving (Generic, Eq, Show, Enum)
+  deriving (Generic, Eq, Show, Enum, Bounded)
 
 instance NoThunks VoteDecision
 
 instance NFData VoteDecision
 
 instance FromCBOR VoteDecision where
-  fromCBOR =
-    decode $
-      Summands "VoteDecision" dec
-    where
-      dec 0 = SumD No
-      dec 1 = SumD Yes
-      dec 2 = SumD Abstain
-      dec k = Invalid k
+  fromCBOR = decodeEnumBounded
 
 instance ToCBOR VoteDecision where
-  toCBOR x =
-    encode $
-      Sum x $ case x of
-        No -> 0
-        Yes -> 1
-        Abstain -> 2
+  toCBOR = encodeEnum

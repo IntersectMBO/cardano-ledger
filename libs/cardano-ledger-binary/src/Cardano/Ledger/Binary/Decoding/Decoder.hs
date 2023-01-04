@@ -47,6 +47,7 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
   decodeRecordNamed,
   decodeRecordNamedT,
   decodeRecordSum,
+  decodeEnumBounded,
 
   -- *** Containers
   decodeMaybe,
@@ -242,6 +243,7 @@ import qualified Data.Set as Set
 import qualified Data.Text as Text
 import Data.Time.Calendar.OrdinalDate (fromOrdinalDate)
 import Data.Time.Clock (UTCTime (..), picosecondsToDiffTime)
+import Data.Typeable (Proxy (Proxy), Typeable, typeRep)
 import qualified Data.VMap as VMap
 import qualified Data.Vector.Generic as VG
 import Data.Word (Word16, Word32, Word64, Word8)
@@ -544,6 +546,13 @@ decodeRecordSum name decoder = do
       isBreak <- decodeBreakOr -- if there is stuff left, it is unnecessary extra stuff
       unless isBreak $ cborError $ DecoderErrorCustom (Text.pack name) "Excess terms in array"
   pure x
+
+decodeEnumBounded :: forall a s. (Enum a, Bounded a, Typeable a) => Decoder s a
+decodeEnumBounded = do
+  n <- decodeInt
+  if fromEnum (minBound :: a) <= n && n <= fromEnum (maxBound :: a)
+    then pure $ toEnum n
+    else fail $ "Failed to decode an Enum: " <> show n <> " for TypeRep: " <> show (typeRep (Proxy @a))
 
 --------------------------------------------------------------------------------
 -- Decoder for Map
