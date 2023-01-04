@@ -15,7 +15,7 @@
 --     versions of old languages) will be added here.
 module Cardano.Ledger.Language where
 
-import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), decodeInt, invalidKey)
+import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), decodeEnumBounded, encodeEnum)
 import Cardano.Ledger.TreeDiff (ToExpr (..))
 import Control.DeepSeq (NFData (..))
 import Data.Ix (Ix)
@@ -43,22 +43,10 @@ instance NoThunks Language
 instance NFData Language
 
 instance ToCBOR Language where
-  toCBOR PlutusV1 = toCBOR (0 :: Int)
-  toCBOR PlutusV2 = toCBOR (1 :: Int)
+  toCBOR = encodeEnum
 
 instance FromCBOR Language where
-  fromCBOR = do
-    n <- decodeInt
-    -- We need to check bounds in order to avoid partial cases of `toEnum`
-    lang <-
-      if n >= fromEnum (minBound :: Language) && n <= fromEnum (maxBound :: Language)
-        then pure $ toEnum n
-        else invalidKey (fromIntegral n)
-    -- We pattern match on lang so that the type checker will
-    -- notice when new language versions are added.
-    pure $ case lang of
-      PlutusV1 -> lang
-      PlutusV2 -> lang
+  fromCBOR = decodeEnumBounded
 
 nonNativeLanguages :: [Language]
 nonNativeLanguages = [minBound .. maxBound]
