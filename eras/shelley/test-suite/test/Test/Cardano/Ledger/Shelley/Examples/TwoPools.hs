@@ -201,7 +201,7 @@ txbodyEx1 =
         , DCertDeleg (Delegate $ Delegation Cast.carlSHK (hk Cast.alicePoolKeys))
         ]
     )
-    (Wdrl Map.empty)
+    (Withdrawals Map.empty)
     feeTx1
     (SlotNo 10)
     SNothing

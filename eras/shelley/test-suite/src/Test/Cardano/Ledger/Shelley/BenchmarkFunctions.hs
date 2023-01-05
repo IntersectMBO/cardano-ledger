@@ -191,7 +191,7 @@ txbSpendOneUTxO =
         ]
     )
     StrictSeq.empty
-    (Wdrl Map.empty)
+    (Withdrawals Map.empty)
     (Coin 1)
     (SlotNo 10)
     SNothing
@@ -245,7 +245,7 @@ txbFromCerts ix regCerts =
     (Set.fromList [TxIn genesisId ix])
     (StrictSeq.fromList [ShelleyTxOut aliceAddr (inject $ Coin 100)])
     regCerts
-    (Wdrl Map.empty)
+    (Withdrawals Map.empty)
     (Coin 0)
     (SlotNo 10)
     SNothing
@@ -314,7 +314,7 @@ txbDeRegStakeKey x y =
     ( StrictSeq.fromList $
         fmap (DCertDeleg . DeRegKey . stakeKeyToCred) (stakeKeys x y)
     )
-    (Wdrl Map.empty)
+    (Withdrawals Map.empty)
     (Coin 0)
     (SlotNo 10)
     SNothing
@@ -350,7 +350,7 @@ txbWithdrawals x y =
     (Set.fromList [mkTxInPartial genesisId 1])
     (StrictSeq.fromList [ShelleyTxOut aliceAddr (inject $ Coin 100)])
     StrictSeq.empty
-    ( Wdrl $
+    ( Withdrawals $
         Map.fromList $
           fmap (\ks -> (RewardAcnt Testnet (stakeKeyToCred ks), Coin 0)) (stakeKeys x y)
     )
@@ -471,7 +471,7 @@ txbRetireStakePool x y =
           (\ks -> DCertPool $ RetirePool (mkPoolKeyHash ks) (EpochNo 1))
           (poolColdKeys x y)
     )
-    (Wdrl Map.empty)
+    (Withdrawals Map.empty)
     (Coin 0)
     (SlotNo 10)
     SNothing
@@ -519,7 +519,7 @@ txbDelegate n m =
           (\ks -> DCertDeleg $ Delegate (Delegation (stakeKeyToCred ks) firstStakePoolKeyHash))
           (stakeKeys n m)
     )
-    (Wdrl Map.empty)
+    (Withdrawals Map.empty)
     (Coin 0)
     (SlotNo 10)
     SNothing

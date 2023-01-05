@@ -24,7 +24,7 @@ import Cardano.Ledger.Crypto
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue)
 import Cardano.Ledger.Mary.Value (PolicyID (..))
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert (..), DelegCert (..), Delegation (..))
-import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), Wdrl (..), getRwdCred)
+import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), Withdrawals (..), getRwdCred)
 import Cardano.Ledger.Shelley.UTxO (scriptCred)
 import Cardano.Ledger.TxIn
 import Cardano.Ledger.UTxO (
@@ -141,7 +141,7 @@ getAlonzoScriptsNeeded (UTxO u) txBody =
 
     !reward = mapMaybe fromRwd (Map.keys withdrawals)
       where
-        withdrawals = unWdrl $ txBody ^. wdrlsTxBodyL
+        withdrawals = unWithdrawals $ txBody ^. withdrawalsTxBodyL
         fromRwd accnt = do
           hash <- scriptCred $ getRwdCred accnt
           return (Rewarding accnt, hash)

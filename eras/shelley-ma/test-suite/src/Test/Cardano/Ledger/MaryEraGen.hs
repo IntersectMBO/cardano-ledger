@@ -29,7 +29,7 @@ import Cardano.Ledger.Mary.Value (
  )
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Tx (ShelleyTxOut (..), TxIn)
-import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl)
+import Cardano.Ledger.Shelley.TxBody (DCert, Withdrawals)
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (ShelleyTxWits))
 import Cardano.Ledger.Val ((<+>))
 import qualified Cardano.Ledger.Val as Val
@@ -284,7 +284,7 @@ genTxBody ::
   Set.Set (TxIn (EraCrypto era)) ->
   StrictSeq (ShelleyTxOut era) ->
   StrictSeq (DCert (EraCrypto era)) ->
-  Wdrl (EraCrypto era) ->
+  Withdrawals (EraCrypto era) ->
   Coin ->
   StrictMaybe (Update era) ->
   StrictMaybe (AuxiliaryDataHash (EraCrypto era)) ->

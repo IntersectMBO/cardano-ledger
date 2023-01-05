@@ -57,7 +57,7 @@ import Cardano.Ledger.Shelley.TxBody (
   Ptr (..),
   RewardAcnt (..),
   ShelleyEraTxBody (..),
-  Wdrl (..),
+  Withdrawals (..),
  )
 import Cardano.Ledger.Slot (SlotNo)
 import Cardano.Ledger.UMapCompact (Trip (..), UMap (..), View (..), fromCompact)
@@ -204,13 +204,13 @@ delegsTransition = do
   case certificates of
     Empty -> do
       let ds = dpsDState dpstate
-          wdrls_ = unWdrl (tx ^. bodyTxL . wdrlsTxBodyL)
+          withdrawals_ = unWithdrawals (tx ^. bodyTxL . withdrawalsTxBodyL)
           rewards' = rewards ds
-      isSubmapOf wdrls_ rewards' -- wdrls_ ⊆ rewards
+      isSubmapOf withdrawals_ rewards' -- withdrawals_ ⊆ rewards
         ?! WithdrawalsNotInRewardsDELEGS
           ( Map.differenceWith
               (\x y -> if x /= y then Just x else Nothing)
-              wdrls_
+              withdrawals_
               (Map.mapKeys (mkRwdAcnt network) (UM.rewView (dsUnified ds)))
           )
 
@@ -222,7 +222,7 @@ delegsTransition = do
                   -- Note that the deposit (CompactCoin 0) will be ignored.
               )
               Map.empty
-              wdrls_
+              withdrawals_
           unified' = rewards' UM.⨃ drainedRewardAccounts
       pure $ dpstate {dpsDState = ds {dsUnified = unified'}}
     gamma :|> c -> do
@@ -245,19 +245,19 @@ delegsTransition = do
       trans @(EraRule "DELPL" era) $
         TRC (DelplEnv slot ptr pp acnt, dpstate', c)
   where
-    -- @wdrls_@ is small and @rewards@ big, better to transform the former
+    -- @withdrawals_@ is small and @rewards@ big, better to transform the former
     -- than the latter into the right shape so we can call 'Map.isSubmapOf'.
     isSubmapOf ::
       Map (RewardAcnt (EraCrypto era)) Coin ->
       View (EraCrypto era) (Credential 'Staking c) UM.RDPair ->
       Bool
-    isSubmapOf wdrls_ (RewardDeposits (UMap tripmap _)) = Map.isSubmapOfBy f withdrawalMap tripmap
+    isSubmapOf withdrawals_ (RewardDeposits (UMap tripmap _)) = Map.isSubmapOfBy f withdrawalMap tripmap
       where
         withdrawalMap :: Map.Map (Credential 'Staking (EraCrypto era)) Coin
         withdrawalMap =
           Map.fromList
             [ (cred, coin)
-            | (RewardAcnt _ cred, coin) <- Map.toList wdrls_
+            | (RewardAcnt _ cred, coin) <- Map.toList withdrawals_
             ]
         f :: Coin -> Trip (EraCrypto era) -> Bool
         f coin1 (Triple (SJust (UM.RDPair coin2 _)) _ _) = coin1 == (fromCompact coin2)

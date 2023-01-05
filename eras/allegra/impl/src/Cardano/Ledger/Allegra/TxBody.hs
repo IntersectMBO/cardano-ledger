@@ -27,7 +27,7 @@ module Cardano.Ledger.Allegra.TxBody (
     atbTxFee,
     atbUpdate,
     atbValidityInterval,
-    atbWdrls
+    atbWithdrawals
   ),
   AllegraEraTxBody (..),
   emptyAllegraTxBodyRaw,
@@ -75,7 +75,7 @@ import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.TxBody (
   DCert (..),
   ShelleyEraTxBody (..),
-  Wdrl (..),
+  Withdrawals (..),
  )
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.DeepSeq (NFData (..))
@@ -92,7 +92,7 @@ data AllegraTxBodyRaw ma era = AllegraTxBodyRaw
   { atbrInputs :: !(Set (TxIn (EraCrypto era)))
   , atbrOutputs :: !(StrictSeq (TxOut era))
   , atbrCerts :: !(StrictSeq (DCert (EraCrypto era)))
-  , atbrWdrls :: !(Wdrl (EraCrypto era))
+  , atbrWithdrawals :: !(Withdrawals (EraCrypto era))
   , atbrTxFee :: !Coin
   , atbrValidityInterval :: !ValidityInterval -- imported from Timelocks
   , atbrUpdate :: !(StrictMaybe (Update era))
@@ -146,7 +146,7 @@ instance (EraTxOut era, Eq ma, ToCBOR ma, Monoid ma) => ToCBOR (AllegraTxBodyRaw
         !> Key 2 (To fee)
         !> encodeKeyedStrictMaybe 3 top
         !> Omit null (Key 4 (To cert))
-        !> Omit (null . unWdrl) (Key 5 (To wdrl))
+        !> Omit (null . unWithdrawals) (Key 5 (To wdrl))
         !> encodeKeyedStrictMaybe 6 up
         !> encodeKeyedStrictMaybe 7 hash
         !> encodeKeyedStrictMaybe 8 bot
@@ -166,7 +166,7 @@ bodyFields 3 =
     )
     From
 bodyFields 4 = field (\x tx -> tx {atbrCerts = x}) From
-bodyFields 5 = field (\x tx -> tx {atbrWdrls = x}) From
+bodyFields 5 = field (\x tx -> tx {atbrWithdrawals = x}) From
 bodyFields 6 = ofield (\x tx -> tx {atbrUpdate = x}) From
 bodyFields 7 = ofield (\x tx -> tx {atbrAuxDataHash = x}) From
 bodyFields 8 =
@@ -187,7 +187,7 @@ emptyAllegraTxBodyRaw =
     empty
     (fromList [])
     (fromList [])
-    (Wdrl Map.empty)
+    (Withdrawals Map.empty)
     (Coin 0)
     (ValidityInterval SNothing SNothing)
     SNothing
@@ -242,7 +242,7 @@ pattern AllegraTxBody ::
   Set (TxIn (EraCrypto era)) ->
   StrictSeq (TxOut era) ->
   StrictSeq (DCert (EraCrypto era)) ->
-  Wdrl (EraCrypto era) ->
+  Withdrawals (EraCrypto era) ->
   Coin ->
   ValidityInterval ->
   StrictMaybe (Update era) ->
@@ -252,7 +252,7 @@ pattern AllegraTxBody
   { atbInputs
   , atbOutputs
   , atbCerts
-  , atbWdrls
+  , atbWithdrawals
   , atbTxFee
   , atbValidityInterval
   , atbUpdate
@@ -263,7 +263,7 @@ pattern AllegraTxBody
         { atbrInputs = atbInputs
         , atbrOutputs = atbOutputs
         , atbrCerts = atbCerts
-        , atbrWdrls = atbWdrls
+        , atbrWithdrawals = atbWithdrawals
         , atbrTxFee = atbTxFee
         , atbrValidityInterval = atbValidityInterval
         , atbrUpdate = atbUpdate
@@ -275,7 +275,7 @@ pattern AllegraTxBody
       inputs
       outputs
       certs
-      wdrls
+      withdrawals
       txFee
       validityInterval
       update
@@ -285,7 +285,7 @@ pattern AllegraTxBody
             { atbrInputs = inputs
             , atbrOutputs = outputs
             , atbrCerts = certs
-            , atbrWdrls = wdrls
+            , atbrWithdrawals = withdrawals
             , atbrTxFee = txFee
             , atbrValidityInterval = validityInterval
             , atbrUpdate = update
@@ -322,12 +322,12 @@ instance Crypto c => EraTxBody (AllegraEra c) where
   allInputsTxBodyF = inputsTxBodyL
   {-# INLINEABLE allInputsTxBodyF #-}
 
+  withdrawalsTxBodyL =
+    lensMemoRawType atbrWithdrawals $ \txBodyRaw withdrawals -> txBodyRaw {atbrWithdrawals = withdrawals}
+  {-# INLINEABLE withdrawalsTxBodyL #-}
+
 instance Crypto c => ShelleyEraTxBody (AllegraEra c) where
   {-# SPECIALIZE instance ShelleyEraTxBody (AllegraEra StandardCrypto) #-}
-
-  wdrlsTxBodyL =
-    lensMemoRawType atbrWdrls $ \txBodyRaw wdrls -> txBodyRaw {atbrWdrls = wdrls}
-  {-# INLINEABLE wdrlsTxBodyL #-}
 
   ttlTxBodyL = notSupportedInThisEraL
   {-# INLINEABLE ttlTxBodyL #-}

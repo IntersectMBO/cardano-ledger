@@ -29,7 +29,7 @@ import Cardano.Ledger.Shelley.Tx (TxIn (..))
 import Cardano.Ledger.Shelley.TxBody (
   ShelleyTxBody (ShelleyTxBody, stbInputs, stbOutputs, stbTxFee),
   ShelleyTxOut (..),
-  Wdrl (..),
+  Withdrawals (..),
  )
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (ShelleyTxWits))
 import Cardano.Ledger.Slot (SlotNo (..))
@@ -112,19 +112,19 @@ genTxBody ::
   Set (TxIn (EraCrypto era)) ->
   StrictSeq (TxOut era) ->
   StrictSeq (DCert (EraCrypto era)) ->
-  Wdrl (EraCrypto era) ->
+  Withdrawals (EraCrypto era) ->
   Coin ->
   StrictMaybe (Update era) ->
   StrictMaybe (AuxiliaryDataHash (EraCrypto era)) ->
   Gen (ShelleyTxBody era, [MultiSig era])
-genTxBody _pparams slot inputs outputs certs wdrls fee update adHash = do
+genTxBody _pparams slot inputs outputs certs withdrawals fee update adHash = do
   ttl <- genTimeToLive slot
   return
     ( ShelleyTxBody
         inputs
         outputs
         certs
-        wdrls
+        withdrawals
         fee
         ttl
         update

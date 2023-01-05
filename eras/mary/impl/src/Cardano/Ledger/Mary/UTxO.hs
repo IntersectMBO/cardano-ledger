@@ -12,7 +12,7 @@ import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.TxBody (MaryEraTxBody (..))
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Shelley.LedgerState (DPState, keyTxRefunds)
-import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), Wdrl (..))
+import Cardano.Ledger.Shelley.TxBody (Withdrawals (..))
 import Cardano.Ledger.Shelley.UTxO (
   ShelleyScriptsNeeded (..),
   getShelleyScriptsNeeded,
@@ -60,7 +60,7 @@ getConsumedMaryValue pp dpstate (UTxO u) txBody = consumedValue <> txBody ^. min
       balance (UTxO (Map.restrictKeys u (txBody ^. inputsTxBodyL)))
         <> inject (refunds <> withdrawals)
     refunds = keyTxRefunds pp dpstate txBody
-    withdrawals = fold . unWdrl $ txBody ^. wdrlsTxBodyL
+    withdrawals = fold . unWithdrawals $ txBody ^. withdrawalsTxBodyL
 
 -- | Computes the set of script hashes required to unlock the transaction inputs and the
 -- withdrawals. Unlike the one from Shelley, this one also includes script hashes needed

@@ -76,7 +76,7 @@ import Cardano.Ledger.Shelley.TxBody (
   RewardAcnt (..),
   ShelleyTxBody (..),
   ShelleyTxOut (..),
-  Wdrl (..),
+  Withdrawals (..),
  )
 import Cardano.Ledger.Shelley.TxWits (
   addrWits,
@@ -211,7 +211,7 @@ txbodyEx1 =
                ]
         )
     )
-    (Wdrl Map.empty)
+    (Withdrawals Map.empty)
     feeTx1
     (SlotNo 10)
     SNothing
@@ -307,7 +307,7 @@ txbodyEx2 =
           [ DCertDeleg (Delegate $ Delegation Cast.aliceSHK (hk Cast.alicePoolKeys))
           , DCertDeleg (Delegate $ Delegation Cast.bobSHK (hk Cast.alicePoolKeys))
           ]
-    , stbWdrls = Wdrl Map.empty
+    , stbWithdrawals = Withdrawals Map.empty
     , stbTxFee = feeTx2
     , stbTTL = SlotNo 90
     , stbUpdate = SNothing
@@ -472,7 +472,7 @@ txbodyEx4 =
     , stbCerts =
         StrictSeq.fromList
           [DCertDeleg (Delegate $ Delegation Cast.carlSHK (hk Cast.alicePoolKeys))]
-    , stbWdrls = Wdrl Map.empty
+    , stbWithdrawals = Withdrawals Map.empty
     , stbTxFee = feeTx4
     , stbTTL = SlotNo 500
     , stbUpdate = SNothing
@@ -863,7 +863,7 @@ txbodyEx10 =
     (Set.fromList [mkTxInPartial genesisId 1])
     (StrictSeq.singleton $ ShelleyTxOut Cast.bobAddr (Val.inject bobAda10))
     (StrictSeq.fromList [DCertDeleg (DeRegKey Cast.bobSHK)])
-    (Wdrl $ Map.singleton (RewardAcnt Testnet Cast.bobSHK) bobRAcnt8)
+    (Withdrawals $ Map.singleton (RewardAcnt Testnet Cast.bobSHK) bobRAcnt8)
     feeTx10
     (SlotNo 500)
     SNothing
@@ -929,7 +929,7 @@ txbodyEx11 =
     (Set.fromList [TxIn (txid txbodyEx4) minBound])
     (StrictSeq.singleton $ ShelleyTxOut Cast.alicePtrAddr (Val.inject aliceCoinEx11Ptr))
     (StrictSeq.fromList [DCertPool (RetirePool (hk Cast.alicePoolKeys) aliceRetireEpoch)])
-    (Wdrl Map.empty)
+    (Withdrawals Map.empty)
     feeTx11
     (SlotNo 500)
     SNothing

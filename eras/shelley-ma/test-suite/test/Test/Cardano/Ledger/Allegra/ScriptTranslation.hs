@@ -60,7 +60,7 @@ testScriptPostTranslation =
               (Set.singleton $ S.TxIn bootstrapTxId minBound)
               StrictSeq.empty
               StrictSeq.empty
-              (S.Wdrl mempty)
+              (S.Withdrawals mempty)
               (S.Coin 1)
               (SlotNo 1)
               S.SNothing

@@ -45,7 +45,7 @@ import Cardano.Ledger.Shelley.PParams (
   pattern ProposedPPUpdates,
   pattern Update,
  )
-import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), Wdrl (..))
+import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), Withdrawals (..))
 import Cardano.Ledger.Slot (SlotNo (..), epochInfoSize)
 import Cardano.Protocol.TPraos.BHeader (
   BHeader,
@@ -276,7 +276,7 @@ txScriptOutputsRatio txoutsList =
           txouts
 
 hasWithdrawal :: (ShelleyEraTxBody era, EraTx era) => Tx era -> Bool
-hasWithdrawal tx = not . null $ unWdrl (tx ^. bodyTxL . wdrlsTxBodyL)
+hasWithdrawal tx = not . null $ unWithdrawals (tx ^. bodyTxL . withdrawalsTxBodyL)
 
 hasPParamUpdate :: (ShelleyEraTxBody era, EraTx era, ProtVerAtMost era 8) => Tx era -> Bool
 hasPParamUpdate tx = ppUpdates (tx ^. bodyTxL . updateTxBodyL)

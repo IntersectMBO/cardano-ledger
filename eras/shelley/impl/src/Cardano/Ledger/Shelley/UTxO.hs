@@ -44,7 +44,7 @@ import Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits (keyTxRefunds, tota
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.TxBody (
   ShelleyEraTxBody (..),
-  Wdrl (..),
+  Withdrawals (..),
   getRwdCred,
   pattern DeRegKey,
   pattern Delegate,
@@ -117,7 +117,7 @@ getShelleyScriptsNeeded u txBody =
           [sh | c <- certificates, requiresVKeyWitness c, Just sh <- [scriptStakeCred c]]
     )
   where
-    withdrawals = Map.keys (unWdrl (txBody ^. wdrlsTxBodyL))
+    withdrawals = Map.keys (unWithdrawals (txBody ^. withdrawalsTxBodyL))
     scriptHashes = txinsScriptHashes (txBody ^. inputsTxBodyL) u
     certificates = toList (txBody ^. certsTxBodyG)
 
@@ -148,7 +148,7 @@ getConsumedCoin pp dpstate (UTxO u) txBody =
     <> withdrawals
   where
     refunds = keyTxRefunds pp dpstate txBody
-    withdrawals = fold . unWdrl $ txBody ^. wdrlsTxBodyL
+    withdrawals = fold . unWithdrawals $ txBody ^. withdrawalsTxBodyL
 
 newtype ShelleyScriptsNeeded era = ShelleyScriptsNeeded (Set.Set (ScriptHash (EraCrypto era)))
   deriving (Eq, Show)

@@ -12,7 +12,7 @@
 
 module Test.Cardano.Ledger.Generic.PrettyCore where
 
-import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
+import Cardano.Ledger.Address (Addr (..), RewardAcnt (..), Withdrawals (..))
 import Cardano.Ledger.Allegra.Rules as Allegra (AllegraUtxoPredFailure (..))
 import Cardano.Ledger.Allegra.Scripts (Timelock (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (..))
@@ -86,7 +86,6 @@ import Cardano.Ledger.Shelley.TxBody (
   PoolCert (..),
   PoolParams (..),
   ShelleyTxOut (..),
-  Wdrl (..),
   WitVKey (..),
  )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
@@ -838,7 +837,7 @@ txBodyFieldSummary txb = case txb of
   (CollateralReturn (SJust _)) -> [("Collateral Return", ppString "?")]
   (TotalCol (SJust c)) -> [("TotalCollateral", ppCoin c)]
   (Certs xs) -> [("Certs", ppInt (length xs))]
-  (Wdrls x) -> [("Withdrawals", ppInt (Map.size (unWdrl x)))]
+  (Withdrawals' x) -> [("Withdrawals", ppInt (Map.size (unWithdrawals x)))]
   (Vldt x) -> [("Validity interval", ppValidityInterval x)]
   (Txfee c) -> [("Fee", ppCoin c)]
   (Update (SJust _)) -> [("Collateral Return", ppString "?")]
@@ -1264,7 +1263,7 @@ pcTxBodyField proof x = case x of
   TotalCol SNothing -> []
   TotalCol (SJust c) -> [("total coll", pcCoin c)]
   Certs xs -> [("certs", ppList pcDCert (toList xs))]
-  Wdrls (Wdrl m) -> [("withdrawal", ppMap pcRewardAcnt pcCoin m)]
+  Withdrawals' (Withdrawals m) -> [("withdrawal", ppMap pcRewardAcnt pcCoin m)]
   Txfee c -> [("fee", pcCoin c)]
   Vldt v -> [("validity interval", ppValidityInterval v)]
   TTL slot -> [("time to live", ppSlotNo slot)]

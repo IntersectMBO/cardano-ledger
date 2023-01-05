@@ -54,7 +54,7 @@ import Cardano.Ledger.Shelley.TxAuxData
 import Cardano.Ledger.Shelley.TxBody (
   PoolMetadata (..),
   StakePoolRelay (..),
-  Wdrl (..),
+  Withdrawals (..),
  )
 import Cardano.Ledger.Shelley.TxWits (
   addrWits,
@@ -168,7 +168,7 @@ txbSimpleUTxO =
     { stbInputs = Set.fromList [TxIn genesisId minBound]
     , stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)]
     , stbCerts = StrictSeq.empty
-    , stbWdrls = Wdrl Map.empty
+    , stbWithdrawals = Withdrawals Map.empty
     , stbTxFee = Coin 94
     , stbTTL = SlotNo 10
     , stbUpdate = SNothing
@@ -208,7 +208,7 @@ txbMutiUTxO =
           , ShelleyTxOut bobAddr (Val.inject $ Coin 50)
           ]
     , stbCerts = StrictSeq.empty
-    , stbWdrls = Wdrl Map.empty
+    , stbWithdrawals = Withdrawals Map.empty
     , stbTxFee = Coin 199
     , stbTTL = SlotNo 10
     , stbUpdate = SNothing
@@ -241,7 +241,7 @@ txbRegisterStake =
     { stbInputs = Set.fromList [TxIn genesisId minBound]
     , stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)]
     , stbCerts = StrictSeq.fromList [DCertDeleg (RegKey aliceSHK)]
-    , stbWdrls = Wdrl Map.empty
+    , stbWithdrawals = Withdrawals Map.empty
     , stbTxFee = Coin 94
     , stbTTL = SlotNo 10
     , stbUpdate = SNothing
@@ -273,7 +273,7 @@ txbDelegateStake =
           [ DCertDeleg
               (Delegate $ Delegation bobSHK alicePoolKH)
           ]
-    , stbWdrls = Wdrl Map.empty
+    , stbWithdrawals = Withdrawals Map.empty
     , stbTxFee = Coin 94
     , stbTTL = SlotNo 10
     , stbUpdate = SNothing
@@ -304,7 +304,7 @@ txbDeregisterStake =
     { stbInputs = Set.fromList [TxIn genesisId minBound]
     , stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)]
     , stbCerts = StrictSeq.fromList [DCertDeleg (DeRegKey aliceSHK)]
-    , stbWdrls = Wdrl Map.empty
+    , stbWithdrawals = Withdrawals Map.empty
     , stbTxFee = Coin 94
     , stbTTL = SlotNo 10
     , stbUpdate = SNothing
@@ -335,7 +335,7 @@ txbRegisterPool =
     { stbInputs = Set.fromList [TxIn genesisId minBound]
     , stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)]
     , stbCerts = StrictSeq.fromList [DCertPool (RegPool alicePoolParams)]
-    , stbWdrls = Wdrl Map.empty
+    , stbWithdrawals = Withdrawals Map.empty
     , stbTxFee = Coin 94
     , stbTTL = SlotNo 10
     , stbUpdate = SNothing
@@ -363,7 +363,7 @@ txbRetirePool =
     { stbInputs = Set.fromList [TxIn genesisId minBound]
     , stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)]
     , stbCerts = StrictSeq.fromList [DCertPool (RetirePool alicePoolKH (EpochNo 5))]
-    , stbWdrls = Wdrl Map.empty
+    , stbWithdrawals = Withdrawals Map.empty
     , stbTxFee = Coin 94
     , stbTTL = SlotNo 10
     , stbUpdate = SNothing
@@ -395,7 +395,7 @@ txbWithMD =
     { stbInputs = Set.fromList [TxIn genesisId minBound]
     , stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)]
     , stbCerts = StrictSeq.empty
-    , stbWdrls = Wdrl Map.empty
+    , stbWithdrawals = Withdrawals Map.empty
     , stbTxFee = Coin 94
     , stbTTL = SlotNo 10
     , stbUpdate = SNothing
@@ -432,7 +432,7 @@ txbWithMultiSig =
     { stbInputs = Set.fromList [TxIn genesisId minBound] -- acting as if this is multi-sig
     , stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)]
     , stbCerts = StrictSeq.empty
-    , stbWdrls = Wdrl Map.empty
+    , stbWithdrawals = Withdrawals Map.empty
     , stbTxFee = Coin 94
     , stbTTL = SlotNo 10
     , stbUpdate = SNothing
@@ -464,7 +464,7 @@ txbWithWithdrawal =
     { stbInputs = Set.fromList [TxIn genesisId minBound]
     , stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)]
     , stbCerts = StrictSeq.empty
-    , stbWdrls = Wdrl $ Map.singleton (RewardAcnt Testnet aliceSHK) (Val.inject $ Coin 100)
+    , stbWithdrawals = Withdrawals $ Map.singleton (RewardAcnt Testnet aliceSHK) (Val.inject $ Coin 100)
     , stbTxFee = Coin 94
     , stbTTL = SlotNo 10
     , stbUpdate = SNothing

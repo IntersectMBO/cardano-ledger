@@ -65,7 +65,7 @@ import Cardano.Ledger.Shelley.Tx (
 import Cardano.Ledger.Shelley.TxBody (
   PoolMetadata (..),
   PoolParams (..),
-  Wdrl (..),
+  Withdrawals (..),
   pmHash,
   pmUrl,
   ppCost,
@@ -347,7 +347,7 @@ aliceGivesBobLovelace
               ]
           )
           (StrictSeq.fromList certs)
-          (Wdrl Map.empty)
+          (Withdrawals Map.empty)
           fee
           ttl
           SNothing
@@ -420,7 +420,7 @@ testWitnessNotIncluded =
               ]
           )
           Empty
-          (Wdrl Map.empty)
+          (Withdrawals Map.empty)
           (Coin 596)
           (SlotNo 100)
           SNothing
@@ -440,7 +440,7 @@ testSpendNotOwnedUTxO =
           (Set.fromList [mkGenesisTxIn 1])
           (StrictSeq.singleton $ ShelleyTxOut aliceAddr (Coin 232))
           Empty
-          (Wdrl Map.empty)
+          (Withdrawals Map.empty)
           (Coin 768)
           (SlotNo 100)
           SNothing
@@ -461,7 +461,7 @@ testWitnessWrongUTxO =
           (Set.fromList [mkGenesisTxIn 1])
           (StrictSeq.singleton $ ShelleyTxOut aliceAddr (Coin 230))
           Empty
-          (Wdrl Map.empty)
+          (Withdrawals Map.empty)
           (Coin 770)
           (SlotNo 100)
           SNothing
@@ -471,7 +471,7 @@ testWitnessWrongUTxO =
           (Set.fromList [mkGenesisTxIn 1])
           (StrictSeq.singleton $ ShelleyTxOut aliceAddr (Coin 230))
           Empty
-          (Wdrl Map.empty)
+          (Withdrawals Map.empty)
           (Coin 770)
           (SlotNo 101)
           SNothing
@@ -496,7 +496,7 @@ testEmptyInputSet =
           Set.empty
           (StrictSeq.singleton $ ShelleyTxOut aliceAddr (Coin 1000))
           Empty
-          (Wdrl aliceWithdrawal)
+          (Withdrawals aliceWithdrawal)
           (Coin 1000)
           (SlotNo 0)
           SNothing
@@ -555,7 +555,7 @@ testInvalidWintess =
               ]
           )
           Empty
-          (Wdrl Map.empty)
+          (Withdrawals Map.empty)
           (Coin 1000)
           (SlotNo 1)
           SNothing
@@ -582,7 +582,7 @@ testWithdrawalNoWit =
               ]
           )
           Empty
-          (Wdrl $ Map.singleton (mkVKeyRwdAcnt Testnet bobStake) (Coin 10))
+          (Withdrawals $ Map.singleton (mkVKeyRwdAcnt Testnet bobStake) (Coin 10))
           (Coin 1000)
           (SlotNo 0)
           SNothing
@@ -608,7 +608,7 @@ testWithdrawalWrongAmt =
               ]
           )
           Empty
-          (Wdrl $ Map.singleton (mkVKeyRwdAcnt Testnet bobStake) (Coin 11))
+          (Withdrawals $ Map.singleton (mkVKeyRwdAcnt Testnet bobStake) (Coin 11))
           (Coin 1000)
           (SlotNo 0)
           SNothing
@@ -701,7 +701,7 @@ testProducedOverMaxWord64 =
           (Set.fromList [TxIn genesisId minBound])
           (StrictSeq.fromList [ShelleyTxOut bobAddr (Coin biggestCoin)])
           Empty
-          (Wdrl Map.empty)
+          (Withdrawals Map.empty)
           (Coin 1) -- @produced@ will return biggestCoin + 1, which is > 2^64.
           (SlotNo 100)
           SNothing

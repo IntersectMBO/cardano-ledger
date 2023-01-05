@@ -148,8 +148,8 @@ import Cardano.Ledger.Shelley.TxBody as X (
   PoolParams (..),
   Ptr (..),
   StakePoolRelay (..),
-  Wdrl (..),
   WitVKey (..),
+  Withdrawals (..),
  )
 import Cardano.Ledger.Shelley.TxWits as X (
   ShelleyTxWits,

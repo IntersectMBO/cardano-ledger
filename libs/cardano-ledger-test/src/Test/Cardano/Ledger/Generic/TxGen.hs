@@ -55,7 +55,7 @@ import Cardano.Ledger.Shelley.API (
   PoolParams (..),
   RewardAcnt (..),
   StakeReference (..),
-  Wdrl (..),
+  Withdrawals (..),
  )
 import Cardano.Ledger.Shelley.LedgerState (RewardAccounts)
 import qualified Cardano.Ledger.Shelley.Scripts as Shelley (MultiSig (..))
@@ -777,14 +777,14 @@ getDCertCredential = \case
   DCertGenesis _g -> Nothing
   DCertMir _m -> Nothing
 
-genWithdrawals :: Reflect era => SlotNo -> GenRS era (Wdrl (EraCrypto era), RewardAccounts (EraCrypto era))
+genWithdrawals :: Reflect era => SlotNo -> GenRS era (Withdrawals (EraCrypto era), RewardAccounts (EraCrypto era))
 genWithdrawals slot =
   if epochFromSlotNo slot == EpochNo 0
     then do
       let networkId = Testnet
       newRewards <- genRewards
-      pure (Wdrl $ Map.mapKeys (RewardAcnt networkId) newRewards, newRewards)
-    else pure (Wdrl Map.empty, Map.empty)
+      pure (Withdrawals $ Map.mapKeys (RewardAcnt networkId) newRewards, newRewards)
+    else pure (Withdrawals Map.empty, Map.empty)
 
 timeToLive :: ValidityInterval -> SlotNo
 timeToLive (ValidityInterval _ (SJust n)) = n
@@ -853,7 +853,7 @@ genAlonzoTxAndInfo proof slot = do
 
   -- generate Withdrawals before DCerts, as Rewards are populated in the Model here,
   -- and we need to avoid certain DCerts if they conflict with existing Rewards
-  (wdrls@(Wdrl wdrlMap), newRewards) <- genWithdrawals slot
+  (withdrawals@(Withdrawals wdrlMap), newRewards) <- genWithdrawals slot
   let withdrawalAmount = F.fold wdrlMap
 
   rewardsWithdrawalTxOut <-
@@ -861,7 +861,7 @@ genAlonzoTxAndInfo proof slot = do
       then pure Nothing
       else Just . coreTxOut proof <$> genTxOut proof (inject withdrawalAmount)
   let wdrlCreds = map (getRwdCred . fst) $ Map.toAscList wdrlMap
-  (IsValid v2, mkWdrlWits) <-
+  (IsValid v2, mkWithdrawalsWits) <-
     redeemerWitnessMaker Rewrd $ map (Just . (,) genDatum) wdrlCreds
 
   dcerts <- genDCerts slot
@@ -871,7 +871,7 @@ genAlonzoTxAndInfo proof slot = do
 
   let isValid = IsValid (v1 && v2 && v3)
       mkWits :: [ExUnits -> [WitnessesField era]]
-      mkWits = mkPaymentWits ++ mkCertsWits ++ mkWdrlWits
+      mkWits = mkPaymentWits ++ mkCertsWits ++ mkWithdrawalsWits
   exUnits <- genExUnits proof (length mkWits)
 
   let redeemerWitsList :: [WitnessesField era]
@@ -926,7 +926,7 @@ genAlonzoTxAndInfo proof slot = do
           , Outputs' outputList
           , CollateralReturn bogusCollReturn
           , Certs' dcerts
-          , Wdrls wdrls
+          , Withdrawals' withdrawals
           , Txfee maxCoin
           , if Some proof >= Some (Allegra Mock)
               then Vldt validityInterval

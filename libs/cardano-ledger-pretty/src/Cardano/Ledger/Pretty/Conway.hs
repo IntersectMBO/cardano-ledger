@@ -47,7 +47,7 @@ import Cardano.Ledger.Pretty (
   ppTxId,
   ppTxIn,
   ppUrl,
-  ppWdrl,
+  ppWithdrawals,
   ppWord64,
  )
 import Cardano.Ledger.Pretty.Babbage (ppBabbagePParams, ppBabbagePParamsUpdate)
@@ -88,7 +88,7 @@ ppConwayTxBody txb =
     , ("collateral return", ppStrictMaybe prettyA (txb ^. collateralReturnTxBodyL))
     , ("total collateral", ppStrictMaybe ppCoin $ txb ^. totalCollateralTxBodyL)
     , ("certificates", ppStrictSeq ppConwayDCert $ txb ^. conwayCertsTxBodyL)
-    , ("withdrawals", ppWdrl $ txb ^. wdrlsTxBodyL)
+    , ("withdrawals", ppWithdrawals $ txb ^. withdrawalsTxBodyL)
     , ("transaction fee", ppCoin $ txb ^. feeTxBodyL)
     , ("validity interval", ppValidityInterval $ txb ^. vldtTxBodyL)
     , ("required signer hashes", ppSet ppKeyHash $ txb ^. reqSignerHashesTxBodyL)

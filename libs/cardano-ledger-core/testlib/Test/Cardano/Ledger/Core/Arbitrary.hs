@@ -349,6 +349,10 @@ instance Crypto c => Arbitrary (RewardAcnt c) where
   arbitrary = RewardAcnt <$> arbitrary <*> arbitrary
   shrink = genericShrink
 
+instance Crypto c => Arbitrary (Withdrawals c) where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
 ------------------------------------------------------------------------------------------
 -- Cardano.Ledger.Reward -----------------------------------------------------------------
 ------------------------------------------------------------------------------------------

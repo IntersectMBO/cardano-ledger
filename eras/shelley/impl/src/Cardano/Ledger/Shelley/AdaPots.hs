@@ -37,7 +37,7 @@ import Cardano.Ledger.Shelley.LedgerState.Types (
   LedgerState (..),
   UTxOState (..),
  )
-import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), unWdrl)
+import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), unWithdrawals)
 import Cardano.Ledger.UMapCompact (View (RewardDeposits), sumDepositView, sumRewardsView)
 import Cardano.Ledger.UTxO (UTxO (..), coinBalance, txouts)
 import Data.Foldable (fold)
@@ -135,7 +135,7 @@ consumedTxBody txBody pp dpstate (UTxO u) = Consumed {conInputs = i, conRefunds 
   where
     i = coinBalance (UTxO (Map.restrictKeys u (txBody ^. inputsTxBodyL)))
     r = keyTxRefunds pp dpstate txBody
-    w = fold . unWdrl $ txBody ^. wdrlsTxBodyL
+    w = fold . unWithdrawals $ txBody ^. withdrawalsTxBodyL
 
 -- | Compute the Coin part of what is produced by a TxBody, itemized as a 'Produced'
 producedTxBody ::

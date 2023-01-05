@@ -146,7 +146,7 @@ exampleTxBodyConway =
     (SJust $ mkSized (eraProtVerHigh @Conway) collateralOutput) -- collateral return
     (SJust $ Coin 8675309) -- collateral tot
     exampleConwayCerts -- txcerts
-    ( Wdrl $
+    ( Withdrawals $
         Map.singleton
           (RewardAcnt Testnet (SLE.keyToCredential SLE.exampleStakeKey))
           (Coin 100) -- txwdrls

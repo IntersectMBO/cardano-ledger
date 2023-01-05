@@ -203,7 +203,7 @@ instance
     -- value can be omitted entirely
     ttl' <- twiddleStrictMaybe v . invalidHereafter $ btbValidityInterval txBody
     cert' <- emptyOrNothing v $ btbCerts txBody
-    wdrls' <- twiddle v $ btbWdrls txBody
+    withdrawals' <- twiddle v $ btbWithdrawals txBody
     update' <- twiddleStrictMaybe v $ btbUpdate txBody
     auxDataHash' <- twiddleStrictMaybe v $ btbAuxDataHash txBody
     validityStart' <- twiddleStrictMaybe v . invalidBefore $ btbValidityInterval txBody
@@ -224,7 +224,7 @@ instance
             <> catMaybes
               [ (TInt 3,) <$> ttl'
               , (TInt 4,) <$> cert'
-              , (TInt 5,) <$> Just wdrls'
+              , (TInt 5,) <$> Just withdrawals'
               , (TInt 6,) <$> update'
               , (TInt 7,) <$> auxDataHash'
               , (TInt 8,) <$> validityStart'

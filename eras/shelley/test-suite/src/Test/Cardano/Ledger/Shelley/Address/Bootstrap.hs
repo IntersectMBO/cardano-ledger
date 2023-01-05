@@ -55,7 +55,7 @@ import Cardano.Ledger.Shelley.Tx (
 import Cardano.Ledger.Shelley.TxBody (
   ShelleyTxBody (..),
   ShelleyTxOut (..),
-  Wdrl (..),
+  Withdrawals (..),
  )
 import Cardano.Ledger.Shelley.TxWits (
   bootWits,
@@ -222,7 +222,7 @@ txBody =
     { stbInputs = Set.fromList [TxIn genesisId minBound]
     , stbOutputs = StrictSeq.fromList [ShelleyTxOut bobAddr coinsToBob, ShelleyTxOut aliceAddr change]
     , stbCerts = StrictSeq.fromList mempty
-    , stbWdrls = Wdrl Map.empty
+    , stbWithdrawals = Withdrawals Map.empty
     , stbTxFee = fee
     , stbTTL = SlotNo 10
     , stbUpdate = SNothing

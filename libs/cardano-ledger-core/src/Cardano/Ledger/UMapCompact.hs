@@ -565,7 +565,7 @@ view ∪ (k, v) = insertWith (\old _new -> old) k v view
 --   Special rules apply for the RewardDeposits view, where only the 'rdReward' field of the RDPair is
 --   overwritten, and the old 'rdDeposit' value persists. In this case it is an invariant that
 --   the domain 'mp' is a subset of the domain of the RewardDeposits View. See the single case in
---   module Cardano.Ledger.Shelley.Rules.Delegs, in the dealing with Wdrl's where it is used at
+--   module Cardano.Ledger.Shelley.Rules.Delegs, in the dealing with Withdrawals's where it is used at
 --   this type.
 (⨃) ::
   View c k v ->

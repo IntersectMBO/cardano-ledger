@@ -100,7 +100,7 @@ genTxBody ::
   Set.Set (TxIn (EraCrypto era)) ->
   StrictSeq (TxOut era) ->
   StrictSeq (DCert (EraCrypto era)) ->
-  Wdrl (EraCrypto era) ->
+  Withdrawals (EraCrypto era) ->
   Coin ->
   StrictMaybe (Update era) ->
   StrictMaybe (AuxiliaryDataHash (EraCrypto era)) ->

@@ -38,7 +38,7 @@ import Cardano.Ledger.Shelley.TxBody (
   DelegCert (..),
   RewardAcnt (..),
   ShelleyTxOut (..),
-  Wdrl (..),
+  Withdrawals (..),
  )
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (mkTxInPartial)
@@ -220,7 +220,7 @@ goldenEncodingTestsAllegra =
                 (Set.fromList [tin])
                 (StrictSeq.singleton tout)
                 StrictSeq.empty
-                (Wdrl Map.empty)
+                (Withdrawals Map.empty)
                 (Coin 9)
                 (ValidityInterval SNothing SNothing)
                 SNothing
@@ -250,7 +250,7 @@ goldenEncodingTestsAllegra =
                 (Set.fromList [tin])
                 (StrictSeq.singleton tout)
                 (StrictSeq.fromList [reg])
-                (Wdrl ras)
+                (Withdrawals ras)
                 (Coin 9)
                 (ValidityInterval (SJust $ SlotNo 500) (SJust $ SlotNo 600))
                 (SJust up)
@@ -359,7 +359,7 @@ goldenEncodingTestsMary =
                 (Set.fromList [tin])
                 (StrictSeq.singleton tout)
                 StrictSeq.empty
-                (Wdrl Map.empty)
+                (Withdrawals Map.empty)
                 (Coin 9)
                 (ValidityInterval SNothing SNothing)
                 SNothing
@@ -391,7 +391,7 @@ goldenEncodingTestsMary =
                 (Set.fromList [tin])
                 (StrictSeq.singleton tout)
                 (StrictSeq.fromList [reg])
-                (Wdrl ras)
+                (Withdrawals ras)
                 (Coin 9)
                 (ValidityInterval (SJust $ SlotNo 500) (SJust $ SlotNo 600))
                 (SJust up)

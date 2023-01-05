@@ -48,7 +48,7 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.Rules (DelplEnv, LedgerEnv (..))
 import Cardano.Ledger.Shelley.Tx (TxIn (..))
-import Cardano.Ledger.Shelley.TxBody (Wdrl (..))
+import Cardano.Ledger.Shelley.TxBody (Withdrawals (..))
 import qualified Cardano.Ledger.UMapCompact as UM
 import Cardano.Ledger.UTxO (
   UTxO (..),
@@ -248,7 +248,7 @@ genTx
           (Set.fromList inputs)
           draftOutputs
           certs
-          (Wdrl (Map.fromList wdrls))
+          (Withdrawals (Map.fromList wdrls))
           draftFee
           (maybeToStrictMaybe update)
           (hashTxAuxData @era <$> metadata)
@@ -774,7 +774,7 @@ genWithdrawals
     }
   ksIndexedStakeScripts
   ksIndexedStakingKeys
-  wdrls = do
+  withdrawals = do
     (a, b) <-
       QC.frequency
         [
@@ -783,36 +783,36 @@ genWithdrawals
           )
         ,
           ( frequencyAFewWithdrawals
-          , genWrdls (take maxAFewWithdrawals . Map.toList $ wdrls)
+          , genWrdls (take maxAFewWithdrawals . Map.toList $ withdrawals)
           )
         ,
           ( frequencyPotentiallyManyWithdrawals
-          , genWrdls (Map.toList wdrls)
+          , genWrdls (Map.toList withdrawals)
           )
         ]
     pure (a, b)
     where
       toRewardAcnt (rwd, coinx) = (RewardAcnt Testnet rwd, coinx)
-      genWrdls wdrls_ = do
-        selectedWrdls <- map toRewardAcnt <$> QC.sublistOf wdrls_
+      genWrdls withdrawals_ = do
+        selectedWrdls <- map toRewardAcnt <$> QC.sublistOf withdrawals_
         let txwits =
-              mkWdrlWits @era ksIndexedStakeScripts ksIndexedStakingKeys
+              mkWithdrawalsWits @era ksIndexedStakeScripts ksIndexedStakingKeys
                 . getRwdCred
                 . fst
                 <$> selectedWrdls
         return (selectedWrdls, Either.partitionEithers txwits)
 
 -- | Collect witnesses needed for reward withdrawals.
-mkWdrlWits ::
+mkWithdrawalsWits ::
   forall era.
   Map (ScriptHash (EraCrypto era)) (Script era, Script era) ->
   Map (KeyHash 'Staking (EraCrypto era)) (KeyPair 'Staking (EraCrypto era)) ->
   Credential 'Staking (EraCrypto era) ->
   Either (KeyPair 'Witness (EraCrypto era)) (Script era, Script era)
-mkWdrlWits scriptsByStakeHash _ c@(ScriptHashObj _) =
+mkWithdrawalsWits scriptsByStakeHash _ c@(ScriptHashObj _) =
   Right $
     findStakeScriptFromCred @era (asWitness c) scriptsByStakeHash
-mkWdrlWits _ keyHashMap c@(KeyHashObj _) =
+mkWithdrawalsWits _ keyHashMap c@(KeyHashObj _) =
   Left $
     asWitness $
       findPayKeyPairCred @era c keyHashMap

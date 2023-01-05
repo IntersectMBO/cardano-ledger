@@ -128,7 +128,7 @@ import Cardano.Ledger.Language (nonNativeLanguages)
 import Cardano.Ledger.Mary.Value (AssetName, MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash (..), hashAnnotated)
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert (..))
-import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), Wdrl (..), unWdrl)
+import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), Withdrawals (..), unWithdrawals)
 import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Cardano.Ledger.UTxO as Shelley
 import Cardano.Ledger.Val (Val ((<+>), (<×>)))
@@ -427,7 +427,7 @@ rdptr ::
 rdptr txBody (Minting (PolicyID hash)) =
   RdmrPtr Mint <$> indexOf hash (txBody ^. mintedTxBodyF :: Set (ScriptHash (EraCrypto era)))
 rdptr txBody (Spending txin) = RdmrPtr Spend <$> indexOf txin (txBody ^. inputsTxBodyL)
-rdptr txBody (Rewarding racnt) = RdmrPtr Rewrd <$> indexOf racnt (unWdrl (txBody ^. wdrlsTxBodyL))
+rdptr txBody (Rewarding racnt) = RdmrPtr Rewrd <$> indexOf racnt (unWithdrawals (txBody ^. withdrawalsTxBodyL))
 rdptr txBody (Certifying d) = RdmrPtr Cert <$> indexOf d (txBody ^. certsTxBodyG)
 
 rdptrInv ::
@@ -441,7 +441,7 @@ rdptrInv txBody (RdmrPtr Mint idx) =
 rdptrInv txBody (RdmrPtr Spend idx) =
   Spending <$> fromIndex idx (txBody ^. inputsTxBodyL)
 rdptrInv txBody (RdmrPtr Rewrd idx) =
-  Rewarding <$> fromIndex idx (unWdrl (txBody ^. wdrlsTxBodyL))
+  Rewarding <$> fromIndex idx (unWithdrawals (txBody ^. withdrawalsTxBodyL))
 rdptrInv txBody (RdmrPtr Cert idx) =
   Certifying <$> fromIndex idx (txBody ^. certsTxBodyG)
 

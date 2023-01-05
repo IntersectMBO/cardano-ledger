@@ -46,7 +46,7 @@ module Cardano.Ledger.Babbage.TxBody (
     btbCollateralReturn,
     btbTotalCollateral,
     btbCerts,
-    btbWdrls,
+    btbWithdrawals,
     btbTxFee,
     btbValidityInterval,
     btbUpdate,
@@ -64,7 +64,7 @@ module Cardano.Ledger.Babbage.TxBody (
   allInputsBabbageTxBodyF,
   mintedBabbageTxBodyF,
   mintValueBabbageTxBodyF,
-  wdrlsBabbbageTxBodyL,
+  withdrawalsBabbbageTxBodyL,
   notSupportedInThisEraL,
   updateBabbageTxBodyL,
   certsBabbageTxBodyL,
@@ -89,7 +89,7 @@ module Cardano.Ledger.Babbage.TxBody (
   collateralReturn',
   totalCollateral',
   certs',
-  wdrls',
+  withdrawals',
   txfee',
   vldt',
   update',
@@ -172,7 +172,7 @@ data BabbageTxBodyRaw era = BabbageTxBodyRaw
   , btbrCollateralReturn :: !(StrictMaybe (Sized (TxOut era)))
   , btbrTotalCollateral :: !(StrictMaybe Coin)
   , btbrCerts :: !(StrictSeq (DCert (EraCrypto era)))
-  , btbrWdrls :: !(Wdrl (EraCrypto era))
+  , btbrWithdrawals :: !(Withdrawals (EraCrypto era))
   , btbrTxFee :: !Coin
   , btbrValidityInterval :: !ValidityInterval
   , btbrUpdate :: !(StrictMaybe (Update era))
@@ -254,10 +254,10 @@ mintedBabbageTxBodyF :: SimpleGetter (BabbageTxBody era) (Set (ScriptHash (EraCr
 mintedBabbageTxBodyF = to (Set.map policyID . policies . btbrMint . getMemoRawType)
 {-# INLINEABLE mintedBabbageTxBodyF #-}
 
-wdrlsBabbbageTxBodyL :: BabbageEraTxBody era => Lens' (BabbageTxBody era) (Wdrl (EraCrypto era))
-wdrlsBabbbageTxBodyL =
-  lensMemoRawType btbrWdrls $ \txBodyRaw wdrls -> txBodyRaw {btbrWdrls = wdrls}
-{-# INLINEABLE wdrlsBabbbageTxBodyL #-}
+withdrawalsBabbbageTxBodyL :: BabbageEraTxBody era => Lens' (BabbageTxBody era) (Withdrawals (EraCrypto era))
+withdrawalsBabbbageTxBodyL =
+  lensMemoRawType btbrWithdrawals $ \txBodyRaw withdrawals -> txBodyRaw {btbrWithdrawals = withdrawals}
+{-# INLINEABLE withdrawalsBabbbageTxBodyL #-}
 
 updateBabbageTxBodyL ::
   BabbageEraTxBody era => Lens' (BabbageTxBody era) (StrictMaybe (Update era))
@@ -387,11 +387,11 @@ instance Crypto c => EraTxBody (BabbageEra c) where
   allInputsTxBodyF = allInputsBabbageTxBodyF
   {-# INLINE allInputsTxBodyF #-}
 
+  withdrawalsTxBodyL = withdrawalsBabbbageTxBodyL
+  {-# INLINE withdrawalsTxBodyL #-}
+
 instance Crypto c => ShelleyEraTxBody (BabbageEra c) where
   {-# SPECIALIZE instance ShelleyEraTxBody (BabbageEra StandardCrypto) #-}
-
-  wdrlsTxBodyL = wdrlsBabbbageTxBodyL
-  {-# INLINE wdrlsTxBodyL #-}
 
   ttlTxBodyL = notSupportedInThisEraL
   {-# INLINE ttlTxBodyL #-}
@@ -489,7 +489,7 @@ pattern BabbageTxBody ::
   StrictMaybe (Sized (TxOut era)) ->
   StrictMaybe Coin ->
   StrictSeq (DCert (EraCrypto era)) ->
-  Wdrl (EraCrypto era) ->
+  Withdrawals (EraCrypto era) ->
   Coin ->
   ValidityInterval ->
   StrictMaybe (Update era) ->
@@ -507,7 +507,7 @@ pattern BabbageTxBody
   , btbCollateralReturn
   , btbTotalCollateral
   , btbCerts
-  , btbWdrls
+  , btbWithdrawals
   , btbTxFee
   , btbValidityInterval
   , btbUpdate
@@ -526,7 +526,7 @@ pattern BabbageTxBody
         , btbrCollateralReturn = btbCollateralReturn
         , btbrTotalCollateral = btbTotalCollateral
         , btbrCerts = btbCerts
-        , btbrWdrls = btbWdrls
+        , btbrWithdrawals = btbWithdrawals
         , btbrTxFee = btbTxFee
         , btbrValidityInterval = btbValidityInterval
         , btbrUpdate = btbUpdate
@@ -546,7 +546,7 @@ pattern BabbageTxBody
       collateralReturn
       totalCollateral
       certs
-      wdrls
+      withdrawals
       txFee
       validityInterval
       update
@@ -564,7 +564,7 @@ pattern BabbageTxBody
             , btbrCollateralReturn = collateralReturn
             , btbrTotalCollateral = totalCollateral
             , btbrCerts = certs
-            , btbrWdrls = wdrls
+            , btbrWithdrawals = withdrawals
             , btbrTxFee = txFee
             , btbrValidityInterval = validityInterval
             , btbrUpdate = update
@@ -597,7 +597,7 @@ collateralReturn' :: BabbageTxBody era -> StrictMaybe (TxOut era)
 totalCollateral' :: BabbageTxBody era -> StrictMaybe Coin
 certs' :: BabbageTxBody era -> StrictSeq (DCert (EraCrypto era))
 txfee' :: BabbageTxBody era -> Coin
-wdrls' :: BabbageTxBody era -> Wdrl (EraCrypto era)
+withdrawals' :: BabbageTxBody era -> Withdrawals (EraCrypto era)
 vldt' :: BabbageTxBody era -> ValidityInterval
 update' :: BabbageTxBody era -> StrictMaybe (Update era)
 reqSignerHashes' :: BabbageTxBody era -> Set (KeyHash 'Witness (EraCrypto era))
@@ -620,7 +620,7 @@ totalCollateral' = btbrTotalCollateral . getMemoRawType
 
 certs' = btbrCerts . getMemoRawType
 
-wdrls' = btbrWdrls . getMemoRawType
+withdrawals' = btbrWithdrawals . getMemoRawType
 
 txfee' = btbrTxFee . getMemoRawType
 
@@ -655,7 +655,7 @@ instance
       , btbrCollateralReturn
       , btbrTotalCollateral
       , btbrCerts
-      , btbrWdrls
+      , btbrWithdrawals
       , btbrTxFee
       , btbrValidityInterval = ValidityInterval bot top
       , btbrUpdate
@@ -679,7 +679,7 @@ instance
           !> Key 2 (To btbrTxFee)
           !> encodeKeyedStrictMaybe 3 top
           !> Omit null (Key 4 (To btbrCerts))
-          !> Omit (null . unWdrl) (Key 5 (To btbrWdrls))
+          !> Omit (null . unWithdrawals) (Key 5 (To btbrWithdrawals))
           !> encodeKeyedStrictMaybe 6 btbrUpdate
           !> encodeKeyedStrictMaybe 8 bot
           !> Omit null (Key 14 (To btbrReqSignerHashes))
@@ -713,7 +713,7 @@ instance
           (\x tx -> tx {btbrValidityInterval = (btbrValidityInterval tx) {invalidHereafter = x}})
           From
       bodyFields 4 = field (\x tx -> tx {btbrCerts = x}) From
-      bodyFields 5 = field (\x tx -> tx {btbrWdrls = x}) From
+      bodyFields 5 = field (\x tx -> tx {btbrWithdrawals = x}) From
       bodyFields 6 = ofield (\x tx -> tx {btbrUpdate = x}) From
       bodyFields 7 = ofield (\x tx -> tx {btbrAuxDataHash = x}) From
       bodyFields 8 =
@@ -742,7 +742,7 @@ basicBabbageTxBodyRaw =
     SNothing
     SNothing
     StrictSeq.empty
-    (Wdrl mempty)
+    (Withdrawals mempty)
     mempty
     (ValidityInterval SNothing SNothing)
     SNothing

@@ -26,7 +26,7 @@ module Test.Cardano.Ledger.Generic.Fields (
   PParamsField (..),
   TxOutField (.., DHash', RefScript'),
   initVI,
-  initWdrl,
+  initWithdrawals,
   initialTxBody,
   initialWitnesses,
   initialTx,
@@ -115,7 +115,7 @@ data TxBodyField era
   | CollateralReturn (StrictMaybe (TxOut era))
   | TotalCol (StrictMaybe Coin)
   | Certs (StrictSeq (DCert (EraCrypto era)))
-  | Wdrls (Wdrl (EraCrypto era))
+  | Withdrawals' (Withdrawals (EraCrypto era))
   | Txfee Coin
   | Vldt ValidityInterval
   | TTL SlotNo
@@ -239,8 +239,8 @@ data PParamsField era
 initVI :: ValidityInterval
 initVI = ValidityInterval SNothing SNothing
 
-initWdrl :: Wdrl c
-initWdrl = Wdrl Map.empty
+initWithdrawals :: Withdrawals c
+initWithdrawals = Withdrawals Map.empty
 
 initialTxBody :: Era era => Proof era -> TxBody era
 initialTxBody (Shelley _) = mkBasicTxBody
@@ -304,7 +304,7 @@ abstractTxBody (Alonzo _) (AlonzoTxBody inp col out cert wdrl fee vldt up req mn
   , Collateral col
   , Outputs out
   , Certs cert
-  , Wdrls wdrl
+  , Withdrawals' wdrl
   , Txfee fee
   , Vldt vldt
   , Update up
@@ -322,7 +322,7 @@ abstractTxBody (Conway _) (ConwayTxBody inp col ref out colret totcol cert wdrl 
   , CollateralReturn (sizedValue <$> colret)
   , TotalCol totcol
   , Certs $ transDCert <$> cert
-  , Wdrls wdrl
+  , Withdrawals' wdrl
   , Txfee fee
   , Vldt vldt
   , ReqSignerHashes req
@@ -341,7 +341,7 @@ abstractTxBody (Babbage _) (BabbageTxBody inp col ref out colret totcol cert wdr
   , CollateralReturn (sizedValue <$> colret)
   , TotalCol totcol
   , Certs cert
-  , Wdrls wdrl
+  , Withdrawals' wdrl
   , Txfee fee
   , Vldt vldt
   , Update up
@@ -352,11 +352,11 @@ abstractTxBody (Babbage _) (BabbageTxBody inp col ref out colret totcol cert wdr
   , Txnetworkid net
   ]
 abstractTxBody (Shelley _) (ShelleyTxBody inp out cert wdrl fee ttlslot up adh) =
-  [Inputs inp, Outputs out, Certs cert, Wdrls wdrl, Txfee fee, TTL ttlslot, Update up, AdHash adh]
+  [Inputs inp, Outputs out, Certs cert, Withdrawals' wdrl, Txfee fee, TTL ttlslot, Update up, AdHash adh]
 abstractTxBody (Mary _) (MaryTxBody inp out cert wdrl fee vldt up adh mnt) =
-  [Inputs inp, Outputs out, Certs cert, Wdrls wdrl, Txfee fee, Vldt vldt, Update up, AdHash adh, Mint mnt]
+  [Inputs inp, Outputs out, Certs cert, Withdrawals' wdrl, Txfee fee, Vldt vldt, Update up, AdHash adh, Mint mnt]
 abstractTxBody (Allegra _) (AllegraTxBody inp out cert wdrl fee vldt up adh) =
-  [Inputs inp, Outputs out, Certs cert, Wdrls wdrl, Txfee fee, Vldt vldt, Update up, AdHash adh]
+  [Inputs inp, Outputs out, Certs cert, Withdrawals' wdrl, Txfee fee, Vldt vldt, Update up, AdHash adh]
 
 abstractWitnesses :: Proof era -> TxWits era -> [WitnessesField era]
 abstractWitnesses (Shelley _) (ShelleyTxWits keys scripts boot) = [AddrWits keys, ScriptWits scripts, BootWits boot]

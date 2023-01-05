@@ -49,7 +49,7 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
-import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..), Wdrl (..))
+import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..), Withdrawals (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..))
 import Cardano.Ledger.UTxO (UTxO (..))
 import Control.State.Transition.Extended (STS (..), State)
@@ -373,7 +373,7 @@ sameShelleyTxBody ::
   ShelleyTxBody era ->
   ShelleyTxBody era ->
   [(String, Maybe PDoc)]
-sameShelleyTxBody proof (ShelleyTxBody i1 o1 c1 (Wdrl w1) f1 s1 pu1 d1) (ShelleyTxBody i2 o2 c2 (Wdrl w2) f2 s2 pu2 d2) =
+sameShelleyTxBody proof (ShelleyTxBody i1 o1 c1 (Withdrawals w1) f1 s1 pu1 d1) (ShelleyTxBody i2 o2 c2 (Withdrawals w2) f2 s2 pu2 d2) =
   [ ("Inputs", eqVia (ppSet pcTxIn) i1 i2)
   , ("Outputs", eqVia (ppList (pcTxOut proof) . toList) o1 o2)
   , ("DCert", eqVia (ppList pcDCert . toList) c1 c2)
@@ -390,7 +390,7 @@ sameAllegraTxBody ::
   AllegraTxBody era ->
   AllegraTxBody era ->
   [(String, Maybe PDoc)]
-sameAllegraTxBody proof (AllegraTxBody i1 o1 c1 (Wdrl w1) f1 v1 pu1 d1) (AllegraTxBody i2 o2 c2 (Wdrl w2) f2 v2 pu2 d2) =
+sameAllegraTxBody proof (AllegraTxBody i1 o1 c1 (Withdrawals w1) f1 v1 pu1 d1) (AllegraTxBody i2 o2 c2 (Withdrawals w2) f2 v2 pu2 d2) =
   [ ("Inputs", eqVia (ppSet pcTxIn) i1 i2)
   , ("Outputs", eqVia (ppList (pcTxOut proof) . toList) o1 o2)
   , ("DCert", eqVia (ppList pcDCert . toList) c1 c2)
@@ -407,7 +407,7 @@ sameMaryTxBody ::
   MaryTxBody era ->
   MaryTxBody era ->
   [(String, Maybe PDoc)]
-sameMaryTxBody proof (MaryTxBody i1 o1 c1 (Wdrl w1) f1 v1 pu1 d1 m1) (MaryTxBody i2 o2 c2 (Wdrl w2) f2 v2 pu2 d2 m2) =
+sameMaryTxBody proof (MaryTxBody i1 o1 c1 (Withdrawals w1) f1 v1 pu1 d1 m1) (MaryTxBody i2 o2 c2 (Withdrawals w2) f2 v2 pu2 d2 m2) =
   [ ("Inputs", eqVia (ppSet pcTxIn) i1 i2)
   , ("Outputs", eqVia (ppList (pcTxOut proof) . toList) o1 o2)
   , ("DCert", eqVia (ppList pcDCert . toList) c1 c2)
@@ -427,8 +427,8 @@ sameAlonzoTxBody ::
   [(String, Maybe PDoc)]
 sameAlonzoTxBody
   proof
-  (AlonzoTxBody i1 cl1 o1 c1 (Wdrl w1) f1 v1 pu1 r1 m1 s1 d1 n1)
-  (AlonzoTxBody i2 cl2 o2 c2 (Wdrl w2) f2 v2 pu2 r2 m2 s2 d2 n2) =
+  (AlonzoTxBody i1 cl1 o1 c1 (Withdrawals w1) f1 v1 pu1 r1 m1 s1 d1 n1)
+  (AlonzoTxBody i2 cl2 o2 c2 (Withdrawals w2) f2 v2 pu2 r2 m2 s2 d2 n2) =
     [ ("Inputs", eqVia (ppSet pcTxIn) i1 i2)
     , ("Collateral", eqVia (ppSet pcTxIn) cl1 cl2)
     , ("Outputs", eqVia (ppList (pcTxOut proof) . toList) o1 o2)
@@ -454,8 +454,8 @@ sameBabbageTxBody ::
   [(String, Maybe PDoc)]
 sameBabbageTxBody
   proof
-  (BabbageTxBody i1 cl1 ri1 o1 cr1 tc1 c1 (Wdrl w1) f1 v1 pu1 r1 m1 s1 d1 n1)
-  (BabbageTxBody i2 cl2 ri2 o2 cr2 tc2 c2 (Wdrl w2) f2 v2 pu2 r2 m2 s2 d2 n2) =
+  (BabbageTxBody i1 cl1 ri1 o1 cr1 tc1 c1 (Withdrawals w1) f1 v1 pu1 r1 m1 s1 d1 n1)
+  (BabbageTxBody i2 cl2 ri2 o2 cr2 tc2 c2 (Withdrawals w2) f2 v2 pu2 r2 m2 s2 d2 n2) =
     [ ("SpendInputs", eqVia (ppSet pcTxIn) i1 i2)
     , ("ColInputs", eqVia (ppSet pcTxIn) cl1 cl2)
     , ("RefInputs", eqVia (ppSet pcTxIn) ri1 ri2)
@@ -485,8 +485,8 @@ sameConwayTxBody ::
   [(String, Maybe PDoc)]
 sameConwayTxBody
   proof
-  (ConwayTxBody i1 cl1 ri1 o1 cr1 tc1 c1 (Wdrl w1) f1 v1 r1 m1 s1 d1 n1 ga1 vs1)
-  (ConwayTxBody i2 cl2 ri2 o2 cr2 tc2 c2 (Wdrl w2) f2 v2 r2 m2 s2 d2 n2 ga2 vs2) =
+  (ConwayTxBody i1 cl1 ri1 o1 cr1 tc1 c1 (Withdrawals w1) f1 v1 r1 m1 s1 d1 n1 ga1 vs1)
+  (ConwayTxBody i2 cl2 ri2 o2 cr2 tc2 c2 (Withdrawals w2) f2 v2 r2 m2 s2 d2 n2 ga2 vs2) =
     [ ("SpendInputs", eqVia (ppSet pcTxIn) i1 i2)
     , ("ColInputs", eqVia (ppSet pcTxIn) cl1 cl2)
     , ("RefInputs", eqVia (ppSet pcTxIn) ri1 ri2)

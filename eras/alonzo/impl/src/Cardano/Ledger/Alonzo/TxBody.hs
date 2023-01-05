@@ -31,7 +31,7 @@ module Cardano.Ledger.Alonzo.TxBody (
     atbCollateral,
     atbOutputs,
     atbCerts,
-    atbWdrls,
+    atbWithdrawals,
     atbTxFee,
     atbValidityInterval,
     atbUpdate,
@@ -49,7 +49,7 @@ module Cardano.Ledger.Alonzo.TxBody (
   collateral',
   outputs',
   certs',
-  wdrls',
+  withdrawals',
   txfee',
   vldt',
   update',
@@ -124,7 +124,7 @@ data AlonzoTxBodyRaw era = AlonzoTxBodyRaw
   , atbrCollateral :: !(Set (TxIn (EraCrypto era)))
   , atbrOutputs :: !(StrictSeq (TxOut era))
   , atbrCerts :: !(StrictSeq (DCert (EraCrypto era)))
-  , atbrWdrls :: !(Wdrl (EraCrypto era))
+  , atbrWithdrawals :: !(Withdrawals (EraCrypto era))
   , atbrTxFee :: !Coin
   , atbrValidityInterval :: !ValidityInterval
   , atbrUpdate :: !(StrictMaybe (Update era))
@@ -182,12 +182,12 @@ instance Crypto c => EraTxBody (AlonzoEra c) where
     to $ \txBody -> (txBody ^. inputsTxBodyL) `Set.union` (txBody ^. collateralInputsTxBodyL)
   {-# INLINEABLE allInputsTxBodyF #-}
 
+  withdrawalsTxBodyL =
+    lensMemoRawType atbrWithdrawals (\txBodyRaw withdrawals_ -> txBodyRaw {atbrWithdrawals = withdrawals_})
+  {-# INLINEABLE withdrawalsTxBodyL #-}
+
 instance Crypto c => ShelleyEraTxBody (AlonzoEra c) where
   {-# SPECIALIZE instance ShelleyEraTxBody (AlonzoEra StandardCrypto) #-}
-
-  wdrlsTxBodyL =
-    lensMemoRawType atbrWdrls (\txBodyRaw wdrls_ -> txBodyRaw {atbrWdrls = wdrls_})
-  {-# INLINEABLE wdrlsTxBodyL #-}
 
   ttlTxBodyL = notSupportedInThisEraL
 
@@ -270,7 +270,7 @@ pattern AlonzoTxBody ::
   Set (TxIn (EraCrypto era)) ->
   StrictSeq (TxOut era) ->
   StrictSeq (DCert (EraCrypto era)) ->
-  Wdrl (EraCrypto era) ->
+  Withdrawals (EraCrypto era) ->
   Coin ->
   ValidityInterval ->
   StrictMaybe (Update era) ->
@@ -285,7 +285,7 @@ pattern AlonzoTxBody
   , atbCollateral
   , atbOutputs
   , atbCerts
-  , atbWdrls
+  , atbWithdrawals
   , atbTxFee
   , atbValidityInterval
   , atbUpdate
@@ -301,7 +301,7 @@ pattern AlonzoTxBody
         , atbrCollateral = atbCollateral
         , atbrOutputs = atbOutputs
         , atbrCerts = atbCerts
-        , atbrWdrls = atbWdrls
+        , atbrWithdrawals = atbWithdrawals
         , atbrTxFee = atbTxFee
         , atbrValidityInterval = atbValidityInterval
         , atbrUpdate = atbUpdate
@@ -318,7 +318,7 @@ pattern AlonzoTxBody
       collateral
       outputs
       certs
-      wdrls
+      withdrawals
       txFee
       validityInterval
       update
@@ -333,7 +333,7 @@ pattern AlonzoTxBody
             , atbrCollateral = collateral
             , atbrOutputs = outputs
             , atbrCerts = certs
-            , atbrWdrls = wdrls
+            , atbrWithdrawals = withdrawals
             , atbrTxFee = txFee
             , atbrValidityInterval = validityInterval
             , atbrUpdate = update
@@ -362,7 +362,7 @@ collateral' :: AlonzoTxBody era -> Set (TxIn (EraCrypto era))
 outputs' :: AlonzoTxBody era -> StrictSeq (TxOut era)
 certs' :: AlonzoTxBody era -> StrictSeq (DCert (EraCrypto era))
 txfee' :: AlonzoTxBody era -> Coin
-wdrls' :: AlonzoTxBody era -> Wdrl (EraCrypto era)
+withdrawals' :: AlonzoTxBody era -> Withdrawals (EraCrypto era)
 vldt' :: AlonzoTxBody era -> ValidityInterval
 update' :: AlonzoTxBody era -> StrictMaybe (Update era)
 reqSignerHashes' :: AlonzoTxBody era -> Set (KeyHash 'Witness (EraCrypto era))
@@ -378,7 +378,7 @@ outputs' = atbrOutputs . getMemoRawType
 
 certs' = atbrCerts . getMemoRawType
 
-wdrls' = atbrWdrls . getMemoRawType
+withdrawals' = atbrWithdrawals . getMemoRawType
 
 txfee' = atbrTxFee . getMemoRawType
 
@@ -410,7 +410,7 @@ instance
       , atbrCollateral
       , atbrOutputs
       , atbrCerts
-      , atbrWdrls
+      , atbrWithdrawals
       , atbrTxFee
       , atbrValidityInterval = ValidityInterval bot top
       , atbrUpdate
@@ -431,7 +431,7 @@ instance
           !> Key 2 (To atbrTxFee)
           !> encodeKeyedStrictMaybe 3 top
           !> Omit null (Key 4 (To atbrCerts))
-          !> Omit (null . unWdrl) (Key 5 (To atbrWdrls))
+          !> Omit (null . unWithdrawals) (Key 5 (To atbrWithdrawals))
           !> encodeKeyedStrictMaybe 6 atbrUpdate
           !> encodeKeyedStrictMaybe 8 bot
           !> Omit null (Key 14 (To atbrReqSignerHashes))
@@ -462,7 +462,7 @@ instance
           (\x tx -> tx {atbrValidityInterval = (atbrValidityInterval tx) {invalidHereafter = x}})
           From
       bodyFields 4 = field (\x tx -> tx {atbrCerts = x}) From
-      bodyFields 5 = field (\x tx -> tx {atbrWdrls = x}) From
+      bodyFields 5 = field (\x tx -> tx {atbrWithdrawals = x}) From
       bodyFields 6 = ofield (\x tx -> tx {atbrUpdate = x}) From
       bodyFields 7 = ofield (\x tx -> tx {atbrAuxDataHash = x}) From
       bodyFields 8 =
@@ -487,7 +487,7 @@ emptyAlonzoTxBodyRaw =
     mempty
     StrictSeq.empty
     StrictSeq.empty
-    (Wdrl mempty)
+    (Withdrawals mempty)
     mempty
     (ValidityInterval SNothing SNothing)
     SNothing

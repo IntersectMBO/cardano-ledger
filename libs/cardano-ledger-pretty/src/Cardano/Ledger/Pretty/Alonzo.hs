@@ -232,7 +232,7 @@ ppTxBody (AlonzoTxBody i ifee o c w fee vi u rsh mnt sdh axh ni) =
     , ("collateral", ppSet ppTxIn ifee)
     , ("outputs", ppStrictSeq prettyA o)
     , ("certificates", ppStrictSeq ppDCert c)
-    , ("withdrawals", ppWdrl w)
+    , ("withdrawals", ppWithdrawals w)
     , ("txfee", ppCoin fee)
     , ("vldt", ppValidityInterval vi)
     , ("update", ppStrictMaybe ppUpdate u)

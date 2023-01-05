@@ -478,9 +478,9 @@ exampleCerts =
               ]
     ]
 
-exampleWithdrawals :: Crypto c => Wdrl c
+exampleWithdrawals :: Crypto c => Withdrawals c
 exampleWithdrawals =
-  Wdrl $
+  Withdrawals $
     Map.fromList
       [ (ppRewardAcnt examplePoolParams, Coin 100)
       ]

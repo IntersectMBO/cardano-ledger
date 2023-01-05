@@ -13,6 +13,7 @@
 
 module Test.Cardano.Ledger.Examples.AlonzoInvalidTxUTXOW (tests) where
 
+import Cardano.Ledger.Address (Withdrawals (..))
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (..))
@@ -66,7 +67,6 @@ import Cardano.Ledger.Shelley.TxBody (
   DCert (..),
   DelegCert (..),
   RewardAcnt (..),
-  Wdrl (..),
  )
 import Cardano.Ledger.Val (inject, (<+>))
 import Cardano.Slotting.Slot (SlotNo (..))
@@ -523,8 +523,8 @@ validatingManyScriptsBody pf =
         [ DCertDeleg (DeRegKey $ timelockStakeCred pf)
         , DCertDeleg (DeRegKey $ scriptStakeCredSuceed pf)
         ]
-    , Wdrls
-        ( Wdrl $
+    , Withdrawals'
+        ( Withdrawals $
             Map.fromList
               [ (RewardAcnt Testnet (scriptStakeCredSuceed pf), Coin 0)
               , (RewardAcnt Testnet (timelockStakeCred pf), Coin 0)

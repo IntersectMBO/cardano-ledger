@@ -39,7 +39,7 @@ import Cardano.Ledger.Shelley.TxBody (
   DCert (..),
   ShelleyTxBody (..),
   ShelleyTxOut (..),
-  Wdrl (..),
+  Withdrawals (..),
  )
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits, addrWits)
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
@@ -144,7 +144,7 @@ txbodyEx1 =
             )
         ]
     )
-    (Wdrl Map.empty)
+    (Withdrawals Map.empty)
     (Coin 1)
     (SlotNo 10)
     SNothing
