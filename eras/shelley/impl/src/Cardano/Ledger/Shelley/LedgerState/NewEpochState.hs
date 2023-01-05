@@ -42,6 +42,7 @@ import Cardano.Ledger.Shelley.TxBody (
   ShelleyEraTxBody (..),
  )
 import Cardano.Ledger.UMapCompact (
+  RDPair (..),
   Trip (..),
   UMap (..),
  )
@@ -78,7 +79,7 @@ getGKeys nes = Map.keysSet genDelegs
   where
     NewEpochState _ _ _ es _ _ _ = nes
     EpochState _ _ ls _ _ _ = es
-    LedgerState _ (DPState (DState _ _ (GenDelegs genDelegs) _ _) _) = ls
+    LedgerState _ (DPState (DState {dsGenDelegs = (GenDelegs genDelegs)}) _) = ls
 
 -- | Creates the ledger state for an empty ledger which
 --  contains the specified transaction outputs.
@@ -122,6 +123,7 @@ depositPoolChange ls pp txBody = (currentPool <+> txDeposits) <-> txRefunds
     txDeposits = totalTxDeposits pp (lsDPState ls) txBody
     txRefunds = keyTxRefunds pp (lsDPState ls) txBody
 
+-- Remove the rewards from the UMap, but leave the deposits alone
 reapRewards ::
   UMap c ->
   RewardAccounts c ->
@@ -129,7 +131,8 @@ reapRewards ::
 reapRewards (UMap tmap ptrmap) withdrawals = UMap (Map.mapWithKey g tmap) ptrmap
   where
     g k (Triple x y z) = Triple (fmap (removeRewards k) x) y z
-    removeRewards k v = if k `Map.member` withdrawals then (CompactCoin 0) else v
+    removeRewards k v@(RDPair _ d) =
+      if k `Map.member` withdrawals then RDPair (CompactCoin 0) d else v
 
 -- A TxOut has 4 different shapes, depending on the shape of its embedded Addr.
 -- Credentials are stored in only 2 of the 4 cases.

@@ -24,6 +24,13 @@ import Cardano.Ledger.Shelley.TxBody (
   pattern RegKey,
   pattern RegPool,
  )
+import Cardano.Ledger.UMapCompact (
+  RDPair (..),
+  View (RewardDeposits),
+  compactCoinOrError,
+  fromCompact,
+ )
+import qualified Cardano.Ledger.UMapCompact as UM
 import Cardano.Ledger.Val ((<+>), (<×>))
 import Data.Foldable (foldl', toList)
 import qualified Data.Map.Strict as Map
@@ -81,17 +88,18 @@ keyCertsRefunds ::
   DPState c ->
   [DCert c] ->
   Coin
-keyCertsRefunds pp dpstate certs = snd (foldl' accum (regkeys, Coin 0) certs)
+keyCertsRefunds pp dpstate certs = snd (foldl' accum (initialKeys, Coin 0) certs)
   where
-    regkeys = dsDeposits (dpsDState dpstate)
-    accum (keys, ans) (DCertDeleg (RegKey k)) =
+    initialKeys = (RewardDeposits . dsUnified . dpsDState) dpstate
+    keyDeposit = compactCoinOrError (getField @"_keyDeposit" pp)
+    accum (!keys, !ans) (DCertDeleg (RegKey k)) =
       -- Deposit is added locally to the growing 'keys'
-      (Map.insert k (getField @"_keyDeposit" pp) keys, ans)
-    accum (keys, ans) (DCertDeleg (DeRegKey k)) =
+      (RewardDeposits $ UM.insert k (RDPair mempty keyDeposit) keys, ans)
+    accum (!keys, !ans) (DCertDeleg (DeRegKey k)) =
       -- If the key is registered, lookup the deposit in the locally growing 'keys'
       -- if it is not registered, then just return ans
-      case Map.lookup k keys of
-        Just deposit -> (keys, ans <+> deposit)
+      case UM.lookup k keys of
+        Just (RDPair _ deposit) -> (keys, ans <+> fromCompact deposit)
         Nothing -> (keys, ans)
     accum ans _ = ans
 

@@ -47,6 +47,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
+  PState (..),
   UTxOState (..),
  )
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
@@ -67,7 +68,7 @@ import Cardano.Slotting.EpochInfo.API (epochInfoSize)
 import Control.Monad.Reader (runReader)
 import Control.State.Transition.Extended (STS (State))
 import Data.Default.Class (Default (def))
-import qualified Data.Foldable as Fold (foldl', toList)
+import qualified Data.Foldable as Fold (fold, toList)
 import qualified Data.List as List
 import Data.Map (Map, keysSet, restrictKeys)
 import qualified Data.Map.Strict as Map
@@ -435,23 +436,27 @@ instance TotalAda AccountState where
   totalAda (AccountState treasury reserves) = treasury <+> reserves
 
 instance Reflect era => TotalAda (UTxOState era) where
-  totalAda (UTxOState utxo deposits fees _ _) = totalAda utxo <+> deposits <+> fees
+  totalAda (UTxOState utxo _deposits fees _ _) = totalAda utxo <+> fees
+
+-- we don't add in the _deposits, because it is invariant that this
+-- is equal to the sum of the key deposit map and the pool deposit map
+-- So these are accounted for in the instance (TotalAda (DPState era))
 
 instance Reflect era => TotalAda (UTxO era) where
-  totalAda (UTxO m) = Map.foldl' accum mempty m
+  totalAda (UTxO m) = foldl accum mempty m
     where
       accum ans txOut = (txOut ^. coinTxOutL) <+> ans
 
 instance TotalAda (DState era) where
-  totalAda dstate = UM.fromCompact $ Fold.foldl' UM.addCompact mempty (UM.Rewards (dsUnified dstate))
+  totalAda dstate =
+    (UM.fromCompact $ UM.sumRewardsView (UM.RewardDeposits (dsUnified dstate)))
+      <> (UM.fromCompact $ UM.sumDepositView (UM.RewardDeposits (dsUnified dstate)))
 
--- we deliberately do NOT add the dsDeposits, because they are accounted for by the utxosDeposits
+instance TotalAda (PState era) where
+  totalAda pstate = Fold.fold (psDeposits pstate)
 
 instance TotalAda (DPState era) where
-  totalAda (DPState ds _) = totalAda ds
-
--- we deliberately do NOT add anything from PState
--- In particular the psDeposits, because they are accounted for by the utxosDeposits
+  totalAda (DPState ds ps) = totalAda ds <> totalAda ps
 
 instance Reflect era => TotalAda (LedgerState era) where
   totalAda (LedgerState utxos dps) = totalAda utxos <+> totalAda dps

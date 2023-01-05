@@ -65,7 +65,7 @@ import qualified Data.ListMap as LM
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
-import GHC.Records (HasField)
+import GHC.Records (HasField (getField))
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Generator.Block (genBlock)
@@ -193,6 +193,7 @@ mkOCertIssueNos (GenDelegs delegs0) =
 -- This allows stake pools to produce blocks from genesis.
 registerGenesisStaking ::
   forall era.
+  HasField "_keyDeposit" (Core.PParams era) Coin =>
   ShelleyGenesisStaking (EraCrypto era) ->
   ChainState era ->
   ChainState era
@@ -203,6 +204,8 @@ registerGenesisStaking
       { chainNes = newChainNes
       }
     where
+      keyDeposit :: UM.CompactForm Coin
+      keyDeposit = (UM.compactCoinOrError . getField @"_keyDeposit" . esPp . nesEs) oldChainNes
       oldEpochState = nesEs oldChainNes
       oldLedgerState = esLState oldEpochState
       oldDPState = lsDPState oldLedgerState
@@ -239,12 +242,13 @@ registerGenesisStaking
       -- about updating the 'ssDelegations' field.
       --
       -- See STS DELEG for details
+      pairWithDepositsButNoRewards _ = UM.RDPair (UM.CompactCoin 0) keyDeposit
       newDState :: DState (EraCrypto era)
       newDState =
         (dpsDState oldDPState)
           { dsUnified =
               UM.unify
-                (Map.map (const $ Coin 0) . Map.mapKeys KeyHashObj . LM.toMap $ sgsStake)
+                (Map.map pairWithDepositsButNoRewards . Map.mapKeys KeyHashObj . LM.toMap $ sgsStake)
                 (Map.mapKeys KeyHashObj $ LM.toMap sgsStake)
                 (UM.ptrView (dsUnified (dpsDState oldDPState)))
           }

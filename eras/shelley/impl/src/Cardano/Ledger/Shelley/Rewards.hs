@@ -136,7 +136,8 @@ sumRewards protocolVersion rs = fold $ aggregateRewards protocolVersion rs
 -- | Filter the reward payments to those that will actually be delivered. This
 -- function exists since in Shelley, a stake credential earning rewards from
 -- multiple sources would only receive one reward. So some of the coins are ignored,
--- because of this backward compatibility issue in early protocolVersions.
+-- because of this backward compatibility issue in early protocolVersions. Note that
+-- both of the domains of the returned maps are a subset of the the domain of the input map 'rewards'
 filterRewards ::
   forall c pp.
   (HasField "_protocolVersion" pp ProtVer) =>
@@ -154,6 +155,7 @@ filterRewards pp rewards =
 
 -- | for each (Set (Reward c)) entry in the map, sum up the coin. In the ShelleyEra
 --   some of the coins are ignored (because of backward compatibility) see 'filterRewards'
+--   Note that domain of the returned map is a subset of the input map 'rewards'
 aggregateRewards ::
   forall c pp.
   (HasField "_protocolVersion" pp ProtVer) =>
@@ -176,6 +178,7 @@ sumCompactRewards protocolVersion rs = fold $ aggregateCompactRewards protocolVe
 
 -- | for each (Set (Reward c)) entry in the map, sum up the coin. In the ShelleyEra
 --   some of the coins are ignored (because of backward compatibility) see 'filterRewards'
+--   Note that the domain of the output map is a subset of the domain of the input rewards.
 aggregateCompactRewards ::
   forall c pp.
   (HasField "_protocolVersion" pp ProtVer) =>

@@ -46,11 +46,11 @@ import Cardano.Ledger.Shelley.Rules as Shelley (
   ShelleyLedgerPredFailure (..),
   ShelleyLedgersEvent (..),
   ShelleyLedgersPredFailure (..),
+  depositEqualsObligation,
  )
 import Cardano.Ledger.Shelley.TxBody (DCert)
 import Control.State.Transition (
   Assertion (..),
-  AssertionViolation (..),
   Embed (..),
   STS (..),
   TRC (..),
@@ -112,8 +112,7 @@ ledgerTransition = do
   pure $ LedgerState utxoSt' dpstate'
 
 instance
-  ( Show (State (EraRule "PPUP" era))
-  , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
+  ( DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
   , AlonzoEraTx era
   , Tx era ~ AlonzoTx era
   , Embed (EraRule "DELEGS" era) (AlonzoLEDGER era)
@@ -140,22 +139,13 @@ instance
   initialRules = []
   transitionRules = [ledgerTransition @AlonzoLEDGER]
 
-  renderAssertionViolation AssertionViolation {avSTS, avMsg, avCtx, avState} =
-    "AssertionViolation ("
-      <> avSTS
-      <> "): "
-      <> avMsg
-      <> "\n"
-      <> show avCtx
-      <> "\n"
-      <> show avState
+  renderAssertionViolation = Shelley.depositEqualsObligation
 
   assertions =
     [ PostCondition
-        "Deposit pot must equal obligation"
+        "Deposit pot must equal obligation (AlonzoLEDGER)"
         ( \(TRC (_, _, _))
-           (LedgerState utxoSt dpstate) ->
-              obligationDPState dpstate == utxosDeposited utxoSt
+           (LedgerState utxoSt dpstate) -> obligationDPState dpstate == utxosDeposited utxoSt
         )
     ]
 

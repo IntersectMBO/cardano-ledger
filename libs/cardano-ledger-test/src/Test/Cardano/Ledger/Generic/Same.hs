@@ -123,12 +123,11 @@ instance (EraCrypto era ~ c) => Same era (PState c) where
     ]
 
 instance (EraCrypto era ~ c) => Same era (DState c) where
-  same _proof (DState u1 fgd1 gd1 ir1 d1) (DState u2 fgd2 gd2 ir2 d2) =
+  same _proof (DState u1 fgd1 gd1 ir1) (DState u2 fgd2 gd2 ir2) =
     [ ("Unified", eqByShow u1 u2)
     , ("FutureGenDelegs", eqByShow fgd1 fgd2)
     , ("GenDelegs", eqByShow gd1 gd2)
     , ("InstantaneousRewards", eqByShow ir1 ir2)
-    , ("Deposits", eqByShow d1 d2)
     ]
 
 sameUTxO :: Proof era -> UTxO era -> UTxO era -> Maybe PDoc

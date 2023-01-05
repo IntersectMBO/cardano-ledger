@@ -89,13 +89,15 @@ makeStatePair ::
   (DState c, PState c)
 makeStatePair rewards' delegs ptrs' poolParams =
   ( DState
-      (UM.unify rewards' delegs ptrs')
+      (UM.unify (Map.map rdPair rewards') delegs ptrs')
       Map.empty
       (GenDelegs Map.empty)
       (InstantaneousRewards Map.empty Map.empty mempty mempty)
-      Map.empty
   , PState poolParams Map.empty Map.empty Map.empty
   )
+
+rdPair :: Coin -> UM.RDPair
+rdPair coin = UM.RDPair (UM.compactCoinOrError coin) (UM.CompactCoin 1)
 
 -- ====================================================================================
 -- operations to benchmark different algorithms for executing ((dom d ◁ r) ▷ dom rg)

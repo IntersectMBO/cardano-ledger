@@ -82,9 +82,9 @@ import Cardano.Ledger.Shelley.TxBody (
   Wdrl (..),
  )
 import Cardano.Ledger.TxIn (TxIn (..))
-import Cardano.Ledger.UMapCompact (View (Rewards))
+import Cardano.Ledger.UMapCompact (View (RewardDeposits))
 import qualified Cardano.Ledger.UMapCompact as UM
-import Cardano.Ledger.Val (inject, (<+>))
+import Cardano.Ledger.Val (inject, (<+>), (<->))
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.State.Transition.Extended hiding (Assertion)
 import qualified Data.ByteString as BS (replicate)
@@ -176,11 +176,17 @@ initialBBodyState ::
 initialBBodyState pf utxo =
   BbodyState (LedgerState initialUtxoSt dpstate) (BlocksMade mempty)
   where
-    initialUtxoSt = smartUTxOState utxo (Coin 0) (Coin 0) def
+    initialUtxoSt = smartUTxOState utxo (UM.fromCompact successDeposit) (Coin 0) def
     dpstate =
       def
         { dpsDState =
-            def {dsUnified = UM.insert (scriptStakeCredSuceed pf) (UM.CompactCoin 1000) (Rewards UM.empty)}
+            def
+              { dsUnified =
+                  UM.insert
+                    (scriptStakeCredSuceed pf)
+                    (UM.RDPair (UM.CompactCoin 1000) successDeposit)
+                    (RewardDeposits UM.empty)
+              }
         }
 
 testAlonzoBlock ::
@@ -412,7 +418,12 @@ validatingRedeemrsWithCert =
     Map.singleton (RdmrPtr Tag.Cert 0) (Data (PV1.I 42), ExUnits 5000 5000)
 
 validatingTxWithCertOut :: EraTxOut era => Proof era -> TxOut era
-validatingTxWithCertOut pf = newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 995)]
+validatingTxWithCertOut pf =
+  newTxOut
+    pf
+    [ Address (someAddr pf)
+    , Amount (inject $ Coin 995 <> UM.fromCompact successDeposit)
+    ]
 
 notValidatingTxWithCert ::
   forall era.
@@ -549,7 +560,7 @@ poolMDHTooBigTx pf =
       newTxBody
         pf
         [ Inputs' [mkGenesisTxIn 3]
-        , Outputs' [newTxOut pf [Address $ someAddr pf, Amount (inject $ Coin 995)]]
+        , Outputs' [newTxOut pf [Address $ someAddr pf, Amount (inject $ Coin 995 <-> poolDeposit)]]
         , Certs' [DCertPool (RegPool poolParams)]
         , Txfee (Coin 5)
         ]
@@ -639,7 +650,9 @@ testBBodyState pf =
           , DHash' [hashData $ someDatum @era]
           ]
       poolID = hashKey . vKey . coerceKeyRole $ coldKeys
-      example1UtxoSt = smartUTxOState utxo (Coin 0) (Coin 40) def
+      example1UtxoSt = smartUTxOState utxo totalDeposits (Coin 40) def
+      -- the default DPState 'def' means that the 'totalDeposits' must be 0
+      totalDeposits = (Coin 0)
    in BbodyState (LedgerState example1UtxoSt def) (BlocksMade $ Map.singleton poolID 1)
 
 -- ============================== Helper functions ===============================
@@ -681,6 +694,11 @@ scriptStakeCredFail pf = ScriptHashObj (alwaysFailsHash 1 pf)
 scriptStakeCredSuceed :: forall era. Scriptic era => Proof era -> StakeCredential (EraCrypto era)
 scriptStakeCredSuceed pf = ScriptHashObj (alwaysSucceedsHash 2 pf)
 
+-- | The deposit made when 'scriptStakeCredSuceed' was registered. It is also
+--   The Refund when 'scriptStakeCredSuceed' is de-registered.
+successDeposit :: UM.CompactForm Coin
+successDeposit = UM.CompactCoin 7
+
 hashsize :: forall c. CC.Crypto c => Int
 hashsize = fromIntegral $ sizeHash ([] @(CC.HASH c))
 
@@ -694,7 +712,12 @@ defaultPPs =
   , MaxBlockExUnits $ ExUnits 1000000 1000000
   , ProtocolVersion $ ProtVer (natVersion @5) 0
   , CollateralPercentage 100
+  , KeyDeposit (Coin 2)
+  , PoolDeposit poolDeposit
   ]
+
+poolDeposit :: Coin
+poolDeposit = Coin 5
 
 pp :: Proof era -> PParams era
 pp pf = newPParams pf defaultPPs

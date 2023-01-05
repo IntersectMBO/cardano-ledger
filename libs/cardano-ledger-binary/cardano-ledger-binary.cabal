@@ -116,6 +116,7 @@ library testlib
                    , primitive
                    , QuickCheck
                    , quickcheck-instances
+                   , tasty-hunit
                    , random >= 1.2
                    , text
                    , vector

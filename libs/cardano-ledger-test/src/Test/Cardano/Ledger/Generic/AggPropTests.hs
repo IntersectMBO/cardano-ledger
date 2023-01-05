@@ -23,7 +23,7 @@ import Cardano.Ledger.Shelley.LedgerState (
 import qualified Cardano.Ledger.Shelley.PParams as Shelley (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Rules.Reports (synopsisCoinMap)
 import Cardano.Ledger.TreeDiff (diffExpr)
-import Cardano.Ledger.UMapCompact (View (Rewards), domain)
+import Cardano.Ledger.UMapCompact (View (RewardDeposits), depositView, domain, fromCompact, sumDepositView)
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val ((<+>))
 import Control.State.Transition (STS (..))
@@ -127,7 +127,7 @@ forAllChainTrace p@(Shelley _) n propf =
 
 -- ===========================================================
 
--- | Check that the sum of dsDeposits and the psDepoits are equal to the utxosDeposits
+-- | Check that the sum of Key Deposits and the Pool Depoits are equal to the utxosDeposits
 depositInvariant ::
   SourceSignalTarget (MOCKCHAIN era) ->
   Property
@@ -135,13 +135,13 @@ depositInvariant SourceSignalTarget {source = mockChainSt} =
   let LedgerState {lsUTxOState = utxost, lsDPState = DPState dstate pstate} = (esLState . nesEs . mcsNes) mockChainSt
       allDeposits = utxosDeposited utxost
       sumCoin m = Map.foldl' (<+>) (Coin 0) m
-      keyDeposits = sumCoin (dsDeposits dstate)
+      keyDeposits = fromCompact $ sumDepositView (RewardDeposits (dsUnified dstate))
       poolDeposits = sumCoin (psDeposits pstate)
    in counterexample
         ( unlines
             [ "Deposit invariant fails"
             , "All deposits = " ++ show allDeposits
-            , "Key deposits = " ++ synopsisCoinMap (Just (dsDeposits dstate))
+            , "Key deposits = " ++ synopsisCoinMap (Just (depositView (dsUnified dstate)))
             , "Pool deposits = " ++ synopsisCoinMap (Just (psDeposits pstate))
             ]
         )
@@ -152,8 +152,8 @@ rewardDepositDomainInvariant ::
   Property
 rewardDepositDomainInvariant SourceSignalTarget {source = mockChainSt} =
   let LedgerState {lsDPState = DPState dstate _} = (esLState . nesEs . mcsNes) mockChainSt
-      rewardDomain = domain (Rewards (dsUnified dstate))
-      depositDomain = Map.keysSet (dsDeposits dstate)
+      rewardDomain = domain (RewardDeposits (dsUnified dstate))
+      depositDomain = Map.keysSet (depositView (dsUnified dstate))
    in counterexample
         ( unlines
             [ "Reward-Deposit domain invariant fails"

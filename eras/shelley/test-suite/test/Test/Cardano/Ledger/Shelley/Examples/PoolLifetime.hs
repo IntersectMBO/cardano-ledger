@@ -899,8 +899,9 @@ expectedStEx10 :: forall c. (ExMock (EraCrypto (ShelleyEra c))) => ChainState (S
 expectedStEx10 =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx10 @c))
     . C.newLab blockEx10
-    . C.feesAndKeyRefund feeTx10 Cast.bobSHK
     . C.deregStakeCred Cast.bobSHK
+    . C.feesAndKeyRefund feeTx10 Cast.bobSHK -- We must zero out the refund, before we deregister
+    -- because we loose the refund amount otherwise
     . C.newUTxO txbodyEx10
     $ expectedStEx9
 

@@ -70,7 +70,7 @@ import GHC.Stack (HasCallStack)
 import Lens.Micro (Lens', lens, to, (^.), (^..))
 import Lens.Micro.TH (makeLenses)
 import NoThunks.Class (NoThunks (..))
-import Test.Cardano.Ledger.Binary.TreeDiff (expectExprEqualWithMessage)
+import Test.Cardano.Ledger.Binary.TreeDiff (assertExprEqualWithMessage)
 import Test.Tasty.HUnit (assertFailure, (@?=))
 
 -- Signal and resulting state.
@@ -426,7 +426,7 @@ mSt .- sig = do
   m st
 mSt .->> stExpected = do
   stActual <- mSt
-  liftIO $ expectExprEqualWithMessage "check trace fails" stExpected stActual
+  liftIO $ assertExprEqualWithMessage "Check trace with (.->>) fails" stExpected stActual
   return stActual
 
 -- | Bind the state inside the first argument, and check whether it is equal to

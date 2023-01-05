@@ -19,9 +19,7 @@ module Cardano.Ledger.DPState (
   rewards,
   delegations,
   ptrsMap,
-  payKeyDeposit,
   payPoolDeposit,
-  refundKeyDeposit,
   refundPoolDeposit,
   obligationDPState,
 )
@@ -59,7 +57,7 @@ import Cardano.Ledger.Slot (
   SlotNo (..),
  )
 import Cardano.Ledger.TreeDiff (ToExpr)
-import Cardano.Ledger.UMapCompact (CompactForm, UMap (UMap), View (Delegations, Rewards))
+import Cardano.Ledger.UMapCompact (RDPair (..), UMap (UMap), View (Delegations, RewardDeposits))
 import qualified Cardano.Ledger.UMapCompact as UM
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans
@@ -118,16 +116,14 @@ instance NFData (InstantaneousRewards c)
 data DState c = DState
   { dsUnified :: !(UMap c)
   -- ^ Unified Reward Maps. This contains the reward map (which is the source
-  -- of truth regarding the registered stake credentials, the delegation map,
-  -- and the stake credential pointer map.
+  -- of truth regarding the registered stake credentials, the deposit map,
+  -- the delegation map, and the stake credential pointer map.
   , dsFutureGenDelegs :: !(Map (FutureGenDeleg c) (GenDelegPair c))
   -- ^ Future genesis key delegations
   , dsGenDelegs :: !(GenDelegs c)
   -- ^ Genesis key delegations
   , dsIRewards :: !(InstantaneousRewards c)
   -- ^ Instantaneous Rewards
-  , dsDeposits :: !(Map (Credential 'Staking c) Coin)
-  -- ^ The Deposit map for staking credentials
   }
   deriving (Show, Eq, Generic)
 
@@ -136,26 +132,24 @@ instance NoThunks (InstantaneousRewards c) => NoThunks (DState c)
 instance NFData (InstantaneousRewards c) => NFData (DState c)
 
 instance (CC.Crypto c, ToCBOR (InstantaneousRewards c)) => ToCBOR (DState c) where
-  toCBOR (DState unified fgs gs ir ds) =
-    encodeListLen 5
+  toCBOR (DState unified fgs gs ir) =
+    encodeListLen 4
       <> toCBOR unified
       <> toCBOR fgs
       <> toCBOR gs
       <> toCBOR ir
-      <> toCBOR ds
 
 instance (CC.Crypto c, FromSharedCBOR (InstantaneousRewards c)) => FromSharedCBOR (DState c) where
   type
     Share (DState c) =
       (Interns (Credential 'Staking c), Interns (KeyHash 'StakePool c))
   fromSharedPlusCBOR =
-    decodeRecordNamedT "DState" (const 5) $ do
+    decodeRecordNamedT "DState" (const 4) $ do
       unified <- fromSharedPlusCBOR
       fgs <- lift fromCBOR
       gs <- lift fromCBOR
       ir <- fromSharedPlusLensCBOR _1
-      ds <- fromSharedPlusLensCBOR (_1 . toMemptyLens _1 id)
-      pure $ DState unified fgs gs ir ds
+      pure $ DState unified fgs gs ir
 
 -- | The state used by the POOL rule, which tracks stake pool information.
 data PState c = PState
@@ -255,14 +249,13 @@ instance Default (DState c) where
       Map.empty
       (GenDelegs Map.empty)
       def
-      Map.empty
 
 instance Default (PState c) where
   def =
     PState Map.empty Map.empty Map.empty Map.empty
 
-rewards :: DState c -> View c (Credential 'Staking c) (CompactForm Coin)
-rewards = Rewards . dsUnified
+rewards :: DState c -> View c (Credential 'Staking c) RDPair
+rewards = RewardDeposits . dsUnified
 
 delegations ::
   DState c ->
@@ -274,38 +267,7 @@ ptrsMap :: DState c -> Map Ptr (Credential 'Staking c)
 ptrsMap (DState {dsUnified = UMap _ ptrmap}) = ptrmap
 
 -- ==========================================================
--- Functions that handle Deposits for stake credentials and key hashes.
-
--- | One only pays a deposit on the initial key registration. If the key has been
---   de-registered it should have been removed from the map. If it hasn't been
---   de-registered, then it has no effect on the Deposits. Paying a deposit on
---   a credential already registered should have no effect. (In fact it probably
---   should be an error) So to avoid this problem one should make an explicit
---   check that the credential is not registered in the places where this function is called.
-payKeyDeposit ::
-  HasField "_keyDeposit" (PParams era) Coin =>
-  Credential 'Staking (EraCrypto era) ->
-  PParams era ->
-  DState (EraCrypto era) ->
-  DState (EraCrypto era)
-payKeyDeposit cred pp dstate = dstate {dsDeposits = newStake}
-  where
-    stake = dsDeposits dstate
-    newStake
-      | Map.notMember cred stake = Map.insert cred (getField @"_keyDeposit" pp) stake
-      | otherwise = stake
-
-refundKeyDepositFull :: Credential 'Staking c -> DState c -> (Coin, DState c)
-refundKeyDepositFull cred dstate =
-  (coin, dstate {dsDeposits = newStake})
-  where
-    stake = dsDeposits dstate
-    (coin, newStake) = case Map.lookup cred stake of
-      Just c -> (c, Map.delete cred stake)
-      Nothing -> (mempty, stake)
-
-refundKeyDeposit :: Credential 'Staking c -> DState c -> DState c
-refundKeyDeposit cred dstate = snd (refundKeyDepositFull cred dstate)
+-- Functions that handle Deposits for pool key hashes.
 
 -- | One only pays a deposit on the initial pool registration. So return the
 --   the Deposits unchanged if the keyhash already exists. There are legal
@@ -335,8 +297,8 @@ refundPoolDeposit keyhash pstate = (coin, pstate {psDeposits = newpool})
 --   this should be the same as the utxosDeposited field of the UTxOState. Note that
 --   this does not depend upon the current values of the Key and Pool deposits of the PParams.
 obligationDPState :: DPState era -> Coin
-obligationDPState (DPState DState {dsDeposits = keys} PState {psDeposits = stakePools}) =
-  foldl' (<>) (Coin 0) keys <> foldl' (<>) (Coin 0) stakePools
+obligationDPState (DPState DState {dsUnified = umap} PState {psDeposits = stakePools}) =
+  UM.fromCompact (UM.sumDepositView (RewardDeposits umap)) <> foldl' (<>) (Coin 0) stakePools
 
 -- =====================================================
 

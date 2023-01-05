@@ -45,7 +45,7 @@ import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   DPState (..),
-  DState (dsDeposits),
+  DState (dsUnified),
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
@@ -59,6 +59,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyLedgersPredFailure (..),
   ShelleyUtxowPredFailure (ScriptWitnessNotValidatingUTXOW),
  )
+import qualified Cardano.Ledger.UMapCompact as UM
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import Control.Monad (forM)
@@ -250,7 +251,7 @@ raiseMockError slot (SlotNo next) epochstate pdfs txs GenState {..} =
   let utxo = unUTxO $ (utxosUtxo . lsUTxOState . esLState) epochstate
       _ssPoolParams = (psStakePoolParams . dpsPState . lsDPState . esLState) epochstate
       _pooldeposits = (psDeposits . dpsPState . lsDPState . esLState) epochstate
-      _keydeposits = (dsDeposits . dpsDState . lsDPState . esLState) epochstate
+      _keydeposits = (UM.depositView . dsUnified . dpsDState . lsDPState . esLState) epochstate
    in show $
         vsep
           [ ppString "==================================="

@@ -63,7 +63,6 @@ instance
   , Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era
   , State (Core.EraRule "DELEGS" era) ~ DPState (EraCrypto era)
   , Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era))
-  , Show (State (Core.EraRule "PPUP" era))
   , Core.Tx era ~ AlonzoTx era
   , ProtVerAtMost era 8
   ) =>

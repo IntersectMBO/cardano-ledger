@@ -693,7 +693,7 @@ instance era ~ BabbageEra Mock => Show (GenState era) where
 initialLedgerState :: forall era. Reflect era => GenState era -> LedgerState era
 initialLedgerState gstate = LedgerState utxostate dpstate
   where
-    umap = UM.unify (gsInitialRewards gstate) (gsInitialDelegations gstate) Map.empty
+    umap = UM.unify (Map.map rdpair (gsInitialRewards gstate)) (gsInitialDelegations gstate) Map.empty
     utxostate = smartUTxOState (UTxO (gsInitialUtxo gstate)) deposited (Coin 0) (pPUPStateZero @era)
     dpstate = DPState dstate pstate
     dstate =
@@ -702,12 +702,12 @@ initialLedgerState gstate = LedgerState utxostate dpstate
         Map.empty
         genDelegsZero
         instantaneousRewardsZero
-        (fmap (const keydeposit) (gsInitialRewards gstate))
     pstate = PState pools Map.empty Map.empty (fmap (const pooldeposit) pools)
     -- In a wellformed LedgerState the deposited equals the obligation
     deposited = obligationDPState dpstate
     pools = gsInitialPoolParams gstate
     (keydeposit, pooldeposit) = keyPoolDeposits reify (mPParams (gsModel gstate))
+    rdpair rew = UM.RDPair (UM.compactCoinOrError rew) (UM.compactCoinOrError keydeposit)
 
 -- =============================================
 -- Generators of inter-related items

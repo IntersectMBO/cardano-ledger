@@ -171,7 +171,7 @@ genTx
           constants
           ksIndexedStakeScripts
           ksIndexedStakingKeys
-          ((Map.map UM.fromCompact . UM.unUnify . rewards . dpsDState) dpState)
+          ((Map.map (UM.fromCompact . UM.rdReward) . UM.unUnify . rewards . dpsDState) dpState)
       (update, updateWits) <-
         genUpdate
           constants

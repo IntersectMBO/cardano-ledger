@@ -69,7 +69,7 @@ keyRegistration
           ((UM.member hk (rewards targetSt)) :: Bool)
       , counterexample
           "a newly registered key should have a reward account with 0 balance"
-          (UM.lookup hk (rewards targetSt) == Just mempty)
+          ((UM.rdReward <$> UM.lookup hk (rewards targetSt)) == Just mempty)
       ]
 keyRegistration _ = property ()
 
@@ -116,8 +116,8 @@ keyDelegation _ = property ()
 rewardsSumInvariant :: SourceSignalTarget (ShelleyDELEG era) -> Property
 rewardsSumInvariant
   SourceSignalTarget {source, target} =
-    let sourceRewards = UM.unUnify (rewards source) -- would not use unUnify in production, but tests are OK?
-        targetRewards = UM.unUnify (rewards target)
+    let sourceRewards = UM.compactRewView (dsUnified source)
+        targetRewards = UM.compactRewView (dsUnified target)
         rewardsSum = foldl' (<>) mempty
      in conjoin
           [ counterexample

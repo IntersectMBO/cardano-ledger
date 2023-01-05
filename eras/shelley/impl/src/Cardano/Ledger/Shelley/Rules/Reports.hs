@@ -25,14 +25,14 @@ import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core (Era (..), EraCrypto)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.DPState (
+  DPState (..),
+  InstantaneousRewards (..),
+ )
 import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Keys (KeyHash (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
-import Cardano.Ledger.Shelley.LedgerState (
-  DPState (..),
-  InstantaneousRewards (..),
- )
 import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.UTxO (UTxO (..))
 import Data.Foldable (fold, toList)

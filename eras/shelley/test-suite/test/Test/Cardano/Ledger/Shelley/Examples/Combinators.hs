@@ -97,7 +97,12 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates, ShelleyPParams, ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Rules (emptyInstantaneousRewards)
 import Cardano.Ledger.Shelley.TxBody (MIRPot (..), PoolParams (..), RewardAcnt (..))
-import Cardano.Ledger.UMapCompact (View (Delegations, Ptrs, Rewards), unView)
+import Cardano.Ledger.UMapCompact (
+  RDPair (..),
+  View (Delegations, Ptrs, RewardDeposits),
+  fromCompact,
+  unView,
+ )
 import qualified Cardano.Ledger.UMapCompact as UM
 import Cardano.Ledger.UTxO (UTxO (..), txins, txouts)
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
@@ -177,7 +182,7 @@ newLab b cs =
 -- | = Update Fees and Deposits
 --
 -- Update the fee pot and deposit pot with the new fees and deposits
--- adjust the deposit tables in the DPState.
+-- adjust the deposit tables in the UTxOState and the DPState.
 -- Notes
 --   1) do not give this function duplicates in the 'stakes' or 'pools' inputs.
 --   2) do not use this function when crossing the epoch boundary,
@@ -210,11 +215,11 @@ feesAndDeposits ppEx newFees stakes pools cs = cs {chainNes = nes'}
     -- This strategy DOES NOT WORK if there are duplicate PoolParams in one call
     newcount = foldl' accum 0 pools
     accum n x = if Map.member (ppId x) (psDeposits pstate) then (n :: Integer) else n + 1
-    newDeposits = Map.fromList (map (\cred -> (cred, _keyDeposit ppEx)) stakes)
+    newDeposits = Map.fromList (map (\cred -> (cred, UM.compactCoinOrError (_keyDeposit ppEx))) stakes)
     newPools = Map.fromList (map (\p -> (ppId p, _poolDeposit ppEx)) pools)
     dpstate' =
       DPState
-        dstate {dsDeposits = Map.unionWith (<+>) newDeposits (dsDeposits dstate)}
+        dstate {dsUnified = UM.unionKeyDeposits (RewardDeposits (dsUnified dstate)) newDeposits}
         pstate {psDeposits = Map.unionWith (\old _new -> old) newPools (psDeposits pstate)}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}
@@ -231,7 +236,9 @@ feesAndKeyRefund newFees key cs = cs {chainNes = nes'}
     es = nesEs nes
     ls = esLState es
     DPState dstate pstate = lsDPState ls
-    refund = Map.findWithDefault (Coin 0) key (dsDeposits dstate)
+    refund = case UM.lookup key (RewardDeposits (dsUnified dstate)) of
+      Nothing -> Coin 0
+      Just (RDPair _ ccoin) -> fromCompact ccoin
     utxoSt = lsUTxOState ls
     utxoSt' =
       utxoSt
@@ -241,7 +248,8 @@ feesAndKeyRefund newFees key cs = cs {chainNes = nes'}
     ls' = ls {lsUTxOState = utxoSt', lsDPState = dpstate'}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}
-    dpstate' = DPState dstate {dsDeposits = Map.delete key (dsDeposits dstate)} pstate
+    dpstate' = DPState dstate {dsUnified = UM.adjust zeroD key (RewardDeposits (dsUnified dstate))} pstate
+    zeroD (RDPair x _) = RDPair x (UM.CompactCoin 0)
 
 -- | = Update the UTxO
 --
@@ -272,7 +280,8 @@ newUTxO txb cs = cs {chainNes = nes'}
 
 -- | = New Stake Credential
 --
--- Add a newly registered stake credential
+--   Add a newly registered stake credential, initialize the rdRewards component of the RDPair.
+--   The rdDeposit component of the RDPair is set by 'feesAndDeposits'
 newStakeCred ::
   forall era.
   Credential 'Staking (EraCrypto era) ->
@@ -290,7 +299,7 @@ newStakeCred cred ptr cs = cs {chainNes = nes'}
       ds
         { dsUnified =
             let um0 = dsUnified ds
-                um1 = (UM.insert cred (UM.CompactCoin 0) (Rewards um0))
+                um1 = UM.insert cred (UM.RDPair (UM.CompactCoin 0) (UM.CompactCoin 0)) (RewardDeposits um0)
                 um2 = (Ptrs um1 UM.∪ (ptr, cred))
              in um2
         }
@@ -302,6 +311,9 @@ newStakeCred cred ptr cs = cs {chainNes = nes'}
 -- | = De-Register Stake Credential
 --
 -- De-register a stake credential and all associated data.
+-- Be sure to run 'feesAndKeyRefund' before you run this
+-- because this throws away the stored refund, which then
+-- can't be used to balance the utxosDeposited field in 'feesAndKeyRefund'
 deregStakeCred ::
   forall era.
   Credential 'Staking (EraCrypto era) ->
@@ -318,7 +330,7 @@ deregStakeCred cred cs = cs {chainNes = nes'}
       ds
         { dsUnified =
             let um0 = dsUnified ds
-                um1 = (UM.delete cred (Rewards um0))
+                um1 = (UM.delete cred (RewardDeposits um0))
                 um2 = (Ptrs um1 UM.⋫ Set.singleton cred)
                 um3 = (UM.delete cred (Delegations um2))
              in um3
@@ -474,7 +486,14 @@ reapPool pool cs = cs {chainNes = nes'}
     (rewards', unclaimed) =
       case UM.lookup rewardAddr (rewards ds) of
         Nothing -> (rewards ds, _poolDeposit pp)
-        Just ccoin -> (UM.insert' rewardAddr (UM.addCompact ccoin (UM.compactCoinOrError (_poolDeposit pp))) (rewards ds), Coin 0)
+        Just (UM.RDPair ccoin dep) ->
+          ( UM.insert'
+              rewardAddr
+              (UM.RDPair (UM.addCompact ccoin (UM.compactCoinOrError (_poolDeposit pp))) dep)
+              (rewards ds)
+          , Coin 0
+          )
+    -- FIXME shouldn't we look up the pooldeposit here?
     umap1 = unView rewards'
     umap2 = (UM.Delegations umap1 UM.⋫ Set.singleton kh)
     ds' = ds {dsUnified = umap2}
