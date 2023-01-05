@@ -107,7 +107,7 @@ built by running:
 nix-build
 ```
 
-The LaTeX documents will be places inside directories named `result*`, e.g.:
+The LaTeX documents will be placed inside directories named `result*`, e.g.:
 
 ```shell
 result-2/ledger-spec.pdf
