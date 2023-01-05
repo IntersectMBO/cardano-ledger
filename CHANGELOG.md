@@ -12,6 +12,7 @@ in the naming of release branches.
 
 ### Added
 
+- Add `fromShelleyPParams` to `CanStartFromGenesis`: #3224
 - Add `setMinFeeTx` to  `Cardano.Ledger.Api.Tx`: #3201
 - Add ToExpr (from tree-diff) instances for all types inside NewEpochState
   - Add module Cardano.Ledger.TreeDiff in cardano-binary. Includes all needed operations, classes, and orphan instances
@@ -61,6 +62,8 @@ in the naming of release branches.
 
 
 - Split `Cardano.Ledger.Alonzo.Data` module into `Cardano.Ledger.Alonzo.Scripts.Data` and `Cardano.Ledeger.Alonzo.TxAuxData`: #3229
+- Changed `ConwayGenesis`, by adding `AlonzoGenesis` to it: #3224
+- Switch parameterization of `ShelleyGenesis` on crypto, i.e. `ShelleyGenesis era` -> `ShelleyGenesis c`: #3224
 - Moved `KeyPair` type and related functions to a new `KeyPair` module in `cardano-ledger-core:testlib` #3210
 - Changed the representaion of  key deposits. Deleted the field dsDeposits. Moved it to the UMap. Added some new functions to UMapCompact module to accomodate changes.
 - Replace `NominalDiffTime` with a `newtype` wrapper `NominalDiffTimeMicro`. Remove use of `NominalDiffTime`, as we don't use its full precision. #3208
@@ -235,6 +238,8 @@ in the naming of release branches.
 
 ### Removed
 
+- Removed `Cardano.Ledger.Babbage.Genesis` module, since now it is completely empty: #3224
+- `TranslateEra` instance for `ShelleyGenesis`: #3224
 - Deprecated `Cardano.Ledger.CompactAddress` module in favor of `Cardano.Ledger.Address`: #3218
 - Removed deprecated `Cardano.Ledger.Shelley.CompactAddr`: #3218
 - Removed depracted type synonyms: `ValidatedTx`, `TxOut`, `TxBody`, `TxSeq`, `Script`,

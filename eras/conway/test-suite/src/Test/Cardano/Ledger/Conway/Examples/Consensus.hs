@@ -69,6 +69,7 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import qualified PlutusTx as Plutus
+import Test.Cardano.Ledger.Alonzo.Examples.Consensus (exampleAlonzoGenesis)
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr, mkWitnessesVKey)
 import qualified Test.Cardano.Ledger.Mary.Examples.Consensus as MarySLE
@@ -197,7 +198,7 @@ exampleTx =
 exampleTransactionInBlock :: AlonzoTx Conway
 exampleTransactionInBlock = AlonzoTx b w (IsValid True) a
   where
-    (ShelleyTx b w a) = exampleTx
+    ShelleyTx b w a = exampleTx
 
 exampleConwayNewEpochState :: NewEpochState Conway
 exampleConwayNewEpochState =
@@ -208,4 +209,4 @@ exampleConwayNewEpochState =
 
 exampleConwayGenesis :: ConwayGenesis c
 exampleConwayGenesis =
-  ConwayGenesis (GenDelegs Map.empty)
+  ConwayGenesis exampleAlonzoGenesis (GenDelegs Map.empty)

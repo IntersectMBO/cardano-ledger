@@ -126,7 +126,7 @@ bogusNewEpochState =
     (PoolDistr Map.empty)
     def
 
-mkGlobals :: ShelleyGenesis CurrentEra -> PParams CurrentEra -> Globals
+mkGlobals :: ShelleyGenesis StandardCrypto -> PParams CurrentEra -> Globals
 mkGlobals genesis pp =
   mkShelleyGlobals genesis epochInfoE majorPParamsVer
   where
@@ -264,7 +264,7 @@ getComplete = \case
 -- ==================================================================
 
 -- | The inital ShelleyGenesis structure, encoded in json format as a Haskell String
-shelleyGenesis :: ShelleyGenesis CurrentEra
+shelleyGenesis :: ShelleyGenesis StandardCrypto
 shelleyGenesis =
   either error id $
     Aeson.eitherDecode $

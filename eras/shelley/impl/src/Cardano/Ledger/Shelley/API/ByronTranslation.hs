@@ -21,9 +21,9 @@ import qualified Cardano.Crypto.Hashing as Hashing
 import Cardano.Ledger.Address (fromBoostrapCompactAddress, isBootstrapRedeemer)
 import Cardano.Ledger.BaseTypes (BlocksMade (..), TxIx (..))
 import Cardano.Ledger.Coin (CompactForm (CompactCoin))
-import Cardano.Ledger.Core
-import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.EpochBoundary
+import Cardano.Ledger.Core (bootAddrTxOutF)
+import Cardano.Ledger.Crypto (Crypto (ADDRHASH))
+import Cardano.Ledger.EpochBoundary (emptySnapShots)
 import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.Types
@@ -42,7 +42,7 @@ import Lens.Micro.Extras (view)
 -- We don't care about the type that is hashed, which will differ going from
 -- Byron to Shelley, we just use the hashes as IDs.
 translateTxIdByronToShelley ::
-  (CC.Crypto c, CC.ADDRHASH c ~ Crypto.Blake2b_224) =>
+  (Crypto c, ADDRHASH c ~ Crypto.Blake2b_224) =>
   Byron.TxId ->
   TxId c
 translateTxIdByronToShelley =
@@ -66,7 +66,7 @@ translateCompactTxOutByronToShelley (Byron.CompactTxOut compactAddr amount) =
     (CompactCoin (Byron.unsafeGetLovelace amount))
 
 translateCompactTxInByronToShelley ::
-  (CC.Crypto c, CC.ADDRHASH c ~ Crypto.Blake2b_224) =>
+  (Crypto c, ADDRHASH c ~ Crypto.Blake2b_224) =>
   Byron.CompactTxIn ->
   TxIn c
 translateCompactTxInByronToShelley (Byron.CompactTxInUtxo compactTxId idx) =
@@ -76,7 +76,7 @@ translateCompactTxInByronToShelley (Byron.CompactTxInUtxo compactTxId idx) =
 
 translateUTxOByronToShelley ::
   forall c.
-  (CC.Crypto c, CC.ADDRHASH c ~ Crypto.Blake2b_224) =>
+  (Crypto c, ADDRHASH c ~ Crypto.Blake2b_224) =>
   Byron.UTxO ->
   UTxO (ShelleyEra c)
 translateUTxOByronToShelley (Byron.UTxO utxoByron) =
@@ -90,8 +90,8 @@ translateUTxOByronToShelley (Byron.UTxO utxoByron) =
 
 translateToShelleyLedgerState ::
   forall c.
-  (CC.Crypto c, CC.ADDRHASH c ~ Crypto.Blake2b_224) =>
-  ShelleyGenesis (ShelleyEra c) ->
+  (Crypto c, ADDRHASH c ~ Crypto.Blake2b_224) =>
+  ShelleyGenesis c ->
   EpochNo ->
   Byron.ChainValidationState ->
   NewEpochState (ShelleyEra c)

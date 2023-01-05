@@ -14,6 +14,7 @@
 module Cardano.Ledger.Alonzo.Genesis (
   AlonzoGenesis (..),
   extendPPWithGenesis,
+  alonzoGenesisAesonPairs,
 )
 where
 
@@ -273,17 +274,19 @@ instance FromJSON AlonzoGenesis where
         }
 
 instance ToJSON AlonzoGenesis where
-  toJSON v =
-    object
-      [ "lovelacePerUTxOWord" .= coinsPerUTxOWord v
-      , "costModels" .= costmdls v
-      , "executionPrices" .= prices v
-      , "maxTxExUnits" .= maxTxExUnits v
-      , "maxBlockExUnits" .= maxBlockExUnits v
-      , "maxValueSize" .= maxValSize v
-      , "collateralPercentage" .= collateralPercentage v
-      , "maxCollateralInputs" .= maxCollateralInputs v
-      ]
+  toJSON = object . alonzoGenesisAesonPairs
+
+alonzoGenesisAesonPairs :: Aeson.KeyValue a => AlonzoGenesis -> [a]
+alonzoGenesisAesonPairs ag =
+  [ "lovelacePerUTxOWord" .= coinsPerUTxOWord ag
+  , "costModels" .= costmdls ag
+  , "executionPrices" .= prices ag
+  , "maxTxExUnits" .= maxTxExUnits ag
+  , "maxBlockExUnits" .= maxBlockExUnits ag
+  , "maxValueSize" .= maxValSize ag
+  , "collateralPercentage" .= collateralPercentage ag
+  , "maxCollateralInputs" .= maxCollateralInputs ag
+  ]
 
 instance ToJSON (AlonzoPParams era) where
   toJSON pp =

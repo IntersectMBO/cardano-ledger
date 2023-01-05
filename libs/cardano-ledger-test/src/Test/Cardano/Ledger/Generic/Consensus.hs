@@ -37,7 +37,6 @@ import Cardano.Ledger.Babbage.Translation ()
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), Datum (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
-import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import qualified Cardano.Ledger.Conway.PParams as ConwayPP
 import Cardano.Ledger.Conway.Translation ()
 import Cardano.Ledger.Core as Core
@@ -87,6 +86,7 @@ import Test.Cardano.Ledger.Alonzo.PlutusScripts (testingCostModelV1)
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import qualified Test.Cardano.Ledger.Babbage.Examples.Consensus as Old (ledgerExamplesBabbage)
 import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
+import Test.Cardano.Ledger.Conway.Examples.Consensus (exampleConwayGenesis)
 import qualified Test.Cardano.Ledger.Conway.Examples.Consensus as Old (ledgerExamplesConway)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessesVKey)
 import Test.Cardano.Ledger.Generic.Fields (
@@ -1057,9 +1057,6 @@ ledgerExamplesBabbage =
     exampleAlonzoGenesis
 
 -- ============================================================
-
-exampleConwayGenesis :: ConwayGenesis crypto
-exampleConwayGenesis = ConwayGenesis (GenDelegs Map.empty)
 
 ledgerExamplesConway :: ShelleyLedgerExamples (ConwayEra StandardCrypto)
 ledgerExamplesConway =

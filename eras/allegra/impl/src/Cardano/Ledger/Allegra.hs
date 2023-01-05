@@ -17,6 +17,7 @@ import Cardano.Ledger.Allegra.Translation ()
 import Cardano.Ledger.Allegra.Tx ()
 import Cardano.Ledger.Allegra.TxSeq ()
 import Cardano.Ledger.Allegra.UTxO ()
+import Cardano.Ledger.Core (translateEra')
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys (DSignable)
@@ -38,4 +39,4 @@ instance
   ApplyBlock (AllegraEra c)
 
 instance Crypto c => CanStartFromGenesis (AllegraEra c) where
-  initialState = initialStateFromGenesis const
+  fromShelleyPParams = translateEra'

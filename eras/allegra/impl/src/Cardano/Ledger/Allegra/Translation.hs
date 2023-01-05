@@ -74,27 +74,6 @@ instance forall c. Crypto c => TranslateEra (AllegraEra c) ShelleyTx where
   type TranslationError (AllegraEra c) ShelleyTx = DecoderError
   translateEra _ctx = translateEraThroughCBOR "ShelleyTx"
 
-instance Crypto c => TranslateEra (AllegraEra c) ShelleyGenesis where
-  translateEra ctxt genesis =
-    return
-      ShelleyGenesis
-        { sgSystemStart = sgSystemStart genesis
-        , sgNetworkMagic = sgNetworkMagic genesis
-        , sgNetworkId = sgNetworkId genesis
-        , sgActiveSlotsCoeff = sgActiveSlotsCoeff genesis
-        , sgSecurityParam = sgSecurityParam genesis
-        , sgEpochLength = sgEpochLength genesis
-        , sgSlotsPerKESPeriod = sgSlotsPerKESPeriod genesis
-        , sgMaxKESEvolutions = sgMaxKESEvolutions genesis
-        , sgSlotLength = sgSlotLength genesis
-        , sgUpdateQuorum = sgUpdateQuorum genesis
-        , sgMaxLovelaceSupply = sgMaxLovelaceSupply genesis
-        , sgProtocolParams = translateEra' ctxt (sgProtocolParams genesis)
-        , sgGenDelegs = sgGenDelegs genesis
-        , sgInitialFunds = sgInitialFunds genesis
-        , sgStaking = sgStaking genesis
-        }
-
 --------------------------------------------------------------------------------
 -- Auxiliary instances and functions
 --------------------------------------------------------------------------------

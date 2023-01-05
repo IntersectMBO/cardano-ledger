@@ -36,6 +36,7 @@ import Cardano.Ledger.Core (
  )
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (Crypto, DSIGN)
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API hiding (SignedDSIGN)
 import Cardano.Ledger.Shelley.LedgerState (FutureGenDeleg, StashedAVVMAddresses)
 import Cardano.Ledger.Shelley.PoolRank (
@@ -437,8 +438,8 @@ instance Era era => Arbitrary (MultiSig era) where
   arbitrary = sizedMultiSig maxMultiSigDepth
 
 instance
-  (Mock (EraCrypto era), Arbitrary (ShelleyPParams era)) =>
-  Arbitrary (ShelleyGenesis era)
+  (Mock c, Arbitrary (Core.PParams (ShelleyEra c))) =>
+  Arbitrary (ShelleyGenesis c)
   where
   arbitrary = do
     sgSystemStart <- arbitrary
