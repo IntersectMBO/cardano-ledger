@@ -120,8 +120,8 @@ import Cardano.Ledger.Shelley.TxBody (
   ShelleyTxBody (..),
   ShelleyTxOut (..),
   StakePoolRelay (..),
-  Wdrl (..),
   WitVKey (..),
+  Withdrawals (..),
   pmHash,
   pmUrl,
   ppCost,
@@ -253,7 +253,7 @@ testTxb =
     Set.empty
     StrictSeq.empty
     StrictSeq.empty
-    (Wdrl Map.empty)
+    (Withdrawals Map.empty)
     (Coin 0)
     (SlotNo 0)
     SNothing
@@ -786,7 +786,7 @@ tests =
                 (Set.fromList [genesisTxIn1])
                 (StrictSeq.singleton tout)
                 StrictSeq.empty
-                (Wdrl Map.empty)
+                (Withdrawals Map.empty)
                 (Coin 9)
                 (SlotNo 500)
                 SNothing
@@ -822,7 +822,7 @@ tests =
                 (Set.fromList [genesisTxIn1])
                 (StrictSeq.singleton tout)
                 StrictSeq.Empty
-                (Wdrl ras)
+                (Withdrawals ras)
                 (Coin 9)
                 (SlotNo 500)
                 (SJust up)
@@ -864,7 +864,7 @@ tests =
                 (Set.fromList [genesisTxIn1])
                 (StrictSeq.singleton tout)
                 (StrictSeq.fromList [reg])
-                (Wdrl ras)
+                (Withdrawals ras)
                 (Coin 9)
                 (SlotNo 500)
                 (SJust up)
@@ -897,7 +897,7 @@ tests =
               (Set.fromList [TxIn genesisId (mkTxIxPartial 1)])
               (StrictSeq.singleton $ ShelleyTxOut @C testAddrE (Coin 2))
               StrictSeq.empty
-              (Wdrl Map.empty)
+              (Withdrawals Map.empty)
               (Coin 9)
               (SlotNo 500)
               SNothing
@@ -926,7 +926,7 @@ tests =
               (Set.fromList [genesisTxIn1])
               (StrictSeq.singleton $ ShelleyTxOut @C testAddrE (Coin 2))
               StrictSeq.empty
-              (Wdrl Map.empty)
+              (Withdrawals Map.empty)
               (Coin 9)
               (SlotNo 500)
               SNothing
@@ -1067,7 +1067,7 @@ tests =
               (Set.fromList [genesisTxIn1])
               tout
               StrictSeq.empty
-              (Wdrl Map.empty)
+              (Withdrawals Map.empty)
               (Coin 9)
               (SlotNo s)
               SNothing

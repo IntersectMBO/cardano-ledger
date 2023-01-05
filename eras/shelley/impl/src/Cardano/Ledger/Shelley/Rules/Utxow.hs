@@ -94,7 +94,7 @@ import Cardano.Ledger.Shelley.TxBody (
   ShelleyEraTxBody (..),
   WitVKey (..),
   getRwdCred,
-  unWdrl,
+  unWithdrawals,
  )
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded (..))
 import Cardano.Ledger.UTxO (
@@ -493,7 +493,7 @@ witsVKeyNeeded utxo' tx genDelegs =
             Nothing -> ans
 
     wdrlAuthors :: Set (KeyHash 'Witness (EraCrypto era))
-    wdrlAuthors = Map.foldrWithKey accum Set.empty (unWdrl (txBody ^. wdrlsTxBodyL))
+    wdrlAuthors = Map.foldrWithKey accum Set.empty (unWithdrawals (txBody ^. withdrawalsTxBodyL))
       where
         accum key _ ans = Set.union (extractKeyHashWitnessSet [getRwdCred key]) ans
     owners :: Set (KeyHash 'Witness (EraCrypto era))

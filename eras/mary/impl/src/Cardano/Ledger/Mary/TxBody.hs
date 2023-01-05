@@ -27,7 +27,7 @@ module Cardano.Ledger.Mary.TxBody (
     mtbTxFee,
     mtbUpdate,
     mtbValidityInterval,
-    mtbWdrls,
+    mtbWithdrawals,
     mtbMint
   ),
   MaryEraTxBody (..),
@@ -142,7 +142,7 @@ pattern MaryTxBody ::
   Set.Set (TxIn (EraCrypto era)) ->
   StrictSeq (TxOut era) ->
   StrictSeq (DCert (EraCrypto era)) ->
-  Wdrl (EraCrypto era) ->
+  Withdrawals (EraCrypto era) ->
   Coin ->
   ValidityInterval ->
   StrictMaybe (Update era) ->
@@ -153,7 +153,7 @@ pattern MaryTxBody
   { mtbInputs
   , mtbOutputs
   , mtbCerts
-  , mtbWdrls
+  , mtbWithdrawals
   , mtbTxFee
   , mtbValidityInterval
   , mtbUpdate
@@ -166,7 +166,7 @@ pattern MaryTxBody
             { atbrInputs = mtbInputs
             , atbrOutputs = mtbOutputs
             , atbrCerts = mtbCerts
-            , atbrWdrls = mtbWdrls
+            , atbrWithdrawals = mtbWithdrawals
             , atbrTxFee = mtbTxFee
             , atbrValidityInterval = mtbValidityInterval
             , atbrUpdate = mtbUpdate
@@ -180,7 +180,7 @@ pattern MaryTxBody
       inputs
       outputs
       certs
-      wdrls
+      withdrawals
       txFee
       validityInterval
       update
@@ -192,7 +192,7 @@ pattern MaryTxBody
               { atbrInputs = inputs
               , atbrOutputs = outputs
               , atbrCerts = certs
-              , atbrWdrls = wdrls
+              , atbrWithdrawals = withdrawals
               , atbrTxFee = txFee
               , atbrValidityInterval = validityInterval
               , atbrUpdate = update
@@ -244,12 +244,12 @@ instance Crypto c => EraTxBody (MaryEra c) where
   allInputsTxBodyF = inputsTxBodyL
   {-# INLINEABLE allInputsTxBodyF #-}
 
+  withdrawalsTxBodyL =
+    lensMaryTxBodyRaw atbrWithdrawals $ \txBodyRaw withdrawals -> txBodyRaw {atbrWithdrawals = withdrawals}
+  {-# INLINEABLE withdrawalsTxBodyL #-}
+
 instance Crypto c => ShelleyEraTxBody (MaryEra c) where
   {-# SPECIALIZE instance ShelleyEraTxBody (MaryEra StandardCrypto) #-}
-
-  wdrlsTxBodyL =
-    lensMaryTxBodyRaw atbrWdrls $ \txBodyRaw wdrls -> txBodyRaw {atbrWdrls = wdrls}
-  {-# INLINEABLE wdrlsTxBodyL #-}
 
   ttlTxBodyL = notSupportedInThisEraL
   {-# INLINEABLE ttlTxBodyL #-}

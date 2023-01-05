@@ -23,7 +23,7 @@ import Cardano.Ledger.Mary (Mary)
 import Cardano.Ledger.Mary.TxBody (MaryEraTxBody (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.MemoBytes (getMemoRawBytes)
-import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), Wdrl (..))
+import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), Withdrawals (..))
 import Cardano.Slotting.Slot (SlotNo (..))
 import qualified Data.ByteString.Short as Short
 import qualified Data.Map.Strict as Map
@@ -59,7 +59,7 @@ fieldTests =
     [ testCase "inputs" (assertEqual "inputs" (txM ^. inputsTxBodyL) empty)
     , testCase "outputs" (assertEqual "outputs" (txM ^. outputsTxBodyL) StrictSeq.empty)
     , testCase "certs" (assertEqual "certs" (txM ^. certsTxBodyG) StrictSeq.empty)
-    , testCase "wdrls" (assertEqual "wdrls" (txM ^. wdrlsTxBodyL) (Wdrl Map.empty))
+    , testCase "withdrawals" (assertEqual "withdrawals" (txM ^. withdrawalsTxBodyL) (Withdrawals Map.empty))
     , testCase "txfree" (assertEqual "txfree" (txM ^. feeTxBodyL) (Coin 6))
     , testCase "vldt" $
         assertEqual "vldt" (txM ^. vldtTxBodyL) $

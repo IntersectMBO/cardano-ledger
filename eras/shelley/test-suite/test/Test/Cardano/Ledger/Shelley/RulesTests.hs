@@ -29,7 +29,7 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate (..), RewardUpdate (..))
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))
-import Cardano.Ledger.Shelley.TxBody (RewardAcnt (..), Wdrl (..))
+import Cardano.Ledger.Shelley.TxBody (RewardAcnt (..), Withdrawals (..))
 import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Protocol.TPraos.API (GetLedgerView (..))
 import Control.State.Transition.Extended (TRC (..))
@@ -123,7 +123,7 @@ testAliceSignsAlone =
         @C_Crypto
         [(aliceOnly, Coin 11000)]
         [aliceOnly]
-        (Wdrl Map.empty)
+        (Withdrawals Map.empty)
         (Coin 0)
         [asWitness Cast.alicePay]
     s = "problem: " ++ show utxoSt'
@@ -137,7 +137,7 @@ testAliceDoesntSign =
         @C_Crypto
         [(aliceOnly, Coin 11000)]
         [aliceOnly]
-        (Wdrl Map.empty)
+        (Withdrawals Map.empty)
         (Coin 0)
         [asWitness Cast.bobPay, asWitness Cast.carlPay, asWitness Cast.dariaPay]
 
@@ -150,7 +150,7 @@ testEverybodySigns =
         @C_Crypto
         [(aliceOnly, Coin 11000)]
         [aliceOnly]
-        (Wdrl Map.empty)
+        (Withdrawals Map.empty)
         (Coin 0)
         [ asWitness Cast.alicePay
         , asWitness Cast.bobPay
@@ -168,7 +168,7 @@ testWrongScript =
         @C_Crypto
         [(aliceOnly, Coin 11000)]
         [aliceOrBob]
-        (Wdrl Map.empty)
+        (Withdrawals Map.empty)
         (Coin 0)
         [asWitness Cast.alicePay, asWitness Cast.bobPay]
 
@@ -181,7 +181,7 @@ testAliceOrBob =
         @C_Crypto
         [(aliceOrBob, Coin 11000)]
         [aliceOrBob]
-        (Wdrl Map.empty)
+        (Withdrawals Map.empty)
         (Coin 0)
         [asWitness Cast.alicePay]
     s = "problem: " ++ show utxoSt'
@@ -195,7 +195,7 @@ testAliceOrBob' =
         @C_Crypto
         [(aliceOrBob, Coin 11000)]
         [aliceOrBob]
-        (Wdrl Map.empty)
+        (Withdrawals Map.empty)
         (Coin 0)
         [asWitness Cast.bobPay]
     s = "problem: " ++ show utxoSt'
@@ -209,7 +209,7 @@ testAliceAndBob =
         @C_Crypto
         [(aliceAndBob, Coin 11000)]
         [aliceAndBob]
-        (Wdrl Map.empty)
+        (Withdrawals Map.empty)
         (Coin 0)
         [asWitness Cast.alicePay, asWitness Cast.bobPay]
     s = "problem: " ++ show utxoSt'
@@ -227,7 +227,7 @@ testAliceAndBob' =
         @C_Crypto
         [(aliceAndBob, Coin 11000)]
         [aliceAndBob]
-        (Wdrl Map.empty)
+        (Withdrawals Map.empty)
         (Coin 0)
         [asWitness Cast.alicePay]
 
@@ -244,7 +244,7 @@ testAliceAndBob'' =
         @C_Crypto
         [(aliceAndBob, Coin 11000)]
         [aliceAndBob]
-        (Wdrl Map.empty)
+        (Withdrawals Map.empty)
         (Coin 0)
         [asWitness Cast.bobPay]
 
@@ -257,7 +257,7 @@ testAliceAndBobOrCarl =
         @C_Crypto
         [(aliceAndBobOrCarl, Coin 11000)]
         [aliceAndBobOrCarl]
-        (Wdrl Map.empty)
+        (Withdrawals Map.empty)
         (Coin 0)
         [asWitness Cast.alicePay, asWitness Cast.bobPay]
     s = "problem: " ++ show utxoSt'
@@ -271,7 +271,7 @@ testAliceAndBobOrCarl' =
         @C_Crypto
         [(aliceAndBobOrCarl, Coin 11000)]
         [aliceAndBobOrCarl]
-        (Wdrl Map.empty)
+        (Withdrawals Map.empty)
         (Coin 0)
         [asWitness Cast.carlPay]
     s = "problem: " ++ show utxoSt'
@@ -285,7 +285,7 @@ testAliceAndBobOrCarlAndDaria =
         @C_Crypto
         [(aliceAndBobOrCarlAndDaria, Coin 11000)]
         [aliceAndBobOrCarlAndDaria]
-        (Wdrl Map.empty)
+        (Withdrawals Map.empty)
         (Coin 0)
         [asWitness Cast.alicePay, asWitness Cast.bobPay]
     s = "problem: " ++ show utxoSt'
@@ -299,7 +299,7 @@ testAliceAndBobOrCarlAndDaria' =
         @C_Crypto
         [(aliceAndBobOrCarlAndDaria, Coin 11000)]
         [aliceAndBobOrCarlAndDaria]
-        (Wdrl Map.empty)
+        (Withdrawals Map.empty)
         (Coin 0)
         [asWitness Cast.carlPay, asWitness Cast.dariaPay]
     s = "problem: " ++ show utxoSt'
@@ -313,7 +313,7 @@ testAliceAndBobOrCarlOrDaria =
         @C_Crypto
         [(aliceAndBobOrCarlOrDaria, Coin 11000)]
         [aliceAndBobOrCarlOrDaria]
-        (Wdrl Map.empty)
+        (Withdrawals Map.empty)
         (Coin 0)
         [asWitness Cast.alicePay, asWitness Cast.bobPay]
     s = "problem: " ++ show utxoSt'
@@ -327,7 +327,7 @@ testAliceAndBobOrCarlOrDaria' =
         @C_Crypto
         [(aliceAndBobOrCarlOrDaria, Coin 11000)]
         [aliceAndBobOrCarlOrDaria]
-        (Wdrl Map.empty)
+        (Withdrawals Map.empty)
         (Coin 0)
         [asWitness Cast.carlPay]
     s = "problem: " ++ show utxoSt'
@@ -341,7 +341,7 @@ testAliceAndBobOrCarlOrDaria'' =
         @C_Crypto
         [(aliceAndBobOrCarlOrDaria, Coin 11000)]
         [aliceAndBobOrCarlOrDaria]
-        (Wdrl Map.empty)
+        (Withdrawals Map.empty)
         (Coin 0)
         [asWitness Cast.dariaPay]
     s = "problem: " ++ show utxoSt'
@@ -361,7 +361,7 @@ testTwoScripts =
         [ aliceOrBob
         , aliceAndBobOrCarl
         ]
-        (Wdrl Map.empty)
+        (Withdrawals Map.empty)
         (Coin 0)
         [asWitness Cast.bobPay, asWitness Cast.carlPay]
     s = "problem: " ++ show utxoSt'
@@ -383,7 +383,7 @@ testTwoScripts' =
         [ aliceAndBob
         , aliceAndBobOrCarl
         ]
-        (Wdrl Map.empty)
+        (Withdrawals Map.empty)
         (Coin 0)
         [asWitness Cast.bobPay, asWitness Cast.carlPay]
 
@@ -398,7 +398,7 @@ testScriptAndSKey =
         @C_Crypto
         [(aliceAndBob, Coin 10000)]
         [aliceAndBob]
-        (Wdrl Map.empty)
+        (Withdrawals Map.empty)
         (Coin 1000)
         [asWitness Cast.alicePay, asWitness Cast.bobPay]
     s = "problem: " ++ show utxoSt'
@@ -416,7 +416,7 @@ testScriptAndSKey' =
         @C_Crypto
         [(aliceOrBob, Coin 10000)]
         [aliceOrBob]
-        (Wdrl Map.empty)
+        (Withdrawals Map.empty)
         (Coin 1000)
         [asWitness Cast.bobPay]
     wits = Set.singleton $ asWitness $ hashKey $ vKey Cast.alicePay
@@ -430,7 +430,7 @@ testScriptAndSKey'' =
         @C_Crypto
         [(aliceOrBob, Coin 10000)]
         [aliceOrBob]
-        (Wdrl Map.empty)
+        (Withdrawals Map.empty)
         (Coin 1000)
         [asWitness Cast.alicePay]
     s = "problem: " ++ show utxoSt'
@@ -444,7 +444,7 @@ testScriptAndSKey''' =
         @C_Crypto
         [(aliceAndBobOrCarl, Coin 10000)]
         [aliceAndBobOrCarl]
-        (Wdrl Map.empty)
+        (Withdrawals Map.empty)
         (Coin 1000)
         [asWitness Cast.alicePay, asWitness Cast.carlPay]
     s = "problem: " ++ show utxoSt'
@@ -460,7 +460,7 @@ testRwdAliceSignsAlone =
         @C_Crypto
         [(aliceOnly, Coin 11000)]
         [aliceOnly]
-        ( Wdrl $
+        ( Withdrawals $
             Map.singleton
               ( RewardAcnt
                   Testnet
@@ -485,7 +485,7 @@ testRwdAliceSignsAlone' =
         @C_Crypto
         [(aliceOnly, Coin 11000)]
         [aliceOnly, bobOnly]
-        ( Wdrl $
+        ( Withdrawals $
             Map.singleton
               ( RewardAcnt
                   Testnet
@@ -507,7 +507,7 @@ testRwdAliceSignsAlone'' =
         @C_Crypto
         [(aliceOnly, Coin 11000)]
         [aliceOnly, bobOnly]
-        ( Wdrl $
+        ( Withdrawals $
             Map.singleton
               ( RewardAcnt
                   Testnet
@@ -536,7 +536,7 @@ testRwdAliceSignsAlone''' =
         @C_Crypto
         [(aliceOnly, Coin 11000)]
         [aliceOnly]
-        ( Wdrl $
+        ( Withdrawals $
             Map.singleton
               (RewardAcnt Testnet (ScriptHashObj $ hashScript @C bobOnly))
               (Coin 1000)

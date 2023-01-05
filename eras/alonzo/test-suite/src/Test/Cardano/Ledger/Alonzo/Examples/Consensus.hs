@@ -102,7 +102,7 @@ exampleTxBodyAlonzo =
         ]
     )
     SLE.exampleCerts -- txcerts
-    ( Wdrl $
+    ( Withdrawals $
         Map.singleton
           (RewardAcnt Testnet (SLE.keyToCredential SLE.exampleStakeKey))
           (Coin 100) -- txwdrls

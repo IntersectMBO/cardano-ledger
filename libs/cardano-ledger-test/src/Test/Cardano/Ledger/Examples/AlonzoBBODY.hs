@@ -14,7 +14,7 @@
 module Test.Cardano.Ledger.Examples.AlonzoBBODY (tests) where
 
 import Cardano.Crypto.Hash.Class (sizeHash)
-import Cardano.Ledger.Address (Addr (..))
+import Cardano.Ledger.Address (Addr (..), Withdrawals (..))
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoBbodyPredFailure (..),
@@ -79,7 +79,6 @@ import Cardano.Ledger.Shelley.TxBody (
   PoolCert (..),
   PoolMetadata (..),
   RewardAcnt (..),
-  Wdrl (..),
  )
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UMapCompact (View (RewardDeposits))
@@ -328,8 +327,8 @@ validatingBodyWithWithdrawal pf =
     , Collateral' [mkGenesisTxIn 15]
     , Outputs' [validatingTxWithWithdrawalOut pf]
     , Txfee (Coin 5)
-    , Wdrls
-        ( Wdrl $
+    , Withdrawals'
+        ( Withdrawals $
             Map.singleton
               (RewardAcnt Testnet (scriptStakeCredSuceed pf))
               (Coin 1000)
@@ -371,8 +370,8 @@ notValidatingTxWithWithdrawal pf =
         , Collateral' [mkGenesisTxIn 16]
         , Outputs' [newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 1995)]]
         , Txfee (Coin 5)
-        , Wdrls
-            ( Wdrl $
+        , Withdrawals'
+            ( Withdrawals $
                 Map.singleton
                   (RewardAcnt Testnet (scriptStakeCredFail pf))
                   (Coin 1000)

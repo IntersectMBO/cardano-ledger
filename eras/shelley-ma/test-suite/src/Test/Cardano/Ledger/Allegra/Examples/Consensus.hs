@@ -45,7 +45,7 @@ exampleAllegraTxBody value =
     & outputsTxBodyL
       .~ StrictSeq.singleton (mkBasicTxOut (mkAddr (examplePayKey, exampleStakeKey)) value)
     & certsTxBodyL .~ exampleCerts
-    & wdrlsTxBodyL .~ exampleWithdrawals
+    & withdrawalsTxBodyL .~ exampleWithdrawals
     & feeTxBodyL .~ Coin 3
     & vldtTxBodyL .~ ValidityInterval (SJust (SlotNo 2)) (SJust (SlotNo 4))
     & updateTxBodyL .~ SJust (Update exampleProposedPPUpdates (EpochNo 0))

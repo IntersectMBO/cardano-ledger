@@ -73,7 +73,7 @@ txb i o =
     mempty -- collateral
     (StrictSeq.singleton o) -- outputs
     mempty -- certs
-    (Wdrl mempty) -- withdrawals
+    (Withdrawals mempty) -- withdrawals
     (Coin 2) -- txfee
     (ValidityInterval SNothing SNothing) -- validity interval
     SNothing -- updates

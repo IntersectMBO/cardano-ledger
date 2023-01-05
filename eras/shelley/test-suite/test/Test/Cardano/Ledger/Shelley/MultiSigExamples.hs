@@ -62,7 +62,7 @@ import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), TxId)
 import Cardano.Ledger.Shelley.TxAuxData (ShelleyTxAuxData)
 import Cardano.Ledger.Shelley.TxBody (
   ShelleyTxBody (..),
-  Wdrl (..),
+  Withdrawals (..),
  )
 import Cardano.Ledger.Shelley.TxWits (addrWits, scriptWits)
 import Cardano.Ledger.Slot (SlotNo (..))
@@ -144,7 +144,7 @@ initTxBody addrs =
     (Set.fromList [TxIn genesisId minBound, TxIn genesisId (mkTxIxPartial 1)])
     (StrictSeq.fromList $ map (uncurry mkBasicTxOut) addrs)
     Empty
-    (Wdrl Map.empty)
+    (Withdrawals Map.empty)
     (Coin 0)
     (SlotNo 0)
     SNothing
@@ -154,7 +154,7 @@ makeTxBody ::
   EraTxOut era =>
   [TxIn (EraCrypto era)] ->
   [(Addr (EraCrypto era), Value era)] ->
-  Wdrl (EraCrypto era) ->
+  Withdrawals (EraCrypto era) ->
   ShelleyTxBody era
 makeTxBody inp addrCs wdrl =
   ShelleyTxBody
@@ -265,7 +265,7 @@ applyTxWithScript ::
   (Mock c) =>
   [(MultiSig (ShelleyEra c), Coin)] ->
   [MultiSig (ShelleyEra c)] ->
-  Wdrl c ->
+  Withdrawals c ->
   Coin ->
   [KeyPair 'Witness c] ->
   Either [PredicateFailure (ShelleyUTXOW (ShelleyEra c))] (UTxOState (ShelleyEra c))
@@ -278,7 +278,7 @@ applyTxWithScript lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
     txbody =
       makeTxBody
         inputs'
-        [(Cast.aliceAddr, Val.inject $ aliceInitCoin <> bobInitCoin <> fold (unWdrl wdrl))]
+        [(Cast.aliceAddr, Val.inject $ aliceInitCoin <> bobInitCoin <> fold (unWithdrawals wdrl))]
         wdrl
     inputs' =
       [ TxIn txId (mkTxIxPartial (toInteger n))

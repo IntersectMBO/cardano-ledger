@@ -35,7 +35,7 @@ module Cardano.Ledger.Shelley.TxBody (
     stbInputs,
     stbOutputs,
     stbCerts,
-    stbWdrls,
+    stbWithdrawals,
     stbTxFee,
     stbTTL,
     stbUpdate,
@@ -47,7 +47,9 @@ module Cardano.Ledger.Shelley.TxBody (
   TxOut,
   ShelleyTxOut (ShelleyTxOut, TxOutCompact),
   Url,
-  Wdrl (..),
+  Withdrawals (..),
+  Wdrl,
+  pattern Wdrl,
   --
   module Cardano.Ledger.Keys.WitVKey,
   witKeyHash,
@@ -139,7 +141,7 @@ data ShelleyTxBodyRaw era = ShelleyTxBodyRaw
   { stbrInputs :: !(Set (TxIn (EraCrypto era)))
   , stbrOutputs :: !(StrictSeq (TxOut era))
   , stbrCerts :: !(StrictSeq (DCert (EraCrypto era)))
-  , stbrWdrls :: !(Wdrl (EraCrypto era))
+  , stbrWithdrawals :: !(Withdrawals (EraCrypto era))
   , stbrTxFee :: !Coin
   , stbrTTL :: !SlotNo
   , stbrUpdate :: !(StrictMaybe (Update era))
@@ -206,7 +208,7 @@ boxBody ::
 boxBody 0 = field (\x tx -> tx {stbrInputs = x}) From
 boxBody 1 = field (\x tx -> tx {stbrOutputs = x}) From
 boxBody 4 = field (\x tx -> tx {stbrCerts = x}) From
-boxBody 5 = field (\x tx -> tx {stbrWdrls = x}) From
+boxBody 5 = field (\x tx -> tx {stbrWithdrawals = x}) From
 boxBody 2 = field (\x tx -> tx {stbrTxFee = x}) From
 boxBody 3 = field (\x tx -> tx {stbrTTL = x}) From
 boxBody 6 = ofield (\x tx -> tx {stbrUpdate = x}) From
@@ -227,7 +229,7 @@ txSparse (ShelleyTxBodyRaw input output cert wdrl fee ttl update hash) =
     !> Key 2 (To fee)
     !> Key 3 (To ttl)
     !> Omit null (Key 4 (To cert))
-    !> Omit (null . unWdrl) (Key 5 (To wdrl))
+    !> Omit (null . unWithdrawals) (Key 5 (To wdrl))
     !> encodeKeyedStrictMaybe 6 update
     !> encodeKeyedStrictMaybe 7 hash
 
@@ -241,7 +243,7 @@ basicShelleyTxBodyRaw =
     , stbrTxFee = Coin 0
     , stbrTTL = SlotNo 0
     , stbrCerts = StrictSeq.empty
-    , stbrWdrls = Wdrl Map.empty
+    , stbrWithdrawals = Withdrawals Map.empty
     , stbrUpdate = SNothing
     , stbrMDHash = SNothing
     }
@@ -288,12 +290,12 @@ instance Crypto c => EraTxBody (ShelleyEra c) where
     lensMemoRawType stbrMDHash $ \txBodyRaw auxDataHash -> txBodyRaw {stbrMDHash = auxDataHash}
   {-# INLINEABLE auxDataHashTxBodyL #-}
 
+  withdrawalsTxBodyL =
+    lensMemoRawType stbrWithdrawals $ \txBodyRaw withdrawals -> txBodyRaw {stbrWithdrawals = withdrawals}
+  {-# INLINEABLE withdrawalsTxBodyL #-}
+
 instance Crypto c => ShelleyEraTxBody (ShelleyEra c) where
   {-# SPECIALIZE instance ShelleyEraTxBody (ShelleyEra StandardCrypto) #-}
-
-  wdrlsTxBodyL =
-    lensMemoRawType stbrWdrls $ \txBodyRaw wdrls -> txBodyRaw {stbrWdrls = wdrls}
-  {-# INLINEABLE wdrlsTxBodyL #-}
 
   ttlTxBodyL =
     lensMemoRawType stbrTTL $ \txBodyRaw ttl -> txBodyRaw {stbrTTL = ttl}
@@ -330,7 +332,7 @@ pattern ShelleyTxBody ::
   Set (TxIn (EraCrypto era)) ->
   StrictSeq (TxOut era) ->
   StrictSeq (DCert (EraCrypto era)) ->
-  Wdrl (EraCrypto era) ->
+  Withdrawals (EraCrypto era) ->
   Coin ->
   SlotNo ->
   StrictMaybe (Update era) ->
@@ -340,7 +342,7 @@ pattern ShelleyTxBody
   { stbInputs
   , stbOutputs
   , stbCerts
-  , stbWdrls
+  , stbWithdrawals
   , stbTxFee
   , stbTTL
   , stbUpdate
@@ -351,7 +353,7 @@ pattern ShelleyTxBody
         { stbrInputs = stbInputs
         , stbrOutputs = stbOutputs
         , stbrCerts = stbCerts
-        , stbrWdrls = stbWdrls
+        , stbrWithdrawals = stbWithdrawals
         , stbrTxFee = stbTxFee
         , stbrTTL = stbTTL
         , stbrUpdate = stbUpdate
@@ -363,7 +365,7 @@ pattern ShelleyTxBody
       inputs
       outputs
       certs
-      wdrls
+      withdrawals
       txFee
       ttl
       update
@@ -373,7 +375,7 @@ pattern ShelleyTxBody
             { stbrInputs = inputs
             , stbrOutputs = outputs
             , stbrCerts = certs
-            , stbrWdrls = wdrls
+            , stbrWithdrawals = withdrawals
             , stbrTxFee = txFee
             , stbrTTL = ttl
             , stbrUpdate = update

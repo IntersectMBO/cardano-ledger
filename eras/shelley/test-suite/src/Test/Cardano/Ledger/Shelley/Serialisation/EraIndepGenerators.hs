@@ -138,10 +138,6 @@ instance Mock c => Arbitrary (BHeader c) where
 instance Crypto c => Arbitrary (TP.HashHeader c) where
   arbitrary = TP.HashHeader <$> arbitrary
 
-instance Crypto c => Arbitrary (Wdrl c) where
-  arbitrary = genericArbitraryU
-  shrink = genericShrink
-
 instance (Era era, Mock (EraCrypto era)) => Arbitrary (ProposedPPUpdates era) where
   arbitrary = ProposedPPUpdates <$> pure Map.empty
 

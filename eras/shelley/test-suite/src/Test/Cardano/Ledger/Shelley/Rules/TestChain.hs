@@ -347,19 +347,19 @@ adaPreservationChain =
     conjoin . concat $
       [ -- preservation properties
         map (checkPreservation @era) (zip justBoundarySsts [0 ..])
-      , map (potsSumIncreaseWdrlsPerTx @era @ledger) ssts
+      , map (potsSumIncreaseWithdrawalsPerTx @era @ledger) ssts
       , map (potsSumIncreaseByRewardsPerTx @era @ledger) ssts
       , map (preserveBalance @era @ledger) ssts
       , map (preserveBalanceRestricted @era @ledger) ssts
       , map (preserveOutputsTx @era @ledger) ssts
-      , map (potsRewardsDecreaseByWdrlsPerTx @era @ledger) ssts
+      , map (potsRewardsDecreaseByWithdrawalsPerTx @era @ledger) ssts
       , map (canRestrictUTxO @era @ledger) ssts
       , -- well formed deposits
         map nonNegativeDeposits ssts
       , -- non-epoch-boundary preservation properties
         map checkWithdrawlBound noEpochBoundarySsts
       , map (utxoDepositsIncreaseByFeesWithdrawals @era @ledger) noEpochBoundarySsts
-      , map potsSumIncreaseWdrlsPerBlock noEpochBoundarySsts
+      , map potsSumIncreaseWithdrawalsPerBlock noEpochBoundarySsts
       , map feesNonDecreasing noEpochBoundarySsts
       ]
 
@@ -490,7 +490,7 @@ checkPreservation (SourceSignalTarget {source, target, signal}, count) =
         ++ "\nfee :"
         ++ show (tx ^. bodyTxL . feeTxBodyL)
         ++ "\nwithdrawals:"
-        ++ showWithdrawal (tx ^. bodyTxL . wdrlsTxBodyL)
+        ++ showWithdrawal (tx ^. bodyTxL . withdrawalsTxBodyL)
         ++ "\ncerts:"
         ++ showListy (("   " ++) . synopsisCert) (toList $ tx ^. bodyTxL . certsTxBodyL)
         ++ "total deposits "
@@ -536,13 +536,13 @@ utxoDepositsIncreaseByFeesWithdrawals SourceSignalTarget {source, signal, target
 
 -- | If we are not at an Epoch Boundary, then (Utxo + Deposits + Fees)
 -- increases by sum of withdrawals for all transactions in a block
-potsSumIncreaseWdrlsPerBlock ::
+potsSumIncreaseWithdrawalsPerBlock ::
   (ChainProperty era, EraGen era) =>
   SourceSignalTarget (CHAIN era) ->
   Property
-potsSumIncreaseWdrlsPerBlock SourceSignalTarget {source, signal, target} =
+potsSumIncreaseWithdrawalsPerBlock SourceSignalTarget {source, signal, target} =
   counterexample
-    "potsSumIncreaseWdrlsPerBlock"
+    "potsSumIncreaseWithdrawalsPerBlock"
     $ potsSum target <-> potsSum source === withdrawals signal
   where
     potsSum chainSt =
@@ -552,7 +552,7 @@ potsSumIncreaseWdrlsPerBlock SourceSignalTarget {source, signal, target} =
 
 -- | If we are not at an Epoch Boundary, then (Utxo + Deposits + Fees)
 -- increases by sum of withdrawals in a transaction
-potsSumIncreaseWdrlsPerTx ::
+potsSumIncreaseWithdrawalsPerTx ::
   forall era ledger.
   ( ChainProperty era
   , EraGen era
@@ -560,15 +560,15 @@ potsSumIncreaseWdrlsPerTx ::
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
-potsSumIncreaseWdrlsPerTx SourceSignalTarget {source = chainSt, signal = block} =
-  counterexample "potsSumIncreaseWdrlsPerTx" $
+potsSumIncreaseWithdrawalsPerTx SourceSignalTarget {source = chainSt, signal = block} =
+  counterexample "potsSumIncreaseWithdrawalsPerTx" $
     conjoin $
-      map sumIncreaseWdrls $
+      map sumIncreaseWithdrawals $
         sourceSignalTargets ledgerTr
   where
     (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
-    sumIncreaseWdrls :: SourceSignalTarget ledger -> Property
-    sumIncreaseWdrls
+    sumIncreaseWithdrawals :: SourceSignalTarget ledger -> Property
+    sumIncreaseWithdrawals
       SourceSignalTarget
         { source = LedgerState UTxOState {utxosUtxo = u, utxosDeposited = d, utxosFees = f} _
         , signal = tx
@@ -577,7 +577,7 @@ potsSumIncreaseWdrlsPerTx SourceSignalTarget {source = chainSt, signal = block} 
         property (hasFailedScripts tx)
           .||. (coinBalance u' <+> d' <+> f')
             <-> (coinBalance u <+> d <+> f)
-            === fold (unWdrl (tx ^. bodyTxL . wdrlsTxBodyL))
+            === fold (unWithdrawals (tx ^. bodyTxL . withdrawalsTxBodyL))
 
 -- | (Utxo + Deposits + Fees) increases by the reward delta
 potsSumIncreaseByRewardsPerTx ::
@@ -612,7 +612,7 @@ potsSumIncreaseByRewardsPerTx SourceSignalTarget {source = chainSt, signal = blo
           <-> (UM.fromCompact (sumRewardsView (UM.RewardDeposits umap2)))
 
 -- | The Rewards pot decreases by the sum of withdrawals in a transaction
-potsRewardsDecreaseByWdrlsPerTx ::
+potsRewardsDecreaseByWithdrawalsPerTx ::
   forall era ledger.
   ( ChainProperty era
   , EraGen era
@@ -620,15 +620,15 @@ potsRewardsDecreaseByWdrlsPerTx ::
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
-potsRewardsDecreaseByWdrlsPerTx SourceSignalTarget {source = chainSt, signal = block} =
-  counterexample "potsRewardsDecreaseByWdrlsPerTx" $
+potsRewardsDecreaseByWithdrawalsPerTx SourceSignalTarget {source = chainSt, signal = block} =
+  counterexample "potsRewardsDecreaseByWithdrawalsPerTx" $
     conjoin $
-      map rewardsDecreaseByWdrls $
+      map rewardsDecreaseByWithdrawals $
         sourceSignalTargets ledgerTr
   where
     rewardsSum = UM.fromCompact . sumRewardsView . rewards . dpsDState
     (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
-    rewardsDecreaseByWdrls
+    rewardsDecreaseByWithdrawals
       SourceSignalTarget
         { source = LedgerState _ dpstate
         , signal = tx
@@ -636,7 +636,7 @@ potsRewardsDecreaseByWdrlsPerTx SourceSignalTarget {source = chainSt, signal = b
         } =
         let totalRewards = rewardsSum dpstate
             totalRewards' = rewardsSum dpstate'
-            txWithdrawals = fold (unWdrl (tx ^. bodyTxL . wdrlsTxBodyL))
+            txWithdrawals = fold (unWithdrawals (tx ^. bodyTxL . withdrawalsTxBodyL))
          in conjoin
               [ counterexample
                   "A transaction should not increase the Rewards pot"
@@ -685,7 +685,7 @@ preserveBalance SourceSignalTarget {source = chainSt, signal = block} =
         consumed_ =
           coinBalance u
             <+> keyTxRefunds pp_ dpstate txb
-            <+> fold (unWdrl (txb ^. wdrlsTxBodyL))
+            <+> fold (unWithdrawals (txb ^. withdrawalsTxBodyL))
 
 -- | Preserve balance restricted to TxIns and TxOuts of the Tx
 preserveBalanceRestricted ::
@@ -717,7 +717,7 @@ preserveBalanceRestricted SourceSignalTarget {source = chainSt, signal = block} 
           inps =
             coinBalance @era (UTxO (Map.restrictKeys u (txb ^. inputsTxBodyL)))
               <> keyTxRefunds pp_ dpstate txb
-              <> fold (unWdrl (txb ^. wdrlsTxBodyL))
+              <> fold (unWithdrawals (txb ^. withdrawalsTxBodyL))
           outs =
             coinBalance (txouts @era txb)
               <> txb
@@ -904,7 +904,7 @@ withdrawals ::
 withdrawals (UnserialisedBlock _ txseq) =
   foldl'
     ( \c tx ->
-        let wdrls = unWdrl $ tx ^. bodyTxL . wdrlsTxBodyL
+        let wdrls = unWithdrawals $ tx ^. bodyTxL . withdrawalsTxBodyL
          in if hasFailedScripts tx then c else c <> fold wdrls
     )
     (Coin 0)

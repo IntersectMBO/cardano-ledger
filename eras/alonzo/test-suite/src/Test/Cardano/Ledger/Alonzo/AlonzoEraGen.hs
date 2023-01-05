@@ -272,12 +272,12 @@ genAlonzoTxBody ::
   Set.Set (TxIn c) ->
   StrictSeq (TxOut (AlonzoEra c)) ->
   StrictSeq (DCert c) ->
-  Wdrl c ->
+  Withdrawals c ->
   Coin ->
   StrictMaybe (Update (AlonzoEra c)) ->
   StrictMaybe (AuxiliaryDataHash c) ->
   Gen (TxBody (AlonzoEra c), [Script (AlonzoEra c)])
-genAlonzoTxBody _genenv utxo pparams currentslot input txOuts certs wdrls fee updates auxDHash = do
+genAlonzoTxBody _genenv utxo pparams currentslot input txOuts certs withdrawals fee updates auxDHash = do
   netid <- genM $ pure Testnet -- frequency [(2, pure Mainnet), (1, pure Testnet)]
   startvalue <- genMint
   (minted, plutusScripts) <- genAlonzoMint startvalue
@@ -293,7 +293,7 @@ genAlonzoTxBody _genenv utxo pparams currentslot input txOuts certs wdrls fee up
         (Set.filter (okAsCollateral utxo) input) -- Set.empty -- collateral -- TODO do something better here (use genenv ?)
         txouts3
         certs
-        wdrls
+        withdrawals
         fee
         validityInterval -- (ValidityInterval SNothing SNothing) -- (ValidityInterval low high)
         updates

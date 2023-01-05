@@ -33,7 +33,7 @@ import Cardano.Ledger.Babbage.TxBody (
   txnetworkid',
   update',
   vldt',
-  wdrls',
+  withdrawals',
  )
 import Cardano.Ledger.BaseTypes (BoundedRational (unboundRational))
 import Cardano.Ledger.Crypto
@@ -227,7 +227,7 @@ ppTxBody x =
     , ("collateral return", ppStrictMaybe prettyA (collateralReturn' x))
     , ("total collateral", ppStrictMaybe ppCoin (totalCollateral' x))
     , ("certificates", ppStrictSeq ppDCert (certs' x))
-    , ("withdrawals", ppWdrl (wdrls' x))
+    , ("withdrawals", ppWithdrawals (withdrawals' x))
     , ("txfee", ppCoin (txfee' x))
     , ("vldt", ppValidityInterval (vldt' x))
     , ("update", ppStrictMaybe ppUpdate (update' x))

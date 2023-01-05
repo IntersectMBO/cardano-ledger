@@ -423,7 +423,7 @@ instance Twiddle SlotNo where
 instance Crypto c => Twiddle (DCert c) where
   twiddle v = twiddle v . toTerm v
 
-instance Crypto c => Twiddle (Wdrl c) where
+instance Crypto c => Twiddle (Withdrawals c) where
   twiddle v = twiddle v . toTerm v
 
 instance Crypto c => Twiddle (AuxiliaryDataHash c) where
@@ -459,7 +459,7 @@ instance Crypto c => Twiddle (AlonzoTxBody (AlonzoEra c)) where
     -- value can be omitted entirely
     ttl' <- twiddleStrictMaybe v . invalidHereafter $ atbValidityInterval txBody
     cert' <- emptyOrNothing v $ atbCerts txBody
-    wdrls' <- twiddle v $ atbWdrls txBody
+    withdrawals' <- twiddle v $ atbWithdrawals txBody
     update' <- twiddleStrictMaybe v $ atbUpdate txBody
     auxDataHash' <- twiddleStrictMaybe v $ atbAuxDataHash txBody
     validityStart' <- twiddleStrictMaybe v . invalidBefore $ atbValidityInterval txBody
@@ -477,7 +477,7 @@ instance Crypto c => Twiddle (AlonzoTxBody (AlonzoEra c)) where
             <> catMaybes
               [ (TInt 3,) <$> ttl'
               , (TInt 4,) <$> cert'
-              , (TInt 5,) <$> Just wdrls'
+              , (TInt 5,) <$> Just withdrawals'
               , (TInt 6,) <$> update'
               , (TInt 7,) <$> auxDataHash'
               , (TInt 8,) <$> validityStart'

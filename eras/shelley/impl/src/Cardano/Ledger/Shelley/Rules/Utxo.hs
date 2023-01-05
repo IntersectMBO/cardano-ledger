@@ -76,7 +76,7 @@ import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), TxIn)
 import Cardano.Ledger.Shelley.TxBody (
   RewardAcnt,
   ShelleyEraTxBody (..),
-  Wdrl (..),
+  Withdrawals (..),
  )
 import Cardano.Ledger.Shelley.UTxO (produced, txup)
 import Cardano.Ledger.Slot (SlotNo)
@@ -339,7 +339,7 @@ instance
         (\_ st' -> utxosDeposited st' >= mempty)
     , let utxoBalance us = Val.inject (utxosDeposited us <> utxosFees us) <> balance (utxosUtxo us)
           withdrawals :: TxBody era -> Value era
-          withdrawals txb = Val.inject $ foldl' (<>) mempty $ unWdrl $ txb ^. wdrlsTxBodyL
+          withdrawals txb = Val.inject $ foldl' (<>) mempty $ unWithdrawals $ txb ^. withdrawalsTxBodyL
        in PostCondition
             "Should preserve value in the UTxO state"
             ( \(TRC (UtxoEnv _ _pp _pools _, us, tx)) us' ->
@@ -492,13 +492,13 @@ validateWrongNetworkWithdrawal ::
   TxBody era ->
   Test (ShelleyUtxoPredFailure era)
 validateWrongNetworkWithdrawal netId txb =
-  failureUnless (null wdrlsWrongNetwork) $
-    WrongNetworkWithdrawal netId (Set.fromList wdrlsWrongNetwork)
+  failureUnless (null withdrawalsWrongNetwork) $
+    WrongNetworkWithdrawal netId (Set.fromList withdrawalsWrongNetwork)
   where
-    wdrlsWrongNetwork =
+    withdrawalsWrongNetwork =
       filter
         (\a -> getRwdNetwork a /= netId)
-        (Map.keys . unWdrl $ txb ^. wdrlsTxBodyL)
+        (Map.keys . unWithdrawals $ txb ^. withdrawalsTxBodyL)
 
 -- | Ensure that value consumed and produced matches up exactly
 --

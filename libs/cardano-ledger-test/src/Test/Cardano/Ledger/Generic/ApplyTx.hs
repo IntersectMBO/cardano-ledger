@@ -29,7 +29,7 @@ import Cardano.Ledger.Shelley.TxBody (
   PoolCert (..),
   PoolParams (..),
   RewardAcnt (..),
-  Wdrl (..),
+  Withdrawals (..),
  )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (..))
@@ -155,11 +155,11 @@ applyField proof count model field = case field of
         newstuff = additions hash minBound (toList seqo)
   (Txfee coin) -> model {mFees = coin <+> (mFees model)}
   (Certs seqc) -> List.foldl' applyCert model (toList seqc)
-  (Wdrls (Wdrl m)) -> Map.foldlWithKey' (applyWdrl proof) model m
+  (Withdrawals' (Withdrawals m)) -> Map.foldlWithKey' (applyWithdrawals proof) model m
   _other -> model
 
-applyWdrl :: Proof era -> Model era -> RewardAcnt (EraCrypto era) -> Coin -> Model era
-applyWdrl _proof model (RewardAcnt _network cred) coin =
+applyWithdrawals :: Proof era -> Model era -> RewardAcnt (EraCrypto era) -> Coin -> Model era
+applyWithdrawals _proof model (RewardAcnt _network cred) coin =
   model {mRewards = Map.adjust (\c -> c <-> coin) cred (mRewards model)}
 
 applyCert :: EraPParams era => Model era -> DCert (EraCrypto era) -> Model era

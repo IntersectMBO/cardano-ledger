@@ -163,26 +163,26 @@ updateTxBody pf txBody dt =
     _ | AdHash auxDataHash <- dt -> txBody & auxDataHashTxBodyL .~ auxDataHash
     Shelley _ -> case dt of
       Certs certs -> txBody & certsTxBodyL .~ certs
-      Wdrls wdrls -> txBody & wdrlsTxBodyL .~ wdrls
+      Withdrawals' withdrawals -> txBody & withdrawalsTxBodyL .~ withdrawals
       TTL ttl -> txBody & ttlTxBodyL .~ ttl
       Update update -> txBody & updateTxBodyL .~ update
       _ -> txBody
     Allegra _ -> case dt of
       Certs certs -> txBody & certsTxBodyL .~ certs
-      Wdrls wdrls -> txBody & wdrlsTxBodyL .~ wdrls
+      Withdrawals' withdrawals -> txBody & withdrawalsTxBodyL .~ withdrawals
       Vldt vldt -> txBody & vldtTxBodyL .~ vldt
       Update update -> txBody & updateTxBodyL .~ update
       _ -> txBody
     Mary _ -> case dt of
       Certs certs -> txBody & certsTxBodyL .~ certs
-      Wdrls wdrls -> txBody & wdrlsTxBodyL .~ wdrls
+      Withdrawals' withdrawals -> txBody & withdrawalsTxBodyL .~ withdrawals
       Vldt vldt -> txBody & vldtTxBodyL .~ vldt
       Update update -> txBody & updateTxBodyL .~ update
       Mint mint -> txBody & mintTxBodyL .~ mint
       _ -> txBody
     Alonzo _ -> case dt of
       Certs certs -> txBody & certsTxBodyL .~ certs
-      Wdrls wdrls -> txBody & wdrlsTxBodyL .~ wdrls
+      Withdrawals' withdrawals -> txBody & withdrawalsTxBodyL .~ withdrawals
       Vldt vldt -> txBody & vldtTxBodyL .~ vldt
       Update update -> txBody & updateTxBodyL .~ update
       Mint mint -> txBody & mintTxBodyL .~ mint
@@ -193,7 +193,7 @@ updateTxBody pf txBody dt =
       _ -> txBody
     Babbage _ -> case dt of
       Certs certs -> txBody & certsTxBodyL .~ certs
-      Wdrls wdrls -> txBody & wdrlsTxBodyL .~ wdrls
+      Withdrawals' withdrawals -> txBody & withdrawalsTxBodyL .~ withdrawals
       Vldt vldt -> txBody & vldtTxBodyL .~ vldt
       Update update -> txBody & updateTxBodyL .~ update
       Mint mint -> txBody & mintTxBodyL .~ mint
@@ -206,7 +206,7 @@ updateTxBody pf txBody dt =
       CollateralReturn collateralReturn -> txBody & collateralReturnTxBodyL .~ collateralReturn
       _ -> txBody
     Conway _ -> case dt of
-      Wdrls wdrls -> txBody & wdrlsTxBodyL .~ wdrls
+      Withdrawals' withdrawals -> txBody & withdrawalsTxBodyL .~ withdrawals
       Vldt vldt -> txBody & vldtTxBodyL .~ vldt
       Mint mint -> txBody & mintTxBodyL .~ mint
       Collateral collateral -> txBody & collateralInputsTxBodyL .~ collateral

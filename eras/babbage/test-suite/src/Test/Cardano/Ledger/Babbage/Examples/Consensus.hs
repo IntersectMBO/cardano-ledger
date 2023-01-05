@@ -121,7 +121,7 @@ exampleTxBodyBabbage =
     (SJust $ mkSized (eraProtVerHigh @Babbage) collateralOutput) -- collateral return
     (SJust $ Coin 8675309) -- collateral tot
     SLE.exampleCerts -- txcerts
-    ( Wdrl $
+    ( Withdrawals $
         Map.singleton
           (RewardAcnt Testnet (SLE.keyToCredential SLE.exampleStakeKey))
           (Coin 100) -- txwdrls

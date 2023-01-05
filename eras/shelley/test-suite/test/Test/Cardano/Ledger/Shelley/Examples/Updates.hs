@@ -139,7 +139,7 @@ txbodyEx1 =
     (Set.fromList [TxIn genesisId minBound])
     (StrictSeq.singleton $ ShelleyTxOut Cast.aliceAddr (Val.inject aliceCoinEx1))
     StrictSeq.empty
-    (Wdrl Map.empty)
+    (Withdrawals Map.empty)
     feeTx1
     (SlotNo 10)
     (SJust (Update ppVotes1 (EpochNo 0)))
@@ -214,7 +214,7 @@ txbodyEx2 =
     (Set.fromList [TxIn (txid txbodyEx1) minBound])
     (StrictSeq.singleton $ ShelleyTxOut Cast.aliceAddr (Val.inject aliceCoinEx2))
     StrictSeq.empty
-    (Wdrl Map.empty)
+    (Withdrawals Map.empty)
     (Coin 1)
     (SlotNo 31)
     (SJust updateEx3B)
@@ -290,7 +290,7 @@ txbodyEx3 =
     (Set.fromList [TxIn (txid txbodyEx2) minBound])
     (StrictSeq.singleton $ ShelleyTxOut Cast.aliceAddr (Val.inject aliceCoinEx3))
     StrictSeq.empty
-    (Wdrl Map.empty)
+    (Withdrawals Map.empty)
     feeTx3
     (SlotNo 81)
     (SJust (Update ppVotes3 (EpochNo 1)))

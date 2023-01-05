@@ -28,7 +28,7 @@ module Cardano.Ledger.Conway.TxBody (
     ctbCollateralReturn,
     ctbTotalCollateral,
     ctbCerts,
-    ctbWdrls,
+    ctbWithdrawals,
     ctbTxfee,
     ctbVldt,
     ctbReqSignerHashes,
@@ -104,7 +104,7 @@ import Cardano.Ledger.MemoBytes (
   mkMemoized,
  )
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
-import Cardano.Ledger.Shelley.TxBody (Wdrl (..))
+import Cardano.Ledger.Shelley.TxBody (Withdrawals (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.DeepSeq
 import Data.Maybe.Strict (StrictMaybe (..))
@@ -128,7 +128,7 @@ data ConwayTxBodyRaw era = ConwayTxBodyRaw
   , ctbrCollateralReturn :: !(StrictMaybe (Sized (TxOut era)))
   , ctbrTotalCollateral :: !(StrictMaybe Coin)
   , ctbrCerts :: !(StrictSeq (ConwayDCert (EraCrypto era)))
-  , ctbrWdrls :: !(Wdrl (EraCrypto era))
+  , ctbrWithdrawals :: !(Withdrawals (EraCrypto era))
   , ctbrTxfee :: !Coin
   , ctbrVldt :: !ValidityInterval
   , ctbrReqSignerHashes :: !(Set (KeyHash 'Witness (EraCrypto era)))
@@ -182,7 +182,7 @@ instance
           (\x tx -> tx {ctbrVldt = (ctbrVldt tx) {invalidHereafter = x}})
           From
       bodyFields 4 = field (\x tx -> tx {ctbrCerts = x}) From
-      bodyFields 5 = field (\x tx -> tx {ctbrWdrls = x}) From
+      bodyFields 5 = field (\x tx -> tx {ctbrWithdrawals = x}) From
       bodyFields 7 = ofield (\x tx -> tx {ctbrAuxDataHash = x}) From
       bodyFields 8 =
         ofield
@@ -251,7 +251,7 @@ basicConwayTxBodyRaw =
     SNothing
     SNothing
     StrictSeq.empty
-    (Wdrl mempty)
+    (Withdrawals mempty)
     mempty
     (ValidityInterval SNothing SNothing)
     mempty
@@ -293,11 +293,11 @@ instance Crypto c => EraTxBody (ConwayEra c) where
         ]
   {-# INLINE allInputsTxBodyF #-}
 
+  withdrawalsTxBodyL = lensMemoRawType ctbrWithdrawals (\txb x -> txb {ctbrWithdrawals = x})
+  {-# INLINE withdrawalsTxBodyL #-}
+
 instance Crypto c => ShelleyEraTxBody (ConwayEra c) where
   {-# SPECIALIZE instance ShelleyEraTxBody (ConwayEra StandardCrypto) #-}
-
-  wdrlsTxBodyL = lensMemoRawType ctbrWdrls (\txb x -> txb {ctbrWdrls = x})
-  {-# INLINE wdrlsTxBodyL #-}
 
   ttlTxBodyL = notSupportedInThisEraL
   {-# INLINE ttlTxBodyL #-}
@@ -384,7 +384,7 @@ pattern ConwayTxBody ::
   StrictMaybe (Sized (TxOut era)) ->
   StrictMaybe Coin ->
   StrictSeq (ConwayDCert (EraCrypto era)) ->
-  Wdrl (EraCrypto era) ->
+  Withdrawals (EraCrypto era) ->
   Coin ->
   ValidityInterval ->
   Set (KeyHash 'Witness (EraCrypto era)) ->
@@ -403,7 +403,7 @@ pattern ConwayTxBody
   , ctbCollateralReturn
   , ctbTotalCollateral
   , ctbCerts
-  , ctbWdrls
+  , ctbWithdrawals
   , ctbTxfee
   , ctbVldt
   , ctbReqSignerHashes
@@ -423,7 +423,7 @@ pattern ConwayTxBody
         , ctbrCollateralReturn = ctbCollateralReturn
         , ctbrTotalCollateral = ctbTotalCollateral
         , ctbrCerts = ctbCerts
-        , ctbrWdrls = ctbWdrls
+        , ctbrWithdrawals = ctbWithdrawals
         , ctbrTxfee = ctbTxfee
         , ctbrVldt = ctbVldt
         , ctbrReqSignerHashes = ctbReqSignerHashes
@@ -444,7 +444,7 @@ pattern ConwayTxBody
       collateralReturnX
       totalCollateralX
       certsX
-      wdrlsX
+      withdrawalsX
       txfeeX
       vldtX
       reqSignerHashesX
@@ -463,7 +463,7 @@ pattern ConwayTxBody
             collateralReturnX
             totalCollateralX
             certsX
-            wdrlsX
+            withdrawalsX
             txfeeX
             vldtX
             reqSignerHashesX
@@ -499,7 +499,7 @@ encodeTxBodyRaw ConwayTxBodyRaw {..} =
         !> Key 2 (To ctbrTxfee)
         !> encodeKeyedStrictMaybe 3 top
         !> Omit null (Key 4 (To ctbrCerts))
-        !> Omit (null . unWdrl) (Key 5 (To ctbrWdrls))
+        !> Omit (null . unWithdrawals) (Key 5 (To ctbrWithdrawals))
         !> encodeKeyedStrictMaybe 8 bot
         !> Omit null (Key 14 (To ctbrReqSignerHashes))
         !> Omit (== mempty) (Key 9 (To ctbrMint))

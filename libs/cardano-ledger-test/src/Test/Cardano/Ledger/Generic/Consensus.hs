@@ -578,7 +578,7 @@ exampleTxBody proof spendval =
     , (CollateralReturn . SJust) <$> exampleCollateralOutput proof
     , (TotalCol . SJust) <$> exampleTotalCollateral proof
     , Just (Certs exampleCerts)
-    , Just (Wdrls (exampleWithdrawals proof))
+    , Just (Withdrawals' (exampleWithdrawals proof))
     , Just (Txfee (exampleFee proof))
     , exampleValidity proof
     , Just (Update' [PParams.Update (exampleProposedPPUpdates proof) (EpochNo 0)])
@@ -768,24 +768,24 @@ examplePoolParams =
   where
     poolKeys = exampleKeys @c @'StakePool
 
-exampleWithdrawals :: Era era => Proof era -> Wdrl (EraCrypto era)
+exampleWithdrawals :: Era era => Proof era -> Withdrawals (EraCrypto era)
 exampleWithdrawals proof =
   case proof of
-    Shelley _ -> Wdrl $ Map.fromList [(ppRewardAcnt examplePoolParams, Coin 100)]
-    Allegra _ -> Wdrl $ Map.fromList [(ppRewardAcnt examplePoolParams, Coin 100)]
-    Mary _ -> Wdrl $ Map.fromList [(ppRewardAcnt examplePoolParams, Coin 100)]
+    Shelley _ -> Withdrawals $ Map.fromList [(ppRewardAcnt examplePoolParams, Coin 100)]
+    Allegra _ -> Withdrawals $ Map.fromList [(ppRewardAcnt examplePoolParams, Coin 100)]
+    Mary _ -> Withdrawals $ Map.fromList [(ppRewardAcnt examplePoolParams, Coin 100)]
     Alonzo _ ->
-      Wdrl $
+      Withdrawals $
         Map.singleton
           (RewardAcnt Testnet (keyToCredential exampleStakeKey))
           (Coin 100)
     Babbage _ ->
-      Wdrl $
+      Withdrawals $
         Map.singleton
           (RewardAcnt Testnet (keyToCredential exampleStakeKey))
           (Coin 100)
     Conway _ ->
-      Wdrl $
+      Withdrawals $
         Map.singleton
           (RewardAcnt Testnet (keyToCredential exampleStakeKey))
           (Coin 100)

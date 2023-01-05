@@ -22,7 +22,7 @@ module Cardano.Ledger.Shelley.Rules.Reports (
 where
 
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Core (Era (..), EraCrypto, PParams, TxBody)
+import Cardano.Ledger.Core (Era (..), EraCrypto, PParams, TxBody, withdrawalsTxBodyL)
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DPState (
   DPState (..),
@@ -88,7 +88,7 @@ produceEqualsConsumed pp dpstate utxo txb =
    in ( "\n (Produce = Consumed) Report\n  certificates\n"
           ++ showTxCerts txb
           ++ "\n  withdrawals "
-          ++ show (fold . unWdrl $ txb ^. wdrlsTxBodyL)
+          ++ show (fold . unWithdrawals $ txb ^. withdrawalsTxBodyL)
           ++ show producedValue
           ++ show consumedValue
       )
@@ -107,8 +107,8 @@ showRewardAcct :: RewardAcnt c -> [Char]
 showRewardAcct (RewardAcnt {getRwdNetwork = network, getRwdCred = cred}) =
   show network ++ " " ++ (showCred cred)
 
-showWithdrawal :: Wdrl c -> String
-showWithdrawal (Wdrl m) = showMap (("   " ++) . showRewardAcct) show m
+showWithdrawal :: Withdrawals c -> String
+showWithdrawal (Withdrawals m) = showMap (("   " ++) . showRewardAcct) show m
 
 showIR :: InstantaneousRewards c -> String
 showIR (InstantaneousRewards m n x y) =

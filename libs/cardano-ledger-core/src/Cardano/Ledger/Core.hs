@@ -71,6 +71,7 @@ import Cardano.Ledger.Address (
   Addr (..),
   BootstrapAddress,
   CompactAddr,
+  Withdrawals,
   compactAddr,
   decompactAddr,
   isBootstrapCompactAddr,
@@ -171,6 +172,8 @@ class
   outputsTxBodyL :: Lens' (TxBody era) (StrictSeq (TxOut era))
 
   feeTxBodyL :: Lens' (TxBody era) Coin
+
+  withdrawalsTxBodyL :: Lens' (TxBody era) (Withdrawals (EraCrypto era))
 
   auxDataHashTxBodyL :: Lens' (TxBody era) (StrictMaybe (AuxiliaryDataHash (EraCrypto era)))
 

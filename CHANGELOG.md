@@ -63,6 +63,7 @@ in the naming of release branches.
 
 ### Changed
 
+- Move `Wdrl` to `Core`. Also rename it to `Withdrawals`, while switching `Test.Cardano.Ledger.Generic.Fields.Withdrawals` to `Withdrawals'` #3239
 - Moved `PreviousEra` into `Era` type class. Added `Era` instance for a new data type
   `ByronEra`.
 - Renamed record fields for all `PParams` types. Too many to list, but follows the same

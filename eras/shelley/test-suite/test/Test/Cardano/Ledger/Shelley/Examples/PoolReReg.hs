@@ -40,7 +40,7 @@ import Cardano.Ledger.Shelley.TxBody (
   PoolParams (..),
   ShelleyTxBody (..),
   ShelleyTxOut (..),
-  Wdrl (..),
+  Withdrawals (..),
  )
 import Cardano.Ledger.Shelley.TxWits (
   addrWits,
@@ -109,7 +109,7 @@ txbodyEx1 =
     (Set.fromList [TxIn genesisId minBound])
     (StrictSeq.fromList [ShelleyTxOut Cast.aliceAddr (Val.inject aliceCoinEx1)])
     (StrictSeq.fromList [DCertPool (RegPool Cast.alicePoolParams)])
-    (Wdrl Map.empty)
+    (Withdrawals Map.empty)
     feeTx1
     (SlotNo 10)
     SNothing
@@ -189,7 +189,7 @@ txbodyEx2 =
           ]
         )
     )
-    (Wdrl Map.empty)
+    (Withdrawals Map.empty)
     feeTx2
     (SlotNo 100)
     SNothing

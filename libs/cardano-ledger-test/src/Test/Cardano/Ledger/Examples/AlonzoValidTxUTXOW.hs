@@ -13,6 +13,7 @@
 
 module Test.Cardano.Ledger.Examples.AlonzoValidTxUTXOW (tests) where
 
+import Cardano.Ledger.Address (Withdrawals (..))
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (
@@ -51,7 +52,6 @@ import Cardano.Ledger.Shelley.TxBody (
   DCert (..),
   DelegCert (..),
   RewardAcnt (..),
-  Wdrl (..),
  )
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (inject, (<+>))
@@ -409,8 +409,8 @@ validatingWithWithdrawalBody pf =
     , Collateral' [mkGenesisTxIn 15]
     , Outputs' [validatingWithWithdrawalTxOut pf]
     , Txfee (Coin 5)
-    , Wdrls
-        ( Wdrl $
+    , Withdrawals'
+        ( Withdrawals $
             Map.singleton
               (RewardAcnt Testnet (scriptStakeCredSuceed pf))
               (Coin 1000)
@@ -464,8 +464,8 @@ notValidatingTxWithWithdrawal pf =
         , Collateral' [mkGenesisTxIn 16]
         , Outputs' [newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 1995)]]
         , Txfee (Coin 5)
-        , Wdrls
-            ( Wdrl $
+        , Withdrawals'
+            ( Withdrawals $
                 Map.singleton
                   (RewardAcnt Testnet (scriptStakeCredFail pf))
                   (Coin 1000)
@@ -640,8 +640,8 @@ validatingManyScriptsBody pf =
         [ DCertDeleg (DeRegKey $ timelockStakeCred pf)
         , DCertDeleg (DeRegKey $ scriptStakeCredSuceed pf)
         ]
-    , Wdrls
-        ( Wdrl $
+    , Withdrawals'
+        ( Withdrawals $
             Map.fromList
               [ (RewardAcnt Testnet (scriptStakeCredSuceed pf), Coin 0)
               , (RewardAcnt Testnet (timelockStakeCred pf), Coin 0)

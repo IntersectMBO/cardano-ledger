@@ -38,7 +38,7 @@ module Cardano.Ledger.Alonzo.TxInfo (
   transMultiAsset,
   transValue,
   transDCert,
-  transWdrl,
+  transWithdrawals,
   getWitVKeyHash,
   transDataPair,
   transExUnits,
@@ -89,7 +89,6 @@ import Cardano.Ledger.Alonzo.TxBody (
   ShelleyEraTxBody (..),
   mintTxBodyL,
   vldtTxBodyL,
-  wdrlsTxBodyL,
  )
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits, RdmrPtr, unTxDats)
 import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..), TxIx, certIxToInt, txIxToInt)
@@ -128,8 +127,8 @@ import Cardano.Ledger.Shelley.TxBody (
   Delegation (..),
   PoolCert (..),
   PoolParams (..),
-  Wdrl (..),
   WitVKey (..),
+  Withdrawals (..),
  )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (..))
@@ -375,7 +374,7 @@ transValue (MaryValue n m) = justAda <> transMultiAsset m
     justAda = PV1.singleton PV1.adaSymbol PV1.adaToken n
 
 -- =============================================
--- translate fileds like DCert, Wdrl, and similar
+-- translate fileds like DCert, Withdrawals, and similar
 
 transDCert :: DCert c -> PV1.DCert
 transDCert (DCertDeleg (RegKey stkcred)) =
@@ -393,8 +392,8 @@ transDCert (DCertPool (RetirePool keyhash (EpochNo i))) =
 transDCert (DCertGenesis _) = PV1.DCertGenesis
 transDCert (DCertMir _) = PV1.DCertMir
 
-transWdrl :: Wdrl c -> Map.Map PV1.StakingCredential Integer
-transWdrl (Wdrl mp) = Map.foldlWithKey' accum Map.empty mp
+transWithdrawals :: Withdrawals c -> Map.Map PV1.StakingCredential Integer
+transWithdrawals (Withdrawals mp) = Map.foldlWithKey' accum Map.empty mp
   where
     accum ans (RewardAcnt _network cred) (Coin n) =
       Map.insert (PV1.StakingHash (transStakeCred cred)) n ans
@@ -506,7 +505,7 @@ alonzoTxInfo pp lang ei sysS utxo tx = do
           , PV1.txInfoFee = transValue (inject @(MaryValue (EraCrypto era)) fee)
           , PV1.txInfoMint = transMultiAsset (txBody ^. mintTxBodyL)
           , PV1.txInfoDCert = foldr (\c ans -> transDCert c : ans) [] (txBody ^. certsTxBodyG)
-          , PV1.txInfoWdrl = Map.toList (transWdrl (txBody ^. wdrlsTxBodyL))
+          , PV1.txInfoWdrl = Map.toList (transWithdrawals (txBody ^. withdrawalsTxBodyL))
           , PV1.txInfoValidRange = timeRange
           , PV1.txInfoSignatories = map transKeyHash (Set.toList (txBody ^. reqSignerHashesTxBodyL))
           , PV1.txInfoData = map transDataPair datpairs

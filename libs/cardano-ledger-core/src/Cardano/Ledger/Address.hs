@@ -57,6 +57,7 @@ module Cardano.Ledger.Address (
   decodeRewardAcnt,
   fromCborRewardAcnt,
   Fail (..),
+  Withdrawals (..),
 )
 where
 
@@ -79,6 +80,7 @@ import Cardano.Ledger.Binary (
   ifDecoderVersionAtLeast,
   serialize,
  )
+import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Credential (
   Credential (..),
   PaymentCredential,
@@ -109,6 +111,7 @@ import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Lazy as BSL
 import Data.ByteString.Short as SBS (ShortByteString, fromShort, index, length, toShort)
 import qualified Data.ByteString.Unsafe as BS (unsafeDrop, unsafeIndex, unsafeTake)
+import Data.Map.Strict (Map)
 import Data.Maybe (fromMaybe)
 import Data.Proxy (Proxy (..))
 import Data.Text (Text)
@@ -877,3 +880,8 @@ isBootstrapCompactAddr (UnsafeCompactAddr bytes) = testBit (SBS.index bytes 0) b
 -- | Convert Byron's comapct address into `CompactAddr`. This is just an efficient type cast.
 fromBoostrapCompactAddress :: Byron.CompactAddress -> CompactAddr c
 fromBoostrapCompactAddress = UnsafeCompactAddr . Byron.unsafeGetCompactAddress
+
+-- | This is called @wdrl@ in the spec.
+newtype Withdrawals c = Withdrawals {unWithdrawals :: Map (RewardAcnt c) Coin}
+  deriving (Show, Eq, Generic)
+  deriving newtype (NoThunks, NFData, ToCBOR, FromCBOR)

@@ -143,8 +143,8 @@ import Cardano.Ledger.Shelley.TxBody (
   ShelleyTxBodyRaw (..),
   ShelleyTxOut (..),
   StakePoolRelay (..),
-  Wdrl (..),
   WitVKey (..),
+  Withdrawals (..),
  )
 import Cardano.Ledger.Shelley.TxWits (
   ShelleyTxWits,
@@ -1055,8 +1055,8 @@ ppPoolParams (PoolParams idx vrf pledge cost margin acnt owners relays md) =
     , ("Metadata", ppStrictMaybe ppPoolMetadata md)
     ]
 
-ppWdrl :: Wdrl c -> PDoc
-ppWdrl (Wdrl m) = ppSexp "" [ppMap' (text "Wdr") ppRewardAcnt' ppCoin m]
+ppWithdrawals :: Withdrawals c -> PDoc
+ppWithdrawals (Withdrawals m) = ppSexp "" [ppMap' (text "Wdr") ppRewardAcnt' ppCoin m]
 
 ppTxId :: TxId c -> PDoc
 ppTxId (TxId x) = ppSexp "TxId" [ppSafeHash x]
@@ -1106,13 +1106,13 @@ ppTxBody ::
   PrettyA (PParamsUpdate era) =>
   ShelleyTxBody era ->
   PDoc
-ppTxBody (TxBodyConstr (Memo (ShelleyTxBodyRaw ins outs cs wdrls fee ttl upd mdh) _)) =
+ppTxBody (TxBodyConstr (Memo (ShelleyTxBodyRaw ins outs cs withdrawals fee ttl upd mdh) _)) =
   ppRecord
     "TxBody"
     [ ("inputs", ppSet ppTxIn ins)
     , ("outputs", ppStrictSeq prettyA outs)
     , ("cert", ppStrictSeq ppDCert cs)
-    , ("wdrls", ppWdrl wdrls)
+    , ("withdrawals", ppWithdrawals withdrawals)
     , ("fee", ppCoin fee)
     , ("timetolive", ppSlotNo ttl)
     , ("update", ppStrictMaybe ppUpdate upd)
@@ -1134,8 +1134,8 @@ instance PrettyA StakePoolRelay where
 instance PrettyA (PoolParams c) where
   prettyA = ppPoolParams
 
-instance PrettyA (Wdrl c) where
-  prettyA = ppWdrl
+instance PrettyA (Withdrawals c) where
+  prettyA = ppWithdrawals
 
 instance PrettyA (TxId c) where
   prettyA = ppTxId

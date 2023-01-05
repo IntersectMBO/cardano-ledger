@@ -22,7 +22,7 @@ import Cardano.Ledger.Binary (mkSized)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core hiding (TranslationError)
 import Cardano.Ledger.Credential (StakeReference (..))
-import Cardano.Ledger.Shelley.TxBody (Wdrl (..))
+import Cardano.Ledger.Shelley.TxBody (Withdrawals (..))
 import Cardano.Ledger.TxIn (TxIn (..), mkTxInPartial)
 import Cardano.Ledger.UTxO (UTxO (..))
 import qualified Cardano.Ledger.Val as Val
@@ -113,7 +113,7 @@ txb i mRefInp o =
     , btbCollateralReturn = SNothing
     , btbTotalCollateral = SNothing
     , btbCerts = mempty
-    , btbWdrls = Wdrl mempty
+    , btbWithdrawals = Withdrawals mempty
     , btbTxFee = Coin 2
     , btbValidityInterval = ValidityInterval SNothing SNothing
     , btbUpdate = SNothing
