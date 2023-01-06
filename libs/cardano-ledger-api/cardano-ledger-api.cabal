@@ -90,12 +90,9 @@ test-suite cardano-ledger-api-test
     cardano-ledger-api,
     cardano-ledger-binary,
     cardano-ledger-babbage-test,
-    cardano-ledger-core,
+    cardano-ledger-core:{cardano-ledger-core, testlib},
     cardano-ledger-conway,
     microlens,
-    tasty,
-    tasty-quickcheck,
-    QuickCheck,
 
 -- Inspired from https://github.com/input-output-hk/haskell.nix/blob/master/test/cabal-doctests/cabal-doctests-test.cabal
 test-suite doctests

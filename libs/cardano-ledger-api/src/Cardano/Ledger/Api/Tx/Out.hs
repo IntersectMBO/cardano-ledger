@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
@@ -32,6 +33,10 @@
 module Cardano.Ledger.Api.Tx.Out (
   module Cardano.Ledger.Api.Scripts.Data,
   EraTxOut (..),
+  setMinCoinTxOut,
+  setMinCoinSizedTxOut,
+  ensureMinCoinTxOut,
+  ensureMinCoinSizedTxOut,
 
   -- * Shelley, Allegra and Mary Era
   ShelleyTxOut,
@@ -43,8 +48,6 @@ module Cardano.Ledger.Api.Tx.Out (
   -- * Babbage Era
   BabbageTxOut,
   BabbageEraTxOut (..),
-  setMinCoinTxOut,
-  setMinCoinSizedTxOut,
 )
 where
 
@@ -52,21 +55,58 @@ import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..), AlonzoTxOut)
 import Cardano.Ledger.Api.Scripts.Data
 import Cardano.Ledger.Babbage.TxBody (BabbageEraTxOut (..), BabbageTxOut)
 import Cardano.Ledger.Binary
+import Cardano.Ledger.Coin
 import Cardano.Ledger.Core (EraTxOut (..), PParams, coinTxOutL, eraProtVerLow)
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxOut)
 import Lens.Micro
 
+setMinCoinTxOutInternal ::
+  EraTxOut era =>
+  (Coin -> Coin -> Bool) ->
+  PParams era ->
+  TxOut era ->
+  TxOut era
+setMinCoinTxOutInternal f pp = go
+  where
+    go !txOut =
+      let curMinCoin = getMinCoinTxOut pp txOut
+          curCoin = txOut ^. coinTxOutL
+       in if curCoin `f` curMinCoin
+            then txOut
+            else go (txOut & coinTxOutL .~ curMinCoin)
+
 -- | Same as `setMinCoinSizedTxOut`, except it doesn't require the size of the
 -- TxOut and will recompute it if needed. Initial amount is not important.
 setMinCoinTxOut :: EraTxOut era => PParams era -> TxOut era -> TxOut era
-setMinCoinTxOut pp = go
+setMinCoinTxOut = setMinCoinTxOutInternal (==)
+
+-- | Similar to `setMinCoinTxOut` it will guarantee that the minimum requirement for the
+-- output amount is satisified, however it makes it possible to set a higher amount than
+-- the minimaly required.
+--
+-- @
+-- > ensureMinCoinTxOut pp (txOut & coinTxOutL .~ zero) == setMinCoinTxOut pp (txOut & coinTxOutL .~ zero)
+-- > (ensureMinCoinTxOut pp txOut ^. coinTxOutL) >= (setMinCoinTxOut pp txOut ^. coinTxOutL)
+-- @
+ensureMinCoinTxOut :: EraTxOut era => PParams era -> TxOut era -> TxOut era
+ensureMinCoinTxOut = setMinCoinTxOutInternal (>=)
+
+setMinCoinSizedTxOutInternal ::
+  forall era.
+  EraTxOut era =>
+  (Coin -> Coin -> Bool) ->
+  PParams era ->
+  Sized (TxOut era) ->
+  Sized (TxOut era)
+setMinCoinSizedTxOutInternal f pp = go
   where
-    go txOut =
-      let curMinCoin = getMinCoinTxOut pp txOut
-          curCoin = txOut ^. coinTxOutL
-       in if curCoin == curMinCoin
+    version = eraProtVerLow @era
+    go !txOut =
+      let curMinCoin = getMinCoinSizedTxOut pp txOut
+          curCoin = txOut ^. toSizedL version coinTxOutL
+       in if curCoin `f` curMinCoin
             then txOut
-            else go (txOut & coinTxOutL .~ curMinCoin)
+            else go (txOut & toSizedL version coinTxOutL .~ curMinCoin)
 
 -- | This function will adjust the output's `Coin` value to the smallest amount
 -- allowed by the UTXO rule. Initial amount is not important.
@@ -76,12 +116,18 @@ setMinCoinSizedTxOut ::
   PParams era ->
   Sized (TxOut era) ->
   Sized (TxOut era)
-setMinCoinSizedTxOut pp = go
-  where
-    version = eraProtVerLow @era
-    go txOut =
-      let curMinCoin = getMinCoinSizedTxOut pp txOut
-          curCoin = txOut ^. toSizedL version coinTxOutL
-       in if curCoin == curMinCoin
-            then txOut
-            else go (txOut & toSizedL version coinTxOutL .~ curMinCoin)
+setMinCoinSizedTxOut = setMinCoinSizedTxOutInternal (==)
+
+-- | Similar to `setMinCoinSizedTxOut` it will guarantee that the minimum requirement for the
+-- output amount is satisified, however it makes it possible to set a higher amount than
+-- the minimaly required.
+--
+-- `ensureMinCoinSizedTxOut` relates to `setMinCoinSizedTxOut` in the same way that
+-- `ensureMinCoinTxOut` relates to `setMinCoinTxOut`.
+ensureMinCoinSizedTxOut ::
+  forall era.
+  EraTxOut era =>
+  PParams era ->
+  Sized (TxOut era) ->
+  Sized (TxOut era)
+ensureMinCoinSizedTxOut = setMinCoinSizedTxOutInternal (>=)
