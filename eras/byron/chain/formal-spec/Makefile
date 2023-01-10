@@ -5,7 +5,7 @@
 ##
 
 # Document name
-DOCNAME = blockchain-spec
+DOCNAME = byron-blockchain
 
 # You want latexmk to *always* run, because make does not have all the info.
 # Also, include non-file targets in .PHONY so they are run regardless of any
@@ -43,5 +43,5 @@ clean:
 
 install:
 	mkdir -pv ${out}/nix-support/
-	cp blockchain-spec.pdf ${out}/
-	echo "doc-pdf blockchain-spec ${out}/blockchain-spec.pdf" > ${out}/nix-support/hydra-build-products
+	cp ${DOCNAME}.pdf ${out}/
+	echo "doc-pdf ${DOCNAME}.pdf ${out}/${DOCNAME}.pdf" > ${out}/nix-support/hydra-build-products

@@ -4,7 +4,7 @@ with pkgs;
 
 latex.buildLatex {
   name = "byron-chain-spec";
-  texFiles = [ "blockchain-spec" ];
+  texFiles = [ "byron-blockchain" ];
   meta = with lib; {
     description = "Byron Blockchain Specification";
     license = licenses.asl20;
