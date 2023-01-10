@@ -108,9 +108,9 @@ startStep ::
   Word64 ->
   PulsingRewUpdate (EraCrypto era)
 startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) maxSupply asc secparam =
-  let SnapShot stake' delegs' poolParams = ssStakeGo ss
+  let SnapShot stake delegs poolParams = ssStakeGo ss
       numStakeCreds, k :: Rational
-      numStakeCreds = fromIntegral (VMap.size $ unStake stake')
+      numStakeCreds = fromIntegral (VMap.size $ unStake stake)
       k = fromIntegral secparam
       -- We expect approximately 10k-many blocks to be produced each epoch.
       -- The reward calculation begins (4k/f)-many slots into the epoch,
@@ -149,19 +149,19 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
       _R = Coin $ rPot - deltaT1
       -- We now compute stake pool specific values that are needed for computing
       -- member and leader rewards.
-      activestake = sumAllStake stake'
-      _totalStake = circulation es maxSupply
-      stakePerPool = sumStakePerPool delegs' stake'
+      activestake = sumAllStake stake
+      totalStake = circulation es maxSupply
+      stakePerPool = sumStakePerPool delegs stake
       mkPoolRewardInfoCurry =
         mkPoolRewardInfo
           pr
           _R
           b
           (fromIntegral blocksMade)
-          stake'
-          delegs'
+          stake
+          delegs
           stakePerPool
-          _totalStake
+          totalStake
           activestake
       -- We map over the registered stake pools to compute the revelant
       -- stake pool specific values.
@@ -215,9 +215,9 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
       -- the neccessary information to compute their individual rewards.
       free =
         FreeVars
-          delegs'
+          delegs
           (UM.domain $ rewards ds)
-          (unCoin _totalStake)
+          totalStake
           (pr ^. ppProtocolVersionL)
           blockProducingPoolInfo
       pulser :: Pulser (EraCrypto era)
@@ -225,7 +225,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
         RSLP
           pulseSize
           free
-          (unStake stake')
+          (unStake stake)
           (RewardAns Map.empty Map.empty)
    in Pulsing rewsnap pulser
 

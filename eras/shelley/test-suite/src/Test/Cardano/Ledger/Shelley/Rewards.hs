@@ -769,11 +769,11 @@ reward
   poolParams
   stake
   delegs
-  (Coin totalStake) = completeM pulser
+  totalStake = completeM pulser
     where
       totalBlocks = sum b
       stakePerPool = sumStakePerPool delegs stake
-      Coin activeStake = sumAllStake stake
+      activeStake = sumAllStake stake
       -- ensure mkPoolRewardInfo does not use stake that doesn't belong to the pool
       stakeForPool pool = poolStake (ppId pool) delegs stake
       mkPoolRewardInfo' pool =
@@ -785,18 +785,17 @@ reward
           (stakeForPool pool)
           delegs
           stakePerPool
-          (Coin totalStake)
-          (Coin activeStake)
+          totalStake
+          activeStake
           pool
-      poolRewardInfo = VMap.toMap $ VMap.mapMaybe (either (const Nothing) Just . mkPoolRewardInfo') poolParams
-      pp_pv = pp ^. ppProtocolVersionL
       free =
         FreeVars
-          { addrsRew
-          , totalStake
-          , pp_pv
-          , poolRewardInfo
-          , delegs
+          { fvAddrsRew = addrsRew
+          , fvTotalStake = totalStake
+          , fvPoolRewardInfo =
+              VMap.toMap $ VMap.mapMaybe (either (const Nothing) Just . mkPoolRewardInfo') poolParams
+          , fvDelegs = delegs
+          , fvProtVer = pp ^. ppProtocolVersionL
           }
       pulser :: Pulser (EraCrypto era)
       pulser = RSLP 2 free (unStake stake) (RewardAns Map.empty Map.empty)

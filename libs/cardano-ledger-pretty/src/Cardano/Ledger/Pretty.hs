@@ -569,7 +569,7 @@ ppFreeVars (FreeVars ds addrs total pv pri) =
     "FreeVars"
     [ ("delegs", ppVMap ppCredential ppKeyHash ds)
     , ("addrsRew", ppSet ppCredential addrs)
-    , ("totalStake", ppInteger total)
+    , ("totalStake", ppCoin total)
     , ("pv", ppProtVer pv)
     , ("poolRewardInfo", ppMap ppKeyHash ppPoolRewardInfo pri)
     ]

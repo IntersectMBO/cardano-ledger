@@ -183,11 +183,11 @@ instance CC.Crypto c => FromCBOR (RewardSnapShot c) where
 -- Pulsable function.
 
 data FreeVars c = FreeVars
-  { delegs :: !(VMap VB VB (Credential 'Staking c) (KeyHash 'StakePool c))
-  , addrsRew :: !(Set (Credential 'Staking c))
-  , totalStake :: !Integer
-  , pp_pv :: !ProtVer
-  , poolRewardInfo :: !(Map (KeyHash 'StakePool c) (PoolRewardInfo c))
+  { fvDelegs :: !(VMap VB VB (Credential 'Staking c) (KeyHash 'StakePool c))
+  , fvAddrsRew :: !(Set (Credential 'Staking c))
+  , fvTotalStake :: !Coin
+  , fvProtVer :: !ProtVer
+  , fvPoolRewardInfo :: !(Map (KeyHash 'StakePool c) (PoolRewardInfo c))
   }
   deriving (Eq, Show, Generic)
   deriving (NoThunks)
@@ -197,30 +197,30 @@ instance NFData (FreeVars c)
 instance (CC.Crypto c) => ToCBOR (FreeVars c) where
   toCBOR
     FreeVars
-      { delegs
-      , addrsRew
-      , totalStake
-      , pp_pv
-      , poolRewardInfo
+      { fvDelegs
+      , fvAddrsRew
+      , fvTotalStake
+      , fvProtVer
+      , fvPoolRewardInfo
       } =
       encode
         ( Rec FreeVars
-            !> To delegs
-            !> To addrsRew
-            !> To totalStake
-            !> To pp_pv
-            !> To poolRewardInfo
+            !> To fvDelegs
+            !> To fvAddrsRew
+            !> To fvTotalStake
+            !> To fvProtVer
+            !> To fvPoolRewardInfo
         )
 
 instance (CC.Crypto c) => FromCBOR (FreeVars c) where
   fromCBOR =
     decode
       ( RecD FreeVars
-          <! From {- delegs -}
-          <! From {- addrsRew -}
-          <! From {- totalStake -}
-          <! From {- pp_pv -}
-          <! From {- poolRewardInfo -}
+          <! From {- fvDelegs -}
+          <! From {- fvAddrsRew -}
+          <! From {- fvTotalStake -}
+          <! From {- fvProtver -}
+          <! From {- fvPoolRewardInfo -}
       )
 
 -- =====================================================================
@@ -234,18 +234,18 @@ rewardStakePoolMember ::
   RewardAns c
 rewardStakePoolMember
   FreeVars
-    { delegs
-    , addrsRew
-    , totalStake
-    , poolRewardInfo
-    , pp_pv
+    { fvDelegs
+    , fvAddrsRew
+    , fvTotalStake
+    , fvPoolRewardInfo
+    , fvProtVer
     }
   inputanswer@(RewardAns accum recent)
   cred
   c = fromMaybe inputanswer $ do
-    poolID <- VMap.lookup cred delegs
-    poolRI <- Map.lookup poolID poolRewardInfo
-    r <- rewardOnePoolMember pp_pv (Coin totalStake) addrsRew poolRI cred (fromCompact c)
+    poolID <- VMap.lookup cred fvDelegs
+    poolRI <- Map.lookup poolID fvPoolRewardInfo
+    r <- rewardOnePoolMember fvProtVer fvTotalStake fvAddrsRew poolRI cred (fromCompact c)
     let ans = Reward MemberReward poolID r
     -- There is always just 1 member reward, so Set.singleton is appropriate
     pure $ RewardAns (Map.insert cred ans accum) (Map.insert cred (Set.singleton ans) recent)
