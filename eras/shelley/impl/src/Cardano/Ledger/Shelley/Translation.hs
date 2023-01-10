@@ -51,6 +51,6 @@ toFromByronTranslationContext ShelleyGenesis {sgGenDelegs, sgMaxLovelaceSupply, 
     , fbtcMaxLovelaceSupply = sgMaxLovelaceSupply
     }
 
-deriving instance Era era => NoThunks (FromByronTranslationContext era)
+deriving instance Crypto c => NoThunks (FromByronTranslationContext c)
 
-type instance TranslationContext (ShelleyEra c) = FromByronTranslationContext (ShelleyEra c)
+type instance TranslationContext (ShelleyEra c) = FromByronTranslationContext c

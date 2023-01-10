@@ -92,7 +92,7 @@ translateUTxOByronToShelley (Byron.UTxO utxoByron) =
 translateToShelleyLedgerState ::
   forall c.
   (Crypto c, ADDRHASH c ~ Crypto.Blake2b_224) =>
-  FromByronTranslationContext (ShelleyEra c) ->
+  FromByronTranslationContext c ->
   EpochNo ->
   Byron.ChainValidationState ->
   NewEpochState (ShelleyEra c)

@@ -250,7 +250,6 @@ in the naming of release branches.
 - `MAClass` is gone: #3175
 - `ShelleyMAEra` type in favor of `AllegraEra` and `MaryEra`: #3175
 - `MATxBody` type in favor of `AllegraTxBody` and `MaryTxBody`: #3175
-- Removed the `TranslateEra` instances for `ShelleyGenesis`: #3164
 - Deprecated `Cardano.Ledger.Serialization` in favor of `Cardano.Ledger.Binary` from
   `cardano-ledger-binary`: #3138
 - Removed `Data.Coders` from `cardano-data` in favor of `Cardano.Ledger.Binary.Coders` from

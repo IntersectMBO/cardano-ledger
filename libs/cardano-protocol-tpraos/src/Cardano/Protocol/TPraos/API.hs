@@ -598,7 +598,7 @@ getLeaderSchedule globals ss cds poolHash key pp = Set.filter isLeader epochSlot
 -- way as 'translateToShelleyLedgerState'.
 mkInitialShelleyLedgerView ::
   forall c.
-  FromByronTranslationContext (ShelleyEra c) ->
+  FromByronTranslationContext c ->
   LedgerView c
 mkInitialShelleyLedgerView transCtxt =
   let !ee = _extraEntropy . fbtcProtocolParams $ transCtxt
