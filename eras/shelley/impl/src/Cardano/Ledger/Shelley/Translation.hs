@@ -24,9 +24,9 @@ import GHC.Word (Word64)
 import NoThunks.Class (NoThunks (..))
 
 -- | Required data to translate a Byron ledger into a Shelley ledger.
-data FromByronTranslationContext era = FromByronTranslationContext
-  { fbtcGenDelegs :: !(Map (KeyHash 'Genesis (EraCrypto era)) (GenDelegPair (EraCrypto era)))
-  , fbtcProtocolParams :: !(ShelleyPParams era)
+data FromByronTranslationContext c = FromByronTranslationContext
+  { fbtcGenDelegs :: !(Map (KeyHash 'Genesis c) (GenDelegPairc))
+  , fbtcProtocolParams :: !(PParams (ShelleyEra c))
   , fbtcMaxLovelaceSupply :: !Word64
   }
   deriving (Eq, Show, Generic)
