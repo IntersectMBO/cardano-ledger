@@ -115,7 +115,7 @@ result-3/delegation_design_spec.pdf
 result-4/non-integer-calculations.pdf
 result-5/small-step-semantics.pdf
 result-6/ledger-spec.pdf
-result/blockchain-spec.pdf
+result/byron-blockchain.pdf
 ```
 
 
