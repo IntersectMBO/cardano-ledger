@@ -42,9 +42,8 @@ emptyFromByronTranslationContext =
     }
 
 toFromByronTranslationContext ::
-  ShelleyEra c ~ era =>
   ShelleyGenesis c ->
-  FromByronTranslationContext era
+  FromByronTranslationContext c
 toFromByronTranslationContext ShelleyGenesis {sgGenDelegs, sgMaxLovelaceSupply, sgProtocolParams} =
   FromByronTranslationContext
     { fbtcGenDelegs = sgGenDelegs
