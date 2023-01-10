@@ -33,7 +33,7 @@ data FromByronTranslationContext c = FromByronTranslationContext
 
 -- | Trivial FromByronTranslationContext value, for use in cases where we do not need
 -- to translate from Byron to Shelley.
-emptyFromByronTranslationContext :: FromByronTranslationContext era
+emptyFromByronTranslationContext :: FromByronTranslationContext c
 emptyFromByronTranslationContext =
   FromByronTranslationContext
     { fbtcGenDelegs = Map.empty
