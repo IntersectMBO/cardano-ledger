@@ -50,40 +50,12 @@ jobs:
         sudo apt-get -y remove --purge software-properties-common
         sudo apt-get -y autoremove
 
-     # this seems to break something. It _must_ come after the pacman setup
-     # above. It appears as if PATHEXT is set _after_ ghcup install ghc/cabal, and
-     # as such we'd need pacman.exe instead.
-    - name: Setup Haskell
-      run: |
-        # Use GHCUP to manage ghc/cabal
-        ghcup install ghc --set ${{ matrix.ghc }}
-        ghcup install cabal --set 3.8.1.0
-
-        ghc --version
-        cabal --version
-
-    # Unify the computation of the cabal store directory to a single step. This makes referencing the cabal
-    # store in later steps easier.
-    #
-    # We know on cabal store is located in the following locations by OS:
-    #
-    #   Linux: /home/runner/.cabal/store
-    #   MacOS: /Users/runner/.cabal/store
-    #   Windows: C:\cabal\store
-    #
-    # However, we compute these as best be can from information cabal provides in case this changes in the future.
-    - name: "Setup cabal-store"
-      id: cabal-store
-      shell: bash
-      run: |
-        cabal help user-config
-        cabal_config_file="$(cabal help user-config | grep -A 1 'You can edit the cabal configuration file to set defaults' | tail -n 1 | xargs)"
-
-        if [[ '${{ runner.os }}' != 'Windows' ]]; then
-          echo "cabal-store=$(dirname "$cabal_config_file")/store" | tee -a "$GITHUB_OUTPUT"
-        else
-          echo "cabal-store=C:\\cabal\\store" | tee -a "$GITHUB_OUTPUT"
-        fi
+    - name: Install Haskell
+      uses: input-output-hk/setup-haskell@v1
+      id: setup-haskell
+      with:
+        ghc-version: ${{ matrix.ghc }}
+        cabal-version: latest
 
     - name: Install secp256k1
       uses: input-output-hk/setup-secp256k1@v1
@@ -109,7 +81,7 @@ jobs:
       name: Cache cabal store
       with:
         path: |
-          ${{ steps.cabal-store.outputs.cabal-store }}
+          ${{ steps.setup-haskell.outputs.cabal-store }}
           dist
         key: cache-${{ env.CABAL_CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-v1-${{ hashFiles('cabal-cache.cabal') }}-${{ github.sha }}
         restore-keys: cache-${{ env.CABAL_CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-v1-${{ hashFiles('cabal-cache.cabal') }}-
