@@ -603,9 +603,9 @@ mkInitialShelleyLedgerView ::
 mkInitialShelleyLedgerView transCtxt =
   let !ee = _extraEntropy . fbtcProtocolParams $ transCtxt
    in LedgerView
-        { lvD = _d . fbtcProtocolParams $ transCtxt,
-          lvExtraEntropy = ee,
-          lvPoolDistr = PoolDistr Map.empty,
-          lvGenDelegs = GenDelegs $ fbtcGenDelegs transCtxt,
-          lvChainChecks = pparamsToChainChecksPParams . fbtcProtocolParams $ transCtxt
+        { lvD = _d . fbtcProtocolParams $ transCtxt
+        , lvExtraEntropy = ee
+        , lvPoolDistr = PoolDistr Map.empty
+        , lvGenDelegs = GenDelegs $ fbtcGenDelegs transCtxt
+        , lvChainChecks = pparamsToChainChecksPParams . fbtcProtocolParams $ transCtxt
         }

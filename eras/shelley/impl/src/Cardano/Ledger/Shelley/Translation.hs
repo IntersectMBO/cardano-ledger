@@ -5,11 +5,11 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Ledger.Shelley.Translation
-  ( FromByronTranslationContext (..),
-    emptyFromByronTranslationContext,
-    toFromByronTranslationContext,
-  )
+module Cardano.Ledger.Shelley.Translation (
+  FromByronTranslationContext (..),
+  emptyFromByronTranslationContext,
+  toFromByronTranslationContext,
+)
 where
 
 import Cardano.Ledger.Core (Era, EraCrypto, TranslationContext)
@@ -25,9 +25,9 @@ import NoThunks.Class (NoThunks (..))
 
 -- | Required data to translate a Byron ledger into a Shelley ledger.
 data FromByronTranslationContext era = FromByronTranslationContext
-  { fbtcGenDelegs :: !(Map (KeyHash 'Genesis (EraCrypto era)) (GenDelegPair (EraCrypto era))),
-    fbtcProtocolParams :: !(ShelleyPParams era),
-    fbtcMaxLovelaceSupply :: !Word64
+  { fbtcGenDelegs :: !(Map (KeyHash 'Genesis (EraCrypto era)) (GenDelegPair (EraCrypto era)))
+  , fbtcProtocolParams :: !(ShelleyPParams era)
+  , fbtcMaxLovelaceSupply :: !Word64
   }
   deriving (Eq, Show, Generic)
 
@@ -36,20 +36,20 @@ data FromByronTranslationContext era = FromByronTranslationContext
 emptyFromByronTranslationContext :: FromByronTranslationContext era
 emptyFromByronTranslationContext =
   FromByronTranslationContext
-    { fbtcGenDelegs = Map.empty,
-      fbtcMaxLovelaceSupply = 0,
-      fbtcProtocolParams = emptyPParams
+    { fbtcGenDelegs = Map.empty
+    , fbtcMaxLovelaceSupply = 0
+    , fbtcProtocolParams = emptyPParams
     }
 
-toFromByronTranslationContext
-  :: ShelleyEra c ~ era
-  => ShelleyGenesis c
-  -> FromByronTranslationContext era
+toFromByronTranslationContext ::
+  ShelleyEra c ~ era =>
+  ShelleyGenesis c ->
+  FromByronTranslationContext era
 toFromByronTranslationContext ShelleyGenesis {sgGenDelegs, sgMaxLovelaceSupply, sgProtocolParams} =
   FromByronTranslationContext
-    { fbtcGenDelegs = sgGenDelegs,
-      fbtcProtocolParams = sgProtocolParams,
-      fbtcMaxLovelaceSupply = sgMaxLovelaceSupply
+    { fbtcGenDelegs = sgGenDelegs
+    , fbtcProtocolParams = sgProtocolParams
+    , fbtcMaxLovelaceSupply = sgMaxLovelaceSupply
     }
 
 deriving instance Era era => NoThunks (FromByronTranslationContext era)
