@@ -41,7 +41,10 @@ emptyFromByronTranslationContext =
       fbtcProtocolParams = emptyPParams
     }
 
-toFromByronTranslationContext :: ShelleyGenesis era -> FromByronTranslationContext era
+toFromByronTranslationContext
+  :: ShelleyEra c ~ era
+  => ShelleyGenesis c
+  -> FromByronTranslationContext era
 toFromByronTranslationContext ShelleyGenesis {sgGenDelegs, sgMaxLovelaceSupply, sgProtocolParams} =
   FromByronTranslationContext
     { fbtcGenDelegs = sgGenDelegs,

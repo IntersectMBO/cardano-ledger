@@ -71,6 +71,7 @@ import Cardano.Ledger.Crypto (Crypto, HASH, KES)
 import Cardano.Ledger.Keys
 import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
+import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.StabilityWindow
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
@@ -213,10 +214,10 @@ deriving instance Crypto c => NoThunks (ShelleyGenesis c)
 
 -- | Although there could be (and was) a `TranslateEra` instance for ShelleyGenesis, it is morally
 -- more correct to have a separate function fulfill that task. The reason is that conceptually there
--- is no need to translate ShelleyGenesis values when moving to the next era. A `TranslateEra`
+-- is no need to translate ShelleyGenesis values when moving to the next era. A `TranslateEraaskell
 -- instance would be a convenience that is ultimately more confusing.
 translateShelleyGenesis ::
-  CC.Crypto era1 ~ CC.Crypto era2 => ShelleyGenesis era1 -> ShelleyGenesis era2
+  Crypto era1 ~ Crypto era2 => ShelleyGenesis era1 -> ShelleyGenesis era2
 translateShelleyGenesis genesis =
   ShelleyGenesis
     { sgSystemStart = sgSystemStart genesis,
@@ -236,7 +237,6 @@ translateShelleyGenesis genesis =
       sgStaking = sgStaking genesis
     }
   where
-    translatePParams :: ShelleyPParams era1 -> ShelleyPParams era2
     translatePParams pp =
       ShelleyPParams
         { _minfeeA = _minfeeA pp,
