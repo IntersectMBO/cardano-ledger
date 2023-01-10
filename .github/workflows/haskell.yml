@@ -28,7 +28,7 @@ jobs:
         os: [ubuntu-latest]
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v3
 
     - name: Set up Ruby 2.7
       uses: ruby/setup-ruby@v1
@@ -74,7 +74,7 @@ jobs:
     - name: Cabal Configure
       run: cabal configure --enable-tests --enable-benchmarks --write-ghc-environment-files=always
 
-    - uses: actions/cache@v2
+    - uses: actions/cache@v3
       if: matrix.os != 'macos-latest'
       name: Cache cabal store
       with:
@@ -113,7 +113,7 @@ jobs:
       fail-fast: false
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v3
 
     - name: Install fourmolu
       run: |
