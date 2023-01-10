@@ -25,7 +25,7 @@ import NoThunks.Class (NoThunks (..))
 
 -- | Required data to translate a Byron ledger into a Shelley ledger.
 data FromByronTranslationContext c = FromByronTranslationContext
-  { fbtcGenDelegs :: !(Map (KeyHash 'Genesis c) (GenDelegPairc))
+  { fbtcGenDelegs :: !(Map (KeyHash 'Genesis c) (GenDelegPair c))
   , fbtcProtocolParams :: !(PParams (ShelleyEra c))
   , fbtcMaxLovelaceSupply :: !Word64
   }
