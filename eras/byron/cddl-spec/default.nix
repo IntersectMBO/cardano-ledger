@@ -4,7 +4,7 @@ with pkgs;
 
 latex.buildLatex {
   name = "blocks-cddl-spec";
-  texFiles = [ "binary" ];
+  texFiles = [ "byron-binary" ];
   meta = with lib; {
     description = "Byron blocks CDDL specification";
     license = licenses.asl20;
