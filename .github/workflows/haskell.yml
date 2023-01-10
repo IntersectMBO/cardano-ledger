@@ -92,12 +92,16 @@ jobs:
     - name: Build
       run: cabal build all
 
-    - name: Git clone
-      run: git clone https://github.com/input-output-hk/cardano-mainnet-mirror
+    - name: Download Mainnet Mirror
+      run: |
+        REF=a31ac75
+        curl -L https://github.com/input-output-hk/cardano-mainnet-mirror/tarball/$REF -o mainnet-mirror.tgz
+        tar -xzf mainnet-mirror.tgz
+        mv input-output-hk-cardano-mainnet-mirror-$REF/epochs .
 
     - name: Run tests
       run: |
-        export CARDANO_MAINNET_MIRROR="$(pwd)/cardano-mainnet-mirror/epochs"
+        export CARDANO_MAINNET_MIRROR="$(pwd)/epochs"
         cabal test all
 
   fourmolu:
