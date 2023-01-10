@@ -11,10 +11,13 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     env:
+      # Modify this value to "invalidate" the cabal cache.
+      CABAL_CACHE_VERSION: "2022-12-30"
+
       # current ref from: 27.02.2022
       SECP256K1_REF: ac83be33d0956faf6b7f61a60ab524ef7d6a473a
 
-      SECP_CACHE_VERSION: 2022-12-24
+      SECP_CACHE_VERSION: "2022-12-30"
 
     defaults:
       run:
@@ -47,26 +50,18 @@ jobs:
         sudo apt-get -y remove --purge software-properties-common
         sudo apt-get -y autoremove
 
-    - uses: actions/cache@v3
-      name: "Cache secp256k1"
-      with:
-        path: secp256k1
-        key: cache-secp256k1-${{ runner.os }}-${{ env.SECP_CACHE_VERSION }}
-        restore-keys: cache-secp256k1-${{ runner.os }}-${{ env.SECP_CACHE_VERSION }}
-
-    - name: "Install secp256k1"
-      if: runner.os != 'Windows'
-      shell: bash
-      env:
-        CI_SECP_FLAGS: "--prefix=/usr/local"
-        CI_SECP_INSTALL_CMD: sudo
-      run: bash .github/workflows/build-secp256k1.bash
-
-    - uses: haskell/actions/setup@v1
+    - name: Install Haskell
+      uses: input-output-hk/setup-haskell@v1
       id: setup-haskell
       with:
         ghc-version: ${{ matrix.ghc }}
-        cabal-version: 3.8.1.0
+        cabal-version: latest
+
+    - name: Install secp256k1
+      uses: input-output-hk/setup-secp256k1@v1
+      with:
+        git-ref: ${{ env.SECP256K1_REF }}
+        cache-version: ${{ env.SECP_CACHE_VERSION }}
 
     - name: Configure to use libsodium
       run: |
@@ -88,8 +83,8 @@ jobs:
         path: |
           ${{ steps.setup-haskell.outputs.cabal-store }}
           dist
-        key: cache-${{ runner.os }}-${{ matrix.ghc }}-v1-${{ hashFiles('cabal-cache.cabal') }}-${{ github.sha }}
-        restore-keys: cache-${{ runner.os }}-${{ matrix.ghc }}-v1-${{ hashFiles('cabal-cache.cabal') }}-
+        key: cache-${{ env.CABAL_CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-v1-${{ hashFiles('cabal-cache.cabal') }}-${{ github.sha }}
+        restore-keys: cache-${{ env.CABAL_CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-v1-${{ hashFiles('cabal-cache.cabal') }}-
 
     - name: Install dependencies
       run: cabal build all --only-dependencies
