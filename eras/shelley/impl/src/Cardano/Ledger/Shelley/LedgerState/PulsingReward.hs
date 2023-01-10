@@ -203,7 +203,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
       rewsnap =
         RewardSnapShot
           { rewFees = ssFee ss
-          , rewprotocolVersion = pr ^. ppProtocolVersionL
+          , rewProtocolVersion = pr ^. ppProtocolVersionL
           , rewNonMyopic = nm
           , rewDeltaR1 = deltaR1
           , rewR = _R
@@ -271,7 +271,7 @@ completeRupd
         , rewNonMyopic = nm
         , rewLikelihoods = newLikelihoods
         , rewLeaders = lrewards
-        , rewprotocolVersion = protVer
+        , rewProtocolVersion = protVer
         }
       pulser@(RSLP _size _free _source (RewardAns prev _now)) -- If prev is Map.empty, we have never pulsed.
     ) = do

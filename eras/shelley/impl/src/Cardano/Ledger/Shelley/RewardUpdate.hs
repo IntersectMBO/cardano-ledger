@@ -135,7 +135,7 @@ emptyRewardUpdate =
 -- | To complete the reward update, we need a snap shot of the EpochState particular to this computation
 data RewardSnapShot c = RewardSnapShot
   { rewFees :: !Coin
-  , rewprotocolVersion :: !ProtVer
+  , rewProtocolVersion :: !ProtVer
   , rewNonMyopic :: !(NonMyopic c)
   , rewDeltaR1 :: !Coin -- deltaR1
   , rewR :: !Coin -- r
