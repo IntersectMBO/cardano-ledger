@@ -146,6 +146,10 @@ library testlib
                      primitive,
                      QuickCheck,
                      text,
+  if !impl(ghc >= 9.2)
+    -- Workaround: https://gitlab.haskell.org/ghc/ghc/-/issues/14630
+    ghc-options: -Wno-name-shadowing
+
 test-suite tests
   import:            base, project-config
   hs-source-dirs:    test

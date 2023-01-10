@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -11,10 +10,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
-#if __GLASGOW_HASKELL__ < 920
--- Workaroud a ghc bug:
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-#endif
+
 module Test.Cardano.Ledger.Core.Arbitrary (
   module Test.Cardano.Ledger.Binary.Arbitrary,
 )
