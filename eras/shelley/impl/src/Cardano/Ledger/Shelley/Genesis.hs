@@ -210,7 +210,6 @@ data ShelleyGenesis c = ShelleyGenesis
 
 deriving instance Crypto c => NoThunks (ShelleyGenesis c)
 
-
 sgActiveSlotCoeff :: ShelleyGenesis c -> ActiveSlotCoeff
 sgActiveSlotCoeff = mkActiveSlotCoeff . sgActiveSlotsCoeff
 
