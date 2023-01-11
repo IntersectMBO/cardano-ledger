@@ -6,7 +6,7 @@
 
 # Document name
 ifndef DOCNAME
-	DOCNAME = babbage-changes
+	DOCNAME = babbage-ledger
 endif
 
 # You want latexmk to *always* run, because make does not have all the info.

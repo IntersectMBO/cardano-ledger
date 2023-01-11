@@ -4,7 +4,7 @@ with pkgs;
 
 latex.buildLatex {
   name = "babbage-spec";
-  texFiles = [ "babbage-changes" ];
+  texFiles = [ "babbage-ledger" ];
   meta = with lib; {
     description = "Babbage ledger specification";
     license = licenses.asl20;
