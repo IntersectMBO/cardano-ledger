@@ -12,11 +12,12 @@ module Cardano.Ledger.Shelley.Translation (
 )
 where
 
-import Cardano.Ledger.Core (Era, EraCrypto, TranslationContext)
+import Cardano.Ledger.Core (PParams, TranslationContext)
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.Genesis (ShelleyGenesis (..))
-import Cardano.Ledger.Shelley.PParams (ShelleyPParams, emptyPParams)
+import Cardano.Ledger.Shelley.PParams (emptyPParams)
 import Data.Map (Map)
 import qualified Data.Map as Map
 import GHC.Generics (Generic)
