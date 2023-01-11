@@ -4,7 +4,7 @@ with pkgs;
 
 latex.buildLatex {
   name = "byron-ledger-spec";
-  texFiles = [ "ledger-spec" ];
+  texFiles = [ "byron-ledger" ];
   meta = with lib; {
     description = "Byron Ledger Specification";
     license = licenses.asl20;

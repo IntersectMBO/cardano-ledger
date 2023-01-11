@@ -5,7 +5,7 @@
 ##
 
 # Document name
-DOCNAME = ledger-spec
+DOCNAME = byron-ledger
 
 # You want latexmk to *always* run, because make does not have all the info.
 # Also, include non-file targets in .PHONY so they are run regardless of any
@@ -42,5 +42,5 @@ clean:
 
 install:
 	mkdir -pv ${out}/nix-support/
-	cp ledger-spec.pdf ${out}/
-	echo "doc-pdf ledger-spec ${out}/ledger-spec.pdf" > ${out}/nix-support/hydra-build-products
+	cp $(DOCNAME).pdf ${out}/
+	echo "doc-pdf $(DOCNAME) ${out}/$(DOCNAME).pdf" > ${out}/nix-support/hydra-build-products
