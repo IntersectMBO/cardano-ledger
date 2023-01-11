@@ -4,7 +4,7 @@ with pkgs;
 
 latex.buildLatex {
   name = "delegation-design-spec";
-  texFiles = [ "delegation_design_spec" ];
+  texFiles = [ "shelley-delegation" ];
   meta = with lib; {
     description = "Delegation Design Specification";
     license = licenses.asl20;
