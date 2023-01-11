@@ -4,7 +4,7 @@ with pkgs;
 
 latex.buildLatex {
   name = "alonzo-spec";
-  texFiles = [ "alonzo-changes" ];
+  texFiles = [ "alonzo-ledger" ];
   meta = with lib; {
     description = "Goguen ledger specification";
     license = licenses.asl20;

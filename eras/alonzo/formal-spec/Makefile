@@ -6,7 +6,7 @@
 
 # Document name
 ifndef DOCNAME
-	DOCNAME = alonzo-changes
+	DOCNAME = alonzo-ledger
 endif
 
 # You want latexmk to *always* run, because make does not have all the info.
