@@ -6,7 +6,7 @@
 
 # Document name
 ifndef DOCNAME
-	DOCNAME = shelley-ma
+	DOCNAME = mary-ledger
 endif
 
 # You want latexmk to *always* run, because make does not have all the info.
