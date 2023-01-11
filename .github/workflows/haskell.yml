@@ -1,10 +1,8 @@
 name: Haskell CI
 
 on:
-  push:
-    branches: [ '*' ]
   pull_request:
-    branches: [ "master", "release/*" ]
+    branches: [ "**" ]
 
 jobs:
   build:
@@ -30,7 +28,7 @@ jobs:
         os: [ubuntu-latest]
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v3
 
     - name: Set up Ruby 2.7
       uses: ruby/setup-ruby@v1
@@ -76,15 +74,21 @@ jobs:
     - name: Cabal Configure
       run: cabal configure --enable-tests --enable-benchmarks --write-ghc-environment-files=always
 
-    - uses: actions/cache@v2
+    - uses: actions/cache@v3
       if: matrix.os != 'macos-latest'
       name: Cache cabal store
       with:
         path: |
           ${{ steps.setup-haskell.outputs.cabal-store }}
-          dist
-        key: cache-${{ env.CABAL_CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-v1-${{ hashFiles('cabal-cache.cabal') }}-${{ github.sha }}
-        restore-keys: cache-${{ env.CABAL_CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-v1-${{ hashFiles('cabal-cache.cabal') }}-
+          dist-newstyle
+        # cache is invalidated upon a change to cabal.project (and/or cabal.project.local), a bump to
+        # CABAL_CACHE_VERSION or after a week of inactivity
+        key: cache-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('cabal.project*') }}-${{ github.head_ref }}
+        # Restoring attempts are from current branch, master or any other branch
+        restore-keys: |
+          cache-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('cabal.project*') }}-${{ github.head_ref }}
+          cache-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('cabal.project*') }}-master
+          cache-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('cabal.project*') }}
 
     - name: Install dependencies
       run: cabal build all --only-dependencies
@@ -92,12 +96,16 @@ jobs:
     - name: Build
       run: cabal build all
 
-    - name: Git clone
-      run: git clone https://github.com/input-output-hk/cardano-mainnet-mirror
+    - name: Download Mainnet Mirror
+      run: |
+        REF=a31ac75
+        curl -L https://github.com/input-output-hk/cardano-mainnet-mirror/tarball/$REF -o mainnet-mirror.tgz
+        tar -xzf mainnet-mirror.tgz
+        mv input-output-hk-cardano-mainnet-mirror-$REF/epochs .
 
     - name: Run tests
       run: |
-        export CARDANO_MAINNET_MIRROR="$(pwd)/cardano-mainnet-mirror/epochs"
+        export CARDANO_MAINNET_MIRROR="$(pwd)/epochs"
         cabal test all
 
   fourmolu:
@@ -111,7 +119,7 @@ jobs:
       fail-fast: false
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v3
 
     - name: Install fourmolu
       run: |
