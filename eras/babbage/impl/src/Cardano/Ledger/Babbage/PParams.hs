@@ -90,9 +90,9 @@ import Numeric.Natural (Natural)
 -- | Babbage Protocol parameters. Ways in which parameters have changed from Alonzo: lack
 -- of @d@, @extraEntropy@ and replacement of @coinsPerUTxOWord@ with @coinsPerUTxOByte@
 data BabbagePParams f era = BabbagePParams
-  { bppMinFeeA :: !(HKD f Natural)
+  { bppMinFeeA :: !(HKD f Coin)
   -- ^ The linear factor for the minimum fee calculation
-  , bppMinFeeB :: !(HKD f Natural)
+  , bppMinFeeB :: !(HKD f Coin)
   -- ^ The constant factor for the minimum fee calculation
   , bppMaxBBSize :: !(HKD f Natural)
   -- ^ Maximal block body size
@@ -275,8 +275,8 @@ instance Era era => FromCBOR (BabbagePParams Identity era) where
 emptyBabbagePParams :: forall era. Era era => BabbagePParams Identity era
 emptyBabbagePParams =
   BabbagePParams
-    { bppMinFeeA = 0
-    , bppMinFeeB = 0
+    { bppMinFeeA = Coin 0
+    , bppMinFeeB = Coin 0
     , bppMaxBBSize = 0
     , bppMaxTxSize = 2048
     , bppMaxBHSize = 0

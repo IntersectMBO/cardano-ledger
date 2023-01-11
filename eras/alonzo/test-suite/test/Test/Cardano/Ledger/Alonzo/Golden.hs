@@ -239,8 +239,8 @@ goldenMinFee =
             pricesParam = Prices priceMem priceSteps
             pp =
               emptyPParams
-                & ppMinFeeAL .~ 44
-                & ppMinFeeBL .~ 155381
+                & ppMinFeeAL .~ Coin 44
+                & ppMinFeeBL .~ Coin 155381
                 & ppPricesL .~ pricesParam
 
         Coin 1006053 @?= getMinFeeTx pp firstTx

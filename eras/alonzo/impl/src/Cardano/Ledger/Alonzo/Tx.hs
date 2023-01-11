@@ -337,12 +337,10 @@ alonzoMinFeeTx ::
   Tx era ->
   Coin
 alonzoMinFeeTx pp tx =
-  (tx ^. sizeTxF <×> a pp)
-    <+> b pp
+  (tx ^. sizeTxF <×> pp ^. ppMinFeeAL)
+    <+> pp ^. ppMinFeeBL
     <+> txscriptfee (pp ^. ppPricesL) allExunits
   where
-    a protparam = Coin (fromIntegral (protparam ^. ppMinFeeAL))
-    b protparam = Coin (fromIntegral (protparam ^. ppMinFeeBL))
     allExunits = totExUnits tx
 
 minfee ::

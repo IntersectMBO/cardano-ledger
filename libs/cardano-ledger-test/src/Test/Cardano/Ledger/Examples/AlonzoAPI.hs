@@ -64,7 +64,7 @@ testEvaluateTransactionFee =
     @?= getMinFeeTx pparams validatingTx
   where
     pf = Alonzo Mock
-    pparams = newPParams pf $ defaultPPs ++ [MinfeeA 1]
+    pparams = newPParams pf $ defaultPPs ++ [MinfeeA (Coin 1)]
     validatingTxNoWits =
       newTx
         pf

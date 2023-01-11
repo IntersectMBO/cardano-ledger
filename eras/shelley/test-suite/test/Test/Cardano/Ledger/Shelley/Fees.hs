@@ -500,8 +500,8 @@ testEvaluateTransactionFee =
   where
     pp =
       emptyPParams
-        & ppMinFeeAL .~ 1
-        & ppMinFeeBL .~ 1
+        & ppMinFeeAL .~ Coin 1
+        & ppMinFeeBL .~ Coin 1
 
     txSimpleUTxONoWit =
       ShelleyTx

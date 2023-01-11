@@ -63,7 +63,7 @@ import Cardano.Ledger.Binary (
   serializeEncoding,
  )
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.Coin (Coin (Coin))
+import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Keys (HasKeyRole (coerceKeyRole), KeyHash, KeyRole (Witness), asWitness)
@@ -78,6 +78,7 @@ import Cardano.Ledger.Shelley.TxAuxData ()
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..), ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits ()
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import Cardano.Ledger.Val ((<+>), (<×>))
 import Control.DeepSeq (NFData)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Short as SBS
@@ -397,8 +398,7 @@ extractKeyHashWitnessSet = foldr accum Set.empty
 -- | Minimum fee calculation
 shelleyMinFeeTx :: EraTx era => PParams era -> Tx era -> Coin
 shelleyMinFeeTx pp tx =
-  Coin $
-    (fromIntegral (pp ^. ppMinFeeAL) * tx ^. sizeTxF) + fromIntegral (pp ^. ppMinFeeBL)
+  (tx ^. sizeTxF <×> pp ^. ppMinFeeAL) <+> pp ^. ppMinFeeBL
 
 minfee :: EraTx era => PParams era -> Tx era -> Coin
 minfee = shelleyMinFeeTx

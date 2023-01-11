@@ -181,9 +181,9 @@ pattern RefScript' :: [Script era] -> TxOutField era -- 0 or 1 element
 
 -- ==================
 data PParamsField era
-  = MinfeeA Natural
+  = MinfeeA Coin
   | -- | The constant factor for the minimum fee calculation
-    MinfeeB Natural
+    MinfeeB Coin
   | -- | Maximal block body size
     MaxBBSize Natural
   | -- | Maximal transaction size

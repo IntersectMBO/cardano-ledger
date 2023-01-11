@@ -607,8 +607,8 @@ genGenEnv proof gsize = do
   maxTxExUnits <- arbitrary :: Gen ExUnits
   maxCollateralInputs <- elements [1 .. collInputsMax gsize]
   collateralPercentage <- fromIntegral <$> chooseInt (1, 10000)
-  minfeeA <- fromIntegral <$> chooseInt (0, 1000)
-  minfeeB <- fromIntegral <$> chooseInt (0, 10000)
+  minfeeA <- Coin <$> choose (0, 1000)
+  minfeeB <- Coin <$> choose (0, 10000)
   let pp =
         newPParams
           proof

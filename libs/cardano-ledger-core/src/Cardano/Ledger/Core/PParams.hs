@@ -259,10 +259,10 @@ class
   -- HKD Versions of lenses
 
   -- | The linear factor for the minimum fee calculation
-  hkdMinFeeAL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Natural)
+  hkdMinFeeAL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
 
   -- | The constant factor for the minimum fee calculation
-  hkdMinFeeBL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Natural)
+  hkdMinFeeBL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
 
   -- | Maximal block body size
   hkdMaxBBSizeL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Natural)
@@ -329,11 +329,11 @@ ppuLens = lens (\(PParamsUpdate x) -> x) (\_ pp -> PParamsUpdate pp)
 -- PParams versions of lenses
 
 -- | The linear factor for the minimum fee calculation
-ppMinFeeAL :: forall era. EraPParams era => Lens' (PParams era) Natural
+ppMinFeeAL :: forall era. EraPParams era => Lens' (PParams era) Coin
 ppMinFeeAL = ppLens . hkdMinFeeAL @era @Identity
 
 -- | The constant factor for the minimum fee calculation
-ppMinFeeBL :: forall era. EraPParams era => Lens' (PParams era) Natural
+ppMinFeeBL :: forall era. EraPParams era => Lens' (PParams era) Coin
 ppMinFeeBL = ppLens . hkdMinFeeBL @era @Identity
 
 -- | Maximal block body size
@@ -399,11 +399,11 @@ ppMinPoolCostL = ppLens . hkdMinPoolCostL @era @Identity
 -- PParamsUpdate versions of lenses
 
 -- | The linear factor for the minimum fee calculation
-ppuMinFeeAL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Natural)
+ppuMinFeeAL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Coin)
 ppuMinFeeAL = ppuLens . hkdMinFeeAL @era @StrictMaybe
 
 -- | The constant factor for the minimum fee calculation
-ppuMinFeeBL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Natural)
+ppuMinFeeBL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Coin)
 ppuMinFeeBL = ppuLens . hkdMinFeeBL @era @StrictMaybe
 
 -- | Maximal block body size
