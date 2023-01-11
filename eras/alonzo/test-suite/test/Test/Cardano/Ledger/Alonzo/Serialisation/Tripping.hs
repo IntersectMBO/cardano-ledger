@@ -16,7 +16,7 @@ import Cardano.Ledger.Alonzo.Rules (
  )
 import Cardano.Ledger.Alonzo.Scripts (CostModels, eqAlonzoScriptRaw)
 import Cardano.Ledger.Alonzo.Scripts.Data (BinaryData, Data (..))
-import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits)
+import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits, Redeemers)
 import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (zipMemoRawType)
@@ -51,6 +51,8 @@ tests =
           roundTripTwiddledProperty @(BinaryData Alonzo)
     , testProperty "alonzo/TxAuxData" $
         roundTripAnnExpectation @(ShelleyTxAuxData Alonzo)
+    , testProperty "alonzo/Redeemers" $
+        roundTripAnnExpectation @(Redeemers Alonzo)
     , testProperty "alonzo/AlonzoTxWits" $
         roundTripAnnExpectation @(AlonzoTxWits Alonzo)
     , testProperty "alonzo/TxBody" $

@@ -23,6 +23,7 @@ module Cardano.Ledger.Alonzo.TxWits (
     Redeemers,
     Redeemers'
   ),
+  RedeemersRaw (..),
   unRedeemers,
   nullRedeemers,
   TxDats (TxDats, TxDats'),
@@ -58,17 +59,24 @@ import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..), Tag)
 import Cardano.Ledger.Alonzo.Scripts.Data (Data, hashData)
 import Cardano.Ledger.Binary (
-  Annotator,
+  Annotator (..),
   Decoder,
+  DecoderError (DecoderErrorSizeMismatch),
   FromCBOR (..),
   FromCBORGroup (..),
   ToCBOR (..),
   ToCBORGroup (..),
+  cborError,
+  decodeBreakOr,
   decodeList,
+  decodeListLenOrIndef,
   encodeFoldableEncoder,
   encodeListLen,
+  natVersion,
  )
 import Cardano.Ledger.Binary.Coders
+import Cardano.Ledger.Binary.Decoding (DecoderError (DecoderErrorCustom), ifDecoderVersionAtLeast)
+import Cardano.Ledger.Binary.Encoding (ifEncodingVersionAtLeast)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto (DSIGN, HASH), StandardCrypto)
 import Cardano.Ledger.Keys (KeyRole (Witness))
@@ -84,12 +92,14 @@ import Cardano.Ledger.MemoBytes (
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.TxBody (WitVKey)
 import Control.DeepSeq (NFData)
+import Control.Monad (unless, when)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
 import Data.Proxy (Proxy (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
+import qualified Data.Text as Text
 import Data.Typeable (Typeable)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
@@ -133,10 +143,15 @@ newtype RedeemersRaw era = RedeemersRaw (Map RdmrPtr (Data era, ExUnits))
 deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (RedeemersRaw era)
 
 instance Typeable era => ToCBOR (RedeemersRaw era) where
-  toCBOR (RedeemersRaw rs) = encodeFoldableEncoder keyValueEncoder $ Map.toAscList rs
+  toCBOR (RedeemersRaw rs) =
+    ifEncodingVersionAtLeast
+      (natVersion @9)
+      (encode' 3)
+      (encode' 4)
     where
-      keyValueEncoder (ptr, (dats, exs)) =
-        encodeListLen 4
+      encode' n = encodeFoldableEncoder (keyValueEncoder n) $ Map.toAscList rs
+      keyValueEncoder numFields (ptr, (dats, exs)) =
+        encodeListLen numFields
           <> toCBORGroup ptr
           <> toCBOR dats
           <> toCBOR exs
@@ -480,20 +495,41 @@ instance
   (Era era) =>
   FromCBOR (Annotator (RedeemersRaw era))
   where
-  fromCBOR = fmap RedeemersRaw <$> dec
+  fromCBOR =
+    fmap RedeemersRaw
+      <$> ifDecoderVersionAtLeast
+        (natVersion @9)
+        (dec decodeConway)
+        (dec decodePreConway)
     where
-      dec :: forall s. Decoder s (Annotator (Map RdmrPtr (Data era, ExUnits)))
-      dec = do
-        entries <- fmap sequence
-          . decodeList
-          . decodeRecordNamed "redeemer" (const 4)
-          $ do
-            rdmrPtr <- fromCBORGroup
-            dat <- fromCBOR
-            ex <- fromCBOR
-            let f x y z = (x, (y, z))
-            pure $ f rdmrPtr <$> dat <*> pure ex
-        pure $ Map.fromList <$> entries
+      dec :: Decoder s (Annotator (RdmrPtr, (Data era, ExUnits))) -> Decoder s (Annotator (Map RdmrPtr (Data era, ExUnits)))
+      dec decoder = fmap (fmap Map.fromList) (fmap sequence . decodeList $ decoder)
+      decodeRedeemerRecord :: Decoder s (Annotator (RdmrPtr, (Data era, ExUnits)))
+      decodeRedeemerRecord = do
+        rdmrPtr <- fromCBORGroup
+        dataEra <- fromCBOR
+        exUnits <- fromCBOR
+        let f :: RdmrPtr -> Data era -> ExUnits -> (RdmrPtr, (Data era, ExUnits))
+            f x y z = (x, (y, z))
+        pure $ f rdmrPtr <$> dataEra <*> pure exUnits
+      decodePreConway :: Decoder s (Annotator (RdmrPtr, (Data era, ExUnits)))
+      decodePreConway = decodeRecordNamed "redeemer" (const 4) decodeRedeemerRecord
+      -- This implementation is adapted directly from `decodeRecordNamed`
+      -- It is customized for Conway because in this Era, we want to allow the decoding of
+      -- Redeemer that is encoded using both sizes, the previous, wrong size of 4, and the new, correct size of 3.
+      decodeConway :: Decoder s (Annotator (RdmrPtr, (Data era, ExUnits)))
+      decodeConway = do
+        lenOrIndef <- decodeListLenOrIndef
+        record <- decodeRedeemerRecord
+        case lenOrIndef of
+          Just n ->
+            when (n `notElem` [3, 4]) $
+              cborError $
+                DecoderErrorSizeMismatch (Text.pack "Record redeemers should be sized 3 for Conway") 3 n
+          Nothing -> do
+            isBreak <- decodeBreakOr
+            unless isBreak $ cborError $ DecoderErrorCustom "redeemers" "Excess terms in array"
+        pure record
 
 deriving via
   (Mem RedeemersRaw era)

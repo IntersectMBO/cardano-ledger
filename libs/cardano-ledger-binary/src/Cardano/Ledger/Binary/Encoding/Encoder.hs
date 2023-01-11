@@ -39,6 +39,7 @@ module Cardano.Ledger.Binary.Encoding.Encoder (
   encodeFoldableAsDefLenList,
   encodeFoldableAsIndefLenList,
   encodeFoldableMapEncoder,
+  ifEncodingVersionAtLeast,
 
   -- *** Time
   encodeUTCTime,

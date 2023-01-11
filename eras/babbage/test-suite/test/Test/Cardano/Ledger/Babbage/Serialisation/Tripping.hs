@@ -6,6 +6,7 @@
 module Test.Cardano.Ledger.Babbage.Serialisation.Tripping where
 
 import Cardano.Ledger.Alonzo.Scripts (CostModels)
+import Cardano.Ledger.Alonzo.TxWits (Redeemers)
 import Cardano.Ledger.Babbage (Babbage)
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure)
 import Cardano.Ledger.Block (Block)
@@ -28,6 +29,8 @@ tests =
         roundTripAnnExpectation @(TxAuxData Babbage)
     , testProperty "babbage/TxOut" $
         roundTripCborExpectation @(TxOut Babbage)
+    , testProperty "babbage/Redeemers" $
+        roundTripAnnExpectation @(Redeemers Babbage)
     , testProperty "babbage/TxBody" $
         roundTripAnnExpectation @(TxBody Babbage)
     , testProperty "babbage/CostModel" $

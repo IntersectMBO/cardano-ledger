@@ -63,6 +63,7 @@ in the naming of release branches.
 
 ### Changed
 
+- Fixed `Redeemer` codec to size of `3` for Conway. Conway can still decode both sizes `3` and older `4` #3263
 - Move `Wdrl` to `Core`. Also rename it to `Withdrawals`, while switching `Test.Cardano.Ledger.Generic.Fields.Withdrawals` to `Withdrawals'` #3239
 - Moved `PreviousEra` into `Era` type class. Added `Era` instance for a new data type
   `ByronEra`.
