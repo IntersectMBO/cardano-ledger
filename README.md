@@ -110,7 +110,7 @@ nix-build
 The LaTeX documents will be placed inside directories named `result*`, e.g.:
 
 ```shell
-result-2/ledger-spec.pdf
+result-2/byron-ledger.pdf
 result-3/delegation_design_spec.pdf
 result-4/non-integer-calculations.pdf
 result-5/small-step-semantics.pdf
