@@ -4,7 +4,7 @@ with pkgs;
 
 latex.buildLatex {
   name = "shelley-ma-spec";
-  texFiles = [ "shelley-ma" ];
+  texFiles = [ "mary-ledger" ];
   meta = with lib; {
     description = "Shelley multi-asset specification";
     license = licenses.asl20;
