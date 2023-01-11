@@ -4,7 +4,7 @@ with pkgs;
 
 latex.buildLatex {
   name = "shelley-ledger-spec";
-  texFiles = [ "ledger-spec" ];
+  texFiles = [ "shelley-ledger" ];
   meta = with lib; {
     description = "Shelley Ledger Specification";
     license = licenses.asl20;
