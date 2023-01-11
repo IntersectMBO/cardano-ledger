@@ -111,7 +111,7 @@ The LaTeX documents will be placed inside directories named `result*`, e.g.:
 
 ```shell
 result-2/byron-ledger.pdf
-result-3/delegation_design_spec.pdf
+result-3/shelley-delegation.pdf
 result-4/non-integer-calculations.pdf
 result-5/small-step-semantics.pdf
 result-6/ledger-spec.pdf
