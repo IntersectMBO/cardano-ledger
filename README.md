@@ -114,7 +114,7 @@ result-2/byron-ledger.pdf
 result-3/shelley-delegation.pdf
 result-4/non-integer-calculations.pdf
 result-5/small-step-semantics.pdf
-result-6/ledger-spec.pdf
+result-6/shelley-ledger.pdf
 result/byron-blockchain.pdf
 ```
 
