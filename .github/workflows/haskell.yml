@@ -1,6 +1,8 @@
 name: Haskell CI
 
 on:
+  push:
+    branches: [ "master" ]
   pull_request:
     branches: [ "**" ]
 
@@ -83,11 +85,9 @@ jobs:
           dist-newstyle
         # cache is invalidated upon a change to cabal.project (and/or cabal.project.local), a bump to
         # CABAL_CACHE_VERSION or after a week of inactivity
-        key: cache-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('cabal.project*') }}-${{ github.head_ref }}
-        # Restoring attempts are from current branch, master or any other branch
+        key: cache-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('cabal.project*') }}
+        # Restoring attempts are from current branch then master
         restore-keys: |
-          cache-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('cabal.project*') }}-${{ github.head_ref }}
-          cache-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('cabal.project*') }}-master
           cache-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('cabal.project*') }}
 
     - name: Install dependencies
