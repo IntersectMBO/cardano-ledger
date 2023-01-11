@@ -37,7 +37,7 @@ import NoThunks.Class (NoThunks (..))
 -- stake credential in the stake pool registration certificate).
 --
 -- See Figure 47, "Functions used in the Reward Splitting", of the
--- <https://hydra.iohk.io/job/Cardano/cardano-ledger/shelleyLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec formal specification>
+-- <https://github.com/input-output-hk/cardano-ledger/releases/latest/download/shelley-ledger.pdf formal specification>
 -- for more details.
 data RewardType = MemberReward | LeaderReward
   deriving (Eq, Show, Ord, Bounded, Enum, Generic)
