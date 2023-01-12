@@ -53,6 +53,7 @@ import Cardano.Ledger.Shelley.PParams
 import qualified Cardano.Ledger.Shelley.PParams as PParams (Update (..))
 import qualified Cardano.Ledger.Shelley.PParams as ShelleyPP
 import Cardano.Ledger.Shelley.Rules
+import Cardano.Ledger.Shelley.Translation (emptyFromByronTranslationContext)
 import Cardano.Ledger.TxIn (mkTxInPartial)
 import Cardano.Ledger.Val (inject)
 import Cardano.Protocol.TPraos.API
@@ -916,7 +917,7 @@ ledgerExamplesShelley =
     exampleCoin
     (exampleTxBody (Shelley Standard) (inject (Coin 100000)))
     exampleShelleyTxAuxData
-    ()
+    emptyFromByronTranslationContext
 
 exampleCoin :: Coin
 exampleCoin = Coin 10

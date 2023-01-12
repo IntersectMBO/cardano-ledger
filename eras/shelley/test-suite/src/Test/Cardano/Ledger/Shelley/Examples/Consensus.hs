@@ -29,6 +29,7 @@ import Cardano.Ledger.Shelley.API hiding (KeyPair, vKey)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Shelley.Rules
+import Cardano.Ledger.Shelley.Translation (emptyFromByronTranslationContext)
 import Cardano.Ledger.Shelley.TxWits
 import Cardano.Protocol.TPraos.API
 import Cardano.Protocol.TPraos.BHeader
@@ -418,7 +419,7 @@ ledgerExamplesShelley =
     exampleCoin
     exampleTxBodyShelley
     exampleAuxiliaryDataShelley
-    ()
+    emptyFromByronTranslationContext
 
 mkWitnessesPreAlonzo ::
   ( Core.EraTx era

@@ -95,6 +95,8 @@ in the naming of release branches.
   - Renamed `AlonzoTxAuxData.txMD` to `AlonzoTxAuxData.atadMetadata`:
   - Removed `AlonzoTxAuxData.scripts` in favor of two new fields `atadTimelock` and
     `atadPlutus`. This was needed due to #3166
+- Changed instance for `TranslationContext (ShelleyEra c)` to a data type that can be used to
+  translate from Byron to Shelley: #3164
 - Changed major version in `ProtVer` to use new type `Version` instead of `Natural`: #3138
 - Renamed records fields in `Cardano.Ledger` to names without `_` (underscores) #3126
   - `Alonzo.TxBody.AlonzoTxBody` pattern synonym

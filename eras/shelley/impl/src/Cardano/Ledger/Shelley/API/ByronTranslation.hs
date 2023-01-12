@@ -28,6 +28,7 @@ import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.Types
 import Cardano.Ledger.Shelley.Rules ()
+import Cardano.Ledger.Shelley.Translation (FromByronTranslationContext (..))
 import Cardano.Ledger.Slot
 import Cardano.Ledger.UTxO (coinBalance)
 import Cardano.Ledger.Val ((<->))
@@ -91,11 +92,11 @@ translateUTxOByronToShelley (Byron.UTxO utxoByron) =
 translateToShelleyLedgerState ::
   forall c.
   (Crypto c, ADDRHASH c ~ Crypto.Blake2b_224) =>
-  ShelleyGenesis c ->
+  FromByronTranslationContext c ->
   EpochNo ->
   Byron.ChainValidationState ->
   NewEpochState (ShelleyEra c)
-translateToShelleyLedgerState genesisShelley epochNo cvs =
+translateToShelleyLedgerState transCtxt epochNo cvs =
   NewEpochState
     { nesEL = epochNo
     , nesBprev = BlocksMade Map.empty
@@ -114,7 +115,7 @@ translateToShelleyLedgerState genesisShelley epochNo cvs =
     }
   where
     pparams :: ShelleyPParams (ShelleyEra c)
-    pparams = sgProtocolParams genesisShelley
+    pparams = fbtcProtocolParams transCtxt
 
     -- NOTE: we ignore the Byron delegation map because the genesis and
     -- delegation verification keys are hashed using a different hashing
@@ -127,11 +128,11 @@ translateToShelleyLedgerState genesisShelley epochNo cvs =
     -- Shelley genesis contains the same genesis and delegation verification
     -- keys, but hashed with the right algorithm.
     genDelegs :: GenDelegs c
-    genDelegs = GenDelegs $ sgGenDelegs genesisShelley
+    genDelegs = GenDelegs $ fbtcGenDelegs transCtxt
 
     reserves :: Coin
     reserves =
-      word64ToCoin (sgMaxLovelaceSupply genesisShelley) <-> coinBalance utxoShelley
+      word64ToCoin (fbtcMaxLovelaceSupply transCtxt) <-> coinBalance utxoShelley
 
     epochState :: EpochState (ShelleyEra c)
     epochState =
