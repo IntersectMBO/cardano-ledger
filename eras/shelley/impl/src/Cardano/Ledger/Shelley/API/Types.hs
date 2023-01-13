@@ -95,11 +95,7 @@ import Cardano.Ledger.Shelley.LedgerState as X (
   UTxOState (..),
  )
 import Cardano.Ledger.Shelley.PParams as X (
-  PParams,
-  PParams',
   ProposedPPUpdates (..),
-  ShelleyPParams,
-  ShelleyPParamsHKD (..),
   Update (..),
  )
 import Cardano.Ledger.Shelley.PoolRank as X (

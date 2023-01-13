@@ -1,7 +1,10 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Ledger.Shelley.RulesTests (
   chainExamples,
@@ -24,7 +27,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
   obligationDPState,
  )
-import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..)) -- _maxTxSize getField
 import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate (..), RewardUpdate (..))
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))
 import Cardano.Ledger.Shelley.TxBody (RewardAcnt (..), Wdrl (..))
@@ -59,16 +61,11 @@ import Test.Cardano.Ledger.Shelley.MultiSigExamples (
   bobOnly,
  )
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
-
--- EraIndepGenerators is neded for Arbitrary NewEpochState
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
-
--- Generators is needed for Arbitrary ShelleyPParams
-import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase, slotFromEpoch)
-import Test.QuickCheck (Property, discard, (===))
+import Test.Cardano.Ledger.Shelley.Utils
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, assertBool, testCase, (@?=))
-import Test.Tasty.QuickCheck (testProperty)
+import Test.Tasty.QuickCheck (Property, discard, testProperty, (===))
 
 chainExamples :: TestTree
 chainExamples =

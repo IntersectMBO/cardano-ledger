@@ -3,7 +3,6 @@
 {-# LANGUAGE TypeApplications #-}
 
 import Cardano.Crypto.Libsodium (sodiumInit)
-import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Rules (ShelleyLEDGER)
 import System.IO (hSetEncoding, stdout, utf8)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C)
@@ -15,7 +14,6 @@ import Test.Cardano.Ledger.Shelley.SafeHash (safeHashTest)
 import qualified Test.Cardano.Ledger.Shelley.Serialisation as Serialisation
 import Test.Cardano.Ledger.Shelley.UnitTests (unitTests)
 import Test.Tasty
-import Test.Tasty.Ingredients.ConsoleReporter (UseColor (Always))
 import Test.TestScenario (TestScenario (..), mainWithTestScenario)
 
 tests :: TestTree
@@ -26,20 +24,19 @@ tests = askOption $ \case
 
 mainTests :: TestTree
 mainTests =
-  localOption Always $
-    testGroup
-      "Ledger with Delegation"
-      [ depositTests @C
-      , minimalPropertyTests @C @(ShelleyLEDGER C)
-      , rewardTests
-      , Serialisation.tests 5
-      , chainExamples
-      , multisigExamples
-      , testTickF
-      , unitTests
-      , prettyTest
-      , safeHashTest
-      ]
+  testGroup
+    "Ledger with Delegation"
+    [ depositTests @C
+    , minimalPropertyTests @C @(ShelleyLEDGER C)
+    , rewardTests
+    , Serialisation.tests 5
+    , chainExamples
+    , multisigExamples
+    , testTickF
+    , unitTests
+    , prettyTest
+    , safeHashTest
+    ]
 
 nightlyTests :: TestTree
 nightlyTests =

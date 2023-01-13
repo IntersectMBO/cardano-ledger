@@ -50,12 +50,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   UTxOState,
   genesisState,
  )
-import Cardano.Ledger.Shelley.PParams (
-  ShelleyPParams,
-  ShelleyPParamsHKD (..),
-  emptyPParams,
-  _maxTxSize,
- )
 import Cardano.Ledger.Shelley.Rules (UtxoEnv (..))
 import Cardano.Ledger.Shelley.Scripts (
   MultiSig,
@@ -68,14 +62,13 @@ import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), TxId)
 import Cardano.Ledger.Shelley.TxAuxData (ShelleyTxAuxData)
 import Cardano.Ledger.Shelley.TxBody (
   ShelleyTxBody (..),
-  ShelleyTxOut (..),
   Wdrl (..),
  )
 import Cardano.Ledger.Shelley.TxWits (addrWits, scriptWits)
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Cardano.Ledger.Val as Val
-import Control.State.Transition.Extended (PredicateFailure, TRC (..))
+import Control.State.Transition
 import Data.Default.Class (Default (def))
 import Data.Foldable (fold)
 import Data.Map.Strict (Map)
@@ -145,11 +138,11 @@ aliceAndBobOrCarlOrDaria =
     , RequireAnyOf [singleKeyOnly Cast.carlAddr, singleKeyOnly Cast.dariaAddr]
     ]
 
-initTxBody :: ShelleyTest era => [(Addr (EraCrypto era), Value era)] -> ShelleyTxBody era
+initTxBody :: EraTxOut era => [(Addr (EraCrypto era), Value era)] -> ShelleyTxBody era
 initTxBody addrs =
   ShelleyTxBody
     (Set.fromList [TxIn genesisId minBound, TxIn genesisId (mkTxIxPartial 1)])
-    (StrictSeq.fromList $ map (uncurry ShelleyTxOut) addrs)
+    (StrictSeq.fromList $ map (uncurry mkBasicTxOut) addrs)
     Empty
     (Wdrl Map.empty)
     (Coin 0)
@@ -158,7 +151,7 @@ initTxBody addrs =
     SNothing
 
 makeTxBody ::
-  ShelleyTest era =>
+  EraTxOut era =>
   [TxIn (EraCrypto era)] ->
   [(Addr (EraCrypto era), Value era)] ->
   Wdrl (EraCrypto era) ->
@@ -166,7 +159,7 @@ makeTxBody ::
 makeTxBody inp addrCs wdrl =
   ShelleyTxBody
     (Set.fromList inp)
-    (StrictSeq.fromList [uncurry ShelleyTxOut addrC | addrC <- addrCs])
+    (StrictSeq.fromList [uncurry mkBasicTxOut addrC | addrC <- addrCs])
     Empty
     wdrl
     (Coin 0)
@@ -196,19 +189,21 @@ aliceInitCoin = Coin 10000
 bobInitCoin :: Coin
 bobInitCoin = Coin 1000
 
-genesis :: forall era. ShelleyTest era => LedgerState era
+genesis :: forall era. (EraTxOut era, Default (State (EraRule "PPUP" era))) => LedgerState era
 genesis = genesisState genDelegs0 utxo0
   where
     genDelegs0 = Map.empty
     utxo0 =
       genesisCoins @era
         genesisId
-        [ ShelleyTxOut Cast.aliceAddr (Val.inject aliceInitCoin)
-        , ShelleyTxOut Cast.bobAddr (Val.inject bobInitCoin)
+        [ mkBasicTxOut Cast.aliceAddr (Val.inject aliceInitCoin)
+        , mkBasicTxOut Cast.bobAddr (Val.inject bobInitCoin)
         ]
 
-initPParams :: ShelleyPParams era
-initPParams = emptyPParams {_maxTxSize = 1000}
+initPParams :: EraPParams era => PParams era
+initPParams =
+  emptyPParams
+    & ppMaxTxSizeL .~ 1000
 
 -- | Create an initial UTxO state where Alice has 'aliceInitCoin' and Bob
 -- 'bobInitCoin' to spend. Then create and apply a transaction which, if

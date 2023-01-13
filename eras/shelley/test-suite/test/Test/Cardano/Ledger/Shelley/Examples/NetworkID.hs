@@ -16,11 +16,12 @@ import Cardano.Ledger.Shelley.API (
   PoolParams (..),
   RewardAcnt (..),
   ShelleyPOOL,
-  ShelleyPParamsHKD (..),
  )
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Slot (SlotNo (..))
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.Default.Class (def)
+import Lens.Micro
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase)
@@ -47,7 +48,12 @@ testPoolNetworkID pv poolParams e = do
   let st =
         runShelleyBase $
           applySTSTest @(ShelleyPOOL ShelleyTest)
-            (TRC (PoolEnv (SlotNo 0) def {_protocolVersion = pv}, def, DCertPool (RegPool poolParams)))
+            ( TRC
+                ( PoolEnv (SlotNo 0) $ emptyPParams & ppProtocolVersionL .~ pv
+                , def
+                , DCertPool (RegPool poolParams)
+                )
+            )
   case (st, e) of
     (Right _, ExpectSuccess) -> assertBool "" True
     (Left _, ExpectFailure) -> assertBool "" True

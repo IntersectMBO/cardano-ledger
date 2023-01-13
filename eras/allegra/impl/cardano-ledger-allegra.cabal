@@ -46,6 +46,7 @@ library
 
   other-modules:
     Cardano.Ledger.Allegra.Era
+    Cardano.Ledger.Allegra.PParams
     Cardano.Ledger.Allegra.TxOut
     Cardano.Ledger.Allegra.TxSeq
     Cardano.Ledger.Allegra.TxWits

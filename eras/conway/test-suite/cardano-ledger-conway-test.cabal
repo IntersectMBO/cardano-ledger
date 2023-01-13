@@ -61,6 +61,7 @@ library
     cardano-ledger-shelley-test,
     cardano-ledger-shelley,
     cardano-strict-containers,
+    microlens,
     tasty,
     tasty-quickcheck,
     QuickCheck,
@@ -72,7 +73,7 @@ test-suite cardano-ledger-conway-test
   type: exitcode-stdio-1.0
   main-is: Tests.hs
   hs-source-dirs: test
-  ghc-options:        
+  ghc-options:
     -threaded
     -rtsopts
     -with-rtsopts=-N
@@ -90,4 +91,3 @@ test-suite cardano-ledger-conway-test
     cardano-ledger-core,
     cardano-ledger-shelley-test,
     tasty,
-

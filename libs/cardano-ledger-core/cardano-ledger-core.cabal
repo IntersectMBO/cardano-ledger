@@ -74,6 +74,11 @@ library
     Cardano.Ledger.Val
     Cardano.Ledger.UMapCompact
 
+  other-modules:
+    Cardano.Ledger.Core.Era
+    Cardano.Ledger.Core.PParams
+    Cardano.Ledger.Core.Translation
+
   build-depends:
     aeson >= 2,
     base16-bytestring,
@@ -109,6 +114,7 @@ library
     text,
     time,
     transformers,
+    tree-diff,
     validation-selective,
     vector-map,
 
@@ -140,6 +146,10 @@ library testlib
                      primitive,
                      QuickCheck,
                      text,
+  if !impl(ghc >= 9.2)
+    -- Workaround: https://gitlab.haskell.org/ghc/ghc/-/issues/14630
+    ghc-options: -Wno-name-shadowing
+
 test-suite tests
   import:            base, project-config
   hs-source-dirs:    test

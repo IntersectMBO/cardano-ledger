@@ -58,7 +58,6 @@ import qualified Data.Set as Set
 import Data.Typeable
 import Data.VMap as VMap
 import GHC.Generics (Generic)
-import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..), allNoThunks)
 
 -- ===============================================================
@@ -136,7 +135,7 @@ emptyRewardUpdate =
 -- | To complete the reward update, we need a snap shot of the EpochState particular to this computation
 data RewardSnapShot c = RewardSnapShot
   { rewFees :: !Coin
-  , rewprotocolVersion :: !ProtVer
+  , rewProtocolVersion :: !ProtVer
   , rewNonMyopic :: !(NonMyopic c)
   , rewDeltaR1 :: !Coin -- deltaR1
   , rewR :: !Coin -- r
@@ -178,58 +177,50 @@ instance CC.Crypto c => FromCBOR (RewardSnapShot c) where
           <! From
       )
 
--- | RewardSnapShot can act as a Proxy for PParams when only the protocol version is needed.
-instance HasField "_protocolVersion" (RewardSnapShot c) ProtVer where
-  getField x = rewprotocolVersion x
-
 -- ========================================================
 -- FreeVars is the set of variables needed to compute
 -- rewardStakePool, so that it can be made into a serializable
 -- Pulsable function.
 
 data FreeVars c = FreeVars
-  { delegs :: !(VMap VB VB (Credential 'Staking c) (KeyHash 'StakePool c))
-  , addrsRew :: !(Set (Credential 'Staking c))
-  , totalStake :: !Integer
-  , pp_pv :: !ProtVer
-  , poolRewardInfo :: !(Map (KeyHash 'StakePool c) (PoolRewardInfo c))
+  { fvDelegs :: !(VMap VB VB (Credential 'Staking c) (KeyHash 'StakePool c))
+  , fvAddrsRew :: !(Set (Credential 'Staking c))
+  , fvTotalStake :: !Coin
+  , fvProtVer :: !ProtVer
+  , fvPoolRewardInfo :: !(Map (KeyHash 'StakePool c) (PoolRewardInfo c))
   }
   deriving (Eq, Show, Generic)
   deriving (NoThunks)
-
--- | FreeVars can act as a Proxy for PParams when only the protocol version is needed.
-instance HasField "_protocolVersion" (FreeVars c) ProtVer where
-  getField = pp_pv
 
 instance NFData (FreeVars c)
 
 instance (CC.Crypto c) => ToCBOR (FreeVars c) where
   toCBOR
     FreeVars
-      { delegs
-      , addrsRew
-      , totalStake
-      , pp_pv
-      , poolRewardInfo
+      { fvDelegs
+      , fvAddrsRew
+      , fvTotalStake
+      , fvProtVer
+      , fvPoolRewardInfo
       } =
       encode
         ( Rec FreeVars
-            !> To delegs
-            !> To addrsRew
-            !> To totalStake
-            !> To pp_pv
-            !> To poolRewardInfo
+            !> To fvDelegs
+            !> To fvAddrsRew
+            !> To fvTotalStake
+            !> To fvProtVer
+            !> To fvPoolRewardInfo
         )
 
 instance (CC.Crypto c) => FromCBOR (FreeVars c) where
   fromCBOR =
     decode
       ( RecD FreeVars
-          <! From {- delegs -}
-          <! From {- addrsRew -}
-          <! From {- totalStake -}
-          <! From {- pp_pv -}
-          <! From {- poolRewardInfo -}
+          <! From {- fvDelegs -}
+          <! From {- fvAddrsRew -}
+          <! From {- fvTotalStake -}
+          <! From {- fvProtver -}
+          <! From {- fvPoolRewardInfo -}
       )
 
 -- =====================================================================
@@ -242,18 +233,19 @@ rewardStakePoolMember ::
   CompactForm Coin ->
   RewardAns c
 rewardStakePoolMember
-  pp@FreeVars
-    { delegs
-    , addrsRew
-    , totalStake
-    , poolRewardInfo
+  FreeVars
+    { fvDelegs
+    , fvAddrsRew
+    , fvTotalStake
+    , fvPoolRewardInfo
+    , fvProtVer
     }
   inputanswer@(RewardAns accum recent)
   cred
   c = fromMaybe inputanswer $ do
-    poolID <- VMap.lookup cred delegs
-    poolRI <- Map.lookup poolID poolRewardInfo
-    r <- rewardOnePoolMember pp (Coin totalStake) addrsRew poolRI cred (fromCompact c)
+    poolID <- VMap.lookup cred fvDelegs
+    poolRI <- Map.lookup poolID fvPoolRewardInfo
+    r <- rewardOnePoolMember fvProtVer fvTotalStake fvAddrsRew poolRI cred (fromCompact c)
     let ans = Reward MemberReward poolID r
     -- There is always just 1 member reward, so Set.singleton is appropriate
     pure $ RewardAns (Map.insert cred ans accum) (Map.insert cred (Set.singleton ans) recent)

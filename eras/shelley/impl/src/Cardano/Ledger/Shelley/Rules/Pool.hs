@@ -25,7 +25,6 @@ import Cardano.Crypto.Hash.Class (sizeHash)
 import Cardano.Ledger.BaseTypes (
   Globals (..),
   Network,
-  ProtVer,
   ShelleyBase,
   epochInfoPure,
   invalidKey,
@@ -69,15 +68,15 @@ import Control.State.Transition (
 import qualified Data.ByteString as BS
 import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
-import GHC.Records (HasField (getField))
+import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
 data PoolEnv era
-  = PoolEnv SlotNo (PParams era)
+  = PoolEnv !SlotNo !(PParams era)
 
-deriving instance (Show (PParams era)) => Show (PoolEnv era)
+deriving instance Show (PParams era) => Show (PoolEnv era)
 
-deriving instance (Eq (PParams era)) => Eq (PoolEnv era)
+deriving instance Eq (PParams era) => Eq (PoolEnv era)
 
 data ShelleyPoolPredFailure era
   = StakePoolNotRegisteredOnKeyPOOL
@@ -102,15 +101,7 @@ data ShelleyPoolPredFailure era
 
 instance NoThunks (ShelleyPoolPredFailure era)
 
-instance
-  ( Era era
-  , HasField "_minPoolCost" (PParams era) Coin
-  , HasField "_eMax" (PParams era) EpochNo
-  , HasField "_poolDeposit" (PParams era) Coin
-  , HasField "_protocolVersion" (PParams era) ProtVer
-  ) =>
-  STS (ShelleyPOOL era)
-  where
+instance EraPParams era => STS (ShelleyPOOL era) where
   type State (ShelleyPOOL era) = PState (EraCrypto era)
 
   type Signal (ShelleyPOOL era) = DCert (EraCrypto era)
@@ -127,10 +118,7 @@ data PoolEvent era
   = RegisterPool (KeyHash 'StakePool (EraCrypto era))
   | ReregisterPool (KeyHash 'StakePool (EraCrypto era))
 
-instance
-  Era era =>
-  ToCBOR (ShelleyPoolPredFailure era)
-  where
+instance Era era => ToCBOR (ShelleyPoolPredFailure era) where
   toCBOR = \case
     StakePoolNotRegisteredOnKeyPOOL kh ->
       encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR kh
@@ -145,10 +133,7 @@ instance
     PoolMedataHashTooBig a b ->
       encodeListLen 3 <> toCBOR (5 :: Word8) <> toCBOR a <> toCBOR b
 
-instance
-  (Era era) =>
-  FromCBOR (ShelleyPoolPredFailure era)
-  where
+instance Era era => FromCBOR (ShelleyPoolPredFailure era) where
   fromCBOR = decodeRecordSum "PredicateFailure (POOL era)" $
     \case
       0 -> do
@@ -177,30 +162,23 @@ instance
         pure (3, PoolMedataHashTooBig poolID s)
       k -> invalidKey k
 
-poolDelegationTransition ::
-  forall era.
-  ( Era era
-  , HasField "_minPoolCost" (PParams era) Coin
-  , HasField "_poolDeposit" (PParams era) Coin
-  , HasField "_eMax" (PParams era) EpochNo
-  , HasField "_protocolVersion" (PParams era) ProtVer
-  ) =>
-  TransitionRule (ShelleyPOOL era)
+poolDelegationTransition :: forall era. EraPParams era => TransitionRule (ShelleyPOOL era)
 poolDelegationTransition = do
   TRC (PoolEnv slot pp, ps, c) <- judgmentContext
   let stpools = psStakePoolParams ps
+  let pv = pp ^. ppProtocolVersionL
   case c of
     DCertPool (RegPool poolParam) -> do
       -- note that pattern match is used instead of cwitness, as in the spec
 
-      when (HardForks.validatePoolRewardAccountNetID pp) $ do
+      when (HardForks.validatePoolRewardAccountNetID pv) $ do
         actualNetID <- liftSTS $ asks networkId
         let suppliedNetID = getRwdNetwork (ppRewardAcnt poolParam)
         actualNetID
           == suppliedNetID
           ?! WrongNetworkPOOL actualNetID suppliedNetID (ppId poolParam)
 
-      when (SoftForks.restrictPoolMetadataHash pp) $
+      when (SoftForks.restrictPoolMetadataHash pv) $
         forM_ (ppMetadata poolParam) $ \pmd ->
           let s = BS.length (pmHash pmd)
            in s
@@ -208,7 +186,7 @@ poolDelegationTransition = do
                 ?! PoolMedataHashTooBig (ppId poolParam) s
 
       let poolCost = ppCost poolParam
-          minPoolCost = getField @"_minPoolCost" pp
+          minPoolCost = pp ^. ppMinPoolCostL
       poolCost >= minPoolCost ?! StakePoolCostTooLowPOOL poolCost minPoolCost
 
       let hk = ppId poolParam
@@ -241,7 +219,7 @@ poolDelegationTransition = do
       EpochNo cepoch <- liftSTS $ do
         ei <- asks epochInfoPure
         epochInfoEpoch ei slot
-      let EpochNo maxEpoch = getField @"_eMax" pp
+      let EpochNo maxEpoch = pp ^. ppEMaxL
       cepoch
         < e
         && e

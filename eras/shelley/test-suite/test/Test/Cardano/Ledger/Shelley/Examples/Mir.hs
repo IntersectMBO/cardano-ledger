@@ -20,7 +20,7 @@ import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..), toDeltaCoin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Ptr (..))
-import qualified Cardano.Ledger.Crypto as CryptoClass
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.EpochBoundary (emptySnapShot)
 import Cardano.Ledger.Keys (
   KeyRole (..),
@@ -36,7 +36,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   PulsingRewUpdate,
   emptyRewardUpdate,
  )
-import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Rules (
   ShelleyBbodyPredFailure (..),
   ShelleyDelegPredFailure (..),
@@ -92,11 +91,11 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..), TestChainPredicateFailure (..))
-import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest, getBlockNonce)
+import Test.Cardano.Ledger.Shelley.Utils (getBlockNonce)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
 
-initUTxO :: (ShelleyTest era) => UTxO era
+initUTxO :: Crypto c => UTxO (ShelleyEra c)
 initUTxO =
   genesisCoins
     genesisId
@@ -107,10 +106,10 @@ initUTxO =
     aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
     bobInitCoin = Val.inject $ Coin $ 1 * 1000 * 1000 * 1000 * 1000 * 1000
 
-initStMIR :: forall era. (ShelleyTest era, PParams era ~ ShelleyPParams era) => Coin -> ChainState era
+initStMIR :: forall c. Crypto c => Coin -> ChainState (ShelleyEra c)
 initStMIR treasury = cs {chainNes = (chainNes cs) {nesEs = es'}}
   where
-    cs = initSt @era initUTxO
+    cs = initSt @(ShelleyEra c) initUTxO
     as = esAccountState . nesEs . chainNes $ cs
     as' =
       as
@@ -126,13 +125,13 @@ initStMIR treasury = cs {chainNes = (chainNes cs) {nesEs = es'}}
 aliceMIRCoin :: Coin
 aliceMIRCoin = Coin 100
 
-ir :: CryptoClass.Crypto c => MIRTarget c
+ir :: Crypto c => MIRTarget c
 ir = StakeAddressesMIR $ Map.fromList [(Cast.aliceSHK, toDeltaCoin aliceMIRCoin)]
 
 feeTx1 :: Coin
 feeTx1 = Coin 1
 
-txbodyEx1 :: ShelleyTest era => MIRPot -> ShelleyTxBody era
+txbodyEx1 :: Crypto c => MIRPot -> TxBody (ShelleyEra c)
 txbodyEx1 pot =
   ShelleyTxBody
     (Set.fromList [TxIn genesisId minBound])
@@ -149,15 +148,15 @@ txbodyEx1 pot =
     SNothing
   where
     aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
-    aliceCoinEx1 = aliceInitCoin <-> (Val.inject $ feeTx1 <+> _keyDeposit ppEx)
+    aliceCoinEx1 = aliceInitCoin <-> (Val.inject $ feeTx1 <+> Coin 7)
 
-mirWits :: (CryptoClass.Crypto c) => [Int] -> [KeyPair 'Witness c]
+mirWits :: Crypto c => [Int] -> [KeyPair 'Witness c]
 mirWits nodes = asWitness <$> map (\x -> cold . coreNodeIssuerKeys $ x) nodes
 
-sufficientMIRWits :: (CryptoClass.Crypto c) => [KeyPair 'Witness c]
+sufficientMIRWits :: Crypto c => [KeyPair 'Witness c]
 sufficientMIRWits = mirWits [0 .. 4]
 
-insufficientMIRWits :: (CryptoClass.Crypto c) => [KeyPair 'Witness c]
+insufficientMIRWits :: Crypto c => [KeyPair 'Witness c]
 insufficientMIRWits = mirWits [0 .. 3]
 
 txEx1 ::
@@ -172,7 +171,7 @@ txEx1 txwits pot =
     mempty
       { addrWits =
           mkWitnessesVKey
-            (hashAnnotated $ txbodyEx1 @(ShelleyEra c) pot)
+            (hashAnnotated $ txbodyEx1 @c pot)
             ([asWitness Cast.alicePay] <> txwits)
       }
     SNothing

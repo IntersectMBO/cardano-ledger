@@ -10,12 +10,9 @@
 
 module Cardano.Ledger.Pretty.Alonzo where
 
+import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.PParams (
-  AlonzoPParams,
-  AlonzoPParamsHKD (AlonzoPParams),
-  AlonzoPParamsUpdate,
- )
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoScript (..),
   CostModel,
@@ -37,15 +34,16 @@ import Cardano.Ledger.Alonzo.TxAuxData (
   AlonzoTxAuxData (AlonzoTxAuxData, atadMetadata),
   getAlonzoTxAuxDataScripts,
  )
-import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody, AlonzoTxOut (AlonzoTxOut))
+import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (AlonzoTxOut))
 import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq (AlonzoTxSeq))
 import Cardano.Ledger.Alonzo.TxWits
 import Cardano.Ledger.AuxiliaryData
 import Cardano.Ledger.BaseTypes (BoundedRational (unboundRational))
-import Cardano.Ledger.Core
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Pretty hiding (ppPParams, ppPParamsUpdate, ppTx, ppTxBody, ppTxOut)
 import Cardano.Ledger.Pretty.Mary (ppMultiAsset, ppTimelock, ppValidityInterval)
 import Cardano.Ledger.SafeHash (SafeToHash)
+import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified Prettyprinter as PP
 
@@ -120,43 +118,41 @@ ppPrices Prices {prMem, prSteps} =
 instance PrettyA Prices where
   prettyA = ppPrices
 
-instance PrettyA (AlonzoPParams era) where
-  prettyA = ppPParams
+instance Crypto c => PrettyA (PParams (AlonzoEra c)) where
+  prettyA = ppAlonzoPParams
 
-ppPParamsUpdate :: AlonzoPParamsUpdate era -> PDoc
-ppPParamsUpdate (AlonzoPParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau d ex pv mpool ada cost prices mxEx mxBEx mxV c mxC) =
+ppAlonzoPParamsUpdate :: Crypto c => PParamsUpdate (AlonzoEra c) -> PDoc
+ppAlonzoPParamsUpdate pp =
   ppRecord
-    "PParams"
-    [ ("minfeeA", lift ppNatural feeA)
-    , ("minfeeB", lift ppNatural feeB)
-    , ("maxBBSize", lift ppNatural mbb)
-    , ("maxTxSize", lift ppNatural mtx)
-    , ("maxBHSize", lift ppNatural mbh)
-    , ("keyDeposit", lift ppCoin kd)
-    , ("poolDeposit", lift ppCoin pd)
-    , ("eMax", lift ppEpochNo em)
-    , ("nOpt", lift ppNatural no)
-    , ("a0", lift (ppRational . unboundRational) a0)
-    , ("rho", lift ppUnitInterval rho)
-    , ("tau", lift ppUnitInterval tau)
-    , ("d", lift ppUnitInterval d)
-    , ("extraEntropy", lift ppNonce ex)
-    , ("protocolVersion", lift ppProtVer pv)
-    , ("minPoolCost", lift ppCoin mpool)
-    , ("adaPerWord", lift ppCoin ada)
-    , ("costmdls", lift ppCostModels cost)
-    , ("prices", lift ppPrices prices)
-    , ("maxTxExUnits", lift ppExUnits mxEx)
-    , ("maxBlockExUnits", lift ppExUnits mxBEx)
-    , ("maxValSize", lift ppNatural mxV)
-    , ("collateral%", lift ppNatural c)
-    , ("maxCollateralInputs", lift ppNatural mxC)
+    "PParamsUdate"
+    [ ("minfeeA", ppStrictMaybe ppNatural $ pp ^. ppuMinFeeAL)
+    , ("minfeeB", ppStrictMaybe ppNatural $ pp ^. ppuMinFeeBL)
+    , ("maxBBSize", ppStrictMaybe ppNatural $ pp ^. ppuMaxBBSizeL)
+    , ("maxTxSize", ppStrictMaybe ppNatural $ pp ^. ppuMaxTxSizeL)
+    , ("maxBHSize", ppStrictMaybe ppNatural $ pp ^. ppuMaxBHSizeL)
+    , ("keyDeposit", ppStrictMaybe ppCoin $ pp ^. ppuKeyDepositL)
+    , ("poolDeposit", ppStrictMaybe ppCoin $ pp ^. ppuPoolDepositL)
+    , ("eMax", ppStrictMaybe ppEpochNo $ pp ^. ppuEMaxL)
+    , ("nOpt", ppStrictMaybe ppNatural $ pp ^. ppuNOptL)
+    , ("a0", ppStrictMaybe (ppRational . unboundRational) $ pp ^. ppuA0L)
+    , ("rho", ppStrictMaybe ppUnitInterval $ pp ^. ppuRhoL)
+    , ("tau", ppStrictMaybe ppUnitInterval $ pp ^. ppuTauL)
+    , ("d", ppStrictMaybe ppUnitInterval $ pp ^. ppuDL)
+    , ("extraEntropy", ppStrictMaybe ppNonce $ pp ^. ppuExtraEntropyL)
+    , ("protocolVersion", ppStrictMaybe ppProtVer $ pp ^. ppuProtocolVersionL)
+    , ("minPoolCost", ppStrictMaybe ppCoin $ pp ^. ppuMinPoolCostL)
+    , ("coinPerWord", ppStrictMaybe (ppCoin . unCoinPerWord) $ pp ^. ppuCoinsPerUTxOWordL)
+    , ("costmdls", ppStrictMaybe ppCostModels $ pp ^. ppuCostModelsL)
+    , ("prices", ppStrictMaybe ppPrices $ pp ^. ppuPricesL)
+    , ("maxTxExUnits", ppStrictMaybe ppExUnits $ pp ^. ppuMaxTxExUnitsL)
+    , ("maxBlockExUnits", ppStrictMaybe ppExUnits $ pp ^. ppuMaxBlockExUnitsL)
+    , ("maxValSize", ppStrictMaybe ppNatural $ pp ^. ppuMaxValSizeL)
+    , ("collateral%", ppStrictMaybe ppNatural $ pp ^. ppuCollateralPercentageL)
+    , ("maxCollateralInputs", ppStrictMaybe ppNatural $ pp ^. ppuMaxCollateralInputsL)
     ]
-  where
-    lift pp x = ppStrictMaybe pp x
 
-instance PrettyA (AlonzoPParamsUpdate era) where
-  prettyA = ppPParamsUpdate
+instance Crypto c => PrettyA (PParamsUpdate (AlonzoEra c)) where
+  prettyA = ppAlonzoPParamsUpdate
 
 ppPlutusData :: PV1.Data -> PDoc
 ppPlutusData (PV1.Constr tag args) = ppSexp "Constr" [ppInteger tag, ppList ppPlutusData args]
@@ -191,34 +187,34 @@ instance
   where
   prettyA = ppAuxiliaryData
 
-ppPParams :: AlonzoPParams era -> PDoc
-ppPParams (AlonzoPParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau d ex pv mpool ada cost prices mxEx mxBEx mxV c mxC) =
+ppAlonzoPParams :: Crypto c => PParams (AlonzoEra c) -> PDoc
+ppAlonzoPParams pp =
   ppRecord
     "PParams"
-    [ ("minfeeA", ppNatural feeA)
-    , ("minfeeB", ppNatural feeB)
-    , ("maxBBSize", ppNatural mbb)
-    , ("maxTxSize", ppNatural mtx)
-    , ("maxBHSize", ppNatural mbh)
-    , ("keyDeposit", ppCoin kd)
-    , ("poolDeposit", ppCoin pd)
-    , ("eMax", ppEpochNo em)
-    , ("nOpt", ppNatural no)
-    , ("a0", ppRational (unboundRational a0))
-    , ("rho", ppUnitInterval rho)
-    , ("tau", ppUnitInterval tau)
-    , ("d", ppUnitInterval d)
-    , ("extraEntropy", ppNonce ex)
-    , ("protocolVersion", ppProtVer pv)
-    , ("minPoolCost", ppCoin mpool)
-    , ("adaPerWord", ppCoin ada)
-    , ("costmdls", ppCostModels cost)
-    , ("prices", ppPrices prices)
-    , ("maxTxExUnits", ppExUnits mxEx)
-    , ("maxBlockExUnits", ppExUnits mxBEx)
-    , ("maxValSize", ppNatural mxV)
-    , ("collateral%", ppNatural c)
-    , ("maxCollateralInputs", ppNatural mxC)
+    [ ("minfeeA", ppNatural $ pp ^. ppMinFeeAL)
+    , ("minfeeB", ppNatural $ pp ^. ppMinFeeBL)
+    , ("maxBBSize", ppNatural $ pp ^. ppMaxBBSizeL)
+    , ("maxTxSize", ppNatural $ pp ^. ppMaxTxSizeL)
+    , ("maxBHSize", ppNatural $ pp ^. ppMaxBHSizeL)
+    , ("keyDeposit", ppCoin $ pp ^. ppKeyDepositL)
+    , ("poolDeposit", ppCoin $ pp ^. ppPoolDepositL)
+    , ("eMax", ppEpochNo $ pp ^. ppEMaxL)
+    , ("nOpt", ppNatural $ pp ^. ppNOptL)
+    , ("a0", (ppRational . unboundRational) $ pp ^. ppA0L)
+    , ("rho", ppUnitInterval $ pp ^. ppRhoL)
+    , ("tau", ppUnitInterval $ pp ^. ppTauL)
+    , ("d", ppUnitInterval $ pp ^. ppDL)
+    , ("extraEntropy", ppNonce $ pp ^. ppExtraEntropyL)
+    , ("protocolVersion", ppProtVer $ pp ^. ppProtocolVersionL)
+    , ("minPoolCost", ppCoin $ pp ^. ppMinPoolCostL)
+    , ("coinPerWord", (ppCoin . unCoinPerWord) $ pp ^. ppCoinsPerUTxOWordL)
+    , ("costmdls", ppCostModels $ pp ^. ppCostModelsL)
+    , ("prices", ppPrices $ pp ^. ppPricesL)
+    , ("maxTxExUnits", ppExUnits $ pp ^. ppMaxTxExUnitsL)
+    , ("maxBlockExUnits", ppExUnits $ pp ^. ppMaxBlockExUnitsL)
+    , ("maxValSize", ppNatural $ pp ^. ppMaxValSizeL)
+    , ("collateral%", ppNatural $ pp ^. ppCollateralPercentageL)
+    , ("maxCollateralInputs", ppNatural $ pp ^. ppMaxCollateralInputsL)
     ]
 
 ppTxOut :: (EraTxOut era, PrettyA (Value era)) => AlonzoTxOut era -> PDoc

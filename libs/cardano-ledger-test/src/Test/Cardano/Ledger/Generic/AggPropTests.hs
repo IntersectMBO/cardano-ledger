@@ -6,9 +6,7 @@
 
 module Test.Cardano.Ledger.Generic.AggPropTests where
 
-import qualified Cardano.Ledger.Alonzo.PParams as Alonzo (AlonzoPParamsHKD (..))
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
-import Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.LedgerState (
@@ -20,7 +18,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   PState (..),
   UTxOState (..),
  )
-import qualified Cardano.Ledger.Shelley.PParams as Shelley (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Rules.Reports (synopsisCoinMap)
 import Cardano.Ledger.TreeDiff (diffExpr)
 import Cardano.Ledger.UMapCompact (View (RewardDeposits), depositView, domain, fromCompact, sumDepositView)
@@ -92,7 +89,7 @@ aggUTxO ::
   Proof era ->
   Gen Property
 aggUTxO proof = do
-  trace1 <- genTrace proof 100 (def {blocksizeMax = 4, slotDelta = (6, 12)}) (initStableFields proof)
+  trace1 <- genTrace proof 100 (def {blocksizeMax = 4, slotDelta = (6, 12)}) initStableFields
   pure $ consistentUtxoSizeProp proof trace1
 
 aggTests :: TestTree
@@ -112,18 +109,18 @@ aggTests =
 forAllChainTrace :: (Testable prop, Reflect era) => Proof era -> Int -> (Trace (MOCKCHAIN era) -> prop) -> Property
 -- TODO re-enable this once we have added all the new rules to Conway
 -- forAllChainTrace p@(Conway _) n propf =
--- property $ propf <$> genTrace p n (def {blocksizeMax = 4, slotDelta = (6, 12)}) (initStableFields p)
+-- property $ propf <$> genTrace p n (def {blocksizeMax = 4, slotDelta = (6, 12)}) initStableFields
 forAllChainTrace (Conway _) _ _ = undefined
 forAllChainTrace p@(Babbage _) n propf =
-  property $ propf <$> genTrace p n (def {blocksizeMax = 4, slotDelta = (6, 12)}) (initStableFields p)
+  property $ propf <$> genTrace p n (def {blocksizeMax = 4, slotDelta = (6, 12)}) initStableFields
 forAllChainTrace p@(Alonzo _) n propf =
-  property $ propf <$> genTrace p n (def {blocksizeMax = 4, slotDelta = (6, 12)}) (initStableFields p)
+  property $ propf <$> genTrace p n (def {blocksizeMax = 4, slotDelta = (6, 12)}) initStableFields
 forAllChainTrace p@(Mary _) n propf =
-  property $ propf <$> genTrace p n (def {blocksizeMax = 4, slotDelta = (6, 12)}) (initStableFields p)
+  property $ propf <$> genTrace p n (def {blocksizeMax = 4, slotDelta = (6, 12)}) initStableFields
 forAllChainTrace p@(Allegra _) n propf =
-  property $ propf <$> genTrace p n (def {blocksizeMax = 4, slotDelta = (6, 12)}) (initStableFields p)
+  property $ propf <$> genTrace p n (def {blocksizeMax = 4, slotDelta = (6, 12)}) initStableFields
 forAllChainTrace p@(Shelley _) n propf =
-  property $ propf <$> genTrace p n (def {blocksizeMax = 4, slotDelta = (6, 12)}) (initStableFields p)
+  property $ propf <$> genTrace p n (def {blocksizeMax = 4, slotDelta = (6, 12)}) initStableFields
 
 -- ===========================================================
 

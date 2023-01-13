@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
@@ -13,14 +14,8 @@ module Cardano.Ledger.Pretty.Conway (
 )
 where
 
-import Cardano.Ledger.Babbage.TxBody (
-  AllegraEraTxBody (..),
-  AlonzoEraTxBody (..),
-  BabbageEraTxBody (..),
-  MaryEraTxBody (..),
-  ShelleyEraTxBody (..),
- )
-import Cardano.Ledger.Conway.Core (ConwayEraTxBody (..))
+import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert (..), transDCert)
 import Cardano.Ledger.Conway.Governance (
   GovernanceAction (..),
@@ -32,7 +27,7 @@ import Cardano.Ledger.Conway.Governance (
   VoterRole (..),
  )
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
-import Cardano.Ledger.Core (EraPParams (..), EraTxBody (..), EraTxOut (..))
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Pretty (
   PDoc,
   PrettyA (..),
@@ -55,6 +50,7 @@ import Cardano.Ledger.Pretty (
   ppWdrl,
   ppWord64,
  )
+import Cardano.Ledger.Pretty.Babbage (ppBabbagePParams, ppBabbagePParamsUpdate)
 import Cardano.Ledger.Pretty.Mary (ppMultiAsset, ppValidityInterval)
 import Lens.Micro ((^.))
 
@@ -161,3 +157,9 @@ instance PrettyA (PParamsUpdate era) => PrettyA (GovernanceActionInfo era) where
 
 instance forall c. PrettyA (ConwayDCert c) where
   prettyA = prettyA . transDCert
+
+instance Crypto c => PrettyA (PParams (ConwayEra c)) where
+  prettyA = ppBabbagePParams
+
+instance Crypto c => PrettyA (PParamsUpdate (ConwayEra c)) where
+  prettyA = ppBabbagePParamsUpdate

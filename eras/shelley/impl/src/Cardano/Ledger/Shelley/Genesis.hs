@@ -206,7 +206,11 @@ data ShelleyGenesis c = ShelleyGenesis
   , sgInitialFunds :: LM.ListMap (Addr c) Coin
   , sgStaking :: ShelleyGenesisStaking c
   }
-  deriving stock (Eq, Show, Generic)
+  deriving stock (Generic)
+
+deriving instance Crypto c => Show (ShelleyGenesis c)
+
+deriving instance Crypto c => Eq (ShelleyGenesis c)
 
 deriving instance Crypto c => NoThunks (ShelleyGenesis c)
 
@@ -217,10 +221,7 @@ instance Crypto c => ToJSON (ShelleyGenesis c) where
   toJSON = Aeson.object . toShelleyGenesisPairs
   toEncoding = Aeson.pairs . mconcat . toShelleyGenesisPairs
 
-toShelleyGenesisPairs ::
-  (Aeson.KeyValue a, Crypto c) =>
-  ShelleyGenesis c ->
-  [a]
+toShelleyGenesisPairs :: (Aeson.KeyValue a, Crypto c) => ShelleyGenesis c -> [a]
 toShelleyGenesisPairs
   ShelleyGenesis
     { sgSystemStart

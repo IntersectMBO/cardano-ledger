@@ -15,22 +15,17 @@ module Test.Cardano.Ledger.Generic.Updaters where
 
 import Cardano.Crypto.DSIGN.Class ()
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import qualified Cardano.Ledger.Alonzo.PParams as Alonzo (AlonzoPParamsHKD (..))
 import Cardano.Ledger.Alonzo.Scripts (CostModels (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), hashScriptIntegrity)
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.Babbage.Core
-import qualified Cardano.Ledger.Babbage.PParams as Babbage (BabbagePParamsHKD (..))
 import Cardano.Ledger.Babbage.TxBody as Babbage (
   BabbageTxOut (..),
   Datum (..),
  )
-import Cardano.Ledger.Coin (Coin (Coin, unCoin))
 import Cardano.Ledger.Conway.Core (ConwayEraTxBody (..))
-import Cardano.Ledger.Shelley.PParams (ShelleyPParams)
-import qualified Cardano.Ledger.Shelley.PParams as Shelley (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Tx as Shelley (
   ShelleyTx (..),
  )
@@ -40,7 +35,6 @@ import Cardano.Ledger.Shelley.TxWits as Shelley (
   bootWits,
   scriptWits,
  )
-import Cardano.Ledger.Val ((<×>))
 import qualified Data.List as List
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
@@ -320,131 +314,83 @@ newTxOut era dts = List.foldl' (updateTxOut era) (initialTxOut era) dts
 
 -- =====================================================
 
--- | An updater specialized to the Shelley PParams (also used in Allegra and Mary)
-updateShelleyPP :: ShelleyPParams era -> PParamsField era -> ShelleyPParams era
-updateShelleyPP pp dpp = case dpp of
-  (MinfeeA nat) -> pp {Shelley._minfeeA = nat}
-  (MinfeeB nat) -> pp {Shelley._minfeeB = nat}
-  (MaxBBSize nat) -> pp {Shelley._maxBBSize = nat}
-  (MaxTxSize nat) -> pp {Shelley._maxTxSize = nat}
-  (MaxBHSize nat) -> pp {Shelley._maxBHSize = nat}
-  (KeyDeposit coin) -> pp {Shelley._keyDeposit = coin}
-  (PoolDeposit coin) -> pp {Shelley._poolDeposit = coin}
-  (EMax e) -> pp {Shelley._eMax = e}
-  (NOpt nat) -> pp {Shelley._nOpt = nat}
-  (A0 rat) -> pp {Shelley._a0 = rat}
-  (Rho u) -> pp {Shelley._rho = u}
-  (Tau u) -> pp {Shelley._tau = u}
-  (D u) -> pp {Shelley._d = u}
-  (ExtraEntropy nonce) -> pp {Shelley._extraEntropy = nonce}
-  (ProtocolVersion pv) -> pp {Shelley._protocolVersion = pv}
-  (MinPoolCost coin) -> pp {Shelley._minPoolCost = coin}
-  (MinUTxOValue mu) -> pp {Shelley._minUTxOValue = mu}
-  -- Not present in Shelley
-  (AdaPerUTxOWord _) -> pp
-  (AdaPerUTxOByte _) -> pp
-  (Costmdls _) -> pp
-  (Prices _) -> pp
-  (MaxTxExUnits _) -> pp
-  (MaxBlockExUnits _) -> pp
-  (MaxValSize _) -> pp
-  (MaxCollateralInputs _) -> pp
-  (CollateralPercentage _) -> pp
-{-# NOINLINE updateShelleyPP #-}
-
 -- | updatePParams uses the Override policy exclusively
-updatePParams :: Proof era -> PParams era -> PParamsField era -> PParams era
-updatePParams (Shelley _) pp dpp = updateShelleyPP pp dpp
-updatePParams (Allegra _) pp dpp = updateShelleyPP pp dpp
-updatePParams (Mary _) pp dpp = updateShelleyPP pp dpp
-updatePParams (Alonzo _) pp dpp = case dpp of
-  (MinfeeA nat) -> pp {Alonzo._minfeeA = nat}
-  (MinfeeB nat) -> pp {Alonzo._minfeeB = nat}
-  (MaxBBSize nat) -> pp {Alonzo._maxBBSize = nat}
-  (MaxTxSize nat) -> pp {Alonzo._maxTxSize = nat}
-  (MaxBHSize nat) -> pp {Alonzo._maxBHSize = nat}
-  (KeyDeposit coin) -> pp {Alonzo._keyDeposit = coin}
-  (PoolDeposit coin) -> pp {Alonzo._poolDeposit = coin}
-  (EMax e) -> pp {Alonzo._eMax = e}
-  (NOpt nat) -> pp {Alonzo._nOpt = nat}
-  (A0 rat) -> pp {Alonzo._a0 = rat}
-  (Rho u) -> pp {Alonzo._rho = u}
-  (Tau u) -> pp {Alonzo._tau = u}
-  (D u) -> pp {Alonzo._d = u}
-  (ExtraEntropy nonce) -> pp {Alonzo._extraEntropy = nonce}
-  (ProtocolVersion pv) -> pp {Alonzo._protocolVersion = pv}
-  (MinPoolCost coin) -> pp {Alonzo._minPoolCost = coin}
-  (Costmdls cost) -> pp {Alonzo._costmdls = cost}
-  (Prices n) -> pp {Alonzo._prices = n}
-  MaxValSize n -> pp {Alonzo._maxValSize = n}
-  MaxTxExUnits n -> pp {Alonzo._maxTxExUnits = n}
-  MaxBlockExUnits n -> pp {Alonzo._maxBlockExUnits = n}
-  CollateralPercentage perc -> pp {Alonzo._collateralPercentage = perc}
-  MaxCollateralInputs n -> pp {Alonzo._maxCollateralInputs = n}
-  AdaPerUTxOWord n -> pp {Alonzo._coinsPerUTxOWord = n}
-  AdaPerUTxOByte n -> pp {Alonzo._coinsPerUTxOWord = (8 :: Int) <×> n}
-  -- Not used in Alonzo
-  MinUTxOValue _ -> pp
-updatePParams (Babbage _) pp dpp = case dpp of
-  (MinfeeA nat) -> pp {Babbage._minfeeA = nat}
-  (MinfeeB nat) -> pp {Babbage._minfeeB = nat}
-  (MaxBBSize nat) -> pp {Babbage._maxBBSize = nat}
-  (MaxTxSize nat) -> pp {Babbage._maxTxSize = nat}
-  (MaxBHSize nat) -> pp {Babbage._maxBHSize = nat}
-  (KeyDeposit coin) -> pp {Babbage._keyDeposit = coin}
-  (PoolDeposit coin) -> pp {Babbage._poolDeposit = coin}
-  (EMax e) -> pp {Babbage._eMax = e}
-  (NOpt nat) -> pp {Babbage._nOpt = nat}
-  (A0 rat) -> pp {Babbage._a0 = rat}
-  (Rho u) -> pp {Babbage._rho = u}
-  (Tau u) -> pp {Babbage._tau = u}
-  (ProtocolVersion pv) -> pp {Babbage._protocolVersion = pv}
-  (MinPoolCost coin) -> pp {Babbage._minPoolCost = coin}
-  Costmdls cost -> pp {Babbage._costmdls = cost}
-  Prices n -> pp {Babbage._prices = n}
-  MaxValSize n -> pp {Babbage._maxValSize = n}
-  MaxTxExUnits n -> pp {Babbage._maxTxExUnits = n}
-  MaxBlockExUnits n -> pp {Babbage._maxBlockExUnits = n}
-  CollateralPercentage perc -> pp {Babbage._collateralPercentage = perc}
-  MaxCollateralInputs n -> pp {Babbage._maxCollateralInputs = n}
-  AdaPerUTxOWord n -> pp {Babbage._coinsPerUTxOByte = Coin $ (unCoin n + 7) `div` 8}
-  AdaPerUTxOByte n -> pp {Babbage._coinsPerUTxOByte = n}
-  -- Not used in Babbage
-  D _ -> pp
-  ExtraEntropy _ -> pp
-  MinUTxOValue _ -> pp
-updatePParams (Conway _) pp dpp = case dpp of
-  (MinfeeA nat) -> pp {Babbage._minfeeA = nat}
-  (MinfeeB nat) -> pp {Babbage._minfeeB = nat}
-  (MaxBBSize nat) -> pp {Babbage._maxBBSize = nat}
-  (MaxTxSize nat) -> pp {Babbage._maxTxSize = nat}
-  (MaxBHSize nat) -> pp {Babbage._maxBHSize = nat}
-  (KeyDeposit coin) -> pp {Babbage._keyDeposit = coin}
-  (PoolDeposit coin) -> pp {Babbage._poolDeposit = coin}
-  (EMax e) -> pp {Babbage._eMax = e}
-  (NOpt nat) -> pp {Babbage._nOpt = nat}
-  (A0 rat) -> pp {Babbage._a0 = rat}
-  (Rho u) -> pp {Babbage._rho = u}
-  (Tau u) -> pp {Babbage._tau = u}
-  (ProtocolVersion pv) -> pp {Babbage._protocolVersion = pv}
-  (MinPoolCost coin) -> pp {Babbage._minPoolCost = coin}
-  Costmdls cost -> pp {Babbage._costmdls = cost}
-  Prices n -> pp {Babbage._prices = n}
-  MaxValSize n -> pp {Babbage._maxValSize = n}
-  MaxTxExUnits n -> pp {Babbage._maxTxExUnits = n}
-  MaxBlockExUnits n -> pp {Babbage._maxBlockExUnits = n}
-  CollateralPercentage perc -> pp {Babbage._collateralPercentage = perc}
-  MaxCollateralInputs n -> pp {Babbage._maxCollateralInputs = n}
-  AdaPerUTxOWord n -> pp {Babbage._coinsPerUTxOByte = Coin $ (unCoin n + 7) `div` 8}
-  AdaPerUTxOByte n -> pp {Babbage._coinsPerUTxOByte = n}
-  -- Not used in Conway
-  D _ -> pp
-  ExtraEntropy _ -> pp
-  MinUTxOValue _ -> pp
-{-# NOINLINE updatePParams #-}
+updatePParams :: EraPParams era => Proof era -> PParams era -> PParamsField era -> PParams era
+updatePParams proof pp' ppf =
+  -- update all of the common fields first
+  let pp = case ppf of
+        MinfeeA minFeeA -> pp' & ppMinFeeAL .~ minFeeA
+        MinfeeB minFeeB -> pp' & ppMinFeeBL .~ minFeeB
+        MaxBBSize maxBBSize -> pp' & ppMaxBBSizeL .~ maxBBSize
+        MaxTxSize maxTxSize -> pp' & ppMaxTxSizeL .~ maxTxSize
+        MaxBHSize maxBHSize -> pp' & ppMaxBHSizeL .~ maxBHSize
+        KeyDeposit keyDeposit -> pp' & ppKeyDepositL .~ keyDeposit
+        PoolDeposit poolDeposit -> pp' & ppPoolDepositL .~ poolDeposit
+        EMax e -> pp' & ppEMaxL .~ e
+        NOpt nat -> pp' & ppNOptL .~ nat
+        A0 a0 -> pp' & ppA0L .~ a0
+        Rho rho -> pp' & ppRhoL .~ rho
+        Tau tau -> pp' & ppTauL .~ tau
+        ProtocolVersion pv -> pp' & ppProtocolVersionL .~ pv
+        MinPoolCost coin -> pp' & ppMinPoolCostL .~ coin
+        _ -> pp'
+   in case proof of
+        Shelley _ ->
+          case ppf of
+            D d -> pp & ppDL .~ d
+            ExtraEntropy nonce -> pp & ppExtraEntropyL .~ nonce
+            MinUTxOValue mu -> pp & ppMinUTxOValueL .~ mu
+            _ -> pp
+        Allegra _ ->
+          case ppf of
+            D d -> pp & ppDL .~ d
+            ExtraEntropy nonce -> pp & ppExtraEntropyL .~ nonce
+            MinUTxOValue mu -> pp & ppMinUTxOValueL .~ mu
+            _ -> pp
+        Mary _ ->
+          case ppf of
+            D d -> pp & ppDL .~ d
+            ExtraEntropy nonce -> pp & ppExtraEntropyL .~ nonce
+            MinUTxOValue mu -> pp & ppMinUTxOValueL .~ mu
+            _ -> pp
+        Alonzo _ ->
+          case ppf of
+            D d -> pp & ppDL .~ d
+            ExtraEntropy nonce -> pp & ppExtraEntropyL .~ nonce
+            AdaPerUTxOWord coinPerWord -> pp & ppCoinsPerUTxOWordL .~ coinPerWord
+            Costmdls costModels -> pp & ppCostModelsL .~ costModels
+            Prices prices -> pp & ppPricesL .~ prices
+            MaxTxExUnits maxTxExUnits -> pp & ppMaxTxExUnitsL .~ maxTxExUnits
+            MaxBlockExUnits maxBlockExUnits -> pp & ppMaxBlockExUnitsL .~ maxBlockExUnits
+            MaxValSize maxValSize -> pp & ppMaxValSizeL .~ maxValSize
+            CollateralPercentage colPerc -> pp & ppCollateralPercentageL .~ colPerc
+            MaxCollateralInputs maxColInputs -> pp & ppMaxCollateralInputsL .~ maxColInputs
+            _ -> pp
+        Babbage _ ->
+          case ppf of
+            AdaPerUTxOByte coinPerByte -> pp & ppCoinsPerUTxOByteL .~ coinPerByte
+            Costmdls costModels -> pp & ppCostModelsL .~ costModels
+            Prices prices -> pp & ppPricesL .~ prices
+            MaxTxExUnits maxTxExUnits -> pp & ppMaxTxExUnitsL .~ maxTxExUnits
+            MaxBlockExUnits maxBlockExUnits -> pp & ppMaxBlockExUnitsL .~ maxBlockExUnits
+            MaxValSize maxValSize -> pp & ppMaxValSizeL .~ maxValSize
+            CollateralPercentage colPerc -> pp & ppCollateralPercentageL .~ colPerc
+            MaxCollateralInputs maxColInputs -> pp & ppMaxCollateralInputsL .~ maxColInputs
+            _ -> pp
+        Conway _ ->
+          case ppf of
+            AdaPerUTxOByte coinPerByte -> pp & ppCoinsPerUTxOByteL .~ coinPerByte
+            Costmdls costModels -> pp & ppCostModelsL .~ costModels
+            Prices prices -> pp & ppPricesL .~ prices
+            MaxTxExUnits maxTxExUnits -> pp & ppMaxTxExUnitsL .~ maxTxExUnits
+            MaxBlockExUnits maxBlockExUnits -> pp & ppMaxBlockExUnitsL .~ maxBlockExUnits
+            MaxValSize maxValSize -> pp & ppMaxValSizeL .~ maxValSize
+            CollateralPercentage colPerc -> pp & ppCollateralPercentageL .~ colPerc
+            MaxCollateralInputs maxColInputs -> pp & ppMaxCollateralInputsL .~ maxColInputs
+            _ -> pp
 
-newPParams :: Proof era -> [PParamsField era] -> PParams era
-newPParams era = List.foldl' (updatePParams era) (initialPParams era)
+newPParams :: EraPParams era => Proof era -> [PParamsField era] -> PParams era
+newPParams era = List.foldl' (updatePParams era) emptyPParams
 
 -- ====================================
 

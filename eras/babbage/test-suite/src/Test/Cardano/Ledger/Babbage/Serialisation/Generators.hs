@@ -2,8 +2,10 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -13,15 +15,17 @@
 module Test.Cardano.Ledger.Babbage.Serialisation.Generators where
 
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
+import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.PParams
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..), BabbageUtxowPredFailure (..))
 import Cardano.Ledger.Babbage.Tx
-import Cardano.Ledger.Babbage.TxBody (BabbageEraTxBody, BabbageTxOut (..))
+import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
+import Cardano.Ledger.BaseTypes (StrictMaybe)
 import Cardano.Ledger.Binary (Sized, Term (..), ToCBOR, mkSized)
-import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.PParams (Update (..))
 import Cardano.Ledger.Val (Val)
 import Control.State.Transition (STS (PredicateFailure))
+import Data.Functor.Identity (Identity)
 import Data.Maybe (catMaybes)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Binary.Twiddle (Twiddle (..), emptyOrNothing, toTerm, twiddleStrictMaybe)
@@ -80,7 +84,9 @@ instance
 -- ==========================
 --
 
-instance Arbitrary (BabbagePParams era) where
+deriving instance Arbitrary CoinPerByte
+
+instance Arbitrary (BabbagePParams Identity era) where
   arbitrary =
     BabbagePParams
       <$> arbitrary
@@ -106,7 +112,7 @@ instance Arbitrary (BabbagePParams era) where
       <*> arbitrary
       <*> arbitrary
 
-instance Arbitrary (BabbagePParamsUpdate era) where
+instance Arbitrary (BabbagePParams StrictMaybe era) where
   arbitrary =
     BabbagePParams
       <$> arbitrary

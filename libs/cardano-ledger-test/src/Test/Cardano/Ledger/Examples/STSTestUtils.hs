@@ -38,7 +38,6 @@ where
 import qualified Cardano.Crypto.Hash as CH
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoBBODY,
   AlonzoUtxoPredFailure (..),
@@ -56,7 +55,6 @@ import Cardano.Ledger.Alonzo.Tx (
  )
 import Cardano.Ledger.Alonzo.TxWits (TxDats (..))
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
-import qualified Cardano.Ledger.Babbage.PParams as Babbage (BabbagePParamsHKD (..))
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..))
 import Cardano.Ledger.Babbage.Rules as Babbage (BabbageUtxowPredFailure (..))
 import Cardano.Ledger.BaseTypes (
@@ -85,7 +83,6 @@ import Cardano.Ledger.Shelley.API (
 import Cardano.Ledger.Shelley.LedgerState (
   smartUTxOState,
  )
-import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Rules (
   BbodyEnv (..),
   ShelleyBbodyState,

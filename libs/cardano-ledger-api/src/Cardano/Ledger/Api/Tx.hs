@@ -48,7 +48,7 @@ import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), AlonzoTx)
 import Cardano.Ledger.Api.Tx.AuxData
 import Cardano.Ledger.Api.Tx.Body
 import Cardano.Ledger.Api.Tx.Wits
-import Cardano.Ledger.Core (EraPParams (PParams), EraTx (..))
+import Cardano.Ledger.Core (EraTx (..), PParams)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx)
 import Lens.Micro ((&), (.~), (^.))
 

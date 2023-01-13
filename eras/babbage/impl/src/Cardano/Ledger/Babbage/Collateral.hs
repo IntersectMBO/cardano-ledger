@@ -16,6 +16,7 @@ where
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Tx (isTwoPhaseScriptAddressFromMap)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (txscripts))
+import Cardano.Ledger.Babbage.PParams ()
 import Cardano.Ledger.Babbage.TxBody (BabbageEraTxBody (..))
 import Cardano.Ledger.BaseTypes (TxIx (..), txIxFromIntegral)
 import Cardano.Ledger.Block (txid)
@@ -40,6 +41,7 @@ isTwoPhaseScriptAddress ::
 isTwoPhaseScriptAddress tx utxo = isTwoPhaseScriptAddressFromMap (txscripts utxo tx)
 
 collAdaBalance ::
+  forall era.
   BabbageEraTxBody era =>
   TxBody era ->
   Map.Map (TxIn (EraCrypto era)) (TxOut era) ->
@@ -47,7 +49,7 @@ collAdaBalance ::
 collAdaBalance txBody utxoCollateral =
   case txBody ^. collateralReturnTxBodyL of
     SNothing -> colbal
-    SJust txOut -> colbal <-> (txOut ^. coinTxOutL)
+    SJust txOut -> colbal <-> (txOut ^. coinTxOutL @era)
   where
     colbal = coinBalance $ UTxO utxoCollateral
 

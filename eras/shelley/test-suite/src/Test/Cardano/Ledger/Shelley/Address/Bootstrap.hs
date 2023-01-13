@@ -29,6 +29,7 @@ import Cardano.Ledger.Address (
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
 import Cardano.Ledger.Binary (byronProtVer, serialize')
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Keys (
@@ -42,13 +43,7 @@ import Cardano.Ledger.Keys.Bootstrap
 import Cardano.Ledger.SafeHash (extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (IncrementalStake (..), PPUPState (..), UTxOState (..))
-
--- def instance for DPState
-import Cardano.Ledger.Shelley.PParams (
-  ProposedPPUpdates (..),
-  ShelleyPParamsHKD (..),
-  emptyPParams,
- )
+import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
 import Cardano.Ledger.Shelley.Rules (
   ShelleyUTXOW,
   ShelleyUtxowPredFailure (..),
@@ -77,12 +72,12 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import qualified Hedgehog.Gen
 import qualified Hedgehog.Range
+import Lens.Micro
 import qualified Test.Cardano.Chain.Common.Gen as Byron
 import qualified Test.Cardano.Crypto.Gen as Byron
 import qualified Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes as Original (C_Crypto)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
-import Test.Cardano.Ledger.Shelley.Orphans ()
 import Test.Cardano.Ledger.Shelley.Utils (testSTS)
 import Test.QuickCheck (Gen)
 import Test.QuickCheck.Hedgehog (hedgehog)
@@ -170,7 +165,7 @@ utxoEnv :: UtxoEnv C
 utxoEnv =
   UtxoEnv
     0
-    emptyPParams {_maxTxSize = 1000}
+    (emptyPParams & ppMaxTxSizeL .~ 1000)
     def
     (GenDelegs mempty)
 

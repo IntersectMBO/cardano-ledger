@@ -6,18 +6,16 @@ module Test.Cardano.Ledger.Alonzo.TxInfo where
 import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..))
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo (Alonzo)
-import Cardano.Ledger.Alonzo.PParams (AlonzoPParams, AlonzoPParamsHKD (..))
+import Cardano.Ledger.Alonzo.Core hiding (TranslationError)
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (..), AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxInfo (TranslationError (..), transVITime, txInfo)
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..), natVersion)
 import qualified Cardano.Ledger.BaseTypes as BT (ProtVer (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (EraTx (Tx), EraTxBody (TxBody), EraTxOut (TxOut))
 import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Language (Language (..))
-import Cardano.Ledger.Shelley.TxBody (Wdrl (..))
 import Cardano.Ledger.TxIn (TxIn (..), mkTxInPartial)
 import Cardano.Ledger.UTxO (UTxO (..))
 import qualified Cardano.Ledger.Val as Val
@@ -29,6 +27,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Shelley.Address.Bootstrap (aliceByronAddr)
 import Test.Cardano.Ledger.Shelley.Examples.Cast (alicePHK)
@@ -108,7 +107,7 @@ expectTranslationError lang tx expected =
 transVITimeUpperBoundIsClosed :: Assertion
 transVITimeUpperBoundIsClosed = do
   let interval = ValidityInterval SNothing (SJust (SlotNo 40))
-  case transVITime (def :: AlonzoPParams Alonzo) ei ss interval of
+  case transVITime (def :: PParams Alonzo) ei ss interval of
     Left e -> assertFailure $ "no translation error was expected, but got: " <> show e
     Right t -> t @?= (PV1.Interval (PV1.LowerBound PV1.NegInf True) (PV1.UpperBound (PV1.Finite (PV1.POSIXTime 40000)) True))
 
@@ -117,7 +116,7 @@ transVITimeUpperBoundIsClosed = do
 transVITimeUpperBoundIsOpen :: Assertion
 transVITimeUpperBoundIsOpen = do
   let interval = ValidityInterval SNothing (SJust (SlotNo 40))
-  case transVITime (def {_protocolVersion = BT.ProtVer (natVersion @9) 0} :: AlonzoPParams Alonzo) ei ss interval of
+  case transVITime (def & ppProtocolVersionL .~ BT.ProtVer (natVersion @9) 0 :: PParams Alonzo) ei ss interval of
     Left e -> assertFailure $ "no translation error was expected, but got: " <> show e
     Right t -> t @?= (PV1.Interval (PV1.LowerBound PV1.NegInf True) (PV1.UpperBound (PV1.Finite (PV1.POSIXTime 40000)) False))
 

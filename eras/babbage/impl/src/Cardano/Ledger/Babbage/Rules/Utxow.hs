@@ -31,7 +31,7 @@ import Cardano.Ledger.Alonzo.Rules (
   witsVKeyNeeded,
  )
 import Cardano.Ledger.Alonzo.Rules as Alonzo (AlonzoUtxoEvent)
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript, CostModels)
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), validScript)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded)
@@ -42,7 +42,7 @@ import Cardano.Ledger.Babbage.TxBody (
   BabbageEraTxBody (..),
   BabbageEraTxOut (..),
  )
-import Cardano.Ledger.BaseTypes (ProtVer, ShelleyBase, quorum, strictMaybeToMaybe)
+import Cardano.Ledger.BaseTypes (ShelleyBase, quorum, strictMaybeToMaybe)
 import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Binary.Coders (
   Decode (From, Invalid, SumD, Summands),
@@ -81,7 +81,6 @@ import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable
-import GHC.Records (HasField (..))
 import Lens.Micro
 import Lens.Micro.Extras (view)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
@@ -175,7 +174,7 @@ deriving via
 -- scripts only has to be a subset of the txscripts.
 {-  { s | (_,s) ∈ scriptsNeeded utxo tx} - dom(refScripts tx utxo) = dom(txscripts txw)  -}
 {-  sNeeded := scriptsNeeded utxo tx                                                     -}
-{-  sReceived := Map.keysSet (getField @"scriptWits" tx)                                 -}
+{-  sReceived := Map.keysSet (tx ^. witsTxL . scriptTxWitsL)                             -}
 babbageMissingScripts ::
   forall era.
   PParams era ->
@@ -240,7 +239,7 @@ validateScriptsWellFormed pp tx =
     ]
   where
     scriptWits = tx ^. witsTxL . scriptTxWitsL
-    invalidScriptWits = Map.filter (not . validScript (getField @"_protocolVersion" pp)) scriptWits
+    invalidScriptWits = Map.filter (not . validScript (pp ^. ppProtocolVersionL)) scriptWits
 
     txBody = tx ^. bodyTxL
     normalOuts = toList $ txBody ^. outputsTxBodyL
@@ -249,7 +248,7 @@ validateScriptsWellFormed pp tx =
       SNothing -> normalOuts
       SJust rOut -> rOut : normalOuts
     rScripts = mapMaybe (strictMaybeToMaybe . view referenceScriptTxOutL) outs
-    invalidRefScripts = filter (not . validScript (getField @"_protocolVersion" pp)) rScripts
+    invalidRefScripts = filter (not . validScript (pp ^. ppProtocolVersionL)) rScripts
     invalidRefScriptHashes = Set.fromList $ map (hashScript @era) invalidRefScripts
 
 -- ==============================================================
@@ -267,7 +266,6 @@ babbageUtxowTransition ::
   , Script era ~ AlonzoScript era
   , STS (BabbageUTXOW era)
   , BabbageEraTxBody era
-  , HasField "_costmdls" (PParams era) CostModels
   , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
   , -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (BabbageUTXOW era)
@@ -365,8 +363,6 @@ instance
   , EraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , BabbageEraTxBody era
-  , HasField "_costmdls" (PParams era) CostModels
-  , HasField "_protocolVersion" (PParams era) ProtVer
   , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
   , Script era ~ AlonzoScript era
   , -- Allow UTXOW to call UTXO

@@ -26,7 +26,7 @@ import Cardano.Ledger.Shelley.API (
   Ptr (..),
   ShelleyDELEG,
  )
-import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..), emptyPParams)
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Rules (ShelleyDelegPredFailure (..))
 import Cardano.Ledger.Slot (SlotNo (..))
 import Control.State.Transition.Extended hiding (Assertion)
@@ -34,6 +34,7 @@ import Control.State.Transition.Trace (checkTrace, (.-), (.->>))
 import Data.Default.Class (def)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Lens.Micro
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
 import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), applySTSTest, mkKeyPair, runShelleyBase)
 import Test.Tasty (TestTree, testGroup)
@@ -52,7 +53,7 @@ env pv acnt =
     { slotNo = SlotNo 50
     , ptr_ = Ptr (SlotNo 50) minBound minBound
     , acnt_ = acnt
-    , ppDE = emptyPParams {_protocolVersion = pv}
+    , ppDE = emptyPParams & ppProtocolVersionL .~ pv
     }
 
 shelleyPV :: ProtVer

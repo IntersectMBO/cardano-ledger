@@ -13,14 +13,13 @@ where
 import Cardano.Ledger.BaseTypes (Nonce)
 import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.PParams (ShelleyPParams)
-import Cardano.Ledger.Slot (
-  BlockNo (..),
-  SlotNo (..),
- )
+import Cardano.Ledger.Shelley.LedgerState
+import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
+import Control.State.Transition
+import Data.Default.Class
 import GHC.Stack (HasCallStack)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (ExMock)
 import Test.Cardano.Ledger.Shelley.Examples (CHAINExample (..))
@@ -37,24 +36,31 @@ import Test.Cardano.Ledger.Shelley.Examples.Init (
  )
 import Test.Cardano.Ledger.Shelley.Generator.Core (
   NatNonce (..),
-  PreAlonzo,
   mkBlockFakeVRF,
   mkOCert,
  )
 import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
-import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest, getBlockNonce)
+import Test.Cardano.Ledger.Shelley.Utils (getBlockNonce)
 
 -- =============================================================
 
-initStEx1 :: forall era. (ShelleyTest era, PParams era ~ ShelleyPParams era) => ChainState era
+initStEx1 ::
+  ( EraTxOut era
+  , Default (State (EraRule "PPUP" era))
+  , Default (StashedAVVMAddresses era)
+  , ProtVerAtMost era 4
+  , ProtVerAtMost era 6
+  ) =>
+  ChainState era
 initStEx1 = initSt (UTxO mempty)
 
 blockEx1 ::
   forall era.
   ( HasCallStack
-  , ShelleyTest era
   , EraSegWits era
   , ExMock (EraCrypto era)
+  , ProtVerAtMost era 4
+  , ProtVerAtMost era 6
   ) =>
   Block (BHeader (EraCrypto era)) era
 blockEx1 =
@@ -74,21 +80,22 @@ blockEx1 =
 blockNonce ::
   forall era.
   ( HasCallStack
-  , PreAlonzo era
-  , ShelleyTest era
   , EraSegWits era
   , ExMock (EraCrypto era)
+  , ProtVerAtMost era 4
+  , ProtVerAtMost era 6
   ) =>
   Nonce
 blockNonce = getBlockNonce (blockEx1 @era)
 
 expectedStEx1 ::
   forall era.
-  ( ShelleyTest era
-  , EraSegWits era
+  ( EraSegWits era
   , ExMock (EraCrypto era)
-  , PreAlonzo era
-  , PParams era ~ ShelleyPParams era
+  , ProtVerAtMost era 4
+  , ProtVerAtMost era 6
+  , Default (State (EraRule "PPUP" era))
+  , Default (StashedAVVMAddresses era)
   ) =>
   ChainState era
 expectedStEx1 = evolveNonceUnfrozen (blockNonce @era) . newLab blockEx1 $ initStEx1
@@ -101,11 +108,12 @@ expectedStEx1 = evolveNonceUnfrozen (blockNonce @era) . newLab blockEx1 $ initSt
 -- The only things that change in the chain state are the
 -- evolving and candidate nonces, and the last applied block.
 exEmptyBlock ::
-  ( ShelleyTest era
-  , ExMock (EraCrypto era)
-  , PreAlonzo era
+  ( ExMock (EraCrypto era)
   , EraSegWits era
-  , PParams era ~ ShelleyPParams era
+  , ProtVerAtMost era 4
+  , ProtVerAtMost era 6
+  , Default (State (EraRule "PPUP" era))
+  , Default (StashedAVVMAddresses era)
   ) =>
   CHAINExample (BHeader (EraCrypto era)) era
 exEmptyBlock = CHAINExample initStEx1 blockEx1 (Right expectedStEx1)

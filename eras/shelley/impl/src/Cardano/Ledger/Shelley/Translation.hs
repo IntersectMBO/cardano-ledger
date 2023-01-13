@@ -12,12 +12,11 @@ module Cardano.Ledger.Shelley.Translation (
 )
 where
 
-import Cardano.Ledger.Core (PParams, TranslationContext)
+import Cardano.Ledger.Core (PParams, TranslationContext, emptyPParams)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.Genesis (ShelleyGenesis (..))
-import Cardano.Ledger.Shelley.PParams (emptyPParams)
 import Data.Map (Map)
 import qualified Data.Map as Map
 import GHC.Generics (Generic)
@@ -34,7 +33,7 @@ data FromByronTranslationContext c = FromByronTranslationContext
 
 -- | Trivial FromByronTranslationContext value, for use in cases where we do not need
 -- to translate from Byron to Shelley.
-emptyFromByronTranslationContext :: FromByronTranslationContext c
+emptyFromByronTranslationContext :: Crypto c => FromByronTranslationContext c
 emptyFromByronTranslationContext =
   FromByronTranslationContext
     { fbtcGenDelegs = Map.empty

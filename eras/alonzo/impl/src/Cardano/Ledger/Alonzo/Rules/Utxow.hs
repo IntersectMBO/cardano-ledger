@@ -34,7 +34,7 @@ import Cardano.Ledger.Alonzo.Rules.Utxo (
   AlonzoUtxoEvent,
   AlonzoUtxoPredFailure,
  )
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), CostModels)
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoEraTx,
   ScriptPurpose,
@@ -55,7 +55,6 @@ import Cardano.Ledger.Alonzo.TxWits (
  )
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..), getInputDataHashesTxBody)
 import Cardano.Ledger.BaseTypes (
-  ProtVer,
   ShelleyBase,
   StrictMaybe (..),
   quorum,
@@ -104,7 +103,6 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
-import GHC.Records
 import Lens.Micro
 import NoThunks.Class
 import Validation
@@ -207,7 +205,7 @@ instance
 
 decodePredFail ::
   ( Era era
-  , FromCBOR (PredicateFailure (EraRule "UTXO" era)) -- TODO, we should be able to get rid of this constraint
+  , FromCBOR (PredicateFailure (EraRule "UTXO" era))
   , Typeable (Script era)
   , Typeable (TxAuxData era)
   ) =>
@@ -309,7 +307,6 @@ ppViewHashesMatch ::
   ( AlonzoEraTx era
   , ExtendedUTxO era
   , Script era ~ AlonzoScript era
-  , HasField "_costmdls" (PParams era) CostModels
   ) =>
   Tx era ->
   PParams era ->
@@ -339,7 +336,6 @@ alonzoStyleWitness ::
   , EraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Script era ~ AlonzoScript era
-  , HasField "_costmdls" (PParams era) CostModels
   , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
   , -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (AlonzoUTXOW era)
@@ -509,8 +505,6 @@ instance
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
   , Script era ~ AlonzoScript era
-  , HasField "_costmdls" (PParams era) CostModels
-  , HasField "_protocolVersion" (PParams era) ProtVer
   , -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (AlonzoUTXOW era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era

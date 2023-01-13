@@ -14,7 +14,6 @@
 module Test.Cardano.Ledger.Examples.AlonzoCollectInputs (tests) where
 
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (..), collectTwoPhaseScriptInputs)
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoScript (..),
@@ -29,7 +28,6 @@ import Cardano.Ledger.Alonzo.Tx (
  )
 import Cardano.Ledger.Alonzo.TxInfo (TranslationError, VersionedTxInfo, txInfo, valContext)
 import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..))
-import qualified Cardano.Ledger.Babbage.PParams as Babbage (BabbagePParamsHKD (..))
 import Cardano.Ledger.BaseTypes (natVersion)
 import Cardano.Ledger.Core hiding (TranslationError)
 import Cardano.Ledger.Pretty.Babbage ()
@@ -209,5 +207,5 @@ defaultPPs =
   , CollateralPercentage 100
   ]
 
-pp :: Proof era -> PParams era
+pp :: EraPParams era => Proof era -> PParams era
 pp pf = newPParams pf defaultPPs

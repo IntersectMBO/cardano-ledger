@@ -34,10 +34,9 @@ module Test.Cardano.Ledger.Shelley.Utils (
   applySTSTest,
   GenesisKeyPair,
   getBlockNonce,
-  ShelleyTest,
   ChainProperty,
-  Split (..),
   RawSeed (..),
+  Split (..),
 )
 where
 
@@ -88,11 +87,6 @@ import Cardano.Ledger.Keys (
   updateKES,
  )
 import Cardano.Ledger.Shelley.API (ApplyBlock)
-import Cardano.Ledger.Shelley.BlockChain (ShelleyTxSeq)
-import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses)
-import Cardano.Ledger.Shelley.Tx (ShelleyTx, ShelleyTxOut)
-import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody)
-import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits)
 import Cardano.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Protocol.TPraos.API (GetLedgerView)
@@ -115,7 +109,6 @@ import Control.State.Transition.Trace (
   (.->>),
  )
 import Data.Coerce (Coercible, coerce)
-import Data.Default.Class (Default)
 import Data.Functor.Identity (runIdentity)
 import Data.Time.Clock.POSIX
 import Data.Typeable (Proxy (Proxy))
@@ -138,20 +131,28 @@ type ChainProperty era =
 
 -- ================================================
 
-type ShelleyTest era =
-  ( EraTx era
-  , ShelleyEraTxBody era
-  , Tx era ~ ShelleyTx era
-  , TxSeq era ~ ShelleyTxSeq era
-  , ShelleyTxOut era ~ TxOut era
-  , TxWits era ~ ShelleyTxWits era
-  , Split (Value era)
-  , Default (State (EraRule "PPUP" era))
-  , Default (StashedAVVMAddresses era)
-  )
-
 class Split v where
   vsplit :: v -> Integer -> ([v], Coin)
+
+-- ===============================================================================
+-- Generating random transactions requires splitting Values into multiple Values
+-- with the same underlying amount of Coin. This property is crucial to generating
+-- transactions which have the preservation of ADA property. (vsplit n v) breaks
+-- v into n different values, and one remainder Coin, where the sum of the Coin
+-- in the original value, and the sum of the underlying Coin in the list plus the
+-- remainder coin are equal.
+-- Given:    let (vs,coin) = split n value
+-- Then:     (coin value) == sum(map coin vs) <+> coin
+
+-- We introduce a new class Split which supplies this operation.
+-- As new kinds of values become instances of the Val class, and we want to generate
+-- transactions over these values, we will have to add additional instances here.
+
+instance Split Coin where
+  vsplit (Coin n) 0 = ([], Coin n)
+  vsplit (Coin n) m
+    | m <= 0 = error "must split coins into positive parts"
+    | otherwise = (take (fromIntegral m) (repeat (Coin (n `div` m))), Coin (n `rem` m))
 
 type GenesisKeyPair c = KeyPair 'Genesis c
 

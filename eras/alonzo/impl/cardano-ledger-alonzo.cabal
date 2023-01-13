@@ -76,7 +76,7 @@ library
     cardano-ledger-mary,
     cardano-slotting,
     containers,
-    data-default,
+    data-default-class,
     deepseq,
     heapwords,
     measures,
@@ -95,8 +95,13 @@ library
     text,
     time,
     transformers,
+    tree-diff,
     utf8-string,
     validation-selective,
     vector
   hs-source-dirs:
     src
+
+  if !impl(ghc >= 9.2)
+    -- Workaround: https://gitlab.haskell.org/ghc/ghc/-/issues/14630
+    ghc-options: -Wno-name-shadowing

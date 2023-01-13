@@ -9,7 +9,6 @@
 module Cardano.Ledger.State.Orphans where
 
 import Cardano.Crypto.Hash.Class
-import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.TxBody
 import Cardano.Ledger.BaseTypes (TxIx (..))
 import Cardano.Ledger.Binary
@@ -148,6 +147,6 @@ deriving via Enc (NonMyopic C) instance PersistField (NonMyopic C)
 
 deriving via Enc (NonMyopic C) instance PersistFieldSql (NonMyopic C)
 
-deriving via Enc (AlonzoPParams CurrentEra) instance PersistField (AlonzoPParams CurrentEra)
+deriving via Enc (PParams CurrentEra) instance PersistField (PParams CurrentEra)
 
-deriving via Enc (AlonzoPParams CurrentEra) instance PersistFieldSql (AlonzoPParams CurrentEra)
+deriving via Enc (PParams CurrentEra) instance PersistFieldSql (PParams CurrentEra)

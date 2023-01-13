@@ -55,13 +55,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   DState (..),
   UTxOState (..),
  )
-import Cardano.Ledger.Shelley.PParams (
-  ShelleyPParams,
-  ShelleyPParamsHKD (..),
-  ShelleyPParamsUpdate,
-  pattern ProposedPPUpdates,
-  pattern Update,
- )
+import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Slot (EpochNo (EpochNo), SlotNo)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -70,6 +64,7 @@ import Data.Ratio (Ratio, (%))
 import Data.Word (Word64)
 import GHC.Records
 import GHC.Stack (HasCallStack)
+import Lens.Micro
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Binary.Arbitrary (genVersion)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair, vKey)
@@ -101,24 +96,45 @@ genIntervalInThousands :: (BoundedRational a, HasCallStack) => Integer -> Intege
 genIntervalInThousands lower upper =
   unsafeBoundRational <$> genRationalInThousands lower upper
 
-genPParams :: Constants -> Gen (ShelleyPParams era)
-genPParams c@Constants {maxMinFeeA, maxMinFeeB, minMajorPV} =
-  mkPParams
-    <$> genNatural 0 maxMinFeeA -- _minfeeA
-    <*> genNatural 0 maxMinFeeB -- _minfeeB
-    <*> szGen -- (maxBBSize, maxBHSize, maxTxSize)
-    <*> genKeyDeposit
-    <*> genPoolDeposit
-    <*> genEMax c
-    <*> genNOpt
-    <*> genA0
-    <*> genRho
-    <*> genTau
-    <*> genDecentralisationParam
-    <*> genExtraEntropy
-    <*> genProtocolVersion minMajorPV
-    <*> genMinUTxOValue
-    <*> genMinPoolCost
+genPParams ::
+  (EraPParams era, ProtVerAtMost era 4, ProtVerAtMost era 6) =>
+  Constants ->
+  Gen (PParams era)
+genPParams c@Constants {maxMinFeeA, maxMinFeeB, minMajorPV} = do
+  minFeeA <- genNatural 0 maxMinFeeA
+  minFeeB <- genNatural 0 maxMinFeeB
+  (maxBBSize, maxTxSize, maxBHSize) <- szGen
+  keyDeposit <- genKeyDeposit
+  poolDeposit <- genPoolDeposit
+  eMax <- genEMax c
+  nOpt <- genNOpt
+  a0 <- genA0
+  rho <- genRho
+  tau <- genTau
+  d <- genDecentralisationParam
+  extraEntropy <- genExtraEntropy
+  protocolVersion <- genProtocolVersion minMajorPV
+  minUTxOValue <- genMinUTxOValue
+  minPoolCost <- genMinPoolCost
+  pure $
+    emptyPParams
+      & ppMinFeeAL .~ minFeeA
+      & ppMinFeeBL .~ minFeeB
+      & ppMaxBBSizeL .~ maxBBSize
+      & ppMaxTxSizeL .~ maxTxSize
+      & ppMaxBHSizeL .~ maxBHSize
+      & ppKeyDepositL .~ keyDeposit
+      & ppPoolDepositL .~ poolDeposit
+      & ppEMaxL .~ eMax
+      & ppNOptL .~ nOpt
+      & ppA0L .~ a0
+      & ppRhoL .~ rho
+      & ppTauL .~ tau
+      & ppDL .~ d
+      & ppExtraEntropyL .~ extraEntropy
+      & ppProtocolVersionL .~ protocolVersion
+      & ppMinUTxOValueL .~ minUTxOValue
+      & ppMinPoolCostL .~ minPoolCost
   where
     szGen :: Gen (Natural, Natural, Natural)
     szGen = do
@@ -126,10 +142,6 @@ genPParams c@Constants {maxMinFeeA, maxMinFeeB, minMajorPV} =
       (blockBodySize,,)
         <$> rangeUpTo (blockBodySize `div` 2)
         <*> rangeUpTo (blockBodySize `div` 2)
-
-    -- A wrapper to enable the dependent generators for the max sizes
-    mkPParams minFeeA minFeeB (maxBBSize, maxTxSize, maxBHSize) =
-      ShelleyPParams minFeeA minFeeB maxBBSize maxTxSize maxBHSize
     rangeUpTo :: Natural -> Gen Natural
     rangeUpTo upper = genNatural low upper
 
@@ -208,11 +220,11 @@ genMinPoolCost = Coin <$> genInteger 10 50
 
 -- | Generate a possible next Protocol version based on the previous version.
 -- Increments the Major or Minor versions and possibly the Alt version.
-genNextProtocolVersion :: HasCallStack => ShelleyPParams era -> Gen ProtVer
+genNextProtocolVersion :: EraPParams era => HasCallStack => PParams era -> Gen ProtVer
 genNextProtocolVersion pp = do
   QC.elements $ ProtVer m (n + 1) : [ProtVer m' 0 | Just m' <- [succVersion m]]
   where
-    ProtVer m n = getField @"_protocolVersion" pp
+    ProtVer m n = pp ^. ppProtocolVersionL
 
 genM :: Gen a -> Gen (StrictMaybe a)
 genM gen = frequency [(1, SJust <$> gen), (2, pure SNothing)]
@@ -220,9 +232,10 @@ genM gen = frequency [(1, SJust <$> gen), (2, pure SNothing)]
 -- | This is only good in the Shelley Era, used to define the genShelleyEraPParamsUpdate method for (EraGen (ShelleyEra c))
 genShelleyPParamsUpdate ::
   forall era.
+  (ProtVerAtMost era 4, ProtVerAtMost era 6, EraPParams era) =>
   Constants ->
-  ShelleyPParams era ->
-  Gen (ShelleyPParamsUpdate era)
+  PParams era ->
+  Gen (PParamsUpdate era)
 genShelleyPParamsUpdate c@Constants {maxMinFeeA, maxMinFeeB} pp = do
   -- TODO generate Maybe types so not all updates are full
   minFeeA <- genM $ genNatural 0 maxMinFeeA
@@ -233,36 +246,34 @@ genShelleyPParamsUpdate c@Constants {maxMinFeeA, maxMinFeeB} pp = do
   keyDeposit <- genM $ genKeyDeposit
   poolDeposit <- genM $ genPoolDeposit
   eMax <- genM $ genEMax c
-  nopt <- genM $ genNOpt
-  a0 <- genM $ genA0
-  rho <- genM $ genRho
-  tau <- genM $ genTau
-  d <- genM $ genDecentralisationParam
-  extraEntropy <- genM $ genExtraEntropy
+  nOpt <- genM genNOpt
+  a0 <- genM genA0
+  rho <- genM genRho
+  tau <- genM genTau
+  d <- genM genDecentralisationParam
+  extraEntropy <- genM genExtraEntropy
   protocolVersion <- genM $ genNextProtocolVersion pp
-  minUTxOValue <- genM $ genMinUTxOValue
-  minPoolCost <- genM $ genMinPoolCost
-  pure
-    ( ShelleyPParams
-        { _minfeeA = minFeeA
-        , _minfeeB = minFeeB
-        , _maxBBSize = maxBBSize
-        , _maxTxSize = maxTxSize
-        , _maxBHSize = maxBHSize
-        , _keyDeposit = keyDeposit
-        , _poolDeposit = poolDeposit
-        , _eMax = eMax
-        , _nOpt = nopt
-        , _a0 = a0
-        , _rho = rho
-        , _tau = tau
-        , _d = d
-        , _extraEntropy = extraEntropy
-        , _protocolVersion = protocolVersion
-        , _minUTxOValue = minUTxOValue
-        , _minPoolCost = minPoolCost
-        }
-    )
+  minUTxOValue <- genM genMinUTxOValue
+  minPoolCost <- genM genMinPoolCost
+  pure $
+    emptyPParamsUpdate
+      & ppuMinFeeAL .~ minFeeA
+      & ppuMinFeeBL .~ minFeeB
+      & ppuMaxBBSizeL .~ maxBBSize
+      & ppuMaxTxSizeL .~ maxTxSize
+      & ppuMaxBHSizeL .~ maxBHSize
+      & ppuKeyDepositL .~ keyDeposit
+      & ppuPoolDepositL .~ poolDeposit
+      & ppuEMaxL .~ eMax
+      & ppuNOptL .~ nOpt
+      & ppuA0L .~ a0
+      & ppuRhoL .~ rho
+      & ppuTauL .~ tau
+      & ppuDL .~ d
+      & ppuExtraEntropyL .~ extraEntropy
+      & ppuProtocolVersionL .~ protocolVersion
+      & ppuMinUTxOValueL .~ minUTxOValue
+      & ppuMinPoolCostL .~ minPoolCost
 
 -- | Generate a proposal for protocol parameter updates for all the given genesis keys.
 -- Return an empty update if it is too late in the epoch for updates.

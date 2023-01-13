@@ -107,7 +107,7 @@ getInputDataHashesTxBody (UTxO mp) txBody hashScriptMap =
 -- cannot be run, so are not collected. In Babbage, reference inputs, fit that description.
 -- Purposes include
 -- 1) Spending (payment script credentials, but NOT staking scripts) in the Addr of a TxOut, pointed
---    to by some input that needs authorization. Be sure (getField @"inputs" txb) gets all such inputs.
+--    to by some input that needs authorization. Be sure (txBody ^. inputsTxBodyL) gets all such inputs.
 --    In some Eras there may be multiple sets of inputs, which ones should be included? Currently that
 --    is only the spending inputs. Because collateral inputs can only have key-locked credentials,
 --    and reference inputs are never authorized. That might not always be the case.

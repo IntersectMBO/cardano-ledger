@@ -12,10 +12,10 @@ module Cardano.Ledger.Pretty.Babbage where
 
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxoPredFailure, AlonzoUtxowPredFailure)
 import Cardano.Ledger.Alonzo.Scripts.Data (BinaryData, binaryDataToData)
-import Cardano.Ledger.Babbage.PParams (BabbagePParams, BabbagePParamsHKD (..), BabbagePParamsUpdate)
+import Cardano.Ledger.Babbage
+import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..), BabbageUtxowPredFailure (..))
 import Cardano.Ledger.Babbage.TxBody (
-  BabbageTxBody (..),
   BabbageTxOut (..),
   Datum (..),
   adHash',
@@ -36,10 +36,8 @@ import Cardano.Ledger.Babbage.TxBody (
   wdrls',
  )
 import Cardano.Ledger.BaseTypes (BoundedRational (unboundRational))
-import Cardano.Ledger.Core
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Pretty hiding (
-  ppPParams,
-  ppPParamsUpdate,
   ppTxBody,
   ppTxOut,
  )
@@ -53,81 +51,72 @@ import Cardano.Ledger.Pretty.Alonzo (
 import Cardano.Ledger.Pretty.Mary (ppMultiAsset, ppValidityInterval)
 import Control.State.Transition.Extended
 import Data.Maybe.Strict (StrictMaybe (SJust, SNothing))
+import Lens.Micro
 import Prettyprinter ((<+>))
 
 -- =====================================
 
-ppPParamsId :: BabbagePParams era -> PDoc
-ppPParamsId (BabbagePParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau pv mpool ada cost prices mxEx mxBEx mxV c mxC) =
+instance Crypto c => PrettyA (PParams (BabbageEra c)) where
+  prettyA = ppBabbagePParams
+
+ppBabbagePParams :: BabbageEraPParams era => PParams era -> PDoc
+ppBabbagePParams pp =
   ppRecord
     "PParams"
-    [ ("minfeeA", lift ppNatural feeA)
-    , ("minfeeB", lift ppNatural feeB)
-    , ("maxBBSize", lift ppNatural mbb)
-    , ("maxTxSize", lift ppNatural mtx)
-    , ("maxBHSize", lift ppNatural mbh)
-    , ("keyDeposit", lift ppCoin kd)
-    , ("poolDeposit", lift ppCoin pd)
-    , ("eMax", lift ppEpochNo em)
-    , ("nOpt", lift ppNatural no)
-    , ("a0", lift (ppRational . unboundRational) a0)
-    , ("rho", lift ppUnitInterval rho)
-    , ("tau", lift ppUnitInterval tau)
-    , ("protocolVersion", lift ppProtVer pv)
-    , ("minPoolCost", lift ppCoin mpool)
-    , ("adaPerWord", lift ppCoin ada)
-    , ("costmdls", lift ppCostModels cost)
-    , ("prices", lift ppPrices prices)
-    , ("maxTxExUnits", lift ppExUnits mxEx)
-    , ("maxBlockExUnits", lift ppExUnits mxBEx)
-    , ("maxValSize", lift ppNatural mxV)
-    , ("collateral%", lift ppNatural c)
-    , ("maxCollateralInputs", lift ppNatural mxC)
+    [ ("minfeeA", ppNatural $ pp ^. ppMinFeeAL)
+    , ("minfeeB", ppNatural $ pp ^. ppMinFeeBL)
+    , ("maxBBSize", ppNatural $ pp ^. ppMaxBBSizeL)
+    , ("maxTxSize", ppNatural $ pp ^. ppMaxTxSizeL)
+    , ("maxBHSize", ppNatural $ pp ^. ppMaxBHSizeL)
+    , ("keyDeposit", ppCoin $ pp ^. ppKeyDepositL)
+    , ("poolDeposit", ppCoin $ pp ^. ppPoolDepositL)
+    , ("eMax", ppEpochNo $ pp ^. ppEMaxL)
+    , ("nOpt", ppNatural $ pp ^. ppNOptL)
+    , ("a0", (ppRational . unboundRational) $ pp ^. ppA0L)
+    , ("rho", ppUnitInterval $ pp ^. ppRhoL)
+    , ("tau", ppUnitInterval $ pp ^. ppTauL)
+    , ("protocolVersion", ppProtVer $ pp ^. ppProtocolVersionL)
+    , ("minPoolCost", ppCoin $ pp ^. ppMinPoolCostL)
+    , ("coinPerByte", (ppCoin . unCoinPerByte) $ pp ^. ppCoinsPerUTxOByteL)
+    , ("costmdls", ppCostModels $ pp ^. ppCostModelsL)
+    , ("prices", ppPrices $ pp ^. ppPricesL)
+    , ("maxTxExUnits", ppExUnits $ pp ^. ppMaxTxExUnitsL)
+    , ("maxBlockExUnits", ppExUnits $ pp ^. ppMaxBlockExUnitsL)
+    , ("maxValSize", ppNatural $ pp ^. ppMaxValSizeL)
+    , ("collateral%", ppNatural $ pp ^. ppCollateralPercentageL)
+    , ("maxCollateralInputs", ppNatural $ pp ^. ppMaxCollateralInputsL)
     ]
-  where
-    lift f = f
 
-ppPParams :: BabbagePParams era -> PDoc
-ppPParams = ppPParamsId
-
-instance PrettyA (BabbagePParams era) where
-  prettyA = ppPParams
-
-ppPParamsStrictMaybe :: BabbagePParamsUpdate era -> PDoc
-ppPParamsStrictMaybe (BabbagePParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau pv mpool ada cost prices mxEx mxBEx mxV c mxC) =
+ppBabbagePParamsUpdate :: BabbageEraPParams era => PParamsUpdate era -> PDoc
+ppBabbagePParamsUpdate pp =
   ppRecord
-    "PParams"
-    [ ("minfeeA", lift ppNatural feeA)
-    , ("minfeeB", lift ppNatural feeB)
-    , ("maxBBSize", lift ppNatural mbb)
-    , ("maxTxSize", lift ppNatural mtx)
-    , ("maxBHSize", lift ppNatural mbh)
-    , ("keyDeposit", lift ppCoin kd)
-    , ("poolDeposit", lift ppCoin pd)
-    , ("eMax", lift ppEpochNo em)
-    , ("nOpt", lift ppNatural no)
-    , ("a0", lift (ppRational . unboundRational) a0)
-    , ("rho", lift ppUnitInterval rho)
-    , ("tau", lift ppUnitInterval tau)
-    , ("protocolVersion", lift ppProtVer pv)
-    , ("minPoolCost", lift ppCoin mpool)
-    , ("adaPerWord", lift ppCoin ada)
-    , ("costmdls", lift ppCostModels cost)
-    , ("prices", lift ppPrices prices)
-    , ("maxTxExUnits", lift ppExUnits mxEx)
-    , ("maxBlockExUnits", lift ppExUnits mxBEx)
-    , ("maxValSize", lift ppNatural mxV)
-    , ("collateral%", lift ppNatural c)
-    , ("maxCollateralInputs", lift ppNatural mxC)
+    "PParamsUdate"
+    [ ("minfeeA", ppStrictMaybe ppNatural $ pp ^. ppuMinFeeAL)
+    , ("minfeeB", ppStrictMaybe ppNatural $ pp ^. ppuMinFeeBL)
+    , ("maxBBSize", ppStrictMaybe ppNatural $ pp ^. ppuMaxBBSizeL)
+    , ("maxTxSize", ppStrictMaybe ppNatural $ pp ^. ppuMaxTxSizeL)
+    , ("maxBHSize", ppStrictMaybe ppNatural $ pp ^. ppuMaxBHSizeL)
+    , ("keyDeposit", ppStrictMaybe ppCoin $ pp ^. ppuKeyDepositL)
+    , ("poolDeposit", ppStrictMaybe ppCoin $ pp ^. ppuPoolDepositL)
+    , ("eMax", ppStrictMaybe ppEpochNo $ pp ^. ppuEMaxL)
+    , ("nOpt", ppStrictMaybe ppNatural $ pp ^. ppuNOptL)
+    , ("a0", ppStrictMaybe (ppRational . unboundRational) $ pp ^. ppuA0L)
+    , ("rho", ppStrictMaybe ppUnitInterval $ pp ^. ppuRhoL)
+    , ("tau", ppStrictMaybe ppUnitInterval $ pp ^. ppuTauL)
+    , ("protocolVersion", ppStrictMaybe ppProtVer $ pp ^. ppuProtocolVersionL)
+    , ("minPoolCost", ppStrictMaybe ppCoin $ pp ^. ppuMinPoolCostL)
+    , ("coinPerByte", ppStrictMaybe (ppCoin . unCoinPerByte) $ pp ^. ppuCoinsPerUTxOByteL)
+    , ("costmdls", ppStrictMaybe ppCostModels $ pp ^. ppuCostModelsL)
+    , ("prices", ppStrictMaybe ppPrices $ pp ^. ppuPricesL)
+    , ("maxTxExUnits", ppStrictMaybe ppExUnits $ pp ^. ppuMaxTxExUnitsL)
+    , ("maxBlockExUnits", ppStrictMaybe ppExUnits $ pp ^. ppuMaxBlockExUnitsL)
+    , ("maxValSize", ppStrictMaybe ppNatural $ pp ^. ppuMaxValSizeL)
+    , ("collateral%", ppStrictMaybe ppNatural $ pp ^. ppuCollateralPercentageL)
+    , ("maxCollateralInputs", ppStrictMaybe ppNatural $ pp ^. ppuMaxCollateralInputsL)
     ]
-  where
-    lift f = ppStrictMaybe f
 
-ppPParamsUpdate :: BabbagePParamsUpdate era -> PDoc
-ppPParamsUpdate = ppPParamsStrictMaybe
-
-instance PrettyA (BabbagePParamsUpdate era) where
-  prettyA = ppPParamsUpdate
+instance Crypto c => PrettyA (PParamsUpdate (BabbageEra c)) where
+  prettyA = ppBabbagePParamsUpdate
 
 ppBabbageUtxoPred ::
   ( PrettyA (AlonzoUtxoPredFailure era)

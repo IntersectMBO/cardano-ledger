@@ -17,7 +17,6 @@ module Bench.Cardano.Ledger.ApplyTx (applyTxBenchmarks, ShelleyBench) where
 import Bench.Cardano.Ledger.ApplyTx.Gen (ApplyTxEnv (..), generateApplyTxEnvForEra)
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
 import Cardano.Ledger.Alonzo.Rules ()
 import Cardano.Ledger.Binary (
   FromCBOR (fromCBOR),
@@ -36,7 +35,6 @@ import Cardano.Ledger.Shelley.API (
   applyTxsTransition,
  )
 import Cardano.Ledger.Shelley.LedgerState (DPState, UTxOState)
-import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Control.DeepSeq (NFData (..))
 import Control.State.Transition (Environment, Signal, State)
 import Control.State.Transition.Trace.Generator.QuickCheck (BaseEnv, HasTrace)

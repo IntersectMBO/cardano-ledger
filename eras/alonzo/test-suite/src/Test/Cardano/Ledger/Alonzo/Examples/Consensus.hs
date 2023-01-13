@@ -6,9 +6,9 @@ module Test.Cardano.Ledger.Alonzo.Examples.Consensus where
 
 import Cardano.Ledger.Allegra.Scripts (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.Alonzo (Alonzo)
+import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..), emptyPParams, emptyPParamsUpdate)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), CostModels (..), ExUnits (..), Prices (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
 import Cardano.Ledger.Alonzo.Scripts.Data (Data (..), hashData)
@@ -19,7 +19,6 @@ import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (..), AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), RdmrPtr (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.BaseTypes (NonNegativeInterval, StrictMaybe (..), boundRational)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (EraScript (hashScript))
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
@@ -33,7 +32,6 @@ import Cardano.Ledger.Shelley.API (
   RewardAcnt (..),
   TxId (..),
   Update (..),
-  Wdrl (..),
  )
 import Cardano.Ledger.Shelley.Rules (ShelleyDelegsPredFailure (..), ShelleyLedgerPredFailure (..))
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
@@ -45,13 +43,13 @@ import Data.Proxy (Proxy (..))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
+import Lens.Micro
 import qualified PlutusTx as Plutus
 import Test.Cardano.Ledger.Alonzo.PlutusScripts (testingCostModelV1)
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr, mkWitnessesVKey)
 import qualified Test.Cardano.Ledger.Mary.Examples.Consensus as SLE
 import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as SLE
-import Test.Cardano.Ledger.Shelley.Orphans ()
 
 -- | ShelleyLedgerExamples for Alonzo era
 ledgerExamplesAlonzo :: SLE.ShelleyLedgerExamples Alonzo
@@ -89,7 +87,7 @@ ledgerExamplesAlonzo =
       ProposedPPUpdates $
         Map.singleton
           (SLE.mkKeyHash 0)
-          (emptyPParamsUpdate {_collateralPercentage = SJust 150})
+          (emptyPParamsUpdate & ppuCollateralPercentageL .~ SJust 150)
 
 exampleTxBodyAlonzo :: AlonzoTxBody Alonzo
 exampleTxBodyAlonzo =
@@ -116,7 +114,7 @@ exampleTxBodyAlonzo =
           ( ProposedPPUpdates $
               Map.singleton
                 (SLE.mkKeyHash 1)
-                (emptyPParamsUpdate {_maxBHSize = SJust 4000})
+                (emptyPParamsUpdate & ppuMaxBHSizeL .~ SJust 4000)
           )
           (EpochNo 0)
     ) -- txUpdates
@@ -166,19 +164,19 @@ exampleAlonzoNewEpochState =
   SLE.exampleNewEpochState
     (SLE.exampleMultiAssetValue 1)
     emptyPParams
-    (emptyPParams {_coinsPerUTxOWord = Coin 1})
+    (emptyPParams & ppCoinsPerUTxOWordL .~ CoinPerWord (Coin 1))
 
 exampleAlonzoGenesis :: AlonzoGenesis
 exampleAlonzoGenesis =
   AlonzoGenesis
-    { coinsPerUTxOWord = Coin 1
-    , costmdls = CostModels $ Map.fromList [(PlutusV1, testingCostModelV1)]
-    , prices = Prices (boundRational' 90) (boundRational' 91)
-    , maxTxExUnits = ExUnits 123 123
-    , maxBlockExUnits = ExUnits 223 223
-    , maxValSize = 1234
-    , collateralPercentage = 20
-    , maxCollateralInputs = 30
+    { agCoinsPerUTxOWord = CoinPerWord $ Coin 1
+    , agCostModels = CostModels $ Map.fromList [(PlutusV1, testingCostModelV1)]
+    , agPrices = Prices (boundRational' 90) (boundRational' 91)
+    , agMaxTxExUnits = ExUnits 123 123
+    , agMaxBlockExUnits = ExUnits 223 223
+    , agMaxValSize = 1234
+    , agCollateralPercentage = 20
+    , agMaxCollateralInputs = 30
     }
   where
     boundRational' :: HasCallStack => Rational -> NonNegativeInterval

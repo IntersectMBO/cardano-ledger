@@ -17,10 +17,8 @@ module Test.Cardano.Ledger.Generic.Trace where
 -- =========================================================================
 
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxowPredFailure (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (body))
-import qualified Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..))
 import Cardano.Ledger.Babbage.Rules (BabbageUtxowPredFailure (..))
 import Cardano.Ledger.Babbage.TxBody (certs')
 import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals)
@@ -53,7 +51,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   StashedAVVMAddresses,
   UTxOState (..),
  )
-import qualified Cardano.Ledger.Shelley.PParams as Shelley (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Rules (
   ShelleyLedgerPredFailure (..),
   ShelleyLedgersPredFailure (..),
@@ -490,7 +487,7 @@ traceProp ::
   (MockChainState era -> MockChainState era -> prop) ->
   Gen prop
 traceProp proof numTxInTrace gsize f = do
-  trace1 <- genTrace proof numTxInTrace gsize (initStableFields proof)
+  trace1 <- genTrace proof numTxInTrace gsize initStableFields
   pure (f (_traceInitState trace1) (lastState trace1))
 
 forEachEpochTrace ::
@@ -507,13 +504,13 @@ forEachEpochTrace proof tracelen genSize f = do
   let newEpoch tr1 tr2 = nesEL (mcsNes tr1) /= nesEL (mcsNes tr2)
   trc <- case proof of
     -- TODO re-enable this once we have added all the new rules to Conway
-    -- Conway _ -> genTrace proof tracelen genSize (initStableFields proof)
+    -- Conway _ -> genTrace proof tracelen genSize initStableFields
     Conway _ -> undefined
-    Babbage _ -> genTrace proof tracelen genSize (initStableFields proof)
-    Alonzo _ -> genTrace proof tracelen genSize (initStableFields proof)
-    Allegra _ -> genTrace proof tracelen genSize (initStableFields proof)
-    Mary _ -> genTrace proof tracelen genSize (initStableFields proof)
-    Shelley _ -> genTrace proof tracelen genSize (initStableFields proof)
+    Babbage _ -> genTrace proof tracelen genSize initStableFields
+    Alonzo _ -> genTrace proof tracelen genSize initStableFields
+    Allegra _ -> genTrace proof tracelen genSize initStableFields
+    Mary _ -> genTrace proof tracelen genSize initStableFields
+    Shelley _ -> genTrace proof tracelen genSize initStableFields
   let propf (subtrace, index) = counterexample ("Subtrace of EpochNo " ++ show index ++ " fails.") (f subtrace)
   -- The very last sub-trace may not be a full epoch, so we throw it away.
   case reverse (splitTrace newEpoch trc) of
@@ -560,7 +557,7 @@ chainTest proof n gsize = testProperty message action
   where
     message = show proof ++ " era."
     action = do
-      (vs, genstate) <- genTxSeq proof gsize n (initStableFields proof)
+      (vs, genstate) <- genTxSeq proof gsize n initStableFields
       let initState = initialMockChainState proof genstate
       trace1 <-
         traceFromInitState @(MOCKCHAIN era)
@@ -640,7 +637,7 @@ main2 = defaultMain (chainTest (Babbage Mock) 100 def)
 displayStableInfo :: IO ()
 displayStableInfo = do
   let proof = Babbage Mock
-  ((), gstate) <- generate $ runGenRS proof def (initStableFields proof)
+  ((), gstate) <- generate $ runGenRS proof def initStableFields
   let mcst = initialMockChainState proof gstate
   let del = gsInitialPoolParams gstate
   print (ppMockChainState mcst)

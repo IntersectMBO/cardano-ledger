@@ -969,5 +969,5 @@ defaultPPs =
   , CollateralPercentage 100
   ]
 
-pp :: Proof era -> PParams era
+pp :: EraPParams era => Proof era -> PParams era
 pp pf = newPParams pf defaultPPs

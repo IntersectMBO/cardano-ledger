@@ -12,16 +12,13 @@ module Test.Cardano.Ledger.Generic.Functions where
 
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.Scripts.Data (binaryDataToData, hashData)
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
-import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody (..), AlonzoTxOut (..), collateral')
+import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), collateral')
 import Cardano.Ledger.Alonzo.TxInfo (languages)
-import qualified Cardano.Ledger.Babbage.PParams as Babbage (BabbagePParamsHKD (..))
 import Cardano.Ledger.Babbage.Tx (refScripts)
 import Cardano.Ledger.Babbage.TxBody (
-  BabbageEraTxBody (..),
   BabbageTxOut (..),
   Datum (..),
   collateralInputs',
@@ -36,7 +33,7 @@ import Cardano.Ledger.BaseTypes (
   natVersion,
  )
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core
+import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Credential (Credential, StakeReference (..))
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.AdaPots (AdaPots (..), totalAdaPotsES)
@@ -50,16 +47,12 @@ import Cardano.Ledger.Shelley.LedgerState (
   PState (..),
   UTxOState (..),
  )
-import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
-import Cardano.Ledger.Shelley.Rewards (aggregateRewards)
 import Cardano.Ledger.Shelley.TxBody (
   DCert (..),
   DelegCert (..),
   PoolCert (..),
-  ShelleyEraTxBody (..),
   ShelleyTxOut (..),
  )
-import Cardano.Ledger.Slot (EpochNo)
 import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Cardano.Ledger.UMapCompact as UM
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), coinBalance)
@@ -76,7 +69,6 @@ import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
-import GHC.Records (HasField (getField))
 import Lens.Micro
 import Numeric.Natural
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
@@ -92,28 +84,28 @@ import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
 -- other XX types Mostly by pattern matching against Proof objects
 
 maxCollateralInputs' :: Proof era -> PParams era -> Natural
-maxCollateralInputs' (Alonzo _) x = _maxCollateralInputs x
-maxCollateralInputs' (Babbage _) x = Babbage._maxCollateralInputs x
-maxCollateralInputs' (Conway _) x = Babbage._maxCollateralInputs x
-maxCollateralInputs' _proof _x = 0
+maxCollateralInputs' (Alonzo _) pp = pp ^. ppMaxCollateralInputsL
+maxCollateralInputs' (Babbage _) pp = pp ^. ppMaxCollateralInputsL
+maxCollateralInputs' (Conway _) pp = pp ^. ppMaxCollateralInputsL
+maxCollateralInputs' _proof _pp = 0
 {-# NOINLINE maxCollateralInputs' #-}
 
 maxTxExUnits' :: Proof era -> PParams era -> ExUnits
-maxTxExUnits' (Alonzo _) x = _maxTxExUnits x
-maxTxExUnits' (Babbage _) x = Babbage._maxTxExUnits x
-maxTxExUnits' (Conway _) x = Babbage._maxTxExUnits x
+maxTxExUnits' (Alonzo _) pp = pp ^. ppMaxTxExUnitsL
+maxTxExUnits' (Babbage _) pp = pp ^. ppMaxTxExUnitsL
+maxTxExUnits' (Conway _) pp = pp ^. ppMaxTxExUnitsL
 maxTxExUnits' _proof _x = mempty
 {-# NOINLINE maxTxExUnits' #-}
 
 collateralPercentage' :: Proof era -> PParams era -> Natural
-collateralPercentage' (Alonzo _) x = _collateralPercentage x
-collateralPercentage' (Babbage _) x = Babbage._collateralPercentage x
-collateralPercentage' (Conway _) x = Babbage._collateralPercentage x
-collateralPercentage' _proof _x = 0
+collateralPercentage' (Alonzo _) pp = pp ^. ppCollateralPercentageL
+collateralPercentage' (Babbage _) pp = pp ^. ppCollateralPercentageL
+collateralPercentage' (Conway _) pp = pp ^. ppCollateralPercentageL
+collateralPercentage' _proof _pp = 0
 {-# NOINLINE collateralPercentage' #-}
 
 protocolVersion :: Proof era -> ProtVer
-protocolVersion (Conway _) = ProtVer (natVersion @7) 0
+protocolVersion (Conway _) = ProtVer (natVersion @9) 0
 protocolVersion (Babbage _) = ProtVer (natVersion @7) 0
 protocolVersion (Alonzo _) = ProtVer (natVersion @6) 0
 protocolVersion (Mary _) = ProtVer (natVersion @4) 0
@@ -121,66 +113,23 @@ protocolVersion (Allegra _) = ProtVer (natVersion @3) 0
 protocolVersion (Shelley _) = ProtVer (natVersion @2) 0
 {-# NOINLINE protocolVersion #-}
 
-ppProtocolVersion :: Proof era -> PParams era -> ProtVer
-ppProtocolVersion (Conway _) pp = getField @"_protocolVersion" pp
-ppProtocolVersion (Babbage _) pp = getField @"_protocolVersion" pp
-ppProtocolVersion (Alonzo _) pp = getField @"_protocolVersion" pp
-ppProtocolVersion (Mary _) pp = getField @"_protocolVersion" pp
-ppProtocolVersion (Allegra _) pp = getField @"_protocolVersion" pp
-ppProtocolVersion (Shelley _) pp = getField @"_protocolVersion" pp
-{-# NOINLINE ppProtocolVersion #-}
-
-aggregateRewards' ::
-  forall era.
-  Proof era ->
-  PParams era ->
-  Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))) ->
-  Map (Credential 'Staking (EraCrypto era)) Coin
-aggregateRewards' (Conway _) = aggregateRewards
-aggregateRewards' (Babbage _) = aggregateRewards
-aggregateRewards' (Alonzo _) = aggregateRewards
-aggregateRewards' (Mary _) = aggregateRewards
-aggregateRewards' (Allegra _) = aggregateRewards
-aggregateRewards' (Shelley _) = aggregateRewards
-{-# NOINLINE aggregateRewards' #-}
-
 -- | Positive numbers are "deposits owed", negative amounts are "refunds gained"
 depositsAndRefunds ::
-  Proof era ->
+  EraPParams era =>
   PParams era ->
   [DCert (EraCrypto era)] ->
   Map (Credential 'Staking (EraCrypto era)) Coin ->
   Coin
-depositsAndRefunds proof pp certificates keydeposits = List.foldl' accum (Coin 0) certificates
+depositsAndRefunds pp certificates keydeposits = List.foldl' accum (Coin 0) certificates
   where
-    accum ans (DCertDeleg (RegKey _)) = keydep <+> ans
+    accum ans (DCertDeleg (RegKey _)) = pp ^. ppKeyDepositL <+> ans
     accum ans (DCertDeleg (DeRegKey hk)) =
       case Map.lookup hk keydeposits of
         Nothing -> ans
         Just c -> (ans <-> c)
-    accum ans (DCertPool (RegPool _)) = pooldep <+> ans
+    accum ans (DCertPool (RegPool _)) = pp ^. ppPoolDepositL <+> ans
     accum ans (DCertPool (RetirePool _ _)) = ans -- The pool reward is refunded at the end of the epoch
     accum ans _ = ans
-    (keydep, pooldep :: Coin) = keyPoolDeposits proof pp
-
-epochMax :: Proof era -> PParams era -> EpochNo
-epochMax (Conway _) = getField @"_eMax"
-epochMax (Babbage _) = getField @"_eMax"
-epochMax (Alonzo _) = getField @"_eMax"
-epochMax (Mary _) = getField @"_eMax"
-epochMax (Allegra _) = getField @"_eMax"
-epochMax (Shelley _) = getField @"_eMax"
-{-# NOINLINE epochMax #-}
-
-keyPoolDeposits :: Proof era -> PParams era -> (Coin, Coin)
-keyPoolDeposits proof pp = case proof of
-  Conway _ -> (getField @"_keyDeposit" pp, getField @"_poolDeposit" pp)
-  Babbage _ -> (getField @"_keyDeposit" pp, getField @"_poolDeposit" pp)
-  Alonzo _ -> (getField @"_keyDeposit" pp, getField @"_poolDeposit" pp)
-  Mary _ -> (getField @"_keyDeposit" pp, getField @"_poolDeposit" pp)
-  Allegra _ -> (getField @"_keyDeposit" pp, getField @"_poolDeposit" pp)
-  Shelley _ -> (getField @"_keyDeposit" pp, getField @"_poolDeposit" pp)
-{-# NOINLINE keyPoolDeposits #-}
 
 -- | Compute the set of ScriptHashes for which there should be ScriptWitnesses. In Babbage
 --  Era and later, where inline Scripts are allowed, they should not appear in this set.

@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -20,12 +21,8 @@ where
 import Cardano.Ledger.BaseTypes (Nonce (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Shelley.PParams (
-  ShelleyPParams,
-  ShelleyPParamsHKD (..),
-  emptyPParams,
- )
+import Cardano.Ledger.Crypto
+import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses)
 import Cardano.Ledger.Slot (
   BlockNo (..),
   EpochNo (..),
@@ -40,43 +37,30 @@ import Cardano.Protocol.TPraos.BHeader (
   hashHeaderToNonce,
  )
 import Cardano.Slotting.Slot (WithOrigin (..))
+import Control.State.Transition
+import Data.Default.Class
+import Lens.Micro
 import Test.Cardano.Ledger.Shelley.Examples.Federation (genDelegs)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (
   ChainState (..),
   initialShelleyState,
  )
-import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest, maxLLSupply, mkHash, unsafeBoundRational)
+import Test.Cardano.Ledger.Shelley.Utils (maxLLSupply, mkHash, unsafeBoundRational)
 
--- === Initial Protocol Parameters
---
--- @
---   emptyPParams
---     { _maxBBSize = 50000,
---       _maxBHSize = 10000,
---       _maxTxSize = 10000,
---       _eMax = EpochNo 10000,
---       _keyDeposit = Coin 7,
---       _poolDeposit = Coin 250,
---       _d = unsafeBoundRational 0.5,
---       _tau = unsafeBoundRational 0.2,
---       _rho = unsafeBoundRational 0.0021,
---       _minUTxOValue = 100
---     }
--- @
-ppEx :: ShelleyPParams era
+-- | Initial Protocol Parameters
+ppEx :: (EraPParams era, ProtVerAtMost era 4, ProtVerAtMost era 6) => PParams era
 ppEx =
   emptyPParams
-    { _maxBBSize = 50000
-    , _maxBHSize = 10000
-    , _maxTxSize = 10000
-    , _eMax = EpochNo 10000
-    , _keyDeposit = Coin 7
-    , _poolDeposit = Coin 250
-    , _d = unsafeBoundRational 0.5
-    , _tau = unsafeBoundRational 0.2
-    , _rho = unsafeBoundRational 0.0021
-    , _minUTxOValue = Coin 100
-    }
+    & ppMaxBBSizeL .~ 50000
+    & ppMaxBHSizeL .~ 10000
+    & ppMaxTxSizeL .~ 10000
+    & ppEMaxL .~ EpochNo 10000
+    & ppKeyDepositL .~ Coin 7
+    & ppPoolDepositL .~ Coin 250
+    & ppDL .~ unsafeBoundRational 0.5
+    & ppTauL .~ unsafeBoundRational 0.2
+    & ppRhoL .~ unsafeBoundRational 0.0021
+    & ppMinUTxOValueL .~ Coin 100
 
 -- | === The hash of the last Bryon Header
 --
@@ -89,14 +73,14 @@ ppEx =
 -- sure that the hash gets translated across the fork.
 lastByronHeaderHash ::
   forall c.
-  CC.Crypto c =>
+  Crypto c =>
   HashHeader c
 lastByronHeaderHash = HashHeader $ mkHash 0
 
 -- | === Initial Nonce
 nonce0 ::
   forall c.
-  CC.Crypto c =>
+  Crypto c =>
   Nonce
 nonce0 = hashHeaderToNonce (lastByronHeaderHash @c)
 
@@ -107,7 +91,12 @@ nonce0 = hashHeaderToNonce (lastByronHeaderHash @c)
 -- 'genDelegs' and any given starting 'UTxO' set.
 initSt ::
   forall era.
-  (ShelleyTest era, PParams era ~ ShelleyPParams era) =>
+  ( EraTxOut era
+  , ProtVerAtMost era 4
+  , ProtVerAtMost era 6
+  , Default (State (EraRule "PPUP" era))
+  , Default (StashedAVVMAddresses era)
+  ) =>
   UTxO era ->
   ChainState era
 initSt utxo =
@@ -117,5 +106,5 @@ initSt utxo =
     utxo
     (maxLLSupply <-> Val.coin (balance utxo))
     genDelegs
-    ppEx
+    (ppEx @era)
     (nonce0 @(EraCrypto era))

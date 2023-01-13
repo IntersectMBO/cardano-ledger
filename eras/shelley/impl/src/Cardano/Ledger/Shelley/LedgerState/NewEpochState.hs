@@ -57,7 +57,6 @@ import Data.Foldable (fold)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
-import GHC.Records (HasField (..))
 import Lens.Micro.Extras (view)
 
 -- | This function returns the coin balance of a given pot, either the
@@ -105,10 +104,7 @@ genesisState genDelegs0 utxo0 =
 
 -- | Calculate the change to the deposit pool for a given transaction.
 depositPoolChange ::
-  ( HasField "_keyDeposit" (PParams era) Coin
-  , HasField "_poolDeposit" (PParams era) Coin
-  , ShelleyEraTxBody era
-  ) =>
+  ShelleyEraTxBody era =>
   LedgerState era ->
   PParams era ->
   TxBody era ->

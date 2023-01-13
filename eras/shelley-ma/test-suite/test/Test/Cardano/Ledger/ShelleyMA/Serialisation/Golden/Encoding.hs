@@ -22,14 +22,12 @@ import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
-import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), hashKey)
 import Cardano.Ledger.Mary (Mary)
 import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.Shelley.PParams (
-  ShelleyPParamsHKD (..),
-  ShelleyPParamsUpdate,
   Update,
   pattern ProposedPPUpdates,
   pattern Update,
@@ -50,6 +48,7 @@ import qualified Data.ByteString.Short as SBS
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import Lens.Micro
 import Test.Cardano.Ledger.Binary.RoundTrip (roundTripFailureExpectation)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Serialisation.GoldenUtils (
@@ -87,7 +86,7 @@ assetName3 = "a3"
 -- == Test Values for Building Transactions ==
 -- ===========================================
 
-testGKeyHash :: KeyHash 'Genesis StandardCrypto
+testGKeyHash :: Crypto c => KeyHash 'Genesis c
 testGKeyHash = hashKey . snd . mkGenKey $ RawSeed 0 0 0 0 0
 
 testAddrE :: Addr StandardCrypto
@@ -105,35 +104,14 @@ testStakeCred = KeyHashObj . hashKey . snd $ mkKeyPair (RawSeed 0 0 0 0 3)
 
 testUpdate ::
   forall era.
-  ( EraCrypto era ~ StandardCrypto
-  , PParamsUpdate era ~ ShelleyPParamsUpdate era
-  ) =>
+  EraPParams era =>
   Update era
 testUpdate =
   Update
     ( ProposedPPUpdates
         ( Map.singleton
             testGKeyHash
-            ( ShelleyPParams
-                { _minfeeA = SNothing
-                , _minfeeB = SNothing
-                , _maxBBSize = SNothing
-                , _maxTxSize = SNothing
-                , _maxBHSize = SNothing
-                , _keyDeposit = SNothing
-                , _poolDeposit = SNothing
-                , _eMax = SNothing
-                , _nOpt = SJust 100
-                , _a0 = SNothing
-                , _rho = SNothing
-                , _tau = SNothing
-                , _d = SNothing
-                , _extraEntropy = SNothing
-                , _protocolVersion = SNothing
-                , _minUTxOValue = SNothing
-                , _minPoolCost = SNothing
-                }
-            )
+            (emptyPParamsUpdate & ppuNOptL .~ SJust 100)
         )
     )
     (EpochNo 0)

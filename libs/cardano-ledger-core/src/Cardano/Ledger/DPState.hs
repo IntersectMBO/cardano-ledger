@@ -42,7 +42,7 @@ import Cardano.Ledger.Coin (
   Coin (..),
   DeltaCoin (..),
  )
-import Cardano.Ledger.Core (EraCrypto, PParams)
+import Cardano.Ledger.Core (EraCrypto, EraPParams, PParams, ppPoolDepositL)
 import Cardano.Ledger.Credential (Credential (..), Ptr)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (
@@ -66,8 +66,7 @@ import Data.Foldable (foldl')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
-import GHC.Records (HasField (..))
-import Lens.Micro (_1, _2)
+import Lens.Micro ((^.), _1, _2)
 import NoThunks.Class (NoThunks (..))
 
 -- ======================================
@@ -273,7 +272,7 @@ ptrsMap (DState {dsUnified = UMap _ ptrmap}) = ptrmap
 --   the Deposits unchanged if the keyhash already exists. There are legal
 --   situations where a pool may be registered multiple times.
 payPoolDeposit ::
-  HasField "_poolDeposit" (PParams era) Coin =>
+  EraPParams era =>
   KeyHash 'StakePool (EraCrypto era) ->
   PParams era ->
   PState (EraCrypto era) ->
@@ -282,7 +281,7 @@ payPoolDeposit keyhash pp pstate = pstate {psDeposits = newpool}
   where
     pool = psDeposits pstate
     newpool
-      | Map.notMember keyhash pool = Map.insert keyhash (getField @"_poolDeposit" pp) pool
+      | Map.notMember keyhash pool = Map.insert keyhash (pp ^. ppPoolDepositL) pool
       | otherwise = pool
 
 refundPoolDeposit :: KeyHash 'StakePool c -> PState c -> (Coin, PState c)

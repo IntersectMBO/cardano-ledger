@@ -11,18 +11,21 @@ module Cardano.Ledger.Allegra (
 where
 
 import Cardano.Ledger.Allegra.Era (AllegraEra)
+import Cardano.Ledger.Allegra.PParams ()
 import Cardano.Ledger.Allegra.Rules ()
 import Cardano.Ledger.Allegra.Scripts ()
 import Cardano.Ledger.Allegra.Translation ()
 import Cardano.Ledger.Allegra.Tx ()
 import Cardano.Ledger.Allegra.TxSeq ()
 import Cardano.Ledger.Allegra.UTxO ()
-import Cardano.Ledger.Core (translateEra')
+import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
-import Cardano.Ledger.Hashes (EraIndependentTxBody)
-import Cardano.Ledger.Keys (DSignable)
-import Cardano.Ledger.Shelley.API
-import Cardano.Ledger.Shelley.PParams ()
+import Cardano.Ledger.Keys (DSignable, Hash)
+import Cardano.Ledger.Shelley.API (
+  ApplyBlock,
+  ApplyTx,
+  CanStartFromGenesis (fromShelleyPParams),
+ )
 
 type Allegra = AllegraEra StandardCrypto
 
@@ -39,4 +42,4 @@ instance
   ApplyBlock (AllegraEra c)
 
 instance Crypto c => CanStartFromGenesis (AllegraEra c) where
-  fromShelleyPParams = translateEra'
+  fromShelleyPParams _ = translateEra' ()

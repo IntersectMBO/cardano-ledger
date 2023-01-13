@@ -40,19 +40,15 @@ import Cardano.Ledger.Alonzo.Rules (
   validateTooManyCollateralInputs,
   validateWrongNetworkInTxBody,
  )
-import Cardano.Ledger.Alonzo.Scripts (ExUnits)
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
-import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody (collateralInputsTxBodyL))
 import Cardano.Ledger.Alonzo.TxWits (
   AlonzoEraTxWits (..),
   nullRedeemers,
  )
 import Cardano.Ledger.Babbage.Collateral (collAdaBalance)
+import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageUTXO)
 import Cardano.Ledger.Babbage.Rules.Utxos (BabbageUTXOS)
-import Cardano.Ledger.Babbage.TxBody (
-  BabbageEraTxBody (..),
- )
 import Cardano.Ledger.BaseTypes (
   ProtVer (..),
   ShelleyBase,
@@ -63,7 +59,6 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (FromCBOR (..), Sized (..), ToCBOR (..), serialize)
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core
 import Cardano.Ledger.Rules.ValidationMode (
   Inject (..),
   Test,
@@ -97,8 +92,6 @@ import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Typeable (Typeable)
-import GHC.Natural (Natural)
-import GHC.Records (HasField (getField))
 import Lens.Micro
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 import Validation (Validation, failureIf, failureUnless)
@@ -181,7 +174,6 @@ feesOK ::
   ( EraTx era
   , BabbageEraTxBody era
   , AlonzoEraTxWits era
-  , HasField "_collateralPercentage" (PParams era) Natural
   ) =>
   PParams era ->
   Tx era ->
@@ -204,9 +196,7 @@ feesOK pp tx (UTxO utxo) =
 
 validateTotalCollateral ::
   forall era.
-  ( BabbageEraTxBody era
-  , HasField "_collateralPercentage" (PParams era) Natural
-  ) =>
+  BabbageEraTxBody era =>
   PParams era ->
   TxBody era ->
   Map.Map (TxIn (EraCrypto era)) (TxOut era) ->
@@ -294,8 +284,8 @@ validateOutputTooSmallUTxO pp outs =
 
 -- > serSize (getValue txout) ≤ maxValSize pp
 validateOutputTooBigUTxO ::
-  ( HasField "_maxValSize" (PParams era) Natural
-  , EraTxOut era
+  ( EraTxOut era
+  , AlonzoEraPParams era
   ) =>
   PParams era ->
   [TxOut era] ->
@@ -303,8 +293,8 @@ validateOutputTooBigUTxO ::
 validateOutputTooBigUTxO pp outs =
   failureUnless (null outputsTooBig) $ OutputTooBigUTxO outputsTooBig
   where
-    maxValSize = getField @"_maxValSize" pp
-    protVer = getField @"_protocolVersion" pp
+    maxValSize = pp ^. ppMaxValSizeL
+    protVer = pp ^. ppProtocolVersionL
     outputsTooBig = foldl' accum [] outs
     accum ans txOut =
       let v = txOut ^. valueTxOutL
@@ -322,13 +312,6 @@ utxoTransition ::
   , AlonzoEraTxWits era
   , Tx era ~ AlonzoTx era
   , STS (BabbageUTXO era)
-  , HasField "_maxTxSize" (PParams era) Natural
-  , HasField "_maxValSize" (PParams era) Natural
-  , HasField "_maxCollateralInputs" (PParams era) Natural
-  , HasField "_maxTxExUnits" (PParams era) ExUnits
-  , HasField "_collateralPercentage" (PParams era) Natural
-  , HasField "_keyDeposit" (PParams era) Coin
-  , HasField "_poolDeposit" (PParams era) Coin
   , -- In this function we we call the UTXOS rule, so we need some assumptions
     Embed (EraRule "UTXOS" era) (BabbageUTXO era)
   , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
@@ -414,15 +397,6 @@ instance
   , BabbageEraTxBody era
   , AlonzoEraTxWits era
   , Tx era ~ AlonzoTx era
-  , HasField "_maxCollateralInputs" (PParams era) Natural
-  , HasField "_coinsPerUTxOByte" (PParams era) Coin
-  , HasField "_collateralPercentage" (PParams era) Natural
-  , HasField "_keyDeposit" (PParams era) Coin
-  , HasField "_maxTxExUnits" (PParams era) ExUnits
-  , HasField "_maxTxSize" (PParams era) Natural
-  , HasField "_maxValSize" (PParams era) Natural
-  , HasField "_poolDeposit" (PParams era) Coin
-  , HasField "_protocolVersion" (PParams era) ProtVer
   , -- instructions for calling UTXOS from BabbageUTXO
     Embed (EraRule "UTXOS" era) (BabbageUTXO era)
   , Environment (EraRule "UTXOS" era) ~ UtxoEnv era

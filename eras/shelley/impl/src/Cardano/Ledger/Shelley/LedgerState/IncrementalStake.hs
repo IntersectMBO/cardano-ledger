@@ -25,9 +25,7 @@ module Cardano.Ledger.Shelley.LedgerState.IncrementalStake (
 where
 
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.BaseTypes (
-  ProtVer (..),
- )
+import Cardano.Ledger.BaseTypes (ProtVer)
 import Cardano.Ledger.Coin (
   Coin (..),
   addDeltaCoin,
@@ -76,7 +74,6 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.VMap as VMap
-import GHC.Records (HasField (..))
 import Lens.Micro
 
 -- =======================================================================
@@ -255,8 +252,7 @@ aggregateActiveStake =
 --   2) Adds to the Treasury of the AccountState for non-actively delegated stake
 --   3) Adds fees to the UTxOState
 applyRUpd ::
-  ( HasField "_protocolVersion" (PParams era) ProtVer
-  ) =>
+  EraPParams era =>
   RewardUpdate (EraCrypto era) ->
   EpochState era ->
   EpochState era
@@ -266,8 +262,7 @@ applyRUpd ru es =
 
 -- TO IncrementalStake
 applyRUpdFiltered ::
-  ( HasField "_protocolVersion" (PParams era) ProtVer
-  ) =>
+  EraPParams era =>
   RewardUpdate (EraCrypto era) ->
   EpochState era ->
   (EpochState era, FilteredRewards era)
@@ -280,12 +275,13 @@ applyRUpdFiltered
       dpState = lsDPState ls
       dState = dpsDState dpState
       prevPParams = esPrevPp es
+      prevProVer = prevPParams ^. ppProtocolVersionL
       filteredRewards@FilteredRewards
         { frRegistered
         , frTotalUnregistered
-        } = filterAllRewards' (rs ru) prevPParams dState
+        } = filterAllRewards' (rs ru) prevProVer dState
       -- Note: domain filteredRewards is a subset of domain (rewards dstate)
-      registeredAggregated = aggregateCompactRewards pp frRegistered
+      registeredAggregated = aggregateCompactRewards prevProVer frRegistered
       -- Note: domain registeredAggregated is a subset of domain (rewards dstate)
       as' =
         as
@@ -331,28 +327,26 @@ instance NFData (FilteredRewards era) where
 --   'prevPParams' is the ProtocolParams of the previous Epoch
 --   'rs' is the rewards mapping of the RewardUpdate from that previous Epoch
 filterAllRewards' ::
-  ( HasField "_protocolVersion" (PParams era) ProtVer
-  ) =>
   Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))) ->
-  PParams era ->
+  ProtVer ->
   DState (EraCrypto era) ->
   FilteredRewards era
-filterAllRewards' rs prevPParams dState =
+filterAllRewards' rs protVer dState =
   FilteredRewards registered shelleyIgnored unregistered totalUnregistered
   where
     (regRU, unregRU) = Map.partitionWithKey (\k _ -> member k (rewards dState)) rs
     -- Partition on memebership in the rewards view of the unified map of DState
     -- Note that only registered rewards appear in 'regRU' because of this 'member' check.
-    totalUnregistered = fold $ aggregateRewards prevPParams unregRU
+    totalUnregistered = fold $ aggregateRewards protVer unregRU
     unregistered = Map.keysSet unregRU
-    (registered, shelleyIgnored) = filterRewards prevPParams regRU
+    (registered, shelleyIgnored) = filterRewards protVer regRU
 
 filterAllRewards ::
-  HasField "_protocolVersion" (PParams era) ProtVer =>
+  EraPParams era =>
   Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))) ->
   EpochState era ->
   FilteredRewards era
 filterAllRewards mp epochstate = filterAllRewards' mp prevPP dState
   where
-    prevPP = esPrevPp epochstate
+    prevPP = esPrevPp epochstate ^. ppProtocolVersionL
     dState = (dpsDState . lsDPState . esLState) epochstate

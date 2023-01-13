@@ -20,7 +20,6 @@ module Cardano.Ledger.Conway.Governance (
 )
 where
 
-import Cardano.Ledger.Babbage.Core (Era (..))
 import Cardano.Ledger.BaseTypes (ProtVer (..))
 import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), decodeEnumBounded, encodeEnum)
 import Cardano.Ledger.Binary.Coders (
@@ -32,7 +31,7 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
  )
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (EraPParams (..))
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
@@ -55,20 +54,15 @@ data GovernanceActionInfo era = GovernanceActionInfo
   }
   deriving (Generic)
 
-deriving instance Eq (PParamsUpdate era) => Eq (GovernanceActionInfo era)
+deriving instance EraPParams era => Eq (GovernanceActionInfo era)
 
-deriving instance Show (PParamsUpdate era) => Show (GovernanceActionInfo era)
+deriving instance EraPParams era => Show (GovernanceActionInfo era)
 
-instance NoThunks (PParamsUpdate era) => NoThunks (GovernanceActionInfo era)
+instance EraPParams era => NoThunks (GovernanceActionInfo era)
 
-instance NFData (PParamsUpdate era) => NFData (GovernanceActionInfo era)
+instance EraPParams era => NFData (GovernanceActionInfo era)
 
-instance
-  ( Era era
-  , FromCBOR (PParamsUpdate era)
-  ) =>
-  FromCBOR (GovernanceActionInfo era)
-  where
+instance EraPParams era => FromCBOR (GovernanceActionInfo era) where
   fromCBOR =
     decode $
       RecD GovernanceActionInfo
@@ -78,12 +72,7 @@ instance
         <! From
         <! From
 
-instance
-  ( Era era
-  , ToCBOR (PParamsUpdate era)
-  ) =>
-  ToCBOR (GovernanceActionInfo era)
-  where
+instance EraPParams era => ToCBOR (GovernanceActionInfo era) where
   toCBOR GovernanceActionInfo {..} =
     encode $
       Rec GovernanceActionInfo
@@ -99,20 +88,15 @@ data GovernanceAction era
   | TreasuryWithdrawals !(Map (Credential 'Staking (EraCrypto era)) Coin)
   deriving (Generic)
 
-deriving instance Eq (PParamsUpdate era) => Eq (GovernanceAction era)
+deriving instance EraPParams era => Eq (GovernanceAction era)
 
-deriving instance Show (PParamsUpdate era) => Show (GovernanceAction era)
+deriving instance EraPParams era => Show (GovernanceAction era)
 
-instance NoThunks (PParamsUpdate era) => NoThunks (GovernanceAction era)
+instance EraPParams era => NoThunks (GovernanceAction era)
 
-instance NFData (PParamsUpdate era) => NFData (GovernanceAction era)
+instance EraPParams era => NFData (GovernanceAction era)
 
-instance
-  ( Era era
-  , FromCBOR (PParamsUpdate era)
-  ) =>
-  FromCBOR (GovernanceAction era)
-  where
+instance EraPParams era => FromCBOR (GovernanceAction era) where
   fromCBOR =
     decode $
       Summands "GovernanceAction" dec
@@ -122,12 +106,7 @@ instance
       dec 2 = TreasuryWithdrawals <$> From
       dec k = Invalid k
 
-instance
-  ( Era era
-  , ToCBOR (PParamsUpdate era)
-  ) =>
-  ToCBOR (GovernanceAction era)
-  where
+instance EraPParams era => ToCBOR (GovernanceAction era) where
   toCBOR x = encode (enc x)
     where
       enc (ParameterChange ppup) = Sum (toCBOR ppup) 0

@@ -1,12 +1,13 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Shelley.API.Genesis where
 
 import Cardano.Ledger.BaseTypes (BlocksMade (..))
-import Cardano.Ledger.Core (EraCrypto, EraRule, EraTxOut, PParams)
+import Cardano.Ledger.Core (Era (..), EraRule, EraTxOut, PParams)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.EpochBoundary (emptySnapShots)
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -26,6 +27,7 @@ import Cardano.Ledger.Shelley.API.Types (
   word64ToCoin,
  )
 import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses, smartUTxOState)
+import Cardano.Ledger.Shelley.PParams ()
 import Cardano.Ledger.UTxO (coinBalance)
 import Cardano.Ledger.Val (Val ((<->)))
 import Control.State.Transition (STS (State))
@@ -71,9 +73,8 @@ instance
 -- | Helper function for constructing the initial state for any era
 initialStateFromGenesis ::
   CanStartFromGenesis era =>
-  -- | Function to extend ShelleyPParams into PParams for the specific era
-  ShelleyGenesis (EraCrypto era) ->
   -- | Genesis type
+  ShelleyGenesis (EraCrypto era) ->
   AdditionalGenesisConfig era ->
   NewEpochState era
 initialStateFromGenesis sg ag =

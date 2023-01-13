@@ -7,12 +7,11 @@ where
 
 import Cardano.Ledger.Allegra (Allegra)
 import Cardano.Ledger.Block (txid)
-import Cardano.Ledger.Core (TranslateEra (..), hashScript, mkBasicTxBody)
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Shelley (Shelley)
 import qualified Cardano.Ledger.Shelley.API as S
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (LedgerState (..))
-import Cardano.Ledger.Shelley.PParams (emptyPParams)
 import Cardano.Ledger.Shelley.TxWits (scriptWits)
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (SlotNo (..))

@@ -155,7 +155,6 @@ import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (
   mkPayScriptHashMap,
   mkStakeScriptHashMap,
  )
-import Test.Cardano.Ledger.Shelley.Orphans ()
 import Test.Cardano.Ledger.Shelley.Utils (
   GenesisKeyPair,
   RawSeed (..),

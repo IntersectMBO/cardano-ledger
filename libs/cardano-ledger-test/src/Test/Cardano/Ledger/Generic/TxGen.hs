@@ -27,7 +27,6 @@ module Test.Cardano.Ledger.Generic.TxGen (
 where
 
 import Cardano.Ledger.Allegra.Scripts (Timelock (..), ValidityInterval (..))
-import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
 import Cardano.Ledger.Alonzo.Scripts hiding (Script)
 import Cardano.Ledger.Alonzo.Scripts.Data (Data, dataToBinaryData, hashData)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
@@ -37,7 +36,6 @@ import Cardano.Ledger.Alonzo.TxWits (
   Redeemers (..),
   TxDats (..),
  )
-import Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), Datum (..))
 import Cardano.Ledger.BaseTypes (Network (..), mkTxIxPartial)
 import Cardano.Ledger.Coin (Coin (..))
@@ -60,7 +58,6 @@ import Cardano.Ledger.Shelley.API (
   Wdrl (..),
  )
 import Cardano.Ledger.Shelley.LedgerState (RewardAccounts)
-import qualified Cardano.Ledger.Shelley.PParams as Shelley (ShelleyPParamsHKD (..))
 import qualified Cardano.Ledger.Shelley.Scripts as Shelley (MultiSig (..))
 import Cardano.Ledger.Shelley.TxBody (DCert (..), DelegCert (..), Delegation (..))
 import Cardano.Ledger.Slot (EpochNo (EpochNo))
@@ -88,6 +85,7 @@ import qualified Data.Set as Set
 import Data.Word (Word16)
 import GHC.Stack
 import Lens.Micro ((^.))
+import Lens.Micro.Extras (view)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
@@ -554,8 +552,8 @@ chooseGood bad n xs = do
 -- ==================================================
 -- Generating Certificates, May add to the Model
 
-genDCert :: forall era. Reflect era => Proof era -> SlotNo -> GenRS era (DCert (EraCrypto era))
-genDCert proof slot = do
+genDCert :: forall era. Reflect era => SlotNo -> GenRS era (DCert (EraCrypto era))
+genDCert slot = do
   res <-
     elementsT
       [ DCertDeleg
@@ -584,16 +582,16 @@ genDCert proof slot = do
     genEpoch = do
       let EpochNo txEpoch = epochFromSlotNo slot
       EpochNo curEpoch <- gets $ mEL . gsModel
-      EpochNo maxEpoch <- asks $ epochMax proof . gePParams
+      EpochNo maxEpoch <- asks $ view ppEMaxL . gePParams
       let nextEpoch = 1 + (txEpoch - curEpoch) -- This will be either 1 or 2. It is 2 if the Tx is at the epoch boundary
       delta <- lift $ choose (nextEpoch, maxEpoch)
       return . EpochNo $ (curEpoch + delta)
 
-genDCerts :: forall era. Reflect era => Proof era -> SlotNo -> GenRS era [DCert (EraCrypto era)]
-genDCerts proof slot = do
+genDCerts :: forall era. Reflect era => SlotNo -> GenRS era [DCert (EraCrypto era)]
+genDCerts slot = do
   let genUniqueScript (!dcs, !ss, !regCreds) _ = do
         honest <- gets gsStableDelegators
-        dc <- genDCert proof slot
+        dc <- genDCert slot
         -- Workaround a misfeature where duplicate plutus scripts in DCert are ignored
         -- so if a duplicate might be generated, we don't do that generation
         let insertIfNotPresent dcs' regCreds' mKey mScriptHash
@@ -866,7 +864,7 @@ genAlonzoTxAndInfo proof slot = do
   (IsValid v2, mkWdrlWits) <-
     redeemerWitnessMaker Rewrd $ map (Just . (,) genDatum) wdrlCreds
 
-  dcerts <- genDCerts proof slot
+  dcerts <- genDCerts slot
   let dcertCreds = map getDCertCredential dcerts
   (IsValid v3, mkCertsWits) <-
     redeemerWitnessMaker Cert $ map ((,) genDatum <$>) dcertCreds
@@ -960,7 +958,7 @@ genAlonzoTxAndInfo proof slot = do
       fee = getMinFeeTx gePParams bogusTxForFeeCalc
 
   keyDeposits <- gets (mKeyDeposits . gsModel)
-  let deposits = depositsAndRefunds proof gePParams dcerts keyDeposits
+  let deposits = depositsAndRefunds gePParams dcerts keyDeposits
 
   -- 8. Crank up the amount in one of outputs to account for the fee and deposits. Note
   -- this is a hack that is not possible in a real life, but in the end it does produce

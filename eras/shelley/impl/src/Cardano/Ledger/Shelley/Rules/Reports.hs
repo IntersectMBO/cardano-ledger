@@ -22,8 +22,7 @@ module Cardano.Ledger.Shelley.Rules.Reports (
 where
 
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Core (Era (..), EraCrypto)
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core (Era (..), EraCrypto, PParams, TxBody)
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DPState (
   DPState (..),
@@ -37,8 +36,7 @@ import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.UTxO (UTxO (..))
 import Data.Foldable (fold, toList)
 import qualified Data.Map.Strict as Map
-import GHC.Records (HasField (..))
-import Lens.Micro
+import Lens.Micro ((^.))
 
 -- ===============================================
 -- Reporting Certificates
@@ -66,7 +64,7 @@ showKeyHash (KeyHash hash) = trim 10 (show hash)
 showCerts :: [DCert c] -> String
 showCerts certs = unlines (map (("  " ++) . synopsisCert) certs)
 
-showTxCerts :: ShelleyEraTxBody era => Core.TxBody era -> String
+showTxCerts :: ShelleyEraTxBody era => TxBody era -> String
 showTxCerts txb = showCerts (toList (txb ^. certsTxBodyG))
 
 -- | Display a synopsis of a map to Coin
@@ -78,14 +76,11 @@ synopsisCoinMap Nothing = "SYNOPSIS NOTHING"
 -- Printing Produced == Consumed
 
 produceEqualsConsumed ::
-  ( ShelleyEraTxBody era
-  , HasField "_poolDeposit" pp Coin
-  , HasField "_keyDeposit" pp Coin
-  ) =>
-  pp ->
+  ShelleyEraTxBody era =>
+  PParams era ->
   DPState (EraCrypto era) ->
   UTxO era ->
-  Core.TxBody era ->
+  TxBody era ->
   String
 produceEqualsConsumed pp dpstate utxo txb =
   let consumedValue = consumedTxBody txb pp dpstate utxo

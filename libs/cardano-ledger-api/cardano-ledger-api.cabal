@@ -87,13 +87,11 @@ test-suite cardano-ledger-api-test
     Test.Cardano.Ledger.Api.Tx.Out
   build-depends:
     bytestring,
-    cardano-ledger-alonzo,
     cardano-ledger-api,
     cardano-ledger-binary,
-    cardano-ledger-core,
-    cardano-ledger-babbage,
     cardano-ledger-babbage-test,
-    cardano-ledger-shelley,
+    cardano-ledger-core,
+    cardano-ledger-conway,
     microlens,
     tasty,
     tasty-quickcheck,

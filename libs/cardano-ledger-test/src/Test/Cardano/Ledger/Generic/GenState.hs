@@ -117,6 +117,7 @@ import qualified Data.Sequence.Strict as Seq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Word (Word64)
+import Lens.Micro
 import Numeric.Natural
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
@@ -125,7 +126,6 @@ import Test.Cardano.Ledger.Generic.Fields
 import Test.Cardano.Ledger.Generic.Functions (
   alwaysFalse,
   alwaysTrue,
-  keyPoolDeposits,
   primaryLanguage,
   protocolVersion,
   txoutFields,
@@ -602,7 +602,7 @@ ioGenRS :: Reflect era => Proof era -> GenSize -> GenRS era ans -> IO (ans, GenS
 ioGenRS proof gsize action = generate $ runGenRS proof gsize action
 
 -- | Generate a random, well-formed, GenEnv
-genGenEnv :: Proof era -> GenSize -> Gen (GenEnv era)
+genGenEnv :: EraPParams era => Proof era -> GenSize -> Gen (GenEnv era)
 genGenEnv proof gsize = do
   maxTxExUnits <- arbitrary :: Gen ExUnits
   maxCollateralInputs <- elements [1 .. collInputsMax gsize]
@@ -702,12 +702,14 @@ initialLedgerState gstate = LedgerState utxostate dpstate
         Map.empty
         genDelegsZero
         instantaneousRewardsZero
-    pstate = PState pools Map.empty Map.empty (fmap (const pooldeposit) pools)
+    pstate = PState pools Map.empty Map.empty (fmap (const poolDeposit) pools)
     -- In a wellformed LedgerState the deposited equals the obligation
     deposited = obligationDPState dpstate
     pools = gsInitialPoolParams gstate
-    (keydeposit, pooldeposit) = keyPoolDeposits reify (mPParams (gsModel gstate))
-    rdpair rew = UM.RDPair (UM.compactCoinOrError rew) (UM.compactCoinOrError keydeposit)
+    pp = mPParams (gsModel gstate)
+    keyDeposit = pp ^. ppKeyDepositL
+    poolDeposit = pp ^. ppPoolDepositL
+    rdpair rew = UM.RDPair (UM.compactCoinOrError rew) (UM.compactCoinOrError keyDeposit)
 
 -- =============================================
 -- Generators of inter-related items
@@ -940,8 +942,8 @@ genCredential tag =
       vimap <- gets gsVI
       case Map.lookup vi vimap of
         Nothing -> genScript @era reify tag
-        Just set ->
-          lift (genSetElem set) >>= \case
+        Just s ->
+          lift (genSetElem s) >>= \case
             Nothing -> genScript reify tag
             Just hash -> pure hash
 
@@ -1020,18 +1022,17 @@ genNewPool = do
 
 -- | Initialize (or overwrite if they are not empty) the Stable fields. It is
 --   intended that this be called just once at the beginning of a trace generation.
-initStableFields :: forall era. Reflect era => Proof era -> GenRS era ()
-initStableFields proof = do
+initStableFields :: forall era. Reflect era => GenRS era ()
+initStableFields = do
   GenEnv {geSize} <- ask
   hashes <- replicateM (maxStablePools geSize) $ do
-    pparam <- asks gePParams
-    let (_, pooldeposit) = keyPoolDeposits proof pparam
-    (kh, pp, ips) <- genNewPool
+    pp <- asks gePParams
+    (kh, poolParams, ips) <- genNewPool
     modifyGenStateStablePools (Set.insert kh)
-    modifyGenStateInitialPoolParams (Map.insert kh pp)
+    modifyGenStateInitialPoolParams (Map.insert kh poolParams)
     modifyGenStateInitialPoolDistr (Map.insert kh ips)
-    modifyModelPoolParams (Map.insert kh pp)
-    modifyModelKeyDeposits kh pooldeposit
+    modifyModelPoolParams (Map.insert kh poolParams)
+    modifyModelKeyDeposits kh (pp ^. ppPoolDepositL)
     return kh
 
   -- This incantation gets a list of fresh (not previously generated) Credential
@@ -1045,11 +1046,11 @@ initStableFields proof = do
   let f :: Credential 'Staking (EraCrypto era) -> KeyHash 'StakePool (EraCrypto era) -> GenRS era ()
       f cred kh = do
         pp <- asks gePParams
-        let (keydeposit, _) = keyPoolDeposits proof pp
+        let keyDeposit = pp ^. ppKeyDepositL
         modifyModelDelegations (Map.insert cred kh)
         modifyModelRewards (Map.insert cred (Coin 0))
-        modifyModelDeposited (<+> keydeposit)
-        modifyKeyDeposits cred keydeposit
+        modifyModelDeposited (<+> keyDeposit)
+        modifyKeyDeposits cred keyDeposit
         modifyGenStateInitialDelegations (Map.insert cred kh)
   zipWithM_ f credentials hashes
 
@@ -1070,8 +1071,7 @@ genRewards = do
   newRewards <- Map.fromList <$> mapM (\x -> (,) x <$> lift genRewardVal) credentials
   modifyModelRewards (\rewards -> eval (rewards ⨃ newRewards)) -- Prefers coins in newrewards
   pp <- asks gePParams
-  let (keydeposit, _) = keyPoolDeposits reify pp
-  sequence_ (map (\cred -> modifyKeyDeposits cred keydeposit) credentials)
+  sequence_ (map (\cred -> modifyKeyDeposits cred (pp ^. ppKeyDepositL)) credentials)
   modifyGenStateInitialRewards (\rewards -> eval (rewards ⨃ newRewards))
   modifyGenStateAvoidCred (Set.union (Set.fromList credentials))
   pure newRewards

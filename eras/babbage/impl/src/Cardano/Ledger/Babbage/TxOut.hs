@@ -55,7 +55,6 @@ import Cardano.Ledger.Alonzo.Scripts.Data (
  )
 import Cardano.Ledger.Alonzo.TxBody (
   Addr28Extra,
-  AlonzoEraTxOut (..),
   DataHash32,
   decodeAddress28,
   decodeDataHash32,
@@ -64,8 +63,9 @@ import Cardano.Ledger.Alonzo.TxBody (
   getAdaOnly,
  )
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
+import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra)
-import Cardano.Ledger.Babbage.PParams (_coinsPerUTxOByte)
+import Cardano.Ledger.Babbage.PParams ()
 import Cardano.Ledger.Babbage.Scripts ()
 import Cardano.Ledger.BaseTypes (
   StrictMaybe (..),
@@ -96,8 +96,6 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible
-import Cardano.Ledger.Core hiding (TxBody, TxOut)
-import qualified Cardano.Ledger.Core as Core (TxOut)
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto (ADDRHASH), StandardCrypto)
 import Cardano.Ledger.Keys (KeyRole (..))
@@ -111,10 +109,8 @@ import qualified Data.ByteString.Lazy as LBS
 import Data.Maybe (fromMaybe)
 import qualified Data.Text as T
 import Data.Typeable (Proxy (..), (:~:) (Refl))
-import Data.Word
-import GHC.Records
 import GHC.Stack (HasCallStack)
-import Lens.Micro
+import Lens.Micro (Lens', lens, to, (^.))
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import Prelude hiding (lookup)
 
@@ -144,10 +140,6 @@ data BabbageTxOut era
       {-# UNPACK #-} !Addr28Extra
       {-# UNPACK #-} !(CompactForm Coin) -- Ada value
       {-# UNPACK #-} !DataHash32
-
-type TxOut era = BabbageTxOut era
-
-{-# DEPRECATED TxOut "Use `BabbageTxOut` instead" #-}
 
 instance Crypto c => EraTxOut (BabbageEra c) where
   {-# SPECIALIZE instance EraTxOut (BabbageEra StandardCrypto) #-}
@@ -183,13 +175,6 @@ instance Crypto c => AlonzoEraTxOut (BabbageEra c) where
 
   datumTxOutF = to getDatumBabbageTxOut
   {-# INLINEABLE datumTxOutF #-}
-
-class (AlonzoEraTxOut era, EraScript era) => BabbageEraTxOut era where
-  referenceScriptTxOutL :: Lens' (Core.TxOut era) (StrictMaybe (Script era))
-
-  dataTxOutL :: Lens' (Core.TxOut era) (StrictMaybe (Data era))
-
-  datumTxOutL :: Lens' (Core.TxOut era) (Datum era)
 
 dataBabbageTxOutL :: EraTxOut era => Lens' (BabbageTxOut era) (StrictMaybe (Data era))
 dataBabbageTxOutL =
@@ -264,7 +249,7 @@ instance NFData (BabbageTxOut era) where
 viewCompactTxOut ::
   forall era.
   EraTxOut era =>
-  TxOut era ->
+  BabbageTxOut era ->
   (CompactAddr (EraCrypto era), CompactForm (Value era), Datum era, StrictMaybe (Script era))
 viewCompactTxOut txOut = case txOut of
   TxOutCompact' addr val -> (addr, val, NoDatum, SNothing)
@@ -288,7 +273,7 @@ viewCompactTxOut txOut = case txOut of
 viewTxOut ::
   forall era.
   (Era era, Val (Value era)) =>
-  TxOut era ->
+  BabbageTxOut era ->
   (Addr (EraCrypto era), Value era, Datum era, StrictMaybe (Script era))
 viewTxOut (TxOutCompact' bs c) = (addr, val, NoDatum, SNothing)
   where
@@ -558,14 +543,14 @@ decodeTxOut decAddr = do
       ]
 
 babbageMinUTxOValue ::
-  HasField "_coinsPerUTxOByte" (PParams era) Coin =>
+  BabbageEraPParams era =>
   PParams era ->
   Sized a ->
   Coin
 babbageMinUTxOValue pp sizedTxOut =
-  Coin $ fromIntegral (constantOverhead + sizedSize sizedTxOut) * unCoin coinsPerUTxOByte
+  Coin $ fromIntegral (constantOverhead + sizedSize sizedTxOut) * cpb
   where
-    coinsPerUTxOByte = getField @"_coinsPerUTxOByte" pp
+    CoinPerByte (Coin cpb) = pp ^. ppCoinsPerUTxOByteL
     -- This constant is an approximation of the memory overhead that comes
     -- from TxIn and an entry in the Map data structure:
     --

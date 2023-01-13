@@ -11,22 +11,18 @@
 
 module Test.Cardano.Ledger.Shelley.UnitTests (unitTests) where
 
-import Cardano.Crypto.DSIGN.Class (SignKeyDSIGN, VerKeyDSIGN)
 import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.Ledger.Address (
-  Addr (..),
-  getRwdCred,
- )
+import Cardano.Ledger.Address (Addr (..), getRwdCred)
 import Cardano.Ledger.BaseTypes hiding ((==>))
 import Cardano.Ledger.Binary (serialize')
 import Cardano.Ledger.Coin
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (
   Credential (..),
   StakeReference (..),
  )
-import Cardano.Ledger.Crypto (DSIGN, HASH, VRF)
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.Crypto (Crypto, HASH, VRF)
 import Cardano.Ledger.Keys (
   KeyRole (..),
   asWitness,
@@ -50,7 +46,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   dsUnified,
   rewards,
  )
-import Cardano.Ledger.Shelley.PParams
+
 import Cardano.Ledger.Shelley.Rules (
   ShelleyDelegsPredFailure (..),
   ShelleyDelplPredFailure (..),
@@ -103,6 +99,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Word (Word64)
 import GHC.Stack
+import Lens.Micro
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkVKeyRwdAcnt, mkWitnessVKey, mkWitnessesVKey, vKey)
 import Test.Cardano.Ledger.Shelley.Address.Bootstrap (
@@ -111,12 +108,9 @@ import Test.Cardano.Ledger.Shelley.Address.Bootstrap (
  )
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, C_Crypto)
 import Test.Cardano.Ledger.Shelley.Fees (sizeTests)
-import Test.Cardano.Ledger.Shelley.Generator.Core (
-  genesisCoins,
- )
+import Test.Cardano.Ledger.Shelley.Generator.Core (genesisCoins)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
-import Test.Cardano.Ledger.Shelley.Orphans ()
 import Test.Cardano.Ledger.Shelley.Utils
 import qualified Test.QuickCheck.Gen as Gen
 import Test.Tasty
@@ -125,32 +119,26 @@ import Test.Tasty.QuickCheck
 
 -- ========================================================================================
 
--- | - This constraint says we can coerce Numbers into a signable keys
-type NumKey c =
-  ( Num (SignKeyDSIGN (DSIGN c))
-  , Num (VerKeyDSIGN (DSIGN c))
-  )
+alicePay :: Crypto c => KeyPair 'Payment c
+alicePay = mkKeyPair' $ RawSeed 1 1 1 1 1
 
-alicePay :: NumKey c => KeyPair 'Payment c
-alicePay = KeyPair 1 1
+aliceStake :: Crypto c => KeyPair 'Staking c
+aliceStake = mkKeyPair' $ RawSeed 2 2 2 2 2
 
-aliceStake :: NumKey c => KeyPair 'Staking c
-aliceStake = KeyPair 2 2
-
-aliceAddr :: (NumKey c, CC.Crypto c) => Addr c
+aliceAddr :: Crypto c => Addr c
 aliceAddr =
   Addr
     Testnet
     (KeyHashObj . hashKey $ vKey alicePay)
     (StakeRefBase . KeyHashObj . hashKey $ vKey aliceStake)
 
-bobPay :: NumKey c => KeyPair 'Payment c
-bobPay = KeyPair 3 3
+bobPay :: Crypto c => KeyPair 'Payment c
+bobPay = mkKeyPair' $ RawSeed 3 3 3 3 3
 
-bobStake :: NumKey c => KeyPair 'Staking c
-bobStake = KeyPair 4 4
+bobStake :: Crypto c => KeyPair 'Staking c
+bobStake = mkKeyPair' $ RawSeed 4 4 4 4 4
 
-bobAddr :: (NumKey c, CC.Crypto c) => Addr c
+bobAddr :: Crypto c => Addr c
 bobAddr =
   Addr
     Testnet
@@ -160,18 +148,17 @@ bobAddr =
 mkGenesisTxIn :: (HashAlgorithm (HASH c), HasCallStack) => Integer -> TxIn c
 mkGenesisTxIn = TxIn genesisId . mkTxIxPartial
 
-pp :: ShelleyPParams era
+pp :: forall era. (EraPParams era, ProtVerAtMost era 4) => PParams era
 pp =
   emptyPParams
-    { _minfeeA = 1
-    , _minfeeB = 1
-    , _keyDeposit = Coin 100
-    , _poolDeposit = Coin 250
-    , _maxTxSize = 1024
-    , _eMax = EpochNo 10
-    , _minUTxOValue = Coin 100
-    , _minPoolCost = Coin 100
-    }
+    & ppMinFeeAL .~ 1
+    & ppMinFeeBL .~ 1
+    & ppKeyDepositL .~ Coin 100
+    & ppPoolDepositL .~ Coin 250
+    & ppMaxTxSizeL .~ 1024
+    & ppEMaxL .~ EpochNo 10
+    & ppMinUTxOValueL .~ Coin 100
+    & ppMinPoolCostL .~ Coin 10
 
 testVRFCheckWithActiveSlotCoeffOne :: Assertion
 testVRFCheckWithActiveSlotCoeffOne =
@@ -684,13 +671,10 @@ alicePoolParamsSmallCost =
 testPoolCostTooSmall :: Assertion
 testPoolCostTooSmall =
   testInvalidTx
-    [ DelegsFailure
-        ( DelplFailure
-            ( PoolFailure
-                ( StakePoolCostTooLowPOOL (ppCost alicePoolParamsSmallCost) (_minPoolCost (pp @C))
-                )
-            )
-        )
+    [ DelegsFailure $
+        DelplFailure $
+          PoolFailure $
+            StakePoolCostTooLowPOOL (ppCost alicePoolParamsSmallCost) (pp @C ^. ppMinPoolCostL)
     ]
     $ aliceGivesBobLovelace
     $ AliceToBob

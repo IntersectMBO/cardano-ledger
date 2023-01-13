@@ -7,7 +7,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Ledger.Shelley.PoolRank (
@@ -48,6 +47,7 @@ import Cardano.Ledger.Binary (
   toMemptyLens,
  )
 import Cardano.Ledger.Coin (Coin (..), coinToRational)
+import Cardano.Ledger.Core (Era (..), EraPParams, PParams, ppA0L, ppNOptL)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.EpochBoundary (maxPool)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
@@ -72,8 +72,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.VMap as VMap
 import GHC.Generics (Generic)
-import GHC.Records (HasField (getField))
-import Lens.Micro (_1)
+import Lens.Micro ((^.), _1)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 import Quiet
@@ -277,10 +276,10 @@ desirability (a0, nOpt) r pool (PerformanceEstimate p) (Coin totalStake) =
 -- corresponding to section 5.6.1 of
 -- "Design Specification for Delegation and Incentives in Cardano"
 getTopRankedPools ::
-  (HasField "_a0" pp NonNegativeInterval, HasField "_nOpt" pp Natural) =>
+  EraPParams era =>
   Coin ->
   Coin ->
-  pp ->
+  PParams era ->
   Map (KeyHash 'StakePool c) (PoolParams c) ->
   Map (KeyHash 'StakePool c) PerformanceEstimate ->
   Set (KeyHash 'StakePool c)
@@ -289,32 +288,32 @@ getTopRankedPools rPot totalStake pp poolParams aps =
    in getTopRankedPoolsInternal rPot totalStake pp pdata
 
 getTopRankedPoolsVMap ::
-  (HasField "_a0" pp NonNegativeInterval, HasField "_nOpt" pp Natural) =>
+  EraPParams era =>
   Coin ->
   Coin ->
-  pp ->
-  VMap.VMap VMap.VB VMap.VB (KeyHash 'StakePool c) (PoolParams c) ->
-  Map (KeyHash 'StakePool c) PerformanceEstimate ->
-  Set (KeyHash 'StakePool c)
+  PParams era ->
+  VMap.VMap VMap.VB VMap.VB (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)) ->
+  Map (KeyHash 'StakePool (EraCrypto era)) PerformanceEstimate ->
+  Set (KeyHash 'StakePool (EraCrypto era))
 getTopRankedPoolsVMap rPot totalStake pp poolParams aps =
   let pdata = [(kh, (pps, a)) | (kh, a) <- Map.toAscList aps, Just pps <- [VMap.lookup kh poolParams]]
    in getTopRankedPoolsInternal rPot totalStake pp pdata
 
 getTopRankedPoolsInternal ::
-  (HasField "_a0" pp NonNegativeInterval, HasField "_nOpt" pp Natural) =>
+  EraPParams era =>
   Coin ->
   Coin ->
-  pp ->
+  PParams era ->
   [(KeyHash 'StakePool c, (PoolParams c, PerformanceEstimate))] ->
   Set (KeyHash 'StakePool c)
 getTopRankedPoolsInternal rPot totalStake pp pdata =
   Set.fromList $
     fst
-      <$> take (fromIntegral $ getField @"_nOpt" pp) (sortBy (flip compare `on` snd) rankings)
+      <$> take (fromIntegral $ pp ^. ppNOptL) (sortBy (flip compare `on` snd) rankings)
   where
     rankings =
       [ ( hk
-        , desirability (getField @"_a0" pp, getField @"_nOpt" pp) rPot pool ap totalStake
+        , desirability (pp ^. ppA0L, pp ^. ppNOptL) rPot pool ap totalStake
         )
       | (hk, (pool, ap)) <- pdata
       ]
@@ -327,8 +326,8 @@ getTopRankedPoolsInternal rPot totalStake pp pdata =
 --   Additionally, instead of passing a rank r to compare with k,
 --   we pass the top k desirable pools and check for membership.
 nonMyopicStake ::
-  HasField "_nOpt" pp Natural =>
-  pp ->
+  EraPParams era =>
+  PParams era ->
   StakeShare ->
   StakeShare ->
   StakeShare ->
@@ -336,7 +335,7 @@ nonMyopicStake ::
   Set (KeyHash 'StakePool c) ->
   StakeShare
 nonMyopicStake pp (StakeShare s) (StakeShare sigma) (StakeShare t) kh topPools =
-  let z0 = 1 % max 1 (fromIntegral (getField @"_nOpt" pp))
+  let z0 = 1 % max 1 (fromIntegral (pp ^. ppNOptL))
    in if kh `Set.member` topPools
         then StakeShare (max (sigma + t) z0)
         else StakeShare (s + t)
@@ -350,10 +349,8 @@ nonMyopicStake pp (StakeShare s) (StakeShare sigma) (StakeShare t) kh topPools =
 --   r to compare with k, we pass the top k desirable pools and
 --   check for membership.
 nonMyopicMemberRew ::
-  ( HasField "_a0" pp NonNegativeInterval
-  , HasField "_nOpt" pp Natural
-  ) =>
-  pp ->
+  EraPParams era =>
+  PParams era ->
   Coin ->
   PoolParams c ->
   StakeShare ->

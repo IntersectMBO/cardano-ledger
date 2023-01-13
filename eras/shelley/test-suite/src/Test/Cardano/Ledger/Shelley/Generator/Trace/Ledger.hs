@@ -121,6 +121,7 @@ instance
   , Embed (Core.EraRule "DELEG" era) (ShelleyDELPL era)
   , Embed (Core.EraRule "LEDGER" era) (ShelleyLEDGERS era)
   , Default (State (Core.EraRule "PPUP" era))
+  , ProtVerAtMost era 8
   ) =>
   TQC.HasTrace (ShelleyLEDGERS era) (GenEnv era)
   where

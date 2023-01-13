@@ -12,6 +12,9 @@ in the naming of release branches.
 
 ### Added
 
+- Added type classes: `EraPParams`, `AlonzoEraPParams` and `BabbageEraPParams` with lenses
+  that can access and manipulate both `PParams` and `ParamsUpdate`. #3242
+- Added types `CoinPerWord` and `CoinPerByte` to prevent mixing up the two: #3242
 - Add `fromShelleyPParams` to `CanStartFromGenesis`: #3224
 - Add `setMinFeeTx` to  `Cardano.Ledger.Api.Tx`: #3201
 - Add ToExpr (from tree-diff) instances for all types inside NewEpochState
@@ -60,7 +63,19 @@ in the naming of release branches.
 
 ### Changed
 
-
+- Moved `PreviousEra` into `Era` type class. Added `Era` instance for a new data type
+  `ByronEra`.
+- Renamed record fields for all `PParams` types. Too many to list, but follows the same
+  convention, eg. `AlonzoPParams._maxTxSize` -> `AlonzoPParams.appMaxTxSize`
+- Renamed `AlonzoGenesis` fields #3242:
+  - `coinsPerUTxOWord` -> `agCoinsPerUTxOWord`
+  - `costmdls` -> `agCostModels`
+  - `prices` -> `agPrices`
+  - `maxTxExUnits` -> `agMaxTxExUnits`
+  - `maxBlockExUnits` -> `agMaxBlockExUnits`
+  - `maxValSize` -> `agMaxValSize`
+  - `collateralPercentage` -> `agCollateralPercentage`
+  - `maxCollateralInputs` -> `agMaxCollateralInputs`
 - Split `Cardano.Ledger.Alonzo.Data` module into `Cardano.Ledger.Alonzo.Scripts.Data` and `Cardano.Ledeger.Alonzo.TxAuxData`: #3229
 - Changed `ConwayGenesis`, by adding `AlonzoGenesis` to it: #3224
 - Switch parameterization of `ShelleyGenesis` on crypto, i.e. `ShelleyGenesis era` -> `ShelleyGenesis c`: #3224
@@ -240,6 +255,11 @@ in the naming of release branches.
 
 ### Removed
 
+- Removed `extendPP` and `retractPP` in favor of `EraPParams` type class functions
+  `upgradePParams`/`upgradePParamsUpdate` and `downgradePParams`/`downgradePParamsUpdate`
+  which can be used to change `PParams` from and to a previous era: #3224
+- Removed deprecated synonyms: `PParams`, `PParams'`, `PParamsUpdate`, `PParamsDelta`,
+  `Value`, `TxBody`, `TxOut`
 - Removed `Cardano.Ledger.Babbage.Genesis` module, since now it is completely empty: #3224
 - `TranslateEra` instance for `ShelleyGenesis`: #3224
 - Deprecated `Cardano.Ledger.CompactAddress` module in favor of `Cardano.Ledger.Address`: #3218
