@@ -16,9 +16,14 @@ module Cardano.Ledger.Binary.Decoding (
   module Cardano.Ledger.Binary.Decoding.FromCBOR,
   module Cardano.Ledger.Binary.Decoding.Sharing,
   module Cardano.Ledger.Binary.Decoding.Decoder,
-  module Cardano.Ledger.Binary.Decoding.Annotated,
   module Cardano.Ledger.Binary.Decoding.Sized,
   module Cardano.Ledger.Binary.Decoding.Drop,
+
+  -- * Annotated
+
+  --
+  -- $annotated
+  module Cardano.Ledger.Binary.Decoding.Annotated,
 
   -- * Nested CBOR in CBOR
   decodeNestedCbor,
@@ -226,3 +231,35 @@ decodeAnnotator = decodeFullAnnotator
 fromCBORMaybe :: Decoder s a -> Decoder s (Maybe a)
 fromCBORMaybe = decodeMaybe
 {-# DEPRECATED fromCBORMaybe "In favor of `decodeMaybe`" #-}
+
+-- $annotated
+--
+-- The regular CBOR 'Decoder' does not support access to the original 'BSL.ByteString' that is
+-- being read during deserialization. The 'Annotator' and 'Annotated' recover this ability.
+--
+-- 1. 'ByteSpan'  A pair of indexes into a bytestring, indicating a substring.
+-- 2. 'Annotated'  Used in practice to pair a value with a 'ByteSpan'. Mostly used in Byron codebase.
+-- 3. 'FullByteString' A newtype (around a bytestring) used to store the original bytestring being deserialized.
+-- 4. 'Annotator' An explict reader monad whose environment is a 'FullByteString'
+--
+-- The basic idea is, for a given type @t@, where we need the original 'BSL.ByteString', either
+--
+-- 1. To complete the deserialization, or
+-- 2. To combine the deserialized answer with the original 'BSL.ByteString'.
+--
+-- We should proceed as follows: Define instances @('FromCBOR' ('Annotator' t))@ instead
+-- of @('FromCBOR' t)@. When making this instance we may freely use that both 'Decoder'
+-- and 'Annotator' are both monads, and that functions 'withSlice' and 'annotatorSlice'
+-- provide access to the original bytes, or portions thereof, inside of decoders.  Then,
+-- to actually decode a value of type @t@, we use something similar to the following code
+-- fragment.
+--
+-- @
+-- howToUseFullBytes bytes = do
+--   Annotator f <- decodeFullDecoder \"DecodingAnnotator\" (fromCBOR :: forall s. Decoder s (Annotator t)) bytes
+--   pure (f (Full bytes))
+-- @
+--
+-- Decode the bytes to get an @('Annotator' f)@ where f is a function that when given
+-- original bytes produces a value of type @t@, then apply @f@ to @('Full' bytes)@ to get
+-- the answer.

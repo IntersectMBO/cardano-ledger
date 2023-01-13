@@ -54,6 +54,7 @@ library
                      Cardano.Ledger.Binary.Decoding.Sized
 
   build-depends:     base >=4.11 && <5
+                   , aeson
                    , binary
                    , bytestring
                    , cardano-binary
