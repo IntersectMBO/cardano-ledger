@@ -8,8 +8,8 @@ module Test.Cardano.Ledger.Shelley.Generator.Constants (
 where
 
 import Cardano.Ledger.BaseTypes (Version, natVersion)
+import Cardano.Ledger.Coin (Coin (..))
 import Data.Word (Word64)
-import Numeric.Natural (Natural)
 
 data Constants = Constants
   { minNumGenInputs :: Int
@@ -86,8 +86,8 @@ data Constants = Constants
   -- ^ Maximal slot for CHAIN trace generation.
   , frequencyLowMaxEpoch :: Word64
   -- ^ Lower bound of the MaxEpoch protocol parameter
-  , maxMinFeeA :: Natural
-  , maxMinFeeB :: Natural
+  , maxMinFeeA :: Coin
+  , maxMinFeeB :: Coin
   , numCoreNodes :: Word64
   , minTreasury :: Integer
   , maxTreasury :: Integer
@@ -138,8 +138,8 @@ defaultConstants =
     , minSlotTrace = 1000
     , maxSlotTrace = 5000
     , frequencyLowMaxEpoch = 200
-    , maxMinFeeA = 1000
-    , maxMinFeeB = 3
+    , maxMinFeeA = Coin 1000
+    , maxMinFeeB = Coin 3
     , numCoreNodes = 7
     , minTreasury = 1000000
     , maxTreasury = 10000000

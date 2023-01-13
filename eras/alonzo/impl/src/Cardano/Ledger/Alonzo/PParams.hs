@@ -129,9 +129,9 @@ import Numeric.Natural (Natural)
 -- | Protocol parameters.
 -- Shelley parameters + additional ones
 data AlonzoPParams f era = AlonzoPParams
-  { appMinFeeA :: !(HKD f Natural)
+  { appMinFeeA :: !(HKD f Coin)
   -- ^ The linear factor for the minimum fee calculation
-  , appMinFeeB :: !(HKD f Natural)
+  , appMinFeeB :: !(HKD f Coin)
   -- ^ The constant factor for the minimum fee calculation
   , appMaxBBSize :: !(HKD f Natural)
   -- ^ Maximal block body size
@@ -460,8 +460,8 @@ instance NFData (DowngradeAlonzoPParams Identity)
 emptyAlonzoPParams :: forall era. Era era => AlonzoPParams Identity era
 emptyAlonzoPParams =
   AlonzoPParams
-    { appMinFeeA = 0
-    , appMinFeeB = 0
+    { appMinFeeA = Coin 0
+    , appMinFeeB = Coin 0
     , appMaxBBSize = 0
     , appMaxTxSize = 2048
     , appMaxBHSize = 0

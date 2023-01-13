@@ -101,8 +101,8 @@ genPParams ::
   Constants ->
   Gen (PParams era)
 genPParams c@Constants {maxMinFeeA, maxMinFeeB, minMajorPV} = do
-  minFeeA <- genNatural 0 maxMinFeeA
-  minFeeB <- genNatural 0 maxMinFeeB
+  minFeeA <- genInteger 0 (unCoin maxMinFeeA)
+  minFeeB <- genInteger 0 (unCoin maxMinFeeB)
   (maxBBSize, maxTxSize, maxBHSize) <- szGen
   keyDeposit <- genKeyDeposit
   poolDeposit <- genPoolDeposit
@@ -118,8 +118,8 @@ genPParams c@Constants {maxMinFeeA, maxMinFeeB, minMajorPV} = do
   minPoolCost <- genMinPoolCost
   pure $
     emptyPParams
-      & ppMinFeeAL .~ minFeeA
-      & ppMinFeeBL .~ minFeeB
+      & ppMinFeeAL .~ Coin minFeeA
+      & ppMinFeeBL .~ Coin minFeeB
       & ppMaxBBSizeL .~ maxBBSize
       & ppMaxTxSizeL .~ maxTxSize
       & ppMaxBHSizeL .~ maxBHSize
@@ -238,8 +238,8 @@ genShelleyPParamsUpdate ::
   Gen (PParamsUpdate era)
 genShelleyPParamsUpdate c@Constants {maxMinFeeA, maxMinFeeB} pp = do
   -- TODO generate Maybe types so not all updates are full
-  minFeeA <- genM $ genNatural 0 maxMinFeeA
-  minFeeB <- genM $ genNatural 0 maxMinFeeB
+  minFeeA <- genM $ genInteger 0 (unCoin maxMinFeeA)
+  minFeeB <- genM $ genInteger 0 (unCoin maxMinFeeB)
   maxBBSize <- genM $ genNatural low hi
   maxTxSize <- genM $ genNatural low hi
   maxBHSize <- genM $ genNatural low hi
@@ -257,8 +257,8 @@ genShelleyPParamsUpdate c@Constants {maxMinFeeA, maxMinFeeB} pp = do
   minPoolCost <- genM genMinPoolCost
   pure $
     emptyPParamsUpdate
-      & ppuMinFeeAL .~ minFeeA
-      & ppuMinFeeBL .~ minFeeB
+      & ppuMinFeeAL .~ fmap Coin minFeeA
+      & ppuMinFeeBL .~ fmap Coin minFeeB
       & ppuMaxBBSizeL .~ maxBBSize
       & ppuMaxTxSizeL .~ maxTxSize
       & ppuMaxBHSizeL .~ maxBHSize

@@ -387,7 +387,7 @@ genNextDelta
         deltaScriptCost = foldr accum (Coin 0) extraScripts
           where
             accum (s1, _) ans = genEraScriptCost @era pparams s1 <+> ans
-        deltaFee = (draftSize <×> Coin (fromIntegral (pparams ^. ppMinFeeAL))) <+> deltaScriptCost
+        deltaFee = draftSize <×> pparams ^. ppMinFeeAL <+> deltaScriptCost
         totalFee = baseTxFee <+> deltaFee :: Coin
         remainingFee = totalFee <-> dfees :: Coin
         changeAmount = getChangeAmount change

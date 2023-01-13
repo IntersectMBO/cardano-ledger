@@ -10,6 +10,7 @@ module Cardano.Ledger.Shelley.Bench.Gen (
 )
 where
 
+import Cardano.Ledger.Coin
 import Cardano.Ledger.Shelley.API (
   ApplyBlock,
   Block,
@@ -70,7 +71,7 @@ genChainState n ge =
           , -- We are using real crypto types here, which can be larger than
             -- those expected by the mock fee calculations. Since this is
             -- unimportant for now, we set the A part of the fee to 0
-            maxMinFeeA = 0
+            maxMinFeeA = Coin 0
           }
       ge' = GenEnv (geKeySpace ge) (ScriptSpace [] [] Map.empty Map.empty) cs
    in fromRight (error "genChainState failed")

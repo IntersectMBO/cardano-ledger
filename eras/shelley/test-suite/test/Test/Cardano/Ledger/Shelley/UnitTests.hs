@@ -151,8 +151,8 @@ mkGenesisTxIn = TxIn genesisId . mkTxIxPartial
 pp :: forall era. (EraPParams era, ProtVerAtMost era 4) => PParams era
 pp =
   emptyPParams
-    & ppMinFeeAL .~ 1
-    & ppMinFeeBL .~ 1
+    & ppMinFeeAL .~ Coin 1
+    & ppMinFeeBL .~ Coin 1
     & ppKeyDepositL .~ Coin 100
     & ppPoolDepositL .~ Coin 250
     & ppMaxTxSizeL .~ 1024

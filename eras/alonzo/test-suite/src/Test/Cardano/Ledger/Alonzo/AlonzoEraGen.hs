@@ -505,8 +505,7 @@ sumCollateral tx (UTxO utxo) =
     collateral_ = tx ^. bodyTxL . collateralInputsTxBodyL
 
 storageCost :: forall era t. (EraPParams era, ToCBOR t) => Integer -> PParams era -> t -> Coin
-storageCost extra pp x =
-  (extra + encodedLen @era x) <×> Coin (fromIntegral (pp ^. ppMinFeeAL))
+storageCost extra pp x = (extra + encodedLen @era x) <×> pp ^. ppMinFeeAL
 
 addRedeemMap ::
   forall c.

@@ -84,9 +84,9 @@ import Numeric.Natural (Natural)
 
 -- | Protocol parameters.
 data ShelleyPParams f era = ShelleyPParams
-  { sppMinFeeA :: !(HKD f Natural)
+  { sppMinFeeA :: !(HKD f Coin)
   -- ^ The linear factor for the minimum fee calculation
-  , sppMinFeeB :: !(HKD f Natural)
+  , sppMinFeeB :: !(HKD f Coin)
   -- ^ The constant factor for the minimum fee calculation
   , sppMaxBBSize :: !(HKD f Natural)
   -- ^ Maximal block body size
@@ -267,8 +267,8 @@ instance FromJSON (ShelleyPParams Identity era) where
 emptyShelleyPParams :: forall era. Era era => ShelleyPParams Identity era
 emptyShelleyPParams =
   ShelleyPParams
-    { sppMinFeeA = 0
-    , sppMinFeeB = 0
+    { sppMinFeeA = Coin 0
+    , sppMinFeeB = Coin 0
     , sppMaxBBSize = 0
     , sppMaxTxSize = 2048
     , sppMaxBHSize = 0

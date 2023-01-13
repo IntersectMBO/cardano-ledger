@@ -686,8 +686,8 @@ tests =
         (emptyPParamsUpdate @Shelley & ppuKeyDepositL .~ SJust (Coin 5))
         ((T $ TkMapLen 1 . TkWord 5) <> S (Coin 5))
     , -- checkEncodingCBOR "pparams_update_all"
-      let minfeea = 0
-          minfeeb = 1
+      let minfeea = Coin 0
+          minfeeb = Coin 1
           maxbbsize = 2
           maxtxsize = 3
           maxbhsize = 4

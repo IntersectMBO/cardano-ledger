@@ -63,8 +63,8 @@ ppBabbagePParams :: BabbageEraPParams era => PParams era -> PDoc
 ppBabbagePParams pp =
   ppRecord
     "PParams"
-    [ ("minfeeA", ppNatural $ pp ^. ppMinFeeAL)
-    , ("minfeeB", ppNatural $ pp ^. ppMinFeeBL)
+    [ ("minfeeA", ppCoin $ pp ^. ppMinFeeAL)
+    , ("minfeeB", ppCoin $ pp ^. ppMinFeeBL)
     , ("maxBBSize", ppNatural $ pp ^. ppMaxBBSizeL)
     , ("maxTxSize", ppNatural $ pp ^. ppMaxTxSizeL)
     , ("maxBHSize", ppNatural $ pp ^. ppMaxBHSizeL)
@@ -91,8 +91,8 @@ ppBabbagePParamsUpdate :: BabbageEraPParams era => PParamsUpdate era -> PDoc
 ppBabbagePParamsUpdate pp =
   ppRecord
     "PParamsUdate"
-    [ ("minfeeA", ppStrictMaybe ppNatural $ pp ^. ppuMinFeeAL)
-    , ("minfeeB", ppStrictMaybe ppNatural $ pp ^. ppuMinFeeBL)
+    [ ("minfeeA", ppStrictMaybe ppCoin $ pp ^. ppuMinFeeAL)
+    , ("minfeeB", ppStrictMaybe ppCoin $ pp ^. ppuMinFeeBL)
     , ("maxBBSize", ppStrictMaybe ppNatural $ pp ^. ppuMaxBBSizeL)
     , ("maxTxSize", ppStrictMaybe ppNatural $ pp ^. ppuMaxTxSizeL)
     , ("maxBHSize", ppStrictMaybe ppNatural $ pp ^. ppuMaxBHSizeL)
