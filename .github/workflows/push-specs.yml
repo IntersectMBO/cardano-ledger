@@ -3,7 +3,7 @@ name: Push Specs
 on:
   push:
     tags:
-      - 'cardano-ledger-specs-[0-9]+.[0-9]+.[0-9]+'
+      - 'cardano-ledger-spec-[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'
 
 jobs:
   push-docs:
