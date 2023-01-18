@@ -123,7 +123,7 @@ instance EraPParams era => STS (ShelleyPPUP era) where
 
 instance Era era => ToCBOR (ShelleyPpupPredFailure era) where
   toCBOR = \case
-    (NonGenesisUpdatePPUP a b) ->
+    NonGenesisUpdatePPUP a b ->
       encodeListLen 3
         <> toCBOR (0 :: Word8)
         <> toCBOR a
@@ -132,10 +132,7 @@ instance Era era => ToCBOR (ShelleyPpupPredFailure era) where
       encodeListLen 4 <> toCBOR (1 :: Word8) <> toCBOR ce <> toCBOR e <> toCBOR vp
     PVCannotFollowPPUP p -> encodeListLen 2 <> toCBOR (2 :: Word8) <> toCBOR p
 
-instance
-  (Era era) =>
-  FromCBOR (ShelleyPpupPredFailure era)
-  where
+instance Era era => FromCBOR (ShelleyPpupPredFailure era) where
   fromCBOR = decodeRecordSum "PredicateFailure (PPUP era)" $
     \case
       0 -> do
