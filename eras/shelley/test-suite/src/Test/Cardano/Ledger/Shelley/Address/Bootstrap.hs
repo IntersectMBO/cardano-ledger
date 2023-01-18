@@ -30,7 +30,7 @@ import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
-import Cardano.Ledger.Crypto (Crypto (..))
+import Cardano.Ledger.Crypto as CC (Crypto (..))
 import Cardano.Ledger.Keys
   ( GenDelegs (..),
     KeyRole (..),
@@ -69,6 +69,7 @@ import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..), mkTxInPartial)
 import Cardano.Ledger.Val ((<->))
+import Cardano.Protocol.HeaderCrypto as CC (HeaderCrypto(..))
 import Data.ByteString (ByteString)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
@@ -256,9 +257,11 @@ type C = ShelleyEra C_crypto
 
 data C_crypto
 
-instance Cardano.Ledger.Crypto.Crypto C_crypto where
-  type KES C_crypto = KES Original.C_Crypto
-  type VRF C_crypto = VRF Original.C_Crypto
+instance CC.Crypto C_crypto where
   type DSIGN C_crypto = DSIGN.Ed25519DSIGN
   type HASH C_crypto = HASH Original.C_Crypto
   type ADDRHASH C_crypto = Hash.Blake2b_224
+
+instance CC.HeaderCrypto C_crypto where
+  type KES C_crypto = KES Original.C_Crypto
+  type VRF C_crypto = VRF Original.C_Crypto

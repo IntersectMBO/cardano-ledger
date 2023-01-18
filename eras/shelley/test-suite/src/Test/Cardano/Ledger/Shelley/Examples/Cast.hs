@@ -52,13 +52,16 @@ import Cardano.Ledger.Credential
     StakeReference (..),
   )
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import qualified Cardano.Protocol.HeaderCrypto as CC (HeaderCrypto)
 import Cardano.Ledger.Keys
   ( Hash,
     KeyPair (..),
     KeyRole (..),
-    VerKeyVRF,
     hashKey,
     hashVerKeyVRF,
+  )
+import Cardano.Protocol.HeaderKeys
+  ( VerKeyVRF
   )
 import Cardano.Ledger.Shelley.TxBody
   ( PoolMetadata (..),
@@ -97,7 +100,7 @@ aliceStake = KeyPair vk sk
     (sk, vk) = mkKeyPair (RawSeed 1 1 1 1 1)
 
 -- | Alice's stake pool keys (cold keys, VRF keys, hot KES keys)
-alicePoolKeys :: CC.Crypto crypto => AllIssuerKeys crypto 'StakePool
+alicePoolKeys :: (CC.Crypto crypto, CC.HeaderCrypto hcrypto) => AllIssuerKeys crypto hcrypto 'StakePool
 alicePoolKeys =
   AllIssuerKeys
     (KeyPair vkCold skCold)
@@ -124,11 +127,11 @@ alicePtrAddr :: CC.Crypto crypto => Addr crypto
 alicePtrAddr = Addr Testnet alicePHK (StakeRefPtr $ Ptr (SlotNo 10) minBound minBound)
 
 -- | Alice's stake pool parameters
-alicePoolParams :: forall crypto. CC.Crypto crypto => PoolParams crypto
+alicePoolParams :: forall crypto hcrypto. (CC.Crypto crypto, CC.HeaderCrypto hcrypto) => PoolParams crypto
 alicePoolParams =
   PoolParams
-    { _poolId = (hashKey . vKey . cold) alicePoolKeys,
-      _poolVrf = hashPoolStakeVRF . snd $ vrf (alicePoolKeys @crypto),
+    { _poolId = (hashKey . vKey . cold) (alicePoolKeys @crypto @hcrypto),
+      _poolVrf = hashPoolStakeVRF . snd $ vrf (alicePoolKeys @crypto @hcrypto),
       _poolPledge = Coin 1,
       _poolCost = Coin 5,
       _poolMargin = unsafeBoundRational 0.1,
@@ -145,10 +148,10 @@ alicePoolParams =
 
 -- | Alice's VRF key hash
 aliceVRFKeyHash ::
-  forall crypto.
-  CC.Crypto crypto =>
-  Hash crypto (VerKeyVRF crypto)
-aliceVRFKeyHash = hashVerKeyVRF (snd $ vrf (alicePoolKeys @crypto))
+  forall crypto hcrypto.
+  (CC.Crypto crypto, CC.HeaderCrypto hcrypto) =>
+  Hash crypto (VerKeyVRF hcrypto)
+aliceVRFKeyHash = hashVerKeyVRF (snd $ vrf (alicePoolKeys @crypto @hcrypto))
 
 -- | Bob's payment key pair
 bobPay :: CC.Crypto crypto => KeyPair 'Payment crypto
@@ -171,7 +174,7 @@ bobSHK :: CC.Crypto crypto => Credential 'Staking crypto
 bobSHK = (KeyHashObj . hashKey . vKey) bobStake
 
 -- | Bob's stake pool keys (cold keys, VRF keys, hot KES keys)
-bobPoolKeys :: CC.Crypto crypto => AllIssuerKeys crypto 'StakePool
+bobPoolKeys :: (CC.Crypto crypto, CC.HeaderCrypto hcrypto) => AllIssuerKeys crypto hcrypto 'StakePool
 bobPoolKeys =
   AllIssuerKeys
     (KeyPair vkCold skCold)
@@ -182,11 +185,11 @@ bobPoolKeys =
     (skCold, vkCold) = mkKeyPair (RawSeed 2 0 0 0 1)
 
 -- | Bob's stake pool parameters
-bobPoolParams :: forall crypto. CC.Crypto crypto => PoolParams crypto
+bobPoolParams :: forall crypto hcrypto. (CC.Crypto crypto, CC.HeaderCrypto hcrypto) => PoolParams crypto
 bobPoolParams =
   PoolParams
-    { _poolId = (hashKey . vKey . cold) bobPoolKeys,
-      _poolVrf = hashPoolStakeVRF . snd $ vrf (bobPoolKeys @crypto),
+    { _poolId = (hashKey . vKey . cold) (bobPoolKeys @crypto @hcrypto),
+      _poolVrf = hashPoolStakeVRF . snd $ vrf (bobPoolKeys @crypto @hcrypto),
       _poolPledge = Coin 2,
       _poolCost = Coin 1,
       _poolMargin = unsafeBoundRational 0.1,
@@ -198,10 +201,10 @@ bobPoolParams =
 
 -- | Bob's VRF key hash
 bobVRFKeyHash ::
-  forall crypto.
-  CC.Crypto crypto =>
-  Hash crypto (VerKeyVRF crypto)
-bobVRFKeyHash = hashVerKeyVRF (snd $ vrf (bobPoolKeys @crypto))
+  forall crypto hcrypto.
+  (CC.Crypto crypto, CC.HeaderCrypto hcrypto) =>
+  Hash crypto (VerKeyVRF hcrypto)
+bobVRFKeyHash = hashVerKeyVRF (snd $ vrf (bobPoolKeys @crypto @hcrypto))
 
 -- Carl's payment key pair
 carlPay :: CC.Crypto crypto => KeyPair 'Payment crypto

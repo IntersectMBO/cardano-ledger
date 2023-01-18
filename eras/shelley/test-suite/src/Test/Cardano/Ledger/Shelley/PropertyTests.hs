@@ -94,21 +94,21 @@ propWitVKeys seed h1 h2 =
         ]
 
 minimalPropertyTests ::
-  forall era ledger.
+  forall era hcrypto ledger.
   ( EraGen era,
     Tx era ~ ShelleyTx era,
     TestingLedger era ledger,
-    ChainProperty era,
-    QC.HasTrace (CHAIN era) (GenEnv era),
+    ChainProperty era hcrypto,
+    QC.HasTrace (CHAIN era hcrypto) (GenEnv era hcrypto),
     State (EraRule "PPUP" era) ~ PPUPState era
   ) =>
   TestTree
 minimalPropertyTests =
   testGroup
     "Minimal Property Tests"
-    [ (localOption (TQC.QuickCheckMaxRatio 50) $ TQC.testProperty "Chain and Ledger traces cover the relevant cases" (relevantCasesAreCovered @era)),
-      TQC.testProperty "total amount of Ada is preserved (Chain)" (adaPreservationChain @era @ledger),
-      TQC.testProperty "Only valid CHAIN STS signals are generated" (onlyValidChainSignalsAreGenerated @era),
+    [ (localOption (TQC.QuickCheckMaxRatio 50) $ TQC.testProperty "Chain and Ledger traces cover the relevant cases" (relevantCasesAreCovered @era @hcrypto)),
+      TQC.testProperty "total amount of Ada is preserved (Chain)" (adaPreservationChain @era @hcrypto @ledger),
+      TQC.testProperty "Only valid CHAIN STS signals are generated" (onlyValidChainSignalsAreGenerated @era @hcrypto),
       bootstrapHashTest,
       testGroup
         "Compact Address Tests"
@@ -127,11 +127,11 @@ minimalPropertyTests =
 
 -- | 'TestTree' of property-based testing properties.
 propertyTests ::
-  forall era ledger.
+  forall era hcrypto ledger.
   ( EraGen era,
-    ChainProperty era,
-    QC.HasTrace (CHAIN era) (GenEnv era),
-    QC.HasTrace ledger (GenEnv era),
+    ChainProperty era hcrypto,
+    QC.HasTrace (CHAIN era hcrypto) (GenEnv era hcrypto),
+    QC.HasTrace ledger (GenEnv era hcrypto),
     Embed (EraRule "DELEGS" era) ledger,
     Embed (EraRule "UTXOW" era) ledger,
     State (EraRule "PPUP" era) ~ PPUPState era,
@@ -150,47 +150,47 @@ propertyTests =
         [ ( localOption (TQC.QuickCheckMaxRatio 100) $
               TQC.testProperty
                 "Chain and Ledger traces cover the relevant cases"
-                (relevantCasesAreCovered @era)
+                (relevantCasesAreCovered @era @hcrypto)
           )
         ],
       testGroup
         "STS Rules - Delegation Properties"
         [ TQC.testProperty
             "properties of the DELEG STS"
-            (delegProperties @era)
+            (delegProperties @era @hcrypto)
         ],
       testGroup
         "STS Rules - Pool Properties"
         [ TQC.testProperty
             "properties of the POOL STS"
-            (poolProperties @era)
+            (poolProperties @era @hcrypto)
         ],
       testGroup
         "STS Rules - Poolreap Properties"
         [ TQC.testProperty
             "pool is removed from stake pool and retiring maps"
-            (removedAfterPoolreap @era)
+            (removedAfterPoolreap @era @hcrypto)
         ],
       testGroup
         "CHAIN level Properties"
         [ TQC.testProperty
             "collection of Ada preservation properties"
-            (adaPreservationChain @era @ledger),
+            (adaPreservationChain @era @hcrypto @ledger),
           TQC.testProperty
             "inputs are eliminated, outputs added to utxo and TxIds are unique"
-            (collisionFreeComplete @era @ledger),
+            (collisionFreeComplete @era @hcrypto @ledger),
           TQC.testProperty
             "incremental stake calc"
-            (stakeIncrTest @era @ledger)
+            (stakeIncrTest @era @hcrypto @ledger)
         ],
       testGroup
         "Properties of Trace generators"
         [ TQC.testProperty
             "Only valid LEDGER STS signals are generated"
-            (onlyValidLedgerSignalsAreGenerated @era @ledger),
+            (onlyValidLedgerSignalsAreGenerated @era @hcrypto @ledger),
           TQC.testProperty
             "Only valid CHAIN STS signals are generated"
-            (onlyValidChainSignalsAreGenerated @era)
+            (onlyValidChainSignalsAreGenerated @era @hcrypto)
         ],
       testGroupByronTranslation,
       testGroupShelleyTranslation,

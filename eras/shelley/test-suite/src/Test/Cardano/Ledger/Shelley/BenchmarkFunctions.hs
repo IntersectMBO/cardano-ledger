@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -32,7 +33,7 @@ import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..), TxIx, mkTxIxPar
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Crypto (Crypto (..))
+import Cardano.Ledger.Crypto as CC (Crypto (..))
 import Cardano.Ledger.Keys
   ( Hash,
     KeyHash,
@@ -77,6 +78,7 @@ import Cardano.Ledger.Shelley.UTxO (makeWitnessesVKey)
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn (..), mkTxInPartial)
 import Cardano.Ledger.Val (Val (inject))
+import Cardano.Protocol.HeaderCrypto as CC (HeaderCrypto (..))
 import Cardano.Protocol.TPraos.API (PraosCrypto)
 import Cardano.Protocol.TPraos.Rules.Overlay (hashPoolStakeVRF)
 import Control.State.Transition.Extended (TRC (..), applySTS)
@@ -112,14 +114,16 @@ type B = ShelleyEra B_Crypto
 
 data B_Crypto
 
-instance Cardano.Ledger.Crypto.Crypto B_Crypto where
-  type KES B_Crypto = KES Original.C_Crypto
-  type VRF B_Crypto = VRF Original.C_Crypto
+instance CC.Crypto B_Crypto where
   type DSIGN B_Crypto = DSIGN Original.C_Crypto
   type HASH B_Crypto = Blake2b_256
   type ADDRHASH B_Crypto = Blake2b_256
 
-instance PraosCrypto B_Crypto
+instance CC.HeaderCrypto B_Crypto where
+  type KES B_Crypto = KES Original.C_Crypto
+  type VRF B_Crypto = VRF Original.C_Crypto
+
+instance PraosCrypto B_Crypto B_Crypto
 
 -- =========================================================
 

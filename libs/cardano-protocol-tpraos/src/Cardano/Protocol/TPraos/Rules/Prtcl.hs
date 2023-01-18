@@ -34,14 +34,17 @@ import Cardano.Ledger.BaseTypes
     ShelleyBase,
     UnitInterval,
   )
-import Cardano.Ledger.Crypto (Crypto, VRF)
+import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Protocol.HeaderCrypto (HeaderCrypto, VRF)
 import Cardano.Ledger.Keys
   ( DSignable,
     GenDelegs (..),
-    KESignable,
     KeyHash,
     KeyRole (..),
-    VRFSignable,
+  )
+import Cardano.Protocol.HeaderKeys
+  ( KESignable,
+    VRFSignable
   )
 import Cardano.Ledger.PoolDistr (PoolDistr)
 import Cardano.Ledger.Serialization (decodeRecordNamed)
@@ -68,7 +71,7 @@ import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
-data PRTCL crypto
+data PRTCL crypto hcrypto
 
 data PrtclState crypto
   = PrtclState
@@ -112,8 +115,8 @@ data PrtclEnv crypto
 
 instance NoThunks (PrtclEnv crypto)
 
-data PrtclPredicateFailure crypto
-  = OverlayFailure (PredicateFailure (OVERLAY crypto)) -- Subtransition Failures
+data PrtclPredicateFailure crypto hcrypto
+  = OverlayFailure (PredicateFailure (OVERLAY crypto hcrypto)) -- Subtransition Failures
   | UpdnFailure (PredicateFailure (UPDN crypto)) -- Subtransition Failures
   deriving (Generic)
 
@@ -122,49 +125,51 @@ data PrtclEvent crypto
   | NoEvent Void
 
 deriving instance
-  (VRF.VRFAlgorithm (VRF crypto)) =>
-  Show (PrtclPredicateFailure crypto)
+  (VRF.VRFAlgorithm (VRF hcrypto)) =>
+  Show (PrtclPredicateFailure crypto hcrypto)
 
 deriving instance
-  (VRF.VRFAlgorithm (VRF crypto)) =>
-  Eq (PrtclPredicateFailure crypto)
+  (VRF.VRFAlgorithm (VRF hcrypto)) =>
+  Eq (PrtclPredicateFailure crypto hcrypto)
 
 instance
   ( Crypto crypto,
-    DSignable crypto (OCertSignable crypto),
-    KESignable crypto (BHBody crypto),
-    VRFSignable crypto Seed
+    HeaderCrypto hcrypto,
+    DSignable crypto (OCertSignable hcrypto),
+    KESignable hcrypto (BHBody crypto hcrypto),
+    VRFSignable hcrypto Seed
   ) =>
-  STS (PRTCL crypto)
+  STS (PRTCL crypto hcrypto)
   where
   type
-    State (PRTCL crypto) =
+    State (PRTCL crypto hcrypto) =
       PrtclState crypto
 
   type
-    Signal (PRTCL crypto) =
-      BHeader crypto
+    Signal (PRTCL crypto hcrypto) =
+      BHeader crypto hcrypto
 
   type
-    Environment (PRTCL crypto) =
+    Environment (PRTCL crypto hcrypto) =
       PrtclEnv crypto
 
-  type BaseM (PRTCL crypto) = ShelleyBase
-  type PredicateFailure (PRTCL crypto) = PrtclPredicateFailure crypto
-  type Event (PRTCL crypto) = PrtclEvent crypto
+  type BaseM (PRTCL crypto hcrypto) = ShelleyBase
+  type PredicateFailure (PRTCL crypto hcrypto) = PrtclPredicateFailure crypto hcrypto
+  type Event (PRTCL crypto hcrypto) = PrtclEvent crypto
 
   initialRules = []
 
   transitionRules = [prtclTransition]
 
 prtclTransition ::
-  forall crypto.
+  forall crypto hcrypto.
   ( Crypto crypto,
-    DSignable crypto (OCertSignable crypto),
-    KESignable crypto (BHBody crypto),
-    VRFSignable crypto Seed
+    HeaderCrypto hcrypto,
+    DSignable crypto (OCertSignable hcrypto),
+    KESignable hcrypto (BHBody crypto hcrypto),
+    VRFSignable hcrypto Seed
   ) =>
-  TransitionRule (PRTCL crypto)
+  TransitionRule (PRTCL crypto hcrypto)
 prtclTransition = do
   TRC
     ( PrtclEnv dval pd dms eta0,
@@ -184,7 +189,7 @@ prtclTransition = do
           slot
         )
   cs' <-
-    trans @(OVERLAY crypto) $
+    trans @(OVERLAY crypto hcrypto) $
       TRC (OverlayEnv dval pd dms eta0, cs, bh)
 
   pure $
@@ -193,26 +198,28 @@ prtclTransition = do
       etaV'
       etaC'
 
-instance (Crypto crypto) => NoThunks (PrtclPredicateFailure crypto)
+instance (Crypto crypto, HeaderCrypto hcrypto) => NoThunks (PrtclPredicateFailure crypto hcrypto)
 
 instance
   ( Crypto crypto,
-    DSignable crypto (OCertSignable crypto),
-    KESignable crypto (BHBody crypto),
-    VRFSignable crypto Seed
+    HeaderCrypto hcrypto,
+    DSignable crypto (OCertSignable hcrypto),
+    KESignable hcrypto (BHBody crypto hcrypto),
+    VRFSignable hcrypto Seed
   ) =>
-  Embed (OVERLAY crypto) (PRTCL crypto)
+  Embed (OVERLAY crypto hcrypto) (PRTCL crypto hcrypto)
   where
   wrapFailed = OverlayFailure
   wrapEvent = NoEvent
 
 instance
   ( Crypto crypto,
-    DSignable crypto (OCertSignable crypto),
-    KESignable crypto (BHBody crypto),
-    VRFSignable crypto Seed
+    HeaderCrypto hcrypto,
+    DSignable crypto (OCertSignable hcrypto),
+    KESignable hcrypto (BHBody crypto hcrypto),
+    VRFSignable hcrypto Seed
   ) =>
-  Embed (UPDN crypto) (PRTCL crypto)
+  Embed (UPDN crypto) (PRTCL crypto hcrypto)
   where
   wrapFailed = UpdnFailure
   wrapEvent = UpdnEvent
@@ -238,9 +245,9 @@ data PrtlSeqFailure crypto
 instance Crypto crypto => NoThunks (PrtlSeqFailure crypto)
 
 prtlSeqChecks ::
-  (MonadError (PrtlSeqFailure crypto) m, Crypto crypto) =>
+  (MonadError (PrtlSeqFailure crypto) m, Crypto crypto, HeaderCrypto hcrypto) =>
   WithOrigin (LastAppliedBlock crypto) ->
-  BHeader crypto ->
+  BHeader crypto hcrypto ->
   m ()
 prtlSeqChecks lab bh =
   case lab of

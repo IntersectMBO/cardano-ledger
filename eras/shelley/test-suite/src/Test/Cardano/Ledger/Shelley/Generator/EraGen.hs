@@ -127,12 +127,12 @@ type MinLEDGER_STS era =
   )
 
 -- | Minimal requirements on the CHAIN instances
-type MinCHAIN_STS era =
-  ( STS (CHAIN era),
-    BaseM (CHAIN era) ~ ShelleyBase,
-    Environment (CHAIN era) ~ (),
-    State (CHAIN era) ~ ChainState era,
-    Signal (CHAIN era) ~ Block (BHeader (Crypto era)) era
+type MinCHAIN_STS era hcrypto =
+  ( STS (CHAIN era hcrypto),
+    BaseM (CHAIN era hcrypto) ~ ShelleyBase,
+    Environment (CHAIN era hcrypto) ~ (),
+    State (CHAIN era hcrypto) ~ ChainState era,
+    Signal (CHAIN era hcrypto) ~ Block (BHeader (Crypto era) hcrypto) era
   )
 
 -- | Minimal requirements on the UTxO instances
@@ -165,7 +165,7 @@ type MinGenPParams era =
 class Show (TxOut era) => MinGenTxout era where
   calcEraMinUTxO :: TxOut era -> PParams era -> Coin
   addValToTxOut :: Value era -> TxOut era -> TxOut era
-  genEraTxOut :: GenEnv era -> Gen (Value era) -> [Addr (Crypto era)] -> Gen [TxOut era]
+  genEraTxOut :: GenEnv era hcrypto -> Gen (Value era) -> [Addr (Crypto era)] -> Gen [TxOut era]
 
 -- ======================================================================================
 -- The EraGen class. Generally one method for each type family in Cardano.Ledger.Core
@@ -187,7 +187,7 @@ class
   EraGen era
   where
   -- | Generate a genesis value for the Era
-  genGenesisValue :: GenEnv era -> Gen (Value era)
+  genGenesisValue :: GenEnv era hcrypto -> Gen (Value era)
 
   -- | A list of three-phase scripts that can be chosen for payment when building a transaction
   genEraTwoPhase3Arg :: [TwoPhase3ArgInfo era]
@@ -201,7 +201,7 @@ class
   -- and a list of additional scripts for eras that sometimes require
   -- additional script witnessing.
   genEraTxBody ::
-    GenEnv era ->
+    GenEnv era hcrypto ->
     UTxO era ->
     PParams era ->
     SlotNo ->
@@ -293,7 +293,7 @@ someKeyPairs c lower upper =
     <$> choose (lower, upper)
     <*> shuffle (keyPairs c)
 
-genUtxo0 :: forall era. EraGen era => GenEnv era -> Gen (UTxO era)
+genUtxo0 :: forall era hcrypto. EraGen era => GenEnv era hcrypto -> Gen (UTxO era)
 genUtxo0 ge@(GenEnv _ _ c@Constants {minGenesisUTxOouts, maxGenesisUTxOouts}) = do
   genesisKeys <- someKeyPairs c minGenesisUTxOouts maxGenesisUTxOouts
   genesisScripts <- someScripts @era c minGenesisUTxOouts maxGenesisUTxOouts

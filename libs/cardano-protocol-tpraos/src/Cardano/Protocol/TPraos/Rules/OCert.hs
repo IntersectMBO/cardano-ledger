@@ -15,7 +15,9 @@ where
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Crypto
+import Cardano.Protocol.HeaderCrypto
 import Cardano.Ledger.Keys
+import Cardano.Protocol.HeaderKeys
 import Cardano.Protocol.TPraos.BHeader
 import Cardano.Protocol.TPraos.OCert
 import Control.Monad.Trans.Reader (asks)
@@ -27,7 +29,7 @@ import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
-data OCERT crypto
+data OCERT crypto hcrypto
 
 data OcertPredicateFailure crypto
   = KESBeforeStartOCERT
@@ -56,30 +58,32 @@ instance NoThunks (OcertPredicateFailure crypto)
 
 instance
   ( Crypto crypto,
-    DSignable crypto (OCertSignable crypto),
-    KESignable crypto (BHBody crypto)
+    HeaderCrypto hcrypto,
+    DSignable crypto (OCertSignable hcrypto),
+    KESignable hcrypto (BHBody crypto hcrypto)
   ) =>
-  STS (OCERT crypto)
+  STS (OCERT crypto hcrypto)
   where
   type
-    State (OCERT crypto) =
+    State (OCERT crypto hcrypto) =
       Map (KeyHash 'BlockIssuer crypto) Word64
   type
-    Signal (OCERT crypto) =
-      BHeader crypto
-  type Environment (OCERT crypto) = OCertEnv crypto
-  type BaseM (OCERT crypto) = ShelleyBase
-  type PredicateFailure (OCERT crypto) = OcertPredicateFailure crypto
+    Signal (OCERT crypto hcrypto) =
+      BHeader crypto hcrypto
+  type Environment (OCERT crypto hcrypto) = OCertEnv crypto
+  type BaseM (OCERT crypto hcrypto) = ShelleyBase
+  type PredicateFailure (OCERT crypto hcrypto) = OcertPredicateFailure crypto
 
   initialRules = [pure Map.empty]
   transitionRules = [ocertTransition]
 
 ocertTransition ::
   ( Crypto crypto,
-    DSignable crypto (OCertSignable crypto),
-    KESignable crypto (BHBody crypto)
+    HeaderCrypto hcrypto,
+    DSignable crypto (OCertSignable hcrypto),
+    KESignable hcrypto (BHBody crypto hcrypto)
   ) =>
-  TransitionRule (OCERT crypto)
+  TransitionRule (OCERT crypto hcrypto)
 ocertTransition =
   judgmentContext >>= \(TRC (env, cs, BHeader bhb sigma)) -> do
     let OCert vk_hot n c0@(KESPeriod c0_) tau = bheaderOCert bhb

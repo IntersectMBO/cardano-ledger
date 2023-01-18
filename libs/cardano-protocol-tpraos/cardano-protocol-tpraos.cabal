@@ -37,6 +37,8 @@ library
   hs-source-dirs: src
 
   exposed-modules:
+    Cardano.Protocol.HeaderCrypto
+    Cardano.Protocol.HeaderKeys
     Cardano.Protocol.TPraos.API
     Cardano.Protocol.TPraos.BHeader
     Cardano.Protocol.TPraos.OCert
@@ -50,6 +52,7 @@ library
     bytestring,
     cardano-binary,
     cardano-crypto-class,
+    cardano-crypto-praos,
     cardano-ledger-alonzo,
     cardano-ledger-babbage,
     cardano-ledger-conway,

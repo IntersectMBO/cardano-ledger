@@ -31,7 +31,8 @@ import Cardano.Ledger.Keys
     Hash,
     KeyHash,
     KeyRole (..),
-    VerKeyVRF,
+    GenesisVRF,
+    -- VerKeyVRF,
   )
 import Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
 import Cardano.Ledger.Shelley.LedgerState
@@ -122,7 +123,7 @@ data ShelleyDelegPredFailure era
       !SlotNo -- current slot
       !SlotNo -- EraRule "MIR" must be submitted before this slot
   | DuplicateGenesisVRFDELEG
-      !(Hash (Crypto era) (VerKeyVRF (Crypto era))) -- VRF KeyHash which is already delegated to
+      !(Hash (Crypto era) GenesisVRF) -- VRF KeyHash which is already delegated to
   | MIRTransferNotCurrentlyAllowed
   | MIRNegativesNotCurrentlyAllowed
   | InsufficientForTransferDELEG

@@ -84,7 +84,8 @@ import GHC.Records (HasField (..))
 import Lens.Micro
 import NoThunks.Class ()
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes
-  ( Mock,
+  ( MockContext,
+    Mock,
   )
 import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..), defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core
@@ -155,15 +156,15 @@ showBalance
 -- the generator 'Constants' so that there is sufficient spending balance.
 
 genTx ::
-  forall era.
+  forall era hcrypto.
   ( EraGen era,
-    Mock (Crypto era),
+    Mock (Crypto era) hcrypto,
     Embed (EraRule "DELPL" era) (CERTS era),
     Environment (EraRule "DELPL" era) ~ DelplEnv era,
     State (EraRule "DELPL" era) ~ DPState (Crypto era),
     Signal (EraRule "DELPL" era) ~ DCert (Crypto era)
   ) =>
-  GenEnv era ->
+  GenEnv era hcrypto ->
   LedgerEnv era ->
   LedgerState era ->
   Gen (Tx era)
@@ -354,12 +355,12 @@ encodedLen x = fromIntegral $ BSL.length (serialize x)
 -- | - Do the work of computing what additioanl inputs we need to 'fix-up' the
 -- transaction so that it will balance.
 genNextDelta ::
-  forall era.
-  (EraGen era, Mock (Crypto era)) =>
+  forall era hcrypto.
+  (EraGen era, Mock (Crypto era) hcrypto) =>
   ScriptInfo era ->
   UTxO era ->
   PParams era ->
-  KeySpace era ->
+  KeySpace era hcrypto ->
   Tx era ->
   Int ->
   Delta era ->
@@ -471,9 +472,9 @@ genNextDelta
 -- genNextDelta repeatedly until genNextDelta delta = delta
 
 genNextDeltaTilFixPoint ::
-  forall era.
+  forall era hcrypto.
   ( EraGen era,
-    Mock (Crypto era)
+    Mock (Crypto era) hcrypto
   ) =>
   ScriptInfo era ->
   Coin ->
@@ -481,7 +482,7 @@ genNextDeltaTilFixPoint ::
   [(Script era, Script era)] ->
   UTxO era ->
   PParams era ->
-  KeySpace era ->
+  KeySpace era hcrypto ->
   Tx era ->
   Gen (Delta era)
 genNextDeltaTilFixPoint scriptinfo initialfee keys scripts utxo pparams keySpace tx = do
@@ -495,16 +496,16 @@ genNextDeltaTilFixPoint scriptinfo initialfee keys scripts utxo pparams keySpace
     safetyOffset = Coin 5
 
 applyDelta ::
-  forall era.
+  forall era hcrypto.
   ( EraGen era,
-    Mock (Crypto era)
+    Mock (Crypto era) hcrypto
   ) =>
   UTxO era ->
   ScriptInfo era ->
   PParams era ->
   [KeyPair 'Witness (Crypto era)] ->
   Map (ScriptHash (Crypto era)) (Script era) ->
-  KeySpace era ->
+  KeySpace era hcrypto ->
   Tx era ->
   Delta era ->
   Tx era
@@ -553,8 +554,8 @@ fix :: (Eq d, Monad m) => Int -> (Int -> d -> m d) -> d -> m d
 fix n f d = do d1 <- f n d; if d1 == d then pure d else fix (n + 1) f d1
 
 converge ::
-  forall era.
-  (EraGen era, Mock (Crypto era)) =>
+  forall era hcrypto.
+  (EraGen era, Mock (Crypto era) hcrypto) =>
   ScriptInfo era ->
   Coin ->
   [KeyPair 'Witness (Crypto era)] ->
@@ -563,7 +564,7 @@ converge ::
   [(Script era, Script era)] ->
   UTxO era ->
   PParams era ->
-  KeySpace era ->
+  KeySpace era hcrypto ->
   Tx era ->
   Gen (Tx era)
 converge
@@ -656,7 +657,9 @@ mkScriptWits payScripts stakeScripts =
 
 mkTxWits ::
   forall era.
-  (EraGen era, Mock (Crypto era)) =>
+  (EraGen era,
+   MockContext (Crypto era)
+  ) =>
   (UTxO era, TxBody era, ScriptInfo era) ->
   Map (KeyHash 'Payment (Crypto era)) (KeyPair 'Payment (Crypto era)) ->
   Map (KeyHash 'Staking (Crypto era)) (KeyPair 'Staking (Crypto era)) ->

@@ -83,6 +83,7 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UnifiedMap (ViewMap)
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val (coin)
+import Cardano.Protocol.HeaderCrypto as CC (HeaderCrypto)
 import Cardano.Protocol.TPraos.API (GetLedgerView)
 import Cardano.Protocol.TPraos.BHeader
   ( BHeader (..),
@@ -119,7 +120,7 @@ import Data.Word (Word64)
 import GHC.Records (HasField (..))
 import Lens.Micro hiding (ix)
 import Lens.Micro.Extras (view)
-import Test.Cardano.Ledger.Shelley.Generator.Block (tickChainState)
+import Test.Cardano.Ledger.Shelley.Generator.Block (futureLedgerViewAt, tickChainState)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
 import qualified Test.Cardano.Ledger.Shelley.Generator.Presets as Preset (genEnv)
@@ -188,57 +189,57 @@ type TestingLedger era ledger =
 
 -- | Tx inputs are eliminated, outputs added to utxo and TxIds are unique
 collisionFreeComplete ::
-  forall era ledger.
+  forall era hcrypto ledger.
   ( EraGen era,
-    ChainProperty era,
+    ChainProperty era hcrypto,
     TestingLedger era ledger,
     Default (State (EraRule "PPUP" era)),
-    QC.HasTrace (CHAIN era) (GenEnv era)
+    QC.HasTrace (CHAIN era hcrypto) (GenEnv era hcrypto)
   ) =>
   Property
 collisionFreeComplete =
-  forAllChainTrace @era traceLen $ \tr -> do
+  forAllChainTrace @era @hcrypto traceLen $ \tr -> do
     let ssts = sourceSignalTargets tr
     conjoin . concat $
       [ -- collision freeness
-        map (eliminateTxInputs @era @ledger) ssts,
-        map (newEntriesAndUniqueTxIns @era @ledger) ssts,
+        map (eliminateTxInputs @era @hcrypto @ledger) ssts,
+        map (newEntriesAndUniqueTxIns @era @hcrypto @ledger) ssts,
         -- no double spend
         map noDoubleSpend ssts,
         -- tx signatures
-        map (requiredMSigSignaturesSubset @era @ledger) ssts
+        map (requiredMSigSignaturesSubset @era @hcrypto @ledger) ssts
       ]
 
 -- | STAKE INCR
 stakeIncrTest ::
-  forall era ledger.
+  forall era hcrypto ledger.
   ( EraGen era,
     TestingLedger era ledger,
     State (EraRule "PPUP" era) ~ PPUPState era,
-    ChainProperty era,
-    QC.HasTrace (CHAIN era) (GenEnv era)
+    ChainProperty era hcrypto,
+    QC.HasTrace (CHAIN era hcrypto) (GenEnv era hcrypto)
   ) =>
   Property
 stakeIncrTest =
-  forAllChainTrace @era longTraceLen $ \tr -> do
+  forAllChainTrace @era @hcrypto longTraceLen $ \tr -> do
     let ssts = sourceSignalTargets tr
 
     conjoin . concat $
       [ -- preservation properties
-        map (incrStakeComp @era @ledger) ssts
+        map (incrStakeComp @era @hcrypto @ledger) ssts
       ]
 
 incrStakeComp ::
-  forall era ledger.
-  (EraSegWits era, ChainProperty era, TestingLedger era ledger) =>
-  SourceSignalTarget (CHAIN era) ->
+  forall era hcrypto ledger.
+  (EraSegWits era, ChainProperty era hcrypto, TestingLedger era ledger) =>
+  SourceSignalTarget (CHAIN era hcrypto) ->
   Property
 incrStakeComp SourceSignalTarget {source = chainSt, signal = block} =
   conjoin $
     map checkIncrStakeComp $
       sourceSignalTargets ledgerTr
   where
-    (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
+    (_, ledgerTr) = ledgerTraceFromBlock @era @hcrypto @ledger chainSt block
     checkIncrStakeComp :: SourceSignalTarget ledger -> Property
     checkIncrStakeComp
       SourceSignalTarget
@@ -277,41 +278,41 @@ incrStakeComp SourceSignalTarget {source = chainSt, signal = block} =
 
 -- | Various preservation properties
 adaPreservationChain ::
-  forall era ledger.
+  forall era hcrypto ledger.
   ( EraGen era,
     TestingLedger era ledger,
     State (EraRule "PPUP" era) ~ PPUPState era,
-    ChainProperty era,
-    QC.HasTrace (CHAIN era) (GenEnv era)
+    ChainProperty era hcrypto,
+    QC.HasTrace (CHAIN era hcrypto) (GenEnv era hcrypto)
   ) =>
   Property
 adaPreservationChain =
-  forAllChainTrace @era longTraceLen $ \tr -> do
+  forAllChainTrace @era @hcrypto longTraceLen $ \tr -> do
     let ssts = sourceSignalTargets tr
         noEpochBoundarySsts = filter sameEpoch ssts
 
     conjoin . concat $
       [ -- preservation properties
         map (checkPreservation @era) ssts,
-        map (potsSumIncreaseWdrlsPerTx @era @ledger) ssts,
-        map (potsSumIncreaseByRewardsPerTx @era @ledger) ssts,
-        map (preserveBalance @era @ledger) ssts,
-        map (preserveBalanceRestricted @era @ledger) ssts,
-        map (preserveOutputsTx @era @ledger) ssts,
-        map (potsRewardsDecreaseByWdrlsPerTx @era @ledger) ssts,
-        map (canRestrictUTxO @era @ledger) ssts,
+        map (potsSumIncreaseWdrlsPerTx @era @hcrypto @ledger) ssts,
+        map (potsSumIncreaseByRewardsPerTx @era @hcrypto @ledger) ssts,
+        map (preserveBalance @era @hcrypto @ledger) ssts,
+        map (preserveBalanceRestricted @era @hcrypto @ledger) ssts,
+        map (preserveOutputsTx @era @hcrypto @ledger) ssts,
+        map (potsRewardsDecreaseByWdrlsPerTx @era @hcrypto @ledger) ssts,
+        map (canRestrictUTxO @era @hcrypto @ledger) ssts,
         -- well formed deposits
         map nonNegativeDeposits ssts,
         -- non-epoch-boundary preservation properties
         map checkWithdrawlBound noEpochBoundarySsts,
-        map (utxoDepositsIncreaseByFeesWithdrawals @era @ledger) noEpochBoundarySsts,
+        map (utxoDepositsIncreaseByFeesWithdrawals @era @hcrypto @ledger) noEpochBoundarySsts,
         map potsSumIncreaseWdrlsPerBlock noEpochBoundarySsts,
         map feesNonDecreasing noEpochBoundarySsts
       ]
 
 -- ADA should be preserved for all state transitions in the generated trace
 checkPreservation ::
-  forall era.
+  forall era hcrypto.
   ( EraSegWits era,
     ShelleyEraTxBody era,
     HasField "_protocolVersion" (PParams era) ProtVer,
@@ -319,7 +320,7 @@ checkPreservation ::
     HasField "_poolDeposit" (PParams era) Coin,
     State (EraRule "PPUP" era) ~ PPUPState era
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (CHAIN era hcrypto) ->
   Property
 checkPreservation SourceSignalTarget {source, target, signal} =
   counterexample
@@ -446,7 +447,7 @@ checkPreservation SourceSignalTarget {source, target, signal} =
 -- If we are not at an Epoch Boundary (i.e. epoch source == epoch target)
 -- then the total rewards should change only by withdrawals
 checkWithdrawlBound ::
-  EraGen era => SourceSignalTarget (CHAIN era) -> Property
+  EraGen era => SourceSignalTarget (CHAIN era hcrypto) -> Property
 checkWithdrawlBound SourceSignalTarget {source, signal, target} =
   counterexample "checkWithdrawlBound" $
     rewardDelta === withdrawals signal
@@ -473,12 +474,12 @@ checkWithdrawlBound SourceSignalTarget {source, signal, target} =
 -- | If we are not at an Epoch Boundary, then (Utxo + Deposits)
 -- increases by Withdrawals minus Fees (for all transactions in a block)
 utxoDepositsIncreaseByFeesWithdrawals ::
-  forall era ledger.
-  ( ChainProperty era,
+  forall era hcrypto ledger.
+  ( ChainProperty era hcrypto,
     EraGen era,
     TestingLedger era ledger
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (CHAIN era hcrypto) ->
   Property
 utxoDepositsIncreaseByFeesWithdrawals SourceSignalTarget {source, signal, target} =
   counterexample "utxoDepositsIncreaseByFeesWithdrawals" $
@@ -489,13 +490,13 @@ utxoDepositsIncreaseByFeesWithdrawals SourceSignalTarget {source, signal, target
     circulation chainSt =
       let UTxOState {_utxo = u, _deposited = d} = us chainSt
        in Val.coin (balance u) <+> d
-    (_, ledgerTr) = ledgerTraceFromBlock @era @ledger source signal
+    (_, ledgerTr) = ledgerTraceFromBlock @era @hcrypto @ledger source signal
 
 -- | If we are not at an Epoch Boundary, then (Utxo + Deposits + Fees)
 -- increases by sum of withdrawals for all transactions in a block
 potsSumIncreaseWdrlsPerBlock ::
-  (ChainProperty era, EraGen era) =>
-  SourceSignalTarget (CHAIN era) ->
+  (ChainProperty era hcrypto, EraGen era) =>
+  SourceSignalTarget (CHAIN era hcrypto) ->
   Property
 potsSumIncreaseWdrlsPerBlock SourceSignalTarget {source, signal, target} =
   counterexample
@@ -510,12 +511,12 @@ potsSumIncreaseWdrlsPerBlock SourceSignalTarget {source, signal, target} =
 -- | If we are not at an Epoch Boundary, then (Utxo + Deposits + Fees)
 -- increases by sum of withdrawals in a transaction
 potsSumIncreaseWdrlsPerTx ::
-  forall era ledger.
-  ( ChainProperty era,
+  forall era hcrypto ledger.
+  ( ChainProperty era hcrypto,
     EraGen era,
     TestingLedger era ledger
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (CHAIN era hcrypto) ->
   Property
 potsSumIncreaseWdrlsPerTx SourceSignalTarget {source = chainSt, signal = block} =
   counterexample "potsSumIncreaseWdrlsPerTx" $
@@ -523,7 +524,7 @@ potsSumIncreaseWdrlsPerTx SourceSignalTarget {source = chainSt, signal = block} 
       map sumIncreaseWdrls $
         sourceSignalTargets ledgerTr
   where
-    (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
+    (_, ledgerTr) = ledgerTraceFromBlock @era @hcrypto @ledger chainSt block
     sumIncreaseWdrls :: SourceSignalTarget ledger -> Property
     sumIncreaseWdrls
       SourceSignalTarget
@@ -537,12 +538,12 @@ potsSumIncreaseWdrlsPerTx SourceSignalTarget {source = chainSt, signal = block} 
 
 -- | (Utxo + Deposits + Fees) increases by the reward delta
 potsSumIncreaseByRewardsPerTx ::
-  forall era ledger.
-  ( ChainProperty era,
+  forall era hcrypto ledger.
+  ( ChainProperty era hcrypto,
     EraSegWits era,
     TestingLedger era ledger
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (CHAIN era hcrypto) ->
   Property
 potsSumIncreaseByRewardsPerTx SourceSignalTarget {source = chainSt, signal = block} =
   counterexample "potsSumIncreaseByRewardsPerTx" $
@@ -550,7 +551,7 @@ potsSumIncreaseByRewardsPerTx SourceSignalTarget {source = chainSt, signal = blo
       map sumIncreaseRewards $
         sourceSignalTargets ledgerTr
   where
-    (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
+    (_, ledgerTr) = ledgerTraceFromBlock @era @hcrypto @ledger chainSt block
     sumIncreaseRewards
       SourceSignalTarget
         { source =
@@ -567,12 +568,12 @@ potsSumIncreaseByRewardsPerTx SourceSignalTarget {source = chainSt, signal = blo
 
 -- | The Rewards pot decreases by the sum of withdrawals in a transaction
 potsRewardsDecreaseByWdrlsPerTx ::
-  forall era ledger.
-  ( ChainProperty era,
+  forall era hcrypto ledger.
+  ( ChainProperty era hcrypto,
     EraGen era,
     TestingLedger era ledger
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (CHAIN era hcrypto) ->
   Property
 potsRewardsDecreaseByWdrlsPerTx SourceSignalTarget {source = chainSt, signal = block} =
   counterexample "potsRewardsDecreaseByWdrlsPerTx" $
@@ -581,7 +582,7 @@ potsRewardsDecreaseByWdrlsPerTx SourceSignalTarget {source = chainSt, signal = b
         sourceSignalTargets ledgerTr
   where
     rewardsSum = fold . rewards . dpsDState
-    (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
+    (_, ledgerTr) = ledgerTraceFromBlock @era @hcrypto @ledger chainSt block
     rewardsDecreaseByWdrls
       SourceSignalTarget
         { source = LedgerState _ dpstate,
@@ -606,12 +607,12 @@ potsRewardsDecreaseByWdrlsPerTx SourceSignalTarget {source = chainSt, signal = b
 -- | Preserve the balance in a transaction, i.e., the sum of the consumed value
 -- equals the sum of the created value.
 preserveBalance ::
-  forall era ledger.
-  ( ChainProperty era,
+  forall era hcrypto ledger.
+  ( ChainProperty era hcrypto,
     EraGen era,
     TestingLedger era ledger
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (CHAIN era hcrypto) ->
   Property
 preserveBalance SourceSignalTarget {source = chainSt, signal = block} =
   counterexample "preserveBalance" $
@@ -619,7 +620,7 @@ preserveBalance SourceSignalTarget {source = chainSt, signal = block} =
       map createdIsConsumed $
         sourceSignalTargets ledgerTr
   where
-    (tickedChainSt, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
+    (tickedChainSt, ledgerTr) = ledgerTraceFromBlock @era @hcrypto @ledger chainSt block
     pp_ = (esPp . nesEs . chainNes) tickedChainSt
 
     createdIsConsumed SourceSignalTarget {source = ledgerSt, signal = tx, target = ledgerSt'} =
@@ -644,15 +645,15 @@ preserveBalance SourceSignalTarget {source = chainSt, signal = block} =
 
 -- | Preserve balance restricted to TxIns and TxOuts of the Tx
 preserveBalanceRestricted ::
-  forall era ledger.
-  ( ChainProperty era,
+  forall era hcrypto ledger.
+  ( ChainProperty era hcrypto,
     TestingLedger era ledger,
     ShelleyEraTxBody era,
     EraSegWits era,
     HasField "_keyDeposit" (PParams era) Coin,
     HasField "_poolDeposit" (PParams era) Coin
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (CHAIN era hcrypto) ->
   Property
 preserveBalanceRestricted SourceSignalTarget {source = chainSt, signal = block} =
   counterexample "preserveBalanceRestricted" $
@@ -660,7 +661,7 @@ preserveBalanceRestricted SourceSignalTarget {source = chainSt, signal = block} 
       map createdIsConsumed $
         sourceSignalTargets ledgerTr
   where
-    (tickedChainSt, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
+    (tickedChainSt, ledgerTr) = ledgerTraceFromBlock @era @hcrypto @ledger chainSt block
     pp_ = (esPp . nesEs . chainNes) tickedChainSt
 
     createdIsConsumed
@@ -683,12 +684,12 @@ preserveBalanceRestricted SourceSignalTarget {source = chainSt, signal = block} 
                   <> totalDeposits pp_ (`Map.notMember` pools) certs
 
 preserveOutputsTx ::
-  forall era ledger.
-  ( ChainProperty era,
+  forall era hcrypto ledger.
+  ( ChainProperty era hcrypto,
     EraGen era,
     TestingLedger era ledger
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (CHAIN era hcrypto) ->
   Property
 preserveOutputsTx SourceSignalTarget {source = chainSt, signal = block} =
   counterexample "preserveOutputsTx" $
@@ -696,7 +697,7 @@ preserveOutputsTx SourceSignalTarget {source = chainSt, signal = block} =
       map outputPreserved $
         sourceSignalTargets ledgerTr
   where
-    (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
+    (_, ledgerTr) = ledgerTraceFromBlock @era @hcrypto @ledger chainSt block
     outputPreserved
       SourceSignalTarget
         { target = LedgerState (UTxOState {_utxo = UTxO utxo}) _,
@@ -708,12 +709,12 @@ preserveOutputsTx SourceSignalTarget {source = chainSt, signal = block} =
                 .||. counterexample "TxOuts are not a subset of UTxO" (outs `Map.isSubmapOf` utxo)
 
 canRestrictUTxO ::
-  forall era ledger.
-  ( ChainProperty era,
+  forall era hcrypto ledger.
+  ( ChainProperty era hcrypto,
     EraSegWits era,
     TestingLedger era ledger
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (CHAIN era hcrypto) ->
   Property
 canRestrictUTxO SourceSignalTarget {source = chainSt, signal = block} =
   counterexample "canRestrictUTxO" $
@@ -723,9 +724,9 @@ canRestrictUTxO SourceSignalTarget {source = chainSt, signal = block} =
         (sourceSignalTargets ledgerTrFull)
         (sourceSignalTargets ledgerTrRestr)
   where
-    (_, ledgerTrFull) = ledgerTraceFromBlock @era @ledger chainSt block
+    (_, ledgerTrFull) = ledgerTraceFromBlock @era @hcrypto @ledger chainSt block
     (UTxO irrelevantUTxO, ledgerTrRestr) =
-      ledgerTraceFromBlockWithRestrictedUTxO @era @ledger chainSt block
+      ledgerTraceFromBlockWithRestrictedUTxO @era @hcrypto @ledger chainSt block
     outputPreserved
       SourceSignalTarget {target = LedgerState (UTxOState {_utxo = UTxO uFull}) _}
       SourceSignalTarget {target = LedgerState (UTxOState {_utxo = UTxO uRestr}) _} =
@@ -736,12 +737,12 @@ canRestrictUTxO SourceSignalTarget {source = chainSt, signal = block} =
 
 -- | Check that consumed inputs are eliminated from the resulting UTxO
 eliminateTxInputs ::
-  forall era ledger.
-  ( ChainProperty era,
+  forall era hcrypto ledger.
+  ( ChainProperty era hcrypto,
     EraGen era,
     TestingLedger era ledger
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (CHAIN era hcrypto) ->
   Property
 eliminateTxInputs SourceSignalTarget {source = chainSt, signal = block} =
   counterexample "eliminateTxInputs" $
@@ -749,7 +750,7 @@ eliminateTxInputs SourceSignalTarget {source = chainSt, signal = block} =
       map inputsEliminated $
         sourceSignalTargets ledgerTr
   where
-    (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
+    (_, ledgerTr) = ledgerTraceFromBlock @era @hcrypto @ledger chainSt block
     inputsEliminated
       SourceSignalTarget
         { target = LedgerState (UTxOState {_utxo = (UTxO u')}) _,
@@ -762,12 +763,12 @@ eliminateTxInputs SourceSignalTarget {source = chainSt, signal = block} =
 -- | Collision-Freeness of new TxIds - checks that all new outputs of a Tx are
 -- included in the new UTxO and that all TxIds are new.
 newEntriesAndUniqueTxIns ::
-  forall era ledger.
-  ( ChainProperty era,
+  forall era hcrypto ledger.
+  ( ChainProperty era hcrypto,
     EraGen era,
     TestingLedger era ledger
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (CHAIN era hcrypto) ->
   Property
 newEntriesAndUniqueTxIns SourceSignalTarget {source = chainSt, signal = block} =
   counterexample "newEntriesAndUniqueTxIns" $
@@ -775,7 +776,7 @@ newEntriesAndUniqueTxIns SourceSignalTarget {source = chainSt, signal = block} =
       map newEntryPresent $
         sourceSignalTargets ledgerTr
   where
-    (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
+    (_, ledgerTr) = ledgerTraceFromBlock @era @hcrypto @ledger chainSt block
     newEntryPresent
       SourceSignalTarget
         { source = LedgerState (UTxOState {_utxo = UTxO u}) _,
@@ -793,12 +794,12 @@ newEntriesAndUniqueTxIns SourceSignalTarget {source = chainSt, signal = block} =
 -- of possible signatures for a multi-sig script which is a sub-set of the
 -- signatures of the tansaction.
 requiredMSigSignaturesSubset ::
-  forall era ledger.
-  ( ChainProperty era,
+  forall era hcrypto ledger.
+  ( ChainProperty era hcrypto,
     EraGen era,
     TestingLedger era ledger
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (CHAIN era hcrypto) ->
   Property
 requiredMSigSignaturesSubset SourceSignalTarget {source = chainSt, signal = block} =
   counterexample "requiredMSigSignaturesSubset" $
@@ -806,7 +807,7 @@ requiredMSigSignaturesSubset SourceSignalTarget {source = chainSt, signal = bloc
       map signaturesSubset $
         sourceSignalTargets ledgerTr
   where
-    (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
+    (_, ledgerTr) = ledgerTraceFromBlock @era @hcrypto @ledger chainSt block
     signaturesSubset :: SourceSignalTarget ledger -> Property
     signaturesSubset SourceSignalTarget {signal = tx} =
       let khs = keyHashSet tx
@@ -821,9 +822,9 @@ requiredMSigSignaturesSubset SourceSignalTarget {source = chainSt, signal = bloc
 
 --- | Check for absence of double spend in a block
 noDoubleSpend ::
-  forall era.
-  (ChainProperty era, EraGen era) =>
-  SourceSignalTarget (CHAIN era) ->
+  forall era hcrypto.
+  (ChainProperty era hcrypto, EraGen era) =>
+  SourceSignalTarget (CHAIN era hcrypto) ->
   Property
 noDoubleSpend SourceSignalTarget {signal} =
   counterexample "noDoubleSpend" $
@@ -854,9 +855,9 @@ noDoubleSpend SourceSignalTarget {signal} =
         inps_j = tx_j ^. bodyTxL . inputsTxBodyL
 
 withdrawals ::
-  forall era.
+  forall era hcrypto.
   EraGen era =>
-  Block (BHeader (Crypto era)) era ->
+  Block (BHeader (Crypto era) hcrypto) era ->
   Coin
 withdrawals (UnserialisedBlock _ txseq) =
   foldl'
@@ -884,7 +885,7 @@ txFees ledgerTr =
 
 -- | Check that deposits are always non-negative
 nonNegativeDeposits ::
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (CHAIN era hcrypto) ->
   Property
 nonNegativeDeposits SourceSignalTarget {source = chainSt} =
   let es = (nesEs . chainNes) chainSt
@@ -893,7 +894,7 @@ nonNegativeDeposits SourceSignalTarget {source = chainSt} =
 
 -- | Checks that the fees are non-decreasing when not at an epoch boundary
 feesNonDecreasing ::
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (CHAIN era hcrypto) ->
   Property
 feesNonDecreasing SourceSignalTarget {source, target} =
   counterexample ("feesNonDecreasing: " <> show (fees_ source) <> " <= " <> show (fees_ target)) $
@@ -911,18 +912,18 @@ feesNonDecreasing SourceSignalTarget {source, target} =
 -- | Various properties of the POOL STS Rule, tested on longer traces
 -- (double the default length)
 poolProperties ::
-  forall era.
+  forall era hcrypto.
   ( EraGen era,
     Default (State (EraRule "PPUP" era)),
-    ChainProperty era,
-    QC.HasTrace (CHAIN era) (GenEnv era)
+    ChainProperty era hcrypto,
+    QC.HasTrace (CHAIN era hcrypto) (GenEnv era hcrypto)
   ) =>
   Property
 poolProperties =
   forAllChainTrace @era traceLen $ \tr -> do
     let ssts = sourceSignalTargets tr
     conjoin . concat $
-      [ map poolRetirement ssts,
+      [ map (poolRetirement @era @hcrypto) ssts,
         map poolRegistration ssts,
         map poolStateIsInternallyConsistent ssts
       ]
@@ -930,13 +931,14 @@ poolProperties =
 -- | Check that a `RetirePool` certificate properly marks a stake pool for
 -- retirement.
 poolRetirement ::
-  ( ChainProperty era,
+  forall era hcrypto.
+  ( ChainProperty era hcrypto,
     EraSegWits era,
     ShelleyEraTxBody era,
     HasField "_eMax" (PParams era) EpochNo,
     HasField "_minPoolCost" (PParams era) Coin
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (CHAIN era hcrypto) ->
   Property
 poolRetirement SourceSignalTarget {source = chainSt, signal = block} =
   conjoin $
@@ -950,13 +952,13 @@ poolRetirement SourceSignalTarget {source = chainSt, signal = block} =
 -- | Check that a newly registered pool key is registered and not
 -- in the retiring map.
 poolRegistration ::
-  ( ChainProperty era,
+  ( ChainProperty era hcrypto,
     EraSegWits era,
     ShelleyEraTxBody era,
     HasField "_eMax" (PParams era) EpochNo,
     HasField "_minPoolCost" (PParams era) Coin
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (CHAIN era hcrypto) ->
   Property
 poolRegistration (SourceSignalTarget {source = chainSt, signal = block}) =
   conjoin $
@@ -967,13 +969,13 @@ poolRegistration (SourceSignalTarget {source = chainSt, signal = block}) =
 -- | Assert that PState maps are in sync with each other after each `Signal
 -- POOL` transition.
 poolStateIsInternallyConsistent ::
-  ( ChainProperty era,
+  ( ChainProperty era hcrypto,
     EraSegWits era,
     ShelleyEraTxBody era,
     HasField "_eMax" (PParams era) EpochNo,
     HasField "_minPoolCost" (PParams era) Coin
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (CHAIN era hcrypto) ->
   Property
 poolStateIsInternallyConsistent (SourceSignalTarget {source = chainSt, signal = block}) =
   conjoin $
@@ -988,11 +990,11 @@ poolStateIsInternallyConsistent (SourceSignalTarget {source = chainSt, signal = 
 -- | Various properties of the POOL STS Rule, tested on longer traces
 -- (double the default length)
 delegProperties ::
-  forall era.
+  forall era hcrypto.
   ( EraGen era,
     Default (State (EraRule "PPUP" era)),
-    QC.HasTrace (CHAIN era) (GenEnv era),
-    ChainProperty era
+    QC.HasTrace (CHAIN era hcrypto) (GenEnv era hcrypto),
+    ChainProperty era hcrypto
   ) =>
   Property
 delegProperties =
@@ -1009,7 +1011,7 @@ delegProperties =
           TestDeleg.rewardsSumInvariant delegSst,
           TestDeleg.checkInstantaneousRewards denv delegSst
         ]
-    chainProp :: SourceSignalTarget (CHAIN era) -> Property
+    chainProp :: SourceSignalTarget (CHAIN era hcrypto) -> Property
     chainProp (SourceSignalTarget {source = chainSt, signal = block}) =
       let delegInfo = delegTraceFromBlock chainSt block
           delegEnv = fst delegInfo
@@ -1023,13 +1025,13 @@ delegProperties =
 
 -- | Reconstruct a LEDGER trace from the transactions in a Block and ChainState
 ledgerTraceFromBlock ::
-  forall era ledger.
-  ( ChainProperty era,
+  forall era hcrypto ledger.
+  ( ChainProperty era hcrypto,
     EraSegWits era,
     TestingLedger era ledger
   ) =>
   ChainState era ->
-  Block (BHeader (Crypto era)) era ->
+  Block (BHeader (Crypto era) hcrypto) era ->
   (ChainState era, Trace ledger)
 ledgerTraceFromBlock chainSt block =
   ( tickedChainSt,
@@ -1043,13 +1045,13 @@ ledgerTraceFromBlock chainSt block =
 -- it restricts the UTxO state to only those needed by the block.
 -- It also returns the unused UTxO for comparison later.
 ledgerTraceFromBlockWithRestrictedUTxO ::
-  forall era ledger.
-  ( ChainProperty era,
+  forall era hcrypto ledger.
+  ( ChainProperty era hcrypto,
     EraSegWits era,
     TestingLedger era ledger
   ) =>
   ChainState era ->
-  Block (BHeader (Crypto era)) era ->
+  Block (BHeader (Crypto era) hcrypto) era ->
   (UTxO era, Trace ledger)
 ledgerTraceFromBlockWithRestrictedUTxO chainSt block =
   ( UTxO irrelevantUTxO,
@@ -1066,15 +1068,15 @@ ledgerTraceFromBlockWithRestrictedUTxO chainSt block =
 
 -- | Reconstruct a POOL trace from the transactions in a Block and ChainState
 poolTraceFromBlock ::
-  forall era.
-  ( ChainProperty era,
+  forall era hcrypto.
+  ( ChainProperty era hcrypto,
     ShelleyEraTxBody era,
     EraSegWits era,
     HasField "_eMax" (PParams era) EpochNo,
     HasField "_minPoolCost" (PParams era) Coin
   ) =>
   ChainState era ->
-  Block (BHeader (Crypto era)) era ->
+  Block (BHeader (Crypto era) hcrypto) era ->
   (ChainState era, Trace (ShelleyPOOL era))
 poolTraceFromBlock chainSt block =
   ( tickedChainSt,
@@ -1096,13 +1098,13 @@ poolTraceFromBlock chainSt block =
 
 -- | Reconstruct a DELEG trace from all the transaction certificates in a Block
 delegTraceFromBlock ::
-  forall era.
-  ( ChainProperty era,
+  forall era hcrypto.
+  ( ChainProperty era hcrypto,
     ShelleyEraTxBody era,
     EraSegWits era
   ) =>
   ChainState era ->
-  Block (BHeader (Crypto era)) era ->
+  Block (BHeader (Crypto era) hcrypto) era ->
   (DelegEnv era, Trace (ShelleyDELEG era))
 delegTraceFromBlock chainSt block =
   ( delegEnv,
@@ -1131,13 +1133,13 @@ delegTraceFromBlock chainSt block =
 -- (in the same way that the CHAIN rule TICKs the slot before processing
 -- transactions with the LEDGERS rule)
 ledgerTraceBase ::
-  forall era.
+  forall era hcrypto.
   ( EraSegWits era,
-    GetLedgerView era,
+    GetLedgerView era hcrypto,
     ApplyBlock era
   ) =>
   ChainState era ->
-  Block (BHeader (Crypto era)) era ->
+  Block (BHeader (Crypto era) hcrypto) era ->
   (ChainState era, LedgerEnv era, LedgerState era, [Tx era])
 ledgerTraceBase chainSt block =
   ( tickedChainSt,
@@ -1148,7 +1150,8 @@ ledgerTraceBase chainSt block =
   where
     (UnserialisedBlock (BHeader bhb _) txSeq) = block
     slot = bheaderSlotNo bhb
-    tickedChainSt = tickChainState slot chainSt
+    lv  = futureLedgerViewAt @era @hcrypto chainSt slot
+    tickedChainSt = tickChainState slot lv chainSt
     nes = (nesEs . chainNes) tickedChainSt
     pp_ = esPp nes
     -- Oldest to Newest first
@@ -1166,28 +1169,29 @@ ledgerTraceBase chainSt block =
 -- a pool that was correctly retired, but is again registered by a certificate
 -- in the block following the transition.
 chainSstWithTick ::
-  forall era.
-  ChainProperty era =>
-  Trace (CHAIN era) ->
-  [SourceSignalTarget (CHAIN era)]
+  forall era hcrypto.
+  ChainProperty era hcrypto =>
+  Trace (CHAIN era hcrypto) ->
+  [SourceSignalTarget (CHAIN era hcrypto)]
 chainSstWithTick ledgerTr =
   map applyTick (sourceSignalTargets ledgerTr)
   where
     applyTick sst@SourceSignalTarget {source = chainSt, signal = block} =
       let bh = bheader block
           slot = (bheaderSlotNo . bhbody) bh
-       in sst {target = tickChainState @era slot chainSt}
+          lv = futureLedgerViewAt chainSt slot
+       in sst {target = tickChainState @era @hcrypto slot lv chainSt}
 
 ----------------------------------------------------------------------
 -- Properties for PoolReap (using the CHAIN Trace) --
 ----------------------------------------------------------------------
 
 removedAfterPoolreap ::
-  forall era.
-  ( ChainProperty era,
+  forall era hcrypto.
+  ( ChainProperty era hcrypto,
     Default (State (EraRule "PPUP" era)),
     EraGen era,
-    QC.HasTrace (CHAIN era) (GenEnv era)
+    QC.HasTrace (CHAIN era hcrypto) (GenEnv era hcrypto)
   ) =>
   Property
 removedAfterPoolreap =
@@ -1198,7 +1202,7 @@ removedAfterPoolreap =
   where
     poolState = dpsPState . lsDPState . esLState . nesEs . chainNes
 
-    removedAfterPoolreap_ :: SourceSignalTarget (CHAIN era) -> Property
+    removedAfterPoolreap_ :: SourceSignalTarget (CHAIN era hcrypto) -> Property
     removedAfterPoolreap_ (SourceSignalTarget {source, target, signal = (UnserialisedBlock bh _)}) =
       let e = (epochFromSlotNo . bheaderSlotNo . bhbody) bh
        in TestPoolreap.removedAfterPoolreap (poolState source) (poolState target) e
@@ -1208,29 +1212,30 @@ removedAfterPoolreap =
 ---------------------------
 
 forAllChainTrace ::
-  forall era prop.
+  forall era hcrypto prop.
   ( Testable prop,
+    CC.HeaderCrypto hcrypto,
     Default (State (EraRule "PPUP" era)),
     EraGen era,
-    QC.HasTrace (CHAIN era) (GenEnv era)
+    QC.HasTrace (CHAIN era hcrypto) (GenEnv era hcrypto)
   ) =>
   Word64 -> -- trace length
-  (Trace (CHAIN era) -> prop) ->
+  (Trace (CHAIN era hcrypto) -> prop) ->
   Property
 forAllChainTrace n prop =
   withMaxSuccess (fromIntegral numberOfTests) . property $
     forAllTraceFromInitState
       testGlobals
       n
-      (Preset.genEnv p)
-      (Just $ mkGenesisChainState (Preset.genEnv p))
+      (Preset.genEnv @era @hcrypto p)
+      (Just $ mkGenesisChainState @era @hcrypto (Preset.genEnv p))
       prop
   where
     p :: Proxy era
     p = Proxy
 
 sameEpoch ::
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (CHAIN era hcrypto) ->
   Bool
 sameEpoch SourceSignalTarget {source, target} =
   epoch source == epoch target
@@ -1239,15 +1244,16 @@ sameEpoch SourceSignalTarget {source, target} =
 
 -- | Test a property on the first 'subtracecount' sub-Traces that end on an EpochBoundary
 forEachEpochTrace ::
-  forall era prop.
+  forall era hcrypto prop.
   ( EraGen era,
+    CC.HeaderCrypto hcrypto,
     Testable prop,
-    QC.HasTrace (CHAIN era) (GenEnv era),
+    QC.HasTrace (CHAIN era hcrypto) (GenEnv era hcrypto),
     Default (State (EraRule "PPUP" era))
   ) =>
   Int ->
   Word64 ->
-  (Trace (CHAIN era) -> prop) ->
+  (Trace (CHAIN era hcrypto) -> prop) ->
   Property
 forEachEpochTrace subtracecount tracelen f = forAllChainTrace tracelen action
   where
@@ -1263,16 +1269,17 @@ forEachEpochTrace subtracecount tracelen f = forAllChainTrace tracelen action
 -- Properties for Incremental Stake Distribution  Calculation
 
 atEpoch ::
-  forall era prop.
+  forall era hcrypto prop.
   ( EraGen era,
+    CC.HeaderCrypto hcrypto,
     Testable prop,
-    QC.HasTrace (CHAIN era) (GenEnv era),
+    QC.HasTrace (CHAIN era hcrypto) (GenEnv era hcrypto),
     Default (State (EraRule "PPUP" era))
   ) =>
   (LedgerState era -> LedgerState era -> prop) ->
   Property
 atEpoch f =
-  forAllChainTrace traceLen $ \tr ->
+  forAllChainTrace @era @hcrypto traceLen $ \tr ->
     conjoin $
       map g $
         filter (not . sameEpoch) (sourceSignalTargets tr)
@@ -1299,14 +1306,15 @@ testIncrementalStake _ (LedgerState (UTxOState utxo _ _ _ incStake) (DPState dst
         (stake === istake)
 
 incrementalStakeProp ::
-  forall era.
+  forall era hcrypto.
   ( EraGen era,
-    QC.HasTrace (CHAIN era) (GenEnv era),
+    CC.HeaderCrypto hcrypto,
+    QC.HasTrace (CHAIN era hcrypto) (GenEnv era hcrypto),
     Default (State (EraRule "PPUP" era))
   ) =>
   Proxy era ->
   Property
-incrementalStakeProp Proxy = atEpoch @era (testIncrementalStake @era)
+incrementalStakeProp Proxy = atEpoch @era @hcrypto (testIncrementalStake @era)
 
 tersediffincremental :: String -> Stake crypto -> Stake crypto -> String
 tersediffincremental message (Stake a) (Stake c) =

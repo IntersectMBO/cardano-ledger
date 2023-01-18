@@ -25,18 +25,20 @@ import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation (..))
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Crypto (Crypto, KES)
+import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Protocol.HeaderCrypto (HeaderCrypto, KES)
 import Cardano.Ledger.Keys
   ( KeyHash,
     KeyRole (..),
     SignedDSIGN,
-    VerKeyKES,
+    -- VerKeyKES,
     coerceKeyRole,
     decodeSignedDSIGN,
     decodeVerKeyKES,
     encodeSignedDSIGN,
     encodeVerKeyKES,
   )
+import Cardano.Protocol.HeaderKeys (VerKeyKES)
 import Cardano.Ledger.Serialization
   ( CBORGroup (..),
     FromCBORGroup (..),
@@ -80,28 +82,28 @@ newtype KESPeriod = KESPeriod {unKESPeriod :: Word}
   deriving (Eq, Generic, Ord, NoThunks, FromCBOR, ToCBOR)
   deriving (Show) via Quiet KESPeriod
 
-data OCert crypto = OCert
+data OCert crypto hcrypto = OCert
   { -- | The operational hot key
-    ocertVkHot :: !(VerKeyKES crypto),
+    ocertVkHot :: !(VerKeyKES hcrypto),
     -- | counter
     ocertN :: !Word64,
     -- | Start of key evolving signature period
     ocertKESPeriod :: !KESPeriod,
     -- | Signature of block operational certificate content
-    ocertSigma :: !(SignedDSIGN crypto (OCertSignable crypto))
+    ocertSigma :: !(SignedDSIGN crypto (OCertSignable hcrypto))
   }
   deriving (Generic)
-  deriving (ToCBOR) via (CBORGroup (OCert crypto))
+  deriving (ToCBOR) via (CBORGroup (OCert crypto hcrypto))
 
-deriving instance Crypto crypto => Eq (OCert crypto)
+deriving instance (Crypto crypto, HeaderCrypto hcrypto) => Eq (OCert crypto hcrypto)
 
-deriving instance Crypto crypto => Show (OCert crypto)
+deriving instance (Crypto crypto, HeaderCrypto hcrypto) => Show (OCert crypto hcrypto)
 
-instance Crypto crypto => NoThunks (OCert crypto)
+instance (Crypto crypto, HeaderCrypto hcrypto) => NoThunks (OCert crypto hcrypto)
 
 instance
-  (Crypto crypto) =>
-  ToCBORGroup (OCert crypto)
+  (Crypto crypto, HeaderCrypto hcrypto) =>
+  ToCBORGroup (OCert crypto hcrypto)
   where
   toCBORGroup ocert =
     encodeVerKeyKES (ocertVkHot ocert)
@@ -121,8 +123,8 @@ instance
   listLenBound _ = 4
 
 instance
-  (Crypto crypto) =>
-  FromCBORGroup (OCert crypto)
+  (Crypto crypto, HeaderCrypto hcrypto) =>
+  FromCBORGroup (OCert crypto hcrypto)
   where
   fromCBORGroup =
     OCert
@@ -143,14 +145,14 @@ data OCertSignable crypto
   = OCertSignable !(VerKeyKES crypto) !Word64 !KESPeriod
 
 instance
-  forall crypto.
-  Crypto crypto =>
-  SignableRepresentation (OCertSignable crypto)
+  forall hcrypto.
+  HeaderCrypto hcrypto =>
+  SignableRepresentation (OCertSignable hcrypto)
   where
   getSignableRepresentation (OCertSignable vk counter period) =
     runByteBuilder
       ( fromIntegral $
-          KES.sizeVerKeyKES (Proxy @(KES crypto))
+          KES.sizeVerKeyKES (Proxy @(KES hcrypto))
             + 8
             + 8
       )
@@ -159,6 +161,6 @@ instance
         <> BS.word64BE (fromIntegral $ unKESPeriod period)
 
 -- | Extract the signable part of an operational certificate (for verification)
-ocertToSignable :: OCert crypto -> OCertSignable crypto
+ocertToSignable :: OCert crypto hcrypto -> OCertSignable hcrypto
 ocertToSignable OCert {ocertVkHot, ocertN, ocertKESPeriod} =
   OCertSignable ocertVkHot ocertN ocertKESPeriod

@@ -83,6 +83,7 @@ import Cardano.Ledger.Shelley.Rules.Bbody
 import Cardano.Ledger.Shelley.Rules.Tick (ShelleyTICK, ShelleyTickEvent, ShelleyTickPredFailure)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.Slot (EpochNo)
+import Cardano.Protocol.HeaderCrypto
 import Cardano.Protocol.TPraos.BHeader
   ( BHeader,
     LastAppliedBlock (..),
@@ -127,7 +128,7 @@ import Numeric.Natural (Natural)
 
 type instance Core.EraRule "TICKN" (ShelleyEra c) = TICKN
 
-data CHAIN era
+data CHAIN era hcrypto
 
 data ChainState era = ChainState
   { chainNes :: NewEpochState era,
@@ -146,44 +147,47 @@ deriving stock instance Eq (NewEpochState era) => Eq (ChainState era)
 
 instance NFData (NewEpochState era) => NFData (ChainState era)
 
-data TestChainPredicateFailure era
+data TestChainPredicateFailure era hcrypto
   = RealChainPredicateFailure !ChainPredicateFailure
   | BbodyFailure !(PredicateFailure (Core.EraRule "BBODY" era)) -- Subtransition Failures
   | TickFailure !(PredicateFailure (Core.EraRule "TICK" era)) -- Subtransition Failures
   | TicknFailure !(PredicateFailure (Core.EraRule "TICKN" era)) -- Subtransition Failures
-  | PrtclFailure !(PredicateFailure (PRTCL (Crypto era))) -- Subtransition Failures
+  | PrtclFailure !(PredicateFailure (PRTCL (Crypto era) hcrypto)) -- Subtransition Failures
   | PrtclSeqFailure !(PrtlSeqFailure (Crypto era)) -- Subtransition Failures
   deriving (Generic)
 
-data ChainEvent era
+data ChainEvent era hcrypto
   = BbodyEvent !(Event (Core.EraRule "BBODY" era))
   | TickEvent !(Event (Core.EraRule "TICK" era))
   | TicknEvent !(Event (Core.EraRule "TICKN" era))
-  | PrtclEvent !(Event (PRTCL (Crypto era)))
+  | PrtclEvent !(Event (PRTCL (Crypto era) hcrypto))
 
 deriving stock instance
   ( Era era,
+    HeaderCrypto hcrypto,
     Show (PredicateFailure (Core.EraRule "BBODY" era)),
     Show (PredicateFailure (Core.EraRule "TICK" era)),
     Show (PredicateFailure (Core.EraRule "TICKN" era))
   ) =>
-  Show (TestChainPredicateFailure era)
+  Show (TestChainPredicateFailure era hcrypto)
 
 deriving stock instance
   ( Era era,
+    HeaderCrypto hcrypto,
     Eq (PredicateFailure (Core.EraRule "BBODY" era)),
     Eq (PredicateFailure (Core.EraRule "TICK" era)),
     Eq (PredicateFailure (Core.EraRule "TICKN" era))
   ) =>
-  Eq (TestChainPredicateFailure era)
+  Eq (TestChainPredicateFailure era hcrypto)
 
 instance
   ( Era era,
+    HeaderCrypto hcrypto,
     NoThunks (PredicateFailure (Core.EraRule "BBODY" era)),
     NoThunks (PredicateFailure (Core.EraRule "TICK" era)),
     NoThunks (PredicateFailure (Core.EraRule "TICKN" era))
   ) =>
-  NoThunks (TestChainPredicateFailure era)
+  NoThunks (TestChainPredicateFailure era hcrypto)
 
 -- | Creates a valid initial chain state
 initialShelleyState ::
@@ -241,19 +245,20 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
 
 instance
   ( Era era,
-    Embed (Core.EraRule "BBODY" era) (CHAIN era),
+    HeaderCrypto hcrypto,
+    Embed (Core.EraRule "BBODY" era) (CHAIN era hcrypto),
     Environment (Core.EraRule "BBODY" era) ~ BbodyEnv era,
     State (Core.EraRule "BBODY" era) ~ ShelleyBbodyState era,
     Signal (Core.EraRule "BBODY" era) ~ Block (BHeaderView (Crypto era)) era,
-    Embed (Core.EraRule "TICKN" era) (CHAIN era),
+    Embed (Core.EraRule "TICKN" era) (CHAIN era hcrypto),
     Environment (Core.EraRule "TICKN" era) ~ TicknEnv,
     State (Core.EraRule "TICKN" era) ~ TicknState,
     Signal (Core.EraRule "TICKN" era) ~ Bool,
-    Embed (Core.EraRule "TICK" era) (CHAIN era),
+    Embed (Core.EraRule "TICK" era) (CHAIN era hcrypto),
     Environment (Core.EraRule "TICK" era) ~ (),
     State (Core.EraRule "TICK" era) ~ NewEpochState era,
     Signal (Core.EraRule "TICK" era) ~ SlotNo,
-    Embed (PRTCL (Crypto era)) (CHAIN era),
+    Embed (PRTCL (Crypto era) hcrypto) (CHAIN era hcrypto),
     HasField "_maxBHSize" (Core.PParams era) Natural,
     HasField "_maxBBSize" (Core.PParams era) Natural,
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
@@ -261,42 +266,43 @@ instance
     HasField "_d" (Core.PParams era) UnitInterval,
     ToCBORGroup (Era.TxSeq era)
   ) =>
-  STS (CHAIN era)
+  STS (CHAIN era hcrypto)
   where
   type
-    State (CHAIN era) =
+    State (CHAIN era hcrypto) =
       ChainState era
 
   type
-    Signal (CHAIN era) =
-      Block (BHeader (Crypto era)) era
+    Signal (CHAIN era hcrypto) =
+      Block (BHeader (Crypto era) hcrypto) era
 
-  type Environment (CHAIN era) = ()
-  type BaseM (CHAIN era) = ShelleyBase
+  type Environment (CHAIN era hcrypto) = ()
+  type BaseM (CHAIN era hcrypto) = ShelleyBase
 
-  type PredicateFailure (CHAIN era) = TestChainPredicateFailure era
-  type Event (CHAIN era) = ChainEvent era
+  type PredicateFailure (CHAIN era hcrypto) = TestChainPredicateFailure era hcrypto
+  type Event (CHAIN era hcrypto) = ChainEvent era hcrypto
 
   initialRules = []
   transitionRules = [chainTransition]
 
 chainTransition ::
-  forall era.
+  forall era hcrypto.
   ( Era era,
-    STS (CHAIN era),
-    Embed (Core.EraRule "BBODY" era) (CHAIN era),
+    HeaderCrypto hcrypto,
+    STS (CHAIN era hcrypto),
+    Embed (Core.EraRule "BBODY" era) (CHAIN era hcrypto),
     Environment (Core.EraRule "BBODY" era) ~ BbodyEnv era,
     State (Core.EraRule "BBODY" era) ~ ShelleyBbodyState era,
     Signal (Core.EraRule "BBODY" era) ~ Block (BHeaderView (Crypto era)) era,
-    Embed (Core.EraRule "TICKN" era) (CHAIN era),
+    Embed (Core.EraRule "TICKN" era) (CHAIN era hcrypto),
     Environment (Core.EraRule "TICKN" era) ~ TicknEnv,
     State (Core.EraRule "TICKN" era) ~ TicknState,
     Signal (Core.EraRule "TICKN" era) ~ Bool,
-    Embed (Core.EraRule "TICK" era) (CHAIN era),
+    Embed (Core.EraRule "TICK" era) (CHAIN era hcrypto),
     Environment (Core.EraRule "TICK" era) ~ (),
     State (Core.EraRule "TICK" era) ~ NewEpochState era,
     Signal (Core.EraRule "TICK" era) ~ SlotNo,
-    Embed (PRTCL (Crypto era)) (CHAIN era),
+    Embed (PRTCL (Crypto era) hcrypto) (CHAIN era hcrypto),
     HasField "_maxBHSize" (Core.PParams era) Natural,
     HasField "_maxBBSize" (Core.PParams era) Natural,
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
@@ -304,7 +310,7 @@ chainTransition ::
     HasField "_d" (Core.PParams era) UnitInterval,
     ToCBORGroup (Era.TxSeq era)
   ) =>
-  TransitionRule (CHAIN era)
+  TransitionRule (CHAIN era hcrypto)
 chainTransition =
   judgmentContext
     >>= \( TRC
@@ -353,7 +359,7 @@ chainTransition =
               )
 
         PrtclState cs' etaV' etaC' <-
-          trans @(PRTCL (Crypto era)) $
+          trans @(PRTCL (Crypto era) hcrypto) $
             TRC
               ( PrtclEnv (getField @"_d" pp') _pd genDelegs eta0',
                 PrtclState cs etaV etaC,
@@ -378,35 +384,35 @@ chainTransition =
 
 instance
   ( Era era,
-    Era era,
+    HeaderCrypto hcrypto,
     STS (ShelleyBBODY era),
     PredicateFailure (Core.EraRule "BBODY" era) ~ ShelleyBbodyPredFailure era,
     Event (Core.EraRule "BBODY" era) ~ Event (ShelleyBBODY era)
   ) =>
-  Embed (ShelleyBBODY era) (CHAIN era)
+  Embed (ShelleyBBODY era) (CHAIN era hcrypto)
   where
   wrapFailed = BbodyFailure
   wrapEvent = BbodyEvent
 
 instance
   ( Era era,
-    Era era,
+    HeaderCrypto hcrypto,
     PredicateFailure (Core.EraRule "TICKN" era) ~ TicknPredicateFailure,
     Event (Core.EraRule "TICKN" era) ~ Void
   ) =>
-  Embed TICKN (CHAIN era)
+  Embed TICKN (CHAIN era hcrypto)
   where
   wrapFailed = TicknFailure
   wrapEvent = TicknEvent
 
 instance
   ( Era era,
-    Era era,
+    HeaderCrypto hcrypto,
     STS (ShelleyTICK era),
     PredicateFailure (Core.EraRule "TICK" era) ~ ShelleyTickPredFailure era,
     Event (Core.EraRule "TICK" era) ~ ShelleyTickEvent era
   ) =>
-  Embed (ShelleyTICK era) (CHAIN era)
+  Embed (ShelleyTICK era) (CHAIN era hcrypto)
   where
   wrapFailed = TickFailure
   wrapEvent = TickEvent
@@ -414,10 +420,10 @@ instance
 instance
   ( Era era,
     c ~ Crypto era,
-    Era era,
-    STS (PRTCL c)
+    HeaderCrypto hcrypto,
+    STS (PRTCL c hcrypto)
   ) =>
-  Embed (PRTCL c) (CHAIN era)
+  Embed (PRTCL c hcrypto) (CHAIN era hcrypto)
   where
   wrapFailed = PrtclFailure
   wrapEvent = PrtclEvent

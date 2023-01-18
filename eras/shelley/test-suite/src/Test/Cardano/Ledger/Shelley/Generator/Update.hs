@@ -296,8 +296,8 @@ genUpdate ::
   EraGen era =>
   Constants ->
   SlotNo ->
-  [(GenesisKeyPair (Crypto era), AllIssuerKeys (Crypto era) 'GenesisDelegate)] ->
-  Map (KeyHash 'GenesisDelegate (Crypto era)) (AllIssuerKeys (Crypto era) 'GenesisDelegate) ->
+  [(GenesisKeyPair (Crypto era), AllIssuerKeys (Crypto era) hcrypto 'GenesisDelegate)] ->
+  Map (KeyHash 'GenesisDelegate (Crypto era)) (AllIssuerKeys (Crypto era) hcrypto 'GenesisDelegate) ->
   PParams era ->
   (UTxOState era, DPState (Crypto era)) ->
   Gen (Maybe (Update era), [KeyPair 'Witness (Crypto era)])

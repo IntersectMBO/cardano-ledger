@@ -51,7 +51,8 @@ import Cardano.Ledger.Keys
   ( Hash,
     KeyHash (..),
     KeyRole (..),
-    VerKeyVRF,
+    GenesisVRF,
+    -- VerKeyVRF, -- TODO: Removed from Keys
   )
 import Cardano.Ledger.Serialization
   ( FromCBORGroup (..),
@@ -100,7 +101,7 @@ data GenesisDelegCert crypto
   = GenesisDelegCert
       !(KeyHash 'Genesis crypto)
       !(KeyHash 'GenesisDelegate crypto)
-      !(Hash crypto (VerKeyVRF crypto))
+      !(Hash crypto GenesisVRF)
   deriving (Show, Generic, Eq, NFData)
 
 data MIRPot = ReservesMIR | TreasuryMIR

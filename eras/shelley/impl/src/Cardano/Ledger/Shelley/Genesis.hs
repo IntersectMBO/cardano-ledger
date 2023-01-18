@@ -34,7 +34,7 @@ import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (HASH, KES)
+import Cardano.Ledger.Crypto (HASH)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys
 import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
@@ -413,7 +413,7 @@ validateGenesis
     where
       errors =
         [ checkEpochLength,
-          checkKesEvolutions,
+          -- checkKesEvolutions,
           checkQuorumSize
         ]
       checkEpochLength =
@@ -431,15 +431,18 @@ validateGenesis
                     activeSlotsCoeff
                     minLength
               else Nothing
-      checkKesEvolutions =
-        if sgMaxKESEvolutions
-          <= fromIntegral (totalPeriodsKES (Proxy @(KES (Crypto era))))
-          then Nothing
-          else
-            Just $
-              MaxKESEvolutionsUnsupported
-                sgMaxKESEvolutions
-                (totalPeriodsKES (Proxy @(KES (Crypto era))))
+      -- TODO: This is the only place where KES is required and that too for a
+      -- situation where pure shelley environment is required. Discuss this
+      -- further where it can be moved to
+      -- checkKesEvolutions =
+      --   if sgMaxKESEvolutions
+      --     <= fromIntegral (totalPeriodsKES (Proxy @(KES (Crypto era))))
+      --     then Nothing
+      --     else
+      --       Just $
+      --         MaxKESEvolutionsUnsupported
+      --           sgMaxKESEvolutions
+      --           (totalPeriodsKES (Proxy @(KES (Crypto era))))
       checkQuorumSize =
         let numGenesisNodes = fromIntegral $ length sgGenDelegs
             maxTooSmal = numGenesisNodes `div` 2

@@ -20,6 +20,7 @@ where
 
 import Cardano.Ledger.BaseTypes (Globals (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import qualified Cardano.Protocol.HeaderCrypto as CC (HeaderCrypto)
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys
   ( GenDelegPair (..),
@@ -39,6 +40,7 @@ import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import Cardano.Protocol.TPraos.Rules.Overlay
   ( OBftSlot (..),
     lookupInOverlaySchedule,
+    toGenesisVRF
   )
 import qualified Data.List
 import Data.Map.Strict (Map)
@@ -55,9 +57,9 @@ numCoreNodes :: Word64
 numCoreNodes = 7
 
 mkAllCoreNodeKeys ::
-  (CC.Crypto crypto) =>
+  (CC.Crypto crypto, CC.HeaderCrypto hcrypto) =>
   Word64 ->
-  AllIssuerKeys crypto r
+  AllIssuerKeys crypto hcrypto r
 mkAllCoreNodeKeys w =
   AllIssuerKeys
     (KeyPair vkCold skCold)
@@ -68,10 +70,10 @@ mkAllCoreNodeKeys w =
     (skCold, vkCold) = mkKeyPair (RawSeed w 0 0 0 1)
 
 coreNodes ::
-  forall crypto.
-  CC.Crypto crypto =>
+  forall crypto hcrypto.
+  (CC.Crypto crypto, CC.HeaderCrypto hcrypto) =>
   [ ( (SignKeyDSIGN crypto, VKey 'Genesis crypto),
-      AllIssuerKeys crypto 'GenesisDelegate
+      AllIssuerKeys crypto hcrypto 'GenesisDelegate
     )
   ]
 coreNodes =
@@ -82,24 +84,30 @@ coreNodes =
 -- === Signing (Secret) Keys
 -- Retrieve the signing key for a core node by providing
 -- a number in the range @[0, ... ('numCoreNodes'-1)]@.
-coreNodeSK :: forall crypto. CC.Crypto crypto => Int -> SignKeyDSIGN crypto
-coreNodeSK = fst . fst . (coreNodes @crypto !!)
+coreNodeSK ::
+  forall crypto hcrypto.
+  (CC.Crypto crypto, CC.HeaderCrypto hcrypto) =>
+  Int -> SignKeyDSIGN crypto
+coreNodeSK = fst . fst . (coreNodes @crypto @hcrypto !!)
 
 -- | === Verification (Public) Keys
 -- Retrieve the verification key for a core node by providing
 -- a number in the range @[0, ... ('numCoreNodes'-1)]@.
-coreNodeVK :: forall crypto. CC.Crypto crypto => Int -> VKey 'Genesis crypto
-coreNodeVK = snd . fst . (coreNodes @crypto !!)
+coreNodeVK ::
+  forall crypto hcrypto.
+  (CC.Crypto crypto, CC.HeaderCrypto hcrypto) =>
+  Int -> VKey 'Genesis crypto
+coreNodeVK = snd . fst . (coreNodes @crypto @hcrypto !!)
 
 -- | === Block Issuer Keys
 -- Retrieve the block issuer keys (cold, VRF, and hot KES keys)
 -- for a core node by providing
 -- a number in the range @[0, ... ('numCoreNodes'-1)]@.
 coreNodeIssuerKeys ::
-  forall crypto.
-  CC.Crypto crypto =>
+  forall crypto hcrypto.
+  (CC.Crypto crypto, CC.HeaderCrypto hcrypto) =>
   Int ->
-  AllIssuerKeys crypto 'GenesisDelegate
+  AllIssuerKeys crypto hcrypto 'GenesisDelegate
 coreNodeIssuerKeys = snd . (coreNodes @crypto !!)
 
 -- | === Keys by Overlay Schedule
@@ -108,15 +116,15 @@ coreNodeIssuerKeys = snd . (coreNodes @crypto !!)
 -- It will return an error if there is not a core node scheduled
 -- for the given slot.
 coreNodeKeysBySchedule ::
-  forall era.
-  (HasCallStack, Era era) =>
+  forall era hcrypto.
+  (HasCallStack, Era era, CC.HeaderCrypto hcrypto) =>
   ShelleyPParams era ->
   Word64 ->
-  AllIssuerKeys (Crypto era) 'GenesisDelegate
+  AllIssuerKeys (Crypto era) hcrypto 'GenesisDelegate
 coreNodeKeysBySchedule pp slot =
   case lookupInOverlaySchedule
     firstSlot
-    (Map.keysSet genDelegs)
+    (Map.keysSet (genDelegs @(Crypto era) @hcrypto))
     (_d pp)
     (activeSlotCoeff testGlobals)
     slot' of
@@ -137,16 +145,16 @@ coreNodeKeysBySchedule pp slot =
 -- The map from genesis/core node (verification) key hashes
 -- to their delegate's (verification) key hash.
 genDelegs ::
-  forall crypto.
-  CC.Crypto crypto =>
+  forall crypto hcrypto.
+  (CC.Crypto crypto, CC.HeaderCrypto hcrypto) =>
   Map (KeyHash 'Genesis crypto) (GenDelegPair crypto)
 genDelegs =
   Map.fromList
     [ ( hashKey $ snd gkey,
         ( GenDelegPair
             (coerceKeyRole . hashKey . vKey $ cold pkeys)
-            (hashVerKeyVRF . snd . vrf $ pkeys)
+            (toGenesisVRF . hashVerKeyVRF . snd . vrf $ pkeys)
         )
       )
-      | (gkey, pkeys) <- coreNodes
+      | (gkey, pkeys) <- coreNodes @crypto @hcrypto
     ]

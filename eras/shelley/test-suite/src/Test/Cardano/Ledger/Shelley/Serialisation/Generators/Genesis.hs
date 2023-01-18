@@ -14,7 +14,7 @@ import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes hiding (Seed)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Credential
-import Cardano.Ledger.Crypto (DSIGN, VRF)
+import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era
 import Cardano.Ledger.Keys
@@ -31,7 +31,9 @@ import Cardano.Ledger.Shelley.Genesis
 import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.Shelley.TxBody
-import Cardano.Protocol.TPraos.Rules.Overlay (toPoolStakeVRF)
+import Cardano.Protocol.HeaderCrypto (VRF)
+import qualified Cardano.Protocol.HeaderCrypto as CC
+import Cardano.Protocol.TPraos.Rules.Overlay (toGenesisVRF, toPoolStakeVRF)
 import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..))
 import Data.Fixed
 import Data.IP (IPv4, IPv6, fromHostAddress, fromHostAddress6)
@@ -52,7 +54,10 @@ import qualified Hedgehog.Range as Range
 import Numeric.Natural
 import Test.Cardano.Ledger.Shelley.Utils (mkHash, unsafeBoundRational)
 
-genShelleyGenesis :: Era era => Gen (ShelleyGenesis era)
+genShelleyGenesis ::
+  forall era hcrypto.
+  (Era era, CC.HeaderCrypto hcrypto) =>
+  Gen (ShelleyGenesis era)
 genShelleyGenesis =
   ShelleyGenesis
     <$> genUTCTime
@@ -67,18 +72,22 @@ genShelleyGenesis =
     <*> Gen.word64 (Range.linear 1 100000)
     <*> Gen.word64 (Range.linear 1 100000)
     <*> genPParams
-    <*> fmap Map.fromList genGenesisDelegationList
+    <*> fmap Map.fromList (genGenesisDelegationList @(Crypto era) @hcrypto)
     <*> fmap LM.ListMap genFundsList
-    <*> genStaking
+    <*> (genStaking @(Crypto era) @hcrypto)
 
-genStaking :: CC.Crypto crypto => Gen (ShelleyGenesisStaking crypto)
+genStaking ::
+  forall crypto hcrypto.
+  (CC.Crypto crypto, CC.HeaderCrypto hcrypto) =>
+  Gen (ShelleyGenesisStaking crypto)
 genStaking =
   ShelleyGenesisStaking
-    <$> fmap LM.ListMap genPools
+    <$> fmap LM.ListMap (genPools @crypto @hcrypto)
     <*> fmap LM.ListMap genStake
 
 genPools ::
-  CC.Crypto crypto =>
+  forall crypto hcrypto.
+  (CC.Crypto crypto, CC.HeaderCrypto hcrypto) =>
   Gen
     [ ( KeyHash 'StakePool crypto,
         PoolParams crypto
@@ -86,7 +95,7 @@ genPools ::
     ]
 genPools =
   Gen.list (Range.linear 1 10) $
-    (,) <$> genKeyHash <*> genPoolParams
+    (,) <$> genKeyHash <*> (genPoolParams @crypto @hcrypto)
 
 genStake ::
   CC.Crypto crypto =>
@@ -99,11 +108,14 @@ genStake =
   Gen.list (Range.linear 1 10) $
     (,) <$> genKeyHash <*> genKeyHash
 
-genPoolParams :: forall crypto. CC.Crypto crypto => Gen (PoolParams crypto)
+genPoolParams ::
+  forall crypto hcrypto.
+  (CC.Crypto crypto, CC.HeaderCrypto hcrypto) =>
+  Gen (PoolParams crypto)
 genPoolParams =
   PoolParams
     <$> genKeyHash
-    <*> genPoolStakeVRFKeyHash @crypto
+    <*> genPoolStakeVRFKeyHash @crypto @hcrypto
     <*> genCoin
     <*> genCoin
     <*> genUnitInterval
@@ -230,41 +242,42 @@ genDecimalBoundedRational gen = do
   pure $ unsafeBoundRational $ toInteger num % toInteger denom
 
 genGenesisDelegationList ::
-  CC.Crypto crypto =>
+  forall crypto hcrypto.
+  (CC.Crypto crypto, CC.HeaderCrypto hcrypto) =>
   Gen [(KeyHash 'Genesis crypto, GenDelegPair crypto)]
-genGenesisDelegationList = Gen.list (Range.linear 1 10) genGenesisDelegationPair
+genGenesisDelegationList = Gen.list (Range.linear 1 10) (genGenesisDelegationPair @crypto @hcrypto)
 
 genGenesisDelegationPair ::
-  forall crypto.
-  CC.Crypto crypto =>
+  forall crypto hcrypto.
+  (CC.Crypto crypto, CC.HeaderCrypto hcrypto) =>
   Gen (KeyHash 'Genesis crypto, GenDelegPair crypto)
 genGenesisDelegationPair =
-  (,) <$> genKeyHash <*> (GenDelegPair <$> genKeyHash <*> genVRFKeyHash @crypto)
+  (,) <$> genKeyHash <*> (GenDelegPair <$> genKeyHash <*> (toGenesisVRF <$> genVRFKeyHash @crypto @hcrypto))
 
 genVRFKeyHash ::
-  forall crypto.
-  CC.Crypto crypto =>
-  Gen (Hash crypto (VerKeyVRF (VRF crypto)))
-genVRFKeyHash = hashVerKeyVRF . snd <$> (genVRFKeyPair @crypto)
+  forall crypto hcrypto.
+  (CC.Crypto crypto, CC.HeaderCrypto hcrypto) =>
+  Gen (Hash crypto (VerKeyVRF (VRF hcrypto)))
+genVRFKeyHash = hashVerKeyVRF . snd <$> (genVRFKeyPair @hcrypto)
 
 genPoolStakeVRFKeyHash ::
-  forall crypto.
-  CC.Crypto crypto =>
+  forall crypto hcrypto.
+  (CC.Crypto crypto, CC.HeaderCrypto hcrypto) =>
   Gen (Hash crypto PoolStakeVRF)
-genPoolStakeVRFKeyHash = toPoolStakeVRF <$> (genVRFKeyHash @crypto)
+genPoolStakeVRFKeyHash = toPoolStakeVRF <$> (genVRFKeyHash @crypto @hcrypto)
 
 
 genVRFKeyPair ::
-  forall crypto.
-  CC.Crypto crypto =>
-  Gen (SignKeyVRF (VRF crypto), VerKeyVRF (VRF crypto))
+  forall hcrypto.
+  CC.HeaderCrypto hcrypto =>
+  Gen (SignKeyVRF (VRF hcrypto), VerKeyVRF (VRF hcrypto))
 genVRFKeyPair = do
   seed <- genSeed seedSize
   let sk = genKeyVRF seed
       vk = deriveVerKeyVRF sk
   pure (sk, vk)
   where
-    seedSize = fromIntegral (seedSizeVRF (Proxy :: Proxy (VRF crypto)))
+    seedSize = fromIntegral (seedSizeVRF (Proxy :: Proxy (VRF hcrypto)))
 
 genFundsList :: CC.Crypto crypto => Gen [(Addr crypto, Coin)]
 genFundsList = Gen.list (Range.linear 1 100) genGenesisFundPair

@@ -6,9 +6,9 @@ module Cardano.Ledger.Crypto where
 
 import Cardano.Crypto.DSIGN
 import Cardano.Crypto.Hash
-import Cardano.Crypto.KES
-import Cardano.Crypto.VRF
-import Cardano.Crypto.VRF.Praos
+-- import Cardano.Crypto.KES
+-- import Cardano.Crypto.VRF
+-- import Cardano.Crypto.VRF.Praos
 import Data.Kind (Type)
 import Data.Typeable (Typeable)
 
@@ -16,11 +16,13 @@ class
   ( HashAlgorithm (HASH c),
     HashAlgorithm (ADDRHASH c),
     DSIGNAlgorithm (DSIGN c),
-    KESAlgorithm (KES c),
-    VRFAlgorithm (VRF c),
+    -- TODO: KES/VRF are not required for ledger
+    -- KESAlgorithm (KES c),
+    -- VRFAlgorithm (VRF c),
     ContextDSIGN (DSIGN c) ~ (),
-    ContextKES (KES c) ~ (),
-    ContextVRF (VRF c) ~ (),
+    -- TODO: KES/VRF are not required for ledger
+    -- ContextKES (KES c) ~ (),
+    -- ContextVRF (VRF c) ~ (),
     Typeable c
   ) =>
   Crypto c
@@ -28,8 +30,9 @@ class
   type HASH c :: Type
   type ADDRHASH c :: Type
   type DSIGN c :: Type
-  type KES c :: Type
-  type VRF c :: Type
+  -- TODO: KES/VRF are not required for ledger
+  -- type KES c :: Type
+  -- type VRF c :: Type
 
 -- ================================
 
@@ -38,7 +41,7 @@ data StandardCrypto
 
 instance Crypto StandardCrypto where
   type DSIGN StandardCrypto = Ed25519DSIGN
-  type KES StandardCrypto = Sum6KES Ed25519DSIGN Blake2b_256
-  type VRF StandardCrypto = PraosVRF
+  -- type KES StandardCrypto = Sum6KES Ed25519DSIGN Blake2b_256 -- TODO: KES/VRF
+  -- type VRF StandardCrypto = PraosVRF
   type HASH StandardCrypto = Blake2b_256
   type ADDRHASH StandardCrypto = Blake2b_224

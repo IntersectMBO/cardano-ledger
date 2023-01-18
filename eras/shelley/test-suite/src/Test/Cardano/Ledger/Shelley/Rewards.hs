@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -51,8 +52,8 @@ import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), rationalToCoinViaFloor, t
 import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Crypto (VRF)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import qualified Cardano.Protocol.HeaderCrypto as CC (HeaderCrypto)
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys
   ( KeyHash,
@@ -118,6 +119,7 @@ import qualified Cardano.Ledger.Shelley.Rules.Tick as Tick
 import Cardano.Ledger.Shelley.TxBody (RewardAcnt (..))
 import Cardano.Ledger.Slot (epochInfoSize)
 import Cardano.Ledger.Val (Val (..), invert, (<+>), (<->))
+import Cardano.Protocol.HeaderCrypto (VRF)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.Monad (replicateM)
 import Control.Monad.Trans.Reader (asks, runReader)
@@ -139,7 +141,7 @@ import Data.Word (Word64)
 import GHC.Records (HasField, getField)
 import GHC.Stack
 import Numeric.Natural (Natural)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, C_Crypto)
 import Test.Cardano.Ledger.Shelley.Generator.Core (genCoin, genNatural)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainEvent (..), ChainState (..))
@@ -268,12 +270,15 @@ genMargin = do
   numer <- choose (0, denom)
   pure $ unsafeBoundRational (numer % denom)
 
-genPoolInfo :: forall crypto. CC.Crypto crypto => PoolSetUpArgs crypto Maybe -> Gen (PoolInfo crypto)
+genPoolInfo ::
+  forall crypto hcrypto.
+  (CC.Crypto crypto, CC.HeaderCrypto hcrypto) =>
+  PoolSetUpArgs crypto Maybe -> Gen (PoolInfo crypto)
 genPoolInfo PoolSetUpArgs {poolPledge, poolCost, poolMargin, poolMembers} = do
   pledge <- getOrGen poolPledge $ genCoin 0 maxPoolPledeg
   cost <- getOrGen poolCost $ genCoin 0 maxPoolCost
   margin <- getOrGen poolMargin genMargin
-  vrfKey <- vrfKeyPair @(VRF crypto) <$> arbitrary
+  vrfKey <- vrfKeyPair @(VRF hcrypto) <$> arbitrary
   coldKey <- keyPair <$> arbitrary
   ownerKey <- keyPair <$> arbitrary
   rewardKey <- keyPair <$> arbitrary
@@ -316,13 +321,15 @@ toCompactCoinError c =
   fromMaybe (error $ "Invalid Coin: " <> show c) $ toCompact c
 
 rewardsBoundedByPot ::
-  forall era.
-  (Era era, Core.PParams era ~ ShelleyPParams era) =>
+  forall era hcrypto.
+  (Era era,
+   Core.PParams era ~ ShelleyPParams era,
+   CC.HeaderCrypto hcrypto) =>
   Proxy era ->
   Property
 rewardsBoundedByPot _ = property $ do
   numPools <- choose (0, maxNumPools)
-  pools <- sequence $ genPoolInfo @(Crypto era) <$> replicate numPools emptySetupArgs
+  pools <- sequence $ genPoolInfo @(Crypto era) @hcrypto <$> replicate numPools emptySetupArgs
   pp <- genRewardPPs
   rewardPot <- genCoin 0 (fromIntegral $ maxLovelaceSupply testGlobals)
   undelegatedLovelace <- genCoin 0 (fromIntegral $ maxLovelaceSupply testGlobals)
@@ -698,23 +705,24 @@ lastElem [] = Nothing
 lastElem (_ : xs) = lastElem xs
 
 -- | Provide a legitimate NewEpochState to make an test Property
-newEpochProp :: Word64 -> (NewEpochState C -> Property) -> Property
+newEpochProp ::
+  Word64 -> (NewEpochState C -> Property) -> Property
 newEpochProp tracelen propf = withMaxSuccess 100 $
-  forAllChainTrace @C tracelen $ \tr ->
+  forAllChainTrace @C @C_Crypto tracelen $ \tr ->
     case lastElem (sourceSignalTargets tr) of
       Just SourceSignalTarget {target} -> propf (chainNes target)
       _ -> property True
 
 -- | Given a NewEpochState and [ChainEvent], test a Property at every Epoch Boundary
-newEpochEventsProp :: Word64 -> ([ChainEvent C] -> NewEpochState C -> Property) -> Property
+newEpochEventsProp :: Word64 -> ([ChainEvent C C_Crypto] -> NewEpochState C -> Property) -> Property
 newEpochEventsProp tracelen propf = withMaxSuccess 10 $
-  forEachEpochTrace @C 10 tracelen $ \tr ->
+  forEachEpochTrace @C @C_Crypto 10 tracelen $ \tr ->
     case lastElem (sourceSignalTargets tr) of
       Just SourceSignalTarget {target} ->
         propf (concat (runShelleyBase $ getEvents tr)) (chainNes target)
       _ -> property True
 
-aggIncrementalRewardEvents :: [ChainEvent C] -> Map (Credential 'Staking (Crypto C)) (Set (Reward (Crypto C)))
+aggIncrementalRewardEvents :: [ChainEvent C hc] -> Map (Credential 'Staking (Crypto C)) (Set (Reward (Crypto C)))
 aggIncrementalRewardEvents = foldl' accum Map.empty
   where
     accum ans (TickEvent (Tick.RupdEvent (RupdEvent _ m))) = Map.unionWith Set.union m ans
@@ -722,7 +730,7 @@ aggIncrementalRewardEvents = foldl' accum Map.empty
       Map.unionWith Set.union m ans
     accum ans _ = ans
 
-getMostRecentTotalRewardEvent :: [ChainEvent C] -> Map (Credential 'Staking (Crypto C)) (Set (Reward (Crypto C)))
+getMostRecentTotalRewardEvent :: [ChainEvent C hc] -> Map (Credential 'Staking (Crypto C)) (Set (Reward (Crypto C)))
 getMostRecentTotalRewardEvent = foldl' accum Map.empty
   where
     accum ans (TickEvent (Tick.NewEpochEvent (TotalRewardEvent _ m))) = Map.unionWith Set.union m ans
@@ -732,7 +740,7 @@ complete :: PulsingRewUpdate crypto -> (RewardUpdate crypto, RewardEvent crypto)
 complete (Complete r) = (r, mempty)
 complete (Pulsing rewsnap pulser) = runShelleyBase $ (completeRupd (Pulsing rewsnap pulser))
 
-eventsMirrorRewards :: [ChainEvent C] -> NewEpochState C -> Property
+eventsMirrorRewards :: [ChainEvent C hc] -> NewEpochState C -> Property
 eventsMirrorRewards events nes = same eventRew compRew
   where
     (compRew, eventRew) =
@@ -833,7 +841,7 @@ rewardTests :: TestTree
 rewardTests =
   testGroup
     "Reward Tests"
-    [ testProperty "Sum of rewards is bounded by reward pot" (withMaxSuccess numberOfTests (rewardsBoundedByPot (Proxy @C))),
+    [ testProperty "Sum of rewards is bounded by reward pot" (withMaxSuccess numberOfTests (rewardsBoundedByPot @C @C_Crypto (Proxy @C))),
       testProperty "compare with reference impl, no provenance, v3" (newEpochProp chainlen (oldEqualsNew @C (ProtVer 3 0))),
       testProperty "compare with reference impl, no provenance, v7" (newEpochProp chainlen (oldEqualsNew @C (ProtVer 7 0))),
       testProperty "compare with reference impl, with provenance" (newEpochProp chainlen (oldEqualsNewOn @C (ProtVer 3 0))),

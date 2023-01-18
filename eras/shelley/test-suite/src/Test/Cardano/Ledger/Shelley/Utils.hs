@@ -103,6 +103,7 @@ import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx, ShelleyTxOut, ShelleyWitnesses)
 import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody)
 import Cardano.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
+import Cardano.Protocol.HeaderCrypto
 import Cardano.Protocol.TPraos.API (GetLedgerView)
 import Cardano.Protocol.TPraos.BHeader (BHBody (..), BHeader, bhbody)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
@@ -137,10 +138,10 @@ import Test.Tasty.HUnit
     (@?=),
   )
 
-type ChainProperty era =
-  ( Mock (Crypto era),
+type ChainProperty era hcrypto =
+  ( Mock (Crypto era) hcrypto,
     ApplyBlock era,
-    GetLedgerView era,
+    GetLedgerView era hcrypto ,
     EraTx era
   )
 
@@ -335,6 +336,6 @@ testSTS env initSt sig predicateFailure@(Left _) = do
 mkHash :: forall a h. HashAlgorithm h => Int -> Hash h a
 mkHash i = coerce (hashWithSerialiser @h toCBOR i)
 
-getBlockNonce :: forall era. Era era => Block (BHeader (Crypto era)) era -> Nonce
+getBlockNonce :: forall era hcrypto. (Era era, HeaderCrypto hcrypto) => Block (BHeader (Crypto era) hcrypto) era -> Nonce
 getBlockNonce =
   mkNonceFromOutputVRF . certifiedOutput . bheaderEta . bhbody . bheader

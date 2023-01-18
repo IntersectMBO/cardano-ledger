@@ -12,11 +12,12 @@ module Test.Cardano.Ledger.Shelley.Serialisation.Generators () where
 
 import Cardano.Binary (ToCBOR)
 import Cardano.Ledger.Core
+import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Shelley.API (ShelleyTxBody (ShelleyTxBody))
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams)
 import qualified Cardano.Ledger.Shelley.Rules.Utxo as STS
 import Generic.Random (genericArbitraryU)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
+-- import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.QuickCheck
   ( Arbitrary,
@@ -32,7 +33,7 @@ import Test.QuickCheck
 -------------------------------------------------------------------------------}
 
 instance
-  (EraTxOut era, Mock (Crypto era), Arbitrary (Value era), ToCBOR (PParamsUpdate era)) =>
+  (EraTxOut era, CC.Crypto (Crypto era), Arbitrary (Value era), ToCBOR (PParamsUpdate era)) =>
   Arbitrary (ShelleyTxBody era)
   where
   arbitrary =
@@ -48,7 +49,7 @@ instance
 
 instance
   ( Era era,
-    Mock (Crypto era),
+    CC.Crypto (Crypto era),
     Arbitrary (Value era),
     Arbitrary (TxOut era),
     Arbitrary (STS.PredicateFailure (EraRule "PPUP" era))

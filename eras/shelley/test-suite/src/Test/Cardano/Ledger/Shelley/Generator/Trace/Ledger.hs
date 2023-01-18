@@ -32,6 +32,7 @@ import Cardano.Ledger.Shelley.Rules.Ledgers (ShelleyLEDGERS, ShelleyLedgersEnv (
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv)
 import Cardano.Ledger.Shelley.TxBody (DCert)
 import Cardano.Ledger.Slot (SlotNo (..))
+import qualified Cardano.Protocol.HeaderCrypto as CC (HeaderCrypto)
 import Control.Monad (foldM)
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition
@@ -70,7 +71,7 @@ genAccountState Constants {minTreasury, maxTreasury, minReserves, maxReserves} =
 -- with meaningful delegation certificates.
 instance
   ( EraGen era,
-    Mock (Crypto era),
+    Mock (Crypto era) hcrypto,
     MinLEDGER_STS era,
     Embed (Core.EraRule "DELPL" era) (CERTS era),
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
@@ -87,7 +88,7 @@ instance
     Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
     Show (State (Core.EraRule "PPUP" era))
   ) =>
-  TQC.HasTrace (ShelleyLEDGER era) (GenEnv era)
+  TQC.HasTrace (ShelleyLEDGER era) (GenEnv era hcrypto)
   where
   envGen GenEnv {geConstants} =
     LedgerEnv (SlotNo 0) minBound
@@ -102,9 +103,9 @@ instance
   interpretSTS globals act = runIdentity $ runReaderT act globals
 
 instance
-  forall era.
+  forall era hcrypto.
   ( EraGen era,
-    Mock (Crypto era),
+    Mock (Crypto era) hcrypto,
     MinLEDGER_STS era,
     Embed (Core.EraRule "DELPL" era) (CERTS era),
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
@@ -115,7 +116,7 @@ instance
     Embed (Core.EraRule "LEDGER" era) (ShelleyLEDGERS era),
     Default (State (Core.EraRule "PPUP" era))
   ) =>
-  TQC.HasTrace (ShelleyLEDGERS era) (GenEnv era)
+  TQC.HasTrace (ShelleyLEDGERS era) (GenEnv era hcrypto)
   where
   envGen GenEnv {geConstants} =
     LedgersEnv (SlotNo 0)
@@ -164,10 +165,13 @@ instance
 -- To achieve this we (1) use 'IRC LEDGER' (the "initial rule context") instead of simply 'LedgerEnv'
 -- and (2) always return Right (since this function does not raise predicate failures).
 mkGenesisLedgerState ::
-  forall a era ledger.
-  (EraGen era, Default (State (Core.EraRule "PPUP" era))) =>
-  GenEnv era ->
+  forall a era ledger hcrypto.
+  (EraGen era,
+   Default (State (Core.EraRule "PPUP" era)),
+   CC.HeaderCrypto hcrypto
+  ) =>
+  GenEnv era hcrypto ->
   IRC ledger ->
   Gen (Either a (LedgerState era))
 mkGenesisLedgerState ge@(GenEnv _ _ c) _ =
-  Right . genesisState (genesisDelegs0 c) <$> genUtxo0 ge
+  Right . genesisState (genesisDelegs0 @(Crypto era) @hcrypto c) <$> genUtxo0 ge
