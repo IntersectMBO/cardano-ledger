@@ -21,6 +21,7 @@
 
 module Cardano.Ledger.Shelley.LedgerState.Types where
 
+import Cardano.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
   StrictMaybe (..),
@@ -34,6 +35,8 @@ import Cardano.Ledger.Binary (
   decodeRecordNamedT,
   encodeListLen,
   fromSharedLensCBOR,
+  toPlainDecoder,
+  toPlainEncoding,
  )
 import Cardano.Ledger.Binary.Coders (Decode (From, RecD), decode, (<!))
 import Cardano.Ledger.Coin (Coin (..))
@@ -46,7 +49,7 @@ import Cardano.Ledger.EpochBoundary (
  )
 import Cardano.Ledger.Keys (
   KeyHash (..),
-  KeyPair, -- deprecated
+  KeyPair,
   KeyRole (..),
  )
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
@@ -433,6 +436,31 @@ instance
         <! From
         <! From
         <! From
+
+instance
+  ( Era era
+  , ToCBOR (TxOut era)
+  , ToCBOR (PParams era)
+  , ToCBOR (State (EraRule "PPUP" era))
+  , ToCBOR (StashedAVVMAddresses era)
+  ) =>
+  EncCBOR (NewEpochState era)
+  where
+  encCBOR = toPlainEncoding (eraProtVerLow @era) . toCBOR
+
+instance
+  ( Era era
+  , FromCBOR (PParams era)
+  , FromSharedCBOR (TxOut era)
+  , Share (TxOut era) ~ Interns (Credential 'Staking (EraCrypto era))
+  , FromCBOR (Value era)
+  , FromCBOR (State (EraRule "PPUP" era))
+  , FromCBOR (StashedAVVMAddresses era)
+  , HashAnnotated (TxBody era) EraIndependentTxBody (EraCrypto era)
+  ) =>
+  DecCBOR (NewEpochState era)
+  where
+  decCBOR = toPlainDecoder (eraProtVerLow @era) fromCBOR
 
 instance
   ( Era era
