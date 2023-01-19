@@ -14,12 +14,14 @@ module Cardano.Ledger.Shelley.Rules.Snap (
   PredicateFailure,
   ShelleySnapPredFailure,
   SnapEvent (..),
-) where
+  SnapEnv (..),
+)
+where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin, CompactForm)
 import Cardano.Ledger.Compactible (fromCompact)
-import Cardano.Ledger.Core (EraTxOut)
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.EpochBoundary (
   SnapShot (ssDelegations, ssStake),
@@ -28,7 +30,6 @@ import Cardano.Ledger.EpochBoundary (
   calculatePoolDistr,
   emptySnapShots,
  )
-import Cardano.Ledger.Era (EraCrypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking))
 import Cardano.Ledger.Shelley.Era (ShelleySNAP)
 import Cardano.Ledger.Shelley.LedgerState (
@@ -60,10 +61,12 @@ instance NoThunks (ShelleySnapPredFailure era)
 newtype SnapEvent era
   = StakeDistEvent (Map (Credential 'Staking (EraCrypto era)) (Coin, KeyHash 'StakePool (EraCrypto era)))
 
+data SnapEnv era = SnapEnv !(LedgerState era) !(PParams era)
+
 instance EraTxOut era => STS (ShelleySNAP era) where
   type State (ShelleySNAP era) = SnapShots (EraCrypto era)
   type Signal (ShelleySNAP era) = ()
-  type Environment (ShelleySNAP era) = LedgerState era
+  type Environment (ShelleySNAP era) = SnapEnv era
   type BaseM (ShelleySNAP era) = ShelleyBase
   type PredicateFailure (ShelleySNAP era) = ShelleySnapPredFailure era
   type Event (ShelleySNAP era) = SnapEvent era
@@ -82,13 +85,10 @@ snapTransition ::
   forall era.
   TransitionRule (ShelleySNAP era)
 snapTransition = do
-  TRC (lstate, s, _) <- judgmentContext
+  TRC (snapEnv, s, _) <- judgmentContext
 
-  let LedgerState
-        (UTxOState _utxo _ fees _ incStake)
-        (DPState dstate pstate) =
-          lstate
-      -- stakeSnap = stakeDistr @era utxo dstate pstate  -- HISTORICAL NOTE
+  let SnapEnv (LedgerState (UTxOState _utxo _ fees _ incStake) (DPState dstate pstate)) _ = snapEnv
+      -- stakeSnap = stakeDistr @era utxo dstate pstate  -EraCrypto- HISTORICAL NOTE
       istakeSnap = incrementalStakeDistr @(EraCrypto era) incStake dstate pstate
 
   tellEvent $
