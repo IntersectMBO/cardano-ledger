@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE ExistentialQuantification #-}
@@ -124,6 +125,7 @@ import Data.ByteString.Short (ShortByteString(SBS))
 #else
 import Data.ByteString.Short.Internal (ShortByteString(SBS))
 #endif
+import Cardano.Binary (EncCBOR (..))
 import Data.Fixed (Fixed (..))
 import Data.Foldable (toList)
 import Data.Functor.Foldable (cata, project)
@@ -166,6 +168,8 @@ import Data.Functor.Foldable (Fix(..))
 
 class Typeable a => ToCBOR a where
   toCBOR :: a -> Encoding
+  default toCBOR :: EncCBOR a => a -> Encoding
+  toCBOR = fromPlainEncoding . encCBOR
 
   encodedSizeExpr :: (forall t. ToCBOR t => Proxy t -> Size) -> Proxy a -> Size
   encodedSizeExpr = todo
