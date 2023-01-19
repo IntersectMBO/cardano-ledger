@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -17,6 +18,7 @@ module Cardano.Ledger.Binary.Decoding.FromCBOR (
 )
 where
 
+import Cardano.Binary (DecCBOR (..))
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm, SeedSizeDSIGN, SigDSIGN, SignKeyDSIGN, VerKeyDSIGN)
 import Cardano.Crypto.DSIGN.EcdsaSecp256k1 (EcdsaSecp256k1DSIGN)
 import Cardano.Crypto.DSIGN.Ed25519 (Ed25519DSIGN)
@@ -87,6 +89,8 @@ import Prelude hiding (decodeFloat)
 
 class Typeable a => FromCBOR a where
   fromCBOR :: Decoder s a
+  default fromCBOR :: DecCBOR a => Decoder s a
+  fromCBOR = fromPlainDecoder decCBOR
 
   -- | Validate decoding of a Haskell value, without the need to actually construct
   -- it. Coule be slightly faster than `fromCBOR`, however it should respect this law:
