@@ -40,6 +40,7 @@ library
                      Cardano.Ledger.Binary.Encoding
                      Cardano.Ledger.Binary.FlatTerm
                      Cardano.Ledger.Binary.Group
+                     Cardano.Ledger.Binary.Plain
                      Cardano.Ledger.Binary.Version
   other-modules:
                      Cardano.Ledger.Binary.Encoding.Coders
