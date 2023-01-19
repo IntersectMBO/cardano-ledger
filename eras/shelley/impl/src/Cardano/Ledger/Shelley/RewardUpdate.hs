@@ -37,7 +37,7 @@ import Cardano.Ledger.Coin (Coin (..), CompactForm, DeltaCoin (..))
 import Cardano.Ledger.Compactible (Compactible (fromCompact))
 import Cardano.Ledger.Core (Reward (..), RewardType (MemberReward))
 import Cardano.Ledger.Credential (Credential (..))
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.PoolRank (Likelihood, NonMyopic)
 import Cardano.Ledger.Shelley.Rewards (
@@ -75,10 +75,10 @@ data RewardAns c = RewardAns
 
 instance NoThunks (RewardAns c)
 
-instance CC.Crypto c => ToCBOR (RewardAns c) where
+instance Crypto c => ToCBOR (RewardAns c) where
   toCBOR (RewardAns accum recent) = encodeListLen 2 <> toCBOR accum <> toCBOR recent
 
-instance CC.Crypto c => FromCBOR (RewardAns c) where
+instance Crypto c => FromCBOR (RewardAns c) where
   fromCBOR = decodeRecordNamed "RewardAns" (const 2) (RewardAns <$> fromCBOR <*> fromCBOR)
 
 -- | The type of RewardPulser we pulse on.
@@ -102,7 +102,7 @@ instance NoThunks (RewardUpdate c)
 instance NFData (RewardUpdate c)
 
 instance
-  CC.Crypto c =>
+  Crypto c =>
   ToCBOR (RewardUpdate c)
   where
   toCBOR (RewardUpdate dt dr rw df nm) =
@@ -114,7 +114,7 @@ instance
       <> toCBOR nm
 
 instance
-  CC.Crypto c =>
+  Crypto c =>
   FromCBOR (RewardUpdate c)
   where
   fromCBOR = do
@@ -149,7 +149,7 @@ instance Typeable c => NoThunks (RewardSnapShot c)
 
 instance NFData (RewardSnapShot c)
 
-instance CC.Crypto c => ToCBOR (RewardSnapShot c) where
+instance Crypto c => ToCBOR (RewardSnapShot c) where
   toCBOR (RewardSnapShot fees ver nm dr1 r dt1 lhs lrs) =
     encode
       ( Rec RewardSnapShot
@@ -163,7 +163,7 @@ instance CC.Crypto c => ToCBOR (RewardSnapShot c) where
           !> To lrs
       )
 
-instance CC.Crypto c => FromCBOR (RewardSnapShot c) where
+instance Crypto c => FromCBOR (RewardSnapShot c) where
   fromCBOR =
     decode
       ( RecD RewardSnapShot
@@ -194,7 +194,7 @@ data FreeVars c = FreeVars
 
 instance NFData (FreeVars c)
 
-instance (CC.Crypto c) => ToCBOR (FreeVars c) where
+instance Crypto c => ToCBOR (FreeVars c) where
   toCBOR
     FreeVars
       { fvDelegs
@@ -212,7 +212,7 @@ instance (CC.Crypto c) => ToCBOR (FreeVars c) where
             !> To fvPoolRewardInfo
         )
 
-instance (CC.Crypto c) => FromCBOR (FreeVars c) where
+instance (Crypto c) => FromCBOR (FreeVars c) where
   fromCBOR =
     decode
       ( RecD FreeVars
@@ -305,11 +305,11 @@ instance Typeable c => NoThunks (Pulser c) where
 instance NFData (Pulser c) where
   rnf (RSLP n1 c1 b1 a1) = seq (rnf n1) (seq (rnf c1) (seq (rnf b1) (rnf a1)))
 
-instance (CC.Crypto c) => ToCBOR (Pulser c) where
+instance Crypto c => ToCBOR (Pulser c) where
   toCBOR (RSLP n free balance ans) =
     encode (Rec RSLP !> To n !> To free !> To balance !> To ans)
 
-instance (CC.Crypto c) => FromCBOR (Pulser c) where
+instance Crypto c => FromCBOR (Pulser c) where
   fromCBOR =
     decode (RecD RSLP <! From <! From <! From <! From)
 
@@ -321,11 +321,11 @@ data PulsingRewUpdate c
   | Complete !(RewardUpdate c) -- Pulsing work completed, ultimate goal reached
   deriving (Eq, Show, Generic, NoThunks)
 
-instance (CC.Crypto c) => ToCBOR (PulsingRewUpdate c) where
+instance Crypto c => ToCBOR (PulsingRewUpdate c) where
   toCBOR (Pulsing s p) = encode (Sum Pulsing 0 !> To s !> To p)
   toCBOR (Complete r) = encode (Sum Complete 1 !> To r)
 
-instance (CC.Crypto c) => FromCBOR (PulsingRewUpdate c) where
+instance Crypto c => FromCBOR (PulsingRewUpdate c) where
   fromCBOR = decode (Summands "PulsingRewUpdate" decPS)
     where
       decPS 0 = SumD Pulsing <! From <! From

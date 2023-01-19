@@ -37,7 +37,7 @@ module Cardano.Ledger.Binary.Decoding.Coders (
   fieldA,
   fieldAA,
 
-  -- * Using Duals .
+  -- * Using Duals
   decodeDual,
 
   -- * Containers, Combinators

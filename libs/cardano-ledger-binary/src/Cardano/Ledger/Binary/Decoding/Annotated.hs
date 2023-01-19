@@ -1,28 +1,30 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
--- TODO: remove once Annotator migrated here
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Binary.Decoding.Annotated (
-  C.Annotated (..),
-  C.ByteSpan (..),
-  C.Decoded (..),
-  C.annotationBytes,
+  Annotated (..),
+  ByteSpan (..),
+  Decoded (..),
+  annotationBytes,
   annotatedDecoder,
-  C.slice,
+  slice,
   fromCBORAnnotated,
   reAnnotate,
-  C.Annotator (..),
+  Annotator (..),
   annotatorSlice,
   withSlice,
-  C.FullByteString (..),
+  FullByteString (..),
   decodeAnnSet,
 )
 where
 
-import qualified Cardano.Binary as C
 import Cardano.Ledger.Binary.Decoding.Decoder (
   Decoder,
   decodeList,
@@ -31,51 +33,159 @@ import Cardano.Ledger.Binary.Decoding.Decoder (
  )
 import Cardano.Ledger.Binary.Decoding.FromCBOR (FromCBOR (..))
 import Cardano.Ledger.Binary.Encoding (ToCBOR, Version, serialize')
+import Codec.CBOR.Read (ByteOffset)
 import qualified Codec.Serialise as Serialise (decode)
+import Control.DeepSeq (NFData)
+import Data.Aeson (FromJSON (..), ToJSON (..))
+import Data.Bifunctor (Bifunctor (first, second))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
+import Data.Function (on)
 import Data.Functor ((<&>))
+import Data.Kind (Type)
 import qualified Data.Set as Set
+import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks)
 import qualified PlutusLedgerApi.V1 as PV1
 
--- | A decoder for a value paired with an annotation specifying the start and end
--- of the consumed bytes.
-annotatedDecoder :: Decoder s a -> Decoder s (C.Annotated a C.ByteSpan)
-annotatedDecoder vd =
-  decodeWithByteSpan vd <&> \(x, start, end) -> C.Annotated x (C.ByteSpan start end)
+-------------------------------------------------------------------------
+-- ByteSpan
+-------------------------------------------------------------------------
 
--- | A decoder for a value paired with an annotation specifying the start and end
--- of the consumed bytes.
-fromCBORAnnotated :: FromCBOR a => Decoder s (C.Annotated a C.ByteSpan)
-fromCBORAnnotated = annotatedDecoder fromCBOR
+-- | Extract a substring of a given ByteString corresponding to the offsets.
+slice :: BSL.ByteString -> ByteSpan -> BSL.ByteString
+slice bytes (ByteSpan start end) =
+  BSL.take (end - start) $ BSL.drop start bytes
 
--- | Reconstruct an annotation by re-serialising the payload to a ByteString.
-reAnnotate :: ToCBOR a => Version -> C.Annotated a b -> C.Annotated a BS.ByteString
-reAnnotate version (C.Annotated x _) = C.Annotated x (serialize' version x)
+-- | A pair of offsets delimiting the beginning and end of a substring of a ByteString
+data ByteSpan = ByteSpan !ByteOffset !ByteOffset
+  deriving (Generic, Show)
+
+-- Used for debugging purposes only.
+instance ToJSON ByteSpan
 
 -------------------------------------------------------------------------
 -- Annotator
 -------------------------------------------------------------------------
 
+data Annotated b a = Annotated {unAnnotated :: !b, annotation :: !a}
+  deriving (Eq, Show, Functor, Generic)
+  deriving anyclass (NFData, NoThunks)
+
+instance Bifunctor Annotated where
+  first f (Annotated b a) = Annotated (f b) a
+  second = fmap
+
+instance (Eq a, Ord b) => Ord (Annotated b a) where
+  compare = compare `on` unAnnotated
+
+instance ToJSON b => ToJSON (Annotated b a) where
+  toJSON = toJSON . unAnnotated
+  toEncoding = toEncoding . unAnnotated
+
+instance FromJSON b => FromJSON (Annotated b ()) where
+  parseJSON j = flip Annotated () <$> parseJSON j
+
+-- | A decoder for a value paired with an annotation specifying the start and end
+-- of the consumed bytes.
+annotatedDecoder :: Decoder s a -> Decoder s (Annotated a ByteSpan)
+annotatedDecoder vd =
+  decodeWithByteSpan vd <&> \(x, start, end) -> Annotated x (ByteSpan start end)
+
+-- | A decoder for a value paired with an annotation specifying the start and end
+-- of the consumed bytes.
+fromCBORAnnotated :: FromCBOR a => Decoder s (Annotated a ByteSpan)
+fromCBORAnnotated = annotatedDecoder fromCBOR
+
+annotationBytes :: Functor f => BSL.ByteString -> f ByteSpan -> f BS.ByteString
+annotationBytes bytes = fmap (BSL.toStrict . slice bytes)
+
+-- | Reconstruct an annotation by re-serialising the payload to a ByteString.
+reAnnotate :: ToCBOR a => Version -> Annotated a b -> Annotated a BS.ByteString
+reAnnotate version (Annotated x _) = Annotated x (serialize' version x)
+
+class Decoded t where
+  type BaseType t :: Type
+  recoverBytes :: t -> BS.ByteString
+
+instance Decoded (Annotated b BS.ByteString) where
+  type BaseType (Annotated b BS.ByteString) = b
+  recoverBytes = annotation
+
+-------------------------------------------------------------------------
+-- Annotator
+-------------------------------------------------------------------------
+
+-- | This marks the entire bytestring used during decoding, rather than the
+--   piece we need to finish constructing our value.
+newtype FullByteString = Full BSL.ByteString
+
+-- | A value of type @(Annotator a)@ is one that needs access to the entire bytestring
+--   used during decoding to finish construction of a vaue of type @a@. A typical use is
+--   some type that stores the bytes that were used to deserialize it.  For example the
+--   type @Inner@ below is constructed using the helper function @makeInner@ which
+--   serializes and stores its bytes (using 'serializeEncoding').  Note how we build the
+--   'Annotator' by abstracting over the full bytes, and using those original bytes to
+--   fill the bytes field of the constructor @Inner@.  The 'ToCBOR' instance just reuses
+--   the stored bytes to produce an encoding (using 'encodePreEncoded').
+--
+-- @
+-- data Inner = Inner Int Bool LByteString
+--
+-- makeInner :: Int -> Bool -> Inner
+-- makeInner i b = Inner i b (serializeEncoding (toCBOR i <> toCBOR b))
+--
+-- instance ToCBOR Inner where
+--   toCBOR (Inner _ _ bytes) = encodePreEncoded bytes
+--
+-- instance FromCBOR (Annotator Inner) where
+--   fromCBOR = do
+--      int <- fromCBOR
+--      trueOrFalse <- fromCBOR
+--      pure (Annotator (\(Full bytes) -> Inner int trueOrFalse bytes))
+-- @
+--
+-- if an @Outer@ type has a field of type @Inner@, with a @(ToCBOR (Annotator Inner))@
+-- instance, the @Outer@ type must also have a @(ToCBOR (Annotator Outer))@ instance.  The
+-- key to writing that instance is to use the operation @withSlice@ which returns a pair.
+-- The first component is an @Annotator@ that can build @Inner@, the second is an
+-- @Annotator@ that given the full bytes, extracts just the bytes needed to decode
+-- @Inner@.
+--
+-- @
+-- data Outer = Outer Text Inner
+--
+-- instance ToCBOR Outer where
+--   toCBOR (Outer t i) = toCBOR t <> toCBOR i
+--
+-- instance FromCBOR (Annotator Outer) where
+--   fromCBOR = do
+--     t <- fromCBOR
+--     (Annotator mkInner, Annotator extractInnerBytes) <- withSlice fromCBOR
+--     pure (Annotator (\ full -> Outer t (mkInner (Full (extractInnerBytes full)))))
+-- @
+newtype Annotator a = Annotator {runAnnotator :: FullByteString -> a}
+  deriving newtype (Monad, Applicative, Functor)
+
 -- | The argument is a decoder for a annotator that needs access to the bytes that
 -- | were decoded. This function constructs and supplies the relevant piece.
 annotatorSlice ::
-  Decoder s (C.Annotator (BSL.ByteString -> a)) ->
-  Decoder s (C.Annotator a)
+  Decoder s (Annotator (BSL.ByteString -> a)) ->
+  Decoder s (Annotator a)
 annotatorSlice dec = do
   (k, bytes) <- withSlice dec
   pure $ k <*> bytes
 
 -- | Pairs the decoder result with an annotator that can be used to construct the exact
 -- bytes used to decode the result.
-withSlice :: Decoder s a -> Decoder s (a, C.Annotator BSL.ByteString)
+withSlice :: Decoder s a -> Decoder s (a, Annotator BSL.ByteString)
 withSlice dec = do
-  C.Annotated r byteSpan <- annotatedDecoder dec
-  return (r, C.Annotator (\(C.Full bsl) -> C.slice bsl byteSpan))
+  Annotated r byteSpan <- annotatedDecoder dec
+  return (r, Annotator (\(Full bsl) -> slice bsl byteSpan))
 
 -- TODO: Implement version that matches the length of a list with the size of the Set in
 -- order to enforce no duplicates.
-decodeAnnSet :: Ord t => Decoder s (C.Annotator t) -> Decoder s (C.Annotator (Set.Set t))
+decodeAnnSet :: Ord t => Decoder s (Annotator t) -> Decoder s (Annotator (Set.Set t))
 decodeAnnSet dec = do
   xs <- decodeList dec
   pure (Set.fromList <$> sequence xs)
@@ -84,5 +194,5 @@ decodeAnnSet dec = do
 -- Plutus
 --------------------------------------------------------------------------------
 
-instance FromCBOR (C.Annotator PV1.Data) where
+instance FromCBOR (Annotator PV1.Data) where
   fromCBOR = pure <$> fromPlainDecoder Serialise.decode
