@@ -255,7 +255,7 @@ newUTxO txb cs = cs {chainNes = nes'}
     utxoWithout = Map.withoutKeys utxo (txins @era txb)
     utxoDel = UTxO utxoToDel
     utxo' = UTxO (utxoWithout `Map.union` unUTxO utxoAdd)
-    sd' = updateStakeDistribution @era (utxosStakeDistr utxoSt) utxoDel utxoAdd
+    sd' = updateStakeDistribution @era (esPp es) (utxosStakeDistr utxoSt) utxoDel utxoAdd
     utxoSt' = utxoSt {utxosUtxo = utxo', utxosStakeDistr = sd'}
     ls' = ls {lsUTxOState = utxoSt'}
     es' = es {esLState = ls'}

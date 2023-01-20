@@ -88,7 +88,7 @@ initialStateFromGenesis sg ag =
         (AccountState (Coin 0) reserves)
         emptySnapShots
         ( LedgerState
-            (smartUTxOState initialUtxo (Coin 0) (Coin 0) emptyGovernanceState)
+            (smartUTxOState (fromShelleyPParams ag pp) initialUtxo (Coin 0) (Coin 0) def)
             (DPState (def {dsGenDelegs = GenDelegs genDelegs}) def)
         )
         (fromShelleyPParams ag pp)

@@ -35,17 +35,17 @@ testMaryNoDelegLEDGER ::
   Assertion
 testMaryNoDelegLEDGER utxo tx env (Right expectedUTxO) = do
   checkTrace @(ShelleyLEDGER Mary) runShelleyBase env $
-    pure (LedgerState (smartUTxOState utxo (Coin 0) (Coin 0) def) def) .- tx .->> expectedSt'
+    pure (LedgerState (smartUTxOState (ledgerPp env) utxo (Coin 0) (Coin 0) def) def) .- tx .->> expectedSt'
   where
     txFee = tx ^. bodyTxL . feeTxBodyL
-    expectedSt' = LedgerState (smartUTxOState expectedUTxO (Coin 0) txFee def) def
+    expectedSt' = LedgerState (smartUTxOState (ledgerPp env) expectedUTxO (Coin 0) txFee def) def
 testMaryNoDelegLEDGER utxo tx env predicateFailure@(Left _) = do
   let st =
         runShelleyBase $
           applySTSTest @(ShelleyLEDGER Mary)
             ( TRC
                 ( env
-                , LedgerState (smartUTxOState utxo (Coin 0) (Coin 0) def) def
+                , LedgerState (smartUTxOState (ledgerPp env) utxo (Coin 0) (Coin 0) def) def
                 , tx
                 )
             )
