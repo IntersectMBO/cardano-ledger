@@ -61,7 +61,8 @@ where
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.HeapWords (HeapWords (..))
 import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Binary.Plain (DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (toExpr))
 import Control.DeepSeq (NFData)
 import Data.ByteString (ByteString)
@@ -83,32 +84,36 @@ import NoThunks.Class (NoThunks (..))
 --     such as 'hashWithCrypto, 'hashAnnotated' and 'extractHash' which have constraints
 --     that limit their application to types which preserve their original serialization
 --     bytes.
-newtype SafeHash c index = SafeHash (Hash.Hash (CC.HASH c) index)
+newtype SafeHash c index = SafeHash (Hash.Hash (HASH c) index)
   deriving (Show, Eq, Ord, NoThunks, NFData)
 
 deriving newtype instance
-  Hash.HashAlgorithm (CC.HASH c) =>
+  Hash.HashAlgorithm (HASH c) =>
   SafeToHash (SafeHash c index)
 
 deriving newtype instance HeapWords (SafeHash c i)
 
-deriving instance (Typeable index, CC.Crypto c) => ToCBOR (SafeHash c index)
+deriving instance (Typeable index, Crypto c) => EncCBOR (SafeHash c index)
 
-deriving instance (Typeable index, CC.Crypto c) => FromCBOR (SafeHash c index)
+deriving instance (Typeable index, Crypto c) => DecCBOR (SafeHash c index)
 
-{-# DEPRECATED HasAlgorithm "Use `Hash.HashAlgorithm (CC.HASH c)` instead" #-}
+deriving instance (Typeable index, Crypto c) => ToCBOR (SafeHash c index)
 
-type HasAlgorithm c = Hash.HashAlgorithm (CC.HASH c)
+deriving instance (Typeable index, Crypto c) => FromCBOR (SafeHash c index)
+
+{-# DEPRECATED HasAlgorithm "Use `Hash.HashAlgorithm (HASH c)` instead" #-}
+
+type HasAlgorithm c = Hash.HashAlgorithm (HASH c)
 
 -- | Extract the hash out of a 'SafeHash'
-extractHash :: SafeHash c i -> Hash.Hash (CC.HASH c) i
+extractHash :: SafeHash c i -> Hash.Hash (HASH c) i
 extractHash (SafeHash h) = h
 
 -- MAKE
 
 -- | Don't use this except in Testing to make Arbitrary instances, etc.
 --   Defined here, only because the Constructor is in scope here.
-unsafeMakeSafeHash :: Hash.Hash (CC.HASH c) index -> SafeHash c index
+unsafeMakeSafeHash :: Hash.Hash (HASH c) index -> SafeHash c index
 unsafeMakeSafeHash = SafeHash
 
 -- =====================================================================
@@ -129,7 +134,7 @@ class SafeToHash t where
   originalBytes :: t -> ByteString
 
   makeHashWithExplicitProxys ::
-    Hash.HashAlgorithm (CC.HASH c) =>
+    Hash.HashAlgorithm (HASH c) =>
     Proxy c ->
     Proxy index ->
     t ->
@@ -180,9 +185,9 @@ class SafeToHash x => HashAnnotated x index c | x -> index c where
   indexProxy _ = Proxy @index
 
   -- | Create a @('SafeHash' i crypto)@,
-  -- given @(Hash.HashAlgorithm (CC.HASH crypto))@
+  -- given @(Hash.HashAlgorithm (HASH crypto))@
   -- and  @(HashAnnotated x i crypto)@ instances.
-  hashAnnotated :: Hash.HashAlgorithm (CC.HASH c) => x -> SafeHash c index
+  hashAnnotated :: Hash.HashAlgorithm (HASH c) => x -> SafeHash c index
   hashAnnotated = makeHashWithExplicitProxys (Proxy @c) (Proxy @index)
 
 -- ========================================================================
@@ -193,7 +198,7 @@ class SafeToHash x => HashWithCrypto x index | x -> index where
   -- | Create a @('SafeHash' index crypto)@ value from @x@, the @proxy@ determines the crypto.
   hashWithCrypto ::
     forall c.
-    Hash.HashAlgorithm (CC.HASH c) =>
+    Hash.HashAlgorithm (HASH c) =>
     Proxy c ->
     x ->
     SafeHash c index
@@ -217,7 +222,7 @@ data Safe where
 instance SafeToHash Safe where
   originalBytes (Safe x) = originalBytes x
 
-hashSafeList :: Hash.HashAlgorithm (CC.HASH c) => Proxy c -> Proxy index -> [Safe] -> SafeHash c index
+hashSafeList :: Hash.HashAlgorithm (HASH c) => Proxy c -> Proxy index -> [Safe] -> SafeHash c index
 hashSafeList pc pindex xs = makeHashWithExplicitProxys pc pindex (fold $ originalBytes <$> xs)
 
 -- ===========================================================

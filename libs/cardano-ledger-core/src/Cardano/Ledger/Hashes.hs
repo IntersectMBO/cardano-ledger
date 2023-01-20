@@ -30,8 +30,8 @@ where
 
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Binary (FromCBOR, ToCBOR)
-import Cardano.Ledger.Crypto (ADDRHASH)
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.Binary.Plain (DecCBOR, EncCBOR)
+import Cardano.Ledger.Crypto (ADDRHASH, Crypto)
 import Cardano.Ledger.SafeHash (SafeHash)
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
@@ -77,10 +77,14 @@ newtype ScriptHash c
   deriving (Show, Eq, Ord, Generic)
   deriving newtype (NFData, NoThunks)
 
-deriving newtype instance CC.Crypto c => ToCBOR (ScriptHash c)
+deriving newtype instance Crypto c => EncCBOR (ScriptHash c)
 
-deriving newtype instance CC.Crypto c => FromCBOR (ScriptHash c)
+deriving newtype instance Crypto c => DecCBOR (ScriptHash c)
 
-deriving newtype instance CC.Crypto c => ToJSON (ScriptHash c)
+deriving newtype instance Crypto c => ToCBOR (ScriptHash c)
 
-deriving newtype instance CC.Crypto c => FromJSON (ScriptHash c)
+deriving newtype instance Crypto c => FromCBOR (ScriptHash c)
+
+deriving newtype instance Crypto c => ToJSON (ScriptHash c)
+
+deriving newtype instance Crypto c => FromJSON (ScriptHash c)
