@@ -191,7 +191,7 @@ scriptsYes = do
 
   let !_ = traceEvent validEnd ()
 
-  pure $! updateUTxOState u txBody depositChange ppup'
+  pure $! updateUTxOState pp u txBody depositChange ppup'
 
 scriptsNo ::
   forall era.
@@ -238,5 +238,5 @@ scriptsNo = do
       { utxosUtxo = UTxO (Map.union utxoKeep collouts) -- NEW to Babbage
       {- fees + collateralFees -}
       , utxosFees = fees <> collateralFees -- NEW to Babbage
-      , utxosStakeDistr = updateStakeDistribution (utxosStakeDistr us) (UTxO utxoDel) (UTxO collouts)
+      , utxosStakeDistr = updateStakeDistribution pp (utxosStakeDistr us) (UTxO utxoDel) (UTxO collouts)
       }

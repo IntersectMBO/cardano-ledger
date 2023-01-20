@@ -11,6 +11,7 @@ module Cardano.Ledger.State.Query where
 
 import Cardano.Ledger.Alonzo.TxBody as Alonzo
 import Cardano.Ledger.Binary
+import Cardano.Ledger.Core (emptyPParams)
 import qualified Cardano.Ledger.Credential as Credential
 import qualified Cardano.Ledger.EpochBoundary as EpochBoundary
 import qualified Cardano.Ledger.Keys as Keys
@@ -515,7 +516,7 @@ getLedgerState utxo LedgerState {..} dstate = do
   pure
     Shelley.LedgerState
       { Shelley.lsUTxOState =
-          Shelley.smartUTxOState utxo utxoStateDeposited utxoStateFees utxoStatePpups -- Maintain invariant
+          Shelley.smartUTxOState emptyPParams utxo utxoStateDeposited utxoStateFees utxoStatePpups -- Maintain invariant
       , Shelley.lsDPState =
           Shelley.DPState
             { Shelley.dpsDState = dstate

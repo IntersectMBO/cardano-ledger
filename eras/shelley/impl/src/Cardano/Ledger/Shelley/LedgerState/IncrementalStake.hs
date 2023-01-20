@@ -84,14 +84,15 @@ import Lens.Micro
 -- | Incrementally add the inserts 'utxoAdd' and the deletes 'utxoDel' to the IncrementalStake.
 updateStakeDistribution ::
   EraTxOut era =>
+  PParams era ->
   IncrementalStake (EraCrypto era) ->
   UTxO era ->
   UTxO era ->
   IncrementalStake (EraCrypto era)
-updateStakeDistribution incStake0 utxoDel utxoAdd = incStake2
+updateStakeDistribution pp incStake0 utxoDel utxoAdd = incStake2
   where
-    incStake1 = incrementalAggregateUtxoCoinByCredential id utxoAdd incStake0
-    incStake2 = incrementalAggregateUtxoCoinByCredential invert utxoDel incStake1
+    incStake1 = incrementalAggregateUtxoCoinByCredential pp id utxoAdd incStake0
+    incStake2 = incrementalAggregateUtxoCoinByCredential pp invert utxoDel incStake1
 
 -- | Incrementally sum up all the Coin, for each staking Credential, in the outputs of the UTxO, and
 --   "add" them to the IncrementalStake. "add" has different meaning depending on if we are inserting
@@ -104,11 +105,12 @@ updateStakeDistribution incStake0 utxoDel utxoAdd = incStake2
 incrementalAggregateUtxoCoinByCredential ::
   forall era.
   EraTxOut era =>
+  PParams era ->
   (Coin -> Coin) ->
   UTxO era ->
   IncrementalStake (EraCrypto era) ->
   IncrementalStake (EraCrypto era)
-incrementalAggregateUtxoCoinByCredential mode (UTxO u) initial =
+incrementalAggregateUtxoCoinByCredential pp mode (UTxO u) initial =
   Map.foldl' accum initial u
   where
     keepOrDelete new Nothing =
@@ -119,10 +121,14 @@ incrementalAggregateUtxoCoinByCredential mode (UTxO u) initial =
       case mode new <> old of
         Coin 0 -> Nothing
         final -> Just final
+    ignorePtrs = HardForks.forgoPointerAddressResolution (pp ^. ppProtocolVersionL)
     accum ans@(IStake stake ptrs) out =
       let c = out ^. coinTxOutL
        in case out ^. addrTxOutL of
-            Addr _ _ (StakeRefPtr p) -> IStake stake (Map.alter (keepOrDelete c) p ptrs)
+            Addr _ _ (StakeRefPtr p) ->
+              if ignorePtrs
+                then ans
+                else IStake stake (Map.alter (keepOrDelete c) p ptrs)
             Addr _ _ (StakeRefBase hk) -> IStake (Map.alter (keepOrDelete c) hk stake) ptrs
             _other -> ans
 
@@ -139,20 +145,20 @@ incrementalAggregateUtxoCoinByCredential mode (UTxO u) initial =
 --
 --   TO IncrementalStake
 smartUTxOState ::
-  ( EraTxOut era
-  ) =>
+  EraTxOut era =>
+  PParams era ->
   UTxO era ->
   Coin ->
   Coin ->
   GovernanceState era ->
   UTxOState era
-smartUTxOState utxo c1 c2 st =
+smartUTxOState pp utxo c1 c2 st =
   UTxOState
     utxo
     c1
     c2
     st
-    (updateStakeDistribution mempty mempty utxo)
+    (updateStakeDistribution pp mempty mempty utxo)
 
 -- =======================================================================
 -- Part 2. Compute a Snapshot using the IncrementalStake in Snap rule

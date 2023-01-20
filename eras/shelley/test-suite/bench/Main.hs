@@ -224,7 +224,7 @@ epochAt x =
       ("UTxO=" ++ show x ++ ",  address=" ++ show n)
       [ bench "stakeDistr" (nf action2m arg)
       , bench "incrementalStakeDistr" (nf action2im arg)
-      , env (pure (updateStakeDistribution mempty mempty utxo)) $ \incStake ->
+      , env (pure (updateStakeDistribution emptyPParams mempty mempty utxo)) $ \incStake ->
           bench "incrementalStakeDistr (no update)" $
             nf (incrementalStakeDistr (emptyPParams @C) incStake dstate) pstate
       ]
@@ -243,8 +243,9 @@ action2im ::
   (DState (EraCrypto era), PState (EraCrypto era), UTxO era) ->
   EB.SnapShot (EraCrypto era)
 action2im (dstate, pstate, utxo) =
-  let incStake = updateStakeDistribution mempty mempty utxo
-   in incrementalStakeDistr (emptyPParams @era) incStake dstate pstate
+  let pp = emptyPParams @era
+      incStake = updateStakeDistribution pp mempty mempty utxo
+   in incrementalStakeDistr pp incStake dstate pstate
 
 -- =================================================================
 

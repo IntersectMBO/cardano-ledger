@@ -365,7 +365,7 @@ testUTXOWsubset (UTXOW other) _ = error ("Cannot use testUTXOW in era " ++ show 
 -- | Use a test where any two (ValidationTagMismatch x y) failures match regardless of 'x' and 'y'
 testUTXOspecialCase wit@(UTXOW proof) utxo pparam tx expected =
   let env = UtxoEnv (SlotNo 0) pparam def (GenDelegs mempty)
-      state = smartUTxOState utxo (Coin 0) (Coin 0) def
+      state = smartUTxOState pparam utxo (Coin 0) (Coin 0) def
    in case proof of
         Alonzo _ -> runSTS wit (TRC (env, state, tx)) (specialCont proof expected)
         Babbage _ -> runSTS wit (TRC (env, state, tx)) (specialCont proof expected)
@@ -396,7 +396,7 @@ testUTXOWwith ::
   Assertion
 testUTXOWwith wit@(UTXOW proof) cont utxo pparams tx expected =
   let env = UtxoEnv (SlotNo 0) pparams def (GenDelegs mempty)
-      state = smartUTxOState utxo (Coin 0) (Coin 0) def
+      state = smartUTxOState pparams utxo (Coin 0) (Coin 0) def
    in case proof of
         Conway _ -> runSTS wit (TRC (env, state, tx)) (cont expected)
         Babbage _ -> runSTS wit (TRC (env, state, tx)) (cont expected)

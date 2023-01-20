@@ -1061,7 +1061,7 @@ testExpectSuccessValid
 
         initUtxo = (UTxO . Map.fromList) $ inputs' ++ refInputs' ++ collateral'
         expectedUtxo = UTxO $ Map.fromList (newTxInOut ++ refInputs' ++ collateral')
-        expectedState = smartUTxOState expectedUtxo (Coin 0) fees def
+        expectedState = smartUTxOState (pp pf) expectedUtxo (Coin 0) fees def
         assumedValidTx = trustMeP pf True tx'
      in testUTXOW (UTXOW pf) initUtxo (pp pf) assumedValidTx (Right expectedState)
 
@@ -1102,7 +1102,7 @@ testExpectSuccessInvalid
         initUtxo = UTxO . Map.fromList $ inputs' ++ refInputs' ++ collateral'
         colBallance = Collateral.collAdaBalance txBody' (Map.fromList collateral')
         expectedUtxo = UTxO $ Map.fromList (inputs' ++ refInputs' ++ newColReturn txBody')
-        expectedState = smartUTxOState expectedUtxo (Coin 0) colBallance def
+        expectedState = smartUTxOState (pp pf) expectedUtxo (Coin 0) colBallance def
         assumedInvalidTx = trustMeP pf False tx'
      in testUTXOW (UTXOW pf) initUtxo (pp pf) assumedInvalidTx (Right expectedState)
 

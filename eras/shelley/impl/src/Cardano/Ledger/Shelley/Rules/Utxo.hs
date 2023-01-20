@@ -417,7 +417,7 @@ utxoInductive = do
   let totalDeposits' = totalTxDeposits pp dpstate txb
   let depositChange = totalDeposits' Val.<-> refunded
   tellEvent $ TotalDeposits (hashAnnotated txb) depositChange
-  pure $! updateUTxOState u txb depositChange ppup'
+  pure $! updateUTxOState pp u txb depositChange ppup'
 
 -- | The ttl field marks the top of an open interval, so it must be strictly
 -- less than the slot, so fail if it is (>=).
@@ -579,19 +579,20 @@ validateMaxTxSizeUTxO pp tx =
 
 updateUTxOState ::
   (EraTxBody era, GovernanceState era ~ ShelleyPPUPState era) =>
+  PParams era ->
   UTxOState era ->
   TxBody era ->
   Coin ->
   ShelleyPPUPState era ->
   UTxOState era
-updateUTxOState UTxOState {utxosUtxo, utxosDeposited, utxosFees, utxosStakeDistr} txb depositChange ppups =
+updateUTxOState pp UTxOState {utxosUtxo, utxosDeposited, utxosFees, utxosStakeDistr} txb depositChange ppups =
   let UTxO utxo = utxosUtxo
       !utxoAdd = txouts txb -- These will be inserted into the UTxO
       {- utxoDel  = txins txb ◁ utxo -}
       !(utxoWithout, utxoDel) = extractKeys utxo (txb ^. inputsTxBodyL)
       {- newUTxO = (txins txb ⋪ utxo) ∪ outs txb -}
       newUTxO = utxoWithout `Map.union` unUTxO utxoAdd
-      newIncStakeDistro = updateStakeDistribution utxosStakeDistr (UTxO utxoDel) utxoAdd
+      newIncStakeDistro = updateStakeDistribution pp utxosStakeDistr (UTxO utxoDel) utxoAdd
    in UTxOState
         { utxosUtxo = UTxO newUTxO
         , utxosDeposited = utxosDeposited <> depositChange

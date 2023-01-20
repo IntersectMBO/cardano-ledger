@@ -206,7 +206,7 @@ utxoTransition = do
   let refunded = keyTxRefunds pp dpstate txb
   let depositChange = totalTxDeposits pp dpstate txb Val.<-> refunded
 
-  pure $! Shelley.updateUTxOState u txb depositChange ppup'
+  pure $! Shelley.updateUTxOState pp u txb depositChange ppup'
 
 -- | Ensure the transaction is within the validity window.
 --
