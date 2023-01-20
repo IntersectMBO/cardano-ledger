@@ -80,10 +80,14 @@ import Cardano.Ledger.Binary (
   ToCBORGroup (..),
   cborError,
   decodeRationalWithTag,
-  decodeRecordSum,
-  encodeListLen,
   encodeRatioWithTag,
   encodedSizeExpr,
+ )
+import Cardano.Ledger.Binary.Plain (
+  DecCBOR (..),
+  EncCBOR (..),
+  decodeRecordSum,
+  encodeListLen,
   invalidKey,
  )
 import Cardano.Ledger.Binary.Version
@@ -413,16 +417,20 @@ data Nonce
 
 instance NoThunks Nonce
 
-instance ToCBOR Nonce where
-  toCBOR NeutralNonce = encodeListLen 1 <> toCBOR (0 :: Word8)
-  toCBOR (Nonce n) = encodeListLen 2 <> toCBOR (1 :: Word8) <> toCBOR n
+instance ToCBOR Nonce
 
-instance FromCBOR Nonce where
-  fromCBOR = decodeRecordSum "Nonce" $
+instance EncCBOR Nonce where
+  encCBOR NeutralNonce = encodeListLen 1 <> encCBOR (0 :: Word8)
+  encCBOR (Nonce n) = encodeListLen 2 <> encCBOR (1 :: Word8) <> encCBOR n
+
+instance FromCBOR Nonce
+
+instance DecCBOR Nonce where
+  decCBOR = decodeRecordSum "Nonce" $
     \case
       0 -> pure (1, NeutralNonce)
       1 -> do
-        x <- fromCBOR
+        x <- decCBOR
         pure (2, Nonce x)
       k -> invalidKey k
 

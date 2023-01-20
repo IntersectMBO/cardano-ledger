@@ -87,6 +87,7 @@ import Cardano.Ledger.Binary (
   encodedVerKeyDSIGNSizeExpr,
  )
 import Cardano.Ledger.Binary.Crypto
+import Cardano.Ledger.Binary.Plain (DecCBOR, EncCBOR)
 import Cardano.Ledger.Crypto (ADDRHASH, Crypto, DSIGN, HASH, KES, VRF)
 import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (toExpr))
 import Control.DeepSeq (NFData)
@@ -228,6 +229,14 @@ newtype KeyHash (discriminator :: KeyRole) c
   = KeyHash (Hash.Hash (ADDRHASH c) (DSIGN.VerKeyDSIGN (DSIGN c)))
   deriving (Show, Eq, Ord)
   deriving newtype (NFData, NoThunks, Generic)
+
+deriving instance
+  (Crypto c, Typeable disc) =>
+  EncCBOR (KeyHash disc c)
+
+deriving instance
+  (Crypto c, Typeable disc) =>
+  DecCBOR (KeyHash disc c)
 
 deriving instance
   (Crypto c, Typeable disc) =>

@@ -6,6 +6,7 @@
 -- `cardano-binary` package.
 module Cardano.Ledger.Binary.Plain (
   module Cardano.Binary,
+  invalidKey,
   decodeRecordNamed,
   decodeRecordSum,
   decodeListLike,
@@ -15,6 +16,10 @@ where
 import Cardano.Binary
 import Control.Monad (unless)
 import qualified Data.Text as Text
+
+-- | Report an error when a numeric key of the type constructor doesn't match.
+invalidKey :: MonadFail m => Word -> m a
+invalidKey k = cborError $ DecoderErrorCustom "Not a valid key:" (Text.pack $ show k)
 
 decodeRecordNamed :: Text.Text -> (a -> Int) -> Decoder s a -> Decoder s a
 decodeRecordNamed name getRecordSize decoder =
