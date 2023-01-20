@@ -31,6 +31,7 @@ import Cardano.Ledger.Shelley.API (
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.Core (EraTallyState (..))
 import qualified Data.Map.Strict as Map
+import Lens.Micro
 
 --------------------------------------------------------------------------------
 -- Translation from Alonzo to Babbage
@@ -67,23 +68,18 @@ instance
 
 newtype Tx era = Tx {unTx :: Core.Tx era}
 
-instance
-  ( Crypto c
-  , Tx (BabbageEra c) ~ AlonzoTx (BabbageEra c)
-  ) =>
-  TranslateEra (BabbageEra c) Tx
-  where
+instance Crypto c => TranslateEra (BabbageEra c) Tx where
   type TranslationError (BabbageEra c) Tx = DecoderError
   translateEra _ctxt (Tx tx) = do
     -- Note that this does not preserve the hidden bytes field of the transaction.
     -- This is under the premise that this is irrelevant for TxInBlocks, which are
     -- not transmitted as contiguous chunks.
-    txBody <- translateEraThroughCBOR "TxBody" $ Alonzo.body tx
-    txWits <- translateEraThroughCBOR "TxWitness" $ Alonzo.wits tx
-    auxData <- case Alonzo.auxiliaryData tx of
+    txBody <- translateEraThroughCBOR "TxBody" $ tx ^. bodyTxL
+    txWits <- translateEraThroughCBOR "TxWitness" $ tx ^. witsTxL
+    auxData <- case tx ^. auxDataTxL of
       SNothing -> pure SNothing
       SJust auxData -> SJust <$> translateEraThroughCBOR "AuxData" auxData
-    let validating = Alonzo.isValid tx
+    let validating = tx ^. Alonzo.isValidTxL
     pure $ Tx $ AlonzoTx txBody txWits validating auxData
 
 --------------------------------------------------------------------------------
