@@ -144,6 +144,10 @@ instance Typeable era => ToCBOR (RedeemersRaw era) where
 instance Memoized Redeemers where
   type RawType Redeemers = RedeemersRaw
 
+-- | Note that 'Redeemers' are based on 'MemoBytes' since we must preserve
+-- the original bytes for the 'ScriptIntegrity'.
+-- Since the 'Redeemers' exist outside of the transaction body,
+-- this is how we ensure that they are not manipulated.
 newtype Redeemers era = RedeemersConstr (MemoBytes RedeemersRaw era)
   deriving newtype (Eq, ToCBOR, NoThunks, SafeToHash, Typeable, NFData)
 
@@ -278,6 +282,10 @@ nullDats (TxDats' d) = Map.null d
 instance (Era era) => FromCBOR (Annotator (TxDatsRaw era)) where
   fromCBOR = decode $ fmap (TxDatsRaw . keyBy hashData) <$> listDecodeA From
 
+-- | Note that 'TxDats' are based on 'MemoBytes' since we must preserve
+-- the original bytes for the 'ScriptIntegrity'.
+-- Since the 'TxDats' exist outside of the transaction body,
+-- this is how we ensure that they are not manipulated.
 newtype TxDats era = TxDatsConstr (MemoBytes TxDatsRaw era)
   deriving newtype (SafeToHash, ToCBOR, Eq, NoThunks, NFData)
 
