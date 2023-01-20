@@ -14,7 +14,8 @@ module Cardano.Protocol.TPraos.Rules.Tickn (
 where
 
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), decodeRecordNamed, encodeListLen)
+import Cardano.Ledger.Binary (FromCBOR, ToCBOR)
+import Cardano.Ledger.Binary.Plain (DecCBOR (..), EncCBOR (..), decodeRecordNamed, encodeListLen)
 import Control.State.Transition
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
@@ -36,26 +37,30 @@ data TicknState = TicknState
 
 instance NoThunks TicknState
 
-instance FromCBOR TicknState where
-  fromCBOR =
+instance FromCBOR TicknState
+
+instance DecCBOR TicknState where
+  decCBOR =
     decodeRecordNamed
       "TicknState"
       (const 2)
       ( TicknState
-          <$> fromCBOR
-          <*> fromCBOR
+          <$> decCBOR
+          <*> decCBOR
       )
 
-instance ToCBOR TicknState where
-  toCBOR
+instance ToCBOR TicknState
+
+instance EncCBOR TicknState where
+  encCBOR
     ( TicknState
         ηv
         ηc
       ) =
       mconcat
         [ encodeListLen 2
-        , toCBOR ηv
-        , toCBOR ηc
+        , encCBOR ηv
+        , encCBOR ηc
         ]
 
 data TicknPredicateFailure -- No predicate failures

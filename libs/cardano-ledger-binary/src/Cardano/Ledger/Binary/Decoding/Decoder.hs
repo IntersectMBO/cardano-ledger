@@ -148,7 +148,7 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
 )
 where
 
-import Cardano.Binary (DecoderError (..), cborError, toCborError)
+import Cardano.Ledger.Binary.Plain (DecoderError (..), cborError, invalidKey, toCborError)
 import Cardano.Ledger.Binary.Version
 import Codec.CBOR.ByteArray (ByteArray)
 import qualified Codec.CBOR.Decoding as C (
@@ -357,10 +357,6 @@ whenDecoderVersionAtLeast atLeast decoder = do
 
 showDecoderError :: B.Buildable e => e -> String
 showDecoderError = formatToString build
-
--- | Report an error when a numeric key of the type constructor doesn't match.
-invalidKey :: Word -> Decoder s a
-invalidKey k = cborError $ DecoderErrorCustom "Not a valid key:" (Text.pack $ show k)
 
 decodeVersion :: Decoder s Version
 decodeVersion = decodeWord64 >>= mkVersion64

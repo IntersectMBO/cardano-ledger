@@ -53,7 +53,8 @@ import Cardano.Ledger.BaseTypes (
   UnitInterval,
   epochInfoPure,
  )
-import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), decodeRecordNamed, encodeListLen)
+import Cardano.Ledger.Binary (FromCBOR, ToCBOR)
+import Cardano.Ledger.Binary.Plain (DecCBOR (..), EncCBOR (..), decodeRecordNamed, encodeListLen)
 import Cardano.Ledger.Chain (ChainChecksPParams, pparamsToChainChecksPParams)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto, VRF)
@@ -380,19 +381,23 @@ initialChainDepState initNonce genDelegs =
 
 instance Crypto c => NoThunks (ChainDepState c)
 
-instance Crypto c => FromCBOR (ChainDepState c) where
-  fromCBOR =
+instance Crypto c => FromCBOR (ChainDepState c)
+
+instance Crypto c => DecCBOR (ChainDepState c) where
+  decCBOR =
     decodeRecordNamed
       "ChainDepState"
       (const 3)
       ( ChainDepState
-          <$> fromCBOR
-          <*> fromCBOR
-          <*> fromCBOR
+          <$> decCBOR
+          <*> decCBOR
+          <*> decCBOR
       )
 
-instance Crypto c => ToCBOR (ChainDepState c) where
-  toCBOR
+instance Crypto c => ToCBOR (ChainDepState c)
+
+instance Crypto c => EncCBOR (ChainDepState c) where
+  encCBOR
     ChainDepState
       { csProtocol
       , csTickn
@@ -400,9 +405,9 @@ instance Crypto c => ToCBOR (ChainDepState c) where
       } =
       mconcat
         [ encodeListLen 3
-        , toCBOR csProtocol
-        , toCBOR csTickn
-        , toCBOR csLabNonce
+        , encCBOR csProtocol
+        , encCBOR csTickn
+        , encCBOR csLabNonce
         ]
 
 newtype ChainTransitionError c
