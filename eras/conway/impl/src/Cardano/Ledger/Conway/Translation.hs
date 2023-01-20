@@ -15,15 +15,14 @@ module Cardano.Ledger.Conway.Translation where
 
 import Cardano.Ledger.Allegra.Scripts (translateTimelock)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
-import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..))
 import Cardano.Ledger.Babbage (BabbageEra)
-import Cardano.Ledger.Babbage.Tx (AlonzoTx (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), Datum (..))
 import Cardano.Ledger.Binary (DecoderError)
+import Cardano.Ledger.Conway.Core hiding (Tx)
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Scripts ()
 import Cardano.Ledger.Conway.Tx ()
-import Cardano.Ledger.Core hiding (Tx)
 import qualified Cardano.Ledger.Core as Core (Tx)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Shelley.API (
@@ -35,9 +34,9 @@ import Cardano.Ledger.Shelley.API (
   UTxOState (..),
  )
 import qualified Cardano.Ledger.Shelley.API as API
-import Cardano.Ledger.Shelley.Core hiding (Tx)
 import Data.Coerce
 import qualified Data.Map.Strict as Map
+import Lens.Micro
 
 --------------------------------------------------------------------------------
 -- Translation from Babbage to Conway
@@ -71,24 +70,24 @@ instance Crypto c => TranslateEra (ConwayEra c) NewEpochState where
 
 newtype Tx era = Tx {unTx :: Core.Tx era}
 
-instance
-  ( Crypto c
-  , Tx (ConwayEra c) ~ AlonzoTx (ConwayEra c)
-  ) =>
-  TranslateEra (ConwayEra c) Tx
-  where
+instance Crypto c => TranslateEra (ConwayEra c) Tx where
   type TranslationError (ConwayEra c) Tx = DecoderError
   translateEra _ctxt (Tx tx) = do
     -- Note that this does not preserve the hidden bytes field of the transaction.
     -- This is under the premise that this is irrelevant for TxInBlocks, which are
     -- not transmitted as contiguous chunks.
-    txBody <- translateEraThroughCBOR "TxBody" $ Alonzo.body tx
-    txWits <- translateEraThroughCBOR "TxWitness" $ Alonzo.wits tx
-    auxData <- case Alonzo.auxiliaryData tx of
+    txBody <- translateEraThroughCBOR "TxBody" $ tx ^. bodyTxL
+    txWits <- translateEraThroughCBOR "TxWitness" $ tx ^. witsTxL
+    auxData <- case tx ^. auxDataTxL of
       SNothing -> pure SNothing
       SJust auxData -> SJust <$> translateEraThroughCBOR "AuxData" auxData
-    let validating = Alonzo.isValid tx
-    pure $ Tx $ AlonzoTx txBody txWits validating auxData
+    let isValidTx = tx ^. isValidTxL
+        newTx =
+          mkBasicTx txBody
+            & witsTxL .~ txWits
+            & isValidTxL .~ isValidTx
+            & auxDataTxL .~ auxData
+    pure $ Tx newTx
 
 --------------------------------------------------------------------------------
 -- Auxiliary instances and functions

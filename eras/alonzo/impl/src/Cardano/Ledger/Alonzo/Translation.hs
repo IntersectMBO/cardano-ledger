@@ -71,12 +71,7 @@ instance Crypto c => TranslateEra (AlonzoEra c) Core.PParams where
 
 newtype Tx era = Tx {unTx :: Core.Tx era}
 
-instance
-  ( Crypto c
-  , Core.Tx (AlonzoEra c) ~ AlonzoTx (AlonzoEra c)
-  ) =>
-  TranslateEra (AlonzoEra c) Tx
-  where
+instance Crypto c => TranslateEra (AlonzoEra c) Tx where
   type TranslationError (AlonzoEra c) Tx = DecoderError
   translateEra _ctxt (Tx tx) = do
     -- Note that this does not preserve the hidden bytes field of the transaction.
