@@ -145,7 +145,7 @@ instance Memoized Redeemers where
   type RawType Redeemers = RedeemersRaw
 
 -- | Note that 'Redeemers' are based on 'MemoBytes' since we must preserve
--- the original bytes for the 'ScriptIntegrity'.
+-- the original bytes for the 'Cardano.Ledger.Alonzo.Tx.ScriptIntegrity'.
 -- Since the 'Redeemers' exist outside of the transaction body,
 -- this is how we ensure that they are not manipulated.
 newtype Redeemers era = RedeemersConstr (MemoBytes RedeemersRaw era)
@@ -283,7 +283,7 @@ instance (Era era) => FromCBOR (Annotator (TxDatsRaw era)) where
   fromCBOR = decode $ fmap (TxDatsRaw . keyBy hashData) <$> listDecodeA From
 
 -- | Note that 'TxDats' are based on 'MemoBytes' since we must preserve
--- the original bytes for the 'ScriptIntegrity'.
+-- the original bytes for the 'Cardano.Ledger.Alonzo.Tx.ScriptIntegrity'.
 -- Since the 'TxDats' exist outside of the transaction body,
 -- this is how we ensure that they are not manipulated.
 newtype TxDats era = TxDatsConstr (MemoBytes TxDatsRaw era)
