@@ -67,8 +67,10 @@ import Cardano.Ledger.Binary.Encoding.Encoder (
   encodeMapLen,
   encodeTag,
   encodeWord,
+  fromPlainEncoding,
  )
 import Cardano.Ledger.Binary.Encoding.ToCBOR (ToCBOR (toCBOR))
+import Cardano.Ledger.Binary.Plain (EncCBOR (..))
 import Data.Maybe.Strict (StrictMaybe (SJust, SNothing))
 
 -- ====================================================================
@@ -129,6 +131,8 @@ data Encode (w :: Wrapped) t where
   Keyed :: t -> Encode ('Closed 'Sparse) t
   -- | Label an (component, field, argument) to be encoded using an existing ToCBOR instance.
   To :: ToCBOR a => a -> Encode ('Closed 'Dense) a
+  -- | Label an (component, field, argument) to be encoded using an existing ToCBOR instance.
+  Enc :: EncCBOR a => a -> Encode ('Closed 'Dense) a
   -- | Label a  (component, field, argument) to be encoded using the given encoding function.
   E :: (t -> Encoding) -> t -> Encode ('Closed 'Dense) t
   -- | Lift one Encode to another with a different type. Used to make a Functor instance of (Encode w).
@@ -162,6 +166,7 @@ runE (Sum cn _) = cn
 runE (Rec cn) = cn
 runE (ApplyE f x) = runE f (runE x)
 runE (To x) = x
+runE (Enc x) = x
 runE (E _ x) = x
 runE (MapE f x) = f $ runE x
 runE (OmitC x) = x
@@ -174,6 +179,7 @@ gsize :: Encode w t -> Word
 gsize (Sum _ _) = 0
 gsize (Rec _) = 0
 gsize (To _) = 1
+gsize (Enc _) = 1
 gsize (E _ _) = 1
 gsize (MapE _ x) = gsize x
 gsize (ApplyE f x) = gsize f + gsize x
@@ -193,6 +199,7 @@ encode = encodeCountPrefix 0
     encodeCountPrefix n (Keyed _) = encodeMapLen n
     encodeCountPrefix n (Rec _) = encodeListLen n
     encodeCountPrefix _ (To x) = toCBOR x
+    encodeCountPrefix _ (Enc x) = fromPlainEncoding $ encCBOR x
     encodeCountPrefix _ (E enc x) = enc x
     encodeCountPrefix n (MapE _ x) = encodeCountPrefix n x
     encodeCountPrefix _ (OmitC _) = mempty
@@ -205,6 +212,7 @@ encode = encodeCountPrefix 0
         encodeClosed :: Encode ('Closed d) t -> Encoding
         encodeClosed (Rec _) = mempty
         encodeClosed (To x) = toCBOR x
+        encodeClosed (Enc x) = fromPlainEncoding $ encCBOR x
         encodeClosed (E enc x) = enc x
         encodeClosed (MapE _ x) = encodeClosed x
         encodeClosed (ApplyE f x) = encodeClosed f <> encodeClosed x

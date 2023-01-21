@@ -26,14 +26,13 @@ module Test.Cardano.Ledger.Shelley.Generator.EraGen (
   someKeyPairs,
   allScripts,
   mkDummyHash,
-  randomByHash,
 )
 where
 
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (Network (..), ShelleyBase, StrictMaybe)
-import Cardano.Ledger.Binary (ToCBOR (..), serializeEncoding', shelleyProtVer)
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto, HASH)
@@ -58,6 +57,7 @@ import Cardano.Ledger.UTxO (UTxO)
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Cardano.Slotting.Slot (SlotNo)
 import Control.State.Transition.Extended (STS (..))
+import qualified Data.ByteString as BS
 import Data.Default.Class (Default)
 import Data.Hashable (Hashable (..))
 import Data.Map (Map)
@@ -341,19 +341,20 @@ allScripts c =
       where
         count3 = length args3 - 1
         count2 = length args2 - 1
-        n = randomByHash 0 count3 stake
-        m = randomByHash 0 count2 pay
-        mode = randomByHash 1 3 pay
+        payBytes = Plain.serializeEncoding' $ Plain.encCBOR pay
+        n = randomByHash 0 count3 $ Plain.serializeEncoding' $ Plain.encCBOR stake
+        m = randomByHash 0 count2 payBytes
+        mode = randomByHash 1 3 payBytes
         pair = case mode of
           1 -> (getScript3 (args3 !! n), stake)
           2 -> (pay, getScript2 (args2 !! m))
           3 -> (getScript3 (args3 !! n), getScript2 (args2 !! m))
           i -> error ("mod function returns value out of bounds: " ++ show i)
 
-randomByHash :: forall x. ToCBOR x => Int -> Int -> x -> Int
+randomByHash :: Int -> Int -> BS.ByteString -> Int
 randomByHash low high x = low + remainder
   where
-    n = hash (serializeEncoding' shelleyProtVer (toCBOR x))
+    n = hash x
     -- We don't really care about the hash, we only
     -- use it to pseudo-randomly pick a number bewteen low and high
     m = high - low + 1

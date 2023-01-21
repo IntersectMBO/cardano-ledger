@@ -60,6 +60,7 @@ import Cardano.Ledger.Alonzo.Scripts.Data (Data, hashData)
 import Cardano.Ledger.Binary (
   Annotator,
   Decoder,
+  EncCBOR (..),
   FromCBOR (..),
   FromCBORGroup (..),
   ToCBOR (..),
@@ -149,7 +150,7 @@ instance Memoized Redeemers where
 -- Since the 'Redeemers' exist outside of the transaction body,
 -- this is how we ensure that they are not manipulated.
 newtype Redeemers era = RedeemersConstr (MemoBytes RedeemersRaw era)
-  deriving newtype (Eq, ToCBOR, NoThunks, SafeToHash, Typeable, NFData)
+  deriving newtype (Eq, EncCBOR, NoThunks, SafeToHash, Typeable, NFData)
 
 deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (Redeemers era)
 
@@ -220,7 +221,7 @@ instance
   NFData (AlonzoTxWitsRaw era)
 
 newtype AlonzoTxWits era = TxWitnessConstr (MemoBytes AlonzoTxWitsRaw era)
-  deriving newtype (SafeToHash, ToCBOR)
+  deriving newtype (SafeToHash, EncCBOR)
 
 instance Memoized AlonzoTxWits where
   type RawType AlonzoTxWits = AlonzoTxWitsRaw
@@ -287,7 +288,7 @@ instance (Era era) => FromCBOR (Annotator (TxDatsRaw era)) where
 -- Since the 'TxDats' exist outside of the transaction body,
 -- this is how we ensure that they are not manipulated.
 newtype TxDats era = TxDatsConstr (MemoBytes TxDatsRaw era)
-  deriving newtype (SafeToHash, ToCBOR, Eq, NoThunks, NFData)
+  deriving newtype (SafeToHash, EncCBOR, Eq, NoThunks, NFData)
 
 instance Memoized TxDats where
   type RawType TxDats = TxDatsRaw
@@ -468,8 +469,8 @@ instance (Era era, Script era ~ AlonzoScript era) => ToCBOR (AlonzoTxWitsRaw era
                 (toCBOR . mapMaybe unwrapPS2 . Map.elems)
                 (Map.filter (isPlutus PlutusV2) scripts)
           )
-        !> Omit nullDats (Key 4 $ E toCBOR dats)
-        !> Omit nullRedeemers (Key 5 $ To rdmrs)
+        !> Omit nullDats (Key 4 $ Enc dats)
+        !> Omit nullRedeemers (Key 5 $ Enc rdmrs)
     where
       unwrapTS (TimelockScript x) = Just x
       unwrapTS _ = Nothing

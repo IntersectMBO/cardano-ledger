@@ -27,7 +27,15 @@ import Cardano.Crypto.Hash (HashAlgorithm)
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.Scripts (Timelock)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
-import Cardano.Ledger.Binary (Annotator (..), FromCBOR (..), ToCBOR (..), peekTokenType)
+import Cardano.Ledger.Binary (
+  Annotator (..),
+  EncCBOR (encCBOR),
+  FromCBOR (..),
+  ToCBOR (..),
+  encodeStrictSeq,
+  fromPlainEncoding,
+  peekTokenType,
+ )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core (
   Era (..),
@@ -93,7 +101,7 @@ instance NFData (AllegraTxAuxDataRaw era)
 
 newtype AllegraTxAuxData era = AuxiliaryDataWithBytes (MemoBytes AllegraTxAuxDataRaw era)
   deriving (Generic)
-  deriving newtype (Eq, ToCBOR, SafeToHash)
+  deriving newtype (Eq, EncCBOR, SafeToHash)
 
 instance Memoized AllegraTxAuxData where
   type RawType AllegraTxAuxData = AllegraTxAuxDataRaw
@@ -142,7 +150,7 @@ pattern AllegraTxAuxData' blob sp <-
 
 instance (Era era, ToCBOR (Script era)) => ToCBOR (AllegraTxAuxDataRaw era) where
   toCBOR (AllegraTxAuxDataRaw blob sp) =
-    encode (Rec AllegraTxAuxDataRaw !> To blob !> To sp)
+    encode (Rec AllegraTxAuxDataRaw !> To blob !> E (encodeStrictSeq (fromPlainEncoding . encCBOR)) sp)
 
 instance
   (Era era, FromCBOR (Annotator (Script era))) =>

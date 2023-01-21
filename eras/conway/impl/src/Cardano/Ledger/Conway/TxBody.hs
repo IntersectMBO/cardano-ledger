@@ -55,6 +55,7 @@ import Cardano.Ledger.Babbage.TxBody as BabbageTxBodyReExports (
 import Cardano.Ledger.BaseTypes (Network)
 import Cardano.Ledger.Binary (
   Annotator,
+  EncCBOR (..),
   FromCBOR (..),
   Sized (..),
   ToCBOR (..),
@@ -201,7 +202,7 @@ instance
         ]
 
 newtype ConwayTxBody era = TxBodyConstr (MemoBytes ConwayTxBodyRaw era)
-  deriving (Generic, SafeToHash, ToCBOR)
+  deriving (Generic, SafeToHash, EncCBOR)
 
 deriving instance
   (EraPParams era, NoThunks (TxOut era)) =>

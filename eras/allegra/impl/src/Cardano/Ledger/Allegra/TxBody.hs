@@ -43,7 +43,7 @@ import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Allegra.TxOut ()
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
-import Cardano.Ledger.Binary (Annotator, FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.Binary (Annotator, EncCBOR, FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
   Encode (..),
@@ -82,7 +82,6 @@ import Control.DeepSeq (NFData (..))
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq, fromList)
 import Data.Set (Set, empty)
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
@@ -198,7 +197,7 @@ emptyAllegraTxBodyRaw =
 -- Wrap it all up in a newtype, hiding the insides with a pattern construtor.
 
 newtype AllegraTxBody e = TxBodyConstr (MemoBytes (AllegraTxBodyRaw ()) e)
-  deriving newtype (SafeToHash)
+  deriving newtype (SafeToHash, EncCBOR)
 
 instance Memoized AllegraTxBody where
   type RawType AllegraTxBody = AllegraTxBodyRaw ()
@@ -223,8 +222,6 @@ deriving newtype instance
   , Era era
   ) =>
   NFData (AllegraTxBody era)
-
-deriving newtype instance Typeable era => ToCBOR (AllegraTxBody era)
 
 deriving via
   Mem (AllegraTxBodyRaw ()) era

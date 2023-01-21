@@ -49,12 +49,12 @@ import Cardano.Ledger.Binary (
   encodeInteger,
   encodeListLen,
   encodeMapLen,
-  encodePreEncoded,
   encodeString,
   peekTokenType,
   serializeEncoding,
   withSlice,
  )
+import qualified Cardano.Ledger.Binary.Plain as Plain (EncCBOR (encCBOR), encodePreEncoded)
 import Cardano.Ledger.Core (Era (..), EraTxAuxData (..), eraProtVerLow)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Hashes (EraIndependentTxAuxData)
@@ -140,8 +140,8 @@ pattern ShelleyTxAuxData m <-
 
 {-# COMPLETE ShelleyTxAuxData #-}
 
-instance Typeable era => ToCBOR (ShelleyTxAuxData era) where
-  toCBOR = encodePreEncoded . LBS.toStrict . mdBytes
+instance Typeable era => Plain.EncCBOR (ShelleyTxAuxData era) where
+  encCBOR = Plain.encodePreEncoded . LBS.toStrict . mdBytes
 
 instance Typeable era => FromCBOR (Annotator (ShelleyTxAuxData era)) where
   fromCBOR = do

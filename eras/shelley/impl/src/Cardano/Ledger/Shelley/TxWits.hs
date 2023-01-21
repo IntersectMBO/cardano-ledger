@@ -49,12 +49,13 @@ import Cardano.Ledger.Binary (
   decodeMapContents,
   decodeWord,
   encodeMapLen,
-  encodePreEncoded,
   encodeWord,
+  fromPlainEncoding,
   invalidKey,
   serializeEncoding,
   withSlice,
  )
+import qualified Cardano.Ledger.Binary.Plain as Plain (EncCBOR (..), encodePreEncoded)
 import Cardano.Ledger.Core (
   Era (EraCrypto),
   EraScript (Script, hashScript),
@@ -186,8 +187,8 @@ instance Crypto c => EraTxWits (ShelleyEra c) where
   scriptTxWitsL = scriptShelleyTxWitsL
   {-# INLINE scriptTxWitsL #-}
 
-instance Era era => ToCBOR (ShelleyTxWits era) where
-  toCBOR (ShelleyTxWitsConstr w) = encodePreEncoded $ BSL.toStrict $ txWitsBytes w
+instance Era era => Plain.EncCBOR (ShelleyTxWits era) where
+  encCBOR (ShelleyTxWitsConstr w) = Plain.encodePreEncoded $ BSL.toStrict $ txWitsBytes w
 
 instance EraScript era => Semigroup (ShelleyTxWits era) where
   (ShelleyTxWits a b c) <> y | Set.null a && Map.null b && Set.null c = y
@@ -213,7 +214,7 @@ pattern ShelleyTxWits {addrWits, scriptWits, bootWits} <-
           l =
             catMaybes
               [ encodeMapElement 0 toCBOR awits
-              , encodeMapElement 1 toCBOR (Map.elems scriptWitMap)
+              , encodeMapElement 1 (fromPlainEncoding . Plain.encCBOR) (Map.elems scriptWitMap)
               , encodeMapElement 2 toCBOR bootstrapWits
               ]
           n = fromIntegral $ length l

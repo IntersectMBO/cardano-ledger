@@ -111,12 +111,14 @@ import Cardano.Ledger.Alonzo.TxWits (
  )
 import Cardano.Ledger.Binary (
   Annotator (..),
+  EncCBOR (..),
   Encoding,
   FromCBOR (..),
   ToCBOR (toCBOR),
   decodeNullMaybe,
   encodeListLen,
   encodeNullMaybe,
+  fromPlainEncoding,
   serializeEncoding,
   serializeEncoding',
  )
@@ -316,17 +318,17 @@ isTwoPhaseScriptAddress tx =
 -- The individual components all store their bytes; the only work we do in this
 -- function is concatenating
 toCBORForSizeComputation ::
-  ( ToCBOR (TxBody era)
-  , ToCBOR (TxWits era)
-  , ToCBOR (TxAuxData era)
+  ( EncCBOR (TxBody era)
+  , EncCBOR (TxWits era)
+  , EncCBOR (TxAuxData era)
   ) =>
   AlonzoTx era ->
   Encoding
 toCBORForSizeComputation AlonzoTx {body, wits, auxiliaryData} =
   encodeListLen 3
-    <> toCBOR body
-    <> toCBOR wits
-    <> encodeNullMaybe toCBOR (strictMaybeToMaybe auxiliaryData)
+    <> fromPlainEncoding (encCBOR body)
+    <> fromPlainEncoding (encCBOR wits)
+    <> encodeNullMaybe (fromPlainEncoding . encCBOR) (strictMaybeToMaybe auxiliaryData)
 
 alonzoMinFeeTx ::
   ( EraTx era
@@ -507,9 +509,9 @@ alonzoSegwitTx txBodyAnn txWitsAnn isValid auxDataAnn = Annotator $ \bytes ->
 -- computing the transaction size (which omits the `IsValid` field for
 -- compatibility with Mary - see 'toCBORForSizeComputation').
 toCBORForMempoolSubmission ::
-  ( ToCBOR (TxBody era)
-  , ToCBOR (TxWits era)
-  , ToCBOR (TxAuxData era)
+  ( EncCBOR (TxBody era)
+  , EncCBOR (TxWits era)
+  , EncCBOR (TxAuxData era)
   ) =>
   AlonzoTx era ->
   Encoding
@@ -517,16 +519,16 @@ toCBORForMempoolSubmission
   AlonzoTx {body, wits, auxiliaryData, isValid} =
     encode $
       Rec AlonzoTx
-        !> To body
-        !> To wits
+        !> Enc body
+        !> Enc wits
         !> To isValid
-        !> E (encodeNullMaybe toCBOR . strictMaybeToMaybe) auxiliaryData
+        !> E (encodeNullMaybe (fromPlainEncoding . encCBOR) . strictMaybeToMaybe) auxiliaryData
 
 instance
   ( Era era
-  , ToCBOR (TxBody era)
-  , ToCBOR (TxAuxData era)
-  , ToCBOR (TxWits era)
+  , EncCBOR (TxBody era)
+  , EncCBOR (TxWits era)
+  , EncCBOR (TxAuxData era)
   ) =>
   ToCBOR (AlonzoTx era)
   where

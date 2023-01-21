@@ -785,7 +785,7 @@ instance ToCBOR a => ToCBOR (Seq.Seq a) where
   toCBOR = encodeSeq toCBOR
 
 instance ToCBOR a => ToCBOR (SSeq.StrictSeq a) where
-  toCBOR = toCBOR . SSeq.fromStrict
+  toCBOR = encodeStrictSeq toCBOR
 
 instance
   (Ord k, ToCBOR k, ToCBOR v, VMap.Vector kv k, VMap.Vector vv v, Typeable kv, Typeable vv) =>

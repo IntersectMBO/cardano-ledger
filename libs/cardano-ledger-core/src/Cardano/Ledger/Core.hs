@@ -80,6 +80,7 @@ import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (ProtVer (..))
 import Cardano.Ledger.Binary (
   Annotator,
+  EncCBOR,
   FromCBOR,
   FromSharedCBOR (Share),
   Interns,
@@ -154,7 +155,7 @@ class
   , EraPParams era
   , HashAnnotated (TxBody era) EraIndependentTxBody (EraCrypto era)
   , FromCBOR (Annotator (TxBody era))
-  , ToCBOR (TxBody era)
+  , EncCBOR (TxBody era)
   , NoThunks (TxBody era)
   , NFData (TxBody era)
   , Show (TxBody era)
@@ -347,7 +348,7 @@ class
   , Eq (TxAuxData era)
   , Show (TxAuxData era)
   , NoThunks (TxAuxData era)
-  , ToCBOR (TxAuxData era)
+  , EncCBOR (TxAuxData era)
   , FromCBOR (Annotator (TxAuxData era))
   , HashAnnotated (TxAuxData era) EraIndependentTxAuxData (EraCrypto era)
   ) =>
@@ -376,7 +377,7 @@ class
   , Show (TxWits era)
   , Monoid (TxWits era)
   , NoThunks (TxWits era)
-  , ToCBOR (TxWits era)
+  , EncCBOR (TxWits era)
   , FromCBOR (Annotator (TxWits era))
   ) =>
   EraTxWits era
@@ -409,7 +410,7 @@ class
   ( Era era
   , Show (Script era)
   , Eq (Script era)
-  , ToCBOR (Script era)
+  , EncCBOR (Script era)
   , FromCBOR (Annotator (Script era))
   , NoThunks (Script era)
   , SafeToHash (Script era)
