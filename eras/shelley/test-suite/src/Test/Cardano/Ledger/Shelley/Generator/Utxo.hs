@@ -27,6 +27,7 @@ import Cardano.Ledger.BaseTypes (
   maybeToStrictMaybe,
  )
 import Cardano.Ledger.Binary (ToCBOR, serialize)
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
@@ -382,7 +383,7 @@ genNextDelta
             , (foldr (\a b -> b + encodedLen @era a) 0 extraInputs) * 2
             , --  inputs end up in collateral as well, so we ^ multiply by 2
               encodedLen @era change
-            , encodedLen @era extraWitnesses
+            , toInteger $ BSL.length $ Plain.serialize extraWitnesses
             ]
         deltaScriptCost = foldr accum (Coin 0) extraScripts
           where

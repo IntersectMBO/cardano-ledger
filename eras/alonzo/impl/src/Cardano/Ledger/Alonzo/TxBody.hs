@@ -85,6 +85,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (
   Annotator,
+  EncCBOR (..),
   FromCBOR (..),
   ToCBOR (..),
  )
@@ -149,7 +150,7 @@ deriving instance
   Show (AlonzoTxBodyRaw era)
 
 newtype AlonzoTxBody era = TxBodyConstr (MemoBytes AlonzoTxBodyRaw era)
-  deriving (ToCBOR)
+  deriving (EncCBOR)
   deriving newtype (SafeToHash)
 
 instance Memoized AlonzoTxBody where

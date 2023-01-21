@@ -15,6 +15,7 @@ where
 import Cardano.Ledger.Binary (
   Annotator,
   DecoderError,
+  EncCBOR (..),
   Encoding,
   FromCBOR (..),
   ToCBOR (..),
@@ -93,7 +94,7 @@ checkEncodingCBOR v name x t =
    in checkEncoding v toCBOR d name x t
 
 checkEncodingCBORAnnotated ::
-  (HasCallStack, FromCBOR (Annotator a), ToCBOR a, Show a, Eq a) =>
+  (HasCallStack, FromCBOR (Annotator a), EncCBOR a, Show a, Eq a) =>
   Version ->
   String ->
   a ->
@@ -101,7 +102,7 @@ checkEncodingCBORAnnotated ::
   TestTree
 checkEncodingCBORAnnotated v name x t =
   let d = decodeFullAnnotator v (fromString name) fromCBOR
-   in checkEncoding v toCBOR d name x annTokens
+   in checkEncoding v (fromPlainEncoding . encCBOR) d name x annTokens
   where
     annTokens = T $ TkEncoded $ serialize' v t
 

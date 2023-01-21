@@ -44,8 +44,11 @@ import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import Cardano.Ledger.Binary (
   Annotator (..),
+  EncCBOR (..),
   FromCBOR (fromCBOR),
   ToCBOR (toCBOR),
+  encodeStrictSeq,
+  fromPlainEncoding,
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -144,9 +147,9 @@ instance Era era => ToCBOR (TimelockRaw era) where
   toCBOR =
     encode . \case
       Signature hash -> Sum Signature 0 !> To hash
-      AllOf xs -> Sum AllOf 1 !> To xs
-      AnyOf xs -> Sum AnyOf 2 !> To xs
-      MOfN m xs -> Sum MOfN 3 !> To m !> To xs
+      AllOf xs -> Sum AllOf 1 !> E (encodeStrictSeq (fromPlainEncoding . encCBOR)) xs
+      AnyOf xs -> Sum AnyOf 2 !> E (encodeStrictSeq (fromPlainEncoding . encCBOR)) xs
+      MOfN m xs -> Sum MOfN 3 !> To m !> E (encodeStrictSeq (fromPlainEncoding . encCBOR)) xs
       TimeStart m -> Sum TimeStart 4 !> To m
       TimeExpire m -> Sum TimeExpire 5 !> To m
 
@@ -173,7 +176,9 @@ instance Era era => FromCBOR (Annotator (TimelockRaw era)) where
 
 newtype Timelock era = TimelockConstr (MemoBytes TimelockRaw era)
   deriving (Eq, Generic)
-  deriving newtype (ToCBOR, NoThunks, NFData, SafeToHash)
+  deriving newtype (EncCBOR, NoThunks, NFData, SafeToHash)
+
+instance Era era => ToCBOR (Timelock era)
 
 instance Memoized Timelock where
   type RawType Timelock = TimelockRaw

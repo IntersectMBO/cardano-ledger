@@ -68,6 +68,7 @@ import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), Url)
 import Cardano.Ledger.Binary (
   Annotator (..),
+  EncCBOR (..),
   FromCBOR (fromCBOR),
   ToCBOR (..),
  )
@@ -258,7 +259,7 @@ instance
 
 newtype ShelleyTxBody era = TxBodyConstr (MemoBytes ShelleyTxBodyRaw era)
   deriving (Generic, Typeable)
-  deriving newtype (SafeToHash, ToCBOR)
+  deriving newtype (SafeToHash, EncCBOR)
 
 instance Memoized ShelleyTxBody where
   type RawType ShelleyTxBody = ShelleyTxBodyRaw

@@ -32,7 +32,7 @@ import Cardano.Ledger.BaseTypes (invalidKey)
 import Cardano.Ledger.Binary (
   Annotator (..),
   FromCBOR (fromCBOR),
-  ToCBOR,
+  EncCBOR,
   decodeRecordSum,
  )
 import Cardano.Ledger.Binary.Coders (Encode (..), (!>))
@@ -86,7 +86,7 @@ instance NFData (MultiSigRaw era)
 
 newtype MultiSig era = MultiSigConstr (MemoBytes MultiSigRaw era)
   deriving (Eq, Generic)
-  deriving newtype (ToCBOR, NoThunks, SafeToHash)
+  deriving newtype (EncCBOR, NoThunks, SafeToHash)
 
 deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (MultiSig era)
 
@@ -124,21 +124,21 @@ pattern RequireAllOf ms <-
   MultiSigConstr (Memo (RequireAllOf' ms) _)
   where
     RequireAllOf ms =
-      MultiSigConstr $ memoBytes (Sum RequireAllOf' 1 !> To ms)
+      MultiSigConstr $ memoBytes (Sum RequireAllOf' 1 !> Enc ms)
 
 pattern RequireAnyOf :: Era era => [MultiSig era] -> MultiSig era
 pattern RequireAnyOf ms <-
   MultiSigConstr (Memo (RequireAnyOf' ms) _)
   where
     RequireAnyOf ms =
-      MultiSigConstr $ memoBytes (Sum RequireAnyOf' 2 !> To ms)
+      MultiSigConstr $ memoBytes (Sum RequireAnyOf' 2 !> Enc ms)
 
 pattern RequireMOf :: Era era => Int -> [MultiSig era] -> MultiSig era
 pattern RequireMOf n ms <-
   MultiSigConstr (Memo (RequireMOf' n ms) _)
   where
     RequireMOf n ms =
-      MultiSigConstr $ memoBytes (Sum RequireMOf' 3 !> To n !> To ms)
+      MultiSigConstr $ memoBytes (Sum RequireMOf' 3 !> To n !> Enc ms)
 
 {-# COMPLETE RequireSignature, RequireAllOf, RequireAnyOf, RequireMOf #-}
 

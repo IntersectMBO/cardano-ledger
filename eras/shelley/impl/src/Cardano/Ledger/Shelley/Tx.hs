@@ -52,17 +52,19 @@ where
 
 import Cardano.Ledger.Binary (
   Annotator (..),
+  EncCBOR (encCBOR),
   FromCBOR (fromCBOR),
   ToCBOR (toCBOR),
   decodeNullMaybe,
   encodeListLen,
   encodeNull,
   encodeNullMaybe,
+  fromPlainEncoding,
   runAnnotator,
-  serialize,
   serializeEncoding,
  )
 import Cardano.Ledger.Binary.Coders
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
@@ -136,7 +138,7 @@ instance
   NoThunks (ShelleyTxRaw era)
 
 newtype ShelleyTx era = TxConstr (MemoBytes ShelleyTxRaw era)
-  deriving newtype (SafeToHash, ToCBOR)
+  deriving newtype (SafeToHash, EncCBOR)
 
 -- | `TxBody` setter and getter for `ShelleyTx`. The setter does update
 -- memoized binary representation.
@@ -259,12 +261,27 @@ pattern ShelleyTx {body, wits, auxiliaryData} <-
 -- Serialisation
 --------------------------------------------------------------------------------
 
-encodeShelleyTxRaw :: EraTx era => ShelleyTxRaw era -> Encode ('Closed 'Dense) (ShelleyTxRaw era)
+encodeShelleyTxRaw ::
+  (EncCBOR (TxWits era), EncCBOR (TxBody era), EncCBOR (TxAuxData era)) =>
+  ShelleyTxRaw era ->
+  Encode ('Closed 'Dense) (ShelleyTxRaw era)
 encodeShelleyTxRaw ShelleyTxRaw {strBody, strWits, strAuxiliaryData} =
   Rec ShelleyTxRaw
-    !> To strBody
-    !> To strWits
-    !> E (encodeNullMaybe toCBOR . strictMaybeToMaybe) strAuxiliaryData
+    !> Enc strBody
+    !> Enc strWits
+    !> E (encodeNullMaybe (fromPlainEncoding . encCBOR) . strictMaybeToMaybe) strAuxiliaryData
+
+instance
+  (Era era, EncCBOR (TxWits era), EncCBOR (TxBody era), EncCBOR (TxAuxData era)) =>
+  ToCBOR (ShelleyTxRaw era)
+  where
+  toCBOR = encode . encodeShelleyTxRaw
+
+instance
+  (Era era, EncCBOR (TxWits era), EncCBOR (TxBody era), EncCBOR (TxAuxData era)) =>
+  ToCBOR (ShelleyTx era)
+  where
+  toCBOR = fromPlainEncoding . encCBOR
 
 instance
   ( Era era
@@ -327,11 +344,11 @@ segwitTx
         metadata = flip runAnnotator bytes <$> metaAnn
         wrappedMetadataBytes = case metadata of
           Nothing -> serializeEncoding version encodeNull
-          Just b -> serialize version b
+          Just b -> Plain.serialize b
         fullBytes =
           serializeEncoding version (encodeListLen 3)
-            <> serialize version body'
-            <> serialize version witnessSet
+            <> Plain.serialize body'
+            <> Plain.serialize witnessSet
             <> wrappedMetadataBytes
      in unsafeConstructTxWithBytes
           body'

@@ -1058,7 +1058,7 @@ tests =
                 <> T (TkListLen 0 . TkListLen 0 . TkMapLen 0)
             )
     , -- checkEncodingCBOR "rich_block"
-      let sig :: (SignedKES (CC.KES C_Crypto) (BHBody C_Crypto))
+      let sig :: SignedKES (CC.KES C_Crypto) (BHBody C_Crypto)
           sig = signedKES () 0 (testBHB @C) (fst $ testKESKeys @C_Crypto)
           bh = BHeader (testBHB @C) sig
           tout = StrictSeq.singleton $ ShelleyTxOut @C testAddrE (Coin 2)

@@ -43,6 +43,7 @@ import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (
   Annotator (..),
   DecoderError (..),
+  EncCBOR (..),
   FromCBOR (..),
   ToCBOR (..),
   decodeFullAnnotator,
@@ -102,7 +103,11 @@ instance Typeable era => FromCBOR (Annotator (PlutusData era)) where
 
 newtype Data era = DataConstr (MemoBytes PlutusData era)
   deriving (Eq, Generic)
-  deriving newtype (SafeToHash, ToCBOR, NFData)
+  deriving newtype (SafeToHash, EncCBOR, NFData)
+
+-- Data is used inside of other types, so it does need ToCBOR, which it gets by
+-- piggybacking on the EncCBOR
+instance Typeable era => ToCBOR (Data era)
 
 instance Memoized Data where
   type RawType Data = PlutusData

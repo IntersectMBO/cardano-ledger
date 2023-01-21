@@ -29,6 +29,7 @@ import Cardano.Ledger.Binary (
   serialize,
   serializeEncoding,
  )
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Codec.CBOR.Read (deserialiseFromBytes)
 import Codec.CBOR.Term (decodeTerm)
 import Control.Exception hiding (throwIO)
@@ -64,13 +65,13 @@ cddlTest v = cddlRoundtripTest @a (serialize v) (decodeFullDecoder v "cbor test"
 -- FromCBOR (Annotator t)
 cddlAnnotatorTest ::
   forall a.
-  (ToCBOR a, FromCBOR (Annotator a), Show a, HasCallStack) =>
+  (Plain.EncCBOR a, FromCBOR (Annotator a), Show a, HasCallStack) =>
   Version ->
   Int ->
   BSL.ByteString ->
   IO BSL.ByteString ->
   TestTree
-cddlAnnotatorTest v = cddlRoundtripTest @a (serialize v) (decodeFullAnnotator v "cbor test" fromCBOR)
+cddlAnnotatorTest v = cddlRoundtripTest @a Plain.serialize (decodeFullAnnotator v "cbor test" fromCBOR)
 
 -- | Round trip test for a type t with instances:
 -- ToCBORGroup t

@@ -1,6 +1,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -13,7 +14,7 @@ import Cardano.Ledger.Binary (
   Annotator (..),
   Decoder,
   FromCBOR (fromCBOR),
-  ToCBOR (..),
+  EncCBOR,
   annotatorSlice,
   decodeRecordNamed,
  )
@@ -26,6 +27,7 @@ import Data.Typeable (Typeable)
 --   encoding of parts of the segwit.
 --   This is only for testing.
 newtype LaxBlock h era = LaxBlock (Block h era)
+  deriving (EncCBOR)
 
 blockDecoder ::
   ( EraTx era
@@ -40,9 +42,6 @@ blockDecoder lax = annotatorSlice $
     header <- fromCBOR
     txns <- txSeqDecoder lax
     pure $ Block' <$> header <*> txns
-
-instance (EraTx era, Typeable h) => ToCBOR (LaxBlock h era) where
-  toCBOR (LaxBlock x) = toCBOR x
 
 deriving stock instance (Era era, Show (TxSeq era), Show h) => Show (LaxBlock h era)
 

@@ -61,6 +61,7 @@ import Cardano.Ledger.Binary (
   Annotator,
   Decoder,
   DecoderError (..),
+  EncCBOR (encCBOR),
   Encoding,
   FromCBOR (fromCBOR),
   ToCBOR (toCBOR),
@@ -69,10 +70,11 @@ import Cardano.Ledger.Binary (
   encodeFoldableAsDefLenList,
   encodeMap,
   getVersion64,
+  toPlainEncoding,
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (Ann, D, From, Invalid, RecD, SumD, Summands),
-  Encode (Rec, Sum, To),
+  Encode (Enc, Rec, Sum, To),
   Wrapped (Open),
   decode,
   encode,
@@ -689,11 +691,15 @@ instance ToCBOR Prices where
 instance FromCBOR Prices where
   fromCBOR = decode $ RecD Prices <! From <! From
 
-instance (Typeable (EraCrypto era), Typeable era) => ToCBOR (AlonzoScript era) where
-  toCBOR x = encode (encodeScript x)
+instance Era era => ToCBOR (AlonzoScript era)
+
+instance Era era => EncCBOR (AlonzoScript era) where
+  -- This is a workaround the fact that `encodeScript` uses `Sum`. Neither `EncCBOR`, nor
+  -- `ToCBOR` are used for anything. This should be fixed.
+  encCBOR = toPlainEncoding (eraProtVerLow @era) . encode . encodeScript
 
 encodeScript :: (Typeable era) => AlonzoScript era -> Encode 'Open (AlonzoScript era)
-encodeScript (TimelockScript i) = Sum TimelockScript 0 !> To i
+encodeScript (TimelockScript i) = Sum TimelockScript 0 !> Enc i
 -- Use the ToCBOR instance of ShortByteString:
 encodeScript (PlutusScript PlutusV1 s) = Sum (PlutusScript PlutusV1) 1 !> To s
 encodeScript (PlutusScript PlutusV2 s) = Sum (PlutusScript PlutusV2) 2 !> To s

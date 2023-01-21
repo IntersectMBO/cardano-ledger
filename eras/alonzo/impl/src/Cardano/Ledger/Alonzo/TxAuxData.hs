@@ -51,6 +51,7 @@ import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes (ProtVer)
 import Cardano.Ledger.Binary (
   Annotator (..),
+  EncCBOR,
   FromCBOR (..),
   ToCBOR (..),
   TokenType (..),
@@ -215,7 +216,7 @@ emptyAuxData = AlonzoTxAuxDataRaw mempty mempty mempty
 -- Version with serialized bytes.
 
 newtype AlonzoTxAuxData era = AuxiliaryDataConstr (MemoBytes AlonzoTxAuxDataRaw era)
-  deriving newtype (ToCBOR, SafeToHash)
+  deriving newtype (EncCBOR, SafeToHash)
 
 instance Memoized AlonzoTxAuxData where
   type RawType AlonzoTxAuxData = AlonzoTxAuxDataRaw
