@@ -63,7 +63,6 @@ import Control.DeepSeq (NFData (..), deepseq, rwhnf)
 import Control.Monad (forM_)
 import Control.Monad.ST (runST)
 import qualified Data.ByteString.Base16 as BS16
-import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Short as SBS
 import Data.ByteString.Short.Internal (ShortByteString (SBS))
 import Data.CanonicalMaps (
@@ -107,7 +106,7 @@ newtype AssetName = AssetName {assetName :: SBS.ShortByteString}
     )
 
 instance Show AssetName where
-  show = BS8.unpack . BS16.encode . SBS.fromShort . assetName
+  show = show . BS16.encode . SBS.fromShort . assetName
 
 instance FromCBOR AssetName where
   fromCBOR = do
