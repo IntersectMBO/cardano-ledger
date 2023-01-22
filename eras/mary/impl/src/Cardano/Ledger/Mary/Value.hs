@@ -823,7 +823,7 @@ prune assets =
 -- | Rather than using prune to remove 0 assets, when can avoid adding them in the
 --   first place by using valueFromList to construct a MultiAsset
 multiAssetFromList :: [(PolicyID era, AssetName, Integer)] -> MultiAsset era
-multiAssetFromList = foldr (\(p, n, i) ans -> insert (+) p n i ans) mempty
+multiAssetFromList = foldr (\(p, n, i) ans -> insertMultiAsset (+) p n i ans) mempty
 
 valueFromList :: Integer -> [(PolicyID era, AssetName, Integer)] -> MaryValue era
 valueFromList ada triples = MaryValue ada (multiAssetFromList triples)

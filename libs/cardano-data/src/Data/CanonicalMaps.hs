@@ -76,20 +76,13 @@ canonicalInsert ::
   a ->
   Map k a ->
   Map k a
-canonicalInsert = go
+canonicalInsert f !kx x = go
   where
-    go ::
-      (Ord k, CanonicalZero a) =>
-      (a -> a -> a) ->
-      k ->
-      a ->
-      Map k a ->
-      Map k a
-    go _ !kx x Tip = if x == zeroC then Tip else singleton kx x
-    go f !kx x (Bin sy ky y l r) =
+    go Tip = if x == zeroC then Tip else singleton kx x
+    go (Bin sy ky y l r) =
       case compare kx ky of
-        LT -> balanceL ky y (go f kx x l) r
-        GT -> balanceR ky y l (go f kx x r)
+        LT -> balanceL ky y (go l) r
+        GT -> balanceR ky y l (go r)
         EQ -> if new == zeroC then link2 l r else Bin sy kx new l r
           where
             new = f y x -- Apply to value in the tree, then the new value
