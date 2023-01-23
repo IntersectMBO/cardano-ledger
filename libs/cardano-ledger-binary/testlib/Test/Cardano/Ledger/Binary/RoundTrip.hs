@@ -16,6 +16,8 @@ module Test.Cardano.Ledger.Binary.RoundTrip (
   roundTripExpectation,
   roundTripCborExpectation,
   roundTripAnnExpectation,
+  roundTripAnnFailureExpectation,
+  roundTripAnnFailureRangeExpectation,
   embedTripSpec,
   embedTripExpectation,
   embedTripAnnExpectation,
@@ -82,7 +84,12 @@ roundTripFailureExpectation version x =
     Left _ -> pure ()
     Right _ ->
       expectationFailure $
-        "Should not have deserialized: " ++ showExpr (CBORBytes (serialize' version x))
+        mconcat
+          [ "Should not have deserialized: <version: "
+          , show version
+          , "> "
+          , showExpr (CBORBytes (serialize' version x))
+          ]
 
 -- | Verify that round triping through the binary form holds for all versions starting
 -- with `shelleyProtVer`.
@@ -113,11 +120,44 @@ roundTripAnnExpectation ::
   (Show t, Eq t, ToCBOR t, FromCBOR (Annotator t), HasCallStack) =>
   t ->
   Expectation
-roundTripAnnExpectation t =
-  forM_ [natVersion @2 .. maxBound] $ \version ->
+roundTripAnnExpectation = roundTripAnnRangeExpectation (natVersion @2) maxBound
+
+roundTripAnnRangeExpectation ::
+  (Show t, Eq t, ToCBOR t, FromCBOR (Annotator t), HasCallStack) =>
+  Version ->
+  Version ->
+  t ->
+  Expectation
+roundTripAnnRangeExpectation fromVersion toVersion t =
+  forM_ [fromVersion .. toVersion] $ \version ->
     case roundTripAnn version t of
       Left err -> expectationFailure $ "Failed to deserialize encoded: " ++ show err
       Right tDecoded -> tDecoded `shouldBe` t
+
+roundTripAnnFailureExpectation ::
+  (ToCBOR t, FromCBOR (Annotator t), HasCallStack) =>
+  t ->
+  Expectation
+roundTripAnnFailureExpectation = roundTripAnnFailureRangeExpectation (natVersion @2) maxBound
+
+roundTripAnnFailureRangeExpectation ::
+  (ToCBOR t, FromCBOR (Annotator t), HasCallStack) =>
+  Version ->
+  Version ->
+  t ->
+  Expectation
+roundTripAnnFailureRangeExpectation fromVersion toVersion t =
+  forM_ [fromVersion .. toVersion] $ \version ->
+    case roundTripAnn version t of
+      Left _ -> pure ()
+      Right _ ->
+        expectationFailure $
+          mconcat
+            [ "Should not have deserialized: <version: "
+            , show version
+            , "> "
+            , showExpr (CBORBytes (serialize' version t))
+            ]
 
 roundTripTwiddledProperty ::
   (Show t, Eq t, Twiddle t, FromCBOR t) => Version -> t -> Property

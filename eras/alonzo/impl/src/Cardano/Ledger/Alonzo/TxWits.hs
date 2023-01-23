@@ -136,7 +136,7 @@ instance Typeable era => ToCBOR (RedeemersRaw era) where
   toCBOR (RedeemersRaw rs) = encodeFoldableEncoder keyValueEncoder $ Map.toAscList rs
     where
       keyValueEncoder (ptr, (dats, exs)) =
-        encodeListLen 4
+        encodeListLen (listLen ptr + 2)
           <> toCBORGroup ptr
           <> toCBOR dats
           <> toCBOR exs
@@ -484,24 +484,22 @@ instance (Era era, Script era ~ AlonzoScript era) => ToCBOR (AlonzoTxWitsRaw era
       isPlutus _ (TimelockScript _) = False
       isPlutus lang (PlutusScript l _) = lang == l
 
-instance
-  (Era era) =>
-  FromCBOR (Annotator (RedeemersRaw era))
-  where
-  fromCBOR = fmap RedeemersRaw <$> dec
+instance Era era => FromCBOR (Annotator (RedeemersRaw era)) where
+  fromCBOR = do
+    entries <- fmap sequence . decodeList $ decodeAnnElement
+    pure $ RedeemersRaw . Map.fromList <$> entries
     where
-      dec :: forall s. Decoder s (Annotator (Map RdmrPtr (Data era, ExUnits)))
-      dec = do
-        entries <- fmap sequence
-          . decodeList
-          . decodeRecordNamed "redeemer" (const 4)
-          $ do
-            rdmrPtr <- fromCBORGroup
-            dat <- fromCBOR
-            ex <- fromCBOR
-            let f x y z = (x, (y, z))
-            pure $ f rdmrPtr <$> dat <*> pure ex
-        pure $ Map.fromList <$> entries
+      decodeAnnElement :: forall s. Decoder s (Annotator (RdmrPtr, (Data era, ExUnits)))
+      decodeAnnElement = do
+        (rdmrPtr, dat, ex) <- decodeElement
+        let f x y z = (x, (y, z))
+        pure $ f rdmrPtr <$> dat <*> pure ex
+      decodeElement :: forall s. Decoder s (RdmrPtr, Annotator (Data era), ExUnits)
+      decodeElement = do
+        decodeRecordNamed
+          "Redeemer"
+          (\(rdmrPtr, _, _) -> fromIntegral (listLen rdmrPtr) + 2)
+          $ (,,) <$> fromCBORGroup <*> fromCBOR <*> fromCBOR
 
 deriving via
   (Mem RedeemersRaw era)
