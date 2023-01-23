@@ -10,6 +10,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary (Mary)
 import Cardano.Ledger.Shelley.API (LedgerEnv (..), ShelleyLEDGER)
+import Cardano.Ledger.Shelley.Core (EraTallyState (..))
 import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), UTxOState (..), smartUTxOState)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.UTxO (UTxO)
@@ -24,7 +25,7 @@ import Test.Tasty.HUnit (Assertion, (@?=))
 ignoreAllButUTxO ::
   Either [PredicateFailure (ShelleyLEDGER Mary)] (LedgerState Mary) ->
   Either [PredicateFailure (ShelleyLEDGER Mary)] (UTxO Mary)
-ignoreAllButUTxO = fmap (\(LedgerState (UTxOState utxo _ _ _ _) _) -> utxo)
+ignoreAllButUTxO = fmap (\(LedgerState (UTxOState utxo _ _ _ _) _ _) -> utxo)
 
 testMaryNoDelegLEDGER ::
   HasCallStack =>
@@ -35,13 +36,18 @@ testMaryNoDelegLEDGER ::
   Assertion
 testMaryNoDelegLEDGER utxo tx env (Right expectedUTxO) = do
   checkTrace @(ShelleyLEDGER Mary) runShelleyBase env $
-    pure (LedgerState (smartUTxOState utxo (Coin 0) (Coin 0) def) def) .- tx .->> expectedSt'
+    pure (LedgerState (smartUTxOState utxo (Coin 0) (Coin 0) def) def emptyTallyState) .- tx .->> expectedSt'
   where
     txFee = tx ^. bodyTxL . feeTxBodyL
-    expectedSt' = LedgerState (smartUTxOState expectedUTxO (Coin 0) txFee def) def
+    expectedSt' = LedgerState (smartUTxOState expectedUTxO (Coin 0) txFee def) def emptyTallyState
 testMaryNoDelegLEDGER utxo tx env predicateFailure@(Left _) = do
   let st =
         runShelleyBase $
           applySTSTest @(ShelleyLEDGER Mary)
-            (TRC (env, LedgerState (smartUTxOState utxo (Coin 0) (Coin 0) def) def, tx))
+            ( TRC
+                ( env
+                , LedgerState (smartUTxOState utxo (Coin 0) (Coin 0) def) def emptyTallyState
+                , tx
+                )
+            )
   ignoreAllButUTxO st @?= predicateFailure

@@ -83,6 +83,7 @@ import Cardano.Ledger.MemoBytes (MemoBytes (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley.Core (EraTallyState (..), ShelleyTallyState)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   DPState (..),
@@ -93,8 +94,9 @@ import Cardano.Ledger.Shelley.LedgerState (
   InstantaneousRewards (..),
   LedgerState (..),
   NewEpochState (..),
-  PPUPState (..),
+  PPUPState,
   PState (..),
+  ShelleyPPUPState (..),
   UTxOState (..),
  )
 import Cardano.Ledger.Shelley.PParams (
@@ -176,7 +178,6 @@ import Cardano.Protocol.TPraos.OCert (
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Cardano.Slotting.Time (SystemStart (SystemStart))
 import Codec.Binary.Bech32
-import Control.State.Transition (STS (State))
 import qualified Data.ByteString as Long (ByteString)
 import qualified Data.ByteString.Lazy as Lazy (ByteString, toStrict)
 import qualified Data.Hashable as Hashable
@@ -188,6 +189,7 @@ import Data.Set (Set, toList)
 import Data.Text (Text)
 import Data.Typeable (Typeable)
 import qualified Data.VMap as VMap
+import Data.Void (Void, absurd)
 import Data.Word (Word16, Word32, Word64, Word8)
 import Debug.Trace (trace)
 import GHC.Natural (Natural)
@@ -395,6 +397,12 @@ ppVMap pk pv = ppAssocList (text "VMap") pk pv . VMap.toList
 
 class PrettyA t where
   prettyA :: t -> PDoc
+
+instance PrettyA () where
+  prettyA = ppString . show
+
+instance PrettyA Void where
+  prettyA = absurd
 
 -- =============================================================================
 -- END HELPER FUNCTIONS
@@ -616,7 +624,6 @@ instance PrettyA (RewardUpdate c) where
 type CanPrettyPrintLedgerState era =
   ( PrettyA (TxOut era)
   , PrettyA (PParams era)
-  , PrettyA (State (EraRule "PPUP" era))
   )
 
 ppAccountState :: AccountState -> PDoc
@@ -658,10 +665,10 @@ ppInstantaneousRewards (InstantaneousRewards res treas dR dT) =
     , ("deltaTreasury", ppDeltaCoin dT)
     ]
 
-ppPPUPState :: PrettyA (PParamsUpdate era) => PPUPState era -> PDoc
-ppPPUPState (PPUPState p fp) =
+ppShelleyPPUPState :: PrettyA (PParamsUpdate era) => ShelleyPPUPState era -> PDoc
+ppShelleyPPUPState (ShelleyPPUPState p fp) =
   ppRecord
-    "Proposed PPUPState"
+    "Proposed ShelleyPPUPState"
     [ ("proposals", ppProposedPPUpdates p)
     , ("futureProposals", ppProposedPPUpdates fp)
     ]
@@ -709,7 +716,9 @@ ppIncrementalStake (IStake st dangle) =
     ]
 
 ppUTxOState ::
-  CanPrettyPrintLedgerState era =>
+  ( CanPrettyPrintLedgerState era
+  , PrettyA (PPUPState era)
+  ) =>
   UTxOState era ->
   PDoc
 ppUTxOState (UTxOState u dep fee ppup sd) =
@@ -722,7 +731,13 @@ ppUTxOState (UTxOState u dep fee ppup sd) =
     , ("stakeDistro", ppIncrementalStake sd)
     ]
 
-ppEpochState :: CanPrettyPrintLedgerState era => EpochState era -> PDoc
+ppEpochState ::
+  ( CanPrettyPrintLedgerState era
+  , PrettyA (PPUPState era)
+  , PrettyA (TallyState era)
+  ) =>
+  EpochState era ->
+  PDoc
 ppEpochState (EpochState acnt snap ls prev pp non) =
   ppRecord
     "EpochState"
@@ -734,7 +749,13 @@ ppEpochState (EpochState acnt snap ls prev pp non) =
     , ("nonMyopic", ppNonMyopic non)
     ]
 
-ppNewEpochState :: CanPrettyPrintLedgerState era => NewEpochState era -> PDoc
+ppNewEpochState ::
+  ( CanPrettyPrintLedgerState era
+  , PrettyA (PPUPState era)
+  , PrettyA (TallyState era)
+  ) =>
+  NewEpochState era ->
+  PDoc
 ppNewEpochState (NewEpochState enum prevB curB es rewup pool _) =
   ppRecord
     "NewEpochState"
@@ -747,14 +768,18 @@ ppNewEpochState (NewEpochState enum prevB curB es rewup pool _) =
     ]
 
 ppLedgerState ::
-  CanPrettyPrintLedgerState era =>
+  ( CanPrettyPrintLedgerState era
+  , PrettyA (PPUPState era)
+  , PrettyA (TallyState era)
+  ) =>
   LedgerState era ->
   PDoc
-ppLedgerState (LedgerState u d) =
+ppLedgerState (LedgerState u d t) =
   ppRecord
     "LedgerState"
     [ ("utxoState", ppUTxOState u)
     , ("delegationState", ppDPState d)
+    , ("tallyState", prettyA t)
     ]
 
 instance PrettyA AccountState where
@@ -769,6 +794,8 @@ instance PrettyA (DState c) where
 instance
   ( Era era
   , CanPrettyPrintLedgerState era
+  , PrettyA (PPUPState era)
+  , PrettyA (TallyState era)
   ) =>
   PrettyA (EpochState era)
   where
@@ -777,6 +804,8 @@ instance
 instance
   ( Era era
   , CanPrettyPrintLedgerState era
+  , PrettyA (PPUPState era)
+  , PrettyA (TallyState era)
   ) =>
   PrettyA (NewEpochState era)
   where
@@ -791,6 +820,8 @@ instance PrettyA (InstantaneousRewards c) where
 instance
   ( Era era
   , CanPrettyPrintLedgerState era
+  , PrettyA (PPUPState era)
+  , PrettyA (TallyState era)
   ) =>
   PrettyA (LedgerState era)
   where
@@ -798,9 +829,9 @@ instance
 
 instance
   PrettyA (PParamsUpdate era) =>
-  PrettyA (PPUPState era)
+  PrettyA (ShelleyPPUPState era)
   where
-  prettyA = ppPPUPState
+  prettyA = ppShelleyPPUPState
 
 instance PrettyA (PState c) where
   prettyA = ppPState
@@ -808,6 +839,7 @@ instance PrettyA (PState c) where
 instance
   ( Era era
   , CanPrettyPrintLedgerState era
+  , PrettyA (PPUPState era)
   ) =>
   PrettyA (UTxOState era)
   where
@@ -1102,8 +1134,10 @@ ppDCert (DCertGenesis x) = ppSexp "DCertGenesis" [ppConstitutionalDelegCert x]
 ppDCert (DCertMir x) = ppSexp "DCertMir" [ppMIRCert x]
 
 ppTxBody ::
-  (Era era, PrettyA (TxOut era)) =>
-  PrettyA (PParamsUpdate era) =>
+  ( EraTxOut era
+  , PrettyA (PParamsUpdate era)
+  , PrettyA (TxOut era)
+  ) =>
   ShelleyTxBody era ->
   PDoc
 ppTxBody (TxBodyConstr (Memo (ShelleyTxBodyRaw ins outs cs withdrawals fee ttl upd mdh) _)) =
@@ -1170,7 +1204,11 @@ instance PrettyA (DCert c) where
   prettyA = ppDCert
 
 instance
-  (PrettyA (TxOut era), PrettyA (PParamsUpdate era), Era era) =>
+  ( EraTxOut era
+  , PrettyA (PParamsUpdate era)
+  , PrettyA (TxOut era)
+  , Era era
+  ) =>
   PrettyA (ShelleyTxBody era)
   where
   prettyA = ppTxBody
@@ -1687,6 +1725,9 @@ instance PrettyA Bool where
 instance PrettyA Int where
   prettyA = ppInt
 
+instance (PrettyA x, PrettyA y) => PrettyA (x, y) where
+  prettyA = ppPair prettyA prettyA
+
 ptrace :: PrettyA t => String -> t -> a -> a
 ptrace x y z = trace ("\n" ++ show (prettyA y) ++ "\n" ++ show x) z
 
@@ -1696,3 +1737,6 @@ instance (PrettyA x, PrettyA y) => PrettyA (Map.Map x y) where
 -- | turn on trace appromimately 1 in 'n' times it is called.
 occaisionally :: Hashable.Hashable a => a -> Int -> String -> String
 occaisionally x n s = if mod (Hashable.hash x) n == 0 then trace s s else s
+
+instance PrettyA (ShelleyTallyState era) where
+  prettyA = ppString . show

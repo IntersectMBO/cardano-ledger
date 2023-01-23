@@ -57,6 +57,7 @@ library
     cardano-slotting,
     containers,
     data-default-class,
+    small-steps,
     plutus-tx,
     cardano-ledger-shelley-test,
     cardano-ledger-shelley,

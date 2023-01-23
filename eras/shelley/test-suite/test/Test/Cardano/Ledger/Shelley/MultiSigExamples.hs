@@ -14,8 +14,7 @@ module Test.Cardano.Ledger.Shelley.MultiSigExamples (
   aliceAndBobOrCarl,
   aliceAndBobOrCarlAndDaria,
   aliceAndBobOrCarlOrDaria,
-)
-where
+) where
 
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Address (
@@ -44,9 +43,11 @@ import Cardano.Ledger.Keys (
  )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.API (ShelleyUTXOW)
+import Cardano.Ledger.Shelley.API (ShelleyPPUPState (..), ShelleyUTXOW)
+import Cardano.Ledger.Shelley.Core (EraTallyState)
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
+  PPUPState,
   UTxOState,
   genesisState,
  )
@@ -189,7 +190,13 @@ aliceInitCoin = Coin 10000
 bobInitCoin :: Coin
 bobInitCoin = Coin 1000
 
-genesis :: forall era. (EraTxOut era, Default (State (EraRule "PPUP" era))) => LedgerState era
+genesis ::
+  forall era.
+  ( EraTxOut era
+  , PPUPState era ~ ShelleyPPUPState era
+  , EraTallyState era
+  ) =>
+  LedgerState era
 genesis = genesisState genDelegs0 utxo0
   where
     genDelegs0 = Map.empty

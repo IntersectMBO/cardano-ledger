@@ -104,8 +104,7 @@ module Cardano.Ledger.Babbage.TxBody (
   txOutData,
   txOutDataHash,
   txOutScript,
-)
-where
+) where
 
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Scripts.Data (Datum (..))

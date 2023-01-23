@@ -41,7 +41,7 @@ allegraTranslationTests =
     "Allegra translation binary compatibiliby tests"
     [ testProperty "Tx compatibility" (testTranslation @S.ShelleyTx)
     , testProperty "ProposedPPUpdates compatibility" (testTranslation @S.ProposedPPUpdates)
-    , testProperty "PPUPState compatibility" (testTranslation @S.PPUPState)
+    , testProperty "ShelleyPPUPState compatibility" (testTranslation @S.ShelleyPPUPState)
     , testProperty "TxOut compatibility" (testTranslation @S.ShelleyTxOut)
     , testProperty "UTxO compatibility" (testTranslation @S.UTxO)
     , testProperty "UTxOState compatibility" (testTranslation @S.UTxOState)

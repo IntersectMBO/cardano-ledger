@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -40,6 +41,7 @@ import Cardano.Ledger.Pretty (
   ppWord64,
  )
 import Cardano.Ledger.SafeHash (hashAnnotated)
+import Cardano.Ledger.Shelley.Core (EraTallyState (..))
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   DPState (..),
@@ -47,6 +49,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
+  PPUPState,
   PState (..),
   StashedAVVMAddresses,
   UTxOState (..),
@@ -218,7 +221,7 @@ makeEpochState gstate ledgerstate =
     }
 
 snaps :: EraTxOut era => LedgerState era -> SnapShots (EraCrypto era)
-snaps (LedgerState UTxOState {utxosUtxo = u, utxosFees = f} (DPState dstate pstate)) =
+snaps (LedgerState UTxOState {utxosUtxo = u, utxosFees = f} (DPState dstate pstate) _) =
   SnapShots snap (calculatePoolDistr snap) snap snap f
   where
     snap = stakeDistr u dstate pstate
@@ -503,9 +506,7 @@ forEachEpochTrace ::
 forEachEpochTrace proof tracelen genSize f = do
   let newEpoch tr1 tr2 = nesEL (mcsNes tr1) /= nesEL (mcsNes tr2)
   trc <- case proof of
-    -- TODO re-enable this once we have added all the new rules to Conway
-    -- Conway _ -> genTrace proof tracelen genSize initStableFields
-    Conway _ -> undefined
+    Conway _ -> genTrace proof tracelen genSize initStableFields
     Babbage _ -> genTrace proof tracelen genSize initStableFields
     Alonzo _ -> genTrace proof tracelen genSize initStableFields
     Allegra _ -> genTrace proof tracelen genSize initStableFields
@@ -546,8 +547,9 @@ chainTest ::
   forall era.
   ( Reflect era
   , HasTrace (MOCKCHAIN era) (Gen1 era)
-  , Eq (State (EraRule "PPUP" era))
   , Eq (StashedAVVMAddresses era)
+  , Eq (PPUPState era)
+  , Eq (TallyState era)
   ) =>
   Proof era ->
   Int ->

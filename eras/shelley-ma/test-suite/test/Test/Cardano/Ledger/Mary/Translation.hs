@@ -46,7 +46,7 @@ maryTranslationTests =
     "Mary translation binary compatibiliby tests"
     [ testProperty "Tx compatibility" (test @S.ShelleyTx)
     , testProperty "ProposedPPUpdates compatibility" (test @S.ProposedPPUpdates)
-    , testProperty "PPUPState compatibility" (test @S.PPUPState)
+    , testProperty "ShelleyPPUPState compatibility" (test @S.ShelleyPPUPState)
     , testProperty "TxOut compatibility" (test @S.ShelleyTxOut)
     , testProperty "UTxO compatibility" (test @S.UTxO)
     , testProperty "UTxOState compatibility" (test @S.UTxOState)

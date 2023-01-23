@@ -40,8 +40,9 @@ import Cardano.Ledger.Shelley.LedgerState (
   FutureGenDeleg (..),
   LedgerState (..),
   NewEpochState (..),
-  PPUPState (..),
+  PPUPState,
   PulsingRewUpdate,
+  ShelleyPPUPState,
   UTxOState (..),
   UpecState (..),
  )
@@ -186,6 +187,7 @@ validatingTickTransitionFORECAST ::
   , Environment (EraRule "UPEC" era) ~ EpochState era
   , Embed (EraRule "UPEC" era) (tick era)
   , STS (tick era)
+  , PPUPState era ~ ShelleyPPUPState era
   ) =>
   NewEpochState era ->
   SlotNo ->
@@ -323,11 +325,12 @@ newtype ShelleyTickfEvent era
 instance
   ( Era era
   , EraPParams era
-  , State (EraRule "PPUP" era) ~ PPUPState era
+  , State (EraRule "PPUP" era) ~ ShelleyPPUPState era
   , Signal (EraRule "UPEC" era) ~ ()
   , State (EraRule "UPEC" era) ~ UpecState era
   , Environment (EraRule "UPEC" era) ~ EpochState era
   , Embed (EraRule "UPEC" era) (ShelleyTICKF era)
+  , PPUPState era ~ ShelleyPPUPState era
   ) =>
   STS (ShelleyTICKF era)
   where

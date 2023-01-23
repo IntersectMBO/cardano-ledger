@@ -15,8 +15,7 @@ module Cardano.Ledger.Shelley.AdaPots (
   Consumed (..),
   consumedTxBody,
   producedTxBody,
-)
-where
+) where
 
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (fromCompact)

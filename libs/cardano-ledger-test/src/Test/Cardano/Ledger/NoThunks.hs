@@ -6,8 +6,7 @@
 
 module Test.Cardano.Ledger.NoThunks (
   test,
-)
-where
+) where
 
 import Cardano.Ledger.Core
 import Cardano.Ledger.Pretty (PrettyA)

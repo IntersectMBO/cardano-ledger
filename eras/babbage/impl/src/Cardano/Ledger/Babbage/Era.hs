@@ -16,6 +16,7 @@ import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Mary.Value (MaryValue)
 import qualified Cardano.Ledger.Shelley.API as API
+import Cardano.Ledger.Shelley.Core (EraTallyState)
 import Cardano.Ledger.Shelley.Rules (
   ShelleyEPOCH,
   ShelleyMIR,
@@ -39,6 +40,8 @@ instance CC.Crypto c => Era (BabbageEra c) where
   type ProtVerHigh (BabbageEra c) = 8
 
 type instance Value (BabbageEra c) = MaryValue c
+
+instance EraTallyState (BabbageEra c)
 
 -------------------------------------------------------------------------------
 -- Era Mapping

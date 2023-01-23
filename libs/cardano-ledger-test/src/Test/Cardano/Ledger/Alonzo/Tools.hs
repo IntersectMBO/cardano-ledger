@@ -24,7 +24,7 @@ import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (GenDelegs (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Shelley.LedgerState (IncrementalStake (..), UTxOState (..))
+import Cardano.Ledger.Shelley.LedgerState (IncrementalStake (..), PPUPState, UTxOState (..))
 import Cardano.Ledger.Shelley.Rules (UtxoEnv (..))
 import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), UTxO (..))
 import Cardano.Ledger.Val (Val (inject))
@@ -148,8 +148,8 @@ exampleExUnitCalc ::
   , PostShelley era
   , EraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Default (State (EraRule "PPUP" era))
   , Script era ~ AlonzoScript era
+  , Default (PPUPState era)
   ) =>
   Proof era ->
   IO ()
@@ -250,7 +250,10 @@ costmodels :: Array Language CostModel
 costmodels = array (PlutusV1, PlutusV1) [(PlutusV1, testingCostModelV1)]
 
 ustate ::
-  (EraTxOut era, PostShelley era, Default (State (EraRule "PPUP" era))) =>
+  ( EraTxOut era
+  , PostShelley era
+  , Default (PPUPState era)
+  ) =>
   Proof era ->
   UTxOState era
 ustate pf =

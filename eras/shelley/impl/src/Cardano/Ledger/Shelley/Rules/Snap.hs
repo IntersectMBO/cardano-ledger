@@ -14,8 +14,7 @@ module Cardano.Ledger.Shelley.Rules.Snap (
   PredicateFailure,
   ShelleySnapPredFailure,
   SnapEvent (..),
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin, CompactForm)
@@ -85,7 +84,10 @@ snapTransition ::
 snapTransition = do
   TRC (lstate, s, _) <- judgmentContext
 
-  let LedgerState (UTxOState _utxo _ fees _ incStake) (DPState dstate pstate) = lstate
+  let LedgerState
+        (UTxOState _utxo _ fees _ incStake)
+        (DPState dstate pstate)
+        _ = lstate
       -- stakeSnap = stakeDistr @era utxo dstate pstate  -- HISTORICAL NOTE
       istakeSnap = incrementalStakeDistr @(EraCrypto era) incStake dstate pstate
 

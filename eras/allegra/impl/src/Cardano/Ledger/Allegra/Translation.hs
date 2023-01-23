@@ -20,8 +20,8 @@ import Cardano.Ledger.Shelley.API (
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
-  PPUPState (..),
   ProposedPPUpdates (..),
+  ShelleyPPUPState (..),
   ShelleyTx (..),
   ShelleyTxOut (..),
   UTxO (..),
@@ -91,10 +91,10 @@ instance Crypto c => TranslateEra (AllegraEra c) ProposedPPUpdates where
   translateEra ctxt (ProposedPPUpdates ppup) =
     return $ ProposedPPUpdates $ Map.map (translateEra' ctxt) ppup
 
-instance Crypto c => TranslateEra (AllegraEra c) PPUPState where
+instance Crypto c => TranslateEra (AllegraEra c) ShelleyPPUPState where
   translateEra ctxt ps =
     return
-      PPUPState
+      ShelleyPPUPState
         { proposals = translateEra' ctxt $ proposals ps
         , futureProposals = translateEra' ctxt $ futureProposals ps
         }
@@ -124,6 +124,7 @@ instance Crypto c => TranslateEra (AllegraEra c) LedgerState where
       LedgerState
         { lsUTxOState = translateEra' ctxt $ lsUTxOState ls
         , lsDPState = lsDPState ls
+        , lsTallyState = coerce $ lsTallyState ls
         }
 
 instance Crypto c => TranslateEra (AllegraEra c) EpochState where

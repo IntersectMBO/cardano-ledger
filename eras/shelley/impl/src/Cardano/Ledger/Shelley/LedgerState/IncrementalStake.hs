@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeFamilies #-}
 
 -- ===========================================================================
 -- There are three parts to IncrementalStaking.
@@ -53,6 +54,7 @@ import Cardano.Ledger.Keys (
 import Cardano.Ledger.Shelley.LedgerState.Types
 import Cardano.Ledger.Shelley.RewardUpdate (RewardUpdate (..))
 import Cardano.Ledger.Shelley.Rewards (aggregateCompactRewards, aggregateRewards, filterRewards)
+import Cardano.Ledger.Shelley.Rules.Ppup (PPUPState)
 import Cardano.Ledger.Shelley.TxBody (
   Ptr (..),
  )
@@ -67,7 +69,6 @@ import Cardano.Ledger.UTxO (
   UTxO (..),
  )
 import Control.DeepSeq (NFData (rnf), deepseq)
-import Control.State.Transition (STS (State))
 import Data.Foldable (fold)
 import Data.Group (invert)
 import Data.Map.Strict (Map)
@@ -138,11 +139,12 @@ incrementalAggregateUtxoCoinByCredential mode (UTxO u) initial =
 --
 --   TO IncrementalStake
 smartUTxOState ::
-  EraTxOut era =>
+  ( EraTxOut era
+  ) =>
   UTxO era ->
   Coin ->
   Coin ->
-  State (EraRule "PPUP" era) ->
+  PPUPState era ->
   UTxOState era
 smartUTxOState utxo c1 c2 st =
   UTxOState

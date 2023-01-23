@@ -270,9 +270,8 @@ babbageUtxowTransition ::
   , -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (BabbageUTXOW era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
-  , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ Tx era
-  , ProtVerAtMost era 8
+  , State (EraRule "UTXO" era) ~ UTxOState era
   ) =>
   TransitionRule (BabbageUTXOW era)
 babbageUtxowTransition = do
@@ -372,7 +371,6 @@ instance
   , Signal (EraRule "UTXO" era) ~ Tx era
   , Eq (PredicateFailure (EraRule "UTXOS" era))
   , Show (PredicateFailure (EraRule "UTXOS" era))
-  , ProtVerAtMost era 8
   ) =>
   STS (BabbageUTXOW era)
   where

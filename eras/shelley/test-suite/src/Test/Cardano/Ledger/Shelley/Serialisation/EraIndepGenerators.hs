@@ -19,8 +19,7 @@ module Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators (
   genCoherentBlock,
   MockGen,
   maxTxWits,
-)
-where
+) where
 
 import Cardano.Crypto.DSIGN.Mock (VerKeyDSIGN (..))
 import Cardano.Ledger.BaseTypes (
@@ -32,7 +31,7 @@ import Cardano.Ledger.Crypto (Crypto, DSIGN)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API hiding (SignedDSIGN)
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.LedgerState (FutureGenDeleg, StashedAVVMAddresses)
+import Cardano.Ledger.Shelley.LedgerState (FutureGenDeleg, PPUPState, StashedAVVMAddresses)
 import Cardano.Ledger.Shelley.PoolRank (
   Likelihood (..),
   LogWeight (..),
@@ -60,7 +59,6 @@ import qualified Cardano.Protocol.TPraos.OCert as TP
 import qualified Cardano.Protocol.TPraos.Rules.Overlay as STS
 import qualified Cardano.Protocol.TPraos.Rules.Prtcl as STS (PrtclState)
 import qualified Cardano.Protocol.TPraos.Rules.Tickn as STS
-import Control.State.Transition (STS (State))
 import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
@@ -267,7 +265,7 @@ instance Crypto c => Arbitrary (DCert c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance (Era era, Mock (EraCrypto era)) => Arbitrary (PPUPState era) where
+instance (Era era, Mock (EraCrypto era)) => Arbitrary (ShelleyPPUPState era) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -279,7 +277,7 @@ instance
   ( EraTxOut era
   , Mock (EraCrypto era)
   , Arbitrary (TxOut era)
-  , Arbitrary (State (EraRule "PPUP" era))
+  , Arbitrary (PPUPState era)
   ) =>
   Arbitrary (UTxOState era)
   where
@@ -306,12 +304,25 @@ instance
   ( EraTxOut era
   , Mock (EraCrypto era)
   , Arbitrary (TxOut era)
-  , Arbitrary (State (EraRule "PPUP" era))
+  , Arbitrary (PPUPState era)
+  , Arbitrary (TallyState era)
   ) =>
   Arbitrary (LedgerState era)
   where
   arbitrary = genericArbitraryU
-  shrink = genericShrink
+  shrink LedgerState {..} =
+    -- We drop the first element in the list so the list does not contain the
+    -- original LedgerState which would cause `shrink` to loop indefinitely.
+    -- This call of `tail` is safe since the list guaranteed to have at least
+    -- one element.
+    tail $
+      LedgerState
+        <$> (lsUTxOState : shrink lsUTxOState)
+        <*> (lsDPState : shrink lsDPState)
+        <*> (lsTallyState : shrink lsTallyState)
+
+instance Arbitrary (ShelleyTallyState era) where
+  arbitrary = pure NoTallyState
 
 instance
   ( EraTxOut era
@@ -319,8 +330,9 @@ instance
   , Arbitrary (TxOut era)
   , Arbitrary (Value era)
   , Arbitrary (PParams era)
-  , Arbitrary (State (EraRule "PPUP" era))
   , Arbitrary (StashedAVVMAddresses era)
+  , Arbitrary (PPUPState era)
+  , Arbitrary (TallyState era)
   ) =>
   Arbitrary (NewEpochState era)
   where
@@ -332,7 +344,8 @@ instance
   , Arbitrary (TxOut era)
   , Arbitrary (Value era)
   , Arbitrary (PParams era)
-  , Arbitrary (State (EraRule "PPUP" era))
+  , Arbitrary (PPUPState era)
+  , Arbitrary (TallyState era)
   ) =>
   Arbitrary (EpochState era)
   where

@@ -13,12 +13,12 @@ where
 import Cardano.Ledger.BaseTypes (Nonce)
 import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Core
+import Cardano.Ledger.Shelley.Core (EraTallyState)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
-import Control.State.Transition
 import Data.Default.Class
 import GHC.Stack (HasCallStack)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (ExMock)
@@ -46,10 +46,11 @@ import Test.Cardano.Ledger.Shelley.Utils (getBlockNonce)
 
 initStEx1 ::
   ( EraTxOut era
-  , Default (State (EraRule "PPUP" era))
-  , Default (StashedAVVMAddresses era)
   , ProtVerAtMost era 4
   , ProtVerAtMost era 6
+  , Default (StashedAVVMAddresses era)
+  , PPUPState era ~ ShelleyPPUPState era
+  , EraTallyState era
   ) =>
   ChainState era
 initStEx1 = initSt (UTxO mempty)
@@ -94,7 +95,8 @@ expectedStEx1 ::
   , ExMock (EraCrypto era)
   , ProtVerAtMost era 4
   , ProtVerAtMost era 6
-  , Default (State (EraRule "PPUP" era))
+  , PPUPState era ~ ShelleyPPUPState era
+  , EraTallyState era
   , Default (StashedAVVMAddresses era)
   ) =>
   ChainState era
@@ -112,8 +114,9 @@ exEmptyBlock ::
   , EraSegWits era
   , ProtVerAtMost era 4
   , ProtVerAtMost era 6
-  , Default (State (EraRule "PPUP" era))
+  , PPUPState era ~ ShelleyPPUPState era
   , Default (StashedAVVMAddresses era)
+  , EraTallyState era
   ) =>
   CHAINExample (BHeader (EraCrypto era)) era
 exEmptyBlock = CHAINExample initStEx1 blockEx1 (Right expectedStEx1)

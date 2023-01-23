@@ -14,8 +14,7 @@ module Cardano.Ledger.Shelley.Rules.Newpp (
   NewppEnv (..),
   ShelleyNewppPredFailure (..),
   PredicateFailure,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin (..))
@@ -29,11 +28,11 @@ import Cardano.Ledger.Shelley.LedgerState (
   obligationDPState,
  )
 import Cardano.Ledger.Shelley.PParams (
-  PPUPState (PPUPState, futureProposals),
   ProposedPPUpdates (ProposedPPUpdates),
   emptyPPPUpdates,
   pvCanFollow,
  )
+import Cardano.Ledger.Shelley.Rules.Ppup (PPUPState, ShelleyPPUPState (..))
 import Control.State.Transition (
   STS (..),
   TRC (..),
@@ -47,7 +46,7 @@ import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
 data ShelleyNewppState era
-  = NewppState (PParams era) (PPUPState era)
+  = NewppState (PParams era) (ShelleyPPUPState era)
 
 data NewppEnv era
   = NewppEnv
@@ -63,7 +62,12 @@ data ShelleyNewppPredFailure era
 
 instance NoThunks (ShelleyNewppPredFailure era)
 
-instance EraPParams era => STS (ShelleyNEWPP era) where
+instance
+  ( EraPParams era
+  , PPUPState era ~ ShelleyPPUPState era
+  ) =>
+  STS (ShelleyNEWPP era)
+  where
   type State (ShelleyNEWPP era) = ShelleyNewppState era
   type Signal (ShelleyNEWPP era) = Maybe (PParams era)
   type Environment (ShelleyNEWPP era) = NewppEnv era
@@ -74,7 +78,12 @@ instance EraPParams era => STS (ShelleyNEWPP era) where
 instance Default (PParams era) => Default (ShelleyNewppState era) where
   def = NewppState def def
 
-newPpTransition :: forall era. EraPParams era => TransitionRule (ShelleyNEWPP era)
+newPpTransition ::
+  forall era.
+  ( EraPParams era
+  , PPUPState era ~ ShelleyPPUPState era
+  ) =>
+  TransitionRule (ShelleyNEWPP era)
 newPpTransition = do
   TRC
     ( NewppEnv dstate pstate utxoSt
@@ -99,11 +108,13 @@ newPpTransition = do
 -- and making the future proposals become the new proposals,
 -- provided the new proposals can follow (otherwise reset them).
 updatePpup ::
-  EraPParams era =>
+  ( EraPParams era
+  , PPUPState era ~ ShelleyPPUPState era
+  ) =>
   PPUPState era ->
   PParams era ->
-  PPUPState era
-updatePpup ppupSt pp = PPUPState ps emptyPPPUpdates
+  ShelleyPPUPState era
+updatePpup ppupSt pp = ShelleyPPUPState ps emptyPPPUpdates
   where
     ProposedPPUpdates newProposals = futureProposals ppupSt
     goodPV ppu =

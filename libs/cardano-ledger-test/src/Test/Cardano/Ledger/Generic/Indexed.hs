@@ -333,9 +333,6 @@ instance Crypto c => PrettyA (KeyPair r c) where
   prettyA (KeyPair x y) =
     ppRecord "KeyPair" [("vKey", ppVKey x), ("sKey", reAnnotate (Width 5 :) (viaShow y))]
 
-instance (PrettyA x, PrettyA y) => PrettyA (x, y) where
-  prettyA = ppPair prettyA prettyA
-
 instance (CC.Crypto c) => PrettyA (PublicSecret kr kr' c) where
   prettyA (PublicSecret x y) = ppPair prettyA prettyA (x, y)
 

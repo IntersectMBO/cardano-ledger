@@ -22,7 +22,8 @@ import Cardano.Ledger.BaseTypes (Nonce (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
-import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses)
+import Cardano.Ledger.Shelley.Core (EraTallyState)
+import Cardano.Ledger.Shelley.LedgerState (PPUPState, ShelleyPPUPState (..), StashedAVVMAddresses)
 import Cardano.Ledger.Slot (
   BlockNo (..),
   EpochNo (..),
@@ -37,7 +38,6 @@ import Cardano.Protocol.TPraos.BHeader (
   hashHeaderToNonce,
  )
 import Cardano.Slotting.Slot (WithOrigin (..))
-import Control.State.Transition
 import Data.Default.Class
 import Lens.Micro
 import Test.Cardano.Ledger.Shelley.Examples.Federation (genDelegs)
@@ -94,8 +94,9 @@ initSt ::
   ( EraTxOut era
   , ProtVerAtMost era 4
   , ProtVerAtMost era 6
-  , Default (State (EraRule "PPUP" era))
   , Default (StashedAVVMAddresses era)
+  , ShelleyPPUPState era ~ PPUPState era
+  , EraTallyState era
   ) =>
   UTxO era ->
   ChainState era

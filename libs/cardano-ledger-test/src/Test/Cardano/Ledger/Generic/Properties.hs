@@ -266,7 +266,13 @@ stakeInvariant (MockChainState _ _ _) (MockChainState nes _ _) =
   case (lsUTxOState . esLState . nesEs) nes of
     (UTxOState utxo _ _ _ istake) -> istake === updateStakeDistribution mempty mempty utxo
 
-incrementStakeInvariant :: (Reflect era, HasTrace (MOCKCHAIN era) (Gen1 era)) => Proof era -> GenSize -> TestTree
+incrementStakeInvariant ::
+  ( Reflect era
+  , HasTrace (MOCKCHAIN era) (Gen1 era)
+  ) =>
+  Proof era ->
+  GenSize ->
+  TestTree
 incrementStakeInvariant proof gensize =
   testProperty (show proof ++ " era. Trace length = 100") $
     traceProp proof 100 gensize stakeInvariant

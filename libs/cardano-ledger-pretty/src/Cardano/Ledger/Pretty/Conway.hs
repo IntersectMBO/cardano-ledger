@@ -1,6 +1,8 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -11,21 +13,23 @@
 
 module Cardano.Ledger.Pretty.Conway (
   ppConwayTxBody,
-)
-where
+) where
 
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert (..), transDCert)
 import Cardano.Ledger.Conway.Governance (
+  ConwayTallyState (..),
   GovernanceAction (..),
   GovernanceActionId (..),
   GovernanceActionInfo (..),
   GovernanceActionIx (..),
+  GovernanceActionState (..),
   Vote (..),
   VoteDecision (..),
   VoterRole (..),
  )
+import Cardano.Ledger.Conway.Rules (ConwayLedgerPredFailure (..), ConwayTallyPredFailure (..), PredicateFailure)
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Pretty (
@@ -44,6 +48,7 @@ import Cardano.Ledger.Pretty (
   ppSexp,
   ppStrictMaybe,
   ppStrictSeq,
+  ppString,
   ppTxId,
   ppTxIn,
   ppUrl,
@@ -163,3 +168,47 @@ instance Crypto c => PrettyA (PParams (ConwayEra c)) where
 
 instance Crypto c => PrettyA (PParamsUpdate (ConwayEra c)) where
   prettyA = ppBabbagePParamsUpdate
+
+instance
+  ( PrettyA (PredicateFailure (EraRule "UTXOW" era))
+  , PrettyA (PredicateFailure (EraRule "DELEGS" era))
+  , PrettyA (PredicateFailure (EraRule "TALLY" era))
+  ) =>
+  PrettyA (ConwayLedgerPredFailure era)
+  where
+  prettyA (ConwayUtxowFailure x) = prettyA x
+  prettyA (ConwayDelegsFailure x) = prettyA x
+  prettyA (ConwayTallyFailure x) = prettyA x
+
+instance PrettyA (ConwayTallyPredFailure era) where
+  prettyA (NoSuchGovernanceAction vote) =
+    ppRecord
+      "NoSuchGovernanceAction"
+      [("Vote", prettyA vote)]
+
+instance PrettyA (PParamsUpdate era) => PrettyA (ConwayTallyState era) where
+  prettyA (ConwayTallyState x) = prettyA x
+
+instance PrettyA (GovernanceActionId era) where
+  prettyA GovernanceActionId {..} =
+    ppRecord
+      "GovernanceActionId"
+      [ ("Transaction ID", prettyA gaidTxId)
+      , ("Governance Action Index", prettyA gaidGovActionIx)
+      ]
+
+instance PrettyA GovernanceActionIx where
+  prettyA (GovernanceActionIx x) = prettyA x
+
+instance PrettyA VoterRole where
+  prettyA = ppString . show
+
+instance PrettyA (PParamsUpdate era) => PrettyA (GovernanceActionState era) where
+  prettyA GovernanceActionState {..} =
+    ppRecord
+      "GovernanceActionState"
+      [ ("Votes", prettyA gasVotes)
+      , ("Deposit", prettyA gasDeposit)
+      , ("Return Address", prettyA gasReturnAddr)
+      , ("Action", prettyA gasAction)
+      ]

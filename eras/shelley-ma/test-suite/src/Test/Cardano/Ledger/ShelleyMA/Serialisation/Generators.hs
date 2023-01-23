@@ -32,7 +32,7 @@ import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import qualified Cardano.Ledger.Mary.Value as ConcreteValue
 import Cardano.Ledger.Shelley.API (KeyHash (KeyHash), ShelleyTxAuxData (ShelleyTxAuxData))
-import Control.State.Transition (PredicateFailure)
+import Cardano.Ledger.Shelley.LedgerState (PPUPPredFailure)
 import qualified Data.ByteString.Short as SBS
 import Data.Int (Int64)
 import Data.Sequence.Strict (StrictSeq, fromList)
@@ -133,7 +133,7 @@ instance
   , Mock (EraCrypto era)
   , Arbitrary (Value era)
   , Arbitrary (TxOut era)
-  , Arbitrary (PredicateFailure (EraRule "PPUP" era))
+  , Arbitrary (PPUPPredFailure era)
   ) =>
   Arbitrary (AllegraUtxoPredFailure era)
   where

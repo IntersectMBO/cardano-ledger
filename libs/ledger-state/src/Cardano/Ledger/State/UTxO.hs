@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
@@ -48,10 +49,14 @@ type C = StandardCrypto
 type CurrentEra = Alonzo
 
 --- Loading
-readNewEpochState :: FilePath -> IO (NewEpochState CurrentEra)
+readNewEpochState ::
+  FilePath ->
+  IO (NewEpochState CurrentEra)
 readNewEpochState = readFromCBOR
 
-readEpochState :: FilePath -> IO (EpochState CurrentEra)
+readEpochState ::
+  FilePath ->
+  IO (EpochState CurrentEra)
 readEpochState = readFromCBOR
 
 readFromCBOR :: FromCBOR a => FilePath -> IO a
@@ -63,7 +68,9 @@ readFromCBOR fp =
 writeEpochState :: FilePath -> EpochState CurrentEra -> IO ()
 writeEpochState fp = LBS.writeFile fp . serialize (eraProtVerHigh @CurrentEra)
 
-loadLedgerState :: FilePath -> IO (LedgerState CurrentEra)
+loadLedgerState ::
+  FilePath ->
+  IO (LedgerState CurrentEra)
 loadLedgerState fp = esLState . nesEs <$> readNewEpochState fp
 
 runConduitFold :: Monad m => ConduitT () a m () -> Fold a b -> m b
@@ -118,7 +125,9 @@ txIxNestedInsert !im (TxIn !txId !txIx, !v) =
 totalADA :: Map.Map (TxIn C) (TxOut CurrentEra) -> MaryValue C
 totalADA = foldMap (^. valueTxOutL)
 
-readBinUTxO :: FilePath -> IO (UTxO CurrentEra)
+readBinUTxO ::
+  FilePath ->
+  IO (UTxO CurrentEra)
 readBinUTxO fp = do
   ls <- readNewEpochState fp
   pure $! utxosUtxo $ lsUTxOState $ esLState $ nesEs ls

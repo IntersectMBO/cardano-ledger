@@ -1,6 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
@@ -27,6 +28,7 @@ import Cardano.Ledger.EpochBoundary (emptySnapShots)
 import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.Types
+import Cardano.Ledger.Shelley.Core (EraTallyState (..))
 import Cardano.Ledger.Shelley.Rules ()
 import Cardano.Ledger.Shelley.Translation (FromByronTranslationContext (..))
 import Cardano.Ledger.UTxO (coinBalance)
@@ -166,4 +168,5 @@ translateToShelleyLedgerState transCtxt epochNo cvs =
               { dpsDState = def {dsGenDelegs = genDelegs}
               , dpsPState = def
               }
+        , lsTallyState = emptyTallyState
         }

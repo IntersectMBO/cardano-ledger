@@ -4,6 +4,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -28,6 +29,7 @@ import Cardano.Ledger.Shelley.API (
   StrictMaybe (..),
  )
 import qualified Cardano.Ledger.Shelley.API as API
+import Cardano.Ledger.Shelley.Core (EraTallyState (..))
 import qualified Data.Map.Strict as Map
 
 --------------------------------------------------------------------------------
@@ -109,6 +111,7 @@ instance Crypto c => TranslateEra (BabbageEra c) API.LedgerState where
       API.LedgerState
         { API.lsUTxOState = translateEra' ctxt $ API.lsUTxOState ls
         , API.lsDPState = API.lsDPState ls
+        , API.lsTallyState = emptyTallyState @(BabbageEra c)
         }
 
 instance Crypto c => TranslateEra (BabbageEra c) API.UTxOState where
@@ -126,10 +129,10 @@ instance Crypto c => TranslateEra (BabbageEra c) API.UTxO where
   translateEra _ctxt utxo =
     pure $ API.UTxO $ translateTxOut `Map.map` API.unUTxO utxo
 
-instance Crypto c => TranslateEra (BabbageEra c) API.PPUPState where
+instance Crypto c => TranslateEra (BabbageEra c) API.ShelleyPPUPState where
   translateEra ctxt ps =
     pure
-      API.PPUPState
+      API.ShelleyPPUPState
         { API.proposals = translateEra' ctxt $ API.proposals ps
         , API.futureProposals = translateEra' ctxt $ API.futureProposals ps
         }

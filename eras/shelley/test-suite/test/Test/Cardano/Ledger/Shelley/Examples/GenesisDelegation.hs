@@ -32,6 +32,7 @@ import Cardano.Ledger.Keys (
  )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley.Core (EraTallyState)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxBody (
@@ -49,8 +50,7 @@ import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Protocol.TPraos.BHeader (BHeader, bhHash)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
-import Control.State.Transition
-import Data.Default.Class
+import Data.Default.Class (Default)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
@@ -104,7 +104,8 @@ initStGenesisDeleg ::
   ( EraTxOut era
   , ProtVerAtMost era 4
   , ProtVerAtMost era 6
-  , Default (State (EraRule "PPUP" era))
+  , PPUPState era ~ ShelleyPPUPState era
+  , EraTallyState era
   , Default (StashedAVVMAddresses era)
   ) =>
   ChainState era

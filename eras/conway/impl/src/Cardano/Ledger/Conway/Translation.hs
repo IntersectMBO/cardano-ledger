@@ -5,6 +5,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -31,8 +32,10 @@ import Cardano.Ledger.Shelley.API (
   EpochState (..),
   NewEpochState (..),
   StrictMaybe (..),
+  UTxOState (..),
  )
 import qualified Cardano.Ledger.Shelley.API as API
+import Cardano.Ledger.Shelley.Core hiding (Tx)
 import Data.Coerce
 import qualified Data.Map.Strict as Map
 
@@ -112,34 +115,27 @@ instance Crypto c => TranslateEra (ConwayEra c) API.LedgerState where
       API.LedgerState
         { API.lsUTxOState = translateEra' newGenDelegs $ API.lsUTxOState ls
         , API.lsDPState = updateGenesisKeys $ API.lsDPState ls
+        , API.lsTallyState = emptyTallyState
         }
     where
       updateGenesisKeys (DPState dstate pstate) = DPState dstate' pstate
         where
           dstate' = dstate {dsGenDelegs = newGenDelegs}
 
-instance Crypto c => TranslateEra (ConwayEra c) API.UTxOState where
+instance Crypto c => TranslateEra (ConwayEra c) UTxOState where
   translateEra ctxt us =
     pure
-      API.UTxOState
+      UTxOState
         { API.utxosUtxo = translateEra' ctxt $ API.utxosUtxo us
         , API.utxosDeposited = API.utxosDeposited us
         , API.utxosFees = API.utxosFees us
-        , API.utxosPpups = translateEra' ctxt $ API.utxosPpups us
+        , API.utxosPpups = ()
         , API.utxosStakeDistr = API.utxosStakeDistr us
         }
 
 instance Crypto c => TranslateEra (ConwayEra c) API.UTxO where
   translateEra _ctxt utxo =
     pure $ API.UTxO $ translateTxOut `Map.map` API.unUTxO utxo
-
-instance Crypto c => TranslateEra (ConwayEra c) API.PPUPState where
-  translateEra ctxt ps =
-    pure
-      API.PPUPState
-        { API.proposals = translateEra' ctxt $ API.proposals ps
-        , API.futureProposals = translateEra' ctxt $ API.futureProposals ps
-        }
 
 instance Crypto c => TranslateEra (ConwayEra c) API.ProposedPPUpdates where
   translateEra _ctxt (API.ProposedPPUpdates ppup) =

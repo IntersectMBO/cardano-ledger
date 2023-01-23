@@ -20,8 +20,7 @@ module Cardano.Ledger.Shelley.TxOut (
   -- * Helpers
   addrEitherShelleyTxOutL,
   valueEitherShelleyTxOutL,
-)
-where
+) where
 
 import qualified Cardano.Crypto.Hash as HS
 import Cardano.HeapWords (HeapWords (..))

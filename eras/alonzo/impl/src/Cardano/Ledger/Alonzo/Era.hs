@@ -14,6 +14,7 @@ where
 import Cardano.Ledger.Core (Era (..), EraRule, Value)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary (MaryEra, MaryValue)
+import Cardano.Ledger.Shelley.Core (EraTallyState)
 import Cardano.Ledger.Shelley.Rules
 
 -- =====================================================
@@ -28,6 +29,8 @@ instance Crypto c => Era (AlonzoEra c) where
   type ProtVerHigh (AlonzoEra c) = 6
 
 type instance Value (AlonzoEra c) = MaryValue c
+
+instance EraTallyState (AlonzoEra c)
 
 -------------------------------------------------------------------------------
 -- Era Mapping

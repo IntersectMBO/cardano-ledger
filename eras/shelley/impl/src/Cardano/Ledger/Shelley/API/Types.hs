@@ -89,9 +89,9 @@ import Cardano.Ledger.Shelley.LedgerState as X (
   KeyPairs, -- deprecated
   LedgerState (..),
   NewEpochState (..),
-  PPUPState (..),
   PState (..),
   RewardUpdate (..),
+  ShelleyPPUPState (..),
   UTxOState (..),
  )
 import Cardano.Ledger.Shelley.PParams as X (

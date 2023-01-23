@@ -32,7 +32,7 @@ import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.LedgerState (NewEpochState)
+import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), NewEpochState)
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
 import Cardano.Ledger.Shelley.PParams ()
 import Cardano.Ledger.Shelley.Rules ()
@@ -61,6 +61,7 @@ class
   , State (EraRule "BBODY" era) ~ STS.ShelleyBbodyState era
   , Signal (EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era
   , ToCBORGroup (TxSeq era)
+  , State (EraRule "LEDGERS" era) ~ LedgerState era
   ) =>
   ApplyBlock era
   where
@@ -206,6 +207,7 @@ mkBbodyEnv
       }
 
 updateNewEpochState ::
+  LedgerState era ~ State (EraRule "LEDGERS" era) =>
   NewEpochState era ->
   STS.ShelleyBbodyState era ->
   NewEpochState era

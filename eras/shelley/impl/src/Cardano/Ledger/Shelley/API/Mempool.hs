@@ -51,7 +51,7 @@ import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (NewEpochState)
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
 import Cardano.Ledger.Shelley.Rules ()
-import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv, ShelleyLedgerPredFailure)
+import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv)
 import qualified Cardano.Ledger.Shelley.Rules.Ledger as Ledger
 import Cardano.Ledger.Slot (SlotNo)
 import Control.Arrow (ArrowChoice (right), left)
@@ -112,7 +112,6 @@ class
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , State (EraRule "LEDGER" era) ~ MempoolState era
   , Signal (EraRule "LEDGER" era) ~ Tx era
-  , PredicateFailure (EraRule "LEDGER" era) ~ ShelleyLedgerPredFailure era
   ) =>
   ApplyTx era
   where

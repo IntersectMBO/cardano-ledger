@@ -48,13 +48,12 @@ import Cardano.Crypto.Hash (
   hashToBytes,
  )
 import Cardano.Crypto.KES (
-  KESAlgorithm,
+  KESAlgorithm (..),
   SignKeyKES,
   VerKeyKES,
   deriveVerKeyKES,
   genKeyKES,
  )
-import Cardano.Crypto.KES.Class (ContextKES)
 import Cardano.Crypto.Seed (Seed, mkSeedFromBytes)
 import Cardano.Crypto.VRF (
   CertifiedVRF,
@@ -81,12 +80,8 @@ import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (DSIGN)
-import Cardano.Ledger.Keys (
-  KeyRole (..),
-  VKey (..),
-  updateKES,
- )
-import Cardano.Ledger.Shelley.API (ApplyBlock)
+import Cardano.Ledger.Shelley.API (ApplyBlock, KeyRole (..), VKey (..))
+import Cardano.Ledger.Shelley.Core (EraTallyState)
 import Cardano.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Protocol.TPraos.API (GetLedgerView)
@@ -127,6 +122,7 @@ type ChainProperty era =
   , ApplyBlock era
   , GetLedgerView era
   , EraTx era
+  , EraTallyState era
   )
 
 -- ================================================
