@@ -67,14 +67,13 @@ test-suite cardano-data-tests
 
   hs-source-dirs:      test
   main-is:             Main.hs
-  other-modules:       Test.Data.MapExtras
+  other-modules:       Test.Cardano.Data.MapExtrasSpec
 
   type:                exitcode-stdio-1.0
   default-language:    Haskell2010
   build-depends:       base
                      , containers
-                     , tasty
-                     , tasty-quickcheck
+                     , hspec
                      , cardano-data:{cardano-data, testlib}
                      , QuickCheck
   ghc-options:        -threaded
