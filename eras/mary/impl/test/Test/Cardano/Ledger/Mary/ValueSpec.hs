@@ -9,11 +9,12 @@
 
 module Test.Cardano.Ledger.Mary.ValueSpec (spec) where
 
+import Cardano.Crypto.Hash.Class -- (hashWith, castHash)
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Hashes
 import Cardano.Ledger.Mary.Value
 import qualified Data.ByteString.Base16 as BS16
-import qualified Data.ByteString.Char8 as BS
+import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Short as SBS
 import Data.CanonicalMaps (canonicalInsert)
 import GHC.Exts
@@ -27,14 +28,32 @@ spec = do
     prop "Canonical construction agrees" $ propCanonicalConstructionAgrees @StandardCrypto
 
 instance IsString AssetName where
-  fromString = AssetName . either error SBS.toShort . BS16.decode . BS.pack
+  fromString = AssetName . either error SBS.toShort . BS16.decode . BS8.pack
 
 instance Arbitrary AssetName where
-  arbitrary = do
-    len <- choose (1, 32)
-    AssetName <$> genShortByteString len
+  arbitrary =
+    AssetName
+      <$> oneof
+        [ do
+            len <- choose (1, 32)
+            genShortByteString len
+        , -- We need duplicates for quality tests
+          elements digitByteStrings
+        ]
 
-deriving instance Crypto c => Arbitrary (PolicyID c)
+digitByteStrings :: IsString s => [s]
+digitByteStrings = [fromString [x] | x <- ['0' .. '9']]
+
+hashOfDigitByteStrings :: HashAlgorithm h => [Hash h a]
+hashOfDigitByteStrings = castHash . hashWith id <$> digitByteStrings
+
+instance Crypto c => Arbitrary (PolicyID c) where
+  arbitrary =
+    PolicyID . ScriptHash
+      <$> oneof
+        [ arbitrary
+        , elements hashOfDigitByteStrings
+        ]
 
 instance Crypto c => Arbitrary (MultiAsset c) where
   arbitrary =
