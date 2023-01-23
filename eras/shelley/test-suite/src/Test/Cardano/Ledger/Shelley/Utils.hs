@@ -141,7 +141,7 @@ import Test.Tasty.HUnit
 type ChainProperty era hcrypto =
   ( Mock (Crypto era) hcrypto,
     ApplyBlock era,
-    GetLedgerView era hcrypto ,
+    GetLedgerView era,
     EraTx era
   )
 

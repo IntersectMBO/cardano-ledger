@@ -29,7 +29,6 @@ where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
 import qualified Cardano.Crypto.Hash.Class as Crypto
-import Cardano.Crypto.KES.Class (totalPeriodsKES)
 import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin)
@@ -60,7 +59,6 @@ import qualified Data.ListMap as LM
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
-import Data.Proxy (Proxy (..))
 import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Time (NominalDiffTime, UTCTime (..))
@@ -395,14 +393,13 @@ describeValidationErr (QuorumTooSmall q maxTooSmal nodes) =
 -- | Do some basic sanity checking on the Shelley genesis file.
 validateGenesis ::
   forall era.
-  Era era =>
   ShelleyGenesis era ->
   Either [ValidationErr] ()
 validateGenesis
   ShelleyGenesis
     { sgEpochLength,
       sgActiveSlotsCoeff,
-      sgMaxKESEvolutions,
+      -- sgMaxKESEvolutions,
       sgSecurityParam,
       sgUpdateQuorum,
       sgGenDelegs

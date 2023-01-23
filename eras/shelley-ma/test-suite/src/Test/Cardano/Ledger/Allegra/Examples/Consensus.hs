@@ -27,7 +27,7 @@ import Test.Cardano.Ledger.Shelley.Utils hiding (mkVRFKeyPair)
 type StandardAllegra = AllegraEra CC.StandardCrypto
 
 -- | ShelleyLedgerExamples for Allegra era
-ledgerExamplesAllegra :: ShelleyLedgerExamples StandardAllegra
+ledgerExamplesAllegra :: ShelleyLedgerExamples StandardAllegra CC.StandardCrypto
 ledgerExamplesAllegra =
   defaultShelleyLedgerExamples
     (mkWitnessesPreAlonzo (Proxy @StandardAllegra))
@@ -43,7 +43,7 @@ exampleTxBodyAllegra = exampleTxBodyMA exampleCoin
 exampleTxBodyMA ::
   forall era.
   ( ShelleyMAEraTxBody era,
-    ShelleyBasedEra' era,
+    CC.Crypto (Crypto era),
     PParamsUpdate era ~ ShelleyPParamsUpdate era
   ) =>
   Value era ->

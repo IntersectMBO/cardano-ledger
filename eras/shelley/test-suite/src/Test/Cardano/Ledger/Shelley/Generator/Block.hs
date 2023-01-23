@@ -86,7 +86,7 @@ genBlock ::
   ( MinLEDGER_STS era,
     ApplyBlock era,
     Mock (Crypto era) hcrypto,
-    GetLedgerView era hcrypto,
+    GetLedgerView era,
     QC.HasTrace (Core.EraRule "LEDGERS" era) (GenEnv era hcrypto),
     EraGen era
   ) =>
@@ -104,7 +104,7 @@ genBlock ge = genBlockWithTxGen genTxs ge
 genBlockWithTxGen ::
   forall era hcrypto.
   ( Mock (Crypto era) hcrypto,
-    GetLedgerView era hcrypto,
+    GetLedgerView era,
     ApplyBlock era,
     EraGen era
   ) =>
@@ -173,7 +173,7 @@ selectNextSlotWithLeader ::
   forall era hcrypto.
   ( Mock (Crypto era) hcrypto,
     EraGen era,
-    GetLedgerView era hcrypto,
+    GetLedgerView era,
     ApplyBlock era
   ) =>
   GenEnv era hcrypto ->
@@ -228,7 +228,7 @@ selectNextSlotWithLeader
             _ -> Nothing
         where
           lv      = futureLedgerViewAt origChainState slotNo
-          chainSt = tickChainState @era @hcrypto slotNo lv origChainState
+          chainSt = tickChainState @era slotNo lv origChainState
           epochNonce = chainEpochNonce chainSt
           poolDistr = unPoolDistr . nesPd . chainNes $ chainSt
           dpstate = (lsDPState . esLState . nesEs . chainNes) chainSt
@@ -249,19 +249,19 @@ selectNextSlotWithLeader
 
 -- Get the future ledger view, raise an error otherwise
 futureLedgerViewAt ::
-  forall era hcrypto.
-  GetLedgerView era hcrypto =>
-  ChainState era -> SlotNo -> LedgerView (Crypto era) hcrypto
+  forall era.
+  GetLedgerView era =>
+  ChainState era -> SlotNo -> LedgerView (Crypto era)
 futureLedgerViewAt ChainState { chainNes } slotNo =
   either (error . show) id $ futureLedgerView testGlobals chainNes slotNo
 
 -- | The chain state is a composite of the new epoch state and the chain dep
 -- state. We tick both.
 tickChainState ::
-  forall era hcrypto.
+  forall era.
   ApplyBlock era =>
   SlotNo ->
-  LedgerView (Crypto era) hcrypto ->
+  LedgerView (Crypto era) ->
   ChainState era ->
   ChainState era
 tickChainState

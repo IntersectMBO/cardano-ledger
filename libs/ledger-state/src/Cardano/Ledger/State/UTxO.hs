@@ -21,7 +21,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Mary.Value
-import Cardano.Ledger.PoolDistr (individualPoolStakeVrf)
+import Cardano.Ledger.PoolDistr (PoolStakeVRF, individualPoolStakeVrf)
 import Cardano.Ledger.Shelley.API hiding (TxOut)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PoolRank
@@ -273,7 +273,7 @@ instance AggregateStat RewardUpdateStats where
 
 data PoolDistrStats = PoolDistrStats
   { pdsStakePoolKeyHash :: !(Stat (KeyHash 'StakePool C)),
-    pdsStakePoolStakeVrf :: !(Stat (Hash C (VerKeyVRF C)))
+    pdsStakePoolStakeVrf :: !(Stat (Hash C PoolStakeVRF))
   }
 
 instance Pretty PoolDistrStats where

@@ -28,6 +28,7 @@ import Cardano.Ledger.Shelley.LedgerState
     NewEpochState (..),
   )
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams)
+import Cardano.Protocol.HeaderCrypto as CC (HeaderCrypto)
 import Cardano.Protocol.TPraos.API (GetLedgerView)
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Control.State.Transition.Extended
@@ -61,10 +62,11 @@ import Test.QuickCheck (generate)
 -- | Generate a genesis chain state given a UTxO size
 genChainState ::
   ( ShelleyTest era,
-    EraGen era
+    EraGen era,
+    HeaderCrypto hcrypto
   ) =>
   Int ->
-  GenEnv era ->
+  GenEnv era hcrypto ->
   IO (ChainState era)
 genChainState n ge =
   let cs =
@@ -84,18 +86,18 @@ genChainState n ge =
 
 -- | Benchmark generating a block given a chain state.
 genBlock ::
-  ( Mock (Crypto era),
+  ( Mock (Crypto era) hcrypto,
     ShelleyTest era,
     EraGen era,
     MinLEDGER_STS era,
-    GetLedgerView era,
+    GetLedgerView era hcrypto,
     Core.EraRule "LEDGERS" era ~ ShelleyLEDGERS era,
-    QC.HasTrace (ShelleyLEDGERS era) (GenEnv era),
+    QC.HasTrace (ShelleyLEDGERS era) (GenEnv era hcrypto),
     ApplyBlock era
   ) =>
-  GenEnv era ->
+  GenEnv era hcrypto ->
   ChainState era ->
-  IO (Block (BHeader (Crypto era)) era)
+  IO (Block (BHeader (Crypto era) hcrypto) era)
 genBlock ge cs = generate $ GenBlock.genBlock ge cs
 
 -- The order one does this is important, since all these things must flow from the same
@@ -109,7 +111,7 @@ genBlock ge cs = generate $ GenBlock.genBlock ge cs
 genTriple ::
   ( EraGen era,
     Core.PParams era ~ ShelleyPParams era,
-    Mock (Crypto era),
+    Mock (Crypto era) hcrypto,
     Embed (Core.EraRule "DELPL" era) (CERTS era),
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
     State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
@@ -118,7 +120,7 @@ genTriple ::
   ) =>
   Proxy era ->
   Int ->
-  IO (GenEnv era, ChainState era, GenEnv era -> IO (ShelleyTx era))
+  IO (GenEnv era hcrypto, ChainState era, GenEnv era hcrypto -> IO (ShelleyTx era))
 genTriple proxy n = do
   let ge = genEnv proxy
   cs <- genChainState n ge

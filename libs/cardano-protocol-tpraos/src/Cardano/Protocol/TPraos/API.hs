@@ -146,10 +146,10 @@ class
 instance PraosCrypto CC.StandardCrypto CC.StandardCrypto
 
 class
-  ( CC.HeaderCrypto hcrypto,
-    Eq (ChainTransitionError (Crypto era) hcrypto),
-    Show (ChainTransitionError (Crypto era) hcrypto),
-    Show (LedgerView (Crypto era) hcrypto),
+  ( --CC.HeaderCrypto hcrypto,
+    -- Eq (ChainTransitionError (Crypto era) hcrypto),
+    -- Show (ChainTransitionError (Crypto era) hcrypto),
+    Show (LedgerView (Crypto era)),
     Show (FutureLedgerViewError era),
     STS (EraRule "TICKF" era),
     BaseM (EraRule "TICKF" era) ~ ShelleyBase,
@@ -162,15 +162,15 @@ class
     HasField "_maxBHSize" (PParams era) Natural,
     HasField "_protocolVersion" (PParams era) ProtVer
   ) =>
-  GetLedgerView era hcrypto
+  GetLedgerView era
   where
   currentLedgerView ::
     NewEpochState era ->
-    LedgerView (Crypto era) hcrypto
+    LedgerView (Crypto era)
   default currentLedgerView ::
     HasField "_extraEntropy" (PParams era) Nonce =>
     NewEpochState era ->
-    LedgerView (Crypto era) hcrypto
+    LedgerView (Crypto era)
   currentLedgerView = view
 
   -- $timetravel
@@ -179,7 +179,7 @@ class
     Globals ->
     NewEpochState era ->
     SlotNo ->
-    m (LedgerView (Crypto era) hcrypto)
+    m (LedgerView (Crypto era) )
   default futureLedgerView ::
     ( MonadError (FutureLedgerViewError era) m,
       HasField "_extraEntropy" (PParams era) Nonce
@@ -187,20 +187,20 @@ class
     Globals ->
     NewEpochState era ->
     SlotNo ->
-    m (LedgerView (Crypto era) hcrypto)
+    m (LedgerView (Crypto era) )
   futureLedgerView = futureView
 
-instance (CC.Crypto crypto, CC.HeaderCrypto hcrypto) => GetLedgerView (ShelleyEra crypto) hcrypto
+instance (CC.Crypto crypto) => GetLedgerView (ShelleyEra crypto)
 
-instance (CC.Crypto c, CC.HeaderCrypto hc) => GetLedgerView (AllegraEra c) hc
+instance (CC.Crypto c) => GetLedgerView (AllegraEra c)
 
-instance (CC.Crypto c, CC.HeaderCrypto hc) => GetLedgerView (MaryEra c) hc
+instance (CC.Crypto c) => GetLedgerView (MaryEra c)
 
-instance (CC.Crypto c, CC.HeaderCrypto hc) => GetLedgerView (AlonzoEra c) hc
+instance (CC.Crypto c) => GetLedgerView (AlonzoEra c)
 
 -- Note that although we do not use TPraos in the Babbage era, we include this
 -- because it makes it simpler to get the ledger view for Praos.
-instance (CC.Crypto c, CC.HeaderCrypto hc) => GetLedgerView (BabbageEra c) hc where
+instance (CC.Crypto c) => GetLedgerView (BabbageEra c) where
   currentLedgerView
     NewEpochState {nesPd = pd, nesEs = es} =
       LedgerView
@@ -227,7 +227,7 @@ instance (CC.Crypto c, CC.HeaderCrypto hc) => GetLedgerView (BabbageEra c) hc wh
 
 -- Note that although we do not use TPraos in the Conway era, we include this
 -- because it makes it simpler to get the ledger view for Praos.
-instance (CC.Crypto c, CC.HeaderCrypto hc) => GetLedgerView (ConwayEra c) hc where
+instance (CC.Crypto c) => GetLedgerView (ConwayEra c) where
   currentLedgerView
     NewEpochState {nesPd = pd, nesEs = es} =
       LedgerView
@@ -253,7 +253,7 @@ instance (CC.Crypto c, CC.HeaderCrypto hc) => GetLedgerView (ConwayEra c) hc whe
           $ TRC ((), ss, slot)
 
 -- | Data required by the Transitional Praos protocol from the Shelley ledger.
-data LedgerView crypto hcrypto = LedgerView
+data LedgerView crypto = LedgerView
   { lvD :: UnitInterval,
     -- Note that this field is not present in Babbage, but we require this view
     -- in order to construct the Babbage ledger view. We allow this to be lazy
@@ -267,13 +267,13 @@ data LedgerView crypto hcrypto = LedgerView
   }
   deriving (Eq, Show, Generic)
 
-instance NoThunks (LedgerView crypto hcrypto)
+instance NoThunks (LedgerView crypto)
 
 -- | Construct a protocol environment from the ledger view, along with the
 -- current slot and a marker indicating whether this is the first block in a new
 -- epoch.
 mkPrtclEnv ::
-  LedgerView crypto hcrypto ->
+  LedgerView crypto ->
   -- | Epoch nonce
   Nonce ->
   STS.Prtcl.PrtclEnv crypto
@@ -296,7 +296,7 @@ view ::
     HasField "_protocolVersion" (PParams era) ProtVer
   ) =>
   NewEpochState era ->
-  LedgerView (Crypto era) hcrypto
+  LedgerView (Crypto era)
 view
   NewEpochState
     { nesPd = pd,
@@ -359,7 +359,7 @@ deriving stock instance
 --   slot corresponding to the passed-in 'NewEpochState'), return a 'LedgerView'
 --   appropriate to that slot.
 futureView ::
-  forall era hcrypto m.
+  forall era m.
   ( MonadError (FutureLedgerViewError era) m,
     STS (EraRule "TICKF" era),
     BaseM (EraRule "TICKF" era) ~ ShelleyBase,
@@ -376,7 +376,7 @@ futureView ::
   Globals ->
   NewEpochState era ->
   SlotNo ->
-  m (LedgerView (Crypto era) hcrypto)
+  m (LedgerView (Crypto era))
 futureView globals ss slot =
   liftEither
     . right view
@@ -470,7 +470,7 @@ deriving instance (CC.Crypto crypto, CC.HeaderCrypto hcrypto) => Show (ChainTran
 -- | Tick the chain state to a new epoch.
 tickChainDepState ::
   Globals ->
-  LedgerView crypto hcrypto ->
+  LedgerView crypto ->
   -- | Are we in a new epoch?
   Bool ->
   ChainDepState crypto ->
@@ -504,7 +504,7 @@ updateChainDepState ::
     MonadError (ChainTransitionError crypto hcrypto) m
   ) =>
   Globals ->
-  LedgerView crypto hcrypto ->
+  LedgerView crypto ->
   BHeader crypto hcrypto ->
   ChainDepState crypto ->
   m (ChainDepState crypto)
@@ -543,7 +543,7 @@ reupdateChainDepState ::
   forall crypto hcrypto.
   PraosCrypto crypto hcrypto =>
   Globals ->
-  LedgerView crypto hcrypto ->
+  LedgerView crypto ->
   BHeader crypto hcrypto ->
   ChainDepState crypto ->
   ChainDepState crypto
@@ -602,9 +602,9 @@ getLeaderSchedule globals ss cds poolHash key pp = Set.filter isLeader epochSlot
 -- | We construct a 'LedgerView' using the Shelley genesis config in the same
 -- way as 'translateToShelleyLedgerState'.
 mkInitialShelleyLedgerView ::
-  forall c hc.
+  forall c.
   ShelleyGenesis (ShelleyEra c) ->
-  LedgerView c hc
+  LedgerView c
 mkInitialShelleyLedgerView genesisShelley =
   let !ee = _extraEntropy . sgProtocolParams $ genesisShelley
    in LedgerView

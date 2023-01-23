@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module BenchUTxOAggregate where
 
@@ -79,7 +80,7 @@ genTestCase numUTxO numAddr = do
 
   keyhash :: [KeyHash 'StakePool C_Crypto] <- replicateM 400 arbitrary
   let delegs = Map.fromList (zip creds (cycle (take 200 keyhash)))
-  let pp = alicePoolParams
+  let pp = alicePoolParams @C_Crypto @C_Crypto
   let poolParams = Map.fromList (zip keyhash (replicate 400 pp))
   let (dstate, pstate) = makeStatePair rewards' delegs ptrs' poolParams
   pure (dstate, pstate, UTxO utxo)

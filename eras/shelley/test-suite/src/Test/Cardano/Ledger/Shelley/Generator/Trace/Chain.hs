@@ -99,7 +99,7 @@ instance
     Core.EraSegWits era,
     Mock (Crypto era) hcrypto,
     ApplyBlock era,
-    GetLedgerView era hcrypto,
+    GetLedgerView era,
     MinLEDGER_STS era,
     MinCHAIN_STS era hcrypto,
     Embed (Core.EraRule "BBODY" era) (CHAIN era hcrypto),

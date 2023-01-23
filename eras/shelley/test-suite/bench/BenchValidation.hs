@@ -40,6 +40,7 @@ import Cardano.Ledger.Shelley.LedgerState
     StashedAVVMAddresses,
     nesBcur,
   )
+import Cardano.Protocol.HeaderCrypto as CryptoClass
 import Cardano.Protocol.TPraos.API
   ( ChainDepState (..),
     ChainTransitionError,
@@ -68,40 +69,40 @@ import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest, testGlobals)
 
-data ValidateInput era = ValidateInput Globals (NewEpochState era) (Block (BHeader (Crypto era)) era)
+data ValidateInput era hcrypto = ValidateInput Globals (NewEpochState era) (Block (BHeader (Crypto era) hcrypto) era)
 
-sizes :: ValidateInput era -> String
+sizes :: ValidateInput era hcrypto -> String
 sizes (ValidateInput _gs ss _blk) = "blockMap size=" ++ show (Map.size (unBlocksMade (nesBcur ss)))
 
-instance NFData (ValidateInput era) where
+instance NFData (ValidateInput era hcrypto) where
   rnf (ValidateInput a b c) = seq a (seq b (seq c ()))
 
 validateInput ::
   ( EraGen era,
     ShelleyTest era,
-    Mock (Crypto era),
+    Mock (Crypto era) hcrypto,
     Core.EraRule "LEDGERS" era ~ API.ShelleyLEDGERS era,
-    QC.HasTrace (API.ShelleyLEDGERS era) (GenEnv era),
+    QC.HasTrace (API.ShelleyLEDGERS era) (GenEnv era hcrypto),
     API.ApplyBlock era,
-    GetLedgerView era,
+    GetLedgerView era hcrypto,
     MinLEDGER_STS era
   ) =>
   Int ->
-  IO (ValidateInput era)
+  IO (ValidateInput era hcrypto)
 validateInput utxoSize = genValidateInput utxoSize
 
 genValidateInput ::
   ( EraGen era,
     ShelleyTest era,
-    Mock (Crypto era),
+    Mock (Crypto era) hcrypto,
     Core.EraRule "LEDGERS" era ~ API.ShelleyLEDGERS era,
-    QC.HasTrace (API.ShelleyLEDGERS era) (GenEnv era),
+    QC.HasTrace (API.ShelleyLEDGERS era) (GenEnv era hcrypto),
     API.ApplyBlock era,
-    GetLedgerView era,
+    GetLedgerView era hcrypto,
     MinLEDGER_STS era
   ) =>
   Int ->
-  IO (ValidateInput era)
+  IO (ValidateInput era hcrypto)
 genValidateInput n = do
   let ge = genEnv (Proxy :: Proxy era)
   chainstate <- genChainState n ge
@@ -109,9 +110,9 @@ genValidateInput n = do
   pure (ValidateInput testGlobals (chainNes chainstate) block)
 
 benchValidate ::
-  forall era.
+  forall era hcrypto.
   (Era era, API.ApplyBlock era) =>
-  ValidateInput era ->
+  ValidateInput era hcrypto ->
   IO (NewEpochState era)
 benchValidate (ValidateInput globals state (Block bh txs)) =
   case API.applyBlock @era globals state (UnsafeUnserialisedBlock (makeHeaderView bh) txs) of
@@ -119,7 +120,7 @@ benchValidate (ValidateInput globals state (Block bh txs)) =
     Left x -> error (show x)
 
 applyBlock ::
-  forall era.
+  forall era hcrypto.
   ( Era era,
     NFData (Core.TxOut era),
     API.ApplyBlock era,
@@ -127,7 +128,7 @@ applyBlock ::
     NFData (State (Core.EraRule "PPUP" era)),
     NFData (StashedAVVMAddresses era)
   ) =>
-  ValidateInput era ->
+  ValidateInput era hcrypto ->
   Int ->
   Int
 applyBlock (ValidateInput globals state (Block bh txs)) n =
@@ -144,21 +145,21 @@ benchreValidate (ValidateInput globals state (Block bh txs)) =
 
 -- ==============================================================
 
-data UpdateInputs c
+data UpdateInputs c hc
   = UpdateInputs
       !Globals
-      !(LedgerView c)
-      !(BHeader c)
+      !(LedgerView c hc)
+      !(BHeader c hc)
       !(ChainDepState c)
 
-instance CryptoClass.Crypto c => Show (UpdateInputs c) where
+instance CryptoClass.Crypto c => Show (UpdateInputs c hc) where
   show (UpdateInputs _globals vl bh st) =
     show vl ++ "\n" ++ show bh ++ "\n" ++ show st
 
-instance NFData (LedgerView era) where
+instance NFData (LedgerView era hc) where
   rnf (LedgerView _D _extraEntropy _pool _delegs _ccd) = ()
 
-instance CryptoClass.Crypto c => NFData (BHeader c) where
+instance CryptoClass.Crypto c => NFData (BHeader c hc) where
   rnf (BHeader _ _) = ()
 
 instance NFData (ChainDepState c) where
@@ -167,26 +168,26 @@ instance NFData (ChainDepState c) where
 instance NFData Globals where
   rnf (Globals _ _ _ _ _ _ _ _ _ _ _ _) = ()
 
-instance NFData (ChainTransitionError c) where
+instance NFData (ChainTransitionError c hc) where
   rnf _ = ()
 
-instance CryptoClass.Crypto c => NFData (UpdateInputs c) where
+instance CryptoClass.Crypto c => NFData (UpdateInputs c hc) where
   rnf (UpdateInputs g lv bh st) =
     seq (rnf g) (seq (rnf lv) (seq (rnf bh) (rnf st)))
 
 genUpdateInputs ::
-  forall era.
+  forall era hc.
   ( EraGen era,
-    Mock (Crypto era),
+    Mock (Crypto era) hc,
     ShelleyTest era,
     MinLEDGER_STS era,
-    GetLedgerView era,
+    GetLedgerView era hc,
     Core.EraRule "LEDGERS" era ~ API.ShelleyLEDGERS era,
-    QC.HasTrace (API.ShelleyLEDGERS era) (GenEnv era),
+    QC.HasTrace (API.ShelleyLEDGERS era) (GenEnv era hc),
     API.ApplyBlock era
   ) =>
   Int ->
-  IO (UpdateInputs (Crypto era))
+  IO (UpdateInputs (Crypto era) hc)
 genUpdateInputs utxoSize = do
   let ge = genEnv (Proxy :: Proxy era)
   chainstate <- genChainState utxoSize ge

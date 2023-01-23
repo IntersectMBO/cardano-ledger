@@ -98,6 +98,7 @@ import Cardano.Ledger.Shelley.Rules.Mir (emptyInstantaneousRewards)
 import Cardano.Ledger.Shelley.TxBody (MIRPot (..), PoolParams (..), RewardAcnt (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), txins, txouts)
 import Cardano.Ledger.Val ((<+>), (<->))
+import Cardano.Protocol.HeaderCrypto (HeaderCrypto)
 import Cardano.Protocol.TPraos.BHeader
   ( BHBody (..),
     BHeader,
@@ -161,9 +162,9 @@ evolveNonceUnfrozen n cs =
 -- Note: do not use this function when crossing the epoch boundary,
 -- instead use 'newEpoch'.
 newLab ::
-  forall era.
-  (Era era) =>
-  Block (BHeader (Crypto era)) era ->
+  forall era hc.
+  (Era era, HeaderCrypto hc) =>
+  Block (BHeader (Crypto era) hc) era ->
   ChainState era ->
   ChainState era
 newLab b cs =
@@ -621,10 +622,10 @@ incrBlockCount kh cs = cs {chainNes = nes'}
 -- Note: This function subsumes the manipulations done by
 -- 'newLab', 'evolveNonceUnfrozen', and 'evolveNonceFrozen'.
 newEpoch ::
-  forall era.
-  (Core.PParams era ~ ShelleyPParams era) =>
+  forall era hc.
+  (Core.PParams era ~ ShelleyPParams era, HeaderCrypto hc) =>
   Era era =>
-  Block (BHeader (Crypto era)) era ->
+  Block (BHeader (Crypto era) hc) era ->
   ChainState era ->
   ChainState era
 newEpoch b cs = cs'

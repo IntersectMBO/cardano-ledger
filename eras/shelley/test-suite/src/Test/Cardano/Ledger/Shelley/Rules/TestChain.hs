@@ -1135,8 +1135,9 @@ delegTraceFromBlock chainSt block =
 ledgerTraceBase ::
   forall era hcrypto.
   ( EraSegWits era,
-    GetLedgerView era hcrypto,
-    ApplyBlock era
+    GetLedgerView era,
+    ApplyBlock era,
+    CC.HeaderCrypto hcrypto
   ) =>
   ChainState era ->
   Block (BHeader (Crypto era) hcrypto) era ->
@@ -1150,7 +1151,7 @@ ledgerTraceBase chainSt block =
   where
     (UnserialisedBlock (BHeader bhb _) txSeq) = block
     slot = bheaderSlotNo bhb
-    lv  = futureLedgerViewAt @era @hcrypto chainSt slot
+    lv  = futureLedgerViewAt @era chainSt slot
     tickedChainSt = tickChainState slot lv chainSt
     nes = (nesEs . chainNes) tickedChainSt
     pp_ = esPp nes
@@ -1180,7 +1181,7 @@ chainSstWithTick ledgerTr =
       let bh = bheader block
           slot = (bheaderSlotNo . bhbody) bh
           lv = futureLedgerViewAt chainSt slot
-       in sst {target = tickChainState @era @hcrypto slot lv chainSt}
+       in sst {target = tickChainState @era slot lv chainSt}
 
 ----------------------------------------------------------------------
 -- Properties for PoolReap (using the CHAIN Trace) --
