@@ -529,7 +529,7 @@ decodeRecordNamedT name getRecordSize decoder = do
   lenOrIndef <- lift decodeListLenOrIndef
   x <- decoder
   lift $ case lenOrIndef of
-    Just n -> matchSize (Text.pack "Record " <> name) n (getRecordSize x)
+    Just n -> matchSize (Text.pack "Record " <> name) (getRecordSize x) n
     Nothing -> do
       isBreak <- decodeBreakOr
       unless isBreak $ cborError $ DecoderErrorCustom name "Excess terms in array"
