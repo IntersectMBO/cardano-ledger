@@ -74,14 +74,13 @@ import Data.Foldable (foldMap')
 import Data.Group (Abelian, Group (..))
 import Data.Int (Int64)
 import Data.List (sortOn)
+import Data.Map (Map)
 import Data.Map.Internal (
-  Map (..),
   link,
   link2,
  )
 import Data.Map.Strict (assocs)
 import qualified Data.Map.Strict as Map
-import Data.Map.Strict.Internal (splitLookup)
 import Data.Maybe (fromJust)
 import qualified Data.Primitive.ByteArray as BA
 import Data.Proxy (Proxy (..))
@@ -779,9 +778,9 @@ insertMultiAsset ::
   MultiAsset c ->
   MultiAsset c
 insertMultiAsset combine pid aid new (MultiAsset m1) =
-  case splitLookup pid m1 of
+  case Map.splitLookup pid m1 of
     (l1, Just m2, l2) ->
-      case splitLookup aid m2 of
+      case Map.splitLookup aid m2 of
         (v1, Just old, v2) ->
           if n == 0
             then
