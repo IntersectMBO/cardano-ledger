@@ -26,9 +26,15 @@ common project-config
                       -Wredundant-constraints
                       -Wpartial-fields
                       -Wunused-packages
+flag asserts
+  description:        Enable assertions
+  manual:             False
+  default:            False
 
 library
   import:             base, project-config
+  if flag(asserts)
+     ghc-options:       -fno-ignore-asserts
   exposed-modules:
     Cardano.Ledger.Chain
     Cardano.Ledger.Shelley
