@@ -31,8 +31,8 @@ import Control.Monad.Trans
 import Control.Monad.Trans.State.Strict
 import qualified Data.Foldable as F
 import Data.Kind
-import qualified Data.Map.Strict as Map
-import Data.Map.Strict.Internal
+import qualified Data.Map.Strict as Map (size)
+import Data.Map.Strict.Internal (Map (..))
 import Data.Primitive.Types (Prim)
 import Data.VMap (VB, VMap, VP)
 import qualified Data.VMap as VMap
