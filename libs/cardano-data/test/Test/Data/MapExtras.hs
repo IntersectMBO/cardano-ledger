@@ -7,6 +7,7 @@ import Data.MapExtras
 import Test.QuickCheck
 import Test.Tasty
 import Test.Tasty.QuickCheck
+import Test.Cardano.Data
 
 mapExtrasTests :: TestTree
 mapExtrasTests =

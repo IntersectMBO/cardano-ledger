@@ -16,9 +16,8 @@ import qualified Data.ByteString.Base16 as BS16
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Short as SBS
 import Data.CanonicalMaps (canonicalInsert)
-import qualified Data.Map as Map hiding (showTree)
-import qualified Data.Map.Internal.Debug as Map
 import GHC.Exts
+import Test.Cardano.Data
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary
 
@@ -53,23 +52,9 @@ instance Crypto c => Arbitrary (MaryValue c) where
       genMultiAsset $ toInteger <$> choose (1 :: Int, maxBound)
     pure $ MaryValue v ma
 
-expectValidMap :: HasCallStack => (Ord k, Show k, Show a) => Map.Map k a -> Expectation
-expectValidMap m =
-  unless (Map.valid m) $
-    expectationFailure $
-      unlines
-        [ "Interal strucutre of a map is invalid:"
-        , "Keys are ordered: " ++ show (Map.ordered m)
-        , "Tree is balanced: " ++ show (Map.balanced m)
-        , "Sizes are valid: " ++ show (Map.validsize m)
-        , Map.showTree m
-        ]
-
-genNonEmptyMap :: Ord k => Gen k -> Gen v -> Gen (Map.Map k v)
-genNonEmptyMap genKey genVal = Map.fromList <$> listOf1 ((,) <$> genKey <*> genVal)
-
 genMultiAsset :: Crypto c => Gen Integer -> Gen (MultiAsset c)
-genMultiAsset genAmount = MultiAsset <$> genNonEmptyMap arbitrary (genNonEmptyMap arbitrary genAmount)
+genMultiAsset genAmount =
+  MultiAsset <$> genNonEmptyMap arbitrary (genNonEmptyMap arbitrary genAmount)
 
 propCanonicalConstructionAgrees ::
   Crypto c =>
