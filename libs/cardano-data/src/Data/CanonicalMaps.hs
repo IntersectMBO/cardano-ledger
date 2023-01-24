@@ -12,8 +12,8 @@ where
 
 import Data.Map.Internal (
   Map (..),
-  balanceL,
-  balanceR,
+  -- balanceL,
+  -- balanceR,
   link,
   link2,
  )
@@ -36,14 +36,14 @@ instance CanonicalZero Integer where
   zeroC = 0
   joinC = (+)
 
-instance (Ord k, CanonicalZero v) => CanonicalZero (Map k v) where
+instance (Show k, Show v, Ord k, CanonicalZero v) => CanonicalZero (Map k v) where
   zeroC = Map.empty
   joinC = canonicalMapUnion joinC
 
 -- Note that the class CanonicalZero and the function canonicalMapUnion are mutually recursive.
 
 canonicalMapUnion ::
-  (Ord k, CanonicalZero a) =>
+  (Show k, Show a, Ord k, CanonicalZero a) =>
   (a -> a -> a) -> -- (\ left right -> ??) which side do you prefer?
   Map k a ->
   Map k a ->
@@ -70,7 +70,7 @@ canonicalMapUnion f (Bin _ k1 x1 l1 r1) t2 = case splitLookup k1 t2 of
 {-# INLINEABLE canonicalMapUnion #-}
 
 canonicalInsert ::
-  (Ord k, CanonicalZero a) =>
+  (Show k, Show a, Ord k, CanonicalZero a) =>
   (a -> a -> a) ->
   k ->
   a ->
@@ -79,7 +79,7 @@ canonicalInsert ::
 canonicalInsert = go
   where
     go ::
-      (Ord k, CanonicalZero a) =>
+      (Show k, Show a, Ord k, CanonicalZero a) =>
       (a -> a -> a) ->
       k ->
       a ->
@@ -88,9 +88,12 @@ canonicalInsert = go
     go _ !kx x Tip = if x == zeroC then Tip else singleton kx x
     go f !kx x (Bin sy ky y l r) =
       case compare kx ky of
-        LT -> balanceL ky y (go f kx x l) r
-        GT -> balanceR ky y l (go f kx x r)
-        EQ -> if new == zeroC then link2 l r else Bin sy kx new l r
+        LT -> {- balanceL -} link ky y (go f kx x l) r
+        GT -> {- balanceR -} link ky y l (go f kx x r)
+        EQ ->
+          if new == zeroC
+            then (link2 l r)
+            else (Bin sy kx new l r)
           where
             new = f y x -- Apply to value in the tree, then the new value
 {-# INLINEABLE canonicalInsert #-}
