@@ -12,8 +12,6 @@ where
 
 import Data.Map.Internal (
   Map (..),
-  balanceL,
-  balanceR,
   link,
   link2,
  )
@@ -80,8 +78,8 @@ canonicalInsert f !kx x = go
     go Tip = if x == zeroC then Tip else Map.singleton kx x
     go (Bin sy ky y l r) =
       case compare kx ky of
-        LT -> balanceL ky y (go l) r
-        GT -> balanceR ky y l (go r)
+        LT -> link ky y (go l) r
+        GT -> link ky y l (go r)
         EQ -> if new == zeroC then link2 l r else Bin sy kx new l r
           where
             new = f y x -- Apply to value in the tree, then the new value
