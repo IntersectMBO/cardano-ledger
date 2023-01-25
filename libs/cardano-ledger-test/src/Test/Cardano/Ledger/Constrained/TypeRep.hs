@@ -39,6 +39,7 @@ import Cardano.Ledger.PoolParams (PoolParams (ppId))
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UTxO (UTxO (..))
+import Cardano.Ledger.Val (Val ((<+>)))
 import qualified Data.List as List
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -46,6 +47,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Universe (Eql, Shape (..), Shaped (..), Singleton (..), cmpIndex, (:~:) (Refl))
 import Data.Word (Word64)
+import Lens.Micro
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
@@ -60,6 +62,7 @@ import Test.Cardano.Ledger.Constrained.Classes (
   genUTxO,
   genValue,
   liftUTxO,
+  txOutCoinL,
   unPParams,
   unPParamsUpdate,
   unTxOut,
@@ -71,6 +74,7 @@ import Test.Cardano.Ledger.Generic.PrettyCore (
   credSummary,
   keyHashSummary,
   pcCoin,
+  pcIndividualPoolStake,
   pcTxIn,
  )
 import Test.Cardano.Ledger.Generic.Proof (Proof (..))
@@ -243,13 +247,25 @@ synopsis GenDelegPairR x = "(GenDelegPair " ++ show x ++ ")"
 synopsis FutureGenDelegR x = "(FutureGenDelegR " ++ show x ++ ")"
 synopsis PPUPStateR _ = "PPUPStateR ..."
 synopsis PtrR p = show p
-synopsis IPoolStakeR p = show p
+synopsis IPoolStakeR p = show (pcIndividualPoolStake p)
 synopsis SnapShotsR _ = "SnapShots ..."
 synopsis UnitR () = "()"
 
 synSum :: Rep era a -> a -> String
 synSum (MapR _ CoinR) m = ", sum = " ++ show (pcCoin (Map.foldl' (<>) mempty m))
 synSum (MapR _ RationalR) m = ", sum = " ++ show (Map.foldl' (+) 0 m)
+synSum (MapR _ IPoolStakeR) m = ", sum = " ++ show (Map.foldl' accum 0 m)
+  where
+    accum z (IndividualPoolStake rat _) = z + rat
+synSum (MapR _ (TxOutR proof)) m = ", sum = " ++ show (Map.foldl' (accum proof) (Coin 0) m)
+  where
+    accum :: Proof era -> Coin -> TxOut era -> Coin
+    accum (Shelley _) z (TxOut _ out) = z <+> (out ^. txOutCoinL)
+    accum (Allegra _) z (TxOut _ out) = z <+> (out ^. txOutCoinL)
+    accum (Mary _) z (TxOut _ out) = z <+> (out ^. txOutCoinL)
+    accum (Alonzo _) z (TxOut _ out) = z <+> (out ^. txOutCoinL)
+    accum (Babbage _) z (TxOut _ out) = z <+> (out ^. txOutCoinL)
+    accum (Conway _) z (TxOut _ out) = z <+> (out ^. txOutCoinL)
 synSum (SetR CoinR) m = ", sum = " ++ show (pcCoin (Set.foldl' (<>) mempty m))
 synSum (SetR RationalR) m = ", sum = " ++ show (Set.foldl' (+) 0 m)
 synSum (ListR CoinR) m = ", sum = " ++ show (List.foldl' (<>) mempty m)

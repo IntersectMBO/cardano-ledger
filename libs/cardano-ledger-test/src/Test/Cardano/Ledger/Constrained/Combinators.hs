@@ -94,8 +94,11 @@ itemFromSet :: HasCallStack => Set a -> Gen a
 itemFromSet set | Set.null set = error ("itemFromSet : Can't take an item from the empty set.")
 itemFromSet set = elements (Set.toList set)
 
-mapFromRange :: Ord a => [b] -> Gen a -> Gen (Map a b)
+mapFromRange :: forall a b. Ord a => [b] -> Gen a -> Gen (Map a b)
 mapFromRange bs genA = Map.fromList <$> mapM (\b -> do a <- genA; pure (a, b)) bs
+
+mapFromProj :: Ord a => [b] -> Gen a -> (b -> Gen c) -> Gen (Map a c)
+mapFromProj bs genA genC = Map.fromList <$> mapM (\b -> do a <- genA; c <- genC b; pure (a, c)) bs
 
 mapFromDomRange :: Ord a => Set a -> [b] -> Map a b
 mapFromDomRange dom bs = Map.fromList $ zip (Set.toList dom) bs

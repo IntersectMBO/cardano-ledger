@@ -15,6 +15,10 @@ module Test.Cardano.Ledger.Constrained.Examples where
 import Cardano.Ledger.DPState (PState (..))
 import Cardano.Ledger.Pretty
 import Test.Cardano.Ledger.Constrained.Ast
+
+-- import Test.Cardano.Ledger.Constrained.Classes  -- (Adds(..),Sums(..))
+
+import Cardano.Ledger.Coin (Coin (..))
 import Test.Cardano.Ledger.Constrained.Env
 import Test.Cardano.Ledger.Constrained.Monad
 import Test.Cardano.Ledger.Constrained.Spec
@@ -24,6 +28,7 @@ import Test.Cardano.Ledger.Generic.PrettyCore (pcCoin, pcKeyHash, pcPoolParams)
 import Test.Cardano.Ledger.Generic.Proof (
   Evidence (..),
   Proof (..),
+  Reflect (..),
  )
 import Test.QuickCheck hiding (Fixed, total)
 
@@ -154,7 +159,11 @@ constraints =
   , Dom retiring :<=: Dom regPools
   , SumsTo deposits [SumMap stakeDeposits, SumMap poolDeposits]
   , SumsTo (Fixed (Lit RationalR 1)) [SumMap poolDistrVar]
-  , SumsTo
+  , -- , SumsTo (Fixed (Lit RationalR 1)) [Project poolDistr]
+    -- , SumsTo totalAda [One fees,One deposits,Project utxo]
+    --    999 = 500 + deposits + 300
+    --    999 = 500 + 199 +      Project utxo => 300
+    SumsTo
       totalAda
       [ One utxoCoin
       , One treasury
@@ -272,3 +281,50 @@ Sum (Proj coinfromTxout utxo) = 35  Rng utxo might have duplicates
 Sum (Proj individualPoolStake markPoolDistr) = 1
 
 -}
+
+-- ==============================================================
+
+sumPreds :: Reflect era => Proof era -> [Pred era]
+sumPreds proof =
+  [ totalAda :=: Fixed (Lit CoinR (Coin 1000))
+  , -- Sized (Fixed (Lit Word64R 10)) (utxo proof)
+    fees :=: Fixed (Lit CoinR (Coin 400))
+  , deposits :=: Fixed (Lit CoinR (Coin 200))
+  , SumsTo totalAda [One fees, One deposits, Project (utxo proof)]
+  , SumsTo (Fixed (Lit RationalR 1)) [Project poolDistr]
+  ]
+
+testn :: Proof era -> [Pred era] -> IO ()
+testn proof cs = do
+  let cs2 = (removeDom cs)
+  let cs3 = removeEqual cs2 []
+  let cs4 = removeSameVar cs3 []
+  graph@(DependGraph _) <- ioTyped $ compile standardOrderInfo cs
+  putStrLn
+    ( unlines
+        [ "Constraints"
+        , show cs
+        , "Introduce new variables"
+        , show cs2
+        , "Substitute for Equality"
+        , show cs3
+        , "Remove syntactic tautologys"
+        , show cs4
+        , "Pick a variable ordering\n"
+        , show graph
+        , "Solve for each variable in the order computed. Note by the time we get\nto each variable, it is the only variable left in the constraint."
+        ]
+    )
+  result <- generate (genDependGraph proof graph)
+  subst <- case result of
+    Left msgs -> error (unlines msgs)
+    Right x -> pure x
+  putStrLn "\nSubstitution produced after solving\n"
+  putStrLn (unlines (map show subst))
+  let env = substToEnv subst emptyEnv
+  putStrLn "Testing constraints against the values generated\n"
+  ss <- ioTyped (mapM (makeTest env) cs)
+  putStrLn (unlines ss)
+
+go :: IO ()
+go = testn (Alonzo Standard) (sumPreds (Alonzo Standard))

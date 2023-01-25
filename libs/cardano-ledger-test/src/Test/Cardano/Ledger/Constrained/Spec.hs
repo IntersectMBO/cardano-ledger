@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -20,7 +21,7 @@ import Data.Universe (cmpIndex)
 import Data.Word (Word64)
 import Debug.Trace (trace)
 import Test.Cardano.Ledger.Constrained.Ast
-import Test.Cardano.Ledger.Constrained.Classes (Adds (..))
+import Test.Cardano.Ledger.Constrained.Classes (Adds (..), Sums (..))
 import Test.Cardano.Ledger.Constrained.Combinators
 import Test.Cardano.Ledger.Constrained.Env
 import Test.Cardano.Ledger.Constrained.Monad
@@ -41,6 +42,7 @@ import Test.Cardano.Ledger.Generic.Proof (
  )
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.QuickCheck hiding (Fixed, total)
+import Prelude hiding (subtract)
 
 -- ===================================================================================
 -- This is testing file, and sometimes it pays for solver to explain what it is doing
@@ -79,7 +81,7 @@ removeSameVar (m : more) ans = removeSameVar more (m : ans)
 removeEqual :: [Pred era] -> [Pred era] -> [Pred era]
 removeEqual [] ans = reverse ans
 removeEqual ((Var v :=: Var u) : more) ans | Name v == Name u = removeEqual more ans
-removeEqual ((Var v :=: expr) : more) ans = removeEqual (map sub more) (map sub ans)
+removeEqual ((Var v :=: expr) : more) ans = removeEqual (map sub more) ((Var v :=: expr) : (map sub ans))
   where
     sub = substPred [SubItem v expr]
 removeEqual (m : more) ans = removeEqual more (m : ans)
@@ -333,7 +335,7 @@ data RngSpec rng where
     RngSpec rng
   -- | The range must be equal to the set created by Set.fromlist [rng]
   Equal ::
-    Ord rng =>
+    Eq rng =>
     [rng] ->
     RngSpec rng
   -- | The range must be a subset of (Set rng)
@@ -346,6 +348,8 @@ data RngSpec rng where
     Ord rng =>
     (Set rng) ->
     RngSpec rng
+  -- | The range must sum upto 'c' through the projection witnessed by the (Sums t c) class
+  ProjRng :: Sums x c => Rep era x -> c -> RngSpec x
   -- | There are no constraints on the range (random generator will do)
   None :: RngSpec rng
   -- | Something was inconsistent
@@ -364,6 +368,7 @@ showRngSpec rep (SubsetRng xs) = "(Subset " ++ synopsis (SetR rep) xs ++ ")"
 showRngSpec rep (DisjointRng xs) = "(Disjoint " ++ synopsis (SetR rep) xs ++ ")"
 showRngSpec _ None = "None"
 showRngSpec _ (NeverRng _) = "NeverRng"
+showRngSpec _ (ProjRng r c) = "(ProjRng " ++ show r ++ " " ++ show c ++ ")"
 
 mergeRngSpec :: RngSpec r -> RngSpec r -> (RngSpec r)
 mergeRngSpec None x = x
@@ -448,12 +453,12 @@ instance (Ord dom) => Monoid (MapSpec dom rng) where mempty = MapSpec Nothing No
 
 -- =======================================================
 
-solveMap :: V era (Map dom rng) -> Pred era -> Typed (MapSpec dom rng)
-solveMap v1@(V _ r@(MapR dom rng) _) cond = case cond of
+solveMap :: forall dom rng era. V era (Map dom rng) -> Pred era -> Typed (MapSpec dom rng)
+solveMap v1@(V _ r@(MapR dom rng) _) cond = explain ("Solving (" ++ show cond ++ ")") $ case cond of
   (Sized (Fixed (Lit Word64R n)) (Var v2))
     | Name v1 == Name v2 -> do
-        With none <- hasOrd rng None
-        pure (MapSpec (Just n) Nothing none)
+        -- With none <- hasOrd rng None
+        pure (MapSpec (Just n) Nothing None)
   (Var v2 :=: expr) | Name v1 == Name v2 ->
     do
       With m <- evalWithOrd r expr rng
@@ -475,6 +480,13 @@ solveMap v1@(V _ r@(MapR dom rng) _) cond = case cond of
           CoinR -> pure $ MapSpec Nothing Nothing (SumRng n)
           RationalR -> pure $ MapSpec Nothing Nothing (SumRng n)
           _ -> failT ["Type " ++ show rng ++ " does not have Summable instance"]
+  -- (SumsTo _expr xs) | exactlyOne (isSumMap (Name v1)) xs -> error "STOP 1"
+
+  (SumsTo expr xs) | exactlyOne (isMapVar (Name v1)) xs -> do
+    let cRep = repOf expr
+    t <- simplify expr
+    With (Id tx) <- hasAdd cRep (Id t)
+    explain ("Solving (" ++ show cond ++ ")") (solveSummands v1 tx xs)
   (Random (Var v2)) | Name v1 == Name v2 -> do
     With none2 <- hasOrd rng None
     pure $ MapSpec Nothing Nothing none2
@@ -487,6 +499,29 @@ solveMap v1@(V _ r@(MapR dom rng) _) cond = case cond of
     pure $ MapSpec Nothing (Just set) emptyRngSpec
   other -> failT ["Cannot solve map condition: " ++ show other]
 
+-- | Is the Sum a variable (of a map). Only SumMap and Project store maps.
+isMapVar :: Name era -> Sum era c -> Bool
+isMapVar n1 (SumMap (Var v2)) = n1 == Name v2
+isMapVar n1 (Project (Var v2)) = n1 == Name v2
+isMapVar _ _ = False
+
+exactlyOne :: (a -> Bool) -> [a] -> Bool
+exactlyOne _ [] = False
+exactlyOne pp (x : xs) = pp x && all (not . pp) xs || exactlyOne pp xs
+
+solveSummands :: Adds c => V era (Map dom rng) -> c -> [Sum era c] -> Typed (MapSpec dom rng)
+solveSummands (V _ (MapR _ r) _) c [Project (Var (V _ (MapR _ r1) _))] = do
+  Refl <- sameRep r r1
+  pure (MapSpec Nothing Nothing (ProjRng r1 c))
+solveSummands (V _ (MapR _ r) _) c [SumMap (Var (V _ (MapR _ r1) _))] = do
+  Refl <- sameRep r r1
+  pure (MapSpec Nothing Nothing (SumRng c))
+solveSummands v c (s : ss) | isMapVar (Name v) s = solveSummands v c (ss ++ [s])
+solveSummands v c (s : ss) = do
+  d <- simplifySum s
+  solveSummands v (subtract c d) ss
+solveSummands v _ [] = failT ["Does not have exactly one summand with variable " ++ show (Name v)]
+
 solveMaps :: Ord dom => V era (Map dom rng) -> [Pred era] -> Typed (MapSpec dom rng)
 solveMaps v@(V nm (MapR _ _) _) cs = foldlM' accum (MapSpec Nothing Nothing None) cs
   where
@@ -494,7 +529,14 @@ solveMaps v@(V nm (MapR _ _) _) cs = foldlM' accum (MapSpec Nothing Nothing None
       condspec <- solveMap v cond
       explain ("Solving Map constraint (" ++ show cond ++ ") for variable " ++ show nm) (liftT (spec <> condspec))
 
+hasAdd :: Rep era t -> s t -> Typed (HasCond Adds (s t))
+hasAdd IntR x = pure $ With x
+hasAdd CoinR x = pure $ With x
+hasAdd RationalR x = pure $ With x
+hasAdd n _ = failT [show n ++ " does not have Adds instance"]
+
 genMap ::
+  forall a b era.
   (Ord a, Era era) =>
   Rep era (Map a b) ->
   MapSpec a b ->
@@ -506,9 +548,13 @@ genMap rep@(MapR d r) cond = explain ("Producing Map generator for " ++ showMapS
   (MapSpec Nothing Nothing (NeverRng xs)) -> failT xs
   (MapSpec Nothing Nothing (Equal rs)) -> pure $ mapFromRange rs (genRep d)
   (MapSpec Nothing Nothing (SumRng tot)) -> pure $ do
-    n <- arbitrary
+    Positive n <- arbitrary
     ranges <- partition n tot
     mapFromRange ranges (genRep d)
+  (MapSpec Nothing Nothing (ProjRng _ tot)) -> pure $ do
+    Positive n <- arbitrary
+    ranges <- partition n tot
+    mapFromProj ranges (genRep d) (genT @b)
   (MapSpec Nothing Nothing (SubsetRng set)) -> pure $ do
     rs <- subsetFromSet set
     mapFromRange (Set.toList rs) (genRep d)
@@ -520,6 +566,10 @@ genMap rep@(MapR d r) cond = explain ("Producing Map generator for " ++ showMapS
   (MapSpec Nothing (Just dom) (SumRng tot)) -> pure $ do
     ranges <- partition (Set.size dom) tot
     pure (Map.fromList $ zip (Set.toList dom) ranges)
+  (MapSpec Nothing (Just dom) (ProjRng _r tot)) -> pure $ do
+    ranges <- partition (Set.size dom) tot
+    projs <- mapM genT ranges
+    pure (Map.fromList $ zip (Set.toList dom) projs)
   (MapSpec Nothing (Just dom) (Equal rs)) ->
     pure $ pure (Map.fromList (zip (Set.toList dom) rs))
   (MapSpec Nothing (Just dom) (SubsetRng set)) ->
@@ -531,6 +581,9 @@ genMap rep@(MapR d r) cond = explain ("Producing Map generator for " ++ showMapS
   (MapSpec (Just n) Nothing (SumRng tot)) -> pure $ do
     ranges <- partition (fromIntegral n) tot
     mapFromRange ranges (genRep d)
+  (MapSpec (Just n) Nothing (ProjRng _r tot)) -> pure $ do
+    ranges <- partition (fromIntegral n) tot
+    mapFromProj ranges (genRep d) genT
   (MapSpec (Just n) Nothing (Equal rs))
     | (fromIntegral n) == length rs -> pure $ mapFromRange rs (genRep d)
     | otherwise -> failT ["Explicit size and exact range don't match"]
@@ -549,6 +602,15 @@ genMap rep@(MapR d r) cond = explain ("Producing Map generator for " ++ showMapS
               pure (Map.fromList $ zip (Set.toList dom) ranges)
           )
     | otherwise -> failT ["Explicit size and dom set don't match"]
+  (MapSpec (Just n) (Just dom) (ProjRng _r tot))
+    | (fromIntegral n) == Set.size dom ->
+        pure
+          ( do
+              ranges <- partition (fromIntegral n) tot
+              projs <- mapM genT ranges
+              pure (Map.fromList $ zip (Set.toList dom) projs)
+          )
+    | otherwise -> failT ["Explicit size and dom set don't match"]
   (MapSpec (Just n) (Just dom) (Equal rs))
     | (fromIntegral n) == length rs -> pure $ mapFromRange rs (itemFromSet dom)
     | otherwise -> failT ["Explicit size and exact range don't match"]
@@ -557,6 +619,7 @@ genMap rep@(MapR d r) cond = explain ("Producing Map generator for " ++ showMapS
   (MapSpec (Just n) (Just dom) (DisjointRng rng)) ->
     pure $ mapSized (fromIntegral n) (itemFromSet dom) (suchThat (genRep r) (`Set.notMember` rng))
 
+--   _other -> failT ["Missing patterns FIX ME"]
 -- ================================================
 
 data SetSpec a = (Ord a) => SetSpec (Maybe Int) (RngSpec a) | NeverSet [String]
@@ -661,6 +724,7 @@ genSet rep@(SetR r) cond = explain ("Producing Set generator for " ++ showSetSpe
   SetSpec Nothing (SubsetRng x) -> pure $ subsetFromSet x
   SetSpec Nothing (DisjointRng x) -> pure $ suchThat (genRep rep) (Set.disjoint x)
   SetSpec Nothing (Equal xs) -> pure $ pure (Set.fromList xs)
+  SetSpec Nothing (ProjRng _ _) -> failT ["FIX ME: SetSpec Nothing (ProjRng _ _)"]
   SetSpec Nothing (SumRng n) -> pure $ do
     i <- choose (2, 5) -- We don't want 'i'too large, or we might not be able to break 'n' into 'i' parts.
     xs <- partition i n
@@ -668,6 +732,7 @@ genSet rep@(SetR r) cond = explain ("Producing Set generator for " ++ showSetSpe
   SetSpec (Just n) None -> pure $ genSizedRep n rep
   SetSpec (Just n) (SubsetRng set) -> pure $ subsetFromSetWithSize set n
   SetSpec (Just n) (DisjointRng set) -> pure $ setSized n (suchThat (genRep r) (`Set.notMember` set))
+  SetSpec (Just _) (ProjRng _ _) -> failT ["FIX ME:  SetSpec (Just _) (ProjRng _ _)"]
   SetSpec (Just n) (Equal xs) ->
     if n == length xs
       then pure $ pure (Set.fromList xs)
@@ -679,6 +744,7 @@ genSet rep@(SetR r) cond = explain ("Producing Set generator for " ++ showSetSpe
 -- =============================================================
 data SumSpec t where
   SumSpec :: Adds t => Maybe t -> Maybe t -> SumSpec t
+  -- ProjSpec :: Sums t c => MapSpec era t -> SumSpec t
   NeverSum :: [String] -> SumSpec t
 
 showSumSpec :: SumSpec a -> String
@@ -722,12 +788,45 @@ instance
   where
   mempty = SumSpec Nothing Nothing
 
+{-
+data SumsOrAdds t where
+   AddsCond :: Adds c => c -> SumsOrAdds c
+   SumsCond :: Sums t c => t -> SumsOrAdds c
+
+evalSum2 :: Rep era t -> Sum era t -> Typed (SumsOrAdds t)
+evalSum2 rep (One expr) = do
+  (Dyn rep2 m) <- eval expr
+  case (testEql rep rep2) of
+     Just Refl -> case rep2 of
+       IntR -> pure $ AddsCond m
+       CoinR -> pure $ AddsCond m
+       RationalR -> pure $ AddsCond m
+       _ -> failT [show rep2 ++ " does not have Adds instance."]
+evalSum2 _rep (SumMap (Fixed (Lit (MapR _ _) m))) = pure $ AddsCond (Map.foldl' add zero m)
+evalSum2 _rep (SumSet (Fixed (Lit (SetR _) m))) = pure $ AddsCond (Set.foldl' add zero m)
+-- evalSum2 _rep (Project (Fixed (Lit (MapR _ r) m))) =  pure $ SumsCond (Map.foldl' accum zero m)
+  -- where accum ans t = add ans (getsum t)
+evalSum2 _rep x = failT ["Can't evalSum " ++ show x]
+
+evalSums2 :: Adds t => Rep era t -> [Sum era t] -> Typed (HasCond Adds (Id t))
+evalSums2 rep xs = foldlM' accum (With (Id zero)) xs
+  where
+    accum (With (Id n)) x = do
+      choice <- evalSum2 rep x
+      case choice of
+        AddsCond m -> pure $ With (Id (add n m))
+        SumsCond _ m -> pure $ With (Id (add n (getsum m)))
+-}
+
 evalSum :: Adds t => Rep era t -> Sum era t -> Typed (HasCond Adds (Id t))
 evalSum rep (One expr) = do
   dyn <- eval expr
   sumFromDyn rep dyn
 evalSum _rep (SumMap (Fixed (Lit (MapR _ _) m))) = pure $ With (Id (Map.foldl' add zero m))
 evalSum _rep (SumSet (Fixed (Lit (SetR _) m))) = pure $ With (Id (Set.foldl' add zero m))
+evalSum _rep (Project (Fixed (Lit (MapR _ _) m))) = pure $ With (Id (Map.foldl' accum zero m))
+  where
+    accum ans t = add ans (getsum t)
 evalSum _rep x = failT ["Can't evalSum " ++ show x]
 
 evalSums :: Adds t => Rep era t -> [Sum era t] -> Typed (HasCond Adds (Id t))
@@ -743,10 +842,18 @@ solveSum v1@(V _ r _) c = case c of
     dyn <- eval expr
     With (Id n) <- sumFromDyn r dyn
     pure $ SumSpec (Just n) Nothing
+  (Sized (Var v2) expr) | Name v1 == Name v2 -> do
+    dyn <- eval expr
+    With (Id n) <- sumFromDyn r dyn
+    pure $ SumSpec Nothing (Just n)
   (expr :=: (Var v2)) | Name v1 == Name v2 -> do
     dyn <- eval expr
     With (Id n) <- sumFromDyn r dyn
     pure $ SumSpec (Just n) Nothing
+  ((Var v2) :=: expr) | Name v1 == Name v2 -> do
+    dyn <- eval expr
+    With (Id n) <- sumFromDyn r dyn
+    pure $ SumSpec Nothing (Just n)
   (Random (Var v2)) | Name v1 == Name v2 -> pure $ SumSpec Nothing Nothing
   (SumsTo (Var v2@(V _ r2 _)) xs@(_ : _)) | Name v1 == Name v2 -> do
     Refl <- sameRep r r2

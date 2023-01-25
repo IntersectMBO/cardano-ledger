@@ -51,7 +51,7 @@ data Sum era c where
   SumSet :: Adds c => Term era (Set c) -> Sum era c
   SumList :: Adds c => Term era [c] -> Sum era c
   One :: Term era c -> Sum era c
-  Extract :: forall c x era. Sums x c => Sum era x -> Sum era c
+  Project :: forall x c a era. Sums x c => Term era (Map a x) -> Sum era c
 
 infixl 0 :$
 
@@ -89,7 +89,7 @@ instance Show (Sum era c) where
   show (SumSet t) = "sum " ++ show t
   show (SumList t) = "sum " ++ show t
   show (One t) = show t
-  show (Extract _) = "Extract"
+  show (Project t) = "Project " ++ show t
 
 instance Show (Pred era) where
   show (Sized n t) = "Sized " ++ show n ++ " " ++ show t
@@ -171,7 +171,7 @@ varsOfSum ans (SumMap y) = varsOfTerm ans y
 varsOfSum ans (SumSet y) = varsOfTerm ans y
 varsOfSum ans (SumList y) = varsOfTerm ans y
 varsOfSum ans (One y) = varsOfTerm ans y
-varsOfSum ans (Extract x) = varsOfSum ans x
+varsOfSum ans (Project x) = varsOfTerm ans x
 
 -- =====================================================
 -- Subtitution of (V era t) inside of (Spec era t)
@@ -232,7 +232,7 @@ substSum sub (SumMap x) = SumMap (substTerm sub x)
 substSum sub (SumSet x) = SumSet (substTerm sub x)
 substSum sub (SumList x) = SumList (substTerm sub x)
 substSum sub (One x) = One (substTerm sub x)
-substSum sub (Extract x) = Extract (substSum sub x)
+substSum sub (Project x) = Project (substTerm sub x)
 
 substTarget :: Subst era -> Target era t -> Target era t
 substTarget sub (Simple e) = Simple (substTerm sub e)
@@ -251,6 +251,20 @@ eval (Dom x) = case eval x of
 eval (Rng (Var (V nm _ _))) = failT ["Can't eval variable: " ++ nm]
 eval (Rng (Fixed (Lit (MapR _ r) m))) = pure (Dyn (SetR r) (Set.fromList (Map.elems m)))
 eval (Var (V nm _ _)) = failT ["Can't eval unbound variable: " ++ nm]
+
+simplify :: Term era t -> Typed t
+simplify (Fixed (Lit _ x)) = pure x
+simplify (Dom (Fixed (Lit _ x))) = pure (Map.keysSet x)
+simplify (Rng (Fixed (Lit _ x))) = pure (Set.fromList (Map.elems x))
+simplify x = failT ["Can't simplify term: " ++ show x ++ ", to a value."]
+
+simplifySum :: Sum era c -> Typed c
+simplifySum (One (Fixed (Lit _ x))) = pure x
+simplifySum (SumMap (Fixed (Lit _ m))) = pure (Map.foldl' add zero m)
+simplifySum (SumSet (Fixed (Lit _ m))) = pure (Set.foldl' add zero m)
+simplifySum (SumList (Fixed (Lit _ m))) = pure (List.foldl' add zero m)
+simplifySum (Project (Fixed (Lit _ m))) = pure (List.foldl' (\ans x -> add ans (getsum x)) zero m)
+simplifySum x = failT ["Can't simplify Sum: " ++ show x ++ ", to a value."]
 
 -- | Evidence that 'expr' has type 'r1'
 evalWith :: Rep era t -> Term era s -> Typed t
@@ -310,7 +324,9 @@ runSum env (SumMap t) = Map.foldl' add zero <$> runTerm env t
 runSum env (SumSet t) = Set.foldl' add zero <$> runTerm env t
 runSum env (SumList t) = List.foldl' add zero <$> runTerm env t
 runSum env (One t) = runTerm env t
-runSum env (Extract x) = getsum <$> runSum env x
+runSum env (Project t) = Map.foldl' accum zero <$> runTerm env t
+  where
+    accum ans x = add ans (getsum x)
 
 makeTest :: Env era -> Pred era -> Typed String
 makeTest env c = do

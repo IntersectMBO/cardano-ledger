@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
@@ -17,9 +18,10 @@ import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
 import Cardano.Ledger.Pretty (PDoc)
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UTxO (UTxO (..))
-import Cardano.Ledger.Val (Val (coin, (<+>)))
+import Cardano.Ledger.Val (Val (coin, modifyCoin, (<+>)))
 import Data.Default.Class (Default (def))
-import qualified Data.List as List
+
+-- import qualified Data.List as List
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
@@ -32,7 +34,9 @@ import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Generic.PrettyCore (pcTxOut, pcVal)
 import Test.Cardano.Ledger.Generic.Proof (
   AllegraEra,
+  GoodCrypto,
   Proof (..),
+  Reflect (..),
   ShelleyEra,
   unReflect,
  )
@@ -50,7 +54,7 @@ import Test.QuickCheck (Arbitrary (..), Gen, chooseInt, shuffle)
 intPartition :: Int -> Int -> Int -> Gen [Int]
 intPartition smallest size total
   | size > total = error ("Can't partition " ++ show total ++ " into " ++ show size ++ " positive pieces.")
-  | size < 1 = error ("Can only make a partion of positive number of pieces: " ++ show size)
+  | size < 1 = error ("Can only make a partion of positive number of pieces: " ++ show size ++ " total: " ++ show total ++ " smallest: " ++ show smallest)
   | smallest < 0 = error ("The minimum choice must be positive : " ++ show smallest)
   | smallest * size > total =
       error
@@ -96,66 +100,81 @@ coinPartition (Coin smallest) size (Coin total) =
 
 class (Eq x, Show x) => Adds x where
   add :: x -> x -> x
+  subtract :: x -> x -> x
   zero :: x
   partition :: Int -> x -> Gen [x]
 
 instance Adds Int where
   add = (+)
+  subtract = (-)
   zero = 0
   partition = intPartition 1
 
 instance Adds Rational where
   add = (+)
+  subtract = (-)
   zero = 0
   partition = rationalPartition
 
 instance Adds Coin where
   add = (<+>)
+  subtract (Coin n) (Coin m) = Coin (n - m)
   zero = Coin 0
   partition = coinPartition (Coin 1)
 
 -- ===========================================================================
--- The Sums class
+-- The Sums class, for summing a projected c (where Adds c) from some richer type
 
 class (Show x, Adds x) => Sums t x | t -> x where
   getsum :: t -> x
+  genT :: x -> Gen t
 
-instance Sums Int Int where
-  getsum x = x
-
-instance Sums Coin Coin where
-  getsum x = x
-
-instance Sums Rational Rational where
-  getsum x = x
-
-instance Sums b x => Sums (Map a b) x where
-  getsum m = Map.foldl' (\ans x -> add ans (getsum x)) zero m
-
-instance Sums b x => Sums (Set b) x where
-  getsum m = Set.foldl' (\ans x -> add ans (getsum x)) zero m
-
-instance Sums b x => Sums [b] x where
-  getsum m = List.foldl' (\ans x -> add ans (getsum x)) zero m
-
-instance Sums (IndividualPoolStake c) Rational where
+instance GoodCrypto c => Sums (IndividualPoolStake c) Rational where
   getsum (IndividualPoolStake r _) = r
+  genT r = IndividualPoolStake r <$> arbitrary
 
-instance Sums (TxOut era) Coin where
+instance (Reflect era) => Sums (TxOut era) Coin where
   getsum (TxOut (Shelley _) t) = coin (t ^. Core.valueTxOutL)
   getsum (TxOut (Allegra _) t) = coin (t ^. Core.valueTxOutL)
   getsum (TxOut (Mary _) t) = coin (t ^. Core.valueTxOutL)
   getsum (TxOut (Alonzo _) t) = coin (t ^. Core.valueTxOutL)
   getsum (TxOut (Babbage _) t) = coin (t ^. Core.valueTxOutL)
   getsum (TxOut (Conway _) t) = coin (t ^. Core.valueTxOutL)
+  genT cn = genTxOutX reify cn
 
-instance Sums (Value era) Coin where
+txOutCoinL :: (Core.EraTxOut era) => Lens' (Core.TxOut era) Coin
+txOutCoinL = lens (\x -> coin (x ^. Core.valueTxOutL)) (\x c -> x & Core.valueTxOutL .~ (modifyCoin (const c) (x ^. Core.valueTxOutL)))
+
+genTxOutX :: Proof era -> Coin -> Gen (TxOut era)
+genTxOutX proof coins = do
+  (TxOut p txout) <- genTxOut proof
+  case p of
+    Shelley _ -> pure $ TxOut p (txout & txOutCoinL .~ coins)
+    Allegra _ -> pure $ TxOut p (txout & txOutCoinL .~ coins)
+    Mary _ -> pure $ TxOut p (txout & txOutCoinL .~ coins)
+    Alonzo _ -> pure $ TxOut p (txout & txOutCoinL .~ coins)
+    Babbage _ -> pure $ TxOut p (txout & txOutCoinL .~ coins)
+    Conway _ -> pure $ TxOut p (txout & txOutCoinL .~ coins)
+
+instance Reflect era => Sums (Value era) Coin where
   getsum (Value (Shelley _) v) = v
   getsum (Value (Allegra _) v) = v
   getsum (Value (Mary _) v) = coin v
   getsum (Value (Alonzo _) v) = coin v
   getsum (Value (Babbage _) v) = coin v
   getsum (Value (Conway _) v) = coin v
+  genT cn = genValueX reify cn
+
+genValueX :: Proof era -> Coin -> Gen (Value era)
+genValueX proof cn = do
+  (Value p v) <- genValue proof
+  case p of
+    (Shelley _) -> pure (Value p cn)
+    (Allegra _) -> pure (Value p cn)
+    (Mary _) -> pure (Value p (modifyCoin (const cn) v))
+    (Alonzo _) -> pure (Value p (modifyCoin (const cn) v))
+    (Babbage _) -> pure (Value p (modifyCoin (const cn) v))
+    (Conway _) -> pure (Value p (modifyCoin (const cn) v))
 
 -- ===========================================================
 -- Sizeable Class
