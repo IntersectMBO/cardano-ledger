@@ -63,6 +63,7 @@ import qualified Cardano.Protocol.HeaderCrypto as CryptoClass
 import Cardano.Protocol.TPraos.BHeader (BHeader, bhHash)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import qualified Data.Map.Strict as Map
+import Data.Proxy
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (ExMock, Mock)
@@ -104,8 +105,6 @@ initUTxO =
   where
     aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
     bobInitCoin = Val.inject $ Coin $ 1 * 1000 * 1000 * 1000 * 1000 * 1000
-
-data Proxy c = Proxy
 
 initStMIR ::
   forall era hc.

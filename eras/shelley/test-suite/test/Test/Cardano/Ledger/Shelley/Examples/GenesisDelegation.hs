@@ -55,6 +55,7 @@ import Cardano.Protocol.TPraos.BHeader (BHeader, bhHash)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import Cardano.Protocol.TPraos.Rules.Overlay (toGenesisVRF)
 import qualified Data.Map.Strict as Map
+import Data.Proxy
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto, ExMock)
@@ -212,8 +213,6 @@ newGenDeleg phc =
   ( FutureGenDeleg (SlotNo 43) (hashKey $ coreNodeVK @crypto @hcrypto 0),
     GenDelegPair (hashKey . vKey $ newGenDelegate) (newGenesisVrfKH phc)
   )
-
-data Proxy c = Proxy
 
 expectedStEx1 ::
   forall c hc.

@@ -48,10 +48,10 @@ import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
 import Cardano.Ledger.Credential (Credential (..), StakeCredential)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys
-  ( Hash,
+  ( GenesisVRF,
+    Hash,
     KeyHash (..),
     KeyRole (..),
-    GenesisVRF,
   )
 import Cardano.Ledger.Serialization
   ( FromCBORGroup (..),
