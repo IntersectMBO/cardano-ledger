@@ -89,10 +89,11 @@ hexByteStringExpr bs =
 -- useful form for debugging, rather than bunch of escaped characters.
 showHexBytesGrouped :: BS.ByteString -> [String]
 showHexBytesGrouped bs =
-  [ "0x" <> BS8.unpack (BS.take 16 $ BS.drop i bs16)
-  | i <- [0, 16 .. BS.length bs16 - 1]
+  [ "0x" <> BS8.unpack (BS.take width $ BS.drop i bs16)
+  | i <- [0, width .. BS.length bs16 - 1]
   ]
   where
+    width = 128
     bs16 = Base16.encode bs
 
 -- | Check that two values are equal and if they are not raise an exception with the

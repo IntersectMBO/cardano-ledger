@@ -11,11 +11,8 @@ module Test.Cardano.Ledger.TranslationTools (
 )
 where
 
-import Cardano.Ledger.Binary (
-  Encoding,
-  ToCBOR (..),
-  serializeEncoding',
- )
+import Cardano.Ledger.Binary (ToCBOR (..), toPlainEncoding)
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Core
 import Cardano.Ledger.TreeDiff (diffExpr)
 import Control.Monad
@@ -35,8 +32,12 @@ translateEraPartial tc fe =
     Right result -> result
     Left err -> error $ "TranslateEra failure: " <> show err
 
--- Tests that the serializing before translation or after translating
--- does not change the result
+-- Tests that the serializing before translation or after translating does not change the
+-- result
+--
+-- FIXME: Replace this test with a better one, since there is no requirement for two
+-- different eras to encode the type in the same way. There, however a requirement that
+-- the encoding from a previous era, must be decodable by the current era.
 translateEraEncoding ::
   forall era f.
   ( HasCallStack
@@ -44,15 +45,15 @@ translateEraEncoding ::
   , Show (TranslationError era f)
   ) =>
   TranslationContext era ->
-  (f era -> Encoding) ->
-  (f (PreviousEra era) -> Encoding) ->
+  (f era -> Plain.Encoding) ->
+  (f (PreviousEra era) -> Plain.Encoding) ->
   f (PreviousEra era) ->
   Assertion
 translateEraEncoding tc encodeThisEra encodePreviousEra x =
   let previousEra =
-        serializeEncoding' (eraProtVerHigh @(PreviousEra era)) (encodePreviousEra x)
+        Plain.serializeEncoding' (encodePreviousEra x)
       currentEra =
-        serializeEncoding' (eraProtVerLow @era) (encodeThisEra $ translateEraPartial @era tc x)
+        Plain.serializeEncoding' (encodeThisEra $ translateEraPartial @era tc x)
    in unless (previousEra == currentEra) $
         assertFailure $
           diffExpr (CBORBytes previousEra) (CBORBytes currentEra)
@@ -71,4 +72,8 @@ translateEraToCBOR ::
   TranslationContext era ->
   f (PreviousEra era) ->
   Assertion
-translateEraToCBOR _ tc = translateEraEncoding @era tc toCBOR toCBOR
+translateEraToCBOR _ tc =
+  translateEraEncoding @era
+    tc
+    (toPlainEncoding (eraProtVerLow @era) . toCBOR)
+    (toPlainEncoding (eraProtVerHigh @(PreviousEra era)) . toCBOR)

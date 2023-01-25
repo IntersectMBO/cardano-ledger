@@ -53,7 +53,6 @@ import Cardano.Ledger.BaseTypes (
   mkNonceFromNumber,
   mkNonceFromOutputVRF,
  )
-import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Binary (
   Annotator (..),
   Case (..),
@@ -78,6 +77,7 @@ import Cardano.Ledger.Binary (
   szCases,
   withWordSize,
  )
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Hashes (
   EraIndependentBlockBody,

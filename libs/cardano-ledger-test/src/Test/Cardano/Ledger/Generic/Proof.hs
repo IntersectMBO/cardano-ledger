@@ -62,8 +62,7 @@ import Cardano.Ledger.BaseTypes (ShelleyBase)
 import qualified Cardano.Ledger.BaseTypes as Base (Seed)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (KES, StandardCrypto, VRF)
-import qualified Cardano.Ledger.Crypto as CC (Crypto, DSIGN, HASH)
+import Cardano.Ledger.Crypto (Crypto, DSIGN, HASH, KES, StandardCrypto, VRF)
 import Cardano.Ledger.Keys (DSignable)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -91,12 +90,12 @@ data Evidence c where
 
 -- | Proof of a valid (predefined) era
 data Proof era where
-  Shelley :: forall c. CC.Crypto c => Evidence c -> Proof (ShelleyEra c)
-  Mary :: forall c. CC.Crypto c => Evidence c -> Proof (MaryEra c)
-  Allegra :: forall c. CC.Crypto c => Evidence c -> Proof (AllegraEra c)
-  Alonzo :: forall c. CC.Crypto c => Evidence c -> Proof (AlonzoEra c)
-  Babbage :: forall c. CC.Crypto c => Evidence c -> Proof (BabbageEra c)
-  Conway :: forall c. CC.Crypto c => Evidence c -> Proof (ConwayEra c)
+  Shelley :: forall c. Crypto c => Evidence c -> Proof (ShelleyEra c)
+  Mary :: forall c. Crypto c => Evidence c -> Proof (MaryEra c)
+  Allegra :: forall c. Crypto c => Evidence c -> Proof (AllegraEra c)
+  Alonzo :: forall c. Crypto c => Evidence c -> Proof (AlonzoEra c)
+  Babbage :: forall c. Crypto c => Evidence c -> Proof (BabbageEra c)
+  Conway :: forall c. Crypto c => Evidence c -> Proof (ConwayEra c)
 
 instance Show (Proof e) where
   show (Shelley c) = "Shelley " ++ show c
@@ -122,15 +121,15 @@ getCrypto (Conway c) = c
 -- Reflection over Crypto and Era
 
 type GoodCrypto c =
-  ( CC.Crypto c
-  , DSignable c (CH.Hash (CC.HASH c) EraIndependentTxBody)
-  , DSIGNAlgorithm (CC.DSIGN c)
-  , DSIGN.Signable (CC.DSIGN c) (OCertSignable c)
+  ( Crypto c
+  , DSignable c (CH.Hash (HASH c) EraIndependentTxBody)
+  , DSIGNAlgorithm (DSIGN c)
+  , DSIGN.Signable (DSIGN c) (OCertSignable c)
   , VRF.Signable (VRF c) Base.Seed
   , KES.Signable (KES c) (BHBody c)
   , ContextKES (KES c) ~ ()
   , ContextVRF (VRF c) ~ ()
-  , CH.HashAlgorithm (CC.HASH c)
+  , CH.HashAlgorithm (HASH c)
   , PraosCrypto c
   )
 

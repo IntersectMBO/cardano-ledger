@@ -112,17 +112,13 @@ import Cardano.Ledger.Alonzo.TxWits (
 import Cardano.Ledger.Binary (
   Annotator (..),
   EncCBOR (..),
-  Encoding,
   FromCBOR (..),
   ToCBOR (toCBOR),
   decodeNullMaybe,
-  encodeListLen,
-  encodeNullMaybe,
-  fromPlainEncoding,
-  serializeEncoding,
   serializeEncoding',
  )
 import Cardano.Ledger.Binary.Coders
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto (HASH), StandardCrypto)
@@ -158,7 +154,7 @@ import NoThunks.Class (NoThunks)
 -- to validate. This is added by the block creator when constructing the block.
 newtype IsValid = IsValid Bool
   deriving (Eq, Show, Generic)
-  deriving newtype (NoThunks, NFData)
+  deriving newtype (NoThunks, NFData, EncCBOR, ToCBOR, FromCBOR)
 
 data AlonzoTx era = AlonzoTx
   { body :: !(TxBody era)
@@ -225,7 +221,7 @@ sizeAlonzoTxF =
   to $
     fromIntegral
       . LBS.length
-      . serializeEncoding (eraProtVerLow @era)
+      . Plain.serializeEncoding
       . toCBORForSizeComputation
 {-# INLINEABLE sizeAlonzoTxF #-}
 
@@ -323,12 +319,12 @@ toCBORForSizeComputation ::
   , EncCBOR (TxAuxData era)
   ) =>
   AlonzoTx era ->
-  Encoding
+  Plain.Encoding
 toCBORForSizeComputation AlonzoTx {body, wits, auxiliaryData} =
-  encodeListLen 3
-    <> fromPlainEncoding (encCBOR body)
-    <> fromPlainEncoding (encCBOR wits)
-    <> encodeNullMaybe (fromPlainEncoding . encCBOR) (strictMaybeToMaybe auxiliaryData)
+  Plain.encodeListLen 3
+    <> Plain.encCBOR body
+    <> Plain.encCBOR wits
+    <> Plain.encNullMaybe encCBOR (strictMaybeToMaybe auxiliaryData)
 
 alonzoMinFeeTx ::
   ( EraTx era
@@ -468,10 +464,6 @@ indexedRdmrs tx sp = case rdptr @era (tx ^. bodyTxL) sp of
 -- Serialisation
 --------------------------------------------------------------------------------
 
-deriving newtype instance FromCBOR IsValid
-
-deriving newtype instance ToCBOR IsValid
-
 -- | Construct an annotated Alonzo style transaction.
 alonzoSegwitTx ::
   AlonzoEraTx era =>
@@ -514,15 +506,14 @@ toCBORForMempoolSubmission ::
   , EncCBOR (TxAuxData era)
   ) =>
   AlonzoTx era ->
-  Encoding
+  Plain.Encoding
 toCBORForMempoolSubmission
   AlonzoTx {body, wits, auxiliaryData, isValid} =
-    encode $
-      Rec AlonzoTx
-        !> Enc body
-        !> Enc wits
-        !> To isValid
-        !> E (encodeNullMaybe (fromPlainEncoding . encCBOR) . strictMaybeToMaybe) auxiliaryData
+    Plain.encodeListLen 3
+      <> encCBOR body
+      <> encCBOR wits
+      <> encCBOR isValid
+      <> Plain.encNullMaybe encCBOR (strictMaybeToMaybe auxiliaryData)
 
 instance
   ( Era era
@@ -530,9 +521,9 @@ instance
   , EncCBOR (TxWits era)
   , EncCBOR (TxAuxData era)
   ) =>
-  ToCBOR (AlonzoTx era)
+  EncCBOR (AlonzoTx era)
   where
-  toCBOR = toCBORForMempoolSubmission
+  encCBOR = toCBORForMempoolSubmission
 
 instance
   ( Typeable era

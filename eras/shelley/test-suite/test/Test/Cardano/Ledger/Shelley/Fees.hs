@@ -19,7 +19,7 @@ import Cardano.Ledger.BaseTypes (
   textToDns,
   textToUrl,
  )
-import Cardano.Ledger.Binary (serialize, shelleyProtVer)
+import Cardano.Ledger.Binary.Plain as Plain (serialize)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as Cr
@@ -86,7 +86,7 @@ import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 
 sizeTest :: HasCallStack => BSL.ByteString -> ShelleyTx Shelley -> Assertion
 sizeTest b16 tx = do
-  Base16.encode (serialize shelleyProtVer tx) @?= b16
+  Base16.encode (Plain.serialize tx) @?= b16
   (tx ^. sizeTxF) @?= toInteger (BSL.length b16 `div` 2)
 
 alicePay :: forall c. Cr.Crypto c => KeyPair 'Payment c

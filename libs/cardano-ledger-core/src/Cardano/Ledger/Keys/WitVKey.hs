@@ -23,7 +23,6 @@ import Cardano.Ledger.Binary (
   annotatorSlice,
   decodeRecordNamed,
   encodeListLen,
-  encodePreEncoded,
   serializeEncoding,
   shelleyProtVer,
  )
@@ -31,6 +30,7 @@ import Cardano.Ledger.Binary.Crypto (
   decodeSignedDSIGN,
   encodeSignedDSIGN,
  )
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys (
@@ -85,8 +85,8 @@ instance (Typeable kr, Crypto c) => Ord (WitVKey kr c) where
     -- compliance with Ord laws.
     comparing wvkKeyHash x y <> comparing (hashSignature @c . wvkSig) x y
 
-instance (Typeable kr, Crypto c) => ToCBOR (WitVKey kr c) where
-  toCBOR = encodePreEncoded . BSL.toStrict . wvkBytes
+instance (Typeable kr, Crypto c) => Plain.EncCBOR (WitVKey kr c) where
+  encCBOR = Plain.encodePreEncoded . BSL.toStrict . wvkBytes
 
 instance (Typeable kr, Crypto c) => FromCBOR (Annotator (WitVKey kr c)) where
   fromCBOR =

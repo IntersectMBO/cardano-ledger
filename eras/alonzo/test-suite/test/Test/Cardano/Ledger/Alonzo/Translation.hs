@@ -17,7 +17,7 @@ import Cardano.Ledger.Alonzo (Alonzo)
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import qualified Cardano.Ledger.Alonzo.Translation as Translation (Tx (..))
 import Cardano.Ledger.Alonzo.Tx (toCBORForSizeComputation)
-import Cardano.Ledger.Binary (ToCBOR (..))
+import Cardano.Ledger.Binary (EncCBOR (encCBOR), ToCBOR)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary (Mary)
 import qualified Cardano.Ledger.Shelley.API as API
@@ -79,8 +79,8 @@ deriving newtype instance
   Arbitrary (Translation.Tx era)
 
 deriving newtype instance
-  (Typeable era, ToCBOR (Tx era)) =>
-  ToCBOR (Translation.Tx era)
+  (Typeable era, EncCBOR (Tx era)) =>
+  EncCBOR (Translation.Tx era)
 
 deriving newtype instance
   (Show (Tx era)) =>
@@ -105,4 +105,4 @@ testTx =
   translateEraEncoding @Alonzo
     dummyAlonzoGenesis
     (toCBORForSizeComputation . Translation.unTx)
-    toCBOR
+    encCBOR

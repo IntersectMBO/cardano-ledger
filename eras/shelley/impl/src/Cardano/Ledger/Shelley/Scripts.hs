@@ -31,8 +31,8 @@ import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.BaseTypes (invalidKey)
 import Cardano.Ledger.Binary (
   Annotator (..),
-  FromCBOR (fromCBOR),
   EncCBOR,
+  FromCBOR (fromCBOR),
   decodeRecordSum,
  )
 import Cardano.Ledger.Binary.Coders (Encode (..), (!>))

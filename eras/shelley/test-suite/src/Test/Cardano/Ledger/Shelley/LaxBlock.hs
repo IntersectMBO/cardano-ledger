@@ -13,8 +13,8 @@ module Test.Cardano.Ledger.Shelley.LaxBlock where
 import Cardano.Ledger.Binary (
   Annotator (..),
   Decoder,
-  FromCBOR (fromCBOR),
   EncCBOR,
+  FromCBOR (fromCBOR),
   annotatorSlice,
   decodeRecordNamed,
  )

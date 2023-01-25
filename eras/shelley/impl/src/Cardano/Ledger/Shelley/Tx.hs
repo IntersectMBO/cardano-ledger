@@ -278,12 +278,6 @@ instance
   toCBOR = encode . encodeShelleyTxRaw
 
 instance
-  (Era era, EncCBOR (TxWits era), EncCBOR (TxBody era), EncCBOR (TxAuxData era)) =>
-  ToCBOR (ShelleyTx era)
-  where
-  toCBOR = fromPlainEncoding . encCBOR
-
-instance
   ( Era era
   , FromCBOR (Annotator (TxBody era))
   , FromCBOR (Annotator (TxWits era))
