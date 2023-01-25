@@ -66,7 +66,6 @@ import Cardano.Ledger.Credential
     StakeReference (..),
   )
 import qualified Cardano.Ledger.Crypto as CC
-import qualified Cardano.Protocol.HeaderCrypto as CC
 import Cardano.Ledger.Keys
   ( GenDelegs (..),
     KeyHash,
@@ -114,6 +113,7 @@ import Cardano.Ledger.Shelley.UTxO (makeWitnessVKey)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (inject, (<+>))
+import qualified Cardano.Protocol.HeaderCrypto as CC
 import Cardano.Protocol.TPraos.Rules.Overlay (hashPoolStakeVRF)
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..), SlotNo (..))

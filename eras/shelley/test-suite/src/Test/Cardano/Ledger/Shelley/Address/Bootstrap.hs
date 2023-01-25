@@ -69,7 +69,7 @@ import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..), mkTxInPartial)
 import Cardano.Ledger.Val ((<->))
-import Cardano.Protocol.HeaderCrypto as CC (HeaderCrypto(..))
+import Cardano.Protocol.HeaderCrypto as CC (HeaderCrypto (..))
 import Data.ByteString (ByteString)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)

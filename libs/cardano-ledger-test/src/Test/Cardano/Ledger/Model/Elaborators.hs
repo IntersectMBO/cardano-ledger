@@ -69,7 +69,6 @@ import Cardano.Ledger.Core (Era (Crypto), EraScript (hashScript))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as C
-import qualified Cardano.Protocol.HeaderCrypto as HC
 import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Keys
   ( GenDelegPair (..),
@@ -84,8 +83,8 @@ import Cardano.Ledger.Keys
     hashVerKeyVRF,
     vKey,
   )
-import Cardano.Ledger.PoolDistr (PoolStakeVRF)
 import Cardano.Ledger.Mary.Value (MaryValue, PolicyID (..))
+import Cardano.Ledger.PoolDistr (PoolStakeVRF)
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.API.Mempool
   ( ApplyTx,
@@ -115,7 +114,8 @@ import qualified Cardano.Ledger.Shelley.TxBody as Shelley
 import qualified Cardano.Ledger.Shelley.UTxO as UTxO
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock)
 import qualified Cardano.Ledger.Val as Val
-import Cardano.Protocol.TPraos.Rules.Overlay (fromPoolStakeVRF, toPoolStakeVRF, toGenesisVRF)
+import qualified Cardano.Protocol.HeaderCrypto as HC
+import Cardano.Protocol.TPraos.Rules.Overlay (fromPoolStakeVRF, toGenesisVRF, toPoolStakeVRF)
 import Cardano.Slotting.EpochInfo.API
   ( epochInfoEpoch,
     epochInfoFirst,

@@ -15,8 +15,8 @@ where
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Crypto
-import Cardano.Protocol.HeaderCrypto
 import Cardano.Ledger.Keys
+import Cardano.Protocol.HeaderCrypto
 import Cardano.Protocol.HeaderKeys
 import Cardano.Protocol.TPraos.BHeader
 import Cardano.Protocol.TPraos.OCert

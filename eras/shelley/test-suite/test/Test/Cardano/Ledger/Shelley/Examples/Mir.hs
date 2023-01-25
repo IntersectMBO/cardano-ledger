@@ -21,7 +21,6 @@ import Cardano.Ledger.Coin (Coin (..), toDeltaCoin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Ptr (..))
 import qualified Cardano.Ledger.Crypto as CryptoClass
-import qualified Cardano.Protocol.HeaderCrypto as CryptoClass
 import Cardano.Ledger.Keys
   ( KeyPair (..),
     KeyRole (..),
@@ -60,6 +59,7 @@ import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val
+import qualified Cardano.Protocol.HeaderCrypto as CryptoClass
 import Cardano.Protocol.TPraos.BHeader (BHeader, bhHash)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import qualified Data.Map.Strict as Map
@@ -109,10 +109,13 @@ data Proxy c = Proxy
 
 initStMIR ::
   forall era hc.
-  (ShelleyTest era,
-   PParams era ~ ShelleyPParams era,
-   CryptoClass.HeaderCrypto hc) =>
-  Proxy hc -> Coin -> ChainState era
+  ( ShelleyTest era,
+    PParams era ~ ShelleyPParams era,
+    CryptoClass.HeaderCrypto hc
+  ) =>
+  Proxy hc ->
+  Coin ->
+  ChainState era
 initStMIR _ treasury = cs {chainNes = (chainNes cs) {nesEs = es'}}
   where
     cs = initSt @era @hc initUTxO
@@ -159,7 +162,8 @@ txbodyEx1 pot =
 mirWits ::
   forall c hc.
   (CryptoClass.Crypto c, CryptoClass.HeaderCrypto hc) =>
-  [Int] -> [KeyPair 'Witness c]
+  [Int] ->
+  [KeyPair 'Witness c]
 mirWits nodes = asWitness <$> map (\x -> cold . coreNodeIssuerKeys @c @hc $ x) nodes
 
 sufficientMIRWits ::
@@ -243,8 +247,11 @@ expectedStEx1 = expectedStEx1' @c @hc (sufficientMIRWits @c @hc)
 -- === Block 1, Slot 10, Epoch 0, Successful MIR Reserves Example
 --
 -- In the first block, submit a MIR cert drawing from the reserves.
-mir1 :: forall c hc.
-  (ExMock (Crypto (ShelleyEra c)) hc) => MIRPot -> CHAINExample (BHeader c hc) (ShelleyEra c) hc
+mir1 ::
+  forall c hc.
+  (ExMock (Crypto (ShelleyEra c)) hc) =>
+  MIRPot ->
+  CHAINExample (BHeader c hc) (ShelleyEra c) hc
 mir1 pot =
   CHAINExample
     (initStMIR (Proxy @hc) (Coin 1000))
@@ -256,7 +263,7 @@ mir1 pot =
 -- In the first block, submit a MIR cert drawing from the reserves.
 mirFailWits ::
   forall c hc.
-  (ExMock (Crypto (ShelleyEra c) ) hc) =>
+  (ExMock (Crypto (ShelleyEra c)) hc) =>
   MIRPot ->
   CHAINExample (BHeader c hc) (ShelleyEra c) hc
 mirFailWits pot =
@@ -411,8 +418,11 @@ expectedStEx3 pot =
 -- === Block 3, Slot 110, Epoch 1
 --
 -- Submit an empty block in the next epoch to apply the MIR rewards.
-mir3 :: forall c hc.
-  (ExMock (Crypto (ShelleyEra c)) hc) => MIRPot -> CHAINExample (BHeader c hc) (ShelleyEra c) hc
+mir3 ::
+  forall c hc.
+  (ExMock (Crypto (ShelleyEra c)) hc) =>
+  MIRPot ->
+  CHAINExample (BHeader c hc) (ShelleyEra c) hc
 mir3 pot = CHAINExample (expectedStEx2 @c @hc pot) (blockEx3 pot) (Right $ expectedStEx3 @c @hc pot)
 
 --

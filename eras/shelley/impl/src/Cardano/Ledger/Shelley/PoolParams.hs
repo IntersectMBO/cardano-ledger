@@ -40,7 +40,7 @@ import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys
   ( Hash,
     KeyHash (..),
-    KeyRole (..)
+    KeyRole (..),
   )
 import Cardano.Ledger.PoolDistr (PoolStakeVRF)
 import Cardano.Ledger.Serialization

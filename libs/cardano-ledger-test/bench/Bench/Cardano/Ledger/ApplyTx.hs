@@ -160,10 +160,9 @@ applyTxBenchmarks =
           deserialiseTxEra (Proxy @AlonzoBench) hcProxy
         ]
     ]
-
-    where
-      hcProxy :: Proxy C_Crypto
-      hcProxy = Proxy
+  where
+    hcProxy :: Proxy C_Crypto
+    hcProxy = Proxy
 
 instance FromCBOR (UTxOState ShelleyBench) where
   fromCBOR = fromNotSharedCBOR

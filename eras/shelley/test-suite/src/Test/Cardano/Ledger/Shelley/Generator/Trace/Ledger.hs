@@ -166,9 +166,9 @@ instance
 -- and (2) always return Right (since this function does not raise predicate failures).
 mkGenesisLedgerState ::
   forall a era ledger hcrypto.
-  (EraGen era,
-   Default (State (Core.EraRule "PPUP" era)),
-   CC.HeaderCrypto hcrypto
+  ( EraGen era,
+    Default (State (Core.EraRule "PPUP" era)),
+    CC.HeaderCrypto hcrypto
   ) =>
   GenEnv era hcrypto ->
   IRC ledger ->

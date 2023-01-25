@@ -37,6 +37,7 @@ import Cardano.Ledger.Slot
   )
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
+import qualified Cardano.Protocol.HeaderCrypto as CC (HeaderCrypto)
 import Cardano.Protocol.TPraos.API
 import Cardano.Protocol.TPraos.BHeader
   ( HashHeader (..),
@@ -48,7 +49,6 @@ import Cardano.Protocol.TPraos.Rules.Tickn
     TicknState,
   )
 import Cardano.Slotting.Slot (WithOrigin (..))
-import qualified Cardano.Protocol.HeaderCrypto as CC (HeaderCrypto)
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition
 import Control.State.Transition.Trace.Generator.QuickCheck
@@ -141,9 +141,9 @@ lastByronHeaderHash _ = HashHeader $ mkHash 0
 -- and (2) always return Right (since this function does not raise predicate failures).
 mkGenesisChainState ::
   forall era hcrypto a.
-  (Default (State (Core.EraRule "PPUP" era)),
-   CC.HeaderCrypto hcrypto,
-   EraGen era
+  ( Default (State (Core.EraRule "PPUP" era)),
+    CC.HeaderCrypto hcrypto,
+    EraGen era
   ) =>
   GenEnv era hcrypto ->
   IRC (CHAIN era hcrypto) ->

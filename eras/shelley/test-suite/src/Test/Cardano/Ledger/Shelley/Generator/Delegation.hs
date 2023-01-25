@@ -22,7 +22,6 @@ import Cardano.Ledger.Coin (DeltaCoin (..), toDeltaCoin)
 import Cardano.Ledger.Core (Crypto, Era, EraScript (..))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import qualified Cardano.Protocol.HeaderCrypto as CC (HeaderCrypto)
 import Cardano.Ledger.Keys
   ( coerceKeyRole,
     hashKey,
@@ -58,8 +57,9 @@ import Cardano.Ledger.Shelley.API
   )
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState (availableAfterMIR, rewards)
-import Cardano.Protocol.TPraos.Rules.Overlay (hashPoolStakeVRF, toGenesisVRF)
 import Cardano.Ledger.Slot (EpochNo (EpochNo), SlotNo)
+import qualified Cardano.Protocol.HeaderCrypto as CC (HeaderCrypto)
+import Cardano.Protocol.TPraos.Rules.Overlay (hashPoolStakeVRF, toGenesisVRF)
 import Control.Monad (replicateM)
 import Control.SetAlgebra (dom, domain, eval, (∈), (∉))
 import Data.Foldable (fold)

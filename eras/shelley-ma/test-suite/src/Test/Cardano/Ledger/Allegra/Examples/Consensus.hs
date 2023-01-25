@@ -12,7 +12,7 @@ import Cardano.Ledger.AuxiliaryData
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Keys (KeyRole(..))
+import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsUpdate, Update (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxOut (..))
 import Cardano.Ledger.ShelleyMA
@@ -22,8 +22,8 @@ import Cardano.Ledger.ShelleyMA.TxBody
 import Cardano.Slotting.Slot
 import Data.Proxy
 import qualified Data.Sequence.Strict as StrictSeq
-import Test.Cardano.Ledger.Shelley.Generator.Core (AllIssuerKeys (..))
 import Test.Cardano.Ledger.Shelley.Examples.Consensus
+import Test.Cardano.Ledger.Shelley.Generator.Core (AllIssuerKeys (..))
 import Test.Cardano.Ledger.Shelley.Orphans ()
 import Test.Cardano.Ledger.Shelley.Utils hiding (mkVRFKeyPair)
 
@@ -44,7 +44,7 @@ ledgerExamplesAllegra =
 exampleTxBodyAllegra :: MATxBody StandardAllegra
 exampleTxBodyAllegra = exampleTxBodyMA keys exampleCoin
   where
-    keys = exampleKeys @CC.StandardCrypto @CC.StandardCrypto  @'StakePool
+    keys = exampleKeys @CC.StandardCrypto @CC.StandardCrypto @'StakePool
 
 exampleTxBodyMA ::
   forall era hc.

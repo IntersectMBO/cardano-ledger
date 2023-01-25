@@ -52,7 +52,6 @@ import Cardano.Ledger.Keys
     KeyHash (..),
     KeyRole (..),
     GenesisVRF,
-    -- VerKeyVRF, -- TODO: Removed from Keys
   )
 import Cardano.Ledger.Serialization
   ( FromCBORGroup (..),

@@ -1151,7 +1151,7 @@ ledgerTraceBase chainSt block =
   where
     (UnserialisedBlock (BHeader bhb _) txSeq) = block
     slot = bheaderSlotNo bhb
-    lv  = futureLedgerViewAt @era chainSt slot
+    lv = futureLedgerViewAt @era chainSt slot
     tickedChainSt = tickChainState slot lv chainSt
     nes = (nesEs . chainNes) tickedChainSt
     pp_ = esPp nes

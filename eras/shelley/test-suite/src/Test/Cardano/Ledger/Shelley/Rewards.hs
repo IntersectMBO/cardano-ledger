@@ -53,7 +53,6 @@ import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import qualified Cardano.Protocol.HeaderCrypto as CC (HeaderCrypto)
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys
   ( KeyHash,
@@ -120,6 +119,8 @@ import Cardano.Ledger.Shelley.TxBody (RewardAcnt (..))
 import Cardano.Ledger.Slot (epochInfoSize)
 import Cardano.Ledger.Val (Val (..), invert, (<+>), (<->))
 import Cardano.Protocol.HeaderCrypto (VRF)
+import qualified Cardano.Protocol.HeaderCrypto as CC (HeaderCrypto)
+import Cardano.Protocol.TPraos.Rules.Overlay (hashPoolStakeVRF)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.Monad (replicateM)
 import Control.Monad.Trans.Reader (asks, runReader)
@@ -154,7 +155,6 @@ import Test.Cardano.Ledger.Shelley.Utils
     unsafeBoundRational,
   )
 import Test.Cardano.Ledger.TerseTools (Terse (..), tersemapdiffs)
-import Cardano.Protocol.TPraos.Rules.Overlay (hashPoolStakeVRF)
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.QuickCheck
   ( Gen,
@@ -273,7 +273,8 @@ genMargin = do
 genPoolInfo ::
   forall crypto hcrypto.
   (CC.Crypto crypto, CC.HeaderCrypto hcrypto) =>
-  PoolSetUpArgs crypto Maybe -> Gen (PoolInfo crypto)
+  PoolSetUpArgs crypto Maybe ->
+  Gen (PoolInfo crypto)
 genPoolInfo PoolSetUpArgs {poolPledge, poolCost, poolMargin, poolMembers} = do
   pledge <- getOrGen poolPledge $ genCoin 0 maxPoolPledeg
   cost <- getOrGen poolCost $ genCoin 0 maxPoolCost
@@ -322,9 +323,10 @@ toCompactCoinError c =
 
 rewardsBoundedByPot ::
   forall era hcrypto.
-  (Era era,
-   Core.PParams era ~ ShelleyPParams era,
-   CC.HeaderCrypto hcrypto) =>
+  ( Era era,
+    Core.PParams era ~ ShelleyPParams era,
+    CC.HeaderCrypto hcrypto
+  ) =>
   Proxy era ->
   Property
 rewardsBoundedByPot _ = property $ do

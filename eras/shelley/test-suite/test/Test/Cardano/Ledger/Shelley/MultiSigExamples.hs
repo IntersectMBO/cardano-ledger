@@ -79,9 +79,9 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Cardano.Ledger.Val as Val
 import Control.State.Transition.Extended (PredicateFailure, TRC (..))
 import Data.Foldable (fold)
-import Data.Proxy
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (empty, fromList)
+import Data.Proxy
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set (fromList)

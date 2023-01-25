@@ -52,7 +52,6 @@ import Cardano.Ledger.Credential
     StakeReference (..),
   )
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import qualified Cardano.Protocol.HeaderCrypto as CC (HeaderCrypto)
 import Cardano.Ledger.Keys
   ( Hash,
     KeyPair (..),
@@ -60,17 +59,18 @@ import Cardano.Ledger.Keys
     hashKey,
     hashVerKeyVRF,
   )
-import Cardano.Protocol.HeaderKeys
-  ( VerKeyVRF
-  )
 import Cardano.Ledger.Shelley.TxBody
   ( PoolMetadata (..),
     PoolParams (..),
     RewardAcnt (..),
   )
 import Cardano.Ledger.Slot (SlotNo (..))
-import Cardano.Protocol.TPraos.Rules.Overlay (hashPoolStakeVRF)
+import qualified Cardano.Protocol.HeaderCrypto as CC (HeaderCrypto)
+import Cardano.Protocol.HeaderKeys
+  ( VerKeyVRF,
+  )
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
+import Cardano.Protocol.TPraos.Rules.Overlay (hashPoolStakeVRF)
 import qualified Data.ByteString.Char8 as BS (pack)
 import Data.Maybe (fromJust)
 import qualified Data.Sequence.Strict as StrictSeq

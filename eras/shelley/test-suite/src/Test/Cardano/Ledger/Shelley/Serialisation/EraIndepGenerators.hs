@@ -715,10 +715,10 @@ genUTCTime = do
       (Time.picosecondsToDiffTime diff)
 
 instance
-  (
-    -- Mock (Crypto era),
+  ( -- Mock (Crypto era),
     CC.Crypto (Crypto era),
-    Arbitrary (ShelleyPParams era)) =>
+    Arbitrary (ShelleyPParams era)
+  ) =>
   Arbitrary (ShelleyGenesis era)
   where
   arbitrary =
@@ -774,8 +774,8 @@ instance
   shrink = recursivelyShrink
 
 instance
-  (Era era
-   -- Mock (Crypto era)
+  ( Era era
+  -- Mock (Crypto era)
   ) =>
   Arbitrary (STS.ShelleyDelegPredFailure era)
   where

@@ -24,7 +24,6 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Block (Block, bheader, txid)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Crypto as Cr
-import qualified Cardano.Protocol.HeaderCrypto as Cr
 import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Keys (asWitness, hashKey)
 import Cardano.Ledger.SafeHash (hashAnnotated)
@@ -56,6 +55,7 @@ import Cardano.Ledger.Slot
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val
+import qualified Cardano.Protocol.HeaderCrypto as Cr
 import Cardano.Protocol.TPraos.BHeader (BHeader, bhHash)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import qualified Data.Map.Strict as Map
@@ -136,8 +136,9 @@ ppVoteA =
 
 collectVotes ::
   forall c hc.
-  (Era (ShelleyEra c),
-   Cr.HeaderCrypto hc) =>
+  ( Era (ShelleyEra c),
+    Cr.HeaderCrypto hc
+  ) =>
   ShelleyPParamsUpdate (ShelleyEra c) ->
   [Int] ->
   ProposedPPUpdates (ShelleyEra c)
@@ -146,8 +147,9 @@ collectVotes vote =
 
 ppVotes1 ::
   forall c hc.
-  (Era (ShelleyEra c),
-   Cr.HeaderCrypto hc) =>
+  ( Era (ShelleyEra c),
+    Cr.HeaderCrypto hc
+  ) =>
   ProposedPPUpdates (ShelleyEra c)
 ppVotes1 = collectVotes @c @hc ppVoteA [0, 3, 4]
 
@@ -222,15 +224,17 @@ updates1 = CHAINExample (initStUpdates @c @hc) blockEx1 (Right $ expectedStEx1 @
 
 ppVotes2 ::
   forall c hc.
-  (Era (ShelleyEra c),
-   Cr.HeaderCrypto hc) =>
+  ( Era (ShelleyEra c),
+    Cr.HeaderCrypto hc
+  ) =>
   ProposedPPUpdates (ShelleyEra c)
 ppVotes2 = collectVotes @c @hc ppVoteA [1, 5]
 
 updateEx3B ::
   forall c hc.
-  (Era (ShelleyEra c),
-   Cr.HeaderCrypto hc) =>
+  ( Era (ShelleyEra c),
+    Cr.HeaderCrypto hc
+  ) =>
   Update (ShelleyEra c)
 updateEx3B = Update (ppVotes2 @c @hc) (EpochNo 0)
 

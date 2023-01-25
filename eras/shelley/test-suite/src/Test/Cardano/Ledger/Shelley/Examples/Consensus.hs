@@ -18,9 +18,9 @@ import Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.AuxiliaryData
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
-import Cardano.Ledger.Crypto (HASH, ADDRHASH, DSIGN, StandardCrypto)
-import qualified Cardano.Ledger.Crypto as CC
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Crypto (ADDRHASH, DSIGN, HASH, StandardCrypto)
+import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era
 import qualified Cardano.Ledger.Era as Era (Crypto)
 import Cardano.Ledger.Keys
@@ -478,9 +478,10 @@ exampleTxIns =
     ]
 
 exampleCerts ::
-  forall c hc .
+  forall c hc.
   (CC.Crypto c, CC.HeaderCrypto hc) =>
-  AllIssuerKeys c hc 'StakePool -> StrictSeq (DCert c)
+  AllIssuerKeys c hc 'StakePool ->
+  StrictSeq (DCert c)
 exampleCerts keys =
   StrictSeq.fromList
     [ DCertDeleg (RegKey (keyToCredential exampleStakeKey)),
@@ -568,7 +569,8 @@ mkVRFKeyPair _ byte = (sk, VRF.deriveVerKeyVRF sk)
 examplePoolParams ::
   forall c hc.
   (CC.Crypto c, CC.HeaderCrypto hc) =>
-  AllIssuerKeys c hc 'StakePool -> PoolParams c
+  AllIssuerKeys c hc 'StakePool ->
+  PoolParams c
 examplePoolParams poolKeys =
   PoolParams
     { _poolId = hashKey $ vKey $ cold poolKeys,
@@ -586,5 +588,6 @@ examplePoolParams poolKeys =
               _poolMDHash = "{}"
             }
     }
-  -- where
-    -- poolKeys = exampleKeys @c @hc @'StakePool
+
+-- where
+-- poolKeys = exampleKeys @c @hc @'StakePool

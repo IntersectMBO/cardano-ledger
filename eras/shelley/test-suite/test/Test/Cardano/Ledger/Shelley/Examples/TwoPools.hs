@@ -43,7 +43,6 @@ import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential, Ptr (..))
 import qualified Cardano.Ledger.Crypto as CryptoClass
-import qualified Cardano.Protocol.HeaderCrypto as CryptoClass
 import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Keys (KeyRole (..), asWitness, coerceKeyRole)
 import Cardano.Ledger.PoolDistr
@@ -102,6 +101,7 @@ import Cardano.Ledger.Slot
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
+import qualified Cardano.Protocol.HeaderCrypto as CryptoClass
 import Cardano.Protocol.TPraos.BHeader (BHeader, bhHash, hashHeaderToNonce)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import Cardano.Protocol.TPraos.Rules.Overlay (toPoolStakeVRF)
@@ -274,7 +274,7 @@ blockEx1 =
 
 expectedStEx1 ::
   forall era hc.
-  ( TwoPoolsConstraints era hc) =>
+  (TwoPoolsConstraints era hc) =>
   ChainState era
 expectedStEx1 =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx1 @era @hc))

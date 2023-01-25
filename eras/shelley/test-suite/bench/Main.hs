@@ -1,7 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -24,7 +24,6 @@ import Cardano.Crypto.KES
 import Cardano.Crypto.VRF.Praos
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Crypto as CryptoClass
-import qualified Cardano.Protocol.HeaderCrypto as CryptoClass
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Bench.Gen
@@ -45,6 +44,7 @@ import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.PoolRank (likelihood)
 import Cardano.Ledger.Shelley.UTxO (UTxO)
+import qualified Cardano.Protocol.HeaderCrypto as CryptoClass
 import Cardano.Protocol.TPraos.API (PraosCrypto)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.DeepSeq (NFData)
@@ -113,7 +113,6 @@ instance CryptoClass.Crypto BenchCrypto where
   type DSIGN BenchCrypto = Ed25519DSIGN
   type HASH BenchCrypto = Blake2b_256
   type ADDRHASH BenchCrypto = Blake2b_224
-
 
 instance CryptoClass.HeaderCrypto BenchCrypto where
   type KES BenchCrypto = Sum6KES Ed25519DSIGN Blake2b_256

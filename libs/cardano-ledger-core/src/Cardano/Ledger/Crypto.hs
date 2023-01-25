@@ -30,9 +30,10 @@ class
   type HASH c :: Type
   type ADDRHASH c :: Type
   type DSIGN c :: Type
-  -- TODO: KES/VRF are not required for ledger
-  -- type KES c :: Type
-  -- type VRF c :: Type
+
+-- TODO: KES/VRF are not required for ledger
+-- type KES c :: Type
+-- type VRF c :: Type
 
 -- ================================
 
@@ -41,6 +42,7 @@ data StandardCrypto
 
 instance Crypto StandardCrypto where
   type DSIGN StandardCrypto = Ed25519DSIGN
+
   -- type KES StandardCrypto = Sum6KES Ed25519DSIGN Blake2b_256 -- TODO: KES/VRF
   -- type VRF StandardCrypto = PraosVRF
   type HASH StandardCrypto = Blake2b_256

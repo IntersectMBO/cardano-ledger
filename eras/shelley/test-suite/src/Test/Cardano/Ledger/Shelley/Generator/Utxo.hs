@@ -84,8 +84,8 @@ import GHC.Records (HasField (..))
 import Lens.Micro
 import NoThunks.Class ()
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes
-  ( MockContext,
-    Mock,
+  ( Mock,
+    MockContext,
   )
 import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..), defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core
@@ -657,8 +657,8 @@ mkScriptWits payScripts stakeScripts =
 
 mkTxWits ::
   forall era.
-  (EraGen era,
-   MockContext (Crypto era)
+  ( EraGen era,
+    MockContext (Crypto era)
   ) =>
   (UTxO era, TxBody era, ScriptInfo era) ->
   Map (KeyHash 'Payment (Crypto era)) (KeyPair 'Payment (Crypto era)) ->

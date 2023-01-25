@@ -10,7 +10,6 @@ module Bench.Cardano.Ledger.ApplyTx.Gen (generateApplyTxEnvForEra, ApplyTxEnv (.
 
 import Cardano.Ledger.Core (EraRule)
 import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Protocol.HeaderCrypto as CC
 import Cardano.Ledger.Shelley.API
   ( AccountState (..),
     Coin (..),
@@ -20,6 +19,7 @@ import Cardano.Ledger.Shelley.API
   )
 import Cardano.Ledger.Shelley.LedgerState (LedgerState)
 import Cardano.Ledger.Slot (SlotNo (SlotNo))
+import qualified Cardano.Protocol.HeaderCrypto as CC
 import Control.DeepSeq (NFData (..))
 import Control.State.Transition (Environment, Signal, State)
 import Control.State.Transition.Trace

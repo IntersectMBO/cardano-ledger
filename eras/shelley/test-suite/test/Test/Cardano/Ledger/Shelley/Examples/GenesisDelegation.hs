@@ -22,7 +22,6 @@ import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as Cr
-import qualified Cardano.Protocol.HeaderCrypto as Cr
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Keys
   ( GenDelegPair (..),
@@ -33,7 +32,6 @@ import Cardano.Ledger.Keys
     hashKey,
     hashVerKeyVRF,
   )
-import Cardano.Protocol.HeaderKeys
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (FutureGenDeleg (..), PulsingRewUpdate)
@@ -51,13 +49,15 @@ import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
+import qualified Cardano.Protocol.HeaderCrypto as Cr
+import Cardano.Protocol.HeaderKeys
 import Cardano.Protocol.TPraos.BHeader (BHeader, bhHash)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import Cardano.Protocol.TPraos.Rules.Overlay (toGenesisVRF)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (ExMock, C_Crypto)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto, ExMock)
 import Test.Cardano.Ledger.Shelley.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
 import qualified Test.Cardano.Ledger.Shelley.Examples.Combinators as C
@@ -106,7 +106,9 @@ initUTxO =
 initStGenesisDeleg ::
   forall era hc.
   ( Cr.HeaderCrypto hc,
-    ShelleyTest era, PParams era ~ ShelleyPParams era) =>
+    ShelleyTest era,
+    PParams era ~ ShelleyPParams era
+  ) =>
   Proxy hc ->
   ChainState era
 initStGenesisDeleg _ = initSt @era @hc initUTxO
@@ -159,7 +161,8 @@ txbodyEx1 phc =
 
 txEx1 ::
   forall c hc.
-  ( Cr.Crypto c, Cr.HeaderCrypto hc,
+  ( Cr.Crypto c,
+    Cr.HeaderCrypto hc,
     Signable (CryptoClass.DSIGN c) (Hash.Hash (CryptoClass.HASH c) EraIndependentTxBody)
   ) =>
   Proxy hc ->

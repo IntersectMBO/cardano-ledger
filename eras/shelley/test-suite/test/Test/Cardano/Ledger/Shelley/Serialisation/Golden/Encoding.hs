@@ -47,7 +47,6 @@ import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
 import Cardano.Ledger.Core (EraTx, Tx, hashAuxiliaryData, hashScript)
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC
-import qualified Cardano.Protocol.HeaderCrypto as CC
 import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys
@@ -67,12 +66,6 @@ import Cardano.Ledger.Keys
     signedDSIGN,
     signedKES,
     vKey,
-  )
-import Cardano.Protocol.HeaderKeys
-  ( SignKeyKES,
-    SignKeyVRF,
-    VerKeyKES,
-    VerKeyVRF,
   )
 import Cardano.Ledger.PoolDistr (PoolDistr (..), PoolStakeVRF)
 import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
@@ -151,6 +144,13 @@ import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.Shelley.UTxO (UTxO (UTxO), makeWitnessVKey)
 import Cardano.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxId, TxIn (..))
+import qualified Cardano.Protocol.HeaderCrypto as CC
+import Cardano.Protocol.HeaderKeys
+  ( SignKeyKES,
+    SignKeyVRF,
+    VerKeyKES,
+    VerKeyVRF,
+  )
 import Cardano.Protocol.TPraos.BHeader
   ( BHBody (..),
     BHeader (..),
@@ -177,7 +177,7 @@ import Cardano.Protocol.TPraos.OCert
     OCertSignable (..),
     pattern OCert,
   )
-import Cardano.Protocol.TPraos.Rules.Overlay (hashPoolStakeVRF, hashGenesisVRF)
+import Cardano.Protocol.TPraos.Rules.Overlay (hashGenesisVRF, hashPoolStakeVRF)
 import Codec.CBOR.Encoding (Encoding (..), Tokens (..))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as B16

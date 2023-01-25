@@ -388,7 +388,9 @@ onlyValidChainSignalsAreGenerated =
 -- | Counts the epochs spanned by this trace
 epochsInTrace ::
   forall era hcrypto.
-  (Era era, CC.HeaderCrypto hcrypto) => [Block (BHeader (Crypto era) hcrypto) era] -> Int
+  (Era era, CC.HeaderCrypto hcrypto) =>
+  [Block (BHeader (Crypto era) hcrypto) era] ->
+  Int
 epochsInTrace [] = 0
 epochsInTrace bs =
   fromIntegral $ toEpoch - fromEpoch + 1

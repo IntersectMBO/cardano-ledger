@@ -130,7 +130,6 @@ instance
     genMetadata' >>= \case
       Metadata m -> MAAuxiliaryData m <$> (genScriptSeq @era)
 
-
 genScriptSeq ::
   forall era. Arbitrary (Script era) => Gen (StrictSeq (Script era))
 genScriptSeq = do

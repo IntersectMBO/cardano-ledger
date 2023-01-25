@@ -26,7 +26,7 @@ import Cardano.Ledger.Shelley.API hiding (TxOut)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PoolRank
 import Cardano.Protocol.HeaderKeys
-import Cardano.Protocol.TPraos.Rules.Overlay (fromPoolStakeVRF, fromGenesisVRF)
+import Cardano.Protocol.TPraos.Rules.Overlay (fromGenesisVRF, fromPoolStakeVRF)
 import Conduit
 import Control.Exception (throwIO)
 import Control.Foldl (Fold (..))
@@ -45,6 +45,7 @@ import Prettyprinter
 import Text.Printf
 
 type C = StandardCrypto
+
 type HC = StandardCrypto
 
 type CurrentEra = AlonzoEra C
@@ -292,10 +293,10 @@ instance AggregateStat PoolDistrStats where
       { gsKeyHashStakePool = pdsStakePoolKeyHash,
         gsVerKeyVRF = gsVerKeyFromPDS
       }
-      where
-        gsStatUnique    = fromPoolStakeVRF `Set.map` statUnique pdsStakePoolStakeVrf
-        gsStatCount     = statCount pdsStakePoolStakeVrf
-        gsVerKeyFromPDS = Stat { statCount = gsStatCount, statUnique = gsStatUnique }
+    where
+      gsStatUnique = fromPoolStakeVRF `Set.map` statUnique pdsStakePoolStakeVrf
+      gsStatCount = statCount pdsStakePoolStakeVrf
+      gsVerKeyFromPDS = Stat {statCount = gsStatCount, statUnique = gsStatUnique}
 
 calcPoolDistrStats :: PoolDistr C -> PoolDistrStats
 calcPoolDistrStats (PoolDistr pd) =

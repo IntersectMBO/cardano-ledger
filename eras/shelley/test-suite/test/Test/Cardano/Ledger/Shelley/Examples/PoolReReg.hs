@@ -25,7 +25,6 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Block (Block, bheader, txid)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Crypto as Cr
-import qualified Cardano.Protocol.HeaderCrypto as Cr
 import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.SafeHash (hashAnnotated)
@@ -50,6 +49,7 @@ import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val
+import qualified Cardano.Protocol.HeaderCrypto as Cr
 import Cardano.Protocol.TPraos.BHeader (BHeader, bhHash)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import qualified Data.Map.Strict as Map

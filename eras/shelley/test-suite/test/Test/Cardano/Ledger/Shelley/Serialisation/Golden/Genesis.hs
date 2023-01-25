@@ -18,13 +18,13 @@ import Cardano.Binary (Encoding (..), ToCBOR (..), Tokens (..), serializeEncodin
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.BaseTypes (textToDns, textToUrl)
 import Cardano.Ledger.Crypto (HASH)
-import qualified Cardano.Protocol.HeaderCrypto as HC (HeaderCrypto (..), VRF)
 import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Keys (GenesisVRF, hashKey, vKey)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import qualified Cardano.Ledger.Shelley.API as L
 import Cardano.Ledger.Shelley.Genesis
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..), emptyPParams)
+import qualified Cardano.Protocol.HeaderCrypto as HC (HeaderCrypto (..), VRF)
 import Cardano.Protocol.TPraos.Rules.Overlay (hashPoolStakeVRF)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Data.Aeson
@@ -204,7 +204,7 @@ tests =
 
 exampleShelleyGenesis ::
   forall era hc.
-  (Era era, HC.HeaderCrypto hc)  =>
+  (Era era, HC.HeaderCrypto hc) =>
   Proxy hc ->
   ShelleyGenesis era
 exampleShelleyGenesis _ =
@@ -270,7 +270,7 @@ exampleShelleyGenesis _ =
     poolParams =
       L.PoolParams
         { L._poolId = hashKey . snd $ mkKeyPair (RawSeed 1 0 0 0 1),
-          L._poolVrf = hashPoolStakeVRF . snd $ mkVRFKeyPair @(HC.VRF hc) $RawSeed 1 0 0 0 2,
+          L._poolVrf = hashPoolStakeVRF . snd $ mkVRFKeyPair @(HC.VRF hc) $ RawSeed 1 0 0 0 2,
           L._poolPledge = L.Coin 1,
           L._poolCost = L.Coin 5,
           L._poolMargin = unsafeBoundRational 0.25,

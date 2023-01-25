@@ -24,7 +24,7 @@ module Cardano.Protocol.TPraos.Rules.Overlay
     hashPoolStakeVRF,
     toGenesisVRF,
     fromGenesisVRF,
-    hashGenesisVRF
+    hashGenesisVRF,
   )
 where
 
@@ -51,29 +51,29 @@ import Cardano.Ledger.BaseTypes
     epochInfoPure,
   )
 import Cardano.Ledger.Crypto
-import Cardano.Protocol.HeaderCrypto
 import Cardano.Ledger.Keys
   ( DSignable,
     GenDelegPair (..),
     GenDelegs (..),
+    GenesisVRF,
     Hash,
     KeyHash (..),
     KeyRole (..),
     coerceKeyRole,
     hashKey,
     hashVerKeyVRF,
-    GenesisVRF
-  )
-import Cardano.Protocol.HeaderKeys
-  ( KESignable,
-    VerKeyVRF,
   )
 import Cardano.Ledger.PoolDistr
   ( IndividualPoolStake (..),
     PoolDistr (..),
-    PoolStakeVRF
+    PoolStakeVRF,
   )
 import Cardano.Ledger.Slot (epochInfoEpoch, epochInfoFirst, (-*))
+import Cardano.Protocol.HeaderCrypto
+import Cardano.Protocol.HeaderKeys
+  ( KESignable,
+    VerKeyVRF,
+  )
 import Cardano.Protocol.TPraos.BHeader
   ( BHBody (..),
     BHeader (BHeader),

@@ -13,8 +13,8 @@ module Test.Cardano.Ledger.Shelley.Serialisation.Tripping.JSON
 where
 
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import qualified Cardano.Protocol.HeaderCrypto as CC (HeaderCrypto)
 import Cardano.Ledger.Era
+import qualified Cardano.Protocol.HeaderCrypto as CC (HeaderCrypto)
 import Data.Aeson (decode, encode, fromJSON, toJSON)
 import Data.Proxy
 import Hedgehog (Property)

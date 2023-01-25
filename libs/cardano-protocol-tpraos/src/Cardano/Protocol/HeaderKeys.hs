@@ -1,14 +1,11 @@
 {-# LANGUAGE ConstraintKinds #-}
--- |
 
 module Cardano.Protocol.HeaderKeys
-  (
-    -- * KES
+  ( -- * KES
     KESignable,
 
     -- * VRF
     VRFSignable,
-
     CertifiedVRF,
     SignedKES,
     SignKeyKES,
@@ -20,7 +17,7 @@ where
 
 import qualified Cardano.Crypto.KES as KES
 import qualified Cardano.Crypto.VRF as VRF
-import           Cardano.Protocol.HeaderCrypto (KES, VRF)
+import Cardano.Protocol.HeaderCrypto (KES, VRF)
 
 -- TODO: Moved from Cardano.Ledger.Keys
 

@@ -20,7 +20,6 @@ where
 
 import Cardano.Ledger.BaseTypes (Globals (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import qualified Cardano.Protocol.HeaderCrypto as CC (HeaderCrypto)
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys
   ( GenDelegPair (..),
@@ -36,11 +35,12 @@ import Cardano.Ledger.Keys
   )
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..))
 import Cardano.Ledger.Slot (SlotNo (..))
+import qualified Cardano.Protocol.HeaderCrypto as CC (HeaderCrypto)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import Cardano.Protocol.TPraos.Rules.Overlay
   ( OBftSlot (..),
     lookupInOverlaySchedule,
-    toGenesisVRF
+    toGenesisVRF,
   )
 import qualified Data.List
 import Data.Map.Strict (Map)
@@ -87,7 +87,8 @@ coreNodes =
 coreNodeSK ::
   forall crypto hcrypto.
   (CC.Crypto crypto, CC.HeaderCrypto hcrypto) =>
-  Int -> SignKeyDSIGN crypto
+  Int ->
+  SignKeyDSIGN crypto
 coreNodeSK = fst . fst . (coreNodes @crypto @hcrypto !!)
 
 -- | === Verification (Public) Keys
@@ -96,7 +97,8 @@ coreNodeSK = fst . fst . (coreNodes @crypto @hcrypto !!)
 coreNodeVK ::
   forall crypto hcrypto.
   (CC.Crypto crypto, CC.HeaderCrypto hcrypto) =>
-  Int -> VKey 'Genesis crypto
+  Int ->
+  VKey 'Genesis crypto
 coreNodeVK = snd . fst . (coreNodes @crypto @hcrypto !!)
 
 -- | === Block Issuer Keys

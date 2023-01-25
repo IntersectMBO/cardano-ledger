@@ -28,11 +28,11 @@ import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys
   ( GenDelegPair (..),
     GenDelegs (..),
+    GenesisVRF,
+    -- VerKeyVRF,
     Hash,
     KeyHash,
     KeyRole (..),
-    GenesisVRF,
-    -- VerKeyVRF,
   )
 import Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
 import Cardano.Ledger.Shelley.LedgerState

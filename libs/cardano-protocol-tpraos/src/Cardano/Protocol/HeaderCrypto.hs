@@ -20,8 +20,7 @@ import Data.Typeable (Typeable)
 -- anyways.
 
 class
-  (
-    KESAlgorithm (KES c),
+  ( KESAlgorithm (KES c),
     VRFAlgorithm (VRF c),
     ContextKES (KES c) ~ (),
     ContextVRF (VRF c) ~ (),
@@ -35,7 +34,6 @@ class
 -- ================================
 
 -- | The same crypto used on the net
-
 instance HeaderCrypto StandardCrypto where
   type KES StandardCrypto = Sum6KES Ed25519DSIGN Blake2b_256 -- TODO: KES/VRF
   type VRF StandardCrypto = PraosVRF

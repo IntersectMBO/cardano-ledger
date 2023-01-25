@@ -1,4 +1,5 @@
-{-# LANGUAGE AllowAmbiguousTypes #-} -- TODO: Review getLeaderSchedule signature that causes it
+-- TODO: Review getLeaderSchedule signature that causes it
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
@@ -63,7 +64,6 @@ import Cardano.Ledger.Chain (ChainChecksPParams, pparamsToChainChecksPParams)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto, StandardCrypto)
-import qualified Cardano.Protocol.HeaderCrypto as CC (HeaderCrypto, VRF)
 import Cardano.Ledger.Keys
   ( DSignable,
     GenDelegPair (..),
@@ -71,11 +71,6 @@ import Cardano.Ledger.Keys
     KeyHash,
     KeyRole (..),
     coerceKeyRole,
-  )
-import Cardano.Protocol.HeaderKeys
-  ( KESignable,
-    SignKeyVRF,
-    VRFSignable
   )
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.PoolDistr (PoolDistr (..), individualPoolStake)
@@ -93,6 +88,12 @@ import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Rules.EraMapping ()
 import Cardano.Ledger.Shelley.Rules.Tick (ShelleyTickfPredFailure)
 import Cardano.Ledger.Slot (SlotNo)
+import qualified Cardano.Protocol.HeaderCrypto as CC (HeaderCrypto, VRF)
+import Cardano.Protocol.HeaderKeys
+  ( KESignable,
+    SignKeyVRF,
+    VRFSignable,
+  )
 import Cardano.Protocol.TPraos.BHeader
   ( BHBody,
     BHeader,
@@ -146,7 +147,7 @@ class
 instance PraosCrypto CC.StandardCrypto CC.StandardCrypto
 
 class
-  ( --CC.HeaderCrypto hcrypto,
+  ( -- CC.HeaderCrypto hcrypto,
     -- Eq (ChainTransitionError (Crypto era) hcrypto),
     -- Show (ChainTransitionError (Crypto era) hcrypto),
     Show (LedgerView (Crypto era)),
@@ -179,7 +180,7 @@ class
     Globals ->
     NewEpochState era ->
     SlotNo ->
-    m (LedgerView (Crypto era) )
+    m (LedgerView (Crypto era))
   default futureLedgerView ::
     ( MonadError (FutureLedgerViewError era) m,
       HasField "_extraEntropy" (PParams era) Nonce
@@ -187,7 +188,7 @@ class
     Globals ->
     NewEpochState era ->
     SlotNo ->
-    m (LedgerView (Crypto era) )
+    m (LedgerView (Crypto era))
   futureLedgerView = futureView
 
 instance (CC.Crypto crypto) => GetLedgerView (ShelleyEra crypto)

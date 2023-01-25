@@ -267,9 +267,8 @@ expectedStEx1 =
     . C.mir Cast.carlSHK ReservesMIR carlMIR
     . C.mir Cast.dariaSHK ReservesMIR dariaMIR
     $ initStPoolLifetime @c @hc
-
-    where
-      blockEx1' = blockEx1 @c @hc
+  where
+    blockEx1' = blockEx1 @c @hc
 
 -- === Block 1, Slot 10, Epoch 0
 --
@@ -394,9 +393,8 @@ expectedStEx2 =
     . C.delegation Cast.bobSHK (_poolId $ Cast.alicePoolParams @c @hc)
     . C.pulserUpdate (pulserEx2 @c @hc)
     $ (expectedStEx1 @c @hc)
-
-    where
-      blockEx2' = blockEx2 @c @hc
+  where
+    blockEx2' = blockEx2 @c @hc
 
 -- === Block 2, Slot 90, Epoch 0
 --
@@ -440,10 +438,9 @@ snapEx3 =
         ],
       EB._poolParams = [(hk alicePoolKeys', alicePoolParams')]
     }
-
-    where
-      alicePoolKeys'   = Cast.alicePoolKeys @c @hc
-      alicePoolParams' = Cast.alicePoolParams @c @hc
+  where
+    alicePoolKeys' = Cast.alicePoolKeys @c @hc
+    alicePoolParams' = Cast.alicePoolParams @c @hc
 
 expectedStEx3 ::
   forall c hc.
@@ -487,10 +484,9 @@ txbodyEx4 =
       _txUpdate = SNothing,
       _mdHash = SNothing
     }
-
-    where
-      txbodyEx2'     = txbodyEx2 @c @hc
-      alicePoolKeys' = Cast.alicePoolKeys @c @hc
+  where
+    txbodyEx2' = txbodyEx2 @c @hc
+    alicePoolKeys' = Cast.alicePoolKeys @c @hc
 
 txEx4 :: forall c hc. (ExMock (Crypto (ShelleyEra c)) hc) => ShelleyTx (ShelleyEra c)
 txEx4 =
@@ -593,10 +589,9 @@ snapEx5 =
         ],
       EB._poolParams = [(hk alicePoolKeys', alicePoolParams')]
     }
-
-    where
-      alicePoolKeys'   = Cast.alicePoolKeys @c @hc
-      alicePoolParams' = Cast.alicePoolParams @c @hc
+  where
+    alicePoolKeys' = Cast.alicePoolKeys @c @hc
+    alicePoolParams' = Cast.alicePoolParams @c @hc
 
 pdEx5 :: forall c hc. (Cr.Crypto c, Cr.HeaderCrypto hc) => PoolDistr c
 pdEx5 =
@@ -666,9 +661,8 @@ expectedStEx6 =
     . C.incrBlockCount (hk alicePoolKeys')
     . C.pulserUpdate (pulserEx6 @c @hc)
     $ (expectedStEx5 @c @hc)
-
-    where
-      alicePoolKeys' = Cast.alicePoolKeys @c @hc
+  where
+    alicePoolKeys' = Cast.alicePoolKeys @c @hc
 
 -- === Block 6, Slot 295, Epoch 2
 --
@@ -721,7 +715,7 @@ poolLifetime7 = CHAINExample (expectedStEx6 @c @hc) blockEx7 (Right $ expectedSt
 -- Block 8, Slot 390, Epoch 3
 --
 
-blockEx8 :: forall c hc. (ExMock (Crypto (ShelleyEra c)) hc)  => Block (BHeader c hc) (ShelleyEra c)
+blockEx8 :: forall c hc. (ExMock (Crypto (ShelleyEra c)) hc) => Block (BHeader c hc) (ShelleyEra c)
 blockEx8 =
   mkBlockFakeVRF
     (bhHash $ bheader @(BHeader c hc) @(ShelleyEra c) blockEx7)
@@ -793,9 +787,8 @@ rewardUpdateEx8 =
       deltaF = DeltaCoin 0,
       nonMyopic = nonMyopicEx8 @c @hc
     }
-
-    where
-      alicePoolKeys' = Cast.alicePoolKeys @c @hc
+  where
+    alicePoolKeys' = Cast.alicePoolKeys @c @hc
 
 expectedStEx8 :: forall c hc. (ExMock (Crypto (ShelleyEra c)) hc) => ChainState (ShelleyEra c)
 expectedStEx8 =

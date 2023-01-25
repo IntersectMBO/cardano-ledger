@@ -71,7 +71,6 @@ import Cardano.Ledger.BaseTypes
     mkNonceFromOutputVRF,
   )
 import qualified Cardano.Ledger.Crypto as CC
-import qualified Cardano.Protocol.HeaderCrypto as CC
 import Cardano.Ledger.Hashes
   ( EraIndependentBlockBody,
     EraIndependentBlockHeader,
@@ -87,11 +86,6 @@ import Cardano.Ledger.Keys
     encodeVerKeyVRF,
     hashKey,
   )
-import Cardano.Protocol.HeaderKeys
-  ( CertifiedVRF,
-    SignedKES,
-    VerKeyVRF,
-  )
 import Cardano.Ledger.NonIntegral (CompareResult (..), taylorExpCmp)
 import Cardano.Ledger.Serialization
   ( FromCBORGroup (..),
@@ -101,6 +95,12 @@ import Cardano.Ledger.Serialization
     runByteBuilder,
   )
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
+import qualified Cardano.Protocol.HeaderCrypto as CC
+import Cardano.Protocol.HeaderKeys
+  ( CertifiedVRF,
+    SignedKES,
+    VerKeyVRF,
+  )
 import Cardano.Protocol.TPraos.OCert (OCert (..))
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.DeepSeq (NFData)

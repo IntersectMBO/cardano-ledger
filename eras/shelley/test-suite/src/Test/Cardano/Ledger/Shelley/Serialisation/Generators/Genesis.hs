@@ -266,7 +266,6 @@ genPoolStakeVRFKeyHash ::
   Gen (Hash crypto PoolStakeVRF)
 genPoolStakeVRFKeyHash = toPoolStakeVRF <$> (genVRFKeyHash @crypto @hcrypto)
 
-
 genVRFKeyPair ::
   forall hcrypto.
   CC.HeaderCrypto hcrypto =>

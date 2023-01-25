@@ -118,7 +118,8 @@ coreNodeKeys c@Constants {numCoreNodes} =
 -- Pre-generate a set of keys to use for genesis delegates.
 genesisDelegates ::
   (CC.Crypto crypto, CC.HeaderCrypto hcrypto) =>
-  Constants -> [AllIssuerKeys crypto hcrypto 'GenesisDelegate]
+  Constants ->
+  [AllIssuerKeys crypto hcrypto 'GenesisDelegate]
 genesisDelegates c =
   [ issuerKeys c 20 x
     | x <- [0 .. 50]
@@ -127,7 +128,8 @@ genesisDelegates c =
 -- Pre-generate a set of keys to use for stake pools.
 stakePoolKeys ::
   (CC.Crypto crypto, CC.HeaderCrypto hcrypto) =>
-  Constants -> [AllIssuerKeys crypto hcrypto 'StakePool]
+  Constants ->
+  [AllIssuerKeys crypto hcrypto 'StakePool]
 stakePoolKeys c =
   [ issuerKeys c 10 x
     | x <- [0 .. 50]

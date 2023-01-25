@@ -34,7 +34,7 @@ import Cardano.Ledger.Slot
   )
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
-import Cardano.Protocol.HeaderCrypto (HeaderCrypto(..))
+import Cardano.Protocol.HeaderCrypto (HeaderCrypto (..))
 import Cardano.Protocol.TPraos.BHeader
   ( HashHeader (..),
     LastAppliedBlock (..),
@@ -108,9 +108,10 @@ nonce0 = hashHeaderToNonce (lastByronHeaderHash @c)
 -- 'genDelegs' and any given starting 'UTxO' set.
 initSt ::
   forall era hc.
-  (ShelleyTest era,
-   PParams era ~ ShelleyPParams era,
-   HeaderCrypto hc) =>
+  ( ShelleyTest era,
+    PParams era ~ ShelleyPParams era,
+    HeaderCrypto hc
+  ) =>
   UTxO era ->
   ChainState era
 initSt utxo =

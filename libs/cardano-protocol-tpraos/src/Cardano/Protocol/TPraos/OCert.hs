@@ -26,7 +26,6 @@ import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Protocol.HeaderCrypto (HeaderCrypto, KES)
 import Cardano.Ledger.Keys
   ( KeyHash,
     KeyRole (..),
@@ -38,7 +37,6 @@ import Cardano.Ledger.Keys
     encodeSignedDSIGN,
     encodeVerKeyKES,
   )
-import Cardano.Protocol.HeaderKeys (VerKeyKES)
 import Cardano.Ledger.Serialization
   ( CBORGroup (..),
     FromCBORGroup (..),
@@ -46,6 +44,8 @@ import Cardano.Ledger.Serialization
     runByteBuilder,
   )
 import Cardano.Ledger.Slot (SlotNo (..))
+import Cardano.Protocol.HeaderCrypto (HeaderCrypto, KES)
+import Cardano.Protocol.HeaderKeys (VerKeyKES)
 import Control.Monad.Trans.Reader (asks)
 import qualified Data.ByteString.Builder as BS
 import qualified Data.ByteString.Builder.Extra as BS

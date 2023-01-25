@@ -82,7 +82,6 @@ import Cardano.Ledger.Credential
   )
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Protocol.HeaderCrypto as CC (HeaderCrypto)
 import Cardano.Ledger.Keys
   ( HasKeyRole (coerceKeyRole),
     Hash,
@@ -95,12 +94,6 @@ import Cardano.Ledger.Keys
     signedDSIGN,
     signedKES,
     vKey,
-  )
-import Cardano.Protocol.HeaderKeys
-  ( SignKeyKES,
-    SignKeyVRF,
-    VerKeyKES,
-    VerKeyVRF,
   )
 import Cardano.Ledger.SafeHash (SafeHash, unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley.BlockChain (bBodySize)
@@ -120,6 +113,13 @@ import Cardano.Ledger.Slot
     SlotNo (..),
     epochInfoFirst,
     (*-),
+  )
+import Cardano.Protocol.HeaderCrypto as CC (HeaderCrypto)
+import Cardano.Protocol.HeaderKeys
+  ( SignKeyKES,
+    SignKeyVRF,
+    VerKeyKES,
+    VerKeyVRF,
   )
 import Cardano.Protocol.TPraos.BHeader
   ( BHeader,

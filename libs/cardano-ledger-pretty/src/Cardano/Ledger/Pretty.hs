@@ -57,7 +57,6 @@ import Cardano.Ledger.Credential
     StakeReference (..),
   )
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Protocol.HeaderCrypto (HeaderCrypto)
 import qualified Cardano.Ledger.Era as Era (TxSeq)
 import Cardano.Ledger.Keys
   ( GKeys (..),
@@ -70,7 +69,6 @@ import Cardano.Ledger.Keys
     -- VerKeyKES,
     hashKey,
   )
-import Cardano.Protocol.HeaderKeys ( VerKeyKES )
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness (..), ChainCode (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
@@ -159,6 +157,8 @@ import Cardano.Ledger.Slot
   )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UnifiedMap (Trip (Triple), Triple, UMap (..), UnifiedMap)
+import Cardano.Protocol.HeaderCrypto (HeaderCrypto)
+import Cardano.Protocol.HeaderKeys (VerKeyKES)
 import Cardano.Protocol.TPraos.BHeader
   ( BHBody (..),
     BHeader (BHeader),

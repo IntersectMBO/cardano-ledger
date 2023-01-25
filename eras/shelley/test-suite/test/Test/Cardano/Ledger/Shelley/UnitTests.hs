@@ -27,7 +27,6 @@ import Cardano.Ledger.Credential
     StakeReference (..),
   )
 import Cardano.Ledger.Crypto (DSIGN, HASH)
-import Cardano.Protocol.HeaderCrypto (VRF)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys
   ( KeyPair (..),
@@ -92,6 +91,7 @@ import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.Shelley.UTxO (makeWitnessVKey, makeWitnessesVKey)
 import Cardano.Ledger.Slot
 import Cardano.Ledger.Val ((<+>), (<->))
+import Cardano.Protocol.HeaderCrypto (VRF)
 import Cardano.Protocol.TPraos.BHeader (checkLeaderValue)
 import Cardano.Protocol.TPraos.Rules.Overlay (hashPoolStakeVRF)
 import Control.State.Transition.Extended (PredicateFailure, TRC (..))
@@ -682,7 +682,7 @@ alicePoolParamsSmallCost =
             }
     }
   where
-    (_skVrf, vkVrf) = mkVRFKeyPair @(VRF C_Crypto) $RawSeed 0 0 0 0 2
+    (_skVrf, vkVrf) = mkVRFKeyPair @(VRF C_Crypto) $ RawSeed 0 0 0 0 2
 
 testPoolCostTooSmall :: Assertion
 testPoolCostTooSmall =

@@ -69,7 +69,7 @@ import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.KES as KES
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.Ledger.Crypto (ADDRHASH, Crypto, DSIGN, HASH ) -- TODO: , KES, VRF)
+import Cardano.Ledger.Crypto (ADDRHASH, Crypto, DSIGN, HASH) -- TODO: , KES, VRF)
 import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey, (.:), (.=))
@@ -327,4 +327,3 @@ type Hash c = Hash.Hash (HASH c)
 type SignedDSIGN c = DSIGN.SignedDSIGN (DSIGN c)
 
 type SignKeyDSIGN c = DSIGN.SignKeyDSIGN (DSIGN c)
-

@@ -17,8 +17,8 @@ import Cardano.Ledger.Keys (asWitness, hashKey, vKey)
 import Cardano.Ledger.Shelley.Rules.Utxow (ShelleyUtxowPredFailure (..))
 import Cardano.Ledger.Shelley.TxBody (RewardAcnt (..), Wdrl (..))
 import Data.Either (isRight)
-import Data.Proxy
 import qualified Data.Map.Strict as Map
+import Data.Proxy
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, C_Crypto)
 import Test.Cardano.Ledger.Shelley.Examples (testCHAINExample)

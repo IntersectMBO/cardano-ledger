@@ -49,9 +49,11 @@ import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest, getBlockNonce)
 
 initStEx1 ::
   forall era hc.
-  (ShelleyTest era,
-   HeaderCrypto hc,
-   PParams era ~ ShelleyPParams era) => ChainState era
+  ( ShelleyTest era,
+    HeaderCrypto hc,
+    PParams era ~ ShelleyPParams era
+  ) =>
+  ChainState era
 initStEx1 = initSt @era @hc (UTxO mempty)
 
 blockEx1 ::

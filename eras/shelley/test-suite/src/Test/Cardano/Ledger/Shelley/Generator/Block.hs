@@ -18,10 +18,10 @@ where
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BaseTypes (UnitInterval)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Protocol.HeaderCrypto (VRF)
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Slot (SlotNo (..))
+import Cardano.Protocol.HeaderCrypto (VRF)
 import Cardano.Protocol.TPraos.API
 import Cardano.Protocol.TPraos.BHeader
   ( BHeader (..),
@@ -227,7 +227,7 @@ selectNextSlotWithLeader
                   >>= \y -> Map.lookup (genDelegKeyHash y) ksIndexedGenDelegates
             _ -> Nothing
         where
-          lv      = futureLedgerViewAt origChainState slotNo
+          lv = futureLedgerViewAt origChainState slotNo
           chainSt = tickChainState @era slotNo lv origChainState
           epochNonce = chainEpochNonce chainSt
           poolDistr = unPoolDistr . nesPd . chainNes $ chainSt
@@ -251,8 +251,10 @@ selectNextSlotWithLeader
 futureLedgerViewAt ::
   forall era.
   GetLedgerView era =>
-  ChainState era -> SlotNo -> LedgerView (Crypto era)
-futureLedgerViewAt ChainState { chainNes } slotNo =
+  ChainState era ->
+  SlotNo ->
+  LedgerView (Crypto era)
+futureLedgerViewAt ChainState {chainNes} slotNo =
   either (error . show) id $ futureLedgerView testGlobals chainNes slotNo
 
 -- | The chain state is a composite of the new epoch state and the chain dep

@@ -35,20 +35,20 @@ import Cardano.Ledger.BaseTypes
     UnitInterval,
   )
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Protocol.HeaderCrypto (HeaderCrypto, VRF)
 import Cardano.Ledger.Keys
   ( DSignable,
     GenDelegs (..),
     KeyHash,
     KeyRole (..),
   )
-import Cardano.Protocol.HeaderKeys
-  ( KESignable,
-    VRFSignable
-  )
 import Cardano.Ledger.PoolDistr (PoolDistr)
 import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Cardano.Ledger.Slot (BlockNo, SlotNo)
+import Cardano.Protocol.HeaderCrypto (HeaderCrypto, VRF)
+import Cardano.Protocol.HeaderKeys
+  ( KESignable,
+    VRFSignable,
+  )
 import Cardano.Protocol.TPraos.BHeader
   ( BHBody (..),
     BHeader (..),
