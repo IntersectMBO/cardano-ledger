@@ -128,7 +128,7 @@ class
   , -- NFData (Tx era), TODO: Add NFData constraints to Crypto class
     NoThunks (Tx era)
   , FromCBOR (Annotator (Tx era))
-  , ToCBOR (Tx era)
+  , EncCBOR (Tx era)
   , Show (Tx era)
   , Eq (Tx era)
   ) =>

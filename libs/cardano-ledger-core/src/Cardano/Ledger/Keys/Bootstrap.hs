@@ -133,8 +133,6 @@ instance Crypto c => Ord (BootstrapWitness c) where
 instance Crypto c => Plain.EncCBOR (BootstrapWitness c) where
   encCBOR = Plain.encodePreEncoded . LBS.toStrict . bwBytes
 
-instance Crypto c => ToCBOR (BootstrapWitness c)
-
 instance Crypto c => FromCBOR (Annotator (BootstrapWitness c)) where
   fromCBOR = annotatorSlice $
     decodeRecordNamed "BootstrapWitness" (const 4) $

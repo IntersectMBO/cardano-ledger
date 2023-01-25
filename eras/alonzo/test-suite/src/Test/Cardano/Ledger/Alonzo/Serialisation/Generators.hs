@@ -491,7 +491,7 @@ instance Crypto c => Twiddle (AlonzoTxBody (AlonzoEra c)) where
     fields' <- shuffle fields
     pure $ mp fields'
 
-instance Typeable c => Twiddle (AlonzoScript (AlonzoEra c)) where
+instance Crypto c => Twiddle (AlonzoScript (AlonzoEra c)) where
   twiddle v = twiddle v . toTerm v
 
 instance Typeable c => Twiddle (Data (AlonzoEra c)) where

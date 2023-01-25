@@ -69,7 +69,6 @@ import Cardano.Ledger.BaseTypes (
   epochInfoPure,
   stabilityWindow,
  )
-import Cardano.Ledger.Binary (ToCBOR)
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core hiding (DataHash)
@@ -173,7 +172,6 @@ import qualified Test.QuickCheck as QC
 -- | For use in the Serialisation and Example Tests, which assume Shelley, Allegra, or Mary Eras.
 type PreAlonzo era =
   ( TxWits era ~ ShelleyTxWits era
-  , ToCBOR (TxAuxData era)
   )
 
 -- =========================================

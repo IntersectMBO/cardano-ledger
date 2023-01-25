@@ -109,12 +109,14 @@ checkEncodingCBORAnnotated v name x t =
 data ToTokens where
   T :: (Tokens -> Tokens) -> ToTokens
   S :: ToCBOR a => a -> ToTokens
+  Si :: EncCBOR a => a -> ToTokens
   G :: ToCBORGroup a => a -> ToTokens
   Plus :: ToTokens -> ToTokens -> ToTokens
 
 instance ToCBOR ToTokens where
   toCBOR (T xs) = fromPlainEncoding (CBOR.Encoding xs)
   toCBOR (S s) = toCBOR s
+  toCBOR (Si s) = fromPlainEncoding (encCBOR s)
   toCBOR (G g) = toCBORGroup g
   toCBOR (Plus a b) = toCBOR a <> toCBOR b
 

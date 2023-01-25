@@ -17,7 +17,7 @@ import qualified Cardano.Ledger.Shelley.API as S
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
-import Test.Cardano.Ledger.TranslationTools (translateEraToCBOR)
+import Test.Cardano.Ledger.TranslationTools (translateEraEncoding, translateEraToCBOR)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion)
 import Test.Tasty.QuickCheck (testProperty)
@@ -39,7 +39,8 @@ allegraTranslationTests :: TestTree
 allegraTranslationTests =
   testGroup
     "Allegra translation binary compatibiliby tests"
-    [ testProperty "Tx compatibility" (testTranslation @S.ShelleyTx)
+    [ testProperty "Tx compatibility" $
+        translateEraEncoding @Allegra @S.ShelleyTx () encCBOR encCBOR
     , testProperty "ProposedPPUpdates compatibility" (testTranslation @S.ProposedPPUpdates)
     , testProperty "ShelleyPPUPState compatibility" (testTranslation @S.ShelleyPPUPState)
     , testProperty "TxOut compatibility" (testTranslation @S.ShelleyTxOut)
@@ -47,7 +48,8 @@ allegraTranslationTests =
     , testProperty "UTxOState compatibility" (testTranslation @S.UTxOState)
     , testProperty "LedgerState compatibility" (testTranslation @S.LedgerState)
     , testProperty "EpochState compatibility" (testTranslation @S.EpochState)
-    , testProperty "ShelleyTxWits compatibility" (testTranslation @S.ShelleyTxWits)
+    , testProperty "ShelleyTxWits compatibility" $
+        translateEraEncoding @Allegra @S.ShelleyTxWits () encCBOR encCBOR
     , testProperty "Update compatibility" (testTranslation @S.Update)
     ]
 

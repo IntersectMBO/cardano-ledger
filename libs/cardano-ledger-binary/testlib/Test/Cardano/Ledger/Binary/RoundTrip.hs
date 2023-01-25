@@ -36,6 +36,7 @@ module Test.Cardano.Ledger.Binary.RoundTrip (
 where
 
 import Cardano.Ledger.Binary
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Control.Monad (forM_, guard)
 import Data.Bifunctor (first)
 import qualified Data.ByteString.Lazy as BSL
@@ -110,7 +111,7 @@ roundTripCborExpectation ::
 roundTripCborExpectation = roundTripExpectation (cborTrip @t)
 
 roundTripAnnExpectation ::
-  (Show t, Eq t, ToCBOR t, FromCBOR (Annotator t), HasCallStack) =>
+  (Show t, Eq t, EncCBOR t, FromCBOR (Annotator t), HasCallStack) =>
   t ->
   Expectation
 roundTripAnnExpectation t =
@@ -158,9 +159,12 @@ embedTripExpectation encVersion decVersion trip f t =
     Left err -> expectationFailure $ "Failed to deserialize encoded: " ++ show err
     Right tDecoded -> f tDecoded t
 
+-- | This is just like `roundTripAnnExpectation`, except it allows for source and target
+-- types to be different. This is very useful to test translation of the same type family
+-- from one era to another.
 embedTripAnnExpectation ::
   forall a b.
-  (ToCBOR a, FromCBOR (Annotator b), HasCallStack) =>
+  (EncCBOR a, FromCBOR (Annotator b), HasCallStack) =>
   -- | Version for the encoder
   Version ->
   -- | Version for the decoder
@@ -180,12 +184,12 @@ data RoundTripFailure = RoundTripFailure
   -- ^ Version that was used during encoding
   , rtfDecoderVersion :: Version
   -- ^ Version that was used during decoding
-  , rtfEncoding :: Encoding
-  -- ^ Produced encoding
+  , rtfEncoding :: Plain.Encoding
+  -- ^ Produced plain encoding
   , rtfEncodedBytes :: BSL.ByteString
   -- ^ Serialized encoding using the version in this failure
   , rtfReEncodedBytes :: Maybe (BSL.ByteString)
-  -- ^ Re-serialized bytes, if there was a mismatch between the binary form and th
+  -- ^ Re-serialized bytes, if there was a mismatch between the binary form and the
   -- reserialization of the data type.
   , rtfDropperError :: Maybe DecoderError
   -- ^ Error received while decoding the produced bytes and dropping the value. Normally
@@ -258,14 +262,14 @@ roundTripTwiddled version x = do
   tw <- twiddle version x
   pure (roundTrip version (Trip (const (encodeTerm tw)) fromCBOR (dropCBOR (Proxy @t))) x)
 
-roundTripAnn :: (ToCBOR t, FromCBOR (Annotator t)) => Version -> t -> Either RoundTripFailure t
+roundTripAnn :: (EncCBOR t, FromCBOR (Annotator t)) => Version -> t -> Either RoundTripFailure t
 roundTripAnn v = embedTripAnn v v
 
 roundTripAnnTwiddled ::
   (Twiddle t, FromCBOR (Annotator t)) => Version -> t -> Gen (Either RoundTripFailure t)
 roundTripAnnTwiddled version x = do
   tw <- twiddle version x
-  pure (decodeAnn version version (encodeTerm tw))
+  pure (decodeAnn version version (toPlainEncoding version (encodeTerm tw)))
 
 decodeAnn ::
   forall t.
@@ -274,13 +278,13 @@ decodeAnn ::
   Version ->
   -- | Version for the decoder
   Version ->
-  Encoding ->
+  Plain.Encoding ->
   Either RoundTripFailure t
 decodeAnn encVersion decVersion encoding =
   first (RoundTripFailure encVersion decVersion encoding encodedBytes Nothing Nothing . Just) $
     decodeFullAnnotator decVersion (label (Proxy @(Annotator t))) fromCBOR encodedBytes
   where
-    encodedBytes = serializeEncoding encVersion encoding
+    encodedBytes = Plain.serializeEncoding encoding
 
 embedTripLabel ::
   forall a b.
@@ -304,7 +308,7 @@ embedTripLabelExtra ::
   Version ->
   Trip a b ->
   a ->
-  Either RoundTripFailure (b, Encoding, BSL.ByteString)
+  Either RoundTripFailure (b, Plain.Encoding, BSL.ByteString)
 embedTripLabelExtra lbl encVersion decVersion (Trip encoder decoder dropper) s =
   case decodeFullDecoder decVersion lbl decoder encodedBytes of
     Right val
@@ -320,8 +324,8 @@ embedTripLabelExtra lbl encVersion decVersion (Trip encoder decoder dropper) s =
        in Left $
             RoundTripFailure encVersion decVersion encoding encodedBytes Nothing mErr (Just err)
   where
-    encoding = encoder s
-    encodedBytes = serializeEncoding encVersion encoding
+    encoding = toPlainEncoding encVersion (encoder s)
+    encodedBytes = Plain.serializeEncoding encoding
     mDropperError =
       case decodeFullDecoder decVersion lbl dropper encodedBytes of
         Left err -> Just err
@@ -342,12 +346,14 @@ embedTrip = embedTripLabel (Text.pack (show (typeRep $ Proxy @b)))
 
 embedTripAnn ::
   forall a b.
-  (ToCBOR a, FromCBOR (Annotator b)) =>
+  (EncCBOR a, FromCBOR (Annotator b)) =>
+  -- | Encoder version for test failure reporting
   Version ->
+  -- | Decoder version
   Version ->
   a ->
   Either RoundTripFailure b
-embedTripAnn encVersion decVersion = decodeAnn encVersion decVersion . toCBOR
+embedTripAnn encVersion decVersion = decodeAnn encVersion decVersion . encCBOR
 
 typeLabel :: forall t. Typeable t => Text.Text
 typeLabel = Text.pack (show (typeRep $ Proxy @t))

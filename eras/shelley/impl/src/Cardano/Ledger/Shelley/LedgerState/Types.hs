@@ -143,7 +143,6 @@ instance
   , NoThunks (PParams era)
   , NoThunks (TallyState era)
   , NoThunks (PPUPState era)
-  , ToCBOR (TxBody era)
   , ToCBOR (TxOut era)
   , ToCBOR (Value era)
   ) =>

@@ -43,7 +43,9 @@ import Cardano.Ledger.Binary (
   decodeFullAnnotator,
   decodeFullDecoder,
   decodeMapTraverse,
+  encCBOR,
   fromNotSharedCBOR,
+  fromPlainEncoding,
   hashWithEncoder,
   ipv4ToBytes,
   serialize',
@@ -518,13 +520,13 @@ tests =
             )
     , checkEncoding
         shelleyProtVer
-        toCBOR
+        (fromPlainEncoding . encCBOR)
         deserializeMultiSigMap
         "script_hash_to_scripts"
         (Map.singleton (hashScript @C testScript) testScript) -- Transaction _witnessMSigMap
         ( T (TkMapLen 1)
             <> S (hashScript @C testScript)
-            <> S (testScript @C_Crypto)
+            <> Si (testScript @C_Crypto)
         )
     , -- checkEncodingCBOR "withdrawal_key"
       let r = RewardAcnt Testnet (testStakeCred @C_Crypto)
@@ -913,11 +915,11 @@ tests =
                 SNothing
             )
             ( T (TkListLen 3)
-                <> S txb
+                <> Si txb
                 <> T (TkMapLen 1)
                 <> T (TkWord 0)
                 <> T (TkListLen 1)
-                <> S w
+                <> Si w
                 <> T TkNull
             )
     , -- checkEncodingCBOR "full_txn"
@@ -942,15 +944,15 @@ tests =
             "tx_full"
             (ShelleyTx @(ShelleyEra C_Crypto) txb txwits (SJust md))
             ( T (TkListLen 3)
-                <> S txb
+                <> Si txb
                 <> T (TkMapLen 2)
                 <> T (TkWord 0)
                 <> T (TkListLen 1)
-                <> S w
+                <> Si w
                 <> T (TkWord 1)
                 <> T (TkListLen 1)
-                <> S (testScript @C_Crypto)
-                <> S md
+                <> Si (testScript @C_Crypto)
+                <> Si md
             )
     , -- checkEncodingCBOR "block_header_body"
       let prevhash = BlockHash testHeaderHash
@@ -1108,47 +1110,47 @@ tests =
                 <> S bh
                 -- bodies
                 <> T (TkListLen 5)
-                <> S txb1
-                <> S txb2
-                <> S txb3
-                <> S txb4
-                <> S txb5
+                <> Si txb1
+                <> Si txb2
+                <> Si txb3
+                <> Si txb4
+                <> Si txb5
                 -- witnesses
                 <> T (TkListLen 5)
                 -- tx 1, one key
                 <> T (TkMapLen 1 . TkWord 0)
                 <> T (TkListLen 1)
-                <> S w1
+                <> Si w1
                 -- tx 2, two keys
                 <> T (TkMapLen 1 . TkWord 0)
                 <> T (TkListLen 2)
                 -- The test is unfortunately sensitive to this ordering. TODO make it
                 -- better
-                <> S w2
-                <> S w1
+                <> Si w2
+                <> Si w1
                 -- tx 3, one script
                 <> T (TkMapLen 1 . TkWord 1)
                 <> T (TkListLen 1)
-                <> S (testScript @C_Crypto)
+                <> Si (testScript @C_Crypto)
                 -- tx 4, two scripts
                 <> T (TkMapLen 1 . TkWord 1)
                 <> T (TkListLen 2)
-                <> S (testScript2 @C_Crypto)
-                <> S (testScript @C_Crypto)
+                <> Si (testScript2 @C_Crypto)
+                <> Si (testScript @C_Crypto)
                 -- tx 5, two keys and two scripts
                 <> T (TkMapLen 2)
                 <> T (TkWord 0)
                 <> T (TkListLen 2)
-                <> S w2
-                <> S w1
+                <> Si w2
+                <> Si w1
                 <> T (TkWord 1)
                 <> T (TkListLen 2)
-                <> S (testScript2 @C_Crypto)
-                <> S (testScript @C_Crypto)
+                <> Si (testScript2 @C_Crypto)
+                <> Si (testScript @C_Crypto)
                 -- metadata
                 <> T (TkMapLen 1)
                 <> T (TkInt 4)
-                <> S tx5MD
+                <> Si tx5MD
             )
     , checkEncodingCBOR
         shelleyProtVer

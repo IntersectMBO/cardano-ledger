@@ -68,6 +68,8 @@ import Cardano.Ledger.Binary (
   decodeList,
   encodeFoldableEncoder,
   encodeListLen,
+  encodeSet,
+  fromPlainEncoding,
  )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
@@ -446,13 +448,13 @@ instance (Era era, Script era ~ AlonzoScript era) => ToCBOR (AlonzoTxWitsRaw era
     encode $
       Keyed
         (\a b c d e f g -> AlonzoTxWitsRaw a b (c <> d <> e) f g)
-        !> Omit null (Key 0 $ To vkeys)
-        !> Omit null (Key 2 $ To boots)
+        !> Omit null (Key 0 $ E (encodeSet (fromPlainEncoding . encCBOR)) vkeys)
+        !> Omit null (Key 2 $ E (encodeSet (fromPlainEncoding . encCBOR)) boots)
         !> Omit
           null
           ( Key 1 $
               E
-                (toCBOR . mapMaybe unwrapTS . Map.elems)
+                (fromPlainEncoding . encCBOR . mapMaybe unwrapTS . Map.elems)
                 (Map.filter isTimelock scripts)
           )
         !> Omit

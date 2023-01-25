@@ -44,7 +44,6 @@ import Cardano.Ledger.Binary (
   Annotator,
   Decoder,
   FromCBOR (fromCBOR),
-  ToCBOR (toCBOR),
   decodeList,
   decodeMapContents,
   decodeWord,
@@ -213,9 +212,9 @@ pattern ShelleyTxWits {addrWits, scriptWits, bootWits} <-
             if null x then Nothing else Just (encodeWord ix <> enc x)
           l =
             catMaybes
-              [ encodeMapElement 0 toCBOR awits
+              [ encodeMapElement 0 (fromPlainEncoding . Plain.encCBOR) awits
               , encodeMapElement 1 (fromPlainEncoding . Plain.encCBOR) (Map.elems scriptWitMap)
-              , encodeMapElement 2 toCBOR bootstrapWits
+              , encodeMapElement 2 (fromPlainEncoding . Plain.encCBOR) bootstrapWits
               ]
           n = fromIntegral $ length l
           witsBytes = serializeEncoding (eraProtVerLow @era) $ encodeMapLen n <> fold l

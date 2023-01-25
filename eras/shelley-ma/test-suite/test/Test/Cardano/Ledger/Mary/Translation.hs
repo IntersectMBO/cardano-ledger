@@ -22,7 +22,7 @@ import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
-import Test.Cardano.Ledger.TranslationTools (translateEraToCBOR)
+import Test.Cardano.Ledger.TranslationTools (translateEraEncoding, translateEraToCBOR)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion)
 import Test.Tasty.QuickCheck (testProperty)
@@ -44,7 +44,8 @@ maryTranslationTests :: TestTree
 maryTranslationTests =
   testGroup
     "Mary translation binary compatibiliby tests"
-    [ testProperty "Tx compatibility" (test @S.ShelleyTx)
+    [ testProperty "Tx compatibility" $
+        translateEraEncoding @Mary @S.ShelleyTx () encCBOR encCBOR
     , testProperty "ProposedPPUpdates compatibility" (test @S.ProposedPPUpdates)
     , testProperty "ShelleyPPUPState compatibility" (test @S.ShelleyPPUPState)
     , testProperty "TxOut compatibility" (test @S.ShelleyTxOut)
@@ -52,7 +53,8 @@ maryTranslationTests =
     , testProperty "UTxOState compatibility" (test @S.UTxOState)
     , testProperty "LedgerState compatibility" (test @S.LedgerState)
     , testProperty "EpochState compatibility" (test @S.EpochState)
-    , testProperty "ShelleyTxWits compatibility" (test @S.ShelleyTxWits)
+    , testProperty "ShelleyTxWits compatibility" $
+        translateEraEncoding @Mary @S.ShelleyTxWits () encCBOR encCBOR
     , testProperty "Update compatibility" (test @S.Update)
     ]
 
