@@ -9,12 +9,12 @@
 module Test.Cardano.Ledger.Model.Elaborators.Shelley where
 
 import qualified Cardano.Crypto.DSIGN.Class as DSIGN
-import qualified Cardano.Crypto.KES.Class as KES
 import Cardano.Crypto.Util (SignableRepresentation)
 import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.BaseTypes (Globals (..), activeSlotVal, epochInfoPure)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Crypto (DSIGN, KES)
+import Cardano.Ledger.Crypto (DSIGN)
+import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Keys (GenDelegPair, KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -31,7 +31,6 @@ import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoPredFailure (..))
 import Cardano.Ledger.Shelley.Rules.Utxow (ShelleyUtxowPredFailure (..))
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (ShelleyTx), ShelleyTxBody (ShelleyTxBody))
 import qualified Cardano.Ledger.Shelley.Tx as Shelley
-import Cardano.Protocol.TPraos.API (PraosCrypto)
 import Cardano.Slotting.EpochInfo.API (epochInfoSize)
 import Cardano.Slotting.Slot (EpochNo (..))
 import qualified Control.Monad.Trans.State as State hiding (state)
@@ -75,8 +74,7 @@ import Test.Cardano.Ledger.Model.Value
   )
 
 instance
-  ( PraosCrypto crypto,
-    KES.Signable (KES crypto) ~ SignableRepresentation,
+  ( CC.Crypto crypto,
     DSIGN.Signable (DSIGN crypto) ~ SignableRepresentation
   ) =>
   ElaborateEraModel (ShelleyEra crypto)

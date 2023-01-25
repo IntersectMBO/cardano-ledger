@@ -10,7 +10,6 @@
 module Test.Cardano.Ledger.Model.Elaborators.Alonzo where
 
 import qualified Cardano.Crypto.DSIGN.Class as DSIGN
-import qualified Cardano.Crypto.KES.Class as KES
 import Cardano.Crypto.Util (SignableRepresentation)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Genesis as Alonzo (AlonzoGenesis (..))
@@ -23,7 +22,8 @@ import Cardano.Ledger.Alonzo.Translation ()
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (AlonzoTxBody), AlonzoTxOut (AlonzoTxOut))
 import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
-import Cardano.Ledger.Crypto (DSIGN, KES)
+import Cardano.Ledger.Crypto (DSIGN)
+import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Shelley.API.Genesis (initialState)
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTxError (..))
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
@@ -34,7 +34,6 @@ import Cardano.Ledger.Shelley.Rules.Utxow
   ( ShelleyUtxowPredFailure (..),
   )
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
-import Cardano.Protocol.TPraos.API (PraosCrypto)
 import qualified Control.Monad.Trans.State as State hiding (state)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
@@ -70,8 +69,7 @@ import Test.Cardano.Ledger.Model.Rules (ModelPredicateFailure (..))
 import Test.Cardano.Ledger.Model.Value (evalModelValue)
 
 instance
-  ( PraosCrypto crypto,
-    KES.Signable (KES crypto) ~ SignableRepresentation,
+  ( CC.Crypto crypto,
     DSIGN.Signable (DSIGN crypto) ~ SignableRepresentation
   ) =>
   ElaborateEraModel (AlonzoEra crypto)

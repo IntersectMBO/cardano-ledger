@@ -44,7 +44,7 @@ import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq, fromList)
 import Data.Word (Word64)
 import Generic.Random (genericArbitraryU)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockContext)
 import Test.Cardano.Ledger.Shelley.Generator.Metadata (genMetadata')
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
@@ -109,7 +109,6 @@ instance
   forall era c.
   ( Era era,
     c ~ Crypto era,
-    Mock c,
     FromCBOR (Annotator (Script era)),
     ToCBOR (Script era),
     Arbitrary (Script era)
@@ -131,6 +130,7 @@ instance
     genMetadata' >>= \case
       Metadata m -> MAAuxiliaryData m <$> (genScriptSeq @era)
 
+
 genScriptSeq ::
   forall era. Arbitrary (Script era) => Gen (StrictSeq (Script era))
 genScriptSeq = do
@@ -140,7 +140,6 @@ genScriptSeq = do
 
 instance
   ( Era era,
-    Mock (Crypto era),
     Arbitrary (Value era),
     Arbitrary (TxOut era),
     Arbitrary (PredicateFailure (EraRule "PPUP" era))
@@ -149,7 +148,7 @@ instance
   where
   arbitrary = genericArbitraryU
 
-instance Mock c => Arbitrary (MATxBody (AllegraEra c)) where
+instance MockContext c => Arbitrary (MATxBody (AllegraEra c)) where
   arbitrary =
     MATxBody
       <$> arbitrary
@@ -162,7 +161,7 @@ instance Mock c => Arbitrary (MATxBody (AllegraEra c)) where
       <*> arbitrary
       <*> pure mempty
 
-instance Mock c => Arbitrary (MATxBody (MaryEra c)) where
+instance MockContext c => Arbitrary (MATxBody (MaryEra c)) where
   arbitrary =
     MATxBody
       <$> arbitrary
@@ -179,10 +178,10 @@ instance Mock c => Arbitrary (MATxBody (MaryEra c)) where
   MaryEra Generators
 -------------------------------------------------------------------------------}
 
-instance Mock c => Arbitrary (PolicyID c) where
+instance MockContext c => Arbitrary (PolicyID c) where
   arbitrary = PolicyID <$> arbitrary
 
-instance Mock c => Arbitrary (MaryValue c) where
+instance MockContext c => Arbitrary (MaryValue c) where
   arbitrary = valueFromListBounded @Word64 <$> arbitrary <*> arbitrary
 
   shrink (MaryValue ada assets) =
@@ -197,8 +196,8 @@ instance Mock c => Arbitrary (MaryValue c) where
 --
 -- - Fix the ADA value to 0
 -- - Allow both positive and negative quantities
-genMintValues :: forall c. Mock c => Gen (MaryValue c)
-genMintValues = valueFromListBounded @Int64 0 <$> arbitrary
+genMintValues :: forall c. MockContext c => Gen (MaryValue c)
+genMintValues = valueFromListBounded @Int64 @c 0 <$> arbitrary
 
 -- | Variant on @valueFromList@ that makes sure that generated values stay
 -- bounded within the range of a given integral type.

@@ -108,12 +108,14 @@ relevantCasesAreCovered = do
   let tl = 100
   checkCoverage $
     forAllBlind
-      (traceFromInitState @(CHAIN era hcrypto) testGlobals tl (genEnv @era @hcrypto p) genesisChainSt)
+      (traceFromInitState @(CHAIN era hcrypto) testGlobals tl (genEnv p q) genesisChainSt)
       relevantCasesAreCoveredForTrace
   where
     p :: Proxy era
     p = Proxy
-    genesisChainSt = Just $ mkGenesisChainState (genEnv p)
+    q :: Proxy hcrypto
+    q = Proxy
+    genesisChainSt = Just $ mkGenesisChainState (genEnv p q)
 
 relevantCasesAreCoveredForTrace ::
   forall era hcrypto.
@@ -291,7 +293,9 @@ onlyValidLedgerSignalsAreGenerated =
   where
     p :: Proxy era
     p = Proxy
-    ge = genEnv @era @hcrypto p
+    q :: Proxy hcrypto
+    q = Proxy
+    ge = genEnv p q
     genesisLedgerSt = Just $ mkGenesisLedgerState ge
 
 -- | Check that the abstract transaction size function
@@ -310,7 +314,7 @@ propAbstractSizeBoundsBytes = property $ do
   forAllTraceFromInitState @(ShelleyLEDGER era)
     testGlobals
     tl
-    (genEnv @era @hcrypto p)
+    (genEnv p q)
     genesisLedgerSt
     $ \tr -> do
       let txs :: [Tx era]
@@ -319,7 +323,9 @@ propAbstractSizeBoundsBytes = property $ do
   where
     p :: Proxy era
     p = Proxy
-    genesisLedgerSt = Just $ mkGenesisLedgerState (genEnv @era @hcrypto p)
+    q :: Proxy hcrypto
+    q = Proxy
+    genesisLedgerSt = Just $ mkGenesisLedgerState (genEnv p q)
 
 -- | Check that the abstract transaction size function
 -- is not off by an acceptable order of magnitude.
@@ -344,7 +350,7 @@ propAbstractSizeNotTooBig = property $ do
   forAllTraceFromInitState @(ShelleyLEDGER era)
     testGlobals
     tl
-    (genEnv @era @hcrypto p)
+    (genEnv p q)
     genesisLedgerSt
     $ \tr -> do
       let txs :: [Tx era]
@@ -353,7 +359,9 @@ propAbstractSizeNotTooBig = property $ do
   where
     p :: Proxy era
     p = Proxy
-    genesisLedgerSt = Just $ mkGenesisLedgerState (genEnv @era @hcrypto p)
+    q :: Proxy hcrypto
+    q = Proxy
+    genesisLedgerSt = Just $ mkGenesisLedgerState (genEnv p q)
 
 onlyValidChainSignalsAreGenerated ::
   forall era hcrypto.
@@ -368,12 +376,14 @@ onlyValidChainSignalsAreGenerated =
     onlyValidSignalsAreGeneratedFromInitState @(CHAIN era hcrypto)
       testGlobals
       100
-      (genEnv @era @hcrypto p)
+      (genEnv p q)
       genesisChainSt
   where
     p :: Proxy era
     p = Proxy
-    genesisChainSt = Just $ mkGenesisChainState (genEnv p)
+    q :: Proxy hcrypto
+    q = Proxy
+    genesisChainSt = Just $ mkGenesisChainState (genEnv p q)
 
 -- | Counts the epochs spanned by this trace
 epochsInTrace ::

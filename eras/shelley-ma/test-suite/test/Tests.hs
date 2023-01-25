@@ -58,7 +58,7 @@ allegraTests =
   testGroup
     "Allegra Ledger Tests"
     [ allegraTranslationTests,
-      minimalPropertyTests @A @AL,
+      minimalPropertyTests @A @TestCrypto @AL,
       testScriptPostTranslation
     ]
 
@@ -78,11 +78,11 @@ nightlyTests =
     "ShelleyMA Ledger - nightly"
     [ testGroup
         "Allegra Ledger - nightly"
-        [ propertyTests @A @AL
+        [ propertyTests @A @TestCrypto @AL
         ],
       testGroup
         "Mary Ledger - nightly"
-        [ propertyTests @M @ML
+        [ propertyTests @M @TestCrypto @ML
         ]
     ]
 

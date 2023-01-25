@@ -125,7 +125,7 @@ defaultShelleyLedgerExamples ::
 defaultShelleyLedgerExamples keys mkWitnesses mkAlonzoTx value txBody auxData translationContext =
   ShelleyLedgerExamples
     { sleBlock = exampleShelleyLedgerBlock (mkAlonzoTx tx),
-      sleHashHeader = exampleHashHeader @era @hcrypto (Proxy @era),
+      sleHashHeader = exampleHashHeader (Proxy @era) (Proxy @hcrypto),
       sleTx = mkAlonzoTx tx,
       sleApplyTxError =
         ApplyTxError
@@ -203,8 +203,9 @@ exampleHashHeader ::
   forall era hcrypto.
   ShelleyBasedEra' era hcrypto =>
   Proxy era ->
+  Proxy hcrypto ->
   HashHeader (Cardano.Ledger.Era.Crypto era)
-exampleHashHeader _ = coerce $ mkDummyHash (Proxy @(HASH (Cardano.Ledger.Era.Crypto era))) 0
+exampleHashHeader _ _ = coerce $ mkDummyHash (Proxy @(HASH (Cardano.Ledger.Era.Crypto era))) 0
 
 mkKeyHash :: forall c discriminator. CC.Crypto c => Int -> KeyHash discriminator c
 mkKeyHash = KeyHash . mkDummyHash (Proxy @(ADDRHASH c))

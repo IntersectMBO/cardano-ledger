@@ -61,7 +61,7 @@ import qualified Test.Tasty.QuickCheck as TQC
 
 type A = AlonzoEra TestCrypto
 
-instance Embed (AlonzoBBODY A) (CHAIN A) where
+instance Embed (AlonzoBBODY A) (CHAIN A TestCrypto) where
   wrapFailed = BbodyFailure
   wrapEvent = BbodyEvent
 
@@ -72,7 +72,7 @@ data HasPlutus = HasPlutus | NoPlutus
   deriving (Show)
 
 alonzoSpecificProps ::
-  SourceSignalTarget (CHAIN A) ->
+  SourceSignalTarget (CHAIN A TestCrypto) ->
   Property
 alonzoSpecificProps SourceSignalTarget {source = chainSt, signal = block} =
   conjoin $
@@ -172,11 +172,11 @@ alonzoPropertyTests :: TestTree
 alonzoPropertyTests =
   testGroup
     "Alonzo property tests"
-    [ Shelley.propertyTests @A @(AlonzoLEDGER A),
+    [ Shelley.propertyTests @A @TestCrypto @(AlonzoLEDGER A),
       propertyTests,
       TQC.testProperty
         "Incremental stake distribution at epoch boundaries agrees"
-        (incrementalStakeProp (Proxy :: Proxy A))
+        (incrementalStakeProp (Proxy :: Proxy A) (Proxy :: Proxy TestCrypto))
     ]
 
 -- | A select subset of all the property tests
@@ -186,5 +186,5 @@ fastPropertyTests =
     "Fast Alonzo Property Tests"
     [ TQC.testProperty
         "total amount of Ada is preserved (Chain)"
-        (withMaxSuccess 50 (Shelley.adaPreservationChain @A @(AlonzoLEDGER A)))
+        (withMaxSuccess 50 (Shelley.adaPreservationChain @A @TestCrypto @(AlonzoLEDGER A)))
     ]

@@ -19,7 +19,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Serialization (Sized, mkSized)
 import Control.State.Transition (STS (PredicateFailure))
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockContext)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators (genMintValues)
 import Test.QuickCheck
@@ -29,7 +29,7 @@ instance (ToCBOR a, Arbitrary a) => Arbitrary (Sized a) where
 
 instance
   ( EraTxOut era,
-    Mock (Crypto era),
+    MockContext (Crypto era),
     Arbitrary (Value era),
     Arbitrary (Script era)
   ) =>
@@ -43,7 +43,7 @@ instance
       <*> arbitrary
 
 instance
-  ( Mock (Crypto era),
+  ( MockContext (Crypto era),
     BabbageEraTxBody era,
     Arbitrary (Value era),
     Arbitrary (Script era)
@@ -126,7 +126,7 @@ instance Arbitrary (BabbagePParamsUpdate era) where
 
 instance
   ( EraTxOut era,
-    Mock (Crypto era),
+    MockContext (Crypto era),
     Arbitrary (Value era),
     Arbitrary (TxOut era),
     Arbitrary (PredicateFailure (EraRule "UTXOS" era))
@@ -141,7 +141,7 @@ instance
 
 instance
   ( Era era,
-    Mock (Crypto era),
+    MockContext (Crypto era),
     Arbitrary (PredicateFailure (EraRule "UTXO" era))
   ) =>
   Arbitrary (BabbageUtxowPredFailure era)

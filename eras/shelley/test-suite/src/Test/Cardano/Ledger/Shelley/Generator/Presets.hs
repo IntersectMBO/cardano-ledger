@@ -61,8 +61,9 @@ genEnv ::
   forall era hcrypto.
   (EraGen era, CC.HeaderCrypto hcrypto) =>
   Proxy era ->
+  Proxy hcrypto ->
   GenEnv era hcrypto
-genEnv _ =
+genEnv _ _ =
   GenEnv
     (keySpace defaultConstants)
     (scriptSpace @era (genEraTwoPhase3Arg @era) (genEraTwoPhase2Arg @era))

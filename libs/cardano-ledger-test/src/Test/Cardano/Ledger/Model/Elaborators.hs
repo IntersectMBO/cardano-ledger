@@ -48,7 +48,6 @@ where
 
 import qualified Cardano.Crypto.DSIGN.Class as DSIGN
 import qualified Cardano.Crypto.Hash.Class as Hash
-import qualified Cardano.Crypto.VRF.Class (VerKeyVRF)
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import qualified Cardano.Ledger.Alonzo.Data as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript, ExUnits (..))
@@ -70,9 +69,11 @@ import Cardano.Ledger.Core (Era (Crypto), EraScript (hashScript))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as C
+import qualified Cardano.Protocol.HeaderCrypto as HC
 import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Keys
   ( GenDelegPair (..),
+    GenesisVRF,
     HasKeyRole,
     KeyHash,
     KeyPair (..),
@@ -83,6 +84,7 @@ import Cardano.Ledger.Keys
     hashVerKeyVRF,
     vKey,
   )
+import Cardano.Ledger.PoolDistr (PoolStakeVRF)
 import Cardano.Ledger.Mary.Value (MaryValue, PolicyID (..))
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.API.Mempool
@@ -113,7 +115,7 @@ import qualified Cardano.Ledger.Shelley.TxBody as Shelley
 import qualified Cardano.Ledger.Shelley.UTxO as UTxO
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock)
 import qualified Cardano.Ledger.Val as Val
-import Cardano.Protocol.TPraos.Rules.Overlay (toPoolStakeVRF)
+import Cardano.Protocol.TPraos.Rules.Overlay (fromPoolStakeVRF, toPoolStakeVRF, toGenesisVRF)
 import Cardano.Slotting.EpochInfo.API
   ( epochInfoEpoch,
     epochInfoFirst,
@@ -471,7 +473,8 @@ data TestKeyKeyed (k :: KeyRole) c = TestKeyKeyed
   { _tkkSeed :: RawSeed,
     _tkkKeyPair :: KeyPair k c,
     _tkkKeyHash :: KeyHash k c,
-    _tkkVrfHash :: Hash.Hash (C.HASH c) (Cardano.Crypto.VRF.Class.VerKeyVRF (C.VRF c))
+    _tkkVrfHash :: Hash.Hash (C.HASH c) PoolStakeVRF,
+    _tkkVrfGHash :: Hash.Hash (C.HASH c) GenesisVRF
   }
   deriving (Generic)
 
@@ -502,8 +505,8 @@ elaborateKeyPair _ seed =
           mkKeyPair @(Crypto era) rawSeed
       pmtHash = hashKey $ vKey pmtKey
 
-      vrf = hashVerKeyVRF . snd . mkVRFKeyPair $ rawSeed
-   in TestKeyKeyed rawSeed pmtKey pmtHash vrf
+      vrf = hashVerKeyVRF . snd . mkVRFKeyPair @(HC.VRF C.StandardCrypto) $ rawSeed
+   in TestKeyKeyed rawSeed pmtKey pmtHash (toPoolStakeVRF vrf) (toGenesisVRF vrf)
 
 elaborateModelCredential ::
   forall era k proxy.
@@ -663,7 +666,7 @@ getTestPoolVrf ::
   ) =>
   proxy era ->
   ModelCredential 'StakePool ('TyScriptFeature 'False 'False) ->
-  m (Hash.Hash (C.HASH (Crypto era)) (Cardano.Crypto.VRF.Class.VerKeyVRF (C.VRF (Crypto era))))
+  m (Hash.Hash (C.HASH (Crypto era)) PoolStakeVRF)
 getTestPoolVrf proxy maddr = do
   fmap _tkkVrfHash $ getTestKeyKeyedFor proxy maddr
 
@@ -689,10 +692,10 @@ getGenesisDelegateKeyHash ::
   ModelCredential 'GenesisDelegate ('TyScriptFeature 'False 'False) ->
   m
     ( KeyHash 'GenesisDelegate (Crypto era),
-      Hash.Hash (C.HASH (Crypto era)) (Cardano.Crypto.VRF.Class.VerKeyVRF (C.VRF (Crypto era)))
+      Hash.Hash (C.HASH (Crypto era)) GenesisVRF
     )
 getGenesisDelegateKeyHash proxy maddr = do
-  fmap (_tkkKeyHash &&& _tkkVrfHash) $ getTestKeyKeyedFor proxy maddr
+  fmap (_tkkKeyHash &&& _tkkVrfGHash) $ getTestKeyKeyedFor proxy maddr
 
 -- | get the StakePool hash for a ModelAddress
 getScriptWitnessFor ::
@@ -1447,7 +1450,7 @@ class
       ModelCertPool mcp -> case mcp of
         ModelRegPool (ModelPoolParams mPoolId mPoolVrf pledge cost margin mRAcnt mOwners) -> do
           poolId <- getTestPoolId proxy mPoolId
-          poolVRF <- getTestPoolVrf proxy mPoolVrf
+          poolVRF <- fromPoolStakeVRF <$> getTestPoolVrf proxy mPoolVrf
           poolOwners <- Set.fromList <$> traverse (getStakingKeyHashFor proxy) mOwners
           rAcnt <- RewardAcnt Testnet <$> getCredentialFor proxy mRAcnt
           pure $

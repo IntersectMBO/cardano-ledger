@@ -50,7 +50,7 @@ import Test.Tasty.QuickCheck
 
 -- ===============================================================
 
-instance Embed (AlonzoBBODY (AlonzoEra TestCrypto)) (CHAIN (AlonzoEra TestCrypto)) where
+instance Embed (AlonzoBBODY (AlonzoEra TestCrypto)) (CHAIN (AlonzoEra TestCrypto) TestCrypto) where
   wrapFailed = BbodyFailure
   wrapEvent = BbodyEvent
 
@@ -63,7 +63,7 @@ profileCover =
   T.defaultMain $
     testProperty
       "Chain and Ledger traces cover the relevant cases"
-      (withMaxSuccess 1 (relevantCasesAreCovered @(AlonzoEra TestCrypto)))
+      (withMaxSuccess 1 (relevantCasesAreCovered @(AlonzoEra TestCrypto) @TestCrypto))
 
 main :: IO ()
 main = profileCover

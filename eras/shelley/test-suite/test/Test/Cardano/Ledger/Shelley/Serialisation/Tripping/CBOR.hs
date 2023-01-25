@@ -145,10 +145,10 @@ prop_roundtrip_RewardAcnt acnt =
   roundtrip toCBOR fromCBOR acnt
     .&&. roundtrip toCBOR fromCborRewardAcnt acnt
 
-prop_roundtrip_Block :: Ledger.Block (TP.BHeader Mock.C_Crypto) Mock.C -> Property
+prop_roundtrip_Block :: Ledger.Block (TP.BHeader Mock.C_Crypto Mock.C_Crypto) Mock.C -> Property
 prop_roundtrip_Block = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 
-prop_roundtrip_Header :: TP.BHeader Mock.C_Crypto -> Property
+prop_roundtrip_Header :: TP.BHeader Mock.C_Crypto Mock.C_Crypto -> Property
 prop_roundtrip_Header = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 
 prop_roundtrip_BlockHeaderHash :: TP.HashHeader Mock.C_Crypto -> Property

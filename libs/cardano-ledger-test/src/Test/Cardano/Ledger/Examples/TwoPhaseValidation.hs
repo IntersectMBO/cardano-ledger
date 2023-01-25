@@ -66,6 +66,7 @@ import Cardano.Ledger.Credential
     StakeReference (..),
   )
 import qualified Cardano.Ledger.Crypto as CC
+import qualified Cardano.Protocol.HeaderCrypto as CC
 import Cardano.Ledger.Keys
   ( GenDelegs (..),
     KeyHash,
@@ -1546,7 +1547,7 @@ poolMDHTooBigTxBody pf =
     poolParams =
       PoolParams
         { _poolId = coerceKeyRole . hashKey . vKey $ someKeys pf,
-          _poolVrf = hashPoolStakeVRF . snd . mkVRFKeyPair @(CC.VRF (Crypto era)) $ RawSeed 0 0 0 0 0,
+          _poolVrf = hashPoolStakeVRF . snd . mkVRFKeyPair @(CC.VRF CC.StandardCrypto) $ RawSeed 0 0 0 0 0,
           _poolPledge = Coin 0,
           _poolCost = Coin 0,
           _poolMargin = minBound,

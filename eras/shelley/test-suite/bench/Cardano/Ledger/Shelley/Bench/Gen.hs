@@ -90,7 +90,7 @@ genBlock ::
     ShelleyTest era,
     EraGen era,
     MinLEDGER_STS era,
-    GetLedgerView era hcrypto,
+    GetLedgerView era,
     Core.EraRule "LEDGERS" era ~ ShelleyLEDGERS era,
     QC.HasTrace (ShelleyLEDGERS era) (GenEnv era hcrypto),
     ApplyBlock era
@@ -119,10 +119,11 @@ genTriple ::
     ShelleyTest era
   ) =>
   Proxy era ->
+  Proxy hcrypto ->
   Int ->
   IO (GenEnv era hcrypto, ChainState era, GenEnv era hcrypto -> IO (ShelleyTx era))
-genTriple proxy n = do
-  let ge = genEnv proxy
+genTriple proxy proxyhc n = do
+  let ge = genEnv proxy proxyhc
   cs <- genChainState n ge
   let fun genenv = generate $ genTx genenv ledgerEnv (esLState (nesEs (chainNes cs)))
   pure (ge, cs, fun)

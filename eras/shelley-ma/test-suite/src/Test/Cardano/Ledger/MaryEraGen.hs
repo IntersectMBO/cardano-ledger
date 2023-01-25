@@ -54,7 +54,7 @@ import Test.Cardano.Ledger.AllegraEraGen
     unQuantifyTL,
   )
 import Test.Cardano.Ledger.EraBuffet (MaryEra)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockContext)
 import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv (..), genInteger)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..), MinGenTxout (..))
@@ -85,7 +85,7 @@ instance (CC.Crypto c) => ScriptClass (MaryEra c) where
   quantify _ = quantifyTL
   unQuantify _ = unQuantifyTL
 
-instance (CC.Crypto c, Mock c) => EraGen (MaryEra c) where
+instance (CC.Crypto c, MockContext c) => EraGen (MaryEra c) where
   genGenesisValue = maryGenesisValue
   genEraTxBody _ge _utxo = genTxBody
   genEraAuxiliaryData = genAuxiliaryData
@@ -98,7 +98,7 @@ instance (CC.Crypto c, Mock c) => EraGen (MaryEra c) where
   genEraWitnesses _scriptinfo setWitVKey mapScriptWit = ShelleyWitnesses setWitVKey mapScriptWit mempty
 
 genAuxiliaryData ::
-  Mock crypto =>
+  MockContext crypto =>
   Constants ->
   Gen (StrictMaybe (AuxiliaryData (MaryEra crypto)))
 genAuxiliaryData Constants {frequencyTxWithMetadata} =
@@ -108,7 +108,7 @@ genAuxiliaryData Constants {frequencyTxWithMetadata} =
     ]
 
 -- | Carefully crafted to apply in any Era where Value is MaryValue
-maryGenesisValue :: forall era crypto. CC.Crypto crypto => GenEnv era -> Gen (MaryValue crypto)
+maryGenesisValue :: forall era crypto hc. CC.Crypto crypto => GenEnv era hc -> Gen (MaryValue crypto)
 maryGenesisValue (GenEnv _ _ Constants {minGenesisOutputVal, maxGenesisOutputVal}) =
   Val.inject . Coin <$> exponential minGenesisOutputVal maxGenesisOutputVal
 
@@ -326,7 +326,7 @@ instance Split (MaryValue era) where
           Coin (n `rem` m)
         )
 
-instance Mock c => MinGenTxout (MaryEra c) where
+instance MockContext c => MinGenTxout (MaryEra c) where
   calcEraMinUTxO _txout pp = _minUTxOValue pp
   addValToTxOut v (ShelleyTxOut a u) = ShelleyTxOut a (v <+> u)
   genEraTxOut _genenv genVal addrs = do

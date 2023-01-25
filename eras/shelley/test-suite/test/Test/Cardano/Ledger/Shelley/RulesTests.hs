@@ -17,6 +17,7 @@ import Cardano.Ledger.Keys (asWitness, hashKey, vKey)
 import Cardano.Ledger.Shelley.Rules.Utxow (ShelleyUtxowPredFailure (..))
 import Cardano.Ledger.Shelley.TxBody (RewardAcnt (..), Wdrl (..))
 import Data.Either (isRight)
+import Data.Proxy
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, C_Crypto)
@@ -98,6 +99,7 @@ testAliceSignsAlone =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceOnly, Coin 11000)]
         [aliceOnly]
         (Wdrl Map.empty)
@@ -112,6 +114,7 @@ testAliceDoesntSign =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceOnly, Coin 11000)]
         [aliceOnly]
         (Wdrl Map.empty)
@@ -125,6 +128,7 @@ testEverybodySigns =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceOnly, Coin 11000)]
         [aliceOnly]
         (Wdrl Map.empty)
@@ -143,6 +147,7 @@ testWrongScript =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceOnly, Coin 11000)]
         [aliceOrBob]
         (Wdrl Map.empty)
@@ -156,6 +161,7 @@ testAliceOrBob =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceOrBob, Coin 11000)]
         [aliceOrBob]
         (Wdrl Map.empty)
@@ -170,6 +176,7 @@ testAliceOrBob' =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceOrBob, Coin 11000)]
         [aliceOrBob]
         (Wdrl Map.empty)
@@ -184,6 +191,7 @@ testAliceAndBob =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceAndBob, Coin 11000)]
         [aliceAndBob]
         (Wdrl Map.empty)
@@ -202,6 +210,7 @@ testAliceAndBob' =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceAndBob, Coin 11000)]
         [aliceAndBob]
         (Wdrl Map.empty)
@@ -219,6 +228,7 @@ testAliceAndBob'' =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceAndBob, Coin 11000)]
         [aliceAndBob]
         (Wdrl Map.empty)
@@ -232,6 +242,7 @@ testAliceAndBobOrCarl =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceAndBobOrCarl, Coin 11000)]
         [aliceAndBobOrCarl]
         (Wdrl Map.empty)
@@ -246,6 +257,7 @@ testAliceAndBobOrCarl' =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceAndBobOrCarl, Coin 11000)]
         [aliceAndBobOrCarl]
         (Wdrl Map.empty)
@@ -260,6 +272,7 @@ testAliceAndBobOrCarlAndDaria =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceAndBobOrCarlAndDaria, Coin 11000)]
         [aliceAndBobOrCarlAndDaria]
         (Wdrl Map.empty)
@@ -274,6 +287,7 @@ testAliceAndBobOrCarlAndDaria' =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceAndBobOrCarlAndDaria, Coin 11000)]
         [aliceAndBobOrCarlAndDaria]
         (Wdrl Map.empty)
@@ -288,6 +302,7 @@ testAliceAndBobOrCarlOrDaria =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceAndBobOrCarlOrDaria, Coin 11000)]
         [aliceAndBobOrCarlOrDaria]
         (Wdrl Map.empty)
@@ -302,6 +317,7 @@ testAliceAndBobOrCarlOrDaria' =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceAndBobOrCarlOrDaria, Coin 11000)]
         [aliceAndBobOrCarlOrDaria]
         (Wdrl Map.empty)
@@ -316,6 +332,7 @@ testAliceAndBobOrCarlOrDaria'' =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceAndBobOrCarlOrDaria, Coin 11000)]
         [aliceAndBobOrCarlOrDaria]
         (Wdrl Map.empty)
@@ -332,6 +349,7 @@ testTwoScripts =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [ (aliceOrBob, Coin 10000),
           (aliceAndBobOrCarl, Coin 1000)
         ]
@@ -354,6 +372,7 @@ testTwoScripts' =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [ (aliceAndBob, Coin 10000),
           (aliceAndBobOrCarl, Coin 1000)
         ]
@@ -373,6 +392,7 @@ testScriptAndSKey =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceAndBob, Coin 10000)]
         [aliceAndBob]
         (Wdrl Map.empty)
@@ -391,6 +411,7 @@ testScriptAndSKey' =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceOrBob, Coin 10000)]
         [aliceOrBob]
         (Wdrl Map.empty)
@@ -405,6 +426,7 @@ testScriptAndSKey'' =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceOrBob, Coin 10000)]
         [aliceOrBob]
         (Wdrl Map.empty)
@@ -419,6 +441,7 @@ testScriptAndSKey''' =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceAndBobOrCarl, Coin 10000)]
         [aliceAndBobOrCarl]
         (Wdrl Map.empty)
@@ -435,6 +458,7 @@ testRwdAliceSignsAlone =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceOnly, Coin 11000)]
         [aliceOnly]
         ( Wdrl $
@@ -460,6 +484,7 @@ testRwdAliceSignsAlone' =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceOnly, Coin 11000)]
         [aliceOnly, bobOnly]
         ( Wdrl $
@@ -482,6 +507,7 @@ testRwdAliceSignsAlone'' =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceOnly, Coin 11000)]
         [aliceOnly, bobOnly]
         ( Wdrl $
@@ -511,6 +537,7 @@ testRwdAliceSignsAlone''' =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceOnly, Coin 11000)]
         [aliceOnly]
         ( Wdrl $

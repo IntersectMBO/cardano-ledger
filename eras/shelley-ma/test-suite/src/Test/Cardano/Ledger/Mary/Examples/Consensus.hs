@@ -20,9 +20,10 @@ import Test.Cardano.Ledger.Shelley.Orphans ()
 type StandardMary = MaryEra CC.StandardCrypto
 
 -- | ShelleyLedgerExamples for Allegra era
-ledgerExamplesMary :: ShelleyLedgerExamples StandardMary
+ledgerExamplesMary :: ShelleyLedgerExamples StandardMary CC.StandardCrypto
 ledgerExamplesMary =
   defaultShelleyLedgerExamples
+    exampleKeys
     (mkWitnessesPreAlonzo (Proxy @StandardMary))
     id
     (exampleMultiAssetValue 1)
@@ -45,4 +46,4 @@ exampleMultiAssetValue x =
     couttsCoin = AssetName "couttsCoin"
 
 exampleTxBodyMary :: MATxBody StandardMary
-exampleTxBodyMary = exampleTxBodyMA (exampleMultiAssetValue 1)
+exampleTxBodyMary = exampleTxBodyMA (exampleKeys @CC.StandardCrypto @CC.StandardCrypto) (exampleMultiAssetValue 1)

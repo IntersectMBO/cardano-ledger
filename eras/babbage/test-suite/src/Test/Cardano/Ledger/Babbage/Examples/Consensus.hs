@@ -63,11 +63,11 @@ import Test.Cardano.Ledger.Shelley.Utils (mkAddr)
 type StandardBabbage = BabbageEra StandardCrypto
 
 -- | ShelleyLedgerExamples for Babbage era
-ledgerExamplesBabbage :: SLE.ShelleyLedgerExamples StandardBabbage
+ledgerExamplesBabbage :: SLE.ShelleyLedgerExamples StandardBabbage StandardCrypto
 ledgerExamplesBabbage =
   SLE.ShelleyLedgerExamples
     { SLE.sleBlock = SLE.exampleShelleyLedgerBlock exampleTransactionInBlock,
-      SLE.sleHashHeader = SLE.exampleHashHeader (Proxy @StandardBabbage),
+      SLE.sleHashHeader = SLE.exampleHashHeader (Proxy @StandardBabbage) (Proxy @StandardCrypto),
       SLE.sleTx = exampleTransactionInBlock,
       SLE.sleApplyTxError =
         ApplyTxError $
@@ -90,7 +90,7 @@ ledgerExamplesBabbage =
       SLE.ShelleyResultExamples
         { SLE.srePParams = def,
           SLE.sreProposedPPUpdates = examplePPPU,
-          SLE.srePoolDistr = SLE.examplePoolDistr,
+          SLE.srePoolDistr = SLE.examplePoolDistr @StandardCrypto @StandardCrypto SLE.exampleKeys,
           SLE.sreNonMyopicRewards = SLE.exampleNonMyopicRewards,
           SLE.sreShelleyGenesis = SLE.testShelleyGenesis
         }
@@ -125,7 +125,7 @@ exampleTxBodyBabbage =
     )
     (SJust $ mkSized collateralOutput) -- collateral return
     (SJust $ Coin 8675309) -- collateral tot
-    SLE.exampleCerts -- txcerts
+    (SLE.exampleCerts (SLE.exampleKeys @StandardCrypto @StandardCrypto)) -- txcerts
     ( Wdrl $
         Map.singleton
           (RewardAcnt Testnet (SLE.keyToCredential SLE.exampleStakeKey))
@@ -186,6 +186,7 @@ exampleTransactionInBlock = AlonzoTx b w (IsValid True) a
 exampleBabbageNewEpochState :: NewEpochState StandardBabbage
 exampleBabbageNewEpochState =
   SLE.exampleNewEpochState
+    (SLE.exampleKeys @StandardCrypto @StandardCrypto)
     (MarySLE.exampleMultiAssetValue 1)
     emptyPParams
     (emptyPParams {_coinsPerUTxOByte = Coin 1})

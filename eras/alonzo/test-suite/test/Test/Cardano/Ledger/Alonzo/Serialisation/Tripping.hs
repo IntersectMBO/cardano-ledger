@@ -97,5 +97,5 @@ tests =
       testProperty "alonzo/Tx" $
         trippingAnn @(Tx (AlonzoEra C_Crypto)),
       testProperty "alonzo/Block" $
-        trippingAnn @(Block (BHeader C_Crypto) (AlonzoEra C_Crypto))
+        trippingAnn @(Block (BHeader C_Crypto C_Crypto) (AlonzoEra C_Crypto))
     ]

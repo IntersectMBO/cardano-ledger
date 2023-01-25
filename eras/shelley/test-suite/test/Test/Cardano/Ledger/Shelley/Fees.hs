@@ -23,6 +23,7 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (hashAuxiliaryData, hashScript, sizeTxF)
 import qualified Cardano.Ledger.Crypto as Cr
+import qualified Cardano.Protocol.HeaderCrypto as Cr
 import Cardano.Ledger.Era (Era (..))
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys
@@ -126,11 +127,15 @@ alicePoolKH = (hashKey . vKey) alicePool
 aliceVRF :: forall v. VRFAlgorithm v => (VRF.SignKeyVRF v, VRF.VerKeyVRF v)
 aliceVRF = mkVRFKeyPair (RawSeed 0 0 0 0 3)
 
-alicePoolParams :: forall crypto. Cr.Crypto crypto => PoolParams crypto
-alicePoolParams =
+alicePoolParams ::
+  forall crypto hc.
+  (Cr.Crypto crypto, Cr.HeaderCrypto hc) =>
+  Proxy hc ->
+  PoolParams crypto
+alicePoolParams _ =
   PoolParams
     { _poolId = alicePoolKH,
-      _poolVrf = hashPoolStakeVRF . snd $ aliceVRF @(Cr.VRF crypto),
+      _poolVrf = hashPoolStakeVRF . snd $ aliceVRF @(Cr.VRF hc),
       _poolPledge = Coin 1,
       _poolCost = Coin 5,
       _poolMargin = unsafeBoundRational 0.1,
@@ -344,12 +349,15 @@ txDeregisterStakeBytes16 :: BSL.ByteString
 txDeregisterStakeBytes16 = "83a5008182582003170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c11131400018182583900e9686d801fa32aeb4390c2f2a53bb0314a9c744c46a2cada394a371fc6852b6aaed73bcf346a57ef99adae3000b51c7c59faaeb15993df760a02185e030a048182018200581cc6852b6aaed73bcf346a57ef99adae3000b51c7c59faaeb15993df76a100818258204628aaf16d6e1baa061d1296419542cb09287c639163d0fdbdac0ff23699797e5840409db925fa592b7f4c76e44d738789f4b0ffb2b9cf4567af127121d635491b4eb736e8c92571f1329f14d06aad7ec42ca654ae65eb63b0b01d30cc4454aee80cf6"
 
 -- | Transaction which registers a stake pool
-txbRegisterPool :: Cr.Crypto c => ShelleyTxBody (ShelleyEra c)
-txbRegisterPool =
+txbRegisterPool ::
+  (Cr.Crypto c, Cr.HeaderCrypto hc) =>
+  Proxy hc ->
+  ShelleyTxBody (ShelleyEra c)
+txbRegisterPool phc =
   ShelleyTxBody
     { _inputs = Set.fromList [TxIn genesisId minBound],
       _outputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)],
-      _certs = StrictSeq.fromList [DCertPool (RegPool alicePoolParams)],
+      _certs = StrictSeq.fromList [DCertPool (RegPool $ alicePoolParams phc)],
       _wdrls = Wdrl Map.empty,
       _txfee = Coin 94,
       _ttl = SlotNo 10,
@@ -357,13 +365,17 @@ txbRegisterPool =
       _mdHash = SNothing
     }
 
-txRegisterPool :: forall c. (Cr.Crypto c, BodySignable (ShelleyEra c)) => ShelleyTx (ShelleyEra c)
-txRegisterPool =
+txRegisterPool ::
+  forall c hc.
+  (Cr.Crypto c, Cr.HeaderCrypto hc, BodySignable (ShelleyEra c)) =>
+  Proxy hc ->
+  ShelleyTx (ShelleyEra c)
+txRegisterPool phc =
   ShelleyTx
-    { body = txbRegisterPool,
+    { body = txbRegisterPool phc,
       wits =
         mempty
-          { addrWits = makeWitnessesVKey (hashAnnotated $ txbRegisterPool @c) [alicePay]
+          { addrWits = makeWitnessesVKey (hashAnnotated $ txbRegisterPool @c phc) [alicePay]
           },
       auxiliaryData = SNothing
     }
@@ -454,8 +466,8 @@ txbWithMultiSig =
       _mdHash = SNothing
     }
 
-txWithMultiSig :: forall c. Mock c => ShelleyTx (ShelleyEra c)
-txWithMultiSig =
+txWithMultiSig :: forall c hc. Mock c hc => Proxy hc -> ShelleyTx (ShelleyEra c)
+txWithMultiSig _ =
   ShelleyTx
     { body = txbWithMultiSig,
       wits =
@@ -538,10 +550,10 @@ sizeTests =
       testCase "register stake key" $ sizeTest p txRegisterStakeBytes16 txRegisterStake,
       testCase "delegate stake key" $ sizeTest p txDelegateStakeBytes16 txDelegateStake,
       testCase "deregister stake key" $ sizeTest p txDeregisterStakeBytes16 txDeregisterStake,
-      testCase "register stake pool" $ sizeTest p txRegisterPoolBytes16 txRegisterPool,
+      testCase "register stake pool" $ sizeTest p txRegisterPoolBytes16 $ txRegisterPool p,
       testCase "retire stake pool" $ sizeTest p txRetirePoolBytes16 txRetirePool,
       testCase "auxiliaryData" $ sizeTest p txWithMDBytes16 txWithMD,
-      testCase "multisig" $ sizeTest p txWithMultiSigBytes16 txWithMultiSig,
+      testCase "multisig" $ sizeTest p txWithMultiSigBytes16 (txWithMultiSig p),
       testCase "reward withdrawal" $ sizeTest p txWithWithdrawalBytes16 txWithWithdrawal,
       testCase "evaluate transaction fee" testEvaluateTransactionFee
     ]

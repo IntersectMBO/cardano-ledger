@@ -213,7 +213,7 @@ goldenMinFee =
             (_leftover, Annotator f) =
               fromRight (error "bad golden block 4228") $
                 deserialiseFromBytes fromCBOR cborBlock
-            _block :: Block (BHeader StandardCrypto) (AlonzoEra StandardCrypto)
+            _block :: Block (BHeader StandardCrypto StandardCrypto) (AlonzoEra StandardCrypto)
             _block@(Block _header txs) = f (Full cborBlock)
             txs' = fromTxSeq @(AlonzoEra StandardCrypto) txs
             firstTx = head $ toList txs'

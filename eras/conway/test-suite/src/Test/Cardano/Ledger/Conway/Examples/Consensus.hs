@@ -64,11 +64,11 @@ import Test.Cardano.Ledger.Shelley.Utils (mkAddr)
 type StandardConway = ConwayEra StandardCrypto
 
 -- | ShelleyLedgerExamples for Conway era
-ledgerExamplesConway :: SLE.ShelleyLedgerExamples StandardConway
+ledgerExamplesConway :: SLE.ShelleyLedgerExamples StandardConway StandardCrypto
 ledgerExamplesConway =
   SLE.ShelleyLedgerExamples
     { SLE.sleBlock = SLE.exampleShelleyLedgerBlock exampleTransactionInBlock,
-      SLE.sleHashHeader = SLE.exampleHashHeader (Proxy @StandardConway),
+      SLE.sleHashHeader = SLE.exampleHashHeader (Proxy @StandardConway) (Proxy @StandardCrypto),
       SLE.sleTx = exampleTransactionInBlock,
       SLE.sleApplyTxError =
         ApplyTxError $
@@ -91,7 +91,7 @@ ledgerExamplesConway =
       SLE.ShelleyResultExamples
         { SLE.srePParams = def,
           SLE.sreProposedPPUpdates = examplePPPU,
-          SLE.srePoolDistr = SLE.examplePoolDistr,
+          SLE.srePoolDistr = SLE.examplePoolDistr @StandardCrypto @StandardCrypto SLE.exampleKeys,
           SLE.sreNonMyopicRewards = SLE.exampleNonMyopicRewards,
           SLE.sreShelleyGenesis = SLE.testShelleyGenesis
         }
@@ -126,7 +126,7 @@ exampleTxBodyConway =
     )
     (SJust $ mkSized collateralOutput) -- collateral return
     (SJust $ Coin 8675309) -- collateral tot
-    SLE.exampleCerts -- txcerts
+    (SLE.exampleCerts @StandardCrypto @StandardCrypto SLE.exampleKeys) -- txcerts
     ( Wdrl $
         Map.singleton
           (RewardAcnt Testnet (SLE.keyToCredential SLE.exampleStakeKey))
@@ -187,6 +187,7 @@ exampleTransactionInBlock = AlonzoTx b w (IsValid True) a
 exampleConwayNewEpochState :: NewEpochState StandardConway
 exampleConwayNewEpochState =
   SLE.exampleNewEpochState
+    (SLE.exampleKeys @StandardCrypto @StandardCrypto)
     (MarySLE.exampleMultiAssetValue 1)
     emptyPParams
     (emptyPParams {_coinsPerUTxOByte = Coin 1})

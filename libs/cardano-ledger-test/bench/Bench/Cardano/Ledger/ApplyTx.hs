@@ -32,6 +32,7 @@ import Cardano.Ledger.Shelley.API
   )
 import Cardano.Ledger.Shelley.LedgerState (DPState, UTxOState)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
+import qualified Cardano.Protocol.HeaderCrypto as CC
 import Control.DeepSeq (NFData (..))
 import Control.State.Transition (Environment, Signal, State)
 import Control.State.Transition.Trace.Generator.QuickCheck (BaseEnv, HasTrace)
@@ -73,7 +74,8 @@ benchmarkSeed = 24601
 benchWithGenState ::
   ( NFData a,
     EraGen era,
-    HasTrace (EraRule "LEDGER" era) (GenEnv era),
+    CC.HeaderCrypto hc,
+    HasTrace (EraRule "LEDGER" era) (GenEnv era hc),
     Default (State (EraRule "PPUP" era)),
     BaseEnv (EraRule "LEDGER" era) ~ Globals,
     Signal (EraRule "LEDGER" era) ~ Tx era,
@@ -81,25 +83,28 @@ benchWithGenState ::
     State (EraRule "LEDGER" era) ~ LedgerState era
   ) =>
   Proxy era ->
+  Proxy hc ->
   (ApplyTxEnv era -> IO a) ->
   (a -> Benchmarkable) ->
   Benchmark
-benchWithGenState px prepEnv mkBench =
-  env (prepEnv $ generateApplyTxEnvForEra px benchmarkSeed) $ bench (show $ typeRep px) . mkBench
+benchWithGenState px ph prepEnv mkBench =
+  env (prepEnv $ generateApplyTxEnvForEra px ph benchmarkSeed) $ bench (show $ typeRep px) . mkBench
 
 benchApplyTx ::
-  forall era.
+  forall era hc.
   ( EraGen era,
+    CC.HeaderCrypto hc,
     ApplyTx era,
-    HasTrace (EraRule "LEDGER" era) (GenEnv era),
+    HasTrace (EraRule "LEDGER" era) (GenEnv era hc),
     BaseEnv (EraRule "LEDGER" era) ~ Globals,
     Default (State (EraRule "PPUP" era)),
     NFData (State (EraRule "PPUP" era))
   ) =>
   Proxy era ->
+  Proxy hc ->
   Benchmark
-benchApplyTx px =
-  benchWithGenState px pure $ \applyTxEnv ->
+benchApplyTx px ph =
+  benchWithGenState px ph pure $ \applyTxEnv ->
     let ApplyTxEnv {ateGlobals, ateMempoolEnv, ateState, ateTx} = applyTxEnv
      in nf
           ( either (error . show) id
@@ -114,20 +119,22 @@ benchApplyTx px =
 -- | Benchmark deserialising a shelley transaction as if it comes from the given
 -- era.
 deserialiseTxEra ::
-  forall era.
+  forall era hc.
   ( EraGen era,
+    CC.HeaderCrypto hc,
     Default (State (EraRule "PPUP" era)),
     BaseEnv (EraRule "LEDGER" era) ~ Globals,
-    HasTrace (EraRule "LEDGER" era) (GenEnv era),
+    HasTrace (EraRule "LEDGER" era) (GenEnv era hc),
     State (EraRule "LEDGER" era) ~ LedgerState era,
     Environment (EraRule "LEDGER" era) ~ LedgerEnv era,
     Signal (EraRule "LEDGER" era) ~ Tx era,
     NFData (Tx era)
   ) =>
   Proxy era ->
+  Proxy hc ->
   Benchmark
-deserialiseTxEra px =
-  benchWithGenState px (pure . serialize . ateTx) $
+deserialiseTxEra px ph =
+  benchWithGenState px ph (pure . serialize . ateTx) $
     nf (either (error . show) (id @(Tx era)) . decodeAnnotator "tx" fromCBOR)
 
 --------------------------------------------------------------------------------
@@ -140,19 +147,23 @@ applyTxBenchmarks =
     "applyTxBenchmarks"
     [ bgroup
         "ApplyTxInEra"
-        [ benchApplyTx (Proxy @ShelleyBench),
-          benchApplyTx (Proxy @AllegraBench),
-          benchApplyTx (Proxy @MaryBench),
-          benchApplyTx (Proxy @AlonzoBench)
+        [ benchApplyTx (Proxy @ShelleyBench) hcProxy,
+          benchApplyTx (Proxy @AllegraBench) hcProxy,
+          benchApplyTx (Proxy @MaryBench) hcProxy,
+          benchApplyTx (Proxy @AlonzoBench) hcProxy
         ],
       bgroup
         "Deserialise Shelley Tx"
-        [ deserialiseTxEra (Proxy @ShelleyBench),
-          deserialiseTxEra (Proxy @AllegraBench),
-          deserialiseTxEra (Proxy @MaryBench),
-          deserialiseTxEra (Proxy @AlonzoBench)
+        [ deserialiseTxEra (Proxy @ShelleyBench) hcProxy,
+          deserialiseTxEra (Proxy @AllegraBench) hcProxy,
+          deserialiseTxEra (Proxy @MaryBench) hcProxy,
+          deserialiseTxEra (Proxy @AlonzoBench) hcProxy
         ]
     ]
+
+    where
+      hcProxy :: Proxy C_Crypto
+      hcProxy = Proxy
 
 instance FromCBOR (UTxOState ShelleyBench) where
   fromCBOR = fromNotSharedCBOR

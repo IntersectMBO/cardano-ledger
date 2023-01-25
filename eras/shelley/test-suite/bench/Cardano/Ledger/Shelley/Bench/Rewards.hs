@@ -117,12 +117,12 @@ genChainInEpoch epoch = do
       Just x' -> x' >>= flip applyUntil f
     applyBlk cs' blk =
       (either err id) . flip runReader testGlobals
-        . applySTS @(CHAIN B)
+        . applySTS @(CHAIN B B_Crypto)
         $ TRC ((), cs', blk)
       where
         err :: Show a => a -> b
         err msg = error $ "Panic! applyBlk failed: " <> (show msg)
-    ge = genEnv (Proxy @B)
+    ge = genEnv (Proxy @B) (Proxy @B_Crypto)
     -- Small UTxO set; we just want enough to stake to pools
     cs =
       (geConstants ge)

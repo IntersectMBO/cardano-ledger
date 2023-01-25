@@ -26,7 +26,8 @@ import Cardano.Ledger.Credential
   ( Credential (..),
     StakeReference (..),
   )
-import Cardano.Ledger.Crypto (DSIGN, HASH, VRF)
+import Cardano.Ledger.Crypto (DSIGN, HASH)
+import Cardano.Protocol.HeaderCrypto (VRF)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys
   ( KeyPair (..),

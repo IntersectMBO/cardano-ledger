@@ -45,7 +45,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Utxo (genTx)
 instance
   ( EraGen era,
     AlonzoEraTx era,
-    Mock (Crypto era),
+    Mock (Crypto era) hc,
     MinLEDGER_STS era,
     Embed (Core.EraRule "DELPL" era) (CERTS era),
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
@@ -63,7 +63,7 @@ instance
     Show (State (Core.EraRule "PPUP" era)),
     Core.Tx era ~ AlonzoTx era
   ) =>
-  TQC.HasTrace (AlonzoLEDGER era) (GenEnv era)
+  TQC.HasTrace (AlonzoLEDGER era) (GenEnv era hc)
   where
   envGen GenEnv {geConstants} =
     LedgerEnv (SlotNo 0) minBound

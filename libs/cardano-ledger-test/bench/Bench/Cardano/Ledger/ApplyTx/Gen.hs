@@ -10,6 +10,7 @@ module Bench.Cardano.Ledger.ApplyTx.Gen (generateApplyTxEnvForEra, ApplyTxEnv (.
 
 import Cardano.Ledger.Core (EraRule)
 import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Protocol.HeaderCrypto as CC
 import Cardano.Ledger.Shelley.API
   ( AccountState (..),
     Coin (..),
@@ -64,20 +65,22 @@ instance NFData (ApplyTxEnv era) where
 
 -- | Generate a ledger state and transaction in a given era, given a seed.
 generateApplyTxEnvForEra ::
-  forall era.
+  forall era hc.
   ( EraGen era,
+    CC.HeaderCrypto hc,
     Default (State (EraRule "PPUP" era)),
-    HasTrace (EraRule "LEDGER" era) (GenEnv era),
+    HasTrace (EraRule "LEDGER" era) (GenEnv era hc),
     BaseEnv (EraRule "LEDGER" era) ~ Globals,
     Signal (EraRule "LEDGER" era) ~ Core.Tx era,
     Environment (EraRule "LEDGER" era) ~ LedgerEnv era,
     State (EraRule "LEDGER" era) ~ LedgerState era
   ) =>
   Proxy era ->
+  Proxy hc ->
   Int ->
   ApplyTxEnv era
-generateApplyTxEnvForEra eraProxy seed =
-  let ge = genEnv eraProxy
+generateApplyTxEnvForEra eraProxy hcProxy seed =
+  let ge = genEnv eraProxy hcProxy
       qcSeed = mkQCGen seed
       traceGen =
         traceFromInitState

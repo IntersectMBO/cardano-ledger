@@ -61,11 +61,11 @@ import Test.Cardano.Ledger.Shelley.Utils (mkAddr)
 type StandardAlonzo = AlonzoEra StandardCrypto
 
 -- | ShelleyLedgerExamples for Alonzo era
-ledgerExamplesAlonzo :: SLE.ShelleyLedgerExamples StandardAlonzo
+ledgerExamplesAlonzo :: SLE.ShelleyLedgerExamples StandardAlonzo StandardCrypto
 ledgerExamplesAlonzo =
   SLE.ShelleyLedgerExamples
     { SLE.sleBlock = SLE.exampleShelleyLedgerBlock exampleTransactionInBlock,
-      SLE.sleHashHeader = SLE.exampleHashHeader (Proxy @StandardAlonzo),
+      SLE.sleHashHeader = SLE.exampleHashHeader @StandardAlonzo @StandardCrypto Proxy Proxy,
       SLE.sleTx = exampleTransactionInBlock,
       SLE.sleApplyTxError =
         ApplyTxError $
@@ -88,7 +88,7 @@ ledgerExamplesAlonzo =
       SLE.ShelleyResultExamples
         { SLE.srePParams = def,
           SLE.sreProposedPPUpdates = examplePPPU,
-          SLE.srePoolDistr = SLE.examplePoolDistr,
+          SLE.srePoolDistr = SLE.examplePoolDistr (SLE.exampleKeys @StandardCrypto @StandardCrypto),
           SLE.sreNonMyopicRewards = SLE.exampleNonMyopicRewards,
           SLE.sreShelleyGenesis = SLE.testShelleyGenesis
         }
@@ -110,7 +110,7 @@ exampleTxBodyAlonzo =
             (SJust $ SLE.mkDummySafeHash Proxy 1) -- outputs
         ]
     )
-    SLE.exampleCerts -- txcerts
+    (SLE.exampleCerts $ SLE.exampleKeys @StandardCrypto @StandardCrypto) -- txcerts
     ( Wdrl $
         Map.singleton
           (RewardAcnt Testnet (SLE.keyToCredential SLE.exampleStakeKey))
@@ -171,6 +171,7 @@ exampleTransactionInBlock = AlonzoTx b w (IsValid True) a
 exampleAlonzoNewEpochState :: NewEpochState StandardAlonzo
 exampleAlonzoNewEpochState =
   SLE.exampleNewEpochState
+    (SLE.exampleKeys @StandardCrypto @StandardCrypto)
     (SLE.exampleMultiAssetValue 1)
     emptyPParams
     (emptyPParams {_coinsPerUTxOWord = Coin 1})

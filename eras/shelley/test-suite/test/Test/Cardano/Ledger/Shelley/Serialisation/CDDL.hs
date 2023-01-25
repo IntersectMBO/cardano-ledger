@@ -49,10 +49,10 @@ type ShelleyE = ShelleyEra StandardCrypto
 tests :: Int -> TestTree
 tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
   testGroup "CDDL roundtrip tests" $
-    [ cddlAnnotatorTest @(BHeader StandardCrypto) n "header",
+    [ cddlAnnotatorTest @(BHeader StandardCrypto StandardCrypto) n "header",
       cddlAnnotatorTest @(BootstrapWitness StandardCrypto) n "bootstrap_witness",
-      cddlTest @(BHBody StandardCrypto) n "header_body",
-      cddlGroupTest @(OCert StandardCrypto) n "operational_cert",
+      cddlTest @(BHBody StandardCrypto StandardCrypto) n "header_body",
+      cddlGroupTest @(OCert StandardCrypto StandardCrypto) n "operational_cert",
       cddlTest @(Addr StandardCrypto) n "address",
       cddlTest @(RewardAcnt StandardCrypto) n "reward_account",
       cddlTest @(Credential 'Staking StandardCrypto) n "stake_credential",
@@ -67,7 +67,7 @@ tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
       cddlTest @(ProposedPPUpdates ShelleyE) n "proposed_protocol_parameter_updates",
       cddlTest @(ShelleyPParamsUpdate ShelleyE) n "protocol_param_update",
       cddlAnnotatorTest @(ShelleyTx ShelleyE) n "transaction",
-      cddlAnnotatorTest @(LaxBlock (BHeader StandardCrypto) ShelleyE) n "block"
+      cddlAnnotatorTest @(LaxBlock (BHeader StandardCrypto StandardCrypto) ShelleyE) n "block"
     ]
       <*> pure cddl
 

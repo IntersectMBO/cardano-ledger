@@ -1228,12 +1228,14 @@ forAllChainTrace n prop =
     forAllTraceFromInitState
       testGlobals
       n
-      (Preset.genEnv @era @hcrypto p)
-      (Just $ mkGenesisChainState @era @hcrypto (Preset.genEnv p))
+      (Preset.genEnv p q)
+      (Just $ mkGenesisChainState (Preset.genEnv p q))
       prop
   where
     p :: Proxy era
     p = Proxy
+    q :: Proxy hcrypto
+    q = Proxy
 
 sameEpoch ::
   SourceSignalTarget (CHAIN era hcrypto) ->
@@ -1314,8 +1316,9 @@ incrementalStakeProp ::
     Default (State (EraRule "PPUP" era))
   ) =>
   Proxy era ->
+  Proxy hcrypto ->
   Property
-incrementalStakeProp Proxy = atEpoch @era @hcrypto (testIncrementalStake @era)
+incrementalStakeProp Proxy Proxy = atEpoch @era @hcrypto (testIncrementalStake @era)
 
 tersediffincremental :: String -> Stake crypto -> Stake crypto -> String
 tersediffincremental message (Stake a) (Stake c) =

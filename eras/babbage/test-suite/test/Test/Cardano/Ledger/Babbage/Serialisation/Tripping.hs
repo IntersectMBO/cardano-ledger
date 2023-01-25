@@ -105,5 +105,5 @@ tests =
       testProperty "babbage/BabbageUtxoPredFailure" $
         tripping @(BabbageUtxoPredFailure (BabbageEra C_Crypto)),
       testProperty "babbage/Block" $
-        trippingAnn @(Block (BHeader C_Crypto) (BabbageEra C_Crypto))
+        trippingAnn @(Block (BHeader C_Crypto C_Crypto) (BabbageEra C_Crypto))
     ]

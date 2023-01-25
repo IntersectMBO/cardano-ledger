@@ -17,9 +17,10 @@ where
 import Cardano.Binary (Encoding (..), ToCBOR (..), Tokens (..), serializeEncoding)
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.BaseTypes (textToDns, textToUrl)
-import Cardano.Ledger.Crypto (HASH, VRF)
+import Cardano.Ledger.Crypto (HASH)
+import qualified Cardano.Protocol.HeaderCrypto as HC (HeaderCrypto (..), VRF)
 import Cardano.Ledger.Era (Crypto (..))
-import Cardano.Ledger.Keys (hashKey, vKey)
+import Cardano.Ledger.Keys (GenesisVRF, hashKey, vKey)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import qualified Cardano.Ledger.Shelley.API as L
 import Cardano.Ledger.Shelley.Genesis
@@ -31,6 +32,7 @@ import qualified Data.ByteString.Char8 as BS (pack)
 import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
+import Data.Proxy
 import Data.Scientific (Scientific)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
@@ -59,8 +61,11 @@ golden_json_ShelleyGenesis :: Assertion
 golden_json_ShelleyGenesis =
   goldenTestJSON example =<< getDataFileName "test/Golden/ShelleyGenesis"
   where
+    proxyHeader :: Proxy StandardCrypto
+    proxyHeader = Proxy
+
     example :: ShelleyGenesis (ShelleyEra StandardCrypto)
-    example = exampleShelleyGenesis
+    example = exampleShelleyGenesis proxyHeader
 
 golden_cbor_ShelleyGenesis :: Assertion
 golden_cbor_ShelleyGenesis =
@@ -76,8 +81,11 @@ golden_cbor_ShelleyGenesis =
           ]
     else return ()
   where
+    proxyHeader :: Proxy StandardCrypto
+    proxyHeader = Proxy
+
     example :: ShelleyGenesis (ShelleyEra StandardCrypto)
-    example = exampleShelleyGenesis
+    example = exampleShelleyGenesis proxyHeader
 
     received = Encoding expectedTokens
     expected = toCBOR example
@@ -195,10 +203,11 @@ tests =
     ]
 
 exampleShelleyGenesis ::
-  forall era.
-  Era era =>
+  forall era hc.
+  (Era era, HC.HeaderCrypto hc)  =>
+  Proxy hc ->
   ShelleyGenesis era
-exampleShelleyGenesis =
+exampleShelleyGenesis _ =
   ShelleyGenesis
     { sgSystemStart = posixSecondsToUTCTime $ realToFrac (1234566789 :: Integer),
       sgNetworkMagic = 4036000900,
@@ -229,7 +238,7 @@ exampleShelleyGenesis =
     genDelegPair = L.GenDelegPair delegVerKeyHash delegVrfKeyHash
     delegVerKeyHash :: L.KeyHash 'L.GenesisDelegate (Crypto era)
     delegVerKeyHash = L.KeyHash "e6960dd671ee8d73de1a83d1345b661165dcddeba99623beef2f157a"
-    delegVrfKeyHash :: Hash.Hash (HASH (Crypto era)) (L.VerKeyVRF (Crypto era))
+    delegVrfKeyHash :: Hash.Hash (HASH (Crypto era)) (GenesisVRF)
     delegVrfKeyHash = "fce31c6f3187531ee4a39aa743c24d22275f415a8895e9cd22c30c8a25cdef0d"
     initialFundedAddress :: L.Addr (Crypto era)
     initialFundedAddress =
@@ -261,7 +270,7 @@ exampleShelleyGenesis =
     poolParams =
       L.PoolParams
         { L._poolId = hashKey . snd $ mkKeyPair (RawSeed 1 0 0 0 1),
-          L._poolVrf = hashPoolStakeVRF . snd $ mkVRFKeyPair @(VRF (Crypto era)) $RawSeed 1 0 0 0 2,
+          L._poolVrf = hashPoolStakeVRF . snd $ mkVRFKeyPair @(HC.VRF hc) $RawSeed 1 0 0 0 2,
           L._poolPledge = L.Coin 1,
           L._poolCost = L.Coin 5,
           L._poolMargin = unsafeBoundRational 0.25,

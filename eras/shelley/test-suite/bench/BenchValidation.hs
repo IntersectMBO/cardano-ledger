@@ -84,7 +84,7 @@ validateInput ::
     Core.EraRule "LEDGERS" era ~ API.ShelleyLEDGERS era,
     QC.HasTrace (API.ShelleyLEDGERS era) (GenEnv era hcrypto),
     API.ApplyBlock era,
-    GetLedgerView era hcrypto,
+    GetLedgerView era,
     MinLEDGER_STS era
   ) =>
   Int ->
@@ -98,20 +98,20 @@ genValidateInput ::
     Core.EraRule "LEDGERS" era ~ API.ShelleyLEDGERS era,
     QC.HasTrace (API.ShelleyLEDGERS era) (GenEnv era hcrypto),
     API.ApplyBlock era,
-    GetLedgerView era hcrypto,
+    GetLedgerView era,
     MinLEDGER_STS era
   ) =>
   Int ->
   IO (ValidateInput era hcrypto)
 genValidateInput n = do
-  let ge = genEnv (Proxy :: Proxy era)
+  let ge = genEnv (Proxy :: Proxy era) (Proxy :: Proxy hcrypto)
   chainstate <- genChainState n ge
   block <- genBlock ge chainstate
   pure (ValidateInput testGlobals (chainNes chainstate) block)
 
 benchValidate ::
   forall era hcrypto.
-  (Era era, API.ApplyBlock era) =>
+  (Era era, API.ApplyBlock era, HeaderCrypto hcrypto) =>
   ValidateInput era hcrypto ->
   IO (NewEpochState era)
 benchValidate (ValidateInput globals state (Block bh txs)) =
@@ -122,6 +122,7 @@ benchValidate (ValidateInput globals state (Block bh txs)) =
 applyBlock ::
   forall era hcrypto.
   ( Era era,
+    CryptoClass.HeaderCrypto hcrypto,
     NFData (Core.TxOut era),
     API.ApplyBlock era,
     NFData (Core.PParams era),
@@ -137,8 +138,8 @@ applyBlock (ValidateInput globals state (Block bh txs)) n =
     Left x -> error (show x)
 
 benchreValidate ::
-  (Era era, API.ApplyBlock era) =>
-  ValidateInput era ->
+  (Era era, API.ApplyBlock era, HeaderCrypto hc) =>
+  ValidateInput era hc ->
   NewEpochState era
 benchreValidate (ValidateInput globals state (Block bh txs)) =
   API.reapplyBlock globals state (UnsafeUnserialisedBlock (makeHeaderView bh) txs)
@@ -148,18 +149,18 @@ benchreValidate (ValidateInput globals state (Block bh txs)) =
 data UpdateInputs c hc
   = UpdateInputs
       !Globals
-      !(LedgerView c hc)
+      !(LedgerView c)
       !(BHeader c hc)
       !(ChainDepState c)
 
-instance CryptoClass.Crypto c => Show (UpdateInputs c hc) where
+instance (CryptoClass.Crypto c, HeaderCrypto hc) => Show (UpdateInputs c hc) where
   show (UpdateInputs _globals vl bh st) =
     show vl ++ "\n" ++ show bh ++ "\n" ++ show st
 
-instance NFData (LedgerView era hc) where
+instance NFData (LedgerView era) where
   rnf (LedgerView _D _extraEntropy _pool _delegs _ccd) = ()
 
-instance CryptoClass.Crypto c => NFData (BHeader c hc) where
+instance (CryptoClass.Crypto c, HeaderCrypto hc) => NFData (BHeader c hc) where
   rnf (BHeader _ _) = ()
 
 instance NFData (ChainDepState c) where
@@ -171,7 +172,7 @@ instance NFData Globals where
 instance NFData (ChainTransitionError c hc) where
   rnf _ = ()
 
-instance CryptoClass.Crypto c => NFData (UpdateInputs c hc) where
+instance (CryptoClass.Crypto c, HeaderCrypto hc) => NFData (UpdateInputs c hc) where
   rnf (UpdateInputs g lv bh st) =
     seq (rnf g) (seq (rnf lv) (seq (rnf bh) (rnf st)))
 
@@ -181,7 +182,7 @@ genUpdateInputs ::
     Mock (Crypto era) hc,
     ShelleyTest era,
     MinLEDGER_STS era,
-    GetLedgerView era hc,
+    GetLedgerView era,
     Core.EraRule "LEDGERS" era ~ API.ShelleyLEDGERS era,
     QC.HasTrace (API.ShelleyLEDGERS era) (GenEnv era hc),
     API.ApplyBlock era
@@ -189,7 +190,7 @@ genUpdateInputs ::
   Int ->
   IO (UpdateInputs (Crypto era) hc)
 genUpdateInputs utxoSize = do
-  let ge = genEnv (Proxy :: Proxy era)
+  let ge = genEnv (Proxy :: Proxy era) (Proxy :: Proxy hc)
   chainstate <- genChainState utxoSize ge
   (Block blockheader _) <- genBlock ge chainstate
   let ledgerview = currentLedgerView (chainNes chainstate)
@@ -208,15 +209,15 @@ genUpdateInputs utxoSize = do
     )
 
 updateChain ::
-  (Mock c) =>
-  UpdateInputs c ->
-  Either (ChainTransitionError c) (ChainDepState c)
+  (Mock c hc) =>
+  UpdateInputs c hc ->
+  Either (ChainTransitionError c hc) (ChainDepState c)
 updateChain (UpdateInputs gl lv bh st) = updateChainDepState gl lv bh st
 
 updateAndTickChain ::
-  (Mock c) =>
-  UpdateInputs c ->
-  Either (ChainTransitionError c) (ChainDepState c)
+  (Mock c hc) =>
+  UpdateInputs c hc ->
+  Either (ChainTransitionError c hc) (ChainDepState c)
 updateAndTickChain (UpdateInputs gl lv bh st) =
   updateChainDepState gl lv bh
     . tickChainDepState gl lv True

@@ -199,6 +199,7 @@ benchmark bench
     cardano-ledger-core,
     cardano-ledger-shelley-ma-test,
     cardano-ledger-shelley-ma,
+    cardano-protocol-tpraos,
     vector-map,
     containers,
     criterion,

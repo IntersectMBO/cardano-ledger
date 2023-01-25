@@ -25,7 +25,8 @@ import Cardano.Ledger.PoolDistr (PoolStakeVRF, individualPoolStakeVrf)
 import Cardano.Ledger.Shelley.API hiding (TxOut)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PoolRank
-import Cardano.Protocol.TPraos.Rules.Overlay (fromPoolStakeVRF)
+import Cardano.Protocol.HeaderKeys
+import Cardano.Protocol.TPraos.Rules.Overlay (fromPoolStakeVRF, fromGenesisVRF)
 import Conduit
 import Control.Exception (throwIO)
 import Control.Foldl (Fold (..))
@@ -44,6 +45,7 @@ import Prettyprinter
 import Text.Printf
 
 type C = StandardCrypto
+type HC = StandardCrypto
 
 type CurrentEra = AlonzoEra C
 
@@ -288,14 +290,18 @@ instance AggregateStat PoolDistrStats where
   aggregateStat PoolDistrStats {..} =
     mempty
       { gsKeyHashStakePool = pdsStakePoolKeyHash,
-        gsVerKeyVRF = pdsStakePoolStakeVrf
+        gsVerKeyVRF = gsVerKeyFromPDS
       }
+      where
+        gsStatUnique    = fromPoolStakeVRF `Set.map` statUnique pdsStakePoolStakeVrf
+        gsStatCount     = statCount pdsStakePoolStakeVrf
+        gsVerKeyFromPDS = Stat { statCount = gsStatCount, statUnique = gsStatUnique }
 
 calcPoolDistrStats :: PoolDistr C -> PoolDistrStats
 calcPoolDistrStats (PoolDistr pd) =
   PoolDistrStats
     { pdsStakePoolKeyHash = statMapKeys pd,
-      pdsStakePoolStakeVrf = statFoldable (fromPoolStakeVRF . individualPoolStakeVrf <$> Map.elems pd)
+      pdsStakePoolStakeVrf = statFoldable (individualPoolStakeVrf <$> Map.elems pd)
     }
 
 data NewEpochStateStats = NewEpochStateStats
@@ -400,7 +406,7 @@ data DStateStats = DStateStats
     dssDelegations :: !(Stat (KeyHash 'StakePool C)),
     dssKeyHashGenesis :: !(Stat (KeyHash 'Genesis C)),
     dssKeyHashGenesisDelegate :: !(Stat (KeyHash 'GenesisDelegate C)),
-    dssHashVerKeyVRF :: !(Stat (Hash C (VerKeyVRF C)))
+    dssHashVerKeyVRF :: !(Stat (Hash C (VerKeyVRF HC)))
   }
 
 instance Pretty DStateStats where
@@ -440,9 +446,9 @@ countDStateStats DState {..} =
           <> statFoldable
             (genDelegKeyHash <$> Map.elems (unGenDelegs _genDelegs)),
       dssHashVerKeyVRF =
-        statFoldable (genDelegVrfHash <$> Map.elems _fGenDelegs)
+        statFoldable (fromGenesisVRF . genDelegVrfHash <$> Map.elems _fGenDelegs)
           <> statFoldable
-            (genDelegVrfHash <$> Map.elems (unGenDelegs _genDelegs))
+            (fromGenesisVRF . genDelegVrfHash <$> Map.elems (unGenDelegs _genDelegs))
     }
 
 data PStateStats = PStateStats
@@ -629,7 +635,7 @@ data AggregateStats = AggregateStats
     gsKeyHashStakePool :: !(Stat (KeyHash 'StakePool C)),
     gsKeyHashGenesis :: !(Stat (KeyHash 'Genesis C)),
     gsKeyHashGenesisDelegate :: !(Stat (KeyHash 'GenesisDelegate C)),
-    gsVerKeyVRF :: !(Stat (Hash C (VerKeyVRF C))),
+    gsVerKeyVRF :: !(Stat (Hash C (VerKeyVRF HC))),
     gsScriptHash :: !(Stat (ScriptHash C))
   }
 

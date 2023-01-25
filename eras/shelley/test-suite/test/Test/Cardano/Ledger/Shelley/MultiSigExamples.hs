@@ -79,6 +79,7 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Cardano.Ledger.Val as Val
 import Control.State.Transition.Extended (PredicateFailure, TRC (..))
 import Data.Foldable (fold)
+import Data.Proxy
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (empty, fromList)
 import Data.Sequence.Strict (StrictSeq (..))
@@ -175,14 +176,15 @@ makeTxBody inp addrCs wdrl =
     SNothing
 
 makeTx ::
-  forall c.
-  (Mock c) =>
+  forall c hc.
+  (Mock c hc) =>
+  Proxy hc ->
   TxBody (ShelleyEra c) ->
   [KeyPair 'Witness c] ->
   Map (ScriptHash c) (MultiSig c) ->
   Maybe (Metadata (ShelleyEra c)) ->
   ShelleyTx (ShelleyEra c)
-makeTx txBody keyPairs msigs = ShelleyTx txBody txWits . maybeToStrictMaybe
+makeTx _ txBody keyPairs msigs = ShelleyTx txBody txWits . maybeToStrictMaybe
   where
     txWits =
       mempty
@@ -215,8 +217,9 @@ initPParams = emptyPParams {_maxTxSize = 1000}
 -- 'aliceKeep' is greater than 0, gives that amount to Alice and creates outputs
 -- locked by a script for each pair of script, coin value in 'msigs'.
 initialUTxOState ::
-  forall c.
-  Mock c =>
+  forall c hc.
+  Mock c hc =>
+  Proxy hc ->
   Coin ->
   [(MultiSig c, Coin)] ->
   ( TxId c,
@@ -224,7 +227,7 @@ initialUTxOState ::
       [PredicateFailure (ShelleyUTXOW (ShelleyEra c))]
       (UTxOState (ShelleyEra c))
   )
-initialUTxOState aliceKeep msigs =
+initialUTxOState phc aliceKeep msigs =
   let addresses =
         [(Cast.aliceAddr, aliceKeep) | Val.pointwise (>) aliceKeep mempty]
           ++ map
@@ -239,6 +242,7 @@ initialUTxOState aliceKeep msigs =
             msigs
    in let tx =
             makeTx
+              phc
               (initTxBody addresses)
               (asWitness <$> [Cast.alicePay, Cast.bobPay])
               Map.empty
@@ -266,17 +270,18 @@ initialUTxOState aliceKeep msigs =
 -- 'aliceKeep' in the case of it being non-zero) to spend all funds back to
 -- Alice. Return resulting UTxO state or collected errors
 applyTxWithScript ::
-  forall c.
-  (Mock c) =>
+  forall c hc.
+  (Mock c hc) =>
+  Proxy hc ->
   [(MultiSig c, Coin)] ->
   [MultiSig c] ->
   Wdrl c ->
   Coin ->
   [KeyPair 'Witness c] ->
   Either [PredicateFailure (ShelleyUTXOW (ShelleyEra c))] (UTxOState (ShelleyEra c))
-applyTxWithScript lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
+applyTxWithScript _phc lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
   where
-    (txId, initUtxo) = initialUTxOState aliceKeep lockScripts
+    (txId, initUtxo) = initialUTxOState _phc aliceKeep lockScripts
     utxoSt = case initUtxo of
       Right utxoSt'' -> utxoSt''
       _ -> error $ "must fail test before: " ++ show initUtxo
@@ -293,6 +298,7 @@ applyTxWithScript lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
     -- alice? + scripts
     tx =
       makeTx
+        _phc
         txbody
         signers
         (Map.fromList $ map (\scr -> (hashScript @(ShelleyEra c) scr, scr)) unlockScripts)

@@ -21,6 +21,7 @@ import Cardano.Ledger.Coin (Coin (..), toDeltaCoin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Ptr (..))
 import qualified Cardano.Ledger.Crypto as CryptoClass
+import qualified Cardano.Protocol.HeaderCrypto as CryptoClass
 import Cardano.Ledger.Keys
   ( KeyPair (..),
     KeyRole (..),
@@ -104,10 +105,17 @@ initUTxO =
     aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
     bobInitCoin = Val.inject $ Coin $ 1 * 1000 * 1000 * 1000 * 1000 * 1000
 
-initStMIR :: forall era. (ShelleyTest era, PParams era ~ ShelleyPParams era) => Coin -> ChainState era
-initStMIR treasury = cs {chainNes = (chainNes cs) {nesEs = es'}}
+data Proxy c = Proxy
+
+initStMIR ::
+  forall era hc.
+  (ShelleyTest era,
+   PParams era ~ ShelleyPParams era,
+   CryptoClass.HeaderCrypto hc) =>
+  Proxy hc -> Coin -> ChainState era
+initStMIR _ treasury = cs {chainNes = (chainNes cs) {nesEs = es'}}
   where
-    cs = initSt @era initUTxO
+    cs = initSt @era @hc initUTxO
     as = esAccountState . nesEs . chainNes $ cs
     as' =
       as
@@ -148,18 +156,27 @@ txbodyEx1 pot =
     aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
     aliceCoinEx1 = aliceInitCoin <-> (Val.inject $ feeTx1 <+> _keyDeposit ppEx)
 
-mirWits :: (CryptoClass.Crypto c) => [Int] -> [KeyPair 'Witness c]
-mirWits nodes = asWitness <$> map (\x -> cold . coreNodeIssuerKeys $ x) nodes
+mirWits ::
+  forall c hc.
+  (CryptoClass.Crypto c, CryptoClass.HeaderCrypto hc) =>
+  [Int] -> [KeyPair 'Witness c]
+mirWits nodes = asWitness <$> map (\x -> cold . coreNodeIssuerKeys @c @hc $ x) nodes
 
-sufficientMIRWits :: (CryptoClass.Crypto c) => [KeyPair 'Witness c]
-sufficientMIRWits = mirWits [0 .. 4]
+sufficientMIRWits ::
+  forall c hc.
+  (CryptoClass.Crypto c, CryptoClass.HeaderCrypto hc) =>
+  [KeyPair 'Witness c]
+sufficientMIRWits = mirWits @c @hc [0 .. 4]
 
-insufficientMIRWits :: (CryptoClass.Crypto c) => [KeyPair 'Witness c]
-insufficientMIRWits = mirWits [0 .. 3]
+insufficientMIRWits ::
+  forall c hc.
+  (CryptoClass.Crypto c, CryptoClass.HeaderCrypto hc) =>
+  [KeyPair 'Witness c]
+insufficientMIRWits = mirWits @c @hc [0 .. 3]
 
 txEx1 ::
-  forall c.
-  (Mock c) =>
+  forall c hc.
+  (Mock c hc) =>
   [KeyPair 'Witness c] ->
   MIRPot ->
   ShelleyTx (ShelleyEra c)
@@ -175,16 +192,16 @@ txEx1 txwits pot =
     SNothing
 
 blockEx1' ::
-  forall c.
-  (ExMock (Crypto (ShelleyEra c))) =>
+  forall c hc.
+  (ExMock (Crypto (ShelleyEra c)) hc) =>
   [KeyPair 'Witness (Crypto (ShelleyEra c))] ->
   MIRPot ->
-  Block (BHeader c) (ShelleyEra c)
+  Block (BHeader c hc) (ShelleyEra c)
 blockEx1' txwits pot =
   mkBlockFakeVRF
     lastByronHeaderHash
     (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 10)
-    [txEx1 txwits pot]
+    [txEx1 @c @hc txwits pot]
     (SlotNo 10)
     (BlockNo 1)
     (nonce0 @(Crypto (ShelleyEra c)))
@@ -195,57 +212,57 @@ blockEx1' txwits pot =
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 10) 0 (KESPeriod 0))
 
 blockEx1 ::
-  forall c.
-  (ExMock (Crypto (ShelleyEra c))) =>
+  forall c hc.
+  (ExMock (Crypto (ShelleyEra c)) hc) =>
   MIRPot ->
-  Block (BHeader c) (ShelleyEra c)
-blockEx1 = blockEx1' sufficientMIRWits
+  Block (BHeader c hc) (ShelleyEra c)
+blockEx1 = blockEx1' (sufficientMIRWits @c @hc)
 
 expectedStEx1' ::
-  forall c.
-  (ExMock (Crypto (ShelleyEra c))) =>
+  forall c hc.
+  (ExMock (Crypto (ShelleyEra c)) hc) =>
   [KeyPair 'Witness (Crypto (ShelleyEra c))] ->
   MIRPot ->
   ChainState (ShelleyEra c)
 expectedStEx1' txwits pot =
-  C.evolveNonceUnfrozen (getBlockNonce (blockEx1' @c txwits pot))
-    . C.newLab (blockEx1' txwits pot)
+  C.evolveNonceUnfrozen (getBlockNonce (blockEx1' @c @hc txwits pot))
+    . C.newLab (blockEx1' @c @hc txwits pot)
     . C.feesAndDeposits feeTx1 (_keyDeposit ppEx)
     . C.newUTxO (txbodyEx1 pot)
     . C.newStakeCred Cast.aliceSHK (Ptr (SlotNo 10) minBound (mkCertIxPartial 1))
     . C.mir Cast.aliceSHK pot aliceMIRCoin
-    $ initStMIR (Coin 1000)
+    $ initStMIR (Proxy @hc) (Coin 1000)
 
 expectedStEx1 ::
-  forall c.
-  (ExMock (Crypto (ShelleyEra c))) =>
+  forall c hc.
+  (ExMock (Crypto (ShelleyEra c)) hc) =>
   MIRPot ->
   ChainState (ShelleyEra c)
-expectedStEx1 = expectedStEx1' sufficientMIRWits
+expectedStEx1 = expectedStEx1' @c @hc (sufficientMIRWits @c @hc)
 
 -- === Block 1, Slot 10, Epoch 0, Successful MIR Reserves Example
 --
 -- In the first block, submit a MIR cert drawing from the reserves.
-mir1 :: (ExMock (Crypto (ShelleyEra c))) => MIRPot -> CHAINExample (BHeader c) (ShelleyEra c)
+mir1 :: forall c hc.
+  (ExMock (Crypto (ShelleyEra c)) hc) => MIRPot -> CHAINExample (BHeader c hc) (ShelleyEra c) hc
 mir1 pot =
   CHAINExample
-    (initStMIR (Coin 1000))
+    (initStMIR (Proxy @hc) (Coin 1000))
     (blockEx1 pot)
-    (Right $ expectedStEx1 pot)
+    (Right $ expectedStEx1 @c @hc pot)
 
 -- === Block 1, Slot 10, Epoch 0, Insufficient MIR Wits, Reserves Example
 --
 -- In the first block, submit a MIR cert drawing from the reserves.
 mirFailWits ::
-  forall c.
-  ( ExMock (Crypto (ShelleyEra c))
-  ) =>
+  forall c hc.
+  (ExMock (Crypto (ShelleyEra c) ) hc) =>
   MIRPot ->
-  CHAINExample (BHeader c) (ShelleyEra c)
+  CHAINExample (BHeader c hc) (ShelleyEra c) hc
 mirFailWits pot =
   CHAINExample
-    (initStMIR (Coin 1000))
-    (blockEx1' insufficientMIRWits pot)
+    (initStMIR (Proxy @hc) (Coin 1000))
+    (blockEx1' (insufficientMIRWits @c @hc) pot)
     ( Left
         [ BbodyFailure @(ShelleyEra c)
             ( LedgersFailure
@@ -258,22 +275,23 @@ mirFailWits pot =
         ]
     )
   where
-    ws = Set.fromList $ asWitness <$> map (\x -> hk . coreNodeIssuerKeys $ x) [0 .. 3]
+    ws = Set.fromList $ asWitness <$> map (\x -> hk . coreNodeIssuerKeys @c @hc $ x) [0 .. 3]
 
 -- === Block 1, Slot 10, Epoch 0, Insufficient MIR funds, Reserves Example
 --
 -- In the first block, submit a MIR cert drawing from the reserves.
 mirFailFunds ::
-  (ExMock (Crypto (ShelleyEra c))) =>
+  forall c hc.
+  (ExMock (Crypto (ShelleyEra c)) hc) =>
   MIRPot ->
   Coin ->
   Coin ->
   Coin ->
-  CHAINExample (BHeader c) (ShelleyEra c)
+  CHAINExample (BHeader c hc) (ShelleyEra c) hc
 mirFailFunds pot treasury llNeeded llReceived =
   CHAINExample
-    (initStMIR treasury)
-    (blockEx1' sufficientMIRWits pot)
+    (initStMIR (Proxy @hc) treasury)
+    (blockEx1' (sufficientMIRWits @c @hc) pot)
     ( Left
         [ BbodyFailure
             ( LedgersFailure
@@ -298,13 +316,13 @@ mirFailFunds pot treasury llNeeded llReceived =
 --
 
 blockEx2 ::
-  forall c.
-  (ExMock (Crypto (ShelleyEra c))) =>
+  forall c hc.
+  (ExMock (Crypto (ShelleyEra c)) hc) =>
   MIRPot ->
-  Block (BHeader c) (ShelleyEra c)
+  Block (BHeader c hc) (ShelleyEra c)
 blockEx2 pot =
   mkBlockFakeVRF
-    (bhHash $ bheader @(BHeader c) @(ShelleyEra c) (blockEx1 pot))
+    (bhHash $ bheader @(BHeader c hc) @(ShelleyEra c) (blockEx1 pot))
     (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 50)
     []
     (SlotNo 50)
@@ -317,60 +335,61 @@ blockEx2 pot =
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 50) 0 (KESPeriod 0))
 
 pulserEx2 ::
-  forall c.
-  (ExMock (Crypto (ShelleyEra c))) =>
+  forall c hc.
+  (ExMock (Crypto (ShelleyEra c)) hc) =>
   MIRPot ->
   PulsingRewUpdate c
-pulserEx2 pot = makePulser' (expectedStEx1 pot)
+pulserEx2 pot = makePulser' (expectedStEx1 @c @hc pot)
 
 expectedStEx2 ::
-  forall c.
-  (ExMock (Crypto (ShelleyEra c))) =>
+  forall c hc.
+  (ExMock (Crypto (ShelleyEra c)) hc) =>
   MIRPot ->
   ChainState (ShelleyEra c)
 expectedStEx2 pot =
-  C.evolveNonceUnfrozen (getBlockNonce (blockEx2 @c pot))
-    . C.newLab (blockEx2 pot)
-    . C.pulserUpdate (pulserEx2 pot)
-    $ (expectedStEx1 pot)
+  C.evolveNonceUnfrozen (getBlockNonce (blockEx2 @c @hc pot))
+    . C.newLab (blockEx2 @c @hc pot)
+    . C.pulserUpdate (pulserEx2 @c @hc pot)
+    $ (expectedStEx1 @c @hc pot)
 
 -- === Block 2, Slot 50, Epoch 0
 --
 -- Submit an empty block to create an empty reward update.
 mir2 ::
-  (ExMock (Crypto (ShelleyEra c))) =>
+  forall c hc.
+  (ExMock (Crypto (ShelleyEra c)) hc) =>
   MIRPot ->
-  CHAINExample (BHeader c) (ShelleyEra c)
+  CHAINExample (BHeader c hc) (ShelleyEra c) hc
 mir2 pot =
   CHAINExample
-    (expectedStEx1 pot)
+    (expectedStEx1 @c @hc pot)
     (blockEx2 pot)
-    (Right $ expectedStEx2 pot)
+    (Right $ expectedStEx2 @c @hc pot)
 
 --
 -- Block 3, Slot 110, Epoch 1
 --
 
 epoch1Nonce ::
-  forall c.
-  (ExMock (Crypto (ShelleyEra c))) =>
+  forall c hc.
+  (ExMock (Crypto (ShelleyEra c)) hc) =>
   MIRPot ->
   Nonce
-epoch1Nonce pot = chainCandidateNonce (expectedStEx2 @c pot)
+epoch1Nonce pot = chainCandidateNonce (expectedStEx2 @c @hc pot)
 
 blockEx3 ::
-  forall c.
-  (ExMock (Crypto (ShelleyEra c))) =>
+  forall c hc.
+  (ExMock (Crypto (ShelleyEra c)) hc) =>
   MIRPot ->
-  Block (BHeader c) (ShelleyEra c)
+  Block (BHeader c hc) (ShelleyEra c)
 blockEx3 pot =
   mkBlockFakeVRF
-    (bhHash $ bheader @(BHeader c) @(ShelleyEra c) (blockEx2 pot))
+    (bhHash $ bheader @(BHeader c hc) @(ShelleyEra c) (blockEx2 pot))
     (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 110)
     []
     (SlotNo 110)
     (BlockNo 3)
-    (epoch1Nonce @c pot)
+    (epoch1Nonce @c @hc pot)
     (NatNonce 3)
     minBound
     5
@@ -378,22 +397,23 @@ blockEx3 pot =
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 110) 0 (KESPeriod 0))
 
 expectedStEx3 ::
-  forall c.
-  (ExMock (Crypto (ShelleyEra c))) =>
+  forall c hc.
+  (ExMock (Crypto (ShelleyEra c)) hc) =>
   MIRPot ->
   ChainState (ShelleyEra c)
 expectedStEx3 pot =
-  C.newEpoch (blockEx3 pot)
+  C.newEpoch (blockEx3 @c @hc pot)
     . C.newSnapshot emptySnapShot feeTx1
     . C.applyRewardUpdate emptyRewardUpdate
     . C.applyMIR pot (Map.singleton Cast.aliceSHK aliceMIRCoin)
-    $ (expectedStEx2 pot)
+    $ (expectedStEx2 @c @hc pot)
 
 -- === Block 3, Slot 110, Epoch 1
 --
 -- Submit an empty block in the next epoch to apply the MIR rewards.
-mir3 :: (ExMock (Crypto (ShelleyEra c))) => MIRPot -> CHAINExample (BHeader c) (ShelleyEra c)
-mir3 pot = CHAINExample (expectedStEx2 pot) (blockEx3 pot) (Right $ expectedStEx3 pot)
+mir3 :: forall c hc.
+  (ExMock (Crypto (ShelleyEra c)) hc) => MIRPot -> CHAINExample (BHeader c hc) (ShelleyEra c) hc
+mir3 pot = CHAINExample (expectedStEx2 @c @hc pot) (blockEx3 pot) (Right $ expectedStEx3 @c @hc pot)
 
 --
 -- MIR Test Group

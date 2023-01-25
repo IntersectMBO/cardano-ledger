@@ -5,7 +5,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -68,7 +67,7 @@ import GHC.Records (HasField)
 import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockContext)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators (genMintValues)
 import Test.QuickCheck
@@ -118,7 +117,7 @@ instance (Era era) => Arbitrary (Redeemers era) where
   arbitrary = Redeemers <$> arbitrary
 
 instance
-  ( Mock (Crypto era),
+  ( MockContext (Crypto era),
     Arbitrary (Script era),
     AlonzoScript era ~ Script era,
     EraScript era
@@ -150,7 +149,7 @@ genData = TxDats . keyBy hashData <$> arbitrary
 
 instance
   ( EraTxOut era,
-    Mock (Crypto era),
+    MockContext (Crypto era),
     Arbitrary (Value era)
   ) =>
   Arbitrary (AlonzoTxOut era)
@@ -162,7 +161,7 @@ instance
       <*> arbitrary
 
 instance
-  (EraTxOut era, ToCBOR (PParamsUpdate era), Arbitrary (Value era), Mock (Crypto era)) =>
+  (EraTxOut era, ToCBOR (PParamsUpdate era), Arbitrary (Value era), MockContext (Crypto era)) =>
   Arbitrary (AlonzoTxBody era)
   where
   arbitrary =
@@ -186,7 +185,7 @@ deriving newtype instance Arbitrary IsValid
 instance
   ( EraTxBody era,
     EraScript era,
-    Mock (Crypto era),
+    MockContext (Crypto era),
     Script era ~ AlonzoScript era,
     Arbitrary (TxBody era),
     Arbitrary (AuxiliaryData era)
@@ -200,7 +199,7 @@ instance
       <*> arbitrary
       <*> arbitrary
 
-instance (Era era, Mock (Crypto era)) => Arbitrary (AlonzoScript era) where
+instance (Era era, MockContext (Crypto era)) => Arbitrary (AlonzoScript era) where
   arbitrary = do
     lang <- arbitrary -- The language is not present in the Script serialization
     frequency
@@ -299,7 +298,7 @@ instance Arbitrary TagMismatchDescription where
     oneof [pure PassedUnexpectedly, FailedUnexpectedly <$> ((:|) <$> arbitrary <*> arbitrary)]
 
 instance
-  (Era era, Mock (Crypto era), Arbitrary (PredicateFailure (EraRule "PPUP" era))) =>
+  (Era era, MockContext (Crypto era), Arbitrary (PredicateFailure (EraRule "PPUP" era))) =>
   Arbitrary (AlonzoUtxosPredFailure era)
   where
   arbitrary =
@@ -310,7 +309,7 @@ instance
 
 instance
   ( EraTxOut era,
-    Mock (Crypto era),
+    MockContext (Crypto era),
     Arbitrary (Value era),
     Arbitrary (TxOut era),
     Arbitrary (PredicateFailure (EraRule "UTXOS" era))
@@ -340,7 +339,7 @@ instance
 
 instance
   ( Era era,
-    Mock (Crypto era),
+    MockContext (Crypto era),
     Arbitrary (PredicateFailure (EraRule "UTXO" era))
   ) =>
   Arbitrary (AlonzoUtxowPredFailure era)
@@ -353,7 +352,7 @@ instance
         PPViewHashesDontMatch <$> arbitrary <*> arbitrary
       ]
 
-instance Mock c => Arbitrary (ScriptPurpose c) where
+instance MockContext c => Arbitrary (ScriptPurpose c) where
   arbitrary =
     oneof
       [ Minting <$> arbitrary,
@@ -364,7 +363,7 @@ instance Mock c => Arbitrary (ScriptPurpose c) where
 
 instance
   ( Era era,
-    Mock (Crypto era),
+    MockContext (Crypto era),
     Arbitrary (PParams era),
     HasField "_costmdls" (PParams era) CostModels
   ) =>
@@ -378,7 +377,7 @@ instance
       <*> (Set.singleton <$> (getLanguageView @era <$> arbitrary <*> arbitrary))
 
 instance
-  (Mock (Crypto era), Era era) =>
+  (MockContext (Crypto era), Era era) =>
   Arbitrary (Datum era)
   where
   arbitrary =

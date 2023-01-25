@@ -13,6 +13,7 @@ module Test.Cardano.Ledger.Shelley.Serialisation.Tripping.JSON
 where
 
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import qualified Cardano.Protocol.HeaderCrypto as CC (HeaderCrypto)
 import Cardano.Ledger.Era
 import Data.Aeson (decode, encode, fromJSON, toJSON)
 import Data.Proxy
@@ -42,13 +43,14 @@ prop_roundtrip_Address_JSON _ =
     Hedgehog.tripping addr encode decode
 
 prop_roundtrip_GenesisDelegationPair_JSON ::
-  forall crypto.
-  CC.Crypto crypto =>
+  forall crypto hc.
+  (CC.Crypto crypto, CC.HeaderCrypto hc) =>
   Proxy crypto ->
+  Proxy hc ->
   Property
-prop_roundtrip_GenesisDelegationPair_JSON _ =
+prop_roundtrip_GenesisDelegationPair_JSON _ _ =
   Hedgehog.property $ do
-    dp <- Hedgehog.forAll $ genGenesisDelegationPair @crypto
+    dp <- Hedgehog.forAll $ genGenesisDelegationPair @crypto @hc
 
     Hedgehog.tripping dp toJSON fromJSON
     Hedgehog.tripping dp encode decode
@@ -67,14 +69,15 @@ prop_roundtrip_FundPair_JSON _ =
     Hedgehog.tripping fp encode decode
 
 prop_roundtrip_ShelleyGenesis_JSON ::
-  forall era.
-  Era era =>
+  forall era hc.
+  (Era era, CC.HeaderCrypto hc) =>
   Proxy era ->
+  Proxy hc ->
   Property
-prop_roundtrip_ShelleyGenesis_JSON _ = Hedgehog.withTests 500 $
+prop_roundtrip_ShelleyGenesis_JSON _ _ = Hedgehog.withTests 500 $
   Hedgehog.property $
     do
-      sg <- Hedgehog.forAll $ genShelleyGenesis @era
+      sg <- Hedgehog.forAll $ genShelleyGenesis @era @hc
       Hedgehog.tripping sg toJSON fromJSON
       Hedgehog.tripping sg encode decode
 
@@ -85,9 +88,9 @@ tests =
     [ testProperty "Address round trip" $
         prop_roundtrip_Address_JSON @C_Crypto Proxy,
       testProperty "Genesis round trip" $
-        prop_roundtrip_ShelleyGenesis_JSON @C Proxy,
+        prop_roundtrip_ShelleyGenesis_JSON @C @C_Crypto Proxy Proxy,
       testProperty "fund pair round trip" $
         prop_roundtrip_FundPair_JSON @C_Crypto Proxy,
       testProperty "delegation pair round trip" $
-        prop_roundtrip_GenesisDelegationPair_JSON @C_Crypto Proxy
+        prop_roundtrip_GenesisDelegationPair_JSON @C_Crypto @C_Crypto Proxy Proxy
     ]
