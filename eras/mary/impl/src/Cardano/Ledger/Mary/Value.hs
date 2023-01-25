@@ -63,7 +63,6 @@ import Control.DeepSeq (NFData (..), deepseq, rwhnf)
 import Control.Monad (forM_)
 import Control.Monad.ST (runST)
 import qualified Data.ByteString.Base16 as BS16
-import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Short as SBS
 import Data.ByteString.Short.Internal (ShortByteString (SBS))
 import Data.CanonicalMaps (
@@ -75,14 +74,13 @@ import Data.Foldable (foldMap')
 import Data.Group (Abelian, Group (..))
 import Data.Int (Int64)
 import Data.List (sortOn)
+import Data.Map (Map)
 import Data.Map.Internal (
-  Map (..),
   link,
   link2,
  )
 import Data.Map.Strict (assocs)
 import qualified Data.Map.Strict as Map
-import Data.Map.Strict.Internal (splitLookup)
 import Data.Maybe (fromJust)
 import qualified Data.Primitive.ByteArray as BA
 import Data.Proxy (Proxy (..))
@@ -107,7 +105,7 @@ newtype AssetName = AssetName {assetName :: SBS.ShortByteString}
     )
 
 instance Show AssetName where
-  show = BS8.unpack . BS16.encode . SBS.fromShort . assetName
+  show = show . BS16.encode . SBS.fromShort . assetName
 
 instance FromCBOR AssetName where
   fromCBOR = do
@@ -780,9 +778,9 @@ insertMultiAsset ::
   MultiAsset c ->
   MultiAsset c
 insertMultiAsset combine pid aid new (MultiAsset m1) =
-  case splitLookup pid m1 of
+  case Map.splitLookup pid m1 of
     (l1, Just m2, l2) ->
-      case splitLookup aid m2 of
+      case Map.splitLookup aid m2 of
         (v1, Just old, v2) ->
           if n == 0
             then
@@ -823,7 +821,7 @@ prune assets =
 -- | Rather than using prune to remove 0 assets, when can avoid adding them in the
 --   first place by using valueFromList to construct a MultiAsset
 multiAssetFromList :: [(PolicyID era, AssetName, Integer)] -> MultiAsset era
-multiAssetFromList = foldr (\(p, n, i) ans -> insert (+) p n i ans) mempty
+multiAssetFromList = foldr (\(p, n, i) ans -> insertMultiAsset (+) p n i ans) mempty
 
 valueFromList :: Integer -> [(PolicyID era, AssetName, Integer)] -> MaryValue era
 valueFromList ada triples = MaryValue ada (multiAssetFromList triples)

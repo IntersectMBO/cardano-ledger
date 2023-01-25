@@ -58,6 +58,12 @@ packages:
 program-options
   ghc-options: -Werror
 
+package cardano-ledger-core
+  flags: +asserts
+
+package cardano-ledger-shelley
+  flags: +asserts
+
 -- Always write GHC env files, because they are needed by the doctests.
 write-ghc-environment-files: always
 

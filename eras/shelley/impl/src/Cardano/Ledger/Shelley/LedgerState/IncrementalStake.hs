@@ -69,8 +69,10 @@ import Cardano.Ledger.UTxO (
   UTxO (..),
  )
 import Control.DeepSeq (NFData (rnf), deepseq)
+import Control.Exception (assert)
 import Data.Foldable (fold)
 import Data.Group (invert)
+import Data.Map.Internal.Debug as Map (valid)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
@@ -229,18 +231,21 @@ resolveActiveIncrementalPtrs isActive ptrMap_ (IStake credStake ptrStake) =
 --   be determined if there is a (SJust deleg) in the Triple.  This is step2 =
 --   aggregate (dom activeDelegs ◁ rewards) step1
 aggregateActiveStake :: Ord k => Map k (Trip c) -> Map k Coin -> Map k Coin
-aggregateActiveStake =
-  Map.mergeWithKey
-    -- How to merge the ranges of the two maps where they have a common key. Below
-    -- 'coin1' and 'coin2' have the same key, '_k', and the stake is active if the delegation is SJust
-    (\_k trip coin2 -> extractAndAdd coin2 <$> UM.tripRewardActiveDelegation trip)
-    -- what to do when a key appears just in 'tripmap', we only add the coin if the key is active
-    (Map.mapMaybe (\trip -> fromCompact . UM.rdReward <$> UM.tripRewardActiveDelegation trip))
-    -- what to do when a key is only in 'incremental', keep everything, because at
-    -- the call site of aggregateActiveStake, the arg 'incremental' is filtered by
-    -- 'resolveActiveIncrementalPtrs' which guarantees that only active stake is included.
-    id
+aggregateActiveStake m1 m2 = assert (Map.valid m) m
   where
+    m =
+      Map.mergeWithKey
+        -- How to merge the ranges of the two maps where they have a common key. Below
+        -- 'coin1' and 'coin2' have the same key, '_k', and the stake is active if the delegation is SJust
+        (\_k trip coin2 -> extractAndAdd coin2 <$> UM.tripRewardActiveDelegation trip)
+        -- what to do when a key appears just in 'tripmap', we only add the coin if the key is active
+        (Map.mapMaybe (\trip -> fromCompact . UM.rdReward <$> UM.tripRewardActiveDelegation trip))
+        -- what to do when a key is only in 'incremental', keep everything, because at
+        -- the call site of aggregateActiveStake, the arg 'incremental' is filtered by
+        -- 'resolveActiveIncrementalPtrs' which guarantees that only active stake is included.
+        id
+        m1
+        m2
     extractAndAdd :: Coin -> UM.RDPair -> Coin
     extractAndAdd coin (UM.RDPair rew _dep) = coin <> fromCompact rew
 

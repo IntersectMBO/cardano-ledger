@@ -90,6 +90,7 @@ import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData (..))
+import Control.Exception (assert)
 import Control.Monad.Trans.State.Strict (StateT (..))
 import Data.Foldable (Foldable (..))
 import Data.Map.Strict (Map)
@@ -606,12 +607,11 @@ unionHelp ::
   Map k (CompactForm Coin) ->
   Map k (Trip c)
 unionHelp tm mm =
-  Map.mergeWithKey
-    (\_k (Triple p1 s deposit) delta -> Just (Triple (addCoinToJustRewardsPartOfRDPair p1 delta) s deposit))
-    id
-    (const Map.empty) -- because mm is a subset of tm, we never add anything here.
-    tm
-    mm
+  let f _k (Triple p1 s deposit) delta =
+        Just (Triple (addCoinToJustRewardsPartOfRDPair p1 delta) s deposit)
+      -- We use Map.empty below because mm is a subset of tm, we never add anything here.
+      result = Map.mergeWithKey f id (const Map.empty) tm mm
+   in assert (Map.valid result) result
 
 unionKeyDeposits :: View c k RDPair -> Map k (CompactForm Coin) -> UMap c
 unionKeyDeposits view coinmap = unView (Map.foldlWithKey' accum view coinmap)
