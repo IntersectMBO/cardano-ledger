@@ -1,5 +1,7 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Conway.Era (
   ConwayEra,
@@ -16,7 +18,7 @@ import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.Rules (BabbageUTXO, BabbageUTXOW)
 import Cardano.Ledger.Conway.Governance (ConwayTallyState)
 import Cardano.Ledger.Core
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.Core (EraTallyState (..))
@@ -34,14 +36,14 @@ import Cardano.Ledger.Shelley.Rules (
 -- | The Conway era
 data ConwayEra c
 
-instance CC.Crypto c => Era (ConwayEra c) where
+instance Crypto c => Era (ConwayEra c) where
   type PreviousEra (ConwayEra c) = BabbageEra c
   type EraCrypto (ConwayEra c) = c
   type ProtVerLow (ConwayEra c) = 9
 
 type instance Value (ConwayEra c) = MaryValue c
 
-instance EraTallyState (ConwayEra c) where
+instance (EraPParams (ConwayEra c), Crypto c) => EraTallyState (ConwayEra c) where
   type TallyState (ConwayEra c) = ConwayTallyState (ConwayEra c)
 
 -------------------------------------------------------------------------------

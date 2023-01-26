@@ -55,11 +55,15 @@ import Cardano.Ledger.BaseTypes (
   isSNothing,
  )
 import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
   Encoding,
   FromCBOR (..),
   FromCBORGroup (..),
   ToCBOR (..),
   ToCBORGroup (..),
+  toPlainDecoder,
+  toPlainEncoding,
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -244,6 +248,9 @@ instance Era era => ToCBOR (BabbagePParams Identity era) where
           !> To bppMaxCollateralInputs
       )
 
+instance Era era => EncCBOR (BabbagePParams Identity era) where
+  encCBOR = toPlainEncoding (eraProtVerLow @era) . toCBOR
+
 instance Era era => FromCBOR (BabbagePParams Identity era) where
   fromCBOR =
     decode $
@@ -270,6 +277,9 @@ instance Era era => FromCBOR (BabbagePParams Identity era) where
         <! From -- maxValSize
         <! From -- collateralPercentage
         <! From -- maxCollateralInputs
+
+instance Era era => DecCBOR (BabbagePParams Identity era) where
+  decCBOR = toPlainDecoder (eraProtVerLow @era) fromCBOR
 
 -- | Returns a basic "empty" `PParams` structure with all zero values.
 emptyBabbagePParams :: forall era. Era era => BabbagePParams Identity era

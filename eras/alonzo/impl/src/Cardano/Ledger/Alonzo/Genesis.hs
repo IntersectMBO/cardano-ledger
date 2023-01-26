@@ -41,11 +41,11 @@ module Cardano.Ledger.Alonzo.Genesis (
 )
 where
 
-import Cardano.Ledger.Alonzo.Core (CoinPerWord (..))
-
+import Cardano.Ledger.Alonzo.Core (CoinPerWord (..), eraProtVerLow)
+import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.PParams (UpgradeAlonzoPParams (..))
 import Cardano.Ledger.Alonzo.Scripts (CostModels (..), ExUnits (..), Prices (..))
-import Cardano.Ledger.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR))
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), toPlainDecoder, toPlainEncoding)
 import Cardano.Ledger.Binary.Coders (
   Decode (From, RecD),
   Encode (Rec, To),
@@ -54,6 +54,7 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
+import Cardano.Ledger.Crypto (StandardCrypto)
 import Data.Aeson (FromJSON (..), ToJSON (..), object, (.:), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Functor.Identity (Identity)
@@ -128,21 +129,22 @@ pattern AlonzoGenesis
 -- Serialisation
 --------------------------------------------------------------------------------
 
-instance FromCBOR AlonzoGenesis where
-  fromCBOR =
-    decode $
-      RecD AlonzoGenesis
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
+instance DecCBOR AlonzoGenesis where
+  decCBOR =
+    toPlainDecoder (eraProtVerLow @(AlonzoEra StandardCrypto)) $
+      decode $
+        RecD AlonzoGenesis
+          <! From
+          <! From
+          <! From
+          <! From
+          <! From
+          <! From
+          <! From
+          <! From
 
-instance ToCBOR AlonzoGenesis where
-  toCBOR
+instance EncCBOR AlonzoGenesis where
+  encCBOR
     AlonzoGenesis
       { agCoinsPerUTxOWord
       , agCostModels
@@ -153,8 +155,9 @@ instance ToCBOR AlonzoGenesis where
       , agCollateralPercentage
       , agMaxCollateralInputs
       } =
-      encode $
-        Rec AlonzoGenesis
+      toPlainEncoding (eraProtVerLow @(AlonzoEra StandardCrypto))
+        . encode
+        $ Rec AlonzoGenesis
           !> To agCoinsPerUTxOWord
           !> To agCostModels
           !> To agPrices

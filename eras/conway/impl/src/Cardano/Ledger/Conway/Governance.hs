@@ -24,7 +24,14 @@ module Cardano.Ledger.Conway.Governance (
 where
 
 import Cardano.Ledger.BaseTypes (ProtVer (..))
-import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), decodeEnumBounded, encodeEnum)
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  decodeEnumBounded,
+  encodeEnum,
+ )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
   Encode (..),
@@ -237,18 +244,26 @@ deriving instance EraPParams era => Eq (GovernanceActionState era)
 
 instance EraPParams era => NoThunks (GovernanceActionState era)
 
+instance EraPParams era => NFData (GovernanceActionState era)
+
 deriving instance EraPParams era => Show (GovernanceActionState era)
 
 newtype ConwayTallyState era
   = ConwayTallyState
       (Map (GovernanceActionId (EraCrypto era)) (GovernanceActionState era))
-  deriving (Generic)
+  deriving (Generic, NFData)
 
 deriving instance EraPParams era => Eq (ConwayTallyState era)
 
 deriving instance EraPParams era => Show (ConwayTallyState era)
 
 instance EraPParams era => NoThunks (ConwayTallyState era)
+
+instance Era era => EncCBOR (ConwayTallyState era) where
+  encCBOR = error "Unimplemented"
+
+instance Era era => DecCBOR (ConwayTallyState era) where
+  decCBOR = error "Unimplemented"
 
 instance Default (ConwayTallyState era) where
   def = ConwayTallyState mempty

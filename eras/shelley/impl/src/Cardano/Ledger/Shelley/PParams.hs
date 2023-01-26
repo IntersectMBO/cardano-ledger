@@ -220,6 +220,12 @@ instance Era era => FromCBOR (ShelleyPParams Identity era) where
         <*> fromCBOR -- sppMinUTxOValue    :: Natural
         <*> fromCBOR -- sppMinPoolCost     :: Natural
 
+instance Era era => EncCBOR (ShelleyPParams Identity era) where
+  encCBOR = toPlainEncoding (eraProtVerLow @era) . toCBOR
+
+instance Era era => DecCBOR (ShelleyPParams Identity era) where
+  decCBOR = toPlainDecoder (eraProtVerLow @era) fromCBOR
+
 instance ToJSON (ShelleyPParams Identity era) where
   toJSON pp =
     Aeson.object

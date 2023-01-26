@@ -12,20 +12,15 @@ import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
 import Cardano.Ledger.Babbage.Rules (BabbageUTXO, BabbageUtxoPredFailure (..))
 import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayUTXOS)
-import Cardano.Ledger.Core (
-  EraRule,
-  EraScript (Script),
-  EraTxOut (TxOut),
-  PParamsUpdate,
- )
 import Cardano.Ledger.Shelley.LedgerState (PPUPPredFailure, PPUPState, UTxOState (..))
 import Cardano.Ledger.Shelley.Rules (UtxoEnv (..))
 import Control.State.Transition.Extended (Embed (..), STS (..))
 import Data.Default.Class (Default)
 
 instance
-  ( EraScript era
+  ( EraTxOut era
   , Script era ~ AlonzoScript era
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
@@ -34,8 +29,6 @@ instance
   , Default (PPUPState era)
   , Eq (PPUPState era)
   , Show (PPUPState era)
-  , Eq (TxOut era)
-  , Show (TxOut era)
   ) =>
   STS (ConwayUTXOS era)
   where
@@ -51,7 +44,7 @@ instance
 instance
   ( PredicateFailure (EraRule "UTXOS" era) ~ AlonzoUtxosPredFailure era
   , Event (EraRule "UTXOS" era) ~ AlonzoUtxosEvent era
-  , EraScript era
+  , EraTxOut era
   , Default (PPUPState era)
   , Eq (PPUPState era)
   , Show (PPUPState era)
@@ -59,8 +52,6 @@ instance
   , Show (PPUPPredFailure era)
   , Eq (PParamsUpdate era)
   , Show (PParamsUpdate era)
-  , Eq (TxOut era)
-  , Show (TxOut era)
   , Script era ~ AlonzoScript era
   ) =>
   Embed (ConwayUTXOS era) (BabbageUTXO era)
