@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -14,7 +15,6 @@ module Cardano.Ledger.Rewards (
 where
 
 import Cardano.Ledger.BaseTypes (invalidKey)
-import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Binary.Plain as Plain (
   DecCBOR (..),
   EncCBOR (..),
@@ -88,10 +88,11 @@ instance NoThunks (Reward c)
 
 instance NFData (Reward c)
 
-instance Crypto c => ToCBOR (Reward c) where
-  toCBOR Reward {rewardType,rewardPool, rewardType, rewardAmount} =
-    toCBOR (rewardType,rewardPool, rewardType, rewardAmount)
+instance Crypto c => EncCBOR (Reward c) where
+  encCBOR Reward {rewardType, rewardPool, rewardAmount} =
+    encCBOR (rewardType, rewardPool, rewardAmount)
 
-instance Crypto c => FromCBOR (Reward c) where
-  fromCBOR =
-    decode $ RecD Reward <! From <! From <! From
+instance Crypto c => DecCBOR (Reward c) where
+  decCBOR = do
+    (rewardType, rewardPool, rewardAmount) <- decCBOR
+    pure Reward {rewardType, rewardPool, rewardAmount}

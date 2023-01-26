@@ -132,6 +132,15 @@ data ProtVer = ProtVer {pvMajor :: !Version, pvMinor :: !Natural}
   deriving (ToCBOR) via (CBORGroup ProtVer)
   deriving (FromCBOR) via (CBORGroup ProtVer)
 
+instance EncCBOR ProtVer where
+  encCBOR ProtVer {..} = encCBOR pvMajor <> encCBOR pvMinor
+
+instance DecCBOR ProtVer where
+  decCBOR = do
+    pvMajor <- decCBOR
+    pvMinor <- decCBOR
+    pure ProtVer {..}
+
 instance NoThunks ProtVer
 
 instance ToJSON ProtVer where

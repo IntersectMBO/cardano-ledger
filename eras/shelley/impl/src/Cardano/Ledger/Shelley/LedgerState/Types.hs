@@ -26,17 +26,20 @@ import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
   StrictMaybe (..),
  )
+
 import Cardano.Ledger.Binary (
   FromCBOR (fromCBOR),
-  FromSharedCBOR (Share, fromSharedCBOR, fromSharedPlusCBOR),
-  Interns,
   ToCBOR (toCBOR),
+  toPlainDecoder,
+  toPlainEncoding,
+ )
+import Cardano.Ledger.Binary.Plain (
+  DecShareCBOR (Share, decShareCBOR, decSharePlusCBOR),
+  Interns,
   decodeRecordNamed,
   decodeRecordNamedT,
   encodeListLen,
-  fromSharedLensCBOR,
-  toPlainDecoder,
-  toPlainEncoding,
+  decShareLensCBOR,
  )
 import Cardano.Ledger.Binary.Coders (Decode (From, RecD), decode, (<!))
 import Cardano.Ledger.Coin (Coin (..))
@@ -180,20 +183,20 @@ instance
   , FromCBOR (PParams era)
   , FromCBOR (PPUPState era)
   , HashAnnotated (TxBody era) EraIndependentTxBody (EraCrypto era)
-  , FromSharedCBOR (TxOut era)
   , FromCBOR (TallyState era)
+  , DecShareCBOR (TxOut era)
   , Share (TxOut era) ~ Interns (Credential 'Staking (EraCrypto era))
   , Era era
   , EraTallyState era
   ) =>
-  FromCBOR (EpochState era)
+  DecCBOR (EpochState era)
   where
-  fromCBOR =
+  decCBOR =
     decodeRecordNamed "EpochState" (const 6) $
       flip evalStateT mempty $ do
         esAccountState <- lift fromCBOR
-        esLState <- fromSharedPlusCBOR
-        esSnapshots <- fromSharedPlusCBOR
+        esLState <- decSharePlusCBOR
+        esSnapshots <- decSharePlusCBOR
         esPrevPp <- lift fromCBOR
         esPp <- lift fromCBOR
         esNonMyopic <- fromSharedLensCBOR _2
@@ -231,11 +234,11 @@ instance CC.Crypto c => ToCBOR (IncrementalStake c) where
   toCBOR (IStake st dangle) =
     encodeListLen 2 <> toCBOR st <> toCBOR dangle
 
-instance CC.Crypto c => FromSharedCBOR (IncrementalStake c) where
+instance CC.Crypto c => DecShareCBOR (IncrementalStake c) where
   type Share (IncrementalStake c) = Interns (Credential 'Staking c)
-  fromSharedCBOR credInterns =
+  decShareCBOR credInterns =
     decodeRecordNamed "Stake" (const 2) $ do
-      stake <- fromSharedCBOR (credInterns, mempty)
+      stake <- decShareCBOR (credInterns, mempty)
       IStake stake <$> fromCBOR
 
 instance Semigroup (IncrementalStake c) where
@@ -308,24 +311,24 @@ instance
 
 instance
   ( CC.Crypto (EraCrypto era)
-  , FromSharedCBOR (TxOut era)
+  , DecShareCBOR (TxOut era)
   , Share (TxOut era) ~ Interns (Credential 'Staking (EraCrypto era))
   , HashAnnotated (TxBody era) EraIndependentTxBody (EraCrypto era)
   , Era era
   , FromCBOR (PPUPState era)
   ) =>
-  FromSharedCBOR (UTxOState era)
+  DecShareCBOR (UTxOState era)
   where
   type
     Share (UTxOState era) =
       Interns (Credential 'Staking (EraCrypto era))
-  fromSharedCBOR credInterns =
+  decShareCBOR credInterns =
     decodeRecordNamed "UTxOState" (const 5) $ do
-      utxosUtxo <- fromSharedCBOR credInterns
+      utxosUtxo <- decShareCBOR credInterns
       utxosDeposited <- fromCBOR
       utxosFees <- fromCBOR
       utxosPpups <- fromCBOR
-      utxosStakeDistr <- fromSharedCBOR credInterns
+      utxosStakeDistr <- decShareCBOR credInterns
       pure UTxOState {..}
 
 -- | New Epoch state and environment
@@ -414,7 +417,7 @@ instance
 instance
   ( Era era
   , FromCBOR (PParams era)
-  , FromSharedCBOR (TxOut era)
+  , DecShareCBOR (TxOut era)
   , Share (TxOut era) ~ Interns (Credential 'Staking (EraCrypto era))
   , FromCBOR (Value era)
   , FromCBOR (StashedAVVMAddresses era)
@@ -450,7 +453,7 @@ instance
 instance
   ( Era era
   , FromCBOR (PParams era)
-  , FromSharedCBOR (TxOut era)
+  , DecShareCBOR (TxOut era)
   , Share (TxOut era) ~ Interns (Credential 'Staking (EraCrypto era))
   , FromCBOR (Value era)
   , FromCBOR (State (EraRule "PPUP" era))
@@ -528,23 +531,23 @@ instance
       <> toCBOR lsTallyState
 
 instance
-  ( Era era
+  ( EraTxOut era
   , HashAnnotated (TxBody era) EraIndependentTxBody (EraCrypto era)
   , FromCBOR (Value era)
-  , FromSharedCBOR (TxOut era)
+  , DecSharedCBOR (TxOut era)
   , Share (TxOut era) ~ Interns (Credential 'Staking (EraCrypto era))
   , FromCBOR (PPUPState era)
   , EraTallyState era
   , FromCBOR (TallyState era)
   ) =>
-  FromSharedCBOR (LedgerState era)
+  DecShareCBOR (LedgerState era)
   where
   type
     Share (LedgerState era) =
       (Interns (Credential 'Staking (EraCrypto era)), Interns (KeyHash 'StakePool (EraCrypto era)))
-  fromSharedPlusCBOR =
+  decSharePlusCBOR =
     decodeRecordNamedT "LedgerState" (const 3) $ do
-      lsDPState <- fromSharedPlusCBOR
+      lsDPState <- decSharePlusCBOR
       lsUTxOState <- fromSharedLensCBOR _1
       lsTallyState <- lift fromCBOR
       pure LedgerState {lsUTxOState, lsDPState, lsTallyState}

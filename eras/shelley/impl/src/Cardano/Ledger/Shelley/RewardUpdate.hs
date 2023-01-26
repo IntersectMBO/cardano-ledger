@@ -23,9 +23,8 @@ import Cardano.Ledger.BaseTypes (ProtVer (..), ShelleyBase)
 import Cardano.Ledger.Binary.Plain (
   DecCBOR (..),
   EncCBOR (..),
-  decNoShareCBOR,
   decodeListLen,
-  decodeRecordNamed,
+  decodeWord,
   encodeListLen,
  )
 import Cardano.Ledger.Coin (Coin (..), CompactForm, DeltaCoin (..))
@@ -43,7 +42,6 @@ import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (toExpr))
 import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad (when)
 import Data.Default.Class (def)
-import Data.Group (invert)
 import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -320,7 +318,7 @@ instance Crypto c => DecCBOR (PulsingRewUpdate c) where
   decCBOR = do
     n <- decodeListLen
     when (n < 1) $ fail $ "<PulsingRewUpdate> Unexpected list length: " ++ show n
-    decCBOR >>= \case
+    decodeWord >>= \case
       0 | n == 3 -> Pulsing <$> decCBOR <*> decCBOR
       1 | n == 2 -> Complete <$> decCBOR
       t ->

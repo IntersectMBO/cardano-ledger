@@ -4,7 +4,9 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Cardano.Ledger.Shelley.Rewards (
   StakeShare (..),
@@ -32,11 +34,7 @@ import Cardano.Ledger.BaseTypes (
   ProtVer,
   UnitInterval,
  )
-import Cardano.Ledger.Binary (
-  FromCBOR (..),
-  ToCBOR (..),
- )
-import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Coin (
   Coin (..),
   CompactForm,
@@ -46,10 +44,9 @@ import Cardano.Ledger.Coin (
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core (EraCrypto, EraPParams (..), PParams (..), Reward (..), RewardType (..), ppA0L, ppNOptL)
 import Cardano.Ledger.Credential (Credential (..))
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.EpochBoundary (Stake (..), maxPool')
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.Shelley.Delegation.PoolParams (poolSpec)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..))
 import Cardano.Ledger.UMapCompact (compactCoinOrError)
@@ -71,7 +68,7 @@ import Quiet
 
 -- | StakeShare type
 newtype StakeShare = StakeShare {unStakeShare :: Rational}
-  deriving (Generic, Ord, Eq, NoThunks)
+  deriving (Generic, Ord, Eq, NoThunks, EncCBOR, DecCBOR)
   deriving (Show) via Quiet StakeShare
 
 instance NFData StakeShare
@@ -104,7 +101,8 @@ leaderRew f pool (StakeShare s) (StakeShare sigma)
         <> rationalToCoinViaFloor
           (coinToRational (f <-> c) * (m' + (1 - m') * s / sigma))
   where
-    (c, m, _) = poolSpec pool
+    c = ppCost pool
+    m = ppMargin pool
     m' = unboundRational m
 
 -- | Calculate pool member reward
@@ -120,7 +118,8 @@ memberRew (Coin f') pool (StakeShare t) (StakeShare sigma)
       rationalToCoinViaFloor $
         fromIntegral (f' - c) * (1 - m') * t / sigma
   where
-    (Coin c, m, _) = poolSpec pool
+    Coin c = ppCost pool
+    m = ppMargin pool
     m' = unboundRational m
 
 sumRewards ::
@@ -198,11 +197,12 @@ instance NoThunks (LeaderOnlyReward c)
 
 instance NFData (LeaderOnlyReward c)
 
-instance CC.Crypto c => ToCBOR (LeaderOnlyReward c) where
-  toCBOR (LeaderOnlyReward pool c) = encode $ Rec LeaderOnlyReward !> To pool !> To c
+instance Crypto c => EncCBOR (LeaderOnlyReward c) where
+  encCBOR LeaderOnlyReward {lRewardPool, lRewardAmount} =
+    encCBOR (lRewardPool, lRewardAmount)
 
-instance CC.Crypto c => FromCBOR (LeaderOnlyReward c) where
-  fromCBOR = decode $ RecD LeaderOnlyReward <! From <! From
+instance Crypto c => DecCBOR (LeaderOnlyReward c) where
+  decCBOR = uncurry LeaderOnlyReward <$> decCBOR
 
 leaderRewardToGeneral :: LeaderOnlyReward c -> Reward c
 leaderRewardToGeneral (LeaderOnlyReward poolId r) = Reward LeaderReward poolId r
@@ -227,27 +227,33 @@ instance NoThunks (PoolRewardInfo c)
 
 instance NFData (PoolRewardInfo c)
 
-instance CC.Crypto c => ToCBOR (PoolRewardInfo c) where
-  toCBOR
-    (PoolRewardInfo a b c d e) =
-      encode $
-        Rec PoolRewardInfo
-          !> E (toCBOR . unStakeShare) a
-          !> To b
-          !> To c
-          !> To d
-          !> To e
+instance Crypto c => EncCBOR (PoolRewardInfo c) where
+  encCBOR
+    PoolRewardInfo
+      { poolRelativeStake
+      , poolPot
+      , poolPs
+      , poolBlocks
+      , poolLeaderReward
+      } =
+      encCBOR
+        ( poolRelativeStake
+        , poolPot
+        , poolPs
+        , poolBlocks
+        , poolLeaderReward
+        )
 
-instance CC.Crypto c => FromCBOR (PoolRewardInfo c) where
-  fromCBOR =
-    decode
-      ( RecD PoolRewardInfo
-          <! D (StakeShare <$> fromCBOR)
-          <! From
-          <! From
-          <! From
-          <! From
-      )
+instance Crypto c => DecCBOR (PoolRewardInfo c) where
+  decCBOR = do
+    ( poolRelativeStake
+      , poolPot
+      , poolPs
+      , poolBlocks
+      , poolLeaderReward
+      ) <-
+      decCBOR
+    pure PoolRewardInfo {..}
 
 notPoolOwner ::
   PoolParams c ->

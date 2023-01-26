@@ -27,6 +27,7 @@ module Cardano.Ledger.Binary.Version (
 )
 where
 
+import Cardano.Binary (EncCBOR(..), DecCBOR(..))
 import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (toExpr))
 import Control.DeepSeq (NFData)
 import Data.Proxy (Proxy (..))
@@ -43,6 +44,12 @@ import Numeric.Natural (Natural)
 -- versions are in the range from `MinVersion` to `MaxVersion`.
 newtype Version = Version Word64
   deriving (Eq, Ord, Show, Enum, NFData, NoThunks)
+
+instance EncCBOR Version where
+  encCBOR (Version v64) = encCBOR v64
+
+instance DecCBOR Version where
+  decCBOR = decCBOR >>= mkVersion64
 
 -- | Minimum supported version
 type MinVersion = 1

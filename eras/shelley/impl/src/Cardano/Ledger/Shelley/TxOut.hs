@@ -28,11 +28,13 @@ import Cardano.HeapWords (HeapWords (..))
 import Cardano.Ledger.Address (Addr (..), CompactAddr, compactAddr, decompactAddr)
 import Cardano.Ledger.Binary (
   DecShareCBOR (..),
+  EncCBOR (..),
   FromCBOR (..),
   ToCBOR (..),
   decodeRecordNamed,
   encodeListLen,
   toPlainDecoder,
+  toPlainEncoding,
  )
 import Cardano.Ledger.Binary.Plain (
   Interns (..),
@@ -156,6 +158,9 @@ instance
     decodeRecordNamed "ShelleyTxOut" (const 2) $ do
       cAddr <- fromCBOR
       TxOutCompact cAddr <$> decodeNonNegative
+
+instance (Era era, ToCBOR (CompactForm (Value era))) => EncCBOR (ShelleyTxOut era) where
+  encCBOR = toPlainEncoding (eraProtVerLow @era) . toCBOR
 
 -- | This instance does not do any sharing and is isomorphic to `FromCBOR`
 instance

@@ -401,6 +401,12 @@ pattern TxOutCompactDH addr vl dh <-
 
 instance
   (Era era, Val (Value era), ToCBOR (Value era), ToCBOR (Script era)) =>
+  EncCBOR (BabbageTxOut era)
+  where
+  encCBOR = toPlainEncoding (eraProtVerLow @era) . toCBOR
+
+instance
+  (Era era, Val (Value era), ToCBOR (Value era), ToCBOR (Script era)) =>
   ToCBOR (BabbageTxOut era)
   where
   toCBOR (BabbageTxOut addr v d s) = encodeTxOut (compactAddr addr) v d s
