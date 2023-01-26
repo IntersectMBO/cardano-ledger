@@ -22,25 +22,13 @@
 module Cardano.Ledger.Shelley.LedgerState.Types where
 
 import Cardano.Binary (DecCBOR (..), EncCBOR (..))
-import Cardano.Ledger.BaseTypes (
-  BlocksMade (..),
-  StrictMaybe (..),
- )
-
-import Cardano.Ledger.Binary (
-  FromCBOR (fromCBOR),
-  ToCBOR (toCBOR),
-  toPlainDecoder,
-  toPlainEncoding,
- )
-import Cardano.Ledger.Binary.Coders (Decode (From, RecD), decode, (<!))
+import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochNo (..), StrictMaybe (..))
 import Cardano.Ledger.Binary.Plain (
   DecShareCBOR (Share, decShareCBOR, decSharePlusCBOR),
   Interns,
   decShareLensCBOR,
   decodeRecordNamed,
   decodeRecordNamedT,
-  encodeListLen,
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
@@ -56,7 +44,6 @@ import Cardano.Ledger.Keys (
   KeyRole (..),
  )
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
-import Cardano.Ledger.SafeHash (HashAnnotated)
 import Cardano.Ledger.Shelley.Core (EraTallyState (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PoolRank (
@@ -66,7 +53,6 @@ import Cardano.Ledger.Shelley.RewardUpdate (
   PulsingRewUpdate (..),
  )
 import Cardano.Ledger.Shelley.Rules.Ppup (PPUPState, ShelleyPPUPState)
-import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.UTxO (UTxO (..))
 import Control.DeepSeq (NFData)

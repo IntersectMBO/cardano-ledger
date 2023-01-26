@@ -68,6 +68,8 @@ import Cardano.Ledger.Alonzo.Scripts (
 import Cardano.Ledger.BaseTypes (EpochNo (..), NonNegativeInterval, Nonce (NeutralNonce), StrictMaybe (..), UnitInterval, isSNothing)
 import qualified Cardano.Ledger.BaseTypes as BT (ProtVer (..))
 import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
   Encoding,
   FromCBOR (..),
   FromCBORGroup (..),
@@ -80,6 +82,8 @@ import Cardano.Ledger.Binary (
   encodePreEncoded,
   serialize',
   serializeEncoding',
+  toPlainDecoder,
+  toPlainEncoding,
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -309,6 +313,9 @@ instance Era era => ToCBOR (AlonzoPParams Identity era) where
           !> To appCollateralPercentage
           !> To appMaxCollateralInputs
 
+instance Era era => EncCBOR (AlonzoPParams Identity era) where
+  encCBOR = toPlainEncoding (eraProtVerLow @era) . toCBOR
+
 instance Era era => FromCBOR (AlonzoPParams Identity era) where
   fromCBOR =
     decode $
@@ -338,6 +345,9 @@ instance Era era => FromCBOR (AlonzoPParams Identity era) where
         <! From -- appMaxValSize
         <! From -- appCollateralPercentage
         <! From -- appMaxCollateralInputs
+
+instance Era era => DecCBOR (AlonzoPParams Identity era) where
+  decCBOR = toPlainDecoder (eraProtVerLow @era) fromCBOR
 
 instance ToJSON (AlonzoPParams Identity era) where
   toJSON AlonzoPParams {..} =

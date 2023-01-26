@@ -30,7 +30,7 @@ instance Crypto c => Era (AlonzoEra c) where
 
 type instance Value (AlonzoEra c) = MaryValue c
 
-instance EraTallyState (AlonzoEra c)
+instance Crypto c => EraTallyState (AlonzoEra c)
 
 -------------------------------------------------------------------------------
 -- Era Mapping

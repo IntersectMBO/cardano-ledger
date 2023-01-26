@@ -56,14 +56,18 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (
   DecoderError (DecoderErrorCustom),
   FromCBOR (fromCBOR),
-  FromSharedCBOR (Share, fromSharedCBOR),
-  Interns,
   ToCBOR (toCBOR),
   cborError,
   decodeBreakOr,
   decodeListLenOrIndef,
   encodeListLen,
-  fromNotSharedCBOR,
+  toPlainDecoder,
+  toPlainEncoding,
+ )
+import Cardano.Ledger.Binary.Plain (
+  DecShareCBOR (Share, decShareCBOR),
+  EncCBOR (..),
+  Interns,
   interns,
  )
 import Cardano.Ledger.Coin (Coin (..))
@@ -347,26 +351,18 @@ instance
       <> toCBOR dh
 
 instance
+  (Era era, Val (Value era), DecodeNonNegative (Value era)) =>
+  EncCBOR (AlonzoTxOut era)
+  where
+  encCBOR = toPlainEncoding (eraProtVerLow @era) . toCBOR
+
+instance
   (Era era, Show (Value era), Val (Value era), DecodeNonNegative (Value era)) =>
   FromCBOR (AlonzoTxOut era)
   where
-  fromCBOR = fromNotSharedCBOR
-  {-# INLINE fromCBOR #-}
-
-instance
-  (Era era, Val (Value era), DecodeNonNegative (Value era), Show (Value era)) =>
-  FromSharedCBOR (AlonzoTxOut era)
-  where
-  type Share (AlonzoTxOut era) = Interns (Credential 'Staking (EraCrypto era))
-  fromSharedCBOR credsInterns = do
+  fromCBOR = do
     lenOrIndef <- decodeListLenOrIndef
-    let internTxOut = \case
-          TxOut_AddrHash28_AdaOnly cred addr28Extra ada ->
-            TxOut_AddrHash28_AdaOnly (interns credsInterns cred) addr28Extra ada
-          TxOut_AddrHash28_AdaOnly_DataHash32 cred addr28Extra ada dataHash32 ->
-            TxOut_AddrHash28_AdaOnly_DataHash32 (interns credsInterns cred) addr28Extra ada dataHash32
-          txOut -> txOut
-    internTxOut <$!> case lenOrIndef of
+    case lenOrIndef of
       Nothing -> do
         (a, ca) <- fromCborBothAddr
         cv <- decodeNonNegative
@@ -386,7 +382,22 @@ instance
         cv <- decodeNonNegative
         mkTxOutCompact a ca cv . SJust <$> fromCBOR
       Just _ -> cborError $ DecoderErrorCustom "txout" "wrong number of terms in txout"
-  {-# INLINEABLE fromSharedCBOR #-}
+  {-# INLINE fromCBOR #-}
+
+instance
+  (Era era, Val (Value era), DecodeNonNegative (Value era), Show (Value era)) =>
+  DecShareCBOR (AlonzoTxOut era)
+  where
+  type Share (AlonzoTxOut era) = Interns (Credential 'Staking (EraCrypto era))
+  decShareCBOR credsInterns = do
+    let internTxOut = \case
+          TxOut_AddrHash28_AdaOnly cred addr28Extra ada ->
+            TxOut_AddrHash28_AdaOnly (interns credsInterns cred) addr28Extra ada
+          TxOut_AddrHash28_AdaOnly_DataHash32 cred addr28Extra ada dataHash32 ->
+            TxOut_AddrHash28_AdaOnly_DataHash32 (interns credsInterns cred) addr28Extra ada dataHash32
+          txOut -> txOut
+    internTxOut <$!> toPlainDecoder (eraProtVerLow @era) fromCBOR
+  {-# INLINEABLE decShareCBOR #-}
 
 instance (EraTxOut era, ToJSON (Value era)) => ToJSON (AlonzoTxOut era) where
   toJSON (AlonzoTxOut addr v dataHash) =

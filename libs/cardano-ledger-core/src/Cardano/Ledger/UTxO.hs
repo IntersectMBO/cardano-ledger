@@ -34,11 +34,9 @@ module Cardano.Ledger.UTxO (
 where
 
 import Cardano.Ledger.Address (Addr (..))
+import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Binary.Plain (
   DecCBOR (..),
-  -- FromCBOR (..),
-  -- ToCBOR (..),
-
   DecShareCBOR (Share, decShareCBOR),
   EncCBOR (..),
   Interns,
@@ -80,6 +78,10 @@ import Quiet (Quiet (Quiet))
 -- | The unspent transaction outputs.
 newtype UTxO era = UTxO {unUTxO :: Map.Map (TxIn (EraCrypto era)) (TxOut era)}
   deriving (Default, Generic, Semigroup)
+
+deriving newtype instance (ToCBOR (TxOut era), Era era) => ToCBOR (UTxO era)
+
+deriving newtype instance (FromCBOR (TxOut era), Era era) => FromCBOR (UTxO era)
 
 deriving newtype instance (EncCBOR (TxOut era), Era era) => EncCBOR (UTxO era)
 
