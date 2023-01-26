@@ -32,7 +32,9 @@ import Test.Cardano.Ledger.Mary.Arbitrary (genEmptyMultiAsset, genMaryValue, gen
 spec :: Spec
 spec = do
   describe "MultiAsset" $ do
-    prop "Canonical construction agrees" $ propCanonicalConstructionAgrees @StandardCrypto
+    prop "Canonical construction agrees" $
+      withMaxSuccess 100000 $
+        propCanonicalConstructionAgrees @StandardCrypto
   describe "CBOR roundtrip" $ do
     context "Coin" $ do
       prop "Non-negative Coin succeeds for all eras" $
