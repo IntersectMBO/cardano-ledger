@@ -77,8 +77,6 @@ import Cardano.Ledger.Binary (
   DecoderError (..),
   Encoding,
   FromCBOR (..),
-  FromSharedCBOR (..),
-  Interns,
   Sized (..),
   ToCBOR (..),
   TokenType (..),
@@ -89,10 +87,17 @@ import Cardano.Ledger.Binary (
   decodeNestedCborBytes,
   encodeNestedCbor,
   getDecoderVersion,
-  interns,
   peekTokenType,
+  toPlainDecoder,
+  toPlainEncoding,
  )
 import Cardano.Ledger.Binary.Coders
+import Cardano.Ledger.Binary.Plain (
+  DecShareCBOR (..),
+  EncCBOR (..),
+  Interns,
+  interns,
+ )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
@@ -439,11 +444,11 @@ instance
   , FromCBOR (Annotator (Script era))
   , DecodeNonNegative (Value era)
   ) =>
-  FromSharedCBOR (BabbageTxOut era)
+  DecShareCBOR (BabbageTxOut era)
   where
   type Share (BabbageTxOut era) = Interns (Credential 'Staking (EraCrypto era))
-  fromSharedCBOR credsInterns =
-    internTxOut <$!> decodeBabbageTxOut
+  decShareCBOR credsInterns =
+    internTxOut <$!> toPlainDecoder (eraProtVerLow @era) decodeBabbageTxOut
     where
       internTxOut = \case
         TxOut_AddrHash28_AdaOnly cred addr28Extra ada ->

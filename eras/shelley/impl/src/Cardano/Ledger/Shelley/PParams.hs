@@ -202,9 +202,6 @@ instance Era era => ToCBOR (ShelleyPParams Identity era) where
         <> toCBOR sppMinUTxOValue
         <> toCBOR sppMinPoolCost
 
-instance Era era => EncCBOR (ShelleyPParams Identity era) where
-  encCBOR = toPlainEncoding (eraProtVerLow @era) . toCBOR
-
 instance Era era => FromCBOR (ShelleyPParams Identity era) where
   fromCBOR = do
     decodeRecordNamed "ShelleyPParams" (const 18) $
@@ -226,6 +223,9 @@ instance Era era => FromCBOR (ShelleyPParams Identity era) where
         <*> fromCBORGroup -- sppProtocolVersion :: ProtVer
         <*> fromCBOR -- sppMinUTxOValue    :: Natural
         <*> fromCBOR -- sppMinPoolCost     :: Natural
+
+instance Era era => EncCBOR (ShelleyPParams Identity era) where
+  encCBOR = toPlainEncoding (eraProtVerLow @era) . toCBOR
 
 instance Era era => DecCBOR (ShelleyPParams Identity era) where
   decCBOR = toPlainDecoder (eraProtVerLow @era) fromCBOR
@@ -374,9 +374,6 @@ instance Era era => ToCBOR (ShelleyPParams StrictMaybe era) where
     where
       encodeMapElement ix encoder x = SJust (encodeWord ix <> encoder x)
 
-instance Era era => EncCBOR (ShelleyPParams StrictMaybe era) where
-  encCBOR = toPlainEncoding (eraProtVerLow @era) . toCBOR
-
 instance Era era => FromCBOR (ShelleyPParams StrictMaybe era) where
   fromCBOR = do
     mapParts <-
@@ -405,9 +402,6 @@ instance Era era => FromCBOR (ShelleyPParams StrictMaybe era) where
       (nub fields == fields)
       (fail $ "duplicate keys: " <> show fields)
     pure $ foldr ($) emptyShelleyPParamsUpdate (snd <$> mapParts)
-
-instance Era era => DecCBOR (ShelleyPParams StrictMaybe era) where
-  decCBOR = toPlainDecoder (eraProtVerLow @era) fromCBOR
 
 -- | Update operation for protocol parameters structure @PParams
 newtype ProposedPPUpdates era

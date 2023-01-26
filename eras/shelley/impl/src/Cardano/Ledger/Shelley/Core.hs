@@ -32,7 +32,7 @@ import Cardano.Ledger.Binary.Plain (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Crypto ( Crypto )
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (Update)

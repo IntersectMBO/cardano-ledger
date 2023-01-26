@@ -51,8 +51,10 @@ import Cardano.Ledger.BaseTypes (
   mkActiveSlotCoeff,
  )
 import Cardano.Ledger.Binary (
+  DecCBOR (..),
   Decoder,
   DecoderError (..),
+  EncCBOR (..),
   Encoding,
   FromCBOR (..),
   ToCBOR (..),
@@ -63,6 +65,8 @@ import Cardano.Ledger.Binary (
   enforceDecoderVersion,
   enforceEncodingVersion,
   shelleyProtVer,
+  toPlainDecoder,
+  toPlainEncoding,
  )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
@@ -304,8 +308,8 @@ instance Crypto c => FromJSON (ShelleyGenesisStaking c) where
         <$> (forceElemsToWHNF <$> obj .: "pools")
         <*> (forceElemsToWHNF <$> obj .: "stake")
 
-instance Crypto c => ToCBOR (ShelleyGenesis c) where
-  toCBOR
+instance Crypto c => EncCBOR (ShelleyGenesis c) where
+  encCBOR
     ShelleyGenesis
       { sgSystemStart
       , sgNetworkMagic
@@ -323,25 +327,26 @@ instance Crypto c => ToCBOR (ShelleyGenesis c) where
       , sgInitialFunds
       , sgStaking
       } =
-      encodeListLen 15
-        <> toCBOR sgSystemStart
-        <> toCBOR sgNetworkMagic
-        <> toCBOR sgNetworkId
-        <> activeSlotsCoeffToCBOR sgActiveSlotsCoeff
-        <> toCBOR sgSecurityParam
-        <> toCBOR (unEpochSize sgEpochLength)
-        <> toCBOR sgSlotsPerKESPeriod
-        <> toCBOR sgMaxKESEvolutions
-        <> toCBOR sgSlotLength
-        <> toCBOR sgUpdateQuorum
-        <> toCBOR sgMaxLovelaceSupply
-        <> toCBOR sgProtocolParams
-        <> toCBOR sgGenDelegs
-        <> toCBOR sgInitialFunds
-        <> toCBOR sgStaking
+      toPlainEncoding shelleyProtVer $
+        encodeListLen 15
+          <> toCBOR sgSystemStart
+          <> toCBOR sgNetworkMagic
+          <> toCBOR sgNetworkId
+          <> activeSlotsCoeffToCBOR sgActiveSlotsCoeff
+          <> toCBOR sgSecurityParam
+          <> toCBOR (unEpochSize sgEpochLength)
+          <> toCBOR sgSlotsPerKESPeriod
+          <> toCBOR sgMaxKESEvolutions
+          <> toCBOR sgSlotLength
+          <> toCBOR sgUpdateQuorum
+          <> toCBOR sgMaxLovelaceSupply
+          <> toCBOR sgProtocolParams
+          <> toCBOR sgGenDelegs
+          <> toCBOR sgInitialFunds
+          <> toCBOR sgStaking
 
-instance Crypto c => FromCBOR (ShelleyGenesis c) where
-  fromCBOR = do
+instance Crypto c => DecCBOR (ShelleyGenesis c) where
+  decCBOR = toPlainDecoder shelleyProtVer $ do
     decodeRecordNamed "ShelleyGenesis" (const 15) $ do
       sgSystemStart <- fromCBOR
       sgNetworkMagic <- fromCBOR

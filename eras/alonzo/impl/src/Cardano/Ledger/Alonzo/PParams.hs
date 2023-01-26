@@ -313,9 +313,6 @@ instance Era era => ToCBOR (AlonzoPParams Identity era) where
           !> To appCollateralPercentage
           !> To appMaxCollateralInputs
 
-instance Era era => EncCBOR (AlonzoPParams Identity era) where
-  encCBOR = toPlainEncoding (eraProtVerLow @era) . toCBOR
-
 instance Era era => FromCBOR (AlonzoPParams Identity era) where
   fromCBOR =
     decode $
@@ -345,6 +342,9 @@ instance Era era => FromCBOR (AlonzoPParams Identity era) where
         <! From -- appMaxValSize
         <! From -- appCollateralPercentage
         <! From -- appMaxCollateralInputs
+
+instance Era era => EncCBOR (AlonzoPParams Identity era) where
+  encCBOR = toPlainEncoding (eraProtVerLow @era) . toCBOR
 
 instance Era era => DecCBOR (AlonzoPParams Identity era) where
   decCBOR = toPlainDecoder (eraProtVerLow @era) fromCBOR
