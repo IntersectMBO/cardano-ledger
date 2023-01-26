@@ -9,10 +9,12 @@
 
 module Test.Cardano.Ledger.Mary.Value (valTests) where
 
+import Cardano.Crypto.Hash.Class (castHash, hashFromStringAsHex)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (fromCompact, toCompact)
 import Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Mary.Value (
   AssetName (..),
   MaryValue (..),
@@ -22,6 +24,7 @@ import Cardano.Ledger.Mary.Value (
   lookupMultiAsset,
  )
 import Cardano.Ledger.Val (Val (..), invert)
+import Control.DeepSeq (rnf)
 import Control.Monad (replicateM)
 import Data.ByteString.Short (ShortByteString)
 import Data.CanonicalMaps (
@@ -29,8 +32,10 @@ import Data.CanonicalMaps (
   canonicalInsert,
   canonicalMapUnion,
  )
+import qualified Data.Group as G
 import Data.Map.Strict (empty, singleton)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (fromMaybe)
 import Test.Cardano.Ledger.Mary.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
@@ -333,6 +338,75 @@ compactRoundTrip = forAll gen $ \v ->
 compactTest :: TestTree
 compactTest = testProperty "fromCompact . toCompact == id" compactRoundTrip
 
+-- | Create a script hash of length 28 with 27 leading zeros followed by one hex-encoded byte
+-- supplied by the caller.
+makeScriptHash :: String -> ScriptHash StandardCrypto
+makeScriptHash str =
+  ScriptHash $ castHash (fromMaybe (error "Impossible") $ hashFromStringAsHex (pad <> str))
+  where
+    pad = replicate 54 '0'
+
+oneNonameAsset :: Map.Map AssetName Integer
+oneNonameAsset = Map.fromList [(AssetName "", 1)]
+
+makeMultiAsset :: ScriptHash StandardCrypto -> MultiAsset StandardCrypto
+makeMultiAsset sh = MultiAsset (Map.singleton (PolicyID sh) oneNonameAsset)
+
+s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12 :: MultiAsset StandardCrypto
+s0 = makeMultiAsset $ makeScriptHash "00"
+s1 = makeMultiAsset $ makeScriptHash "01"
+s2 = makeMultiAsset $ makeScriptHash "02"
+s3 = makeMultiAsset $ makeScriptHash "03"
+s4 = makeMultiAsset $ makeScriptHash "04"
+s5 = makeMultiAsset $ makeScriptHash "05"
+s6 = makeMultiAsset $ makeScriptHash "06"
+s7 = makeMultiAsset $ makeScriptHash "07"
+s8 = makeMultiAsset $ makeScriptHash "08"
+s9 = makeMultiAsset $ makeScriptHash "09"
+s10 = makeMultiAsset $ makeScriptHash "10"
+s11 = makeMultiAsset $ makeScriptHash "11"
+s12 = makeMultiAsset $ makeScriptHash "12"
+
+exampleMultiAssets :: [MultiAsset StandardCrypto]
+exampleMultiAssets = [s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12]
+
+-- | Test that the subtraction of Multi-assets (and the underlying 'CanonicalMaps')
+-- is a total function.
+-- This was used to diagnose https://github.com/input-output-hk/cardano-node/issues/4826
+subtractionIsTotal :: TestTree
+subtractionIsTotal = testProperty "multi-asset subtraction is total" $
+  QC.withMaxSuccess 100000 $
+    do
+      shuffle1 <- take 12 <$> QC.shuffle exampleMultiAssets
+      shuffle2 <- take 2 <$> QC.shuffle exampleMultiAssets
+      let a = mconcat [m | MultiAsset m <- shuffle1]
+          -- \^ here we chose to perform addition on the CanonicalMaps, as this is what
+          -- happens during deserialization, giving us insight into how node-4826 could
+          -- have occurred on mainnet (since we care about how the addition is associated).
+          -- Note that the ledger does not manipulate instances of
+          -- 'Value' and then store them in memory, since outputs are created by the user
+          -- and only deserialized. In other words, it is only in the ledger rules themselves
+          -- that we manipulate 'Value'.
+          b = mconcat shuffle2
+      pure $! rnf (MultiAsset a <> G.invert b)
+
+-- | The test below was discovered by a failure of 'subtractionIsTotal'
+-- using git sha bd359d3f745ca72242b2cd1208780c2787992b5f and --quickcheck-replay=649941
+node4826Reproducible :: TestTree
+node4826Reproducible =
+  testProperty "node4826Reproducible" $
+    let shuffle1 =
+          [ makeMultiAsset $ makeScriptHash suffix
+          | suffix <- ["10", "09", "11", "08", "01", "06", "03", "05", "04", "07", "02", "00"]
+          ]
+        shuffle2 =
+          [ makeMultiAsset $ makeScriptHash suffix
+          | suffix <- ["04", "08"]
+          ]
+        multiAssetMap = mconcat [m | MultiAsset m <- shuffle1]
+        reproducible = MultiAsset multiAssetMap <> G.invert (mconcat shuffle2)
+     in rnf reproducible
+
 -- ===========================================
 -- All the value tests
 
@@ -347,4 +421,6 @@ valTests =
     , monoValueTests
     , valueGroupTests
     , compactTest
+    , subtractionIsTotal
+    , node4826Reproducible
     ]
