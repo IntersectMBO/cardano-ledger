@@ -8,13 +8,16 @@ module Cardano.Ledger.Binary.Plain (
   module Cardano.Binary,
   invalidKey,
   decodeRecordNamed,
+  decodeRecordNamedT,
   decodeRecordSum,
-  decodeListLike,
+  decodeListLikeT,
 )
 where
 
 import Cardano.Binary
 import Control.Monad (unless)
+import Control.Monad.Trans (MonadTrans (..))
+import Control.Monad.Trans.Identity (IdentityT (runIdentityT))
 import qualified Data.Text as Text
 
 -- | Report an error when a numeric key of the type constructor doesn't match.
@@ -23,32 +26,43 @@ invalidKey k = cborError $ DecoderErrorCustom "Not a valid key:" (Text.pack $ sh
 
 decodeRecordNamed :: Text.Text -> (a -> Int) -> Decoder s a -> Decoder s a
 decodeRecordNamed name getRecordSize decoder =
-  decodeListLike name decoder $ \result n ->
-    matchSize ("Record " <> name) n (getRecordSize result)
-{-# INLINEABLE decodeRecordNamed #-}
+  runIdentityT $ decodeRecordNamedT name getRecordSize (lift decoder)
+{-# INLINE decodeRecordNamed #-}
+
+decodeRecordNamedT ::
+  (MonadTrans m, Monad (m (Decoder s))) =>
+  Text.Text ->
+  (a -> Int) ->
+  m (Decoder s) a ->
+  m (Decoder s) a
+decodeRecordNamedT name getRecordSize decoder =
+  decodeListLikeT name decoder $ \result n ->
+    lift $ matchSize ("Record " <> name) n (getRecordSize result)
+{-# INLINEABLE decodeRecordNamedT #-}
 
 decodeRecordSum :: Text.Text -> (Word -> Decoder s (Int, a)) -> Decoder s a
 decodeRecordSum name decoder =
-  snd <$> do
-    decodeListLike name (decodeWord >>= decoder) $ \(size, _) n ->
-      matchSize (Text.pack "Sum " <> name) size n
+  runIdentityT $ snd <$> do
+    decodeListLikeT name (lift (decodeWord >>= decoder)) $ \(size, _) n ->
+      lift $ matchSize (Text.pack "Sum " <> name) size n
 {-# INLINEABLE decodeRecordSum #-}
 
-decodeListLike ::
+decodeListLikeT ::
+  (MonadTrans m, Monad (m (Decoder s))) =>
   -- | Name for error reporting
   Text.Text ->
   -- | Decoder for the datastructure itself
-  Decoder s a ->
+  m (Decoder s) a ->
   -- | In case when length was provided, act upon it.
-  (a -> Int -> Decoder s ()) ->
-  Decoder s a
-decodeListLike name decoder actOnLength = do
-  lenOrIndef <- decodeListLenOrIndef
+  (a -> Int -> m (Decoder s) ()) ->
+  m (Decoder s) a
+decodeListLikeT name decoder actOnLength = do
+  lenOrIndef <- lift decodeListLenOrIndef
   result <- decoder
   case lenOrIndef of
     Just n -> actOnLength result n
-    Nothing -> do
+    Nothing -> lift $ do
       isBreak <- decodeBreakOr
       unless isBreak $ cborError $ DecoderErrorCustom name "Excess terms in array"
   pure result
-{-# INLINEABLE decodeListLike #-}
+{-# INLINEABLE decodeListLikeT #-}

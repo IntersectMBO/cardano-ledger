@@ -15,7 +15,7 @@ where
 import Cardano.Ledger.Binary.Decoding
 import Cardano.Ledger.Binary.Encoding
 import Cardano.Ledger.Binary.Group
-import Cardano.Ledger.Binary.Plain (DecCBOR (decCBOR), EncCBOR (encCBOR))
+import Cardano.Ledger.Binary.Plain (DecCBOR (decCBOR), DecShareCBOR (..), EncCBOR (encCBOR))
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Binary.Version
 import qualified Codec.CBOR.Read as C (DeserialiseFailure (..))

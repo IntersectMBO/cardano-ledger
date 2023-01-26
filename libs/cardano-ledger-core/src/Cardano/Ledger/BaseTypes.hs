@@ -83,7 +83,7 @@ import Cardano.Ledger.Binary (
   encodeRatioWithTag,
   encodedSizeExpr,
  )
-import Cardano.Ledger.Binary.Plain (
+import Cardano.Ledger.Binary.Plain as Plain (
   DecCBOR (..),
   EncCBOR (..),
   decodeRecordSum,
@@ -420,13 +420,13 @@ instance NoThunks Nonce
 instance ToCBOR Nonce
 
 instance EncCBOR Nonce where
-  encCBOR NeutralNonce = encodeListLen 1 <> encCBOR (0 :: Word8)
-  encCBOR (Nonce n) = encodeListLen 2 <> encCBOR (1 :: Word8) <> encCBOR n
+  encCBOR NeutralNonce = Plain.encodeListLen 1 <> encCBOR (0 :: Word8)
+  encCBOR (Nonce n) = Plain.encodeListLen 2 <> encCBOR (1 :: Word8) <> encCBOR n
 
 instance FromCBOR Nonce
 
 instance DecCBOR Nonce where
-  decCBOR = decodeRecordSum "Nonce" $
+  decCBOR = Plain.decodeRecordSum "Nonce" $
     \case
       0 -> pure (1, NeutralNonce)
       1 -> do
@@ -660,7 +660,7 @@ newtype BlocksMade c = BlocksMade
 -- | Transaction index.
 newtype TxIx = TxIx Word64
   deriving stock (Eq, Ord, Show, Generic)
-  deriving newtype (NFData, Enum, Bounded, NoThunks, ToCBOR, FromCBOR)
+  deriving newtype (NFData, Enum, Bounded, NoThunks, EncCBOR, DecCBOR, ToCBOR, FromCBOR)
 
 txIxToInt :: TxIx -> Int
 txIxToInt (TxIx w16) = fromIntegral w16
@@ -680,7 +680,7 @@ mkTxIxPartial i =
 -- `mkCertIxPartial` that can be used for testing.
 newtype CertIx = CertIx Word64
   deriving stock (Eq, Ord, Show)
-  deriving newtype (NFData, Enum, Bounded, NoThunks, ToCBOR, FromCBOR)
+  deriving newtype (NFData, Enum, Bounded, NoThunks, EncCBOR, DecCBOR, ToCBOR, FromCBOR)
 
 certIxToInt :: CertIx -> Int
 certIxToInt (CertIx w16) = fromIntegral w16

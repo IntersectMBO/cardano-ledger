@@ -51,7 +51,6 @@ library
                      Cardano.Ledger.Binary.Decoding.Decoder
                      Cardano.Ledger.Binary.Decoding.Drop
                      Cardano.Ledger.Binary.Decoding.FromCBOR
-                     Cardano.Ledger.Binary.Decoding.Sharing
                      Cardano.Ledger.Binary.Decoding.Sized
 
   build-depends:     base >=4.11 && <5
@@ -80,7 +79,7 @@ library
                    , tagged
                    , text
                    , time
-                   , transformers >= 0.5
+                   , transformers
                    , tree-diff
                    , vector
                    , vector-map

@@ -1,4 +1,6 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -38,9 +40,13 @@ module Data.VMap (
   fromAscListWithKeyN,
   fromDistinctAscList,
   fromDistinctAscListN,
-  internMaybe,
+  internVMapMaybe,
   null,
   splitAt,
+
+  -- * Decoding
+  decVMap,
+  internsFromVMap,
   -- Internal types
   KV.KVMVector,
   KV.KVVector,
@@ -49,10 +55,23 @@ module Data.VMap (
 )
 where
 
+import Cardano.Binary (
+  DecCBOR (..),
+  DecShareCBOR (..),
+  Decoder,
+  EncCBOR (..),
+  Encoding,
+  Intern (..),
+  Interns (..),
+  decMapSkel,
+  encodeMapLen,
+  interns,
+ )
 import Control.DeepSeq
 import qualified Data.Map.Strict as Map
 import Data.Maybe as Maybe hiding (mapMaybe)
 import Data.TreeDiff.Class (ToExpr (toExpr))
+import Data.Typeable
 import Data.VMap.KVVector (KVVector (..))
 import qualified Data.VMap.KVVector as KV
 import qualified Data.Vector as V
@@ -260,9 +279,71 @@ splitAt ::
 splitAt i (VMap vec) = let (l, r) = VG.splitAt i vec in (VMap l, VMap r)
 {-# INLINE splitAt #-}
 
-internMaybe :: (VG.Vector kv k, Ord k) => k -> VMap kv vv k v -> Maybe k
-internMaybe key = KV.internKVVectorMaybe key . unVMap
-{-# INLINE internMaybe #-}
+internVMapMaybe :: (VG.Vector kv k, Ord k) => k -> VMap kv vv k v -> Maybe k
+internVMapMaybe key = KV.internKVVectorMaybe key . unVMap
+{-# INLINE internVMapMaybe #-}
 
 instance (VG.Vector kv k, VG.Vector vv v, ToExpr k, ToExpr v) => ToExpr (VMap kv vv k v) where
   toExpr = toExpr . toMap
+
+encVMap ::
+  (VG.Vector kv k, VG.Vector vv v) =>
+  (k -> Encoding) ->
+  (v -> Encoding) ->
+  VMap kv vv k v ->
+  Encoding
+encVMap encodeKey encodeValue m =
+  encodeMapLen (fromIntegral (size m) :: Word)
+    <> foldMapWithKey (\k v -> encodeKey k <> encodeValue v) m
+{-# INLINE encVMap #-}
+
+instance
+  (VG.Vector kv k, VG.Vector vv v, Typeable kv, Typeable vv, EncCBOR k, EncCBOR v) =>
+  EncCBOR (VMap kv vv k v)
+  where
+  encCBOR = encVMap encCBOR encCBOR
+
+decVMap ::
+  (Ord k, VG.Vector kv k, VG.Vector av a) =>
+  Decoder s k ->
+  Decoder s a ->
+  Decoder s (VMap kv av k a)
+decVMap = decMapSkel fromDistinctAscList
+{-# INLINE decVMap #-}
+
+instance
+  ( Ord k
+  , DecCBOR k
+  , DecCBOR a
+  , Typeable kv
+  , Typeable av
+  , VG.Vector kv k
+  , VG.Vector av a
+  ) =>
+  DecCBOR (VMap kv av k a)
+  where
+  decCBOR = decVMap decCBOR decCBOR
+  {-# INLINE decCBOR #-}
+
+internsFromVMap :: Ord k => VMap VB kv k a -> Interns k
+internsFromVMap m =
+  Interns
+    [ Intern
+        { internMaybe = \k -> internVMapMaybe k m
+        , internWeight = size m
+        }
+    ]
+
+instance (Ord k, DecCBOR k, DecCBOR v) => DecShareCBOR (VMap VB VB k v) where
+  type Share (VMap VB VB k v) = (Interns k, Interns v)
+  decShareCBOR (kis, vis) = do
+    decVMap (interns kis <$> decCBOR) (interns vis <$> decCBOR)
+  {-# INLINE decShareCBOR #-}
+  getShare !m = (internsFromVMap m, mempty)
+
+instance (Ord k, DecCBOR k, DecCBOR v, VP.Prim v) => DecShareCBOR (VMap VB VP k v) where
+  type Share (VMap VB VP k v) = Interns k
+  decShareCBOR kis = do
+    decVMap (interns kis <$> decCBOR) decCBOR
+  {-# INLINE decShareCBOR #-}
+  getShare !m = internsFromVMap m

@@ -30,6 +30,8 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (
   CBORGroup (..),
   Case (..),
+  DecCBOR (..),
+  EncCBOR (..),
   FromCBOR (fromCBOR),
   FromCBORGroup (..),
   Size,
@@ -40,10 +42,13 @@ import Cardano.Ledger.Binary (
   decodeRecordSum,
   encodeListLen,
   encodeNullMaybe,
+  shelleyProtVer,
   szCases,
+  toPlainDecoder,
+  toPlainEncoding,
  )
 import Cardano.Ledger.Coin (Coin (..))
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (
   Hash,
   KeyHash (..),
@@ -213,11 +218,17 @@ data PoolParams c = PoolParams
   deriving (ToCBOR) via CBORGroup (PoolParams c)
   deriving (FromCBOR) via CBORGroup (PoolParams c)
 
+instance Crypto c => EncCBOR (PoolParams c) where
+  encCBOR = toPlainEncoding shelleyProtVer . toCBOR
+
+instance Crypto c => DecCBOR (PoolParams c) where
+  decCBOR = toPlainDecoder shelleyProtVer fromCBOR
+
 instance NoThunks (PoolParams c)
 
 deriving instance NFData (PoolParams c)
 
-instance CC.Crypto c => ToJSON (PoolParams c) where
+instance Crypto c => ToJSON (PoolParams c) where
   toJSON pp =
     Aeson.object
       [ "publicKey" .= ppId pp -- TODO publicKey is an unfortunate name, should be poolId
@@ -231,7 +242,7 @@ instance CC.Crypto c => ToJSON (PoolParams c) where
       , "metadata" .= ppMetadata pp
       ]
 
-instance CC.Crypto c => FromJSON (PoolParams c) where
+instance Crypto c => FromJSON (PoolParams c) where
   parseJSON =
     Aeson.withObject "PoolParams" $ \obj ->
       PoolParams
@@ -270,7 +281,7 @@ instance ToCBOR SizeOfPoolRelays where
   toCBOR = error "The `SizeOfPoolRelays` type cannot be encoded!"
 
 instance
-  CC.Crypto c =>
+  Crypto c =>
   ToCBORGroup (PoolParams c)
   where
   toCBORGroup poolParams =
@@ -310,7 +321,7 @@ instance
   listLenBound _ = 9
 
 instance
-  CC.Crypto c =>
+  Crypto c =>
   FromCBORGroup (PoolParams c)
   where
   fromCBORGroup = do

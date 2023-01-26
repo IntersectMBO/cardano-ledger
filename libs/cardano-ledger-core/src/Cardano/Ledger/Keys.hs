@@ -79,15 +79,18 @@ import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.KES as KES
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.Ledger.Binary (
-  FromCBOR (..),
-  ToCBOR (..),
+import Cardano.Ledger.Binary.Crypto
+import Cardano.Ledger.Binary.Plain (
+  DecCBOR (..),
+  EncCBOR (..),
   decodeRecordNamed,
   encodeListLen,
+ )
+import Cardano.Ledger.Binary(
+  FromCBOR(..),
+  ToCBOR(..), 
   encodedVerKeyDSIGNSizeExpr,
  )
-import Cardano.Ledger.Binary.Crypto
-import Cardano.Ledger.Binary.Plain (DecCBOR, EncCBOR)
 import Cardano.Ledger.Crypto (ADDRHASH, Crypto, DSIGN, HASH, KES, VRF)
 import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (toExpr))
 import Control.DeepSeq (NFData)
@@ -286,8 +289,6 @@ type VRFSignable c = VRF.Signable (VRF c)
 
 --------------------------------------------------------------------------------
 -- Genesis delegation
---
--- TODO should this really live in here?
 --------------------------------------------------------------------------------
 
 data GenDelegPair c = GenDelegPair
@@ -300,16 +301,20 @@ instance NoThunks (GenDelegPair c)
 
 instance NFData (GenDelegPair c)
 
-instance Crypto c => ToCBOR (GenDelegPair c) where
-  toCBOR (GenDelegPair hk vrf) =
-    encodeListLen 2 <> toCBOR hk <> toCBOR vrf
+instance Crypto c => EncCBOR (GenDelegPair c) where
+  encCBOR (GenDelegPair hk vrf) =
+    encodeListLen 2 <> encCBOR hk <> encCBOR vrf
 
-instance Crypto c => FromCBOR (GenDelegPair c) where
-  fromCBOR = do
+instance Crypto c => ToCBOR (GenDelegPair c) where
+
+instance Crypto c => DecCBOR (GenDelegPair c) where
+  decCBOR = do
     decodeRecordNamed
       "GenDelegPair"
       (const 2)
-      (GenDelegPair <$> fromCBOR <*> fromCBOR)
+      (GenDelegPair <$> decCBOR <*> decCBOR)
+
+instance Crypto c => FromCBOR (GenDelegPair c) where
 
 instance Crypto c => ToJSON (GenDelegPair c) where
   toJSON (GenDelegPair d v) =
@@ -328,16 +333,10 @@ instance Crypto c => FromJSON (GenDelegPair c) where
 newtype GenDelegs c = GenDelegs
   { unGenDelegs :: Map (KeyHash 'Genesis c) (GenDelegPair c)
   }
-  deriving (Eq, FromCBOR, NoThunks, NFData, Generic, FromJSON)
+  deriving (Eq, FromCBOR, NoThunks, NFData, Generic, FromJSON, EncCBOR, DecCBOR)
   deriving (Show) via Quiet (GenDelegs c)
 
-deriving instance
-  (Crypto c) =>
-  ToCBOR (GenDelegs c)
-
-deriving instance
-  Crypto c =>
-  ToJSON (GenDelegs c)
+deriving instance Crypto c => ToJSON (GenDelegs c)
 
 newtype GKeys c = GKeys {unGKeys :: Set (VKey 'Genesis c)}
   deriving (Eq, NoThunks, Generic)

@@ -28,15 +28,13 @@ import Cardano.Ledger.BaseTypes (
   invalidKey,
  )
 import Cardano.Ledger.Binary (
-  CBORGroup (..),
+  DecCBOR (..),
+  EncCBOR (..),
   FromCBOR (..),
-  FromCBORGroup (..),
   ToCBOR (..),
-  ToCBORGroup (..),
-  decodeRecordSum,
-  encodeListLen,
  )
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import qualified Cardano.Ledger.Binary.Plain as Plain
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Keys (
   HasKeyRole (..),
@@ -79,7 +77,7 @@ instance HasKeyRole Credential where
 
 instance NoThunks (Credential kr c)
 
-instance CC.Crypto c => ToJSON (Credential kr c) where
+instance Crypto c => ToJSON (Credential kr c) where
   toJSON (ScriptHashObj hash) =
     Aeson.object
       [ "script hash" .= hash
@@ -89,7 +87,7 @@ instance CC.Crypto c => ToJSON (Credential kr c) where
       [ "key hash" .= hash
       ]
 
-instance CC.Crypto c => FromJSON (Credential kr c) where
+instance Crypto c => FromJSON (Credential kr c) where
   parseJSON =
     Aeson.withObject "Credential" $ \obj ->
       asum [parser1 obj, parser2 obj]
@@ -97,9 +95,9 @@ instance CC.Crypto c => FromJSON (Credential kr c) where
       parser1 obj = ScriptHashObj <$> obj .: "script hash"
       parser2 obj = KeyHashObj <$> obj .: "key hash"
 
-instance CC.Crypto c => ToJSONKey (Credential kr c)
+instance Crypto c => ToJSONKey (Credential kr c)
 
-instance CC.Crypto c => FromJSONKey (Credential kr c)
+instance Crypto c => FromJSONKey (Credential kr c)
 
 type PaymentCredential c = Credential 'Payment c
 
@@ -136,7 +134,12 @@ instance NoThunks (StakeReference c)
 -- list.
 data Ptr = Ptr !SlotNo !TxIx !CertIx
   deriving (Eq, Ord, Generic, NFData, NoThunks)
-  deriving (ToCBOR, FromCBOR) via CBORGroup Ptr
+
+instance EncCBOR Ptr where
+  encCBOR (Ptr slotNo txIx certIx) = encCBOR slotNo <> encCBOR txIx <> encCBOR certIx
+
+instance DecCBOR Ptr where
+  decCBOR = Ptr <$> decCBOR <*> decCBOR <*> decCBOR
 
 instance Show Ptr where
   showsPrec n (Ptr slotNo txIx certIx)
@@ -188,47 +191,25 @@ ptrTxIx (Ptr _ txIx _) = txIx
 ptrCertIx :: Ptr -> CertIx
 ptrCertIx (Ptr _ _ cIx) = cIx
 
-instance
-  (Typeable kr, CC.Crypto c) =>
-  ToCBOR (Credential kr c)
-  where
-  toCBOR = \case
-    KeyHashObj kh -> encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR kh
-    ScriptHashObj hs -> encodeListLen 2 <> toCBOR (1 :: Word8) <> toCBOR hs
+instance (Typeable kr, Crypto c) => EncCBOR (Credential kr c) where
+  encCBOR = \case
+    KeyHashObj kh -> Plain.encodeListLen 2 <> encCBOR (0 :: Word8) <> encCBOR kh
+    ScriptHashObj hs -> Plain.encodeListLen 2 <> encCBOR (1 :: Word8) <> encCBOR hs
 
-instance
-  (Typeable kr, CC.Crypto c) =>
-  FromCBOR (Credential kr c)
-  where
-  fromCBOR = decodeRecordSum "Credential" $
+instance (Typeable kr, Crypto c) => ToCBOR (Credential kr c)
+
+instance (Typeable kr, Crypto c) => DecCBOR (Credential kr c) where
+  decCBOR = Plain.decodeRecordSum "Credential" $
     \case
       0 -> do
-        x <- fromCBOR
+        x <- decCBOR
         pure (2, KeyHashObj x)
       1 -> do
-        x <- fromCBOR
+        x <- decCBOR
         pure (2, ScriptHashObj x)
       k -> invalidKey k
 
-instance ToCBORGroup Ptr where
-  toCBORGroup (Ptr sl txIx certIx) =
-    toCBOR sl
-      <> toCBOR txIx
-      <> toCBOR certIx
-  encodedGroupSizeExpr size_ proxy =
-    encodedSizeExpr size_ (ptrSlotNo <$> proxy)
-      + encodedSizeExpr size_ (ptrTxIx <$> proxy)
-      + encodedSizeExpr size_ (ptrCertIx <$> proxy)
-
-  listLen _ = 3
-  listLenBound _ = 3
-
-instance FromCBORGroup Ptr where
-  fromCBORGroup = do
-    slotNo <- fromCBOR
-    txIx <- fromCBOR
-    certIx <- fromCBOR
-    pure $ Ptr slotNo txIx certIx
+instance (Typeable kr, Crypto c) => FromCBOR (Credential kr c)
 
 -- case mkPtr slotNo txIx certIx of
 --   Nothing -> fail $ "SlotNo is too far into the future: " ++ show slotNo
@@ -246,7 +227,7 @@ instance Ord (GenesisCredential c) where
 instance Eq (GenesisCredential c) where
   (==) (GenesisCredential gh) (GenesisCredential gh') = gh == gh'
 
-instance CC.Crypto c => ToCBOR (GenesisCredential c) where
+instance Crypto c => ToCBOR (GenesisCredential c) where
   toCBOR (GenesisCredential kh) = toCBOR kh
 
 -- ==================================

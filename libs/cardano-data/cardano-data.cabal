@@ -47,7 +47,6 @@ library
                      , deepseq
                      , mtl
                      , nothunks
-                     , transformers >= 0.5
                      , vector
   hs-source-dirs:      src
 

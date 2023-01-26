@@ -26,8 +26,9 @@ where
 import Cardano.HeapWords (HeapWords (..))
 import qualified Cardano.HeapWords as HW
 import Cardano.Ledger.BaseTypes (TxIx (..), mkTxIxPartial)
-import Cardano.Ledger.Binary (FromCBOR (fromCBOR), ToCBOR (..), decodeRecordNamed, encodeListLen)
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), FromCBOR (..), ToCBOR (..))
+import qualified Cardano.Ledger.Binary.Plain as Plain
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.SafeHash (SafeHash)
 import Cardano.Ledger.TreeDiff (ToExpr)
@@ -49,51 +50,39 @@ import NoThunks.Class (NoThunks (..))
 -- | A unique ID of a transaction, which is computable from the transaction.
 newtype TxId c = TxId {_unTxId :: SafeHash c EraIndependentTxBody}
   deriving (Show, Eq, Ord, Generic)
-  deriving newtype (NoThunks)
+  deriving newtype (NoThunks, EncCBOR, DecCBOR, ToCBOR, FromCBOR, HeapWords, NFData)
 
-deriving newtype instance CC.Crypto c => HeapWords (TxId c)
-
-deriving newtype instance CC.Crypto c => ToCBOR (TxId c)
-
-deriving newtype instance CC.Crypto c => FromCBOR (TxId c)
-
-deriving newtype instance CC.Crypto c => NFData (TxId c)
-
-instance CC.Crypto c => HeapWords (TxIn c) where
+instance Crypto c => HeapWords (TxIn c) where
   heapWords (TxIn txId _) =
     2 + HW.heapWords txId + 1 {- txIx -}
 
 -- | The input of a UTxO.
 data TxIn c = TxIn !(TxId c) {-# UNPACK #-} !TxIx
-  deriving (Generic)
+  deriving (Generic, Eq, Ord, Show, NFData)
 
 -- | Construct `TxIn` while throwing an error for an out of range `TxIx`. Make
 -- sure to use it only for testing.
 mkTxInPartial :: HasCallStack => TxId c -> Integer -> TxIn c
 mkTxInPartial txId = TxIn txId . mkTxIxPartial
 
-deriving instance Eq (TxIn c)
-
-deriving instance Ord (TxIn c)
-
-deriving instance Show (TxIn c)
-
-deriving instance CC.Crypto c => NFData (TxIn c)
-
 instance NoThunks (TxIn c)
 
-instance CC.Crypto c => ToCBOR (TxIn c) where
-  toCBOR (TxIn txId index) =
-    encodeListLen 2
-      <> toCBOR txId
-      <> toCBOR index
+instance Crypto c => EncCBOR (TxIn c) where
+  encCBOR (TxIn txId index) =
+    Plain.encodeListLen 2
+      <> encCBOR txId
+      <> encCBOR index
 
-instance CC.Crypto c => FromCBOR (TxIn c) where
-  fromCBOR =
-    decodeRecordNamed
+instance Crypto c => ToCBOR (TxIn c)
+
+instance Crypto c => DecCBOR (TxIn c) where
+  decCBOR =
+    Plain.decodeRecordNamed
       "TxIn"
       (const 2)
-      (TxIn <$> fromCBOR <*> fromCBOR)
+      (TxIn <$> decCBOR <*> decCBOR)
+
+instance Crypto c => FromCBOR (TxIn c)
 
 -- ============================================================
 

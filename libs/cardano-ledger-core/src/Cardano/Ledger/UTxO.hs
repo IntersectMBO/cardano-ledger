@@ -34,12 +34,15 @@ module Cardano.Ledger.UTxO (
 where
 
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.Binary (
-  FromCBOR (..),
-  FromSharedCBOR (Share, fromSharedCBOR),
+import Cardano.Ledger.Binary.Plain (
+  DecCBOR (..),
+  -- FromCBOR (..),
+  -- ToCBOR (..),
+
+  DecShareCBOR (Share, decShareCBOR),
+  EncCBOR (..),
   Interns,
-  ToCBOR (..),
-  decodeMapNoDuplicates,
+  decMap,
  )
 import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Coin (Coin, CompactForm (CompactCoin))
@@ -78,37 +81,30 @@ import Quiet (Quiet (Quiet))
 newtype UTxO era = UTxO {unUTxO :: Map.Map (TxIn (EraCrypto era)) (TxOut era)}
   deriving (Default, Generic, Semigroup)
 
+deriving newtype instance (EncCBOR (TxOut era), Era era) => EncCBOR (UTxO era)
+
+deriving newtype instance (DecCBOR (TxOut era), Era era) => DecCBOR (UTxO era)
+
 deriving instance NoThunks (TxOut era) => NoThunks (UTxO era)
 
-deriving instance (Era era, NFData (TxOut era)) => NFData (UTxO era)
+deriving instance (NFData (TxOut era), Era era) => NFData (UTxO era)
 
-deriving newtype instance
-  (Eq (TxOut era), Crypto (EraCrypto era)) => Eq (UTxO era)
+deriving newtype instance (Eq (TxOut era), Era era) => Eq (UTxO era)
 
-deriving newtype instance Crypto (EraCrypto era) => Monoid (UTxO era)
-
-deriving newtype instance (Era era, ToCBOR (TxOut era)) => ToCBOR (UTxO era)
+deriving newtype instance Era era => Monoid (UTxO era)
 
 instance
   ( Crypto (EraCrypto era)
-  , FromSharedCBOR (TxOut era)
+  , DecShareCBOR (TxOut era)
   , Share (TxOut era) ~ Interns (Credential 'Staking (EraCrypto era))
   ) =>
-  FromSharedCBOR (UTxO era)
+  DecShareCBOR (UTxO era)
   where
   type
     Share (UTxO era) =
       Interns (Credential 'Staking (EraCrypto era))
-  fromSharedCBOR credsInterns =
-    UTxO <$!> decodeMapNoDuplicates fromCBOR (fromSharedCBOR credsInterns)
-
-instance
-  ( FromCBOR (TxOut era)
-  , Era era
-  ) =>
-  FromCBOR (UTxO era)
-  where
-  fromCBOR = UTxO <$!> decodeMapNoDuplicates fromCBOR fromCBOR
+  decShareCBOR credsInterns =
+    UTxO <$!> decMap decCBOR (decShareCBOR credsInterns)
 
 deriving via
   Quiet (UTxO era)

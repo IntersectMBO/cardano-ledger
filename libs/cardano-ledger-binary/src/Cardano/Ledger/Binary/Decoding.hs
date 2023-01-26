@@ -14,7 +14,6 @@ module Cardano.Ledger.Binary.Decoding (
   decodeFullAnnotatedBytes,
   module Cardano.Ledger.Binary.Version,
   module Cardano.Ledger.Binary.Decoding.FromCBOR,
-  module Cardano.Ledger.Binary.Decoding.Sharing,
   module Cardano.Ledger.Binary.Decoding.Decoder,
   module Cardano.Ledger.Binary.Decoding.Sized,
   module Cardano.Ledger.Binary.Decoding.Drop,
@@ -46,7 +45,6 @@ import Cardano.Ledger.Binary.Decoding.Annotated
 import Cardano.Ledger.Binary.Decoding.Decoder
 import Cardano.Ledger.Binary.Decoding.Drop
 import Cardano.Ledger.Binary.Decoding.FromCBOR
-import Cardano.Ledger.Binary.Decoding.Sharing
 import Cardano.Ledger.Binary.Decoding.Sized
 import Cardano.Ledger.Binary.Version
 import Codec.CBOR.Read as Read (DeserialiseFailure, IDecode (..), deserialiseIncremental)
