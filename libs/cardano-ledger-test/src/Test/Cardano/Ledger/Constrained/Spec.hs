@@ -7,8 +7,6 @@
 
 module Test.Cardano.Ledger.Constrained.Spec where
 
-import Cardano.Ledger.Era (Era (EraCrypto))
-import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Data.Graph
 import qualified Data.List as List
 import Data.Map.Strict (Map)
@@ -32,7 +30,6 @@ import Test.Cardano.Ledger.Constrained.TypeRep (
   testEql,
   (:~:) (Refl),
  )
-import Test.Cardano.Ledger.Constrained.Vars
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Generic.Proof (
   Mock,
@@ -41,6 +38,7 @@ import Test.Cardano.Ledger.Generic.Proof (
  )
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.QuickCheck hiding (Fixed, total)
+import Cardano.Ledger.Core
 
 -- ===================================================================================
 -- This is testing file, and sometimes it pays for solver to explain what it is doing
@@ -410,6 +408,7 @@ showMapSpec (MapR dom rng) (MapSpec w (Just s) r) =
   "(MapSpec " ++ show w ++ " " ++ synopsis (SetR dom) s ++ " " ++ showRngSpec rng r ++ ")"
 showMapSpec rep@(MapR _ _) (MapEqual m) = "(MapEqual " ++ synopsis rep m ++ ")"
 showMapSpec _ (NeverMap _) = "NeverMap"
+showMapSpec (SimpleR _) _ = undefined
 
 instance LiftT (MapSpec a b) where
   liftT (NeverMap xs) = failT xs
@@ -472,7 +471,6 @@ solveMap v1@(V _ r@(MapR dom rng) _) cond = case cond of
         n <- evalWith rng expr
         case rng of
           IntR -> pure $ MapSpec Nothing Nothing (SumRng n)
-          CoinR -> pure $ MapSpec Nothing Nothing (SumRng n)
           RationalR -> pure $ MapSpec Nothing Nothing (SumRng n)
           _ -> failT ["Type " ++ show rng ++ " does not have Summable instance"]
   (Random (Var v2)) | Name v1 == Name v2 -> do
@@ -486,6 +484,7 @@ solveMap v1@(V _ r@(MapR dom rng) _) cond = case cond of
     With emptyRngSpec <- hasOrd rng None
     pure $ MapSpec Nothing (Just set) emptyRngSpec
   other -> failT ["Cannot solve map condition: " ++ show other]
+solveMap _ _ = undefined
 
 solveMaps :: Ord dom => V era (Map dom rng) -> [Pred era] -> Typed (MapSpec dom rng)
 solveMaps v@(V nm (MapR _ _) _) cs = foldlM' accum (MapSpec Nothing Nothing None) cs
@@ -493,6 +492,7 @@ solveMaps v@(V nm (MapR _ _) _) cs = foldlM' accum (MapSpec Nothing Nothing None
     accum spec cond = do
       condspec <- solveMap v cond
       explain ("Solving Map constraint (" ++ show cond ++ ") for variable " ++ show nm) (liftT (spec <> condspec))
+solveMaps _ _ = undefined
 
 genMap ::
   (Ord a, Era era) =>
@@ -556,6 +556,7 @@ genMap rep@(MapR d r) cond = explain ("Producing Map generator for " ++ showMapS
     pure $ mapSized (fromIntegral n) (itemFromSet dom) (itemFromSet rng)
   (MapSpec (Just n) (Just dom) (DisjointRng rng)) ->
     pure $ mapSized (fromIntegral n) (itemFromSet dom) (suchThat (genRep r) (`Set.notMember` rng))
+genMap _ _ = undefined
 
 -- ================================================
 
@@ -604,7 +605,6 @@ sumFromDyn rep (Dyn rep2 m) = case (testEql rep rep2) of
 
 hasSummable :: Rep era t -> (s t) -> Typed (HasCond Adds (s t))
 hasSummable IntR x = pure $ With x
-hasSummable CoinR x = pure $ With x
 hasSummable RationalR x = pure $ With x
 hasSummable r _ = failT [show r ++ " does not have Adds instance."]
 
@@ -647,6 +647,7 @@ solveSets v@(V nm (SetR _) _) cs = foldlM' accum mempty cs
     accum spec cond = do
       condspec <- solveSet v cond
       explain ("Solving Set constraint (" ++ show cond ++ ") for variable " ++ show nm) (liftT (spec <> condspec))
+solveSets _ _ = undefined
 
 genSet ::
   (Ord a) =>
@@ -675,6 +676,7 @@ genSet rep@(SetR r) cond = explain ("Producing Set generator for " ++ showSetSpe
   SetSpec (Just i) (SumRng n) -> pure $ do
     xs <- partition i n
     pure (Set.fromList xs)
+genSet _ _ = undefined
 
 -- =============================================================
 data SumSpec t where
@@ -831,8 +833,12 @@ known s (Lit r x) = case testEql s r of Nothing -> Nothing; Just Refl -> Just x
 repOf :: Term era t -> Rep era t
 repOf (Fixed (Lit r _)) = r
 repOf (Var (V _ r _)) = r
-repOf (Dom e) = case repOf e of MapR d _ -> SetR d
-repOf (Rng e) = case repOf e of MapR _ r -> SetR r
+repOf (Dom e) = case repOf e of 
+                  MapR d _ -> SetR d
+                  SimpleR _ -> undefined
+repOf (Rng e) = case repOf e of 
+                  MapR _ r -> SetR r
+                  SimpleR _ -> undefined
 
 -- =======================================================================
 
@@ -865,54 +871,51 @@ totalAda: Coin                        | totalAda =∑= utxoCoin + treasury + res
 -}
 
 -- | Here is a transcription by hand, just to get a feel of what we have to generate.
-foo :: forall era. Era era => Proof era -> Gen [P era]
-foo _proof = do
-  utxoCoinX <- genRep @era CoinR
-  treasuryX <- genRep @era CoinR
-  reservesX <- genRep @era CoinR
-  poolsX <- setSized 10 (genRep @era PoolHashR)
-  poolDistrDomX <- subsetFromSet poolsX
-  regPoolsX <- mapFromSet poolDistrDomX (genRep @era PoolParamsR)
-  retiringDomX <- subsetFromSet poolDistrDomX
-  retiringX <- mapFromSet retiringDomX (genRep @era EpochR)
-  rs <- partition (Set.size poolDistrDomX) (1 :: Rational)
-  let poolDistrX = mapFromDomRange poolDistrDomX rs
-  poolDepositsX <- mapFromSet poolDistrDomX (genRep @era CoinR)
-  let poolDepositsSumX = sumMap poolDepositsX
-  feesX <- genRep @era CoinR
-  credsX <- setSized 10 (genRep @era CredR)
-  keyDepositxDomX <- subsetFromSet credsX
-  delegationsDomX <- subsetFromSet keyDepositxDomX
-  delegationsX <- mapFromSet delegationsDomX (itemFromSet poolsX)
-  stakeDepositsX <- mapFromSet keyDepositxDomX (genRep @era CoinR)
-  let stakeDepositsSumX = sumMap stakeDepositsX
-  let _depositsX = add poolDepositsSumX stakeDepositsSumX
-  rewardsX <- mapFromSet keyDepositxDomX (genRep @era CoinR)
-  let rewardsSumX = sumMap rewardsX
-  let totalAdaX = List.foldl' add zero [utxoCoinX, treasuryX, reservesX, feesX, stakeDepositsSumX, poolDepositsSumX, rewardsSumX]
-  pure
-    [ p utxoCoin utxoCoinX
-    , p treasury treasuryX
-    , p reserves reservesX
-    , p fees feesX
-    , P (V "keyDepositSum" CoinR No) stakeDepositsSumX
-    , P (V "poolDepositSum" CoinR No) poolDepositsSumX
-    , P (V "rewardsSum" CoinR No) rewardsSumX
-    , p totalAda totalAdaX
-    , p poolsUniv poolsX
-    , P (V "poolDistrDom" (SetR PoolHashR) No) poolDistrDomX
-    , p regPools regPoolsX
-    , p retiring retiringX
-    , p poolDistrVar poolDistrX
-    , p poolDeposits poolDepositsX
-    , p credsUniv credsX
-    , p rewards rewardsX
-    , p delegations delegationsX
-    , p stakeDeposits stakeDepositsX
-    ]
-
-poolDistrVar :: Term era (Map (KeyHash 'StakePool (EraCrypto era)) Rational)
-poolDistrVar = Var (V "poolDistr" (MapR PoolHashR RationalR) No)
+--foo :: forall era. Era era => Proof era -> Gen [P era]
+--foo _proof = do
+--  utxoCoinX <- Coin <$> genRep @era IntegerR
+--  treasuryX <- Coin <$> genRep @era IntegerR
+--  reservesX <- Coin <$> genRep @era IntegerR
+--  poolsX <- setSized 10 (genRep @era (SimpleR typeRep))
+--  poolDistrDomX <- subsetFromSet poolsX
+--  regPoolsX <- mapFromSet poolDistrDomX (genRep @era (SimpleR typeRep))
+--  retiringDomX <- subsetFromSet poolDistrDomX
+--  retiringX <- mapFromSet retiringDomX (genRep @era (SimpleR typeRep))
+--  rs <- partition (Set.size poolDistrDomX) (1 :: Rational)
+--  let poolDistrX = mapFromDomRange poolDistrDomX rs
+--  poolDepositsX <- fmap Coin <$> mapFromSet poolDistrDomX (genRep @era IntegerR)
+--  let poolDepositsSumX = sumMap poolDepositsX
+--  feesX <- Coin <$> genRep @era IntegerR
+--  credsX <- setSized 10 (genRep @era (SimpleR typeRep))
+--  keyDepositxDomX <- subsetFromSet credsX
+--  delegationsDomX <- subsetFromSet keyDepositxDomX
+--  delegationsX <- mapFromSet delegationsDomX (itemFromSet poolsX)
+--  stakeDepositsX <- fmap Coin <$> mapFromSet keyDepositxDomX (genRep @era IntegerR)
+--  let stakeDepositsSumX = sumMap stakeDepositsX
+--  let _depositsX = add poolDepositsSumX stakeDepositsSumX
+--  rewardsX <- fmap Coin <$> mapFromSet keyDepositxDomX (genRep @era IntegerR)
+--  let rewardsSumX = sumMap rewardsX
+--  let totalAdaX = List.foldl' add zero [utxoCoinX, treasuryX, reservesX, feesX, stakeDepositsSumX, poolDepositsSumX, rewardsSumX]
+--  pure
+--    [ p utxoCoin utxoCoinX
+--    , p treasury treasuryX
+--    , p reserves reservesX
+--    , p fees feesX
+--    , P (V "keyDepositSum" IntR No) stakeDepositsSumX
+--    , P (V "poolDepositSum" IntR No) poolDepositsSumX
+--    , P (V "rewardsSum" IntR No) rewardsSumX
+--    , p totalAda totalAdaX
+--    , p poolsUniv poolsX
+--    , P (V "poolDistrDom" (SetR PoolHashR) No) poolDistrDomX
+--    , p regPools regPoolsX
+--    , p retiring retiringX
+--    , p poolDistrVar poolDistrX
+--    , p poolDeposits poolDepositsX
+--    , p credsUniv credsX
+--    , p rewards rewardsX
+--    , p delegations delegationsX
+--    , p stakeDeposits stakeDepositsX
+--    ]
 
 p :: Term era t -> t -> P era
 p (Var v) t = P v t

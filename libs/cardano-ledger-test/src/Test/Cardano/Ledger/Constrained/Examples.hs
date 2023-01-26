@@ -19,7 +19,6 @@ import Test.Cardano.Ledger.Constrained.Env
 import Test.Cardano.Ledger.Constrained.Monad
 import Test.Cardano.Ledger.Constrained.Spec
 import Test.Cardano.Ledger.Constrained.TypeRep
-import Test.Cardano.Ledger.Constrained.Vars
 import Test.Cardano.Ledger.Generic.PrettyCore (pcCoin, pcKeyHash, pcPoolParams)
 import Test.Cardano.Ledger.Generic.Proof (
   Evidence (..),

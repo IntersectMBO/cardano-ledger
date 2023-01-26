@@ -30,6 +30,7 @@ import Test.Cardano.Ledger.Constrained.TypeRep
 import Cardano.Ledger.Shelley.LedgerState (NewEpochState)
 import Data.Kind (Type)
 import Lens.Micro
+import Type.Reflection (typeRep)
 
 -- ================================================================
 
@@ -45,7 +46,7 @@ data Payload era where
   Payload :: Rep era t -> t -> (Access era t) -> Payload era
 
 instance Shaped (V era) (Rep era) where
-  shape (V n1 rep _) = Nary 0 [Esc StringR n1, shape rep]
+  shape (V n1 rep _) = Nary 0 [Esc (SimpleR typeRep) n1, shape rep]
 
 -- We are ignoring the Accessfield on purpose
 

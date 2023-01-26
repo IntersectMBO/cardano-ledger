@@ -21,7 +21,6 @@ module Test.Cardano.Ledger.Constrained.Monad (
 
 import Data.Set (Set)
 import Test.Cardano.Ledger.Constrained.TypeRep
-import Test.Cardano.Ledger.Generic.Proof (Proof (..))
 
 -- =================================================
 
@@ -89,7 +88,6 @@ hasOrd :: Rep era t -> s t -> Typed (HasCond Ord (s t))
 hasOrd rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
   where
     help :: Rep era t -> s t -> Typed (HasCond Ord (s t))
-    help CoinR t = pure $ With t
     help r@(_ :-> _) _ = failT [show r ++ " does not have an Ord instance."]
     help (MapR _ b) m = do
       With _ <- help b undefined
@@ -98,35 +96,13 @@ hasOrd rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
     help (ListR a) l = do
       With _ <- help a undefined
       pure $ With l
-    help CredR c = pure $ With c
-    help PoolHashR p = pure $ With p
-    help GenHashR p = pure $ With p
-    help GenDelegHashR p = pure $ With p
-    help WitHashR p = pure $ With p
-    help PoolParamsR pp = pure $ With pp
-    help EpochR e = pure $ With e
     help RationalR r = pure $ With r
     help Word64R w = pure $ With w
     help IntR i = pure $ With i
+    help IntegerR i = pure $ With i
     help NaturalR i = pure $ With i
     help FloatR i = pure $ With i
-    help TxInR t = pure $ With t
-    help StringR s = pure $ With s
-    help (ValueR (Shelley _)) v = pure $ With v
-    help (ValueR (Allegra _)) v = pure $ With v
-    help UnitR v = pure $ With v
-    help (ValueR _) _ = failT ["Value does not have Ord instance in post Allegra eras"]
-    help (TxOutR _) _ = failT ["TxOut does not have Ord instance"]
-    help (UTxOR _) _ = failT ["UTxO does not have Ord instance"]
-    help DeltaCoinR v = pure $ With v
-    help GenDelegPairR v = pure $ With v
-    help FutureGenDelegR v = pure $ With v
-    help PPUPStateR _ = failT ["PPUPState does not have Ord instance"]
-    help PtrR v = pure $ With v
-    help SnapShotsR _ = failT ["SnapShot does not have Ord instance"]
-    help IPoolStakeR _ = failT ["IndividualPoolStake does not have Ord instance"]
-    help (PParamsR _) _ = failT ["PParams does not have Ord instance"]
-    help (PParamsUpdateR _) _ = failT ["PParamsUpdate does not have Ord instance"]
+    help (SimpleR _) _ = undefined
 
 -- | Used to test hasOrd
 testHasCond :: Rep era [t] -> t -> IO ()

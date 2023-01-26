@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE RankNTypes #-}
 
 module Test.Cardano.Ledger.Constrained.Lenses where
 
@@ -44,6 +45,7 @@ import qualified Data.Set as Set
 import Data.VMap (VB, VMap)
 import Lens.Micro
 import Numeric.Natural (Natural)
+import Lens.Micro.Extras (view)
 
 -- ====================================================
 -- Lenses
@@ -59,11 +61,11 @@ mmL = lens mm (\ds u -> ds { mm = u })
 -- ===================================
 -- InstantaneousRewards
 
-iRReservesL :: Lens' (InstantaneousRewards c) (Map (Credential 'Staking c) Coin)
-iRReservesL = lens iRReserves (\ds u -> ds {iRReserves = u})
+iRReservesL :: Lens' (InstantaneousRewards c) (Map (Credential 'Staking c) Integer)
+iRReservesL = lens iRReserves (\ds u -> ds {iRReserves = u}) . mapL coinL
 
-iRTreasuryL :: Lens' (InstantaneousRewards c) (Map (Credential 'Staking c) Coin)
-iRTreasuryL = lens iRTreasury (\ds u -> ds {iRTreasury = u})
+iRTreasuryL :: Lens' (InstantaneousRewards c) (Map (Credential 'Staking c) Integer)
+iRTreasuryL = lens iRTreasury (\ds u -> ds {iRTreasury = u}) . mapL coinL
 
 deltaResL :: Lens' (InstantaneousRewards c) DeltaCoin
 deltaResL = lens LS.deltaReserves (\ds u -> ds {LS.deltaReserves = u})
@@ -343,3 +345,19 @@ delegationsUMapL = lens delView delta
     delta um new = unSplitUMap (split {spDel = new})
       where
         split = splitUMap um
+
+coinL :: Lens' Coin Integer
+coinL = lens unCoin (\_ y -> Coin y)
+
+-- These lenses might not be safe, use with care
+listL :: Lens' a b -> Lens' [a] [b]
+listL l = lens (\x -> view l <$> x) (\x y -> zipWith (\ a b -> a & l .~ b) x y)
+
+mapL :: Ord c => Lens' a b -> Lens' (Map c a) (Map c b)
+mapL l = lens (\x -> view l <$> x) setter
+  where
+    setter a b = Map.fromList $ do
+      k <- Map.keys b
+      let orig = a Map.! k
+      let new = b Map.! k
+      pure (k, orig & l .~ new)

@@ -11,6 +11,8 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 -- | The idea is to create a world of Haskell types, called a Universe. Then to
 --   define a 'class' whose methods are only applicable to that set of types. We define

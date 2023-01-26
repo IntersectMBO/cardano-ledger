@@ -250,6 +250,7 @@ eval (Dom x) = case eval x of
   Typed _other -> failT ["In " ++ show (Dom x) ++ ", " ++ show x ++ " does not eval to a Map type"]
 eval (Rng (Var (V nm _ _))) = failT ["Can't eval variable: " ++ nm]
 eval (Rng (Fixed (Lit (MapR _ r) m))) = pure (Dyn (SetR r) (Set.fromList (Map.elems m)))
+eval (Rng (Fixed _)) = failT ["Rng applied to a value that is not a map"]
 eval (Var (V nm _ _)) = failT ["Can't eval unbound variable: " ++ nm]
 
 -- | Evidence that 'expr' has type 'r1'
