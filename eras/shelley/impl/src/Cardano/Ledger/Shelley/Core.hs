@@ -23,9 +23,16 @@ module Cardano.Ledger.Shelley.Core (
 where
 
 import Cardano.Ledger.Address
-import Cardano.Ledger.Binary (FromCBOR (..), FromSharedCBOR (..), ToCBOR (..), decodeNull, encodeNull)
+import Cardano.Ledger.Binary.Plain (
+  DecCBOR (..),
+  DecShareCBOR (..),
+  EncCBOR (..),
+  decodeNull,
+  encodeNull,
+ )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (Update)
@@ -42,7 +49,15 @@ import GHC.Generics (Generic)
 import Lens.Micro (Lens', SimpleGetter)
 import NoThunks.Class (NoThunks)
 
-class EraTallyState era where
+class
+  ( Era era
+  , NoThunks (TallyState era)
+  , NFData (TallyState era)
+  , EncCBOR (TallyState era)
+  , DecCBOR (TallyState era)
+  ) =>
+  EraTallyState era
+  where
   type TallyState era = (r :: Type) | r -> era
   type TallyState era = ShelleyTallyState era
 
@@ -62,17 +77,17 @@ instance Default (ShelleyTallyState era) where
 
 instance ToExpr (ShelleyTallyState era)
 
-instance Era era => ToCBOR (ShelleyTallyState era) where
-  toCBOR _ = encodeNull
+instance Era era => EncCBOR (ShelleyTallyState era) where
+  encCBOR _ = encodeNull
 
-instance Era era => FromSharedCBOR (ShelleyTallyState era) where
-  fromSharedCBOR _ = fromCBOR
-  fromSharedPlusCBOR = lift fromCBOR
+instance Era era => DecShareCBOR (ShelleyTallyState era) where
+  decShareCBOR _ = decCBOR
+  decSharePlusCBOR = lift decCBOR
 
-instance Era era => FromCBOR (ShelleyTallyState era) where
-  fromCBOR = NoTallyState <$ decodeNull
+instance Era era => DecCBOR (ShelleyTallyState era) where
+  decCBOR = NoTallyState <$ decodeNull
 
-instance EraTallyState (ShelleyEra c)
+instance Crypto c => EraTallyState (ShelleyEra c)
 
 class EraTxBody era => ShelleyEraTxBody era where
   ttlTxBodyL :: ExactEra ShelleyEra era => Lens' (TxBody era) SlotNo

@@ -81,7 +81,7 @@ import Cardano.Ledger.BaseTypes (
   StrictMaybe (..),
   UnitInterval,
  )
-import Cardano.Ledger.Binary (FromCBOR, ToCBOR)
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR, FromCBOR, ToCBOR)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core.Era (Era (..), PreviousEra, ProtVerAtMost)
 import Cardano.Ledger.HKD (HKD, HKDFunctor)
@@ -131,6 +131,12 @@ deriving newtype instance
   (Typeable era, FromCBOR (PParamsHKD Identity era)) => FromCBOR (PParams era)
 
 deriving newtype instance
+  (Typeable era, EncCBOR (PParamsHKD Identity era)) => EncCBOR (PParams era)
+
+deriving newtype instance
+  (Typeable era, DecCBOR (PParamsHKD Identity era)) => DecCBOR (PParams era)
+
+deriving newtype instance
   ToExpr (PParamsHKD Identity era) => ToExpr (PParams era)
 
 deriving instance Generic (PParams era)
@@ -161,6 +167,12 @@ deriving newtype instance
 
 deriving newtype instance
   (Typeable era, FromCBOR (PParamsHKD StrictMaybe era)) => FromCBOR (PParamsUpdate era)
+
+deriving newtype instance
+  (Typeable era, EncCBOR (PParamsHKD StrictMaybe era)) => EncCBOR (PParamsUpdate era)
+
+deriving newtype instance
+  (Typeable era, DecCBOR (PParamsHKD StrictMaybe era)) => DecCBOR (PParamsUpdate era)
 
 deriving newtype instance
   ToJSON (PParamsHKD StrictMaybe era) => ToJSON (PParamsUpdate era)
@@ -203,6 +215,8 @@ class
   , NFData (PParamsHKD Identity era)
   , ToCBOR (PParamsHKD Identity era)
   , FromCBOR (PParamsHKD Identity era)
+  , EncCBOR (PParamsHKD Identity era)
+  , DecCBOR (PParamsHKD Identity era)
   , NoThunks (PParamsHKD Identity era)
   , Eq (PParamsHKD StrictMaybe era)
   , Ord (PParamsHKD StrictMaybe era)

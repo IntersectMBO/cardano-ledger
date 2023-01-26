@@ -657,7 +657,7 @@ newtype BlocksMade c = BlocksMade
   }
   deriving (Eq, Generic)
   deriving (Show) via Quiet (BlocksMade c)
-  deriving newtype (NoThunks, NFData, ToJSON, FromJSON, ToCBOR, FromCBOR)
+  deriving newtype (NoThunks, NFData, ToJSON, FromJSON, EncCBOR, DecCBOR)
 
 -- TODO: It is unfeasable to have 65535 outputs in a transaction,
 -- but 255 is right on the border of a maximum TxIx on Mainnet at the moment,

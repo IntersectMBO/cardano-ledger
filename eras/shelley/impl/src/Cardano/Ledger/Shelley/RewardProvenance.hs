@@ -148,14 +148,9 @@ data RewardProvenance c = RewardProvenance
   -- ^ The amount of Lovelace taken from the treasury for the given epoch.
   , activeStake :: !Coin
   -- ^ The amount of Lovelace that is delegated during the given epoch.
-  , pools ::
-      !( Map
-          (KeyHash 'StakePool c)
-          (RewardProvenancePool c)
-       )
+  , pools :: !(Map (KeyHash 'StakePool c) (RewardProvenancePool c))
   -- ^ Individual stake pool provenance.
-  , desirabilities ::
-      !(Map (KeyHash 'StakePool c) Desirability)
+  , desirabilities :: !(Map (KeyHash 'StakePool c) Desirability)
   -- ^ A map from pool ID to the desirability score.
   -- See the <https://github.com/input-output-hk/cardano-ledger/releases/latest/download/pool-ranking.pdf stake pool ranking document>.
   }
@@ -270,93 +265,93 @@ instance Show (RewardProvenance c) where
 -- =======================================================
 -- CBOR instances
 
-instance ToCBOR Desirability where
-  toCBOR (Desirability p1 p2) =
-    encode $ Rec Desirability !> E encodeDouble p1 !> E encodeDouble p2
+-- instance ToCBOR Desirability where
+--   toCBOR (Desirability p1 p2) =
+--     encode $ Rec Desirability !> E encodeDouble p1 !> E encodeDouble p2
 
-instance FromCBOR Desirability where
-  fromCBOR = decode $ RecD Desirability <! D decodeDouble <! D decodeDouble
+-- instance FromCBOR Desirability where
+--   fromCBOR = decode $ RecD Desirability <! D decodeDouble <! D decodeDouble
 
-instance
-  (CC.Crypto c) =>
-  ToCBOR (RewardProvenancePool c)
-  where
-  toCBOR (RewardProvenancePool p1 p2 p3 p4 p5 p6 p7 p8 p9 p10) =
-    encode $
-      Rec RewardProvenancePool
-        !> To p1
-        !> To p2
-        !> To p3
-        !> To p4
-        !> To p5
-        !> To p6
-        !> To p7
-        !> To p8
-        !> To p9
-        !> To p10
+-- instance
+--   (CC.Crypto c) =>
+--   ToCBOR (RewardProvenancePool c)
+--   where
+--   toCBOR (RewardProvenancePool p1 p2 p3 p4 p5 p6 p7 p8 p9 p10) =
+--     encode $
+--       Rec RewardProvenancePool
+--         !> To p1
+--         !> To p2
+--         !> To p3
+--         !> To p4
+--         !> To p5
+--         !> To p6
+--         !> To p7
+--         !> To p8
+--         !> To p9
+--         !> To p10
 
-instance
-  (CC.Crypto c) =>
-  FromCBOR (RewardProvenancePool c)
-  where
-  fromCBOR =
-    decode $
-      RecD RewardProvenancePool
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
+-- instance
+--   (CC.Crypto c) =>
+--   FromCBOR (RewardProvenancePool c)
+--   where
+--   fromCBOR =
+--     decode $
+--       RecD RewardProvenancePool
+--         <! From
+--         <! From
+--         <! From
+--         <! From
+--         <! From
+--         <! From
+--         <! From
+--         <! From
+--         <! From
+--         <! From
 
-instance
-  (CC.Crypto c) =>
-  ToCBOR (RewardProvenance c)
-  where
-  toCBOR (RewardProvenance p1 p2 p3 p4 p5 p6 p7 p8 p9 p10 p11 p12 p13 p14 p15 p16) =
-    encode $
-      Rec RewardProvenance
-        !> To p1
-        !> To p2
-        !> To p3
-        !> To p4
-        !> To p5
-        !> To p6
-        !> To p7
-        !> To p8
-        !> To p9
-        !> To p10
-        !> To p11
-        !> To p12
-        !> To p13
-        !> To p14
-        !> To p15
-        !> To p16
+-- instance
+--   (CC.Crypto c) =>
+--   ToCBOR (RewardProvenance c)
+--   where
+--   toCBOR (RewardProvenance p1 p2 p3 p4 p5 p6 p7 p8 p9 p10 p11 p12 p13 p14 p15 p16) =
+--     encode $
+--       Rec RewardProvenance
+--         !> To p1
+--         !> To p2
+--         !> To p3
+--         !> To p4
+--         !> To p5
+--         !> To p6
+--         !> To p7
+--         !> To p8
+--         !> To p9
+--         !> To p10
+--         !> To p11
+--         !> To p12
+--         !> To p13
+--         !> To p14
+--         !> To p15
+--         !> To p16
 
-instance
-  (CC.Crypto c) =>
-  FromCBOR (RewardProvenance c)
-  where
-  fromCBOR =
-    decode $
-      RecD RewardProvenance
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
+-- instance
+--   (CC.Crypto c) =>
+--   FromCBOR (RewardProvenance c)
+--   where
+--   fromCBOR =
+--     decode $
+--       RecD RewardProvenance
+--         <! From
+--         <! From
+--         <! From
+--         <! From
+--         <! From
+--         <! From
+--         <! From
+--         <! From
+--         <! From
+--         <! From
+--         <! From
+--         <! From
+--         <! From
+--         <! From
+--         <! From
+--         <! From

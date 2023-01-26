@@ -6,6 +6,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
@@ -23,8 +24,8 @@ module Cardano.Ledger.PoolDistr (
 )
 where
 
-import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), decodeRecordNamed, encodeListLen)
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Binary.Plain (DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (Hash, KeyHash, KeyRole (..), VerKeyVRF)
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
@@ -53,20 +54,14 @@ data IndividualPoolStake c = IndividualPoolStake
   deriving stock (Show, Eq, Generic)
   deriving anyclass (NFData, NoThunks)
 
-instance CC.Crypto c => ToCBOR (IndividualPoolStake c) where
-  toCBOR (IndividualPoolStake stake vrf) =
-    mconcat
-      [ encodeListLen 2
-      , toCBOR stake
-      , toCBOR vrf
-      ]
+instance Crypto c => EncCBOR (IndividualPoolStake c) where
+  encCBOR IndividualPoolStake {individualPoolStake, individualPoolStakeVrf} =
+    encCBOR (individualPoolStake, individualPoolStakeVrf)
 
-instance CC.Crypto c => FromCBOR (IndividualPoolStake c) where
-  fromCBOR =
-    decodeRecordNamed "IndividualPoolStake" (const 2) $
-      IndividualPoolStake
-        <$> fromCBOR
-        <*> fromCBOR
+instance Crypto c => DecCBOR (IndividualPoolStake c) where
+  decCBOR = do
+    (individualPoolStake, individualPoolStakeVrf) <- decCBOR
+    pure IndividualPoolStake {individualPoolStake, individualPoolStakeVrf}
 
 -- | A map of stake pool IDs (the hash of the stake pool operator's
 -- verification key) to 'IndividualPoolStake'.
@@ -75,17 +70,14 @@ newtype PoolDistr c = PoolDistr
       Map (KeyHash 'StakePool c) (IndividualPoolStake c)
   }
   deriving stock (Show, Eq, Generic)
-  deriving newtype (ToCBOR, FromCBOR, NFData, NoThunks)
+  deriving newtype (EncCBOR, DecCBOR, NFData, NoThunks)
 
 -- ===============================
 
 instance
   HasExp
     (PoolDistr c)
-    ( Map
-        (KeyHash 'StakePool c)
-        (IndividualPoolStake c)
-    )
+    (Map (KeyHash 'StakePool c) (IndividualPoolStake c))
   where
   toExp (PoolDistr x) = Base MapR x
 
@@ -93,10 +85,7 @@ instance
 instance
   Embed
     (PoolDistr c)
-    ( Map
-        (KeyHash 'StakePool c)
-        (IndividualPoolStake c)
-    )
+    (Map (KeyHash 'StakePool c) (IndividualPoolStake c))
   where
   toBase (PoolDistr x) = x
   fromBase = PoolDistr
