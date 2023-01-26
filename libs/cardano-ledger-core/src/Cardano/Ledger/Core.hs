@@ -80,6 +80,7 @@ import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (ProtVer (..))
 import Cardano.Ledger.Binary (
   Annotator,
+  DecCBOR,
   EncCBOR,
   FromCBOR,
   FromSharedCBOR (Share),
@@ -190,6 +191,8 @@ class
   , Eq (Value era)
   , FromCBOR (Value era)
   , ToCBOR (Value era)
+  , EncCBOR (TxOut era)
+  , DecCBOR (TxOut era)
   , FromCBOR (TxOut era)
   , FromSharedCBOR (TxOut era)
   , Share (TxOut era) ~ Interns (Credential 'Staking (EraCrypto era))

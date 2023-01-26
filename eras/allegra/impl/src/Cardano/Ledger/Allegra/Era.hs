@@ -33,7 +33,7 @@ instance Crypto c => Era (AllegraEra c) where
   type EraCrypto (AllegraEra c) = c
   type ProtVerLow (AllegraEra c) = 3
 
-instance EraTallyState (AllegraEra c)
+instance Crypto c => EraTallyState (AllegraEra c)
 
 --------------------------------------------------------------------------------
 -- Core instances

@@ -23,7 +23,7 @@ instance Crypto c => Era (MaryEra c) where
   type EraCrypto (MaryEra c) = c
   type ProtVerLow (MaryEra c) = 4
 
-instance EraTallyState (MaryEra c)
+instance Crypto c => EraTallyState (MaryEra c)
 
 --------------------------------------------------------------------------------
 -- Core instances

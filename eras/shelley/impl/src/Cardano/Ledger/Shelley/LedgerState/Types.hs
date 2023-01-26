@@ -53,7 +53,6 @@ import Cardano.Ledger.Keys (
   KeyRole (..),
  )
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
-import Cardano.Ledger.SafeHash (HashAnnotated)
 import Cardano.Ledger.Shelley.Core (EraTallyState (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PoolRank (
@@ -63,7 +62,6 @@ import Cardano.Ledger.Shelley.RewardUpdate (
   PulsingRewUpdate (..),
  )
 import Cardano.Ledger.Shelley.Rules.Ppup (PPUPState, ShelleyPPUPState)
-import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.UTxO (UTxO (..))
 import Control.DeepSeq (NFData)

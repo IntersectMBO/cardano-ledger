@@ -35,11 +35,15 @@ where
 
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
   FromCBOR (..),
   FromSharedCBOR (Share, fromSharedCBOR),
   Interns,
   ToCBOR (..),
-  decodeMapNoDuplicates,
+  decodeMap,
+  toPlainDecoder,
+  toPlainEncoding,
  )
 import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Coin (Coin, CompactForm (CompactCoin))
@@ -78,6 +82,12 @@ import Quiet (Quiet (Quiet))
 newtype UTxO era = UTxO {unUTxO :: Map.Map (TxIn (EraCrypto era)) (TxOut era)}
   deriving (Default, Generic, Semigroup)
 
+instance (ToCBOR (TxOut era), Era era) => EncCBOR (UTxO era) where
+  encCBOR = toPlainEncoding (eraProtVerLow @era) . toCBOR
+
+instance (FromCBOR (TxOut era), Era era) => DecCBOR (UTxO era) where
+  decCBOR = toPlainDecoder (eraProtVerLow @era) fromCBOR
+
 deriving instance NoThunks (TxOut era) => NoThunks (UTxO era)
 
 deriving instance (Era era, NFData (TxOut era)) => NFData (UTxO era)
@@ -88,6 +98,8 @@ deriving newtype instance
 deriving newtype instance Crypto (EraCrypto era) => Monoid (UTxO era)
 
 deriving newtype instance (Era era, ToCBOR (TxOut era)) => ToCBOR (UTxO era)
+
+deriving newtype instance (FromCBOR (TxOut era), Era era) => FromCBOR (UTxO era)
 
 instance
   ( Crypto (EraCrypto era)
@@ -100,15 +112,7 @@ instance
     Share (UTxO era) =
       Interns (Credential 'Staking (EraCrypto era))
   fromSharedCBOR credsInterns =
-    UTxO <$!> decodeMapNoDuplicates fromCBOR (fromSharedCBOR credsInterns)
-
-instance
-  ( FromCBOR (TxOut era)
-  , Era era
-  ) =>
-  FromCBOR (UTxO era)
-  where
-  fromCBOR = UTxO <$!> decodeMapNoDuplicates fromCBOR fromCBOR
+    UTxO <$!> decodeMap fromCBOR (fromSharedCBOR credsInterns)
 
 deriving via
   Quiet (UTxO era)
