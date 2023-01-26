@@ -8,6 +8,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -26,16 +27,18 @@ import qualified Cardano.Crypto.Hash as HS
 import Cardano.HeapWords (HeapWords (..))
 import Cardano.Ledger.Address (Addr (..), CompactAddr, compactAddr, decompactAddr)
 import Cardano.Ledger.Binary (
+  DecShareCBOR (..),
   FromCBOR (..),
-  FromSharedCBOR (..),
-  Interns (..),
   ToCBOR (..),
   decodeRecordNamed,
   encodeListLen,
-  fromNotSharedCBOR,
+  toPlainDecoder,
+ )
+import Cardano.Ledger.Binary.Plain (
+  Interns (..),
  )
 import Cardano.Ledger.Compactible (Compactible (CompactForm, fromCompact, toCompact))
-import Cardano.Ledger.Core (Era (EraCrypto), EraTxOut (..), Value, ppMinUTxOValueL)
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto (ADDRHASH), StandardCrypto)
 import Cardano.Ledger.Keys (KeyRole (..))
@@ -99,7 +102,8 @@ valueEitherShelleyTxOutL =
     )
 {-# INLINE valueEitherShelleyTxOutL #-}
 
--- assume Shelley+ type address : payment addr, staking addr (same length as payment), plus 1 word overhead
+-- assume Shelley+ type address : payment addr, staking addr (same length as payment),
+-- plus 1 word overhead
 instance (Era era, HeapWords (CompactForm (Value era))) => HeapWords (ShelleyTxOut era) where
   heapWords (TxOutCompact _ vl) =
     3
@@ -131,7 +135,10 @@ pattern ShelleyTxOut addr vl <-
 
 {-# COMPLETE ShelleyTxOut #-}
 
-viewCompactTxOut :: (Era era, Compactible (Value era)) => ShelleyTxOut era -> (Addr (EraCrypto era), Value era)
+viewCompactTxOut ::
+  (Era era, Compactible (Value era)) =>
+  ShelleyTxOut era ->
+  (Addr (EraCrypto era), Value era)
 viewCompactTxOut TxOutCompact {txOutCompactAddr, txOutCompactValue} =
   (decompactAddr txOutCompactAddr, fromCompact txOutCompactValue)
 
@@ -145,19 +152,18 @@ instance
   (Era era, DecodeNonNegative (Value era), Compactible (Value era), Show (Value era)) =>
   FromCBOR (ShelleyTxOut era)
   where
-  fromCBOR = fromNotSharedCBOR
-
--- This instance does not do any sharing and is isomorphic to FromCBOR
--- use the weakest constraint necessary
-instance
-  (Era era, Show (Value era), DecodeNonNegative (Value era), Compactible (Value era)) =>
-  FromSharedCBOR (ShelleyTxOut era)
-  where
-  type Share (ShelleyTxOut era) = Interns (Credential 'Staking (EraCrypto era))
-  fromSharedCBOR _ =
+  fromCBOR =
     decodeRecordNamed "ShelleyTxOut" (const 2) $ do
       cAddr <- fromCBOR
       TxOutCompact cAddr <$> decodeNonNegative
+
+-- | This instance does not do any sharing and is isomorphic to `FromCBOR`
+instance
+  (Era era, Show (Value era), DecodeNonNegative (Value era), Compactible (Value era)) =>
+  DecShareCBOR (ShelleyTxOut era)
+  where
+  type Share (ShelleyTxOut era) = Interns (Credential 'Staking (EraCrypto era))
+  decShareCBOR _ = toPlainDecoder (eraProtVerLow @era) fromCBOR
 
 -- a ShortByteString of the same length as the ADDRHASH
 -- used to calculate heapWords

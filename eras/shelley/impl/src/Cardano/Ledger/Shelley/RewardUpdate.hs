@@ -7,9 +7,11 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -18,20 +20,13 @@
 module Cardano.Ledger.Shelley.RewardUpdate where
 
 import Cardano.Ledger.BaseTypes (ProtVer (..), ShelleyBase)
-import Cardano.Ledger.Binary (
-  FromCBOR (..),
-  ToCBOR (..),
+import Cardano.Ledger.Binary.Plain (
+  DecCBOR (..),
+  EncCBOR (..),
+  decNoShareCBOR,
+  decodeListLen,
   decodeRecordNamed,
   encodeListLen,
-  fromNotSharedCBOR,
- )
-import Cardano.Ledger.Binary.Coders (
-  Decode (..),
-  Encode (..),
-  decode,
-  encode,
-  (!>),
-  (<!),
  )
 import Cardano.Ledger.Coin (Coin (..), CompactForm, DeltaCoin (..))
 import Cardano.Ledger.Compactible (Compactible (fromCompact))
@@ -45,7 +40,8 @@ import Cardano.Ledger.Shelley.Rewards (
   rewardOnePoolMember,
  )
 import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (toExpr))
-import Control.DeepSeq (NFData (..))
+import Control.DeepSeq (NFData (..), deepseq)
+import Control.Monad (when)
 import Data.Default.Class (def)
 import Data.Group (invert)
 import Data.Kind (Type)
@@ -75,11 +71,14 @@ data RewardAns c = RewardAns
 
 instance NoThunks (RewardAns c)
 
-instance Crypto c => ToCBOR (RewardAns c) where
-  toCBOR (RewardAns accum recent) = encodeListLen 2 <> toCBOR accum <> toCBOR recent
+instance Crypto c => EncCBOR (RewardAns c) where
+  encCBOR RewardAns {accumRewardAns, recentRewardAns} =
+    encCBOR (accumRewardAns, recentRewardAns)
 
-instance Crypto c => FromCBOR (RewardAns c) where
-  fromCBOR = decodeRecordNamed "RewardAns" (const 2) (RewardAns <$> fromCBOR <*> fromCBOR)
+instance Crypto c => DecCBOR (RewardAns c) where
+  decCBOR = do
+    (accumRewardAns, recentRewardAns) <- decCBOR
+    pure RewardAns {accumRewardAns, recentRewardAns}
 
 -- | The type of RewardPulser we pulse on.
 type Pulser c = RewardPulser c ShelleyBase (RewardAns c)
@@ -101,30 +100,14 @@ instance NoThunks (RewardUpdate c)
 
 instance NFData (RewardUpdate c)
 
-instance
-  Crypto c =>
-  ToCBOR (RewardUpdate c)
-  where
-  toCBOR (RewardUpdate dt dr rw df nm) =
-    encodeListLen 5
-      <> toCBOR dt
-      <> toCBOR (invert dr) -- TODO change Coin serialization to use integers?
-      <> toCBOR rw
-      <> toCBOR (invert df) -- TODO change Coin serialization to use integers?
-      <> toCBOR nm
+instance Crypto c => EncCBOR (RewardUpdate c) where
+  encCBOR RewardUpdate {deltaT, deltaR, rs, deltaF, nonMyopic} =
+    encCBOR (deltaT, deltaR, rs, deltaF, nonMyopic)
 
-instance
-  Crypto c =>
-  FromCBOR (RewardUpdate c)
-  where
-  fromCBOR = do
-    decodeRecordNamed "RewardUpdate" (const 5) $ do
-      dt <- fromCBOR
-      dr <- fromCBOR -- TODO change Coin serialization to use integers?
-      rw <- fromCBOR
-      df <- fromCBOR -- TODO change Coin serialization to use integers?
-      nm <- fromNotSharedCBOR
-      pure $ RewardUpdate dt (invert dr) rw (invert df) nm
+instance Crypto c => DecCBOR (RewardUpdate c) where
+  decCBOR = do
+    (deltaT, deltaR, rs, deltaF, nonMyopic) <- decCBOR
+    pure $ RewardUpdate {deltaT, deltaR, rs, deltaF, nonMyopic}
 
 emptyRewardUpdate :: RewardUpdate c
 emptyRewardUpdate =
@@ -149,33 +132,42 @@ instance Typeable c => NoThunks (RewardSnapShot c)
 
 instance NFData (RewardSnapShot c)
 
-instance Crypto c => ToCBOR (RewardSnapShot c) where
-  toCBOR (RewardSnapShot fees ver nm dr1 r dt1 lhs lrs) =
-    encode
-      ( Rec RewardSnapShot
-          !> To fees
-          !> To ver
-          !> To nm
-          !> To dr1
-          !> To r
-          !> To dt1
-          !> To lhs
-          !> To lrs
-      )
+instance Crypto c => EncCBOR (RewardSnapShot c) where
+  encCBOR
+    RewardSnapShot
+      { rewFees
+      , rewProtocolVersion
+      , rewNonMyopic
+      , rewDeltaR1
+      , rewR
+      , rewDeltaT1
+      , rewLikelihoods
+      , rewLeaders
+      } =
+      encCBOR
+        ( rewFees
+        , rewProtocolVersion
+        , rewNonMyopic
+        , rewDeltaR1
+        , rewR
+        , rewDeltaT1
+        , rewLikelihoods
+        , rewLeaders
+        )
 
-instance Crypto c => FromCBOR (RewardSnapShot c) where
-  fromCBOR =
-    decode
-      ( RecD RewardSnapShot
-          <! From
-          <! From
-          <! D fromNotSharedCBOR
-          <! From
-          <! From
-          <! From
-          <! From
-          <! From
-      )
+instance Crypto c => DecCBOR (RewardSnapShot c) where
+  decCBOR = do
+    ( rewFees
+      , rewProtocolVersion
+      , rewNonMyopic
+      , rewDeltaR1
+      , rewR
+      , rewDeltaT1
+      , rewLikelihoods
+      , rewLeaders
+      ) <-
+      decCBOR
+    pure RewardSnapShot {..}
 
 -- ========================================================
 -- FreeVars is the set of variables needed to compute
@@ -194,8 +186,8 @@ data FreeVars c = FreeVars
 
 instance NFData (FreeVars c)
 
-instance Crypto c => ToCBOR (FreeVars c) where
-  toCBOR
+instance Crypto c => EncCBOR (FreeVars c) where
+  encCBOR
     FreeVars
       { fvDelegs
       , fvAddrsRew
@@ -203,25 +195,24 @@ instance Crypto c => ToCBOR (FreeVars c) where
       , fvProtVer
       , fvPoolRewardInfo
       } =
-      encode
-        ( Rec FreeVars
-            !> To fvDelegs
-            !> To fvAddrsRew
-            !> To fvTotalStake
-            !> To fvProtVer
-            !> To fvPoolRewardInfo
+      encCBOR
+        ( fvDelegs
+        , fvAddrsRew
+        , fvTotalStake
+        , fvProtVer
+        , fvPoolRewardInfo
         )
 
-instance (Crypto c) => FromCBOR (FreeVars c) where
-  fromCBOR =
-    decode
-      ( RecD FreeVars
-          <! From {- fvDelegs -}
-          <! From {- fvAddrsRew -}
-          <! From {- fvTotalStake -}
-          <! From {- fvProtver -}
-          <! From {- fvPoolRewardInfo -}
-      )
+instance Crypto c => DecCBOR (FreeVars c) where
+  decCBOR = do
+    ( fvDelegs
+      , fvAddrsRew
+      , fvTotalStake
+      , fvProtVer
+      , fvPoolRewardInfo
+      ) <-
+      decCBOR
+    pure FreeVars {..}
 
 -- =====================================================================
 
@@ -303,15 +294,15 @@ instance Typeable c => NoThunks (Pulser c) where
       ]
 
 instance NFData (Pulser c) where
-  rnf (RSLP n1 c1 b1 a1) = seq (rnf n1) (seq (rnf c1) (seq (rnf b1) (rnf a1)))
+  rnf (RSLP n free balance ans) = n `deepseq` free `deepseq` balance `deepseq` rnf ans
 
-instance Crypto c => ToCBOR (Pulser c) where
-  toCBOR (RSLP n free balance ans) =
-    encode (Rec RSLP !> To n !> To free !> To balance !> To ans)
+instance Crypto c => EncCBOR (Pulser c) where
+  encCBOR (RSLP n free balance ans) = encCBOR (n, free, balance, ans)
 
-instance Crypto c => FromCBOR (Pulser c) where
-  fromCBOR =
-    decode (RecD RSLP <! From <! From <! From <! From)
+instance Crypto c => DecCBOR (Pulser c) where
+  decCBOR = do
+    (n, free, balance, ans) <- decCBOR
+    pure $ RSLP n free balance ans
 
 -- =========================================================================
 
@@ -321,16 +312,23 @@ data PulsingRewUpdate c
   | Complete !(RewardUpdate c) -- Pulsing work completed, ultimate goal reached
   deriving (Eq, Show, Generic, NoThunks)
 
-instance Crypto c => ToCBOR (PulsingRewUpdate c) where
-  toCBOR (Pulsing s p) = encode (Sum Pulsing 0 !> To s !> To p)
-  toCBOR (Complete r) = encode (Sum Complete 1 !> To r)
+instance Crypto c => EncCBOR (PulsingRewUpdate c) where
+  encCBOR (Pulsing s p) = encodeListLen 3 <> encCBOR (0 :: Word) <> encCBOR s <> encCBOR p
+  encCBOR (Complete r) = encodeListLen 2 <> encCBOR (1 :: Word) <> encCBOR r
 
-instance Crypto c => FromCBOR (PulsingRewUpdate c) where
-  fromCBOR = decode (Summands "PulsingRewUpdate" decPS)
-    where
-      decPS 0 = SumD Pulsing <! From <! From
-      decPS 1 = SumD Complete <! From
-      decPS n = Invalid n
+instance Crypto c => DecCBOR (PulsingRewUpdate c) where
+  decCBOR = do
+    n <- decodeListLen
+    when (n < 1) $ fail $ "<PulsingRewUpdate> Unexpected list length: " ++ show n
+    decCBOR >>= \case
+      0 | n == 3 -> Pulsing <$> decCBOR <*> decCBOR
+      1 | n == 2 -> Complete <$> decCBOR
+      t ->
+        fail $
+          "<PulsingRewUpdate> Unexpected combination of key: "
+            ++ show t
+            ++ " and list length: "
+            ++ show n
 
 instance NFData (PulsingRewUpdate c)
 

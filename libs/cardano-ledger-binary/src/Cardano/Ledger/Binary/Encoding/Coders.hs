@@ -189,7 +189,7 @@ gsize (Tag _ _) = 1
 gsize (Key _ x) = gsize x
 gsize (Keyed _) = 0
 
--- | Translate a first-order @(Encode w d) domain specific langage program, into an 'Encoding' .
+-- | Translate a first-order @(Encode w d) domain specific language program, into an 'Encoding' .
 encode :: Encode w t -> Encoding
 encode = encodeCountPrefix 0
   where

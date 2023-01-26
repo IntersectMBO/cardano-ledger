@@ -14,13 +14,13 @@ module Cardano.Ledger.Rewards (
 where
 
 import Cardano.Ledger.BaseTypes (invalidKey)
-import Cardano.Ledger.Binary (
-  FromCBOR (..),
-  ToCBOR (..),
+import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
+import Cardano.Ledger.Binary.Plain as Plain (
+  DecCBOR (..),
+  EncCBOR (..),
   decodeWord,
   encodeWord,
  )
-import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
@@ -46,16 +46,20 @@ instance NoThunks RewardType
 
 instance NFData RewardType
 
-instance ToCBOR RewardType where
-  toCBOR MemberReward = encodeWord 0
-  toCBOR LeaderReward = encodeWord 1
+instance EncCBOR RewardType where
+  encCBOR MemberReward = Plain.encodeWord 0
+  encCBOR LeaderReward = Plain.encodeWord 1
 
-instance FromCBOR RewardType where
-  fromCBOR =
-    decodeWord >>= \case
+-- instance ToCBOR RewardType
+
+instance DecCBOR RewardType where
+  decCBOR =
+    Plain.decodeWord >>= \case
       0 -> pure MemberReward
       1 -> pure LeaderReward
       n -> invalidKey n
+
+-- instance FromCBOR RewardType
 
 -- | The 'Reward' type captures:
 --
@@ -85,8 +89,8 @@ instance NoThunks (Reward c)
 instance NFData (Reward c)
 
 instance Crypto c => ToCBOR (Reward c) where
-  toCBOR (Reward rt pool c) =
-    encode $ Rec Reward !> To rt !> To pool !> To c
+  toCBOR Reward {rewardType,rewardPool, rewardType, rewardAmount} =
+    toCBOR (rewardType,rewardPool, rewardType, rewardAmount)
 
 instance Crypto c => FromCBOR (Reward c) where
   fromCBOR =
