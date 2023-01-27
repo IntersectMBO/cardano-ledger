@@ -52,6 +52,7 @@ import Cardano.Ledger.Shelley.TxBody (
   getRwdNetwork,
  )
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo, epochInfoEpoch)
+import Control.DeepSeq
 import Control.Monad (forM_, when)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, setSingleton, singleton, (∈), (∉), (∪), (⋪), (⨃))
@@ -100,6 +101,8 @@ data ShelleyPoolPredFailure era
   deriving (Show, Eq, Generic)
 
 instance NoThunks (ShelleyPoolPredFailure era)
+
+instance NFData (ShelleyPoolPredFailure era)
 
 instance EraPParams era => STS (ShelleyPOOL era) where
   type State (ShelleyPOOL era) = PState (EraCrypto era)

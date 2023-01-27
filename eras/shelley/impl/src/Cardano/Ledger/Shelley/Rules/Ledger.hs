@@ -125,6 +125,13 @@ instance
   NoThunks (ShelleyLedgerPredFailure era)
 
 instance
+  ( NFData (PredicateFailure (EraRule "DELEGS" era))
+  , NFData (PredicateFailure (EraRule "UTXOW" era))
+  , Era era
+  ) =>
+  NFData (ShelleyLedgerPredFailure era)
+
+instance
   ( ToCBOR (PredicateFailure (EraRule "DELEGS" era))
   , ToCBOR (PredicateFailure (EraRule "UTXOW" era))
   , Era era

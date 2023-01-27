@@ -84,6 +84,8 @@ data VotingPeriod = VoteForThisEpoch | VoteForNextEpoch
 
 instance NoThunks VotingPeriod
 
+instance NFData VotingPeriod
+
 instance ToCBOR VotingPeriod where
   toCBOR VoteForThisEpoch = toCBOR (0 :: Word8)
   toCBOR VoteForNextEpoch = toCBOR (1 :: Word8)
@@ -121,6 +123,8 @@ data ShelleyPpupPredFailure era
   deriving (Show, Eq, Generic)
 
 instance NoThunks (ShelleyPpupPredFailure era)
+
+instance NFData (ShelleyPpupPredFailure era)
 
 newtype PpupEvent era = NewEpoch EpochNo
 
