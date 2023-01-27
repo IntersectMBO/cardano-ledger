@@ -84,7 +84,7 @@ roundTripFailureExpectation version x =
     Right _ ->
       expectationFailure $
         "Should not have deserialized: "
-          ++ showExpr (CBORBytes (Just (label (Proxy @a))) (serialize' version x))
+          ++ showExpr (CBORBytes (label (Proxy @a)) (serialize' version x))
 
 -- | Verify that round triping through the binary form holds for all versions starting
 -- with `shelleyProtVer`.

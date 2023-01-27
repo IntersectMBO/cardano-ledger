@@ -145,6 +145,7 @@ library testlib
                      containers,
                      generic-random,
                      mtl,
+                     vector-map,
 
 test-suite tests
   import:            base, project-config

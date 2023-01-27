@@ -16,12 +16,8 @@ where
 
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.BaseTypes (textToDns, textToUrl)
-import Cardano.Ledger.Binary (
-  ToCBOR (..),
-  Tokens (..),
-  serializeEncoding',
-  shelleyProtVer,
- )
+import Cardano.Ledger.Binary (Tokens (..))
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Core (emptyPParams, ppDL, ppMaxBBSizeL, ppMaxBHSizeL)
 import Cardano.Ledger.Crypto (Crypto (HASH), StandardCrypto)
 import Cardano.Ledger.Keys (hashKey, hashVerKeyVRF)
@@ -72,13 +68,13 @@ golden_cbor_ShelleyGenesis :: Assertion
 golden_cbor_ShelleyGenesis =
   when (received /= expected) $
     assertFailure
-      (diffExpr (CBORBytes expected) (CBORBytes received))
+      (diffExpr (CBORBytes "Expected" expected) (CBORBytes "Actual" received))
   where
     example :: ShelleyGenesis StandardCrypto
     example = exampleShelleyGenesis
 
-    received = serializeEncoding' shelleyProtVer (toCBOR expectedTokens)
-    expected = serializeEncoding' shelleyProtVer (toCBOR example)
+    received = Plain.serialize' expectedTokens
+    expected = Plain.serialize' example
 
     expectedTokens =
       TkListLen 15

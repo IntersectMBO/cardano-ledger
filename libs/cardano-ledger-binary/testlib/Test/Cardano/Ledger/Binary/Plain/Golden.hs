@@ -75,9 +75,9 @@ expectGoldenEncBytes viewDiff actual expectedBytes = do
     diffAs f =
       case viewDiff of
         DiffCBOR ->
-          f (CBORBytes (Just "Actual") actualBytes) (CBORBytes (Just "Expected") expectedBytes)
+          f (CBORBytes "Actual" actualBytes) (CBORBytes "Expected" expectedBytes)
         DiffHex ->
-          f (HexBytes (Just "Actual") actualBytes) (HexBytes (Just "Expected") expectedBytes)
+          f (HexBytes "Actual" actualBytes) (HexBytes "Expected" expectedBytes)
         DiffRaw -> f actualBytes expectedBytes
         DiffAuto -> actualBytes `shouldBe` expectedBytes
 

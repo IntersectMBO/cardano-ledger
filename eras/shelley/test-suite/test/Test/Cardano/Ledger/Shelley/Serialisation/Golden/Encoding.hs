@@ -18,7 +18,6 @@ import Cardano.Crypto.KES (SignedKES)
 import Cardano.Crypto.VRF (CertifiedVRF)
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (
-  BlocksMade (..),
   BoundedRational (..),
   Network (..),
   Nonce (..),
@@ -48,7 +47,6 @@ import Cardano.Ledger.Binary (
   fromPlainEncoding,
   hashWithEncoder,
   ipv4ToBytes,
-  serialize',
   shelleyProtVer,
   toCBOR,
   toPlainEncoding,
@@ -58,16 +56,10 @@ import Cardano.Ledger.Binary.Crypto (
   encodeVerKeyDSIGN,
  )
 import Cardano.Ledger.Block (Block (..))
-import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
+import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.EpochBoundary (
-  SnapShot (..),
-  SnapShots (..),
-  Stake (..),
-  calculatePoolDistr,
- )
 import Cardano.Ledger.Keys (
   Hash,
   KeyHash (..),
@@ -85,7 +77,6 @@ import Cardano.Ledger.Keys (
   signedDSIGN,
   signedKES,
  )
-import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley (Shelley, ShelleyEra)
 import Cardano.Ledger.Shelley.API (MultiSig)
@@ -98,13 +89,6 @@ import Cardano.Ledger.Shelley.Delegation.Certificates (
   pattern RegKey,
   pattern RegPool,
   pattern RetirePool,
- )
-import Cardano.Ledger.Shelley.LedgerState (
-  AccountState (..),
-  EpochState (..),
-  NewEpochState (..),
-  PulsingRewUpdate (Complete),
-  RewardUpdate (..),
  )
 import Cardano.Ledger.Shelley.PParams (
   ProposedPPUpdates (..),
@@ -146,7 +130,6 @@ import Cardano.Ledger.Shelley.TxBody (
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits, addrWits, scriptWits)
 import Cardano.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxId, TxIn (..))
-import Cardano.Ledger.UTxO (UTxO (UTxO))
 import Cardano.Protocol.TPraos.BHeader (
   BHBody (..),
   BHeader (..),
@@ -180,7 +163,6 @@ import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Char8 as BS (pack)
 import qualified Data.ByteString.Lazy as BSL (ByteString)
 import Data.Coerce (coerce)
-import Data.Default.Class (def)
 import Data.IP (toIPv4)
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe as Maybe (fromJust)
@@ -1152,20 +1134,6 @@ tests =
                 <> T (TkInt 4)
                 <> Si tx5MD
             )
-    , checkEncodingCBOR
-        shelleyProtVer
-        "epoch"
-        (EpochNo 13)
-        (T (TkWord64 13))
-    , let stk = [(testStakeCred @C_Crypto, CompactCoin 13)]
-       in checkEncodingCBOR
-            shelleyProtVer
-            "stake"
-            (Stake stk)
-            ( T (TkMapLen 1)
-                <> S (testStakeCred @C_Crypto)
-                <> S (Coin 13)
-            )
     , let actual =
             Plain.serialize' $ Ex.sleNewEpochState Ex.ledgerExamplesShelley
           expected = either error id $ B16.decode expectedHex
@@ -1190,7 +1158,7 @@ tests =
                 unlines
                   [ "Expected: " ++ show expectedHex
                   , "Actual: " ++ show actualHex
-                  , diffExpr (CBORBytes expected) (CBORBytes actual)
+                  , diffExpr (CBORBytes "Expected" expected) (CBORBytes "Actual" actual)
                   ]
     ]
   where

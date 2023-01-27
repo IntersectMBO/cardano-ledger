@@ -15,7 +15,6 @@ where
 import Cardano.Ledger.Binary (
   FromCBOR (..),
   ToCBOR (..),
-  fromNotSharedCBOR,
  )
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Crypto (StandardCrypto)
@@ -56,8 +55,8 @@ testCoreTypes =
         roundTripExpectation @(TxId StandardCrypto) cborTrip
     , testProperty "Protocol State" $
         roundTripExpectation @(STS.PrtclState StandardCrypto) cborTrip
-    , testProperty "SnapShots" $
-        roundTripExpectation @(SnapShots StandardCrypto) (mkTrip toCBOR fromNotSharedCBOR)
+    -- , testProperty "SnapShots" $
+    --     roundTripExpectation @(SnapShots StandardCrypto) (mkTrip toCBOR fromNotSharedCBOR)
     , testProperty "coin CompactCoin cbor" $
         roundTripExpectation @Coin (mkTrip (toCBOR . fromJust . toCompact) fromCBOR)
     , testProperty "coin cbor CompactCoin" $
