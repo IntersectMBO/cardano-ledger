@@ -29,6 +29,7 @@ import Control.State.Transition.Trace.Generator.QuickCheck (HasTrace (BaseEnv), 
 import Data.Proxy (Proxy)
 import GHC.Generics (Generic)
 import Test.Cardano.Ledger.AllegraEraGen ()
+import Test.Cardano.Ledger.Shelley.Generator.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv (..))
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen)
 import Test.Cardano.Ledger.Shelley.Generator.Presets (genEnv)
@@ -75,7 +76,7 @@ generateApplyTxEnvForEra ::
   Int ->
   ApplyTxEnv era
 generateApplyTxEnvForEra eraProxy seed =
-  let ge = genEnv eraProxy
+  let ge = genEnv eraProxy defaultConstants
       qcSeed = mkQCGen seed
       traceGen =
         traceFromInitState
