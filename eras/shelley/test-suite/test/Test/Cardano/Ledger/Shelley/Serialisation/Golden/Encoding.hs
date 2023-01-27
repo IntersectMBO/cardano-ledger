@@ -18,7 +18,6 @@ import Cardano.Crypto.KES (SignedKES)
 import Cardano.Crypto.VRF (CertifiedVRF)
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (
-  BlocksMade (..),
   BoundedRational (..),
   Network (..),
   Nonce (..),
@@ -48,7 +47,6 @@ import Cardano.Ledger.Binary (
   fromPlainEncoding,
   hashWithEncoder,
   ipv4ToBytes,
-  serialize',
   shelleyProtVer,
   toCBOR,
   toPlainEncoding,
@@ -58,16 +56,10 @@ import Cardano.Ledger.Binary.Crypto (
   encodeVerKeyDSIGN,
  )
 import Cardano.Ledger.Block (Block (..))
-import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
+import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.EpochBoundary (
-  SnapShot (..),
-  SnapShots (..),
-  Stake (..),
-  calculatePoolDistr,
- )
 import Cardano.Ledger.Keys (
   Hash,
   KeyHash (..),
@@ -85,7 +77,6 @@ import Cardano.Ledger.Keys (
   signedDSIGN,
   signedKES,
  )
-import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley (Shelley, ShelleyEra)
 import Cardano.Ledger.Shelley.API (MultiSig)
@@ -98,13 +89,6 @@ import Cardano.Ledger.Shelley.Delegation.Certificates (
   pattern RegKey,
   pattern RegPool,
   pattern RetirePool,
- )
-import Cardano.Ledger.Shelley.LedgerState (
-  AccountState (..),
-  EpochState (..),
-  NewEpochState (..),
-  PulsingRewUpdate (Complete),
-  RewardUpdate (..),
  )
 import Cardano.Ledger.Shelley.PParams (
   ProposedPPUpdates (..),
@@ -146,7 +130,6 @@ import Cardano.Ledger.Shelley.TxBody (
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits, addrWits, scriptWits)
 import Cardano.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxId, TxIn (..))
-import Cardano.Ledger.UTxO (UTxO (UTxO))
 import Cardano.Protocol.TPraos.BHeader (
   BHBody (..),
   BHeader (..),
@@ -180,7 +163,6 @@ import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Char8 as BS (pack)
 import qualified Data.ByteString.Lazy as BSL (ByteString)
 import Data.Coerce (coerce)
-import Data.Default.Class (def)
 import Data.IP (toIPv4)
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe as Maybe (fromJust)
@@ -1152,157 +1134,6 @@ tests =
                 <> T (TkInt 4)
                 <> Si tx5MD
             )
-    , checkEncodingCBOR
-        shelleyProtVer
-        "epoch"
-        (EpochNo 13)
-        (T (TkWord64 13))
-    , let n = (17 :: Natural)
-          bs = Map.singleton (hashKey . vKey $ testStakePoolKey @C_Crypto) n
-       in checkEncodingCBOR
-            shelleyProtVer
-            "blocks_made"
-            (BlocksMade bs)
-            ( T (TkMapLen 1)
-                <> S (hashKey . vKey $ testStakePoolKey @C_Crypto)
-                <> S n
-            )
-    , checkEncodingCBOR
-        shelleyProtVer
-        "account_state"
-        (AccountState (Coin 1) (Coin 2))
-        ( T (TkListLen 2)
-            <> S (Coin 1)
-            <> S (Coin 2)
-        )
-    , let stk = [(testStakeCred @C_Crypto, CompactCoin 13)]
-       in checkEncodingCBOR
-            shelleyProtVer
-            "stake"
-            (Stake stk)
-            ( T (TkMapLen 1)
-                <> S (testStakeCred @C_Crypto)
-                <> S (Coin 13)
-            )
-    , let mark =
-            SnapShot
-              (Stake [(testStakeCred @C_Crypto, CompactCoin 11)])
-              [(testStakeCred @C_Crypto, hashKey $ vKey testStakePoolKey)]
-              ps
-          set =
-            SnapShot
-              (Stake [(KeyHashObj testKeyHash2, CompactCoin 22)])
-              [(testStakeCred @C_Crypto, hashKey $ vKey testStakePoolKey)]
-              ps
-          go =
-            SnapShot
-              (Stake [(testStakeCred @C_Crypto, CompactCoin 33)])
-              [(testStakeCred @C_Crypto, hashKey $ vKey testStakePoolKey)]
-              ps
-          params =
-            PoolParams
-              { ppId = hashKey $ vKey testStakePoolKey
-              , ppVrf = testVRFKH @C_Crypto
-              , ppPledge = Coin 5
-              , ppCost = Coin 4
-              , ppMargin = unsafeBoundRational 0.7
-              , ppRewardAcnt = RewardAcnt Testnet (testStakeCred @C_Crypto)
-              , ppOwners = Set.singleton testKeyHash2
-              , ppRelays = StrictSeq.empty
-              , ppMetadata =
-                  SJust $
-                    PoolMetadata
-                      { pmUrl = Maybe.fromJust $ textToUrl "web.site"
-                      , pmHash = BS.pack "{}"
-                      }
-              }
-          ps = [(hashKey $ vKey testStakePoolKey, params)]
-          fs = Coin 123
-       in checkEncodingCBOR
-            shelleyProtVer
-            "snapshots"
-            (SnapShots mark (calculatePoolDistr mark) set go fs)
-            ( T (TkListLen 4)
-                <> S mark
-                <> S set
-                <> S go
-                <> S fs
-            )
-    , let e = EpochNo 0
-          ac = AccountState (Coin 100) (Coin 100)
-          mark =
-            SnapShot
-              (Stake [(testStakeCred @C_Crypto, CompactCoin 11)])
-              [(testStakeCred @C_Crypto, hashKey $ vKey testStakePoolKey)]
-              ps
-          set =
-            SnapShot
-              (Stake [(KeyHashObj testKeyHash2, CompactCoin 22)])
-              [(testStakeCred @C_Crypto, hashKey $ vKey testStakePoolKey)]
-              ps
-          go =
-            SnapShot
-              (Stake [(testStakeCred @C_Crypto, CompactCoin 33)])
-              [(testStakeCred @C_Crypto, hashKey $ vKey testStakePoolKey)]
-              ps
-          params =
-            PoolParams
-              { ppId = hashKey $ vKey testStakePoolKey
-              , ppVrf = testVRFKH @C_Crypto
-              , ppPledge = Coin 5
-              , ppCost = Coin 4
-              , ppMargin = unsafeBoundRational 0.7
-              , ppRewardAcnt = RewardAcnt Testnet (testStakeCred @C_Crypto)
-              , ppOwners = Set.singleton testKeyHash2
-              , ppRelays = StrictSeq.empty
-              , ppMetadata =
-                  SJust $
-                    PoolMetadata
-                      { pmUrl = Maybe.fromJust $ textToUrl "web.site"
-                      , pmHash = BS.pack "{}"
-                      }
-              }
-          ps = [(hashKey $ vKey testStakePoolKey, params)]
-          fs = Coin 123
-          ss = SnapShots mark (calculatePoolDistr mark) set go fs
-          ls = def
-          pps = emptyPParams
-          bs = Map.singleton (hashKey $ vKey testStakePoolKey) 1
-          nm = def
-          es = EpochState @C ac ss ls pps pps nm
-          ru =
-            ( Complete $
-                RewardUpdate
-                  { deltaT = DeltaCoin 100
-                  , deltaR = DeltaCoin (-200)
-                  , rs = Map.empty
-                  , deltaF = DeltaCoin (-10)
-                  , nonMyopic = nm
-                  }
-            )
-          pd = PoolDistr @C_Crypto Map.empty
-          nes =
-            NewEpochState
-              e
-              (BlocksMade bs)
-              (BlocksMade bs)
-              es
-              (SJust ru)
-              pd
-              (UTxO mempty)
-       in checkEncodingCBOR
-            shelleyProtVer
-            "new_epoch_state"
-            nes
-            ( T (TkListLen 7)
-                <> Si e
-                <> Si (BlocksMade @C_Crypto bs)
-                <> Si (BlocksMade @C_Crypto bs)
-                <> Si es
-                <> Si (SJust ru)
-                <> Si pd
-                <> Si (UTxO @(ShelleyEra C_Crypto) mempty)
-            )
     , let actual =
             Plain.serialize' $ Ex.sleNewEpochState Ex.ledgerExamplesShelley
           expected = either error id $ B16.decode expectedHex
@@ -1327,7 +1158,7 @@ tests =
                 unlines
                   [ "Expected: " ++ show expectedHex
                   , "Actual: " ++ show actualHex
-                  , diffExpr (CBORBytes expected) (CBORBytes actual)
+                  , diffExpr (CBORBytes "Expected" expected) (CBORBytes "Actual" actual)
                   ]
     ]
   where

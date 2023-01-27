@@ -58,7 +58,7 @@ import Cardano.Ledger.Keys (
   KeyRole (..),
   verifySignedDSIGN,
  )
-import Cardano.Ledger.Keys.WitVKey
+import Cardano.Ledger.Keys.WitVKey (WitVKey (..))
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.DeepSeq (NFData)
@@ -66,7 +66,7 @@ import Control.Monad ((<$!>))
 import Data.Coerce (coerce)
 import Data.Default.Class (Default)
 import Data.Foldable (foldMap', toList)
-import Data.Kind
+import Data.Kind (Type)
 import qualified Data.Map.Strict as Map
 import Data.Monoid (Sum (..))
 import Data.Set (Set)

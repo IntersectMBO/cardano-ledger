@@ -138,6 +138,14 @@ data Ptr = Ptr !SlotNo !TxIx !CertIx
   deriving (Eq, Ord, Generic, NFData, NoThunks)
   deriving (ToCBOR, FromCBOR) via CBORGroup Ptr
 
+instance EncCBOR Ptr where
+  encCBOR (Ptr slotNo txIx certIx) = encCBOR (slotNo, txIx, certIx)
+
+instance DecCBOR Ptr where
+  decCBOR = do
+    (slotNo, txIx, certIx) <- decCBOR
+    pure $ Ptr slotNo txIx certIx
+
 instance Show Ptr where
   showsPrec n (Ptr slotNo txIx certIx)
     | n < 1 = inner

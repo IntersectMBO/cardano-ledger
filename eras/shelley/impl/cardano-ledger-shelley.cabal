@@ -143,8 +143,10 @@ library testlib
                      cardano-ledger-binary:{cardano-ledger-binary, testlib},
                      cardano-ledger-core:{cardano-ledger-core, testlib},
                      cardano-ledger-shelley,
+                     containers,
                      generic-random,
                      mtl,
+                     vector-map,
 
 test-suite tests
   import:            base, project-config
