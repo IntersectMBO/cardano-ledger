@@ -27,6 +27,7 @@ import qualified Cardano.Crypto.Hash as HS
 import Cardano.HeapWords (HeapWords (..))
 import Cardano.Ledger.Address (Addr (..), CompactAddr, compactAddr, decompactAddr)
 import Cardano.Ledger.Binary (
+  DecCBOR (..),
   DecShareCBOR (..),
   EncCBOR (..),
   FromCBOR (..),
@@ -162,13 +163,19 @@ instance
 instance (Era era, ToCBOR (CompactForm (Value era))) => EncCBOR (ShelleyTxOut era) where
   encCBOR = toPlainEncoding (eraProtVerLow @era) . toCBOR
 
--- | This instance does not do any sharing and is isomorphic to `FromCBOR`
+-- | This instance does not do any sharing and is isomorphic to `FromCBOR` and `DecCBOR`
 instance
   (Era era, Show (Value era), DecodeNonNegative (Value era), Compactible (Value era)) =>
   DecShareCBOR (ShelleyTxOut era)
   where
   type Share (ShelleyTxOut era) = Interns (Credential 'Staking (EraCrypto era))
-  decShareCBOR _ = toPlainDecoder (eraProtVerLow @era) fromCBOR
+  decShareCBOR _ = decCBOR
+
+instance
+  (Era era, Show (Value era), DecodeNonNegative (Value era), Compactible (Value era)) =>
+  DecCBOR (ShelleyTxOut era)
+  where
+  decCBOR = toPlainDecoder (eraProtVerLow @era) fromCBOR
 
 -- a ShortByteString of the same length as the ADDRHASH
 -- used to calculate heapWords

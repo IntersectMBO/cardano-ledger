@@ -133,13 +133,10 @@ data ProtVer = ProtVer {pvMajor :: !Version, pvMinor :: !Natural}
   deriving (FromCBOR) via (CBORGroup ProtVer)
 
 instance EncCBOR ProtVer where
-  encCBOR ProtVer {..} = encCBOR pvMajor <> encCBOR pvMinor
+  encCBOR ProtVer {..} = encCBOR (pvMajor, pvMinor)
 
 instance DecCBOR ProtVer where
-  decCBOR = do
-    pvMajor <- decCBOR
-    pvMinor <- decCBOR
-    pure ProtVer {..}
+  decCBOR = uncurry ProtVer <$> decCBOR
 
 instance NoThunks ProtVer
 

@@ -1,6 +1,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Test.Cardano.Ledger.Binary.Plain.Golden (
   Enc (E, Em),
@@ -12,6 +13,7 @@ module Test.Cardano.Ledger.Binary.Plain.Golden (
   expectGoldenEncHexBytes,
 ) where
 
+import Cardano.Ledger.Binary (Term)
 import Cardano.Ledger.Binary.Plain
 import qualified Data.ByteString as BS
 import Data.ByteString.Base16 as BS16
@@ -38,14 +40,14 @@ instance Monoid Enc where
 
 -- | Indicator of the format in which the diff should be displayed.
 data DiffView
-  = DiffCBOR
-  -- ^ TreeDiff bytes as CBOR Terms
-  | DiffHex
-  -- ^ TreeDiff bytes as Base64 encoded strings
-  | DiffRaw
-  -- ^ TreeDiff will be shown on raw bytes.
-  | DiffAuto
-  -- ^ Let hspec handle the diffing
+  = -- | TreeDiff bytes as CBOR Terms
+    DiffCBOR
+  | -- | TreeDiff bytes as Base64 encoded strings
+    DiffHex
+  | -- | TreeDiff will be shown on raw bytes.
+    DiffRaw
+  | -- | Let hspec handle the diffing
+    DiffAuto
 
 expectGoldenEncoding ::
   HasCallStack => (a -> Encoding) -> (b -> Encoding) -> DiffView -> a -> b -> Expectation
@@ -58,8 +60,12 @@ expectGoldenEncCBOR = expectGoldenEncoding encCBOR encCBOR
 
 expectGoldenEncBytes ::
   (HasCallStack, EncCBOR a) => DiffView -> a -> BS.ByteString -> Expectation
-expectGoldenEncBytes viewDiff actual expectedBytes =
-  diffAs (expectExprEqualWithMessage "Encoding did not match expectation")
+expectGoldenEncBytes viewDiff actual expectedBytes = do
+  diffAs $ expectExprEqualWithMessage "Encoding did not match expectation"
+  -- ensure that it is also valid CBOR
+  case decodeFull' actualBytes of
+    Left err -> error $ "Type was encoded sucessfully, but as invalid CBOR: " ++ show err
+    Right (_ :: Term) -> pure ()
   where
     actualBytes = serialize' (encCBOR actual)
     diffAs ::

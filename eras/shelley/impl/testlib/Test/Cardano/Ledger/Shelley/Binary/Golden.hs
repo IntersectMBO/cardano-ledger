@@ -18,7 +18,8 @@ import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
 
 goldenNewEpochStateExpectation ::
-  ( EraTxOut era
+  ( HasCallStack
+  , EraTxOut era
   , EncCBOR (StashedAVVMAddresses era)
   , EncCBOR (PPUPState era)
   , EncCBOR (TallyState era)
@@ -36,34 +37,34 @@ goldenNewEpochStateExpectation
     , ..
     } =
     expectGoldenEncCBOR DiffCBOR nes $
-      mconcat
-        [ E (TkListLen 7)
-        , E nesEL
-        , blockMadeEnc nesBprev
-        , blockMadeEnc nesBcur
-        , Em
-            [ E (TkListLen 6)
-            , Em
-                [ E (TkListLen 2)
-                , E asTreasury
-                , E asReserves
-                ]
-            , Em
-                [ E (TkListLen 4)
-                , E ssStakeMark
-                , E ssStakeSet
-                , E ssStakeGo
-                , E ssFee
-                ]
-            , E esLState
-            , E esPrevPp
-            , E esPp
-            , E esNonMyopic
-            ]
-        , E nesRu
-        , E nesPd
-        , E stashedAVVMAddresses
-        ]
+        mconcat
+          [ E (TkListLen 7)
+          , E nesEL
+          , blockMadeEnc nesBprev
+          , blockMadeEnc nesBcur
+          , Em
+              [ E (TkListLen 6)
+              , Em
+                  [ E (TkListLen 2)
+                  , E asTreasury
+                  , E asReserves
+                  ]
+              , E esLState
+              , Em
+                  [ E (TkListLen 4)
+                  , E ssStakeMark
+                  , E ssStakeSet
+                  , E ssStakeGo
+                  , E ssFee
+                  ]
+              , E esPrevPp
+              , E esPp
+              , E esNonMyopic
+              ]
+          , E nesRu
+          , E nesPd
+          , E stashedAVVMAddresses
+          ]
     where
       blockMadeEnc (BlocksMade m) =
         Em

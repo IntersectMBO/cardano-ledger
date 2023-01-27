@@ -42,7 +42,10 @@ data HexBytes = HexBytes
   { hexBytesName :: !(Maybe T.Text)
   , hexBytesRaw :: !BS.ByteString
   }
-  deriving (Eq)
+
+-- | Ignores the hexBytesName during comparison.
+instance Eq HexBytes where
+  x1 == x2 = hexBytesRaw x1 == hexBytesRaw x2
 
 named :: (Monoid str, IsString str) => str -> Maybe str -> str
 named typeName mName = typeName <> maybe "" (\x -> "<" <> x <> ">") mName
@@ -58,7 +61,10 @@ data CBORBytes = CBORBytes
   { cborbytesName :: !(Maybe T.Text)
   , cborBytesRaw :: !BS.ByteString
   }
-  deriving (Eq)
+
+-- | Ignores the hexBytesName during comparison.
+instance Eq CBORBytes where
+  x1 == x2 = cborBytesRaw x1 == cborBytesRaw x2
 
 instance Show CBORBytes where
   show = showExpr
