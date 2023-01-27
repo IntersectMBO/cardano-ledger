@@ -355,7 +355,7 @@ instance LiftT (RngSpec a) where
   dropT (Typed (Left s)) = NeverRng s
   dropT (Typed (Right x)) = x
 
-showRngSpec :: Rep era t -> RngSpec t -> String
+showRngSpec :: Rep t -> RngSpec t -> String
 showRngSpec _ (SumRng r) = "(Sum " ++ show r ++ ")"
 showRngSpec rep (Equal xs) = "(RngEqual " ++ synopsis (ListR rep) xs ++ ")"
 showRngSpec rep (SubsetRng xs) = "(Subset " ++ synopsis (SetR rep) xs ++ ")"
@@ -401,7 +401,7 @@ data MapSpec dom rng where
     MapSpec dom rng
   NeverMap :: [String] -> MapSpec dom rng
 
-showMapSpec :: Rep era (Map dom rng) -> MapSpec dom rng -> String
+showMapSpec :: Rep (Map dom rng) -> MapSpec dom rng -> String
 showMapSpec (MapR _ rng) (MapSpec w Nothing r) =
   "(MapSpec " ++ show w ++ " Nothing " ++ showRngSpec rng r ++ ")"
 showMapSpec (MapR dom rng) (MapSpec w (Just s) r) =
@@ -495,8 +495,8 @@ solveMaps v@(V nm (MapR _ _) _) cs = foldlM' accum (MapSpec Nothing Nothing None
 solveMaps _ _ = undefined
 
 genMap ::
-  (Ord a, Era era) =>
-  Rep era (Map a b) ->
+  (Ord a) =>
+  Rep (Map a b) ->
   MapSpec a b ->
   Typed (Gen (Map a b))
 genMap rep@(MapR d r) cond = explain ("Producing Map generator for " ++ showMapSpec rep cond) $ case cond of
@@ -562,7 +562,7 @@ genMap _ _ = undefined
 
 data SetSpec a = (Ord a) => SetSpec (Maybe Int) (RngSpec a) | NeverSet [String]
 
-showSetSpec :: Rep era a -> SetSpec a -> String
+showSetSpec :: Rep a -> SetSpec a -> String
 showSetSpec rep (SetSpec m r) = "(SetSpec " ++ show m ++ " " ++ showRngSpec rep r ++ ")"
 showSetSpec _ (NeverSet _) = "NeverSet"
 
@@ -598,12 +598,12 @@ instance Ord a => Semigroup (SetSpec a) where
 instance (Ord a) => Monoid (SetSpec a) where
   mempty = SetSpec Nothing None
 
-sumFromDyn :: Rep era t -> Dyn era -> Typed (HasCond Adds (Id t))
+sumFromDyn :: Rep t -> Dyn era -> Typed (HasCond Adds (Id t))
 sumFromDyn rep (Dyn rep2 m) = case (testEql rep rep2) of
   Just Refl -> hasSummable rep2 (Id m)
   Nothing -> failT ["(Dyn " ++ show rep2 ++ " _) does not store expected type: " ++ show rep]
 
-hasSummable :: Rep era t -> (s t) -> Typed (HasCond Adds (s t))
+hasSummable :: Rep t -> (s t) -> Typed (HasCond Adds (s t))
 hasSummable IntR x = pure $ With x
 hasSummable RationalR x = pure $ With x
 hasSummable r _ = failT [show r ++ " does not have Adds instance."]
@@ -651,8 +651,7 @@ solveSets _ _ = undefined
 
 genSet ::
   (Ord a) =>
-  Era era =>
-  Rep era (Set a) ->
+  Rep (Set a) ->
   SetSpec a ->
   Typed (Gen (Set a))
 genSet rep@(SetR r) cond = explain ("Producing Set generator for " ++ showSetSpec r cond) $ case cond of
@@ -724,7 +723,7 @@ instance
   where
   mempty = SumSpec Nothing Nothing
 
-evalSum :: Adds t => Rep era t -> Sum era t -> Typed (HasCond Adds (Id t))
+evalSum :: Adds t => Rep t -> Sum era t -> Typed (HasCond Adds (Id t))
 evalSum rep (One expr) = do
   dyn <- eval expr
   sumFromDyn rep dyn
@@ -732,7 +731,7 @@ evalSum _rep (SumMap (Fixed (Lit (MapR _ _) m))) = pure $ With (Id (Map.foldl' a
 evalSum _rep (SumSet (Fixed (Lit (SetR _) m))) = pure $ With (Id (Set.foldl' add zero m))
 evalSum _rep x = failT ["Can't evalSum " ++ show x]
 
-evalSums :: Adds t => Rep era t -> [Sum era t] -> Typed (HasCond Adds (Id t))
+evalSums :: Adds t => Rep t -> [Sum era t] -> Typed (HasCond Adds (Id t))
 evalSums rep xs = foldlM' accum (With (Id zero)) xs
   where
     accum (With (Id n)) x = do
@@ -765,7 +764,7 @@ solveSums v@(V nm _ _) cs = foldlM' accum mempty cs
         ("Solving Sum constraint (" ++ show cond ++ ") for variable " ++ show nm)
         (liftT (spec <> condspec))
 
-genSum :: (Adds t, Era era) => Rep era t -> SumSpec t -> Typed (Gen t)
+genSum :: (Adds t) => Rep t -> SumSpec t -> Typed (Gen t)
 genSum rep spec = explain ("Producing Sum generator for " ++ showSumSpec spec) $ case spec of
   (NeverSum msgs) -> failT msgs
   (SumSpec Nothing Nothing) -> pure $ genRep rep
@@ -776,14 +775,14 @@ genSum rep spec = explain ("Producing Sum generator for " ++ showSumSpec spec) $
       then pure $ pure x
       else failT ["Not the same in genSum: " ++ show (x, tot)]
 
-isSumType :: forall era t. Rep era t -> Bool
+isSumType :: forall t. Rep t -> Bool
 isSumType rep = case hasSummable rep (Id (undefined :: t)) of
   (Typed (Right (With _))) -> True
   (Typed (Left _)) -> False
 
 -- ===================================================
 
-genPair :: Era era => (V era t, [Pred era]) -> Typed (Gen t)
+genPair :: (V s t, [Pred era]) -> Typed (Gen t)
 genPair (v@(V _nm rep@(MapR _ _) _), cs) = (solveMaps v cs) >>= genMap rep
 genPair (v@(V _nm rep@(SetR _) _), cs) = (solveSets v cs) >>= genSet rep
 genPair (v@(V _nm rep _), cs) | isSumType rep = do
@@ -827,10 +826,10 @@ genDependGraph (Conway _) (DependGraph pairs) = genOrFailList (Right []) pairs
 -- ==========================================================
 -- Extras
 
-known :: Rep era s -> Literal era t -> Maybe s
+known :: Rep s -> Literal t -> Maybe s
 known s (Lit r x) = case testEql s r of Nothing -> Nothing; Just Refl -> Just x
 
-repOf :: Term era t -> Rep era t
+repOf :: Term era t -> Rep t
 repOf (Fixed (Lit r _)) = r
 repOf (Var (V _ r _)) = r
 repOf (Dom e) = case repOf e of 

@@ -2,6 +2,7 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ImpredicativeTypes #-}
 
 -- | Provides variables (V era t), and mappings of them to objects of type 't'
 module Test.Cardano.Ledger.Constrained.Env (
@@ -14,7 +15,6 @@ module Test.Cardano.Ledger.Constrained.Env (
   bulkStore,
   Dyn (..),
   Name (..),
-  Access (..),
   Field,
 )
 where
@@ -23,30 +23,20 @@ import qualified Data.List as List
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (isJust)
-import Data.Universe (Shaped (..))
 import Test.Cardano.Ledger.Constrained.Monad (Dyn (..), Typed (..), failT)
 import Test.Cardano.Ledger.Constrained.TypeRep
 
 import Cardano.Ledger.Shelley.LedgerState (NewEpochState)
-import Data.Kind (Type)
 import Lens.Micro
-import Type.Reflection (typeRep)
 
 -- ================================================================
 
-data Access era t where
-  Yes :: forall t era. (forall (f :: Type -> Type). Functor f => ((t -> f t) -> (NewEpochState era) -> f (NewEpochState era))) -> Access era t
-  No :: Access era t
-
 type Field era x = Lens' (NewEpochState era) x
 
-data V era t where V :: String -> Rep era t -> (Access era t) -> V era t
+data V s t where V :: String -> Rep t -> Maybe (Lens' s t) -> V s t
 
 data Payload era where
-  Payload :: Rep era t -> t -> (Access era t) -> Payload era
-
-instance Shaped (V era) (Rep era) where
-  shape (V n1 rep _) = Nary 0 [Esc (SimpleR typeRep) n1, shape rep]
+  Payload :: Rep t -> t -> (Maybe (Lens' s t)) -> Payload era
 
 -- We are ignoring the Accessfield on purpose
 

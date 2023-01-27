@@ -34,7 +34,7 @@ class LiftT x where
   liftT :: x -> Typed x
   dropT :: Typed x -> x
 
-sameRep :: Rep era i -> Rep era j -> Typed (i :~: j)
+sameRep :: Rep i -> Rep j -> Typed (i :~: j)
 sameRep r1 r2 = case testEql r1 r2 of
   Just x -> pure x
   Nothing -> failT [show r1 ++ " =/= " ++ show r2 ++ " in sameRep."]
@@ -50,15 +50,15 @@ ioTyped t = case runTyped t of
 
 -- ========================================================
 
--- | A Pair of a (Rep era t), and a 't' . Useful to encapsulate 't' in a way
+-- | A Pair of a (Rep t), and a 't' . Useful to encapsulate 't' in a way
 --   one can interogate its type at runtime.
-data Dyn era where Dyn :: Rep era t -> t -> Dyn era
+data Dyn era where Dyn :: Rep t -> t -> Dyn era
 
 instance Show (Dyn era) where
   show (Dyn rep t) = "(Dyn " ++ synopsis rep t ++ ")"
 
 -- | extract the type 't' from a Dyn (if possible).
-runDyn :: Rep era t -> Dyn era -> Typed t
+runDyn :: Rep t -> Dyn era -> Typed t
 runDyn rep1 (Dyn rep2 t) = do
   Refl <- sameRep rep1 rep2
   pure t
@@ -66,7 +66,7 @@ runDyn rep1 (Dyn rep2 t) = do
 -- | Evidence that a (Dyn era) is a (Set rng), where rng has an Ord instance.
 --   This is hard to write using (runDyn (SetR x) dyn) because SetR requires an
 --   Ord instance, and one often doesn't know any properties of 'x'
-isDynSet :: Dyn era -> Rep era rng -> Typed (HasCond Ord (Set rng))
+isDynSet :: Dyn era -> Rep rng -> Typed (HasCond Ord (Set rng))
 isDynSet (Dyn (SetR r2) set) rng = do
   Refl <- sameRep rng r2
   pure (With set) -- Note pattern matchin against (SetR r2) provides the Ord instance
@@ -84,10 +84,10 @@ data Id x = Id x
 data HasCond c t where
   With :: c t => (s t) -> HasCond c (s t)
 
-hasOrd :: Rep era t -> s t -> Typed (HasCond Ord (s t))
+hasOrd :: Rep t -> s t -> Typed (HasCond Ord (s t))
 hasOrd rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
   where
-    help :: Rep era t -> s t -> Typed (HasCond Ord (s t))
+    help :: Rep t -> s t -> Typed (HasCond Ord (s t))
     help r@(_ :-> _) _ = failT [show r ++ " does not have an Ord instance."]
     help (MapR _ b) m = do
       With _ <- help b undefined
@@ -103,9 +103,10 @@ hasOrd rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
     help NaturalR i = pure $ With i
     help FloatR i = pure $ With i
     help (SimpleR _) _ = undefined
+    help (RecR _) _ = undefined
 
 -- | Used to test hasOrd
-testHasCond :: Rep era [t] -> t -> IO ()
+testHasCond :: Rep [t] -> t -> IO ()
 testHasCond (ListR rep) t = case hasOrd rep [t] of
   Typed (Right (With x)) -> print (synopsis (ListR rep) x)
   Typed (Left xs) -> putStrLn $ unlines xs

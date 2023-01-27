@@ -1,13 +1,18 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Test.Cardano.Ledger.Constrained.TypeRep (
+  Rec (..),
   Rep (..),
   (:~:) (Refl),
   Shape (..),
@@ -28,7 +33,9 @@ module Test.Cardano.Ledger.Constrained.TypeRep (
   liftUTxO,
 ) where
 
-import Cardano.Ledger.Core (Era)
+import Cardano.Ledger.HKD (HKD)
+import Control.Monad.Identity (Identity)
+import Data.Kind (Type)
 import qualified Data.List as List
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -59,6 +66,7 @@ import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
 import Test.QuickCheck hiding (Fixed, Fun, total)
 import Type.Reflection (
   TypeRep,
+  Typeable,
   typeRep,
   pattern App,
   pattern Fun,
@@ -67,23 +75,40 @@ import Type.Reflection (
 -- =======================================================================
 infixr 0 :->
 
-data Rep era t where
-  RationalR :: Rep era Rational
-  (:->) :: Rep era a -> Rep era b -> Rep era (a -> b)
-  MapR :: Ord a => Rep era a -> Rep era b -> Rep era (Map a b)
-  SetR :: Ord a => Rep era a -> Rep era (Set a)
-  ListR :: Rep era a -> Rep era [a]
-  SimpleR :: (Eq a, Show a, Arbitrary a) => TypeRep a -> Rep era a
-  IntR :: Rep era Int
-  IntegerR :: Rep era Integer
-  FloatR :: Rep era Float
-  NaturalR :: Rep era Natural
-  Word64R :: Rep era Word64
+data Rec f (t :: [Type]) where
+  RNil :: Rec f '[]
+  (:&) :: HKD f a -> !(Rec f as) -> Rec f (a ': as)
+  deriving (Typeable)
+
+instance Arbitrary (Rec Identity '[]) where
+  arbitrary = pure RNil
+
+instance
+  ( Arbitrary a
+  , Arbitrary (Rec Identity as)
+  ) =>
+  Arbitrary (Rec Identity (a ': as))
+  where
+  arbitrary = (:&) <$> arbitrary <*> arbitrary
+
+data Rep (t :: Type) where
+  RecR :: Arbitrary (Rec Identity a) => Rec Rep a -> Rep (Rec Identity a)
+  RationalR :: Rep Rational
+  (:->) :: Rep a -> Rep b -> Rep (a -> b)
+  MapR :: Ord a => Rep a -> Rep b -> Rep (Map a b)
+  SetR :: Ord a => Rep a -> Rep (Set a)
+  ListR :: Rep a -> Rep [a]
+  SimpleR :: (Eq a, Show a, Arbitrary a) => TypeRep a -> Rep a
+  IntR :: Rep Int
+  IntegerR :: Rep Integer
+  FloatR :: Rep Float
+  NaturalR :: Rep Natural
+  Word64R :: Rep Word64
 
 -- ===========================================================
 -- Proof of Rep equality
 
-instance Singleton (Rep e) where
+instance Singleton Rep where
   testEql (a :-> b) (x :-> y) = do
     Refl <- testEql a x
     Refl <- testEql b y
@@ -105,7 +130,12 @@ instance Singleton (Rep e) where
   testEql _ _ = Nothing
   cmpIndex x y = compare (shape x) (shape y)
 
-toTypeRep :: Rep era a -> TypeRep a
+recToTypeRep :: forall (a :: [Type]). Rec Rep a -> TypeRep a
+recToTypeRep RNil = typeRep
+recToTypeRep (a :& as) = typeRep @(:) `App` toTypeRep a `App` recToTypeRep as
+
+toTypeRep :: Rep a -> TypeRep a
+toTypeRep (RecR a) = App typeRep $ recToTypeRep a
 toTypeRep (a :-> b) = Fun (toTypeRep a) (toTypeRep b)
 toTypeRep (MapR a b) = App (App typeRep (toTypeRep a)) (toTypeRep b)
 toTypeRep (SetR a) = App typeRep (toTypeRep a)
@@ -121,10 +151,15 @@ toTypeRep (SimpleR t) = t
 -- ============================================================
 -- Show instances
 
-instance Show (Rep era t) where
+instance Show (Rep t) where
   show = show . toTypeRep
 
-synopsis :: forall e t. Rep e t -> t -> String
+synopsis :: forall t. Rep t -> t -> String
+synopsis (RecR t) r = "{" ++ help t r
+  where
+    help :: Rec Rep a -> Rec Identity a -> String
+    help RNil _ = "}"
+    help (a :& as) (v :& vs) = synopsis a v ++ ", " ++ help as vs
 synopsis RationalR r = show r
 synopsis (a :-> b) _ = "(Arrow " ++ show a ++ " " ++ show b ++ ")"
 synopsis Word64R w = show w
@@ -143,7 +178,7 @@ synopsis NaturalR n = show n
 synopsis FloatR n = show n
 synopsis (SimpleR _) n = show n
 
-synSum :: Rep era a -> a -> String
+synSum :: Rep a -> a -> String
 synSum (MapR _ RationalR) m = ", sum = " ++ show (Map.foldl' (+) 0 m)
 synSum (SetR RationalR) m = ", sum = " ++ show (Set.foldl' (+) 0 m)
 synSum (ListR RationalR) m = ", sum = " ++ show (List.foldl' (+) 0 m)
@@ -151,7 +186,7 @@ synSum _ _ = ""
 
 -- ==================================================
 
-instance Shaped (Rep era) any where
+instance Shaped (Rep) any where
   shape (a :-> b) = Nary 0 [shape a, shape b]
   shape (MapR a b) = Nary 1 [shape a, shape b]
   shape (SetR a) = Nary 2 [shape a]
@@ -162,19 +197,21 @@ instance Shaped (Rep era) any where
   shape IntegerR = Nullary 7
   shape NaturalR = Nullary 8
   shape FloatR = Nullary 9
-  shape (SimpleR _) = Nullary 10
+  shape (SimpleR _) = undefined
+  shape (RecR a) = Nary 11 [shape a]
 
-compareRep :: forall era t s. Rep era t -> Rep era s -> Ordering
-compareRep x y = cmpIndex @(Rep era) x y
+instance Shaped (Rec Rep) any where
+  shape RNil = Nullary 0
+  shape (a :& as) = Nary 1 [shape a, shape as]
+
+compareRep :: forall t s. Rep t -> Rep s -> Ordering
+compareRep x y = cmpIndex @(Rep) x y
 
 -- ================================================
 
 genSizedRep ::
-  ( Era era
-  -- , Mock (EraCrypto era)
-  ) =>
   Int ->
-  Rep era t ->
+  Rep t ->
   Gen t
 genSizedRep n (_a :-> b) = const <$> genSizedRep n b
 genSizedRep n (MapR a b) = do
@@ -189,9 +226,9 @@ genSizedRep _ IntR = arbitrary
 genSizedRep _ NaturalR = arbitrary
 genSizedRep _ FloatR = arbitrary
 genSizedRep _ IntegerR = arbitrary
+genSizedRep _ (RecR _) = arbitrary
 
 genRep ::
-  Era era =>
-  Rep era b ->
+  Rep b ->
   Gen b
 genRep x = do (NonZero n) <- arbitrary; genSizedRep n x
