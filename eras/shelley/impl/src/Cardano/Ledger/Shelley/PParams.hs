@@ -399,6 +399,12 @@ instance Era era => FromCBOR (ShelleyPParams StrictMaybe era) where
       (fail $ "duplicate keys: " <> show fields)
     pure $ foldr ($) emptyShelleyPParamsUpdate (snd <$> mapParts)
 
+instance Era era => EncCBOR (ShelleyPParams StrictMaybe era) where
+  encCBOR = toPlainEncoding (eraProtVerLow @era) . toCBOR
+
+instance Era era => DecCBOR (ShelleyPParams StrictMaybe era) where
+  decCBOR = toPlainDecoder (eraProtVerLow @era) fromCBOR
+
 -- | Update operation for protocol parameters structure @PParams
 newtype ProposedPPUpdates era
   = ProposedPPUpdates (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdate era))
@@ -412,17 +418,13 @@ deriving instance Show (PParamsUpdate era) => Show (ProposedPPUpdates era)
 
 instance NoThunks (PParamsUpdate era) => NoThunks (ProposedPPUpdates era)
 
-instance
-  (Era era, ToCBOR (PParamsUpdate era)) =>
-  ToCBOR (ProposedPPUpdates era)
-  where
-  toCBOR (ProposedPPUpdates m) = toCBOR m
+deriving instance (Era era, EncCBOR (PParamsUpdate era)) => EncCBOR (ProposedPPUpdates era)
 
-instance
-  (Era era, FromCBOR (PParamsUpdate era)) =>
-  FromCBOR (ProposedPPUpdates era)
-  where
-  fromCBOR = ProposedPPUpdates <$> fromCBOR
+deriving instance (Era era, DecCBOR (PParamsUpdate era)) => DecCBOR (ProposedPPUpdates era)
+
+deriving instance (Era era, ToCBOR (PParamsUpdate era)) => ToCBOR (ProposedPPUpdates era)
+
+deriving instance (Era era, FromCBOR (PParamsUpdate era)) => FromCBOR (ProposedPPUpdates era)
 
 emptyPPPUpdates :: ProposedPPUpdates era
 emptyPPPUpdates = ProposedPPUpdates Map.empty

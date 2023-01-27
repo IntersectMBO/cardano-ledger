@@ -163,6 +163,12 @@ deriving newtype instance
   (Typeable era, FromCBOR (PParamsHKD StrictMaybe era)) => FromCBOR (PParamsUpdate era)
 
 deriving newtype instance
+  (Typeable era, EncCBOR (PParamsHKD StrictMaybe era)) => EncCBOR (PParamsUpdate era)
+
+deriving newtype instance
+  (Typeable era, DecCBOR (PParamsHKD StrictMaybe era)) => DecCBOR (PParamsUpdate era)
+
+deriving newtype instance
   ToJSON (PParamsHKD StrictMaybe era) => ToJSON (PParamsUpdate era)
 
 deriving newtype instance

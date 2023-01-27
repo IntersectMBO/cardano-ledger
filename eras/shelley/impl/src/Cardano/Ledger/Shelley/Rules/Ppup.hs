@@ -4,8 +4,11 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -32,13 +35,14 @@ import Cardano.Ledger.BaseTypes (
   invalidKey,
  )
 import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
   FromCBOR (..),
   ToCBOR (..),
   decodeRecordSum,
   decodeWord,
   encodeListLen,
  )
-import Cardano.Ledger.Binary.Coders (Decode (..), decode, (<!))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (GenDelegs (GenDelegs), KeyHash, KeyRole (Genesis))
 import Cardano.Ledger.Shelley.Era (ShelleyPPUP)
@@ -244,19 +248,11 @@ instance NFData (PParamsUpdate era) => NFData (ShelleyPPUPState era)
 
 instance NoThunks (PParamsUpdate era) => NoThunks (ShelleyPPUPState era)
 
-instance (Era era, ToCBOR (PParamsUpdate era)) => ToCBOR (ShelleyPPUPState era) where
-  toCBOR (ShelleyPPUPState ppup fppup) =
-    encodeListLen 2 <> toCBOR ppup <> toCBOR fppup
+instance (Era era, EncCBOR (PParamsUpdate era)) => EncCBOR (ShelleyPPUPState era) where
+  encCBOR ShelleyPPUPState {proposals, futureProposals} = encCBOR (proposals, futureProposals)
 
-instance
-  (Era era, FromCBOR (PParamsUpdate era)) =>
-  FromCBOR (ShelleyPPUPState era)
-  where
-  fromCBOR =
-    decode $
-      RecD ShelleyPPUPState
-        <! From
-        <! From
+instance (Era era, DecCBOR (PParamsUpdate era)) => DecCBOR (ShelleyPPUPState era) where
+  decCBOR = uncurry ShelleyPPUPState <$> decCBOR
 
 instance Default (ShelleyPPUPState era) where
   def = ShelleyPPUPState emptyPPPUpdates emptyPPPUpdates

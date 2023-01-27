@@ -30,6 +30,7 @@ import Cardano.Ledger.BaseTypes (
   textToDns,
   textToUrl,
  )
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Binary (
   Annotator,
   Decoder,
@@ -44,7 +45,6 @@ import Cardano.Ledger.Binary (
   decodeFullDecoder,
   decodeMapTraverse,
   encCBOR,
-  fromNotSharedCBOR,
   fromPlainEncoding,
   hashWithEncoder,
   ipv4ToBytes,
@@ -1295,17 +1295,16 @@ tests =
             "new_epoch_state"
             nes
             ( T (TkListLen 7)
-                <> S e
-                <> S (BlocksMade @C_Crypto bs)
-                <> S (BlocksMade @C_Crypto bs)
-                <> S es
-                <> S (SJust ru)
-                <> S pd
-                <> S (UTxO @(ShelleyEra C_Crypto) mempty)
+                <> Si e
+                <> Si (BlocksMade @C_Crypto bs)
+                <> Si (BlocksMade @C_Crypto bs)
+                <> Si es
+                <> Si (SJust ru)
+                <> Si pd
+                <> Si (UTxO @(ShelleyEra C_Crypto) mempty)
             )
     , let actual =
-            serialize' shelleyProtVer $
-              Ex.sleNewEpochState Ex.ledgerExamplesShelley
+            Plain.serialize' $ Ex.sleNewEpochState Ex.ledgerExamplesShelley
           expected = either error id $ B16.decode expectedHex
           actualHex = B16.encode actual
           expectedHex =
@@ -1337,8 +1336,8 @@ tests =
 -- ===============
 -- From CBOR instances for things that only have FromCBORSharing instances
 
-instance FromCBOR (Stake C_Crypto) where
-  fromCBOR = fromNotSharedCBOR
+-- instance FromCBOR (Stake C_Crypto) where
+--   fromCBOR = fromNotSharedCBOR
 
-instance FromCBOR (SnapShots C_Crypto) where
-  fromCBOR = fromNotSharedCBOR
+-- instance FromCBOR (SnapShots C_Crypto) where
+--   fromCBOR = fromNotSharedCBOR

@@ -410,6 +410,12 @@ instance Era era => FromCBOR (BabbagePParams StrictMaybe era) where
     decode
       (SparseKeyed "PParamsUpdate" emptyBabbagePParamsUpdate updateField [])
 
+instance Era era => EncCBOR (BabbagePParams StrictMaybe era) where
+  encCBOR = toPlainEncoding (eraProtVerLow @era) . toCBOR
+
+instance Era era => DecCBOR (BabbagePParams StrictMaybe era) where
+  decCBOR = toPlainDecoder (eraProtVerLow @era) fromCBOR
+
 upgradeBabbagePParams ::
   forall f c.
   HKDFunctor f =>
