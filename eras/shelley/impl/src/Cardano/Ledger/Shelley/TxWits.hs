@@ -44,6 +44,7 @@ import Cardano.Ledger.Binary (
   Annotator,
   Decoder,
   FromCBOR (fromCBOR),
+  ToCBOR,
   decodeList,
   decodeMapContents,
   decodeWord,
@@ -242,6 +243,9 @@ prettyWitnessSetParts ::
   , Set (BootstrapWitness (EraCrypto era))
   )
 prettyWitnessSetParts (ShelleyTxWitsConstr (WitnessSet' a b c _)) = (a, b, c)
+
+-- | Encodes memoized bytes created upon construction.
+instance Era era => ToCBOR (ShelleyTxWits era)
 
 instance EraScript era => FromCBOR (Annotator (ShelleyTxWits era)) where
   fromCBOR = decodeWits

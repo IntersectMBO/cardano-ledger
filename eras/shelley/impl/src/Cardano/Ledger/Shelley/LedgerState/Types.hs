@@ -24,6 +24,7 @@ module Cardano.Ledger.Shelley.LedgerState.Types where
 import Cardano.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
+  EpochNo,
   StrictMaybe (..),
  )
 import Cardano.Ledger.Binary (
@@ -177,12 +178,10 @@ instance
   ( FromCBOR (Value era)
   , FromCBOR (PParams era)
   , FromCBOR (PPUPState era)
-  , HashAnnotated (TxBody era) EraIndependentTxBody (EraCrypto era)
   , FromSharedCBOR (TxOut era)
   , FromCBOR (TallyState era)
   , Share (TxOut era) ~ Interns (Credential 'Staking (EraCrypto era))
   , Era era
-  , EraTallyState era
   ) =>
   FromCBOR (EpochState era)
   where
@@ -308,7 +307,6 @@ instance
   ( CC.Crypto (EraCrypto era)
   , FromSharedCBOR (TxOut era)
   , Share (TxOut era) ~ Interns (Credential 'Staking (EraCrypto era))
-  , HashAnnotated (TxBody era) EraIndependentTxBody (EraCrypto era)
   , Era era
   , FromCBOR (PPUPState era)
   ) =>
@@ -418,8 +416,6 @@ instance
   , FromCBOR (StashedAVVMAddresses era)
   , FromCBOR (PPUPState era)
   , FromCBOR (TallyState era)
-  , HashAnnotated (TxBody era) EraIndependentTxBody (EraCrypto era)
-  , EraTallyState era
   ) =>
   FromCBOR (NewEpochState era)
   where
@@ -438,7 +434,8 @@ instance
   ( Era era
   , ToCBOR (TxOut era)
   , ToCBOR (PParams era)
-  , ToCBOR (State (EraRule "PPUP" era))
+  , ToCBOR (PPUPState era)
+  , ToCBOR (TallyState era)
   , ToCBOR (StashedAVVMAddresses era)
   ) =>
   EncCBOR (NewEpochState era)
@@ -451,9 +448,9 @@ instance
   , FromSharedCBOR (TxOut era)
   , Share (TxOut era) ~ Interns (Credential 'Staking (EraCrypto era))
   , FromCBOR (Value era)
-  , FromCBOR (State (EraRule "PPUP" era))
+  , FromCBOR (PPUPState era)
+  , FromCBOR (TallyState era)
   , FromCBOR (StashedAVVMAddresses era)
-  , HashAnnotated (TxBody era) EraIndependentTxBody (EraCrypto era)
   ) =>
   DecCBOR (NewEpochState era)
   where
@@ -527,12 +524,10 @@ instance
 
 instance
   ( Era era
-  , HashAnnotated (TxBody era) EraIndependentTxBody (EraCrypto era)
   , FromCBOR (Value era)
   , FromSharedCBOR (TxOut era)
   , Share (TxOut era) ~ Interns (Credential 'Staking (EraCrypto era))
   , FromCBOR (PPUPState era)
-  , EraTallyState era
   , FromCBOR (TallyState era)
   ) =>
   FromSharedCBOR (LedgerState era)

@@ -9,7 +9,7 @@ module Test.Cardano.Ledger.Conway.Serialisation.Roundtrip (allprops) where
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Core (Era (..))
 import Data.Data (Proxy (..), typeRep)
-import Test.Cardano.Ledger.Binary.RoundTrip (roundTripCborExpectation)
+import Test.Cardano.Ledger.Binary.Plain.RoundTrip (roundTripCborExpectation)
 import Test.Cardano.Ledger.Conway.Serialisation.Generators ()
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperty)

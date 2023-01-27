@@ -8,6 +8,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -26,19 +27,22 @@ import qualified Cardano.Crypto.Hash as HS
 import Cardano.HeapWords (HeapWords (..))
 import Cardano.Ledger.Address (Addr (..), CompactAddr, compactAddr, decompactAddr)
 import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
   FromCBOR (..),
   FromSharedCBOR (..),
   Interns (..),
   ToCBOR (..),
   decodeRecordNamed,
   encodeListLen,
-  fromNotSharedCBOR,
+  toPlainDecoder,
+  toPlainEncoding,
  )
 import Cardano.Ledger.Compactible (Compactible (CompactForm, fromCompact, toCompact))
-import Cardano.Ledger.Core (Era (EraCrypto), EraTxOut (..), Value, ppMinUTxOValueL)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto (ADDRHASH), StandardCrypto)
 import Cardano.Ledger.Keys (KeyRole (..))
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams ()
 import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (toExpr))
@@ -145,7 +149,10 @@ instance
   (Era era, DecodeNonNegative (Value era), Compactible (Value era), Show (Value era)) =>
   FromCBOR (ShelleyTxOut era)
   where
-  fromCBOR = fromNotSharedCBOR
+  fromCBOR =
+    decodeRecordNamed "ShelleyTxOut" (const 2) $ do
+      cAddr <- fromCBOR
+      TxOutCompact cAddr <$> decodeNonNegative
 
 -- This instance does not do any sharing and is isomorphic to FromCBOR
 -- use the weakest constraint necessary
@@ -154,10 +161,16 @@ instance
   FromSharedCBOR (ShelleyTxOut era)
   where
   type Share (ShelleyTxOut era) = Interns (Credential 'Staking (EraCrypto era))
-  fromSharedCBOR _ =
-    decodeRecordNamed "ShelleyTxOut" (const 2) $ do
-      cAddr <- fromCBOR
-      TxOutCompact cAddr <$> decodeNonNegative
+  fromSharedCBOR _ = fromCBOR
+
+instance (Era era, ToCBOR (CompactForm (Value era))) => EncCBOR (ShelleyTxOut era) where
+  encCBOR = toPlainEncoding (eraProtVerLow @era) . toCBOR
+
+instance
+  (Era era, Show (Value era), DecodeNonNegative (Value era), Compactible (Value era)) =>
+  DecCBOR (ShelleyTxOut era)
+  where
+  decCBOR = toPlainDecoder (eraProtVerLow @era) fromCBOR
 
 -- a ShortByteString of the same length as the ADDRHASH
 -- used to calculate heapWords

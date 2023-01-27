@@ -108,6 +108,9 @@ deriving via
   instance
     NoThunks (AlonzoTxAuxDataRaw era)
 
+-- | Encodes memoized bytes created upon construction.
+instance Era era => ToCBOR (AlonzoTxAuxData era)
+
 instance Era era => ToCBOR (AlonzoTxAuxDataRaw era) where
   toCBOR AlonzoTxAuxDataRaw {atadrMetadata, atadrTimelock, atadrPlutus} =
     encode $

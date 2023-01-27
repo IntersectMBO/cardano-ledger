@@ -512,3 +512,7 @@ encodeTxBodyRaw ConwayTxBodyRaw {..} =
 
 instance ConwayEraTxBody era => ToCBOR (ConwayTxBodyRaw era) where
   toCBOR = encode . encodeTxBodyRaw
+
+
+-- | Encodes memoized bytes created upon construction.
+instance Era era => ToCBOR (ConwayTxBody era)

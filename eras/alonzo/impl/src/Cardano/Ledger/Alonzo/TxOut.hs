@@ -54,21 +54,20 @@ import Cardano.Ledger.BaseTypes (
   strictMaybeToMaybe,
  )
 import Cardano.Ledger.Binary (
+  DecCBOR (..),
   DecoderError (DecoderErrorCustom),
+  EncCBOR (..),
   FromCBOR (fromCBOR),
+  FromSharedCBOR (Share, fromSharedCBOR),
+  Interns,
   ToCBOR (toCBOR),
   cborError,
   decodeBreakOr,
   decodeListLenOrIndef,
   encodeListLen,
+  interns,
   toPlainDecoder,
   toPlainEncoding,
- )
-import Cardano.Ledger.Binary.Plain (
-  DecShareCBOR (Share, decShareCBOR),
-  EncCBOR (..),
-  Interns,
-  interns,
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible
@@ -386,18 +385,25 @@ instance
 
 instance
   (Era era, Val (Value era), DecodeNonNegative (Value era), Show (Value era)) =>
-  DecShareCBOR (AlonzoTxOut era)
+  FromSharedCBOR (AlonzoTxOut era)
   where
   type Share (AlonzoTxOut era) = Interns (Credential 'Staking (EraCrypto era))
-  decShareCBOR credsInterns = do
+  fromSharedCBOR credsInterns = do
     let internTxOut = \case
           TxOut_AddrHash28_AdaOnly cred addr28Extra ada ->
             TxOut_AddrHash28_AdaOnly (interns credsInterns cred) addr28Extra ada
           TxOut_AddrHash28_AdaOnly_DataHash32 cred addr28Extra ada dataHash32 ->
             TxOut_AddrHash28_AdaOnly_DataHash32 (interns credsInterns cred) addr28Extra ada dataHash32
           txOut -> txOut
-    internTxOut <$!> toPlainDecoder (eraProtVerLow @era) fromCBOR
-  {-# INLINEABLE decShareCBOR #-}
+    internTxOut <$!> fromCBOR
+  {-# INLINEABLE fromSharedCBOR #-}
+
+instance
+  (Era era, Show (Value era), Val (Value era), DecodeNonNegative (Value era)) =>
+  DecCBOR (AlonzoTxOut era)
+  where
+  decCBOR = toPlainDecoder (eraProtVerLow @era) fromCBOR
+  {-# INLINE decCBOR #-}
 
 instance (EraTxOut era, ToJSON (Value era)) => ToJSON (AlonzoTxOut era) where
   toJSON (AlonzoTxOut addr v dataHash) =

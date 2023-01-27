@@ -10,10 +10,12 @@ module Cardano.Ledger.Binary.Plain (
   decodeRecordNamed,
   decodeRecordSum,
   decodeListLike,
+  module Codec.CBOR.Term,
 )
 where
 
 import Cardano.Binary
+import Codec.CBOR.Term
 import Control.Monad (unless)
 import qualified Data.Text as Text
 

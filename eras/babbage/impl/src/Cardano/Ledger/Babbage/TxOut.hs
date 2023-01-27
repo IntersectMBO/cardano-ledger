@@ -73,10 +73,14 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (
   Annotator (..),
+  DecCBOR (..),
   Decoder,
   DecoderError (..),
+  EncCBOR (..),
   Encoding,
   FromCBOR (..),
+  FromSharedCBOR (..),
+  Interns,
   Sized (..),
   ToCBOR (..),
   TokenType (..),
@@ -87,17 +91,12 @@ import Cardano.Ledger.Binary (
   decodeNestedCborBytes,
   encodeNestedCbor,
   getDecoderVersion,
+  interns,
   peekTokenType,
   toPlainDecoder,
   toPlainEncoding,
  )
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.Binary.Plain (
-  DecShareCBOR (..),
-  EncCBOR (..),
-  Interns,
-  interns,
- )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
@@ -423,6 +422,22 @@ instance
 -- toCBOR (TxOutCompactRefScript addr cv d rs) = encodeTxOut addr cv d (SJust rs)
 
 instance
+  (Era era, Val (Value era), ToCBOR (Value era), ToCBOR (Script era)) =>
+  EncCBOR (BabbageTxOut era)
+  where
+  encCBOR = toPlainEncoding (eraProtVerLow @era) . toCBOR
+
+instance
+  ( Era era
+  , Val (Value era)
+  , FromCBOR (Annotator (Script era))
+  , DecodeNonNegative (Value era)
+  ) =>
+  DecCBOR (BabbageTxOut era)
+  where
+  decCBOR = toPlainDecoder (eraProtVerLow @era) decodeBabbageTxOut
+
+instance
   ( Era era
   , Val (Value era)
   , FromCBOR (Annotator (Script era))
@@ -438,11 +453,11 @@ instance
   , FromCBOR (Annotator (Script era))
   , DecodeNonNegative (Value era)
   ) =>
-  DecShareCBOR (BabbageTxOut era)
+  FromSharedCBOR (BabbageTxOut era)
   where
   type Share (BabbageTxOut era) = Interns (Credential 'Staking (EraCrypto era))
-  decShareCBOR credsInterns =
-    internTxOut <$!> toPlainDecoder (eraProtVerLow @era) decodeBabbageTxOut
+  fromSharedCBOR credsInterns =
+    internTxOut <$!> decodeBabbageTxOut
     where
       internTxOut = \case
         TxOut_AddrHash28_AdaOnly cred addr28Extra ada ->

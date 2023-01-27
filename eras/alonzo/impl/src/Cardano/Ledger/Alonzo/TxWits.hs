@@ -443,6 +443,9 @@ instance (EraScript (AlonzoEra c), Crypto c) => AlonzoEraTxWits (AlonzoEra c) wh
 -- Serialisation
 --------------------------------------------------------------------------------
 
+-- | Encodes memoized bytes created upon construction.
+instance Era era => ToCBOR (AlonzoTxWits era)
+
 instance (Era era, Script era ~ AlonzoScript era) => ToCBOR (AlonzoTxWitsRaw era) where
   toCBOR (AlonzoTxWitsRaw vkeys boots scripts dats rdmrs) =
     encode $

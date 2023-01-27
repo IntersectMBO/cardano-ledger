@@ -223,6 +223,9 @@ deriving newtype instance
   ) =>
   NFData (AllegraTxBody era)
 
+-- | Encodes memoized bytes created upon construction.
+instance Era era => ToCBOR (AllegraTxBody era)
+
 deriving via
   Mem (AllegraTxBodyRaw ()) era
   instance

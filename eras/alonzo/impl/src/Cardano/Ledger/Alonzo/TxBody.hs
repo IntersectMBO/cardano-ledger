@@ -401,6 +401,9 @@ txnetworkid' = atbrTxNetworkId . getMemoRawType
 -- Serialisation
 --------------------------------------------------------------------------------
 
+-- | Encodes memoized bytes created upon construction.
+instance Era era => ToCBOR (AlonzoTxBody era)
+
 instance
   (Era era, ToCBOR (TxOut era), ToCBOR (PParamsUpdate era)) =>
   ToCBOR (AlonzoTxBodyRaw era)

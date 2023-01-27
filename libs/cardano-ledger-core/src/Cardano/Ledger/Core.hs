@@ -129,6 +129,7 @@ class
   , -- NFData (Tx era), TODO: Add NFData constraints to Crypto class
     NoThunks (Tx era)
   , FromCBOR (Annotator (Tx era))
+  , ToCBOR (Tx era)
   , EncCBOR (Tx era)
   , Show (Tx era)
   , Eq (Tx era)
@@ -156,6 +157,7 @@ class
   , EraPParams era
   , HashAnnotated (TxBody era) EraIndependentTxBody (EraCrypto era)
   , FromCBOR (Annotator (TxBody era))
+  , ToCBOR (TxBody era)
   , EncCBOR (TxBody era)
   , NoThunks (TxBody era)
   , NFData (TxBody era)
@@ -193,10 +195,10 @@ class
   , ToCBOR (Value era)
   , EncCBOR (TxOut era)
   , DecCBOR (TxOut era)
+  , ToCBOR (TxOut era)
   , FromCBOR (TxOut era)
   , FromSharedCBOR (TxOut era)
   , Share (TxOut era) ~ Interns (Credential 'Staking (EraCrypto era))
-  , ToCBOR (TxOut era)
   , NoThunks (TxOut era)
   , NFData (TxOut era)
   , Show (TxOut era)
@@ -352,6 +354,7 @@ class
   , Show (TxAuxData era)
   , NoThunks (TxAuxData era)
   , EncCBOR (TxAuxData era)
+  , ToCBOR (TxAuxData era)
   , FromCBOR (Annotator (TxAuxData era))
   , HashAnnotated (TxAuxData era) EraIndependentTxAuxData (EraCrypto era)
   ) =>
@@ -381,6 +384,7 @@ class
   , Monoid (TxWits era)
   , NoThunks (TxWits era)
   , EncCBOR (TxWits era)
+  , ToCBOR (TxWits era)
   , FromCBOR (Annotator (TxWits era))
   ) =>
   EraTxWits era
@@ -414,6 +418,7 @@ class
   , Show (Script era)
   , Eq (Script era)
   , EncCBOR (Script era)
+  , ToCBOR (Script era)
   , FromCBOR (Annotator (Script era))
   , NoThunks (Script era)
   , SafeToHash (Script era)

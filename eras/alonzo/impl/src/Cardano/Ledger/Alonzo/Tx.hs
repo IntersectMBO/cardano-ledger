@@ -69,7 +69,7 @@ module Cardano.Ledger.Alonzo.Tx (
   -- Segwit
   alonzoSegwitTx,
   -- Other
-  toCBORForSizeComputation,
+  encCBORForSizeComputation,
   toCBORForMempoolSubmission,
 )
 where
@@ -112,10 +112,13 @@ import Cardano.Ledger.Alonzo.TxWits (
 import Cardano.Ledger.Binary (
   Annotator (..),
   EncCBOR (..),
+  Encoding,
   FromCBOR (..),
   ToCBOR (toCBOR),
   decodeNullMaybe,
+  encodeNullMaybe,
   serializeEncoding',
+  toPlainEncoding,
  )
 import Cardano.Ledger.Binary.Coders
 import qualified Cardano.Ledger.Binary.Plain as Plain
@@ -221,8 +224,8 @@ sizeAlonzoTxF =
   to $
     fromIntegral
       . LBS.length
-      . Plain.serializeEncoding
-      . toCBORForSizeComputation
+      . Plain.serialize
+      . encCBORForSizeComputation
 {-# INLINEABLE sizeAlonzoTxF #-}
 
 isValidAlonzoTxL :: Lens' (AlonzoTx era) IsValid
@@ -313,14 +316,14 @@ isTwoPhaseScriptAddress tx =
 -- | This ensures that the size of transactions from Mary is unchanged.
 -- The individual components all store their bytes; the only work we do in this
 -- function is concatenating
-toCBORForSizeComputation ::
+encCBORForSizeComputation ::
   ( EncCBOR (TxBody era)
   , EncCBOR (TxWits era)
   , EncCBOR (TxAuxData era)
   ) =>
   AlonzoTx era ->
   Plain.Encoding
-toCBORForSizeComputation AlonzoTx {body, wits, auxiliaryData} =
+encCBORForSizeComputation AlonzoTx {body, wits, auxiliaryData} =
   Plain.encodeListLen 3
     <> Plain.encCBOR body
     <> Plain.encCBOR wits
@@ -499,31 +502,42 @@ alonzoSegwitTx txBodyAnn txWitsAnn isValid auxDataAnn = Annotator $ \bytes ->
 -- Note that this serialisation is neither the serialisation used on-chain
 -- (where Txs are deconstructed using segwit), nor the serialisation used for
 -- computing the transaction size (which omits the `IsValid` field for
--- compatibility with Mary - see 'toCBORForSizeComputation').
+-- compatibility with Mary - see 'encCBORForSizeComputation').
 toCBORForMempoolSubmission ::
-  ( EncCBOR (TxBody era)
-  , EncCBOR (TxWits era)
-  , EncCBOR (TxAuxData era)
+  ( ToCBOR (TxBody era)
+  , ToCBOR (TxWits era)
+  , ToCBOR (TxAuxData era)
   ) =>
   AlonzoTx era ->
-  Plain.Encoding
+  Encoding
 toCBORForMempoolSubmission
   AlonzoTx {body, wits, auxiliaryData, isValid} =
-    Plain.encodeListLen 3
-      <> encCBOR body
-      <> encCBOR wits
-      <> encCBOR isValid
-      <> Plain.encNullMaybe encCBOR (strictMaybeToMaybe auxiliaryData)
+    encode $
+      Rec AlonzoTx
+        !> To body
+        !> To wits
+        !> To isValid
+        !> E (encodeNullMaybe toCBOR . strictMaybeToMaybe) auxiliaryData
 
 instance
   ( Era era
-  , EncCBOR (TxBody era)
-  , EncCBOR (TxWits era)
-  , EncCBOR (TxAuxData era)
+  , ToCBOR (TxBody era)
+  , ToCBOR (TxAuxData era)
+  , ToCBOR (TxWits era)
+  ) =>
+  ToCBOR (AlonzoTx era)
+  where
+  toCBOR = toCBORForMempoolSubmission
+
+instance
+  ( Era era
+  , ToCBOR (TxBody era)
+  , ToCBOR (TxAuxData era)
+  , ToCBOR (TxWits era)
   ) =>
   EncCBOR (AlonzoTx era)
   where
-  encCBOR = toCBORForMempoolSubmission
+  encCBOR = toPlainEncoding (eraProtVerLow @era) . toCBOR
 
 instance
   ( Typeable era

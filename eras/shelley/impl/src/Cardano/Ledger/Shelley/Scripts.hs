@@ -33,12 +33,12 @@ import Cardano.Ledger.Binary (
   Annotator (..),
   EncCBOR,
   FromCBOR (fromCBOR),
+  ToCBOR,
   decodeRecordSum,
  )
 import Cardano.Ledger.Binary.Coders (Encode (..), (!>))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (HASH)
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.Crypto (Crypto, HASH)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (Witness))
 import Cardano.Ledger.MemoBytes (
   Mem,
@@ -97,7 +97,7 @@ nativeMultiSigTag = "\00"
 
 type instance SomeScript 'PhaseOne (ShelleyEra c) = MultiSig (ShelleyEra c)
 
-instance CC.Crypto c => EraScript (ShelleyEra c) where
+instance Crypto c => EraScript (ShelleyEra c) where
   type Script (ShelleyEra c) = MultiSig (ShelleyEra c)
 
   -- In the ShelleyEra there is only one kind of Script and its tag is "\x00"
@@ -142,10 +142,10 @@ pattern RequireMOf n ms <-
 
 {-# COMPLETE RequireSignature, RequireAllOf, RequireAnyOf, RequireMOf #-}
 
-instance
-  (Era era) =>
-  FromCBOR (Annotator (MultiSigRaw era))
-  where
+-- | Encodes memoized bytes created upon construction.
+instance Era era => ToCBOR (MultiSig era)
+
+instance Era era => FromCBOR (Annotator (MultiSigRaw era)) where
   fromCBOR = decodeRecordSum "MultiSig" $
     \case
       0 -> (,) 2 . pure . RequireSignature' . KeyHash <$> fromCBOR

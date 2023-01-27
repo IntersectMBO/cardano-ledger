@@ -165,6 +165,10 @@ deriving instance
   (Era era, Show (TxOut era), Show (PParamsUpdate era)) =>
   Show (ShelleyTxBodyRaw era)
 
+
+-- | Encodes memoized bytes created upon construction.
+instance Era era => ToCBOR (ShelleyTxBody era)
+
 instance
   ( Era era
   , FromCBOR (PParamsUpdate era)

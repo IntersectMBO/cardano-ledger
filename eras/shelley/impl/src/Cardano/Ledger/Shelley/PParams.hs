@@ -43,6 +43,8 @@ import Cardano.Ledger.BaseTypes (
  )
 import qualified Cardano.Ledger.BaseTypes as BT
 import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
   FromCBOR (..),
   FromCBORGroup (..),
   ToCBOR (..),
@@ -53,6 +55,8 @@ import Cardano.Ledger.Binary (
   encodeListLen,
   encodeMapLen,
   encodeWord,
+  toPlainDecoder,
+  toPlainEncoding,
  )
 import Cardano.Ledger.Binary.Coders (Decode (From, RecD), decode, (<!))
 import Cardano.Ledger.Coin (Coin (..))

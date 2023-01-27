@@ -94,6 +94,9 @@ deriving newtype instance
 
 deriving newtype instance AllegraEraTxBody era => FromCBOR (MaryTxBodyRaw era)
 
+-- | Encodes memoized bytes created upon construction.
+instance Era era => ToCBOR (MaryTxBody era)
+
 instance AllegraEraTxBody era => FromCBOR (Annotator (MaryTxBodyRaw era)) where
   fromCBOR = pure <$> fromCBOR
 

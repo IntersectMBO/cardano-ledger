@@ -1,9 +1,11 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Conway.Genesis (
@@ -12,7 +14,10 @@ module Cardano.Ledger.Conway.Genesis (
 where
 
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis, alonzoGenesisAesonPairs)
-import Cardano.Ledger.Binary (EncCBOR (..), DecCBOR (..))
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), toPlainDecoder, toPlainEncoding)
+import Cardano.Ledger.Binary.Coders
+import Cardano.Ledger.Conway.Era (ConwayEra)
+import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (GenDelegs (..))
 import Data.Aeson (FromJSON (..), ToJSON, object, withObject, (.:))
@@ -32,12 +37,19 @@ instance NoThunks (ConwayGenesis c)
 
 instance Crypto c => DecCBOR (ConwayGenesis c) where
   decCBOR = do
-    (cgAlonzoGenesis, cgGenDelegs) <- decCBOR
-    pure ConwayGenesis {..}
+    toPlainDecoder (eraProtVerLow @(ConwayEra c)) $
+      decode $
+        RecD ConwayGenesis
+          <! Dec
+          <! From
 
 instance Crypto c => EncCBOR (ConwayGenesis c) where
   encCBOR ConwayGenesis {cgAlonzoGenesis, cgGenDelegs} =
-    encCBOR (cgAlonzoGenesis, cgGenDelegs)
+    toPlainEncoding (eraProtVerLow @(ConwayEra c))
+      . encode
+      $ Rec ConwayGenesis
+        !> Enc cgAlonzoGenesis
+        !> To cgGenDelegs
 
 instance Crypto c => ToJSON (ConwayGenesis c) where
   toJSON (ConwayGenesis alonzoGenesis genDelegs) =

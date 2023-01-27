@@ -277,6 +277,9 @@ instance
   where
   toCBOR = encode . encodeShelleyTxRaw
 
+-- | Encodes memoized bytes created upon construction.
+instance Era era => ToCBOR (ShelleyTx era)
+
 instance
   ( Era era
   , FromCBOR (Annotator (TxBody era))

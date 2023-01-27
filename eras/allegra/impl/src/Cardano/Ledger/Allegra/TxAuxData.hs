@@ -152,6 +152,9 @@ instance (Era era, ToCBOR (Script era)) => ToCBOR (AllegraTxAuxDataRaw era) wher
   toCBOR (AllegraTxAuxDataRaw blob sp) =
     encode (Rec AllegraTxAuxDataRaw !> To blob !> E (encodeStrictSeq (fromPlainEncoding . encCBOR)) sp)
 
+-- | Encodes memoized bytes created upon construction.
+instance Era era => ToCBOR (AllegraTxAuxData era)
+
 instance
   (Era era, FromCBOR (Annotator (Script era))) =>
   FromCBOR (Annotator (AllegraTxAuxDataRaw era))

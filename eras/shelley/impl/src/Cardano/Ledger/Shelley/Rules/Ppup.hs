@@ -42,7 +42,10 @@ import Cardano.Ledger.Binary (
   decodeRecordSum,
   decodeWord,
   encodeListLen,
+  toPlainDecoder,
+  toPlainEncoding,
  )
+import Cardano.Ledger.Binary.Coders (Decode (..), decode, (<!))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (GenDelegs (GenDelegs), KeyHash, KeyRole (Genesis))
 import Cardano.Ledger.Shelley.Era (ShelleyPPUP)
@@ -248,11 +251,22 @@ instance NFData (PParamsUpdate era) => NFData (ShelleyPPUPState era)
 
 instance NoThunks (PParamsUpdate era) => NoThunks (ShelleyPPUPState era)
 
-instance (Era era, EncCBOR (PParamsUpdate era)) => EncCBOR (ShelleyPPUPState era) where
-  encCBOR ShelleyPPUPState {proposals, futureProposals} = encCBOR (proposals, futureProposals)
+instance (Era era, ToCBOR (PParamsUpdate era)) => ToCBOR (ShelleyPPUPState era) where
+  toCBOR (ShelleyPPUPState ppup fppup) =
+    encodeListLen 2 <> toCBOR ppup <> toCBOR fppup
 
-instance (Era era, DecCBOR (PParamsUpdate era)) => DecCBOR (ShelleyPPUPState era) where
-  decCBOR = uncurry ShelleyPPUPState <$> decCBOR
+instance (Era era, FromCBOR (PParamsUpdate era)) => FromCBOR (ShelleyPPUPState era) where
+  fromCBOR =
+    decode $
+      RecD ShelleyPPUPState
+        <! From
+        <! From
+
+instance (Era era, ToCBOR (PParamsUpdate era)) => EncCBOR (ShelleyPPUPState era) where
+  encCBOR = toPlainEncoding (eraProtVerLow @era) . toCBOR
+
+instance (Era era, FromCBOR (PParamsUpdate era)) => DecCBOR (ShelleyPPUPState era) where
+  decCBOR = toPlainDecoder (eraProtVerLow @era) fromCBOR
 
 instance Default (ShelleyPPUPState era) where
   def = ShelleyPPUPState emptyPPPUpdates emptyPPPUpdates

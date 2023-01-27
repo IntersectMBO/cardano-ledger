@@ -58,6 +58,7 @@ module Cardano.Ledger.Binary.Decoding.Coders (
 )
 where
 
+import Cardano.Binary (DecCBOR (..))
 import Cardano.Ledger.Binary.Decoding.Annotated (Annotator (..), decodeAnnSet)
 import Cardano.Ledger.Binary.Decoding.Decoder
 import Cardano.Ledger.Binary.Decoding.FromCBOR (FromCBOR (fromCBOR))
@@ -334,6 +335,8 @@ data Decode (w :: Wrapped) t where
   -- FromCBOR instance at @t@
   From :: FromCBOR t => Decode w t
   -- | Label a (component, field, argument). It will be decoded using the given decoder.
+  Dec :: DecCBOR t => Decode w t
+  -- | Label a (component, field, argument). It will be decoded using the given decoder.
   D :: (forall s. Decoder s t) -> Decode ('Closed 'Dense) t
   -- | Apply a functional decoding (arising from 'RecD' or 'SumD') to get (type wise)
   -- smaller decoding.
@@ -389,6 +392,7 @@ hsize (SumD _) = 0
 hsize (RecD _) = 0
 hsize (KeyedD _) = 0
 hsize From = 1
+hsize Dec = 1
 hsize (D _) = 1
 hsize (ApplyD f x) = hsize f + hsize x
 hsize (Invalid _) = 0
@@ -412,6 +416,7 @@ decodeCount (SumD cn) n = pure (n + 1, cn)
 decodeCount (KeyedD cn) n = pure (n + 1, cn)
 decodeCount (RecD cn) n = decodeRecordNamed "RecD" (const n) (pure (n, cn))
 decodeCount From n = (n,) <$> fromCBOR
+decodeCount Dec n = (n,) <$> fromPlainDecoder decCBOR
 decodeCount (D dec) n = (n,) <$> dec
 decodeCount (Invalid k) _ = invalidKey k
 decodeCount (Map f x) n = do (m, y) <- decodeCount x n; pure (m, f y)
@@ -444,6 +449,7 @@ decodeClosed (Summands nm f) = decodeRecordSum nm (decodE . f)
 decodeClosed (KeyedD cn) = pure cn
 decodeClosed (RecD cn) = pure cn
 decodeClosed From = fromCBOR
+decodeClosed Dec = fromPlainDecoder decCBOR
 decodeClosed (D dec) = dec
 decodeClosed (ApplyD cn g) = do
   f <- decodeClosed cn
