@@ -91,17 +91,14 @@ data ShelleyLedgerExamples era = ShelleyLedgerExamples
   }
 
 deriving instance
-  ( Eq (PParams era)
-  , Eq (PParamsUpdate era)
-  , Eq (TxSeq era)
+  ( Eq (TxSeq era)
   , Eq (PredicateFailure (EraRule "LEDGER" era))
   , Eq (StashedAVVMAddresses era)
   , Eq (TranslationContext era)
   , Eq (PPUPState era)
   , Eq (TallyState era)
   , Eq (Tx era)
-  , Eq (TxOut era)
-  , Era era
+  , EraTxOut era
   ) =>
   Eq (ShelleyLedgerExamples era)
 

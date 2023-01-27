@@ -604,6 +604,12 @@ instance Era era => FromCBOR (AlonzoPParams StrictMaybe era) where
   fromCBOR =
     decode (SparseKeyed "PParamsUpdate" emptyAlonzoPParamsUpdate updateField [])
 
+instance Era era => EncCBOR (AlonzoPParams StrictMaybe era) where
+  encCBOR = toPlainEncoding (eraProtVerLow @era) . toCBOR
+
+instance Era era => DecCBOR (AlonzoPParams StrictMaybe era) where
+  decCBOR = toPlainDecoder (eraProtVerLow @era) fromCBOR
+
 -- ===================================================
 -- Figure 1: "Definitions Used in Protocol Parameters"
 
