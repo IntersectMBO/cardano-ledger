@@ -127,6 +127,10 @@ hasOrd rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
     help IPoolStakeR _ = failT ["IndividualPoolStake does not have Ord instance"]
     help (PParamsR _) _ = failT ["PParams does not have Ord instance"]
     help (PParamsUpdateR _) _ = failT ["PParamsUpdate does not have Ord instance"]
+    help RewardR v = pure $ With v
+    help (MaybeR a) l = do
+      With _ <- help a undefined
+      pure $ With l
 
 -- | Used to test hasOrd
 testHasCond :: Rep era [t] -> t -> IO ()

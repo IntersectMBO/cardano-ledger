@@ -43,6 +43,10 @@ import Test.Cardano.Ledger.Constrained.Lenses
 import Test.Cardano.Ledger.Constrained.TypeRep (Rep (..))
 import Test.Cardano.Ledger.Generic.Proof (Evidence (..), Proof (..))
 
+import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate (Complete)) -- , RewardUpdate (RewardUpdate))
+import qualified Cardano.Ledger.Shelley.RewardUpdate as RU
+import Cardano.Ledger.Shelley.Rewards (Reward (..)) -- ,RewardType(..))
+
 -- import qualified Cardano.Ledger.Core as Core
 -- import Cardano.Ledger.Shelley.LedgerState(PulsingRewUpdate, StashedAVVMAddresses)
 
@@ -379,6 +383,69 @@ snapShotsT =
     :$ (Simple snapShotFee)
   where
     shotsfun w x y z f = SnapShots w (PoolDistr x) y z f
+
+-- ==================================================================
+-- RewardUpdate
+
+deltaT :: Term era (Maybe DeltaCoin)
+deltaT = Var (V "deltaT" (MaybeR DeltaCoinR) (Yes deltaTL))
+
+deltaTL :: Field era (Maybe DeltaCoin)
+deltaTL = nesRuL . help
+  where
+    help :: Lens' (StrictMaybe (PulsingRewUpdate c)) (Maybe DeltaCoin)
+    help = lens view update
+      where
+        view SNothing = Nothing
+        view (SJust (Complete x)) = Just (RU.deltaT x)
+        view (SJust _) = Nothing
+        update (SJust (Complete ru)) (Just change) = SJust (Complete (ru {RU.deltaT = change}))
+        update _ _ = SNothing
+
+deltaR :: Term era (Maybe DeltaCoin)
+deltaR = Var (V "deltaR" (MaybeR DeltaCoinR) (Yes deltaRL))
+
+deltaRL :: Field era (Maybe DeltaCoin)
+deltaRL = nesRuL . help
+  where
+    help :: Lens' (StrictMaybe (PulsingRewUpdate c)) (Maybe DeltaCoin)
+    help = lens view update
+      where
+        view SNothing = Nothing
+        view (SJust (Complete x)) = Just (RU.deltaR x)
+        view (SJust _) = Nothing
+        update (SJust (Complete ru)) (Just change) = SJust (Complete (ru {RU.deltaR = change}))
+        update _ _ = SNothing
+
+deltaF :: Term era (Maybe DeltaCoin)
+deltaF = Var (V "deltaF" (MaybeR DeltaCoinR) (Yes deltaFL))
+
+deltaFL :: Field era (Maybe DeltaCoin)
+deltaFL = nesRuL . help
+  where
+    help :: Lens' (StrictMaybe (PulsingRewUpdate c)) (Maybe DeltaCoin)
+    help = lens view update
+      where
+        view SNothing = Nothing
+        view (SJust (Complete x)) = Just (RU.deltaF x)
+        view (SJust _) = Nothing
+        update (SJust (Complete ru)) (Just change) = SJust (Complete (ru {RU.deltaF = change}))
+        update _ _ = SNothing
+
+rewardSet :: Term era (Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))))
+rewardSet = Var (V "rewardSet" (MapR CredR (SetR RewardR)) No)
+
+rewardSetL :: Field era (Maybe (Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era)))))
+rewardSetL = nesRuL . help
+  where
+    help :: Lens' (StrictMaybe (PulsingRewUpdate c)) (Maybe (Map (Credential 'Staking c) (Set (Reward c))))
+    help = lens view update
+      where
+        view SNothing = Nothing
+        view (SJust (Complete x)) = Just (RU.rs x)
+        view (SJust _) = Nothing
+        update (SJust (Complete ru)) (Just change) = SJust (Complete (ru {RU.rs = change}))
+        update _ _ = SNothing
 
 -- ===================================================================
 -- Non Access variables

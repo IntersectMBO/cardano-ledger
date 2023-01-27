@@ -2,6 +2,8 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -22,6 +24,9 @@ import Cardano.Ledger.Val (Val (coin, modifyCoin, (<+>)))
 import Data.Default.Class (Default (def))
 
 -- import qualified Data.List as List
+
+import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Shelley.Rewards (Reward (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
@@ -45,7 +50,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Update (genShelleyPParamsUpdate)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
-import Test.QuickCheck (Arbitrary (..), Gen, chooseInt, shuffle)
+import Test.QuickCheck (Arbitrary (..), Gen, chooseInt, shuffle, vectorOf)
 
 -- =====================================================================
 -- Partioning a value into a bunch of pieces, that sum to that value
@@ -176,6 +181,28 @@ genValueX proof cn = do
     (Babbage _) -> pure (Value p (modifyCoin (const cn) v))
     (Conway _) -> pure (Value p (modifyCoin (const cn) v))
 
+instance Crypto c => Sums (Set (Reward c)) Coin where
+  getsum ss = Set.foldl' accum (Coin 0) ss
+    where
+      accum ans (Reward _ _ c) = add ans c
+  genT (Coin 1) = Set.singleton . updateRew (Coin 1) <$> arbitrary
+  genT (Coin n) | n > 1 = do
+    size <- chooseInt (1, fromIntegral n)
+    cs <- partition size (Coin n)
+    list <- vectorOf size (arbitrary :: Gen (Reward c))
+    pure $ Set.fromList (zipWith (updateRew @c) cs list)
+  genT c = error ("Coin in genT must be positive: " ++ show c)
+
+updateRew :: forall c. Coin -> Reward c -> Reward c
+updateRew c (Reward a b _) = Reward a b c
+
+{-
+An example test, Move to Examples
+foo :: IO ()
+foo = do
+  zs <- generate (genT @(Set (Reward C_Crypto)) (Coin 30) :: Gen (Set (Reward C_Crypto)))
+  putStrLn (unlines (map show (Set.toList zs)))
+-}
 -- ===========================================================
 -- Sizeable Class
 

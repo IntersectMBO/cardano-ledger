@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -36,7 +37,9 @@ import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Keys (GenDelegPair, KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
 import Cardano.Ledger.PoolParams (PoolParams (ppId))
+import Cardano.Ledger.Pretty (PDoc, ppRecord, ppRewardType)
 import Cardano.Ledger.Shelley.LedgerState
+import Cardano.Ledger.Shelley.Rewards (Reward (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val (Val ((<+>)))
@@ -75,6 +78,7 @@ import Test.Cardano.Ledger.Generic.PrettyCore (
   keyHashSummary,
   pcCoin,
   pcIndividualPoolStake,
+  pcKeyHash,
   pcTxIn,
  )
 import Test.Cardano.Ledger.Generic.Proof (Proof (..))
@@ -121,6 +125,8 @@ data Rep era t where
   PtrR :: Rep era Ptr
   IPoolStakeR :: Rep era (IndividualPoolStake (EraCrypto era))
   SnapShotsR :: Rep era (SnapShots (EraCrypto era))
+  RewardR :: Rep era (Reward (EraCrypto era))
+  MaybeR :: Rep era t -> Rep era (Maybe t)
 
 -- ===========================================================
 -- Proof of Rep equality
@@ -171,6 +177,9 @@ instance Singleton (Rep e) where
   testEql PtrR PtrR = Just Refl
   testEql IPoolStakeR IPoolStakeR = Just Refl
   testEql SnapShotsR SnapShotsR = Just Refl
+  testEql RewardR RewardR = Just Refl
+  testEql (MaybeR c) (MaybeR d) =
+    do Refl <- testEql c d; pure Refl
   testEql _ _ = Nothing
   cmpIndex x y = compare (shape x) (shape y)
 
@@ -210,6 +219,8 @@ instance Show (Rep era t) where
   show IPoolStakeR = "(IndividualPoolStake c)"
   show SnapShotsR = "(SnapShots c)"
   show UnitR = "()"
+  show RewardR = "(Reward c)"
+  show (MaybeR x) = "(Maybe " ++ show x ++ ")"
 
 synopsis :: forall e t. Rep e t -> t -> String
 synopsis RationalR r = show r
@@ -250,6 +261,9 @@ synopsis PtrR p = show p
 synopsis IPoolStakeR p = show (pcIndividualPoolStake p)
 synopsis SnapShotsR _ = "SnapShots ..."
 synopsis UnitR () = "()"
+synopsis RewardR x = show (pcReward x)
+synopsis (MaybeR _) Nothing = "Nothing"
+synopsis (MaybeR x) (Just y) = "(Just " ++ synopsis x y ++ ")"
 
 synSum :: Rep era a -> a -> String
 synSum (MapR _ CoinR) m = ", sum = " ++ show (pcCoin (Map.foldl' (<>) mempty m))
@@ -307,6 +321,8 @@ instance Shaped (Rep era) any where
   shape NaturalR = Nullary 29
   shape FloatR = Nullary 30
   shape UnitR = Nullary 31
+  shape RewardR = Nullary 32
+  shape (MaybeR x) = Nary 33 [shape x]
 
 compareRep :: forall era t s. Rep era t -> Rep era s -> Ordering
 compareRep x y = cmpIndex @(Rep era) x y
@@ -354,9 +370,22 @@ genSizedRep _ PtrR = arbitrary
 genSizedRep _ IPoolStakeR = arbitrary
 genSizedRep _ SnapShotsR = arbitrary
 genSizedRep _ UnitR = arbitrary
+genSizedRep _ RewardR = arbitrary
+genSizedRep n (MaybeR x) = frequency [(1, pure Nothing), (5, Just <$> genSizedRep n x)]
 
 genRep ::
   Era era =>
   Rep era b ->
   Gen b
 genRep x = do (NonZero n) <- arbitrary; genSizedRep n x
+
+-- ===========================
+
+pcReward :: Reward c -> PDoc
+pcReward (Reward ty pl c) =
+  ppRecord
+    "Reward"
+    [ ("type", ppRewardType ty)
+    , ("pool", pcKeyHash pl)
+    , ("amount", pcCoin c)
+    ]
