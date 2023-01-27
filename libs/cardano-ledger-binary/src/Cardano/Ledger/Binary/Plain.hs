@@ -6,6 +6,7 @@
 -- `cardano-binary` package.
 module Cardano.Ledger.Binary.Plain (
   module Cardano.Binary,
+  module Codec.CBOR.Term,
   invalidKey,
   decodeRecordNamed,
   decodeRecordNamedT,
@@ -15,6 +16,7 @@ module Cardano.Ledger.Binary.Plain (
 where
 
 import Cardano.Binary
+import Codec.CBOR.Term
 import Control.Monad (unless)
 import Control.Monad.Trans (MonadTrans (..))
 import Control.Monad.Trans.Identity (IdentityT (runIdentityT))
@@ -42,9 +44,10 @@ decodeRecordNamedT name getRecordSize decoder =
 
 decodeRecordSum :: Text.Text -> (Word -> Decoder s (Int, a)) -> Decoder s a
 decodeRecordSum name decoder =
-  runIdentityT $ snd <$> do
-    decodeListLikeT name (lift (decodeWord >>= decoder)) $ \(size, _) n ->
-      lift $ matchSize (Text.pack "Sum " <> name) size n
+  runIdentityT $
+    snd <$> do
+      decodeListLikeT name (lift (decodeWord >>= decoder)) $ \(size, _) n ->
+        lift $ matchSize (Text.pack "Sum " <> name) size n
 {-# INLINEABLE decodeRecordSum #-}
 
 decodeListLikeT ::

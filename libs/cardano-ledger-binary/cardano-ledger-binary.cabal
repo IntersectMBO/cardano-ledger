@@ -92,6 +92,7 @@ library testlib
   exposed-modules:
                      Test.Cardano.Ledger.Binary.Arbitrary
                    , Test.Cardano.Ledger.Binary.Plain.Golden
+                   , Test.Cardano.Ledger.Binary.Plain.RoundTrip
                    , Test.Cardano.Ledger.Binary.Random
                    , Test.Cardano.Ledger.Binary.RoundTrip
                    , Test.Cardano.Ledger.Binary.TreeDiff
