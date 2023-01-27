@@ -49,6 +49,7 @@ import Cardano.Ledger.Shelley.TxBody (
   Ptr,
  )
 import Cardano.Ledger.Slot (SlotNo)
+import Control.DeepSeq
 import Control.State.Transition
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
@@ -88,6 +89,12 @@ instance
   , NoThunks (PredicateFailure (EraRule "POOL" era))
   ) =>
   NoThunks (ShelleyDelplPredFailure era)
+
+instance
+  ( NFData (PredicateFailure (EraRule "DELEG" era))
+  , NFData (PredicateFailure (EraRule "POOL" era))
+  ) =>
+  NFData (ShelleyDelplPredFailure era)
 
 instance
   ( Era era

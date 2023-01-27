@@ -33,6 +33,7 @@ module Cardano.Ledger.Shelley.Rules.Utxow (
 )
 where
 
+import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (VerKeyDSIGN))
 import Cardano.Ledger.Address (Addr (..), bootstrapKeyHash)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (
@@ -46,6 +47,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), decodeRecordSum, encodeListLen)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.Crypto (Crypto (DSIGN))
 import Cardano.Ledger.Keys (
   DSignable,
   GenDelegPair (..),
@@ -103,6 +105,7 @@ import Cardano.Ledger.UTxO (
   txinLookup,
   verifyWitVKey,
  )
+import Control.DeepSeq
 import Control.Monad (when)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (∩), (◁))
@@ -167,6 +170,13 @@ instance
   , Era era
   ) =>
   NoThunks (ShelleyUtxowPredFailure era)
+
+instance
+  ( NFData (PredicateFailure (EraRule "UTXO" era))
+  , NFData (VerKeyDSIGN (DSIGN (EraCrypto era)))
+  , Era era
+  ) =>
+  NFData (ShelleyUtxowPredFailure era)
 
 deriving stock instance
   ( Eq (PredicateFailure (EraRule "UTXO" era))

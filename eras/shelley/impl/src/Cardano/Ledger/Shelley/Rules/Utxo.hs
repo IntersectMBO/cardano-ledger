@@ -88,6 +88,7 @@ import Cardano.Ledger.UTxO (
   txouts,
  )
 import qualified Cardano.Ledger.Val as Val
+import Control.DeepSeq
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition (
   Assertion (..),
@@ -179,6 +180,13 @@ instance
   , NoThunks (PPUPPredFailure era)
   ) =>
   NoThunks (ShelleyUtxoPredFailure era)
+
+instance
+  ( NFData (Value era)
+  , NFData (TxOut era)
+  , NFData (PPUPPredFailure era)
+  ) =>
+  NFData (ShelleyUtxoPredFailure era)
 
 instance
   ( Typeable era

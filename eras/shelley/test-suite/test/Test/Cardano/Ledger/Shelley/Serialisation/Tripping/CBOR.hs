@@ -16,6 +16,7 @@ import Cardano.Ledger.Binary (
   FromCBOR (..),
   ToCBOR (..),
  )
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Shelley (Shelley)
@@ -30,6 +31,7 @@ import qualified Cardano.Ledger.Shelley.Rules as STS
 import qualified Cardano.Protocol.TPraos.BHeader as TP
 import qualified Cardano.Protocol.TPraos.Rules.Prtcl as STS (PrtclState)
 import Data.Maybe (fromJust)
+import qualified Test.Cardano.Ledger.Binary.Plain.RoundTrip as Plain
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
@@ -55,22 +57,22 @@ testCoreTypes =
         roundTripExpectation @(TxId StandardCrypto) cborTrip
     , testProperty "Protocol State" $
         roundTripExpectation @(STS.PrtclState StandardCrypto) cborTrip
-    -- , testProperty "SnapShots" $
-    --     roundTripExpectation @(SnapShots StandardCrypto) (mkTrip toCBOR fromNotSharedCBOR)
-    , testProperty "coin CompactCoin cbor" $
+    , -- , testProperty "SnapShots" $
+      --     roundTripExpectation @(SnapShots StandardCrypto) (mkTrip toCBOR fromNotSharedCBOR)
+      testProperty "coin CompactCoin cbor" $
         roundTripExpectation @Coin (mkTrip (toCBOR . fromJust . toCompact) fromCBOR)
     , testProperty "coin cbor CompactCoin" $
         roundTripExpectation @Coin (mkTrip toCBOR (fromCompact <$> fromCBOR))
     , testProperty "RewardUpdate" $
-        roundTripExpectation @(RewardUpdate StandardCrypto) cborTrip
+        Plain.roundTripExpectation @(RewardUpdate StandardCrypto) Plain.cborTrip
     , testProperty "RewardSnapShot" $
-        roundTripExpectation @(RewardSnapShot StandardCrypto) cborTrip
+        Plain.roundTripExpectation @(RewardSnapShot StandardCrypto) Plain.cborTrip
     , testProperty "RewardFreeVars" $
-        roundTripExpectation @(FreeVars StandardCrypto) cborTrip
+        Plain.roundTripExpectation @(FreeVars StandardCrypto) Plain.cborTrip
     , testProperty "RewardPulser" $
-        roundTripExpectation @(Pulser StandardCrypto) cborTrip
+        Plain.roundTripExpectation @(Pulser StandardCrypto) Plain.cborTrip
     , testProperty "PulsingRewUpdate" $
-        roundTripExpectation @(PulsingRewUpdate StandardCrypto) cborTrip
+        Plain.roundTripExpectation @(PulsingRewUpdate StandardCrypto) Plain.cborTrip
     ]
 
 tests :: TestTree
@@ -88,17 +90,18 @@ tests =
       , testProperty "LEDGER Predicate Failures" $
           roundTripExpectation @([STS.PredicateFailure (STS.ShelleyLEDGERS Shelley)]) cborTrip
       , testProperty "Ledger State" $
-          roundTripExpectation @(LedgerState Shelley) (mkTrip toCBOR fromNotSharedCBOR)
+          Plain.roundTripExpectation @(LedgerState Shelley) $
+            Plain.mkTrip Plain.encCBOR Plain.decNoShareCBOR
       , testProperty "Epoch State" $
-          roundTripExpectation @(EpochState Shelley) cborTrip
+          Plain.roundTripExpectation @(EpochState Shelley) Plain.cborTrip
       , testProperty "NewEpoch State" $
-          roundTripExpectation @(NewEpochState Shelley) cborTrip
+          Plain.roundTripExpectation @(NewEpochState Shelley) Plain.cborTrip
       , testProperty "MultiSig" $
           roundTripAnnExpectation @(MultiSig Shelley)
       , testProperty "TxAuxData" $
           roundTripAnnExpectation @(ShelleyTxAuxData Shelley)
       , testProperty "Shelley Genesis" $
-          roundTripExpectation @(ShelleyGenesis StandardCrypto) cborTrip
+          Plain.roundTripExpectation @(ShelleyGenesis StandardCrypto) Plain.cborTrip
       , testProperty "NominalDiffTimeMicro" $
           roundTripExpectation @NominalDiffTimeMicro cborTrip
       , testCoreTypes

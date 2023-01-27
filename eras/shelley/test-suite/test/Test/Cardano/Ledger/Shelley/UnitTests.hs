@@ -15,7 +15,6 @@ import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Address (Addr (..), getRwdCred)
 import Cardano.Ledger.BaseTypes hiding ((==>))
-import Cardano.Ledger.Binary (serialize')
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (
@@ -47,6 +46,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   dsUnified,
   rewards,
  )
+import Control.DeepSeq (rnf)
 
 import Cardano.Ledger.Shelley.Rules (
   ShelleyDelegsPredFailure (..),
@@ -712,8 +712,8 @@ testProducedOverMaxWord64 =
       st =
         runShelleyBase $
           applySTSTest @(ShelleyLEDGER C) (TRC (ledgerEnv, ledgerState, tx))
-   in -- We test that the serialization of the predicate failure does not return bottom
-      serialize' shelleyProtVer st @?= serialize' shelleyProtVer st
+   in -- We test that the predicate failure does not return bottom
+      pure $ rnf st
 
 testsInvalidLedger :: TestTree
 testsInvalidLedger =
