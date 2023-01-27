@@ -341,8 +341,8 @@ allScripts c =
       where
         count3 = length args3 - 1
         count2 = length args2 - 1
-        payBytes = Plain.serializeEncoding' $ Plain.encCBOR pay
-        n = randomByHash 0 count3 $ Plain.serializeEncoding' $ Plain.encCBOR stake
+        payBytes = Plain.serialize' pay
+        n = randomByHash 0 count3 $ Plain.serialize' stake
         m = randomByHash 0 count2 payBytes
         mode = randomByHash 1 3 payBytes
         pair = case mode of

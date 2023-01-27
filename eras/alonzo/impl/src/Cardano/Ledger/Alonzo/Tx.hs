@@ -221,7 +221,7 @@ sizeAlonzoTxF =
   to $
     fromIntegral
       . LBS.length
-      . Plain.serializeEncoding
+      . Plain.serialize
       . toCBORForSizeComputation
 {-# INLINEABLE sizeAlonzoTxF #-}
 

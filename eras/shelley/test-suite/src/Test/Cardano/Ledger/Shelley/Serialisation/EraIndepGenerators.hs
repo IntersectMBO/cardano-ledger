@@ -21,38 +21,18 @@ module Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators (
   maxTxWits,
 ) where
 
+import Test.Cardano.Ledger.Shelley.Arbitrary ()
 import Cardano.Crypto.DSIGN.Mock (VerKeyDSIGN (..))
 import Cardano.Ledger.BaseTypes (
   BlockNo (..),
   SlotNo (..),
  )
-import Cardano.Ledger.Coin (CompactForm (..))
 import Cardano.Ledger.Crypto (Crypto, DSIGN)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API hiding (SignedDSIGN)
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.LedgerState (FutureGenDeleg, PPUPState, StashedAVVMAddresses)
-import Cardano.Ledger.Shelley.PoolRank (
-  Likelihood (..),
-  LogWeight (..),
-  PerformanceEstimate (..),
- )
-import Cardano.Ledger.Shelley.RewardUpdate (
-  FreeVars (..),
-  Pulser,
-  PulsingRewUpdate (..),
-  RewardAns (..),
-  RewardPulser (..),
-  RewardSnapShot (..),
- )
-import Cardano.Ledger.Shelley.Rewards (
-  LeaderOnlyReward (..),
-  PoolRewardInfo (..),
-  StakeShare (..),
- )
 import qualified Cardano.Ledger.Shelley.Rules as STS
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..))
-import Cardano.Ledger.UMapCompact (RDPair (..), Trip (Triple), UMap (UMap))
 import Cardano.Protocol.TPraos.BHeader (BHeader, HashHeader)
 import qualified Cardano.Protocol.TPraos.BHeader as TP
 import qualified Cardano.Protocol.TPraos.OCert as TP
@@ -62,8 +42,6 @@ import qualified Cardano.Protocol.TPraos.Rules.Tickn as STS
 import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
-import qualified Data.VMap as VMap
-import Data.Word (Word64)
 import Generic.Random (genericArbitraryU)
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
@@ -74,23 +52,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (
   mkOCert,
  )
 import Test.Cardano.Ledger.Shelley.Generator.Presets (coreNodeKeys)
-import Test.QuickCheck (
-  Arbitrary,
-  Gen,
-  arbitrary,
-  choose,
-  chooseBoundedIntegral,
-  chooseInt,
-  elements,
-  frequency,
-  genericShrink,
-  listOf,
-  oneof,
-  recursivelyShrink,
-  resize,
-  shrink,
-  vectorOf,
- )
+import Test.QuickCheck
 
 -- =======================================================
 
@@ -136,10 +98,7 @@ instance Mock c => Arbitrary (BHeader c) where
 instance Crypto c => Arbitrary (TP.HashHeader c) where
   arbitrary = TP.HashHeader <$> arbitrary
 
-instance (Era era, Mock (EraCrypto era)) => Arbitrary (ProposedPPUpdates era) where
-  arbitrary = ProposedPPUpdates <$> pure Map.empty
-
-instance (Era era, Mock (EraCrypto era)) => Arbitrary (Update era) where
+instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (Update era) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -177,11 +136,6 @@ instance Era era => Arbitrary (ShelleyTxAuxData era) where
 maxTxWits :: Int
 maxTxWits = 5
 
-instance
-  (EraTxOut era, Mock (EraCrypto era), Arbitrary (Value era)) =>
-  Arbitrary (ShelleyTxOut era)
-  where
-  arbitrary = ShelleyTxOut <$> arbitrary <*> arbitrary
 
 instance Arbitrary MIRPot where
   arbitrary = genericArbitraryU
@@ -205,41 +159,9 @@ instance Crypto c => Arbitrary (STS.PrtclState c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Crypto c => Arbitrary (PState c) where
-  arbitrary = genericArbitraryU
-  shrink = genericShrink
-
-instance Crypto c => Arbitrary (InstantaneousRewards c) where
-  arbitrary = genericArbitraryU
-  shrink = genericShrink
-
-instance Crypto c => Arbitrary (FutureGenDeleg c) where
-  arbitrary = genericArbitraryU
-  shrink = genericShrink
-
 instance (Arbitrary k, Arbitrary v) => Arbitrary (LM.ListMap k v) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
-
-instance Arbitrary RDPair where
-  arbitrary = RDPair <$> arbitrary <*> arbitrary
-  shrink = genericShrink
-
-instance Crypto c => Arbitrary (Trip c) where
-  arbitrary = Triple <$> arbitrary <*> arbitrary <*> arbitrary
-  shrink = genericShrink
-
-instance Crypto c => Arbitrary (UMap c) where
-  arbitrary = UMap <$> arbitrary <*> arbitrary
-  shrink = genericShrink
-
-instance Crypto c => Arbitrary (DState c) where
-  arbitrary =
-    DState
-      <$> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
 
 instance Crypto c => Arbitrary (DelegCert c) where
   arbitrary = genericArbitraryU
@@ -265,161 +187,10 @@ instance Crypto c => Arbitrary (DCert c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance (Era era, Mock (EraCrypto era)) => Arbitrary (ShelleyPPUPState era) where
-  arbitrary = genericArbitraryU
-  shrink = genericShrink
-
-instance Crypto c => Arbitrary (DPState c) where
-  arbitrary = genericArbitraryU
-  shrink = genericShrink
-
-instance
-  ( EraTxOut era
-  , Mock (EraCrypto era)
-  , Arbitrary (TxOut era)
-  , Arbitrary (PPUPState era)
-  ) =>
-  Arbitrary (UTxOState era)
-  where
-  arbitrary = genericArbitraryU
-  shrink = recursivelyShrink
-
-instance Crypto c => Arbitrary (IncrementalStake c) where
-  arbitrary = IStake <$> arbitrary <*> arbitrary
-  shrink = genericShrink
-
--- The 'genericShrink' function returns first the immediate subterms of a
--- value (in case it is a recursive data-type), and then shrinks the value
--- itself. Since 'UTxOState' is not a recursive data-type, there are no
--- subterms, and we can use `recursivelyShrink` directly. This is particularly
--- important when abstracting away the different fields of the ledger state,
--- since the generic subterms instances will overlap due to GHC not having
--- enough context to infer if 'a' and 'b' are the same types (since in this
--- case this will depend on the definition of 'era').
---
--- > instance OVERLAPPING_ GSubtermsIncl (K1 i a) a where
--- > instance OVERLAPPING_ GSubtermsIncl (K1 i a) b where
-
-instance
-  ( EraTxOut era
-  , Mock (EraCrypto era)
-  , Arbitrary (TxOut era)
-  , Arbitrary (PPUPState era)
-  , Arbitrary (TallyState era)
-  ) =>
-  Arbitrary (LedgerState era)
-  where
-  arbitrary = genericArbitraryU
-  shrink LedgerState {..} =
-    -- We drop the first element in the list so the list does not contain the
-    -- original LedgerState which would cause `shrink` to loop indefinitely.
-    -- This call of `tail` is safe since the list guaranteed to have at least
-    -- one element.
-    tail $
-      LedgerState
-        <$> (lsUTxOState : shrink lsUTxOState)
-        <*> (lsDPState : shrink lsDPState)
-        <*> (lsTallyState : shrink lsTallyState)
-
-instance Arbitrary (ShelleyTallyState era) where
-  arbitrary = pure NoTallyState
-
-instance
-  ( EraTxOut era
-  , Mock (EraCrypto era)
-  , Arbitrary (TxOut era)
-  , Arbitrary (Value era)
-  , Arbitrary (PParams era)
-  , Arbitrary (StashedAVVMAddresses era)
-  , Arbitrary (PPUPState era)
-  , Arbitrary (TallyState era)
-  ) =>
-  Arbitrary (NewEpochState era)
-  where
-  arbitrary = genericArbitraryU
-
-instance
-  ( EraTxOut era
-  , Mock (EraCrypto era)
-  , Arbitrary (TxOut era)
-  , Arbitrary (Value era)
-  , Arbitrary (PParams era)
-  , Arbitrary (PPUPState era)
-  , Arbitrary (TallyState era)
-  ) =>
-  Arbitrary (EpochState era)
-  where
-  arbitrary =
-    EpochState
-      <$> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-
-instance Crypto c => Arbitrary (LeaderOnlyReward c) where
-  arbitrary = genericArbitraryU
-  shrink = genericShrink
-
-instance Crypto c => Arbitrary (RewardUpdate c) where
-  arbitrary = genericArbitraryU
-  shrink = genericShrink
-
 instance Crypto c => Arbitrary (STS.OBftSlot c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Arbitrary Likelihood where
-  arbitrary = Likelihood <$> arbitrary
-
-instance Arbitrary LogWeight where
-  arbitrary = LogWeight <$> arbitrary
-
-instance Crypto c => Arbitrary (NonMyopic c) where
-  arbitrary = genericArbitraryU
-  shrink = genericShrink
-
-instance Crypto c => Arbitrary (SnapShot c) where
-  arbitrary = genericArbitraryU
-  shrink = genericShrink
-
-instance Crypto c => Arbitrary (SnapShots c) where
-  arbitrary = do
-    mark <- arbitrary
-    set <- arbitrary
-    go <- arbitrary
-    fee <- arbitrary
-    pure $ SnapShots mark (calculatePoolDistr mark) set go fee
-  shrink = genericShrink
-
-instance Arbitrary PerformanceEstimate where
-  arbitrary = PerformanceEstimate <$> arbitrary
-
--- | In the system, Stake never contains more than the sum of all Ada (which is constant).
--- This makes it safe to store individual Coins (in CompactForm) as Word64. But we must
--- be careful that we never generate Stake where the sum of all the coins exceeds (maxBound :: Word64)
--- There will never be a real Stake in the system with that many Ada, because total Ada is constant.
--- So using a restricted Arbitrary Generator is OK.
-instance Crypto c => Arbitrary (Stake c) where
-  arbitrary = Stake <$> (VMap.fromMap <$> theMap)
-    where
-      genWord64 :: Int -> Gen Word64
-      genWord64 n =
-        frequency
-          [ (3, chooseBoundedIntegral (1, 100))
-          , (2, chooseBoundedIntegral (101, 10000))
-          , (1, chooseBoundedIntegral (1, maxBound `div` (fromIntegral n)))
-          ]
-      theMap = do
-        n <- frequency [(3, chooseInt (1, 20)), (2, chooseInt (21, 150)), (1, chooseInt (151, 1000))]
-        let pair = (,) <$> arbitrary <*> (CompactCoin <$> (genWord64 n))
-        list <- frequency [(1, pure []), (99, vectorOf n pair)]
-        pure (Map.fromList list)
-
-instance Arbitrary AccountState where
-  arbitrary = genericArbitraryU
-  shrink = genericShrink
 
 maxMultiSigDepth :: Int
 maxMultiSigDepth = 3
@@ -638,54 +409,3 @@ instance
   arbitrary = ApplyTxError <$> arbitrary
   shrink (ApplyTxError xs) = [ApplyTxError xs' | xs' <- shrink xs]
 
-instance (Mock c) => Arbitrary (PulsingRewUpdate c) where
-  arbitrary =
-    oneof
-      [ Complete <$> arbitrary
-      , Pulsing <$> arbitrary <*> arbitrary
-      ]
-
-instance
-  Mock c =>
-  Arbitrary (RewardSnapShot c)
-  where
-  arbitrary =
-    RewardSnapShot
-      <$> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-
-instance
-  Mock c =>
-  Arbitrary (PoolRewardInfo c)
-  where
-  arbitrary =
-    PoolRewardInfo
-      <$> (StakeShare <$> arbitrary)
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-
-instance
-  Mock c =>
-  Arbitrary (FreeVars c)
-  where
-  arbitrary =
-    FreeVars
-      <$> arbitrary {- addrsRew -}
-      <*> arbitrary {- totalStake -}
-      <*> arbitrary {- pp_mv -}
-      <*> arbitrary {- poolRewardInfo -}
-      <*> arbitrary {- delegations -}
-
-instance
-  Mock c =>
-  Arbitrary (Pulser c)
-  where
-  arbitrary = RSLP <$> arbitrary <*> arbitrary <*> arbitrary <*> (RewardAns <$> arbitrary <*> arbitrary)

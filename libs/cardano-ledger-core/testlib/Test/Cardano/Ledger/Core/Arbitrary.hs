@@ -36,6 +36,7 @@ import Cardano.Ledger.BaseTypes (
   PositiveUnitInterval,
   ProtVer (..),
   SlotNo (..),
+  StrictMaybe,
   TxIx,
   UnitInterval,
   Url,
@@ -48,10 +49,11 @@ import Cardano.Ledger.BaseTypes (
   textToUrl,
  )
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
-import Cardano.Ledger.Core (EraTxOut (TxOut))
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), Ptr (..), StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto (DSIGN))
-import Cardano.Ledger.Hashes (ScriptHash (..))
+import Cardano.Ledger.DPState
+import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
   GenDelegs (..),
@@ -68,14 +70,17 @@ import Cardano.Ledger.PoolParams (
   SizeOfPoolRelays (..),
   StakePoolRelay (..),
  )
-import Cardano.Ledger.Rewards (Reward (..), RewardType (..))
 import Cardano.Ledger.SafeHash (SafeHash, unsafeMakeSafeHash)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import Cardano.Ledger.UMapCompact (RDPair (..), Trip (Triple), UMap (UMap))
 import Cardano.Ledger.UTxO (UTxO (..))
+import Control.Monad.Identity (Identity)
 import Data.GenValidity
+import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
 import qualified Data.Text as T
 import Data.Typeable
+import qualified Data.VMap as VMap
 import Data.Word (Word16, Word32, Word64)
 import GHC.Stack
 import Generic.Random (genericArbitraryU)
@@ -405,7 +410,80 @@ instance Crypto c => Arbitrary (IndividualPoolStake c) where
   arbitrary = IndividualPoolStake <$> arbitrary <*> arbitrary
 
 ------------------------------------------------------------------------------------------
--- Cardano.Ledger.UTxO --------------------------------------------------------------
+-- Cardano.Ledger.UTxO -------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
 deriving instance (EraTxOut era, Arbitrary (TxOut era)) => Arbitrary (UTxO era)
+
+------------------------------------------------------------------------------------------
+-- Cardano.Ledger.Core.PParams -----------------------------------------------------------
+------------------------------------------------------------------------------------------
+
+deriving instance (Era era, Arbitrary (PParamsHKD Identity era)) => Arbitrary (PParams era)
+
+deriving instance (Era era, Arbitrary (PParamsHKD StrictMaybe era)) => Arbitrary (PParamsUpdate era)
+
+------------------------------------------------------------------------------------------
+-- Cardano.Ledger.UMap -------------------------------------------------------------------
+------------------------------------------------------------------------------------------
+
+instance Arbitrary RDPair where
+  arbitrary = RDPair <$> arbitrary <*> arbitrary
+  shrink = genericShrink
+
+instance Crypto c => Arbitrary (Trip c) where
+  arbitrary = Triple <$> arbitrary <*> arbitrary <*> arbitrary
+  shrink = genericShrink
+
+instance Crypto c => Arbitrary (UMap c) where
+  arbitrary = UMap <$> arbitrary <*> arbitrary
+  shrink = genericShrink
+
+------------------------------------------------------------------------------------------
+-- Cardano.Ledger.DPState -------------------------------------------------------------------
+------------------------------------------------------------------------------------------
+
+instance Crypto c => Arbitrary (DPState c) where
+  arbitrary = DPState <$> arbitrary <*> arbitrary
+  shrink = genericShrink
+
+instance Crypto c => Arbitrary (DState c) where
+  arbitrary = DState <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+  shrink = genericShrink
+
+instance Crypto c => Arbitrary (PState c) where
+  arbitrary = PState <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+  shrink = genericShrink
+
+instance Crypto c => Arbitrary (InstantaneousRewards c) where
+  arbitrary = InstantaneousRewards <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+  shrink = genericShrink
+
+instance Crypto c => Arbitrary (FutureGenDeleg c) where
+  arbitrary = FutureGenDeleg <$> arbitrary <*> arbitrary
+  shrink = genericShrink
+
+------------------------------------------------------------------------------------------
+-- Cardano.Ledger.EpochBoundary ----------------------------------------------------------
+------------------------------------------------------------------------------------------
+
+-- | In the system, Stake never contains more than the sum of all Ada (which is constant).
+-- This makes it safe to store individual Coins (in CompactForm) as Word64. But we must
+-- be careful that we never generate Stake where the sum of all the coins exceeds (maxBound :: Word64)
+-- There will never be a real Stake in the system with that many Ada, because total Ada is constant.
+-- So using a restricted Arbitrary Generator is OK.
+instance Crypto c => Arbitrary (Stake c) where
+  arbitrary = Stake <$> (VMap.fromMap <$> theMap)
+    where
+      genWord64 :: Int -> Gen Word64
+      genWord64 n =
+        frequency
+          [ (3, choose (1, 100))
+          , (2, choose (101, 10000))
+          , (1, choose (1, maxBound `div` fromIntegral n))
+          ]
+      theMap = do
+        n <- frequency [(3, chooseInt (1, 20)), (2, chooseInt (21, 150)), (1, chooseInt (151, 1000))]
+        let pair = (,) <$> arbitrary <*> (CompactCoin <$> genWord64 n)
+        list <- frequency [(1, pure []), (99, vectorOf n pair)]
+        pure (Map.fromList list)
