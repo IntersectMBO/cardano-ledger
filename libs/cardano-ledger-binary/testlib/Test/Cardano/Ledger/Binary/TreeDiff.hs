@@ -1,5 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Binary.TreeDiff (
@@ -23,7 +24,9 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Lazy as BSL
+import qualified Data.Text as T
 import Data.TreeDiff
+import GHC.Exts
 import Test.Hspec (Expectation, HasCallStack, expectationFailure)
 import Test.Tasty.HUnit (Assertion, assertFailure)
 
@@ -35,26 +38,36 @@ showExpr :: ToExpr a => a -> String
 showExpr = show . ansiWlExpr . toExpr
 
 -- | Wraps regular ByteString, but shows and diffs it as hex
-newtype HexBytes = HexBytes {unHexBytes :: BS.ByteString}
+data HexBytes = HexBytes
+  { hexBytesName :: !(Maybe T.Text)
+  , hexBytesRaw :: !BS.ByteString
+  }
   deriving (Eq)
+
+named :: (Monoid str, IsString str) => str -> Maybe str -> str
+named typeName mName = typeName <> maybe "" (\x -> "<" <> x <> ">") mName
 
 instance Show HexBytes where
   show = showExpr
 
 instance ToExpr HexBytes where
-  toExpr = App "HexBytes" . hexByteStringExpr . unHexBytes
+  toExpr HexBytes {..} =
+    App (named "HexBytes" (T.unpack <$> hexBytesName)) $ hexByteStringExpr hexBytesRaw
 
-newtype CBORBytes = CBORBytes {unCBORBytes :: BS.ByteString}
+data CBORBytes = CBORBytes
+  { cborbytesName :: !(Maybe T.Text)
+  , cborBytesRaw :: !BS.ByteString
+  }
   deriving (Eq)
 
 instance Show CBORBytes where
   show = showExpr
 
 instance ToExpr CBORBytes where
-  toExpr (CBORBytes bytes) =
+  toExpr (CBORBytes name bytes) =
     -- `decodeTerm` does not care about the version, so we can use any version
-    case decodeFullDecoder' minBound "Term" decodeTerm bytes of
-      Left err -> error $ "Error decoding CBOR: " ++ showDecoderError err
+    case decodeFullDecoder' minBound (named "Term" name) decodeTerm bytes of
+      Left err -> error $ "Error decoding CBOR: " ++ showDecoderError err ++ "\n" ++ show bytes
       Right term -> toExpr term
 
 instance ToExpr Term where
@@ -70,7 +83,7 @@ instance ToExpr Term where
       TListI xs -> App "TListI" [Lst (map toExpr xs)]
       TMap xs -> App "TMap" [Lst (map (toExpr . bimap toExpr toExpr) xs)]
       TMapI xs -> App "TMapI" [Lst (map (toExpr . bimap toExpr toExpr) xs)]
-      TTagged 24 (TBytes x) -> App "CBOR-in-CBOR" [toExpr (CBORBytes x)]
+      TTagged 24 (TBytes x) -> App "CBOR-in-CBOR" [toExpr (CBORBytes Nothing x)]
       TTagged t x -> App "TTagged" [toExpr t, toExpr x]
       TBool x -> App "TBool" [toExpr x]
       TNull -> App "TNull" []

@@ -83,7 +83,8 @@ roundTripFailureExpectation version x =
     Left _ -> pure ()
     Right _ ->
       expectationFailure $
-        "Should not have deserialized: " ++ showExpr (CBORBytes (serialize' version x))
+        "Should not have deserialized: "
+          ++ showExpr (CBORBytes (Just (label (Proxy @a))) (serialize' version x))
 
 -- | Verify that round triping through the binary form holds for all versions starting
 -- with `shelleyProtVer`.
@@ -284,7 +285,7 @@ decodeAnn encVersion decVersion encoding =
   first (RoundTripFailure encVersion decVersion encoding encodedBytes Nothing Nothing . Just) $
     decodeFullAnnotator decVersion (label (Proxy @(Annotator t))) fromCBOR encodedBytes
   where
-    encodedBytes = Plain.serializeEncoding encoding
+    encodedBytes = Plain.serialize encoding
 
 embedTripLabel ::
   forall a b.
@@ -325,7 +326,7 @@ embedTripLabelExtra lbl encVersion decVersion (Trip encoder decoder dropper) s =
             RoundTripFailure encVersion decVersion encoding encodedBytes Nothing mErr (Just err)
   where
     encoding = toPlainEncoding encVersion (encoder s)
-    encodedBytes = Plain.serializeEncoding encoding
+    encodedBytes = Plain.serialize encoding
     mDropperError =
       case decodeFullDecoder decVersion lbl dropper encodedBytes of
         Left err -> Just err
