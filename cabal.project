@@ -56,7 +56,7 @@ packages:
   libs/vector-map
 
 program-options
-  ghc-options: -Werror
+  ghc-options: -Wwarn
 
 package cardano-ledger-core
   flags: +asserts
