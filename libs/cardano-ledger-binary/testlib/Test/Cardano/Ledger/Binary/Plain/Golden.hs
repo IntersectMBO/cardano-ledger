@@ -13,7 +13,6 @@ module Test.Cardano.Ledger.Binary.Plain.Golden (
   expectGoldenEncHexBytes,
 ) where
 
-import Cardano.Ledger.Binary (Term)
 import Cardano.Ledger.Binary.Plain
 import qualified Data.ByteString as BS
 import Data.ByteString.Base16 as BS16

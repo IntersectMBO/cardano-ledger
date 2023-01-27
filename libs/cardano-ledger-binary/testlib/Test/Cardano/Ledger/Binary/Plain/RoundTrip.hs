@@ -68,7 +68,7 @@ roundTripFailureExpectation x =
     Right _ ->
       expectationFailure $
         "Should not have deserialized: "
-          ++ showExpr (CBORBytes (serialize' x))
+          ++ showExpr (CBORBytes (label (Proxy @a)) (serialize' x))
 
 -- | Verify that round triping through the binary form holds
 roundTripExpectation ::
