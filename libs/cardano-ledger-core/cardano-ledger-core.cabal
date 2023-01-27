@@ -149,10 +149,12 @@ library testlib
                      genvalidity,
                      hspec,
                      hedgehog-quickcheck,
+                     mtl,
                      nothunks,
                      primitive,
                      QuickCheck,
                      text,
+                     vector-map,
   if !impl(ghc >= 9.2)
     -- Workaround: https://gitlab.haskell.org/ghc/ghc/-/issues/14630
     ghc-options: -Wno-name-shadowing

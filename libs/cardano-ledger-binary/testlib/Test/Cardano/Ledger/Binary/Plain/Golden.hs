@@ -5,11 +5,13 @@ module Test.Cardano.Ledger.Binary.Plain.Golden (
   expectGoldenEncoding,
   expectGoldenEncCBOR,
   expectGoldenEncBytes,
-  expectGoldenEncBytes',
+  expectGoldenEncLazyBytes,
+  expectGoldenEncHexBytes,
 ) where
 
 import Cardano.Ledger.Binary.Plain
 import qualified Data.ByteString as BS
+import Data.ByteString.Base16 as BS16
 import qualified Data.ByteString.Lazy as BSL
 import Test.Cardano.Ledger.Binary.TreeDiff
 import Test.Hspec
@@ -30,16 +32,24 @@ instance Monoid Enc where
 
 expectGoldenEncoding :: (a -> Encoding) -> (b -> Encoding) -> a -> b -> Expectation
 expectGoldenEncoding encActual encExpected actual expected =
-  expectGoldenEncBytes (encActual actual) (serialize (encExpected expected))
+  expectGoldenEncLazyBytes (encActual actual) (serialize (encExpected expected))
 
 expectGoldenEncCBOR :: (EncCBOR a, EncCBOR b) => a -> b -> Expectation
 expectGoldenEncCBOR = expectGoldenEncoding encCBOR encCBOR
 
-expectGoldenEncBytes :: EncCBOR a => a -> BSL.ByteString -> Expectation
-expectGoldenEncBytes actual =
+expectGoldenEncBytes :: EncCBOR a => a -> BS.ByteString -> Expectation
+expectGoldenEncBytes a = expectGoldenEncLazyBytes a . BSL.fromStrict
+
+expectGoldenEncLazyBytes :: EncCBOR a => a -> BSL.ByteString -> Expectation
+expectGoldenEncLazyBytes actual =
   expectExprEqualWithMessage "Encoding did not match expectation" actualBytes
   where
     actualBytes = serialize (encCBOR actual)
 
-expectGoldenEncBytes' :: EncCBOR a => a -> BS.ByteString -> Expectation
-expectGoldenEncBytes' a = expectGoldenEncBytes a . BSL.fromStrict
+expectGoldenEncHexBytes :: EncCBOR a => a -> BS.ByteString -> Expectation
+expectGoldenEncHexBytes actual hexBytes = do
+  case BS16.decode hexBytes of
+    Left err -> expectationFailure $ "Unexpected failure during Base16 decoding: " ++ err
+    Right expectedBytes ->
+      expectGoldenEncBytes actual expectedBytes
+      where

@@ -89,7 +89,7 @@ library
                 cardano-ledger-byron-test,
                 cardano-ledger-core:{cardano-ledger-core, testlib},
                 cardano-ledger-pretty,
-                cardano-ledger-shelley,
+                cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
                 cardano-protocol-tpraos,
                 cardano-slotting,
                 cborg,
