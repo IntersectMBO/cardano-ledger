@@ -45,6 +45,7 @@ import qualified Data.Set as Set
 import Test.Cardano.Ledger.Shelley.BenchmarkFunctions (B, B_Crypto)
 import Test.Cardano.Ledger.Shelley.Generator.Block (genBlockWithTxGen)
 import Test.Cardano.Ledger.Shelley.Generator.Constants (
+  defaultConstants,
   maxGenesisUTxOouts,
   minGenesisUTxOouts,
  )
@@ -122,7 +123,7 @@ genChainInEpoch epoch = do
       where
         err :: Show a => a -> b
         err msg = error $ "Panic! applyBlk failed: " <> (show msg)
-    ge = genEnv (Proxy @B)
+    ge = genEnv (Proxy @B) defaultConstants
     -- Small UTxO set; we just want enough to stake to pools
     cs =
       (geConstants ge)

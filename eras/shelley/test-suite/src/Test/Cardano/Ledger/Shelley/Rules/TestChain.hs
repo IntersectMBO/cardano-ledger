@@ -71,6 +71,7 @@ import qualified Data.Set as Set
 import Data.Word (Word64)
 import Lens.Micro.Extras (view)
 import Test.Cardano.Ledger.Shelley.Generator.Block (tickChainState)
+import Test.Cardano.Ledger.Shelley.Generator.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
 import qualified Test.Cardano.Ledger.Shelley.Generator.Presets as Preset (genEnv)
@@ -306,8 +307,8 @@ forAllChainTrace n prop =
     forAllTraceFromInitState
       testGlobals
       n
-      (Preset.genEnv p)
-      (Just $ mkGenesisChainState (Preset.genEnv p))
+      (Preset.genEnv p defaultConstants)
+      (Just $ mkGenesisChainState (Preset.genEnv p defaultConstants))
       prop
   where
     p :: Proxy era
