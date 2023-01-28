@@ -112,7 +112,6 @@ data AllegraUtxoPredFailure era
 deriving stock instance
   ( Show (TxOut era)
   , Show (Value era)
-  , Show (Shelley.UTxOState era)
   , Show (PPUPPredFailure era)
   ) =>
   Show (AllegraUtxoPredFailure era)
@@ -120,7 +119,6 @@ deriving stock instance
 deriving stock instance
   ( Eq (TxOut era)
   , Eq (Value era)
-  , Eq (Shelley.UTxOState era)
   , Eq (PPUPPredFailure era)
   ) =>
   Eq (AllegraUtxoPredFailure era)
@@ -128,7 +126,6 @@ deriving stock instance
 instance
   ( NoThunks (TxOut era)
   , NoThunks (Value era)
-  , NoThunks (Shelley.UTxOState era)
   , NoThunks (PPUPPredFailure era)
   ) =>
   NoThunks (AllegraUtxoPredFailure era)
@@ -308,7 +305,6 @@ instance
   , Crypto (EraCrypto era)
   , ToCBOR (Value era)
   , ToCBOR (TxOut era)
-  , ToCBOR (Shelley.UTxOState era)
   , ToCBOR (PPUPPredFailure era)
   ) =>
   ToCBOR (AllegraUtxoPredFailure era)

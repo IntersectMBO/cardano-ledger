@@ -9,7 +9,7 @@ module Test.Cardano.Ledger.ShelleyMA.Serialisation.Roundtrip where
 
 import Cardano.Ledger.Allegra (Allegra)
 import Cardano.Ledger.Binary (FromCBOR, ToCBOR)
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core
 import Cardano.Ledger.Mary (Mary)
 import Cardano.Ledger.Shelley (Shelley)
 import Cardano.Ledger.Shelley.API (ApplyTx, ApplyTxError)
@@ -32,22 +32,22 @@ import Test.Tasty.QuickCheck (testProperty)
 eraRoundTripProps ::
   forall e.
   ( ApplyTx e
-  , Arbitrary (Core.TxBody e)
-  , Arbitrary (Core.TxAuxData e)
-  , Arbitrary (Core.Value e)
-  , Arbitrary (Core.Script e)
+  , Arbitrary (TxBody e)
+  , Arbitrary (TxAuxData e)
+  , Arbitrary (Value e)
+  , Arbitrary (Script e)
   , Arbitrary (ApplyTxError e)
-  , ToCBOR (PredicateFailure (Core.EraRule "LEDGER" e))
-  , FromCBOR (PredicateFailure (Core.EraRule "LEDGER" e))
+  , ToCBOR (PredicateFailure (EraRule "LEDGER" e))
+  , FromCBOR (PredicateFailure (EraRule "LEDGER" e))
   ) =>
   TestTree
 eraRoundTripProps =
   testGroup
     (show $ typeRep (Proxy @e))
-    [ testProperty "TxBody" $ roundTripAnnExpectation @(Core.TxBody e)
-    , testProperty "Metadata" $ roundTripAnnExpectation @(Core.TxAuxData e)
-    , testProperty "Value" $ roundTripExpectation @(Core.Value e) cborTrip
-    , testProperty "Script" $ roundTripAnnExpectation @(Core.Script e)
+    [ testProperty "TxBody" $ roundTripAnnExpectation @(TxBody e)
+    , testProperty "Metadata" $ roundTripAnnExpectation @(TxAuxData e)
+    , testProperty "Value" $ roundTripExpectation @(Value e) cborTrip
+    , testProperty "Script" $ roundTripAnnExpectation @(Script e)
     , testProperty "ApplyTxError" $ roundTripCborExpectation @(ApplyTxError e)
     ]
 

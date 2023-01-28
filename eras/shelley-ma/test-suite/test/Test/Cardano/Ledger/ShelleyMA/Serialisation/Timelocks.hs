@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -55,6 +56,8 @@ timelockTests =
           (eraProtVerHigh @Shelley)
           (eraProtVerLow @Allegra)
           ( \timelock multiSig ->
-              expectExprEqual (HexBytes (originalBytes timelock)) (HexBytes (originalBytes multiSig))
+              expectExprEqual
+              (HexBytes "Timelock" (originalBytes timelock))
+              (HexBytes "MultiSig" (originalBytes multiSig))
           )
     ]

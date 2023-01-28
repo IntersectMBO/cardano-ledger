@@ -42,12 +42,17 @@ allegraTranslationTests =
     [ testProperty "Tx compatibility" $
         translateEraEncoding @Allegra @S.ShelleyTx () encCBOR encCBOR
     , testProperty "ProposedPPUpdates compatibility" (testTranslation @S.ProposedPPUpdates)
-    , testProperty "ShelleyPPUPState compatibility" (testTranslation @S.ShelleyPPUPState)
+    , testProperty "ShelleyPPUPState compatibility" $
+        translateEraEncoding @Allegra @S.ShelleyPPUPState () encCBOR encCBOR
     , testProperty "TxOut compatibility" (testTranslation @S.ShelleyTxOut)
-    , testProperty "UTxO compatibility" (testTranslation @S.UTxO)
-    , testProperty "UTxOState compatibility" (testTranslation @S.UTxOState)
-    , testProperty "LedgerState compatibility" (testTranslation @S.LedgerState)
-    , testProperty "EpochState compatibility" (testTranslation @S.EpochState)
+    , testProperty "UTxO compatibility" $
+        translateEraEncoding @Allegra @S.UTxO () encCBOR encCBOR
+    , testProperty "UTxOState compatibility" $
+        translateEraEncoding @Allegra @S.UTxOState () encCBOR encCBOR
+    , testProperty "LedgerState compatibility" $
+        translateEraEncoding @Allegra @S.LedgerState () encCBOR encCBOR
+    , testProperty "EpochState compatibility" $
+        translateEraEncoding @Allegra @S.EpochState () encCBOR encCBOR
     , testProperty "ShelleyTxWits compatibility" $
         translateEraEncoding @Allegra @S.ShelleyTxWits () encCBOR encCBOR
     , testProperty "Update compatibility" (testTranslation @S.Update)
