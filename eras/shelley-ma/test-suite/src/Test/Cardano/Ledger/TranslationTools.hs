@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -56,7 +57,7 @@ translateEraEncoding tc encodeThisEra encodePreviousEra x =
         Plain.serialize' (encodeThisEra $ translateEraPartial @era tc x)
    in unless (previousEra == currentEra) $
         assertFailure $
-          diffExpr (CBORBytes previousEra) (CBORBytes currentEra)
+          diffExpr (CBORBytes "PreviousEra" previousEra) (CBORBytes "CurrentEra" currentEra)
 
 -- Tests that the serializing before translation or after translating
 -- does not change the result

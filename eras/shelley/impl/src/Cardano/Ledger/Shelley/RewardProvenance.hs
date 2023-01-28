@@ -14,20 +14,6 @@ module Cardano.Ledger.Shelley.RewardProvenance (
 where
 
 import Cardano.Ledger.BaseTypes (BlocksMade (..))
-import Cardano.Ledger.Binary (
-  FromCBOR (fromCBOR),
-  ToCBOR (toCBOR),
-  decodeDouble,
-  encodeDouble,
- )
-import Cardano.Ledger.Binary.Coders (
-  Decode (..),
-  Encode (..),
-  decode,
-  encode,
-  (!>),
-  (<!),
- )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..))
 import qualified Cardano.Ledger.Crypto as CC
@@ -266,6 +252,7 @@ instance Show (RewardProvenance c) where
         , "pools = " ++ show (pools t)
         , "desirabilities = " ++ show (desirabilities t)
         ]
+
 
 -- =======================================================
 -- CBOR instances

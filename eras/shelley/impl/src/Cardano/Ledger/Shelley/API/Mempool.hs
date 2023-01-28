@@ -222,21 +222,17 @@ deriving stock instance
   (Show (PredicateFailure (EraRule "LEDGER" era))) =>
   Show (ApplyTxError era)
 
-instance
+deriving newtype instance
   ( Era era
   , ToCBOR (PredicateFailure (EraRule "LEDGER" era))
   ) =>
   ToCBOR (ApplyTxError era)
-  where
-  toCBOR (ApplyTxError es) = toCBOR es
 
-instance
+deriving newtype instance
   ( Era era
   , FromCBOR (PredicateFailure (EraRule "LEDGER" era))
   ) =>
   FromCBOR (ApplyTxError era)
-  where
-  fromCBOR = ApplyTxError <$> fromCBOR
 
 -- | Old 'applyTxs'
 applyTxs ::

@@ -47,12 +47,17 @@ maryTranslationTests =
     [ testProperty "Tx compatibility" $
         translateEraEncoding @Mary @S.ShelleyTx () encCBOR encCBOR
     , testProperty "ProposedPPUpdates compatibility" (test @S.ProposedPPUpdates)
-    , testProperty "ShelleyPPUPState compatibility" (test @S.ShelleyPPUPState)
+    , testProperty "ShelleyPPUPState compatibility" $
+        translateEraEncoding @Mary @S.ShelleyPPUPState () encCBOR encCBOR
     , testProperty "TxOut compatibility" (test @S.ShelleyTxOut)
-    , testProperty "UTxO compatibility" (test @S.UTxO)
-    , testProperty "UTxOState compatibility" (test @S.UTxOState)
-    , testProperty "LedgerState compatibility" (test @S.LedgerState)
-    , testProperty "EpochState compatibility" (test @S.EpochState)
+    , testProperty "UTxO compatibility" $
+        translateEraEncoding @Mary @S.UTxO () encCBOR encCBOR
+    , testProperty "UTxOState compatibility" $
+        translateEraEncoding @Mary @S.UTxOState () encCBOR encCBOR
+    , testProperty "LedgerState compatibility" $
+        translateEraEncoding @Mary @S.LedgerState () encCBOR encCBOR
+    , testProperty "EpochState compatibility" $
+        translateEraEncoding @Mary @S.EpochState () encCBOR encCBOR
     , testProperty "ShelleyTxWits compatibility" $
         translateEraEncoding @Mary @S.ShelleyTxWits () encCBOR encCBOR
     , testProperty "Update compatibility" (test @S.Update)
