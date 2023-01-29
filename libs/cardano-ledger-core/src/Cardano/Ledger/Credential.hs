@@ -29,6 +29,8 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (
   CBORGroup (..),
+  DecCBOR (..),
+  EncCBOR (..),
   FromCBOR (..),
   FromCBORGroup (..),
   ToCBOR (..),

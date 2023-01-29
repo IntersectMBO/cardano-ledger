@@ -18,7 +18,7 @@ import Cardano.Ledger.Alonzo
 import Cardano.Ledger.Alonzo.Scripts.Data
 import Cardano.Ledger.Alonzo.TxBody
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Binary
+import Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Crypto
@@ -59,14 +59,14 @@ readEpochState ::
   IO (EpochState CurrentEra)
 readEpochState = readFromCBOR
 
-readFromCBOR :: FromCBOR a => FilePath -> IO a
+readFromCBOR :: DecCBOR a => FilePath -> IO a
 readFromCBOR fp =
-  LBS.readFile fp <&> decodeFull (eraProtVerHigh @CurrentEra) >>= \case
+  LBS.readFile fp <&> Plain.decodeFull >>= \case
     Left exc -> throwIO exc
     Right res -> pure res
 
 writeEpochState :: FilePath -> EpochState CurrentEra -> IO ()
-writeEpochState fp = LBS.writeFile fp . serialize (eraProtVerHigh @CurrentEra)
+writeEpochState fp = LBS.writeFile fp . Plain.serialize
 
 loadLedgerState ::
   FilePath ->

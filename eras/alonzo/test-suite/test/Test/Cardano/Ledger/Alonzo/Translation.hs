@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -17,7 +18,7 @@ import Cardano.Ledger.Alonzo (Alonzo)
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import qualified Cardano.Ledger.Alonzo.Translation as Translation (Tx (..))
 import Cardano.Ledger.Alonzo.Tx (toCBORForSizeComputation)
-import Cardano.Ledger.Binary (EncCBOR (encCBOR), ToCBOR)
+import Cardano.Ledger.Binary (EncCBOR (encCBOR))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary (Mary)
 import qualified Cardano.Ledger.Shelley.API as API
@@ -91,14 +92,14 @@ dummyAlonzoGenesis = error "Undefined AlonzoGenesis"
 
 test ::
   forall f.
-  ( ToCBOR (f Mary)
-  , ToCBOR (f Alonzo)
+  ( EncCBOR (f Mary)
+  , EncCBOR (f Alonzo)
   , TranslateEra Alonzo f
   , Show (TranslationError Alonzo f)
   ) =>
   f Mary ->
   Assertion
-test = translateEraToCBOR ([] :: [Alonzo]) dummyAlonzoGenesis
+test = translateEraEncoding @Alonzo @f dummyAlonzoGenesis encCBOR encCBOR
 
 testTx :: Translation.Tx Mary -> Assertion
 testTx =

@@ -395,11 +395,11 @@ instance
           TxOut_AddrHash28_AdaOnly_DataHash32 cred addr28Extra ada dataHash32 ->
             TxOut_AddrHash28_AdaOnly_DataHash32 (interns credsInterns cred) addr28Extra ada dataHash32
           txOut -> txOut
-    internTxOut <$!> fromCBOR
-  {-# INLINEABLE fromSharedCBOR #-}
+    internTxOut <$!> decCBOR
+  {-# INLINEABLE decShareCBOR #-}
 
 instance
-  (Era era, Show (Value era), Val (Value era), DecodeNonNegative (Value era)) =>
+  (Era era, Val (Value era), DecodeNonNegative (Value era), Show (Value era)) =>
   DecCBOR (AlonzoTxOut era)
   where
   decCBOR = toPlainDecoder (eraProtVerLow @era) fromCBOR

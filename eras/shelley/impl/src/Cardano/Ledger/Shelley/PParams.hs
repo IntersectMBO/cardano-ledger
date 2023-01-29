@@ -409,7 +409,7 @@ instance Era era => EncCBOR (ShelleyPParams StrictMaybe era) where
 instance Era era => DecCBOR (ShelleyPParams StrictMaybe era) where
   decCBOR = toPlainDecoder (eraProtVerLow @era) fromCBOR
 
--- | Update operation for protocol parameters structure @PParams
+-- | Update operation for protocol parameters structure @PParams@
 newtype ProposedPPUpdates era
   = ProposedPPUpdates (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdate era))
   deriving (Generic)

@@ -9,7 +9,7 @@ module Test.Cardano.Ledger.Conway.Serialisation.Roundtrip (allprops) where
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Core (Era (..))
 import Data.Data (Proxy (..), typeRep)
-import Test.Cardano.Ledger.Binary.Plain.RoundTrip (roundTripCborExpectation)
+import Test.Cardano.Ledger.Binary.Plain.RoundTrip as Plain (roundTripCborExpectation)
 import Test.Cardano.Ledger.Conway.Serialisation.Generators ()
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperty)
@@ -22,5 +22,5 @@ allprops ::
 allprops =
   testGroup
     (show $ typeRep (Proxy @e))
-    [ testProperty "ConwayGenesis" $ roundTripCborExpectation @(ConwayGenesis (EraCrypto e))
+    [ testProperty "ConwayGenesis" $ Plain.roundTripCborExpectation @(ConwayGenesis (EraCrypto e))
     ]

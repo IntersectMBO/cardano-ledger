@@ -72,8 +72,10 @@ import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Binary (
   CBORGroup (..),
+  DecCBOR,
   Decoder,
   DecoderError (..),
+  EncCBOR,
   FromCBOR (fromCBOR),
   FromCBORGroup (..),
   ToCBOR (toCBOR),
@@ -666,7 +668,7 @@ newtype BlocksMade c = BlocksMade
 -- | Transaction index.
 newtype TxIx = TxIx Word64
   deriving stock (Eq, Ord, Show, Generic)
-  deriving newtype (NFData, Enum, Bounded, NoThunks, ToCBOR, FromCBOR)
+  deriving newtype (NFData, Enum, Bounded, NoThunks, ToCBOR, FromCBOR, EncCBOR, DecCBOR)
 
 txIxToInt :: TxIx -> Int
 txIxToInt (TxIx w16) = fromIntegral w16
@@ -686,7 +688,7 @@ mkTxIxPartial i =
 -- `mkCertIxPartial` that can be used for testing.
 newtype CertIx = CertIx Word64
   deriving stock (Eq, Ord, Show)
-  deriving newtype (NFData, Enum, Bounded, NoThunks, ToCBOR, FromCBOR)
+  deriving newtype (NFData, Enum, Bounded, NoThunks, ToCBOR, FromCBOR, EncCBOR, DecCBOR)
 
 certIxToInt :: CertIx -> Int
 certIxToInt (CertIx w16) = fromIntegral w16

@@ -17,11 +17,7 @@ module Bench.Cardano.Ledger.ApplyTx (applyTxBenchmarks, ShelleyBench) where
 import Bench.Cardano.Ledger.ApplyTx.Gen (ApplyTxEnv (..), generateApplyTxEnvForEra)
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Binary (
-  FromCBOR (fromCBOR),
-  decodeFullAnnotator,
-  fromNotSharedCBOR,
- )
+import Cardano.Ledger.Binary (decodeFullAnnotator, fromCBOR)
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary (MaryEra)
@@ -34,7 +30,7 @@ import Cardano.Ledger.Shelley.API (
   applyTxsTransition,
  )
 import Cardano.Ledger.Shelley.Core (EraTallyState (..))
-import Cardano.Ledger.Shelley.LedgerState (DPState, PPUPState, UTxOState)
+import Cardano.Ledger.Shelley.LedgerState (PPUPState)
 import Control.DeepSeq (NFData (..))
 import Control.State.Transition (Environment, Signal, State)
 import Control.State.Transition.Trace.Generator.QuickCheck (BaseEnv, HasTrace)
@@ -99,7 +95,6 @@ benchApplyTx ::
   , Default (PPUPState era)
   , NFData (PPUPState era)
   , EraTallyState era
-  , NFData (TallyState era)
   ) =>
   Proxy era ->
   Benchmark
@@ -161,18 +156,3 @@ applyTxBenchmarks =
         , deserialiseTxEra (Proxy @AlonzoBench)
         ]
     ]
-
-instance FromCBOR (UTxOState ShelleyBench) where
-  fromCBOR = fromNotSharedCBOR
-
-instance FromCBOR (UTxOState AllegraBench) where
-  fromCBOR = fromNotSharedCBOR
-
-instance FromCBOR (UTxOState MaryBench) where
-  fromCBOR = fromNotSharedCBOR
-
-instance FromCBOR (UTxOState AlonzoBench) where
-  fromCBOR = fromNotSharedCBOR
-
-instance FromCBOR (DPState C_Crypto) where
-  fromCBOR = fromNotSharedCBOR

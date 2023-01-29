@@ -48,7 +48,9 @@ import Cardano.Ledger.Binary (
   decodeList,
   decodeMapContents,
   decodeWord,
+  encodeList,
   encodeMapLen,
+  encodeSet,
   encodeWord,
   fromPlainEncoding,
   invalidKey,
@@ -209,13 +211,17 @@ pattern ShelleyTxWits {addrWits, scriptWits, bootWits} <-
   ShelleyTxWitsConstr (WitnessSet' addrWits scriptWits bootWits _)
   where
     ShelleyTxWits awits scriptWitMap bootstrapWits =
-      let encodeMapElement ix enc x =
-            if null x then Nothing else Just (encodeWord ix <> enc x)
+      let encodeIndexedMaybe ix enc x =
+            if null x
+              then Nothing
+              else
+                Just $
+                  encodeWord ix <> enc (fromPlainEncoding . Plain.encCBOR) x
           l =
             catMaybes
-              [ encodeMapElement 0 (fromPlainEncoding . Plain.encCBOR) awits
-              , encodeMapElement 1 (fromPlainEncoding . Plain.encCBOR) (Map.elems scriptWitMap)
-              , encodeMapElement 2 (fromPlainEncoding . Plain.encCBOR) bootstrapWits
+              [ encodeIndexedMaybe 0 encodeSet awits
+              , encodeIndexedMaybe 1 encodeList (Map.elems scriptWitMap)
+              , encodeIndexedMaybe 2 encodeSet bootstrapWits
               ]
           n = fromIntegral $ length l
           witsBytes = serializeEncoding (eraProtVerLow @era) $ encodeMapLen n <> fold l

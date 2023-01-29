@@ -27,6 +27,7 @@ module Cardano.Ledger.Binary.Version (
 )
 where
 
+import Cardano.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (toExpr))
 import Control.DeepSeq (NFData)
 import Data.Proxy (Proxy (..))
@@ -42,7 +43,7 @@ import Numeric.Natural (Natural)
 -- | Protocol version number that is used during encoding and decoding. All supported
 -- versions are in the range from `MinVersion` to `MaxVersion`.
 newtype Version = Version Word64
-  deriving (Eq, Ord, Show, Enum, NFData, NoThunks)
+  deriving (Eq, Ord, Show, Enum, NFData, NoThunks, EncCBOR)
 
 -- | Minimum supported version
 type MinVersion = 1
@@ -53,6 +54,9 @@ type MaxVersion = 10
 instance Bounded Version where
   minBound = Version (fromInteger (natVal (Proxy @MinVersion)))
   maxBound = Version (fromInteger (natVal (Proxy @MaxVersion)))
+
+instance DecCBOR Version where
+  decCBOR = decCBOR >>= mkVersion64
 
 -- | Same as `natVersionProxy`, construct a version from a type level `Nat`, except it can be
 -- supplied through @TypeApplications@.

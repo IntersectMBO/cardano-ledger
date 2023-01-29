@@ -36,9 +36,10 @@ translateEraPartial tc fe =
 -- Tests that the serializing before translation or after translating does not change the
 -- result
 --
--- FIXME: Replace this test with a better one, since there is no requirement for two
--- different eras to encode the type in the same way. There, however a requirement that
--- the encoding from a previous era, must be decodable by the current era.
+-- FIXME: This property only holds for annotated types. Replace this test with a better
+-- one, since there is no requirement for two different eras to encode the type in the
+-- same way. There is, however a requirement that the encoding from a previous era, must
+-- be decodable by the current era.
 translateEraEncoding ::
   forall era f.
   ( HasCallStack
