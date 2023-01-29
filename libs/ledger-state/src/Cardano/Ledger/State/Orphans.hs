@@ -11,7 +11,8 @@ module Cardano.Ledger.State.Orphans where
 import Cardano.Crypto.Hash.Class
 import Cardano.Ledger.Alonzo.TxBody
 import Cardano.Ledger.BaseTypes (TxIx (..))
-import Cardano.Ledger.Binary
+import Cardano.Ledger.Binary (toCBOR, toPlainEncoding)
+import Cardano.Ledger.Binary.Plain
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
@@ -87,16 +88,16 @@ instance PersistFieldSql DeltaCoin where
 
 newtype Enc a = Enc {unEnc :: a}
 
-instance (ToCBOR a, FromCBOR a) => PersistField (Enc a) where
-  toPersistValue = PersistByteString . serialize' (eraProtVerHigh @CurrentEra) . unEnc
+instance (EncCBOR a, DecCBOR a) => PersistField (Enc a) where
+  toPersistValue = PersistByteString . serialize' . unEnc
   fromPersistValue = fmap Enc . decodePersistValue
 
-instance (ToCBOR a, FromCBOR a) => PersistFieldSql (Enc a) where
+instance (EncCBOR a, DecCBOR a) => PersistFieldSql (Enc a) where
   sqlType _ = SqlBlob
 
-decodePersistValue :: FromCBOR b => PersistValue -> Either T.Text b
+decodePersistValue :: DecCBOR b => PersistValue -> Either T.Text b
 decodePersistValue (PersistByteString bs) =
-  case decodeFull' (eraProtVerHigh @CurrentEra) bs of
+  case decodeFull' bs of
     Left err -> Left $ "Could not decode: " <> T.pack (show err)
     Right v -> Right v
 decodePersistValue _ = Left "Unexpected type"
@@ -121,8 +122,8 @@ deriving via Enc (AlonzoTxOut CurrentEra) instance PersistField (AlonzoTxOut Cur
 
 deriving via Enc (AlonzoTxOut CurrentEra) instance PersistFieldSql (AlonzoTxOut CurrentEra)
 
-instance FromCBOR (DState C) where
-  fromCBOR = fromNotSharedCBOR
+instance DecCBOR (DState C) where
+  decCBOR = decNoShareCBOR
 
 deriving via Enc (DState C) instance PersistField (DState C)
 
@@ -139,9 +140,6 @@ deriving via Enc (GenDelegs C) instance PersistFieldSql (GenDelegs C)
 deriving via Enc (PoolParams C) instance PersistField (PoolParams C)
 
 deriving via Enc (PoolParams C) instance PersistFieldSql (PoolParams C)
-
-instance FromCBOR (NonMyopic C) where
-  fromCBOR = fromNotSharedCBOR
 
 deriving via Enc (NonMyopic C) instance PersistField (NonMyopic C)
 

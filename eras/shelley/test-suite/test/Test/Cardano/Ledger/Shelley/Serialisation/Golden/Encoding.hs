@@ -29,7 +29,6 @@ import Cardano.Ledger.BaseTypes (
   textToDns,
   textToUrl,
  )
-import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Binary (
   Annotator,
   Decoder,
@@ -55,6 +54,7 @@ import Cardano.Ledger.Binary.Crypto (
   encodeSignedDSIGN,
   encodeVerKeyDSIGN,
  )
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Core

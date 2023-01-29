@@ -27,15 +27,15 @@ where
 
 import Cardano.Ledger.Binary.Plain (
   DecCBOR (..),
-  EncCBOR (..),
   DecShareCBOR (..),
+  EncCBOR (..),
   Interns,
   decNoShareCBOR,
   decSharePlusCBOR,
+  decSharePlusLensCBOR,
   decodeRecordNamed,
   decodeRecordNamedT,
   encodeListLen,
-  decSharePlusLensCBOR,
   toMemptyLens,
  )
 import Cardano.Ledger.Coin (

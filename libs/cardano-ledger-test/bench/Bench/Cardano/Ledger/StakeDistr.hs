@@ -20,7 +20,7 @@ where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals (..), pvMajor)
-import Cardano.Ledger.Binary (FromCBOR (..), decodeFullDecoder)
+import Cardano.Ledger.Binary.Plain as Plain (DecCBOR (..), decodeFullDecoder)
 import Cardano.Ledger.Coin (DeltaCoin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (StandardCrypto)
@@ -104,7 +104,7 @@ readNewEpochState = do
     Just ledgerStateFilePath -> do
       lazyBytes <- Lazy.readFile ledgerStateFilePath
       let lbl = "NewEpochState from " <> pack ledgerStateFilePath
-      case decodeFullDecoder (eraProtVerHigh @CurrentEra) lbl fromCBOR lazyBytes of
+      case Plain.decodeFullDecoder lbl decCBOR lazyBytes of
         Left err -> error (show err)
         Right (nes :: NewEpochState CurrentEra) -> pure nes
     Nothing ->

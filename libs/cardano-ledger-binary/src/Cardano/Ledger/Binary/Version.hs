@@ -27,7 +27,7 @@ module Cardano.Ledger.Binary.Version (
 )
 where
 
-import Cardano.Binary (EncCBOR(..), DecCBOR(..))
+import Cardano.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (toExpr))
 import Control.DeepSeq (NFData)
 import Data.Proxy (Proxy (..))

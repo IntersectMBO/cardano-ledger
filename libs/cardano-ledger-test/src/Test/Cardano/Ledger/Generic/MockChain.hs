@@ -15,7 +15,6 @@ module Test.Cardano.Ledger.Generic.MockChain where
 
 import Cardano.Ledger.BaseTypes (BlocksMade (..), ShelleyBase)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Pretty (
   PDoc,
@@ -98,11 +97,8 @@ data MockChainState era = MockChainState
   }
 
 deriving instance
-  ( Crypto (EraCrypto era)
-  , Eq (TxOut era)
-  , Eq (PParams era)
+  ( EraTxOut era
   , Eq (StashedAVVMAddresses era)
-  , Eq (Core.PParamsUpdate era)
   , Eq (PPUPState era)
   , Eq (TallyState era)
   ) =>

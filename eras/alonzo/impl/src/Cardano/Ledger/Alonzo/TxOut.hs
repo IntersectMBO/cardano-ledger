@@ -65,6 +65,7 @@ import Cardano.Ledger.Binary (
   toPlainEncoding,
  )
 import Cardano.Ledger.Binary.Plain (
+  DecCBOR (..),
   DecShareCBOR (Share, decShareCBOR),
   EncCBOR (..),
   Interns,
@@ -396,8 +397,15 @@ instance
           TxOut_AddrHash28_AdaOnly_DataHash32 cred addr28Extra ada dataHash32 ->
             TxOut_AddrHash28_AdaOnly_DataHash32 (interns credsInterns cred) addr28Extra ada dataHash32
           txOut -> txOut
-    internTxOut <$!> toPlainDecoder (eraProtVerLow @era) fromCBOR
+    internTxOut <$!> decCBOR
   {-# INLINEABLE decShareCBOR #-}
+
+instance
+  (Era era, Val (Value era), DecodeNonNegative (Value era), Show (Value era)) =>
+  DecCBOR (AlonzoTxOut era)
+  where
+  decCBOR = toPlainDecoder (eraProtVerLow @era) fromCBOR
+  {-# INLINE decCBOR #-}
 
 instance (EraTxOut era, ToJSON (Value era)) => ToJSON (AlonzoTxOut era) where
   toJSON (AlonzoTxOut addr v dataHash) =

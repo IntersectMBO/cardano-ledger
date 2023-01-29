@@ -7,7 +7,7 @@ module Test.Cardano.Ledger.Shelley.Binary.Golden (
   goldenNewEpochStateExpectation,
 ) where
 
-import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochNo(..))
+import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochNo (..))
 import Cardano.Ledger.Binary.Plain
 import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Shelley.Core

@@ -57,7 +57,7 @@ timelockTests =
           (eraProtVerLow @Allegra)
           ( \timelock multiSig ->
               expectExprEqual
-              (HexBytes "Timelock" (originalBytes timelock))
-              (HexBytes "MultiSig" (originalBytes multiSig))
+                (HexBytes "Timelock" (originalBytes timelock))
+                (HexBytes "MultiSig" (originalBytes multiSig))
           )
     ]

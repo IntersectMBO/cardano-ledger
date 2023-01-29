@@ -79,17 +79,17 @@ import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.KES as KES
 import qualified Cardano.Crypto.VRF as VRF
+import Cardano.Ledger.Binary (
+  FromCBOR (..),
+  ToCBOR (..),
+  encodedVerKeyDSIGNSizeExpr,
+ )
 import Cardano.Ledger.Binary.Crypto
 import Cardano.Ledger.Binary.Plain (
   DecCBOR (..),
   EncCBOR (..),
   decodeRecordNamed,
   encodeListLen,
- )
-import Cardano.Ledger.Binary(
-  FromCBOR(..),
-  ToCBOR(..), 
-  encodedVerKeyDSIGNSizeExpr,
  )
 import Cardano.Ledger.Crypto (ADDRHASH, Crypto, DSIGN, HASH, KES, VRF)
 import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (toExpr))
@@ -305,7 +305,7 @@ instance Crypto c => EncCBOR (GenDelegPair c) where
   encCBOR (GenDelegPair hk vrf) =
     encodeListLen 2 <> encCBOR hk <> encCBOR vrf
 
-instance Crypto c => ToCBOR (GenDelegPair c) where
+instance Crypto c => ToCBOR (GenDelegPair c)
 
 instance Crypto c => DecCBOR (GenDelegPair c) where
   decCBOR = do
@@ -314,7 +314,7 @@ instance Crypto c => DecCBOR (GenDelegPair c) where
       (const 2)
       (GenDelegPair <$> decCBOR <*> decCBOR)
 
-instance Crypto c => FromCBOR (GenDelegPair c) where
+instance Crypto c => FromCBOR (GenDelegPair c)
 
 instance Crypto c => ToJSON (GenDelegPair c) where
   toJSON (GenDelegPair d v) =

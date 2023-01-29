@@ -1,8 +1,8 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -12,7 +12,7 @@ module Cardano.Ledger.Conway.Genesis (
 where
 
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis, alonzoGenesisAesonPairs)
-import Cardano.Ledger.Binary (EncCBOR (..), DecCBOR (..))
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (GenDelegs (..))
 import Data.Aeson (FromJSON (..), ToJSON, object, withObject, (.:))

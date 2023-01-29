@@ -21,7 +21,6 @@ module Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators (
   maxTxWits,
 ) where
 
-import Test.Cardano.Ledger.Shelley.Arbitrary ()
 import Cardano.Crypto.DSIGN.Mock (VerKeyDSIGN (..))
 import Cardano.Ledger.BaseTypes (
   BlockNo (..),
@@ -44,6 +43,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import Generic.Random (genericArbitraryU)
 import Test.Cardano.Ledger.Core.Arbitrary ()
+import Test.Cardano.Ledger.Shelley.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Generator.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (
@@ -136,7 +136,6 @@ instance Era era => Arbitrary (ShelleyTxAuxData era) where
 maxTxWits :: Int
 maxTxWits = 5
 
-
 instance Arbitrary MIRPot where
   arbitrary = genericArbitraryU
 
@@ -190,7 +189,6 @@ instance Crypto c => Arbitrary (DCert c) where
 instance Crypto c => Arbitrary (STS.OBftSlot c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
-
 
 maxMultiSigDepth :: Int
 maxMultiSigDepth = 3
@@ -408,4 +406,3 @@ instance
   where
   arbitrary = ApplyTxError <$> arbitrary
   shrink (ApplyTxError xs) = [ApplyTxError xs' | xs' <- shrink xs]
-
