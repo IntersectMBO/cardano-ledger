@@ -78,7 +78,7 @@ roundTripExpectation ::
   Expectation
 roundTripExpectation trip t =
   case roundTrip trip t of
-    Left err -> expectationFailure $ "Failed to deserialize encoded: " ++ show err
+    Left err -> expectationFailure $ "Failed to deserialize encoded:\n" ++ show err
     Right tDecoded -> tDecoded `shouldBe` t
 
 roundTripCborExpectation ::
@@ -97,7 +97,7 @@ embedTripExpectation ::
   Expectation
 embedTripExpectation trip f t =
   case embedTrip trip t of
-    Left err -> expectationFailure $ "Failed to deserialize encoded: " ++ show err
+    Left err -> expectationFailure $ "Failed to deserialize encoded:\n" ++ show err
     Right tDecoded -> f tDecoded t
 
 -- =====================================================================
@@ -120,14 +120,14 @@ instance Show RoundTripFailure where
       [ showMaybeDecoderError "Decoder" rtfDecoderError
       , prettyTerm
       ]
-        ++ showHexBytesGrouped (BSL.toStrict bytes)
+        ++ showHexBytesGrouped bytes
     where
       showMaybeDecoderError name = \case
         Nothing -> "No " ++ name ++ " error"
         Just err -> name ++ " error: " ++ show err
-      bytes = rtfEncodedBytes
+      bytes = BSL.toStrict rtfEncodedBytes
       prettyTerm =
-        case decodeFullDecoder "Term" decodeTerm bytes of
+        case decodeFullDecoder' "Term" decodeTerm bytes of
           Left err -> "Could not decode as Term: " ++ show err
           Right term -> showExpr term
 

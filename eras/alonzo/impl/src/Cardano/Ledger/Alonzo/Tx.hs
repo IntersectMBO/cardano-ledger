@@ -509,7 +509,7 @@ toCBORForMempoolSubmission ::
   Plain.Encoding
 toCBORForMempoolSubmission
   AlonzoTx {body, wits, auxiliaryData, isValid} =
-    Plain.encodeListLen 3
+    Plain.encodeListLen 4
       <> encCBOR body
       <> encCBOR wits
       <> encCBOR isValid

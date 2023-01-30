@@ -41,7 +41,7 @@ import Control.Monad (forM_, guard)
 import Data.Bifunctor (first)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Proxy
-import qualified Data.Text as Text
+import qualified Data.Text as T
 import Data.Typeable
 import Test.Cardano.Ledger.Binary.TreeDiff (CBORBytes (..), showExpr, showHexBytesGrouped)
 import Test.Cardano.Ledger.Binary.Twiddle (Twiddle (..))
@@ -101,7 +101,7 @@ roundTripExpectation ::
 roundTripExpectation trip t =
   forM_ [natVersion @2 .. maxBound] $ \version ->
     case roundTrip version trip t of
-      Left err -> expectationFailure $ "Failed to deserialize encoded: " ++ show err
+      Left err -> expectationFailure $ "Failed to deserialize encoded:\n" ++ show err
       Right tDecoded -> tDecoded `shouldBe` t
 
 roundTripCborExpectation ::
@@ -118,7 +118,7 @@ roundTripAnnExpectation ::
 roundTripAnnExpectation t =
   forM_ [natVersion @2 .. maxBound] $ \version ->
     case roundTripAnn version t of
-      Left err -> expectationFailure $ "Failed to deserialize encoded: " ++ show err
+      Left err -> expectationFailure $ "Failed to deserialize encoded:\n" ++ show err
       Right tDecoded -> tDecoded `shouldBe` t
 
 roundTripTwiddledProperty ::
@@ -126,7 +126,7 @@ roundTripTwiddledProperty ::
 roundTripTwiddledProperty version t = property $ do
   roundTripTwiddled version t >>= \case
     Left err ->
-      pure $ counterexample ("Failed to deserialize twiddled encoding: " ++ show err) False
+      pure $ counterexample ("Failed to deserialize twiddled encoding:\n" ++ show err) False
     Right tDecoded ->
       pure (tDecoded === t)
 
@@ -140,7 +140,7 @@ roundTripAnnTwiddledProperty ::
 roundTripAnnTwiddledProperty eqProp version t = property $ do
   roundTripAnnTwiddled version t >>= \case
     Left err ->
-      pure $ counterexample ("Failed to deserialize twiddled encoding: " ++ show err) False
+      pure $ counterexample ("Failed to deserialize twiddled encoding:\n" ++ show err) False
     Right tDecoded ->
       pure $ property (tDecoded `eqProp` t)
 
@@ -157,7 +157,7 @@ embedTripExpectation ::
   Expectation
 embedTripExpectation encVersion decVersion trip f t =
   case embedTrip encVersion decVersion trip t of
-    Left err -> expectationFailure $ "Failed to deserialize encoded: " ++ show err
+    Left err -> expectationFailure $ "Failed to deserialize encoded:\n" ++ show err
     Right tDecoded -> f tDecoded t
 
 -- | This is just like `roundTripAnnExpectation`, except it allows for source and target
@@ -175,7 +175,7 @@ embedTripAnnExpectation ::
   Expectation
 embedTripAnnExpectation encVersion decVersion f a =
   case embedTripAnn encVersion decVersion a of
-    Left err -> expectationFailure $ "Failed to deserialize encoded: " ++ show err
+    Left err -> expectationFailure $ "Failed to deserialize encoded:\n" ++ show err
     Right b -> b `f` a
 
 -- =====================================================================
@@ -251,7 +251,11 @@ roundTrip version trip val = do
     then
       Left $
         RoundTripFailure version version encoding encodedBytes (Just reserialized) Nothing Nothing
-    else Right val'
+    else case Plain.decodeFull reserialized of
+           Left err ->
+             Right val'
+             -- error $ "Invalid CBOR discovered: "  ++ T.unpack (typeLabel @t) ++ ": " ++ show err
+           Right (_ :: Plain.Term) -> Right val'
 
 roundTripTwiddled ::
   forall t.
@@ -289,7 +293,7 @@ decodeAnn encVersion decVersion encoding =
 
 embedTripLabel ::
   forall a b.
-  Text.Text ->
+  T.Text ->
   -- | Version for the encoder
   Version ->
   -- | Version for the decoder
@@ -302,7 +306,7 @@ embedTripLabel lbl encVersion decVersion trip s =
 
 embedTripLabelExtra ::
   forall a b.
-  Text.Text ->
+  T.Text ->
   -- | Version for the encoder
   Version ->
   -- | Version for the decoder
@@ -343,7 +347,7 @@ embedTrip ::
   Trip a b ->
   a ->
   Either RoundTripFailure b
-embedTrip = embedTripLabel (Text.pack (show (typeRep $ Proxy @b)))
+embedTrip = embedTripLabel (T.pack (show (typeRep $ Proxy @b)))
 
 embedTripAnn ::
   forall a b.
@@ -356,5 +360,5 @@ embedTripAnn ::
   Either RoundTripFailure b
 embedTripAnn encVersion decVersion = decodeAnn encVersion decVersion . encCBOR
 
-typeLabel :: forall t. Typeable t => Text.Text
-typeLabel = Text.pack (show (typeRep $ Proxy @t))
+typeLabel :: forall t. Typeable t => T.Text
+typeLabel = T.pack (show (typeRep $ Proxy @t))
