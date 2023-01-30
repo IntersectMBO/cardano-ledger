@@ -76,6 +76,7 @@ import Test.Cardano.Ledger.Shelley.BenchmarkFunctions (
   ledgerStateWithNregisteredKeys,
   ledgerStateWithNregisteredPools,
  )
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C)
 import Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (stakeDistr)
 import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
 import Test.QuickCheck (arbitrary)
@@ -225,7 +226,7 @@ epochAt x =
       , bench "incrementalStakeDistr" (nf action2im arg)
       , env (pure (updateStakeDistribution mempty mempty utxo)) $ \incStake ->
           bench "incrementalStakeDistr (no update)" $
-            nf (incrementalStakeDistr incStake dstate) pstate
+            nf (incrementalStakeDistr (emptyPParams @C) incStake dstate) pstate
       ]
   where
     n = 10000 :: Int
@@ -237,12 +238,13 @@ action2m ::
 action2m (dstate, pstate, utxo) = stakeDistr utxo dstate pstate
 
 action2im ::
+  forall era.
   EraTxOut era =>
   (DState (EraCrypto era), PState (EraCrypto era), UTxO era) ->
   EB.SnapShot (EraCrypto era)
 action2im (dstate, pstate, utxo) =
   let incStake = updateStakeDistribution mempty mempty utxo
-   in incrementalStakeDistr incStake dstate pstate
+   in incrementalStakeDistr (emptyPParams @era) incStake dstate pstate
 
 -- =================================================================
 

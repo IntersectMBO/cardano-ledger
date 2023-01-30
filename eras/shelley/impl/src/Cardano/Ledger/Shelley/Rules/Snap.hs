@@ -83,13 +83,14 @@ instance EraTxOut era => STS (ShelleySNAP era) where
 -- where important changes were made to the source code.
 snapTransition ::
   forall era.
+  EraPParams era =>
   TransitionRule (ShelleySNAP era)
 snapTransition = do
   TRC (snapEnv, s, _) <- judgmentContext
 
-  let SnapEnv (LedgerState (UTxOState _utxo _ fees _ incStake) (DPState dstate pstate)) _ = snapEnv
-      -- stakeSnap = stakeDistr @era utxo dstate pstate  -EraCrypto- HISTORICAL NOTE
-      istakeSnap = incrementalStakeDistr @(EraCrypto era) incStake dstate pstate
+  let SnapEnv (LedgerState (UTxOState _utxo _ fees _ incStake) (DPState dstate pstate)) pp = snapEnv
+      -- per the spec: stakeSnap = stakeDistr @era utxo dstate pstate
+      istakeSnap = incrementalStakeDistr pp incStake dstate pstate
 
   tellEvent $
     let stMap :: Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin)

@@ -52,12 +52,10 @@ import Cardano.Ledger.Keys (
   KeyRole (..),
  )
 import Cardano.Ledger.Shelley.Governance (EraGovernance (GovernanceState))
+import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState.Types
 import Cardano.Ledger.Shelley.RewardUpdate (RewardUpdate (..))
 import Cardano.Ledger.Shelley.Rewards (aggregateCompactRewards, aggregateRewards, filterRewards)
-import Cardano.Ledger.Shelley.TxBody (
-  Ptr (..),
- )
 import Cardano.Ledger.UMapCompact (
   Trip,
   UMap (..),
@@ -186,45 +184,38 @@ smartUTxOState utxo c1 c2 st =
 --   step2 =  aggregate (dom activeDelegs ◁ rewards) step1
 --   This function has a non-incremental analog, 'stakeDistr', mosty used in tests, which does use the UTxO.
 incrementalStakeDistr ::
-  forall c.
-  IncrementalStake c ->
-  DState c ->
-  PState c ->
-  SnapShot c
-incrementalStakeDistr incstake ds ps =
+  forall era.
+  EraPParams era =>
+  PParams era ->
+  IncrementalStake (EraCrypto era) ->
+  DState (EraCrypto era) ->
+  PState (EraCrypto era) ->
+  SnapShot (EraCrypto era)
+incrementalStakeDistr pp (IStake credStake ptrStake) ds ps =
   SnapShot
     (Stake $ VMap.fromMap (compactCoinOrError <$> step2))
     delegs_
     (VMap.fromMap poolParams)
   where
-    UMap tripmap ptrmap = dsUnified ds
+    UMap triplesMap ptrsMap = dsUnified ds
     PState {psStakePoolParams = poolParams} = ps
     delegs_ = UM.viewToVMap (delegations ds)
     -- A credential is active, only if it is being delegated
-    step1 = resolveActiveIncrementalPtrs (`VMap.member` delegs_) ptrmap incstake
-    step2 = aggregateActiveStake tripmap step1
-
--- | Resolve inserts and deletes which were indexed by Ptrs, by looking them
---   up in 'ptrs' and combining the result of the lookup with the ordinary stake.
---   keep ony the active credentials.
---   This is  step1 = (dom activeDelegs ◁ credStake) ∪ (dom activeDelegs ◁ ptrStake)
-resolveActiveIncrementalPtrs ::
-  (Credential 'Staking c -> Bool) ->
-  Map Ptr (Credential 'Staking c) ->
-  IncrementalStake c ->
-  Map (Credential 'Staking c) Coin
-resolveActiveIncrementalPtrs isActive ptrMap_ (IStake credStake ptrStake) =
-  Map.foldlWithKey' accum step1A ptrStake -- step1A  ∪ (dom activeDelegs ◁ ptrStake)
-  where
-    -- (dom activeDelegs ◁ credStake)
-    step1A = Map.filterWithKey (\k _ -> isActive k) credStake
-    accum ans ptr coin =
-      case Map.lookup ptr ptrMap_ of -- Map ptrs to Credentials
-        Nothing -> ans
-        Just cred ->
-          if isActive cred
-            then Map.insertWith (<>) cred coin ans
-            else ans
+    activeCreds = Map.filterWithKey (\k _ -> VMap.member k delegs_) credStake
+    ignorePtrs = HardForks.forgoPointerAddressResolution (pp ^. ppProtocolVersionL)
+    -- pre Conway: (dom activeDelegs ◁ credStake) ∪ (dom activeDelegs ◁ ptrStake)
+    -- afterwards we forgo ptr resolution: (dom activeDelegs ◁ credStake)
+    step1 =
+      if ignorePtrs
+        then activeCreds
+        else -- Resolve inserts and delets which were indexed by ptrs, by looking them up in the ptrsMap
+        -- and combining the result of the lookup with teh ordinary stake, keeping only the active credentials
+          Map.foldlWithKey' addResolvedPointer activeCreds ptrStake
+    step2 = aggregateActiveStake triplesMap step1
+    addResolvedPointer ans ptr coin =
+      case Map.lookup ptr ptrsMap of -- map of ptrs to credentials
+        Just cred | VMap.member cred delegs_ -> Map.insertWith (<>) cred coin ans
+        _ -> ans
 
 -- | Aggregate active stake by merging two maps. The triple map from the
 --   UMap, and the IncrementalStake. Only keep the active stake. Active can
