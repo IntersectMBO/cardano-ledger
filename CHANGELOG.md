@@ -341,6 +341,7 @@ in the naming of release branches.
 
 - Fixed typo in makeHashWithExplicitProxys phantom type (indexl to index). #3072
 - Fixed the incorrect conversion of the validity interval's upper bound in `transVITime` (fixes #3043). #3200
+- Enforce that the CostModel deserializers expect a specific length prior to version 9.
 
 ## Release branch 1.1.x
 
