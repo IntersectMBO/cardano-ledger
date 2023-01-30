@@ -11,7 +11,6 @@ module Cardano.Ledger.State.Orphans where
 import Cardano.Crypto.Hash.Class
 import Cardano.Ledger.Alonzo.TxBody
 import Cardano.Ledger.BaseTypes (TxIx (..))
-import Cardano.Ledger.Binary (toCBOR, toPlainEncoding)
 import Cardano.Ledger.Binary.Plain
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core

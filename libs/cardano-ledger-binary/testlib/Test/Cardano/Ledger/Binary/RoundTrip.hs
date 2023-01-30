@@ -251,11 +251,11 @@ roundTrip version trip val = do
     then
       Left $
         RoundTripFailure version version encoding encodedBytes (Just reserialized) Nothing Nothing
-    else case Plain.decodeFull reserialized of
-           Left err ->
-             Right val'
-             -- error $ "Invalid CBOR discovered: "  ++ T.unpack (typeLabel @t) ++ ": " ++ show err
-           Right (_ :: Plain.Term) -> Right val'
+    else Right val'
+    -- case Plain.decodeFull reserialized of
+    --        Left err ->
+    --          error $ "Invalid CBOR discovered: "  ++ T.unpack (typeLabel @t) ++ ": " ++ show err
+    --        Right (_ :: Plain.Term) -> Right val'
 
 roundTripTwiddled ::
   forall t.

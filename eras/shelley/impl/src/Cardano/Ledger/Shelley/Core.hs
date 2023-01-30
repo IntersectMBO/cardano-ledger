@@ -51,6 +51,8 @@ import NoThunks.Class (NoThunks)
 
 class
   ( Era era
+  , Eq (TallyState era)
+  , Show (TallyState era)
   , NoThunks (TallyState era)
   , NFData (TallyState era)
   , EncCBOR (TallyState era)
