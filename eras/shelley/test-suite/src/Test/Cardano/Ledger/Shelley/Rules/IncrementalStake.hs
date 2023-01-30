@@ -149,26 +149,28 @@ incrStakeComparisonProp ::
 incrStakeComparisonProp Proxy =
   forAllChainTrace traceLen $ \tr ->
     conjoin $
-      map (\(SourceSignalTarget _ target _) -> checkIncrementalStake @era (ledgerStateFromChainState target)) $
+      map (\(SourceSignalTarget _ target _) -> checkIncrementalStake @era ((nesEs . chainNes) target)) $
         filter (not . sameEpoch) (sourceSignalTargets tr)
   where
     sameEpoch SourceSignalTarget {source, target} = epoch source == epoch target
     epoch = nesEL . chainNes
-    ledgerStateFromChainState = esLState . nesEs . chainNes
 
 checkIncrementalStake ::
   forall era.
   EraTxOut era =>
-  LedgerState era ->
+  EpochState era ->
   Property
-checkIncrementalStake (LedgerState (UTxOState utxo _ _ _ incStake) (DPState dstate pstate)) =
-  let stake = stakeDistr @era utxo dstate pstate
-      istake = incrementalStakeDistr @(EraCrypto era) incStake dstate pstate
-   in counterexample
-        ( "\nIncremental stake distribution does not match old style stake distribution"
-            ++ tersediffincremental "differences: Old vs Incremental" (ssStake stake) (ssStake istake)
-        )
-        (stake === istake)
+checkIncrementalStake es =
+  let
+    (LedgerState (UTxOState utxo _ _ _ incStake) (DPState dstate pstate)) = esLState es
+    stake = stakeDistr @era utxo dstate pstate
+    istake = incrementalStakeDistr (esPp es) incStake dstate pstate
+   in
+    counterexample
+      ( "\nIncremental stake distribution does not match old style stake distribution"
+          ++ tersediffincremental "differences: Old vs Incremental" (ssStake stake) (ssStake istake)
+      )
+      (stake === istake)
 
 tersediffincremental :: String -> Stake c -> Stake c -> String
 tersediffincremental message (Stake a) (Stake c) =
