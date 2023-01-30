@@ -10,11 +10,14 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Ledger.Constrained.TypeRep (
   Rec (..),
   Rep (..),
   (:~:) (Refl),
+  type (.:) (..),
+  Lookup,
   Shape (..),
   Singleton (..),
   Eql,
@@ -42,7 +45,7 @@ import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Type.Equality (TestEquality (..))
-import Data.Universe (Eql, Shape (..), Shaped (..), Singleton (..), cmpIndex, (:~:) (Refl))
+import Data.Universe (Eql, Shape (..), Singleton (..), cmpIndex, (:~:) (Refl))
 import Data.Word (Word64)
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
@@ -71,13 +74,24 @@ import Type.Reflection (
   pattern App,
   pattern Fun,
  )
+import GHC.TypeLits (Symbol)
 
 -- =======================================================================
 infixr 0 :->
 
+type family Lookup n (rec :: [Type]) where
+  Lookup n (n .: v ': t) = v
+  Lookup n (a .: v ': t) = Lookup n t
+
+data (.:) (s :: Symbol) a where
+  Field :: Typeable s => TypeRep s -> a -> s .: a
+
+instance (Arbitrary a, Typeable n) => Arbitrary (n .: a) where
+  arbitrary = Field typeRep <$> arbitrary
+
 data Rec f (t :: [Type]) where
   RNil :: Rec f '[]
-  (:&) :: HKD f a -> !(Rec f as) -> Rec f (a ': as)
+  (:&) :: s .: (HKD f a) -> !(Rec f as) -> Rec f (s .: a ': as)
   deriving (Typeable)
 
 instance Arbitrary (Rec Identity '[]) where
@@ -86,8 +100,9 @@ instance Arbitrary (Rec Identity '[]) where
 instance
   ( Arbitrary a
   , Arbitrary (Rec Identity as)
+  , Typeable n
   ) =>
-  Arbitrary (Rec Identity (a ': as))
+  Arbitrary (Rec Identity (n .: a ': as))
   where
   arbitrary = (:&) <$> arbitrary <*> arbitrary
 
@@ -128,11 +143,13 @@ instance Singleton Rep where
   testEql IntR IntR = Just Refl
   testEql (SimpleR x) (SimpleR y) = testEquality x y
   testEql _ _ = Nothing
-  cmpIndex x y = compare (shape x) (shape y)
+  cmpIndex _ _ = undefined
 
 recToTypeRep :: forall (a :: [Type]). Rec Rep a -> TypeRep a
 recToTypeRep RNil = typeRep
-recToTypeRep (a :& as) = typeRep @(:) `App` toTypeRep a `App` recToTypeRep as
+recToTypeRep (Field _ a :& as) = typeRep @(:) `App` fieldRep `App` recToTypeRep as
+  where
+    fieldRep = typeRep @(.:) `App` typeRep `App` toTypeRep a
 
 toTypeRep :: Rep a -> TypeRep a
 toTypeRep (RecR a) = App typeRep $ recToTypeRep a
@@ -159,7 +176,7 @@ synopsis (RecR t) r = "{" ++ help t r
   where
     help :: Rec Rep a -> Rec Identity a -> String
     help RNil _ = "}"
-    help (a :& as) (v :& vs) = synopsis a v ++ ", " ++ help as vs
+    help (Field na a :& as) (Field _ v :& vs) = show na ++ " = " ++ synopsis a v ++ ", " ++ help as vs
 synopsis RationalR r = show r
 synopsis (a :-> b) _ = "(Arrow " ++ show a ++ " " ++ show b ++ ")"
 synopsis Word64R w = show w
@@ -183,26 +200,6 @@ synSum (MapR _ RationalR) m = ", sum = " ++ show (Map.foldl' (+) 0 m)
 synSum (SetR RationalR) m = ", sum = " ++ show (Set.foldl' (+) 0 m)
 synSum (ListR RationalR) m = ", sum = " ++ show (List.foldl' (+) 0 m)
 synSum _ _ = ""
-
--- ==================================================
-
-instance Shaped (Rep) any where
-  shape (a :-> b) = Nary 0 [shape a, shape b]
-  shape (MapR a b) = Nary 1 [shape a, shape b]
-  shape (SetR a) = Nary 2 [shape a]
-  shape (ListR a) = Nary 3 [shape a]
-  shape RationalR = Nullary 4
-  shape Word64R = Nullary 5
-  shape IntR = Nullary 6
-  shape IntegerR = Nullary 7
-  shape NaturalR = Nullary 8
-  shape FloatR = Nullary 9
-  shape (SimpleR _) = undefined
-  shape (RecR a) = Nary 11 [shape a]
-
-instance Shaped (Rec Rep) any where
-  shape RNil = Nullary 0
-  shape (a :& as) = Nary 1 [shape a, shape as]
 
 compareRep :: forall t s. Rep t -> Rep s -> Ordering
 compareRep x y = cmpIndex @(Rep) x y

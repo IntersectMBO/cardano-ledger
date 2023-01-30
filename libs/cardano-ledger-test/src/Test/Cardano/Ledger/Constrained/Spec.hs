@@ -447,7 +447,7 @@ instance (Ord dom) => Monoid (MapSpec dom rng) where mempty = MapSpec Nothing No
 
 -- =======================================================
 
-solveMap :: V era (Map dom rng) -> Pred era -> Typed (MapSpec dom rng)
+solveMap :: V s (Map dom rng) -> Pred s -> Typed (MapSpec dom rng)
 solveMap v1@(V _ r@(MapR dom rng) _) cond = case cond of
   (Sized (Fixed (Lit Word64R n)) (Var v2))
     | Name v1 == Name v2 -> do

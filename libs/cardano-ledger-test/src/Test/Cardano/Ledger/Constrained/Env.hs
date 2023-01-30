@@ -3,96 +3,51 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ImpredicativeTypes #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 
 -- | Provides variables (V era t), and mappings of them to objects of type 't'
 module Test.Cardano.Ledger.Constrained.Env (
-  V (..),
-  Env (..),
+  Env,
   emptyEnv,
   findVar,
   storeVar,
-  P (..),
-  bulkStore,
   Dyn (..),
-  Name (..),
   Field,
 )
 where
 
-import qualified Data.List as List
-import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import Data.Maybe (isJust)
-import Test.Cardano.Ledger.Constrained.Monad (Dyn (..), Typed (..), failT)
+import Test.Cardano.Ledger.Constrained.Monad (Dyn (..))
 import Test.Cardano.Ledger.Constrained.TypeRep
 
 import Cardano.Ledger.Shelley.LedgerState (NewEpochState)
 import Lens.Micro
+import Data.Functor.Identity (Identity)
+import Type.Reflection (typeRep)
+import Data.Type.Equality (TestEquality(..))
 
 -- ================================================================
 
 type Field era x = Lens' (NewEpochState era) x
 
-data V s t where V :: String -> Rep t -> Maybe (Lens' s t) -> V s t
-
-data Payload era where
-  Payload :: Rep t -> t -> (Maybe (Lens' s t)) -> Payload era
+data Payload where
+  Payload :: Rep t -> t -> (Maybe (Lens' s t)) -> Payload
 
 -- We are ignoring the Accessfield on purpose
 
-data Env era = Env (Map String (Payload era))
+type Env env = Rec Identity env
 
-instance Show (Env era) where
-  show (Env m) = unlines (map f (Map.toList m))
-    where
-      f (nm, Payload rep t _) = nm ++ " -> " ++ synopsis rep t
+emptyEnv :: Env '[]
+emptyEnv = RNil
 
-emptyEnv :: Env era
-emptyEnv = Env Map.empty
+findVar :: forall (n :: String) {env}. Env env -> Lookup n env
+findVar RNil = error $ "Failed to find variable " ++ show (typeRep @n)
+findVar (Field n v :& t) = case testEquality n (typeRep @n) of
+  Just Refl -> v
+  Nothing -> findVar t
 
-findVar :: V era t -> Env era -> Typed t
-findVar (V name rep1 _) (Env m) =
-  case Map.lookup name m of
-    Nothing -> failT ["Cannot find " ++ name ++ " in env"]
-    Just (Payload rep2 t _) ->
-      case testEql rep1 rep2 of
-        Just Refl -> pure t
-        Nothing -> failT ["We found: " ++ name ++ ", but the types did not match. " ++ show rep1 ++ " =/= " ++ show rep2]
-
-storeVar :: V era t -> t -> Env era -> Env era
-storeVar (V name rep access) t (Env m) = Env (Map.insert name (Payload rep t access) m)
-
--- ============================================
--- Group a bunch of bindings into a list
-
-data P era where P :: V era t -> t -> P era
-
-instance Show (P era) where
-  show (P (V nm rep _) t) = nm ++ " = " ++ synopsis rep t
-  showList xs ans = unlines (ans : (map show xs))
-
-bulkStore :: [P era] -> Env era -> Env era
-bulkStore ps env = List.foldl' accum env ps
-  where
-    accum e (P v t) = storeVar v t e
-
--- ===================================
-
--- | An existentially quantified (V era t), hiding the 't'
---   Usefull because unlike (V era t), it has both Eq and Ord instances
-data Name era where Name :: V era t -> Name era
-
-instance Show (Name era) where
-  show (Name (V n _ _)) = n
-
-instance Eq (Name era) where
-  (Name (V n1 rep1 _)) == (Name (V n2 rep2 _)) = n1 == n2 && isJust (testEql rep1 rep2)
-
-instance Ord (Name era) where
-  compare v1@(Name (V n1 rep1 _)) v2@(Name (V n2 rep2 _)) =
-    if v1 == v2
-      then EQ
-      else case compare n1 n2 of
-        LT -> LT
-        GT -> GT
-        EQ -> compareRep rep1 rep2
+storeVar :: forall (n :: String) t env. t -> Env env -> (Env (n .: t ': env))
+storeVar t env = t :& env

@@ -37,33 +37,33 @@ infix 4 :=:
 
 infix 4 :<=:
 
-data Pred where
-  Sized :: Sizeable t => Term Word64 -> Term t -> Pred era
-  (:=:) :: Eq a => Term a -> Term a -> Pred era
-  (:<=:) :: Ord a => Term (Set a) -> Term (Set a) -> Pred era
-  Disjoint :: Ord a => Term (Set a) -> Term (Set a) -> Pred era
-  SumsTo :: Adds c => Term c -> [Sum c] -> Pred era
-  Random :: Term t -> Pred era
-  HasDom :: Ord d => Term (Map d r) -> Term (Set d) -> Pred era
+data Pred s t where
+  Sized :: Sizeable t => Term s Word64 -> Term s t -> Pred s t
+  (:=:) :: Eq a => Term s a -> Term s a -> Pred s t
+  (:<=:) :: Ord a => Term s (Set a) -> Term s (Set a) -> Pred s t
+  Disjoint :: Ord a => Term s (Set a) -> Term s (Set a) -> Pred s t
+  SumsTo :: Adds t => Term s t -> [Sum s t] -> Pred s t
+  Random :: Term s t -> Pred s t
+  HasDom :: Ord d => Term s (Map d r) -> Term s (Set d) -> Pred s t
 
-data Sum c where
-  SumMap :: Adds c => Term (Map a c) -> Sum c
-  SumSet :: Adds c => Term (Set c) -> Sum c
-  SumList :: Adds c => Term [c] -> Sum c
-  One :: Term c -> Sum c
-  Extract :: forall c x era. Sums x c => Sum x -> Sum c
+data Sum s c where
+  SumMap :: Adds c => Term s (Map a c) -> Sum s c
+  SumSet :: Adds c => Term s (Set c) -> Sum s c
+  SumList :: Adds c => Term s [c] -> Sum s c
+  One :: Term s c -> Sum s c
+  Extract :: forall c x s. Sums x c => Sum s x -> Sum s c
 
 infixl 0 :$
 
-data Target t where
-  Simple :: Term t -> Target t
-  (:$) :: Target (a -> b) -> Target a -> Target b
-  Constr :: String -> (a -> b) -> Target (a -> b)
+data Target s t where
+  Simple :: Term s t -> Target s t
+  (:$) :: Target s (a -> b) -> Target s a -> Target s b
+  Constr :: String -> (a -> b) -> Target s (a -> b)
 
 infixl 0 $>
 
 -- | Version of (:$) That takes a Term on the left, rather than a Target
-($>) :: Target (a -> t) -> Term a -> Target t
+($>) :: Target s (a -> t) -> Term s a -> Target s t
 ($>) f x = f :$ (Simple x)
 
 -- ===================================
@@ -76,7 +76,7 @@ showL f sep (t : ts) = f t ++ sep ++ showL f sep ts
 instance Show (Literal t) where
   show (Lit r k) = synopsis r k
 
-instance Show (Term t) where
+instance Show (Term s t) where
   -- show (Fixed k) = "(Fixed " ++ show k ++ ")"
   show (Fixed k) = show k
   show (Var (V nm _rep _)) = nm -- ++ "::" ++ show _rep
@@ -84,14 +84,14 @@ instance Show (Term t) where
   show (Rng x) = "(rng " ++ show x ++ ")"
   showList xs ans = unlines (ans : (map show xs))
 
-instance Show (Sum c) where
+instance Show (Sum s c) where
   show (SumMap t) = "sum " ++ show t
   show (SumSet t) = "sum " ++ show t
   show (SumList t) = "sum " ++ show t
   show (One t) = show t
   show (Extract _) = "Extract"
 
-instance Show (Pred era) where
+instance Show (Pred s t) where
   show (Sized n t) = "Sized " ++ show n ++ " " ++ show t
   show (x :=: y) = show x ++ " = " ++ show y
   show (x :<=: y) = show x ++ " ⊆  " ++ show y
@@ -101,7 +101,7 @@ instance Show (Pred era) where
   show (HasDom m s) = "HasDomain " ++ show m ++ " " ++ show s
   showList xs ans = unlines (ans : (map show xs))
 
-instance Show (Target t) where
+instance Show (Target s t) where
   show (Constr nm _f) = nm
   show (Simple x) = show x
   show (f :$ x) = "(" ++ show f ++ " :$ " ++ showL pp " :$ " (args x) ++ ")"
@@ -109,29 +109,29 @@ instance Show (Target t) where
       pp :: Any (Target era) -> String
       pp (Any spec) = show spec
 
-args :: Target t -> [Any (Target era)]
+args :: Target s t -> [Any (Target s)]
 args (x :$ xs) = (Any x) : args xs
 args other = [Any other]
 
 -- | Print a Target as a record showing the struture and names of all
 --   the variables involved. This documents what is in scope where
 --   the Target value was defined.
-ppTarget :: Target t -> PDoc
+ppTarget :: Target s t -> PDoc
 ppTarget x = targetRecord x []
 
-targetRecord :: Target t -> [(Text, PDoc)] -> PDoc
+targetRecord :: Target s t -> [(Text, PDoc)] -> PDoc
 targetRecord (Constr n _) xs = ppRecord (pack n) xs
 targetRecord (ts :$ t) xs = targetRecord ts (targetPair t : xs)
 targetRecord (Simple e) [] = ppString (show e)
 targetRecord other xs = ppRecord (nameOf other) xs
 
-nameOf :: Target t -> Text
+nameOf :: Target s t -> Text
 nameOf (Constr cs _) = pack (map toLower cs ++ "T")
 nameOf (Simple (Var (V n _ _))) = pack n
 nameOf (Simple term) = pack (show term)
 nameOf (x :$ _) = nameOf x
 
-targetPair :: Target t -> (Text, PDoc)
+targetPair :: Target s t -> (Text, PDoc)
 targetPair (Simple (Var (V n rep _))) = (pack n, ppString (show rep))
 targetPair x = (nameOf x, targetRecord x [])
 
@@ -140,23 +140,23 @@ targetPair x = (nameOf x, targetRecord x [])
 -- Their are no binders in any of these, so this is not so difficult
 -- But (V t) may have different 't', so we hide 't' in 'Name'
 
-varsOfTerm :: Set (Name era) -> Term t -> Set (Name era)
+varsOfTerm :: Set (Name s) -> Term s t -> Set (Name s)
 varsOfTerm ans s = case s of
   Fixed _ -> ans
   Var v@(V _ _ _) -> Set.insert (Name v) ans
   Dom x -> varsOfTerm ans x
   Rng x -> varsOfTerm ans x
 
-vars :: Term t -> Set (Name era)
+vars :: Term s t -> Set (Name s)
 vars x = varsOfTerm Set.empty x
 
-varsOfTarget :: Set (Name era) -> Target t -> Set (Name era)
+varsOfTarget :: Set (Name s) -> Target s t -> Set (Name s)
 varsOfTarget ans s = case s of
   (a :$ b) -> varsOfTarget (varsOfTarget ans a) b
   (Simple x) -> varsOfTerm ans x
   (Constr _ _) -> ans
 
-varsOfPred :: Set (Name era) -> Pred -> Set (Name era)
+varsOfPred :: Set (Name s) -> Pred s t -> Set (Name s)
 varsOfPred ans s = case s of
   Sized a b -> varsOfTerm (varsOfTerm ans a) b
   (a :=: b) -> varsOfTerm (varsOfTerm ans a) b
@@ -166,7 +166,7 @@ varsOfPred ans s = case s of
   Random x -> varsOfTerm ans x
   HasDom a b -> varsOfTerm (varsOfTerm ans a) b
 
-varsOfSum :: Set (Name era) -> Sum r -> Set (Name era)
+varsOfSum :: Set (Name s) -> Sum s r -> Set (Name s)
 varsOfSum ans (SumMap y) = varsOfTerm ans y
 varsOfSum ans (SumSet y) = varsOfTerm ans y
 varsOfSum ans (SumList y) = varsOfTerm ans y
@@ -176,26 +176,26 @@ varsOfSum ans (Extract x) = varsOfSum ans x
 -- =====================================================
 -- Subtitution of (V t) inside of (Spec t)
 
-substToEnv :: [SubItem era] -> Env -> Env era
+substToEnv :: [SubItem s t] -> Env -> Env
 substToEnv [] ans = ans
 substToEnv ((SubItem v (Fixed (Lit _ t))) : more) ans =
   substToEnv more (storeVar v t ans)
 substToEnv ((SubItem _ e) : _) _ = error ("Not Literal expr in substToEnv: " ++ show e)
 
-data SubItem where SubItem :: V t -> Term t -> SubItem era
+data SubItem s t where SubItem :: V s t -> Term s t -> SubItem s t
 
-instance Show (SubItem era) where
+instance Show (SubItem s t) where
   show (SubItem (V nm _rep _) expr) = pad 14 nm ++ " = " ++ show expr
 
 pad :: Int -> String -> String
 pad n x = x ++ replicate (n - length x) ' '
 
-type Subst = [SubItem]
+type Subst s t = [SubItem s t]
 
-extend :: V t -> Term t -> Subst -> Subst era
+extend :: V s t -> Term s t -> Subst s t -> Subst s t
 extend v k xs = (SubItem v k) : xs
 
-findV :: Subst -> V t -> Term t
+findV :: Subst s u -> V s t -> Term s t
 findV [] (V n rep1 lens) = Var (V n rep1 lens) -- If its not in the Subst, return the Var
 findV (SubItem (V n2 rep2 _) kn : more) v@(V n1 rep1 _) =
   if not (n1 == n2)
@@ -212,13 +212,13 @@ findV (SubItem (V n2 rep2 _) kn : more) v@(V n1 rep1 _) =
               ++ show rep2
           )
 
-substTerm :: Subst -> Term t -> Term t
+substTerm :: Subst s u -> Term s t -> Term s t
 substTerm sub (Var v) = findV sub v
 substTerm _ (Fixed k) = Fixed k
 substTerm sub (Dom x) = Dom (substTerm sub x)
 substTerm sub (Rng x) = Rng (substTerm sub x)
 
-substPred :: Subst -> Pred -> Pred era
+substPred :: Subst s u -> Pred s t -> Pred s t
 substPred sub (Sized a b) = Sized (substTerm sub a) (substTerm sub b)
 substPred sub (a :=: b) = (substTerm sub a) :=: (substTerm sub b)
 substPred sub (a :<=: b) = (substTerm sub a) :<=: (substTerm sub b)
@@ -227,14 +227,14 @@ substPred sub (SumsTo a b) = SumsTo (substTerm sub a) (map (substSum sub) b)
 substPred sub (Random x) = Random (substTerm sub x)
 substPred sub (HasDom a b) = HasDom (substTerm sub a) (substTerm sub b)
 
-substSum :: Subst -> Sum t -> Sum t
+substSum :: Subst s u -> Sum s t -> Sum s t
 substSum sub (SumMap x) = SumMap (substTerm sub x)
 substSum sub (SumSet x) = SumSet (substTerm sub x)
 substSum sub (SumList x) = SumList (substTerm sub x)
 substSum sub (One x) = One (substTerm sub x)
 substSum sub (Extract x) = Extract (substSum sub x)
 
-substTarget :: Subst -> Target t -> Target t
+substTarget :: Subst s u -> Target s t -> Target s t
 substTarget sub (Simple e) = Simple (substTerm sub e)
 substTarget sub (a :$ b) = substTarget sub a :$ substTarget sub b
 substTarget _ (Constr n f) = Constr n f
@@ -243,7 +243,7 @@ substTarget _ (Constr n f) = Constr n f
 -- Evaluators
 
 -- | Symbolic evaluation with free variables, that cause failures
-eval :: Term t -> Typed (Dyn era)
+eval :: Term s t -> Typed (Dyn era)
 eval (Fixed (Lit r x)) = pure (Dyn r x)
 eval (Dom x) = case eval x of
   Typed (Right (Dyn (MapR d _) m)) -> pure (Dyn (SetR d) (Map.keysSet m))
@@ -254,7 +254,7 @@ eval (Rng (Fixed _)) = failT ["Rng applied to a value that is not a map"]
 eval (Var (V nm _ _)) = failT ["Can't eval unbound variable: " ++ nm]
 
 -- | Evidence that 'expr' has type 'r1'
-evalWith :: Rep t -> Term s -> Typed t
+evalWith :: Rep t -> Term s t -> Typed t
 evalWith r1 expr = explain ("(evalWith " ++ show r1 ++ " " ++ show expr ++ ") fails") $ do
   (Dyn r2 x) <- eval expr
   Refl <- sameRep r1 r2
@@ -262,13 +262,13 @@ evalWith r1 expr = explain ("(evalWith " ++ show r1 ++ " " ++ show expr ++ ") fa
 
 -- | Evaluate an arbitrary expression, if it actually has type (s rng) and (Ord rng) then
 --   return evidence of these facts (HasCond Ord (s rng))
-evalWithOrd :: Rep (s rng) -> Term k -> Rep rng -> Typed (HasCond Ord (s rng))
+evalWithOrd :: Rep (s rng) -> Term u k -> Rep rng -> Typed (HasCond Ord (s rng))
 evalWithOrd r expr rng = explain ("(evalWithOrd " ++ show r ++ " " ++ show expr ++ " " ++ show rng ++ ") fails") $ do
   m <- evalWith r expr
   hasOrd rng m
 
 -- | Fully evaluate an Term, looking up the variables in the Env.
-runTerm :: Env -> Term t -> Typed t
+runTerm :: Env -> Term s t -> Typed t
 runTerm _ (Fixed (Lit _ x)) = pure x
 runTerm env (Dom x) = do
   m <- runTerm env x
@@ -278,7 +278,7 @@ runTerm env (Rng x) = do
   pure (Set.fromList (Map.elems m))
 runTerm env (Var v) = findVar v env
 
-runPred :: Env -> Pred -> Typed Bool
+runPred :: Env -> Pred s t -> Typed Bool
 runPred env (Sized w x) = do
   word <- runTerm env w
   item <- runTerm env x
@@ -306,14 +306,14 @@ runPred env (HasDom m s) = do
   s2 <- runTerm env s
   pure (Set.isSubsetOf (Map.keysSet m2) s2)
 
-runSum :: Env -> Sum c -> Typed c
+runSum :: Env -> Sum s c -> Typed c
 runSum env (SumMap t) = Map.foldl' add zero <$> runTerm env t
 runSum env (SumSet t) = Set.foldl' add zero <$> runTerm env t
 runSum env (SumList t) = List.foldl' add zero <$> runTerm env t
 runSum env (One t) = runTerm env t
 runSum env (Extract x) = getsum <$> runSum env x
 
-makeTest :: Env -> Pred -> Typed String
+makeTest :: Env -> Pred s t -> Typed String
 makeTest env c = do
   b <- runPred env c
   pure (show c ++ " => " ++ show b)
