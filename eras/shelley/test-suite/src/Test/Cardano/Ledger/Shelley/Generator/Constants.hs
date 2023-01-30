@@ -94,6 +94,7 @@ data Constants = Constants
   , minReserves :: Integer
   , maxReserves :: Integer
   , minMajorPV :: Version
+  , maxMajorPV :: Version
   , genTxStableUtxoSize :: Int
   -- ^ When generating Tx, we want the UTxO size to fluctuate around this point. If
   --   it gets too small, we can't balance the fee, too large it gets too complicated.
@@ -146,6 +147,7 @@ defaultConstants =
     , minReserves = 1000000
     , maxReserves = 10000000
     , minMajorPV = natVersion @2
+    , maxMajorPV = maxBound
     , genTxStableUtxoSize = 100
     , genTxUtxoIncrement = 3
     }

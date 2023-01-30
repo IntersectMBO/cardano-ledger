@@ -100,7 +100,7 @@ genPParams ::
   (EraPParams era, ProtVerAtMost era 4, ProtVerAtMost era 6) =>
   Constants ->
   Gen (PParams era)
-genPParams c@Constants {maxMinFeeA, maxMinFeeB, minMajorPV} = do
+genPParams c@Constants {maxMinFeeA, maxMinFeeB, minMajorPV, maxMajorPV} = do
   minFeeA <- genInteger 0 (unCoin maxMinFeeA)
   minFeeB <- genInteger 0 (unCoin maxMinFeeB)
   (maxBBSize, maxTxSize, maxBHSize) <- szGen
@@ -113,7 +113,7 @@ genPParams c@Constants {maxMinFeeA, maxMinFeeB, minMajorPV} = do
   tau <- genTau
   d <- genDecentralisationParam
   extraEntropy <- genExtraEntropy
-  protocolVersion <- genProtocolVersion minMajorPV
+  protocolVersion <- genProtocolVersion minMajorPV maxMajorPV
   minUTxOValue <- genMinUTxOValue
   minPoolCost <- genMinPoolCost
   pure $
@@ -208,9 +208,9 @@ genDecentralisationParam = unsafeBoundRational <$> QC.elements [0.1, 0.2 .. 1]
 -- ^ ^ TODO jc - generating d=0 takes some care, if there are no registered
 --  stake pools then d=0 deadlocks the system.
 
-genProtocolVersion :: HasCallStack => Version -> Gen ProtVer
-genProtocolVersion minMajPV =
-  ProtVer <$> genVersion minMajPV maxBound <*> genNatural 1 50
+genProtocolVersion :: HasCallStack => Version -> Version -> Gen ProtVer
+genProtocolVersion minMajPV maxMajPV =
+  ProtVer <$> genVersion minMajPV maxMajPV <*> genNatural 1 50
 
 genMinUTxOValue :: HasCallStack => Gen Coin
 genMinUTxOValue = Coin <$> genInteger 1 20
@@ -220,9 +220,9 @@ genMinPoolCost = Coin <$> genInteger 10 50
 
 -- | Generate a possible next Protocol version based on the previous version.
 -- Increments the Major or Minor versions and possibly the Alt version.
-genNextProtocolVersion :: EraPParams era => HasCallStack => PParams era -> Gen ProtVer
-genNextProtocolVersion pp = do
-  QC.elements $ ProtVer m (n + 1) : [ProtVer m' 0 | Just m' <- [succVersion m]]
+genNextProtocolVersion :: EraPParams era => HasCallStack => PParams era -> Version -> Gen ProtVer
+genNextProtocolVersion pp maxMajorPV = do
+  QC.elements $ ProtVer m (n + 1) : [ProtVer m' 0 | Just m' <- [succVersion m], m' <= maxMajorPV]
   where
     ProtVer m n = pp ^. ppProtocolVersionL
 
@@ -236,7 +236,7 @@ genShelleyPParamsUpdate ::
   Constants ->
   PParams era ->
   Gen (PParamsUpdate era)
-genShelleyPParamsUpdate c@Constants {maxMinFeeA, maxMinFeeB} pp = do
+genShelleyPParamsUpdate c@Constants {maxMinFeeA, maxMinFeeB, maxMajorPV} pp = do
   -- TODO generate Maybe types so not all updates are full
   minFeeA <- genM $ genInteger 0 (unCoin maxMinFeeA)
   minFeeB <- genM $ genInteger 0 (unCoin maxMinFeeB)
@@ -252,7 +252,7 @@ genShelleyPParamsUpdate c@Constants {maxMinFeeA, maxMinFeeB} pp = do
   tau <- genM genTau
   d <- genM genDecentralisationParam
   extraEntropy <- genM genExtraEntropy
-  protocolVersion <- genM $ genNextProtocolVersion pp
+  protocolVersion <- genM $ genNextProtocolVersion pp maxMajorPV
   minUTxOValue <- genM genMinUTxOValue
   minPoolCost <- genM genMinPoolCost
   pure $
