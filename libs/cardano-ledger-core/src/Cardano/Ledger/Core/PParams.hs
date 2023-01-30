@@ -224,6 +224,8 @@ class
   , NFData (PParamsHKD StrictMaybe era)
   , ToCBOR (PParamsHKD StrictMaybe era)
   , FromCBOR (PParamsHKD StrictMaybe era)
+  , EncCBOR (PParamsHKD StrictMaybe era)
+  , DecCBOR (PParamsHKD StrictMaybe era)
   , NoThunks (PParamsHKD StrictMaybe era)
   ) =>
   EraPParams era

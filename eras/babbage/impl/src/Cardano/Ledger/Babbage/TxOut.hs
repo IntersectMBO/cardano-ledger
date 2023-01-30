@@ -93,6 +93,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Binary.Plain (
+  DecCBOR (..),
   DecShareCBOR (..),
   EncCBOR (..),
   Interns,
@@ -456,6 +457,13 @@ instance
         TxOut_AddrHash28_AdaOnly_DataHash32 cred addr28Extra ada dataHash32 ->
           TxOut_AddrHash28_AdaOnly_DataHash32 (interns credsInterns cred) addr28Extra ada dataHash32
         txOut -> txOut
+
+instance
+  (Era era, Val (Value era), FromCBOR (Annotator (Script era)), DecodeNonNegative (Value era)) =>
+  DecCBOR (BabbageTxOut era)
+  where
+  decCBOR = toPlainDecoder (eraProtVerLow @era) decodeBabbageTxOut
+  {-# INLINE decCBOR #-}
 
 decodeBabbageTxOut ::
   (Era era, Val (Value era), FromCBOR (Annotator (Script era)), DecodeNonNegative (Value era)) =>

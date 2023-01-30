@@ -89,6 +89,7 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Plain (
   DecShareCBOR (Share),
   EncCBOR,
+  DecCBOR,
   Interns,
  )
 import Cardano.Ledger.Coin (Coin)
@@ -191,6 +192,7 @@ class
   , Val (Value era)
   , Eq (Value era)
   , EncCBOR (TxOut era)
+  , DecCBOR (TxOut era)
   , DecShareCBOR (TxOut era)
   , Share (TxOut era) ~ Interns (Credential 'Staking (EraCrypto era))
   , FromCBOR (Value era)
