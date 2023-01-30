@@ -48,6 +48,7 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
   decodeRecordNamedT,
   decodeRecordSum,
   decodeEnumBounded,
+  decodeWithOrigin,
 
   -- *** Containers
   decodeMaybe,
@@ -149,7 +150,8 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
 where
 
 import Cardano.Ledger.Binary.Plain (DecoderError (..), cborError, invalidKey, toCborError)
-import Cardano.Ledger.Binary.Version
+import Cardano.Ledger.Binary.Version (Version, mkVersion, mkVersion64, natVersion)
+import Cardano.Slotting.Slot (WithOrigin, withOriginFromMaybe)
 import Codec.CBOR.ByteArray (ByteArray)
 import qualified Codec.CBOR.Decoding as C (
   ByteOffset,
@@ -542,6 +544,9 @@ decodeEnumBounded = do
   if fromEnum (minBound :: a) <= n && n <= fromEnum (maxBound :: a)
     then pure $ toEnum n
     else fail $ "Failed to decode an Enum: " <> show n <> " for TypeRep: " <> show (typeRep (Proxy @a))
+
+decodeWithOrigin :: Decoder s a -> Decoder s (WithOrigin a)
+decodeWithOrigin f = withOriginFromMaybe <$> decodeMaybe f
 
 --------------------------------------------------------------------------------
 -- Decoder for Map
