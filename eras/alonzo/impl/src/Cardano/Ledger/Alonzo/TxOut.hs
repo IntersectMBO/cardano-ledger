@@ -395,8 +395,8 @@ instance
           TxOut_AddrHash28_AdaOnly_DataHash32 cred addr28Extra ada dataHash32 ->
             TxOut_AddrHash28_AdaOnly_DataHash32 (interns credsInterns cred) addr28Extra ada dataHash32
           txOut -> txOut
-    internTxOut <$!> decCBOR
-  {-# INLINEABLE decShareCBOR #-}
+    internTxOut <$!> fromCBOR
+  {-# INLINEABLE fromSharedCBOR #-}
 
 instance
   (Era era, Val (Value era), DecodeNonNegative (Value era), Show (Value era)) =>
