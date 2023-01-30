@@ -25,6 +25,7 @@ module Cardano.Ledger.Binary.Encoding.Encoder (
   encodeRatio,
   encodeRatioWithTag,
   encodeEnum,
+  encodeWithOrigin,
 
   -- *** Containers
   encodeList,
@@ -88,7 +89,8 @@ where
 
 import qualified Cardano.Binary as C
 import Cardano.Ledger.Binary.Decoding.Decoder (setTag)
-import Cardano.Ledger.Binary.Version
+import Cardano.Ledger.Binary.Version (Version, getVersion64, natVersion)
+import Cardano.Slotting.Slot (WithOrigin, withOriginToMaybe)
 import Codec.CBOR.ByteArray.Sliced (SlicedByteArray)
 import qualified Codec.CBOR.Term as C (Term (..), encodeTerm)
 import qualified Codec.CBOR.Write as CBOR (toBuilder)
@@ -295,6 +297,9 @@ encodeRatioWithTag encodeNumeric r =
 
 encodeEnum :: Enum a => a -> Encoding
 encodeEnum = encodeInt . fromEnum
+
+encodeWithOrigin :: (a -> Encoding) -> WithOrigin a -> Encoding
+encodeWithOrigin f = encodeMaybe f . withOriginToMaybe
 
 --------------------------------------------------------------------------------
 -- Containers

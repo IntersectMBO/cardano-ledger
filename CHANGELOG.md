@@ -12,6 +12,7 @@ in the naming of release branches.
 
 ### Added
 
+- Addition of `encodeWithOrigin` and `decodeWithOrigin`. #3297
 - Added type classes: `EraPParams`, `AlonzoEraPParams` and `BabbageEraPParams` with lenses
   that can access and manipulate both `PParams` and `ParamsUpdate`. #3242
 - Added types `CoinPerWord` and `CoinPerByte` to prevent mixing up the two: #3242
