@@ -9,6 +9,7 @@ where
 
 import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Alonzo (Alonzo)
+import Cardano.Ledger.Alonzo.Scripts (CostModels)
 import Cardano.Ledger.Alonzo.Scripts.Data (Data)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits, Redeemers)
 import Cardano.Ledger.Core
@@ -33,6 +34,7 @@ tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
     , cddlTest @(PParamsUpdate Alonzo) (eraProtVerHigh @Alonzo) n "protocol_param_update"
     , cddlAnnotatorTest @(Redeemers Alonzo) (eraProtVerHigh @Alonzo) n "[* redeemer]"
     , cddlAnnotatorTest @(Tx Alonzo) (eraProtVerHigh @Alonzo) n "transaction"
+    , cddlTest @CostModels (eraProtVerHigh @Alonzo) n "costmdls"
     ]
       <*> pure cddl
 

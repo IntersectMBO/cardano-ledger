@@ -69,6 +69,7 @@ import Cardano.Ledger.Binary (
   encodeFoldableAsDefLenList,
   encodeMap,
   getVersion64,
+  ifDecoderVersionAtLeast,
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (Ann, D, From, Invalid, RecD, SumD, Summands),
@@ -80,6 +81,7 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
   (<*!),
  )
+import Cardano.Ledger.Binary.Version (natVersion)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
@@ -559,7 +561,44 @@ getCostModelParams :: CostModel -> [Integer]
 getCostModelParams (CostModel _ cm _) = cm
 
 decodeCostModelMap :: Decoder s (Map Language CostModel)
-decodeCostModelMap = decodeMapByKey fromCBOR decodeCostModel
+decodeCostModelMap =
+  ifDecoderVersionAtLeast
+    (natVersion @9)
+    (decodeMapByKey fromCBOR decodeCostModel)
+    (decodeMapByKey fromCBOR legacyDecodeCostModel)
+
+-- | Prior to version 9, each 'CostModel' was expected to be serialized as
+-- an array of integers of a specific length (depending on the version of Plutus).
+-- Starting in version 9, we allow the decoders to accept lists longer than what they
+-- require, so that new fields can be added in the future.
+-- For this reason, we must hard code the length expectation into the deserializers
+-- prior to version 9.
+--
+-- Note that the number of elements in the V1 and V2 cost models
+-- may change in the future, they are only fixed prior to version 9.
+--
+-- See https://github.com/input-output-hk/cardano-ledger/issues/2902
+-- and https://github.com/input-output-hk/cardano-ledger/blob/master/docs/adr/2022-12-05_006-cost-model-serialization.md
+legacyCostModelLength :: Language -> Int
+legacyCostModelLength PlutusV1 = 166
+legacyCostModelLength PlutusV2 = 175
+
+-- | See the note for 'legacyCostModelLength'.
+legacyDecodeCostModel :: Language -> Decoder s CostModel
+legacyDecodeCostModel lang = do
+  values <- fromCBOR
+  let numValues = length values
+      expectedNumValues = legacyCostModelLength lang
+  when (numValues /= expectedNumValues) $
+    fail $
+      "Expected array with "
+        <> show expectedNumValues
+        <> " entries, but encoded array has "
+        <> show numValues
+        <> " entries."
+  case mkCostModel lang values of
+    Left e -> fail $ show e
+    Right cm -> pure cm
 
 decodeCostModel :: Language -> Decoder s CostModel
 decodeCostModel lang = do
