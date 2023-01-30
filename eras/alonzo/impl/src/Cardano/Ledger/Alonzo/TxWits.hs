@@ -67,6 +67,7 @@ import Cardano.Ledger.Binary (
   ToCBORGroup (..),
   decodeList,
   encodeFoldableEncoder,
+  encodeList,
   encodeListLen,
   encodeSet,
   fromPlainEncoding,
@@ -457,7 +458,7 @@ instance (Era era, Script era ~ AlonzoScript era) => ToCBOR (AlonzoTxWitsRaw era
           null
           ( Key 1 $
               E
-                (fromPlainEncoding . encCBOR . mapMaybe unwrapTS . Map.elems)
+                (encodeList (fromPlainEncoding . encCBOR) . mapMaybe unwrapTS . Map.elems)
                 (Map.filter isTimelock scripts)
           )
         !> Omit

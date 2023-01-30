@@ -42,7 +42,17 @@ import GHC.Generics (Generic)
 import Lens.Micro (Lens', SimpleGetter)
 import NoThunks.Class (NoThunks)
 
-class EraTallyState era where
+class
+  ( Era era
+  , Eq (TallyState era)
+  , Show (TallyState era)
+  , NoThunks (TallyState era)
+  , NFData (TallyState era)
+  , EncCBOR (TallyState era)
+  , DecCBOR (TallyState era)
+  ) =>
+  EraTallyState era
+  where
   type TallyState era = (r :: Type) | r -> era
   type TallyState era = ShelleyTallyState era
 
