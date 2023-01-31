@@ -9,6 +9,7 @@ module Test.Cardano.Ledger.Constrained.Monad (
   failT,
   sameRep,
   explain,
+  mergeExplain,
   Dyn (..),
   runDyn,
   isDynSet,
@@ -20,8 +21,15 @@ module Test.Cardano.Ledger.Constrained.Monad (
 ) where
 
 import Data.Set (Set)
-import Test.Cardano.Ledger.Constrained.TypeRep
-import Test.Cardano.Ledger.Generic.Proof (Proof (..))
+import Test.Cardano.Ledger.Constrained.Classes (SumCond (..))
+import Test.Cardano.Ledger.Constrained.TypeRep (
+  Proof (..),
+  Rep (..),
+  Size (..),
+  synopsis,
+  testEql,
+  (:~:) (Refl),
+ )
 
 -- =================================================
 
@@ -35,19 +43,36 @@ class LiftT x where
   liftT :: x -> Typed x
   dropT :: Typed x -> x
 
+instance LiftT SumCond where
+  liftT (CondNever xs) = failT xs
+  liftT x = pure x
+  dropT (Typed (Left s)) = CondNever s
+  dropT (Typed (Right x)) = x
+
+instance LiftT Size where
+  liftT (SzNever xs) = failT xs
+  liftT x = pure x
+  dropT (Typed (Left s)) = SzNever s
+  dropT (Typed (Right x)) = x
+
+-- ==================================
+
 sameRep :: Rep era i -> Rep era j -> Typed (i :~: j)
 sameRep r1 r2 = case testEql r1 r2 of
   Just x -> pure x
-  Nothing -> failT [show r1 ++ " =/= " ++ show r2 ++ " in sameRep."]
+  Nothing -> failT ["Type error in sameRep:\n  " ++ show r1 ++ " =/=\n  " ++ show r2]
 
 explain :: String -> Typed a -> Typed a
 explain s (Typed (Left ss)) = Typed (Left (s : ss))
 explain _ (Typed (Right x)) = Typed (Right x)
 
-ioTyped :: Typed t -> IO t
+mergeExplain :: (Monoid x, LiftT x) => String -> x -> x -> x
+mergeExplain message x y = dropT (explain message (liftT (x <> y)))
+
+ioTyped :: Typed t -> t
 ioTyped t = case runTyped t of
-  Right x -> pure x
-  Left xs -> error (unlines xs)
+  Right x -> x
+  Left xs -> error (unlines ("\nSolver-time error" : xs))
 
 -- ========================================================
 
@@ -131,6 +156,10 @@ hasOrd rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
     help (MaybeR a) l = do
       With _ <- help a undefined
       pure $ With l
+    help NewEpochStateR _ = failT ["NewEpochStateR does not have Ord instance"]
+    help (ProtVerR _) v = pure $ With v
+    help SlotNoR v = pure $ With v
+    help SizeR v = pure $ With v
 
 -- | Used to test hasOrd
 testHasCond :: Rep era [t] -> t -> IO ()

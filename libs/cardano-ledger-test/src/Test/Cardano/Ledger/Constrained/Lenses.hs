@@ -8,7 +8,7 @@ module Test.Cardano.Ledger.Constrained.Lenses where
 -- import Test.Cardano.Ledger.Constrained.TypeRep
 -- import Cardano.Ledger.PoolDistr(IndividualPoolStake(..))
 
-import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochNo)
+import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochNo, SlotNo)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
 import Cardano.Ledger.Core (EraRule, PParams)
 import Cardano.Ledger.Credential (Credential, Ptr)
@@ -88,6 +88,13 @@ dsIRewardsL = lens dsIRewards (\ds u -> ds {dsIRewards = u})
 
 dsFutureGenDelegsL :: Lens' (DState c) (Map (FutureGenDeleg c) (GenDelegPair c))
 dsFutureGenDelegsL = lens dsFutureGenDelegs (\ds u -> ds {dsFutureGenDelegs = u})
+
+-- Lenses for (FutureGenDeleg c)
+fGenDelegSlotL :: Lens' (FutureGenDeleg c) SlotNo
+fGenDelegSlotL = lens fGenDelegSlot (\ds u -> ds {fGenDelegSlot = u})
+
+fGenDelegGenKeyHashL :: Lens' (FutureGenDeleg c) (KeyHash 'Genesis c)
+fGenDelegGenKeyHashL = lens fGenDelegGenKeyHash (\ds u -> ds {fGenDelegGenKeyHash = u})
 
 -- ===================================
 -- PState
