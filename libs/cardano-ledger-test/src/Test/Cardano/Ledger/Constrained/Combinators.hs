@@ -71,7 +71,7 @@ subsetFromSetWithSize set n = help set Set.empty n
       | count <= 0 = pure target
       | otherwise = do
           item <- itemFromSet source
-          help (Set.delete item set) (Set.insert item target) (count - 1)
+          help (Set.delete item source) (Set.insert item target) (count - 1)
 
 mapFromSubset :: Ord a => Map a b -> Int -> Gen a -> Gen b -> Gen (Map a b)
 mapFromSubset subset n genA genB = do
