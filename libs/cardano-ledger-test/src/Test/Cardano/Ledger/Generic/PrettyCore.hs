@@ -5,6 +5,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -31,16 +32,20 @@ import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..), unTxDats)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
-import Cardano.Ledger.BaseTypes (BlocksMade (..), Network (..), TxIx (..), txIxToInt)
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.BaseTypes (BlocksMade (..), Network (..), ProtVer (..), SlotNo (..), TxIx (..), txIxToInt)
+import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert (..))
 import Cardano.Ledger.Conway.Governance (ConwayTallyState (..))
 import Cardano.Ledger.Conway.Rules (ConwayNewEpochPredFailure)
 import qualified Cardano.Ledger.Conway.Rules as Conway
-
+import Cardano.Ledger.Core
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import qualified Cardano.Ledger.DPState as DP
+import Cardano.Ledger.EpochBoundary (SnapShot (..), SnapShots (..), Stake (..))
 import Cardano.Ledger.Keys (
+  GenDelegPair (..),
   GenDelegs (..),
   HasKeyRole (coerceKeyRole),
   KeyHash (..),
@@ -57,11 +62,13 @@ import Cardano.Ledger.Pretty.Conway (ppConwayTxBody)
 import Cardano.Ledger.Pretty.Mary
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.Core
+import Cardano.Ledger.Shelley.AdaPots (AdaPots (..), totalAdaES, totalAdaPotsES)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   DPState (..),
   DState (..),
   EpochState (..),
+  FutureGenDeleg (..),
   InstantaneousRewards (..),
   LedgerState (..),
   NewEpochState (..),
@@ -98,11 +105,19 @@ import Cardano.Ledger.Shelley.TxBody (
   WitVKey (..),
  )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import Cardano.Ledger.UMapCompact (
+  delView,
+  depositView,
+  fromCompact,
+  ptrView,
+  rewView,
+ )
 import qualified Cardano.Ledger.UMapCompact as UM (UMap, View (..), delView, rewView, size)
 import Cardano.Ledger.UTxO (UTxO (..))
 import qualified Cardano.Ledger.Val as Val
 import Control.State.Transition.Extended (STS (..))
 import Data.Foldable (toList)
+import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set)
@@ -110,6 +125,8 @@ import qualified Data.Set as Set
 import Data.Text (Text, pack)
 import Data.Typeable (Typeable)
 import Data.Void (absurd)
+import qualified Data.VMap as VMap
+import Lens.Micro ((^.))
 import qualified PlutusLedgerApi.V1 as PV1 (Data (..))
 import Prettyprinter (hsep, parens, viaShow, vsep)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
@@ -121,7 +138,16 @@ import Test.Cardano.Ledger.Generic.Fields (
   abstractTxBody,
   abstractWitnesses,
  )
-import Test.Cardano.Ledger.Generic.Proof
+import Test.Cardano.Ledger.Generic.Proof (
+  AllegraEra,
+  AlonzoEra,
+  BabbageEra,
+  ConwayEra,
+  MaryEra,
+  Proof (..),
+  Reflect (..),
+  ShelleyEra,
+ )
 
 -- =====================================================
 
@@ -1332,14 +1358,6 @@ pcUTxO proof = ppMap pcTxIn (pcTxOut proof) . unUTxO
 
 instance Reflect era => PrettyC (UTxO era) era where prettyC = pcUTxO
 
-pcIndividualPoolStake :: IndividualPoolStake c -> PDoc
-pcIndividualPoolStake (IndividualPoolStake rat vrf) =
-  ppRecord
-    "pool stake"
-    [("ratio", ppRational rat), ("vrf", trim (ppHash vrf))]
-
-instance c ~ EraCrypto era => PrettyC (IndividualPoolStake c) era where prettyC _ = pcIndividualPoolStake
-
 pcPoolParams :: PoolParams era -> PDoc
 pcPoolParams x =
   ppRecord
@@ -1460,19 +1478,6 @@ pcTxBody proof txbody = ppRecord "TxBody" pairs
     fields = abstractTxBody proof txbody
     pairs = concat (map (pcTxBodyField proof) fields)
 
-pcUTxOState :: Reflect era => Proof era -> UTxOState era -> PDoc
-pcUTxOState proof (UTxOState u dep fees _pups _stakedistro) =
-  ppRecord
-    "UTxOState"
-    [ ("utxo", pcUTxO proof u)
-    , ("deposited", pcCoin dep)
-    , ("fees", pcCoin fees)
-    , ("ppups", ppString "PPUP")
-    , ("stake distr", ppString "Stake Distr")
-    ]
-
-instance Reflect era => PrettyC (UTxOState era) era where prettyC = pcUTxOState
-
 pcDPState :: p -> DPState era -> PDoc
 pcDPState _proof (DPState (DState {dsUnified = un}) (PState {psStakePoolParams = pool})) =
   ppRecord
@@ -1493,15 +1498,126 @@ instance PrettyC (ConwayTallyState era) era where
     Babbage _ -> ppMap prettyA prettyA x
     Conway _ -> ppMap prettyA prettyA x
 
-pcLedgerState :: Reflect era => Proof era -> LedgerState era -> PDoc
-pcLedgerState proof (LedgerState utstate dpstate) =
+pc :: PrettyC t era => Proof era -> t -> IO ()
+pc proof x = putStrLn (show (prettyC proof x))
+
+-- ===================================================
+
+pcReward :: Reward c -> PDoc
+pcReward (Reward ty pl c) =
   ppRecord
-    "LedgerState"
-    [ ("UTxOState", pcUTxOState proof utstate)
-    , ("DPState", pcDPState proof dpstate)
+    "Reward"
+    [ ("type", ppRewardType ty)
+    , ("pool", pcKeyHash pl)
+    , ("amount", pcCoin c)
     ]
 
+pcFutureGenDeleg :: FutureGenDeleg c -> PDoc
+pcFutureGenDeleg (FutureGenDeleg (SlotNo x) y) =
+  ppRecord
+    "FutGenDeleg"
+    [ ("slot", ppWord64 x)
+    , ("keyHash", pcKeyHash y)
+    ]
+
+instance (PrettyC x era, PrettyC y era) => PrettyC (x, y) era where
+  prettyC p (x, y) = vsep [prettyC p x, prettyC p y]
+
+instance
+  c ~ EraCrypto era =>
+  PrettyC (Map (FutureGenDeleg c) (GenDelegPair c)) era
+  where
+  prettyC _ x = ppMap pcFutureGenDeleg pcGenDelegPair x
+
+instance
+  c ~ EraCrypto era =>
+  PrettyC (Map (KeyHash 'Genesis c) (GenDelegPair c)) era
+  where
+  prettyC _ x = ppMap pcKeyHash pcGenDelegPair x
+
+instance c ~ EraCrypto era => PrettyC (PState c) era where
+  prettyC _ x = pcPState x
+
+instance c ~ EraCrypto era => PrettyC (DPState c) era where
+  prettyC _ (DPState dst pst) =
+    ppRecord
+      "DPState"
+      [ ("dstate", pcDState dst)
+      , ("pstate", pcPState pst)
+      ]
+
 instance Reflect era => PrettyC (LedgerState era) era where prettyC = pcLedgerState
+
+instance Reflect era => PrettyC (EpochState era) era where prettyC = pcEpochState
+
+pcSnapShotL :: Text -> SnapShot c -> [(Text, PDoc)]
+pcSnapShotL prefix ss =
+  [ (prefix <> "Stake", ppMap pcCredential (pcCoin . fromCompact) (VMap.toMap (unStake (ssStake ss))))
+  , (prefix <> "Delegs", ppMap pcCredential pcKeyHash (VMap.toMap (ssDelegations ss)))
+  , (prefix <> "Pools", ppMap pcKeyHash pcPoolParams (VMap.toMap (ssPoolParams ss)))
+  ]
+
+pcIndividualPoolStake :: IndividualPoolStake c -> PDoc
+pcIndividualPoolStake x =
+  ppRecord
+    "IPS"
+    [ ("ratio", ppRational (individualPoolStake x))
+    , ("vrf", trim (ppHash (individualPoolStakeVrf x)))
+    ]
+
+instance c ~ EraCrypto era => PrettyC (IndividualPoolStake c) era where prettyC _ = pcIndividualPoolStake
+
+pcSnapShots :: SnapShots c -> PDoc
+pcSnapShots sss =
+  ppRecord' "" $
+    pcSnapShotL "mark" (ssStakeMark sss)
+      ++ [("markPoolDistr", pcPoolDistr (ssStakeMarkPoolDistr sss))]
+      ++ pcSnapShotL "set" (ssStakeSet sss)
+      ++ pcSnapShotL "go" (ssStakeGo sss)
+      ++ [("fee", pcCoin (ssFee sss))]
+
+pcPoolDistr :: PoolDistr c -> PDoc
+pcPoolDistr (PoolDistr pdistr) =
+  ppMap pcKeyHash pcIndividualPoolStake pdistr
+    <> ppString " total = "
+    <> ppRational (Map.foldl' (+) 0 (fmap individualPoolStake pdistr))
+
+withEraPParams :: forall era a. Proof era -> (Core.EraPParams era => a) -> a
+withEraPParams (Shelley _) x = x
+withEraPParams (Mary _) x = x
+withEraPParams (Allegra _) x = x
+withEraPParams (Alonzo _) x = x
+withEraPParams (Babbage _) x = x
+withEraPParams (Conway _) x = x
+
+-- | Print just a few of the PParams fields
+pcPParamsSynopsis :: forall era. Proof era -> Core.PParams era -> PDoc
+pcPParamsSynopsis p x = withEraPParams p help
+  where
+    help :: Core.EraPParams era => PDoc
+    help =
+      ppRecord
+        "PParams"
+        [ ("maxBBSize", ppNatural (x ^. Core.ppMaxBBSizeL))
+        , ("maxBHSize", ppNatural (x ^. Core.ppMaxBHSizeL))
+        , ("maxTxSize", ppNatural (x ^. Core.ppMaxTxSizeL))
+        , ("protVer", ppString (showProtver (x ^. Core.ppProtocolVersionL)))
+        ]
+
+showProtver :: ProtVer -> String
+showProtver (ProtVer x y) = "(" ++ show x ++ " " ++ show y ++ ")"
+
+pcEpochState :: Reflect era => Proof era -> EpochState era -> PDoc
+pcEpochState proof es@(EpochState (AccountState tre res) sss ls ppp pp _) =
+  ppRecord
+    "EpochState"
+    [ ("AccountState", ppRecord' "" [("treasury", pcCoin tre), ("reserves", pcCoin res)])
+    , ("SnapShots", pcSnapShots sss)
+    , ("LedgerState", pcLedgerState proof ls)
+    , ("prevparams", pcPParamsSynopsis proof ppp)
+    , ("params", pcPParamsSynopsis proof pp)
+    , ("AdaPots", pcAdaPot es)
+    ]
 
 pcNewEpochState :: Reflect era => Proof era -> NewEpochState era -> PDoc
 pcNewEpochState proof (NewEpochState en (BlocksMade pbm) (BlocksMade cbm) es _ (PoolDistr pd) _) =
@@ -1516,17 +1632,84 @@ pcNewEpochState proof (NewEpochState en (BlocksMade pbm) (BlocksMade cbm) es _ (
 
 instance Reflect era => PrettyC (NewEpochState era) era where prettyC = pcNewEpochState
 
-pcEpochState :: Reflect era => Proof era -> EpochState era -> PDoc
-pcEpochState proof (EpochState (AccountState tre res) _ ls _ _ _) =
+pcUTxOState :: Reflect era => Proof era -> UTxOState era -> PDoc
+pcUTxOState proof (UTxOState u dep fs _pups _stakedistro) =
   ppRecord
-    "EpochState"
-    [ ("AccountState", ppRecord' "" [("treasury", pcCoin tre), ("reserves", pcCoin res)])
-    , ("LedgerState", pcLedgerState proof ls)
+    "UTxOState"
+    [ ("utxo", pcUTxO proof u)
+    , ("deposited", pcCoin dep)
+    , ("fees", pcCoin fs)
+    , ("ppups", ppString "PPUP")
+    , ("stake distr", ppString "Stake Distr") -- This is not part of the model
     ]
 
-instance Reflect era => PrettyC (EpochState era) era where prettyC = pcEpochState
+instance Reflect era => PrettyC (UTxOState era) era where prettyC = pcUTxOState
 
-pc :: PrettyC t era => Proof era -> t -> IO ()
-pc proof x = putStrLn (show (prettyC proof x))
+pcLedgerState :: Reflect era => Proof era -> LedgerState era -> PDoc
+pcLedgerState proof ls =
+  ppRecord
+    "LedgerState"
+    [ ("utxoState", pcUTxOState proof (lsUTxOState ls))
+    , ("dpState", prettyC proof (lsDPState ls))
+    ]
 
--- ===================================================
+pcPState :: PState era -> PDoc
+pcPState (PState regP fregP ret dep) =
+  ppRecord
+    "PState"
+    [ ("regPools", ppMap pcKeyHash pcPoolParams regP)
+    , ("futureRegPools", ppMap pcKeyHash pcPoolParams fregP)
+    , ("retiring", ppMap pcKeyHash ppEpochNo ret)
+    , ("poolDeposits", ppMap pcKeyHash pcCoin dep)
+    ]
+
+pcDState :: DState c -> PDoc
+pcDState ds =
+  ppRecord
+    "DState"
+    [ ("rewards", ppMap pcCredential pcCoin (rewView (dsUnified ds)))
+    , ("deposits", ppMap pcCredential pcCoin (depositView (dsUnified ds)))
+    , ("delegate", ppMap pcCredential pcKeyHash (delView (dsUnified ds)))
+    , ("ptrs", ppMap ppPtr ppCredential (ptrView (dsUnified ds)))
+    , ("fGenDel", ppMap pcFutureGenDeleg pcGenDelegPair (dsFutureGenDelegs ds))
+    , ("GenDel", ppMap pcKeyHash pcGenDelegPair (unGenDelegs (dsGenDelegs ds)))
+    , ("iRewards", pcIRewards (dsIRewards ds))
+    ]
+
+pcGenDelegPair :: GenDelegPair c -> PDoc
+pcGenDelegPair x =
+  ppRecord
+    "GDPair"
+    [ ("keyhash", pcKeyHash (genDelegKeyHash x))
+    , ("vrfhash", trim (ppHash (genDelegVrfHash x)))
+    ]
+
+pcIRewards :: InstantaneousRewards c -> PDoc
+pcIRewards xs =
+  ppRecord
+    "IReward"
+    [ ("reserves", ppMap pcCredential pcCoin (DP.iRReserves xs))
+    , ("treasury", ppMap pcCredential pcCoin (DP.iRTreasury xs))
+    , ("deltaR", pcDeltaCoin (DP.deltaReserves xs))
+    , ("deltaT", pcDeltaCoin (DP.deltaTreasury xs))
+    ]
+
+pcDeltaCoin :: DeltaCoin -> PDoc
+pcDeltaCoin (DeltaCoin n) = hsep [ppString "▵₳", ppInteger n]
+
+pcSlotNo :: SlotNo -> PDoc
+pcSlotNo (SlotNo n) = ppWord64 n
+
+pcAdaPot :: EraTxOut era => EpochState era -> PDoc
+pcAdaPot es =
+  let x = totalAdaPotsES es
+   in ppRecord
+        "AdaPot"
+        [ ("treasury", pcCoin (treasuryAdaPot x))
+        , ("rewards", pcCoin (rewardsAdaPot x))
+        , ("utxo", pcCoin (utxoAdaPot x))
+        , ("keydeposit", pcCoin (keyDepositAdaPot x))
+        , ("pooldeposit", pcCoin (poolDepositAdaPot x))
+        , ("fees", pcCoin (feesAdaPot x))
+        , ("totalAda", pcCoin (totalAdaES es))
+        ]

@@ -33,8 +33,11 @@ library
     Test.Cardano.Ledger.Constrained.Lenses
     Test.Cardano.Ledger.Constrained.Monad
     Test.Cardano.Ledger.Constrained.Spec
+    Test.Cardano.Ledger.Constrained.Tests
     Test.Cardano.Ledger.Constrained.TypeRep
     Test.Cardano.Ledger.Constrained.Vars
+    Test.Cardano.Ledger.Constrained.Rewrite
+    Test.Cardano.Ledger.Constrained.Solver
     Test.Cardano.Ledger.Examples.BabbageFeatures
     Test.Cardano.Ledger.Examples.AlonzoValidTxUTXOW
     Test.Cardano.Ledger.Examples.AlonzoInvalidTxUTXOW
@@ -65,8 +68,8 @@ library
     Test.Cardano.Ledger.TestableEra
     Test.Cardano.Ledger.ValueFromList
     Test.Cardano.Ledger.Tickf
-  other-modules:    
 
+    other-modules:    
     build-depends:
         base >=4.14 && <4.17,
         array,
@@ -89,6 +92,7 @@ library
         cardano-protocol-tpraos >=1.0,
         cardano-slotting,
         containers,
+        hspec-expectations,        
         vector-map,
         data-default-class,
         microlens,
