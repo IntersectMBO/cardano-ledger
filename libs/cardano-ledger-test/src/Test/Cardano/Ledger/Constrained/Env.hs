@@ -2,11 +2,17 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 -- | Provides variables (V era t), and mappings of them to objects of type 't'
 module Test.Cardano.Ledger.Constrained.Env (
   V (..),
+  W (..),
+  AnyW (..),
+  vToW,
+  wToV,
   Env (..),
+  Payload (..),
   emptyEnv,
   findVar,
   storeVar,
@@ -16,8 +22,7 @@ module Test.Cardano.Ledger.Constrained.Env (
   Name (..),
   Access (..),
   Field,
-)
-where
+) where
 
 import qualified Data.List as List
 import Data.Map.Strict (Map)
@@ -28,21 +33,57 @@ import Test.Cardano.Ledger.Constrained.Monad (Dyn (..), Typed (..), failT)
 import Test.Cardano.Ledger.Constrained.TypeRep
 
 import Cardano.Ledger.Shelley.LedgerState (NewEpochState)
-import Data.Kind (Type)
+import Data.List (intercalate)
 import Lens.Micro
 
 -- ================================================================
 
-data Access era t where
-  Yes :: forall t era. (forall (f :: Type -> Type). Functor f => ((t -> f t) -> (NewEpochState era) -> f (NewEpochState era))) -> Access era t
-  No :: Access era t
+data Access era s t where
+  Yes :: forall s t era. Rep era s -> Lens' s t -> Access era s t
+  No :: Access era s t
 
 type Field era x = Lens' (NewEpochState era) x
 
-data V era t where V :: String -> Rep era t -> (Access era t) -> V era t
+data AnyW era s where
+  AnyW :: (Show t, Eq t) => W era s t -> AnyW era s
+
+instance Show (AnyW era s) where
+  show (AnyW (W n r _)) = "Field " ++ n ++ " " ++ show r
+  show (AnyW (WConst t No)) = "Const " ++ show t
+  show (AnyW (WConst t (Yes r _))) = "Const " ++ show t ++ " " ++ show r
+
+data V era t where V :: String -> Rep era t -> Access era s t -> V era t
+
+
+instance Show (V era t) where
+  show (V nm rep _) = nm ++ " :: " ++ show rep
+
+data W era s t where
+  W :: Eq t => String -> Rep era t -> Access era s t -> W era s t
+  WConst :: Eq t => t -> Access era s t -> W era s t
+
+instance Show (W era s t) where
+  show (W n r _) = intercalate " " ["W", show n, show r]
+  show (WConst _ _) = "WConst"
+
+vToW :: Eq t => Rep era s -> V era t -> Typed (W era s t)
+vToW reps (V name rept access@(Yes reps' _)) = case testEql reps reps' of
+  Just Refl -> pure $ W name rept access
+  Nothing ->
+    failT
+      [ "Given rep and lens target do not match: "
+      , "rep: " ++ show reps
+      , "lens target: " ++ show reps'
+      ]
+vToW _ (V name rep No) = pure $ W name rep No
+
+wToV :: W era s t -> Typed (V era t)
+wToV (W name rep access) = pure $ V name rep access
+wToV (WConst _ _) = failT ["Cannot convert a WConst to a V"]
+
 
 data Payload era where
-  Payload :: Rep era t -> t -> (Access era t) -> Payload era
+  Payload :: Rep era t -> t -> Access era s t -> Payload era
 
 instance Shaped (V era) (Rep era) where
   shape (V n1 rep _) = Nary 0 [Esc StringR n1, shape rep]
@@ -94,8 +135,9 @@ data Name era where Name :: V era t -> Name era
 instance Show (Name era) where
   show (Name (V n _ _)) = n
 
+-- | Does not satisfy extensionality
 instance Eq (Name era) where
-  (Name (V n1 rep1 _)) == (Name (V n2 rep2 _)) = n1 == n2 && isJust (testEql rep1 rep2)
+  Name (V n1 rep1 _) == Name (V n2 rep2 _) = n1 == n2 && isJust (testEql rep1 rep2)
 
 instance Ord (Name era) where
   compare v1@(Name (V n1 rep1 _)) v2@(Name (V n2 rep2 _)) =
