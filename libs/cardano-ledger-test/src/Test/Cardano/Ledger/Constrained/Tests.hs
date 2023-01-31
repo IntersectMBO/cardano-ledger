@@ -15,7 +15,7 @@
 module Test.Cardano.Ledger.Constrained.Tests where
 
 import Control.Arrow (first)
-import Data.List (intercalate)
+import Data.List (intercalate, partition)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Data.Set (Set)
@@ -26,7 +26,7 @@ import Test.Cardano.Ledger.Constrained.Env
 import Cardano.Ledger.Era (Era)
 import Cardano.Ledger.Shelley
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes
-import Test.Cardano.Ledger.Constrained.Classes
+import Test.Cardano.Ledger.Constrained.Classes hiding (partition)
 import Test.Cardano.Ledger.Constrained.Combinators
 import Test.Cardano.Ledger.Constrained.Monad
 import Test.Cardano.Ledger.Constrained.Spec
@@ -51,6 +51,11 @@ Current limitations
   - Only IntR and SetR IntR types (and Word64R for size constraints)
   - Only generates Sized and :<=: constraints
   - Only tests standardOrderInfo variable order
+
+Current issues
+  - Generates cyclic constraints of the form [Random A, B ⊆ A, A ⊆ B]
+  - Property fails on constraints like [Sized 3 A, B ⊆ A, C ⊆ B, Sized 1 C]
+    where the solver solves B with the empty set and then fails on the size constraint for C.
 -}
 
 -- Generators ---
@@ -71,14 +76,14 @@ markSolved solved env = env{ gSolved = solved <> gSolved env }
 addSolvedVar :: V era t -> t -> GenEnv era -> GenEnv era
 addSolvedVar var val = markSolved (Set.singleton $ Name var) . addVar var val
 
-genSizedLiteral :: forall era t. Era era => Int -> GenEnv era -> Rep era t -> Gen (Literal era t)
-genSizedLiteral n _env rep =
+genLiteral :: forall era t. Era era => GenEnv era -> Rep era t -> Gen (Literal era t)
+genLiteral _env rep =
   case rep of
     SetR erep -> setLiteral erep
     _         -> unconstrained rep
   where
     unconstrained :: forall a. Rep era a -> Gen (Literal era a)
-    unconstrained r = Lit r <$> genSizedRep n r
+    unconstrained r = Lit r <$> genRep r
 
     setLiteral :: forall a. Ord a => Rep era a -> Gen (Literal era (Set a))
     setLiteral erep = unconstrained (SetR erep)
@@ -109,10 +114,10 @@ genTerm :: Era era => GenEnv era -> Rep era t -> VarSpec -> Gen (Term era t, Gen
 genTerm env rep vspec = sized $ \ n -> genSizedTerm n env rep vspec
 
 genSizedTerm :: Era era => Int -> GenEnv era -> Rep era t -> VarSpec -> Gen (Term era t, GenEnv era)
-genSizedTerm size env rep vspec = genTerm' env rep (const True) (genSizedLiteral size env rep) vspec
+genSizedTerm size env rep vspec = genSizedTerm' size env rep (const True) (genLiteral env rep) vspec
 
-genTerm' :: GenEnv era -> Rep era t -> (t -> Bool) -> Gen (Literal era t) -> VarSpec -> Gen (Term era t, GenEnv era)
-genTerm' env rep valid genLit vspec = frequency $
+genSizedTerm' :: Int -> GenEnv era -> Rep era t -> (t -> Bool) -> Gen (Literal era t) -> VarSpec -> Gen (Term era t, GenEnv era)
+genSizedTerm' _size env rep valid genLit vspec = frequency $
   [ (5, genFixed)       | vspec == KnownTerm ] ++
   [ (5, genExistingVar) | not $ null allowedVars ] ++
   [ (1, genFreshVar)    | vspec == VarTerm ]
@@ -182,10 +187,10 @@ genSizedPred size env = frequency
       case runTyped $ runTerm (gEnv env') sup of
         Left errs -> pure (errPred errs, env')
         Right val -> do
-          (sub, env'') <- genTerm' env' (SetR rep)
-                                   (`Set.isSubsetOf` val)
-                                   (Lit (SetR rep) <$> subsetFromSet val)
-                                   VarTerm
+          (sub, env'') <- genSizedTerm' size env' (SetR rep)
+                                        (`Set.isSubsetOf` val)
+                                        (Lit (SetR rep) <$> subsetFromSet val)
+                                        VarTerm
           pure (sub :<=: sup, markSolved (vars sub) env'')
 
 genPreds :: Era era => GenEnv era -> Gen ([Pred era], GenEnv era)
@@ -205,9 +210,8 @@ shrinkPreds :: ([Pred era], GenEnv era) -> [([Pred era], GenEnv era)]
 shrinkPreds (preds, env) =
   [ (preds', env') | preds' <- shrinkList shrinkPred preds
                    , let defined = foldMap def preds'
-                         used    = foldMap use preds'
                          env'    = env{ gEnv = pruneEnv defined (gEnv env) }
-                   , Set.isSubsetOf used defined
+                   , depCheck mempty preds'
                    ]
   where
     shrinkPred Random{}    = []
@@ -219,6 +223,15 @@ shrinkPreds (preds, env) =
       where
         defNames = Set.map (\ (Name (V name _ _)) -> name) defs
 
+    -- TODO: don't reimplement this here!
+    depCheck _ [] = True
+    depCheck solved preds'
+      | null rdy  = False
+      | otherwise = depCheck (foldMap def rdy <> solved) rest
+      where
+        (rdy, rest) = partition canSolve preds'
+        canSolve c = Set.isSubsetOf (use c) solved
+
     use Random{}   = mempty
     use Sized{}    = mempty
     use (_ :<=: t) = vars t
@@ -226,7 +239,7 @@ shrinkPreds (preds, env) =
 
     def (Random t)  = vars t
     def (Sized _ t) = vars t
-    def (t :<=: t') = vars t `Set.difference` vars t'
+    def (t :<=: _)  = vars t
     def _ = mempty
 
 -- Tests ---
@@ -257,13 +270,21 @@ initEnv = GenEnv { gEnv    = emptyEnv
                  , gSolved = mempty
                  }
 
+showVal :: Rep era t -> t -> String
+showVal (SetR r) t = "{" ++ intercalate ", " (map (synopsis r) (Set.toList t)) ++ "}"
+showVal rep t      = synopsis rep t
+
+showTerm :: Term era t -> String
+showTerm (Fixed (Lit rep t)) = showVal rep t
+showTerm t                   = show t
+
+showPred :: Pred era -> String
+showPred (sub :<=: sup) = showTerm sub ++ " ⊆ " ++ showTerm sup
+showPred pr             = show pr
+
 showEnv :: Env era -> String
 showEnv (Env vmap) = unlines $ map pr $ Map.toList vmap
-  where pr (name, Payload rep t _) = name ++ " :: " ++ show rep ++ " -> " ++ prVal rep t
-        prVal rep t =
-          case rep of
-            SetR r -> "{" ++ intercalate ", " (map (synopsis r) (Set.toList t)) ++ "}"
-            _      -> synopsis rep t
+  where pr (name, Payload rep t _) = name ++ " :: " ++ show rep ++ " -> " ++ showVal rep t
 
 -- | Generate a set of satisfiable constraints and check that we can generate a solution and that it
 --   actually satisfies the constraints.
@@ -278,7 +299,7 @@ prop_soundness =
   in
     tabulate "Var count"        [show n] $
     tabulate "Constraint count" [show $ length preds] $
-    counterexample ("\n-- Constraints --\n" ++ unlines (map show preds)) $
+    counterexample ("\n-- Constraints --\n" ++ unlines (map showPred preds)) $
     counterexample ("-- Model solution --\n" ++ showEnv (gEnv genenv)) $
     counterexample ("-- Solution --\n" ++ showEnv env) $
     conjoin $ map checkPred preds
