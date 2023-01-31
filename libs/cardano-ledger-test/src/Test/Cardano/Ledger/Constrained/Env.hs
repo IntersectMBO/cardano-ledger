@@ -7,6 +7,7 @@
 module Test.Cardano.Ledger.Constrained.Env (
   V (..),
   Env (..),
+  Payload (..),
   emptyEnv,
   findVar,
   storeVar,
@@ -40,6 +41,9 @@ data Access era t where
 type Field era x = Lens' (NewEpochState era) x
 
 data V era t where V :: String -> Rep era t -> (Access era t) -> V era t
+
+instance Show (V era t) where
+  show (V nm rep _) = nm ++ " :: " ++ show rep
 
 data Payload era where
   Payload :: Rep era t -> t -> (Access era t) -> Payload era

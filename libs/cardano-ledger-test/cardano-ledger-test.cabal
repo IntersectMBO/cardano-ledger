@@ -45,6 +45,7 @@ library
     Test.Cardano.Ledger.Constrained.Lenses
     Test.Cardano.Ledger.Constrained.Monad
     Test.Cardano.Ledger.Constrained.Spec
+    Test.Cardano.Ledger.Constrained.Tests
     Test.Cardano.Ledger.Constrained.TypeRep
     Test.Cardano.Ledger.Constrained.Vars
     Test.Cardano.Ledger.Examples.BabbageFeatures
