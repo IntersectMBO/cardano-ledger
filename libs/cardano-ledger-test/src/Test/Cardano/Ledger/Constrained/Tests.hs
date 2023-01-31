@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -13,75 +14,123 @@
 
 module Test.Cardano.Ledger.Constrained.Tests where
 
-import Data.Map (Map)
+import Control.Arrow (first)
+import Data.List (intercalate)
 import qualified Data.Map as Map
+import qualified Data.Set as Set
+import Data.Set (Set)
 
-import Cardano.Ledger.DPState (PState (..))
-import Cardano.Ledger.Pretty
 import Test.Cardano.Ledger.Constrained.Ast
 
-import Cardano.Ledger.Coin (Coin (..))
 import Test.Cardano.Ledger.Constrained.Env
-import Cardano.Ledger.Era (Era (EraCrypto))
+import Cardano.Ledger.Era (Era)
 import Cardano.Ledger.Shelley
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes
 import Test.Cardano.Ledger.Constrained.Classes
+import Test.Cardano.Ledger.Constrained.Combinators
 import Test.Cardano.Ledger.Constrained.Monad
 import Test.Cardano.Ledger.Constrained.Spec
 import Test.Cardano.Ledger.Constrained.TypeRep
-import Test.Cardano.Ledger.Constrained.Vars
-import Test.Cardano.Ledger.Generic.Proof (
-  Evidence (..),
-  Proof (..),
-  Reflect (..),
- )
+import Test.Cardano.Ledger.Generic.Proof (Evidence (..), Proof (..))
 import Test.QuickCheck hiding (Fixed, total)
+
+{-
+
+One property that we'd like to test is the soundness property for the constraint solver: if it
+successfully generates a solution to a set of constraints, this solution *actually* satisfies the
+constraints.
+
+In order to test this we need to generate random satisfiable constraints. The approach we take is to
+generate constraints in a given fixed environment, and take care to only generate ones that hold in
+this particular environment.
+
+To ensure we generate constraints that have a linear dependency graph we keep track of which
+variables in the environment are solved by an already generated constraint.
+
+Current limitations
+  - Only IntR and SetR IntR types (and Word64R for size constraints)
+  - Only generates Sized and :<=: constraints
+  - Only tests standardOrderInfo variable order
+-}
 
 -- Generators ---
 
-genLiteral :: Era era => Rep era t -> Gen (Literal era t)
-genLiteral rep = Lit rep <$> genRep rep
+data GenEnv era = GenEnv { gEnv    :: Env era
+                         , gSolved :: Set (Name era)
+                            -- ^ Which variables in the environment have we "solved", i.e. generated
+                            --   a constraint that allows solving them.
+                         }
+  deriving Show
 
-genSizedLiteral :: Era era => Int -> Rep era t -> Gen (Literal era t)
-genSizedLiteral n rep = Lit rep <$> genSizedRep n rep
+addVar :: V era t -> t -> GenEnv era -> GenEnv era
+addVar var val env = env{ gEnv = storeVar var val $ gEnv env }
 
-genFreshVarName :: Env era -> Gen String
-genFreshVarName (Env env) = elements varNames
+markSolved :: Set (Name era) -> GenEnv era -> GenEnv era
+markSolved solved env = env{ gSolved = solved <> gSolved env }
+
+addSolvedVar :: V era t -> t -> GenEnv era -> GenEnv era
+addSolvedVar var val = markSolved (Set.singleton $ Name var) . addVar var val
+
+genSizedLiteral :: forall era t. Era era => Int -> GenEnv era -> Rep era t -> Gen (Literal era t)
+genSizedLiteral n _env rep =
+  case rep of
+    SetR erep -> setLiteral erep
+    _         -> unconstrained rep
   where
+    unconstrained :: forall a. Rep era a -> Gen (Literal era a)
+    unconstrained r = Lit r <$> genSizedRep n r
+
+    setLiteral :: forall a. Ord a => Rep era a -> Gen (Literal era (Set a))
+    setLiteral erep = unconstrained (SetR erep)
+
+genFreshVarName :: GenEnv era -> Gen String
+genFreshVarName env = elements varNames
+  where
+    Env vmap = gEnv env
     varNames = take 10 [ name | s <- "" : varNames
                               , c <- ['A'..'Z']
                               , let name = s ++ [c]
-                              , Map.notMember name env
+                              , Map.notMember name vmap
                        ]
 
 envVarsOfType :: Env era -> Rep era t -> [(V era t, Literal era t)]
-envVarsOfType (Env env) rep = concatMap (wellTyped rep) $ Map.toList env
+envVarsOfType (Env env) rep = concatMap wellTyped $ Map.toList env
   where
-    wellTyped :: Rep era t -> (String, Payload era) -> [(V era t, Literal era t)]
-    wellTyped rep (name, Payload rep' val access) =
+    wellTyped (name, Payload rep' val access) =
       case testEql rep rep' of
         Just Refl -> [(V name rep access, Lit rep val)]
         Nothing   -> []
 
-genTerm :: Era era => Env era -> Rep era t -> Bool -> Gen (Term era t, Env era)
-genTerm env rep allowFixed = sized $ genSizedTerm env rep allowFixed
+data VarSpec = VarTerm    -- ^ Must contain a variable (solved or unsolved)
+             | KnownTerm  -- ^ Can only use solved variables
+  deriving (Eq, Show)
 
-genSizedTerm :: Era era => Env era -> Rep era t -> Bool -> Int -> Gen (Term era t, Env era)
-genSizedTerm env rep allowFixed size = frequency $
-  [ (5, genFixed)       | allowFixed ] ++
-  [ (5, genExistingVar) | not $ null existingVars ] ++
-  [ (1, genFreshVar)    | size > 0 || not allowFixed ]
+genTerm :: Era era => GenEnv era -> Rep era t -> VarSpec -> Gen (Term era t, GenEnv era)
+genTerm env rep vspec = sized $ \ n -> genSizedTerm n env rep vspec
+
+genSizedTerm :: Era era => Int -> GenEnv era -> Rep era t -> VarSpec -> Gen (Term era t, GenEnv era)
+genSizedTerm size env rep vspec = genTerm' env rep (const True) (genSizedLiteral size env rep) vspec
+
+genTerm' :: GenEnv era -> Rep era t -> (t -> Bool) -> Gen (Literal era t) -> VarSpec -> Gen (Term era t, GenEnv era)
+genTerm' env rep valid genLit vspec = frequency $
+  [ (5, genFixed)       | vspec == KnownTerm ] ++
+  [ (5, genExistingVar) | not $ null allowedVars ] ++
+  [ (1, genFreshVar)    | vspec == VarTerm ]
   where
-    existingVars = envVarsOfType env rep
+    isValid (_, Lit _ val) = valid val
+    existingVars = map fst $ filter isValid $ envVarsOfType (gEnv env) rep
+    allowedVars = case vspec of
+      VarTerm   -> existingVars  -- Open terms can use solved variables
+      KnownTerm -> filter ((`Set.member`    gSolved env) . Name) existingVars
 
-    genFixed       = (, env) . Fixed <$> genSizedLiteral size rep
-    genExistingVar = (, env) . Var <$> elements (map fst existingVars)
+    genFixed       = (, env) . Fixed <$> genLit
+    genExistingVar = (, env) . Var <$> elements allowedVars
 
     genFreshVar = do
       name      <- genFreshVarName env
-      Lit _ val <- genSizedLiteral size rep
+      Lit _ val <- genLit
       let var = V name rep No
-      pure (Var var, storeVar var val env)
+      pure (Var var, addVar var val env)
 
 data TypeInEra era where
   TypeInEra :: (Show t, Ord t) => Rep era t -> TypeInEra era
@@ -92,36 +141,93 @@ genType = elements [TypeInEra IntR, TypeInEra (SetR IntR)]
 genBaseType :: Gen (TypeInEra era)
 genBaseType = elements [TypeInEra IntR]
 
+-- | Unsatisfiable constraint returned if we fail during constraint generation.
 errPred :: [String] -> Pred era
 errPred errs = Fixed (Lit (ListR StringR) ["Errors:"]) :=: Fixed (Lit (ListR StringR) errs)
 
-genPred :: Era era => Env era -> Gen (Pred era, Env era)
-genPred env = sized $ genSizedPred env
+genPred :: Era era => GenEnv era -> Gen (Maybe (Pred era, GenEnv era))
+genPred env = sized $ \ n -> genSizedPred n env
 
-genSizedPred :: Era era => Env era -> Int -> Gen (Pred era, Env era)
-genSizedPred env size = frequency
-  [ (1, sized) ]
+genSizedPred :: forall era. Era era => Int -> GenEnv era -> Gen (Maybe (Pred era, GenEnv era))
+genSizedPred size env = frequency
+  [ (1, Just <$> fixedSizedC)
+  , (0, Just <$> varSizedC)      -- TODO: we can't solve these at the moment
+  , (1, Just <$> subsetC)
+  ]
   where
     -- Fixed size
-    sized = do
+    fixedSizedC = do
       TypeInEra rep <- genBaseType
-      (set, env')   <- genSizedTerm env (SetR rep) False size -- Must contain a variable!
-      case runTyped $ runTerm env' set of
+      (set, env')   <- genSizedTerm size env (SetR rep) VarTerm
+      case runTyped $ runTerm (gEnv env') set of
         Left errs -> pure (errPred errs, env')
-        Right val -> pure (Sized n set, env')
+        Right val -> pure (Sized n set, markSolved (vars set) env')
           where n = Fixed $ Lit Word64R (getsize val)
 
-genPreds :: Era era => Env era -> Gen ([Pred era], Env era)
-genPreds env = do
+    -- Fresh variable for size.
+    varSizedC = do
+      TypeInEra rep <- genBaseType
+      (set, env')   <- genSizedTerm size env (SetR rep) KnownTerm
+      case runTyped $ runTerm (gEnv env') set of
+        Left errs -> pure (errPred errs, env')
+        Right val -> do
+          name <- genFreshVarName env'
+          let var = V name Word64R No
+          pure (Sized (Var var) set, addSolvedVar var (getsize val) env')
+
+    -- Open subset, known superset
+    subsetC = do
+      TypeInEra rep <- genBaseType
+      (sup, env') <- genSizedTerm size env (SetR rep) KnownTerm
+      case runTyped $ runTerm (gEnv env') sup of
+        Left errs -> pure (errPred errs, env')
+        Right val -> do
+          (sub, env'') <- genTerm' env' (SetR rep)
+                                   (`Set.isSubsetOf` val)
+                                   (Lit (SetR rep) <$> subsetFromSet val)
+                                   VarTerm
+          pure (sub :<=: sup, markSolved (vars sub) env'')
+
+genPreds :: Era era => GenEnv era -> Gen ([Pred era], GenEnv era)
+genPreds = \ env -> do
   n <- choose (1, 10)
   loop (n :: Int) env
   where
     loop n env
       | n == 0    = pure ([], env)
-      | otherwise = do
-        (pr, env')   <- genPred env
-        (prs, env'') <- loop (n - 1) env'
-        pure (pr : prs, env'')
+      | otherwise = genPred env >>= \ case
+        Nothing         -> loop (n - 1) env
+        Just (pr, env') -> first (pr :) <$> loop (n - 1) env'
+
+-- We can't drop constraints due to dependency limitations. There needs to be at least one
+-- constraint to solve each variable. We can replace constraints by Random though!
+shrinkPreds :: ([Pred era], GenEnv era) -> [([Pred era], GenEnv era)]
+shrinkPreds (preds, env) =
+  [ (preds', env') | preds' <- shrinkList shrinkPred preds
+                   , let defined = foldMap def preds'
+                         used    = foldMap use preds'
+                         env'    = env{ gEnv = pruneEnv defined (gEnv env) }
+                   , Set.isSubsetOf used defined
+                   ]
+  where
+    shrinkPred Random{}    = []
+    shrinkPred (Sized _ t) = [Random t]
+    shrinkPred (t :<=: _)  = [Random t]
+    shrinkPred _           = []
+
+    pruneEnv defs (Env vmap) = Env $ Map.filterWithKey (\ name _ -> Set.member name defNames) vmap
+      where
+        defNames = Set.map (\ (Name (V name _ _)) -> name) defs
+
+    use Random{}   = mempty
+    use Sized{}    = mempty
+    use (_ :<=: t) = vars t
+    use _          = mempty
+
+    def (Random t)  = vars t
+    def (Sized _ t) = vars t
+    def (t :<=: t') = vars t `Set.difference` vars t'
+    def _ = mempty
 
 -- Tests ---
 
@@ -146,14 +252,34 @@ ifTyped t prop =
     Left{}  -> False ==> False
     Right x -> property $ prop x
 
+initEnv :: GenEnv TestEra
+initEnv = GenEnv { gEnv    = emptyEnv
+                 , gSolved = mempty
+                 }
+
+showEnv :: Env era -> String
+showEnv (Env vmap) = unlines $ map pr $ Map.toList vmap
+  where pr (name, Payload rep t _) = name ++ " :: " ++ show rep ++ " -> " ++ prVal rep t
+        prVal rep t =
+          case rep of
+            SetR r -> "{" ++ intercalate ", " (map (synopsis r) (Set.toList t)) ++ "}"
+            _      -> synopsis rep t
+
 -- | Generate a set of satisfiable constraints and check that we can generate a solution and that it
 --   actually satisfies the constraints.
 prop_soundness :: Property
 prop_soundness =
-  forAll (genPreds @TestEra emptyEnv)                        $ \ (preds, _) ->
+  forAllShrink (genPreds initEnv) shrinkPreds                $ \ (preds, genenv) ->
   ensureTyped (compile standardOrderInfo preds)              $ \ graph ->
   forAll (genDependGraph testProof graph) . flip ensureRight $ \ subst ->
   let env = substToEnv subst emptyEnv
       checkPred pr = counterexample ("Failed: " ++ show pr) $ ensureTyped (runPred env pr) id
-  in conjoin $ map checkPred preds
+      n = let Env e = gEnv genenv in Map.size e
+  in
+    tabulate "Var count"        [show n] $
+    tabulate "Constraint count" [show $ length preds] $
+    counterexample ("\n-- Constraints --\n" ++ unlines (map show preds)) $
+    counterexample ("-- Model solution --\n" ++ showEnv (gEnv genenv)) $
+    counterexample ("-- Solution --\n" ++ showEnv env) $
+    conjoin $ map checkPred preds
 
