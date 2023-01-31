@@ -41,7 +41,7 @@ fixSet numtrys size genA s = help numtrys s
       | trys <= 0 =
           if Set.size set == size
             then pure set
-            else error ("Ran out of trys in fixSet: " ++ show trys)
+            else error ("Ran out of trys in fixSet: need " ++ show size ++ " elements, have " ++ show (Set.size set))
     help trys set = case compare (Set.size set) size of
       EQ -> pure set
       GT -> help (trys - 1) (iterate Set.deleteMin set !! (Set.size set - size))
