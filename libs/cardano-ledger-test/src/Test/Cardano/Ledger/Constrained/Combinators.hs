@@ -44,8 +44,10 @@ fixSet numtrys size genA s = help numtrys s
             else error ("Ran out of trys in fixSet: " ++ show trys)
     help trys set = case compare (Set.size set) size of
       EQ -> pure set
-      GT -> help (trys - 1) (Set.deleteMin set)
-      LT -> do a <- genA; help (trys - 1) (Set.insert a set)
+      GT -> help (trys - 1) (iterate Set.deleteMin set !! (Set.size set - size))
+      LT -> do
+        new <- Set.fromList <$> vectorOf (size - Set.size set) genA
+        help (trys - 1) (Set.union new set)
 
 mapSized :: Ord a => Int -> Gen a -> Gen b -> Gen (Map a b)
 mapSized size genA genB = setSized size genA >>= addRange
