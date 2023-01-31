@@ -377,7 +377,7 @@ genRep ::
   Era era =>
   Rep era b ->
   Gen b
-genRep x = do (NonZero n) <- arbitrary; genSizedRep n x
+genRep x = do (NonNegative n) <- arbitrary; genSizedRep n x
 
 -- ===========================
 
