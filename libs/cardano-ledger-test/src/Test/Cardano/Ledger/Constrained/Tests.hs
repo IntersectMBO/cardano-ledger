@@ -86,7 +86,7 @@ genLiteral _env rep =
     unconstrained r = Lit r <$> genRep r
 
     setLiteral :: forall a. Ord a => Rep era a -> Gen (Literal era (Set a))
-    setLiteral erep = unconstrained (SetR erep)
+    setLiteral erep = unconstrained (SetR erep) -- TODO: generate combinations of known sets
 
 genFreshVarName :: GenEnv era -> Gen String
 genFreshVarName env = elements varNames
@@ -256,14 +256,15 @@ ensureRight :: Testable prop => Either [String] a -> (a -> prop) -> Property
 ensureRight (Left errs) _ = counterexample (unlines errs) False
 ensureRight (Right x) prop = property $ prop x
 
+ifRight :: Testable prop => Either [String] a -> (a -> prop) -> Property
+ifRight Left{} _ = False ==> False
+ifRight (Right x) prop = property $ prop x
+
 ensureTyped :: Testable prop => Typed a -> (a -> prop) -> Property
 ensureTyped = ensureRight . runTyped
 
 ifTyped :: Testable prop => Typed a -> (a -> prop) -> Property
-ifTyped t prop =
-  case runTyped t of
-    Left{}  -> False ==> False
-    Right x -> property $ prop x
+ifTyped = ifRight . runTyped
 
 initEnv :: GenEnv TestEra
 initEnv = GenEnv { gEnv    = emptyEnv
@@ -289,10 +290,15 @@ showEnv (Env vmap) = unlines $ map pr $ Map.toList vmap
 -- | Generate a set of satisfiable constraints and check that we can generate a solution and that it
 --   actually satisfies the constraints.
 prop_soundness :: Property
-prop_soundness =
-  forAllShrink (genPreds initEnv) shrinkPreds                $ \ (preds, genenv) ->
-  ensureTyped (compile standardOrderInfo preds)              $ \ graph ->
-  forAll (genDependGraph testProof graph) . flip ensureRight $ \ subst ->
+prop_soundness = prop_soundness' False
+
+-- | If argument is True, fail property if constraints cannot be solved. Otherwise discard unsolved
+--   constraints.
+prop_soundness' :: Bool -> Property
+prop_soundness' strict =
+  forAllShrink (genPreds initEnv) shrinkPreds               $ \ (preds, genenv) ->
+  checkTyped (compile standardOrderInfo preds)              $ \ graph ->
+  forAll (genDependGraph testProof graph) . flip checkRight $ \ subst ->
   let env = substToEnv subst emptyEnv
       checkPred pr = counterexample ("Failed: " ++ show pr) $ ensureTyped (runPred env pr) id
       n = let Env e = gEnv genenv in Map.size e
@@ -303,4 +309,9 @@ prop_soundness =
     counterexample ("-- Model solution --\n" ++ showEnv (gEnv genenv)) $
     counterexample ("-- Solution --\n" ++ showEnv env) $
     conjoin $ map checkPred preds
+  where
+    checkTyped | strict    = ensureTyped
+               | otherwise = ifTyped
+    checkRight | strict    = ensureRight
+               | otherwise = ifRight
 
