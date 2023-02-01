@@ -66,7 +66,7 @@ fails in these cases:
 
 Current limitations of the tests
   - Only IntR and SetR IntR types (and Word64R for size constraints)
-  - Only generates Sized, :<=:, and Disjoint constraints
+  - Only generates Sized, :<=:, Disjoint, and SumsTo(SumSet) constraints
 
 Known limitations of the code that the tests avoid
   - Constraints of the form `Sized X t` cannot be solved (with X unknown), even with sizeBeforeArg =
@@ -74,6 +74,8 @@ Known limitations of the code that the tests avoid
     TODO/sizeBeforeArg for where these constraints a disabled in the tests.
   - Superset constraints cannot be solved, meaning `setBeforeSubset` is always set to True (see
     TODO/supersetConstraints).
+  - The generator for SumSet is wrong. It does `Set.fromList` on a partitioned list which doesn't
+    account for duplicate elements (see TODO/SumSet).
 
 -}
 
@@ -96,7 +98,10 @@ instance Arbitrary OrderInfo where
     info <- OrderInfo <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
     -- TODO/supersetConstraints: RngSpec can't represent superset constraints at the moment, so
     -- setBeforeSubset = False doesn't work.
-    pure info{ setBeforeSubset = True }
+    -- TODO/SumSet: The generator for a Set with a given sum doesn't work (it doesn't account for
+    -- duplicate elements), so we can't have sumBeforeParts.
+    pure info{ setBeforeSubset = True
+             , sumBeforeParts  = False }
   shrink info = [ standardOrderInfo | info /= standardOrderInfo ]
 
 addVar :: V era t -> t -> GenEnv era -> GenEnv era
@@ -114,6 +119,14 @@ depthOfName env x = Map.findWithDefault 0 x (gSolved env)
 
 depthOf :: GenEnv era -> Term era t -> Depth
 depthOf env t = maximum $ 0 : map (depthOfName env) (Set.toList $ vars t)
+
+depthOfSum :: GenEnv era -> Sum era c -> Depth
+depthOfSum env = \ case
+  SumMap t  -> depthOf env t
+  SumSet t  -> depthOf env t
+  SumList t -> depthOf env t
+  One t     -> depthOf env t
+  Project t -> depthOf env t
 
 genLiteral :: forall era t. Era era => GenEnv era -> Rep era t -> Gen (Literal era t)
 genLiteral env rep =
@@ -158,13 +171,10 @@ data VarSpec = VarTerm Depth -- ^ Must contain a variable (either unsolved, or s
   deriving (Eq, Show)
 
 genTerm :: Era era => GenEnv era -> Rep era t -> VarSpec -> Gen (Term era t, GenEnv era)
-genTerm env rep vspec = sized $ \ n -> genSizedTerm n env rep vspec
+genTerm env rep vspec = genTerm' env rep (const True) (genLiteral env rep) vspec
 
-genSizedTerm :: Era era => Int -> GenEnv era -> Rep era t -> VarSpec -> Gen (Term era t, GenEnv era)
-genSizedTerm size env rep vspec = genSizedTerm' size env rep (const True) (genLiteral env rep) vspec
-
-genSizedTerm' :: Int -> GenEnv era -> Rep era t -> (t -> Bool) -> Gen (Literal era t) -> VarSpec -> Gen (Term era t, GenEnv era)
-genSizedTerm' _size env rep valid genLit vspec = frequency $
+genTerm' :: GenEnv era -> Rep era t -> (t -> Bool) -> Gen (Literal era t) -> VarSpec -> Gen (Term era t, GenEnv era)
+genTerm' env rep valid genLit vspec = frequency $
   [ (5, genFixed)       | vspec == KnownTerm ] ++
   [ (5, genExistingVar) | not $ null allowedVars ] ++
   [ (1, genFreshVar)    | VarTerm{} <- [vspec] ]
@@ -197,15 +207,23 @@ genBaseType = elements [TypeInEra IntR]
 errPred :: [String] -> Pred era
 errPred errs = Fixed (Lit (ListR StringR) ["Errors:"]) :=: Fixed (Lit (ListR StringR) errs)
 
-genPred :: Era era => GenEnv era -> Gen (Maybe (Pred era, GenEnv era))
-genPred env = sized $ \ n -> genSizedPred n env
+-- This is very ad hoc
+setWithSum :: Int -> Gen (Set Int)
+setWithSum n = fixUp <$> arbitrary
+  where
+    fixUp s
+      | missing == 0 = s
+      | otherwise    = if Set.notMember missing s then Set.insert missing s
+                                                  else Set.singleton n
+      where missing = n - sum s
 
-genSizedPred :: forall era. Era era => Int -> GenEnv era -> Gen (Maybe (Pred era, GenEnv era))
-genSizedPred size env = frequency $
-  [ (1, Just <$> fixedSizedC)         ] ++
-  [ (1, Just <$> varSizedC)   | False ] ++  -- TODO/sizeBeforeArg: we can't solve these at the moment
-  [ (1, Just <$> subsetC)             ] ++
-  [ (1, Just <$> disjointC)           ]
+genPred :: forall era. Era era => GenEnv era -> Gen (Pred era, GenEnv era)
+genPred env = frequency $
+  [ (1, fixedSizedC)         ] ++
+  [ (1, varSizedC)   | False ] ++  -- TODO/sizeBeforeArg: we can't solve these at the moment
+  [ (1, subsetC)             ] ++
+  [ (1, disjointC)           ] ++
+  [ (1, sumsToC)             ]
   where
     withValue :: forall t.
                  Gen (Term era t, GenEnv era)
@@ -220,14 +238,14 @@ genSizedPred size env = frequency $
     -- Fixed size
     fixedSizedC = do
       TypeInEra rep <- genBaseType
-      withValue (genSizedTerm size env (SetR rep) (VarTerm 1)) $ \ set val env' ->
+      withValue (genTerm env (SetR rep) (VarTerm 1)) $ \ set val env' ->
         let n = Fixed $ Lit Word64R (getsize val) in
         pure (Sized n set, markSolved (vars set) 1 env')
 
     -- Fresh variable for size.
     varSizedC = do
       TypeInEra rep <- genBaseType
-      withValue (genSizedTerm size env (SetR rep) KnownTerm) $ \ set val env' -> do
+      withValue (genTerm env (SetR rep) KnownTerm) $ \ set val env' -> do
         name <- genFreshVarName env'
         let var = V name Word64R No
         pure (Sized (Var var) set, addSolvedVar var (getsize val) (1 + depthOf env' set) env')
@@ -236,9 +254,9 @@ genSizedPred size env = frequency $
       | setBeforeSubset (gOrder env) = do
         -- Known superset
         TypeInEra rep <- genBaseType
-        withValue (genSizedTerm size env (SetR rep) KnownTerm) $ \ sup val env' -> do
+        withValue (genTerm env (SetR rep) KnownTerm) $ \ sup val env' -> do
           let d = 1 + depthOf env' sup
-          (sub, env'') <- genSizedTerm' size env' (SetR rep)
+          (sub, env'') <- genTerm' env' (SetR rep)
                                         (`Set.isSubsetOf` val)
                                         (Lit (SetR rep) <$> subsetFromSet val)
                                         (VarTerm d)
@@ -246,9 +264,9 @@ genSizedPred size env = frequency $
       | otherwise = do
         -- Known subset
         TypeInEra rep <- genBaseType
-        withValue (genSizedTerm size env (SetR rep) KnownTerm) $ \ sub val env' -> do
+        withValue (genTerm env (SetR rep) KnownTerm) $ \ sub val env' -> do
           let d = 1 + depthOf env' sub
-          (sup, env'') <- genSizedTerm' size env' (SetR rep)
+          (sup, env'') <- genTerm' env' (SetR rep)
                                         (Set.isSubsetOf val)
                                         (Lit (SetR rep) . Set.union val <$> genRep (SetR rep))
                                         (VarTerm d)
@@ -257,13 +275,51 @@ genSizedPred size env = frequency $
     -- Disjoint, left KnownTerm and right VarTerm
     disjointC = do
       TypeInEra rep <- genBaseType
-      withValue (genSizedTerm size env (SetR rep) KnownTerm) $ \ lhs val env' -> do
+      withValue (genTerm env (SetR rep) KnownTerm) $ \ lhs val env' -> do
         let d = 1 + depthOf env' lhs
-        (rhs, env'') <- genSizedTerm' size env' (SetR rep)
+        (rhs, env'') <- genTerm' env' (SetR rep)
                                       (Set.disjoint val)
                                       (Lit (SetR rep) . (`Set.difference` val) <$> genRep (SetR rep))
                                       (VarTerm d)
         pure (Disjoint lhs rhs, markSolved (vars rhs) d env'')
+
+    -- SumsTo constraint, only Set Int at the moment.
+    sumsToC
+      | sumBeforeParts (gOrder env) =
+        -- Known sum
+        withValue (genTerm' env IntR (> 10) (Lit IntR . (+ 10) . getPositive <$> arbitrary) KnownTerm) $ \ sumTm val env' -> do
+          let d = 1 + depthOf env' sumTm
+
+              genParts [] env0 = pure ([], env0)
+              genParts (n : ns) env0 = do
+                (t, env1) <- genTerm' env0 (SetR IntR)
+                                           ((== n) . sum)
+                                           (Lit (SetR IntR) <$> setWithSum n)
+                                           (VarTerm d)
+                first (SumSet t :) <$> genParts ns env1
+          -- TODO: It's unclear what the requirements are on the parts when solving sumBeforeParts.
+          -- The solver fails if you have multiple unknown variables. Generating only a single part
+          -- for now, since sumBeforeParts is anyway disabled due to TODO/SumSet.
+          -- count <- choose (1, min 3 val)
+          let count = 1
+          partSums <- intPartition 1 count val
+          (parts, env'') <- genParts partSums env'
+          pure (SumsTo sumTm parts, markSolved (foldMap (varsOfSum mempty) parts) d env'')
+      | otherwise = do
+        -- Known sets
+        let genParts 0 env0 k = k [] 0 env0
+            genParts n env0 k =
+              withValue (genTerm env0 (SetR IntR) KnownTerm) $ \ set val env1 ->
+                genParts (n - 1) env1 $ \ parts tot ->
+                k (SumSet set : parts) (sum val + tot)
+        count <- choose (1, 3 :: Int)
+        genParts count env $ \ parts tot env' -> do
+          let d = 1 + maximum (0 : map (depthOfSum env') parts)
+          (sumTm, env'') <- genTerm' env' IntR
+                                     (== tot)
+                                     (pure $ Lit IntR tot)
+                                     (VarTerm d)
+          pure (SumsTo sumTm parts, markSolved (vars sumTm) d env'')
 
 genPreds :: Era era => GenEnv era -> Gen ([Pred era], GenEnv era)
 genPreds = \ env -> do
@@ -272,9 +328,9 @@ genPreds = \ env -> do
   where
     loop n env
       | n == 0    = pure ([], env)
-      | otherwise = genPred env >>= \ case
-        Nothing         -> loop (n - 1) env
-        Just (pr, env') -> first (pr :) <$> loop (n - 1) env'
+      | otherwise = do
+        (pr, env') <- genPred env
+        first (pr :) <$> loop (n - 1) env'
 
 -- We can't drop constraints due to dependency limitations. There needs to be at least one
 -- constraint to solve each variable. We can replace constraints by Random though!
