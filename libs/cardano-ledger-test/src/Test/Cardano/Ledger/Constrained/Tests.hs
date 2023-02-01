@@ -116,7 +116,7 @@ depthOf :: GenEnv era -> Term era t -> Depth
 depthOf env t = maximum $ 0 : map (depthOfName env) (Set.toList $ vars t)
 
 genLiteral :: forall era t. Era era => GenEnv era -> Rep era t -> Gen (Literal era t)
-genLiteral _env rep =
+genLiteral env rep =
   case rep of
     SetR erep -> setLiteral erep
     _         -> unconstrained rep
@@ -125,7 +125,13 @@ genLiteral _env rep =
     unconstrained r = Lit r <$> genRep r
 
     setLiteral :: forall a. Ord a => Rep era a -> Gen (Literal era (Set a))
-    setLiteral erep = unconstrained (SetR erep) -- TODO: generate combinations of known sets
+    setLiteral erep = do
+      let knownSets = [ val | (_, Lit _ val) <- envVarsOfType (gEnv env) (SetR erep) ]
+          gen       = oneof $ genRep (SetR erep) : map pure knownSets
+      set1 <- gen
+      set2 <- gen
+      op   <- elements [const, const id, Set.union, Set.intersection, Set.difference, flip Set.difference]
+      pure $ Lit (SetR erep) $ op set1 set2
 
 genFreshVarName :: GenEnv era -> Gen String
 genFreshVarName env = elements varNames
