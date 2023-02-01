@@ -722,7 +722,10 @@ genSet rep@(SetR r) cond = explain ("Producing Set generator for " ++ showSetSpe
   SetSpec _ (NeverRng xs) -> failT xs
   SetSpec Nothing None -> pure $ genRep rep
   SetSpec Nothing (SubsetRng x) -> pure $ subsetFromSet x
-  SetSpec Nothing (DisjointRng x) -> pure $ suchThat (genRep rep) (Set.disjoint x)
+  SetSpec Nothing (DisjointRng x) ->
+    -- TODO: might want to push the suchThat into the element generator here to improve
+    --       distribution.
+    pure $ suchThat (genRep rep) (Set.disjoint x)
   SetSpec Nothing (Equal xs) -> pure $ pure (Set.fromList xs)
   SetSpec Nothing (ProjRng _ _) -> failT ["FIX ME: SetSpec Nothing (ProjRng _ _)"]
   SetSpec Nothing (SumRng n) -> pure $ do
