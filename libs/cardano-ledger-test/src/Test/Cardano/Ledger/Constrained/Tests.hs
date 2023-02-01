@@ -6,15 +6,20 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
+-- Orphan Arbitrary instance for OrderInfo
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module Test.Cardano.Ledger.Constrained.Tests where
 
 import Control.Arrow (first)
+import Data.Foldable (fold)
 import Data.List (intercalate, partition)
 import qualified Data.Map as Map
 import Data.Map (Map)
@@ -51,11 +56,6 @@ it was solved. When generating constraints between solved variables we require t
 the dependency order. For instance, a constraints S ⊆ T (assuming we solve supersets before subsets)
 must have `depthOf T < depthOf S`.
 
-Current limitations
-  - Only IntR and SetR IntR types (and Word64R for size constraints)
-  - Only generates Sized, :<=:, and Disjoint constraints
-  - Only tests standardOrderInfo variable order
-
 The soundness property discards cases where we fail to find a solution to the constraints, but it's
 still interesting to know when this happens, since we try our best to generate solvable constraints.
 There is a strict version of the property (`prop_soundness' True`) that fails instead. Currently it
@@ -63,11 +63,24 @@ fails in these cases:
   - When the existence of a solution to a later variable depends on the value picked for an earlier
     variable. For instance, [Sized 3 A, B ⊆ A, C ⊆ B, Sized 1 C]. Here B needs to be solved with a
     non-empty set for C to have a solution.
+
+Current limitations of the tests
+  - Only IntR and SetR IntR types (and Word64R for size constraints)
+  - Only generates Sized, :<=:, and Disjoint constraints
+
+Known limitations of the code that the tests avoid
+  - Constraints of the form `Sized X t` cannot be solved (with X unknown), even with sizeBeforeArg =
+    False. On the other hand `Sized n X` is no problem regardless of the value of sizeBeforeArg. See
+    TODO/sizeBeforeArg for where these constraints a disabled in the tests.
+  - Superset constraints cannot be solved, meaning `setBeforeSubset` is always set to True (see
+    TODO/supersetConstraints).
+
 -}
 
 -- Generators ---
 
-data GenEnv era = GenEnv { gEnv    :: Env era
+data GenEnv era = GenEnv { gOrder  :: OrderInfo
+                         , gEnv    :: Env era
                          , gSolved :: Map (Name era) Depth
                             -- ^ Which variables in the environment have we "solved", i.e. generated
                             --   a constraint that allows solving them. Also track the "depth" of
@@ -77,6 +90,14 @@ data GenEnv era = GenEnv { gEnv    :: Env era
   deriving Show
 
 type Depth = Int
+
+instance Arbitrary OrderInfo where
+  arbitrary   = do
+    info <- OrderInfo <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+    -- TODO/supersetConstraints: RngSpec can't represent superset constraints at the moment, so
+    -- setBeforeSubset = False doesn't work.
+    pure info{ setBeforeSubset = True }
+  shrink info = [ standardOrderInfo | info /= standardOrderInfo ]
 
 addVar :: V era t -> t -> GenEnv era -> GenEnv era
 addVar var val env = env{ gEnv = storeVar var val $ gEnv env }
@@ -174,12 +195,11 @@ genPred :: Era era => GenEnv era -> Gen (Maybe (Pred era, GenEnv era))
 genPred env = sized $ \ n -> genSizedPred n env
 
 genSizedPred :: forall era. Era era => Int -> GenEnv era -> Gen (Maybe (Pred era, GenEnv era))
-genSizedPred size env = frequency
-  [ (1, Just <$> fixedSizedC)
-  , (0, Just <$> varSizedC)      -- TODO: we can't solve these at the moment
-  , (1, Just <$> subsetC)
-  , (1, Just <$> disjointC)
-  ]
+genSizedPred size env = frequency $
+  [ (1, Just <$> fixedSizedC)         ] ++
+  [ (1, Just <$> varSizedC)   | False ] ++  -- TODO/sizeBeforeArg: we can't solve these at the moment
+  [ (1, Just <$> subsetC)             ] ++
+  [ (1, Just <$> disjointC)           ]
   where
     withValue :: forall t.
                  Gen (Term era t, GenEnv era)
@@ -206,16 +226,27 @@ genSizedPred size env = frequency
         let var = V name Word64R No
         pure (Sized (Var var) set, addSolvedVar var (getsize val) (1 + depthOf env' set) env')
 
-    -- Open subset, known superset
-    subsetC = do
-      TypeInEra rep <- genBaseType
-      withValue (genSizedTerm size env (SetR rep) KnownTerm) $ \ sup val env' -> do
-        let d = 1 + depthOf env' sup
-        (sub, env'') <- genSizedTerm' size env' (SetR rep)
-                                      (`Set.isSubsetOf` val)
-                                      (Lit (SetR rep) <$> subsetFromSet val)
-                                      (VarTerm d)
-        pure (sub :<=: sup, markSolved (vars sub) d env'')
+    subsetC
+      | setBeforeSubset (gOrder env) = do
+        -- Known superset
+        TypeInEra rep <- genBaseType
+        withValue (genSizedTerm size env (SetR rep) KnownTerm) $ \ sup val env' -> do
+          let d = 1 + depthOf env' sup
+          (sub, env'') <- genSizedTerm' size env' (SetR rep)
+                                        (`Set.isSubsetOf` val)
+                                        (Lit (SetR rep) <$> subsetFromSet val)
+                                        (VarTerm d)
+          pure (sub :<=: sup, markSolved (vars sub) d env'')
+      | otherwise = do
+        -- Known subset
+        TypeInEra rep <- genBaseType
+        withValue (genSizedTerm size env (SetR rep) KnownTerm) $ \ sub val env' -> do
+          let d = 1 + depthOf env' sub
+          (sup, env'') <- genSizedTerm' size env' (SetR rep)
+                                        (Set.isSubsetOf val)
+                                        (Lit (SetR rep) . Set.union val <$> genRep (SetR rep))
+                                        (VarTerm d)
+          pure (sub :<=: sup, markSolved (vars sup) d env'')
 
     -- Disjoint, left KnownTerm and right VarTerm
     disjointC = do
@@ -249,16 +280,21 @@ shrinkPreds (preds, env) =
                    , depCheck mempty preds'
                    ]
   where
-    shrinkPred Random{}    = []
-    shrinkPred (Sized _ t) = [Random t]
-    shrinkPred (t :<=: _)  = [Random t]
-    shrinkPred _           = []
+    -- Shrink to a Random constraint defining the same variables. The makes sure we respect the
+    -- OrderInfo.
+    shrinkPred Random{} = []
+    shrinkPred c        = [ r | r <- randoms c, def r == def c, not . null $ def r ]
+
+    randoms (Sized n t)    = [Random n, Random t]
+    randoms (s :<=: t)     = [Random s, Random t]
+    randoms (s :=: t)      = [Random s, Random t]
+    randoms (Disjoint s t) = [Random s, Random t]
+    randoms _              = []
 
     pruneEnv defs (Env vmap) = Env $ Map.filterWithKey (\ name _ -> Set.member name defNames) vmap
       where
         defNames = Set.map (\ (Name (V name _ _)) -> name) defs
 
-    -- TODO: don't reimplement this here!
     depCheck _ [] = True
     depCheck solved preds'
       | null rdy  = False
@@ -267,17 +303,8 @@ shrinkPreds (preds, env) =
         (rdy, rest) = partition canSolve preds'
         canSolve c = Set.isSubsetOf (use c) solved
 
-    use Random{}       = mempty
-    use Sized{}        = mempty
-    use (_ :<=: t)     = vars t
-    use (Disjoint s _) = vars s
-    use _              = mempty
-
-    def (Random t)     = vars t
-    def (Sized _ t)    = vars t
-    def (t :<=: _)     = vars t
-    def (Disjoint _ t) = vars t
-    def _              = mempty
+    def = Map.keysSet . accumdep (gOrder env) mempty
+    use = fold        . accumdep (gOrder env) mempty
 
 -- Tests ---
 
@@ -303,10 +330,11 @@ ensureTyped = ensureRight . runTyped
 ifTyped :: Testable prop => Typed a -> (a -> prop) -> Property
 ifTyped = ifRight . runTyped
 
-initEnv :: GenEnv TestEra
-initEnv = GenEnv { gEnv    = emptyEnv
-                 , gSolved = mempty
-                 }
+initEnv :: OrderInfo -> GenEnv TestEra
+initEnv info = GenEnv { gOrder  = info
+                      , gEnv    = emptyEnv
+                      , gSolved = mempty
+                      }
 
 showVal :: Rep era t -> t -> String
 showVal (SetR r) t = "{" ++ intercalate ", " (map (synopsis r) (Set.toList t)) ++ "}"
@@ -336,17 +364,18 @@ predConstr HasDom{}   = "HasDom"
 
 -- | Generate a set of satisfiable constraints and check that we can generate a solution and that it
 --   actually satisfies the constraints.
-prop_soundness :: Property
+prop_soundness :: OrderInfo -> Property
 prop_soundness = prop_soundness' False
 
 -- | If argument is True, fail property if constraints cannot be solved. Otherwise discard unsolved
 --   constraints.
-prop_soundness' :: Bool -> Property
-prop_soundness' strict =
-  forAllShrink (genPreds initEnv) shrinkPreds                              $ \ (preds, genenv) ->
+prop_soundness' :: Bool -> OrderInfo -> Property
+prop_soundness' strict info =
+  forAllShrink (genPreds $ initEnv info) shrinkPreds                       $ \ (preds, genenv) ->
+  counterexample ("\n-- Order --\n" ++ show info)                          $
   counterexample ("\n-- Constraints --\n" ++ unlines (map showPred preds)) $
   counterexample ("-- Model solution --\n" ++ showEnv (gEnv genenv))       $
-  ensureTyped (compile standardOrderInfo preds)                            $ \ graph ->
+  ensureTyped (compile info preds)                                         $ \ graph ->
   forAll (genDependGraph testProof graph) . flip checkRight                $ \ subst ->
   let env = substToEnv subst emptyEnv
       checkPred pr = counterexample ("Failed: " ++ show pr) $ ensureTyped (runPred env pr) id

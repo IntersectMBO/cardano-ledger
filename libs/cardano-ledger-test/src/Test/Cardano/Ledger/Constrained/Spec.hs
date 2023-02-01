@@ -258,7 +258,7 @@ data OrderInfo = OrderInfo
   , setBeforeSubset :: Bool
   , mapBeforeDom :: Bool
   }
-  deriving (Show)
+  deriving (Show, Eq)
 
 standardOrderInfo :: OrderInfo
 standardOrderInfo =
