@@ -50,7 +50,7 @@ import Prelude hiding (subtract)
 -- of what it is doing, and why.
 
 traceOn :: Bool
-traceOn = True
+traceOn = False
 
 ifTrace :: String -> a -> a
 ifTrace message a = case traceOn of
@@ -730,7 +730,9 @@ genSet rep@(SetR r) cond = explain ("Producing Set generator for " ++ showSetSpe
     xs <- partition i n
     pure (Set.fromList xs)
   SetSpec (Just n) None -> pure $ genSizedRep n rep
-  SetSpec (Just n) (SubsetRng set) -> pure $ subsetFromSetWithSize set n
+  SetSpec (Just n) (SubsetRng set)
+    | Set.size set < n -> failT ["Cannot make subset of size " ++ show n ++ " from set of size " ++ show (Set.size set)]
+    | otherwise -> pure $ subsetFromSetWithSize set n
   SetSpec (Just n) (DisjointRng set) -> pure $ setSized n (suchThat (genRep r) (`Set.notMember` set))
   SetSpec (Just _) (ProjRng _ _) -> failT ["FIX ME:  SetSpec (Just _) (ProjRng _ _)"]
   SetSpec (Just n) (Equal xs) ->
