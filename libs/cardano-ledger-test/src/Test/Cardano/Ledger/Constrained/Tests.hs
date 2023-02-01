@@ -52,10 +52,14 @@ Current limitations
   - Only generates Sized and :<=: constraints
   - Only tests standardOrderInfo variable order
 
-Current issues
-  - Generates cyclic constraints of the form [Random A, B ⊆ A, A ⊆ B]
-  - Property fails on constraints like [Sized 3 A, B ⊆ A, C ⊆ B, Sized 1 C]
-    where the solver solves B with the empty set and then fails on the size constraint for C.
+The soundness property discards cases where we fail to find a solution to the constraints, but it's
+still interesting to know when this happens, since we try our best to generate solvable constraints.
+There is a strict version of the property (`prop_soundness' True`) that fails instead. Currently it
+fails in these cases:
+  - We can generate cyclic constraints of the form [Random A, B ⊆ A, A ⊆ B]
+  - When the existence of a solution to a later variable depends on the value picked for an earlier
+    variable. For instance, [Sized 3 A, B ⊆ A, C ⊆ B, Sized 1 C]. Here B needs to be solved with a
+    non-empty set for C to have a solution.
 -}
 
 -- Generators ---
