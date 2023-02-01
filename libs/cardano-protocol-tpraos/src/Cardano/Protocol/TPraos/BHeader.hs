@@ -73,12 +73,12 @@ import Cardano.Ledger.Binary (
   peekTokenType,
   runByteBuilder,
   serialize',
-  serializeEncoding,
+  serializeEncoding',
   szCases,
   withWordSize,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
-import Cardano.Ledger.Crypto
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Hashes (
   EraIndependentBlockBody,
   EraIndependentBlockHeader,
@@ -102,6 +102,7 @@ import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Cardano.Protocol.TPraos.OCert (OCert (..))
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.DeepSeq (NFData)
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Builder as BS
 import qualified Data.ByteString.Builder.Extra as BS
 import qualified Data.ByteString.Lazy as BSL
@@ -268,7 +269,7 @@ instance
 data BHeader c = BHeader'
   { bHeaderBody' :: !(BHBody c)
   , bHeaderSig' :: !(SignedKES c (BHBody c))
-  , bHeaderBytes :: !BSL.ByteString
+  , bHeaderBytes :: BS.ByteString -- Lazy on purpose. Constructed on demand
   }
   deriving (Generic)
 
@@ -291,7 +292,7 @@ pattern BHeader bHeaderBody' bHeaderSig' <-
   where
     BHeader body sig =
       let mkBytes bhBody kESig =
-            serializeEncoding (pvMajor (bprotver bhBody)) $
+            serializeEncoding' (pvMajor (bprotver bhBody)) $
               encodeListLen 2
                 <> toCBOR bhBody
                 <> encodeSignedKES kESig
@@ -300,7 +301,7 @@ pattern BHeader bHeaderBody' bHeaderSig' <-
 {-# COMPLETE BHeader #-}
 
 instance Crypto c => Plain.EncCBOR (BHeader c) where
-  encCBOR (BHeader' _ _ bytes) = Plain.encodePreEncoded (BSL.toStrict bytes)
+  encCBOR (BHeader' _ _ bytes) = Plain.encodePreEncoded bytes
 
 instance Crypto c => ToCBOR (BHeader c) where
   encodedSizeExpr size proxy =
@@ -316,7 +317,7 @@ instance
     decodeRecordNamed "Header" (const 2) $ do
       bhb <- fromCBOR
       sig <- decodeSignedKES
-      pure $ pure $ BHeader' bhb sig
+      pure $ pure $ BHeader' bhb sig . BSL.toStrict
 
 -- | Hash a given block header
 bhHash ::
@@ -358,7 +359,7 @@ issuerIDfromBHBody :: Crypto c => BHBody c -> KeyHash 'BlockIssuer c
 issuerIDfromBHBody = hashKey . bheaderVk
 
 bHeaderSize :: forall c. BHeader c -> Int
-bHeaderSize = fromIntegral . BSL.length . bHeaderBytes
+bHeaderSize = BS.length . bHeaderBytes
 
 bhbody ::
   Crypto c =>
