@@ -74,11 +74,10 @@ import Cardano.Ledger.Binary (
   peekTokenType,
   runByteBuilder,
   serialize',
-  serializeEncoding,
   szCases,
   withWordSize,
  )
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Hashes (
   EraIndependentBlockBody,
   EraIndependentBlockHeader,
@@ -102,6 +101,7 @@ import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Cardano.Protocol.TPraos.OCert (OCert (..))
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.DeepSeq (NFData)
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Builder as BS
 import qualified Data.ByteString.Builder.Extra as BS
 import qualified Data.ByteString.Lazy as BSL
@@ -117,16 +117,16 @@ newtype HashHeader c = HashHeader {unHashHeader :: Hash c EraIndependentBlockHea
   deriving stock (Show, Eq, Generic, Ord)
   deriving newtype (NFData, NoThunks)
 
-deriving newtype instance CC.Crypto c => ToCBOR (HashHeader c)
+deriving newtype instance Crypto c => ToCBOR (HashHeader c)
 
 -- | The previous hash of a block
 data PrevHash c = GenesisHash | BlockHash !(HashHeader c)
   deriving (Show, Eq, Generic, Ord)
 
-instance CC.Crypto c => NoThunks (PrevHash c)
+instance Crypto c => NoThunks (PrevHash c)
 
 instance
-  CC.Crypto c =>
+  Crypto c =>
   ToCBOR (PrevHash c)
   where
   toCBOR GenesisHash = encodeNull
@@ -140,7 +140,7 @@ instance
       p = Proxy :: Proxy (HashHeader c)
 
 instance
-  CC.Crypto c =>
+  Crypto c =>
   FromCBOR (PrevHash c)
   where
   fromCBOR = do
@@ -150,7 +150,7 @@ instance
         pure GenesisHash
       _ -> BlockHash <$> fromCBOR
 
-deriving newtype instance CC.Crypto c => FromCBOR (HashHeader c)
+deriving newtype instance Crypto c => FromCBOR (HashHeader c)
 
 data BHBody c = BHBody
   { bheaderBlockNo :: !BlockNo
@@ -178,22 +178,22 @@ data BHBody c = BHBody
   }
   deriving (Generic)
 
-deriving instance CC.Crypto c => Show (BHBody c)
+deriving instance Crypto c => Show (BHBody c)
 
-deriving instance CC.Crypto c => Eq (BHBody c)
+deriving instance Crypto c => Eq (BHBody c)
 
 instance
-  CC.Crypto c =>
+  Crypto c =>
   SignableRepresentation (BHBody c)
   where
   getSignableRepresentation bh = serialize' (pvMajor (bprotver bh)) bh
 
 instance
-  CC.Crypto c =>
+  Crypto c =>
   NoThunks (BHBody c)
 
 instance
-  CC.Crypto c =>
+  Crypto c =>
   ToCBOR (BHBody c)
   where
   toCBOR bhBody =
@@ -233,7 +233,7 @@ instance
       toWord64 = fromIntegral
 
 instance
-  CC.Crypto c =>
+  Crypto c =>
   FromCBOR (BHBody c)
   where
   fromCBOR = decodeRecordNamed "BHBody" bhBodySize $ do
@@ -268,21 +268,21 @@ instance
 data BHeader c = BHeader'
   { bHeaderBody' :: !(BHBody c)
   , bHeaderSig' :: !(SignedKES c (BHBody c))
-  , bHeaderBytes :: !BSL.ByteString
+  , bHeaderBytes :: BS.ByteString -- Lazy on purpose. Constructed on demand
   }
   deriving (Generic)
 
 deriving via
   AllowThunksIn '["bHeaderBytes"] (BHeader c)
   instance
-    CC.Crypto c => NoThunks (BHeader c)
+    Crypto c => NoThunks (BHeader c)
 
-deriving instance CC.Crypto c => Eq (BHeader c)
+deriving instance Crypto c => Eq (BHeader c)
 
-deriving instance CC.Crypto c => Show (BHeader c)
+deriving instance Crypto c => Show (BHeader c)
 
 pattern BHeader ::
-  CC.Crypto c =>
+  Crypto c =>
   BHBody c ->
   SignedKES c (BHBody c) ->
   BHeader c
@@ -291,7 +291,7 @@ pattern BHeader bHeaderBody' bHeaderSig' <-
   where
     BHeader body sig =
       let mkBytes bhBody kESig =
-            serializeEncoding (pvMajor (bprotver bhBody)) $
+            serialize' (pvMajor (bprotver bhBody)) $
               encodeListLen 2
                 <> toCBOR bhBody
                 <> encodeSignedKES kESig
@@ -299,29 +299,24 @@ pattern BHeader bHeaderBody' bHeaderSig' <-
 
 {-# COMPLETE BHeader #-}
 
-instance
-  CC.Crypto c =>
-  ToCBOR (BHeader c)
-  where
-  toCBOR (BHeader' _ _ bytes) = encodePreEncoded (BSL.toStrict bytes)
+instance Crypto c => ToCBOR (BHeader c) where
+  toCBOR (BHeader' _ _ bytes) = encodePreEncoded bytes
+
   encodedSizeExpr size proxy =
     1
       + encodedSizeExpr size (bHeaderBody' <$> proxy)
       + encodedSigKESSizeExpr (KES.getSig . bHeaderSig' <$> proxy)
 
-instance
-  CC.Crypto c =>
-  FromCBOR (Annotator (BHeader c))
-  where
+instance Crypto c => FromCBOR (Annotator (BHeader c)) where
   fromCBOR = annotatorSlice $
     decodeRecordNamed "Header" (const 2) $ do
       bhb <- fromCBOR
       sig <- decodeSignedKES
-      pure $ pure $ BHeader' bhb sig
+      pure $ pure $ BHeader' bhb sig . BSL.toStrict
 
 -- | Hash a given block header
 bhHash ::
-  CC.Crypto c =>
+  Crypto c =>
   BHeader c ->
   HashHeader c
 bhHash bh = HashHeader . Hash.castHash . hashToCBOR version $ bh
@@ -355,14 +350,14 @@ prevHashToNonce = \case
 
 -- | Retrieve the issuer id (the hash of the cold key) from the body of the block header.
 -- This corresponds to either a genesis/core node or a stake pool.
-issuerIDfromBHBody :: CC.Crypto c => BHBody c -> KeyHash 'BlockIssuer c
+issuerIDfromBHBody :: Crypto c => BHBody c -> KeyHash 'BlockIssuer c
 issuerIDfromBHBody = hashKey . bheaderVk
 
 bHeaderSize :: forall c. BHeader c -> Int
-bHeaderSize = fromIntegral . BSL.length . bHeaderBytes
+bHeaderSize = BS.length . bHeaderBytes
 
 bhbody ::
-  CC.Crypto c =>
+  Crypto c =>
   BHeader c ->
   BHBody c
 bhbody (BHeader b _) = b
@@ -492,15 +487,15 @@ data LastAppliedBlock c = LastAppliedBlock
   }
   deriving (Show, Eq, Generic)
 
-instance CC.Crypto c => NoThunks (LastAppliedBlock c)
+instance Crypto c => NoThunks (LastAppliedBlock c)
 
 instance NFData (LastAppliedBlock c)
 
-instance CC.Crypto c => ToCBOR (LastAppliedBlock c) where
+instance Crypto c => ToCBOR (LastAppliedBlock c) where
   toCBOR (LastAppliedBlock b s h) =
     encodeListLen 3 <> toCBOR b <> toCBOR s <> toCBOR h
 
-instance CC.Crypto c => FromCBOR (LastAppliedBlock c) where
+instance Crypto c => FromCBOR (LastAppliedBlock c) where
   fromCBOR =
     decodeRecordNamed
       "lastAppliedBlock"
@@ -519,7 +514,7 @@ lastAppliedHash (At lab) = BlockHash $ labHash lab
 bnonce :: BHBody c -> Nonce
 bnonce = mkNonceFromOutputVRF . VRF.certifiedOutput . bheaderEta
 
-makeHeaderView :: CC.Crypto c => BHeader c -> BHeaderView c
+makeHeaderView :: Crypto c => BHeader c -> BHeaderView c
 makeHeaderView bh =
   BHeaderView
     (hashKey . bheaderVk $ bhb)
