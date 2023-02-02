@@ -1,6 +1,7 @@
 module Main where
 
 import System.IO (BufferMode (LineBuffering), hSetBuffering, hSetEncoding, stdout, utf8)
+import qualified Test.Cardano.Ledger.Binary.Failure as Failure
 import qualified Test.Cardano.Ledger.Binary.RoundTripSpec as RoundTripSpec
 import qualified Test.Cardano.Ledger.Binary.Vintage.Coders as Vintage.Coders
 import qualified Test.Cardano.Ledger.Binary.Vintage.Drop as Vintage.Drop
@@ -21,6 +22,7 @@ spec = do
     Vintage.Coders.spec
   describe "Versioned" $ do
     RoundTripSpec.spec
+    Failure.spec
 
 main :: IO ()
 main = do

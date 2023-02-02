@@ -130,7 +130,8 @@ test-suite tests
   main-is:           Main.hs
   type:              exitcode-stdio-1.0
 
-  other-modules:     Test.Cardano.Ledger.Binary.RoundTripSpec
+  other-modules:     Test.Cardano.Ledger.Binary.Failure
+                   , Test.Cardano.Ledger.Binary.RoundTripSpec
                    , Test.Cardano.Ledger.Binary.Vintage.Coders
                    , Test.Cardano.Ledger.Binary.Vintage.Drop
                    , Test.Cardano.Ledger.Binary.Vintage.Failure
@@ -153,6 +154,7 @@ test-suite tests
                    , hspec
                    , iproute
                    , primitive
+                   , QuickCheck
                    , tagged
                    , text
                    , testlib

@@ -674,7 +674,11 @@ decodeMapByKey ::
 decodeMapByKey decodeKey decodeValue =
   ifDecoderVersionAtLeast
     (natVersion @2)
-    (decodeIsListByKey decodeKey decodeValue)
+    ( ifDecoderVersionAtLeast
+        (natVersion @9)
+        (decodeMapEnforceNoDuplicates decodeKey decodeValue)
+        (decodeIsListByKey decodeKey decodeValue)
+    )
     (decodeMapSkel Map.fromDistinctDescList decodeKey decodeValue)
 
 -- | Decode `VMap`. Unlike `decodeMap` it does not behavee differently for
@@ -829,6 +833,32 @@ decodeMapNoDuplicates decodeKey decodeValue =
     decodeInlinedPair = do
       !key <- decodeKey
       !value <- decodeValue
+      pure (key, value)
+
+-- | Just like `decodeMap`, but fails on duplicate keys
+decodeMapEnforceNoDuplicates ::
+  forall s k v.
+  Ord k =>
+  Decoder s k ->
+  (k -> Decoder s v) ->
+  Decoder s (Map.Map k v)
+decodeMapEnforceNoDuplicates decodeKey decodeValueFor = do
+  decodeMapLenOrIndef >>= \case
+    Just len -> loop (\x -> pure (x - 1, x <= 0)) len Map.empty
+    Nothing -> loop (\x -> (,) x <$> decodeBreakOr) () Map.empty
+  where
+    loop :: (a -> Decoder s (a, Bool)) -> a -> Map.Map k v -> Decoder s (Map.Map k v)
+    loop condition prevStep !acc = do
+      (nextStep, shouldStop) <- condition prevStep
+      if shouldStop
+        then pure acc
+        else do
+          (k, v) <- decodeInlinedPair
+          when (k `Map.member` acc) $ fail "Duplicate key detected in the Map"
+          loop condition nextStep (Map.insert k v acc)
+    decodeInlinedPair = do
+      !key <- decodeKey
+      !value <- decodeValueFor key
       pure (key, value)
 
 decodeMapContents :: Decoder s a -> Decoder s [a]
