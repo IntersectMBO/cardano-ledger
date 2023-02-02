@@ -89,8 +89,8 @@ hexByteStringExpr bs =
 -- useful form for debugging, rather than bunch of escaped characters.
 showHexBytesGrouped :: BS.ByteString -> [String]
 showHexBytesGrouped bs =
-  [ "0x" <> BS8.unpack (BS.take 16 $ BS.drop i bs16)
-  | i <- [0, 16 .. BS.length bs16 - 1]
+  [ "0x" <> BS8.unpack (BS.take 128 $ BS.drop i bs16)
+  | i <- [0, 128 .. BS.length bs16 - 1]
   ]
   where
     bs16 = Base16.encode bs

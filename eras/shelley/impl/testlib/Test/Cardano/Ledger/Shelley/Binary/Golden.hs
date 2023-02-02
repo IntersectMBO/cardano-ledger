@@ -8,7 +8,7 @@ module Test.Cardano.Ledger.Shelley.Binary.Golden (
 ) where
 
 import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochNo (..))
-import Cardano.Ledger.Binary (ToCBOR)
+import Cardano.Ledger.Binary (ToCBOR, lengthThreshold)
 import Cardano.Ledger.Binary.Plain
 import Cardano.Ledger.Core
 import Cardano.Ledger.EpochBoundary
@@ -43,7 +43,7 @@ goldenNewEpochStateExpectation
         }
     , ..
     } =
-    expectGoldenEncCBOR DiffCBOR nes $
+    expectGoldenEncCBOR DiffHex nes $
       mconcat
         [ E (TkListLen 7)
         , E (TkWord64 (unEpochNo nesEL))
@@ -74,11 +74,13 @@ goldenNewEpochStateExpectation
         ]
     where
       ver = eraProtVerLow @era
-      mapEnc m =
-        Em
-          [ E (TkMapLen (fromIntegral (Map.size m)))
-          , Em [Ev ver k <> Ev ver v | (k, v) <- Map.toList m]
-          ]
+      mapEnc m
+        | Map.size m > lengthThreshold =
+            Em [E TkMapBegin, me, E TkBreak]
+        | otherwise =
+            Em [E (TkMapLen (fromIntegral (Map.size m))), me]
+        where
+          me = Em [Ev ver k <> Ev ver v | (k, v) <- Map.toList m]
       snapShotEnc SnapShot {..} =
         Em
           [ E (TkListLen 3)
