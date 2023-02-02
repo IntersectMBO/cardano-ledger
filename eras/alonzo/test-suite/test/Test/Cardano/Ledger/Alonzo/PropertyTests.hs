@@ -42,9 +42,9 @@ import Test.Cardano.Ledger.Shelley.Rules.Chain (
   ChainState (..),
   TestChainPredicateFailure (..),
  )
+import Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (incrementalStakeProp)
 import Test.Cardano.Ledger.Shelley.Rules.TestChain (
   forAllChainTrace,
-  incrementalStakeProp,
   ledgerTraceFromBlock,
  )
 import Test.QuickCheck (

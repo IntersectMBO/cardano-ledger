@@ -40,7 +40,7 @@ import Data.Maybe (fromJust)
 import Data.Proxy
 import Data.Word (Word64)
 import Test.Cardano.Ledger.EraBuffet (TestCrypto)
-import Test.Cardano.Ledger.Shelley.Rules.TestChain (aggregateUtxoCoinByCredential)
+import Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (aggregateUtxoCoinByCredential)
 
 type TestEra = MaryEra TestCrypto
 

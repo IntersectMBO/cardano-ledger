@@ -76,7 +76,7 @@ import Test.Cardano.Ledger.Shelley.BenchmarkFunctions (
   ledgerStateWithNregisteredKeys,
   ledgerStateWithNregisteredPools,
  )
-import Test.Cardano.Ledger.Shelley.Rules.TestChain (stakeDistr)
+import Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (stakeDistr)
 import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
 import Test.QuickCheck (arbitrary)
 import Test.QuickCheck.Gen as QC
