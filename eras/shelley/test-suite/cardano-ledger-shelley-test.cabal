@@ -62,13 +62,16 @@ library
     Test.Cardano.Ledger.Shelley.LaxBlock
     Test.Cardano.Ledger.Shelley.PropertyTests
     Test.Cardano.Ledger.Shelley.Rewards
+    Test.Cardano.Ledger.Shelley.Rules.AdaPreservation
     Test.Cardano.Ledger.Shelley.Rules.Chain
     Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces
+    Test.Cardano.Ledger.Shelley.Rules.CollisionFreeness
+    Test.Cardano.Ledger.Shelley.Rules.Deposits
     Test.Cardano.Ledger.Shelley.Rules.IncrementalStake
+    Test.Cardano.Ledger.Shelley.Rules.PoolReap
     Test.Cardano.Ledger.Shelley.Rules.TestChain
-    Test.Cardano.Ledger.Shelley.Rules.TestDeleg
-    Test.Cardano.Ledger.Shelley.Rules.TestPool
-    Test.Cardano.Ledger.Shelley.Rules.TestPoolreap
+    Test.Cardano.Ledger.Shelley.Rules.Deleg
+    Test.Cardano.Ledger.Shelley.Rules.Pool
     Test.Cardano.Ledger.Shelley.Serialisation.CDDLUtils
     Test.Cardano.Ledger.Shelley.Serialisation.Generators
     Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators

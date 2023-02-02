@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -8,52 +9,87 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
-module Test.Cardano.Ledger.Shelley.Rules.TestDeleg (
-  keyRegistration,
-  keyDeRegistration,
-  keyDelegation,
-  rewardsSumInvariant,
-  checkInstantaneousRewards,
+module Test.Cardano.Ledger.Shelley.Rules.Deleg (
+  delegProps,
 )
 where
 
-import Cardano.Ledger.Coin (addDeltaCoin)
+import Cardano.Ledger.Coin
 import Cardano.Ledger.Shelley.API (ShelleyDELEG)
 import Cardano.Ledger.Shelley.Core
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
 import Cardano.Ledger.Shelley.LedgerState (
   DState (..),
   InstantaneousRewards (..),
+  PPUPState,
   delegations,
   rewards,
  )
 import Cardano.Ledger.Shelley.Rules (DelegEnv (..))
-import Cardano.Ledger.Shelley.TxBody (
-  MIRPot (..),
-  MIRTarget (..),
-  pattern DCertDeleg,
-  pattern DCertMir,
-  pattern DeRegKey,
-  pattern Delegate,
-  pattern Delegation,
-  pattern MIRCert,
-  pattern RegKey,
- )
+import Cardano.Ledger.Shelley.TxBody
 import qualified Cardano.Ledger.UMapCompact as UM
 import Control.SetAlgebra (eval, rng, (∈))
 import Control.State.Transition.Trace (
-  SourceSignalTarget,
-  signal,
-  source,
-  target,
-  pattern SourceSignalTarget,
+  SourceSignalTarget (..),
+  sourceSignalTargets,
  )
+import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
+import Data.Default.Class (Default)
 import Data.Foldable (fold)
 import Data.List (foldl')
-import qualified Data.Map.Strict as Map (difference, filter, keysSet, (\\))
-import qualified Data.Set as Set (isSubsetOf, singleton, size)
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 import Lens.Micro.Extras (view)
-import Test.QuickCheck (Property, conjoin, counterexample, property)
+import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
+import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
+import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
+import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN)
+import Test.QuickCheck (Property, conjoin, counterexample)
+
+import Test.Cardano.Ledger.Shelley.Rules.TestChain (
+  delegTraceFromBlock,
+  forAllChainTrace,
+  traceLen,
+ )
+import Test.Cardano.Ledger.Shelley.Utils (
+  ChainProperty,
+ )
+import Test.QuickCheck (
+  Testable (..),
+ )
+
+-- | Various properties of the POOL STS Rule, tested on longer traces
+-- (double the default length)
+delegProps ::
+  forall era.
+  ( EraGen era
+  , QC.HasTrace (CHAIN era) (GenEnv era)
+  , ChainProperty era
+  , ProtVerAtMost era 8
+  , Default (PPUPState era)
+  ) =>
+  Property
+delegProps =
+  forAllChainTrace @era traceLen $ \tr -> do
+    conjoin $
+      map chainProp (sourceSignalTargets tr)
+  where
+    delegProp :: DelegEnv era -> SourceSignalTarget (ShelleyDELEG era) -> Property
+    delegProp denv delegSst =
+      conjoin $
+        [ keyRegistration delegSst
+        , keyDeRegistration delegSst
+        , keyDelegation delegSst
+        , rewardsSumInvariant delegSst
+        , checkInstantaneousRewards denv delegSst
+        ]
+    chainProp :: SourceSignalTarget (CHAIN era) -> Property
+    chainProp (SourceSignalTarget {source = chainSt, signal = block}) =
+      let delegInfo = delegTraceFromBlock chainSt block
+          delegEnv = fst delegInfo
+          delegTr = snd delegInfo
+          delegSsts = sourceSignalTargets delegTr
+       in conjoin (map (delegProp delegEnv) delegSsts)
 
 -- | Check stake key registration
 keyRegistration :: SourceSignalTarget (ShelleyDELEG era) -> Property

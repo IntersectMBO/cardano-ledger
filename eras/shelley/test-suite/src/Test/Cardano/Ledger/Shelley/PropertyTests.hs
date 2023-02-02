@@ -11,15 +11,15 @@ module Test.Cardano.Ledger.Shelley.PropertyTests (
   propertyTests,
   minimalPropertyTests,
   relevantCasesAreCovered,
-  delegProperties,
-  poolProperties,
-  removedAfterPoolreap,
-  adaPreservationChain,
-  collisionFreeComplete,
+  delegProps,
+  poolProps,
+  poolReapProps,
+  adaPreservationProps,
+  collisionFreeProps,
   onlyValidLedgerSignalsAreGenerated,
   onlyValidChainSignalsAreGenerated,
   -- Crypto era only
-  depositTests,
+  depositsProps,
 )
 where
 
@@ -45,6 +45,7 @@ import Test.Cardano.Ledger.Shelley.Address.Bootstrap (
 import Test.Cardano.Ledger.Shelley.ByronTranslation (testGroupByronTranslation)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen)
+import Test.Cardano.Ledger.Shelley.Rules.AdaPreservation (adaPreservationProps)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN)
 import Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces (
   onlyValidChainSignalsAreGenerated,
@@ -52,16 +53,13 @@ import Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces (
   relevantCasesAreCovered,
  )
 
+import Test.Cardano.Ledger.Shelley.Rules.CollisionFreeness (collisionFreeProps)
+import Test.Cardano.Ledger.Shelley.Rules.Deleg (delegProps)
+import Test.Cardano.Ledger.Shelley.Rules.Deposits (depositsProps)
 import Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (stakeIncrTest)
-import Test.Cardano.Ledger.Shelley.Rules.TestChain (
-  TestingLedger,
-  adaPreservationChain,
-  collisionFreeComplete,
-  delegProperties,
-  depositTests,
-  poolProperties,
-  removedAfterPoolreap,
- )
+import Test.Cardano.Ledger.Shelley.Rules.Pool (poolProps)
+import Test.Cardano.Ledger.Shelley.Rules.PoolReap (poolReapProps)
+import Test.Cardano.Ledger.Shelley.Rules.TestChain (TestingLedger)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.ShelleyTranslation (testGroupShelleyTranslation)
 import Test.Cardano.Ledger.Shelley.Utils (ChainProperty, RawSeed, mkKeyPair')
@@ -103,7 +101,7 @@ minimalPropertyTests =
   testGroup
     "Minimal Property Tests"
     [ (localOption (TQC.QuickCheckMaxRatio 50) $ TQC.testProperty "Chain and Ledger traces cover the relevant cases" (relevantCasesAreCovered @era))
-    , TQC.testProperty "total amount of Ada is preserved (Chain)" (adaPreservationChain @era @ledger)
+    , TQC.testProperty "total amount of Ada is preserved (Chain)" (adaPreservationProps @era @ledger)
     , TQC.testProperty "Only valid CHAIN STS signals are generated" (onlyValidChainSignalsAreGenerated @era)
     , bootstrapHashTest
     , TQC.testProperty "WitVKey does not brake containers due to invalid Ord" $
@@ -143,28 +141,28 @@ propertyTests =
         "STS Rules - Delegation Properties"
         [ TQC.testProperty
             "properties of the DELEG STS"
-            (delegProperties @era)
+            (delegProps @era)
         ]
     , testGroup
         "STS Rules - Pool Properties"
         [ TQC.testProperty
             "properties of the POOL STS"
-            (poolProperties @era)
+            (poolProps @era)
         ]
     , testGroup
         "STS Rules - Poolreap Properties"
         [ TQC.testProperty
             "pool is removed from stake pool and retiring maps"
-            (removedAfterPoolreap @era)
+            (poolReapProps @era)
         ]
     , testGroup
         "CHAIN level Properties"
         [ TQC.testProperty
             "collection of Ada preservation properties"
-            (adaPreservationChain @era @ledger)
+            (adaPreservationProps @era @ledger)
         , TQC.testProperty
             "inputs are eliminated, outputs added to utxo and TxIds are unique"
-            (collisionFreeComplete @era @ledger)
+            (collisionFreeProps @era @ledger)
         , TQC.testProperty
             "incremental stake calc"
             (stakeIncrTest @era @ledger)
