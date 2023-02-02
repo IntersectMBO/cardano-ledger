@@ -42,7 +42,7 @@ import Test.Cardano.Ledger.Shelley.Rules.Chain (
   ChainState (..),
   TestChainPredicateFailure (..),
  )
-import Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (incrementalStakeProp)
+import Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (incrStakeComparisonProp)
 import Test.Cardano.Ledger.Shelley.Rules.TestChain (
   forAllChainTrace,
   ledgerTraceFromBlock,
@@ -175,7 +175,7 @@ alonzoPropertyTests =
     , propertyTests
     , TQC.testProperty
         "Incremental stake distribution at epoch boundaries agrees"
-        (incrementalStakeProp (Proxy :: Proxy A))
+        (incrStakeComparisonProp (Proxy :: Proxy A))
     ]
 
 -- | A select subset of all the property tests
