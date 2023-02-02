@@ -185,5 +185,5 @@ fastPropertyTests =
     "Fast Alonzo Property Tests"
     [ TQC.testProperty
         "total amount of Ada is preserved (Chain)"
-        (withMaxSuccess 50 (Shelley.adaPreservationChain @A @(AlonzoLEDGER A)))
+        (withMaxSuccess 50 (Shelley.adaPreservationProps @A @(AlonzoLEDGER A)))
     ]
