@@ -51,7 +51,7 @@ import Cardano.Ledger.Binary (
   encodeMapLen,
   encodeString,
   peekTokenType,
-  serializeEncoding,
+  serialize,
   withSlice,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain (EncCBOR (encCBOR), encodePreEncoded)
@@ -135,7 +135,7 @@ pattern ShelleyTxAuxData m <-
   ShelleyTxAuxData' m _
   where
     ShelleyTxAuxData m =
-      let bytes = serializeEncoding (eraProtVerLow @era) $ toCBOR m
+      let bytes = serialize (eraProtVerLow @era) $ toCBOR m
        in ShelleyTxAuxData' m bytes
 
 {-# COMPLETE ShelleyTxAuxData #-}

@@ -43,7 +43,7 @@ import Cardano.Ledger.Binary (
   decodeRecordNamed,
   encodeListLen,
   serialize',
-  serializeEncoding,
+  serialize,
  )
 import Cardano.Ledger.Binary.Crypto (
   decodeSignedDSIGN,
@@ -117,7 +117,7 @@ pattern BootstrapWitness {bwKey, bwSig, bwChainCode, bwAttributes} <-
   where
     BootstrapWitness key sig cc attributes =
       let bytes =
-            serializeEncoding byronProtVer $
+            serialize byronProtVer $
               encodeListLen 4
                 <> toCBOR key
                 <> encodeSignedDSIGN sig

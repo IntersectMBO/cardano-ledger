@@ -54,7 +54,7 @@ import Cardano.Ledger.Binary (
   encodeWord,
   fromPlainEncoding,
   invalidKey,
-  serializeEncoding,
+  serialize,
   withSlice,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain (EncCBOR (..), encodePreEncoded)
@@ -224,7 +224,7 @@ pattern ShelleyTxWits {addrWits, scriptWits, bootWits} <-
               , encodeIndexedMaybe 2 encodeSet bootstrapWits
               ]
           n = fromIntegral $ length l
-          witsBytes = serializeEncoding (eraProtVerLow @era) $ encodeMapLen n <> fold l
+          witsBytes = serialize (eraProtVerLow @era) $ encodeMapLen n <> fold l
        in ShelleyTxWitsConstr
             ( WitnessSet'
                 { addrWits' = awits

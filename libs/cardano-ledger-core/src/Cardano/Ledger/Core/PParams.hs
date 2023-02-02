@@ -131,6 +131,12 @@ deriving newtype instance
   (Typeable era, FromCBOR (PParamsHKD Identity era)) => FromCBOR (PParams era)
 
 deriving newtype instance
+  (Typeable era, EncCBOR (PParamsHKD Identity era)) => EncCBOR (PParams era)
+
+deriving newtype instance
+  (Typeable era, DecCBOR (PParamsHKD Identity era)) => DecCBOR (PParams era)
+
+deriving newtype instance
   ToExpr (PParamsHKD Identity era) => ToExpr (PParams era)
 
 deriving instance Generic (PParams era)

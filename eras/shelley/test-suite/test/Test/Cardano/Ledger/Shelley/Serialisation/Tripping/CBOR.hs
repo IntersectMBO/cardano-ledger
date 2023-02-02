@@ -64,15 +64,15 @@ testCoreTypes =
     , testProperty "coin cbor CompactCoin" $
         roundTripExpectation @Coin (mkTrip toCBOR (fromCompact <$> fromCBOR))
     , testProperty "RewardUpdate" $
-        Plain.roundTripExpectation @(RewardUpdate StandardCrypto) Plain.cborTrip
+        roundTripExpectation @(RewardUpdate StandardCrypto) cborTrip
     , testProperty "RewardSnapShot" $
-        Plain.roundTripExpectation @(RewardSnapShot StandardCrypto) Plain.cborTrip
+        roundTripExpectation @(RewardSnapShot StandardCrypto) cborTrip
     , testProperty "RewardFreeVars" $
-        Plain.roundTripExpectation @(FreeVars StandardCrypto) Plain.cborTrip
+        roundTripExpectation @(FreeVars StandardCrypto) cborTrip
     , testProperty "RewardPulser" $
-        Plain.roundTripExpectation @(Pulser StandardCrypto) Plain.cborTrip
+        roundTripExpectation @(Pulser StandardCrypto) cborTrip
     , testProperty "PulsingRewUpdate" $
-        Plain.roundTripExpectation @(PulsingRewUpdate StandardCrypto) Plain.cborTrip
+        roundTripExpectation @(PulsingRewUpdate StandardCrypto) cborTrip
     ]
 
 tests :: TestTree
@@ -91,7 +91,7 @@ tests =
           roundTripExpectation @([STS.PredicateFailure (STS.ShelleyLEDGERS Shelley)]) cborTrip
       , testProperty "Ledger State" $
           Plain.roundTripExpectation @(LedgerState Shelley) $
-            Plain.mkTrip Plain.encCBOR Plain.decNoShareCBOR
+            Plain.mkTrip Plain.encCBOR Plain.decCBOR
       , testProperty "Epoch State" $
           Plain.roundTripExpectation @(EpochState Shelley) Plain.cborTrip
       , testProperty "NewEpoch State" $

@@ -28,7 +28,6 @@ import Cardano.Ledger.Binary (
   fromPlainEncoding,
   serialize,
   serialize',
-  serializeEncoding,
   toCBOR,
  )
 
@@ -52,7 +51,7 @@ roundTrip ::
   a ->
   Assertion
 roundTrip v encode decode x =
-  case (decode . serializeEncoding v . encode) x of
+  case decode . serialize v $ encode x of
     Left e -> assertFailure $ "could not decode serialization of " ++ show x ++ ", " ++ show e
     Right y -> y @?= x
 
@@ -79,7 +78,7 @@ checkEncoding v encode decode name x t =
   where
     getTerms lbl = either throwIO pure . decodeFullDecoder v lbl decodeTerm
     expectedBinary = serialize v t
-    actualBinary = serializeEncoding v $ encode x
+    actualBinary = serialize v $ encode x
     testName = "golden_serialize_" <> name
 
 checkEncodingCBOR ::

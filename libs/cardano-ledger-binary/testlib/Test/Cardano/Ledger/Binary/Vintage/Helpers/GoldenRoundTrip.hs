@@ -26,7 +26,6 @@ import Cardano.Ledger.Binary (
   decodeFullDecoder,
   natVersion,
   serialize,
-  serializeEncoding,
  )
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import qualified Data.ByteString.Lazy as BSL
@@ -135,7 +134,7 @@ goldenTestCBORExplicit ::
   FilePath ->
   Property
 goldenTestCBORExplicit eLabel enc dec =
-  goldenTestExplicit (serializeEncoding byronProtVer . enc) fullDecoder
+  goldenTestExplicit (serialize byronProtVer . enc) fullDecoder
   where
     fullDecoder :: BSL.ByteString -> Either DecoderError a
     fullDecoder = decodeFullDecoder byronProtVer eLabel dec

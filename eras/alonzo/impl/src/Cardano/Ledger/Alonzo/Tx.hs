@@ -117,7 +117,7 @@ import Cardano.Ledger.Binary (
   ToCBOR (toCBOR),
   decodeNullMaybe,
   encodeNullMaybe,
-  serializeEncoding',
+  serialize',
  )
 import Cardano.Ledger.Binary.Coders
 import qualified Cardano.Ledger.Binary.Plain as Plain
@@ -280,7 +280,7 @@ deriving instance Typeable era => NoThunks (ScriptIntegrity era)
 instance Era era => SafeToHash (ScriptIntegrity era) where
   originalBytes (ScriptIntegrity m d l) =
     let dBytes = if nullDats d then mempty else originalBytes d
-        lBytes = serializeEncoding' (eraProtVerLow @era) (encodeLangViews l)
+        lBytes = serialize' (eraProtVerLow @era) (encodeLangViews l)
      in originalBytes m <> dBytes <> lBytes
 
 instance

@@ -4,7 +4,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Test.Cardano.Ledger.Binary.Plain.Golden (
-  Enc (E, Em),
+  Enc (E, Ev, Em),
   DiffView (..),
   expectGoldenEncoding,
   expectGoldenEncCBOR,
@@ -13,6 +13,7 @@ module Test.Cardano.Ledger.Binary.Plain.Golden (
   expectGoldenEncHexBytes,
 ) where
 
+import Cardano.Ledger.Binary (ToCBOR (toCBOR), toPlainEncoding, Version)
 import Cardano.Ledger.Binary.Plain
 import qualified Data.ByteString as BS
 import Data.ByteString.Base16 as BS16
@@ -23,11 +24,13 @@ import Test.Hspec
 
 data Enc where
   E :: EncCBOR a => a -> Enc
+  Ev :: ToCBOR a => Version -> a -> Enc
   Em :: [Enc] -> Enc
   (:<>:) :: Enc -> Enc -> Enc
 
 instance EncCBOR Enc where
   encCBOR (E s) = encCBOR s
+  encCBOR (Ev v s) = toPlainEncoding v $ toCBOR s
   encCBOR (Em m) = foldMap encCBOR m
   encCBOR (a :<>: b) = encCBOR a <> encCBOR b
 

@@ -126,13 +126,10 @@ benchValidate (ValidateInput globals state (Block bh txs)) =
 
 applyBlock ::
   forall era.
-  ( Era era
-  , NFData (TxOut era)
+  ( EraTxOut era
   , API.ApplyBlock era
-  , NFData (PParams era)
   , NFData (StashedAVVMAddresses era)
   , PPUPState era ~ ShelleyPPUPState era
-  , NFData (PParamsUpdate era)
   , NFData (TallyState era)
   ) =>
   ValidateInput era ->

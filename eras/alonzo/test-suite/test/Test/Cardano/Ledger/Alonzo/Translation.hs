@@ -17,7 +17,7 @@ where
 import Cardano.Ledger.Alonzo (Alonzo)
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import qualified Cardano.Ledger.Alonzo.Translation as Translation (Tx (..))
-import Cardano.Ledger.Alonzo.Tx (toCBORForSizeComputation)
+import Cardano.Ledger.Alonzo.Tx (encCBORForSizeComputation)
 import Cardano.Ledger.Binary (EncCBOR (encCBOR))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary (Mary)
@@ -105,5 +105,5 @@ testTx :: Translation.Tx Mary -> Assertion
 testTx =
   translateEraEncoding @Alonzo
     dummyAlonzoGenesis
-    (toCBORForSizeComputation . Translation.unTx)
+    (encCBORForSizeComputation . Translation.unTx)
     encCBOR

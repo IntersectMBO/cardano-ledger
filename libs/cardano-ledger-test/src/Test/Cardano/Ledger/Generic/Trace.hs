@@ -41,7 +41,6 @@ import Cardano.Ledger.Pretty (
   ppWord64,
  )
 import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Shelley.Core (EraTallyState (..))
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   DPState (..),
@@ -549,7 +548,6 @@ chainTest ::
   , HasTrace (MOCKCHAIN era) (Gen1 era)
   , Eq (StashedAVVMAddresses era)
   , Eq (PPUPState era)
-  , Eq (TallyState era)
   ) =>
   Proof era ->
   Int ->

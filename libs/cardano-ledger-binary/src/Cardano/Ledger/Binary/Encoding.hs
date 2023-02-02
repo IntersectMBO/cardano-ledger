@@ -47,7 +47,13 @@ import qualified Data.ByteString.Lazy as BSL
 --   The output is represented as a lazy 'LByteString' and is constructed
 --   incrementally.
 serialize :: ToCBOR a => Version -> a -> BSL.ByteString
-serialize version = serializeEncoding version . toCBOR
+serialize version =
+  toLazyByteStringWith strategy mempty . toBuilder version . toCBOR
+  where
+    -- 1024 is the size of the first buffer, 4096 is the size of subsequent
+    -- buffers. Chosen because they seem to give good performance. They are not
+    -- sacred.
+    strategy = safeStrategy 1024 4096
 
 -- | Serialize a Haskell value to an external binary representation.
 --
@@ -66,17 +72,15 @@ serializeBuilder version = toBuilder version . toCBOR
 --   The output is represented as an 'LByteString' and is constructed
 --   incrementally.
 serializeEncoding :: Version -> Encoding -> BSL.ByteString
-serializeEncoding version =
-  toLazyByteStringWith strategy mempty . toBuilder version
-  where
-    -- 1024 is the size of the first buffer, 4096 is the size of subsequent
-    -- buffers. Chosen because they seem to give good performance. They are not
-    -- sacred.
-    strategy = safeStrategy 1024 4096
+serializeEncoding = serialize
+-- TODO deprecate:
+-- {-# DEPRECATED serializeEncoding "Use `serialize` instead, since `Encoding` has `ToCBOR` instance" #-}
 
 -- | A strict version of 'serializeEncoding'
 serializeEncoding' :: Version -> Encoding -> BS.ByteString
-serializeEncoding' version = BSL.toStrict . serializeEncoding version
+serializeEncoding' = serialize'
+-- TODO deprecate:
+-- {-# DEPRECATED serializeEncoding' "Use `serialize'` instead, since `Encoding` has `FromCBOR` instance" #-}
 
 --------------------------------------------------------------------------------
 -- Hashing

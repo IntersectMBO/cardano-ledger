@@ -10,9 +10,11 @@ module Test.Cardano.Ledger.Shelley.Binary.Golden (
 import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochNo (..))
 import Cardano.Ledger.Binary (ToCBOR)
 import Cardano.Ledger.Binary.Plain
+import Cardano.Ledger.Core
 import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
+import Data.Functor.Identity (Identity)
 import qualified Data.Map.Strict as Map
 import qualified Data.VMap as VMap
 import Test.Cardano.Ledger.Binary.Plain.Golden
@@ -20,11 +22,13 @@ import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
 
 goldenNewEpochStateExpectation ::
+  forall era.
   ( HasCallStack
   , EraTxOut era
   , EncCBOR (StashedAVVMAddresses era)
-  , EncCBOR (TallyState era)
-  , EncCBOR (PPUPState era)
+  , EncCBOR (PParamsHKD Identity era)
+  , ToCBOR (StashedAVVMAddresses era)
+  , ToCBOR (TallyState era)
   , ToCBOR (PPUPState era)
   ) =>
   NewEpochState era ->
@@ -62,22 +66,23 @@ goldenNewEpochStateExpectation
                 ]
             , E esPrevPp
             , E esPp
-            , E esNonMyopic
+            , Ev ver esNonMyopic
             ]
-        , E nesRu
-        , E nesPd
+        , Ev ver nesRu
+        , Ev ver nesPd
         , E stashedAVVMAddresses
         ]
     where
+      ver = eraProtVerLow @era
       mapEnc m =
         Em
           [ E (TkMapLen (fromIntegral (Map.size m)))
-          , Em [E k <> E v | (k, v) <- Map.toList m]
+          , Em [Ev ver k <> Ev ver v | (k, v) <- Map.toList m]
           ]
-      snapShotEnc (SnapShot {..}) =
+      snapShotEnc SnapShot {..} =
         Em
           [ E (TkListLen 3)
           , mapEnc (VMap.toMap (unStake ssStake))
-          , E ssDelegations
-          , E ssPoolParams
+          , Ev ver ssDelegations
+          , Ev ver ssPoolParams
           ]

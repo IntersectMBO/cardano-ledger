@@ -81,7 +81,6 @@ import Cardano.Ledger.Binary (
   encodeNull,
   encodePreEncoded,
   serialize',
-  serializeEncoding',
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -648,7 +647,7 @@ getLanguageView pp lang =
         costModelEncoding
   where
     costModel = Map.lookup lang (unCostModels $ pp ^. ppCostModelsL)
-    costModelEncoding = serializeEncoding' version $ maybe encodeNull encodeCostModel costModel
+    costModelEncoding = serialize' version $ maybe encodeNull encodeCostModel costModel
     version = BT.pvMajor $ pp ^. ppProtocolVersionL
 
 encodeLangViews :: Set LangDepView -> Encoding

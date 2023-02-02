@@ -23,7 +23,7 @@ import Cardano.Ledger.Binary (
   annotatorSlice,
   decodeRecordNamed,
   encodeListLen,
-  serializeEncoding,
+  serialize,
   shelleyProtVer,
  )
 import Cardano.Ledger.Binary.Crypto (
@@ -107,7 +107,7 @@ pattern WitVKey k s <-
   where
     WitVKey k s =
       let bytes =
-            serializeEncoding shelleyProtVer $
+            serialize shelleyProtVer $
               encodeListLen 2
                 <> toCBOR k
                 <> encodeSignedDSIGN s

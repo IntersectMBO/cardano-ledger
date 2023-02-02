@@ -285,7 +285,7 @@ mkTrip encoder decoder = Trip encoder decoder (() <$ decoder)
 roundTrip :: forall t. Typeable t => Version -> Trip t t -> t -> Either RoundTripFailure t
 roundTrip version trip val = do
   (val', encoding, encodedBytes) <- embedTripLabelExtra (typeLabel @t) version version trip val
-  let reserialized = serializeEncoding version (tripEncoder trip val')
+  let reserialized = serialize version (tripEncoder trip val')
   if reserialized /= encodedBytes
     then
       Left $

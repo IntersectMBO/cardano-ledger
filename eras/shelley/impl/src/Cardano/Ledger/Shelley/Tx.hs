@@ -61,7 +61,7 @@ import Cardano.Ledger.Binary (
   encodeNullMaybe,
   fromPlainEncoding,
   runAnnotator,
-  serializeEncoding,
+  serialize,
  )
 import Cardano.Ledger.Binary.Coders
 import qualified Cardano.Ledger.Binary.Plain as Plain
@@ -340,10 +340,10 @@ segwitTx
         witnessSet = runAnnotator witsAnn bytes
         metadata = flip runAnnotator bytes <$> metaAnn
         wrappedMetadataBytes = case metadata of
-          Nothing -> serializeEncoding version encodeNull
+          Nothing -> serialize version encodeNull
           Just b -> Plain.serialize b
         fullBytes =
-          serializeEncoding version (encodeListLen 3)
+          serialize version (encodeListLen 3)
             <> Plain.serialize body'
             <> Plain.serialize witnessSet
             <> wrappedMetadataBytes

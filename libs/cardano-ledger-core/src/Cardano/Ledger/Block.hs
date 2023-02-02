@@ -31,7 +31,7 @@ import Cardano.Ledger.Binary (
   annotatorSlice,
   decodeRecordNamed,
   encodeListLen,
-  serializeEncoding,
+  serialize,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Core
@@ -79,7 +79,7 @@ pattern Block h txns <-
   where
     Block h txns =
       let bytes =
-            serializeEncoding (eraProtVerLow @era) $
+            serialize (eraProtVerLow @era) $
               encodeListLen (1 + listLen txns) <> toCBOR h <> toCBORGroup txns
        in Block' h txns bytes
 

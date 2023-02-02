@@ -27,7 +27,6 @@ import Cardano.Ledger.Binary (
   encodeListLen,
   groupRecord,
   serialize,
-  serializeEncoding,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Codec.CBOR.Read (deserialiseFromBytes)
@@ -85,7 +84,7 @@ cddlGroupTest ::
   IO BSL.ByteString ->
   TestTree
 cddlGroupTest v n entryName =
-  let serializeGroup x = serializeEncoding v $ encodeListLen (listLen x) <> toCBORGroup x
+  let serializeGroup x = serialize v $ encodeListLen (listLen x) <> toCBORGroup x
       desrializeGroup = decodeFullDecoder v "cbor test" groupRecord
    in cddlRoundtripTest @a serializeGroup desrializeGroup n ("[" <> entryName <> "]")
 

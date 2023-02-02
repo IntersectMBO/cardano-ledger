@@ -73,7 +73,6 @@ import Cardano.Ledger.Binary (
   peekTokenType,
   runByteBuilder,
   serialize',
-  serializeEncoding',
   szCases,
   withWordSize,
  )
@@ -292,7 +291,7 @@ pattern BHeader bHeaderBody' bHeaderSig' <-
   where
     BHeader body sig =
       let mkBytes bhBody kESig =
-            serializeEncoding' (pvMajor (bprotver bhBody)) $
+            serialize' (pvMajor (bprotver bhBody)) $
               encodeListLen 2
                 <> toCBOR bhBody
                 <> encodeSignedKES kESig

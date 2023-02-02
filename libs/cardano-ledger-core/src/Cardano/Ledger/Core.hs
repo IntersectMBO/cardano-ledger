@@ -187,6 +187,7 @@ class
 class
   ( DecodeNonNegative (Value era)
   , Compactible (Value era)
+  , NoThunks (Value era)
   , NFData (Value era)
   , Show (Value era)
   , Val (Value era)

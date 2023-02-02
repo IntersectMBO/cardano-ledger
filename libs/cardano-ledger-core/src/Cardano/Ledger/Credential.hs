@@ -3,6 +3,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -22,11 +23,7 @@ module Cardano.Ledger.Credential (
 )
 where
 
-import Cardano.Ledger.BaseTypes (
-  CertIx (..),
-  TxIx (..),
-  invalidKey,
- )
+import Cardano.Ledger.BaseTypes (CertIx (..), SlotNo (..), TxIx (..), invalidKey)
 import Cardano.Ledger.Binary (
   CBORGroup (..),
   DecCBOR (..),
@@ -38,14 +35,13 @@ import Cardano.Ledger.Binary (
   decodeRecordSum,
   encodeListLen,
  )
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Keys (
   HasKeyRole (..),
   KeyHash,
   KeyRole (..),
  )
-import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
 import Data.Aeson (
@@ -59,7 +55,7 @@ import Data.Aeson (
 import qualified Data.Aeson as Aeson
 import Data.Foldable (asum)
 import Data.Typeable (Typeable)
-import Data.Word
+import Data.Word (Word8)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Quiet (Quiet (Quiet))
@@ -81,7 +77,7 @@ instance HasKeyRole Credential where
 
 instance NoThunks (Credential kr c)
 
-instance CC.Crypto c => ToJSON (Credential kr c) where
+instance Crypto c => ToJSON (Credential kr c) where
   toJSON (ScriptHashObj hash) =
     Aeson.object
       [ "script hash" .= hash
@@ -91,7 +87,7 @@ instance CC.Crypto c => ToJSON (Credential kr c) where
       [ "key hash" .= hash
       ]
 
-instance CC.Crypto c => FromJSON (Credential kr c) where
+instance Crypto c => FromJSON (Credential kr c) where
   parseJSON =
     Aeson.withObject "Credential" $ \obj ->
       asum [parser1 obj, parser2 obj]
@@ -99,9 +95,9 @@ instance CC.Crypto c => FromJSON (Credential kr c) where
       parser1 obj = ScriptHashObj <$> obj .: "script hash"
       parser2 obj = KeyHashObj <$> obj .: "key hash"
 
-instance CC.Crypto c => ToJSONKey (Credential kr c)
+instance Crypto c => ToJSONKey (Credential kr c)
 
-instance CC.Crypto c => FromJSONKey (Credential kr c)
+instance Crypto c => FromJSONKey (Credential kr c)
 
 type PaymentCredential c = Credential 'Payment c
 
@@ -199,7 +195,7 @@ ptrCertIx :: Ptr -> CertIx
 ptrCertIx (Ptr _ _ cIx) = cIx
 
 instance
-  (Typeable kr, CC.Crypto c) =>
+  (Typeable kr, Crypto c) =>
   ToCBOR (Credential kr c)
   where
   toCBOR = \case
@@ -207,7 +203,7 @@ instance
     ScriptHashObj hs -> encodeListLen 2 <> toCBOR (1 :: Word8) <> toCBOR hs
 
 instance
-  (Typeable kr, CC.Crypto c) =>
+  (Typeable kr, Crypto c) =>
   FromCBOR (Credential kr c)
   where
   fromCBOR = decodeRecordSum "Credential" $
@@ -248,6 +244,7 @@ newtype GenesisCredential c = GenesisCredential
   { unGenesisCredential :: KeyHash 'Genesis c
   }
   deriving (Generic)
+  deriving newtype (EncCBOR, ToCBOR)
   deriving (Show) via Quiet (GenesisCredential c)
 
 instance Ord (GenesisCredential c) where
@@ -255,9 +252,6 @@ instance Ord (GenesisCredential c) where
 
 instance Eq (GenesisCredential c) where
   (==) (GenesisCredential gh) (GenesisCredential gh') = gh == gh'
-
-instance CC.Crypto c => ToCBOR (GenesisCredential c) where
-  toCBOR (GenesisCredential kh) = toCBOR kh
 
 -- ==================================
 

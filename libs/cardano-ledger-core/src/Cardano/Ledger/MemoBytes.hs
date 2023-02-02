@@ -55,7 +55,6 @@ import Cardano.Ledger.Binary (
   FromCBOR (fromCBOR),
   ToCBOR,
   serialize,
-  serializeEncoding,
   withSlice,
  )
 import Cardano.Ledger.Binary.Coders (Encode, encode, runE)
@@ -159,7 +158,7 @@ printMemo x = putStrLn (showMemo x)
 
 -- | Create MemoBytes from its CBOR encoding
 memoBytes :: forall era w t. Era era => Encode w (t era) -> MemoBytes t era
-memoBytes t = mkMemoBytes (runE t) (serializeEncoding (eraProtVerLow @era) (encode t))
+memoBytes t = mkMemoBytes (runE t) (serialize (eraProtVerLow @era) (encode t))
 
 -- | Helper function. Converts a short bytestring to a lazy bytestring.
 shortToLazy :: ShortByteString -> BSL.ByteString

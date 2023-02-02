@@ -10,7 +10,7 @@
 module Cardano.Ledger.State.Query where
 
 import Cardano.Ledger.Alonzo.TxBody as Alonzo
-import Cardano.Ledger.Binary.Plain (interns, internsFromMap)
+import Cardano.Ledger.Binary
 import qualified Cardano.Ledger.Credential as Credential
 import qualified Cardano.Ledger.EpochBoundary as EpochBoundary
 import qualified Cardano.Ledger.Keys as Keys
@@ -394,16 +394,13 @@ getSnapShotWithSharing ::
 getSnapShotWithSharing otherSnapShots epochStateId snapShotType = do
   let internOtherStakes =
         interns
-          ( foldMap
-              (VMap.internsFromVMap . EpochBoundary.unStake . EpochBoundary.ssStake)
-              otherSnapShots
-          )
+          (foldMap (internsFromVMap . EpochBoundary.unStake . EpochBoundary.ssStake) otherSnapShots)
           . Keys.coerceKeyRole
   let internOtherPoolParams =
-        interns (foldMap (VMap.internsFromVMap . EpochBoundary.ssPoolParams) otherSnapShots)
+        interns (foldMap (internsFromVMap . EpochBoundary.ssPoolParams) otherSnapShots)
           . Keys.coerceKeyRole
   let internOtherDelegations =
-        interns (foldMap (VMap.internsFromVMap . EpochBoundary.ssDelegations) otherSnapShots)
+        interns (foldMap (internsFromVMap . EpochBoundary.ssDelegations) otherSnapShots)
           . Keys.coerceKeyRole
   snapShotId <-
     selectFirst
@@ -420,7 +417,7 @@ getSnapShotWithSharing otherSnapShots epochStateId snapShotType = do
     selectVMap [SnapShotPoolSnapShotId ==. snapShotId] $ \SnapShotPool {..} -> do
       KeyHash keyHash <- getJust snapShotPoolKeyHashId
       pure (internOtherPoolParams keyHash, snapShotPoolParams)
-  let internPoolParams = interns (VMap.internsFromVMap poolParams) . Keys.coerceKeyRole
+  let internPoolParams = interns (internsFromVMap poolParams) . Keys.coerceKeyRole
   delegations <-
     selectVMap [SnapShotDelegationSnapShotId ==. snapShotId] $ \SnapShotDelegation {..} -> do
       Credential credential <- getJust snapShotDelegationCredentialId
