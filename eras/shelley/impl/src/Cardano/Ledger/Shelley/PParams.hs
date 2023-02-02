@@ -55,8 +55,6 @@ import Cardano.Ledger.Binary (
   encodeListLen,
   encodeMapLen,
   encodeWord,
-  toPlainDecoder,
-  toPlainEncoding,
  )
 import Cardano.Ledger.Binary.Coders (Decode (From, RecD), decode, (<!))
 import Cardano.Ledger.Coin (Coin (..))
@@ -225,10 +223,10 @@ instance Era era => FromCBOR (ShelleyPParams Identity era) where
         <*> fromCBOR -- sppMinPoolCost     :: Natural
 
 instance Era era => EncCBOR (ShelleyPParams Identity era) where
-  encCBOR = toPlainEncoding (eraProtVerLow @era) . toCBOR
+  encCBOR = encEraToCBOR @era
 
 instance Era era => DecCBOR (ShelleyPParams Identity era) where
-  decCBOR = toPlainDecoder (eraProtVerLow @era) fromCBOR
+  decCBOR = decEraFromCBOR @era
 
 instance ToJSON (ShelleyPParams Identity era) where
   toJSON pp =
@@ -404,10 +402,10 @@ instance Era era => FromCBOR (ShelleyPParams StrictMaybe era) where
     pure $ foldr ($) emptyShelleyPParamsUpdate (snd <$> mapParts)
 
 instance Era era => EncCBOR (ShelleyPParams StrictMaybe era) where
-  encCBOR = toPlainEncoding (eraProtVerLow @era) . toCBOR
+  encCBOR = encEraToCBOR @era
 
 instance Era era => DecCBOR (ShelleyPParams StrictMaybe era) where
-  decCBOR = toPlainDecoder (eraProtVerLow @era) fromCBOR
+  decCBOR = decEraFromCBOR @era
 
 -- | Update operation for protocol parameters structure @PParams@
 newtype ProposedPPUpdates era

@@ -27,10 +27,14 @@ module Cardano.Ledger.Core.Era (
   notSupportedInThisEraL,
   eraProtVerLow,
   eraProtVerHigh,
+  encEraToCBOR,
+  decEraFromCBOR,
+  decEraDecoder,
 )
 where
 
-import Cardano.Ledger.BaseTypes (MaxVersion, MinVersion, Version, natVersion)
+import Cardano.Ledger.Binary
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Crypto
 import Data.Kind (Constraint, Type)
 import Data.Typeable (Typeable)
@@ -173,3 +177,22 @@ notSupportedInThisEra = error "Impossible: Function is not supported in this era
 -- Without using `lens` we hit a ghc bug, which results in a redundant constraint warning
 notSupportedInThisEraL :: HasCallStack => Lens' a b
 notSupportedInThisEraL = lens notSupportedInThisEra notSupportedInThisEra
+
+
+-- | Convert a type that implements `ToCBOR` to plain `Plain.Encoding` using the lowest
+-- protocol version for the supplied @era@
+encEraToCBOR :: forall era t. (Era era, ToCBOR t) => t -> Plain.Encoding
+encEraToCBOR = toPlainEncoding (eraProtVerLow @era) . toCBOR
+{-# INLINE encEraToCBOR #-}
+
+-- | Convert a type that implements `FromCBOR` to plain `Plain.Decoder` using the lowest
+-- protocol version for the supplied @era@
+decEraFromCBOR :: forall era t s. (Era era, FromCBOR t) => Plain.Decoder s t
+decEraFromCBOR = decEraDecoder @era fromCBOR
+{-# INLINE decEraFromCBOR #-}
+
+-- | Convert a versioned `Decoder` to plain a `Plain.Decoder` using the lowest protocol
+-- version for the supplied @era@
+decEraDecoder :: forall era t s. (Era era, FromCBOR t) => Decoder s t -> Plain.Decoder s t
+decEraDecoder = toPlainDecoder (eraProtVerLow @era)
+{-# INLINE decEraDecoder #-}

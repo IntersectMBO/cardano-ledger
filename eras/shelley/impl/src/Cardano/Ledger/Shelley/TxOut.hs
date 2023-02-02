@@ -35,8 +35,6 @@ import Cardano.Ledger.Binary (
   ToCBOR (..),
   decodeRecordNamed,
   encodeListLen,
-  toPlainDecoder,
-  toPlainEncoding,
  )
 import Cardano.Ledger.Compactible (Compactible (CompactForm, fromCompact, toCompact))
 import Cardano.Ledger.Credential (Credential)
@@ -164,13 +162,13 @@ instance
   fromSharedCBOR _ = fromCBOR
 
 instance (Era era, ToCBOR (CompactForm (Value era))) => EncCBOR (ShelleyTxOut era) where
-  encCBOR = toPlainEncoding (eraProtVerLow @era) . toCBOR
+  encCBOR = encEraToCBOR @era
 
 instance
   (Era era, Show (Value era), DecodeNonNegative (Value era), Compactible (Value era)) =>
   DecCBOR (ShelleyTxOut era)
   where
-  decCBOR = toPlainDecoder (eraProtVerLow @era) fromCBOR
+  decCBOR = decEraFromCBOR @era
 
 -- a ShortByteString of the same length as the ADDRHASH
 -- used to calculate heapWords

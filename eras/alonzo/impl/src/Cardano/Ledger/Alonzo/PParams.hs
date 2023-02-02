@@ -82,8 +82,6 @@ import Cardano.Ledger.Binary (
   encodePreEncoded,
   serialize',
   serializeEncoding',
-  toPlainDecoder,
-  toPlainEncoding,
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -344,10 +342,10 @@ instance Era era => FromCBOR (AlonzoPParams Identity era) where
         <! From -- appMaxCollateralInputs
 
 instance Era era => EncCBOR (AlonzoPParams Identity era) where
-  encCBOR = toPlainEncoding (eraProtVerLow @era) . toCBOR
+  encCBOR = encEraToCBOR @era
 
 instance Era era => DecCBOR (AlonzoPParams Identity era) where
-  decCBOR = toPlainDecoder (eraProtVerLow @era) fromCBOR
+  decCBOR = decEraFromCBOR @era
 
 instance ToJSON (AlonzoPParams Identity era) where
   toJSON AlonzoPParams {..} =
@@ -605,10 +603,10 @@ instance Era era => FromCBOR (AlonzoPParams StrictMaybe era) where
     decode (SparseKeyed "PParamsUpdate" emptyAlonzoPParamsUpdate updateField [])
 
 instance Era era => EncCBOR (AlonzoPParams StrictMaybe era) where
-  encCBOR = toPlainEncoding (eraProtVerLow @era) . toCBOR
+  encCBOR = encEraToCBOR @era
 
 instance Era era => DecCBOR (AlonzoPParams StrictMaybe era) where
-  decCBOR = toPlainDecoder (eraProtVerLow @era) fromCBOR
+  decCBOR = decEraFromCBOR @era
 
 -- ===================================================
 -- Figure 1: "Definitions Used in Protocol Parameters"

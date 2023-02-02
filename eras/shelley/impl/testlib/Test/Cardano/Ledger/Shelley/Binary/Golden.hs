@@ -8,6 +8,7 @@ module Test.Cardano.Ledger.Shelley.Binary.Golden (
 ) where
 
 import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochNo (..))
+import Cardano.Ledger.Binary (ToCBOR)
 import Cardano.Ledger.Binary.Plain
 import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Shelley.Core
@@ -22,8 +23,9 @@ goldenNewEpochStateExpectation ::
   ( HasCallStack
   , EraTxOut era
   , EncCBOR (StashedAVVMAddresses era)
-  , EncCBOR (PPUPState era)
   , EncCBOR (TallyState era)
+  , EncCBOR (PPUPState era)
+  , ToCBOR (PPUPState era)
   ) =>
   NewEpochState era ->
   Expectation

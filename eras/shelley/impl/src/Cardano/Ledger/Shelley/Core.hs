@@ -8,6 +8,8 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 
@@ -23,9 +25,18 @@ module Cardano.Ledger.Shelley.Core (
 where
 
 import Cardano.Ledger.Address
-import Cardano.Ledger.Binary (FromCBOR (..), FromSharedCBOR (..), ToCBOR (..), decodeNull, encodeNull)
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
+  FromCBOR (..),
+  FromSharedCBOR (..),
+  ToCBOR (..),
+  decodeNull,
+  encodeNull,
+ )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (Update)
@@ -48,6 +59,8 @@ class
   , Show (TallyState era)
   , NoThunks (TallyState era)
   , NFData (TallyState era)
+  , ToCBOR (TallyState era)
+  , FromCBOR (TallyState era)
   , EncCBOR (TallyState era)
   , DecCBOR (TallyState era)
   ) =>
@@ -82,7 +95,13 @@ instance Era era => FromSharedCBOR (ShelleyTallyState era) where
 instance Era era => FromCBOR (ShelleyTallyState era) where
   fromCBOR = NoTallyState <$ decodeNull
 
-instance EraTallyState (ShelleyEra c)
+instance Era era => EncCBOR (ShelleyTallyState era) where
+  encCBOR = encEraToCBOR @era
+
+instance Era era => DecCBOR (ShelleyTallyState era) where
+  decCBOR = decEraFromCBOR @era
+
+instance Crypto c => EraTallyState (ShelleyEra c)
 
 class EraTxBody era => ShelleyEraTxBody era where
   ttlTxBodyL :: ExactEra ShelleyEra era => Lens' (TxBody era) SlotNo

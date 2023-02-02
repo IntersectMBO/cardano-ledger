@@ -77,5 +77,5 @@ translateEraToCBOR ::
 translateEraToCBOR _ tc =
   translateEraEncoding @era
     tc
-    (toPlainEncoding (eraProtVerLow @era) . toCBOR)
+    (encEraToCBOR @era)
     (toPlainEncoding (eraProtVerHigh @(PreviousEra era)) . toCBOR)

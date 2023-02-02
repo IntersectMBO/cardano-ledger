@@ -42,8 +42,6 @@ import Cardano.Ledger.Binary (
   decodeRecordSum,
   decodeWord,
   encodeListLen,
-  toPlainDecoder,
-  toPlainEncoding,
  )
 import Cardano.Ledger.Binary.Coders (Decode (..), decode, (<!))
 import Cardano.Ledger.Core
@@ -267,10 +265,10 @@ instance (Era era, FromCBOR (PParamsUpdate era)) => FromCBOR (ShelleyPPUPState e
         <! From
 
 instance (Era era, ToCBOR (PParamsUpdate era)) => EncCBOR (ShelleyPPUPState era) where
-  encCBOR = toPlainEncoding (eraProtVerLow @era) . toCBOR
+  encCBOR = encEraToCBOR @era
 
 instance (Era era, FromCBOR (PParamsUpdate era)) => DecCBOR (ShelleyPPUPState era) where
-  decCBOR = toPlainDecoder (eraProtVerLow @era) fromCBOR
+  decCBOR = decEraFromCBOR @era
 
 instance Default (ShelleyPPUPState era) where
   def = ShelleyPPUPState emptyPPPUpdates emptyPPPUpdates

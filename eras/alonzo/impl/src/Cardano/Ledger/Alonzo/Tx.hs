@@ -118,7 +118,6 @@ import Cardano.Ledger.Binary (
   decodeNullMaybe,
   encodeNullMaybe,
   serializeEncoding',
-  toPlainEncoding,
  )
 import Cardano.Ledger.Binary.Coders
 import qualified Cardano.Ledger.Binary.Plain as Plain
@@ -537,7 +536,7 @@ instance
   ) =>
   EncCBOR (AlonzoTx era)
   where
-  encCBOR = toPlainEncoding (eraProtVerLow @era) . toCBOR
+  encCBOR = encEraToCBOR @era
 
 instance
   ( Typeable era

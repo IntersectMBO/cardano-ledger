@@ -66,8 +66,6 @@ import Cardano.Ledger.Binary (
   decodeListLenOrIndef,
   encodeListLen,
   interns,
-  toPlainDecoder,
-  toPlainEncoding,
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible
@@ -353,7 +351,7 @@ instance
   (Era era, Val (Value era), DecodeNonNegative (Value era)) =>
   EncCBOR (AlonzoTxOut era)
   where
-  encCBOR = toPlainEncoding (eraProtVerLow @era) . toCBOR
+  encCBOR = encEraToCBOR @era
 
 instance
   (Era era, Show (Value era), Val (Value era), DecodeNonNegative (Value era)) =>
@@ -402,7 +400,7 @@ instance
   (Era era, Val (Value era), DecodeNonNegative (Value era), Show (Value era)) =>
   DecCBOR (AlonzoTxOut era)
   where
-  decCBOR = toPlainDecoder (eraProtVerLow @era) fromCBOR
+  decCBOR = decEraFromCBOR @era
   {-# INLINE decCBOR #-}
 
 instance (EraTxOut era, ToJSON (Value era)) => ToJSON (AlonzoTxOut era) where

@@ -42,8 +42,6 @@ import Cardano.Ledger.Binary (
   Interns,
   ToCBOR (..),
   decodeMap,
-  toPlainDecoder,
-  toPlainEncoding,
  )
 import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Coin (Coin, CompactForm (CompactCoin))
@@ -83,10 +81,10 @@ newtype UTxO era = UTxO {unUTxO :: Map.Map (TxIn (EraCrypto era)) (TxOut era)}
   deriving (Default, Generic, Semigroup)
 
 instance (ToCBOR (TxOut era), Era era) => EncCBOR (UTxO era) where
-  encCBOR = toPlainEncoding (eraProtVerLow @era) . toCBOR
+  encCBOR = encEraToCBOR @era
 
 instance (FromCBOR (TxOut era), Era era) => DecCBOR (UTxO era) where
-  decCBOR = toPlainDecoder (eraProtVerLow @era) fromCBOR
+  decCBOR = decEraFromCBOR @era
 
 deriving instance NoThunks (TxOut era) => NoThunks (UTxO era)
 
