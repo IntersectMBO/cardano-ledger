@@ -51,6 +51,8 @@ import Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces (
   onlyValidLedgerSignalsAreGenerated,
   relevantCasesAreCovered,
  )
+
+import Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (stakeIncrTest)
 import Test.Cardano.Ledger.Shelley.Rules.TestChain (
   TestingLedger,
   adaPreservationChain,
@@ -59,7 +61,6 @@ import Test.Cardano.Ledger.Shelley.Rules.TestChain (
   depositTests,
   poolProperties,
   removedAfterPoolreap,
-  stakeIncrTest,
  )
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.ShelleyTranslation (testGroupShelleyTranslation)
