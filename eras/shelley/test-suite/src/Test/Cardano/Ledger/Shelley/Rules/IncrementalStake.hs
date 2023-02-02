@@ -8,8 +8,8 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (
-  stakeIncrTest,
-  incrementalStakeProp,
+  incrStakeComputationProp,
+  incrStakeComparisonProp,
   stakeDistr,
   aggregateUtxoCoinByCredential,
 ) where
@@ -70,13 +70,12 @@ import Test.Cardano.Ledger.Shelley.Utils (
 import Test.Cardano.Ledger.TerseTools (tersemapdiffs)
 import Test.QuickCheck (
   Property,
-  Testable (..),
   conjoin,
   counterexample,
   (===),
  )
 
-stakeIncrTest ::
+incrStakeComputationProp ::
   forall era ledger.
   ( EraGen era
   , TestingLedger era ledger
@@ -85,7 +84,7 @@ stakeIncrTest ::
   , Default (PPUPState era)
   ) =>
   Property
-stakeIncrTest =
+incrStakeComputationProp =
   forAllChainTrace @era longTraceLen $ \tr -> do
     let ssts = sourceSignalTargets tr
 
@@ -141,7 +140,7 @@ incrStakeComp SourceSignalTarget {source = chainSt, signal = block} =
           ptrs = ptrsMap . dpsDState $ dp
           ptrs' = ptrsMap . dpsDState $ dp'
 
-incrementalStakeProp ::
+incrStakeComparisonProp ::
   forall era.
   ( EraGen era
   , QC.HasTrace (CHAIN era) (GenEnv era)
@@ -150,40 +149,23 @@ incrementalStakeProp ::
   ) =>
   Proxy era ->
   Property
-incrementalStakeProp Proxy = atEpoch @era (testIncrementalStake @era)
-
-atEpoch ::
-  forall era prop.
-  ( EraGen era
-  , Testable prop
-  , QC.HasTrace (CHAIN era) (GenEnv era)
-  , Default (PPUPState era)
-  , EraTallyState era
-  ) =>
-  (LedgerState era -> LedgerState era -> prop) ->
-  Property
-atEpoch f =
+incrStakeComparisonProp Proxy =
   forAllChainTrace traceLen $ \tr ->
     conjoin $
-      map g $
+      map (\(SourceSignalTarget _ target _) -> checkIncrementalStake @era (ledgerStateFromChainState target)) $
         filter (not . sameEpoch) (sourceSignalTargets tr)
   where
-    g (SourceSignalTarget s1 s2 _) = f (ledgerStateFromChainState s1) (ledgerStateFromChainState s2)
     sameEpoch SourceSignalTarget {source, target} = epoch source == epoch target
     epoch = nesEL . chainNes
+    ledgerStateFromChainState = esLState . nesEs . chainNes
 
-ledgerStateFromChainState :: ChainState era -> LedgerState era
-ledgerStateFromChainState = esLState . nesEs . chainNes
-
-testIncrementalStake ::
+checkIncrementalStake ::
   forall era.
   EraTxOut era =>
   LedgerState era ->
-  LedgerState era ->
   Property
-testIncrementalStake _ (LedgerState (UTxOState utxo _ _ _ incStake) (DPState dstate pstate) _) =
+checkIncrementalStake (LedgerState (UTxOState utxo _ _ _ incStake) (DPState dstate pstate) _) =
   let stake = stakeDistr @era utxo dstate pstate
-
       istake = incrementalStakeDistr @(EraCrypto era) incStake dstate pstate
    in counterexample
         ( "\nIncremental stake distribution does not match old style stake distribution"

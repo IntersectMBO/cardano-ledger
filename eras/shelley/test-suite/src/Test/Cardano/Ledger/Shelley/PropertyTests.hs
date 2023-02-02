@@ -56,7 +56,7 @@ import Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces (
 import Test.Cardano.Ledger.Shelley.Rules.CollisionFreeness (collisionFreeProps)
 import Test.Cardano.Ledger.Shelley.Rules.Deleg (delegProps)
 import Test.Cardano.Ledger.Shelley.Rules.Deposits (depositsProps)
-import Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (stakeIncrTest)
+import Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (incrStakeComputationProp)
 import Test.Cardano.Ledger.Shelley.Rules.Pool (poolProps)
 import Test.Cardano.Ledger.Shelley.Rules.PoolReap (poolReapProps)
 import Test.Cardano.Ledger.Shelley.Rules.TestChain (TestingLedger)
@@ -165,7 +165,7 @@ propertyTests =
             (collisionFreeProps @era @ledger)
         , TQC.testProperty
             "incremental stake calc"
-            (stakeIncrTest @era @ledger)
+            (incrStakeComputationProp @era @ledger)
         ]
     , testGroup
         "Properties of Trace generators"
