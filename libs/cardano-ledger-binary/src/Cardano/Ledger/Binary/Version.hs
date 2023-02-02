@@ -11,6 +11,7 @@
 module Cardano.Ledger.Binary.Version (
   -- * Versioning
   Version,
+  getVersion,
   MinVersion,
   MaxVersion,
   natVersion,
@@ -33,7 +34,6 @@ import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
 import GHC.TypeLits (KnownNat, natVal, type (<=))
 import NoThunks.Class (NoThunks)
-import Numeric.Natural (Natural)
 
 --------------------------------------------------------------------------------
 -- Version
@@ -63,11 +63,14 @@ natVersion = natVersionProxy (Proxy @v)
 natVersionProxy :: (KnownNat v, MinVersion <= v, v <= MaxVersion) => Proxy v -> Version
 natVersionProxy = Version . fromInteger . natVal
 
--- | Construct a `Version` and fail if the supplied value is not supported version number.
-mkVersion :: MonadFail m => Natural -> m Version
+-- | Construct a `Version` and fail if the supplied value is not a supported version number.
+mkVersion :: (Integral i, MonadFail m) => i -> m Version
 mkVersion v
-  | v <= fromIntegral (maxBound :: Word64) = mkVersion64 (fromIntegral v)
-  | otherwise = fail $ "Decoder version is too big: " ++ show v
+  | vi < toInteger (minBound :: Word64) = fail $ "Decoder version is too small: " ++ show vi
+  | vi > toInteger (maxBound :: Word64) = fail $ "Decoder version is too big: " ++ show vi
+  | otherwise = mkVersion64 (fromIntegral v)
+  where
+    vi = toInteger v
 
 -- | Construct a `Version` and fail if the supplied value is not supported version number.
 mkVersion64 :: MonadFail m => Word64 -> m Version
@@ -86,6 +89,13 @@ mkVersion64 v
   where
     Version minVersion = minBound
     Version maxVersion = maxBound
+
+-- | Convert a `Version` to an ingegral.
+--
+-- /Note/ - Version spans a fairly small range of non-negative numbers, so this should be
+-- safe even for smallest integral types.
+getVersion :: Integral i => Version -> i
+getVersion (Version w64) = fromIntegral w64
 
 -- | Extract `Word64` representation of the `Version`
 getVersion64 :: Version -> Word64

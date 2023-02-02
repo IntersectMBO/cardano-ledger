@@ -150,7 +150,7 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
 where
 
 import Cardano.Binary (DecoderError (..))
-import Cardano.Ledger.Binary.Version (Version, mkVersion, mkVersion64, natVersion)
+import Cardano.Ledger.Binary.Version (Version, mkVersion64, natVersion)
 import Cardano.Slotting.Slot (WithOrigin, withOriginFromMaybe)
 import Codec.CBOR.ByteArray (ByteArray)
 import qualified Codec.CBOR.Decoding as C (
@@ -408,8 +408,8 @@ decodeRational =
 _decodeRationalFuture :: Decoder s Rational
 _decodeRationalFuture = do
   -- We are not using `natVersion` because these versions aren't yet supported.
-  v9 <- mkVersion 9
-  v10 <- mkVersion 10
+  v9 <- mkVersion64 9
+  v10 <- mkVersion64 10
   ifDecoderVersionAtLeast
     v10
     decodeRationalWithTag
