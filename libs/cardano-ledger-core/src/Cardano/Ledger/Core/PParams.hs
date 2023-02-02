@@ -215,6 +215,8 @@ class
   , NFData (PParamsHKD Identity era)
   , ToCBOR (PParamsHKD Identity era)
   , FromCBOR (PParamsHKD Identity era)
+  , EncCBOR (PParamsHKD Identity era)
+  , DecCBOR (PParamsHKD Identity era)
   , NoThunks (PParamsHKD Identity era)
   , Eq (PParamsHKD StrictMaybe era)
   , Ord (PParamsHKD StrictMaybe era)
