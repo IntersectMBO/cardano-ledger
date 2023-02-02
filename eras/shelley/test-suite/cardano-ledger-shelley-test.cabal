@@ -64,6 +64,7 @@ library
     Test.Cardano.Ledger.Shelley.Rewards
     Test.Cardano.Ledger.Shelley.Rules.Chain
     Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces
+    Test.Cardano.Ledger.Shelley.Rules.IncrementalStake
     Test.Cardano.Ledger.Shelley.Rules.TestChain
     Test.Cardano.Ledger.Shelley.Rules.TestDeleg
     Test.Cardano.Ledger.Shelley.Rules.TestPool
