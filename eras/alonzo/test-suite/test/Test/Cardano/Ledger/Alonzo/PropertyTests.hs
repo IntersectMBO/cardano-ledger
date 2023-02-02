@@ -35,6 +35,7 @@ import Test.Cardano.Ledger.Alonzo.AlonzoEraGen (sumCollateral)
 import Test.Cardano.Ledger.Alonzo.EraMapping ()
 import Test.Cardano.Ledger.Alonzo.Trace ()
 import Test.Cardano.Ledger.EraBuffet (TestCrypto)
+import Test.Cardano.Ledger.Shelley.Generator.Constants (defaultConstants)
 import qualified Test.Cardano.Ledger.Shelley.PropertyTests as Shelley
 import Test.Cardano.Ledger.Shelley.Rules.Chain (
   CHAIN,
@@ -159,7 +160,7 @@ alonzoSpecificProps SourceSignalTarget {source = chainSt, signal = block} =
 
 alonzoTraceTests :: Property
 alonzoTraceTests =
-  forAllChainTrace @A traceLen $ \tr ->
+  forAllChainTrace @A traceLen defaultConstants $ \tr ->
     conjoin $ map alonzoSpecificProps (sourceSignalTargets tr)
 
 propertyTests :: TestTree

@@ -41,6 +41,7 @@ import Control.State.Transition.Trace (
  )
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import qualified Data.Map.Strict as Map
+import Test.Cardano.Ledger.Shelley.Generator.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
@@ -65,9 +66,9 @@ depositsProps ::
 depositsProps =
   testGroup
     "Deposit Invariants"
-    [ TQC.testProperty "Non negative deposits" (shortChainTrace (nonNegativeDeposits @era))
-    , TQC.testProperty "Deposits = KeyDeposits + PoolDeposits" (shortChainTrace (depositInvariant @era))
-    , TQC.testProperty "Reward domain = Deposit domain" (shortChainTrace (rewardDepositDomainInvariant @era))
+    [ TQC.testProperty "Non negative deposits" (shortChainTrace defaultConstants (nonNegativeDeposits @era))
+    , TQC.testProperty "Deposits = KeyDeposits + PoolDeposits" (shortChainTrace defaultConstants (depositInvariant @era))
+    , TQC.testProperty "Reward domain = Deposit domain" (shortChainTrace defaultConstants (rewardDepositDomainInvariant @era))
     ]
 
 -- | Check that deposits are always non-negative

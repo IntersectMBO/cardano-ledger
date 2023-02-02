@@ -58,6 +58,7 @@ import qualified Data.Map.Strict as Map
 import Data.Proxy
 import qualified Data.VMap as VMap
 import Lens.Micro hiding (ix)
+import Test.Cardano.Ledger.Shelley.Generator.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
@@ -83,7 +84,7 @@ incrStakeComputationProp ::
   ) =>
   Property
 incrStakeComputationProp =
-  forAllChainTrace @era longTraceLen $ \tr -> do
+  forAllChainTrace @era longTraceLen defaultConstants $ \tr -> do
     let ssts = sourceSignalTargets tr
 
     conjoin . concat $
@@ -147,7 +148,7 @@ incrStakeComparisonProp ::
   Proxy era ->
   Property
 incrStakeComparisonProp Proxy =
-  forAllChainTrace traceLen $ \tr ->
+  forAllChainTrace traceLen defaultConstants $ \tr ->
     conjoin $
       map (\(SourceSignalTarget _ target _) -> checkIncrementalStake @era ((nesEs . chainNes) target)) $
         filter (not . sameEpoch) (sourceSignalTargets tr)

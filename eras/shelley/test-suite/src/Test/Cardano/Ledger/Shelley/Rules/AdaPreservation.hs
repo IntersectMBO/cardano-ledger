@@ -82,6 +82,7 @@ import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Lens.Micro hiding (ix)
 import Lens.Micro.Extras (view)
+import Test.Cardano.Ledger.Shelley.Generator.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
@@ -115,7 +116,7 @@ adaPreservationProps ::
   ) =>
   Property
 adaPreservationProps =
-  forAllChainTrace @era longTraceLen $ \tr -> do
+  forAllChainTrace @era longTraceLen defaultConstants $ \tr -> do
     let ssts :: [SourceSignalTarget (CHAIN era)]
         -- In this test, the STS Signal has this definition
         -- Signal(CHAIN era) = Block (BHeader (EraCrypto era)) era
@@ -167,7 +168,7 @@ adaIsPreserved ::
   ) =>
   Property
 adaIsPreserved =
-  forAllChainTrace @era longTraceLen $ \tr -> do
+  forAllChainTrace @era longTraceLen defaultConstants $ \tr -> do
     let ssts :: [SourceSignalTarget (CHAIN era)]
         -- Signal(CHAIN era) = Block (BHeader (EraCrypto era)) era
         ssts = sourceSignalTargets tr

@@ -44,6 +44,7 @@ import Control.State.Transition.Trace (
  )
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import qualified Data.Set as Set
+import Test.Cardano.Ledger.Shelley.Generator.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
@@ -71,7 +72,7 @@ poolReapProps ::
   ) =>
   Property
 poolReapProps =
-  forAllChainTrace traceLen $ \tr ->
+  forAllChainTrace traceLen defaultConstants $ \tr ->
     conjoin $
       map removedAfterPoolreap_ $
         filter (not . sameEpoch) (chainSstWithTick tr)

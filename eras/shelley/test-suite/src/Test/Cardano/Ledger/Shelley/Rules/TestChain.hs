@@ -71,7 +71,7 @@ import qualified Data.Set as Set
 import Data.Word (Word64)
 import Lens.Micro.Extras (view)
 import Test.Cardano.Ledger.Shelley.Generator.Block (tickChainState)
-import Test.Cardano.Ledger.Shelley.Generator.Constants (defaultConstants)
+import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
 import qualified Test.Cardano.Ledger.Shelley.Generator.Presets as Preset (genEnv)
@@ -123,9 +123,10 @@ shortChainTrace ::
   , QC.HasTrace (CHAIN era) (GenEnv era)
   , EraGovernance era
   ) =>
+  Constants ->
   (SourceSignalTarget (CHAIN era) -> Property) ->
   Property
-shortChainTrace f = withMaxSuccess 100 $ forAllChainTrace @era 10 $ \tr -> conjoin (map f (sourceSignalTargets tr))
+shortChainTrace constants f = withMaxSuccess 100 $ forAllChainTrace @era 10 constants $ \tr -> conjoin (map f (sourceSignalTargets tr))
 
 ----------------------------------------------------------------------
 -- Projections of CHAIN Trace
@@ -300,15 +301,16 @@ forAllChainTrace ::
   , EraGovernance era
   ) =>
   Word64 -> -- trace length
+  Constants ->
   (Trace (CHAIN era) -> prop) ->
   Property
-forAllChainTrace n prop =
+forAllChainTrace n constants prop =
   withMaxSuccess (fromIntegral numberOfTests) . property $
     forAllTraceFromInitState
       testGlobals
       n
-      (Preset.genEnv p defaultConstants)
-      (Just $ mkGenesisChainState (Preset.genEnv p defaultConstants))
+      (Preset.genEnv p constants)
+      (Just $ mkGenesisChainState (Preset.genEnv p constants))
       prop
   where
     p :: Proxy era
@@ -324,9 +326,10 @@ forEachEpochTrace ::
   ) =>
   Int ->
   Word64 ->
+  Constants ->
   (Trace (CHAIN era) -> prop) ->
   Property
-forEachEpochTrace subtracecount tracelen f = forAllChainTrace tracelen action
+forEachEpochTrace subtracecount tracelen constants f = forAllChainTrace tracelen constants action
   where
     -- split at contiguous elements with different Epoch numbers
     p new old = (nesEL . chainNes) new /= (nesEL . chainNes) old
