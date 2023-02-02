@@ -259,11 +259,17 @@ deriving instance EraPParams era => Show (ConwayTallyState era)
 
 instance EraPParams era => NoThunks (ConwayTallyState era)
 
+instance Era era => ToCBOR (ConwayTallyState era) where
+  toCBOR = error "Unimplemented"
+
+instance Era era => FromCBOR (ConwayTallyState era) where
+  fromCBOR = error "Unimplemented"
+
 instance Era era => EncCBOR (ConwayTallyState era) where
-  encCBOR = error "Unimplemented"
+  encCBOR = encEraToCBOR @era
 
 instance Era era => DecCBOR (ConwayTallyState era) where
-  decCBOR = error "Unimplemented"
+  decCBOR = decEraFromCBOR @era
 
 instance Default (ConwayTallyState era) where
   def = ConwayTallyState mempty
