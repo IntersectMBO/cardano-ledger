@@ -13,7 +13,7 @@ module Test.Cardano.Ledger.Binary.Plain.Golden (
   expectGoldenEncHexBytes,
 ) where
 
-import Cardano.Ledger.Binary (ToCBOR (toCBOR), toPlainEncoding, Version)
+import Cardano.Ledger.Binary (ToCBOR (toCBOR), Version, toPlainEncoding)
 import Cardano.Ledger.Binary.Plain
 import qualified Data.ByteString as BS
 import Data.ByteString.Base16 as BS16
@@ -77,9 +77,9 @@ expectGoldenEncBytes viewDiff actual expectedBytes = do
     diffAs f =
       case viewDiff of
         DiffCBOR ->
-          f (CBORBytes "Actual" actualBytes) (CBORBytes "Expected" expectedBytes)
+          f (CBORBytes actualBytes) (CBORBytes expectedBytes)
         DiffHex ->
-          f (HexBytes "Actual" actualBytes) (HexBytes "Expected" expectedBytes)
+          f (HexBytes actualBytes) (HexBytes expectedBytes)
         DiffRaw -> f actualBytes expectedBytes
         DiffAuto -> actualBytes `shouldBe` expectedBytes
 

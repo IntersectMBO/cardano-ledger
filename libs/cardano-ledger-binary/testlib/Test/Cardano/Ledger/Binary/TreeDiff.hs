@@ -1,6 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Binary.TreeDiff (
@@ -24,7 +23,6 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Lazy as BSL
-import qualified Data.Text as T
 import Data.TreeDiff
 import Test.Hspec (Expectation, HasCallStack, expectationFailure)
 import Test.Tasty.HUnit (Assertion, assertFailure)
@@ -36,58 +34,28 @@ import Test.Tasty.HUnit (Assertion, assertFailure)
 showExpr :: ToExpr a => a -> String
 showExpr = show . ansiWlExpr . toExpr
 
--- | Wraps regular ByteString, but shows and diffs it as hex.
---
--- /Warning/ - It is important to note that `Eq` instance can break referential
--- transparency. In other words tree-diff will use the `hexBytesName` while creating the
--- diff, but comparison will not take it into account. Therefore this property does not hold:
---
--- > x1 == x2 ==> showExpr x1 == showExpr x2
---
--- This is only OK because it is used for testing. In fact it is quite useful during test
--- failure reporting.
-data HexBytes = HexBytes
-  { hexBytesName :: !T.Text
-  , hexBytesRaw :: !BS.ByteString
-  }
-
--- | Ignores the hexBytesName during comparison.
-instance Eq HexBytes where
-  x1 == x2 = hexBytesRaw x1 == hexBytesRaw x2
-
-named :: T.Text -> T.Text -> T.Text
-named typeName name
-  | T.null name = typeName
-  | otherwise = typeName <> "<" <> name <> ">"
+-- | Wraps regular ByteString, but shows and diffs it as hex
+newtype HexBytes = HexBytes {unHexBytes :: BS.ByteString}
+  deriving (Eq)
 
 instance Show HexBytes where
   show = showExpr
 
 instance ToExpr HexBytes where
-  toExpr HexBytes {..} =
-    App (T.unpack $ named "HexBytes" hexBytesName) $ hexByteStringExpr hexBytesRaw
+  toExpr = App "HexBytes" . hexByteStringExpr . unHexBytes
 
--- | Wraps regular ByteString, but shows and diffs it as hex.
---
--- /Warning/ - Same warning as for `HexBytes`
-data CBORBytes = CBORBytes
-  { cborbytesName :: !T.Text
-  , cborBytesRaw :: !BS.ByteString
-  }
-
--- | Ignores the hexBytesName during comparison.
-instance Eq CBORBytes where
-  x1 == x2 = cborBytesRaw x1 == cborBytesRaw x2
+newtype CBORBytes = CBORBytes {unCBORBytes :: BS.ByteString}
+  deriving (Eq)
 
 instance Show CBORBytes where
   show = showExpr
 
 instance ToExpr CBORBytes where
-  toExpr (CBORBytes name bytes) =
+  toExpr (CBORBytes bytes) =
     -- `decodeTerm` does not care about the version, so we can use any version
-    case decodeFullDecoder' minBound (named "Term" name) decodeTerm bytes of
-      Left err -> error $ "Error decoding CBOR: " ++ showDecoderError err ++ "\n" ++ show bytes
-      Right term -> App (T.unpack $ named "Term" name) [toExpr term]
+    case decodeFullDecoder' minBound "Term" decodeTerm bytes of
+      Left err -> error $ "Error decoding CBOR: " ++ showDecoderError err
+      Right term -> toExpr term
 
 instance ToExpr Term where
   toExpr =
@@ -102,7 +70,7 @@ instance ToExpr Term where
       TListI xs -> App "TListI" [Lst (map toExpr xs)]
       TMap xs -> App "TMap" [Lst (map (toExpr . bimap toExpr toExpr) xs)]
       TMapI xs -> App "TMapI" [Lst (map (toExpr . bimap toExpr toExpr) xs)]
-      TTagged 24 (TBytes x) -> App "CBOR-in-CBOR" [toExpr (CBORBytes "" x)]
+      TTagged 24 (TBytes x) -> App "CBOR-in-CBOR" [toExpr (CBORBytes x)]
       TTagged t x -> App "TTagged" [toExpr t, toExpr x]
       TBool x -> App "TBool" [toExpr x]
       TNull -> App "TNull" []
@@ -121,11 +89,10 @@ hexByteStringExpr bs =
 -- useful form for debugging, rather than bunch of escaped characters.
 showHexBytesGrouped :: BS.ByteString -> [String]
 showHexBytesGrouped bs =
-  [ "0x" <> BS8.unpack (BS.take width $ BS.drop i bs16)
-  | i <- [0, width .. BS.length bs16 - 1]
+  [ "0x" <> BS8.unpack (BS.take 16 $ BS.drop i bs16)
+  | i <- [0, 16 .. BS.length bs16 - 1]
   ]
   where
-    width = 128
     bs16 = Base16.encode bs
 
 -- | Check that two values are equal and if they are not raise an exception with the

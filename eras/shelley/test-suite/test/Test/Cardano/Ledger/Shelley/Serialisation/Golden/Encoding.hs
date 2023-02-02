@@ -1158,7 +1158,7 @@ tests =
                 unlines
                   [ "Expected: " ++ show expectedHex
                   , "Actual: " ++ show actualHex
-                  , diffExpr (CBORBytes "Expected" expected) (CBORBytes "Actual" actual)
+                  , diffExpr (CBORBytes expected) (CBORBytes actual)
                   ]
     ]
   where

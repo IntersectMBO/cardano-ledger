@@ -68,7 +68,7 @@ golden_cbor_ShelleyGenesis :: Assertion
 golden_cbor_ShelleyGenesis =
   when (received /= expected) $
     assertFailure
-      (diffExpr (CBORBytes "Expected" expected) (CBORBytes "Actual" received))
+      (diffExpr (CBORBytes expected) (CBORBytes received))
   where
     example :: ShelleyGenesis StandardCrypto
     example = exampleShelleyGenesis
