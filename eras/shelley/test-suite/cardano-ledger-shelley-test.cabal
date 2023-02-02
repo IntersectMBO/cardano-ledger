@@ -47,8 +47,11 @@ library
         Test.Cardano.Ledger.Shelley.LaxBlock
         Test.Cardano.Ledger.Shelley.PropertyTests
         Test.Cardano.Ledger.Shelley.Rewards
+        Test.Cardano.Ledger.Shelley.Rules.AdaPreservation
         Test.Cardano.Ledger.Shelley.Rules.Chain
         Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces
+        Test.Cardano.Ledger.Shelley.Rules.CollisionFreeness
+        Test.Cardano.Ledger.Shelley.Rules.Deposits
         Test.Cardano.Ledger.Shelley.Rules.IncrementalStake
         Test.Cardano.Ledger.Shelley.Rules.PoolReap
         Test.Cardano.Ledger.Shelley.Rules.TestChain
