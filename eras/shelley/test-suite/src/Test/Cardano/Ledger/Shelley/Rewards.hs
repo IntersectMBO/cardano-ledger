@@ -133,6 +133,7 @@ import Lens.Micro ((&), (.~), (^.))
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), vKey)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C)
+import Test.Cardano.Ledger.Shelley.Generator.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (genCoin, genNatural)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainEvent (..), ChainState (..))
@@ -675,7 +676,7 @@ lastElem (_ : xs) = lastElem xs
 -- | Provide a legitimate NewEpochState to make an test Property
 newEpochProp :: Word64 -> (NewEpochState C -> Property) -> Property
 newEpochProp tracelen propf = withMaxSuccess 100 $
-  forAllChainTrace @C tracelen $ \tr ->
+  forAllChainTrace @C tracelen defaultConstants $ \tr ->
     case lastElem (sourceSignalTargets tr) of
       Just SourceSignalTarget {target} -> propf (chainNes target)
       _ -> property True
@@ -683,7 +684,7 @@ newEpochProp tracelen propf = withMaxSuccess 100 $
 -- | Given a NewEpochState and [ChainEvent], test a Property at every Epoch Boundary
 newEpochEventsProp :: Word64 -> ([ChainEvent C] -> NewEpochState C -> Property) -> Property
 newEpochEventsProp tracelen propf = withMaxSuccess 10 $
-  forEachEpochTrace @C 10 tracelen $ \tr ->
+  forEachEpochTrace @C 10 tracelen defaultConstants $ \tr ->
     case lastElem (sourceSignalTargets tr) of
       Just SourceSignalTarget {target} ->
         propf (concat (runShelleyBase $ getEvents tr)) (chainNes target)
