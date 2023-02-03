@@ -18,6 +18,8 @@ import Test.Cardano.Ledger.Alonzo.TxInfo (txInfoTests)
 import Test.Tasty
 import Test.TestScenario (TestScenario (..), mainWithTestScenario)
 
+import Debug.Trace (trace)
+
 -- ====================================================================================
 
 tests :: TestTree
@@ -62,7 +64,7 @@ nightlyTests :: TestTree
 nightlyTests =
   testGroup
     "Alonzo tests"
-    [ alonzoPropertyTests -- These are the full property tests
+    [ (trace ("!!!RUNNING NIGHTLY ALONZO!!!") nightlyTests) -- These are the full property tests
     , CDDL.tests 50
     ]
 

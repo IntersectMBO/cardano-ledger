@@ -16,6 +16,8 @@ import Test.Cardano.Ledger.Shelley.UnitTests (unitTests)
 import Test.Tasty
 import Test.TestScenario (TestScenario (..), mainWithTestScenario)
 
+import Debug.Trace (trace)
+
 tests :: TestTree
 tests = askOption $ \case
   Nightly -> nightlyTests
@@ -42,7 +44,7 @@ nightlyTests :: TestTree
 nightlyTests =
   testGroup
     "Ledger with Delegation nightly"
-    [ propertyTests @C @(ShelleyLEDGER C)
+    [ (trace "!!!RUNNING NIGHTLY SHELLEY" (propertyTests @C @(ShelleyLEDGER C)))
     , Serialisation.tests 50
     ]
 

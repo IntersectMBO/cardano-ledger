@@ -9,6 +9,8 @@ import Test.Cardano.Ledger.Babbage.TxInfo (txInfoTests)
 import Test.Tasty
 import Test.TestScenario (TestScenario (..), mainWithTestScenario)
 
+import Debug.Trace (trace)
+
 -- ====================================================================================
 
 tests :: TestTree
@@ -39,7 +41,7 @@ nightlyTests :: TestTree
 nightlyTests =
   testGroup
     "Babbage tests"
-    [ CDDL.tests 50
+    [ (trace "!!!RUNNING NIGHTLY BABBAGE!!!" CDDL.tests 50)
     ]
 
 -- main entry point

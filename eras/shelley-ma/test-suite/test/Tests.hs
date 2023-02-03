@@ -23,6 +23,8 @@ import qualified Test.Cardano.Ledger.ShelleyMA.Serialisation as Serialisation
 import Test.Tasty
 import Test.TestScenario (TestScenario (..), mainWithTestScenario)
 
+import Debug.Trace (trace)
+
 type instance EraRule "TICKN" (MaryEra _c) = TPraos.TICKN
 
 type instance EraRule "TICKN" (AllegraEra _c) = TPraos.TICKN
@@ -70,11 +72,11 @@ nightlyTests =
     "ShelleyMA Ledger - nightly"
     [ testGroup
         "Allegra Ledger - nightly"
-        [ propertyTests @Allegra @(ShelleyLEDGER Allegra)
+        [ (trace "!!!RUNNING NIGHTLY ALLEGRA!!!" (propertyTests @Allegra @(ShelleyLEDGER Allegra)))
         ]
     , testGroup
         "Mary Ledger - nightly"
-        [ propertyTests @Mary @(ShelleyLEDGER Mary)
+        [ (trace "!!!RUNNING NIGHTLY MARY!!!" (propertyTests @Mary @(ShelleyLEDGER Mary)))
         ]
     ]
 

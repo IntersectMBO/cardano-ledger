@@ -24,6 +24,7 @@ import Test.Cardano.Ledger.Tickf (calcPoolDistOldEqualsNew)
 import Test.Tasty
 import Test.TestScenario (TestScenario (..), mainWithTestScenario)
 
+import Debug.Trace (trace)
 -- ====================================================================================
 
 tests :: TestTree
@@ -59,7 +60,7 @@ mainTests :: TestTree
 mainTests = testGroup "cardano-core" mainTestTrees
 
 nightlyTests :: TestTree
-nightlyTests = testGroup "cardano-core-nightly" nightlyTestTrees
+nightlyTests = testGroup "cardano-core-nightly" (trace "!!!RUNNING NIGHTLY CARDANO-LEDGER-TEST!!!" nightlyTestTrees)
 
 -- main entry point
 main :: IO ()
