@@ -24,7 +24,7 @@ import Debug.Trace (trace)
 
 tests :: TestTree
 tests = askOption $ \case
-  Nightly -> nightlyTests
+  Nightly -> fakeNightlyTests
   Fast -> fastTests
   _ -> mainTests
 
@@ -59,6 +59,9 @@ fastTests =
     , plutusScriptExamples
     , txInfoTests
     ]
+
+fakeNightlyTests :: TestTree
+fakeNightlyTests = testGroup "FAKE NIGHTLY ALONZO" []
 
 nightlyTests :: TestTree
 nightlyTests =

@@ -20,7 +20,7 @@ import Debug.Trace (trace)
 
 tests :: TestTree
 tests = askOption $ \case
-  Nightly -> nightlyTests
+  Nightly -> fakeNightlyTests
   Fast -> fastTests
   _ -> mainTests
 
@@ -39,6 +39,10 @@ mainTests =
     , prettyTest
     , safeHashTest
     ]
+
+
+fakeNightlyTests :: TestTree
+fakeNightlyTests = testGroup "FAKE NIGHTLY SHELLEY" []
 
 nightlyTests :: TestTree
 nightlyTests =

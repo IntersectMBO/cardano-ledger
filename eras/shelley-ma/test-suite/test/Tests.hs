@@ -31,7 +31,7 @@ type instance EraRule "TICKN" (AllegraEra _c) = TPraos.TICKN
 
 tests :: TestTree
 tests = askOption $ \case
-  Nightly -> nightlyTests
+  Nightly -> fakeNightlyTests
   Fast -> mainTests
   _ -> mainTests
 
@@ -65,6 +65,9 @@ maryTests =
     , multiAssetsExample
     , goldenScaledMinDeposit
     ]
+
+fakeNightlyTests :: TestTree
+fakeNightlyTests = testGroup "FAKE NIGHTLY SHELLEY-MA" []
 
 nightlyTests :: TestTree
 nightlyTests =

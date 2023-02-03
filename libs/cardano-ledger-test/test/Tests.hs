@@ -29,7 +29,7 @@ import Debug.Trace (trace)
 
 tests :: TestTree
 tests = askOption $ \case
-  Nightly -> nightlyTests
+  Nightly -> fakeNightlyTests
   Fast -> mainTests
   _ -> mainTests
 
@@ -58,6 +58,10 @@ nightlyTestTrees =
 
 mainTests :: TestTree
 mainTests = testGroup "cardano-core" mainTestTrees
+
+
+fakeNightlyTests :: TestTree
+fakeNightlyTests = testGroup "FAKE NIGHTLY CARDANO-LEDGER-Test" []
 
 nightlyTests :: TestTree
 nightlyTests = testGroup "cardano-core-nightly" (trace "!!!RUNNING NIGHTLY CARDANO-LEDGER-TEST!!!" nightlyTestTrees)

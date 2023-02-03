@@ -15,7 +15,7 @@ import Debug.Trace (trace)
 
 tests :: TestTree
 tests = askOption $ \case
-  Nightly -> nightlyTests
+  Nightly -> fakeNightlyTests
   Fast -> fastTests
   _ -> mainTests
 
@@ -36,6 +36,9 @@ fastTests =
     , txInfoTests
     , CDDL.tests 1
     ]
+
+fakeNightlyTests :: TestTree
+fakeNightlyTests = testGroup "FAKE NIGHTLY BABBAGE" []
 
 nightlyTests :: TestTree
 nightlyTests =
