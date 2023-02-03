@@ -9,7 +9,6 @@
 module Cardano.Ledger.Shelley.API.Genesis where
 
 import Cardano.Ledger.BaseTypes (BlocksMade (..))
-import Cardano.Ledger.Core (Era (..), EraRule, EraTxOut, PParams)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.EpochBoundary (emptySnapShots)
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -28,16 +27,13 @@ import Cardano.Ledger.Shelley.API.Types (
   genesisUTxO,
   word64ToCoin,
  )
-import Cardano.Ledger.Shelley.Core (EraTallyState (..))
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  PPUPState,
   StashedAVVMAddresses,
   smartUTxOState,
  )
-import Cardano.Ledger.Shelley.PParams ()
 import Cardano.Ledger.UTxO (coinBalance)
 import Cardano.Ledger.Val (Val ((<->)))
-import Control.State.Transition (STS (..))
 import Data.Default.Class (Default, def)
 import Data.Kind (Type)
 import qualified Data.Map.Strict as Map
@@ -46,8 +42,7 @@ import qualified Data.Map.Strict as Map
 class
   ( EraTxOut era
   , Default (StashedAVVMAddresses era)
-  , Default (PPUPState era)
-  , EraTallyState era
+  , EraGovernance era
   ) =>
   CanStartFromGenesis era
   where
@@ -72,7 +67,6 @@ class
 
 instance
   ( Crypto c
-  , Default (State (EraRule "PPUP" (ShelleyEra c)))
   ) =>
   CanStartFromGenesis (ShelleyEra c)
   where
@@ -94,9 +88,8 @@ initialStateFromGenesis sg ag =
         (AccountState (Coin 0) reserves)
         emptySnapShots
         ( LedgerState
-            (smartUTxOState initialUtxo (Coin 0) (Coin 0) def)
+            (smartUTxOState initialUtxo (Coin 0) (Coin 0) emptyGovernanceState)
             (DPState (def {dsGenDelegs = GenDelegs genDelegs}) def)
-            emptyTallyState
         )
         (fromShelleyPParams ag pp)
         (fromShelleyPParams ag pp)

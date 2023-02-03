@@ -14,7 +14,6 @@ import Cardano.Ledger.Binary
 import qualified Cardano.Ledger.Credential as Credential
 import qualified Cardano.Ledger.EpochBoundary as EpochBoundary
 import qualified Cardano.Ledger.Keys as Keys
-import Cardano.Ledger.Shelley.Core (EraTallyState (..))
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.State.Orphans
 import Cardano.Ledger.State.Schema
@@ -61,7 +60,7 @@ insertUTxOState Shelley.UTxOState {..} = do
     UtxoState
       { utxoStateDeposited = utxosDeposited
       , utxoStateFees = utxosFees
-      , utxoStatePpups = utxosPpups
+      , utxoStatePpups = utxosGovernance
       }
 
 insertUTxO ::
@@ -522,7 +521,6 @@ getLedgerState utxo LedgerState {..} dstate = do
             { Shelley.dpsDState = dstate
             , Shelley.dpsPState = ledgerStatePstateBin
             }
-      , Shelley.lsTallyState = emptyTallyState @CurrentEra
       }
 
 getDStateNoSharing ::

@@ -34,10 +34,9 @@ import Cardano.Ledger.Binary (
   decodeRecordSum,
   encodeListLen,
  )
-import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
-import Cardano.Ledger.Shelley.Core (EraTallyState (..))
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyLEDGER)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState,
@@ -57,7 +56,7 @@ import Cardano.Ledger.Shelley.Rules.Delegs (
 import Cardano.Ledger.Shelley.Rules.Reports (showTxCerts, synopsisCoinMap)
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
 import Cardano.Ledger.Shelley.Rules.Utxow (ShelleyUTXOW, ShelleyUtxowPredFailure)
-import Cardano.Ledger.Shelley.TxBody (DCert (..), ShelleyEraTxBody (..))
+import Cardano.Ledger.Shelley.TxBody (DCert (..))
 import Cardano.Ledger.Slot (EpochNo, SlotNo, epochInfoEpoch)
 import Cardano.Ledger.UMapCompact (depositView)
 import Control.DeepSeq (NFData (..))
@@ -171,7 +170,6 @@ instance
   , State (EraRule "DELEGS" era) ~ DPState (EraCrypto era)
   , Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era))
   , ProtVerAtMost era 8
-  , EraTallyState era
   ) =>
   STS (ShelleyLEDGER era)
   where
@@ -191,7 +189,7 @@ instance
     [ PostCondition
         "Deposit pot must equal obligation (ShelleyLedger)"
         ( \(TRC (_, _, _))
-           (LedgerState utxoSt dpstate _) ->
+           (LedgerState utxoSt dpstate) ->
               obligationDPState dpstate == utxosDeposited utxoSt
         )
     ]
@@ -209,11 +207,10 @@ ledgerTransition ::
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , ProtVerAtMost era 8
-  , EraTallyState era
   ) =>
   TransitionRule (ShelleyLEDGER era)
 ledgerTransition = do
-  TRC (LedgerEnv slot txIx pp account, LedgerState utxoSt dpstate _, tx) <- judgmentContext
+  TRC (LedgerEnv slot txIx pp account, LedgerState utxoSt dpstate, tx) <- judgmentContext
   dpstate' <-
     trans @(EraRule "DELEGS" era) $
       TRC
@@ -230,7 +227,7 @@ ledgerTransition = do
         , utxoSt
         , tx
         )
-  pure (LedgerState utxoSt' dpstate' emptyTallyState)
+  pure (LedgerState utxoSt' dpstate')
 
 instance
   ( Era era

@@ -18,7 +18,7 @@ module Test.Cardano.Ledger.Shelley.Generator.Trace.Chain where
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.LedgerState (PPUPState, incrementalStakeDistr)
+import Cardano.Ledger.Shelley.LedgerState (incrementalStakeDistr)
 import Cardano.Ledger.Shelley.Rules (
   BbodyEnv,
   ShelleyBbodyState,
@@ -52,7 +52,6 @@ import Control.State.Transition.Trace.Generator.QuickCheck (
   sigGen,
  )
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
-import Data.Default.Class (Default)
 import Data.Functor.Identity (runIdentity)
 import qualified Data.ListMap as LM
 import Data.Map.Strict (Map)
@@ -129,9 +128,8 @@ lastByronHeaderHash _ = HashHeader $ mkHash 0
 -- and (2) always return Right (since this function does not raise predicate failures).
 mkGenesisChainState ::
   forall era a.
-  ( Default (PPUPState era)
-  , EraGen era
-  , EraTallyState era
+  ( EraGen era
+  , EraGovernance era
   ) =>
   GenEnv era ->
   IRC (CHAIN era) ->

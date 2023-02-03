@@ -20,10 +20,9 @@ where
 
 import Cardano.Ledger.BaseTypes (Nonce (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
-import Cardano.Ledger.Shelley.Core (EraTallyState)
-import Cardano.Ledger.Shelley.LedgerState (PPUPState, ShelleyPPUPState (..), StashedAVVMAddresses)
+import Cardano.Ledger.Shelley.Core
+import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses)
 import Cardano.Ledger.Slot (
   BlockNo (..),
   EpochNo (..),
@@ -95,8 +94,7 @@ initSt ::
   , ProtVerAtMost era 4
   , ProtVerAtMost era 6
   , Default (StashedAVVMAddresses era)
-  , ShelleyPPUPState era ~ PPUPState era
-  , EraTallyState era
+  , EraGovernance era
   ) =>
   UTxO era ->
   ChainState era

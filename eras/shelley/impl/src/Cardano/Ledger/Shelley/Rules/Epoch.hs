@@ -22,18 +22,14 @@ module Cardano.Ledger.Shelley.Rules.Epoch (
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core
 import Cardano.Ledger.EpochBoundary (SnapShots)
-import Cardano.Ledger.Shelley.Core (EraTallyState)
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEPOCH)
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState,
   LedgerState,
-  PPUPState,
   PState (..),
-  ShelleyPPUPState (..),
-  UTxOState (utxosDeposited, utxosPpups),
-  UpecState (..),
+  UTxOState (utxosDeposited, utxosGovernance),
   asReserves,
   esAccountState,
   esLState,
@@ -55,7 +51,7 @@ import Cardano.Ledger.Shelley.Rules.PoolReap (
   ShelleyPoolreapState (..),
  )
 import Cardano.Ledger.Shelley.Rules.Snap (ShelleySNAP, ShelleySnapPredFailure, SnapEvent)
-import Cardano.Ledger.Shelley.Rules.Upec (ShelleyUPEC, ShelleyUpecPredFailure)
+import Cardano.Ledger.Shelley.Rules.Upec (ShelleyUPEC, ShelleyUpecPredFailure, UpecState (..))
 import Cardano.Ledger.Slot (EpochNo)
 import Control.SetAlgebra (eval, (⨃))
 import Control.State.Transition (
@@ -111,6 +107,8 @@ data ShelleyEpochEvent era
 
 instance
   ( EraTxOut era
+  , EraGovernance era
+  , GovernanceState era ~ ShelleyPPUPState era
   , Embed (EraRule "SNAP" era) (ShelleyEPOCH era)
   , Environment (EraRule "SNAP" era) ~ LedgerState era
   , State (EraRule "SNAP" era) ~ SnapShots (EraCrypto era)
@@ -126,8 +124,6 @@ instance
   , Default (PParams era)
   , Eq (UpecPredFailure era)
   , Show (UpecPredFailure era)
-  , PPUPState era ~ ShelleyPPUPState era
-  , EraTallyState era
   ) =>
   STS (ShelleyEPOCH era)
   where
@@ -160,7 +156,7 @@ epochTransition ::
   , Environment (EraRule "UPEC" era) ~ EpochState era
   , State (EraRule "UPEC" era) ~ UpecState era
   , Signal (EraRule "UPEC" era) ~ ()
-  , PPUPState era ~ ShelleyPPUPState era
+  , GovernanceState era ~ ShelleyPPUPState era
   ) =>
   TransitionRule (ShelleyEPOCH era)
 epochTransition = do
@@ -205,8 +201,8 @@ epochTransition = do
 
   UpecState pp' ppupSt' <-
     trans @(EraRule "UPEC" era) $
-      TRC (epochState', UpecState pp (utxosPpups utxoSt'), ())
-  let utxoSt'' = utxoSt' {utxosPpups = ppupSt'}
+      TRC (epochState', UpecState pp (utxosGovernance utxoSt'), ())
+  let utxoSt'' = utxoSt' {utxosGovernance = ppupSt'}
 
   let
     -- At the epoch boundary refunds are made, so we need to change what

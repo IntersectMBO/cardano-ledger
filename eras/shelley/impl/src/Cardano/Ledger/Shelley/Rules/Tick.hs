@@ -33,6 +33,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.EpochBoundary (SnapShots (ssStakeMark, ssStakeMarkPoolDistr))
 import Cardano.Ledger.Keys (GenDelegs (..))
 import Cardano.Ledger.Shelley.Era (ShelleyTICK, ShelleyTICKF)
+import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState (
   DPState (..),
   DState (..),
@@ -40,11 +41,8 @@ import Cardano.Ledger.Shelley.LedgerState (
   FutureGenDeleg (..),
   LedgerState (..),
   NewEpochState (..),
-  PPUPState,
   PulsingRewUpdate,
-  ShelleyPPUPState,
   UTxOState (..),
-  UpecState (..),
  )
 import Cardano.Ledger.Shelley.Rules.NewEpoch (
   ShelleyNEWEPOCH,
@@ -57,7 +55,7 @@ import Cardano.Ledger.Shelley.Rules.Rupd (
   ShelleyRUPD,
   ShelleyRupdPredFailure,
  )
-import Cardano.Ledger.Shelley.Rules.Upec (ShelleyUPEC, ShelleyUpecPredFailure)
+import Cardano.Ledger.Shelley.Rules.Upec (ShelleyUPEC, ShelleyUpecPredFailure, UpecState (..))
 import Cardano.Ledger.Slot (EpochNo (unEpochNo), SlotNo, epochInfoEpoch)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (⨃))
@@ -187,7 +185,7 @@ validatingTickTransitionFORECAST ::
   , Environment (EraRule "UPEC" era) ~ EpochState era
   , Embed (EraRule "UPEC" era) (tick era)
   , STS (tick era)
-  , PPUPState era ~ ShelleyPPUPState era
+  , GovernanceState era ~ ShelleyPPUPState era
   ) =>
   NewEpochState era ->
   SlotNo ->
@@ -222,7 +220,7 @@ validatingTickTransitionFORECAST nes slot = do
       -- return value here was used to validate their headers.
 
       let pp = esPp es
-          updates = utxosPpups . lsUTxOState . esLState $ es
+          updates = utxosGovernance . lsUTxOState . esLState $ es
       UpecState pp' _ <-
         trans @(EraRule "UPEC" era) $
           TRC (es, UpecState pp updates, ())
@@ -330,7 +328,7 @@ instance
   , State (EraRule "UPEC" era) ~ UpecState era
   , Environment (EraRule "UPEC" era) ~ EpochState era
   , Embed (EraRule "UPEC" era) (ShelleyTICKF era)
-  , PPUPState era ~ ShelleyPPUPState era
+  , GovernanceState era ~ ShelleyPPUPState era
   ) =>
   STS (ShelleyTICKF era)
   where

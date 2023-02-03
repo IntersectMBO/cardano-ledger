@@ -46,7 +46,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   NewEpochState (..),
   PState (..),
-  ShelleyPPUPState,
   UTxOState (..),
  )
 import Cardano.Ledger.Shelley.TxBody (
@@ -386,7 +385,8 @@ instance TotalAda AccountState where
   totalAda (AccountState treasury reserves) = treasury <+> reserves
 
 instance Reflect era => TotalAda (UTxOState era) where
-  totalAda (UTxOState utxo _deposits fees _ _) = totalAda utxo <+> fees
+  totalAda (UTxOState utxo _deposits fees gs _) =
+    totalAda utxo <+> fees <+> governanceStateTotalAda gs
 
 -- we don't add in the _deposits, because it is invariant that this
 -- is equal to the sum of the key deposit map and the pool deposit map
@@ -408,15 +408,15 @@ instance TotalAda (PState era) where
 instance TotalAda (DPState era) where
   totalAda (DPState ds ps) = totalAda ds <> totalAda ps
 
-instance TotalAda (ShelleyTallyState era) where
+instance TotalAda (ShelleyPPUPState era) where
   totalAda _ = mempty
 
 instance TotalAda (ConwayTallyState era) where
   -- TODO Might need a review once the specification is done
   totalAda (ConwayTallyState x) = mconcat $ gasDeposit <$> Map.elems x
 
-tallyStateTotalAda :: forall era. Reflect era => TallyState era -> Coin
-tallyStateTotalAda = case reify @era of
+governanceStateTotalAda :: forall era. Reflect era => GovernanceState era -> Coin
+governanceStateTotalAda = case reify @era of
   Shelley _ -> totalAda
   Mary _ -> totalAda
   Allegra _ -> totalAda
@@ -425,8 +425,7 @@ tallyStateTotalAda = case reify @era of
   Conway _ -> totalAda
 
 instance Reflect era => TotalAda (LedgerState era) where
-  totalAda (LedgerState utxos dps tallyState) =
-    totalAda utxos <+> totalAda dps <+> tallyStateTotalAda tallyState
+  totalAda (LedgerState utxos dps) = totalAda utxos <+> totalAda dps
 
 instance Reflect era => TotalAda (EpochState era) where
   totalAda eps = totalAda (esLState eps) <+> totalAda (esAccountState eps)

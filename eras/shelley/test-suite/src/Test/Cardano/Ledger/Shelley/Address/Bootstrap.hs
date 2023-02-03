@@ -133,7 +133,7 @@ utxoState0 =
     { utxosUtxo = utxo0
     , utxosDeposited = Coin 0
     , utxosFees = Coin 0
-    , utxosPpups = ShelleyPPUPState (ProposedPPUpdates mempty) (ProposedPPUpdates mempty)
+    , utxosGovernance = ShelleyPPUPState (ProposedPPUpdates mempty) (ProposedPPUpdates mempty)
     , utxosStakeDistr = mempty
     }
 
@@ -149,7 +149,7 @@ utxoState1 =
     { utxosUtxo = UTxO $ Map.fromList [bobResult, aliceResult]
     , utxosDeposited = Coin 0
     , utxosFees = Coin 10
-    , utxosPpups = ShelleyPPUPState (ProposedPPUpdates mempty) (ProposedPPUpdates mempty)
+    , utxosGovernance = ShelleyPPUPState (ProposedPPUpdates mempty) (ProposedPPUpdates mempty)
     , utxosStakeDistr = IStake mempty mempty
     }
   where

@@ -28,8 +28,8 @@ import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.SafeHash (SafeHash)
-import Cardano.Ledger.Shelley.API (LedgerState, ShelleyPPUPState (..))
-import Cardano.Ledger.Shelley.LedgerState (PPUPState)
+import Cardano.Ledger.Shelley.API (LedgerState)
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Rules (LedgerEnv)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx)
 import Control.Monad.Trans.Reader (ReaderT)
@@ -90,12 +90,13 @@ propWitVKeys seed h1 h2 =
 minimalPropertyTests ::
   forall era ledger.
   ( EraGen era
+  , EraGovernance era
   , Tx era ~ ShelleyTx era
   , TestingLedger era ledger
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv era)
   , ProtVerAtMost era 8
-  , ShelleyPPUPState era ~ PPUPState era
+  , GovernanceState era ~ ShelleyPPUPState era
   ) =>
   TestTree
 minimalPropertyTests =
@@ -113,6 +114,7 @@ minimalPropertyTests =
 propertyTests ::
   forall era ledger.
   ( EraGen era
+  , EraGovernance era
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv era)
   , QC.HasTrace ledger (GenEnv era)
@@ -124,7 +126,7 @@ propertyTests ::
   , State ledger ~ LedgerState era
   , Signal ledger ~ Tx era
   , ProtVerAtMost era 8
-  , ShelleyPPUPState era ~ PPUPState era
+  , GovernanceState era ~ ShelleyPPUPState era
   ) =>
   TestTree
 propertyTests =

@@ -24,8 +24,6 @@ import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   NewEpochState (..),
-  PPUPState,
-  ShelleyPPUPState (..),
  )
 import Cardano.Protocol.TPraos.API (GetLedgerView)
 import Cardano.Protocol.TPraos.BHeader (BHeader)
@@ -59,8 +57,7 @@ import Test.QuickCheck (generate)
 -- | Generate a genesis chain state given a UTxO size
 genChainState ::
   ( EraGen era
-  , PPUPState era ~ ShelleyPPUPState era
-  , EraTallyState era
+  , EraGovernance era
   ) =>
   Int ->
   GenEnv era ->
@@ -111,9 +108,8 @@ genTriple ::
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
   , State (EraRule "DELPL" era) ~ DPState (EraCrypto era)
   , Signal (EraRule "DELPL" era) ~ DCert (EraCrypto era)
-  , ShelleyPPUPState era ~ PPUPState era
   , Tx era ~ ShelleyTx era
-  , EraTallyState era
+  , EraGovernance era
   , ProtVerAtMost era 4
   , ProtVerAtMost era 6
   ) =>

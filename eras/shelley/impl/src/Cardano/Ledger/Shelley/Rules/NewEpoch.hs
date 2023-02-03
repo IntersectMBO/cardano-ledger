@@ -28,13 +28,12 @@ import Cardano.Ledger.BaseTypes (
   StrictMaybe (SJust, SNothing),
  )
 import Cardano.Ledger.Coin (toDeltaCoin)
-import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Keys (KeyRole (Staking))
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.Shelley.AdaPots (AdaPots, totalAdaPotsES)
-import Cardano.Ledger.Shelley.Core (EraTallyState)
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyNEWEPOCH)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rewards (sumRewards)
@@ -89,6 +88,7 @@ data ShelleyNewEpochEvent era
 
 instance
   ( EraTxOut era
+  , EraGovernance era
   , Embed (EraRule "MIR" era) (ShelleyNEWEPOCH era)
   , Embed (EraRule "EPOCH" era) (ShelleyNEWEPOCH era)
   , Environment (EraRule "MIR" era) ~ ()
@@ -102,9 +102,6 @@ instance
   , Default (State (EraRule "PPUP" era))
   , Default (PParams era)
   , Default (StashedAVVMAddresses era)
-  , Default (PPUPState era)
-  , EraPParams era
-  , EraTallyState era
   ) =>
   STS (ShelleyNEWEPOCH era)
   where
@@ -135,6 +132,7 @@ instance
 newEpochTransition ::
   forall era.
   ( EraTxOut era
+  , EraGovernance era
   , Embed (EraRule "MIR" era) (ShelleyNEWEPOCH era)
   , Embed (EraRule "EPOCH" era) (ShelleyNEWEPOCH era)
   , -- Event (EraRule "RUPD" era) ~ RupdEvent (EraCrypto era),
@@ -145,10 +143,8 @@ newEpochTransition ::
   , State (EraRule "EPOCH" era) ~ EpochState era
   , Signal (EraRule "EPOCH" era) ~ EpochNo
   , Default (PParams era)
-  , Default (PPUPState era)
   , Default (StashedAVVMAddresses era)
   , Event (EraRule "RUPD" era) ~ RupdEvent (EraCrypto era)
-  , EraTallyState era
   , Default (State (EraRule "PPUP" era))
   ) =>
   TransitionRule (ShelleyNEWEPOCH era)

@@ -66,7 +66,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
-  PPUPState,
   PState (..),
   StashedAVVMAddresses,
   dsGenDelegs,
@@ -190,9 +189,8 @@ instance
 -- | Creates a valid initial chain state
 initialShelleyState ::
   ( EraTxOut era
+  , EraGovernance era
   , Default (StashedAVVMAddresses era)
-  , Default (PPUPState era)
-  , EraTallyState era
   ) =>
   WithOrigin (LastAppliedBlock (EraCrypto era)) ->
   EpochNo ->
@@ -216,10 +214,9 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
                     utxo
                     (Coin 0)
                     (Coin 0)
-                    def
+                    emptyGovernanceState
                 )
                 (DPState (def {dsGenDelegs = GenDelegs genDelegs}) def)
-                emptyTallyState
             )
             pp
             pp
@@ -338,7 +335,7 @@ chainTransition =
         let NewEpochState e1 _ _ _ _ _ _ = nes
             NewEpochState e2 _ bcur es _ _pd _ = nes'
         let EpochState account _ ls _ pp' _ = es
-        let LedgerState _ (DPState DState {dsGenDelegs = genDelegs} PState {}) _ = ls
+        let LedgerState _ (DPState DState {dsGenDelegs = genDelegs} PState {}) = ls
         let ph = lastAppliedHash lab
             etaPH = prevHashToNonce ph
 
@@ -433,8 +430,7 @@ totalAda = totalAdaES . nesEs . chainNes
 
 ppChainState ::
   ( PP.CanPrettyPrintLedgerState era
-  , PrettyA (PPUPState era)
-  , PrettyA (TallyState era)
+  , PrettyA (GovernanceState era)
   ) =>
   ChainState era ->
   PP.PDoc
@@ -452,8 +448,7 @@ ppChainState (ChainState nes ocert epochnonce evolvenonce prevnonce candnonce la
 
 instance
   ( PP.CanPrettyPrintLedgerState era
-  , PrettyA (PPUPState era)
-  , PrettyA (TallyState era)
+  , PrettyA (GovernanceState era)
   ) =>
   PP.PrettyA (ChainState era)
   where
@@ -463,8 +458,7 @@ instance
   ( ToExpr (PParams era)
   , ToExpr (TxOut era)
   , ToExpr (StashedAVVMAddresses era)
-  , ToExpr (PPUPState era)
-  , ToExpr (TallyState era)
+  , ToExpr (GovernanceState era)
   ) =>
   ToExpr (ChainState era)
 

@@ -14,9 +14,6 @@
 module Test.Cardano.Ledger.Generic.MockChain where
 
 import Cardano.Ledger.BaseTypes (BlocksMade (..), ShelleyBase)
-import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Pretty (
   PDoc,
@@ -26,12 +23,11 @@ import Cardano.Ledger.Pretty (
   ppRecord,
   ppSlotNo,
  )
-import Cardano.Ledger.Shelley.Core (EraTallyState (..))
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
-  PPUPState,
   StashedAVVMAddresses,
  )
 import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate)
@@ -73,7 +69,7 @@ import Test.Cardano.Ledger.Generic.Proof (Proof (..), Reflect (reify))
 
 data MOCKCHAIN era -- This is a Testing only STS instance
 
-type instance Core.EraRule "MOCKCHAIN" era = MOCKCHAIN era
+type instance EraRule "MOCKCHAIN" era = MOCKCHAIN era
 
 data MockChainFailure era
   = MockChainFromTickFailure !(ShelleyTickPredFailure era)
@@ -89,7 +85,7 @@ data MockChainEvent era
 data MockBlock era = MockBlock
   { mbIssuer :: !(KeyHash 'StakePool (EraCrypto era))
   , mbSlot :: !SlotNo
-  , mbTrans :: !(StrictSeq (Core.Tx era))
+  , mbTrans :: !(StrictSeq (Tx era))
   }
 
 data MockChainState era = MockChainState
@@ -99,13 +95,9 @@ data MockChainState era = MockChainState
   }
 
 deriving instance
-  ( CC.Crypto (EraCrypto era)
-  , Eq (Core.TxOut era)
-  , Eq (Core.PParams era)
+  ( EraTxOut era
   , Eq (StashedAVVMAddresses era)
-  , Eq (Core.PParamsUpdate era)
-  , Eq (PPUPState era)
-  , Eq (TallyState era)
+  , Eq (GovernanceState era)
   ) =>
   Eq (MockChainState era)
 
@@ -129,13 +121,13 @@ instance
   ( Reflect era
   , STS (ShelleyLEDGERS era)
   , STS (ShelleyTICK era)
-  , State (Core.EraRule "TICK" era) ~ NewEpochState era
-  , Signal (Core.EraRule "TICK" era) ~ SlotNo
-  , Environment (Core.EraRule "TICK" era) ~ ()
-  , Signal (Core.EraRule "LEDGER" era) ~ Core.Tx era
-  , Environment (Core.EraRule "LEDGER" era) ~ LedgerEnv era
-  , State (Core.EraRule "LEDGER" era) ~ LedgerState era
-  , Embed (Core.EraRule "TICK" era) (MOCKCHAIN era)
+  , State (EraRule "TICK" era) ~ NewEpochState era
+  , Signal (EraRule "TICK" era) ~ SlotNo
+  , Environment (EraRule "TICK" era) ~ ()
+  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , Embed (EraRule "TICK" era) (MOCKCHAIN era)
   ) =>
   STS (MOCKCHAIN era)
   where
@@ -151,13 +143,13 @@ instance
 chainTransition ::
   forall era.
   ( STS (ShelleyLEDGERS era)
-  , State (Core.EraRule "TICK" era) ~ NewEpochState era
-  , Signal (Core.EraRule "TICK" era) ~ SlotNo
-  , Environment (Core.EraRule "TICK" era) ~ ()
-  , Signal (Core.EraRule "LEDGER" era) ~ Core.Tx era
-  , Environment (Core.EraRule "LEDGER" era) ~ LedgerEnv era
-  , State (Core.EraRule "LEDGER" era) ~ LedgerState era
-  , Embed (Core.EraRule "TICK" era) (MOCKCHAIN era)
+  , State (EraRule "TICK" era) ~ NewEpochState era
+  , Signal (EraRule "TICK" era) ~ SlotNo
+  , Environment (EraRule "TICK" era) ~ ()
+  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , Embed (EraRule "TICK" era) (MOCKCHAIN era)
   ) =>
   TransitionRule (MOCKCHAIN era)
 chainTransition = do
@@ -165,7 +157,7 @@ chainTransition = do
 
   lastSlot < slot ?! BlocksOutOfOrder lastSlot slot
 
-  nes' <- trans @(Core.EraRule "TICK" era) $ TRC ((), nes, slot)
+  nes' <- trans @(EraRule "TICK" era) $ TRC ((), nes, slot)
 
   let NewEpochState _ _ (BlocksMade current) epochState _ _ _ = nes'
       EpochState account _ ledgerState _ pparams _ = epochState
@@ -185,13 +177,13 @@ chainTransition = do
 
 instance
   ( STS (ShelleyTICK era)
-  , Signal (Core.EraRule "RUPD" era) ~ SlotNo
-  , State (Core.EraRule "RUPD" era) ~ StrictMaybe (PulsingRewUpdate (EraCrypto era))
-  , Environment (Core.EraRule "RUPD" era) ~ RupdEnv era
-  , State (Core.EraRule "NEWEPOCH" era) ~ NewEpochState era
-  , Signal (Core.EraRule "NEWEPOCH" era) ~ EpochNo
-  , State (Core.EraRule "NEWEPOCH" era) ~ NewEpochState era
-  , Environment (Core.EraRule "NEWEPOCH" era) ~ ()
+  , Signal (EraRule "RUPD" era) ~ SlotNo
+  , State (EraRule "RUPD" era) ~ StrictMaybe (PulsingRewUpdate (EraCrypto era))
+  , Environment (EraRule "RUPD" era) ~ RupdEnv era
+  , State (EraRule "NEWEPOCH" era) ~ NewEpochState era
+  , Signal (EraRule "NEWEPOCH" era) ~ EpochNo
+  , State (EraRule "NEWEPOCH" era) ~ NewEpochState era
+  , Environment (EraRule "NEWEPOCH" era) ~ ()
   ) =>
   Embed (ShelleyTICK era) (MOCKCHAIN era)
   where
@@ -200,9 +192,9 @@ instance
 
 instance
   ( STS (ShelleyLEDGERS era)
-  , State (Core.EraRule "LEDGER" era) ~ LedgerState era
-  , Environment (Core.EraRule "LEDGER" era) ~ LedgerEnv era
-  , Signal (Core.EraRule "LEDGER" era) ~ Core.Tx era
+  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , Signal (EraRule "LEDGER" era) ~ Tx era
   ) =>
   Embed (ShelleyLEDGERS era) (MOCKCHAIN era)
   where

@@ -20,11 +20,11 @@ import Cardano.Ledger.Alonzo.TxWits
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded)
 import Cardano.Ledger.BaseTypes (ProtVer (..), ShelleyBase, natVersion)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (GenDelegs (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Shelley.LedgerState (IncrementalStake (..), PPUPState, UTxOState (..))
+import Cardano.Ledger.Shelley.Core
+import Cardano.Ledger.Shelley.LedgerState (IncrementalStake (..), UTxOState (..))
 import Cardano.Ledger.Shelley.Rules (UtxoEnv (..))
 import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), UTxO (..))
 import Cardano.Ledger.Val (Val (inject))
@@ -140,7 +140,7 @@ exampleExUnitCalc ::
   ( BaseM (EraRule "UTXOS" era) ~ ShelleyBase
   , State (EraRule "UTXOS" era) ~ UTxOState era
   , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
-  , Signable (CC.DSIGN (EraCrypto era)) (Crypto.Hash (CC.HASH (EraCrypto era)) EraIndependentTxBody)
+  , Signable (DSIGN (EraCrypto era)) (Crypto.Hash (HASH (EraCrypto era)) EraIndependentTxBody)
   , Signal (EraRule "UTXOS" era) ~ Tx era
   , ExtendedUTxO era
   , STS (EraRule "UTXOS" era)
@@ -149,7 +149,7 @@ exampleExUnitCalc ::
   , EraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Script era ~ AlonzoScript era
-  , Default (PPUPState era)
+  , EraGovernance era
   ) =>
   Proof era ->
   IO ()
@@ -173,8 +173,8 @@ exampleInvalidExUnitCalc ::
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Script era ~ AlonzoScript era
   , Signable
-      (CC.DSIGN (EraCrypto era))
-      (Crypto.Hash (CC.HASH (EraCrypto era)) EraIndependentTxBody)
+      (DSIGN (EraCrypto era))
+      (Crypto.Hash (HASH (EraCrypto era)) EraIndependentTxBody)
   ) =>
   Proof era ->
   IO ()
@@ -206,7 +206,7 @@ exampleInvalidExUnitCalc proof = do
 exampleTx ::
   ( Scriptic era
   , EraTxBody era
-  , Signable (CC.DSIGN (EraCrypto era)) (Crypto.Hash (CC.HASH (EraCrypto era)) EraIndependentTxBody)
+  , Signable (DSIGN (EraCrypto era)) (Crypto.Hash (HASH (EraCrypto era)) EraIndependentTxBody)
   ) =>
   Proof era ->
   RdmrPtr ->
@@ -252,7 +252,7 @@ costmodels = array (PlutusV1, PlutusV1) [(PlutusV1, testingCostModelV1)]
 ustate ::
   ( EraTxOut era
   , PostShelley era
-  , Default (PPUPState era)
+  , EraGovernance era
   ) =>
   Proof era ->
   UTxOState era
@@ -261,7 +261,7 @@ ustate pf =
     { utxosUtxo = initUTxO pf
     , utxosDeposited = Coin 0
     , utxosFees = Coin 0
-    , utxosPpups = def
+    , utxosGovernance = def
     , utxosStakeDistr = IStake mempty mempty
     }
 

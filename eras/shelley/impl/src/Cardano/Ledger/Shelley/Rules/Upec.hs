@@ -1,9 +1,11 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -15,6 +17,7 @@
 -- handles the epoch transitions.
 module Cardano.Ledger.Shelley.Rules.Upec (
   ShelleyUPEC,
+  UpecState (..),
   ShelleyUpecPredFailure (..),
   votedValue,
 ) where
@@ -22,10 +25,10 @@ module Cardano.Ledger.Shelley.Rules.Upec (
 import Cardano.Ledger.BaseTypes (Globals (..), ShelleyBase)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Era (ShelleyUPEC)
+import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState,
-  UTxOState (utxosPpups),
-  UpecState (..),
+  UTxOState (..),
   esLState,
   lsDPState,
   lsUTxOState,
@@ -38,7 +41,6 @@ import Cardano.Ledger.Shelley.Rules.Newpp (
   ShelleyNEWPP,
   ShelleyNewppState (..),
  )
-import Cardano.Ledger.Shelley.Rules.Ppup (PPUPState, ShelleyPPUPState (..))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition (
   Embed (..),
@@ -54,6 +56,17 @@ import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
+data UpecState era = UpecState
+  { currentPp :: !(PParams era)
+  -- ^ Current protocol parameters.
+  , ppupState :: !(ShelleyPPUPState era)
+  -- ^ State of the protocol update transition system.
+  }
+
+deriving stock instance
+  (Show (PParams era), Show (PParamsUpdate era)) =>
+  Show (UpecState era)
+
 newtype ShelleyUpecPredFailure era
   = NewPpFailure (PredicateFailure (ShelleyNEWPP era))
   deriving (Eq, Show, Generic)
@@ -63,7 +76,7 @@ instance NoThunks (ShelleyUpecPredFailure era)
 instance
   ( EraPParams era
   , Default (PParams era)
-  , PPUPState era ~ ShelleyPPUPState era
+  , GovernanceState era ~ ShelleyPPUPState era
   ) =>
   STS (ShelleyUPEC era)
   where
@@ -88,7 +101,7 @@ instance
 
         let utxoSt = lsUTxOState ls
             DPState dstate pstate = lsDPState ls
-            pup = proposals . utxosPpups $ utxoSt
+            pup = proposals . utxosGovernance $ utxoSt
             ppNew = votedValue pup pp (fromIntegral coreNodeQuorum)
         NewppState pp' ppupSt' <-
           trans @(ShelleyNEWPP era) $

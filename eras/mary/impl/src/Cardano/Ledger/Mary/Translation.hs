@@ -85,7 +85,6 @@ instance Crypto c => TranslateEra (MaryEra c) LedgerState where
       LedgerState
         { lsUTxOState = translateEra' ctxt $ lsUTxOState ls
         , lsDPState = lsDPState ls
-        , lsTallyState = coerce $ lsTallyState ls
         }
 
 instance Crypto c => TranslateEra (MaryEra c) ProposedPPUpdates where
@@ -107,7 +106,7 @@ instance Crypto c => TranslateEra (MaryEra c) UTxOState where
         { utxosUtxo = translateEra' ctxt $ utxosUtxo us
         , utxosDeposited = utxosDeposited us
         , utxosFees = utxosFees us
-        , utxosPpups = translateEra' ctxt $ utxosPpups us
+        , utxosGovernance = translateEra' ctxt $ utxosGovernance us
         , utxosStakeDistr = utxosStakeDistr us
         }
 

@@ -18,7 +18,6 @@ module Cardano.Ledger.Shelley.LedgerState (
   delegations,
   ptrsMap,
   EpochState (..),
-  UpecState (..),
   PulsingRewUpdate (..),
   FutureGenDeleg (..),
   InstantaneousRewards (..),
@@ -38,7 +37,6 @@ module Cardano.Ledger.Shelley.LedgerState (
   reapRewards,
   availableAfterMIR,
   ShelleyPPUPState (..),
-  PPUPState,
 
   -- * Genesis State
   genesisState,
@@ -100,7 +98,7 @@ import Cardano.Ledger.Shelley.PParams (
   pvCanFollow,
  )
 import Cardano.Ledger.Shelley.RewardUpdate
-import Cardano.Ledger.Shelley.Rules.Ppup (PPUPPredFailure, PPUPState, ShelleyPPUPState (..))
+import Cardano.Ledger.Shelley.Rules.Ppup (PPUPPredFailure, ShelleyPPUPState (..))
 import Cardano.Ledger.Shelley.Tx (minfee, witsFromTxWitnesses)
 import Cardano.Ledger.Shelley.UTxO (produced)
 import Data.Default.Class (def)

@@ -122,7 +122,6 @@ defaultLedgerExamples ::
   forall era.
   ( Reflect era
   , Default (StashedAVVMAddresses era)
-  , Default (PPUPState era)
   ) =>
   Proof era ->
   Value era ->
@@ -355,7 +354,6 @@ exampleNewEpochState ::
   forall era.
   ( Reflect era
   , Default (StashedAVVMAddresses era)
-  , Default (PPUPState era)
   ) =>
   Proof era ->
   Value era ->
@@ -396,11 +394,10 @@ exampleNewEpochState proof spendvalue ppp pp =
                             ]
                     , utxosDeposited = Coin 1000
                     , utxosFees = Coin 1
-                    , utxosPpups = def
+                    , utxosGovernance = def
                     , utxosStakeDistr = mempty
                     }
               , lsDPState = def
-              , lsTallyState = emptyTallyState
               }
         , esPrevPp = ppp
         , esPp = pp

@@ -115,7 +115,6 @@ instance Crypto c => TranslateEra (ConwayEra c) API.LedgerState where
       API.LedgerState
         { API.lsUTxOState = translateEra' newGenDelegs $ API.lsUTxOState ls
         , API.lsDPState = updateGenesisKeys $ API.lsDPState ls
-        , API.lsTallyState = emptyTallyState
         }
     where
       updateGenesisKeys (DPState dstate pstate) = DPState dstate' pstate
@@ -129,7 +128,7 @@ instance Crypto c => TranslateEra (ConwayEra c) UTxOState where
         { API.utxosUtxo = translateEra' ctxt $ API.utxosUtxo us
         , API.utxosDeposited = API.utxosDeposited us
         , API.utxosFees = API.utxosFees us
-        , API.utxosPpups = ()
+        , API.utxosGovernance = emptyGovernanceState
         , API.utxosStakeDistr = API.utxosStakeDistr us
         }
 

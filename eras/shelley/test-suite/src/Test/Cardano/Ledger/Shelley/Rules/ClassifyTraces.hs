@@ -20,7 +20,6 @@ where
 import Cardano.Ledger.BaseTypes (Globals, StrictMaybe (..), epochInfoPure)
 import Cardano.Ledger.Binary (serialize')
 import Cardano.Ledger.Block (Block (..), bheader)
-import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.API (
   Addr (..),
   Credential (..),
@@ -29,7 +28,7 @@ import Cardano.Ledger.Shelley.API (
   Delegation (..),
   ShelleyLEDGER,
  )
-import Cardano.Ledger.Shelley.Core (EraTallyState)
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Delegation.Certificates (
   isDeRegKey,
   isDelegation,
@@ -40,13 +39,12 @@ import Cardano.Ledger.Shelley.Delegation.Certificates (
   isRetirePool,
   isTreasuryMIRCert,
  )
-import Cardano.Ledger.Shelley.LedgerState (LedgerState, PPUPState)
+import Cardano.Ledger.Shelley.LedgerState (LedgerState)
 import Cardano.Ledger.Shelley.PParams (
   Update (..),
   pattern ProposedPPUpdates,
   pattern Update,
  )
-import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), Withdrawals (..))
 import Cardano.Ledger.Slot (SlotNo (..), epochInfoSize)
 import Cardano.Protocol.TPraos.BHeader (
   BHeader,
@@ -68,7 +66,6 @@ import Control.State.Transition.Trace.Generator.QuickCheck (
  )
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import qualified Data.ByteString as BS
-import Data.Default.Class (Default)
 import Data.Foldable (foldMap', toList)
 import qualified Data.Map.Strict as Map
 import Data.Proxy
@@ -99,10 +96,10 @@ import Test.QuickCheck (
 relevantCasesAreCovered ::
   forall era.
   ( EraGen era
+  , EraGovernance era
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv era)
   , ProtVerAtMost era 8
-  , Default (PPUPState era)
   ) =>
   Property
 relevantCasesAreCovered = do
@@ -299,8 +296,7 @@ onlyValidLedgerSignalsAreGenerated ::
   , State ledger ~ LedgerState era
   , Show (Environment ledger)
   , Show (Signal ledger)
-  , Default (PPUPState era)
-  , EraTallyState era
+  , EraGovernance era
   ) =>
   Property
 onlyValidLedgerSignalsAreGenerated =
@@ -323,8 +319,7 @@ propAbstractSizeBoundsBytes ::
   forall era.
   ( EraGen era
   , QC.HasTrace (ShelleyLEDGER era) (GenEnv era)
-  , Default (PPUPState era)
-  , EraTallyState era
+  , EraGovernance era
   ) =>
   Property
 propAbstractSizeBoundsBytes = property $ do
@@ -350,8 +345,7 @@ propAbstractSizeNotTooBig ::
   forall era.
   ( EraGen era
   , QC.HasTrace (ShelleyLEDGER era) (GenEnv era)
-  , Default (PPUPState era)
-  , EraTallyState era
+  , EraGovernance era
   ) =>
   Property
 propAbstractSizeNotTooBig = property $ do
@@ -382,8 +376,7 @@ onlyValidChainSignalsAreGenerated ::
   forall era.
   ( EraGen era
   , QC.HasTrace (CHAIN era) (GenEnv era)
-  , Default (PPUPState era)
-  , EraTallyState era
+  , EraGovernance era
   ) =>
   Property
 onlyValidChainSignalsAreGenerated =

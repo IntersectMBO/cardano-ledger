@@ -13,7 +13,6 @@
 
 module Test.Cardano.Ledger.Examples.AlonzoInvalidTxUTXOW (tests) where
 
-import Cardano.Ledger.Address (Withdrawals (..))
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (..))
@@ -37,16 +36,16 @@ import Cardano.Ledger.Alonzo.Tx (
 import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..), TxDats (..), unRedeemers)
 import Cardano.Ledger.BaseTypes (
   Network (..),
+  ProtVer (..),
   StrictMaybe (..),
   natVersion,
  )
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core hiding (TranslationError)
 import Cardano.Ledger.Credential (
   Credential (..),
   StakeCredential,
  )
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (
   KeyHash,
   KeyRole (..),
@@ -56,13 +55,8 @@ import Cardano.Ledger.Keys (
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Shelley.API (
-  ProtVer (..),
- )
-import Cardano.Ledger.Shelley.LedgerState (
-  PPUPState,
-  UTxOState (..),
- )
+import Cardano.Ledger.Shelley.Core hiding (TranslationError)
+import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
 import Cardano.Ledger.Shelley.Rules as Shelley (ShelleyUtxowPredFailure (..))
 import Cardano.Ledger.Shelley.TxBody (
   DCert (..),
@@ -72,7 +66,6 @@ import Cardano.Ledger.Shelley.TxBody (
 import Cardano.Ledger.Val (inject, (<+>))
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.State.Transition.Extended hiding (Assertion)
-import Data.Default.Class (Default (..))
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -134,7 +127,7 @@ alonzoUTXOWTests ::
   , EraTx era
   , PostShelley era -- MAYBE WE CAN REPLACE THIS BY GoodCrypto,
   , Value era ~ MaryValue (EraCrypto era)
-  , Default (PPUPState era)
+  , EraGovernance era
   ) =>
   Proof era ->
   TestTree
@@ -954,7 +947,7 @@ quietPlutusFailure = PlutusFailure "human" "debug"
 scriptStakeCredSuceed :: Scriptic era => Proof era -> StakeCredential (EraCrypto era)
 scriptStakeCredSuceed pf = ScriptHashObj (alwaysSucceedsHash 2 pf)
 
-extraneousKeyHash :: CC.Crypto c => KeyHash 'Witness c
+extraneousKeyHash :: Crypto c => KeyHash 'Witness c
 extraneousKeyHash = hashKey . snd . mkKeyPair $ RawSeed 0 0 0 0 99
 
 -- ============================== PPARAMS ===============================

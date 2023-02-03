@@ -14,12 +14,10 @@ module Cardano.Ledger.Conway.Era (
 import Cardano.Ledger.Alonzo.Rules (AlonzoBBODY)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.Rules (BabbageUTXO, BabbageUTXOW)
-import Cardano.Ledger.Conway.Governance (ConwayTallyState)
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Mary.Value (MaryValue)
 import qualified Cardano.Ledger.Shelley.API as API
-import Cardano.Ledger.Shelley.Core (EraTallyState (..))
 import Cardano.Ledger.Shelley.Rules (
   ShelleyMIR,
   ShelleyNEWPP,
@@ -40,9 +38,6 @@ instance CC.Crypto c => Era (ConwayEra c) where
   type ProtVerLow (ConwayEra c) = 9
 
 type instance Value (ConwayEra c) = MaryValue c
-
-instance EraTallyState (ConwayEra c) where
-  type TallyState (ConwayEra c) = ConwayTallyState (ConwayEra c)
 
 -------------------------------------------------------------------------------
 -- Era Mapping

@@ -31,7 +31,7 @@ import Cardano.Ledger.Crypto (Crypto, DSIGN)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API hiding (SignedDSIGN)
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.LedgerState (FutureGenDeleg, PPUPState, StashedAVVMAddresses)
+import Cardano.Ledger.Shelley.LedgerState (FutureGenDeleg, StashedAVVMAddresses)
 import Cardano.Ledger.Shelley.PoolRank (
   Likelihood (..),
   LogWeight (..),
@@ -277,7 +277,7 @@ instance
   ( EraTxOut era
   , Mock (EraCrypto era)
   , Arbitrary (TxOut era)
-  , Arbitrary (PPUPState era)
+  , Arbitrary (GovernanceState era)
   ) =>
   Arbitrary (UTxOState era)
   where
@@ -304,8 +304,7 @@ instance
   ( EraTxOut era
   , Mock (EraCrypto era)
   , Arbitrary (TxOut era)
-  , Arbitrary (PPUPState era)
-  , Arbitrary (TallyState era)
+  , Arbitrary (GovernanceState era)
   ) =>
   Arbitrary (LedgerState era)
   where
@@ -319,10 +318,6 @@ instance
       LedgerState
         <$> (lsUTxOState : shrink lsUTxOState)
         <*> (lsDPState : shrink lsDPState)
-        <*> (lsTallyState : shrink lsTallyState)
-
-instance Arbitrary (ShelleyTallyState era) where
-  arbitrary = pure NoTallyState
 
 instance
   ( EraTxOut era
@@ -331,8 +326,7 @@ instance
   , Arbitrary (Value era)
   , Arbitrary (PParams era)
   , Arbitrary (StashedAVVMAddresses era)
-  , Arbitrary (PPUPState era)
-  , Arbitrary (TallyState era)
+  , Arbitrary (GovernanceState era)
   ) =>
   Arbitrary (NewEpochState era)
   where
@@ -344,8 +338,7 @@ instance
   , Arbitrary (TxOut era)
   , Arbitrary (Value era)
   , Arbitrary (PParams era)
-  , Arbitrary (PPUPState era)
-  , Arbitrary (TallyState era)
+  , Arbitrary (GovernanceState era)
   ) =>
   Arbitrary (EpochState era)
   where

@@ -78,10 +78,9 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (ToCBOR (..), hashWithEncoder, shelleyProtVer)
 import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (DSIGN)
 import Cardano.Ledger.Shelley.API (ApplyBlock, KeyRole (..), VKey (..))
-import Cardano.Ledger.Shelley.Core (EraTallyState)
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Protocol.TPraos.API (GetLedgerView)
@@ -122,7 +121,6 @@ type ChainProperty era =
   , ApplyBlock era
   , GetLedgerView era
   , EraTx era
-  , EraTallyState era
   )
 
 -- ================================================

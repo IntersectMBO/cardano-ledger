@@ -51,10 +51,10 @@ import Cardano.Ledger.EpochBoundary (
 import Cardano.Ledger.Keys (
   KeyRole (..),
  )
+import Cardano.Ledger.Shelley.Governance (EraGovernance (GovernanceState))
 import Cardano.Ledger.Shelley.LedgerState.Types
 import Cardano.Ledger.Shelley.RewardUpdate (RewardUpdate (..))
 import Cardano.Ledger.Shelley.Rewards (aggregateCompactRewards, aggregateRewards, filterRewards)
-import Cardano.Ledger.Shelley.Rules.Ppup (PPUPState)
 import Cardano.Ledger.Shelley.TxBody (
   Ptr (..),
  )
@@ -146,7 +146,7 @@ smartUTxOState ::
   UTxO era ->
   Coin ->
   Coin ->
-  PPUPState era ->
+  GovernanceState era ->
   UTxOState era
 smartUTxOState utxo c1 c2 st =
   UTxOState

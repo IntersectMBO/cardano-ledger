@@ -91,17 +91,12 @@ data ShelleyLedgerExamples era = ShelleyLedgerExamples
   }
 
 deriving instance
-  ( Eq (PParams era)
-  , Eq (PParamsUpdate era)
+  ( EraTx era
+  , EraGovernance era
   , Eq (TxSeq era)
   , Eq (PredicateFailure (EraRule "LEDGER" era))
   , Eq (StashedAVVMAddresses era)
   , Eq (TranslationContext era)
-  , Eq (PPUPState era)
-  , Eq (TallyState era)
-  , Eq (Tx era)
-  , Eq (TxOut era)
-  , Era era
   ) =>
   Eq (ShelleyLedgerExamples era)
 
@@ -117,12 +112,11 @@ defaultShelleyLedgerExamples ::
   forall era.
   ( ShelleyBasedEra' era
   , EraSegWits era
+  , EraGovernance era
   , PredicateFailure (EraRule "DELEGS" era) ~ ShelleyDelegsPredFailure era
   , PredicateFailure (EraRule "LEDGER" era) ~ ShelleyLedgerPredFailure era
   , Default (StashedAVVMAddresses era)
   , ProtVerAtMost era 4
-  , Default (PPUPState era)
-  , EraTallyState era
   ) =>
   (TxBody era -> KeyPairWits era -> TxWits era) ->
   (ShelleyTx era -> Tx era) ->
@@ -301,10 +295,9 @@ testShelleyGenesis =
 exampleNewEpochState ::
   forall era.
   ( EraTxOut era
+  , EraGovernance era
   , ShelleyBasedEra' era
   , Default (StashedAVVMAddresses era)
-  , Default (PPUPState era)
-  , EraTallyState era
   ) =>
   Value era ->
   PParams era ->
@@ -344,11 +337,10 @@ exampleNewEpochState value ppp pp =
                             ]
                     , utxosDeposited = Coin 1000
                     , utxosFees = Coin 1
-                    , utxosPpups = def
+                    , utxosGovernance = emptyGovernanceState
                     , utxosStakeDistr = mempty
                     }
               , lsDPState = def
-              , lsTallyState = emptyTallyState
               }
         , esPrevPp = ppp
         , esPp = pp

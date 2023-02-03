@@ -8,8 +8,6 @@
 -- | Generates fixed transaction/state pairs for benchmarking.
 module Bench.Cardano.Ledger.ApplyTx.Gen (generateApplyTxEnvForEra, ApplyTxEnv (..)) where
 
-import Cardano.Ledger.Core (EraRule)
-import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Shelley.API (
   AccountState (..),
   Coin (..),
@@ -17,8 +15,8 @@ import Cardano.Ledger.Shelley.API (
   LedgerEnv (..),
   MempoolEnv,
  )
-import Cardano.Ledger.Shelley.Core (EraTallyState)
-import Cardano.Ledger.Shelley.LedgerState (LedgerState, PPUPState)
+import Cardano.Ledger.Shelley.Core
+import Cardano.Ledger.Shelley.LedgerState (LedgerState)
 import Cardano.Ledger.Slot (SlotNo (SlotNo))
 import Control.DeepSeq (NFData (..))
 import Control.State.Transition (Environment, Signal, State)
@@ -28,7 +26,6 @@ import Control.State.Transition.Trace (
   sourceSignalTargets,
  )
 import Control.State.Transition.Trace.Generator.QuickCheck (HasTrace (BaseEnv), traceFromInitState)
-import Data.Default.Class (Default)
 import Data.Proxy (Proxy)
 import GHC.Generics (Generic)
 import Test.Cardano.Ledger.AllegraEraGen ()
@@ -43,7 +40,7 @@ import Test.QuickCheck.Random (mkQCGen)
 
 -- | Static mempool environment. We apply Txs in some future slot. The account
 -- state shouldn't matter much.
-applyTxMempoolEnv :: Core.PParams era -> MempoolEnv era
+applyTxMempoolEnv :: PParams era -> MempoolEnv era
 applyTxMempoolEnv pp =
   LedgerEnv
     { ledgerSlotNo = SlotNo 0
@@ -56,7 +53,7 @@ data ApplyTxEnv era = ApplyTxEnv
   { ateGlobals :: !Globals
   , ateMempoolEnv :: !(MempoolEnv era)
   , ateState :: !(LedgerState era)
-  , ateTx :: !(Core.Tx era)
+  , ateTx :: !(Tx era)
   }
   deriving (Generic)
 
@@ -69,11 +66,10 @@ generateApplyTxEnvForEra ::
   ( EraGen era
   , HasTrace (EraRule "LEDGER" era) (GenEnv era)
   , BaseEnv (EraRule "LEDGER" era) ~ Globals
-  , Signal (EraRule "LEDGER" era) ~ Core.Tx era
+  , Signal (EraRule "LEDGER" era) ~ Tx era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
-  , Default (PPUPState era)
-  , EraTallyState era
+  , EraGovernance era
   ) =>
   Proxy era ->
   Int ->

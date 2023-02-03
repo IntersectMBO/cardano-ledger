@@ -53,6 +53,7 @@ library
     Cardano.Ledger.Shelley.Delegation.PoolParams
     Cardano.Ledger.Shelley.EpochBoundary
     Cardano.Ledger.Shelley.Genesis
+    Cardano.Ledger.Shelley.Governance
     Cardano.Ledger.Shelley.HardForks
     Cardano.Ledger.Shelley.LedgerState
     Cardano.Ledger.Shelley.Metadata
