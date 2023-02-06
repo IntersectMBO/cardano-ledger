@@ -79,11 +79,9 @@ import Cardano.Ledger.Shelley.LedgerState (
   InstantaneousRewards (..),
   LedgerState (..),
   NewEpochState (..),
-  PPUPState,
   PState (..),
   PulsingRewUpdate (..),
   RewardUpdate (..),
-  ShelleyPPUPState (..),
   UTxOState (..),
   applyRUpd,
   delegations,
@@ -711,7 +709,7 @@ newEpoch b cs = cs'
 -- Set the current protocol parameter proposals.
 setCurrentProposals ::
   forall era.
-  PPUPState era ~ ShelleyPPUPState era =>
+  GovernanceState era ~ ShelleyPPUPState era =>
   ProposedPPUpdates era ->
   ChainState era ->
   ChainState era
@@ -721,9 +719,9 @@ setCurrentProposals ps cs = cs {chainNes = nes'}
     es = nesEs nes
     ls = esLState es
     utxoSt = lsUTxOState ls
-    ppupSt = utxosPpups utxoSt
+    ppupSt = utxosGovernance utxoSt
     ppupSt' = ppupSt {proposals = ps}
-    utxoSt' = utxoSt {utxosPpups = ppupSt'}
+    utxoSt' = utxoSt {utxosGovernance = ppupSt'}
     ls' = ls {lsUTxOState = utxoSt'}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}
@@ -733,7 +731,7 @@ setCurrentProposals ps cs = cs {chainNes = nes'}
 -- Set the future protocol parameter proposals.
 setFutureProposals ::
   forall era.
-  PPUPState era ~ ShelleyPPUPState era =>
+  GovernanceState era ~ ShelleyPPUPState era =>
   ProposedPPUpdates era ->
   ChainState era ->
   ChainState era
@@ -743,9 +741,9 @@ setFutureProposals ps cs = cs {chainNes = nes'}
     es = nesEs nes
     ls = esLState es
     utxoSt = lsUTxOState ls
-    ppupSt = utxosPpups utxoSt
+    ppupSt = utxosGovernance utxoSt
     ppupSt' = ppupSt {futureProposals = ps}
-    utxoSt' = utxoSt {utxosPpups = ppupSt'}
+    utxoSt' = utxoSt {utxosGovernance = ppupSt'}
     ls' = ls {lsUTxOState = utxoSt'}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}

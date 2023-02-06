@@ -61,15 +61,14 @@ import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest)
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyUTXO)
+import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState (DPState (..), PPUPPredFailure, UTxOState (..), keyTxRefunds, totalTxDeposits)
 import Cardano.Ledger.Shelley.LedgerState.IncrementalStake
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules.Ppup (
-  PPUPState,
   PpupEnv (..),
   PpupEvent,
   ShelleyPPUP,
-  ShelleyPPUPState,
   ShelleyPpupPredFailure,
  )
 import Cardano.Ledger.Shelley.Rules.Reports (showTxCerts)
@@ -103,7 +102,6 @@ import Control.State.Transition (
   wrapEvent,
   wrapFailed,
  )
-import Data.Default.Class (Default)
 import Data.Foldable (foldl', toList)
 import qualified Data.Map.Strict as Map
 import Data.MapExtras (extractKeys)
@@ -288,6 +286,8 @@ instance
   ( EraTx era
   , EraUTxO era
   , ShelleyEraTxBody era
+  , EraGovernance era
+  , GovernanceState era ~ ShelleyPPUPState era
   , ExactEra ShelleyEra era
   , Tx era ~ ShelleyTx era
   , Show (ShelleyTx era)
@@ -298,8 +298,6 @@ instance
   , ProtVerAtMost era 8
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
-  , Default (PPUPState era)
-  , PPUPState era ~ ShelleyPPUPState era
   ) =>
   STS (ShelleyUTXO era)
   where
@@ -371,7 +369,7 @@ utxoInductive ::
   , State (EraRule "PPUP" era) ~ ShelleyPPUPState era
   , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
   , ProtVerAtMost era 8
-  , PPUPState era ~ ShelleyPPUPState era
+  , GovernanceState era ~ ShelleyPPUPState era
   ) =>
   TransitionRule (utxo era)
 utxoInductive = do
@@ -580,7 +578,7 @@ validateMaxTxSizeUTxO pp tx =
     txSize = tx ^. sizeTxF
 
 updateUTxOState ::
-  (EraTxBody era, PPUPState era ~ ShelleyPPUPState era) =>
+  (EraTxBody era, GovernanceState era ~ ShelleyPPUPState era) =>
   UTxOState era ->
   TxBody era ->
   Coin ->
@@ -598,7 +596,7 @@ updateUTxOState UTxOState {utxosUtxo, utxosDeposited, utxosFees, utxosStakeDistr
         { utxosUtxo = UTxO newUTxO
         , utxosDeposited = utxosDeposited <> depositChange
         , utxosFees = utxosFees <> txb ^. feeTxBodyL
-        , utxosPpups = ppups
+        , utxosGovernance = ppups
         , utxosStakeDistr = newIncStakeDistro
         }
 

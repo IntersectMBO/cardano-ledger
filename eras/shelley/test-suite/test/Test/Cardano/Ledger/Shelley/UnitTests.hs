@@ -17,7 +17,6 @@ import Cardano.Ledger.Address (Addr (..), getRwdCred)
 import Cardano.Ledger.BaseTypes hiding ((==>))
 import Cardano.Ledger.Binary (serialize')
 import Cardano.Ledger.Coin
-import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (
   Credential (..),
   StakeReference (..),
@@ -35,7 +34,7 @@ import Cardano.Ledger.Shelley.API (
   LedgerEnv (..),
   ShelleyLEDGER,
  )
-import Cardano.Ledger.Shelley.Core (EraTallyState (..))
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Delegation.Certificates (pattern RegPool)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
@@ -66,7 +65,6 @@ import Cardano.Ledger.Shelley.Tx (
 import Cardano.Ledger.Shelley.TxBody (
   PoolMetadata (..),
   PoolParams (..),
-  Withdrawals (..),
   pmHash,
   pmUrl,
   ppCost,
@@ -373,7 +371,7 @@ dpState :: DPState C_Crypto
 dpState = DPState def def
 
 ledgerState :: LedgerState C
-ledgerState = LedgerState utxoState dpState emptyTallyState
+ledgerState = LedgerState utxoState dpState
 
 addReward :: DPState C_Crypto -> Credential 'Staking C_Crypto -> Coin -> DPState C_Crypto
 addReward dp ra c = dp {dpsDState = ds {dsUnified = rewards'}}
@@ -506,7 +504,7 @@ testEmptyInputSet =
       tx = ShelleyTx txb txwits SNothing
       dpState' = addReward dpState (getRwdCred $ mkVKeyRwdAcnt Testnet aliceStake) (Coin 2000)
    in testLEDGER
-        (LedgerState utxoState dpState' emptyTallyState)
+        (LedgerState utxoState dpState')
         tx
         ledgerEnv
         (Left [UtxowFailure (UtxoFailure InputSetEmptyUTxO)])
@@ -596,7 +594,7 @@ testWithdrawalNoWit =
         [ UtxowFailure $ MissingVKeyWitnessesUTXOW missing
         ]
       dpState' = addReward dpState (getRwdCred $ mkVKeyRwdAcnt Testnet bobStake) (Coin 10)
-   in testLEDGER (LedgerState utxoState dpState' emptyTallyState) tx ledgerEnv (Left errs)
+   in testLEDGER (LedgerState utxoState dpState') tx ledgerEnv (Left errs)
 
 testWithdrawalWrongAmt :: Assertion
 testWithdrawalWrongAmt =
@@ -625,7 +623,7 @@ testWithdrawalWrongAmt =
       dpState' = addReward dpState (getRwdCred rAcnt) (Coin 10)
       tx = ShelleyTx @C txb txwits SNothing
       errs = [DelegsFailure (WithdrawalsNotInRewardsDELEGS (Map.singleton rAcnt (Coin 11)))]
-   in testLEDGER (LedgerState utxoState dpState' emptyTallyState) tx ledgerEnv (Left errs)
+   in testLEDGER (LedgerState utxoState dpState') tx ledgerEnv (Left errs)
 
 testOutputTooSmall :: Assertion
 testOutputTooSmall =

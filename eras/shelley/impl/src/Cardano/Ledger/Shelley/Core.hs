@@ -2,77 +2,32 @@
 {-# LANGUAGE ConstrainedClassMethods #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeFamilyDependencies #-}
 
 module Cardano.Ledger.Shelley.Core (
   ShelleyEraTxBody (..),
   Withdrawals (..),
-  EraTallyState (..),
-  ShelleyTallyState (..),
   Wdrl,
   module Cardano.Ledger.Core,
   pattern Wdrl,
+  module Cardano.Ledger.Shelley.Governance,
 )
 where
 
 import Cardano.Ledger.Address
-import Cardano.Ledger.Binary (FromCBOR (..), FromSharedCBOR (..), ToCBOR (..), decodeNull, encodeNull)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
+import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Slot (SlotNo (..))
-import Cardano.Ledger.TreeDiff (ToExpr)
-import Control.DeepSeq (NFData)
-import Control.Monad.Trans.Class (MonadTrans (..))
-import Data.Default.Class (Default (..))
-import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import Data.Maybe.Strict (StrictMaybe)
 import Data.Sequence.Strict (StrictSeq)
-import GHC.Generics (Generic)
 import Lens.Micro (Lens', SimpleGetter)
-import NoThunks.Class (NoThunks)
-
-class EraTallyState era where
-  type TallyState era = (r :: Type) | r -> era
-  type TallyState era = ShelleyTallyState era
-
-  emptyTallyState :: TallyState era
-  default emptyTallyState :: Default (TallyState era) => TallyState era
-  emptyTallyState = def
-
-data ShelleyTallyState era = NoTallyState
-  deriving (Show, Generic, Eq)
-
-instance NFData (ShelleyTallyState era)
-
-instance NoThunks (ShelleyTallyState era)
-
-instance Default (ShelleyTallyState era) where
-  def = NoTallyState
-
-instance ToExpr (ShelleyTallyState era)
-
-instance Era era => ToCBOR (ShelleyTallyState era) where
-  toCBOR _ = encodeNull
-
-instance Era era => FromSharedCBOR (ShelleyTallyState era) where
-  fromSharedCBOR _ = fromCBOR
-  fromSharedPlusCBOR = lift fromCBOR
-
-instance Era era => FromCBOR (ShelleyTallyState era) where
-  fromCBOR = NoTallyState <$ decodeNull
-
-instance EraTallyState (ShelleyEra c)
 
 class EraTxBody era => ShelleyEraTxBody era where
   ttlTxBodyL :: ExactEra ShelleyEra era => Lens' (TxBody era) SlotNo

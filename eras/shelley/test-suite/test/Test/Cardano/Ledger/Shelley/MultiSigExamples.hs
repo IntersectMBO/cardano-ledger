@@ -29,7 +29,6 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Coin
-import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (
   pattern KeyHashObj,
   pattern ScriptHashObj,
@@ -43,15 +42,13 @@ import Cardano.Ledger.Keys (
  )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.API (ShelleyPPUPState (..), ShelleyUTXOW)
-import Cardano.Ledger.Shelley.Core (EraTallyState)
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
-  PPUPState,
   UTxOState,
   genesisState,
  )
-import Cardano.Ledger.Shelley.Rules (UtxoEnv (..))
+import Cardano.Ledger.Shelley.Rules (ShelleyUTXOW, UtxoEnv (..))
 import Cardano.Ledger.Shelley.Scripts (
   MultiSig,
   pattern RequireAllOf,
@@ -61,10 +58,7 @@ import Cardano.Ledger.Shelley.Scripts (
  )
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), TxId)
 import Cardano.Ledger.Shelley.TxAuxData (ShelleyTxAuxData)
-import Cardano.Ledger.Shelley.TxBody (
-  ShelleyTxBody (..),
-  Withdrawals (..),
- )
+import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
 import Cardano.Ledger.Shelley.TxWits (addrWits, scriptWits)
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn (..))
@@ -193,8 +187,7 @@ bobInitCoin = Coin 1000
 genesis ::
   forall era.
   ( EraTxOut era
-  , PPUPState era ~ ShelleyPPUPState era
-  , EraTallyState era
+  , EraGovernance era
   ) =>
   LedgerState era
 genesis = genesisState genDelegs0 utxo0

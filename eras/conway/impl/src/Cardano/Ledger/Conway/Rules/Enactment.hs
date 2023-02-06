@@ -11,18 +11,15 @@ module Cardano.Ledger.Conway.Rules.Enactment (
 where
 
 import Cardano.Ledger.BaseTypes (EpochNo (..), ShelleyBase)
+import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayENACTMENT)
-import Cardano.Ledger.Shelley.Core (Era, EraTallyState, PParams (..))
-import Cardano.Ledger.Shelley.LedgerState (EpochState (..), PPUPState)
+import Cardano.Ledger.Shelley.LedgerState (EpochState (..))
 import Control.State.Transition.Extended (STS (..))
-import Data.Default.Class (Default)
 import Data.Void (Void)
 
 instance
-  ( Era era
-  , Default (PPUPState era)
-  , Default (PParams era)
-  , EraTallyState era
+  ( EraPParams era
+  , EraGovernance era
   ) =>
   STS (ConwayENACTMENT era)
   where

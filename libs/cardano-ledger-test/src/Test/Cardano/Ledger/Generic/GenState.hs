@@ -77,7 +77,6 @@ import Cardano.Ledger.Alonzo.Scripts.Data (Data (..), hashData)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.BaseTypes (Network (Testnet))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), StakeCredential)
 import Cardano.Ledger.Keys (
   KeyHash (..),
@@ -88,7 +87,7 @@ import Cardano.Ledger.Keys (
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
 import Cardano.Ledger.Pretty (PDoc, ppInt, ppMap, ppRecord, ppSet, ppString)
 import Cardano.Ledger.Pretty.Mary (ppValidityInterval)
-import Cardano.Ledger.Shelley.Core (EraTallyState (..))
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   DPState (..),
   DState (..),
@@ -138,7 +137,6 @@ import Test.Cardano.Ledger.Generic.ModelState (
   mNewEpochStateZero,
   mPoolDeposits,
   pcModelNewEpochState,
-  ppupStateZero,
  )
 import Test.Cardano.Ledger.Generic.PrettyCore (
   PrettyC (..),
@@ -691,10 +689,10 @@ instance era ~ BabbageEra Mock => Show (GenState era) where
 -- logically be applied one after another)
 
 initialLedgerState :: forall era. Reflect era => GenState era -> LedgerState era
-initialLedgerState gstate = LedgerState utxostate dpstate emptyTallyState
+initialLedgerState gstate = LedgerState utxostate dpstate
   where
     umap = UM.unify (Map.map rdpair (gsInitialRewards gstate)) (gsInitialDelegations gstate) Map.empty
-    utxostate = smartUTxOState (UTxO (gsInitialUtxo gstate)) deposited (Coin 0) (ppupStateZero @era)
+    utxostate = smartUTxOState (UTxO (gsInitialUtxo gstate)) deposited (Coin 0) emptyGovernanceState
     dpstate = DPState dstate pstate
     dstate =
       DState

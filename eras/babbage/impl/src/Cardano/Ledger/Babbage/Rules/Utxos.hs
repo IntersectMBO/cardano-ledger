@@ -42,8 +42,6 @@ import Cardano.Ledger.BaseTypes (ShelleyBase, epochInfo, strictMaybeToMaybe, sys
 import Cardano.Ledger.Binary (ToCBOR (..))
 import Cardano.Ledger.Shelley.LedgerState (
   PPUPPredFailure,
-  PPUPState,
-  ShelleyPPUPState,
   UTxOState (..),
   keyTxRefunds,
   totalTxDeposits,
@@ -79,6 +77,8 @@ instance
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Tx era ~ AlonzoTx era
   , Script era ~ AlonzoScript era
+  , EraGovernance era
+  , GovernanceState era ~ ShelleyPPUPState era
   , Embed (EraRule "PPUP" era) (BabbageUTXOS era)
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
@@ -86,7 +86,6 @@ instance
   , ToCBOR (PPUPPredFailure era) -- Serializing the PredicateFailure
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
-  , PPUPState era ~ ShelleyPPUPState era
   ) =>
   STS (BabbageUTXOS era)
   where
@@ -118,6 +117,8 @@ utxosTransition ::
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Tx era ~ AlonzoTx era
   , Script era ~ AlonzoScript era
+  , EraGovernance era
+  , GovernanceState era ~ ShelleyPPUPState era
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
   , Embed (EraRule "PPUP" era) (BabbageUTXOS era)
@@ -125,7 +126,6 @@ utxosTransition ::
   , ToCBOR (PPUPPredFailure era)
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
-  , PPUPState era ~ ShelleyPPUPState era
   ) =>
   TransitionRule (BabbageUTXOS era)
 utxosTransition =
@@ -148,7 +148,7 @@ scriptsYes ::
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
   , Embed (EraRule "PPUP" era) (BabbageUTXOS era)
-  , PPUPState era ~ ShelleyPPUPState era
+  , GovernanceState era ~ ShelleyPPUPState era
   , State (EraRule "PPUP" era) ~ ShelleyPPUPState era
   ) =>
   TransitionRule (BabbageUTXOS era)

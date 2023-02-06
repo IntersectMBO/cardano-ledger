@@ -16,15 +16,11 @@
 module Test.Cardano.Ledger.Shelley.Generator.Trace.Ledger where
 
 import Cardano.Ledger.BaseTypes (Globals, TxIx, mkTxIxPartial)
-import Cardano.Ledger.Core (ProtVerAtMost)
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (EraCrypto)
-import Cardano.Ledger.Shelley.Core (EraTallyState (..))
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   DPState,
   LedgerState (..),
-  PPUPState,
   UTxOState,
   genesisState,
  )
@@ -45,7 +41,6 @@ import Control.Monad (foldM)
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as TQC
-import Data.Default.Class (Default)
 import Data.Functor.Identity (runIdentity)
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
@@ -81,21 +76,20 @@ instance
   ( EraGen era
   , Mock (EraCrypto era)
   , MinLEDGER_STS era
-  , Embed (Core.EraRule "DELPL" era) (CERTS era)
-  , Environment (Core.EraRule "DELPL" era) ~ DelplEnv era
-  , State (Core.EraRule "DELPL" era) ~ DPState (EraCrypto era)
-  , Signal (Core.EraRule "DELPL" era) ~ DCert (EraCrypto era)
-  , PredicateFailure (Core.EraRule "DELPL" era) ~ ShelleyDelplPredFailure era
-  , Embed (Core.EraRule "DELEGS" era) (ShelleyLEDGER era)
-  , Embed (Core.EraRule "UTXOW" era) (ShelleyLEDGER era)
-  , Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era
-  , State (Core.EraRule "UTXOW" era) ~ UTxOState era
-  , Signal (Core.EraRule "UTXOW" era) ~ Core.Tx era
-  , Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era
-  , State (Core.EraRule "DELEGS" era) ~ DPState (EraCrypto era)
-  , Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era))
+  , Embed (EraRule "DELPL" era) (CERTS era)
+  , Environment (EraRule "DELPL" era) ~ DelplEnv era
+  , State (EraRule "DELPL" era) ~ DPState (EraCrypto era)
+  , Signal (EraRule "DELPL" era) ~ DCert (EraCrypto era)
+  , PredicateFailure (EraRule "DELPL" era) ~ ShelleyDelplPredFailure era
+  , Embed (EraRule "DELEGS" era) (ShelleyLEDGER era)
+  , Embed (EraRule "UTXOW" era) (ShelleyLEDGER era)
+  , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
+  , State (EraRule "UTXOW" era) ~ UTxOState era
+  , Signal (EraRule "UTXOW" era) ~ Tx era
+  , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
+  , State (EraRule "DELEGS" era) ~ DPState (EraCrypto era)
+  , Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era))
   , ProtVerAtMost era 8
-  , EraTallyState era
   ) =>
   TQC.HasTrace (ShelleyLEDGER era) (GenEnv era)
   where
@@ -114,18 +108,17 @@ instance
 instance
   forall era.
   ( EraGen era
+  , EraGovernance era
   , Mock (EraCrypto era)
   , MinLEDGER_STS era
-  , Embed (Core.EraRule "DELPL" era) (CERTS era)
-  , Environment (Core.EraRule "DELPL" era) ~ DelplEnv era
-  , State (Core.EraRule "DELPL" era) ~ DPState (EraCrypto era)
-  , Signal (Core.EraRule "DELPL" era) ~ DCert (EraCrypto era)
-  , PredicateFailure (Core.EraRule "DELPL" era) ~ ShelleyDelplPredFailure era
-  , Embed (Core.EraRule "DELEG" era) (ShelleyDELPL era)
-  , Embed (Core.EraRule "LEDGER" era) (ShelleyLEDGERS era)
+  , Embed (EraRule "DELPL" era) (CERTS era)
+  , Environment (EraRule "DELPL" era) ~ DelplEnv era
+  , State (EraRule "DELPL" era) ~ DPState (EraCrypto era)
+  , Signal (EraRule "DELPL" era) ~ DCert (EraCrypto era)
+  , PredicateFailure (EraRule "DELPL" era) ~ ShelleyDelplPredFailure era
+  , Embed (EraRule "DELEG" era) (ShelleyDELPL era)
+  , Embed (EraRule "LEDGER" era) (ShelleyLEDGERS era)
   , ProtVerAtMost era 8
-  , Default (PPUPState era)
-  , EraTallyState era
   ) =>
   TQC.HasTrace (ShelleyLEDGERS era) (GenEnv era)
   where
@@ -149,16 +142,16 @@ instance
       where
         genAndApplyTx ::
           HasCallStack =>
-          (LedgerState era, [Core.Tx era]) ->
+          (LedgerState era, [Tx era]) ->
           TxIx ->
-          Gen (LedgerState era, [Core.Tx era])
+          Gen (LedgerState era, [Tx era])
         genAndApplyTx (ls', txs) txIx = do
           let ledgerEnv = LedgerEnv slotNo txIx pParams reserves
           tx <- genTx ge ledgerEnv ls'
 
           let res =
                 runShelleyBase $
-                  applySTSTest @(Core.EraRule "LEDGER" era)
+                  applySTSTest @(EraRule "LEDGER" era)
                     (TRC (ledgerEnv, ls', tx))
           case res of
             Left pf -> error ("LEDGER sigGen: " <> show pf)
@@ -178,8 +171,7 @@ instance
 mkGenesisLedgerState ::
   forall a era ledger.
   ( EraGen era
-  , Default (PPUPState era)
-  , EraTallyState era
+  , EraGovernance era
   ) =>
   GenEnv era ->
   IRC ledger ->

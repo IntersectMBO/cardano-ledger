@@ -21,7 +21,6 @@ import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
@@ -32,7 +31,7 @@ import Cardano.Ledger.Keys (
  )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.Core (EraTallyState)
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxBody (
@@ -40,7 +39,6 @@ import Cardano.Ledger.Shelley.TxBody (
   DCert (..),
   ShelleyTxBody (..),
   ShelleyTxOut (..),
-  Withdrawals (..),
  )
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits, addrWits)
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
@@ -104,8 +102,7 @@ initStGenesisDeleg ::
   ( EraTxOut era
   , ProtVerAtMost era 4
   , ProtVerAtMost era 6
-  , PPUPState era ~ ShelleyPPUPState era
-  , EraTallyState era
+  , EraGovernance era
   , Default (StashedAVVMAddresses era)
   ) =>
   ChainState era

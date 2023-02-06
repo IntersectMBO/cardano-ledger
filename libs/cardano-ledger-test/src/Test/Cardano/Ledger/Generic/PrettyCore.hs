@@ -12,7 +12,7 @@
 
 module Test.Cardano.Ledger.Generic.PrettyCore where
 
-import Cardano.Ledger.Address (Addr (..), RewardAcnt (..), Withdrawals (..))
+import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Allegra.Rules as Allegra (AllegraUtxoPredFailure (..))
 import Cardano.Ledger.Allegra.Scripts (Timelock (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (..))
@@ -37,7 +37,7 @@ import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert (..))
 import Cardano.Ledger.Conway.Governance (ConwayTallyState (..))
 import Cardano.Ledger.Conway.Rules (ConwayNewEpochPredFailure)
 import qualified Cardano.Ledger.Conway.Rules as Conway
-import Cardano.Ledger.Core
+
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (
@@ -56,7 +56,7 @@ import qualified Cardano.Ledger.Pretty.Babbage as Babbage
 import Cardano.Ledger.Pretty.Conway (ppConwayTxBody)
 import Cardano.Ledger.Pretty.Mary
 import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Shelley.Core (EraTallyState (..))
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   DPState (..),
@@ -66,7 +66,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   NewEpochState (..),
   PPUPPredFailure,
-  PPUPState,
   PState (..),
   UTxOState (..),
  )
@@ -931,8 +930,7 @@ instance PrettyA (ShelleyNewppPredFailure era) where prettyA = ppNewppPredicateF
 ppBbodyState ::
   ( PrettyA (TxOut era)
   , PrettyA (PParams era)
-  , PrettyA (PPUPState era)
-  , PrettyA (TallyState era)
+  , PrettyA (GovernanceState era)
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   ) =>
   ShelleyBbodyState era ->
@@ -947,8 +945,7 @@ ppBbodyState (BbodyState ls (BlocksMade mp)) =
 instance
   ( PrettyA (TxOut era)
   , PrettyA (PParams era)
-  , PrettyA (PPUPState era)
-  , PrettyA (TallyState era)
+  , PrettyA (GovernanceState era)
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   ) =>
   PrettyA (ShelleyBbodyState era)
@@ -1491,22 +1488,12 @@ instance PrettyC (ConwayTallyState era) era where
     Babbage _ -> ppMap prettyA prettyA x
     Conway _ -> ppMap prettyA prettyA x
 
-pcTallyState :: Proof era -> TallyState era -> PDoc
-pcTallyState proof ts = case proof of
-  Shelley _ -> prettyA ts
-  Mary _ -> prettyA ts
-  Allegra _ -> prettyA ts
-  Alonzo _ -> prettyA ts
-  Babbage _ -> prettyA ts
-  Conway _ -> prettyC proof ts
-
 pcLedgerState :: Reflect era => Proof era -> LedgerState era -> PDoc
-pcLedgerState proof (LedgerState utstate dpstate tallyState) =
+pcLedgerState proof (LedgerState utstate dpstate) =
   ppRecord
     "LedgerState"
     [ ("UTxOState", pcUTxOState proof utstate)
     , ("DPState", pcDPState proof dpstate)
-    , ("TallyState", pcTallyState proof tallyState)
     ]
 
 instance Reflect era => PrettyC (LedgerState era) era where prettyC = pcLedgerState

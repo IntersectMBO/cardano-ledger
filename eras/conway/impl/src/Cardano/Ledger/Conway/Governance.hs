@@ -7,9 +7,12 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.Governance (
+  EraGovernance (..),
   ConwayTallyState (..),
   GovernanceActionInfo (..),
   GovernanceAction (..),
@@ -34,11 +37,14 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
  )
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway.Era (ConwayEra)
+import Cardano.Ledger.Conway.PParams ()
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.SafeHash (SafeHash)
+import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.TxBody (Url)
 import Cardano.Ledger.TxIn (TxId)
 import Control.DeepSeq (NFData)
@@ -239,6 +245,8 @@ instance EraPParams era => NoThunks (GovernanceActionState era)
 
 deriving instance EraPParams era => Show (GovernanceActionState era)
 
+instance EraPParams era => NFData (GovernanceActionState era)
+
 newtype ConwayTallyState era
   = ConwayTallyState
       (Map (GovernanceActionId (EraCrypto era)) (GovernanceActionState era))
@@ -247,6 +255,8 @@ newtype ConwayTallyState era
 deriving instance EraPParams era => Eq (ConwayTallyState era)
 
 deriving instance EraPParams era => Show (ConwayTallyState era)
+
+deriving instance EraPParams era => NFData (ConwayTallyState era)
 
 instance EraPParams era => NoThunks (ConwayTallyState era)
 
@@ -261,3 +271,13 @@ makeGovAction GovernanceActionInfo {..} =
     , gasReturnAddr = gaiRewardAddress
     , gasAction = gaiAction
     }
+
+instance EraPParams era => ToCBOR (ConwayTallyState era) where
+  toCBOR = undefined
+
+instance EraPParams era => FromCBOR (ConwayTallyState era) where
+  fromCBOR = undefined
+
+instance Crypto c => EraGovernance (ConwayEra c) where
+  type GovernanceState (ConwayEra c) = ConwayTallyState (ConwayEra c)
+  emptyGovernanceState = ConwayTallyState mempty

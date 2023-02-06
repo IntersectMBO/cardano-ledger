@@ -50,7 +50,8 @@ import Cardano.Ledger.Rules.ValidationMode (
   Test,
   runTest,
  )
-import Cardano.Ledger.Shelley.LedgerState (PPUPPredFailure, PPUPState, ShelleyPPUPState, keyTxRefunds, totalTxDeposits)
+import Cardano.Ledger.Shelley.Governance
+import Cardano.Ledger.Shelley.LedgerState (PPUPPredFailure, keyTxRefunds, totalTxDeposits)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules (PpupEnv (..), ShelleyPPUP, ShelleyPpupPredFailure)
@@ -149,7 +150,7 @@ utxoTransition ::
   , State (EraRule "PPUP" era) ~ ShelleyPPUPState era
   , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
   , ProtVerAtMost era 8
-  , PPUPState era ~ ShelleyPPUPState era
+  , GovernanceState era ~ ShelleyPPUPState era
   ) =>
   TransitionRule (AllegraUTXO era)
 utxoTransition = do
@@ -275,7 +276,7 @@ instance
   , ProtVerAtMost era 8
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
-  , PPUPState era ~ ShelleyPPUPState era
+  , GovernanceState era ~ ShelleyPPUPState era
   ) =>
   STS (AllegraUTXO era)
   where

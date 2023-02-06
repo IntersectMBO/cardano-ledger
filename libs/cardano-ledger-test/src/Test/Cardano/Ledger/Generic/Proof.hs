@@ -61,13 +61,12 @@ import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import qualified Cardano.Ledger.BaseTypes as Base (Seed)
 import Cardano.Ledger.Conway (ConwayEra)
-import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (KES, StandardCrypto, VRF)
 import qualified Cardano.Ledger.Crypto as CC (Crypto, DSIGN, HASH)
 import Cardano.Ledger.Keys (DSignable)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.Core (EraTallyState)
+import Cardano.Ledger.Shelley.Core
 import Cardano.Protocol.TPraos.API (PraosCrypto)
 import Cardano.Protocol.TPraos.BHeader (BHBody)
 import Cardano.Protocol.TPraos.OCert
@@ -146,7 +145,7 @@ instance ReflectC C_Crypto where
   evidence = Mock
 
 class
-  ( EraTallyState era
+  ( EraGovernance era
   , EraTx era
   , ReflectC (EraCrypto era)
   ) =>

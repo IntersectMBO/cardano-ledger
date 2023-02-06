@@ -77,6 +77,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.HKD (HKD, HKDFunctor (..))
 import Cardano.Ledger.Orphans ()
+import Cardano.Ledger.Shelley.PParams (emptyPPPUpdates)
 import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Ledger.TreeDiff (ToExpr (..))
 import Control.DeepSeq (NFData)
@@ -215,6 +216,12 @@ instance Crypto c => AlonzoEraPParams (BabbageEra c) where
 
 instance Crypto c => BabbageEraPParams (BabbageEra c) where
   hkdCoinsPerUTxOByteL = lens bppCoinsPerUTxOByte (\pp x -> pp {bppCoinsPerUTxOByte = x})
+
+instance Crypto c => EraGovernance (BabbageEra c) where
+  type GovernanceState (BabbageEra c) = ShelleyPPUPState (BabbageEra c)
+  emptyGovernanceState = ShelleyPPUPState emptyPPPUpdates emptyPPPUpdates
+
+  getProposedPPUpdates = Just . proposals
 
 instance Era era => ToCBOR (BabbagePParams Identity era) where
   toCBOR BabbagePParams {..} =

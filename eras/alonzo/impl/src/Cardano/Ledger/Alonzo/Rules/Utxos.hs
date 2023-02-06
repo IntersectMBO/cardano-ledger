@@ -66,10 +66,9 @@ import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), serialize')
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), lblStatic)
+import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState (
   PPUPPredFailure,
-  PPUPState,
-  ShelleyPPUPState,
   UTxOState (..),
   keyTxRefunds,
   totalTxDeposits,
@@ -110,10 +109,14 @@ instance
   forall era.
   ( AlonzoEraTx era
   , AlonzoEraPParams era
+  , ShelleyEraTxBody era
   , ExtendedUTxO era
   , EraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Script era ~ AlonzoScript era
+  , EraGovernance era
+  , GovernanceState era ~ ShelleyPPUPState era
+  , State (EraRule "PPUP" era) ~ ShelleyPPUPState era
   , Embed (EraRule "PPUP" era) (AlonzoUTXOS era)
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
@@ -121,9 +124,6 @@ instance
   , ProtVerAtMost era 8
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
-  , PPUPState era ~ ShelleyPPUPState era
-  , ShelleyEraTxBody era
-  , State (EraRule "PPUP" era) ~ ShelleyPPUPState era
   ) =>
   STS (AlonzoUTXOS era)
   where
@@ -158,6 +158,9 @@ utxosTransition ::
   , EraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Script era ~ AlonzoScript era
+  , EraGovernance era
+  , GovernanceState era ~ ShelleyPPUPState era
+  , State (EraRule "PPUP" era) ~ ShelleyPPUPState era
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
   , Embed (EraRule "PPUP" era) (AlonzoUTXOS era)
@@ -165,8 +168,6 @@ utxosTransition ::
   , ProtVerAtMost era 8
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
-  , PPUPState era ~ ShelleyPPUPState era
-  , State (EraRule "PPUP" era) ~ ShelleyPPUPState era
   ) =>
   TransitionRule (AlonzoUTXOS era)
 utxosTransition =
@@ -226,7 +227,7 @@ scriptsValidateTransition ::
   , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
   , Embed (EraRule "PPUP" era) (AlonzoUTXOS era)
   , ProtVerAtMost era 8
-  , PPUPState era ~ ShelleyPPUPState era
+  , GovernanceState era ~ ShelleyPPUPState era
   , State (EraRule "PPUP" era) ~ ShelleyPPUPState era
   ) =>
   TransitionRule (AlonzoUTXOS era)

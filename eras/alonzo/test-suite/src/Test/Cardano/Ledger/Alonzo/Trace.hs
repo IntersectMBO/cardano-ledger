@@ -13,13 +13,10 @@
 -- | Export HasTrace instance for AlonzoLEDGE Alonzo Era.
 module Test.Cardano.Ledger.Alonzo.Trace () where
 
+import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Rules (AlonzoLEDGER)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, AlonzoTx)
-import Cardano.Ledger.Alonzo.TxBody ()
 import Cardano.Ledger.BaseTypes (Globals)
-import Cardano.Ledger.Core
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Shelley.Core (EraTallyState (..))
 import Cardano.Ledger.Shelley.LedgerState (DPState (..), UTxOState)
 import Cardano.Ledger.Shelley.Rules (
   DelegsEnv,
@@ -51,22 +48,21 @@ instance
   , AlonzoEraTx era
   , Mock (EraCrypto era)
   , MinLEDGER_STS era
-  , Embed (Core.EraRule "DELPL" era) (CERTS era)
-  , Environment (Core.EraRule "DELPL" era) ~ DelplEnv era
-  , State (Core.EraRule "DELPL" era) ~ DPState (EraCrypto era)
-  , Signal (Core.EraRule "DELPL" era) ~ DCert (EraCrypto era)
-  , PredicateFailure (Core.EraRule "DELPL" era) ~ ShelleyDelplPredFailure era
-  , Embed (Core.EraRule "DELEGS" era) (AlonzoLEDGER era)
-  , Embed (Core.EraRule "UTXOW" era) (AlonzoLEDGER era)
-  , Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era
-  , State (Core.EraRule "UTXOW" era) ~ UTxOState era
-  , Signal (Core.EraRule "UTXOW" era) ~ Core.Tx era
-  , Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era
-  , State (Core.EraRule "DELEGS" era) ~ DPState (EraCrypto era)
-  , Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era))
-  , Core.Tx era ~ AlonzoTx era
+  , Embed (EraRule "DELPL" era) (CERTS era)
+  , Environment (EraRule "DELPL" era) ~ DelplEnv era
+  , State (EraRule "DELPL" era) ~ DPState (EraCrypto era)
+  , Signal (EraRule "DELPL" era) ~ DCert (EraCrypto era)
+  , PredicateFailure (EraRule "DELPL" era) ~ ShelleyDelplPredFailure era
+  , Embed (EraRule "DELEGS" era) (AlonzoLEDGER era)
+  , Embed (EraRule "UTXOW" era) (AlonzoLEDGER era)
+  , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
+  , State (EraRule "UTXOW" era) ~ UTxOState era
+  , Signal (EraRule "UTXOW" era) ~ Tx era
+  , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
+  , State (EraRule "DELEGS" era) ~ DPState (EraCrypto era)
+  , Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era))
+  , Tx era ~ AlonzoTx era
   , ProtVerAtMost era 8
-  , EraTallyState era
   ) =>
   TQC.HasTrace (AlonzoLEDGER era) (GenEnv era)
   where

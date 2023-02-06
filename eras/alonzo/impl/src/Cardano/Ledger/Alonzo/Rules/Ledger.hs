@@ -19,11 +19,9 @@ module Cardano.Ledger.Alonzo.Rules.Ledger (
 import Cardano.Ledger.Alonzo.Era (AlonzoLEDGER)
 import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoUTXOW, AlonzoUtxowEvent, AlonzoUtxowPredFailure)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), AlonzoTx (..), IsValid (..))
-import Cardano.Ledger.Alonzo.TxBody (ShelleyEraTxBody (..))
 import Cardano.Ledger.BaseTypes (ShelleyBase)
-import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (DSignable, Hash)
-import Cardano.Ledger.Shelley.Core (EraTallyState (..))
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   DPState (..),
   DState (..),
@@ -80,11 +78,10 @@ ledgerTransition ::
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , AlonzoEraTx era
-  , EraTallyState era
   ) =>
   TransitionRule (someLEDGER era)
 ledgerTransition = do
-  TRC (LedgerEnv slot txIx pp account, LedgerState utxoSt dpstate _, tx) <- judgmentContext
+  TRC (LedgerEnv slot txIx pp account, LedgerState utxoSt dpstate, tx) <- judgmentContext
   let txBody = tx ^. bodyTxL
 
   dpstate' <-
@@ -108,7 +105,7 @@ ledgerTransition = do
         , utxoSt
         , tx
         )
-  pure $ LedgerState utxoSt' dpstate' emptyTallyState
+  pure $ LedgerState utxoSt' dpstate'
 
 instance
   ( DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
@@ -123,7 +120,6 @@ instance
   , State (EraRule "DELEGS" era) ~ DPState (EraCrypto era)
   , Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era))
   , ProtVerAtMost era 8
-  , EraTallyState era
   ) =>
   STS (AlonzoLEDGER era)
   where
@@ -143,7 +139,7 @@ instance
     [ PostCondition
         "Deposit pot must equal obligation (AlonzoLEDGER)"
         ( \(TRC (_, _, _))
-           (LedgerState utxoSt dpstate _) -> obligationDPState dpstate == utxosDeposited utxoSt
+           (LedgerState utxoSt dpstate) -> obligationDPState dpstate == utxosDeposited utxoSt
         )
     ]
 

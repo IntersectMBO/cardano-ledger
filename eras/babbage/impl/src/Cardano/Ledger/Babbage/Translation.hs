@@ -15,12 +15,12 @@ module Cardano.Ledger.Babbage.Translation where
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
+import Cardano.Ledger.Babbage.Core hiding (Tx)
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.PParams ()
 import Cardano.Ledger.Babbage.Tx (AlonzoTx (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), Datum (..))
 import Cardano.Ledger.Binary (DecoderError)
-import Cardano.Ledger.Core hiding (Tx)
 import qualified Cardano.Ledger.Core as Core (Tx)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Shelley.API (
@@ -29,7 +29,6 @@ import Cardano.Ledger.Shelley.API (
   StrictMaybe (..),
  )
 import qualified Cardano.Ledger.Shelley.API as API
-import Cardano.Ledger.Shelley.Core (EraTallyState (..))
 import qualified Data.Map.Strict as Map
 
 --------------------------------------------------------------------------------
@@ -111,7 +110,6 @@ instance Crypto c => TranslateEra (BabbageEra c) API.LedgerState where
       API.LedgerState
         { API.lsUTxOState = translateEra' ctxt $ API.lsUTxOState ls
         , API.lsDPState = API.lsDPState ls
-        , API.lsTallyState = emptyTallyState @(BabbageEra c)
         }
 
 instance Crypto c => TranslateEra (BabbageEra c) API.UTxOState where
@@ -121,7 +119,7 @@ instance Crypto c => TranslateEra (BabbageEra c) API.UTxOState where
         { API.utxosUtxo = translateEra' ctxt $ API.utxosUtxo us
         , API.utxosDeposited = API.utxosDeposited us
         , API.utxosFees = API.utxosFees us
-        , API.utxosPpups = translateEra' ctxt $ API.utxosPpups us
+        , API.utxosGovernance = translateEra' ctxt $ API.utxosGovernance us
         , API.utxosStakeDistr = API.utxosStakeDistr us
         }
 

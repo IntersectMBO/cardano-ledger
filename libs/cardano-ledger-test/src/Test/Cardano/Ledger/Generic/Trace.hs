@@ -23,7 +23,6 @@ import Cardano.Ledger.Alonzo.Tx (AlonzoTx (body))
 import Cardano.Ledger.Babbage.Rules (BabbageUtxowPredFailure (..))
 import Cardano.Ledger.Babbage.TxBody (certs')
 import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals)
-import Cardano.Ledger.Core
 import Cardano.Ledger.EpochBoundary (SnapShots (..), calculatePoolDistr)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
@@ -41,7 +40,7 @@ import Cardano.Ledger.Pretty (
   ppWord64,
  )
 import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Shelley.Core (EraTallyState (..))
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   DPState (..),
@@ -49,7 +48,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
-  PPUPState,
   PState (..),
   StashedAVVMAddresses,
   UTxOState (..),
@@ -221,7 +219,7 @@ makeEpochState gstate ledgerstate =
     }
 
 snaps :: EraTxOut era => LedgerState era -> SnapShots (EraCrypto era)
-snaps (LedgerState UTxOState {utxosUtxo = u, utxosFees = f} (DPState dstate pstate) _) =
+snaps (LedgerState UTxOState {utxosUtxo = u, utxosFees = f} (DPState dstate pstate)) =
   SnapShots snap (calculatePoolDistr snap) snap snap f
   where
     snap = stakeDistr u dstate pstate
@@ -548,8 +546,6 @@ chainTest ::
   ( Reflect era
   , HasTrace (MOCKCHAIN era) (Gen1 era)
   , Eq (StashedAVVMAddresses era)
-  , Eq (PPUPState era)
-  , Eq (TallyState era)
   ) =>
   Proof era ->
   Int ->

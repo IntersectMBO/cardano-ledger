@@ -14,7 +14,7 @@
 module Test.Cardano.Ledger.Examples.AlonzoBBODY (tests) where
 
 import Cardano.Crypto.Hash.Class (sizeHash)
-import Cardano.Ledger.Address (Addr (..), Withdrawals (..))
+import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoBbodyPredFailure (..),
@@ -37,7 +37,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Block (Block (..), txid)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Rules (ConwayLedgerPredFailure (..))
-import Cardano.Ledger.Core hiding (TranslationError)
+
 import Cardano.Ledger.Credential (
   Credential (..),
   StakeCredential,
@@ -62,11 +62,8 @@ import Cardano.Ledger.Shelley.API (
   UTxO (..),
  )
 import Cardano.Ledger.Shelley.BlockChain (bBodySize)
-import Cardano.Ledger.Shelley.Core (EraTallyState (..))
-import Cardano.Ledger.Shelley.LedgerState (
-  PPUPState,
-  smartUTxOState,
- )
+import Cardano.Ledger.Shelley.Core hiding (TranslationError)
+import Cardano.Ledger.Shelley.LedgerState (smartUTxOState)
 import Cardano.Ledger.Shelley.Rules (
   ShelleyBbodyPredFailure (..),
   ShelleyBbodyState (..),
@@ -144,9 +141,8 @@ alonzoBBODYexamplesP ::
   , PostShelley era
   , Value era ~ MaryValue (EraCrypto era)
   , EraSegWits era
-  , Default (PPUPState era)
+  , EraGovernance era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
-  , EraTallyState era
   ) =>
   Proof era ->
   TestTree
@@ -172,15 +168,14 @@ alonzoBBODYexamplesP proof =
 initialBBodyState ::
   ( EraTxOut era
   , PostShelley era
-  , Default (PPUPState era)
+  , EraGovernance era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
-  , EraTallyState era
   ) =>
   Proof era ->
   UTxO era ->
   ShelleyBbodyState era
 initialBBodyState pf utxo =
-  BbodyState (LedgerState initialUtxoSt dpstate emptyTallyState) (BlocksMade mempty)
+  BbodyState (LedgerState initialUtxoSt dpstate) (BlocksMade mempty)
   where
     initialUtxoSt = smartUTxOState utxo (UM.fromCompact successDeposit) (Coin 0) def
     dpstate =
@@ -594,9 +589,8 @@ testBBodyState ::
   , PostShelley era
   , EraTxBody era
   , Value era ~ MaryValue (EraCrypto era)
-  , Default (PPUPState era)
+  , EraGovernance era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
-  , EraTallyState era
   ) =>
   Proof era ->
   ShelleyBbodyState era
@@ -662,7 +656,7 @@ testBBodyState pf =
       -- the default DPState 'def' means that the 'totalDeposits' must be 0
       totalDeposits = (Coin 0)
    in BbodyState
-        (LedgerState example1UtxoSt def emptyTallyState)
+        (LedgerState example1UtxoSt def)
         (BlocksMade $ Map.singleton poolID 1)
 
 -- ============================== Helper functions ===============================

@@ -23,12 +23,11 @@ import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (..))
 import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
-import Cardano.Ledger.Babbage.TxBody (BabbageEraTxBody, BabbageTxBody (..))
+import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..))
 import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Block (Block (..))
-import Cardano.Ledger.Conway.Core (ConwayEraTxBody)
+import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
-import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (KeyHash, KeyRole (Genesis))
 import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
 import Cardano.Ledger.Pretty
@@ -43,16 +42,13 @@ import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
-  PPUPState,
   PState (..),
-  ShelleyPPUPState,
   StashedAVVMAddresses,
   UTxOState (..),
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
-import Cardano.Ledger.Shelley.Translation ()
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
-import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..), Withdrawals (..))
+import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..))
 import Cardano.Ledger.UTxO (UTxO (..))
 import Data.Foldable (toList)
@@ -165,8 +161,8 @@ instance Reflect era => Same era (UTxOState era) where
       ++ ppu
       ++ [("StakeDistr", eqByShow (utxosStakeDistr u1) (utxosStakeDistr u2))]
     where
-      ppuPretty :: ShelleyPPUPState era ~ PPUPState era => [(String, Maybe PDoc)]
-      ppuPretty = [("PPUpdates", samePPUP proof (utxosPpups u1) (utxosPpups u2))]
+      ppuPretty :: GovernanceState era ~ ShelleyPPUPState era => [(String, Maybe PDoc)]
+      ppuPretty = [("ShelleyPPUPState", samePPUP proof (utxosGovernance u1) (utxosGovernance u2))]
       ppu = case reify @era of
         Shelley _ -> ppuPretty
         Mary _ -> ppuPretty

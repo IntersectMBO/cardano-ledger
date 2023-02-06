@@ -23,7 +23,6 @@ import Cardano.Ledger.Coin (
   CompactForm (CompactCoin),
   addDeltaCoin,
  )
-import Cardano.Ledger.Core
 import Cardano.Ledger.DPState (
   DPState (..),
   DState (..),
@@ -35,25 +34,14 @@ import Cardano.Ledger.Keys (
   KeyHash (..),
   KeyRole (..),
  )
-import Cardano.Ledger.Shelley.Core (EraTallyState (..))
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits (keyTxRefunds, totalTxDeposits)
 import Cardano.Ledger.Shelley.LedgerState.Types
-import Cardano.Ledger.Shelley.Rules.Ppup (PPUPState)
-import Cardano.Ledger.Shelley.TxBody (
-  MIRPot (..),
-  ShelleyEraTxBody (..),
- )
-import Cardano.Ledger.UMapCompact (
-  RDPair (..),
-  Trip (..),
-  UMap (..),
- )
-import Cardano.Ledger.UTxO (
-  UTxO (..),
-  coinBalance,
- )
+import Cardano.Ledger.Shelley.TxBody (MIRPot (..))
+import Cardano.Ledger.UMapCompact (RDPair (..), Trip (..), UMap (..))
+import Cardano.Ledger.UTxO (UTxO (..), coinBalance)
 import Cardano.Ledger.Val ((<+>), (<->))
-import Data.Default.Class (Default, def)
+import Data.Default.Class (def)
 import Data.Foldable (fold)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -79,15 +67,13 @@ getGKeys nes = Map.keysSet genDelegs
   where
     NewEpochState _ _ _ es _ _ _ = nes
     EpochState _ _ ls _ _ _ = es
-    LedgerState _ (DPState (DState {dsGenDelegs = (GenDelegs genDelegs)}) _) _ = ls
+    LedgerState _ (DPState (DState {dsGenDelegs = (GenDelegs genDelegs)}) _) = ls
 
 -- | Creates the ledger state for an empty ledger which
 --  contains the specified transaction outputs.
 genesisState ::
   forall era.
-  ( Default (PPUPState era)
-  , EraTallyState era
-  ) =>
+  EraGovernance era =>
   Map (KeyHash 'Genesis (EraCrypto era)) (GenDelegPair (EraCrypto era)) ->
   UTxO era ->
   LedgerState era
@@ -97,11 +83,10 @@ genesisState genDelegs0 utxo0 =
         utxo0
         (Coin 0)
         (Coin 0)
-        def
+        emptyGovernanceState
         (IStake mempty Map.empty)
     )
     (DPState dState def)
-    emptyTallyState
   where
     dState = def {dsGenDelegs = GenDelegs genDelegs0}
 

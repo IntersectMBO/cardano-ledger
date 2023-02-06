@@ -83,9 +83,9 @@ alonzoSpecificProps SourceSignalTarget {source = chainSt, signal = block} =
     alonzoSpecificPropsLEDGER :: SourceSignalTarget (AlonzoLEDGER A) -> Property
     alonzoSpecificPropsLEDGER
       SourceSignalTarget
-        { source = LedgerState UTxOState {utxosUtxo = UTxO u, utxosDeposited = dp, utxosFees = f} ds _
+        { source = LedgerState UTxOState {utxosUtxo = UTxO u, utxosDeposited = dp, utxosFees = f} ds
         , signal = tx
-        , target = LedgerState UTxOState {utxosUtxo = UTxO u', utxosDeposited = dp', utxosFees = f'} ds' _
+        , target = LedgerState UTxOState {utxosUtxo = UTxO u', utxosDeposited = dp', utxosFees = f'} ds'
         } =
         let isValid' = tx ^. isValidTxL
             noNewUTxO = u' `Map.isSubmapOf` u

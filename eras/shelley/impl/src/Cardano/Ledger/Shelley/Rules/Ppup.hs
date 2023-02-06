@@ -19,7 +19,6 @@ module Cardano.Ledger.Shelley.Rules.Ppup (
   PredicateFailure,
   VotingPeriod (..),
   PPUPPredFailure,
-  PPUPState,
 )
 where
 
@@ -38,14 +37,13 @@ import Cardano.Ledger.Binary (
   decodeWord,
   encodeListLen,
  )
-import Cardano.Ledger.Binary.Coders (Decode (..), decode, (<!))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (GenDelegs (GenDelegs), KeyHash, KeyRole (Genesis))
 import Cardano.Ledger.Shelley.Era (ShelleyPPUP)
+import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.PParams (
   ProposedPPUpdates (ProposedPPUpdates),
   Update (..),
-  emptyPPPUpdates,
   pvCanFollow,
  )
 import Cardano.Ledger.Slot (
@@ -56,12 +54,9 @@ import Cardano.Ledger.Slot (
   epochInfoFirst,
   (*-),
  )
-import Cardano.Ledger.TreeDiff (ToExpr)
-import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, (⊆), (⨃))
 import Control.State.Transition
-import Data.Default.Class (Default (..))
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import Data.Word (Word8)
@@ -116,12 +111,6 @@ data ShelleyPpupPredFailure era
 instance NoThunks (ShelleyPpupPredFailure era)
 
 newtype PpupEvent era = NewEpoch EpochNo
-
-data ShelleyPPUPState era = ShelleyPPUPState
-  { proposals :: !(ProposedPPUpdates era)
-  , futureProposals :: !(ProposedPPUpdates era)
-  }
-  deriving (Generic)
 
 instance EraPParams era => STS (ShelleyPPUP era) where
   type State (ShelleyPPUP era) = ShelleyPPUPState era
@@ -223,42 +212,3 @@ type family PPUPPredFailurePV pv era where
   PPUPPredFailurePV 7 era = ShelleyPpupPredFailure era
   PPUPPredFailurePV 8 era = ShelleyPpupPredFailure era
   PPUPPredFailurePV _ _ = ()
-
-type PPUPState era = PPUPStatePV (ProtVerLow era) era
-
-type family PPUPStatePV pv era where
-  PPUPStatePV 2 era = ShelleyPPUPState era
-  PPUPStatePV 3 era = ShelleyPPUPState era
-  PPUPStatePV 4 era = ShelleyPPUPState era
-  PPUPStatePV 5 era = ShelleyPPUPState era
-  PPUPStatePV 6 era = ShelleyPPUPState era
-  PPUPStatePV 7 era = ShelleyPPUPState era
-  PPUPStatePV 8 era = ShelleyPPUPState era
-  PPUPStatePV _ _ = ()
-
-deriving instance Show (PParamsUpdate era) => Show (ShelleyPPUPState era)
-
-deriving instance Eq (PParamsUpdate era) => Eq (ShelleyPPUPState era)
-
-instance NFData (PParamsUpdate era) => NFData (ShelleyPPUPState era)
-
-instance NoThunks (PParamsUpdate era) => NoThunks (ShelleyPPUPState era)
-
-instance (Era era, ToCBOR (PParamsUpdate era)) => ToCBOR (ShelleyPPUPState era) where
-  toCBOR (ShelleyPPUPState ppup fppup) =
-    encodeListLen 2 <> toCBOR ppup <> toCBOR fppup
-
-instance
-  (Era era, FromCBOR (PParamsUpdate era)) =>
-  FromCBOR (ShelleyPPUPState era)
-  where
-  fromCBOR =
-    decode $
-      RecD ShelleyPPUPState
-        <! From
-        <! From
-
-instance Default (ShelleyPPUPState era) where
-  def = ShelleyPPUPState emptyPPPUpdates emptyPPPUpdates
-
-instance ToExpr (PParamsUpdate era) => ToExpr (ShelleyPPUPState era)

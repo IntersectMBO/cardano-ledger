@@ -13,16 +13,9 @@ module Cardano.Ledger.Allegra.Era (
 ) where
 
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Core (
-  Era (EraCrypto, ProtVerLow),
-  EraRule,
-  PreviousEra,
-  TranslationContext,
-  Value,
- )
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.Core (EraTallyState)
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Rules
 
 -- | The Allegra era
@@ -32,8 +25,6 @@ instance Crypto c => Era (AllegraEra c) where
   type PreviousEra (AllegraEra c) = ShelleyEra c
   type EraCrypto (AllegraEra c) = c
   type ProtVerLow (AllegraEra c) = 3
-
-instance EraTallyState (AllegraEra c)
 
 --------------------------------------------------------------------------------
 -- Core instances

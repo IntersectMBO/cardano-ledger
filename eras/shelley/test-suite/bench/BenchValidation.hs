@@ -28,15 +28,13 @@ module BenchValidation (
 
 import Cardano.Ledger.BaseTypes (Globals (..), unBlocksMade)
 import Cardano.Ledger.Block (Block (..))
-import Cardano.Ledger.Core
-import qualified Cardano.Ledger.Crypto as CryptoClass
+import Cardano.Ledger.Crypto
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.Bench.Gen (genBlock, genChainState)
 import Cardano.Ledger.Shelley.BlockChain (slotToNonce)
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState,
-  PPUPState,
-  ShelleyPPUPState,
   StashedAVVMAddresses,
   nesBcur,
  )
@@ -56,14 +54,10 @@ import Cardano.Slotting.Slot (withOriginToMaybe)
 import Control.DeepSeq (NFData (rnf))
 import Control.Monad.Except ()
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
+import qualified Data.Map.Strict as Map
 import Data.Proxy
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
-
--- Use Another constraint, so this works in all Eras
-
-import Cardano.Ledger.Shelley.Core (EraTallyState (..))
-import qualified Data.Map.Strict as Map
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen, MinLEDGER_STS)
 import Test.Cardano.Ledger.Shelley.Generator.Presets (genEnv)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
@@ -85,9 +79,8 @@ validateInput ::
   , QC.HasTrace (API.ShelleyLEDGERS era) (GenEnv era)
   , API.ApplyBlock era
   , GetLedgerView era
-  , PPUPState era ~ ShelleyPPUPState era
   , MinLEDGER_STS era
-  , EraTallyState era
+  , EraGovernance era
   ) =>
   Int ->
   IO (ValidateInput era)
@@ -101,8 +94,7 @@ genValidateInput ::
   , API.ApplyBlock era
   , GetLedgerView era
   , MinLEDGER_STS era
-  , PPUPState era ~ ShelleyPPUPState era
-  , EraTallyState era
+  , EraGovernance era
   ) =>
   Int ->
   IO (ValidateInput era)
@@ -126,14 +118,10 @@ benchValidate (ValidateInput globals state (Block bh txs)) =
 
 applyBlock ::
   forall era.
-  ( Era era
-  , NFData (TxOut era)
+  ( EraTxOut era
   , API.ApplyBlock era
-  , NFData (PParams era)
   , NFData (StashedAVVMAddresses era)
-  , PPUPState era ~ ShelleyPPUPState era
-  , NFData (PParamsUpdate era)
-  , NFData (TallyState era)
+  , GovernanceState era ~ ShelleyPPUPState era
   ) =>
   ValidateInput era ->
   Int ->
@@ -161,14 +149,14 @@ data UpdateInputs c
       !(BHeader c)
       !(ChainDepState c)
 
-instance CryptoClass.Crypto c => Show (UpdateInputs c) where
+instance Crypto c => Show (UpdateInputs c) where
   show (UpdateInputs _globals vl bh st) =
     show vl ++ "\n" ++ show bh ++ "\n" ++ show st
 
 instance NFData (LedgerView era) where
   rnf (LedgerView _D _extraEntropy _pool _delegs _ccd) = ()
 
-instance CryptoClass.Crypto c => NFData (BHeader c) where
+instance Crypto c => NFData (BHeader c) where
   rnf (BHeader _ _) = ()
 
 instance NFData (ChainDepState c) where
@@ -177,7 +165,7 @@ instance NFData (ChainDepState c) where
 instance NFData (ChainTransitionError c) where
   rnf _ = ()
 
-instance CryptoClass.Crypto c => NFData (UpdateInputs c) where
+instance Crypto c => NFData (UpdateInputs c) where
   rnf (UpdateInputs g lv bh st) =
     seq (rnf g) (seq (rnf lv) (seq (rnf bh) (rnf st)))
 
@@ -189,9 +177,8 @@ genUpdateInputs ::
   , GetLedgerView era
   , EraRule "LEDGERS" era ~ API.ShelleyLEDGERS era
   , QC.HasTrace (API.ShelleyLEDGERS era) (GenEnv era)
-  , PPUPState era ~ ShelleyPPUPState era
   , API.ApplyBlock era
-  , EraTallyState era
+  , EraGovernance era
   ) =>
   Int ->
   IO (UpdateInputs (EraCrypto era))

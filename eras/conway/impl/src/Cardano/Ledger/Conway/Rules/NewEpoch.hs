@@ -24,16 +24,15 @@ import Cardano.Ledger.BaseTypes (
   StrictMaybe (SJust, SNothing),
  )
 import Cardano.Ledger.Coin (toDeltaCoin)
+import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayENACTMENT, ConwayEPOCH, ConwayNEWEPOCH)
 import Cardano.Ledger.Conway.Rules.Enactment ()
 import Cardano.Ledger.Conway.Rules.Epoch (ConwayEpochEvent)
-import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.Shelley.AdaPots (AdaPots (..), totalAdaPotsES)
-import Cardano.Ledger.Shelley.Core (EraTallyState)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rewards (sumRewards)
 import Cardano.Ledger.Shelley.Rules (
@@ -83,6 +82,7 @@ data ConwayNewEpochEvent era
 
 instance
   ( EraTxOut era
+  , EraGovernance era
   , Embed (EraRule "EPOCH" era) (ConwayNEWEPOCH era)
   , Embed (EraRule "ENACTMENT" era) (ConwayNEWEPOCH era)
   , Event (EraRule "RUPD" era) ~ RupdEvent (EraCrypto era)
@@ -93,10 +93,7 @@ instance
   , Signal (EraRule "ENACTMENT" era) ~ EpochNo
   , Environment (EraRule "ENACTMENT" era) ~ ()
   , State (EraRule "ENACTMENT" era) ~ EpochState era
-  , Default (PParams era)
   , Default (StashedAVVMAddresses era)
-  , Default (PPUPState era)
-  , EraTallyState era
   ) =>
   STS (ConwayNEWEPOCH era)
   where
@@ -122,10 +119,7 @@ instance
   transitionRules = [newEpochTransition]
 
 instance
-  ( Era era
-  , Default (PPUPState era)
-  , Default (PParams era)
-  , EraTallyState era
+  ( EraGovernance era
   , PredicateFailure (EraRule "ENACTMENT" era) ~ Void
   , Event (EraRule "ENACTMENT" era) ~ Void
   ) =>
@@ -137,6 +131,7 @@ instance
 newEpochTransition ::
   forall era.
   ( EraTxOut era
+  , EraGovernance era
   , Embed (EraRule "EPOCH" era) (ConwayNEWEPOCH era)
   , Environment (EraRule "EPOCH" era) ~ ()
   , State (EraRule "EPOCH" era) ~ EpochState era
@@ -148,8 +143,6 @@ newEpochTransition ::
   , State (EraRule "ENACTMENT" era) ~ EpochState era
   , Environment (EraRule "ENACTMENT" era) ~ ()
   , Signal (EraRule "ENACTMENT" era) ~ EpochNo
-  , Default (PPUPState era)
-  , EraTallyState era
   ) =>
   TransitionRule (ConwayNEWEPOCH era)
 newEpochTransition = do

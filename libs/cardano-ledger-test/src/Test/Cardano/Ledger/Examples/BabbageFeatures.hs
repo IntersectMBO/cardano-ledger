@@ -55,7 +55,7 @@ import Cardano.Ledger.Keys (
 import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API (DCert (DCertDeleg), DelegCert (DeRegKey), ProtVer (..), UTxO (..))
-import Cardano.Ledger.Shelley.LedgerState (PPUPState, UTxOState (..), smartUTxOState)
+import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), smartUTxOState)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (inject)
@@ -1043,7 +1043,7 @@ testExpectSuccessValid ::
   , PostShelley era
   , EraTx era
   , BabbageEraTxBody era
-  , Default (PPUPState era)
+  , EraGovernance era
   ) =>
   Proof era ->
   TestCaseData era ->
@@ -1088,7 +1088,7 @@ testExpectSuccessInvalid ::
   , PostShelley era
   , EraTx era
   , BabbageEraTxBody era
-  , Default (PPUPState era)
+  , EraGovernance era
   ) =>
   Proof era ->
   TestCaseData era ->
@@ -1137,7 +1137,7 @@ genericBabbageFeatures ::
   , BabbageEraTxBody era
   , PostShelley era
   , EraTx era
-  , Default (PPUPState era)
+  , EraGovernance era
   ) =>
   Proof era ->
   TestTree

@@ -22,13 +22,12 @@ import qualified Cardano.Crypto.Hashing as Hashing
 import Cardano.Ledger.Address (fromBoostrapCompactAddress, isBootstrapRedeemer)
 import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochNo, TxIx (..))
 import Cardano.Ledger.Coin (CompactForm (CompactCoin))
-import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto (ADDRHASH))
 import Cardano.Ledger.EpochBoundary (emptySnapShots)
 import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.Types
-import Cardano.Ledger.Shelley.Core (EraTallyState (..))
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Rules ()
 import Cardano.Ledger.Shelley.Translation (FromByronTranslationContext (..))
 import Cardano.Ledger.UTxO (coinBalance)
@@ -160,7 +159,7 @@ translateToShelleyLedgerState transCtxt epochNo cvs =
               { utxosUtxo = utxoShelley
               , utxosDeposited = Coin 0
               , utxosFees = Coin 0
-              , utxosPpups = def
+              , utxosGovernance = emptyGovernanceState
               , utxosStakeDistr = IStake mempty Map.empty
               }
         , lsDPState =
@@ -168,5 +167,4 @@ translateToShelleyLedgerState transCtxt epochNo cvs =
               { dpsDState = def {dsGenDelegs = genDelegs}
               , dpsPState = def
               }
-        , lsTallyState = emptyTallyState
         }

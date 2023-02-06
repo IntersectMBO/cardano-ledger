@@ -98,7 +98,7 @@ import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.HKD (HKD, HKDFunctor (..))
 import Cardano.Ledger.Language (Language (..))
 import Cardano.Ledger.Orphans ()
-import Cardano.Ledger.Shelley.PParams (ShelleyPParams (..))
+import Cardano.Ledger.Shelley.PParams (ShelleyPParams (..), emptyPPPUpdates)
 import Cardano.Ledger.TreeDiff (ToExpr (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson as Aeson (
@@ -252,6 +252,12 @@ instance Crypto c => AlonzoEraPParams (AlonzoEra c) where
     lens appCollateralPercentage $ \pp x -> pp {appCollateralPercentage = x}
   hkdMaxCollateralInputsL =
     lens appMaxCollateralInputs $ \pp x -> pp {appMaxCollateralInputs = x}
+
+instance Crypto c => EraGovernance (AlonzoEra c) where
+  type GovernanceState (AlonzoEra c) = ShelleyPPUPState (AlonzoEra c)
+  emptyGovernanceState = ShelleyPPUPState emptyPPPUpdates emptyPPPUpdates
+
+  getProposedPPUpdates = Just . proposals
 
 instance Era era => ToCBOR (AlonzoPParams Identity era) where
   toCBOR

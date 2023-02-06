@@ -71,7 +71,7 @@ testScriptPostTranslation =
           result =
             runShelleyBase $
               applySTSTest @(S.ShelleyLEDGER Allegra)
-                (TRC (env, LedgerState utxoStAllegra def emptyTallyState, txa))
+                (TRC (env, LedgerState utxoStAllegra def, txa))
        in case result of
             Left e -> error $ show e
             Right _ -> pure ()

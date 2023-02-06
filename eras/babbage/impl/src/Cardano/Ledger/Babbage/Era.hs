@@ -12,11 +12,10 @@ where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Rules (AlonzoBBODY)
-import Cardano.Ledger.Core
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Babbage.Core
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Mary.Value (MaryValue)
 import qualified Cardano.Ledger.Shelley.API as API
-import Cardano.Ledger.Shelley.Core (EraTallyState)
 import Cardano.Ledger.Shelley.Rules (
   ShelleyEPOCH,
   ShelleyMIR,
@@ -33,15 +32,13 @@ import Cardano.Ledger.Shelley.Rules (
 -- | The Babbage era
 data BabbageEra c
 
-instance CC.Crypto c => Era (BabbageEra c) where
+instance Crypto c => Era (BabbageEra c) where
   type PreviousEra (BabbageEra c) = AlonzoEra c
   type EraCrypto (BabbageEra c) = c
   type ProtVerLow (BabbageEra c) = 7
   type ProtVerHigh (BabbageEra c) = 8
 
 type instance Value (BabbageEra c) = MaryValue c
-
-instance EraTallyState (BabbageEra c)
 
 -------------------------------------------------------------------------------
 -- Era Mapping

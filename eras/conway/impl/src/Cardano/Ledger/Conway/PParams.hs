@@ -23,8 +23,8 @@ where
 
 import Cardano.Ledger.Alonzo.PParams (OrdExUnits (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
+import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.PParams
-import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.HKD (HKD, HKDFunctor (..))

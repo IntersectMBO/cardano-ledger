@@ -20,14 +20,12 @@ module Cardano.Ledger.Conway.Rules.Epoch (
 where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEPOCH)
-import Cardano.Ledger.Core
 import Cardano.Ledger.EpochBoundary (SnapShots)
-import Cardano.Ledger.Shelley.Core (EraTallyState)
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState,
   LedgerState,
-  PPUPState,
   PState (..),
   UTxOState (..),
   asReserves,
@@ -65,7 +63,6 @@ import Control.State.Transition (
   judgmentContext,
   trans,
  )
-import Data.Default.Class (Default)
 import qualified Data.Map.Strict as Map
 
 data ConwayEpochEvent era
@@ -74,6 +71,7 @@ data ConwayEpochEvent era
 
 instance
   ( EraTxOut era
+  , EraGovernance era
   , Embed (EraRule "SNAP" era) (ConwayEPOCH era)
   , Environment (EraRule "SNAP" era) ~ LedgerState era
   , State (EraRule "SNAP" era) ~ SnapShots (EraCrypto era)
@@ -82,11 +80,8 @@ instance
   , Environment (EraRule "POOLREAP" era) ~ PParams era
   , State (EraRule "POOLREAP" era) ~ ShelleyPoolreapState era
   , Signal (EraRule "POOLREAP" era) ~ EpochNo
-  , Default (PParams era)
   , Eq (UpecPredFailure era)
   , Show (UpecPredFailure era)
-  , Default (PPUPState era)
-  , EraTallyState era
   ) =>
   STS (ConwayEPOCH era)
   where

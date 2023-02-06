@@ -62,7 +62,6 @@ import Cardano.Ledger.BaseTypes (
   mkTxIxPartial,
  )
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core hiding (TranslationError)
 import Cardano.Ledger.Credential (
   Credential (..),
   StakeCredential,
@@ -80,10 +79,8 @@ import Cardano.Ledger.Shelley.API (
   Block (..),
   UTxO (..),
  )
-import Cardano.Ledger.Shelley.LedgerState (
-  PPUPState,
-  smartUTxOState,
- )
+import Cardano.Ledger.Shelley.Core hiding (TranslationError)
+import Cardano.Ledger.Shelley.LedgerState (smartUTxOState)
 import Cardano.Ledger.Shelley.Rules (
   BbodyEnv (..),
   ShelleyBbodyState,
@@ -349,8 +346,8 @@ testUTXOWsubset
     ( GoodCrypto (EraCrypto era)
     , PostShelley era
     , EraTx era
+    , EraGovernance era
     , HasCallStack
-    , Default (PPUPState era)
     ) =>
     WitRule "UTXOW" era ->
     UTxO era ->
@@ -388,7 +385,7 @@ testUTXOWwith ::
   forall era.
   ( GoodCrypto (EraCrypto era)
   , EraTx era
-  , Default (PPUPState era)
+  , EraGovernance era
   ) =>
   WitRule "UTXOW" era ->
   (Result era -> Result era -> Assertion) ->
