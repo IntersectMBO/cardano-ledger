@@ -11,17 +11,17 @@ jobs:
     name: shelley
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: cachix/install-nix-action@v15
+      - uses: actions/checkout@v3
+      - uses: cachix/install-nix-action@v18
         with:
           nix_path: nixpkgs=channel:nixos-unstable
           extra_nix_config: |
             trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
             substituters = https://cache.iog.io https://cache.nixos.org/
-      - name: Build benchmarks
+      - name: Run nightly tests
         run: nix-shell --run "cabal test cardano-ledger-shelley-test --test-options='--scenario=Nightly'"
   nightly-shelley-ma:
-    name: shelley
+    name: shelley-ma
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -31,5 +31,5 @@ jobs:
           extra_nix_config: |
             trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
             substituters = https://cache.iog.io https://cache.nixos.org/
-      - name: Build benchmarks
+      - name: Run nightly tests
         run: nix-shell --run "cabal test cardano-ledger-shelley-ma-test --test-options='--scenario=Nightly'"
