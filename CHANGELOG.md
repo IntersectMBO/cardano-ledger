@@ -381,6 +381,7 @@ BabbageEraTxBody --> AlonzoEraTxBody --> ....
                 `--> BabbageEraTxOut -> AlonzoEraTxOut -->
 ```
 ### Changed
+- Introduced a new switch in `HardForks` that turns off pointer address resolution in `IncrementalStake` starting with version 9
 - Some types have been moved:
   - The `WitVKey` type has been moved into its own module in core.
   - The `HKD` type has been moved to `cardano-ledger-core`.
