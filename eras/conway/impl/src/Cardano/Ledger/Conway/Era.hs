@@ -8,6 +8,7 @@ module Cardano.Ledger.Conway.Era (
   ConwayEPOCH,
   ConwayENACTMENT,
   ConwayUTXOS,
+  ConwayTICKF,
   ConwayLEDGER,
 ) where
 
@@ -24,7 +25,6 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyRUPD,
   ShelleySNAP,
   ShelleyTICK,
-  ShelleyTICKF,
  )
 
 -- =====================================================
@@ -67,6 +67,10 @@ data ConwayLEDGER era
 
 type instance EraRule "LEDGER" (ConwayEra c) = ConwayLEDGER (ConwayEra c)
 
+data ConwayTICKF era
+
+type instance EraRule "TICKF" (ConwayEra c) = ConwayTICKF (ConwayEra c)
+
 -- Rules inherited from Babbage
 
 type instance EraRule "UTXO" (ConwayEra c) = BabbageUTXO (ConwayEra c)
@@ -101,6 +105,6 @@ type instance EraRule "SNAP" (ConwayEra c) = ShelleySNAP (ConwayEra c)
 
 type instance EraRule "TICK" (ConwayEra c) = ShelleyTICK (ConwayEra c)
 
-type instance EraRule "TICKF" (ConwayEra c) = ShelleyTICKF (ConwayEra c)
+type instance EraRule "TICKF" (ConwayEra c) = ConwayTICKF (ConwayEra c)
 
 -- =================================================
