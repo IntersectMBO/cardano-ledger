@@ -10,7 +10,7 @@ module Test.Cardano.Ledger.Alonzo.Tools (tests, testExUnitCalculation) where
 import Cardano.Crypto.DSIGN
 import qualified Cardano.Crypto.Hash as Crypto
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript, CostModel, CostModels (..), ExUnits (..), Tag (..))
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript, CostModel, ExUnits (..), Tag (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag
 import Cardano.Ledger.Alonzo.Scripts.Data (Data (..))
 import Cardano.Ledger.Alonzo.Tools (TransactionScriptFailure (..), evaluateTransactionExecutionUnits)
@@ -40,7 +40,7 @@ import Data.Text (Text)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
-import Test.Cardano.Ledger.Alonzo.PlutusScripts (testingCostModelV1)
+import Test.Cardano.Ledger.Alonzo.CostModel (freeCostModel, freeV1CostModels)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
@@ -247,7 +247,7 @@ uenv :: EraPParams era => Proof era -> UtxoEnv era
 uenv pf = UtxoEnv (SlotNo 0) (pparams pf) def (GenDelegs mempty)
 
 costmodels :: Array Language CostModel
-costmodels = array (PlutusV1, PlutusV1) [(PlutusV1, testingCostModelV1)]
+costmodels = array (PlutusV1, PlutusV1) [(PlutusV1, freeCostModel PlutusV1)]
 
 ustate ::
   ( EraTxOut era
@@ -314,7 +314,7 @@ pparams :: EraPParams era => Proof era -> PParams era
 pparams proof =
   newPParams
     proof
-    [ Costmdls . CostModels $ Map.singleton PlutusV1 testingCostModelV1
+    [ Costmdls freeV1CostModels
     , MaxValSize 1000000000
     , MaxTxExUnits $ ExUnits 100000000 100000000
     , MaxBlockExUnits $ ExUnits 100000000 100000000

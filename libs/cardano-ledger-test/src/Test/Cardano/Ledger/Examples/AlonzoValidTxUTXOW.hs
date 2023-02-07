@@ -15,10 +15,7 @@ module Test.Cardano.Ledger.Examples.AlonzoValidTxUTXOW (tests) where
 
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.Scripts (
-  CostModels (..),
-  ExUnits (..),
- )
+import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
 import Cardano.Ledger.Alonzo.Scripts.Data (Data (..), hashData)
 import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..))
@@ -60,11 +57,11 @@ import Data.Default.Class (Default (..))
 import qualified Data.Map.Strict as Map
 import GHC.Stack
 import qualified PlutusLedgerApi.V1 as PV1
+import Test.Cardano.Ledger.Alonzo.CostModel (freeV1CostModels)
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
   alwaysFailsHash,
   alwaysSucceedsHash,
-  freeCostModelV1,
   initUTxO,
   mkGenesisTxIn,
   mkTxDats,
@@ -922,7 +919,7 @@ scriptStakeCredSuceed pf = ScriptHashObj (alwaysSucceedsHash 2 pf)
 
 defaultPPs :: [PParamsField era]
 defaultPPs =
-  [ Costmdls . CostModels $ Map.singleton PlutusV1 freeCostModelV1
+  [ Costmdls freeV1CostModels
   , MaxValSize 1000000000
   , MaxTxExUnits $ ExUnits 1000000 1000000
   , MaxBlockExUnits $ ExUnits 1000000 1000000

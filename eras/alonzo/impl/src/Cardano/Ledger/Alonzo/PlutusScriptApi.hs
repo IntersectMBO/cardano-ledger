@@ -153,7 +153,7 @@ collectTwoPhaseScriptInputs ::
   Either [CollectError (EraCrypto era)] [(ShortByteString, Language, [Data era], ExUnits, CostModel)]
 collectTwoPhaseScriptInputs ei sysS pp tx utxo =
   let usedLanguages = Set.fromList [lang | (_, lang, _) <- neededAndConfirmedToBePlutus]
-      costModels = unCostModels $ pp ^. ppCostModelsL
+      costModels = costModelsValid $ pp ^. ppCostModelsL
       missingCMs = Set.filter (`Map.notMember` costModels) usedLanguages
    in case Set.lookupMin missingCMs of
         Just l -> Left [NoCostModel l]

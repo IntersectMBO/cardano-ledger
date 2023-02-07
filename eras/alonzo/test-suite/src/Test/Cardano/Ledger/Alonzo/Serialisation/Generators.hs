@@ -34,6 +34,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   Prices (..),
   Tag (..),
   mkCostModel,
+  mkCostModelsLenient,
  )
 import Cardano.Ledger.Alonzo.Scripts.Data (
   BinaryData,
@@ -57,7 +58,7 @@ import Cardano.Ledger.Alonzo.TxAuxData (
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Binary (toCBOR)
+import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash)
@@ -68,6 +69,7 @@ import Cardano.Ledger.Shelley.TxBody (DCert)
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val (Val)
 import Codec.CBOR.Term (Term (..))
+import Control.Monad (replicateM)
 import Control.State.Transition (PredicateFailure)
 import Data.Either (fromRight)
 import Data.Functor.Identity
@@ -79,9 +81,10 @@ import Data.Maybe (catMaybes)
 import qualified Data.Set as Set
 import Data.Text (pack)
 import Data.Typeable (Typeable)
+import Data.Word (Word8)
 import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.V1 as PV1
-import Test.Cardano.Ledger.Alonzo.AlonzoEraGen (costModelParamsCount)
+import Test.Cardano.Ledger.Alonzo.CostModel (costModelParamsCount)
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Binary.Twiddle
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
@@ -233,19 +236,67 @@ instance Arbitrary Language where
 instance Arbitrary Prices where
   arbitrary = Prices <$> arbitrary <*> arbitrary
 
-genCM :: Language -> Gen CostModel
-genCM lang = do
+genValidCostModel :: Language -> Gen CostModel
+genValidCostModel lang = do
   newParamValues <- (vectorOf (costModelParamsCount lang) (arbitrary :: Gen Integer))
   pure $ fromRight (error "Corrupt cost model") (mkCostModel lang newParamValues)
 
-genCostModel :: Language -> Gen (Language, CostModel)
-genCostModel lang = (,) lang <$> genCM lang
+genValidCostModelPair :: Language -> Gen (Language, CostModel)
+genValidCostModelPair lang = (,) lang <$> genValidCostModel lang
 
-instance Arbitrary CostModel where
-  arbitrary = snd <$> (elements nonNativeLanguages >>= genCostModel)
-
+-- | This Arbitrary instance assumes the inflexible deserialization
+-- scheme prior to version 9.
 instance Arbitrary CostModels where
-  arbitrary = CostModels . Map.fromList <$> (sublistOf nonNativeLanguages >>= mapM genCostModel)
+  arbitrary = do
+    langs <- sublistOf nonNativeLanguages
+    cms <- mapM genValidCostModelPair langs
+    pure $ CostModels (Map.fromList cms) mempty mempty
+
+listAtLeast :: Int -> Gen [Integer]
+listAtLeast x = do
+  y <- getNonNegative <$> arbitrary
+  replicateM (x + y) arbitrary
+
+genCostModelValues :: Language -> Gen (Word8, [Integer])
+genCostModelValues lang =
+  (lang',)
+    <$> oneof
+      [ listAtLeast (costModelParamsCount lang) -- Valid Cost Model for known language
+      , take tooFew <$> arbitrary -- Invalid Cost Model for known language
+      ]
+  where
+    lang' = fromIntegral (fromEnum lang)
+    tooFew = costModelParamsCount lang - 1
+
+genUnknownCostModelValues :: Gen (Word8, [Integer])
+genUnknownCostModelValues = do
+  lang <- chooseInt (firstInvalid, fromIntegral (maxBound :: Word8))
+  vs <- arbitrary
+  return (fromIntegral . fromEnum $ lang, vs)
+  where
+    firstInvalid = fromEnum (maxBound :: Language) + 1
+
+genUnknownCostModels :: Gen (Map Word8 [Integer])
+genUnknownCostModels = Map.fromList <$> listOf genUnknownCostModelValues
+
+genKnownCostModels :: Gen (Map Word8 [Integer])
+genKnownCostModels = do
+  langs <- sublistOf nonNativeLanguages
+  cms <- mapM genCostModelValues langs
+  return $ Map.fromList cms
+
+-- | This Arbitrary instance assumes the flexible deserialization
+-- scheme of 'CostModels' starting at version 9.
+newtype FlexibleCostModels = FlexibleCostModels CostModels
+  deriving (Show, Eq, Ord)
+  deriving newtype (ToCBOR, FromCBOR)
+
+instance Arbitrary FlexibleCostModels where
+  arbitrary = do
+    known <- genKnownCostModels
+    unknown <- genUnknownCostModels
+    let cms = known `Map.union` unknown
+    pure . FlexibleCostModels $ mkCostModelsLenient cms
 
 instance Arbitrary (AlonzoPParams Identity era) where
   arbitrary =

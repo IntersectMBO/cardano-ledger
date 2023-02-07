@@ -23,10 +23,7 @@ import Cardano.Ledger.Alonzo.Rules (
   FailureDescription (..),
   TagMismatchDescription (..),
  )
-import Cardano.Ledger.Alonzo.Scripts (
-  CostModels (..),
-  ExUnits (..),
- )
+import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
 import Cardano.Ledger.Alonzo.Scripts.Data (Data (..), hashData)
 import Cardano.Ledger.Alonzo.Tx (
@@ -71,11 +68,11 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import GHC.Stack
 import qualified PlutusLedgerApi.V1 as PV1
+import Test.Cardano.Ledger.Alonzo.CostModel (freeV1CostModels)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
   AlonzoBased (..),
   alwaysSucceedsHash,
-  freeCostModelV1,
   initUTxO,
   keyBy,
   mkGenesisTxIn,
@@ -954,7 +951,7 @@ extraneousKeyHash = hashKey . snd . mkKeyPair $ RawSeed 0 0 0 0 99
 
 defaultPPs :: [PParamsField era]
 defaultPPs =
-  [ Costmdls . CostModels $ Map.singleton PlutusV1 freeCostModelV1
+  [ Costmdls freeV1CostModels
   , MaxValSize 1000000000
   , MaxTxExUnits $ ExUnits 1000000 1000000
   , MaxBlockExUnits $ ExUnits 1000000 1000000

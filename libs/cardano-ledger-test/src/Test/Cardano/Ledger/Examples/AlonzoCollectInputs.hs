@@ -18,7 +18,6 @@ import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (..), collectTwoPhase
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoScript (..),
   CostModel,
-  CostModels (..),
   ExUnits (..),
  )
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
@@ -47,6 +46,7 @@ import qualified Data.Map.Strict as Map
 import Data.Text (Text)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import qualified PlutusLedgerApi.V1 as PV1
+import Test.Cardano.Ledger.Alonzo.CostModel (freeV1CostModels)
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
   freeCostModelV1,
@@ -199,7 +199,7 @@ testSystemStart = SystemStart $ posixSecondsToUTCTime 0
 
 defaultPPs :: [PParamsField era]
 defaultPPs =
-  [ Costmdls . CostModels $ Map.singleton PlutusV1 freeCostModelV1
+  [ Costmdls freeV1CostModels
   , MaxValSize 1000000000
   , MaxTxExUnits $ ExUnits 1000000 1000000
   , MaxBlockExUnits $ ExUnits 1000000 1000000

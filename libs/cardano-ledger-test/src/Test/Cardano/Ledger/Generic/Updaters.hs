@@ -15,7 +15,7 @@ module Test.Cardano.Ledger.Generic.Updaters where
 
 import Cardano.Crypto.DSIGN.Class ()
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.Scripts (CostModels (..))
+import Cardano.Ledger.Alonzo.Scripts (emptyCostModels)
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), hashScriptIntegrity)
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
@@ -42,7 +42,7 @@ import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Lens.Micro
-import Test.Cardano.Ledger.Alonzo.PlutusScripts (testingCostModelV1, testingCostModelV2)
+import Test.Cardano.Ledger.Alonzo.CostModel (freeV1CostModels, freeV1V2CostModels)
 import Test.Cardano.Ledger.Generic.Fields
 import Test.Cardano.Ledger.Generic.Proof
 
@@ -411,20 +411,12 @@ newScriptIntegrityHash (Alonzo _) pp ls rds dats =
 newScriptIntegrityHash _wit _pp _ls _rds _dats = SNothing
 
 defaultCostModels :: Proof era -> PParamsField era
-defaultCostModels (Shelley _) = Costmdls (CostModels mempty)
-defaultCostModels (Allegra _) = Costmdls (CostModels mempty)
-defaultCostModels (Mary _) = Costmdls (CostModels mempty)
-defaultCostModels (Alonzo _) = Costmdls . CostModels $ Map.singleton PlutusV1 testingCostModelV1
-defaultCostModels (Babbage _) =
-  Costmdls . CostModels . Map.fromList $
-    [ (PlutusV1, testingCostModelV1)
-    , (PlutusV2, testingCostModelV2)
-    ]
-defaultCostModels (Conway _) =
-  Costmdls . CostModels . Map.fromList $
-    [ (PlutusV1, testingCostModelV1)
-    , (PlutusV2, testingCostModelV2)
-    ]
+defaultCostModels (Shelley _) = Costmdls emptyCostModels
+defaultCostModels (Allegra _) = Costmdls emptyCostModels
+defaultCostModels (Mary _) = Costmdls emptyCostModels
+defaultCostModels (Alonzo _) = Costmdls freeV1CostModels
+defaultCostModels (Babbage _) = Costmdls freeV1V2CostModels
+defaultCostModels (Conway _) = Costmdls freeV1V2CostModels
 
 languages :: Proof era -> [Language]
 languages (Shelley _) = []

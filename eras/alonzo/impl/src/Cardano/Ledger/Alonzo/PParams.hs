@@ -61,6 +61,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   CostModels (..),
   ExUnits (..),
   Prices (..),
+  emptyCostModels,
   getCostModelLanguage,
   getCostModelParams,
   zipSemiExUnits,
@@ -482,7 +483,7 @@ emptyAlonzoPParams =
     , appMinPoolCost = mempty
     , -- new/updated for alonzo
       appCoinsPerUTxOWord = CoinPerWord (Coin 0)
-    , appCostModels = CostModels mempty
+    , appCostModels = emptyCostModels
     , appPrices = Prices minBound minBound
     , appMaxTxExUnits = OrdExUnits $ ExUnits 0 0
     , appMaxBlockExUnits = OrdExUnits $ ExUnits 0 0
@@ -637,7 +638,7 @@ getLanguageView pp lang =
         (serialize' version lang)
         costModelEncoding
   where
-    costModel = Map.lookup lang (unCostModels $ pp ^. ppCostModelsL)
+    costModel = Map.lookup lang (costModelsValid $ pp ^. ppCostModelsL)
     costModelEncoding = serializeEncoding' version $ maybe encodeNull encodeCostModel costModel
     version = BT.pvMajor $ pp ^. ppProtocolVersionL
 

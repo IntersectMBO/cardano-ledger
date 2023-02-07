@@ -22,12 +22,9 @@ import Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo (language)
 import Cardano.Ledger.Alonzo.Rules (vKeyLocked)
 import Cardano.Ledger.Alonzo.Scripts as Alonzo (
   AlonzoScript (..),
-  CostModel,
-  CostModels (..),
   ExUnits (..),
   Prices (..),
   isPlutusScript,
-  mkCostModel,
   pointWiseExUnits,
   txscriptfee,
  )
@@ -84,7 +81,6 @@ import Cardano.Ledger.UTxO (
  )
 import Cardano.Ledger.Val (Val (isAdaOnly, (<+>), (<×>)))
 import Control.Monad (replicateM)
-import Data.Either (fromRight)
 import qualified Data.List as List
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -95,13 +91,12 @@ import qualified Data.Sequence.Strict as Seq (fromList)
 import Data.Set as Set
 import Lens.Micro
 import Numeric.Natural (Natural)
-import qualified PlutusLedgerApi.V1 as PV1 (Data, ParamName)
-import qualified PlutusLedgerApi.V2 as PV2 (ParamName)
-import PlutusPrelude (enumerate)
+import qualified PlutusLedgerApi.V1 as PV1 (Data)
 import qualified PlutusTx as P (Data (..))
 import qualified PlutusTx as Plutus
 import System.Random
 import Test.Cardano.Ledger.AllegraEraGen (genValidityInterval)
+import Test.Cardano.Ledger.Alonzo.CostModel (freeV1CostModels)
 import Test.Cardano.Ledger.Alonzo.PlutusScripts (
   evenRedeemer2,
   evendata3,
@@ -195,21 +190,6 @@ genAlonzoMint startvalue = do
       count <- chooseEnum (1, 10)
       let assetname = AssetName "purple"
       pure (multiAssetFromList [(PolicyID shash, assetname, count)] <> startvalue, [script])
-
--- ================================================================
-
-costModelParamsCount :: Language -> Int
-costModelParamsCount lang = case lang of
-  PlutusV1 -> length (enumerate @PV1.ParamName)
-  PlutusV2 -> length (enumerate @PV2.ParamName)
-
--- | A cost model that sets everything as being free
-freeCostModel :: Language -> CostModel
-freeCostModel lang =
-  fromRight (error "freeCostModel is not well-formed") $
-    Alonzo.mkCostModel lang (replicate (costModelParamsCount lang) 0)
-
--- ================================================================
 
 genPair :: Gen a -> Gen b -> Gen (a, b)
 genPair x y = (,) <$> x <*> y
@@ -336,7 +316,7 @@ genAlonzoPParamsUpdate constants pp = do
   let alonzoUpgrade =
         UpgradeAlonzoPParams
           { uappCoinsPerUTxOWord = coinPerWord
-          , uappCostModels = SJust $ CostModels $ Map.singleton PlutusV1 (freeCostModel PlutusV1)
+          , uappCostModels = SJust freeV1CostModels
           , uappPrices = prices
           , uappMaxTxExUnits = maxTxExUnits
           , uappMaxBlockExUnits = maxBlockExUnits
@@ -370,7 +350,7 @@ genAlonzoPParams constants = do
   let alonzoUpgrade =
         UpgradeAlonzoPParams
           { uappCoinsPerUTxOWord = coinPerWord
-          , uappCostModels = CostModels $ Map.singleton PlutusV1 (freeCostModel PlutusV1)
+          , uappCostModels = freeV1CostModels
           , uappPrices = prices
           , uappMaxTxExUnits = maxTxExUnits
           , uappMaxBlockExUnits = maxBlockExUnits

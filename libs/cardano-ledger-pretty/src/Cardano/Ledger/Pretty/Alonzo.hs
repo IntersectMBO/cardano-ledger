@@ -16,7 +16,7 @@ import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoScript (..),
   CostModel,
-  CostModels (CostModels),
+  CostModels (..),
   ExUnits (ExUnits),
   Prices (..),
   Tag,
@@ -105,7 +105,7 @@ instance PrettyA CostModel where
   prettyA = ppCostModel
 
 ppCostModels :: CostModels -> PDoc
-ppCostModels (CostModels cms) = ppMap ppLanguage ppCostModel cms
+ppCostModels cms = ppMap ppLanguage ppCostModel (costModelsValid cms)
 
 ppPrices :: Prices -> PDoc
 ppPrices Prices {prMem, prSteps} =

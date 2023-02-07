@@ -283,6 +283,12 @@ in the naming of release branches.
   - Replaced `PredicateFailure (EraRule "UPEC" era)` with `UpecPredFailure era`
 - Changed the type of the first field of `ShelleyBbodyState` to  #3216
   `State (EraRule "LEDGERS" era)`
+- Starting in version 9, CostModels can now be deserialized from any map of Word8 values to lists of integers.
+  Only valid cost models are actually converted to evaluation contexts that can be used.
+  Errors and unrecognized language versions are stored in the CostModels type so that:
+    - they can accept cost models that they do not yet understand
+    - upon deserializing after a software update, new cost models are available from the prior serialization.
+  #3283
 
 ### Removed
 

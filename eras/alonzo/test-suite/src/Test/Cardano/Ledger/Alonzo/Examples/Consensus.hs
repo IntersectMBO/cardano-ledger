@@ -170,7 +170,7 @@ exampleAlonzoGenesis :: AlonzoGenesis
 exampleAlonzoGenesis =
   AlonzoGenesis
     { agCoinsPerUTxOWord = CoinPerWord $ Coin 1
-    , agCostModels = CostModels $ Map.fromList [(PlutusV1, testingCostModelV1)]
+    , agCostModels = CostModels (Map.fromList [(PlutusV1, testingCostModelV1)]) mempty mempty
     , agPrices = Prices (boundRational' 90) (boundRational' 91)
     , agMaxTxExUnits = ExUnits 123 123
     , agMaxBlockExUnits = ExUnits 223 223

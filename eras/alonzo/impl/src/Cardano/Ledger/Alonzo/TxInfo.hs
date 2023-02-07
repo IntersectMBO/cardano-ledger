@@ -75,7 +75,7 @@ import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoScript (..),
   ExUnits (..),
-  decodeCostModel,
+  decodeCostModelFailHard,
   encodeCostModel,
   getEvaluationContext,
   transProtocolVersion,
@@ -615,7 +615,7 @@ instance
     let lang = fromSLanguage $ isLanguage @l
     when (fromEnum lang /= fromIntegral tag) $ fail $ "Unexpected language: " <> show tag
     slang <- fromCBOR
-    costModel <- decodeCostModel lang
+    costModel <- decodeCostModelFailHard lang
     exUnits <- fromCBOR
     sbs <- fromCBOR
     pData <- fromCBOR
