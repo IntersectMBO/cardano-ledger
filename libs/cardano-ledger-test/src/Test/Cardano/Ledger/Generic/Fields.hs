@@ -61,7 +61,7 @@ import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert, transDCert)
-import Cardano.Ledger.Conway.Governance (GovernanceActionInfo (..), Vote)
+import Cardano.Ledger.Conway.Rules (GovernanceProcedure)
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..), hashKey)
@@ -125,8 +125,7 @@ data TxBodyField era
   | WppHash (StrictMaybe (ScriptIntegrityHash (EraCrypto era)))
   | AdHash (StrictMaybe (AuxiliaryDataHash (EraCrypto era)))
   | Txnetworkid (StrictMaybe Network)
-  | GovernanceActions (StrictSeq (GovernanceActionInfo era))
-  | Votes (StrictSeq (Vote era))
+  | GovernanceProcs (StrictSeq (GovernanceProcedure era))
   | ConwayCerts (StrictSeq (ConwayDCert (EraCrypto era)))
 
 pattern Inputs' :: [TxIn (EraCrypto era)] -> TxBodyField era -- Set
@@ -314,7 +313,7 @@ abstractTxBody (Alonzo _) (AlonzoTxBody inp col out cert wdrl fee vldt up req mn
   , AdHash adh
   , Txnetworkid net
   ]
-abstractTxBody (Conway _) (ConwayTxBody inp col ref out colret totcol cert wdrl fee vldt req mnt sih adh net ga votes) =
+abstractTxBody (Conway _) (ConwayTxBody inp col ref out colret totcol cert wdrl fee vldt req mnt sih adh net gp) =
   [ Inputs inp
   , Collateral col
   , RefInputs ref
@@ -330,8 +329,7 @@ abstractTxBody (Conway _) (ConwayTxBody inp col ref out colret totcol cert wdrl 
   , WppHash sih
   , AdHash adh
   , Txnetworkid net
-  , GovernanceActions ga
-  , Votes votes
+  , GovernanceProcs gp
   ]
 abstractTxBody (Babbage _) (BabbageTxBody inp col ref out colret totcol cert wdrl fee vldt up req mnt sih adh net) =
   [ Inputs inp

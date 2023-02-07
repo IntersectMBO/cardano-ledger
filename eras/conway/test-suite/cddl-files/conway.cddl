@@ -51,51 +51,94 @@ major_protocol_version = 1..next_major_protocol_version
 protocol_version = (major_protocol_version, uint)
 
 transaction_body =
-  { 0 : set<transaction_input>        ; inputs
+  { 0 : set<transaction_input>      ; inputs
   , 1 : [* transaction_output]
-  , 2 : coin                          ; fee
-  , ? 3 : uint                        ; time to live
+  , 2 : coin                        ; fee
+  , ? 3 : uint                      ; time to live
   , ? 4 : [* certificate]
   , ? 5 : withdrawals
   , ? 7 : auxiliary_data_hash
-  , ? 8 : uint                        ; validity interval start
+  , ? 8 : uint                      ; validity interval start
   , ? 9 : mint
   , ? 11 : script_data_hash
-  , ? 13 : set<transaction_input>     ; collateral inputs
+  , ? 13 : set<transaction_input>   ; collateral inputs
   , ? 14 : required_signers
   , ? 15 : network_id
-  , ? 16 : transaction_output         ; collateral return
-  , ? 17 : coin                       ; total collateral
-  , ? 18 : set<transaction_input>     ; reference inputs
-  , ? 19 : [* governance_action_info] ; New; governance actions
-  , ? 20 : [* vote]                   ; New; votes
+  , ? 16 : transaction_output       ; collateral return
+  , ? 17 : coin                     ; total collateral
+  , ? 18 : set<transaction_input>   ; reference inputs
+  , ? 19 : [* governance_procedure] ; New; governance procedures
   }
 
-governance_action_info =
-  [ deposit_amount    : coin
+governance_action_state =
+  [ votes             : {vote_info => vote}
+  , deposit_amount    : coin
   , reward_address    : $addr_keyhash
   , metadata_url      : url
   , metadata_hash     : $hash32
-  , governance_action : governance_action
+  , governance_action
+  , proposed_in       : epoch
   ]
 
-governance_action = parameter_change_action
-                  / hard_fork_initiation_action
-                  / treasury_withdrawals_action
+vote_info =
+  [ voter_role
+  , stake_credential
+  ]
 
-parameter_change_action = protocol_param_update
+governance_procedure = 
+  [ voting_procedure
+  // proposal_procedure
+  ]
 
-hard_fork_initiation_action = protocol_version
+voting_procedure =
+  ( 0
+  , governance_action_id
+  , voter_role
+  , stake_credential
+  , decision
+  , governance_metadata
+  )
 
-treasury_withdrawals_action = { $addr_keyhash => coin }
+proposal_procedure =
+  ( 1
+  , deposit : coin
+  , $addr_keyhash
+  , governance_action
+  , governance_metadata
+  )
+
+governance_metadata =
+  [ url
+  , $hash32
+  ]
+
+governance_action = 
+  [ parameter_change_action
+  // hard_fork_initiation_action
+  // treasury_withdrawals_action
+  // no_confidence
+  // new_committee
+  ]
+
+parameter_change_action = (0, protocol_param_update)
+
+hard_fork_initiation_action = (1, protocol_version)
+
+treasury_withdrawals_action = (2, { $addr_keyhash => coin })
+
+no_confidence = 3
+
+new_committee = (4, [* $addr_keyhash], rational)
+
+new_constitution = (5, $hash32)
 
 vote =
   [ governance_action_id : governance_action_id
-  , voter_role           : voter_role
-  , voter_role_key_hash  : $addr_keyhash
+  , voter_role
+  , voter_role_key_hash  : stake_credential
   , metadata_url         : url
   , metadata_hash        : $hash32
-  , decision             : decision
+  , decision
   ]
 
 ; constitutional committee - 0

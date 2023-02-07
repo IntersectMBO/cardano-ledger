@@ -127,7 +127,6 @@ testTxValidForLEDGER ::
   , Signal (EraRule "LEDGER" era) ~ Tx era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , PrettyA (PredicateFailure (EraRule "LEDGER" era))
-  , PrettyA (PParamsUpdate era)
   ) =>
   Proof era ->
   Box era ->

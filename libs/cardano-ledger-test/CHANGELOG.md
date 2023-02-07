@@ -1,5 +1,1 @@
-# Version history for cardano-ledger-test
-
-## 0.1.0.0 -- YYYY-mm-dd
-
-* First version. Released on an unsuspecting world.
+## This package is not versioned, so there's no need to update this changelog

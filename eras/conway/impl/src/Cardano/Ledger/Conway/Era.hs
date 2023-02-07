@@ -6,10 +6,11 @@ module Cardano.Ledger.Conway.Era (
   ConwayTALLY,
   ConwayNEWEPOCH,
   ConwayEPOCH,
-  ConwayENACTMENT,
+  ConwayENACT,
   ConwayUTXOS,
   ConwayTICKF,
   ConwayLEDGER,
+  ConwayRATIFY,
 ) where
 
 import Cardano.Ledger.Alonzo.Rules (AlonzoBBODY)
@@ -55,9 +56,9 @@ data ConwayEPOCH era
 
 type instance EraRule "EPOCH" (ConwayEra c) = ConwayEPOCH (ConwayEra c)
 
-data ConwayENACTMENT era
+data ConwayENACT era
 
-type instance EraRule "ENACTMENT" (ConwayEra c) = ConwayENACTMENT (ConwayEra c)
+type instance EraRule "ENACT" (ConwayEra c) = ConwayENACT (ConwayEra c)
 
 data ConwayUTXOS era
 
@@ -70,6 +71,10 @@ type instance EraRule "LEDGER" (ConwayEra c) = ConwayLEDGER (ConwayEra c)
 data ConwayTICKF era
 
 type instance EraRule "TICKF" (ConwayEra c) = ConwayTICKF (ConwayEra c)
+
+data ConwayRATIFY era
+
+type instance EraRule "RATIFY" (ConwayEra c) = ConwayRATIFY (ConwayEra c)
 
 -- Rules inherited from Babbage
 

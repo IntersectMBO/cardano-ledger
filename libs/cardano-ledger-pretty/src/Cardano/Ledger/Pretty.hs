@@ -182,6 +182,7 @@ import qualified Data.Hashable as Hashable
 import Data.IP (IPv4, IPv6)
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
+import Data.Ratio (Ratio, denominator, numerator)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set, toList)
 import Data.Text (Text)
@@ -1716,8 +1717,20 @@ instance PrettyA Bool where
 instance PrettyA Int where
   prettyA = ppInt
 
+instance PrettyA a => PrettyA (Ratio a) where
+  prettyA x = prettyA (numerator x) <> " % " <> prettyA (denominator x)
+
+instance PrettyA a => PrettyA (Set a) where
+  prettyA = ppSet prettyA
+
 instance (PrettyA x, PrettyA y) => PrettyA (x, y) where
   prettyA = ppPair prettyA prettyA
+
+instance PrettyA a => PrettyA (StrictSeq a) where
+  prettyA = ppStrictSeq prettyA
+
+instance PrettyA a => PrettyA (StrictMaybe a) where
+  prettyA = ppStrictMaybe prettyA
 
 ptrace :: PrettyA t => String -> t -> a -> a
 ptrace x y z = trace ("\n" ++ show (prettyA y) ++ "\n" ++ show x) z

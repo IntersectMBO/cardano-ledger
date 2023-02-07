@@ -483,7 +483,6 @@ sameBabbageTxBody
 
 sameConwayTxBody ::
   ( ConwayEraTxBody era
-  , PrettyA (PParamsUpdate era)
   , Reflect era
   ) =>
   Proof era ->
@@ -492,8 +491,8 @@ sameConwayTxBody ::
   [(String, Maybe PDoc)]
 sameConwayTxBody
   proof
-  (ConwayTxBody i1 cl1 ri1 o1 cr1 tc1 c1 (Withdrawals w1) f1 v1 r1 m1 s1 d1 n1 ga1 vs1)
-  (ConwayTxBody i2 cl2 ri2 o2 cr2 tc2 c2 (Withdrawals w2) f2 v2 r2 m2 s2 d2 n2 ga2 vs2) =
+  (ConwayTxBody i1 cl1 ri1 o1 cr1 tc1 c1 (Withdrawals w1) f1 v1 r1 m1 s1 d1 n1 ga1)
+  (ConwayTxBody i2 cl2 ri2 o2 cr2 tc2 c2 (Withdrawals w2) f2 v2 r2 m2 s2 d2 n2 ga2) =
     [ ("SpendInputs", eqVia (ppSet pcTxIn) i1 i2)
     , ("ColInputs", eqVia (ppSet pcTxIn) cl1 cl2)
     , ("RefInputs", eqVia (ppSet pcTxIn) ri1 ri2)
@@ -509,8 +508,7 @@ sameConwayTxBody
     , ("ScriptIntegrityHash", eqVia (ppStrictMaybe (trim . ppSafeHash)) s1 s2)
     , ("AuxDataHash", eqVia (ppStrictMaybe (\(AuxiliaryDataHash h) -> trim (ppSafeHash h))) d1 d2)
     , ("NetworkId", eqVia (ppStrictMaybe pcNetwork) n1 n2)
-    , ("GovernanceActions", eqVia (ppStrictSeq prettyA) ga1 ga2)
-    , ("Votes", eqVia (ppStrictSeq prettyA) vs1 vs2)
+    , ("GovernanceProcs", eqVia (ppStrictSeq prettyA) ga1 ga2)
     ]
 
 sameTxBody :: Reflect era => Proof era -> TxBody era -> TxBody era -> [(String, Maybe PDoc)]

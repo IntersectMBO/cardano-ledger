@@ -84,6 +84,13 @@ module Cardano.Ledger.Shelley.LedgerState (
   -- * Remove Bootstrap Redeem Addresses
   returnRedeemAddrsToReserves,
   updateNonMyopic,
+
+  -- * Lenses
+  esPpL,
+  esLStateL,
+  lsUTxOStateL,
+  utxosFeesL,
+  utxosGovernanceL,
 ) where
 
 import Cardano.Ledger.DPState

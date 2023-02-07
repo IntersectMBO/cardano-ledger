@@ -19,11 +19,10 @@ where
 
 import Cardano.Ledger.Babbage.Core as X
 import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert)
-import Cardano.Ledger.Conway.Governance (GovernanceActionInfo, Vote)
+import Cardano.Ledger.Conway.Rules.Tally (GovernanceProcedure)
 import Data.Sequence.Strict (StrictSeq)
 import Lens.Micro (Lens')
 
 class BabbageEraTxBody era => ConwayEraTxBody era where
-  govActionsTxBodyL :: Lens' (TxBody era) (StrictSeq (GovernanceActionInfo era))
-  votesTxBodyL :: Lens' (TxBody era) (StrictSeq (Vote era))
+  govProcsTxBodyL :: Lens' (TxBody era) (StrictSeq (GovernanceProcedure era))
   conwayCertsTxBodyL :: Lens' (TxBody era) (StrictSeq (ConwayDCert (EraCrypto era)))
