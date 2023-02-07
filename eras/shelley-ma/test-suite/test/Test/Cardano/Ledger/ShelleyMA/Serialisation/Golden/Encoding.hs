@@ -49,7 +49,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Lens.Micro
-import Test.Cardano.Ledger.Binary.RoundTrip (roundTripFailureExpectation)
+import Test.Cardano.Ledger.Binary.RoundTrip (roundTripFailureCborRangeExpectation)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Serialisation.GoldenUtils (
   ToTokens (..),
@@ -330,22 +330,6 @@ goldenEncodingTestsMary =
                   . TkInteger 19
               )
         )
-    , checkEncodingCBOR
-        (eraProtVerHigh @Mary)
-        "value_with_negative"
-        (MaryValue 0 $ MultiAsset $ Map.singleton policyID1 (Map.singleton (AssetName assetName1) (-19)))
-        ( T
-            ( TkListLen 2
-                . TkInteger 0
-                . TkMapLen 1
-            )
-            <> S policyID1
-            <> T
-              ( TkMapLen 1
-                  . TkBytes (SBS.fromShort assetName1)
-                  . TkInteger (-19)
-              )
-        )
     , scriptGoldenTest @Mary
     , metadataNoScriptsGoldenTest @Mary
     , metadataWithScriptsGoldenTest @Mary
@@ -427,7 +411,7 @@ goldenEncodingTestsMary =
 
 assetName32Bytes :: Assertion
 assetName32Bytes =
-  roundTripFailureExpectation (eraProtVerHigh @Mary) $
+  roundTripFailureCborRangeExpectation (eraProtVerHigh @Mary) (eraProtVerHigh @Mary) $
     AssetName "123456789-123456789-123456789-123"
 
 -- | Golden Tests for Allegra and Mary

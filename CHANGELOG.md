@@ -82,6 +82,7 @@ in the naming of release branches.
 
 ### Changed
 
+- Disallow decoding a 0-value `MultiAsset` in the de-serialization. #3241
 - Move `Wdrl` to `Core`. Also rename it to `Withdrawals`, while switching `Test.Cardano.Ledger.Generic.Fields.Withdrawals` to `Withdrawals'` #3239
 - Moved `PreviousEra` into `Era` type class. Added `Era` instance for a new data type
   `ByronEra`.

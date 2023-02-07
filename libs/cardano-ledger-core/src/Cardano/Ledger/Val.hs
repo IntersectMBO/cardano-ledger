@@ -13,11 +13,9 @@ module Cardano.Ledger.Val (
   invert,
   sumVal,
   adaOnly,
-  DecodeNonNegative (..),
 )
 where
 
-import Cardano.Ledger.Binary (Decoder, decodeWord64)
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Data.Coerce
@@ -129,16 +127,3 @@ instance Val DeltaCoin where
   modifyCompactCoin f (CompactDeltaCoin cc) =
     case f (CompactCoin cc) of
       CompactCoin cc' -> CompactDeltaCoin cc'
-
--- =============================================================
-
-class DecodeNonNegative v where
-  decodeNonNegative :: Decoder s v
-
-instance DecodeNonNegative Coin where
-  decodeNonNegative = Coin . fromIntegral <$> decodeWord64
-
-instance (DecodeNonNegative a, Compactible a, Show a) => DecodeNonNegative (CompactForm a) where
-  decodeNonNegative = do
-    v <- decodeNonNegative
-    maybe (fail $ "illegal value: " <> show v) pure (toCompact v)

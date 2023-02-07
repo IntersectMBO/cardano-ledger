@@ -42,6 +42,9 @@ cradle:
     - path: "eras/mary/impl/src"
       component: "lib:cardano-ledger-mary"
 
+    - path: "eras/mary/impl/test"
+      component: "cardano-ledger-mary:lib:testlib"
+
     - path: "eras/shelley-ma/impl/src"
       component: "lib:cardano-ledger-shelley-ma"
 

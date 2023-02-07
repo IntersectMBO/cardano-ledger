@@ -42,7 +42,7 @@ import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams ()
 import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (toExpr))
-import Cardano.Ledger.Val (DecodeNonNegative (..))
+
 import Control.DeepSeq (NFData (rnf))
 import Data.ByteString.Short (ShortByteString, pack)
 import Data.Maybe (fromMaybe)
@@ -142,7 +142,7 @@ instance (Era era, ToCBOR (CompactForm (Value era))) => ToCBOR (ShelleyTxOut era
       <> toCBOR coin
 
 instance
-  (Era era, DecodeNonNegative (Value era), Compactible (Value era), Show (Value era)) =>
+  (Era era, FromCBOR (CompactForm (Value era))) =>
   FromCBOR (ShelleyTxOut era)
   where
   fromCBOR = fromNotSharedCBOR
@@ -150,14 +150,14 @@ instance
 -- This instance does not do any sharing and is isomorphic to FromCBOR
 -- use the weakest constraint necessary
 instance
-  (Era era, Show (Value era), DecodeNonNegative (Value era), Compactible (Value era)) =>
+  (Era era, FromCBOR (CompactForm (Value era))) =>
   FromSharedCBOR (ShelleyTxOut era)
   where
   type Share (ShelleyTxOut era) = Interns (Credential 'Staking (EraCrypto era))
   fromSharedCBOR _ =
     decodeRecordNamed "ShelleyTxOut" (const 2) $ do
       cAddr <- fromCBOR
-      TxOutCompact cAddr <$> decodeNonNegative
+      TxOutCompact cAddr <$> fromCBOR
 
 -- a ShortByteString of the same length as the ADDRHASH
 -- used to calculate heapWords

@@ -17,11 +17,10 @@ import Control.State.Transition.Extended (PredicateFailure)
 import Data.Proxy (Proxy (Proxy))
 import Data.Typeable (typeRep)
 import Test.Cardano.Ledger.Binary.RoundTrip (
-  cborTrip,
   roundTripAnnRangeExpectation,
   roundTripCborExpectation,
-  roundTripExpectation,
  )
+import Test.Cardano.Ledger.Mary.ValueSpec ()
 import Test.Cardano.Ledger.Shelley.Generator.TxAuxData ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
@@ -52,7 +51,7 @@ eraRoundTripProps =
         roundTripAnnRangeExpectation @(TxAuxData e)
           (eraProtVerLow @e)
           (eraProtVerHigh @e)
-    , testProperty "Value" $ roundTripExpectation @(Value e) cborTrip
+    , testProperty "Value" $ roundTripCborExpectation @(Value e)
     , testProperty "Script" $
         roundTripAnnRangeExpectation @(Script e)
           (eraProtVerLow @e)

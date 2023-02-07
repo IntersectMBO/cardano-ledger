@@ -9,6 +9,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Ledger.Mary.Value (
@@ -28,6 +29,7 @@ module Cardano.Ledger.Mary.Value (
   flattenMultiAsset,
   valueFromList,
   ToExpr (..),
+  CompactValue (..),
 )
 where
 
@@ -43,6 +45,7 @@ import Cardano.Ledger.Binary (
   decodeInteger,
   decodeMap,
   decodeWord64,
+  ifDecoderVersionAtLeast,
   peekTokenType,
  )
 import Cardano.Ledger.Binary.Coders (
@@ -53,14 +56,15 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.Coin (Coin (..), CompactForm (..), integerToWord64)
+import Cardano.Ledger.Binary.Version (natVersion)
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..), decodePositiveCoin, integerToWord64, word64ToCoin)
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Crypto (Crypto (ADDRHASH))
 import Cardano.Ledger.Shelley.Scripts (ScriptHash (..))
 import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (..), trimExprViaShow)
-import Cardano.Ledger.Val (DecodeNonNegative (..), Val (..))
+import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..), deepseq, rwhnf)
-import Control.Monad (forM_)
+import Control.Monad (forM_, when)
 import Control.Monad.ST (runST)
 import qualified Data.ByteString.Base16 as BS16
 import qualified Data.ByteString.Short as SBS
@@ -147,7 +151,7 @@ instance Group (MultiAsset c) where
     MultiAsset (canonicalMap (canonicalMap ((-1 :: Integer) *)) m)
 
 instance Crypto c => FromCBOR (MultiAsset c) where
-  fromCBOR = decodeMultiAssetMaps decodeIntegerBounded64
+  fromCBOR = decodeMultiAssetMint
 
 instance Crypto c => ToCBOR (MultiAsset c) where
   toCBOR = encodeMultiAssetMaps
@@ -260,19 +264,29 @@ roundupBytesToWords b = quot (b + wordLength - 1) wordLength
 -- Maybe better to make this distinction in the TxOut de/serialization
 
 decodeValue ::
+  forall c s.
   Crypto c =>
   Decoder s (MaryValue c)
-decodeValue = do
-  tt <- peekTokenType
-  case tt of
-    TypeUInt -> inject . Coin <$> decodeInteger
-    TypeUInt64 -> inject . Coin <$> decodeInteger
-    TypeNInt -> inject . Coin <$> decodeInteger
-    TypeNInt64 -> inject . Coin <$> decodeInteger
-    TypeListLen -> decodeValuePair decodeInteger
-    TypeListLen64 -> decodeValuePair decodeInteger
-    TypeListLenIndef -> decodeValuePair decodeInteger
-    _ -> fail $ "Value: expected array or int, got " ++ show tt
+decodeValue =
+  ifDecoderVersionAtLeast
+    (natVersion @9)
+    (decode' conwayCoin)
+    (decode' preConwayCoin)
+  where
+    conwayCoin :: forall t. Decoder t Coin
+    conwayCoin = decodePositiveCoin
+    preConwayCoin :: forall t. Decoder t Coin
+    preConwayCoin = word64ToCoin <$> decodeWord64
+    decode' :: (forall t. Decoder t Coin) -> Decoder s (MaryValue c)
+    decode' decodeCoin = do
+      tt <- peekTokenType
+      case tt of
+        TypeUInt -> inject <$> decodeCoin
+        TypeUInt64 -> inject <$> decodeCoin
+        TypeListLen -> decodeValuePair (unCoin <$> decodeCoin)
+        TypeListLen64 -> decodeValuePair (unCoin <$> decodeCoin)
+        TypeListLenIndef -> decodeValuePair (unCoin <$> decodeCoin)
+        _ -> fail $ "Value: expected array or int, got " ++ show tt
 
 decodeValuePair ::
   Crypto c =>
@@ -290,28 +304,24 @@ encodeMultiAssetMaps ::
   Encoding
 encodeMultiAssetMaps (MultiAsset m) = toCBOR m
 
-decodeMultiAssetMaps ::
-  Crypto c =>
-  Decoder s Integer ->
-  Decoder s (MultiAsset c)
-decodeMultiAssetMaps decodeAmount =
-  MultiAsset . prune <$> decodeMap fromCBOR (decodeMap fromCBOR decodeAmount)
+-- | `MultiAsset` can be used in two different circumstances:
+-- during minting and in `MaryValue` while sending.
+-- In the latter case, MultiAsset amounts cannot be negative,
+-- while in minting negative indicates burning, and should not be zero.
+decodeMultiAssetMaps :: Crypto c => (forall t. Decoder t Integer) -> Decoder s (MultiAsset c)
+decodeMultiAssetMaps decodeAmount = do
+  ma <- decodeMap fromCBOR (decodeMap fromCBOR decodeAmount)
+  ifDecoderVersionAtLeast
+    (natVersion @9)
+    (MultiAsset ma <$ forM_ ma (\m -> when (Map.null m) $ fail "Empty Assets are not allowed"))
+    (pure $ MultiAsset $ prune ma)
 
-decodeNonNegativeInteger :: Decoder s Integer
-decodeNonNegativeInteger = fromIntegral <$> decodeWord64
-
-decodeNonNegativeValue ::
-  Crypto c =>
-  Decoder s (MaryValue c)
-decodeNonNegativeValue = do
-  tt <- peekTokenType
-  case tt of
-    TypeUInt -> inject . Coin <$> decodeNonNegativeInteger
-    TypeUInt64 -> inject . Coin <$> decodeNonNegativeInteger
-    TypeListLen -> decodeValuePair decodeNonNegativeInteger
-    TypeListLen64 -> decodeValuePair decodeNonNegativeInteger
-    TypeListLenIndef -> decodeValuePair decodeNonNegativeInteger
-    _ -> fail $ "MaryValue: expected array or int, got " ++ show tt
+decodeMultiAssetMint :: Crypto c => Decoder s (MultiAsset c)
+decodeMultiAssetMint =
+  ifDecoderVersionAtLeast
+    (natVersion @9)
+    (decodeMultiAssetMaps (decodeIntegerBounded64 True))
+    (decodeMultiAssetMaps (decodeIntegerBounded64 False))
 
 instance
   Crypto c =>
@@ -332,16 +342,14 @@ instance
   where
   fromCBOR = decodeValue
 
-instance
-  Crypto c =>
-  DecodeNonNegative (MaryValue c)
-  where
-  decodeNonNegative = decodeNonNegativeValue
-
 -- Note: we do not use `decodeInt64` from the cborg library here because the
 -- implementation contains "-- TODO FIXME: overflow"
-decodeIntegerBounded64 :: Decoder s Integer
-decodeIntegerBounded64 = do
+-- Also, the caller may control whether to allow values of 0 (zero),
+decodeIntegerBounded64 ::
+  -- | Don't allow 0 (zero)?
+  Bool ->
+  Decoder s Integer
+decodeIntegerBounded64 nonZero = do
   tt <- peekTokenType
   case tt of
     TypeUInt -> pure ()
@@ -350,8 +358,11 @@ decodeIntegerBounded64 = do
     TypeNInt64 -> pure ()
     _ -> fail "expected major type 0 or 1 when decoding mint field"
   x <- decodeInteger
-  if x >= minval && x <= maxval
-    then pure x
+  if minval <= x && x <= maxval
+    then
+      if x == 0 && nonZero
+        then fail "mint field cannot be 0 (zero)"
+        else pure x
     else
       fail $
         concat
@@ -381,7 +392,7 @@ instance Crypto c => ToCBOR (CompactValue c) where
 
 instance Crypto c => FromCBOR (CompactValue c) where
   fromCBOR = do
-    v <- decodeNonNegativeValue
+    v <- decodeValue
     case to v of
       Nothing ->
         fail

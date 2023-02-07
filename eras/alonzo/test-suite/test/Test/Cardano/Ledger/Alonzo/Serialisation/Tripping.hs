@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -17,6 +18,7 @@ import Cardano.Ledger.Alonzo.Rules (
 import Cardano.Ledger.Alonzo.Scripts (CostModels, eqAlonzoScriptRaw)
 import Cardano.Ledger.Alonzo.Scripts.Data (BinaryData, Data (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits)
+import Cardano.Ledger.Binary.Version (natVersion)
 import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (zipMemoRawType)
@@ -69,15 +71,19 @@ tests =
         testProperty "alonzo/TxBody twiddled" $
           roundTripAnnTwiddledProperty @(TxBody Alonzo) (zipMemoRawType (===))
     , testProperty "alonzo/CostModels" $
-        roundTripCborExpectation @CostModels
+        roundTripCborRangeExpectation @CostModels
+          (natVersion @2)
+          maxBound
     , testProperty "alonzo/PParams" $
-        roundTripCborExpectation @(PParams Alonzo)
-    , testProperty "alonzo/PParamsUpdate" $
-        roundTripCborExpectation @(PParamsUpdate Alonzo)
-    , testProperty "alonzo/AuxiliaryData" $
-        roundTripAnnRangeExpectation @(TxAuxData Alonzo)
+        roundTripCborRangeExpectation @(PParams Alonzo)
           (eraProtVerLow @Alonzo)
           (eraProtVerHigh @Alonzo)
+    , testProperty "alonzo/PParamsUpdate" $
+        roundTripCborRangeExpectation @(PParamsUpdate Alonzo)
+          (eraProtVerLow @Alonzo)
+          (eraProtVerHigh @Alonzo)
+    , testProperty "alonzo/AuxiliaryData" $
+        roundTripAnnExpectation @(TxAuxData Alonzo)
     , testProperty "alonzo/AlonzoUtxowPredFailure" $
         roundTripCborExpectation @(AlonzoUtxowPredFailure Alonzo)
     , testProperty "alonzo/AlonzoUtxoPredFailure" $

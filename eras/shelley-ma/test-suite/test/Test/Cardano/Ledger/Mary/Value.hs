@@ -1,5 +1,7 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE NoMonoLocalBinds #-}
@@ -30,6 +32,7 @@ import Data.CanonicalMaps (
  )
 import Data.Map.Strict (empty, singleton)
 import qualified Data.Map.Strict as Map
+import Test.Cardano.Ledger.Mary.ValueSpec ()
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
@@ -147,28 +150,6 @@ genAssetName = AssetName <$> genB
 
 genPolicyID :: Gen (PolicyID C_Crypto)
 genPolicyID = PolicyID <$> arbitrary
-
-genTriple :: Gen Integer -> Gen (PolicyID C_Crypto, AssetName, Integer)
-genTriple genAmount = (,,) <$> genPolicyID <*> genAssetName <*> genAmount
-
--- Most maps have 1 or 2 Assets
-genMap :: Gen Integer -> Gen [(PolicyID C_Crypto, AssetName, Integer)]
-genMap genAmount = do
-  len <- frequency [(1, pure 0), (4, pure 1), (5, pure 2), (2, pure 3), (1, pure 4)]
-  vectorOf len (genTriple genAmount)
-
-genValue :: Gen Integer -> Gen (MaryValue C_Crypto)
-genValue genAmount = valueFromList <$> genMap genAmount <*> genAmount
-
-instance Arbitrary (MaryValue C_Crypto) where
-  arbitrary = genValue (choose (-2, 10))
-  shrink _ = []
-
-instance Arbitrary AssetName where
-  arbitrary = genAssetName
-
-instance Arbitrary (PolicyID C_Crypto) where
-  arbitrary = genPolicyID
 
 -- ===========================================================================
 -- Tests that Val instances really align with the Albelian Group Supertype
