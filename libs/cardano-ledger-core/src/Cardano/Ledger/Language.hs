@@ -54,6 +54,15 @@ instance NoThunks Language
 
 instance NFData Language
 
+-- | Make a language form its `Enum` index.
+mkLanguageEnum :: Int -> Maybe Language
+mkLanguageEnum iLang
+  | minLang <= iLang && iLang <= maxLang = Just $ toEnum iLang
+  | otherwise = Nothing
+  where
+    minLang = fromEnum (minBound :: Language)
+    maxLang = fromEnum (maxBound :: Language)
+
 instance FromJSON Language where
   parseJSON = withText "Language" languageFromText
 

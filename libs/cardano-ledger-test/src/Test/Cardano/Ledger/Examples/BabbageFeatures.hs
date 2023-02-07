@@ -22,7 +22,7 @@ import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxosPredFailure (CollectErrors),
   AlonzoUtxowPredFailure (NonOutputSupplimentaryDatums),
  )
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (PlutusScript), CostModels (..), ExUnits (..))
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (PlutusScript), ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
 import Cardano.Ledger.Alonzo.Scripts.Data (Data (..), dataToBinaryData, hashData)
 import Cardano.Ledger.Alonzo.TxInfo (
@@ -70,11 +70,10 @@ import qualified Data.Set as Set
 import GHC.Stack
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
+import Test.Cardano.Ledger.Alonzo.CostModel (freeV1V2CostModels)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
   AlonzoBased (..),
-  freeCostModelV1,
-  freeCostModelV2,
   mkGenesisTxIn,
   mkTxDats,
   testUTXOW,
@@ -197,7 +196,7 @@ yetAnotherTxIn = mkGenesisTxIn 3
 
 defaultPPs :: [PParamsField era]
 defaultPPs =
-  [ Costmdls . CostModels $ Map.fromList [(PlutusV1, freeCostModelV1), (PlutusV2, freeCostModelV2)]
+  [ Costmdls freeV1V2CostModels
   , MaxValSize 1000000000
   , MaxTxExUnits $ ExUnits 1000000 1000000
   , MaxBlockExUnits $ ExUnits 1000000 1000000

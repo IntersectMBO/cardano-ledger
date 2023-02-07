@@ -11,7 +11,7 @@
 module Test.Cardano.Ledger.Generic.ApplyTx where
 
 import Cardano.Ledger.Alonzo.Language (Language (PlutusV1))
-import Cardano.Ledger.Alonzo.Scripts (CostModels (..), ExUnits (ExUnits))
+import Cardano.Ledger.Alonzo.Scripts (ExUnits (ExUnits))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag
 import Cardano.Ledger.Alonzo.Scripts.Data (Data (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
@@ -47,9 +47,9 @@ import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
+import Test.Cardano.Ledger.Alonzo.CostModel (freeV1CostModels)
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
-  freeCostModelV1,
   initUTxO,
   mkGenesisTxIn,
   mkTxDats,
@@ -88,7 +88,7 @@ import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo)
 
 defaultPPs :: [PParamsField era]
 defaultPPs =
-  [ Costmdls . CostModels $ Map.singleton PlutusV1 freeCostModelV1
+  [ Costmdls $ freeV1CostModels
   , MaxValSize 1000000000
   , MaxTxExUnits $ ExUnits 1000000 1000000
   , MaxBlockExUnits $ ExUnits 1000000 1000000

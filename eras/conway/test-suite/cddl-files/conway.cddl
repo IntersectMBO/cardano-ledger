@@ -366,10 +366,17 @@ ex_unit_prices =
 language = 0 ; Plutus v1
          / 1 ; Plutus v2
 
-costmdls =
-  { ? 0 : [ 166* int ] ; Plutus v1, only 166 integers are used, but more are accepted (and ignored)
-  , ? 1 : [ 175* int ] ; Plutus v2, only 175 integers are used, but more are accepted (and ignored)
-  }
+potential_languages = 0 .. 255
+
+; The format for costmdls is flexible enough to allow adding Plutus built-ins and language
+; versions in the future.
+;
+; To construct valid cost models, however, you must restrict to:
+;
+; { ? 0 : [ 166* int ] ; Plutus v1, only 166 integers are used, but more are accepted (and ignored)
+; , ? 1 : [ 175* int ] ; Plutus v2, only 175 integers are used, but more are accepted (and ignored)
+; }
+costmdls = { * potential_languages => [int] }
 
 transaction_metadatum =
     { * transaction_metadatum => transaction_metadatum }

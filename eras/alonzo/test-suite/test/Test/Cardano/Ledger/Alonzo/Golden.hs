@@ -47,7 +47,7 @@ import Data.Sequence.Strict
 import GHC.Stack (HasCallStack)
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1 (Data (..))
-import Test.Cardano.Ledger.Alonzo.AlonzoEraGen (freeCostModel)
+import Test.Cardano.Ledger.Alonzo.CostModel (freeV1V2CostModels)
 import Test.Cardano.Ledger.Alonzo.Examples.Consensus (ledgerExamplesAlonzo)
 import Test.Cardano.Ledger.Alonzo.Serialisation.CDDL (readDataFile)
 import Test.Cardano.Ledger.EraBuffet (StandardCrypto)
@@ -253,7 +253,7 @@ fromRightError errorMsg =
 exPP :: PParams Alonzo
 exPP =
   emptyPParams
-    & ppCostModelsL .~ CostModels (Map.fromList [(l, freeCostModel l) | l <- [PlutusV1, PlutusV2]])
+    & ppCostModelsL .~ freeV1V2CostModels
 
 exampleLangDepViewPV1 :: LangDepView
 exampleLangDepViewPV1 = LangDepView b1 b2
@@ -308,13 +308,20 @@ expectedGenesis =
   AlonzoGenesis
     { agCoinsPerUTxOWord = CoinPerWord $ Coin 34482
     , agPrices = Prices (fromJust $ boundRational 0.0577) (fromJust $ boundRational 0.0000721)
-    , agCostModels = CostModels $ Map.fromList [(PlutusV1, expectedCostModel), (PlutusV2, expectedCostModelV2)]
+    , agCostModels = expectedCostModels
     , agMaxTxExUnits = ExUnits 10000000 10000000000
     , agMaxBlockExUnits = ExUnits 50000000 40000000000
     , agMaxValSize = 5000
     , agCollateralPercentage = 150
     , agMaxCollateralInputs = 3
     }
+
+expectedCostModels :: CostModels
+expectedCostModels =
+  CostModels
+    (Map.fromList [(PlutusV1, expectedCostModel), (PlutusV2, expectedCostModelV2)])
+    mempty
+    mempty
 
 expectedCostModel :: CostModel
 expectedCostModel =

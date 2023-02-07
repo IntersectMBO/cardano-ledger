@@ -40,9 +40,10 @@ import Cardano.Ledger.Alonzo.PParams (
   getLanguageView,
  )
 import Cardano.Ledger.Alonzo.Scripts (
-  CostModels (..),
+  CostModels,
   ExUnits (..),
   Prices (..),
+  emptyCostModels,
  )
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra)
@@ -295,7 +296,7 @@ emptyBabbagePParams =
     , bppProtocolVersion = ProtVer (eraProtVerLow @era) 0
     , bppMinPoolCost = mempty
     , bppCoinsPerUTxOByte = CoinPerByte $ Coin 0
-    , bppCostModels = CostModels mempty
+    , bppCostModels = emptyCostModels
     , bppPrices = Prices minBound minBound
     , bppMaxTxExUnits = OrdExUnits $ ExUnits 0 0
     , bppMaxBlockExUnits = OrdExUnits $ ExUnits 0 0

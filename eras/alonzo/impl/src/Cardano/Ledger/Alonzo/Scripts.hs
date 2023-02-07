@@ -33,7 +33,10 @@ module Cardano.Ledger.Alonzo.Scripts (
 
   -- * Cost Model
   CostModel,
+  CostModelError (..),
+  emptyCostModels,
   mkCostModel,
+  mkCostModelsLenient,
   encodeCostModel,
   getCostModelLanguage,
   getCostModelParams,
@@ -41,8 +44,7 @@ module Cardano.Ledger.Alonzo.Scripts (
   ExUnits (ExUnits, exUnitsMem, exUnitsSteps, ..),
   ExUnits',
   Prices (..),
-  decodeCostModelMap,
-  decodeCostModel,
+  decodeCostModelFailHard,
   CostModels (..),
   PV1.CostModelApplyError (..),
 )
@@ -67,7 +69,6 @@ import Cardano.Ledger.Binary (
   cborError,
   decodeMapByKey,
   encodeFoldableAsDefLenList,
-  encodeMap,
   getVersion64,
   ifDecoderVersionAtLeast,
  )
@@ -85,6 +86,7 @@ import Cardano.Ledger.Binary.Version (natVersion)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Language (mkLanguageEnum)
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Scripts (nativeMultiSigTag)
 import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (..), defaultExprViaShow)
@@ -120,7 +122,7 @@ import Data.Typeable (Typeable)
 import Data.Vector as Vector (toList)
 import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
-import NoThunks.Class (InspectHeapNamed (..), NoThunks)
+import NoThunks.Class (InspectHeapNamed (..), NoThunks (..), allNoThunks)
 import Numeric.Natural (Natural)
 import PlutusCore.Evaluation.Machine.CostModelInterface (CostModelApplyWarn)
 import qualified PlutusLedgerApi.V1 as PV1 (
@@ -328,7 +330,7 @@ instance FromJSON CostModels where
   parseJSON = withObject "CostModels" $ \o -> do
     v1CostModels <- legacyParseCostModels o
     v2CostModels <- parseCostModels o
-    pure $ CostModels $ Map.fromList (v1CostModels ++ v2CostModels)
+    pure $ CostModels (Map.fromList (v1CostModels ++ v2CostModels)) mempty mempty
 
 -- | The costmodel parameters in Alonzo Genesis are represented as a map.  Plutus API does
 -- no longer require the map as a parameter to `mkEvaluationContext`, but the list of
@@ -560,12 +562,19 @@ getCostModelLanguage (CostModel lang _ _) = lang
 getCostModelParams :: CostModel -> [Integer]
 getCostModelParams (CostModel _ cm _) = cm
 
-decodeCostModelMap :: Decoder s (Map Language CostModel)
-decodeCostModelMap =
+decodeCostModelsCollectingErrors :: Decoder s CostModels
+decodeCostModelsCollectingErrors = mkCostModelsLenient <$> fromCBOR
+
+decodeCostModelsFailingOnError :: Decoder s CostModels
+decodeCostModelsFailingOnError =
+  CostModels <$> decodeMapByKey fromCBOR legacyDecodeCostModel <*> pure mempty <*> pure mempty
+
+decodeCostModels :: Decoder s CostModels
+decodeCostModels =
   ifDecoderVersionAtLeast
     (natVersion @9)
-    (decodeMapByKey fromCBOR decodeCostModel)
-    (decodeMapByKey fromCBOR legacyDecodeCostModel)
+    decodeCostModelsCollectingErrors
+    decodeCostModelsFailingOnError
 
 -- | Prior to version 9, each 'CostModel' was expected to be serialized as
 -- an array of integers of a specific length (depending on the version of Plutus).
@@ -600,8 +609,8 @@ legacyDecodeCostModel lang = do
     Left e -> fail $ show e
     Right cm -> pure cm
 
-decodeCostModel :: Language -> Decoder s CostModel
-decodeCostModel lang = do
+decodeCostModelFailHard :: Language -> Decoder s CostModel
+decodeCostModelFailHard lang = do
   checked <- mkCostModel lang <$> fromCBOR
   case checked of
     Left e -> fail $ show e
@@ -610,21 +619,94 @@ decodeCostModel lang = do
 getEvaluationContext :: CostModel -> PV1.EvaluationContext
 getEvaluationContext (CostModel _ _ ec) = ec
 
-newtype CostModels = CostModels {unCostModels :: Map Language CostModel}
+-- | See 'CostModels' for an explanation of how 'CostModelError' is used.
+newtype CostModelError = CostModelError PV1.CostModelApplyError
+  deriving stock (Show, Generic)
+
+instance Eq CostModelError where
+  CostModelError x1 == CostModelError x2 = show x1 == show x2
+
+instance Ord CostModelError where
+  CostModelError x1 <= CostModelError x2 = show x1 <= show x2
+
+instance ToExpr CostModelError where
+  toExpr (CostModelError x1) = toExpr (show x1)
+
+instance NoThunks PV1.CostModelApplyError where
+  showTypeOf _ = "CostModelApplyError"
+  wNoThunks _ctxt _error = allNoThunks []
+
+instance NoThunks CostModelError
+
+instance NFData PV1.CostModelApplyError where
+  rnf = rwhnf
+
+instance NFData CostModelError
+
+-- | For a known version of Plutus, attempting to construct a cost model with
+-- too few parameters (depending on the version) will result in an error.
+-- 'CostModelApplyError' exists to collect these errors in the 'CostModels' type.
+-- The 'CostModels' type itself needs to be flexible enough to accept any map
+-- of 'Word8' to '[Integer]', so that cost models can be placed in the protocol parameters
+-- ahead of changes to the Plutus evaluation context. In this way, serializing a cost model,
+-- updating software, and deserializing can result in errors going away.
+--
+-- Additionally, 'CostModels' needs to be able to store cost models for future version
+-- of Plutus, which we cannot yet even validate. These are stored in 'invalidCostModels'.
+data CostModels = CostModels
+  { costModelsValid :: !(Map Language CostModel)
+  , costModelsErrors :: !(Map Language CostModelError)
+  , costModelsUnknown :: !(Map Word8 [Integer])
+  }
   deriving stock (Eq, Show, Ord, Generic)
-  deriving newtype (NFData, NoThunks)
+
+emptyCostModels :: CostModels
+emptyCostModels = CostModels mempty mempty mempty
+
+-- | This function attempts to add a new cost model to a given 'CostModels'.
+-- If it is a valid cost model for a known version of Plutus, it is added to
+-- 'validCostModels'. If it is an invalid cost model for a known version of Plutus,
+-- the error is sorted in 'costModelErrors' and the cost model is stored in
+-- 'invalidCostModels'. Lastly, if the Plutus version is unknown,
+-- the cost model is also stored in 'invalidCostModels'.
+addRawCostModel :: Word8 -> [Integer] -> CostModels -> CostModels
+addRawCostModel langW8 cmIds (CostModels validCMs errs invalidCMs) =
+  case mkLanguageEnum (fromIntegral langW8) of
+    Just lang ->
+      case mkCostModel lang cmIds of
+        Right cm -> CostModels (Map.insert lang cm validCMs) errs invalidCMs
+        Left e -> CostModels validCMs (addError lang e errs) updatedInvalidCMs
+    Nothing -> CostModels validCMs errs updatedInvalidCMs
+  where
+    updatedInvalidCMs = Map.insert langW8 cmIds invalidCMs
+    addError l e es = Map.insert l (CostModelError e) es
+
+mkCostModelsLenient :: Map Word8 [Integer] -> CostModels
+mkCostModelsLenient = Map.foldrWithKey addRawCostModel (CostModels mempty mempty mempty)
+
+-- | Turn a 'CostModels' into a mapping of potential language versions and
+-- cost model values, with no distinction between valid and invalid cost models.
+-- This is used for serialization, so that judgements about validity can be made
+-- upon deserialization.
+flattenCostModel :: CostModels -> Map Word8 [Integer]
+flattenCostModel (CostModels validCMs _ invalidCMs) =
+  Map.foldrWithKey (\lang cm -> Map.insert (fromIntegral $ fromEnum lang) (cmMap cm)) invalidCMs validCMs
+
+instance NoThunks CostModels
+
+instance NFData CostModels
 
 instance FromCBOR CostModels where
-  fromCBOR = CostModels <$> decodeCostModelMap
+  fromCBOR = decodeCostModels
 
 instance ToCBOR CostModels where
-  toCBOR = encodeMap toCBOR encodeCostModel . unCostModels
+  toCBOR = toCBOR . flattenCostModel
 
 instance ToJSON CostModel where
   toJSON = toJSON . getCostModelParams
 
 instance ToJSON CostModels where
-  toJSON = toJSON . unCostModels
+  toJSON = toJSON . costModelsValid
 
 -- | Encoding for the `CostModel`. Important to note that it differs from `Encoding` used
 -- by `Cardano.Ledger.Alonzo.PParams.getLanguageView`
