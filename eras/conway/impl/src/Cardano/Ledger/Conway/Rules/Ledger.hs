@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
@@ -26,6 +27,8 @@ import Cardano.Ledger.Babbage.Rules (BabbageUTXOW, BabbageUtxowPredFailure)
 import Cardano.Ledger.Babbage.Tx (IsValid (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayLEDGER, ConwayTALLY)
@@ -58,6 +61,7 @@ import Cardano.Ledger.Shelley.Rules (
   UtxoEnv (..),
  )
 import Cardano.Ledger.UTxO (EraUTxO (..))
+import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (
   Assertion (..),
   AssertionViolation (..),
@@ -73,6 +77,7 @@ import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Generics (Generic (..))
 import Lens.Micro ((^.))
+import NoThunks.Class (NoThunks (..))
 
 data ConwayLedgerPredFailure era
   = ConwayUtxowFailure (PredicateFailure (EraRule "UTXOW" era))
@@ -95,6 +100,51 @@ deriving instance
   , Show (PredicateFailure (EraRule "TALLY" era))
   ) =>
   Show (ConwayLedgerPredFailure era)
+
+instance
+  ( Era era
+  , NoThunks (PredicateFailure (EraRule "UTXOW" era))
+  , NoThunks (PredicateFailure (EraRule "DELEGS" era))
+  , NoThunks (PredicateFailure (EraRule "TALLY" era))
+  ) =>
+  NoThunks (ConwayLedgerPredFailure era)
+
+instance
+  ( Era era
+  , NFData (PredicateFailure (EraRule "UTXOW" era))
+  , NFData (PredicateFailure (EraRule "DELEGS" era))
+  , NFData (PredicateFailure (EraRule "TALLY" era))
+  ) =>
+  NFData (ConwayLedgerPredFailure era)
+
+instance
+  ( Era era
+  , ToCBOR (PredicateFailure (EraRule "UTXOW" era))
+  , ToCBOR (PredicateFailure (EraRule "DELEGS" era))
+  , ToCBOR (PredicateFailure (EraRule "TALLY" era))
+  ) =>
+  ToCBOR (ConwayLedgerPredFailure era)
+  where
+  toCBOR =
+    encode . \case
+      ConwayUtxowFailure x -> Sum (ConwayUtxowFailure @era) 1 !> To x
+      ConwayDelegsFailure x -> Sum (ConwayDelegsFailure @era) 2 !> To x
+      ConwayTallyFailure x -> Sum (ConwayTallyFailure @era) 3 !> To x
+
+instance
+  ( Era era
+  , FromCBOR (PredicateFailure (EraRule "UTXOW" era))
+  , FromCBOR (PredicateFailure (EraRule "DELEGS" era))
+  , FromCBOR (PredicateFailure (EraRule "TALLY" era))
+  ) =>
+  FromCBOR (ConwayLedgerPredFailure era)
+  where
+  fromCBOR =
+    decode $ Summands "ConwayLedgerPredFailure" $ \case
+      1 -> SumD ConwayUtxowFailure <! From
+      2 -> SumD ConwayDelegsFailure <! From
+      3 -> SumD ConwayTallyFailure <! From
+      n -> Invalid n
 
 data ConwayLedgerEvent era
   = UtxowEvent (Event (EraRule "UTXOW" era))
