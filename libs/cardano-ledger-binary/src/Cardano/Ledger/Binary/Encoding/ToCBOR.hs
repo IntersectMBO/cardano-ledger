@@ -62,11 +62,6 @@ import Cardano.Crypto.DSIGN.Class (
   sizeSignKeyDSIGN,
   sizeVerKeyDSIGN,
  )
-import Cardano.Crypto.DSIGN.EcdsaSecp256k1 (EcdsaSecp256k1DSIGN)
-import Cardano.Crypto.DSIGN.Ed25519 (Ed25519DSIGN)
-import Cardano.Crypto.DSIGN.Ed448 (Ed448DSIGN)
-import Cardano.Crypto.DSIGN.Mock (MockDSIGN)
-import Cardano.Crypto.DSIGN.SchnorrSecp256k1 (SchnorrSecp256k1DSIGN)
 import Cardano.Crypto.Hash.Class (
   Hash (..),
   HashAlgorithm,
@@ -855,63 +850,15 @@ encodedSigDSIGNSizeExpr _proxy =
 -- DSIGN
 --------------------------------------------------------------------------------
 
-instance ToCBOR (VerKeyDSIGN EcdsaSecp256k1DSIGN) where
+instance DSIGNAlgorithm v => ToCBOR (VerKeyDSIGN v) where
   toCBOR = encodeVerKeyDSIGN
   encodedSizeExpr _ = encodedVerKeyDSIGNSizeExpr
 
-instance ToCBOR (SignKeyDSIGN EcdsaSecp256k1DSIGN) where
+instance DSIGNAlgorithm v => ToCBOR (SignKeyDSIGN v) where
   toCBOR = encodeSignKeyDSIGN
   encodedSizeExpr _ = encodedSignKeyDSIGNSizeExpr
 
-instance ToCBOR (SigDSIGN EcdsaSecp256k1DSIGN) where
-  toCBOR = encodeSigDSIGN
-  encodedSizeExpr _ = encodedSigDSIGNSizeExpr
-
-instance ToCBOR (VerKeyDSIGN MockDSIGN) where
-  toCBOR = encodeVerKeyDSIGN
-  encodedSizeExpr _ = encodedVerKeyDSIGNSizeExpr
-
-instance ToCBOR (SignKeyDSIGN MockDSIGN) where
-  toCBOR = encodeSignKeyDSIGN
-  encodedSizeExpr _ = encodedSignKeyDSIGNSizeExpr
-
-instance ToCBOR (SigDSIGN MockDSIGN) where
-  toCBOR = encodeSigDSIGN
-  encodedSizeExpr _ = encodedSigDSIGNSizeExpr
-
-instance ToCBOR (VerKeyDSIGN Ed25519DSIGN) where
-  toCBOR = encodeVerKeyDSIGN
-  encodedSizeExpr _ = encodedVerKeyDSIGNSizeExpr
-
-instance ToCBOR (SignKeyDSIGN Ed25519DSIGN) where
-  toCBOR = encodeSignKeyDSIGN
-  encodedSizeExpr _ = encodedSignKeyDSIGNSizeExpr
-
-instance ToCBOR (SigDSIGN Ed25519DSIGN) where
-  toCBOR = encodeSigDSIGN
-  encodedSizeExpr _ = encodedSigDSIGNSizeExpr
-
-instance ToCBOR (VerKeyDSIGN Ed448DSIGN) where
-  toCBOR = encodeVerKeyDSIGN
-  encodedSizeExpr _ = encodedVerKeyDSIGNSizeExpr
-
-instance ToCBOR (SignKeyDSIGN Ed448DSIGN) where
-  toCBOR = encodeSignKeyDSIGN
-  encodedSizeExpr _ = encodedSignKeyDSIGNSizeExpr
-
-instance ToCBOR (SigDSIGN Ed448DSIGN) where
-  toCBOR = encodeSigDSIGN
-  encodedSizeExpr _ = encodedSigDSIGNSizeExpr
-
-instance ToCBOR (VerKeyDSIGN SchnorrSecp256k1DSIGN) where
-  toCBOR = encodeVerKeyDSIGN
-  encodedSizeExpr _ = encodedVerKeyDSIGNSizeExpr
-
-instance ToCBOR (SignKeyDSIGN SchnorrSecp256k1DSIGN) where
-  toCBOR = encodeSignKeyDSIGN
-  encodedSizeExpr _ = encodedSignKeyDSIGNSizeExpr
-
-instance ToCBOR (SigDSIGN SchnorrSecp256k1DSIGN) where
+instance DSIGNAlgorithm v => ToCBOR (SigDSIGN v) where
   toCBOR = encodeSigDSIGN
   encodedSizeExpr _ = encodedSigDSIGNSizeExpr
 

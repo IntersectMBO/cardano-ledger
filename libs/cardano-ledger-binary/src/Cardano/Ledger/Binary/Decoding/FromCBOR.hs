@@ -18,11 +18,6 @@ module Cardano.Ledger.Binary.Decoding.FromCBOR (
 where
 
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm, SeedSizeDSIGN, SigDSIGN, SignKeyDSIGN, VerKeyDSIGN)
-import Cardano.Crypto.DSIGN.EcdsaSecp256k1 (EcdsaSecp256k1DSIGN)
-import Cardano.Crypto.DSIGN.Ed25519 (Ed25519DSIGN)
-import Cardano.Crypto.DSIGN.Ed448 (Ed448DSIGN)
-import Cardano.Crypto.DSIGN.Mock (MockDSIGN)
-import Cardano.Crypto.DSIGN.SchnorrSecp256k1 (SchnorrSecp256k1DSIGN)
 import Cardano.Crypto.Hash.Class (Hash, HashAlgorithm, hashFromBytes, sizeHash)
 import Cardano.Crypto.KES.Class (KESAlgorithm, OptimizedKESAlgorithm, SigKES, SignKeyKES, VerKeyKES)
 import Cardano.Crypto.KES.CompactSingle (CompactSingleKES)
@@ -397,49 +392,13 @@ instance FromCBOR UTCTime where
 -- DSIGN
 --------------------------------------------------------------------------------
 
-instance FromCBOR (VerKeyDSIGN EcdsaSecp256k1DSIGN) where
+instance DSIGNAlgorithm v => FromCBOR (VerKeyDSIGN v) where
   fromCBOR = decodeVerKeyDSIGN
 
-instance FromCBOR (SignKeyDSIGN EcdsaSecp256k1DSIGN) where
+instance DSIGNAlgorithm v => FromCBOR (SignKeyDSIGN v) where
   fromCBOR = decodeSignKeyDSIGN
 
-instance FromCBOR (SigDSIGN EcdsaSecp256k1DSIGN) where
-  fromCBOR = decodeSigDSIGN
-
-instance FromCBOR (VerKeyDSIGN MockDSIGN) where
-  fromCBOR = decodeVerKeyDSIGN
-
-instance FromCBOR (SignKeyDSIGN MockDSIGN) where
-  fromCBOR = decodeSignKeyDSIGN
-
-instance FromCBOR (SigDSIGN MockDSIGN) where
-  fromCBOR = decodeSigDSIGN
-
-instance FromCBOR (VerKeyDSIGN Ed25519DSIGN) where
-  fromCBOR = decodeVerKeyDSIGN
-
-instance FromCBOR (SignKeyDSIGN Ed25519DSIGN) where
-  fromCBOR = decodeSignKeyDSIGN
-
-instance FromCBOR (SigDSIGN Ed25519DSIGN) where
-  fromCBOR = decodeSigDSIGN
-
-instance FromCBOR (VerKeyDSIGN Ed448DSIGN) where
-  fromCBOR = decodeVerKeyDSIGN
-
-instance FromCBOR (SignKeyDSIGN Ed448DSIGN) where
-  fromCBOR = decodeSignKeyDSIGN
-
-instance FromCBOR (SigDSIGN Ed448DSIGN) where
-  fromCBOR = decodeSigDSIGN
-
-instance FromCBOR (VerKeyDSIGN SchnorrSecp256k1DSIGN) where
-  fromCBOR = decodeVerKeyDSIGN
-
-instance FromCBOR (SignKeyDSIGN SchnorrSecp256k1DSIGN) where
-  fromCBOR = decodeSignKeyDSIGN
-
-instance FromCBOR (SigDSIGN SchnorrSecp256k1DSIGN) where
+instance DSIGNAlgorithm v => FromCBOR (SigDSIGN v) where
   fromCBOR = decodeSigDSIGN
 
 --------------------------------------------------------------------------------
