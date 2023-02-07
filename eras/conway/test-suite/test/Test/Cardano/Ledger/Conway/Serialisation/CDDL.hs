@@ -12,6 +12,7 @@ import Cardano.Ledger.Alonzo.Tx (Data)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers)
 import Cardano.Ledger.Babbage.TxBody (Datum)
 import Cardano.Ledger.Conway (Conway)
+import Cardano.Ledger.Conway.Rules (GovernanceProcedure)
 import Cardano.Ledger.Core
 import qualified Data.ByteString.Lazy as BSL
 import Paths_cardano_ledger_conway_test (getDataFileName)
@@ -38,6 +39,7 @@ tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
     , cddlTest @CostModels (eraProtVerHigh @Conway) n "costmdls"
     , cddlAnnotatorTest @(Redeemers Conway) (eraProtVerHigh @Conway) n "[* redeemer]"
     , cddlAnnotatorTest @(Tx Conway) (eraProtVerHigh @Conway) n "transaction"
+    , cddlTest @(GovernanceProcedure Conway) (eraProtVerHigh @Conway) n "governance_procedure"
     ]
       <*> pure cddl
 

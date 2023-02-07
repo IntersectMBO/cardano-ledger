@@ -14,19 +14,22 @@
 module Cardano.Ledger.Conway.Governance (
   EraGovernance (..),
   ConwayTallyState (..),
-  GovernanceActionInfo (..),
+  EnactState (..),
+  RatifyState (..),
+  ConwayGovernance (..),
   GovernanceAction (..),
   GovernanceActionState (..),
   GovernanceActionIx (..),
   GovernanceActionId (..),
-  Vote (..),
   VoterRole (..),
   VoteDecision (..),
-  makeGovAction,
-)
-where
+  -- Lenses
+  cgTallyL,
+  cgRatifyL,
+  cgVoterRolesL,
+) where
 
-import Cardano.Ledger.BaseTypes (ProtVer (..))
+import Cardano.Ledger.BaseTypes (EpochNo (..), ProtVer (..), StrictMaybe)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
@@ -52,57 +55,25 @@ import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.SafeHash (SafeHash)
 import Cardano.Ledger.Shelley.Governance
-import Cardano.Ledger.Shelley.TxBody (Url)
 import Cardano.Ledger.TxIn (TxId)
 import Control.DeepSeq (NFData)
 import Data.ByteString (ByteString)
 import Data.Default.Class (Default (..))
 import Data.Map.Strict (Map)
+import Data.Sequence.Strict (StrictSeq)
+import Data.Set (Set)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
+import Lens.Micro (Lens', lens)
 import NoThunks.Class (NoThunks)
-
-data GovernanceActionInfo era = GovernanceActionInfo
-  { gaiDepositAmount :: !Coin
-  , gaiRewardAddress :: !(KeyHash 'Staking (EraCrypto era))
-  , gaiMetadataURL :: !Url
-  , gaiMetadataHash :: !(SafeHash (EraCrypto era) ByteString)
-  , gaiAction :: !(GovernanceAction era)
-  }
-  deriving (Generic)
-
-deriving instance EraPParams era => Eq (GovernanceActionInfo era)
-
-deriving instance EraPParams era => Show (GovernanceActionInfo era)
-
-instance EraPParams era => NoThunks (GovernanceActionInfo era)
-
-instance EraPParams era => NFData (GovernanceActionInfo era)
-
-instance EraPParams era => DecCBOR (GovernanceActionInfo era) where
-  decCBOR =
-    decode $
-      RecD GovernanceActionInfo
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-
-instance EraPParams era => EncCBOR (GovernanceActionInfo era) where
-  encCBOR GovernanceActionInfo {..} =
-    encode $
-      Rec GovernanceActionInfo
-        !> To gaiDepositAmount
-        !> To gaiRewardAddress
-        !> To gaiMetadataURL
-        !> To gaiMetadataHash
-        !> To gaiAction
 
 data GovernanceAction era
   = ParameterChange !(PParamsUpdate era)
   | HardForkInitiation !ProtVer
   | TreasuryWithdrawals !(Map (Credential 'Staking (EraCrypto era)) Coin)
+  | NoConfidence
+  | NewCommittee !(Set (KeyHash 'Voting (EraCrypto era))) !Rational
+  | NewConstitution !(SafeHash (EraCrypto era) ByteString)
   deriving (Generic)
 
 deriving instance EraPParams era => Eq (GovernanceAction era)
@@ -118,17 +89,23 @@ instance EraPParams era => DecCBOR (GovernanceAction era) where
     decode $
       Summands "GovernanceAction" dec
     where
-      dec 0 = ParameterChange <$> From
-      dec 1 = HardForkInitiation <$> From
-      dec 2 = TreasuryWithdrawals <$> From
+      dec 0 = SumD ParameterChange <! From
+      dec 1 = SumD HardForkInitiation <! From
+      dec 2 = SumD TreasuryWithdrawals <! From
+      dec 3 = SumD NoConfidence
+      dec 4 = SumD NewCommittee <! From <! From
+      dec 5 = SumD NewConstitution <! From
       dec k = Invalid k
 
 instance EraPParams era => EncCBOR (GovernanceAction era) where
   encCBOR x = encode (enc x)
     where
-      enc (ParameterChange ppup) = Sum (encCBOR ppup) 0
-      enc (HardForkInitiation pv) = Sum (encCBOR pv) 1
-      enc (TreasuryWithdrawals ws) = Sum (encCBOR ws) 2
+      enc (ParameterChange ppup) = Sum ParameterChange 0 !> To ppup
+      enc (HardForkInitiation pv) = Sum HardForkInitiation 1 !> To pv
+      enc (TreasuryWithdrawals ws) = Sum TreasuryWithdrawals 2 !> To ws
+      enc NoConfidence = Sum NoConfidence 3
+      enc (NewCommittee mems quorum) = Sum NewCommittee 4 !> To mems !> To quorum
+      enc (NewConstitution h) = Sum NewConstitution 5 !> To h
 
 newtype GovernanceActionIx = GovernanceActionIx Word64
   deriving (Generic, Eq, Ord, Show, Num, Enum)
@@ -158,53 +135,12 @@ instance NoThunks (GovernanceActionId c)
 
 instance Crypto c => NFData (GovernanceActionId c)
 
-data Vote era = Vote
-  { voteGovActionId :: !(GovernanceActionId (EraCrypto era))
-  , voteRole :: !VoterRole
-  , voteRoleKeyHash :: !(KeyHash 'Voting (EraCrypto era))
-  , voteMetadataURL :: !Url
-  , voteMetadataHash :: !(SafeHash (EraCrypto era) ByteString)
-  , voteDecision :: !VoteDecision
-  }
-  deriving (Generic, Eq, Show)
-
-instance NoThunks (Vote era)
-
-instance Crypto (EraCrypto era) => NFData (Vote era)
-
-instance
-  ( Era era
-  , Crypto (EraCrypto era)
-  ) =>
-  DecCBOR (Vote era)
-  where
-  decCBOR =
-    decode $
-      RecD Vote
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-
 instance Crypto c => EncCBOR (GovernanceActionId c) where
   encCBOR GovernanceActionId {..} =
     encode $
       Rec GovernanceActionId
         !> To gaidTxId
         !> To gaidGovActionIx
-
-instance Era era => EncCBOR (Vote era) where
-  encCBOR Vote {..} =
-    encode $
-      Rec (Vote @era)
-        !> To voteGovActionId
-        !> To voteRole
-        !> To voteRoleKeyHash
-        !> To voteMetadataURL
-        !> To voteMetadataHash
-        !> To voteDecision
 
 data VoterRole
   = ConstitutionalCommittee
@@ -239,10 +175,11 @@ instance EncCBOR VoteDecision where
   encCBOR = encodeEnum
 
 data GovernanceActionState era = GovernanceActionState
-  { gasVotes :: !(Map (VoterRole, KeyHash 'Voting (EraCrypto era)) (Vote era))
+  { gasVotes :: !(Map (VoterRole, Credential 'Voting (EraCrypto era)) VoteDecision)
   , gasDeposit :: !Coin
   , gasReturnAddr :: !(KeyHash 'Staking (EraCrypto era))
   , gasAction :: !(GovernanceAction era)
+  , gasProposedIn :: !EpochNo
   }
   deriving (Generic)
 
@@ -254,10 +191,30 @@ instance EraPParams era => NoThunks (GovernanceActionState era)
 
 instance EraPParams era => NFData (GovernanceActionState era)
 
-newtype ConwayTallyState era
-  = ConwayTallyState
-      (Map (GovernanceActionId (EraCrypto era)) (GovernanceActionState era))
-  deriving (Eq, Generic, NFData)
+instance (Era era, EraPParams era) => DecCBOR (GovernanceActionState era) where
+  decCBOR =
+    decode $
+      RecD GovernanceActionState
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+
+instance (Era era, EraPParams era) => EncCBOR (GovernanceActionState era) where
+  encCBOR GovernanceActionState {..} =
+    encode $
+      Rec GovernanceActionState
+        !> To gasVotes
+        !> To gasDeposit
+        !> To gasReturnAddr
+        !> To gasAction
+        !> To gasProposedIn
+
+newtype ConwayTallyState era = ConwayTallyState {unConwayTallyState :: Map (GovernanceActionId (EraCrypto era)) (GovernanceActionState era)}
+  deriving (Generic, NFData)
+
+deriving instance EraPParams era => Eq (ConwayTallyState era)
 
 deriving instance EraPParams era => Show (ConwayTallyState era)
 
@@ -266,14 +223,13 @@ instance EraPParams era => NoThunks (ConwayTallyState era)
 instance Default (ConwayTallyState era) where
   def = ConwayTallyState mempty
 
-makeGovAction :: GovernanceActionInfo era -> GovernanceActionState era
-makeGovAction GovernanceActionInfo {..} =
-  GovernanceActionState
-    { gasVotes = mempty
-    , gasDeposit = gaiDepositAmount
-    , gasReturnAddr = gaiRewardAddress
-    , gasAction = gaiAction
-    }
+data EnactState era = EnactState
+  { ensCC :: !(StrictMaybe (Set (KeyHash 'Voting (EraCrypto era)), Rational))
+  , ensConstitution :: !(SafeHash (EraCrypto era) ByteString)
+  , ensProtVer :: !ProtVer
+  , ensPParams :: !(PParams era)
+  }
+  deriving (Generic)
 
 instance Era era => EncCBOR (ConwayTallyState era) where
   encCBOR _ =
@@ -294,6 +250,111 @@ instance Era era => ToCBOR (ConwayTallyState era) where
 instance Era era => FromCBOR (ConwayTallyState era) where
   fromCBOR = fromEraCBOR @era
 
-instance Crypto c => EraGovernance (ConwayEra c) where
-  type GovernanceState (ConwayEra c) = ConwayTallyState (ConwayEra c)
-  emptyGovernanceState = ConwayTallyState mempty
+deriving instance Eq (PParams era) => Eq (EnactState era)
+
+deriving instance Show (PParams era) => Show (EnactState era)
+
+instance (Era era, EraPParams era) => Default (EnactState era) where
+  def =
+    EnactState
+      def
+      def
+      (ProtVer (eraProtVerLow @era) 0)
+      def
+
+instance (Era era, EraPParams era) => DecCBOR (EnactState era) where
+  decCBOR =
+    decode $
+      RecD EnactState
+        <! From
+        <! From
+        <! From
+        <! From
+
+instance (Era era, EraPParams era) => EncCBOR (EnactState era) where
+  encCBOR EnactState {..} =
+    encode $
+      Rec EnactState
+        !> To ensCC
+        !> To ensConstitution
+        !> To ensProtVer
+        !> To ensPParams
+
+instance EraPParams era => NFData (EnactState era)
+
+instance EraPParams era => NoThunks (EnactState era)
+
+data RatifyState era = RatifyState
+  { rsES :: !(EnactState era)
+  , rsFuture ::
+      !( StrictSeq
+          (GovernanceActionId (EraCrypto era), GovernanceActionState era)
+       )
+  }
+  deriving (Generic, Eq, Show)
+
+instance EraPParams era => Default (RatifyState era)
+
+instance (Era era, EraPParams era) => DecCBOR (RatifyState era) where
+  decCBOR =
+    decode $
+      RecD RatifyState
+        <! From
+        <! From
+
+instance (Era era, EraPParams era) => EncCBOR (RatifyState era) where
+  encCBOR RatifyState {..} =
+    encode $
+      Rec RatifyState
+        !> To rsES
+        !> To rsFuture
+
+instance EraPParams era => NFData (RatifyState era)
+
+instance EraPParams era => NoThunks (RatifyState era)
+
+data ConwayGovernance era = ConwayGovernance
+  { cgTally :: !(ConwayTallyState era)
+  , cgRatify :: !(RatifyState era)
+  , cgVoterRoles :: !(Map (Credential 'Voting (EraCrypto era)) VoterRole)
+  }
+  deriving (Generic, Eq, Show)
+
+cgTallyL :: Lens' (ConwayGovernance era) (ConwayTallyState era)
+cgTallyL = lens cgTally (\x y -> x {cgTally = y})
+
+cgRatifyL :: Lens' (ConwayGovernance era) (RatifyState era)
+cgRatifyL = lens cgRatify (\x y -> x {cgRatify = y})
+
+cgVoterRolesL :: Lens' (ConwayGovernance era) (Map (Credential 'Voting (EraCrypto era)) VoterRole)
+cgVoterRolesL = lens cgVoterRoles (\x y -> x {cgVoterRoles = y})
+
+instance EraPParams era => DecCBOR (ConwayGovernance era) where
+  decCBOR =
+    decode $
+      RecD ConwayGovernance
+        <! From
+        <! From
+        <! From
+
+instance EraPParams era => EncCBOR (ConwayGovernance era) where
+  encCBOR ConwayGovernance {..} =
+    encode $
+      Rec ConwayGovernance
+        !> To cgTally
+        !> To cgRatify
+        !> To cgVoterRoles
+
+instance EraPParams era => Default (ConwayGovernance era)
+
+instance EraPParams era => NFData (ConwayGovernance era)
+
+instance EraPParams era => NoThunks (ConwayGovernance era)
+
+instance
+  ( Crypto c
+  , EraPParams (ConwayEra c)
+  ) =>
+  EraGovernance (ConwayEra c)
+  where
+  type GovernanceState (ConwayEra c) = ConwayGovernance (ConwayEra c)

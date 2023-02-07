@@ -28,7 +28,6 @@ import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.Pretty (
   PDoc,
-  PrettyA,
   ppInt,
   ppList,
   ppMap,
@@ -237,7 +236,7 @@ pcSmallUTxO proof u txs = ppMap pcTxIn (shortTxOut proof) m
 
 raiseMockError ::
   forall era.
-  (Reflect era, PrettyA (PParamsUpdate era)) =>
+  Reflect era =>
   Word64 ->
   SlotNo ->
   EpochState era ->
@@ -340,7 +339,7 @@ badScripts proof xs = Fold.foldl' (\s mcf -> Set.union s (getw proof mcf)) Set.e
         ) = set
     getw _ _ = Set.empty
 
-showBlock :: forall era. (Reflect era, PrettyA (PParamsUpdate era)) => MUtxo era -> [Tx era] -> PDoc
+showBlock :: forall era. Reflect era => MUtxo era -> [Tx era] -> PDoc
 showBlock u txs = ppList pppair (zip txs [0 ..])
   where
     pppair (tx, n) =
@@ -361,7 +360,7 @@ shortTxOut proof out = case txoutFields proof out of
     hsep ["Out", parens $ hsep ["Addr", pcCredential pay], pcCoin (out ^. coinTxOutL)]
   _ -> error "Bootstrap Address in shortTxOut"
 
-smartTxBody :: (Reflect era, PrettyA (PParamsUpdate era)) => Proof era -> MUtxo era -> TxBody era -> PDoc
+smartTxBody :: Reflect era => Proof era -> MUtxo era -> TxBody era -> PDoc
 smartTxBody proof u txbody = ppRecord "TxBody" pairs
   where
     fields = abstractTxBody proof txbody
@@ -393,7 +392,6 @@ data Gen1 era = Gen1 (Vector (StrictSeq (Tx era), SlotNo)) (GenState era)
 instance
   ( STS (MOCKCHAIN era)
   , Reflect era
-  , PrettyA (PParamsUpdate era)
   ) =>
   HasTrace (MOCKCHAIN era) (Gen1 era)
   where

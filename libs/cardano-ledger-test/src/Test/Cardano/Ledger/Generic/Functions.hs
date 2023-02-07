@@ -34,7 +34,12 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Governance (ConwayTallyState (..), GovernanceActionState (..))
+import Cardano.Ledger.Conway.Governance (
+  ConwayGovernance (..),
+  ConwayTallyState (..),
+  GovernanceActionState (..),
+  RatifyState (..),
+ )
 import Cardano.Ledger.Credential (Credential, StakeReference (..))
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.AdaPots (AdaPots (..), totalAdaPotsES)
@@ -423,6 +428,12 @@ governanceStateTotalAda = case reify @era of
   Alonzo _ -> totalAda
   Babbage _ -> totalAda
   Conway _ -> totalAda
+
+instance TotalAda (RatifyState era) where
+  totalAda (RatifyState _ as) = foldMap (gasDeposit . snd) as
+
+instance TotalAda (ConwayGovernance era) where
+  totalAda (ConwayGovernance ts rs _) = totalAda ts <+> totalAda rs
 
 instance Reflect era => TotalAda (LedgerState era) where
   totalAda (LedgerState utxos dps) = totalAda utxos <+> totalAda dps

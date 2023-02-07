@@ -77,10 +77,10 @@ Changes recorded below are for all of the package versions in the list:
 - Added `ConwayDCert` data type which is similar to `DCert` but does not have
   MIR certificates #3176
 - Added CDDL files for Conway era #3176
-- Added `Vote`, `VoterRole`, `VoteDecision`, `GovernanceActionInfo` and
+- Added `VoterRole`, `VoteDecision` and
   `GovernanceAction` data types #3176
-- Added `ctbrVotes` and `ctbrGovActions` fields to `ConwayTxBodyRaw` and
-  corresponding fields to `ConwayTxBody` #3176
+- Added `ctbrGovProcedure` field to `ConwayTxBodyRaw` and
+  corresponding field to `ConwayTxBody` #3176
 - Added `ToCBOR` and `FromCBOR` instances to `ConwayTxBody` and all its
   constituent data types #3176
 - Added `ConwayUTXOS` rule #3176
@@ -90,7 +90,8 @@ Changes recorded below are for all of the package versions in the list:
 - Added `updateTxBodyG` getter to EraTxBody #3216
 - Added new rules to the Conway era: #3216
   - `TALLY` (new)
-  - `ENACTMENT` (new)
+  - `ENACT` (new)
+  - `RATIFY` (new)
   - `NEWEPOCH`
   - `EPOCH`
   - `LEDGER`
@@ -102,8 +103,10 @@ Changes recorded below are for all of the package versions in the list:
 - Added new governance related data types to Conway: #3216
   - `GovernanceActionState`
   - `GovernanceProcedure`
+  - `GovernanceMetadata`
   - `TallyEnv`
-
+  - `RatifyEnv`
+  - `RatifySignal`
 
 ### Changed
 

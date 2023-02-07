@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               cardano-ledger-conway
-version:            1.0.0.0
+version:            1.1.0.0
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -38,10 +38,11 @@ library
     other-modules:
         Cardano.Ledger.Conway.Era
         Cardano.Ledger.Conway.UTxO
-        Cardano.Ledger.Conway.Rules.Enactment
+        Cardano.Ledger.Conway.Rules.Enact
         Cardano.Ledger.Conway.Rules.Epoch
         Cardano.Ledger.Conway.Rules.Ledger
         Cardano.Ledger.Conway.Rules.NewEpoch
+        Cardano.Ledger.Conway.Rules.Ratify
         Cardano.Ledger.Conway.Rules.Tally
         Cardano.Ledger.Conway.Rules.Tickf
         Cardano.Ledger.Conway.Rules.Utxos
@@ -63,7 +64,7 @@ library
         cardano-ledger-babbage >=1.0,
         cardano-ledger-core >=1.0,
         cardano-ledger-mary >=1.0,
-        cardano-ledger-shelley >=1.0,
+        cardano-ledger-shelley >=1.0.1,
         cardano-strict-containers,
         containers,
         data-default-class,
@@ -72,4 +73,6 @@ library
         nothunks,
         set-algebra,
         small-steps,
-        validation-selective
+        transformers,
+        validation-selective,
+        cardano-strict-containers

@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -25,9 +26,10 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Coin (toDeltaCoin)
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Era (ConwayENACTMENT, ConwayEPOCH, ConwayNEWEPOCH)
-import Cardano.Ledger.Conway.Rules.Enactment ()
+import Cardano.Ledger.Conway.Era (ConwayEPOCH, ConwayNEWEPOCH, ConwayRATIFY)
+import Cardano.Ledger.Conway.Governance (ConwayGovernance (..), ConwayTallyState (..), cgTallyL)
 import Cardano.Ledger.Conway.Rules.Epoch (ConwayEpochEvent)
+import Cardano.Ledger.Conway.Rules.Ratify (RatifyEnv (..), RatifySignal (..), RatifyState (..))
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Keys (KeyRole (..))
@@ -46,26 +48,25 @@ import Cardano.Ledger.Slot (EpochNo (EpochNo))
 import qualified Cardano.Ledger.Val as Val
 import Control.State.Transition
 import Data.Default.Class (Default (..))
+import Data.Foldable (Foldable (..))
 import qualified Data.Map.Strict as Map
+import qualified Data.Sequence.Strict as Seq
 import Data.Set (Set)
-import Data.Void (Void)
-import Lens.Micro ((^.))
+import Data.Void (Void, absurd)
+import Lens.Micro ((&), (.~), (^.))
 
 data ConwayNewEpochPredFailure era
   = EpochFailure !(PredicateFailure (EraRule "EPOCH" era)) -- Subtransition Failures
   | CorruptRewardUpdate
       !(RewardUpdate (EraCrypto era)) -- The reward update which violates an invariant
-  | EnactmentFailure !(PredicateFailure (EraRule "ENACTMENT" era))
 
 deriving instance
   ( Eq (PredicateFailure (EraRule "EPOCH" era))
-  , Eq (PredicateFailure (EraRule "ENACTMENT" era))
   ) =>
   Eq (ConwayNewEpochPredFailure era)
 
 deriving instance
   ( Show (PredicateFailure (EraRule "EPOCH" era))
-  , Show (PredicateFailure (EraRule "ENACTMENT" era))
   ) =>
   Show (ConwayNewEpochPredFailure era)
 
@@ -78,22 +79,22 @@ data ConwayNewEpochEvent era
   | TotalRewardEvent !EpochNo !(Map.Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))))
   | EpochEvent !(Event (EraRule "EPOCH" era))
   | TotalAdaPotsEvent !AdaPots
-  | EnactmentEvent !(Event (EraRule "ENACTMENT" era))
 
 instance
   ( EraTxOut era
   , EraGovernance era
   , Embed (EraRule "EPOCH" era) (ConwayNEWEPOCH era)
-  , Embed (EraRule "ENACTMENT" era) (ConwayNEWEPOCH era)
   , Event (EraRule "RUPD" era) ~ RupdEvent (EraCrypto era)
   , Environment (EraRule "EPOCH" era) ~ ()
   , State (EraRule "EPOCH" era) ~ EpochState era
   , Signal (EraRule "EPOCH" era) ~ EpochNo
   , Default (EpochState era)
-  , Signal (EraRule "ENACTMENT" era) ~ EpochNo
-  , Environment (EraRule "ENACTMENT" era) ~ ()
-  , State (EraRule "ENACTMENT" era) ~ EpochState era
   , Default (StashedAVVMAddresses era)
+  , Embed (EraRule "RATIFY" era) (ConwayNEWEPOCH era)
+  , Signal (EraRule "RATIFY" era) ~ RatifySignal era
+  , State (EraRule "RATIFY" era) ~ RatifyState era
+  , Environment (EraRule "RATIFY" era) ~ RatifyEnv era
+  , GovernanceState era ~ ConwayGovernance era
   ) =>
   STS (ConwayNEWEPOCH era)
   where
@@ -120,13 +121,15 @@ instance
 
 instance
   ( EraGovernance era
-  , PredicateFailure (EraRule "ENACTMENT" era) ~ Void
-  , Event (EraRule "ENACTMENT" era) ~ Void
+  , STS (ConwayRATIFY era)
+  , BaseM (ConwayRATIFY era) ~ ShelleyBase
+  , Event (ConwayRATIFY era) ~ Void
+  , PredicateFailure (ConwayRATIFY era) ~ Void
   ) =>
-  Embed (ConwayENACTMENT era) (ConwayNEWEPOCH era)
+  Embed (ConwayRATIFY era) (ConwayNEWEPOCH era)
   where
-  wrapEvent = EnactmentEvent
-  wrapFailed = EnactmentFailure
+  wrapEvent = absurd
+  wrapFailed = absurd
 
 newEpochTransition ::
   forall era.
@@ -139,16 +142,17 @@ newEpochTransition ::
   , Default (PParams era)
   , Default (StashedAVVMAddresses era)
   , Event (EraRule "RUPD" era) ~ RupdEvent (EraCrypto era)
-  , Embed (EraRule "ENACTMENT" era) (ConwayNEWEPOCH era)
-  , State (EraRule "ENACTMENT" era) ~ EpochState era
-  , Environment (EraRule "ENACTMENT" era) ~ ()
-  , Signal (EraRule "ENACTMENT" era) ~ EpochNo
+  , Embed (EraRule "RATIFY" era) (ConwayNEWEPOCH era)
+  , Signal (EraRule "RATIFY" era) ~ RatifySignal era
+  , State (EraRule "RATIFY" era) ~ RatifyState era
+  , Environment (EraRule "RATIFY" era) ~ RatifyEnv era
+  , GovernanceState era ~ ConwayGovernance era
   ) =>
   TransitionRule (ConwayNEWEPOCH era)
 newEpochTransition = do
   TRC
     ( _
-      , src@(NewEpochState (EpochNo eL) _ bcur es ru _pd _)
+      , src@(NewEpochState (EpochNo eL) _ bcur eps ru _pd _)
       , eNo@(EpochNo e)
       ) <-
     judgmentContext
@@ -156,14 +160,30 @@ newEpochTransition = do
     then pure src
     else do
       es' <- case ru of
-        SNothing -> pure es
+        SNothing -> pure eps
         SJust p@(Pulsing _ _) -> do
           (ans, event) <- liftSTS (completeRupd p)
           tellReward (DeltaRewardEvent (RupdEvent eNo event))
-          updateRewards es eNo ans
-        SJust (Complete ru') -> updateRewards es eNo ru'
+          updateRewards eps eNo ans
+        SJust (Complete ru') -> updateRewards eps eNo ru'
       es'' <- trans @(EraRule "EPOCH" era) $ TRC ((), es', eNo)
-      es''' <- trans @(EraRule "ENACTMENT" era) $ TRC ((), es'', eNo)
+      let utxoSt = lsUTxOState $ esLState eps
+          govSt = utxosGovernance utxoSt
+          stakeDistr = credMap $ utxosStakeDistr utxoSt
+          ratEnv =
+            RatifyEnv
+              { reStakeDistr = stakeDistr
+              , reCurrentEpoch = EpochNo $ eL + 1
+              , reRoles = cgVoterRoles govSt
+              }
+          tallyStateToSeq = Seq.fromList . Map.toList
+          ratSig = RatifySignal . tallyStateToSeq . unConwayTallyState $ cgTally govSt
+      ens' <- trans @(EraRule "RATIFY" era) $ TRC (ratEnv, cgRatify govSt, ratSig)
+      let es''' =
+            let RatifyState {..} = ens'
+                newTally = ConwayTallyState . Map.fromList . toList $ rsFuture
+             in es''
+                  & esLStateL . lsUTxOStateL . utxosGovernanceL . cgTallyL .~ newTally
       let adaPots = totalAdaPotsES es'''
       tellEvent $ TotalAdaPotsEvent adaPots
       let ss = esSnapshots es'''

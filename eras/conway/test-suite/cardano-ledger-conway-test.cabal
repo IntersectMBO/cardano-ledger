@@ -39,7 +39,7 @@ library
         cardano-ledger-babbage ^>=1.0,
         cardano-ledger-babbage-test,
         cardano-ledger-binary:{cardano-ledger-binary, testlib} ^>=1.0,
-        cardano-ledger-conway ^>=1.0,
+        cardano-ledger-conway ^>=1.1,
         cardano-ledger-core:{cardano-ledger-core, testlib} ^>=1.0,
         cardano-ledger-allegra ^>=1.0,
         cardano-ledger-mary ^>=1.0,

@@ -26,13 +26,13 @@ import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.Babbage.Rules (BabbageUTXOW, BabbageUtxowPredFailure)
 import Cardano.Ledger.Babbage.Tx (IsValid (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
-import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.BaseTypes (ShelleyBase, epochInfoPure)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayLEDGER, ConwayTALLY)
-import Cardano.Ledger.Conway.Governance (ConwayTallyState)
+import Cardano.Ledger.Conway.Governance (ConwayGovernance (..), ConwayTallyState)
 import Cardano.Ledger.Conway.Rules.Tally (
   ConwayTallyPredFailure,
   GovernanceProcedure (..),
@@ -60,8 +60,10 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyLedgersPredFailure (..),
   UtxoEnv (..),
  )
+import Cardano.Ledger.Slot (epochInfoEpoch)
 import Cardano.Ledger.UTxO (EraUTxO (..))
 import Control.DeepSeq (NFData)
+import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended (
   Assertion (..),
   AssertionViolation (..),
@@ -70,6 +72,7 @@ import Control.State.Transition.Extended (
   TRC (..),
   TransitionRule,
   judgmentContext,
+  liftSTS,
   trans,
  )
 import Data.Kind (Type)
@@ -154,7 +157,7 @@ data ConwayLedgerEvent era
 instance
   ( AlonzoEraTx era
   , ConwayEraTxBody era
-  , GovernanceState era ~ ConwayTallyState era
+  , GovernanceState era ~ ConwayGovernance era
   , Embed (EraRule "UTXOW" era) (ConwayLEDGER era)
   , Embed (EraRule "TALLY" era) (ConwayLEDGER era)
   , Embed (EraRule "DELEGS" era) (ConwayLEDGER era)
@@ -206,7 +209,7 @@ ledgerTransition ::
   forall (someLEDGER :: Type -> Type) era.
   ( AlonzoEraTx era
   , ConwayEraTxBody era
-  , GovernanceState era ~ ConwayTallyState era
+  , GovernanceState era ~ ConwayGovernance era
   , Signal (someLEDGER era) ~ Tx era
   , State (someLEDGER era) ~ LedgerState era
   , Environment (someLEDGER era) ~ LedgerEnv era
@@ -221,7 +224,9 @@ ledgerTransition ::
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , Signal (EraRule "TALLY" era) ~ Seq (GovernanceProcedure era)
   , Environment (EraRule "TALLY" era) ~ TallyEnv era
-  , State (EraRule "TALLY" era) ~ GovernanceState era
+  , State (EraRule "TALLY" era) ~ ConwayTallyState era
+  , BaseM (someLEDGER era) ~ ShelleyBase
+  , STS (someLEDGER era)
   ) =>
   TransitionRule (someLEDGER era)
 ledgerTransition = do
@@ -242,16 +247,16 @@ ledgerTransition = do
   let DPState dstate _pstate = dpstate
       genDelegs = dsGenDelegs dstate
 
-  let govProcedures =
-        mconcat
-          [ fmap ProposalProcedure $ txBody ^. govActionsTxBodyL
-          , fmap VotingProcedure $ txBody ^. votesTxBodyL
-          ]
+  let govProcedures = txBody ^. govProcsTxBodyL
+  let govSt = utxosGovernance utxoSt
+  epoch <- liftSTS $ do
+    ei <- asks epochInfoPure
+    epochInfoEpoch ei slot
   tallySt' <-
     trans @(EraRule "TALLY" era) $
       TRC
-        ( TallyEnv $ txid txBody
-        , utxosGovernance utxoSt
+        ( TallyEnv (txid txBody) epoch $ cgVoterRoles govSt
+        , cgTally govSt
         , StrictSeq.fromStrict govProcedures
         )
 
@@ -259,7 +264,7 @@ ledgerTransition = do
     trans @(EraRule "UTXOW" era) $
       TRC
         ( UtxoEnv @era slot pp dpstate genDelegs
-        , utxoSt {utxosGovernance = tallySt'}
+        , utxoSt {utxosGovernance = govSt {cgTally = tallySt'}}
         , tx
         )
   pure $ LedgerState utxoSt' dpstate'
@@ -309,7 +314,7 @@ instance
   , Embed (EraRule "TALLY" era) (ConwayLEDGER era)
   , AlonzoEraTx era
   , ConwayEraTxBody era
-  , GovernanceState era ~ ConwayTallyState era
+  , GovernanceState era ~ ConwayGovernance era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
   , Environment (EraRule "TALLY" era) ~ TallyEnv era

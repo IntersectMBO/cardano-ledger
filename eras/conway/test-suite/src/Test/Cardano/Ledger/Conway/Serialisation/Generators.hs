@@ -43,19 +43,11 @@ instance Crypto c => Arbitrary (ConwayDCert c) where
 instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (ConwayTallyState era) where
   arbitrary = pure $ ConwayTallyState mempty
 
-instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovernanceActionInfo era) where
-  arbitrary =
-    GovernanceActionInfo
-      <$> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-
 instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovernanceActionState era) where
   arbitrary =
     GovernanceActionState
       <$> arbitrary
+      <*> arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
@@ -67,16 +59,6 @@ instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovernanceAction
       , HardForkInitiation <$> arbitrary
       , TreasuryWithdrawals <$> arbitrary
       ]
-
-instance Era era => Arbitrary (Vote era) where
-  arbitrary =
-    Vote
-      <$> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
 
 instance Crypto c => Arbitrary (GovernanceActionId c) where
   arbitrary =
@@ -122,7 +104,6 @@ instance
       <*> arbitrary
       -- FIXME: For now this is turned off, rountrip tests in consensus are failing
       <*> pure mempty -- arbitrary
-      <*> pure mempty -- arbitrary
 
 ------------------------------------------------------------------------------------------
 -- Cardano.Ledger.Conway.Rules -----------------------------------------------------------
@@ -130,14 +111,24 @@ instance
 
 -- TALLY
 
-deriving instance Era era => Arbitrary (ConwayTallyPredFailure era)
-deriving instance Era era => Arbitrary (TallyEnv era)
+instance Era era => Arbitrary (TallyEnv era) where
+  arbitrary =
+    TallyEnv
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+
+instance Crypto c => Arbitrary (GovernanceMetadata c) where
+  arbitrary =
+    GovernanceMetadata
+      <$> arbitrary
+      <*> arbitrary
 
 instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovernanceProcedure era) where
   arbitrary =
     oneof
-      [ VotingProcedure <$> arbitrary
-      , ProposalProcedure <$> arbitrary
+      [ VotingProcedure <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+      , ProposalProcedure <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
       ]
 
 instance

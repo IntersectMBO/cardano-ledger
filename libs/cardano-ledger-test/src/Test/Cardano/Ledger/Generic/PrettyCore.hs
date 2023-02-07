@@ -859,14 +859,12 @@ ppConwayNewEpochPredicateFailure ::
   forall era.
   ( PredicateFailure (EraRule "EPOCH" era) ~ ShelleyEpochPredFailure era
   , Reflect era
-  , PrettyA (PredicateFailure (EraRule "ENACTMENT" era))
   ) =>
   ConwayNewEpochPredFailure era ->
   PDoc
 ppConwayNewEpochPredicateFailure (Conway.EpochFailure x) = ppEpochPredicateFailure @era x
 ppConwayNewEpochPredicateFailure (Conway.CorruptRewardUpdate x) =
   ppSexp "CorruptRewardUpdate" [ppRewardUpdate x]
-ppConwayNewEpochPredicateFailure (Conway.EnactmentFailure x) = prettyA x
 
 instance
   ( Reflect era
@@ -1379,7 +1377,7 @@ pcExUnits :: ExUnits -> PDoc
 pcExUnits (ExUnits mem step) =
   ppSexp "ExUnits" [ppNatural mem, ppNatural step]
 
-pcTxBodyField :: (Reflect era, PrettyA (PParamsUpdate era)) => Proof era -> TxBodyField era -> [(Text, PDoc)]
+pcTxBodyField :: Reflect era => Proof era -> TxBodyField era -> [(Text, PDoc)]
 pcTxBodyField proof x = case x of
   Inputs s -> [("spend inputs", ppSet pcTxIn s)]
   Collateral s -> [("coll inputs", ppSet pcTxIn s)]
@@ -1404,11 +1402,10 @@ pcTxBodyField proof x = case x of
   AdHash (SJust (AuxiliaryDataHash h)) -> [("aux data hash", trim (ppSafeHash h))]
   Txnetworkid SNothing -> []
   Txnetworkid (SJust nid) -> [("network id", pcNetwork nid)]
-  GovernanceActions ga -> [("governance actions", ppStrictSeq prettyA ga)]
-  Votes vs -> [("votes", ppStrictSeq prettyA vs)]
+  GovernanceProcs ga -> [("governance procedures", ppStrictSeq prettyA ga)]
   ConwayCerts certs -> [("conway certs", ppStrictSeq prettyA certs)]
 
-pcTxField :: forall era. (Reflect era, PrettyA (PParamsUpdate era)) => Proof era -> TxField era -> [(Text, PDoc)]
+pcTxField :: forall era. Reflect era => Proof era -> TxField era -> [(Text, PDoc)]
 pcTxField proof x = case x of
   Body b -> [("txbody hash", ppSafeHash (hashAnnotated b)), ("body", pcTxBody proof b)]
   BodyI xs -> [("body", ppRecord "TxBody" (concat (map (pcTxBodyField proof) xs)))]
@@ -1443,13 +1440,13 @@ pcWitnesses proof wits = ppRecord "Witnesses" pairs
     fields = abstractWitnesses proof wits
     pairs = concat (map (pcWitnessesField proof) fields)
 
-pcTx :: (Reflect era, PrettyA (PParamsUpdate era)) => Proof era -> Tx era -> PDoc
+pcTx :: Reflect era => Proof era -> Tx era -> PDoc
 pcTx proof tx = ppRecord "Tx" pairs
   where
     fields = abstractTx proof tx
     pairs = concat (map (pcTxField proof) fields)
 
-pcTxBody :: (Reflect era, PrettyA (PParamsUpdate era)) => Proof era -> TxBody era -> PDoc
+pcTxBody :: Reflect era => Proof era -> TxBody era -> PDoc
 pcTxBody proof txbody = ppRecord "TxBody" pairs
   where
     fields = abstractTxBody proof txbody

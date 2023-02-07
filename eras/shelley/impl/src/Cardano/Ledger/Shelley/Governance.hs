@@ -45,6 +45,7 @@ class
   type GovernanceState era = (r :: Type) | r -> era
 
   emptyGovernanceState :: GovernanceState era
+  emptyGovernanceState = def
 
   getProposedPPUpdates :: GovernanceState era -> Maybe (ProposedPPUpdates era)
   getProposedPPUpdates _ = Nothing
@@ -53,7 +54,6 @@ instance ToExpr (PParamsUpdate era) => ToExpr (ShelleyPPUPState era)
 
 instance Crypto c => EraGovernance (ShelleyEra c) where
   type GovernanceState (ShelleyEra c) = ShelleyPPUPState (ShelleyEra c)
-  emptyGovernanceState = ShelleyPPUPState emptyPPPUpdates emptyPPPUpdates
 
   getProposedPPUpdates = Just . proposals
 

@@ -15,7 +15,6 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
@@ -68,7 +67,7 @@ import Data.Group (Group, invert)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
-import Lens.Micro (_1, _2)
+import Lens.Micro (Lens', lens, _1, _2)
 import NoThunks.Class (NoThunks (..))
 
 -- ==================================
@@ -111,6 +110,24 @@ data EpochState era = EpochState
   -- See https://github.com/input-output-hk/cardano-ledger/releases/latest/download/pool-ranking.pdf
   }
   deriving (Generic)
+
+esAccountStateL :: Lens' (EpochState era) AccountState
+esAccountStateL = lens esAccountState (\x y -> x {esAccountState = y})
+
+esSnapshotsL :: Lens' (EpochState era) (SnapShots (EraCrypto era))
+esSnapshotsL = lens esSnapshots (\x y -> x {esSnapshots = y})
+
+esLStateL :: Lens' (EpochState era) (LedgerState era)
+esLStateL = lens esLState (\x y -> x {esLState = y})
+
+esPrevPpL :: Lens' (EpochState era) (PParams era)
+esPrevPpL = lens esPrevPp (\x y -> x {esPrevPp = y})
+
+esPpL :: Lens' (EpochState era) (PParams era)
+esPpL = lens esPp (\x y -> x {esPp = y})
+
+esNonMyopicL :: Lens' (EpochState era) (NonMyopic (EraCrypto era))
+esNonMyopicL = lens esNonMyopic (\x y -> x {esNonMyopic = y})
 
 deriving stock instance
   ( EraTxOut era
@@ -231,6 +248,21 @@ data UTxOState era = UTxOState
   , utxosStakeDistr :: !(IncrementalStake (EraCrypto era))
   }
   deriving (Generic)
+
+utxosUtxoL :: Lens' (UTxOState era) (UTxO era)
+utxosUtxoL = lens utxosUtxo (\x y -> x {utxosUtxo = y})
+
+utxosDepositedL :: Lens' (UTxOState era) Coin
+utxosDepositedL = lens utxosDeposited (\x y -> x {utxosDeposited = y})
+
+utxosFeesL :: Lens' (UTxOState era) Coin
+utxosFeesL = lens utxosFees (\x y -> x {utxosFees = y})
+
+utxosGovernanceL :: Lens' (UTxOState era) (GovernanceState era)
+utxosGovernanceL = lens utxosGovernance (\x y -> x {utxosGovernance = y})
+
+utxosStakeDistrL :: Lens' (UTxOState era) (IncrementalStake (EraCrypto era))
+utxosStakeDistrL = lens utxosStakeDistr (\x y -> x {utxosStakeDistr = y})
 
 instance
   ( EraTxOut era
@@ -407,6 +439,12 @@ data LedgerState era = LedgerState
   , lsDPState :: !(DPState (EraCrypto era))
   }
   deriving (Generic)
+
+lsUTxOStateL :: Lens' (LedgerState era) (UTxOState era)
+lsUTxOStateL = lens lsUTxOState (\x y -> x {lsUTxOState = y})
+
+lsDPStateL :: Lens' (LedgerState era) (DPState (EraCrypto era))
+lsDPStateL = lens lsDPState (\x y -> x {lsDPState = y})
 
 deriving stock instance
   ( EraTxOut era
