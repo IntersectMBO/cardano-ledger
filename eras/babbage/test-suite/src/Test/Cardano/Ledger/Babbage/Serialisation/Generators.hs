@@ -59,6 +59,7 @@ instance
   , Arbitrary (TxOut era)
   , Arbitrary (Value era)
   , Arbitrary (Script era)
+  , Arbitrary (PParamsUpdate era)
   ) =>
   Arbitrary (BabbageTxBody era)
   where

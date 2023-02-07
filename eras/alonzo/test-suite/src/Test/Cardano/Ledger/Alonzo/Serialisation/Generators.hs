@@ -180,7 +180,7 @@ instance
       <*> arbitrary
 
 instance
-  (EraTxOut era, Arbitrary (TxOut era), Mock (EraCrypto era)) =>
+  (EraTxOut era, Arbitrary (TxOut era), Mock (EraCrypto era), Arbitrary (PParamsUpdate era)) =>
   Arbitrary (AlonzoTxBody era)
   where
   arbitrary =

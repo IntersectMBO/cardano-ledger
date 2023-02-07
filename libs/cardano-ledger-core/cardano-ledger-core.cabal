@@ -144,10 +144,12 @@ library testlib
         genvalidity,
         hspec,
         hedgehog-quickcheck,
+        mtl,
         nothunks,
         primitive,
         QuickCheck,
-        text
+        text,
+        vector-map
 
     if !impl(ghc >=9.2)
         ghc-options: -Wno-name-shadowing
