@@ -1,81 +1,76 @@
 cabal-version: 3.0
+name:          cardano-ledger-babbage
+version:       0.1.0.0
+license:       Apache-2.0
+maintainer:    operations@iohk.io
+author:        IOHK
+bug-reports:   https://github.com/input-output-hk/cardano-ledger/issues
+synopsis:
+    Cardano ledger introducing refrence scripts and inline datums
 
-name:                cardano-ledger-babbage
-version:             0.1.0.0
-synopsis:            Cardano ledger introducing refrence scripts and inline datums
 description:
-  This package builds upon the Alonzo ledger with support for reference scripts,
-  reference inputs and inline datums.
-bug-reports:         https://github.com/input-output-hk/cardano-ledger/issues
-license:             Apache-2.0
-author:              IOHK
-maintainer:          operations@iohk.io
-category:            Network
-build-type:          Simple
+    This package builds upon the Alonzo ledger with support for reference scripts,
+    reference inputs and inline datums.
+
+category:      Network
+build-type:    Simple
 
 source-repository head
-  type:     git
-  location: https://github.com/input-output-hk/cardano-ledger
-  subdir:   eras/babbage/impl
-
-common base
-  build-depends:      base >= 4.12 && < 4.17
-
-common project-config
-  default-language:   Haskell2010
-
-  ghc-options:        -Wall
-                      -Wcompat
-                      -Wincomplete-record-updates
-                      -Wincomplete-uni-patterns
-                      -Wpartial-fields
-                      -Wredundant-constraints
-                      -Wunused-packages
+    type:     git
+    location: https://github.com/input-output-hk/cardano-ledger
+    subdir:   eras/babbage/impl
 
 library
-  import:             base, project-config
-  exposed-modules:
-    Cardano.Ledger.Babbage.PParams
-    Cardano.Ledger.Babbage.Tx
-    Cardano.Ledger.Babbage.TxBody
-    Cardano.Ledger.Babbage.TxOut
-    Cardano.Ledger.Babbage.TxInfo
-    Cardano.Ledger.Babbage.TxWits
-    Cardano.Ledger.Babbage.Translation
-    Cardano.Ledger.Babbage.Scripts
-    Cardano.Ledger.Babbage.Collateral
-    Cardano.Ledger.Babbage.Rules
-    Cardano.Ledger.Babbage.Core
-    Cardano.Ledger.Babbage
-  other-modules:
-    Cardano.Ledger.Babbage.Era
-    Cardano.Ledger.Babbage.Rules.Utxow
-    Cardano.Ledger.Babbage.Rules.Utxo
-    Cardano.Ledger.Babbage.Rules.Utxos
-    Cardano.Ledger.Babbage.Rules.Ledger
-    Cardano.Ledger.Babbage.UTxO
-  build-depends:
-                aeson,
-                bytestring,
-                cardano-crypto-class,
-                cardano-data,
-                cardano-ledger-allegra,
-                cardano-ledger-alonzo,
-                cardano-ledger-binary,
-                cardano-ledger-core,
-                cardano-ledger-mary,
-                cardano-ledger-shelley,
-                cardano-slotting,
-                cardano-strict-containers,
-                containers,
-                deepseq,
-                microlens,
-                nothunks,
-                plutus-ledger-api ^>= 1.1,
-                set-algebra,
-                small-steps,
-                text,
-                transformers,
-                validation-selective
-  hs-source-dirs:
-    src
+    exposed-modules:
+        Cardano.Ledger.Babbage.PParams
+        Cardano.Ledger.Babbage.Tx
+        Cardano.Ledger.Babbage.TxBody
+        Cardano.Ledger.Babbage.TxOut
+        Cardano.Ledger.Babbage.TxInfo
+        Cardano.Ledger.Babbage.TxWits
+        Cardano.Ledger.Babbage.Translation
+        Cardano.Ledger.Babbage.Scripts
+        Cardano.Ledger.Babbage.Collateral
+        Cardano.Ledger.Babbage.Rules
+        Cardano.Ledger.Babbage.Core
+        Cardano.Ledger.Babbage
+
+    hs-source-dirs:   src
+    other-modules:
+        Cardano.Ledger.Babbage.Era
+        Cardano.Ledger.Babbage.Rules.Utxow
+        Cardano.Ledger.Babbage.Rules.Utxo
+        Cardano.Ledger.Babbage.Rules.Utxos
+        Cardano.Ledger.Babbage.Rules.Ledger
+        Cardano.Ledger.Babbage.UTxO
+
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints
+        -Wunused-packages
+
+    build-depends:
+        base >=4.12 && <4.17,
+        aeson,
+        bytestring,
+        cardano-crypto-class,
+        cardano-data,
+        cardano-ledger-allegra,
+        cardano-ledger-alonzo,
+        cardano-ledger-binary,
+        cardano-ledger-core,
+        cardano-ledger-mary,
+        cardano-ledger-shelley,
+        cardano-slotting,
+        cardano-strict-containers,
+        containers,
+        deepseq,
+        microlens,
+        nothunks,
+        plutus-ledger-api ^>=1.1,
+        set-algebra,
+        small-steps,
+        text,
+        transformers,
+        validation-selective

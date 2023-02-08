@@ -1,139 +1,136 @@
-cabal-version: 3.0
+cabal-version:      3.0
+name:               ledger-state
+version:            0.1.0.0
+license:            Apache-2.0
+maintainer:         operations@iohk.io
+author:             IOHK
+description:
+    This is a tool that helps us experiment with the Ledger State
 
-name:                ledger-state
-version:             0.1.0.0
-license:             Apache-2.0
-author:              IOHK
-maintainer:          operations@iohk.io
-description:         This is a tool that helps us experiment with the Ledger State
-build-type:          Simple
-
+build-type:         Simple
 extra-source-files:
-  README.md
-  ChangeLog.md
+    README.md
+    ChangeLog.md
 
 source-repository head
-  type: git
-  location: https://github.com/input-output-hk/cardano-ledger.git
-  subdir:   libs/ledger-state
-
-common project-config
-  default-language:   Haskell2010
-  build-depends:      base >= 4.12 && < 4.17
-
-  ghc-options:        -Wall
-                      -Wcompat
-                      -Wincomplete-record-updates
-                      -Wincomplete-uni-patterns
-                      -Wredundant-constraints
-                      -Wunused-packages
+    type:     git
+    location: https://github.com/input-output-hk/cardano-ledger.git
+    subdir:   libs/ledger-state
 
 library
-  import:             project-config
-  build-depends:      bytestring
-                    , cardano-crypto-class
-                    , cardano-ledger-alonzo
-                    , cardano-ledger-binary
-                    , cardano-ledger-core
-                    , cardano-ledger-mary
-                    , cardano-ledger-shelley
-                    , conduit
-                    , containers
-                    , vector-map
-                    , deepseq
-                    , foldl
-                    , vector
-                    , microlens
-                    , persistent
-                    , persistent-sqlite
-                    , prettyprinter
-                    , set-algebra
-                    , text
-                    , transformers
+    exposed-modules:
+        Cardano.Ledger.State.UTxO
+        Cardano.Ledger.State.Orphans
+        Cardano.Ledger.State.Schema
+        Cardano.Ledger.State.Transform
+        Cardano.Ledger.State.Query
+        Cardano.Ledger.State.Vector
 
-  exposed-modules:    Cardano.Ledger.State.UTxO
-                    , Cardano.Ledger.State.Orphans
-                    , Cardano.Ledger.State.Schema
-                    , Cardano.Ledger.State.Transform
-                    , Cardano.Ledger.State.Query
-                    , Cardano.Ledger.State.Vector
-  hs-source-dirs:     src
+    hs-source-dirs:   src
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wredundant-constraints -Wunused-packages
+
+    build-depends:
+        base >=4.12 && <4.17,
+        bytestring,
+        cardano-crypto-class,
+        cardano-ledger-alonzo,
+        cardano-ledger-binary,
+        cardano-ledger-core,
+        cardano-ledger-mary,
+        cardano-ledger-shelley,
+        conduit,
+        containers,
+        vector-map,
+        deepseq,
+        foldl,
+        vector,
+        microlens,
+        persistent,
+        persistent-sqlite,
+        prettyprinter,
+        set-algebra,
+        text,
+        transformers
 
 executable ledger-state
-  import:              project-config
-  hs-source-dirs:      app
-  main-is:             Main.hs
-  ghc-options:         -O2
-                       -threaded
-                       -rtsopts
-  build-depends:       cardano-ledger-shelley
-                     , ledger-state
-                     , optparse-applicative
-                     , text
+    main-is:          Main.hs
+    hs-source-dirs:   app
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wredundant-constraints -Wunused-packages
+        -O2 -threaded -rtsopts
 
+    build-depends:
+        base >=4.12 && <4.17,
+        cardano-ledger-shelley,
+        ledger-state,
+        optparse-applicative,
+        text
 
 benchmark memory
-  type:           exitcode-stdio-1.0
-  main-is:        Memory.hs
-  hs-source-dirs: bench
-  build-depends:  base
-                , deepseq
-                , weigh
-                , ledger-state
-                , optparse-applicative
-                , text
-  ghc-options:   -Wall
-                 -O2
-                 -rtsopts
-  default-language:   Haskell2010
-
+    type:             exitcode-stdio-1.0
+    main-is:          Memory.hs
+    hs-source-dirs:   bench
+    default-language: Haskell2010
+    ghc-options:      -Wall -O2 -rtsopts
+    build-depends:
+        base,
+        deepseq,
+        weigh,
+        ledger-state,
+        optparse-applicative,
+        text
 
 benchmark performance
-  import:             project-config
+    type:             exitcode-stdio-1.0
+    main-is:          Performance.hs
+    hs-source-dirs:   bench
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wredundant-constraints -Wunused-packages
+        -threaded -rtsopts -O2
 
-  type:             exitcode-stdio-1.0
-  hs-source-dirs:
-    bench
-  main-is:          Performance.hs
-  build-depends:
-    base,
-    aeson >= 2,
-    bytestring,
-    base16-bytestring,
-    cardano-data,
-    cardano-ledger-binary,
-    cardano-ledger-core,
-    cardano-ledger-shelley,
-    cardano-slotting,
-    containers,
-    criterion,
-    data-default-class,
-    deepseq,
-    ledger-state,
-    microlens,
-    random,
-  ghc-options:
-      -threaded
-      -rtsopts
-      -O2
+    build-depends:
+        base >=4.12 && <4.17,
+        base,
+        aeson >=2,
+        bytestring,
+        base16-bytestring,
+        cardano-data,
+        cardano-ledger-binary,
+        cardano-ledger-core,
+        cardano-ledger-shelley,
+        cardano-slotting,
+        containers,
+        criterion,
+        data-default-class,
+        deepseq,
+        ledger-state,
+        microlens,
+        random
 
 benchmark address
-  import:             project-config
+    type:             exitcode-stdio-1.0
+    main-is:          Address.hs
+    hs-source-dirs:   bench
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wredundant-constraints -Wunused-packages
+        -threaded -rtsopts -O2
 
-  type:             exitcode-stdio-1.0
-  hs-source-dirs:
-    bench
-  main-is:          Address.hs
-  build-depends:
-    base,
-    cardano-ledger-binary,
-    cardano-crypto-class,
-    cardano-ledger-core:{cardano-ledger-core, testlib},
-    criterion,
-    deepseq,
-    cardano-strict-containers,
-    text
-  ghc-options:
-      -threaded
-      -rtsopts
-      -O2
+    build-depends:
+        base >=4.12 && <4.17,
+        base,
+        cardano-ledger-binary,
+        cardano-crypto-class,
+        cardano-ledger-core:{cardano-ledger-core, testlib},
+        criterion,
+        deepseq,
+        cardano-strict-containers,
+        text

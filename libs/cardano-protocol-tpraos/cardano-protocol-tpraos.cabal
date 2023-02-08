@@ -1,68 +1,54 @@
-cabal-version:      3.0
-name:               cardano-protocol-tpraos
-version:            0.1.0.0
-synopsis:           Cardano Protocol: Transitional Praos
-bug-reports:        https://github.com/input-output-hk/cardano-ledger/issues
-
-license:            Apache-2.0
-author:             IOHK
-maintainer:         operations@iohk.io
+cabal-version: 3.0
+name:          cardano-protocol-tpraos
+version:       0.1.0.0
+license:       Apache-2.0
+maintainer:    operations@iohk.io
+author:        IOHK
+bug-reports:   https://github.com/input-output-hk/cardano-ledger/issues
+synopsis:      Cardano Protocol: Transitional Praos
 
 source-repository head
-  type:     git
-  location: https://github.com/input-output-hk/cardano-ledger
-  subdir:   libs/cardano-protocol-tpraos
-
-common base
-  build-depends:
-    base >= 4.12 && < 4.17
-
-common project-config
-  default-language: Haskell2010
-
-  ghc-options:
-    -Wall
-    -Wcompat
-    -Wincomplete-record-updates
-    -Wincomplete-uni-patterns
-    -Wredundant-constraints
-    -Wpartial-fields
-    -Wunused-packages
+    type:     git
+    location: https://github.com/input-output-hk/cardano-ledger
+    subdir:   libs/cardano-protocol-tpraos
 
 library
-  import:
-    base, project-config
+    exposed-modules:
+        Cardano.Protocol.TPraos.API
+        Cardano.Protocol.TPraos.BHeader
+        Cardano.Protocol.TPraos.OCert
+        Cardano.Protocol.TPraos.Rules.OCert
+        Cardano.Protocol.TPraos.Rules.Overlay
+        Cardano.Protocol.TPraos.Rules.Prtcl
+        Cardano.Protocol.TPraos.Rules.Tickn
+        Cardano.Protocol.TPraos.Rules.Updn
 
-  hs-source-dirs: src
+    hs-source-dirs:   src
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
+        -Wunused-packages
 
-  exposed-modules:
-    Cardano.Protocol.TPraos.API
-    Cardano.Protocol.TPraos.BHeader
-    Cardano.Protocol.TPraos.OCert
-    Cardano.Protocol.TPraos.Rules.OCert
-    Cardano.Protocol.TPraos.Rules.Overlay
-    Cardano.Protocol.TPraos.Rules.Prtcl
-    Cardano.Protocol.TPraos.Rules.Tickn
-    Cardano.Protocol.TPraos.Rules.Updn
-
-  build-depends:
-    bytestring,
-    cardano-crypto-class,
-    cardano-ledger-allegra,
-    cardano-ledger-alonzo,
-    cardano-ledger-babbage,
-    cardano-ledger-binary,
-    cardano-ledger-core,
-    cardano-ledger-mary,
-    cardano-ledger-shelley,
-    cardano-slotting,
-    containers,
-    deepseq,
-    nothunks,
-    microlens,
-    mtl,
-    quiet,
-    non-integral,
-    set-algebra,
-    small-steps,
-    transformers,
+    build-depends:
+        base >=4.12 && <4.17,
+        bytestring,
+        cardano-crypto-class,
+        cardano-ledger-allegra,
+        cardano-ledger-alonzo,
+        cardano-ledger-babbage,
+        cardano-ledger-binary,
+        cardano-ledger-core,
+        cardano-ledger-mary,
+        cardano-ledger-shelley,
+        cardano-slotting,
+        containers,
+        deepseq,
+        nothunks,
+        microlens,
+        mtl,
+        quiet,
+        non-integral,
+        set-algebra,
+        small-steps,
+        transformers

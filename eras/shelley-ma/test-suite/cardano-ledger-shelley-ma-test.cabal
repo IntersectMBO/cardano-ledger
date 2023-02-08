@@ -1,131 +1,118 @@
 cabal-version: 3.0
-
-name:                cardano-ledger-shelley-ma-test
-version:             0.1.0.0
-synopsis:            Shelley ledger with multiasset and time lock support.
+name:          cardano-ledger-shelley-ma-test
+version:       0.1.0.0
+license:       Apache-2.0
+maintainer:    operations@iohk.io
+author:        IOHK
+bug-reports:   https://github.com/input-output-hk/cardano-ledger/issues
+synopsis:      Shelley ledger with multiasset and time lock support.
 description:
-  This package extends the Shelley ledger with support for
-  native tokens and timelocks.
-bug-reports:         https://github.com/input-output-hk/cardano-ledger/issues
-license:             Apache-2.0
-author:              IOHK
-maintainer:          operations@iohk.io
-category:            Network
-build-type:          Simple
+    This package extends the Shelley ledger with support for
+    native tokens and timelocks.
 
+category:      Network
+build-type:    Simple
 data-files:
-  cddl-files/shelley-ma.cddl
-  cddl-files/real/crypto.cddl
-  cddl-files/mock/extras.cddl
+    cddl-files/shelley-ma.cddl
+    cddl-files/real/crypto.cddl
+    cddl-files/mock/extras.cddl
 
 source-repository head
-  type:     git
-  location: https://github.com/input-output-hk/cardano-ledger
-  subdir:   eras/shelley-ma/test-suite
-
-common base
-  build-depends:      base >= 4.12 && < 4.17
-
-common project-config
-  default-language:   Haskell2010
-
-  ghc-options:        -Wall
-                      -Wcompat
-                      -Werror
-                      -Wincomplete-record-updates
-                      -Wincomplete-uni-patterns
-                      -Wpartial-fields
-                      -Wredundant-constraints
-                      -Wunused-packages
+    type:     git
+    location: https://github.com/input-output-hk/cardano-ledger
+    subdir:   eras/shelley-ma/test-suite
 
 library
-  import:             base, project-config
+    exposed-modules:
+        Test.Cardano.Ledger.TranslationTools
+        Test.Cardano.Ledger.EraBuffet
+        Test.Cardano.Ledger.MaryEraGen
+        Test.Cardano.Ledger.Mary.Golden
+        Test.Cardano.Ledger.Mary.Examples.Consensus
+        Test.Cardano.Ledger.AllegraEraGen
+        Test.Cardano.Ledger.Allegra.Examples.Consensus
+        Test.Cardano.Ledger.ShelleyMA.TxBody
+        Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators
+        Test.Cardano.Ledger.ShelleyMA.Serialisation.Roundtrip
 
-  exposed-modules:
-    Test.Cardano.Ledger.TranslationTools
-    Test.Cardano.Ledger.EraBuffet
-    Test.Cardano.Ledger.MaryEraGen
-    Test.Cardano.Ledger.Mary.Golden
-    Test.Cardano.Ledger.Mary.Examples.Consensus
-    Test.Cardano.Ledger.AllegraEraGen
-    Test.Cardano.Ledger.Allegra.Examples.Consensus
-    Test.Cardano.Ledger.ShelleyMA.TxBody
-    Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators
-    Test.Cardano.Ledger.ShelleyMA.Serialisation.Roundtrip
+    hs-source-dirs:   src
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Werror -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints
+        -Wunused-packages
 
-  build-depends:
-    bytestring,
-    cardano-ledger-binary:{cardano-ledger-binary, testlib},
-    cardano-ledger-core:{cardano-ledger-core, testlib},
-    cardano-ledger-pretty,
-    cardano-ledger-allegra,
-    cardano-ledger-mary,
-    cardano-slotting,
-    containers,
-    generic-random,
-    hashable,
-    cardano-ledger-shelley-test,
-    cardano-ledger-shelley,
-    cardano-strict-containers,
-    microlens,
-    mtl,
-    small-steps,
-    tasty,
-    tasty-quickcheck,
-    tasty-hunit,
-    text,
-    QuickCheck
-  hs-source-dirs: src
+    build-depends:
+        base >=4.12 && <4.17,
+        bytestring,
+        cardano-ledger-binary:{cardano-ledger-binary, testlib},
+        cardano-ledger-core:{cardano-ledger-core, testlib},
+        cardano-ledger-pretty,
+        cardano-ledger-allegra,
+        cardano-ledger-mary,
+        cardano-slotting,
+        containers,
+        generic-random,
+        hashable,
+        cardano-ledger-shelley-test,
+        cardano-ledger-shelley,
+        cardano-strict-containers,
+        microlens,
+        mtl,
+        small-steps,
+        tasty,
+        tasty-quickcheck,
+        tasty-hunit,
+        text,
+        QuickCheck
 
 test-suite cardano-ledger-shelley-ma-test
-  import:             base, project-config
+    type:             exitcode-stdio-1.0
+    main-is:          Tests.hs
+    hs-source-dirs:   test
+    other-modules:
+        Test.Cardano.Ledger.Mary.Examples
+        Test.Cardano.Ledger.Mary.Examples.Cast
+        Test.Cardano.Ledger.Mary.Examples.MultiAssets
+        Test.Cardano.Ledger.Mary.Translation
+        Test.Cardano.Ledger.Mary.Value
+        Test.Cardano.Ledger.Allegra.Translation
+        Test.Cardano.Ledger.Allegra.ScriptTranslation
+        Test.Cardano.Ledger.ShelleyMA.Serialisation
+        Test.Cardano.Ledger.ShelleyMA.Serialisation.CDDL
+        Test.Cardano.Ledger.ShelleyMA.Serialisation.Golden.Encoding
+        Test.Cardano.Ledger.ShelleyMA.Serialisation.Timelocks
+        Paths_cardano_ledger_shelley_ma_test
 
-  type:               exitcode-stdio-1.0
-  main-is:            Tests.hs
-  hs-source-dirs:     test
-  other-modules:
-      Test.Cardano.Ledger.Mary.Examples
-      Test.Cardano.Ledger.Mary.Examples.Cast
-      Test.Cardano.Ledger.Mary.Examples.MultiAssets
-      Test.Cardano.Ledger.Mary.Translation
-      Test.Cardano.Ledger.Mary.Value
-      Test.Cardano.Ledger.Allegra.Translation
-      Test.Cardano.Ledger.Allegra.ScriptTranslation
-      Test.Cardano.Ledger.ShelleyMA.Serialisation
-      Test.Cardano.Ledger.ShelleyMA.Serialisation.CDDL
-      Test.Cardano.Ledger.ShelleyMA.Serialisation.Golden.Encoding
-      Test.Cardano.Ledger.ShelleyMA.Serialisation.Timelocks
-      Paths_cardano_ledger_shelley_ma_test
-  -- We set a bound here so that we're alerted of potential space
-  -- leaks in our generators (or test) code.
-  --
-  -- The 4 megabytes stack bound and 250 megabytes heap bound were
-  -- determined ad-hoc.
-  ghc-options:        -threaded
-                      -rtsopts
-                      -with-rtsopts=-N
-                      "-with-rtsopts=-K4m -M250m"
-  build-depends:
-      bytestring,
-      cardano-data,
-      cardano-ledger-binary:{cardano-ledger-binary, testlib},
-      cardano-ledger-core:{cardano-ledger-core, testlib},
-      cardano-ledger-shelley-ma-test,
-      cardano-ledger-allegra,
-      cardano-ledger-mary,
-      cardano-protocol-tpraos,
-      cardano-slotting,
-      cborg,
-      containers,
-      data-default-class,
-      mtl,
-      microlens,
-      QuickCheck,
-      cardano-ledger-shelley-test,
-      cardano-ledger-shelley,
-      small-steps-test,
-      small-steps,
-      cardano-strict-containers,
-      tasty-hunit,
-      tasty-quickcheck,
-      tasty
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Werror -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints
+        -Wunused-packages -threaded -rtsopts -with-rtsopts=-N
+        "-with-rtsopts=-K4m -M250m"
+
+    build-depends:
+        base >=4.12 && <4.17,
+        bytestring,
+        cardano-data,
+        cardano-ledger-binary:{cardano-ledger-binary, testlib},
+        cardano-ledger-core:{cardano-ledger-core, testlib},
+        cardano-ledger-shelley-ma-test,
+        cardano-ledger-allegra,
+        cardano-ledger-mary,
+        cardano-protocol-tpraos,
+        cardano-slotting,
+        cborg,
+        containers,
+        data-default-class,
+        mtl,
+        microlens,
+        QuickCheck,
+        cardano-ledger-shelley-test,
+        cardano-ledger-shelley,
+        small-steps-test,
+        small-steps,
+        cardano-strict-containers,
+        tasty-hunit,
+        tasty-quickcheck,
+        tasty

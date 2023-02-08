@@ -1,126 +1,121 @@
 cabal-version: 3.0
-
-name:                cardano-ledger-alonzo-test
-version:             0.1.0.0
-synopsis:            Tests for Cardano ledger introducing Plutus Core
+name:          cardano-ledger-alonzo-test
+version:       0.1.0.0
+license:       Apache-2.0
+maintainer:    operations@iohk.io
+author:        IOHK
+bug-reports:   https://github.com/input-output-hk/cardano-ledger/issues
+synopsis:      Tests for Cardano ledger introducing Plutus Core
 description:
-  This package builds upon the Mary ledger with support for extended UTxO
-  via Plutus Core.
-bug-reports:         https://github.com/input-output-hk/cardano-ledger/issues
-license:             Apache-2.0
-author:              IOHK
-maintainer:          operations@iohk.io
-category:            Network
-build-type:          Simple
+    This package builds upon the Mary ledger with support for extended UTxO
+    via Plutus Core.
 
+category:      Network
+build-type:    Simple
 data-files:
-  cddl-files/alonzo.cddl
-  cddl-files/real/crypto.cddl
-  cddl-files/mock/extras.cddl
-  golden/*.cbor
-  golden/mainnet-alonzo-genesis.json
+    cddl-files/alonzo.cddl
+    cddl-files/real/crypto.cddl
+    cddl-files/mock/extras.cddl
+    golden/*.cbor
+    golden/mainnet-alonzo-genesis.json
 
 source-repository head
-  type:     git
-  location: https://github.com/input-output-hk/cardano-ledger
-  subdir:   eras/alonzo/test-suite
-
-common base
-  build-depends:      base >= 4.12 && < 4.17
-
-common project-config
-  default-language:   Haskell2010
-
-  ghc-options:        -Wall
-                      -Wcompat
-                      -Wincomplete-record-updates
-                      -Wincomplete-uni-patterns
-                      -Wpartial-fields
-                      -Wredundant-constraints
-                      -Wunused-packages
+    type:     git
+    location: https://github.com/input-output-hk/cardano-ledger
+    subdir:   eras/alonzo/test-suite
 
 library
-  import:             base, project-config
+    exposed-modules:
+        Test.Cardano.Ledger.Alonzo.AlonzoEraGen
+        Test.Cardano.Ledger.Alonzo.EraMapping
+        Test.Cardano.Ledger.Alonzo.Examples.Consensus
+        Test.Cardano.Ledger.Alonzo.PlutusScripts
+        Test.Cardano.Ledger.Alonzo.Serialisation.Generators
+        Test.Cardano.Ledger.Alonzo.Scripts
+        Test.Cardano.Ledger.Alonzo.Trace
 
-  exposed-modules:
-    Test.Cardano.Ledger.Alonzo.AlonzoEraGen
-    Test.Cardano.Ledger.Alonzo.EraMapping
-    Test.Cardano.Ledger.Alonzo.Examples.Consensus
-    Test.Cardano.Ledger.Alonzo.PlutusScripts
-    Test.Cardano.Ledger.Alonzo.Serialisation.Generators
-    Test.Cardano.Ledger.Alonzo.Scripts
-    Test.Cardano.Ledger.Alonzo.Trace
-  build-depends:
-    bytestring,
-    cardano-ledger-alonzo,
-    cardano-ledger-binary:{cardano-ledger-binary, testlib},
-    cardano-ledger-core:{cardano-ledger-core, testlib},
-    cardano-ledger-pretty,
-    cardano-ledger-allegra,
-    cardano-ledger-shelley,
-    cardano-ledger-shelley-test,
-    cardano-ledger-mary,
-    cardano-ledger-shelley-ma-test,
-    cardano-protocol-tpraos,
-    cardano-slotting,
-    cardano-strict-containers,
-    cborg,
-    containers,
-    data-default-class,
-    microlens,
-    plutus-core,
-    plutus-tx,
-    plutus-ledger-api:{plutus-ledger-api,plutus-ledger-api-testlib} ^>=1.1,
-    QuickCheck,
-    random,
-    small-steps,
-    small-steps-test,
-    text,
-    transformers,
-  hs-source-dirs:
-    src
+    hs-source-dirs:   src
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints
+        -Wunused-packages
+
+    build-depends:
+        base >=4.12 && <4.17,
+        bytestring,
+        cardano-ledger-alonzo,
+        cardano-ledger-binary:{cardano-ledger-binary, testlib},
+        cardano-ledger-core:{cardano-ledger-core, testlib},
+        cardano-ledger-pretty,
+        cardano-ledger-allegra,
+        cardano-ledger-shelley,
+        cardano-ledger-shelley-test,
+        cardano-ledger-mary,
+        cardano-ledger-shelley-ma-test,
+        cardano-protocol-tpraos,
+        cardano-slotting,
+        cardano-strict-containers,
+        cborg,
+        containers,
+        data-default-class,
+        microlens,
+        plutus-core,
+        plutus-tx,
+        plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib} ^>=1.1,
+        QuickCheck,
+        random,
+        small-steps,
+        small-steps-test,
+        text,
+        transformers
 
 test-suite cardano-ledger-alonzo-test
-  import:             base, project-config
+    type:             exitcode-stdio-1.0
+    main-is:          Tests.hs
+    hs-source-dirs:   test
+    other-modules:
+        Test.Cardano.Ledger.Alonzo.Examples
+        Test.Cardano.Ledger.Alonzo.Golden
+        Test.Cardano.Ledger.Alonzo.PropertyTests
+        Test.Cardano.Ledger.Alonzo.Serialisation.Canonical
+        Test.Cardano.Ledger.Alonzo.Serialisation.CDDL
+        Test.Cardano.Ledger.Alonzo.Serialisation.Tripping
+        Test.Cardano.Ledger.Alonzo.Translation
+        Test.Cardano.Ledger.Alonzo.TxInfo
+        Paths_cardano_ledger_alonzo_test
 
-  type:                exitcode-stdio-1.0
-  main-is:             Tests.hs
-  hs-source-dirs:
-    test
-  other-modules:
-    Test.Cardano.Ledger.Alonzo.Examples
-    Test.Cardano.Ledger.Alonzo.Golden
-    Test.Cardano.Ledger.Alonzo.PropertyTests
-    Test.Cardano.Ledger.Alonzo.Serialisation.Canonical
-    Test.Cardano.Ledger.Alonzo.Serialisation.CDDL
-    Test.Cardano.Ledger.Alonzo.Serialisation.Tripping
-    Test.Cardano.Ledger.Alonzo.Translation
-    Test.Cardano.Ledger.Alonzo.TxInfo
-    Paths_cardano_ledger_alonzo_test
-  build-depends:
-    aeson >= 2,
-    base16-bytestring,
-    bytestring,
-    cardano-ledger-allegra,
-    cardano-ledger-alonzo,
-    cardano-ledger-alonzo-test,
-    cardano-ledger-binary:{cardano-ledger-binary, testlib},
-    cardano-ledger-core,
-    cardano-ledger-mary,
-    cardano-ledger-shelley-ma-test,
-    cardano-protocol-tpraos,
-    cardano-slotting,
-    containers,
-    data-default-class,
-    plutus-ledger-api:{plutus-ledger-api,plutus-ledger-api-testlib} ^>=1.1,
-    QuickCheck,
-    small-steps,
-    small-steps-test,
-    cardano-ledger-shelley,
-    cardano-ledger-shelley-test,
-    microlens,
-    cardano-strict-containers,
-    tasty,
-    tasty-hunit,
-    tasty-quickcheck,
-    time,
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints
+        -Wunused-packages
+
+    build-depends:
+        base >=4.12 && <4.17,
+        aeson >=2,
+        base16-bytestring,
+        bytestring,
+        cardano-ledger-allegra,
+        cardano-ledger-alonzo,
+        cardano-ledger-alonzo-test,
+        cardano-ledger-binary:{cardano-ledger-binary, testlib},
+        cardano-ledger-core,
+        cardano-ledger-mary,
+        cardano-ledger-shelley-ma-test,
+        cardano-protocol-tpraos,
+        cardano-slotting,
+        containers,
+        data-default-class,
+        plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib} ^>=1.1,
+        QuickCheck,
+        small-steps,
+        small-steps-test,
+        cardano-ledger-shelley,
+        cardano-ledger-shelley-test,
+        microlens,
+        cardano-strict-containers,
+        tasty,
+        tasty-hunit,
+        tasty-quickcheck,
+        time

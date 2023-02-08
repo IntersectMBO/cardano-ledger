@@ -1,73 +1,73 @@
-cabal-version: 3.0
+cabal-version:      3.0
+name:               vector-map
+version:            0.1.0.0
+license:            Apache-2.0
+maintainer:         operations@iohk.io
+author:             IOHK
+homepage:           https://github.com/input-output-hk/cardano-ledger
+synopsis:
+    An efficient VMap that is backed by two vectors: one for keys and another for values.
 
-name:                vector-map
-version:             0.1.0.0
-synopsis:            An efficient VMap that is backed by two vectors: one for keys and another for values.
-homepage:            https://github.com/input-output-hk/cardano-ledger
-license:             Apache-2.0
-author:              IOHK
-maintainer:          operations@iohk.io
-category:            Control
-build-type:          Simple
-extra-source-files:  CHANGELOG.md
+category:           Control
+build-type:         Simple
+extra-source-files: CHANGELOG.md
 
 source-repository head
-  type:     git
-  location: https://github.com/input-output-hk/cardano-ledger
-  subdir:   libs/vector-map
-
-common project-config
-  default-language:   Haskell2010
-
-  ghc-options:        -Wall
-                      -Wcompat
-                      -Wincomplete-record-updates
-                      -Wincomplete-uni-patterns
-                      -Wredundant-constraints
-                      -Wunused-packages
+    type:     git
+    location: https://github.com/input-output-hk/cardano-ledger
+    subdir:   libs/vector-map
 
 library
-  import:             project-config
+    exposed-modules:  Data.VMap
+    hs-source-dirs:   src
+    other-modules:    Data.VMap.KVVector
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wredundant-constraints -Wunused-packages
 
-  exposed-modules:     Data.VMap
-  other-modules:       Data.VMap.KVVector
-  build-depends:       base >=4.11 && <5
-                     , containers
-                     , deepseq
-                     , nothunks
-                     , primitive
-                     , tree-diff
-                     , vector
-                     , vector-algorithms
-  hs-source-dirs:      src
+    build-depends:
+        base >=4.11 && <5,
+        containers,
+        deepseq,
+        nothunks,
+        primitive,
+        tree-diff,
+        vector,
+        vector-algorithms
 
 test-suite tests
-  import:             project-config
+    type:             exitcode-stdio-1.0
+    main-is:          Main.hs
+    hs-source-dirs:   test
+    other-modules:
+        Test.Common
+        Test.VMap
 
-  hs-source-dirs:      test
-  main-is:             Main.hs
-  other-modules:       Test.Common
-                     , Test.VMap
-  type:                exitcode-stdio-1.0
-  default-language:    Haskell2010
-  build-depends:       base
-                     , containers
-                     , tasty
-                     , tasty-quickcheck
-                     , vector-map
-                     , QuickCheck
-                     , quickcheck-classes-base
-  ghc-options:        -threaded
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wredundant-constraints -Wunused-packages
+        -threaded
+
+    build-depends:
+        base,
+        containers,
+        tasty,
+        tasty-quickcheck,
+        vector-map,
+        QuickCheck,
+        quickcheck-classes-base
 
 benchmark bench
-  type:                exitcode-stdio-1.0
-  hs-source-dirs:      bench
-  main-is:             Bench.hs
-  ghc-options:         -Wall -threaded -O2 -rtsopts
-  build-depends:       base
-                     , criterion
-                     , vector-map
-                     , containers
-                     , random
-  default-language:    Haskell2010
-
+    type:             exitcode-stdio-1.0
+    main-is:          Bench.hs
+    hs-source-dirs:   bench
+    default-language: Haskell2010
+    ghc-options:      -Wall -threaded -O2 -rtsopts
+    build-depends:
+        base,
+        criterion,
+        vector-map,
+        containers,
+        random

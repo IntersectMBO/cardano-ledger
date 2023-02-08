@@ -1,58 +1,49 @@
 cabal-version:      3.0
 name:               plutus-preprocessor
 version:            0.1.0.0
+license:            Apache-2.0
+maintainer:         operations@iohk.io
+author:             IOHK
+bug-reports:        https://github.com/input-output-hk/cardano-ledger/issues
+synopsis:
+    A preproceesor for creating plutus scripts as bytestrings and equivalents
 
-synopsis: A preproceesor for creating plutus scripts as bytestrings and equivalents
+description:
+    Use this file to compile plutus scripts and to generate bytestring equivalents as text
 
-description: Use this file to compile plutus scripts and to generate bytestring equivalents as text
-
-bug-reports:https://github.com/input-output-hk/cardano-ledger/issues
-license:             Apache-2.0
-author:              IOHK
-maintainer:          operations@iohk.io
-
-category:            Network
-
+category:           Network
 extra-source-files: CHANGELOG.md
 
 source-repository head
-  type:     git
-  location: https://github.com/input-output-hk/cardano-ledger
-  subdir:   libs/plutus-preprocessor
+    type:     git
+    location: https://github.com/input-output-hk/cardano-ledger
+    subdir:   libs/plutus-preprocessor
 
 executable plutus-preprocessor
     main-is:          Main.hs
-
-    if impl (ghc < 9.2)
-      buildable: false
-
-    -- Modules included in this executable, other than Main.
-    other-modules:
-      PlutusScripts
-
-    -- LANGUAGE extensions used by modules in this package.
-    -- other-extensions:
-    build-depends:
-      base,
-      bytestring,
-      cardano-ledger-alonzo,
-      flat,
-      hashable >= 1.4.1.0,
-      plutus-tx ^>= 1.1,
-      -- This package needs at least 1.1.1 for 9.2
-      -- compatibility in the plugin
-      plutus-tx-plugin ^>= 1.1.1,
-      plutus-ledger-api ^>= 1.1,
-      serialise,
-      template-haskell
     hs-source-dirs:   src
+    other-modules:    PlutusScripts
     default-language: Haskell2010
+    build-depends:
+        base,
+        bytestring,
+        cardano-ledger-alonzo,
+        flat,
+        hashable >=1.4.1.0,
+        plutus-tx ^>=1.1,
+        plutus-tx-plugin ^>=1.1.1,
+        plutus-ledger-api ^>=1.1,
+        serialise,
+        template-haskell
+
+    if impl(ghc <9.2)
+        buildable: False
 
 executable plutus-debug
     main-is:          Debug.hs
-    build-depends:
-      base,
-      cardano-ledger-alonzo,
-      cardano-ledger-core,
     hs-source-dirs:   src
     default-language: Haskell2010
+    build-depends:
+        base,
+        cardano-ledger-alonzo,
+        cardano-ledger-core

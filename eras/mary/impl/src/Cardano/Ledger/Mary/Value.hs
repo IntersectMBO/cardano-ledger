@@ -16,7 +16,6 @@ module Cardano.Ledger.Mary.Value (
   AssetName (..),
   MaryValue (..),
   MultiAsset (..),
-  flattenMultiAsset,
   insert,
   insertMultiAsset,
   lookup,
@@ -26,6 +25,7 @@ module Cardano.Ledger.Mary.Value (
   prune,
   representationSize,
   showValue,
+  flattenMultiAsset,
   valueFromList,
   ToExpr (..),
 )

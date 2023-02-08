@@ -130,3 +130,18 @@ jobs:
 
     - name: Run fourmolu
       run: ./scripts/fourmolize.sh
+
+  cabal-format:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash
+
+    strategy:
+      fail-fast: false
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Format all cabal files
+      run: ./scripts/cabal-format.sh
