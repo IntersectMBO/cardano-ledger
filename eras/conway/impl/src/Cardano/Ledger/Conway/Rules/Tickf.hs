@@ -6,6 +6,7 @@
 module Cardano.Ledger.Conway.Rules.Tickf (
   ConwayTICKF,
   ConwayTickfPredFailure,
+  ConwayTickfEvent,
 )
 where
 

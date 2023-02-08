@@ -18,7 +18,13 @@ import Cardano.Ledger.Binary (
   listLenInt,
  )
 import Cardano.Ledger.Crypto
-import Cardano.Ledger.Shelley.Delegation.Certificates (ConstitutionalDelegCert (..), DCert (..), DelegCert (..), Delegation (..), PoolCert (..))
+import Cardano.Ledger.Shelley.Delegation.Certificates (
+  ConstitutionalDelegCert (..),
+  DCert (..),
+  DelegCert (..),
+  Delegation (..),
+  PoolCert (..),
+ )
 import Cardano.Ledger.Slot (EpochNo (..))
 import Control.DeepSeq (NFData)
 import Data.Word (Word8)
