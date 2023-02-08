@@ -74,6 +74,7 @@ module Cardano.Ledger.Alonzo.Tx (
 )
 where
 
+import Debug.Trace (trace)
 import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Allegra.Core ()
@@ -297,7 +298,9 @@ hashScriptIntegrity ::
 hashScriptIntegrity langViews rdmrs dats =
   if nullRedeemers rdmrs && Set.null langViews && nullDats dats
     then SNothing
-    else SJust (hashAnnotated (ScriptIntegrity rdmrs dats langViews))
+    else trace ("\nLike a rainbow in the dark: " ++ show (originalBytes si)) $ SJust (hashAnnotated si)
+  where
+    si = ScriptIntegrity rdmrs dats langViews
 
 -- ===============================================================
 -- From the specification, Figure 4 "Functions related to fees"
