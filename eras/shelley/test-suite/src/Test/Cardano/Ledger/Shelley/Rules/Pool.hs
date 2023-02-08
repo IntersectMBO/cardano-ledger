@@ -3,7 +3,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Test.Cardano.Ledger.Shelley.Rules.TestPool (
+module Test.Cardano.Ledger.Shelley.Rules.Pool (
   poolRegistration,
   poolStateIsInternallyConsistent,
   poolRetirement,

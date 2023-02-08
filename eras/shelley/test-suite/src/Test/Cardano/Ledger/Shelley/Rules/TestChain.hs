@@ -128,19 +128,19 @@ import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (scriptKeyCombinations)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Generator.Trace.Chain (mkGenesisChainState)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState (..), totalAda, totalAdaPots)
-import qualified Test.Cardano.Ledger.Shelley.Rules.TestDeleg as TestDeleg (
+import qualified Test.Cardano.Ledger.Shelley.Rules.Deleg as TestDeleg (
   checkInstantaneousRewards,
   keyDeRegistration,
   keyDelegation,
   keyRegistration,
   rewardsSumInvariant,
  )
-import qualified Test.Cardano.Ledger.Shelley.Rules.TestPool as TestPool (
+import qualified Test.Cardano.Ledger.Shelley.Rules.Pool as TestPool (
   poolRegistration,
   poolRetirement,
   poolStateIsInternallyConsistent,
  )
-import qualified Test.Cardano.Ledger.Shelley.Rules.TestPoolreap as TestPoolreap
+import qualified Test.Cardano.Ledger.Shelley.Rules.PoolReap as TestPoolreap
 import Test.Cardano.Ledger.Shelley.Utils (
   ChainProperty,
   epochFromSlotNo,

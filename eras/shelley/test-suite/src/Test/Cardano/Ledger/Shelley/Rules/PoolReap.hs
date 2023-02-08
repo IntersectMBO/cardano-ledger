@@ -7,7 +7,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
-module Test.Cardano.Ledger.Shelley.Rules.TestPoolreap (
+module Test.Cardano.Ledger.Shelley.Rules.PoolReap (
   removedAfterPoolreap,
 )
 where

@@ -8,7 +8,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
-module Test.Cardano.Ledger.Shelley.Rules.TestDeleg (
+module Test.Cardano.Ledger.Shelley.Rules.Deleg (
   keyRegistration,
   keyDeRegistration,
   keyDelegation,
