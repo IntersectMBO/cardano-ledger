@@ -1,52 +1,45 @@
 cabal-version: 3.0
+name:          cardano-ledger-shelley-ma
+version:       0.1.0.0
+license:       Apache-2.0
+maintainer:    operations@iohk.io
+author:        IOHK
+bug-reports:   https://github.com/input-output-hk/cardano-ledger/issues
+synopsis:
+    Deprecated package that used to implement Allegra and Mary eras.
 
-name:                cardano-ledger-shelley-ma
-version:             0.1.0.0
-synopsis:            Deprecated package that used to implement Allegra and Mary eras.
 description:
-  Deprecated package that used to implement Allegra and Mary eras. Use 'cardano-ledger-allegra' and 'cardano-ledger-mary' instead.
-bug-reports:         https://github.com/input-output-hk/cardano-ledger/issues
-license:             Apache-2.0
-author:              IOHK
-maintainer:          operations@iohk.io
-category:            Network
-build-type:          Simple
+    Deprecated package that used to implement Allegra and Mary eras. Use 'cardano-ledger-allegra' and 'cardano-ledger-mary' instead.
+
+category:      Network
+build-type:    Simple
 
 source-repository head
-  type:     git
-  location: https://github.com/input-output-hk/cardano-ledger
-  subdir:   eras/shelley-ma/impl
-
-common base
-  build-depends:      base >= 4.12 && < 4.17
-
-common project-config
-  default-language:   Haskell2010
-
-  ghc-options:        -Wall
-                      -Wcompat
-                      -Wincomplete-record-updates
-                      -Wincomplete-uni-patterns
-                      -Wredundant-constraints
-                      -Wpartial-fields
-                      -Wunused-packages
+    type:     git
+    location: https://github.com/input-output-hk/cardano-ledger
+    subdir:   eras/shelley-ma/impl
 
 library
-  import:             base, project-config
+    exposed-modules:
+        Cardano.Ledger.ShelleyMA
+        Cardano.Ledger.ShelleyMA.Core
+        Cardano.Ledger.ShelleyMA.AuxiliaryData
+        Cardano.Ledger.ShelleyMA.Rules
+        Cardano.Ledger.ShelleyMA.Timelocks
+        Cardano.Ledger.ShelleyMA.TxBody
+        Cardano.Ledger.ShelleyMA.TxOut
+        Cardano.Ledger.ShelleyMA.Tx
+        Cardano.Ledger.ShelleyMA.TxWits
 
-  exposed-modules:
-    Cardano.Ledger.ShelleyMA
-    Cardano.Ledger.ShelleyMA.Core
-    Cardano.Ledger.ShelleyMA.AuxiliaryData
-    Cardano.Ledger.ShelleyMA.Rules
-    Cardano.Ledger.ShelleyMA.Timelocks
-    Cardano.Ledger.ShelleyMA.TxBody
-    Cardano.Ledger.ShelleyMA.TxOut
-    Cardano.Ledger.ShelleyMA.Tx
-    Cardano.Ledger.ShelleyMA.TxWits
+    hs-source-dirs:   src
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
+        -Wunused-packages
 
-  build-depends:
-    cardano-ledger-allegra,
-    cardano-ledger-mary,
-    cardano-ledger-shelley,
-  hs-source-dirs: src
+    build-depends:
+        base >=4.12 && <4.17,
+        cardano-ledger-allegra,
+        cardano-ledger-mary,
+        cardano-ledger-shelley

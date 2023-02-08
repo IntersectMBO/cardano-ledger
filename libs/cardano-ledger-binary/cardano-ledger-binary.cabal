@@ -1,165 +1,168 @@
 cabal-version: 3.0
-
-name:                cardano-ledger-binary
-version:             0.1.0.0
-synopsis:            Binary serialization library used throughout ledger
-homepage:            https://github.com/input-output-hk/cardano-ledger
-license:             Apache-2.0
-author:              IOHK
-maintainer:          operations@iohk.io
-category:            Network
-build-type:          Simple
+name:          cardano-ledger-binary
+version:       0.1.0.0
+license:       Apache-2.0
+maintainer:    operations@iohk.io
+author:        IOHK
+homepage:      https://github.com/input-output-hk/cardano-ledger
+synopsis:      Binary serialization library used throughout ledger
+category:      Network
+build-type:    Simple
 
 source-repository head
-  type:     git
-  location: https://github.com/input-output-hk/cardano-ledger
-  subdir:   libs/cardano-ledger-binary
-
-common base
-  build-depends:     base >= 4.12 && < 4.17
-
-common project-config
-  default-language:  Haskell2010
-
-  ghc-options:      -Wall
-                    -Wcompat
-                    -Wincomplete-record-updates
-                    -Wincomplete-uni-patterns
-                    -Wredundant-constraints
-                    -Wunused-packages
+    type:     git
+    location: https://github.com/input-output-hk/cardano-ledger
+    subdir:   libs/cardano-ledger-binary
 
 library
-  import:            base, project-config
+    exposed-modules:
+        Cardano.Ledger.TreeDiff
+        Cardano.Ledger.Binary
+        Cardano.Ledger.Binary.Coders
+        Cardano.Ledger.Binary.Crypto
+        Cardano.Ledger.Binary.Decoding
+        Cardano.Ledger.Binary.Encoding
+        Cardano.Ledger.Binary.FlatTerm
+        Cardano.Ledger.Binary.Group
+        Cardano.Ledger.Binary.Version
 
-  exposed-modules:
-                     Cardano.Ledger.TreeDiff
-                     Cardano.Ledger.Binary
-                     Cardano.Ledger.Binary.Coders
-                     Cardano.Ledger.Binary.Crypto
-                     Cardano.Ledger.Binary.Decoding
-                     Cardano.Ledger.Binary.Encoding
-                     Cardano.Ledger.Binary.FlatTerm
-                     Cardano.Ledger.Binary.Group
-                     Cardano.Ledger.Binary.Version
-  other-modules:
-                     Cardano.Ledger.Binary.Encoding.Coders
-                     Cardano.Ledger.Binary.Encoding.Encoder
-                     Cardano.Ledger.Binary.Encoding.ToCBOR
-                     Cardano.Ledger.Binary.Decoding.Annotated
-                     Cardano.Ledger.Binary.Decoding.Coders
-                     Cardano.Ledger.Binary.Decoding.Decoder
-                     Cardano.Ledger.Binary.Decoding.Drop
-                     Cardano.Ledger.Binary.Decoding.FromCBOR
-                     Cardano.Ledger.Binary.Decoding.Sharing
-                     Cardano.Ledger.Binary.Decoding.Sized
+    hs-source-dirs:   src
+    other-modules:
+        Cardano.Ledger.Binary.Encoding.Coders
+        Cardano.Ledger.Binary.Encoding.Encoder
+        Cardano.Ledger.Binary.Encoding.ToCBOR
+        Cardano.Ledger.Binary.Decoding.Annotated
+        Cardano.Ledger.Binary.Decoding.Coders
+        Cardano.Ledger.Binary.Decoding.Decoder
+        Cardano.Ledger.Binary.Decoding.Drop
+        Cardano.Ledger.Binary.Decoding.FromCBOR
+        Cardano.Ledger.Binary.Decoding.Sharing
+        Cardano.Ledger.Binary.Decoding.Sized
 
-  build-depends:     base >=4.11 && <5
-                   , aeson
-                   , binary
-                   , bytestring
-                   , cardano-binary
-                   , cardano-crypto-class
-                   , cardano-crypto-praos >= 2.1.0.0
-                   , cardano-slotting
-                   , cardano-strict-containers
-                   , cborg
-                   , containers
-                   , data-fix
-                   , deepseq
-                   , formatting
-                   , iproute
-                   , microlens
-                   , mtl
-                   , network
-                   , nothunks
-                   , primitive
-                   , plutus-ledger-api ^>= 1.1
-                   , recursion-schemes
-                   , serialise
-                   , tagged
-                   , text
-                   , time
-                   , transformers >= 0.5
-                   , tree-diff
-                   , vector
-                   , vector-map
-  hs-source-dirs:    src
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wredundant-constraints -Wunused-packages
+
+    build-depends:
+        base >=4.12 && <4.17,
+        base >=4.11 && <5,
+        aeson,
+        binary,
+        bytestring,
+        cardano-binary,
+        cardano-crypto-class,
+        cardano-crypto-praos >=2.1.0.0,
+        cardano-slotting,
+        cardano-strict-containers,
+        cborg,
+        containers,
+        data-fix,
+        deepseq,
+        formatting,
+        iproute,
+        microlens,
+        mtl,
+        network,
+        nothunks,
+        primitive,
+        plutus-ledger-api ^>=1.1,
+        recursion-schemes,
+        serialise,
+        tagged,
+        text,
+        time,
+        transformers >=0.5,
+        tree-diff,
+        vector,
+        vector-map
 
 library testlib
-  import:            base, project-config
-  visibility:        public
-  hs-source-dirs:    testlib
-  exposed-modules:
-                     Test.Cardano.Ledger.Binary.Arbitrary
-                   , Test.Cardano.Ledger.Binary.Random
-                   , Test.Cardano.Ledger.Binary.RoundTrip
-                   , Test.Cardano.Ledger.Binary.TreeDiff
-                   , Test.Cardano.Ledger.Binary.Twiddle
-                   , Test.Cardano.Ledger.Binary.Vintage.Helpers
-                   , Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip
-  build-depends:     base
-                   , bytestring
-                   , base16-bytestring
-                   , cardano-ledger-binary
-                   , cardano-crypto-class
-                   , cardano-crypto-tests
-                   , cardano-prelude-test
-                   , cardano-strict-containers
-                   , cardano-slotting
-                   , cborg
-                   , containers
-                   , formatting
-                   , tree-diff
-                   , iproute
-                   , hedgehog
-                   , hspec
-                   , pretty-show
-                   , primitive
-                   , QuickCheck
-                   , quickcheck-instances
-                   , tasty-hunit
-                   , random >= 1.2
-                   , text
-                   , vector
-                   , vector-map
+    exposed-modules:
+        Test.Cardano.Ledger.Binary.Arbitrary
+        Test.Cardano.Ledger.Binary.Random
+        Test.Cardano.Ledger.Binary.RoundTrip
+        Test.Cardano.Ledger.Binary.TreeDiff
+        Test.Cardano.Ledger.Binary.Twiddle
+        Test.Cardano.Ledger.Binary.Vintage.Helpers
+        Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip
 
+    visibility:       public
+    hs-source-dirs:   testlib
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wredundant-constraints -Wunused-packages
+
+    build-depends:
+        base >=4.12 && <4.17,
+        base,
+        bytestring,
+        base16-bytestring,
+        cardano-ledger-binary,
+        cardano-crypto-class,
+        cardano-crypto-tests,
+        cardano-prelude-test,
+        cardano-strict-containers,
+        cardano-slotting,
+        cborg,
+        containers,
+        formatting,
+        tree-diff,
+        iproute,
+        hedgehog,
+        hspec,
+        pretty-show,
+        primitive,
+        QuickCheck,
+        quickcheck-instances,
+        tasty-hunit,
+        random >=1.2,
+        text,
+        vector,
+        vector-map
 
 test-suite tests
-  import:            base, project-config
-  hs-source-dirs:    test
-  main-is:           Main.hs
-  type:              exitcode-stdio-1.0
+    type:             exitcode-stdio-1.0
+    main-is:          Main.hs
+    hs-source-dirs:   test
+    other-modules:
+        Test.Cardano.Ledger.Binary.Failure
+        Test.Cardano.Ledger.Binary.RoundTripSpec
+        Test.Cardano.Ledger.Binary.Vintage.Coders
+        Test.Cardano.Ledger.Binary.Vintage.Drop
+        Test.Cardano.Ledger.Binary.Vintage.Failure
+        Test.Cardano.Ledger.Binary.Vintage.RoundTrip
+        Test.Cardano.Ledger.Binary.Vintage.Serialization
+        Test.Cardano.Ledger.Binary.Vintage.SizeBounds
 
-  other-modules:     Test.Cardano.Ledger.Binary.Failure
-                   , Test.Cardano.Ledger.Binary.RoundTripSpec
-                   , Test.Cardano.Ledger.Binary.Vintage.Coders
-                   , Test.Cardano.Ledger.Binary.Vintage.Drop
-                   , Test.Cardano.Ledger.Binary.Vintage.Failure
-                   , Test.Cardano.Ledger.Binary.Vintage.RoundTrip
-                   , Test.Cardano.Ledger.Binary.Vintage.Serialization
-                   , Test.Cardano.Ledger.Binary.Vintage.SizeBounds
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wredundant-constraints -Wunused-packages
+        -threaded -rtsopts -with-rtsopts=-N
 
-  build-depends:     base
-                   , bytestring
-                   , cardano-ledger-binary
-                   , cardano-crypto-class
-                   , cardano-crypto-praos
-                   , cardano-prelude-test
-                   , cardano-slotting
-                   , cardano-strict-containers
-                   , cborg
-                   , containers
-                   , hedgehog
-                   , hedgehog-quickcheck
-                   , hspec
-                   , iproute
-                   , primitive
-                   , QuickCheck
-                   , tagged
-                   , text
-                   , testlib
-                   , time
-                   , vector
-                   , vector-map
-
-  ghc-options:      -threaded -rtsopts -with-rtsopts=-N
+    build-depends:
+        base >=4.12 && <4.17,
+        base,
+        bytestring,
+        cardano-ledger-binary,
+        cardano-crypto-class,
+        cardano-crypto-praos,
+        cardano-prelude-test,
+        cardano-slotting,
+        cardano-strict-containers,
+        cborg,
+        containers,
+        hedgehog,
+        hedgehog-quickcheck,
+        hspec,
+        iproute,
+        primitive,
+        QuickCheck,
+        tagged,
+        text,
+        testlib,
+        time,
+        vector,
+        vector-map

@@ -1,59 +1,51 @@
-cabal-version: 3.0
-
-name:                small-steps
-version:             0.1.0.0
-synopsis:            Small step semantics
-homepage:            https://github.com/input-output-hk/cardano-ledger
-license:             Apache-2.0
-author:              IOHK
-maintainer:          operations@iohk.io
-category:            Control
-build-type:          Simple
-extra-source-files:  CHANGELOG.md
+cabal-version:      3.0
+name:               small-steps
+version:            0.1.0.0
+license:            Apache-2.0
+maintainer:         operations@iohk.io
+author:             IOHK
+homepage:           https://github.com/input-output-hk/cardano-ledger
+synopsis:           Small step semantics
+category:           Control
+build-type:         Simple
+extra-source-files: CHANGELOG.md
 
 source-repository head
-  type:     git
-  location: https://github.com/input-output-hk/cardano-ledger
-  subdir:   libs/small-steps
+    type:     git
+    location: https://github.com/input-output-hk/cardano-ledger
+    subdir:   libs/small-steps
 
 flag sts_assert
     description: Enable STS assertions by default
-    default: False
-    manual: True
-
-common base
-  build-depends:      base >= 4.12 && < 4.17
-
-common project-config
-  default-language:   Haskell2010
-
-  ghc-options:        -Wall
-                      -Wcompat
-                      -Wincomplete-record-updates
-                      -Wincomplete-uni-patterns
-                      -Wredundant-constraints
-                      -Wunused-packages
+    default:     False
+    manual:      True
 
 library
-  import:             base, project-config
+    exposed-modules:
+        Control.State.Transition
+        Control.State.Transition.Extended
+        Control.State.Transition.Simple
+        Control.Provenance
 
-  exposed-modules:     Control.State.Transition
-                     , Control.State.Transition.Extended
-                     , Control.State.Transition.Simple
-                     , Control.Provenance
+    hs-source-dirs:   src
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wredundant-constraints -Wunused-packages
 
-  build-depends:       aeson
-                     , base >=4.11 && <5
-                     , containers
-                     , data-default-class
-                     , free
-                     , mtl
-                     , nothunks
-                     , cardano-strict-containers
-                     , text
-                     , transformers >= 0.5
-                     , validation-selective
+    build-depends:
+        base >=4.12 && <4.17,
+        aeson,
+        base >=4.11 && <5,
+        containers,
+        data-default-class,
+        free,
+        mtl,
+        nothunks,
+        cardano-strict-containers,
+        text,
+        transformers >=0.5,
+        validation-selective
 
-  hs-source-dirs:      src
-  if (flag(sts_assert))
-    cpp-options:      -DSTS_ASSERT
+    if flag(sts_assert)
+        cpp-options: -DSTS_ASSERT

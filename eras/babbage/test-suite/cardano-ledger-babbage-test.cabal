@@ -1,101 +1,93 @@
 cabal-version: 3.0
-
-name:                cardano-ledger-babbage-test
-version:             0.1.0.0
-synopsis:            Tests for Cardano ledger babbage era
-description:
-  This package builds upon the Alonzo ledger
-bug-reports:         https://github.com/input-output-hk/cardano-ledger/issues
-license:             Apache-2.0
-author:              IOHK
-maintainer:          operations@iohk.io
-category:            Network
-build-type:          Simple
-
+name:          cardano-ledger-babbage-test
+version:       0.1.0.0
+license:       Apache-2.0
+maintainer:    operations@iohk.io
+author:        IOHK
+bug-reports:   https://github.com/input-output-hk/cardano-ledger/issues
+synopsis:      Tests for Cardano ledger babbage era
+description:   This package builds upon the Alonzo ledger
+category:      Network
+build-type:    Simple
 data-files:
-  cddl-files/babbage.cddl
-  cddl-files/real/crypto.cddl
-  cddl-files/mock/extras.cddl
+    cddl-files/babbage.cddl
+    cddl-files/real/crypto.cddl
+    cddl-files/mock/extras.cddl
 
 source-repository head
-  type:     git
-  location: https://github.com/input-output-hk/cardano-ledger
-  subdir:   eras/babbage/test-suite
-
-common base
-  build-depends:      base >= 4.12 && < 4.17
-
-common project-config
-  default-language:   Haskell2010
-
-  ghc-options:        -Wall
-                      -Wcompat
-                      -Wincomplete-record-updates
-                      -Wincomplete-uni-patterns
-                      -Wpartial-fields
-                      -Wredundant-constraints
-                      -Wunused-packages
+    type:     git
+    location: https://github.com/input-output-hk/cardano-ledger
+    subdir:   eras/babbage/test-suite
 
 library
-  import:             base, project-config
+    exposed-modules:
+        Test.Cardano.Ledger.Babbage.Examples.Consensus
+        Test.Cardano.Ledger.Babbage.Serialisation.Generators
 
-  exposed-modules:
-    Test.Cardano.Ledger.Babbage.Examples.Consensus,
-    Test.Cardano.Ledger.Babbage.Serialisation.Generators
-  build-depends:
-    cardano-ledger-allegra,
-    cardano-ledger-binary:{cardano-ledger-binary, testlib},
-    cardano-ledger-alonzo,
-    cardano-ledger-alonzo-test,
-    cardano-ledger-babbage,
-    cardano-ledger-core:{cardano-ledger-core, testlib},
-    cardano-ledger-shelley-ma-test,
-    cardano-ledger-mary,
-    cardano-ledger-shelley-test,
-    cardano-ledger-shelley,
-    cardano-strict-containers,
-    cardano-slotting,
-    containers,
-    data-default-class,
-    microlens,
-    plutus-tx,
-    QuickCheck,
-    small-steps,
+    hs-source-dirs:   src
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints
+        -Wunused-packages
 
-  hs-source-dirs:
-    src
+    build-depends:
+        base >=4.12 && <4.17,
+        cardano-ledger-allegra,
+        cardano-ledger-binary:{cardano-ledger-binary, testlib},
+        cardano-ledger-alonzo,
+        cardano-ledger-alonzo-test,
+        cardano-ledger-babbage,
+        cardano-ledger-core:{cardano-ledger-core, testlib},
+        cardano-ledger-shelley-ma-test,
+        cardano-ledger-mary,
+        cardano-ledger-shelley-test,
+        cardano-ledger-shelley,
+        cardano-strict-containers,
+        cardano-slotting,
+        containers,
+        data-default-class,
+        microlens,
+        plutus-tx,
+        QuickCheck,
+        small-steps
 
 test-suite cardano-ledger-babbage-test
-  import:             base, project-config
+    type:             exitcode-stdio-1.0
+    main-is:          Tests.hs
+    hs-source-dirs:   test
+    other-modules:
+        Test.Cardano.Ledger.Babbage.Serialisation.Tripping
+        Test.Cardano.Ledger.Babbage.Serialisation.CDDL
+        Test.Cardano.Ledger.Babbage.TxInfo
+        Paths_cardano_ledger_babbage_test
 
-  type:                exitcode-stdio-1.0
-  main-is:             Tests.hs
-  hs-source-dirs:
-    test
-  other-modules:
-    Test.Cardano.Ledger.Babbage.Serialisation.Tripping,
-    Test.Cardano.Ledger.Babbage.Serialisation.CDDL,
-    Test.Cardano.Ledger.Babbage.TxInfo,
-    Paths_cardano_ledger_babbage_test
-  build-depends:
-    bytestring,
-    cardano-ledger-binary:{cardano-ledger-binary, testlib},
-    cardano-ledger-allegra,
-    cardano-ledger-alonzo,
-    cardano-ledger-alonzo-test,
-    cardano-ledger-babbage,
-    cardano-ledger-babbage-test,
-    cardano-ledger-core,
-    cardano-ledger-shelley,
-    cardano-ledger-shelley-ma-test,
-    cardano-ledger-shelley-test,
-    cardano-protocol-tpraos,
-    cardano-slotting,
-    containers,
-    data-default-class,
-    plutus-ledger-api,
-    cardano-strict-containers,
-    tasty,
-    tasty-hunit,
-    tasty-quickcheck,
-    time,
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints
+        -Wunused-packages
+
+    build-depends:
+        base >=4.12 && <4.17,
+        bytestring,
+        cardano-ledger-binary:{cardano-ledger-binary, testlib},
+        cardano-ledger-allegra,
+        cardano-ledger-alonzo,
+        cardano-ledger-alonzo-test,
+        cardano-ledger-babbage,
+        cardano-ledger-babbage-test,
+        cardano-ledger-core,
+        cardano-ledger-shelley,
+        cardano-ledger-shelley-ma-test,
+        cardano-ledger-shelley-test,
+        cardano-protocol-tpraos,
+        cardano-slotting,
+        containers,
+        data-default-class,
+        plutus-ledger-api,
+        cardano-strict-containers,
+        tasty,
+        tasty-hunit,
+        tasty-quickcheck,
+        time

@@ -1,98 +1,88 @@
-cabal-version: 3.0
-
-name:                byron-spec-ledger
-version:             0.1.0.0
-synopsis:            Executable specification of Cardano ledger
--- description:
-homepage:            https://github.com/input-output-hk/cardano-legder
-license:             Apache-2.0
-author:              IOHK
-maintainer:          operations@iohk.io
-category:            Testing
-build-type:          Simple
-
-extra-source-files:  CHANGELOG.md
-
-common base
-  build-depends:      base >= 4.12 && < 4.18
-
-common project-config
-  default-language:   Haskell2010
-
-  ghc-options:        -Wall
-                      -Wcompat
-                      -Wincomplete-record-updates
-                      -Wincomplete-uni-patterns
-                      -Wredundant-constraints
-                      -Wunused-packages
+cabal-version:      3.0
+name:               byron-spec-ledger
+version:            0.1.0.0
+license:            Apache-2.0
+maintainer:         operations@iohk.io
+author:             IOHK
+homepage:           https://github.com/input-output-hk/cardano-legder
+synopsis:           Executable specification of Cardano ledger
+category:           Testing
+build-type:         Simple
+extra-source-files: CHANGELOG.md
 
 library
-  import:             base, project-config
+    exposed-modules:
+        Hedgehog.Gen.Double
+        Byron.Spec.Ledger.Core
+        Byron.Spec.Ledger.Core.Generators
+        Byron.Spec.Ledger.Core.Omniscient
+        Byron.Spec.Ledger.Delegation
+        Byron.Spec.Ledger.Delegation.Test
+        Byron.Spec.Ledger.GlobalParams
+        Byron.Spec.Ledger.Update
+        Byron.Spec.Ledger.Update.Generators
+        Byron.Spec.Ledger.Update.Test
+        Byron.Spec.Ledger.UTxO
+        Byron.Spec.Ledger.UTxO.Generators
+        Byron.Spec.Ledger.STS.UTXO
+        Byron.Spec.Ledger.STS.UTXOW
+        Byron.Spec.Ledger.STS.UTXOWS
+        Data.AbstractSize
 
-  hs-source-dirs:      src
-  exposed-modules:     Hedgehog.Gen.Double
-                     , Byron.Spec.Ledger.Core
-                     , Byron.Spec.Ledger.Core.Generators
-                     , Byron.Spec.Ledger.Core.Omniscient
-                     , Byron.Spec.Ledger.Delegation
-                     , Byron.Spec.Ledger.Delegation.Test
-                     , Byron.Spec.Ledger.GlobalParams
-                     , Byron.Spec.Ledger.Update
-                     , Byron.Spec.Ledger.Update.Generators
-                     , Byron.Spec.Ledger.Update.Test
-                     , Byron.Spec.Ledger.UTxO
-                     , Byron.Spec.Ledger.UTxO.Generators
-                     , Byron.Spec.Ledger.STS.UTXO
-                     , Byron.Spec.Ledger.STS.UTXOW
-                     , Byron.Spec.Ledger.STS.UTXOWS
-                     , Data.AbstractSize
-  build-depends:       bimap >=0.4 && <0.5
-                     , bytestring
-                     , cardano-crypto-class
-                     , cardano-ledger-binary
-                     , containers
-                     , cryptonite
-                     , hashable
-                     , hedgehog >= 1.0.4
-                     , microlens
-                     , microlens-th
-                     , nothunks
-                     , small-steps
-                     , small-steps-test
-                     , Unique >= 0.4.7.6
+    hs-source-dirs:   src
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wredundant-constraints -Wunused-packages
+
+    build-depends:
+        base >=4.12 && <4.18,
+        bimap >=0.4 && <0.5,
+        bytestring,
+        cardano-crypto-class,
+        cardano-ledger-binary,
+        containers,
+        cryptonite,
+        hashable,
+        hedgehog >=1.0.4,
+        microlens,
+        microlens-th,
+        nothunks,
+        small-steps,
+        small-steps-test,
+        Unique >=0.4.7.6
 
 test-suite byron-spec-ledger-test
-  import:             base, project-config
+    type:             exitcode-stdio-1.0
+    main-is:          Main.hs
+    hs-source-dirs:   test
+    other-modules:
+        Test.Byron.Spec.Ledger.Core.Generators.Properties
+        Test.Byron.Spec.Ledger.Delegation.Examples
+        Test.Byron.Spec.Ledger.Delegation.Properties
+        Test.Byron.Spec.Ledger.AbstractSize.Properties
+        Test.Byron.Spec.Ledger.Update.Examples
+        Test.Byron.Spec.Ledger.Update.Properties
+        Test.Byron.Spec.Ledger.Relation.Properties
+        Test.Byron.Spec.Ledger.UTxO.Properties
 
-  hs-source-dirs: test
-  main-is: Main.hs
-  other-modules: Test.Byron.Spec.Ledger.Core.Generators.Properties
-               , Test.Byron.Spec.Ledger.Delegation.Examples
-               , Test.Byron.Spec.Ledger.Delegation.Properties
-               , Test.Byron.Spec.Ledger.AbstractSize.Properties
-               , Test.Byron.Spec.Ledger.Update.Examples
-               , Test.Byron.Spec.Ledger.Update.Properties
-               , Test.Byron.Spec.Ledger.Relation.Properties
-               , Test.Byron.Spec.Ledger.UTxO.Properties
-  type: exitcode-stdio-1.0
-  default-language:    Haskell2010
-  build-depends: bimap >=0.4 && <0.5
-               , containers
-               , hedgehog >= 1.0.4
-               , microlens
-               , microlens-th
-               , tasty
-               , tasty-hunit
-               , tasty-hedgehog
-               , Unique >= 0.4.7.6
-               -- Local deps
-               , byron-spec-ledger
-               , small-steps
-               , small-steps-test
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wredundant-constraints -Wunused-packages
+        "-with-rtsopts=-K4m -M150m"
 
-  -- We set a bound here so that we're alerted of potential space
-  -- leaks in our generators (or test) code.
-  --
-  -- The 4 megabytes stack bound and 150 megabytes heap bound were
-  -- determined ad-hoc.
-  ghc-options:        "-with-rtsopts=-K4m -M150m"
+    build-depends:
+        base >=4.12 && <4.18,
+        bimap >=0.4 && <0.5,
+        containers,
+        hedgehog >=1.0.4,
+        microlens,
+        microlens-th,
+        tasty,
+        tasty-hunit,
+        tasty-hedgehog,
+        Unique >=0.4.7.6,
+        byron-spec-ledger,
+        small-steps,
+        small-steps-test
