@@ -45,7 +45,7 @@ newtype Version = Version Word64
   deriving (Eq, Ord, Show, Enum, NFData, NoThunks)
 
 -- | Minimum supported version
-type MinVersion = 1
+type MinVersion = 0
 
 -- | Maximum supported version. This is the protocol version of the next upcoming era
 type MaxVersion = 10

@@ -82,7 +82,8 @@ data VoidEra c
 instance Crypto c => Era (ByronEra c) where
   type EraCrypto (ByronEra c) = c
   type PreviousEra (ByronEra c) = VoidEra c
-  type ProtVerLow (ByronEra c) = 1
+  type ProtVerLow (ByronEra c) = 0
+  type ProtVerHigh (ByronEra c) = 1
 
 -----------------------------
 -- Protocol version bounds --
