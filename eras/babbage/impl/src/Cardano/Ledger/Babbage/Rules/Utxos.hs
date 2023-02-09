@@ -231,7 +231,7 @@ scriptsNo = do
   {- utxoKeep = txBody ^. collateralInputsTxBodyL ⋪ utxo -}
   {- utxoDel  = txBody ^. collateralInputsTxBodyL ◁ utxo -}
   let !(utxoKeep, utxoDel) = extractKeys (unUTxO utxo) (txBody ^. collateralInputsTxBodyL)
-      UTxO collouts = collOuts txBody
+      UTxO collouts = error "\n\nBOOOOOOOOOOOooooooooOOOOOM\n\n" $ collOuts txBody
       collateralFees = collAdaBalance txBody utxoDel -- NEW to Babbage
   pure $!
     us {- (collInputs txb ⋪ utxo) ∪ collouts tx -}
