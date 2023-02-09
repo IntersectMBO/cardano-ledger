@@ -115,7 +115,7 @@ deriving newtype instance
 deriving newtype instance
   NoThunks (PParamsHKD Identity era) => NoThunks (PParams era)
 
-deriving newtype instance
+deriving stock instance
   Show (PParamsHKD Identity era) => Show (PParams era)
 
 deriving newtype instance
@@ -153,7 +153,7 @@ deriving newtype instance
 deriving newtype instance
   NoThunks (PParamsHKD StrictMaybe era) => NoThunks (PParamsUpdate era)
 
-deriving newtype instance
+deriving stock instance
   Show (PParamsHKD StrictMaybe era) => Show (PParamsUpdate era)
 
 deriving newtype instance
