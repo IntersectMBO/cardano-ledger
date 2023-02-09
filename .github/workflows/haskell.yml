@@ -50,6 +50,13 @@ jobs:
         sudo apt-get -y remove --purge software-properties-common
         sudo apt-get -y autoremove
 
+    # Workaround the issue on GA Ubuntu images:
+    # https://github.com/actions/runner-images/issues/7061
+    - name: Fixup ghcup
+      run: |
+        rm -f /usr/local/.ghcup/cache/ghcup-0.0.7.yaml*
+        sudo chown -R $USER /usr/local/.ghcup
+
     - name: Install Haskell
       uses: input-output-hk/setup-haskell@v1
       id: setup-haskell
