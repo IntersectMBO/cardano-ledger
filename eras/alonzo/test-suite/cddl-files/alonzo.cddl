@@ -92,11 +92,11 @@ script_data_hash = $hash32 ; New
 ; Since this data does not exist in contiguous form inside a transaction, it needs
 ; to be independently constructed by each recipient.
 ;
-; script data format:
-; [ redeemers | datums | language views ]
+; The bytestring which is hashed is the concatenation of three things:
+;   redeemers || datums || language views
 ; The redeemers are exactly the data present in the transaction witness set.
 ; Similarly for the datums, if present. If no datums are provided, the middle
-; field is an empty string.
+; field is omitted (i.e. it is the empty/null bytestring).
 ;
 ; language views CDDL:
 ; { * language => script_integrity_data }
