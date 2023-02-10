@@ -16,6 +16,7 @@ module Test.Cardano.Ledger.Binary.RoundTrip (
   roundTripExpectation,
   roundTripCborExpectation,
   roundTripAnnExpectation,
+  roundTripAnnRangeExpectation,
   roundTripAnnFailureExpectation,
   roundTripAnnFailureRangeExpectation,
   embedTripSpec,
