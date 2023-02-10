@@ -35,12 +35,16 @@ tests =
   testGroup
     "Alonzo CBOR round-trip"
     [ testProperty "alonzo/Script" $
-        roundTripAnnExpectation @(Script Alonzo)
+        roundTripAnnRangeExpectation @(Script Alonzo)
+          (eraProtVerLow @Alonzo)
+          (eraProtVerHigh @Alonzo)
     , skip $
         testProperty "alonzo/Script twiddled" $
           roundTripAnnTwiddledProperty @(Script Alonzo) eqAlonzoScriptRaw
     , testProperty "alonzo/Data" $
-        roundTripAnnExpectation @(Data Alonzo)
+        roundTripAnnRangeExpectation @(Data Alonzo)
+          (eraProtVerLow @Alonzo)
+          (eraProtVerHigh @Alonzo)
     , skip $
         testProperty "alonzo/Data twiddled" $
           roundTripAnnTwiddledProperty @(Data Alonzo) (zipMemoRawType (===))
@@ -50,11 +54,17 @@ tests =
         testProperty "alonzo/BinaryData twiddled" $
           roundTripTwiddledProperty @(BinaryData Alonzo)
     , testProperty "alonzo/TxAuxData" $
-        roundTripAnnExpectation @(ShelleyTxAuxData Alonzo)
+        roundTripAnnRangeExpectation @(ShelleyTxAuxData Alonzo)
+          (eraProtVerLow @Alonzo)
+          (eraProtVerHigh @Alonzo)
     , testProperty "alonzo/AlonzoTxWits" $
-        roundTripAnnExpectation @(AlonzoTxWits Alonzo)
+        roundTripAnnRangeExpectation @(AlonzoTxWits Alonzo)
+          (eraProtVerLow @Alonzo)
+          (eraProtVerHigh @Alonzo)
     , testProperty "alonzo/TxBody" $
-        roundTripAnnExpectation @(TxBody Alonzo)
+        roundTripAnnRangeExpectation @(TxBody Alonzo)
+          (eraProtVerLow @Alonzo)
+          (eraProtVerHigh @Alonzo)
     , skip $
         testProperty "alonzo/TxBody twiddled" $
           roundTripAnnTwiddledProperty @(TxBody Alonzo) (zipMemoRawType (===))
@@ -65,7 +75,9 @@ tests =
     , testProperty "alonzo/PParamsUpdate" $
         roundTripCborExpectation @(PParamsUpdate Alonzo)
     , testProperty "alonzo/AuxiliaryData" $
-        roundTripAnnExpectation @(TxAuxData Alonzo)
+        roundTripAnnRangeExpectation @(TxAuxData Alonzo)
+          (eraProtVerLow @Alonzo)
+          (eraProtVerHigh @Alonzo)
     , testProperty "alonzo/AlonzoUtxowPredFailure" $
         roundTripCborExpectation @(AlonzoUtxowPredFailure Alonzo)
     , testProperty "alonzo/AlonzoUtxoPredFailure" $
@@ -73,11 +85,15 @@ tests =
     , testProperty "alonzo/AlonzoUtxosPredFailure" $
         roundTripCborExpectation @(AlonzoUtxosPredFailure Alonzo)
     , testProperty "Script" $
-        roundTripAnnExpectation @(Script Alonzo)
+        roundTripAnnRangeExpectation @(Script Alonzo)
     , testProperty "alonzo/Tx" $
-        roundTripAnnExpectation @(Tx Alonzo)
+        roundTripAnnRangeExpectation @(Tx Alonzo)
+          (eraProtVerLow @Alonzo)
+          (eraProtVerHigh @Alonzo)
     , testProperty "alonzo/Block" $
-        roundTripAnnExpectation @(Block (BHeader StandardCrypto) Alonzo)
+        roundTripAnnRangeExpectation @(Block (BHeader StandardCrypto) Alonzo)
+          (eraProtVerLow @Alonzo)
+          (eraProtVerHigh @Alonzo)
     ]
   where
     skip _ = testProperty "Test skipped" True

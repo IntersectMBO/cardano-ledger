@@ -140,7 +140,7 @@ instance
   arbitrary = genericArbitraryU
 
 instance
-  (EraTxOut era, Mock (EraCrypto era), Arbitrary (TxOut era)) =>
+  (EraTxOut era, Mock (EraCrypto era), Arbitrary (TxOut era), Arbitrary (PParamsUpdate era)) =>
   Arbitrary (AllegraTxBody era)
   where
   arbitrary =
@@ -159,7 +159,7 @@ instance
 -------------------------------------------------------------------------------}
 
 instance
-  (EraTxOut era, Mock (EraCrypto era), Arbitrary (TxOut era)) =>
+  (EraTxOut era, Mock (EraCrypto era), Arbitrary (TxOut era), Arbitrary (PParamsUpdate era)) =>
   Arbitrary (MaryTxBody era)
   where
   arbitrary =

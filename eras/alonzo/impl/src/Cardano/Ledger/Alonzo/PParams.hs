@@ -70,9 +70,7 @@ import qualified Cardano.Ledger.BaseTypes as BT (ProtVer (..))
 import Cardano.Ledger.Binary (
   Encoding,
   FromCBOR (..),
-  FromCBORGroup (..),
   ToCBOR (..),
-  ToCBORGroup (..),
   encodeFoldableAsDefLenList,
   encodeFoldableAsIndefLenList,
   encodeMapLen,
@@ -303,7 +301,7 @@ instance Era era => ToCBOR (AlonzoPParams Identity era) where
           !> To appTau
           !> To appD
           !> To appExtraEntropy
-          !> E toCBORGroup appProtocolVersion
+          !> To appProtocolVersion
           !> To appMinPoolCost
           -- new/updated for alonzo
           !> To appCoinsPerUTxOWord
@@ -333,7 +331,7 @@ instance Era era => FromCBOR (AlonzoPParams Identity era) where
         <! From -- appTau
         <! From -- appD
         <! From -- appExtraEntropy
-        <! D fromCBORGroup -- appProtocolVersion
+        <! From -- appProtocolVersion
         <! From -- appMinPoolCost
         -- new/updated for alonzo
         <! From -- appCoinsPerUTxOWord

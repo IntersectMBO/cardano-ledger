@@ -58,10 +58,10 @@ module Cardano.Ledger.Binary.Decoding.Coders (
 )
 where
 
-import qualified Cardano.Binary as C
 import Cardano.Ledger.Binary.Decoding.Annotated (Annotator (..), decodeAnnSet)
 import Cardano.Ledger.Binary.Decoding.Decoder
 import Cardano.Ledger.Binary.Decoding.FromCBOR (FromCBOR (fromCBOR))
+import Cardano.Ledger.Binary.Encoding.ToCBOR (ToCBOR (toCBOR))
 import Control.Applicative (liftA2)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
@@ -529,11 +529,11 @@ instance Applicative (Decode ('Closed d)) where
 
 -- | Use `Cardano.Ledger.Binary.Coders.encodeDual` and `decodeDual`, when you want to
 -- guarantee that a type has both `ToCBOR` and `FromCBR` instances.
-decodeDual :: forall t. (C.ToCBOR t, FromCBOR t) => Decode ('Closed 'Dense) t
+decodeDual :: forall t. (ToCBOR t, FromCBOR t) => Decode ('Closed 'Dense) t
 decodeDual = D fromCBOR
   where
     -- Enforce ToCBOR constraint on t
-    _toCBOR = C.toCBOR (undefined :: t)
+    _toCBOR = toCBOR (undefined :: t)
 
 -- =============================================================================
 
