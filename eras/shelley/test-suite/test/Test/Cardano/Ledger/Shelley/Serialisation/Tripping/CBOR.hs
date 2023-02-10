@@ -18,6 +18,7 @@ import Cardano.Ledger.Binary (
   fromNotSharedCBOR,
  )
 import Cardano.Ledger.Compactible (Compactible (..))
+import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Shelley (Shelley)
 import Cardano.Ledger.Shelley.API as Ledger
@@ -79,11 +80,17 @@ tests =
   testGroup
     "Serialisation roundtrip Property Tests"
     $ [ testProperty "Block" $
-          roundTripAnnExpectation @(Block (TP.BHeader StandardCrypto) Shelley)
+          roundTripAnnRangeExpectation @(Block (TP.BHeader StandardCrypto) Shelley)
+            (eraProtVerLow @Shelley)
+            (eraProtVerHigh @Shelley)
       , testProperty "TxBody" $
-          roundTripAnnExpectation @(ShelleyTxBody Shelley)
+          roundTripAnnRangeExpectation @(ShelleyTxBody Shelley)
+            (eraProtVerLow @Shelley)
+            (eraProtVerHigh @Shelley)
       , testProperty "Tx" $
-          roundTripAnnExpectation @(ShelleyTx Shelley)
+          roundTripAnnRangeExpectation @(ShelleyTx Shelley)
+            (eraProtVerLow @Shelley)
+            (eraProtVerHigh @Shelley)
       , testProperty "TxOut" $
           roundTripExpectation @(ShelleyTxOut Shelley) cborTrip
       , testProperty "LEDGER Predicate Failures" $
@@ -95,9 +102,13 @@ tests =
       , testProperty "NewEpoch State" $
           roundTripExpectation @(NewEpochState Shelley) cborTrip
       , testProperty "MultiSig" $
-          roundTripAnnExpectation @(MultiSig Shelley)
+          roundTripAnnRangeExpectation @(MultiSig Shelley)
+            (eraProtVerLow @Shelley)
+            (eraProtVerHigh @Shelley)
       , testProperty "TxAuxData" $
-          roundTripAnnExpectation @(ShelleyTxAuxData Shelley)
+          roundTripAnnRangeExpectation @(ShelleyTxAuxData Shelley)
+            (eraProtVerLow @Shelley)
+            (eraProtVerHigh @Shelley)
       , testProperty "Shelley Genesis" $
           roundTripExpectation @(ShelleyGenesis StandardCrypto) cborTrip
       , testProperty "NominalDiffTimeMicro" $
