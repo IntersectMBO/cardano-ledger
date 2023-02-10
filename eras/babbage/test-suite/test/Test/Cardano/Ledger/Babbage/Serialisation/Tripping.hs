@@ -23,13 +23,19 @@ tests =
   testGroup
     "Babbage CBOR round-trip"
     [ testProperty "babbage/Script" $
-        roundTripAnnExpectation @(Script Babbage)
+        roundTripAnnRangeExpectation @(Script Babbage)
+          (eraProtVerLow @Babbage)
+          (eraProtVerHigh @Babbage)
     , testProperty "babbage/Metadata" $
-        roundTripAnnExpectation @(TxAuxData Babbage)
+        roundTripAnnRangeExpectation @(TxAuxData Babbage)
+          (eraProtVerLow @Babbage)
+          (eraProtVerHigh @Babbage)
     , testProperty "babbage/TxOut" $
         roundTripCborExpectation @(TxOut Babbage)
     , testProperty "babbage/TxBody" $
-        roundTripAnnExpectation @(TxBody Babbage)
+        roundTripAnnRangeExpectation @(TxBody Babbage)
+          (eraProtVerLow @Babbage)
+          (eraProtVerHigh @Babbage)
     , testProperty "babbage/CostModel" $
         roundTripCborExpectation @CostModels
     , testProperty "babbage/PParams" $
@@ -37,13 +43,21 @@ tests =
     , testProperty "babbage/PParamsUpdate" $
         roundTripCborExpectation @(PParamsUpdate Babbage)
     , testProperty "babbage/AuxiliaryData" $
-        roundTripAnnExpectation @(TxAuxData Babbage)
+        roundTripAnnRangeExpectation @(TxAuxData Babbage)
+          (eraProtVerLow @Babbage)
+          (eraProtVerHigh @Babbage)
     , testProperty "Script" $
-        roundTripAnnExpectation @(Script Babbage)
+        roundTripAnnRangeExpectation @(Script Babbage)
+          (eraProtVerLow @Babbage)
+          (eraProtVerHigh @Babbage)
     , testProperty "babbage/Tx" $
-        roundTripAnnExpectation @(Tx Babbage)
+        roundTripAnnRangeExpectation @(Tx Babbage)
+          (eraProtVerLow @Babbage)
+          (eraProtVerHigh @Babbage)
     , testProperty "babbage/BabbageUtxoPredFailure" $
         roundTripCborExpectation @(BabbageUtxoPredFailure Babbage)
     , testProperty "babbage/Block" $
-        roundTripAnnExpectation @(Block (BHeader StandardCrypto) Babbage)
+        roundTripAnnRangeExpectation @(Block (BHeader StandardCrypto) Babbage)
+          (eraProtVerLow @Babbage)
+          (eraProtVerHigh @Babbage)
     ]

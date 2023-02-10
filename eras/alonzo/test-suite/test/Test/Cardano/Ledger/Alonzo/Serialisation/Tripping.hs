@@ -86,6 +86,8 @@ tests =
         roundTripCborExpectation @(AlonzoUtxosPredFailure Alonzo)
     , testProperty "Script" $
         roundTripAnnRangeExpectation @(Script Alonzo)
+          (eraProtVerLow @Alonzo)
+          (eraProtVerHigh @Alonzo)
     , testProperty "alonzo/Tx" $
         roundTripAnnRangeExpectation @(Tx Alonzo)
           (eraProtVerLow @Alonzo)

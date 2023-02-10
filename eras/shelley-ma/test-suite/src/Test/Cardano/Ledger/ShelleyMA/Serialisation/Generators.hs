@@ -50,6 +50,7 @@ import Test.QuickCheck (
   listOf,
   oneof,
   resize,
+  scale,
   shrink,
   vectorOf,
  )
@@ -151,7 +152,7 @@ instance
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-      <*> arbitrary
+      <*> scale (`div` 15) arbitrary
       <*> arbitrary
 
 {-------------------------------------------------------------------------------
@@ -170,7 +171,7 @@ instance
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-      <*> arbitrary
+      <*> scale (`div` 15) arbitrary
       <*> arbitrary
       <*> genMintValues
 
