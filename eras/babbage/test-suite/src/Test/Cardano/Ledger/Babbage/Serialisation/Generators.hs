@@ -75,7 +75,7 @@ instance
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-      <*> arbitrary
+      <*> scale (`div` 15) arbitrary
       <*> arbitrary
       <*> genMintValues
       <*> arbitrary

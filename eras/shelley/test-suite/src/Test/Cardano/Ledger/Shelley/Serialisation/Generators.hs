@@ -19,7 +19,7 @@ import qualified Cardano.Ledger.Shelley.Rules as STS
 import Generic.Random (genericArbitraryU)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
-import Test.QuickCheck (Arbitrary (..))
+import Test.QuickCheck (Arbitrary (..), scale)
 
 {-------------------------------------------------------------------------------
   ShelleyEra Generators
@@ -40,7 +40,7 @@ instance
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-      <*> arbitrary
+      <*> scale (`div` 15) arbitrary
       <*> arbitrary
 
 instance
