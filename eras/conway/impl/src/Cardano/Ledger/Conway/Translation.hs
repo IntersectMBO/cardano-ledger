@@ -29,11 +29,13 @@ import Cardano.Ledger.Shelley.API (
   DPState (..),
   DState (..),
   EpochState (..),
+  LedgerState (..),
   NewEpochState (..),
   StrictMaybe (..),
   UTxOState (..),
  )
 import qualified Cardano.Ledger.Shelley.API as API
+import Cardano.Ledger.Shelley.LedgerState (updateStakeDistribution)
 import Data.Coerce
 import qualified Data.Map.Strict as Map
 import Lens.Micro
@@ -62,7 +64,7 @@ instance Crypto c => TranslateEra (ConwayEra c) NewEpochState where
         { nesEL = nesEL nes
         , nesBprev = nesBprev nes
         , nesBcur = nesBcur nes
-        , nesEs = translateEra' ctxt $ nesEs nes
+        , nesEs = translateEra' ctxt $ recomputeStakeEpochState (nesEs nes)
         , nesRu = nesRu nes
         , nesPd = nesPd nes
         , stashedAVVMAddresses = ()
@@ -156,3 +158,16 @@ translateScript :: Crypto c => Script (BabbageEra c) -> Script (ConwayEra c)
 translateScript = \case
   TimelockScript ts -> TimelockScript $ translateTimelock ts
   PlutusScript l sbs -> PlutusScript l sbs
+
+-- Starting with Conway, we are no longer resolving pointer addresses,
+-- so we have to recompute the stake distribution from scratch, from the
+-- create a UTxOState that computes the utxosStakeDistr from the UTxO.
+recomputeStakeEpochState ::
+  forall era.
+  EraTxOut era =>
+  EpochState era ->
+  EpochState era
+recomputeStakeEpochState es =
+  let utxo = utxosUtxo . lsUTxOState . esLState $ es
+      incrStake = updateStakeDistribution (esPp es) mempty mempty utxo
+   in es {esLState = (esLState es) {lsUTxOState = (((lsUTxOState . esLState) es)) {utxosStakeDistr = incrStake}}}
