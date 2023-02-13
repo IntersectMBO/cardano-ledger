@@ -83,7 +83,9 @@ tests =
           (eraProtVerLow @Alonzo)
           (eraProtVerHigh @Alonzo)
     , testProperty "alonzo/AuxiliaryData" $
-        roundTripAnnExpectation @(TxAuxData Alonzo)
+        roundTripAnnRangeExpectation @(TxAuxData Alonzo)
+          (eraProtVerLow @Alonzo)
+          (eraProtVerHigh @Alonzo)
     , testProperty "alonzo/AlonzoUtxowPredFailure" $
         roundTripCborExpectation @(AlonzoUtxowPredFailure Alonzo)
     , testProperty "alonzo/AlonzoUtxoPredFailure" $

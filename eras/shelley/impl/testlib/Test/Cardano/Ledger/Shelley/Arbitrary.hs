@@ -48,7 +48,7 @@ deriving instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (Propose
 ------------------------------------------------------------------------------------------
 
 instance (EraTxOut era, Arbitrary (Value era)) => Arbitrary (ShelleyTxOut era) where
-  arbitrary = ShelleyTxOut <$> arbitrary <*> arbitrary
+  arbitrary = ShelleyTxOut <$> arbitrary <*> scale (`div` 15) arbitrary
 
 ------------------------------------------------------------------------------------------
 -- Cardano.Ledger.Shelley.LedgerState ----------------------------------------------------

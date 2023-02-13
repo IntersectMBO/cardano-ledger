@@ -176,7 +176,7 @@ instance
   arbitrary =
     AlonzoTxOut
       <$> arbitrary
-      <*> arbitrary
+      <*> scale (`div` 15) arbitrary
       <*> arbitrary
 
 instance
@@ -187,14 +187,14 @@ instance
     AlonzoTxBody
       <$> arbitrary
       <*> arbitrary
-      <*> arbitrary
+      <*> scale (`div` 15) arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> scale (`div` 15) arbitrary
       <*> arbitrary
-      <*> genMintValues @(EraCrypto era)
+      <*> scale (`div` 15) (genMintValues @(EraCrypto era))
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary

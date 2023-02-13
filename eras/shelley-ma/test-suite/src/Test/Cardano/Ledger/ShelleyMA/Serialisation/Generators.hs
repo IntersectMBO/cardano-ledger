@@ -147,7 +147,7 @@ instance
   arbitrary =
     AllegraTxBody
       <$> arbitrary
-      <*> arbitrary
+      <*> scale (`div` 15) arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
@@ -166,14 +166,14 @@ instance
   arbitrary =
     MaryTxBody
       <$> arbitrary
-      <*> arbitrary
+      <*> scale (`div` 15) arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> scale (`div` 15) arbitrary
       <*> arbitrary
-      <*> genMintValues
+      <*> scale (`div` 15) genMintValues
 
 -- | When generating values for the mint field, we do two things:
 --

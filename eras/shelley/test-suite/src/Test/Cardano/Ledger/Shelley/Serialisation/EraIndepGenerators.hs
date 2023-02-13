@@ -334,7 +334,10 @@ genBlock ::
   , h ~ BHeader (EraCrypto era)
   ) =>
   Gen (Block h era)
-genBlock = Block <$> arbitrary <*> (toTxSeq @era <$> arbitrary)
+genBlock =
+  Block
+    <$> (scale (`div` 15) arbitrary)
+    <*> (toTxSeq @era <$> scale (`div` 15) arbitrary)
 
 -- | For some purposes, a totally random block generator may not be suitable.
 -- There are tests in the ouroboros-network repository, for instance, that
