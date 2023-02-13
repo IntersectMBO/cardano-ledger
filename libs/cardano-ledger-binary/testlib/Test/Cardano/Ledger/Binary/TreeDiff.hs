@@ -1,5 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Binary.TreeDiff (
@@ -15,8 +16,11 @@ module Test.Cardano.Ledger.Binary.TreeDiff (
 )
 where
 
+import qualified Cardano.Binary as Plain
 import Cardano.Ledger.Binary
 import Cardano.Ledger.TreeDiff (diffExpr)
+import qualified Codec.CBOR.Read as CBOR
+import qualified Codec.CBOR.Term as CBOR
 import Control.Monad (unless)
 import Data.Bifunctor (bimap)
 import qualified Data.ByteString as BS
@@ -52,10 +56,35 @@ instance Show CBORBytes where
 
 instance ToExpr CBORBytes where
   toExpr (CBORBytes bytes) =
-    -- `decodeTerm` does not care about the version, so we can use any version
-    case decodeFullDecoder' minBound "Term" decodeTerm bytes of
-      Left err -> error $ "Error decoding CBOR: " ++ showDecoderError err
-      Right term -> toExpr term
+    case CBOR.deserialiseFromBytes CBOR.decodeTerm (BSL.fromStrict bytes) of
+      Left err ->
+        App
+          "CBORBytesError"
+          [ toExpr @String "Error decoding CBOR, showing as Hex:"
+          , toExpr (HexBytes bytes)
+          , toExpr $ show err
+          ]
+      Right (leftOver, term)
+        | BSL.null leftOver -> App "CBORBytes" [toExpr term]
+        | otherwise ->
+            case Plain.decodeFullDecoder "Term" CBOR.decodeTerm leftOver of
+              Right leftOverTerm ->
+                App
+                  "CBORBytesError"
+                  [ toExpr @String "Error decoding CBOR fully:"
+                  , toExpr term
+                  , toExpr @String "Leftover:"
+                  , toExpr (leftOverTerm :: Term)
+                  ]
+              Left err ->
+                App
+                  "CBORBytesError"
+                  [ toExpr @String "Error decoding CBOR fully:"
+                  , toExpr term
+                  , toExpr @String "Leftover as Hex, due to inabilty to decode as Term:"
+                  , toExpr $ HexBytes $ BSL.toStrict leftOver
+                  , toExpr $ showDecoderError err
+                  ]
 
 instance ToExpr Term where
   toExpr =
