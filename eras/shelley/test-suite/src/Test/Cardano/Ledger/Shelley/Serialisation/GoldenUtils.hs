@@ -9,6 +9,8 @@ module Test.Cardano.Ledger.Shelley.Serialisation.GoldenUtils (
   checkEncodingCBOR,
   checkEncodingCBORAnnotated,
   ToTokens (..),
+  roundTripFailure,
+  checkEncodingCBORDecodeFailure,
 )
 where
 
@@ -43,28 +45,40 @@ import Test.Cardano.Ledger.Binary.TreeDiff ()
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit (Assertion, assertFailure, testCase, (@?=))
 
-roundTrip ::
-  (HasCallStack, Show a, Eq a) =>
-  Version ->
-  (a -> Encoding) ->
-  (BSL.ByteString -> Either DecoderError a) ->
-  a ->
-  Assertion
-roundTrip v encode decode x =
-  case (decode . serializeEncoding v . encode) x of
+expectDecodingSuccess :: (HasCallStack, Show a, Eq a) => (a -> Either DecoderError a) -> a -> IO ()
+expectDecodingSuccess action x =
+  case action x of
     Left e -> assertFailure $ "could not decode serialization of " ++ show x ++ ", " ++ show e
     Right y -> y @?= x
 
+expectDecodingFailure :: (HasCallStack, Show a) => (a -> Either DecoderError a) -> a -> IO ()
+expectDecodingFailure action x =
+  case action x of
+    Left _ -> pure ()
+    Right _ -> assertFailure $ "Did not expect successful decoding of " ++ show x
+
+roundtrip :: Version -> (a -> Encoding) -> (BSL.ByteString -> Either DecoderError a) -> a -> Either DecoderError a
+roundtrip v encode decode = decode . serializeEncoding v . encode
+
+roundTripSuccess ::
+  (Show a, Eq a) => Version -> (a -> Encoding) -> (BSL.ByteString -> Either DecoderError a) -> a -> Assertion
+roundTripSuccess v encode decode x = expectDecodingSuccess (roundtrip v encode decode) x
+
+roundTripFailure ::
+  Show a => Version -> (a -> Encoding) -> (BSL.ByteString -> Either DecoderError a) -> a -> Assertion
+roundTripFailure v encode decode x = expectDecodingFailure (roundtrip v encode decode) x
+
 checkEncoding ::
-  (HasCallStack, Show a, Eq a) =>
+  (HasCallStack) =>
   Version ->
   (a -> Encoding) ->
   (BSL.ByteString -> Either DecoderError a) ->
+  (Version -> (a -> Encoding) -> (BSL.ByteString -> Either DecoderError a) -> a -> Assertion) ->
   String ->
   a ->
   ToTokens ->
   TestTree
-checkEncoding v encode decode name x t =
+checkEncoding v encode decode roundTrip name x t =
   testCase testName $ do
     unless (expectedBinary == actualBinary) $ do
       expectedTerms <- getTerms "expected" expectedBinary
@@ -81,6 +95,17 @@ checkEncoding v encode decode name x t =
     actualBinary = serializeEncoding v $ encode x
     testName = "golden_serialize_" <> name
 
+checkEncodingCBORDecodeFailure ::
+  (HasCallStack, FromCBOR a, ToCBOR a, Show a) =>
+  Version ->
+  String ->
+  a ->
+  ToTokens ->
+  TestTree
+checkEncodingCBORDecodeFailure v name x t =
+  let d = decodeFullDecoder v (fromString name) fromCBOR
+   in checkEncoding v toCBOR d roundTripFailure name x t
+
 checkEncodingCBOR ::
   (HasCallStack, FromCBOR a, ToCBOR a, Show a, Eq a) =>
   Version ->
@@ -90,7 +115,7 @@ checkEncodingCBOR ::
   TestTree
 checkEncodingCBOR v name x t =
   let d = decodeFullDecoder v (fromString name) fromCBOR
-   in checkEncoding v toCBOR d name x t
+   in checkEncoding v toCBOR d roundTripSuccess name x t
 
 checkEncodingCBORAnnotated ::
   (HasCallStack, FromCBOR (Annotator a), ToCBOR a, Show a, Eq a) =>
@@ -101,7 +126,7 @@ checkEncodingCBORAnnotated ::
   TestTree
 checkEncodingCBORAnnotated v name x t =
   let d = decodeFullAnnotator v (fromString name) fromCBOR
-   in checkEncoding v toCBOR d name x annTokens
+   in checkEncoding v toCBOR d roundTripSuccess name x annTokens
   where
     annTokens = T $ TkEncoded $ serialize' v t
 

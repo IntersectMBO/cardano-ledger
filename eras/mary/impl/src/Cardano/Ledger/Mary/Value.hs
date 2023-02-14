@@ -317,11 +317,7 @@ decodeMultiAssetMaps decodeAmount = do
     (pure $ MultiAsset $ prune ma)
 
 decodeMultiAssetMint :: Crypto c => Decoder s (MultiAsset c)
-decodeMultiAssetMint =
-  ifDecoderVersionAtLeast
-    (natVersion @9)
-    (decodeMultiAssetMaps (decodeIntegerBounded64 True))
-    (decodeMultiAssetMaps (decodeIntegerBounded64 False))
+decodeMultiAssetMint = decodeMultiAssetMaps decodeIntegerBounded64
 
 instance
   Crypto c =>
@@ -344,12 +340,8 @@ instance
 
 -- Note: we do not use `decodeInt64` from the cborg library here because the
 -- implementation contains "-- TODO FIXME: overflow"
--- Also, the caller may control whether to allow values of 0 (zero),
-decodeIntegerBounded64 ::
-  -- | Don't allow 0 (zero)?
-  Bool ->
-  Decoder s Integer
-decodeIntegerBounded64 nonZero = do
+decodeIntegerBounded64 :: Decoder s Integer
+decodeIntegerBounded64 = do
   tt <- peekTokenType
   case tt of
     TypeUInt -> pure ()
@@ -360,8 +352,8 @@ decodeIntegerBounded64 nonZero = do
   x <- decodeInteger
   if minval <= x && x <= maxval
     then
-      if x == 0 && nonZero
-        then fail "mint field cannot be 0 (zero)"
+      if x == 0
+        then ifDecoderVersionAtLeast (natVersion @9) (fail "mint field cannot be 0 (zero)") (pure x)
         else pure x
     else
       fail $

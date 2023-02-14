@@ -68,8 +68,8 @@ instance
       <$> arbitrary
       <*> arbitrary
       <*> arbitrary
-      <*> scale (`div` 15) arbitrary
-      <*> scale (`div` 15) arbitrary
+      <*> arbitrary
+      <*> arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary

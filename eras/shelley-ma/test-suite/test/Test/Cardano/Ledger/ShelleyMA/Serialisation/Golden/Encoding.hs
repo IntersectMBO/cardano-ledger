@@ -55,6 +55,7 @@ import Test.Cardano.Ledger.Shelley.Serialisation.GoldenUtils (
   ToTokens (..),
   checkEncodingCBOR,
   checkEncodingCBORAnnotated,
+  checkEncodingCBORDecodeFailure,
  )
 import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkGenKey, mkKeyPair)
 import Test.Tasty (TestTree, testGroup)
@@ -330,6 +331,36 @@ goldenEncodingTestsMary =
                   . TkInteger 19
               )
         )
+    , checkEncodingCBOR
+        (eraProtVerHigh @Mary)
+        "multiasset_with_negative"
+        (MultiAsset $ Map.singleton policyID1 (Map.singleton (AssetName assetName1) (-19)))
+        ( T
+            ( TkMapLen 1
+            )
+            <> S policyID1
+            <> T
+              ( TkMapLen 1
+                  . TkBytes (SBS.fromShort assetName1)
+                  . TkInteger (-19)
+              )
+        )
+    , checkEncodingCBORDecodeFailure
+        (eraProtVerHigh @Mary)
+        "value_with_negative"
+        (MaryValue 1 $ MultiAsset $ Map.singleton policyID1 (Map.singleton (AssetName assetName1) (-19)))
+        ( T
+            ( TkListLen 2
+                . TkInteger 1
+                . TkMapLen 1
+            )
+            <> S policyID1
+            <> T
+              ( TkMapLen 1
+                  . TkBytes (SBS.fromShort assetName1)
+                  . TkInteger (-19)
+              )
+        )
     , scriptGoldenTest @Mary
     , metadataNoScriptsGoldenTest @Mary
     , metadataWithScriptsGoldenTest @Mary
@@ -411,7 +442,7 @@ goldenEncodingTestsMary =
 
 assetName32Bytes :: Assertion
 assetName32Bytes =
-  roundTripFailureCborRangeExpectation (eraProtVerHigh @Mary) (eraProtVerHigh @Mary) $
+  roundTripFailureCborRangeExpectation (eraProtVerHigh @Mary) maxBound $
     AssetName "123456789-123456789-123456789-123"
 
 -- | Golden Tests for Allegra and Mary
