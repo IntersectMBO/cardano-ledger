@@ -14,12 +14,13 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 -- Orphan Arbitrary instance for OrderInfo
 {-# OPTIONS_GHC -Wno-orphans #-}
+-- {-# OPTIONS_GHC -Wname-shadowing #-}
 
 module Test.Cardano.Ledger.Constrained.Tests where
 
 import Control.Arrow (first)
 import Data.Foldable (fold)
-import Data.List (intercalate, partition)
+import Data.List (intercalate, partition, isPrefixOf)
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Set (Set)
@@ -74,9 +75,9 @@ Known limitations of the code that the tests avoid
     TODO/sizeBeforeArg for where these constraints a disabled in the tests.
   - Superset constraints cannot be solved, meaning `setBeforeSubset` is always set to True (see
     TODO/supersetConstraints).
-  - The generator for SumSet is wrong. It does `Set.fromList` on a partitioned list which doesn't
-    account for duplicate elements (see TODO/SumSet).
-  -- We have removed SumSet, since it can't be implemented, Perhaps we shoud add SumList or SumMap instead?
+  - Constraints of the form `n = Σ sum X` cannot be solved, so we set `sumBeforeParts` to false (see
+    TODO/sumBeforeParts).
+  - HasDom constraints don't work with non-variable domains.
 
 -}
 
@@ -100,8 +101,8 @@ instance Arbitrary OrderInfo where
     info <- OrderInfo <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
     -- TODO/supersetConstraints: RngSpec can't represent superset constraints at the moment, so
     -- setBeforeSubset = False doesn't work.
-    -- TODO/SumSet: The generator for a Set with a given sum doesn't work (it doesn't account for
-    -- duplicate elements), so we can't have sumBeforeParts.
+    -- TODO/sumBeforeParts: The solver can't solve constraints of the form `n = Σ sum X` for known
+    -- `n` and unknown `X`, so we set `sumBeforeParts` to False.
     pure
       info
         { setBeforeSubset = True
@@ -137,7 +138,8 @@ genLiteral :: forall era t. Era era => GenEnv era -> Rep era t -> Gen (Literal e
 genLiteral env rep =
   case rep of
     SetR erep -> setLiteral erep
-    _ -> unconstrained rep
+    MapR _ _  -> unconstrained rep  -- TODO: more clever generation for maps
+    _         -> unconstrained rep
   where
     unconstrained :: forall a. Rep era a -> Gen (Literal era a)
     unconstrained r = Lit r <$> genRep r
@@ -181,12 +183,14 @@ data VarSpec
 genTerm :: Era era => GenEnv era -> Rep era t -> VarSpec -> Gen (Term era t, GenEnv era)
 genTerm env rep vspec = genTerm' env rep (const True) (genLiteral env rep) vspec
 
-genTerm' :: GenEnv era -> Rep era t -> (t -> Bool) -> Gen (Literal era t) -> VarSpec -> Gen (Term era t, GenEnv era)
+genTerm' :: forall era t. Era era => GenEnv era -> Rep era t -> (t -> Bool) -> Gen (Literal era t) -> VarSpec -> Gen (Term era t, GenEnv era)
 genTerm' env rep valid genLit vspec =
   frequency $
     [(5, genFixed) | vspec == KnownTerm]
       ++ [(5, genExistingVar) | not $ null allowedVars]
       ++ [(1, genFreshVar) | VarTerm {} <- [vspec]]
+      ++ [(2, genDom krep) | SetR krep <- [rep]]
+      -- ++ [(2, genRng vrep) | SetR vrep <- [rep]]
   where
     isValid (_, Lit _ val) = valid val
     existingVars = map fst $ filter isValid $ envVarsOfType (gEnv env) rep
@@ -203,11 +207,30 @@ genTerm' env rep valid genLit vspec =
       let var = V name rep No
       pure (Var var, addVar var val env)
 
+    genDom :: forall k. (t ~ Set k, Ord k) => Rep era k -> Gen (Term era (Set k), GenEnv era)
+    genDom krep = do
+      TypeInEra vrep <- genBaseType
+      (m, env') <- genTerm' env (MapR krep vrep) (valid . Map.keysSet)
+                            (genLit >>= genMapLiteralWithDom env krep vrep)
+                            vspec
+      pure (Dom m, env')
+
+genMapLiteralWithDom :: (Era era, Ord k) => GenEnv era -> Rep era k -> Rep era v -> Literal era (Set k) -> Gen (Literal era (Map k v))
+genMapLiteralWithDom env krep vrep (Lit _ keys) = do
+  let genVal = do
+        Lit _ v <- genLiteral env vrep
+        pure v
+  Lit (MapR krep vrep) <$> traverse (\ _ -> genVal) (Map.fromSet (const ()) keys)
+
 data TypeInEra era where
   TypeInEra :: (Show t, Ord t) => Rep era t -> TypeInEra era
 
 genType :: Gen (TypeInEra era)
-genType = elements [TypeInEra IntR, TypeInEra (SetR IntR), TypeInEra (ListR IntR)]
+genType = elements [ TypeInEra IntR
+                   , TypeInEra (SetR IntR)
+                   , TypeInEra (ListR IntR)
+                   , TypeInEra (MapR IntR IntR)
+                   ]
 
 genBaseType :: Gen (TypeInEra era)
 genBaseType = elements [TypeInEra IntR]
@@ -246,6 +269,7 @@ genPred env =
       ++ [(1, subsetC)] -- TODO/sizeBeforeArg: we can't solve these at the moment
       ++ [(1, disjointC)]
       ++ [(1, sumsToC)]
+      ++ [(1, hasDomC)]
   where
     withValue ::
       forall t.
@@ -316,7 +340,7 @@ genPred env =
             (VarTerm d)
         pure (Disjoint lhs rhs, markSolved (vars rhs) d env'')
 
-    -- SumsTo constraint, only Set Int at the moment.
+    -- SumsTo constraint, only [Int] at the moment.
     sumsToC
       | sumBeforeParts (gOrder env) =
           -- Known sum
@@ -361,6 +385,41 @@ genPred env =
                 (VarTerm d)
             pure (SumsTo 1 EQL sumTm parts, markSolved (vars sumTm) d env'')
 
+    hasDomC
+      | mapBeforeDom (gOrder env) = do
+        -- Known map
+        TypeInEra krep <- genBaseType
+        TypeInEra vrep <- genBaseType
+        withValue (genTerm env (MapR krep vrep) KnownTerm) $ \mapTm val env' -> do
+          let d = 1 + depthOf env' mapTm
+          (domTm, env'') <-
+            genTerm'
+              env'
+              (SetR krep)
+              (== Map.keysSet val)
+              (pure $ Lit (SetR krep) $ Map.keysSet val)
+              (VarTerm d)
+          -- pure (domTm :=: Dom mapTm, env'')
+          pure (Dom mapTm :=: domTm, env'')
+          -- pure (HasDom mapTm domTm, env'')
+
+      | otherwise = do
+        -- Known domain
+        TypeInEra krep <- genBaseType
+        TypeInEra vrep <- genBaseType
+        withValue (genTerm env (SetR krep) KnownTerm) $ \domTm val env' -> do
+          let d = 1 + depthOf env' domTm
+          (mapTm, env'') <-
+            genTerm'
+              env'
+              (MapR krep vrep)
+              ((val ==) . Map.keysSet)
+              (genMapLiteralWithDom env krep vrep $ Lit (SetR krep) val)
+              (VarTerm d)
+          pure (domTm :=: Dom mapTm, env'')
+          -- pure (Dom mapTm :=: domTm, env'')
+          -- pure (HasDom mapTm domTm, env'')
+
 genPreds :: Era era => GenEnv era -> Gen ([Pred era], GenEnv era)
 genPreds = \env -> do
   n <- choose (1, 10)
@@ -383,7 +442,7 @@ shrinkPreds (preds, env) =
     -- Shrink to a Random constraint defining the same variables. The makes sure we respect the
     -- OrderInfo.
     shrinkPred Random {} = []
-    shrinkPred c = [r | r <- randoms c, def r == def c, not . null $ def r]
+    shrinkPred c = [r | r@(Random Var{}) <- randoms c, def r == def c, not . null $ def r ]
 
     randoms (Sized n t) = [Random n, Random t]
     randoms (s `Subset` t) = [Random s, Random t]
@@ -403,8 +462,11 @@ shrinkPreds (preds, env) =
         (rdy, rest) = partition canSolve preds'
         canSolve c = Set.isSubsetOf (use c) solved
 
-    def = Map.keysSet . accumdep (gOrder env) mempty
-    use = fold . accumdep (gOrder env) mempty
+    -- deps (lhs :=: rhs) = Map.fromSet (const $ vars rhs) (vars lhs)
+    deps (lhs :=: rhs) = Map.fromSet (const $ vars lhs) (vars rhs)
+    deps c = accumdep (gOrder env) mempty c
+    def = Map.keysSet . deps
+    use = fold . deps
 
 -- Tests ---
 
@@ -439,20 +501,23 @@ initEnv info =
     }
 
 showVal :: Rep era t -> t -> String
-showVal (SetR r) t = "{" ++ intercalate ", " (map (synopsis r) (Set.toList t)) ++ "}"
+showVal (SetR r)   t = "{" ++ intercalate ", " (map (synopsis r) (Set.toList t)) ++ "}"
+showVal (MapR kr vr) t = "{" ++ intercalate ", " [ synopsis kr k ++ " -> " ++ synopsis vr v | (k, v) <- Map.toList t ] ++ "}"
 showVal rep t = synopsis rep t
 
 showTerm :: Term era t -> String
 showTerm (Fixed (Lit rep t)) = showVal rep t
+showTerm (Dom t) = "(Dom " ++ showTerm t ++ ")"
 showTerm t = show t
 
 showPred :: Pred era -> String
 showPred (sub `Subset` sup) = showTerm sub ++ " ⊆ " ++ showTerm sup
 showPred (Disjoint s t) = "Disjoint " ++ showTerm s ++ " " ++ showTerm t
+showPred (HasDom m d) = "HasDomain " ++ showTerm m ++ " " ++ showTerm d
 showPred pr = show pr
 
 showEnv :: Env era -> String
-showEnv (Env vmap) = unlines $ map pr $ Map.toList vmap
+showEnv (Env vmap) = unlines $ map pr (Map.toList vmap)
   where
     pr (name, Payload rep t _) = name ++ " :: " ++ show rep ++ " -> " ++ showVal rep t
 
@@ -470,18 +535,18 @@ predConstr CanFollow {} = "CanFollow"
 -- | Generate a set of satisfiable constraints and check that we can generate a solution and that it
 --   actually satisfies the constraints.
 prop_soundness :: OrderInfo -> Property
-prop_soundness = prop_soundness' False
+prop_soundness = prop_soundness' False []
 
 -- | If argument is True, fail property if constraints cannot be solved. Otherwise discard unsolved
 --   constraints.
-prop_soundness' :: Bool -> OrderInfo -> Property
-prop_soundness' strict info =
+prop_soundness' :: Bool -> [String] -> OrderInfo -> Property
+prop_soundness' strict whitelist info =
   forAllShrink (genPreds $ initEnv info) shrinkPreds $ \(preds, genenv) ->
     counterexample ("\n-- Order --\n" ++ show info) $
       counterexample ("\n-- Constraints --\n" ++ unlines (map showPred preds)) $
         counterexample ("-- Model solution --\n" ++ showEnv (gEnv genenv)) $
           ensureTyped (compile info preds) $ \graph ->
-            forAll (genDependGraph False testProof graph) . flip checkRight $ \subst ->
+            forAllBlind (genDependGraph False testProof graph) . flip checkRight $ \subst ->
               let env = errorTyped $ substToEnv subst emptyEnv
                   checkPred pr = counterexample ("Failed: " ++ show pr) $ ensureTyped (runPred env pr) id
                   n = let Env e = gEnv genenv in Map.size e
@@ -493,5 +558,22 @@ prop_soundness' strict info =
                             map checkPred preds
   where
     checkRight
-      | strict = ensureRight
+      | strict = checkWhitelist
       | otherwise = ifRight
+
+    checkWhitelist (Left errs) _ = and [ not $ isPrefixOf white err
+                                       | white <- whitelist
+                                       , err <- errs ] ==> False
+    checkWhitelist (Right x) k = k x
+
+-- Why is this not triggered by tests?
+bug :: Gen (Either [String] (Subst TestEra))
+bug = genDependGraph True testProof graph
+  where
+    info  = OrderInfo {sumBeforeParts = False, sizeBeforeArg = True, setBeforeSubset = True, mapBeforeDom = False}
+    a = V "A" (MapR IntR IntR) No
+    preds = [ Sized (Size 1) (Dom (Var a))
+            , HasDom (Var a) (Fixed $ Lit (SetR IntR) $ Set.singleton 6)
+            ]
+    graph = either (error . unlines) id $ runTyped $ compile info preds
+
