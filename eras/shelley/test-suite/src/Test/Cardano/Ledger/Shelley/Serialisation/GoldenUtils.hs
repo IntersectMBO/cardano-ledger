@@ -69,6 +69,17 @@ roundTripFailure ::
 roundTripFailure v encode decode x = expectDecodingFailure (roundtrip v encode decode) x
 
 checkEncoding ::
+  (HasCallStack, Show a, Eq a) =>
+  Version ->
+  (a -> Encoding) ->
+  (BSL.ByteString -> Either DecoderError a) ->
+  String ->
+  a ->
+  ToTokens ->
+  TestTree
+checkEncoding v encode decode name x t = checkEncodingWithRoundtrip v encode decode roundTripSuccess name x t
+
+checkEncodingWithRoundtrip ::
   (HasCallStack) =>
   Version ->
   (a -> Encoding) ->
@@ -78,7 +89,7 @@ checkEncoding ::
   a ->
   ToTokens ->
   TestTree
-checkEncoding v encode decode roundTrip name x t =
+checkEncodingWithRoundtrip v encode decode roundTrip name x t =
   testCase testName $ do
     unless (expectedBinary == actualBinary) $ do
       expectedTerms <- getTerms "expected" expectedBinary
@@ -104,7 +115,7 @@ checkEncodingCBORDecodeFailure ::
   TestTree
 checkEncodingCBORDecodeFailure v name x t =
   let d = decodeFullDecoder v (fromString name) fromCBOR
-   in checkEncoding v toCBOR d roundTripFailure name x t
+   in checkEncodingWithRoundtrip v toCBOR d roundTripFailure name x t
 
 checkEncodingCBOR ::
   (HasCallStack, FromCBOR a, ToCBOR a, Show a, Eq a) =>
@@ -115,7 +126,7 @@ checkEncodingCBOR ::
   TestTree
 checkEncodingCBOR v name x t =
   let d = decodeFullDecoder v (fromString name) fromCBOR
-   in checkEncoding v toCBOR d roundTripSuccess name x t
+   in checkEncodingWithRoundtrip v toCBOR d roundTripSuccess name x t
 
 checkEncodingCBORAnnotated ::
   (HasCallStack, FromCBOR (Annotator a), ToCBOR a, Show a, Eq a) =>
@@ -126,7 +137,7 @@ checkEncodingCBORAnnotated ::
   TestTree
 checkEncodingCBORAnnotated v name x t =
   let d = decodeFullAnnotator v (fromString name) fromCBOR
-   in checkEncoding v toCBOR d roundTripSuccess name x annTokens
+   in checkEncodingWithRoundtrip v toCBOR d roundTripSuccess name x annTokens
   where
     annTokens = T $ TkEncoded $ serialize' v t
 
