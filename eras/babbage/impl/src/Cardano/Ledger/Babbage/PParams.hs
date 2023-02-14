@@ -57,9 +57,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (
   Encoding,
   FromCBOR (..),
-  FromCBORGroup (..),
   ToCBOR (..),
-  ToCBORGroup (..),
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -239,7 +237,7 @@ instance Era era => ToCBOR (BabbagePParams Identity era) where
           !> To bppA0
           !> To bppRho
           !> To bppTau
-          !> E toCBORGroup bppProtocolVersion
+          !> To bppProtocolVersion
           !> To bppMinPoolCost
           !> To bppCoinsPerUTxOByte
           !> To bppCostModels
@@ -267,7 +265,7 @@ instance Era era => FromCBOR (BabbagePParams Identity era) where
         <! From -- bppA0
         <! From -- bppRho
         <! From -- bppTau
-        <! D fromCBORGroup -- bppProtocolVersion
+        <! From -- bppProtocolVersion
         <! From -- bppMinPoolCost
         <! From -- bppCoinsPerUTxOByte
         <! From -- bppCostModels
