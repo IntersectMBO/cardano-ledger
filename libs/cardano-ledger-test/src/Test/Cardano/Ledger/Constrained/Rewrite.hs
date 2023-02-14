@@ -209,6 +209,7 @@ removeSameVar :: [Pred era] -> [Pred era] -> [Pred era]
 removeSameVar [] ans = reverse ans
 removeSameVar ((Var v :=: Var u) : more) ans | Name v == Name u = removeSameVar more ans
 removeSameVar ((Var v :⊆: Var u) : more) ans | Name v == Name u = removeSameVar more ans
+removeSameVar (Disjoint (Var v@(V _ rep _)) (Var u) : more) ans | Name v == Name u = removeSameVar more ((Fixed (Lit rep mempty) :=: Var v) : ans)
 removeSameVar (m : more) ans = removeSameVar more (m : ans)
 
 removeEqual :: [Pred era] -> [Pred era] -> [Pred era]
