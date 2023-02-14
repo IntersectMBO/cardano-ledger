@@ -103,7 +103,7 @@ import Cardano.Ledger.Language (Language)
 import Cardano.Ledger.Rewards (Reward (..), RewardType (..))
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash (..))
 import Cardano.Ledger.TxIn (TxIn (..))
-import Cardano.Ledger.Val (DecodeNonNegative, Val (..))
+import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
 import qualified Data.ByteString as BS
 import Data.ByteString.Short (ShortByteString)
@@ -181,14 +181,14 @@ class
 
 -- | Abstract interface into specific fields of a `TxOut`
 class
-  ( DecodeNonNegative (Value era)
-  , Compactible (Value era)
+  ( Compactible (Value era)
   , NoThunks (Value era)
   , NFData (Value era)
   , Show (Value era)
   , Val (Value era)
   , Eq (Value era)
   , FromCBOR (Value era)
+  , FromCBOR (CompactForm (Value era))
   , ToCBOR (Value era)
   , FromCBOR (TxOut era)
   , FromSharedCBOR (TxOut era)

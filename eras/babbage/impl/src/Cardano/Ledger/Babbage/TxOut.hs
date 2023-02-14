@@ -98,10 +98,7 @@ import Cardano.Ledger.Compactible
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto (ADDRHASH), StandardCrypto)
 import Cardano.Ledger.Keys (KeyRole (..))
-import Cardano.Ledger.Val (
-  DecodeNonNegative (decodeNonNegative),
-  Val (..),
- )
+import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (rnf), rwhnf)
 import Control.Monad ((<$!>))
 import qualified Data.ByteString.Lazy as LBS
@@ -421,7 +418,7 @@ instance
   ( Era era
   , Val (Value era)
   , FromCBOR (Annotator (Script era))
-  , DecodeNonNegative (Value era)
+  , FromCBOR (Value era)
   ) =>
   FromCBOR (BabbageTxOut era)
   where
@@ -431,7 +428,7 @@ instance
   ( Era era
   , Val (Value era)
   , FromCBOR (Annotator (Script era))
-  , DecodeNonNegative (Value era)
+  , FromCBOR (Value era)
   ) =>
   FromSharedCBOR (BabbageTxOut era)
   where
@@ -447,7 +444,7 @@ instance
         txOut -> txOut
 
 decodeBabbageTxOut ::
-  (Era era, Val (Value era), FromCBOR (Annotator (Script era)), DecodeNonNegative (Value era)) =>
+  (Era era, Val (Value era), FromCBOR (Annotator (Script era)), FromCBOR (Value era)) =>
   Decoder s (BabbageTxOut era)
 decodeBabbageTxOut = do
   peekTokenType >>= \case
@@ -460,7 +457,7 @@ decodeBabbageTxOut = do
       case lenOrIndef of
         Nothing -> do
           (a, ca) <- fromCborBothAddr
-          v <- decodeNonNegative
+          v <- fromCBOR
           decodeBreakOr >>= \case
             True -> pure $ mkTxOut a ca v NoDatum SNothing
             False -> do
@@ -470,11 +467,11 @@ decodeBabbageTxOut = do
                 False -> cborError $ DecoderErrorCustom "txout" "Excess terms in txout"
         Just 2 -> do
           (a, ca) <- fromCborBothAddr
-          v <- decodeNonNegative
+          v <- fromCBOR
           pure $ mkTxOut a ca v NoDatum SNothing
         Just 3 -> do
           (a, ca) <- fromCborBothAddr
-          v <- decodeNonNegative
+          v <- fromCBOR
           dh <- fromCBOR
           pure $ mkTxOut a ca v (DatumHash dh) SNothing
         Just _ -> cborError $ DecoderErrorCustom "txout" "wrong number of terms in txout"
@@ -506,7 +503,7 @@ data DecodingTxOut era = DecodingTxOut
 {-# INLINE decodeTxOut #-}
 decodeTxOut ::
   forall s era.
-  (Era era, Val (Value era), DecodeNonNegative (Value era), FromCBOR (Annotator (Script era))) =>
+  (Era era, Val (Value era), FromCBOR (Value era), FromCBOR (Annotator (Script era))) =>
   (forall s'. Decoder s' (Addr (EraCrypto era), CompactAddr (EraCrypto era))) ->
   Decoder s (BabbageTxOut era)
 decodeTxOut decAddr = do
@@ -526,7 +523,7 @@ decodeTxOut decAddr = do
     bodyFields 1 =
       field
         (\x txo -> txo {decodingTxOutVal = x})
-        (D decodeNonNegative)
+        From
     bodyFields 2 =
       field
         (\x txo -> txo {decodingTxOutDatum = x})

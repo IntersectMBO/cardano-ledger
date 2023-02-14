@@ -425,12 +425,18 @@ coin = uint
 
 sub_coin = positive_interval
 
-multiasset<a> = { * policy_id => { * asset_name => a } }
+multiasset<a> = { + policy_id => { + asset_name => a } }
 policy_id = scripthash
 asset_name = bytes .size (0..32)
 
-value = coin / [coin,multiasset<uint>]
-mint = multiasset<int64>
+negInt64 = -9223372036854775808 .. -1
+posInt64 = 1 .. 9223372036854775807
+nonZeroInt64 = negInt64 / posInt64 ; this is the same as the current int64 definition but without zero
+natNum = 1 .. 4294967295 ; non-zero 32bit uint
+
+value = coin / [coin,multiasset<natNum>]
+
+mint = multiasset<nonZeroInt64>
 
 int64 = -9223372036854775808 .. 9223372036854775807
 

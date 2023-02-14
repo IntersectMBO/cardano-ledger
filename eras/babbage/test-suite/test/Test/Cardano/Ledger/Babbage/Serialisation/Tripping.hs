@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -8,6 +9,7 @@ module Test.Cardano.Ledger.Babbage.Serialisation.Tripping where
 import Cardano.Ledger.Alonzo.Scripts (CostModels)
 import Cardano.Ledger.Babbage (Babbage)
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure)
+import Cardano.Ledger.Binary.Version (natVersion)
 import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Core
 import Cardano.Protocol.TPraos.BHeader (BHeader)
@@ -37,11 +39,17 @@ tests =
           (eraProtVerLow @Babbage)
           (eraProtVerHigh @Babbage)
     , testProperty "babbage/CostModel" $
-        roundTripCborExpectation @CostModels
+        roundTripCborRangeExpectation @CostModels
+          (natVersion @2)
+          maxBound
     , testProperty "babbage/PParams" $
-        roundTripCborExpectation @(PParams Babbage)
+        roundTripCborRangeExpectation @(PParams Babbage)
+          (eraProtVerLow @Babbage)
+          (eraProtVerHigh @Babbage)
     , testProperty "babbage/PParamsUpdate" $
-        roundTripCborExpectation @(PParamsUpdate Babbage)
+        roundTripCborRangeExpectation @(PParamsUpdate Babbage)
+          (eraProtVerLow @Babbage)
+          (eraProtVerHigh @Babbage)
     , testProperty "babbage/AuxiliaryData" $
         roundTripAnnRangeExpectation @(TxAuxData Babbage)
           (eraProtVerLow @Babbage)

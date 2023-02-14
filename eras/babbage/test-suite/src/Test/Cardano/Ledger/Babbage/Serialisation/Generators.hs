@@ -48,7 +48,7 @@ instance
   arbitrary =
     BabbageTxOut
       <$> arbitrary
-      <*> arbitrary
+      <*> scale (`div` 15) arbitrary
       <*> arbitrary
       <*> arbitrary
 
@@ -77,7 +77,7 @@ instance
       <*> arbitrary
       <*> scale (`div` 15) arbitrary
       <*> arbitrary
-      <*> genMintValues
+      <*> scale (`div` 15) genMintValues
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary

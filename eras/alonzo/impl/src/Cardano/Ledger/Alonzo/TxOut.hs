@@ -75,10 +75,7 @@ import Cardano.Ledger.SafeHash (
   extractHash,
   unsafeMakeSafeHash,
  )
-import Cardano.Ledger.Val (
-  DecodeNonNegative (decodeNonNegative),
-  Val (..),
- )
+import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..), rwhnf)
 import Control.Monad (guard, (<$!>))
 import Data.Aeson (ToJSON (..), object, (.=))
@@ -333,7 +330,7 @@ instance Crypto c => EraTxOut (AlonzoEra c) where
       CoinPerWord (Coin cpw) -> Coin $ utxoEntrySize txOut * cpw
 
 instance
-  (Era era, Val (Value era), DecodeNonNegative (Value era)) =>
+  (Era era, Val (Value era)) =>
   ToCBOR (AlonzoTxOut era)
   where
   toCBOR (TxOutCompact addr cv) =
@@ -347,14 +344,14 @@ instance
       <> toCBOR dh
 
 instance
-  (Era era, Show (Value era), Val (Value era), DecodeNonNegative (Value era)) =>
+  (Era era, Show (Value era), FromCBOR (CompactForm (Value era)), Val (Value era)) =>
   FromCBOR (AlonzoTxOut era)
   where
   fromCBOR = fromNotSharedCBOR
   {-# INLINE fromCBOR #-}
 
 instance
-  (Era era, Val (Value era), DecodeNonNegative (Value era), Show (Value era)) =>
+  (Era era, Val (Value era), FromCBOR (CompactForm (Value era)), Show (Value era)) =>
   FromSharedCBOR (AlonzoTxOut era)
   where
   type Share (AlonzoTxOut era) = Interns (Credential 'Staking (EraCrypto era))
@@ -369,7 +366,7 @@ instance
     internTxOut <$!> case lenOrIndef of
       Nothing -> do
         (a, ca) <- fromCborBothAddr
-        cv <- decodeNonNegative
+        cv <- fromCBOR
         decodeBreakOr >>= \case
           True -> pure $ mkTxOutCompact a ca cv SNothing
           False -> do
@@ -379,11 +376,11 @@ instance
               False -> cborError $ DecoderErrorCustom "txout" "Excess terms in txout"
       Just 2 -> do
         (a, ca) <- fromCborBothAddr
-        cv <- decodeNonNegative
+        cv <- fromCBOR
         pure $ mkTxOutCompact a ca cv SNothing
       Just 3 -> do
         (a, ca) <- fromCborBothAddr
-        cv <- decodeNonNegative
+        cv <- fromCBOR
         mkTxOutCompact a ca cv . SJust <$> fromCBOR
       Just _ -> cborError $ DecoderErrorCustom "txout" "wrong number of terms in txout"
   {-# INLINEABLE fromSharedCBOR #-}

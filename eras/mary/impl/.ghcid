@@ -1,0 +1,1 @@
+--command="cabal repl --repl-options='-isrc -fwarn-unused-binds -fwarn-unused-imports -fno-code -fobject-code -g2 -fno-break-on-exception -fno-break-on-error -ferror-spans -j -Wno-unused-packages'" --clear --no-height-limit --reverse-errors --reload=../../../ --outputfile=/tmp/cardano-ledger-mary-ghcid.txt

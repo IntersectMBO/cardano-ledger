@@ -28,17 +28,17 @@ import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
 import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (..))
 import Cardano.Ledger.Binary (Annotator, FromCBOR, ToCBOR)
 import Cardano.Ledger.Core
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
-import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
+import Cardano.Ledger.Mary.Value (AssetName (..), MultiAsset (..), PolicyID (..))
 import qualified Cardano.Ledger.Mary.Value as ConcreteValue
 import Cardano.Ledger.Shelley.API (KeyHash (KeyHash), ShelleyTxAuxData (ShelleyTxAuxData))
 import Cardano.Ledger.Shelley.LedgerState (PPUPPredFailure)
-import qualified Data.ByteString.Short as SBS
 import Data.Int (Int64)
 import Data.Sequence.Strict (StrictSeq, fromList)
-import Data.Word (Word64)
 import Generic.Random (genericArbitraryU)
 import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
+import Test.Cardano.Ledger.Mary.ValueSpec ()
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Generator.TxAuxData (genMetadata')
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
@@ -147,7 +147,7 @@ instance
   arbitrary =
     AllegraTxBody
       <$> arbitrary
-      <*> arbitrary
+      <*> scale (`div` 15) arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
@@ -173,33 +173,13 @@ instance
       <*> arbitrary
       <*> scale (`div` 15) arbitrary
       <*> arbitrary
-      <*> genMintValues
-
-instance Mock c => Arbitrary (PolicyID c) where
-  arbitrary = PolicyID <$> arbitrary
-
-instance Mock c => Arbitrary (MultiAsset c) where
-  arbitrary = MultiAsset <$> arbitrary
-
-instance Mock c => Arbitrary (MaryValue c) where
-  arbitrary = MaryValue <$> (fromIntegral <$> positives) <*> (multiAssetFromListBounded <$> triples)
-    where
-      triples = arbitrary :: Gen [(PolicyID c, AssetName, Word64)]
-      positives = arbitrary :: Gen Word64
-
-  shrink (MaryValue ada assets) =
-    concat
-      [ -- Shrink the ADA value
-        flip MaryValue assets <$> shrink ada
-      , -- Shrink the non-ADA assets by reducing the list length
-        MaryValue ada <$> shrink assets
-      ]
+      <*> scale (`div` 15) genMintValues
 
 -- | When generating values for the mint field, we do two things:
 --
 -- - Fix the ADA value to 0
 -- - Allow both positive and negative quantities
-genMintValues :: forall c. Mock c => Gen (MultiAsset c)
+genMintValues :: forall c. Crypto c => Gen (MultiAsset c)
 genMintValues = multiAssetFromListBounded @Int64 <$> arbitrary
 
 -- | Variant on @multiAssetFromList@ that makes sure that generated values stay
@@ -219,9 +199,6 @@ multiAssetFromListBounded =
       max
         (fromIntegral $ minBound @i)
         (min (fromIntegral $ maxBound @i) (a + b))
-
-instance Arbitrary AssetName where
-  arbitrary = AssetName . SBS.pack . take 32 . SBS.unpack <$> arbitrary
 
 {-------------------------------------------------------------------------------
   AllegraEra Generators
