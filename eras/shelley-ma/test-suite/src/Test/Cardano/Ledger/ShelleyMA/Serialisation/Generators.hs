@@ -166,7 +166,7 @@ instance
   arbitrary =
     MaryTxBody
       <$> arbitrary
-      <*> scale (`div` 15) arbitrary
+      <*> arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
