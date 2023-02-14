@@ -12,6 +12,8 @@ in the naming of release branches.
 
 ### Added
 
+- Addition of `encodeWithOrigin` and `decodeWithOrigin`. #3297
+- Change `mkVersion` to accept any `Integral`. Add `getVersion` function. #3297
 - Added type classes: `EraPParams`, `AlonzoEraPParams` and `BabbageEraPParams` with lenses
   that can access and manipulate both `PParams` and `ParamsUpdate`. #3242
 - Added types `CoinPerWord` and `CoinPerByte` to prevent mixing up the two: #3242
@@ -82,6 +84,7 @@ in the naming of release branches.
 
 ### Changed
 
+- Fix `ToCBOR`/`FromCBOR` insatance for `PParams Babbage` and `PParams Alonzo`: #3297 and #3288
 - Disallow decoding a 0-value `MultiAsset` in the de-serialization. #3241
 - Move `Wdrl` to `Core`. Also rename it to `Withdrawals`, while switching `Test.Cardano.Ledger.Generic.Fields.Withdrawals` to `Withdrawals'` #3239
 - Moved `PreviousEra` into `Era` type class. Added `Era` instance for a new data type

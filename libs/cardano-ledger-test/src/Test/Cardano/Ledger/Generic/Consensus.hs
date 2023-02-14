@@ -91,7 +91,10 @@ import Test.Cardano.Ledger.Generic.Fields (
  )
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Updaters (merge, newTx, newTxBody, newTxOut, newWitnesses)
-import qualified Test.Cardano.Ledger.Mary.Examples.Consensus as Old (ledgerExamplesMary)
+import qualified Test.Cardano.Ledger.Mary.Examples.Consensus as Old (
+  exampleMultiAsset,
+  ledgerExamplesMary,
+ )
 import Test.Cardano.Ledger.Shelley.Examples.Consensus (
   ShelleyLedgerExamples (..),
   ShelleyResultExamples (..),
@@ -555,7 +558,7 @@ exampleTx proof txBody auxData =
 
 exampleMint :: forall era. Proof era -> Maybe (MultiAsset (EraCrypto era))
 exampleMint (Shelley _) = Nothing
-exampleMint (Allegra _) = Just mempty
+exampleMint (Allegra _) = Nothing
 exampleMint (Mary _) = Just mempty
 exampleMint (Alonzo _) = Just (multiAssetOf (exampleMultiAssetValue @(EraCrypto era) 3))
 exampleMint (Babbage _) = Just (multiAssetOf (exampleMultiAssetValue @(EraCrypto era) 3))
@@ -926,6 +929,7 @@ ledgerExamplesMary =
     ( exampleTxBody @(MaryEra StandardCrypto)
         (Mary Standard)
         (exampleMultiAssetValue @StandardCrypto 1)
+        & mintTxBodyL .~ Old.exampleMultiAsset @StandardCrypto 1
     )
     exampleAllegraTxAuxData
     ()

@@ -48,6 +48,7 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
   decodeRecordNamedT,
   decodeRecordSum,
   decodeEnumBounded,
+  decodeWithOrigin,
 
   -- *** Containers
   decodeMaybe,
@@ -149,7 +150,8 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
 where
 
 import Cardano.Binary (DecoderError (..))
-import Cardano.Ledger.Binary.Version
+import Cardano.Ledger.Binary.Version (Version, mkVersion64, natVersion)
+import Cardano.Slotting.Slot (WithOrigin, withOriginFromMaybe)
 import Codec.CBOR.ByteArray (ByteArray)
 import qualified Codec.CBOR.Decoding as C (
   ByteOffset,
@@ -406,8 +408,8 @@ decodeRational =
 _decodeRationalFuture :: Decoder s Rational
 _decodeRationalFuture = do
   -- We are not using `natVersion` because these versions aren't yet supported.
-  v9 <- mkVersion 9
-  v10 <- mkVersion 10
+  v9 <- mkVersion64 9
+  v10 <- mkVersion64 10
   ifDecoderVersionAtLeast
     v10
     decodeRationalWithTag
@@ -553,6 +555,9 @@ decodeEnumBounded = do
   if fromEnum (minBound :: a) <= n && n <= fromEnum (maxBound :: a)
     then pure $ toEnum n
     else fail $ "Failed to decode an Enum: " <> show n <> " for TypeRep: " <> show (typeRep (Proxy @a))
+
+decodeWithOrigin :: Decoder s a -> Decoder s (WithOrigin a)
+decodeWithOrigin f = withOriginFromMaybe <$> decodeMaybe f
 
 --------------------------------------------------------------------------------
 -- Decoder for Map
